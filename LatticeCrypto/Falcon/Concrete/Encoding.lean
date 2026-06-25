@@ -69,9 +69,15 @@ def compress (n : ℕ) (s : IntPoly n) (dlen : ℕ) : Option (List UInt8) := Id.
     out := out.push 0
   return some out.toList
 
-/-- Decompress a Falcon signature polynomial from its compressed byte representation. -/
+/-- Decompress a Falcon signature polynomial from its compressed byte representation.
+
+Falcon signatures are fixed-length: `compress` pads its output to exactly `dlen` bytes, so a
+canonical compressed `s` has length exactly `dlen`. We reject any input whose length differs from
+`dlen` (not merely shorter ones): accepting trailing bytes would make signatures **malleable** —
+a verifier reads only the first `dlen` bytes, so appended garbage would verify identically
+(B9 / ENC-3). This enforces the spec's fixed-bitlength requirement (Falcon §3.11.2–3 / FN-DSA). -/
 def decompress (n : ℕ) (d : List UInt8) (dlen : ℕ) : Option (IntPoly n) := Id.run do
-  if d.length < dlen then return none
+  if d.length ≠ dlen then return none
   let bytes := d.toArray
   let mut acc : UInt32 := 0
   let mut accLen : UInt32 := 0

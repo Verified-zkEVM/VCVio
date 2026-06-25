@@ -135,10 +135,8 @@ theorem concrete_verify_eq_verify
         Falcon.verify p prims pk msg sig := by
   dsimp
   by_cases hcomp : sig.compressedS2 = []
-  · have hslen : sig.compressedS2.length < p.sbytelen := by
-      simpa [hcomp] using hsbytelen
-    have hdecomp : (verifyPrimitives p hn).decompress [] p.sbytelen = none := by
-      simp [verifyPrimitives, Falcon.Concrete.decompress, hsbytelen]
+  · have hdecomp : (verifyPrimitives p hn).decompress [] p.sbytelen = none := by
+      simp [verifyPrimitives, Falcon.Concrete.decompress, hsbytelen.ne]
     have hleft :
         Falcon.Concrete.concreteVerify p ((verifyPrimitives p hn).publicKeyBytes pk.h) msg
           (Falcon.Concrete.sigEncode sig.salt [] p.logn) = false := by

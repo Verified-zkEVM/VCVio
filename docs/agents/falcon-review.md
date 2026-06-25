@@ -59,8 +59,12 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
 - [ ] **KG-quickwin** — **cheap, high-yield:** delete `NTRUSolver`'s local sorry-stub shadows (`FXR.sqr`,
   `vect_*`, `poly_big_to_small`) and `import` the real `Concrete/FXR.lean` + `PolyBigInt.lean` (already fully
   implemented). Cuts ~8 of 11 NTRUSolver sorries with **no new proofs** + makes `check_ortho_norm` executable.
-- [ ] **B9 / ENC-3** — fix over-length malleability: `sigDecode` must slice exactly `1+40+sbytelen` / assert
-  total length (`Concrete/Encoding.lean:73–112,186–192`). The one genuine wire defect; target-independent.
+- [x] **B9 / ENC-3** — DONE (s6): `decompress` now rejects `d.length ≠ dlen` (was `< dlen`)
+  (`Concrete/Encoding.lean:79`), so over-length/trailing-garbage sigs are refused (the verify path
+  `verify → decompress … p.sbytelen` rejects any `comp.length ≠ sbytelen`). Enforces fixed-length
+  (NIST/c-fn-dsa) framing; the spec's *optional* unpadded (variable-length) verification remains
+  unsupported (it never was — the old `< dlen` already rejected unpadded). Repaired the dependent
+  `concrete_verify_eq_verify` nil-branch (`FPRBridge.lean:141`).
 - [ ] **ENC-2** — repair/delete the orphan `Falcon.Encoding`/`Laws` (`sigDecode_sigEncode` false for the
   concrete codec). Unsound-as-stated.
 - [ ] **B6** — prove kernel equalities `negacyclicMulU32 = negacyclicMul`, `pairL2NormSqU32 = pairL2NormSq`
@@ -83,10 +87,10 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
 - SD-1/M2,M8 fresh-salt-per-retry single loop (`Scheme.lean:262–274`; `Concrete/Sign.lean:230–244`).
 - SD-2/M3 L2-only, no L∞ (`Scheme.lean:283–290`; `Instance.lean:98–99`). SD-3/M4 no leaf-range gate. SD-4/M5 72-bit sampler.
 
-**Spec-divergence — REAL BUG:**
-- **B9/ENC-3** over-length signature malleability: `decompress` trailing-zero check loops only `while j<dlen`;
-  `sigDecode` takes all remaining bytes; bytes ≥ `sbytelen` never inspected ⇒ appended garbage verifies
-  identically (`Concrete/Encoding.lean:73–112,186–192`). (Internal unique-encoding checks ARE faithful.)
+**Spec-divergence — REAL BUG (RESOLVED s6):**
+- ~~**B9/ENC-3** over-length signature malleability~~ **FIXED s6**: `decompress` now rejects `d.length ≠ dlen`
+  (`Concrete/Encoding.lean:79`), refusing trailing-garbage sigs on the verify path. (Internal unique-encoding
+  checks were already faithful; this closes the unbounded-tail gap.)
 
 **Unsound-as-stated:**
 - UN-2 `euf_cma_security` — `sorry` + discards all hyps (`let _ :=`) + free `samplerLoss` trivially satisfiable (`Security.lean:302–333`).
@@ -135,6 +139,15 @@ over-counts prose/comments):
   ENC-1 conditional); corrected a subagent's false `main`-branch claim. No code.
 - **s5-milestone** (this) — full 9-dim adversarial re-audit @ `f405e7c2`: NO DRIFT (19 confirmed); all
   resolved/ok claims re-verified sound; surfaced KG-4/KG-5 (shadowing quick-win) + re-confirmed B9. Doc rewritten fresh.
+
+- **s6** — **B9/ENC-3 fixed**: `decompress` rejects `d.length ≠ dlen` (was `< dlen`), closing over-length
+  signature malleability at the single verify chokepoint (`Concrete/Encoding.lean:79`); repaired the
+  dependent `concrete_verify_eq_verify` nil-branch (`FPRBridge.lean`, `hsbytelen.ne`) and removed a now-dead
+  `hslen`. END review (Encoding+Verify): fix closes the bug with **no regression** (compress pads to exactly
+  `dlen`; over-length is a strict superset of previously-rejected inputs), no second `sigDecode` fix needed,
+  no new sorry (19). Build + test module green. **Next: B6** (prove `negacyclicMulU32 = negacyclicMul`,
+  `pairL2NormSqU32 = pairL2NormSq` → make `concrete_verify_eq_verify` unconditional — the load-bearing
+  verify-path soundness gap), or KG-quickwin, or `verify_sign_correct`.
 
 ## 6. Drift-check snippet
 ```bash
