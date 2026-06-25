@@ -21,7 +21,10 @@ export const meta = {
   ],
 }
 
-const A = (typeof args === 'object' && args) ? args : {}
+// Robust against the runtime delivering `args` as a JSON string vs an object.
+let A = args
+if (typeof A === 'string') { try { A = JSON.parse(A) } catch (_e) { A = {} } }
+if (typeof A !== 'object' || A === null) A = {}
 const FULL = A.full === true
 const BASELINE = typeof A.baseline === 'number' ? A.baseline : 20
 const CHANGED = typeof A.changed === 'string' && A.changed.length ? A.changed : ''

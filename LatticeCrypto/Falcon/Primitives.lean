@@ -18,8 +18,9 @@ parameters use `ℝ` (Mathlib Real), matching the exact-arithmetic specification
 
 - **`SamplerZ : ℝ → ℝ → ProbComp ℤ`** takes a real center `μ` and real standard deviation
   `σ'`, producing an integer sample from the discrete Gaussian `D_{ℤ,σ',μ}`.
-- **`FalconTree`** is a binary tree with `ℝ`-valued leaves (the `σ` values from the
-  normalized Gram-Schmidt basis) and `ℝ`-polynomial internal nodes.
+- **`FalconTree`** is a binary tree whose leaves carry the bottom `2 × 2` LDL block
+  (two `σ` values plus the off-diagonal `l01`) and whose internal nodes carry an
+  `ℝ`-polynomial `ℓ` from the LDL decomposition.
 - **`ffSampling`** operates on packed FFT representations over `ℝ`, returning sampled
   vectors in the FFT domain. In coefficient space, the sampled vector is integral.
 - **`fftTarget` / `fftInt` / `ifftRound`** bridge between coefficient-domain polynomials
@@ -74,14 +75,23 @@ end RealFFTPoly
 
 /-- The Falcon tree (LDL tree), a binary tree used by `ffSampling` (Algorithm 11).
 
-- At level 0 (leaves): stores `σ > 0`, the standard deviation for `SamplerZ` at that leaf.
+- At level 0 (leaves): stores the bottom `2 × 2` LDL block — two **standard deviations**
+  `σ₀, σ₁ > 0` (for the `t₀`- and `t₁`-coordinates) and the off-diagonal `L` entry
+  `l01 = (l01Re, l01Im)`. These are the *true* stddevs `σ₀ = σ / √d00`, `σ₁ = σ / √d11`
+  (with `l01 = conj(g01 / g00)`), passed directly to `samplerZ`, which by its
+  `Primitives.Laws.samplerZ_correct` contract takes a standard deviation. **Convention note:**
+  the concrete `Falcon.Concrete.FFT.ffsampFFTDeepest` instead passes the *reciprocal*
+  `isigma = √d11 · (1/σ) = 1/σ₁` to its `SamplerZ`; the two agree up to that inversion.
+  A single shared `σ` with no `l01` would be unfaithful: a
+  depth-`(logn − 1)` tree has `2^(logn − 1)` leaves, exactly one per bottom `2 × 2` block,
+  each with its own `l01` — there are only `2^(logn − 2)` level-`1` nodes, too few to carry them.
 - At level `k + 1` (internal nodes): stores a polynomial `ℓ` in FFT representation
   (from the LDL decomposition of the Gram matrix) and two subtrees.
 
 The tree is built by `ffLDL*` (Algorithm 9) during key generation, using exact arithmetic
-over `ℝ` (or `ℚ`). The leaf values are the `σ'_i` parameters passed to `SamplerZ`. -/
+over `ℝ` (or `ℚ`). The leaf values are the normalized `σ'_i` parameters passed to `SamplerZ`. -/
 inductive FalconTree : ℕ → Type where
-  | leaf (σ : ℝ) : FalconTree 0
+  | leaf (σ₀ σ₁ l01Re l01Im : ℝ) : FalconTree 0
   | node {k : ℕ} (ℓ : RealFFTPoly (k + 1)) (left right : FalconTree k) : FalconTree (k + 1)
 
 /-- The primitive algorithms referenced by the Falcon specification. -/
@@ -240,19 +250,29 @@ a sampled pair `z = (z₀, z₁)` in FFT representation. In coefficient space, `
 and `(t - z)` is short relative to the Gram-Schmidt data encoded by `T`.
 
 The algorithm recurses on the tree structure:
-- **Leaf** (`κ = 0`): each of `t₀` and `t₁` has one complex FFT coordinate, so we sample
-  their real and imaginary parts independently via `SamplerZ`.
+- **Leaf** (`κ = 0`): the bottom `2 × 2` LDL block. Sample the `t₁`-coordinate (real and
+  imaginary parts) at `σ₁`, correct the target by `l01 · (t₁ - z₁)`, then sample the corrected
+  `t₀`-coordinate at `σ₀` (mirrors `Falcon.Concrete.FFT.ffsampFFTDeepest`).
 - **Node** (`κ + 1`): split `t₁`, recurse on the right subtree, merge to obtain `z₁`,
   compute `t_b0 = t₀ + ℓ · (t₁ - z₁)`, split `t_b0`, recurse on the left subtree, then
   merge to obtain `z₀`. -/
 noncomputable def ffSampling (κ : ℕ) (t : FFTPair κ)
     (tree : FalconTree κ) : ProbComp (FFTPair κ) :=
   match κ, t, tree with
-  | 0, (t₀, t₁), .leaf σ => do
-    let z₀Re ← prims.samplerZ (RealFFTPoly.re t₀ ⟨0, by omega⟩) σ
-    let z₀Im ← prims.samplerZ (RealFFTPoly.im t₀ ⟨0, by omega⟩) σ
-    let z₁Re ← prims.samplerZ (RealFFTPoly.re t₁ ⟨0, by omega⟩) σ
-    let z₁Im ← prims.samplerZ (RealFFTPoly.im t₁ ⟨0, by omega⟩) σ
+  | 0, (t₀, t₁), .leaf σ₀ σ₁ l01Re l01Im => do
+    -- Bottom `2 × 2` LDL sampling, mirroring `Falcon.Concrete.FFT.ffsampFFTDeepest`:
+    -- sample the `t₁`-coordinate first at `σ₁`, correct `t₀` by the off-diagonal
+    -- `l01 · (t₁ - z₁)`, then sample the corrected `t₀`-coordinate at `σ₀`.
+    let t₁Re := RealFFTPoly.re t₁ ⟨0, by omega⟩
+    let t₁Im := RealFFTPoly.im t₁ ⟨0, by omega⟩
+    let z₁Re ← prims.samplerZ t₁Re σ₁
+    let z₁Im ← prims.samplerZ t₁Im σ₁
+    let aRe := t₁Re - (z₁Re : ℝ)
+    let aIm := t₁Im - (z₁Im : ℝ)
+    let bRe := aRe * l01Re - aIm * l01Im
+    let bIm := aRe * l01Im + aIm * l01Re
+    let z₀Re ← prims.samplerZ (RealFFTPoly.re t₀ ⟨0, by omega⟩ + bRe) σ₀
+    let z₀Im ← prims.samplerZ (RealFFTPoly.im t₀ ⟨0, by omega⟩ + bIm) σ₀
     let z₀ : RealFFTPoly 0 :=
       RealFFTPoly.pack
         (Vector.ofFn fun _ => (z₀Re : ℝ))
@@ -281,10 +301,6 @@ structure Primitives.Laws {p : Params} (prims : Primitives p) : Prop where
   samplerZ_correct : ∀ (μ σ' : ℝ) (_hσ : 0 < σ'),
     ∀ z : ℤ, Pr[= z | prims.samplerZ μ σ'] =
       ENNReal.ofReal (LatticeCrypto.discreteGaussianPMF σ' μ z)
-  /-- `HashToPoint` output lies in `R_q` (coefficients in `[0, q-1]`).
-  In the random oracle model, this is modeled by the random oracle itself;
-  this law is a placeholder for any additional structural constraint. -/
-  hashToPoint_welldefined : ∀ (_salt : Bytes 40) (_vrfyKey : ByteArray) (_msg : List Byte), True
   /-- Compress/decompress roundtrip: decompressing a compressed polynomial recovers
   the original. -/
   compress_decompress : ∀ (s : IntPoly p.n) (slen : ℕ) (bytes : List Byte),

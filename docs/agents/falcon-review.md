@@ -52,24 +52,35 @@ Do not trust this doc blindly — the protocol re-validates it.
 - Full report (severity-ranked, all findings): see Artifact link in §7.
 
 ## 2. Critical path (status)
-- [ ] **B8** — Integrity cleanup: delete/strengthen vacuous `hashToPoint_welldefined`; mark
-  `verify_sign_correct` / `euf_cma_security` `stop`/conjectural. *(cheap; do first)*
-- [ ] **B1** — Fix the abstract `ffSampling` leaf (root blocker; 2×2-aware base case).
+- [x] **B8** — DONE (session 1): deleted vacuous `hashToPoint_welldefined`; added ⚠ CONJECTURAL
+  markers above `verify_sign_correct` / `euf_cma_security`.
+- [x] **B1** — DONE (session 1, abstract sampler): `FalconTree.leaf` now carries `(σ₀,σ₁,l01Re,l01Im)`
+  and `ffSampling` κ=0 mirrors `ffsampFFTDeepest`. **Remaining (→ tracked under B4):** the tree-*builder*
+  (`keyGenFromSeed`) that populates the leaf from the LDL, and an equivalence lemma
+  `abstract ffSampling ≈ ffsampFFTDeepest`.
 - [ ] **B5** — Make `samplerZ_correct` satisfiable (ideal sampler + `SamplerQuality` Rényi).
 - [ ] **B2** — Define `sign` + `keyGenFromSeed` (Option B / abstract PSF loop). *(enquirer goal)*
 - [ ] **B3b** then **B3a** — conditional EUF-CMA via `euf_cma_split_bound`; then the generic GPV lemmas.
 - [ ] **B6** — Kernel + codec equality lemmas (make `concrete_verify_eq_verify` unconditional). *(parallel)*
 - [ ] **B4** — Finish NTRUSolve ascent + prove `solve_NTRU ⊨ ntruEquation`. *(refinement)*
-- [ ] **B7** — FN-DSA decision + FIPS 206 IPD confirmation (L∞ value, 79-bit, 0.9999 factor). *(scoping)*
+- [ ] **B9** — Signature canonical-encoding / malleability: `Decompress`/`sigDecode` accept over-length
+  & non-canonical signatures (ENC-3 — the one genuine *wire-level* defect found in session 1). Enforce
+  fixed-bitlength + trailing-zero checks. *(target-independent; surfaced by the session-1 full sweep)*
+- [ ] **B7** — FN-DSA acceptance-region decision (L∞, leaf-range, 79-bit). **Decoupled from the rest:**
+  parameterize `isShort`/norm bound over an *optional* L∞ (L2-only instance = today's c-fn-dsa behavior;
+  L∞ instance ready to switch on) so adopting FN-DSA-final is a config flip. Default target = **c-fn-dsa**
+  (freshest *retrievable* spec). FIPS 206 IPD is **not fetchable** as of 2026-06 (`csrc.nist.gov/pubs/fips/206/ipd`
+  → 404; submitted for approval 2025-08-28, final expected late-2026/2027). Re-check IPD at milestones via the
+  harness `full:true` watch; pin L∞/79-bit/0.9999 when it lands. *(scoping; does NOT block B1/B2/B5/B6/B8/B3a)*
 
 ## 3. Validated findings (condensed — full detail in the Artifact, §7)
 | ID | Sev | One-line | Key citation |
 |---|---|---|---|
-| B1 / SD-5 | divergence (correctness) | abstract `ffSampling` leaf has one σ + no `l01`; concrete deepest does full 2×2 LDL (2 stddevs + correction) ⇒ abstract `trapdoorSample` samples wrong distribution | `Primitives.lean:251-264` vs `FFT.lean:356-391` |
-| UN-1 | unsound | `verify_sign_correct` quantifies over support of a `sorry`ed `sign` | `Security.lean:105-119`; `Scheme.lean:224-225` |
-| UN-2 | unsound | `euf_cma_security` discards hypotheses (`let _ :=`) and asserts bound | `Security.lean:290-321` |
+| ~~B1 / SD-5~~ **RESOLVED s1** | was divergence (correctness) | leaf now carries `(σ₀,σ₁,l01)`; κ=0 mirrors `ffsampFFTDeepest`. Counting argument settled it (256 bottom-2×2 leaves vs 128 κ=1 nodes ⇒ `l01` must be at the leaf; START-review re-leveling was incorrect). Remaining: builder + equivalence lemma | `Primitives.lean:~91,251-271` ↔ `FFT.lean:356-391` |
+| UN-1 | unsound (marked s1) | `verify_sign_correct` quantifies over support of a `sorry`ed `sign` — now carries a ⚠ CONJECTURAL marker; still `sorry` pending B2 | `Security.lean` (theorem ~109) |
+| UN-2 | unsound (marked s1) | `euf_cma_security` discards hypotheses and asserts bound — now ⚠ CONJECTURAL; still `sorry` pending B3 | `Security.lean` (theorem ~300) |
 | UN-3 | unsound (generic) | GPV reductions + game-hops are `sorry`; the split-bound theorem is proved *modulo* them | `GPVHashAndSign.lean:270,283,332,363` |
-| UN-4 | unsound | `hashToPoint_welldefined : … → True` is vacuous | `Primitives.lean:287` |
+| ~~UN-4~~ **RESOLVED s1** | was unsound | vacuous `hashToPoint_welldefined : … → True` deleted from `Primitives.Laws` | (removed) |
 | UN-5 | unsound | no proof `solve_NTRU ⊨ ntruEquation`; `GenerableRelation` only assumed | `Security.lean:106,147` |
 | B5 / IN-8/9 | incompleteness | `samplerZ_correct` demands *exact* PMF (RCDT only Rényi-close); concrete sampler runs over ℝ, distinct from FPR path | `Primitives.lean:281-283`; `Instance.lean:186-191` |
 | B4 / IN-2..4 | incompleteness | NTRUSolve ascent (`solve_NTRU_intermediate`, `solve_NTRU_depth0`), `FXR.sqr`, `vect_*` stubs | `NTRUSolver.lean:73,86-98,395,413` |
@@ -78,19 +89,27 @@ Do not trust this doc blindly — the protocol re-validates it.
 | SD-2 | divergence (vs FN-DSA) | only L2 bound; no L∞ in sign/verify (`cInfNorm` exists but unused) | `Scheme.lean:191,241`; `Ring/Norms.lean:203` |
 | SD-3 | divergence (vs FN-DSA) | no LDL leaf-range `[σ_min,σ_max]` gate | `FFT.lean:372,386` |
 | SD-4 | divergence (vs FN-DSA slides) | 72-bit base sampler, not 79-bit | `SamplerZ.lean:112-123` |
+| ~~SIGN-3~~ **RESOLVED s1** | was unsound (introduced + caught same session) | the B1 leaf docstring described `σ` as the concrete `isigma` (`√d·1/σ`) while passing it as a true stddev to `samplerZ`; docstring corrected to `σ = σ/√d` with an explicit convention note | `Primitives.lean:~78-85` |
+| ENC-3 (B9) | **spec-divergence (NEW s1)** | `Decompress`/`sigDecode` accept over-length / non-canonical signatures ⇒ wire-level malleability (the one genuine wire defect) | `Encoding.lean:74,109-111,186-191` |
+| TS-5 | incompleteness (NEW s1) | `Correct (falconPSF)` is likely **false** as stated (ℝ `ifftRound` reconstruction need not give `eval = c` exactly) — a real risk for B2/B3, check before relying on it | `Scheme.lean` (`falconPSF`, `fromFFTPreimage`) |
 
 **Verified-faithful (ok):** params vs Table 3.3 (`betaSquared` 34034726/70265242), centered-rep L2 norm
 (q/2=6144), RCDT/FACCT/σ constants bit-exact, encoding bit-layout + unique-encoding checks, headers +
 14-bit PK packing, `toFFTTarget` sign-folding, `concrete_verify_eq_verify` sound (conditional), no
 `native_decide`/`axiom` in the Concrete layer.
 
-## 4. Baseline — validated 2026-06-25 @ `main` HEAD `a41b514f`
-- **Live `sorry`s in `LatticeCrypto/Falcon/` = 20**: NTRUSolver 11 · FPRBridge 5 · Scheme 2 · Security 2.
-  (`ApproxArith.lean` has 5 `sorry` tokens but all comment-only: lines 241,257,258,263,264.)
-- **Load-bearing generic `sorry`s** (`VCVio/CryptoFoundations/GPVHashAndSign.lean`): 270, 283, 332, 363.
-- **Anchor citations** (must still resolve): `Scheme.lean:121` (`keyGenFromSeed`), `Scheme.lean:225`
-  (`sign`), `Security.lean:119,321`, `Primitives.lean:287` (`…→ True`), `Primitives.lean:251-264` &
-  `FFT.lean:356-391` (SD-5), `Instance.lean:186-191` (sampler ℝ path).
+## 4. Baseline — validated 2026-06-25 @ branch `falcon-faithfulness-review` (after session 1)
+- **Live `sorry`s in `LatticeCrypto/Falcon/` = 20** (unchanged by session 1): NTRUSolver 11 · FPRBridge 5 ·
+  Scheme 2 · Security 2. Authoritative signal = the build's `declaration uses 'sorry'` warnings, **not**
+  a raw `grep`: as of session 1 the raw `grep -c sorry` over `Falcon/` returns **29** tokens (was 25)
+  because the new ⚠ CONJECTURAL markers + leaf docstrings mention the word "sorry" in prose. `ApproxArith.lean`
+  still contributes 5 comment-only tokens.
+- **Load-bearing generic `sorry`s** (`VCVio/CryptoFoundations/GPVHashAndSign.lean`): decls at 266, 279, 316, 344
+  (`sorry` tokens at 270, 283, 332, 363).
+- **Anchor citations** (must still resolve): `Scheme.lean:121` (`keyGenFromSeed`), `Scheme.lean:~224` (`sign`),
+  `Security.lean` theorems `verify_sign_correct` (~109) & `euf_cma_security` (~300),
+  `Primitives.lean:~91` (`leaf σ₀ σ₁ l01Re l01Im`) & `~251-271` (`ffSampling` κ=0) ↔ `FFT.lean:356-391`
+  (`ffsampFFTDeepest`), `Instance.lean:186-191` (sampler ℝ path). (`Primitives.lean:287` vacuous law — removed.)
 
 ## 5. Session log
 - **2026-06-25 — session 0 (review + bootstrap).** Three-way faithfulness/soundness audit (21-agent
@@ -99,21 +118,41 @@ Do not trust this doc blindly — the protocol re-validates it.
   code edited.** Residual risk: FN-DSA L∞/79-bit/0.9999 from unfrozen NIST slides, not the IPD;
   c-fn-dsa submodule not checked out (table equalities read from brief). Next entry point: **B8 → B1**.
 
+- **2026-06-25 — session 1 (B8 + B1).** START: drift clean (20 live sorrys). Landed **B8** (deleted
+  vacuous `hashToPoint_welldefined`; ⚠ markers on the two unsound theorems) and **B1** (leaf carries
+  `(σ₀,σ₁,l01)`; κ=0 `ffSampling` mirrors `ffsampFFTDeepest`). START review re-leveled B1 to incompleteness;
+  **overturned by a counting argument** (256 bottom-2×2 leaves vs 128 κ=1 nodes ⇒ `l01` must live at the
+  leaf). Build clean, no new live sorrys (still 20); fixed a 100-col lint. END review (full 9-dim sweep —
+  `args` scoping didn't thread; **harness fixed** to parse stringified args) **caught SIGN-3**, a stddev/isigma
+  docstring inversion I introduced — **fixed** (docstring now states true stddev `σ/√d` + convention note);
+  re-confirmed no drift, refuted a false "Security=6 sorrys" (prose). Newly surfaced by the fuller sweep:
+  **ENC-3** (wire-level signature malleability → new **B9**) and **TS-5** (`Correct (falconPSF)` likely false —
+  risk for B2/B3). Residual: c-fn-dsa submodule empty locally (pin `33026d4d`), FN-DSA IPD still 404.
+  **Next entry point: B2** (define `sign` + `keyGenFromSeed`); pin the σ convention (SIGN-3) when building
+  the leaf; B6/B9 parallelizable.
+
 ## 6. Drift-check snippet
+The **authoritative** live-`sorry` count is the build warnings (raw `grep` over-counts because comments
+now mention "sorry" in prose — see §4). Quick deterministic check:
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 git branch --show-current                     # expect falcon-faithfulness-review
-grep -rho "sorry" LatticeCrypto/Falcon/ | wc -l            # expect 25 tokens (20 live + 5 comment)
-grep -rcn "sorry" LatticeCrypto/Falcon/ | grep -v ':0' | sort -t: -k2 -rn
-grep -n "sorry" VCVio/CryptoFoundations/GPVHashAndSign.lean # expect 270,283,332,363
-grep -n "hashToPoint_welldefined" LatticeCrypto/Falcon/Primitives.lean   # expect "…→ True" still present
+# Authoritative live-sorry count (expect 20 in Falcon/, +4 in GPVHashAndSign):
+lake build LatticeCrypto.Falcon.Security LatticeCrypto.Falcon.Concrete.FPRBridge \
+  LatticeCrypto.Falcon.Concrete.NTRUSolver 2>&1 | grep -c "declaration uses"
+grep -rcn "sorry" LatticeCrypto/Falcon/ | grep -v ':0' | sort -t: -k2 -rn  # per-file (incl. prose)
+grep -n "sorry" VCVio/CryptoFoundations/GPVHashAndSign.lean | cut -d: -f1   # expect 270,283,332,363
+grep -c "hashToPoint_welldefined" LatticeCrypto/Falcon/Primitives.lean      # expect 0 (removed session 1)
 ```
 
 ## 7. References
 - Full review Artifact (severity-ranked findings, spec-of-record matrix, discharge plan):
   `https://claude.ai/code/artifact/5e8ff7c5-dcb4-4ba1-94a4-6ec986f44b52`
-- Spec source of truth: Falcon v1.2 PDF (`https://falcon-sign.info/falcon.pdf`); FN-DSA = FIPS 206 IPD
-  (confirm exact constants — see B7); c-fn-dsa = `github.com/pornin/c-fn-dsa` @ `33026d4d`.
+- Spec sources: Falcon v1.2 PDF (`https://falcon-sign.info/falcon.pdf`, frozen, oldest);
+  **default executable target = c-fn-dsa** `github.com/pornin/c-fn-dsa` @ `33026d4d` (freshest *retrievable*).
+- **IPD watch** (re-check at milestones; pin B7 constants when live): `https://csrc.nist.gov/pubs/fips/206/ipd`
+  — 404 as of 2026-06-25 (not yet published). Status slides: `csrc.nist.gov/presentations/2025/fips-206-fn-dsa-falcon`.
+  FN-DSA submitted for approval 2025-08-28; final expected late-2026/early-2027.
 - Memory pointer: `falcon-review-status`.
 
 ## 8. Spec-of-record matrix (M1–M9, condensed)
