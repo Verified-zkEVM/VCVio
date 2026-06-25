@@ -48,7 +48,14 @@ Do not trust this doc blindly — the protocol re-validates it.
   Falcon+/c-fn-dsa: yes at the concrete/constant level.
 - **Complete?** No — 20 live `sorry`s incl. 3 load-bearing primitives.
 - **Sound?** No — 0/4 security theorems proven; 2 are unsound *as stated*; the generic GPV chain is `sorry`.
-- This branch has made **no Falcon code edits yet** (review + scaffolding only).
+  (s2-END) **TS-5 fixed + verified**: `fromFFTPreimage` now reconstructs `s₁ := c − s₂·h` (`Scheme.lean:163`),
+  so `eval (trapdoorSample) = c` holds — **proven, re-audited sound** (`falconPSF_eval_trapdoorSample`,
+  `Scheme.lean:202`); PSF `s₁` agrees with `verify` (`:269`). The `isShort` half of `Correct (falconPSF)`
+  remains open (needs a rejection/retry sampler model — the remaining B2 work). New rider **SD-TS5b**:
+  abstract `isShort` (verify-consistent `s₁`) vs the concrete signer's `rint(v₀)`-based norm gate diverge
+  under independent rounding (benign for the verify identity).
+- Branch edits so far: **session 1** (B8 + B1), **session 2** (TS-5 fix + eval lemma, re-audited s2-END §4c). No `sign`/`keyGenFromSeed` yet.
+- **Next entry point: B2** (`isShort`-half + `sign` + `keyGenFromSeed`) — TS-5 eval-half is now done and B2 is unblocked. See §4c (4).
 - Full report (severity-ranked, all findings): see Artifact link in §7.
 
 ## 2. Critical path (status)
@@ -59,7 +66,14 @@ Do not trust this doc blindly — the protocol re-validates it.
   (`keyGenFromSeed`) that populates the leaf from the LDL, and an equivalence lemma
   `abstract ffSampling ≈ ffsampFFTDeepest`.
 - [ ] **B5** — Make `samplerZ_correct` satisfiable (ideal sampler + `SamplerQuality` Rényi).
-- [ ] **B2** — Define `sign` + `keyGenFromSeed` (Option B / abstract PSF loop). *(enquirer goal)*
+- [~] **B2** — Define `sign` + `keyGenFromSeed` (Option B / abstract PSF loop). *(enquirer goal — now unblocked)*
+  **(s2-END) Prerequisite TS-5 DONE + re-audited sound (§4c)** — `fromFFTPreimage` recomputes `s₁ := c − s₂·h`
+  (`Scheme.lean:163`); `eval(trapdoorSample)=c` proven (`falconPSF_eval_trapdoorSample`, `:202`), PSF `s₁`
+  agrees with `verify` (`:269`). **Remaining:** the `isShort` half (rejection/retry model —
+  `ffSampling` can emit over-long vectors and ProbComp has no retry combinator; decide fuel-bounded loop vs
+  weakening `Correct` to probabilistic), then `sign` (`Scheme.lean:254`, single-attempt, matching GPV's
+  no-retry `sign`) + `keyGenFromSeed` (`Scheme.lean:121`, constructive `validKeyPair` witness; real impl
+  gated on B4). Mind new rider **SD-TS5b** (abstract `isShort` vs concrete norm-gate rounding).
 - [ ] **B3b** then **B3a** — conditional EUF-CMA via `euf_cma_split_bound`; then the generic GPV lemmas.
 - [ ] **B6** — Kernel + codec equality lemmas (make `concrete_verify_eq_verify` unconditional). *(parallel)*
 - [ ] **B4** — Finish NTRUSolve ascent + prove `solve_NTRU ⊨ ntruEquation`. *(refinement)*
@@ -91,7 +105,8 @@ Do not trust this doc blindly — the protocol re-validates it.
 | SD-4 | divergence (vs FN-DSA slides) | 72-bit base sampler, not 79-bit | `SamplerZ.lean:112-123` |
 | ~~SIGN-3~~ **RESOLVED s1** | was unsound (introduced + caught same session) | the B1 leaf docstring described `σ` as the concrete `isigma` (`√d·1/σ`) while passing it as a true stddev to `samplerZ`; docstring corrected to `σ = σ/√d` with an explicit convention note | `Primitives.lean:~78-85` |
 | ENC-3 (B9) | **spec-divergence (NEW s1)** | `Decompress`/`sigDecode` accept over-length / non-canonical signatures ⇒ wire-level malleability (the one genuine wire defect) | `Encoding.lean:74,109-111,186-191` |
-| TS-5 | incompleteness (NEW s1) | `Correct (falconPSF)` is likely **false** as stated (ℝ `ifftRound` reconstruction need not give `eval = c` exactly) — a real risk for B2/B3, check before relying on it | `Scheme.lean` (`falconPSF`, `fromFFTPreimage`) |
+| ~~TS-5~~ **RESOLVED (eval-half) s2-END** | **FIX LANDED** at `bfcccbda` working tree: `fromFFTPreimage` now returns `(c − negacyclicMul s₂ pk.h, s₂)` (`Scheme.lean:163`), `v₀` dropped, `trapdoorSample` threads `pk`; `eval(trapdoorSample)=c` is **proven** (`falconPSF_eval_trapdoorSample`, `Scheme.lean:202`) and the PSF `s₁` now **agrees** with `verify`'s `s₁=c−s₂·h` (`:269`). **Remaining:** the `isShort`-half of `Correct(falconPSF)` (needs B2 retry/rejection model). See §4c | `Scheme.lean:158-164,187,202,269` |
+| SD-TS5b | **spec-divergence (NEW s2-END)** | abstract `isShort`/`pairL2NormSq` is computed on the verify-consistent `s₁=c−s₂·h`, but the concrete signer's squared-norm gate uses an *independently* `rint(v₀)`-based `s₁`; the two agree only modulo rounding. Benign for the verify/EUF-CMA identity; must be quantified iff a future proof links abstract `isShort` to the concrete gate | `Scheme.lean:158-164,192`; `Concrete/Sign.lean:169-175,182-197` |
 
 **Verified-faithful (ok):** params vs Table 3.3 (`betaSquared` 34034726/70265242), centered-rep L2 norm
 (q/2=6144), RCDT/FACCT/σ constants bit-exact, encoding bit-layout + unique-encoding checks, headers +
@@ -110,6 +125,281 @@ Do not trust this doc blindly — the protocol re-validates it.
   `Security.lean` theorems `verify_sign_correct` (~109) & `euf_cma_security` (~300),
   `Primitives.lean:~91` (`leaf σ₀ σ₁ l01Re l01Im`) & `~251-271` (`ffSampling` κ=0) ↔ `FFT.lean:356-391`
   (`ffsampFFTDeepest`), `Instance.lean:186-191` (sampler ℝ path). (`Primitives.lean:287` vacuous law — removed.)
+
+## 4b. Session 2 synthesis (lead-reviewer report — 2026-06-25, HEAD `bfcccbda`)
+
+Two-dimension adversarial sweep (Sign+ffSampling, Theorem-soundness), each finding re-verified.
+Re-read this session: `Scheme.lean:155-163,186,234-241`; `GPVHashAndSign.lean:91-94`, sorry tokens
+270/283/332/363; `git rev-parse HEAD` = `bfcccbda05…`; grep for L∞ / `Correct falconPSF` sites.
+
+### (1) Drift verdict vs baseline of 20 live sorrys — **NO DRIFT**
+- HEAD `bfcccbda` = Session 2 START. Live bodies: `Scheme.lean:121,225` (2), `Security.lean:123,331` (2),
+  GPV `270/283/332/363` (4 load-bearing) — all confirmed. `sign`/`keyGenFromSeed` still `sorry`; B2 un-started.
+- `Security.lean:105/106/294/297` are prose CONJECTURAL markers, not bodies (raw grep over-counts, per §4).
+- *Residual (low):* NTRUSolver 11 / FPRBridge 5 / ApproxArith 5-comment split asserted, not re-counted this session.
+
+**PRIORITY — TS-5: is `Correct(falconPSF)` actually false? YES (confirmed, not "likely").**
+`Correct` (`GPVHashAndSign.lean:91-94`) demands `eval pk x = t` ∀ `x ∈ support`; `eval = x.1 + negacyclicMul x.2 pk.h`
+(`:186`); `trapdoorSample` → `fromFFTPreimage` returns `(c − v₀, −v₁)` with `v₀,v₁` **independently** `ifftRound`-ed
+(`Scheme.lean:161-163`). So `eval = c − (v₀ + v₁·h)`. Exact NTRU (`fG−gF=q`, `f·h=g`, `F·h≡G mod q`) gives
+pre-rounding `v₀ ≡ −v₁·h`, but `round(v₀) + round(v₁)·h ≡ 0` fails — rounding does not commute with mult-by-`h`.
+No `Primitives.Laws` field links `ifftRound` to `negacyclicMul` (`Primitives.lean:298-311`). **So `s₁` should be
+recomputed as `c − s₂·h`, exactly matching `verify` (`Scheme.lean:240`) and all three baselines (v1.2 Alg 16,
+FN-DSA/c-fn-dsa M9) which store only `s₂`.** The current PSF `s₁` (= `c − round(v₀)`) *disagrees* with verify's `s₁`.
+
+*Severity-tag reconciliation (the one cross-audit disagreement):* Theorem-soundness tagged TS-5 unsound-statement;
+Sign+ffSampling revised it to spec-divergence because `Correct(falconPSF)` is **never instantiated** (grep: no
+`Correct falconPSF` / `falconPSF.Correct` site; it appears only as `hcorrect` at `GPVHashAndSign.lean:317,345,383,408`,
+and `euf_cma_security` routes around it via `SamplerQuality.idealCorrect` about the *exact* `idealSampler`).
+**Lead ruling: spec-divergence (primary) + unsound-statement (contingent).** The reachable signing path emits an
+`s₁` inconsistent with verify (behavioral/region divergence); it becomes a false *statement* only when someone tries
+to discharge `Correct(falconPSF)` for B2/B3 — which today nobody has. Load-bearing description = eval/verify `s₁`
+disagreement, regardless of tag.
+
+**B1 leaf re-confirmation: faithful, no drift.** `FalconTree.leaf (σ₀ σ₁ l01Re l01Im)` (`Primitives.lean:94`);
+leaf samples `z₁` at `σ₁`, corrects `b = a·l01`, samples `z₀` at `σ₀` (`:262-284`) — structurally identical to
+`ffsampFFTDeepest` (`FFT.lean:356-391`: `leaf_r=√d11·invSigma`, `leaf_l=√d00·invSigma`, `l01_im=−mu_im=conj(g01/g00)`).
+Node case (`:285-293`) mirrors `ffsampFFTInner` (`FFT.lean:419-464`). **SD-5's "one sigma, no l01" premise is stale.**
+
+### (2) Findings by severity
+- **spec-divergence — TS-5** | `Scheme.lean:155-163,186,240`; `GPVHashAndSign.lean:91-94` | baseline v1.2 Alg 16 /
+  FN-DSA-c-fn-dsa M9 (store `s₂`, recompute `s₁=c−s₂·h`) | evidence above; concrete signer mirrors the same
+  independent rounding (`Concrete/Sign.lean:177-197`) so it is a faithful transcription of reference *signing* math,
+  but the PSF must reconstruct `s₁` from `s₂` to agree with verify | **fix:** `s₁ := c − negacyclicMul s₂ pk.h`,
+  thread `pk.h` into `fromFFTPreimage`; B2's `sign` must feed `compress` the same `s₂`.
+- **unsound-statement — TS-1** | `Security.lean:109-123`; `Scheme.lean:225` | v1.2 Alg 10/16 | `verify_sign_correct`
+  quantifies over `support (sign …)` where `sign:=sorry`; hypothesis neither provably inhabited nor empty; body
+  `sorry`; `h_laws` discarded; CONJECTURAL marker present; docstring obligation "(b) eval=c" is the TS-5 defect |
+  block on B2 + TS-5 fix.
+- **unsound-statement — TS-2** | `Security.lean:300-331,338-364` | [FGdG+25] Thm 1 | body `let _ := …; sorry`
+  discards `hSamplerLoss`; free `samplerLoss:ℝ≥0∞` (`:306`) appears additively in the bound (`:326`), trivially met
+  with `samplerLoss=⊤`; `bytes40` is a direct specialization, its `2⁻¹⁹³` docstring untethered | tie `samplerLoss`
+  into the derivation; discharge via the generic chain.
+- **incompleteness — TS-3 / SIGN-1** | `GPVHashAndSign.lean:270,283,332,363` (+wrappers `382-394,407-424`);
+  `Scheme.lean:121,225` | GPV08 Prop 6.1-6.2 | four load-bearing GPV sorrys; wrappers are term-mode `exact ⟨…⟩` only
+  modulo them; both require `hcorrect` (unmeetable per TS-5); `sign`/`keyGenFromSeed` no body (`signAttempt` IS
+  defined, `Scheme.lean:205-211`) | discharge `forgery_yields_collision` (`:332`) first.
+- **ok (verified faithful / well-formed):** SD5-1/SD5-2 (B1 leaf+node; *caveat:* producer side unverified —
+  `keyGenFromSeed` sorry); TGT-1 (`toFFTTarget` = Alg 10 = `fpolyApplyBasis`, `Scheme.lean:135-143` / `FFT.lean:301-312`);
+  SALT-1 (fresh-salt + pk-bound hash = FN-DSA/c-fn-dsa, intended divergence from v1.2; medium conf — `sign` is sorry);
+  NORM-1 (L2-only, `betaSquared` 34034726/70265242 = Table 3.3; grep confirms **no** L∞ this session — intended
+  divergence from FN-DSA M3/M4); TS-4 (`SamplerQuality` well-formed; finite `HasUniformSamplerLoss` unsatisfiable for
+  current `falconPSF` for the TS-5 reason); TS-6 (`ntruPSFCollisionProblem`/`ntruSISProblem` correct data defs).
+
+### (3) Changes vs the §3 table (for refresh)
+- **CHANGED (this doc, line 94):** TS-5 ⬆ from "incompleteness (NEW s1) / likely false" → **spec-divergence
+  (CONFIRMED s2)**; both s2 audits prove it false-as-constructed and pin the `eval` vs `verify` `s₁` disagreement.
+  (Edited in place.)
+- **CONFIRMED CLOSED:** SD-5 (≡ §3 "B1 / SD-5 RESOLVED s1") — premise "one sigma, no l01" is stale at `bfcccbda`;
+  leaf carries `(σ₀,σ₁,l01)` and matches `ffsampFFTDeepest`. New open follow-up (under B4/SD5-2): prove abstract leaf
+  `σ₀,σ₁,l01 = σ/√d00, σ/√d11, conj(g01/g00)` once `keyGenFromSeed` (B2) builds the tree.
+- **CLARIFIED (no count change):** UN-1≡TS-1 and UN-2≡TS-2 are now explicitly *also* blocked on the TS-5 redefinition
+  (their "eval=c" obligations are unmeetable today), not only on completing the GPV chain (UN-3≡TS-3).
+- **NO new sorrys; baseline §4 needs no count edit.** Anchors all still resolve.
+
+### (4) Recommended next entry point on the critical path
+**Fix TS-5 before writing any B2.** Order:
+1. `Scheme.lean:155-163` — redefine `fromFFTPreimage` to return `(c − negacyclicMul s₂ pk.h, s₂)` with
+   `s₂ = −IntPoly.toRq (ifftRound v₁FFT)`; thread `pk.h` in. Makes `eval = c` definitional, reduces `Correct` to
+   `isShort`, and aligns the PSF `s₁` with `verify` (`:240`).
+2. **Then B2** (`sign` `:225`, `keyGenFromSeed` `:121`) via the PSF loop; return `Signature = (salt, compress s₂)`
+   feeding the *same* `s₂`. Pin the σ convention (SIGN-3) at the leaf builder.
+3. **Only after:** revisit security — `forgery_yields_collision` (`GPVHashAndSign.lean:332`) is the highest-leverage
+   obligation that turns TS-2 from conjectural into a real bound and unblocks finite-loss `SamplerQuality` (TS-4).
+
+Rationale: TS-5 is upstream of TS-1/TS-2/TS-4 and of any meaningful B2 — defining `sign` on the current
+`fromFFTPreimage` would bake the eval/verify `s₁` inconsistency into the on-the-wire signing path. The fix is small,
+local, baseline-sorry-neutral. (B6/B9 remain parallelizable.)
+
+*Residual uncertainty:* the exact-arithmetic NTRU identity behind TS-5 is reasoning about the reference (confirmed by
+both auditors); the *failure under independent rounding* is the load-bearing claim and is unrescuable by any
+`Primitives.Laws` field (`Primitives.lean:298-311`). SALT-1 / abstract-`sign` salt-refresh verifiable only via
+docstring + concrete signer (`sign` is sorry). SD5-2 producer side gated on B2.
+
+## 4c. Session 2 END synthesis (lead-reviewer report — 2026-06-25, working tree on `bfcccbda`)
+
+**Scope of this report.** §4b above was the Session-2 *START* review, written when TS-5 was still a
+*pending defect* (`fromFFTPreimage` returning `(c − round(v₀), −v₁)`). This §4c is the Session-2 *END*
+lead-reviewer synthesis: the **TS-5 fix has now landed** in the working tree — `fromFFTPreimage`
+(`Scheme.lean:158-164`) returns `(c − negacyclicMul s₂ pk.h, s₂)`, `v₀` is dropped, `s₁` is recomputed
+from `s₂`, `falconPSF.trapdoorSample` threads `pk` (`Scheme.lean:188-191`), and a new fully-proven lemma
+`falconPSF_eval_trapdoorSample` (`Scheme.lean:202-220`) establishes the **eval-half** of `Correct`.
+Two adversarial dimensions (Sign+ffSampling, Theorem-soundness), 18 findings total, **all 18 verdicts
+"confirmed", 0 refuted** (one severity-tag reconciliation on TS-5). Independently re-verified this
+session: `git rev-parse HEAD` = `bfcccbda…`; the eval-lemma proof body (`Scheme.lean:202-220`); the
+20-sorry breakdown (`Scheme` 121/254, `Security` 123/331, `FPRBridge` 82/88/94/100/110, `NTRUSolver`
+73/87/89/90/91/93/94/96/98/395/413; `ApproxArith:241` is doc-prose, 257-264 commented); `verify`
+recomputes `s₁=c−s₂·h` (`Scheme.lean:269`) matching the new `fromFFTPreimage`; no L∞ anywhere in
+`Scheme.lean`; GPV sorrys at `GPVHashAndSign.lean:270/283/332/363`.
+
+### (1) Drift verdict vs recorded baseline of 20 live sorrys — **NO DRIFT**
+- **Live Falcon sorrys = 20, unchanged.** Per-file split confirmed this session by direct grep:
+  `NTRUSolver` 11 · `FPRBridge` 5 · `Scheme` 2 (`121` keyGenFromSeed, `254` sign) · `Security` 2 (`123`,
+  `331`). `ApproxArith.lean:241` is doc text; `:257-264` are commented-out — not live. GPV load-bearing
+  sorrys (`GPVHashAndSign.lean:270/283/332/363`) intact. The Session-2 diff **adds a fully-proven lemma
+  and modifies defs without adding any sorry**; build is green.
+- This resolves the §4b §1 "residual (low)" note: the NTRUSolver-11 / FPRBridge-5 split **was** re-counted
+  this session and holds.
+
+**Adversarial verdicts on the five focus questions (all confirmed by both audits):**
+
+1. **Is the eval lemma SOUND — does `eval(trapdoorSample)=c` truly hold, proof valid?** **YES.**
+   `eval pk x = x.1 + negacyclicMul x.2 pk.h` (`Scheme.lean:187`); `fromFFTPreimage` returns
+   `(c − negacyclicMul s₂ pk.h, s₂)` (`:162-164`); helper `eval_pair` reduces
+   `(c − s₂·h) + s₂·h = c` coefficient-wise via `ext i; simp only [coeff_add, coeff_sub]; ring`
+   (`:206-214`), where `coeff_add`/`coeff_sub` are correct `@[simp]` lemmas pushing equality to the
+   `ZMod q` coefficient ring (`Ring/Kernel.lean:150-152,155-157`). Support extraction
+   (`simp [falconPSF, support_bind, support_pure, …]; obtain ⟨z,_,rfl⟩; exact eval_pair _`, `:215-220`)
+   is valid because `fromFFTPreimage … z` is **definitionally** `(c − s₂·h, s₂)`. **No sorry, no
+   `decide`/`native_decide` shortcut, correct support handling, non-vacuous** (`trapdoorSample` ends in
+   `return`, so support is non-empty for any `z ∈ support(ffSampling)`). [F2/TS-1 confirmed]
+2. **Is `fromFFTPreimage` still a faithful `s₂ = round(f·z₀+F·z₁)`?** **For `s₂`: yes** —
+   `s₂ = −IntPoly.toRq(ifftRound(−(mulFFT z.1 fft(f) + mulFFT z.2 fft(F))))` = `round(f·z₀+F·z₁)`,
+   identical to concrete `computeSignature` `s₂ = −rint(v₁)` (`Concrete/Sign.lean:179,193-196`). The
+   underlying `ifftRound`/`mulFFT` sign-convention/basis-pairing vs c-fn-dsa@`33026d4d` is uninterpreted
+   and not bit-checked here (submodule not retrievable) — confidence medium. [F6/TS-8 confirmed]
+3. **Did dropping `v₀` lose anything needed elsewhere?** **Eval-side: nothing** — `s₁` is *defined* to
+   make eval hold, so the identity is exact (the whole point of the fix). **One residual divergence:** the
+   abstract `isShort`/`pairL2NormSq` (`Scheme.lean:192`) is now computed on the verify-consistent
+   `s₁=c−s₂·h`, whereas the concrete signer's norm gate uses an *independently* `rint(v₀)`-based `s₁`
+   (`Concrete/Sign.lean:182-191`). These coincide in exact arithmetic but can differ under independent
+   coefficient rounding — so the abstract norm quantity and the concrete signer's gate are not
+   coefficient-for-coefficient identical. This is **correct for the EUF-CMA/verify identity** and must be
+   quantified (or shown irrelevant) only if a future proof links abstract `isShort` to the concrete gate.
+   [F6 spec-divergence, confirmed]
+4. **Any NEW sorry/unsound?** **No new sorry.** One **new cosmetic style-lint** at `Scheme.lean:209`
+   (`show` → `change` recommended) introduced by the eval-lemma proof; does not affect soundness. [TS-7]
+5. **Is the isShort-half still NOT claimed?** **Correct — NOT claimed.** Grep confirms
+   `falconPSF.Correct` (the eval∧isShort conjunction, `GPVHashAndSign.lean:91-94`) is **never**
+   instantiated for Falcon; only the eval-half lemma exists. The docstring (`Scheme.lean:198-201`)
+   explicitly states the isShort half is not provable for the raw sampler and needs a rejection/retry
+   model. `signAttempt` (`Scheme.lean:234-240`) gates on `isShort` but returns `none` on failure rather
+   than retrying — honest separation. **No over-claim.** [F3/TS-1 confirmed]
+
+### (2) Findings by severity (merged audit + verdict)
+
+**spec-divergence**
+- **SD-TS5b** (`F6`) — `Scheme.lean:158-164,192,269` ↔ `Concrete/Sign.lean:169-175,182-197`.
+  *Baseline:* v1.2 Alg 10 norm check on `(s₁,s₂)=invFFT(s)` vs Alg 16 verify `s₁=c−s₂h`; reference
+  `computeSignature` rounds `v₀` independently. *Evidence:* after the TS-5 fix the abstract `s₁=c−s₂·h`
+  matches verify exactly, but the concrete signer's squared-norm gate is fed an independently-rounded
+  `rint(v₀)`-based `s₁`; the two `isShort` inputs agree only modulo rounding. *Recommendation:* document
+  that abstract `isShort`/`pairL2NormSq` is the verify-consistent quantity, not the reference signer's
+  gate; if a future correctness proof links them, quantify or dismiss the rounding mismatch.
+- **SD-1 / M1** (`F7`) — `Concrete/Sampling.lean:37-44`; `Primitives.lean:145-147`; `Concrete/Sign.lean:233-234`.
+  *Baseline:* v1.2 Alg 3 (`r‖m`, no pk) & Alg 10 (salt once). *Evidence:* hash input =
+  `salt(40)‖SHAKE256(pk)[0:64]‖0x00 0x00‖msg` (pk-bound, FN-DSA/c-fn-dsa M1) and salt refreshes per
+  counter (FN-DSA M2/M8). **Intended** FN-DSA-baseline divergence, not an error; flagged because the
+  abstract `sign` docstring labels it "Falcon+" while the body is `sorry` (see IN-1). *Recommendation:*
+  state the chosen baseline at the top of the signing modules; verify the `0x00 0x00` empty-context
+  framing against FIPS 206 IPD when it is available.
+
+**unsound-statement**
+- **UN-1 / TS-2** (`F10`/`TS-2`) — `Security.lean:109-123`; `Scheme.lean:254`. `verify_sign_correct` has a
+  `sorry` body and quantifies over `support (Falcon.sign …)` where `sign := sorry`; the statement is about
+  an undefined computation and carries no content. ⚠ CONJECTURAL marker present (`:105-108`). The
+  eval-half it needs is now available (the new lemma) but the isShort-half and the sign/verify roundtrip
+  (compress/decompress, hash recompute) are not. *Recommendation:* give `sign` a real body before stating
+  correctness; do not present the eval lemma as discharging this.
+- **UN-2 / TS-3** (`F10`/`TS-3`) — `Security.lean:300-331,338-364`. `euf_cma_security` ends
+  `let _ := …; sorry`, discarding all hypotheses (incl. `hQ`, `hSamplerLoss`); the conclusion's RHS
+  includes a **free caller-supplied** `samplerLoss : ℝ≥0∞` (`:306`) appearing additively (`:326`), so a
+  caller may pass `⊤` and the bound is information-free. Does **not** route through the generic
+  `euf_cma_split_bound` chain — sorrys directly. `euf_cma_security_bytes40` (`:338`) inherits the vacuity.
+  *Recommendation:* prove via the generic split bound and tie `samplerLoss` to `SamplerQuality.bound`
+  rather than leaving it as free additive slack.
+
+**incompleteness**
+- **IN-1 / B2** (`F1`) — `Scheme.lean:253-254`. **Largest gap in this dimension.** Abstract `sign` is a
+  `sorry`; the docstring (`:242-252`) asserts Algorithm-10 / Falcon+ fresh-salt-per-retry with no backing
+  code or proof. Only the concrete `concreteSignLoop` (`Concrete/Sign.lean:230-244`) implements a loop.
+  The eval lemma and `signAttempt` cover only the single-attempt core. *Recommendation:* implement `sign`
+  as the retry over `signAttempt` with fresh `Salt` + `hashToPointForPublicKey` + `compress`, or relabel
+  the docstring to stop claiming Alg-10 behavior the body lacks.
+- **UN-3 / TS-4** (`TS-4`) — `GPVHashAndSign.lean:266/270, 279/283, 316/332, 344/363`. Four load-bearing
+  generic GPV sorrys (`reduction`, `programmedPreimageReduction`, `forgery_yields_collision`,
+  `forgery_yields_collision_or_exact_match`). `euf_cma_split_bound`/`euf_cma_collision_bound` (`:407`,
+  `:382`) type-check by composition but rest transitively on these sorrys. *Note:* Falcon's
+  `euf_cma_security` does not invoke them today (it sorrys directly), so they are load-bearing for the
+  *intended* proof, not the current one. *Recommendation:* discharge `reduction` +
+  `forgery_yields_collision` (distinct-preimage branch) first.
+- **TS-5-residual** (`TS-5`) — `Security.lean:210-237`. `SamplerQuality`/`HasUniformSamplerLoss` are
+  **non-vacuous** definitions (the `idealCorrect` field genuinely constrains: one cannot set
+  `idealSampler := trapdoorSample` and dodge it, because that would re-demand the unproven isShort-half).
+  Defect is only that `euf_cma_security` discards `hSamplerLoss` (UN-2), so this well-formed hypothesis
+  currently contributes nothing. `ntruPSFCollisionProblem` (`:150`) samples valid keys (`gen_sound`,
+  `HardRelation.lean:30`). *Recommendation:* once UN-2 is proven, consume `hSamplerLoss`; consider adding
+  a `SamplerQuality` witness to demonstrate inhabitation.
+- **TS-8-residual** (`F8`/`TS-8`) — `s₂` formula faithfulness (sign convention / basis pairing) and the
+  intentional L∞ omission are not yet settled against c-fn-dsa@`33026d4d` (submodule unretrievable);
+  medium confidence. None of it breaks the eval lemma. *Recommendation:* add a cross-reference comment;
+  confirm L∞ omission is intentional (matches v1.2/c-fn-dsa, diverges from FN-DSA M3).
+
+**nit**
+- **NIT-1 / TS-7** — `Scheme.lean:209` new `linter.style.show` warning (use `change` not `show`),
+  introduced by the eval-lemma proof. Cosmetic. *Recommendation:* replace `show` with `change`.
+- **NIT-2 / TS-6** — the new lemma `falconPSF_eval_trapdoorSample` is **orphaned**: grep finds it
+  referenced only at its own declaration/docstring (`Scheme.lean:156,202`); no downstream proof consumes
+  it (all `Correct`-demanding GPV theorems are sorried). Sound but presently inert — a valid incremental
+  step that does not yet move an end-to-end soundness needle. *Recommendation:* wire it toward
+  `verify_sign_correct` via a partial `Correct`-eval-half consumer once `sign` has a body.
+- **NIT-3 / TS-7** — baseline citation drift: §4 cites GPV sorry *body* lines `270/283/332/363` while the
+  build reports *declaration* lines `266/279/316/344`. Same four declarations; normalize the doc.
+
+**ok (verified faithful / well-formed)**
+- **eval-lemma** (`F2`/`TS-1`) — proven, sound, non-vacuous, honestly scoped (focus Q1/Q5 above).
+- **isShort-half correctly NOT claimed** (`F3`) — no `falconPSF.Correct` instantiation anywhere.
+- **B1 leaf+node** (`F4`/`F8`) — `FalconTree.leaf (σ₀ σ₁ l01Re l01Im)` (`Primitives.lean:94`); leaf body
+  (`:262-284`) mirrors `ffsampFFTDeepest` (`FFT.lean:356-391`); node (`:285-293`) mirrors `ffsampFFTInner`
+  (`FFT.lean:419-462`). **The §3 SD-5 "one sigma, no l01" premise is stale** — re-confirmed. Medium
+  confidence on exact σ values / bit-level twiddle equality (gated on the unwritten `keyGenFromSeed` tree
+  builder, `Scheme.lean:121`).
+- **toFFTTarget** (`F5`) — `Scheme.lean:135-143` = Alg 10 = concrete `fpolyApplyBasis` (`FFT.lean:301-312`);
+  `invQ ≈ 1/12289` (not bit-exact-verified).
+
+### (3) Changes vs the §3 table (for refresh)
+- **TS-5 (§3 line 102): ⬆ RESOLVED (eval-half).** Was "spec-divergence (CONFIRMED s2) / false-as-constructed".
+  The fix landed: `fromFFTPreimage` now returns `(c − s₂·h, s₂)`, `eval(trapdoorSample)=c` is **proven**
+  (`falconPSF_eval_trapdoorSample`, `Scheme.lean:202`), and the PSF `s₁` now **agrees** with `verify`
+  (`:269`). Mark §3 TS-5 as **RESOLVED (eval-half) s2**; the *remaining* open item is the **isShort-half**
+  of `Correct(falconPSF)` (needs the rejection/retry model — B2) plus the new residual SD-TS5b (abstract
+  `isShort` vs concrete norm-gate rounding mismatch).
+- **NEW finding SD-TS5b** — abstract `isShort`/`pairL2NormSq` (verify-consistent `s₁`) vs the concrete
+  signer's `rint(v₀)`-based norm gate diverge under independent rounding. Add to §3 as a spec-divergence
+  rider on the (now-resolved) TS-5.
+- **UN-1 / UN-2 clarification** — their eval-half obligation is now *available* (no longer blocked on
+  TS-5); they remain unsound-as-stated purely because `sign` is `sorry` (UN-1) and the GPV chain +
+  discarded hypotheses (UN-2). Update §3 lines 88-89 to drop "blocked on TS-5 redefinition" — only B2 / GPV
+  remain.
+- **SD-5 (§3 line 87): confirmed CLOSED** — leaf carries `(σ₀,σ₁,l01)`; the stale "one sigma" wording
+  should be removed. Follow-up (producer-side σ values) tracked under B2/B4.
+- **NEW nits** — NIT-1 (`Scheme.lean:209` show/change lint, a session-2 regression), NIT-3 (GPV
+  decl-vs-body line normalization). Neither affects the sorry count.
+- **No new sorrys; §4 baseline count needs no edit (still 20 + 4 GPV).** All anchors resolve. Note the §4
+  anchor `Scheme.lean:~224 (sign)` is now `Scheme.lean:254`, and `Scheme.lean:~91`/`Primitives.lean:~91`
+  for the leaf is `Primitives.lean:94`.
+
+### (4) Recommended next entry point on the critical path
+**TS-5 (eval-half) is done; B2 is now unblocked and is the critical path.** Order:
+1. **`isShort`-half of `Correct(falconPSF)` + `sign` (B2)** — `Scheme.lean:254`, `:121`. Decide the
+   rejection/retry model (fuel-bounded loop vs weakening `Correct` to probabilistic — `ffSampling` can
+   emit over-long vectors and `ProbComp` has no retry combinator). Then implement `sign` as the retry over
+   `signAttempt` (fresh `Salt`, `hashToPointForPublicKey`, feeding `compress` the same `s₂`), and
+   `keyGenFromSeed` (constructive `validKeyPair` witness; real impl gated on B4). This is the prerequisite
+   to making UN-1 (`verify_sign_correct`) non-vacuous.
+2. **Wire the eval lemma toward `verify_sign_correct`** (close NIT-2's orphan status) once `sign` exists.
+3. **Only after:** `forgery_yields_collision` (`GPVHashAndSign.lean:332`) is the highest-leverage GPV
+   obligation — it turns UN-2 from conjectural into a real bound and lets `hSamplerLoss`/`SamplerQuality`
+   carry weight (TS-5-residual).
+4. **Quick wins (parallel):** fix NIT-1 (`show`→`change` at `Scheme.lean:209`); normalize §4 GPV citation
+   lines (NIT-3); document the SD-TS5b abstract-vs-concrete `isShort` rounding caveat in `fromFFTPreimage`.
+
+*Residual uncertainty:* (a) `s₂` sign-convention/basis-pairing faithfulness vs c-fn-dsa@`33026d4d` is
+uninterpreted and unverifiable locally (submodule not retrievable) — medium confidence on F6/TS-8. (b) B1
+leaf σ-value/twiddle bit-equality is gated on the unwritten `keyGenFromSeed` tree builder. (c) abstract
+`sign` salt-refresh is verifiable only via docstring + concrete signer while the body is `sorry`. (d) The
+SD-TS5b rounding mismatch is benign for the verify identity but unquantified for any future
+abstract-`isShort`↔concrete-gate link.
 
 ## 5. Session log
 - **2026-06-25 — session 0 (review + bootstrap).** Three-way faithfulness/soundness audit (21-agent
@@ -130,6 +420,33 @@ Do not trust this doc blindly — the protocol re-validates it.
   risk for B2/B3). Residual: c-fn-dsa submodule empty locally (pin `33026d4d`), FN-DSA IPD still 404.
   **Next entry point: B2** (define `sign` + `keyGenFromSeed`); pin the σ convention (SIGN-3) when building
   the leaf; B6/B9 parallelizable.
+
+- **2026-06-25 — session 2 START (review only, HEAD `bfcccbda`).** Two-dimension adversarial sweep
+  (Sign+ffSampling, Theorem-soundness), every finding re-verified against source, 0 refuted (one
+  severity-tag revision). **Drift: none** — 20 live Falcon sorrys + 4 GPV load-bearing intact; `sign`/
+  `keyGenFromSeed` still `sorry`; B2 un-started. **PRIORITY validated: `Correct(falconPSF)` is false
+  as constructed** (TS-5) — `fromFFTPreimage` independently `ifftRound`s `v₀,v₁` so `eval = c−(v₀+v₁·h) ≠ c`
+  after rounding, and the PSF `s₁ = c−round(v₀)` disagrees with `verify`'s `s₁ = c−s₂·h` (`Scheme.lean:163`
+  vs `:240`). Elevated TS-5 in §3 from "incompleteness/likely-false (s1)" to **spec-divergence (confirmed)**;
+  lead ruling spec-divergence-primary + unsound-contingent (`Correct` never instantiated with `falconPSF`).
+  **B1 leaf re-confirmed faithful** to `ffsampFFTDeepest` (SD-5 premise stale; closed). No Falcon code edited.
+  Residual: NTRUSolver/FPRBridge per-file split not re-counted; producer-side leaf params unverified (B2).
+  **Next entry point: fix TS-5 in `fromFFTPreimage` (s₁ := c − s₂·h), THEN B2** (`sign`+`keyGenFromSeed`).
+
+- **2026-06-25 — session 2 END (TS-5 fix + eval lemma; lead-reviewer synthesis §4c).** The TS-5 fix
+  landed (`fromFFTPreimage` → `(c − s₂·h, s₂)`, `v₀` dropped, `pk` threaded, `Scheme.lean:158-164,188-191`)
+  plus the new fully-proven `falconPSF_eval_trapdoorSample` (`:202-220`). Two-dimension adversarial sweep
+  (Sign+ffSampling, Theorem-soundness), **18 findings, all confirmed, 0 refuted**. Re-verified this session:
+  HEAD `bfcccbda`; eval-lemma proof sound + non-vacuous (focus Q1); `s₂=round(f·z₀+F·z₁)` faithful (Q2);
+  dropping `v₀` loses nothing eval-side but introduces **SD-TS5b** (abstract `isShort` on verify-consistent
+  `s₁` vs concrete `rint(v₀)`-based norm gate — agree only mod rounding, Q3); **no new sorry** (Q4) — one
+  new style-lint at `Scheme.lean:209` (`show`→`change`); **isShort-half correctly NOT claimed** (Q5).
+  **Drift: none** — 20 live Falcon sorrys (per-file split re-counted this session) + 4 GPV intact. §3 TS-5
+  ⬆ to **RESOLVED (eval-half)**; SD-5 confirmed closed; UN-1/UN-2 no longer blocked on TS-5 (only B2 / GPV
+  chain). New nits: NIT-1 (`:209` lint regression), NIT-2 (eval lemma orphaned), NIT-3 (GPV decl-vs-body
+  line normalization). **Next entry point: B2** (`isShort`-half + `sign` `:254` + `keyGenFromSeed` `:121`),
+  now unblocked; then `forgery_yields_collision` (`GPVHashAndSign.lean:332`). Residual: `s₂` sign-convention
+  vs c-fn-dsa@`33026d4d` uninterpreted (submodule not retrievable); leaf σ-values gated on `keyGenFromSeed`.
 
 ## 6. Drift-check snippet
 The **authoritative** live-`sorry` count is the build warnings (raw `grep` over-counts because comments

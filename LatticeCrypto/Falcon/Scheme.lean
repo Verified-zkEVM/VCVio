@@ -133,23 +133,24 @@ noncomputable def toFFTTarget (c : Rq p.n) (sk : SecretKey p) :
 
 /-- Convert the ffSampling output back to a pair `(s₁, s₂) ∈ R_q × R_q`.
 
-Given the hash target `c`, the secret basis, and the sampled FFT-domain vector `z`, this
-reconstructs the lattice point `v = z · [[g, -f], [G, -F]]`, inverse-transforms and rounds
-it to coefficients, then returns
+Given the hash target `c`, the public key, the secret basis, and the sampled FFT-domain
+vector `z`, this reconstructs `s₂` from the basis (inverse-transform and round), then sets
 
-- `s₁ = c - v₀`
-- `s₂ = -v₁`
+- `s₂ = -v₁`  where  `v₁ = round(IFFT(-(f·z₀ + F·z₁)))`
+- `s₁ = c - s₂ · h`
 
-This matches the post-sampling basis application in Falcon's reference signing flow. -/
-noncomputable def fromFFTPreimage (c : Rq p.n) (sk : SecretKey p)
+`s₁` is recomputed from `s₂` (rather than from an independently-rounded `v₀`), so the PSF
+identity `s₁ + s₂ · h = c` holds **exactly**. This matches `Falcon.verify` — which stores only
+`s₂` and recomputes `s₁` — and the real Falcon / FN-DSA signing flow, and is what makes
+`falconPSF.eval (trapdoorSample …) = c` (see `falconPSF_eval_trapdoorSample`). Independent
+rounding of a separate `v₀` would break the identity (the rounded `v₀ + v₁ · h ≢ 0 mod q`). -/
+noncomputable def fromFFTPreimage (c : Rq p.n) (pk : PublicKey p) (sk : SecretKey p)
     (z : FFTPair p.fftDepth) : Rq p.n × Rq p.n :=
-  let v₀FFT := Primitives.mulFFT z.1 (prims.fftInt sk.g) +
-    Primitives.mulFFT z.2 (prims.fftInt sk.capG)
   let v₁FFT := -(Primitives.mulFFT z.1 (prims.fftInt sk.f) +
     Primitives.mulFFT z.2 (prims.fftInt sk.capF))
-  let v₀ := IntPoly.toRq (prims.ifftRound v₀FFT)
-  let v₁ := IntPoly.toRq (prims.ifftRound v₁FFT)
-  (c - v₀, -v₁)
+  let s₂ := -IntPoly.toRq (prims.ifftRound v₁FFT)
+  let s₁ := c - negacyclicMul s₂ pk.h
+  (s₁, s₂)
 
 /-- Falcon as a `PreimageSampleableFunction`.
 
@@ -173,11 +174,39 @@ to the ideal discrete Gaussian over the NTRU lattice coset. -/
 noncomputable def falconPSF : PreimageSampleableFunction
     (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n) where
   eval pk x := x.1 + negacyclicMul x.2 pk.h
-  trapdoorSample _pk sk c := do
+  trapdoorSample pk sk c := do
     let t := toFFTTarget p prims c sk
     let z ← Primitives.ffSampling prims p.fftDepth t sk.tree
-    return fromFFTPreimage p prims c sk z
+    return fromFFTPreimage p prims c pk sk z
   isShort x := decide (pairL2NormSq x.1 x.2 ≤ p.betaSquared)
+
+/-- The `eval`-half of `PreimageSampleableFunction.Correct` for the Falcon PSF: every output
+of `trapdoorSample` is an exact preimage, `eval pk x = c`. This holds *by construction* because
+`fromFFTPreimage` sets `s₁ := c - s₂ · h`, so `eval pk (s₁, s₂) = s₁ + s₂ · h = c`.
+
+(The full `Correct` predicate also requires `isShort x = true` for every output; that half is
+**not** provable for the raw sampler — `ffSampling` can occasionally produce an over-long vector,
+which is why real Falcon retries. Establishing it needs a rejection/retry model for
+`trapdoorSample`; see B2 in `docs/agents/falcon-review.md`.) -/
+theorem falconPSF_eval_trapdoorSample (pk : PublicKey p) (sk : SecretKey p) (c : Rq p.n) :
+    ∀ x ∈ support ((falconPSF p prims).trapdoorSample pk sk c),
+      (falconPSF p prims).eval pk x = c := by
+  -- For any `s₂`, evaluating the recomputed pair `(c - s₂·h, s₂)` returns `c`.
+  have eval_pair : ∀ s₂ : Rq p.n,
+      (falconPSF p prims).eval pk (c - negacyclicMul s₂ pk.h, s₂) = c := by
+    intro s₂
+    change (c - negacyclicMul s₂ pk.h) + negacyclicMul s₂ pk.h = c
+    -- `Rq` equalities are coefficient-wise (the bespoke `Sub`/`Add` make `ring`/`abel`
+    -- inapplicable on `Rq` directly); reduce to `ZMod` and cancel there.
+    ext i
+    simp only [LatticeCrypto.NegacyclicRing.coeff_add, LatticeCrypto.NegacyclicRing.coeff_sub]
+    ring
+  intro x hx
+  simp only [falconPSF, support_bind, support_pure, Set.mem_iUnion, Set.mem_singleton_iff,
+    exists_prop] at hx
+  obtain ⟨z, _, rfl⟩ := hx
+  -- `fromFFTPreimage … z` is definitionally `(c - negacyclicMul s₂ pk.h, s₂)`.
+  exact eval_pair _
 
 /-! ### One-Shot Signing -/
 
