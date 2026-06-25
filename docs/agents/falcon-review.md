@@ -46,7 +46,8 @@ Do not trust this doc blindly — the protocol re-validates it.
 ## 1. Status summary
 - **Faithful?** v1.2: no (by design — FN-DSA target). FN-DSA: partial (omits L∞, leaf-range, 79-bit).
   Falcon+/c-fn-dsa: yes at the concrete/constant level.
-- **Complete?** No — 20 live `sorry`s incl. 3 load-bearing primitives.
+- **Complete?** No — **19** live `sorry`s (s4: `sign` implemented, was 20). `keyGenFromSeed` + NTRUSolve
+  ascent + the security/correctness proofs remain.
 - **Sound?** No — 0/4 security theorems proven; 2 are unsound *as stated*; the generic GPV chain is `sorry`.
   (s2-END) **TS-5 fixed + verified**: `fromFFTPreimage` now reconstructs `s₁ := c − s₂·h` (`Scheme.lean:163`),
   so `eval (trapdoorSample) = c` holds — **proven, re-audited sound** (`falconPSF_eval_trapdoorSample`,
@@ -66,7 +67,11 @@ Do not trust this doc blindly — the protocol re-validates it.
   (`keyGenFromSeed`) that populates the leaf from the LDL, and an equivalence lemma
   `abstract ffSampling ≈ ffsampFFTDeepest`.
 - [ ] **B5** — Make `samplerZ_correct` satisfiable (ideal sampler + `SamplerQuality` Rényi).
-- [~] **B2** — Define `sign` + `keyGenFromSeed` (Option B / abstract PSF loop). *(enquirer goal — now unblocked)*
+- [~] **B2** — **(s4) `sign` DONE** — implemented as the fuel-bounded `Option` rejection loop
+  (`Scheme.lean:253`, `sign : … → ℕ → ProbComp (Option Signature)`); the `sign` sorry is **resolved**
+  (original enquirer goal met). New helper `rqToIntPolyCentered` (`Scheme.lean:243`). **Remaining:**
+  `keyGenFromSeed` (still sorry) + the `verify_sign_correct` proof. Define `sign` + `keyGenFromSeed`
+  *(Option B / abstract PSF loop)*
   **(s2-END) Prerequisite TS-5 DONE + re-audited sound (§4c)** — `fromFFTPreimage` recomputes `s₁ := c − s₂·h`
   (`Scheme.lean:163`); `eval(trapdoorSample)=c` proven (`falconPSF_eval_trapdoorSample`, `:202`), PSF `s₁`
   agrees with `verify` (`:269`). **Remaining:** the `isShort` half (rejection/retry model —
@@ -79,12 +84,22 @@ Do not trust this doc blindly — the protocol re-validates it.
   **LOCKED PLAN (implement next session):**
   (a) `sign : pk sk msg → (maxAttempts : ℕ) → ProbComp (Option Signature)` mirroring `fsAbortSignLoop`:
       each iter sample salt → `c := hashToPointForPublicKey pk.h salt msg` → `signAttempt`; on `some (_,s₂)`
-      compress and `return some ⟨salt, comp⟩`; on `none` or compress-fail, recurse; `0 ⇒ none`.
+      `compress (Rq→IntPoly s₂) p.sbytelen` (**F7: exact `slen = p.sbytelen`**, matching `verify`'s
+      `decompress … p.sbytelen` so `compress_decompress` chains); on `some comp` `return some ⟨salt, comp⟩`;
+      on `none`/compress-fail, recurse; `0 ⇒ none`.
+      **F5 (s4-START): the `some`-branch is NOT compress-success-by-construction** — `compress` fails when a
+      centered coeff `|x|>2047` (or overflows `dlen`), independent of the L2 sum, and such a vector can pass
+      `isShort` (β²≈34M) yet fail `compress`. So loop *productivity* is **probabilistic, not constructive**;
+      the `none`-on-exhaustion branch handles it. Do NOT try to prove the loop yields `some`.
   (b) Needs a helper `Rq → IntPoly` (centered, via `centeredRepr` per coeff; inverse of `IntPoly.toRq`) to
       feed `compress : IntPoly → ℕ → Option …`. (`Rq`/`IntPoly` are `Vector`-backed: cf. `Concrete/Sign.lean:241`
       `Vector.ofFn … : IntPoly n` and `rqToUInt16Array` using `.toArray`.)
-  (c) Restate `verify_sign_correct` against `some sig ∈ support (sign … maxAttempts)`; the `some`-branch is
-      short by construction (so the isShort-half of `Correct` is discharged on outputs). `keyGenFromSeed`
+  (c) Restate `verify_sign_correct` against `some sig ∈ support (sign … maxAttempts)`; the `some`-branch had
+      **both** `isShort` and `compress = some` (so its norm bound + roundtrip are discharged on outputs).
+      ⚠ Two-world gap (UN-1, reconfirmed s4): `Falcon.verify` (byte-level, `hashToPointForPublicKey`) is NOT
+      the verify the security theorems use (`falconSignatureAlg = GPVHashAndSign (falconPSF …)` queries the
+      RO; sig type `Salt × (Rq×Rq)`). So `verify_sign_correct` is about the executable/byte layer; reconciling
+      the two worlds is separate. `keyGenFromSeed`
       still a constructive `validKeyPair` witness (real impl gated on B4). Mind expected build friction
       (bespoke `Rq` instances — `ext`/coeff-wise, not `ring`/`abel`; cf. s2 eval-lemma). Then
   `sign` (`Scheme.lean:254`, single-attempt over the rejection sampler, matching GPV's
@@ -129,15 +144,15 @@ Do not trust this doc blindly — the protocol re-validates it.
 14-bit PK packing, `toFFTTarget` sign-folding, `concrete_verify_eq_verify` sound (conditional), no
 `native_decide`/`axiom` in the Concrete layer.
 
-## 4. Baseline — validated 2026-06-25 @ branch `falcon-faithfulness-review` (after session 1)
-- **Live `sorry`s in `LatticeCrypto/Falcon/` = 20** (unchanged by session 1): NTRUSolver 11 · FPRBridge 5 ·
-  Scheme 2 · Security 2. Authoritative signal = the build's `declaration uses 'sorry'` warnings, **not**
-  a raw `grep`: as of session 1 the raw `grep -c sorry` over `Falcon/` returns **29** tokens (was 25)
-  because the new ⚠ CONJECTURAL markers + leaf docstrings mention the word "sorry" in prose. `ApproxArith.lean`
-  still contributes 5 comment-only tokens.
+## 4. Baseline — validated 2026-06-25 @ branch `falcon-faithfulness-review` (after session 4)
+- **Live `sorry`s in `LatticeCrypto/Falcon/` = 19** (s4: `sign` implemented, was 20): NTRUSolver 11 ·
+  FPRBridge 5 · **Scheme 1** (`keyGenFromSeed` only — `sign` resolved) · Security 2. Authoritative signal =
+  the build's `declaration uses 'sorry'` warnings (= **24** total: 19 Falcon + 4 GPV + 1 `ToMathlib/…/RenyiDivergence.lean:736`),
+  **not** a raw `grep` (prose ⚠ markers + docstrings mention "sorry"). `ApproxArith.lean` = 5 comment-only.
 - **Load-bearing generic `sorry`s** (`VCVio/CryptoFoundations/GPVHashAndSign.lean`): decls at 266, 279, 316, 344
   (`sorry` tokens at 270, 283, 332, 363).
-- **Anchor citations** (must still resolve): `Scheme.lean:121` (`keyGenFromSeed`), `Scheme.lean:~224` (`sign`),
+- **Anchor citations** (must still resolve): `Scheme.lean:121` (`keyGenFromSeed`), `Scheme.lean:~253` (`sign`,
+  now fuel-bounded `Option` loop) & `~243` (`rqToIntPolyCentered`),
   `Security.lean` theorems `verify_sign_correct` (~109) & `euf_cma_security` (~300),
   `Primitives.lean:~91` (`leaf σ₀ σ₁ l01Re l01Im`) & `~251-271` (`ffSampling` κ=0) ↔ `FFT.lean:356-391`
   (`ffsampFFTDeepest`), `Instance.lean:186-191` (sampler ℝ path). (`Primitives.lean:287` vacuous law — removed.)
@@ -472,13 +487,33 @@ abstract-`isShort`↔concrete-gate link.
   deferred to a fresh session** to keep context clean (expected multi-iteration build friction from `Rq`'s
   bespoke instances). Next entry point: implement §2/B2 (a)(b)(c).
 
+- **2026-06-25 — session 4 START (review + doc; pre-B2-implementation).** Drift clean at `b9277622`
+  (20 live Falcon + 4 GPV + 1 ToMathlib; TS-5 fix + B1 leaf re-confirmed sound). Scoped review pressure-tested
+  the B2 plan and surfaced two implementation constraints now folded into §2/B2: **F5** (some-branch not
+  compress-success-by-construction ⇒ loop productivity is probabilistic, use `none`-on-exhaustion) and **F7**
+  (`sign` must `compress … p.sbytelen` exactly). Refuted a false "Concrete files deleted" alarm (TS-4 →
+  path-attribution nit). Next: implement §2/B2 (a)(b)(c).
+
+- **2026-06-25 — session 4 (B2: `sign` implemented).** START: drift clean at `b9277622`; scoped review
+  surfaced F5 (productivity probabilistic) + F7 (`compress … p.sbytelen`). Implemented `Falcon.sign`
+  (`Scheme.lean:253`) as a fuel-bounded `Option` rejection loop mirroring `fsAbortSignLoop`, plus helper
+  `rqToIntPolyCentered` (`:243`); restated `verify_sign_correct` against `some sig ∈ support (sign … maxAttempts)`.
+  **The `sign` sorry is resolved — original enquirer goal met.** Live Falcon sorries **20→19**; build green.
+  END review (Sign+ffSampling, Encoding, Theorem-soundness): **0 refuted**, confirmed `rqToIntPolyCentered`
+  is the exact inverse of `IntPoly.toRq` (via `centeredRepr_intCast`), the loop faithful to M1/M2/M8, no new
+  unsoundness, and `verify_sign_correct` now non-vacuous (still `sorry` = incompleteness). Persisting:
+  **two-world gap (UN-1/TS-4)** — `Falcon.verify` (byte-level) ≠ the GPV/`falconPSF` verify `euf_cma` targets;
+  needs a bridge lemma. Next entry point: **`keyGenFromSeed`** (constructive `validKeyPair` witness) and/or the
+  `verify_sign_correct` proof (chain `falconPSF_eval_trapdoorSample` + `compress_decompress` + `isShort`), and
+  the two-world bridge lemma. B3a/B6/B9 remain parallelizable.
+
 ## 6. Drift-check snippet
 The **authoritative** live-`sorry` count is the build warnings (raw `grep` over-counts because comments
 now mention "sorry" in prose — see §4). Quick deterministic check:
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 git branch --show-current                     # expect falcon-faithfulness-review
-# Authoritative live-sorry count (expect 20 in Falcon/, +4 in GPVHashAndSign):
+# Authoritative live-sorry count (expect 24 = 19 Falcon + 4 GPV + 1 ToMathlib/RenyiDivergence):
 lake build LatticeCrypto.Falcon.Security LatticeCrypto.Falcon.Concrete.FPRBridge \
   LatticeCrypto.Falcon.Concrete.NTRUSolver 2>&1 | grep -c "declaration uses"
 grep -rcn "sorry" LatticeCrypto/Falcon/ | grep -v ':0' | sort -t: -k2 -rn  # per-file (incl. prose)

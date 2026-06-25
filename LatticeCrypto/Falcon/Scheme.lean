@@ -228,6 +228,40 @@ noncomputable def signAttempt (pk : PublicKey p) (sk : SecretKey p) (c : Rq p.n)
   else
     return none
 
+/-- Centered integer lift of an `R_q` element (coefficients in `[-(q-1)/2, (q-1)/2]`), the
+coefficient-wise inverse of `IntPoly.toRq`. Used to feed the signature compressor, which
+consumes an `IntPoly`. -/
+def rqToIntPolyCentered {n : ℕ} (f : Rq n) : IntPoly n :=
+  let a := f.toArray
+  Vector.ofFn fun i : Fin n => centeredRepr (a.getD i.1 0)
+
+/-- Falcon signing (Falcon+, Algorithm 10), as a fuel-bounded rejection loop.
+
+Mirrors `FiatShamir.WithAbort.fsAbortSignLoop` and the concrete `Concrete.Sign.concreteSign`:
+on each of up to `maxAttempts` attempts, sample a fresh 40-byte salt `r`, hash
+`c = HashToPoint(r, pk, message)`, and run `signAttempt`. On a short preimage `(_, s₂)` that
+also compresses within `p.sbytelen`, return `some ⟨r, compress s₂⟩`; otherwise retry with a
+fresh salt. Returns `none` if all `maxAttempts` attempts abort.
+
+The `Option` result mirrors the `FiatShamirWithAbort` convention: the acceptance + compression
+check cannot hold by construction (a vector can pass the `ℓ₂` `isShort` bound yet have a
+coefficient too large for `compress`), so loop *productivity* is probabilistic — the `none`
+branch handles exhaustion. The compression length is exactly `p.sbytelen`, matching `verify`'s
+`decompress … p.sbytelen` so the `compress_decompress` roundtrip chains. -/
+noncomputable def sign (pk : PublicKey p) (sk : SecretKey p) (msg : List Byte) :
+    ℕ → ProbComp (Option Signature)
+  | 0 => return none
+  | maxAttempts + 1 => do
+    let salt ← ($ᵗ (Bytes 40) : ProbComp (Bytes 40))
+    let c := prims.hashToPointForPublicKey pk.h salt msg
+    let r ← signAttempt p prims pk sk c
+    match r with
+    | some (_, s₂) =>
+        match prims.compress (rqToIntPolyCentered s₂) p.sbytelen with
+        | some comp => return (some ⟨salt, comp⟩)
+        | none => sign pk sk msg maxAttempts
+    | none => sign pk sk msg maxAttempts
+
 /-- Falcon verification (Algorithm 16).
 
 Given `(pk, message, signature)`:

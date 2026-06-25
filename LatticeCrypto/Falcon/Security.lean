@@ -95,6 +95,37 @@ namespace Falcon
 
 variable (p : Params) (prims : Primitives p)
 
+/-! ### Correctness -/
+
+/-- Falcon verification correctness: if the key pair is valid and signing produces a
+signature (does not abort), then verification accepts.
+
+The proof relies on:
+1. The NTRU equation ensuring `s₁ + s₂ · h = c mod q`.
+2. The norm bound from `ffSampling` ensuring `‖(s₁, s₂)‖₂² ≤ ⌊β²⌋`.
+3. The compress/decompress roundtrip preserving `s₂`. -/
+-- ⚠ UNPROVEN (`sorry` body): a genuine, now-non-vacuous obligation (s2 defined `sign`). The
+-- hypothesis ranges over the `some`-branch of the real `Falcon.sign` rejection loop, i.e. an
+-- attempt where both `isShort` and `compress = some` held; from those the proof must chain
+-- `eval = c` (`falconPSF_eval_trapdoorSample`) + `compress_decompress` + the norm bound. Not yet
+-- discharged. Note the two-world gap (UN-1): this concerns `Falcon.verify`, not the GPV verify
+-- the EUF-CMA theorems use. See `docs/agents/falcon-review.md` (UN-1 / B2).
+theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p)
+    (hvalid : validKeyPair p pk sk = true)
+    (msg : List Byte) (maxAttempts : ℕ) (sig : Signature)
+    (h_laws : Primitives.Laws prims)
+    (hsig : some sig ∈ support (Falcon.sign p prims pk sk msg maxAttempts)) :
+    Falcon.verify p prims pk msg sig = true := by
+  -- The proof proceeds by unfolding `sign` and `verify`:
+  -- 1. `sign` produces (salt, compressedS2) where s₂ came from trapdoorSample
+  -- 2. `verify` decompresses s₂, recomputes c, checks the norm bound
+  -- Key steps:
+  -- (a) compress/decompress roundtrip (from h_laws.compress_decompress)
+  -- (b) PSF correctness: trapdoorSample output satisfies eval pk (s₁,s₂) = c
+  --     and isShort (s₁,s₂) = true
+  -- (c) The norm bound from (b) matches the verify check
+  sorry
+
 /-! ### NTRU-SIS Hardness Assumption -/
 
 /-- The NTRU-SIS problem: given `h ∈ R_q` (the Falcon public key), find a short nonzero
