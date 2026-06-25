@@ -43,8 +43,11 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
 - **Complete?** No — **19 live Falcon sorries** (+4 GPV +1 ToMathlib). `sign` done (s4); `keyGenFromSeed` +
   NTRUSolve ascent + the security/correctness proofs remain.
 - **Sound?** No — 0/4 security theorems proven; `euf_cma_security`/`verify_sign_correct` are `sorry`; the
-  generic GPV chain is `sorry`. **But** the pieces built (B1, TS-5, `falconPSF_eval_trapdoorSample`, `sign`)
-  were re-audited sound at HEAD (could not refute).
+  generic GPV chain is `sorry`. **But** the pieces built (B1, TS-5, `falconPSF_eval_trapdoorSample`, `sign`,
+  B9, **B6 kernel equalities**) were re-audited sound at HEAD (could not refute); B6's two kernel-equality
+  theorems are standard-axioms-only.
+- **Verify bridge:** `concrete_verify_eq_verify` is proven modulo **3** explicit hyps (was 4): the U32-kernel
+  equality assumptions are eliminated (B6); remaining = the two codec round-trips + one numeric no-overflow bound.
 - **One genuine wire bug:** B9/ENC-3 over-length signature malleability (not just an intended divergence).
 - Original enquiry ("hash to sign is a sorry") — **RESOLVED** (s4).
 
@@ -67,8 +70,14 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
   `concrete_verify_eq_verify` nil-branch (`FPRBridge.lean:141`).
 - [ ] **ENC-2** — repair/delete the orphan `Falcon.Encoding`/`Laws` (`sigDecode_sigEncode` false for the
   concrete codec). Unsound-as-stated.
-- [ ] **B6** — prove kernel equalities `negacyclicMulU32 = negacyclicMul`, `pairL2NormSqU32 = pairL2NormSq`
-  → make `concrete_verify_eq_verify` unconditional (`FPRBridge.lean:117–153`).
+- [x] **B6** (s7) — kernel equalities PROVEN (standard-axioms-only): `negacyclicMulU32_eq_negacyclicMul`
+  (unconditional, `Instance.lean:447`) + `pairL2NormSqU32_eq_pairL2NormSq` (under UInt64 no-overflow
+  `hn : 2*n*(modulus/2)^2 < 2^64`, `Instance.lean:645`). `concrete_verify_eq_verify` reduced **4→3 hyps**
+  (`FPRBridge.lean:121`): kernel-equality assumptions removed; remaining = 2 codec round-trips
+  (`hsigDecode`/`hpkDecode`) + 1 numeric `hn_ovf`. **NOT** fully unconditional — the ∀n norm equality is
+  false by UInt64 overflow at n≈2.4e11; `hn_ovf` holds with vast headroom for n∈{512,1024}
+  (2·1024·6144² ≈ 7.7e10 ≪ 2⁶⁴). ~19 private helpers; forIn→foldl bridge + Array.set! invariant
+  (technique cribbed, not imported, from `~/CompPoly` NTTFast).
 - [ ] **TS-4 two-world bridge** — `Falcon.verify` (byte-level) ↔ the GPV/`falconPSF` verify `euf_cma` targets.
 - [ ] **B4** — finish NTRUSolve ascent (`solve_NTRU_intermediate`/`depth0`) + prove `solve_NTRU ⊨ ntruEquation`
   (KG-2/KG-3) → real **`keyGenFromSeed`** (deferred here, KG-1; degenerate stub rejected as dishonest).
@@ -80,7 +89,9 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
   default target c-fn-dsa; re-check IPD at milestones (still 404).
 
 ## 3. Findings (current; full history in git + the Artifact §7)
-**Resolved & re-verified sound (s1–s4):** B8, B1/SD-5, TS-5, `falconPSF_eval_trapdoorSample`, B2 `sign`.
+**Resolved & re-verified sound (s1–s7):** B8, B1/SD-5, TS-5, `falconPSF_eval_trapdoorSample`, B2 `sign`,
+B9/ENC-3, **B6** kernel equalities (`negacyclicMulU32_eq_negacyclicMul`/`pairL2NormSqU32_eq_pairL2NormSq`,
+standard-axioms-only; END review re-verified the RHS chains target the genuine spec, not a weakened form).
 
 **Spec-divergence — intended (vs v1.2; faithful to FN-DSA/c-fn-dsa):**
 - SD-1/M1 pk-bound hash `salt‖SHAKE256(pk)[0:64]‖0x00 0x00‖msg` (`Sampling.lean:39–43`; FFI-cross-validated).
@@ -94,7 +105,7 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
 
 **Unsound-as-stated:**
 - UN-2 `euf_cma_security` — `sorry` + discards all hyps (`let _ :=`) + free `samplerLoss` trivially satisfiable (`Security.lean:302–333`).
-- UN-3 generic GPV chain `sorry` (`GPVHashAndSign.lean:266,279,316,344`); `euf_cma_split_bound` is `exact ⟨…sorry…⟩`.
+- UN-3 generic GPV chain `sorry` (`GPVHashAndSign.lean:270,283,332,363`); `euf_cma_split_bound` is `exact ⟨…sorry…⟩`.
 - ENC-2 orphan `Falcon.Encoding`/`Laws`; `sigDecode_sigEncode` false for the concrete codec.
 
 **Incompleteness (unfinished, statement sound-in-shape):**
@@ -102,7 +113,9 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
   `Falcon.verify` ≠ GPV verify; no bridge lemma.
 - ENC-1 `compress_decompress` only ever the assumed `h_laws` — no `Primitives.Laws (concretePrimitives)` instance.
 - F8/ENC-7 `toRq_rqToIntPolyCentered = id` not yet a lemma (needs the index bridge).
-- B6/VER-1 kernel equalities unproven; `concrete_verify_eq_verify` conditional on 4 hyps.
+- VER-1 (B6 done s7): `concrete_verify_eq_verify` now conditional on **3** hyps — the remaining genuine
+  obligations are the two codec round-trips `hsigDecode`/`hpkDecode` (ENC-1/F7); the numeric `hn_ovf` is
+  trivially dischargeable for concrete params. Kernel equalities proven. **Next entry point** (END-review pick).
 - KG-1 `keyGenFromSeed` sorry; KG-2 NTRUSolve ascent sorry; KG-3 no keygen correctness theorem.
 - **KG-4/KG-5** NTRUSolver local stubs (`FXR.sqr`/`vect_*`/`poly_big_to_small`) shadow the real, fully-implemented
   `Concrete/FXR.lean`/`PolyBigInt.lean` — ~8 redundant sorries. KG-6 `check_ortho_norm` vacuous (fixed by KG-4).
@@ -113,17 +126,19 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
 RCDT/FACCT/σ constants bit-exact, compress internal unique-encoding checks, headers + 14-bit PK packing,
 `toFFTTarget` sign-folding, GS-norm threshold 72251709809335 (v1.2/c-fn-dsa), no `native_decide`/`axiom` in Concrete.
 
-## 4. Baseline — verified 2026-06-25 @ `falcon-faithfulness-review` `f405e7c2`
+## 4. Baseline — verified 2026-06-25 @ `falcon-faithfulness-review` (s7, B6 landed; build-warning total 24)
 **19 live Falcon sorries** (authoritative = build `declaration uses 'sorry'` warnings, NOT raw `grep` which
-over-counts prose/comments):
+over-counts prose/comments). B6 added two PROVEN theorems (no new sorries) and removed two `concrete_verify_eq_verify`
+hypotheses; the live-sorry inventory is unchanged from s6:
 - `Concrete/NTRUSolver.lean` ×11 (decls 73,86,89,90,91,92,94,95,97,394,412) — ~8 are KG-4/KG-5 shadows.
 - `Concrete/FPRBridge.lean` ×5 (79,85,91,97,105). `Security.lean` ×2 (111 `verify_sign_correct`, 302 `euf_cma_security`).
   `Scheme.lean` ×1 (121 `keyGenFromSeed`). `ApproxArith.lean` = 0 live (241 prose; 257–264 commented).
-- Non-Falcon load-bearing: `GPVHashAndSign.lean` ×4 (266/279/316/344) + `ToMathlib/…/RenyiDivergence.lean:736` ×1.
+- Non-Falcon load-bearing: `GPVHashAndSign.lean` ×4 (270/283/332/363) + `ToMathlib/…/RenyiDivergence.lean:736` ×1.
   **Build-warning total = 24.** (Build reports *decl* lines; older notes cited *token* lines — same decls.)
 - Anchors: `Scheme.lean` `sign`:262, `rqToIntPolyCentered`:245, `falconPSF_eval_trapdoorSample`:202,
   `fromFFTPreimage`:158, `falconPSF`:185; `Primitives.lean` `FalconTree.leaf`:94, `ffSampling` κ=0:262;
-  `Concrete/FFT.lean` `ffsampFFTDeepest`:356.
+  `Concrete/FFT.lean` `ffsampFFTDeepest`:356; `Concrete/Instance.lean` `negacyclicMulU32_eq_negacyclicMul`:447,
+  `pairL2NormSqU32_eq_pairL2NormSq`:645; `Concrete/FPRBridge.lean` `concrete_verify_eq_verify`:121.
 
 ## 5. Session log (terse)
 - **s0** (review + bootstrap) — three-way audit (Artifact §7), branch + doc + harness created. No code.
@@ -145,9 +160,19 @@ over-counts prose/comments):
   dependent `concrete_verify_eq_verify` nil-branch (`FPRBridge.lean`, `hsbytelen.ne`) and removed a now-dead
   `hslen`. END review (Encoding+Verify): fix closes the bug with **no regression** (compress pads to exactly
   `dlen`; over-length is a strict superset of previously-rejected inputs), no second `sigDecode` fix needed,
-  no new sorry (19). Build + test module green. **Next: B6** (prove `negacyclicMulU32 = negacyclicMul`,
-  `pairL2NormSqU32 = pairL2NormSq` → make `concrete_verify_eq_verify` unconditional — the load-bearing
-  verify-path soundness gap), or KG-quickwin, or `verify_sign_correct`.
+  no new sorry (19). Build + test module green.
+
+- **s7** — **B6 kernel equalities PROVEN**: `negacyclicMulU32_eq_negacyclicMul` (unconditional) +
+  `pairL2NormSqU32_eq_pairL2NormSq` (under UInt64 no-overflow `hn`) in `Concrete/Instance.lean`
+  (~19 private helpers; forIn→foldl + Array.set! invariant, technique cribbed from `~/CompPoly` NTTFast,
+  not imported). START review validated the plan + caught the doc's "unconditional" overstatement; mid-proof
+  found the ∀n norm equality is **false** (UInt64 overflow at n≈2.4e11) → added the `hn` bound. Rewired
+  `concrete_verify_eq_verify` **4→3 hyps** (removed `hmul`/`hnorm`, added numeric `hn_ovf`); all three
+  theorems standard-axioms-only. END review (Verify): **GREEN, no regression** — independently re-ran
+  `#print axioms`, confirmed both RHS chains target the genuine spec (not weakened), `hn_ovf` honest, same
+  conclusion both branches; refuted its own tool's stale-GPV-lines finding. Full `LatticeCrypto` build green;
+  sorry count 24 (unchanged — B6 cuts hyps, not sorries). **Next: discharge the codec round-trips**
+  `hsigDecode`/`hpkDecode` (ENC-1/F7) to make the verify bridge end-to-end, or `verify_sign_correct`, or KG-quickwin.
 
 ## 6. Drift-check snippet
 ```bash
