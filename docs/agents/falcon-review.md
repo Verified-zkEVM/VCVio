@@ -70,8 +70,24 @@ Do not trust this doc blindly — the protocol re-validates it.
   **(s2-END) Prerequisite TS-5 DONE + re-audited sound (§4c)** — `fromFFTPreimage` recomputes `s₁ := c − s₂·h`
   (`Scheme.lean:163`); `eval(trapdoorSample)=c` proven (`falconPSF_eval_trapdoorSample`, `:202`), PSF `s₁`
   agrees with `verify` (`:269`). **Remaining:** the `isShort` half (rejection/retry model —
-  `ffSampling` can emit over-long vectors and ProbComp has no retry combinator; decide fuel-bounded loop vs
-  weakening `Correct` to probabilistic), then `sign` (`Scheme.lean:254`, single-attempt, matching GPV's
+  `ffSampling` can emit over-long vectors and ProbComp has no retry combinator. **DECISION (s3): make
+  `trapdoorSample` a rejection sampler** (resample until `isShort`). **s3-START investigation RESOLVED the
+  totality caveat:** the framework already models reject-and-retry signing in `VCVio/CryptoFoundations/FiatShamir/WithAbort.lean`
+  — `fsAbortSignLoop : … → ℕ → m (Option …)` is a **fuel-bounded total recursion** (try ≤ n attempts; `none`
+  if all abort), with **conditional** correctness (`fsAbortSignLoop_cache_invariant`: `some ⟹ verify accepts`).
+  `Falcon.signAttempt` already returns `ProbComp (Option (Rq×Rq))` — the exact per-attempt shape.
+  **LOCKED PLAN (implement next session):**
+  (a) `sign : pk sk msg → (maxAttempts : ℕ) → ProbComp (Option Signature)` mirroring `fsAbortSignLoop`:
+      each iter sample salt → `c := hashToPointForPublicKey pk.h salt msg` → `signAttempt`; on `some (_,s₂)`
+      compress and `return some ⟨salt, comp⟩`; on `none` or compress-fail, recurse; `0 ⇒ none`.
+  (b) Needs a helper `Rq → IntPoly` (centered, via `centeredRepr` per coeff; inverse of `IntPoly.toRq`) to
+      feed `compress : IntPoly → ℕ → Option …`. (`Rq`/`IntPoly` are `Vector`-backed: cf. `Concrete/Sign.lean:241`
+      `Vector.ofFn … : IntPoly n` and `rqToUInt16Array` using `.toArray`.)
+  (c) Restate `verify_sign_correct` against `some sig ∈ support (sign … maxAttempts)`; the `some`-branch is
+      short by construction (so the isShort-half of `Correct` is discharged on outputs). `keyGenFromSeed`
+      still a constructive `validKeyPair` witness (real impl gated on B4). Mind expected build friction
+      (bespoke `Rq` instances — `ext`/coeff-wise, not `ring`/`abel`; cf. s2 eval-lemma). Then
+  `sign` (`Scheme.lean:254`, single-attempt over the rejection sampler, matching GPV's
   no-retry `sign`) + `keyGenFromSeed` (`Scheme.lean:121`, constructive `validKeyPair` witness; real impl
   gated on B4). Mind new rider **SD-TS5b** (abstract `isShort` vs concrete norm-gate rounding).
 - [ ] **B3b** then **B3a** — conditional EUF-CMA via `euf_cma_split_bound`; then the generic GPV lemmas.
@@ -447,6 +463,14 @@ abstract-`isShort`↔concrete-gate link.
   line normalization). **Next entry point: B2** (`isShort`-half + `sign` `:254` + `keyGenFromSeed` `:121`),
   now unblocked; then `forgery_yields_collision` (`GPVHashAndSign.lean:332`). Residual: `s₂` sign-convention
   vs c-fn-dsa@`33026d4d` uninterpreted (submodule not retrievable); leaf σ-values gated on `keyGenFromSeed`.
+
+- **2026-06-25 — session 3 START + checkpoint (no code change).** Drift clean at `cd82fb3b`. Decisions locked:
+  B2 uses a **rejection sampler** realized as a **fuel-bounded `Option`-valued loop** (user choices), mirroring
+  `FiatShamir/WithAbort.fsAbortSignLoop` (prior art found this session — resolves the ProbComp totality caveat).
+  `sign : … → (maxAttempts : ℕ) → ProbComp (Option Signature)`. Full implementation plan recorded in §2/B2
+  (incl. the needed `Rq→IntPoly` centered helper + `verify_sign_correct` restatement). **Implementation
+  deferred to a fresh session** to keep context clean (expected multi-iteration build friction from `Rq`'s
+  bespoke instances). Next entry point: implement §2/B2 (a)(b)(c).
 
 ## 6. Drift-check snippet
 The **authoritative** live-`sorry` count is the build warnings (raw `grep` over-counts because comments
