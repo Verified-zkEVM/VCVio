@@ -432,6 +432,255 @@ leaf σ-value/twiddle bit-equality is gated on the unwritten `keyGenFromSeed` tr
 SD-TS5b rounding mismatch is benign for the verify identity but unquantified for any future
 abstract-`isShort`↔concrete-gate link.
 
+## 4d. Session 5 START synthesis (lead-reviewer report — 2026-06-25, HEAD `937a36c6`)
+
+**Scope.** Session 5 START review, immediately before the planned discharge of
+`verify_sign_correct` (`Security.lean:111-125`, currently `sorry`). Three adversarial dimensions
+(Sign+ffSampling, Encoding, Theorem-soundness), **25 findings, 24 confirmed, 1 refuted**
+(ENC-3, downgraded to ok). Independently re-verified this session: `git rev-parse HEAD` =
+`937a36c6…`; live-`sorry` per-file split by direct grep; the `verify_sign_correct` body + `h_laws`
+parameter (`Security.lean:114`); `sign` is a complete fuel loop (`Scheme.lean:262-274`); the
+`0x30+logn` header arithmetic vs v1.2's `0cc1nnnn`.
+
+> ⚠ **Branch note (low):** the §0 protocol expects branch `falcon-faithfulness-review`; `git
+> status` reports **`main`** at HEAD `937a36c6`. The drift counts and citations all resolve at this
+> HEAD, but reconcile the working branch before committing per §0 START step 1.
+
+### (1) Drift verdict vs recorded baseline of 19 live sorrys — **NO DRIFT**
+- **Live Falcon `sorry`s = 19, unchanged from the post-session-4 baseline (§4).** Per-file split
+  re-counted by direct grep this session: `NTRUSolver` 11 · `FPRBridge` 5 · **`Scheme` 1**
+  (`keyGenFromSeed`, `Scheme.lean:121` — `sign` is **not** a sorry, resolved session 4 at this very
+  HEAD) · `Security` 2 (`verify_sign_correct` `:125`, `euf_cma_security` `:333`) = **19**.
+  `ApproxArith.lean` shows 5 raw grep hits = 1 docstring (`:241`) + 4 commented-out fields
+  (`:257-264`), **0 live**. GPV load-bearing sorrys intact (`GPVHashAndSign.lean:270/283/332/363`).
+  No new sorry; no previously-`ok` theorem broken.
+- **Recorded-baseline arithmetic nit (carryover, §4 line 148-149):** the §4 prose headline "19"
+  is correct, but the *next-clause* per-file enumeration must read `11+5+1+2 = 19` (Scheme **1**,
+  not 2) — confirmed by all three audits' independent tallies. The "Scheme 2" relic and any
+  `11+5+2+2=20` enumeration is stale; §4 already says "Scheme 1" so only confirm, no edit needed.
+
+**Adversarial verdict on the planned `verify_sign_correct` discharge chain — PLAN SOUND, with two
+genuine prerequisite sub-obligations and one undischarged codec assumption.**
+
+The four questions in the session brief, resolved against live source (all three audits concur):
+
+1. **Is every step actually true and supported (fuel-loop support induction; isShort↔verify-norm
+   identity; `compress_decompress` quantifier matching `slen=p.sbytelen`)?** **YES for steps
+   (i)-(iii).**
+   - *(i) Fuel-loop induction.* `sign` (`Scheme.lean:262-274`) is structural recursion on
+     `maxAttempts`: base case `0 ⇒ none` (so `some sig ∉ support`, vacuous); inductive step is
+     `support_bind` over `salt ← $ᵗ (Bytes 40)` (total support), then `signAttempt`, then a match
+     whose **success** branch returns `some ⟨salt, comp⟩` only when
+     `compress (rqToIntPolyCentered s₂) p.sbytelen = some comp`, and whose **fail** branches recurse
+     into `sign … maxAttempts`. `signAttempt` (`Scheme.lean:234-240`) emits `some x` **only** inside
+     the `if isShort x` branch (else `none`), so `some x ∈ support` *forces* `isShort x = true`.
+     This is the norm-bound witness. Routine `support_bind`/`support_pure`/`mem_support_bind_iff`
+     machinery (VCVio/EvalDist) applies. [F7/TS-1 confirmed]
+   - *(ii)/(iii) isShort↔verify identity + `compress_decompress`.* `fromFFTPreimage` sets
+     `s₁ := c − negacyclicMul s₂ pk.h` (`Scheme.lean:163`); `verify` recomputes `s1 := c −
+     negacyclicMul s2 pk.h` with the **identical formula** (`Scheme.lean:289`) and checks the same
+     `decide (pairL2NormSq · · ≤ p.betaSquared)` proposition (`:192` vs `:290`). `c` is
+     `hashToPointForPublicKey pk.h salt msg` in both sign (`:267`) and verify (`:287`), same salt
+     (stored in `sig`, `:272`). `Primitives.Laws.compress_decompress` (`Primitives.lean:306-308`)
+     is `∀ s slen bytes, compress s slen = some bytes → decompress bytes slen = some s`, so it
+     instantiates at `slen = p.sbytelen` — and sign compresses (`:271`) / verify decompresses
+     (`:284`) at exactly `p.sbytelen`. `h_laws : Primitives.Laws prims` is an explicit in-scope
+     parameter (`Security.lean:114`). The quantifier matches. [F7, TS-1, ENC-1 all confirmed]
+2. **Does `signAttempt`'s `isShort` use the SAME `s₁` verify recomputes (both `c − s₂·h` after
+   TS-5)?** **YES.** This is the load-bearing correctness fact and the TS-5 fix is exactly what makes
+   it hold: `fromFFTPreimage:163` and `verify:289` use the identical `c − negacyclicMul s₂ pk.h`
+   construction; given the step-(iv) roundtrip, verify's `s2` = signAttempt's `s₂`, so verify's `s1`
+   is *definitionally* signAttempt's `s₁` and the two norm checks are the same proposition.
+   [F7/TS-2 confirmed]
+3. **Any hidden gap — is `compress_decompress` a `Primitives.Laws` hyp, is `h_laws` in scope, does it
+   apply at `slen=p.sbytelen`?** **`h_laws` is in scope (`Security.lean:114`) and applies at
+   `p.sbytelen` (quantifier-general).** BUT the genuine hidden gap is **ENC-1**: `compress_decompress`
+   is **only ever an assumed hypothesis** — there is **no `Primitives.Laws (concretePrimitives …)`
+   instance** anywhere. `concretePrimitives` (`Concrete/Instance.lean:198-199`) wires the executable
+   Golomb-Rice codec (`Concrete/Encoding.lean:44-112`) but proves no roundtrip lemma. So once
+   discharged, `verify_sign_correct` is correct **only relative to an undischarged assumption about
+   the executable codec**; the codec's roundtrip is itself unverified. This is the single biggest
+   gap for the planned discharge — the plan is sound *modulo* `h_laws`, but `h_laws` is an axiom for
+   the concrete instance. [ENC-1, confirmed, incompleteness]
+4. **Is `IntPoly.toRq ∘ rqToIntPolyCentered = id` actually provable from `centeredRepr_intCast`?**
+   **Provable, but NOT a one-liner — it is a genuine multi-lemma sub-obligation, and no proved `= id`
+   lemma exists yet.** `centeredRepr_intCast` (`Ring/Norms.lean:112-119`) gives the right *per-coefficient*
+   identity `(x : ZMod q) = ((centeredRepr x : ℤ) : ZMod q)`, and the Falcon-local `centeredRepr`
+   (`Arithmetic.lean:140-141`) **is** `LatticeCrypto.centeredRepr`, so it applies. But the roundtrip
+   additionally needs: (a) `IntPoly.toRq = (integralLift n).toRq = PolyBackend.mapCoeffs … (·:ZMod q)`
+   (`Arithmetic.lean:136`; `Ring/IntegralLift.lean:46`) and a `mapCoeffs`/`build` coefficient rule
+   (`Ring/Core.lean:130-140`); (b) `rqToIntPolyCentered` builds `Vector.ofFn fun i => centeredRepr
+   (s₂.toArray.getD i.1 0)` (`Scheme.lean:245-247`), so a `Vector.toArray.getD ↔ get`/coeff **index-
+   alignment bridge** for the concrete `vectorBackend` Poly; (c) `ext_coeff` Rq equality. Grep over
+   `LatticeCrypto/Falcon/` finds **no** `toRq_rqToIntPolyCentered` and **no** `centeredRepr_intCast`
+   in that dir; `Ring/Smoke.lean:155` (`falconIntegralLiftRoundtrip`) is a **typecheck-only** def in
+   the "Typecheck-only roundtrip exercises" section (`:117`), **not a theorem**. The session-4 END
+   log note "confirmed `rqToIntPolyCentered` is the exact inverse … via `centeredRepr_intCast`" was a
+   *mathematical*-inverse confirmation, **not** a discharged Lean lemma. [F8/ENC-7/TS-1 all confirmed,
+   incompleteness; the index-alignment bridge is the residual implementation risk]
+
+### (2) Findings by severity (merged audit + verdict)
+
+**spec-divergence** *(all intended Falcon+/FN-DSA-baseline choices vs v1.2; bytes-on-wire diverge
+from v1.2, faithful to the chosen baseline — flag in the matrix, not bugs)*
+- **F4 / SD-1 / M2,M8** — fresh salt per signing attempt. `Scheme.lean:265-274` (abstract `sign`
+  re-samples `salt ← $ᵗ (Bytes 40)` each iteration, recurses on fail) ↔ `Concrete/Sign.lean:86-87,
+  230-244` (`signLoopRandomBytes seed counter = SHAKE256(seed ‖ counter_le32)`, per-retry counter).
+  FN-DSA/c-fn-dsa fresh-nonce single-loop; v1.2 Alg 10 is salt-once + nested do-while. *Already
+  recorded as SD-1/M2/M8.*
+- **F5 / SD-1 / M1** — HashToPoint binds pk. `hashToPointForPublicKey` (`Primitives.lean:145-147`)
+  absorbs `prims.publicKeyBytes pk`; sign (`:267`) and verify (`:287`) both use `pk.h`. FN-DSA/
+  c-fn-dsa M1; v1.2 Alg 3 is `r‖m` with no pk. Exact byte layout deferred to the HashToPoint
+  dimension. *Already recorded as SD-1/M1.*
+- **F6 / SD-2 / M3** — verify + `isShort` are integer-only, L2-only, no L∞ gate. `Scheme.lean:192,
+  283-290`; `Concrete/Sign.lean:182-197,223`. Faithful to v1.2/c-fn-dsa (M3 L2-only, M9 integer),
+  diverges from FN-DSA M3 (adds L∞). *Already recorded as SD-2/M3.*
+
+**unsound-statement**
+- **ENC-2 (NEW s5)** — the abstract `Falcon.Encoding`/`Laws` scaffolding (`Encoding.lean:32-70`) is
+  **dead** (imported by no file; instantiated nowhere) **and its `sigDecode_sigEncode` law is
+  positively FALSE for the only concrete codec**: `sigEncode salt [] logn` = 41 bytes, but concrete
+  `sigDecode` gates on `d.size ≥ 42` (`Concrete/Encoding.lean:187`), so the empty-`compSig`
+  roundtrip returns `none` — proven as `sigDecode_sigEncode_nil` (`Concrete/Encoding.lean:194-202`).
+  The developers already know this: `FPRBridge.lean:119-122` restricts its concrete roundtrip
+  hypothesis to `compSig ≠ []`. So the abstract `Laws` over-claims a contract that fails for its sole
+  candidate instance — a vacuous/unsound contract. *Not a regression (pre-existing orphan), but newly
+  surfaced this session.* **Recommendation:** delete the orphan `Falcon.Encoding`/`Laws`, or weaken
+  `sigDecode_sigEncode` to nonempty/valid-length `compSig` and actually instantiate against the
+  concrete encoders.
+- **TS-4 / UN-2 (≡ §3)** — `euf_cma_security` (`Security.lean:302-333`) ends `let _ := …; sorry`,
+  discarding all hypotheses; its entire generic GPV substrate is `sorry`
+  (`GPVHashAndSign.lean:270/283/332/363`); `euf_cma_split_bound`/`euf_cma_collision_bound`
+  (`:407,:382`) type-check by composition but hand back sorried witnesses; `samplerLoss` enters as a
+  free additive `ℝ≥0∞` via the assumed `HasUniformSamplerLoss` (`Security.lean:237-239`), trivially
+  met with `⊤`. 0/4 EUF-CMA statements carry verified content. *Already recorded as UN-2/TS-2; ⚠
+  CONJECTURAL marker present.*
+
+**incompleteness**
+- **ENC-1 (NEW emphasis s5) — HIGHEST-LEVERAGE GAP FOR THE PLANNED PROOF.** `compress_decompress`
+  is never proven for `concretePrimitives` — it is only the assumed `h_laws` (`Security.lean:114`;
+  `Instance.lean:198-199` wires the codec but proves no roundtrip). `verify_sign_correct`, even once
+  discharged, is conditional on this unverified codec property. **Recommendation:** prove
+  `Primitives.Laws.compress_decompress` for `concretePrimitives` (i.e. `decompress (compress n s
+  slen) slen = some s` for in-range `s`), or document it as a clearly-labelled axiom-level assumption
+  in the security story. The plan correctly uses it at `slen = p.sbytelen` (matches sign `:271` /
+  verify `:284`).
+- **F8 / ENC-7 / TS-1 (NEW prerequisite s5)** — `IntPoly.toRq (rqToIntPolyCentered s₂) = s₂` does
+  not exist as a proved lemma and needs `mapCoeffs` coeff-rule + `Vector.toArray.getD ↔ get`
+  index-alignment bridge + `centeredRepr_intCast`, not just the last. `Scheme.lean:245-247`;
+  `Arithmetic.lean:136,140-141`; `Ring/IntegralLift.lean:46`; `Ring/Core.lean:130-140`;
+  `Ring/Norms.lean:112-119`; `Ring/Smoke.lean:117,155` (typecheck-only, not a theorem).
+  **Recommendation:** add and prove `toRq_rqToIntPolyCentered` coefficient-wise as the first step of
+  the `verify_sign_correct` discharge; search `Ring/*` for an existing `mapCoeffs`-get simp lemma and
+  verify the concrete `vectorBackend` `toArray.getD ↔ get` bridge before re-deriving.
+- **TS-1 / UN-1 (≡ §3)** — `verify_sign_correct` body is still `sorry` (`Security.lean:125`); the
+  plan is implementable (steps i-iii supported), gated only on ENC-1 (assumed codec law) + F8 (the
+  roundtrip lemma). Two-world gap (UN-1) persists: this is about byte-level `Falcon.verify`, not the
+  GPV verify the EUF-CMA theorems use. *This is the target of Session 5.*
+- **TS-5 / TS-6 (≡ §3 B5)** — `SamplerQuality`/`HasUniformSamplerLoss` (`Security.lean:212-239`) are
+  well-typed but no instance is constructed; `HasUniformSamplerLoss` only *asserts* existence
+  (assumed `hSamplerLoss`, never derived), and `idealCorrect` (`:230-232`) is vacuously satisfiable
+  by an empty-support `idealSampler` (no nonemptiness/total-mass constraint). *Already recorded as
+  B5/IN-8/9.* **Recommendation:** add a nonemptiness condition on `idealSampler`; build a
+  `SamplerQuality` witness from the FPRBridge bounds.
+
+**ok (verified faithful / well-formed)**
+- **F2 / SD-5 (CONFIRMED CLOSED)** — the abstract `ffSampling` leaf carries **two stddevs + l01**:
+  `FalconTree.leaf (σ₀ σ₁ l01Re l01Im)` (`Primitives.lean:94`); leaf branch (`:262-284`) samples
+  `z₁` at `σ₁`, applies the off-diagonal `b = a·l01` correction, samples `z₀` at `σ₀` — structurally
+  mirroring `ffsampFFTDeepest` (`FFT.lean:356-391`). **SD-5's "one sigma, no l01" premise is stale.**
+  Residual (gated on `keyGenFromSeed`): that the tree *builder* populates `σ₀,σ₁,l01` correctly.
+- **F3 / TGT-1** — `toFFTTarget` (`Scheme.lean:135-143`) = Alg 10 target; signs cancel
+  (`t₀ = −(1/q)·FFT(c)·FFT(F)`, `t₁ = (1/q)·FFT(c)·FFT(f)`). Matches concrete `fpolyApplyBasis`
+  (`Concrete/Sign.lean:216`).
+- **F10 / SD5-2** — `splitFFT`/`mergeFFT`/node recursion (`Primitives.lean:141-244,285-293`)
+  structurally match Alg 11 node case + concrete `ffsampFFTInner` (`FFT.lean:393-445`). *Medium
+  confidence:* twiddle half-angle algebra and `mergeFFT∘splitFFT=id` not machine-checked.
+- **F9 / params** — F-512/F-1024 `betaSquared` (34034726/70265242), `sbytelen` (625/1239), `sigmaMin`
+  match v1.2 Table 3.3; `signatureBytes = 1+40+sbytelen` = 666/1280 reconciles compressed-len vs
+  total (`Params.lean:81,100-112`; `Concrete/Sign.lean:48-74`).
+- **ENC-4 / ENC-5 / ENC-6** — 14-bit PK packing + canonical-range rejection (`Concrete/Encoding.lean:
+  117-174`, 897/1793 B), Golomb-Rice sign+7low+unary compression + all four unique-encoding rejection
+  checks (`:44-112`), and the byte-aligned `8·sbytelen−328` budget (5000/9912 bits, exact byte
+  multiples) faithful to c-fn-dsa **by inspection** (roundtrip itself unproven — see ENC-1).
+- **F1 / TS-7 / ENC-8 — drift reconciliation** — 19 live Falcon sorrys, `Scheme` 1, no new sorry; the
+  `verify_sign_correct` `sorry` at `Security.lean:125` is the (intended) Session-5 target.
+
+**REFUTED (downgraded to ok)**
+- **ENC-3 — REFUTED.** The audit claimed the concrete sig header `0x30+logn`
+  (`Concrete/Encoding.lean:180,189`) **diverges** from v1.2's `0cc1nnnn`. **False.** v1.2's header
+  template `0cc1nnnn` in compressed mode (`cc=01`, the only mode this implementation emits) is
+  `0011nnnn = 0x30 + logn`. Verified arithmetically: `logn=9 → 0x39`, `logn=10 → 0x3a` from **both**
+  formulas. The bytes-on-wire are faithful to v1.2's compressed signature header and equally to
+  FN-DSA/c-fn-dsa (all use compressed mode). The §3-cited docstring (v1.2 Alg 17-18) is **not**
+  mislabeling. **This matches the doc's own §8 M6 row** (`0cc1nnnn` / `0x30+logn` → "all three").
+  No doc fix warranted; the earlier ENC-3/B9 framing of the *header* as a divergence was wrong.
+
+  > **Note on the OTHER ENC-3 (the genuine §3 B9 finding):** §3 line 138 / B9 record a *different*,
+  > real ENC-3 — `Decompress`/`sigDecode` **accepting over-length / non-canonical signatures** (wire
+  > malleability). That is a separate claim from the header arithmetic refuted above. The session-5
+  > Encoding audit (ENC-5) read the decompressor's rejection checks (neg-zero, >2047, trailing-zero,
+  > padding `:99-111`) as **faithful by inspection** but unproven; it did **not** re-examine the
+  > over-length acceptance angle that B9 targets. **B9's malleability claim is neither re-confirmed
+  > nor refuted this session — treat it as still-open pending a dedicated re-audit.**
+
+### (3) Changes vs the §3 table (for refresh)
+- **NEW ENC-2 (unsound-statement)** — orphan `Falcon.Encoding`/`Laws`; `sigDecode_sigEncode` false
+  for the concrete codec (proven by `sigDecode_sigEncode_nil`, `Concrete/Encoding.lean:194-202`). Add
+  to §3. Distinct from the B9/ENC-3 wire-malleability row.
+- **NEW ENC-1 emphasis (incompleteness)** — `compress_decompress` is an **assumed** `h_laws`, never
+  proven for `concretePrimitives`; it is the load-bearing assumption under the planned
+  `verify_sign_correct`. Add as an explicit §3 row (or fold into B6's "codec roundtrips unproven",
+  `FPRBridge.lean:117-153`, which it sharpens with the security-relevance angle).
+- **NEW F8/ENC-7 (incompleteness)** — `toRq_rqToIntPolyCentered = id` lemma does not exist; needs
+  `mapCoeffs` coeff-rule + index-alignment bridge, not just `centeredRepr_intCast`. The session-4 END
+  log's "confirmed exact inverse via `centeredRepr_intCast`" should be amended to "mathematically the
+  inverse; Lean lemma not yet proved, requires an index-alignment bridge."
+- **REFUTED header-ENC-3** — the *header-byte* divergence reading is wrong (`0x30+logn = 0cc1nnnn|cc=01`,
+  consistent with §8 M6). Do **not** add a header divergence; the existing §3 ENC-3/B9 row is about
+  **over-length/non-canonical acceptance**, which remains open (not re-audited this session).
+- **CONFIRMED unchanged:** SD-5 closed (F2); SD-1/M1/M2/M8 (F4,F5), SD-2/M3 (F6), B5 (TS-5/6), UN-1
+  (TS-1), UN-2 (TS-4), UN-3 (GPV sorrys), B4 (NTRUSolver), B6 (codec/kernel) all hold. SD-TS5b
+  (abstract `isShort` vs concrete `rint(v₀)` norm gate) still a benign rider on the now-resolved TS-5.
+- **No new sorrys; §4 baseline count needs no edit (19 + 4 GPV + 1 ToMathlib).** §4's per-file
+  enumeration should read `NTRUSolver 11 + FPRBridge 5 + Scheme 1 + Security 2 = 19` (it already
+  says "Scheme 1"; just drop any residual `2+2` arithmetic). Branch mismatch (`main` vs
+  `falcon-faithfulness-review`) to reconcile per §0.
+
+### (4) Recommended next entry point on the critical path
+**Proceed with the planned `verify_sign_correct` discharge (B2/UN-1), in this order — the plan is
+sound but has two named prerequisites and one undischarged assumption:**
+1. **Prove the prerequisite roundtrip lemma `IntPoly.toRq (rqToIntPolyCentered s) = s` first**
+   (F8/ENC-7) — coefficient-wise: `ext i`; expand `IntPoly.toRq` = `mapCoeffs … (·:ZMod q)`
+   (`Ring/IntegralLift.lean:46`) via a `mapCoeffs`/`build`-coeff simp rule (`Ring/Core.lean:130-140`);
+   rewrite `s.toArray.getD i 0 = s.get i` (the **index-alignment bridge** — verify it for the
+   concrete `vectorBackend` Poly, this is the residual implementation risk); close with
+   `(centeredRepr_intCast _).symm` (`Ring/Norms.lean:112`). Search `Ring/*` for an existing
+   `mapCoeffs`-get lemma before re-deriving.
+2. **Then discharge `verify_sign_correct`** (`Security.lean:125`) via the chain: fuel-loop
+   `support_bind` induction over `maxAttempts` (some-branch forces `isShort` + `compress = some`)
+   → `h_laws.compress_decompress` at `slen = p.sbytelen` → step-1 roundtrip → `pairL2NormSq` identity
+   (verify's `s₁ = c − s₂·h` is signAttempt's, both `Scheme.lean:163/289`). `hvalid` is **not
+   needed** (TS-3, discardable) — the eval/verify identity is by construction and the norm bound is
+   the loop's `isShort` witness; keep `hvalid` only to mirror the spec precondition or drop it for an
+   honest minimal statement.
+3. **Document the ENC-1 caveat in the theorem/PR:** the result is conditional on
+   `h_laws.compress_decompress`, which is **unproven for `concretePrimitives`**. Either prove
+   `Primitives.Laws.compress_decompress` for the concrete Golomb-Rice codec, or label it an
+   axiom-level assumption. Until then `verify_sign_correct` says nothing about the executable codec.
+4. **Parallel quick wins:** delete/repair the orphan `Falcon.Encoding`/`Laws` (ENC-2); after UN-1,
+   the highest-leverage security obligation remains `forgery_yields_collision`
+   (`GPVHashAndSign.lean:332`) to turn UN-2 from conjectural into a real bound.
+
+*Residual uncertainty:* (a) the **index-alignment bridge** (`Vector.toArray.getD ↔ get`) in step 1
+is the one unverified implementation risk in an otherwise-supported plan; (b) the concrete codec
+roundtrip (ENC-1) is faithful **by inspection only** — unproven; (c) B9 wire-malleability
+(over-length/non-canonical sig acceptance) was **not** re-audited this session — still open; (d) FFT
+twiddle bit-equality (F10) and `s₂` sign-convention vs c-fn-dsa@`33026d4d` (submodule not
+retrievable) remain medium-confidence. (e) ~~branch is `main`~~ **CORRECTED: a review subagent misreported
+the branch (it echoed the session's initial git-status reminder, not live `git`); the actual branch is
+`falcon-faithfulness-review` @ `937a36c6`, verified — no reconciliation needed.**
+
 ## 5. Session log
 - **2026-06-25 — session 0 (review + bootstrap).** Three-way faithfulness/soundness audit (21-agent
   workflow, every finding adversarially verified, 0 refuted). Validated the baseline above directly.
@@ -506,6 +755,35 @@ abstract-`isShort`↔concrete-gate link.
   needs a bridge lemma. Next entry point: **`keyGenFromSeed`** (constructive `validKeyPair` witness) and/or the
   `verify_sign_correct` proof (chain `falconPSF_eval_trapdoorSample` + `compress_decompress` + `isShort`), and
   the two-world bridge lemma. B3a/B6/B9 remain parallelizable.
+
+- **2026-06-25 — session 5 START (review only, HEAD `937a36c6`; pre-`verify_sign_correct` proof).**
+  Three-dimension adversarial sweep (Sign+ffSampling, Encoding, Theorem-soundness), **25 findings,
+  24 confirmed, 1 refuted.** **Drift: none** — 19 live Falcon sorrys (`NTRUSolver` 11 · `FPRBridge` 5
+  · `Scheme` 1 [`keyGenFromSeed`, `sign` resolved s4] · `Security` 2) + 4 GPV + 1 ToMathlib, re-counted
+  by direct grep; `ApproxArith` 0 live (1 doc + 4 commented). **Validated the planned
+  `verify_sign_correct` discharge chain: SOUND** — fuel-loop `support_bind` induction (some-branch
+  forces `isShort`+`compress=some`), isShort↔verify-norm identity (both `s₁=c−s₂·h`, `Scheme.lean:163`
+  vs `:289`), and `compress_decompress` quantifier match at `slen=p.sbytelen` all supported; `hvalid`
+  not needed (TS-3). **Two named prerequisites + one undischarged assumption flagged:** (i) **ENC-1**
+  — `compress_decompress` is only the assumed `h_laws`, NEVER proven for `concretePrimitives`
+  (`Instance.lean:198-199`), so the result is conditional on an unverified codec roundtrip — the
+  single biggest gap; (ii) **F8/ENC-7** — `IntPoly.toRq∘rqToIntPolyCentered = id` is not a proved
+  lemma and needs a `mapCoeffs` coeff-rule + `Vector.toArray.getD↔get` index-alignment bridge, not
+  just `centeredRepr_intCast` (the s4-END "exact inverse via `centeredRepr_intCast`" note amended).
+  **NEW ENC-2 (unsound-statement):** orphan `Falcon.Encoding`/`Laws` whose `sigDecode_sigEncode` is
+  false for the concrete codec (`sigDecode_sigEncode_nil`, `Concrete/Encoding.lean:194-202`).
+  **REFUTED header-ENC-3:** `0x30+logn` IS v1.2's `0cc1nnnn|cc=01` (verified `0x39`/`0x3a`),
+  consistent with §8 M6 — no header divergence; the genuine B9/ENC-3 *over-length-acceptance*
+  malleability claim was **not** re-audited this session (still open). SD-5 confirmed closed; SD-1/2,
+  M1/2/3/8/9, UN-1/2/3, B4/5/6, SD-TS5b all hold. No Falcon code edited. **Branch note CORRECTED:** the
+  subagent misreported `main`; live branch is `falcon-faithfulness-review` @ `937a36c6` (verified). **Plan
+  validated SOUND; session 5 checkpointed here (implementation handed off to keep context clean).
+  Next entry point: prove `toRq_rqToIntPolyCentered` (coeff-wise `poly_ext` + the `mapCoeffs` coeff rule +
+  the `ofFn`/`toArray.getD` index bridge — see the `simp [vectorNegacyclicRing, Vector.get,
+  Array.getElem_ofFn]` pattern at `Ring/SchoolbookCert.lean:213` + `centeredRepr_intCast` `Norms.lean:112`),
+  THEN discharge `verify_sign_correct` (`Security.lean:125`) by induction on `maxAttempts` over the fuel loop,
+  documenting the ENC-1 conditional-on-`h_laws` caveat. Also new s5: ENC-2 (orphan `Falcon.Encoding/Laws`,
+  unsound) — repair or delete.**
 
 ## 6. Drift-check snippet
 The **authoritative** live-`sorry` count is the build warnings (raw `grep` over-counts because comments
