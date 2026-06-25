@@ -196,3 +196,4 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)
 - **Proof workflows (game-hopping, reductions)**: [`docs/agents/proof-workflows.md`](docs/agents/proof-workflows.md)
 - **Gotchas and troubleshooting**: [`docs/agents/gotchas.md`](docs/agents/gotchas.md)
+- **Falcon faithfulness/soundness remediation** (active, branch `falcon-faithfulness-review`): [`docs/agents/falcon-review.md`](docs/agents/falcon-review.md) — canonical bootstrap doc + session protocol; paired harness `scripts/falcon_review.mjs`.
