@@ -128,8 +128,8 @@ def pkEncode (n : ℕ) (h : Rq n) : ByteArray := Id.run do
   if n % 4 != 0 then
     panic! s!"Falcon public-key encoding requires n divisible by 4, got {n}"
   let mut out := ByteArray.empty
-  let mut i := 0
-  while i + 3 < n do
+  for b in [0:n / 4] do
+    let i := 4 * b
     let h0 := (h[i]!).val
     let h1 := (h[i+1]!).val
     let h2 := (h[i+2]!).val
@@ -141,7 +141,6 @@ def pkEncode (n : ℕ) (h : Rq n) : ByteArray := Id.run do
     out := out.push (h2 >>> 2).toUInt8
     out := out.push ((h2 <<< 6) ||| (h3 >>> 8)).toUInt8
     out := out.push h3.toUInt8
-    i := i + 4
   return out
 
 /-- Decode a Falcon public key polynomial from the packed 14-bit coefficient format. -/
@@ -150,9 +149,9 @@ def pkDecode (n : ℕ) (d : ByteArray) : Option (Rq n) := Id.run do
   let needed := 7 * n / 4
   if d.size < needed then return none
   let mut result : Array Coeff := Array.replicate n 0
-  let mut i := 0
-  let mut j := 0
-  while i + 3 < n do
+  for b in [0:n / 4] do
+    let i := 4 * b
+    let j := 7 * b
     let d0 := d[j]!.toNat
     let d1 := d[j+1]!.toNat
     let d2 := d[j+2]!.toNat
@@ -160,7 +159,6 @@ def pkDecode (n : ℕ) (d : ByteArray) : Option (Rq n) := Id.run do
     let d4 := d[j+4]!.toNat
     let d5 := d[j+5]!.toNat
     let d6 := d[j+6]!.toNat
-    j := j + 7
     let h0 := (d0 <<< 6) ||| (d1 >>> 2)
     let h1 := ((d1 <<< 12) ||| (d2 <<< 4) ||| (d3 >>> 4)) &&& 0x3FFF
     let h2 := ((d3 <<< 10) ||| (d4 <<< 2) ||| (d5 >>> 6)) &&& 0x3FFF
@@ -171,7 +169,6 @@ def pkDecode (n : ℕ) (d : ByteArray) : Option (Rq n) := Id.run do
     result := result.set! (i+1) (h1 : Coeff)
     result := result.set! (i+2) (h2 : Coeff)
     result := result.set! (i+3) (h3 : Coeff)
-    i := i + 4
   return some (Vector.ofFn fun ⟨i, _⟩ => result.getD i 0)
 
 /-- External public-key bytes used by FN-DSA verification and raw-message hashing:
@@ -206,5 +203,87 @@ def sigDecode (d : ByteArray) (logn : ℕ) : Option (Bytes 40 × List UInt8) := 
       have hone : ({ data := #[48 + UInt8.ofNat logn] } : ByteArray).size = 1 := rfl
       have hempty : ({ data := #[] } : ByteArray).size = 0 := rfl
       simp [sigDecode, sigEncode, hsalt, hone, hempty]
+
+/-- The accumulator loop underlying `ByteArray.toList` reverses its accumulator onto the
+remaining bytes, so the full traversal recovers the underlying array as a list. -/
+private theorem toList_loop_eq (a : ByteArray) :
+    ∀ i (acc : List UInt8), ByteArray.toList.loop a i acc
+      = acc.reverse ++ (a.data.toList.drop i) := by
+  intro i acc
+  fun_induction ByteArray.toList.loop a i acc with
+  | case1 i acc h ih =>
+      rw [ih]
+      have hi : i < a.data.toList.length := by rw [Array.length_toList]; exact h
+      rw [List.drop_eq_getElem_cons hi]
+      simp only [List.reverse_cons, List.append_assoc, List.singleton_append]
+      congr 2
+      cases a with
+      | mk bs =>
+        change bs[i]! = _
+        rw [getElem!_pos bs i (show i < bs.size from h), Array.getElem_toList]
+  | case2 i acc h =>
+      have : a.data.toList.length ≤ i := by
+        rw [Array.length_toList]; exact Nat.le_of_not_lt h
+      rw [List.drop_eq_nil_of_le this]; simp
+
+/-- `ByteArray.toList` agrees with the list of the underlying data array. -/
+private theorem byteArray_toList_eq (a : ByteArray) : a.toList = a.data.toList := by
+  rw [ByteArray.toList, toList_loop_eq]; simp
+
+/-- Round-trip: decoding an encoded signature recovers the original salt and compressed bytes.
+A nonempty compressed payload guarantees the encoded length passes the `42`-byte minimum check,
+so the header, salt, and payload segments all decode back to their inputs. -/
+theorem sigDecode_sigEncode (salt : Bytes 40) (compSig : List UInt8) (logn : ℕ)
+    (hne : compSig ≠ []) :
+    sigDecode (sigEncode salt compSig logn) logn = some (salt, compSig) := by
+  have hlen : 1 ≤ compSig.length := by
+    rw [Nat.one_le_iff_ne_zero, ne_eq, List.length_eq_zero_iff]; exact hne
+  set hdr : UInt8 := (0x30 + logn).toUInt8 with hhdr
+  have hb1 : (ByteArray.mk #[hdr]).size = 1 := rfl
+  have hss : (ByteArray.mk salt.toArray).size = 40 := by change salt.toArray.size = 40; simp
+  have hcs : (ByteArray.mk compSig.toArray).size = compSig.length := by
+    change compSig.toArray.size = compSig.length; simp
+  have hesize : (sigEncode salt compSig logn).size = 41 + compSig.length := by
+    change (ByteArray.mk #[hdr] ++ ByteArray.mk salt.toArray ++ ByteArray.mk compSig.toArray).size
+        = 41 + compSig.length
+    rw [ByteArray.size_append, ByteArray.size_append, hb1, hss, hcs]
+  have hguard : ¬ (sigEncode salt compSig logn).size < 42 := by rw [hesize]; omega
+  have hhead : (sigEncode salt compSig logn)[0]! = hdr := by
+    have h0 : (0:Nat) < (sigEncode salt compSig logn).size := by rw [hesize]; omega
+    rw [getElem!_pos _ 0 h0]
+    change (ByteArray.mk #[hdr] ++ ByteArray.mk salt.toArray ++ ByteArray.mk compSig.toArray)[0]'_
+        = hdr
+    rw [ByteArray.getElem_eq_getElem_data]
+    simp only [ByteArray.data_append]
+    simp [Array.getElem_append_left]
+  have hsalt : (Vector.ofFn fun (i : Fin 40) => (sigEncode salt compSig logn)[i.val + 1]!)
+      = salt := by
+    apply Vector.ext
+    intro i hi
+    rw [Vector.getElem_ofFn]
+    have hfull : i + 1 < (sigEncode salt compSig logn).size := by rw [hesize]; omega
+    rw [getElem!_pos _ (i+1) hfull]
+    change (ByteArray.mk #[hdr] ++ ByteArray.mk salt.toArray
+        ++ ByteArray.mk compSig.toArray)[i+1]'_ = salt[i]
+    rw [ByteArray.getElem_eq_getElem_data]
+    simp only [ByteArray.data_append]
+    rw [Array.getElem_append_left (by simp; omega)]
+    rw [Array.getElem_append_right (by simp)]
+    simp only [Array.size_singleton]
+    rw [Vector.getElem_toArray]
+    congr 1
+  have hcomp : ((sigEncode salt compSig logn).extract 41
+      (sigEncode salt compSig logn).size).toList = compSig := by
+    rw [hesize]
+    change ((ByteArray.mk #[hdr] ++ ByteArray.mk salt.toArray
+        ++ ByteArray.mk compSig.toArray).extract 41 (41 + compSig.length)).toList = compSig
+    rw [ByteArray.extract_append_eq_right
+      (a := ByteArray.mk #[hdr] ++ ByteArray.mk salt.toArray) (b := ByteArray.mk compSig.toArray)
+      (by rw [ByteArray.size_append, hb1, hss]) (by rw [ByteArray.size_append, hb1, hss, hcs])]
+    rw [byteArray_toList_eq]
+  unfold sigDecode
+  simp only [Id.run, hguard, hhead, hhdr, if_false, bne_self_eq_false, Bool.false_eq_true,
+    pure_bind, hsalt, hcomp]
+  rfl
 
 end Falcon.Concrete

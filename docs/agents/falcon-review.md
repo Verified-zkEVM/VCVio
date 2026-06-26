@@ -113,9 +113,35 @@ standard-axioms-only; END review re-verified the RHS chains target the genuine s
   `Falcon.verify` ≠ GPV verify; no bridge lemma.
 - ENC-1 `compress_decompress` only ever the assumed `h_laws` — no `Primitives.Laws (concretePrimitives)` instance.
 - F8/ENC-7 `toRq_rqToIntPolyCentered = id` not yet a lemma (needs the index bridge).
-- VER-1 (B6 done s7): `concrete_verify_eq_verify` now conditional on **3** hyps — the remaining genuine
-  obligations are the two codec round-trips `hsigDecode`/`hpkDecode` (ENC-1/F7); the numeric `hn_ovf` is
-  trivially dischargeable for concrete params. Kernel equalities proven. **Next entry point** (END-review pick).
+- VER-1 (B6 done s7; codecs in progress s8): `concrete_verify_eq_verify` conditional on **3** hyps.
+  - `hsigDecode` (sig framing round-trip): **PROVEN s8** (`Concrete/Encoding.lean` `sigDecode_sigEncode`,
+    standard-axioms-only).
+  - `hpkDecode` (14-bit pk pack/unpack round-trip): **IN PROGRESS s8** — see the codec/`while` note below.
+  - `hn_ovf`: trivially dischargeable numeric bound. After both codecs land, the bridge has NO semantic
+    hyps left — only structural/numeric side-conditions (`hn`, `hsbytelen`, `hn_ovf`, + new `hn4 : 4 ∣ p.n`).
+
+**`while`-loop unprovability (KEY FINDING s8, reusable):** Lean's `while c do … (mut)` lowers to
+`forIn Lean.Loop.mk` → an opaque `partial` `Lean.Loop.forIn.loop✝` with NO `rfl`-reduction and NO
+simp-usable equation (even the 0-iteration case can't be closed). So any imperative codec/kernel written
+with `while` is **unprovable as-is** — unlike `for i in [0:n]` (→ `List.foldl`, the B6-provable form).
+Fix pattern: refactor `while i+3<n do … i:=i+4` → `for b in [0:n/4] do let i:=4*b; …` (byte-identical;
+iteration count `⌊n/4⌋` matches exactly for all n). This affects `compress`/`decompress` (ENC-1) and the
+other `Concrete/*.lean` `while` codecs too if they're ever to be proven.
+
+**hpkDecode resume plan (s8, paused to avoid context overflow):**
+- `pkEncode`/`pkDecode` **already refactored** `while`→`for` (s8); byte-identity confirmed by pure-Lean
+  `#eval` round-trip (n=4,8,12 + boundary coeffs) + the iteration-count argument. (FFI differential
+  runner needs native backends absent locally; runs in CI.)
+- Proven scaffolding banked in **`docs/agents/falcon-hpkdecode-wip.lean`** (inert, not built; compiles
+  sorry-free against the refactored Encoding.lean): the hard per-group 56-bit pack/unpack identity
+  `group_roundtrip` + Nat bit-helpers (`toU8`/`lor_add`/`and3fff`) + full `pkEncode` characterization
+  (`pkEncode_eq_E`, `E_size`, `E_getElem`, `gblock_byte`). **LIFT these into Encoding.lean.**
+- REMAINING: (1) `pkEncode_size` (immediate from `E_size`); (2) `publicKeyBytes_extract` (ByteArray
+  extract, mirror `sigDecode_sigEncode`); (3) **`pkDecode_pkEncode`** — the decode-side `forIn` invariant
+  (reuse B6's `foldl_range_preserve` + the `Std.Legacy.Range.forIn_eq_forIn_range'`/`List.forIn_pure_yield_eq_foldl`
+  set; handle the early-`return none` `done` step is never taken since decoded coeffs `< modulus`); then
+  `Vector.ext` to get `result[k]=h[k].val ⇒ = h`. (4) Wire into `concrete_verify_eq_verify` adding
+  `(hn4 : 4 ∣ p.n)`. Keep standard-axioms-only (ℕ route, no `native_decide`).
 - KG-1 `keyGenFromSeed` sorry; KG-2 NTRUSolve ascent sorry; KG-3 no keygen correctness theorem.
 - **KG-4/KG-5** NTRUSolver local stubs (`FXR.sqr`/`vect_*`/`poly_big_to_small`) shadow the real, fully-implemented
   `Concrete/FXR.lean`/`PolyBigInt.lean` — ~8 redundant sorries. KG-6 `check_ortho_norm` vacuous (fixed by KG-4).
@@ -173,6 +199,17 @@ hypotheses; the live-sorry inventory is unchanged from s6:
   conclusion both branches; refuted its own tool's stale-GPV-lines finding. Full `LatticeCrypto` build green;
   sorry count 24 (unchanged — B6 cuts hyps, not sorries). **Next: discharge the codec round-trips**
   `hsigDecode`/`hpkDecode` (ENC-1/F7) to make the verify bridge end-to-end, or `verify_sign_correct`, or KG-quickwin.
+
+- **s8** — **codec round-trips (partial; paused to avoid context overflow).** START review (Encoding):
+  GREEN — both round-trips TRUE (reviewer ran a 200k+ random pack/unpack model, 0 mismatches), `hpkDecode`
+  needs `4∣n`, ENC-2 false codec confirmed isolated to the orphan `Falcon/Encoding.lean`. **`hsigDecode`
+  PROVEN** (`Concrete/Encoding.lean` `sigDecode_sigEncode`, standard-axioms-only). Discovered **`while`
+  loops are unprovable** (opaque `partial Lean.Loop.forIn.loop`) → **refactored `pkEncode`/`pkDecode`
+  `while`→`for b in [0:n/4]`** (byte-identical: pure-Lean `#eval` round-trip + exact iteration-count match).
+  **`hpkDecode` IN PROGRESS:** hard crux already proven + banked in `docs/agents/falcon-hpkdecode-wip.lean`
+  (per-group identity `group_roundtrip` + `pkEncode` characterization); remaining = decode `forIn` invariant
+  + `publicKeyBytes_extract` + wiring (+`hn4`). Current tree builds clean; no new sorries. **Next (fresh
+  session, bootstrap from the VER-1 resume plan + the WIP file): finish `hpkDecode`, then `verify_sign_correct`.**
 
 ## 6. Drift-check snippet
 ```bash
