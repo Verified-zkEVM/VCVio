@@ -44,8 +44,9 @@ free function:
 ## What is still deferred
 
 The **proof** is `sorry` (the CMA→NMA hop, WOTS+ one-wayness, Merkle/FORS binding, and the
-multi-target → single-target `p`-fold loss are research-level and deferred, exactly as
-`LatticeCrypto.MLDSA.Security.euf_cma_security`). The query bounds `qS`/`qH` are *assumed* bounds
+multi-target → single-target `p`-fold loss are research-level and deferred). The lattice
+analogue is the sound EUF-CMA bound `LatticeCrypto.MLDSA.euf_cma_security_of_nma`. The query
+bounds `qS`/`qH` are *assumed* bounds
 on the adversary stated in the usual cryptographic prose; wiring them to the adversary's actual
 query count via the cost model (`VCVio.OracleComp.QueryTracking`) is the remaining formalization
 gap. These are honest gaps in the proof and instrumentation, not vacuity in the statement.

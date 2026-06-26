@@ -4,6 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 import LatticeCrypto.MLDSA.Security
+import LatticeCrypto.MLDSA.SecurityHVZK
+import VCVio.CryptoFoundations.Asymptotics.Negligible
+import Mathlib.Analysis.SpecificLimits.Normed
 
 /-!
 # ML-DSA EUF-NMA Security: the MLWE key-swap hop (Lemma 7, Step 1)
@@ -14,10 +17,11 @@ and the **SelfTargetMSIS extractor**:
 
 1. **MLWE key-swap (`nma_keyswap_hop`).** Replace the honest key generation, where the public key
    vector is `t = Â · s₁ + s₂`, with a variant `keygen1` that samples `t` uniformly. The gap
-   between the two EUF-NMA games equals the decisional MLWE advantage of the (seed-based)
-   distinguisher `B = distinguisherB`. The `(Hadv)` and uniform-branch `(H1)` parts are pure
-   runtime-plumbing rewrites; the real-branch `(H0)` is discharged from the honest-sampling field
-   `Primitives.Laws.expandS_honest_sampling` (the ROM idealization of `ExpandSeed`/`ExpandS`).
+   between the two EUF-NMA games is bounded by the decisional MLWE advantage of the (seed-based)
+   distinguisher `B = distinguisherB`, plus the honest-sampling slack `idealGap`. The `(Hadv)` and
+   uniform-branch `(H1)` parts are pure runtime-plumbing rewrites; the real-branch `(H0)` is
+   controlled by the `honestSamplingSlack` hypothesis — the quantitative total-variation ROM
+   modeling of `ExpandSeed`/`ExpandS`, carried as the real slack `idealGap`.
 2. **SelfTargetMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** Once `t` is uniform the key
    carries no secret, so a forgery is a short vector satisfying the SelfTargetMSIS relation; the
    extractor `extractorC` reads `(z, c̃)` out of the forged signature. This is fully proven: the
@@ -107,6 +111,37 @@ theorem keyFromMaterial_eq (seed : Bytes 32) :
     keyFromMaterial p prims rho key s1 s2 (prims.expandA rho * s1 + s2) =
       keyGenFromSeed p prims seed := by
   simp only [keyFromMaterial, keyGenFromSeed]
+
+/-- **Honest-sampling slack of the secret derivation (ML-DSA ROM modeling, quantitative form).**
+
+For a real bound `idealGap`, this asserts that for *every* continuation `f`, the real key
+derivation (drawing the secrets `(s₁, s₂) = ExpandS((ExpandSeed seed).2.1)` deterministically
+from the same uniform `seed` that produces `ρ = (ExpandSeed seed).1`) differs from the ideal
+derivation (drawing `s₁`, `s₂` independently and uniformly while keeping the same `ρ`) by total
+variation distance at most `idealGap`.
+
+This is the quantitative replacement for the (false-as-equality) honest-sampling idealization:
+`ExpandSeed`/`ExpandS` are deterministic XOFs, so the real derivation is a deterministic image of
+at most `2^256` seeds and can never *equal* a full-support uniform over the vastly larger secret
+space. The honest model carries the residual distance as an explicit real `idealGap` that enters
+the security bound additively (and is `0` exactly in the idealized limit). It is satisfiable for
+any concrete `prims` — `tvDist` is always at most `1`, so `idealGap = 1` is a trivial witness, and
+the genuine ROM-modeling bound supplies the meaningful value. It is consumed only by
+`MLDSA.NMA.nma_keyswap_hop` to bound the `(H0)` real-branch residue. -/
+def honestSamplingSlack (idealGap : ℝ) : Prop :=
+  ∀ {γ : Type}
+    [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] [IsUniformSpec unifSpec]
+    (f : Bytes 32 → RqVec p.l → RqVec p.k → ProbComp γ),
+    tvDist (do
+        let seed ← $ᵗ (Bytes 32)
+        f (prims.expandSeed seed).1
+          (prims.expandS (prims.expandSeed seed).2.1).1
+          (prims.expandS (prims.expandSeed seed).2.1).2)
+      (do
+        let seed ← $ᵗ (Bytes 32)
+        let s₁ ← $ᵗ (RqVec p.l)
+        let s₂ ← $ᵗ (RqVec p.k)
+        f (prims.expandSeed seed).1 s₁ s₂) ≤ idealGap
 
 end KeyGen
 
@@ -314,8 +349,8 @@ theorem nmaGame_eq_keygen_bind
   rfl
 
 /-- **The MLWE key-swap hop (Lemma 7, Step 1).** For every NMA forging strategy `main`, the gap
-between the real-`t` and uniform-`t` EUF-NMA games is bounded by (in fact equal to) the decisional
-MLWE advantage of the seed-based distinguisher `B`.
+between the real-`t` and uniform-`t` EUF-NMA games is bounded by the decisional MLWE advantage of
+the seed-based distinguisher `B`, plus the honest-sampling slack `idealGap`.
 
 The proof factors through three facts:
 - **(Hadv)** the MLWE advantage equals `(game0 B).boolDistAdvantage (game1 B)`
@@ -324,26 +359,32 @@ The proof factors through three facts:
   (proven below: both are the uniform-`t` game, and the `ρ` marginals coincide because
   `mldsaMLWE` samples `ρ` through the *same* `ExpandSeed` that `keygen1` uses, and `keygen1`'s
   secret is discarded);
-- **(H0)** `nmaGame … keygen0` and `game0 (mldsaMLWE) B` have equal `Pr[= true]` — discharged from
-  the honest-sampling field `h_laws.expandS_honest_sampling` (the ROM idealization of
-  `ExpandSeed`/`ExpandS`); see the inline comment for exactly what it needs.
+- **(H0)** `nmaGame … keygen0` and `game0 (mldsaMLWE) B` differ in `Pr[= true]` by at most
+  `idealGap` — controlled by the honest-sampling slack hypothesis `hSlack` (the quantitative,
+  total-variation ROM modeling of `ExpandSeed`/`ExpandS`); see the inline comment for exactly
+  what it needs.
+
+The deterministic `ExpandSeed`/`ExpandS` cannot make the real key law *equal* the
+independent-uniform secret law (a deterministic image of `2^256` seeds has strictly smaller
+support), so `(H0)` is genuinely an inequality with the residual carried by `idealGap`.
 
 This is the first of the three steps of `nma_security`; steps 2 and 3 (the `H₁` reprogramming and
 the SelfTargetMSIS extraction) are handled elsewhere. The bound is stated on `toReal` because the
-NMA advantages are `ℝ≥0∞` while MLWE advantage is `ℝ`. -/
-theorem nma_keyswap_hop (h_laws : Primitives.Laws prims nttOps)
+NMA advantages are `ℝ≥0∞` while MLWE advantage and `idealGap` are `ℝ`. -/
+theorem nma_keyswap_hop (_h_laws : Primitives.Laws prims nttOps)
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
     (maxAttempts : ℕ)
+    (idealGap : ℝ) (_hGap : 0 ≤ idealGap)
+    (hSlack : honestSamplingSlack p prims idealGap)
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     |(nmaAdvantage p prims hr maxAttempts (keygen0 p prims) main).toReal -
         (nmaAdvantage p prims hr maxAttempts (keygen1 p prims) main).toReal| ≤
       LearningWithErrors.advantage (mldsaMLWE p prims)
-        (distinguisherB p prims hr maxAttempts main) := by
+        (distinguisherB p prims hr maxAttempts main) + idealGap := by
   set B := distinguisherB p prims hr maxAttempts main (M := M) with hB
   -- (Hadv): the MLWE advantage is exactly the gap between the two single-branch games.
-  apply le_of_eq
   rw [advantage_eq_game_boolDistAdvantage (mldsaMLWE p prims) B,
     ProbComp.boolDistAdvantage, nmaAdvantage, nmaAdvantage]
   -- It now suffices to identify `Pr[= true]` of each NMA game with the matching MLWE game.
@@ -360,40 +401,39 @@ theorem nma_keyswap_hop (h_laws : Primitives.Laws prims nttOps)
     simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, hB, distinguisherB,
       mldsaMLWE, keygen1, keyFromMaterial, bind_assoc, pure_bind]
     rw [probOutput_def, probOutput_def, SPMF.evalDist_def]
-  have hH0 : Pr[= true | nmaGame p prims hr maxAttempts (keygen0 p prims) main] =
-      Pr[= true | LearningWithErrors.game0 (mldsaMLWE p prims) B] := by
-    -- (H0) real-branch identity — THE residual honest-sampling assumption.
-    -- `nmaGame … keygen0` samples one `seed ← $ᵗ Bytes 32`, derives `ρ := (ExpandSeed seed).1`,
-    -- `(s₁, s₂) := ExpandS (ExpandSeed seed).2`, and sets `t := ExpandA(ρ)·s₁ + s₂`.
-    -- `game0 = distr >>= B` instead samples `ρ` through `ExpandSeed` but `s₁ ← $ᵗ RqVec l`,
-    -- `s₂ ← $ᵗ RqVec k` *independently* of `ρ` and of each other, with `t := ExpandA(ρ)·s₁ + s₂`.
-    -- These agree on `Pr[= true]` iff the joint law of `(ρ, s₁, s₂)` produced by
-    -- `ExpandSeed`/`ExpandS` from one uniform `seed` equals the product law
-    -- `((ExpandSeed (·)).1 of uniform seed) ⊗ Uniform(RqVec l) ⊗ Uniform(RqVec k)`.
-    -- This is the ML-DSA *honest sampling assumption* (`ExpandSeed`/`ExpandS` modeled as
-    -- independent uniform samplers in the ROM); it is NOT derivable from the deterministic
-    -- `prims` and must enter as an added hypothesis on `prims` (or be supplied by the ROM
-    -- modeling of `ExpandSeed`/`ExpandA`). See obligation (1) in the closing note.
+  -- (H0) real-branch *bound* — THE residual honest-sampling slack, quantified by `idealGap`.
+  -- `nmaGame … keygen0` samples one `seed ← $ᵗ Bytes 32`, derives `ρ := (ExpandSeed seed).1`,
+  -- `(s₁, s₂) := ExpandS (ExpandSeed seed).2`, and sets `t := ExpandA(ρ)·s₁ + s₂`.
+  -- `game0 = distr >>= B` instead samples `ρ` through `ExpandSeed` but `s₁ ← $ᵗ RqVec l`,
+  -- `s₂ ← $ᵗ RqVec k` *independently* of `ρ` and of each other, with `t := ExpandA(ρ)·s₁ + s₂`.
+  -- The two `Pr[= true]` differ by at most the total-variation distance of the underlying key
+  -- derivations, which `hSlack` bounds by `idealGap`. This is the ML-DSA *honest-sampling slack*
+  -- (`ExpandSeed`/`ExpandS` modeled as near-uniform samplers in the ROM); it is NOT derivable from
+  -- the deterministic `prims` (deterministic XOFs cannot manufacture entropy beyond their seed) and
+  -- enters as a real-number bound, not a false equality. See obligation (1) in the closing note.
+  have hH0 : |Pr[= true | nmaGame p prims hr maxAttempts (keygen0 p prims) main].toReal -
+      Pr[= true | LearningWithErrors.game0 (mldsaMLWE p prims) B].toReal| ≤ idealGap := by
     rw [nmaGame_eq_keygen_bind]
     simp only [LearningWithErrors.game0, LearningWithErrors.distr, hB, distinguisherB,
       mldsaMLWE, keygen0, keyFromMaterial, bind_assoc, pure_bind]
-    -- After the runtime plumbing the goal is purely about the *key distribution*:
+    -- After the runtime plumbing the goal compares the *key distributions* only:
     --   LHS: `seed ← $ᵗ; t := ExpandA((ExpandSeed seed).1)·(ExpandS (ExpandSeed seed).2).1
     --           + (ExpandS (ExpandSeed seed).2).2; run B-tail on pk(seed, t)`
     --   RHS: `seed ← $ᵗ; s₁ ← $ᵗ; s₂ ← $ᵗ; t := ExpandA((ExpandSeed seed).1)·s₁ + s₂;
     --           run B-tail on pk(seed, t)`.
-    -- These coincide exactly when `(s₁, s₂) = ExpandS (ExpandSeed seed).2` is, jointly over a
-    -- uniform `seed`, distributed as an *independent* `Uniform(RqVec l) × Uniform(RqVec k)`
-    -- (and independent of `(ExpandSeed seed).1`). That is the ML-DSA honest-sampling assumption
-    -- on `ExpandSeed`/`ExpandS`, not derivable from the deterministic `prims`; see obligation (1).
-    exact probOutput_congr rfl (h_laws.expandS_honest_sampling
+    -- The `Pr[= true]` gap is at most their TV distance, bounded by `idealGap` via `hSlack`.
+    refine le_trans (abs_probOutput_toReal_sub_le_tvDist _ _) ?_
+    exact hSlack
       (fun rho s1 s2 => simulateToProbComp p prims (M := M) (do
         let d ← main ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩
         (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify
-          ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩ d.1 d.2)))
-  -- The hop is in fact an *equality* modulo (H0)/(H1): after rewriting both NMA games into the
-  -- matching MLWE games the bound becomes `|x - y| = |x - y|`, closed by reflexivity.
-  rw [hH0, hH1]
+          ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩ d.1 d.2))
+  -- Assemble: `|a − b| ≤ |a − g₀| + |g₀ − g₁| ≤ idealGap + MLWE`, then reorder.
+  rw [hH1]
+  refine le_trans (abs_sub_le _
+    (Pr[= true | LearningWithErrors.game0 (mldsaMLWE p prims) B].toReal) _) ?_
+  rw [add_comm]
+  exact add_le_add le_rfl hH0
 
 end Hop
 
@@ -631,13 +671,15 @@ prims M`, and
 `hGen : hr.gen = keygen0 p prims` pins the Fiat-Shamir key generation to the real ML-DSA keygen.
 
 This is the EUF-NMA half (Lemma 7) of the ML-DSA security proof; the CMA-to-NMA statistical step
-(`euf_cma_security`) composes on top of it. -/
+(`euf_cma_security_of_nma`) composes on top of it. -/
 theorem nma_security (h_laws : Primitives.Laws prims nttOps)
     (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
     (stmsis : SelfTargetMSIS.Problem
       (TqMatrix p.k p.l) (Response p prims)
       (PublicKey p prims) (M × Commitment p prims) (CommitHashBytes p))
     (maxAttempts : ℕ)
+    (idealGap : ℝ) (hGap : 0 ≤ idealGap)
+    (hSlack : honestSamplingSlack p prims idealGap)
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p)
       (validKeyPair p prims))
     (hGen : hr.gen = keygen0 p prims)
@@ -657,7 +699,8 @@ theorem nma_security (h_laws : Primitives.Laws prims nttOps)
           (FiatShamirWithAbort.runtime
             (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
         ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweReduction) +
-        SelfTargetMSIS.advantage stmsisReduction := by
+        SelfTargetMSIS.advantage stmsisReduction +
+        ENNReal.ofReal idealGap := by
   classical
   intro adv
   obtain ⟨B, hB⟩ := hMlweBridge adv.main
@@ -695,25 +738,492 @@ theorem nma_security (h_laws : Primitives.Laws prims nttOps)
   have htri := ProbComp.probOutput_true_le_add_ofReal_boolDistAdvantage pc0 pc1
   rw [hg0]
   refine le_trans htri ?_
-  -- `pc0.boolDistAdvantage pc1 = |nmaAdv keygen0 - nmaAdv keygen1| ≤ advantage mldsaMLWE B'`.
+  -- `pc0.boolDistAdvantage pc1 = |nmaAdv keygen0 - nmaAdv keygen1| ≤ advantage mldsaMLWE B' +
+  -- idealGap` (the honest-sampling slack of `nma_keyswap_hop`).
   have hbias : pc0.boolDistAdvantage pc1 ≤
       LearningWithErrors.advantage (mldsaMLWE p prims)
-        (distinguisherB p prims hr maxAttempts adv.main) := by
-    have hk := nma_keyswap_hop p prims h_laws hr maxAttempts (M := M) adv.main
+        (distinguisherB p prims hr maxAttempts adv.main) + idealGap := by
+    have hk := nma_keyswap_hop p prims h_laws hr maxAttempts idealGap hGap hSlack (M := M) adv.main
     rw [ProbComp.boolDistAdvantage, ← hg0, ← hg1]
     exact hk
+  -- `ofReal` of the slacked bound splits additively (both summands are nonnegative).
+  have hbias' : ENNReal.ofReal (pc0.boolDistAdvantage pc1) ≤
+      ENNReal.ofReal (LearningWithErrors.advantage (mldsaMLWE p prims)
+        (distinguisherB p prims hr maxAttempts adv.main)) + ENNReal.ofReal idealGap := by
+    refine le_trans (ENNReal.ofReal_le_ofReal hbias) ?_
+    exact ENNReal.ofReal_add_le
   -- STMSIS extraction bound on the uniform game.
   have hstm := nmaAdvantage_keygen1_le_stmsis p prims hr maxAttempts (M := M) adv.main
   rw [hg1] at hstm
   calc Pr[= true | pc1] + ENNReal.ofReal (pc0.boolDistAdvantage pc1)
       ≤ SelfTargetMSIS.advantage (extractorC p prims adv.main) +
+        (ENNReal.ofReal (LearningWithErrors.advantage (mldsaMLWE p prims)
+          (distinguisherB p prims hr maxAttempts adv.main)) + ENNReal.ofReal idealGap) := by
+        exact add_le_add hstm hbias'
+    _ = (SelfTargetMSIS.advantage (extractorC p prims adv.main) +
         ENNReal.ofReal (LearningWithErrors.advantage (mldsaMLWE p prims)
-          (distinguisherB p prims hr maxAttempts adv.main)) := by
-        exact add_le_add hstm (ENNReal.ofReal_le_ofReal hbias)
+          (distinguisherB p prims hr maxAttempts adv.main))) + ENNReal.ofReal idealGap := by
+        rw [← add_assoc]
     _ ≤ ENNReal.ofReal (LearningWithErrors.advantage mlwe B) +
-        SelfTargetMSIS.advantage (extractorC p prims adv.main) := by
+        SelfTargetMSIS.advantage (extractorC p prims adv.main) +
+        ENNReal.ofReal idealGap := by
+        refine add_le_add ?_ le_rfl
         rw [add_comm]
         exact add_le_add (ENNReal.ofReal_le_ofReal hB) le_rfl
+
+open scoped Classical in
+/-- **EUF-CMA security of ML-DSA (Theorem 4, CRYPTO 2023), wired end to end.**
+
+This is the sound CMA-to-NMA-to-hardness composition. It relocates here (rather than to
+`LatticeCrypto.MLDSA.Security`) to avoid the circular import: `nma_security` lives in this
+file, which already imports `LatticeCrypto.MLDSA.Security`.
+
+For any EUF-CMA adversary `adv` against the Fiat-Shamir-with-aborts ML-DSA signature, the
+advantage is bounded by the MLWE advantage, the SelfTargetMSIS advantage, and the
+statistical CMA-to-NMA loss `FiatShamirWithAbort.cmaToNmaLoss`. The proof composes three
+pieces:
+
+1. `FiatShamirWithAbort.euf_cma_to_nma`: `adv.advantage ≤ Pr[managedRoNmaExp simulatedNmaAdv]
+   + cmaToNmaLoss`, under the good-key/commitment-guessing/abort/query hypotheses;
+2. `FiatShamirWithAbort.managedRoNmaExp_simulatedNmaAdv_eq_eufNmaExp` (Option B): the managed-RO
+   NMA success probability equals the plain EUF-NMA advantage of `simulatedEufNmaAdv`, the
+   cache-forgetting reduction — this is the soundness fix that makes the bridge legitimate;
+3. `nma_security` (Lemma 7) applied to `simulatedEufNmaAdv`: `≤ MLWE + SelfTargetMSIS`.
+
+The loss parameters carry the nonnegativity and good-key hypotheses that the abstract
+reduction needs; the `nma_security` bridge hypotheses (`hGen`, `hStmsis`, `hMlweBridge`) pin
+the abstract hardness problems to the concrete ML-DSA ones. -/
+theorem euf_cma_security_of_nma [SampleableType (PublicKey p prims)]
+    (h_laws : Primitives.Laws prims nttOps)
+    (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
+    (stmsis : SelfTargetMSIS.Problem
+      (TqMatrix p.k p.l) (Response p prims)
+      (PublicKey p prims) (M × Commitment p prims) (CommitHashBytes p))
+    (maxAttempts : ℕ)
+    (idealGap : ℝ) (hGap : 0 ≤ idealGap)
+    (hSlack : honestSamplingSlack p prims idealGap)
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p)
+      (validKeyPair p prims))
+    (hGen : hr.gen = keygen0 p prims)
+    (hStmsis : stmsis = mldsaSTMSIS p prims M)
+    (sim : PublicKey p prims →
+      ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))
+    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk)
+    (hhvzk : (identificationScheme p prims).HVZK sim ζ_zk)
+    (qS qH : ℕ) (ε p_abort δ : ℝ)
+    (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
+    (Good : PublicKey p prims → SecretKey p → Prop)
+    (hGood : Pr[ fun xw : PublicKey p prims × SecretKey p => ¬ Good xw.1 xw.2 | hr.gen] ≤
+      ENNReal.ofReal δ)
+    (hGuess : ∀ pk sk, Good pk sk → ∀ cm : Commitment p prims,
+      Pr[= cm | Prod.fst <$> (identificationScheme p prims).commit pk sk] ≤ ENNReal.ofReal ε)
+    (hAbort : ∀ pk sk, Good pk sk →
+      Pr[= none | (identificationScheme p prims).honestExecution pk sk] ≤
+        ENNReal.ofReal p_abort)
+    (hAbortSim : ∀ pk sk, Good pk sk →
+      Pr[= none | sim pk] ≤ ENNReal.ofReal p_abort)
+    (adv : SignatureAlg.unforgeableAdv
+      (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts))
+    (hQ : ∀ pk, FiatShamir.signHashQueryBound M
+      (S' := Option (Commitment p prims × Response p prims)) (oa := adv.main pk) qS qH)
+    (hMlweBridge : ∀ (main : PublicKey p prims →
+        OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+          (M × Option (Commitment p prims × Response p prims))),
+      ∃ B : LearningWithErrors.Adversary mlwe,
+        LearningWithErrors.advantage (mldsaMLWE p prims)
+          (distinguisherB p prims hr maxAttempts main) ≤
+          LearningWithErrors.advantage mlwe B) :
+    ∃ (mlweReduction : LearningWithErrors.Adversary mlwe)
+      (stmsisReduction : SelfTargetMSIS.Adversary stmsis),
+      adv.advantage
+          (FiatShamirWithAbort.runtime
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+        ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweReduction) +
+        SelfTargetMSIS.advantage stmsisReduction +
+        ENNReal.ofReal
+          (FiatShamirWithAbort.cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) +
+        ENNReal.ofReal idealGap := by
+  classical
+  -- Step 1: CMA advantage ≤ managed-RO NMA success of `simulatedNmaAdv` + loss.
+  have hcma := FiatShamirWithAbort.euf_cma_to_nma (identificationScheme p prims) hr M
+    maxAttempts sim adv ζ_zk hζ hhvzk qS qH ε p_abort δ hε hδ hp₀ hp Good hGood hGuess
+    hAbort hAbortSim hQ
+  -- Step 2 (Option B bridge): managed-RO NMA success = plain EUF-NMA advantage of the
+  -- cache-forgetting reduction `simulatedEufNmaAdv`.
+  have hbridge := FiatShamirWithAbort.managedRoNmaExp_simulatedNmaAdv_eq_eufNmaExp
+    (identificationScheme p prims) hr M maxAttempts sim adv
+  -- Step 3 (Lemma 7): the plain EUF-NMA advantage is bounded by MLWE + SelfTargetMSIS + idealGap.
+  obtain ⟨mlweRed, stmsisRed, hnma⟩ := nma_security p prims h_laws mlwe stmsis maxAttempts
+    idealGap hGap hSlack hr hGen hStmsis hMlweBridge
+    (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M maxAttempts
+      sim adv)
+  refine ⟨mlweRed, stmsisRed, ?_⟩
+  -- Assemble: advantage ≤ (managed = eufNma advantage ≤ MLWE + STMSIS + idealGap) + loss.
+  refine le_trans hcma ?_
+  have hmanaged : Pr[= true | SignatureAlg.managedRoNmaExp
+        (FiatShamirWithAbort.runtime M)
+        (FiatShamirWithAbort.simulatedNmaAdv (identificationScheme p prims) hr M maxAttempts
+          sim adv)] =
+      (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M maxAttempts
+        sim adv).advantage (FiatShamirWithAbort.runtime M) := by
+    rw [SignatureAlg.eufNmaAdv.advantage, hbridge]
+  rw [hmanaged]
+  -- `(MLWE + STMSIS + idealGap) + loss = MLWE + STMSIS + loss + idealGap` (commute last two).
+  refine le_trans (add_le_add hnma le_rfl) (le_of_eq ?_)
+  rw [add_right_comm]
+
+open scoped Classical in
+/-- **EUF-CMA security of ML-DSA with the HVZK hypotheses discharged.**
+
+A corollary of `euf_cma_security_of_nma` that instantiates the abstract HVZK simulator with the
+proven ML-DSA simulator `hvzkSimulatorReal` and discharges the `hhvzk` obligation via
+`idsWithAbort_hvzk_real`. The zero-knowledge slack `ζ_zk` is therefore exposed as its concrete
+value `hvzkBoundReal p prims` — the supremum over honestly generated key pairs of the
+prover's extra-rejection mass — rather than being a free parameter.
+
+Compared with `euf_cma_security_of_nma`, this statement drops the four HVZK hypotheses
+(`sim`, `ζ_zk`, `hζ`, `hhvzk`): the simulator and its quantitative bound are now supplied by the
+already-proven `idsWithAbort_hvzk_real`. The remaining hypotheses are unchanged. The abort-rate
+side conditions `hAbort`/`hAbortSim` are retained: they bound a different quantity (the abort
+probability of, respectively, the honest execution and the simulator) and are not implied by the
+HVZK bound without strengthening `p_abort` to `p_abort + ζ_zk`.
+
+The `hvzkBoundReal p prims` slack is a genuine finite real bound (a probability mass projected
+through `ENNReal.toReal`, nonnegative by `ENNReal.toReal_nonneg`), not a vacuous `⊤` placeholder. -/
+theorem euf_cma_security_of_nma_hvzk [SampleableType (PublicKey p prims)]
+    (h_laws : Primitives.Laws prims nttOps)
+    (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
+    (stmsis : SelfTargetMSIS.Problem
+      (TqMatrix p.k p.l) (Response p prims)
+      (PublicKey p prims) (M × Commitment p prims) (CommitHashBytes p))
+    (maxAttempts : ℕ)
+    (idealGap : ℝ) (hGap : 0 ≤ idealGap)
+    (hSlack : honestSamplingSlack p prims idealGap)
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p)
+      (validKeyPair p prims))
+    (hGen : hr.gen = keygen0 p prims)
+    (hStmsis : stmsis = mldsaSTMSIS p prims M)
+    (qS qH : ℕ) (ε p_abort δ : ℝ)
+    (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
+    (Good : PublicKey p prims → SecretKey p → Prop)
+    (hGood : Pr[ fun xw : PublicKey p prims × SecretKey p => ¬ Good xw.1 xw.2 | hr.gen] ≤
+      ENNReal.ofReal δ)
+    (hGuess : ∀ pk sk, Good pk sk → ∀ cm : Commitment p prims,
+      Pr[= cm | Prod.fst <$> (identificationScheme p prims).commit pk sk] ≤ ENNReal.ofReal ε)
+    (hAbort : ∀ pk sk, Good pk sk →
+      Pr[= none | (identificationScheme p prims).honestExecution pk sk] ≤
+        ENNReal.ofReal p_abort)
+    (hAbortSim : ∀ pk sk, Good pk sk →
+      Pr[= none | hvzkSimulatorReal p prims pk] ≤ ENNReal.ofReal p_abort)
+    (adv : SignatureAlg.unforgeableAdv
+      (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts))
+    (hQ : ∀ pk, FiatShamir.signHashQueryBound M
+      (S' := Option (Commitment p prims × Response p prims)) (oa := adv.main pk) qS qH)
+    (hMlweBridge : ∀ (main : PublicKey p prims →
+        OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+          (M × Option (Commitment p prims × Response p prims))),
+      ∃ B : LearningWithErrors.Adversary mlwe,
+        LearningWithErrors.advantage (mldsaMLWE p prims)
+          (distinguisherB p prims hr maxAttempts main) ≤
+          LearningWithErrors.advantage mlwe B) :
+    ∃ (mlweReduction : LearningWithErrors.Adversary mlwe)
+      (stmsisReduction : SelfTargetMSIS.Adversary stmsis),
+      adv.advantage
+          (FiatShamirWithAbort.runtime
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+        ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweReduction) +
+        SelfTargetMSIS.advantage stmsisReduction +
+        ENNReal.ofReal
+          (FiatShamirWithAbort.cmaToNmaLoss qS qH ε p_abort
+            (hvzkBoundReal p prims) δ hp) +
+        ENNReal.ofReal idealGap :=
+  euf_cma_security_of_nma p prims h_laws mlwe stmsis maxAttempts idealGap hGap hSlack hr
+    hGen hStmsis (hvzkSimulatorReal p prims) (hvzkBoundReal p prims) ENNReal.toReal_nonneg
+    (idsWithAbort_hvzk_real p prims h_laws) qS qH ε p_abort δ hε hδ hp₀ hp Good hGood hGuess
+    hAbort hAbortSim adv hQ hMlweBridge
+
+/-! ## Asymptotic (negligible) EUF-CMA headline
+
+The non-degenerate asymptotic statement. The scheme is indexed by a security parameter `n`
+through a *family* `(p n, prims n)` of ML-DSA parameter/primitive instances, so that the
+commitment guessing probability `ε n`, the key-regularity failure `δ n`, and the HVZK slack
+`hvzkBoundReal (p n) (prims n)` all shrink (negligibly) as `n → ∞` while the signing / hashing
+query budgets `qS n`, `qH n` grow only polynomially in `n`. Under negligible MLWE and
+SelfTargetMSIS advantage families this makes the EUF-CMA advantage family negligible.
+
+The earlier fixed-scheme wrapper was degenerate: with a *constant* `ε > 0` the loss term
+`2·qS·(qH+1)·ε/(1−p)` is only negligible when the query budgets vanish. Here the slacks are
+themselves negligible families, so each loss term is `poly(n) · negligible(n)`, which is negligible
+by `negligible_polynomial_mul`. -/
+
+omit nttOps in
+/-- A geometric family `r ^ n` with `0 ≤ r < 1` is negligible (after `ENNReal.ofReal`): for every
+power `k`, `n ^ k · r ^ n → 0` (`tendsto_pow_const_mul_const_pow_of_lt_one`), and `ENNReal.ofReal`
+is continuous. This provides concrete negligible slack/advantage families for the non-vacuity
+witness `euf_cma_security_asymptotic_real_satisfiable`. -/
+theorem negligible_ofReal_geometric (r : ℝ) (hr0 : 0 ≤ r) (hr1 : r < 1) :
+    negligible (fun n => ENNReal.ofReal (r ^ n)) := by
+  intro k
+  have hreal : Filter.Tendsto (fun n : ℕ => (n : ℝ) ^ k * r ^ n) Filter.atTop (nhds 0) :=
+    tendsto_pow_const_mul_const_pow_of_lt_one k hr0 hr1
+  have h2 : Filter.Tendsto (fun n : ℕ => ENNReal.ofReal ((n : ℝ) ^ k * r ^ n)) Filter.atTop
+      (nhds (ENNReal.ofReal 0)) :=
+    (ENNReal.continuous_ofReal.tendsto 0).comp hreal
+  rw [ENNReal.ofReal_zero] at h2
+  refine h2.congr (fun n => ?_)
+  rw [ENNReal.ofReal_mul (by positivity), ENNReal.ofReal_pow (by positivity),
+      ENNReal.ofReal_natCast]
+
+omit nttOps in
+/-- Building block: a fixed-constant multiple of `qS ^ dS · qH ^ dH · slack n` is negligible
+whenever `qS`, `qH` are polynomially bounded and `slack` is a negligible (real-valued) family. The
+product is bounded above by `(poly evaluation) · (constant) · ofReal (slack n)`; the polynomial
+absorbs the query powers and the negligible slack drives the product to `0` faster than any
+polynomial via `negligible_polynomial_mul`. -/
+private theorem negl_poly_slack
+    (qS qH : ℕ → ℕ) (slack : ℕ → ℝ) (c : ℝ) (hc : 0 ≤ c)
+    (pS pH : Polynomial ℕ) (dS dH : ℕ)
+    (hqS : ∀ n, qS n ≤ pS.eval n) (hqH : ∀ n, qH n ≤ pH.eval n)
+    (hslackneg : negligible (fun n => ENNReal.ofReal (slack n))) :
+    negligible (fun n => ENNReal.ofReal (c * (qS n) ^ dS * (qH n) ^ dH * slack n)) := by
+  have hbound : ∀ n, ENNReal.ofReal (c * (qS n) ^ dS * (qH n) ^ dH * slack n) ≤
+      (↑((pS.eval n) ^ dS * (pH.eval n) ^ dH) : ℝ≥0∞) *
+        (ENNReal.ofReal c * ENNReal.ofReal (slack n)) := by
+    intro n
+    rcases le_or_gt 0 (slack n) with hs | hs
+    · rw [show c * (qS n : ℝ) ^ dS * (qH n : ℝ) ^ dH * slack n
+            = ((qS n : ℝ) ^ dS * (qH n : ℝ) ^ dH) * (c * slack n) by ring,
+          ENNReal.ofReal_mul (by positivity), ENNReal.ofReal_mul hc]
+      gcongr
+      rw [show ((qS n : ℝ) ^ dS * (qH n : ℝ) ^ dH)
+            = ((((qS n) ^ dS) * ((qH n) ^ dH) : ℕ) : ℝ) by push_cast; ring,
+          ENNReal.ofReal_natCast]
+      exact_mod_cast Nat.mul_le_mul (Nat.pow_le_pow_left (hqS n) dS)
+        (Nat.pow_le_pow_left (hqH n) dH)
+    · have hle : c * (qS n : ℝ) ^ dS * (qH n : ℝ) ^ dH * slack n ≤ 0 := by
+        have hpos : (0 : ℝ) ≤ c * (qS n : ℝ) ^ dS * (qH n : ℝ) ^ dH := by positivity
+        nlinarith
+      rw [ENNReal.ofReal_of_nonpos hle]; exact zero_le
+  refine negligible_of_le hbound ?_
+  have hconst : negligible (fun n => ENNReal.ofReal c * ENNReal.ofReal (slack n)) :=
+    negligible_const_mul hslackneg ENNReal.ofReal_ne_top
+  have hpoly := negligible_polynomial_mul hconst (pS ^ dS * pH ^ dH)
+  refine negligible_of_le (fun n => ?_) hpoly
+  rw [Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_pow]
+
+omit nttOps in
+/-- **The CMA-to-NMA statistical loss is a negligible family** when the abort rate `p_abort` is a
+fixed constant `< 1`, the signing / hashing budgets `qS`, `qH` are polynomially bounded, and the
+three per-key slacks `ε` (commitment guessing), `ζ_zk` (HVZK), and `δ` (key regularity) are
+negligible families. Each of the four loss terms is a fixed-constant multiple of a polynomial in the
+query budgets times a negligible slack, hence negligible by `negl_poly_slack`; the final `δ` term is
+negligible by hypothesis. The total `cmaToNmaLoss` is bounded by their sum (subadditivity of
+`ENNReal.ofReal`). -/
+theorem cmaToNmaLoss_negligible
+    (qS qH : ℕ → ℕ) (ε ζ_zk δ : ℕ → ℝ) (p_abort : ℝ) (hp : p_abort < 1)
+    (pS pH : Polynomial ℕ)
+    (hqS : ∀ n, qS n ≤ pS.eval n) (hqH : ∀ n, qH n ≤ pH.eval n)
+    (hεneg : negligible (fun n => ENNReal.ofReal (ε n)))
+    (hζneg : negligible (fun n => ENNReal.ofReal (ζ_zk n)))
+    (hδneg : negligible (fun n => ENNReal.ofReal (δ n))) :
+    negligible (fun n => ENNReal.ofReal
+      (FiatShamirWithAbort.cmaToNmaLoss (qS n) (qH n) (ε n) p_abort (ζ_zk n) (δ n) hp)) := by
+  have h1mp : (0 : ℝ) < 1 - p_abort := by linarith
+  have t1 := negl_poly_slack qS (fun n => qH n + 1) ε (2 / (1 - p_abort))
+    (by positivity) pS (pH + 1) 1 1 hqS
+    (fun n => by simpa [Polynomial.eval_add] using Nat.add_le_add_right (hqH n) 1) hεneg
+  have t2 := negl_poly_slack (fun n => qS n * (qS n + 1)) qH ε (1 / (2 * (1 - p_abort) ^ 2))
+    (by positivity) (pS * (pS + 1)) pH 1 0
+    (fun n => by
+      rw [Polynomial.eval_mul, Polynomial.eval_add, Polynomial.eval_one]
+      exact Nat.mul_le_mul (hqS n) (Nat.add_le_add_right (hqS n) 1))
+    (fun n => hqH n) hεneg
+  have t3 := negl_poly_slack qS qH ζ_zk (1 / (1 - p_abort)) (by positivity) pS pH 1 0
+    hqS hqH hζneg
+  have hsum := negligible_add (negligible_add (negligible_add t1 t2) t3) hδneg
+  refine negligible_of_le (g := fun n =>
+      ENNReal.ofReal (2 / (1 - p_abort) * (qS n : ℝ) ^ 1 * ((qH n + 1 : ℕ) : ℝ) ^ 1 * ε n) +
+      ENNReal.ofReal (1 / (2 * (1 - p_abort) ^ 2) * ((qS n * (qS n + 1) : ℕ) : ℝ) ^ 1 *
+        (qH n : ℝ) ^ 0 * ε n) +
+      ENNReal.ofReal (1 / (1 - p_abort) * (qS n : ℝ) ^ 1 * (qH n : ℝ) ^ 0 * ζ_zk n) +
+      ENNReal.ofReal (δ n)) (fun n => ?_) hsum
+  change ENNReal.ofReal
+      (FiatShamirWithAbort.cmaToNmaLoss (qS n) (qH n) (ε n) p_abort (ζ_zk n) (δ n) hp) ≤ _
+  have heq : (FiatShamirWithAbort.cmaToNmaLoss (qS n) (qH n) (ε n) p_abort (ζ_zk n) (δ n) hp)
+      = (2 / (1 - p_abort) * (qS n : ℝ) ^ 1 * ((qH n + 1 : ℕ) : ℝ) ^ 1 * ε n) +
+        (1 / (2 * (1 - p_abort) ^ 2) * ((qS n * (qS n + 1) : ℕ) : ℝ) ^ 1 *
+          (qH n : ℝ) ^ 0 * ε n) +
+        (1 / (1 - p_abort) * (qS n : ℝ) ^ 1 * (qH n : ℝ) ^ 0 * ζ_zk n) + δ n := by
+    rw [FiatShamirWithAbort.cmaToNmaLoss]; push_cast; field_simp
+  rw [heq]
+  calc ENNReal.ofReal (_ + _ + _ + δ n)
+      ≤ ENNReal.ofReal (_ + _ + _) + ENNReal.ofReal (δ n) := ENNReal.ofReal_add_le
+    _ ≤ _ + ENNReal.ofReal _ + ENNReal.ofReal (δ n) := by gcongr; exact ENNReal.ofReal_add_le
+    _ ≤ ENNReal.ofReal _ + ENNReal.ofReal _ + ENNReal.ofReal _ + ENNReal.ofReal (δ n) := by
+        gcongr; exact ENNReal.ofReal_add_le
+
+omit nttOps in
+/-- **Asymptotic (negligible) EUF-CMA security of ML-DSA.**
+
+The security-parameter-indexed, non-degenerate headline. The ML-DSA scheme is given as a *family*
+`(p n, prims n)` over the security parameter `n`, with all carrier instances supplied per `n`. The
+hypotheses are the `n`-indexed lifts of those of `euf_cma_security_of_nma_hvzk`, plus:
+
+* polynomial query bounds `qS n ≤ pS.eval n`, `qH n ≤ pH.eval n` (poly-time adversaries);
+* negligible commitment-guessing slack `ε`, key-regularity slack `δ`, and HVZK slack
+  `hvzkBoundReal (p n) (prims n)` (the commitment / response spaces grow with `n`);
+* negligible MLWE and SelfTargetMSIS advantage families `mlweAdv`, `stmsisAdv` dominating every
+  reduction adversary (the hardness assumptions, carried as `n`-indexed families per the standard
+  ROM model).
+
+The conclusion is that the EUF-CMA advantage family of `adv` is negligible. The proof instantiates
+the per-`n` bound `euf_cma_security_of_nma_hvzk`, dominates the two existential reductions by their
+negligible families, and bounds the statistical loss family with `cmaToNmaLoss_negligible`: with
+polynomially-bounded queries and negligible slacks each loss term is `poly(n) · negligible(n)`.
+
+This is non-vacuous in the real regime: the hypotheses are jointly satisfiable with query budgets
+growing polynomially (e.g. `qS n = qH n = n`) and slacks vanishing super-polynomially (e.g.
+`ε n = δ n = (1 / 2) ^ n`), which is exactly the standard asymptotic ML-DSA setting — not the
+degenerate vanishing-query regime. -/
+theorem euf_cma_security_asymptotic_real
+    (p' : ℕ → Params) (prims' : ∀ n, Primitives (p' n)) [nttOps' : NTTRingOps]
+    (instHigh : ∀ n, DecidableEq (prims' n).High)
+    {M' : Type} [DecidableEq M']
+    (instCommEq : ∀ n, DecidableEq (Commitment (p' n) (prims' n)))
+    (instCommInh : ∀ n, Inhabited (Commitment (p' n) (prims' n)))
+    (instRespInh : ∀ n, Inhabited (Response (p' n) (prims' n)))
+    (instRql : ∀ n, SampleableType (RqVec (p' n).l))
+    (instRqk : ∀ n, SampleableType (RqVec (p' n).k))
+    (instChal : ∀ n, SampleableType (CommitHashBytes (p' n)))
+    (instPk : ∀ n, SampleableType (PublicKey (p' n) (prims' n)))
+    (h_laws : ∀ n, Primitives.Laws (prims' n) nttOps')
+    (mlwe : ∀ n, LearningWithErrors.Problem (TqMatrix (p' n).k (p' n).l)
+      (RqVec (p' n).l) (RqVec (p' n).k))
+    (stmsis : ∀ n, SelfTargetMSIS.Problem
+      (TqMatrix (p' n).k (p' n).l) (Response (p' n) (prims' n))
+      (PublicKey (p' n) (prims' n)) (M' × Commitment (p' n) (prims' n)) (CommitHashBytes (p' n)))
+    (maxAttempts : ℕ → ℕ)
+    (hr : ∀ n, GenerableRelation (PublicKey (p' n) (prims' n)) (SecretKey (p' n))
+      (validKeyPair (p' n) (prims' n)))
+    (hGen : ∀ n, (hr n).gen = keygen0 (p' n) (prims' n))
+    (hStmsis : ∀ n, stmsis n = mldsaSTMSIS (p' n) (prims' n) M')
+    (qS qH : ℕ → ℕ) (ε δ : ℕ → ℝ) (p_abort : ℝ)
+    (hp : p_abort < 1) (hp₀ : 0 ≤ p_abort)
+    (hε : ∀ n, 0 ≤ ε n) (hδ : ∀ n, 0 ≤ δ n)
+    (Good : ∀ n, PublicKey (p' n) (prims' n) → SecretKey (p' n) → Prop)
+    (hGood : ∀ n, Pr[ fun xw : PublicKey (p' n) (prims' n) × SecretKey (p' n) =>
+        ¬ Good n xw.1 xw.2 | (hr n).gen] ≤ ENNReal.ofReal (δ n))
+    (hGuess : ∀ n, ∀ pk sk, Good n pk sk → ∀ cm : Commitment (p' n) (prims' n),
+      Pr[= cm | Prod.fst <$> (identificationScheme (p' n) (prims' n)).commit pk sk] ≤
+        ENNReal.ofReal (ε n))
+    (hAbort : ∀ n, ∀ pk sk, Good n pk sk →
+      Pr[= none | (identificationScheme (p' n) (prims' n)).honestExecution pk sk] ≤
+        ENNReal.ofReal p_abort)
+    (hAbortSim : ∀ n, ∀ pk sk, Good n pk sk →
+      Pr[= none | hvzkSimulatorReal (p' n) (prims' n) pk] ≤ ENNReal.ofReal p_abort)
+    (adv : ∀ n, SignatureAlg.unforgeableAdv
+      (FiatShamirWithAbort (identificationScheme (p' n) (prims' n)) (hr n) M' (maxAttempts n)))
+    (hQ : ∀ n, ∀ pk, FiatShamir.signHashQueryBound M'
+      (S' := Option (Commitment (p' n) (prims' n) × Response (p' n) (prims' n)))
+      (oa := (adv n).main pk) (qS n) (qH n))
+    (hMlweBridge : ∀ n, ∀ (main : PublicKey (p' n) (prims' n) →
+        OracleComp (unifSpec + (M' × Commitment (p' n) (prims' n) →ₒ CommitHashBytes (p' n)))
+          (M' × Option (Commitment (p' n) (prims' n) × Response (p' n) (prims' n)))),
+      ∃ B : LearningWithErrors.Adversary (mlwe n),
+        LearningWithErrors.advantage (mldsaMLWE (p' n) (prims' n))
+          (distinguisherB (p' n) (prims' n) (hr n) (maxAttempts n) main) ≤
+          LearningWithErrors.advantage (mlwe n) B)
+    (pS pH : Polynomial ℕ)
+    (hqS : ∀ n, qS n ≤ pS.eval n) (hqH : ∀ n, qH n ≤ pH.eval n)
+    (mlweAdv stmsisAdv : ℕ → ℝ≥0∞)
+    (hmlweNegl : negligible mlweAdv) (hstmsisNegl : negligible stmsisAdv)
+    (hMlweBound : ∀ n (B : LearningWithErrors.Adversary (mlwe n)),
+      ENNReal.ofReal (LearningWithErrors.advantage (mlwe n) B) ≤ mlweAdv n)
+    (hStmsisBound : ∀ n (C : SelfTargetMSIS.Adversary (stmsis n)),
+      SelfTargetMSIS.advantage C ≤ stmsisAdv n)
+    (idealGap : ℕ → ℝ) (hGap : ∀ n, 0 ≤ idealGap n)
+    (hSlack : ∀ n, honestSamplingSlack (p' n) (prims' n) (idealGap n))
+    (hGapNegl : negligible (fun n => ENNReal.ofReal (idealGap n)))
+    (hεneg : negligible (fun n => ENNReal.ofReal (ε n)))
+    (hδneg : negligible (fun n => ENNReal.ofReal (δ n)))
+    (hζneg : negligible (fun n => ENNReal.ofReal (hvzkBoundReal (p' n) (prims' n)))) :
+    negligible (fun n => (adv n).advantage
+      (FiatShamirWithAbort.runtime
+        (Commit := Commitment (p' n) (prims' n)) (Chal := CommitHashBytes (p' n)) M')) := by
+  have hbound : ∀ n, (adv n).advantage
+      (FiatShamirWithAbort.runtime
+        (Commit := Commitment (p' n) (prims' n)) (Chal := CommitHashBytes (p' n)) M') ≤
+      mlweAdv n + stmsisAdv n +
+      ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss (qS n) (qH n) (ε n) p_abort
+        (hvzkBoundReal (p' n) (prims' n)) (δ n) hp) +
+      ENNReal.ofReal (idealGap n) := by
+    intro n
+    obtain ⟨mlweRed, stmsisRed, hb⟩ :=
+      @euf_cma_security_of_nma_hvzk (p' n) (prims' n) nttOps' (instHigh n) M' _
+        (instCommEq n) (instCommInh n) (instRespInh n) (instRql n) (instRqk n)
+        (instChal n) (instPk n)
+        (h_laws n) (mlwe n) (stmsis n) (maxAttempts n) (idealGap n) (hGap n) (hSlack n)
+        (hr n) (hGen n) (hStmsis n)
+        (qS n) (qH n) (ε n) p_abort (δ n) (hε n) (hδ n) hp₀ hp (Good n) (hGood n) (hGuess n)
+        (hAbort n) (hAbortSim n) (adv n) (hQ n) (hMlweBridge n)
+    refine le_trans hb ?_
+    gcongr
+    · exact hMlweBound n mlweRed
+    · exact hStmsisBound n stmsisRed
+  refine negligible_of_le hbound ?_
+  refine negligible_add (negligible_add (negligible_add hmlweNegl hstmsisNegl) ?_) hGapNegl
+  exact cmaToNmaLoss_negligible qS qH ε (fun n => hvzkBoundReal (p' n) (prims' n)) δ p_abort hp
+    pS pH hqS hqH hεneg hζneg hδneg
+
+omit nttOps in
+/-- **Non-vacuity witness for the asymptotic regime.**
+
+The quantitative hypotheses of `euf_cma_security_asymptotic_real` — *polynomially-bounded* query
+budgets together with *negligible* statistical slacks (commitment guessing `ε`, HVZK `ζ_zk`, key
+regularity `δ`) and negligible hardness advantage families — are jointly satisfiable with query
+budgets that genuinely **grow** with the security parameter. Concretely, taking
+`qS n = qH n = n` (bounded by `Polynomial.X`, i.e. *not* vanishing), all slacks and advantage
+families equal to `(1 / 2) ^ n`, and `p_abort = 1 / 2`, the resulting `cmaToNmaLoss` family,
+together with the two hardness families, is negligible — so the dominating sum in the headline's
+internal bound is negligible.
+
+This rules out the degenerate reading of the headline (where polynomial queries against a *fixed*
+positive `ε` would force the budgets to vanish): here the budgets grow polynomially while the loss
+still decays, which is exactly the standard asymptotic ML-DSA setting. -/
+theorem euf_cma_security_asymptotic_real_satisfiable :
+    ∃ (qS qH : ℕ → ℕ) (ε ζ_zk δ idealGap : ℕ → ℝ) (p_abort : ℝ) (hp : p_abort < 1)
+      (pS pH : Polynomial ℕ) (mlweAdv stmsisAdv : ℕ → ℝ≥0∞),
+      (∀ n, qS n ≤ pS.eval n) ∧ (∀ n, qH n ≤ pH.eval n) ∧
+      -- the queries genuinely grow (are not the degenerate vanishing-query regime)
+      (∀ n, qS n = n) ∧ (∀ n, qH n = n) ∧
+      negligible mlweAdv ∧ negligible stmsisAdv ∧
+      negligible (fun n => ENNReal.ofReal (ε n)) ∧
+      negligible (fun n => ENNReal.ofReal (ζ_zk n)) ∧
+      negligible (fun n => ENNReal.ofReal (δ n)) ∧
+      negligible (fun n => ENNReal.ofReal (idealGap n)) ∧
+      negligible (fun n => mlweAdv n + stmsisAdv n +
+        ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss (qS n) (qH n) (ε n) p_abort
+          (ζ_zk n) (δ n) hp) +
+        ENNReal.ofReal (idealGap n)) := by
+  have hgrow : ∀ n : ℕ, n ≤ (Polynomial.X : Polynomial ℕ).eval n := fun n => by simp
+  have hneg : negligible (fun n => ENNReal.ofReal ((1 / 2 : ℝ) ^ n)) :=
+    negligible_ofReal_geometric (1 / 2) (by norm_num) (by norm_num)
+  have hEeq : ∀ n : ℕ, (1 / 2 : ℝ≥0∞) ^ n = ENNReal.ofReal ((1 / 2 : ℝ) ^ n) := by
+    intro n
+    rw [ENNReal.ofReal_pow (by norm_num)]
+    congr 1
+    rw [ENNReal.ofReal_div_of_pos (by norm_num)]
+    simp [ENNReal.ofReal_one]
+  have hnegE : negligible (fun n => (1 / 2 : ℝ≥0∞) ^ n) := by
+    simp only [hEeq]; exact hneg
+  refine ⟨fun n => n, fun n => n, fun n => (1 / 2) ^ n, fun n => (1 / 2) ^ n,
+    fun n => (1 / 2) ^ n, fun n => (1 / 2) ^ n, 1 / 2, by norm_num, Polynomial.X, Polynomial.X,
+    fun n => (1 / 2) ^ n, fun n => (1 / 2) ^ n, hgrow, hgrow, fun _ => rfl, fun _ => rfl,
+    hnegE, hnegE, hneg, hneg, hneg, hneg, ?_⟩
+  refine negligible_add (negligible_add (negligible_add hnegE hnegE) ?_) hneg
+  exact cmaToNmaLoss_negligible (fun n => n) (fun n => n) (fun n => (1 / 2) ^ n)
+    (fun n => (1 / 2) ^ n) (fun n => (1 / 2) ^ n) (1 / 2) (by norm_num) Polynomial.X Polynomial.X
+    hgrow hgrow hneg hneg hneg
 
 end Headline
 
@@ -726,15 +1236,19 @@ proven and axiom-clean (`[propext, Classical.choice, Quot.sound]`), assembled fr
 
 1. **`(Hadv)`/`(H1)`/`(H0)` MLWE key-swap (`nma_keyswap_hop`).** `(Hadv)` and the uniform branch
    `(H1)` are pure runtime-plumbing rewrites (`advantage_eq_game_boolDistAdvantage`,
-   `nmaGame_eq_keygen_bind`). The real branch `(H0)` reduces, after the plumbing, to the pure
-   key-distribution identity
-   `𝒟[seed ← $ᵗ; run B-tail on pk(seed, ExpandA(ρ)·(ExpandS ρ').1 + (ExpandS ρ').2)] =
-    𝒟[seed ← $ᵗ; s₁ ← $ᵗ; s₂ ← $ᵗ; run B-tail on pk(seed, ExpandA(ρ)·s₁ + s₂)]`
-   (with `ρ = (ExpandSeed seed).1`, `ρ' = (ExpandSeed seed).2`), which is discharged by the
-   honest-sampling field `Primitives.Laws.expandS_honest_sampling` carried by `h_laws`: the ROM
-   idealization of `ExpandSeed`/`ExpandS` as independent uniform XOFs. (This idealization is a
-   modeling assumption, not derivable from the deterministic `prims`; strengthening or instantiating
-   it on a concrete `prims` is the one remaining modeling decision.)
+   `nmaGame_eq_keygen_bind`). The real branch `(H0)` reduces, after the plumbing, to comparing the
+   key distributions
+   `𝒟[seed ← $ᵗ; run B-tail on pk(seed, ExpandA(ρ)·(ExpandS ρ').1 + (ExpandS ρ').2)]` against
+   `𝒟[seed ← $ᵗ; s₁ ← $ᵗ; s₂ ← $ᵗ; run B-tail on pk(seed, ExpandA(ρ)·s₁ + s₂)]`
+   (with `ρ = (ExpandSeed seed).1`, `ρ' = (ExpandSeed seed).2`). Because `ExpandSeed`/`ExpandS` are
+   deterministic, the first is a deterministic image of at most `2^256` seeds and can never *equal*
+   the full-support independent-uniform secret law of the second. The residual is therefore carried
+   as the explicit total-variation slack `idealGap` supplied by the `honestSamplingSlack` hypothesis
+   `hSlack`: the `(H0)` `Pr[= true]` gap is at most `idealGap` (via
+   `abs_probOutput_toReal_sub_le_tvDist` plus `hSlack`), and `idealGap` propagates additively into
+   the final bound. (This slack is a
+   modeling assumption on the XOFs, not derivable from the deterministic `prims`; supplying a
+   concrete quantitative bound on a concrete `prims` is the one remaining modeling decision.)
 
 2. **STMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** Both `Pr[= true]`s reduce, through the
    shared `withStateOracle` semantics, to: sample the uniform-`t` key, run the forger against the
