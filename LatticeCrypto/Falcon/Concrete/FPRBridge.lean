@@ -120,15 +120,7 @@ assumed equal to their specification-level counterparts: that is now discharged 
 instantiated with the same concrete verification fields. -/
 theorem concrete_verify_eq_verify
     (p : Falcon.Params) (hn : p.n = 2 ^ p.logn) (hsbytelen : 0 < p.sbytelen)
-    (hn_ovf : 2 * p.n * (Falcon.modulus / 2) ^ 2 < 2 ^ 64)
-    (hsigDecode : ∀ (salt : Bytes 40) (compSig : List Byte),
-      compSig ≠ [] →
-        Falcon.Concrete.sigDecode (Falcon.Concrete.sigEncode salt compSig p.logn) p.logn =
-          some (salt, compSig))
-    (hpkDecode : ∀ h : Falcon.Rq p.n,
-      Falcon.Concrete.pkDecode p.n
-        ((Falcon.Concrete.publicKeyBytes p.logn h).extract 1
-          (Falcon.Concrete.publicKeyBytes p.logn h).size) = some h)
+    (hn_ovf : 2 * p.n * (Falcon.modulus / 2) ^ 2 < 2 ^ 64) (hn4 : 4 ∣ p.n)
     (pk : Falcon.PublicKey p) (msg : List Falcon.Byte) (sig : Falcon.Signature) :
     let prims := verifyPrimitives p hn;
     Falcon.Concrete.concreteVerify p (prims.publicKeyBytes pk.h) msg
@@ -146,9 +138,14 @@ theorem concrete_verify_eq_verify
     have hright : Falcon.verify p (verifyPrimitives p hn) pk msg sig = false := by
       simp [Falcon.verify, hcomp, hdecomp]
     simpa [hcomp] using hleft.trans hright.symm
-  · simp [Falcon.Concrete.concreteVerify, Falcon.verify,
-      hsigDecode sig.salt sig.compressedS2 hcomp, Falcon.Primitives.hashToPointForPublicKey,
-      verifyPrimitives, hpkDecode, Falcon.Concrete.negacyclicMulU32_eq_negacyclicMul,
+  · have hsig := Falcon.Concrete.sigDecode_sigEncode sig.salt sig.compressedS2 p.logn hcomp
+    have hpk : Falcon.Concrete.pkDecode p.n
+        ((Falcon.Concrete.publicKeyBytes p.logn pk.h).extract 1
+          (Falcon.Concrete.publicKeyBytes p.logn pk.h).size) = some pk.h := by
+      rw [Falcon.Concrete.publicKeyBytes_extract, Falcon.Concrete.pkDecode_pkEncode p.n pk.h hn4]
+    simp [Falcon.Concrete.concreteVerify, Falcon.verify,
+      hsig, Falcon.Primitives.hashToPointForPublicKey,
+      verifyPrimitives, hpk, Falcon.Concrete.negacyclicMulU32_eq_negacyclicMul,
       Falcon.Concrete.pairL2NormSqU32_eq_pairL2NormSq hn_ovf]
     rfl
 

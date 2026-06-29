@@ -46,8 +46,10 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
   generic GPV chain is `sorry`. **But** the pieces built (B1, TS-5, `falconPSF_eval_trapdoorSample`, `sign`,
   B9, **B6 kernel equalities**) were re-audited sound at HEAD (could not refute); B6's two kernel-equality
   theorems are standard-axioms-only.
-- **Verify bridge:** `concrete_verify_eq_verify` is proven modulo **3** explicit hyps (was 4): the U32-kernel
-  equality assumptions are eliminated (B6); remaining = the two codec round-trips + one numeric no-overflow bound.
+- **Verify bridge:** `concrete_verify_eq_verify` is proven with **NO semantic hyps** (was 4, then 3): the
+  U32-kernel equalities (B6) and **both codec round-trips** (`hsigDecode`/`hpkDecode`, s8/s9) are now
+  discharged inline. Remaining hyps are purely structural/numeric: `hn`, `hsbytelen`, `hn_ovf`, `hn4 : 4∣p.n`.
+  The byte-level verifier provably equals the spec verifier (VER-1 closed). Standard-axioms-only.
 - **One genuine wire bug:** B9/ENC-3 over-length signature malleability (not just an intended divergence).
 - Original enquiry ("hash to sign is a sorry") — **RESOLVED** (s4).
 
@@ -59,9 +61,11 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
 - [ ] **B2′ `verify_sign_correct`** (next, agreed) — prove it. Prereqs: `toRq_rqToIntPolyCentered = id`
   (F8 — coeff-wise + `ofFn`/`toArray` index bridge, see `SchoolbookCert.lean:213` + `centeredRepr_intCast`
   `Norms.lean:112`); induct on `maxAttempts`; stays conditional on the `h_laws` `compress_decompress` (ENC-1).
-- [ ] **KG-quickwin** — **cheap, high-yield:** delete `NTRUSolver`'s local sorry-stub shadows (`FXR.sqr`,
-  `vect_*`, `poly_big_to_small`) and `import` the real `Concrete/FXR.lean` + `PolyBigInt.lean` (already fully
-  implemented). Cuts ~8 of 11 NTRUSolver sorries with **no new proofs** + makes `check_ortho_norm` executable.
+- [ ] **KG-quickwin** — delete `NTRUSolver`'s local sorry-stub shadows (`FXR.sqr`, `vect_*`,
+  `poly_big_to_small`) and use the real `Concrete/FXR.lean` + `PolyBigInt.lean` (already fully implemented).
+  Cuts ~8 of 11 NTRUSolver sorries. **CAVEAT (s9 re-check): NOT a clean drop-in** — the real signatures
+  differ from the stubs (`poly_big_to_small` is 3-arg vs the stub's 4-arg `_off`; `vect_set` takes
+  `Array Int32` vs the stub's `Array Int8`), so call sites need reconciliation. Medium effort, not "no new proofs."
 - [x] **B9 / ENC-3** — DONE (s6): `decompress` now rejects `d.length ≠ dlen` (was `< dlen`)
   (`Concrete/Encoding.lean:79`), so over-length/trailing-garbage sigs are refused (the verify path
   `verify → decompress … p.sbytelen` rejects any `comp.length ≠ sbytelen`). Enforces fixed-length
@@ -113,12 +117,14 @@ standard-axioms-only; END review re-verified the RHS chains target the genuine s
   `Falcon.verify` ≠ GPV verify; no bridge lemma.
 - ENC-1 `compress_decompress` only ever the assumed `h_laws` — no `Primitives.Laws (concretePrimitives)` instance.
 - F8/ENC-7 `toRq_rqToIntPolyCentered = id` not yet a lemma (needs the index bridge).
-- VER-1 (B6 done s7; codecs in progress s8): `concrete_verify_eq_verify` conditional on **3** hyps.
+- VER-1 (B6 done s7; codecs done s8/s9): **CLOSED** — `concrete_verify_eq_verify` has NO semantic hyps.
   - `hsigDecode` (sig framing round-trip): **PROVEN s8** (`Concrete/Encoding.lean` `sigDecode_sigEncode`,
     standard-axioms-only).
-  - `hpkDecode` (14-bit pk pack/unpack round-trip): **IN PROGRESS s8** — see the codec/`while` note below.
-  - `hn_ovf`: trivially dischargeable numeric bound. After both codecs land, the bridge has NO semantic
-    hyps left — only structural/numeric side-conditions (`hn`, `hsbytelen`, `hn_ovf`, + new `hn4 : 4 ∣ p.n`).
+  - `hpkDecode` (14-bit pk pack/unpack round-trip): **PROVEN s9** — `pkDecode_pkEncode` (under `4∣n`) +
+    `publicKeyBytes_extract` (unconditional) in `Concrete/Encoding.lean`; standard-axioms-only. The bridge
+    drops both `hsigDecode`/`hpkDecode` params and discharges them inline (adds `hn4 : 4 ∣ p.n`).
+  - `hn_ovf`: trivially dischargeable numeric bound. Bridge now conditional only on structural/numeric
+    side-conditions (`hn`, `hsbytelen`, `hn_ovf`, `hn4 : 4 ∣ p.n`).
 
 **`while`-loop unprovability (KEY FINDING s8, reusable):** Lean's `while c do … (mut)` lowers to
 `forIn Lean.Loop.mk` → an opaque `partial` `Lean.Loop.forIn.loop✝` with NO `rfl`-reduction and NO
@@ -128,20 +134,15 @@ Fix pattern: refactor `while i+3<n do … i:=i+4` → `for b in [0:n/4] do let i
 iteration count `⌊n/4⌋` matches exactly for all n). This affects `compress`/`decompress` (ENC-1) and the
 other `Concrete/*.lean` `while` codecs too if they're ever to be proven.
 
-**hpkDecode resume plan (s8, paused to avoid context overflow):**
-- `pkEncode`/`pkDecode` **already refactored** `while`→`for` (s8); byte-identity confirmed by pure-Lean
-  `#eval` round-trip (n=4,8,12 + boundary coeffs) + the iteration-count argument. (FFI differential
-  runner needs native backends absent locally; runs in CI.)
-- Proven scaffolding banked in **`docs/agents/falcon-hpkdecode-wip.lean`** (inert, not built; compiles
-  sorry-free against the refactored Encoding.lean): the hard per-group 56-bit pack/unpack identity
-  `group_roundtrip` + Nat bit-helpers (`toU8`/`lor_add`/`and3fff`) + full `pkEncode` characterization
-  (`pkEncode_eq_E`, `E_size`, `E_getElem`, `gblock_byte`). **LIFT these into Encoding.lean.**
-- REMAINING: (1) `pkEncode_size` (immediate from `E_size`); (2) `publicKeyBytes_extract` (ByteArray
-  extract, mirror `sigDecode_sigEncode`); (3) **`pkDecode_pkEncode`** — the decode-side `forIn` invariant
-  (reuse B6's `foldl_range_preserve` + the `Std.Legacy.Range.forIn_eq_forIn_range'`/`List.forIn_pure_yield_eq_foldl`
-  set; handle the early-`return none` `done` step is never taken since decoded coeffs `< modulus`); then
-  `Vector.ext` to get `result[k]=h[k].val ⇒ = h`. (4) Wire into `concrete_verify_eq_verify` adding
-  `(hn4 : 4 ∣ p.n)`. Keep standard-axioms-only (ℕ route, no `native_decide`).
+**hpkDecode — DONE (s9).** Both pk codec lemmas proven in `Concrete/Encoding.lean`, standard-axioms-only:
+- `pkDecode_pkEncode (hn4 : 4 ∣ n) : pkDecode n (pkEncode n h) = some h` — the decode `forIn` invariant
+  (`decode_loop_invariant`: characterizes the loop over `List.range'`, no-reject state `⟨none,R⟩`, correct
+  decoded values + frame); no-reject precondition discharged by `pkEncode_not_reject` (dead `≥ modulus`
+  branch since each decoded coeff `= h[k].val < modulus`). Per-group crux = the banked `group_roundtrip`.
+- `publicKeyBytes_extract` (unconditional) — `(publicKeyBytes logn h).extract 1 size = pkEncode n h`.
+- Bridge rewired: `concrete_verify_eq_verify` drops `hsigDecode`/`hpkDecode`, adds `hn4 : 4 ∣ p.n`,
+  discharges both inline. The 56-bit pack/unpack scaffolding (`group_roundtrip`, `E_*`, `gblock_*`,
+  `pkEncode_eq_E`) was lifted from `docs/agents/falcon-hpkdecode-wip.lean` (still kept as a reference).
 - KG-1 `keyGenFromSeed` sorry; KG-2 NTRUSolve ascent sorry; KG-3 no keygen correctness theorem.
 - **KG-4/KG-5** NTRUSolver local stubs (`FXR.sqr`/`vect_*`/`poly_big_to_small`) shadow the real, fully-implemented
   `Concrete/FXR.lean`/`PolyBigInt.lean` — ~8 redundant sorries. KG-6 `check_ortho_norm` vacuous (fixed by KG-4).
@@ -152,7 +153,7 @@ other `Concrete/*.lean` `while` codecs too if they're ever to be proven.
 RCDT/FACCT/σ constants bit-exact, compress internal unique-encoding checks, headers + 14-bit PK packing,
 `toFFTTarget` sign-folding, GS-norm threshold 72251709809335 (v1.2/c-fn-dsa), no `native_decide`/`axiom` in Concrete.
 
-## 4. Baseline — verified 2026-06-25 @ `falcon-faithfulness-review` (s7, B6 landed; build-warning total 24)
+## 4. Baseline — verified 2026-06-29 @ `falcon-faithfulness-review` (s9, hpkDecode landed / VER-1 closed; build-warning total 24)
 **19 live Falcon sorries** (authoritative = build `declaration uses 'sorry'` warnings, NOT raw `grep` which
 over-counts prose/comments). B6 added two PROVEN theorems (no new sorries) and removed two `concrete_verify_eq_verify`
 hypotheses; the live-sorry inventory is unchanged from s6:
@@ -210,6 +211,19 @@ hypotheses; the live-sorry inventory is unchanged from s6:
   (per-group identity `group_roundtrip` + `pkEncode` characterization); remaining = decode `forIn` invariant
   + `publicKeyBytes_extract` + wiring (+`hn4`). Current tree builds clean; no new sorries. **Next (fresh
   session, bootstrap from the VER-1 resume plan + the WIP file): finish `hpkDecode`, then `verify_sign_correct`.**
+
+- **s9** — **hpkDecode PROVEN; VER-1 CLOSED.** Lifted the s8 WIP scaffolding into `Concrete/Encoding.lean`
+  and proved `pkDecode_pkEncode` (decode `forIn` invariant `decode_loop_invariant` + dead-reject
+  `pkEncode_not_reject`) + `publicKeyBytes_extract` + `pkEncode_size`. Rewired
+  `FPRBridge.concrete_verify_eq_verify` to drop `hsigDecode`/`hpkDecode` and discharge both inline (added
+  `hn4 : 4 ∣ p.n`) — the byte-level verifier now provably equals the spec verifier with **no semantic hyps**.
+  Heavy proof delegated to a background agent; output **adversarially re-verified** at HEAD: `#print axioms`
+  = standard-only on all three theorems, full `LatticeCrypto` build green, sorry count **24** (unchanged —
+  VER-1 discharges hyps, not sorries), lemma statements confirmed unweakened (`publicKeyBytes_extract`
+  unconditional; `pkDecode_pkEncode` only the necessary `4∣n`; bridge conclusion unchanged),
+  `decode_loop_invariant` confirmed non-vacuous. Cleaned 20 `show`→`change` lint warnings (no linter
+  disabled). **Next: `verify_sign_correct` (needs F8 + ENC-1 compress/decompress `while`→`for`), or KG-quickwin
+  (note: real FXR/PolyBigInt signatures differ from the stubs — not a clean drop-in).**
 
 ## 6. Drift-check snippet
 ```bash
