@@ -39,7 +39,12 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
 ## 1. Status summary (milestone-verified @ `f405e7c2`, sessions 0–5)
 - **Faithful?** v1.2: **no, by design** (FN-DSA target: pk-bound hash, fresh salt). FN-DSA: **partial**
   (omits L∞, leaf-range gate, 79-bit sampler). **c-fn-dsa: yes** at the concrete/constant level — the
-  pk-bound hash path is cross-validated by the FFI differential tests.
+  pk-bound hash path is cross-validated by the FFI differential tests. **Caveat (s13):** the
+  `third_party/c-fn-dsa` submodule is **uninitialized in-tree** (`git submodule status` → `-33026d4d…`), so
+  `kgen_*.c` byte-faithfulness of the keygen path (`poly_big_to_small` layout, depth-0 buffer, gauss CDT
+  tables) is **not source-verifiable here** — it rests on the FFI differential tests, whose keygen-path
+  coverage is itself unaudited. Run `git submodule update --init third_party/c-fn-dsa` before the next
+  keygen-faithfulness pass (also required for the FFI/test build to compile).
 - **Complete?** No — **9 live Falcon sorries** (+4 GPV +1 ToMathlib; **14 total** after s12). `sign` done (s4);
   **`verify_sign_correct` done (s10)**; **KG-quickwin done (s12)** (NTRUSolver 11→2); `keyGenFromSeed` +
   NTRUSolve ascent + EUF-CMA remain.
@@ -72,8 +77,10 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
   (`#print axioms` = `propext, Quot.sound` only) and executable (KG-6 vacuity gone). `solve_NTRU` tail
   rewritten for the real 3-arg `poly_big_to_small` (offset→`buf.extract 0 n`/`buf.extract n (2*n)`,
   `Array Int8 × Bool` → `if !ok then none`); `check_ortho_norm` uses `vect_set logn (f.map (·.toInt32))`.
-  END adversarial review: 0 regressions (3/3 claims CONFIRMED-OK; the only `fxr_of` sign-extension divergence
-  is in the unexercised negative regime and is strictly more correct; bit-identical for 12289). NOT a
+  END adversarial review (s12 + s13): 0 regressions (claims CONFIRMED-OK; the real `fxr_of`
+  `j.toInt64.toUInt64 <<< 32` sign-extends correctly on negatives — and IS exercised on the routinely-negative
+  NTRU secrets `f,g` via `vect_set ∘ (·.toInt32)`, so it is not "unexercised"; it is bit-identical to the
+  deleted `ofInt` stub for the constant 12289 and strictly more correct for negatives). NOT a
   correctness proof — the 2 ascent sorries (`solve_NTRU_intermediate` 365 / `solve_NTRU_depth0` 383 =
   KG-2/KG-3) stay. Standard-axioms-only preserved (no `native_decide`).
 - [x] **B9 / ENC-3** — DONE (s6): `decompress` now rejects `d.length ≠ dlen` (was `< dlen`)
@@ -139,6 +146,16 @@ standard-axioms-only; END review re-verified the RHS chains target the genuine s
     drops both `hsigDecode`/`hpkDecode` params and discharges them inline (adds `hn4 : 4 ∣ p.n`).
   - `hn_ovf`: trivially dischargeable numeric bound. Bridge now conditional only on structural/numeric
     side-conditions (`hn`, `hsbytelen`, `hn_ovf`, `hn4 : 4 ∣ p.n`).
+- **TB-5 (s13) — verify bridge is LATENT.** `concrete_verify_eq_verify` (`FPRBridge.lean:121-150`) is sorry-free
+  and the strongest result in the verify dimension, but `grep` finds it referenced **only in a docstring**
+  (`Instance.lean:112`) — no theorem/def/test consumes it, so the integer-only verify guarantee is not yet
+  propagated to any end-to-end claim. Fix: wire it into the concrete security/correctness chain (or a
+  regression test exercising `hn_ovf`/`hn4`) so it becomes load-bearing.
+- **TB-3 (s13 re-confirmed) — FPR precision gap.** The 5 `FPRBridge.lean` sorries (`add/mul/div/sqrt/expm_p63_error`,
+  82/88/94/100/110) are consumed **only** by the disabled `HasRealSemantics` instance (`ApproxArith.lean`,
+  commented); the live `concrete_verify_eq_verify` is integer-only and does NOT depend on them. They block any
+  future sign-side/sampler-quality proof, not verifier-equivalence. Canonical FPR-precision gap (needs a
+  verified/axiomatized IEEE-754 model).
 
 **`while`-loop unprovability (KEY FINDING s8, reusable):** Lean's `while c do … (mut)` lowers to
 `forIn Lean.Loop.mk` → an opaque `partial` `Lean.Loop.forIn.loop✝` with NO `rfl`-reduction and NO
@@ -170,9 +187,12 @@ other `Concrete/*.lean` `while` codecs too if they're ever to be proven.
   (`buf` holds F at words [0:n], G at [n:2n] — documented depth-0 single-word postcondition, review-confirmed.)
 - `check_ortho_norm`: `fxr_zero/fxr_add/fxr_sqr/fxr_lt/fxr_of/fxr_of_scaled32`; `vect_set` wants `Array Int32`
   → `vect_set logn (f.map (·.toInt32))` (Int8→Int32 sign-extends); `vect_invnorm_fft … (0 : UInt64)`.
-- KG-4/KG-5 (shadow stubs) **RESOLVED**; KG-6 (`check_ortho_norm` vacuous) **FIXED**. Refuted-divergence note
-  retained: `fxr_of` (real, sign-extends via `toInt64`) vs old `ofInt` (`toUInt32`) differ only for negative
-  inputs — bit-identical for the sole call site 12289; the real one is the more correct version.
+- KG-4/KG-5 (shadow stubs) **RESOLVED**; KG-6 (`check_ortho_norm` vacuous) **FIXED**. Divergence note
+  (s13-corrected): real `fxr_of` (`j.toInt64.toUInt64 <<< 32`, sign-extends) vs the deleted `ofInt` stub
+  (`j.toUInt32.toUInt64 <<< 32`) differ only on negative inputs. `fxr_of` IS hit on negatives — `vect_set`
+  maps it over the (signed) `f,g` coeffs, and NTRU secrets are routinely negative — so the earlier
+  "unexercised negative regime" framing was WRONG; the real impl is simply correct on negatives
+  (matches C `(int64_t)j << 32`) and bit-identical to the stub for the positive constant 12289.
 - KG-1 `keyGenFromSeed` sorry; KG-2 NTRUSolve ascent sorry; KG-3 no keygen correctness theorem — all still open
   (this was plumbing, NOT `solve_NTRU ⊨ ntruEquation`).
 - SZ-2 `concretePrimitives.samplerZ` runs over ℝ (≠ FPR path); SZ-3 5 FPR error bounds `sorry`. TS-F transitive ToMathlib Rényi `sorry`.
@@ -282,14 +302,30 @@ over-counts prose/comments). s12 removed 9 NTRUSolver shadow-stub sorries (KG-qu
   `#print axioms`: `check_ortho_norm` now `propext, Quot.sound` only (sorry-free, KG-6 closed, `#eval`
   executable), `solve_NTRU` `sorryAx` only from the 2 ascent sorries; no `native_decide`. END adversarial
   review (3 semantic claims — `buf.extract` offset faithfulness, `Int8→Int32` sign-extension, FXR renames):
-  **0 regressions**, all CONFIRMED-OK; the only `fxr_of` divergence is unexercised-negative + strictly more
-  correct. **Next: EUF-CMA (UN-2/UN-3 GPV chain + TS-4 two-world bridge), or B4 keyGenFromSeed/ascent.**
+  **0 regressions**, all CONFIRMED-OK; real `fxr_of` is correct on the (routinely-negative) NTRU secrets it
+  is actually called on, bit-identical to the stub for the positive constant 12289. **Next: EUF-CMA (UN-2/UN-3
+  GPV chain + TS-4 two-world bridge), or B4 keyGenFromSeed/ascent.**
+
+- **s13** (END adversarial review of s12 + doc fixes — NO proof code) — ran the harness scoped to
+  `KeyGen+NTRUSolve` + `Trust-boundary` (`baseline:14`, `changed=s12`). **No drift** (14 confirmed exactly),
+  **no regression, no new spec-divergence, no unsound statement**: s12 plumbing verified faithful by two
+  independent audits (9 stubs gone/not shadowed; `check_ortho_norm` axioms re-confirmed `{propext, Quot.sound}`
+  two-source; no `native_decide`/new axiom in the FXR/PolyBigInt closure; the 2 remaining sorries are exactly
+  the ascent stubs). Acted on the findings: (1) **corrected** the doc's wrong "`fxr_of` unexercised-negative"
+  claim (KG-5/N-1 — it IS hit on negative `f,g` via `vect_set`, and is correct there); (2) **fixed** the stale
+  `fndsa_native.c` citation → `fndsa.c` in `FFI.lean:22` + `gen_testvectors.c` (N-2); (3) recorded **TB-5**
+  (verify bridge `concrete_verify_eq_verify` is sound but LATENT — referenced only in a docstring) and
+  re-confirmed **TB-3** (FPR error sorries feed only the disabled `HasRealSemantics`, not the live verifier);
+  (4) flagged the **uninitialized `third_party/c-fn-dsa` submodule** as a hard prerequisite for the next
+  keygen-faithfulness pass (and for the FFI/test build). **Next phase: B4 ascent — implement
+  `solve_NTRU_intermediate`/`solve_NTRU_depth0` (the 2 live NTRUSolver sorries; `solve_NTRU` is non-functional
+  for n>1 until then) + state KG-2 `solve_NTRU … → ntruEquation`, after `git submodule update --init`.**
 
 ## 6. Drift-check snippet
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 git branch --show-current      # expect falcon-faithfulness-review (verify LIVE)
-# Authoritative live-sorry count (expect 23 = 18 Falcon + 4 GPV + 1 ToMathlib/RenyiDivergence):
+# Authoritative live-sorry count (expect 14 = 9 Falcon + 4 GPV + 1 ToMathlib/RenyiDivergence, since s12):
 lake build LatticeCrypto.Falcon.Security LatticeCrypto.Falcon.Concrete.FPRBridge \
   LatticeCrypto.Falcon.Concrete.NTRUSolver 2>&1 | grep -c "declaration uses"
 grep -n "sorry" VCVio/CryptoFoundations/GPVHashAndSign.lean | cut -d: -f1   # 270 283 332 363
