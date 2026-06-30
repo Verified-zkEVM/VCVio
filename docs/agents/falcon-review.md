@@ -64,11 +64,13 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
   `h_laws.compress_decompress` → **F8** `toRq_rqToIntPolyCentered` (proven, `Scheme.lean`) →
   `falconPSF_eval_trapdoorSample` (`s₁=c−s₂·h`) → `isShort` = the `ℓ₂` check. `_hvalid` unused (conditional
   correctness). Stays conditional on the abstract `h_laws.compress_decompress` only (NOT the concrete codec).
-- [ ] **KG-quickwin** — delete `NTRUSolver`'s local sorry-stub shadows (`FXR.sqr`, `vect_*`,
-  `poly_big_to_small`) and use the real `Concrete/FXR.lean` + `PolyBigInt.lean` (already fully implemented).
-  Cuts ~8 of 11 NTRUSolver sorries. **CAVEAT (s9 re-check): NOT a clean drop-in** — the real signatures
-  differ from the stubs (`poly_big_to_small` is 3-arg vs the stub's 4-arg `_off`; `vect_set` takes
-  `Array Int32` vs the stub's `Array Int8`), so call sites need reconciliation. Medium effort, not "no new proofs."
+- [ ] **KG-quickwin** (NEXT — agreed s11; bootstrap plan below in §3) — replace `NTRUSolver`'s 9 local
+  stub-`sorry`s (`FXR.sqr`, `vect_*`, `poly_big_to_small`) with the real, fully-implemented
+  `Concrete/FXR.lean` + `PolyBigInt.lean`. Removes 9 sorries (NTRUSolver 11→2; **total 23→14**) and makes
+  `solve_NTRU`/`check_ortho_norm` executable (KG-6 vacuity gone). **NOT a clean drop-in** (medium effort):
+  real names are `fxr_`-prefixed; `poly_big_to_small` is 3-arg (offset→`Array.extract`); `vect_set` wants
+  `Array Int32`. Full reconciliation map in §3 **"KG-quickwin resume plan"**. NOT a correctness proof
+  (KG-2/KG-3 ascent sorries 394/412 stay).
 - [x] **B9 / ENC-3** — DONE (s6): `decompress` now rejects `d.length ≠ dlen` (was `< dlen`)
   (`Concrete/Encoding.lean:79`), so over-length/trailing-garbage sigs are refused (the verify path
   `verify → decompress … p.sbytelen` rejects any `comp.length ≠ sbytelen`). Enforces fixed-length
@@ -150,6 +152,34 @@ other `Concrete/*.lean` `while` codecs too if they're ever to be proven.
 - Bridge rewired: `concrete_verify_eq_verify` drops `hsigDecode`/`hpkDecode`, adds `hn4 : 4 ∣ p.n`,
   discharges both inline. The 56-bit pack/unpack scaffolding (`group_roundtrip`, `E_*`, `gblock_*`,
   `pkEncode_eq_E`) was lifted from `docs/agents/falcon-hpkdecode-wip.lean` (still kept as a reference).
+**KG-quickwin resume plan (s11 bootstrap — execute in a fresh session; scoped against live code):**
+Goal: swap `NTRUSolver`'s 9 stub-`sorry`s for the real `Concrete/FXR.lean` + `Concrete/PolyBigInt.lean`.
+Removes 9 sorries (NTRUSolver decls 73,86,89-92,94,95,97 → gone; 11→2; **total 23→14**), makes
+`solve_NTRU`/`check_ortho_norm` executable (KG-6 no longer vacuous). Leaves the 2 real ascent sorries
+(decls 394/412 = KG-2/KG-3, B4) untouched. Standard-axioms-only preserved (pure Lean; no `native_decide`).
+- **Setup:** add `import LatticeCrypto.Falcon.Concrete.FXR` + `…PolyBigInt` (no cycle — neither imports
+  NTRUSolver; they pull FPR/GMTable/BigInt31/SmallPrimeNTT). Delete the local `namespace FXR … end FXR`
+  (lines ~63-79: `abbrev FXR` + `zero/ofInt/add/sqr/lt/ofScaled32`) and the 9 stub defs (`poly_big_to_small`
+  @86, `vect_*` @89-98). Add `open Falcon.Concrete.FXR` (brings `FXR`=UInt64, `fxr_*`, `vect_*`).
+- **All local-`FXR` uses are confined to `check_ortho_norm`:481-491; `poly_big_to_small` only in
+  `solve_NTRU`:456-457** (grep-confirmed s11). Rewrites:
+  - Real names are `fxr_`-prefixed: `FXR.zero→fxr_zero`, `FXR.ofInt→fxr_of` (`fxr_of 12289`, arg `Int32`),
+    `FXR.add→fxr_add`, `FXR.sqr→fxr_sqr` (**real impl EXISTS, FXR.lean:87** — doc previously wrong),
+    `FXR.lt→fxr_lt`, `FXR.ofScaled32→fxr_of_scaled32`. `let mut sn : FXR` stays (FXR=UInt64).
+  - `vect_set logn f` (f : Array Int8): real wants `Array Int32` → `vect_set logn (f.map (·.toInt32))` (and g).
+  - `vect_invnorm_fft logn rt1 rt2 0`: real `e : UInt64`; `0` literal fine.
+  - `poly_big_to_small`: real sig `(logn)(s : Array UInt32)(lim : Int32) : Array Int8 × Bool` (no `off`,
+    returns pair not `Option`, reads `s[0:n]`). Rewrite `solve_NTRU`'s tail (the `off` 0/n → `Array.extract`):
+    ```
+    let (capF, okF) := PolyBigInt.poly_big_to_small logn (buf.extract 0 n) 127
+    if !okF then none else
+    let (capG, okG) := PolyBigInt.poly_big_to_small logn (buf.extract n (2*n)) 127
+    if !okG then none else pure (capF, capG)
+    ```
+    (verify `buf` holds F at [0:n], G at [n:2n] — c-fn-dsa reads `buf+off`.)
+- **Gotchas:** real fns are plain `def` (accessible); grep no OTHER file references the deleted local
+  `FXR`/stubs; build NTRUSolver (expect 11→2) + full `LatticeCrypto` green; optional `#eval` to confirm
+  executability (FFI differential needs native backends → CI). This is plumbing, NOT `solve_NTRU ⊨ ntruEquation`.
 - KG-1 `keyGenFromSeed` sorry; KG-2 NTRUSolve ascent sorry; KG-3 no keygen correctness theorem.
 - **KG-4/KG-5** NTRUSolver local stubs (`FXR.sqr`/`vect_*`/`poly_big_to_small`) shadow the real, fully-implemented
   `Concrete/FXR.lean`/`PolyBigInt.lean` — ~8 redundant sorries. KG-6 `check_ortho_norm` vacuous (fixed by KG-4).
@@ -245,6 +275,13 @@ theorems (`verify_sign_correct`, F8 `toRq_rqToIntPolyCentered`) with no new sorr
   sorry count **24→23**. Cleaned the `let _ := hvalid` antipattern → `_hvalid` binder + fixed line-length.
   **Next: EUF-CMA (UN-2/UN-3: the generic GPV chain `GPVHashAndSign.lean` ×4 + `euf_cma_security` + the
   TS-4 two-world bridge), or KG (B4/keyGenFromSeed), or KG-quickwin (signature reconciliation).**
+
+- **s11** (checkpoint/bootstrap — NO code) — chose **KG-quickwin** as next (guaranteed sorry reduction +
+  makes NTRUSolver executable/differential-testable; de-risks the keygen path; lower risk than the
+  multi-session GPV chain). Scoped the reconciliation against live code and banked the full **"KG-quickwin
+  resume plan"** in §3. Corrected the doc: `fxr_sqr` DOES exist (FXR.lean:87); real fns are `fxr_`-prefixed;
+  all local-`FXR` uses confined to `check_ortho_norm`, `poly_big_to_small` only in `solve_NTRU`; no import
+  cycle. **Next session: execute the §3 KG-quickwin resume plan (target 23→14 sorries).**
 
 ## 6. Drift-check snippet
 ```bash
