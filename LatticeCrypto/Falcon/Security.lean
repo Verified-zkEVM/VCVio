@@ -13,11 +13,13 @@ import VCVio.OracleComp.Constructions.SampleableType
 
 This file states the high-level security theorems for the Falcon signature scheme.
 
-## Correctness
+## Scope
 
-`verify(pk, m, sign(sk, m)) = true` whenever:
-1. The key pair is valid (NTRU equation holds, `h = g · f⁻¹ mod q`).
-2. Signing does not abort (norm check passes, compression succeeds).
+This file states Falcon's EUF-CMA *security* result. Machine-checked verification
+correctness (`verify` accepting honest signatures) is not formalized here: it requires a
+retry-loop signer together with preimage-sampleable-function correctness
+(`s₁ + s₂ · h = c` on honest keys), the latter routing through the floating-point
+inverse-FFT rounding in `Falcon.fromFFTPreimage`.
 
 ## EUF-CMA Security
 
@@ -92,31 +94,6 @@ open OracleComp OracleSpec ENNReal
 namespace Falcon
 
 variable (p : Params) (prims : Primitives p)
-
-/-! ### Correctness -/
-
-/-- Falcon verification correctness: if the key pair is valid and signing produces a
-signature (does not abort), then verification accepts.
-
-The proof relies on:
-1. The NTRU equation ensuring `s₁ + s₂ · h = c mod q`.
-2. The norm bound from `ffSampling` ensuring `‖(s₁, s₂)‖₂² ≤ ⌊β²⌋`.
-3. The compress/decompress roundtrip preserving `s₂`. -/
-theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p)
-    (hvalid : validKeyPair p pk sk = true)
-    (msg : List Byte) (sig : Signature)
-    (h_laws : Primitives.Laws prims)
-    (hsig : sig ∈ support (Falcon.sign p pk sk msg)) :
-    Falcon.verify p prims pk msg sig = true := by
-  -- The proof proceeds by unfolding `sign` and `verify`:
-  -- 1. `sign` produces (salt, compressedS2) where s₂ came from trapdoorSample
-  -- 2. `verify` decompresses s₂, recomputes c, checks the norm bound
-  -- Key steps:
-  -- (a) compress/decompress roundtrip (from h_laws.compress_decompress)
-  -- (b) PSF correctness: trapdoorSample output satisfies eval pk (s₁,s₂) = c
-  --     and isShort (s₁,s₂) = true
-  -- (c) The norm bound from (b) matches the verify check
-  sorry
 
 /-! ### NTRU-SIS Hardness Assumption -/
 
@@ -315,10 +292,11 @@ The universal forms would be *unsatisfiable* for the Falcon PSF — `isShort` is
 `‖·‖₂² ≤ betaSquared`, `PublicKey` is unconstrained, and a key with `h = 0` together with a
 large-norm target `c` (`‖c‖² > betaSquared`) has no short preimage — so no sampler could be both
 correct and total at *every* key. Restricting to `support hr.gen` (where the NTRU geometry of a
-valid key guarantees short preimages, matching `verify_sign_correct`) makes the hypotheses
-satisfiable, so this theorem is conditional, not vacuous. The ideal sampler `idealPSF` shares the
-deterministic `eval`/`isShort` of `falconPSF` (`hEval`/`hShort`); `hTransport` carries the
-finite-precision concrete→ideal gap as the [FGdG+25] Rényi term `samplerLoss`, assumed here in the
+valid key guarantees short preimages — the honest-key regime in which Falcon signatures verify)
+makes the hypotheses satisfiable, so this theorem is conditional, not vacuous. The ideal sampler
+`idealPSF` shares the deterministic `eval`/`isShort` of `falconPSF` (`hEval`/`hShort`); `hTransport`
+carries the finite-precision concrete→ideal gap as the [FGdG+25] Rényi term `samplerLoss`, assumed
+here in the
 same way MLWE/SIS hardness is assumed. The collision branch is discharged by
 `collisionFindingAdvantage_eq_ntruPSF`. -/
 theorem euf_cma_security
