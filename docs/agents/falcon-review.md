@@ -204,7 +204,19 @@ helper signature re-checked):** replace the 2 NTRUSolver ascent `sorry`s. Submod
 (`NTRUSolver.lean:270-327`). **Style:** pure-functional `Id.run do` + `mut` arrays named via
 `extractRange`/`writeRange` (NTRUSolver.lean:86-110); FXR arrays are fresh `Array UInt64` (ignore the C's
 `uint32_t*`→`fxr*` byte-aliasing); `return none` on failure. `FXR := UInt64`, `mp_mmul`→`SmallPrimeNTT.mp_montymul`.
-- **`solve_NTRU_depth0` — DO FIRST (zero helper gaps, ~90-120 LOC, single-session, all sigs verified s13).**
+- **`solve_NTRU_depth0` — s13 ATTEMPT FAILED, reverted to `sorry`.** A full line-by-line port of
+  `kgen_ntru.c:1575-1766` was written + compiles, but **fails end-to-end validation** at logn=1: the lift
+  leaves `(F,G)` un-reduced (raw coeffs ±2048/±4096 ≫ 127) and/or the internal `f·G−g·F≡q` gate rejects
+  (`solved=0` over all 7⁴ small inputs). Safe (gate ⇒ no wrong key escapes) but non-functional. **Bug most
+  likely the deeper-(F,G) convention from `solve_NTRU_deepest`** (itself NEVER runtime-validated — succeeds
+  476/2401× but its degree-1 output Fd=4·q/Gd=0 for `[1,2]/[0,1]` satisfies no naive scalar relation; 31-bit-limb
+  sign-bit-30 vs `poly_mp_set`'s `.toInt32` sign-bit-31 mismatch for negatives is a prime suspect). C driver
+  (`kgen_ntru.c:2003`) confirms deepest→depth0 is DIRECT for logn=1 (empty intermediate loop), so the test path
+  is faithful. **Full implementation + diagnostics banked in `docs/agents/falcon-ntru-depth0-wip.lean`.**
+  **Next step: build the C backend (submodule now init'd) + differential-trace `solve_NTRU_deepest` AND
+  `solve_NTRU_depth0` word-for-word on one fixed (f,g) at logn=2 to localise the divergence.** Original plan
+  (still valid, all sigs verified s13):
+- **`solve_NTRU_depth0` plan — (zero helper gaps, ~90-120 LOC, single-session, all sigs verified s13).**
   `pr := PRIMES[0]` (single prime), `n=1<<<logn`, `hn=n>>>1`. Buf entry: deeper `(F,G)` at `[0:hn]`/`[hn:n]`
   (degree `hn`, single word). Exit: `F=[0:n]`, `G=[n:2n]` single-word (matches `solve_NTRU`'s
   `buf.extract 0 n`/`n (2*n)`). Steps (C lines): A load f,g,Fd,Gd → RNS+NTT (extract Fd/Gd BEFORE
@@ -349,10 +361,16 @@ over-counts prose/comments). s12 removed 9 NTRUSolver shadow-stub sorries (KG-qu
   `fndsa_native.c` citation → `fndsa.c` in `FFI.lean:22` + `gen_testvectors.c` (N-2); (3) recorded **TB-5**
   (verify bridge `concrete_verify_eq_verify` is sound but LATENT — referenced only in a docstring) and
   re-confirmed **TB-3** (FPR error sorries feed only the disabled `HasRealSemantics`, not the live verifier);
-  (4) flagged the **uninitialized `third_party/c-fn-dsa` submodule** as a hard prerequisite for the next
-  keygen-faithfulness pass (and for the FFI/test build). **Next phase: B4 ascent — implement
-  `solve_NTRU_intermediate`/`solve_NTRU_depth0` (the 2 live NTRUSolver sorries; `solve_NTRU` is non-functional
-  for n>1 until then) + state KG-2 `solve_NTRU … → ntruEquation`, after `git submodule update --init`.**
+  (4) flagged the **uninitialized `third_party/c-fn-dsa` submodule** as a hard prerequisite. **Then bootstrapped
+  B4 ascent** (user picked it): ran `git submodule update --init third_party/c-fn-dsa` (DONE, `33026d4d`
+  checked out — `kgen_*.c` now source-visible); recon agent produced + I validated (every helper sig re-checked
+  live) the §3 "B4 ascent resume plan" — key finding: `solve_NTRU_depth0` has ZERO helper gaps. **Attempted
+  `solve_NTRU_depth0`**: full port written + compiles, but **FAILED end-to-end validation** (lift un-reduced /
+  verify-gate reject, `solved=0`; bug most likely `solve_NTRU_deepest`'s deeper-(F,G) convention, which was
+  never runtime-validated). **Reverted to `sorry`** (honest — non-functional ≠ done); banked the implementation
+  + diagnostics in `docs/agents/falcon-ntru-depth0-wip.lean`. Count back to **14**. **Next: differential-trace
+  `solve_NTRU_deepest`+`solve_NTRU_depth0` vs the C backend (now buildable) on a fixed (f,g) at logn=2 to
+  localise the divergence; then fix depth0 from the WIP file; then `solve_NTRU_intermediate`.**
 
 ## 6. Drift-check snippet
 ```bash

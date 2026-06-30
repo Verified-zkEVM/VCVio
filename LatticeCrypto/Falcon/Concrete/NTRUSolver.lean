@@ -380,6 +380,13 @@ suffices for all modular arithmetic.
 6. Verify `f·G - g·F ≡ q·R (mod p)` for all NTT slots.
 7. Convert back via inverse NTT and normalize. -/
 
+-- NOTE (s13): a full line-by-line port of `kgen_ntru.c:1575-1766` was written and
+-- compiles, but FAILS end-to-end validation at logn=1 (the lift leaves (F,G)
+-- un-reduced / the internal `f·G − g·F ≡ q` gate rejects). Preserved with the
+-- diagnostic findings in `docs/agents/falcon-ntru-depth0-wip.lean`; the bug is most
+-- likely a deeper-(F,G) buffer-format / sign-convention mismatch from
+-- `solve_NTRU_deepest` (itself never runtime-validated), to be localised by
+-- differential-tracing against the now-available C backend. Kept `sorry` until correct.
 def solve_NTRU_depth0 (_logn : Nat) (_f _g : Array Int8)
     (_buf : Array UInt32) : Option (Array UInt32) := sorry
 
