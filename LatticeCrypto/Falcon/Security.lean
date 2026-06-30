@@ -100,31 +100,80 @@ variable (p : Params) (prims : Primitives p)
 /-- Falcon verification correctness: if the key pair is valid and signing produces a
 signature (does not abort), then verification accepts.
 
-The proof relies on:
-1. The NTRU equation ensuring `s₁ + s₂ · h = c mod q`.
-2. The norm bound from `ffSampling` ensuring `‖(s₁, s₂)‖₂² ≤ ⌊β²⌋`.
-3. The compress/decompress roundtrip preserving `s₂`. -/
--- ⚠ UNPROVEN (`sorry` body): a genuine, now-non-vacuous obligation (s2 defined `sign`). The
--- hypothesis ranges over the `some`-branch of the real `Falcon.sign` rejection loop, i.e. an
--- attempt where both `isShort` and `compress = some` held; from those the proof must chain
--- `eval = c` (`falconPSF_eval_trapdoorSample`) + `compress_decompress` + the norm bound. Not yet
--- discharged. Note the two-world gap (UN-1): this concerns `Falcon.verify`, not the GPV verify
--- the EUF-CMA theorems use. See `docs/agents/falcon-review.md` (UN-1 / B2).
+The proof proceeds by induction on `maxAttempts` over the rejection loop:
+
+1. The compress/decompress roundtrip (`h_laws.compress_decompress` + `toRq_rqToIntPolyCentered`)
+   makes `verify` recover exactly the `s₂` that signing compressed.
+2. PSF correctness (`falconPSF_eval_trapdoorSample`) gives `s₁ + s₂ · h = c`, so `verify`'s
+   recomputed `s₁ = c - s₂ · h` matches the sampled `s₁`.
+3. The `isShort` flag that the accepting attempt passed is exactly `verify`'s `ℓ₂` norm check.
+
+This is conditional correctness: validity of the key pair (`_hvalid`) is *not* needed — `hsig`
+already ranges only over the `some`-branch of the real `Falcon.sign` rejection loop (an attempt
+where both `isShort` and `compress = some` held). Note the two-world gap (UN-1): this concerns
+`Falcon.verify`, not the GPV verify the EUF-CMA theorems use. See `docs/agents/falcon-review.md`
+(UN-1 / B2). -/
 theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p)
-    (hvalid : validKeyPair p pk sk = true)
+    (_hvalid : validKeyPair p pk sk = true)
     (msg : List Byte) (maxAttempts : ℕ) (sig : Signature)
     (h_laws : Primitives.Laws prims)
     (hsig : some sig ∈ support (Falcon.sign p prims pk sk msg maxAttempts)) :
     Falcon.verify p prims pk msg sig = true := by
-  -- The proof proceeds by unfolding `sign` and `verify`:
-  -- 1. `sign` produces (salt, compressedS2) where s₂ came from trapdoorSample
-  -- 2. `verify` decompresses s₂, recomputes c, checks the norm bound
-  -- Key steps:
-  -- (a) compress/decompress roundtrip (from h_laws.compress_decompress)
-  -- (b) PSF correctness: trapdoorSample output satisfies eval pk (s₁,s₂) = c
-  --     and isShort (s₁,s₂) = true
-  -- (c) The norm bound from (b) matches the verify check
-  sorry
+  induction maxAttempts with
+  | zero =>
+    simp only [Falcon.sign, support_pure, Set.mem_singleton_iff] at hsig
+    exact absurd hsig (by simp)
+  | succ k ih =>
+    rw [Falcon.sign, mem_support_bind_iff] at hsig
+    obtain ⟨salt, _hsalt, hsig⟩ := hsig
+    rw [mem_support_bind_iff] at hsig
+    obtain ⟨r, hr, hsig⟩ := hsig
+    match r, hr, hsig with
+    | none, _hr, hsig => exact ih hsig
+    | some (s₁, s₂), hr, hsig =>
+      dsimp only at hsig
+      cases hcomp : prims.compress (rqToIntPolyCentered s₂) p.sbytelen with
+      | none =>
+        rw [hcomp] at hsig
+        exact ih hsig
+      | some comp =>
+        rw [hcomp] at hsig
+        simp only [support_pure, Set.mem_singleton_iff, Option.some.injEq] at hsig
+        subst hsig
+        -- Recover from `signAttempt` membership: the accepting attempt is a `trapdoorSample`
+        -- output that passed the `isShort` check.
+        set c := prims.hashToPointForPublicKey pk.h salt msg with hc
+        rw [signAttempt, mem_support_bind_iff] at hr
+        obtain ⟨x, hx, hr⟩ := hr
+        have hshort_eval :
+            (s₁, s₂) ∈ support ((falconPSF p prims).trapdoorSample pk sk c) ∧
+              (falconPSF p prims).isShort (s₁, s₂) = true := by
+          by_cases hshort : (falconPSF p prims).isShort x = true
+          · rw [if_pos hshort, support_pure, Set.mem_singleton_iff, Option.some.injEq] at hr
+            subst hr
+            exact ⟨hx, hshort⟩
+          · rw [if_neg hshort, support_pure, Set.mem_singleton_iff] at hr
+            exact absurd hr (by simp)
+        obtain ⟨hmem, hshort⟩ := hshort_eval
+        -- `eval pk (s₁, s₂) = c`, i.e. `s₁ + s₂ · h = c`, holds by construction of the sampler.
+        have heval : (falconPSF p prims).eval pk (s₁, s₂) = c :=
+          falconPSF_eval_trapdoorSample p prims pk sk c (s₁, s₂) hmem
+        -- `verify` decompresses to the same `s₂` and recomputes the same `s₁`, then runs the
+        -- same `ℓ₂` check that `isShort` already passed.
+        have hdec := h_laws.compress_decompress _ _ _ hcomp
+        unfold verify
+        simp only [hdec]
+        rw [toRq_rqToIntPolyCentered]
+        have hs1 : c - negacyclicMul s₂ pk.h = s₁ := by
+          rw [← heval]
+          change s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h = s₁
+          ext i
+          simp only [LatticeCrypto.NegacyclicRing.coeff_add,
+            LatticeCrypto.NegacyclicRing.coeff_sub]
+          ring
+        change decide (pairL2NormSq (c - negacyclicMul s₂ pk.h) s₂ ≤ p.betaSquared) = true
+        rw [hs1]
+        exact hshort
 
 /-! ### NTRU-SIS Hardness Assumption -/
 

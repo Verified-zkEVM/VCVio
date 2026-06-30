@@ -235,6 +235,25 @@ def rqToIntPolyCentered {n : ℕ} (f : Rq n) : IntPoly n :=
   let a := f.toArray
   Vector.ofFn fun i : Fin n => centeredRepr (a.getD i.1 0)
 
+/-- `IntPoly.toRq` is a left inverse of `rqToIntPolyCentered`: reducing the centered integer
+lift of `f ∈ R_q` back mod `q` recovers `f`. Coefficient-wise, `rqToIntPolyCentered` stores the
+centered representative `centeredRepr (f[i])` and `IntPoly.toRq` casts it back into `ZMod q`;
+`LatticeCrypto.centeredRepr_intCast` shows this cast is the identity on `ZMod q`. This closes the
+compress/decompress roundtrip in `verify_sign_correct`, where `verify` recomputes
+`s₂ = IntPoly.toRq (rqToIntPolyCentered s₂)`. -/
+theorem toRq_rqToIntPolyCentered {n : ℕ} (f : Rq n) :
+    IntPoly.toRq (rqToIntPolyCentered f) = f := by
+  apply LatticeCrypto.Poly.ext_get_eq
+  intro i
+  unfold IntPoly.toRq integralLift rqToIntPolyCentered
+  simp only [LatticeCrypto.vectorIntegralLift, LatticeCrypto.PolyBackend.mapCoeffs,
+    LatticeCrypto.vectorBackend, Vector.get_ofFn]
+  have hget : f.toArray.getD i.1 0 = f.get i := by
+    simp [Array.getD_eq_getD_getElem?, Vector.get]
+  rw [hget]
+  change (↑(LatticeCrypto.centeredRepr (f.get i)) : Coeff) = f.get i
+  exact (LatticeCrypto.centeredRepr_intCast (f.get i)).symm
+
 /-- Falcon signing (Falcon+, Algorithm 10), as a fuel-bounded rejection loop.
 
 Mirrors `FiatShamir.WithAbort.fsAbortSignLoop` and the concrete `Concrete.Sign.concreteSign`:

@@ -40,12 +40,13 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
 - **Faithful?** v1.2: **no, by design** (FN-DSA target: pk-bound hash, fresh salt). FN-DSA: **partial**
   (omits L∞, leaf-range gate, 79-bit sampler). **c-fn-dsa: yes** at the concrete/constant level — the
   pk-bound hash path is cross-validated by the FFI differential tests.
-- **Complete?** No — **19 live Falcon sorries** (+4 GPV +1 ToMathlib). `sign` done (s4); `keyGenFromSeed` +
-  NTRUSolve ascent + the security/correctness proofs remain.
-- **Sound?** No — 0/4 security theorems proven; `euf_cma_security`/`verify_sign_correct` are `sorry`; the
-  generic GPV chain is `sorry`. **But** the pieces built (B1, TS-5, `falconPSF_eval_trapdoorSample`, `sign`,
-  B9, **B6 kernel equalities**) were re-audited sound at HEAD (could not refute); B6's two kernel-equality
-  theorems are standard-axioms-only.
+- **Complete?** No — **18 live Falcon sorries** (+4 GPV +1 ToMathlib). `sign` done (s4);
+  **`verify_sign_correct` done (s10)**; `keyGenFromSeed` + NTRUSolve ascent + EUF-CMA remain.
+- **Sound?** Partial — **`verify_sign_correct` PROVEN (s10)**, standard-axioms-only (the abstract correctness
+  theorem: a non-aborting signature always verifies, conditional on `h_laws.compress_decompress`).
+  `euf_cma_security` + the generic GPV chain are still `sorry`. The pieces built (B1, TS-5,
+  `falconPSF_eval_trapdoorSample`, `sign`, B9, **B6 kernel equalities**, **F8**, **VER-1**) were re-audited
+  sound at HEAD (could not refute); all standard-axioms-only.
 - **Verify bridge:** `concrete_verify_eq_verify` is proven with **NO semantic hyps** (was 4, then 3): the
   U32-kernel equalities (B6) and **both codec round-trips** (`hsigDecode`/`hpkDecode`, s8/s9) are now
   discharged inline. Remaining hyps are purely structural/numeric: `hn`, `hsbytelen`, `hn_ovf`, `hn4 : 4∣p.n`.
@@ -58,9 +59,11 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
 - [x] **B1** (s1) — `FalconTree.leaf` carries `(σ₀,σ₁,l01)`; `ffSampling` κ=0 mirrors `ffsampFFTDeepest`. SD-5 closed.
 - [x] **TS-5** (s2) — `fromFFTPreimage` recomputes `s₁:=c−s₂·h`; `falconPSF_eval_trapdoorSample` proven.
 - [x] **B2 `sign`** (s4) — fuel-bounded `Option` rejection loop (`Scheme.lean:262`) + `rqToIntPolyCentered`.
-- [ ] **B2′ `verify_sign_correct`** (next, agreed) — prove it. Prereqs: `toRq_rqToIntPolyCentered = id`
-  (F8 — coeff-wise + `ofFn`/`toArray` index bridge, see `SchoolbookCert.lean:213` + `centeredRepr_intCast`
-  `Norms.lean:112`); induct on `maxAttempts`; stays conditional on the `h_laws` `compress_decompress` (ENC-1).
+- [x] **B2′ `verify_sign_correct`** (s10) — PROVEN, standard-axioms-only. Induction on `maxAttempts`
+  (vacuous base; success-vs-retry decomposition via `mem_support_bind_iff`); chains
+  `h_laws.compress_decompress` → **F8** `toRq_rqToIntPolyCentered` (proven, `Scheme.lean`) →
+  `falconPSF_eval_trapdoorSample` (`s₁=c−s₂·h`) → `isShort` = the `ℓ₂` check. `_hvalid` unused (conditional
+  correctness). Stays conditional on the abstract `h_laws.compress_decompress` only (NOT the concrete codec).
 - [ ] **KG-quickwin** — delete `NTRUSolver`'s local sorry-stub shadows (`FXR.sqr`, `vect_*`,
   `poly_big_to_small`) and use the real `Concrete/FXR.lean` + `PolyBigInt.lean` (already fully implemented).
   Cuts ~8 of 11 NTRUSolver sorries. **CAVEAT (s9 re-check): NOT a clean drop-in** — the real signatures
@@ -112,11 +115,15 @@ standard-axioms-only; END review re-verified the RHS chains target the genuine s
 - UN-3 generic GPV chain `sorry` (`GPVHashAndSign.lean:270,283,332,363`); `euf_cma_split_bound` is `exact ⟨…sorry…⟩`.
 - ENC-2 orphan `Falcon.Encoding`/`Laws`; `sigDecode_sigEncode` false for the concrete codec.
 
+**Resolved (s10):**
+- UN-1/TS-B `verify_sign_correct` — **PROVEN s10** (`Security.lean`, standard-axioms-only); see §2 B2′.
+  `_hvalid` unused (conditional correctness). **Two-world gap (TS-4) STILL OPEN:** this is byte-level
+  `Falcon.verify`; the GPV verify the EUF-CMA theorems use is a different predicate — no bridge lemma yet.
+- F8/ENC-7 `toRq_rqToIntPolyCentered = id` — **PROVEN s10** (`Scheme.lean`, coeff-wise via
+  `Poly.ext_get_eq` + `mapCoeffs`/`vectorBackend` reduction + `centeredRepr_intCast.symm`).
+
 **Incompleteness (unfinished, statement sound-in-shape):**
-- UN-1/TS-B `verify_sign_correct` `sorry` (non-vacuous now). **Two-world gap (TS-4):** byte-level
-  `Falcon.verify` ≠ GPV verify; no bridge lemma.
 - ENC-1 `compress_decompress` only ever the assumed `h_laws` — no `Primitives.Laws (concretePrimitives)` instance.
-- F8/ENC-7 `toRq_rqToIntPolyCentered = id` not yet a lemma (needs the index bridge).
 - VER-1 (B6 done s7; codecs done s8/s9): **CLOSED** — `concrete_verify_eq_verify` has NO semantic hyps.
   - `hsigDecode` (sig framing round-trip): **PROVEN s8** (`Concrete/Encoding.lean` `sigDecode_sigEncode`,
     standard-axioms-only).
@@ -153,15 +160,16 @@ other `Concrete/*.lean` `while` codecs too if they're ever to be proven.
 RCDT/FACCT/σ constants bit-exact, compress internal unique-encoding checks, headers + 14-bit PK packing,
 `toFFTTarget` sign-folding, GS-norm threshold 72251709809335 (v1.2/c-fn-dsa), no `native_decide`/`axiom` in Concrete.
 
-## 4. Baseline — verified 2026-06-29 @ `falcon-faithfulness-review` (s9, hpkDecode landed / VER-1 closed; build-warning total 24)
-**19 live Falcon sorries** (authoritative = build `declaration uses 'sorry'` warnings, NOT raw `grep` which
-over-counts prose/comments). B6 added two PROVEN theorems (no new sorries) and removed two `concrete_verify_eq_verify`
-hypotheses; the live-sorry inventory is unchanged from s6:
+## 4. Baseline — verified 2026-06-30 @ `falcon-faithfulness-review` (s10, verify_sign_correct + F8 landed; build-warning total 23)
+**18 live Falcon sorries** (authoritative = build `declaration uses 'sorry'` warnings, NOT raw `grep` which
+over-counts prose/comments). s10 removed the `verify_sign_correct` sorry (proven) and added two PROVEN
+theorems (`verify_sign_correct`, F8 `toRq_rqToIntPolyCentered`) with no new sorries:
 - `Concrete/NTRUSolver.lean` ×11 (decls 73,86,89,90,91,92,94,95,97,394,412) — ~8 are KG-4/KG-5 shadows.
-- `Concrete/FPRBridge.lean` ×5 (79,85,91,97,105). `Security.lean` ×2 (111 `verify_sign_correct`, 302 `euf_cma_security`).
-  `Scheme.lean` ×1 (121 `keyGenFromSeed`). `ApproxArith.lean` = 0 live (241 prose; 257–264 commented).
+- `Concrete/FPRBridge.lean` ×5 (79,85,91,97,105). `Security.lean` ×1 (351 `euf_cma_security`;
+  `verify_sign_correct` PROVEN s10). `Scheme.lean` ×1 (121 `keyGenFromSeed`).
+  `ApproxArith.lean` = 0 live (241 prose; 257–264 commented).
 - Non-Falcon load-bearing: `GPVHashAndSign.lean` ×4 (270/283/332/363) + `ToMathlib/…/RenyiDivergence.lean:736` ×1.
-  **Build-warning total = 24.** (Build reports *decl* lines; older notes cited *token* lines — same decls.)
+  **Build-warning total = 23.** (Build reports *decl* lines; older notes cited *token* lines — same decls.)
 - Anchors: `Scheme.lean` `sign`:262, `rqToIntPolyCentered`:245, `falconPSF_eval_trapdoorSample`:202,
   `fromFFTPreimage`:158, `falconPSF`:185; `Primitives.lean` `FalconTree.leaf`:94, `ffSampling` κ=0:262;
   `Concrete/FFT.lean` `ffsampFFTDeepest`:356; `Concrete/Instance.lean` `negacyclicMulU32_eq_negacyclicMul`:447,
@@ -225,11 +233,24 @@ hypotheses; the live-sorry inventory is unchanged from s6:
   disabled). **Next: `verify_sign_correct` (needs F8 + ENC-1 compress/decompress `while`→`for`), or KG-quickwin
   (note: real FXR/PolyBigInt signatures differ from the stubs — not a clean drop-in).**
 
+- **s10** — **`verify_sign_correct` PROVEN; F8 PROVEN.** START review GREEN: drift clean (24); independent
+  skeptic validated the proof plan (all identity checks — salt, `s₂`, norm arg-order, eval — confirmed;
+  `_hvalid` unused; only gap was F8-needs-proving, which was the plan). Correction banked: `verify_sign_correct`
+  is ABSTRACT-level — needs only the `h_laws.compress_decompress` law, NOT the concrete codec / ENC-1 refactor.
+  Proved **F8** `toRq_rqToIntPolyCentered` (`Scheme.lean`) + **`verify_sign_correct`** (`Security.lean`):
+  induction on `maxAttempts` (vacuous base; success-vs-retry via `mem_support_bind_iff`) chaining
+  `compress_decompress` → F8 → `falconPSF_eval_trapdoorSample` → `isShort` norm check. Heavy proof delegated
+  to a background agent; **adversarially re-verified** at HEAD: `#print axioms` standard-only on both,
+  signature UNCHANGED (not weakened/vacuous — success branch does real work), full `LatticeCrypto` build green,
+  sorry count **24→23**. Cleaned the `let _ := hvalid` antipattern → `_hvalid` binder + fixed line-length.
+  **Next: EUF-CMA (UN-2/UN-3: the generic GPV chain `GPVHashAndSign.lean` ×4 + `euf_cma_security` + the
+  TS-4 two-world bridge), or KG (B4/keyGenFromSeed), or KG-quickwin (signature reconciliation).**
+
 ## 6. Drift-check snippet
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 git branch --show-current      # expect falcon-faithfulness-review (verify LIVE)
-# Authoritative live-sorry count (expect 24 = 19 Falcon + 4 GPV + 1 ToMathlib/RenyiDivergence):
+# Authoritative live-sorry count (expect 23 = 18 Falcon + 4 GPV + 1 ToMathlib/RenyiDivergence):
 lake build LatticeCrypto.Falcon.Security LatticeCrypto.Falcon.Concrete.FPRBridge \
   LatticeCrypto.Falcon.Concrete.NTRUSolver 2>&1 | grep -c "declaration uses"
 grep -n "sorry" VCVio/CryptoFoundations/GPVHashAndSign.lean | cut -d: -f1   # 270 283 332 363
