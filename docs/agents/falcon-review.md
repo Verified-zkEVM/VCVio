@@ -40,8 +40,9 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
 - **Faithful?** v1.2: **no, by design** (FN-DSA target: pk-bound hash, fresh salt). FN-DSA: **partial**
   (omits L∞, leaf-range gate, 79-bit sampler). **c-fn-dsa: yes** at the concrete/constant level — the
   pk-bound hash path is cross-validated by the FFI differential tests.
-- **Complete?** No — **18 live Falcon sorries** (+4 GPV +1 ToMathlib). `sign` done (s4);
-  **`verify_sign_correct` done (s10)**; `keyGenFromSeed` + NTRUSolve ascent + EUF-CMA remain.
+- **Complete?** No — **9 live Falcon sorries** (+4 GPV +1 ToMathlib; **14 total** after s12). `sign` done (s4);
+  **`verify_sign_correct` done (s10)**; **KG-quickwin done (s12)** (NTRUSolver 11→2); `keyGenFromSeed` +
+  NTRUSolve ascent + EUF-CMA remain.
 - **Sound?** Partial — **`verify_sign_correct` PROVEN (s10)**, standard-axioms-only (the abstract correctness
   theorem: a non-aborting signature always verifies, conditional on `h_laws.compress_decompress`).
   `euf_cma_security` + the generic GPV chain are still `sorry`. The pieces built (B1, TS-5,
@@ -64,13 +65,17 @@ the `falcon-review-status` memory + Artifact if material. (5) **Commit** (doc re
   `h_laws.compress_decompress` → **F8** `toRq_rqToIntPolyCentered` (proven, `Scheme.lean`) →
   `falconPSF_eval_trapdoorSample` (`s₁=c−s₂·h`) → `isShort` = the `ℓ₂` check. `_hvalid` unused (conditional
   correctness). Stays conditional on the abstract `h_laws.compress_decompress` only (NOT the concrete codec).
-- [ ] **KG-quickwin** (NEXT — agreed s11; bootstrap plan below in §3) — replace `NTRUSolver`'s 9 local
-  stub-`sorry`s (`FXR.sqr`, `vect_*`, `poly_big_to_small`) with the real, fully-implemented
-  `Concrete/FXR.lean` + `PolyBigInt.lean`. Removes 9 sorries (NTRUSolver 11→2; **total 23→14**) and makes
-  `solve_NTRU`/`check_ortho_norm` executable (KG-6 vacuity gone). **NOT a clean drop-in** (medium effort):
-  real names are `fxr_`-prefixed; `poly_big_to_small` is 3-arg (offset→`Array.extract`); `vect_set` wants
-  `Array Int32`. Full reconciliation map in §3 **"KG-quickwin resume plan"**. NOT a correctness proof
-  (KG-2/KG-3 ascent sorries 394/412 stay).
+- [x] **KG-quickwin** (DONE s12) — replaced `NTRUSolver`'s 9 local stub-`sorry`s (`FXR.sqr`, `vect_*`,
+  `poly_big_to_small`) with the real, fully-implemented `Concrete/FXR.lean` + `PolyBigInt.lean` (imports +
+  `open Falcon.Concrete.FXR` / `open …PolyBigInt (poly_big_to_small)`; deleted the local `namespace FXR` and
+  9 stubs). Removed 9 sorries (NTRUSolver 11→2; **total 23→14**); `check_ortho_norm` now sorry-free
+  (`#print axioms` = `propext, Quot.sound` only) and executable (KG-6 vacuity gone). `solve_NTRU` tail
+  rewritten for the real 3-arg `poly_big_to_small` (offset→`buf.extract 0 n`/`buf.extract n (2*n)`,
+  `Array Int8 × Bool` → `if !ok then none`); `check_ortho_norm` uses `vect_set logn (f.map (·.toInt32))`.
+  END adversarial review: 0 regressions (3/3 claims CONFIRMED-OK; the only `fxr_of` sign-extension divergence
+  is in the unexercised negative regime and is strictly more correct; bit-identical for 12289). NOT a
+  correctness proof — the 2 ascent sorries (`solve_NTRU_intermediate` 365 / `solve_NTRU_depth0` 383 =
+  KG-2/KG-3) stay. Standard-axioms-only preserved (no `native_decide`).
 - [x] **B9 / ENC-3** — DONE (s6): `decompress` now rejects `d.length ≠ dlen` (was `< dlen`)
   (`Concrete/Encoding.lean:79`), so over-length/trailing-garbage sigs are refused (the verify path
   `verify → decompress … p.sbytelen` rejects any `comp.length ≠ sbytelen`). Enforces fixed-length
@@ -152,54 +157,40 @@ other `Concrete/*.lean` `while` codecs too if they're ever to be proven.
 - Bridge rewired: `concrete_verify_eq_verify` drops `hsigDecode`/`hpkDecode`, adds `hn4 : 4 ∣ p.n`,
   discharges both inline. The 56-bit pack/unpack scaffolding (`group_roundtrip`, `E_*`, `gblock_*`,
   `pkEncode_eq_E`) was lifted from `docs/agents/falcon-hpkdecode-wip.lean` (still kept as a reference).
-**KG-quickwin resume plan (s11 bootstrap — execute in a fresh session; scoped against live code):**
-Goal: swap `NTRUSolver`'s 9 stub-`sorry`s for the real `Concrete/FXR.lean` + `Concrete/PolyBigInt.lean`.
-Removes 9 sorries (NTRUSolver decls 73,86,89-92,94,95,97 → gone; 11→2; **total 23→14**), makes
-`solve_NTRU`/`check_ortho_norm` executable (KG-6 no longer vacuous). Leaves the 2 real ascent sorries
-(decls 394/412 = KG-2/KG-3, B4) untouched. Standard-axioms-only preserved (pure Lean; no `native_decide`).
-- **Setup:** add `import LatticeCrypto.Falcon.Concrete.FXR` + `…PolyBigInt` (no cycle — neither imports
-  NTRUSolver; they pull FPR/GMTable/BigInt31/SmallPrimeNTT). Delete the local `namespace FXR … end FXR`
-  (lines ~63-79: `abbrev FXR` + `zero/ofInt/add/sqr/lt/ofScaled32`) and the 9 stub defs (`poly_big_to_small`
-  @86, `vect_*` @89-98). Add `open Falcon.Concrete.FXR` (brings `FXR`=UInt64, `fxr_*`, `vect_*`).
-- **All local-`FXR` uses are confined to `check_ortho_norm`:481-491; `poly_big_to_small` only in
-  `solve_NTRU`:456-457** (grep-confirmed s11). Rewrites:
-  - Real names are `fxr_`-prefixed: `FXR.zero→fxr_zero`, `FXR.ofInt→fxr_of` (`fxr_of 12289`, arg `Int32`),
-    `FXR.add→fxr_add`, `FXR.sqr→fxr_sqr` (**real impl EXISTS, FXR.lean:87** — doc previously wrong),
-    `FXR.lt→fxr_lt`, `FXR.ofScaled32→fxr_of_scaled32`. `let mut sn : FXR` stays (FXR=UInt64).
-  - `vect_set logn f` (f : Array Int8): real wants `Array Int32` → `vect_set logn (f.map (·.toInt32))` (and g).
-  - `vect_invnorm_fft logn rt1 rt2 0`: real `e : UInt64`; `0` literal fine.
-  - `poly_big_to_small`: real sig `(logn)(s : Array UInt32)(lim : Int32) : Array Int8 × Bool` (no `off`,
-    returns pair not `Option`, reads `s[0:n]`). Rewrite `solve_NTRU`'s tail (the `off` 0/n → `Array.extract`):
-    ```
-    let (capF, okF) := PolyBigInt.poly_big_to_small logn (buf.extract 0 n) 127
-    if !okF then none else
-    let (capG, okG) := PolyBigInt.poly_big_to_small logn (buf.extract n (2*n)) 127
-    if !okG then none else pure (capF, capG)
-    ```
-    (verify `buf` holds F at [0:n], G at [n:2n] — c-fn-dsa reads `buf+off`.)
-- **Gotchas:** real fns are plain `def` (accessible); grep no OTHER file references the deleted local
-  `FXR`/stubs; build NTRUSolver (expect 11→2) + full `LatticeCrypto` green; optional `#eval` to confirm
-  executability (FFI differential needs native backends → CI). This is plumbing, NOT `solve_NTRU ⊨ ntruEquation`.
-- KG-1 `keyGenFromSeed` sorry; KG-2 NTRUSolve ascent sorry; KG-3 no keygen correctness theorem.
-- **KG-4/KG-5** NTRUSolver local stubs (`FXR.sqr`/`vect_*`/`poly_big_to_small`) shadow the real, fully-implemented
-  `Concrete/FXR.lean`/`PolyBigInt.lean` — ~8 redundant sorries. KG-6 `check_ortho_norm` vacuous (fixed by KG-4).
-  (Refuted sub-claim: the local `ofInt` does NOT mis-sign negatives — `<<<32` discards the differing bits.)
+**KG-quickwin — DONE (s12; verified against live code + END adversarial review):** swapped `NTRUSolver`'s
+9 stub-`sorry`s for the real `Concrete/FXR.lean` + `Concrete/PolyBigInt.lean`. NTRUSolver 11→2; **total 23→14**.
+`check_ortho_norm` now sorry-free + executable (KG-6 closed); the 2 real ascent sorries
+(`solve_NTRU_intermediate` 365 / `solve_NTRU_depth0` 383 = KG-2/KG-3, B4) remain. Standard-axioms-only
+(no `native_decide`). What landed:
+- Imports `…Concrete.FXR` + `…Concrete.PolyBigInt`; `open Falcon.Concrete.FXR` +
+  `open Falcon.Concrete.PolyBigInt (poly_big_to_small)`; deleted the local `namespace FXR` (abbrev +
+  `zero/ofInt/add/sqr/lt/ofScaled32`) and the 9 stub defs.
+- `solve_NTRU` tail: real `poly_big_to_small (logn)(s : Array UInt32)(lim : Int32) : Array Int8 × Bool`
+  reads `s[0:n]`, so `off`→slice: `buf.extract 0 n` / `buf.extract n (2*n)`; pair-return → `if !okF/okG then none`.
+  (`buf` holds F at words [0:n], G at [n:2n] — documented depth-0 single-word postcondition, review-confirmed.)
+- `check_ortho_norm`: `fxr_zero/fxr_add/fxr_sqr/fxr_lt/fxr_of/fxr_of_scaled32`; `vect_set` wants `Array Int32`
+  → `vect_set logn (f.map (·.toInt32))` (Int8→Int32 sign-extends); `vect_invnorm_fft … (0 : UInt64)`.
+- KG-4/KG-5 (shadow stubs) **RESOLVED**; KG-6 (`check_ortho_norm` vacuous) **FIXED**. Refuted-divergence note
+  retained: `fxr_of` (real, sign-extends via `toInt64`) vs old `ofInt` (`toUInt32`) differ only for negative
+  inputs — bit-identical for the sole call site 12289; the real one is the more correct version.
+- KG-1 `keyGenFromSeed` sorry; KG-2 NTRUSolve ascent sorry; KG-3 no keygen correctness theorem — all still open
+  (this was plumbing, NOT `solve_NTRU ⊨ ntruEquation`).
 - SZ-2 `concretePrimitives.samplerZ` runs over ℝ (≠ FPR path); SZ-3 5 FPR error bounds `sorry`. TS-F transitive ToMathlib Rényi `sorry`.
 
 **Verified-faithful (ok):** params vs Table 3.3 (`betaSquared` 34034726/70265242), centered-rep L2 norm,
 RCDT/FACCT/σ constants bit-exact, compress internal unique-encoding checks, headers + 14-bit PK packing,
 `toFFTTarget` sign-folding, GS-norm threshold 72251709809335 (v1.2/c-fn-dsa), no `native_decide`/`axiom` in Concrete.
 
-## 4. Baseline — verified 2026-06-30 @ `falcon-faithfulness-review` (s10, verify_sign_correct + F8 landed; build-warning total 23)
-**18 live Falcon sorries** (authoritative = build `declaration uses 'sorry'` warnings, NOT raw `grep` which
-over-counts prose/comments). s10 removed the `verify_sign_correct` sorry (proven) and added two PROVEN
-theorems (`verify_sign_correct`, F8 `toRq_rqToIntPolyCentered`) with no new sorries:
-- `Concrete/NTRUSolver.lean` ×11 (decls 73,86,89,90,91,92,94,95,97,394,412) — ~8 are KG-4/KG-5 shadows.
+## 4. Baseline — verified 2026-06-30 @ `falcon-faithfulness-review` (s12, KG-quickwin landed; build-warning total 14)
+**9 live Falcon sorries** (authoritative = build `declaration uses 'sorry'` warnings, NOT raw `grep` which
+over-counts prose/comments). s12 removed 9 NTRUSolver shadow-stub sorries (KG-quickwin; NTRUSolver 11→2):
+- `Concrete/NTRUSolver.lean` ×2 (decls `solve_NTRU_intermediate` 365 / `solve_NTRU_depth0` 383 = KG-2/KG-3
+  ascent, B4). The 9 stub sorries (`FXR.sqr`, `poly_big_to_small`, 7×`vect_*`) are GONE (real impls imported).
 - `Concrete/FPRBridge.lean` ×5 (79,85,91,97,105). `Security.lean` ×1 (351 `euf_cma_security`;
   `verify_sign_correct` PROVEN s10). `Scheme.lean` ×1 (121 `keyGenFromSeed`).
   `ApproxArith.lean` = 0 live (241 prose; 257–264 commented).
 - Non-Falcon load-bearing: `GPVHashAndSign.lean` ×4 (270/283/332/363) + `ToMathlib/…/RenyiDivergence.lean:736` ×1.
-  **Build-warning total = 23.** (Build reports *decl* lines; older notes cited *token* lines — same decls.)
+  **Build-warning total = 14.** (Build reports *decl* lines; older notes cited *token* lines — same decls.)
 - Anchors: `Scheme.lean` `sign`:262, `rqToIntPolyCentered`:245, `falconPSF_eval_trapdoorSample`:202,
   `fromFFTPreimage`:158, `falconPSF`:185; `Primitives.lean` `FalconTree.leaf`:94, `ffSampling` κ=0:262;
   `Concrete/FFT.lean` `ffsampFFTDeepest`:356; `Concrete/Instance.lean` `negacyclicMulU32_eq_negacyclicMul`:447,
@@ -282,6 +273,17 @@ theorems (`verify_sign_correct`, F8 `toRq_rqToIntPolyCentered`) with no new sorr
   resume plan"** in §3. Corrected the doc: `fxr_sqr` DOES exist (FXR.lean:87); real fns are `fxr_`-prefixed;
   all local-`FXR` uses confined to `check_ortho_norm`, `poly_big_to_small` only in `solve_NTRU`; no import
   cycle. **Next session: execute the §3 KG-quickwin resume plan (target 23→14 sorries).**
+
+- **s12** — **KG-quickwin DONE** (executed the §3 resume plan). Imported real `Concrete/FXR.lean` +
+  `Concrete/PolyBigInt.lean`, deleted the local `namespace FXR` + 9 stub-sorry defs, rewired `solve_NTRU`
+  tail (3-arg `poly_big_to_small`, `off`→`Array.extract`, pair→`if !ok then none`) and `check_ortho_norm`
+  (`fxr_*` names, `vect_set ∘ map ·.toInt32`). **23→14 sorries** (NTRUSolver 11→2; only the 2 KG-2/KG-3
+  ascent sorries 365/383 left). START drift clean (23, branch live); full `LatticeCrypto` build green;
+  `#print axioms`: `check_ortho_norm` now `propext, Quot.sound` only (sorry-free, KG-6 closed, `#eval`
+  executable), `solve_NTRU` `sorryAx` only from the 2 ascent sorries; no `native_decide`. END adversarial
+  review (3 semantic claims — `buf.extract` offset faithfulness, `Int8→Int32` sign-extension, FXR renames):
+  **0 regressions**, all CONFIRMED-OK; the only `fxr_of` divergence is unexercised-negative + strictly more
+  correct. **Next: EUF-CMA (UN-2/UN-3 GPV chain + TS-4 two-world bridge), or B4 keyGenFromSeed/ascent.**
 
 ## 6. Drift-check snippet
 ```bash
