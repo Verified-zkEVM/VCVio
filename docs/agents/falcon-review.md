@@ -197,6 +197,39 @@ other `Concrete/*.lean` `while` codecs too if they're ever to be proven.
   (this was plumbing, NOT `solve_NTRU ⊨ ntruEquation`).
 - SZ-2 `concretePrimitives.samplerZ` runs over ℝ (≠ FPR path); SZ-3 5 FPR error bounds `sorry`. TS-F transitive ToMathlib Rényi `sorry`.
 
+**B4 ascent resume plan (s13 bootstrap — validated against live `kgen_ntru.c` @ `33026d4d` + every Lean
+helper signature re-checked):** replace the 2 NTRUSolver ascent `sorry`s. Submodule prerequisite DONE
+(`git submodule update --init third_party/c-fn-dsa`). C refs (NON-AVX2 only): `solve_NTRU_depth0`
+`kgen_ntru.c:1575-1772`, `solve_NTRU_intermediate` `:532-1006`; layout exemplar = local `solve_NTRU_deepest`
+(`NTRUSolver.lean:270-327`). **Style:** pure-functional `Id.run do` + `mut` arrays named via
+`extractRange`/`writeRange` (NTRUSolver.lean:86-110); FXR arrays are fresh `Array UInt64` (ignore the C's
+`uint32_t*`→`fxr*` byte-aliasing); `return none` on failure. `FXR := UInt64`, `mp_mmul`→`SmallPrimeNTT.mp_montymul`.
+- **`solve_NTRU_depth0` — DO FIRST (zero helper gaps, ~90-120 LOC, single-session, all sigs verified s13).**
+  `pr := PRIMES[0]` (single prime), `n=1<<<logn`, `hn=n>>>1`. Buf entry: deeper `(F,G)` at `[0:hn]`/`[hn:n]`
+  (degree `hn`, single word). Exit: `F=[0:n]`, `G=[n:2n]` single-word (matches `solve_NTRU`'s
+  `buf.extract 0 n`/`n (2*n)`). Steps (C lines): A load f,g,Fd,Gd → RNS+NTT (extract Fd/Gd BEFORE
+  overwrite; `mp_NTT (logn-1)` for the degree-`hn` Fd/Gd, reusing full `gm`) :1600-1611; B build unreduced
+  `(F,G)` butterfly into ft,gt :1613-1625; C name `Fp:=ft,Gp:=gt`, alloc t1..t4 :1627-1640; D
+  `t1←F·adj f+G·adj g`, `t3←f·adj f+g·adj g` (note `t4[(n-1)-i]`) :1646-1668; E iNTT t1,t3 + `mp_norm`
+  (`.toUInt32`, keep raw) :1670-1679; F FXR division: `rt3[i]=fxr_of_scaled32((t2[i]).toInt32.toInt64.toUInt64<<<22)`,
+  `vect_FFT`, `rt2:=rt3.extract 0 hn`, same for t1, `vect_div_selfadj_fft`, `vect_iFFT`, `t1[i]=mp_set (fxr_round …) p`
+  :1687-1721; G k→NTT+Mont :1731-1736; H subtract k·f,k·g + **verify `f·G−g·F ≡ q·R` per slot, `return none`
+  on mismatch** (compute `x` from the just-`set!` Fp/Gp — ordering!) :1738-1757; I iNTT, `poly_mp_norm`,
+  assemble via `writeRange` into `ensureSize buf (6*n)` :1759-1766. Verified sigs: `mp_set(v:Int32)(p)`,
+  `mp_NTT/iNTT(logn)(a)(gm)(p p0i)`, `poly_mp_norm/set(logn)(a:Array UInt32)(p)`, `fxr_round:FXR→Int32`,
+  `fxr_of_scaled32:UInt64→FXR`, `vect_FFT/iFFT/div_selfadj_fft`, `mkigm logn pr`, `Q=12289` (NTRUSolver.lean:45).
+- **`solve_NTRU_intermediate` — LARGER (~200-280 LOC, separate effort).** Multi-prime RNS + CRT + iterative
+  Babai loop + save/restore of `(f,g)` via `MIN_SAVE_FG`. Reuses `make_fg_intermediate` (NTRUSolver.lean:241),
+  `zint_rebuild_CRT`, `zint_mod_small_signed` (:116), `poly_max_bitlength`/`poly_big_to_fixed`/`poly_sub_scaled`/
+  `poly_sub_scaled_ntt` (PolyBigInt), `vect_norm_fft`/`vect_mul_fft`/`divrem31`. **ONE GAP:**
+  `poly_sub_kfg_scaled_depth1` (`kgen_poly.c:976-1095`, ~80-120 LOC) — used ONLY in the `depth==1` branch
+  (:900-902); port into `PolyBigInt.lean`, or stub `depth==1` first and land `depth>1` (which already has its
+  helpers). The `f·G−g·F≡q` verify is SKIPPED for `depth==1` (:943-944).
+- **Verify gates:** in-function NTT `q·R` check (the correctness gate, keep as `return none`); `#eval` integer
+  round-trip `f·G−g·F=q` in `ℤ[x]/(xⁿ+1)` for small `logn` (no `LatticeCryptoTest` refs NTRUSolver yet);
+  escalate to FFI differential vs C `solve_NTRU` once depth0 green. Build `LatticeCrypto.Falcon.Concrete.NTRUSolver`;
+  no new `sorry`; standard-axioms preserved. Full plan in the s13 recon transcript.
+
 **Verified-faithful (ok):** params vs Table 3.3 (`betaSquared` 34034726/70265242), centered-rep L2 norm,
 RCDT/FACCT/σ constants bit-exact, compress internal unique-encoding checks, headers + 14-bit PK packing,
 `toFFTTarget` sign-folding, GS-norm threshold 72251709809335 (v1.2/c-fn-dsa), no `native_decide`/`axiom` in Concrete.
