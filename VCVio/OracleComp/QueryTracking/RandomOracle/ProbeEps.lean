@@ -6,30 +6,36 @@ Authors: Oleksandr Vovkotrub
 import VCVio.OracleComp.ProbComp
 
 /-!
-# ε-Cell First-Fire Probe Bound
+# ε-Cell First-Fire Bound
 
-This file generalizes the *first-fire probe bound* from a uniform per-cell value to an arbitrary
-sampler `oa : ProbComp R` whose every outcome has probability at most `ε`. Where the uniform
-development (`FirstFire.lean`) charges a state-dependent `1 / (|R| - S.card)` per genuine probe and
-needs an exact telescope to fold the growing exclusion sets, the ε-development charges a single
-uniform `ε` per genuine probe, valid in *every* state. The first-fire telescope therefore collapses
-to a plain union bound: an adaptive `q`-probe strategy fires with probability at most `q · ε`.
+This file develops the *first-fire bound* for a hidden value drawn from an arbitrary sampler
+`oa : ProbComp R` whose every outcome has probability at most `ε`. Where the uniform development
+(`FirstFire.lean`) charges a state-dependent `1 / (|R| - S.card)` per genuine read and needs an
+exact telescope to fold the growing exclusion sets, the ε-development charges a single uniform `ε`
+per read, valid in *every* state. The first-fire telescope collapses to a plain union bound: an
+adaptive `q`-read strategy fires with probability at most `q · ε`.
 
 ## The model
 
-A probe targets a *cell* `d : D`. Each cell carries a value drawn from `oa`; the adversary never
-sees the value, only the boolean reply "does cell `d` hold `a`?" to a probe `(d, a)`. We model the
-genuine probe memorylessly: each genuine probe draws a fresh sample `v ← oa` and replies
-`decide (v = a)`. Because the per-outcome bound `∀ r, Pr[= r | oa] ≤ ε` holds unconditionally, the
-fresh-draw model is a sound upper bound for any state-conditioned commitment law (the conditioning
-that inflates a re-targeted cell's firing probability in the uniform case is, in the ε-case,
-already absorbed into the hypothesis `hε`, which bounds *every* outcome's mass).
+A hidden target `w ← oa` is drawn **once** and committed into the run's state; an adaptive
+`q`-read strategy `σ : List Bool → R`, mapping the boolean reply history (hit/miss) to the next
+read point, then probes that fixed `w`, firing as soon as some read equals `w`. Up to the first
+hit the read points are fixed by the all-miss history and independent of `w`, so averaging over
+the single hidden draw — without ever conditioning on the drawn value — bounds the firing
+probability by the union of `q` fixed singletons, each of mass at most `ε`. This models an eager
+run that commits a sampled key at draw time and exposes it only through later membership tests.
+Because the per-outcome bound `∀ r, Pr[= r | oa] ≤ ε` holds unconditionally, the bound is valid
+in every state.
 
 ## Main results
 
-* `probeStepEps` / `probeManyEps` : the single-probe and adaptive `q`-probe programs.
-* `probEvent_probeStepEps_le` : a single probe fires with probability at most `ε`.
-* `probEvent_probeManyEps_le` : the adaptive first-fire union bound `Pr[fire] ≤ q · ε`.
+* `hiddenReadMany` / `probEvent_hiddenReadMany_le` : the single-target adaptive read game and its
+  first-fire union bound `Pr[fire] ≤ q · ε`.
+* `hiddenReadList` / `probEvent_hiddenReadList_le` : the per-attempt-fresh-target list game and
+  its union bound.
+* `probEvent_bind_fire_le_of_gen` : the deferred-sampling fire bound whose marginal is a
+  hidden-target read, against an opaque continuation.
+* `drawList` : the explicit i.i.d. front-tape form of the per-attempt draws.
 -/
 
 open OracleComp OracleSpec
@@ -37,97 +43,16 @@ open scoped ENNReal
 
 namespace OracleComp
 
-variable {D R : Type} [DecidableEq R]
-
-/-- One ε-probe at cell `d` (the cell index is carried only for documentation/adaptivity) with
-target `a`: draw a fresh value `v ← oa` and reply whether `v = a`. The genuine-fire flag is exactly
-this boolean. -/
-noncomputable def probeStepEps (oa : ProbComp R) (a : R) : ProbComp Bool :=
-  (fun v => decide (v = a)) <$> oa
-
-/-- A single ε-probe fires with probability at most `ε`, in *any* state, whenever every outcome of
-`oa` has mass at most `ε`. -/
-theorem probEvent_probeStepEps_le {oa : ProbComp R} {ε : ℝ≥0∞} (a : R)
-    (hε : ∀ r : R, Pr[= r | oa] ≤ ε) :
-    Pr[ (fun b : Bool => b = true) | probeStepEps oa a ] ≤ ε := by
-  rw [probeStepEps, probEvent_map]
-  have hpred : ((fun b : Bool => b = true) ∘ fun v : R => decide (v = a)) = fun v : R => v = a := by
-    funext v
-    rw [Function.comp_apply, decide_eq_true_eq]
-  rw [hpred, probEvent_eq_eq_probOutput]
-  exact hε a
-
-/-- An adaptive `q`-probe ε-program: the strategy `σ` maps the list of boolean replies seen so far
-to the next probe target, and the program returns whether some probe fired. Each step draws a fresh
-sample from `oa` and OR-s the reply onto the tail. -/
-noncomputable def probeManyEps (oa : ProbComp R) : ℕ → (List Bool → R) → ProbComp Bool
-  | 0, _ => pure false
-  | q + 1, σ =>
-    probeStepEps oa (σ []) >>= fun b =>
-      (fun b' => b || b') <$> probeManyEps oa q fun h => σ (b :: h)
-
-@[simp]
-theorem probeManyEps_zero (oa : ProbComp R) (σ : List Bool → R) :
-    probeManyEps oa 0 σ = pure false := rfl
-
-theorem probeManyEps_succ (oa : ProbComp R) (q : ℕ) (σ : List Bool → R) :
-    probeManyEps oa (q + 1) σ =
-      probeStepEps oa (σ []) >>= fun b =>
-        (fun b' => b || b') <$> probeManyEps oa q fun h => σ (b :: h) := rfl
-
-/-- **ε-cell first-fire bound.** An adaptive strategy issuing `q` probes against a sampler whose
-every outcome has mass at most `ε` fires with probability at most `q · ε`. The per-step charge is a
-uniform `ε` (`probEvent_probeStepEps_le`), valid in every state, so the union bound is exact: there
-is no growing exclusion set to telescope. -/
-theorem probEvent_probeManyEps_le {oa : ProbComp R} {ε : ℝ≥0∞} (hε : ∀ r : R, Pr[= r | oa] ≤ ε)
-    (q : ℕ) (σ : List Bool → R) :
-    Pr[ (fun b : Bool => b = true) | probeManyEps oa q σ ] ≤ (q : ℝ≥0∞) * ε := by
-  induction q generalizing σ with
-  | zero => simp
-  | succ q ih =>
-    rw [probeManyEps_succ, probEvent_bind_eq_tsum]
-    -- Split on the head reply `b`. Genuine head fire (`b = true`) is charged `ε`; on a head miss
-    -- (`b = false`) the OR collapses to the tail, charged `q · ε` by the inductive hypothesis.
-    have hsplit : ∀ b : Bool,
-        Pr[= b | probeStepEps oa (σ [])] *
-          Pr[ (fun c : Bool => c = true) |
-            (fun b' => b || b') <$> probeManyEps oa q fun h => σ (b :: h)] ≤
-          (if b = true then ε else (q : ℝ≥0∞) * ε) := by
-      intro b
-      cases b with
-      | true =>
-        -- The OR is constantly `true`, so the event holds with probability `1`; the head reaches
-        -- `true` with probability at most `ε`.
-        simp only [Bool.true_or]
-        refine le_trans (mul_le_mul' (le_refl _) probEvent_le_one) ?_
-        rw [mul_one,
-          show Pr[= true | probeStepEps oa (σ [])] =
-            Pr[ (fun c : Bool => c = true) | probeStepEps oa (σ [])] from
-            (probEvent_eq_eq_probOutput _ true).symm]
-        exact probEvent_probeStepEps_le _ hε
-      | false =>
-        -- The OR collapses to the tail; the head mass is at most `1`.
-        simp only [if_neg (by simp : ¬ (false = true)), Bool.false_or, probEvent_map]
-        have htail : Pr[ ((fun c : Bool => c = true) ∘ fun b' => b') |
-            probeManyEps oa q fun h => σ (false :: h)] ≤ (q : ℝ≥0∞) * ε := by
-          have : ((fun c : Bool => c = true) ∘ fun b' : Bool => b') =
-              fun c : Bool => c = true := rfl
-          rw [this]; exact ih _
-        exact le_trans (mul_le_mul' probOutput_le_one htail) (one_mul _).le
-    refine le_trans (ENNReal.tsum_le_tsum hsplit) ?_
-    rw [tsum_bool, if_pos rfl, if_neg (by simp : ¬ (false = true))]
-    rw [Nat.cast_succ, add_mul, one_mul, add_comm]
+variable {R : Type} [DecidableEq R]
 
 /-! ## Hidden-target adaptive first-fire bound
 
-The companion of `probeManyEps` for the *same-target-reused* regime. Where `probeManyEps`
-redraws a fresh sample `v ← oa` at **every** probe (the memoryless, deferred-sampling model),
 `hiddenReadMany` draws a single hidden target `w ← oa` **once** and lets an adaptive `q`-read
 strategy probe that *fixed* `w` repeatedly. This is the structure of an eager run that commits a
 sampled key into its state at draw time and then exposes it only through later membership tests:
 the key's value is hidden until the first hit, so up to the first hit the read points are fixed
 (determined by the all-miss reply history) and independent of `w`. Averaging over the single hidden
-draw — without ever conditioning on the drawn value — gives the same union bound `q · ε`. -/
+draw — without ever conditioning on the drawn value — gives the union bound `q · ε`. -/
 
 /-- Adaptive `q`-read game against a FIXED hidden target `w`: the strategy `σ` maps the list of
 boolean replies (hit/miss) seen so far to the next read point, and the game fires (returns `true`)
@@ -179,8 +104,7 @@ theorem readMany_true_iff (w : R) (q : ℕ) (σ : List Bool → R) :
 by `q` adaptive reads fires with probability at most `q · ε`, whenever every outcome of `oa` has
 mass at most `ε`. The averaging is over the single hidden draw; we never condition on `w`. Because
 the read points are fixed by the all-miss history (`readMany_true_iff`), the firing event is the
-union of the `q` fixed singletons `{w = σ (replicate j false)}`, each of mass at most `ε`. This is
-the same-target-reused sibling of `probEvent_probeManyEps_le`. -/
+union of the `q` fixed singletons `{w = σ (replicate j false)}`, each of mass at most `ε`. -/
 theorem probEvent_hiddenReadMany_le {oa : ProbComp R} {ε : ℝ≥0∞}
     (hε : ∀ r : R, Pr[= r | oa] ≤ ε) (q : ℕ) (σ : List Bool → R) :
     Pr[ (fun b : Bool => b = true) | hiddenReadMany oa q σ ] ≤ (q : ℝ≥0∞) * ε := by
