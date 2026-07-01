@@ -29,7 +29,7 @@ The two computational assumptions are:
 
 The statistical loss `L` from the CMA-to-NMA reduction via Fiat-Shamir with aborts is:
 
-  `L = 2·qS·(qH + qS + 1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk + δ`
+  `L = 2·qS·(qH + qS + 1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk/(1-p) + δ`
 
 The proof follows the structure:
 1. EUF-CMA → EUF-NMA via the Fiat-Shamir with aborts CMA-to-NMA reduction (Theorem 3)
@@ -275,7 +275,7 @@ effective random-oracle budget, yielding:
 
   `L = 2·qS·(qH + qS + 1)·ε/(1-p)
      + qS·ε·(qS+1)/(2·(1-p)²)
-     + qS·ζ_zk
+     + qS·ζ_zk/(1-p)
      + δ`
 
 This is exactly `FiatShamirWithAbort.cmaToNmaLoss qS (qH + qS) ...`. -/
