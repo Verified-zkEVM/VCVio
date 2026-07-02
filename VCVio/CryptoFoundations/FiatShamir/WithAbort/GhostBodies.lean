@@ -1114,7 +1114,7 @@ lemma signCollisionBound_eq (ε p : ℝ) (n : ℕ) (N : ℝ≥0∞) :
 
 /-! ### Per-attempt collision and abort bounds -/
 
-omit [SampleableType Stmt] in
+omit [SampleableType Stmt] [DecidableEq Commit] in
 /-- Aggregate per-attempt abort bound: the commit-averaged probability that a fresh
 uniform challenge is refused equals the abort probability of one honest execution. -/
 lemma tsum_probOutput_commit_mul_abort_le (pk : Stmt) (sk : Wit) {p_abort : ℝ}
@@ -1137,7 +1137,7 @@ lemma tsum_probOutput_commit_mul_abort_le (pk : Stmt) (sk : Wit) {p_abort : ℝ}
     · exact absurd rfl hb
     · simp [probOutput_pure]
 
-omit [SampleableType Stmt] [SampleableType Chal] [DecidableEq M] in
+omit [SampleableType Stmt] [SampleableType Chal] [DecidableEq M] [DecidableEq Commit] in
 /-- Commitment-guessing bound for cache hits: under a pointwise commitment-guessing
 bound `ε`, one commit lands on a cached point of `c` at message `msg` with probability
 at most `enncard c · ε`. -/
@@ -1148,6 +1148,7 @@ lemma probEvent_commit_hit_le (pk : Stmt) (sk : Wit) {ε : ℝ}
     Pr[fun ws : Commit × PrvState => c (msg, ws.1) ≠ none | ids.commit pk sk]
       ≤ QueryCache.enncard c * ENNReal.ofReal ε := by
   classical
+  haveI : DecidableEq Commit := Classical.decEq Commit
   let commitDist : ProbComp Commit := Prod.fst <$> ids.commit pk sk
   let hit : Commit → Prop := fun w => c (msg, w) ≠ none
   let S : Finset Commit := (finSupport commitDist).filter hit
