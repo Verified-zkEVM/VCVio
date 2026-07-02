@@ -702,6 +702,20 @@ lemma IsTotalQueryBound.of_bind_left
       rw [isTotalQueryBound_query_bind_iff]
       exact ⟨h.1, fun u => ih u (h.2 u)⟩
 
+/-- A total query bound is a per-index bound with the same constant at every index. -/
+lemma IsTotalQueryBound.isPerIndexQueryBound [DecidableEq ι]
+    {oa : OracleComp spec α} {n : ℕ} (h : IsTotalQueryBound oa n) :
+    IsPerIndexQueryBound oa (fun _ => n) := by
+  induction oa using OracleComp.inductionOn generalizing n with
+  | pure _ => trivial
+  | query_bind t mx ih =>
+    rw [isTotalQueryBound_query_bind_iff] at h
+    rw [isPerIndexQueryBound_query_bind_iff]
+    refine ⟨h.1, fun u => (ih u (h.2 u)).mono fun j => ?_⟩
+    rcases eq_or_ne j t with rfl | hj
+    · simp
+    · simp [Function.update_of_ne hj]
+
 /-- Forward-direction `seq` analogue of `isTotalQueryBound_bind`. Reduces to the bind case
 via `seq_eq_bind_map` plus the `IsTotalQueryBound`-flavoured `isQueryBound_map_iff` to
 discharge the constant continuation. -/

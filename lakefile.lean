@@ -65,6 +65,19 @@ exact diagnostics. Leave this commented until upstream ships a v4.30 build
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "ba600392" / "backends/lean"
 
+/-
+Cslib: the Lean computer science library. Used for its single-tape Turing
+machine model with proven polynomial-time composition
+(`Turing.SingleTapeTM.PolyTimeComputable.comp`), which grounds the
+TM-based polynomial-time adversary layer in
+`VCVio/OracleComp/Coinductive/PolyTime.lean`. The `v4.30.0` tag pins the
+exact same Lean toolchain and Mathlib commit as this project. Kept before
+`require mathlib` so Mathlib's transitive pins win (see note above).
+-/
+require cslib from git
+  "https://github.com/leanprover/cslib" @
+  "v4.30.0"
+
 require "leanprover-community" / "mathlib" @ git "v4.30.0"
 
 require PolyFun from git

@@ -192,6 +192,14 @@ lemma eq_liftM_iff_forall (p : SPMF α) (q : PMF α) :
 @[simp] lemma pure_apply_eq_zero_iff (x y : α) :
     (pure x : SPMF α) y = 0 ↔ y ≠ x := by aesop
 
+lemma pure_injective : Function.Injective (pure : α → SPMF α) := by
+  intro a b h
+  by_contra hab
+  have h1 : (pure a : SPMF α) a = 1 := pure_apply_self a
+  have h0 : (pure b : SPMF α) a = 0 := (pure_apply_eq_zero_iff b a).mpr hab
+  rw [h, h0] at h1
+  exact zero_ne_one h1
+
 @[simp] lemma bind_apply_eq_tsum (p : SPMF α) (q : α → SPMF β) (y : β) :
     (p >>= q) y = ∑' x, p x * q x y := by
   erw [PMF.bind_apply, tsum_option _ ENNReal.summable]

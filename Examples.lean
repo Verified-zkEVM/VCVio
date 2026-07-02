@@ -12,6 +12,7 @@ import Examples.CommitmentScheme.Hiding.LoggingBounds.QuerySalt
 import Examples.CommitmentScheme.Hiding.Main
 import Examples.CompositionDiagram
 import Examples.DynamicalSystems.Basic
+import Examples.DynamicalSystems.PolyTime
 import Examples.ElGamal.Basic
 import Examples.ElGamal.Common
 import Examples.ElGamal.Hash

@@ -1,0 +1,121 @@
+/-
+Copyright (c) 2026 Devon Tuma. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Devon Tuma
+-/
+module
+
+public import Cslib.Computability.Machines.SingleTapeTuring.Basic
+public import Mathlib.Algebra.Polynomial.Eval.Degree
+public import ToMathlib.Computability.Encoding
+
+/-!
+# Encoded Polynomial-Time Computability
+
+Cslib's `Turing.SingleTapeTM.PolyTimeComputable` certifies polynomial-time computability
+of raw string functions `List Symbol → List Symbol`. This file adds the encoding layer:
+`Computability.EncPolyTime ea eb f` witnesses that a function `f : α → β` between
+arbitrary types is polynomial-time computable relative to `Bool`-string encodings
+`ea : α → List Bool` and `eb : β → List Bool`, by bundling a machine-computed total
+string function that intertwines the encodings. Encodings typically arise from a
+`Computability.FinEncoding` via `FinEncoding.boolify`.
+
+Identity and composition (`EncPolyTime.id`, `EncPolyTime.comp`) lift directly from
+Cslib's proven `PolyTimeComputable.id` and `PolyTimeComputable.comp`; the monotone
+time-bound side condition of the latter is discharged by `PolyTimeComputable.normalize`,
+which replaces a machine's time bound with its own polynomial.
+-/
+
+@[expose] public section
+
+universe u v w
+
+/-- Evaluation of a natural-number polynomial is monotone in the argument. -/
+theorem Polynomial.eval_le_eval {p : Polynomial ℕ} {m n : ℕ} (h : m ≤ n) :
+    p.eval m ≤ p.eval n := by
+  rw [p.eval_eq_sum_range, p.eval_eq_sum_range]
+  exact Finset.sum_le_sum fun i _ => Nat.mul_le_mul_left _ (Nat.pow_le_pow_left h i)
+
+namespace Turing.SingleTapeTM
+
+variable {Symbol : Type} [Inhabited Symbol] [Fintype Symbol]
+
+/-- Replace the time bound of a polynomial-time machine by the evaluation of its own
+polynomial. The resulting bound is monotone, as required by `PolyTimeComputable.comp`
+for the second machine. -/
+def PolyTimeComputable.normalize {f : List Symbol → List Symbol}
+    (h : PolyTimeComputable f) : PolyTimeComputable f where
+  tm := h.tm
+  timeBound n := h.poly.eval n
+  outputsFunInTime a := (h.outputsFunInTime a).of_le (h.bounds _)
+  poly := h.poly
+  bounds _ := le_rfl
+
+theorem PolyTimeComputable.monotone_normalize_timeBound {f : List Symbol → List Symbol}
+    (h : PolyTimeComputable f) : Monotone h.normalize.timeBound :=
+  fun _ _ hmn => Polynomial.eval_le_eval hmn
+
+end Turing.SingleTapeTM
+
+namespace Computability
+
+open Turing.SingleTapeTM
+
+variable {α : Type u} {β : Type v} {γ : Type w}
+
+/-- A witness that `f : α → β` is polynomial-time computable relative to `Bool`-string
+encodings of its domain and codomain: a total string function, computed by a single-tape
+machine in polynomial time, that maps the encoding of `a` to the encoding of `f a`.
+
+The string function is total: its behavior on strings outside the range of `ea` is
+unconstrained. -/
+structure EncPolyTime (ea : α → List Bool) (eb : β → List Bool) (f : α → β) where
+  /-- The total string function the machine computes. -/
+  toFun : List Bool → List Bool
+  /-- The machine computing `toFun`, with its polynomial time bound. -/
+  polyTime : PolyTimeComputable toFun
+  /-- The string function intertwines the encodings. -/
+  map_encode : ∀ a, toFun (ea a) = eb (f a)
+
+namespace EncPolyTime
+
+variable {ea : α → List Bool} {eb : β → List Bool} {ec : γ → List Bool}
+
+/-- The polynomial time bound of the underlying machine. -/
+def time {f : α → β} (h : EncPolyTime ea eb f) : Polynomial ℕ := h.polyTime.poly
+
+/-- The identity function is polynomial-time computable relative to any encoding. -/
+noncomputable def id (ea : α → List Bool) : EncPolyTime ea ea _root_.id where
+  toFun := _root_.id
+  polyTime := PolyTimeComputable.id
+  map_encode _ := rfl
+
+/-- Transport a witness along a pointwise-equal function. -/
+def copy {f : α → β} (h : EncPolyTime ea eb f) (f' : α → β) (hf : ∀ a, f a = f' a) :
+    EncPolyTime ea eb f' where
+  toFun := h.toFun
+  polyTime := h.polyTime
+  map_encode a := (h.map_encode a).trans (congrArg eb (hf a))
+
+/-- Composition of encoded polynomial-time witnesses, from Cslib's
+`PolyTimeComputable.comp`. -/
+noncomputable def comp {f : α → β} {f' : β → γ}
+    (h : EncPolyTime ea eb f) (h' : EncPolyTime eb ec f') :
+    EncPolyTime ea ec (f' ∘ f) where
+  toFun := h'.toFun ∘ h.toFun
+  polyTime := h.polyTime.comp h'.polyTime.normalize h'.polyTime.monotone_normalize_timeBound
+  map_encode a := by
+    simp only [Function.comp_apply, h.map_encode, h'.map_encode]
+
+/-- The output encoding of a polynomial-time computable function is at most polynomially
+longer than the input encoding, by `output_length_le_input_length_add_time`. -/
+theorem length_le {f : α → β} (h : EncPolyTime ea eb f) (a : α) :
+    (eb (f a)).length ≤ max 1 (ea a).length + h.time.eval (ea a).length := by
+  rw [← h.map_encode a]
+  refine le_trans (output_length_le_input_length_add_time h.polyTime.tm _ _ _
+    (h.polyTime.outputsFunInTime (ea a))) ?_
+  exact Nat.add_le_add_left (h.polyTime.bounds _) _
+
+end EncPolyTime
+
+end Computability
