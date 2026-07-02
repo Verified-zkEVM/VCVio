@@ -3295,22 +3295,23 @@ produces `ε` happened earlier, at the commit draw, and cannot be localized to a
 read state.
 
 The fix carried here is to average not over a single fixed state but over a **state
-measure** `μ : PMF (σ × Bool)` — the *law* of the eager handler's slot under the pending
+measure** `ν : σ × Bool → ℝ≥0∞` — the *law* of the eager handler's slot under the pending
 upstream draws. The averaged bad mass
 
-  `avgBad impl μ oa := ∑' p, μ p · Pr[bad | (simulateQ impl oa).run p]`
+  `avgBadM impl ν oa := ∑' p, ν p · Pr[bad | (simulateQ impl oa).run p]`
 
 telescopes through the free monad exactly like `expectedQuerySlack`, but the read step's
-charge is now `∑' p, μ p · 1_{mc ∈ slot(p)} = Pr_{p∼μ}[mc ∈ slot(p)]`, a genuine
-probability over the state law. When `μ` is the pushforward of the upstream commit draws,
+charge is now `∑' p, ν p · 1_{mc ∈ slot(p)} = Pr_{p∼ν}[mc ∈ slot(p)]`, a genuine
+probability over the state law. When `ν` is the pushforward of the upstream commit draws,
 this collapses (by Fubini / `tsum`-swap over the pending draws) to the *same* mass the lazy
 handler charges at the read — `probOutput_lazyGhostFire_one` is its single-pending base
 case. This is the missing-framework analogue of `expectedQuerySlack`: it carries a
 state-**law** plus an averaged-output invariant rather than a per-state resource charge.
 
-This section builds the reusable telescoping scaffold (`avgBad`, its `pure`/`query_bind`
-unfoldings, and the pushforward step law `avgBad_query_bind_eq`) and isolates the read-step
-charge as the standalone Fubini lemma the instantiation must match against the lazy run. -/
+This section builds the reusable telescoping scaffold (`avgBadM`, its `pure`/`query_bind`
+unfoldings, and the output-grouped step law `avgBadM_query_bind_eq_tsum_output`) and isolates
+the read-step charge as the standalone Fubini lemma (`tsum_tsum_postStepOutM_mul`) the
+instantiation must match against the lazy run. -/
 section AveragedStateMeasureBad
 
 variable {ι : Type} {spec : OracleSpec ι}
@@ -3319,23 +3320,19 @@ variable {σ γ : Type}
 
 /-! ### Bare-measure averaged bad mass
 
-The `avgBad` scaffold below averages the per-state bad mass against a *probability*
-state law `μ : PMF (σ × Bool)`. That total-mass-1 constraint is never used: the telescoping
-identities and the free-monad induction only ever use `μ p` as an `ℝ≥0∞` weight. An
-**aborting** signing step, however, produces a *sub*-probability post-step state law (its
-total mass drops by the rejection mass), so a `PMF`-typed average cannot carry the charge
-invariant across it.
+The scaffold is stated over a **bare measure** `ν : σ × Bool → ℝ≥0∞` rather than a
+probability law: the telescoping identities and the free-monad induction only ever use
+`ν p` as an `ℝ≥0∞` weight, and an **aborting** signing step produces a *sub*-probability
+post-step state law (its total mass drops by the rejection mass), which a `PMF`-typed
+average could not carry.
 
-This block re-states the whole scaffold over a **bare measure** `ν : σ × Bool → ℝ≥0∞`
-(no total-mass constraint), so the same telescoping carries sub-probability post-step laws.
-The `PMF` lemmas above are recovered verbatim as corollaries by instantiating `ν := fun p => μ p`.
+A caller (e.g. the deferred-sampling charge route) telescopes with
+`avgBadM_query_bind_eq_tsum_output` directly at the sub-probability state laws produced by
+the aborting sign step. -/
 
-A caller (e.g. the deferred-sampling charge route) instantiates `avgBadM_le_of_steps_inv`
-directly at the sub-probability state laws produced by the aborting sign step. -/
-
-/-- **Bare-measure averaged bad mass.** As `avgBad`, but averaging against an arbitrary
-measure `ν : σ × Bool → ℝ≥0∞` rather than a probability law. The total-mass-1 constraint of
-`PMF` is never needed by the telescoping, so this version carries the sub-probability
+/-- **Bare-measure averaged bad mass.** The per-state bad mass of a run, averaged against an
+arbitrary measure `ν : σ × Bool → ℝ≥0∞` rather than a probability law. No total-mass
+constraint is needed by the telescoping, so the average carries the sub-probability
 post-step laws emitted by an aborting step. -/
 noncomputable def avgBadM
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
@@ -3345,7 +3342,7 @@ noncomputable def avgBadM
 
 open scoped Classical in
 /-- `avgBadM` at a Dirac (single-point indicator) measure is the plain per-state bad
-probability. The bare-measure analogue of `avgBad_pure_state`. -/
+probability. -/
 lemma avgBadM_pure_state
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (p₀ : σ × Bool) (oa : OracleComp spec γ) :
@@ -3354,9 +3351,8 @@ lemma avgBadM_pure_state
   rw [avgBadM, tsum_eq_single p₀ (by intro p hp; rw [if_neg hp, zero_mul]), if_pos rfl, one_mul]
 
 open scoped Classical in
-/-- **Linearity of `avgBadM` in the state measure.** The bare-measure analogue of
-`avgBad_eq_tsum_pure`: the averaged bad mass over `ν` is the `ν`-weighted sum of the
-per-state (Dirac) bad masses. -/
+/-- **Linearity of `avgBadM` in the state measure.** The averaged bad mass over `ν` is the
+`ν`-weighted sum of the per-state (Dirac) bad masses. -/
 lemma avgBadM_eq_tsum_pure
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (oa : OracleComp spec γ) :
@@ -3366,8 +3362,7 @@ lemma avgBadM_eq_tsum_pure
   exact tsum_congr fun s' => by rw [avgBadM_pure_state]
 
 /-- **Pure base case of `avgBadM`.** With no queries, the bad mass is exactly the carried
-bad mass of the measure `ν` — the `ν`-mass on states with the flag already set. Bare-measure
-analogue of `avgBad_pure`. -/
+bad mass of the measure `ν` — the `ν`-mass on states with the flag already set. -/
 lemma avgBadM_pure
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (x : γ) :
@@ -3381,9 +3376,9 @@ lemma avgBadM_pure
   | false => simp
   | true => simp [probEvent_pure]
 
-/-- **One-step telescoping of `avgBadM` (joint-law form).** Bare-measure analogue of
-`avgBad_query_bind_eq`: moves one query off the front and exposes the post-step joint law,
-holding for any impl and any measure `ν`. No probabilistic content — pure rearrangement. -/
+/-- **One-step telescoping of `avgBadM` (joint-law form).** Moves one query off the front
+and exposes the post-step joint law, holding for any impl and any measure `ν`. No
+probabilistic content — pure rearrangement. -/
 lemma avgBadM_query_bind_eq
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) (cont : spec.Range t → OracleComp spec γ) :
@@ -3404,18 +3399,18 @@ lemma avgBadM_query_bind_eq
 
 /-- **Post-step joint measure of a query step (bare-measure form).** The measure over
 `(output, post-state)` produced by averaging the per-state impl step `Pr[= z | (impl t).run p]`
-against the state measure `ν`. Bare-measure analogue of `postStepJoint`; stated directly as a
-`tsum` since `ν` need not be a probability law. -/
+against the state measure `ν`. Stated directly as a `tsum` since `ν` need not be a
+probability law. -/
 noncomputable def postStepJointM
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) (z : spec.Range t × σ × Bool) : ℝ≥0∞ :=
   ∑' p : σ × Bool, ν p * Pr[= z | (impl t).run p]
 
 open scoped Classical in
-/-- **Output-grouped telescoping of the bare-measure average.** Bare-measure analogue of
-`avgBad_telescope_eq_tsum_postStep`: the telescoped one-step average regroups as a single
-`tsum` over the post-step joint measure `postStepJointM impl ν t`, weighting each
-`(output, post-state)` pair by the Dirac bad mass at the post-state. Pure `tsum`-Fubini. -/
+/-- **Output-grouped telescoping of the bare-measure average.** The telescoped one-step
+average regroups as a single `tsum` over the post-step joint measure `postStepJointM impl ν t`,
+weighting each `(output, post-state)` pair by the Dirac bad mass at the post-state.
+Pure `tsum`-Fubini. -/
 lemma avgBadM_telescope_eq_tsum_postStep
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) (cont : spec.Range t → OracleComp spec γ) :
@@ -3475,405 +3470,6 @@ lemma avgBadM_query_bind_eq_tsum_output
   refine tsum_congr fun s => ?_
   rw [postStepOutM]
 
-/-- **Bare-measure averaged-bad telescoping with a state-measure invariant.** Bare-measure
-analogue of `avgBad_le_of_steps_inv`: threads a predicate `Inv : (σ × Bool → ℝ≥0∞) → Prop`
-on the state *measure* through the free-monad induction. The conclusion holds for every
-measure `ν` satisfying `Inv ν`, and the two per-step premises may assume `Inv ν`. The
-total-mass-1 constraint is never used, so an aborting step's sub-probability post-step law is
-admissible — which is exactly why this generalization is needed for the charge route. -/
-theorem avgBadM_le_of_steps_inv
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (bound : {β : Type} → OracleComp spec β → (σ × Bool → ℝ≥0∞) → ℝ≥0∞)
-    (Inv : (σ × Bool → ℝ≥0∞) → Prop)
-    (h_pure : ∀ (ν : σ × Bool → ℝ≥0∞), Inv ν → ∀ (x : γ),
-      (∑' p : σ × Bool, ν p * (if p.2 = true then 1 else 0))
-        ≤ bound (pure x : OracleComp spec γ) ν)
-    (h_step : ∀ (ν : σ × Bool → ℝ≥0∞), Inv ν → ∀ (t : spec.Domain)
-      (cont : spec.Range t → OracleComp spec γ),
-      (∀ (ν' : σ × Bool → ℝ≥0∞), Inv ν' → ∀ (u : spec.Range t),
-        avgBadM impl ν' (cont u) ≤ bound (cont u) ν') →
-      (∑' p : σ × Bool, ν p *
-        ∑' z : spec.Range t × σ × Bool,
-          Pr[= z | (impl t).run p] *
-            Pr[ fun w : γ × σ × Bool => w.2.2 = true |
-              (simulateQ impl (cont z.1)).run z.2])
-        ≤ bound (query t >>= cont) ν)
-    (oa : OracleComp spec γ) :
-    ∀ (ν : σ × Bool → ℝ≥0∞), Inv ν → avgBadM impl ν oa ≤ bound oa ν := by
-  induction oa using OracleComp.inductionOn with
-  | pure x =>
-      intro ν hν
-      rw [avgBadM_pure]
-      exact h_pure ν hν x
-  | @query_bind t cont ih =>
-      intro ν hν
-      rw [avgBadM_query_bind_eq]
-      exact h_step ν hν t cont (fun ν' hν' u => ih u ν' hν')
-
-/-- **Bare-measure averaged-bad telescoping (invariant-free corollary).** The
-`Inv := fun _ => True` specialization of `avgBadM_le_of_steps_inv`. -/
-theorem avgBadM_le_of_steps
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (bound : {β : Type} → OracleComp spec β → (σ × Bool → ℝ≥0∞) → ℝ≥0∞)
-    (h_pure : ∀ (ν : σ × Bool → ℝ≥0∞) (x : γ),
-      (∑' p : σ × Bool, ν p * (if p.2 = true then 1 else 0))
-        ≤ bound (pure x : OracleComp spec γ) ν)
-    (h_step : ∀ (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain)
-      (cont : spec.Range t → OracleComp spec γ),
-      (∀ (ν' : σ × Bool → ℝ≥0∞) (u : spec.Range t),
-        avgBadM impl ν' (cont u) ≤ bound (cont u) ν') →
-      (∑' p : σ × Bool, ν p *
-        ∑' z : spec.Range t × σ × Bool,
-          Pr[= z | (impl t).run p] *
-            Pr[ fun w : γ × σ × Bool => w.2.2 = true |
-              (simulateQ impl (cont z.1)).run z.2])
-        ≤ bound (query t >>= cont) ν)
-    (oa : OracleComp spec γ) :
-    ∀ (ν : σ × Bool → ℝ≥0∞), avgBadM impl ν oa ≤ bound oa ν := by
-  intro ν
-  exact avgBadM_le_of_steps_inv impl bound (fun _ => True)
-    (fun ν _ x => h_pure ν x)
-    (fun ν _ t cont ih => h_step ν t cont (fun ν' u => ih ν' trivial u))
-    oa ν trivial
-
-/-- **Averaged bad mass over a state measure.** The probability the bad flag is set after
-`(simulateQ impl oa).run p`, *averaged* over the starting state `p` drawn from the state
-law `μ : PMF (σ × Bool)`. This is the quantity an eager (commit-upstream) handler must be
-bounded by: the averaging happens over the state law `μ` rather than at a fixed reachable
-state, so the deterministic per-state read charge `1_{mc ∈ slot(p)}` averages to the
-genuine guessing mass `Pr_{p∼μ}[mc ∈ slot(p)]`. Specializing `μ := PMF.pure (s, false)`
-recovers the plain per-state bad probability `Pr[bad | (simulateQ impl oa).run (s, false)]`
-(see `avgBad_pure_state`). -/
-noncomputable def avgBad
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (μ : PMF (σ × Bool)) (oa : OracleComp spec γ) : ℝ≥0∞ :=
-  ∑' p : σ × Bool, μ p *
-    Pr[fun z : γ × σ × Bool => z.2.2 = true | (simulateQ impl oa).run p]
-
-/-- **Bridge: `avgBad` is `avgBadM` at the underlying measure.** The `PMF`-typed average is
-definitionally the bare-measure average against the coerced measure `fun p => μ p`. This lets
-every `PMF` corollary be derived from its bare-measure counterpart, and lets a caller move a
-`PMF` hypothesis into the bare-measure machinery. -/
-lemma avgBad_eq_avgBadM
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (μ : PMF (σ × Bool)) (oa : OracleComp spec γ) :
-    avgBad impl μ oa = avgBadM impl (fun p => μ p) oa := rfl
-
-/-- `avgBad` at a Dirac state measure is the plain per-state bad probability: the average
-over `PMF.pure p₀` collapses to the single term at `p₀`. This is the bridge that reduces
-the averaged invariant back to the concrete eager probability at the empty-cache start
-state (`μ = δ_∅`). -/
-lemma avgBad_pure_state
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (p₀ : σ × Bool) (oa : OracleComp spec γ) :
-    avgBad impl (PMF.pure p₀) oa =
-      Pr[fun z : γ × σ × Bool => z.2.2 = true | (simulateQ impl oa).run p₀] := by
-  rw [avgBad, tsum_eq_single p₀ (by intro p hp; rw [PMF.pure_apply, if_neg hp, zero_mul]),
-    PMF.pure_apply, if_pos rfl, one_mul]
-
-/-- **Linearity of `avgBad` in the state law.** The averaged bad mass over a state law `μ`
-is the `μ`-weighted average of the per-state (Dirac) bad masses. Immediate from
-`avgBad_pure_state` under the `tsum` defining `avgBad`. This is the structural fact that
-lets the output-grouped telescoping fold the inductive hypothesis at an *unnormalized*
-post-step measure: a `tsum`-weighted sum of Dirac `avgBad`s is itself an `avgBad` at the
-weighting law. -/
-lemma avgBad_eq_tsum_pure
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (μ : PMF (σ × Bool)) (oa : OracleComp spec γ) :
-    avgBad impl μ oa =
-      ∑' s' : σ × Bool, μ s' * avgBad impl (PMF.pure s') oa := by
-  rw [avgBad]
-  exact tsum_congr fun s' => by rw [avgBad_pure_state]
-
-/-- **Pure base case of `avgBad`.** With no queries, the run leaves the state untouched and
-the bad mass is exactly the carried bad mass of the state law `μ` — the probability `μ`
-assigns to states with the flag already set. -/
-lemma avgBad_pure
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (μ : PMF (σ × Bool)) (x : γ) :
-    avgBad impl μ (pure x : OracleComp spec γ) =
-      ∑' p : σ × Bool, μ p * (if p.2 = true then 1 else 0) := by
-  rw [avgBad]
-  refine tsum_congr fun p => ?_
-  rw [simulateQ_pure, StateT.run_pure]
-  rcases p with ⟨s, b⟩
-  cases b with
-  | false => simp
-  | true => simp [probEvent_pure]
-
-/-- **One-step telescoping of `avgBad` (joint-law form).** Averaging the bad mass of a
-`query t >>= cont` run over the state law `μ` equals averaging, over `μ` *and* the
-per-state impl step `(impl t).run p`, the bad mass of the continuation run started from the
-post-step state. This is the averaged analogue of `expectedQuerySlack_query_bind`: it moves
-one query off the front and exposes the post-step joint law `(p, z)` over which the next
-`avgBad` is taken. No probabilistic content yet — it is a pure rearrangement
-(`probEvent_bind_eq_tsum` inside the average) and holds for *any* impl and `μ`. -/
-lemma avgBad_query_bind_eq
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (μ : PMF (σ × Bool)) (t : spec.Domain) (cont : spec.Range t → OracleComp spec γ) :
-    avgBad impl μ (query t >>= cont) =
-      ∑' p : σ × Bool, μ p *
-        ∑' z : spec.Range t × σ × Bool,
-          Pr[= z | (impl t).run p] *
-            Pr[fun w : γ × σ × Bool => w.2.2 = true |
-              (simulateQ impl (cont z.1)).run z.2] := by
-  rw [avgBad]
-  refine tsum_congr fun p => ?_
-  congr 1
-  have hsim : (simulateQ impl (query t >>= cont)).run p =
-      (impl t).run p >>= fun z => (simulateQ impl (cont z.1)).run z.2 := by
-    simp [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-      OracleQuery.cont_query, StateT.run_bind]
-  rw [hsim, probEvent_bind_eq_tsum]
-
-/-- **Post-step joint law of a query step.** The law over `(output, post-state)` produced by
-drawing the starting state from `μ` and running one impl step `(impl t).run p`. This is the
-`SPMF`-valued joint measure whose first marginal is the output law and whose conditional
-second marginal (given an output) is the post-step state law the inductive hypothesis is
-folded at. -/
-noncomputable def postStepJoint
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (μ : PMF (σ × Bool)) (t : spec.Domain) :
-    SPMF (spec.Range t × σ × Bool) :=
-  (liftM μ : SPMF (σ × Bool)) >>= fun p => evalDist ((impl t).run p)
-
-/-- The post-step joint law evaluated pointwise: the `μ`-average of the per-state impl-step
-output probability. -/
-lemma postStepJoint_apply
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (μ : PMF (σ × Bool)) (t : spec.Domain) (z : spec.Range t × σ × Bool) :
-    postStepJoint impl μ t z = ∑' p : σ × Bool, μ p * Pr[= z | (impl t).run p] := by
-  rw [postStepJoint, SPMF.bind_apply_eq_tsum]
-  refine tsum_congr fun p => ?_
-  rw [SPMF.liftM_apply]
-  rfl
-
-/-- **Output-grouped telescoping of the eager average.** The telescoped one-step eager
-average (the right-hand side of `avgBad_query_bind_eq`) regroups as a single `tsum` over the
-post-step joint law `postStepJoint impl μ t`, weighting each `(output u, post-state s')` pair
-by the Dirac bad mass `avgBad impl δ_{s'} (cont u)`. This is the pure `tsum`-Fubini
-rearrangement that exposes the post-step state `s'` (grouped by output `u`) so the inductive
-hypothesis can be folded at the genuine post-step law rather than collapsed to a Dirac at a
-single reachable state. No probabilistic content — `PMF.bind` Fubini plus `avgBad_pure_state`. -/
-lemma avgBad_telescope_eq_tsum_postStep
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (μ : PMF (σ × Bool)) (t : spec.Domain) (cont : spec.Range t → OracleComp spec γ) :
-    (∑' p : σ × Bool, μ p *
-        ∑' z : spec.Range t × σ × Bool,
-          Pr[= z | (impl t).run p] *
-            Pr[fun w : γ × σ × Bool => w.2.2 = true |
-              (simulateQ impl (cont z.1)).run z.2]) =
-      ∑' z : spec.Range t × σ × Bool,
-        postStepJoint impl μ t z * avgBad impl (PMF.pure z.2) (cont z.1) := by
-  classical
-  -- Pull the `μ p` weight inside the inner `tsum` and replace the Dirac bad mass.
-  have hstep : (∑' p : σ × Bool, μ p *
-        ∑' z : spec.Range t × σ × Bool,
-          Pr[= z | (impl t).run p] *
-            Pr[fun w : γ × σ × Bool => w.2.2 = true |
-              (simulateQ impl (cont z.1)).run z.2]) =
-      ∑' p : σ × Bool, ∑' z : spec.Range t × σ × Bool,
-          μ p * (Pr[= z | (impl t).run p] *
-            avgBad impl (PMF.pure z.2) (cont z.1)) := by
-    refine tsum_congr fun p => ?_
-    rw [← ENNReal.tsum_mul_left]
-    refine tsum_congr fun z => ?_
-    rw [avgBad_pure_state, ← mul_assoc]
-  rw [hstep, ENNReal.tsum_comm]
-  refine tsum_congr fun z => ?_
-  rw [postStepJoint_apply, ← ENNReal.tsum_mul_right]
-  refine tsum_congr fun p => ?_
-  rw [mul_assoc]
-
-/-! ### Read-step Fubini charge equality (the genuine new content)
-
-The eager read at a structural ghost hit pays a *deterministic* charge `1_{mc ∈ slot(p)}`
-at the committed state `p`. The averaged-state-measure invariant turns this into a genuine
-probability by averaging over the state law `μ`:
-
-  `E_{p∼μ}[1_{mc ∈ slot(p)}] = Pr_{p∼μ}[mc ∈ slot(p)]`.
-
-When `μ` is the pushforward of the upstream commit draws into the slot, this collapses (by
-`tsum`-swap over the pending draws) to the *same* mass the lazy handler charges at the read.
-The lemmas here express that collapse abstractly: a membership-indicator average over a
-**pushforward measure** equals the draw's hit probability. The single-pending case is the
-framework analogue of the banked `probOutput_lazyGhostFire_one`. -/
-
-/-- **Single-pending read-charge Fubini equality.** Let `draw : PMF κ` be one pending draw,
-let `place : κ → σ × Bool` push a drawn value into the slot, and let `hit : σ × Bool → ℝ≥0∞`
-read the (deterministic) charge off the resulting state. Averaging the read charge over the
-pushforward law `draw.map place` equals averaging `hit ∘ place` directly over `draw`. This is
-the pure change-of-variables that moves the averaging site from the *state law* (eager view:
-the slot is already populated) to the *draw* (lazy view: the value is sampled at read time);
-the eager `1_{mc ∈ slot}` after `place` becomes the lazy `decide (w = mc)` charge under the
-draw. The multi-pending case is the `tsum`-swap over independent draws (the genuine residual
-isolated below). -/
-lemma tsum_pushforward_eq_tsum_draw {κ : Type}
-    (draw : PMF κ) (place : κ → σ × Bool) (hit : σ × Bool → ℝ≥0∞) :
-    (∑' p : σ × Bool, (draw.map place) p * hit p) =
-      ∑' w : κ, draw w * hit (place w) := by
-  classical
-  simp only [PMF.map_apply, ← ENNReal.tsum_mul_right]
-  rw [ENNReal.tsum_comm]
-  refine tsum_congr fun w => ?_
-  rw [tsum_eq_single (place w) (by intro p hp; rw [if_neg hp, zero_mul]), if_pos rfl]
-
-/-- **Membership-indicator average over a pushforward equals hit probability.** Specialize
-`tsum_pushforward_eq_tsum_draw` with the read charge being the structural membership
-indicator of the read point `mc` in the slot reached by `place`. The eager averaged
-read-hit charge `E_{p∼μ}[1_{mc ∈ slot(p)}]` (here `μ = draw.map place`, `slot` extracted by
-`testMem`) equals the draw's mass on values that `place` maps to a hit. With
-`testMem (place w) = decide (w hits mc)` this is exactly the lazy single-pending fire mass
-(`probOutput_lazyGhostFire_one`). -/
-lemma tsum_pushforward_mem_eq_draw_hit {κ : Type}
-    (draw : PMF κ) (place : κ → σ × Bool) (testMem : σ × Bool → Bool) :
-    (∑' p : σ × Bool, (draw.map place) p * (if testMem p = true then 1 else 0)) =
-      ∑' w : κ, draw w * (if testMem (place w) = true then 1 else 0) :=
-  tsum_pushforward_eq_tsum_draw draw place (fun p => if testMem p = true then 1 else 0)
-
-/-! ### Averaged-bad telescoping skeleton
-
-The fully-proven free-monad telescoping for the averaged invariant. The theorem
-`avgBad_le_of_steps` reduces the averaged eager bad mass `avgBad impl_e μ oa` to a target
-`bound : OracleComp spec γ → PMF (σ × Bool) → ℝ≥0∞` supplied by the caller (the lazy /
-deferred-sampling charge), provided two per-step premises hold:
-
-* `h_pure`: at a `pure` leaf the carried bad mass of `μ` is below the target's leaf value;
-* `h_step`: at each `query t >>= cont`, the one-step telescoped eager average
-  (`avgBad_query_bind_eq`) — i.e. the impl-`t` push of `μ` into the continuation average —
-  is dominated by the target at the same point.
-
-The proof is a pure free-monad induction: `pure` discharges by `h_pure`, and `query_bind`
-rewrites the eager side by `avgBad_query_bind_eq` and discharges by `h_step` (whose premise
-in turn folds the inductive hypothesis through the post-step law). All free-monad
-bookkeeping is handled here; the *probabilistic* content lives entirely in discharging
-`h_step` at the read query, where the caller must supply the Fubini charge equality
-(`tsum_pushforward_mem_eq_draw_hit`) recoupling the post-read state law `μ'` — the genuine
-residual isolated for the instantiation. -/
-
-/-- **Averaged-bad telescoping with a state-law invariant.** A strict generalization of
-`avgBad_le_of_steps` that threads a predicate `Inv : PMF (σ × Bool) → Prop` on the state law
-through the free-monad induction. The conclusion holds for every `μ` satisfying `Inv μ`, and
-the two per-step premises may *assume* `Inv μ`:
-
-* `h_pure` discharges the `pure` leaf assuming `Inv μ`;
-* `h_step` discharges one telescoped query step assuming `Inv μ`, and is handed an inductive
-  hypothesis that fires only at post-step laws `μ'` for which `Inv μ'` holds — so `h_step` is
-  responsible for re-establishing `Inv` on every post-step law it feeds the IH.
-
-This is the shape required by the deferred-sampling read step: the eager read flips the bad
-flag deterministically at a structural ghost-hit state, so a *per-state* bound is false; the
-collapse to the lazy fire mass only happens once the average is taken against a state law that
-is a pushforward of the upstream commit draws. The invariant carries exactly that pushforward
-structure across the induction (preserved by reads — the ghost cache is untouched — grown by
-signs — one more draw — and holding at the empty-cache Dirac start). The probabilistic content
-still lives entirely in discharging `h_step`; the framework supplies only the `Inv` plumbing. -/
-theorem avgBad_le_of_steps_inv
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (bound : {β : Type} → OracleComp spec β → PMF (σ × Bool) → ℝ≥0∞)
-    (Inv : PMF (σ × Bool) → Prop)
-    (h_pure : ∀ (μ : PMF (σ × Bool)), Inv μ → ∀ (x : γ),
-      (∑' p : σ × Bool, μ p * (if p.2 = true then 1 else 0))
-        ≤ bound (pure x : OracleComp spec γ) μ)
-    (h_step : ∀ (μ : PMF (σ × Bool)), Inv μ → ∀ (t : spec.Domain)
-      (cont : spec.Range t → OracleComp spec γ),
-      (∀ (μ' : PMF (σ × Bool)), Inv μ' → ∀ (u : spec.Range t),
-        avgBad impl μ' (cont u) ≤ bound (cont u) μ') →
-      (∑' p : σ × Bool, μ p *
-        ∑' z : spec.Range t × σ × Bool,
-          Pr[= z | (impl t).run p] *
-            Pr[ fun w : γ × σ × Bool => w.2.2 = true |
-              (simulateQ impl (cont z.1)).run z.2])
-        ≤ bound (query t >>= cont) μ)
-    (oa : OracleComp spec γ) :
-    ∀ (μ : PMF (σ × Bool)), Inv μ → avgBad impl μ oa ≤ bound oa μ := by
-  induction oa using OracleComp.inductionOn with
-  | pure x =>
-      intro μ hμ
-      rw [avgBad_pure]
-      exact h_pure μ hμ x
-  | @query_bind t cont ih =>
-      intro μ hμ
-      rw [avgBad_query_bind_eq]
-      exact h_step μ hμ t cont (fun μ' hμ' u => ih u μ' hμ')
-
-/-- **Averaged-bad telescoping (invariant-free corollary).** The `Inv := fun _ => True`
-specialization of `avgBad_le_of_steps_inv`: the original telescoping shape, recovered so
-callers that do not need a state-law invariant are unaffected. -/
-theorem avgBad_le_of_steps
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (bound : {β : Type} → OracleComp spec β → PMF (σ × Bool) → ℝ≥0∞)
-    (h_pure : ∀ (μ : PMF (σ × Bool)) (x : γ),
-      (∑' p : σ × Bool, μ p * (if p.2 = true then 1 else 0))
-        ≤ bound (pure x : OracleComp spec γ) μ)
-    (h_step : ∀ (μ : PMF (σ × Bool)) (t : spec.Domain)
-      (cont : spec.Range t → OracleComp spec γ),
-      (∀ (μ' : PMF (σ × Bool)) (u : spec.Range t),
-        avgBad impl μ' (cont u) ≤ bound (cont u) μ') →
-      (∑' p : σ × Bool, μ p *
-        ∑' z : spec.Range t × σ × Bool,
-          Pr[= z | (impl t).run p] *
-            Pr[ fun w : γ × σ × Bool => w.2.2 = true |
-              (simulateQ impl (cont z.1)).run z.2])
-        ≤ bound (query t >>= cont) μ)
-    (oa : OracleComp spec γ) :
-    ∀ (μ : PMF (σ × Bool)), avgBad impl μ oa ≤ bound oa μ := by
-  intro μ
-  exact avgBad_le_of_steps_inv impl bound (fun _ => True)
-    (fun μ _ x => h_pure μ x)
-    (fun μ _ t cont ih => h_step μ t cont (fun μ' u => ih μ' trivial u))
-    oa μ trivial
-
-/-- **Total post-step joint mass equals the `ν`-weighted per-state step mass.** Marginalizing
-the post-step joint measure over all `(output, post-state)` pairs gives the `ν`-average of the
-per-state impl-step total mass `∑' z, Pr[= z | (impl t).run p]`. -/
-lemma tsum_postStepJointM_eq
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) :
-    (∑' z : spec.Range t × σ × Bool, postStepJointM impl ν t z)
-      = ∑' p : σ × Bool, ν p *
-          ∑' z : spec.Range t × σ × Bool, Pr[= z | (impl t).run p] := by
-  unfold postStepJointM
-  rw [ENNReal.tsum_comm]
-  exact tsum_congr fun p => ENNReal.tsum_mul_left
-
-/-- **Per-output post-step mass is bounded by the pre-step mass.** Each per-output slice
-`postStepOutM impl ν t u` has total mass at most the total mass of `ν`, since the per-state
-step `(impl t).run p` is a sub-probability. The `h_massU` premise of
-`avgBadM_le_threaded_linear`. -/
-lemma tsum_postStepOutM_single_le
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) (u : spec.Range t) :
-    (∑' s : σ × Bool, postStepOutM impl ν t u s) ≤ ∑' p : σ × Bool, ν p := by
-  calc (∑' s : σ × Bool, postStepOutM impl ν t u s)
-      ≤ ∑' z : spec.Range t × σ × Bool, postStepJointM impl ν t z := by
-        simp only [postStepOutM]
-        rw [ENNReal.tsum_prod' (f := fun z => postStepJointM impl ν t z)]
-        exact ENNReal.le_tsum u
-    _ = ∑' p : σ × Bool, ν p *
-          ∑' z : spec.Range t × σ × Bool, Pr[= z | (impl t).run p] :=
-        tsum_postStepJointM_eq impl ν t
-    _ ≤ ∑' p : σ × Bool, ν p :=
-        ENNReal.tsum_le_tsum fun p => mul_le_of_le_one_right zero_le' tsum_probOutput_le_one
-
-/-- **Total post-step mass is bounded by the pre-step mass.** Summed over both the query
-output `u` and the post-state, the post-step joint mass is at most the total mass of `ν`. The
-`h_mass` premise of `avgBadM_le_threaded_linear`. -/
-lemma tsum_tsum_postStepOutM_le
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) :
-    (∑' u : spec.Range t, ∑' s : σ × Bool, postStepOutM impl ν t u s)
-      ≤ ∑' p : σ × Bool, ν p := by
-  calc (∑' u : spec.Range t, ∑' s : σ × Bool, postStepOutM impl ν t u s)
-      = ∑' z : spec.Range t × σ × Bool, postStepJointM impl ν t z := by
-        simp only [postStepOutM]
-        rw [ENNReal.tsum_prod' (f := fun z => postStepJointM impl ν t z)]
-    _ = ∑' p : σ × Bool, ν p *
-          ∑' z : spec.Range t × σ × Bool, Pr[= z | (impl t).run p] :=
-        tsum_postStepJointM_eq impl ν t
-    _ ≤ ∑' p : σ × Bool, ν p :=
-        ENNReal.tsum_le_tsum fun p => mul_le_of_le_one_right zero_le' tsum_probOutput_le_one
-
 open scoped Classical in
 /-- **Weighted post-step rearrangement.** Summing any post-state functional `F` against the
 post-step measure (over output `u` and post-state `s`) equals the `ν`-average of the per-state
@@ -3903,223 +3499,6 @@ lemma tsum_tsum_postStepOutM_mul
           ∑' z : spec.Range t × σ × Bool, Pr[= z | (impl t).run p] * F z.2 := by
         rw [ENNReal.tsum_comm]
         exact tsum_congr fun p => ENNReal.tsum_mul_left
-
-/-- **Threaded linear (mass-weighted) accumulator bound for `avgBadM`.** A reusable
-free-monad telescoping that, unlike `avgBadM_le_of_steps_inv`, bakes in a *linear,
-mass-weighted, additive* bound shape so it telescopes across the output-branching of a
-query step (where a `⨆`-ceiling bound does not).
-
-The bound carried for a measure `ν` at read/sign budgets `(qHb, qSb)` is
-`carriedBad ν + qHb · (K ν · ε) + (mass ν) · qHb · qSb · (g · ε)`,
-where `carriedBad ν := ∑' p, ν p · 1_{p.2}`, `mass ν := ∑' p, ν p`, `K` is an arbitrary
-charge functional, and `g, ε : ℝ≥0∞` are constants.
-
-Each query domain point `t` is classified by two decidable predicates `pHb` (a "read":
-consumes a read unit, pays its hit charge `≤ K ν · ε` into the post-step carried bad mass)
-and `pSb` (a "sign": consumes a sign unit, raises the post-step charge by `≤ g · mass ν`).
-Steps that fire neither predicate are inert (preserve everything). The numeric premises,
-summed over the query output `u` against the per-output post-step measures
-`νu := postStepOutM impl ν t u`, are:
-
-* `h_carry` — the carried bad mass telescopes, paying the read hit charge on a read step
-  (the charge `≤ K ν · ε` is provided by the carried invariant `Inv ν`);
-* `h_mass` — the total mass is non-increasing across the step;
-* `h_K` — the charge telescopes, growing by `≤ g · mass ν` on a sign step;
-* `h_massU` — each per-output mass is bounded by the pre-step mass (so the IH's
-  sub-probability hypothesis is re-established);
-* `h_inv` — the invariant `Inv` is preserved across every per-output post-step measure.
-
-The read charge bound `Inv ν → C(ν, ·) ≤ K ν · ε` is in general only an *averaged* fact
-(the rejected commit lands at the read target with probability `≤ ε`), so it cannot be a
-universal hypothesis over arbitrary `ν`; it is carried as the invariant `Inv` and
-re-established incrementally on each post-step measure. The read/sign budgets are threaded
-by `isQueryBoundP_query_bind_iff`; the budget decrement on the fired predicate exactly
-absorbs the charge increment. -/
-theorem avgBadM_le_threaded_linear
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (K : (σ × Bool → ℝ≥0∞) → ℝ≥0∞) (g ε : ℝ≥0∞)
-    (Inv : (σ × Bool → ℝ≥0∞) → Prop)
-    (pHb pSb : ι → Prop) [DecidablePred pHb] [DecidablePred pSb]
-    (hpExcl : ∀ t, pHb t → pSb t → False)
-    (h_carry : ∀ (ν : σ × Bool → ℝ≥0∞), Inv ν → ∀ (t : spec.Domain),
-      (∑' u : spec.Range t,
-          ∑' p : σ × Bool, postStepOutM impl ν t u p * (if p.2 = true then 1 else 0))
-        ≤ (∑' p : σ × Bool, ν p * (if p.2 = true then 1 else 0)) +
-            (if pHb t then K ν * ε else 0))
-    (h_mass : ∀ (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain),
-      (∑' u : spec.Range t, ∑' p : σ × Bool, postStepOutM impl ν t u p)
-        ≤ ∑' p : σ × Bool, ν p)
-    (h_massU : ∀ (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) (u : spec.Range t),
-      (∑' p : σ × Bool, postStepOutM impl ν t u p) ≤ ∑' p : σ × Bool, ν p)
-    (h_K : ∀ (ν : σ × Bool → ℝ≥0∞), Inv ν → ∀ (t : spec.Domain),
-      (∑' u : spec.Range t, K (postStepOutM impl ν t u))
-        ≤ K ν + (if pSb t then g * (∑' p : σ × Bool, ν p) else 0))
-    (h_inv : ∀ (ν : σ × Bool → ℝ≥0∞), Inv ν → ∀ (t : spec.Domain) (u : spec.Range t),
-      Inv (postStepOutM impl ν t u))
-    (oa : OracleComp spec γ) :
-    ∀ (ν : σ × Bool → ℝ≥0∞) (qHb qSb : ℕ),
-      Inv ν → (∑' p : σ × Bool, ν p) ≤ 1 →
-      oa.IsQueryBoundP pHb qHb → oa.IsQueryBoundP pSb qSb →
-      avgBadM impl ν oa
-        ≤ (∑' p : σ × Bool, ν p * (if p.2 = true then 1 else 0)) +
-            (qHb : ℝ≥0∞) * (K ν * ε) +
-            (∑' p : σ × Bool, ν p) * (qHb : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) := by
-  classical
-  induction oa using OracleComp.inductionOn with
-  | pure x =>
-      intro ν qHb qSb _ _ _ _
-      rw [avgBadM_pure]
-      exact le_add_right (le_add_right le_rfl)
-  | @query_bind t cont ih =>
-      intro ν qHb qSb hInv hν hqH hqS
-      rw [avgBadM_query_bind_eq_tsum_output]
-      -- Abbreviations.
-      set cb : (σ × Bool → ℝ≥0∞) → ℝ≥0∞ :=
-        fun μ => ∑' p : σ × Bool, μ p * (if p.2 = true then 1 else 0) with hcb
-      set M : (σ × Bool → ℝ≥0∞) → ℝ≥0∞ := fun μ => ∑' p : σ × Bool, μ p with hM
-      set νu : spec.Range t → (σ × Bool → ℝ≥0∞) := fun u => postStepOutM impl ν t u with hνu
-      -- Per-output mass ≤ 1, from `h_massU` and `hν`.
-      have hνuMass : ∀ u, M (νu u) ≤ 1 := fun u =>
-        le_trans (h_massU ν t u) hν
-      -- The invariant is preserved on every per-output post-step measure.
-      have hInvU : ∀ u, Inv (νu u) := fun u => h_inv ν hInv t u
-      rw [isQueryBoundP_query_bind_iff] at hqH hqS
-      obtain ⟨hqHfst, hqHcont⟩ := hqH
-      obtain ⟨hqSfst, hqScont⟩ := hqS
-      -- Three cases by which predicate fires.
-      by_cases hHb : pHb t
-      · -- Read step: `pHb t` true, `pSb t` false; budgets `(qHb-1, qSb)`.
-        have hSbF : ¬ pSb t := fun hSb => hpExcl t hHb hSb
-        have hpos : 0 < qHb := by
-          rcases hqHfst with h | h
-          · exact absurd hHb h
-          · exact h
-        simp only [hHb, if_pos, hSbF, if_neg, not_false_eq_true] at hqHcont hqScont
-        have hqHcont : ∀ u, (cont u).IsQueryBoundP pHb (qHb - 1) := hqHcont
-        have hqScont' : ∀ u, (cont u).IsQueryBoundP pSb qSb := hqScont
-        -- Per-output IH, summed.
-        calc (∑' u : spec.Range t, avgBadM impl (νu u) (cont u))
-            ≤ ∑' u : spec.Range t,
-                (cb (νu u) + ((qHb - 1 : ℕ) : ℝ≥0∞) * (K (νu u) * ε) +
-                  M (νu u) * ((qHb - 1 : ℕ) : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε)) :=
-              ENNReal.tsum_le_tsum fun u =>
-                ih u (νu u) (qHb - 1) qSb (hInvU u) (hνuMass u) (hqHcont u) (hqScont' u)
-          _ = (∑' u, cb (νu u)) +
-                ((qHb - 1 : ℕ) : ℝ≥0∞) * ε * (∑' u, K (νu u)) +
-                ((qHb - 1 : ℕ) : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) * (∑' u, M (νu u)) := by
-              rw [ENNReal.tsum_add, ENNReal.tsum_add, ← ENNReal.tsum_mul_left,
-                ← ENNReal.tsum_mul_left]
-              congr 1
-              · congr 1
-                exact tsum_congr fun u => by ring
-              · exact tsum_congr fun u => by ring
-          _ ≤ (cb ν + K ν * ε) +
-                ((qHb - 1 : ℕ) : ℝ≥0∞) * ε * (K ν) +
-                ((qHb - 1 : ℕ) : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) * (M ν) := by
-              refine add_le_add (add_le_add ?_ ?_) ?_
-              · have := h_carry ν hInv t; simpa [hcb, hνu, hHb] using this
-              · gcongr
-                have := h_K ν hInv t; simpa [hνu, hSbF] using this
-              · gcongr
-                have := h_mass ν t; simpa [hM, hνu] using this
-          _ ≤ cb ν + (qHb : ℝ≥0∞) * (K ν * ε) +
-                M ν * (qHb : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) := by
-              have hsucc : ((qHb - 1 : ℕ) : ℝ≥0∞) + 1 = (qHb : ℝ≥0∞) := by
-                rw [show ((qHb - 1 : ℕ) : ℝ≥0∞) + 1 = (((qHb - 1) + 1 : ℕ) : ℝ≥0∞) by
-                  push_cast; ring, Nat.sub_add_cancel hpos]
-              -- Charge term: `(K ν · ε) + (qHb-1)·ε·K ν = qHb·(K ν · ε)`.
-              have hch : K ν * ε + ((qHb - 1 : ℕ) : ℝ≥0∞) * ε * K ν
-                  = (qHb : ℝ≥0∞) * (K ν * ε) := by
-                rw [← hsucc]; ring
-              -- Future term: `(qHb-1) ≤ qHb`.
-              have hfut : ((qHb - 1 : ℕ) : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) * M ν
-                  ≤ M ν * (qHb : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) := by
-                rw [show M ν * (qHb : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε)
-                      = ((qHb : ℝ≥0∞)) * (qSb : ℝ≥0∞) * (g * ε) * M ν by ring]
-                gcongr
-                exact_mod_cast Nat.sub_le qHb 1
-              calc cb ν + K ν * ε + ((qHb - 1 : ℕ) : ℝ≥0∞) * ε * K ν +
-                    ((qHb - 1 : ℕ) : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) * M ν
-                  = cb ν + (K ν * ε + ((qHb - 1 : ℕ) : ℝ≥0∞) * ε * K ν) +
-                      ((qHb - 1 : ℕ) : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) * M ν := by ring
-                _ ≤ cb ν + (qHb : ℝ≥0∞) * (K ν * ε) +
-                      M ν * (qHb : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) := by
-                    rw [hch]; gcongr
-      · by_cases hSb : pSb t
-        · -- Sign step: `pSb t` true, `pHb t` false; budgets `(qHb, qSb-1)`.
-          have hpos : 0 < qSb := by
-            rcases hqSfst with h | h
-            · exact absurd hSb h
-            · exact h
-          simp only [hHb, if_neg, not_false_eq_true, hSb, if_pos] at hqHcont hqScont
-          have hqHcont' : ∀ u, (cont u).IsQueryBoundP pHb qHb := hqHcont
-          have hqScont' : ∀ u, (cont u).IsQueryBoundP pSb (qSb - 1) := hqScont
-          calc (∑' u : spec.Range t, avgBadM impl (νu u) (cont u))
-              ≤ ∑' u : spec.Range t,
-                  (cb (νu u) + (qHb : ℝ≥0∞) * (K (νu u) * ε) +
-                    M (νu u) * (qHb : ℝ≥0∞) * ((qSb - 1 : ℕ) : ℝ≥0∞) * (g * ε)) :=
-                ENNReal.tsum_le_tsum fun u =>
-                  ih u (νu u) qHb (qSb - 1) (hInvU u) (hνuMass u) (hqHcont' u) (hqScont' u)
-            _ = (∑' u, cb (νu u)) +
-                  (qHb : ℝ≥0∞) * ε * (∑' u, K (νu u)) +
-                  (qHb : ℝ≥0∞) * ((qSb - 1 : ℕ) : ℝ≥0∞) * (g * ε) * (∑' u, M (νu u)) := by
-                rw [ENNReal.tsum_add, ENNReal.tsum_add, ← ENNReal.tsum_mul_left,
-                  ← ENNReal.tsum_mul_left]
-                congr 1
-                · congr 1
-                  exact tsum_congr fun u => by ring
-                · exact tsum_congr fun u => by ring
-            _ ≤ cb ν +
-                  (qHb : ℝ≥0∞) * ε * (K ν + g * M ν) +
-                  (qHb : ℝ≥0∞) * ((qSb - 1 : ℕ) : ℝ≥0∞) * (g * ε) * (M ν) := by
-                refine add_le_add (add_le_add ?_ ?_) ?_
-                · have := h_carry ν hInv t; simpa [hcb, hνu, hHb] using this
-                · gcongr
-                  have := h_K ν hInv t; simpa [hM, hνu, hSb] using this
-                · gcongr
-                  have := h_mass ν t; simpa [hM, hνu] using this
-            _ ≤ cb ν + (qHb : ℝ≥0∞) * (K ν * ε) +
-                  M ν * (qHb : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) := by
-                have hsucc : ((qSb - 1 : ℕ) : ℝ≥0∞) + 1 = (qSb : ℝ≥0∞) := by
-                  rw [show ((qSb - 1 : ℕ) : ℝ≥0∞) + 1 = (((qSb - 1) + 1 : ℕ) : ℝ≥0∞) by
-                    push_cast; ring, Nat.sub_add_cancel hpos]
-                -- Charge: `qHb·ε·(K ν + g·M ν) = qHb·K ν·ε + qHb·g·ε·M ν`; the second piece
-                -- combines with the future term via the `qSb-1 → qSb` increment.
-                refine le_of_eq ?_
-                rw [show cb ν + (qHb : ℝ≥0∞) * ε * (K ν + g * M ν) +
-                      (qHb : ℝ≥0∞) * ((qSb - 1 : ℕ) : ℝ≥0∞) * (g * ε) * (M ν)
-                    = cb ν + (qHb : ℝ≥0∞) * (K ν * ε) +
-                      M ν * (qHb : ℝ≥0∞) * (((qSb - 1 : ℕ) : ℝ≥0∞) + 1) * (g * ε) by ring,
-                  hsucc]
-        · -- Inert step: neither fires; budgets `(qHb, qSb)`.
-          simp only [hHb, if_neg, not_false_eq_true, hSb] at hqHcont hqScont
-          have hqHcont' : ∀ u, (cont u).IsQueryBoundP pHb qHb := hqHcont
-          have hqScont' : ∀ u, (cont u).IsQueryBoundP pSb qSb := hqScont
-          calc (∑' u : spec.Range t, avgBadM impl (νu u) (cont u))
-              ≤ ∑' u : spec.Range t,
-                  (cb (νu u) + (qHb : ℝ≥0∞) * (K (νu u) * ε) +
-                    M (νu u) * (qHb : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε)) :=
-                ENNReal.tsum_le_tsum fun u =>
-                  ih u (νu u) qHb qSb (hInvU u) (hνuMass u) (hqHcont' u) (hqScont' u)
-            _ = (∑' u, cb (νu u)) +
-                  (qHb : ℝ≥0∞) * ε * (∑' u, K (νu u)) +
-                  (qHb : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) * (∑' u, M (νu u)) := by
-                rw [ENNReal.tsum_add, ENNReal.tsum_add, ← ENNReal.tsum_mul_left,
-                  ← ENNReal.tsum_mul_left]
-                congr 1
-                · congr 1
-                  exact tsum_congr fun u => by ring
-                · exact tsum_congr fun u => by ring
-            _ ≤ cb ν + (qHb : ℝ≥0∞) * ε * (K ν) +
-                  (qHb : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) * (M ν) := by
-                refine add_le_add (add_le_add ?_ ?_) ?_
-                · have := h_carry ν hInv t; simpa [hcb, hνu, hHb] using this
-                · gcongr
-                  have := h_K ν hInv t; simpa [hνu, hSb] using this
-                · gcongr
-                  have := h_mass ν t; simpa [hM, hνu] using this
-            _ = cb ν + (qHb : ℝ≥0∞) * (K ν * ε) +
-                  M ν * (qHb : ℝ≥0∞) * (qSb : ℝ≥0∞) * (g * ε) := by ring
 
 end AveragedStateMeasureBad
 

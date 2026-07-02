@@ -364,14 +364,12 @@ theorem probEvent_bind_fire_le_of_marginal_eq_readMany {α : Type} {oa : ProbCom
   rw [hcongr]
   exact probEvent_hiddenReadMany_le hε q σ
 
-/-! ## Iterated draws: the explicit key-list game
+/-! ## Iterated draws: the explicit front-block key list
 
-Stage A defers a *single* output-irrelevant draw. Stage B lifts this to `n` interleaved draws by
-exhibiting the i.i.d. multi-key game `hiddenReadList` as the explicit *draw-then-test* game
-`drawList oa n >>= readManyList · q σ`: draw a list of `n` independent keys up front, then fire iff
-some key is read-hit by the fixed `q`-read all-miss strategy. The two are *equal* as computations
-(`drawList_readManyList_eq_hiddenReadList`), which is the structural bridge from "the run's hidden
-draws collected into a front list" to the abstract `hiddenReadList` charge. -/
+Stage A defers a *single* output-irrelevant draw. `drawList` lifts this to `n` interleaved draws
+by collecting them into an explicit front block: draw a list of `n` independent keys up front,
+against which a run's hidden draws can be exhibited and then charged by the abstract
+`hiddenReadList` union bound. -/
 
 /-- Draw a list of `n` independent keys from `oa` (the front block of the deferred-sampling
 factorization). The keys are the hidden targets; the list length is the key count `n`. -/
@@ -396,43 +394,5 @@ omit [DecidableEq R] in
 lemma tsum_probOutput_drawList_eq_one (oa : ProbComp R) (n : ℕ) :
     (∑' ws : List R, Pr[= ws | drawList oa n]) = 1 :=
   tsum_probOutput_eq_one' (probFailure_drawList oa n)
-
-/-- **Explicit-list ↔ i.i.d. multi-key game.** Drawing `n` independent keys into a list and firing
-iff some key is read-hit (`drawList oa n >>= readManyList · q σ`) is *exactly* the i.i.d. multi-key
-hidden-target game `hiddenReadList oa q σ n` as a computation. The head key contributes its own
-`readMany` test (OR-ed in via `readManyList (w :: ws) = readMany w || readManyList ws`) and the tail
-is the inductive hypothesis, matching `hiddenReadList`'s own `readMany w q σ || b` recursion. This
-is the Stage B structural bridge: it lets a run whose hidden draws are collected into an explicit
-front list be charged by the banked `hiddenReadList` union bound. -/
-theorem drawList_readManyList_eq_hiddenReadList (oa : ProbComp R) (q : ℕ) (σ : List Bool → R)
-    (n : ℕ) :
-    (drawList oa n >>= fun ws => pure (readManyList ws q σ)) = hiddenReadList oa q σ n := by
-  induction n with
-  | zero => simp [drawList, hiddenReadList, readManyList]
-  | succ n ih =>
-    rw [hiddenReadList, drawList]
-    simp only [bind_assoc, pure_bind]
-    refine bind_congr fun w => ?_
-    rw [← ih, bind_assoc]
-    refine bind_congr fun ws => ?_
-    rw [pure_bind]
-    simp [readManyList]
-
-/-- **Averaged explicit-list multi-key bound.** When the key count is sampled from
-`kn : ProbComp ℕ`, the explicit draw-then-test game fires with probability at most `E[n] · q · ε`.
-Immediate from the list↔i.i.d. bridge `drawList_readManyList_eq_hiddenReadList` and the banked
-averaged i.i.d. bound `probEvent_bind_hiddenReadList_le`. This is the Stage B form that the M3
-charge consumes once the run's hidden draws are exhibited as an explicit front list indexed by
-`kn`. -/
-theorem probEvent_bind_drawList_readManyList_le {oa : ProbComp R} {ε : ℝ≥0∞}
-    (hε : ∀ r : R, Pr[= r | oa] ≤ ε) (q : ℕ) (σ : List Bool → R) (kn : ProbComp ℕ) :
-    Pr[(fun b : Bool => b = true) |
-        kn >>= fun n => drawList oa n >>= fun ws => pure (readManyList ws q σ)]
-      ≤ (∑' n : ℕ, Pr[= n | kn] * (n : ℝ≥0∞)) * ((q : ℝ≥0∞) * ε) := by
-  have hrw : (kn >>= fun n => drawList oa n >>= fun ws => pure (readManyList ws q σ))
-      = kn >>= fun n => hiddenReadList oa q σ n :=
-    bind_congr fun n => drawList_readManyList_eq_hiddenReadList oa q σ n
-  rw [hrw]
-  exact probEvent_bind_hiddenReadList_le hε q σ kn
 
 end OracleComp
