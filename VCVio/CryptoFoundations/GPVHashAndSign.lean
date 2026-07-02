@@ -9635,7 +9635,7 @@ lemma tsum_probOutput_embedTrapFreshIdxSig_mul_eq_frontDraw [Inhabited Range]
         (simulateQ (embedTrapIdxSigImpl psf M Salt pk sk j y) oa).run s)] :=
     fun w => by rw [probOutput, probOutput, hlift]
   simp_rw [hF]
-  rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+  rw [tsum_probOutput_bind_mul]
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Freshness-confined winner-slot cache invariant (state-general form).** On the
@@ -10199,11 +10199,11 @@ lemma progGameRunImplCombinedTrapCount_table_indep (pk : PK) (sk : SK)
       rcases t with (n | mc) | msg
       · rw [progGameRunImplCombinedTrapCount_run_inl_inl,
           progGameRunImplCombinedTrapCount_run_inl_inl]
-        rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-          OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+        rw [tsum_probOutput_bind_mul,
+          tsum_probOutput_bind_mul]
         refine tsum_congr fun v => ?_
-        rw [OracleComp.DeferredSampling.tsum_probOutput_pure_mul,
-          OracleComp.DeferredSampling.tsum_probOutput_pure_mul]
+        rw [tsum_probOutput_pure_mul,
+          tsum_probOutput_pure_mul]
         exact congrArg _ (hKinv v a b ⟨hb11, hb2⟩)
       · rw [progGameRunImplCombinedTrapCount_run_inl_inr,
           progGameRunImplCombinedTrapCount_run_inl_inr]
@@ -10211,33 +10211,33 @@ lemma progGameRunImplCombinedTrapCount_table_indep (pk : PK) (sk : SK)
         rw [hcache]
         cases hq : b.1.1.1.1 mc with
         | some v =>
-            rw [OracleComp.DeferredSampling.tsum_probOutput_pure_mul,
-              OracleComp.DeferredSampling.tsum_probOutput_pure_mul]
+            rw [tsum_probOutput_pure_mul,
+              tsum_probOutput_pure_mul]
             exact hKinv v a b ⟨hb11, hb2⟩
         | none =>
-            rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-              OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+            rw [tsum_probOutput_bind_mul,
+              tsum_probOutput_bind_mul]
             refine tsum_congr fun v => congrArg _ ?_
-            rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-              OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+            rw [tsum_probOutput_bind_mul,
+              tsum_probOutput_bind_mul]
             refine tsum_congr fun x => congrArg _ ?_
-            rw [OracleComp.DeferredSampling.tsum_probOutput_pure_mul,
-              OracleComp.DeferredSampling.tsum_probOutput_pure_mul]
+            rw [tsum_probOutput_pure_mul,
+              tsum_probOutput_pure_mul]
             refine hKinv v _ _ ⟨?_, ?_⟩
             · simp only [hb11]
             · simp only [hb2]
       · rw [progGameRunImplCombinedTrapCount_run_inr, progGameRunImplCombinedTrapCount_run_inr]
-        rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-          OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+        rw [tsum_probOutput_bind_mul,
+          tsum_probOutput_bind_mul]
         refine tsum_congr fun r => congrArg _ ?_
-        rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-          OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+        rw [tsum_probOutput_bind_mul,
+          tsum_probOutput_bind_mul]
         refine tsum_congr fun v => congrArg _ ?_
-        rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-          OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+        rw [tsum_probOutput_bind_mul,
+          tsum_probOutput_bind_mul]
         refine tsum_congr fun x => congrArg _ ?_
-        rw [OracleComp.DeferredSampling.tsum_probOutput_pure_mul,
-          OracleComp.DeferredSampling.tsum_probOutput_pure_mul]
+        rw [tsum_probOutput_pure_mul,
+          tsum_probOutput_pure_mul]
         refine hKinv _ _ _ ⟨?_, ?_⟩
         · simp only [hb11]
         · simp only [hb2])
@@ -10332,7 +10332,7 @@ lemma progGameRunImplCombinedTrapCount_table_defer (pk : PK) (sk : SK)
   | pure a =>
       intro s htc
       simp only [simulateQ_pure, StateT.run_pure,
-        OracleComp.DeferredSampling.tsum_probOutput_pure_mul]
+        tsum_probOutput_pure_mul]
       -- At `pure`, the final state is the start state, so the table at `k₀` is `s.1.2 k₀`.
       rcases hc : s.1.1.1.1 k₀ with _ | v
       · -- `k₀` unprogrammed at start (and at end): the deferred branch gives `0`; the table/cache
@@ -10354,8 +10354,8 @@ lemma progGameRunImplCombinedTrapCount_table_defer (pk : PK) (sk : SK)
         · -- Uniform query: the state is untouched, `cache(k₀)` stays `none`; apply the IH at `s`.
           rw [progGameRunImplCombinedTrapCount_run_inl_inl, bind_assoc]
           simp only [pure_bind]
-          rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-            OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+          rw [tsum_probOutput_bind_mul,
+            tsum_probOutput_bind_mul]
           refine tsum_congr fun v => congrArg _ ?_
           have hih := ih v s htc
           simp only [hcs] at hih
@@ -10376,8 +10376,8 @@ lemma progGameRunImplCombinedTrapCount_table_defer (pk : PK) (sk : SK)
               by_cases hmck : mc = k₀
               · -- **The forged random-oracle miss: integrate the single trapdoor draw.**
                 subst hmck
-                rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-                  OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+                rw [tsum_probOutput_bind_mul,
+                  tsum_probOutput_bind_mul]
                 refine tsum_congr fun v => congrArg _ ?_
                 -- Abbreviate the per-`(v, x)` `G`-expectation `Q x` from the post-state.
                 set Q : Domain → ℝ≥0∞ := fun x =>
@@ -10453,8 +10453,8 @@ lemma progGameRunImplCombinedTrapCount_table_defer (pk : PK) (sk : SK)
                 -- the right and `1_{x = sStar} · Q x` on the left, and `Q` is table-independent
                 -- (`progGameRunImplCombinedTrapCount_table_indep`), so `Q x = Q sStar`; integrating
                 -- `x ← trapdoorSample v` turns the left indicator into `Pr[= sStar | trapdoor v]`.
-                rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-                  OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+                rw [tsum_probOutput_bind_mul,
+                  tsum_probOutput_bind_mul]
                 simp only [hLHS, hRHS]
                 -- `Q` is independent of the table value `x`, so `Q x = Q sStar` for all `x`.
                 have hQindep : ∀ x : Domain, Q x = Q sStar := fun x => by
@@ -10472,11 +10472,11 @@ lemma progGameRunImplCombinedTrapCount_table_defer (pk : PK) (sk : SK)
                 rw [ENNReal.tsum_mul_right,
                   tsum_probOutput_eq_one' (hNF v).probFailure_eq_zero, one_mul]
               · -- Miss at `mc ≠ k₀`: `cache(k₀)` stays `none`; apply the IH at the post-state.
-                rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-                  OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+                rw [tsum_probOutput_bind_mul,
+                  tsum_probOutput_bind_mul]
                 refine tsum_congr fun v => congrArg _ ?_
-                rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-                  OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+                rw [tsum_probOutput_bind_mul,
+                  tsum_probOutput_bind_mul]
                 refine tsum_congr fun x => congrArg _ ?_
                 -- Apply the IH at the post-state; `cache(k₀)` is unchanged (miss at `mc ≠ k₀`),
                 -- so its outer deferred branch stays `none`, matching the goal.
@@ -10497,14 +10497,14 @@ lemma progGameRunImplCombinedTrapCount_table_defer (pk : PK) (sk : SK)
           by_cases hmsg : msg = k₀.2
           · -- Signing the forged message inserts `k₀.2` into the (monotone) signed set, so every
             -- continuation has `k₀.2 ∈ signedSet` and `G = 0`; both sides vanish termwise.
-            rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-              OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+            rw [tsum_probOutput_bind_mul,
+              tsum_probOutput_bind_mul]
             refine tsum_congr fun r => congrArg _ ?_
-            rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-              OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+            rw [tsum_probOutput_bind_mul,
+              tsum_probOutput_bind_mul]
             refine tsum_congr fun v => congrArg _ ?_
-            rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-              OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+            rw [tsum_probOutput_bind_mul,
+              tsum_probOutput_bind_mul]
             refine tsum_congr fun x => congrArg _ ?_
             refine tsum_congr fun z => ?_
             by_cases hz : z ∈ support
@@ -10520,14 +10520,14 @@ lemma progGameRunImplCombinedTrapCount_table_defer (pk : PK) (sk : SK)
               rw [hGfresh z.1 _ hmem]; ring
             · rw [probOutput_eq_zero_of_not_mem_support hz]; ring
           · -- `msg ≠ k₀.2` forces `(r, msg) ≠ k₀`, so `cache(k₀)` stays `none`; apply the IH.
-            rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-              OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+            rw [tsum_probOutput_bind_mul,
+              tsum_probOutput_bind_mul]
             refine tsum_congr fun r => congrArg _ ?_
-            rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-              OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+            rw [tsum_probOutput_bind_mul,
+              tsum_probOutput_bind_mul]
             refine tsum_congr fun v => congrArg _ ?_
-            rw [OracleComp.DeferredSampling.tsum_probOutput_bind_mul,
-              OracleComp.DeferredSampling.tsum_probOutput_bind_mul]
+            rw [tsum_probOutput_bind_mul,
+              tsum_probOutput_bind_mul]
             refine tsum_congr fun x => congrArg _ ?_
             have hk : k₀ ≠ (r, msg) := fun h => hmsg (by rw [h])
             have hih := ih (r, x)
@@ -10628,7 +10628,7 @@ lemma trap_freshSig_le_winnerSlot_deferred [Inhabited Range]
                 (fun _ => none), 0)] :=
       fun w => by rw [probOutput, probOutput, hmap]
     simp_rw [hpt]
-    rw [OracleComp.DeferredSampling.tsum_probOutput_map_mul]
+    rw [tsum_probOutput_map_mul]
     refine tsum_congr fun z => ?_
     simp only [Prod.map, id_eq]
   rw [hRHS]
