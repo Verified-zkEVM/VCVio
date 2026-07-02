@@ -17,10 +17,6 @@ The technique underlies several proofs in this library (Fiat–Shamir with abort
 preimage sampling, collision/birthday bounds). Those proofs each instantiate a bespoke
 state machine; what is genuinely generic — and lives here — is:
 
-* **Expectation algebra** (`tsum_probOutput_*`): Tonelli-style rearrangements of an
-  expected nonnegative functional through `pure` / `bind` / `Functor.map`, and the
-  collapse of a constant-on-support functional. These are the workhorses for pushing a
-  fold's expected observable through the monad structure.
 * **i.i.d. bind-commutation** (`evalDist_bind_comm`, `evalDist_bind_const_neverFails`,
   `evalDist_bind_congr_left`): the *answer-irrelevant draw commutes past its
   continuation* step at the distribution level. `OracleComp`'s syntactic `bind` is not
@@ -46,46 +42,6 @@ open OracleComp OracleSpec
 open scoped BigOperators ENNReal
 
 namespace OracleComp.DeferredSampling
-
-/-! ## Expectation algebra for nonnegative functionals -/
-
-/-- Expectation of a nonnegative functional under a `pure` computation. -/
-lemma tsum_probOutput_pure_mul {β : Type} (y : β) (f : β → ℝ≥0∞) :
-    ∑' z, Pr[= z | (pure y : ProbComp β)] * f z = f y := by
-  rw [tsum_eq_single y fun z hz => by
-    rw [probOutput_eq_zero_of_not_mem_support (by simp [hz]), zero_mul]]
-  rw [probOutput_pure_self, one_mul]
-
-/-- Tonelli-style rearrangement: the expectation of a nonnegative functional under a
-`bind` is the outer expectation of the inner expectations. -/
-lemma tsum_probOutput_bind_mul {α β : Type} (oa : ProbComp α)
-    (g : α → ProbComp β) (f : β → ℝ≥0∞) :
-    ∑' z, Pr[= z | oa >>= g] * f z =
-      ∑' x, Pr[= x | oa] * ∑' z, Pr[= z | g x] * f z := by
-  simp_rw [probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_right]
-  rw [ENNReal.tsum_comm]
-  simp_rw [mul_assoc, ENNReal.tsum_mul_left]
-
-/-- Expectation of a nonnegative functional under a `Functor.map`: the functional is
-precomposed with the map. -/
-lemma tsum_probOutput_map_mul {α β : Type} (oa : ProbComp α) (f : α → β) (g : β → ℝ≥0∞) :
-    ∑' z, Pr[= z | f <$> oa] * g z = ∑' x, Pr[= x | oa] * g (f x) := by
-  rw [map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
-  refine tsum_congr fun x => ?_
-  simp only [Function.comp_apply]
-  rw [tsum_probOutput_pure_mul]
-
-/-- The expectation of a nonnegative functional `F` that is constant (equal to `c`) on the
-support of a never-failing (sub)probability computation equals `c`. -/
-lemma tsum_probOutput_mul_of_const_on_support {β : Type} (run : ProbComp β) {c : ℝ≥0∞}
-    {F : β → ℝ≥0∞} (hconst : ∀ z ∈ support run, F z = c) (hmass : Pr[⊥ | run] = 0) :
-    ∑' z, Pr[= z | run] * F z = c := by
-  have hsum : (∑' z, Pr[= z | run] * F z) = ∑' z, Pr[= z | run] * c := by
-    refine tsum_congr fun z => ?_
-    by_cases hz : z ∈ support run
-    · rw [hconst z hz]
-    · rw [probOutput_eq_zero_of_not_mem_support hz, zero_mul, zero_mul]
-  rw [hsum, ENNReal.tsum_mul_right, tsum_probOutput_eq_one' hmass, one_mul]
 
 /-! ## i.i.d. bind-commutation at the distribution level
 
