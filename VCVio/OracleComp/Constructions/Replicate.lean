@@ -43,14 +43,14 @@ def replicateTR {ι} {spec : OracleSpec ι} {α : Type v}
 variable {ι} {spec : OracleSpec ι} {α β : Type v}
   (oa : OracleComp spec α) (n : ℕ)
 
-@[simp]
+@[simp, grind =]
 lemma replicate_zero : replicate 0 oa = return [] := rfl
 
-@[simp]
+@[simp, grind =]
 lemma replicateTR_zero : replicateTR 0 oa = return [] := rfl
 
 /-- Bind-style unfolding of `replicate`, convenient for program-logic proofs. -/
-@[simp]
+@[simp, grind =]
 lemma replicate_succ_bind :
     replicate (n + 1) oa = (do
       let x ← oa
@@ -60,7 +60,7 @@ lemma replicate_succ_bind :
 /-- The tail-recursive `replicateTR` agrees with the recursive `replicate`. The
 `@[simp]` annotation lets every later proof about `replicateTR` reduce to the
 recursive form automatically. -/
-@[simp]
+@[simp, grind =]
 lemma replicateTR_eq_replicate : replicateTR n oa = replicate n oa := by
   simp only [replicateTR, ← List.replicate_eq_replicateTR]
   induction n with
@@ -70,7 +70,7 @@ lemma replicateTR_eq_replicate : replicateTR n oa = replicate n oa := by
 lemma replicate_succ : replicate (n + 1) oa = List.cons <$> oa <*> replicate n oa := by
   simp [replicate_succ_bind, monad_norm, Function.comp]
 
-@[simp]
+@[simp, grind =]
 lemma replicate_pure (x : α) :
     (pure x : OracleComp spec α).replicate n = pure (List.replicate n x) := by
   induction n with

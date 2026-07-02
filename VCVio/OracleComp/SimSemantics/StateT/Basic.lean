@@ -79,7 +79,7 @@ def flattenStateT {ι : Type _} {spec : OracleSpec ι}
   StateT.mk fun (s, q) =>
     (fun ((u, s'), q') => (u, (s', q'))) <$> ((impl t).run s |>.run q)
 
-@[simp] theorem flattenStateT_liftTarget_apply_run {ι : Type _} {spec : OracleSpec ι}
+@[simp, grind =] theorem flattenStateT_liftTarget_apply_run {ι : Type _} {spec : OracleSpec ι}
     {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ τ : Type u}
     (impl : QueryImpl spec (StateT τ m)) (t : spec.Domain) (s : σ) (q : τ) :
     ((impl.liftTarget (StateT σ (StateT τ m))).flattenStateT t).run (s, q) =
@@ -116,7 +116,7 @@ def withBadUpdate {ι : Type _} {spec : OracleSpec ι}
 
 /-- Run-shape of `withBadFlag`: the lifted implementation maps the underlying run by tagging
 each `(value, state)` pair with the unchanged bad flag `b`. -/
-@[simp] lemma withBadFlag_apply_run {ι : Type _} {spec : OracleSpec ι}
+@[simp, grind =] lemma withBadFlag_apply_run {ι : Type _} {spec : OracleSpec ι}
     {m : Type _ → Type _} [Functor m] {σ : Type _}
     (impl : QueryImpl spec (StateT σ m)) (t : spec.Domain) (s : σ) (b : Bool) :
     (impl.withBadFlag t).run (s, b) =
@@ -124,7 +124,7 @@ each `(value, state)` pair with the unchanged bad flag `b`. -/
 
 /-- Run-shape of `withBadUpdate`: the lifted implementation maps the underlying run by
 appending the OR-updated bad flag `b || f t s vs.1`. -/
-@[simp] lemma withBadUpdate_apply_run {ι : Type _} {spec : OracleSpec ι}
+@[simp, grind =] lemma withBadUpdate_apply_run {ι : Type _} {spec : OracleSpec ι}
     {m : Type _ → Type _} [Functor m] {σ : Type _}
     (impl : QueryImpl spec (StateT σ m))
     (f : (t : spec.Domain) → σ → spec.Range t → Bool)

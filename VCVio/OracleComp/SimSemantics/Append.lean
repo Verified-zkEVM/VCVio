@@ -30,10 +30,10 @@ lemma add_apply (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
     (t : OracleSpec.Domain (spec₁ + spec₂)) : (impl₁ + impl₂) t =
       match t with | .inl t => impl₁ t | .inr t => impl₂ t := rfl
 
-@[simp] lemma add_apply_inl (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
+@[simp, grind =] lemma add_apply_inl (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
     (t : spec₁.Domain) : (impl₁ + impl₂) (.inl t) = impl₁ t := rfl
 
-@[simp] lemma add_apply_inr (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
+@[simp, grind =] lemma add_apply_inr (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
     (t : spec₂.Domain) : (impl₁ + impl₂) (.inr t) = impl₂ t := rfl
 
 /-- Version of `QueryImpl.add` that also lifts the two implementations to a shared lift monad. -/
@@ -42,7 +42,7 @@ def addLift {ι₁ ι₂} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι�
     (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ n) : QueryImpl (spec₁ + spec₂) r :=
   (impl₁.liftTarget r) + (impl₂.liftTarget r)
 
-@[simp] lemma addLift_def {ι₁ ι₂} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+@[simp, grind =] lemma addLift_def {ι₁ ι₂} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     {m n r : Type u → Type*} [MonadLiftT m r] [MonadLiftT n r]
     (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ n) :
     (impl₁.addLift impl₂ : QueryImpl (spec₁ + spec₂) r) =
@@ -69,7 +69,9 @@ private lemma simulateQ_add_liftM_query_right (t : spec₂'.Domain) :
   change simulateQ (impl₁' + impl₂') (liftM ((spec₁' + spec₂').query (Sum.inr t))) = _
   simp
 
-@[simp]
+/- Also `@[grind =]`: without it, bare `grind` on a routed `simulateQ (impl₁ + impl₂)` goal over a
+lifted computation saturates (times out) instead of failing fast; with it, the shape closes. -/
+@[simp, grind =]
 lemma simulateQ_add_liftComp_left (oa : OracleComp spec₁' α) :
     simulateQ (impl₁' + impl₂') (OracleComp.liftComp oa (spec₁' + spec₂')) =
       simulateQ impl₁' oa := by
@@ -77,7 +79,7 @@ lemma simulateQ_add_liftComp_left (oa : OracleComp spec₁' α) :
   congr 1 with t
   exact simulateQ_add_liftM_query_left impl₁' impl₂' t
 
-@[simp]
+@[simp, grind =]
 lemma simulateQ_add_liftComp_right (ob : OracleComp spec₂' α) :
     simulateQ (impl₁' + impl₂') (OracleComp.liftComp ob (spec₁' + spec₂')) =
       simulateQ impl₂' ob := by

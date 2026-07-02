@@ -273,11 +273,17 @@ lemma probEvent_pos_iff' [HasEvalFinset m] [DecidableEq α] :
     0 < Pr[ p | mx] ↔ ∃ x ∈ finSupport mx, p x := by grind [probEvent_pos_iff]
 alias ⟨_, probEvent_pos'⟩ := probEvent_pos_iff'
 
-/-- `grind`-friendly companion to the `simp`-only `probEvent_ne_zero_iff`: the event has positive
+/-- `Set.Nonempty` companion to the `simp`-only `probEvent_ne_zero_iff`: the event has positive
 probability iff some reachable output satisfies `p`. The `Set.Nonempty` witness stays atomic under
 `grind` (unlike the saturating `∃ x ∈ support mx, p x` form). Mirrors
-`probFailure_eq_one_iff_not_nonempty`. -/
-@[grind =]
+`probFailure_eq_one_iff_not_nonempty`.
+
+Deliberately NOT in the default `grind` set: together with `probEvent_eq_zero_iff_not_nonempty`
+and `probFailure_eq_one_iff_not_nonempty` it re-forms a saturation cycle in the generic-monad
+context (`grind` times out on the `probEvent_eq_one_iff` statement shape with all three tagged;
+dropping any one of the trio restores fail-fast, and dropping this one is free: `grind` recovers
+`≠ 0 ↔ Nonempty` from the kept `= 0 ↔ ¬ Nonempty` sibling by classical negation). Gated by
+`VCVioTest/GrindFailFast.lean`. -/
 lemma probEvent_ne_zero_iff_nonempty :
     Pr[ p | mx] ≠ 0 ↔ {x ∈ support mx | p x}.Nonempty := by
   rw [probEvent_ne_zero_iff]; simp [Set.nonempty_def]
@@ -679,12 +685,14 @@ section bool
 
 variable [MonadLiftT m SPMF]
 
-@[simp]
+-- also `@[grind =]`: without the tag `grind` routes the impossible event through the support
+-- machinery and fails on `Pr[ fun _ => False | mx] = 0`
+@[simp, grind =]
 lemma probEvent_False (mx : m α) :
     Pr[ fun _ => False | mx] = 0 := by
   simp [probEvent_eq_tsum_indicator]
 
-@[simp]
+@[simp, grind =]
 lemma probEvent_false (mx : m α) :
     Pr[ fun _ => false | mx] = 0 := by aesop
 

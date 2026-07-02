@@ -68,7 +68,13 @@ hub. Dropped from the default `grind` set, `grind` instead fails fast. If a `gri
 needs one, re-supply it: `grind [probEvent_eq_zero_iff]`. The directed single-variable membership
 bridges (`probOutput_eq_zero_iff`, `probOutput_pos_iff`, `mem_finSupport_iff`) stay `@[grind =]`. See
 *`grind` vs `simp` on Probability Goals* in [`probability.md`](probability.md) and the benchmarks
-`VCVioTest/ProbabilityTactics.lean` / `VCVioTest/LongChainPrograms.lean`.
+`VCVioTest/ProbabilityTactics.lean` / `VCVioTest/LongChainPrograms.lean`;
+`VCVioTest/GrindFailFast.lean` gates that each dropped lemma stays dropped (and that the opt-in
+still works).
+
+Downstream escape hatches, since these tags are inherited by importing projects: `grind [-lemma]`
+(disable per call), `grind only [...]` (ignore the default set), `attribute [-grind] lemma`
+(unset for a file), and `grind?` (print a minimal `grind only` call).
 
 ### 10. Plain `vcstep` may solve a probability equality when you only wanted a rewrite
 

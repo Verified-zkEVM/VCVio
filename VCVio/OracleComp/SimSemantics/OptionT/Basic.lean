@@ -28,12 +28,12 @@ variable {ι} {spec : OracleSpec ι} {r n : Type u → Type*}
     [Monad n] [LawfulMonad n] (impl : QueryImpl spec n)
 
 omit [LawfulMonad n] in
-@[simp] lemma simulateQ_option_elim (x : Option α) (my : OracleComp spec β)
+@[simp, grind =] lemma simulateQ_option_elim (x : Option α) (my : OracleComp spec β)
     (my' : α → OracleComp spec β) : simulateQ impl (x.elim my my') =
     x.elim (simulateQ impl my) (fun x => simulateQ impl (my' x)) := by
   cases x <;> simp
 
-@[simp] lemma simulateQ_option_elimM (mx : OracleComp spec (Option α))
+@[simp, grind =] lemma simulateQ_option_elimM (mx : OracleComp spec (Option α))
     (my : OracleComp spec β) (my' : α → OracleComp spec β) :
     simulateQ impl (Option.elimM mx my my') =
     Option.elimM (simulateQ impl mx) (simulateQ impl my) (fun x => simulateQ impl (my' x)) := by
