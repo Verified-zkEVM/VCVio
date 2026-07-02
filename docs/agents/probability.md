@@ -175,17 +175,25 @@ needs to reason about a computation failing (or not) with probability one.
 `grind` conclude e.g. `Pr[⊥ | $ᵗ α] ≠ 1` end-to-end.
 
 The event-probability versions follow the same recipe with the *filtered* support `{x ∈ support mx | p x}`
-(the reachable outputs satisfying `p`): `probEvent_ne_zero_iff_nonempty`
-(`Pr[ p | mx] ≠ 0 ↔ {x ∈ support mx | p x}.Nonempty`) and `probEvent_eq_zero_iff_not_nonempty`
-(`Pr[ p | mx] = 0 ↔ ¬ …`) are the `@[grind =]` companions to the `simp`-only `probEvent_ne_zero_iff` /
-`probEvent_eq_zero_iff`. The `Pr[…] = 1` companions are deliberately *omitted*: a `Nonempty`-phrased
-`probEvent_eq_one` keeps its `Pr[⊥ | mx] = 0` conjunct, which re-couples it to the hub family and
-re-creates the combination slowdown even though it is cheap in isolation. The two event companions add
-a small fixed `grind` cost that does not compound, so they stay in the default set; the `= 1` cases use
-`grind [probEvent_eq_one_iff]` opt-in instead.
+(the reachable outputs satisfying `p`): `probEvent_eq_zero_iff_not_nonempty`
+(`Pr[ p | mx] = 0 ↔ ¬ {x ∈ support mx | p x}.Nonempty`) is the `@[grind =]` companion to the
+`simp`-only `probEvent_eq_zero_iff`. Its sibling `probEvent_ne_zero_iff_nonempty` (`Pr[ p | mx] ≠ 0 ↔ …`)
+exists but is deliberately **untagged**: the trio of `Nonempty` companions tagged together re-forms
+a saturation cycle in the *generic-monad* context (`grind` on the `probEvent_eq_one_iff` statement
+shape times out instead of failing fast; dropping any one of the three restores fail-fast), and
+dropping the `≠ 0` sibling is free — `grind` recovers `≠ 0 ↔ Nonempty` from the kept
+`= 0 ↔ ¬ Nonempty` form by classical negation. The `Pr[…] = 1` companions are deliberately
+*omitted* entirely: a `Nonempty`-phrased `probEvent_eq_one` keeps its `Pr[⊥ | mx] = 0` conjunct,
+which re-couples it to the hub family; the `= 1` cases use `grind [probEvent_eq_one_iff]` opt-in
+instead. `VCVioTest/GrindFailFast.lean` gates all of this: each dropped lemma has a
+`fail_if_success grind` + `grind [<lemma>]` example over a generic `m`, so both a bad re-tag
+(bare `grind` starts succeeding) and a new saturation (the timeout escapes `fail_if_success`)
+fail the build loudly.
 
-**Monad/functor laws normalise structure for `grind`.** `bind_pure`, `pure_bind`, `bind_assoc`, and
-`map_pure` are tagged `@[grind =]` (in `EvalDist/Monad/Basic.lean`). They are confluent rewrites, so
+**Monad/functor laws normalise structure for `grind`.** `bind_pure`, `bind_assoc`, and
+`map_pure` are tagged `@[grind =]` (in `EvalDist/Monad/Basic.lean`); `pure_bind` is already in the
+default set from core (`attribute [grind <=] pure_bind` in `Init.Control.Lawful`), so it is not
+re-tagged here. They are confluent rewrites, so
 `grind` collapses a computation's structure (`mx >>= pure = mx`, `pure a >>= f = f a`, …) *before*
 falling into `probOutput`/`tsum` expansion — turning what would otherwise be a `grind` *explosion* on
 a `bind`/`pure`-shaped probability/support/distribution equality into a quick solve
@@ -195,11 +203,32 @@ a `bind`/`pure`-shaped probability/support/distribution equality into a quick so
 `<$>` / `if` / `<*>` does not normalise to a `pure`, so those structured equalities stay
 `simp`-terminal.
 
-**`grind` cannot factor an independent product.** `Pr[= z | (·, ·) <$> mx <*> my]` or its `bind`
-spelling does not reduce under `grind`: the second factor `my` is a free variable under a binder
-(`Seq.seq`'s `Unit → _` thunk, or `bind`'s continuation), which `grind`'s pattern compiler cannot
-index — tagging the factorization lemma yields an "invalid pattern" error. Factor with `simp`
-(`probOutput_seq_map_prod_mk_eq_mul` is `@[simp high]`), then hand the resulting goal to `grind`.
+**Independent products factor via `@[grind norm]`, not E-matching.** The second factor of
+`Pr[= z | (·, ·) <$> mx <*> my]` sits under a binder (`Seq.seq`'s `Unit → _` thunk), which
+`grind`'s pattern compiler cannot index — tagging the factorization lemma `@[grind =]` yields an
+"invalid pattern" error (so do `pure_seq`/`seq_pure`). The escape is `grind`'s *normalization*
+phase: `probOutput_seq_map_prod_mk_eq_mul` is `@[simp high, grind norm]`, so bare `grind` factors
+the applicative spelling (and closes e.g. equiprobability of a uniform product). The `bind`-spelled
+product (`do let x ← mx; let y ← my; pure (x, y)`) remains `simp`-only — the second draw sits under
+`bind`'s continuation, which the seq-keyed norm rule does not reach.
+
+**`grind norm` can starve E-matching — use it sparingly.** Norm rules rewrite goal/hypothesis
+terms *before* E-matching, so a norm rule whose result no longer matches the `@[grind =]` patterns
+disconnects them. Concretely: `@[grind norm] bind_pure_comp` (`mx >>= fun a => pure (f a)` →
+`f <$> mx`) closes a couple of `target(grind)` gaps but breaks the `replicate` gates — the goal's
+do-block normalises to a `<$>` form while the E-matching-side `replicate` unfolds stay in `bind`
+form, and the E-graph never connects the two. It is therefore deliberately **not** tagged. Gate any
+new `@[grind norm]` candidate against all of `VCVioTest/{ProbabilityTactics,MonadProbability,`
+`LongChainPrograms,GrindFailFast}.lean` before keeping it.
+
+**Structural additions to the default set** (all gated in `VCVioTest/GrindFailFast.lean`):
+`OracleComp.replicate` unfolds (`replicate_zero`, `replicate_succ_bind`, `replicate_pure`,
+`replicateTR_*` — the proof-level loop combinator; core already grind-tags the `List.mapM` /
+`foldlM` / `forIn` layer), `Functor.map_map`, `probEvent_False`/`probEvent_false`, and the
+`simulateQ` routing layer (`QueryImpl.add_apply_inl/inr`, `simulateQ_add_liftComp_left/right`,
+the `withBadFlag`/`withBadUpdate`/`flattenStateT` run-shapes, `simulateQ_option_elim(M)`). The
+`simulateQ_add_liftComp` pair also *fixes a saturation*: bare `grind` used to time out on a routed
+`simulateQ (impl₁ + impl₂)` goal over a lifted computation.
 
 `VCVioTest/ProbabilityTactics.lean` is the living benchmark and **gate** for all of this: a broad
 corpus of probability / event / failure / support / distribution facts organised by category, each
@@ -217,6 +246,14 @@ facts `ProbComp` masks — chiefly the **failure factor**: over a monad that can
 to the `ProbComp` forms only because `Pr[⊥] = 0` there. New API filled along the way:
 `probOutput_map` (the `probOutput`/`<$>` companion to `probEvent_map`, `@[grind =]`), `support_guard`,
 and the `orElse` (`<|>`) probability lemmas for `OptionT (OracleComp spec)` (`probFailure_orElse` etc.).
+
+**Opting out downstream.** VCVio deliberately extends the *default* `grind` set — the monad laws
+above plus the probability/support bridges — and these tags are inherited by every project that
+imports it. All of the standard escape hatches work if a downstream `grind` call misbehaves:
+disable a rule per call (`grind [-bind_pure]`), ignore the default set entirely
+(`grind only [the, lemmas, you, want]`), or unset a tag for a whole file
+(`attribute [-grind] bind_pure`). `grind?` reports a minimal `grind only [...]` call for a goal it
+closes, which is the easiest way to make a fragile call site independent of the default set.
 
 ## Common Mistakes
 

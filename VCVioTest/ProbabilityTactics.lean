@@ -105,8 +105,12 @@ example (x : Bool) : Pr[= x | (do let _ ← $ᵗ Bool; pure x : ProbComp Bool)] 
 /-! ## Independence and the multiplication rule
 Two independent uniform draws factor: the joint mass is the product of the marginals.
 
-target(grind): `grind` cannot factor an independent product — the second factor sits under a binder
-(`<*>`'s thunk or `bind`'s continuation), unindexable by `grind`; `simp` factors it. -/
+The applicative (`<$> … <*>`) spelling factors under `grind` via the `@[grind norm]` rule
+`probOutput_seq_map_prod_mk_eq_mul` (the `Seq.seq` thunk is unindexable for E-matching, but
+`grind`'s normalization phase handles it).
+
+target(grind): the `bind`-spelled product — the second draw sits under `bind`'s continuation, which
+neither E-matching nor the seq-keyed norm rule reaches; `simp` factors it. -/
 
 example (a b : Bool) :
     Pr[= (a, b) | do let x ← $ᵗ Bool; let y ← $ᵗ Bool; pure (x, y)]
@@ -119,6 +123,9 @@ example :
 example (z : Bool × Bool) :
     Pr[= z | (·, ·) <$> ($ᵗ Bool) <*> ($ᵗ Bool)]
       = Pr[= z.1 | $ᵗ Bool] * Pr[= z.2 | $ᵗ Bool] := by simp
+example (z : Bool × Bool) :
+    Pr[= z | (·, ·) <$> ($ᵗ Bool) <*> ($ᵗ Bool)]
+      = Pr[= z.1 | $ᵗ Bool] * Pr[= z.2 | $ᵗ Bool] := by grind
 
 /-! # 2. Event probability — `Pr[ p | _]` -/
 
@@ -132,8 +139,8 @@ example (mx : ProbComp Bool) (p : Bool → Prop) : Pr[p | mx] ≠ ⊤ := by simp
 example (mx : ProbComp Bool) (p : Bool → Prop) : Pr[p | mx] ≠ ⊤ := by grind
 
 -- The impossible event has probability zero; a single fair outcome has probability one half.
--- target(grind): `grind` routes `Pr[fun _ => False]` through the support machinery and fails.
 example (mx : ProbComp Bool) : Pr[fun _ => False | mx] = 0 := by simp
+example (mx : ProbComp Bool) : Pr[fun _ => False | mx] = 0 := by grind
 example : Pr[fun b => b = true | $ᵗ Bool] = 2⁻¹ := by simp
 example : Pr[fun n => n < 3 | $ᵗ (Fin 6)] = 3 / 6 := by simp; rfl
 
@@ -363,12 +370,13 @@ example : support ($ᵗ α) = Set.univ := by grind
 
 example (z : α × β) :
     Pr[= z | (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)] = Pr[= z.1 | $ᵗ α] * Pr[= z.2 | $ᵗ β] := by simp
+example (z : α × β) :
+    Pr[= z | (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)] = Pr[= z.1 | $ᵗ α] * Pr[= z.2 | $ᵗ β] := by grind
 
--- target(grind): equiprobability of a uniform product. `grind` cannot factor the applicative
--- product (second factor under a binder); `simp` factors it, then `grind` closes the equal factors.
+-- equiprobability of a uniform product: the `@[grind norm]` factorization rule lets bare `grind`
+-- factor the applicative product, then close the equal factors
 example (x y : α × β) :
-    Pr[= x | (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)] = Pr[= y | (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)] := by
-  simp only [probOutput_seq_map_prod_mk_eq_mul]; grind
+    Pr[= x | (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)] = Pr[= y | (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)] := by grind
 
 end abstract
 

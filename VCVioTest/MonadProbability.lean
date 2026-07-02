@@ -146,9 +146,13 @@ example (mf : m (α → β)) (mx : m α) :
 
 example (mf : m (α → β)) (mx : m α) : 𝒟[mf <*> mx] = 𝒟[mf] <*> 𝒟[mx] := by simp
 
--- target(grind): the applicative product's second factor sits under a binder, unindexable by grind.
+-- the applicative product factors under both: `simp` by the `@[simp high]` rule, `grind` by the
+-- same lemma as a `@[grind norm]` rule (the `Seq.seq` thunk is unindexable for E-matching, but
+-- `grind`'s normalization phase needs no pattern)
 example (mx my : m α) (z : α × α) :
     Pr[= z | Prod.mk <$> mx <*> my] = Pr[= z.1 | mx] * Pr[= z.2 | my] := by simp
+example (mx my : m α) (z : α × α) :
+    Pr[= z | Prod.mk <$> mx <*> my] = Pr[= z.1 | mx] * Pr[= z.2 | my] := by grind
 
 end generic
 
