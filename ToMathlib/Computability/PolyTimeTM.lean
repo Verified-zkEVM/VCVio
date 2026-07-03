@@ -16,6 +16,13 @@ functions, in Cslib's `Turing.SingleTapeTM` model:
 - `Turing.SingleTapeTM.clearComputer` / `Turing.SingleTapeTM.constComputer`: erase the
   input and produce a fixed output string, giving `constPolyTimeComputable` and the
   encoding-level witness `Computability.EncPolyTime.const` for constant functions.
+- `Turing.SingleTapeTM.tableComputer`: read the input into machine state through the
+  prefix tree of a finite set of valid inputs, then write the corresponding table
+  output, giving `tablePolyTimeComputable` and the encoding-level witness
+  `Computability.EncPolyTime.ofFintype`: **any function with a finite domain is
+  polynomial-time computable** relative to an injective encoding. This subsumes
+  constants, relabelings, and projections on finite domains, and discharges all four
+  per-step machine witnesses of `PolyTimeAdversary` for finite-state oracle machines.
 
 The machines follow one design: **clear the input moving right, then write the output
 backwards moving left**. Clearing onto an empty left stack keeps the tape in canonical
@@ -23,10 +30,10 @@ form (`StackTape` normalizes blanks), and writing the output back-to-front while
 left lands the head on its first symbol, which is exactly the halting configuration
 `BiTape.mk₁` — no rewind phases are needed.
 
-Remaining base machines (symbol relabeling with a constant prefix, and projections with
-respect to paired encodings) follow the same skeleton and are future work; together
-with `EncPolyTime.comp` (from Cslib's proven machine composition) they discharge the
-witness hypotheses of `OracleComp.isPolyTime_pure_of_witnesses` generically.
+Base machines for *unbounded* domains (symbol relabeling, projections with respect to
+paired encodings of infinite types) would follow the same skeleton and remain future
+work; together with `EncPolyTime.comp` (from Cslib's proven machine composition) they
+would extend the generic witnesses beyond finite domains.
 -/
 
 @[expose] public section
@@ -79,7 +86,7 @@ private lemma clearComputer_clear_steps (l : List Symbol) :
   | nil => exact .refl _
   | cons c t ih =>
     refine .head _ ⟨some (), .mk₁ t⟩ _ _ ?_ ih
-    show (clearComputer (Symbol := Symbol)).step ⟨some (), .mk₁ (c :: t)⟩ = _
+    change (clearComputer (Symbol := Symbol)).step ⟨some (), .mk₁ (c :: t)⟩ = _
     rw [← bitape_head_tail_eq_mk₁ t]
     rfl
 
@@ -90,7 +97,7 @@ private lemma constComputer_clear_steps (o : Symbol) (os l : List Symbol) :
   | nil => exact .refl _
   | cons c t ih =>
     refine .head _ ⟨some (.inl ()), .mk₁ t⟩ _ _ ?_ ih
-    show (constComputer o os).step ⟨some (.inl ()), .mk₁ (c :: t)⟩ = _
+    change (constComputer o os).step ⟨some (.inl ()), .mk₁ (c :: t)⟩ = _
     rw [← bitape_head_tail_eq_mk₁ t]
     rfl
 
@@ -100,7 +107,7 @@ private lemma constComputer_enter_step (o : Symbol) (os : List Symbol) :
     (constComputer o os).TransitionRelation ⟨some (.inl ()), .nil⟩
       ⟨some (.inr ⟨os.length, by simp⟩),
         ⟨none, ∅, .mapSome ((o :: os).drop (os.length + 1))⟩⟩ := by
-  show (constComputer o os).step _ = _
+  change (constComputer o os).step _ = _
   rw [show (o :: os).drop (os.length + 1) = [] by simp]
   rfl
 
@@ -113,13 +120,13 @@ private lemma constComputer_write_steps (o : Symbol) (os : List Symbol) (i : ℕ
   | zero =>
     intro hi
     refine .single ?_
-    show (constComputer o os).step _ = _
+    change (constComputer o os).step _ = _
     rfl
   | succ i ih =>
     intro hi
     refine .head _ ⟨some (.inr ⟨i, by omega⟩),
       ⟨none, ∅, .mapSome ((o :: os).drop (i + 1))⟩⟩ _ _ ?_ (ih (by omega))
-    show (constComputer o os).step _ = _
+    change (constComputer o os).step _ = _
     rw [List.drop_eq_getElem_cons hi]
     rfl
 
@@ -162,6 +169,212 @@ noncomputable def constPolyTimeComputable (out : List Symbol) :
         Polynomial.eval_C, List.length_cons]
       omega
 
+/-! ## The finite-table machine
+
+A machine computing `fun l => if l ∈ S then T l else []` for a *finite* set `S` of
+valid inputs: read the input into machine state through the prefix tree of `S`
+(clearing as it goes), then on the blank look up the table and write the output
+backwards moving left exactly as `constComputer` does. Inputs that stop matching any
+prefix of `S` fall into an absorbing junk state and clear to a blank tape. -/
+
+section Table
+
+variable [DecidableEq Symbol]
+
+omit [Inhabited Symbol] [Fintype Symbol] [DecidableEq Symbol] in
+private lemma bitape_mk₁_eq_of_length_pos {t : List Symbol} (h : 0 < t.length) :
+    (BiTape.mk₁ t : BiTape Symbol) = ⟨some t[0], ∅, .mapSome (t.drop 1)⟩ := by
+  cases t with
+  | nil => simp at h
+  | cons a as => rfl
+
+omit [Inhabited Symbol] [Fintype Symbol] in
+/-- All prefixes of members of `S`: the reading states of `tableComputer`. -/
+def prefixClosure (S : Finset (List Symbol)) : Finset (List Symbol) :=
+  S.biUnion fun s => s.inits.toFinset
+
+omit [Inhabited Symbol] [Fintype Symbol] in
+theorem mem_prefixClosure {S : Finset (List Symbol)} {l : List Symbol} :
+    l ∈ prefixClosure S ↔ ∃ s ∈ S, l <+: s := by
+  simp [prefixClosure, List.mem_inits]
+
+omit [Inhabited Symbol] [Fintype Symbol] in
+theorem subset_prefixClosure (S : Finset (List Symbol)) : S ⊆ prefixClosure S :=
+  fun s hs => mem_prefixClosure.mpr ⟨s, hs, List.prefix_refl s⟩
+
+omit [Inhabited Symbol] [Fintype Symbol] in
+/-- Path independence of falling out of the prefix tree: once the consumed prefix
+matches no member of `S`, no extension does either. -/
+theorem append_not_mem_prefixClosure {S : Finset (List Symbol)} {l : List Symbol}
+    (h : l ∉ prefixClosure S) (b : Symbol) : l ++ [b] ∉ prefixClosure S := by
+  intro hmem
+  obtain ⟨s, hs, hpre⟩ := mem_prefixClosure.mp hmem
+  exact h (mem_prefixClosure.mpr ⟨s, hs, (List.prefix_append l [b]).trans hpre⟩)
+
+omit [Inhabited Symbol] [Fintype Symbol] in
+/-- States of the finite-table machine: reading (tracking the consumed prefix through
+the prefix tree of `S`), junk (clearing an unmatched input), or writing symbol `i` of
+the table output of `s`. -/
+abbrev TableState (S : Finset (List Symbol)) (T : List Symbol → List Symbol) : Type :=
+  ({l // l ∈ prefixClosure S} ⊕ Unit) ⊕ (Σ s : {s // s ∈ S}, Fin (T s.1).length)
+
+omit [Inhabited Symbol] [Fintype Symbol] in
+/-- The state after consuming the prefix `l`: still reading if `l` can extend to a
+member of `S`, junk otherwise. Totality in `l` makes the reading-step lemma uniform
+(via `append_not_mem_prefixClosure`). -/
+def readState (S : Finset (List Symbol)) (T : List Symbol → List Symbol)
+    (l : List Symbol) : TableState S T :=
+  if h : l ∈ prefixClosure S then .inl (.inl ⟨l, h⟩) else .inl (.inr ())
+
+omit [Inhabited Symbol] [Fintype Symbol] in
+/-- The state entered on reaching the blank at the end of the input with consumed
+prefix `l`: write the table output backwards if `l ∈ S` and the output is nonempty,
+otherwise halt (the tape is already the blank output). -/
+def enterState (S : Finset (List Symbol)) (T : List Symbol → List Symbol)
+    (l : List Symbol) : Option (TableState S T) :=
+  if hS : l ∈ S then
+    if hT : (T l).length = 0 then none
+    else some (.inr ⟨⟨l, hS⟩,
+      ⟨(T l).length - 1, by change (T l).length - 1 < (T l).length; omega⟩⟩)
+  else none
+
+/-- The finite-table machine: clear the input moving right while tracking the consumed
+prefix through the prefix tree of `S`; on the blank, look up the table and write the
+output backwards moving left. Computes `fun l => if l ∈ S then T l else []`. -/
+def tableComputer (S : Finset (List Symbol)) (T : List Symbol → List Symbol) :
+    SingleTapeTM Symbol where
+  State := TableState S T
+  q₀ := readState S T []
+  tr q h := match q with
+    | .inl (.inl ⟨l, _⟩) => match h with
+      | some b => ⟨⟨none, some .right⟩, some (readState S T (l ++ [b]))⟩
+      | none => ⟨⟨none, none⟩, enterState S T l⟩
+    | .inl (.inr ()) => match h with
+      | some _ => ⟨⟨none, some .right⟩, some (.inl (.inr ()))⟩
+      | none => ⟨⟨none, none⟩, none⟩
+    | .inr ⟨s, i⟩ => ⟨⟨some (T s.1)[i], if i.val = 0 then none else some .left⟩,
+        if i.val = 0 then none else some (.inr ⟨s, ⟨i.val - 1, by omega⟩⟩)⟩
+
+/-! ### Reading-phase verification -/
+
+private lemma tableComputer_read_step (S : Finset (List Symbol))
+    (T : List Symbol → List Symbol) (l : List Symbol) (b : Symbol) (t : List Symbol) :
+    (tableComputer S T).TransitionRelation
+      ⟨some (readState S T l), .mk₁ (b :: t)⟩
+      ⟨some (readState S T (l ++ [b])), .mk₁ t⟩ := by
+  change (tableComputer S T).step _ = _
+  rw [← bitape_head_tail_eq_mk₁ t]
+  by_cases h : l ∈ prefixClosure S
+  · simp only [readState]
+    rw [dif_pos h]
+    rfl
+  · simp only [readState]
+    rw [dif_neg h, dif_neg (append_not_mem_prefixClosure h b)]
+    rfl
+
+private lemma tableComputer_read_steps (S : Finset (List Symbol))
+    (T : List Symbol → List Symbol) (t l : List Symbol) :
+    RelatesInSteps (tableComputer S T).TransitionRelation
+      ⟨some (readState S T l), .mk₁ t⟩ ⟨some (readState S T (l ++ t)), .nil⟩
+      t.length := by
+  induction t generalizing l with
+  | nil => rw [List.append_nil]; exact .refl _
+  | cons b t ih =>
+    refine .head _ ⟨some (readState S T (l ++ [b])), .mk₁ t⟩ _ _
+      (tableComputer_read_step S T l b t) ?_
+    have h := ih (l ++ [b])
+    rwa [← List.append_cons] at h
+
+/-! ### Lookup and writing-phase verification -/
+
+private lemma tableComputer_blank_step (S : Finset (List Symbol))
+    (T : List Symbol → List Symbol) (l : List Symbol) :
+    (tableComputer S T).TransitionRelation
+      ⟨some (readState S T l), .nil⟩ ⟨enterState S T l, .nil⟩ := by
+  change (tableComputer S T).step _ = _
+  by_cases h : l ∈ prefixClosure S
+  · simp only [readState]
+    rw [dif_pos h]
+    rfl
+  · simp only [readState, enterState]
+    rw [dif_neg h, dif_neg fun hS => h (subset_prefixClosure S hS)]
+    rfl
+
+private lemma tableComputer_write_steps (S : Finset (List Symbol))
+    (T : List Symbol → List Symbol) (s : {s // s ∈ S}) (i : ℕ) :
+    ∀ (hi : i < (T s.1).length),
+      RelatesInSteps (tableComputer S T).TransitionRelation
+        ⟨some (.inr ⟨s, ⟨i, hi⟩⟩), ⟨none, ∅, .mapSome ((T s.1).drop (i + 1))⟩⟩
+        ⟨none, .mk₁ (T s.1)⟩ (i + 1) := by
+  induction i with
+  | zero =>
+    intro hi
+    refine .single ?_
+    change (tableComputer S T).step _ = _
+    rw [bitape_mk₁_eq_of_length_pos hi]
+    rfl
+  | succ i ih =>
+    intro hi
+    refine .head _ ⟨some (.inr ⟨s, ⟨i, by omega⟩⟩),
+      ⟨none, ∅, .mapSome ((T s.1).drop (i + 1))⟩⟩ _ _ ?_ (ih (by omega))
+    change (tableComputer S T).step _ = _
+    rw [List.drop_eq_getElem_cons hi]
+    rfl
+
+private lemma tableComputer_finish_within (S : Finset (List Symbol))
+    (T : List Symbol → List Symbol) (l : List Symbol) :
+    RelatesWithinSteps (tableComputer S T).TransitionRelation
+      ⟨some (readState S T l), .nil⟩
+      ⟨none, .mk₁ (if l ∈ S then T l else [])⟩
+      ((S.sup fun s => (T s).length) + 1) := by
+  have h1 := tableComputer_blank_step S T l
+  simp only [enterState] at h1
+  by_cases hS : l ∈ S
+  · by_cases hT : (T l).length = 0
+    · rw [dif_pos hS, dif_pos hT] at h1
+      rw [if_pos hS, List.length_eq_zero_iff.mp hT]
+      exact RelatesWithinSteps.of_le (.single h1) (by omega)
+    · rw [dif_pos hS, dif_neg hT] at h1
+      rw [if_pos hS]
+      have h2 := tableComputer_write_steps S T ⟨l, hS⟩ ((T l).length - 1)
+        (by change (T l).length - 1 < (T l).length; omega)
+      rw [show (T l).length - 1 + 1 = (T l).length from by omega,
+        List.drop_length] at h2
+      refine RelatesWithinSteps.of_le
+        ((RelatesWithinSteps.single h1).trans
+          (RelatesWithinSteps.of_relatesInSteps h2)) ?_
+      have hle : (T l).length ≤ S.sup fun s => (T s).length :=
+        Finset.le_sup (f := fun s => (T s).length) hS
+      omega
+  · rw [dif_neg hS] at h1
+    rw [if_neg hS]
+    exact RelatesWithinSteps.of_le (.single h1) (by omega)
+
+/-! ### Assembly -/
+
+/-- Finite tables are machine-computable in linear time: `n` steps to read the input
+into state, then at most one plus the longest table output to write the result. -/
+def tableTimeComputable (S : Finset (List Symbol)) (T : List Symbol → List Symbol) :
+    TimeComputable (Symbol := Symbol) (fun l => if l ∈ S then T l else []) where
+  tm := tableComputer S T
+  timeBound n := n + ((S.sup fun s => (T s).length) + 1)
+  outputsFunInTime l := by
+    exact (RelatesWithinSteps.of_relatesInSteps
+      (tableComputer_read_steps S T l [])).trans (tableComputer_finish_within S T l)
+
+/-- Finite tables are machine-computable in polynomial time. -/
+noncomputable def tablePolyTimeComputable (S : Finset (List Symbol))
+    (T : List Symbol → List Symbol) :
+    PolyTimeComputable (Symbol := Symbol) (fun l => if l ∈ S then T l else []) where
+  toTimeComputable := tableTimeComputable S T
+  poly := .X + .C ((S.sup fun s => (T s).length) + 1)
+  bounds n := by
+    simp only [tableTimeComputable, Polynomial.eval_add, Polynomial.eval_X,
+      Polynomial.eval_C]
+    omega
+
+end Table
+
 end Turing.SingleTapeTM
 
 namespace Computability.EncPolyTime
@@ -172,5 +385,42 @@ noncomputable def const {α : Type u} {β : Type v} (ea : α → List Bool)
   toFun _ := eb c
   polyTime := Turing.SingleTapeTM.constPolyTimeComputable (eb c)
   map_encode _ := rfl
+
+/-- **Any function with a finite domain is polynomial-time computable** relative to an
+injective input encoding: the machine reads the input into state through the prefix
+tree of the finitely many valid encodings, then writes the encoded output. Instantiated
+at the `boolify` of a `FinEncoding` (injective by `FinEncoding.boolify_injective`),
+this discharges the per-step machine witnesses of finite-state oracle machines. -/
+noncomputable def ofFintype {α : Type u} {β : Type v} [Fintype α]
+    (ea : α → List Bool) (hea : Function.Injective ea) (eb : β → List Bool)
+    (f : α → β) : EncPolyTime ea eb f where
+  toFun l := if l ∈ Finset.univ.image ea
+    then ((Function.partialInv ea l).map fun a => eb (f a)).getD [] else []
+  polyTime := Turing.SingleTapeTM.tablePolyTimeComputable (Finset.univ.image ea)
+    fun l => ((Function.partialInv ea l).map fun a => eb (f a)).getD []
+  map_encode a := by
+    rw [if_pos (Finset.mem_image_of_mem ea (Finset.mem_univ a)),
+      Function.partialInv_left hea]
+    rfl
+
+/-- The finite-table witness runs in time linear in the input plus the longest encoded
+output: with a pointwise bound `B` on the output encodings, evaluation at `k` is at
+most `k + (B + 1)`. This is the shape that discharges the uniform per-step time bounds
+of `PolyTimeAdversary`. -/
+theorem time_ofFintype_eval_le {α : Type u} {β : Type v} [Fintype α]
+    {ea : α → List Bool} (hea : Function.Injective ea) {eb : β → List Bool}
+    {f : α → β} {B : ℕ} (hB : ∀ a, (eb (f a)).length ≤ B) (k : ℕ) :
+    (ofFintype ea hea eb f).time.eval k ≤ k + (B + 1) := by
+  have htime : (ofFintype ea hea eb f).time =
+      .X + .C (((Finset.univ.image ea).sup fun l =>
+        (((Function.partialInv ea l).map fun a => eb (f a)).getD []).length) + 1) := rfl
+  have hsup : ((Finset.univ.image ea).sup fun l =>
+      (((Function.partialInv ea l).map fun a => eb (f a)).getD []).length) ≤ B := by
+    refine Finset.sup_le fun l hl => ?_
+    obtain ⟨a, -, rfl⟩ := Finset.mem_image.mp hl
+    rw [Function.partialInv_left hea]
+    exact hB a
+  rw [htime, Polynomial.eval_add, Polynomial.eval_X, Polynomial.eval_C]
+  omega
 
 end Computability.EncPolyTime

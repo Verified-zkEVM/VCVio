@@ -150,4 +150,16 @@ theorem boolify_injective : Function.Injective e.boolify :=
 
 end FinEncoding
 
+/-- The boolified unary `FinEnum` encoding has length at most `2 * card`: the unary
+string has length the enumeration index (below `card`), and the one-hot symbol width
+over the `Unit` alphabet is `2`. This is the pointwise bound feeding
+`Computability.EncPolyTime.time_ofFintype_eval_le` at `FinEnum` encodings. -/
+theorem length_boolify_finEncodingOfFinEnum {γ : Type u} [FinEnum γ] [Fintype γ] (x : γ) :
+    ((finEncodingOfFinEnum γ).boolify x).length ≤ 2 * Fintype.card γ := by
+  have hx : (FinEnum.equiv x : ℕ) < Fintype.card γ :=
+    FinEnum.card_eq_fintypeCard (α := γ) ▸ (FinEnum.equiv x).isLt
+  rw [FinEncoding.length_boolify]
+  simp only [finEncodingOfFinEnum, List.length_replicate, Fintype.card_unique]
+  omega
+
 end Computability
