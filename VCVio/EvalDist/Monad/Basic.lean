@@ -30,6 +30,12 @@ lemma mem_support_pure_iff [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] (x y : 
 lemma mem_support_pure_iff' [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] (x y : α) :
     x ∈ support (pure y : m α) ↔ y = x := by aesop
 
+/-- `obtain`-friendly forward direction of `mem_support_pure_iff`: membership in the support
+of a `pure` forces equality with the pure value. -/
+lemma eq_of_mem_support_pure [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    {x y : α} (h : y ∈ support (pure x : m α)) : y = x := by
+  simpa [mem_support_pure_iff] using h
+
 @[simp, grind =]
 lemma finSupport_pure [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [HasEvalFinset m]
     [DecidableEq α] (x : α) : finSupport (pure x : m α) = {x} := by aesop
@@ -119,6 +125,13 @@ lemma support_bind [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] (mx : m α) (my
 lemma mem_support_bind_iff [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] (mx : m α)
     (my : α → m β) (y : β) :
     y ∈ support (mx >>= my) ↔ ∃ x ∈ support mx, y ∈ support (my x) := by simp
+
+/-- `obtain`-friendly forward direction of `mem_support_bind_iff`: peel an element of the
+support of a bind into a witness for the first computation and membership for the second. -/
+lemma support_bind_exists [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    {x : m α} {f : α → m β} {y : β}
+    (hy : y ∈ support (x >>= f)) : ∃ a, a ∈ support x ∧ y ∈ support (f a) := by
+  simpa [mem_support_bind_iff] using hy
 
 @[simp, grind =]
 lemma finSupport_bind [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [HasEvalFinset m]
@@ -768,3 +781,51 @@ lemma probEvent_exists_finset_le_sum
   gcongr
 
 end union_bound
+
+/-! ## Expectation algebra for nonnegative functionals -/
+
+section tsum_probOutput_mul
+
+variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+
+/-- Expectation of a nonnegative functional under a `pure` computation. -/
+@[simp]
+lemma tsum_probOutput_pure_mul (y : α) (f : α → ℝ≥0∞) :
+    ∑' z, Pr[= z | (pure y : m α)] * f z = f y := by
+  have : DecidableEq α := Classical.decEq α
+  rw [tsum_eq_single y fun z hz => by rw [probOutput_pure, if_neg hz, zero_mul]]
+  rw [probOutput_pure_self, one_mul]
+
+/-- Tonelli-style rearrangement: the expectation of a nonnegative functional under a
+`bind` is the outer expectation of the inner expectations. -/
+lemma tsum_probOutput_bind_mul (mx : m α) (g : α → m β) (f : β → ℝ≥0∞) :
+    ∑' z, Pr[= z | mx >>= g] * f z =
+      ∑' x, Pr[= x | mx] * ∑' z, Pr[= z | g x] * f z := by
+  simp_rw [probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_right]
+  rw [ENNReal.tsum_comm]
+  simp_rw [mul_assoc, ENNReal.tsum_mul_left]
+
+/-- Expectation of a nonnegative functional under a `Functor.map`: the functional is
+precomposed with the map. -/
+lemma tsum_probOutput_map_mul [LawfulMonad m] (mx : m α) (f : α → β) (g : β → ℝ≥0∞) :
+    ∑' z, Pr[= z | f <$> mx] * g z = ∑' x, Pr[= x | mx] * g (f x) := by
+  rw [map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
+  refine tsum_congr fun x => ?_
+  simp only [Function.comp_apply]
+  rw [tsum_probOutput_pure_mul]
+
+omit [Monad m] [LawfulMonadLiftT m SPMF] in
+/-- The expectation of a nonnegative functional `F` that is constant (equal to `c`) on the
+support of a never-failing (sub)probability computation equals `c`. -/
+lemma tsum_probOutput_mul_of_const_on_support [MonadLiftT m SetM] [EvalDistCompatible m]
+    (mx : m α) {c : ℝ≥0∞}
+    {F : α → ℝ≥0∞} (hconst : ∀ z ∈ support mx, F z = c) (hmass : Pr[⊥ | mx] = 0) :
+    ∑' z, Pr[= z | mx] * F z = c := by
+  have hsum : (∑' z, Pr[= z | mx] * F z) = ∑' z, Pr[= z | mx] * c := by
+    refine tsum_congr fun z => ?_
+    by_cases hz : z ∈ support mx
+    · rw [hconst z hz]
+    · rw [probOutput_eq_zero_of_not_mem_support hz, zero_mul, zero_mul]
+  rw [hsum, ENNReal.tsum_mul_right, tsum_probOutput_eq_one' hmass, one_mul]
+
+end tsum_probOutput_mul

@@ -763,7 +763,42 @@ lemma probEvent_or_le (mx : m α) (p q : α → Prop) :
   refine ENNReal.tsum_le_tsum fun x => ?_
   by_cases hp : p x <;> by_cases hq : q x <;> simp [hp, hq]
 
+/-- **First-moment / Markov bound.** The probability of `p` is at most the expectation of any
+`ℝ≥0∞`-valued cost `c` that is `≥ 1` wherever `p` holds. This is the elementary core of a
+first-moment (union) argument: a monotone "bad" event whose occurrence forces a unit of some
+nonnegative cost has probability bounded by the expected cost. -/
+lemma probEvent_le_tsum_probOutput_mul_cost (mx : m α) (p : α → Prop) (c : α → ℝ≥0∞)
+    (hc : ∀ x, p x → 1 ≤ c x) :
+    Pr[ p | mx] ≤ ∑' x : α, Pr[= x | mx] * c x := by
+  have := Classical.decPred p
+  rw [probEvent_eq_tsum_ite mx p]
+  refine ENNReal.tsum_le_tsum fun x => ?_
+  split_ifs with hp
+  · calc Pr[= x | mx] = Pr[= x | mx] * 1 := (mul_one _).symm
+      _ ≤ Pr[= x | mx] * c x := by gcongr; exact hc x hp
+  · exact zero_le'
+
 variable [MonadLiftT m SetM] [EvalDistCompatible m]
+
+/-- **First-moment / Markov bound** (`support`-restricted cost). Variant of
+`probEvent_le_tsum_probOutput_mul_cost` whose `c ≥ 1` hypothesis need only hold on the
+`support` of `mx`. -/
+lemma probEvent_le_tsum_probOutput_mul_cost_of_mem_support
+    (mx : m α) (p : α → Prop) (c : α → ℝ≥0∞)
+    (hc : ∀ x ∈ support mx, p x → 1 ≤ c x) :
+    Pr[ p | mx] ≤ ∑' x : α, Pr[= x | mx] * c x := by
+  have := Classical.decPred p
+  rw [probEvent_eq_tsum_ite mx p]
+  refine ENNReal.tsum_le_tsum fun x => ?_
+  by_cases hx : x ∈ support mx
+  · split_ifs with hp
+    · calc Pr[= x | mx] = Pr[= x | mx] * 1 := (mul_one _).symm
+        _ ≤ Pr[= x | mx] * c x := by
+              gcongr
+              exact hc x hx hp
+    · exact zero_le'
+  · rw [probOutput_eq_zero_of_not_mem_support hx]
+    simp
 
 /-- If `p` implies `q` on the `support` of a computation then it is more likely to happen. -/
 lemma probEvent_mono (h : ∀ x ∈ support mx, p x → q x) : Pr[ p | mx] ≤ Pr[ q | mx] := by

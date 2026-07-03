@@ -2421,24 +2421,6 @@ private lemma probOutput_uniform_bind_fst_replayRunWithTraceValue_takeBeforeFork
   exact congrFun (congrArg DFunLike.coe
     (evalDist_uniform_bind_fst_replayRunWithTraceValue_takeBeforeForkAt main i log s)) x
 
-omit [∀ j, SampleableType (spec.Range j)] [unifSpec ⊂ₒ spec]
-  [unifSpec ˡ⊂ₒ spec] [spec.DecidableEq] in
-private lemma tsum_probOutput_map_mul [IsUniformSpec spec] {γ δ : Type} (mn : OracleComp spec γ)
-    (f : γ → δ) (g : δ → ℝ≥0∞) :
-    ∑' y : δ, Pr[= y | (f <$> mn : OracleComp spec δ)] * g y =
-    ∑' x : γ, Pr[= x | mn] * g (f x) := by
-  classical
-  simp_rw [probOutput_map_eq_tsum, ← ENNReal.tsum_mul_right]
-  rw [ENNReal.tsum_comm]
-  refine tsum_congr fun x => ?_
-  simp_rw [mul_assoc]
-  rw [ENNReal.tsum_mul_left]
-  refine congrArg _ ?_
-  refine (tsum_eq_single (f x) fun y hy => ?_).trans ?_
-  · have : DecidableEq δ := Classical.decEq δ
-    rw [probOutput_pure, if_neg hy, zero_mul]
-  · rw [probOutput_pure_self, one_mul]
-
 omit [unifSpec ˡ⊂ₒ spec] [spec.DecidableEq] in
 private lemma probOutput_map_fst_bind_liftComp_congr [IsUniformSpec spec] {β σ : Type}
     (j : ι) (f : α → β) (y : β)
