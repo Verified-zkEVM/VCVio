@@ -39,8 +39,8 @@ export Monad.Commutative (bind_comm)
 
 attribute [simp] bind_comm
 
--- Instance for accessing bind_comm directly
-instance {m} [Monad m] [Commutative m] {α β} (ma : m α) (mb : m β) :
+/-- Accessing `bind_comm` directly: any two actions of a `Commutative` monad commute. -/
+theorem commutativeAt_of_commutative {m} [Monad m] [Commutative m] {α β} (ma : m α) (mb : m β) :
     CommutativeAt m ma mb := bind_comm ma mb
 
 -- The main commutativity lemma for composed computations

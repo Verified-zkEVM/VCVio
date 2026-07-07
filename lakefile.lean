@@ -26,12 +26,13 @@ ships a Lean v4.30-compatible release. The CI TCB-isolation check
 (`scripts/check-interop-isolation.sh`) still protects against accidental
 cross-imports regardless of which backend requires are active.
 
-Important: `require mathlib` must come **after** any Interop backend `require`s
-so Mathlib's transitive pins (in particular `Qq`) win over the backends'. Lake
-warns and `lake exe cache get` fails otherwise.
+Important: `require mathlib` must come **after** every other dependency
+`require` (the Interop backends and PolyFun) so Mathlib's transitive pins (in
+particular `Qq`, `batteries`, `aesop`) win over the others'. Lake warns and
+`lake exe cache get` fails otherwise.
 
-Hax: Lean 4.29.0-rc1 (compatible with our 4.30.0). Latest `main` as of
-2026-04-16. Subdirectory: `hax-lib/proof-libs/lean`.
+Hax: Lean 4.29.0-rc1 (built against our v4.31.0 stack cross-version). Latest
+`main` as of 2026-04-16. Subdirectory: `hax-lib/proof-libs/lean`.
 -/
 require Hax from git
   "https://github.com/cryspen/hax" @
@@ -65,11 +66,11 @@ exact diagnostics. Leave this commented until upstream ships a v4.30 build
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "ba600392" / "backends/lean"
 
-require "leanprover-community" / "mathlib" @ git "v4.30.0"
-
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "5d3a160ed751b9227af90adb9da41d0eae2e0238"
+  "d5620448dfef7303d7cd7451ebf5a705d9dd3e73"
+
+require "leanprover-community" / "mathlib" @ git "v4.31.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
