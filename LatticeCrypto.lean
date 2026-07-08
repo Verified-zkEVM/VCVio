@@ -23,6 +23,7 @@ import LatticeCrypto.Falcon.Encoding
 import LatticeCrypto.Falcon.NonVacuity
 import LatticeCrypto.Falcon.Params
 import LatticeCrypto.Falcon.Primitives
+import LatticeCrypto.Falcon.SISBridge
 import LatticeCrypto.Falcon.Scheme
 import LatticeCrypto.Falcon.Security
 import LatticeCrypto.HardnessAssumptions.LearningWithErrors

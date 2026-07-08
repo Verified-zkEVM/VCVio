@@ -106,10 +106,13 @@ over the cyclotomic ring `R_q = ℤ_q[x]/(x^n + 1)`.
 
 The norm target is `4·betaSquared`, not `betaSquared`: a kernel vector produced from a
 Falcon-PSF collision is the difference `x - x'` of two `β`-short preimages, so its squared
-`ℓ₂` norm is at most `(‖x‖₂ + ‖x'‖₂)² ≤ (2β)² = 4·betaSquared`. This is the target that a
-`ntruPSFCollisionProblem → ntruSISProblem` translation would produce; that translation is not
-yet formalized (the reduction in `euf_cma_security` currently terminates at
-`ntruPSFCollisionProblem`). -/
+`ℓ₂` norm is at most `(‖x‖₂ + ‖x'‖₂)² ≤ (2β)² = 4·betaSquared`. The
+`ntruPSFCollisionProblem → ntruSISProblem` translation realizing this target is
+`Falcon.ntruSISProblem_isValid_sub` (witness level) and
+`Falcon.advantage_le_ntruSISProblemKeyed` / `Falcon.euf_cma_security_ntruSIS` (advantage
+level, at the honest key distribution `ntruSISProblemKeyed`) in
+`LatticeCrypto.Falcon.SISBridge`; the remaining distance between the honest key
+distribution and this problem's uniform challenge is a decisional-NTRU assumption. -/
 noncomputable def ntruSISProblem [SampleableType (Rq p.n)] :
     SIS.Problem (Rq p.n) (Rq p.n × Rq p.n) where
   sampleChallenge := $ᵗ (Rq p.n)
