@@ -21,6 +21,13 @@ import Examples.ElGamal.ReductionCost
 import Examples.ElGamal.SSP
 import Examples.EvalDistCompatible.Basic
 import Examples.FrankingProtocol
+import Examples.KatzLindell.Defs
+import Examples.KatzLindell.MachineWiring
+import Examples.KatzLindell.Negligible
+import Examples.KatzLindell.OneTimePad
+import Examples.KatzLindell.PrivKEav
+import Examples.KatzLindell.SemanticSecurity
+import Examples.KatzLindell.SingleBit
 import Examples.OneTimePad.Basic
 import Examples.OneTimePad.HeapBasic
 import Examples.OneTimePad.HeapPar

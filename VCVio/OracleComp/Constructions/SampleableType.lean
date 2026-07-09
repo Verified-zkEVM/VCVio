@@ -94,6 +94,19 @@ lemma probOutput_bind_bijective_uniform_cross
   simp_rw [show (($ᵗ α) >>= fun x => g (f x)) = ((f <$> ($ᵗ α)) >>= g) from by simp [monad_norm],
     probOutput_bind_eq_tsum, probOutput_map_bijective_uniform_cross (α := α) (β := β) f hf]
 
+/-- Sampling two uniform values sequentially is the same as sampling a uniform pair, as
+observed by any continuation. -/
+lemma probOutput_uniformSample_bind_uniformSample {β γ : Type} [SampleableType β]
+    [SampleableType (α × β)] [Finite α] [Finite β] (g : α × β → ProbComp γ) (z : γ) :
+    Pr[= z | do let x ← $ᵗ α; let y ← $ᵗ β; g (x, y)] =
+      Pr[= z | ($ᵗ (α × β)) >>= g] := by
+  letI := Fintype.ofFinite α
+  letI := Fintype.ofFinite β
+  simp_rw [probOutput_bind_eq_tsum, probOutput_uniformSample, ENNReal.tsum_prod',
+    Fintype.card_prod, Nat.cast_mul,
+    ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _)) (Or.inl (ENNReal.natCast_ne_top _)),
+    mul_assoc, ENNReal.tsum_mul_left]
+
 /-- Left-translation by a constant in `AddGroup α` preserves the uniform output distribution,
 since `(m + ·)` is a bijection on `α` with inverse `(-m + ·)`. -/
 lemma probOutput_add_left_uniform [AddGroup α] (m x : α) :

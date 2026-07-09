@@ -8,6 +8,7 @@ import VCVio.CryptoFoundations.Asymptotics.Negligible
 import VCVio.CryptoFoundations.Asymptotics.PolyTime
 import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 import VCVio.CryptoFoundations.Asymptotics.Security
+import VCVio.CryptoFoundations.Asymptotics.TwoPhaseGame
 import VCVio.CryptoFoundations.CommitmentScheme
 import VCVio.CryptoFoundations.DataEncapMech
 import VCVio.CryptoFoundations.FiatShamir.QueryBounds
@@ -67,6 +68,7 @@ import VCVio.CryptoFoundations.SeededFork
 import VCVio.CryptoFoundations.SigmaProtocol
 import VCVio.CryptoFoundations.SignatureAlg
 import VCVio.CryptoFoundations.SymmEncAlg
+import VCVio.CryptoFoundations.SymmEncAlg.EAV
 import VCVio.CryptoFoundations.TweakableHash
 import VCVio.EvalDist.BitVec
 import VCVio.EvalDist.Bool
@@ -103,6 +105,7 @@ import VCVio.OracleComp.Coinductive.Bridge
 import VCVio.OracleComp.Coinductive.DynSystem
 import VCVio.OracleComp.Coinductive.Machine
 import VCVio.OracleComp.Coinductive.PolyTime
+import VCVio.OracleComp.Coinductive.PolyTimeClosure
 import VCVio.OracleComp.Constructions.BitVec
 import VCVio.OracleComp.Constructions.GenerateSeed
 import VCVio.OracleComp.Constructions.Replicate

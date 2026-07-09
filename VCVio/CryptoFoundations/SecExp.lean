@@ -154,6 +154,32 @@ lemma ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half (p : ProbComp Bool) :
       2 * ((Pr[= true | p]).toReal - 1 / 2) by ring,
     abs_mul, abs_two]
 
+/-- The Boolean bias advantage is at most one. -/
+lemma ProbComp.boolBiasAdvantage_le_one (p : ProbComp Bool) : p.boolBiasAdvantage ≤ 1 := by
+  rw [ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half]
+  have h0 : 0 ≤ (Pr[= true | p]).toReal := ENNReal.toReal_nonneg
+  have h1 : (Pr[= true | p]).toReal ≤ 1 := by
+    simpa using (ENNReal.toReal_le_toReal probOutput_ne_top ENNReal.one_ne_top).mpr
+      probOutput_le_one
+  rcases abs_cases ((Pr[= true | p]).toReal - 1 / 2) with h | h <;> linarith [h.1]
+
+/-- One-sided reading of the bias: the success probability of a Boolean game is at most
+`1/2` plus its bias advantage. -/
+lemma ProbComp.probOutput_true_le_half_add_ofReal_boolBiasAdvantage (p : ProbComp Bool) :
+    Pr[= true | p] ≤ 1 / 2 + ENNReal.ofReal p.boolBiasAdvantage := by
+  calc Pr[= true | p]
+      = ENNReal.ofReal (Pr[= true | p]).toReal :=
+        (ENNReal.ofReal_toReal probOutput_ne_top).symm
+    _ ≤ ENNReal.ofReal (1 / 2 + p.boolBiasAdvantage) :=
+        ENNReal.ofReal_le_ofReal (by
+          rw [ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half]
+          rcases abs_cases ((Pr[= true | p]).toReal - 1 / 2) with h | h <;>
+            linarith [h.1, ENNReal.toReal_nonneg (a := Pr[= true | p])])
+    _ = 1 / 2 + ENNReal.ofReal p.boolBiasAdvantage := by
+        rw [ENNReal.ofReal_add (by norm_num) (by
+          rw [ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half]; positivity)]
+        norm_num [ENNReal.ofReal_div_of_pos]
+
 /-- A hidden-bit guessing game over two Boolean branches has bias exactly equal to the
 distinguishing advantage between those two branches. -/
 lemma ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch

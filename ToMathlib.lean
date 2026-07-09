@@ -22,6 +22,7 @@ import ToMathlib.Control.Monad.Transformer
 import ToMathlib.Control.OptionT
 import ToMathlib.Control.StateT
 import ToMathlib.Control.WriterT
+import ToMathlib.Data.BitVec
 import ToMathlib.Data.ENNReal.AbsDiff
 import ToMathlib.Data.ENNReal.Gauss
 import ToMathlib.Data.ENNReal.SumSquares

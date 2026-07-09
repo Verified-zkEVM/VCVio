@@ -23,6 +23,9 @@ structured values to Turing machines:
 - `Computability.FinEncoding.boolify`: relabel any finite-alphabet encoding into
   `List Bool` via fixed-width one-hot symbol codes, so that encodings over different
   alphabets can serve as inputs and outputs of machines over a single alphabet.
+- `Computability.finEncodingBitVec`: the fixed-width binary encoding of `BitVec w`,
+  linear in `w` where the unary `finEncodingOfFinEnum` would be exponential, together
+  with length lemmas for it and for pair and option encodings.
 
 These mirror the design of `Computability.finEncodingPair`.
 -/
@@ -161,5 +164,51 @@ theorem length_boolify_finEncodingOfFinEnum {γ : Type u} [FinEnum γ] [Fintype 
   rw [FinEncoding.length_boolify]
   simp only [finEncodingOfFinEnum, List.length_replicate, Fintype.card_unique]
   omega
+
+/-! ## Binary Bitvector Encoding -/
+
+/-- Fixed-width binary encoding of `BitVec w` over the `Bool` alphabet: the string of the
+`w` bits, least significant first. The encoded length is `w`, linear where the unary
+`finEncodingOfFinEnum` encoding would have length up to `2 ^ w`; machine states containing
+bitvectors need this encoding for polynomial size bounds. -/
+def finEncodingBitVec (w : ℕ) : FinEncoding (BitVec w) where
+  Γ := Bool
+  encode m := (List.range w).map m.getLsbD
+  decode l := if h : l.length = w then some (BitVec.cast h (BitVec.ofBoolListLE l)) else none
+  decode_encode m := by
+    have hlen : ((List.range w).map m.getLsbD).length = w := by simp
+    rw [dif_pos hlen]
+    refine congrArg some (BitVec.eq_of_getLsbD_eq_iff.mpr fun i hi => ?_)
+    rw [BitVec.getLsbD_cast, BitVec.getLsbD_ofBoolListLE]
+    simp [List.getD_eq_getElem?_getD, hi]
+  ΓFin := inferInstance
+
+@[simp] theorem length_encode_finEncodingBitVec {w : ℕ} (m : BitVec w) :
+    ((finEncodingBitVec w).encode m).length = w := by
+  simp [finEncodingBitVec]
+
+/-- The boolified binary bitvector encoding has length exactly `3 * w`: `w` symbols of
+one-hot width `card Bool + 1`. The pointwise bound feeding
+`Computability.EncPolyTime.time_ofFintype_eval_le` at bitvector-shaped machine states. -/
+theorem length_boolify_finEncodingBitVec {w : ℕ} (m : BitVec w) :
+    ((finEncodingBitVec w).boolify m).length = 3 * w := by
+  rw [FinEncoding.length_boolify, length_encode_finEncodingBitVec]
+  change (Fintype.card Bool + 1) * w = 3 * w
+  rw [Fintype.card_bool]
+
+/-! ## Encoding Lengths of Pairs and Options -/
+
+theorem length_encode_finEncodingPair {α : Type u} {β : Type v} (ea : FinEncoding α)
+    (eb : FinEncoding β) (x : α × β) :
+    ((finEncodingPair ea eb).encode x).length =
+      (ea.encode x.1).length + (eb.encode x.2).length := by
+  simp [finEncodingPair]
+
+@[simp] theorem length_encode_finEncodingOption_none {β : Type u} (eb : FinEncoding β) :
+    ((finEncodingOption eb).encode (none : Option β)).length = 0 := rfl
+
+theorem length_encode_finEncodingOption_some {β : Type u} (eb : FinEncoding β) (b : β) :
+    ((finEncodingOption eb).encode (some b)).length = (eb.encode b).length + 1 := by
+  simp [finEncodingOption]
 
 end Computability
