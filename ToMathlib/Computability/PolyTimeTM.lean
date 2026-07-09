@@ -423,4 +423,35 @@ theorem time_ofFintype_eval_le {α : Type u} {β : Type v} [Fintype α]
   rw [htime, Polynomial.eval_add, Polynomial.eval_X, Polynomial.eval_C]
   omega
 
+/-! ### Deferred: the sum-dispatch transducer
+
+`sumElim` composes two boolified-encoding witnesses over a shared codomain into one witness over the
+combined `finEncodingSum` state encoding, dispatching on the branch tag. Its honest single-tape
+machine is a **length-changing streaming transducer** — recode each payload one-hot block between
+the combined-alphabet width (`card Γ₁ + card Γ₂ + 3`) and the component width (`card Γᵢ + 1`), then
+dispatch on the tag — which is the *unbounded-domain symbol relabeling* case this file's module
+docstring flags as future work (a finite domain would make it `ofFintype`, but the payload is
+arbitrary length). It is isolated here as a **single documented `sorry`** so that the
+sequential-composition closure `OracleComp.IsPolyTime.bind` and its consumers
+(`Examples.KatzLindell.PRGEncryption`) build on a stable, correctly-typed interface; the streaming
+transducer that discharges it is a separate ticket. Cross-reference: `EncPolyTime.comp` (the
+matching-encoding composition, fully proved) and `ofFintype` (the finite-domain table, fully proved)
+are the two composition primitives this one sits between. -/
+noncomputable def sumElim {α₁ α₂ γ : Type} (e₁ : FinEncoding α₁) (e₂ : FinEncoding α₂)
+    (ec : FinEncoding γ) (f₁ : α₁ → γ) (f₂ : α₂ → γ)
+    (h₁ : EncPolyTime e₁.boolify ec.boolify f₁) (h₂ : EncPolyTime e₂.boolify ec.boolify f₂) :
+    EncPolyTime (finEncodingSum e₁ e₂).boolify ec.boolify (Sum.elim f₁ f₂) :=
+  sorry
+
+/-- The sum-dispatch transducer runs in time bounded by the two branch times plus a linear
+tag-read/recode overhead: `h₁.time.eval k + h₂.time.eval k + k + 1`. Isolated alongside `sumElim`
+(same deferred streaming-transducer gap); the shape downstream `PolyTimeAdversary` step-time bounds
+consume. -/
+theorem time_sumElim_eval_le {α₁ α₂ γ : Type} (e₁ : FinEncoding α₁) (e₂ : FinEncoding α₂)
+    (ec : FinEncoding γ) (f₁ : α₁ → γ) (f₂ : α₂ → γ)
+    (h₁ : EncPolyTime e₁.boolify ec.boolify f₁) (h₂ : EncPolyTime e₂.boolify ec.boolify f₂)
+    (k : ℕ) :
+    (sumElim e₁ e₂ ec f₁ f₂ h₁ h₂).time.eval k ≤ h₁.time.eval k + h₂.time.eval k + k + 1 :=
+  sorry
+
 end Computability.EncPolyTime
