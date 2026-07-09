@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
 import VCVio.CryptoFoundations.SymmEncAlg
-import VCVio.OracleComp.Coinductive.PolyTime
+import VCVio.OracleComp.Coinductive.PolyTimeConstructions
 
 /-!
 # Katz–Lindell Definition 3.8: Private-Key Encryption Schemes
@@ -58,5 +58,13 @@ coin oracle, i.e. with a random tape it never reads) is a polynomial-time progra
 family. Used to state the efficiency hypotheses of the semantic-security definitions. -/
 def IsPolyTimeFun {α β : ℕ → Type} (g : (n : ℕ) → α n → β n) : Prop :=
   OracleComp.IsPolyTime fun n x => (pure (g n x) : OracleComp coinSpec (β n))
+
+/-- The core construction `OracleComp.isPolyTime_bitVecFun` discharges `IsPolyTimeFun`
+directly: the identity on plaintexts — and any width-bounded bitvector function — is a
+polynomial-time computable function, so it can back the `f`/`h` slots of the
+semantic-security definitions. -/
+example : IsPolyTimeFun (fun n (x : BitVec n) => x) :=
+  isPolyTime_bitVecFun Polynomial.X Polynomial.X (fun n => by simp) (fun n => by simp)
+    (fun _ => id)
 
 end KatzLindell
