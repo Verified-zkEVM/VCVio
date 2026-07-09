@@ -26,6 +26,7 @@ import Examples.KatzLindell.MachineWiring
 import Examples.KatzLindell.Negligible
 import Examples.KatzLindell.OneTimePad
 import Examples.KatzLindell.PrivKEav
+import Examples.KatzLindell.SamplerMachine
 import Examples.KatzLindell.SemanticSecurity
 import Examples.KatzLindell.SingleBit
 import Examples.OneTimePad.Basic

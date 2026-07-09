@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
 import Examples.KatzLindell.PrivKEav
+import Examples.KatzLindell.SamplerMachine
 import ToMathlib.Data.BitVec
 import VCVio.OracleComp.Coinductive.PolyTimeClosure
 
@@ -35,18 +36,11 @@ equality of experiments:
   "`A′` is PPT since `A` is" step is `OracleComp.IsPolyTime.precomp` for the
   distinguish phase and the sampler machine for the choose phase.
 
-Two supporting facts are deferred with `sorry`, each isolated and consumed only through
-its statement:
-
-* `evalDist_simulateQ_chooseProg`: the coin-by-coin sampler computes the specification
-  sampler `chooseIdeal` (proof plan: induction on the coin-fill recursion showing the
-  accumulator's filled bits are uniform, then the `BitVec.extractLsb'` pairing bijection
-  `BitVec (2*n) ≃ BitVec n × BitVec n` via `probOutput_map_bijective_uniform_cross`).
-* `isPolyTime_chooseProg`: the sampler is polynomial time (proof plan: an
-  `Examples.DynamicalSystems.XorFlips`-style machine with state
-  `Fin (2*n+1) × BitVec (2*n)`, round bound `2*n`, the *binary* state encoding
-  `Computability.finEncodingBitVec` — the unary `FinEnum` encoding would be exponential
-  — and per-step witnesses from `Computability.EncPolyTime.ofFintype`).
+The distribution of the coin-by-coin sampler is pinned down by `evalDist_fillBits` (the
+coin loop is uniform) and the half-splitting bijection `splitPair`, giving the exact
+sampler semantics `evalDist_simulateQ_chooseProg`. Polynomial time of the sampler,
+`isPolyTime_chooseProg`, is the Turing-machine witness supplied in
+`Examples.KatzLindell.SamplerMachine`.
 -/
 
 open ENNReal OracleComp OracleSpec SymmEncAlg Computability
@@ -68,26 +62,76 @@ noncomputable def predictExp (π : (n : ℕ) → SymmEncAlg ProbComp (BitVec n) 
   let g ← simulateQ uniformSampleImpl (A n c)
   pure (g == m.getLsbD i)
 
-/-! ## The reduction adversary -/
+/-! ## Distribution of the coin-fill sampler
 
-/-- Sample `r` fresh coins into bits `r-1, …, 0` of the accumulator. -/
-def fillBits {w : ℕ} : ℕ → BitVec w → OracleComp coinSpec (BitVec w)
-  | 0, acc => pure acc
-  | r + 1, acc => OracleComp.queryBind () fun b => fillBits r (acc.overwriteBit r b)
+The choose-phase sampler `fillBits` / `chooseProg` and its polynomial-time witness
+`isPolyTime_chooseProg` live in `Examples.KatzLindell.SamplerMachine`; here its output
+distribution is pinned down. -/
 
-/-- `fillBits r acc` makes at most `r` queries. -/
-theorem isTotalQueryBound_fillBits {w : ℕ} (r : ℕ) (acc : BitVec w) :
-    IsTotalQueryBound (fillBits r acc) r := by
+/-- Binding a fair coin query averages the two branch probabilities, since a `coinSpec`
+query returns a uniform boolean. -/
+theorem probOutput_queryBind_coin_split {α : Type} (g : Bool → OracleComp coinSpec α) (v : α) :
+    Pr[= v | OracleComp.queryBind (spec := coinSpec) () g] =
+      (Pr[= v | g true] + Pr[= v | g false]) / 2 := by
+  rw [show OracleComp.queryBind (spec := coinSpec) () g
+        = (liftM (OracleSpec.query (spec := coinSpec) ()) : OracleComp coinSpec Bool) >>= g
+      from rfl, probOutput_bind_eq_tsum]
+  simp only [tsum_fintype (L := .unconditional _), Fintype.sum_bool, probOutput_query,
+    Fintype.card_bool, Nat.cast_ofNat]
+  rw [← mul_add, ENNReal.div_eq_inv_mul]
+
+open Classical in
+/-- Output distribution of the coin-fill loop: `fillBits r acc` overwrites the low `r`
+bits of `acc` with independent fair coins, so a target `v` is produced exactly when it
+agrees with `acc` on the untouched high bits (`r ≤ j`), each such `v` with mass `2⁻ʳ`. -/
+theorem probOutput_fillBits {w : ℕ} (r : ℕ) (hr : r ≤ w) (acc v : BitVec w) :
+    Pr[= v | fillBits r acc] =
+      if ∀ j, r ≤ j → acc.getLsbD j = v.getLsbD j then (2 ^ r : ℝ≥0∞)⁻¹ else 0 := by
   induction r generalizing acc with
-  | zero => trivial
-  | succ r ih => exact ⟨Nat.succ_pos r, fun b => ih (acc.overwriteBit r b)⟩
+  | zero =>
+    simp only [fillBits, probOutput_pure]
+    refine if_congr ?_ (by norm_num) rfl
+    refine ⟨fun h => h ▸ fun j _ => rfl, fun h => ?_⟩
+    exact ((BitVec.eq_of_getLsbD_eq_iff).mpr fun j _ => h j (Nat.zero_le j)).symm
+  | succ r ih =>
+    have hrw : r < w := hr
+    have harith : ((2 : ℝ≥0∞) ^ r)⁻¹ / 2 = (2 ^ (r + 1))⁻¹ := by
+      rw [pow_succ, ENNReal.mul_inv (by simp) (by simp), div_eq_mul_inv]
+    rw [show fillBits (r + 1) acc = OracleComp.queryBind (spec := coinSpec) () fun b =>
+          fillBits r (acc.overwriteBit r b) from rfl, probOutput_queryBind_coin_split,
+      ih (Nat.le_of_succ_le hr) _, ih (Nat.le_of_succ_le hr) _]
+    have hcond : ∀ b : Bool,
+        (∀ j, r ≤ j → (acc.overwriteBit r b).getLsbD j = v.getLsbD j) ↔
+          (b = v.getLsbD r ∧ ∀ j, r + 1 ≤ j → acc.getLsbD j = v.getLsbD j) := by
+      intro b
+      refine ⟨fun h => ⟨?_, fun j hj => ?_⟩, ?_⟩
+      · have := h r (le_refl r); rwa [BitVec.getLsbD_overwriteBit_self hrw] at this
+      · have hjr : r < j := Nat.lt_of_succ_le hj
+        have := h j (Nat.le_of_succ_le hj)
+        rwa [BitVec.getLsbD_overwriteBit_of_ne hjr.ne'] at this
+      · rintro ⟨hb, hD⟩ j hj
+        rcases eq_or_lt_of_le hj with rfl | hlt
+        · rw [BitVec.getLsbD_overwriteBit_self hrw]; exact hb
+        · rw [BitVec.getLsbD_overwriteBit_of_ne hlt.ne']; exact hD j hlt
+    simp only [hcond]
+    by_cases hD : (∀ j, r + 1 ≤ j → acc.getLsbD j = v.getLsbD j)
+    · simp only [eq_true hD, and_true, if_true]
+      rw [show (if true = v.getLsbD r then ((2 : ℝ≥0∞) ^ r)⁻¹ else 0)
+            + (if false = v.getLsbD r then ((2 : ℝ≥0∞) ^ r)⁻¹ else 0) = (2 ^ r)⁻¹ from by
+          cases v.getLsbD r <;> simp, harith]
+    · simp only [eq_false hD, and_false, if_false, add_zero]
+      simp
 
-/-- The choose phase of the Katz–Lindell Claim 3.11 reduction: fill `2 * n` uniform
-coins, split them into two `n`-bit messages, and force bit `i` to `0` in the first and
-`1` in the second. -/
-def chooseProg (i n : ℕ) : OracleComp coinSpec (BitVec n × BitVec n × Unit) := do
-  let w ← fillBits (2 * n) (0 : BitVec (2 * n))
-  pure ((w.extractLsb' 0 n).overwriteBit i false, (w.extractLsb' n n).overwriteBit i true, ())
+/-- Filling all `w` bits with fair coins yields the uniform distribution on `BitVec w`,
+regardless of the starting accumulator. -/
+theorem evalDist_fillBits {w : ℕ} (acc : BitVec w) :
+    𝒟[fillBits w acc] = 𝒟[($ᵗ BitVec w)] := by
+  refine evalDist_ext fun v => ?_
+  rw [probOutput_fillBits w le_rfl acc v, probOutput_uniformSample,
+    if_pos fun j hj => by rw [BitVec.getLsbD_of_ge acc j hj, BitVec.getLsbD_of_ge v j hj],
+    card_bitVec, Nat.cast_pow, Nat.cast_ofNat]
+
+/-! ## The reduction adversary -/
 
 /-- The Katz–Lindell Claim 3.11 reduction adversary `A′`: choose two uniform messages
 differing in the forced bit `i`, and forward the predictor's bit as the guess. It keeps
@@ -113,26 +157,56 @@ noncomputable def reduceAdvIdeal (A : (n : ℕ) → C n → OracleComp coinSpec 
   chooseMessages := chooseIdeal i n
   distinguish _ c := simulateQ uniformSampleImpl (A n c)
 
-/-- **(Deferred)** The coin-by-coin sampler computes the specification sampler.
-Proof plan: induction on `fillBits` showing the filled low bits are uniform and
-independent, then the pairing bijection `w ↦ (extractLsb' 0 n w, extractLsb' n n w)`
-via `probOutput_map_bijective_uniform_cross` and
-`probOutput_uniformSample_bind_uniformSample`. -/
+/-- Splitting a `2 * n`-bit vector into its low and high `n`-bit halves. -/
+def splitPair (n : ℕ) (w : BitVec (2 * n)) : BitVec n × BitVec n :=
+  (w.extractLsb' 0 n, w.extractLsb' n n)
+
+/-- The half-splitting map is a bijection `BitVec (2 * n) ≃ BitVec n × BitVec n`: distinct
+vectors differ in some bit, which lands in exactly one half, and the two spaces have equal
+cardinality `2 ^ (2 * n) = 2 ^ n * 2 ^ n`. -/
+theorem bijective_splitPair (n : ℕ) : Function.Bijective (splitPair n) := by
+  classical
+  rw [Fintype.bijective_iff_injective_and_card]
+  refine ⟨fun w1 w2 h => ?_, ?_⟩
+  · simp only [splitPair, Prod.mk.injEq] at h
+    obtain ⟨h0, hn⟩ := h
+    refine BitVec.eq_of_getLsbD_eq_iff.mpr fun j hj => ?_
+    rcases lt_or_ge j n with hjn | hjn
+    · have hcongr := congrArg (·.getLsbD j) h0
+      simpa [BitVec.getLsbD_extractLsb', hjn, Nat.zero_add] using hcongr
+    · have hi : j - n < n := by omega
+      have hcongr := congrArg (·.getLsbD (j - n)) hn
+      simp only [BitVec.getLsbD_extractLsb', hi, decide_true, Bool.true_and] at hcongr
+      rwa [show n + (j - n) = j from by omega] at hcongr
+  · rw [card_bitVec, Fintype.card_prod, card_bitVec, ← pow_add, two_mul]
+
+/-- The coin-by-coin sampler computes the specification sampler: filling `2 * n` coins and
+splitting them into the two forced messages has the same distribution as sampling two
+independent uniform messages and forcing bit `i`. The coin loop is uniform
+(`evalDist_fillBits`) and the half-splitting `splitPair` is a bijection turning one uniform
+`2 * n`-bit sample into two independent uniform `n`-bit samples. -/
 theorem evalDist_simulateQ_chooseProg (i n : ℕ) :
     𝒟[simulateQ uniformSampleImpl (chooseProg i n)] = 𝒟[chooseIdeal i n] := by
-  sorry
-
-/-- **(Deferred)** The choose phase is polynomial time. Proof plan: the machine with
-state `Fin (2*n+1) × BitVec (2*n)` (counter of remaining coins, accumulator), round
-bound `steps := .C 2 * .X`, simulation relation tying the state to the residual
-`fillBits` program (the `Examples.DynamicalSystems.XorFlips` recipe), the binary state
-encoding `finEncodingPair (finEncodingOfFinEnum _) (finEncodingBitVec _)` — linear where
-the unary `FinEnum` encoding would be exponential — and all four step witnesses from
-`Computability.EncPolyTime.ofFintype` with time bounds from
-`EncPolyTime.time_ofFintype_eval_le`. -/
-theorem isPolyTime_chooseProg (i : ℕ) :
-    OracleComp.IsPolyTime fun n (_ : Unit) => chooseProg i n := by
-  sorry
+  rw [uniformSampleImpl.evalDist_simulateQ]
+  have hstep : 𝒟[chooseProg i n] =
+      𝒟[($ᵗ BitVec (2 * n)) >>= fun w : BitVec (2 * n) =>
+        pure (BitVec.overwriteBit i false (splitPair n w).1,
+              BitVec.overwriteBit i true (splitPair n w).2, ())] := by
+    rw [show chooseProg i n = fillBits (2 * n) (0 : BitVec (2 * n)) >>= fun w : BitVec (2 * n) =>
+          pure (BitVec.overwriteBit i false (splitPair n w).1,
+                BitVec.overwriteBit i true (splitPair n w).2, ()) from rfl,
+      evalDist_bind, evalDist_bind]
+    congr 1
+    exact evalDist_fillBits _
+  rw [hstep]
+  refine evalDist_ext fun z => ?_
+  refine Eq.trans (probOutput_bind_bijective_uniform_cross (BitVec (2 * n)) (splitPair n)
+      (bijective_splitPair n)
+      (fun p : BitVec n × BitVec n =>
+        pure (BitVec.overwriteBit i false p.1, BitVec.overwriteBit i true p.2, ())) z) ?_
+  exact (probOutput_uniformSample_bind_uniformSample (BitVec n)
+      (fun p : BitVec n × BitVec n =>
+        pure (BitVec.overwriteBit i false p.1, BitVec.overwriteBit i true p.2, ())) z).symm
 
 /-! ## The probability core -/
 

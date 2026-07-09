@@ -102,6 +102,7 @@ import VCVio.Interaction.UC.StdDoBridge
 import VCVio.OracleComp.Coercions.Add
 import VCVio.OracleComp.Coercions.SubSpec
 import VCVio.OracleComp.Coinductive.Bridge
+import VCVio.OracleComp.Coinductive.CoinFold
 import VCVio.OracleComp.Coinductive.DynSystem
 import VCVio.OracleComp.Coinductive.Machine
 import VCVio.OracleComp.Coinductive.PolyTime

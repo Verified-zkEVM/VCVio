@@ -211,4 +211,27 @@ theorem length_encode_finEncodingOption_some {β : Type u} (eb : FinEncoding β)
     ((finEncodingOption eb).encode (some b)).length = (eb.encode b).length + 1 := by
   simp [finEncodingOption]
 
+/-- The boolified pair encoding has length `(card Γ₁ + card Γ₂ + 1)` times the sum of the two
+component encode-lengths: the one-hot symbol width over the combined alphabet `Γ₁ ⊕ Γ₂` times
+the concatenated encoding length. The pointwise bound for paired machine states (e.g. a counter
+paired with an accumulator). -/
+theorem length_boolify_finEncodingPair {α : Type u} {β : Type v} (ea : FinEncoding α)
+    (eb : FinEncoding β) (x : α × β) :
+    ((finEncodingPair ea eb).boolify x).length
+      = (Fintype.card ea.Γ + Fintype.card eb.Γ + 1)
+          * ((ea.encode x.1).length + (eb.encode x.2).length) := by
+  have hc : Fintype.card (finEncodingPair ea eb).Γ = Fintype.card ea.Γ + Fintype.card eb.Γ :=
+    Fintype.card_sum
+  rw [FinEncoding.length_boolify, length_encode_finEncodingPair, hc]
+
+/-- The boolified option encoding has length `(card Γ + 2)` times the option encode-length: the
+`Unit ⊕ Γ` alphabet has one more symbol than `Γ`, so the one-hot width is `card Γ + 2`. The
+pointwise bound for optional machine outputs. -/
+theorem length_boolify_finEncodingOption {β : Type v} (eb : FinEncoding β) (x : Option β) :
+    ((finEncodingOption eb).boolify x).length
+      = (Fintype.card eb.Γ + 2) * ((finEncodingOption eb).encode x).length := by
+  have hc : Fintype.card (finEncodingOption eb).Γ = Fintype.card eb.Γ + 1 :=
+    (Fintype.card_sum (α := Unit) (β := eb.Γ)).trans (by rw [Fintype.card_unit, Nat.add_comm])
+  rw [FinEncoding.length_boolify, hc]
+
 end Computability
