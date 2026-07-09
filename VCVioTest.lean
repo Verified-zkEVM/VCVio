@@ -1,2 +1,6 @@
+import VCVioTest.GrindFailFast
+import VCVioTest.LongChainPrograms
+import VCVioTest.MonadProbability
+import VCVioTest.ProbabilityTactics
 import VCVioTest.SampleableType
 import VCVioTest.Smoke

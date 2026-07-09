@@ -78,7 +78,11 @@ section prod_mk
 
 variable (mx : m α) (my : m β) (f : α → γ) (g : β → δ)
 
-@[simp high]
+/- `@[grind norm]` (not `@[grind =]`): `Seq.seq`'s thunk argument makes the LHS an invalid
+E-matching pattern, but `grind`'s simp-based normalization phase needs no pattern indexing. This
+lets bare `grind` factor an independent applicative product (and e.g. close equiprobability of a
+uniform product), which E-matching alone cannot. -/
+@[simp high, grind norm]
 lemma probOutput_seq_map_prod_mk_eq_mul (z : α × β) :
     Pr[= z | Prod.mk <$> mx <*> my] = Pr[= z.1 | mx] * Pr[= z.2 | my] :=
   probOutput_seq_map_eq_mul_of_injective2 mx my Prod.mk Prod.mk.injective2 z.1 z.2
