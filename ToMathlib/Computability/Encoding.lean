@@ -234,4 +234,56 @@ theorem length_boolify_finEncodingOption {β : Type v} (eb : FinEncoding β) (x 
     (Fintype.card_sum (α := Unit) (β := eb.Γ)).trans (by rw [Fintype.card_unit, Nat.add_comm])
   rw [FinEncoding.length_boolify, hc]
 
+/-! ## Sum Encoding -/
+
+/-- Encode a disjoint union `α ⊕ β` over the combined alphabet `Bool ⊕ ea.Γ ⊕ eb.Γ`: each value is
+prefixed with a `Bool` tag symbol (`.inl false` for a left value, `.inl true` for a right value) so
+the branch is always readable from the head, and the payload symbols land in `.inr (.inl _)` (left)
+or `.inr (.inr _)` (right). This is the two-sided generalization of `finEncodingOption` and the
+state encoding for the two-phase machine `OracleMachine.seqComp`, whose state is
+`M₁.State ⊕ M₂.State`. -/
+def finEncodingSum {α : Type u} {β : Type v} (ea : FinEncoding α) (eb : FinEncoding β) :
+    FinEncoding (α ⊕ β) where
+  Γ := Bool ⊕ ea.Γ ⊕ eb.Γ
+  encode
+    | .inl a => .inl false :: (ea.encode a).map (Sum.inr ∘ Sum.inl)
+    | .inr b => .inl true :: (eb.encode b).map (Sum.inr ∘ Sum.inr)
+  decode
+    | .inl false :: l =>
+        (ea.decode (l.filterMap fun s => (Sum.getRight? s).bind Sum.getLeft?)).map Sum.inl
+    | .inl true :: l =>
+        (eb.decode (l.filterMap fun s => (Sum.getRight? s).bind Sum.getRight?)).map Sum.inr
+    | _ => none
+  decode_encode x := by
+    cases x with
+    | inl a => simp [List.filterMap_map, Function.comp_def, ea.decode_encode]
+    | inr b => simp [List.filterMap_map, Function.comp_def, eb.decode_encode]
+  ΓFin := inferInstance
+
+@[simp] theorem length_encode_finEncodingSum_inl {α : Type u} {β : Type v} (ea : FinEncoding α)
+    (eb : FinEncoding β) (a : α) :
+    ((finEncodingSum ea eb).encode (Sum.inl a : α ⊕ β)).length = (ea.encode a).length + 1 := by
+  simp [finEncodingSum]
+
+@[simp] theorem length_encode_finEncodingSum_inr {α : Type u} {β : Type v} (ea : FinEncoding α)
+    (eb : FinEncoding β) (b : β) :
+    ((finEncodingSum ea eb).encode (Sum.inr b : α ⊕ β)).length = (eb.encode b).length + 1 := by
+  simp [finEncodingSum]
+
+/-- The boolified sum encoding has length `(card Γ₁ + card Γ₂ + 3)` times the sum encode-length: the
+`Bool ⊕ Γ₁ ⊕ Γ₂` alphabet has two more symbols than `Γ₁ ⊕ Γ₂`, so the one-hot width is
+`card Γ₁ + card Γ₂ + 3`. The pointwise bound feeding `encState_length_le` for the two-phase
+`seqComp` machine state. -/
+theorem length_boolify_finEncodingSum {α : Type u} {β : Type v} (ea : FinEncoding α)
+    (eb : FinEncoding β) (x : α ⊕ β) :
+    ((finEncodingSum ea eb).boolify x).length
+      = (Fintype.card ea.Γ + Fintype.card eb.Γ + 3) * ((finEncodingSum ea eb).encode x).length := by
+  have hc : Fintype.card (finEncodingSum ea eb).Γ = Fintype.card ea.Γ + Fintype.card eb.Γ + 2 := by
+    change Fintype.card (Bool ⊕ ea.Γ ⊕ eb.Γ) = Fintype.card ea.Γ + Fintype.card eb.Γ + 2
+    rw [Fintype.card_sum, Fintype.card_sum, Fintype.card_bool]
+    omega
+  rw [FinEncoding.length_boolify, hc,
+    show Fintype.card ea.Γ + Fintype.card eb.Γ + 2 + 1
+      = Fintype.card ea.Γ + Fintype.card eb.Γ + 3 from by omega]
+
 end Computability
