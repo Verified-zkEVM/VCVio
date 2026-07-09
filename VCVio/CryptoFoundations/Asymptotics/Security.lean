@@ -122,6 +122,41 @@ noncomputable def ofGuessGame
     (game : Adv → ℕ → ProbComp Unit) : SecurityGame Adv where
   advantage A n := ENNReal.ofReal ((game A n).guessAdvantage)
 
+/-- Build from a `Bool`-valued single-game guessing experiment.
+Advantage = the bias of the game away from a fair coin (`ProbComp.boolBiasAdvantage`). This is
+the canonical former for hidden-bit games where the experiment reports whether the adversary
+identified a secret bit. -/
+noncomputable def ofBoolGuessGame
+    (game : Adv → ℕ → ProbComp Bool) : SecurityGame Adv where
+  advantage A n := ENNReal.ofReal (game A n).boolBiasAdvantage
+
+/-- Build from a pair of `Bool`-valued distinguishing experiments.
+Advantage = the distinguishing advantage between the two games
+(`ProbComp.boolDistAdvantage`). -/
+noncomputable def ofBoolDistGame
+    (game₀ game₁ : Adv → ℕ → ProbComp Bool) : SecurityGame Adv where
+  advantage A n := ENNReal.ofReal ((game₀ A n).boolDistAdvantage (game₁ A n))
+
+/-- A hidden-bit guessing game — sample a shared prefix `a`, flip a fair coin `b` selecting one
+of two branches, and report whether the coin was guessed — is, as a `SecurityGame`, exactly the
+distinguishing game between its two branches. This lifts the pointwise identity
+`ProbComp.boolBiasAdvantage_bind_uniformBool_eq_boolDistAdvantage` to the game level, so any game
+in this coin-branch shape gets its guess/distinguish equivalence for free. -/
+theorem ofBoolGuessGame_eq_ofBoolDistGame {α : Adv → ℕ → Type}
+    (pref : (A : Adv) → (n : ℕ) → ProbComp (α A n))
+    (real rand : (A : Adv) → (n : ℕ) → α A n → ProbComp Bool) :
+    ofBoolGuessGame (fun A n => do
+        let a ← pref A n
+        let b ← ($ᵗ Bool)
+        let z ← if b then real A n a else rand A n a
+        pure (b == z)) =
+      ofBoolDistGame (fun A n => pref A n >>= real A n)
+        (fun A n => pref A n >>= rand A n) :=
+  congrArg SecurityGame.mk (funext fun A => funext fun n =>
+    congrArg ENNReal.ofReal
+      (ProbComp.boolBiasAdvantage_bind_uniformBool_eq_boolDistAdvantage
+        (pref A n) (real A n) (rand A n)))
+
 /-! ### Security reductions -/
 
 /-- Basic security reduction: if there is a map `reduce : Adv → Adv'` that

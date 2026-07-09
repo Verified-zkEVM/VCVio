@@ -61,6 +61,7 @@ import VCVio.CryptoFoundations.MerkleTree.Vector.Completeness
 import VCVio.CryptoFoundations.MerkleTree.Vector.Defs
 import VCVio.CryptoFoundations.PRF
 import VCVio.CryptoFoundations.PRG
+import VCVio.CryptoFoundations.PRGGame
 import VCVio.CryptoFoundations.ReplayFork
 import VCVio.CryptoFoundations.ReplayForkStdDo
 import VCVio.CryptoFoundations.SecExp
@@ -69,6 +70,7 @@ import VCVio.CryptoFoundations.SigmaProtocol
 import VCVio.CryptoFoundations.SignatureAlg
 import VCVio.CryptoFoundations.SymmEncAlg
 import VCVio.CryptoFoundations.SymmEncAlg.EAV
+import VCVio.CryptoFoundations.SymmEncAlg.Keystream
 import VCVio.CryptoFoundations.TweakableHash
 import VCVio.EvalDist.BitVec
 import VCVio.EvalDist.Bool

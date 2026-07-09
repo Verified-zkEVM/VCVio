@@ -64,7 +64,7 @@ theorem eavDistGame_oneTimePad_advantage_eq_zero
     (A : PPTEavAdversary (fun n => BitVec n) (fun n => BitVec n)) (n : ℕ) :
     (eavDistGame (fun m => oneTimePad m)).advantage A n = 0 := by
   have h := evalDist_privKEavFixed_oneTimePad A true false n
-  simp only [eavDistGame, ProbComp.boolDistAdvantage,
+  simp only [eavDistGame, SecurityGame.ofBoolDistGame, ProbComp.boolDistAdvantage,
     OracleComp.probOutput_congr rfl h, sub_self, abs_zero, ENNReal.ofReal_zero]
 
 /-- **The one-time pad is eavesdropping-secure**: perfect secrecy implies computational

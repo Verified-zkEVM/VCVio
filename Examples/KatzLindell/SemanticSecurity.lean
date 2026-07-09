@@ -15,6 +15,18 @@ Claim 3.12 (`exists_simulator_predict_of_eavSecure`), and Theorem 3.14
 (`eavSecure_iff_semanticallySecure`). The theorems are stated with `sorry`; the book
 itself only sketches Claim 3.12 and defers Theorem 3.14 to the literature.
 
+Beyond the book's own gaps, two concrete framework blockers keep the mechanization deferred, both
+rooted in the uniform machine model rather than in the mathematics:
+
+* **Derandomization bridge.** The simulator is a `coinSpec` program that must run the scheme's
+  probabilistic `keygen`/`encrypt` internally. There is no `ProbComp → poly-time coinSpec` bridge
+  turning an arbitrary probabilistic algorithm into a coin-oracle program; the existing
+  `SamplerMachine`/`fillBits` machinery only derandomizes uniform bitvector sampling. This is why
+  Claim 3.12 must additionally assume `SchemePolyTime π`.
+* **Ensemble ↔ two-message translation.** Both theorems require moving between the predict-a-function
+  presentation over plaintext ensembles and the two-message-choice eavesdropping game; that
+  translation (and its advantage bookkeeping) is the second half of the deferred proof.
+
 Two deliberate simplifications relative to the book, both flagged here:
 
 * Variable-length data over `{0,1}*` is modeled as fixed-length-per-parameter bitstring
@@ -81,9 +93,20 @@ def SemanticallySecure (π : (n : ℕ) → SymmEncAlg ProbComp (BitVec n) (K n) 
 /-- **Katz–Lindell Claim 3.12** (statement): for an eavesdropping-secure scheme, any
 PPT adversary receiving an encryption of a uniform plaintext has a ciphertext-free PPT
 simulator computing every polynomial-time target function with almost the same success
-probability. The book gives a proof sketch; the mechanization is deferred. -/
+probability. The book gives a proof sketch; the mechanization is deferred.
+
+The `SchemePolyTime π` hypothesis — absent from the §3.2 indistinguishability theorems, where the
+challenger runs the scheme — is genuinely needed here: the simulator is a `coinSpec` program that
+must itself run `keygen`/`encrypt` internally to fabricate a ciphertext for `A`, so those algorithms
+must be polynomial-time computable *inside a reduction*. This is exactly the concrete blocker for a
+mechanized proof: closing the `sorry` requires a `ProbComp → poly-time coinSpec` **derandomization
+bridge** turning the scheme's probabilistic algorithms into coin-oracle programs of the simulator
+(the current `SamplerMachine`/`fillBits` bridge only derandomizes uniform bitvector sampling, not an
+arbitrary `ProbComp`), together with the ensemble ↔ two-message-choice translation between this
+predict-a-function form and the eavesdropping game. -/
 theorem exists_simulator_predict_of_eavSecure
     (π : (n : ℕ) → SymmEncAlg ProbComp (BitVec n) (K n) (C n)) (hπ : EavSecure π)
+    (hπ_poly : SchemePolyTime π)
     (vl : ℕ → ℕ) (A : (n : ℕ) → C n → OracleComp coinSpec (BitVec (vl n)))
     (hA : OracleComp.IsPolyTime A) :
     ∃ A' : (n : ℕ) → Unit → OracleComp coinSpec (BitVec (vl n)),

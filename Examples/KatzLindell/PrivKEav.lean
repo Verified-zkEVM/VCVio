@@ -80,14 +80,14 @@ noncomputable def privKEavFixed (A : PPTEavAdversary M C) (b : Bool) (n : ℕ) :
 
 /-- **Katz–Lindell Definition 3.9** packaged as a `SecurityGame`: the advantage of an
 adversary is the bias of the guessing experiment away from the coin flip `1/2`. -/
-noncomputable def eavGuessGame : SecurityGame (PPTEavAdversary M C) where
-  advantage A n := ENNReal.ofReal (privKEav π A n).boolBiasAdvantage
+noncomputable def eavGuessGame : SecurityGame (PPTEavAdversary M C) :=
+  SecurityGame.ofBoolGuessGame (fun A n => privKEav π A n)
 
 /-- **Katz–Lindell Definition 3.10** packaged as a `SecurityGame`: the advantage of an
 adversary is the distinguishing advantage between the two fixed-bit branches. -/
-noncomputable def eavDistGame : SecurityGame (PPTEavAdversary M C) where
-  advantage A n := ENNReal.ofReal
-    ((privKEavFixed π A true n).boolDistAdvantage (privKEavFixed π A false n))
+noncomputable def eavDistGame : SecurityGame (PPTEavAdversary M C) :=
+  SecurityGame.ofBoolDistGame (fun A n => privKEavFixed π A true n)
+    (fun A n => privKEavFixed π A false n)
 
 /-- Definitions 3.9 and 3.10 define literally the same advantage function, hence the
 same security notion — the equivalence exercise after Katz–Lindell Definition 3.10,
@@ -111,8 +111,16 @@ theorem eavSecure_iff_distGame_secure :
 
 /-- The literal one-sided reading of Katz–Lindell Definition 3.9: for a secure scheme,
 every PPT adversary identifies the hidden bit with probability at most negligibly above
-`1/2`. (The two-sided bias form of `EavSecure` is stronger; the converse direction needs
-closure of the adversary class under output negation and is not stated.) -/
+`1/2`.
+
+The two-sided bias form of `EavSecure` is stronger, and recovering it from the one-sided
+`Pr[PrivK = 1] ≤ 1/2 + negl` reading needs the PPT adversary class closed under **output
+negation** (`distinguish ↦ !distinguish`). That closure is currently blocked at the framework
+level, not merely unstated: negating the output is an *output map* of the distinguish phase, and
+`OracleComp.IsPolyTime` is closed under output maps only for *concrete finite-state* machine
+bundles (`IsPolyTime.map_of_adversary`), whereas `PPTEavAdversary.IsPPT` exposes only the
+existential `IsPolyTime` predicate, whose machine state carries `FinEncoding` but not `Fintype`.
+The same abstract output-map gap blocks the §3.3 reduction's polynomial time. -/
 theorem exists_negligible_probOutput_privKEav_le (h : EavSecure π)
     (A : PPTEavAdversary M C) (hA : A.IsPPT) :
     ∃ f : ℕ → ℝ≥0∞, negligible f ∧

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 import VCVio.CryptoFoundations.SymmEncAlg
+import VCVio.CryptoFoundations.SymmEncAlg.Keystream
 import VCVio.OracleComp.Constructions.BitVec
 import VCVio.ProgramLogic.Tactics.Relational
 import VCVioWidgets.GameHop.Panel
@@ -104,5 +105,13 @@ ciphertext distribution. Derived from the relational `GameEquiv` proof above. -/
 @[game_hop_root]
 lemma ciphertextRowsEqual (sp : ℕ) : (oneTimePad sp).ciphertextRowsEqualAt :=
   fun msg₀ msg₁ σ => (cipherGivenMsg_equiv sp msg₀ msg₁).probOutput_eq σ
+
+/-- The one-time pad is the XOR-keystream scheme (`SymmEncAlg.keystreamEnc`) with the identity
+generator and a uniform key, exhibiting it as the degenerate PRG-encryption instance whose
+"generator" performs no stretching. -/
+lemma oneTimePad_eq_keystreamEnc (sp : ℕ) :
+    oneTimePad sp = SymmEncAlg.keystreamEnc ($ᵗ BitVec sp) (id : BitVec sp → BitVec sp) := by
+  simp only [oneTimePad, SymmEncAlg.keystreamEnc, id_eq]
+  congr 1 <;> funext k m <;> simp [BitVec.xor_comm]
 
 end oneTimePad

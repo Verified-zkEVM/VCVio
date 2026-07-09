@@ -370,8 +370,8 @@ variable (π : (n : ℕ) → SymmEncAlg ProbComp (BitVec n) (K n) (C n))
 /-- The bit-prediction game of Claim 3.11 as a `SecurityGame`: the advantage of a
 predictor at bit `i` is the bias of `predictExp` away from `1/2`. -/
 noncomputable def predictBitGame (i : ℕ) :
-    SecurityGame ((n : ℕ) → C n → OracleComp coinSpec Bool) where
-  advantage A n := ENNReal.ofReal (predictExp π A i n).boolBiasAdvantage
+    SecurityGame ((n : ℕ) → C n → OracleComp coinSpec Bool) :=
+  SecurityGame.ofBoolGuessGame (fun A n => predictExp π A i n)
 
 /-- **Katz–Lindell Claim 3.11**: if `π` has indistinguishable encryptions in the
 presence of an eavesdropper, then for every bit position `i`, no polynomial-time

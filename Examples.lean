@@ -25,6 +25,8 @@ import Examples.KatzLindell.Defs
 import Examples.KatzLindell.MachineWiring
 import Examples.KatzLindell.Negligible
 import Examples.KatzLindell.OneTimePad
+import Examples.KatzLindell.PRFEncryption
+import Examples.KatzLindell.PRGEncryption
 import Examples.KatzLindell.PrivKEav
 import Examples.KatzLindell.SamplerMachine
 import Examples.KatzLindell.SemanticSecurity
