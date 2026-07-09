@@ -6,6 +6,7 @@ Authors: Devon Tuma
 import Examples.KatzLindell.Defs
 import VCVio.CryptoFoundations.SymmEncAlg.EAV
 import VCVio.CryptoFoundations.Asymptotics.Security
+import VCVio.OracleComp.Coinductive.PolyTimeClosure
 
 /-!
 # Katz–Lindell Definitions 3.9 and 3.10: Eavesdropping Security
@@ -66,6 +67,35 @@ def PPTEavAdversary.IsPPT (A : PPTEavAdversary M C) : Prop :=
   OracleComp.IsPolyTime (fun n (_ : Unit) => A.choose n) ∧
     OracleComp.IsPolyTime (fun n (p : A.State n × C n) => A.distinguish n p)
 
+/-- Flip a two-phase eavesdropping adversary's guess: same choice phase, distinguish phase's
+output bit negated. The adversary that outputs `1 - PrivK^eav` guess. -/
+def PPTEavAdversary.negateDistinguish (A : PPTEavAdversary M C) : PPTEavAdversary M C where
+  State := A.State
+  choose := A.choose
+  distinguish n p := (fun b => !b) <$> A.distinguish n p
+
+/-- The PPT adversary class is **closed under output negation**: flipping the guess preserves
+polynomial time. This is the closure that the one-sided→two-sided reading of Definition 3.9 needs
+(see `exists_negligible_probOutput_privKEav_le`). It is discharged by the general output-map closure
+`OracleComp.IsPolyTime.map`: `Bool` is a finite output type, so the negation post-map is a finite
+table composed onto the distinguish machine's readout via `EncPolyTime.comp` — no finiteness of the
+adversary's (abstract) machine state is required. -/
+theorem PPTEavAdversary.isPPT_negateDistinguish {A : PPTEavAdversary M C} (hA : A.IsPPT) :
+    A.negateDistinguish.IsPPT := by
+  refine ⟨hA.1, OracleComp.IsPolyTime.map hA.2 (fun _ b => !b)
+    (fun _ => Computability.finEncodingOfFinEnum Bool) (Polynomial.C 9) fun n x => ?_⟩
+  show ((Computability.finEncodingOption (Computability.finEncodingOfFinEnum Bool)).boolify
+      (Option.map (fun b => !b) x)).length ≤ (Polynomial.C 9).eval n
+  rw [Polynomial.eval_C, Computability.length_boolify_finEncodingOption,
+    show Fintype.card (Computability.finEncodingOfFinEnum Bool).Γ = 1 from rfl]
+  have hL : ((Computability.finEncodingOption (Computability.finEncodingOfFinEnum Bool)).encode
+      (Option.map (fun b => !b) x)).length ≤ 3 := by
+    cases x with
+    | none => simp [Computability.finEncodingOption, Computability.finEncodingOfFinEnum]
+    | some b => cases b <;>
+        simp [Computability.finEncodingOption, Computability.finEncodingOfFinEnum] <;> decide
+  omega
+
 variable (π : (n : ℕ) → SymmEncAlg ProbComp (M n) (K n) (C n))
 
 /-- Katz–Lindell `PrivK^eav_{A,π}(n)`: the guessing experiment across the family. -/
@@ -115,12 +145,12 @@ every PPT adversary identifies the hidden bit with probability at most negligibl
 
 The two-sided bias form of `EavSecure` is stronger, and recovering it from the one-sided
 `Pr[PrivK = 1] ≤ 1/2 + negl` reading needs the PPT adversary class closed under **output
-negation** (`distinguish ↦ !distinguish`). That closure is currently blocked at the framework
-level, not merely unstated: negating the output is an *output map* of the distinguish phase, and
-`OracleComp.IsPolyTime` is closed under output maps only for *concrete finite-state* machine
-bundles (`IsPolyTime.map_of_adversary`), whereas `PPTEavAdversary.IsPPT` exposes only the
-existential `IsPolyTime` predicate, whose machine state carries `FinEncoding` but not `Fintype`.
-The same abstract output-map gap blocks the §3.3 reduction's polynomial time. -/
+negation** (`distinguish ↦ !distinguish`). That closure is now available as
+`PPTEavAdversary.isPPT_negateDistinguish`, via the general output-map closure
+`OracleComp.IsPolyTime.map`: negating the output is a `Bool` post-map, which composes onto the
+distinguish machine's readout through a finite table and needs no finiteness of the (abstract)
+machine state. Assembling the full two-sided `EavSecure` from the one-sided bound and this closure
+is the remaining probability step. -/
 theorem exists_negligible_probOutput_privKEav_le (h : EavSecure π)
     (A : PPTEavAdversary M C) (hA : A.IsPPT) :
     ∃ f : ℕ → ℝ≥0∞, negligible f ∧

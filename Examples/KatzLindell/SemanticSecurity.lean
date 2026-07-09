@@ -23,8 +23,9 @@ rooted in the uniform machine model rather than in the mathematics:
   turning an arbitrary probabilistic algorithm into a coin-oracle program; the existing
   `SamplerMachine`/`fillBits` machinery only derandomizes uniform bitvector sampling. This is why
   Claim 3.12 must additionally assume `SchemePolyTime π`.
-* **Ensemble ↔ two-message translation.** Both theorems require moving between the predict-a-function
-  presentation over plaintext ensembles and the two-message-choice eavesdropping game; that
+* **Ensemble ↔ two-message translation.** Both theorems require moving between the
+  predict-a-function presentation over plaintext ensembles and the two-message-choice
+  eavesdropping game; that
   translation (and its advantage bookkeeping) is the second half of the deferred proof.
 
 Two deliberate simplifications relative to the book, both flagged here:

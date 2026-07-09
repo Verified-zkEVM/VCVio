@@ -107,6 +107,19 @@ noncomputable def comp {f : α → β} {f' : β → γ}
   map_encode a := by
     simp only [Function.comp_apply, h.map_encode, h'.map_encode]
 
+/-- The polynomial time bound of a composition, unfolded: the first machine's polynomial plus
+the second's evaluated at the first's output-length envelope `1 + X + h.time`. -/
+theorem comp_time {f : α → β} {f' : β → γ}
+    (h : EncPolyTime ea eb f) (h' : EncPolyTime eb ec f') :
+    (h.comp h').time = h.time + h'.time.comp (1 + Polynomial.X + h.time) := rfl
+
+/-- Evaluation of the composed time bound: `h`'s cost at input length `k`, plus `h'`'s cost at the
+length `h`'s output can reach (`1 + k + h.time.eval k`). -/
+theorem comp_time_eval {f : α → β} {f' : β → γ}
+    (h : EncPolyTime ea eb f) (h' : EncPolyTime eb ec f') (k : ℕ) :
+    (h.comp h').time.eval k = h.time.eval k + h'.time.eval (1 + k + h.time.eval k) := by
+  rw [comp_time]; simp [Polynomial.eval_comp]
+
 /-- The output encoding of a polynomial-time computable function is at most polynomially
 longer than the input encoding, by `output_length_le_input_length_add_time`. -/
 theorem length_le {f : α → β} (h : EncPolyTime ea eb f) (a : α) :

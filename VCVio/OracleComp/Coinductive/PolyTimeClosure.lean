@@ -39,6 +39,30 @@ polynomial, in line with the non-uniform adversary model in the design notes of
 
 open OracleSpec Computability
 
+namespace Computability.EncPolyTime
+
+/-- The finite-table witness that `Option.map g` is polynomial-time computable relative to the
+boolified option encodings, for a function `g` on a **finite** domain. This is the post-map witness
+composed onto an adversary's `outputTM` by `PolyTimeAdversary.mapComp`: the domain finiteness is on
+the adversary's *output* type, never on its state. -/
+noncomputable def optionMap {β γ : Type} [Fintype β] (encβ : FinEncoding β)
+    (encγ : FinEncoding γ) (g : β → γ) :
+    EncPolyTime ((finEncodingOption encβ).boolify) ((finEncodingOption encγ).boolify)
+      (Option.map g) :=
+  EncPolyTime.ofFintype ((finEncodingOption encβ).boolify)
+    ((finEncodingOption encβ).boolify_injective) ((finEncodingOption encγ).boolify) (Option.map g)
+
+/-- The `optionMap` table machine runs in time linear in the input plus its longest encoded output:
+given a pointwise bound `B` on the boolified output lengths, evaluation at `k` is at most
+`k + (B + 1)`. -/
+theorem time_optionMap_eval_le {β γ : Type} [Fintype β] (encβ : FinEncoding β)
+    (encγ : FinEncoding γ) (g : β → γ) {B : ℕ}
+    (hB : ∀ x : Option β, ((finEncodingOption encγ).boolify (Option.map g x)).length ≤ B) (k : ℕ) :
+    (optionMap encβ encγ g).time.eval k ≤ k + (B + 1) :=
+  EncPolyTime.time_ofFintype_eval_le ((finEncodingOption encβ).boolify_injective) hB k
+
+end Computability.EncPolyTime
+
 variable {ι : Type} [DecidableEq ι]
 
 omit [DecidableEq ι] in
@@ -228,6 +252,99 @@ theorem map_implements {D : PolyTimeAdversary spec α β} (g : (n : ℕ) → β 
   rw [map_steps, map_M, OracleMachine.runK_setOutput, h n H x]
   simp [simulateQ_map, Functor.map_map, Function.comp]
 
+/-! ### Output-map on an abstract adversary via composition
+
+`map` above needs the machine's *state* to be a `Fintype` (it retables the whole output over the
+state). `mapComp` instead **composes** the adversary's own `outputTM` with the
+`EncPolyTime.optionMap` witness for the post-map, via `EncPolyTime.comp`. The finiteness required is
+only on the adversary's
+*output* type `β` (so `optionMap`'s table is over the finite `Option (β n)`), never on the state —
+which is exactly what lets it fire on an abstract `OracleComp.IsPolyTime` hypothesis, whose machine
+state carries only a `FinEncoding`. -/
+
+omit [∀ n, Fintype (γ n)] in
+/-- Post-compose a polynomial-time adversary with a pure output map, from a **supplied** encoded
+poly-time witness `wit n` for `Option.map (g n)` and a linear time bound on it. The machine is
+reused with its read-out post-composed with `Option.map (g n)`; the new `outputTM` is
+`(D.outputTM n).comp (wit n)`, its time bound from `EncPolyTime.comp_time_eval`. Taking the witness
+abstractly (rather than rebuilding it here) is essential: it keeps the `outputTM` field and its
+`_time_le` proof referring to the *same* term, avoiding the `Fintype`-instance mismatch that a
+re-synthesized witness triggers. No finiteness of the state — the point of this over `map`. The
+caller (`IsPolyTime.map`) supplies `EncPolyTime.optionMap` for a finite output type. -/
+noncomputable def mapComp (D : PolyTimeAdversary spec α β) (g : (n : ℕ) → β n → γ n)
+    (encOut' : (n : ℕ) → FinEncoding (γ n))
+    (wit : (n : ℕ) → EncPolyTime ((finEncodingOption (D.encOut n)).boolify)
+      ((finEncodingOption (encOut' n)).boolify) (Option.map (g n)))
+    (Sγ : Polynomial ℕ) (hwit : ∀ n k, (wit n).time.eval k ≤ k + (Sγ.eval n + 1)) :
+    PolyTimeAdversary spec α γ where
+  M n := ⟨(D.M n).toStrategy, (D.M n).init, fun s => ((D.M n).output s).map (g n)⟩
+  steps := D.steps
+  stable n := by
+    intro s c hc r
+    obtain ⟨b, hb, rfl⟩ := Option.map_eq_some_iff.mp hc
+    exact Option.map_eq_some_iff.mpr ⟨b, (D.stable n) hb r, rfl⟩
+  steady n h x := by simpa only [OracleMachine.SteadyBy, Option.isSome_map] using D.steady n h x
+  encState := D.encState
+  encIn := D.encIn
+  encOut := encOut'
+  encIface := D.encIface
+  sizeBound := D.sizeBound
+  encState_length_le := D.encState_length_le
+  initTM := D.initTM
+  exposeTM := D.exposeTM
+  updateTM := D.updateTM
+  outputTM n := (D.outputTM n).comp (wit n)
+  stepTime := 2 * D.stepTime + (.X + Sγ + .C 2)
+  initTM_time_le n k := (D.initTM_time_le n k).trans (by
+    simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_ofNat, Polynomial.eval_X,
+      Polynomial.eval_C]; omega)
+  exposeTM_time_le n k := (D.exposeTM_time_le n k).trans (by
+    simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_ofNat, Polynomial.eval_X,
+      Polynomial.eval_C]; omega)
+  updateTM_time_le n k := (D.updateTM_time_le n k).trans (by
+    simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_ofNat, Polynomial.eval_X,
+      Polynomial.eval_C]; omega)
+  outputTM_time_le n k := by
+    show Polynomial.eval k ((D.outputTM n).comp (wit n)).time ≤ _
+    rw [EncPolyTime.comp_time_eval]
+    have h1 : (D.outputTM n).time.eval k ≤ D.stepTime.eval (n + k) := D.outputTM_time_le n k
+    have h2 := hwit n (1 + k + (D.outputTM n).time.eval k)
+    have hmono : Sγ.eval n ≤ Sγ.eval (n + k) := Polynomial.eval_le_eval (Nat.le_add_right n k)
+    simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_ofNat, Polynomial.eval_X,
+      Polynomial.eval_C]
+    omega
+
+omit [∀ n, Fintype (γ n)] in
+@[simp] theorem mapComp_M (D : PolyTimeAdversary spec α β) (g : (n : ℕ) → β n → γ n)
+    (encOut' : (n : ℕ) → FinEncoding (γ n))
+    (wit : (n : ℕ) → EncPolyTime ((finEncodingOption (D.encOut n)).boolify)
+      ((finEncodingOption (encOut' n)).boolify) (Option.map (g n)))
+    (Sγ : Polynomial ℕ) (hwit : ∀ n k, (wit n).time.eval k ≤ k + (Sγ.eval n + 1)) (n : ℕ) :
+    (D.mapComp g encOut' wit Sγ hwit).M n =
+      ⟨(D.M n).toStrategy, (D.M n).init, fun s => ((D.M n).output s).map (g n)⟩ := rfl
+
+omit [∀ n, Fintype (γ n)] in
+@[simp] theorem mapComp_steps (D : PolyTimeAdversary spec α β) (g : (n : ℕ) → β n → γ n)
+    (encOut' : (n : ℕ) → FinEncoding (γ n))
+    (wit : (n : ℕ) → EncPolyTime ((finEncodingOption (D.encOut n)).boolify)
+      ((finEncodingOption (encOut' n)).boolify) (Option.map (g n)))
+    (Sγ : Polynomial ℕ) (hwit : ∀ n k, (wit n).time.eval k ≤ k + (Sγ.eval n + 1)) :
+    (D.mapComp g encOut' wit Sγ hwit).steps = D.steps := rfl
+
+omit [∀ n, Fintype (γ n)] in
+/-- The `mapComp` adversary implements the output-mapped program family, identically to `map`
+(the machine — hence its run — is the same; only the `outputTM` witness differs). -/
+theorem mapComp_implements {D : PolyTimeAdversary spec α β} (g : (n : ℕ) → β n → γ n)
+    (encOut' : (n : ℕ) → FinEncoding (γ n))
+    (wit : (n : ℕ) → EncPolyTime ((finEncodingOption (D.encOut n)).boolify)
+      ((finEncodingOption (encOut' n)).boolify) (Option.map (g n)))
+    (Sγ : Polynomial ℕ) (hwit : ∀ n k, (wit n).time.eval k ≤ k + (Sγ.eval n + 1))
+    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D.Implements oa) :
+    (D.mapComp g encOut' wit Sγ hwit).Implements fun n x => g n <$> oa n x := by
+  intro n H x
+  rw [mapComp_steps, mapComp_M, OracleMachine.runK_setOutput, h n H x]
+  simp [simulateQ_map, Functor.map_map, Function.comp]
+
 end PolyTimeAdversary
 
 /-- `OracleComp.IsPolyTime` is closed under precomposition with a pure map on
@@ -260,3 +377,26 @@ theorem OracleComp.IsPolyTime.map_of_adversary {spec : ℕ → OracleSpec.{0, 0}
     simp only [PolyTimeAdversary.map_steps]
     rw [map_eq_bind_pure_comp]
     exact isTotalQueryBound_bind (n₂ := 0) (hqb n x) fun _ => trivial⟩
+
+/-- `OracleComp.IsPolyTime` is closed under a pure **output** map on per-parameter **finite** output
+types — *without* the finite-state requirement of `map_of_adversary`, so it fires on an abstract
+`IsPolyTime` hypothesis. The witness for `Option.map (g n)` is the finite table
+`EncPolyTime.optionMap` over the finite `Option (β n)`, composed onto the (abstract) adversary's own
+`outputTM` via `EncPolyTime.comp`. This is the "then post-process the Boolean result" primitive that
+reductions such as output negation (`!`) and challenge comparison (`· == b`) need. -/
+theorem OracleComp.IsPolyTime.map {spec : ℕ → OracleSpec.{0, 0} ι}
+    {α β γ : ℕ → Type} {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
+    (hoa : OracleComp.IsPolyTime oa) (g : (n : ℕ) → β n → γ n) [∀ n, Finite (β n)]
+    (encOut' : (n : ℕ) → FinEncoding (γ n)) (Sγ : Polynomial ℕ)
+    (hbound : ∀ (n : ℕ) (x : Option (β n)),
+      ((finEncodingOption (encOut' n)).boolify (Option.map (g n) x)).length ≤ Sγ.eval n) :
+    OracleComp.IsPolyTime fun n x => g n <$> oa n x := by
+  letI : ∀ n, Fintype (β n) := fun n => Fintype.ofFinite (β n)
+  obtain ⟨D, hImp, hqb⟩ := hoa
+  refine ⟨D.mapComp g encOut'
+      (fun n => EncPolyTime.optionMap (D.encOut n) (encOut' n) (g n)) Sγ
+      (fun n k => EncPolyTime.time_optionMap_eval_le (D.encOut n) (encOut' n) (g n) (hbound n) k),
+    D.mapComp_implements g encOut' _ Sγ _ hImp, fun n x => by
+      simp only [PolyTimeAdversary.mapComp_steps]
+      rw [map_eq_bind_pure_comp]
+      exact isTotalQueryBound_bind (n₂ := 0) (hqb n x) fun _ => trivial⟩
