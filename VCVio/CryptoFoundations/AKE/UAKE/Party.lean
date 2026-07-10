@@ -65,11 +65,10 @@ variable {m : Type → Type} {In W Out : Type}
 def RecoveryDeterministic [Monad m] (P : Party m In W Out) : Prop :=
   ∀ st : P.State, ∃ out, P.output st = pure out
 
--- TODO: Fix this
 /-- True if a party outputs a final message only once the protocol is complete. -/
 def OutputsAtCompletion [MonadLiftT m SetM] (P : Party m In W Out) : Prop :=
   (∀ i r, r ∈ support (P.init i) → ∀ out ∈ support (P.output r.state), out = none) ∧
-    (∀ st w st' w' b, StepResult.acceptAndSend st' w' b ∈ support (P.step st w) →
+    (∀ st w st' w', StepResult.acceptAndSend st' w' false ∈ support (P.step st w) →
       ∀ out ∈ support (P.output st'), out = none)
 
 def runHonestLoop [Monad m] {InP OutP InQ OutQ : Type}
