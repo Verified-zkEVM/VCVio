@@ -8,12 +8,20 @@ import VCVio.CryptoFoundations.SecExp
 import VCVio.OracleComp.SimSemantics.Append
 import VCVio.OracleComp.SimSemantics.SimulateQ
 
+/-!
+# Transcript Definition for UAKE from DF'17
+
+The transcripts in DF'17 bundle messages with timestamps from a global clock
+incremented whenever a party sends a message.
+-/
+
 open OracleSpec OracleComp
 
 namespace AKE
 
 variable {W : Type}
 
+/-- A transcript is a list of messages and timestamps. -/
 structure Transcript (W : Type) where
   entries : List (W × ℕ)
 
@@ -43,6 +51,10 @@ def interleave : Bool → List (ℕ × ℕ) → List ℕ
   | _, [] => []
   | ab, (a, b) :: rest => (if ab then [a, b] else [b, a]) ++ interleave (!ab) rest
 
+/-- Def. 3 from DF'17. A pair of transcripts match (T ⊆ T*) if their messages
+   are elementwise identical and their timestamps are "interleaved" as t₁ < t₁*
+   < t₂* < t₂ < ... or t₁* < t₁ < t₂ < t₂* < ..., depending on which party
+   speaks first. -/
 def Matching (oracleLeadsFirst : Bool) (T Tstar : Transcript W) : Prop :=
   T.entries.map Prod.fst = Tstar.entries.map Prod.fst ∧
     List.IsChain (· < ·)

@@ -6,7 +6,7 @@ Authors: Ben Hamlin
 import VCVio.CryptoFoundations.AKE.UAKE.Party
 import VCVio.CryptoFoundations.AKE.UAKE.Transcript
 
-/-
+/-!
 # UAKE Core Definitions
 
 This file defines a Unilaterally Authenticated Key Exchange (UAKE) scheme from
@@ -15,6 +15,31 @@ possibly interactive scheme between two parties: A keyed party T, and an
 unkeyed party U. At the end of the protocol, both parties output a key, which
 is guaranteed to be indistinguishable from random, and T is authenticated to U
 (but not vice-versa).
+
+Model simplifications
+* **Revealing unfinished sessions:** DF'17 only allows the reveal query after
+  T's last message. We accept reveal queries at any time, but a reveal before
+  completion returns none (the session key is recorded only at completion)
+  while still marking the session revealed for the full-ping-pong check. This
+  penalizes only the adversary, and is WLOG because an early reveal returns no
+  information: any adversary making one has an equivalent adversary that defers
+  it.
+* **Rejected protocol messages:** DF'17 does not talk about what happens when a
+  protocol message is rejected, but it seems necessary to model this in real
+  protocols. We allow protocol messages to be rejected, in which case we a)
+  drop the message from the transcript and b) continue the session. Other
+  choices would be to record the message and halt the session (record and
+  continue is degenerate, since an adversary could avoid ping-pong by injecting
+  a garbage message), however allowing the adversary to retry is the
+  alternative that gives the adversary the most power, so we choose that option
+  here.
+* **WLOG protocol assumptions:** DF'17 assumes (explicitly) that T speaks last.
+  We do not enforce this in our model, nor do we enforce that a protocol has
+  the stated number of rounds. Moreover, we do not enforce that U outputs K0
+  only at completion, which DF'17 (implicitly) assumes. Such ill-formed
+  protocols will be vacuously insecure (if they are correct), because the
+  ping-pong predicate will not fire on an honest relay, allowing the trivial
+  adversary to win.
 -/
 
 open OracleSpec OracleComp
@@ -23,17 +48,18 @@ namespace AKE.UAKE
 
 variable {K UK TK W : Type}
 
-/- A UAKE scheme with a fixed number of rounds. The keyed (authenticated) party
-   is T; the unkeyed (unauthenticated) party is U. -/
+/-- A UAKE scheme with a fixed number of rounds. The keyed (authenticated) party
+  is T; the unkeyed (unauthenticated) party is U. -/
 structure Scheme (m : Type → Type) (K UK TK W : Type) where
   rounds : ℕ
   setup : m (UK × TK)
   U : Party m UK W (Option K)
   T : Party m TK W (Option K)
 
-/- The UAKE correctness experiment (Def. 7). The parties' keys are sampled
-   using the setup routine, then both parties are run honestly to completion.
-   The protocol is correct if both (honest) parties output the same key. -/
+/-- The UAKE correctness experiment (Def. 7). The parties' keys are sampled
+  using the setup routine, then both parties are run honestly to completion.
+  The protocol is correct if both (honest) parties output the same key (or
+  either party outputs ⊥). -/
 def CorrectExp [DecidableEq K] (proto : Scheme ProbComp K UK TK W) : ProbComp Bool := do
   let (uk, tk) ← proto.setup
   let (uOut, tOut) ← runHonest proto.U proto.T uk tk (proto.rounds + 1)
@@ -42,22 +68,43 @@ def CorrectExp [DecidableEq K] (proto : Scheme ProbComp K UK TK W) : ProbComp Bo
 def PerfectlyCorrect [DecidableEq K] (proto : Scheme ProbComp K UK TK W) : Prop :=
   Pr[= true | CorrectExp proto] = 1
 
+/-- The state of a single copy of the T oracle state in the UAKE security
+  experiment. -/
 structure TSession {m : Type → Type} (proto : Scheme m K UK TK W) where
+  /-- T's state -/
   state : proto.T.State
+  /-- The transcript for this session -/
   transcript : Transcript W
+  /-- The final key output by T for this session:
+    * none: Session has not yet completed
+    * some none: Session completed with T outputing ⊥
+    * some (some k): Session completed with T outputing k -/
   key : Option (Option K)
+  /-- Whether the adversary has called reveal on this session -/
   revealed : Bool
 
+/-- Challenge environment for the UAKE security experiment -/
 structure Env {m : Type → Type} (proto : Scheme m K UK TK W) where
+  /-- The global clock, incremented once for each message sent by a party -/
   clock : ℕ
+  /-- The challenge session -/
   challenge : Session proto.U.State W
+  /-- Whether the challenge session has completed -/
   challengeDone : Bool
+  /-- List of sessions the adversary has opened with copies of T -/
   tSessions : List (TSession proto)
 
+/-- Adversary's oracle operations for UAKE security experiment -/
 inductive Op (W : Type) where
+  /-- Start a new session. Returns the new session id and the initial protocol
+    message (or ⊥ if T is not the first speaker). -/
   | openT : Op W
+  /-- Increment an existing session with a given message. Returns the next
+    protocol message. -/
   | stepT : ℕ → W → Op W
+  /-- Reveal the key for this session -/
   | revealT : ℕ → Op W
+  /-- Increment the challenge session (created up front) -/
   | stepChallenge : W → Op W
 
 def oracleSpec (K W : Type) : OracleSpec (Op W)
@@ -66,6 +113,7 @@ def oracleSpec (K W : Type) : OracleSpec (Op W)
   | .revealT _ => Option K
   | .stepChallenge _ => W ⊕ Unit
 
+/-- T-Oracle logic for the UAKE experiment -/
 def oracleImpl {m : Type → Type} [Monad m] (proto : Scheme m K UK TK W) (tk : TK) :
     QueryImpl (oracleSpec K W) (StateT (Env proto) m) := fun op =>
   match op with
@@ -123,6 +171,7 @@ def oracleImpl {m : Type → Type} [Monad m] (proto : Scheme m K UK TK W) (tk : 
               set { env with clock := c1, challenge := ⟨st', tr1⟩, challengeDone := true }
               pure (.inr ())
 
+/-- An adversary in the UAKE security game -/
 structure Adversary {m : Type → Type} (proto : Scheme m K UK TK W) where
   State : Type
   challenge : UK → Option W → OracleComp (unifSpec + oracleSpec K W) State
@@ -144,10 +193,14 @@ def challengeSession {m : Type → Type} [Monad m] [MonadLiftT ProbComp m]
   pure (⟨k0.join, env.challenge.transcript, env.tSessions.map (·.transcript)⟩,
     (st, env, tk))
 
+/-- True if an oracle session matches challenge transcript, meaning that the
+  adversary is trivial: It simply relayed the oracle session in the challenge. -/
 def isPingPong [DecidableEq W] {m : Type → Type} {proto : Scheme m K UK TK W}
     (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1) cr.oracleTrs cr.challengeTr
 
+/-- True if the challenge transcript is ping-pong and the adversary called
+   reveal on the session. -/
 def fullPingPong [DecidableEq W] {m : Type → Type} {proto : Scheme m K UK TK W}
     (env : Env proto) (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1)
@@ -162,6 +215,7 @@ def finalize [DecidableEq W] {proto : Scheme ProbComp K UK TK W} (A : Adversary 
   if fullPingPong env' cr then $ᵗ Bool
   else pure (b' == b)
 
+/-- The security experiment from Sec. 3 of DF'17 -/
 def Exp [SampleableType K] [DecidableEq W] {proto : Scheme ProbComp K UK TK W}
     (A : Adversary proto) : ProbComp Bool := do
   let (uk, tk) ← proto.setup
