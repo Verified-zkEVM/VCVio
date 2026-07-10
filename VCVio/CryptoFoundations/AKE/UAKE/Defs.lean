@@ -40,6 +40,10 @@ Model simplifications
   protocols will be vacuously insecure (if they are correct), because the
   ping-pong predicate will not fire on an honest relay, allowing the trivial
   adversary to win.
+* **No 1-round protocols:** Our model can represent only ≥2-round protocols, since a
+  party's init function has no variant to indicate that it is done at that
+  stage. This is fine for UAKE, since such protocols (where only T contributes
+  to the final key) are trivially insecure (if they are correct).
 -/
 
 open OracleSpec OracleComp
