@@ -155,7 +155,7 @@ noncomputable def toyPk : PublicKey toyP := { h := 0 }
 
 /-- The (trivial) Falcon tree at FFT depth `0`. -/
 noncomputable def toyTree : FalconTree toyP.fftDepth := by
-  rw [show toyP.fftDepth = 0 from rfl]; exact FalconTree.leaf 0
+  rw [show toyP.fftDepth = 0 from rfl]; exact FalconTree.leaf 0 0 0 0
 
 /-- The honest secret key: the genuinely NTRU-valid basis `(f, g, F, G) = (1, 0, 0, q)`. -/
 noncomputable def toySk : SecretKey toyP :=

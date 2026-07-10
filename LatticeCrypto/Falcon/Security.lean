@@ -3,7 +3,7 @@ Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
-import LatticeCrypto.Falcon.Scheme
+import LatticeCrypto.Falcon.Correctness
 import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 import VCVio.EvalDist.RenyiDivergence
 import VCVio.OracleComp.Constructions.SampleableType
@@ -11,15 +11,9 @@ import VCVio.OracleComp.Constructions.SampleableType
 /-!
 # Falcon Security
 
-This file states the high-level security theorems for the Falcon signature scheme.
-
-## Scope
-
-This file states Falcon's EUF-CMA *security* result. Machine-checked verification
-correctness (`verify` accepting honest signatures) is not formalized here: it requires a
-retry-loop signer together with preimage-sampleable-function correctness
-(`s₁ + s₂ · h = c` on honest keys), the latter routing through the floating-point
-inverse-FFT rounding in `Falcon.fromFFTPreimage`.
+This file states the high-level security theorems and hardness assumptions for the
+Falcon signature scheme. Abstract signing correctness is proved in
+`LatticeCrypto.Falcon.Correctness`.
 
 ## EUF-CMA Security
 
@@ -95,107 +89,47 @@ namespace Falcon
 
 variable (p : Params) (prims : Primitives p)
 
-/-! ### Correctness -/
+/-! ### NTRU-SIS Hardness Assumptions -/
 
-/-- Falcon verification correctness: if the key pair is valid and signing produces a
-signature (does not abort), then verification accepts.
+/-- A parameterized NTRU-SIS problem: given `h ∈ R_q`, find short
+`(s₁, s₂) ∈ R_q²` satisfying `s₁ + s₂ · h = 0 mod q` with
+`‖(s₁, s₂)‖₂² ≤ bound`.
 
-The proof proceeds by induction on `maxAttempts` over the rejection loop:
+The challenge sampler is explicit because Falcon uses both the idealized uniform-`h`
+problem and the key-distributed `h` problem induced by actual key generation. -/
+noncomputable def ntruSISProblemWithSample (sampleH : ProbComp (Rq p.n)) (bound : ℕ) :
+    SIS.Problem (Rq p.n) (Rq p.n × Rq p.n) where
+  sampleChallenge := sampleH
+  isValid h x :=
+    decide (x ≠ (0, 0)) &&
+    decide (pairL2NormSq x.1 x.2 ≤ bound) &&
+    decide (x.1 + negacyclicMul x.2 h = 0)
 
-1. The compress/decompress roundtrip (`h_laws.compress_decompress` + `toRq_rqToIntPolyCentered`)
-   makes `verify` recover exactly the `s₂` that signing compressed.
-2. PSF correctness (`falconPSF_eval_trapdoorSample`) gives `s₁ + s₂ · h = c`, so `verify`'s
-   recomputed `s₁ = c - s₂ · h` matches the sampled `s₁`.
-3. The `isShort` flag that the accepting attempt passed is exactly `verify`'s `ℓ₂` norm check.
-
-This is conditional correctness: validity of the key pair (`_hvalid`) is *not* needed — `hsig`
-already ranges only over the `some`-branch of the real `Falcon.sign` rejection loop (an attempt
-where both `isShort` and `compress = some` held). Note the two-world gap (UN-1): this concerns
-`Falcon.verify`, not the GPV verify the EUF-CMA theorems use. See `docs/agents/falcon-review.md`
-(UN-1 / B2). -/
-theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p)
-    (_hvalid : validKeyPair p pk sk = true)
-    (msg : List Byte) (maxAttempts : ℕ) (sig : Signature)
-    (h_laws : Primitives.Laws prims)
-    (hsig : some sig ∈ support (Falcon.sign p prims pk sk msg maxAttempts)) :
-    Falcon.verify p prims pk msg sig = true := by
-  induction maxAttempts with
-  | zero =>
-    simp only [Falcon.sign, support_pure, Set.mem_singleton_iff] at hsig
-    exact absurd hsig (by simp)
-  | succ k ih =>
-    rw [Falcon.sign, mem_support_bind_iff] at hsig
-    obtain ⟨salt, _hsalt, hsig⟩ := hsig
-    rw [mem_support_bind_iff] at hsig
-    obtain ⟨r, hr, hsig⟩ := hsig
-    match r, hr, hsig with
-    | none, _hr, hsig => exact ih hsig
-    | some (s₁, s₂), hr, hsig =>
-      dsimp only at hsig
-      cases hcomp : prims.compress (rqToIntPolyCentered s₂) p.sbytelen with
-      | none =>
-        rw [hcomp] at hsig
-        exact ih hsig
-      | some comp =>
-        rw [hcomp] at hsig
-        simp only [support_pure, Set.mem_singleton_iff, Option.some.injEq] at hsig
-        subst hsig
-        -- Recover from `signAttempt` membership: the accepting attempt is a `trapdoorSample`
-        -- output that passed the `isShort` check.
-        set c := prims.hashToPointForPublicKey pk.h salt msg with hc
-        rw [signAttempt, mem_support_bind_iff] at hr
-        obtain ⟨x, hx, hr⟩ := hr
-        have hshort_eval :
-            (s₁, s₂) ∈ support ((falconPSF p prims).trapdoorSample pk sk c) ∧
-              (falconPSF p prims).isShort (s₁, s₂) = true := by
-          by_cases hshort : (falconPSF p prims).isShort x = true
-          · rw [if_pos hshort, support_pure, Set.mem_singleton_iff, Option.some.injEq] at hr
-            subst hr
-            exact ⟨hx, hshort⟩
-          · rw [if_neg hshort, support_pure, Set.mem_singleton_iff] at hr
-            exact absurd hr (by simp)
-        obtain ⟨hmem, hshort⟩ := hshort_eval
-        -- `eval pk (s₁, s₂) = c`, i.e. `s₁ + s₂ · h = c`, holds by construction of the sampler.
-        have heval : (falconPSF p prims).eval pk (s₁, s₂) = c :=
-          falconPSF_eval_trapdoorSample p prims pk sk c (s₁, s₂) hmem
-        -- `verify` decompresses to the same `s₂` and recomputes the same `s₁`, then runs the
-        -- same `ℓ₂` check that `isShort` already passed.
-        have hdec := h_laws.compress_decompress _ _ _ hcomp
-        unfold verify
-        simp only [hdec]
-        rw [toRq_rqToIntPolyCentered]
-        have hs1 : c - negacyclicMul s₂ pk.h = s₁ := by
-          rw [← heval]
-          change s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h = s₁
-          ext i
-          simp only [LatticeCrypto.NegacyclicRing.coeff_add,
-            LatticeCrypto.NegacyclicRing.coeff_sub]
-          ring
-        change decide (pairL2NormSq (c - negacyclicMul s₂ pk.h) s₂ ≤ p.betaSquared) = true
-        rw [hs1]
-        exact hshort
-
-/-! ### NTRU-SIS Hardness Assumption -/
-
-/-- The NTRU-SIS problem: given `h ∈ R_q` (the Falcon public key), find a short nonzero
-`(s₁, s₂) ∈ R_q²` satisfying `s₁ + s₂ · h = 0 mod q` with `‖(s₁, s₂)‖₂² ≤ 4·⌊β²⌋`.
+/-- The idealized NTRU-SIS problem: given uniform `h ∈ R_q` (the Falcon public key),
+find short `(s₁, s₂) ∈ R_q²` satisfying `s₁ + s₂ · h = 0 mod q` with
+`‖(s₁, s₂)‖₂² ≤ ⌊β²⌋`.
 
 This is the lattice problem underlying Falcon's security. It is an instance of
 the generic SIS problem where the matrix is the single-row matrix `[I | h]`
-over the cyclotomic ring `R_q = ℤ_q[x]/(x^n + 1)`.
-
-The norm target is `4·betaSquared`, not `betaSquared`: a kernel vector produced from a
-Falcon-PSF collision is the difference `x - x'` of two `β`-short preimages, so its squared
-`ℓ₂` norm is at most `(‖x‖₂ + ‖x'‖₂)² ≤ (2β)² = 4·betaSquared`. This is the target that a
-`ntruPSFCollisionProblem → ntruSISProblem` translation would produce; that translation is not
-yet formalized (the reduction in `euf_cma_security` currently terminates at
-`ntruPSFCollisionProblem`). -/
+over the cyclotomic ring `R_q = ℤ_q[x]/(x^n + 1)`. -/
 noncomputable def ntruSISProblem [SampleableType (Rq p.n)] :
-    SIS.Problem (Rq p.n) (Rq p.n × Rq p.n) where
-  sampleChallenge := $ᵗ (Rq p.n)
+    SIS.Problem (Rq p.n) (Rq p.n × Rq p.n) :=
+  ntruSISProblemWithSample p ($ᵗ (Rq p.n)) p.betaSquared
+
+/-- The key-distributed NTRU-SIS problem induced by a Falcon key generator relation.
+
+The challenge is `pk.h` for `(pk, sk)` sampled by `hr.gen`, not a uniformly sampled
+ring element. This is the direct target obtained from a Falcon PSF collision before
+adding a separate decisional/uniformity step for the public-key distribution. -/
+noncomputable def ntruKeyedSISProblem
+    (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
+    (bound : ℕ) : SIS.Problem (Rq p.n) (Rq p.n × Rq p.n) where
+  sampleChallenge := do
+    let (pk, _) ← hr.gen
+    pure pk.h
   isValid h x :=
     decide (x ≠ (0, 0)) &&
-    decide (pairL2NormSq x.1 x.2 ≤ 4 * p.betaSquared) &&
+    decide (pairL2NormSq x.1 x.2 ≤ bound) &&
     decide (x.1 + negacyclicMul x.2 h = 0)
 
 /-- The direct Falcon PSF collision problem induced by the generic GPV reduction.
@@ -217,6 +151,126 @@ noncomputable def ntruPSFCollisionProblem
     decide ((falconPSF p prims).eval pk xs.1 = (falconPSF p prims).eval pk xs.2) &&
     (falconPSF p prims).isShort xs.1 &&
     (falconPSF p prims).isShort xs.2
+
+/-- The kernel vector obtained from a collision pair. -/
+def collisionToNTRUSISSolution
+    (xs : (Rq p.n × Rq p.n) × (Rq p.n × Rq p.n)) : Rq p.n × Rq p.n :=
+  (xs.1.1 - xs.2.1, xs.1.2 - xs.2.2)
+
+/-- Turn a Falcon-PSF collision adversary into a keyed NTRU-SIS adversary with
+the `4 * betaSquared` norm bound.
+
+The adversary only receives `h`; this is enough to reconstruct `PublicKey`, whose only
+field is `h`, and then difference the two collision preimages. -/
+noncomputable def ntruPSFCollisionToKeyedSISAdversary
+    (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
+    (adv : SIS.Adversary (ntruPSFCollisionProblem p prims hr)) :
+    SIS.Adversary (ntruKeyedSISProblem p hr (4 * p.betaSquared)) :=
+  fun h => do
+    let xs ← adv ⟨h⟩
+    pure (collisionToNTRUSISSolution p xs)
+
+private theorem negacyclicMul_sub_left {n : ℕ} (a b c : Rq n) :
+    negacyclicMul (a - b) c = negacyclicMul a c - negacyclicMul b c := by
+  calc
+    negacyclicMul (a - b) c = negacyclicMul c (a - b) := by
+      simpa [negacyclicMul] using LatticeCrypto.vectorRing_mul_comm (a - b) c
+    _ = negacyclicMul c a - negacyclicMul c b := by
+      simpa [negacyclicMul] using LatticeCrypto.vectorRing_mul_sub_right c a b
+    _ = negacyclicMul a c - negacyclicMul b c := by
+      have hca : negacyclicMul c a = negacyclicMul a c := by
+        simpa [negacyclicMul] using LatticeCrypto.vectorRing_mul_comm c a
+      have hcb : negacyclicMul c b = negacyclicMul b c := by
+        simpa [negacyclicMul] using LatticeCrypto.vectorRing_mul_comm c b
+      rw [hca, hcb]
+
+/-- A valid Falcon-PSF collision yields a valid solution to the key-distributed
+NTRU-SIS problem at bound `4 * betaSquared`.
+
+The algebraic kernel equation comes from subtracting the equal PSF images. The norm
+bound is the centered-residue `ℓ₂` triangle inequality: if both preimages are
+`betaSquared`-short, then their difference has squared norm at most `4 * betaSquared`. -/
+theorem ntruPSFCollision_to_keyedSIS_valid
+    (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
+    (pk : PublicKey p) (xs : (Rq p.n × Rq p.n) × (Rq p.n × Rq p.n))
+    (hvalid : (ntruPSFCollisionProblem p prims hr).isValid pk xs = true) :
+    (ntruKeyedSISProblem p hr (4 * p.betaSquared)).isValid pk.h
+      (collisionToNTRUSISSolution p xs) = true := by
+  rcases xs with ⟨x, y⟩
+  rcases x with ⟨x₁, x₂⟩
+  rcases y with ⟨y₁, y₂⟩
+  simp only [ntruPSFCollisionProblem, falconPSF, Bool.and_eq_true, decide_eq_true_eq] at hvalid
+  rcases hvalid with ⟨⟨⟨hne, heval⟩, hxshort⟩, hyshort⟩
+  simp only [ntruKeyedSISProblem, collisionToNTRUSISSolution, Bool.and_eq_true,
+    decide_eq_true_eq]
+  constructor
+  · constructor
+    · intro hzero
+      apply hne
+      simp only [Prod.mk.injEq] at hzero ⊢
+      have sub_eq_zero_poly {a b : Rq p.n} (h : a - b = 0) : a = b := by
+        ext i
+        have hi := congrArg (fun z : Rq p.n => (coeffRing p.n).backend.coeff z i) h
+        simp only [LatticeCrypto.NegacyclicRing.coeff_sub,
+          LatticeCrypto.NegacyclicRing.coeff_zero] at hi
+        exact sub_eq_zero.mp hi
+      exact ⟨sub_eq_zero_poly hzero.1, sub_eq_zero_poly hzero.2⟩
+    · have hnorm :=
+        LatticeCrypto.pairL2NormSq_sub_le_two_mul_add
+          (q := modulus) (n := p.n) (x₁, x₂) (y₁, y₂)
+      have hnorm' :
+          LatticeCrypto.pairL2NormSq (x₁ - y₁) (x₂ - y₂) ≤
+            2 * (LatticeCrypto.pairL2NormSq x₁ x₂ +
+              LatticeCrypto.pairL2NormSq y₁ y₂) := by
+        simpa using hnorm
+      change LatticeCrypto.pairL2NormSq (x₁ - y₁) (x₂ - y₂) ≤ 4 * p.betaSquared
+      change LatticeCrypto.pairL2NormSq x₁ x₂ ≤ p.betaSquared at hxshort
+      change LatticeCrypto.pairL2NormSq y₁ y₂ ≤ p.betaSquared at hyshort
+      nlinarith
+  · rw [negacyclicMul_sub_left]
+    ext i
+    have hcoeff := congrArg (fun z : Rq p.n => (coeffRing p.n).backend.coeff z i) heval
+    simp only [LatticeCrypto.NegacyclicRing.coeff_add,
+      LatticeCrypto.NegacyclicRing.coeff_sub, LatticeCrypto.NegacyclicRing.coeff_zero] at hcoeff ⊢
+    have hsub :
+        (coeffRing p.n).backend.coeff x₁ i +
+            (coeffRing p.n).backend.coeff (negacyclicMul x₂ pk.h) i -
+          ((coeffRing p.n).backend.coeff y₁ i +
+            (coeffRing p.n).backend.coeff (negacyclicMul y₂ pk.h) i) = 0 :=
+      sub_eq_zero.mpr hcoeff
+    simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hsub
+
+/-- Advantage bridge: the keyed NTRU-SIS adversary built from a Falcon-PSF collision adversary
+wins with at least the collision adversary's advantage.
+
+Both experiments draw the key pair from `hr.gen` and run the *same* collision adversary on the
+*same* public key (`⟨pk.h⟩ = pk`, as `PublicKey` has a single field); the keyed experiment then
+differences the output. Every valid collision differences to a valid keyed-SIS solution
+(`ntruPSFCollision_to_keyedSIS_valid`), so the keyed win event contains the collision win event
+pointwise, giving the inequality. -/
+theorem ntruPSFCollision_advantage_le_keyedSIS
+    (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
+    (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr)) :
+    SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction ≤
+      SIS.advantage (ntruKeyedSISProblem p hr (4 * p.betaSquared))
+        (ntruPSFCollisionToKeyedSISAdversary p prims hr collisionReduction) := by
+  unfold SIS.advantage SIS.experiment
+  -- Unfold only the challenge samplers and the reduction adversary, keeping `isValid` folded.
+  have hsc_c : (ntruPSFCollisionProblem p prims hr).sampleChallenge
+      = (hr.gen >>= fun x => pure x.1) := rfl
+  have hsc_k : (ntruKeyedSISProblem p hr (4 * p.betaSquared)).sampleChallenge
+      = (hr.gen >>= fun x => pure x.1.h) := rfl
+  rw [hsc_c, hsc_k]
+  simp only [ntruPSFCollisionToKeyedSISAdversary, bind_assoc, pure_bind]
+  -- Common prefix `hr.gen >>= collisionReduction`; `⟨x.1.h⟩ = x.1` by structure eta.
+  refine probOutput_bind_mono fun x _hx => ?_
+  refine probOutput_bind_mono fun xs _hxs => ?_
+  by_cases hC : (ntruPSFCollisionProblem p prims hr).isValid x.1 xs = true
+  · have hK := ntruPSFCollision_to_keyedSIS_valid p prims hr x.1 xs hC
+    rw [hC, hK]
+  · rw [Bool.not_eq_true] at hC
+    rw [hC, probOutput_pure]
+    simp
 
 /-! ### Sampler Quality Hypotheses -/
 
@@ -447,6 +501,68 @@ theorem euf_cma_security
     collisionFindingAdvantage_eq_ntruPSF p prims idealPSF hr hEval hShort cRed
   rw [← hbridge]
   exact le_trans hAdvLe (by gcongr)
+
+/-- EUF-CMA security expressed against the **key-distributed NTRU-SIS** problem (norm bound
+`4 · betaSquared`), obtained by composing `euf_cma_security` with the collision→keyed-SIS
+advantage bridge `ntruPSFCollision_advantage_le_keyedSIS`.
+
+The reduction now terminates at `ntruKeyedSISProblem` — finding a short nonzero kernel vector for
+the Falcon public key's `[I | h]` lattice — the standard lattice target, at the `4 · betaSquared`
+bound that a difference of two `β`-short preimages achieves. The bound is otherwise identical to
+`euf_cma_security` (only the first summand is replaced, using that the keyed adversary wins
+whenever the collision adversary does). -/
+theorem euf_cma_security_ntruSIS
+    (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
+    [SampleableType (Rq p.n)] [Inhabited (Rq p.n)]
+    (hr : GenerableRelation (PublicKey p) (SecretKey p)
+      (validKeyPair p))
+    (qSign qHash : ℕ)
+    (samplerLoss : ENNReal)
+    (adv : SignatureAlg.unforgeableAdv
+      (falconSignatureAlg p prims Salt hr))
+    (idealPSF : PreimageSampleableFunction
+      (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
+    (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
+    (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
+    (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
+    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
+      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+        𝒟[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
+              : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
+        𝒟[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
+              : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))])
+    (hNeverFail : ∀ pk sk, (pk, sk) ∈ support hr.gen →
+      ∀ c, NeverFail (idealPSF.trapdoorSample pk sk c))
+    (hTransport : ∃ adv' : SignatureAlg.unforgeableAdv
+        (GPVHashAndSign idealPSF hr (List Byte) Salt),
+      adv.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) ≤
+          adv'.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) +
+            samplerLoss ∧
+        (∀ ds, GPVHashAndSign.ForgesQueriedPoint idealPSF hr (List Byte) Salt adv' ds) ∧
+        (∀ pk, GPVHashAndSign.signHashQueryBound
+          (M := List Byte) (Salt := Salt) (Range := Rq p.n)
+          (S' := Salt × (Rq p.n × Rq p.n))
+          (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv'.main pk)
+          (qSign := qSign) (qHash := qHash))) :
+    ∃ (keyedReduction : SIS.Adversary (ntruKeyedSISProblem p hr (4 * p.betaSquared)))
+      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
+        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
+      adv.advantage
+          (GPVHashAndSign.runtime
+            (Range := Rq p.n) (List Byte) Salt) ≤
+        SIS.advantage (ntruKeyedSISProblem p hr (4 * p.betaSquared)) keyedReduction +
+        ((qSign + qHash : ℕ) : ENNReal) *
+          GPVHashAndSign.programmedPreimageAdvantage
+            idealPSF hr exactMatchReduction +
+        GPVHashAndSign.collisionBound Salt qSign qHash +
+        samplerLoss := by
+  obtain ⟨cRed, eRed, hbound⟩ :=
+    euf_cma_security p prims Salt hr qSign qHash samplerLoss adv idealPSF
+      hEval hShort hCorrect hReg hNeverFail hTransport
+  refine ⟨ntruPSFCollisionToKeyedSISAdversary p prims hr cRed, eRed, ?_⟩
+  refine le_trans hbound ?_
+  gcongr
+  exact ntruPSFCollision_advantage_le_keyedSIS p prims hr cRed
 
 /-- Concrete instantiation of `euf_cma_security` with the Falcon-specified 40-byte
 (320-bit) salt.
