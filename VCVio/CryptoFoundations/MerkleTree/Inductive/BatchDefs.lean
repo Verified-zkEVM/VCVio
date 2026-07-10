@@ -1,5 +1,5 @@
 /-
-Copyright (c) 2026 The Institute for Ontological Mathematics / Equation Capital dba Apoth3osis. All rights reserved.
+Copyright (c) 2026 IAOM / Equation Capital dba Apoth3osis. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Abraxas1010 (IAOM / Apoth3osis)
 -/
