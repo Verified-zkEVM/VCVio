@@ -46,7 +46,7 @@ open OracleSpec OracleComp
 
 namespace AKE.UAKE
 
-variable {K UK TK W : Type}
+variable {K UK TK W : Type} {m : Type → Type}
 
 /-- A UAKE scheme with a fixed number of rounds. The keyed (authenticated) party
   is T; the unkeyed (unauthenticated) party is U. -/
@@ -60,17 +60,18 @@ structure Scheme (m : Type → Type) (K UK TK W : Type) where
   using the setup routine, then both parties are run honestly to completion.
   The protocol is correct if both (honest) parties output the same key (or
   either party outputs ⊥). -/
-def CorrectExp [DecidableEq K] (proto : Scheme ProbComp K UK TK W) : ProbComp Bool := do
+def CorrectExp [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W) : m Bool := do
   let (uk, tk) ← proto.setup
-  let (uOut, tOut) ← runHonest proto.U proto.T uk tk (proto.rounds + 1)
+  let (uOut, tOut) ← proto.U.runHonest proto.T uk tk (proto.rounds + 1)
   return decide (uOut.join = none ∨ tOut.join = none ∨ uOut.join = tOut.join)
 
-def PerfectlyCorrect [DecidableEq K] (proto : Scheme ProbComp K UK TK W) : Prop :=
+def PerfectlyCorrect [DecidableEq K] [Monad m] [MonadLiftT m SPMF]
+    (proto : Scheme m K UK TK W) : Prop :=
   Pr[= true | CorrectExp proto] = 1
 
 /-- The state of a single copy of the T oracle state in the UAKE security
   experiment. -/
-structure TSession {m : Type → Type} (proto : Scheme m K UK TK W) where
+structure TSession (proto : Scheme m K UK TK W) where
   /-- T's state -/
   state : proto.T.State
   /-- The transcript for this session -/
@@ -84,7 +85,7 @@ structure TSession {m : Type → Type} (proto : Scheme m K UK TK W) where
   revealed : Bool
 
 /-- Challenge environment for the UAKE security experiment -/
-structure Env {m : Type → Type} (proto : Scheme m K UK TK W) where
+structure Env (proto : Scheme m K UK TK W) where
   /-- The global clock, incremented once for each message sent by a party -/
   clock : ℕ
   /-- The challenge session -/
@@ -113,8 +114,9 @@ def oracleSpec (K W : Type) : OracleSpec (Op W)
   | .revealT _ => Option K
   | .stepChallenge _ => W ⊕ Unit
 
-/-- T-Oracle logic for the UAKE experiment -/
-def oracleImpl {m : Type → Type} [Monad m] (proto : Scheme m K UK TK W) (tk : TK) :
+/-- Logic for the UAKE experiment's `Op` queries: the T-session and
+  challenge-session oracles. -/
+def opImpl [Monad m] (proto : Scheme m K UK TK W) (tk : TK) :
     QueryImpl (oracleSpec K W) (StateT (Env proto) m) := fun op =>
   match op with
   | .openT => do
@@ -171,55 +173,63 @@ def oracleImpl {m : Type → Type} [Monad m] (proto : Scheme m K UK TK W) (tk : 
               set { env with clock := c1, challenge := ⟨st', tr1⟩, challengeDone := true }
               pure (.inr ())
 
+/-- Full oracle for the UAKE experiment. `unifSpec` queries (the adversary's
+  coin flips) are forwarded to the ambient monad; the remaining queries are
+  handled by `opImpl`. -/
+def oracleImpl [Monad m] [MonadLiftT ProbComp m] (proto : Scheme m K UK TK W) (tk : TK) :
+    QueryImpl (unifSpec + oracleSpec K W) (StateT (Env proto) m) :=
+  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget (StateT (Env proto) m)
+    + opImpl proto tk
+
 /-- An adversary in the UAKE security game -/
-structure Adversary {m : Type → Type} (proto : Scheme m K UK TK W) where
+structure Adversary (proto : Scheme m K UK TK W) where
   State : Type
   challenge : UK → Option W → OracleComp (unifSpec + oracleSpec K W) State
   post : State → Option K → OracleComp (unifSpec + oracleSpec K W) Bool
 
-structure ChallengeResult {m : Type → Type} (proto : Scheme m K UK TK W) where
+structure ChallengeResult (proto : Scheme m K UK TK W) where
   K0 : Option K
   challengeTr : Transcript W
   oracleTrs : List (Transcript W)
 
-def challengeSession {m : Type → Type} [Monad m] [MonadLiftT ProbComp m]
+def challengeSession [Monad m] [MonadLiftT ProbComp m]
     {proto : Scheme m K UK TK W} (A : Adversary proto) (uk : UK) (tk : TK) :
     m (ChallengeResult proto × (A.State × Env proto × TK)) := do
   let u0 ← (proto.U.init uk : m _)
   let (tr0, c0) := recordOpt ⟨[]⟩ u0.opening 0
   let init : Env proto := ⟨c0, ⟨u0.state, tr0⟩, false, []⟩
-  let (st, env) ← (simulateQ (withUnif (oracleImpl proto tk)) (A.challenge uk u0.opening)).run init
+  let (st, env) ← (simulateQ (oracleImpl proto tk) (A.challenge uk u0.opening)).run init
   let k0 ← (proto.U.output env.challenge.state : m _)
   pure (⟨k0.join, env.challenge.transcript, env.tSessions.map (·.transcript)⟩,
     (st, env, tk))
 
 /-- True if an oracle session matches challenge transcript, meaning that the
   adversary is trivial: It simply relayed the oracle session in the challenge. -/
-def isPingPong [DecidableEq W] {m : Type → Type} {proto : Scheme m K UK TK W}
+def isPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
     (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1) cr.oracleTrs cr.challengeTr
 
 /-- True if the challenge transcript is ping-pong and the adversary called
    reveal on the session. -/
-def fullPingPong [DecidableEq W] {m : Type → Type} {proto : Scheme m K UK TK W}
+def fullPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
     (env : Env proto) (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1)
     ((env.tSessions.filter (·.revealed)).map (·.transcript)) cr.challengeTr
 
-def finalize [DecidableEq W] {proto : Scheme ProbComp K UK TK W} (A : Adversary proto)
+def finalize [DecidableEq W] [Monad m] [MonadLiftT ProbComp m]
+    {proto : Scheme m K UK TK W} (A : Adversary proto)
     (st : A.State × Env proto × TK) (cr : ChallengeResult proto) (b : Bool) (K1 : Option K) :
-    ProbComp Bool := do
+    m Bool := do
   let (aSt, env, tk) := st
   let Kb := if b then K1 else cr.K0
-  let (b', env') ← (simulateQ (withUnif (oracleImpl proto tk)) (A.post aSt Kb)).run env
-  if fullPingPong env' cr then $ᵗ Bool
-  else pure (b' == b)
+  let (b', env') ← (simulateQ (oracleImpl proto tk) (A.post aSt Kb)).run env
+  if fullPingPong env' cr then liftM ($ᵗ Bool) else pure (b' == b)
 
 /-- The security experiment from Sec. 3 of DF'17 -/
-def Exp [SampleableType K] [DecidableEq W] {proto : Scheme ProbComp K UK TK W}
-    (A : Adversary proto) : ProbComp Bool := do
+def Exp [SampleableType K] [DecidableEq W] [Monad m] [MonadLiftT ProbComp m]
+    {proto : Scheme m K UK TK W} (A : Adversary proto) : m Bool := do
   let (uk, tk) ← proto.setup
-  let b ← $ᵗ Bool
+  let b ← ($ᵗ Bool : ProbComp Bool)
   let (cr, st) ← challengeSession A uk tk
   if cr.K0.isNone then
     let K1 := none
@@ -227,11 +237,12 @@ def Exp [SampleableType K] [DecidableEq W] {proto : Scheme ProbComp K UK TK W}
   else if !isPingPong cr then
     return true
   else
-    let K1 ← some <$> ($ᵗ K)
+    let K1 ← some <$> ($ᵗ K : ProbComp K)
     finalize A st cr b K1
 
-noncomputable def advantage [SampleableType K] [DecidableEq W]
-    {proto : Scheme ProbComp K UK TK W} (A : Adversary proto) : ℝ :=
+noncomputable def advantage [SampleableType K] [DecidableEq W] [Monad m]
+    [MonadLiftT ProbComp m] [MonadLiftT m SPMF] {proto : Scheme m K UK TK W}
+    (A : Adversary proto) : ℝ :=
   |(Pr[= true | Exp A]).toReal - 1 / 2|
 
 end AKE.UAKE

@@ -3,10 +3,7 @@ Copyright (c) 2026 Galois Inc. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
-import VCVio.CryptoFoundations.AKE.UAKE.Party
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.SimulateQ
+import Mathlib.Data.List.Chain
 
 /-!
 # Transcript Definition for UAKE from DF'17
@@ -15,9 +12,7 @@ The transcripts in DF'17 bundle messages with timestamps from a global clock
 incremented whenever a party sends a message.
 -/
 
-open OracleSpec OracleComp
-
-namespace AKE
+namespace AKE.UAKE
 
 variable {W : Type}
 
@@ -76,39 +71,4 @@ def recordOpt (tr : Transcript W) : Option W → ℕ → Transcript W × ℕ
   | none, clock => (tr, clock)
   | some w, clock => recordOne tr w clock
 
-def withUnif {m : Type → Type} [Monad m] [MonadLiftT ProbComp m]
-    {ι : Type} {customSpec : OracleSpec ι} {σ : Type}
-    (customImpl : QueryImpl customSpec (StateT σ m)) :
-    QueryImpl (unifSpec + customSpec) (StateT σ m) :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget (StateT σ m)
-    + customImpl
-
-def runHonestLoop {m : Type → Type} [Monad m] {InP OutP InQ OutQ : Type}
-    (P : Party m InP W OutP) (Q : Party m InQ W OutQ) :
-    ℕ → P.State → Q.State → W → Bool → m (P.State × Q.State)
-  | 0, pState, qState, _, _ => pure (pState, qState)
-  | fuel + 1, pState, qState, w, true => do
-      match ← Q.step qState w with
-      | .acceptAndSend qState' w' _ => runHonestLoop P Q fuel pState qState' w' false
-      | .complete qState' => pure (pState, qState')
-      | .reject => pure (pState, qState)
-  | fuel + 1, pState, qState, w, false => do
-      match ← P.step pState w with
-      | .acceptAndSend pState' w' _ => runHonestLoop P Q fuel pState' qState w' true
-      | .complete pState' => pure (pState', qState)
-      | .reject => pure (pState, qState)
-
-def runHonest {m : Type → Type} [Monad m] {InP OutP InQ OutQ : Type}
-    (P : Party m InP W OutP) (Q : Party m InQ W OutQ) (inP : InP) (inQ : InQ) (fuel : ℕ) :
-    m (Option OutP × Option OutQ) := do
-  let pInit ← P.init inP
-  let qInit ← Q.init inQ
-  let (pState', qState') ← match pInit.opening, qInit.opening with
-    | some w, _ => runHonestLoop P Q fuel pInit.state qInit.state w true
-    | none, some w => runHonestLoop P Q fuel pInit.state qInit.state w false
-    | none, none => pure (pInit.state, qInit.state)
-  let pOut ← P.output pState'
-  let qOut ← Q.output qState'
-  pure (pOut, qOut)
-
-end AKE
+end AKE.UAKE

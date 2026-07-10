@@ -20,7 +20,9 @@ function produces output only at the end.
 
 open OracleSpec OracleComp
 
-namespace AKE
+namespace AKE.UAKE
+
+namespace Party
 
 /-- Result of a party's init function -/
 inductive InitResult (State W : Type)
@@ -45,27 +47,59 @@ inductive StepResult (State W : Type)
   | complete (state : State) : StepResult State W
   | reject : StepResult State W
 
+end Party
+
 /-- A party, structured as a Mealy machine with a final output function. -/
 structure Party (m : Type → Type) (In W Out : Type) where
   State : Type
-  init : In → m (InitResult State W)
-  step : State → W → m (StepResult State W)
+  init : In → m (Party.InitResult State W)
+  step : State → W → m (Party.StepResult State W)
   output : State → m (Option Out)
 
 namespace Party
 
+variable {m : Type → Type} {In W Out : Type}
+
 /-- True if the final output message of a party is deterministic given the
    state. I.e., all non-determinism is in the init and step functions. -/
-def RecoveryDeterministic {In W Out : Type} (P : Party ProbComp In W Out) : Prop :=
-  ∀ st : P.State, ∃ m, P.output st = pure m
+def RecoveryDeterministic [Monad m] (P : Party m In W Out) : Prop :=
+  ∀ st : P.State, ∃ out, P.output st = pure out
 
 -- TODO: Fix this
 /-- True if a party outputs a final message only once the protocol is complete. -/
-def OutputsAtCompletion {In W Out : Type} (P : Party ProbComp In W Out) : Prop :=
-  (∀ i r, r ∈ support (P.init i) → ∀ m ∈ support (P.output r.state), m = none) ∧
+def OutputsAtCompletion [MonadLiftT m SetM] (P : Party m In W Out) : Prop :=
+  (∀ i r, r ∈ support (P.init i) → ∀ out ∈ support (P.output r.state), out = none) ∧
     (∀ st w st' w' b, StepResult.acceptAndSend st' w' b ∈ support (P.step st w) →
-      ∀ m ∈ support (P.output st'), m = none)
+      ∀ out ∈ support (P.output st'), out = none)
+
+def runHonestLoop [Monad m] {InP OutP InQ OutQ : Type}
+    (P : Party m InP W OutP) (Q : Party m InQ W OutQ) :
+    ℕ → P.State → Q.State → W → Bool → m (P.State × Q.State)
+  | 0, pState, qState, _, _ => pure (pState, qState)
+  | fuel + 1, pState, qState, w, true => do
+      match ← Q.step qState w with
+      | .acceptAndSend qState' w' _ => runHonestLoop P Q fuel pState qState' w' false
+      | .complete qState' => pure (pState, qState')
+      | .reject => pure (pState, qState)
+  | fuel + 1, pState, qState, w, false => do
+      match ← P.step pState w with
+      | .acceptAndSend pState' w' _ => runHonestLoop P Q fuel pState' qState w' true
+      | .complete pState' => pure (pState', qState)
+      | .reject => pure (pState, qState)
+
+def runHonest [Monad m] {InP OutP InQ OutQ : Type}
+    (P : Party m InP W OutP) (Q : Party m InQ W OutQ) (inP : InP) (inQ : InQ) (fuel : ℕ) :
+    m (Option OutP × Option OutQ) := do
+  let pInit ← P.init inP
+  let qInit ← Q.init inQ
+  let (pState', qState') ← match pInit.opening, qInit.opening with
+    | some w, _ => runHonestLoop P Q fuel pInit.state qInit.state w true
+    | none, some w => runHonestLoop P Q fuel pInit.state qInit.state w false
+    | none, none => pure (pInit.state, qInit.state)
+  let pOut ← P.output pState'
+  let qOut ← Q.output qState'
+  pure (pOut, qOut)
 
 end Party
 
-end AKE
+end AKE.UAKE
