@@ -335,9 +335,7 @@ private lemma simulatedNmaUnifSim_fsUniform_run
       exact bind_congr (m := ProbComp) fun u ↦ ih u cache
 
 omit [SampleableType Stmt] [SampleableType Wit] [SampleableType Chal] [Finite Chal] in
-set_option linter.overlappingInstances false in
 private def cmaSimLoggedLeftOrnament
-    [Finite Chal]
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (pk : Stmt) (sk : Wit) :

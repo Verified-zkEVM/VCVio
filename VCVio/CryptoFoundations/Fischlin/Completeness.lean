@@ -405,13 +405,11 @@ private lemma fischlinSearch_run'_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
             (hfresh ω' (List.mem_cons_of_mem _ hω') r)
         exact ih (List.nodup_cons.mp hcs).2 _ _ hfresh'
 
-set_option linter.overlappingInstances false in
 /-- The random-oracle record that the Fischlin verifier re-queries for the transcript projected
 from a search result `p : Option (Chal × Resp)`. On `none` (an unreachable branch when the
 challenge list is nonempty, since the search always keeps a best) we return a dummy `default`
 record; it is never consulted in the games below. -/
 private def searchRecord (pk : Stmt) (msg : M) (comList : List Commit) (i : Fin ρ)
-    [Inhabited Chal] [Inhabited Resp]
     (p : Option (Chal × Resp)) : FischlinROInput Stmt Commit Chal Resp ρ M :=
   match p with
   | some (ω, resp) => ⟨pk, msg, comList, i, ω, resp⟩

@@ -1407,7 +1407,6 @@ private theorem probEvent_forkReplay_fst_eq_probEvent_pair [IsUniformSpec spec]
       x₁ x₂ (by simpa using hr) with ⟨t, h₁, h₂⟩
     simp [h₁, h₂]
 
-set_option linter.overlappingInstances false in
 /-- Reachability hypothesis on the fork-index selector `cf`: whenever the first run
 of `main` outputs `x` and the recorded log is `log`, every selected fork index
 `s = cf x` actually corresponds to an `i`-query in `log` (i.e. the `s`-th `i`-query
@@ -1415,7 +1414,7 @@ exists in the log). This is needed for the replay forking lemma because, unlike
 the seeded variant, `forkReplay`'s second run cannot fork at a position the first
 run never reached. In FiatShamir-style applications `cf` extracts the index of a
 recorded query, so this property holds by construction. -/
-def CfReachable [spec.DecidableEq] (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+def CfReachable (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) : Prop :=
   ∀ {x : α} {log : QueryLog spec},
     (x, log) ∈ support (replayFirstRun main) →
