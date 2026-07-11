@@ -83,7 +83,7 @@ require cslib from git
 
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "38762c36f6da94331a381bd3efd43720203bbea1"
+  "e66224b265f0fa4b8370b2802e2f45922b3ed8a6"
 
 require "leanprover-community" / "mathlib" @ git "v4.31.0"
 
@@ -100,6 +100,12 @@ lean_lib LatticeCrypto
 Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but nothing in
 `VCVio`/`ToMathlib`/`FFI`/`Interop` may import it. -/
 lean_lib HashSig
+
+/-- Formalization of Katz–Lindell's *Introduction to Modern Cryptography* (3rd edition),
+structured chapter-by-chapter as a thin layer over the `PolyFun`-backed game framework in
+`VCVio.CryptoFoundations`. Peer of `HashSig`; may depend on `VCVio`/`ToMathlib`/`Examples`,
+but nothing in those libraries may import it. -/
+lean_lib KatzLindell
 
 /-- Example constructions of cryptographic primitives. -/
 lean_lib Examples

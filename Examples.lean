@@ -23,7 +23,6 @@ import Examples.EvalDistCompatible.Basic
 import Examples.FrankingProtocol
 import Examples.KatzLindell.Defs
 import Examples.KatzLindell.MachineWiring
-import Examples.KatzLindell.Negligible
 import Examples.KatzLindell.OneTimePad
 import Examples.KatzLindell.PRFEncryption
 import Examples.KatzLindell.PRGEncryption
