@@ -11,6 +11,11 @@
 third_party/**/target/
 third_party/**/Cargo.lock
 
+# Local reference books (kept on disk for reading, never committed; tracked
+# reference PDFs live under `references/`)
+/introduction_to_modern_cryptography.pdf
+/spivak-niu.pdf
+
 # LaTeX compilation files
 *.aux
 *.paux
