@@ -152,14 +152,8 @@ theorem zeroGame_advantage_toMachineGame
     (n : ℕ) :
     (zeroGame.toMachineGame (BoundaryData.coin BitEncFam.unit BitEncFam.bool)).advantage
       D n = 0 := by
-  have h : (zeroGame.toMachineGame
-        (BoundaryData.coin BitEncFam.unit BitEncFam.bool)).advantage D n =
-      ((D.exec n (QueryImpl.stateless Unit fairCoin) ()).run () >>= fun _ =>
-        (pure false : SPMF Bool)) true := by
-    simp only [Challenger.toMachineGame, zeroGame, Challenger.ofProbHandler, map_pure,
-      pure_bind]
-    rfl
-  rw [h, SPMF.bind_apply_eq_tsum]
+  simp only [zeroGame, Challenger.advantage_toMachineGame_ofProbHandler, pure_bind]
+  rw [SPMF.bind_apply_eq_tsum]
   simp [SPMF.pure_apply]
 
 /-- An unconditional end-to-end security instance: the unwinnable game is secure

@@ -4,30 +4,33 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
 import VCVio.CryptoFoundations.Asymptotics.PolyTime
-import VCVio.OracleComp.Coinductive.WireK
+import VCVio.OracleComp.Coinductive.WiredRun
 
 /-!
-# Single-Phase Games as Stateful Kleisli Challengers
+# Single-Phase Games as Dynamical Systems
 
-A `Challenger spec α β` is the generic single-phase security experiment: a challenger
-with hidden per-parameter state that samples an input for the adversary, answers every
-adversary query through a *stateful* oracle in `StateT (State n) SPMF`, and scores the
-adversary's (possibly unresolved) result against its final state. Categorically the
-oracle is a Kleisli coalgebra over the spec's polynomial — the SPMF-with-state instance
-of a PolyFun handler — and the two game readings below wire the adversary against it in
-its two presentations:
+A `Challenger spec α β` is the generic single-phase security experiment, presented as a
+dynamical system: a stateful probabilistic **responder** (`ProbResponder`) that samples
+an input for the adversary, answers every adversary query while advancing its hidden
+state, and scores the adversary's (possibly unresolved) result against its final state.
+The responder *is* the game's wiring data; the folded-away `State`/`oracle` fields survive
+as the `Challenger.State` / `Challenger.oracle` accessors (the responder's state set and
+its `StateT (State n) SPMF` handler). The two game readings below close an adversary
+against the responder in its two presentations:
 
-* `Challenger.toProgGame` — the **algebraic** reading over program families, via
-  `simulateQ` into `StateT (State n) SPMF`. This is the definitional home of advantage,
-  where probability reasoning happens.
-* `Challenger.toMachineGame` — the **coalgebraic** reading over bundled polynomial-time
-  machine adversaries, via the machine run `MachineAdversary.exec` at
-  `m := StateT (State n) SPMF`.
+* `Challenger.toMachineGame` — the **primary**, coalgebraic reading over bundled
+  polynomial-time machine adversaries, closed against the responder by the eval-wired
+  dynamical-system run `OracleMachine.wireKRun` at the adversary's round budget. This is
+  the game stated in dynamical-systems vocabulary; reductions target it.
+* `Challenger.toProgGame` — the algebraic reading over program families, via `simulateQ`
+  through the responder's handler. The definitional home of advantage, where probability
+  reasoning happens; it is *not* derivable from the machine game (an arbitrary program has
+  no canonical machine bundle, and `simulateQ` is unfuelled).
 
 The two agree on implementing adversaries (`advantage_toMachineGame_eq`), which is an
 instance of the master transfer equation `MachineAdversary.exec_eq_of_implements` — the
 monad-parametric `OracleMachine.Implements` is exactly what lets the transfer hold
-against a *stateful* oracle. Security transfers along it
+against a *stateful* responder. Security transfers along it
 (`secureAgainst_isPolyTime_of_machineGame`).
 
 Statefulness of the oracle is the point: a memoryless `ProbHandler` cannot express a
@@ -95,40 +98,57 @@ end Stateless
 
 variable {ι : ℕ → Type} [∀ n, DecidableEq (ι n)]
 
-/-- A single-phase game challenger: hidden state, an input sampler, a *stateful* oracle
-answering every adversary query, and a judge scoring the adversary's result against the
-final challenger state. `none` marks an adversary run that did not resolve (machine
-reading); program adversaries always resolve. -/
+/-- A single-phase game challenger presented as a dynamical system: a stateful
+probabilistic **responder** answering every adversary query (its state set is the
+challenger's hidden state), an input sampler, and a judge scoring the adversary's result
+against the final responder state. `none` marks an adversary run that did not resolve
+(machine reading); program adversaries always resolve.
+
+The `responder` field *is* the game's wiring data: closing an adversary against it is the
+eval-wired dynamical system `OracleMachine.wireKRun` (machine reading, the primary game
+`toMachineGame`) or `simulateQ` through the responder's handler (program reading,
+`toProgGame`). The folded-away `State`/`oracle` fields survive as the `Challenger.State`
+/ `Challenger.oracle` accessors. -/
 structure Challenger (spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)) (α β : ℕ → Type) where
-  /-- The challenger's hidden state at each security parameter. -/
-  State : ℕ → Type
-  /-- Sample the initial challenger state together with the adversary's input. -/
-  setup : (n : ℕ) → SPMF (State n × α n)
-  /-- The challenger's oracle: answer each query monadically, reading and updating the
-  hidden state. -/
-  oracle : (n : ℕ) → QueryImpl (spec n) (StateT (State n) SPMF)
+  /-- The challenger's stateful responder at each security parameter: for each query, a
+  joint subdistribution over the answer and the successor hidden state. -/
+  responder : (n : ℕ) → ProbResponder (spec n)
+  /-- Sample the initial hidden (responder) state together with the adversary's input. -/
+  setup : (n : ℕ) → SPMF ((responder n).State × α n)
   /-- Score the adversary's (possibly unresolved) result against the final state. -/
-  score : (n : ℕ) → State n → Option (β n) → SPMF Bool
+  score : (n : ℕ) → (responder n).State → Option (β n) → SPMF Bool
 
 namespace Challenger
 
 variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
 
-/-- A memoryless challenger: a plain randomized oracle, an input sampler, and a score
-that sees the input (kept as the trivial state). The old one-shot game shape. -/
+/-- The challenger's hidden state at security parameter `n`: the responder's state.
+A compatibility accessor for the folded-away `State` field. -/
+abbrev State (G : Challenger spec α β) (n : ℕ) : Type := (G.responder n).State
+
+/-- The challenger's oracle: the responder's stateful handler in `StateT (State n) SPMF`.
+A compatibility accessor for the folded-away `oracle` field. -/
+abbrev oracle (G : Challenger spec α β) (n : ℕ) :
+    QueryImpl (spec n) (StateT (G.State n) SPMF) :=
+  (G.responder n).toQueryImpl
+
+/-- A memoryless challenger: a plain randomized oracle bundled as a constant-state
+responder, an input sampler, and a score that sees the input (kept as the trivial state).
+The old one-shot game shape. -/
 noncomputable def ofProbHandler (oracle : (n : ℕ) → ProbHandler (spec n))
     (gen : (n : ℕ) → SPMF (α n)) (score : (n : ℕ) → α n → Option (β n) → SPMF Bool) :
     Challenger spec α β where
-  State := α
+  responder n := ProbResponder.ofHandlerFamily fun _ : α n => oracle n
   setup n := (fun x => (x, x)) <$> gen n
-  oracle n := QueryImpl.stateless (α n) (oracle n)
   score := score
 
 /-! ## The algebraic reading: program families -/
 
 /-- The game over program-family adversaries: sample state and input, interpret the
-program's queries through the stateful oracle, and score the result against the final
-state. The definitional home of the game's advantage. -/
+program's queries through the responder's handler, and score the result against the final
+state. The definitional home of the game's advantage; it is *not* derivable from the
+machine game (an arbitrary `oa` has no canonical machine bundle, and `simulateQ` is
+unfuelled). -/
 noncomputable def toProgGame (G : Challenger spec α β) :
     SecurityGame ((n : ℕ) → α n → OracleComp (spec n) (β n)) where
   advantage oa n :=
@@ -136,20 +156,31 @@ noncomputable def toProgGame (G : Challenger spec α β) :
       (some <$> simulateQ (G.oracle n) (oa n sx.2)).run sx.1 >>= fun rs =>
       G.score n rs.2 rs.1) true
 
-/-! ## The coalgebraic reading: machine adversaries -/
+/-! ## The coalgebraic reading: machine adversaries (primary) -/
 
-/-- The game over bundled polynomial-time machine adversaries at boundaries `bd`: the
-machine run `MachineAdversary.exec` against the stateful oracle, at
-`m := StateT (G.State n) SPMF`. -/
+/-- **The primary game**: bundled polynomial-time machine adversaries at boundaries `bd`
+closed against the challenger's responder by the eval-wired dynamical-system run
+`OracleMachine.wireKRun` at the adversary's round budget. This is the game stated in
+dynamical-systems vocabulary; reductions target it. -/
 noncomputable def toMachineGame (G : Challenger spec α β) (bd : BoundaryData spec α β) :
     SecurityGame (MachineAdversary bd) where
   advantage D n :=
     (G.setup n >>= fun sx =>
-      (D.exec n (G.oracle n) sx.2).run sx.1 >>= fun rs =>
-      G.score n rs.2 rs.1) true
+      (D.M n).wireKRun (G.responder n) (D.steps.eval n) (sx.1, (D.M n).init sx.2) >>=
+        fun rs => G.score n rs.2 rs.1) true
 
-/-- **Advantage transfer**: a machine adversary implementing a program family has
-exactly the program's advantage, against the stateful oracle. An instance of the master
+/-- The primary game's advantage in `MachineAdversary.exec` form: the wired run unfolds
+back to the security-game execution against the responder's handler. Definitional (the
+run-level bridge `MachineAdversary.exec_run_eq_wireKRun` is `rfl`). -/
+theorem advantage_toMachineGame_eq_exec (G : Challenger spec α β)
+    (bd : BoundaryData spec α β) (D : MachineAdversary bd) (n : ℕ) :
+    (G.toMachineGame bd).advantage D n =
+      (G.setup n >>= fun sx =>
+        (D.exec n (G.oracle n) sx.2).run sx.1 >>= fun rs =>
+        G.score n rs.2 rs.1) true := rfl
+
+/-- **Advantage transfer**: a machine adversary implementing a program family has exactly
+the program's advantage, against the responder's handler. An instance of the master
 transfer equation `MachineAdversary.exec_eq_of_implements` at `m := StateT _ SPMF` —
 available precisely because `OracleMachine.Implements` is monad-parametric. -/
 theorem advantage_toMachineGame_eq (G : Challenger spec α β)
@@ -157,11 +188,12 @@ theorem advantage_toMachineGame_eq (G : Challenger spec α β)
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
     (h : D ⊨ oa) (n : ℕ) :
     (G.toMachineGame bd).advantage D n = G.toProgGame.advantage oa n := by
+  rw [advantage_toMachineGame_eq_exec]
   refine congrArg (fun p : SPMF Bool => p true) (bind_congr fun sx => ?_)
   rw [MachineAdversary.exec_eq_of_implements h]
 
 /-- **Security transfer**: if every bundled polynomial-time machine adversary has
-negligible advantage in the machine-level game, the program-level game is secure
+negligible advantage in the primary machine-level game, the program-level game is secure
 against `OracleComp.IsPolyTime`. -/
 theorem secureAgainst_isPolyTime_of_machineGame (G : Challenger spec α β)
     (bd : BoundaryData spec α β)
@@ -171,5 +203,43 @@ theorem secureAgainst_isPolyTime_of_machineGame (G : Challenger spec α β)
   have heq : G.toProgGame.advantage oa = (G.toMachineGame bd).advantage w.A :=
     funext fun n => (G.advantage_toMachineGame_eq w.implements n).symm
   exact heq ▸ hsec w.A
+
+/-! ## Memoryless characterizations
+
+Advantage formulas for the memoryless challenger `ofProbHandler` with the responder
+plumbing discharged, so callers rewrite to a clean form instead of hand-unfolding the
+structure (the σ-projection simp-blocker lesson). -/
+
+omit [∀ n, DecidableEq (ι n)] in
+/-- The program-game advantage of a memoryless challenger: sample the input, simulate the
+program against the plain handler, and score. -/
+@[simp] theorem advantage_toProgGame_ofProbHandler
+    (oracle : (n : ℕ) → ProbHandler (spec n)) (gen : (n : ℕ) → SPMF (α n))
+    (score : (n : ℕ) → α n → Option (β n) → SPMF Bool)
+    (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) (n : ℕ) :
+    (ofProbHandler oracle gen score).toProgGame.advantage oa n =
+      (gen n >>= fun x => simulateQ (oracle n) (oa n x) >>= fun r =>
+        score n x (some r)) true := by
+  refine congrArg (fun p : SPMF Bool => p true) ?_
+  change ((fun x => (x, x)) <$> gen n >>= fun sx =>
+      (some <$> simulateQ (QueryImpl.stateless (α n) (oracle n)) (oa n sx.2)).run
+        sx.1 >>= fun rs => score n rs.2 rs.1) = _
+  simp only [map_eq_bind_pure_comp, StateT.run_bind, OracleComp.simulateQ_stateless_run,
+    StateT.run_pure, bind_assoc, pure_bind, Function.comp]
+
+/-- The machine-game advantage of a memoryless challenger: sample the input, run the
+machine against the plain handler at its round budget, and score. The wired run collapses
+to the memoryless `OracleMachine.runK` (`wireKRun_ofHandlerFamily`). -/
+@[simp] theorem advantage_toMachineGame_ofProbHandler
+    (oracle : (n : ℕ) → ProbHandler (spec n)) (gen : (n : ℕ) → SPMF (α n))
+    (score : (n : ℕ) → α n → Option (β n) → SPMF Bool)
+    (bd : BoundaryData spec α β) (D : MachineAdversary bd) (n : ℕ) :
+    ((ofProbHandler oracle gen score).toMachineGame bd).advantage D n =
+      (gen n >>= fun x => (D.M n).runK (oracle n) (D.steps.eval n) ((D.M n).init x) >>=
+        fun ob => score n x ob) true := by
+  refine congrArg (fun p : SPMF Bool => p true) ?_
+  simp only [ofProbHandler, OracleMachine.wireKRun_ofHandlerFamily]
+  rw [bind_map_left]
+  exact bind_congr fun x => bind_map_left _ _ _
 
 end Challenger
