@@ -122,6 +122,69 @@ form of `OracleStrategy.wireKIterate_ofHandlerFamily`. -/
         _ = (fun ob => (ob, γ)) <$> M.runK (h γ) (k + 1) s := by
             rw [M.runK_succ_of_output_eq_none' _ hb, map_bind]
 
+/-! ## Interface wrapping: reductions as lenses
+
+Installing an interface translation on a machine adversary is literal lens composition,
+and it is *adjoint* to pulling the responder back along the same lens: wrapping the
+adversary forward equals pulling the challenger's responder back. This is the run-level
+combinator behind same-interface security reductions (`OracleStrategy.reduce` is the
+sub-spec special case). -/
+
+variable {ι' : Type u} {spec' : OracleSpec.{u, u} ι'}
+
+/-- Install an interface translation on a machine along a lens `w : spec ⇆ spec'`: the
+machine speaks `spec` internally; the wrapper exposes each query forward through `w` and
+feeds each answer back, so the result speaks `spec'`, with `init`/`output` threaded
+unchanged. The pointed re-cut of `PFunctor.DynSystem.wrap w`, and the machine-level
+generalization of `OracleStrategy.reduce` (the sub-spec inclusion special case). -/
+def wrapIface (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
+    (M : OracleMachine spec α β) : OracleMachine spec' α β where
+  State := M.State
+  expose s := w.toFunA (M.expose s)
+  update s a := M.update s (w.toFunB (M.expose s) a)
+  init := M.init
+  output := M.output
+
+@[simp] theorem wrapIface_output (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
+    (M : OracleMachine spec α β) (s : M.State) : (M.wrapIface w).output s = M.output s :=
+  rfl
+
+@[simp] theorem wrapIface_init (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
+    (M : OracleMachine spec α β) (x : α) : (M.wrapIface w).init x = M.init x := rfl
+
+/-- **The run-level interface-wrapping adjunction**: running the wrapped machine against a
+`spec'`-responder equals running the original machine against the responder pulled back
+along `w`. Wrapping the adversary forward is pulling the responder back — proved by fuel
+induction through the handler-level `ProbResponder.toQueryImpl_pullback`. -/
+theorem runK_wrapIface (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
+    (M : OracleMachine spec α β) (R : ProbResponder spec') (k : ℕ) (s : M.State) :
+    (M.wrapIface w).runK R.toQueryImpl k s = M.runK (R.pullback w).toQueryImpl k s := by
+  induction k generalizing s with
+  | zero => rfl
+  | succ k ih =>
+    cases hb : M.output s with
+    | some b =>
+      rw [M.runK_of_output_eq_some (R.pullback w).toQueryImpl hb]
+      exact (M.wrapIface w).runK_of_output_eq_some R.toQueryImpl hb _
+    | none =>
+      have h0 : (M.wrapIface w).output s = none := hb
+      rw [M.runK_succ_of_output_eq_none (R.pullback w).toQueryImpl hb,
+        (M.wrapIface w).runK_succ_of_output_eq_none R.toQueryImpl h0]
+      simp only [ih]
+      simp only [wrapIface, ProbResponder.toQueryImpl_pullback]
+      exact (bind_map_left (m := StateT R.State SPMF)
+        (fun a => w.toFunB (M.expose s) a) (R.toQueryImpl (w.toFunA (M.expose s)))
+        (fun r => M.runK (R.pullback w).toQueryImpl k (M.update s r))).symm
+
+/-- **The wired-run interface-wrapping adjunction**: the `wireKRun` form of
+`runK_wrapIface`. This is the workhorse of same-interface reductions at the game level. -/
+theorem wireKRun_wrapIface (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
+    (M : OracleMachine spec α β) (R : ProbResponder spec') (k : ℕ) (r : R.State)
+    (s : M.State) :
+    (M.wrapIface w).wireKRun R k (r, s) = M.wireKRun (R.pullback w) k (r, s) := by
+  rw [wireKRun_eq_runK_run, wireKRun_eq_runK_run, runK_wrapIface]
+  rfl
+
 end OracleMachine
 
 end WiredRun

@@ -242,4 +242,51 @@ to the memoryless `OracleMachine.runK` (`wireKRun_ofHandlerFamily`). -/
   rw [bind_map_left]
   exact bind_congr fun x => bind_map_left _ _ _
 
+/-! ## Reductions from lenses: interface wrapping
+
+A same-interface security reduction is a lens. Pulling a challenger back along an
+interface lens `w` is the challenger-side dual of wrapping an adversary machine forward
+along `w` (`OracleMachine.wrapIface`), and the two are adjoint: an adversary playing the
+pulled-back game equals the *wrapped* adversary playing the original game
+(`advantage_toMachineGame_pullbackIface`, the game-level image of
+`OracleMachine.wireKRun_wrapIface`). This is the game-facing combinator behind the §3.5
+PRF⇒CPA workhorse; the polynomial-time closure of the wrapped adversary
+(`MachineAdversary.wrapIface` / `IsPolyTime.wrapIface`, an honest base-machine witness
+for the answer-translation transducer) is the remaining frontier, and genuinely
+non-lens reductions (translating one query into an oracle *computation*, e.g. encrypting
+under a PRF key) route through the challenger-side `ProbResponder.simulate` rather than a
+single lens. -/
+
+variable {ι' : ℕ → Type} {spec' : (n : ℕ) → OracleSpec.{0, 0} (ι' n)}
+
+/-- Pull a challenger's game back along an interface lens family `w : spec ⇆ spec'`: the
+challenger now speaks `spec`, answering each `spec`-query by translating it forward
+through `w`, consulting the original `spec'`-responder, and mapping the answer back
+(`ProbResponder.pullback`). Its hidden state, input sampler, and score are unchanged —
+`pullback` preserves the responder's state set. The challenger-side dual of
+`OracleMachine.wrapIface`. -/
+noncomputable def pullbackIface
+    (w : (n : ℕ) → PFunctor.Lens (spec n).toPFunctor (spec' n).toPFunctor)
+    (G : Challenger spec' α β) : Challenger spec α β where
+  responder n := (G.responder n).pullback (w n)
+  setup := G.setup
+  score := G.score
+
+/-- **The game-level interface-wrapping adjunction**: an adversary machine playing the
+pulled-back game `G.pullbackIface w` has exactly the advantage of the *wrapped* adversary
+machine `(D.M n).wrapIface (w n)` playing the original game `G`. The game-level image of
+`OracleMachine.wireKRun_wrapIface`: wrapping the adversary forward along `w` is pulling
+the challenger back along `w`. -/
+theorem advantage_toMachineGame_pullbackIface
+    (w : (n : ℕ) → PFunctor.Lens (spec n).toPFunctor (spec' n).toPFunctor)
+    (G : Challenger spec' α β) (bd : BoundaryData spec α β) (D : MachineAdversary bd)
+    (n : ℕ) :
+    ((G.pullbackIface w).toMachineGame bd).advantage D n =
+      (G.setup n >>= fun sx =>
+        ((D.M n).wrapIface (w n)).wireKRun (G.responder n) (D.steps.eval n)
+          (sx.1, (D.M n).init sx.2) >>= fun rs => G.score n rs.2 rs.1) true := by
+  refine congrArg (fun p : SPMF Bool => p true) (bind_congr fun sx => ?_)
+  rw [OracleMachine.wireKRun_wrapIface]
+  rfl
+
 end Challenger

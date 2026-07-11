@@ -135,6 +135,18 @@ noncomputable def pullback {ι' : Type u} {spec' : OracleSpec.{u, u} ι'}
   State := R.State
   answer s t := (fun q => (w.toFunB t q.1, q.2)) <$> R.answer s (w.toFunA t)
 
+/-- The pulled-back responder's handler translates each query forward and maps the
+target responder's answer back through the lens: `toQueryImpl` of `pullback w R` is the
+answer-post-composition of `R.toQueryImpl` along `w`. The handler-level form of the
+interface-wrapping adjunction. -/
+@[simp] theorem toQueryImpl_pullback {ι' : Type u} {spec' : OracleSpec.{u, u} ι'}
+    (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
+    (t : spec.toPFunctor.A) :
+    (pullback w R).toQueryImpl t =
+      (fun a => w.toFunB t a) <$> R.toQueryImpl (w.toFunA t) := by
+  funext s
+  rfl
+
 /-- Lift a stateful `ProbComp` query implementation to a probabilistic responder via
 its evaluation distribution, pointwise in the state. This is the bridge along which
 existing stateful challengers (the lazy random oracle, cached LR encryption oracles)
