@@ -32,16 +32,6 @@ open List OracleSpec OracleComp BinaryTree
 
 variable {α : Type _}
 
-/-- A batch proof exists only for selectors that select at least one leaf: the `BatchProof`
-family is uninhabited on selectors with `anySelected = false`. -/
-theorem BatchProof.anySelected_of_batchProof {s : Skeleton} {sel : LeafData Bool s}
-    (proof : BatchProof α sel) : sel.anySelected = true := by
-  induction proof with
-  | leaf => rfl
-  | internalBoth pl pr ihl ihr => simp [LeafData.anySelected, ihl, ihr]
-  | pruneRight hr rightRoot pl ih => simp [LeafData.anySelected, ih]
-  | pruneLeft hl leftRoot pr ih => simp [LeafData.anySelected, ih]
-
 /--
 A functional form of the batch completeness theorem: the honest batch proof generated from
 an honestly built tree, together with the true selected leaf values, recomputes the tree's

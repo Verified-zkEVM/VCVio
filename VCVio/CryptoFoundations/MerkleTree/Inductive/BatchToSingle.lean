@@ -55,25 +55,6 @@ open List OracleSpec OracleComp BinaryTree
 
 variable {α : Type _}
 
-/-- A selector selects some leaf as soon as it selects a particular one: `get idx = true`
-implies `anySelected = true`. -/
-theorem _root_.BinaryTree.LeafData.anySelected_of_get {s : Skeleton} {sel : LeafData Bool s}
-    (idx : SkeletonLeafIndex s) (h : sel.get idx = true) : sel.anySelected = true := by
-  induction idx with
-  | ofLeaf =>
-    cases sel with
-    | leaf b => simpa using h
-  | ofLeft idxL ih =>
-    cases sel with
-    | internal l r =>
-      simp only [LeafData.anySelected, Bool.or_eq_true]
-      exact Or.inl (ih (by simpa using h))
-  | ofRight idxR ih =>
-    cases sel with
-    | internal l r =>
-      simp only [LeafData.anySelected, Bool.or_eq_true]
-      exact Or.inr (ih (by simpa using h))
-
 /-- The claimed value of a batch opening at a selected leaf index. This is the batch
 analogue of the single-index claimed leaf value. -/
 def selectedValueAt : {s : Skeleton} → {sel : LeafData Bool s} → SelectedValues α sel →

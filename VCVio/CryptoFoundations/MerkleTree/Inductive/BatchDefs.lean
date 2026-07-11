@@ -30,7 +30,6 @@ committed vector at once.
 
 ## Main definitions
 
-* `LeafData.anySelected`: does a selector select any leaf?
 * `InductiveMerkleTree.BatchProof`: pruned authentication data for a selector. The family is
   indexed by the selector, so structurally malformed proofs (extra hashes, hashes for opened
   subtrees, or descent into pruned subtrees) are unrepresentable. It is inhabited only when
@@ -57,12 +56,6 @@ universe u
 
 variable {α : Type _}
 
-/-- Does a selector select any leaf of the tree? -/
-@[simp, grind]
-def _root_.BinaryTree.LeafData.anySelected {s : Skeleton} : LeafData Bool s → Bool
-  | .leaf b => b
-  | .internal l r => l.anySelected || r.anySelected
-
 /--
 Authentication data for a batch opening with selector `sel`.
 
@@ -76,7 +69,7 @@ stores nothing (the verifier is given the claimed leaf value separately, via
 The hypotheses on the pruning constructors make the proof shape canonical for its selector:
 for every selector that selects at least one leaf exactly one constructor applies at each
 node. Conversely the family is *uninhabited* whenever `sel.anySelected = false` (see
-`BatchProof.anySelected_of_batchProof` in `BatchCompleteness`): there is no such thing as a
+`BatchProof.anySelected_of_batchProof` in `BatchUniqueness`): there is no such thing as a
 batch proof that opens nothing.
 -/
 inductive BatchProof (α : Type u) : {s : Skeleton} → LeafData Bool s → Type u
