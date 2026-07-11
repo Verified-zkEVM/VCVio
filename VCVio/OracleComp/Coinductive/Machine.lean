@@ -471,8 +471,7 @@ theorem toMachine_steadyBy {oa : α → OracleComp spec β} (h : OracleHandler s
     rw [toMachine_advanceOnce]
     exact iterate_advance_eq_of_le h (stepsToHalt_le_of_isTotalQueryBound h hqb)
   change (pureOutput (OracleStrategy.stateAfter h (toMachine oa).toDynSystem (oa x) k)).isSome
-  rw [key]
-  rfl
+  exact key ▸ rfl
 
 end ToMachine
 

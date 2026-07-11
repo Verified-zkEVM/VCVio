@@ -265,7 +265,8 @@ is the *inductive* free monad on `spec.toPFunctor` — a program that **asks** q
 adaptive querier is the *coalgebraic* dual: a PolyFun dynamical system over the same polynomial functor
 (Niu–Spivak, *Polynomial Functors*, Ch. 4).
 
-- `OracleStrategy spec := PFunctor.DynSystem spec.toPFunctor` — `expose : State → ι` chooses the next
+- `OracleStrategy S spec := PFunctor.DynSystem S spec.toPFunctor` (a lens `selfMonomial S ⟹
+  spec.toPFunctor`; the state set is a parameter) — `expose : S → ι` chooses the next
   query, `update : State → spec.Range _ → State` digests the answer. The whole `PFunctor.DynSystem` /
   `PFunctor.Lens` combinator library applies directly (it is an `abbrev`).
 - `OracleHandler spec := PFunctor.Section spec.toPFunctor` — a deterministic oracle as a PolyFun

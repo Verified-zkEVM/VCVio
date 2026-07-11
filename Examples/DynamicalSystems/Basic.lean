@@ -31,10 +31,8 @@ counts heads is a dynamical system over `coinSpec.toPFunctor`: the state is the 
 always exposes the (unique) query, and it digests a `Bool` answer by incrementing on heads. -/
 
 /-- A strategy against the coin oracle: count the heads seen so far. -/
-def coinCounter : OracleStrategy coinSpec where
-  State := ℕ
-  expose := fun _ => ()
-  update := fun n b => bif b then n + 1 else n
+def coinCounter : OracleStrategy ℕ coinSpec :=
+  PFunctor.DynSystem.mk' (fun _ => ()) (fun n b => bif b then n + 1 else n)
 
 /-- A deterministic coin oracle that always answers heads. -/
 def allHeads : OracleHandler coinSpec := OracleHandler.ofFn fun _ => true
@@ -96,11 +94,10 @@ example :
 A sub-spec coercion `coinSpec ⊂ₒ coinSpec + coinSpec` is a polynomial-functor lens; applying it to a
 strategy (`reduce`) rewrites every query into the larger oracle, preserving the state. -/
 
-/-- The coin counter, reduced into the left copy of a two-coin oracle. -/
-def coinCounterLeft : OracleStrategy (coinSpec + coinSpec) :=
+/-- The coin counter, reduced into the left copy of a two-coin oracle — same state set,
+as its type records. -/
+def coinCounterLeft : OracleStrategy ℕ (coinSpec + coinSpec) :=
   OracleStrategy.reduce inferInstance coinCounter
-
-example : coinCounterLeft.State = ℕ := rfl
 
 /-! ## Denotational query bounds
 

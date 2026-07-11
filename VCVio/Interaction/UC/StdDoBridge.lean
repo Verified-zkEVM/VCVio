@@ -98,15 +98,15 @@ end StepOver
 section ProcessOver
 
 variable {m : Type → Type} [Monad m]
-variable {Γ : Interaction.Spec.Node.Context.{0, 0}}
+variable {Γ : Interaction.Spec.Node.Context.{0, 0}} {P : Type}
 
 @[simp]
-theorem ProcessOver.runSteps_zero (process : ProcessOver Γ)
+theorem ProcessOver.runSteps_zero (process : ProcessOver P Γ)
     (sampler : ∀ p : process.Proc, Spec.Sampler m (process.step p).spec) (s : process.Proc) :
     process.runSteps sampler 0 s = pure s := rfl
 
 @[simp]
-theorem ProcessOver.runSteps_succ (process : ProcessOver Γ)
+theorem ProcessOver.runSteps_succ (process : ProcessOver P Γ)
     (sampler : ∀ p : process.Proc, Spec.Sampler m (process.step p).spec) (n : ℕ)
     (s : process.Proc) :
     process.runSteps sampler (n + 1) s =
@@ -124,7 +124,7 @@ namespace ProcessOver
 
 variable {m : Type → Type} [Monad m]
 variable {ps : PostShape} [WPMonad m ps]
-variable {Γ : Interaction.Spec.Node.Context.{0, 0}}
+variable {Γ : Interaction.Spec.Node.Context.{0, 0}} {P : Type}
 
 /-- If every one-step execution preserves an invariant `I` on the
 process state, then `runSteps n` preserves `I` for any fuel `n`.
@@ -133,7 +133,7 @@ This is the process-runtime analogue of
 `OracleComp.ProgramLogic.StdDo.simulateQ_triple_preserves_invariant`:
 a generic invariant lemma that factors out the fuel induction so
 downstream proofs stay inside the `Std.Do` world. -/
-theorem runSteps_triple_preserves_invariant (process : ProcessOver Γ)
+theorem runSteps_triple_preserves_invariant (process : ProcessOver P Γ)
     (sampler : ∀ p : process.Proc, Spec.Sampler m (process.step p).spec)
     (I : process.Proc → Prop) (hstep : ∀ p : process.Proc,
       Std.Do.Triple ((process.step p).sample (sampler p))

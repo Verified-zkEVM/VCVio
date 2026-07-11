@@ -54,7 +54,7 @@ theorem OracleMachine.runK_setInit {spec : OracleSpec.{0, 0} ι} {α α' β : Ty
     {m : Type → Type} [Monad m]
     (M : OracleMachine spec α β) (g : α' → M.State) (H : QueryImpl spec m) (k : ℕ)
     (s : M.State) :
-    OracleMachine.runK ⟨M.toDynSystem, g, M.output⟩ H k s = M.runK H k s := by
+    OracleMachine.runK ⟨M.State, M.expose, M.update, g, M.output⟩ H k s = M.runK H k s := by
   induction k generalizing s with
   | zero => rfl
   | succ k ih =>
@@ -62,11 +62,11 @@ theorem OracleMachine.runK_setInit {spec : OracleSpec.{0, 0} ι} {α α' β : Ty
     | some b =>
       rw [M.runK_succ_of_output_eq_some H hb]
       exact OracleMachine.runK_succ_of_output_eq_some
-        (M := ⟨M.toDynSystem, g, M.output⟩) H hb k
+        (M := ⟨M.State, M.expose, M.update, g, M.output⟩) H hb k
     | none =>
       rw [M.runK_succ_of_output_eq_none H hb,
         OracleMachine.runK_succ_of_output_eq_none
-          (M := ⟨M.toDynSystem, g, M.output⟩) H hb k]
+          (M := ⟨M.State, M.expose, M.update, g, M.output⟩) H hb k]
       exact bind_congr fun r => ih (M.update s r)
 
 omit [DecidableEq ι] in
@@ -76,7 +76,7 @@ lawful monad. -/
 theorem OracleMachine.runK_setOutput {spec : OracleSpec.{0, 0} ι} {α β γ : Type}
     {m : Type → Type} [Monad m] [LawfulMonad m]
     (M : OracleMachine spec α β) (g : β → γ) (H : QueryImpl spec m) (k : ℕ) (s : M.State) :
-    OracleMachine.runK ⟨M.toDynSystem, M.init, fun s => (M.output s).map g⟩ H k s
+    OracleMachine.runK ⟨M.State, M.expose, M.update, M.init, fun s => (M.output s).map g⟩ H k s
       = Option.map g <$> M.runK H k s := by
   induction k generalizing s with
   | zero => simp only [OracleMachine.runK_zero, map_pure]
@@ -84,14 +84,14 @@ theorem OracleMachine.runK_setOutput {spec : OracleSpec.{0, 0} ι} {α β γ : T
     cases hb : M.output s with
     | some b =>
       rw [OracleMachine.runK_succ_of_output_eq_some
-            (M := ⟨M.toDynSystem, M.init, fun s => (M.output s).map g⟩) H
-            (show (⟨M.toDynSystem, M.init, fun s => (M.output s).map g⟩ :
+            (M := ⟨M.State, M.expose, M.update, M.init, fun s => (M.output s).map g⟩) H
+            (show (⟨M.State, M.expose, M.update, M.init, fun s => (M.output s).map g⟩ :
               OracleMachine spec α γ).output s = some (g b) by simp [hb]) k,
         M.runK_succ_of_output_eq_some H hb]
       simp
     | none =>
       rw [OracleMachine.runK_succ_of_output_eq_none
-            (M := ⟨M.toDynSystem, M.init, fun s => (M.output s).map g⟩) H (by simp [hb]) k,
+            (M := ⟨M.State, M.expose, M.update, M.init, fun s => (M.output s).map g⟩) H (by simp [hb]) k,
         M.runK_succ_of_output_eq_none H hb, map_bind]
       exact bind_congr fun r => ih (M.update s r)
 
@@ -124,7 +124,8 @@ noncomputable def precomp (D : MachineAdversary bd)
     [∀ n, Fintype (γ n)] (eIn' : BitEncFam γ) (cardIn : Polynomial ℕ)
     (hcard : ∀ n, Fintype.card (γ n) ≤ cardIn.eval n) (n : ℕ) :
     (D.precomp f eIn' cardIn hcard).M n =
-      ⟨(D.M n).toDynSystem, fun x => (D.M n).init (f n x), (D.M n).output⟩ := rfl
+      ⟨(D.M n).State, (D.M n).expose, (D.M n).update, fun x => (D.M n).init (f n x),
+        (D.M n).output⟩ := rfl
 
 @[simp] theorem precomp_steps (D : MachineAdversary bd) (f : (n : ℕ) → γ n → α n)
     [∀ n, Fintype (γ n)] (eIn' : BitEncFam γ) (cardIn : Polynomial ℕ)
@@ -164,7 +165,8 @@ noncomputable def precompComp (D : MachineAdversary bd) (f : (n : ℕ) → γ n 
     (eIn' : Computability.BitEncFam γ)
     (wit : Computability.EncPolyTimeFam eIn'.enc bd.eIn.enc f) (n : ℕ) :
     (D.precompComp f eIn' wit).M n =
-      ⟨(D.M n).toDynSystem, fun x => (D.M n).init (f n x), (D.M n).output⟩ := rfl
+      ⟨(D.M n).State, (D.M n).expose, (D.M n).update, fun x => (D.M n).init (f n x),
+        (D.M n).output⟩ := rfl
 
 @[simp] theorem precompComp_steps (D : MachineAdversary bd) (f : (n : ℕ) → γ n → α n)
     (eIn' : Computability.BitEncFam γ)
@@ -191,7 +193,8 @@ noncomputable def mapComp (D : MachineAdversary bd) (g : (n : ℕ) → β n → 
     (wit : EncPolyTimeFam (bd.eOut.option).enc (eOut'.option).enc
       (fun n => Option.map (g n))) :
     MachineAdversary (bd.withOut eOut') where
-  M n := ⟨(D.M n).toDynSystem, (D.M n).init, fun s => ((D.M n).output s).map (g n)⟩
+  M n := ⟨(D.M n).State, (D.M n).expose, (D.M n).update, (D.M n).init,
+        fun s => ((D.M n).output s).map (g n)⟩
   steps := D.steps
   stable n := by
     intro s c hc r
@@ -208,7 +211,8 @@ noncomputable def mapComp (D : MachineAdversary bd) (g : (n : ℕ) → β n → 
     (wit : EncPolyTimeFam (bd.eOut.option).enc (eOut'.option).enc
       (fun n => Option.map (g n))) (n : ℕ) :
     (D.mapComp g eOut' wit).M n =
-      ⟨(D.M n).toDynSystem, (D.M n).init, fun s => ((D.M n).output s).map (g n)⟩ := rfl
+      ⟨(D.M n).State, (D.M n).expose, (D.M n).update, (D.M n).init,
+        fun s => ((D.M n).output s).map (g n)⟩ := rfl
 
 @[simp] theorem mapComp_steps (D : MachineAdversary bd) (g : (n : ℕ) → β n → γ n)
     (eOut' : BitEncFam γ)

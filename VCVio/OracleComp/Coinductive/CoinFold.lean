@@ -135,7 +135,8 @@ private theorem coinFoldMachine_advanceOnce_val (rounds : ℕ) (init₀ : σ)
     (h : OracleHandler coinSpec) (s : Fin (rounds + 1) × σ) (hs : ¬(s.1 : ℕ) = 0) :
     ((OracleStrategy.advanceOnce h (coinFoldMachine step readout rounds init₀).toDynSystem s).1
       : ℕ) = (s.1 : ℕ) - 1 := by
-  simp [OracleStrategy.advanceOnce, coinFoldMachine, hs]
+  simp [OracleStrategy.advanceOnce, PFunctor.PointedMachine.toDynSystem,
+    PFunctor.DynSystem.update, PFunctor.DynSystem.expose, coinFoldMachine, hs]
 
 theorem coinFoldMachine_stateAfter_val (rounds : ℕ) (init₀ : σ) (h : OracleHandler coinSpec) :
     ∀ j, j ≤ rounds →

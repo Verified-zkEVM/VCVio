@@ -24,13 +24,14 @@ OracleComp  (algebra / answer side, inductive)  ⟷  OracleStrategy  (coalgebra 
                           glued by a handler  (=  Section spec.toPFunctor  =  QueryImpl spec Id)
 ```
 
-* `OracleStrategy spec := PFunctor.DynSystem spec.toPFunctor` — a state set with
-  `expose : State → ι` (the next query to ask) and `update : State → spec.Range _ → State`
-  (digest the answer, advance). This is exactly an adaptive querying strategy / adversary.
+* `OracleStrategy S spec := PFunctor.DynSystem S spec.toPFunctor` — states `S` with
+  `expose : S → ι` (the next query to ask) and `update : S → spec.Range _ → S`
+  (digest the answer, advance) — literally a lens `selfMonomial S ⟹ spec.toPFunctor`.
+  This is exactly an adaptive querying strategy / adversary.
 * `OracleHandler spec := PFunctor.Section spec.toPFunctor` — a deterministic oracle as a section
   (a lens `spec.toPFunctor ⟹ X`); build with `ofFn`, apply via `DFunLike` (`h t`), and coerce to the
   underlying `QueryImpl spec Id` with `toQueryImpl`.
-* `OracleStrategy.runAgainst h A : PFunctor.Closed` — close the strategy off with a handler
+* `OracleStrategy.runAgainst h A : PFunctor.Closed S` — close the strategy off with a handler
   (PolyFun's `close`); its `Closed.iterate` is the state trajectory and `transcript` the run log.
 * `OracleStrategy.reduce` / `pair` / `juxtapose` — install a strategy along a reduction
   (`⊂ₒ` lens), against a product oracle (`*`), or in parallel (`⊗`).
@@ -47,11 +48,13 @@ open scoped PFunctor
 
 variable {ι : Type u} {spec : OracleSpec.{u, v} ι}
 
-/-- A stateful, adaptive querier against `spec` (an adversary / environment): a PolyFun dynamical
-system whose interface is the oracle's polynomial functor `spec.toPFunctor`. The field `expose`
-chooses the next query from the current state; `update` digests an oracle answer into the next
-state. The whole `PFunctor.DynSystem` / `PFunctor.Lens` combinator library applies directly. -/
-abbrev OracleStrategy (spec : OracleSpec ι) : Type _ := PFunctor.DynSystem spec.toPFunctor
+/-- A stateful, adaptive querier against `spec` with states `S` (an adversary / environment): a
+PolyFun dynamical system whose interface is the oracle's polynomial functor `spec.toPFunctor` —
+literally a lens `selfMonomial S ⟹ spec.toPFunctor`. Its `expose` chooses the next query from the
+current state; `update` digests an oracle answer into the next state. The whole
+`PFunctor.DynSystem` / `PFunctor.Lens` combinator library applies directly. -/
+abbrev OracleStrategy (S : Type w) (spec : OracleSpec ι) : Type _ :=
+  PFunctor.DynSystem S spec.toPFunctor
 
 /-- A deterministic, total oracle for `spec`, as a PolyFun **section** — a lens
 `spec.toPFunctor ⟹ X` choosing a direction (answer) at every position (query). Build one from an
@@ -129,61 +132,63 @@ end OracleSpec
 
 namespace OracleStrategy
 
+variable {S : Type w}
+
 /-! ## Deterministic run and transcript -/
 
 /-- Closing a strategy with a deterministic handler gives an autonomous (`Closed`) system whose
 pure state transition is "ask the exposed query, feed the handler's answer back". Since the handler
 *is* the section lens `spec.toPFunctor ⟹ X`, this is just `wrap` along it. -/
-def runAgainst (h : OracleHandler spec) (A : OracleStrategy spec) : PFunctor.Closed :=
+def runAgainst (h : OracleHandler spec) (A : OracleStrategy S spec) : PFunctor.Closed S :=
   PFunctor.DynSystem.wrap h A
 
 /-- One step of the closed-loop run: ask `A.expose s`, answer with `h`, advance. Definitionally
 equal to `(runAgainst h A).step s`. -/
-def advanceOnce (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State) : A.State :=
+def advanceOnce (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S) : S :=
   A.update s (h (A.expose s))
 
-@[simp] theorem runAgainst_step (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State) :
+@[simp] theorem runAgainst_step (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S) :
     (runAgainst h A).step s = advanceOnce h A s := rfl
 
 /-- The strategy's state after `n` handler-answered steps from `s`. Definitionally the closed
 system's `Closed.iterate`. -/
-def stateAfter (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State) (n : ℕ) : A.State :=
+def stateAfter (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S) (n : ℕ) : S :=
   (advanceOnce h A)^[n] s
 
-theorem stateAfter_eq_iterate (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State)
+theorem stateAfter_eq_iterate (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S)
     (n : ℕ) : stateAfter h A s n = (runAgainst h A).iterate s n := rfl
 
-@[simp] theorem stateAfter_zero (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State) :
+@[simp] theorem stateAfter_zero (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S) :
     stateAfter h A s 0 = s := rfl
 
-theorem stateAfter_succ (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State) (n : ℕ) :
+theorem stateAfter_succ (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S) (n : ℕ) :
     stateAfter h A s (n + 1) = stateAfter h A (advanceOnce h A s) n :=
   Function.iterate_succ_apply (advanceOnce h A) n s
 
 /-- The query asked at step `n` of the run. -/
-def queryStream (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State) (n : ℕ) :
+def queryStream (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S) (n : ℕ) :
     spec.Domain := A.expose (stateAfter h A s n)
 
 /-- The answer received at step `n` of the run. -/
-def answerStream (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State) (n : ℕ) :
+def answerStream (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S) (n : ℕ) :
     spec.Range (queryStream h A s n) := h (queryStream h A s n)
 
 /-- The length-`n` transcript of the run from state `s`: the recorded sequence of
 `⟨query, answer⟩` pairs, valued in `QueryLog spec`. This associates a concrete run log to the
 abstract state machine. -/
-def transcript (h : OracleHandler spec) (A : OracleStrategy spec) :
-    A.State → ℕ → QueryLog spec
+def transcript (h : OracleHandler spec) (A : OracleStrategy S spec) :
+    S → ℕ → QueryLog spec
   | _, 0 => []
   | s, n + 1 => ⟨A.expose s, h (A.expose s)⟩ :: transcript h A (advanceOnce h A s) n
 
-@[simp] theorem transcript_zero (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State) :
+@[simp] theorem transcript_zero (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S) :
     transcript h A s 0 = [] := rfl
 
-@[simp] theorem transcript_succ (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State)
+@[simp] theorem transcript_succ (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S)
     (n : ℕ) : transcript h A s (n + 1) =
       ⟨A.expose s, h (A.expose s)⟩ :: transcript h A (advanceOnce h A s) n := rfl
 
-@[simp] theorem transcript_length (h : OracleHandler spec) (A : OracleStrategy spec) (s : A.State)
+@[simp] theorem transcript_length (h : OracleHandler spec) (A : OracleStrategy S spec) (s : S)
     (n : ℕ) : (transcript h A s n).length = n := by
   induction n generalizing s with
   | zero => rfl
@@ -196,8 +201,8 @@ run its spine is the state `iterate` (`PFunctor.DynSystem.next_iterate_trajector
 
 /-- The behaviour trajectory of the closed-loop run: the cofree tree whose spine is the state
 sequence. The `n`-fold `CofreeC.next` walks it to the state after `n` steps. -/
-theorem next_iterate_trajectory_runAgainst (h : OracleHandler spec) (A : OracleStrategy spec)
-    (s : A.State) (n : ℕ) :
+theorem next_iterate_trajectory_runAgainst (h : OracleHandler spec) (A : OracleStrategy S spec)
+    (s : S) (n : ℕ) :
     (PFunctor.CofreeC.next)^[n] (PFunctor.DynSystem.trajectory (runAgainst h A) s) =
       PFunctor.DynSystem.trajectory (runAgainst h A) (stateAfter h A s n) :=
   PFunctor.DynSystem.next_iterate_trajectory (runAgainst h A) s n
@@ -212,26 +217,22 @@ identification is **a reduction is a lens**: a sub-spec coercion `⊂ₒ` is a `
 `wrap` along the reduction lens `SubSpec.toLens`; it rewrites each query forward and each answer
 backward, exactly a reduction of adversaries. -/
 def reduce {τ : Type u} {superSpec : OracleSpec.{u, v} τ} (h : spec ⊂ₒ superSpec)
-    (A : OracleStrategy spec) : OracleStrategy superSpec :=
+    (A : OracleStrategy S spec) : OracleStrategy S superSpec :=
   PFunctor.DynSystem.wrap (SubSpec.toLens h) A
-
-@[simp] theorem reduce_state {τ : Type u} {superSpec : OracleSpec.{u, v} τ} (h : spec ⊂ₒ superSpec)
-    (A : OracleStrategy spec) : (reduce h A).State = A.State := rfl
 
 /-- Reductions compose: reducing along `h₁` then `h₂` is reducing along `h₁.trans h₂`. Free from
 `PFunctor.DynSystem.wrap_comp` and `SubSpec.trans_toLens`. -/
 theorem reduce_trans {τ : Type u} {superSpec : OracleSpec.{u, v} τ}
     {ρ : Type u} {superSpec' : OracleSpec.{u, v} ρ}
-    (h₁ : spec ⊂ₒ superSpec) (h₂ : superSpec ⊂ₒ superSpec') (A : OracleStrategy spec) :
+    (h₁ : spec ⊂ₒ superSpec) (h₂ : superSpec ⊂ₒ superSpec') (A : OracleStrategy S spec) :
     reduce h₂ (reduce h₁ A) = reduce (h₁.trans h₂) A := rfl
 
 /-- A shared-state strategy against the product oracle `spec₁ * spec₂`, built from two interface
 lenses out of one self-monomial state. This is PolyFun's categorical product `pairing`, landing in
 `PFunctor.prod = *` definitionally (directions are a `Sum`, matching `OracleSpec` `*`). -/
 def pair {ι₁ : Type u} {spec₁ : OracleSpec.{u, v} ι₁} {ι₂ : Type u} {spec₂ : OracleSpec.{u, v} ι₂}
-    {S : Type u} (l₁ : PFunctor.Lens (PFunctor.selfMonomial S) spec₁.toPFunctor)
-    (l₂ : PFunctor.Lens (PFunctor.selfMonomial S) spec₂.toPFunctor) :
-    OracleStrategy (spec₁ * spec₂) :=
+    {S : Type u} (l₁ : OracleStrategy S spec₁) (l₂ : OracleStrategy S spec₂) :
+    OracleStrategy S (spec₁ * spec₂) :=
   PFunctor.DynSystem.pairing l₁ l₂
 
 /-- Parallel product of two independent-state strategies. This lands in the Dirichlet tensor
@@ -239,8 +240,9 @@ def pair {ι₁ : Type u} {spec₁ : OracleSpec.{u, v} ι₁} {ι₂ : Type u} {
 directions are a `Prod`. Note `⊗ ≠ *`: this interface has no standard `OracleSpec` preimage, unlike
 `pair`. Kept for modeling genuinely parallel adversaries. -/
 def juxtapose {ι₁ : Type u} {spec₁ : OracleSpec.{u, v} ι₁} {ι₂ : Type u}
-    {spec₂ : OracleSpec.{u, v} ι₂} (A : OracleStrategy spec₁) (B : OracleStrategy spec₂) :
-    PFunctor.DynSystem (spec₁.toPFunctor ⊗ spec₂.toPFunctor) :=
+    {spec₂ : OracleSpec.{u, v} ι₂} {S₁ S₂ : Type w} (A : OracleStrategy S₁ spec₁)
+    (B : OracleStrategy S₂ spec₂) :
+    PFunctor.DynSystem (S₁ × S₂) (spec₁.toPFunctor ⊗ spec₂.toPFunctor) :=
   A.tensor B
 
 /-! ## Probabilistic Kleisli run
@@ -252,24 +254,24 @@ queries. The deterministic run embeds as the Dirac special case (`ofHandler`). -
 
 section Probabilistic
 
-variable {spec : OracleSpec.{u, u} ι}
+variable {spec : OracleSpec.{u, u} ι} {S : Type u}
 
 /-- One probabilistic step: sample an answer to the exposed query from the handler, then advance the
 state. The result is a sub-distribution over next states. -/
-noncomputable def kleisliStep (H : ProbHandler spec) (A : OracleStrategy spec) (s : A.State) :
-    SPMF A.State :=
+noncomputable def kleisliStep (H : ProbHandler spec) (A : OracleStrategy S spec) (s : S) :
+    SPMF S :=
   (fun r => A.update s r) <$> H (A.expose s)
 
 /-- The `n`-fold Kleisli iterate of `kleisliStep`: the sub-distribution over states reached after
 `n` adaptive queries, starting from `s`. -/
-noncomputable def kleisliIterate (H : ProbHandler spec) (A : OracleStrategy spec) :
-    ℕ → A.State → SPMF A.State
+noncomputable def kleisliIterate (H : ProbHandler spec) (A : OracleStrategy S spec) :
+    ℕ → S → SPMF S
   | 0, s => pure s
   | n + 1, s => kleisliStep H A s >>= kleisliIterate H A n
 
 /-- The joint sub-distribution over the length-`n` transcript and the final state. -/
-noncomputable def kleisliTranscript (H : ProbHandler spec) (A : OracleStrategy spec) :
-    A.State → ℕ → SPMF (QueryLog spec × A.State)
+noncomputable def kleisliTranscript (H : ProbHandler spec) (A : OracleStrategy S spec) :
+    S → ℕ → SPMF (QueryLog spec × S)
   | s, 0 => pure ([], s)
   | s, n + 1 => do
       let r ← H (A.expose s)
@@ -277,7 +279,7 @@ noncomputable def kleisliTranscript (H : ProbHandler spec) (A : OracleStrategy s
       pure (⟨A.expose s, r⟩ :: p.1, p.2)
 
 /-- The sub-distribution over length-`n` transcripts of the randomized run from `s`. -/
-noncomputable def transcriptDist (H : ProbHandler spec) (A : OracleStrategy spec) (s : A.State)
+noncomputable def transcriptDist (H : ProbHandler spec) (A : OracleStrategy S spec) (s : S)
     (n : ℕ) : SPMF (QueryLog spec) :=
   Prod.fst <$> kleisliTranscript H A s n
 
@@ -285,19 +287,19 @@ noncomputable def transcriptDist (H : ProbHandler spec) (A : OracleStrategy spec
 noncomputable def _root_.ProbHandler.ofHandler (h : OracleHandler spec) : ProbHandler spec :=
   fun t => (pure (h t) : SPMF (spec.Range t))
 
-@[simp] theorem kleisliStep_ofHandler (h : OracleHandler spec) (A : OracleStrategy spec)
-    (s : A.State) : kleisliStep (ProbHandler.ofHandler h) A s = pure (advanceOnce h A s) := by
+@[simp] theorem kleisliStep_ofHandler (h : OracleHandler spec) (A : OracleStrategy S spec)
+    (s : S) : kleisliStep (ProbHandler.ofHandler h) A s = pure (advanceOnce h A s) := by
   simp [kleisliStep, ProbHandler.ofHandler, advanceOnce]
 
-@[simp] theorem kleisliIterate_ofHandler (h : OracleHandler spec) (A : OracleStrategy spec)
-    (n : ℕ) (s : A.State) :
+@[simp] theorem kleisliIterate_ofHandler (h : OracleHandler spec) (A : OracleStrategy S spec)
+    (n : ℕ) (s : S) :
     kleisliIterate (ProbHandler.ofHandler h) A n s = pure (stateAfter h A s n) := by
   induction n generalizing s with
   | zero => rfl
   | succ n ih => rw [kleisliIterate, kleisliStep_ofHandler, pure_bind, ih, stateAfter_succ]
 
-@[simp] theorem kleisliTranscript_ofHandler (h : OracleHandler spec) (A : OracleStrategy spec)
-    (n : ℕ) (s : A.State) : kleisliTranscript (ProbHandler.ofHandler h) A s n =
+@[simp] theorem kleisliTranscript_ofHandler (h : OracleHandler spec) (A : OracleStrategy S spec)
+    (n : ℕ) (s : S) : kleisliTranscript (ProbHandler.ofHandler h) A s n =
       pure (transcript h A s n, stateAfter h A s n) := by
   induction n generalizing s with
   | zero => rfl
@@ -307,8 +309,8 @@ noncomputable def _root_.ProbHandler.ofHandler (h : OracleHandler spec) : ProbHa
 
 /-- **Dirac bridge.** The randomized transcript distribution of a deterministic handler is the Dirac
 mass on the deterministic transcript: parts 1 and 3 agree. -/
-@[simp] theorem transcriptDist_ofHandler (h : OracleHandler spec) (A : OracleStrategy spec)
-    (s : A.State) (n : ℕ) :
+@[simp] theorem transcriptDist_ofHandler (h : OracleHandler spec) (A : OracleStrategy S spec)
+    (s : S) (n : ℕ) :
     transcriptDist (ProbHandler.ofHandler h) A s n = pure (transcript h A s n) := by
   rw [transcriptDist, kleisliTranscript_ofHandler, map_pure]
 
@@ -371,10 +373,9 @@ theorem iterate_advance_eq_simulate (h : OracleHandler spec) (oa : OracleComp sp
 /-- The program as a closed dynamical system: the state is the remaining computation, the interface
 is the unit `X`, and one step answers the head query via `h`. The system reaches a fixed point
 exactly at `pure`; iterating it is `iterate_advance_eq_simulate`. -/
-def evalSystem (h : OracleHandler spec) (α : Type v) : PFunctor.Closed.{u, v, max u v} where
-  State := OracleComp spec α
-  expose := fun _ => PUnit.unit
-  update := fun oa _ => advance h oa
+def evalSystem (h : OracleHandler spec) (α : Type v) :
+    PFunctor.Closed.{max u v, u, v} (OracleComp spec α) :=
+  PFunctor.DynSystem.mk' (fun _ => PUnit.unit) (fun oa _ => advance h oa)
 
 @[simp] theorem evalSystem_step (h : OracleHandler spec) (oa : OracleComp spec α) :
     (evalSystem h α).step oa = advance h oa := rfl
