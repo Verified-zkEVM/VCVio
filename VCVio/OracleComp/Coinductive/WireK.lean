@@ -156,6 +156,44 @@ noncomputable def ofStateQueryImpl {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} �
   State := σ
   answer s t := 𝒟[(impl t).run s]
 
+/-- **The stateful-responder probability bridge**: running an adversary against the
+responder built from a `StateT σ ProbComp` handler (`ofStateQueryImpl impl`) is exactly
+the evaluation distribution of running it against `impl` itself — the responder's `SPMF`
+program-run is `𝒟` of the `ProbComp` program-run, *jointly* in the returned value and the
+final state. This is the reusable bridge every stateful-responder consumer needs to move a
+game between its `ProbComp` presentation (where probability reasoning happens) and its
+`ProbResponder` presentation (the dynamical-systems wiring data).
+
+Structurally it is the naturality of `simulateQ` along the monad morphism
+`𝒟 : ProbComp →ᵐ SPMF`, transported through `StateT σ` — i.e. `𝒟 ∘ simulateQ impl =
+simulateQ (𝒟 ∘ impl)`. It is proved here by a bespoke `OracleComp` induction for want of a
+generic *naturality of the universal fold along a monad morphism* law: `simulateQ'` is
+already a bundled `OracleComp spec →ᵐ r`, but there is no `φ ∘ₘ simulateQ' impl =
+simulateQ' (φ ∘ impl)`, nor a `StateT`-functoriality lemma for `→ᵐ`, so this and its
+siblings (`evalDist_simulateQ_run'_eq_evalDist`, `evalDist_simulateQ_run_congr`) are each
+re-derived by hand. See the PolyFun Kleisli/handler pain-point ledger. -/
+theorem run_simulateQ_toQueryImpl_ofStateQueryImpl {ι₀ : Type}
+    {spec₀ : OracleSpec.{0, 0} ι₀} {σ α : Type}
+    (impl : QueryImpl spec₀ (StateT σ ProbComp)) (oa : OracleComp spec₀ α) (s : σ) :
+    (simulateQ (ofStateQueryImpl impl).toQueryImpl oa).run s =
+      𝒟[(simulateQ impl oa).run s] := by
+  induction oa generalizing s with
+  | pure x =>
+    show (simulateQ (ofStateQueryImpl impl).toQueryImpl (pure x)).run s =
+      𝒟[(simulateQ impl (pure x)).run s]
+    rw [simulateQ_pure, simulateQ_pure, StateT.run_pure, StateT.run_pure, evalDist_pure]
+    rfl
+  | queryBind t k ih =>
+    have hqb : ∀ {r : Type → Type} [Monad r] [LawfulMonad r] (impl' : QueryImpl spec₀ r),
+        simulateQ impl' (OracleComp.queryBind t k) =
+          impl' t >>= fun u => simulateQ impl' (k u) := by
+      intro r _ _ impl'
+      rw [show OracleComp.queryBind t k =
+        (liftM (spec₀.query t) : OracleComp spec₀ (spec₀.Range t)) >>= k from rfl,
+        simulateQ_bind, simulateQ_spec_query]
+    rw [hqb, hqb, StateT.run_bind, StateT.run_bind, evalDist_bind]
+    exact bind_congr fun p => ih p.1 p.2
+
 end ProbResponder
 
 /-- The lazy random oracle as a probabilistic responder: the state is the query cache,

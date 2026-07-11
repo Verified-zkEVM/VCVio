@@ -61,6 +61,7 @@ import VCVio.CryptoFoundations.MerkleTree.Inductive.Uniqueness
 import VCVio.CryptoFoundations.MerkleTree.Vector.Completeness
 import VCVio.CryptoFoundations.MerkleTree.Vector.Defs
 import VCVio.CryptoFoundations.PRF
+import VCVio.CryptoFoundations.PRFGame
 import VCVio.CryptoFoundations.PRG
 import VCVio.CryptoFoundations.PRGGame
 import VCVio.CryptoFoundations.ReplayFork
