@@ -140,7 +140,10 @@ lemma perfectHVZK_iff_hvzk_zero
     (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp))) :
     ids.PerfectHVZK sim ↔ ids.HVZK sim 0 := by
-  simp [PerfectHVZK, HVZK, ← tvDist_eq_zero_iff, le_antisymm_iff, tvDist_nonneg]
+  unfold PerfectHVZK HVZK
+  refine forall₂_congr fun s w => imp_congr_right fun _ => ?_
+  rw [← tvDist_eq_zero_iff]
+  exact ⟨le_of_eq, fun h => le_antisymm h (tvDist_nonneg _ _)⟩
 
 end HVZK
 

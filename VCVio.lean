@@ -110,6 +110,10 @@ import VCVio.OracleComp.Coinductive.Machine
 import VCVio.OracleComp.Coinductive.PolyTime
 import VCVio.OracleComp.Coinductive.PolyTimeClosure
 import VCVio.OracleComp.Coinductive.PolyTimeConstructions
+import VCVio.OracleComp.Coinductive.PolyTimeNontrivial
+import VCVio.OracleComp.Coinductive.RejectionSampler
+import VCVio.OracleComp.Coinductive.RunLimit
+import VCVio.OracleComp.Coinductive.WireK
 import VCVio.OracleComp.Constructions.BitVec
 import VCVio.OracleComp.Constructions.GenerateSeed
 import VCVio.OracleComp.Constructions.Replicate

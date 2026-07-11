@@ -69,7 +69,7 @@ universe w in
 theorem renyiDiv_bind_right_le (a : ℝ) (ha : 1 < a) {α' : Type w} {β : Type w}
     (f : α' → SPMF β) (p q : SPMF α') :
     SPMF.renyiDiv a (p >>= f) (q >>= f) ≤ SPMF.renyiDiv a p q := by
-  simpa only [SPMF.renyiDiv, SPMF.toPMF_bind] using
+  simpa only [SPMF.renyiDiv, SPMF.toPMF_bind, Option.elimM, PMF.monad_bind_eq_bind] using
     PMF.renyiDiv_bind_right_le a ha _ p.toPMF q.toPMF
 
 end SPMF

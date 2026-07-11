@@ -27,7 +27,6 @@ reduction, runs the scheme's algorithms — but it is part of the textbook defin
 recorded here for fidelity.
 -/
 
-universe u
 
 open OracleComp OracleSpec
 
@@ -46,25 +45,42 @@ def SchemeCorrect (π : (n : ℕ) → SymmEncAlg ProbComp (M n) (K n) (C n)) : P
   ∀ n, (π n).Complete
 
 /-- Efficiency half of Katz–Lindell Definition 3.8: key generation, encryption, and
-decryption are all polynomial-time program families. Fidelity-only in §3.2 — the
-security theorems never run the honest algorithms inside a reduction. -/
-def SchemePolyTime (π : (n : ℕ) → SymmEncAlg ProbComp (M n) (K n) (C n)) : Prop :=
-  OracleComp.IsPolyTime (fun n (_ : Unit) => (π n).keygen) ∧
-    OracleComp.IsPolyTime (fun n (p : K n × M n) => (π n).encrypt p.1 p.2) ∧
-    OracleComp.IsPolyTime (fun n (p : K n × C n) => (π n).decrypt p.1 p.2)
+decryption are all polynomial-time program families, at pinned canonical boundaries
+for messages, keys, and ciphertexts. Fidelity-only in §3.2 — the security theorems
+never run the honest algorithms inside a reduction.
 
-/-- A pure function family is polynomial-time computable when its `pure`-lift (over the
-coin oracle, i.e. with a random tape it never reads) is a polynomial-time program
-family. Used to state the efficiency hypotheses of the semantic-security definitions. -/
-def IsPolyTimeFun {α β : ℕ → Type} (g : (n : ℕ) → α n → β n) : Prop :=
-  OracleComp.IsPolyTime fun n x => (pure (g n x) : OracleComp coinSpec (β n))
+**Interim caveat**: the scheme algorithms are `ProbComp` programs over `unifSpec`,
+whose query indices range over all of `ℕ` — an infinite type admits no fixed-width
+canonical interface encoding, so `OracleSpec.InterfaceBitEnc (fun _ => unifSpec)` is
+uninhabited and this definition is currently vacuous. The faithful definition awaits
+the `ProbComp → coinSpec` derandomization bridge (the textbook's algorithms run on a
+random bit tape, i.e. the coin oracle), the same bridge blocking Claim 3.12; the
+interface encoding is an explicit parameter so the statement shape is already final. -/
+def SchemePolyTime (eM : Computability.BitEncFam M) (eK : Computability.BitEncFam K)
+    (eC : Computability.BitEncFam C)
+    (eU : OracleSpec.InterfaceBitEnc (fun _ => unifSpec))
+    (π : (n : ℕ) → SymmEncAlg ProbComp (M n) (K n) (C n)) : Prop :=
+  OracleComp.IsPolyTime ⟨.unit, eK, eU⟩ (fun n (_ : Unit) => (π n).keygen) ∧
+    OracleComp.IsPolyTime ⟨eK.pair eM, eC, eU⟩ (fun n (p : K n × M n) =>
+      (π n).encrypt p.1 p.2) ∧
+    OracleComp.IsPolyTime ⟨eK.pair eC, eM.option, eU⟩ (fun n (p : K n × C n) =>
+      (π n).decrypt p.1 p.2)
 
-/-- The core construction `OracleComp.isPolyTime_bitVecFun` discharges `IsPolyTimeFun`
-directly: the identity on plaintexts — and any width-bounded bitvector function — is a
-polynomial-time computable function, so it can back the `f`/`h` slots of the
-semantic-security definitions. -/
-example : IsPolyTimeFun (fun n (x : BitVec n) => x) :=
-  isPolyTime_bitVecFun Polynomial.X Polynomial.X (fun n => by simp) (fun n => by simp)
-    (fun _ => id)
+/-- A pure function family is polynomial-time computable, at pinned canonical
+boundaries, when its `pure`-lift (over the coin oracle, i.e. with a random tape it
+never reads) is a polynomial-time program family. Used to state the efficiency
+hypotheses of the semantic-security definitions. -/
+def IsPolyTimeFun {α β : ℕ → Type} (eIn : Computability.BitEncFam α)
+    (eOut : Computability.BitEncFam β) (g : (n : ℕ) → α n → β n) : Prop :=
+  OracleComp.IsPolyTime (BoundaryData.coin eIn eOut)
+    fun n x => (pure (g n x) : OracleComp coinSpec (β n))
+
+/-! `IsPolyTimeFun` for a concrete function family is discharged by supplying uniform
+machine families through `OracleComp.isPolyTime_pure_of_witnesses` (or, for input types
+of polynomially bounded cardinality, hypothesis-free via
+`OracleComp.isPolyTime_pure_ofFintype`). There is deliberately no hypothesis-free route
+for bitvector functions: a finite table over `BitVec n` inputs is `2 ^ n` states of
+advice, exactly the collapse the machine model's advice bound exists to prevent — even
+the identity needs a genuine (deferred) base machine. -/
 
 end KatzLindell

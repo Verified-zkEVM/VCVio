@@ -195,8 +195,8 @@ lemma evalDist_eq (mx : ExceptT ε m α) :
 
 @[grind =]
 lemma probOutput_eq (mx : ExceptT ε m α) (x : α) :
-    Pr[= x | mx] = Pr[= Except.ok x | mx.run] := by
-  simpa only [probOutput_def] using toSPMF'_apply_eq mx x
+    Pr[= x | mx] = Pr[= Except.ok x | mx.run] :=
+  toSPMF'_apply_eq mx x
 
 @[grind =]
 lemma probFailure_eq (mx : ExceptT ε m α) :

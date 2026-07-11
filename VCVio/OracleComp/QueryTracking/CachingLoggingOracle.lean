@@ -162,8 +162,8 @@ theorem run'_simulateQ_eq {α : Type u}
     (oa : OracleComp spec α) (s : QueryCache spec × QueryLog spec) :
     (simulateQ cachingLoggingOracle oa).run' s =
       (simulateQ cachingOracle oa).run' s.1 := by
-  have hmap := congrArg (fun p => Prod.fst <$> p) (fst_map_run_simulateQ oa s)
-  simpa [StateT.run'] using hmap
+  have hmap := congrArg (fun p => (fun x => x.1) <$> p) (fst_map_run_simulateQ oa s)
+  simpa [StateT.run', StateT.run] using hmap
 
 /-! ### Forward-direction query bounds
 

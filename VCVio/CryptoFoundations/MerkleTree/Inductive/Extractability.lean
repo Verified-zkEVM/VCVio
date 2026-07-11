@@ -205,7 +205,8 @@ private lemma extractabilityGame_logged_prefix_map_unit_eq
       (do let (_root, aux) ← 𝒜.commit
           let ⟨_idx, _leaf, _proof⟩ ← 𝒜.opening aux
           pure ()) := by
-  simpa [map_bind, map_pure] using loggingOracle.run_simulateQ_bind_fst 𝒜.commit
+  simp only [map_bind, map_pure]
+  exact loggingOracle.run_simulateQ_bind_fst 𝒜.commit
     (fun (_, aux) => 𝒜.opening aux >>= fun _ => pure ())
 
 /--
@@ -703,7 +704,7 @@ theorem extractability [DecidableEq α] [Fintype α] [Inhabited α]
         (extractabilityGame 𝒜) (qb + s.depth)
         (extractabilityGame_isTotalQueryBound 𝒜 qb h_IsQueryBound_qb)
         (fun _ => le_rfl) using 2
-      norm_cast
+      all_goals first | rfl | norm_cast
     _ ≤ ((qb + s.depth) ^ 2 : ENNReal) / (2 * Fintype.card α) +
         1 / (Fintype.card α) := by
       have h' := extractabilityGame_not_logHasCollision_wins_le_inv_card 𝒜

@@ -183,8 +183,7 @@ lemma isTotalQueryBound_listMapM
     (h : ∀ x, IsTotalQueryBound (f x) (k x)) (xs : List α) :
     IsTotalQueryBound (xs.mapM f) ((xs.map k).sum) := by
   induction xs with
-  | nil => simpa [List.mapM_nil] using
-      (trivial : IsTotalQueryBound (pure ([] : List β) : OracleComp spec _) 0)
+  | nil => simp [List.mapM_nil, IsTotalQueryBound]
   | cons a xs ih =>
       rw [List.mapM_cons, List.map_cons, List.sum_cons]
       refine isTotalQueryBound_bind (h a) fun y => ?_
@@ -206,8 +205,7 @@ lemma isTotalQueryBound_listFoldlM
     (h : ∀ b x, IsTotalQueryBound (f b x) (k x)) (b₀ : β) (xs : List α) :
     IsTotalQueryBound (xs.foldlM f b₀) ((xs.map k).sum) := by
   induction xs generalizing b₀ with
-  | nil => simpa [List.foldlM_nil] using
-      (trivial : IsTotalQueryBound (pure b₀ : OracleComp spec _) 0)
+  | nil => simp [List.foldlM_nil, IsTotalQueryBound]
   | cons a xs ih =>
       rw [List.foldlM_cons, List.map_cons, List.sum_cons]
       exact isTotalQueryBound_bind (h b₀ a) fun b' => ih b'

@@ -32,7 +32,6 @@ experiments of `VCVio.CryptoFoundations.SymmEncAlg.EAV`:
   Definition 3.9, `Pr[PrivK^eav = 1] ≤ 1/2 + negl n`.
 -/
 
-universe u
 
 open ENNReal OracleComp OracleSpec SymmEncAlg
 
@@ -47,6 +46,13 @@ cross-phase `State` family carries whatever the first phase wants to remember. -
 structure PPTEavAdversary (M C : ℕ → Type) where
   /-- Cross-phase adversary state. -/
   State : ℕ → Type
+  /-- The adversary's fixed-width representation of its own cross-phase state. This is
+  the sole *adversary-supplied* boundary encoding in the model, and it is sound because
+  it is **shared** between the phase that writes it and the phase that reads it: every
+  bit cached in the encoded state was produced by the choose phase's witnessed machine
+  from canonical inputs and coin answers, so no computation can be smuggled through the
+  representation (see the `## Model` notes of `VCVio.OracleComp.Coinductive.PolyTime`). -/
+  encState : Computability.BitEncFam State
   /-- Choose the two challenge messages, retaining state. -/
   choose : (n : ℕ) → OracleComp coinSpec (M n × M n × State n)
   /-- Guess which challenge message a ciphertext encrypts. -/
@@ -61,40 +67,35 @@ def PPTEavAdversary.toEavAdversary (A : PPTEavAdversary M C) (n : ℕ) :
   distinguish s c := simulateQ uniformSampleImpl (A.distinguish n (s, c))
 
 /-- Probabilistic polynomial time for a two-phase eavesdropping adversary: both phases
-are `OracleComp.IsPolyTime` program families. This is the `isPPT` slot of
-`SecurityGame.secureAgainst` used by `EavSecure`. -/
-def PPTEavAdversary.IsPPT (A : PPTEavAdversary M C) : Prop :=
-  OracleComp.IsPolyTime (fun n (_ : Unit) => A.choose n) ∧
-    OracleComp.IsPolyTime (fun n (p : A.State n × C n) => A.distinguish n p)
+are `OracleComp.IsPolyTime` program families, at boundaries pinned to the canonical
+message/ciphertext encodings `eM`/`eC` and the adversary's own shared cross-phase state
+encoding. This is the `isPPT` slot of `SecurityGame.secureAgainst` used by `EavSecure`. -/
+def PPTEavAdversary.IsPPT (A : PPTEavAdversary M C) (eM : Computability.BitEncFam M)
+    (eC : Computability.BitEncFam C) : Prop :=
+  OracleComp.IsPolyTime (BoundaryData.coin .unit (eM.pair (eM.pair A.encState)))
+      (fun n (_ : Unit) => A.choose n) ∧
+    OracleComp.IsPolyTime (BoundaryData.coin (A.encState.pair eC) .bool)
+      (fun n (p : A.State n × C n) => A.distinguish n p)
 
 /-- Flip a two-phase eavesdropping adversary's guess: same choice phase, distinguish phase's
 output bit negated. The adversary that outputs `1 - PrivK^eav` guess. -/
 def PPTEavAdversary.negateDistinguish (A : PPTEavAdversary M C) : PPTEavAdversary M C where
   State := A.State
+  encState := A.encState
   choose := A.choose
   distinguish n p := (fun b => !b) <$> A.distinguish n p
 
-/-- The PPT adversary class is **closed under output negation**: flipping the guess preserves
-polynomial time. This is the closure that the one-sided→two-sided reading of Definition 3.9 needs
-(see `exists_negligible_probOutput_privKEav_le`). It is discharged by the general output-map closure
-`OracleComp.IsPolyTime.map`: `Bool` is a finite output type, so the negation post-map is a finite
-table composed onto the distinguish machine's readout via `EncPolyTime.comp` — no finiteness of the
-adversary's (abstract) machine state is required. -/
-theorem PPTEavAdversary.isPPT_negateDistinguish {A : PPTEavAdversary M C} (hA : A.IsPPT) :
-    A.negateDistinguish.IsPPT := by
-  refine ⟨hA.1, OracleComp.IsPolyTime.map hA.2 (fun _ b => !b)
-    (fun _ => Computability.finEncodingOfFinEnum Bool) (Polynomial.C 9) fun n x => ?_⟩
-  show ((Computability.finEncodingOption (Computability.finEncodingOfFinEnum Bool)).boolify
-      (Option.map (fun b => !b) x)).length ≤ (Polynomial.C 9).eval n
-  rw [Polynomial.eval_C, Computability.length_boolify_finEncodingOption,
-    show Fintype.card (Computability.finEncodingOfFinEnum Bool).Γ = 1 from rfl]
-  have hL : ((Computability.finEncodingOption (Computability.finEncodingOfFinEnum Bool)).encode
-      (Option.map (fun b => !b) x)).length ≤ 3 := by
-    cases x with
-    | none => simp [Computability.finEncodingOption, Computability.finEncodingOfFinEnum]
-    | some b => cases b <;>
-        simp [Computability.finEncodingOption, Computability.finEncodingOfFinEnum] <;> decide
-  omega
+/-- The PPT adversary class is **closed under output negation** (`distinguish ↦
+!distinguish`) — the closure the one-sided→two-sided reading of Definition 3.9 needs
+(see `exists_negligible_probOutput_privKEav_le`). Discharged by the abstract output-map
+closure `OracleComp.IsPolyTime.map`, which is derivable exactly because the output
+boundary is the canonical `Bool` encoding (with an existential output encoding this
+closure was uncertifiable — the pre-canonicalization model carried it as a
+hypothesis). -/
+theorem PPTEavAdversary.isPPT_negateDistinguish {A : PPTEavAdversary M C}
+    {eM : Computability.BitEncFam M} {eC : Computability.BitEncFam C}
+    (hA : A.IsPPT eM eC) : A.negateDistinguish.IsPPT eM eC :=
+  ⟨hA.1, hA.2.map (fun _ b => !b) .bool (.C 2) (fun n => by simp)⟩
 
 variable (π : (n : ℕ) → SymmEncAlg ProbComp (M n) (K n) (C n))
 
@@ -129,14 +130,16 @@ theorem eavGuessGame_eq_eavDistGame : eavGuessGame π = eavDistGame π :=
       (eavBiasAdvantage_eq_eavDistAdvantage (π n) (A.toEavAdversary n)))
 
 /-- **Eavesdropping security** (Katz–Lindell Definitions 3.9 / 3.10): every PPT
-two-phase adversary has negligible advantage in the guessing experiment. -/
-def EavSecure : Prop :=
-  (eavGuessGame π).secureAgainst PPTEavAdversary.IsPPT
+two-phase adversary — at the pinned canonical message/ciphertext boundaries `eM`/`eC` —
+has negligible advantage in the guessing experiment. -/
+def EavSecure (eM : Computability.BitEncFam M) (eC : Computability.BitEncFam C) : Prop :=
+  (eavGuessGame π).secureAgainst (PPTEavAdversary.IsPPT · eM eC)
 
 /-- Eavesdropping security is equivalently the distinguishing form of the game being
 secure, by the game equality. -/
-theorem eavSecure_iff_distGame_secure :
-    EavSecure π ↔ (eavDistGame π).secureAgainst PPTEavAdversary.IsPPT := by
+theorem eavSecure_iff_distGame_secure (eM : Computability.BitEncFam M)
+    (eC : Computability.BitEncFam C) :
+    EavSecure π eM eC ↔ (eavDistGame π).secureAgainst (PPTEavAdversary.IsPPT · eM eC) := by
   rw [EavSecure, eavGuessGame_eq_eavDistGame]
 
 /-- The literal one-sided reading of Katz–Lindell Definition 3.9: for a secure scheme,
@@ -145,14 +148,13 @@ every PPT adversary identifies the hidden bit with probability at most negligibl
 
 The two-sided bias form of `EavSecure` is stronger, and recovering it from the one-sided
 `Pr[PrivK = 1] ≤ 1/2 + negl` reading needs the PPT adversary class closed under **output
-negation** (`distinguish ↦ !distinguish`). That closure is now available as
-`PPTEavAdversary.isPPT_negateDistinguish`, via the general output-map closure
-`OracleComp.IsPolyTime.map`: negating the output is a `Bool` post-map, which composes onto the
-distinguish machine's readout through a finite table and needs no finiteness of the (abstract)
-machine state. Assembling the full two-sided `EavSecure` from the one-sided bound and this closure
-is the remaining probability step. -/
-theorem exists_negligible_probOutput_privKEav_le (h : EavSecure π)
-    (A : PPTEavAdversary M C) (hA : A.IsPPT) :
+negation** (`distinguish ↦ !distinguish`) — available unconditionally as
+`PPTEavAdversary.isPPT_negateDistinguish` now that the output boundary is canonical.
+Assembling the full two-sided `EavSecure` from the one-sided bound and this closure is
+the remaining probability step. -/
+theorem exists_negligible_probOutput_privKEav_le {eM : Computability.BitEncFam M}
+    {eC : Computability.BitEncFam C} (h : EavSecure π eM eC)
+    (A : PPTEavAdversary M C) (hA : A.IsPPT eM eC) :
     ∃ f : ℕ → ℝ≥0∞, negligible f ∧
       ∀ n, Pr[= true | privKEav π A n] ≤ 1 / 2 + f n := by
   exact ⟨(eavGuessGame π).advantage A, h A hA, fun n =>

@@ -71,7 +71,7 @@ noncomputable instance instMAlgRelOrdered :
     have hd : ∀ a b, c.1.1 (some (a, b)) ≠ 0 →
         _root_.SPMF.IsCoupling (d a b) (𝒟[fa a]) (𝒟[fb b]) := fun a b hmass => by
       have hcut : CouplingPost (fa a) (fb b) post := hcCut (a, b)
-        ((mem_support_iff c.1 (a, b)).2 (by simpa [SPMF.apply_eq_toPMF_some] using hmass))
+        ((mem_support_iff c.1 (a, b)).2 (by rw [ne_eq, probOutput_def]; exact hmass))
       simpa [d, hcut] using (Classical.choose hcut).2
     refine ⟨⟨c.1 >>= fun p => d p.1 p.2, ?_⟩, fun z hz => ?_⟩
     · simpa [evalDist_bind] using _root_.SPMF.IsCoupling.bind c d hd

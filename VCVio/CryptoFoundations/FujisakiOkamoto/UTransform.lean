@@ -433,7 +433,7 @@ theorem decaps_usesAtMostTwoQueries [MonadLiftT m SetM] [LawfulMonadLiftT m SetM
     (policy : FujisakiOkamoto.RejectionPolicy K C)
     (pk : PK) (sk : SK) (fb : policy.FallbackState) (c : C) :
     Queries[ (UTransform pke kdInput policy).decaps ((pk, sk), fb) c in runtime ] ≤ 2 := by
-  simpa [HasQuery.UsesAtMostQueries] using
+  simp only [HasQuery.UsesAtMostQueries]; exact
     (decaps_usesWeightedQueryCostAtMost
       (ω := ℕ) (runtime := runtime) (pke := pke) (kdInput := kdInput) (policy := policy)
       (pk := pk) (sk := sk) (fb := fb) (c := c) (costFn := fun _ ↦ 1) (wCoins := 1) (wKey := 1)

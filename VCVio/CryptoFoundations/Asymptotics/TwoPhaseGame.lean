@@ -25,53 +25,27 @@ families is `OracleComp.IsPolyTimePair`: both phases are `OracleComp.IsPolyTime`
 adversary's own cross-phase state is not a parameter of the game former; instantiators
 fold it into the phase-one output and phase-two input types.
 
-The file also provides `OracleSpec.probHandler`, the canonical randomized oracle of a
-probability spec (answering each query by its `IsProbabilitySpec` distribution), with
-`OracleSpec.simulateQ_probHandler` identifying runs against it with the distributional
-semantics `𝒟[·]`. This connects machine-level game values to `Pr[…]` reasoning.
+Game values are computed against `OracleSpec.probHandler` (the canonical randomized
+oracle of a probability spec, defined with the coinductive run layer in
+`VCVio.OracleComp.Coinductive.DynSystem`), whose `simulateQ_probHandler` identifies
+machine-level game values with `Pr[…]` statements about the program.
 -/
 
-universe u
 
 open OracleSpec OracleComp Computability
 
 variable {ι : Type} [DecidableEq ι]
 
-/-! ## The canonical probabilistic handler -/
-
-namespace OracleSpec
-
-/-- The canonical randomized oracle of a probability spec: answer each query by its
-`IsProbabilitySpec` distribution, lifted to `SPMF`. Specializes to a fair coin on
-`coinSpec` and to uniform selection on `unifSpec`. -/
-noncomputable def probHandler (spec : OracleSpec.{0, 0} ι) [IsProbabilitySpec spec] :
-    ProbHandler spec :=
-  fun t => (IsProbabilitySpec.toPMF t : SPMF (spec.Range t))
-
-omit [DecidableEq ι] in
-/-- Running a program against the canonical probabilistic handler computes its
-distributional semantics: machine-level game values against `probHandler` are `Pr[…]`
-statements about the program. -/
-theorem simulateQ_probHandler {spec : OracleSpec.{0, 0} ι} [IsProbabilitySpec spec]
-    {α : Type} (oa : OracleComp spec α) :
-    simulateQ spec.probHandler oa = 𝒟[oa] := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => simp
-  | query_bind t k ih =>
-    rw [simulateQ_query_bind]
-    simp only [ih, evalDist_bind, evalDist_liftM_toPMF]
-    simp [OracleSpec.probHandler, ← PMF.monad_map_eq_map]
-
-end OracleSpec
-
 /-! ## Polynomial time for adversary pairs -/
 
 /-- The polynomial-time predicate for a pair of program families, the `isPPT` slot for
-two-phase games: both phases are Turing-machine-grounded polynomial time. -/
+two-phase games: both phases are Turing-machine-grounded polynomial time, each at its
+own pinned boundaries. -/
 def OracleComp.IsPolyTimePair {spec : ℕ → OracleSpec.{0, 0} ι} {α₁ β₁ α₂ β₂ : ℕ → Type}
+    (bd₁ : BoundaryData spec α₁ β₁) (bd₂ : BoundaryData spec α₂ β₂)
     (oa : ((n : ℕ) → α₁ n → OracleComp (spec n) (β₁ n)) ×
       ((n : ℕ) → α₂ n → OracleComp (spec n) (β₂ n))) : Prop :=
-  OracleComp.IsPolyTime oa.1 ∧ OracleComp.IsPolyTime oa.2
+  OracleComp.IsPolyTime bd₁ oa.1 ∧ OracleComp.IsPolyTime bd₂ oa.2
 
 /-! ## Two-phase games over both adversary presentations -/
 
@@ -109,8 +83,9 @@ noncomputable def toProgGame (G : TwoPhaseGame spec α₁ β₁ γ α₂ β₂) 
 
 /-- The game as a `SecurityGame` over pairs of bundled polynomial-time adversaries, via
 the machine runs `PolyTimeAdversary.exec`. -/
-noncomputable def toPolyGame (G : TwoPhaseGame spec α₁ β₁ γ α₂ β₂) :
-    SecurityGame (PolyTimeAdversary spec α₁ β₁ × PolyTimeAdversary spec α₂ β₂) where
+noncomputable def toPolyGame (G : TwoPhaseGame spec α₁ β₁ γ α₂ β₂)
+    (bd₁ : BoundaryData spec α₁ β₁) (bd₂ : BoundaryData spec α₂ β₂) :
+    SecurityGame (MachineAdversary bd₁ × MachineAdversary bd₂) where
   advantage D n :=
     (G.gen n >>= fun x =>
       D.1.exec n (G.oracle n) x >>= fun r₁ =>
@@ -122,26 +97,28 @@ noncomputable def toPolyGame (G : TwoPhaseGame spec α₁ β₁ γ α₂ β₂) 
 advantage of the implemented program pair, by the master transfer equation
 `PolyTimeAdversary.exec_eq_of_implements` applied once per phase. -/
 theorem advantage_toPolyGame_eq (G : TwoPhaseGame spec α₁ β₁ γ α₂ β₂)
-    {D₁ : PolyTimeAdversary spec α₁ β₁} {D₂ : PolyTimeAdversary spec α₂ β₂}
+    {bd₁ : BoundaryData spec α₁ β₁} {bd₂ : BoundaryData spec α₂ β₂}
+    {D₁ : MachineAdversary bd₁} {D₂ : MachineAdversary bd₂}
     {oa₁ : (n : ℕ) → α₁ n → OracleComp (spec n) (β₁ n)}
     {oa₂ : (n : ℕ) → α₂ n → OracleComp (spec n) (β₂ n)}
     (h₁ : D₁.Implements oa₁) (h₂ : D₂.Implements oa₂) (n : ℕ) :
-    G.toPolyGame.advantage (D₁, D₂) n = G.toProgGame.advantage (oa₁, oa₂) n := by
+    (G.toPolyGame bd₁ bd₂).advantage (D₁, D₂) n = G.toProgGame.advantage (oa₁, oa₂) n := by
   refine congrArg (fun p : SPMF Bool => p true) (bind_congr fun x => ?_)
-  rw [PolyTimeAdversary.exec_eq_of_implements h₁]
+  rw [MachineAdversary.exec_eq_of_implements h₁]
   refine bind_congr fun r₁ => bind_congr fun gy => ?_
-  rw [PolyTimeAdversary.exec_eq_of_implements h₂]
+  rw [MachineAdversary.exec_eq_of_implements h₂]
 
 /-- **Security transfer**: if every pair of bundled polynomial-time adversaries has
 negligible machine-level advantage, the program-level game is secure against
 `OracleComp.IsPolyTimePair`. -/
 theorem secureAgainst_isPolyTimePair_of_polyGame (G : TwoPhaseGame spec α₁ β₁ γ α₂ β₂)
-    (hsec : ∀ (D₁ : PolyTimeAdversary spec α₁ β₁) (D₂ : PolyTimeAdversary spec α₂ β₂),
-      negligible (G.toPolyGame.advantage (D₁, D₂))) :
-    G.toProgGame.secureAgainst OracleComp.IsPolyTimePair := by
-  rintro ⟨oa₁, oa₂⟩ ⟨⟨D₁, h₁, -⟩, ⟨D₂, h₂, -⟩⟩
-  have heq : G.toProgGame.advantage (oa₁, oa₂) = G.toPolyGame.advantage (D₁, D₂) :=
-    funext fun n => (G.advantage_toPolyGame_eq h₁ h₂ n).symm
-  exact heq ▸ hsec D₁ D₂
+    (bd₁ : BoundaryData spec α₁ β₁) (bd₂ : BoundaryData spec α₂ β₂)
+    (hsec : ∀ (D₁ : MachineAdversary bd₁) (D₂ : MachineAdversary bd₂),
+      negligible ((G.toPolyGame bd₁ bd₂).advantage (D₁, D₂))) :
+    G.toProgGame.secureAgainst (OracleComp.IsPolyTimePair bd₁ bd₂) := by
+  rintro ⟨oa₁, oa₂⟩ ⟨⟨w₁⟩, ⟨w₂⟩⟩
+  have heq : G.toProgGame.advantage (oa₁, oa₂) = (G.toPolyGame bd₁ bd₂).advantage (w₁.A, w₂.A) :=
+    funext fun n => (G.advantage_toPolyGame_eq w₁.implements w₂.implements n).symm
+  exact heq ▸ hsec w₁.A w₂.A
 
 end TwoPhaseGame

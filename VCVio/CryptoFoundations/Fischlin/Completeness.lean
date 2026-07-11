@@ -218,13 +218,13 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
       ≤ Pr[fun o => minGt k o | minUnifAux b cs.length (best.map (fun t => t.2.2))] := by
   induction cs generalizing best with
   | nil =>
-      simp only [fischlinUnifSearch, minUnifAux]
+      simp only [fischlinUnifSearch, minUnifAux, List.length_nil]
       rw [probEvent_pure_eq_indicator, probEvent_pure_eq_indicator]
       refine le_of_eq ?_
       by_cases h : minGt k (Option.map (fun t => t.2.2) best) <;>
         simp [Set.indicator, Set.mem_setOf_eq, h]
   | cons ω rest ih =>
-      simp only [fischlinUnifSearch, minUnifAux]
+      simp only [fischlinUnifSearch, minUnifAux, List.length_cons]
       refine probEvent_bind_le_of_forall_le (fun resp _ => ?_)
       rw [probEvent_bind_eq_tsum, probEvent_bind_eq_tsum]
       refine ENNReal.tsum_le_tsum (fun h => ?_)

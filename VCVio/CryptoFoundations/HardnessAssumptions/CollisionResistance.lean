@@ -141,8 +141,8 @@ def ROMHashSpec (X Y : Type) : OracleSpec X := fun _ => Y
 
 instance {X Y : Type} [DecidableEq X] [DecidableEq Y] :
     (ROMHashSpec X Y).DecidableEq where
-  decidableEq_A := (inferInstanceAs (DecidableEq X))
-  decidableEq_B := fun _ => (inferInstanceAs (DecidableEq Y))
+  decidableEqA := (inferInstanceAs (DecidableEq X))
+  decidableEqB := fun _ => (inferInstanceAs (DecidableEq Y))
 
 /-- The post-simulation companion to `ROMHashSpec`: definitionally the same
 `OracleSpec X`, but with a distinct head symbol so the `IsUniformSpec`
@@ -152,15 +152,15 @@ computation only via `simulateQ ROMHashSpec.cachingOracle`. -/
 def ROMHashSpec.cached (X Y : Type) : OracleSpec X := fun _ => Y
 
 instance {X Y : Type} [Fintype Y] : (ROMHashSpec.cached X Y).Fintype where
-  fintype_B := fun _ => (inferInstanceAs (Fintype Y))
+  fintypeB := fun _ => (inferInstanceAs (Fintype Y))
 
 instance {X Y : Type} [Inhabited Y] : (ROMHashSpec.cached X Y).Inhabited where
-  inhabited_B := fun _ => (inferInstanceAs (Inhabited Y))
+  inhabitedB := fun _ => (inferInstanceAs (Inhabited Y))
 
 instance {X Y : Type} [DecidableEq X] [DecidableEq Y] :
     (ROMHashSpec.cached X Y).DecidableEq where
-  decidableEq_A := (inferInstanceAs (DecidableEq X))
-  decidableEq_B := fun _ => (inferInstanceAs (DecidableEq Y))
+  decidableEqA := (inferInstanceAs (DecidableEq X))
+  decidableEqB := fun _ => (inferInstanceAs (DecidableEq Y))
 
 noncomputable instance {X Y : Type} [Fintype Y] [Inhabited Y] :
     IsUniformSpec (ROMHashSpec.cached X Y) := IsUniformSpec.ofFintypeInhabited _

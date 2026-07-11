@@ -144,7 +144,11 @@ lemma simulateQ_StateT_evalDist_congr_of_bij {α : Type} {σ₁ σ₂ : Type}
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query,
       id_map, StateT.run_bind, map_bind, evalDist_bind, hh t s, monad_norm]
     refine bind_congr fun ⟨x, s'⟩ => ?_
-    simpa [Prod.map, Equiv.apply_symm_apply] using ih x (φ.symm s')
+    have key := ih x (φ.symm s')
+    rw [Equiv.apply_symm_apply, evalDist_map] at key
+    simp only [Function.comp_apply, evalDist_pure, pure_bind, bind_pure_comp,
+      Prod.map_fst, Prod.map_snd, id_eq]
+    exact key
 
 /-! ## Functoriality of `runProb` -/
 

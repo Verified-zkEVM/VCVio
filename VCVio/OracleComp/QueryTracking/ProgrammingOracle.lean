@@ -269,8 +269,8 @@ theorem withProgramming_empty_run'_eq
     (oa : OracleComp spec α) (cache : spec.QueryCache) (bad : Bool) :
     (simulateQ (so.withProgramming ProgrammingPolicy.empty) oa).run' (cache, bad) =
       (simulateQ so.withCaching oa).run' cache := by
-  simpa [StateT.run'] using
-    congrArg (fun p => Prod.fst <$> p) (withProgramming_empty_run_proj_eq so oa cache bad)
+  simpa [StateT.run', StateT.run] using
+    congrArg (fun p => (fun x => x.1) <$> p) (withProgramming_empty_run_proj_eq so oa cache bad)
 
 /-! ## `withCachingTrackingPolicy` ≡ `withCaching` (cache-side projection) -/
 
@@ -300,7 +300,7 @@ theorem withCachingTrackingPolicy_run'_eq'
     (oa : OracleComp spec α) (cache : spec.QueryCache) (bad : Bool) :
     (simulateQ (so.withCachingTrackingPolicy policy) oa).run' (cache, bad) =
       (simulateQ so.withCaching oa).run' cache := by
-  simpa [StateT.run'] using congrArg (fun p => Prod.fst <$> p)
+  simpa [StateT.run', StateT.run] using congrArg (fun p => (fun x => x.1) <$> p)
     (withCachingTrackingPolicy_run_proj_eq' so policy oa cache bad)
 
 /-- `ProbComp` specialization of `withCachingTrackingPolicy_run_proj_eq'`. -/

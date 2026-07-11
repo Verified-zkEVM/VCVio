@@ -20,9 +20,13 @@ functions, in Cslib's `Turing.SingleTapeTM` model:
   prefix tree of a finite set of valid inputs, then write the corresponding table
   output, giving `tablePolyTimeComputable` and the encoding-level witness
   `Computability.EncPolyTime.ofFintype`: **any function with a finite domain is
-  polynomial-time computable** relative to an injective encoding. This subsumes
-  constants, relabelings, and projections on finite domains, and discharges all four
-  per-step machine witnesses of `PolyTimeAdversary` for finite-state oracle machines.
+  polynomial-time computable** relative to an injective encoding — but with a
+  description size (`EncPolyTime.size_ofFintype_le`) that grows with the domain's
+  total encoded length, so a *family* of tables stays within a polynomial advice
+  bound (`PolyTimeAdversary.descBound`) only on domains of polynomially bounded
+  cardinality. Within that regime it subsumes constants, relabelings, and projections,
+  and discharges all four per-step machine witnesses of `PolyTimeAdversary` for
+  small-state oracle machines.
 
 The machines follow one design: **clear the input moving right, then write the output
 backwards moving left**. Clearing onto an empty left stack keeps the tape in canonical
@@ -168,6 +172,19 @@ noncomputable def constPolyTimeComputable (out : List Symbol) :
       simp only [constTimeComputable, Polynomial.eval_add, Polynomial.eval_X,
         Polynomial.eval_C, List.length_cons]
       omega
+
+/-- The constant-function machine has at most `out.length + 2` states: one clearing
+state plus one writing state per output symbol. -/
+theorem size_constPolyTimeComputable_le (out : List Symbol) :
+    (constPolyTimeComputable (Symbol := Symbol) out).size ≤ out.length + 2 := by
+  cases out with
+  | nil =>
+    show Fintype.card Unit ≤ 2
+    simp
+  | cons o os =>
+    show Fintype.card (Unit ⊕ Fin (o :: os).length) ≤ (o :: os).length + 2
+    simp only [Fintype.card_sum, Fintype.card_unit, Fintype.card_fin, List.length_cons]
+    omega
 
 /-! ## The finite-table machine
 
@@ -373,6 +390,29 @@ noncomputable def tablePolyTimeComputable (S : Finset (List Symbol))
       Polynomial.eval_C]
     omega
 
+/-! ### Description size of the table machine
+
+The table machine's *time* is linear, but its *state count* — the reading prefix tree
+plus the writing states — grows with the total length of the valid inputs and their
+table outputs. This is the advice a table smuggles: a family of tables over
+exponentially large domains has exponential description size, which is why witness
+families must carry an explicit size bound (`Computability.EncPolyTime.size`). -/
+
+omit [Inhabited Symbol] [Fintype Symbol] in
+/-- The prefix tree of a finite set of strings has at most `∑ (length + 1)` nodes. -/
+theorem card_prefixClosure_le (S : Finset (List Symbol)) :
+    (prefixClosure S).card ≤ ∑ s ∈ S, (s.length + 1) :=
+  Finset.card_biUnion_le.trans (Finset.sum_le_sum fun s _ =>
+    (List.toFinset_card_le _).trans (by simp))
+
+omit [Inhabited Symbol] [Fintype Symbol] in
+/-- The state count of the finite-table machine: prefix-tree nodes, the junk state, and
+one writing state per output symbol. -/
+theorem card_tableState (S : Finset (List Symbol)) (T : List Symbol → List Symbol) :
+    Fintype.card (TableState S T) =
+      ((prefixClosure S).card + 1) + ∑ s ∈ S, (T s).length := by
+  simp [TableState, Fintype.card_sigma, Finset.sum_attach S fun s => (T s).length]
+
 end Table
 
 end Turing.SingleTapeTM
@@ -388,9 +428,12 @@ noncomputable def const {α : Type u} {β : Type v} (ea : α → List Bool)
 
 /-- **Any function with a finite domain is polynomial-time computable** relative to an
 injective input encoding: the machine reads the input into state through the prefix
-tree of the finitely many valid encodings, then writes the encoded output. Instantiated
-at the `boolify` of a `FinEncoding` (injective by `FinEncoding.boolify_injective`),
-this discharges the per-step machine witnesses of finite-state oracle machines. -/
+tree of the finitely many valid encodings, then writes the encoded output. The trade is
+time for description: the machine has one reading state per prefix of a valid input
+(`size_ofFintype_le`), so families of these witnesses respect a polynomial advice bound
+only on domains of polynomially bounded cardinality. Instantiated at the `boolify` of a
+`FinEncoding` (injective by `FinEncoding.boolify_injective`), this discharges the
+per-step machine witnesses of small-state oracle machines. -/
 noncomputable def ofFintype {α : Type u} {β : Type v} [Fintype α]
     (ea : α → List Bool) (hea : Function.Injective ea) (eb : β → List Bool)
     (f : α → β) : EncPolyTime ea eb f where
@@ -422,6 +465,60 @@ theorem time_ofFintype_eval_le {α : Type u} {β : Type v} [Fintype α]
     exact hB a
   rw [htime, Polynomial.eval_add, Polynomial.eval_X, Polynomial.eval_C]
   omega
+
+/-- The constant-function witness has at most `(eb c).length + 2` machine states. -/
+theorem size_const_le {α : Type u} {β : Type v} (ea : α → List Bool)
+    (eb : β → List Bool) (c : β) :
+    (const ea eb c).size ≤ (eb c).length + 2 :=
+  Turing.SingleTapeTM.size_constPolyTimeComputable_le (eb c)
+
+/-- The description size of the finite-table witness: the machine hard-codes the whole
+input/output table, so its state count grows with the **total encoded length of the
+domain** — for a domain of exponential cardinality this is exponential advice, however
+fast the machine runs. Families of `ofFintype` witnesses are therefore only usable
+where the domain cardinality is polynomially bounded in the security parameter. -/
+theorem size_ofFintype_le {α : Type u} {β : Type v} [Fintype α]
+    {ea : α → List Bool} (hea : Function.Injective ea) (eb : β → List Bool)
+    (f : α → β) :
+    (ofFintype ea hea eb f).size ≤
+      (∑ a : α, ((ea a).length + 1)) + 1 + ∑ a : α, (eb (f a)).length := by
+  show Fintype.card (Turing.SingleTapeTM.TableState (Finset.univ.image ea)
+    fun l => ((Function.partialInv ea l).map fun a => eb (f a)).getD []) ≤ _
+  rw [Turing.SingleTapeTM.card_tableState]
+  have hinj : ∀ a ∈ Finset.univ, ∀ b ∈ Finset.univ, ea a = ea b → a = b :=
+    fun a _ b _ h => hea h
+  have h1 : (Turing.SingleTapeTM.prefixClosure (Finset.univ.image ea)).card ≤
+      ∑ a : α, ((ea a).length + 1) := by
+    refine (Turing.SingleTapeTM.card_prefixClosure_le _).trans (le_of_eq ?_)
+    rw [Finset.sum_image hinj]
+  have h2 : (∑ s ∈ Finset.univ.image ea,
+      (((Function.partialInv ea s).map fun a => eb (f a)).getD []).length) =
+      ∑ a : α, (eb (f a)).length := by
+    rw [Finset.sum_image hinj]
+    exact Finset.sum_congr rfl fun a _ => by rw [Function.partialInv_left hea]; rfl
+  omega
+
+/-- Discharge form of `size_ofFintype_le`: a cardinality bound on the domain and
+pointwise bounds on both encodings give the table size bound consumed by
+`PolyTimeAdversary.descBound` fields. -/
+theorem size_ofFintype_le_of_bounds {α : Type u} {β : Type v} [Fintype α]
+    {ea : α → List Bool} (hea : Function.Injective ea) {eb : β → List Bool}
+    {f : α → β} {A La B : ℕ} (hcard : Fintype.card α ≤ A)
+    (hla : ∀ a, (ea a).length ≤ La) (hB : ∀ a, (eb (f a)).length ≤ B) :
+    (ofFintype ea hea eb f).size ≤ A * (La + 1 + B) + 1 := by
+  refine (size_ofFintype_le hea eb f).trans ?_
+  have h1 : (∑ a : α, ((ea a).length + 1)) ≤ Fintype.card α * (La + 1) := by
+    refine (Finset.sum_le_card_nsmul _ _ (La + 1) fun a _ => ?_).trans_eq (by
+      simp [smul_eq_mul])
+    have := hla a; omega
+  have h2 : (∑ a : α, (eb (f a)).length) ≤ Fintype.card α * B := by
+    refine (Finset.sum_le_card_nsmul _ _ B fun a _ => hB a).trans_eq (by
+      simp [smul_eq_mul])
+  have h3 : Fintype.card α * (La + 1) ≤ A * (La + 1) := Nat.mul_le_mul_right _ hcard
+  have h4 : Fintype.card α * B ≤ A * B := Nat.mul_le_mul_right _ hcard
+  calc (∑ a : α, ((ea a).length + 1)) + 1 + ∑ a : α, (eb (f a)).length
+      ≤ A * (La + 1) + 1 + A * B := by omega
+    _ = A * (La + 1 + B) + 1 := by ring
 
 /-! ### Deferred: the sum-dispatch transducer
 

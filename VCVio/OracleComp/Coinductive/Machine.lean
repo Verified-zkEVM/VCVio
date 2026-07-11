@@ -259,12 +259,43 @@ theorem Implements.implementsDet {M : OracleMachine spec α β}
   rw [runK_ofHandler, OracleComp.simulateQ_ofHandler, map_pure] at key
   exact SPMF.pure_injective key
 
+/-- For a stable machine, implementing a program at fuel `k` forces deterministic
+steadiness at `k`: the `steady` field of a `PolyTimeAdversary` is *derivable* for any
+implementing bundle — it keeps standalone bundles self-certifying but adds no strength
+beyond the implements equation. -/
+theorem Implements.steadyBy {M : OracleMachine spec α β} {oa : α → OracleComp spec β}
+    {k : ℕ} (hst : M.StableOutput) (h : M.Implements oa k) (hd : OracleHandler spec)
+    (x : α) : M.SteadyBy hd (M.init x) k := by
+  rw [steadyBy_iff_isSome_runD hst, h.implementsDet hd x]
+  rfl
+
+/-- An implementing machine resolves along every randomized run: the early-stopping
+probabilistic run puts no mass on an unresolved readout. Probabilistic steadiness is
+thus a consequence of `Implements`, not an extra assumption — the deterministic
+quantification of the `steady` field loses nothing. -/
+theorem Implements.runK_none_eq_zero {M : OracleMachine spec α β}
+    {oa : α → OracleComp spec β} {k : ℕ} (h : M.Implements oa k)
+    (H : ProbHandler spec) (x : α) : M.runK H k (M.init x) none = 0 := by
+  rw [h H x, map_eq_bind_pure_comp, SPMF.bind_apply_eq_tsum]
+  refine ENNReal.tsum_eq_zero.mpr fun b => ?_
+  rw [Function.comp_apply, (SPMF.pure_apply_eq_zero_iff _ _).mpr (by simp)]
+  exact mul_zero _
+
 /-! ## Simulation relations: the practical proof method for `Implements` -/
 
 /-- A step-synchronized simulation between machine states and program residues: related
 `pure` programs read out, related query programs are unresolved and ask the same query,
 and updating along any answer stays related to the continuation. This is the practical
-interface for proving `Implements` (`implements_of_isSimulation`). -/
+interface for proving `Implements` (`implements_of_isSimulation`).
+
+Step synchronization (each machine round consumes exactly one program query, enforced
+by `expose_eq`) restricts this *proof method*, not the `Implements` relation itself: a
+machine taking internal bookkeeping rounds can still implement a program, but must be
+handled either by restructuring its state so each round consumes a query, or by a
+future stuttering variant (a relation with a per-query stutter budget, `expose_eq` and
+`update_rel` required only at query-consuming steps, and fuel scaled accordingly in
+`implements_of_isSimulation`). Every current machine construction is step-synchronized
+by design, so the stuttering variant is deferred until a consumer needs it. -/
 structure IsSimulation (R : M.State → OracleComp spec β → Prop) : Prop where
   /-- A state related to a halted program reads out its value. -/
   output_pure : ∀ ⦃s : M.State⦄ ⦃b : β⦄, R s (pure b) → M.output s = some b

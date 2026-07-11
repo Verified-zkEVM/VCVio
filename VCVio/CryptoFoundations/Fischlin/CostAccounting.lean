@@ -194,7 +194,7 @@ private lemma fischlinSearchAuxWithAddCost_pathwiseCostAtMost
       (challenges.length • w) := by
   induction challenges generalizing best with
   | nil =>
-      simpa using
+      simpa [fischlinSearchAuxWithAddCost] using
         (AddWriterT.pathwiseCostAtMost_pure
           (m := m) ((best.map fun (ω, resp, _) => (ω, resp)) : Option (Chal × Resp)))
   | cons chal rest ih =>
@@ -256,10 +256,12 @@ private lemma fischlinSearchAuxWithAddCost_pathwiseCostAtMost
                   if h.val < h'.val then some (chal, resp, h) else some (ω', resp', h')
             simpa [hh, newBest] using ih (best := newBest)
         exact AddWriterT.pathwiseCostAtMost_mono hhash (by simp [zero_add])
-      simpa [succ_nsmul'] using
-        (AddWriterT.pathwiseCostAtMost_bind (w₁ := 0) (w₂ := w + rest.length • w)
-          (AddWriterT.pathwiseCostAtMost_monadLift (m := m) (σ.respond pk sk sc chal))
-          hstep)
+      have hcost' : (rest.length + 1) • w = 0 + (w + rest.length • w) := by
+        rw [zero_add, succ_nsmul']
+      rw [hcost']
+      exact AddWriterT.pathwiseCostAtMost_bind (w₁ := 0) (w₂ := w + rest.length • w)
+        (AddWriterT.pathwiseCostAtMost_monadLift (m := m) (σ.respond pk sk sc chal))
+        hstep
 
 section verifyCostAccounting
 
@@ -442,9 +444,8 @@ theorem sign_usesAtMostRhoCardOmegaQueries
     have hstep :
         AddWriterT.QueryBoundedAboveBy
           (liftM (σ.commit pk sk) : AddWriterT ℕ m (Commit × PrvState)) 0 := by
-      simpa [WriterT.liftM_def] using
-        (AddWriterT.queryBoundedAboveBy_monadLift
-          (monadLift (σ.commit pk sk) : m (Commit × PrvState)))
+      exact AddWriterT.queryBoundedAboveBy_monadLift
+        (monadLift (σ.commit pk sk) : m (Commit × PrvState))
     simpa [commitComp] using
       (AddWriterT.queryBoundedAboveBy_fin_mOfFn (n := ρ) (k := 0)
         (f := fun _ => (liftM (σ.commit pk sk) : AddWriterT ℕ m (Commit × PrvState)))
@@ -474,7 +475,7 @@ theorem sign_usesAtMostRhoCardOmegaQueries
         match result with
         | some (ω, resp) => pure (comVec i, ω, resp)
         | none => pure (comVec i, default, default)
-      simpa [finish] using congrArg finish
+      exact congrArg finish
         (fischlinSearchAux_eq_withUnitCost
           σ (runtime := runtime) (pk := pk) (sk := sk) (sc := (commits i).2)
           (msg := msg) (comList := comList) (i := i)
@@ -556,9 +557,8 @@ theorem sign_usesWeightedQueryCostAtMost
     have hstep :
         AddWriterT.PathwiseCostAtMost
           (liftM (σ.commit pk sk) : AddWriterT κ m (Commit × PrvState)) 0 := by
-      simpa [WriterT.liftM_def] using
-        (AddWriterT.pathwiseCostAtMost_monadLift
-          (m := m) (monadLift (σ.commit pk sk) : m (Commit × PrvState)))
+      exact AddWriterT.pathwiseCostAtMost_monadLift
+        (m := m) (monadLift (σ.commit pk sk) : m (Commit × PrvState))
     simpa [commitComp] using
       (AddWriterT.pathwiseCostAtMost_fin_mOfFn (n := ρ) (k := 0)
         (f := fun _ => (liftM (σ.commit pk sk) : AddWriterT κ m (Commit × PrvState)))
@@ -588,7 +588,7 @@ theorem sign_usesWeightedQueryCostAtMost
         match result with
         | some (ω, resp) => pure (comVec i, ω, resp)
         | none => pure (comVec i, default, default)
-      simpa [finish] using congrArg finish
+      exact congrArg finish
         (fischlinSearchAux_eq_withAddCost
           σ (runtime := runtime) (pk := pk) (sk := sk) (sc := (commits i).2)
           (msg := msg) (comList := comList) (i := i)

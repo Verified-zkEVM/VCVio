@@ -26,15 +26,19 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 - `costDist oa cm`: Joint distribution of `(output, totalCost)`.
 - `expectedCost oa cm val`: Expected total cost `E[val(cost)]`, computed via `wp`.
 - `WorstCaseCostBound`, `ExpectedCostBound`: Cost bound predicates.
-- `WorstCasePolyTime`, `ExpectedPolyTime`: Asymptotic polynomial-time predicates for computation
-  families indexed by a security parameter.
+
+Asymptotic polynomial-time predicates are deliberately *not* defined here: this cost
+model prices oracle queries only (local computation lives in continuation lambdas that
+no instrumentation can observe), and the canonical PPT notion is the Turing-machine-
+grounded `OracleComp.IsPolyTime` of `VCVio.OracleComp.Coinductive.PolyTime`.
 
 ## Key Results
 
 - `fst_map_costDist`: Cost instrumentation doesn't change the output distribution.
 - `expectedCost_pure`: Expected cost of a pure computation is `0`.
 - `probEvent_cost_gt_le_expectedCost_div`: Markov's inequality for cost distributions.
-- `WorstCasePolyTime.toExpectedPolyTime`: Strict polynomial time implies expected polynomial time.
+- `WorstCaseCostBound.toExpectedCostBound`: A strict cost bound implies an expected
+  cost bound.
 -/
 
 open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal

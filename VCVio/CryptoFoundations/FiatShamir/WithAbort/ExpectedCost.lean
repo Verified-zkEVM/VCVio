@@ -382,11 +382,11 @@ private theorem sign_queryTailProbability_eq_zero_of_le
   refine probEvent_eq_zero fun c hc => ?_
   have hc' : c ∈ support
       (AddWriterT.costs
-        (HasQuery.Program.withUnitCost
+        (HasQuery.Program.withAddCost
           (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
             (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
-          runtime)) := by
-    simpa [HasQuery.queryCountDist, HasQuery.queryCostDist, HasQuery.Program.withUnitCost]
+          runtime (fun _ ↦ 1))) := by
+    simpa [HasQuery.queryCountDist, HasQuery.queryCostDist]
       using hc
   rw [AddWriterT.costs_def, support_map] at hc'
   rcases hc' with ⟨z, hz, rfl⟩

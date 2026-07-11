@@ -84,7 +84,7 @@ instance : LawfulMonadLift PMF SPMF := OptionT.instLawfulMonadLift
 /-- Apply an `SPMF α` to an element of `α`. -/
 instance : FunLike (SPMF α) α ENNReal where
   coe p x := OptionT.run p (some x)
-  coe_injective' _ _ h := OptionT.ext (PMF.ext_forall_ne none fun | some x, _ => congr_fun h x)
+  coe_injective _ _ h := OptionT.ext (PMF.ext_forall_ne none fun | some x, _ => congr_fun h x)
 
 @[aesop unsafe norm, grind =] -- TODO: decide if this should be a simp
 lemma apply_eq_toPMF_some (p : SPMF α) (x : α) : p x = p.toPMF (some x) := rfl

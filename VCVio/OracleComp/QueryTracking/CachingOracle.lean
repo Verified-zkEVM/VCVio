@@ -124,9 +124,9 @@ theorem withCachingAux_run'_eq
     {α : Type u} (oa : OracleComp spec α) (cache : spec.QueryCache) (q : Q) :
     (simulateQ (withCachingAux hit miss) oa).run' (cache, q) =
       (simulateQ base.withCaching oa).run' cache := by
-  have hmap := congrArg (Prod.fst <$> ·)
+  have hmap := congrArg (fun p => (fun x => x.1) <$> p)
     (withCachingAux_run_proj_eq base hit miss hmiss oa cache q)
-  simpa [StateT.run'] using hmap
+  simpa [StateT.run', StateT.run] using hmap
 
 end CacheAuxProjection
 

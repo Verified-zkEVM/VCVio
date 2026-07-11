@@ -33,13 +33,15 @@ equality of experiments:
 * `secureAgainst_predictBitGame_of_eavSecure` assembles **Claim 3.11** through
   `SecurityGame.secureAgainst_of_close_reduction`: the reduction is exact for `i < n`
   and the finitely many parameters `n ≤ i` are absorbed into the negligible slack; the
-  "`A′` is PPT since `A` is" step is `OracleComp.IsPolyTime.precomp` for the
-  distinguish phase and the sampler machine for the choose phase.
+  "`A′` is PPT since `A` is" step (`hred`) is an explicit hypothesis in the
+  honest-fallback pattern of `eavSecure_prgEnc` — see `isPPT_reduceAdv` for its
+  decomposition into the choose-phase machine witnesses and the ciphertext-projection
+  precomposition, both awaiting the base-machine library.
 
 The distribution of the coin-by-coin sampler is pinned down by `evalDist_fillBits` (the
 coin loop is uniform) and the half-splitting bijection `splitPair`, giving the exact
-sampler semantics `evalDist_simulateQ_chooseProg`. Polynomial time of the sampler,
-`isPolyTime_chooseProg`, is the Turing-machine witness supplied in
+sampler semantics `evalDist_simulateQ_chooseProg`. The sampler's polynomial-time story,
+`isPolyTime_chooseProg` (hypothesis form), lives in
 `Examples.KatzLindell.SamplerMachine`.
 -/
 
@@ -136,9 +138,10 @@ theorem evalDist_fillBits {w : ℕ} (acc : BitVec w) :
 /-- The Katz–Lindell Claim 3.11 reduction adversary `A′`: choose two uniform messages
 differing in the forced bit `i`, and forward the predictor's bit as the guess. It keeps
 no cross-phase state. -/
-def reduceAdv (A : (n : ℕ) → C n → OracleComp coinSpec Bool) (i : ℕ) :
+noncomputable def reduceAdv (A : (n : ℕ) → C n → OracleComp coinSpec Bool) (i : ℕ) :
     PPTEavAdversary (fun n => BitVec n) C where
   State _ := Unit
+  encState := BitEncFam.unit
   choose n := chooseProg i n
   distinguish n p := A n p.2
 
@@ -349,19 +352,29 @@ end MasterIdentity
 
 /-! ## Polynomial time of the reduction -/
 
-/-- **`A′` is PPT since `A` is**: the reduction adversary is probabilistic polynomial
-time whenever the predictor is. The choose phase is the (deferred) sampler machine; the
-distinguish phase reuses the predictor's machine through the input-precomposition
-closure `OracleComp.IsPolyTime.precomp`. Ciphertexts are required to be (per-parameter)
-finite encodable types, as bitstring types are. -/
-theorem isPPT_reduceAdv [∀ n, Finite (C n)] (encC : (n : ℕ) → FinEncoding (C n))
-    {A : (n : ℕ) → C n → OracleComp coinSpec Bool}
-    (hA : OracleComp.IsPolyTime A) (i : ℕ) :
-    (reduceAdv (C := C) A i).IsPPT :=
-  ⟨isPolyTime_chooseProg i,
-    hA.precomp (fun n (p : Unit × C n) => p.2)
-      (fun n => finEncodingPair (finEncodingOfFinEnum Unit) (encC n))
-      (fun _ => OracleHandler.ofFn fun _ => true)⟩
+/-- **`A′` is PPT since `A` is — the honest hypothesis form.** Both halves of the
+reduction adversary's polynomial time are taken as hypotheses (now at pinned canonical
+boundaries), for two distinct reasons rooted in the advice bound of the machine model:
+
+* the choose phase is a coin fold into a `BitVec (2 * n)` accumulator, whose machine
+  families await the base-machine library (`isPolyTime_chooseProg` states exactly the
+  needed families);
+* the distinguish phase precomposes the predictor with a projection on the ciphertext
+  type, which is superpolynomially large for bitstring ciphertexts, so the table-based
+  closure `OracleComp.IsPolyTime.precomp` cannot certify it within any polynomial
+  advice bound — a real projection machine is needed.
+
+Once discharged, the conclusion is definitional. -/
+theorem isPPT_reduceAdv {A : (n : ℕ) → C n → OracleComp coinSpec Bool}
+    (eC : Computability.BitEncFam C) (i : ℕ)
+    (hchoose : OracleComp.IsPolyTime (BoundaryData.coin BitEncFam.unit
+      (BitEncFam.bitVecX.pair (BitEncFam.bitVecX.pair BitEncFam.unit)))
+      fun n (_ : Unit) => chooseProg i n)
+    (hdist : OracleComp.IsPolyTime
+      (BoundaryData.coin (BitEncFam.unit.pair eC) BitEncFam.bool)
+      fun n (p : Unit × C n) => A n p.2) :
+    (reduceAdv (C := C) A i).IsPPT BitEncFam.bitVecX eC :=
+  ⟨hchoose, hdist⟩
 
 /-! ## Claim 3.11 -/
 
@@ -377,15 +390,24 @@ noncomputable def predictBitGame (i : ℕ) :
 presence of an eavesdropper, then for every bit position `i`, no polynomial-time
 adversary predicts bit `i` of a uniform plaintext from its encryption with
 non-negligible bias. The reduction is advantage-exact for `i < n`; the finitely many
-parameters `n ≤ i` are absorbed as negligible slack. -/
-theorem secureAgainst_predictBitGame_of_eavSecure [∀ n, Finite (C n)]
-    (encC : (n : ℕ) → FinEncoding (C n)) (hπ : EavSecure π) (i : ℕ) :
-    (predictBitGame π i).secureAgainst OracleComp.IsPolyTime := by
+parameters `n ≤ i` are absorbed as negligible slack.
+
+The polynomial time of the reduction adversary is an explicit hypothesis (`hred`),
+matching the honest-fallback pattern of `eavSecure_prgEnc`: discharging it awaits the
+base-machine library (see `isPPT_reduceAdv` for the exact decomposition into choose-
+and distinguish-phase witnesses). -/
+theorem secureAgainst_predictBitGame_of_eavSecure (eC : Computability.BitEncFam C)
+    (hπ : EavSecure π BitEncFam.bitVecX eC) (i : ℕ)
+    (hred : ∀ A : (n : ℕ) → C n → OracleComp coinSpec Bool,
+      OracleComp.IsPolyTime (BoundaryData.coin eC BitEncFam.bool) A →
+        (reduceAdv A i).IsPPT BitEncFam.bitVecX eC) :
+    (predictBitGame π i).secureAgainst
+      (OracleComp.IsPolyTime (BoundaryData.coin eC BitEncFam.bool)) := by
   refine SecurityGame.secureAgainst_of_close_reduction
     (g₂ := eavGuessGame π) (reduce := fun A => reduceAdv A i)
     (ε := fun n => if n ≤ i then 1 else 0)
     (negligible_of_eventually_zero ?_)
-    (fun A hA => isPPT_reduceAdv encC hA i) ?_ hπ
+    (fun A hA => hred A hA) ?_ hπ
   · filter_upwards [Filter.eventually_gt_atTop i] with n hn
     simp [Nat.not_le.mpr hn]
   · intro A _ n
@@ -407,15 +429,19 @@ theorem secureAgainst_predictBitGame_of_eavSecure [∀ n, Finite (C n)]
 
 /-- The literal reading of **Katz–Lindell Claim 3.11**: for an eavesdropping-secure
 scheme, every polynomial-time predictor guesses bit `i` of a uniform plaintext with
-probability at most `1/2 + negl n`. -/
-theorem exists_negligible_probOutput_predictExp_le [∀ n, Finite (C n)]
-    (encC : (n : ℕ) → FinEncoding (C n)) (hπ : EavSecure π)
+probability at most `1/2 + negl n`. The reduction's polynomial time is the same
+explicit hypothesis as in `secureAgainst_predictBitGame_of_eavSecure`. -/
+theorem exists_negligible_probOutput_predictExp_le (eC : Computability.BitEncFam C)
+    (hπ : EavSecure π BitEncFam.bitVecX eC)
     (A : (n : ℕ) → C n → OracleComp coinSpec Bool)
-    (hA : OracleComp.IsPolyTime A) (i : ℕ) :
+    (hA : OracleComp.IsPolyTime (BoundaryData.coin eC BitEncFam.bool) A) (i : ℕ)
+    (hred : ∀ A : (n : ℕ) → C n → OracleComp coinSpec Bool,
+      OracleComp.IsPolyTime (BoundaryData.coin eC BitEncFam.bool) A →
+        (reduceAdv A i).IsPPT BitEncFam.bitVecX eC) :
     ∃ f : ℕ → ℝ≥0∞, negligible f ∧
       ∀ n, Pr[= true | predictExp π A i n] ≤ 1 / 2 + f n :=
   ⟨(predictBitGame π i).advantage A,
-    secureAgainst_predictBitGame_of_eavSecure π encC hπ i A hA, fun n =>
+    secureAgainst_predictBitGame_of_eavSecure π eC hπ i hred A hA, fun n =>
     ProbComp.probOutput_true_le_half_add_ofReal_boolBiasAdvantage (predictExp π A i n)⟩
 
 end KatzLindell

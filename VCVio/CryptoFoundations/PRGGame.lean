@@ -57,10 +57,12 @@ noncomputable def prgSecurityGame [∀ n, SampleableType (S n)] [∀ n, Sampleab
     (prg : (n : ℕ) → PRGScheme (S n) (R n)) : SecurityGame (PPTPRGAdversary R) :=
   SecurityGame.ofBoolDistGame (prgRealExpFamily prg) (prgIdealExpFamily (R := R))
 
-/-- **PRG security**: every polynomial-time distinguisher family has negligible advantage in the
-PRG distinguishing game. -/
+/-- **PRG security**: every polynomial-time distinguisher family — at the pinned
+canonical boundary `eR` for the distinguished values, per the statement-site discipline
+of the machine model — has negligible advantage in the PRG distinguishing game. -/
 def PRGSecure [∀ n, SampleableType (S n)] [∀ n, SampleableType (R n)]
-    (prg : (n : ℕ) → PRGScheme (S n) (R n)) : Prop :=
-  (prgSecurityGame prg).secureAgainst OracleComp.IsPolyTime
+    (eR : Computability.BitEncFam R) (prg : (n : ℕ) → PRGScheme (S n) (R n)) : Prop :=
+  (prgSecurityGame prg).secureAgainst
+    (OracleComp.IsPolyTime (BoundaryData.coin eR Computability.BitEncFam.bool))
 
 end PRGScheme

@@ -3,9 +3,7 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.CryptoFoundations.Asymptotics.PolyTime
-import ToMathlib.Computability.PolyTimeTM
-import ToMathlib.Computability.Encoding
+import VCVio.OracleComp.Coinductive.PolyTimeClosure
 
 /-!
 # Bounded Coin Fold: a Reusable Polynomial-Time Construction
@@ -37,15 +35,6 @@ work.
 open OracleSpec OracleComp Computability
 
 namespace OracleComp
-
-/-- `IsPolyTime` transports along pointwise program equality: a family equal to a
-polynomial-time family is polynomial time. Lets a call site name its program directly and
-bridge to the combinator's `coinFoldProg` form. -/
-theorem IsPolyTime.congr {ι : Type} [DecidableEq ι] {spec : ℕ → OracleSpec.{0, 0} ι}
-    {α β : ℕ → Type}
-    {oa oa' : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : ∀ n x, oa n x = oa' n x)
-    (hp : OracleComp.IsPolyTime oa) : OracleComp.IsPolyTime oa' :=
-  (funext fun n => funext fun x => h n x : oa = oa') ▸ hp
 
 /-! ## The fold program and its machine -/
 
@@ -186,8 +175,10 @@ end Machine
 /-! ## The polynomial-time adversary and `IsPolyTime`
 
 The actual per-parameter round count is a plain `rnd : ℕ → ℕ` (so a call site's `2 * n`
-stays definitionally equal, keeping the state encoding `Fin (rnd n + 1) × σ n` unadorned);
-`steps` is the `Polynomial ℕ` round *bound* with `hrnd : ∀ n, rnd n = steps.eval n`. -/
+stays definitionally equal, keeping the state family `Fin (rnd n + 1) × σ n` unadorned);
+`steps` is the `Polynomial ℕ` round *bound* with `hrnd : ∀ n, rnd n = steps.eval n`.
+Boundaries are pinned to the canonical `BoundaryData.coin BitEncFam.unit eβ`; the fold
+state representation `st` is machine-internal data supplied by the caller. -/
 
 section Adversary
 
@@ -195,111 +186,170 @@ variable {σ β : ℕ → Type} [∀ n, Fintype (σ n)]
   (step : (n : ℕ) → σ n → ℕ → Bool → σ n)
   (readout : (n : ℕ) → σ n → β n) (init₀ : (n : ℕ) → σ n)
   (rnd : ℕ → ℕ) (steps : Polynomial ℕ) (hrnd : ∀ n, rnd n = steps.eval n)
-  (encState : (n : ℕ) → FinEncoding (Fin (rnd n + 1) × σ n))
-  (Sσ : Polynomial ℕ) (hstate : ∀ n s, ((encState n).boolify s).length ≤ Sσ.eval n)
-  (encβ : (n : ℕ) → FinEncoding (β n))
-  (Sβ : Polynomial ℕ)
-  (hout : ∀ n (x : Option (β n)), ((finEncodingOption (encβ n)).boolify x).length ≤ Sβ.eval n)
+  (st : StrEncFam (fun n => Fin (rnd n + 1) × σ n)) (eβ : BitEncFam β)
+  (Sc : Polynomial ℕ) (hcard : ∀ n, Fintype.card (σ n) ≤ Sc.eval n)
 
-/-- The bounded coin fold as a fully concrete `PolyTimeAdversary`: round bound `steps`, size
-bound `Sσ`, step time dominating the four per-step machine witnesses (all instances of the
-finite-table machine `EncPolyTime.ofFintype`). -/
+/-- The bounded coin fold as a fully concrete `MachineAdversary` at the canonical
+coin boundaries: round bound `steps`, state representation `st`, and all four step
+witnesses discharged by finite tables (`Computability.EncPolyTimeFam.ofFintype`) —
+within the advice budget exactly because the accumulator cardinality is polynomially
+bounded (`Sc`). Folds into superpolynomially large accumulators need
+`coinFoldAdversaryOfWitnesses` instead. -/
 noncomputable def coinFoldAdversary :
-    PolyTimeAdversary (fun _ => coinSpec) (fun _ => Unit) β where
+    MachineAdversary (BoundaryData.coin BitEncFam.unit eβ) where
   M n := coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)
   steps := steps
   stable n := coinFoldMachine_stableOutput (step n) (readout n) (rnd n) (init₀ n)
-  steady n h x := by
-    rw [← hrnd n]; exact coinFoldMachine_steadyBy (step n) (readout n) (rnd n) (init₀ n) h x
-  encState := encState
-  encIn _ := finEncodingOfFinEnum Unit
-  encOut := encβ
-  encIface _ := .ofFinEnum coinSpec
-  sizeBound := Sσ
-  encState_length_le n _ _ _ _ := hstate n _
-  initTM n := EncPolyTime.ofFintype _ (FinEncoding.boolify_injective _) _ _
-  exposeTM n :=
-    letI : Fintype (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).State :=
-      inferInstanceAs (Fintype (Fin (rnd n + 1) × σ n))
-    EncPolyTime.ofFintype _ (FinEncoding.boolify_injective _) _ _
-  updateTM n :=
-    letI : Fintype (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).State :=
-      inferInstanceAs (Fintype (Fin (rnd n + 1) × σ n))
-    EncPolyTime.ofFintype _ (FinEncoding.boolify_injective _) _ _
-  outputTM n :=
-    letI : Fintype (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).State :=
-      inferInstanceAs (Fintype (Fin (rnd n + 1) × σ n))
-    EncPolyTime.ofFintype _ (FinEncoding.boolify_injective _) _ _
-  stepTime := .X + Sσ + Sβ + .C 3
-  initTM_time_le n k := by
-    refine (EncPolyTime.time_ofFintype_eval_le _
-      (fun x => hstate n
-        ((coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).init x)) k).trans ?_
-    have h1 : Sσ.eval n ≤ Sσ.eval (n + k) := Polynomial.eval_le_eval (Nat.le_add_right n k)
-    simp only [Polynomial.eval_add, Polynomial.eval_X, Polynomial.eval_C]
-    omega
-  exposeTM_time_le n k := by
-    letI : Fintype (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).State :=
-      inferInstanceAs (Fintype (Fin (rnd n + 1) × σ n))
-    refine (EncPolyTime.time_ofFintype_eval_le (B := 2) _ (fun s =>
-      (length_boolify_finEncodingOfFinEnum (γ := Unit) ()).trans
-        (by simp [Fintype.card_unique])) k).trans ?_
-    simp only [Polynomial.eval_add, Polynomial.eval_X, Polynomial.eval_C]
-    omega
-  updateTM_time_le n k := by
-    letI : Fintype (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).State :=
-      inferInstanceAs (Fintype (Fin (rnd n + 1) × σ n))
-    refine (EncPolyTime.time_ofFintype_eval_le _
-      (fun p => hstate n
-        ((coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).updateFlat p)) k).trans ?_
-    have h1 : Sσ.eval n ≤ Sσ.eval (n + k) := Polynomial.eval_le_eval (Nat.le_add_right n k)
-    simp only [Polynomial.eval_add, Polynomial.eval_X, Polynomial.eval_C]
-    omega
-  outputTM_time_le n k := by
-    letI : Fintype (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).State :=
-      inferInstanceAs (Fintype (Fin (rnd n + 1) × σ n))
-    refine (EncPolyTime.time_ofFintype_eval_le _
-      (fun s => hout n
-        ((coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).output s)) k).trans ?_
-    have h1 : Sβ.eval n ≤ Sβ.eval (n + k) := Polynomial.eval_le_eval (Nat.le_add_right n k)
-    simp only [Polynomial.eval_add, Polynomial.eval_X, Polynomial.eval_C]
-    omega
+  state := st
+  initF := .ofFintype BitEncFam.unit.enc_injective
+    (fun n => (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).init)
+    (.C 1) (fun n => by simp)
+    BitEncFam.unit.widBound
+    (fun n x => (BitEncFam.unit.len_eq n x).le.trans (BitEncFam.unit.wid_le n))
+    st.bound (fun n _ => st.len_le n _)
+  exposeF :=
+    letI : ∀ n, Fintype (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).State :=
+      fun n => inferInstanceAs (Fintype (Fin (rnd n + 1) × σ n))
+    .ofFintype st.enc_injective
+      (fun n => (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).expose)
+      ((steps + .C 1) * Sc)
+      (fun n => by
+        show Fintype.card (Fin (rnd n + 1) × σ n) ≤ _
+        rw [Fintype.card_prod, Fintype.card_fin, hrnd n]
+        simp only [Polynomial.eval_mul, Polynomial.eval_add, Polynomial.eval_C]
+        exact Nat.mul_le_mul_left _ (hcard n))
+      st.bound (fun n _ => st.len_le n _)
+      InterfaceBitEnc.coin.encQuery.widBound
+      (fun n x => (InterfaceBitEnc.coin.encQuery.len_eq n _).le.trans
+        (InterfaceBitEnc.coin.encQuery.wid_le n))
+  updateF :=
+    letI : ∀ n, Fintype (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).State :=
+      fun n => inferInstanceAs (Fintype (Fin (rnd n + 1) × σ n))
+    .ofFintype (st.pairVar InterfaceBitEnc.coin.encAns).enc_injective
+      (fun n => (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).updateFlat)
+      ((steps + .C 1) * Sc * .C 2)
+      (fun n => by
+        have hAns : Fintype.card ((t : Unit) × coinSpec.Range t) = 2 := by
+          simp [Fintype.card_sigma]
+        show Fintype.card ((Fin (rnd n + 1) × σ n) × ((t : Unit) × coinSpec.Range t)) ≤ _
+        rw [Fintype.card_prod, hAns, Fintype.card_prod, Fintype.card_fin, hrnd n]
+        simp only [Polynomial.eval_mul, Polynomial.eval_add, Polynomial.eval_C]
+        exact Nat.mul_le_mul_right _ (Nat.mul_le_mul_left _ (hcard n)))
+      (st.bound + .C 1)
+      (fun n p => by
+        have h1 := st.len_le n p.1
+        have h2 := InterfaceBitEnc.coin.encAns.len_eq n p.2
+        have h3 : InterfaceBitEnc.coin.encAns.wid n = 1 := rfl
+        simp only [StrEncFam.pairVar_enc, List.length_append, h2, h3, Polynomial.eval_add,
+          Polynomial.eval_C]
+        omega)
+      st.bound (fun n _ => st.len_le n _)
+  outputF :=
+    letI : ∀ n, Fintype (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).State :=
+      fun n => inferInstanceAs (Fintype (Fin (rnd n + 1) × σ n))
+    .ofFintype st.enc_injective
+      (fun n => (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).output)
+      ((steps + .C 1) * Sc)
+      (fun n => by
+        show Fintype.card (Fin (rnd n + 1) × σ n) ≤ _
+        rw [Fintype.card_prod, Fintype.card_fin, hrnd n]
+        simp only [Polynomial.eval_mul, Polynomial.eval_add, Polynomial.eval_C]
+        exact Nat.mul_le_mul_left _ (hcard n))
+      st.bound (fun n _ => st.len_le n _)
+      (eβ.option).widBound
+      (fun n x => ((eβ.option).len_eq n _).le.trans ((eβ.option).wid_le n))
 
-/-- The bundled fold adversary implements the fold program family. -/
-theorem coinFoldAdversary_implements {σ β : ℕ → Type} [∀ n, Fintype (σ n)]
-    (step : (n : ℕ) → σ n → ℕ → Bool → σ n) (readout : (n : ℕ) → σ n → β n)
-    (init₀ : (n : ℕ) → σ n) (rnd : ℕ → ℕ) (steps : Polynomial ℕ) (hrnd : ∀ n, rnd n = steps.eval n)
-    (encState : (n : ℕ) → FinEncoding (Fin (rnd n + 1) × σ n))
-    (Sσ : Polynomial ℕ) (hstate : ∀ n s, ((encState n).boolify s).length ≤ Sσ.eval n)
-    (encβ : (n : ℕ) → FinEncoding (β n)) (Sβ : Polynomial ℕ)
-    (hout : ∀ n (x : Option (β n)),
-      ((finEncodingOption (encβ n)).boolify x).length ≤ Sβ.eval n) :
-    (coinFoldAdversary step readout init₀ rnd steps hrnd encState Sσ hstate encβ Sβ hout).Implements
-      fun n (_ : Unit) => coinFoldProg (step n) (readout n) (rnd n) (init₀ n) := by
-  intro n
-  show (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).Implements
-    (fun _ => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) (steps.eval n)
-  rw [← hrnd n]
-  exact coinFoldMachine_implements (step n) (readout n) (rnd n) (init₀ n)
+/-- The bundled fold adversary certifies the fold program family. -/
+noncomputable def coinFoldWitness :
+    PolyTimeWitness (BoundaryData.coin BitEncFam.unit eβ)
+      (fun n (_ : Unit) => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) where
+  A := coinFoldAdversary step readout init₀ rnd steps hrnd st eβ Sc hcard
+  implements n := by
+    show (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).Implements
+      (fun _ => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) (steps.eval n)
+    rw [← hrnd n]
+    exact coinFoldMachine_implements (step n) (readout n) (rnd n) (init₀ n)
+  queryBound n _ := (isTotalQueryBound_coinFoldProg (step n) (readout n) (rnd n)
+    (init₀ n)).mono (le_of_eq (hrnd n))
 
-/-- **The bounded coin fold is polynomial time.** Filling `rnd n` coin answers into a finite
-accumulator and reading out is polynomial time, witnessed end to end by concrete Turing
-machines — no hand-built machine required at the call site. -/
-theorem isPolyTime_coinFold {σ β : ℕ → Type} [∀ n, Fintype (σ n)]
-    (step : (n : ℕ) → σ n → ℕ → Bool → σ n) (readout : (n : ℕ) → σ n → β n)
-    (init₀ : (n : ℕ) → σ n) (rnd : ℕ → ℕ) (steps : Polynomial ℕ) (hrnd : ∀ n, rnd n = steps.eval n)
-    (encState : (n : ℕ) → FinEncoding (Fin (rnd n + 1) × σ n))
-    (Sσ : Polynomial ℕ) (hstate : ∀ n s, ((encState n).boolify s).length ≤ Sσ.eval n)
-    (encβ : (n : ℕ) → FinEncoding (β n)) (Sβ : Polynomial ℕ)
-    (hout : ∀ n (x : Option (β n)),
-      ((finEncodingOption (encβ n)).boolify x).length ≤ Sβ.eval n) :
-    OracleComp.IsPolyTime
-      fun n (_ : Unit) => coinFoldProg (step n) (readout n) (rnd n) (init₀ n) :=
-  ⟨coinFoldAdversary step readout init₀ rnd steps hrnd encState Sσ hstate encβ Sβ hout,
-    coinFoldAdversary_implements step readout init₀ rnd steps hrnd encState Sσ hstate encβ Sβ hout,
-    fun n _ => (isTotalQueryBound_coinFoldProg (step n) (readout n) (rnd n) (init₀ n)).mono
-      (le_of_eq (hrnd n))⟩
+include steps hrnd st Sc hcard in
+/-- **The bounded coin fold is polynomial time.** Filling `rnd n` coin answers into an
+accumulator of *polynomially bounded cardinality* and reading out is polynomial time,
+witnessed end to end by concrete Turing machines — no hand-built machine required at
+the call site. The cardinality bound `Sc` keeps the table witnesses within the advice
+budget; folds into superpolynomially large accumulators (e.g. `BitVec n`) need
+`isPolyTime_coinFold_of_witnesses`. -/
+theorem isPolyTime_coinFold :
+    OracleComp.IsPolyTime (BoundaryData.coin BitEncFam.unit eβ)
+      (fun n (_ : Unit) => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) :=
+  ⟨coinFoldWitness step readout init₀ rnd steps hrnd st eβ Sc hcard⟩
 
 end Adversary
+
+/-! ## The witness-parameterized fold adversary
+
+For folds whose accumulator type is *not* polynomially small (e.g. a `BitVec n`
+accumulator), the table witnesses of `coinFoldAdversary` would exceed any polynomial
+advice bound, so the machine witnesses must be supplied: uniform machine families for
+the fold's step functions. All coalgebraic content (implements, stability, the
+state-size invariant) is still discharged here; only the four `EncPolyTimeFam`
+witnesses are hypotheses, pending a base-machine library. -/
+
+section AdversaryOfWitnesses
+
+variable {σ β : ℕ → Type}
+  (step : (n : ℕ) → σ n → ℕ → Bool → σ n)
+  (readout : (n : ℕ) → σ n → β n) (init₀ : (n : ℕ) → σ n)
+  (rnd : ℕ → ℕ) (steps : Polynomial ℕ) (hrnd : ∀ n, rnd n = steps.eval n)
+  (st : StrEncFam (fun n => Fin (rnd n + 1) × σ n)) (eβ : BitEncFam β)
+  (initF : EncPolyTimeFam BitEncFam.unit.enc st.enc
+    (fun n => (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).init))
+  (exposeF : EncPolyTimeFam st.enc InterfaceBitEnc.coin.encQuery.enc
+    (fun n => (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).expose))
+  (updateF : EncPolyTimeFam (st.pairVar InterfaceBitEnc.coin.encAns).enc st.enc
+    (fun n => (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).updateFlat))
+  (outputF : EncPolyTimeFam st.enc (eβ.option).enc
+    (fun n => (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).output))
+
+/-- The bounded coin fold as a `MachineAdversary`, from supplied step-function machine
+families: the coalgebraic fields are discharged by the `coinFoldMachine` lemmas, the
+machine fields are the hypotheses. -/
+noncomputable def coinFoldAdversaryOfWitnesses :
+    MachineAdversary (BoundaryData.coin BitEncFam.unit eβ) where
+  M n := coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)
+  steps := steps
+  stable n := coinFoldMachine_stableOutput (step n) (readout n) (rnd n) (init₀ n)
+  state := st
+  initF := initF
+  exposeF := exposeF
+  updateF := updateF
+  outputF := outputF
+
+/-- The witness-parameterized fold adversary certifies the fold program family. -/
+noncomputable def coinFoldWitnessOfWitnesses :
+    PolyTimeWitness (BoundaryData.coin BitEncFam.unit eβ)
+      (fun n (_ : Unit) => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) where
+  A := coinFoldAdversaryOfWitnesses step readout init₀ rnd steps st eβ
+    initF exposeF updateF outputF
+  implements n := by
+    show (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).Implements
+      (fun _ => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) (steps.eval n)
+    rw [← hrnd n]
+    exact coinFoldMachine_implements (step n) (readout n) (rnd n) (init₀ n)
+  queryBound n _ := (isTotalQueryBound_coinFoldProg (step n) (readout n) (rnd n)
+    (init₀ n)).mono (le_of_eq (hrnd n))
+
+include steps hrnd st initF exposeF updateF outputF in
+/-- **The bounded coin fold is polynomial time, given machine families for its step
+functions** — the honest hypothesis form for folds into accumulators of superpolynomial
+cardinality, where the table witnesses of `isPolyTime_coinFold` would smuggle
+superpolynomial advice. -/
+theorem isPolyTime_coinFold_of_witnesses :
+    OracleComp.IsPolyTime (BoundaryData.coin BitEncFam.unit eβ)
+      (fun n (_ : Unit) => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) :=
+  ⟨coinFoldWitnessOfWitnesses step readout init₀ rnd steps hrnd st eβ
+    initF exposeF updateF outputF⟩
+
+end AdversaryOfWitnesses
 
 end OracleComp

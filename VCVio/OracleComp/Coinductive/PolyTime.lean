@@ -4,82 +4,161 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
 import VCVio.OracleComp.Coinductive.Machine
-import ToMathlib.Computability.CslibPolyTime
+import ToMathlib.Computability.BitEncoding
 
 /-!
 # Turing-Machine-Grounded Polynomial-Time Adversaries
 
-A `PolyTimeAdversary spec α β` is a family of oracle machines (`OracleMachine`),
-indexed by a security parameter, whose step functions are each Turing-machine
-computable in polynomial time (via `Computability.EncPolyTime`, grounded in Cslib's
-single-tape machines) and whose readout resolves within polynomially many oracle
-rounds. Defining polynomial time on machines rather than on `OracleComp` programs
-directly is what makes a Turing-machine grounding possible: a machine is a state type
-with four plain Lean functions (`init`, `expose`, `update`, `output`), each of which
-can be computed by a concrete machine on encoded states, whereas the continuations of
-a program tree have no bounded syntactic presentation.
+A `MachineAdversary bd` is a family of oracle machines (`OracleMachine`), indexed by a
+security parameter, whose step functions are each Turing-machine computable in
+polynomial time (via `Computability.EncPolyTimeFam`, grounded in Cslib's single-tape
+machines) relative to **pinned canonical boundary encodings** `bd : BoundaryData`.
+Defining polynomial time on machines rather than on `OracleComp` programs directly is
+what makes a Turing-machine grounding possible: a machine is a state type with four
+plain Lean functions (`init`, `expose`, `update`, `output`), each of which can be
+computed by a concrete machine on encoded states, whereas the continuations of a
+program tree have no bounded syntactic presentation.
 
-`OracleComp.IsPolyTime oa` then holds when *some* polynomial-time adversary implements
-the program family `oa`, in the sense of `OracleMachine.Implements`; it is the intended
-instantiation of the `isPPT` predicate of `SecurityGame.secureAgainst`.
+`OracleComp.IsPolyTime bd oa` holds when some adversary carries a `PolyTimeWitness`
+for the program family `oa`: it implements `oa` (`OracleMachine.Implements`) within its
+round budget, and `oa` is syntactically query-bounded by that budget. It is the
+intended instantiation of the `isPPT` predicate of `SecurityGame.secureAgainst`.
 
-Design notes, deliberate and worth restating:
+## Model
 
-* **Non-uniform**: there is one machine per security parameter `n` (with uniform
-  polynomial bounds across the family), the standard non-uniform adversary model.
-  A uniform variant — a single machine reading `n` as part of its input — is a
-  possible future refinement.
-* **Bounds are functions of `n` alone**, matching `PolyQueries`: adversaries whose
-  resource use must grow with an unbounded input cannot be certified; an
-  input-size-aware variant (bounds in `n + |input|`) is a possible refinement.
-* **The encoded-state-size invariant `encState_length_le` is an explicit field, not
-  derivable**: a machine can double its state on every step while remaining per-step
-  polynomial-time in its current state length, so per-step time witnesses plus a
-  polynomial round count alone would admit exponentially growing states (and hence
-  super-polynomial total time). The invariant is exactly what makes the total-time
-  bound `detTotalTime_le` sound.
-* The total query bound demanded by `OracleComp.IsPolyTime` is in principle
-  extractable from the `Implements` equation (by driving the program along handlers
-  concentrated on deep paths), but that extraction is genuinely involved; it is kept
-  as an explicit conjunct, which also feeds the `PolyQueries` bridge directly.
+The adversary model is **non-uniform P/poly relative to a fixed canonical
+representation**. The pieces, and why each exists:
+
+* **Canonical boundaries** (`BoundaryData`: input, output, and oracle-interface
+  encodings, all fixed-width `Computability.BitEncFam`). Without pinning these,
+  "polynomial time relative to *some* encoding" is vacuous: the encoding
+  `enc x := std x ++ block (f x)` caches any `f` inside the representation, and every
+  machine witness degenerates to a small projection — the class would contain every
+  function, making hardness assumptions such as `PRGScheme.PRGSecure` unsatisfiable.
+  The oracle-answer encoding is an equally real caching channel and is pinned for the
+  same reason. Statement-site discipline: `bd` is always an explicit pinned parameter
+  of a security definition, never existentially quantified and never adversary-chosen
+  (the sole documented exemption is a multi-phase adversary's *own* cross-phase state,
+  which its phases share — every bit cached there was produced by a witnessed machine
+  from canonical inputs and answers). The registry of canonical constructors
+  (`BitEncFam.const/bitVec/pair/option`) is deliberately tiny and structural; theorems
+  mean "secure against P/poly relative to the standard representation".
+* **The `1^n` convention, formalized.** Katz–Lindell define PPT as polynomial in the
+  *input length* and reconcile it with "polynomial in `n`" by handing algorithms the
+  security parameter in unary. Here the boundary widths are polynomially bounded by
+  definition (`BitEncFam.widBound`), so the two readings agree — the width bound *is*
+  the `1^n` convention.
+* **Machine-internal freedom.** The state representation (`StrEncFam`, variable-width,
+  polynomially length-bounded, existential in the bundle) is the machine's choice of
+  data structure. This is harmless by construction: every bit entering a state
+  encoding is written by a witnessed step machine from a canonical input or a
+  canonical oracle answer, so a crafted state encoding can only cache what the
+  machines already computed within their budgets.
+* **Resources.** Rounds (`steps`), state length (`StrEncFam.bound`), per-step time
+  (`EncPolyTimeFam.time`), and description size (`EncPolyTimeFam.size` — the advice
+  bound; time bounds alone admit lookup tables with one state per input, i.e.
+  unbounded advice). All four are single polynomials uniform across the family:
+  non-uniform machines, P/poly-style, with uniformly polynomial bounds. A uniform
+  variant (one machine reading `n`) is deliberately out of scope rather than stubbed.
+* Bounds are functions of `n` alone, matching `PolyQueries`; boundary widths being
+  `poly(n)` is what makes this equivalent to input-length-based bounds on game inputs.
+
+## Universes
+
+The coalgebra layer (`VCVio.OracleComp.Coinductive.DynSystem`,
+`VCVio.OracleComp.Coinductive.Machine`) is universe-polymorphic at `OracleSpec.{u, u}`
+(single-universe, forced by `SPMF : Type u → Type u`). This file and everything above
+it (closure properties, concrete constructions, asymptotic security) is pinned to
+`OracleSpec.{0, 0}` and `Type`: Cslib's single-tape machines, the bit-string
+encodings, `Polynomial ℕ`, and the program logic's `wp` all live at `Type 0`.
 -/
-
-universe u v w
 
 open OracleSpec Computability
 
-variable {ι : Type} [DecidableEq ι]
+variable {ι : Type}
 
-/-! ## Encoding the oracle interface -/
+/-! ## Canonical interface encodings -/
 
-/-- Turing-machine-facing encodability of an oracle interface: finite-alphabet
+/-- Turing-machine-facing canonical encodability of an oracle interface: fixed-width
 encodings of the query indices and of the typed query/answer pairs. The answer
 component encodes the dependent pair `⟨t, r⟩` so that a machine can consume answers of
-varying type through one alphabet; build it from per-index range encodings over a
-shared alphabet with `InterfaceEncoding.ofRangeEncodings`. -/
-structure OracleSpec.InterfaceEncoding (spec : OracleSpec.{0, 0} ι) where
-  /-- An encoding of the query index type. -/
-  encQuery : FinEncoding ι
-  /-- An encoding of typed query/answer pairs. -/
-  encAns : FinEncoding ((t : ι) × spec.Range t)
+varying type through one representation. Pinned per spec family: adversary-chosen
+answer encodings would be a caching channel (see the module docstring). -/
+structure OracleSpec.InterfaceBitEnc (spec : ℕ → OracleSpec.{0, 0} ι) where
+  /-- Canonical fixed-width encoding of the query index type. -/
+  encQuery : BitEncFam (fun _ => ι)
+  /-- Canonical fixed-width encoding of typed query/answer pairs. -/
+  encAns : BitEncFam (fun n => (t : ι) × (spec n).Range t)
 
-/-- Build an `InterfaceEncoding` from an index encoding and per-index range encodings
-over a shared alphabet, via `Computability.finEncodingSigma`. -/
-def OracleSpec.InterfaceEncoding.ofRangeEncodings {spec : OracleSpec.{0, 0} ι}
-    (ei : FinEncoding ι) {Γ : Type} [Fintype Γ]
-    (enc : (t : ι) → spec.Range t → List Γ)
-    (dec : (t : ι) → List Γ → Option (spec.Range t))
-    (henc : ∀ t x, dec t (enc t x) = some x) : spec.InterfaceEncoding :=
-  ⟨ei, finEncodingSigma ei enc dec henc⟩
+/-- The canonical coin-oracle interface: queries have width `0` (the index type is
+`Unit`), answers width `1` (the coin bit). -/
+noncomputable def OracleSpec.InterfaceBitEnc.coin :
+    InterfaceBitEnc (fun _ => coinSpec) where
+  encQuery := .const Unit
+  encAns :=
+    { wid := fun _ => 1
+      widBound := .C 1
+      wid_le := fun _ => by simp
+      enc := fun _ a => [a.2]
+      len_eq := fun _ _ => rfl
+      enc_injective := fun n a₁ a₂ h => by
+        rcases a₁ with ⟨⟨⟩, b₁⟩
+        rcases a₂ with ⟨⟨⟩, b₂⟩
+        simpa using h }
 
-/-- The canonical `InterfaceEncoding` of an oracle interface with enumerable finite
-index and answer types, via `Computability.finEncodingOfFinEnum`. Covers the common
-concrete specs (e.g. `coinSpec`) with no encoding work. -/
-def OracleSpec.InterfaceEncoding.ofFinEnum (spec : OracleSpec.{0, 0} ι) [FinEnum ι]
-    [∀ t, FinEnum (spec.Range t)] : spec.InterfaceEncoding :=
-  ⟨finEncodingOfFinEnum ι, finEncodingOfFinEnum ((t : ι) × spec.Range t)⟩
+/-- The pinned boundary data of a polynomial-time program family: canonical fixed-width
+encodings of its inputs and outputs, and the canonical interface encoding of its oracle.
+Always an explicit parameter of security statements — never existential (see the module
+docstring). -/
+structure BoundaryData (spec : ℕ → OracleSpec.{0, 0} ι) (α β : ℕ → Type) where
+  /-- Canonical input encoding. -/
+  eIn : BitEncFam α
+  /-- Canonical output encoding. -/
+  eOut : BitEncFam β
+  /-- Canonical oracle-interface encoding. -/
+  eIface : OracleSpec.InterfaceBitEnc spec
+
+namespace BoundaryData
+
+variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β γ : ℕ → Type}
+
+/-- Replace the input boundary. -/
+def withIn (bd : BoundaryData spec α β) (eIn' : BitEncFam γ) : BoundaryData spec γ β :=
+  ⟨eIn', bd.eOut, bd.eIface⟩
+
+/-- Replace the output boundary. -/
+def withOut (bd : BoundaryData spec α β) (eOut' : BitEncFam γ) : BoundaryData spec α γ :=
+  ⟨bd.eIn, eOut', bd.eIface⟩
+
+@[simp] theorem withIn_eIn (bd : BoundaryData spec α β) (e : BitEncFam γ) :
+    (bd.withIn e).eIn = e := rfl
+
+@[simp] theorem withIn_eOut (bd : BoundaryData spec α β) (e : BitEncFam γ) :
+    (bd.withIn e).eOut = bd.eOut := rfl
+
+@[simp] theorem withOut_eOut (bd : BoundaryData spec α β) (e : BitEncFam γ) :
+    (bd.withOut e).eOut = e := rfl
+
+@[simp] theorem withOut_eIn (bd : BoundaryData spec α β) (e : BitEncFam γ) :
+    (bd.withOut e).eIn = bd.eIn := rfl
+
+@[simp] theorem withIn_eIface (bd : BoundaryData spec α β) (e : BitEncFam γ) :
+    (bd.withIn e).eIface = bd.eIface := rfl
+
+@[simp] theorem withOut_eIface (bd : BoundaryData spec α β) (e : BitEncFam γ) :
+    (bd.withOut e).eIface = bd.eIface := rfl
+
+end BoundaryData
+
+/-- Boundary data over the coin oracle: the common case for textbook adversaries (the
+coin oracle is the random bit tape). -/
+noncomputable def BoundaryData.coin {α β : ℕ → Type} (eIn : BitEncFam α)
+    (eOut : BitEncFam β) : BoundaryData (fun _ => coinSpec) α β :=
+  ⟨eIn, eOut, .coin⟩
 
 /-! ## Flattening the dependent update -/
+
+variable [DecidableEq ι]
 
 namespace OracleMachine
 
@@ -87,7 +166,11 @@ variable {spec : OracleSpec.{0, 0} ι} {α β : Type}
 
 /-- The machine's dependent update flattened to a total function on tagged
 query/answer pairs, as a Turing machine must consume it: answers tagged with the
-currently exposed query update the state, mismatched tags act as the identity. -/
+currently exposed query update the state, mismatched tags act as the identity.
+Acting as the identity on mismatched tags is a canonical completion, not a modeling
+commitment: the run semantics only ever applies the update at the exposed query
+(`updateFlat_expose`), but the machine witness needs a total function on the flat
+pair type, and any other completion would certify the same machines. -/
 def updateFlat (M : OracleMachine spec α β) :
     M.State × ((t : ι) × spec.Range t) → M.State := fun p =>
   letI : DecidableEq spec.toPFunctor.A := ‹DecidableEq ι›
@@ -99,229 +182,250 @@ def updateFlat (M : OracleMachine spec α β) :
 
 end OracleMachine
 
-/-! ## Polynomial-time adversaries -/
+/-! ## Machine adversaries -/
 
-/-- A Turing-machine-grounded polynomial-time adversary: a family of oracle machines
-indexed by the security parameter, together with
+/-- A Turing-machine-grounded polynomial-time adversary at pinned boundaries `bd`:
+a family of oracle machines indexed by the security parameter, together with
 
-* a polynomial round bound `steps` within which the readout resolves against every
-  handler (`steady`), stably (`stable`);
-* `Bool`-string encodings of states, inputs, outputs, and the oracle interface;
-* a polynomial invariant `sizeBound` on encoded state length along every run (an
-  explicit field — per-step polynomial time alone admits exponential state growth);
-* per-step machine witnesses (`initTM`, `exposeTM`, `updateTM`, `outputTM`) that each
-  step function is polynomial-time computable on encodings, with a single polynomial
-  `stepTime` bounding all of their running times uniformly in `n`.
+* a polynomial round budget `steps` and a stable readout (`stable`);
+* an injective, polynomially length-bounded string representation of the machine
+  states (`state : Computability.StrEncFam` — machine-internal, hence variable-width
+  and freely chosen);
+* uniform polynomial-time machine families (`Computability.EncPolyTimeFam`, each
+  bundling per-parameter Cslib machine witnesses with one time and one description
+  polynomial) for the four step functions, against the canonical boundary encodings.
 
+There is no `steady` field: readout resolution within the round budget is *derivable*
+for any adversary that implements a program family (`PolyTimeWitness.steadyBy`), and
+probabilistic resolution likewise (`OracleMachine.Implements.runK_none_eq_zero`).
 The witnesses are data (they carry concrete machines); the Prop-level predicate on
-program families is `OracleComp.IsPolyTime`. No composition of machines is involved:
-polynomial time is the conjunction of per-step witnesses, the round bound, and the
-state-size invariant, exactly the clocked-machine reading of "PPT". -/
-structure PolyTimeAdversary (spec : ℕ → OracleSpec.{0, 0} ι) (α β : ℕ → Type) where
+program families is `OracleComp.IsPolyTime`. -/
+structure MachineAdversary {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+    (bd : BoundaryData spec α β) where
   /-- The machine at each security parameter. -/
   M : (n : ℕ) → OracleMachine (spec n) (α n) (β n)
   /-- Polynomial bound on the number of oracle rounds. -/
   steps : Polynomial ℕ
   /-- The readout is stable: once resolved it never changes. -/
   stable : ∀ n, (M n).StableOutput
-  /-- The readout resolves within `steps.eval n` rounds against every handler. -/
-  steady : ∀ (n : ℕ) (h : OracleHandler (spec n)) (x : α n),
-    (M n).SteadyBy h ((M n).init x) (steps.eval n)
-  /-- An encoding of the machine's states. -/
-  encState : (n : ℕ) → FinEncoding (M n).State
-  /-- An encoding of the inputs. -/
-  encIn : (n : ℕ) → FinEncoding (α n)
-  /-- An encoding of the outputs. -/
-  encOut : (n : ℕ) → FinEncoding (β n)
-  /-- An encoding of the oracle interface. -/
-  encIface : (n : ℕ) → (spec n).InterfaceEncoding
-  /-- Polynomial bound on the encoded state length along every run. -/
-  sizeBound : Polynomial ℕ
-  /-- The encoded state length stays below `sizeBound` along every handler run. -/
-  encState_length_le : ∀ (n : ℕ) (h : OracleHandler (spec n)) (x : α n) (j : ℕ),
-    j ≤ steps.eval n →
-    ((encState n).boolify
-      (OracleStrategy.stateAfter h (M n).toStrategy ((M n).init x) j)).length ≤
-      sizeBound.eval n
-  /-- The initialization map is polynomial-time computable. -/
-  initTM : (n : ℕ) → EncPolyTime ((encIn n).boolify) ((encState n).boolify) (M n).init
-  /-- The query-selection map is polynomial-time computable. -/
-  exposeTM : (n : ℕ) →
-    EncPolyTime ((encState n).boolify) ((encIface n).encQuery.boolify) (M n).expose
-  /-- The (flattened) state-update map is polynomial-time computable. -/
-  updateTM : (n : ℕ) →
-    EncPolyTime ((finEncodingPair (encState n) (encIface n).encAns).boolify)
-      ((encState n).boolify) (M n).updateFlat
-  /-- The readout map is polynomial-time computable. -/
-  outputTM : (n : ℕ) →
-    EncPolyTime ((encState n).boolify) ((finEncodingOption (encOut n)).boolify)
-      (M n).output
-  /-- A single polynomial bounding every per-step running time, uniformly in `n`
-  (without this, per-`n` polynomial bounds could grow arbitrarily with `n`). -/
-  stepTime : Polynomial ℕ
-  /-- `initTM` runs within the uniform per-step bound. -/
-  initTM_time_le : ∀ n k, ((initTM n).time).eval k ≤ stepTime.eval (n + k)
-  /-- `exposeTM` runs within the uniform per-step bound. -/
-  exposeTM_time_le : ∀ n k, ((exposeTM n).time).eval k ≤ stepTime.eval (n + k)
-  /-- `updateTM` runs within the uniform per-step bound. -/
-  updateTM_time_le : ∀ n k, ((updateTM n).time).eval k ≤ stepTime.eval (n + k)
-  /-- `outputTM` runs within the uniform per-step bound. -/
-  outputTM_time_le : ∀ n k, ((outputTM n).time).eval k ≤ stepTime.eval (n + k)
+  /-- The machine-internal state representation: injective raw bit strings with a
+  polynomial length bound (over all states). -/
+  state : StrEncFam (fun n => (M n).State)
+  /-- The initialization map is uniformly polynomial-time computable. -/
+  initF : EncPolyTimeFam bd.eIn.enc state.enc (fun n => (M n).init)
+  /-- The query-selection map is uniformly polynomial-time computable. -/
+  exposeF : EncPolyTimeFam state.enc bd.eIface.encQuery.enc (fun n => (M n).expose)
+  /-- The (flattened) state-update map is uniformly polynomial-time computable, on the
+  append encoding of state/answer pairs. -/
+  updateF : EncPolyTimeFam (state.pairVar bd.eIface.encAns).enc state.enc
+    (fun n => (M n).updateFlat)
+  /-- The readout map is uniformly polynomial-time computable, into the canonical
+  optional output encoding. -/
+  outputF : EncPolyTimeFam state.enc (bd.eOut.option).enc (fun n => (M n).output)
 
-namespace PolyTimeAdversary
+namespace MachineAdversary
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} {bd : BoundaryData spec α β}
+
+/-- A single polynomial dominating every per-step running time. -/
+noncomputable def stepTime (D : MachineAdversary bd) : Polynomial ℕ :=
+  D.initF.time + D.exposeF.time + D.updateF.time + D.outputF.time
+
+/-- A single polynomial dominating every witness description size — the total advice. -/
+noncomputable def descBound (D : MachineAdversary bd) : Polynomial ℕ :=
+  D.initF.size + D.exposeF.size + D.updateF.size + D.outputF.size
 
 /-! ## Run semantics and the implements relation -/
 
 /-- The adversary's run at security parameter `n`: the early-stopping probabilistic
-run of the machine at its round bound. -/
-noncomputable def exec (D : PolyTimeAdversary spec α β) (n : ℕ)
+run of the machine at its round budget. -/
+noncomputable def exec (D : MachineAdversary bd) (n : ℕ)
     (H : ProbHandler (spec n)) (x : α n) : SPMF (Option (β n)) :=
   (D.M n).runK H (D.steps.eval n) ((D.M n).init x)
 
 /-- The adversary implements a program family when each machine implements the
-program at the round bound (`OracleMachine.Implements`). -/
-def Implements (D : PolyTimeAdversary spec α β)
+program at the round budget (`OracleMachine.Implements`). -/
+def Implements (D : MachineAdversary bd)
     (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) : Prop :=
   ∀ n, (D.M n).Implements (oa n) (D.steps.eval n)
 
 /-- **Master transfer equation**: the run of an implementing adversary computes the
 program's `simulateQ` semantics. Game-level advantage transfers are instances. -/
-theorem exec_eq_of_implements {D : PolyTimeAdversary spec α β}
+theorem exec_eq_of_implements {D : MachineAdversary bd}
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D.Implements oa)
     (n : ℕ) (H : ProbHandler (spec n)) (x : α n) :
     D.exec n H x = some <$> simulateQ H (oa n x) :=
   h n H x
 
-end PolyTimeAdversary
+/-- An implementing adversary's run resolves along every randomized handler: no mass on
+an unresolved readout. Probabilistic steadiness is a consequence of the implements
+equation (`OracleMachine.Implements.runK_none_eq_zero`), not an extra field. -/
+theorem exec_none_eq_zero {D : MachineAdversary bd}
+    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D.Implements oa)
+    (n : ℕ) (H : ProbHandler (spec n)) (x : α n) :
+    D.exec n H x none = 0 :=
+  (h n).runK_none_eq_zero H x
 
-/-! ## The polynomial-time predicate on program families -/
+end MachineAdversary
 
-/-- A program family is polynomial time when some `PolyTimeAdversary` implements it
-within its round bound. This is the intended `isPPT` instantiation for
-`SecurityGame.secureAgainst`. The total query bound conjunct feeds the `PolyQueries`
-bridge; it is morally a consequence of the implements equation, but the extraction is
-kept as an explicit hypothesis (see the module docstring). -/
+/-! ## The polynomial-time certificate and predicate -/
+
+/-- A certificate that the program family `oa` is polynomial time at boundaries `bd`:
+an adversary together with proofs that it implements `oa` within its round budget and
+that `oa` itself respects that budget syntactically. Proof-relevant data, mirroring
+`OracleComp.PolyQueries`; the Prop-level predicate is `OracleComp.IsPolyTime`.
+
+The `queryBound` field is definitional, not a wart: "makes polynomially many queries"
+is part of what polynomial time means, it feeds the `PolyQueries` bridge directly, and
+every route to `implements` produces it as an input or byproduct. It is *conjectured*
+to follow from `implements` alone, but the extraction is genuinely hard:
+
+* A counting handler cannot do it. `Implements` quantifies over
+  `ProbHandler spec = QueryImpl spec SPMF`, and `SPMF` has no writer component, so no
+  handler admissible in the quantification observes query counts.
+* The plausible route drives the program along *scaled* handlers `H_ε` (each answer
+  distribution scaled to total mass `ε ∈ (0, 1]`): the output mass of the fuelled run
+  is a polynomial of degree at most the budget in `ε`, while a program family
+  violating the bound contributes a positive higher-degree monomial to the mass of
+  `some <$> simulateQ H_ε`, and agreement on `(0, 1]` forces equal coefficients. The
+  coefficient-extraction step over `ℝ≥0∞` is the hard part; it is recorded here as a
+  conjecture rather than smuggled as an axiom. -/
+structure PolyTimeWitness {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+    (bd : BoundaryData spec α β)
+    (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) where
+  /-- The machine adversary. -/
+  A : MachineAdversary bd
+  /-- The adversary implements the program family within its round budget. -/
+  implements : A.Implements oa
+  /-- The program family syntactically respects the round budget. -/
+  queryBound : ∀ n x, OracleComp.IsTotalQueryBound (oa n x) (A.steps.eval n)
+
+/-- A program family is polynomial time at pinned boundaries `bd` when it carries a
+`PolyTimeWitness`. This is the intended `isPPT` instantiation for
+`SecurityGame.secureAgainst`; `bd` must be a fixed parameter of the enclosing security
+statement (see the module docstring's statement-site discipline). -/
 def OracleComp.IsPolyTime {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+    (bd : BoundaryData spec α β)
     (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) : Prop :=
-  ∃ D : PolyTimeAdversary spec α β, D.Implements oa ∧
-    ∀ n x, OracleComp.IsTotalQueryBound (oa n x) (D.steps.eval n)
+  Nonempty (PolyTimeWitness bd oa)
 
-namespace PolyTimeAdversary
+namespace PolyTimeWitness
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} {bd : BoundaryData spec α β}
+  {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
 
-/-- **Bridge to query bounds**: a polynomial-time adversary's round bound gives a
-(per-index constant) `PolyQueries` certificate for any program family it query-bounds. -/
-def toPolyQueries (D : PolyTimeAdversary spec α β)
-    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
-    (hqb : ∀ n x, OracleComp.IsTotalQueryBound (oa n x) (D.steps.eval n)) :
-    OracleComp.PolyQueries oa where
-  qb _ := D.steps
-  qb_isQueryBound n x := (hqb n x).isPerIndexQueryBound
+/-- Deterministic steadiness is derivable for any certified adversary: the old `steady`
+field, now a theorem (via `OracleMachine.Implements.steadyBy`). -/
+theorem steadyBy (w : PolyTimeWitness bd oa) (n : ℕ) (h : OracleHandler (spec n))
+    (x : α n) : (w.A.M n).SteadyBy h ((w.A.M n).init x) (w.A.steps.eval n) :=
+  (w.implements n).steadyBy (w.A.stable n) h x
 
-end PolyTimeAdversary
+/-- **Bridge to query bounds**: a certified family makes polynomially many queries,
+with a per-index constant `PolyQueries` certificate. -/
+def toPolyQueries (w : PolyTimeWitness bd oa) : OracleComp.PolyQueries oa where
+  qb _ := w.A.steps
+  qb_isQueryBound n x := (w.queryBound n x).isPerIndexQueryBound
+
+end PolyTimeWitness
 
 /-- Polynomial-time program families make polynomially many queries. -/
 theorem OracleComp.IsPolyTime.polyQueries {spec : ℕ → OracleSpec.{0, 0} ι}
-    {α β : ℕ → Type} {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
-    (h : OracleComp.IsPolyTime oa) : Nonempty (OracleComp.PolyQueries oa) := by
-  obtain ⟨D, -, hqb⟩ := h
-  exact ⟨D.toPolyQueries hqb⟩
+    {α β : ℕ → Type} {bd : BoundaryData spec α β}
+    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
+    (h : OracleComp.IsPolyTime bd oa) : Nonempty (OracleComp.PolyQueries oa) :=
+  h.elim fun w => ⟨w.toPolyQueries⟩
 
 /-! ## Total running time
 
-The total Turing-machine time of a run is polynomial in the security parameter: the
-round count is bounded by `steps`, each per-step time by `stepTime` at inputs whose
-length the `sizeBound` invariant (for states) and explicit hypotheses (for inputs and
-answers, which are handler-controlled and hence not machine data) keep polynomial.
-This is pure polynomial arithmetic over the per-step witnesses — no machine is
-constructed. An end-to-end single-machine witness for the whole run is a separate,
-genuinely harder goal (it needs machine iteration on top of Cslib's composition). -/
+The total Turing-machine time of a run is polynomial in the security parameter,
+hypothesis-free: the round count is bounded by `steps`, each per-step time by its
+family's polynomial at inputs whose lengths the state bound (for states) and the
+canonical fixed widths (for inputs and answers) control. This is pure polynomial
+arithmetic over the per-step witnesses — no machine is constructed. An end-to-end
+single-machine witness for the whole run is a separate, genuinely harder goal (it
+needs machine iteration on top of Cslib's composition). -/
 
-namespace PolyTimeAdversary
+namespace MachineAdversary
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} {bd : BoundaryData spec α β}
 
 /-- The state at round `j` of the deterministic run against handler `h` on input `x`. -/
-def stateAt (D : PolyTimeAdversary spec α β) (n : ℕ) (h : OracleHandler (spec n))
+def stateAt (D : MachineAdversary bd) (n : ℕ) (h : OracleHandler (spec n))
     (x : α n) (j : ℕ) : (D.M n).State :=
   OracleStrategy.stateAfter h (D.M n).toStrategy ((D.M n).init x) j
 
 /-- The tagged query/answer pair received at round `j` of the deterministic run. -/
-def answerAt (D : PolyTimeAdversary spec α β) (n : ℕ) (h : OracleHandler (spec n))
+def answerAt (D : MachineAdversary bd) (n : ℕ) (h : OracleHandler (spec n))
     (x : α n) (j : ℕ) : (t : ι) × (spec n).Range t :=
   ⟨(D.M n).expose (D.stateAt n h x j), h ((D.M n).expose (D.stateAt n h x j))⟩
 
 /-- The total Turing-machine time of the deterministic run against handler `h` on
 input `x`: the initialization cost plus, per round, the expose, update, and readout
 costs, each evaluated at the encoded lengths actually occurring along the run. -/
-noncomputable def detTotalTime (D : PolyTimeAdversary spec α β) (n : ℕ)
+noncomputable def detTotalTime (D : MachineAdversary bd) (n : ℕ)
     (h : OracleHandler (spec n)) (x : α n) : ℕ :=
-  (D.initTM n).time.eval ((D.encIn n).boolify x).length +
+  ((D.initF.wit n).time).eval (bd.eIn.enc n x).length +
     ∑ j ∈ Finset.range (D.steps.eval n),
-      ((D.exposeTM n).time.eval
-          ((D.encState n).boolify (D.stateAt n h x j)).length +
-        (D.updateTM n).time.eval
-          ((finEncodingPair (D.encState n) (D.encIface n).encAns).boolify
+      (((D.exposeF.wit n).time).eval (D.state.enc n (D.stateAt n h x j)).length +
+        ((D.updateF.wit n).time).eval
+          ((D.state.pairVar bd.eIface.encAns).enc n
             (D.stateAt n h x j, D.answerAt n h x j)).length +
-        (D.outputTM n).time.eval
-          ((D.encState n).boolify (D.stateAt n h x j)).length)
+        ((D.outputF.wit n).time).eval (D.state.enc n (D.stateAt n h x j)).length)
 
-/-- **Tier-1 total-time bound.** Against handlers whose answers are boundedly encoded
-(`hpair`) and on boundedly encoded inputs (`hin`), the total machine time of a run is
-bounded by an explicit polynomial expression in `n`. -/
-theorem detTotalTime_le (D : PolyTimeAdversary spec α β) (iB pB : Polynomial ℕ)
-    (hin : ∀ (n : ℕ) (x : α n), ((D.encIn n).boolify x).length ≤ iB.eval n)
-    (hpair : ∀ (n : ℕ) (h : OracleHandler (spec n)) (x : α n) (j : ℕ),
-      j < D.steps.eval n →
-      ((finEncodingPair (D.encState n) (D.encIface n).encAns).boolify
-        (D.stateAt n h x j, D.answerAt n h x j)).length ≤
-        pB.eval n)
+/-- **Total-time bound, hypothesis-free**: the total machine time of any run is bounded
+by an explicit polynomial expression in `n` — the canonical fixed input width bounds
+the initialization input, the state bound covers every occurring state, and the
+canonical answer width caps the update inputs. -/
+theorem detTotalTime_le (D : MachineAdversary bd)
     (n : ℕ) (h : OracleHandler (spec n)) (x : α n) :
     D.detTotalTime n h x ≤
-      D.stepTime.eval (n + iB.eval n) +
+      D.initF.time.eval (n + bd.eIn.widBound.eval n) +
         D.steps.eval n *
-          (2 * D.stepTime.eval (n + D.sizeBound.eval n) +
-            D.stepTime.eval (n + pB.eval n)) := by
+          (D.exposeF.time.eval (n + D.state.bound.eval n) +
+            D.updateF.time.eval
+              (n + (D.state.bound.eval n + bd.eIface.encAns.widBound.eval n)) +
+            D.outputF.time.eval (n + D.state.bound.eval n)) := by
   refine Nat.add_le_add ?_ ?_
-  · exact ((D.initTM_time_le n _).trans
-      (Polynomial.eval_le_eval (Nat.add_le_add_left (hin n x) n)))
+  · refine (D.initF.time_le n _).trans (Polynomial.eval_le_eval ?_)
+    have h1 : (bd.eIn.enc n x).length ≤ bd.eIn.widBound.eval n :=
+      (bd.eIn.len_eq n x).le.trans (bd.eIn.wid_le n)
+    omega
   · refine le_trans (Finset.sum_le_card_nsmul _ _
-      (2 * D.stepTime.eval (n + D.sizeBound.eval n) + D.stepTime.eval (n + pB.eval n))
-      fun j hj => ?_) ?_
-    · rw [Finset.mem_range] at hj
-      have hstate : ((D.encState n).boolify (D.stateAt n h x j)).length ≤
-          D.sizeBound.eval n :=
-        D.encState_length_le n h x j hj.le
-      have hexpose := (D.exposeTM_time_le n _).trans
-        (Polynomial.eval_le_eval (Nat.add_le_add_left hstate n))
-      have houtput := (D.outputTM_time_le n _).trans
-        (Polynomial.eval_le_eval (Nat.add_le_add_left hstate n))
-      have hupdate := (D.updateTM_time_le n _).trans
-        (Polynomial.eval_le_eval (Nat.add_le_add_left (hpair n h x j hj) n))
-      omega
-    · rw [Finset.card_range, smul_eq_mul]
-
-/-- Packaged form of `detTotalTime_le`: the total run time is bounded by a single
-polynomial in the security parameter. -/
-theorem exists_polynomial_detTotalTime_le (D : PolyTimeAdversary spec α β)
-    (iB pB : Polynomial ℕ)
-    (hin : ∀ (n : ℕ) (x : α n), ((D.encIn n).boolify x).length ≤ iB.eval n)
-    (hpair : ∀ (n : ℕ) (h : OracleHandler (spec n)) (x : α n) (j : ℕ),
-      j < D.steps.eval n →
-      ((finEncodingPair (D.encState n) (D.encIface n).encAns).boolify
+      (D.exposeF.time.eval (n + D.state.bound.eval n) +
+        D.updateF.time.eval
+          (n + (D.state.bound.eval n + bd.eIface.encAns.widBound.eval n)) +
+        D.outputF.time.eval (n + D.state.bound.eval n))
+      fun j _ => ?_) (by rw [Finset.card_range, smul_eq_mul])
+    have hstate : (D.state.enc n (D.stateAt n h x j)).length ≤ D.state.bound.eval n :=
+      D.state.len_le n _
+    have hpair : ((D.state.pairVar bd.eIface.encAns).enc n
         (D.stateAt n h x j, D.answerAt n h x j)).length ≤
-        pB.eval n) :
+          D.state.bound.eval n + bd.eIface.encAns.widBound.eval n := by
+      rw [StrEncFam.pairVar_enc, List.length_append, bd.eIface.encAns.len_eq]
+      have h1 := D.state.len_le n (D.stateAt n h x j, D.answerAt n h x j).1
+      have h2 := bd.eIface.encAns.wid_le n
+      omega
+    have hexpose := (D.exposeF.time_le n _).trans
+      (Polynomial.eval_le_eval (Nat.add_le_add_left hstate n))
+    have hupdate := (D.updateF.time_le n _).trans
+      (Polynomial.eval_le_eval (Nat.add_le_add_left hpair n))
+    have houtput := (D.outputF.time_le n _).trans
+      (Polynomial.eval_le_eval (Nat.add_le_add_left hstate n))
+    omega
+
+/-- Packaged form of `detTotalTime_le`: the total run time of any adversary is bounded
+by a single polynomial in the security parameter, with no side conditions. -/
+theorem exists_polynomial_detTotalTime_le (D : MachineAdversary bd) :
     ∃ p : Polynomial ℕ, ∀ (n : ℕ) (h : OracleHandler (spec n)) (x : α n),
       D.detTotalTime n h x ≤ p.eval n := by
-  refine ⟨D.stepTime.comp (.X + iB) +
-    D.steps * (2 * D.stepTime.comp (.X + D.sizeBound) + D.stepTime.comp (.X + pB)),
-    fun n h x => (D.detTotalTime_le iB pB hin hpair n h x).trans_eq ?_⟩
+  refine ⟨D.initF.time.comp (.X + bd.eIn.widBound) +
+    D.steps * (D.exposeF.time.comp (.X + D.state.bound) +
+      D.updateF.time.comp (.X + (D.state.bound + bd.eIface.encAns.widBound)) +
+      D.outputF.time.comp (.X + D.state.bound)),
+    fun n h x => (D.detTotalTime_le n h x).trans_eq ?_⟩
   simp [Polynomial.eval_comp]
 
-end PolyTimeAdversary
+end MachineAdversary
 
 /-! ## Query-free adversaries are polynomial time -/
 
@@ -345,56 +449,36 @@ theorem OracleMachine.updateFlat_ofPureFn {spec : OracleSpec.{0, 0} ι} {α β :
   funext p
   simp [OracleMachine.updateFlat, OracleMachine.ofPureFn]
 
-/-- **Sanity: query-free adversaries are polynomial time**, given machine witnesses
-for their (trivial) step functions: the identity witness serves initialization, and
-the caller supplies witnesses for the constant query selection, first-projection
-update, and the output map itself. Once concrete base machines for constants and
-projections exist, all hypotheses discharge generically; until then this is the honest
-hypothesis form. -/
+/-- **Query-free adversaries are polynomial time**, given uniform machine families for
+their (trivial) step functions: the identity family serves initialization and the
+state representation is the canonical input boundary itself, so the caller supplies
+families for the constant query selection, the first-projection update, and the output
+map. Once base machines for constants and projections exist, all three discharge
+generically; until then this is the honest hypothesis form — and the output family is a
+genuine assumption ("`f` is P/poly-computable"), not a formality. -/
 theorem OracleComp.isPolyTime_pure_of_witnesses
-    {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} (f : (n : ℕ) → α n → β n)
-    (encIn : (n : ℕ) → FinEncoding (α n)) (encOut : (n : ℕ) → FinEncoding (β n))
-    (encIface : (n : ℕ) → (spec n).InterfaceEncoding)
-    (sizeBound : Polynomial ℕ)
-    (hsize : ∀ n x, ((encIn n).boolify x).length ≤ sizeBound.eval n)
-    (stepTime : Polynomial ℕ) (hone : ∀ m, 1 ≤ stepTime.eval m)
-    (exposeTM : (n : ℕ) → EncPolyTime ((encIn n).boolify)
-      ((encIface n).encQuery.boolify) (fun _ => (default : ι)))
-    (hexpose : ∀ n k, ((exposeTM n).time).eval k ≤ stepTime.eval (n + k))
-    (updateTM : (n : ℕ) → EncPolyTime
-      ((finEncodingPair (encIn n) (encIface n).encAns).boolify) ((encIn n).boolify)
-      Prod.fst)
-    (hupdate : ∀ n k, ((updateTM n).time).eval k ≤ stepTime.eval (n + k))
-    (outputTM : (n : ℕ) → EncPolyTime ((encIn n).boolify)
-      ((finEncodingOption (encOut n)).boolify) (fun x => some (f n x)))
-    (houtput : ∀ n k, ((outputTM n).time).eval k ≤ stepTime.eval (n + k)) :
-    OracleComp.IsPolyTime (fun n x => (pure (f n x) : OracleComp (spec n) (β n))) := by
+    {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} (bd : BoundaryData spec α β)
+    (f : (n : ℕ) → α n → β n)
+    (exposeF : EncPolyTimeFam bd.eIn.enc bd.eIface.encQuery.enc
+      (fun _ _ => (default : ι)))
+    (updateF : EncPolyTimeFam (bd.eIn.toStrEncFam.pairVar bd.eIface.encAns).enc
+      bd.eIn.enc (fun _ => Prod.fst))
+    (outputF : EncPolyTimeFam bd.eIn.enc (bd.eOut.option).enc
+      (fun n x => some (f n x))) :
+    OracleComp.IsPolyTime bd (fun n x => (pure (f n x) : OracleComp (spec n) (β n))) := by
   refine ⟨{
-    M := fun n => .ofPureFn (f n)
-    steps := 0
-    stable := fun n _ _ hb _ => hb
-    steady := fun n h x => rfl
-    encState := encIn
-    encIn := encIn
-    encOut := encOut
-    encIface := encIface
-    sizeBound := sizeBound
-    encState_length_le := fun n h x j hj => by
-      rw [Polynomial.eval_zero, Nat.le_zero] at hj
-      subst hj
-      exact hsize n x
-    initTM := fun n => .id ((encIn n).boolify)
-    exposeTM := exposeTM
-    updateTM := fun n => (updateTM n).copy _
-      fun p => congrFun (OracleMachine.updateFlat_ofPureFn (f n)).symm p
-    outputTM := outputTM
-    stepTime := stepTime
-    initTM_time_le := fun n k => by
-      simpa [EncPolyTime.time, EncPolyTime.id,
-        Turing.SingleTapeTM.PolyTimeComputable.id] using hone (n + k)
-    exposeTM_time_le := hexpose
-    updateTM_time_le := fun n k => hupdate n k
-    outputTM_time_le := houtput }, fun n H x => ?_, fun n x => trivial⟩
+    A := {
+      M := fun n => .ofPureFn (f n)
+      steps := 0
+      stable := fun n _ _ hb _ => hb
+      state := bd.eIn.toStrEncFam
+      initF := .id bd.eIn.enc
+      exposeF := exposeF
+      updateF := updateF.copy _
+        (fun n p => congrFun (OracleMachine.updateFlat_ofPureFn (f n)).symm p)
+      outputF := outputF }
+    implements := fun n H x => ?_
+    queryBound := fun n x => trivial }⟩
   rw [Polynomial.eval_zero, OracleMachine.runK_zero]
   change (pure (some (f n x)) : SPMF (Option (β n))) = some <$> simulateQ H (pure (f n x))
   rw [simulateQ_pure, map_pure]

@@ -26,16 +26,19 @@ ships a Lean v4.30-compatible release. The CI TCB-isolation check
 (`scripts/check-interop-isolation.sh`) still protects against accidental
 cross-imports regardless of which backend requires are active.
 
-Important: `require mathlib` must come **after** any Interop backend `require`s
-so Mathlib's transitive pins (in particular `Qq`) win over the backends'. Lake
-warns and `lake exe cache get` fails otherwise.
+Important: `require mathlib` must come **after** every other dependency `require`
+(the Interop backends, cslib, and PolyFun) so Mathlib's transitive pins (in
+particular `Qq`, `batteries`, `aesop`) win over the others'. Lake warns and
+`lake exe cache get` fails otherwise.
 
-Hax: Lean 4.29.0-rc1 (compatible with our 4.30.0). Latest `main` as of
-2026-04-16. Subdirectory: `hax-lib/proof-libs/lean`.
+Hax is **disabled** for the v4.31 + PolyFun-PR-#15 draft bump: it pins an older
+Lean rc toolchain and, being TCB-isolated, is never imported by core VCVio, so
+the `Interop` lean_lib is simply not built while this is off. Re-enable (with a
+cross-versioned pin) once the bump stabilizes.
 -/
-require Hax from git
-  "https://github.com/cryspen/hax" @
-  "492a34e3" / "hax-lib/proof-libs/lean"
+-- require Hax from git
+--   "https://github.com/cryspen/hax" @
+--   "492a34e3" / "hax-lib/proof-libs/lean"
 
 /-
 Loom2 (Verse Lab fork): foundation for the Loom-style WP / Triple program-logic
@@ -70,19 +73,19 @@ Cslib: the Lean computer science library. Used for its single-tape Turing
 machine model with proven polynomial-time composition
 (`Turing.SingleTapeTM.PolyTimeComputable.comp`), which grounds the
 TM-based polynomial-time adversary layer in
-`VCVio/OracleComp/Coinductive/PolyTime.lean`. The `v4.30.0` tag pins the
+`VCVio/OracleComp/Coinductive/PolyTime.lean`. The `v4.31.0` tag pins the
 exact same Lean toolchain and Mathlib commit as this project. Kept before
 `require mathlib` so Mathlib's transitive pins win (see note above).
 -/
 require cslib from git
   "https://github.com/leanprover/cslib" @
-  "v4.30.0"
-
-require "leanprover-community" / "mathlib" @ git "v4.30.0"
+  "v4.31.0"
 
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "124c7b5474d230c3307d01b8b73afcc11b16f487"
+  "38762c36f6da94331a381bd3efd43720203bbea1"
+
+require "leanprover-community" / "mathlib" @ git "v4.31.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio

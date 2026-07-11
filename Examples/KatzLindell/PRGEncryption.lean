@@ -26,17 +26,16 @@ scheme is EAV-secure.
 ## Surfaced gap
 
 The reduction `prgReduction` sequences the eavesdropping adversary's *choose* and *distinguish*
-phases into one program and post-composes the result with `· == b`. Establishing its polynomial
-time therefore needs closure of `OracleComp.IsPolyTime` under **sequential composition of two
-query-bearing programs** (`IsPolyTime.bind`) and under **output maps of an abstract
-`IsPolyTime` family** — neither is available: the machine model closes `IsPolyTime` under input
-precomposition (`IsPolyTime.precomp`) and under output maps of *concrete finite-state* bundles
-(`IsPolyTime.map_of_adversary`), but not of an existential `IsPolyTime` hypothesis whose machine
-state is only `FinEncoding`, not `Fintype`. The two-phase `TwoPhaseGame` pipeline was designed to
-avoid `IsPolyTime.bind`; carrying that all the way through the PRG reduction is the remaining
-plumbing. Both the PRG-advantage bound (`prgReduction_advantage_bound`) and the reduction's
-polynomial time (`prgReduction_isPolyTime`) are therefore taken as explicit hypotheses of
-`eavSecure_prgEnc`, isolating exactly the two facts that the surrounding argument reduces to.
+phases into one program and post-composes the result with `· == b`. The output post-map is now
+closed abstractly (`OracleComp.IsPolyTime.map`, derivable at canonical boundaries), so the single
+remaining gap is closure under **sequential composition of two query-bearing programs**
+(`IsPolyTime.bind`) — the two-phase machine construction, whose statement the canonical
+boundaries finally make well-formed (the mid boundary is shared by construction). Both the
+PRG-advantage bound and the reduction's polynomial time are therefore taken as explicit
+hypotheses of `eavSecure_prgEnc`, isolating exactly the two facts the surrounding argument
+reduces to. Note the boundary parameters make the Katz–Lindell `1^n` convention visible: the
+theorem now explicitly requires the expansion length `ℓ` to be polynomially bounded (`pℓ`/`hℓ`),
+which the textbook leaves implicit in "expansion factor `ℓ(n)` polynomial in `n`".
 -/
 
 open ENNReal OracleComp OracleSpec SymmEncAlg PRGScheme
@@ -86,15 +85,18 @@ each isolating one deferred component (see the module docstring):
 
 Given both, security transfers through the generic polynomial-loss reduction meta-theorem
 `SecurityGame.secureAgainst_of_poly_reduction` with loss factor `2`. -/
-theorem eavSecure_prgEnc (prg : (n : ℕ) → PRGScheme (BitVec n) (BitVec (ℓ n)))
-    (hprg : PRGSecure prg)
+theorem eavSecure_prgEnc (pℓ : Polynomial ℕ) (hℓ : ∀ n, ℓ n ≤ pℓ.eval n)
+    (prg : (n : ℕ) → PRGScheme (BitVec n) (BitVec (ℓ n)))
+    (hprg : PRGSecure (Computability.BitEncFam.bitVec ℓ pℓ hℓ) prg)
     (hadv : ∀ (A : PPTEavAdversary (fun n => BitVec (ℓ n)) (fun n => BitVec (ℓ n))) (n : ℕ),
       (eavGuessGame (prgEnc prg)).advantage A n ≤
         (↑(Polynomial.eval n (2 : Polynomial ℕ)) : ℝ≥0∞) *
           (prgSecurityGame prg).advantage (prgReduction A) n)
     (hppt : ∀ (A : PPTEavAdversary (fun n => BitVec (ℓ n)) (fun n => BitVec (ℓ n))),
-      A.IsPPT → OracleComp.IsPolyTime (prgReduction A)) :
-    EavSecure (prgEnc prg) :=
+      A.IsPPT (.bitVec ℓ pℓ hℓ) (.bitVec ℓ pℓ hℓ) →
+        OracleComp.IsPolyTime
+          (BoundaryData.coin (.bitVec ℓ pℓ hℓ) .bool) (prgReduction A)) :
+    EavSecure (prgEnc prg) (.bitVec ℓ pℓ hℓ) (.bitVec ℓ pℓ hℓ) :=
   SecurityGame.secureAgainst_of_poly_reduction (loss := 2) hppt hadv hprg
 
 end KatzLindell

@@ -1,5 +1,6 @@
 import ToMathlib.Analysis.MeanInequalities
 import ToMathlib.Combinatorics.FinPairs
+import ToMathlib.Computability.BitEncoding
 import ToMathlib.Computability.CslibPolyTime
 import ToMathlib.Computability.Encoding
 import ToMathlib.Computability.PolyTimeTM
@@ -42,3 +43,4 @@ import ToMathlib.ProbabilityTheory.Coupling
 import ToMathlib.ProbabilityTheory.FinRatPMF
 import ToMathlib.ProbabilityTheory.OptimalCoupling
 import ToMathlib.ProbabilityTheory.SPMF
+import ToMathlib.ProbabilityTheory.SPMFOrder

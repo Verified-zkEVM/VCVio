@@ -60,7 +60,7 @@ answer function with `OracleHandler.ofFn`, apply it as a function through the `D
 `OracleHandler.toQueryImpl`. Being a lens, it is exactly what `PFunctor.DynSystem.wrap` closes a
 strategy with (`OracleStrategy.runAgainst`), and the whole `PFunctor.Lens` algebra applies. -/
 abbrev OracleHandler (spec : OracleSpec.{u, v} ι) : Type _ :=
-  PFunctor.Section.{u, v, u, v} spec.toPFunctor
+  PFunctor.Section spec.toPFunctor
 
 namespace OracleHandler
 
@@ -74,12 +74,12 @@ def toFn (h : OracleHandler spec) (t : spec.Domain) : spec.Range t :=
 
 instance instDFunLike : DFunLike (OracleHandler spec) spec.Domain (fun t => spec.Range t) where
   coe := toFn
-  coe_injective' _ _ heq := by
+  coe_injective _ _ heq := by
     apply PFunctor.Lens.ext _ _ (fun a => Subsingleton.elim _ _)
     intro a
     refine funext fun u => ?_
     rw [Subsingleton.elim u PUnit.unit]
-    simpa using congrFun heq a
+    exact congrFun heq a
 
 @[simp] theorem coe_ofFn (f : (t : spec.Domain) → spec.Range t) : ⇑(ofFn f) = f := rfl
 
@@ -101,6 +101,31 @@ query answered by a sub-probability distribution. This is the Kleisli-category s
 a strategy into a Markov chain on its states (`OracleStrategy.kleisliStep`). Single-universe because
 `SPMF : Type u → Type u`. -/
 abbrev ProbHandler {ι : Type u} (spec : OracleSpec.{u, u} ι) : Type u := QueryImpl spec SPMF
+
+namespace OracleSpec
+
+/-- The canonical randomized oracle of a probability spec: answer each query by its
+`IsProbabilitySpec` distribution, lifted to `SPMF`. Specializes to a fair coin on
+`coinSpec` and to uniform selection on `unifSpec`. -/
+noncomputable def probHandler {ι : Type} (spec : OracleSpec.{0, 0} ι)
+    [IsProbabilitySpec spec] : ProbHandler spec :=
+  fun t => (IsProbabilitySpec.toPMF t : SPMF (spec.Range t))
+
+open OracleComp in
+/-- Running a program against the canonical probabilistic handler computes its
+distributional semantics: machine-level game values against `probHandler` are `Pr[…]`
+statements about the program. -/
+theorem simulateQ_probHandler {ι : Type} {spec : OracleSpec.{0, 0} ι}
+    [IsProbabilitySpec spec] {α : Type} (oa : OracleComp spec α) :
+    simulateQ spec.probHandler oa = 𝒟[oa] := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t k ih =>
+    rw [simulateQ_query_bind]
+    simp only [ih, evalDist_bind, evalDist_liftM_toPMF]
+    simp [OracleSpec.probHandler, ← PMF.monad_map_eq_map]
+
+end OracleSpec
 
 namespace OracleStrategy
 

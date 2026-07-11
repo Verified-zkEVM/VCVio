@@ -153,15 +153,6 @@ section sum_thing
 open Filter Finset Function Topology SummationFilter
 
 @[to_additive (attr := simp)]
-theorem tprod_ite_eq' {α β} [CommMonoid α] [TopologicalSpace α]
-    (b : β) [DecidablePred (b = ·)] (a : α)
-    (L := unconditional β) [L.LeAtTop] :
-    ∏'[L] b', (if b = b' then a else 1) = a := by
-  rw [tprod_eq_mulSingle b]
-  · simp
-  · intro b' hb'; simp [hb', @eq_comm _ b]
-
-@[to_additive (attr := simp)]
 theorem tprod_ite_eq_apply {α β} [CommMonoid α] [TopologicalSpace α]
     (b : β) [DecidablePred (· = b)] (f : β → α)
     (L := unconditional β) [L.LeAtTop] :
@@ -327,7 +318,7 @@ lemma Array.card_eq_countP {α : Type} (as : Array α)
   rw [← List.map_getElem_finRange as.toList, List.countP_map]
   have hcard := Fin.card_eq_countP_mem ({i : Fin as.size | p as[↑i]} : Finset (Fin as.size))
   rw [Fin.countP_eq_countP_map_finRange] at hcard
-  simpa [Function.comp, Array.length_toList] using hcard
+  simpa [Function.comp_def, Array.length_toList] using hcard
 
 section VectorCounting
 

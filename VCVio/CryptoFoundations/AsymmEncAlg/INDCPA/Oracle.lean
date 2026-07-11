@@ -5,6 +5,7 @@ Authors: Devon Tuma, Quang Dao
 -/
 import VCVio.CryptoFoundations.AsymmEncAlg.Defs
 import VCVio.OracleComp.Coercions.SubSpec
+import VCVio.OracleComp.Coinductive.WireK
 import VCVio.OracleComp.ProbComp
 import VCVio.OracleComp.QueryTracking.QueryBound
 import VCVio.OracleComp.SimSemantics.Append
@@ -81,6 +82,14 @@ def IND_CPA_queryImpl' (encAlg : AsymmEncAlg ProbComp M PK SK C)
   IND_CPA_queryImplFromChallenge encAlg
     (IND_CPA_cachedChallengeOracle encAlg pk
       (fun mm => if b then mm.1 else mm.2))
+
+/-- The cached LR challenge oracle as a probabilistic stateful responder
+(`ProbResponder`, see `VCVio.OracleComp.Coinductive.WireK`): the responder state is the
+challenge cache, and each answer is drawn jointly with the updated cache. Exhibits the
+stateful IND-CPA challenger in the coalgebraic wired-run presentation. -/
+noncomputable def IND_CPA_challengeResponder (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (pk : PK) (b : Bool) : ProbResponder encAlg.IND_CPA_oracleSpec :=
+  .ofStateQueryImpl (encAlg.IND_CPA_queryImpl' pk b)
 
 /-- Oracle IND-CPA experiment with caching on the LR oracle. -/
 def IND_CPA_experiment {encAlg : AsymmEncAlg ProbComp M PK SK C}
@@ -184,7 +193,7 @@ lemma IND_CPA_queryImpl'_counted_counter_le_succ
       simp
   | inr mm =>
       have hp' : p ∈ support ((encAlg'.IND_CPA_challengeOracle'_counted pk b mm).run st) := by
-        simpa [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge] using hp
+        exact hp
       clear hp
       revert hp'
       rcases hcache : st.1 mm with _ | c <;> intro hp
@@ -302,7 +311,7 @@ theorem IND_CPA_run'_evalDist_eq_queryImpl'_of_bounded_eq [Finite C] [Inhabited 
       𝒟[(simulateQ (implCounted pk b q) comp).run' (cache, n)] =
       𝒟[(simulateQ (encAlg'.IND_CPA_queryImpl'_counted pk b) comp).run'
         (cache, n)] := by
-    simpa [StateT.run', evalDist_map] using congrArg (fun p => Prod.fst <$> p) hrun
+    simp only [StateT.run', evalDist_map]; exact congrArg (fun p => Prod.fst <$> p) hrun
   refine hcounted_run'.trans ?_
   simpa using congrArg evalDist (OracleComp.run'_simulateQ_eq_of_query_map_eq
       (impl₁ := encAlg'.IND_CPA_queryImpl'_counted pk b)
@@ -535,7 +544,7 @@ lemma IND_CPA_hybridLR_counted_counter_le
   | inr mm =>
     have hp' : p ∈ support
         ((IND_CPA_hybridChallengeOracleLR_counted (encAlg' := encAlg') pk k mm).run st) := by
-      simpa [IND_CPA_queryImpl_hybridLR_counted, IND_CPA_queryImplFromChallenge] using hp
+      exact hp
     clear hp
     revert hp'
     simp only [IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle]

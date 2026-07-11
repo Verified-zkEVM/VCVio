@@ -80,6 +80,9 @@ def inducedFunctor (M : RelativeMonad C D J) : C ⥤ D where
 induced by the relative monad. -/
 def inducedNatTrans (M : RelativeMonad C D J) : NatTrans J M.inducedFunctor where
   app X := M.η
+  naturality X Y f := by
+    simp only [inducedFunctor_map]
+    exact (M.right_unit (f := J.map f ≫ M.η)).symm
 
 /-- If a relative monad is over the identity functor, it is a monad. -/
 def monadOfId (M : RelativeMonad C _ (𝟭 _)) : Monad C where
@@ -88,10 +91,10 @@ def monadOfId (M : RelativeMonad C _ (𝟭 _)) : Monad C where
     { app := fun X => M.η
       naturality := fun X Y f => by
         simp only [Functor.id_map, inducedFunctor_map]
-        simpa using (M.right_unit (f := f ≫ M.η)).symm }
+        exact (M.right_unit (f := f ≫ M.η)).symm }
   μ := NatTrans.mk (fun X => M.μ (𝟙 (M.T X)))
     (fun X Y f => by
-      simp only [Functor.comp_obj, inducedFunctor_obj, Functor.comp_map, inducedFunctor_map,
+      simp only [Functor.comp_map, inducedFunctor_map,
         Functor.id_obj, Functor.id_map]
       calc
         M.μ (M.μ (f ≫ M.η) ≫ M.η) ≫ M.μ (𝟙 (M.T Y))
@@ -106,9 +109,9 @@ def monadOfId (M : RelativeMonad C _ (𝟭 _)) : Monad C where
         _ = M.μ (𝟙 (M.T X)) ≫ M.μ (f ≫ M.η) := by
               exact M.assoc (f := 𝟙 (M.T X)) (g := f ≫ M.η))
   left_unit X := by
-    simpa using (M.right_unit (f := 𝟙 (M.T X)))
+    exact M.right_unit (f := 𝟙 (M.T X))
   right_unit X := by
-    simp only [Functor.id_obj, inducedFunctor_obj, inducedFunctor_map, Functor.id_map]
+    simp only [Functor.id_obj, inducedFunctor_map, Functor.id_map]
     calc
       M.μ (M.η ≫ M.η) ≫ M.μ (𝟙 (M.T X))
           = M.μ ((M.η ≫ M.η) ≫ M.μ (𝟙 (M.T X))) := by
@@ -120,7 +123,7 @@ def monadOfId (M : RelativeMonad C _ (𝟭 _)) : Monad C where
               congrArg (fun k => M.η ≫ k) (M.right_unit (f := 𝟙 (M.T X)))
       _ = 𝟙 (M.T X) := by simp
   assoc X := by
-    simp only [Functor.comp_obj, inducedFunctor_obj, inducedFunctor_map, Functor.id_obj,
+    simp only [inducedFunctor_map, Functor.id_obj,
       Functor.id_map]
     calc
       M.μ (M.μ (𝟙 (M.T X)) ≫ M.η) ≫ M.μ (𝟙 (M.T X))
@@ -148,6 +151,9 @@ def precompose {C' : Type u₃} [Category.{v₃} C'] (J' : C' ⥤ C) (M : Relati
   T := M.T ∘ J'.obj
   η := M.η
   μ := M.μ
+  left_unit := M.left_unit
+  right_unit f := M.right_unit f
+  assoc f g := M.assoc f g
 
 -- TODO: post-composition by a fully faithful functor
 
@@ -163,6 +169,9 @@ def prod (M₁ : RelativeMonad C₁ D₁ J₁) (M₂ : RelativeMonad C₂ D₂ J
   T := fun X => (M₁.T X.fst, M₂.T X.snd)
   η := ⟨M₁.η, M₂.η⟩
   μ := fun f => ⟨M₁.μ f.fst, M₂.μ f.snd⟩
+  left_unit := Prod.ext M₁.left_unit M₂.left_unit
+  right_unit f := Prod.ext (M₁.right_unit f.fst) (M₂.right_unit f.snd)
+  assoc f g := Prod.ext (M₁.assoc f.fst g.fst) (M₂.assoc f.snd g.snd)
 
 end RelativeMonad
 

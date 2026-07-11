@@ -76,17 +76,19 @@ noncomputable def semIdealExp (X : (n : ℕ) → OracleComp coinSpec (BitVec n))
 secure in the presence of an eavesdropper when every PPT adversary has a PPT simulator
 that, seeing only the leakage, computes any polynomial-time target function of the
 plaintext essentially as well — over every efficiently sampleable plaintext ensemble. -/
-def SemanticallySecure (π : (n : ℕ) → SymmEncAlg ProbComp (BitVec n) (K n) (C n)) :
-    Prop :=
-  ∀ (vl ll : ℕ → ℕ)
+def SemanticallySecure (eC : Computability.BitEncFam C)
+    (π : (n : ℕ) → SymmEncAlg ProbComp (BitVec n) (K n) (C n)) : Prop :=
+  ∀ (vl ll : ℕ → ℕ) (eVl : Computability.BitEncFam (fun n => BitVec (vl n)))
+    (eLl : Computability.BitEncFam (fun n => BitVec (ll n)))
     (A : (n : ℕ) → C n × BitVec (ll n) → OracleComp coinSpec (BitVec (vl n))),
-    OracleComp.IsPolyTime A →
+    OracleComp.IsPolyTime (BoundaryData.coin (eC.pair eLl) eVl) A →
     ∃ A' : (n : ℕ) → BitVec (ll n) → OracleComp coinSpec (BitVec (vl n)),
-      OracleComp.IsPolyTime A' ∧
+      OracleComp.IsPolyTime (BoundaryData.coin eLl eVl) A' ∧
         ∀ (X : (n : ℕ) → OracleComp coinSpec (BitVec n)),
-          OracleComp.IsPolyTime (fun n (_ : Unit) => X n) →
-          ∀ (f : (n : ℕ) → BitVec n → BitVec (vl n)), IsPolyTimeFun f →
-          ∀ (h : (n : ℕ) → BitVec n → BitVec (ll n)), IsPolyTimeFun h →
+          OracleComp.IsPolyTime (BoundaryData.coin .unit .bitVecX)
+            (fun n (_ : Unit) => X n) →
+          ∀ (f : (n : ℕ) → BitVec n → BitVec (vl n)), IsPolyTimeFun .bitVecX eVl f →
+          ∀ (h : (n : ℕ) → BitVec n → BitVec (ll n)), IsPolyTimeFun .bitVecX eLl h →
           negligible fun n => ENNReal.ofReal
             |(Pr[= true | semRealExp π X f h A n]).toReal -
               (Pr[= true | semIdealExp X f h A' n]).toReal|
@@ -106,13 +108,17 @@ bridge** turning the scheme's probabilistic algorithms into coin-oracle programs
 arbitrary `ProbComp`), together with the ensemble ↔ two-message-choice translation between this
 predict-a-function form and the eavesdropping game. -/
 theorem exists_simulator_predict_of_eavSecure
-    (π : (n : ℕ) → SymmEncAlg ProbComp (BitVec n) (K n) (C n)) (hπ : EavSecure π)
-    (hπ_poly : SchemePolyTime π)
-    (vl : ℕ → ℕ) (A : (n : ℕ) → C n → OracleComp coinSpec (BitVec (vl n)))
-    (hA : OracleComp.IsPolyTime A) :
+    (eK : Computability.BitEncFam K) (eC : Computability.BitEncFam C)
+    (eU : OracleSpec.InterfaceBitEnc (fun _ => unifSpec))
+    (π : (n : ℕ) → SymmEncAlg ProbComp (BitVec n) (K n) (C n))
+    (hπ : EavSecure π .bitVecX eC)
+    (hπ_poly : SchemePolyTime .bitVecX eK eC eU π)
+    (vl : ℕ → ℕ) (eVl : Computability.BitEncFam (fun n => BitVec (vl n)))
+    (A : (n : ℕ) → C n → OracleComp coinSpec (BitVec (vl n)))
+    (hA : OracleComp.IsPolyTime (BoundaryData.coin eC eVl) A) :
     ∃ A' : (n : ℕ) → Unit → OracleComp coinSpec (BitVec (vl n)),
-      OracleComp.IsPolyTime A' ∧
-        ∀ (f : (n : ℕ) → BitVec n → BitVec (vl n)), IsPolyTimeFun f →
+      OracleComp.IsPolyTime (BoundaryData.coin .unit eVl) A' ∧
+        ∀ (f : (n : ℕ) → BitVec n → BitVec (vl n)), IsPolyTimeFun .bitVecX eVl f →
           negligible fun n => ENNReal.ofReal
             |(Pr[= true | do
                 let m ← $ᵗ BitVec n
@@ -129,9 +135,9 @@ theorem exists_simulator_predict_of_eavSecure
 /-- **Katz–Lindell Theorem 3.14** (statement): eavesdropping indistinguishability and
 semantic security coincide. The book states this without proof; the mechanization is
 deferred. -/
-theorem eavSecure_iff_semanticallySecure
+theorem eavSecure_iff_semanticallySecure (eC : Computability.BitEncFam C)
     (π : (n : ℕ) → SymmEncAlg ProbComp (BitVec n) (K n) (C n)) :
-    EavSecure π ↔ SemanticallySecure π := by
+    EavSecure π .bitVecX eC ↔ SemanticallySecure eC π := by
   sorry
 
 end KatzLindell

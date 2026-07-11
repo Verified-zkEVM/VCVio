@@ -69,17 +69,28 @@ theorem eavDistGame_oneTimePad_advantage_eq_zero
 
 /-- **The one-time pad is eavesdropping-secure**: perfect secrecy implies computational
 secrecy, unconditionally — an end-to-end check that `EavSecure` is satisfiable. -/
-theorem eavSecure_oneTimePad : EavSecure (fun n => oneTimePad n) := by
+theorem eavSecure_oneTimePad :
+    EavSecure (fun n => oneTimePad n) Computability.BitEncFam.bitVecX
+      Computability.BitEncFam.bitVecX := by
   rw [eavSecure_iff_distGame_secure]
   exact fun A _ => negligible_of_zero (eavDistGame_oneTimePad_advantage_eq_zero A)
 
 -- Claim 3.11 instantiated at the one-time pad: no polynomial-time adversary predicts
--- any single bit of a uniform plaintext from its one-time-pad encryption. The whole
--- pipeline — definitions, reduction, and machine-level polynomial-time transfer —
--- discharges on a concrete scheme.
-example (i : ℕ) :
-    (predictBitGame (fun n => oneTimePad n) i).secureAgainst OracleComp.IsPolyTime :=
-  secureAgainst_predictBitGame_of_eavSecure _
-    (fun n => Computability.finEncodingBitVec n) eavSecure_oneTimePad i
+-- any single bit of a uniform plaintext from its one-time-pad encryption. The
+-- probability pipeline discharges on a concrete scheme at the canonical bitvector
+-- boundaries; the reduction's polynomial time (`hred`) is the explicit hypothesis of
+-- Claim 3.11, awaiting the base-machine library (see `isPPT_reduceAdv`).
+example (i : ℕ)
+    (hred : ∀ A : (n : ℕ) → BitVec n → OracleComp coinSpec Bool,
+      OracleComp.IsPolyTime
+        (BoundaryData.coin Computability.BitEncFam.bitVecX Computability.BitEncFam.bool)
+        A →
+      (reduceAdv A i).IsPPT Computability.BitEncFam.bitVecX
+        Computability.BitEncFam.bitVecX) :
+    (predictBitGame (fun n => oneTimePad n) i).secureAgainst
+      (OracleComp.IsPolyTime
+        (BoundaryData.coin Computability.BitEncFam.bitVecX Computability.BitEncFam.bool)) :=
+  secureAgainst_predictBitGame_of_eavSecure _ Computability.BitEncFam.bitVecX
+    eavSecure_oneTimePad i hred
 
 end KatzLindell

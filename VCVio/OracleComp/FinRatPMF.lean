@@ -31,7 +31,7 @@ namespace finRatImpl
 variable [spec.Inhabited] [∀ t : spec.Domain, FinEnum (spec.Range t)]
 
 local instance instSpecFintypeOfFinEnum : spec.Fintype where
-  fintype_B _ := inferInstance
+  fintypeB _ := inferInstance
 
 noncomputable local instance instIsUniformSpec : IsUniformSpec spec :=
   IsUniformSpec.ofFintypeInhabited _
@@ -40,6 +40,7 @@ noncomputable local instance instIsUniformSpec : IsUniformSpec spec :=
     @Raw.toPMF _ (Classical.decEq _) (finRatImpl (spec := spec) t) =
       PMF.uniformOfFintype (spec.Range t) := by
   convert Raw.toPMF_uniform (α := spec.Range t) using 2
+  rfl
 
 @[simp] lemma evalDist_apply (t : spec.Domain) :
     𝒟[finRatImpl (spec := spec) t] = liftM (PMF.uniformOfFintype (spec.Range t)) := by

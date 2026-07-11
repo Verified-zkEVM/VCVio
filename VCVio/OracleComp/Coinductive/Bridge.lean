@@ -20,6 +20,12 @@ The reverse map "ITree-to-OracleComp" exists *only* on terminating ITrees
 and requires productivity / well-foundedness arguments that are not yet
 in scope; hence we provide only the forward direction here.
 
+**Status**: leaf module — no other module currently consumes `toITree`; it is
+retained as the forward half of the inductive/coinductive correspondence described
+in `VCVio.OracleComp.Coinductive.DynSystem`. The backward map and a run-semantics
+correspondence (e.g. relating `OracleMachine.toComp` unrollings to ITree
+behaviours) are future work.
+
 ## Universe restriction
 
 To keep the polynomial functor uniform-universe, we specialise to

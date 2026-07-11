@@ -555,7 +555,7 @@ lemma pathwiseCostAtMost_fin_mOfFn [LawfulMonad m] [IsOrderedAddMonoid ω] {n : 
     PathwiseCostAtMost (Fin.mOfFn n f) (n • k) := by
   induction n with
   | zero =>
-      simpa [zero_nsmul] using
+      simpa [zero_nsmul, Fin.mOfFn] using
         (pathwiseCostAtMost_pure (m := m) (ω := ω) (x := (Fin.elim0 : Fin 0 → α)))
   | succ n ih =>
       simp only [Fin.mOfFn, succ_nsmul']
@@ -569,7 +569,7 @@ lemma pathwiseCostAtLeast_fin_mOfFn [LawfulMonad m] [IsOrderedAddMonoid ω] {n :
     PathwiseCostAtLeast (Fin.mOfFn n f) (n • k) := by
   induction n with
   | zero =>
-      simpa [zero_nsmul] using
+      simpa [zero_nsmul, Fin.mOfFn] using
         (pathwiseCostAtLeast_pure (m := m) (ω := ω) (x := (Fin.elim0 : Fin 0 → α)))
   | succ n ih =>
       simp only [Fin.mOfFn, succ_nsmul']

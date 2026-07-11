@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
+import ToMathlib.ProbabilityTheory.SPMFOrder
 import VCVio.EvalDist.Defs.Basic
 import VCVio.EvalDist.Monad.Basic
 import VCVio.EvalDist.Defs.NeverFails
@@ -14,8 +15,14 @@ import VCVio.EvalDist.Defs.NeverFails
 This file extends the TV distance from `PMF` (defined in
 `ToMathlib.Probability.ProbabilityMassFunction.TotalVariation`) to:
 
-1. `SPMF.tvDist` — on sub-probability mass functions (via `toPMF`)
+1. `SPMF.etvDist` / `SPMF.tvDist` — on sub-probability mass functions (via `toPMF`),
+   in `ℝ≥0∞`-valued and real-valued forms
 2. `tvDist` — on any monad with `MonadLiftT m SPMF` (via `evalDist`)
+
+For subdistributions comparable in the pointwise order of
+`ToMathlib.ProbabilityTheory.SPMFOrder`, the extended distance is exactly the
+difference of missing masses (`SPMF.etvDist_eq_gap_sub_of_le`), which is how
+quantitative termination bounds on truncated runs become distance bounds.
 -/
 
 noncomputable section
@@ -53,7 +60,61 @@ lemma tvDist_map_le {α' : Type w} {β : Type w} (f : α' → β)
 universe w in
 lemma tvDist_bind_right_le {α' : Type w} {β : Type w} (f : α' → SPMF β)
     (p q : SPMF α') : SPMF.tvDist (p >>= f) (q >>= f) ≤ SPMF.tvDist p q := by
-  simpa only [SPMF.tvDist, SPMF.toPMF_bind] using PMF.tvDist_bind_right_le _ p.toPMF q.toPMF
+  simpa only [SPMF.tvDist, SPMF.toPMF_bind, Option.elimM, PMF.monad_bind_eq_bind] using
+    PMF.tvDist_bind_right_le _ p.toPMF q.toPMF
+
+/-! ### Extended (`ℝ≥0∞`-valued) total variation distance -/
+
+/-- Extended total variation distance on SPMFs, valued in `ℝ≥0∞` via the underlying
+`PMF (Option α)`; `SPMF.tvDist` is its real part. Missing mass counts toward the
+distance, so e.g. `failure` is at distance `1` from any full distribution. -/
+protected def etvDist (p q : SPMF α) : ℝ≥0∞ := p.toPMF.etvDist q.toPMF
+
+lemma tvDist_eq_toReal_etvDist (p q : SPMF α) : p.tvDist q = (p.etvDist q).toReal := rfl
+
+@[simp] lemma etvDist_self (p : SPMF α) : p.etvDist p = 0 := PMF.etvDist_self _
+
+lemma etvDist_comm (p q : SPMF α) : p.etvDist q = q.etvDist p := PMF.etvDist_comm _ _
+
+lemma etvDist_triangle (p q r : SPMF α) :
+    p.etvDist r ≤ p.etvDist q + q.etvDist r := PMF.etvDist_triangle _ _ _
+
+lemma etvDist_le_one (p q : SPMF α) : p.etvDist q ≤ 1 := PMF.etvDist_le_one _ _
+
+lemma etvDist_ne_top (p q : SPMF α) : p.etvDist q ≠ ⊤ := PMF.etvDist_ne_top _ _
+
+@[simp] lemma etvDist_eq_zero_iff {p q : SPMF α} : p.etvDist q = 0 ↔ p = q := by
+  rw [SPMF.etvDist, PMF.etvDist_eq_zero_iff, toPMF_inj]
+
+/-- For subdistributions comparable in the pointwise order, the extended total variation
+distance is exactly the difference of missing masses: all the discrepancy sits in mass
+that `p` is missing and `q` has. This is the workhorse turning quantitative termination
+bounds on truncated machine runs into distance bounds from the limit semantics
+(`OracleMachine.ImplementsWithin`). -/
+lemma etvDist_eq_gap_sub_of_le {p q : SPMF α} (h : p ≤ q) :
+    p.etvDist q = p.gap - q.gap := by
+  have hnone : ENNReal.absDiff (p.toPMF none) (q.toPMF none) = p.gap - q.gap := by
+    rw [← gap_eq_toPMF_none, ← gap_eq_toPMF_none, ENNReal.absDiff,
+      tsub_eq_zero_of_le (gap_antitone h), add_zero]
+  have hsome : ∀ x, ENNReal.absDiff (p.toPMF (some x)) (q.toPMF (some x)) = q x - p x :=
+    fun x => by
+      rw [← apply_eq_toPMF_some, ← apply_eq_toPMF_some, ENNReal.absDiff,
+        tsub_eq_zero_of_le (apply_le_apply h x), zero_add]
+  have hp_top : (∑' x, p x) ≠ ⊤ := ne_top_of_le_ne_top one_ne_top (tsum_apply_le_one p)
+  have hsum : ∑' x, (q x - p x) = p.gap - q.gap := by
+    have hd : ∑' x, (q x - p x) = (∑' x, q x) - ∑' x, p x := by
+      refine ENNReal.eq_sub_of_add_eq hp_top ?_
+      rw [← ENNReal.tsum_add]
+      exact tsum_congr fun x => tsub_add_cancel_of_le (apply_le_apply h x)
+    have hA : (∑' x, q x) - (∑' x, p x) + (1 - ∑' x, q x) + ∑' x, p x = 1 := by
+      rw [add_right_comm,
+        tsub_add_cancel_of_le (ENNReal.tsum_le_tsum fun x => apply_le_apply h x),
+        add_comm, tsub_add_cancel_of_le (tsum_apply_le_one q)]
+    rw [hd, gap_eq_one_sub_tsum, gap_eq_one_sub_tsum]
+    exact ENNReal.eq_sub_of_add_eq (ENNReal.sub_ne_top one_ne_top)
+      (ENNReal.eq_sub_of_add_eq hp_top hA)
+  rw [SPMF.etvDist, PMF.etvDist, tsum_option _ ENNReal.summable, hnone, tsum_congr hsome,
+    hsum, ← mul_two, ENNReal.mul_div_cancel_right two_ne_zero ofNat_ne_top]
 
 end SPMF
 
@@ -186,8 +247,8 @@ private lemma spmf_tvDist_bind_left_le_liftM
         ((liftM p : SPMF α) >>= fun a => liftM (f a))
         ((liftM p : SPMF α) >>= fun a => liftM (g a)) ≤
       ∑' a, (p a).toReal * SPMF.tvDist (liftM (f a)) (liftM (g a)) := by
-  simpa [SPMF.tvDist, SPMF.toPMF_bind, SPMF.toPMF_liftM, Option.elimM, PMF.monad_bind_eq_bind]
-    using pmf_tvDist_bind_left_le p (fun a => PMF.map Option.some (f a))
+  simpa [SPMF.tvDist, SPMF.toPMF_bind, SPMF.toPMF_liftM, Option.elimM, PMF.monad_bind_eq_bind,
+    PMF.map, Function.comp_def] using pmf_tvDist_bind_left_le p (fun a => PMF.map Option.some (f a))
       (fun a => PMF.map Option.some (g a))
 
 lemma tvDist_bind_left_le

@@ -3,8 +3,7 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.Coinductive.PolyTime
-import ToMathlib.Computability.PolyTimeTM
+import VCVio.OracleComp.Coinductive.PolyTimeConstructions
 import Examples.DynamicalSystems.Basic
 
 /-!
@@ -23,8 +22,9 @@ Concrete demonstrations of `VCVio.OracleComp.Coinductive.Machine` and
   (`OracleComp.toMachine`), steady within its query bound; and a machine unrolled for
   `k` rounds *is* a program with total query bound `k` and the same semantics
   (`OracleMachine.toComp`).
-* free interface encodings — `coinSpec`'s query and answer types are `FinEnum`, so its
-  `InterfaceEncoding` comes for free.
+* canonical interface encodings — `coinSpec`'s pinned interface encoding is the
+  registry constant `OracleSpec.InterfaceBitEnc.coin` (queries width `0`, answers
+  width `1`).
 -/
 
 open OracleSpec OracleComp Computability
@@ -216,50 +216,57 @@ example : evalWithAnswerFn (QueryImpl.ofFn allHeads) (coinOnce.toComp 1 none) =
 
 example : coinOnce.runD allHeads 1 none = some true := rfl
 
-/-! ## Free interface encodings
+/-! ## Canonical interface encodings
 
-`coinSpec`'s query type (`Unit`) and answer type (`Bool`) are `FinEnum`, so the
-Turing-machine-facing interface encoding needs no construction work. -/
+The coin oracle's canonical interface encoding is `OracleSpec.InterfaceBitEnc.coin`:
+queries have width `0` (the index type is `Unit`) and answers width `1` (the coin
+bit). No construction work is needed at call sites. -/
 
-/-- The coin oracle's interface encoding, for free. -/
-noncomputable example : coinSpec.InterfaceEncoding := .ofFinEnum coinSpec
+noncomputable example : OracleSpec.InterfaceBitEnc (fun _ => coinSpec) := .coin
 
 /-! ## Query-free adversaries, hypothesis form
 
 `OracleComp.isPolyTime_pure_of_witnesses` certifies any query-free adversary as
-polynomial time once base machine witnesses (constants, projections, and the output
-map) are supplied. On finite domains every such witness is concrete: constants via
-`Computability.EncPolyTime.const` and everything else via the generic finite-table
-machine `Computability.EncPolyTime.ofFintype`. See `Examples.DynamicalSystems.XorFlips`
-for a fully concrete, hypothesis-free `PolyTimeAdversary` built this way. -/
+polynomial time once uniform machine families (a constant for query selection, a
+projection for the update, and the output map itself) are supplied against the pinned
+canonical boundaries. On polynomially small domains every witness is a concrete finite
+table (`OracleComp.isPolyTime_pure_ofFintype`); the output family for a function on a
+large domain is a genuine computability assumption, awaiting the base-machine library.
+See `Examples.DynamicalSystems.XorFlips` for a fully concrete, hypothesis-free
+`MachineAdversary` built from the coin-fold combinator. -/
 
-/-- The constant query-selection witness is concrete: a verified machine erases the
-input and writes the encoded query. -/
-noncomputable example (encIface : coinSpec.InterfaceEncoding) :
-    EncPolyTime ((finEncodingOfFinEnum Bool).boolify) (encIface.encQuery.boolify)
-      (fun _ => (default : Unit)) :=
-  .const _ _ default
+/-- The constant query-selection family is concrete: a verified machine erases the
+input and writes the (zero-width) encoded coin query. -/
+noncomputable example :
+    EncPolyTimeFam BitEncFam.bool.enc InterfaceBitEnc.coin.encQuery.enc
+      (fun _ (_ : Bool) => (default : Unit)) :=
+  .const _ _ InterfaceBitEnc.coin.encQuery.widBound
+    (fun n => (InterfaceBitEnc.coin.encQuery.len_eq n _).le.trans
+      (InterfaceBitEnc.coin.encQuery.wid_le n))
 
-example (encIface : (n : ℕ) → (coinSpec).InterfaceEncoding)
-    (sizeBound : Polynomial ℕ)
-    (hsize : ∀ (n : ℕ) (b : Bool),
-      ((finEncodingOfFinEnum Bool).boolify b).length ≤ sizeBound.eval n)
-    (stepTime : Polynomial ℕ) (hone : ∀ m, 1 ≤ stepTime.eval m)
-    (exposeTM : (n : ℕ) → EncPolyTime ((finEncodingOfFinEnum Bool).boolify)
-      ((encIface n).encQuery.boolify) (fun _ => (default : Unit)))
-    (hexpose : ∀ n k, ((exposeTM n).time).eval k ≤ stepTime.eval (n + k))
-    (updateTM : (n : ℕ) → EncPolyTime
-      ((finEncodingPair (finEncodingOfFinEnum Bool) (encIface n).encAns).boolify)
-      ((finEncodingOfFinEnum Bool).boolify) Prod.fst)
-    (hupdate : ∀ n k, ((updateTM n).time).eval k ≤ stepTime.eval (n + k))
-    (outputTM : (n : ℕ) → EncPolyTime ((finEncodingOfFinEnum Bool).boolify)
-      ((finEncodingOption (finEncodingOfFinEnum Bool)).boolify) (fun b => some (!b)))
-    (houtput : ∀ n k, ((outputTM n).time).eval k ≤ stepTime.eval (n + k)) :
-    OracleComp.IsPolyTime
+/-- Bit negation as a query-free polynomial-time family, in the honest hypothesis form:
+the projection and output families are the awaited base machines. -/
+example
+    (updateF : EncPolyTimeFam
+      (BitEncFam.bool.toStrEncFam.pairVar InterfaceBitEnc.coin.encAns).enc
+      BitEncFam.bool.enc (fun _ => Prod.fst))
+    (outputF : EncPolyTimeFam BitEncFam.bool.enc (BitEncFam.bool.option).enc
+      (fun _ b => some (!b))) :
+    OracleComp.IsPolyTime (BoundaryData.coin BitEncFam.bool BitEncFam.bool)
       (fun (_ : ℕ) (b : Bool) => (pure (!b) : OracleComp coinSpec Bool)) :=
-  OracleComp.isPolyTime_pure_of_witnesses (fun _ b => !b)
-    (fun _ => finEncodingOfFinEnum Bool) (fun _ => finEncodingOfFinEnum Bool)
-    encIface sizeBound hsize
-    stepTime hone exposeTM hexpose updateTM hupdate outputTM houtput
+  OracleComp.isPolyTime_pure_of_witnesses _ (fun _ b => !b)
+    (.const _ _ InterfaceBitEnc.coin.encQuery.widBound
+      (fun n => (InterfaceBitEnc.coin.encQuery.len_eq n _).le.trans
+        (InterfaceBitEnc.coin.encQuery.wid_le n)))
+    updateF outputF
+
+/-- On the constant-cardinality `Bool` domain, negation is polynomial time with **no**
+hypotheses: the finite-table former discharges every witness. -/
+example :
+    OracleComp.IsPolyTime (BoundaryData.coin BitEncFam.bool BitEncFam.bool)
+      (fun (_ : ℕ) (b : Bool) => (pure (!b) : OracleComp coinSpec Bool)) :=
+  OracleComp.isPolyTime_pure_ofFintype _ (fun _ b => !b)
+    (.C 2) (fun n => by simp)
+    (.C 2) (fun n => by simp [Nat.card_eq_fintype_card, Fintype.card_sigma])
 
 end DynSystemExamples
