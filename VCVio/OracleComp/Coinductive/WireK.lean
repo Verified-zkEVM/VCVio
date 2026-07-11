@@ -194,6 +194,25 @@ theorem run_simulateQ_toQueryImpl_ofStateQueryImpl {ι₀ : Type}
     rw [hqb, hqb, StateT.run_bind, StateT.run_bind, evalDist_bind]
     exact bind_congr fun p => ih p.1 p.2
 
+/-- The state set of a responder built from a stateful `ProbComp` handler is that handler's
+state; a `@[simp]` `rfl` bridge so `(ofStateQueryImpl impl).State` reduces to the concrete state
+type in downstream goals (the responder-`State` abbrev is otherwise opaque to `simp` and blocks
+`StateT` run-map / bind rewriting). -/
+@[simp] theorem ofStateQueryImpl_state {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀} {σ : Type}
+    (impl : QueryImpl spec₀ (StateT σ ProbComp)) : (ofStateQueryImpl impl).State = σ := rfl
+
+/-- The post-composed form of `run_simulateQ_toQueryImpl_ofStateQueryImpl`: mapping the returned
+value by `f` before running commutes with the bridge, pairing `f` on the value component. The
+form security games hit, where the adversary's result is wrapped in `some` before the judge sees
+it. -/
+theorem run_map_simulateQ_toQueryImpl_ofStateQueryImpl {ι₀ : Type}
+    {spec₀ : OracleSpec.{0, 0} ι₀} {σ α γ : Type}
+    (impl : QueryImpl spec₀ (StateT σ ProbComp)) (f : α → γ) (oa : OracleComp spec₀ α) (s : σ) :
+    (f <$> simulateQ (ofStateQueryImpl impl).toQueryImpl oa).run s =
+      (fun p => (f p.1, p.2)) <$> 𝒟[(simulateQ impl oa).run s] := by
+  rw [StateT.run_map, run_simulateQ_toQueryImpl_ofStateQueryImpl]
+  rfl
+
 end ProbResponder
 
 /-- The lazy random oracle as a probabilistic responder: the state is the query cache,

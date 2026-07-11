@@ -1,3 +1,4 @@
+import KatzLindell.Chapter03.CPA
 import KatzLindell.Chapter03.MachinePipeline
 import KatzLindell.Chapter03.OneTimePad
 import KatzLindell.Chapter03.PRFEncryption
