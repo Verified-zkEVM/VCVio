@@ -42,11 +42,11 @@ lemma monad_pure_def [Monad m] (x : α) :
 lemma monad_bind_def [Monad m] (x : StateT σ m α) (f : α → StateT σ m β) :
     x >>= f = StateT.bind x f := rfl
 
-lemma monad_failure_eq [Monad m] [Alternative m] :
+lemma monad_failure_eq [AlternativeMonad m] :
     (failure : StateT σ m α) = StateT.failure := rfl
 
 @[simp]
-lemma run_failure' [Monad m] [Alternative m] :
+lemma run_failure' [AlternativeMonad m] :
     (failure : StateT σ m α).run = fun _ => failure := by
   funext s
   simp

@@ -5,12 +5,15 @@ Bridge from [aeneas](https://github.com/AeneasVerif/aeneas)'s Lean backend
 
 ## Status
 
-Scaffolded but **blocked on upstream regressions**. Empirically verified
-on 2026-04-17 against aeneas `main` (`ba600392`): Lake happily resolves
-aeneas with our root Mathlib v4.29.0 and Lean v4.29.0 pins overriding
-aeneas's `v4.28.0-rc1` manifest entries, but aeneas's source has **three
-real regressions** against the v4.29 stack, and one of them is inside the
-single file we need:
+Scaffolded and **disabled pending bridge revalidation**. Upstream's published
+`nightly-2026.07.11-15b9684` (commit
+`15b968482b0dcd7aae45020b6d1bca39b5024af5`) natively pins Lean and Mathlib
+v4.31.0, which resolves the former upstream-version blocker. The dormant pin
+is recorded in `lakefile.lean`, but Aeneas remains outside dependency
+resolution and CI until this bridge builds without compatibility aliases.
+
+For history, the previous `ba600392` experiment against Lean 4.29 failed in
+three places:
 
 1. `Aeneas/Std/Primitives.lean:168:44` — kernel type mismatch in
    `CCPO (Result α) := inferInstanceAs (CCPO (FlatOrder .div))`. The
@@ -24,14 +27,7 @@ single file we need:
    different normal form under Mathlib v4.29, so a test's `exact h`
    mismatches. Tests only, not the main library.
 
-Build coverage on the compatibility attempt was 1625/1662 jobs before the
-three failures propagated. The require is therefore **commented out** in
-`lakefile.lean`. Unblock by either:
-
-- Waiting for upstream to bump aeneas to Lean v4.29 (a one-line `require`
-  flip afterwards); or
-- Maintaining a short patch series on a fork pinning the above three
-  files and using that fork as the git source.
+Build coverage on that historical compatibility attempt was 1625/1662 jobs.
 
 ## Plan (applies once upstream ships a v4.29 build)
 

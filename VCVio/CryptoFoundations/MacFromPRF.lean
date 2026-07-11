@@ -365,7 +365,7 @@ private theorem prfIdealExp_macToPRFReduction_probOutput_le [SampleableType R] [
         · simp [probOutput_eq_zero_of_not_mem_support hmem]
     _ ≤ (Fintype.card R : ℝ≥0∞)⁻¹ := by
         rw [ENNReal.tsum_mul_right]
-        exact mul_le_of_le_one_left zero_le' tsum_probOutput_le_one
+        exact mul_le_of_le_one_left zero_le tsum_probOutput_le_one
 
 /-- In the ideal PRF experiment (random oracle), the reduction succeeds with probability
 at most `1/|R|` — a fresh random oracle query is independent of the forger's output. -/

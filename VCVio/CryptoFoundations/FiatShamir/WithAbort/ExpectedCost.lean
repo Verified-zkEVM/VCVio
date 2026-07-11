@@ -386,8 +386,8 @@ private theorem sign_queryTailProbability_eq_zero_of_le
           (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
             (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
           runtime)) := by
-    simpa [HasQuery.queryCountDist, HasQuery.queryCostDist, HasQuery.Program.withUnitCost]
-      using hc
+    rw [HasQuery.Program.withUnitCost_eq_withAddCost]
+    exact hc
   rw [AddWriterT.costs_def, support_map] at hc'
   rcases hc' with ⟨z, hz, rfl⟩
   exact not_lt.2 <| le_trans (sign_usesAtMostMaxAttemptsQueries

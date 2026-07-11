@@ -474,7 +474,8 @@ noncomputable instance instExceptTRight (ε : Type u) :
     exact le_trans hmono <|
       by
         convert MAlgRelOrdered.rwp_bind_le (m₁ := m₁) (m₂ := m₂) (l := l)
-          x y.run f gRun collapse using 1 <;> rfl
+          x y.run f gRun collapse using 1
+        all_goals rfl
 
 /-- Left `ExceptT` lift (interpreting exceptions as `⊥`). -/
 noncomputable instance instExceptTLeft (ε : Type u) :
@@ -520,7 +521,8 @@ noncomputable instance instExceptTLeft (ε : Type u) :
     exact le_trans hmono <|
       by
         convert MAlgRelOrdered.rwp_bind_le (m₁ := m₁) (m₂ := m₂) (l := l)
-          x.run y fRun g collapse using 1 <;> rfl
+          x.run y fRun g collapse using 1
+        all_goals rfl
 
 end FailureInstances
 

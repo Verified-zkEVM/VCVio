@@ -48,9 +48,6 @@ jobs:
       - name: Check for all imports in VCVioWidgets
         run: lake exe mk_all --lib VCVioWidgets --check
 
-      - name: Check for all imports in Interop
-        run: lake exe mk_all --lib Interop --check
-
   build:
     name: Build Project
     runs-on: ubuntu-latest
@@ -76,8 +73,8 @@ jobs:
           echo "BUILD_TIMING_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_SOURCE_BRANCH=${{ github.head_ref || github.ref_name }}" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_BASE_REF=" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_CLEAN_COMMAND=rm -rf .lake/build && lake build ToMathlib VCVio FFI LatticeCrypto HashSig Examples VCVioWidgets Interop" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_WARM_COMMAND=lake build ToMathlib VCVio FFI LatticeCrypto HashSig Examples VCVioWidgets Interop" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_CLEAN_COMMAND=rm -rf .lake/build && lake build ToMathlib VCVio FFI LatticeCrypto HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_WARM_COMMAND=lake build ToMathlib VCVio FFI LatticeCrypto HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_NAME=Smoke test" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_COMMAND=lake env lean VCVioTest/Smoke.lean" >> "$GITHUB_ENV"
           {
@@ -122,7 +119,6 @@ jobs:
             --path-prefix HashSig/ \
             --path-prefix Examples/ \
             --path-prefix VCVioWidgets/ \
-            --path-prefix Interop/ \
             --path-prefix ToMathlib.lean \
             --path-prefix VCVio.lean \
             --path-prefix FFI.lean \
@@ -130,7 +126,6 @@ jobs:
             --path-prefix HashSig.lean \
             --path-prefix Examples.lean \
             --path-prefix VCVioWidgets.lean \
-            --path-prefix Interop.lean \
             --exclude-substring 'declaration uses `sorry`' \
             --label 'repository non-sorry warnings'
       - name: Time warm rebuild

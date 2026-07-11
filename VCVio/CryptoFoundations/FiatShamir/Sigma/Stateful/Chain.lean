@@ -335,6 +335,7 @@ private lemma simulatedNmaUnifSim_fsUniform_run
       exact bind_congr (m := ProbComp) fun u ↦ ih u cache
 
 omit [SampleableType Stmt] [SampleableType Wit] [SampleableType Chal] [Finite Chal] in
+set_option linter.overlappingInstances false in
 private def cmaSimLoggedLeftOrnament
     [Finite Chal]
     (hr : GenerableRelation Stmt Wit rel)
@@ -1083,7 +1084,7 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace
               (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) σ
               hsigned hcache hlive hlenq
 
-omit [SampleableType Stmt] [SampleableType Wit] in
+omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 private lemma forkBase_finalQuery_runTrace_eq
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
@@ -1120,7 +1121,7 @@ private lemma forkBase_finalQuery_runTrace_eq
     (forkLoggedImpl (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) simT pk)
 
-omit [SampleableType Stmt] in
+omit [SampleableType Stmt] [Inhabited Chal] in
 private lemma forkLoggedProbImpl_run [Fintype Chal]
     {α : Type}
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)
@@ -1345,7 +1346,7 @@ private noncomputable def forkLoggedVerifyBody
   forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
     (Resp := Resp) σ pk z.1 z.2
 
-omit [SampleableType Stmt] [SampleableType Wit] in
+omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 private lemma forkLogged_base_support
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
@@ -1634,7 +1635,7 @@ theorem cmaSim_run_eq_nma_run_shiftLeft_cmaToNma
   simp [cmaInit, nmaInit, cmaFrame, cmaOuterLens, cmaNmaLens,
     Functor.map_map]
 
-omit [SampleableType Stmt] [SampleableType Wit] in
+omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 private lemma forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux [Fintype Chal]
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)
     (oa : OracleComp (cmaOracleSpec M Commit Chal Resp) (M × (Commit × Resp))) :
@@ -1688,7 +1689,7 @@ private lemma forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux [Fintype Ch
               (Chal := Chal))
           simpa [forkLoggedProj, forkInitialState, forkLoggedProbOrnament] using hrun]
 
-omit [SampleableType Stmt] [SampleableType Wit] in
+omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
     [Fintype Chal]
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
@@ -1818,10 +1819,11 @@ private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
             (Resp := Resp) σ ps.1 x.1 x.2 := by
         simp only [bind_map_left]
         refine bind_congr fun x => ?_
-        simpa [cmaSim, _root_.FiatShamir, monad_norm] using
-          cmaSimVerifyFreshComp_project (σ := σ) (hr := hr) (M := M)
+        have hproject := cmaSimVerifyFreshComp_project (σ := σ) (hr := hr) (M := M)
           (Commit := Commit) (Chal := Chal) (Resp := Resp)
           (Stmt := Stmt) (Wit := Wit) simT ps.1 x.1 x.2
+        simpa [cmaFrame, cmaOuterLens, cmaNmaLens, cmaSim,
+          _root_.FiatShamir, monad_norm] using hproject
     _ =
       ((simulateQ (simulatedNmaLoggedProbImpl (M := M) (Commit := Commit)
         (Chal := Chal) (Resp := Resp) simT ps.1) (adv.main ps.1)).run
@@ -1983,7 +1985,7 @@ theorem cmaSim_runProb_eq_nma_runProb_shiftLeft_cmaToNma
     (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
     (Stmt := Stmt) (Wit := Wit) simT A
 
-omit [SampleableType Stmt] [SampleableType Wit] in
+omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 /-- Convert the shifted-NMA H5 boundary into the linked simulated-CMA form used
 by the top-level chain. -/
 theorem cmaSim_signedFreshAdv_le_fork_of_shifted_h5
@@ -2033,7 +2035,7 @@ theorem cmaSim_signedFreshAdv_le_fork
 
 /-! ## Top-level chain factored over H5 -/
 
-omit [SampleableType Stmt] [SampleableType Wit] in
+omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 /-- Native stateful top-level chain, assuming the H5 replay-forking boundary.
 
 This theorem carries the H1/H2/H3/H4 arithmetic directly in the stateful chain.

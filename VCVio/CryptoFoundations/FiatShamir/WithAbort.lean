@@ -266,7 +266,7 @@ lemma probOutput_false_signVerify_le_probOutput_none_sign
             w' z p.2 c₀ hcached hverify]
           simp [probOutput_pure]
         rw [hVerifyTrue, mul_zero]
-        exact zero_le'
+        exact zero_le
       · simp [probOutput_eq_zero_of_not_mem_support hmem]
 
 /-- Correctness of the Fiat-Shamir with aborts signature scheme: the canonical

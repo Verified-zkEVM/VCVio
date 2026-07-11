@@ -252,10 +252,8 @@ theorem evalDist_realCipherObserve_eq (sp : ℕ) (msg : BitVec sp)
     rwa [show (c ^^^ msg ^^^ msg : BitVec sp) = c by
       rw [BitVec.xor_assoc, BitVec.xor_self, BitVec.xor_zero]]
   · intro k _
-    simp only
     rw [BitVec.xor_assoc, BitVec.xor_self, BitVec.xor_zero]
   · intro c _
-    simp only
     rw [BitVec.xor_assoc, BitVec.xor_self, BitVec.xor_zero]
 
 /-! ## Concrete closed processes carrying a plaintext -/

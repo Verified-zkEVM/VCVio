@@ -391,6 +391,7 @@ theorem seededOracle_triple_of_cons (t : spec.Domain)
   rw [triple_stateT_iff_forall_support]
   intro seed hseed v seed' hmem
   rw [hseed] at hmem
+  change v = u ∧ seed' = Function.update seed₀ t us
   simpa only [seededOracle.apply_eq, StateT.run, StateT.mk, h, support_pure,
     Set.mem_singleton_iff, Prod.mk.injEq] using hmem
 

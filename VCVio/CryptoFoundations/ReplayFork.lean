@@ -1017,7 +1017,8 @@ private lemma replayRunWithTraceValue_immutable_params [spec.DecidableEq] [IsUni
         have hstep := OracleComp.replayOracle_immutable_params (i := i) (t := t) hy
         ⟨hstep.1.trans hs.1, hstep.2.1.trans hs.2.1, hstep.2.2.trans hs.2.2⟩)
       main stInit ⟨rfl, rfl, rfl⟩ z (by simpa [stInit] using hz)
-  simpa [ReplayForkState.init] using hparams
+  dsimp [stInit, ReplayForkState.init] at hparams
+  exact hparams
 
 /-- Every reachable replay state keeps the immutable `forkQuery` parameter equal to its
 initial value. -/
@@ -1289,8 +1290,10 @@ private theorem replayRun_mem_support_replayFirstRun_append [spec.DecidableEq]
       refine ⟨⟨t, us.1⟩ :: log, ?_, ?_⟩
       · rw [replayFirstRun, OracleComp.run_simulateQ_loggingOracle_query_bind]
         simpa [replayFirstRun] using hlog
-      · rw [hobs, replayOracle_observed_eq_logQuery (i := i) (t := t)
-          (by simpa [simulateQ_query, OracleSpec.query_def] using hus)]
+      · have hus' : us ∈ support (((replayOracle i) t).run st₀ :
+            OracleComp spec (spec.Range t × ReplayForkState spec i)) := by
+          convert hus using 1 <;> rfl
+        rw [hobs, replayOracle_observed_eq_logQuery (i := i) (t := t) hus']
         simp [QueryLog.logQuery, QueryLog.singleton, List.append_assoc]
 
 /-- Every replay run can be realized as a logged run with the same observed transcript. -/
@@ -1404,6 +1407,7 @@ private theorem probEvent_forkReplay_fst_eq_probEvent_pair [IsUniformSpec spec]
       x₁ x₂ (by simpa using hr) with ⟨t, h₁, h₂⟩
     simp [h₁, h₂]
 
+set_option linter.overlappingInstances false in
 /-- Reachability hypothesis on the fork-index selector `cf`: whenever the first run
 of `main` outputs `x` and the recorded log is `log`, every selected fork index
 `s = cf x` actually corresponds to an `i`-query in `log` (i.e. the `s`-th `i`-query
@@ -1455,7 +1459,7 @@ private theorem replayRun_preservesConsumed
       obtain ⟨us, hus, hzcont⟩ := hz
       have hus' : us ∈ support (((replayOracle idx) t).run st₀ :
           OracleComp spec (spec.Range t × ReplayForkState spec idx)) := by
-        simpa [simulateQ_query, OracleSpec.query_def] using hus
+        convert hus using 1 <;> rfl
       obtain ⟨h_consumed', h_mismatch'⟩ :=
         replayOracle_preservesConsumed (i := idx) (t := t) h_consumed h_mismatch hus'
       exact ih (u := us.1) (st₀ := us.2) h_consumed' h_mismatch' hzcont
@@ -1522,7 +1526,7 @@ private theorem replayRun_state_correct_aux
       obtain ⟨us, hus, hzcont⟩ := hz
       have hus' : us ∈ support (((replayOracle idx) t).run st₀ :
           OracleComp spec (spec.Range t × ReplayForkState spec idx)) := by
-        simpa [simulateQ_query, OracleSpec.query_def] using hus
+        convert hus using 1 <;> rfl
       unfold replayOracle at hus'
       simp only [StateT.run_bind, StateT.run_get, pure_bind] at hus'
       have hlive_false : (st₀.forkConsumed || st₀.mismatch) = false := by
@@ -1741,9 +1745,8 @@ private lemma probOutput_collisionReplay_le_main_div [IsUniformSpec spec]
                     simpa using probEvent_fst_replayFirstRun (main := main)
                       (p := fun x : α => cf x = some s)
               _ = Pr[ fun y : Option (Fin (qb i + 1)) => y = some s | cf <$> main] := by
-                    simpa [Function.comp] using
-                      (probEvent_map (mx := main) (f := cf)
-                        (q := fun y : Option (Fin (qb i + 1)) => y = some s)).symm
+                    exact (probEvent_map (mx := main) (f := cf)
+                      (q := fun y : Option (Fin (qb i + 1)) => y = some s)).symm
               _ = Pr[= (some s : Option (Fin (qb i + 1))) | cf <$> main] := by
                     simp [probEvent_eq_eq_probOutput
                       (mx := cf <$> main) (x := (some s : Option (Fin (qb i + 1))))]
@@ -2892,10 +2895,9 @@ private theorem le_probOutput_forkReplay [IsUniformSpec spec]
       Pr[ fun r => r.map (Prod.map cf cf) = some (some s, some s) | forkReplay main qb i cf]
           = Pr[ fun r => f r = z | forkReplay main qb i cf] := by simp [f, z]
       _ = Pr[ fun x => x = z | f <$> forkReplay main qb i cf] := by
-            simpa [Function.comp] using
-              (probEvent_map (mx := forkReplay main qb i cf) (f := f)
-                (q := fun x : Option (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1))) =>
-                  x = z)).symm
+            exact (probEvent_map (mx := forkReplay main qb i cf) (f := f)
+              (q := fun x : Option (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1))) =>
+                x = z)).symm
       _ = Pr[= z | f <$> forkReplay main qb i cf] := by
             simp [probEvent_eq_eq_probOutput
               (mx := f <$> forkReplay main qb i cf) (x := z)]

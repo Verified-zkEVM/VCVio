@@ -376,7 +376,12 @@ theorem cmaH3ExpectedLoss_le_queryBounds
         (Resp := Resp) (Stmt := Stmt)) qH) :
     cmaH3ExpectedLoss M Commit Chal σ hr ζ_zk β A qS ≤
       (qS : ℝ≥0∞) * ζ_zk + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + qH) * β := by
-  simpa [cmaH3ExpectedLoss, cmaInit_eq_cmaDataInit, cmaDataInit, add_assoc] using
+  change expectedQuerySlack (cmaReal M Commit Chal σ hr)
+    (cmaH3Costly (M := M) (Commit := Commit) (Chal := Chal)
+      (Resp := Resp) (Stmt := Stmt))
+    (fun s : CmaData M Commit Chal Stmt Wit ↦ ζ_zk + QueryCache.enncard s.2.1 * β)
+    A qS (cmaDataInit M Commit Chal Stmt Wit, false) ≤ _
+  simpa [cmaDataInit, add_assoc] using
     expectedQuerySlack_resource_le
       (impl := cmaReal M Commit Chal σ hr)
       (chargedQuery := cmaH3Costly (M := M) (Commit := Commit) (Chal := Chal)
@@ -646,10 +651,12 @@ private lemma cmaSignPublicDist_tv_le_hvzk
   | some key =>
       refine (ENNReal.ofReal_le_iff_le_toReal htop).mpr <| le_trans ?_
         (hHVZK key.1 key.2 (by simpa [CmaData.Valid] using hvalid))
-      simpa [cmaRealSignPublicDist, cmaSimSignPublicDist, cmaSignKeySource,
-        cmaSignPublicOfTranscript, map_eq_bind_pure_comp] using
-        tvDist_map_le (cmaSignPublicOfTranscript key.1 key.2)
-          (σ.realTranscript key.1 key.2) (simT key.1)
+      rw [cmaRealSignPublicDist, cmaSimSignPublicDist, cmaSignKeySource]
+      change tvDist
+        (cmaSignPublicOfTranscript key.1 key.2 <$> σ.realTranscript key.1 key.2)
+        (cmaSignPublicOfTranscript key.1 key.2 <$> simT key.1) ≤ _
+      exact tvDist_map_le (cmaSignPublicOfTranscript key.1 key.2)
+        (σ.realTranscript key.1 key.2) (simT key.1)
   | none =>
       rw [cmaRealSignPublicDist, cmaSimSignPublicDist, cmaSignKeySource]
       refine ofReal_tvDist_bind_left_le_const
@@ -711,9 +718,10 @@ private lemma cmaSimSignPublicBad_prob_le_roCacheCount_mul
   rcases s with ⟨log, cache, keypair⟩
   cases keypair with
   | some key =>
-      simpa [cmaSimSignPublicDist, cmaSignKeySource, cmaSimSignPublicBad] using
-        simTranscript_cacheHit_prob_le_roCacheCount_mul M Commit Chal σ simT β hCommit
-          key.1 m cache
+      simpa [cmaSimSignPublicDist, cmaSignKeySource, cmaSimSignPublicBad,
+        cmaSignPublicOfTranscript, CmaSignPublic.commit, Function.comp_def] using
+          simTranscript_cacheHit_prob_le_roCacheCount_mul M Commit Chal σ simT β hCommit
+            key.1 m cache
   | none =>
       rw [cmaSimSignPublicDist, cmaSignKeySource]
       rw [probEvent_bind_eq_tsum]
@@ -727,7 +735,7 @@ private lemma cmaSimSignPublicBad_prob_le_roCacheCount_mul
                     CmaSignPublic Stmt Wit Commit Chal Resp)) <$> simT key.1])
             ≤ ∑' key : Stmt × Wit, Pr[= key | hr.gen] * (QueryCache.enncard cache * β) := by
               gcongr with key
-              simpa [cmaSimSignPublicBad] using
+              simpa [cmaSimSignPublicBad, Function.comp_def] using
                 simTranscript_cacheHit_prob_le_roCacheCount_mul M Commit Chal σ simT β
                   hCommit key.1 m cache
         _ = (∑' key : Stmt × Wit, Pr[= key | hr.gen]) * (QueryCache.enncard cache * β) := by

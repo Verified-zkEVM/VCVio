@@ -495,7 +495,7 @@ private lemma update_add_eq_update_add {qb₁ qb₂ : ι → ℕ} {t : ι} (ht :
     Function.update qb₁ t (qb₁ t - 1) + qb₂ =
       Function.update (qb₁ + qb₂) t ((qb₁ + qb₂) t - 1) := by
   funext j
-  by_cases hj : j = t <;> simp [Function.update_apply, hj, Pi.add_apply]
+  by_cases hj : j = t <;> simp [hj, Pi.add_apply]
   omega
 
 /-- Split a per-index budget at index `t` into one unit at `t` plus the decremented

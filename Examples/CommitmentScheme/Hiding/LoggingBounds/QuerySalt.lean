@@ -391,8 +391,15 @@ theorem run_cached_logging_proj_eq_cachingOracle
       rw [simulateQ_query_bind, StateT.run_bind, simulateQ_query_bind, StateT.run_bind]
       cases ht : cache₀ t with
       | some u =>
-          simp [ht, StateT.run_bind, StateT.run_get, monad_norm]
-          simpa [simulateQ_map, StateT.map, StateT.run, Function.comp_def] using ih u cache₀
+          simp only [OracleQuery.input_query, QueryImpl.withCaching_apply,
+            QueryImpl.ofLift_apply, monadLift_self, StateT.run_bind, StateT.run_get,
+            pure_bind, ht, id_eq, simulateQ_map, StateT.run_map,
+            map_bind, Functor.map_map, Prod.map_apply]
+          rw [show (fun a ↦ (a.1.1, a.2)) = Prod.map Prod.fst id by
+            funext a
+            rcases a with ⟨⟨x, l⟩, c⟩
+            rfl]
+          exact ih u cache₀
       | none =>
           simp only [OracleQuery.input_query, QueryImpl.withCaching_apply,
             QueryImpl.ofLift_apply, monadLift_self, StateT.run_bind,
@@ -402,8 +409,11 @@ theorem run_cached_logging_proj_eq_cachingOracle
             bind_map_left, map_bind, Prod.map_apply]
           refine bind_congr ?_
           intro u
-          simpa [simulateQ_map, StateT.map, StateT.run, Function.comp_def] using
-            ih u (cache₀.cacheQuery t u)
+          rw [show (fun a ↦ (a.1.1, a.2)) = Prod.map Prod.fst id by
+            funext a
+            rcases a with ⟨⟨x, l⟩, c⟩
+            rfl]
+          exact ih u (cache₀.cacheQuery t u)
 
 omit [DecidableEq M] [DecidableEq S] [Finite C] [Inhabited C] in
 lemma queryLog_countQ_pos_of_mem

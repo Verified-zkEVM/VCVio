@@ -18,24 +18,18 @@ package VCVio where
   ]
 
 /-
-Interop backends — pinned to explicit git revisions so reproducible builds are
-guaranteed and bumping a pin is a deliberate, reviewed change. The current
-branch keeps **Hax enabled by default** because `Interop.lean` imports the
-Hax-backed bridge and examples; Aeneas stays commented out until upstream
-ships a Lean v4.30-compatible release. The CI TCB-isolation check
-(`scripts/check-interop-isolation.sh`) still protects against accidental
-cross-imports regardless of which backend requires are active.
+Interop backends are intentionally disabled for the Lean 4.31 baseline. Their
+source remains under `Interop/`, isolated from the trusted libraries by
+`scripts/check-interop-isolation.sh`, but the aggregate module and CI do not
+build it. Re-enable a backend only once its upstream Lean library supports the
+repository's Lean version without a local compatibility layer.
 
-Important: `require mathlib` must come **after** any Interop backend `require`s
-so Mathlib's transitive pins (in particular `Qq`) win over the backends'. Lake
-warns and `lake exe cache get` fails otherwise.
-
-Hax: Lean 4.29.0-rc1 (compatible with our 4.30.0). Latest `main` as of
-2026-04-16. Subdirectory: `hax-lib/proof-libs/lean`.
+Hax still targets Lean 4.29.0-rc1 and does not build with Lean 4.31.0 as of
+2026-07-11. Subdirectory: `hax-lib/proof-libs/lean`.
 -/
-require Hax from git
-  "https://github.com/cryspen/hax" @
-  "492a34e3" / "hax-lib/proof-libs/lean"
+-- require Hax from git
+--   "https://github.com/cryspen/hax" @
+--   "492a34e3" / "hax-lib/proof-libs/lean"
 
 /-
 Loom2: foundation for the Loom-style WP / Triple program-logic
@@ -53,16 +47,14 @@ require loom2 from git
   "lean-4.31"
 
 /-
-Aeneas: upstream pins Lean 4.28.0-rc1. Lake happily resolves aeneas against
-our root Mathlib v4.30.0 and Lean v4.30.0, but aeneas's source has three
-real regressions under that stack — see `Interop/Aeneas/README.md` for the
-exact diagnostics. Leave this commented until upstream ships a v4.30 build
-(or pin to a patched fork). Latest upstream `main` as of 2026-04-17 is
-`ba600392`; subdirectory `backends/lean`.
+Aeneas now natively pins Lean and Mathlib v4.31.0. This dormant pin follows its
+published `nightly-2026.07.11-15b9684`; keep it disabled until the VCVio bridge
+is tested separately and can be enabled without compatibility aliases.
+Subdirectory: `backends/lean`.
 -/
 -- require aeneas from git
 --   "https://github.com/AeneasVerif/aeneas" @
---   "ba600392" / "backends/lean"
+--   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
 require "leanprover-community" / "mathlib" @ git "v4.31.0"
 
@@ -91,9 +83,10 @@ lean_lib VCVioWidgets
 /-- Seperate section of the project for things that should be ported. -/
 lean_lib ToMathlib
 
-/-- Interop bridges to Rust verification frontends (hax, aeneas).
+/-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
 Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
-`Interop/README.md` and `docs/agents/interop.md`. -/
+`Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
+excluded from the Lean 4.31 baseline build. -/
 lean_lib Interop
 
 -- Compile the shared FIPS 202 (SHA-3/SHAKE) FFI wrapper.

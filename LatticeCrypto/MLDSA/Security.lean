@@ -109,7 +109,7 @@ omit nttOps [DecidableEq prims.High] [SampleableType (RqVec p.l)]
   [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
 private lemma neg_rq_get (f : Rq) (i : Fin ringDegree) : (-f).get i = -(f.get i) := by
   change (coeffRing.neg f).get i = _
-  simp [LatticeCrypto.vectorNegacyclicRing]
+  simp
 
 omit nttOps [DecidableEq prims.High] [SampleableType (RqVec p.l)]
   [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
@@ -119,9 +119,7 @@ private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
   unfold LatticeCrypto.cInfNormOf
   apply Finset.sup_congr rfl
   intro i _
-  simp only [LatticeCrypto.zmodCenteredCoeffView, polyBackend,
-    LatticeCrypto.vectorNegacyclicRing, LatticeCrypto.vectorBackend]
-  rw [neg_rq_get]
+  simp only [LatticeCrypto.zmodCenteredCoeffView, coeffRing.coeff_neg]
   exact LatticeCrypto.centeredRepr_natAbs_neg _
 
 omit [DecidableEq prims.High] [SampleableType (RqVec p.l)]
@@ -134,7 +132,9 @@ theorem useHintVec_makeHintVec (h_laws : Primitives.Laws prims nttOps) {k : ℕ}
   apply Vector.ext; intro i hi
   simp only [Primitives.useHintVec, Primitives.makeHintVec, Primitives.highBitsVec,
     Vector.getElem_zipWith, Vector.getElem_map, Vector.getElem_add]
-  exact h_laws.useHint_makeHint z[i] r[i] (by simpa using hz ⟨i, hi⟩)
+  have hzi := hz ⟨i, hi⟩
+  rw [Vector.get_eq_getElem] at hzi
+  exact h_laws.useHint_makeHint z[i] r[i] hzi
 
 omit [DecidableEq prims.High] [SampleableType (RqVec p.l)]
   [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
@@ -146,7 +146,10 @@ theorem hide_lowVec (h_laws : Primitives.Laws prims nttOps) {k : ℕ}
     prims.highBitsVec (r + s) = prims.highBitsVec r := by
   apply Vector.ext; intro i hi
   simp only [Primitives.highBitsVec, Vector.getElem_map, Vector.getElem_add]
-  exact h_laws.hide_low r[i] s[i] b (by simpa using hs ⟨i, hi⟩) (by simpa using hr ⟨i, hi⟩)
+  have hsi := hs ⟨i, hi⟩
+  have hri := hr ⟨i, hi⟩
+  rw [Vector.get_eq_getElem] at hsi hri
+  exact h_laws.hide_low r[i] s[i] b hsi hri
 
 /-- The ML-DSA identification scheme is complete: whenever the honest prover does not abort,
 the verifier always accepts. This follows from the correctness of the rounding operations

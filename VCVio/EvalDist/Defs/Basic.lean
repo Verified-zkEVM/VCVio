@@ -823,7 +823,7 @@ lemma probEvent_le_tsum_probOutput_mul_cost (mx : m α) (p : α → Prop) (c : �
   split_ifs with hp
   · calc Pr[= x | mx] = Pr[= x | mx] * 1 := (mul_one _).symm
       _ ≤ Pr[= x | mx] * c x := by gcongr; exact hc x hp
-  · exact zero_le'
+  · exact zero_le
 
 variable [MonadLiftT m SetM] [EvalDistCompatible m]
 
@@ -843,7 +843,7 @@ lemma probEvent_le_tsum_probOutput_mul_cost_of_mem_support
         _ ≤ Pr[= x | mx] * c x := by
               gcongr
               exact hc x hx hp
-    · exact zero_le'
+    · exact zero_le
   · rw [probOutput_eq_zero_of_not_mem_support hx]
     simp
 

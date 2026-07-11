@@ -126,7 +126,7 @@ theorem probEvent_hiddenReadMany_le {oa : ProbComp R} {ε : ℝ≥0∞}
               (f := fun j => if w = σ (List.replicate j false) then Pr[= w | oa] else 0)
               (fun i _ => by positivity) (Finset.mem_range.2 hj)
     · rw [probEvent_pure, if_neg hfire, mul_zero]
-      exact zero_le'
+      exact zero_le
   refine le_trans (ENNReal.tsum_le_tsum hstep) ?_
   rw [Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
   calc ∑ j ∈ Finset.range q, ∑' w : R,
@@ -204,7 +204,7 @@ theorem probEvent_hiddenReadList_le {oa : ProbComp R} {ε : ℝ≥0∞} (hε : �
         Pr[(fun c : Bool => c = true) | hiddenReadList oa q σ n])
         ≤ Pr[(fun c : Bool => c = true) | hiddenReadList oa q σ n] := by
       rw [ENNReal.tsum_mul_right]
-      exact mul_le_of_le_one_left zero_le' tsum_probOutput_le_one
+      exact mul_le_of_le_one_left zero_le tsum_probOutput_le_one
     rw [h1]
     calc Pr[(fun b : Bool => b = true) | hiddenReadMany oa q σ]
           + (∑' w : R, Pr[= w | oa] *

@@ -240,7 +240,9 @@ section List.Vector
 
 open List (Vector)
 
-@[simp] -- mathlib?
+-- mathlib?
+set_option warning.simp.varHead false in
+@[simp]
 lemma vector_eq_nil {α : Type*} (xs : List.Vector α 0) : xs = Vector.nil :=
   List.Vector.ext (IsEmpty.forall_iff.2 True.intro)
 

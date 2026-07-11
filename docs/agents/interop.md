@@ -6,6 +6,11 @@ let VCVio reason about Lean code emitted by Rust verification frontends:
 - [hax](https://github.com/cryspen/hax): MIR → Lean/F\*/Coq/EasyCrypt/ProVerif/SSProve via a 35-phase OCaml engine. Lean target produces code in the `Hax.RustM := ExceptT Error Option` monad.
 - [aeneas](https://github.com/AeneasVerif/aeneas): MIR → Lean/Coq/F\* via Charon's LLBC + functional translation. Lean target produces code in an inductive `Aeneas.Std.Result α := ok | fail | div`.
 
+**Current baseline (Lean 4.31):** both integrations are dormant and the
+aggregate `Interop` target is excluded from CI. Hax is not yet Lean
+4.31-compatible. Aeneas now publishes a Lean 4.31 build, but its VCVio bridge
+must be revalidated independently before being enabled.
+
 Both backends collapse panic + divergence into the same shape; VCVio adds
 oracle access on top. The framework-side target monad is
 `Interop.Rust.RustOracleComp`.
@@ -76,15 +81,15 @@ oracle-aware Rust target monad for both backends.
 state:
 
 ```lean
--- Enabled (verified compatible against our v4.29.0 stack).
-require Hax from git
-  "https://github.com/cryspen/hax" @
-  "492a34e3" / "hax-lib/proof-libs/lean"
+-- Disabled: upstream Hax does not build under Lean 4.31.
+-- require Hax from git
+--   "https://github.com/cryspen/hax" @
+--   "492a34e3" / "hax-lib/proof-libs/lean"
 
--- Disabled (three source regressions under v4.29; see below).
+-- Disabled pending bridge validation; upstream pin uses Lean 4.31.
 -- require aeneas from git
 --   "https://github.com/AeneasVerif/aeneas" @
---   "ba600392" / "backends/lean"
+--   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 ```
 
 Git-pin by default so reproducible builds are guaranteed; bumping a pin

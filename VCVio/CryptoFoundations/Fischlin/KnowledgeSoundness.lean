@@ -353,7 +353,7 @@ private lemma knowledgeSoundnessExp_bad_le_misses
         let _e ← onlineExtract σ ρ b M x π' roLog'
         return false] = 0 := by
       simp
-    exact le_trans (le_of_eq hzero) zero_le'
+    exact le_trans (le_of_eq hzero) zero_le
   | true =>
     by_cases hfw : fischlinFindWitness σ ρ b M x π' roLog' = none
     · refine le_trans probOutput_le_one (le_of_eq ?_)
@@ -361,7 +361,7 @@ private lemma knowledgeSoundnessExp_bad_le_misses
       simp [hfw]
     · have hver := hverSupp π' cache' c' hvc
       have hzero := probOutput_onlineExtract_bad_eq_zero σ ρ b M hss hver hfw
-      exact le_trans (le_of_eq hzero) zero_le'
+      exact le_trans (le_of_eq hzero) zero_le
 
 /-- The lifted `unifSpec` forwarder on the logging stack, exactly as in
 `knowledgeSoundnessExp`. -/
@@ -2309,7 +2309,7 @@ private lemma fischlin_leaf_le (hur : σ.UniqueResponses) (x : Stmt) (msg : M)
   by_cases hpin : CachePinned σ ρ b M x π cache
   case neg =>
     rw [if_neg hpin, zero_mul]
-    exact zero_le'
+    exact zero_le
   rw [if_pos hpin, one_mul]
   by_cases hver : ∀ i, σ.verify x (π i).1 (π i).2.1 (π i).2.2 = true
   case neg =>
@@ -2320,7 +2320,7 @@ private lemma fischlin_leaf_le (hur : σ.UniqueResponses) (x : Stmt) (msg : M)
     rw [verify_probOutput_true_mixed σ hr ρ b S M x msg π cache
       (fun j => cache ⟨x, msg, List.ofFn fun k => (π k).1, j, (π j).2.1, (π j).2.2⟩)
       (fun j => rfl), if_neg hall, zero_mul, ENNReal.zero_div]
-    exact zero_le'
+    exact zero_le
   set k₀ : List Commit := List.ofFn fun j => (π j).1 with hk₀
   -- The proof's key is live: deadness would give two distinct pinned challenges in a cell.
   have hlive : ¬ ksDead σ ρ b M x msg cache k₀ := by
@@ -2373,7 +2373,7 @@ private lemma fischlin_leaf_le (hur : σ.UniqueResponses) (x : Stmt) (msg : M)
       _ ≤ ∑ k ∈ keys, if ksDead σ ρ b M x msg cache k then 0 else slotPsi ρ b S (st k) :=
           Finset.single_le_sum
             (f := fun k => if ksDead σ ρ b M x msg cache k then 0 else slotPsi ρ b S (st k))
-            (fun k _ => zero_le') hk
+            (fun k _ => zero_le) hk
   · -- Untouched key: its slot state is all-`none`, contributing exactly `μ`.
     rw [hINV.untouched k₀ hk]
     exact le_add_self

@@ -359,12 +359,12 @@ private theorem liftAdv_cmaSignHashQueryBound
       (superSpec := cmaSpec M Commit Chal Resp Stmt)
       (q := IsCostlyQuery (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) (Stmt := Stmt))
-      (hpq := by rintro ((n | mc) | m) <;> simp [IsCostlyQuery]) hQ.1
+      (hpq := by rintro ((n | mc) | m) <;> simp [IsCostlyQuery, SubSpec.onQuery]) hQ.1
   · exact OracleComp.IsQueryBoundP.liftComp_subSpec
       (superSpec := cmaSpec M Commit Chal Resp Stmt)
       (q := IsHashQuery (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) (Stmt := Stmt))
-      (hpq := by rintro ((n | mc) | m) <;> simp [IsHashQuery]) hQ.2
+      (hpq := by rintro ((n | mc) | m) <;> simp [IsHashQuery, SubSpec.onQuery]) hQ.2
 
 omit [DecidableEq M]
   [DecidableEq Commit] [SampleableType Chal] in
@@ -404,7 +404,7 @@ theorem signedCandidateAdv_cmaSignHashQueryBound
     (candidateAdv σ hr M adv) [] qS qH (by
       rw [candidateAdv, cmaSignHashQueryBound_query_bind_iff]
       refine ⟨⟨by simp [IsCostlyQuery], by simp [IsHashQuery]⟩, fun pk => ?_⟩
-      simpa [cmaSignHashQueryBound] using
+      simpa [postKeygenCandidateAdv, cmaSignHashQueryBound, IsCostlyQuery, IsHashQuery] using
         liftAdv_cmaSignHashQueryBound (M := M) (Commit := Commit)
           (Chal := Chal) (Resp := Resp) (Stmt := Stmt)
           (oa := adv.main pk) qS qH (hQ pk))
@@ -432,10 +432,13 @@ theorem signedFreshAdv_cmaSignHashQueryBound
         adv qS qH hQ)
       (fun p => by
         rcases p with ⟨⟨pk, msg, sig⟩, _⟩
-        simpa using
-          fiatShamir_verify_cmaSignHashQueryBound (σ := σ) (hr := hr) (M := M)
-            (Commit := Commit) (Chal := Chal) (Resp := Resp) pk msg sig 0 1
-            (Nat.succ_pos 0))
+        have hv := fiatShamir_verify_cmaSignHashQueryBound (σ := σ) (hr := hr) (M := M)
+          (Commit := Commit) (Chal := Chal) (Resp := Resp) pk msg sig 0 1
+          (Nat.succ_pos 0)
+        simp only [verifyFreshComp, bind_pure_comp]
+        rw [cmaSignHashQueryBound]
+        exact ⟨(isQueryBoundP_map_iff _ _ _).mpr hv.1,
+          (isQueryBoundP_map_iff _ _ _).mpr hv.2⟩)
 
 omit [DecidableEq Commit] [SampleableType Chal] in
 /-- Predicate-targeted signing-query bound for the final freshness-preserving

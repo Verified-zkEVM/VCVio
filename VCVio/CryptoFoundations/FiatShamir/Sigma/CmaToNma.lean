@@ -88,7 +88,7 @@ noncomputable def simulatedNmaBaseSim
 
 noncomputable def simulatedNmaSigSim
     [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [Inhabited Chal] [SampleableType Chal]
+    [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (M →ₒ (Commit × Resp))
       (StateT (fsRoSpec M Commit Chal).QueryCache
@@ -103,7 +103,7 @@ noncomputable def simulatedNmaSigSim
 
 noncomputable def simulatedNmaImpl
     [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [Inhabited Chal] [SampleableType Chal]
+    [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (cmaOracleSpec M Commit Chal Resp)
       (StateT (fsRoSpec M Commit Chal).QueryCache
@@ -124,7 +124,7 @@ and returns the final cache together with the forgery.
 This is the concrete-interface reduction entering the replay-forking lemma. -/
 noncomputable def simulatedNmaAdv
     [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [Inhabited Chal] [SampleableType Chal]
+    [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M)) :

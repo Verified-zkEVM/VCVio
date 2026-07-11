@@ -218,7 +218,8 @@ def byteEncode (d : Nat) (f : Rq) : ByteArray :=
   let bits : Array Nat := Array.ofFn fun idx : Fin (ringDegree * d) =>
     let coeff := idx.val / d
     let bit := idx.val % d
-    have hcoeff : coeff < ringDegree := by
+    have hcoeff : coeff < coeffRing.degree := by
+      change coeff < ringDegree
       by_cases hd : d = 0
       · subst hd
         have hlt0 : idx.val < 0 := by
@@ -243,7 +244,8 @@ private theorem byteEncode_size (d : Nat) (f : Rq) :
   let bits : Array Nat := Array.ofFn fun idx : Fin (ringDegree * d) =>
     let coeff := idx.val / d
     let bit := idx.val % d
-    have hcoeff : coeff < ringDegree := by
+    have hcoeff : coeff < coeffRing.degree := by
+      change coeff < ringDegree
       by_cases hd : d = 0
       · subst hd
         have hlt0 : idx.val < 0 := by
@@ -267,7 +269,8 @@ private theorem byteDecode_byteEncode_of_bound {d : Nat} (hd : 0 < d) (f : Rq)
   let bits : Array Nat := Array.ofFn fun idx : Fin (ringDegree * d) =>
     let coeff := idx.val / d
     let bit := idx.val % d
-    have hcoeff : coeff < ringDegree := by
+    have hcoeff : coeff < coeffRing.degree := by
+      change coeff < ringDegree
       have hlt : idx.val < d * ringDegree := by simpa [Nat.mul_comm] using idx.isLt
       exact Nat.div_lt_of_lt_mul hlt
     let coeffBits := Nat.digitsAppend 2 d (((f[coeff]'hcoeff : Coeff).val) % 2 ^ d)
@@ -280,7 +283,8 @@ private theorem byteDecode_byteEncode_of_bound {d : Nat} (hd : 0 < d) (f : Rq)
     have hj' : j < ringDegree * d := by simpa [bits] using hj
     let coeff := j / d
     let bit := j % d
-    have hcoeff : coeff < ringDegree := by
+    have hcoeff : coeff < coeffRing.degree := by
+      change coeff < ringDegree
       have hlt : j < d * ringDegree := by simpa [Nat.mul_comm] using hj'
       exact Nat.div_lt_of_lt_mul hlt
     have hbit : bit < d := by
@@ -352,15 +356,17 @@ private theorem byteDecode_byteEncode_of_bound {d : Nat} (hd : 0 < d) (f : Rq)
           (Nat.digitsAppend 2 d ((f[i]'hi : Coeff).val)).getD j.val 0 := by
       have hcoeffModLt :
           ((f[i]'hi : Coeff).val % 2 ^ d) = (f[i]'hi : Coeff).val := Nat.mod_eq_of_lt hcoeffBound
-      suffices
-          (Nat.digitsAppend 2 d (((f[i]'hi : Coeff).val % 2 ^ d))).getD j.val 0 =
-            (Nat.digitsAppend 2 d ((f[i]'hi : Coeff).val)).getD j.val 0 by
-        simpa [bits, hcoeffDiv, hcoeffMod] using this
-      have hdigitsMod :
-          Nat.digitsAppend 2 d (((f[i]'hi : Coeff).val % 2 ^ d)) =
-            Nat.digitsAppend 2 d ((f[i]'hi : Coeff).val) := by
-        rw [hcoeffModLt]
-      exact congrArg (fun l => l[j.val]?.getD 0) hdigitsMod
+      rw [Array.getElem_ofFn]
+      dsimp only
+      have hget :
+          (f[(i * d + j.val) / d]'(by
+            change (i * d + j.val) / d < ringDegree
+            rw [hcoeffDiv]
+            exact hi) : Coeff) = f[i]'hi := by
+        apply congrArg f.get
+        apply Fin.ext
+        exact hcoeffDiv
+      rw [hget, hcoeffMod, hcoeffModLt]
     rw [hleft]
     exact hbitsRoundtrip.trans hbitPos |>.trans hdigitElem
   have hdigits :
@@ -639,7 +645,8 @@ private theorem byteDecode12Poly_byteEncode12Poly (f : Tq) :
       apply Array.ext
       · simp
       · intro i hi1 hi2
-        simpa using tq_getElem_eq_coeffs (f := f) (i := i) (hi := by simpa using hi1)
+        rw [Array.getElem_ofFn]
+        rfl
 
 private theorem getByteD_byteEncode12Vec_eq_byteEncode12Poly
     {k : Nat} (v : TqVec k) {poly j : Nat} (hpoly : poly < k) (hj : j < 384) :
@@ -903,7 +910,8 @@ private theorem toArray_byteEncode1Msg (f : Rq) :
       (Array.ofFn fun idx : Fin (ringDegree * 1) =>
         let coeff := idx.val / 1
         let bit := idx.val % 1
-        have hcoeff : coeff < ringDegree := by
+        have hcoeff : coeff < coeffRing.degree := by
+          change coeff < ringDegree
           omega
         let coeffBits := Nat.digitsAppend 2 1 (((f[coeff]'hcoeff : Coeff).val) % 2 ^ 1)
         coeffBits.getD bit 0) = bits := by
@@ -914,8 +922,13 @@ private theorem toArray_byteEncode1Msg (f : Rq) :
         simpa [bits, ringDegree] using hi1
       let idx : Fin ringDegree := ⟨i, hi⟩
       rw [Array.getElem_ofFn, Array.getElem_ofFn]
-      simpa [bits, idx, Nat.div_one, Nat.mod_one] using
-        digitsAppend_two_one_getD_zero_mod (((f.get idx : Coeff).val))
+      have hget : (f[i]'hi : Coeff) = f.get idx := by
+        apply congrArg f.get
+        apply Fin.ext
+        rfl
+      simp only [Nat.div_one, Nat.mod_one, pow_one]
+      exact (digitsAppend_two_one_getD_zero_mod ((f[i]'hi : Coeff).val)).trans
+        (congrArg (fun x : Coeff => x.val % 2) hget)
   have hencode : byteEncode 1 f = bitsToBytes bits := by
     unfold byteEncode
     simpa [Nat.mul_one] using congrArg bitsToBytes hbitsEq

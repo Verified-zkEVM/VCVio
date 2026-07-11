@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean
 import Lean.Meta.Sym.Pattern
 import Lean.Meta.Sym.Simp.DiscrTree
 import Lean.Elab.Tactic.Do.Attr

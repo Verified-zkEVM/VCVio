@@ -59,7 +59,7 @@ how `Pr[bad]` absorbs the tag-side nonce-collision mass.
 
 Lives in this module (rather than `DirectCoupling.Compose`) so that the instrumented fine handler
 `multipleBadTableHandlerFine` defined below can reach it without inducing an import cycle. -/
-def cacheBadReader [Fintype TagId]
+def cacheBadReader
     (T : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (t : TagTranscript Nonce Digest) : Bool :=
   decide (∃ tag : TagId, ∃ sid : Fin sessionsPerTag, sid ≠ 0 ∧ T ((tag, sid), t.nonce) = t.auth)
@@ -80,7 +80,7 @@ lemma cacheBadReader_eq_true_iff
 flag, leaving every other field of the bad state untouched. This is the reader-side analogue of
 `multipleBadAdvance`, but mutating `cacheBad` instead of `bad`. The two flags are independent:
 reader steps never touch `bad`, tag steps never touch `cacheBad`. -/
-def multipleBadReaderAdvance [Fintype TagId]
+def multipleBadReaderAdvance
     (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (transcript : TagTranscript Nonce Digest)
     (sB : UnlinkBadState TagId Nonce Digest) : UnlinkBadState TagId Nonce Digest :=

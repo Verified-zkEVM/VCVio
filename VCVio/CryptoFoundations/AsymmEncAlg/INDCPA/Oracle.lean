@@ -183,17 +183,16 @@ lemma IND_CPA_queryImpl'_counted_counter_le_succ
       obtain ⟨a, _, rfl⟩ := hp
       simp
   | inr mm =>
-      have hp' : p ∈ support ((encAlg'.IND_CPA_challengeOracle'_counted pk b mm).run st) := by
-        simpa [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge] using hp
-      clear hp
-      revert hp'
+      change C × encAlg'.IND_CPA_CountedState at p
+      change p ∈ support ((encAlg'.IND_CPA_challengeOracle'_counted pk b mm).run st) at hp
+      revert hp
       rcases hcache : st.1 mm with _ | c <;> intro hp
       · simp only [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle, hcache,
           StateT.run_bind, StateT.run_get, pure_bind] at hp
-        change (_ : (ofFn fun _ ↦ C).Range mm × encAlg'.IND_CPA_CountedState) ∈ _ at hp
-        simp only [StateT.run_set, StateT.run_pure, support_bind, Set.mem_iUnion, support_pure,
-          Set.mem_singleton_iff] at hp
-        obtain ⟨c, _, _, rfl, rfl⟩ := hp
+        rw [mem_support_bind_iff] at hp
+        obtain ⟨c, _, hp⟩ := hp
+        simp only [StateT.run_set, StateT.run_pure] at hp
+        subst p
         simp
       · simp_all [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle]
 
@@ -302,7 +301,8 @@ theorem IND_CPA_run'_evalDist_eq_queryImpl'_of_bounded_eq [Finite C] [Inhabited 
       𝒟[(simulateQ (implCounted pk b q) comp).run' (cache, n)] =
       𝒟[(simulateQ (encAlg'.IND_CPA_queryImpl'_counted pk b) comp).run'
         (cache, n)] := by
-    simpa [StateT.run', evalDist_map] using congrArg (fun p => Prod.fst <$> p) hrun
+    simp only [StateT.run'_eq, evalDist_map]
+    exact congrArg (fun p => Prod.fst <$> p) hrun
   refine hcounted_run'.trans ?_
   simpa using congrArg evalDist (OracleComp.run'_simulateQ_eq_of_query_map_eq
       (impl₁ := encAlg'.IND_CPA_queryImpl'_counted pk b)
@@ -533,14 +533,14 @@ lemma IND_CPA_hybridLR_counted_counter_le
     obtain ⟨a, _, rfl⟩ := hp
     simp
   | inr mm =>
-    have hp' : p ∈ support
-        ((IND_CPA_hybridChallengeOracleLR_counted (encAlg' := encAlg') pk k mm).run st) := by
-      simpa [IND_CPA_queryImpl_hybridLR_counted, IND_CPA_queryImplFromChallenge] using hp
-    clear hp
-    revert hp'
+    change C × encAlg'.IND_CPA_CountedState at p
+    change p ∈ support
+      ((IND_CPA_hybridChallengeOracleLR_counted (encAlg' := encAlg') pk k mm).run st) at hp
+    revert hp
     simp only [IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle]
     rcases hcache : st.1 mm with _ | c <;> intro hp <;> simp_all
-    obtain ⟨x, _, rfl⟩ := hp
+    obtain ⟨x, _, hp⟩ := hp
+    subst p
     simp
 
 /-- Behavior of the hybrid challenge oracle on a cache miss. -/

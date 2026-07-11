@@ -334,7 +334,7 @@ theorem cf_eq_of_mem_support_seededFork (x₁ x₂ : α)
     (h : some (x₁, x₂) ∈ support (seededFork main qb js i cf)) :
       ∃ s, cf x₁ = some s ∧ cf x₂ = some s := by
   simp only [seededFork] at h
-  grind
+  grind (gen := 16)
 
 omit [unifSpec ˡ⊂ₒ spec] in
 /-- On `seededFork` support, first-projection success equals old pair-style success event. -/
@@ -685,7 +685,9 @@ private lemma probEvent_seededFork_pair_eq_probOutput_map_aux (s : Fin (qb i + 1
       = Pr[ fun r => (fun r => r.map (Prod.map cf cf)) r = z | seededFork main qb js i cf] := by
           simp [z]
     _ = Pr[ fun x => x = z | (fun r => r.map (Prod.map cf cf)) <$> seededFork main qb js i cf] := by
-          simpa [Function.comp] using (probEvent_map (mx := seededFork main qb js i cf)
+          change Pr[((fun x => x = z) ∘ fun r => r.map (Prod.map cf cf)) |
+            seededFork main qb js i cf] = _
+          exact (probEvent_map (mx := seededFork main qb js i cf)
             (f := fun r => r.map (Prod.map cf cf)) (q := fun x => x = z)).symm
     _ = Pr[= z | (fun r => r.map (Prod.map cf cf)) <$> seededFork main qb js i cf] := by
           simp [probEvent_eq_eq_probOutput]

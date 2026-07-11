@@ -112,8 +112,12 @@ lemma signAttempt_run_withUnitCost_eq
           (fun [HasQuery (M × Commit →ₒ Chal) m] =>
             fsAbortSignAttempt (m := m) ids M pk sk msg)
           runtime := by
-  simpa [HasQuery.Program.withUnitCost] using
-    signAttempt_run_withAddCost_eq
+  change WriterT.run
+      (HasQuery.Program.withAddCost
+        (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
+          fsAbortSignAttempt (m := AddWriterT ℕ m) ids M pk sk msg)
+        runtime (fun _ ↦ 1)) = _
+  exact signAttempt_run_withAddCost_eq
       (ids := ids) (M := M) (runtime := runtime) (pk := pk) (sk := sk) (msg := msg)
       (costFn := fun _ ↦ (1 : ℕ))
 
@@ -255,9 +259,9 @@ theorem fsAbortSignLoop_usesWeightedQueryCostAtMost
                 (zero_le))
         | none =>
             simpa [cont, hAttempt, HasQuery.UsesCostAtMost] using hRec
-      simpa [HasQuery.UsesCostAtMost, HasQuery.Program.withAddCost, fsAbortSignLoop, succ_nsmul',
-        fsAbortSignAttempt, cont] using
-        (AddWriterT.pathwiseCostAtMost_bind (w₁ := w) (w₂ := n • w) hStep hCont)
+      unfold HasQuery.UsesCostAtMost HasQuery.Program.withAddCost at hStep hRec ⊢
+      simp only [fsAbortSignLoop, succ_nsmul']
+      exact AddWriterT.pathwiseCostAtMost_bind (w₁ := w) (w₂ := n • w) hStep hCont
 
 section schemeCost
 
@@ -282,7 +286,9 @@ theorem sign_usesAtMostMaxAttemptsQueries
     QueryCost[
       (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg in runtime
     ] ≤ maxAttempts := by
-  simpa [nsmul_eq_mul] using
+  simpa [HasQuery.UsesAtMostQueries, HasQuery.UsesCostAtMost,
+    AddWriterT.QueryBoundedAboveBy,
+    HasQuery.Program.withUnitCost_eq_withAddCost, nsmul_eq_mul] using
     sign_usesWeightedQueryCostAtMost ids M hr runtime pk sk msg
       (fun _ ↦ (1 : ℕ)) 1 (fun _ ↦ le_rfl) maxAttempts
 

@@ -296,7 +296,7 @@ omit nttOps [SampleableType (RqVec p.l)] [SampleableType (CommitHashBytes p)]
   [DecidableEq prims.High] in
 private lemma neg_rq_get (f : Rq) (i : Fin ringDegree) : (-f).get i = -(f.get i) := by
   change (coeffRing.neg f).get i = _
-  simp [LatticeCrypto.vectorNegacyclicRing]
+  simp
 
 omit nttOps [SampleableType (RqVec p.l)] [SampleableType (CommitHashBytes p)]
   [DecidableEq prims.High] in
@@ -306,9 +306,7 @@ private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
   unfold LatticeCrypto.cInfNormOf
   apply Finset.sup_congr rfl
   intro i _
-  simp only [LatticeCrypto.zmodCenteredCoeffView, polyBackend,
-    LatticeCrypto.vectorNegacyclicRing, LatticeCrypto.vectorBackend]
-  rw [neg_rq_get]
+  simp only [LatticeCrypto.zmodCenteredCoeffView, coeffRing.coeff_neg]
   exact LatticeCrypto.centeredRepr_natAbs_neg _
 
 omit [SampleableType (RqVec p.l)] [SampleableType (CommitHashBytes p)]

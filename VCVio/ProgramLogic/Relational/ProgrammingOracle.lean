@@ -332,9 +332,9 @@ theorem tvDist_simulateQ_withCaching_withProgramming_le_probEvent_bad'
       tvDist ((simulateQ (so.withProgramming policy) oa).run' (cache, false))
           ((simulateQ (so.withCachingTrackingPolicy policy) oa).run' (cache, false))
         ≤ tvDist sim₁ sim₂ := by
-    simpa [hs1, hs2, StateT.run'] using
-      (tvDist_map_le (m := OracleComp spec') (α := α × spec.QueryCache × Bool) (β := α)
-        Prod.fst sim₁ sim₂)
+    rw [StateT.run']
+    exact tvDist_map_le (m := OracleComp spec') (α := α × spec.QueryCache × Bool) (β := α)
+      Prod.fst sim₁ sim₂
   have h_proj :
       (simulateQ (so.withCachingTrackingPolicy policy) oa).run' (cache, false) =
         (simulateQ so.withCaching oa).run' cache :=

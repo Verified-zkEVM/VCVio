@@ -404,8 +404,7 @@ private theorem highBitsCoeff_eq_of_repr {alpha m : ℕ} (ctx : BalancedDecomp a
         · simp [hn1, hval, ctx.hqm1]
         · left; exact ⟨by omega, by left; exact ⟨ctx.hqm1, hr1z⟩⟩
       · refine ⟨m - 1, alpha + 1 - n, ?_, by omega, ?_⟩
-        · change r.val = alpha * (m - 1) + (alpha + 1 - n)
-          rw [hval, Nat.mul_sub, mul_one, ctx.hqm1]
+        · rw [hval, Nat.mul_sub, mul_one, ctx.hqm1]
           zify [show n ≤ alpha + 1 by omega,
                 ctx.hqm1 ▸ Nat.le_mul_of_pos_right alpha ctx.hm,
                 show 1 ≤ modulus by omega, hnltq.le]
@@ -415,8 +414,7 @@ private theorem highBitsCoeff_eq_of_repr {alpha m : ℕ} (ctx : BalancedDecomp a
           · rw [Nat.sub_add_cancel (by omega)]; left; exact ⟨ctx.hqm1, hr1z⟩
     | inr hr1pos =>
       refine ⟨r1 - 1, alpha - n, ?_, by omega, ?_⟩
-      · change r.val = alpha * (r1 - 1) + (alpha - n)
-        have hnle : n ≤ alpha * r1 :=
+      · have hnle : n ≤ alpha * r1 :=
           le_trans hn_lt.le (Nat.le_mul_of_pos_right alpha hr1pos)
         have hval : r.val = alpha * r1 - n := by
           have hrcast : r = ((alpha * r1 - n : ℕ) : Coeff) := by
@@ -723,9 +721,10 @@ theorem concreteRoundingLaws_of_isApproved (p : Params) (hp : p.isApproved) :
   lowBits_bound r := by
     let ctx := BalancedDecomp.ofApproved hp
     have hγ : 0 <  p.gamma2 := by haveI := ctx.hα; omega
-    simpa using concreteRounding_lowBits_bound p hγ ctx.hq r
+    simpa [concreteRoundingOps] using concreteRounding_lowBits_bound p hγ ctx.hq r
   hide_low r s b hs hlow :=
-    concreteRounding_hide_low_of_isApproved p hp r s b hs (by simpa using hlow)
+    concreteRounding_hide_low_of_isApproved p hp r s b hs (by
+      simpa [concreteRoundingOps] using hlow)
   shift_injective := highBitsShift_injective_of_isApproved p hp
   useHint_correct z r hz :=
     concreteRounding_useHint_correct_of_isApproved p hp z r (by simpa using hz)

@@ -267,7 +267,7 @@ lemma expectedCost_le_of_support_bound
         ≤ ∑' w : ω, Pr[= w | oa.costs] * c :=
           ENNReal.tsum_le_tsum fun w ↦ by
             by_cases hw : w ∈ support oa.costs
-            · exact mul_le_mul_of_nonneg_left (h w hw) zero_le'
+            · exact mul_le_mul_of_nonneg_left (h w hw) zero_le
             · rw [probOutput_eq_zero_of_not_mem_support hw, zero_mul, zero_mul]
     _ = (∑' w : ω, Pr[= w | oa.costs]) * c := ENNReal.tsum_mul_right
     _ ≤ 1 * c := by gcongr; exact tsum_probOutput_le_one

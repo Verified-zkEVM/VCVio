@@ -218,13 +218,17 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
       ≤ Pr[fun o => minGt k o | minUnifAux b cs.length (best.map (fun t => t.2.2))] := by
   induction cs generalizing best with
   | nil =>
-      simp only [fischlinUnifSearch, minUnifAux]
+      rw [fischlinUnifSearch]
+      unfold minUnifAux
+      simp only [List.length_nil]
       rw [probEvent_pure_eq_indicator, probEvent_pure_eq_indicator]
       refine le_of_eq ?_
       by_cases h : minGt k (Option.map (fun t => t.2.2) best) <;>
         simp [Set.indicator, Set.mem_setOf_eq, h]
   | cons ω rest ih =>
-      simp only [fischlinUnifSearch, minUnifAux]
+      rw [fischlinUnifSearch]
+      unfold minUnifAux
+      simp only [List.length_cons]
       refine probEvent_bind_le_of_forall_le (fun resp _ => ?_)
       rw [probEvent_bind_eq_tsum, probEvent_bind_eq_tsum]
       refine ENNReal.tsum_le_tsum (fun h => ?_)
@@ -401,6 +405,7 @@ private lemma fischlinSearch_run'_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
             (hfresh ω' (List.mem_cons_of_mem _ hω') r)
         exact ih (List.nodup_cons.mp hcs).2 _ _ hfresh'
 
+set_option linter.overlappingInstances false in
 /-- The random-oracle record that the Fischlin verifier re-queries for the transcript projected
 from a search result `p : Option (Chal × Resp)`. On `none` (an unreachable branch when the
 challenge list is nonempty, since the search always keeps a best) we return a dummy `default`

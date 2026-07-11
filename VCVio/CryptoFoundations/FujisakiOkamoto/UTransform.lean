@@ -433,11 +433,11 @@ theorem decaps_usesAtMostTwoQueries [MonadLiftT m SetM] [LawfulMonadLiftT m SetM
     (policy : FujisakiOkamoto.RejectionPolicy K C)
     (pk : PK) (sk : SK) (fb : policy.FallbackState) (c : C) :
     Queries[ (UTransform pke kdInput policy).decaps ((pk, sk), fb) c in runtime ] ≤ 2 := by
-  simpa [HasQuery.UsesAtMostQueries] using
-    (decaps_usesWeightedQueryCostAtMost
+  rw [HasQuery.UsesAtMostQueries, HasQuery.Program.withUnitCost_eq_withAddCost]
+  exact decaps_usesWeightedQueryCostAtMost
       (ω := ℕ) (runtime := runtime) (pke := pke) (kdInput := kdInput) (policy := policy)
       (pk := pk) (sk := sk) (fb := fb) (c := c) (costFn := fun _ ↦ 1) (wCoins := 1) (wKey := 1)
-      (hCoins := fun _ ↦ le_rfl) (hKeys := fun _ ↦ le_rfl))
+      (hCoins := fun _ ↦ le_rfl) (hKeys := fun _ ↦ le_rfl)
 
 /-- Expected query count of U-transform decapsulation is at most `2`. -/
 theorem decaps_expectedQueries_le_two [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
