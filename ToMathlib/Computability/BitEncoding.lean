@@ -235,7 +235,75 @@ noncomputable def pairVar (s : StrEncFam σ) (e : BitEncFam β) : StrEncFam (fun
 @[simp] theorem pairVar_enc (s : StrEncFam σ) (e : BitEncFam β) (n : ℕ) (p : σ n × β n) :
     (s.pairVar e).enc n p = s.enc n p.1 ++ e.enc n p.2 := rfl
 
+/-- Tag-bit sum of raw string encodings: `false ::` the left payload, `true ::` the
+right payload. The state shape of a two-phase (`⊕`-state) machine. -/
+noncomputable def sum {τ : ℕ → Type u} (s₁ : StrEncFam σ) (s₂ : StrEncFam τ) :
+    StrEncFam (fun n => σ n ⊕ τ n) where
+  enc n := Sum.elim (fun x => false :: s₁.enc n x) (fun y => true :: s₂.enc n y)
+  enc_injective n x y h := by
+    cases x <;> cases y <;> simp only [Sum.elim_inl, Sum.elim_inr, List.cons.injEq] at h
+    · exact congrArg Sum.inl (s₁.enc_injective n h.2)
+    · exact absurd h.1 (by simp)
+    · exact absurd h.1 (by simp)
+    · exact congrArg Sum.inr (s₂.enc_injective n h.2)
+  bound := s₁.bound + s₂.bound + .C 1
+  len_le n x := by
+    cases x with
+    | inl x =>
+      have := s₁.len_le n x
+      simp only [Sum.elim_inl, List.length_cons, Polynomial.eval_add, Polynomial.eval_C]
+      omega
+    | inr y =>
+      have := s₂.len_le n y
+      simp only [Sum.elim_inr, List.length_cons, Polynomial.eval_add, Polynomial.eval_C]
+      omega
+
+@[simp] theorem sum_enc_inl {τ : ℕ → Type u} (s₁ : StrEncFam σ) (s₂ : StrEncFam τ)
+    (n : ℕ) (x : σ n) : (s₁.sum s₂).enc n (Sum.inl x) = false :: s₁.enc n x := rfl
+
+@[simp] theorem sum_enc_inr {τ : ℕ → Type u} (s₁ : StrEncFam σ) (s₂ : StrEncFam τ)
+    (n : ℕ) (y : τ n) : (s₁.sum s₂).enc n (Sum.inr y) = true :: s₂.enc n y := rfl
+
 end StrEncFam
+
+namespace BitEncFam
+
+variable {γ : ℕ → Type u} {σ : ℕ → Type u}
+
+/-- Pair a fixed-width encoding on the left with a variable-width one on the right by
+append — the mirror of `StrEncFam.pairVar`. Injective because the fixed-width left
+component determines the split point from the left. This is the state shape of a
+machine carrying a fixed-width value alongside a running machine's state. -/
+noncomputable def pairFix (e : BitEncFam γ) (s : StrEncFam σ) :
+    StrEncFam (fun n => γ n × σ n) where
+  enc n p := e.enc n p.1 ++ s.enc n p.2
+  enc_injective n p q h := by
+    obtain ⟨h₁, h₂⟩ := List.append_inj h (by rw [e.len_eq, e.len_eq])
+    exact Prod.ext (e.enc_injective n h₁) (s.enc_injective n h₂)
+  bound := e.widBound + s.bound
+  len_le n p := by
+    rw [List.length_append, e.len_eq]
+    have := s.len_le n p.2; have := e.wid_le n
+    simp only [Polynomial.eval_add]; omega
+
+@[simp] theorem pairFix_enc (e : BitEncFam γ) (s : StrEncFam σ) (n : ℕ) (p : γ n × σ n) :
+    (e.pairFix s).enc n p = e.enc n p.1 ++ s.enc n p.2 := rfl
+
+/-- The all-zero padding block of a prescribed fixed width: a `PUnit` boundary whose
+encoding is `wid n` zero bits — the `none`-payload shape of `BitEncFam.option`. -/
+noncomputable def pad (w : ℕ → ℕ) (p : Polynomial ℕ) (hw : ∀ n, w n ≤ p.eval n) :
+    BitEncFam (fun _ => PUnit.{u + 1}) where
+  wid := w
+  widBound := p
+  wid_le := hw
+  enc n _ := List.replicate (w n) false
+  len_eq n _ := List.length_replicate
+  enc_injective _ x y _ := by cases x; cases y; rfl
+
+@[simp] theorem pad_enc (w : ℕ → ℕ) (p : Polynomial ℕ) (hw : ∀ n, w n ≤ p.eval n)
+    (n : ℕ) (x : PUnit) : (pad w p hw).enc n x = List.replicate (w n) false := rfl
+
+end BitEncFam
 
 /-! ## Uniform polynomial-time machine families -/
 
@@ -265,6 +333,22 @@ namespace EncPolyTimeFam
 variable {α β γ : ℕ → Type u}
   {ea : (n : ℕ) → α n → List Bool} {eb : (n : ℕ) → β n → List Bool}
   {ec : (n : ℕ) → γ n → List Bool}
+
+/-- Transport a witness family along string-equal encodings on both sides: the machines,
+time polynomial, and advice bound are untouched (`EncPolyTime.recode` per parameter).
+The workhorse for pure re-bracketings of encoded data — `cons`/append associativity and
+pair/sum reshuffles cost no machine content. -/
+def recode {α' β' : ℕ → Type u} {ea' : (n : ℕ) → α' n → List Bool}
+    {eb' : (n : ℕ) → β' n → List Bool} {f : (n : ℕ) → α n → β n}
+    (h : EncPolyTimeFam ea eb f) (φ : (n : ℕ) → α' n → α n) (g : (n : ℕ) → α' n → β' n)
+    (hin : ∀ n x, ea' n x = ea n (φ n x))
+    (hout : ∀ n x, eb' n (g n x) = eb n (f n (φ n x))) :
+    EncPolyTimeFam ea' eb' g where
+  wit n := (h.wit n).recode (φ n) (g n) (hin n) (hout n)
+  time := h.time
+  time_le := h.time_le
+  size := h.size
+  size_le := h.size_le
 
 /-- The identity family: one state, unit time. -/
 noncomputable def id (ea : (n : ℕ) → α n → List Bool) :

@@ -38,7 +38,7 @@ non-uniform P/poly model.
 
 @[expose] public section
 
-universe u v w
+universe u v w u_1 u_2
 
 /-- Evaluation of a natural-number polynomial is monotone in the argument. -/
 theorem Polynomial.eval_le_eval {p : Polynomial ℕ} {m n : ℕ} (h : m ≤ n) :
@@ -130,6 +130,31 @@ def copy {f : α → β} (h : EncPolyTime ea eb f) (f' : α → β) (hf : ∀ a,
 /-- Transporting along a pointwise-equal function preserves the machine, hence the size. -/
 @[simp] theorem size_copy {f : α → β} (h : EncPolyTime ea eb f) (f' : α → β)
     (hf : ∀ a, f a = f' a) : (h.copy f' hf).size = h.size := rfl
+
+/-- Transport a witness along string-equal encodings on both sides: if `ea'` encodes
+each `a'` exactly as `ea` encodes `φ a'`, and `eb'` encodes each `g a'` exactly as `eb`
+encodes `f (φ a')`, the same machine witnesses `g` relative to `ea'`/`eb'`. The machine,
+time, and size are untouched — this discharges pure re-bracketings and re-taggings of
+encoded data (`cons`/append associativity, pair/sum reshuffles) with no machine content. -/
+def recode {α' : Type u_1} {β' : Type u_2} {ea' : α' → List Bool} {eb' : β' → List Bool}
+    {f : α → β} (h : EncPolyTime ea eb f) (φ : α' → α) (g : α' → β')
+    (hin : ∀ a', ea' a' = ea (φ a')) (hout : ∀ a', eb' (g a') = eb (f (φ a'))) :
+    EncPolyTime ea' eb' g where
+  toFun := h.toFun
+  polyTime := h.polyTime
+  map_encode a' := by rw [hin, h.map_encode, ← hout]
+
+/-- Recoding preserves the machine's time polynomial. -/
+@[simp] theorem time_recode {α' : Type u_1} {β' : Type u_2} {ea' : α' → List Bool}
+    {eb' : β' → List Bool} {f : α → β} (h : EncPolyTime ea eb f) (φ : α' → α) (g : α' → β')
+    (hin : ∀ a', ea' a' = ea (φ a')) (hout : ∀ a', eb' (g a') = eb (f (φ a'))) :
+    (h.recode φ g hin hout).time = h.time := rfl
+
+/-- Recoding preserves the machine, hence the description size. -/
+@[simp] theorem size_recode {α' : Type u_1} {β' : Type u_2} {ea' : α' → List Bool}
+    {eb' : β' → List Bool} {f : α → β} (h : EncPolyTime ea eb f) (φ : α' → α) (g : α' → β')
+    (hin : ∀ a', ea' a' = ea (φ a')) (hout : ∀ a', eb' (g a') = eb (f (φ a'))) :
+    (h.recode φ g hin hout).size = h.size := rfl
 
 /-- Composition of encoded polynomial-time witnesses, from Cslib's
 `PolyTimeComputable.comp`. -/
