@@ -114,6 +114,7 @@ import VCVio.OracleComp.Coinductive.PolyTimeConstructions
 import VCVio.OracleComp.Coinductive.PolyTimeNontrivial
 import VCVio.OracleComp.Coinductive.RejectionSampler
 import VCVio.OracleComp.Coinductive.RunLimit
+import VCVio.OracleComp.Coinductive.SeqComp
 import VCVio.OracleComp.Coinductive.WireK
 import VCVio.OracleComp.Constructions.BitVec
 import VCVio.OracleComp.Constructions.GenerateSeed
