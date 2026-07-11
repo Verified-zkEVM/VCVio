@@ -195,8 +195,7 @@ def sigDecode (d : ByteArray) (logn : ℕ) : Option (Bytes 40 × List UInt8) := 
     sigDecode (sigEncode salt [] logn) logn = none := by
   cases salt with
   | mk xs hxs =>
-      have hsalt : ({ data := xs } : ByteArray).size = 40 := by
-        simpa using hxs
+      have hsalt : ({ data := xs } : ByteArray).size = 40 := hxs
       have hone : ({ data := #[48 + UInt8.ofNat logn] } : ByteArray).size = 1 := rfl
       have hempty : ({ data := #[] } : ByteArray).size = 0 := rfl
       simp [sigDecode, sigEncode, hsalt, hone, hempty]

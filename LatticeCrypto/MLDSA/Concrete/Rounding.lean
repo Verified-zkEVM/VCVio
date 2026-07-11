@@ -723,9 +723,10 @@ theorem concreteRoundingLaws_of_isApproved (p : Params) (hp : p.isApproved) :
   lowBits_bound r := by
     let ctx := BalancedDecomp.ofApproved hp
     have hγ : 0 <  p.gamma2 := by haveI := ctx.hα; omega
-    simpa using concreteRounding_lowBits_bound p hγ ctx.hq r
+    simpa [concreteRoundingOps] using concreteRounding_lowBits_bound p hγ ctx.hq r
   hide_low r s b hs hlow :=
-    concreteRounding_hide_low_of_isApproved p hp r s b hs (by simpa using hlow)
+    concreteRounding_hide_low_of_isApproved p hp r s b hs
+      (by simpa [concreteRoundingOps] using hlow)
   shift_injective := highBitsShift_injective_of_isApproved p hp
   useHint_correct z r hz :=
     concreteRounding_useHint_correct_of_isApproved p hp z r (by simpa using hz)

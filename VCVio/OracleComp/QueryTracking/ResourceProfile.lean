@@ -79,6 +79,10 @@ noncomputable instance [Add ω] : Add (ResourceProfile ω κ) where
 @[simp] lemma ofIntrinsic_zero [Zero ω] :
     ofIntrinsic (κ := κ) (0 : ω) = 0 := rfl
 
+@[simp] lemma ofIntrinsic_add [Add ω] (v w : ω) :
+    ofIntrinsic (κ := κ) (v + w) = ofIntrinsic v + ofIntrinsic w := by
+  ext <;> simp [ofIntrinsic]
+
 @[simp] lemma intrinsic_ofUsage [Zero ω] (u : κ →₀ ℕ) :
     (ofUsage (ω := ω) u).intrinsic = 0 := rfl
 

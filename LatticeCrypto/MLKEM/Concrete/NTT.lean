@@ -212,10 +212,9 @@ def multiplyNTTs (fHat gHat : Tq) : Tq :=
 /-- The concrete inverse transform is a left inverse to the concrete forward transform. -/
 theorem invNTT_ntt (f : Rq) : invNTT (ntt f) = f := by
   calc
-    invNTT (ntt f) = applyMatrix idMatrix f := by
-      simpa [invNTT, ntt] using
-        LatticeCrypto.NTTCert.applyMatrix_comp (backend := polyBackend)
-          invNTTMatrix nttMatrix idMatrix invNTTMatrix_nttMatrix_entry f
+    invNTT (ntt f) = applyMatrix idMatrix f :=
+      LatticeCrypto.NTTCert.applyMatrix_comp (backend := polyBackend)
+        invNTTMatrix nttMatrix idMatrix invNTTMatrix_nttMatrix_entry f
     _ = f := LatticeCrypto.NTTCert.applyMatrix_id (backend := polyBackend) f
 
 private def rqEquivCoeffFun : Rq ≃ (Fin ringDegree → Coeff) where
@@ -283,12 +282,12 @@ theorem ntt_sub_toRq (f g : Rq) : (ntt (f - g) : Rq) = (ntt f : Rq) - (ntt g : R
 /-- The concrete NTT is additive. -/
 theorem ntt_add (f g : Rq) : ntt (f + g) = ntt f + ntt g := by
   apply LatticeCrypto.TransformPoly.ext
-  simpa using ntt_add_toRq f g
+  exact ntt_add_toRq f g
 
 /-- The concrete NTT preserves subtraction. -/
 theorem ntt_sub (f g : Rq) : ntt (f - g) = ntt f - ntt g := by
   apply LatticeCrypto.TransformPoly.ext
-  simpa using ntt_sub_toRq f g
+  exact ntt_sub_toRq f g
 
 private theorem invNTT_add (g h : Tq) : invNTT (g + h) = invNTT g + invNTT h := by
   apply ntt_injective
@@ -335,10 +334,10 @@ private theorem negacyclicMul_sub_right (a b c : Rq) :
     simp only [multiplyNTTs, invNTT_ntt]
   toHat_add f g := by
     apply LatticeCrypto.TransformPoly.ext
-    simpa using ntt_add_toRq f g
+    exact ntt_add_toRq f g
   toHat_sub f g := by
     apply LatticeCrypto.TransformPoly.ext
-    simpa using ntt_sub_toRq f g
+    exact ntt_sub_toRq f g
   mul_add f g h := by
     change multiplyNTTs f (g + h) = multiplyNTTs f g + multiplyNTTs f h
     simp only [multiplyNTTs, invNTT_add]

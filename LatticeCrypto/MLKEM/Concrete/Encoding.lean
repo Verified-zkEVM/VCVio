@@ -355,7 +355,8 @@ private theorem byteDecode_byteEncode_of_bound {d : Nat} (hd : 0 < d) (f : Rq)
       suffices
           (Nat.digitsAppend 2 d (((f[i]'hi : Coeff).val % 2 ^ d))).getD j.val 0 =
             (Nat.digitsAppend 2 d ((f[i]'hi : Coeff).val)).getD j.val 0 by
-        simpa [bits, hcoeffDiv, hcoeffMod] using this
+        simp only [bits, Array.getElem_ofFn, hcoeffDiv, hcoeffMod]
+        exact this
       have hdigitsMod :
           Nat.digitsAppend 2 d (((f[i]'hi : Coeff).val % 2 ^ d)) =
             Nat.digitsAppend 2 d ((f[i]'hi : Coeff).val) := by
@@ -639,7 +640,8 @@ private theorem byteDecode12Poly_byteEncode12Poly (f : Tq) :
       apply Array.ext
       · simp
       · intro i hi1 hi2
-        simpa using tq_getElem_eq_coeffs (f := f) (i := i) (hi := by simpa using hi1)
+        simp only [Array.getElem_ofFn, Vector.getElem_toArray]
+        rfl
 
 private theorem getByteD_byteEncode12Vec_eq_byteEncode12Poly
     {k : Nat} (v : TqVec k) {poly j : Nat} (hpoly : poly < k) (hj : j < 384) :
@@ -914,8 +916,8 @@ private theorem toArray_byteEncode1Msg (f : Rq) :
         simpa [bits, ringDegree] using hi1
       let idx : Fin ringDegree := ⟨i, hi⟩
       rw [Array.getElem_ofFn, Array.getElem_ofFn]
-      simpa [bits, idx, Nat.div_one, Nat.mod_one] using
-        digitsAppend_two_one_getD_zero_mod (((f.get idx : Coeff).val))
+      simp only [Nat.div_one, Nat.mod_one, pow_one]
+      exact digitsAppend_two_one_getD_zero_mod (((f.get idx : Coeff).val))
   have hencode : byteEncode 1 f = bitsToBytes bits := by
     unfold byteEncode
     simpa [Nat.mul_one] using congrArg bitsToBytes hbitsEq

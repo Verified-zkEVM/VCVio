@@ -398,7 +398,7 @@ theorem game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
       let h ← liftM ($ᵗ M)
       let c : Rand × M := (tdp.forward pk r, h)
       adv.guess st c)).run' ∅
-  simpa [game2, f] using
+  simpa [game2, f, Bool.beq_eq_decide_eq] using
     (probOutput_decide_eq_uniformBool_half f (by rfl))
 
 omit [Inhabited Rand] [Fintype Rand] [DecidableEq Rand] [SampleableType Rand] [Inhabited M]
