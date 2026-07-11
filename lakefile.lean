@@ -44,13 +44,13 @@ upstream PR https://github.com/leanprover/lean4/pull/12965 in the
 `Std.Internal.Do.{WPMonad,PredTrans,Triple,Assertion,ExceptPost}` namespace
 (temporarily prefixed `Std.Do'` in Loom2 to avoid clashing once it merges).
 
-Pinned to the Lean 4.31 compatibility branch based on upstream revision
+Tracks the Lean 4.31 compatibility branch based on upstream revision
 `876296fc`. When upstream Lean ships these foundations in a stable release,
 drop this require and re-import from `Std.Do.…` directly.
 -/
 require loom2 from git
   "https://github.com/quangvdao/loom2" @
-  "4a47c27fa960590b104df117479f3cb6f73cc0b4"
+  "lean-4.31"
 
 /-
 Aeneas: upstream pins Lean 4.28.0-rc1. Lake happily resolves aeneas against
