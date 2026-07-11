@@ -113,6 +113,7 @@ import VCVio.OracleComp.Coinductive.PolyTimeCarry
 import VCVio.OracleComp.Coinductive.PolyTimeClosure
 import VCVio.OracleComp.Coinductive.PolyTimeConstructions
 import VCVio.OracleComp.Coinductive.PolyTimeNontrivial
+import VCVio.OracleComp.Coinductive.PolyTimeSeqComp
 import VCVio.OracleComp.Coinductive.RejectionSampler
 import VCVio.OracleComp.Coinductive.RunLimit
 import VCVio.OracleComp.Coinductive.SeqComp
