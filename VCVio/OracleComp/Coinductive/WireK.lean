@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 import VCVio.OracleComp.Coinductive.DynSystem
 import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+import PolyFun.PFunctor.Dynamical.Game
 
 /-!
 # Probabilistic Wiring: Adversary Strategies Against Stateful Responders
@@ -12,40 +13,53 @@ import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 `ProbResponder spec` is the challenger side of an interactive game presented as a
 coalgebra: a state set together with, for each query, a *joint* subdistribution over
 the answer and the next state — a Mealy machine in the Kleisli category of `SPMF`.
-Wiring one against an adversary `OracleStrategy` closes the query interface and yields
-a Markov chain on the product state space (`wireKStep`, `wireKIterate`);
-`wireKTranscript` additionally records the exchanged queries and answers.
+Unbundled, it is exactly a stateful handler `QueryImpl spec (StateT State SPMF)`
+(`ProbResponder.toQueryImpl` / `ofQueryImpl` are definitional inverses): the bundled
+probabilistic sibling of PolyFun's deterministic Kleisli–Mealy bridge
+`PFunctor.Responder.equivStateHandler`.
+
+Wiring a responder against an adversary `OracleStrategy` is not a hand-rolled
+construction: `wireKStep` / `wireKIterate` are PolyFun's generic eval-wired runs
+`PFunctor.DynSystem.stepWith` / `iterWith` instantiated at `m := SPMF`, driven by the
+responder's stateful handler. The responder state comes first in the product state,
+matching the upstream handler-state-first convention and the challenger-first state of
+`PFunctor.DynSystem.closedGame`; a deterministic responder (`ProbResponder.ofDet`) wires
+to `pure` of the closed-game step (`wireKStep_ofDet`). `wireKTranscript` additionally
+records the exchanged queries and answers — `QueryLog` is VCVio vocabulary, so the
+transcript form lives here rather than upstream.
 
 Memoryless oracles embed as responders with trivial (`ProbResponder.ofHandler`) or
 constant (`ProbResponder.ofHandlerFamily`) state, and the wired run then collapses to
 the existing memoryless runs `OracleStrategy.kleisliStep` / `kleisliIterate`
-(`wireKStep_ofHandler` and companions). The per-run-sampled oracle of a one-shot
-security game is exactly the constant-state case. Genuinely stateful challengers enter
-through `ProbResponder.ofQueryImpl` (from a `QueryImpl` into `StateT σ SPMF`) or
-`ProbResponder.ofStateQueryImpl` (from a `QueryImpl` into `StateT σ ProbComp`, via its
-evaluation distribution): the lazy random oracle (`randomOracleResponder`) is the
-motivating instance, and cached LR encryption oracles fit the same constructor at the
-`CryptoFoundations` layer. The joint answer/state draw is essential for these — the
-cache entry a random oracle stores must be the very answer it returned.
+(`wireKStep_ofHandler` and companions) — the setup-indexed family form of the upstream
+stateless collapses `PFunctor.DynSystem.stepWith_lift` / `iterWith_lift`. The
+per-run-sampled oracle of a one-shot security game is exactly the constant-state case.
+Genuinely stateful challengers enter through `ProbResponder.ofQueryImpl` (from a
+`QueryImpl` into `StateT σ SPMF`) or `ProbResponder.ofStateQueryImpl` (from a
+`QueryImpl` into `StateT σ ProbComp`, via its evaluation distribution): the lazy random
+oracle (`randomOracleResponder`) is the motivating instance, and cached LR encryption
+oracles fit the same constructor at the `CryptoFoundations` layer. The joint
+answer/state draw is essential for these — the cache entry a random oracle stores must
+be the very answer it returned.
 
 ## Categorical view (Spivak–Niu)
 
 A *deterministic* responder is a dynamical system over the internal hom `[p, y]` of
-Spivak–Niu §4.5 (for `p` the interface polynomial `spec.toPFunctor`): its positions
-are the sections of the interface — exactly `OracleHandler spec` — and closing an
-adversary against it is wiring along the evaluation map `eval : [p, y] ⊗ p → y`.
-`wireKStep` keeps that wiring as deterministic combinatorial data and lets the
-*states* advance in the Kleisli category of the commutative monad `SPMF`: one
-synchronized step of the tensor system with the evaluation wiring applied.
-`ProbResponder` is strictly more general than a Kleisli lift of an `[p, y]`-system,
-because the answer and the next state are drawn jointly rather than the state first
-determining a handler. The UC layer's `processSemanticsOracle` is the heavyweight
-sibling of this construction (multi-party, scheduler-driven); this file is the minimal
-two-party core, and neither is derived from the other.
+Spivak–Niu §4.5 (for `p` the interface polynomial `spec.toPFunctor`) — PolyFun's
+`PFunctor.Responder`, which embeds here as the Dirac case `ProbResponder.ofDet`.
+Closing an adversary against a responder is wiring along the evaluation map
+`eval : [p, y] ⊗ p → y`: `wireKStep` keeps that wiring as deterministic combinatorial
+data and lets the *states* advance in the Kleisli category of the commutative monad
+`SPMF` — one synchronized step of the tensor system with the evaluation wiring applied,
+which is precisely the upstream `stepWith`. `ProbResponder` is strictly more general
+than a Kleisli lift of an `[p, y]`-system, because the answer and the next state are
+drawn jointly rather than the state first determining a handler. The UC layer's
+`processSemanticsOracle` is the heavyweight sibling of this construction (multi-party,
+scheduler-driven); this file is the minimal two-party core, and neither is derived from
+the other.
 
 Wired runs of machine adversaries (an `OracleMachine.runK` against a responder rather
-than a memoryless handler) are a deliberate follow-on, driven by the random-oracle-model
-use case.
+than a memoryless handler) live in `VCVio.OracleComp.Coinductive.WiredRun`.
 -/
 
 universe u v
@@ -69,7 +83,9 @@ structure ProbResponder {ι : Type u} (spec : OracleSpec.{u, u} ι) where
 
 namespace ProbResponder
 
-/-- A responder as a stateful query implementation in `StateT State SPMF`. -/
+/-- A responder as a stateful query implementation in `StateT State SPMF`: the
+bundled-to-unbundled direction of the Kleisli–Mealy identification, of which
+`PFunctor.Responder.equivStateHandler` is the deterministic (`Id`) sibling. -/
 def toQueryImpl (R : ProbResponder spec) : QueryImpl spec (StateT R.State SPMF) :=
   fun t s => R.answer s t
 
@@ -100,6 +116,25 @@ noncomputable def ofHandlerFamily {Γ : Type u} (h : Γ → ProbHandler spec) :
 noncomputable def ofHandler (H : ProbHandler spec) : ProbResponder spec :=
   ofHandlerFamily fun _ : PUnit => H
 
+/-- A deterministic responder — PolyFun's `PFunctor.Responder`, a dynamical system over
+the internal hom `spec.toPFunctor ⊸ X` — as a Dirac probabilistic responder: the answer
+and successor state it commits to, with probability one. Wiring against it recovers the
+upstream closed game (`OracleStrategy.wireKStep_ofDet`). -/
+noncomputable def ofDet {σ : Type u} (C : PFunctor.Responder σ spec.toPFunctor) :
+    ProbResponder spec where
+  State := σ
+  answer s t := pure (C.answer s t, C.next s t)
+
+/-- Pull a responder back along an interface lens: translate each query forward through
+the lens, ask the target responder, and pull its answer back through the lens, keeping
+the target's state. This is the challenger side of interface wrapping — dual to
+installing an adversary forward along a lens (`OracleStrategy.reduce`). -/
+noncomputable def pullback {ι' : Type u} {spec' : OracleSpec.{u, u} ι'}
+    (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec') :
+    ProbResponder spec where
+  State := R.State
+  answer s t := (fun q => (w.toFunB t q.1, q.2)) <$> R.answer s (w.toFunA t)
+
 /-- Lift a stateful `ProbComp` query implementation to a probabilistic responder via
 its evaluation distribution, pointwise in the state. This is the bridge along which
 existing stateful challengers (the lazy random oracle, cached LR encryption oracles)
@@ -122,89 +157,138 @@ noncomputable def randomOracleResponder {ι₀ : Type} [DecidableEq ι₀]
 
 namespace OracleStrategy
 
-/-! ## Wired runs -/
+/-! ## Wired runs
+
+`wireKStep` / `wireKIterate` are the upstream eval-wired runs
+`PFunctor.DynSystem.stepWith` / `iterWith` at `m := SPMF`, driven by the responder's
+stateful handler `ProbResponder.toQueryImpl`. The responder state comes first in the
+product, mirroring the upstream handler-state-first convention (and the challenger-first
+state of `PFunctor.DynSystem.closedGame`). Likewise, the memoryless Kleisli runs of
+`VCVio.OracleComp.Coinductive.DynSystem` are the upstream stateless runs at `m := SPMF`:
+the step identification is definitional, the iterate agrees by fuel induction (the two
+equation-compiler recursions do not unify definitionally at a variable fuel). Regression
+guards below keep both identifications tight. -/
+
+example (H : ProbHandler spec) (A : OracleStrategy S spec) (s : S) :
+    kleisliStep H A s = PFunctor.DynSystem.kleisliStep H A s := rfl
+
+example (H : ProbHandler spec) (A : OracleStrategy S spec) (n : ℕ) (s : S) :
+    kleisliIterate H A n s = PFunctor.DynSystem.kleisliIterate H A n s := by
+  induction n generalizing s with
+  | zero => rfl
+  | succ n ih => exact congrArg (kleisliStep H A s >>= ·) (funext ih)
 
 /-- One wired round of an adversary strategy against a stateful responder: the
 responder answers the exposed query (jointly drawing its successor state), and the
-adversary advances along the answer. The wiring itself is deterministic interface
-data; only the states advance stochastically. -/
-noncomputable def wireKStep (A : OracleStrategy S spec) (R : ProbResponder spec)
-    (p : S × R.State) : SPMF (S × R.State) :=
-  (fun q => (A.update p.1 q.1, q.2)) <$> R.answer p.2 (A.expose p.1)
+adversary advances along the answer. This is the upstream stateful-handler step
+`PFunctor.DynSystem.stepWith` at `m := SPMF`: the wiring itself is deterministic
+interface data; only the states advance stochastically. -/
+noncomputable def wireKStep (A : OracleStrategy S spec) (R : ProbResponder spec) :
+    R.State × S → SPMF (R.State × S) :=
+  PFunctor.DynSystem.stepWith R.toQueryImpl A
+
+@[simp] theorem wireKStep_apply (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (p : R.State × S) :
+    wireKStep A R p =
+      (fun q => (q.2, A.update p.2 q.1)) <$> R.answer p.1 (A.expose p.2) := rfl
 
 /-- The `n`-round wired run: the Markov chain on the product state space generated by
-`wireKStep`. -/
+`wireKStep` — the upstream `PFunctor.DynSystem.iterWith` at `m := SPMF`. -/
 noncomputable def wireKIterate (A : OracleStrategy S spec) (R : ProbResponder spec) :
-    ℕ → S × R.State → SPMF (S × R.State)
-  | 0, p => pure p
-  | n + 1, p => wireKStep A R p >>= wireKIterate A R n
+    ℕ → R.State × S → SPMF (R.State × S) :=
+  PFunctor.DynSystem.iterWith R.toQueryImpl A
+
+@[simp] theorem wireKIterate_zero (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (p : R.State × S) : wireKIterate A R 0 p = pure p := rfl
+
+theorem wireKIterate_succ (A : OracleStrategy S spec) (R : ProbResponder spec) (n : ℕ)
+    (p : R.State × S) :
+    wireKIterate A R (n + 1) p = wireKStep A R p >>= wireKIterate A R n := rfl
 
 /-- The joint subdistribution over the length-`n` wired transcript and the final
-product state. -/
+product state (responder state first, matching `wireKStep`). `QueryLog` is VCVio
+vocabulary, so the transcript-recording run lives here rather than upstream. -/
 noncomputable def wireKTranscript (A : OracleStrategy S spec) (R : ProbResponder spec) :
-    S × R.State → ℕ → SPMF (QueryLog spec × (S × R.State))
+    R.State × S → ℕ → SPMF (QueryLog spec × (R.State × S))
   | p, 0 => pure ([], p)
   | p, n + 1 => do
-      let q ← R.answer p.2 (A.expose p.1)
-      let rest ← wireKTranscript A R (A.update p.1 q.1, q.2) n
-      pure (⟨A.expose p.1, q.1⟩ :: rest.1, rest.2)
+      let q ← R.answer p.1 (A.expose p.2)
+      let rest ← wireKTranscript A R (q.2, A.update p.2 q.1) n
+      pure (⟨A.expose p.2, q.1⟩ :: rest.1, rest.2)
 
 /-- The subdistribution over length-`n` wired transcripts. -/
 noncomputable def wireKTranscriptDist (A : OracleStrategy S spec) (R : ProbResponder spec)
-    (p : S × R.State) (n : ℕ) : SPMF (QueryLog spec) :=
+    (p : R.State × S) (n : ℕ) : SPMF (QueryLog spec) :=
   Prod.fst <$> wireKTranscript A R p n
+
+/-! ## Deterministic recovery
+
+Against the Dirac lift of a deterministic responder, one wired step is `pure` of the
+upstream closed-game step: the state pairs agree on the nose because both put the
+responder/challenger state first. -/
+
+/-- Wiring against a deterministic responder is the (Dirac lift of the) upstream closed
+game `PFunctor.DynSystem.closedGame`. -/
+@[simp] theorem wireKStep_ofDet (A : OracleStrategy S spec) {σ : Type u}
+    (C : PFunctor.Responder σ spec.toPFunctor) (p : σ × S) :
+    wireKStep A (.ofDet C) p = pure ((PFunctor.DynSystem.closedGame C A).step p) := by
+  obtain ⟨r, s⟩ := p
+  simp [ProbResponder.ofDet]
 
 /-! ## Memoryless recovery
 
 Against a constant-state responder the wired run is the existing memoryless Kleisli
-run against the selected handler, with the setup carried along unchanged. -/
+run against the selected handler, with the setup carried along unchanged — the
+setup-indexed family form of the upstream `PFunctor.DynSystem.stepWith_lift` /
+`iterWith_lift` collapses (the family handler is state-dependent, so it is not literally
+a `StateT.lift`; the same induction applies). -/
 
 @[simp] theorem wireKStep_ofHandlerFamily {Γ : Type u} (h : Γ → ProbHandler spec)
-    (A : OracleStrategy S spec) (p : S × Γ) :
+    (A : OracleStrategy S spec) (p : Γ × S) :
     wireKStep A (ProbResponder.ofHandlerFamily h) p =
-      (fun s' => (s', p.2)) <$> kleisliStep (h p.2) A p.1 := by
-  simp only [wireKStep, ProbResponder.ofHandlerFamily, kleisliStep, Functor.map_map]
+      (fun s' => (p.1, s')) <$> kleisliStep (h p.1) A p.2 := by
+  simp only [wireKStep_apply, ProbResponder.ofHandlerFamily, kleisliStep, Functor.map_map]
   rfl
 
 @[simp] theorem wireKIterate_ofHandlerFamily {Γ : Type u} (h : Γ → ProbHandler spec)
-    (A : OracleStrategy S spec) (n : ℕ) (p : S × Γ) :
+    (A : OracleStrategy S spec) (n : ℕ) (p : Γ × S) :
     wireKIterate A (ProbResponder.ofHandlerFamily h) n p =
-      (fun s' => (s', p.2)) <$> kleisliIterate (h p.2) A n p.1 := by
+      (fun s' => (p.1, s')) <$> kleisliIterate (h p.1) A n p.2 := by
   induction n generalizing p with
   | zero =>
-    simp only [wireKIterate, kleisliIterate, map_pure]
+    simp only [wireKIterate_zero, kleisliIterate, map_pure]
     rfl
   | succ n ih =>
     calc wireKIterate A (ProbResponder.ofHandlerFamily h) (n + 1) p
-        = ((fun s' => (s', p.2)) <$> kleisliStep (h p.2) A p.1) >>=
+        = ((fun s' => (p.1, s')) <$> kleisliStep (h p.1) A p.2) >>=
             wireKIterate A (ProbResponder.ofHandlerFamily h) n := by
-          rw [wireKIterate, wireKStep_ofHandlerFamily]
+          rw [wireKIterate_succ, wireKStep_ofHandlerFamily]
           rfl
-      _ = kleisliStep (h p.2) A p.1 >>= fun s' =>
-            wireKIterate A (ProbResponder.ofHandlerFamily h) n (s', p.2) := by
+      _ = kleisliStep (h p.1) A p.2 >>= fun s' =>
+            wireKIterate A (ProbResponder.ofHandlerFamily h) n (p.1, s') := by
           rw [map_eq_bind_pure_comp, bind_assoc]
-          exact congrArg (kleisliStep (h p.2) A p.1 >>= ·)
+          exact congrArg (kleisliStep (h p.1) A p.2 >>= ·)
             (funext fun s' => by rw [Function.comp_apply, pure_bind]; rfl)
-      _ = kleisliStep (h p.2) A p.1 >>= fun s' =>
-            (fun s'' => (s'', p.2)) <$> kleisliIterate (h p.2) A n s' :=
-          congrArg (kleisliStep (h p.2) A p.1 >>= ·)
-            (funext fun s' => ih (s', p.2))
-      _ = (fun s' => (s', p.2)) <$> kleisliIterate (h p.2) A (n + 1) p.1 := by
+      _ = kleisliStep (h p.1) A p.2 >>= fun s' =>
+            (fun s'' => (p.1, s'')) <$> kleisliIterate (h p.1) A n s' :=
+          congrArg (kleisliStep (h p.1) A p.2 >>= ·)
+            (funext fun s' => ih (p.1, s'))
+      _ = (fun s' => (p.1, s')) <$> kleisliIterate (h p.1) A (n + 1) p.2 := by
           rw [kleisliIterate]
           simp only [map_eq_bind_pure_comp, bind_assoc]
 
 /-- Against a memoryless oracle the wired step is the memoryless Kleisli step. -/
 @[simp] theorem wireKStep_ofHandler (H : ProbHandler spec) (A : OracleStrategy S spec)
-    (p : S × PUnit) :
+    (p : PUnit × S) :
     wireKStep A (ProbResponder.ofHandler H) p =
-      (fun s' => (s', p.2)) <$> kleisliStep H A p.1 :=
+      (fun s' => (p.1, s')) <$> kleisliStep H A p.2 :=
   wireKStep_ofHandlerFamily (fun _ => H) A p
 
 /-- Against a memoryless oracle the wired run is the memoryless Kleisli run. -/
 @[simp] theorem wireKIterate_ofHandler (H : ProbHandler spec) (A : OracleStrategy S spec)
-    (n : ℕ) (p : S × PUnit) :
+    (n : ℕ) (p : PUnit × S) :
     wireKIterate A (ProbResponder.ofHandler H) n p =
-      (fun s' => (s', p.2)) <$> kleisliIterate H A n p.1 :=
+      (fun s' => (p.1, s')) <$> kleisliIterate H A n p.2 :=
   wireKIterate_ofHandlerFamily (fun _ => H) A n p
 
 end OracleStrategy

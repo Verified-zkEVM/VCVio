@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
 import VCVio.CryptoFoundations.Asymptotics.PolyTime
+import VCVio.OracleComp.Coinductive.WireK
 
 /-!
 # Single-Phase Games as Stateful Kleisli Challengers
@@ -50,10 +51,26 @@ def QueryImpl.stateless {spec : OracleSpec ι} {m : Type → Type} [Monad m] (σ
     (H : QueryImpl spec m) : QueryImpl spec (StateT σ m) :=
   fun t => StateT.lift (H t)
 
+omit [DecidableEq ι] in
 @[simp] theorem QueryImpl.stateless_apply {spec : OracleSpec ι} {m : Type → Type}
     [Monad m] (σ : Type) (H : QueryImpl spec m) (t : spec.Domain) :
     QueryImpl.stateless σ H t = StateT.lift (H t) := rfl
 
+omit [DecidableEq ι] in
+/-- Bundling a fixed memoryless oracle as a constant-state responder
+(`ProbResponder.ofHandlerFamily`) and reading back its stateful handler is exactly the
+memoryless embedding `QueryImpl.stateless`: the two presentations of a stateless oracle
+in a challenger's oracle slot agree. -/
+@[simp] theorem ProbResponder.toQueryImpl_ofHandlerFamily_const {spec : OracleSpec ι}
+    {σ : Type} (H : ProbHandler spec) :
+    (ProbResponder.ofHandlerFamily fun _ : σ => H).toQueryImpl =
+      QueryImpl.stateless σ H := by
+  funext t s
+  simp only [ProbResponder.toQueryImpl, ProbResponder.ofHandlerFamily,
+    QueryImpl.stateless_apply, StateT.lift, map_eq_bind_pure_comp]
+  rfl
+
+omit [DecidableEq ι] in
 /-- `simulateQ` through the memoryless embedding threads the state unchanged: running
 against a stateless oracle from state `s` is the plain simulation paired with `s`. -/
 @[simp] theorem OracleComp.simulateQ_stateless_run {spec : OracleSpec ι}
@@ -63,12 +80,10 @@ against a stateless oracle from state `s` is the plain simulation paired with `s
       = (fun r => (r, s)) <$> simulateQ H oa := by
   induction oa generalizing s with
   | pure x =>
-    show (simulateQ (QueryImpl.stateless σ H) (pure x)).run s
+    change (simulateQ (QueryImpl.stateless σ H) (pure x)).run s
       = (fun r => (r, s)) <$> simulateQ H (pure x)
     simp only [simulateQ_pure, StateT.run_pure, map_pure]
   | queryBind t k ih =>
-    show (simulateQ (QueryImpl.stateless σ H) (OracleComp.queryBind t k)).run s
-      = (fun r => (r, s)) <$> simulateQ H (OracleComp.queryBind t k)
     rw [OracleComp.simulateQ_queryBind, OracleComp.simulateQ_queryBind, map_bind,
       StateT.run_bind]
     simp only [QueryImpl.stateless_apply, StateT.run_lift, bind_assoc, pure_bind]
