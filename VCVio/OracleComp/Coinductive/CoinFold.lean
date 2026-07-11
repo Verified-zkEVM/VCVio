@@ -33,6 +33,7 @@ work.
 -/
 
 open OracleSpec OracleComp Computability
+open scoped OracleMachine
 
 namespace OracleComp
 
@@ -122,8 +123,8 @@ theorem coinFoldMachine_isSimulation (rounds : ℕ) (init₀ : σ) :
       simp [coinFoldMachine, hv]
 
 theorem coinFoldMachine_implements (rounds : ℕ) (init₀ : σ) :
-    (coinFoldMachine step readout rounds init₀).Implements
-      (fun _ : Unit => coinFoldProg step readout rounds init₀) rounds :=
+    coinFoldMachine step readout rounds init₀ ⊨[rounds]
+      fun _ : Unit => coinFoldProg step readout rounds init₀ :=
   OracleMachine.implements_of_isSimulation
     (coinFoldMachine_isSimulation step readout rounds init₀)
     (fun _ => rfl) (fun _ => isTotalQueryBound_coinFoldProg step readout rounds init₀)
@@ -265,8 +266,8 @@ noncomputable def coinFoldWitness :
       (fun n (_ : Unit) => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) where
   A := coinFoldAdversary step readout init₀ rnd steps hrnd st eβ Sc hcard
   implements n := by
-    show (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).Implements
-      (fun _ => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) (steps.eval n)
+    show coinFoldMachine (step n) (readout n) (rnd n) (init₀ n) ⊨[steps.eval n]
+      fun _ => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)
     rw [← hrnd n]
     exact coinFoldMachine_implements (step n) (readout n) (rnd n) (init₀ n)
   queryBound n _ := (isTotalQueryBound_coinFoldProg (step n) (readout n) (rnd n)
@@ -332,8 +333,8 @@ noncomputable def coinFoldWitnessOfWitnesses :
   A := coinFoldAdversaryOfWitnesses step readout init₀ rnd steps st eβ
     initF exposeF updateF outputF
   implements n := by
-    show (coinFoldMachine (step n) (readout n) (rnd n) (init₀ n)).Implements
-      (fun _ => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) (steps.eval n)
+    show coinFoldMachine (step n) (readout n) (rnd n) (init₀ n) ⊨[steps.eval n]
+      fun _ => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)
     rw [← hrnd n]
     exact coinFoldMachine_implements (step n) (readout n) (rnd n) (init₀ n)
   queryBound n _ := (isTotalQueryBound_coinFoldProg (step n) (readout n) (rnd n)

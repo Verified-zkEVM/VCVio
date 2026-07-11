@@ -251,12 +251,15 @@ def Implements (D : MachineAdversary bd)
     (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) : Prop :=
   ∀ n, (D.M n).Implements (oa n) (D.steps.eval n)
 
+@[inherit_doc Implements]
+scoped notation:50 D " ⊨ " oa => MachineAdversary.Implements D oa
+
 /-- **Master transfer equation**: the run of an implementing adversary computes the
 program's `simulateQ` semantics, in every lawful monad. Game-level advantage transfers
 — including against stateful challenger oracles at `m := StateT σ SPMF` — are
 instances. -/
 theorem exec_eq_of_implements {D : MachineAdversary bd}
-    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D.Implements oa)
+    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D ⊨ oa)
     (n : ℕ) {m : Type → Type} [Monad m] [LawfulMonad m]
     (H : QueryImpl (spec n) m) (x : α n) :
     D.exec n H x = some <$> simulateQ H (oa n x) :=
@@ -266,12 +269,14 @@ theorem exec_eq_of_implements {D : MachineAdversary bd}
 an unresolved readout. Probabilistic steadiness is a consequence of the implements
 equation (`OracleMachine.Implements.runK_none_eq_zero`), not an extra field. -/
 theorem exec_none_eq_zero {D : MachineAdversary bd}
-    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D.Implements oa)
+    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D ⊨ oa)
     (n : ℕ) (H : ProbHandler (spec n)) (x : α n) :
     D.exec n H x none = 0 :=
   (h n).runK_none_eq_zero H x
 
 end MachineAdversary
+
+open scoped MachineAdversary
 
 /-! ## The polynomial-time certificate and predicate -/
 
@@ -301,7 +306,7 @@ structure PolyTimeWitness {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ →
   /-- The machine adversary. -/
   A : MachineAdversary bd
   /-- The adversary implements the program family within its round budget. -/
-  implements : A.Implements oa
+  implements : A ⊨ oa
   /-- The program family syntactically respects the round budget. -/
   queryBound : ∀ n x, OracleComp.IsTotalQueryBound (oa n x) (A.steps.eval n)
 

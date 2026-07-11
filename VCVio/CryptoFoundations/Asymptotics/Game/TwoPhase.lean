@@ -32,6 +32,7 @@ the former; instantiators fold it into the phase-one output and phase-two input 
 -/
 
 open OracleComp OracleSpec Computability
+open scoped MachineAdversary
 
 variable {ι : Type} [DecidableEq ι]
 
@@ -158,7 +159,7 @@ theorem advantage_toMachineGame_eq (G : Challenger₂ spec α₁ β₁ α₂ β�
     {D₁ : MachineAdversary bd₁} {D₂ : MachineAdversary bd₂}
     {oa₁ : (n : ℕ) → α₁ n → OracleComp (spec n) (β₁ n)}
     {oa₂ : (n : ℕ) → α₂ n → OracleComp (spec n) (β₂ n)}
-    (h₁ : D₁.Implements oa₁) (h₂ : D₂.Implements oa₂) (n : ℕ) :
+    (h₁ : D₁ ⊨ oa₁) (h₂ : D₂ ⊨ oa₂) (n : ℕ) :
     (G.toMachineGame bd₁ bd₂).advantage (D₁, D₂) n
       = G.toProgGame.advantage (oa₁, oa₂) n := by
   refine congrArg (fun p : SPMF Bool => p true) (bind_congr fun sx => ?_)

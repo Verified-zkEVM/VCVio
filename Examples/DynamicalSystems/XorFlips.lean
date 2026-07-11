@@ -30,6 +30,7 @@ boundaries `BoundaryData.coin BitEncFam.unit BitEncFam.bool`:
 -/
 
 open OracleSpec OracleComp Computability
+open scoped MachineAdversary
 
 namespace DynSystemExamples
 
@@ -87,7 +88,7 @@ noncomputable def xorFoldWitness :
 
 /-- The bundled XOR adversary implements the `n`-flip program family. -/
 theorem xorFoldAdversary_implements :
-    xorFoldAdversary.Implements fun n (_ : Unit) => xorProg n false := by
+    xorFoldAdversary ⊨ fun n (_ : Unit) => xorProg n false := by
   rw [show (fun n (_ : Unit) => xorProg n false)
       = fun n (_ : Unit) => OracleComp.coinFoldProg (fun a _ b => xor a b) id n false from
     funext fun n => funext fun _ => xorProg_eq_coinFoldProg n false]

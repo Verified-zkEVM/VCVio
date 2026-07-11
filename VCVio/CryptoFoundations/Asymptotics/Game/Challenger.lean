@@ -36,6 +36,7 @@ keeping the single-phase former strictly more general than an unstated one-shot 
 -/
 
 open OracleComp OracleSpec Computability
+open scoped MachineAdversary
 
 universe u v
 
@@ -133,7 +134,7 @@ available precisely because `OracleMachine.Implements` is monad-parametric. -/
 theorem advantage_toMachineGame_eq (G : Challenger spec α β)
     {bd : BoundaryData spec α β} {D : MachineAdversary bd}
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
-    (h : D.Implements oa) (n : ℕ) :
+    (h : D ⊨ oa) (n : ℕ) :
     (G.toMachineGame bd).advantage D n = G.toProgGame.advantage oa n := by
   refine congrArg (fun p : SPMF Bool => p true) (bind_congr fun sx => ?_)
   rw [MachineAdversary.exec_eq_of_implements h]

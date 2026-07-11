@@ -310,7 +310,7 @@ def ImplementsAE (oa : α → OracleComp spec β) : Prop :=
 /-- Fuelled implementation implies limit implementation: an implementing run has no
 unresolved mass, so the chain is already constant at its fuel. -/
 theorem Implements.implementsAE {M : OracleMachine spec α β}
-    {oa : α → OracleComp spec β} {k : ℕ} (h : M.Implements oa k) :
+    {oa : α → OracleComp spec β} {k : ℕ} (h : M ⊨[k] oa) :
     M.ImplementsAE oa := fun H x => by
   rw [M.runLimit_eq_runKT_of_apply_none_eq_zero H (h.runK_none_eq_zero H x),
     runKT_eq_joinOption_runK, h H x, SPMF.joinOption_map_some]
@@ -348,7 +348,7 @@ theorem ImplementsWithin.mono {M : OracleMachine spec α β}
 
 /-- Exact fuelled implementation is approximate implementation with budget zero. -/
 theorem Implements.implementsWithin {M : OracleMachine spec α β}
-    {oa : α → OracleComp spec β} {k : ℕ} (h : M.Implements oa k) :
+    {oa : α → OracleComp spec β} {k : ℕ} (h : M ⊨[k] oa) :
     M.ImplementsWithin oa k 0 := fun H x => by
   rw [runKT_eq_joinOption_runK, h H x, SPMF.joinOption_map_some]
   exact le_of_eq (SPMF.etvDist_self _)

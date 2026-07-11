@@ -28,6 +28,7 @@ Concrete demonstrations of `VCVio.OracleComp.Coinductive.Machine` and
 -/
 
 open OracleSpec OracleComp Computability
+open scoped OracleMachine
 
 namespace DynSystemExamples
 
@@ -68,7 +69,7 @@ theorem coinOnce_isSimulation : coinOnce.IsSimulation CoinRel where
 
 /-- `coinOnce` implements the one-query program at fuel `1`. -/
 theorem coinOnce_implements :
-    coinOnce.Implements (fun _ : Unit => coinSpec.query ()) 1 :=
+    coinOnce ⊨[1] fun _ : Unit => coinSpec.query () :=
   OracleMachine.implements_of_isSimulation coinOnce_isSimulation
     (fun _ => CoinRel.start) (fun _ => ⟨Nat.one_pos, fun _ => trivial⟩)
 
@@ -151,7 +152,7 @@ theorem isTotalQueryBound_adaptProg : IsTotalQueryBound adaptProg 2 :=
   ⟨by norm_num, fun b => by cases b <;> exact ⟨by norm_num, fun _ => trivial⟩⟩
 
 /-- `adaptCoins` implements the adaptive program at fuel `2`. -/
-theorem adaptCoins_implements : adaptCoins.Implements (fun _ : Unit => adaptProg) 2 :=
+theorem adaptCoins_implements : adaptCoins ⊨[2] fun _ : Unit => adaptProg :=
   OracleMachine.implements_of_isSimulation adaptCoins_isSimulation
     (fun _ => AdaptRel.start) (fun _ => isTotalQueryBound_adaptProg)
 
@@ -194,7 +195,7 @@ theorem isTotalQueryBound_prog : IsTotalQueryBound prog 2 :=
   ⟨by norm_num, fun _ => ⟨by norm_num, fun _ => trivial⟩⟩
 
 /-- The program-as-machine implements `prog` at its query bound... -/
-example : (toMachine fun _ : Unit => prog).Implements (fun _ => prog) 2 :=
+example : (toMachine fun _ : Unit => prog) ⊨[2] fun _ => prog :=
   toMachine_implements fun _ => isTotalQueryBound_prog
 
 /-- ...and is steady within it, against every handler. -/

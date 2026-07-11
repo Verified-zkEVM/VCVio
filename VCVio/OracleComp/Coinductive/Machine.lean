@@ -34,7 +34,8 @@ The run/unrolling theory is inherited from PolyFun rather than duplicated:
 
 Key definitions:
 
-* `OracleMachine.Implements M oa k`: the run of `M` at fuel `k` agrees with `simulateQ` of
+* `OracleMachine.Implements M oa k` (scoped notation `M ⊨[k] oa`): the run of `M` at fuel
+  `k` agrees with `simulateQ` of
   `oa` against every query implementation in every lawful monad. The single-monad SPMF
   form (agreement against every `ProbHandler`) already pins down distribution semantics,
   but the monad-parametric form is what stateful challengers consume (`m := StateT σ SPMF`
@@ -242,6 +243,9 @@ def Implements (oa : α → OracleComp spec β) (k : ℕ) : Prop :=
   ∀ ⦃m : Type u → Type u⦄ [Monad m] [LawfulMonad m] (H : QueryImpl spec m) (x : α),
     M.runK H k (M.init x) = some <$> simulateQ H (oa x)
 
+@[inherit_doc Implements]
+scoped notation:50 M " ⊨[" k "] " oa => OracleMachine.Implements M oa k
+
 /-- The deterministic form of the implements relation: the early-stopping run against
 every deterministic handler computes `evalWithAnswerFn`. Weaker than `Implements`; see
 `Implements.implementsDet`. -/
@@ -251,7 +255,7 @@ def ImplementsDet (oa : α → OracleComp spec β) (k : ℕ) : Prop :=
 
 /-- Monad-parametric agreement specializes to deterministic agreement at `m := Id`. -/
 theorem Implements.implementsDet {M : OracleMachine spec α β}
-    {oa : α → OracleComp spec β} {k : ℕ} (h : M.Implements oa k) :
+    {oa : α → OracleComp spec β} {k : ℕ} (h : M ⊨[k] oa) :
     M.ImplementsDet oa k := by
   intro hd x
   have key := h (m := Id) hd.toQueryImpl x
@@ -263,7 +267,7 @@ steadiness at `k`: the `steady` field of a `PolyTimeAdversary` is *derivable* fo
 implementing bundle — it keeps standalone bundles self-certifying but adds no strength
 beyond the implements equation. -/
 theorem Implements.steadyBy {M : OracleMachine spec α β} {oa : α → OracleComp spec β}
-    {k : ℕ} (hst : M.StableOutput) (h : M.Implements oa k) (hd : OracleHandler spec)
+    {k : ℕ} (hst : M.StableOutput) (h : M ⊨[k] oa) (hd : OracleHandler spec)
     (x : α) : M.SteadyBy hd (M.init x) k := by
   rw [steadyBy_iff_isSome_runD hst, h.implementsDet hd x]
   rfl
@@ -272,7 +276,7 @@ theorem Implements.steadyBy {M : OracleMachine spec α β} {oa : α → OracleCo
 probabilistic run puts no mass on an unresolved readout. Probabilistic steadiness is
 thus a consequence of `Implements`, not an extra assumption. -/
 theorem Implements.runK_none_eq_zero {M : OracleMachine spec α β}
-    {oa : α → OracleComp spec β} {k : ℕ} (h : M.Implements oa k)
+    {oa : α → OracleComp spec β} {k : ℕ} (h : M ⊨[k] oa)
     (H : ProbHandler spec) (x : α) : M.runK H k (M.init x) none = 0 := by
   rw [h H x, map_eq_bind_pure_comp, SPMF.bind_apply_eq_tsum]
   refine ENNReal.tsum_eq_zero.mpr fun b => ?_
@@ -344,7 +348,7 @@ every lawful monad at once. -/
 theorem implements_of_isSimulation {M : OracleMachine spec α β}
     {oa : α → OracleComp spec β} {k : ℕ} {R : M.State → OracleComp spec β → Prop}
     (hsim : M.IsSimulation R) (hinit : ∀ x, R (M.init x) (oa x))
-    (hqb : ∀ x, OracleComp.IsTotalQueryBound (oa x) k) : M.Implements oa k :=
+    (hqb : ∀ x, OracleComp.IsTotalQueryBound (oa x) k) : M ⊨[k] oa :=
   fun _m _ _ H x => hsim.runK_eq H (oa x) (M.init x) k k (hinit x) (hqb x) le_rfl
 
 end OracleMachine
@@ -439,10 +443,11 @@ theorem toMachine_isSimulation (oa : α → OracleComp spec β) :
   expose_eq := by rintro s t k rfl; rfl
   update_rel := by rintro s t k rfl r; rfl
 
+open scoped OracleMachine in
 /-- **Program-to-machine bridge (semantics).** A query-bounded program family is
 implemented by its program-as-machine at the bound. -/
 theorem toMachine_implements {oa : α → OracleComp spec β} {k : ℕ}
-    (hqb : ∀ x, IsTotalQueryBound (oa x) k) : OracleMachine.Implements (toMachine oa) oa k :=
+    (hqb : ∀ x, IsTotalQueryBound (oa x) k) : toMachine oa ⊨[k] oa :=
   OracleMachine.implements_of_isSimulation (toMachine_isSimulation oa) (fun _ => rfl) hqb
 
 omit [Inhabited ι] in

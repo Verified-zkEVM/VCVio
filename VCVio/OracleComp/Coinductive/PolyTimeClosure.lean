@@ -134,8 +134,8 @@ run is unchanged except that it starts from `init (f n x)`. -/
 theorem precomp_implements {D : MachineAdversary bd} (f : (n : ℕ) → γ n → α n)
     [∀ n, Fintype (γ n)] (eIn' : BitEncFam γ) (cardIn : Polynomial ℕ)
     (hcard : ∀ n, Fintype.card (γ n) ≤ cardIn.eval n)
-    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D.Implements oa) :
-    (D.precomp f eIn' cardIn hcard).Implements fun n x => oa n (f n x) := by
+    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D ⊨ oa) :
+    D.precomp f eIn' cardIn hcard ⊨ fun n x => oa n (f n x) := by
   intro n m _ _ H x
   rw [precomp_steps, precomp_M]
   exact (OracleMachine.runK_setInit (D.M n) _ H _ _).trans (h n H (f n x))
@@ -180,8 +180,8 @@ theorem mapComp_implements {D : MachineAdversary bd} (g : (n : ℕ) → β n →
     (eOut' : BitEncFam γ)
     (wit : EncPolyTimeFam (bd.eOut.option).enc (eOut'.option).enc
       (fun n => Option.map (g n)))
-    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D.Implements oa) :
-    (D.mapComp g eOut' wit).Implements fun n x => g n <$> oa n x := by
+    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D ⊨ oa) :
+    D.mapComp g eOut' wit ⊨ fun n x => g n <$> oa n x := by
   intro n m _ _ H x
   rw [mapComp_steps, mapComp_M, OracleMachine.runK_setOutput, h n H x]
   simp [simulateQ_map, Functor.map_map]

@@ -35,7 +35,7 @@ namespace OracleMachine
 identity query implementation in `m := OracleComp spec`, says the machine's unrolling
 *is* the program (up to the `some` resolution layer). -/
 theorem Implements.toComp_eq {M : OracleMachine spec α β} {oa : α → OracleComp spec β}
-    {k : ℕ} (h : M.Implements oa k) (x : α) :
+    {k : ℕ} (h : M ⊨[k] oa) (x : α) :
     M.toComp k (M.init x) = some <$> oa x := by
   have key := h (QueryImpl.id' spec) x
   rwa [show M.runK (QueryImpl.id' spec) k (M.init x)
@@ -45,7 +45,7 @@ theorem Implements.toComp_eq {M : OracleMachine spec α β} {oa : α → OracleC
 /-- An implementing machine carries the syntactic resolution certificate: every answer
 path of the `k`-query unrolling reads out. -/
 theorem Implements.resolvesIn {M : OracleMachine spec α β} {oa : α → OracleComp spec β}
-    {k : ℕ} (h : M.Implements oa k) (x : α) :
+    {k : ℕ} (h : M ⊨[k] oa) (x : α) :
     PointedMachine.ResolvesIn M k (M.init x) :=
   PointedMachine.resolvesIn_of_toComp_eq_map_some (h.toComp_eq x)
 
@@ -57,11 +57,11 @@ semantic half of `IsPolyTime.bind`; the Turing-machine halves (state encoding an
 witnesses for the `⊕`-state machine) are supplied separately. -/
 theorem Implements.seqComp {M₁ : OracleMachine spec α mid} {M₂ : OracleMachine spec mid β}
     {oa : α → OracleComp spec mid} {ob : mid → OracleComp spec β} {k₁ k₂ : ℕ}
-    (h₁ : M₁.Implements oa k₁) (h₂ : M₂.Implements ob k₂) :
-    OracleMachine.Implements (M₁.seqComp M₂) (fun x => oa x >>= ob) (k₁ + k₂) := by
+    (h₁ : M₁ ⊨[k₁] oa) (h₂ : M₂ ⊨[k₂] ob) :
+    M₁ ⨟ M₂ ⊨[k₁ + k₂] fun x => oa x >>= ob := by
   intro m _ _ H x
-  rw [show OracleMachine.runK (M₁.seqComp M₂) H (k₁ + k₂) ((M₁.seqComp M₂).init x)
-      = (M₁.seqComp M₂).runWith H (k₁ + k₂) ((M₁.seqComp M₂).init x) from rfl,
+  rw [show OracleMachine.runK (M₁ ⨟ M₂) H (k₁ + k₂) ((M₁ ⨟ M₂).init x)
+      = (M₁ ⨟ M₂).runWith H (k₁ + k₂) ((M₁ ⨟ M₂).init x) from rfl,
     PointedMachine.runWith_seqComp_init M₁ M₂ H k₂ x (h₁.resolvesIn x)
       (fun y => h₂.resolvesIn y),
     show M₁.runWith H k₁ (M₁.init x) = M₁.runK H k₁ (M₁.init x) from rfl,
