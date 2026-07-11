@@ -25,7 +25,7 @@
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "4a47c27fa960590b104df117479f3cb6f73cc0b4",
+   "rev": "0e11dcf85dd5fbb362bf6a6cafaba5c476ed9333",
    "name": "loom2",
    "manifestFile": "lake-manifest.json",
    "inputRev": "lean-4.31",
