@@ -3,6 +3,7 @@ import ToMathlib.Combinatorics.FinPairs
 import ToMathlib.Computability.BitEncoding
 import ToMathlib.Computability.CslibPolyTime
 import ToMathlib.Computability.Encoding
+import ToMathlib.Computability.MachineCombinators
 import ToMathlib.Computability.PolyTimeTM
 import ToMathlib.Control.AlternativeMonad
 import ToMathlib.Control.Lawful.MonadControl

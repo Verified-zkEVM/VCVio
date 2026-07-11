@@ -139,16 +139,16 @@ Sequential composition is the one closure every nontrivial reduction needs
 (`eavSecure_prgEnc`'s `hppt`, ElGamal-style reductions). Machine-level scoping:
 
 * Composite machine `seqComp` with state `σ₁ ⊕ σ₂` and eager handoff; `stable`/
-  `steady`/`encState` (via `finEncodingSum`) are routine; the `Implements`-splitting
-  needs a `runK` fuel-monotonicity lemma via path-steadiness (no TM content).
-* The TM witnesses are the hard part. Two discoveries change the economics:
-  **fused witnesses** (`initOutTM`/`updateOutTM` computing `(output s', s')` as one
-  function) remove the fanout obstruction entirely; and re-cutting the deferred
-  `EncPolyTime.sumElim` against a `Γ = Bool` wrapping convention replaces the
-  length-changing one-hot transducer with a small reusable Bool-machine toolkit
-  (shift, dispatch, fixed-width recode). The two `sumElim` sorries in
-  `ToMathlib/Computability/PolyTimeTM.lean` should be retired by interface
-  replacement, not proven as typed.
+  `steady` are routine; the semantic half is `OracleMachine.Implements.seqComp`
+  (`VCVio/OracleComp/Coinductive/SeqComp.lean`), with resolution certificates
+  extracted from the implements equations themselves.
+* The TM witnesses are the hard part. The interface replacement has happened:
+  the old boolify-typed `EncPolyTime.sumElim` sorries are gone, and the declared
+  frontier is `ToMathlib/Computability/MachineCombinators.lean` — six raw-encoding
+  `EncPolyTimeFam` base combinators (`sumElim`, `keep`, `takeFix`, `dropFix`,
+  `underPrefix`, `optionUnder`), each a self-contained single-tape base-machine
+  ticket over the tag-bit `StrEncFam.sum` / fixed-left `BitEncFam.pairFix` shapes,
+  with the injection witnesses (`inlWit`/`inrWit`) derived on top.
 
 ## The open architecture decision (deferred to discussion)
 
