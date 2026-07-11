@@ -480,7 +480,7 @@ theorem sign_usesAtMostRhoCardOmegaQueries
         (fischlinSearchAux_eq_withUnitCost
           σ (runtime := runtime) (pk := pk) (sk := sk) (sc := (commits i).2)
           (msg := msg) (comList := comList) (i := i)
-          (challenges := FinEnum.toList Chal) (best := none)) using 1 ;
+          (challenges := FinEnum.toList Chal) (best := none)) using 1;
         rfl
     simpa [HasQuery.UsesAtMostQueries, hsign] using this
   simpa [Nat.zero_add] using
@@ -596,7 +596,7 @@ theorem sign_usesWeightedQueryCostAtMost
         (fischlinSearchAux_eq_withAddCost
           σ (runtime := runtime) (pk := pk) (sk := sk) (sc := (commits i).2)
           (msg := msg) (comList := comList) (i := i)
-          (challenges := FinEnum.toList Chal) (best := none) (costFn := costFn)) using 1 ;
+          (challenges := FinEnum.toList Chal) (best := none) (costFn := costFn)) using 1;
         rfl
     simpa [HasQuery.UsesCostAtMost, hsign] using this
   simpa [zero_add] using
