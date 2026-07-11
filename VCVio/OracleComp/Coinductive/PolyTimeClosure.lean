@@ -14,9 +14,11 @@ precomposition and output maps, at pinned canonical boundaries:
 * `MachineAdversary.precomp` / `IsPolyTime.precomp`: precompose with a pure input map
   on per-parameter input types of polynomially bounded cardinality. The machine family
   is reused with only its initialization changed to `init ∘ f`, witnessed by a finite
-  table; the cardinality bound is what keeps the table within the advice budget —
-  precomposition on a superpolynomially large input type (e.g. bitstring ciphertexts)
-  is *not* closed and needs a real projection machine.
+  table; the cardinality bound is what keeps the table within the advice budget.
+* `MachineAdversary.precompComp` / `IsPolyTime.precompComp`: precompose with a pure
+  input map carrying its **own machine witness** between the canonical input encodings
+  — the unbounded-input sibling, for maps on superpolynomially large types (bitstring
+  glue, projections) that a finite table can never certify.
 * `MachineAdversary.mapComp`: post-compose the readout with a supplied uniform machine
   family for `Option.map g` — the general engine; all time and size accounting is
   `Computability.EncPolyTimeFam.comp`.
@@ -140,6 +142,46 @@ theorem precomp_implements {D : MachineAdversary bd} (f : (n : ℕ) → γ n →
   rw [precomp_steps, precomp_M]
   exact (OracleMachine.runK_setInit (D.M n) _ H _ _).trans (h n H (f n x))
 
+/-- Precompose an adversary with a pure input map from a **supplied machine witness**
+between the canonical input encodings — the sibling of `precomp` for input types too
+large for a table (`precomp` needs polynomially many inputs; here the map carries its
+own machine). The machine family is reused with only its initialization changed to
+`init ∘ f`; the new initialization family is the composition. -/
+noncomputable def precompComp (D : MachineAdversary bd) (f : (n : ℕ) → γ n → α n)
+    (eIn' : Computability.BitEncFam γ)
+    (wit : Computability.EncPolyTimeFam eIn'.enc bd.eIn.enc f) :
+    MachineAdversary (bd.withIn eIn') where
+  M n := { D.M n with init := fun x => (D.M n).init (f n x) }
+  steps := D.steps
+  stable n := D.stable n
+  state := D.state
+  initF := wit.comp D.initF
+  exposeF := D.exposeF
+  updateF := D.updateF
+  outputF := D.outputF
+
+@[simp] theorem precompComp_M (D : MachineAdversary bd) (f : (n : ℕ) → γ n → α n)
+    (eIn' : Computability.BitEncFam γ)
+    (wit : Computability.EncPolyTimeFam eIn'.enc bd.eIn.enc f) (n : ℕ) :
+    (D.precompComp f eIn' wit).M n =
+      ⟨(D.M n).toDynSystem, fun x => (D.M n).init (f n x), (D.M n).output⟩ := rfl
+
+@[simp] theorem precompComp_steps (D : MachineAdversary bd) (f : (n : ℕ) → γ n → α n)
+    (eIn' : Computability.BitEncFam γ)
+    (wit : Computability.EncPolyTimeFam eIn'.enc bd.eIn.enc f) :
+    (D.precompComp f eIn' wit).steps = D.steps := rfl
+
+/-- The witness-precomposed adversary implements the precomposed program family: the
+machine run is unchanged except that it starts from `init (f n x)`. -/
+theorem precompComp_implements {D : MachineAdversary bd} (f : (n : ℕ) → γ n → α n)
+    (eIn' : Computability.BitEncFam γ)
+    (wit : Computability.EncPolyTimeFam eIn'.enc bd.eIn.enc f)
+    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D ⊨ oa) :
+    D.precompComp f eIn' wit ⊨ fun n x => oa n (f n x) := by
+  intro n m _ _ H x
+  rw [precompComp_steps, precompComp_M]
+  exact (OracleMachine.runK_setInit (D.M n) _ H _ _).trans (h n H (f n x))
+
 /-- Post-compose an adversary with a pure output map, from a supplied uniform machine
 family for `Option.map g` between the canonical optional output encodings. The machine
 is reused with its read-out post-composed; the new output family is the composition,
@@ -230,6 +272,23 @@ theorem OracleComp.IsPolyTime.precomp {spec : ℕ → OracleSpec.{0, 0} ι}
   exact ⟨{
     A := w.A.precomp f eIn' cardIn hcard'
     implements := MachineAdversary.precomp_implements f eIn' cardIn hcard' w.implements
+    queryBound := fun n x => w.queryBound n (f n x) }⟩
+
+/-- `OracleComp.IsPolyTime` is closed under pure input precomposition from a supplied
+machine witness between the canonical input encodings — the unbounded-input sibling of
+`IsPolyTime.precomp`, for input maps on superpolynomially large types (bitstring glue,
+projections) that a finite table can never certify. -/
+theorem OracleComp.IsPolyTime.precompComp {spec : ℕ → OracleSpec.{0, 0} ι}
+    {α β γ : ℕ → Type} {bd : BoundaryData spec α β}
+    {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
+    (hoa : OracleComp.IsPolyTime bd oa) (f : (n : ℕ) → γ n → α n)
+    (eIn' : Computability.BitEncFam γ)
+    (wit : Computability.EncPolyTimeFam eIn'.enc bd.eIn.enc f) :
+    OracleComp.IsPolyTime (bd.withIn eIn') fun n x => oa n (f n x) := by
+  obtain ⟨w⟩ := hoa
+  exact ⟨{
+    A := w.A.precompComp f eIn' wit
+    implements := MachineAdversary.precompComp_implements f eIn' wit w.implements
     queryBound := fun n x => w.queryBound n (f n x) }⟩
 
 /-- `OracleComp.IsPolyTime` is closed under a pure **output** map on per-parameter
