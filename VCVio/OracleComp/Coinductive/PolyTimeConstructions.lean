@@ -31,6 +31,26 @@ open OracleSpec Computability
 
 namespace OracleComp
 
+/-! ## The single coin flip -/
+
+/-- The state representation of the one-round coin fold: a one-bit round counter and a
+Boolean accumulator. -/
+noncomputable def coinFlipState : StrEncFam (fun _ => Fin 2 × Bool) :=
+  ((BitEncFam.fin (fun _ => 1) (.C 1) (fun _ => by simp)).pair
+    (BitEncFam.const Bool)).toStrEncFam
+
+/-- A single coin flip is polynomial time at the canonical boundaries: the one-round
+bounded coin fold with a Boolean accumulator, witnessed end to end by finite tables. -/
+theorem isPolyTime_coin :
+    OracleComp.IsPolyTime (BoundaryData.coin BitEncFam.unit BitEncFam.bool)
+      (fun _ (_ : Unit) => OracleComp.coin) := by
+  refine OracleComp.IsPolyTime.congr (oa := fun n (_ : Unit) =>
+      coinFoldProg (fun (_ : Bool) _ b => b) id 1 false) (fun n _ => ?_)
+    (isPolyTime_coinFold (fun _ (_ : Bool) _ b => b) (fun _ => id) (fun _ => false)
+      (fun _ => 1) (.C 1) (fun _ => by simp) coinFlipState BitEncFam.bool
+      (.C 2) (fun _ => by simp))
+  rfl
+
 /-! ## Uniform `BitVec` generation -/
 
 /-- Sample a uniform `BitVec n` by flipping `n` coins, folding the `r`-th answer into bit
