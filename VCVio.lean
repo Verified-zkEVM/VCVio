@@ -4,11 +4,12 @@ import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.GenericLift
 import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
 import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
+import VCVio.CryptoFoundations.Asymptotics.Game.Challenger
+import VCVio.CryptoFoundations.Asymptotics.Game.TwoPhase
 import VCVio.CryptoFoundations.Asymptotics.Negligible
 import VCVio.CryptoFoundations.Asymptotics.PolyTime
 import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 import VCVio.CryptoFoundations.Asymptotics.Security
-import VCVio.CryptoFoundations.Asymptotics.TwoPhaseGame
 import VCVio.CryptoFoundations.CommitmentScheme
 import VCVio.CryptoFoundations.DataEncapMech
 import VCVio.CryptoFoundations.FiatShamir.QueryBounds

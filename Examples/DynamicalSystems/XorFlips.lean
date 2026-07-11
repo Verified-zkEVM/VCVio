@@ -3,7 +3,7 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.CryptoFoundations.Asymptotics.PolyTime
+import VCVio.CryptoFoundations.Asymptotics.Game.Challenger
 import VCVio.OracleComp.Coinductive.CoinFold
 import Examples.DynamicalSystems.Basic
 
@@ -25,8 +25,8 @@ boundaries `BoundaryData.coin BitEncFam.unit BitEncFam.bool`:
 * the output-map closure in action — negating the reported parity stays polynomial
   time, by `OracleComp.IsPolyTime.map` on the abstract instance.
 * Game wiring — `xorGame` demonstrates the advantage transfer
-  `OneShotGame.advantage_toPolyGame_eq` on the concrete bundle, and `zeroGame` yields an
-  unconditional `SecurityGame.secureAgainstPolyTime` instance.
+  `Challenger.advantage_toMachineGame_eq` on the concrete bundle, and `zeroGame` yields
+  an unconditional `SecurityGame.secureAgainstPolyTime` instance.
 -/
 
 open OracleSpec OracleComp Computability
@@ -126,37 +126,38 @@ noncomputable def fairCoin : ProbHandler coinSpec :=
   fun _ => liftM (PMF.uniformOfFintype Bool)
 
 /-- Guess-the-parity game: run the adversary against a fair coin, win on a report of
-`true`. -/
+`true`. A memoryless challenger, via `Challenger.ofProbHandler`. -/
 noncomputable def xorGame :
-    OneShotGame (fun _ => coinSpec) (fun _ => Unit) (fun _ => Bool) where
-  oracle _ := fairCoin
-  gen _ := pure ()
-  score _ _ b := pure (b.getD false)
+    Challenger (fun _ => coinSpec) (fun _ => Unit) (fun _ => Bool) :=
+  Challenger.ofProbHandler (fun _ => fairCoin) (fun _ => pure ())
+    (fun _ _ b => pure (b.getD false))
 
 /-- Advantage transfer, concretely: the machine-level advantage of the bundled XOR
 adversary is exactly the program-level advantage of `xorProg`. -/
 example (n : ℕ) :
-    (xorGame.toPolyGame (BoundaryData.coin BitEncFam.unit BitEncFam.bool)).advantage
+    (xorGame.toMachineGame (BoundaryData.coin BitEncFam.unit BitEncFam.bool)).advantage
         xorFoldAdversary n =
       xorGame.toProgGame.advantage (fun n _ => xorProg n false) n :=
-  xorGame.advantage_toPolyGame_eq xorFoldAdversary_implements n
+  xorGame.advantage_toMachineGame_eq xorFoldAdversary_implements n
 
 /-- A game nobody wins: the score is constantly `false`. -/
 noncomputable def zeroGame :
-    OneShotGame (fun _ => coinSpec) (fun _ => Unit) (fun _ => Bool) where
-  oracle _ := fairCoin
-  gen _ := pure ()
-  score _ _ _ := pure false
+    Challenger (fun _ => coinSpec) (fun _ => Unit) (fun _ => Bool) :=
+  Challenger.ofProbHandler (fun _ => fairCoin) (fun _ => pure ())
+    (fun _ _ _ => pure false)
 
-theorem zeroGame_advantage_toPolyGame
+theorem zeroGame_advantage_toMachineGame
     (D : MachineAdversary (BoundaryData.coin BitEncFam.unit BitEncFam.bool))
     (n : ℕ) :
-    (zeroGame.toPolyGame (BoundaryData.coin BitEncFam.unit BitEncFam.bool)).advantage
+    (zeroGame.toMachineGame (BoundaryData.coin BitEncFam.unit BitEncFam.bool)).advantage
       D n = 0 := by
-  have h : (zeroGame.toPolyGame
+  have h : (zeroGame.toMachineGame
         (BoundaryData.coin BitEncFam.unit BitEncFam.bool)).advantage D n =
-      (D.exec n fairCoin () >>= fun _ => (pure false : SPMF Bool)) true := by
-    simp only [OneShotGame.toPolyGame, zeroGame, pure_bind]
+      ((D.exec n (QueryImpl.stateless Unit fairCoin) ()).run () >>= fun _ =>
+        (pure false : SPMF Bool)) true := by
+    simp only [Challenger.toMachineGame, zeroGame, Challenger.ofProbHandler, map_pure,
+      pure_bind]
+    rfl
   rw [h, SPMF.bind_apply_eq_tsum]
   simp [SPMF.pure_apply]
 
@@ -165,7 +166,7 @@ against all polynomial-time program families. -/
 theorem zeroGame_secureAgainstPolyTime :
     zeroGame.toProgGame.secureAgainstPolyTime
       (BoundaryData.coin BitEncFam.unit BitEncFam.bool) :=
-  zeroGame.secureAgainst_isPolyTime_of_polyGame _ fun D =>
-    negligible_of_zero (zeroGame_advantage_toPolyGame D)
+  zeroGame.secureAgainst_isPolyTime_of_machineGame _ fun D =>
+    negligible_of_zero (zeroGame_advantage_toMachineGame D)
 
 end DynSystemExamples

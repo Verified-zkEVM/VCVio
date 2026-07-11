@@ -237,10 +237,12 @@ noncomputable def descBound (D : MachineAdversary bd) : Polynomial ℕ :=
 
 /-! ## Run semantics and the implements relation -/
 
-/-- The adversary's run at security parameter `n`: the early-stopping probabilistic
-run of the machine at its round budget. -/
-noncomputable def exec (D : MachineAdversary bd) (n : ℕ)
-    (H : ProbHandler (spec n)) (x : α n) : SPMF (Option (β n)) :=
+/-- The adversary's run at security parameter `n`: the early-stopping run of the
+machine at its round budget, against a query implementation in any monad. The
+probabilistic run is the `m := SPMF` instance (`H : ProbHandler (spec n)`); a run
+against a stateful challenger oracle is the `m := StateT σ SPMF` instance. -/
+noncomputable def exec (D : MachineAdversary bd) (n : ℕ) {m : Type → Type} [Monad m]
+    (H : QueryImpl (spec n) m) (x : α n) : m (Option (β n)) :=
   (D.M n).runK H (D.steps.eval n) ((D.M n).init x)
 
 /-- The adversary implements a program family when each machine implements the
@@ -250,10 +252,13 @@ def Implements (D : MachineAdversary bd)
   ∀ n, (D.M n).Implements (oa n) (D.steps.eval n)
 
 /-- **Master transfer equation**: the run of an implementing adversary computes the
-program's `simulateQ` semantics. Game-level advantage transfers are instances. -/
+program's `simulateQ` semantics, in every lawful monad. Game-level advantage transfers
+— including against stateful challenger oracles at `m := StateT σ SPMF` — are
+instances. -/
 theorem exec_eq_of_implements {D : MachineAdversary bd}
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D.Implements oa)
-    (n : ℕ) (H : ProbHandler (spec n)) (x : α n) :
+    (n : ℕ) {m : Type → Type} [Monad m] [LawfulMonad m]
+    (H : QueryImpl (spec n) m) (x : α n) :
     D.exec n H x = some <$> simulateQ H (oa n x) :=
   h n H x
 
