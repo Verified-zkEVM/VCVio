@@ -36,18 +36,21 @@ well-formed (the mid boundary is shared by construction).
 
 open OracleSpec Computability
 
-variable {ι : Type} [DecidableEq ι]
+variable {ι : ℕ → Type} [∀ n, DecidableEq (ι n)]
 
 /-- `IsPolyTime` transports along pointwise program equality: a family equal to a
 polynomial-time family is polynomial time. Lets a call site name its program directly
 and bridge to a combinator's canonical form. -/
-theorem OracleComp.IsPolyTime.congr {spec : ℕ → OracleSpec.{0, 0} ι}
+theorem OracleComp.IsPolyTime.congr {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)}
     {α β : ℕ → Type} {bd : BoundaryData spec α β}
     {oa oa' : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : ∀ n x, oa n x = oa' n x)
     (hp : OracleComp.IsPolyTime bd oa) : OracleComp.IsPolyTime bd oa' :=
   (funext fun n => funext fun x => h n x : oa = oa') ▸ hp
 
-omit [DecidableEq ι] in
+section SingleSpec
+
+variable {ι : Type}
+
 /-- The run of a machine ignores the initialization field: replacing `init` (possibly
 changing the input type) leaves `runK` unchanged from any state, in any monad. -/
 theorem OracleMachine.runK_setInit {spec : OracleSpec.{0, 0} ι} {α α' β : Type}
@@ -69,7 +72,6 @@ theorem OracleMachine.runK_setInit {spec : OracleSpec.{0, 0} ι} {α α' β : Ty
           (M := ⟨M.State, M.expose, M.update, g, M.output⟩) H hb k]
       exact bind_congr fun r => ih (M.update s r)
 
-omit [DecidableEq ι] in
 /-- The run of a machine commutes with post-composing a pure map on the read-out:
 replacing `output` by `Option.map g ∘ output` maps every run's result by `g`, in any
 lawful monad. -/
@@ -95,9 +97,12 @@ theorem OracleMachine.runK_setOutput {spec : OracleSpec.{0, 0} ι} {α β γ : T
         M.runK_succ_of_output_eq_none H hb, map_bind]
       exact bind_congr fun r => ih (M.update s r)
 
+end SingleSpec
+
 namespace MachineAdversary
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β γ : ℕ → Type} {bd : BoundaryData spec α β}
+variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β γ : ℕ → Type}
+  {bd : BoundaryData spec α β}
 
 /-- Precompose an adversary with a pure input map on per-parameter finite input types
 of polynomially bounded cardinality. The machine family is reused with only its
@@ -262,7 +267,7 @@ end Computability.EncPolyTimeFam
 per-parameter finite input types of polynomially bounded cardinality: the standard
 "the reduction is polynomial time since the adversary is" step for input-reshaping
 reductions. -/
-theorem OracleComp.IsPolyTime.precomp {spec : ℕ → OracleSpec.{0, 0} ι}
+theorem OracleComp.IsPolyTime.precomp {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)}
     {α β γ : ℕ → Type} {bd : BoundaryData spec α β}
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
     (hoa : OracleComp.IsPolyTime bd oa) (f : (n : ℕ) → γ n → α n) [∀ n, Finite (γ n)]
@@ -282,7 +287,7 @@ theorem OracleComp.IsPolyTime.precomp {spec : ℕ → OracleSpec.{0, 0} ι}
 machine witness between the canonical input encodings — the unbounded-input sibling of
 `IsPolyTime.precomp`, for input maps on superpolynomially large types (bitstring glue,
 projections) that a finite table can never certify. -/
-theorem OracleComp.IsPolyTime.precompComp {spec : ℕ → OracleSpec.{0, 0} ι}
+theorem OracleComp.IsPolyTime.precompComp {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)}
     {α β γ : ℕ → Type} {bd : BoundaryData spec α β}
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
     (hoa : OracleComp.IsPolyTime bd oa) (f : (n : ℕ) → γ n → α n)
@@ -301,7 +306,7 @@ the post-map is a finite table between the *canonical* optional output encodings
 widths are pinned — exactly what an existential output encoding could never provide.
 This is the "post-process the Boolean result" primitive reductions need (output
 negation, challenge comparison). -/
-theorem OracleComp.IsPolyTime.map {spec : ℕ → OracleSpec.{0, 0} ι}
+theorem OracleComp.IsPolyTime.map {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)}
     {α β γ : ℕ → Type} {bd : BoundaryData spec α β}
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
     (hoa : OracleComp.IsPolyTime bd oa) (g : (n : ℕ) → β n → γ n) [∀ n, Finite (β n)]

@@ -34,14 +34,15 @@ the former; instantiators fold it into the phase-one output and phase-two input 
 open OracleComp OracleSpec Computability
 open scoped MachineAdversary
 
-variable {ι : Type} [DecidableEq ι]
+variable {ι : ℕ → Type} [∀ n, DecidableEq (ι n)]
 
 /-! ## Polynomial time for adversary pairs -/
 
 /-- The polynomial-time predicate for a pair of program families, the `isPPT` slot for
 two-phase games: both phases are Turing-machine-grounded polynomial time, each at its
 own pinned boundaries. -/
-def OracleComp.IsPolyTimePair {spec : ℕ → OracleSpec.{0, 0} ι} {α₁ β₁ α₂ β₂ : ℕ → Type}
+def OracleComp.IsPolyTimePair {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)}
+    {α₁ β₁ α₂ β₂ : ℕ → Type}
     (bd₁ : BoundaryData spec α₁ β₁) (bd₂ : BoundaryData spec α₂ β₂)
     (oa : ((n : ℕ) → α₁ n → OracleComp (spec n) (β₁ n)) ×
       ((n : ℕ) → α₂ n → OracleComp (spec n) (β₂ n))) : Prop :=
@@ -53,7 +54,8 @@ def OracleComp.IsPolyTimePair {spec : ℕ → OracleSpec.{0, 0} ι} {α₁ β₁
 oracles, with the challenge step consuming the phase-one final state and the
 phase-one result to produce the phase-two state and input. The Kleisli image of a
 `CompTriple`: `(setup, challenge, score)` decorated with per-phase oracle policies. -/
-structure Challenger₂ (spec : ℕ → OracleSpec.{0, 0} ι) (α₁ β₁ α₂ β₂ : ℕ → Type) where
+structure Challenger₂ (spec : (n : ℕ) → OracleSpec.{0, 0} (ι n))
+    (α₁ β₁ α₂ β₂ : ℕ → Type) where
   /-- The challenger's hidden phase-one state. -/
   σ₁ : ℕ → Type
   /-- The challenger's hidden phase-two state. -/
@@ -72,7 +74,7 @@ structure Challenger₂ (spec : ℕ → OracleSpec.{0, 0} ι) (α₁ β₁ α₂
 
 namespace Challenger₂
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α₁ β₁ α₂ β₂ : ℕ → Type}
+variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α₁ β₁ α₂ β₂ : ℕ → Type}
 
 /-- The game over pairs of program families, via `simulateQ` through each phase's
 stateful oracle. -/

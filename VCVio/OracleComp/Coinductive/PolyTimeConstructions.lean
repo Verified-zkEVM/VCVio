@@ -102,20 +102,21 @@ output `= some ∘ f`), so the query-selection witness is a constant machine and
 update (projection) and output (`some ∘ f`) witnesses are finite tables — within the
 advice budget exactly because the input cardinality (`cardIn`) and the tagged-answer
 cardinality (`cardIface`) are polynomially bounded. -/
-theorem isPolyTime_pure_ofFintype {ι : Type} [DecidableEq ι] [Inhabited ι] [Finite ι]
-    {spec : ℕ → OracleSpec.{0, 0} ι} [∀ n, (spec n).Fintype]
+theorem isPolyTime_pure_ofFintype {ι : ℕ → Type} [∀ n, DecidableEq (ι n)]
+    [∀ n, Inhabited (ι n)] [∀ n, Finite (ι n)]
+    {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} [∀ n, (spec n).Fintype]
     {α β : ℕ → Type} [∀ n, Finite (α n)] (bd : BoundaryData spec α β)
     (f : (n : ℕ) → α n → β n)
     (cardIn : Polynomial ℕ) (hcardIn : ∀ n, Nat.card (α n) ≤ cardIn.eval n)
     (cardIface : Polynomial ℕ)
-    (hcardIface : ∀ n, Nat.card ((t : ι) × (spec n).Range t) ≤ cardIface.eval n) :
+    (hcardIface : ∀ n, Nat.card ((t : ι n) × (spec n).Range t) ≤ cardIface.eval n) :
     OracleComp.IsPolyTime bd fun n x => (pure (f n x) : OracleComp (spec n) (β n)) := by
-  letI : Fintype ι := Fintype.ofFinite ι
+  letI : ∀ n, Fintype (ι n) := fun n => Fintype.ofFinite (ι n)
   letI : ∀ n, Fintype (α n) := fun n => Fintype.ofFinite (α n)
   have hcardIn' : ∀ n, Fintype.card (α n) ≤ cardIn.eval n := fun n => by
     simpa [Nat.card_eq_fintype_card] using hcardIn n
   refine OracleComp.isPolyTime_pure_of_witnesses bd f
-    (.const bd.eIn.enc (fun _ => (default : ι)) bd.eIface.encQuery.widBound
+    (.const bd.eIn.enc (fun n => (default : ι n)) bd.eIface.encQuery.widBound
       (fun n => (bd.eIface.encQuery.len_eq n _).le.trans (bd.eIface.encQuery.wid_le n)))
     (.ofFintype (bd.eIn.toStrEncFam.pairVar bd.eIface.encAns).enc_injective
       (fun _ => Prod.fst)

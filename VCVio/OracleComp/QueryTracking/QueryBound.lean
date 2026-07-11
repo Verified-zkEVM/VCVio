@@ -1847,16 +1847,21 @@ lemma QueryUpperBound.apply [DecidableEq ι]
   h (size x) x le_rfl
 
 /-- If `oa` is a computation indexed by a security parameter, then `PolyQueries oa`
-means that for each oracle index there is a polynomial function `qb` of the security parameter,
-such that the number of queries to that oracle is bounded by the corresponding polynomial.
+means there is a polynomial function `qb` of the security parameter bounding the number
+of queries made to every oracle index. The oracle index type may itself vary with the
+security parameter, so the bound is uniform across indices (an index-dependent bound
+family would let the polynomial vary arbitrarily with `n`, emptying the notion of
+"polynomially many queries").
 
-Currently used only in `CostModel.lean`; retained as scaffolding for future asymptotic analyses. -/
-structure PolyQueries {ι : Type} [DecidableEq ι] {spec : ℕ → OracleSpec ι}
-    {α β : ℕ → Type} (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) where
-  /-- `qb i` is a polynomial bound on the queries made to oracle `i`. -/
-  qb : ι → Polynomial ℕ
+Consumed by the polynomial-time bridge `PolyTimeWitness.toPolyQueries`; retained
+otherwise as scaffolding for future asymptotic analyses. -/
+structure PolyQueries {ι : ℕ → Type} [∀ n, DecidableEq (ι n)]
+    {spec : (n : ℕ) → OracleSpec (ι n)} {α β : ℕ → Type}
+    (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) where
+  /-- `qb` is a polynomial bound on the queries made to each oracle index. -/
+  qb : Polynomial ℕ
   /-- The bound is actually a bound on the number of queries made. -/
   qb_isQueryBound (n : ℕ) (x : α n) :
-    IsPerIndexQueryBound (oa n x) (fun i => (qb i).eval n)
+    IsPerIndexQueryBound (oa n x) (fun _ => qb.eval n)
 
 end OracleComp

@@ -75,7 +75,7 @@ encodings, `Polynomial ℕ`, and the program logic's `wp` all live at `Type 0`.
 
 open OracleSpec Computability
 
-variable {ι : Type}
+variable {ι : ℕ → Type}
 
 /-! ## Canonical interface encodings -/
 
@@ -84,11 +84,11 @@ encodings of the query indices and of the typed query/answer pairs. The answer
 component encodes the dependent pair `⟨t, r⟩` so that a machine can consume answers of
 varying type through one representation. Pinned per spec family: adversary-chosen
 answer encodings would be a caching channel (see the module docstring). -/
-structure OracleSpec.InterfaceBitEnc (spec : ℕ → OracleSpec.{0, 0} ι) where
+structure OracleSpec.InterfaceBitEnc (spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)) where
   /-- Canonical fixed-width encoding of the query index type. -/
-  encQuery : BitEncFam (fun _ => ι)
+  encQuery : BitEncFam ι
   /-- Canonical fixed-width encoding of typed query/answer pairs. -/
-  encAns : BitEncFam (fun n => (t : ι) × (spec n).Range t)
+  encAns : BitEncFam (fun n => (t : ι n) × (spec n).Range t)
 
 /-- The canonical coin-oracle interface: queries have width `0` (the index type is
 `Unit`), answers width `1` (the coin bit). -/
@@ -110,7 +110,7 @@ noncomputable def OracleSpec.InterfaceBitEnc.coin :
 encodings of its inputs and outputs, and the canonical interface encoding of its oracle.
 Always an explicit parameter of security statements — never existential (see the module
 docstring). -/
-structure BoundaryData (spec : ℕ → OracleSpec.{0, 0} ι) (α β : ℕ → Type) where
+structure BoundaryData (spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)) (α β : ℕ → Type) where
   /-- Canonical input encoding. -/
   eIn : BitEncFam α
   /-- Canonical output encoding. -/
@@ -120,7 +120,7 @@ structure BoundaryData (spec : ℕ → OracleSpec.{0, 0} ι) (α β : ℕ → Ty
 
 namespace BoundaryData
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β γ : ℕ → Type}
+variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β γ : ℕ → Type}
 
 /-- Replace the input boundary. -/
 def withIn (bd : BoundaryData spec α β) (eIn' : BitEncFam γ) : BoundaryData spec γ β :=
@@ -129,6 +129,11 @@ def withIn (bd : BoundaryData spec α β) (eIn' : BitEncFam γ) : BoundaryData s
 /-- Replace the output boundary. -/
 def withOut (bd : BoundaryData spec α β) (eOut' : BitEncFam γ) : BoundaryData spec α γ :=
   ⟨bd.eIn, eOut', bd.eIface⟩
+
+/-- Replace the interface boundary. -/
+def withIface (bd : BoundaryData spec α β) (eIface' : OracleSpec.InterfaceBitEnc spec) :
+    BoundaryData spec α β :=
+  ⟨bd.eIn, bd.eOut, eIface'⟩
 
 @[simp] theorem withIn_eIn (bd : BoundaryData spec α β) (e : BitEncFam γ) :
     (bd.withIn e).eIn = e := rfl
@@ -148,6 +153,15 @@ def withOut (bd : BoundaryData spec α β) (eOut' : BitEncFam γ) : BoundaryData
 @[simp] theorem withOut_eIface (bd : BoundaryData spec α β) (e : BitEncFam γ) :
     (bd.withOut e).eIface = bd.eIface := rfl
 
+@[simp] theorem withIface_eIface (bd : BoundaryData spec α β)
+    (e : OracleSpec.InterfaceBitEnc spec) : (bd.withIface e).eIface = e := rfl
+
+@[simp] theorem withIface_eIn (bd : BoundaryData spec α β)
+    (e : OracleSpec.InterfaceBitEnc spec) : (bd.withIface e).eIn = bd.eIn := rfl
+
+@[simp] theorem withIface_eOut (bd : BoundaryData spec α β)
+    (e : OracleSpec.InterfaceBitEnc spec) : (bd.withIface e).eOut = bd.eOut := rfl
+
 end BoundaryData
 
 /-- Boundary data over the coin oracle: the common case for textbook adversaries (the
@@ -158,7 +172,9 @@ noncomputable def BoundaryData.coin {α β : ℕ → Type} (eIn : BitEncFam α)
 
 /-! ## Flattening the dependent update -/
 
-variable [DecidableEq ι]
+section UpdateFlat
+
+variable {ι : Type} [DecidableEq ι]
 
 namespace OracleMachine
 
@@ -182,7 +198,11 @@ def updateFlat (M : OracleMachine spec α β) :
 
 end OracleMachine
 
+end UpdateFlat
+
 /-! ## Machine adversaries -/
+
+variable [∀ n, DecidableEq (ι n)]
 
 /-- A Turing-machine-grounded polynomial-time adversary at pinned boundaries `bd`:
 a family of oracle machines indexed by the security parameter, together with
@@ -200,7 +220,7 @@ for any adversary that implements a program family (`PolyTimeWitness.steadyBy`),
 probabilistic resolution likewise (`OracleMachine.Implements.runK_none_eq_zero`).
 The witnesses are data (they carry concrete machines); the Prop-level predicate on
 program families is `OracleComp.IsPolyTime`. -/
-structure MachineAdversary {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+structure MachineAdversary {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
     (bd : BoundaryData spec α β) where
   /-- The machine at each security parameter. -/
   M : (n : ℕ) → OracleMachine (spec n) (α n) (β n)
@@ -225,7 +245,8 @@ structure MachineAdversary {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ �
 
 namespace MachineAdversary
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} {bd : BoundaryData spec α β}
+variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
+  {bd : BoundaryData spec α β}
 
 /-- A single polynomial dominating every per-step running time. -/
 noncomputable def stepTime (D : MachineAdversary bd) : Polynomial ℕ :=
@@ -300,7 +321,7 @@ to follow from `implements` alone, but the extraction is genuinely hard:
   `some <$> simulateQ H_ε`, and agreement on `(0, 1]` forces equal coefficients. The
   coefficient-extraction step over `ℝ≥0∞` is the hard part; it is recorded here as a
   conjecture rather than smuggled as an axiom. -/
-structure PolyTimeWitness {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+structure PolyTimeWitness {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
     (bd : BoundaryData spec α β)
     (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) where
   /-- The machine adversary. -/
@@ -314,15 +335,15 @@ structure PolyTimeWitness {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ →
 `PolyTimeWitness`. This is the intended `isPPT` instantiation for
 `SecurityGame.secureAgainst`; `bd` must be a fixed parameter of the enclosing security
 statement (see the module docstring's statement-site discipline). -/
-def OracleComp.IsPolyTime {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+def OracleComp.IsPolyTime {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
     (bd : BoundaryData spec α β)
     (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) : Prop :=
   Nonempty (PolyTimeWitness bd oa)
 
 namespace PolyTimeWitness
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} {bd : BoundaryData spec α β}
-  {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
+variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
+  {bd : BoundaryData spec α β} {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
 
 /-- Deterministic steadiness is derivable for any certified adversary: the old `steady`
 field, now a theorem (via `OracleMachine.Implements.steadyBy`). -/
@@ -333,13 +354,13 @@ theorem steadyBy (w : PolyTimeWitness bd oa) (n : ℕ) (h : OracleHandler (spec 
 /-- **Bridge to query bounds**: a certified family makes polynomially many queries,
 with a per-index constant `PolyQueries` certificate. -/
 def toPolyQueries (w : PolyTimeWitness bd oa) : OracleComp.PolyQueries oa where
-  qb _ := w.A.steps
+  qb := w.A.steps
   qb_isQueryBound n x := (w.queryBound n x).isPerIndexQueryBound
 
 end PolyTimeWitness
 
 /-- Polynomial-time program families make polynomially many queries. -/
-theorem OracleComp.IsPolyTime.polyQueries {spec : ℕ → OracleSpec.{0, 0} ι}
+theorem OracleComp.IsPolyTime.polyQueries {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)}
     {α β : ℕ → Type} {bd : BoundaryData spec α β}
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
     (h : OracleComp.IsPolyTime bd oa) : Nonempty (OracleComp.PolyQueries oa) :=
@@ -357,7 +378,8 @@ needs machine iteration on top of Cslib's composition). -/
 
 namespace MachineAdversary
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} {bd : BoundaryData spec α β}
+variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
+  {bd : BoundaryData spec α β}
 
 /-- The state at round `j` of the deterministic run against handler `h` on input `x`. -/
 def stateAt (D : MachineAdversary bd) (n : ℕ) (h : OracleHandler (spec n))
@@ -366,7 +388,7 @@ def stateAt (D : MachineAdversary bd) (n : ℕ) (h : OracleHandler (spec n))
 
 /-- The tagged query/answer pair received at round `j` of the deterministic run. -/
 def answerAt (D : MachineAdversary bd) (n : ℕ) (h : OracleHandler (spec n))
-    (x : α n) (j : ℕ) : (t : ι) × (spec n).Range t :=
+    (x : α n) (j : ℕ) : (t : ι n) × (spec n).Range t :=
   ⟨(D.M n).expose (D.stateAt n h x j), h ((D.M n).expose (D.stateAt n h x j))⟩
 
 /-- The total Turing-machine time of the deterministic run against handler `h` on
@@ -441,7 +463,9 @@ end MachineAdversary
 
 section PureFn
 
-variable [Inhabited ι]
+section SingleSpec
+
+variable {ι : Type} [DecidableEq ι] [Inhabited ι]
 
 /-- The trivial machine of a query-free function: the state is the input, updates are
 ignored, and the readout is immediate. -/
@@ -459,6 +483,10 @@ theorem OracleMachine.updateFlat_ofPureFn {spec : OracleSpec.{0, 0} ι} {α β :
   funext p
   simp [OracleMachine.updateFlat, OracleMachine.ofPureFn]
 
+end SingleSpec
+
+variable [∀ n, Inhabited (ι n)]
+
 /-- **Query-free adversaries are polynomial time**, given uniform machine families for
 their (trivial) step functions: the identity family serves initialization and the
 state representation is the canonical input boundary itself, so the caller supplies
@@ -467,10 +495,10 @@ map. Once base machines for constants and projections exist, all three discharge
 generically; until then this is the honest hypothesis form — and the output family is a
 genuine assumption ("`f` is P/poly-computable"), not a formality. -/
 theorem OracleComp.isPolyTime_pure_of_witnesses
-    {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} (bd : BoundaryData spec α β)
+    {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type} (bd : BoundaryData spec α β)
     (f : (n : ℕ) → α n → β n)
     (exposeF : EncPolyTimeFam bd.eIn.enc bd.eIface.encQuery.enc
-      (fun _ _ => (default : ι)))
+      (fun n _ => (default : ι n)))
     (updateF : EncPolyTimeFam (bd.eIn.toStrEncFam.pairVar bd.eIface.encAns).enc
       bd.eIn.enc (fun _ => Prod.fst))
     (outputF : EncPolyTimeFam bd.eIn.enc (bd.eOut.option).enc

@@ -40,6 +40,8 @@ open scoped MachineAdversary
 
 universe u v
 
+section Stateless
+
 variable {ι : Type} [DecidableEq ι]
 
 /-- Lift a query implementation to a stateful monad by ignoring the state: the
@@ -72,13 +74,17 @@ against a stateless oracle from state `s` is the plain simulation paired with `s
     simp only [QueryImpl.stateless_apply, StateT.run_lift, bind_assoc, pure_bind]
     exact bind_congr fun r => ih r s
 
+end Stateless
+
 /-! ## The single-phase challenger -/
+
+variable {ι : ℕ → Type} [∀ n, DecidableEq (ι n)]
 
 /-- A single-phase game challenger: hidden state, an input sampler, a *stateful* oracle
 answering every adversary query, and a judge scoring the adversary's result against the
 final challenger state. `none` marks an adversary run that did not resolve (machine
 reading); program adversaries always resolve. -/
-structure Challenger (spec : ℕ → OracleSpec.{0, 0} ι) (α β : ℕ → Type) where
+structure Challenger (spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)) (α β : ℕ → Type) where
   /-- The challenger's hidden state at each security parameter. -/
   State : ℕ → Type
   /-- Sample the initial challenger state together with the adversary's input. -/
@@ -91,7 +97,7 @@ structure Challenger (spec : ℕ → OracleSpec.{0, 0} ι) (α β : ℕ → Type
 
 namespace Challenger
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
 
 /-- A memoryless challenger: a plain randomized oracle, an input sampler, and a score
 that sees the input (kept as the trivial state). The old one-shot game shape. -/

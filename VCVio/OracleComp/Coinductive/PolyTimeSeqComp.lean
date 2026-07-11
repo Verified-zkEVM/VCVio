@@ -36,9 +36,10 @@ The three ledgers:
   string-equal pure recode, recorded as its own private lemma.
 
 Scope note: the phase-one update commutation `OracleMachine.updateFlat_seqComp_inl` —
-hence the adversary former and `IsPolyTime.bind` — assumes `[Subsingleton ι]`. The
-flattened update's tag-match guard can disagree between the composite and phase one on
-a mismatched tag at an already-resolved phase-one state (the guard returns the state
+hence the adversary former and `IsPolyTime.bind`, per parameter
+(`[∀ n, Subsingleton (ι n)]`) — assumes a subsingleton index type. The flattened
+update's tag-match guard can disagree between the composite and phase one on a
+mismatched tag at an already-resolved phase-one state (the guard returns the state
 unchanged, which differs from hand-off after the equally unchanged update), and a
 subsingleton index type makes the guard always-true. This covers `coinSpec`
 (`ι = Unit`), the boundary of every current textbook adversary; a general-`ι` version
@@ -101,7 +102,10 @@ a mismatched tag the composite's flattened update returns an `inl` state unchang
 while hand-off after phase one's (equally unchanged) flattened update re-dispatches on
 the readout — the two sides differ exactly at an already-resolved phase-one state. A
 subsingleton index type (e.g. `coinSpec`, `ι = Unit`) makes the guard always-true; a
-general-`ι` version awaits an index-equality-test machine. -/
+general-`ι` version awaits an index-equality-test machine. An `n`-dependent query
+domain (e.g. a keyed left–right encryption spec) fails per-`n` Subsingleton as well, so
+CPA-style reductions must route through oracle simulation rather than `bind` — flagged
+for Stage 5/6. -/
 
 section UpdateFlat
 
@@ -142,11 +146,12 @@ end OracleMachine
 
 /-! ## The adversary former -/
 
-variable {ι : Type} [DecidableEq ι]
+variable {ι : ℕ → Type} [∀ n, DecidableEq (ι n)]
 
 namespace MachineAdversary
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α γ β : ℕ → Type} {bd : BoundaryData spec α β}
+variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α γ β : ℕ → Type}
+  {bd : BoundaryData spec α β}
 
 /-- Dispatch an optional value paired with a companion into the tag-bit sum shape:
 `none` to a left padded-unit pair, `some y` to a right payload pair. A pure
@@ -230,14 +235,14 @@ private noncomputable def handoffF :
       cases h : (D₁.M n).output s <;>
         simp [optionSplit, OracleMachine.handoff, h])
 
-variable [Subsingleton ι]
+variable [∀ n, Subsingleton (ι n)]
 
 /-- Pointwise action of the composite's flattened update in the distributed layout:
 the phase-one branch steps and hands off (`OracleMachine.updateFlat_seqComp_inl`, at
 subsingleton index types), the phase-two branch steps in place
 (`OracleMachine.updateFlat_seqComp_inr`). -/
 private theorem seqComp_updateFlat_elim (n : ℕ)
-    (q : ((D₁.M n).State ⊕ (D₂.M n).State) × ((t : ι) × (spec n).Range t)) :
+    (q : ((D₁.M n).State ⊕ (D₂.M n).State) × ((t : ι n) × (spec n).Range t)) :
     OracleMachine.updateFlat (D₁.M n ⨟ D₂.M n) q =
       Sum.elim (fun p => (D₁.M n).handoff (D₂.M n) ((D₁.M n).updateFlat p))
         (fun p => Sum.inr ((D₂.M n).updateFlat p)) (sumDistrib q) := by
@@ -291,7 +296,7 @@ end SeqComp
 /-- The composite adversary implements the bound program family at the summed round
 budget: per parameter this is the proven semantic composition law
 `OracleMachine.Implements.seqComp`. -/
-theorem seqComp_implements [Subsingleton ι] {eMid : BitEncFam γ}
+theorem seqComp_implements [∀ n, Subsingleton (ι n)] {eMid : BitEncFam γ}
     {D₁ : MachineAdversary (bd.withOut eMid)} {D₂ : MachineAdversary (bd.withIn eMid)}
     {oa : (n : ℕ) → α n → OracleComp (spec n) (γ n)}
     {ob : (n : ℕ) → γ n → OracleComp (spec n) (β n)}
@@ -308,8 +313,9 @@ end MachineAdversary
 /-- Sequential composition of polynomial-time certificates at a shared mid boundary:
 the adversaries compose by `MachineAdversary.seqComp`, the implements proofs by the
 semantic law, and the syntactic budgets by `OracleComp.isTotalQueryBound_bind`. -/
-noncomputable def PolyTimeWitness.seqComp [Subsingleton ι]
-    {spec : ℕ → OracleSpec.{0, 0} ι} {α γ β : ℕ → Type} {bd : BoundaryData spec α β}
+noncomputable def PolyTimeWitness.seqComp [∀ n, Subsingleton (ι n)]
+    {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α γ β : ℕ → Type}
+    {bd : BoundaryData spec α β}
     {eMid : BitEncFam γ} {oa : (n : ℕ) → α n → OracleComp (spec n) (γ n)}
     {ob : (n : ℕ) → γ n → OracleComp (spec n) (β n)}
     (w₁ : PolyTimeWitness (bd.withOut eMid) oa)
@@ -327,7 +333,8 @@ out of it, then `fun n x => oa n x >>= ob n` is polynomial time — the last mis
 closure of the polynomial-time calculus, over subsingleton oracle index types
 (`coinSpec` in particular; see the module docstring). The mid type family may be
 superpolynomially large: only its encoding is polynomial-width. -/
-theorem OracleComp.IsPolyTime.bind [Subsingleton ι] {spec : ℕ → OracleSpec.{0, 0} ι}
+theorem OracleComp.IsPolyTime.bind [∀ n, Subsingleton (ι n)]
+    {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)}
     {α γ β : ℕ → Type} {bd : BoundaryData spec α β} (eMid : BitEncFam γ)
     {oa : (n : ℕ) → α n → OracleComp (spec n) (γ n)}
     {ob : (n : ℕ) → γ n → OracleComp (spec n) (β n)}

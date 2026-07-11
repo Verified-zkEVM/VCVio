@@ -149,16 +149,17 @@ end OracleMachine
 
 /-! ## The adversary former -/
 
-variable {ι : Type} [DecidableEq ι]
+variable {ι : ℕ → Type} [∀ n, DecidableEq (ι n)]
 
 namespace MachineAdversary
 
-variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β γ : ℕ → Type} {bd : BoundaryData spec α β}
+variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β γ : ℕ → Type}
+  {bd : BoundaryData spec α β}
 
 /-- Reassociating the append encoding of a carried state/answer pair: the input
 recode equation for the carried adversary's update witness. -/
 private theorem carry_encIn_update (e : BitEncFam γ) (D : MachineAdversary bd) (n : ℕ)
-    (q : (γ n × (D.M n).State) × ((t : ι) × (spec n).Range t)) :
+    (q : (γ n × (D.M n).State) × ((t : ι n) × (spec n).Range t)) :
     ((e.pairFix D.state).pairVar bd.eIface.encAns).enc n q =
       (e.pairFix (D.state.pairVar bd.eIface.encAns)).enc n (q.1.1, (q.1.2, q.2)) := by
   obtain ⟨⟨c, s⟩, a⟩ := q
@@ -180,7 +181,7 @@ noncomputable def carry (e : BitEncFam γ) (D : MachineAdversary bd) :
   exposeF := .dropFix e D.state D.exposeF
   updateF := (EncPolyTimeFam.underPrefix e (D.state.pairVar bd.eIface.encAns) D.state
       D.updateF).recode
-    (fun n (q : (γ n × (D.M n).State) × ((t : ι) × (spec n).Range t)) =>
+    (fun n (q : (γ n × (D.M n).State) × ((t : ι n) × (spec n).Range t)) =>
       (q.1.1, (q.1.2, q.2)))
     (fun n => ((D.M n).carry (γ n)).updateFlat)
     (carry_encIn_update e D)
@@ -208,7 +209,7 @@ end MachineAdversary
 fixed-width value through a polynomial-time family is polynomial time, at the boundary
 that prefixes the carried block `e` to both the input and output encodings. This is the
 "a value crosses an oracle-using phase" primitive of the reduction pipeline. -/
-theorem OracleComp.IsPolyTime.carry {spec : ℕ → OracleSpec.{0, 0} ι}
+theorem OracleComp.IsPolyTime.carry {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)}
     {α β γ : ℕ → Type} {bd : BoundaryData spec α β}
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
     (hoa : OracleComp.IsPolyTime bd oa) (e : BitEncFam γ) :

@@ -22,7 +22,7 @@ adversary presentations (programs and machines) live in
 
 open OracleComp OracleSpec Computability ENNReal
 
-variable {ι : Type} [DecidableEq ι]
+variable {ι : ℕ → Type} [∀ n, DecidableEq (ι n)]
 
 namespace SecurityGame
 
@@ -30,10 +30,20 @@ namespace SecurityGame
 canonical boundaries `bd`: `SecurityGame.secureAgainst` at the `isPPT` predicate
 `OracleComp.IsPolyTime bd`. The boundary data is an explicit parameter of the security
 notion, per the statement-site discipline of the model. -/
-abbrev secureAgainstPolyTime {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type}
+abbrev secureAgainstPolyTime {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
     (bd : BoundaryData spec α β)
     (g : SecurityGame ((n : ℕ) → α n → OracleComp (spec n) (β n))) : Prop :=
   g.secureAgainst (OracleComp.IsPolyTime bd)
+
+/-- Security of a game over bundled machine adversaries: every `MachineAdversary bd`
+has negligible advantage. A machine adversary carries its own polynomial-time
+witnesses — the four step-machine families and the round budget are fields of the
+bundle — so the `isPPT` slot of `SecurityGame.secureAgainst` is trivially `True`;
+quantifying over the adversary type is already quantifying over the polynomial-time
+class. -/
+abbrev secureAgainstMachines {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
+    {bd : BoundaryData spec α β} (g : SecurityGame (MachineAdversary bd)) : Prop :=
+  g.secureAgainst fun _ => True
 
 /-- **Per-query loss composes with the polynomial round budget**: a game whose advantage
 against every `k`-total-query-bounded family is at most `k * ε n` for negligible `ε` is
@@ -41,7 +51,7 @@ secure against all polynomial-time families. This is where the query-bound conju
 `OracleComp.IsPolyTime` and the `steps` polynomial do quantitative work: the adversary's
 polynomially many queries turn per-query loss into `poly * negligible = negligible`. -/
 theorem secureAgainstPolyTime_of_advantage_le_mul_totalQueries
-    {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} (bd : BoundaryData spec α β)
+    {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type} (bd : BoundaryData spec α β)
     (g : SecurityGame ((n : ℕ) → α n → OracleComp (spec n) (β n)))
     {ε : ℕ → ℝ≥0∞} (hε : negligible ε)
     (hadv : ∀ (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) (k : ℕ → ℕ),
