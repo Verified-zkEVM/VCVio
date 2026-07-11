@@ -83,7 +83,7 @@ require cslib from git
 
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "ebc74a4d7d936a7c2b965e695381bff7808db539"
+  "d553f4e19b9a8d6d50ca6de7a0ed19799e6fbe91"
 
 require "leanprover-community" / "mathlib" @ git "v4.31.0"
 

@@ -6,6 +6,9 @@ Authors: Devon Tuma
 import KatzLindell.Chapter03.PrivKEav
 import VCVio.CryptoFoundations.SymmEncAlg.Keystream
 import VCVio.CryptoFoundations.PRGGame
+import VCVio.OracleComp.Coinductive.PolyTimeCarry
+import VCVio.OracleComp.Coinductive.PolyTimeConstructions
+import VCVio.OracleComp.Coinductive.PolyTimeSeqComp
 
 /-!
 # Katz–Lindell §3.3: Encryption from a Pseudorandom Generator (Construction 3.17)
@@ -23,25 +26,35 @@ scheme is EAV-secure.
   identity — the eavesdropping bias against `prgEnc` is precisely twice the PRG-distinguishing
   advantage of `prgReduction A` (real branch = `PrivK^eav` on the nose, ideal branch = a fair
   coin by the one-time-pad change of variables `y ↦ m_b ^^^ y`).
-- `eavSecure_prgEnc`: Theorem 3.18, the identity fed to the generic reduction meta-theorem
-  `SecurityGame.secureAgainst_of_poly_reduction` with loss factor `2`.
+- `prgReductionGlue` / `PRGReductionGlueWitness`: the reduction's pure inter-phase glue
+  (hidden-bit select, XOR mask, state projection) and its machine-witness type — the sole
+  residual polynomial-time hypothesis.
+- `isPolyTime_prgReduction`: the reduction is polynomial time, assembled from the closure
+  calculus of `OracleComp.IsPolyTime`, given a glue witness.
+- `eavSecure_prgEnc`: Theorem 3.18, the advantage identity and the polynomial-time proof fed
+  to the generic reduction meta-theorem `SecurityGame.secureAgainst_of_poly_reduction` with
+  loss factor `2`.
 
 ## Surfaced gap
 
 The reduction `prgReduction` sequences the eavesdropping adversary's *choose* and *distinguish*
-phases into one program and post-composes the result with `· == b`. The output post-map is
-closed abstractly (`OracleComp.IsPolyTime.map`, derivable at canonical boundaries), so the single
-remaining gap is closure under **sequential composition of two query-bearing programs**
-(`IsPolyTime.bind`) — the two-phase machine construction, whose statement the canonical
-boundaries finally make well-formed (the mid boundary is shared by construction). The
-reduction's polynomial time is therefore the one explicit hypothesis of `eavSecure_prgEnc`;
-the advantage side is proven. Note the boundary parameters make the Katz–Lindell `1^n`
-convention visible: the theorem explicitly requires the expansion length `ℓ` to be polynomially
-bounded (`pℓ`/`hℓ`), which the textbook leaves implicit in "expansion factor `ℓ(n)` polynomial
-in `n`".
+phases into one program, threads its own challenge value and a sampled hidden bit across them,
+and post-composes the comparison `· == b`. All of that is discharged by the closure calculus in
+`isPolyTime_prgReduction`: `OracleComp.IsPolyTime.bind` chains the query-bearing stages at
+shared mid boundaries, `IsPolyTime.carry` threads the fixed-width challenge and hidden bit
+across the phases, `IsPolyTime.precompComp` reshapes inputs, and `IsPolyTime.map` closes the
+final comparison at the canonical `Bool` boundary. The single residual hypothesis is `hglue`, a
+machine witness (`PRGReductionGlueWitness`) for the reduction's pure inter-phase glue
+`prgReductionGlue` — per-adversary because its boundary contains the adversary's own
+cross-phase state encoding `A.encState`. Splitting the glue into an `A`-independent bitvector
+atom (select and XOR) and a pure block permutation around the inert state block would make the
+residue adversary-free; that refinement is not done here. Note the boundary parameters make
+the Katz–Lindell `1^n` convention visible: the theorem explicitly requires the expansion
+length `ℓ` to be polynomially bounded (`pℓ`/`hℓ`), which the textbook leaves implicit in
+"expansion factor `ℓ(n)` polynomial in `n`".
 -/
 
-open ENNReal OracleComp OracleSpec SymmEncAlg PRGScheme
+open ENNReal OracleComp OracleSpec SymmEncAlg PRGScheme Computability
 
 namespace KatzLindell
 
@@ -185,23 +198,119 @@ theorem eavGuessGame_advantage_prgEnc_eq (n : ℕ) :
 
 end AdvantageCore
 
+/-! ## The reduction's polynomial time
+
+`prgReduction A` factors as three query-bearing stages chained by
+`OracleComp.IsPolyTime.bind` at shared mid boundaries — the choose phase with the challenge
+value carried across it, a coin flip with the accumulated data carried across it, and the
+distinguish phase behind the pure glue `prgReductionGlue` with the hidden bit carried across
+it — followed by the comparison `· == b`, an output map at the canonical `Bool` boundary. -/
+
+section PolyTime
+
+/-- The unit boundary has width zero, so pairing a trailing unit is string-equal to the bare
+encoding. -/
+private lemma enc_pair_unit {α : ℕ → Type} (e : BitEncFam α) (n : ℕ) (x : α n) :
+    (e.pair BitEncFam.unit).enc n (x, PUnit.unit) = e.enc n x := by
+  simp [BitEncFam.pair, BitEncFam.const, natToBits]
+
+/-- Pad a value with a trailing unit: the identity machine recoded along the string-equal
+width-zero pairing — the input reshaping that feeds a bare value to a carried `Unit`-input
+phase. -/
+private noncomputable def pairUnitWit {α : ℕ → Type} (e : BitEncFam α) :
+    EncPolyTimeFam e.enc (e.pair BitEncFam.unit).enc (fun _ x => (x, PUnit.unit)) :=
+  (EncPolyTimeFam.id e.enc).recode (fun _ x => x) (fun _ x => (x, PUnit.unit))
+    (fun _ _ => rfl) (enc_pair_unit e)
+
+/-- The reduction's inter-phase pure glue: reshape the pipeline state after the coin flip —
+the challenge value `y`, the choose phase's output `(m₀, m₁, st)`, and the hidden bit `b` —
+into the distinguish phase's carried input `(b, (st, (if b then m₁ else m₀) ^^^ y))`:
+hidden-bit select, XOR mask, and state projection. This deterministic bitstring map is the
+exact base-machine ticket surfaced by `eavSecure_prgEnc`; its machine-witness type is
+`PRGReductionGlueWitness`. -/
+def prgReductionGlue (A : PPTEavAdversary (fun n => BitVec (ℓ n)) (fun n => BitVec (ℓ n)))
+    (n : ℕ) (q : (BitVec (ℓ n) × (BitVec (ℓ n) × BitVec (ℓ n) × A.State n)) × Bool) :
+    Bool × (A.State n × BitVec (ℓ n)) :=
+  (q.2, (q.1.2.2.2, (if q.2 then q.1.2.2.1 else q.1.2.1) ^^^ q.1.1))
+
+/-- The machine-witness type for the reduction's pure glue `prgReductionGlue A`, between its
+pinned boundary encodings: from the mid-pipeline layout (challenge value, messages and state,
+hidden bit) to the distinguish phase's carried input (hidden bit alongside the
+state/ciphertext pair). The sole residual hypothesis of `eavSecure_prgEnc` — per-adversary
+because the boundary contains the adversary's own cross-phase state encoding `A.encState`. -/
+abbrev PRGReductionGlueWitness (pℓ : Polynomial ℕ) (hℓ : ∀ n, ℓ n ≤ pℓ.eval n)
+    (A : PPTEavAdversary (fun n => BitVec (ℓ n)) (fun n => BitVec (ℓ n))) : Type 1 :=
+  EncPolyTimeFam
+    ((((BitEncFam.bitVec ℓ pℓ hℓ).pair ((BitEncFam.bitVec ℓ pℓ hℓ).pair
+      ((BitEncFam.bitVec ℓ pℓ hℓ).pair A.encState))).pair BitEncFam.bool).enc)
+    ((BitEncFam.bool.pair (A.encState.pair (BitEncFam.bitVec ℓ pℓ hℓ))).enc)
+    (prgReductionGlue A)
+
+/-- **The reduction `prgReduction A` is polynomial time**, assembled from the closure
+calculus: the choose phase crosses the carried challenge value (`IsPolyTime.carry` +
+`IsPolyTime.precompComp` against the width-zero unit pad), the coin flip carries the
+accumulated data, the distinguish phase consumes the glued input, the three stages chain by
+`IsPolyTime.bind` at the shared mid boundaries, and the final comparison `· == b` is an
+output map at the canonical `Bool` boundary (`IsPolyTime.map`). The sole machine hypothesis
+is `hglue`, a witness for the pure inter-phase glue `prgReductionGlue`. -/
+theorem isPolyTime_prgReduction (pℓ : Polynomial ℕ) (hℓ : ∀ n, ℓ n ≤ pℓ.eval n)
+    (A : PPTEavAdversary (fun n => BitVec (ℓ n)) (fun n => BitVec (ℓ n)))
+    (hA : A.IsPPT (.bitVec ℓ pℓ hℓ) (.bitVec ℓ pℓ hℓ))
+    (hglue : Nonempty (PRGReductionGlueWitness pℓ hℓ A)) :
+    OracleComp.IsPolyTime (BoundaryData.coin (.bitVec ℓ pℓ hℓ) .bool) (prgReduction A) := by
+  obtain ⟨wit⟩ := hglue
+  set eR : BitEncFam (fun n => BitVec (ℓ n)) := .bitVec ℓ pℓ hℓ
+  set eMMSt : BitEncFam (fun n => BitVec (ℓ n) × (BitVec (ℓ n) × A.State n)) :=
+    eR.pair (eR.pair A.encState)
+  -- Stage 1: the choose phase, with the challenge value carried across it.
+  have h₁ : OracleComp.IsPolyTime (BoundaryData.coin eR (eR.pair eMMSt))
+      (fun n (y : BitVec (ℓ n)) => (y, ·) <$> A.choose n) :=
+    (hA.1.carry eR).precompComp (fun _ y => (y, PUnit.unit)) eR (pairUnitWit eR)
+  -- Stage 2: the coin flip, with the accumulated data carried across it.
+  have h₂ : OracleComp.IsPolyTime
+      (BoundaryData.coin (eR.pair eMMSt) ((eR.pair eMMSt).pair .bool))
+      (fun n (p : BitVec (ℓ n) × (BitVec (ℓ n) × BitVec (ℓ n) × A.State n)) =>
+        (p, ·) <$> OracleComp.coin) :=
+    (OracleComp.isPolyTime_coin.carry (eR.pair eMMSt)).precompComp
+      (fun _ p => (p, PUnit.unit)) (eR.pair eMMSt) (pairUnitWit (eR.pair eMMSt))
+  -- Stage 3: the glue, then the distinguish phase with the hidden bit carried across it.
+  have h₃ : OracleComp.IsPolyTime
+      (BoundaryData.coin ((eR.pair eMMSt).pair .bool) (BitEncFam.bool.pair .bool))
+      (fun n (q : (BitVec (ℓ n) × (BitVec (ℓ n) × BitVec (ℓ n) × A.State n)) × Bool) =>
+        (q.2, ·) <$> A.distinguish n
+          (q.1.2.2.2, (if q.2 then q.1.2.2.1 else q.1.2.1) ^^^ q.1.1)) :=
+    (hA.2.carry .bool).precompComp (prgReductionGlue A) ((eR.pair eMMSt).pair .bool) wit
+  -- Chain the stages and post-map the comparison against the carried hidden bit.
+  have h₁₂ := OracleComp.IsPolyTime.bind
+    (bd := BoundaryData.coin eR ((eR.pair eMMSt).pair .bool)) (eR.pair eMMSt) h₁ h₂
+  have h₁₂₃ := OracleComp.IsPolyTime.bind
+    (bd := BoundaryData.coin eR (BitEncFam.bool.pair .bool)) ((eR.pair eMMSt).pair .bool)
+    h₁₂ h₃
+  have hmap := h₁₂₃.map (fun _ (p : Bool × Bool) => p.2 == p.1) .bool (.C 4)
+    (fun n => by simp)
+  refine hmap.congr (fun n y => ?_)
+  simp only [prgReduction, map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
+
+end PolyTime
+
 /-- **Katz–Lindell Theorem 3.18**: if `prg` is a secure pseudorandom generator, the PRG-based
 scheme `prgEnc prg` is eavesdropping-secure.
 
 The advantage side is proven outright — `eavGuessGame_advantage_prgEnc_eq` gives the bias as
-*exactly* twice the reduction's PRG-distinguishing advantage. The one remaining hypothesis is
-`hppt`, the reduction's **polynomial time**, blocked on `IsPolyTime.bind` as described in the
-module docstring. Security then transfers through the generic polynomial-loss reduction
-meta-theorem `SecurityGame.secureAgainst_of_poly_reduction` with loss factor `2`. -/
+*exactly* twice the reduction's PRG-distinguishing advantage — and the reduction's polynomial
+time is proven from the closure calculus in `isPolyTime_prgReduction`. The one remaining
+hypothesis is `hglue`, a per-adversary machine witness for the reduction's pure inter-phase
+glue `prgReductionGlue` (see the module docstring). Security then transfers through the
+generic polynomial-loss reduction meta-theorem `SecurityGame.secureAgainst_of_poly_reduction`
+with loss factor `2`. -/
 theorem eavSecure_prgEnc (pℓ : Polynomial ℕ) (hℓ : ∀ n, ℓ n ≤ pℓ.eval n)
     (prg : (n : ℕ) → PRGScheme (BitVec n) (BitVec (ℓ n)))
     (hprg : PRGSecure (Computability.BitEncFam.bitVec ℓ pℓ hℓ) prg)
-    (hppt : ∀ (A : PPTEavAdversary (fun n => BitVec (ℓ n)) (fun n => BitVec (ℓ n))),
-      A.IsPPT (.bitVec ℓ pℓ hℓ) (.bitVec ℓ pℓ hℓ) →
-        OracleComp.IsPolyTime
-          (BoundaryData.coin (.bitVec ℓ pℓ hℓ) .bool) (prgReduction A)) :
+    (hglue : ∀ (A : PPTEavAdversary (fun n => BitVec (ℓ n)) (fun n => BitVec (ℓ n))),
+      Nonempty (PRGReductionGlueWitness pℓ hℓ A)) :
     EavSecure (prgEnc prg) (.bitVec ℓ pℓ hℓ) (.bitVec ℓ pℓ hℓ) :=
-  SecurityGame.secureAgainst_of_poly_reduction (loss := 2) hppt
+  SecurityGame.secureAgainst_of_poly_reduction (loss := 2)
+    (fun A hA => isPolyTime_prgReduction pℓ hℓ A hA (hglue A))
     (fun A n => le_of_eq (by
       rw [eavGuessGame_advantage_prgEnc_eq prg A n]
       simp))

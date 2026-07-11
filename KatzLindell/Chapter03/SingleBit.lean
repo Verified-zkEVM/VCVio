@@ -33,10 +33,10 @@ equality of experiments:
 * `secureAgainst_predictBitGame_of_eavSecure` assembles **Claim 3.11** through
   `SecurityGame.secureAgainst_of_close_reduction`: the reduction is exact for `i < n`
   and the finitely many parameters `n ≤ i` are absorbed into the negligible slack; the
-  "`A′` is PPT since `A` is" step (`hred`) is an explicit hypothesis in the
-  honest-fallback pattern of `eavSecure_prgEnc` — see `isPPT_reduceAdv` for its
-  decomposition into the choose-phase machine witnesses and the ciphertext-projection
-  precomposition, both awaiting the base-machine library.
+  "`A′` is PPT since `A` is" step (`hred`) is an explicit honest-fallback hypothesis —
+  a coarser residue than the single pure-glue witness `eavSecure_prgEnc` is left with —
+  see `isPPT_reduceAdv` for its decomposition into the choose-phase machine witnesses
+  and the ciphertext-projection precomposition, both awaiting the base-machine library.
 
 The distribution of the coin-by-coin sampler is pinned down by `evalDist_fillBits` (the
 coin loop is uniform) and the half-splitting bijection `splitPair`, giving the exact
@@ -392,10 +392,10 @@ adversary predicts bit `i` of a uniform plaintext from its encryption with
 non-negligible bias. The reduction is advantage-exact for `i < n`; the finitely many
 parameters `n ≤ i` are absorbed as negligible slack.
 
-The polynomial time of the reduction adversary is an explicit hypothesis (`hred`),
-matching the honest-fallback pattern of `eavSecure_prgEnc`: discharging it awaits the
-base-machine library (see `isPPT_reduceAdv` for the exact decomposition into choose-
-and distinguish-phase witnesses). -/
+The polynomial time of the reduction adversary is an explicit hypothesis (`hred`) — an
+honest fallback, coarser than the single pure-glue witness `eavSecure_prgEnc` is left
+with: discharging it awaits the base-machine library (see `isPPT_reduceAdv` for the
+exact decomposition into choose- and distinguish-phase witnesses). -/
 theorem secureAgainst_predictBitGame_of_eavSecure (eC : Computability.BitEncFam C)
     (hπ : EavSecure π BitEncFam.bitVecX eC) (i : ℕ)
     (hred : ∀ A : (n : ℕ) → C n → OracleComp coinSpec Bool,
