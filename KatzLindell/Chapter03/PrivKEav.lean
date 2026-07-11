@@ -3,7 +3,7 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import Examples.KatzLindell.Defs
+import KatzLindell.Common.Scheme
 import VCVio.CryptoFoundations.SymmEncAlg.EAV
 import VCVio.CryptoFoundations.Asymptotics.Security
 import VCVio.OracleComp.Coinductive.PolyTimeClosure

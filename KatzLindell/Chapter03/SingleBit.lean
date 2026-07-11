@@ -3,8 +3,8 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import Examples.KatzLindell.PrivKEav
-import Examples.KatzLindell.SamplerMachine
+import KatzLindell.Chapter03.PrivKEav
+import KatzLindell.Chapter03.SamplerMachine
 import ToMathlib.Data.BitVec
 import VCVio.OracleComp.Coinductive.PolyTimeClosure
 
@@ -42,7 +42,7 @@ The distribution of the coin-by-coin sampler is pinned down by `evalDist_fillBit
 coin loop is uniform) and the half-splitting bijection `splitPair`, giving the exact
 sampler semantics `evalDist_simulateQ_chooseProg`. The sampler's polynomial-time story,
 `isPolyTime_chooseProg` (hypothesis form), lives in
-`Examples.KatzLindell.SamplerMachine`.
+`KatzLindell.Chapter03.SamplerMachine`.
 -/
 
 open ENNReal OracleComp OracleSpec SymmEncAlg Computability
@@ -67,7 +67,7 @@ noncomputable def predictExp (π : (n : ℕ) → SymmEncAlg ProbComp (BitVec n) 
 /-! ## Distribution of the coin-fill sampler
 
 The choose-phase sampler `fillBits` / `chooseProg` and its polynomial-time witness
-`isPolyTime_chooseProg` live in `Examples.KatzLindell.SamplerMachine`; here its output
+`isPolyTime_chooseProg` live in `KatzLindell.Chapter03.SamplerMachine`; here its output
 distribution is pinned down. -/
 
 /-- Binding a fair coin query averages the two branch probabilities, since a `coinSpec`

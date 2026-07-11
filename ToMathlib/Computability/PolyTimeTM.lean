@@ -530,7 +530,7 @@ dispatch on the tag — which is the *unbounded-domain symbol relabeling* case t
 docstring flags as future work (a finite domain would make it `ofFintype`, but the payload is
 arbitrary length). It is isolated here as a **single documented `sorry`** so that the
 sequential-composition closure `OracleComp.IsPolyTime.bind` and its consumers
-(`Examples.KatzLindell.PRGEncryption`) build on a stable, correctly-typed interface; the streaming
+(`KatzLindell.Chapter03.PRGEncryption`) build on a stable, correctly-typed interface; the streaming
 transducer that discharges it is a separate ticket. Cross-reference: `EncPolyTime.comp` (the
 matching-encoding composition, fully proved) and `ofFintype` (the finite-domain table, fully proved)
 are the two composition primitives this one sits between. -/

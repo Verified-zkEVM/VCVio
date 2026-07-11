@@ -23,7 +23,7 @@ encoding-length bounds — no hand-built `OracleMachine`/`PolyTimeAdversary` nee
   `OracleComp.IsPolyTime`.
 
 Worked instances: `Examples.DynamicalSystems.XorFlips` (single-`Bool` accumulator, `readout`
-the identity) and `Examples.KatzLindell.SamplerMachine` (`BitVec` accumulator, nontrivial
+the identity) and `KatzLindell.Chapter03.SamplerMachine` (`BitVec` accumulator, nontrivial
 `readout`), which collapse onto this combinator.
 
 Specialized to `coinSpec` (the coin oracle, answers `Bool`): both current consumers use it,

@@ -3,7 +3,7 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import Examples.KatzLindell.PrivKEav
+import KatzLindell.Chapter03.PrivKEav
 import VCVio.CryptoFoundations.SymmEncAlg.Keystream
 import VCVio.CryptoFoundations.PRGGame
 

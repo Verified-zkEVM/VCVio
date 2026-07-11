@@ -13,7 +13,7 @@ The choose phase of the Katz–Lindell Claim 3.11 reduction samples two `n`-bit 
 forced to differ in bit `i`, by filling `2 * n` fair coins into an accumulator coin by
 coin (`fillBits` / `chooseProg`). This file supplies its polynomial-time story in the
 honest hypothesis form `isPolyTime_chooseProg`, feeding the reduction adversary of
-`Examples.KatzLindell.SingleBit`.
+`KatzLindell.Chapter03.SingleBit`.
 
 `chooseProg` is exactly a bounded coin fold (`fillBits_bind_pure_eq_coinFoldProg`), and
 the binary counter/accumulator state representation `chooseState` keeps the encoded
