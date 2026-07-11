@@ -352,7 +352,7 @@ variable {spec : ℕ → OracleSpec.{0, 0} ι} {α β : ℕ → Type} {bd : Boun
 /-- The state at round `j` of the deterministic run against handler `h` on input `x`. -/
 def stateAt (D : MachineAdversary bd) (n : ℕ) (h : OracleHandler (spec n))
     (x : α n) (j : ℕ) : (D.M n).State :=
-  OracleStrategy.stateAfter h (D.M n).toStrategy ((D.M n).init x) j
+  OracleStrategy.stateAfter h (D.M n).toDynSystem ((D.M n).init x) j
 
 /-- The tagged query/answer pair received at round `j` of the deterministic run. -/
 def answerAt (D : MachineAdversary bd) (n : ℕ) (h : OracleHandler (spec n))
@@ -477,10 +477,11 @@ theorem OracleComp.isPolyTime_pure_of_witnesses
       updateF := updateF.copy _
         (fun n p => congrFun (OracleMachine.updateFlat_ofPureFn (f n)).symm p)
       outputF := outputF }
-    implements := fun n H x => ?_
+    implements := fun n => ?_
     queryBound := fun n x => trivial }⟩
+  intro m _ _ H x
   rw [Polynomial.eval_zero, OracleMachine.runK_zero]
-  change (pure (some (f n x)) : SPMF (Option (β n))) = some <$> simulateQ H (pure (f n x))
+  change (pure (some (f n x)) : m (Option (β n))) = some <$> simulateQ H (pure (f n x))
   rw [simulateQ_pure, map_pure]
 
 end PureFn

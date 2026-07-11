@@ -160,7 +160,7 @@ turned to. -/
 theorem adaptCoins_output_advanceOnce_second (h : OracleHandler (coinSpec + coinSpec))
     (side : Bool) :
     (adaptCoins.output
-      (OracleStrategy.advanceOnce h adaptCoins.toStrategy (.second side))).isSome := by
+      (OracleStrategy.advanceOnce h adaptCoins.toDynSystem (.second side))).isSome := by
   cases side <;> rfl
 
 /-- The machine is steady after two rounds, against every handler. -/

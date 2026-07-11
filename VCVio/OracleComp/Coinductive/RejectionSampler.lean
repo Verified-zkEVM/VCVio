@@ -262,7 +262,7 @@ private lemma runKT_build (t : ℕ) (j : ℕ) :
     rw [hfuel, (rejectionMachine t).runKT_succ_of_output_eq_none _
       (output_eq_none_of_lt t hlt acc) (j + m)]
     have hstep : OracleStrategy.kleisliStep coinSpec.probHandler
-        (rejectionMachine t).toStrategy (c, acc) =
+        (rejectionMachine t).toDynSystem (c, acc) =
         (fun b => (rejectionMachine t).update (c, acc) b) <$>
           coinSpec.probHandler () := rfl
     have hupd : ∀ b : Bool, (rejectionMachine t).update (c, acc) b =
@@ -322,13 +322,13 @@ private lemma output_reject (t : ℕ) {u : Fin (2 ^ rejWidth t)} (hu : t < (u : 
   rw [if_pos (by simp), dif_neg (by omega)]
 
 private lemma kleisliStep_reject (t : ℕ) (u : Fin (2 ^ rejWidth t)) (m : ℕ) :
-    OracleStrategy.kleisliStep coinSpec.probHandler (rejectionMachine t).toStrategy
+    OracleStrategy.kleisliStep coinSpec.probHandler (rejectionMachine t).toDynSystem
         (Fin.last _, u) >>=
         (rejectionMachine t).runKT coinSpec.probHandler m =
       (rejectionMachine t).runKT coinSpec.probHandler m
         ((rejectionMachine t).init ()) := by
   have hstep : OracleStrategy.kleisliStep coinSpec.probHandler
-      (rejectionMachine t).toStrategy (Fin.last _, u) =
+      (rejectionMachine t).toDynSystem (Fin.last _, u) =
       (fun b => (rejectionMachine t).update (Fin.last _, u) b) <$>
         coinSpec.probHandler () := rfl
   have hupd : ∀ b : Bool, (rejectionMachine t).update (Fin.last _, u) b =

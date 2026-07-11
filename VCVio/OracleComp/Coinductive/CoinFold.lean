@@ -132,13 +132,13 @@ theorem coinFoldMachine_implements (rounds : ℕ) (init₀ : σ) :
 
 private theorem coinFoldMachine_advanceOnce_val (rounds : ℕ) (init₀ : σ)
     (h : OracleHandler coinSpec) (s : Fin (rounds + 1) × σ) (hs : ¬(s.1 : ℕ) = 0) :
-    ((OracleStrategy.advanceOnce h (coinFoldMachine step readout rounds init₀).toStrategy s).1
+    ((OracleStrategy.advanceOnce h (coinFoldMachine step readout rounds init₀).toDynSystem s).1
       : ℕ) = (s.1 : ℕ) - 1 := by
   simp [OracleStrategy.advanceOnce, coinFoldMachine, hs]
 
 theorem coinFoldMachine_stateAfter_val (rounds : ℕ) (init₀ : σ) (h : OracleHandler coinSpec) :
     ∀ j, j ≤ rounds →
-      ((OracleStrategy.stateAfter h (coinFoldMachine step readout rounds init₀).toStrategy
+      ((OracleStrategy.stateAfter h (coinFoldMachine step readout rounds init₀).toDynSystem
         ((coinFoldMachine step readout rounds init₀).init ()) j).1 : ℕ) = rounds - j := by
   intro j
   induction j with
@@ -146,10 +146,10 @@ theorem coinFoldMachine_stateAfter_val (rounds : ℕ) (init₀ : σ) (h : Oracle
   | succ j ih =>
     intro hj
     have hpeel :
-        OracleStrategy.stateAfter h (coinFoldMachine step readout rounds init₀).toStrategy
+        OracleStrategy.stateAfter h (coinFoldMachine step readout rounds init₀).toDynSystem
           ((coinFoldMachine step readout rounds init₀).init ()) (j + 1) =
-        OracleStrategy.advanceOnce h (coinFoldMachine step readout rounds init₀).toStrategy
-          (OracleStrategy.stateAfter h (coinFoldMachine step readout rounds init₀).toStrategy
+        OracleStrategy.advanceOnce h (coinFoldMachine step readout rounds init₀).toDynSystem
+          (OracleStrategy.stateAfter h (coinFoldMachine step readout rounds init₀).toDynSystem
             ((coinFoldMachine step readout rounds init₀).init ()) j) :=
       Function.iterate_succ_apply' _ _ _
     rw [hpeel,

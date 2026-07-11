@@ -46,12 +46,13 @@ theorem OracleComp.IsPolyTime.congr {spec : ℕ → OracleSpec.{0, 0} ι}
   (funext fun n => funext fun x => h n x : oa = oa') ▸ hp
 
 omit [DecidableEq ι] in
-/-- The probabilistic run of a machine ignores the initialization field: replacing
-`init` (possibly changing the input type) leaves `runK` unchanged from any state. -/
+/-- The run of a machine ignores the initialization field: replacing `init` (possibly
+changing the input type) leaves `runK` unchanged from any state, in any monad. -/
 theorem OracleMachine.runK_setInit {spec : OracleSpec.{0, 0} ι} {α α' β : Type}
-    (M : OracleMachine spec α β) (g : α' → M.State) (H : ProbHandler spec) (k : ℕ)
+    {m : Type → Type} [Monad m]
+    (M : OracleMachine spec α β) (g : α' → M.State) (H : QueryImpl spec m) (k : ℕ)
     (s : M.State) :
-    OracleMachine.runK ⟨M.toStrategy, g, M.output⟩ H k s = M.runK H k s := by
+    OracleMachine.runK ⟨M.toDynSystem, g, M.output⟩ H k s = M.runK H k s := by
   induction k generalizing s with
   | zero => rfl
   | succ k ih =>
@@ -59,19 +60,21 @@ theorem OracleMachine.runK_setInit {spec : OracleSpec.{0, 0} ι} {α α' β : Ty
     | some b =>
       rw [M.runK_succ_of_output_eq_some H hb]
       exact OracleMachine.runK_succ_of_output_eq_some
-        (M := ⟨M.toStrategy, g, M.output⟩) H hb k
+        (M := ⟨M.toDynSystem, g, M.output⟩) H hb k
     | none =>
       rw [M.runK_succ_of_output_eq_none H hb,
         OracleMachine.runK_succ_of_output_eq_none
-          (M := ⟨M.toStrategy, g, M.output⟩) H hb k]
-      exact bind_congr fun s' => ih s'
+          (M := ⟨M.toDynSystem, g, M.output⟩) H hb k]
+      exact bind_congr fun r => ih (M.update s r)
 
 omit [DecidableEq ι] in
-/-- The probabilistic run of a machine commutes with post-composing a pure map on the
-read-out: replacing `output` by `Option.map g ∘ output` maps every run's result by `g`. -/
+/-- The run of a machine commutes with post-composing a pure map on the read-out:
+replacing `output` by `Option.map g ∘ output` maps every run's result by `g`, in any
+lawful monad. -/
 theorem OracleMachine.runK_setOutput {spec : OracleSpec.{0, 0} ι} {α β γ : Type}
-    (M : OracleMachine spec α β) (g : β → γ) (H : ProbHandler spec) (k : ℕ) (s : M.State) :
-    OracleMachine.runK ⟨M.toStrategy, M.init, fun s => (M.output s).map g⟩ H k s
+    {m : Type → Type} [Monad m] [LawfulMonad m]
+    (M : OracleMachine spec α β) (g : β → γ) (H : QueryImpl spec m) (k : ℕ) (s : M.State) :
+    OracleMachine.runK ⟨M.toDynSystem, M.init, fun s => (M.output s).map g⟩ H k s
       = Option.map g <$> M.runK H k s := by
   induction k generalizing s with
   | zero => simp only [OracleMachine.runK_zero, map_pure]
@@ -79,16 +82,16 @@ theorem OracleMachine.runK_setOutput {spec : OracleSpec.{0, 0} ι} {α β γ : T
     cases hb : M.output s with
     | some b =>
       rw [OracleMachine.runK_succ_of_output_eq_some
-            (M := ⟨M.toStrategy, M.init, fun s => (M.output s).map g⟩) H
-            (show (⟨M.toStrategy, M.init, fun s => (M.output s).map g⟩ :
+            (M := ⟨M.toDynSystem, M.init, fun s => (M.output s).map g⟩) H
+            (show (⟨M.toDynSystem, M.init, fun s => (M.output s).map g⟩ :
               OracleMachine spec α γ).output s = some (g b) by simp [hb]) k,
         M.runK_succ_of_output_eq_some H hb]
       simp
     | none =>
       rw [OracleMachine.runK_succ_of_output_eq_none
-            (M := ⟨M.toStrategy, M.init, fun s => (M.output s).map g⟩) H (by simp [hb]) k,
+            (M := ⟨M.toDynSystem, M.init, fun s => (M.output s).map g⟩) H (by simp [hb]) k,
         M.runK_succ_of_output_eq_none H hb, map_bind]
-      exact bind_congr fun s' => ih s'
+      exact bind_congr fun r => ih (M.update s r)
 
 namespace MachineAdversary
 
@@ -119,7 +122,7 @@ noncomputable def precomp (D : MachineAdversary bd)
     [∀ n, Fintype (γ n)] (eIn' : BitEncFam γ) (cardIn : Polynomial ℕ)
     (hcard : ∀ n, Fintype.card (γ n) ≤ cardIn.eval n) (n : ℕ) :
     (D.precomp f eIn' cardIn hcard).M n =
-      ⟨(D.M n).toStrategy, fun x => (D.M n).init (f n x), (D.M n).output⟩ := rfl
+      ⟨(D.M n).toDynSystem, fun x => (D.M n).init (f n x), (D.M n).output⟩ := rfl
 
 @[simp] theorem precomp_steps (D : MachineAdversary bd) (f : (n : ℕ) → γ n → α n)
     [∀ n, Fintype (γ n)] (eIn' : BitEncFam γ) (cardIn : Polynomial ℕ)
@@ -133,7 +136,7 @@ theorem precomp_implements {D : MachineAdversary bd} (f : (n : ℕ) → γ n →
     (hcard : ∀ n, Fintype.card (γ n) ≤ cardIn.eval n)
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D.Implements oa) :
     (D.precomp f eIn' cardIn hcard).Implements fun n x => oa n (f n x) := by
-  intro n H x
+  intro n m _ _ H x
   rw [precomp_steps, precomp_M]
   exact (OracleMachine.runK_setInit (D.M n) _ H _ _).trans (h n H (f n x))
 
@@ -146,7 +149,7 @@ noncomputable def mapComp (D : MachineAdversary bd) (g : (n : ℕ) → β n → 
     (wit : EncPolyTimeFam (bd.eOut.option).enc (eOut'.option).enc
       (fun n => Option.map (g n))) :
     MachineAdversary (bd.withOut eOut') where
-  M n := ⟨(D.M n).toStrategy, (D.M n).init, fun s => ((D.M n).output s).map (g n)⟩
+  M n := ⟨(D.M n).toDynSystem, (D.M n).init, fun s => ((D.M n).output s).map (g n)⟩
   steps := D.steps
   stable n := by
     intro s c hc r
@@ -163,7 +166,7 @@ noncomputable def mapComp (D : MachineAdversary bd) (g : (n : ℕ) → β n → 
     (wit : EncPolyTimeFam (bd.eOut.option).enc (eOut'.option).enc
       (fun n => Option.map (g n))) (n : ℕ) :
     (D.mapComp g eOut' wit).M n =
-      ⟨(D.M n).toStrategy, (D.M n).init, fun s => ((D.M n).output s).map (g n)⟩ := rfl
+      ⟨(D.M n).toDynSystem, (D.M n).init, fun s => ((D.M n).output s).map (g n)⟩ := rfl
 
 @[simp] theorem mapComp_steps (D : MachineAdversary bd) (g : (n : ℕ) → β n → γ n)
     (eOut' : BitEncFam γ)
@@ -179,7 +182,7 @@ theorem mapComp_implements {D : MachineAdversary bd} (g : (n : ℕ) → β n →
       (fun n => Option.map (g n)))
     {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)} (h : D.Implements oa) :
     (D.mapComp g eOut' wit).Implements fun n x => g n <$> oa n x := by
-  intro n H x
+  intro n m _ _ H x
   rw [mapComp_steps, mapComp_M, OracleMachine.runK_setOutput, h n H x]
   simp [simulateQ_map, Functor.map_map]
 

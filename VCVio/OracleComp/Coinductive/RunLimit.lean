@@ -80,7 +80,7 @@ noncomputable def runKT (H : ProbHandler spec) : ℕ → M.State → SPMF β
   | 0, s => (M.output s).elim failure pure
   | k + 1, s => match M.output s with
     | some b => pure b
-    | none => OracleStrategy.kleisliStep H M.toStrategy s >>= runKT H k
+    | none => OracleStrategy.kleisliStep H M.toDynSystem s >>= runKT H k
 
 @[simp] theorem runKT_zero (H : ProbHandler spec) (s : M.State) :
     M.runKT H 0 s = (M.output s).elim failure pure := rfl
@@ -92,7 +92,7 @@ theorem runKT_succ_of_output_eq_some (H : ProbHandler spec) {s : M.State} {b : �
 theorem runKT_succ_of_output_eq_none (H : ProbHandler spec) {s : M.State}
     (hb : M.output s = none) (k : ℕ) :
     M.runKT H (k + 1) s =
-      OracleStrategy.kleisliStep H M.toStrategy s >>= M.runKT H k := by
+      OracleStrategy.kleisliStep H M.toDynSystem s >>= M.runKT H k := by
   simp [runKT, hb]
 
 /-- A halted machine's truncated run is the Dirac mass on its readout, at any fuel. -/
@@ -115,9 +115,9 @@ theorem runKT_eq_joinOption_runK (H : ProbHandler spec) (k : ℕ) (s : M.State) 
         SPMF.joinOption_pure]
       rfl
     | none =>
-      rw [M.runKT_succ_of_output_eq_none H hb, M.runK_succ_of_output_eq_none H hb,
+      rw [M.runKT_succ_of_output_eq_none H hb, M.runK_succ_of_output_eq_none' H hb,
         SPMF.joinOption_bind]
-      exact congrArg (fun f => OracleStrategy.kleisliStep H M.toStrategy s >>= f)
+      exact congrArg (fun f => OracleStrategy.kleisliStep H M.toDynSystem s >>= f)
         (funext fun s' => ih s')
 
 /-- **Dirac bridge** for the truncated run: against a deterministic handler it is the
@@ -187,11 +187,11 @@ theorem runLimit_of_output_eq_some (H : ProbHandler spec) {s : M.State} {b : β}
 absorbs the fuel recursion. -/
 theorem runLimit_of_output_eq_none (H : ProbHandler spec) {s : M.State}
     (hb : M.output s = none) :
-    M.runLimit H s = OracleStrategy.kleisliStep H M.toStrategy s >>= M.runLimit H := by
+    M.runLimit H s = OracleStrategy.kleisliStep H M.toDynSystem s >>= M.runLimit H := by
   let C : Chain (SPMF β) :=
-    ⟨fun k => OracleStrategy.kleisliStep H M.toStrategy s >>= fun s' => M.runKT H k s',
+    ⟨fun k => OracleStrategy.kleisliStep H M.toDynSystem s >>= fun s' => M.runKT H k s',
       fun _ _ h => SPMF.bind_le_bind le_rfl fun s' => M.runKT_monotone H s' h⟩
-  have hbind : OracleStrategy.kleisliStep H M.toStrategy s >>= M.runLimit H = ωSup C :=
+  have hbind : OracleStrategy.kleisliStep H M.toDynSystem s >>= M.runLimit H = ωSup C :=
     SPMF.bind_ωSup _ fun s' => M.runChain H s'
   rw [hbind]
   refine le_antisymm (ωSup_le _ _ fun k => ?_) (ωSup_le _ _ fun k => ?_)
@@ -211,7 +211,7 @@ supremum. -/
 theorem runLimit_fix (H : ProbHandler spec) (s : M.State) :
     M.runLimit H s = match M.output s with
       | some b => pure b
-      | none => OracleStrategy.kleisliStep H M.toStrategy s >>= M.runLimit H := by
+      | none => OracleStrategy.kleisliStep H M.toDynSystem s >>= M.runLimit H := by
   cases hb : M.output s with
   | some b => exact M.runLimit_of_output_eq_some H hb
   | none => exact M.runLimit_of_output_eq_none H hb
@@ -316,13 +316,18 @@ theorem Implements.implementsAE {M : OracleMachine spec α β}
     runKT_eq_joinOption_runK, h H x, SPMF.joinOption_map_some]
 
 /-- Limit implementation plus probabilistic steadiness at fuel `k` (no unresolved mass
-against any handler) recovers the fuelled implements relation. The steadiness
-hypothesis is essential: `ImplementsAE` alone says nothing about *when* the machine
-resolves. -/
-theorem ImplementsAE.implements {M : OracleMachine spec α β}
+against any handler) recovers the fuelled run equation against every randomized oracle —
+the `m := SPMF` face of `Implements`. The steadiness hypothesis is essential:
+`ImplementsAE` alone says nothing about *when* the machine resolves. Note the full
+monad-parametric `Implements` is *not* recoverable from limit data: `ImplementsAE` is
+an SPMF-level hypothesis, and nothing in it constrains the run in other monads
+(recovering it would need the machine-vs-program correspondence at the level of
+transition structure, not distribution semantics). -/
+theorem ImplementsAE.runK_eq {M : OracleMachine spec α β}
     {oa : α → OracleComp spec β} (h : M.ImplementsAE oa) {k : ℕ}
-    (hk : ∀ (H : ProbHandler spec) (x : α), M.runK H k (M.init x) none = 0) :
-    M.Implements oa k := fun H x => by
+    (hk : ∀ (H : ProbHandler spec) (x : α), M.runK H k (M.init x) none = 0)
+    (H : ProbHandler spec) (x : α) :
+    M.runK H k (M.init x) = some <$> simulateQ H (oa x) := by
   rw [SPMF.eq_map_some_of_apply_none_eq_zero (hk H x)]
   refine congrArg (fun p => some <$> p) ?_
   rw [← runKT_eq_joinOption_runK, ← M.runLimit_eq_runKT_of_apply_none_eq_zero H (hk H x)]
