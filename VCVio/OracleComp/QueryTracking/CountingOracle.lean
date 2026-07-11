@@ -400,7 +400,8 @@ lemma exists_mem_support_of_mem_support_simulate_queryBind {t : spec.Domain}
     (mem_support_simulate_iff (oa := ((query t : OracleComp spec _) >>= oa)) qc z).1 hz
   obtain ⟨u, b, hb, hq0⟩ := (by
     simpa [simulate, countingOracle, QueryImpl.withCounting_apply] using hq0mem)
-  have hb0 : (z.1, b) ∈ support (simulate (oa u) 0) := by simpa [simulate] using hb
+  have hb0 : (z.1, b) ∈ support (simulate (oa u) 0) := by
+    simpa [simulate, countingOracle] using hb
   refine ⟨u, (mem_support_simulate_iff (oa := oa u) qc
     (z := (z.1, Function.update z.2 t (z.2 t - 1)))).2 ⟨b, hb0, ?_⟩⟩
   funext j

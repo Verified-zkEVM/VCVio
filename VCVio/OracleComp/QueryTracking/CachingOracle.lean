@@ -126,7 +126,10 @@ theorem withCachingAux_run'_eq
       (simulateQ base.withCaching oa).run' cache := by
   have hmap := congrArg (Prod.fst <$> ·)
     (withCachingAux_run_proj_eq base hit miss hmiss oa cache q)
-  simpa [StateT.run'] using hmap
+  rw [StateT.run', StateT.run']
+  change (fun a => id a.1) <$> (simulateQ (withCachingAux hit miss) oa).run (cache, q) =
+    Prod.fst <$> (simulateQ base.withCaching oa).run cache
+  simpa only [Functor.map_map, Function.comp_def, Prod.map] using hmap
 
 end CacheAuxProjection
 

@@ -38,20 +38,19 @@ require Hax from git
   "492a34e3" / "hax-lib/proof-libs/lean"
 
 /-
-Loom2 (Verse Lab fork): foundation for the Loom-style WP / Triple program-logic
+Loom2: foundation for the Loom-style WP / Triple program-logic
 abstractions used in `VCVio/ProgramLogic/`. Tracks Volo Gladshtein's unmerged
 upstream PR https://github.com/leanprover/lean4/pull/12965 in the
 `Std.Internal.Do.{WPMonad,PredTrans,Triple,Assertion,ExceptPost}` namespace
 (temporarily prefixed `Std.Do'` in Loom2 to avoid clashing once it merges).
 
-Pinned to our `quangvdao/loom2` fork on branch `v4.29.0-ci-threads`, which
-patches only the toolchain / build configuration over upstream
-`verse-lab/loom2`. When upstream Lean ships these foundations in a stable
-release, drop this require and re-import from `Std.Do.…` directly.
+Pinned to the Lean 4.31 compatibility branch based on upstream revision
+`876296fc`. When upstream Lean ships these foundations in a stable release,
+drop this require and re-import from `Std.Do.…` directly.
 -/
 require loom2 from git
   "https://github.com/quangvdao/loom2" @
-  "eccaa1eb"
+  "4a47c27fa960590b104df117479f3cb6f73cc0b4"
 
 /-
 Aeneas: upstream pins Lean 4.28.0-rc1. Lake happily resolves aeneas against
@@ -65,11 +64,11 @@ exact diagnostics. Leave this commented until upstream ships a v4.30 build
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "ba600392" / "backends/lean"
 
-require "leanprover-community" / "mathlib" @ git "v4.30.0"
+require "leanprover-community" / "mathlib" @ git "v4.31.0"
 
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "5d3a160ed751b9227af90adb9da41d0eae2e0238"
+  "04a12b67fa2048c9412fdd26ed9e446f25919d37"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio

@@ -354,7 +354,7 @@ does not change which outputs are reachable. This is the support analogue of
         ((monadLift : OracleQuery spec _ → OracleQuery superSpec _) (OracleSpec.query t))) = _
       rw [support_liftM, show (monadLift (OracleSpec.query t) : OracleQuery superSpec _) =
         ⟨h.onQuery t, h.onResponse t⟩ from by
-          simpa only [ofPFunctor_toPFunctor] using h.liftM_eq_lift (OracleSpec.query t)]
+          convert h.liftM_eq_lift (OracleSpec.query t) using 1 <;> rfl]
       exact (LawfulSubSpec.onResponse_bijective (h := h) t).surjective.range_eq
     rw [hs]; simp
 

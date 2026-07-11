@@ -555,8 +555,10 @@ lemma pathwiseCostAtMost_fin_mOfFn [LawfulMonad m] [IsOrderedAddMonoid ω] {n : 
     PathwiseCostAtMost (Fin.mOfFn n f) (n • k) := by
   induction n with
   | zero =>
-      simpa [zero_nsmul] using
-        (pathwiseCostAtMost_pure (m := m) (ω := ω) (x := (Fin.elim0 : Fin 0 → α)))
+      have hf : f = (Fin.elim0 : Fin 0 → AddWriterT ω m α) := funext fun i => Fin.elim0 i
+      subst f
+      rw [Fin.mOfFn, zero_nsmul]
+      exact pathwiseCostAtMost_pure (m := m) (ω := ω) (x := (Fin.elim0 : Fin 0 → α))
   | succ n ih =>
       simp only [Fin.mOfFn, succ_nsmul']
       simpa [add_comm] using
@@ -569,8 +571,10 @@ lemma pathwiseCostAtLeast_fin_mOfFn [LawfulMonad m] [IsOrderedAddMonoid ω] {n :
     PathwiseCostAtLeast (Fin.mOfFn n f) (n • k) := by
   induction n with
   | zero =>
-      simpa [zero_nsmul] using
-        (pathwiseCostAtLeast_pure (m := m) (ω := ω) (x := (Fin.elim0 : Fin 0 → α)))
+      have hf : f = (Fin.elim0 : Fin 0 → AddWriterT ω m α) := funext fun i => Fin.elim0 i
+      subst f
+      rw [Fin.mOfFn, zero_nsmul]
+      exact pathwiseCostAtLeast_pure (m := m) (ω := ω) (x := (Fin.elim0 : Fin 0 → α))
   | succ n ih =>
       simp only [Fin.mOfFn, succ_nsmul']
       simpa [add_comm] using

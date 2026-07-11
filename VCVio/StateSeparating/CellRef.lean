@@ -526,7 +526,8 @@ theorem supportPreserves_of_preserves {α : Type (max u v)} {c : StateT (Heap Id
     SupportPreserves c r := by
   intro h z hz
   obtain rfl : z = (c.run h).run := by simpa [Id.support_eq_singleton] using hz
-  simpa using hc h
+  change r.get (c.run h).2 = r.get h
+  exact hc h
 
 theorem preserves_of_supportPreserves {α : Type (max u v)} {c : StateT (Heap Ident) Id α}
     {r : CellRef Ident} (hc : SupportPreserves c r) :
@@ -569,7 +570,8 @@ theorem preserves_pure {α : Type (max u v)} (x : α) (r : CellRef Ident) :
 theorem preserves_read (r s : CellRef Ident) :
     Preserves (r.read) s := by
   refine preserves_of_supportPreserves fun h z hz => ?_
-  obtain rfl : z = (r.get h, h) := by simpa [read, Id.support_eq_singleton] using hz
+  change z ∈ ({(r.get h, h)} : Set _) at hz
+  obtain rfl : z = (r.get h, h) := by simpa using hz
   simp
 
 theorem read_writesOnly_empty (r : CellRef Ident) :
@@ -588,7 +590,8 @@ theorem write_writesOnly_single [DecidableEq Ident] (r : CellRef Ident) (x : r.V
     WritesOnly (r.write x) ({r.id} : Set Ident) := by
   refine writesOnly_of_supportWritesOnly ?_
   intro s hs h z hz
-  obtain rfl : z = (PUnit.unit, r.set h x) := by simpa [write, Id.support_eq_singleton] using hz
+  change z ∈ ({(PUnit.unit, r.set h x)} : Set _) at hz
+  obtain rfl : z = (PUnit.unit, r.set h x) := by simpa using hz
   simpa using get_set_of_ne r s h x hs
 
 theorem writesOnly_bind {α β : Type (max u v)} {c : StateT (Heap Ident) Id α}
@@ -1028,13 +1031,20 @@ theorem demoImpl_writesOnly :
   intro t
   cases t with
   | touchLog =>
-      simpa [demoImpl, demoWrites, logRef] using
+      change CellRef.SupportWritesOnly
+        (logRef.writeM 1 : StateT (Heap DemoCell) ProbComp PUnit) {DemoCell.log}
+      simpa [demoSpec, demoImpl, demoWrites, logRef] using
         CellRef.writeM_supportWritesOnly_single logRef 1
   | touchCache =>
-      simpa [demoImpl, demoWrites, cacheRef] using
+      change CellRef.SupportWritesOnly
+        (cacheRef.writeM 1 : StateT (Heap DemoCell) ProbComp PUnit) {DemoCell.cache}
+      simpa [demoSpec, demoImpl, demoWrites, cacheRef] using
         CellRef.writeM_supportWritesOnly_single cacheRef 1
   | readFlag =>
-      simpa [demoImpl, demoWrites] using
+      change CellRef.SupportWritesOnly
+        ((do let _ ← (flagRef.readM : StateT (Heap DemoCell) ProbComp Bool)
+             pure PUnit.unit) : StateT (Heap DemoCell) ProbComp PUnit) ∅
+      simpa [demoSpec, demoImpl, demoWrites] using
         CellRef.supportWritesOnly_bind
           (CellRef.readM_supportWritesOnly_empty (m := ProbComp) flagRef)
           (fun _ => CellRef.supportWritesOnly_pure_empty (m := ProbComp) PUnit.unit)

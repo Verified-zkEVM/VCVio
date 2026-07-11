@@ -46,18 +46,18 @@ abbrev Range (spec : OracleSpec ι) (t : ι) : Type _ := spec t
 protected class Fintype (spec : OracleSpec ι) extends PFunctor.Fintype spec.toPFunctor
 
 instance {spec : OracleSpec ι} [h : spec.Fintype] (t : spec.Domain) :
-  Fintype (spec.Range t) := h.fintype_B t
+  Fintype (spec.Range t) := h.fintypeB t
 
 protected class Inhabited (spec : OracleSpec ι) extends PFunctor.Inhabited spec.toPFunctor
 
 instance {spec : OracleSpec ι} [h : spec.Inhabited] (t : spec.Domain) :
-  Inhabited (spec.Range t) := h.inhabited_B t
+  Inhabited (spec.Range t) := h.inhabitedB t
 
 protected class DecidableEq (spec : OracleSpec ι) extends PFunctor.DecidableEq spec.toPFunctor
 
-instance {spec : OracleSpec ι} [h : spec.DecidableEq] : DecidableEq spec.Domain := h.decidableEq_A
+instance {spec : OracleSpec ι} [h : spec.DecidableEq] : DecidableEq spec.Domain := h.decidableEqA
 instance {spec : OracleSpec ι} [h : spec.DecidableEq] (t : spec.Domain) :
-  DecidableEq (spec.Range t) := h.decidableEq_B t
+  DecidableEq (spec.Range t) := h.decidableEqB t
 
 section ofFn
 
@@ -67,16 +67,16 @@ notation:25 (name := singletonSpec) A:25 " →ₒ " B:26 =>
 
 instance {ι : Type u} (F : ι → Type v) [h : (i : ι) → Fintype (F i)] :
     (OracleSpec.ofFn F).Fintype where
-  fintype_B := h
+  fintypeB := h
 
 instance {ι : Type u} (F : ι → Type v) [h : DecidableEq ι] [h' : (i : ι) → DecidableEq (F i)] :
     (OracleSpec.ofFn F).DecidableEq where
-  decidableEq_A := h
-  decidableEq_B := h'
+  decidableEqA := h
+  decidableEqB := h'
 
 instance {ι : Type u} (F : ι → Type v) [h : (i : ι) → Inhabited (F i)] :
     (OracleSpec.ofFn F).Inhabited where
-  inhabited_B := h
+  inhabitedB := h
 
 end ofFn
 
@@ -105,16 +105,16 @@ lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
 
 instance {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
     [h : spec.Fintype] [h' : spec'.Fintype] : (spec + spec').Fintype where
-  fintype_B | .inl i => h.fintype_B i | .inr i => h'.fintype_B i
+  fintypeB | .inl i => h.fintypeB i | .inr i => h'.fintypeB i
 
 instance {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
     [h : spec.DecidableEq] [h' : spec'.DecidableEq] : (spec + spec').DecidableEq where
-  decidableEq_A := inferInstanceAs (DecidableEq (ι ⊕ ι'))
-  decidableEq_B | .inl i => h.decidableEq_B i | .inr i => h'.decidableEq_B i
+  decidableEqA := inferInstanceAs (DecidableEq (ι ⊕ ι'))
+  decidableEqB | .inl i => h.decidableEqB i | .inr i => h'.decidableEqB i
 
 instance {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
     [h : spec.Inhabited] [h' : spec'.Inhabited] : (spec + spec').Inhabited where
-  inhabited_B | .inl i => h.inhabited_B i | .inr i => h'.inhabited_B i
+  inhabitedB | .inl i => h.inhabitedB i | .inr i => h'.inhabitedB i
 
 end add
 
