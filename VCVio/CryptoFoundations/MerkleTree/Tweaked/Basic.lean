@@ -12,10 +12,21 @@ import VCVio.CryptoFoundations.TweakableHash
 
 Merkle trees whose node hash is a *tweakable* hash (`TweakableHash`), with the tweak varying
 by level: the internal node rooting a subtree of skeleton `s` hashes its children under the
-tweak `tweakAt s.depth`. This is the tree layout used by hash-based signature schemes in the
-XMSS family (including the SLH-DSA / SPHINCS+ functions `H` and the lean-Ethereum leanSig
-proposal), where domain separation by level is what enables *target*-collision-resistance
-assumptions in place of full collision resistance.
+tweak `tweakAt s.depth`. This provides per-**level** domain separation only.
+
+**Scope and limitations (read first).**
+
+* This is a *level-separated* Merkle tree, **not** the XMSS / SLH-DSA layout: those schemes
+  tweak by full node *address* (layer, tree, horizontal index, domain tag), and
+  `tweakAt : ℕ → Tweak` cannot distinguish two nodes at the same depth, whatever `Tweak` is.
+  The right generalization is the inductive engine over a node-addressed hash
+  (`nodeHash : NodeAddress s → Y → Y → Y`) with this module as its level-indexed instance;
+  that engine is tracked as a follow-up.
+* The binding kernel below returns a **symmetric same-tweak collision** as data. This is
+  *not by itself* a target-collision-resistance break: TCR is directional (one endpoint must
+  be fixed at target-generation time, before the adversary answers). The oriented reduction
+  — an honestly built tree/path fixed in a commitment phase against a later adversarial
+  opening — is future work, as is the audit of the multi-target TCR game it should land in.
 
 Contents:
 
@@ -23,13 +34,13 @@ Contents:
   recomputation from a leaf, an authentication path, and a leaf index, hashing each level
   under its own tweak. `generateProof` from the untweaked development is reused unchanged.
 * `tweaked_functional_completeness` — honestly generated paths verify.
-* `TweakedCollision` and `findCollisionTweaked` — the constructive binding kernel. A
-  disagreement between two verifying openings is traced down the two paths and returned as a
-  *tweak-tagged* collision: two distinct input pairs with the same digest **under the same
-  tweak**. This is exactly the win condition shape of the target-collision experiments in
-  `VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget` (SM-TCR), so binding for the
-  tweaked tree needs only tweak-wise target collision resistance, not full collision
-  resistance of a single function.
+* `TweakedCollision` and `findCollisionTweaked` — the constructive same-tweak collision
+  kernel. A disagreement between two verifying openings is traced down the two paths and
+  returned as a *tweak-tagged* collision: two distinct input pairs with the same digest
+  **under the same tweak**. The tag localizes the collision to a single level's hash, which
+  is the raw material a (future, oriented) per-level target-collision reduction will
+  consume; see the scope note above for why this symmetric statement is deliberately not
+  phrased as a TCR win.
 * `getPutativeRootTweaked_binding_collision` — the user-facing binding statement: distinct
   leaf values verifying to the same root at the same index yield a `TweakedCollision`,
   as data.
@@ -123,7 +134,7 @@ variable [DecidableEq Y]
 
 /-- Walk two tweaked Merkle branches with the same leaf index, looking for a tweak-tagged
 hash collision. Tweaked analogue of `InductiveMerkleTree.findCollision`; the returned tweak
-identifies the level (and hence the SM-TCR target) at which the collision occurs. -/
+identifies the level at which the collision occurs. -/
 def findCollisionTweaked (th : TweakableHash PkSeed Tweak (Y × Y) Y) (pk : PkSeed)
     (tweakAt : ℕ → Tweak) : {s : Skeleton} → (idx : SkeletonLeafIndex s) →
     (proof₁ proof₂ : List.Vector Y idx.depth) → (x y : Y) → Option (Tweak × (Y × Y) × (Y × Y))
