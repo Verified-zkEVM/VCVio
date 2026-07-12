@@ -26,6 +26,11 @@ import VCVio.CryptoFoundations.FiatShamir.WithAbort
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.Cost
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.ExpectedCost
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies
+import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Bodies
+import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.BodyBounds
+import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.GhostLayer
+import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.NMAHandler
+import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Projections
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.Assembly
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.BodyHops
