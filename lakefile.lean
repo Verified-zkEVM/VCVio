@@ -60,7 +60,20 @@ require "leanprover-community" / "mathlib" @ git "v4.31.0"
 
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "04a12b67fa2048c9412fdd26ed9e446f25919d37"
+  "5c3a070362f68c5f9edb60b730985b2107eeaaf4"
+
+/-
+Cslib: the Lean computer science library. Used for its single-tape Turing
+machine model with proven polynomial-time composition
+(`Turing.SingleTapeTM.PolyTimeComputable.comp`), which grounds the
+TM-based polynomial-time adversary layer in
+`VCVio/OracleComp/Coinductive/PolyTime.lean`. The `v4.31.0` tag pins the same
+Lean toolchain and Mathlib commit as this project; `require mathlib` above wins
+the shared transitive pins.
+-/
+require cslib from git
+  "https://github.com/leanprover/cslib" @
+  "v4.31.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio

@@ -106,8 +106,8 @@ runtime distribution, exactly as
 `ProcessOver.Run`.
 -/
 structure AsyncRun
-    {Γ : Spec.Node.Context} {m : Type → Type} [Pure m] {State Event : Type}
-    (process : Concurrent.ProcessOver Γ)
+    {Γ : Spec.Node.Context} {m : Type → Type} [Pure m] {State Event P : Type}
+    (process : Concurrent.ProcessOver P Γ)
     (envAction : EnvAction m Event State) where
   /-- The joint runtime state at each step. -/
   state : ℕ → AsyncRuntimeState process.Proc State
@@ -134,8 +134,8 @@ namespace AsyncRun
 
 variable {Γ : Spec.Node.Context}
 variable {m : Type → Type} [Pure m]
-variable {State Event : Type}
-variable {process : Concurrent.ProcessOver Γ}
+variable {State Event P : Type}
+variable {process : Concurrent.ProcessOver P Γ}
 variable {envAction : EnvAction m Event State}
 
 /-- The initial joint runtime state of an async run. -/
