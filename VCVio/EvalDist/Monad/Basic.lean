@@ -79,6 +79,24 @@ lemma probOutput_pure_self [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (x : α
     Pr[= x | (pure x : m α)] = 1 := by
   aesop (rule_sets := [UnfoldEvalDist])
 
+/-- Boolean monotonicity of `pure` outcome probability into a disjunction: if `win` implies
+`inner ∨ outer`, then the probability of outcome `true` under `pure win` is bounded by the sum of
+the probabilities under `pure inner` and `pure outer`. -/
+lemma probOutput_pure_bool_le_or {m : Type → Type} [Monad m]
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    (win inner outer : Bool) (h : win = true → inner = true ∨ outer = true) :
+    Pr[= true | (pure win : m Bool)] ≤
+      Pr[= true | (pure inner : m Bool)] + Pr[= true | (pure outer : m Bool)] := by
+  cases win <;> cases inner <;> cases outer <;> simp_all
+
+/-- Boolean monotonicity of `pure` outcome probability: if `b₁` implies `b₂`, then the probability
+of outcome `true` under `pure b₁` is bounded by that under `pure b₂`. -/
+lemma probOutput_pure_bool_le {m : Type → Type} [Monad m]
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    (b₁ b₂ : Bool) (h : b₁ = true → b₂ = true) :
+    Pr[= true | (pure b₁ : m Bool)] ≤ Pr[= true | (pure b₂ : m Bool)] := by
+  simpa using probOutput_pure_bool_le_or (m := m) b₁ b₂ false (fun hw => Or.inl (h hw))
+
 /-- Fallback when we don't have decidable equality. -/
 @[grind =]
 lemma probOutput_pure_eq_indicator [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (x y : α) :
