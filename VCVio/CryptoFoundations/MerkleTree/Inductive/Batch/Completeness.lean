@@ -4,14 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Abraxas1010 (IAOM / Apoth3osis)
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.BatchDefs
+import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
 import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 
 /-!
 # Completeness of Batch Openings for Inductive Merkle Trees
 
 This file proves the completeness theorem for the batch openings defined in
-`VCVio.CryptoFoundations.MerkleTree.Inductive.BatchDefs`: an honestly generated batch proof,
+`VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs`: an honestly generated batch proof,
 together with the true values of the selected leaves, recomputes exactly the root of the
 honestly built Merkle tree — for *every* selector that opens at least one leaf.
 

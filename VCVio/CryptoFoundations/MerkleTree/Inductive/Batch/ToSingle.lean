@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Abraxas1010 (IAOM / Apoth3osis)
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.BatchDefs
+import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
 
 /-!
@@ -26,13 +26,14 @@ openings:
   via the constructive `findCollision` kernel of `Binding.lean`. (Note this is strictly more
   general than the same-selector uniqueness of `BatchUniqueness.lean`, which needs an
   injective hash; here the hash is arbitrary and the output is a collision as data.)
-* **Extractability reduces.** In the extractability game, a batch adversary whose opening
-  verifies and disagrees with the extracted tree at some *selected* leaf yields — through
-  `batchToSingleProof` — a single-index opening for that leaf that verifies against the same
-  root, i.e. a winning single-index opening for the same committing phase (and hence the
-  same query log and the same extracted tree). The game-level packaging of this reduction is
-  left to future work; the content is the root-preservation theorem
-  `getPutativeRootWithHash_batchToSingleProof` below.
+* **A deterministic kernel for a future extractability transfer.** This file does *not*
+  prove batch extractability. What it provides is the deterministic core such a proof will
+  consume: `batchToSingleProof` maps any verifying batch opening, at any *selected* leaf, to
+  a single-index opening for that leaf recomputing the very same putative root
+  (`getPutativeRootWithHash_batchToSingleProof`). The game-level transfer remains future
+  work and still has to: package the adversary's *dynamic* choice of selector, preserve the
+  commitment-phase extraction log across the reduction, account for the root-recomputation
+  query costs, and transfer the winning event itself.
 
 ## Main definitions
 

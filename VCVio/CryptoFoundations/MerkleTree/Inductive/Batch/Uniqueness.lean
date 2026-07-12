@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Abraxas1010 (IAOM / Apoth3osis)
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.BatchDefs
+import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
 
 /-!
 # Batch Opening Uniqueness
@@ -14,6 +14,13 @@ hash function is injective (`Function.Injective2`), any two batch openings for t
 selector that produce the same putative root must agree on the claimed values of every
 selected leaf and on the entire (pruned) authentication data. The Merkle root uniquely
 determines the committed values at all opened positions simultaneously.
+
+`Function.Injective2` is **not** a realistic assumption on a compressing hash — no
+`α × α → α` compression is injective on a nontrivial type. These theorems are structural
+sanity results (the pruned representation carries no slack). The cryptographically
+meaningful binding statement is the *constructive collision* result: see `Binding.lean`
+and the cross-selector `getPutativeBatchRootWithHash_binding` in `ToSingle.lean`, which
+assume nothing about the hash and return a collision as data.
 
 Two points specific to the batch setting:
 

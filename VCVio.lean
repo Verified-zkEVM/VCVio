@@ -49,10 +49,10 @@ import VCVio.CryptoFoundations.KEMDEM
 import VCVio.CryptoFoundations.KeyEncapMech
 import VCVio.CryptoFoundations.MacAlg
 import VCVio.CryptoFoundations.MacFromPRF
-import VCVio.CryptoFoundations.MerkleTree.Inductive.BatchCompleteness
-import VCVio.CryptoFoundations.MerkleTree.Inductive.BatchDefs
-import VCVio.CryptoFoundations.MerkleTree.Inductive.BatchToSingle
-import VCVio.CryptoFoundations.MerkleTree.Inductive.BatchUniqueness
+import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
+import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
+import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
+import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Completeness
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
