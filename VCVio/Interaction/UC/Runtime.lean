@@ -149,8 +149,8 @@ Run `fuel` steps of a process, starting from state `s`, using a
 state-dependent sampler at each step.
 -/
 noncomputable def ProcessOver.runSteps {m : Type → Type} [Monad m]
-    {Γ : Spec.Node.Context}
-    (process : ProcessOver Γ)
+    {Γ : Spec.Node.Context} {P : Type}
+    (process : ProcessOver P Γ)
     (sampler : (p : process.Proc) → Spec.Sampler m (process.step p).spec) :
     ℕ → process.Proc → m process.Proc
   | 0, s => pure s
@@ -188,7 +188,8 @@ noncomputable def processSemantics (Party : Type u) {m : Type → Type} [Monad m
   instMonad := inferInstance
   sem := sem
   run process :=
-    process.toProcess.runSteps process.stepSampler fuel (init process) >>= observe process
+    ProcessOver.runSteps process.toProcess process.stepSampler fuel (init process) >>=
+      observe process
 
 /--
 `processSemanticsProbComp` is the specialization of `processSemantics`
