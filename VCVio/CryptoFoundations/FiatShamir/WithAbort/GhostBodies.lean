@@ -1475,7 +1475,7 @@ lemma probOutput_lazyGhostFire_true_le (pk : Stmt) (sk : Wit) {ε : ℝ}
                 Pr[= true | lazyGhostFire ids pk sk w' n] := by
               gcongr
               · rw [tsum_eq_single w' (by intro b hb; simp [hb]), if_pos rfl, mul_one]
-              · exact mul_le_of_le_one_left (zero_le') tsum_probOutput_le_one
+              · exact mul_le_of_le_one_left (zero_le) tsum_probOutput_le_one
       refine hbody.trans ?_
       push_cast
       rw [add_mul, one_mul, add_comm]
@@ -2138,7 +2138,7 @@ lemma tsum_probOutput_commit_mul_writeHit_le (pk : Stmt) (sk : Wit) (msg : M)
   obtain ⟨w, st⟩ := ws
   by_cases hhit : ((msg, w) : M × Commit) = mc
   · rw [if_pos hhit, mul_one, if_pos (by rw [← hhit])]
-  · rw [if_neg hhit, mul_zero]; exact zero_le'
+  · rw [if_neg hhit, mul_zero]; exact zero_le
 
 omit [SampleableType Stmt] in
 /-- **(a) Sign-step ghost-membership charge increment.** Running `ghostSignBody` for `n`

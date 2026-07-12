@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
+import Mathlib.Data.Nat.Choose.Cast
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies
 import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 import VCVio.ProgramLogic.Relational.SimulateQ
@@ -391,7 +392,7 @@ lemma probEvent_lazyGhostHybridImpl_charged_step (pk : Stmt) (sk : Wit) {ε : �
           Pr[= (z.1, z.2, true) |
             fire >>= fun fired => (fun cu => (cu.1, (((cu.2, gh), list), fired))) <$> ro] := by
         refine ENNReal.tsum_le_tsum fun z => ?_
-        exact mul_le_of_le_one_right (zero_le') probEvent_le_one
+        exact mul_le_of_le_one_right (zero_le) probEvent_le_one
     _ ≤ Pr[= true | fire] := by
         -- Each output's bad bit equals the fire draw, so the `b = true` outputs carry
         -- at most the fire `true`-mass. Expand each summand over the fire draw, swap the
@@ -417,6 +418,7 @@ lemma probEvent_lazyGhostHybridImpl_charged_step (pk : Stmt) (sk : Wit) {ε : �
           intro fired
           rw [ENNReal.tsum_mul_left]
           gcongr ?_ * ?_
+          · exact le_rfl
           cases fired with
           | false =>
               rw [if_neg (by decide)]
@@ -998,7 +1000,7 @@ lemma ghostHybridImpl_flag_preserved_le {γ : Type}
     _ = (∑' z : γ × GhostState M Commit Chal, Pr[= z | run]) * (if p.2 = true then 1 else 0) := by
         rw [ENNReal.tsum_mul_right]
     _ ≤ (if p.2 = true then 1 else 0) :=
-        mul_le_of_le_one_left zero_le' tsum_probOutput_le_one
+        mul_le_of_le_one_left zero_le tsum_probOutput_le_one
 
 omit [SampleableType Stmt] in
 /-- Per-state read-step bad-mass bound: the eager read sets the bad flag only on a ghost hit,
@@ -1039,14 +1041,14 @@ lemma ghostHybridImpl_read_expected_flag_le (pk : Stmt) (sk : Wit)
         by_cases hz : z ∈ support ((ghostHybridImpl ids M maxAttempts true pk sk
             (.inl (.inr mc))).run p)
         · gcongr; exact hflag z hz
-        · refine le_of_eq (mul_eq_zero.mpr (Or.inl ?_)) |>.trans zero_le'
+        · refine le_of_eq (mul_eq_zero.mpr (Or.inl ?_)) |>.trans zero_le
           exact probOutput_eq_zero_of_not_mem_support hz
     _ = (∑' z : Chal × GhostState M Commit Chal,
           Pr[= z | (ghostHybridImpl ids M maxAttempts true pk sk (.inl (.inr mc))).run p]) *
           ((if p.2 = true then 1 else 0) + memCharge M p.1.1.2 mc) := by
         rw [ENNReal.tsum_mul_right]
     _ ≤ (if p.2 = true then 1 else 0) + memCharge M p.1.1.2 mc :=
-        mul_le_of_le_one_left zero_le' tsum_probOutput_le_one
+        mul_le_of_le_one_left zero_le tsum_probOutput_le_one
 
 omit [SampleableType Stmt] in
 /-- **`h_carry` premise of the threaded bound for the ghost handler.** The carried bad mass
@@ -2112,28 +2114,6 @@ noncomputable def deferredDrawImpl (pk : Stmt) (sk : Wit) :
       (fun alc => (alc.1.1, (((alc.2, msg :: s.1.1.2), s.1.2 ++ alc.1.2), s.2))) <$>
         (ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1
 
-/-- Tonelli-style rearrangement under a `map`: the expectation of a nonnegative functional under a
-mapped computation reindexes along the map. -/
-private lemma tsum_probOutput_map_mul' {α β : Type} (oa : ProbComp α)
-    (f : α → β) (g : β → ℝ≥0∞) :
-    ∑' z, Pr[= z | f <$> oa] * g z = ∑' x, Pr[= x | oa] * g (f x) := by
-  rw [map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
-  refine tsum_congr fun x => ?_
-  simp only [Function.comp_apply]
-  rw [tsum_probOutput_pure_mul]
-
-/-- The expectation of a nonnegative functional `F` that is constant (equal to `c`) on the support
-of a (sub)probability computation `run` equals `c`. -/
-private lemma tsum_probOutput_mul_of_const_on_support {β : Type} (run : ProbComp β) {c : ℝ≥0∞}
-    {F : β → ℝ≥0∞} (hconst : ∀ z ∈ support run, F z = c) (hone : Pr[⊥ | run] = 0) :
-    ∑' z, Pr[= z | run] * F z = c := by
-  have hsum : (∑' z, Pr[= z | run] * F z) = ∑' z, Pr[= z | run] * c := by
-    refine tsum_congr fun z => ?_
-    by_cases hz : z ∈ support run
-    · rw [hconst z hz]
-    · rw [probOutput_eq_zero_of_not_mem_support hz, zero_mul, zero_mul]
-  rw [hsum, ENNReal.tsum_mul_right, tsum_probOutput_eq_one' hone, one_mul]
-
 omit [SampleableType Stmt] in
 /-- **Per-step expected drawn-list length growth of the deferred-draw handler.** One step of
 `deferredDrawImpl` grows the expected drawn-list length by at most `1/(1-p)` on a signing query and
@@ -2179,7 +2159,7 @@ lemma deferredDrawImpl_step_expected_length_le (pk : Stmt) (sk : Wit)
           (alc.1.1, (((alc.2, msg :: s.1.1.2), s.1.2 ++ alc.1.2), s.2))) <$>
           (ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1 := rfl
     rw [hrun]
-    refine le_of_eq_of_le (tsum_probOutput_map_mul'
+    refine le_of_eq_of_le (tsum_probOutput_map_mul
       ((ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1)
       (fun alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache =>
         (alc.1.1, (((alc.2, msg :: s.1.1.2), s.1.2 ++ alc.1.2), s.2)))
@@ -2705,7 +2685,7 @@ theorem deferredDraw_kn_mean_le {γ : Type} (pk : Stmt) (sk : Wit)
         (n : ℝ≥0∞))
       = ∑' z : γ × DeferredState M Commit Chal, Pr[= z | run] *
           ((z.2.1.2.length - ws₀.length : ℕ) : ℝ≥0∞) :=
-    tsum_probOutput_map_mul' run
+    tsum_probOutput_map_mul run
       (fun z => z.2.1.2.length - ws₀.length) (fun n => (n : ℝ≥0∞))
   rw [hmean]
   -- Add back `ws₀.length` to recover the total-length expectation, bounded by the fold lemma.
@@ -2813,7 +2793,7 @@ lemma deferredDrawImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
           (alc.1.1, (((alc.2, msg :: s.1.1.2), s.1.2 ++ alc.1.2), s.2))) <$>
           (ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1 := rfl
     rw [hrun]
-    refine le_of_eq_of_le (tsum_probOutput_map_mul'
+    refine le_of_eq_of_le (tsum_probOutput_map_mul
       ((ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1)
       (fun alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache =>
         (alc.1.1, (((alc.2, msg :: s.1.1.2), s.1.2 ++ alc.1.2), s.2)))
@@ -2974,7 +2954,7 @@ theorem deferredDraw_attemptKn_mean_le {γ : Type} (pk : Stmt) (sk : Wit)
         (n : ℝ≥0∞))
       = ∑' z : γ × DeferredState M Commit Chal, Pr[= z | run] *
           (((z.2.1.2.length - ws₀.length) + (z.2.1.1.2.length - l.length) : ℕ) : ℝ≥0∞) :=
-    tsum_probOutput_map_mul' run
+    tsum_probOutput_map_mul run
       (fun z => (z.2.1.2.length - ws₀.length) + (z.2.1.1.2.length - l.length))
       (fun n => (n : ℝ≥0∞))
   rw [hmean]
@@ -3411,7 +3391,7 @@ lemma deferredDrawReadImpl_step_expected_drawnlist_length_le (pk : Stmt) (sk : W
           (alc.1.1, ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2), s.2))) <$>
           (ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1.1 := rfl
     rw [hrun]
-    refine le_of_eq_of_le (tsum_probOutput_map_mul'
+    refine le_of_eq_of_le (tsum_probOutput_map_mul
       ((ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1.1)
       (fun alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache =>
         (alc.1.1, ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2), s.2)))
@@ -3574,7 +3554,7 @@ lemma deferredDrawReadImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
           (alc.1.1, ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2), s.2))) <$>
           (ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1.1 := rfl
     rw [hrun]
-    refine le_of_eq_of_le (tsum_probOutput_map_mul'
+    refine le_of_eq_of_le (tsum_probOutput_map_mul
       ((ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1.1)
       (fun alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache =>
         (alc.1.1, ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2), s.2)))
@@ -4324,8 +4304,8 @@ theorem deferredDrawRead_run_count_dl_invariant {γ : Type} (pk : Stmt) (sk : Wi
             (fun u => (u, ((((re, sgn), D₂), b₂), rl))) <$>
               (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) n := rfl
         rw [hx₁, hx₂]
-        refine (tsum_probOutput_map_mul' _ _ G).trans
-          ((tsum_congr fun u => ?_).trans (tsum_probOutput_map_mul' _ _ G).symm)
+        refine (tsum_probOutput_map_mul _ _ G).trans
+          ((tsum_congr fun u => ?_).trans (tsum_probOutput_map_mul _ _ G).symm)
         exact congrArg _ (ih u re sgn rl D₁ b₁ D₂ b₂)
       · -- READ: read list grows by `mc.2` (independent of `D`); the bad flag updates to
         -- `b || (mc.2 ∈ D)` (D-dependent), but `ih` is quantified over *all* bad flags.
@@ -4345,8 +4325,8 @@ theorem deferredDrawRead_run_count_dl_invariant {γ : Type} (pk : Stmt) (sk : Wi
               (cu.1, ((((cu.2, sgn), D₂), b₂ || decide (mc.2 ∈ D₂)), mc.2 :: rl))) <$>
               roStep M re mc := rfl
         rw [hx₁, hx₂]
-        refine (tsum_probOutput_map_mul' _ _ G).trans
-          ((tsum_congr fun cu => ?_).trans (tsum_probOutput_map_mul' _ _ G).symm)
+        refine (tsum_probOutput_map_mul _ _ G).trans
+          ((tsum_congr fun cu => ?_).trans (tsum_probOutput_map_mul _ _ G).symm)
         exact congrArg _
           (ih cu.1 cu.2 sgn (mc.2 :: rl) D₁ (b₁ || decide (mc.2 ∈ D₁)) D₂
             (b₂ || decide (mc.2 ∈ D₂)))
@@ -4368,8 +4348,8 @@ theorem deferredDrawRead_run_count_dl_invariant {γ : Type} (pk : Stmt) (sk : Wi
               (alc.1.1, ((((alc.2, msg :: sgn), D₂ ++ alc.1.2), b₂), rl))) <$>
               (ghostSignDrawBody ids M pk sk msg maxAttempts).run re := rfl
         rw [hx₁, hx₂]
-        refine (tsum_probOutput_map_mul' _ _ G).trans
-          ((tsum_congr fun alc => ?_).trans (tsum_probOutput_map_mul' _ _ G).symm)
+        refine (tsum_probOutput_map_mul _ _ G).trans
+          ((tsum_congr fun alc => ?_).trans (tsum_probOutput_map_mul _ _ G).symm)
         exact congrArg _
           (ih alc.1.1 alc.2 (msg :: sgn) rl (D₁ ++ alc.1.2) b₁ (D₂ ++ alc.1.2) b₂)
 
@@ -4755,7 +4735,7 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
             (H ws + L₀ * Rr) := by rw [probOutput_bind_eq_tsum]
       _ ≤ H ws + L₀ * R ws := by
           rw [mul_add, hR_eq]
-          refine add_le_add (mul_le_of_le_one_left zero_le' probOutput_le_one) ?_
+          refine add_le_add (mul_le_of_le_one_left zero_le probOutput_le_one) ?_
           rw [← mul_assoc, mul_comm
             Pr[= none | uniformSample Chal >>= fun ch => ids.respond pk sk ws.2 ch] L₀, mul_assoc]
   -- Assemble: unfold the `succ` body, peel the commit draw, apply `h_ws`, and split the sums.
@@ -4900,7 +4880,7 @@ theorem ghostSignDrawBody_continuation_charge {γ : Type}
       intro re dr
       simp only [ghostSignDrawBody, StateT.run_pure, tsum_probOutput_pure_mul, List.map_nil,
         List.sum_nil, Nat.cast_zero, mul_zero, tsum_zero]
-      exact zero_le'
+      exact zero_le
   | succ n ih =>
       intro re dr
       -- The genuine per-attempt step; see `ghostSignDrawBody_succ_charge`.
@@ -5017,7 +4997,7 @@ theorem nontape_signStep_charge {γ : Type}
                   (ob alc.1.1)).run ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2),
                     s.2)] *
                 ((z.2.2.map (fun rc => z.2.1.1.2.count rc)).sum : ℝ≥0∞) :=
-    tsum_probOutput_map_mul' _ _ _
+    tsum_probOutput_map_mul _ _ _
   have hRHS1 : (∑' x : (((unifSpec + (M × Commit →ₒ Chal)) +
         (M →ₒ Option (Commit × Resp))).Range (Sum.inr msg)) × DeferredReadState M Commit Chal,
         Pr[= x | (deferredDrawReadImpl ids M maxAttempts pk sk (Sum.inr msg)).run s] *
@@ -5031,7 +5011,7 @@ theorem nontape_signStep_charge {γ : Type}
                   (ob alc.1.1)).run ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2),
                     s.2)] *
                 ((z.2.2.map (fun rc => s.1.1.2.count rc)).sum : ℝ≥0∞) :=
-    tsum_probOutput_map_mul' _ _ _
+    tsum_probOutput_map_mul _ _ _
   have hRHS2 : (∑' x : (((unifSpec + (M × Commit →ₒ Chal)) +
         (M →ₒ Option (Commit × Resp))).Range (Sum.inr msg)) × DeferredReadState M Commit Chal,
         L₀ * (Pr[= x | (deferredDrawReadImpl ids M maxAttempts pk sk (Sum.inr msg)).run s] *
@@ -5047,7 +5027,7 @@ theorem nontape_signStep_charge {γ : Type}
                     s.2)] *
                 (((z.2.1.1.2.length - s.1.1.2.length)
                   + (z.2.1.1.1.2.length - s.1.1.1.2.length) : ℕ) : ℝ≥0∞) := by
-    rw [ENNReal.tsum_mul_left]; exact congrArg (L₀ * ·) (tsum_probOutput_map_mul' _ _ _)
+    rw [ENNReal.tsum_mul_left]; exact congrArg (L₀ * ·) (tsum_probOutput_map_mul _ _ _)
   -- Rewrite all three sums to body averages; the RHS is `(pre-existing) + L₀ · (slack)`.
   rw [hLHS]
   rw [ENNReal.tsum_add]
@@ -6376,7 +6356,7 @@ lemma probOutput_hybridExpAtKey_real_le_prog
       ← ENNReal.ofReal_add (by positivity) (by positivity)]
     refine ENNReal.ofReal_le_ofReal ?_
     -- Pure real inequality.
-    have hchoose : (qS.choose 2 : ℝ) = qS * (qS - 1) / 2 := Nat.cast_choose_two ℝ qS
+    have hchoose : (qS.choose 2 : ℝ) = qS * (qS - 1) / 2 := Nat.cast_choose_two (K := ℝ) qS
     have hqS : (0 : ℝ) ≤ qS := Nat.cast_nonneg qS
     have hqH : (0 : ℝ) ≤ qH := Nat.cast_nonneg qH
     have hS2 : S ^ 2 ≤ 1 / (1 - p_abort) ^ 2 := by
@@ -6631,7 +6611,8 @@ lemma probOutput_hybridExpAtKey_trans_le_sim
       (· matches .inr _) ?_ ?_ (adv.main pk) (hQ pk).1 (∅, [])
     · rintro (t | msg) hSt s
       · simp at hSt
-      · simpa only [QueryImpl.add_apply_inr] using h_step msg s
+      · simpa only [OracleSpec.add_apply_inl, OracleSpec.add_apply_inr,
+          QueryImpl.add_apply_inr] using h_step msg s
     · rintro (t | msg) hSt s
       · simp only [QueryImpl.add_apply_inl]
       · simp at hSt
@@ -7289,7 +7270,7 @@ lemma probOutput_hybridVerifyCont_le_managed_verify (pk : Stmt)
   by_cases hmem : msg ∈ signed
   · rw [probOutput_true_hybridVerifyCont_of_mem ids hr M maxAttempts pk (msg, σ)
       (overlayCache M base ghost) signed hmem]
-    exact zero_le'
+    exact zero_le
   · rw [withCacheOverlay_verify_eq_of_miss ids hr M maxAttempts _ pk msg σ
         (by intro w' z hσ; simp [hσ]),
       hybridVerifyCont_cache_congr ids hr M maxAttempts pk (msg, σ)
@@ -7990,7 +7971,8 @@ lemma simulatedNmaAdv_nmaHashQueryBound
         ?_ s
       intro n _ s'
       have h := hfwd (.inl n) s'
-      simpa [unifSim, FiatShamir.nmaHashQueryBound] using h
+      unfold FiatShamir.nmaHashQueryBound at h
+      exact h
     have hcont : ∀ (rs : Option (Commit × Chal × Resp) × spec.QueryCache),
         FiatShamir.nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
           (oa := StateT.run
@@ -8014,13 +7996,14 @@ lemma simulatedNmaAdv_nmaHashQueryBound
     refine OracleComp.IsQueryBoundP.simulateQ_run_of_step (hQ pk).2 ?_ ?_ ∅
     · rintro ((n | mc) | msg) hp s'
       · simp at hp
-      · simpa only [QueryImpl.add_apply_inl, QueryImpl.add_apply_inr] using hro mc s'
+      · exact hro mc s'
       · simp at hp
     · rintro ((n | mc) | msg) hnp s'
       · have h := hfwd (.inl n) s'
-        simpa only [QueryImpl.add_apply_inl, FiatShamir.nmaHashQueryBound] using h
+        unfold FiatShamir.nmaHashQueryBound at h
+        exact h
       · simp at hnp
-      · simpa only [QueryImpl.add_apply_inr] using hsig msg s'
+      · exact hsig msg s'
   have hpost : ∀ result : (M × Option (Commit × Resp)) × spec.QueryCache,
       FiatShamir.nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
         (oa := (pure ((result.1.1, result.1.2),
@@ -8038,7 +8021,7 @@ lemma simulatedNmaAdv_nmaHashQueryBound
         match result.1.2 with
         | some (w', _) => Function.update result.2 (Sum.inr (result.1.1, w')) none
         | none => result.2)) qH
-  simpa only [Nat.add_zero] using hbind
+  exact hbind
 
 end scaffold
 
