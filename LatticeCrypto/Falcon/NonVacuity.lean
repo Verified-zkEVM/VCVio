@@ -7,14 +7,18 @@ import LatticeCrypto.Falcon.Security
 import LatticeCrypto.Falcon.Concrete.Instance
 
 /-!
-# Falcon EUF-CMA: non-vacuity witness
+# Falcon EUF-CMA: hypothesis-consistency witness
 
 `Falcon.euf_cma_security` is a conditional theorem.  Its hypotheses bundle the GPV laws on
 honestly generated keys (`hCorrect`/`hReg`/`hNeverFail`), the shared deterministic `eval`/`isShort`
 of the ideal and concrete PSFs (`hEval`/`hShort`), and a finite-precision transport hypothesis
 (`hTransport`).  A conditional theorem asserts nothing if its hypotheses are jointly
 uninhabitable; this file rules that out with a concrete, **genuine valid-key** instance for which
-every hypothesis holds simultaneously, so the headline bound is not vacuous.
+every hypothesis holds simultaneously.
+
+This is a **logical consistency (inhabitance) witness only**: the degree-one parameters, the
+all-accepting shortness predicate, and the trivial transport bound carry no quantitative
+security content, and no security claim about any real Falcon parameter set follows from it.
 
 The witness uses the degree-one parameter set `n = 1` with a huge squared-norm bound
 `betaSquared = 2 · ⌊q/2⌋² = 75497472`, so the verifier's shortness predicate accepts every pair
@@ -201,7 +205,8 @@ theorem toy_hShort (x : Rq toyP.n × Rq toyP.n) :
 theorem toy_l2NormSq_le (s : Rq toyP.n) : LatticeCrypto.l2NormSq s ≤ 37748736 := by
   have h := LatticeCrypto.l2NormSq_le_of_cInfNorm_le
     (LatticeCrypto.cInfNorm_le_halfq (q := modulus) s)
-  simpa using h
+  refine le_trans h (le_of_eq ?_)
+  norm_num [toyP, modulus]
 
 /-- The shortness predicate accepts every pair, since `betaSquared` exceeds the maximal norm. -/
 theorem toy_isShort (x : Rq toyP.n × Rq toyP.n) : toyIdealPSF.isShort x = true := by
@@ -369,17 +374,19 @@ theorem toy_advantage_bound :
     exact probOutput_le_one
   calc toyAdv.advantage _ ≤ 1 := h1
     _ = 0 + 1 := (zero_add 1).symm
-    _ ≤ toyAdv'.advantage _ + 1 := by gcongr; exact zero_le'
+    _ ≤ toyAdv'.advantage _ + 1 := by gcongr; exact zero_le
 
-/-! ## The non-vacuity certificate -/
+/-! ## The hypothesis-consistency certificate -/
 
-/-- **Non-vacuity witness for the `Falcon.euf_cma_security` hypotheses.** For the degree-one toy
+/-- **Consistency (inhabitance) witness for the `Falcon.euf_cma_security` hypotheses.** For the
+degree-one toy
 parameters `toyP`, primitives `toyPrims`, salt `Unit`, honest relation `toyHr`, query counts
 `0`/`1`, sampler loss `1`, headline adversary `toyAdv`, and ideal PSF `toyIdealPSF`, every
 hypothesis of `Falcon.euf_cma_security` holds simultaneously: the shared deterministic
 `eval`/`isShort` (`hEval`/`hShort`), the GPV laws on honest keys (`hCorrect`/`hReg`/`hNeverFail`),
-and the finite-precision transport package (`hTransport`).  So the headline EUF-CMA bound is not
-vacuous. -/
+and the finite-precision transport package (`hTransport`).  The hypothesis conjunction of the
+headline theorem is therefore inhabitable; this witness carries no quantitative security
+content. -/
 theorem falcon_eufcma_hyps_inhabited :
     -- hEval
     (∀ pk x, toyIdealPSF.eval pk x = (falconPSF toyP toyPrims).eval pk x) ∧
