@@ -33,6 +33,25 @@ The `H₁` reprogramming step of the paper folds into the random-oracle modeling
 out here. `MLDSA.nma_security` assembles the two steps under the bridge hypotheses negotiated in its
 statement (`hGen`, `hStmsis`, `hMlweBridge`).
 
+## Scope: an idealized proof-level ML-DSA model
+
+The theorems in this file (and the EUF-CMA composition built on them) are about the
+**proof-level** scheme `FiatShamirWithAbort (identificationScheme p prims)`, not the FIPS 204
+signing/encoding path. The idealizations, explicitly:
+
+- Signatures are the identification-scheme transcripts `(commitment, challenge hash, response)`;
+  the FIPS byte-level encodings, hints, and the `Signature.lean` packing layer are not part of
+  the statement.
+- The hardness problems are stated over the seed-based key embedding (`mldsaMLWE`,
+  `mldsaSTMSIS`); bridging to the standard matrix-based MLWE problem and to an explicit
+  algebraic SelfTargetMSIS relation is carried by the `hMlweBridge`/`hStmsis` hypotheses.
+- The `honestSamplingSlack`/`idealGap` hypothesis carries the distance between the
+  deterministic `ExpandSeed`/`ExpandS` outputs and the comparison distribution of the key-swap
+  hop.
+- No cost model is attached: the reductions are constructed explicitly but their polynomial
+  runtime is not machine-checked, and asymptotic statements quantify over unrestricted
+  adversaries — they are not statements about poly-time adversaries.
+
 ## What is defined here
 
 The honest ML-DSA key distribution embeds an MLWE instance: sample a public seed `ρ`, set the
@@ -960,7 +979,7 @@ omit nttOps in
 /-- A geometric family `r ^ n` with `0 ≤ r < 1` is negligible (after `ENNReal.ofReal`): for every
 power `k`, `n ^ k · r ^ n → 0` (`tendsto_pow_const_mul_const_pow_of_lt_one`), and `ENNReal.ofReal`
 is continuous. This provides concrete negligible slack/advantage families for the non-vacuity
-witness `euf_cma_security_asymptotic_real_satisfiable`. -/
+witness `asymptotic_loss_regime_satisfiable`. -/
 theorem negligible_ofReal_geometric (r : ℝ) (hr0 : 0 ≤ r) (hr1 : r < 1) :
     negligible (fun n => ENNReal.ofReal (r ^ n)) := by
   intro k
@@ -1047,8 +1066,6 @@ theorem cmaToNmaLoss_negligible
         (qH n : ℝ) ^ 0 * ε n) +
       ENNReal.ofReal (1 / (1 - p_abort) * (qS n : ℝ) ^ 1 * (qH n : ℝ) ^ 0 * ζ_zk n) +
       ENNReal.ofReal (δ n)) (fun n => ?_) hsum
-  change ENNReal.ofReal
-      (FiatShamirWithAbort.cmaToNmaLoss (qS n) (qH n) (ε n) p_abort (ζ_zk n) (δ n) hp) ≤ _
   have heq : (FiatShamirWithAbort.cmaToNmaLoss (qS n) (qH n) (ε n) p_abort (ζ_zk n) (δ n) hp)
       = (2 / (1 - p_abort) * (qS n : ℝ) ^ 1 * ((qH n + 1 : ℕ) : ℝ) ^ 1 * ε n) +
         (1 / (2 * (1 - p_abort) ^ 2) * ((qS n * (qS n + 1) : ℕ) : ℝ) ^ 1 *
@@ -1176,7 +1193,7 @@ theorem euf_cma_security_asymptotic_real
     pS pH hqS hqH hεneg hζneg hδneg
 
 omit nttOps in
-/-- **Non-vacuity witness for the asymptotic regime.**
+/-- **Consistency of the asymptotic numerical-loss regime.**
 
 The quantitative hypotheses of `euf_cma_security_asymptotic_real` — *polynomially-bounded* query
 budgets together with *negligible* statistical slacks (commitment guessing `ε`, HVZK `ζ_zk`, key
@@ -1189,8 +1206,13 @@ internal bound is negligible.
 
 This rules out the degenerate reading of the headline (where polynomial queries against a *fixed*
 positive `ε` would force the budgets to vanish): here the budgets grow polynomially while the loss
-still decays, which is exactly the standard asymptotic ML-DSA setting. -/
-theorem euf_cma_security_asymptotic_real_satisfiable :
+still decays.
+
+This statement chooses **numerical sequences only**. It does not instantiate
+`honestSamplingSlack`, the hardness problems, `hMlweBridge`, the scheme family, or the other
+hypotheses of `euf_cma_security_asymptotic_real`; it describes the loss regime, not the
+satisfiability of the security theorem. -/
+theorem asymptotic_loss_regime_satisfiable :
     ∃ (qS qH : ℕ → ℕ) (ε ζ_zk δ idealGap : ℕ → ℝ) (p_abort : ℝ) (hp : p_abort < 1)
       (pS pH : Polynomial ℕ) (mlweAdv stmsisAdv : ℕ → ℝ≥0∞),
       (∀ n, qS n ≤ pS.eval n) ∧ (∀ n, qH n ≤ pH.eval n) ∧
