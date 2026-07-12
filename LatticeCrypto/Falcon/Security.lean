@@ -5,7 +5,6 @@ Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 import LatticeCrypto.Falcon.Scheme
 import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
-import VCVio.EvalDist.RenyiDivergence
 import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
@@ -13,13 +12,26 @@ import VCVio.OracleComp.Constructions.SampleableType
 
 This file states the high-level security theorems for the Falcon signature scheme.
 
-## Scope
+## Scope: an idealized Falcon/GPV model
 
-This file states Falcon's EUF-CMA *security* result. Machine-checked verification
-correctness (`verify` accepting honest signatures) is not formalized here: it requires a
-retry-loop signer together with preimage-sampleable-function correctness
-(`s₁ + s₂ · h = c` on honest keys), the latter routing through the floating-point
-inverse-FFT rounding in `Falcon.fromFFTPreimage`.
+The theorems here are about an **idealized Falcon model**, precisely:
+
+- The scheme is `falconSignatureAlg` — the generic GPV hash-and-sign scheme
+  (`GPVHashAndSign`) instantiated at the Falcon PSF. Signatures carry the full `(s₁, s₂)`
+  preimage; the compressed `s₂`-only wire encoding and byte-level (de)serialization of
+  FN-DSA are not modeled.
+- Arithmetic is exact: the trapdoor sampler enters only through an ideal
+  preimage-sampleable abstraction (`idealPSF` in `euf_cma_security`) sharing the
+  deterministic `eval`/`isShort` of `falconPSF`. Floating-point `ffSampling` and its
+  precision analysis are not modeled; the concrete-to-ideal sampler swap is the single
+  `hTransport` hypothesis.
+- Machine-checked verification correctness (`verify` accepting honest signatures) is not
+  formalized here: it requires a retry-loop signer together with
+  preimage-sampleable-function correctness (`s₁ + s₂ · h = c` on honest keys), the latter
+  routing through the floating-point inverse-FFT rounding in `Falcon.fromFFTPreimage`.
+- No cost model is attached: the reductions are constructed explicitly but their
+  polynomial runtime is not machine-checked. They perform no exhaustive search and no
+  noncomputable steps beyond the ambient probabilistic semantics.
 
 ## EUF-CMA Security
 
@@ -141,83 +153,6 @@ noncomputable def ntruPSFCollisionProblem
     (falconPSF p prims).isShort xs.1 &&
     (falconPSF p prims).isShort xs.2
 
-/-! ### Sampler Quality Hypotheses -/
-
-/-- The trapdoor sampler quality hypothesis: the Rényi divergence of order `a > 1`
-between the concrete trapdoor sampler and an ideal sampler is bounded by `R`.
-
-This captures the floating-point precision loss in `ffSampling` and `SamplerZ`.
-The structure separates the *existence* of the bound from its *concrete value*.
-
-### Precise bound ([Jia+26] Corollary 1, refining [Pre17] Lemma 6)
-
-For basis `B` with Gram-Schmidt vectors `b̃_i`, let `α_i = ‖B‖_{GS} / ‖b̃_i‖` and
-`ε_i = ε^{α_i²}` where `ε` is the global closeness parameter. Then:
-
-  `R_a(PreSmp(B,s,t) ‖ D_{Λ(B),s,t}) ≲ 1 + a · δ²_{B,s} / 2`
-
-where `δ_{B,s} = ∏_i (1+ε_i)/(1-ε_i) - 1` is the basis-specific relative error.
-
-The previous worst-case analysis ([Pre17]) used `δ ≈ 4nε`, but the basis-specific
-metric gives `δ_{B,s} ≈ 4nε / (0.87 · |ln ε|)`, which is ~21× tighter for Falcon
-parameters ([Jia+26] Section 4.3).
-
-### Optimal Rényi order ([FGdG+25] Lemma 4)
-
-The Rényi orders `a_p, a_u` should be chosen to minimize the total security loss
-`C_s · log₂(r_p) + C_s · log₂(r_u) + λ/a`, which gives much larger optimal orders
-than the traditional `a = 2λ`:
-
-| | [FGdG+25] | [Jia+26] |
-|---|---|---|
-| Falcon+-512 `a_p` | 72.96 | 2577.30 |
-| Falcon+-512 `a_u` | 69.64 | 2573.91 |
-| Falcon+-1024 `a_p` | 157.05 | 6417.73 |
-| Falcon+-1024 `a_u` | 153.28 | 6413.92 |
-
-### Precision requirements ([TWFalcon] Section 3)
-
-The combined FP error must satisfy `10·√(2n)·(δ_c + δ_σ) ≤ 2^{-37}` for the
-Rényi argument to hold with `λ = 256`, `Q_s = 2^{64}`. This requires
-`δ_c + δ_σ ≤ 2^{-46}`. Measured precision:
-
-| Arithmetic | `δ_c + δ_σ` | Provably secure queries |
-|---|---|---|
-| binary64 (53-bit) | ≤ 2^{-37} (worst) | 2^{47} |
-| triple-word (72-bit) | ≤ 2^{-57} | 2^{68} (exceeds 2^{64}) |
-| exact | 0 | ∞ |
-
-Discharging this hypothesis requires composing per-operation FPR error bounds
-(from `ApproxArith.lean` / `FPRBridge.lean`) through the `ffSampling` recursion. -/
-structure SamplerQuality (pk : PublicKey p) (sk : SecretKey p) where
-  /-- The Rényi divergence order. Optimal values are much larger than `2λ`:
-  ~2577 for Falcon+-512, ~6418 for Falcon+-1024 ([Jia+26] Table 6). -/
-  renyiOrder : ℝ
-  hOrder : 1 < renyiOrder
-  /-- The Rényi divergence bound `R ≥ 1`.
-  By [Jia+26] Corollary 1: `R ≲ 1 + a · δ²_{B,s} / 2` where `δ_{B,s}` is the
-  basis-specific relative error. For typical Falcon bases, `log₂ R < 2^{-10}`. -/
-  bound : ℝ≥0∞
-  /-- The ideal sampler: exact discrete Gaussian `D_{Λ^⊥, σ, c}` over the NTRU lattice
-  coset. This is the target distribution that `ffSampling` approximates. -/
-  idealSampler : Rq p.n → ProbComp (Rq p.n × Rq p.n)
-  /-- Rényi divergence bound: for every target `c`, the Rényi divergence of order `a`
-  between the concrete sampler and the ideal Gaussian is at most `R`. -/
-  quality : ∀ c : Rq p.n,
-    renyiDiv renyiOrder ((falconPSF p prims).trapdoorSample pk sk c) (idealSampler c) ≤ bound
-  /-- Ideal sampler correctness: the ideal Gaussian always produces valid short preimages.
-  This follows from the lattice geometry when `σ ≥ η_ε(Λ^⊥) · ‖B̃‖_GS`. -/
-  idealCorrect : ∀ c : Rq p.n,
-    ∀ x ∈ support (idealSampler c),
-      (falconPSF p prims).eval pk x = c ∧ (falconPSF p prims).isShort x = true
-
-/-- A concrete upper bound on the finite-precision sampler loss that is uniform over
-all valid Falcon key pairs. This keeps the theorem statement non-vacuous while still
-letting later work plug in sharper bounds from `SamplerQuality`. -/
-def HasUniformSamplerLoss (samplerLoss : ENNReal) : Prop :=
-  ∀ pk sk, validKeyPair p pk sk = true →
-    ∃ quality : SamplerQuality p prims pk sk, quality.bound ≤ samplerLoss
-
 /-! ### EUF-CMA Security -/
 
 /-- The Falcon-PSF collision experiment **is** the `ntruPSFCollisionProblem` search experiment.
@@ -246,8 +181,8 @@ generic in the salt type `Salt`.
 
 For any EUF-CMA adversary `A` making at most `qSign` signing queries and `qHash`
 random-oracle queries against the Falcon+ signature scheme with salt type `Salt`, and
-any externally supplied bound `ε_sampler` that upper-bounds `SamplerQuality.bound` for
-every valid Falcon key pair, there exist:
+any transport bound `ε_sampler` on the concrete-to-ideal sampler swap (the
+`hTransport` hypothesis), there exist:
 
 - a collision reduction `B_coll` for the distinct-preimage branch,
 - a programmed-preimage replay reduction `B_exact` for the exact-match branch,
@@ -257,7 +192,7 @@ such that:
   `Adv^{EUF-CMA}_{Falcon+}(A)`
   `  ≤ Adv^{collision}_{Falcon-PSF}(B_coll)`
   `    + (qSign + qHash) · Adv^{exact-match}_{Falcon-PSF}(B_exact)`
-  `    + qSign² / (2 · |Salt|) + ε_sampler`
+  `    + (qSign + qHash)² / (2 · |Salt|) + ε_sampler`
 
 ### Error terms
 
@@ -272,9 +207,10 @@ The explicit multi-target loss for the exact-match branch. The reduction guesses
 the programmed random-oracle entries and tries to show that reproducing the simulator's
 hidden short preimage there is hard.
 
-**Term 3: `qSign² / (2 · |Salt|)`.**
-Salt collision probability, bounded by the birthday paradox. This is a simplified form
-of the `Q_s · (C_s + Q_H) / 2^k` term from [FGdG+25] Theorem 1.
+**Term 3: `(qSign + qHash)² / (2 · |Salt|)`.**
+Salt collision probability over every salt appearing in a signing query or a
+random-oracle query, bounded by the birthday paradox. This is a simplified form of the
+`Q_s · (C_s + Q_H) / 2^k` term from [FGdG+25] Theorem 1.
 
 **Term 4: `ε_sampler`.**
 The Rényi divergence-based sampler loss. The full [FGdG+25] bound has the structure
@@ -293,7 +229,7 @@ With exact arithmetic (infinite precision), `r_p = 1` and the sampler loss vanis
    sampled from the same key distribution (`collisionFindingAdvantage_eq_ntruPSF`).
 3. Leave the exact-match branch explicit in the theorem statement until it is discharged by
    a Falcon-specific min-entropy / one-way lemma.
-4. Account for finite-precision via the sampler quality hypothesis.
+4. Account for finite precision via the `hTransport` sampler-transport hypothesis.
 
 **On the GPV laws (`hCorrect`/`hReg`/`hNeverFail`).** These are taken on the support of `hr.gen`
 (honestly generated keys) only, via the valid-key-restricted `GPVHashAndSign.euf_cma_split_bound`.
@@ -334,7 +270,9 @@ theorem euf_cma_security
       ∀ c, NeverFail (idealPSF.trapdoorSample pk sk c))
     -- Finite-precision sampler transport ([FGdG+25] Rényi term): swapping the concrete signing
     -- oracle for the ideal one costs at most `samplerLoss` and yields a well-behaved ideal-scheme
-    -- adversary. Derivable from `SamplerQuality`/`renyiDiv`; assumed here.
+    -- adversary. Assumed here as a single transport hypothesis; decomposing it into a
+    -- per-call sampler-approximation bound with a proven adaptive accumulation is the
+    -- intended refinement.
     (hTransport : ∃ adv' : SignatureAlg.unforgeableAdv
         (GPVHashAndSign idealPSF hr (List Byte) Salt),
       adv.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) ≤
