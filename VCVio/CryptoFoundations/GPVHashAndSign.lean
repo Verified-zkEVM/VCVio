@@ -47,9 +47,10 @@ signing query. The precise EUF-CMA bound from [FGdG+25] Theorem 1 is:
   `                  + tail_bound + Q_s · (C_s + Q_H) / 2^k`
 
 where the salt-collision term `Q_s · (C_s + Q_H) / 2^k` bounds the probability that
-a fresh salt collides with any prior RO query. The simpler birthday bound
-`qSign² / (2 · |Salt|)` from GPV08 Prop 6.2 is slightly looser but still valid and is
-the one we formalize here.
+a fresh salt collides with any prior RO query. The formalized statement uses the birthday
+bound `(qSign + qHash)² / (2 · |Salt|)` (`GPVHashAndSign.collisionBound`), counting every
+salt appearing in a signing or random-oracle query; it is slightly looser than the
+[FGdG+25] term but still negligible for Falcon's 320-bit salts.
 
 The proof decomposes into:
 - `GPVHashAndSign.reduction`: the collision-finding adversary (sign-then-hash simulation)

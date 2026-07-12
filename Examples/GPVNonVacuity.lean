@@ -6,15 +6,16 @@ Authors: Oleksandr Vovkotrub
 import VCVio.CryptoFoundations.GPVHashAndSign
 
 /-!
-# GPV #188 EUF-CMA: non-vacuity witness
+# GPV #188 EUF-CMA: hypothesis-consistency witness
 
 The GPV hash-and-sign EUF-CMA bounds (`GPVHashAndSign.forgery_yields_collision_or_exact_match`
 and the `euf_cma_*` corollaries) are stated under side conditions — PSF correctness and regularity,
 a never-failing trapdoor sampler, the random-oracle "forger queries its forgery point" convention
 (`ForgesQueriedPoint`), and a query-count bound (`signHashQueryBound`).  A conditional theorem says
 nothing if its hypotheses are jointly uninhabitable: this file rules that out with a concrete
-instance for which every side condition holds simultaneously, so the bounds are genuinely
-non-vacuous.
+instance for which every side condition holds simultaneously.  This is a **logical consistency
+(inhabitance) witness only** — the one-point key space and two-point domain carry no
+quantitative security content.
 
 The witness is the canonical bijective PSF over `Bool` with `PK = SK = Unit`: `eval` is the
 identity, `trapdoorSample` returns its argument (the inverse of the identity), and the shortness
@@ -135,11 +136,13 @@ theorem bijPSF_regularity : bijPSF.Regularity := by
   refine ⟨domainSample, fun pk sk => ?_⟩
   simp only [bijPSF, domainSample, pure_bind]
 
-/-- **Non-vacuity witness for the GPV #188 headline hypotheses.** For the concrete bijective PSF,
+/-- **Consistency (inhabitance) witness for the GPV #188 headline hypotheses.** For the concrete
+bijective PSF,
 the generable relation `hr`, and the query-then-forge adversary `adv`, all the standard GPV side
 conditions hold simultaneously: the forger queries its forgery point (`ForgesQueriedPoint`), the
 adversary makes `0` signing and `1` random-oracle queries (`signHashQueryBound`), the PSF is correct
-(`Correct`), and the PSF is regular (`Regularity`).  So the GPV EUF-CMA bounds are not vacuous. -/
+(`Correct`), and the PSF is regular (`Regularity`).  The hypothesis conjunction of the headline
+bounds is therefore inhabitable; this witness carries no quantitative security content. -/
 theorem gpv188_hyps_inhabited :
     GPVHashAndSign.ForgesQueriedPoint bijPSF hr Unit Unit adv domainSample ∧
     (∀ pk : Unit, GPVHashAndSign.signHashQueryBound Unit Unit (adv.main pk) 0 1) ∧
