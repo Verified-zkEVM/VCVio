@@ -225,8 +225,8 @@ lemma freshSig_winnerSlot_deferred_le_embed [DecidableEq Domain] [Inhabited Rang
       rw [probOutput_pure_eq_indicator]
       simp only [Set.indicator_apply, Set.mem_singleton_iff, eq_comm (a := true),
         decide_eq_true_eq, if_true, Function.const_apply, mul_one]
-    · rw [if_neg hWf]; exact zero_le'
-  · rw [probOutput_eq_zero_of_not_mem_support hsupp, zero_mul]; exact zero_le'
+    · rw [if_neg hWf]; exact zero_le
+  · rw [probOutput_eq_zero_of_not_mem_support hsupp, zero_mul]; exact zero_le
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **The signed set only grows along the trap-count run.**  Every reachable final state's signed
@@ -432,7 +432,6 @@ lemma progGameRunImplCombinedTrapCount_table_indep (pk : PK) (sk : SK)
         rw [show u₁.1.1.1.1 = u₂.1.1.1.1 from by rw [hu11],
           show u₁.1.1.1.2 = u₂.1.1.1.2 from by rw [hu11],
           show u₁.2.1 = u₂.2.1 from by rw [hu2], show u₁.2.2 = u₂.2.2 from by rw [hu2]]
-      simp only []
       rw [hst])
     s₁ s₂ ⟨h11, h2⟩
 
@@ -1311,7 +1310,7 @@ lemma reservoir_embed_commute_winner [DecidableEq Domain] [Inhabited Range]
         (adv.main pk) hQ hmem hP.2
       omega
     rw [hLHS0]
-    exact zero_le'
+    exact zero_le
 
 open Classical in
 omit [Fintype Salt] in

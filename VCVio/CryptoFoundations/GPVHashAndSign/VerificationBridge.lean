@@ -863,7 +863,7 @@ lemma gpv_perKey_distinct_le_collision [DecidableEq Domain]
           hForge (msg, (r, s)) st hmem _ rfl hwin.1 hwin.2
       rw [if_pos hwin, if_pos ⟨sHidden, htbl, hcoll⟩]
     · rw [if_neg hwin]
-      exact zero_le'
+      exact zero_le
   · have hcache_ne : st.1.1.1 (r, msg) ≠ none :=
       combined_cache_forge_point_ne_none psf hr M Salt domainSample pk adv hForge
         ((msg, (r, s)), st) hmem

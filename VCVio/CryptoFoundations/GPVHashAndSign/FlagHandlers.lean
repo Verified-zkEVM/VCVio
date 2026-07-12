@@ -603,7 +603,7 @@ theorem gpv_orig_flag_le_collisionBound_aux [Inhabited Range] [Nonempty Salt]
         -- Phrase the collision event in the `¬ · = false` form expected by `probEvent_bind_le_add`.
         refine le_trans (le_of_eq (probEvent_congr'
           (q := fun z => ¬ z.2.2 = false) (oa' := _)
-          (fun z _ => by cases h : z.2.2 <;> simp [h]) rfl)) ?_
+          (fun z _ => by cases h : z.2.2 <;> simp) rfl)) ?_
         -- Head charge: the fresh inline salt lands in `keyedSalts cache` w.p. `≤ m / |Salt|`.
         have hhead :
             Pr[fun r : Salt => ¬ (fun r : Salt => saltKeyed M Salt cache r = false) r |
@@ -635,7 +635,7 @@ theorem gpv_orig_flag_le_collisionBound_aux [Inhabited Range] [Nonempty Salt]
           intro r _ hr
           -- Convert the event back to `z.2.2 = true` (cleaner for the IH).
           refine le_trans (le_of_eq (probEvent_congr' (q := fun z => z.2.2 = true) (oa' := _)
-            (fun z _ => by cases h : z.2.2 <;> simp [h]) rfl)) ?_
+            (fun z _ => by cases h : z.2.2 <;> simp) rfl)) ?_
           -- Bound the continuation pointwise over the signing-step outputs.
           rw [bind_assoc]
           refine probEvent_bind_le_of_forall_le (fun p hp => ?_)

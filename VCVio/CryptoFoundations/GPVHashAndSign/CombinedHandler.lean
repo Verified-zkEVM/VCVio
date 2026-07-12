@@ -746,7 +746,8 @@ lemma evalDist_progGameRunImplCombined_step_eq_trap
                     : Range × Domain →
                       Range × ((((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) ×
                         ((Salt × M) → Option Domain)))) hreg
-              simpa only [← evalDist_map, map_bind, map_pure, bind_assoc] using h
+              simpa only [OracleSpec.add_apply_inl, OracleSpec.add_apply_inr, ← evalDist_map,
+                map_bind, map_pure, bind_assoc] using h
   | inr msg =>
       rw [progGameRunImplCombined_run_inr, progGameRunImplCombinedTrap_run_inr]
       -- Programming step (signing): draw salt `r`, then map `hreg` through the salt-keyed update.
@@ -760,7 +761,8 @@ lemma evalDist_progGameRunImplCombined_step_eq_trap
             : Range × Domain →
               (Salt × Domain) × ((((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) ×
                 ((Salt × M) → Option Domain)))) hreg
-      simpa only [← evalDist_map, map_bind, map_pure, bind_assoc] using h
+      simpa only [OracleSpec.add_apply_inl, OracleSpec.add_apply_inr, ← evalDist_map,
+                map_bind, map_pure, bind_assoc] using h
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Lemma A — write-only-table deferral / `eval→trapdoor-recording` run rewrite.** For *any*
