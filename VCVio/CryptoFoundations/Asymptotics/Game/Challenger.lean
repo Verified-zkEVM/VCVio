@@ -10,13 +10,14 @@ import VCVio.OracleComp.Coinductive.WiredRun
 # Single-Phase Games as Dynamical Systems
 
 A `Challenger spec α β` is the generic single-phase security experiment, presented as a
-dynamical system: a stateful probabilistic **responder** (`ProbResponder`) that samples
-an input for the adversary, answers every adversary query while advancing its hidden
-state, and scores the adversary's (possibly unresolved) result against its final state.
-The responder *is* the game's wiring data; the folded-away `State`/`oracle` fields survive
-as the `Challenger.State` / `Challenger.oracle` accessors (the responder's state set and
-its `StateT (State n) SPMF` handler). The two game readings below close an adversary
-against the responder in its two presentations:
+dynamical system: a hidden **`State`** carrier, a Kleisli-Mealy **`answer`** transition that
+answers every adversary query while jointly advancing that state, an input sampler, and a judge
+scoring the adversary's (possibly unresolved) result against the final state. The `State`/`answer`
+pair bundles as the `Challenger.responder` accessor (a `ProbResponder`), with its handler as
+`Challenger.oracle`. Exposing the carrier as an explicit field — rather than folding it into an
+opaque responder projection — is what lets a stateful game identify its program-level advantage
+with a concrete `ProbComp` experiment (`ofStateOracle` / `advantage_toProgGame_ofStateOracle`). The
+two game readings below close an adversary against the responder in its two presentations:
 
 * `Challenger.toMachineGame` — the **primary**, coalgebraic reading over bundled
   polynomial-time machine adversaries, closed against the responder by the eval-wired
@@ -98,49 +99,82 @@ end Stateless
 
 variable {ι : ℕ → Type} [∀ n, DecidableEq (ι n)]
 
-/-- A single-phase game challenger presented as a dynamical system: a stateful
-probabilistic **responder** answering every adversary query (its state set is the
-challenger's hidden state), an input sampler, and a judge scoring the adversary's result
-against the final responder state. `none` marks an adversary run that did not resolve
-(machine reading); program adversaries always resolve.
+/-- A single-phase game challenger presented as a dynamical system, with the hidden **carrier
+exposed as an explicit `State` field** (rather than folded into a `ProbResponder`, whose state
+projection is opaque to `simp`/instance resolution): a state family, a Kleisli-Mealy `answer`
+transition jointly drawing the successor state, an input sampler, and a judge scoring the
+adversary's (possibly unresolved) result against the final state. `none` marks an adversary run
+that did not resolve (machine reading); program adversaries always resolve.
 
-The `responder` field *is* the game's wiring data: closing an adversary against it is the
-eval-wired dynamical system `OracleMachine.wireKRun` (machine reading, the primary game
-`toMachineGame`) or `simulateQ` through the responder's handler (program reading,
-`toProgGame`). The folded-away `State`/`oracle` fields survive as the `Challenger.State`
-/ `Challenger.oracle` accessors. -/
+The `State`/`answer` pair *is* the game's wiring data, bundled as the `Challenger.responder`
+accessor: closing an adversary against it is the eval-wired dynamical system
+`OracleMachine.wireKRun` (machine reading, the primary game `toMachineGame`) or `simulateQ` through
+the responder's handler (program reading, `toProgGame`). Exposing the carrier is what lets stateful
+games identify their program-level advantage with a concrete `ProbComp` experiment
+(`ofStateOracle` / `advantage_toProgGame_ofStateOracle`). -/
 structure Challenger (spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)) (α β : ℕ → Type) where
-  /-- The challenger's stateful responder at each security parameter: for each query, a
-  joint subdistribution over the answer and the successor hidden state. -/
-  responder : (n : ℕ) → ProbResponder (spec n)
-  /-- Sample the initial hidden (responder) state together with the adversary's input. -/
-  setup : (n : ℕ) → SPMF ((responder n).State × α n)
+  /-- The challenger's hidden state at each security parameter (its carrier, exposed). -/
+  State : (n : ℕ) → Type
+  /-- Answer a query from a hidden state, jointly drawing the successor state — the responder's
+  Kleisli-Mealy transition in the Kleisli category of `SPMF`. -/
+  answer : (n : ℕ) → State n → (t : (spec n).Domain) → SPMF ((spec n).Range t × State n)
+  /-- Sample the initial hidden state together with the adversary's input. -/
+  setup : (n : ℕ) → SPMF (State n × α n)
   /-- Score the adversary's (possibly unresolved) result against the final state. -/
-  score : (n : ℕ) → (responder n).State → Option (β n) → SPMF Bool
+  score : (n : ℕ) → State n → Option (β n) → SPMF Bool
 
 namespace Challenger
 
 variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
 
-/-- The challenger's hidden state at security parameter `n`: the responder's state.
-A compatibility accessor for the folded-away `State` field. -/
-abbrev State (G : Challenger spec α β) (n : ℕ) : Type := (G.responder n).State
+/-- The challenger's stateful responder: its `State`/`answer` data bundled as a `ProbResponder`.
+The game's wiring data in dynamical-systems form. -/
+def responder (G : Challenger spec α β) (n : ℕ) : ProbResponder (spec n) :=
+  ⟨G.State n, G.answer n⟩
 
-/-- The challenger's oracle: the responder's stateful handler in `StateT (State n) SPMF`.
-A compatibility accessor for the folded-away `oracle` field. -/
-abbrev oracle (G : Challenger spec α β) (n : ℕ) :
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem responder_State (G : Challenger spec α β) (n : ℕ) :
+    (G.responder n).State = G.State n := rfl
+
+/-- The challenger's oracle: the responder's stateful handler in `StateT (State n) SPMF`. -/
+def oracle (G : Challenger spec α β) (n : ℕ) :
     QueryImpl (spec n) (StateT (G.State n) SPMF) :=
-  (G.responder n).toQueryImpl
+  fun t s => G.answer n s t
 
-/-- A memoryless challenger: a plain randomized oracle bundled as a constant-state
-responder, an input sampler, and a score that sees the input (kept as the trivial state).
-The old one-shot game shape. -/
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem oracle_eq_toQueryImpl (G : Challenger spec α β) (n : ℕ) :
+    G.oracle n = (G.responder n).toQueryImpl := rfl
+
+/-- A memoryless challenger: a plain randomized oracle carried as a constant state (the input,
+kept unchanged), an input sampler, and a score that sees the input. The old one-shot game shape. -/
 noncomputable def ofProbHandler (oracle : (n : ℕ) → ProbHandler (spec n))
     (gen : (n : ℕ) → SPMF (α n)) (score : (n : ℕ) → α n → Option (β n) → SPMF Bool) :
     Challenger spec α β where
-  responder n := ProbResponder.ofHandlerFamily fun _ : α n => oracle n
+  State n := α n
+  answer n x t := (fun r => (r, x)) <$> oracle n t
   setup n := (fun x => (x, x)) <$> gen n
   score := score
+
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem ofProbHandler_State (oracle : (n : ℕ) → ProbHandler (spec n))
+    (gen : (n : ℕ) → SPMF (α n)) (score : (n : ℕ) → α n → Option (β n) → SPMF Bool) (n : ℕ) :
+    (ofProbHandler oracle gen score).State n = α n := rfl
+
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem ofProbHandler_responder (oracle : (n : ℕ) → ProbHandler (spec n))
+    (gen : (n : ℕ) → SPMF (α n)) (score : (n : ℕ) → α n → Option (β n) → SPMF Bool) (n : ℕ) :
+    (ofProbHandler oracle gen score).responder n =
+      ProbResponder.ofHandlerFamily (fun _ : α n => oracle n) := rfl
+
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem ofProbHandler_setup (oracle : (n : ℕ) → ProbHandler (spec n))
+    (gen : (n : ℕ) → SPMF (α n)) (score : (n : ℕ) → α n → Option (β n) → SPMF Bool) (n : ℕ) :
+    (ofProbHandler oracle gen score).setup n = (fun x => (x, x)) <$> gen n := rfl
+
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem ofProbHandler_score (oracle : (n : ℕ) → ProbHandler (spec n))
+    (gen : (n : ℕ) → SPMF (α n)) (score : (n : ℕ) → α n → Option (β n) → SPMF Bool) :
+    (ofProbHandler oracle gen score).score = score := rfl
 
 /-! ## The algebraic reading: program families -/
 
@@ -153,8 +187,8 @@ noncomputable def toProgGame (G : Challenger spec α β) :
     SecurityGame ((n : ℕ) → α n → OracleComp (spec n) (β n)) where
   advantage oa n :=
     (G.setup n >>= fun sx =>
-      (some <$> simulateQ (G.oracle n) (oa n sx.2)).run sx.1 >>= fun rs =>
-      G.score n rs.2 rs.1) true
+      (simulateQ (G.oracle n) (oa n sx.2)).run sx.1 >>= fun rs =>
+      G.score n rs.2 (some rs.1)) true
 
 /-! ## The coalgebraic reading: machine adversaries (primary) -/
 
@@ -190,7 +224,7 @@ theorem advantage_toMachineGame_eq (G : Challenger spec α β)
     (G.toMachineGame bd).advantage D n = G.toProgGame.advantage oa n := by
   rw [advantage_toMachineGame_eq_exec]
   refine congrArg (fun p : SPMF Bool => p true) (bind_congr fun sx => ?_)
-  rw [MachineAdversary.exec_eq_of_implements h]
+  rw [MachineAdversary.exec_eq_of_implements h, StateT.run_map, bind_map_left]
 
 /-- **Security transfer**: if every bundled polynomial-time machine adversary has
 negligible advantage in the primary machine-level game, the program-level game is secure
@@ -222,10 +256,9 @@ program against the plain handler, and score. -/
         score n x (some r)) true := by
   refine congrArg (fun p : SPMF Bool => p true) ?_
   change ((fun x => (x, x)) <$> gen n >>= fun sx =>
-      (some <$> simulateQ (QueryImpl.stateless (α n) (oracle n)) (oa n sx.2)).run
-        sx.1 >>= fun rs => score n rs.2 rs.1) = _
-  simp only [map_eq_bind_pure_comp, StateT.run_bind, OracleComp.simulateQ_stateless_run,
-    StateT.run_pure, bind_assoc, pure_bind, Function.comp]
+      (simulateQ (QueryImpl.stateless (α n) (oracle n)) (oa n sx.2)).run
+        sx.1 >>= fun rs => score n rs.2 (some rs.1)) = _
+  simp only [OracleComp.simulateQ_stateless_run, bind_map_left]
 
 /-- The machine-game advantage of a memoryless challenger: sample the input, run the
 machine against the plain handler at its round budget, and score. The wired run collapses
@@ -238,9 +271,90 @@ to the memoryless `OracleMachine.runK` (`wireKRun_ofHandlerFamily`). -/
       (gen n >>= fun x => (D.M n).runK (oracle n) (D.steps.eval n) ((D.M n).init x) >>=
         fun ob => score n x ob) true := by
   refine congrArg (fun p : SPMF Bool => p true) ?_
-  simp only [ofProbHandler, OracleMachine.wireKRun_ofHandlerFamily]
+  simp only [ofProbHandler_State, ofProbHandler_responder, ofProbHandler_setup,
+    ofProbHandler_score, OracleMachine.wireKRun_ofHandlerFamily]
   rw [bind_map_left]
   exact bind_congr fun x => bind_map_left _ _ _
+
+/-! ## Stateful challengers: the `ofStateQueryImpl` former
+
+A challenger whose oracle is a genuinely stateful `StateT σ ProbComp` handler, carried at the
+explicit state `σ`. Because the carrier is exposed as the `State` field (not folded behind an
+opaque responder projection), its program-game advantage identifies with a concrete `ProbComp`
+experiment (`advantage_toProgGame_ofStateOracle`) — the stateful analogue of
+`advantage_toProgGame_ofProbHandler`, and the connection a keyed encryption oracle or lazy random
+oracle needs. -/
+
+/-- A stateful challenger built from a `StateT σ ProbComp` oracle, a `ProbComp` state/input
+sampler, and a `ProbComp` judge — read into `SPMF` by their evaluation distributions. -/
+noncomputable def ofStateOracle {σ : ℕ → Type}
+    (impl : (n : ℕ) → QueryImpl (spec n) (StateT (σ n) ProbComp))
+    (gen : (n : ℕ) → ProbComp (σ n × α n))
+    (scoreP : (n : ℕ) → σ n → Option (β n) → ProbComp Bool) : Challenger spec α β where
+  State n := σ n
+  answer n s t := 𝒟[(impl n t).run s]
+  setup n := 𝒟[gen n]
+  score n s ob := 𝒟[scoreP n s ob]
+
+variable {σ : ℕ → Type}
+
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem ofStateOracle_State
+    (impl : (n : ℕ) → QueryImpl (spec n) (StateT (σ n) ProbComp))
+    (gen : (n : ℕ) → ProbComp (σ n × α n))
+    (scoreP : (n : ℕ) → σ n → Option (β n) → ProbComp Bool) (n : ℕ) :
+    (ofStateOracle impl gen scoreP).State n = σ n := rfl
+
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem ofStateOracle_oracle
+    (impl : (n : ℕ) → QueryImpl (spec n) (StateT (σ n) ProbComp))
+    (gen : (n : ℕ) → ProbComp (σ n × α n))
+    (scoreP : (n : ℕ) → σ n → Option (β n) → ProbComp Bool) (n : ℕ) :
+    (ofStateOracle impl gen scoreP).oracle n =
+      (ProbResponder.ofStateQueryImpl (impl n)).toQueryImpl := rfl
+
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem ofStateOracle_setup
+    (impl : (n : ℕ) → QueryImpl (spec n) (StateT (σ n) ProbComp))
+    (gen : (n : ℕ) → ProbComp (σ n × α n))
+    (scoreP : (n : ℕ) → σ n → Option (β n) → ProbComp Bool) (n : ℕ) :
+    (ofStateOracle impl gen scoreP).setup n = 𝒟[gen n] := rfl
+
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem ofStateOracle_score
+    (impl : (n : ℕ) → QueryImpl (spec n) (StateT (σ n) ProbComp))
+    (gen : (n : ℕ) → ProbComp (σ n × α n))
+    (scoreP : (n : ℕ) → σ n → Option (β n) → ProbComp Bool) (n : ℕ) (s : σ n)
+    (ob : Option (β n)) :
+    (ofStateOracle impl gen scoreP).score n s ob = 𝒟[scoreP n s ob] := rfl
+
+omit [∀ n, DecidableEq (ι n)] in
+/-- **The stateful challenger's program-game advantage is a concrete `ProbComp` experiment**:
+sample the state and input, run the program against the stateful oracle from that state, and score
+the result paired with the final state — all in `ProbComp`. The responder's `SPMF` run collapses to
+the `ProbComp` run via `ProbResponder.run_simulateQ_toQueryImpl_ofStateQueryImpl`; exposing the
+carrier `σ` (the `State` field) is exactly what lets the run rewriting go through. The stateful
+analogue of `advantage_toProgGame_ofProbHandler`. -/
+theorem advantage_toProgGame_ofStateOracle
+    (impl : (n : ℕ) → QueryImpl (spec n) (StateT (σ n) ProbComp))
+    (gen : (n : ℕ) → ProbComp (σ n × α n))
+    (scoreP : (n : ℕ) → σ n → Option (β n) → ProbComp Bool)
+    (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) (n : ℕ) :
+    (ofStateOracle impl gen scoreP).toProgGame.advantage oa n =
+      Pr[= true | do
+        let sx ← gen n
+        let rs ← (simulateQ (impl n) (oa n sx.2)).run sx.1
+        scoreP n rs.2 (some rs.1)] := by
+  rw [probOutput_def]
+  refine congrFun (congrArg DFunLike.coe ?_) true
+  change (𝒟[gen n] >>= fun sx : σ n × α n =>
+      (simulateQ (ProbResponder.ofStateQueryImpl (impl n)).toQueryImpl (oa n sx.2) :
+        StateT (σ n) SPMF (β n)).run sx.1 >>= fun rs => 𝒟[scoreP n rs.2 (some rs.1)]) = _
+  rw [evalDist_bind]
+  refine bind_congr fun sx => ?_
+  rw [ProbResponder.run_simulateQ_toQueryImpl_ofStateQueryImpl (impl n) (oa n sx.2) sx.1,
+    evalDist_bind]
+  exact bind_congr fun rs => rfl
 
 /-! ## Reductions from lenses: interface wrapping
 
@@ -268,9 +382,16 @@ through `w`, consulting the original `spec'`-responder, and mapping the answer b
 noncomputable def pullbackIface
     (w : (n : ℕ) → PFunctor.Lens (spec n).toPFunctor (spec' n).toPFunctor)
     (G : Challenger spec' α β) : Challenger spec α β where
-  responder n := (G.responder n).pullback (w n)
+  State n := G.State n
+  answer n := ((G.responder n).pullback (w n)).answer
   setup := G.setup
   score := G.score
+
+omit [∀ n, DecidableEq (ι n)] in
+@[simp] theorem pullbackIface_responder
+    (w : (n : ℕ) → PFunctor.Lens (spec n).toPFunctor (spec' n).toPFunctor)
+    (G : Challenger spec' α β) (n : ℕ) :
+    (pullbackIface w G).responder n = (G.responder n).pullback (w n) := rfl
 
 /-- **The game-level interface-wrapping adjunction**: an adversary machine playing the
 pulled-back game `G.pullbackIface w` has exactly the advantage of the *wrapped* adversary

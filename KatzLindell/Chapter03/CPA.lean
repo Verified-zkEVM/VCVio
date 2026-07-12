@@ -130,24 +130,43 @@ def CPASecure (π : (n : ℕ) → SymmEncAlg ProbComp (M n) (K n) (C n))
 
 /-! ## The machine-level reading
 
-The same game as a single-phase `Challenger`, so the CPA experiment also rides the Turing-machine
-adversary pipeline (`Challenger.toMachineGame`). Setup samples the key and hidden bit into the
-responder's state; the responder answers every left-right query; the judge compares the adversary's
-guess against the hidden bit read from the final state. Identifying this challenger's *program*-game
-advantage with `cpaExp` is obstructed by the opacity of the responder-`State` abbrev in the
-program-game's setup type (the state is defeq to `K × Bool` but does not reduce under the
-transparency `simp`/`rw` use), and is left for a companion stateful-challenger characterization
-lemma. -/
+The same game as a single-phase `Challenger` built by the stateful former `Challenger.ofStateOracle`
+(carrier `= K × Bool` exposed), so the CPA experiment also rides the Turing-machine adversary
+pipeline (`Challenger.toMachineGame`), and its *program*-game advantage identifies with the concrete
+`ProbComp` experiment (`advantage_cpaChallenger_toProgGame`) — the exposed carrier is exactly what
+lets that identity go through. -/
 
-/-- `PrivK^cpa` as a single-phase `Challenger` over the left-right oracle: the machine-adversary
-presentation of the CPA experiment, exposing `Challenger.toMachineGame`. -/
+/-- `PrivK^cpa` as a single-phase `Challenger` over the left-right oracle, via the stateful former
+`Challenger.ofStateOracle`: setup samples the key and hidden bit into the state, the keyed
+left-right oracle is the responder, and the judge compares the guess against the hidden bit in the
+final state. Exposes `Challenger.toMachineGame` and `advantage_cpaChallenger_toProgGame`. -/
 noncomputable def cpaChallenger (π : (n : ℕ) → SymmEncAlg ProbComp (M n) (K n) (C n)) :
-    Challenger (fun n => lrSpec (M n) (C n)) (fun _ => Unit) (fun _ => Bool) where
-  responder n := cpaResponder (π n)
-  setup n := 𝒟[(do
-    let k ← (π n).keygen
-    let b ← ($ᵗ Bool)
-    pure ((k, b), ()) : ProbComp ((K n × Bool) × Unit))]
-  score _ st ob := pure (some st.2 == ob)
+    Challenger (fun n => lrSpec (M n) (C n)) (fun _ => Unit) (fun _ => Bool) :=
+  Challenger.ofStateOracle (fun n => cpaLROracle (π n))
+    (fun n => do
+      let k ← (π n).keygen
+      let b ← ($ᵗ Bool)
+      pure ((k, b), ()))
+    (fun _ st ob => pure (some st.2 == ob))
+
+omit [∀ n, DecidableEq (M n)] in
+/-- **The CPA challenger's program-game advantage is the concrete `PrivK^cpa` success probability**:
+sample the key and hidden bit, run the adversary against the keyed left-right oracle, and report
+whether its guess matches the hidden bit read from the final state. A direct instance of the
+stateful-challenger characterization `Challenger.advantage_toProgGame_ofStateOracle`, available
+because `cpaChallenger` carries its `K × Bool` state explicitly. -/
+theorem advantage_cpaChallenger_toProgGame
+    (π : (n : ℕ) → SymmEncAlg ProbComp (M n) (K n) (C n))
+    (oa : (n : ℕ) → Unit → OracleComp (lrSpec (M n) (C n)) Bool) (n : ℕ) :
+    (cpaChallenger π).toProgGame.advantage oa n =
+      Pr[= true | do
+        let k ← (π n).keygen
+        let b ← ($ᵗ Bool)
+        let rs ← (simulateQ (cpaLROracle (π n)) (oa n ())).run (k, b)
+        pure (rs.2.2 == rs.1)] := by
+  rw [cpaChallenger, Challenger.advantage_toProgGame_ofStateOracle]
+  refine congrArg (fun p : ProbComp Bool => Pr[= true | p]) ?_
+  simp only [bind_assoc, pure_bind]
+  exact bind_congr fun k => bind_congr fun b => bind_congr fun rs => by simp
 
 end KatzLindell
