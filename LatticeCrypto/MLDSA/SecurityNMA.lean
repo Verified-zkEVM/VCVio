@@ -242,6 +242,44 @@ noncomputable def keygenShort1 : ProbComp (PublicKey p prims × SecretKey p) := 
   let t ← $ᵗ (RqVec p.k)
   return keyFromMaterial p prims rho key s1 s2 t
 
+omit nttOps in
+/-- Every output of `sampleShortVec k b` lies in the `b`-bounded box: the sampler draws from
+the subtype `{v // polyVecBounded v b}` and projects out the value, so support membership
+carries the bound. -/
+lemma mem_support_sampleShortVec {k b : ℕ} [SampleableType (RqVec k)] {v : RqVec k}
+    (hv : v ∈ support (sampleShortVec k b)) : polyVecBounded v b := by
+  simp only [sampleShortVec, support_map] at hv
+  obtain ⟨u, -, rfl⟩ := hv
+  exact u.property
+
+/-- The generable relation carried by the idealized short-key model: the generator is
+`keygenShort`, and every generated pair is material-valid. Each pair drawn by `keygenShort`
+is literally `keyFromMaterial ρ K s₁ s₂ (ExpandA(ρ)·s₁ + s₂)` for uniform `ρ`, `K` and
+box-sampled `(s₁, s₂)`, and `sampleShortVec` outputs are `η`-bounded on their support
+(`mem_support_sampleShortVec`) — exactly the witness `validKeyPairShort` asks for. This
+inhabits the `hGen` hypothesis of the short-model security headlines
+(`keygenShort_generable`). -/
+noncomputable def hrShort :
+    GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims) :=
+  ⟨keygenShort p prims, fun pk sk hmem => by
+    rw [validKeyPairShort_eq_true_iff]
+    simp only [keygenShort, mem_support_bind_iff] at hmem
+    obtain ⟨key, -, rho, -, s1, hs1, s2, hs2, hpure⟩ := hmem
+    refine ⟨rho, key, s1, s2, mem_support_sampleShortVec hs1,
+      mem_support_sampleShortVec hs2, ?_⟩
+    simpa only [keyFromMaterial] using (eq_of_mem_support_pure _ hpure).symm⟩
+
+omit [DecidableEq prims.High] in
+/-- **Satisfiability certificate for the short-model `hGen` hypothesis.** Some generable
+relation over `validKeyPairShort` has `keygenShort` as its generator — witnessed by
+`hrShort`. The short-model security statements hypothesize such a relation via
+`hGen : hr.gen = keygenShort p prims`; this theorem records that the hypothesis pair
+`(hr, hGen)` is inhabited, so those statements have non-vacuous instances. -/
+theorem keygenShort_generable :
+    ∃ hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims),
+      hr.gen = keygenShort p prims :=
+  ⟨hrShort p prims, rfl⟩
+
 end KeyGen
 
 section Game
