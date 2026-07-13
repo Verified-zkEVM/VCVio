@@ -37,6 +37,7 @@ import VCVio.CryptoFoundations.FujisakiOkamoto.Defs
 import VCVio.CryptoFoundations.FujisakiOkamoto.TTransform
 import VCVio.CryptoFoundations.FujisakiOkamoto.UTransform
 import VCVio.CryptoFoundations.GPVHashAndSign
+import VCVio.CryptoFoundations.GPVHashAndSign.AppendQuery
 import VCVio.CryptoFoundations.GPVHashAndSign.Basic
 import VCVio.CryptoFoundations.GPVHashAndSign.CollisionTelescope
 import VCVio.CryptoFoundations.GPVHashAndSign.CombinedHandler

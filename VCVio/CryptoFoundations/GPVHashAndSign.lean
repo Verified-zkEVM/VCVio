@@ -16,6 +16,7 @@ import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
 import VCVio.CryptoFoundations.GPVHashAndSign.TrapCount
 import VCVio.CryptoFoundations.GPVHashAndSign.EmbedIndex
 import VCVio.CryptoFoundations.GPVHashAndSign.Security
+import VCVio.CryptoFoundations.GPVHashAndSign.AppendQuery
 
 /-!
 # GPV Hash-and-Sign Framework
@@ -73,6 +74,7 @@ The proof decomposes into:
 The development is split along its proof phases: `Basic` (the PSF abstraction and
 the scheme), `CollisionTelescope`, `Factorization`, `GameRuns`, `TapeFactorization`,
 `FlagHandlers`, `CombinedHandler`, `GameIdentification`, `VerificationBridge`,
-`TrapCount`, `EmbedIndex`, and `Security` (the headline EUF-CMA bounds). This
-umbrella module re-exports all of them.
+`TrapCount`, `EmbedIndex`, `Security` (the headline EUF-CMA bounds), and
+`AppendQuery` (the append-forgery-query compiler discharging `ForgesQueriedPoint`).
+This umbrella module re-exports all of them.
 -/
