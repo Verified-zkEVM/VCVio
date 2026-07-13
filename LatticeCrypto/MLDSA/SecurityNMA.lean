@@ -45,8 +45,8 @@ norm gates `‖z‖∞ < γ₁ − β` and `weight(h) ≤ ω` plus a commitment 
 `w' = UseHint(h, Â·z − SampleInBall(c̃)·(t₁·2^d))` over `R_q`
 (`computeWApprox_eq_mul_sub_smul`), with the RO consistency of `c̃` enforced by the
 surrounding `SelfTargetMSIS.experiment`. The reduction **stops at this tailored
-intermediate problem**: the generic `SelfTargetMSIS.Problem.isValid` never sees the hash
-preimage, so the relation cannot bind `w'` to the pair hashed to produce `c̃`, and at the
+intermediate problem**: the tailored `isValid` ignores the hash preimage it receives, so
+the relation does not bind `w'` to the pair hashed to produce `c̃`, and at the
 matched parameters `Â = ExpandA(ρ)` published by `sampleParams` acceptance degenerates to
 the two norm gates (`mldsaSTMSISShort_isValid_expandA_iff`). The tailored problem is
 therefore strictly weaker than the literature SelfTargetMSIS — after a single random-oracle
@@ -56,8 +56,8 @@ quantity about this specific problem and extractor, not as an appeal to the lite
 hardness assumption. The full self-target binding — the forged commitment `w₁` satisfies
 `w₁ = UseHint(h, ExpandA(ρ)·z − c·(t₁·2^d))` while `c̃ = H(msg, w₁)` — does hold of every
 accepted NMA forgery (`identificationSchemeShort_verify_eq_true_iff` plus the cache
-read-back inside the extraction proof); expressing it as the target problem would require
-extending `SelfTargetMSIS.Problem.isValid` with the hash-preimage argument.
+read-back inside the extraction proof); expressing it as the target problem requires the
+tailored `isValid` to consume its hash-preimage argument.
 
 ## Scope: an idealized proof-level ML-DSA model
 
@@ -828,8 +828,8 @@ Accepted solutions are characterized algebraically by `stmsisAlgebraicSolution` 
 bridge `mldsaSTMSISShort_isValid_iff`: the verifier's norm gates `‖z‖∞ < γ₁ − β` and
 `weight(h) ≤ ω` plus the hint-recovered matrix equation
 `w' = UseHint(h, Â·z − SampleInBall(c̃)·(t₁·2^d))` over `R_q`. The security theorems **stop
-at this tailored intermediate problem**: `isValid` never sees the hash preimage, so it does
-not bind the recovered commitment to the pair hashed to produce `c̃`, and at the matched
+at this tailored intermediate problem**: `isValid` ignores the hash preimage it receives, so
+it does not bind the recovered commitment to the pair hashed to produce `c̃`, and at the matched
 parameters published by `sampleParams` acceptance degenerates to the two norm gates
 (`mldsaSTMSISShort_isValid_expandA_iff`); see the module docstring for the precise scope. -/
 noncomputable def mldsaSTMSISShort (M : Type) :
@@ -838,7 +838,7 @@ noncomputable def mldsaSTMSISShort (M : Type) :
   sampleParams := do
     let (pk, _) ← keygenShort1 p prims
     return (prims.expandA pk.rho, pk)
-  isValid := fun aHat pk cTilde (z, h) =>
+  isValid := fun aHat pk _hashInput cTilde (z, h) =>
     -- Recover the commitment `w'` from `(pk, c̃, (z, h))` and run the identification verifier.
     let w' := prims.useHintVec h (computeWApprox p prims aHat (prims.sampleInBall cTilde) z pk.t1)
     (identificationSchemeShort p prims).verify pk w' cTilde (z, h)
@@ -925,9 +925,9 @@ gates together with the hint-recovered matrix equation over `R_q`, with the reco
 commitment `w'` exhibited explicitly. Only the transform-isomorphism laws of `h_laws` are
 consumed (via `computeWApprox_eq_mul_sub_smul`). -/
 theorem mldsaSTMSISShort_isValid_iff (h_laws : Primitives.Laws prims nttOps)
-    (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims) (cTilde : CommitHashBytes p)
-    (z : RqVec p.l) (h : Vector prims.Hint p.k) :
-    (mldsaSTMSISShort p prims M).isValid aHat pk cTilde (z, h) = true ↔
+    (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims) (hashInput : M × Commitment p prims)
+    (cTilde : CommitHashBytes p) (z : RqVec p.l) (h : Vector prims.Hint p.k) :
+    (mldsaSTMSISShort p prims M).isValid aHat pk hashInput cTilde (z, h) = true ↔
       stmsisAlgebraicSolution p prims aHat pk cTilde (z, h) := by
   simp only [mldsaSTMSISShort, identificationSchemeShort, identificationScheme,
     stmsisAlgebraicSolution, computeWApprox_eq_mul_sub_smul p prims h_laws.transform,
@@ -947,8 +947,10 @@ records the honest residual content of the tailored problem; the self-target bin
 the commitment to the hash preimage lives only on the NMA side
 (`identificationSchemeShort_verify_eq_true_iff`). No primitive laws are needed. -/
 theorem mldsaSTMSISShort_isValid_expandA_iff (pk : PublicKey p prims)
-    (cTilde : CommitHashBytes p) (z : RqVec p.l) (h : Vector prims.Hint p.k) :
-    (mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk cTilde (z, h) = true ↔
+    (hashInput : M × Commitment p prims) (cTilde : CommitHashBytes p)
+    (z : RqVec p.l) (h : Vector prims.Hint p.k) :
+    (mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk hashInput cTilde
+        (z, h) = true ↔
       polyVecNorm z < p.gamma1 - p.beta ∧ prims.hintWeight h ≤ p.omega := by
   simp only [mldsaSTMSISShort, identificationSchemeShort, identificationScheme,
     Bool.and_eq_true, decide_eq_true_eq]
@@ -1022,7 +1024,7 @@ private theorem stmsis_tail_le_short
         match cache hashInput with
         | some hashOutput =>
             pure ((mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk
-              hashOutput response)
+              hashInput hashOutput response)
         | none => pure false] := by
   classical
   -- Decompose both tails over the shared simulation of `main pk` from the empty cache.
@@ -1075,7 +1077,8 @@ private theorem stmsis_tail_le_short
     · -- Accepted: `isValid` recovers `w'` as the very `useHintVec …` value `verify` checks against,
       -- so its middle conjunct is `decide (X = X) = true` and `isValid = true`.
       have hvalid :
-          (mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk cc.1 (z, h) = true := by
+          (mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk (msg, w') cc.1
+            (z, h) = true := by
         simp only [mldsaSTMSISShort, identificationSchemeShort, identificationScheme]
           at hverify ⊢
         revert hverify
