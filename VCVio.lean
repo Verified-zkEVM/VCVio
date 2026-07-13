@@ -102,6 +102,8 @@ import VCVio.OracleComp.Coinductive.Bridge
 import VCVio.OracleComp.Coinductive.Composition
 import VCVio.OracleComp.Coinductive.DynSystem
 import VCVio.OracleComp.Coinductive.Machine
+import VCVio.OracleComp.Coinductive.Responder
+import VCVio.OracleComp.Coinductive.WiredRun
 import VCVio.OracleComp.Constructions.BitVec
 import VCVio.OracleComp.Constructions.GenerateSeed
 import VCVio.OracleComp.Constructions.Replicate
