@@ -1689,4 +1689,42 @@ The short-model headline `nma_security_short` is proven and axiom-clean
    `prims` is a modeling decision pending the cost-model infrastructure (#460).
 -/
 
+section MatrixHeadline
+
+variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
+  [DecidableEq prims.High]
+  {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
+  [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+  [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)]
+  [SampleableType (TqMatrix p.k p.l)]
+  [SampleableType (CommitHashBytes p)]
+
+/-- **The literature-facing NMA headline.** `nma_security_short` with the abstract-problem
+bridge discharged: the MLWE leg lands on the standard uniform-matrix short-secret problem
+`mldsaMatrixMLWE`, at the cost of one application of the `expandAIdealization` assumption
+(`advantage_mldsaMLWEShort_le_matrix`, supplying the bridge slack `εA`), and the
+SelfTargetMSIS leg on `mldsaSTMSISShort`. No caller-supplied inequality remains: every
+hypothesis is a satisfiable pinned equality (`keygenShort_generable`), a proven reduction,
+or the named XOF idealization. -/
+theorem nma_security_short_matrix (maxAttempts : ℕ) (εA : ℝ)
+    (hA : NMA.expandAIdealization p prims εA)
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
+    (hGen : hr.gen = NMA.keygenShort p prims) :
+    ∀ (adv : SignatureAlg.eufNmaAdv
+      (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts)),
+    ∃ (mlweReduction : LearningWithErrors.Adversary (NMA.mldsaMatrixMLWE p))
+      (stmsisReduction : SelfTargetMSIS.Adversary (NMA.mldsaSTMSISShort p prims M)),
+      adv.advantage
+          (FiatShamirWithAbort.runtime
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+        ENNReal.ofReal
+          (LearningWithErrors.advantage (NMA.mldsaMatrixMLWE p) mlweReduction + εA) +
+        SelfTargetMSIS.advantage stmsisReduction :=
+  nma_security_short p prims (NMA.mldsaMatrixMLWE p) (NMA.mldsaSTMSISShort p prims M)
+    maxAttempts hr hGen rfl εA
+    (fun main => ⟨NMA.matrixLift p prims (NMA.distinguisherBShort p prims hr maxAttempts main),
+      NMA.advantage_mldsaMLWEShort_le_matrix p prims hA _⟩)
+
+end MatrixHeadline
+
 end MLDSA
