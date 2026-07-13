@@ -422,6 +422,114 @@ noncomputable def distinguisherB
       let (msg, σ) ← main pk
       (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify pk msg σ
 
+omit [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
+  [SampleableType (CommitHashBytes p)] in
+/-- **Seed-to-matrix bridge.** Under `expandAIdealization`, any adversary against the
+seed-based short problem yields one against the standard uniform-matrix problem: the
+matrix adversary runs the seed adversary on a freshly sampled seed and the challenged
+target vector. The uniform branches agree exactly (both present an independent uniform
+`t`), and the real branches differ by one application of the idealization at the
+distinguisher `D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s₂)`.
+
+Proof recipe: rewrite both advantages via `advantage_eq_game_boolDistAdvantage` and
+`ProbComp.boolDistAdvantage`; the `game1` branches are identified by stripping the
+unused matrix draw (`probOutput_bind_const`, with `Pr[⊥ | $ᵗ _] = 0`) and commuting
+the independent uniform draws (`evalDist_bind_comm_probComp`); the `game0` branches
+are `≤ εA` by `hA` applied at `D` above, after `bind_assoc` normalization. Conclude
+by the triangle inequality. -/
+lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
+    (hA : expandAIdealization p prims εA)
+    (B : LearningWithErrors.Adversary (mldsaMLWEShort p prims)) :
+    LearningWithErrors.advantage (mldsaMLWEShort p prims) B ≤
+      LearningWithErrors.advantage (mldsaMatrixMLWE p)
+        (fun c => do let rho ← $ᵗ (Bytes 32); B (rho, c.2)) + εA := by
+  -- The goal's games/advantages carry the canonical global `IsUniformSpec unifSpec` instance, but
+  -- `hA` (through `expandAIdealization`) carries the section variable `iu`. Name `iu`, then shadow
+  -- with the global term so the auxiliary `have`s and the goal share instances; the single residual
+  -- `iu`-vs-global gap (only `hA`) is closed inside `h0` via `hips` (both give uniform `toPMF`).
+  rename_i iu
+  letI : IsUniformSpec unifSpec := instIsUniformSpecNatUnifSpec
+  set Bm : LearningWithErrors.Adversary (mldsaMatrixMLWE p) :=
+    (fun c => do let rho ← $ᵗ (Bytes 32); B (rho, c.2)) with hBm
+  set D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool :=
+    (fun rho A => do
+      let s1 ← sampleShortVec p.l p.eta
+      let s2 ← sampleShortVec p.k p.eta
+      B (rho, A * s1 + s2)) with hD
+  -- Local copy of the generic `advantage = boolDistAdvantage` bridge (its named form lives later
+  -- in the file, in the `Hop` section, so it is not yet in scope here).
+  have hadv : ∀ {S Sec O : Type} [Add O] (problem : LearningWithErrors.Problem S Sec O)
+      (adv : LearningWithErrors.Adversary problem),
+      LearningWithErrors.advantage problem adv =
+        (LearningWithErrors.game0 problem adv).boolDistAdvantage
+          (LearningWithErrors.game1 problem adv) := by
+    intro S Sec O _ problem adv
+    rw [LearningWithErrors.advantage,
+      show LearningWithErrors.experiment problem adv = (do
+        let b ← ($ᵗ Bool)
+        let z ← if b then LearningWithErrors.game0 problem adv
+                      else LearningWithErrors.game1 problem adv
+        pure (b == z)) by
+        simp only [LearningWithErrors.experiment, LearningWithErrors.game0,
+          LearningWithErrors.game1, bind_assoc]]
+    exact ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch _ _
+  rw [hadv (mldsaMLWEShort p prims) B, hadv (mldsaMatrixMLWE p) Bm,
+    ProbComp.boolDistAdvantage, ProbComp.boolDistAdvantage]
+  have h1 : Pr[= true | LearningWithErrors.game1 (mldsaMLWEShort p prims) B] =
+      Pr[= true | LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm] := by
+    simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, mldsaMLWEShort,
+      mldsaMatrixMLWE, hBm, bind_assoc, pure_bind]
+    -- Strip the unused leading matrix draw on the right, then commute the two uniform draws.
+    rw [probOutput_bind_const, probFailure_uniformSample]
+    simp only [tsub_zero, one_mul]
+    rw [probOutput_def, probOutput_def,
+      FiatShamirWithAbort.evalDist_bind_comm_probComp
+        ($ᵗ (Bytes 32)) ($ᵗ (RqVec p.k)) (fun rho t => B (rho, t))]
+  have h0 : |(Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B]).toReal -
+      (Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm]).toReal| ≤ εA := by
+    -- `hA` carries the section instance `iu`; the goal carries the global one (`this`). Both are
+    -- `IsUniformSpec unifSpec`, hence share the uniform `toPMF`, so their `IsProbabilitySpec`
+    -- projections coincide and the `probOutput`s agree.
+    have ext_ips : ∀ (a b : IsProbabilitySpec unifSpec), a.toPMF = b.toPMF → a = b := by
+      intro a b h; cases a; cases b; congr
+    have hips : (this : IsUniformSpec unifSpec).toIsProbabilitySpec = iu.toIsProbabilitySpec := by
+      apply ext_ips
+      funext t
+      rw [(this : IsUniformSpec unifSpec).toPMF_eq_uniform t, iu.toPMF_eq_uniform t]
+      congr 1
+      exact Subsingleton.elim _ _
+    have hreal : Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B] =
+        Pr[= true | do let rho ← $ᵗ (Bytes 32); D rho (prims.expandA rho)] := by
+      simp only [LearningWithErrors.game0, LearningWithErrors.distr, mldsaMLWEShort, hD,
+        bind_assoc, pure_bind]
+    have hunif : Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] =
+        Pr[= true | do
+          let rho ← $ᵗ (Bytes 32)
+          let A ← $ᵗ (TqMatrix p.k p.l)
+          D rho A] := by
+      simp only [LearningWithErrors.game0, LearningWithErrors.distr, mldsaMatrixMLWE, hBm, hD,
+        bind_assoc, pure_bind]
+      -- Commute the trailing `ρ` draw to the front (three independent-draw transpositions).
+      rw [probOutput_def, probOutput_def]
+      congr 1
+      refine Eq.trans (evalDist_bind_congr' _ (fun A => evalDist_bind_congr' _ (fun s1 =>
+        FiatShamirWithAbort.evalDist_bind_comm_probComp (sampleShortVec p.k p.eta) ($ᵗ (Bytes 32))
+          (fun s2 rho => B (rho, A * s1 + s2))))) ?_
+      refine Eq.trans (evalDist_bind_congr' _ (fun A =>
+        FiatShamirWithAbort.evalDist_bind_comm_probComp (sampleShortVec p.l p.eta) ($ᵗ (Bytes 32))
+          (fun s1 rho => sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2)))) ?_
+      exact FiatShamirWithAbort.evalDist_bind_comm_probComp
+        ($ᵗ (TqMatrix p.k p.l)) ($ᵗ (Bytes 32))
+        (fun A rho => sampleShortVec p.l p.eta >>= fun s1 =>
+          sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2))
+    rw [hreal, hunif, hips]
+    exact hA D
+  rw [h1]
+  refine le_trans (abs_sub_le _
+    (Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm].toReal) _) ?_
+  rw [add_comm]
+  exact add_le_add le_rfl h0
+
 end Distinguisher
 
 section Hop
@@ -589,6 +697,59 @@ theorem nma_keyswap_hop (_h_laws : Primitives.Laws prims nttOps)
     (Pr[= true | LearningWithErrors.game0 (mldsaMLWE p prims) B].toReal) _) ?_
   rw [add_comm]
   exact add_le_add le_rfl hH0
+
+/-- **The exact short-model key-swap hop.** Against the idealized key generators
+`keygenShort` / `keygenShort1`, the NMA-game gap **is** the `mldsaMLWEShort`
+distinguishing advantage of `distinguisherB` — both branch identifications are pure
+monad-rewriting identities, with no statistical slack: the key generators sample
+`ρ`, `K`, `s₁`, `s₂` independently, exactly as the problem's `distr`/`uniformDistr`
+do (the unused `K` draw strips off, being the leading draw).
+
+Proof recipe: mirror `nma_keyswap_hop` with both branches following its `hH1` shape:
+`rw [nmaGame_eq_keygen_bind]`, `simp only [LearningWithErrors.game0/1,
+LearningWithErrors.distr/uniformDistr, distinguisherB, mldsaMLWEShort, keygenShort/1,
+keyFromMaterial, bind_assoc, pure_bind]`, strip the leading `K` draw with
+`probOutput_bind_const` (`Pr[⊥ | $ᵗ (Bytes 32)] = 0`), and close with
+`probOutput_def`/`SPMF.evalDist_def`. No `hSlack` step. -/
+theorem nma_keyswap_hop_short
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
+    (maxAttempts : ℕ)
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims))) :
+    |(nmaAdvantage p prims hr maxAttempts (keygenShort p prims) main).toReal -
+        (nmaAdvantage p prims hr maxAttempts (keygenShort1 p prims) main).toReal| ≤
+      LearningWithErrors.advantage (mldsaMLWEShort p prims)
+        (distinguisherB p prims hr maxAttempts main) := by
+  set B := distinguisherB p prims hr maxAttempts main (M := M) with hB
+  -- `Pr[= true | 𝒟[Y]] = Pr[= true | Y]` holds definitionally (the SPMF self-lift is `id`).
+  have peel : ∀ (Y : ProbComp Bool), Pr[= true | 𝒟[Y]] = Pr[= true | Y] := fun _ => rfl
+  have hkey : Pr[⊥ | ($ᵗ (Bytes 32) : ProbComp (Bytes 32))] = 0 := probFailure_uniformSample _
+  have hss : ∀ (k b : ℕ) [SampleableType (RqVec k)], Pr[⊥ | sampleShortVec k b] = 0 := by
+    intro k b _
+    simp only [sampleShortVec, probFailure_map, probFailure_uniformSample]
+  rw [advantage_eq_game_boolDistAdvantage (mldsaMLWEShort p prims) B,
+    ProbComp.boolDistAdvantage, nmaAdvantage, nmaAdvantage]
+  have hH1 : Pr[= true | nmaGame p prims hr maxAttempts (keygenShort1 p prims) main] =
+      Pr[= true | LearningWithErrors.game1 (mldsaMLWEShort p prims) B] := by
+    rw [nmaGame_eq_keygen_bind]
+    simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, hB, distinguisherB,
+      mldsaMLWEShort, keygenShort1, keyFromMaterial, bind_assoc, pure_bind]
+    -- Strip the unused leading `key` draw, then the unused `s₁`, `s₂` draws under `ρ`.
+    rw [peel, probOutput_bind_const, hkey]
+    simp only [tsub_zero, one_mul]
+    refine probOutput_bind_congr' _ true (fun rho => ?_)
+    rw [probOutput_bind_const, hss, probOutput_bind_const, hss]
+    simp only [tsub_zero, one_mul]
+  have hH0 : Pr[= true | nmaGame p prims hr maxAttempts (keygenShort p prims) main] =
+      Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B] := by
+    rw [nmaGame_eq_keygen_bind]
+    simp only [LearningWithErrors.game0, LearningWithErrors.distr, hB, distinguisherB,
+      mldsaMLWEShort, keygenShort, keyFromMaterial, bind_assoc, pure_bind]
+    -- Only the leading `key` draw is unused here (`s₁`, `s₂` build `t`).
+    rw [peel, probOutput_bind_const, hkey]
+    simp only [tsub_zero, one_mul]
+  rw [hH0, hH1]
 
 end Hop
 
