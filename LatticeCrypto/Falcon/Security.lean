@@ -537,4 +537,107 @@ theorem euf_cma_security_of_samplerTransport_queryBound
       (fun pk => (hQ pk).1)
   exact le_trans hAdvLe (by gcongr)
 
+/-! ### Ideal-sampler min-entropy and the collision-only bound
+
+The exact-match (programmed-preimage) term of the decomposed frontier is controlled by the
+*guessing probability* of the ideal trapdoor sampler
+(`GPVHashAndSign.programmedPreimageAdvantage_le_of_probOutput_trapdoorSample_le`).
+`idealSamplerGuessBound` names the per-call pointwise-mass bound, and
+`euf_cma_collision_security` discharges the exact-match term under it, leaving the NTRU-PSF
+collision problem as the only cryptographic residual besides the named assumptions. -/
+
+/-- **Per-call guessing-probability (min-entropy) bound for the ideal trapdoor sampler**: on
+every honestly generated key pair and every hash target `c`, no single preimage carries more
+than `εpp` of the ideal sampler's output mass — equivalently, the sampler has min-entropy at
+least `log₂ (1/εpp)` at every honest key and target.
+
+For the ideal (exact-arithmetic) discrete Gaussian over the NTRU lattice coset — the sampler
+GPV08 and [FGdG+25] analyze — the literature value is `εpp = 2^(-H∞)` of the coset Gaussian
+`D_{Λ+c,σ}`, and GPV08 Lemma 2.10 gives `H∞ ≥ n - 1` bits once `σ` exceeds the smoothing
+parameter of the lattice, so `εpp` is negligible at Falcon parameters (`n = 512` / `1024`).
+The formal discharge of a concrete numeric `εpp` awaits a discrete-Gaussian pointwise-mass
+theory: `LatticeCrypto.DiscreteGaussian` currently provides the one-dimensional
+`discreteGaussianPMF` with positivity and normalization but no pointwise *upper* bound.
+Missing are (i) a max-mass lemma
+`discreteGaussianPMF σ μ z ≤ discreteGaussianWeight σ μ ⌊μ⌉ / discreteGaussianSum σ μ`
+with a quantitative lower bound on `discreteGaussianSum σ μ` (e.g. `≥ σ√(2π) - 1` by integral
+comparison), and (ii) their lift to the `2n`-dimensional coset Gaussian over the NTRU lattice
+via the smoothing-parameter bound (GPV08 Lemma 2.10).  Until then this remains a named
+assumption with inspectable content; it is trivially satisfiable at `εpp = 1`
+(`idealSamplerGuessBound_one`), since pointwise masses of any sampler are probabilities. -/
+def idealSamplerGuessBound
+    (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
+    (idealPSF : PreimageSampleableFunction
+      (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
+    (εpp : ℝ≥0∞) : Prop :=
+  ∀ pk sk, (pk, sk) ∈ support hr.gen → ∀ (c : Rq p.n) (x : Rq p.n × Rq p.n),
+    Pr[= x | idealPSF.trapdoorSample pk sk c] ≤ εpp
+
+/-- The trivial witness for the guessing-probability bound: pointwise output masses of any
+sampler never exceed one, so `εpp = 1` is always admissible. -/
+theorem idealSamplerGuessBound_one
+    (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
+    (idealPSF : PreimageSampleableFunction
+      (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n)) :
+    idealSamplerGuessBound p hr idealPSF 1 :=
+  fun _pk _sk _h _c _x => probOutput_le_one
+
+/-- **Collision-only EUF-CMA security of Falcon from the per-call sampler and min-entropy
+bounds.**  The bound of `euf_cma_security_of_samplerTransport_queryBound` with the
+exact-match (programmed-preimage) term discharged: under the guessing-probability bound
+`hGuess`, every programmed-preimage reduction has advantage at most `εpp`
+(`GPVHashAndSign.programmedPreimageAdvantage_le_of_probOutput_trapdoorSample_le`), so the
+existential exact-match term collapses to the explicit `(qSign + qHash + 1) · εpp`.
+
+The hypothesis set is exactly that of `euf_cma_security_of_samplerTransport_queryBound`
+plus `hGuess`; the only remaining cryptographic residual in the conclusion is the NTRU-PSF
+collision problem.  For the ideal coset Gaussian, `εpp = 2^(-H∞)` is negligible at Falcon
+parameters (see `idealSamplerGuessBound`); `εpp = 1` recovers a trivial bound
+(`idealSamplerGuessBound_one`), so quantitative content enters only through the assumed
+`εpp`. -/
+theorem euf_cma_collision_security
+    (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
+    [SampleableType (Rq p.n)] [Inhabited (Rq p.n)]
+    (hr : GenerableRelation (PublicKey p) (SecretKey p)
+      (validKeyPair p))
+    (qSign qHash : ℕ)
+    (ε_step : ℝ) (hε : 0 ≤ ε_step) (εpp : ℝ≥0∞)
+    (adv : SignatureAlg.unforgeableAdv
+      (falconSignatureAlg p prims Salt hr))
+    (idealPSF : PreimageSampleableFunction
+      (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
+    (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
+    (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
+    (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
+    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
+      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+        𝒟[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
+              : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
+        𝒟[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
+              : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))])
+    (hNeverFail : ∀ pk sk, (pk, sk) ∈ support hr.gen →
+      ∀ c, NeverFail (idealPSF.trapdoorSample pk sk c))
+    (hStep : samplerTransport p prims hr idealPSF ε_step)
+    (hQ : ∀ pk, GPVHashAndSign.signHashQueryBound
+      (M := List Byte) (Salt := Salt) (Range := Rq p.n)
+      (S' := Salt × (Rq p.n × Rq p.n))
+      (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv.main pk)
+      (qSign := qSign) (qHash := qHash))
+    (hGuess : idealSamplerGuessBound p hr idealPSF εpp) :
+    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr)),
+      adv.advantage
+          (GPVHashAndSign.runtime
+            (Range := Rq p.n) (List Byte) Salt) ≤
+        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+        ((qSign + (qHash + 1) : ℕ) : ENNReal) * εpp +
+        GPVHashAndSign.collisionBound Salt qSign (qHash + 1) +
+        ENNReal.ofReal (qSign * ε_step) := by
+  obtain ⟨cRed, eRed, hbound⟩ :=
+    euf_cma_security_of_samplerTransport_queryBound p prims Salt hr qSign qHash ε_step hε
+      adv idealPSF hEval hShort hCorrect hReg hNeverFail hStep hQ
+  refine ⟨cRed, le_trans hbound ?_⟩
+  gcongr
+  exact GPVHashAndSign.programmedPreimageAdvantage_le_of_probOutput_trapdoorSample_le
+    idealPSF hr eRed hGuess
+
 end Falcon
