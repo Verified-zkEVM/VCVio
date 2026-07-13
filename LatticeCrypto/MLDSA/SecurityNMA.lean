@@ -483,7 +483,7 @@ should be read computationally, against bounded distinguishers, where it is the
 assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
 def expandAIdealization (p : Params) (prims : Primitives p)
     [SampleableType (TqMatrix p.k p.l)] (εA : ℝ) : Prop :=
-  ∀ D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool,
+  ∀ [IsUniformSpec unifSpec] (D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool),
     |(Pr[= true | do
         let rho ← $ᵗ (Bytes 32)
         D rho (prims.expandA rho)]).toReal -
@@ -524,7 +524,7 @@ noncomputable def matrixLift
     B (rho, c.2)
 
 omit [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
-  [SampleableType (CommitHashBytes p)] in
+  [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
 /-- **Seed-to-matrix bridge.** Under `expandAIdealization`, any adversary against the
 seed-based short problem yields one against the standard uniform-matrix problem: the
 matrix adversary runs the seed adversary on a freshly sampled seed and the challenged
@@ -543,12 +543,6 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
     (B : LearningWithErrors.Adversary (mldsaMLWEShort p prims)) :
     LearningWithErrors.advantage (mldsaMLWEShort p prims) B ≤
       LearningWithErrors.advantage (mldsaMatrixMLWE p) (matrixLift p prims B) + εA := by
-  -- The goal's games/advantages carry the canonical global `IsUniformSpec unifSpec` instance, but
-  -- `hA` (through `expandAIdealization`) carries the section variable `iu`. Name `iu`, then shadow
-  -- with the global term so the auxiliary `have`s and the goal share instances; the single residual
-  -- `iu`-vs-global gap (only `hA`) is closed inside `h0` via `hips` (both give uniform `toPMF`).
-  rename_i iu
-  letI : IsUniformSpec unifSpec := instIsUniformSpecNatUnifSpec
   set Bm : LearningWithErrors.Adversary (mldsaMatrixMLWE p) :=
     matrixLift p prims B with hBm
   set D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool :=
@@ -587,17 +581,6 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
         ($ᵗ (Bytes 32)) ($ᵗ (RqVec p.k)) (fun rho t => B (rho, t))]
   have h0 : |(Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B]).toReal -
       (Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm]).toReal| ≤ εA := by
-    -- `hA` carries the section instance `iu`; the goal carries the global one (`this`). Both are
-    -- `IsUniformSpec unifSpec`, hence share the uniform `toPMF`, so their `IsProbabilitySpec`
-    -- projections coincide and the `probOutput`s agree.
-    have ext_ips : ∀ (a b : IsProbabilitySpec unifSpec), a.toPMF = b.toPMF → a = b := by
-      intro a b h; cases a; cases b; congr
-    have hips : (this : IsUniformSpec unifSpec).toIsProbabilitySpec = iu.toIsProbabilitySpec := by
-      apply ext_ips
-      funext t
-      rw [(this : IsUniformSpec unifSpec).toPMF_eq_uniform t, iu.toPMF_eq_uniform t]
-      congr 1
-      exact Subsingleton.elim _ _
     have hreal : Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B] =
         Pr[= true | do let rho ← $ᵗ (Bytes 32); D rho (prims.expandA rho)] := by
       simp only [LearningWithErrors.game0, LearningWithErrors.distr, mldsaMLWEShort, hD,
@@ -623,7 +606,7 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
         ($ᵗ (TqMatrix p.k p.l)) ($ᵗ (Bytes 32))
         (fun A rho => sampleShortVec p.l p.eta >>= fun s1 =>
           sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2))
-    rw [hreal, hunif, hips]
+    rw [hreal, hunif]
     exact hA D
   rw [h1]
   refine le_trans (abs_sub_le _
