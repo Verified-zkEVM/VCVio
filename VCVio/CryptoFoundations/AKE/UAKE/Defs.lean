@@ -55,9 +55,21 @@ variable {K UK TK W : Type} {m : Type → Type}
 /-- A UAKE scheme with a fixed number of rounds. The keyed (authenticated) party
   is T; the unkeyed (unauthenticated) party is U. -/
 structure Scheme (m : Type → Type) (K UK TK W : Type) where
+  /-- The total number of protocol messages sent (not round trips) in an honest
+    execution of the protocol, which we assume to be fixed for a given
+    protocol. We do *not* enforce that the two parties follow this behavior. We
+    use this field in conjunction with the "T speaks last" convention of DF'17
+    to determine the first speaker in the ping-pong predicates used in the
+    security game. -/
   rounds : ℕ
+  /-- Create the initial key material used by U and T. In the security game,
+    this is called just once by the challenger (as opposed to T's init
+    function, which is called each time a new party instance is spun up by the
+    adversary), so the parameters it creates are long term and global. -/
   setup : m (UK × TK)
+  /-- Unkeyed (unauthenticated) party -/
   U : Party m UK W (Option K)
+  /-- Keyed (authenticated) party -/
   T : Party m TK W (Option K)
 
 /-- The UAKE correctness experiment (Def. 7). The parties' keys are sampled
