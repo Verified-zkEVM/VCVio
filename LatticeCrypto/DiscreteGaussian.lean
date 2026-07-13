@@ -372,4 +372,35 @@ theorem le_discreteGaussianSum (σ μ : ℝ) (hσ : 0 < σ) :
 
 end LowerBound
 
+/-! ## Guessing-Probability Bound
+
+Combining the mode-mass bound with the normalizing-constant lower bound yields a computable
+per-point guessing bound for the one-dimensional discrete Gaussian: once
+`1 < σ√(2π)`, no integer carries more than `1 / (σ√(2π) - 1)` of the mass — a min-entropy of
+at least `log₂ (σ√(2π) - 1)` bits.  This is the one-dimensional building block for the
+per-call guessing-probability (min-entropy) assumptions of GPV-style hash-and-sign security
+proofs; the lift to the `2n`-dimensional NTRU coset Gaussian via the smoothing-parameter
+bound (GPV08 Lemma 2.10) remains future work. -/
+
+/-- **Guessing bound for the discrete Gaussian**: when `1 < σ√(2π)`, every integer carries
+mass at most `1 / (σ√(2π) - 1)`, since the weight is at most `1` and the normalizing
+constant is at least `σ√(2π) - 1` (`le_discreteGaussianSum`). -/
+theorem discreteGaussianPMF_le_one_div_sub_one (σ μ : ℝ) (hσ : 0 < σ)
+    (hσ' : 1 < σ * Real.sqrt (2 * π)) (z : ℤ) :
+    discreteGaussianPMF σ μ z ≤ 1 / (σ * Real.sqrt (2 * π) - 1) := by
+  have hpos : 0 < σ * Real.sqrt (2 * π) - 1 := by linarith
+  have h1 := discreteGaussianWeight_le_one σ μ z
+  have h2 := le_discreteGaussianSum σ μ hσ
+  rw [discreteGaussianPMF]
+  gcongr
+
+/-- The guessing bound for the discrete Gaussian, stated on the Mathlib `PMF`: when
+`1 < σ√(2π)`, every pointwise output mass of `discreteGaussianDist` is at most
+`ENNReal.ofReal (1 / (σ√(2π) - 1))`.  One-dimensional building block for min-entropy
+assumptions on lattice-coset trapdoor samplers. -/
+theorem discreteGaussianDist_apply_le (σ μ : ℝ) (hσ : 0 < σ)
+    (hσ' : 1 < σ * Real.sqrt (2 * π)) (z : ℤ) :
+    discreteGaussianDist σ μ hσ z ≤ ENNReal.ofReal (1 / (σ * Real.sqrt (2 * π) - 1)) :=
+  ENNReal.ofReal_le_ofReal (discreteGaussianPMF_le_one_div_sub_one σ μ hσ hσ' z)
+
 end LatticeCrypto
