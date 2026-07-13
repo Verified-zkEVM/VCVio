@@ -162,6 +162,86 @@ def honestSamplingSlack (idealGap : ℝ) : Prop :=
         let s₂ ← $ᵗ (RqVec p.k)
         f (prims.expandSeed seed).1 s₁ s₂) ≤ idealGap
 
+/-! ### Short-secret sampling and the idealized key generators
+
+The FIPS key generator derives everything deterministically from one seed
+(`keygen0` above). The idealized proof-level model instead samples the matrix
+seed `ρ`, the signing key `K`, and the short secrets `(s₁, s₂)` independently,
+with `(s₁, s₂)` uniform on the `η`-bounded box `S_η^ℓ × S_η^k` — the
+distribution the Module-LWE assumption for ML-DSA is stated over. The key-swap
+hop is then an exact monad identity against `mldsaMLWEShort` (no statistical
+slack), and the deterministic-XOF derivation enters only through the separate
+`expandSReplacement` assumption consumed by the FIPS-keygen corollary. -/
+
+/-- `polyVecBounded` is a decidable predicate: it is a `≤` test on the computed
+centered infinity norm. -/
+instance {k b : ℕ} : DecidablePred (fun v : RqVec k => polyVecBounded v b) := fun _ => by
+  unfold polyVecBounded
+  exact Nat.decLe _ _
+
+omit nttOps in
+/-- The zero vector lies in every `η`-bounded box. -/
+lemma polyVecBounded_zero (k b : ℕ) : polyVecBounded (0 : RqVec k) b := by
+  unfold polyVecBounded polyVecNorm
+  rw [LatticeCrypto.PolyVec.cInfNorm_le_iff]
+  intro j
+  have hz : (0 : RqVec k).get j = (0 : Rq) := by
+    change (0 : Vector Rq k).get j = 0
+    simp [Vector.get]
+  rw [hz]
+  have h0 : polyNorm (0 : Rq) = 0 := by
+    simp only [polyNorm, normOps, LatticeCrypto.zmodPolyNormOps,
+      LatticeCrypto.normOpsOfCenteredView, LatticeCrypto.cInfNormOf]
+    simp only [vectorNegacyclicRing_backend, vectorBackend_coeff, Finset.sup_eq_zero,
+      Finset.mem_univ, Int.natAbs_eq_zero, forall_const]
+    intro i
+    have hci : Vector.get (0 : Rq) i = (0 : Coeff) :=
+      LatticeCrypto.NegacyclicRing.coeff_zero coeffRing i
+    rw [hci]
+    simp only [LatticeCrypto.zmodCenteredCoeffView, LatticeCrypto.centeredRepr, ZMod.val_zero,
+      Int.natCast_zero]
+    split <;> omega
+  calc normOps.cInfNorm (0 : Rq) = polyNorm (0 : Rq) := rfl
+    _ = 0 := h0
+    _ ≤ b := Nat.zero_le b
+
+/-- **Uniform sampling from the `η`-bounded box.** The uniform distribution on
+`S_b^k = { v : RqVec k | ‖v‖∞ ≤ b }`, i.e. every coefficient of every component
+uniform on the centered interval `[-b, b]`. This is the secret/error
+distribution of the Module-LWE assumption used by ML-DSA (`η ∈ {2, 4}` for the
+approved parameter sets). -/
+noncomputable def sampleShortVec (k b : ℕ) [SampleableType (RqVec k)] : ProbComp (RqVec k) :=
+  letI : Fintype {v : RqVec k // polyVecBounded v b} := .ofFinite _
+  letI : Nonempty {v : RqVec k // polyVecBounded v b} := ⟨0, polyVecBounded_zero k b⟩
+  letI : SampleableType {v : RqVec k // polyVecBounded v b} := .ofFintype _
+  Subtype.val <$> ($ᵗ {v : RqVec k // polyVecBounded v b})
+
+/-- **Idealized key generation (real `t`).** Sample the matrix seed `ρ`, the
+signing key `K`, and the short secrets `(s₁, s₂)` independently — `(s₁, s₂)`
+uniform on the `η`-bounded box — and form `t = ExpandA(ρ) · s₁ + s₂`. This is
+the honestly-sampled key distribution of the idealized proof-level ML-DSA
+model; the deterministic seed-expanded `keygen0` is related to it by the
+`expandSReplacement` assumption. -/
+noncomputable def keygenShort : ProbComp (PublicKey p prims × SecretKey p) := do
+  let key ← $ᵗ (Bytes 32)
+  let rho ← $ᵗ (Bytes 32)
+  let s1 ← sampleShortVec p.l p.eta
+  let s2 ← sampleShortVec p.k p.eta
+  let t := prims.expandA rho * s1 + s2
+  return keyFromMaterial p prims rho key s1 s2 t
+
+/-- **Idealized key generation (uniform `t`).** Identical to `keygenShort`
+except the public vector `t` is sampled uniformly. The gap between the two is
+exactly the `mldsaMLWEShort` distinguishing advantage of the induced
+distinguisher (`nma_keyswap_hop_short`). -/
+noncomputable def keygenShort1 : ProbComp (PublicKey p prims × SecretKey p) := do
+  let key ← $ᵗ (Bytes 32)
+  let rho ← $ᵗ (Bytes 32)
+  let s1 ← sampleShortVec p.l p.eta
+  let s2 ← sampleShortVec p.k p.eta
+  let t ← $ᵗ (RqVec p.k)
+  return keyFromMaterial p prims rho key s1 s2 t
+
 end KeyGen
 
 section Game
@@ -262,6 +342,62 @@ noncomputable def mldsaMLWE (p : Params) (prims : Primitives p)
   sampleError := $ᵗ (RqVec p.k)
   noiseless := fun s1 rho => prims.expandA rho * s1
   sampleUniform := $ᵗ (RqVec p.k)
+
+/-- **The short-secret Module-LWE problem for ML-DSA** (seed-based form). The public
+challenge is the matrix seed `ρ` itself (uniform), the secret `s₁` and the additive
+error `s₂` are uniform on the `η`-bounded box (`sampleShortVec`), and the decision
+target is `t = ExpandA(ρ) · s₁ + s₂` versus uniform `t`. This is the distribution the
+ML-DSA literature states its MLWE assumption over; unlike a uniform-error variant it
+is not information-theoretically trivial, since `ExpandA(ρ) · s₁ + s₂` with short
+`(s₁, s₂)` is far from uniform. Bridging the seed-based challenge to the standard
+uniform-matrix form is `advantage_mldsaMLWEShort_le_matrix`, under the explicit
+`expandAIdealization` assumption. -/
+noncomputable def mldsaMLWEShort (p : Params) (prims : Primitives p)
+    [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] :
+    LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
+  sampleChallenge := $ᵗ (Bytes 32)
+  sampleSecret := sampleShortVec p.l p.eta
+  sampleError := sampleShortVec p.k p.eta
+  noiseless := fun s1 rho => prims.expandA rho * s1
+  sampleUniform := $ᵗ (RqVec p.k)
+
+/-- **The matrix-based short Module-LWE problem for ML-DSA.** The standard form: the
+public challenge is a uniform matrix `A`, the secret and error are uniform on the
+`η`-bounded box, and the decision target is `A · s₁ + s₂` versus uniform. This is the
+literature-facing hardness assumption; `mldsaMLWEShort` reduces to it under
+`expandAIdealization` (`advantage_mldsaMLWEShort_le_matrix`). -/
+noncomputable def mldsaMatrixMLWE (p : Params)
+    [SampleableType (TqMatrix p.k p.l)]
+    [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] :
+    LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k) where
+  sampleChallenge := $ᵗ (TqMatrix p.k p.l)
+  sampleSecret := sampleShortVec p.l p.eta
+  sampleError := sampleShortVec p.k p.eta
+  noiseless := fun s1 A => A * s1
+  sampleUniform := $ᵗ (RqVec p.k)
+
+/-- **ExpandA idealization (quantified XOF-as-random-matrix step).** For every
+distinguisher `D` receiving both the seed and the matrix, the pair
+`(ρ, ExpandA(ρ))` for uniform `ρ` is `εA`-indistinguishable from `(ρ, A)` with `A`
+uniform and independent of `ρ`.
+
+This is the standard random-oracle reading of `ExpandA` (Dilithium's `A = ExpandA(ρ)`
+with `ExpandA` modeled as a random function), stated once with inspectable content
+rather than supplied per-reduction. For a fixed deterministic `prims.expandA` the
+unrestricted-quantifier form is only satisfiable at large `εA` (a distinguisher may
+recompute `ExpandA(ρ)` and compare); pending the cost-model infrastructure (#460) it
+should be read computationally, against bounded distinguishers, where it is the
+assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
+def expandAIdealization (p : Params) (prims : Primitives p)
+    [SampleableType (TqMatrix p.k p.l)] (εA : ℝ) : Prop :=
+  ∀ D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool,
+    |(Pr[= true | do
+        let rho ← $ᵗ (Bytes 32)
+        D rho (prims.expandA rho)]).toReal -
+      (Pr[= true | do
+        let rho ← $ᵗ (Bytes 32)
+        let A ← $ᵗ (TqMatrix p.k p.l)
+        D rho A]).toReal| ≤ εA
 
 /-- **The MLWE distinguisher `B`.** Given a seed-based MLWE challenge `(ρ, t)` (real
 `ExpandA(ρ)·s₁ + s₂` vs uniform `t`), `B` forms the ML-DSA public key `pk = (ρ, Power2Round(t).1)`
