@@ -666,4 +666,3 @@ theorem run_simulateQ_ofFn_withLogging (h : OracleHandler spec) (oa : OracleComp
 end Subsumption
 
 end OracleComp
-
