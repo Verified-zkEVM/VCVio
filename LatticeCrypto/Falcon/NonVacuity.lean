@@ -512,4 +512,47 @@ theorem toy_euf_cma_security_of_samplerTransport :
     (fun pk sk _ c => toy_neverFail pk sk c)
     toy_samplerTransport toy_ForgesQueriedPoint toy_signHashQueryBound
 
+/-! ## The ideal-sampler guessing-probability witness
+
+`Falcon.euf_cma_collision_security` additionally assumes the per-call min-entropy bound
+`Falcon.idealSamplerGuessBound`.  The witnesses below extend the consistency certificate to
+that frontier.  The toy sampler is deterministic, so its guessing probability is *exactly*
+one (zero min-entropy): the budget `εpp = 1` used here is tight for the toy sampler, and —
+as everywhere in this file — carries no quantitative security content. -/
+
+/-- The toy ideal sampler `pure (c, 0)` puts its whole mass on the single preimage `(c, 0)`:
+its pointwise maximum is exactly `1`, i.e. the toy sampler has zero min-entropy.  The
+guessing-probability budget `εpp = 1` of `toy_idealSamplerGuessBound` is therefore tight,
+not merely the trivial `≤ 1` witness. -/
+theorem toy_trapdoorSample_probOutput_self (pk : PublicKey toyP) (sk : SecretKey toyP)
+    (c : Rq toyP.n) :
+    Pr[= (c, (0 : Rq toyP.n)) | toyIdealPSF.trapdoorSample pk sk c] = 1 :=
+  probOutput_pure_self _
+
+/-- The toy guessing-probability bound at the (tight, by
+`toy_trapdoorSample_probOutput_self`) budget `εpp = 1`. -/
+theorem toy_idealSamplerGuessBound :
+    idealSamplerGuessBound toyP toyHr toyIdealPSF 1 :=
+  idealSamplerGuessBound_one toyP toyHr toyIdealPSF
+
+/-- **End-to-end applicability of the collision-only headline.** The derived theorem
+`Falcon.euf_cma_collision_security` applies at the toy instance with all hypotheses
+discharged, producing its collision reduction and bound.  Consistency-only: with
+`ε_step = 1`, `εpp = 1`, and the deterministic zero-min-entropy toy sampler, no
+quantitative claim about any real Falcon parameter set follows. -/
+theorem toy_euf_cma_collision_security :
+    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem toyP toyPrims toyHr)),
+      toyAdvQ.advantage
+          (GPVHashAndSign.runtime (Range := Rq toyP.n) (List Byte) Unit) ≤
+        SIS.advantage (ntruPSFCollisionProblem toyP toyPrims toyHr) collisionReduction +
+        ((0 + (1 + 1) : ℕ) : ENNReal) * 1 +
+        GPVHashAndSign.collisionBound Unit 0 (1 + 1) +
+        ENNReal.ofReal (((0 : ℕ) : ℝ) * 1) :=
+  euf_cma_collision_security toyP toyPrims Unit toyHr 0 1 1 zero_le_one 1
+    toyAdvQ toyIdealPSF toy_hEval toy_hShort
+    (fun pk sk _ => toy_correctAt pk sk)
+    ⟨toyDomainSample, fun pk sk _ => toy_hReg pk sk⟩
+    (fun pk sk _ c => toy_neverFail pk sk c)
+    toy_samplerTransport toy_signHashQueryBound toy_idealSamplerGuessBound
+
 end Examples.FalconNonVacuity
