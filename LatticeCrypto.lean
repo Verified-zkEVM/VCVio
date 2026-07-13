@@ -36,6 +36,7 @@ import LatticeCrypto.MLDSA.Concrete.NonVacuity
 import LatticeCrypto.MLDSA.Concrete.Rounding
 import LatticeCrypto.MLDSA.Concrete.Sampling
 import LatticeCrypto.MLDSA.Encoding
+import LatticeCrypto.MLDSA.NonVacuity
 import LatticeCrypto.MLDSA.Params
 import LatticeCrypto.MLDSA.Primitives
 import LatticeCrypto.MLDSA.Scheme
