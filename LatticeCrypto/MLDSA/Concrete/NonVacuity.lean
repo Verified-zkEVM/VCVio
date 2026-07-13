@@ -8,11 +8,11 @@ import LatticeCrypto.MLDSA.Concrete.Laws
 /-!
 # Hypothesis-consistency certificate for `MLDSA.Primitives.Laws` (issue #228)
 
-`MLDSA.euf_cma_security_of_nma` is gated on `h_laws : Primitives.Laws prims nttOps`.  A conditional
-theorem asserts nothing if its hypothesis is uninhabitable, and `#print axioms` cannot detect that.
-This file rules that out with a kernel-checked witness: after the honest-sampling reformulation
-(the false `expandS_honest_sampling` uniformity field is gone, its gap carried as the explicit
-additive `honestSamplingSlack`/`idealGap`), `Primitives.Laws` is genuinely **inhabitable**.
+The ML-DSA completeness and HVZK theorems (`MLDSA.idsWithAbort_complete`,
+`MLDSA.idsWithAbort_hvzk_real`) are gated on `h_laws : Primitives.Laws prims nttOps`.  A
+conditional theorem asserts nothing if its hypothesis is uninhabitable, and `#print axioms`
+cannot detect that.  This file rules that out with a kernel-checked witness: `Primitives.Laws`
+is genuinely **inhabitable**.
 
 This is a **logical consistency (inhabitance) witness only**: `seedRevealingPrims` publishes the
 key-generation seed as the public `ρ`, so it is neither a faithful nor a secure ML-DSA
@@ -32,10 +32,10 @@ from the *unsatisfiable* (cardinality-false) `expandS_honest_sampling` it replac
 (`MLDSA.Concrete.invNTTMatrix_nttMatrix_entry`, routed in through `concrete_transform`).  That
 `native_decide` axiom is **not** introduced here — it is already carried by every concrete ML-DSA
 fact (e.g. `concrete_transform` itself), since `concreteNTTRingOps` is the only `NTTRingLaws`
-instance in the tree.  The *abstract* headline `MLDSA.euf_cma_security_of_nma` (quantified over
-`nttOps`) is itself axiom-clean `[propext, Classical.choice, Quot.sound]`; this certificate only
-witnesses that its `Laws` hypothesis can be met by the concrete layer (whose NTT-correctness trust
-assumption it inherits).
+instance in the tree.  The *abstract* `Laws`-gated statements (quantified over `nttOps`) are
+themselves axiom-clean `[propext, Classical.choice, Quot.sound]`; this certificate only
+witnesses that their `Laws` hypothesis can be met by the concrete layer (whose NTT-correctness
+trust assumption it inherits).
 -/
 
 open MLDSA
@@ -88,9 +88,10 @@ theorem seedRevealingPrims_laws (p : Params) (hp : p.isApproved) :
     rfl
 
 /-- **The #228 non-vacuity certificate.**  There is an approved parameter set and a primitive
-bundle whose `Primitives.Laws` is inhabited — so `MLDSA.euf_cma_security_of_nma` is not
-true-but-vacuous.  (See the trust-surface note in the module docstring on the inherited concrete
-NTT `native_decide` axiom.) -/
+bundle whose `Primitives.Laws` is inhabited — so the `Laws`-gated ML-DSA statements (e.g.
+`MLDSA.idsWithAbort_complete`, `MLDSA.idsWithAbort_hvzk_real`) are not true-but-vacuous.
+(See the trust-surface note in the module docstring on the inherited concrete NTT
+`native_decide` axiom.) -/
 theorem mldsa_laws_inhabited :
     ∃ (p : Params) (prims : MLDSA.Primitives p),
       Nonempty (MLDSA.Primitives.Laws prims MLDSA.Concrete.concreteNTTRingOps) :=

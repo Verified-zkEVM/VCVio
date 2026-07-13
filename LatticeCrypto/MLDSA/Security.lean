@@ -252,7 +252,7 @@ end Properties
 
 /-! ### EUF-NMA Security (Lemma 7)
 
-The EUF-NMA security theorem `MLDSA.nma_security` is assembled downstream in
+The EUF-NMA security theorem `MLDSA.nma_security_short` is assembled downstream in
 `LatticeCrypto.MLDSA.SecurityNMA`, where the concrete MLWE key-swap distinguisher and the
 SelfTargetMSIS extractor are defined. It composes the MLWE key-swap hop with the SelfTargetMSIS
 extraction bound; see that file for the statement and proof. -/
@@ -288,7 +288,7 @@ end CMAtoNMA
 /-! ### Main Security Theorem (Theorem 4)
 
 The sound, fully-quantitative EUF-CMA security theorem for ML-DSA is
-`MLDSA.euf_cma_security_of_nma`, assembled in `LatticeCrypto.MLDSA.SecurityNMA`. It composes
+`MLDSA.euf_cma_security_of_nma_short`, assembled in `LatticeCrypto.MLDSA.SecurityNMA`. It composes
 the Fiat-Shamir-with-aborts CMA-to-NMA reduction (using `cmaToNmaLoss` above) with the
 EUF-NMA bound, and is stated with nonnegativity side-conditions on the statistical-loss
 parameters so the bound cannot collapse. -/

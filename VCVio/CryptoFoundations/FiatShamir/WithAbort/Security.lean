@@ -34,7 +34,7 @@ the probability that key generation falls outside the event, and `ε`/`p_abort`
 bound the per-key quantities pointwise on it.
 
 The scheme-specific NMA-to-hard-problem reduction lives with each concrete
-scheme (e.g. `MLDSA.nma_security`).
+scheme (e.g. `MLDSA.nma_security_short`).
 
 ## Module layout
 
