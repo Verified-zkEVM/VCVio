@@ -152,4 +152,46 @@ theorem discreteGaussianDist_ne_zero (σ μ : ℝ) (hσ : 0 < σ) (z : ℤ) :
     discreteGaussianDist σ μ hσ z ≠ 0 :=
   ne_of_gt (discreteGaussianDist_pos σ μ hσ z)
 
+/-! ## Pointwise Mass Bounds
+
+The discrete Gaussian weight is maximized over `ℤ` at `round μ`, the integer nearest to the
+center, so every pointwise mass of `discreteGaussianPMF` is at most the mode mass
+`discreteGaussianWeight σ μ (round μ) / discreteGaussianSum σ μ`. -/
+
+/-- The discrete Gaussian weight never exceeds `1`: the exponent `-(z - μ)² / (2σ²)` is
+nonpositive (including the degenerate `σ = 0` case, where it is zero by convention). -/
+theorem discreteGaussianWeight_le_one (σ μ : ℝ) (z : ℤ) :
+    discreteGaussianWeight σ μ z ≤ 1 := by
+  rw [discreteGaussianWeight, ← Real.exp_zero]
+  apply exp_le_exp_of_le
+  rw [neg_div, neg_nonpos]
+  positivity
+
+/-- The discrete Gaussian weight is maximized over `ℤ` at `round μ`, the nearest integer to
+the center: the exponent is antitone in the squared distance `(z - μ)²`, which `round μ`
+minimizes (`round_le`). -/
+theorem discreteGaussianWeight_le_weight_round (σ μ : ℝ) (z : ℤ) :
+    discreteGaussianWeight σ μ z ≤ discreteGaussianWeight σ μ (round μ) := by
+  have hkey : |(round μ : ℝ) - μ| ≤ |(z : ℝ) - μ| := by
+    rw [abs_sub_comm ((round μ : ℝ)) μ, abs_sub_comm ((z : ℝ)) μ]
+    exact round_le μ z
+  have hsq : ((round μ : ℝ) - μ) ^ 2 ≤ ((z : ℝ) - μ) ^ 2 := by
+    have h := abs_le.mp hkey
+    calc ((round μ : ℝ) - μ) ^ 2 ≤ |(z : ℝ) - μ| ^ 2 := sq_le_sq' h.1 h.2
+      _ = ((z : ℝ) - μ) ^ 2 := sq_abs _
+  rw [discreteGaussianWeight, discreteGaussianWeight]
+  apply exp_le_exp_of_le
+  rw [neg_div, neg_div, neg_le_neg_iff]
+  gcongr
+
+/-- **Mode-mass bound**: every pointwise mass of the discrete Gaussian PMF is at most the
+mass of the mode `round μ`. -/
+theorem discreteGaussianPMF_le_weight_round_div_sum (σ μ : ℝ) (hσ : 0 < σ) (z : ℤ) :
+    discreteGaussianPMF σ μ z ≤
+      discreteGaussianWeight σ μ (round μ) / discreteGaussianSum σ μ := by
+  have hS := discreteGaussianSum_pos σ μ hσ
+  rw [discreteGaussianPMF]
+  gcongr
+  exact discreteGaussianWeight_le_weight_round σ μ z
+
 end LatticeCrypto
