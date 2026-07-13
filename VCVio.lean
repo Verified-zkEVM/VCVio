@@ -46,6 +46,7 @@ import VCVio.CryptoFoundations.GPVHashAndSign.Factorization
 import VCVio.CryptoFoundations.GPVHashAndSign.FlagHandlers
 import VCVio.CryptoFoundations.GPVHashAndSign.GameIdentification
 import VCVio.CryptoFoundations.GPVHashAndSign.GameRuns
+import VCVio.CryptoFoundations.GPVHashAndSign.MinEntropy
 import VCVio.CryptoFoundations.GPVHashAndSign.SamplerTransport
 import VCVio.CryptoFoundations.GPVHashAndSign.Security
 import VCVio.CryptoFoundations.GPVHashAndSign.TapeFactorization

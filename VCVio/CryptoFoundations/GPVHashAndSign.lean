@@ -5,6 +5,7 @@ Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 import VCVio.CryptoFoundations.GPVHashAndSign.Basic
+import VCVio.CryptoFoundations.GPVHashAndSign.MinEntropy
 import VCVio.CryptoFoundations.GPVHashAndSign.CollisionTelescope
 import VCVio.CryptoFoundations.GPVHashAndSign.Factorization
 import VCVio.CryptoFoundations.GPVHashAndSign.GameRuns
@@ -73,7 +74,8 @@ The proof decomposes into:
 ## Module layout
 
 The development is split along its proof phases: `Basic` (the PSF abstraction and
-the scheme), `CollisionTelescope`, `Factorization`, `GameRuns`, `TapeFactorization`,
+the scheme), `MinEntropy` (the guessing-probability bound for the programmed-preimage
+experiment), `CollisionTelescope`, `Factorization`, `GameRuns`, `TapeFactorization`,
 `FlagHandlers`, `CombinedHandler`, `GameIdentification`, `VerificationBridge`,
 `TrapCount`, `EmbedIndex`, `Security` (the headline EUF-CMA bounds),
 `AppendQuery` (the append-forgery-query compiler discharging `ForgesQueriedPoint`), and
