@@ -361,4 +361,180 @@ theorem euf_cma_security_bytes40
   euf_cma_security p prims (Bytes 40) hr qSign qHash samplerLoss adv
     idealPSF hEval hShort hCorrect hReg hNeverFail hTransport
 
+/-! ### Per-call sampler transport
+
+`euf_cma_security` assumes the concrete-to-ideal sampler swap as the single monolithic
+`hTransport` package.  This section decomposes it: `samplerTransport` is the *per-call*
+finite-precision sampler-approximation bound, and
+`euf_cma_security_of_samplerTransport` derives the headline with the transport package
+replaced by that per-call bound, the adaptive accumulation across the at-most-`qSign`
+signing queries being *proven*
+(`GPVHashAndSign.advantage_le_advantage_add_of_trapdoorSample_tvDist`) rather than
+assumed. -/
+
+/-- **Per-call sampler-approximation bound** ([FGdG+25]'s per-query Rényi term `r_p`, read
+here at total-variation distance): on every honestly generated key pair and every hash
+target `c`, the concrete Falcon trapdoor sampler (`ffSampling` over floating-point
+arithmetic) and the ideal sampler are within total-variation distance `ε_step`.
+
+The total-variation form is chosen because it is what the adaptive accumulation tool
+(`OracleComp.ProgramLogic.Relational.tvDist_simulateQ_run_le_queryBoundP_mul`) consumes
+per signing step; a Boolean-distinguisher formulation is interderivable but composes less
+directly.  Honest-key scoping matches `hCorrect`/`hNeverFail`: the sampler geometry is
+only meaningful where the NTRU basis is valid.
+
+Discharging this bound for the concrete floating-point sampler routes through the IEEE
+semantics of `Float`, which is opaque (`@[extern]`) to Lean — the same obstruction scoped
+in `LatticeCrypto.Falcon.Concrete.FPRBridge` — so it remains a named assumption with
+inspectable content rather than a proved lemma.  It is trivially satisfiable at
+`ε_step = 1` (`samplerTransport_one`), and `ε_step = 0` states that the two samplers
+agree exactly at every honest key and target. -/
+def samplerTransport
+    (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
+    (idealPSF : PreimageSampleableFunction
+      (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
+    (ε_step : ℝ) : Prop :=
+  ∀ pk sk, (pk, sk) ∈ support hr.gen → ∀ c : Rq p.n,
+    tvDist ((falconPSF p prims).trapdoorSample pk sk c)
+      (idealPSF.trapdoorSample pk sk c) ≤ ε_step
+
+/-- The trivial witness for the per-call sampler transport: total-variation distance never
+exceeds one, so `ε_step = 1` is always admissible. -/
+theorem samplerTransport_one
+    (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
+    (idealPSF : PreimageSampleableFunction
+      (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n)) :
+    samplerTransport p prims hr idealPSF 1 :=
+  fun _pk _sk _h _c => tvDist_le_one _ _
+
+/-- **EUF-CMA security of Falcon from the per-call sampler bound.** The same conclusion as
+`euf_cma_security` with `samplerLoss = qSign · ε_step`, but the monolithic `hTransport`
+package is *derived*: the per-call sampler-approximation bound `hStep` accumulates
+adaptively across the at-most-`qSign` signing queries
+(`GPVHashAndSign.advantage_le_advantage_add_of_trapdoorSample_tvDist`), and the
+`ForgesQueriedPoint` / query-bound conjuncts transport to the ideal-scheme adversary
+`⟨adv.main⟩` — the same forger repackaged at the ideal scheme, well-typed because the two
+schemes share all type indices.
+
+The frontier is that of `euf_cma_security` with `hTransport` replaced by `hStep` plus the
+query bound `hQ` and the random-oracle well-formedness convention `hForge` stated on the
+adversary's own `main`; `euf_cma_security_of_samplerTransport_queryBound` further
+discharges `hForge` at the cost of one extra hash query. -/
+theorem euf_cma_security_of_samplerTransport
+    (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
+    [SampleableType (Rq p.n)] [Inhabited (Rq p.n)]
+    (hr : GenerableRelation (PublicKey p) (SecretKey p)
+      (validKeyPair p))
+    (qSign qHash : ℕ)
+    (ε_step : ℝ) (hε : 0 ≤ ε_step)
+    (adv : SignatureAlg.unforgeableAdv
+      (falconSignatureAlg p prims Salt hr))
+    (idealPSF : PreimageSampleableFunction
+      (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
+    (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
+    (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
+    (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
+    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
+      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+        𝒟[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
+              : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
+        𝒟[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
+              : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))])
+    (hNeverFail : ∀ pk sk, (pk, sk) ∈ support hr.gen →
+      ∀ c, NeverFail (idealPSF.trapdoorSample pk sk c))
+    (hStep : samplerTransport p prims hr idealPSF ε_step)
+    (hForge : ∀ ds, GPVHashAndSign.ForgesQueriedPoint idealPSF hr (List Byte) Salt
+      ⟨adv.main⟩ ds)
+    (hQ : ∀ pk, GPVHashAndSign.signHashQueryBound
+      (M := List Byte) (Salt := Salt) (Range := Rq p.n)
+      (S' := Salt × (Rq p.n × Rq p.n))
+      (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv.main pk)
+      (qSign := qSign) (qHash := qHash)) :
+    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr))
+      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
+        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
+      adv.advantage
+          (GPVHashAndSign.runtime
+            (Range := Rq p.n) (List Byte) Salt) ≤
+        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+        ((qSign + qHash : ℕ) : ENNReal) *
+          GPVHashAndSign.programmedPreimageAdvantage
+            idealPSF hr exactMatchReduction +
+        GPVHashAndSign.collisionBound Salt qSign qHash +
+        ENNReal.ofReal (qSign * ε_step) := by
+  refine euf_cma_security p prims Salt hr qSign qHash (ENNReal.ofReal (qSign * ε_step)) adv
+    idealPSF hEval hShort hCorrect hReg hNeverFail ⟨⟨adv.main⟩, ?_, hForge, hQ⟩
+  exact GPVHashAndSign.advantage_le_advantage_add_of_trapdoorSample_tvDist
+    (falconPSF p prims) idealPSF hr (List Byte) Salt
+    (fun pk x => (hEval pk x).symm) (fun x => (hShort x).symm) hε hStep qSign adv
+    (fun pk => (hQ pk).1)
+
+/-- **EUF-CMA security of Falcon from the per-call sampler bound, for all query-bounded
+adversaries.** The `ForgesQueriedPoint` convention of
+`euf_cma_security_of_samplerTransport` is discharged by the append-forgery-query compiler
+(`GPVHashAndSign.euf_cma_split_bound_of_queryBound`) at the cost of one extra hash query:
+the exact-match and salt-collision terms are read at hash budget `qHash + 1`.  The only
+structural hypothesis on the adversary is the query bound `hQ`. -/
+theorem euf_cma_security_of_samplerTransport_queryBound
+    (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
+    [SampleableType (Rq p.n)] [Inhabited (Rq p.n)]
+    (hr : GenerableRelation (PublicKey p) (SecretKey p)
+      (validKeyPair p))
+    (qSign qHash : ℕ)
+    (ε_step : ℝ) (hε : 0 ≤ ε_step)
+    (adv : SignatureAlg.unforgeableAdv
+      (falconSignatureAlg p prims Salt hr))
+    (idealPSF : PreimageSampleableFunction
+      (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
+    (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
+    (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
+    (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
+    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
+      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+        𝒟[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
+              : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
+        𝒟[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
+              : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))])
+    (hNeverFail : ∀ pk sk, (pk, sk) ∈ support hr.gen →
+      ∀ c, NeverFail (idealPSF.trapdoorSample pk sk c))
+    (hStep : samplerTransport p prims hr idealPSF ε_step)
+    (hQ : ∀ pk, GPVHashAndSign.signHashQueryBound
+      (M := List Byte) (Salt := Salt) (Range := Rq p.n)
+      (S' := Salt × (Rq p.n × Rq p.n))
+      (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv.main pk)
+      (qSign := qSign) (qHash := qHash)) :
+    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr))
+      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
+        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
+      adv.advantage
+          (GPVHashAndSign.runtime
+            (Range := Rq p.n) (List Byte) Salt) ≤
+        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+        ((qSign + (qHash + 1) : ℕ) : ENNReal) *
+          GPVHashAndSign.programmedPreimageAdvantage
+            idealPSF hr exactMatchReduction +
+        GPVHashAndSign.collisionBound Salt qSign (qHash + 1) +
+        ENNReal.ofReal (qSign * ε_step) := by
+  obtain ⟨cRed, eRed, hsplit⟩ :=
+    GPVHashAndSign.euf_cma_split_bound_of_queryBound (psf := idealPSF) (hr := hr)
+      (M := List Byte) (Salt := Salt) hCorrect hReg qSign qHash ⟨adv.main⟩
+      hNeverFail hQ
+  refine ⟨cRed, eRed, ?_⟩
+  have hbridge :
+      GPVHashAndSign.collisionFindingAdvantage idealPSF hr cRed
+        = SIS.advantage (ntruPSFCollisionProblem p prims hr) cRed :=
+    collisionFindingAdvantage_eq_ntruPSF p prims idealPSF hr hEval hShort cRed
+  rw [← hbridge]
+  have hAdvLe :
+      adv.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) ≤
+        (⟨adv.main⟩ : SignatureAlg.unforgeableAdv
+            (GPVHashAndSign idealPSF hr (List Byte) Salt)).advantage
+            (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) +
+          ENNReal.ofReal (qSign * ε_step) :=
+    GPVHashAndSign.advantage_le_advantage_add_of_trapdoorSample_tvDist
+      (falconPSF p prims) idealPSF hr (List Byte) Salt
+      (fun pk x => (hEval pk x).symm) (fun x => (hShort x).symm) hε hStep qSign adv
+      (fun pk => (hQ pk).1)
+  exact le_trans hAdvLe (by gcongr)
+
 end Falcon
