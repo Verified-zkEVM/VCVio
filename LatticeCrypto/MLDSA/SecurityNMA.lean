@@ -280,6 +280,64 @@ theorem keygenShort_generable :
       hr.gen = keygenShort p prims :=
   ⟨hrShort p prims, rfl⟩
 
+/-- The generable relation carried by the FIPS seed-derived key generation: the generator is
+`keygen0`, and every generated pair is seed-valid. Each pair drawn by `keygen0` is literally
+the key assembled by `keyFromMaterial` from the material expanded out of its seed, which
+`keyFromMaterial_eq` identifies with `keyGenFromSeed` — exactly the witness `validKeyPair`
+asks for. This inhabits the `hGen` hypothesis of the FIPS-keygen security corollary
+(`keygen0_generable`). -/
+def hrFips :
+    GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims) :=
+  ⟨keygen0 p prims, fun pk sk hmem => by
+    rw [validKeyPair_eq_true_iff]
+    simp only [keygen0, mem_support_bind_iff] at hmem
+    obtain ⟨seed, -, hpure⟩ := hmem
+    refine ⟨seed, ?_⟩
+    have h := (eq_of_mem_support_pure _ hpure).symm
+    simpa only [keyFromMaterial, keyGenFromSeed] using h⟩
+
+omit [DecidableEq prims.High] [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] in
+/-- **Satisfiability certificate for the FIPS-keygen `hGen` hypothesis.** Some generable
+relation over `validKeyPair` has the seed-derived FIPS key generator `keygen0` as its
+generator — witnessed by `hrFips`. The FIPS-keygen security corollary hypothesizes such a
+relation via `hGen : hr.gen = keygen0 p prims`; this theorem records that the hypothesis
+pair `(hr, hGen)` is inhabited, so that statement has non-vacuous instances. -/
+theorem keygen0_generable :
+    ∃ hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims),
+      hr.gen = keygen0 p prims :=
+  ⟨hrFips p prims, rfl⟩
+
+/-- **XOF replacement for the ML-DSA secret derivation (`ExpandSeed`/`ExpandS`), quantified
+form.** For a real bound `εPRG`, this asserts that no distinguisher receiving
+`(ρ, K, s₁, s₂)` can tell the FIPS derivation — expand a uniform 32-byte seed into
+`(ρ, ρ', K)` and derive `(s₁, s₂) = ExpandS(ρ')` — from independent sampling with the
+correct short marginals: `ρ`, `K` uniform and `(s₁, s₂)` uniform on the `η`-bounded box
+`S_η^ℓ × S_η^k`, i.e. exactly the draws of the idealized key generator `keygenShort`.
+
+This is the standard PRG/XOF-replacement reading of `ExpandSeed`/`ExpandS` against the
+short-secret marginal: the ideal branch is the box distribution the Module-LWE assumption
+for ML-DSA is stated over, so the assumption carries exactly the "SHAKE output is
+pseudorandom with the FIPS marginals" step and nothing else. For a fixed deterministic
+`prims` the unrestricted-quantifier form is only satisfiable at large `εPRG` — an unbounded
+distinguisher can test membership in the `2^256`-point image of the seed expansion — so,
+pending the cost-model infrastructure (#460), it should be read computationally, against
+bounded distinguishers, where it is the assumption that the SHAKE-derived `(ρ, K, s₁, s₂)`
+is pseudorandom with the FIPS marginals. It is consumed by the FIPS-keygen corollary
+`nma_security_fips` to transfer the short-model bound to `keygen0`. -/
+def expandSReplacement (εPRG : ℝ) : Prop :=
+  ∀ D : Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool,
+    |(Pr[= true | do
+        let seed ← $ᵗ (Bytes 32)
+        let (rho, rhoPrime, key) := prims.expandSeed seed
+        let (s1, s2) := prims.expandS rhoPrime
+        D rho key s1 s2]).toReal -
+      (Pr[= true | do
+        let key ← $ᵗ (Bytes 32)
+        let rho ← $ᵗ (Bytes 32)
+        let s1 ← sampleShortVec p.l p.eta
+        let s2 ← sampleShortVec p.k p.eta
+        D rho key s1 s2]).toReal| ≤ εPRG
+
 end KeyGen
 
 section Game
@@ -1515,6 +1573,143 @@ theorem nma_security_short
         add_le_add le_rfl (ENNReal.ofReal_le_ofReal (le_trans hB le_rfl))
     _ = ENNReal.ofReal (LearningWithErrors.advantage mlwe B + εbridge) +
         SelfTargetMSIS.advantage (extractorCShort p prims adv.main) := add_comm _ _
+
+open scoped Classical in
+/-- **NMA security of ML-DSA at the FIPS seed-derived key generation.**
+
+The short-model bound `nma_security_short` transferred to the deterministic FIPS key
+generator `keygen0` through the XOF-replacement assumption `expandSReplacement`: for every
+EUF-NMA adversary against the ML-DSA scheme instantiated with the seed-derived key relation
+(`hGen : hr.gen = keygen0 p prims`, inhabited by `hrFips` / `keygen0_generable`), there are
+an MLWE adversary and a SelfTargetMSIS adversary with
+
+  `Adv^{EUF-NMA}(A) ≤ (Adv^{MLWE}(B) + εbridge) + Adv^{SelfTargetMSIS}(C) + εPRG`.
+
+The proof has exactly one new ingredient beyond the short model: the FIPS and short NMA
+games share their forge-and-verify tail (`identificationScheme` and
+`identificationSchemeShort` carry the same `verify` function), so the gap between the
+`keygen0` game and the `keygenShort` game is one application of `hPRG` at the distinguisher
+`D ρ K s₁ s₂ :=` "run the tail at the key built by `keyFromMaterial` from the material
+`(ρ, K, s₁, s₂)`": its real branch is exactly the FIPS game and its ideal branch is exactly
+the short game. The short-model reduction hypotheses (`hrS`/`hGenS`, `hStmsis`,
+`hMlweBridge`) then bound the short game as in `nma_security_short`, applied to the same
+forging strategy repackaged at the short scheme tag. -/
+theorem nma_security_fips
+    (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
+    (stmsis : SelfTargetMSIS.Problem
+      (TqMatrix p.k p.l) (Response p prims)
+      (PublicKey p prims) (M × Commitment p prims) (CommitHashBytes p))
+    (maxAttempts : ℕ)
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p)
+      (validKeyPair p prims))
+    (hGen : hr.gen = keygen0 p prims)
+    (hrS : GenerableRelation (PublicKey p prims) (SecretKey p)
+      (validKeyPairShort p prims))
+    (hGenS : hrS.gen = keygenShort p prims)
+    (hStmsis : stmsis = mldsaSTMSISShort p prims M)
+    (εPRG : ℝ) (hPRG : expandSReplacement p prims εPRG)
+    (εbridge : ℝ)
+    (hMlweBridge : ∀ (main : PublicKey p prims →
+        OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+          (M × Option (Commitment p prims × Response p prims))),
+      ∃ B : LearningWithErrors.Adversary mlwe,
+        LearningWithErrors.advantage (mldsaMLWEShort p prims)
+          (distinguisherBShort p prims hrS maxAttempts main) ≤
+          LearningWithErrors.advantage mlwe B + εbridge) :
+    ∀ (adv : SignatureAlg.eufNmaAdv
+      (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts)),
+    ∃ (mlweReduction : LearningWithErrors.Adversary mlwe)
+      (stmsisReduction : SelfTargetMSIS.Adversary stmsis),
+      adv.advantage
+          (FiatShamirWithAbort.runtime
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+        ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweReduction + εbridge) +
+        SelfTargetMSIS.advantage stmsisReduction +
+        ENNReal.ofReal εPRG := by
+  classical
+  intro adv
+  obtain ⟨mlweRed, stmsisRed, hshortBound⟩ :=
+    nma_security_short p prims mlwe stmsis maxAttempts hrS hGenS hStmsis εbridge hMlweBridge
+      ⟨adv.main⟩
+  refine ⟨mlweRed, stmsisRed, ?_⟩
+  -- The FIPS EUF-NMA experiment is the real-`t` NMA game at `keygen0` with `main := adv.main`.
+  have hadv : adv.advantage (FiatShamirWithAbort.runtime
+      (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) =
+      nmaAdvantage p prims hr maxAttempts (keygen0 p prims) adv.main := by
+    rw [SignatureAlg.eufNmaAdv.advantage, nmaAdvantage, nmaGame]
+    rw [SignatureAlg.eufNmaExp]
+    simp only [FiatShamirWithAbort, hGen]
+    rfl
+  -- The two NMA games as plain `ProbComp`s over their key generators.
+  set pcF := (do
+      let (pk, _) ← keygen0 p prims
+      simulateToProbComp p prims (M := M) (do
+        let (msg, σ) ← adv.main pk
+        (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify
+          pk msg σ) : ProbComp Bool) with hpcF
+  set pcS := (do
+      let (pk, _) ← keygenShort p prims
+      simulateToProbComp p prims (M := M) (do
+        let (msg, σ) ← adv.main pk
+        (FiatShamirWithAbort (identificationSchemeShort p prims) hrS M maxAttempts).verify
+          pk msg σ) : ProbComp Bool) with hpcS
+  have hgF : nmaAdvantage p prims hr maxAttempts (keygen0 p prims) adv.main =
+      Pr[= true | pcF] := by
+    rw [nmaAdvantage, nmaGame_eq_keygen_bind, probOutput_def, probOutput_def, SPMF.evalDist_def]
+  have hgS : (⟨adv.main⟩ : SignatureAlg.eufNmaAdv
+      (FiatShamirWithAbort (identificationSchemeShort p prims) hrS M maxAttempts)).advantage
+        (FiatShamirWithAbort.runtime
+          (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) =
+      Pr[= true | pcS] := by
+    have h1 : (⟨adv.main⟩ : SignatureAlg.eufNmaAdv
+        (FiatShamirWithAbort (identificationSchemeShort p prims) hrS M maxAttempts)).advantage
+          (FiatShamirWithAbort.runtime
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) =
+        nmaAdvantageShort p prims hrS maxAttempts (keygenShort p prims) adv.main := by
+      rw [SignatureAlg.eufNmaAdv.advantage, nmaAdvantageShort, nmaGameShort]
+      rw [SignatureAlg.eufNmaExp]
+      simp only [FiatShamirWithAbort, hGenS]
+      rfl
+    rw [h1, nmaAdvantageShort, nmaGameShort_eq_keygen_bind, probOutput_def, probOutput_def,
+      SPMF.evalDist_def]
+  -- The PRG hop: the two games are the two branches of `hPRG` at the shared verify tail.
+  have hF : Pr[= true | pcF] = Pr[= true | do
+      let seed ← $ᵗ (Bytes 32)
+      let (rho, rhoPrime, _key) := prims.expandSeed seed
+      let (s1, s2) := prims.expandS rhoPrime
+      simulateToProbComp p prims (M := M) (do
+        let d ← adv.main ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩
+        (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify
+          ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩ d.1 d.2)] := by
+    rw [hpcF]
+    simp only [keygen0, keyFromMaterial, bind_assoc, pure_bind]
+  have hS : Pr[= true | pcS] = Pr[= true | do
+      let _key ← $ᵗ (Bytes 32)
+      let rho ← $ᵗ (Bytes 32)
+      let s1 ← sampleShortVec p.l p.eta
+      let s2 ← sampleShortVec p.k p.eta
+      simulateToProbComp p prims (M := M) (do
+        let d ← adv.main ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩
+        (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify
+          ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩ d.1 d.2)] := by
+    rw [hpcS]
+    simp only [keygenShort, keyFromMaterial, bind_assoc, pure_bind]
+    rfl
+  have hbias : pcF.boolDistAdvantage pcS ≤ εPRG := by
+    rw [ProbComp.boolDistAdvantage, hF, hS]
+    exact hPRG (fun rho _key s1 s2 => simulateToProbComp p prims (M := M) (do
+      let d ← adv.main ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩
+      (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify
+        ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩ d.1 d.2))
+  -- Assemble: FIPS game ≤ short game + εPRG ≤ (MLWE + εbridge) + STMSIS + εPRG.
+  rw [hadv, hgF]
+  refine le_trans (ProbComp.probOutput_true_le_add_ofReal_boolDistAdvantage pcF pcS) ?_
+  have hshort' : Pr[= true | pcS] ≤
+      ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweRed + εbridge) +
+        SelfTargetMSIS.advantage stmsisRed := by
+    rw [← hgS]
+    exact hshortBound
+  exact add_le_add hshort' (ENNReal.ofReal_le_ofReal hbias)
 
 open scoped Classical in
 /-- **EUF-CMA security of ML-DSA (Theorem 4, CRYPTO 2023), wired end to end.**
