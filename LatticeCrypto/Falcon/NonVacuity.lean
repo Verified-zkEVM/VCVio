@@ -421,4 +421,95 @@ theorem falcon_eufcma_hyps_inhabited :
   · intro pk sk _; exact toy_hReg pk sk
   · intro pk sk _ c; exact toy_neverFail pk sk c
 
+/-! ## The per-call sampler-transport witness
+
+`Falcon.euf_cma_security_of_samplerTransport` replaces the monolithic `hTransport` package by
+the per-call bound `Falcon.samplerTransport` plus the query bound and the
+`ForgesQueriedPoint` convention on the adversary's own `main`.  The witnesses below extend
+the consistency certificate to that decomposed frontier, still at the degree-one toy
+instance and still **consistency-only**: the trivial budget `ε_step = 1` carries no
+quantitative sampler-accuracy content. -/
+
+/-- The toy per-call sampler transport holds at the trivial budget `ε_step = 1`:
+total-variation distance never exceeds one.  (The toy concrete and ideal samplers do not
+coincide — `ffSampling` at the toy primitives is not the deterministic `pure (c, 0)` — so no
+`ε_step = 0` claim is made.) -/
+theorem toy_samplerTransport :
+    samplerTransport toyP toyPrims toyHr toyIdealPSF 1 :=
+  samplerTransport_one toyP toyPrims toyHr toyIdealPSF
+
+/-- The query-then-forge adversary of `toyAdv'`, typed at the concrete Falcon scheme (the
+scheme value only indexes the adversary type, so the same `main` serves both).  This is the
+headline adversary for the decomposed frontier: `euf_cma_security_of_samplerTransport` states
+its `ForgesQueriedPoint` and query-bound hypotheses on this very `main`. -/
+noncomputable def toyAdvQ :
+    SignatureAlg.unforgeableAdv (falconSignatureAlg toyP toyPrims Unit toyHr) where
+  main := toyAdv'.main
+
+/-- **Consistency (inhabitance) witness for the `Falcon.euf_cma_security_of_samplerTransport`
+hypotheses.** For the degree-one toy parameters, salt `Unit`, honest relation `toyHr`, query
+counts `0`/`1`, per-call budget `ε_step = 1`, headline adversary `toyAdvQ`, and ideal PSF
+`toyIdealPSF`, every hypothesis of the decomposed headline holds simultaneously: the shared
+deterministic `eval`/`isShort`, the GPV laws on honest keys, the per-call sampler transport
+at the trivial budget, and the `ForgesQueriedPoint` / query-bound conventions on the
+adversary's own `main`.  The hypothesis conjunction is therefore inhabitable; this witness
+carries no quantitative security content. -/
+theorem falcon_eufcma_samplerTransport_hyps_inhabited :
+    -- hEval
+    (∀ pk x, toyIdealPSF.eval pk x = (falconPSF toyP toyPrims).eval pk x) ∧
+    -- hShort
+    (∀ x, toyIdealPSF.isShort x = (falconPSF toyP toyPrims).isShort x) ∧
+    -- hCorrect
+    (∀ pk sk, (pk, sk) ∈ support toyHr.gen → toyIdealPSF.CorrectAt pk sk) ∧
+    -- hReg
+    (∃ domainSample : PublicKey toyP → ProbComp (Rq toyP.n × Rq toyP.n),
+      ∀ pk sk, (pk, sk) ∈ support toyHr.gen →
+        𝒟[(do let s ← domainSample pk; pure (toyIdealPSF.eval pk s, s)
+              : ProbComp (Rq toyP.n × (Rq toyP.n × Rq toyP.n)))] =
+        𝒟[(do let c ← ($ᵗ (Rq toyP.n)); let s ← toyIdealPSF.trapdoorSample pk sk c; pure (c, s)
+              : ProbComp (Rq toyP.n × (Rq toyP.n × Rq toyP.n)))]) ∧
+    -- hNeverFail
+    (∀ pk sk, (pk, sk) ∈ support toyHr.gen →
+      ∀ c, NeverFail (toyIdealPSF.trapdoorSample pk sk c)) ∧
+    -- hε and hStep
+    ((0 : ℝ) ≤ 1 ∧ samplerTransport toyP toyPrims toyHr toyIdealPSF 1) ∧
+    -- hForge
+    (∀ ds, GPVHashAndSign.ForgesQueriedPoint toyIdealPSF toyHr (List Byte) Unit
+      ⟨toyAdvQ.main⟩ ds) ∧
+    -- hQ
+    (∀ pk, GPVHashAndSign.signHashQueryBound
+      (M := List Byte) (Salt := Unit) (Range := Rq toyP.n)
+      (S' := Unit × (Rq toyP.n × Rq toyP.n))
+      (α := List Byte × (Unit × (Rq toyP.n × Rq toyP.n))) (oa := toyAdvQ.main pk)
+      (qSign := 0) (qHash := 1)) := by
+  refine ⟨toy_hEval, toy_hShort, ?_, ⟨toyDomainSample, ?_⟩, ?_,
+    ⟨zero_le_one, toy_samplerTransport⟩, toy_ForgesQueriedPoint, toy_signHashQueryBound⟩
+  · intro pk sk _; exact toy_correctAt pk sk
+  · intro pk sk _; exact toy_hReg pk sk
+  · intro pk sk _ c; exact toy_neverFail pk sk c
+
+/-- **End-to-end applicability of the decomposed headline.** The derived theorem
+`Falcon.euf_cma_security_of_samplerTransport` applies at the toy instance with all
+hypotheses discharged, producing its reductions and bound.  Consistency-only: with
+`ε_step = 1` the sampler term `qSign · ε_step` is trivial (here `qSign = 0`), and no
+quantitative claim about any real Falcon parameter set follows. -/
+theorem toy_euf_cma_security_of_samplerTransport :
+    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem toyP toyPrims toyHr))
+      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
+        (PK := PublicKey toyP) (Domain := Rq toyP.n × Rq toyP.n) (Range := Rq toyP.n)),
+      toyAdvQ.advantage
+          (GPVHashAndSign.runtime (Range := Rq toyP.n) (List Byte) Unit) ≤
+        SIS.advantage (ntruPSFCollisionProblem toyP toyPrims toyHr) collisionReduction +
+        ((0 + 1 : ℕ) : ENNReal) *
+          GPVHashAndSign.programmedPreimageAdvantage
+            toyIdealPSF toyHr exactMatchReduction +
+        GPVHashAndSign.collisionBound Unit 0 1 +
+        ENNReal.ofReal (((0 : ℕ) : ℝ) * 1) :=
+  euf_cma_security_of_samplerTransport toyP toyPrims Unit toyHr 0 1 1 zero_le_one
+    toyAdvQ toyIdealPSF toy_hEval toy_hShort
+    (fun pk sk _ => toy_correctAt pk sk)
+    ⟨toyDomainSample, fun pk sk _ => toy_hReg pk sk⟩
+    (fun pk sk _ c => toy_neverFail pk sk c)
+    toy_samplerTransport toy_ForgesQueriedPoint toy_signHashQueryBound
+
 end Examples.FalconNonVacuity
