@@ -20,10 +20,27 @@ a knowledge-state predicate from false to true. This layer does not impose proto
 computational restrictions; those and any admissibility conditions belong in downstream adapters.
 
 `KnowledgeExtractionFamily` gives the extensional clauses of generalized round-by-round knowledge
-from Block, Garreta, Tiwari, and Zajac, *On Soundness Notions for Interactive Oracle Proofs*,
-Definition 4.2. Its transcript context and prover message are fixed before sampling a fresh uniform
-challenge. The API records the initial and terminal doomed-state conditions separately from the
-extraction condition. It does not encode polynomial-time computability.
+from Block, Garreta, Tiwari, and Zając, *On Soundness Notions for Interactive Oracle Proofs*
+(Cryptology ePrint Archive 2023/1256), generalized RBR knowledge, Definition 3.12. The protocol
+model is strictly alternating: at every interaction round the prover sends one message and the
+verifier then samples one fresh uniform challenge, so a partial transcript is
+`(m₁, c₁, …, m_i, c_i)`. Schedules that are not message/challenge alternating (for example two
+consecutive prover messages, or a challenge-first round) are represented in this model by padding
+the appropriate message or challenge type with `Unit`; this is a faithful encoding, not a claim
+that arbitrary scheduling has been added. Its transcript context and prover message are fixed
+before sampling a fresh uniform challenge. The API records the all-inputs initial doomed condition
+and the terminal doomed-implies-rejection condition separately from the strict extraction
+condition.
+
+This layer is **extensional**: `extract` is data returning a candidate witness and
+`ExtractionCondition` only asserts that this witness is valid whenever the strict escape trigger
+`error < Pr[escape]` fires. It is therefore the soundness-strength/existence content of Definition
+3.12, **not** the paper's full computational round-by-round knowledge claim; it carries no security
+parameter, encoding, runtime bound, or polynomial-time predicate on the extractor.
+
+TODO: the deferred computational layer needs a security-indexed family of encoded polynomial-time
+extractors together with negligible per-round error, and lives behind the separate polytime
+framework. This module deliberately does not add that layer or depend on an unmerged branch.
 -/
 
 noncomputable section
@@ -48,31 +65,38 @@ namespace GameFamily
 
 variable {Round : Type u} {Context : Round → Type v}
 
-/-- The failure-based experiment that succeeds exactly when the indexed event occurs. -/
-def experiment (games : GameFamily Round Context)
-    (round : Round) (context : Context round) : SecExp (OptionT ProbComp) := by
-  classical
-  exact
-    { toSPMFSemantics := SPMFSemantics.ofMonadLift (OptionT ProbComp)
-      main := do
-        let result ← OptionT.lift (games.sample round context)
-        guard (games.event round context result) }
+/-- The failure-based experiment that succeeds exactly when the indexed event occurs.
 
-/-- The advantage of the indexed experiment is the probability of its event. -/
+The guard predicate is made decidable through a term-level classical local instance, so the
+definition stays a transparent structure literal and its `advantage` reduces through the stable
+semantic lemmas rather than a tactic block. -/
+def experiment (games : GameFamily Round Context)
+    (round : Round) (context : Context round) : SecExp (OptionT ProbComp) :=
+  letI : DecidablePred (games.event round context) := fun _ => Classical.propDecidable _
+  { toSPMFSemantics := SPMFSemantics.ofMonadLift (OptionT ProbComp)
+    main := do
+      let result ← games.sample round context
+      guard (games.event round context result) }
+
+/-- The advantage of the indexed experiment is the probability of its event.
+
+The advantage `1 - probFailure` of the guarded experiment is routed through the stable semantic
+lemmas `SPMFSemantics.ofMonadLift_probFailure`, the monad-generic
+`probOutput_punit_eq_sub_probFailure`, and the public `probOutput_bind_guard_eq_probEvent`. -/
 @[simp]
 theorem experiment_advantage (games : GameFamily Round Context)
     (round : Round) (context : Context round) :
     (games.experiment round context).advantage =
       Pr[games.event round context | games.sample round context] := by
   classical
-  change 1 - Pr[⊥ | (games.experiment round context).main] = _
-  rw [← probEvent_True_eq_sub]
-  change Pr[fun _ ↦ True | (do
-    let result ← OptionT.lift (games.sample round context)
-    guard (games.event round context result) : OptionT ProbComp Unit)] = _
-  rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
-  refine tsum_congr fun result ↦ ?_
-  by_cases h : games.event round context result <;> simp [h]
+  calc (games.experiment round context).advantage
+      = 1 - Pr[⊥ | (games.experiment round context).main] := by
+        simp only [SecExp.advantage]
+        exact congrArg (1 - ·) (SPMFSemantics.ofMonadLift_probFailure _)
+    _ = Pr[= () | (games.experiment round context).main] :=
+        probOutput_punit_eq_sub_probFailure.symm
+    _ = Pr[games.event round context | games.sample round context] :=
+        probOutput_bind_guard_eq_probEvent _ _
 
 /-- Every indexed experiment has advantage at most its round's error bound.
 
@@ -202,7 +226,11 @@ structure KnowledgeExtractionFamily (rounds : ℕ) where
       statement round.castSucc context
   /-- The single doomed-set predicate on stage-indexed contexts. -/
   doomed : (stage : Fin (rounds + 1)) → Context stage → Prop
-  /-- Extracts a candidate witness from the transcript through the fixed prover message. -/
+  /-- A total candidate-witness extractor from the transcript through the fixed prover message.
+  Storing a *total* function here is a representational totalization: the source definition permits
+  the extractor to fail off-trigger, and `ExtractionCondition` requires this output to satisfy the
+  relation only when the strict escape trigger `error < Pr[escape]` fires. This field is therefore
+  not by itself the paper's polynomial-time extractor. -/
   extract : (round : Fin rounds) → Context round.castSucc → Message round → Witness
   /-- The fixed statement-witness relation proved by the protocol. -/
   relation : Statement → Witness → Prop
@@ -251,7 +279,10 @@ theorem experiment_advantage (games : KnowledgeExtractionFamily rounds)
       Pr[games.escapeEvent round context message | games.sampleChallenge round] := by
   simp [experiment, toGameFamily]
 
-/-- Every protocol state is doomed before the first interaction round. -/
+/-- Every input's canonical initial context is doomed: for every possible input, the context that
+contains only that input lies in the doomed set. This is the all-inputs initial clause of
+generalized round-by-round knowledge (Definition 3.12); it strengthens the initial clause of
+generalized round-by-round soundness, which only requires doom when the statement is false. -/
 def InitialCondition (games : KnowledgeExtractionFamily rounds) : Prop :=
   ∀ input, games.doomed 0 (games.initialContext input)
 
@@ -279,6 +310,99 @@ negligibility of the error family, so it does not by itself assert the full comp
 def ExtensionalConditions (games : KnowledgeExtractionFamily rounds)
     (error : Fin rounds → ℝ≥0∞) : Prop :=
   games.InitialCondition ∧ games.TerminalCondition ∧ games.ExtractionCondition error
+
+/-! ## Bridge to the generic knowledge-transition family
+
+For each round we restrict a `KnowledgeTransitionFamily` to the subtype of fixed
+`(context, message)` pairs whose pre-message context is doomed. The pre-state is validity of the
+directly extracted witness, the post-state is escape from the doomed set after that fixed message
+and the fresh challenge, and the after-witness is `Unit`. The transition bad event is then,
+challenge by challenge, the conjunction of a failed extracted relation with escape, so the
+transition family is bounded by the per-round error exactly when the strict extraction trigger
+holds. -/
+
+/-- Fixed `(context, message)` pairs at a round whose pre-message context is doomed. -/
+@[reducible] def DoomedContext (games : KnowledgeExtractionFamily rounds) (round : Fin rounds) :
+    Type :=
+  {cm : games.Context round.castSucc × games.Message round // games.doomed round.castSucc cm.1}
+
+/-- The knowledge-transition family carried by a knowledge-extraction family, on the doomed subtype
+of fixed `(context, message)` pairs.
+
+The challenge sampler is the existing `sampleChallenge`; `WitnessBefore` is the protocol witness
+type; `WitnessAfter` is `Unit`; the pre-witness ignores that unit and is the existing
+`extract round context message`; the pre-state says this extracted witness satisfies the relation
+at the statement projected from the context; and the post-state is exactly the escape event for the
+fixed context/message and the fresh challenge. -/
+def toKnowledgeTransitionFamily (games : KnowledgeExtractionFamily rounds) :
+    KnowledgeTransitionFamily (Fin rounds) games.DoomedContext where
+  Challenge := games.Challenge
+  WitnessBefore := fun _ => games.Witness
+  WitnessAfter := fun _ => Unit
+  sampleChallenge := games.sampleChallenge
+  extractBefore := fun round cm _ _ => games.extract round cm.val.1 cm.val.2
+  preState := fun round cm witnessBefore =>
+    games.relation (games.statement round.castSucc cm.val.1) witnessBefore
+  postState := fun round cm challenge _ =>
+    games.escapeEvent round cm.val.1 cm.val.2 challenge
+
+/-- On the doomed subtype, the transition bad event is, challenge by challenge, the conjunction of
+a failed extracted relation with escape from the doomed set. -/
+lemma toKnowledgeTransitionFamily_badEvent_iff (games : KnowledgeExtractionFamily rounds)
+    (round : Fin rounds) (context : games.Context round.castSucc) (message : games.Message round)
+    (hdoomed : games.doomed round.castSucc context) (challenge : games.Challenge round) :
+    games.toKnowledgeTransitionFamily.badEvent round ⟨(context, message), hdoomed⟩ challenge ↔
+      (¬ games.relation (games.statement round.castSucc context)
+            (games.extract round context message)
+        ∧ games.escapeEvent round context message challenge) := by
+  constructor
+  · rintro ⟨_, hnr, hesc⟩; exact ⟨hnr, hesc⟩
+  · rintro ⟨hnr, hesc⟩; exact ⟨(), hnr, hesc⟩
+
+/-- When the directly extracted witness fails the relation, the transition bad-event probability on
+the doomed subtype is exactly the escape probability. -/
+lemma probEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation
+    (games : KnowledgeExtractionFamily rounds) (round : Fin rounds)
+    (context : games.Context round.castSucc) (message : games.Message round)
+    (hdoomed : games.doomed round.castSucc context)
+    (hrel : ¬ games.relation (games.statement round.castSucc context)
+        (games.extract round context message)) :
+    Pr[games.toKnowledgeTransitionFamily.badEvent round ⟨(context, message), hdoomed⟩
+        | games.toKnowledgeTransitionFamily.sampleChallenge round] =
+      Pr[games.escapeEvent round context message | games.sampleChallenge round] := by
+  refine probEvent_ext (fun challenge _ => ?_)
+  rw [games.toKnowledgeTransitionFamily_badEvent_iff round context message hdoomed challenge]
+  exact ⟨fun h => h.2, fun h => ⟨hrel, h⟩⟩
+
+/-- **Extensional round-by-round extraction bridge.** The extensional extraction condition with a
+per-round error holds exactly when the doomed-subtype knowledge-transition family is bounded by the
+same error. This is a genuine equivalence: the forward direction turns each bad-event bound into the
+strict extraction trigger's contrapositive, and the backward direction recovers a valid extracted
+witness from a bad-event bound via the strict trigger `error < Pr[escape]`. -/
+theorem extractionCondition_iff_isBounded (games : KnowledgeExtractionFamily rounds)
+    (error : Fin rounds → ℝ≥0∞) :
+    games.ExtractionCondition error ↔
+      games.toKnowledgeTransitionFamily.IsBounded error := by
+  rw [KnowledgeTransitionFamily.isBounded_iff]
+  constructor
+  · intro hEC round cm
+    obtain ⟨⟨context, message⟩, hdoomed⟩ := cm
+    by_cases hR : games.relation (games.statement round.castSucc context)
+        (games.extract round context message)
+    · refine le_of_eq_of_le (probEvent_eq_zero (fun challenge _ hbad => ?_)) zero_le
+      exact ((games.toKnowledgeTransitionFamily_badEvent_iff round context message hdoomed
+        challenge).mp hbad).1 hR
+    · rw [games.probEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation round context
+        message hdoomed hR]
+      by_contra hle
+      rw [not_le] at hle
+      exact hR (hEC round context message hdoomed hle)
+  · intro hIB round context message hdoomed hlt
+    by_contra hR
+    have hbound := hIB round ⟨(context, message), hdoomed⟩
+    rw [games.probEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation round context
+      message hdoomed hR] at hbound
+    exact absurd hbound (not_le.mpr hlt)
 
 end KnowledgeExtractionFamily
 
