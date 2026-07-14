@@ -235,16 +235,32 @@ def fullPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
   pingPong (proto.rounds % 2 == 1)
     ((env.tSessions.filter (·.revealed)).map (·.transcript)) cr.challengeTr
 
+/-- Final stage in the security experiment:
+  1. Pick between `Kb = K1` (if `b = true`) or `Kb = K0` (otherwise)
+  2. Finalize the challenge oracle so the adversary can't continue the
+     challenge session by setting `env.challengeDone = true`
+  3. Give the adversary Kb (and continued oracle access to copies of T) and let
+     it make a guess b'
+  4. Declare the adversary a winner if b' = b and the challenge session is not
+     full ping-pong (in which case it wins w.p. 1/2) -/
 def finalize [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto)
     (st : A.State × Env proto × TK) (cr : ChallengeResult proto) (b : Bool) (K1 : Option K) :
     m Bool := do
   let (aSt, env, tk) := st
   let Kb := if b then K1 else cr.K0
+  let env := { env with challengeDone := true }
   let (b', env') ← (simulateQ (oracleImpl lift proto tk) (A.post aSt Kb)).run env
   if fullPingPong env' cr then lift.liftProbComp ($ᵗ Bool) else pure (b' == b)
 
-/-- The security experiment from Sec. 3 of DF'17 -/
+/-- The security experiment from Sec. 3 of DF'17:
+  1. Run setup
+  2. Choose a uniform challenge bit `b`
+  3. Run A with oracle access to copies of T and the challenge session
+  4. Declare the adversary a winner if it did *not* relay the challenge session
+     and the challenge key is not ⊥
+  5. Run finalize, either with `K0 = K1 = ⊥` if the challenge key was ⊥, or on
+     the challenge key K0 and a uniformly chosen K1 -/
 def Exp [SampleableType K] [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto) : m Bool := do
   let (uk, tk) ← proto.setup
