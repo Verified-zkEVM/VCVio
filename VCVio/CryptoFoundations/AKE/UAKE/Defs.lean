@@ -94,7 +94,8 @@ structure TSession (proto : Scheme m K UK TK W) where
   /-- The transcript for this session -/
   transcript : Transcript W
   /-- The final key output by T for this session:
-    * none: Session has not yet completed
+    * none: Session has not yet completed, assuming a well-formed party
+      who outputs a key or an explicit ⊥ when complete
     * some none: Session completed with T outputing ⊥
     * some (some k): Session completed with T outputing k -/
   key : Option (Option K)
