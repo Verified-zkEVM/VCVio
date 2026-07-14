@@ -64,6 +64,7 @@ import VCVio.CryptoFoundations.MerkleTree.Vector.Defs
 import VCVio.CryptoFoundations.PRF
 import VCVio.CryptoFoundations.PRG
 import VCVio.CryptoFoundations.ReplayFork
+import VCVio.CryptoFoundations.RoundByRound
 import VCVio.CryptoFoundations.SecExp
 import VCVio.CryptoFoundations.SeededFork
 import VCVio.CryptoFoundations.SigmaProtocol
