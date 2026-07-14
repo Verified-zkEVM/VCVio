@@ -5,6 +5,7 @@ Authors: Ben Hamlin
 -/
 import VCVio.CryptoFoundations.AKE.UAKE.Party
 import VCVio.CryptoFoundations.AKE.UAKE.Transcript
+import VCVio.OracleComp.ProbCompLift
 
 /-!
 # UAKE Core Definitions
@@ -81,9 +82,9 @@ def CorrectExp [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W) : m Bool :
   let (uOut, tOut) ← proto.U.runHonest proto.T uk tk (proto.rounds + 1)
   return decide (uOut.join = none ∨ tOut.join = none ∨ uOut.join = tOut.join)
 
-def PerfectlyCorrect [DecidableEq K] [Monad m] [MonadLiftT m SPMF]
-    (proto : Scheme m K UK TK W) : Prop :=
-  Pr[= true | CorrectExp proto] = 1
+def PerfectlyCorrect [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W)
+    (runtime : ProbCompRuntime m) : Prop :=
+  Pr[= true | runtime.evalDist (CorrectExp proto)] = 1
 
 /-- The state of a single copy of the T oracle state in the UAKE security
   experiment. -/
@@ -192,10 +193,11 @@ def opImpl [Monad m] (proto : Scheme m K UK TK W) (tk : TK) :
 /-- Full oracle for the UAKE experiment. `unifSpec` queries (the adversary's
   coin flips) are forwarded to the ambient monad; the remaining queries are
   handled by `opImpl`. -/
-def oracleImpl [Monad m] [MonadLiftT ProbComp m] (proto : Scheme m K UK TK W) (tk : TK) :
+def oracleImpl [Monad m] (lift : ProbCompLift m) (proto : Scheme m K UK TK W) (tk : TK) :
     QueryImpl (unifSpec + oracleSpec K W) (StateT (Env proto) m) :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget (StateT (Env proto) m)
-    + opImpl proto tk
+  let unifImpl : QueryImpl unifSpec (StateT (Env proto) m) := fun q =>
+    liftM (lift.liftProbComp ((HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) q))
+  unifImpl + opImpl proto tk
 
 /-- An adversary in the UAKE security game -/
 structure Adversary (proto : Scheme m K UK TK W) where
@@ -208,13 +210,13 @@ structure ChallengeResult (proto : Scheme m K UK TK W) where
   challengeTr : Transcript W
   oracleTrs : List (Transcript W)
 
-def challengeSession [Monad m] [MonadLiftT ProbComp m]
+def challengeSession [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto) (uk : UK) (tk : TK) :
     m (ChallengeResult proto × (A.State × Env proto × TK)) := do
-  let u0 ← (proto.U.init uk : m _)
+  let u0 ← proto.U.init uk
   let (tr0, c0) := recordOpt ⟨[]⟩ u0.opening 0
   let init : Env proto := ⟨c0, ⟨u0.state, tr0⟩, false, []⟩
-  let (st, env) ← (simulateQ (oracleImpl proto tk) (A.challenge uk u0.opening)).run init
+  let (st, env) ← (simulateQ (oracleImpl lift proto tk) (A.challenge uk u0.opening)).run init
   let k0 ← (proto.U.output env.challenge.state : m _)
   pure (⟨k0.join, env.challenge.transcript, env.tSessions.map (·.transcript)⟩,
     (st, env, tk))
@@ -232,33 +234,33 @@ def fullPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
   pingPong (proto.rounds % 2 == 1)
     ((env.tSessions.filter (·.revealed)).map (·.transcript)) cr.challengeTr
 
-def finalize [DecidableEq W] [Monad m] [MonadLiftT ProbComp m]
+def finalize [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto)
     (st : A.State × Env proto × TK) (cr : ChallengeResult proto) (b : Bool) (K1 : Option K) :
     m Bool := do
   let (aSt, env, tk) := st
   let Kb := if b then K1 else cr.K0
-  let (b', env') ← (simulateQ (oracleImpl proto tk) (A.post aSt Kb)).run env
-  if fullPingPong env' cr then liftM ($ᵗ Bool) else pure (b' == b)
+  let (b', env') ← (simulateQ (oracleImpl lift proto tk) (A.post aSt Kb)).run env
+  if fullPingPong env' cr then lift.liftProbComp ($ᵗ Bool) else pure (b' == b)
 
 /-- The security experiment from Sec. 3 of DF'17 -/
-def Exp [SampleableType K] [DecidableEq W] [Monad m] [MonadLiftT ProbComp m]
+def Exp [SampleableType K] [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto) : m Bool := do
   let (uk, tk) ← proto.setup
-  let b ← ($ᵗ Bool : ProbComp Bool)
-  let (cr, st) ← challengeSession A uk tk
+  let b ← lift.liftProbComp ($ᵗ Bool)
+  let (cr, st) ← challengeSession lift A uk tk
   if cr.K0.isNone then
     let K1 := none
-    finalize A st cr b K1
+    finalize lift A st cr b K1
   else if !isPingPong cr then
     return true
   else
-    let K1 ← some <$> ($ᵗ K : ProbComp K)
-    finalize A st cr b K1
+    let K1 ← some <$> lift.liftProbComp ($ᵗ K)
+    finalize lift A st cr b K1
 
 noncomputable def advantage [SampleableType K] [DecidableEq W] [Monad m]
-    [MonadLiftT ProbComp m] [MonadLiftT m SPMF] {proto : Scheme m K UK TK W}
+    {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m)
     (A : Adversary proto) : ℝ :=
-  |(Pr[= true | Exp A]).toReal - 1 / 2|
+  |(Pr[= true | runtime.evalDist (Exp runtime.toProbCompLift A)]).toReal - 1 / 2|
 
 end AKE.UAKE
