@@ -25,14 +25,15 @@ The pieces, each isolated so the diagonalization argument reads as pure counting
   (`card_tmTable`, bounded by `Turing.SingleTapeTM.B`), and `reify` packages one back
   into a `SingleTapeTM Bool`. The `Fintype`/`DecidableEq` instances for the underlying
   `Turing.Dir` and `SingleTapeTM.Stmt Bool` are supplied here.
-* **State normalization** (`exists_tmTable_of_card_le`, an isolated `sorry`): any
+* **State normalization** (`exists_tmTable_of_card_le`): any
   `SingleTapeTM Bool` with at most `d` states computes the same string function as
   `reify` of some `TMTable d`.
 * **Realizable predicates** (`Computability.RealizableLE`): the predicates realizable by
   an input/output `EncPolyTime` pair of description size at most `d`. This set is covered
   by a `Finset` of cardinality at most `B d ^ 2` (`exists_realizableLE_covering`, the
-  isolated counting `sorry`: the surjection `TMTable d × TMTable d → RealizableLE n d`
-  built from state normalization), and it is monotone in `d` (`realizableLE_mono`).
+  counting core: the cover of `RealizableLE n d` by the image of
+  `TMTable d × TMTable d` under `tablePairPred`, built from state normalization), and it is
+  monotone in `d` (`realizableLE_mono`).
 * **Growth bounds**: every polynomial is eventually dominated by `2 ^ (n / 4)`
   (`Computability.eventually_poly_le`), while the machine count stays below the function
   count (`Computability.eventually_count_lt`).
@@ -103,18 +104,227 @@ def reify {d : ℕ} (t : TMTable d) : SingleTapeTM Bool where
   q₀ := t.2
   tr := t.1
 
+/-! ## State-relabeling normalization construction
+
+The machinery discharging `exists_tmTable_of_card_le`: relabel the finite state space of a
+machine `tm` through `Fintype.equivFin`, embed `Fin (card tm.State)` into `Fin d` along the
+cardinality inequality (`embFin`), and transport the transition function on the image
+(`normTr`), sending every spare state (those outside the image, detected by `decFin`) to a
+fixed halting transition. Configurations transport along `normCfg`, single steps correspond
+(`step_normCfg`), and this lifts through `ReflTransGen` in both directions
+(`normCfg_reflTransGen`, `reflTransGen_normCfg_reverse`), giving the `Outputs` equivalence. -/
+
+section Normalize
+
+/-- Embed a finite type into `Fin d` (with `card ≤ d`) via its `Fintype.equivFin` labeling. -/
+noncomputable def embFin {α : Type*} [Fintype α] {d : ℕ} (hd : Fintype.card α ≤ d) (s : α) :
+    Fin d :=
+  (Fintype.equivFin α s).castLE hd
+
+/-- The partial inverse of `embFin`: recover the state whose label is `i`, or `none` for
+spare indices `i` with no preimage. -/
+noncomputable def decFin {α : Type*} [Fintype α] {d : ℕ} (i : Fin d) : Option α :=
+  if hi : (i : ℕ) < Fintype.card α then some ((Fintype.equivFin α).symm ⟨i, hi⟩) else none
+
+/-- `decFin` inverts `embFin` on the image. -/
+lemma decFin_embFin {α : Type*} [Fintype α] {d : ℕ} (hd : Fintype.card α ≤ d) (s : α) :
+    (decFin (embFin hd s) : Option α) = some s := by
+  have hlt : ((embFin hd s : Fin d) : ℕ) < Fintype.card α := by
+    simp only [embFin, Fin.val_castLE]; exact (Fintype.equivFin α s).isLt
+  simp only [decFin, dif_pos hlt]
+  congr 1
+  apply (Fintype.equivFin α).symm_apply_eq.mpr
+  apply Fin.ext
+  simp [embFin, Fin.val_castLE]
+
+/-- `embFin` is injective. -/
+lemma embFin_injective {α : Type*} [Fintype α] {d : ℕ} (hd : Fintype.card α ≤ d) :
+    Function.Injective (embFin hd) := fun _ _ hab =>
+  (Fintype.equivFin α).injective (Fin.castLE_injective hd hab)
+
+variable {d : ℕ} (tm : SingleTapeTM Bool) (emb : tm.State → Fin d)
+  (dec : Fin d → Option tm.State)
+
+/-- Transition table transporting `tm`'s transitions along `emb`; spare states (those with
+`dec i = none`) are given a fixed halting transition. -/
+noncomputable def normTr : Fin d → Option Bool → SingleTapeTM.Stmt Bool × Option (Fin d) :=
+  fun i b =>
+    match dec i with
+    | some s => ((tm.tr s b).1, (tm.tr s b).2.map emb)
+    | none => (default, none)
+
+/-- The canonical `d`-state table normalizing `tm` onto `Fin d` along `emb`/`dec`. -/
+noncomputable def normTable : TMTable d := (normTr tm emb dec, emb tm.q₀)
+
+/-- Transport a configuration of `tm` to the reified normalized machine. -/
+noncomputable def normCfg (c : tm.Cfg) : (reify (normTable tm emb dec)).Cfg :=
+  ⟨c.state.map emb, c.BiTape⟩
+
+variable {tm emb dec}
+
+/-- The reified normalized machine's step transports `tm`'s step along `normCfg`, provided
+`dec` inverts `emb` on the image. -/
+lemma step_normCfg (hdec : ∀ s, dec (emb s) = some s) (c : tm.Cfg) :
+    (reify (normTable tm emb dec)).step (normCfg tm emb dec c)
+      = (tm.step c).map (normCfg tm emb dec) := by
+  obtain ⟨st, tp⟩ := c
+  cases st with
+  | none => rfl
+  | some q =>
+    have hdq : dec (emb q) = some q := hdec q
+    rcases htr : tm.tr q tp.head with ⟨⟨wr, dir⟩, q''⟩
+    simp only [step, normCfg, reify, normTable, normTr, Option.map_some, hdq, htr]
+
+/-- `normCfg` is injective when `emb` is. -/
+lemma normCfg_injective (hemb : Function.Injective emb) :
+    Function.Injective (normCfg tm emb dec) := by
+  rintro ⟨s1, t1⟩ ⟨s2, t2⟩ h
+  simp only [normCfg, Cfg.mk.injEq] at h
+  obtain ⟨hs, ht⟩ := h
+  have hss : s1 = s2 := Option.map_injective hemb hs
+  subst hss; subst ht; rfl
+
+/-- A run of `tm` maps forward to a run of the normalized machine. -/
+lemma normCfg_reflTransGen (hdec : ∀ s, dec (emb s) = some s) {c c' : tm.Cfg}
+    (h : Relation.ReflTransGen tm.TransitionRelation c c') :
+    Relation.ReflTransGen (reify (normTable tm emb dec)).TransitionRelation
+      (normCfg tm emb dec c) (normCfg tm emb dec c') := by
+  refine Relation.ReflTransGen.lift (normCfg tm emb dec) ?_ h
+  intro a b hab
+  have hs := step_normCfg hdec a
+  rw [show tm.step a = some b from hab, Option.map_some] at hs
+  exact hs
+
+/-- A run of the normalized machine from an image configuration stays in the image and maps
+back to a run of `tm`. -/
+lemma reflTransGen_normCfg_reverse (hdec : ∀ s, dec (emb s) = some s) {c : tm.Cfg}
+    {c' : (reify (normTable tm emb dec)).Cfg}
+    (h : Relation.ReflTransGen (reify (normTable tm emb dec)).TransitionRelation
+      (normCfg tm emb dec c) c') :
+    ∃ c₂, c' = normCfg tm emb dec c₂ ∧ Relation.ReflTransGen tm.TransitionRelation c c₂ := by
+  induction h with
+  | refl => exact ⟨c, rfl, Relation.ReflTransGen.refl⟩
+  | @tail b e hab hbc ih =>
+    obtain ⟨c₂, rfl, hrun⟩ := ih
+    have hs := step_normCfg hdec c₂
+    rw [show (reify (normTable tm emb dec)).step (normCfg tm emb dec c₂) = some e from hbc] at hs
+    obtain ⟨c₃, hstep, hc3⟩ := Option.map_eq_some_iff.mp hs.symm
+    exact ⟨c₃, hc3.symm, hrun.tail hstep⟩
+
+end Normalize
+
+/-! ## Determinism of machine runs
+
+Supporting facts for `Computability.exists_realizableLE_covering`: a single-tape machine
+is deterministic (its `step` is a function), so the output list of a halting run is
+unique. This lets the covering predicate attached to a table pair be read off by an
+unbounded-search-free choice construction and still agree with any witness predicate. -/
+
+section Determinism
+
+/-- In a relation that is a partial function (deterministic), two irreducible points
+reachable from a common source coincide. -/
+theorem _root_.Relation.ReflTransGen.unique_of_deterministic
+    {α : Type*} {R : α → α → Prop}
+    (hdet : ∀ {a b c : α}, R a b → R a c → b = c)
+    {a b c : α} (hb : Relation.ReflTransGen R a b) (hc : Relation.ReflTransGen R a c)
+    (hbf : ∀ y, ¬ R b y) (hcf : ∀ y, ¬ R c y) : b = c := by
+  induction hb using Relation.ReflTransGen.head_induction_on with
+  | refl =>
+      rcases hc.cases_head with h | ⟨y, hy, _⟩
+      · exact h
+      · exact absurd hy (hbf y)
+  | head h' _ ih =>
+      rename_i a' _
+      rcases hc.cases_head with h | ⟨y, hy, hyc⟩
+      · exact absurd (h ▸ h') (hcf a')
+      · rw [hdet h' hy] at ih; exact ih hyc
+
+/-- Distinct input lists give distinct initial/halting tapes: `BiTape.mk₁` is injective. -/
+theorem _root_.Turing.BiTape.mk₁_injective {Symbol : Type} :
+    Function.Injective (Turing.BiTape.mk₁ : List Symbol → Turing.BiTape Symbol) := by
+  intro l₁ l₂ h
+  cases l₁ with
+  | nil =>
+    cases l₂ with
+    | nil => rfl
+    | cons b t => simp [Turing.BiTape.mk₁, Turing.BiTape.nil] at h
+  | cons a s =>
+    cases l₂ with
+    | nil => simp [Turing.BiTape.mk₁, Turing.BiTape.nil] at h
+    | cons b t =>
+      simp only [Turing.BiTape.mk₁, Turing.BiTape.mk.injEq, Option.some.injEq] at h
+      obtain ⟨hab, -, hst⟩ := h
+      have : (s.map some) = (t.map some) := by
+        have := congrArg Turing.StackTape.toList hst
+        simpa [Turing.StackTape.mapSome] using this
+      have hst' : s = t := List.map_injective_iff.mpr (Option.some_injective _) this
+      rw [hab, hst']
+
+variable {Symbol : Type} [Inhabited Symbol] [Fintype Symbol]
+
+/-- A halting configuration is irreducible: no transition leaves the halting state. -/
+theorem not_transitionRelation_haltCfg (tm : SingleTapeTM Symbol) (l : List Symbol)
+    (y : tm.Cfg) : ¬ tm.TransitionRelation (tm.haltCfg l) y := by
+  intro hy
+  simp only [TransitionRelation, haltCfg, step] at hy
+  exact absurd hy (by simp)
+
+/-- The output list of a halting machine run is unique: the machine is deterministic. -/
+theorem Outputs_unique (tm : SingleTapeTM Symbol) {l l₁ l₂ : List Symbol}
+    (h1 : tm.Outputs l l₁) (h2 : tm.Outputs l l₂) : l₁ = l₂ := by
+  have hcfg : tm.haltCfg l₁ = tm.haltCfg l₂ := by
+    refine Relation.ReflTransGen.unique_of_deterministic (R := tm.TransitionRelation)
+      (fun {a b c} hab hac => ?_) h1 h2 (not_transitionRelation_haltCfg tm l₁)
+      (not_transitionRelation_haltCfg tm l₂)
+    rw [TransitionRelation] at hab hac
+    rw [hab] at hac
+    exact Option.some.inj hac
+  have := congrArg Cfg.BiTape hcfg
+  simp only [haltCfg] at this
+  exact Turing.BiTape.mk₁_injective this
+
+/-- A polynomial-time machine halts with the correct output on every input. -/
+theorem PolyTimeComputable.outputs {f : List Symbol → List Symbol}
+    (h : PolyTimeComputable f) (a : List Symbol) : h.tm.Outputs a (f a) := by
+  obtain ⟨m, _, hm⟩ := h.outputsFunInTime a
+  exact hm.reflTransGen
+
+end Determinism
+
 /-! ## State normalization -/
 
-/-- **[Isolated crux, `sorry`]** Every `SingleTapeTM Bool` computing a string function
-with at most `d` states computes the same function as `reify` of some `TMTable d` — the
-state space is relabeled to `Fin d` along `Fintype.equivFin`, preserving the `Outputs`
-relation. Discharging this is the Cslib-internal run-preservation-under-state-relabeling
-lemma; it needs an induction over `SingleTapeTM.step` / `RelatesInSteps` transported along
-the relabeling. It is the machine-theoretic input to `exists_realizableLE_covering`. -/
+/-- Every `SingleTapeTM Bool` computing a string function with at most `d` states computes
+the same function as `reify` of some `TMTable d` — the state space is relabeled to `Fin d`
+along `Fintype.equivFin`, preserving the `Outputs` relation. It is the machine-theoretic
+input to `exists_realizableLE_covering`. -/
 theorem exists_tmTable_of_card_le {f : List Bool → List Bool} (h : PolyTimeComputable f)
     {d : ℕ} (hd : Fintype.card h.tm.State ≤ d) :
     ∃ t : TMTable d, ∀ l l', (reify t).Outputs l l' ↔ h.tm.Outputs l l' := by
-  sorry
+  set tm := h.tm with htm
+  refine ⟨normTable tm (embFin hd) (decFin (α := tm.State)), fun l l' => ?_⟩
+  have hdec : ∀ s, decFin (α := tm.State) (embFin hd s) = some s := decFin_embFin hd
+  have hemb : Function.Injective (embFin (α := tm.State) hd) := embFin_injective hd
+  have hinit : normCfg tm (embFin hd) (decFin (α := tm.State)) (tm.initCfg l)
+      = (reify (normTable tm (embFin hd) (decFin (α := tm.State)))).initCfg l := rfl
+  have hhalt : normCfg tm (embFin hd) (decFin (α := tm.State)) (tm.haltCfg l')
+      = (reify (normTable tm (embFin hd) (decFin (α := tm.State)))).haltCfg l' := rfl
+  constructor
+  · intro hout
+    have hout' : Relation.ReflTransGen
+        (reify (normTable tm (embFin hd) (decFin (α := tm.State)))).TransitionRelation
+        (normCfg tm (embFin hd) (decFin (α := tm.State)) (tm.initCfg l))
+        ((reify (normTable tm (embFin hd) (decFin (α := tm.State)))).haltCfg l') := by
+      rw [hinit]; exact hout
+    obtain ⟨c₂, hc₂, hrun⟩ := reflTransGen_normCfg_reverse hdec hout'
+    rw [← hhalt] at hc₂
+    have hcfg : tm.haltCfg l' = c₂ := normCfg_injective hemb hc₂
+    rw [← hcfg] at hrun
+    exact hrun
+  · intro hout
+    have hmap := normCfg_reflTransGen hdec hout
+    rw [hinit, hhalt] at hmap
+    exact hmap
 
 end Turing.SingleTapeTM
 
@@ -143,16 +353,61 @@ theorem realizableLE_mono {n : ℕ} {d d' : ℕ} (h : d ≤ d') :
   rintro g ⟨σ, es, init, output, i, o, hi, ho, hg⟩
   exact ⟨σ, es, init, output, i, o, hi.trans h, ho.trans h, hg⟩
 
-/-- **[Isolated counting crux, `sorry`]** The realizable predicates at description size at
-most `d` are covered by a `Finset` of cardinality at most `B d ^ 2`. Discharging this uses
-state normalization (`exists_tmTable_of_card_le`) to reduce each realizing pair of witness
-machines to a pair `TMTable d × TMTable d` of canonical `d`-state tables; the realized
-predicate factors through the two tables (decode the output encoding of the composite run),
-giving a surjection from `TMTable d × TMTable d` onto `RealizableLE n d`, whence
-`card ≤ Fintype.card (TMTable d × TMTable d) = B d ^ 2` (`card_tmTable`). -/
+open Classical in
+/-- The total predicate `BitVec n → Bool` attached to a pair of canonical `d`-state tables:
+run `reify p.1` on the canonical input encoding of `x`, feed its (deterministic) output to
+`reify p.2`, and decode the resulting canonical `Option Bool` encoding. Totality is ensured
+by a deterministic choice over the (at most one, by `Outputs_unique`) successful run, with
+an arbitrary `false` fallback where no such run exists — no claim that either raw table
+pair halts or is polynomial-time. -/
+noncomputable def tablePairPred (n d : ℕ) (p : TMTable d × TMTable d) : BitVec n → Bool :=
+  fun x =>
+    if h : ∃ b : Bool, ∃ l₁ : List Bool,
+        (reify p.1).Outputs (BitEncFam.bitVecX.enc n x) l₁ ∧
+        (reify p.2).Outputs l₁ (BitEncFam.bool.option.enc n (some b))
+    then h.choose else false
+
+/-- The realizable predicates at description size at most `d` are covered by a `Finset` of
+cardinality at most `B d ^ 2`. State normalization (`exists_tmTable_of_card_le`) reduces each
+realizing pair of witness machines to a pair `TMTable d × TMTable d` of canonical `d`-state
+tables; the realized predicate is recovered from the two tables by `tablePairPred` (running
+both reified machines and decoding the canonical output encoding, using determinism of the
+runs via `Outputs_unique`). Thus `RealizableLE n d` lands in the image of
+`TMTable d × TMTable d` under `tablePairPred`, whence
+`card ≤ Fintype.card (TMTable d × TMTable d) = B d ^ 2` (`card_tmTable`). The map need not be
+injective — it only needs to cover the realizable set. -/
 theorem exists_realizableLE_covering (n d : ℕ) :
     ∃ s : Finset (BitVec n → Bool), RealizableLE n d ⊆ ↑s ∧ s.card ≤ B d ^ 2 := by
-  sorry
+  classical
+  refine ⟨Finset.image (tablePairPred n d)
+    (Finset.univ : Finset (TMTable d × TMTable d)), ?_, ?_⟩
+  · rintro g ⟨σ, es, init, output, i, o, hi, ho, hg⟩
+    obtain ⟨t₁, ht₁⟩ := exists_tmTable_of_card_le i.polyTime (d := d) hi
+    obtain ⟨t₂, ht₂⟩ := exists_tmTable_of_card_le o.polyTime (d := d) ho
+    refine Finset.mem_coe.mpr (Finset.mem_image.mpr ⟨(t₁, t₂), Finset.mem_univ _, ?_⟩)
+    funext x
+    have hrun1 : (reify t₁).Outputs (BitEncFam.bitVecX.enc n x) (es (init x)) := by
+      rw [ht₁]
+      have h := i.polyTime.outputs (BitEncFam.bitVecX.enc n x)
+      rwa [i.map_encode x] at h
+    have hrun2 : (reify t₂).Outputs (es (init x))
+        (BitEncFam.bool.option.enc n (some (g x))) := by
+      rw [ht₂]
+      have h := o.polyTime.outputs (es (init x))
+      rwa [o.map_encode (init x), hg x] at h
+    have hex : ∃ b : Bool, ∃ l₁ : List Bool,
+        (reify t₁).Outputs (BitEncFam.bitVecX.enc n x) l₁ ∧
+        (reify t₂).Outputs l₁ (BitEncFam.bool.option.enc n (some b)) :=
+      ⟨g x, es (init x), hrun1, hrun2⟩
+    have hpick : tablePairPred n d (t₁, t₂) x = hex.choose := dif_pos hex
+    rw [hpick]
+    obtain ⟨l₁', hl1', hl2'⟩ := hex.choose_spec
+    have hl1eq : l₁' = es (init x) := Outputs_unique _ hl1' hrun1
+    rw [hl1eq] at hl2'
+    have henc := Outputs_unique _ hl2' hrun2
+    exact Option.some.inj ((BitEncFam.bool.option).enc_injective n henc)
+  · refine Finset.card_image_le.trans ?_
+    rw [Finset.card_univ, Fintype.card_prod, card_tmTable, sq]
 
 /-! ## Cardinality of the predicate space -/
 
