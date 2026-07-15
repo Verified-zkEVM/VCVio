@@ -1,4 +1,4 @@
-# VCV-io — AI Agent Guide
+# VCVio — AI Agent Guide
 
 Formally verified cryptography proofs in Lean 4, built on Mathlib.
 
