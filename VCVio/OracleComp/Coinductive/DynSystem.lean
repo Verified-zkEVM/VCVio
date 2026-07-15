@@ -479,7 +479,8 @@ a program that makes at most `n` queries has a transcript of length at most `n`.
     (transcript h oa).length = stepsToHalt h oa := by
   induction oa with
   | pure x => rfl
-  | queryBind t k ih => simp [ih]
+  | queryBind t k ih =>
+      rw [transcript_queryBind, stepsToHalt_queryBind, List.length_cons, ih]
 
 @[simp] theorem transcript_countQ_pure (h : OracleHandler spec) (p : ι → Prop) [DecidablePred p]
     (x : α) : (transcript h (pure x : OracleComp spec α)).countQ p = 0 := rfl
@@ -504,7 +505,7 @@ the answer-erasure of the program's typed interaction path. -/
 node, choose the handler's answer. This is the program's *typed* transcript. -/
 def handlerPath (h : OracleHandler spec) : (oa : OracleComp spec α) → PFunctor.FreeM.Path oa
   | .pure _ => ⟨⟩
-  | .roll a rest => ⟨h a, handlerPath h (rest (h a))⟩
+  | .liftBind a rest => ⟨h a, handlerPath h (rest (h a))⟩
 
 /-- The leaf selected by the handler's typed path is exactly the simulated value. -/
 theorem output_handlerPath (h : OracleHandler spec) (oa : OracleComp spec α) :
@@ -520,7 +521,7 @@ theorem output_handlerPath (h : OracleHandler spec) (oa : OracleComp spec α) :
 selected there. -/
 def logOfPath : (oa : OracleComp spec α) → PFunctor.FreeM.Path oa → QueryLog spec
   | .pure _, _ => []
-  | .roll a rest, ⟨b, path⟩ => ⟨a, b⟩ :: logOfPath (rest b) path
+  | .liftBind a rest, ⟨b, path⟩ => ⟨a, b⟩ :: logOfPath (rest b) path
 
 /-- The flat transcript is the answer-erasure of the handler's typed path. -/
 theorem logOfPath_handlerPath (h : OracleHandler spec) (oa : OracleComp spec α) :
@@ -554,7 +555,7 @@ super-spec handler `H`. -/
 def runAlong (hs : spec ⊂ₒ superSpec) (H : OracleHandler superSpec) :
     (oa : OracleComp spec α) → PFunctor.FreeM.PathAlong (SubSpec.toLens hs) oa
   | .pure _ => ⟨⟩
-  | .roll a rest => ⟨H ((SubSpec.toLens hs).toFunA a),
+  | .liftBind a rest => ⟨H ((SubSpec.toLens hs).toFunA a),
       runAlong hs H (rest (OracleHandler.pullback hs H a))⟩
 
 /-- Running a program along the reduction lens with a super-spec handler computes the same value as

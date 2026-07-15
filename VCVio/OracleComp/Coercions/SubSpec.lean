@@ -256,8 +256,8 @@ lemma liftComp_map (mx : OracleComp spec α) (f : α → β) :
 lemma liftComp_bind_pure (oa : OracleComp spec α) (f : α → β) :
     OracleComp.liftComp (do let a ← oa; pure (f a)) superSpec =
       f <$> OracleComp.liftComp oa superSpec := by
-  change (f <$> oa).liftComp superSpec = f <$> oa.liftComp superSpec
-  exact liftComp_map superSpec oa f
+  rw [liftComp_bind, map_eq_bind_pure_comp]
+  rfl
 
 /-- One-directional, assumption-light variant of `mem_support_liftComp_iff`: under just a
 query-level lift (no `SubSpec` or lawfulness assumptions), the support of a lifted computation

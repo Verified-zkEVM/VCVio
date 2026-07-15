@@ -553,10 +553,7 @@ private lemma sq_tsum_seed_weighted_le_tsum_factored (s : Fin (qb i + 1)) :
         OracleComp spec (Option (Fin (qb i + 1))))).run' σ' =
         cf <$> (simulateQ seededOracle main).run' σ' := by
       intro σ'
-      simp only [simulateQ_map]
-      change Prod.fst <$> (Prod.map cf id <$> (simulateQ seededOracle main).run σ') =
-        cf <$> (Prod.fst <$> (simulateQ seededOracle main).run σ')
-      simp [Functor.map_map]
+      rw [simulateQ_map, StateT.run'_map']
     have hWF := seededOracle.tsum_probOutput_generateSeed_weight_takeAtIndex
       qb js i (↑s) (cf <$> main : OracleComp spec (Option (Fin (qb i + 1))))
       (some s : Option (Fin (qb i + 1)))

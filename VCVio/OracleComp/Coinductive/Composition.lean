@@ -30,9 +30,9 @@ theorem Implements.seqComp {M₁ : OracleMachine spec α mid} {M₂ : OracleMach
   intro m _ _ H x
   rw [show OracleMachine.runK (M₁ ⨟ M₂) H (k₁ + k₂) ((M₁ ⨟ M₂).init x) =
       (M₁ ⨟ M₂).runWith H (k₁ + k₂) ((M₁ ⨟ M₂).init x) from rfl,
-    PointedMachine.runWith_seqComp_init M₁ M₂ H k₂ x
-      (PFunctor.PointedMachine.Implements.resolvesIn h₁ x)
-      (fun y => PFunctor.PointedMachine.Implements.resolvesIn h₂ y),
+    PFunctor.DynSystem.IOMachine.runWith_seqComp_init M₁ M₂ H k₂ x
+      (PFunctor.DynSystem.IOMachine.Implements.resolvesIn h₁ x)
+      (fun y => PFunctor.DynSystem.IOMachine.Implements.resolvesIn h₂ y),
     show M₁.runWith H k₁ (M₁.init x) = M₁.runK H k₁ (M₁.init x) from rfl,
     h₁.runK_eq H x, simulateQ_bind, map_eq_bind_pure_comp, bind_assoc, map_bind]
   refine bind_congr fun a => ?_

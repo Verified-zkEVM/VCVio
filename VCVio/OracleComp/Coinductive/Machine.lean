@@ -3,14 +3,14 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import PolyFun.PFunctor.Dynamical.PointedMachine
+import PolyFun.PFunctor.Dynamical.IOMachine
 import VCVio.OracleComp.Coinductive.DynSystem
 import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # Oracle Machines: Strategies with Initialization and Readout
 
-An `OracleMachine spec α β` is PolyFun's `PFunctor.PointedMachine` at the spec's polynomial:
+An `OracleMachine spec α β` is PolyFun's `PFunctor.DynSystem.IOMachine` at the spec's polynomial:
 an `OracleStrategy` together with an initial-state map `init : α → State` and a Moore-style
 partial readout `output : State → Option β`. `output s = some b` means the machine has
 halted with result `b`, while `none` means it queries on. This is the machine-shaped
@@ -18,11 +18,11 @@ presentation of an adversary `α → OracleComp spec β`.
 
 The run/unrolling theory is inherited from PolyFun rather than duplicated:
 
-* `OracleMachine.toComp` is `PFunctor.PointedMachine.toComp` — the fuelled unrolling into
+* `OracleMachine.toComp` is `PFunctor.DynSystem.IOMachine.toComp` — the fuelled unrolling into
   `OracleComp spec (Option β)` (which *is* `FreeM spec.toPFunctor (Option β)`). Fuel counts
   queries exactly: the readout is free, so the `k`-step unrolling makes at most `k` queries
   and resolves precisely when the machine is steady within `k` queries.
-* `OracleMachine.runK`: the monad-parametric fuelled run — `PointedMachine.runWith` fed a
+* `OracleMachine.runK`: the monad-parametric fuelled run — `IOMachine.runWith` fed a
   `QueryImpl spec m` (which *is* a `PFunctor.Handler m spec.toPFunctor`). The probabilistic
   run of an adversary is the `m := SPMF` instance; the early-stopping behaviour (halted
   states are absorbing) is what keeps sub-probability mass against lossy handlers.
@@ -53,22 +53,32 @@ variable {ι : Type u} {spec : OracleSpec.{u, u} ι} {α β : Type u}
 
 /-! ## Oracle machines -/
 
-/-- An oracle machine: PolyFun's `PointedMachine` over the spec's polynomial. An adaptive
+/-- An oracle machine: PolyFun's `IOMachine` over the spec's polynomial. An adaptive
 querying strategy (`OracleStrategy`, the `toDynSystem` parent) together with an
 initialization of its state from an input and a Moore-style partial readout of its result.
 `output s = some b` means the machine has halted with result `b`; `output s = none` means
 it queries on. -/
 abbrev OracleMachine (spec : OracleSpec.{u, u} ι) (α β : Type u) :=
-  PFunctor.PointedMachine.{u, u, u, u, u} spec.toPFunctor α β
+  PFunctor.DynSystem.IOMachine.{u} spec.toPFunctor α β
 
 /-- A query implementation *is* a PolyFun handler for the spec's polynomial — the
-identification `runK = PointedMachine.runWith` rests on. Recorded as a regression
+identification `runK = IOMachine.runWith` rests on. Recorded as a regression
 guard: it must remain definitional. -/
 example {m : Type u → Type u} : QueryImpl spec m = PFunctor.Handler m spec.toPFunctor := rfl
 
 namespace OracleMachine
 
 variable (M : OracleMachine spec α β)
+
+/-- The adaptive strategy underlying an oracle machine. -/
+abbrev toDynSystem : OracleStrategy M.State spec := M.toMachine.behavior
+
+/-- The next query exposed by an oracle machine. -/
+abbrev expose (state : M.State) : spec.Domain := M.toDynSystem.expose state
+
+/-- Advance an oracle machine with a response to its exposed query. -/
+abbrev update (state : M.State) (response : spec.Range (M.expose state)) : M.State :=
+  M.toDynSystem.update state response
 
 /-! ## Stability and steadiness -/
 
@@ -92,7 +102,7 @@ def SteadyBy (h : OracleHandler spec) (s : M.State) (k : ℕ) : Prop :=
 
 /-! ## Fuelled monad-parametric runs
 
-`runK` is `PointedMachine.runWith`: a `QueryImpl spec m` is definitionally a
+`runK` is `IOMachine.runWith`: a `QueryImpl spec m` is definitionally a
 `PFunctor.Handler m spec.toPFunctor`, so the machine run against a randomized oracle
 (`m := SPMF`), a stateful oracle (`m := StateT σ SPMF`), or a deterministic handler
 (`m := Id`, packaged as `runD`) are all instances of one PolyFun run. -/
@@ -115,13 +125,13 @@ def runK (H : QueryImpl spec m) : ℕ → M.State → m (Option β) :=
 theorem runK_succ_of_output_eq_none (H : QueryImpl spec m) {s : M.State}
     (hb : M.output s = none) (k : ℕ) :
     M.runK H (k + 1) s = H (M.expose s) >>= fun r => M.runK H k (M.update s r) := by
-  rw [runK, PointedMachine.runWith_succ, hb]
+  rw [runK, PFunctor.DynSystem.IOMachine.runWith_succ, hb]
   rfl
 
 /-- A halted machine's run is `pure` on its readout, at any fuel. -/
 theorem runK_of_output_eq_some (H : QueryImpl spec m) {s : M.State} {b : β}
     (hb : M.output s = some b) (k : ℕ) : M.runK H k s = pure (some b) :=
-  PointedMachine.runWith_of_output_eq_some M H k hb
+  PFunctor.DynSystem.IOMachine.runWith_of_output_eq_some M H k hb
 
 theorem runK_succ_of_output_eq_some (H : QueryImpl spec m) {s : M.State} {b : β}
     (hb : M.output s = some b) (k : ℕ) : M.runK H (k + 1) s = pure (some b) :=
@@ -230,20 +240,20 @@ namespace OracleMachine
 variable (M : OracleMachine spec α β)
 
 /-- A machine implements a program at fuel `k`: **PolyFun's native
-`PointedMachine.Implements`**, the free-handler equation `M.toComp k (M.init x) = some <$> oa x`
+`IOMachine.Implements`**, the free-handler equation `M.toComp k (M.init x) = some <$> oa x`
 (`OracleComp spec` is `FreeM spec.toPFunctor`). Stated at the free/initial handler, it pins
 the machine's observable behaviour once and universally; the run against *any* lawful-monad
 handler is the derived reading `Implements.runK_eq` (the `m := SPMF` instance pins the full
 distribution; `m := Id` gives the deterministic form). -/
 def Implements (oa : α → OracleComp spec β) (k : ℕ) : Prop :=
-  PFunctor.PointedMachine.Implements M oa k
+  PFunctor.DynSystem.IOMachine.Implements M oa k
 
 @[inherit_doc Implements]
 scoped notation:50 M " ⊨[" k "] " oa => OracleMachine.Implements M oa k
 
 /-- **The handler reading of `Implements`.** Running an implementing machine through any
 lawful-monad handler `H` agrees with `simulateQ H` of the program — a one-line corollary of
-`PointedMachine.Implements.runWith_eq` via `FreeM.mapM` naturality, using `runK = runWith`
+`IOMachine.Implements.runWith_eq` via `FreeM.liftM` naturality, using `runK = runWith`
 and `simulateQ = FreeM.mapMHom` definitionally. This is the monad-parametric form the
 stateful game transfer consumes (`m := StateT σ SPMF`), the distribution semantics
 (`m := SPMF`), and the deterministic form (`m := Id`), all at once. -/
@@ -251,7 +261,7 @@ theorem Implements.runK_eq {M : OracleMachine spec α β} {oa : α → OracleCom
     (h : M ⊨[k] oa) ⦃m : Type u → Type u⦄ [Monad m] [LawfulMonad m]
     (H : QueryImpl spec m) (x : α) :
     M.runK H k (M.init x) = some <$> simulateQ H (oa x) :=
-  PFunctor.PointedMachine.Implements.runWith_eq M H h x
+  PFunctor.DynSystem.IOMachine.Implements.runWith_eq M H h x
 
 /-- Converse of `Implements.runK_eq`: agreement of the fuelled run with `simulateQ` against
 every lawful-monad handler already gives `Implements` — it suffices to check the free/initial
@@ -305,7 +315,7 @@ theorem Implements.runK_none_eq_zero {M : OracleMachine spec α β}
 /-- A step-synchronized simulation between machine states and program residues. This is
 PolyFun's interface-generic simulation relation specialized to the oracle polynomial. -/
 abbrev IsSimulation (R : M.State → OracleComp spec β → Prop) : Prop :=
-  PFunctor.PointedMachine.IsSimulation M R
+  PFunctor.DynSystem.IOMachine.IsSimulation M R
 
 /-- **Main proof method.** A machine implements a program at any fuel that totally
 bounds the program's queries, given a simulation relation matching the initial states.
@@ -315,7 +325,7 @@ theorem implements_of_isSimulation {M : OracleMachine spec α β}
     {oa : α → OracleComp spec β} {k : ℕ} {R : M.State → OracleComp spec β → Prop}
     (hsim : M.IsSimulation R) (hinit : ∀ x, R (M.init x) (oa x))
     (hqb : ∀ x, OracleComp.IsTotalQueryBound (oa x) k) : M ⊨[k] oa :=
-  PFunctor.PointedMachine.implements_of_isSimulation hsim hinit hqb
+  PFunctor.DynSystem.IOMachine.implements_of_isSimulation hsim hinit hqb
 
 end OracleMachine
 
@@ -326,7 +336,7 @@ presentations of the same finiteness. A program family with a total query bound 
 a machine — its own residual program is the state — that is steady within `k` rounds
 against every handler and implements the family (`OracleComp.toMachine`). Conversely a
 machine unrolled for `k` rounds is a program with total query bound `k` — the PolyFun
-unrolling `PointedMachine.toComp`, whose `simulateQ` semantics is *definitionally* the
+unrolling `IOMachine.toComp`, whose `simulateQ` semantics is *definitionally* the
 machine's run (`simulateQ_toComp`). -/
 
 namespace OracleComp
@@ -375,16 +385,19 @@ theorem pureOutput_headUpdate_of_eq_some {ob : OracleComp spec β} {b : β}
     pureOutput (headUpdate ob r) = some b := by
   cases ob with
   | pure x => exact hb
-  | queryBind t k => simp at hb
+  | queryBind t k =>
+      change (none : Option β) = some b at hb
+      contradiction
 
 /-- A program family as an oracle machine: the state is the residual program, one round
 answers the head query. Steadiness of this machine is exactly a total query bound on
 the family (`toMachine_steadyBy`), and it implements the family at any such bound
 (`toMachine_implements`). -/
 def toMachine (oa : α → OracleComp spec β) : OracleMachine spec α β where
-  State := OracleComp spec β
-  expose := headQuery
-  update := headUpdate
+  toMachine := {
+    State := OracleComp spec β
+    behavior := headQuery ⇆ headUpdate
+  }
   init := oa
   output := pureOutput
 
@@ -405,7 +418,7 @@ themselves, via equality of states and residual programs. -/
 theorem toMachine_isSimulation (oa : α → OracleComp spec β) :
     OracleMachine.IsSimulation (toMachine oa) Eq where
   output_pure := by rintro s b rfl; rfl
-  output_roll := by rintro s t k rfl; rfl
+  output_liftBind := by rintro s t k rfl; rfl
   expose_eq := by rintro s t k rfl; rfl
   update_rel := by rintro s t k rfl r; rfl
 
@@ -447,7 +460,7 @@ namespace OracleMachine
 
 /-! ## The unrolling bridge, inherited from PolyFun
 
-`M.toComp` is `PFunctor.PointedMachine.toComp`, which lands in
+`M.toComp` is `PFunctor.DynSystem.IOMachine.toComp`, which lands in
 `FreeM spec.toPFunctor (Option β) = OracleComp spec (Option β)` on the nose. The `Option`
 accounts for fuel exhaustion; under steadiness at `k` the result is always `some`. -/
 
@@ -457,19 +470,19 @@ variable (M : OracleMachine spec α β)
 
 theorem toComp_succ_of_output_eq_some {s : M.State} {b : β} (hb : M.output s = some b)
     (k : ℕ) : M.toComp (k + 1) s = pure (some b) := by
-  rw [PointedMachine.toComp_succ, hb]
+  rw [PFunctor.DynSystem.IOMachine.toComp_succ, hb]
   rfl
 
 theorem toComp_succ_of_output_eq_none {s : M.State} (hb : M.output s = none) (k : ℕ) :
     M.toComp (k + 1) s =
       OracleComp.queryBind (M.expose s) fun r => M.toComp k (M.update s r) := by
-  rw [PointedMachine.toComp_succ, hb]
+  rw [PFunctor.DynSystem.IOMachine.toComp_succ, hb]
   rfl
 
 /-- A halted machine unrolls to its readout, at any fuel. -/
 theorem toComp_of_output_eq_some {s : M.State} {b : β} (hb : M.output s = some b)
     (k : ℕ) : M.toComp k s = pure (some b) :=
-  PointedMachine.toComp_of_output_eq_some M k hb
+  PFunctor.DynSystem.IOMachine.toComp_of_output_eq_some M k hb
 
 /-- **Machine-to-program bridge (query bounds).** The `k`-round unrolling makes at most
 `k` queries: steadiness fuel is a total query bound. -/
@@ -487,7 +500,7 @@ theorem isTotalQueryBound_toComp (k : ℕ) (s : M.State) :
 
 /-- **Machine-to-program bridge (semantics).** Simulating the unrolled program is the
 machine's run — *definitionally*: `simulateQ` is `FreeM.mapM` and `runK` is
-`PointedMachine.runWith = FreeM.mapM ∘ toComp`. -/
+`IOMachine.runWith = FreeM.liftM ∘ toComp`. -/
 theorem simulateQ_toComp {m : Type u → Type u} [Monad m] (H : QueryImpl spec m)
     (k : ℕ) (s : M.State) : simulateQ H (M.toComp k s) = M.runK H k s := rfl
 

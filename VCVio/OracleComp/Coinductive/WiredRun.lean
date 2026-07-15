@@ -42,7 +42,7 @@ theorem wireKRun_succ_of_output_eq_none (M : OracleMachine spec α β)
     (r : R.State) :
     M.wireKRun R (k + 1) (r, s) =
       OracleStrategy.wireKStep M.toDynSystem R (r, s) >>= fun p => M.wireKRun R k p :=
-  PointedMachine.runWith_run_succ_of_output_eq_none M R.toQueryImpl hb k r
+  PFunctor.DynSystem.IOMachine.runWith_run_succ_of_output_eq_none M R.toQueryImpl hb k r
 
 @[simp] theorem wireKRun_ofHandlerFamily {Γ : Type u} (h : Γ → ProbHandler spec)
     (M : OracleMachine spec α β) (k : ℕ) (s : M.State) (γ : Γ) :
@@ -76,12 +76,8 @@ variable {ι' : Type u} {spec' : OracleSpec.{u, u} ι'}
 
 /-- Transport a machine along a lens, specialized back to the OracleSpec vocabulary. -/
 def wrapIface (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
-    (M : OracleMachine spec α β) : OracleMachine spec' α β where
-  State := M.State
-  expose s := w.toFunA (M.expose s)
-  update s a := M.update s (w.toFunB (M.expose s) a)
-  init := M.init
-  output := M.output
+    (M : OracleMachine spec α β) : OracleMachine spec' α β :=
+  M.wrap w
 
 /-- The OracleSpec wrapper is PolyFun's pointed-machine interface transport. -/
 theorem wrapIface_eq_wrap (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)

@@ -82,7 +82,7 @@ theorem run_simulateQ_toQueryImpl_ofStateQueryImpl {ι₀ : Type}
     (impl : QueryImpl spec₀ (StateT σ ProbComp)) (oa : OracleComp spec₀ α) (s : σ) :
     (simulateQ (ofStateQueryImpl impl).toQueryImpl oa).run s =
       𝒟[(simulateQ impl oa).run s] := by
-  exact PFunctor.FreeM.run_mapM_mapHom (MonadHom.ofLift ProbComp SPMF) impl oa s
+  exact PFunctor.FreeM.run_liftM_mapHom (MonadHom.ofLift ProbComp SPMF) impl oa s
 
 /-- Embed an actual PolyFun deterministic responder into the probabilistic Kleisli model. The
 Mealy presentation comes from `Responder.toStateHandler`; only its effects are lifted to `SPMF`. -/
