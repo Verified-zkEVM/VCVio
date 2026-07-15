@@ -28,6 +28,24 @@ This is the vector-commitment operation used by the query phase of IOP-based pro
 (FRI/STIR/WHIR) and by the BCS transform, where a verifier opens many leaves of one
 committed vector at once.
 
+## Relation to path pruning in the SNARGs book
+
+This is an intrinsic encoding of the *path-pruning* optimization in
+[*Building Cryptographic Proofs from Hash Functions*](https://snargsbook.org/). The book
+first presents a multi-opening as one authentication path per opened location, then removes
+both duplicate commitments and commitments derivable from the opened leaves. Its optimized
+proof contains the minimal authentication frontier: the vertices in the union of the
+copaths, minus the vertices in the union of the paths.
+
+`BatchProof` represents that same frontier directly for an arbitrary indexed binary-tree
+skeleton. An unselected subtree contributes exactly its root, while a subtree containing
+selected leaves is recomputed from its selected values and recursively pruned proof. The
+dependent constructors make the pruned shape canonical instead of representing the
+frontier as a separate flat vertex set. `batchToSingleProof` in `Batch.ToSingle` is the
+corresponding expansion into an authentication path for one selected leaf. A separate
+tuple-of-paths compression API and a full compression/expansion equivalence are not
+formalized here.
+
 ## Main definitions
 
 * `InductiveMerkleTree.BatchProof`: pruned authentication data for a selector. The family is
