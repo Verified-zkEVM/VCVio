@@ -165,6 +165,20 @@ theorem natAbs_le_of_neg_le_and_le {z : ℤ} {b : ℕ}
     (hl : -(b : ℤ) ≤ z) (hu : z ≤ b) : z.natAbs ≤ b := by
   omega
 
+/-- Centered representatives satisfy the triangle inequality for subtraction in `ZMod q`.
+
+This uses the minimum-absolute representative property, so it does not need a separate
+"no modular wraparound" hypothesis. -/
+theorem centeredRepr_sub_natAbs_le (x y : ZMod q) :
+    (centeredRepr (x - y)).natAbs ≤
+      (centeredRepr x).natAbs + (centeredRepr y).natAbs := by
+  rw [centeredRepr_eq_valMinAbs, centeredRepr_eq_valMinAbs, centeredRepr_eq_valMinAbs]
+  calc
+    (x - y).valMinAbs.natAbs = (x + -y).valMinAbs.natAbs := by rw [sub_eq_add_neg]
+    _ ≤ (x.valMinAbs + (-y).valMinAbs).natAbs := ZMod.natAbs_valMinAbs_add_le x (-y)
+    _ ≤ x.valMinAbs.natAbs + (-y).valMinAbs.natAbs := Int.natAbs_add_le _ _
+    _ = x.valMinAbs.natAbs + y.valMinAbs.natAbs := by rw [ZMod.natAbs_valMinAbs_neg]
+
 /-- The canonical centered coefficient view for `ZMod q`. -/
 def zmodCenteredCoeffView (q : ℕ) [NeZero q] : CenteredCoeffView (ZMod q) where
   repr := centeredRepr
@@ -255,6 +269,41 @@ theorem l2NormSq_le_of_cInfNorm_le {p : Poly (ZMod q) n} {b : ℕ}
       ≤ ∑ _i : Fin n, b ^ 2 :=
         Finset.sum_le_sum fun i _ => Nat.pow_le_pow_left (cInfNorm_le_iff.mp h i) 2
     _ = n * b ^ 2 := by simp [Finset.sum_const]
+
+/-- Squared triangle bound for natural numbers. -/
+theorem add_sq_le_two_mul_add_sq (a b : ℕ) :
+    (a + b) ^ 2 ≤ 2 * (a ^ 2 + b ^ 2) := by
+  nlinarith [sq_nonneg ((a : ℤ) - b)]
+
+/-- Subtracting two vector-backed polynomials grows squared `ℓ₂` norm by at most the
+usual `2(a²+b²)` triangle bound. -/
+theorem l2NormSq_sub_le_two_mul_add (p₁ p₂ : Poly (ZMod q) n) :
+    l2NormSq (p₁ - p₂) ≤ 2 * (l2NormSq p₁ + l2NormSq p₂) := by
+  unfold l2NormSq l2NormSqOf
+  calc
+    ∑ i : Fin n, (centeredRepr ((p₁ - p₂).get i)).natAbs ^ 2
+        ≤ ∑ i : Fin n,
+            2 * ((centeredRepr (p₁.get i)).natAbs ^ 2 +
+              (centeredRepr (p₂.get i)).natAbs ^ 2) := by
+          apply Finset.sum_le_sum
+          intro i _hi
+          have hcoeff : (p₁ - p₂).get i = p₁.get i - p₂.get i :=
+            Vector.getElem_sub p₁ p₂ i.val i.isLt
+          have htri := centeredRepr_sub_natAbs_le (p₁.get i) (p₂.get i)
+          have hsquare := Nat.pow_le_pow_left htri 2
+          simpa [hcoeff] using hsquare.trans (add_sq_le_two_mul_add_sq _ _)
+    _ = 2 * ((∑ i : Fin n, (centeredRepr (p₁.get i)).natAbs ^ 2) +
+          ∑ i : Fin n, (centeredRepr (p₂.get i)).natAbs ^ 2) := by
+        simp [Finset.mul_sum, Finset.sum_add_distrib, Nat.mul_add]
+
+/-- Pair version of `l2NormSq_sub_le_two_mul_add`. -/
+theorem pairL2NormSq_sub_le_two_mul_add (x y : Poly (ZMod q) n × Poly (ZMod q) n) :
+    pairL2NormSq (x.1 - y.1) (x.2 - y.2) ≤
+      2 * (pairL2NormSq x.1 x.2 + pairL2NormSq y.1 y.2) := by
+  unfold pairL2NormSq
+  have h₁ := l2NormSq_sub_le_two_mul_add (q := q) (n := n) x.1 y.1
+  have h₂ := l2NormSq_sub_le_two_mul_add (q := q) (n := n) x.2 y.2
+  nlinarith
 
 end SpecializedVectorNorms
 

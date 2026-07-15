@@ -19,7 +19,7 @@ Falcon-1024 (logn=10):
 3. `falcon512Verify` / `falcon1024Verify` — verification
 
 The C side is compiled from `csrc/falcon/lean_falcon_ffi.c`, which links
-against the c-fn-dsa SCU amalgamation (`csrc/falcon/fndsa_native.c`).
+against the c-fn-dsa SCU amalgamation (`csrc/falcon/fndsa.c`).
 -/
 
 

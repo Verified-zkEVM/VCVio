@@ -112,22 +112,15 @@ theorem expm_p63_error (x ccs : FPR)
 /-! ## End-to-end correctness -/
 
 /-- The concrete Falcon verifier agrees with the abstract verifier once the concrete signature
-codec, public-key codec, and fast arithmetic kernels are related to their specification-level
-counterparts. The abstract verifier is instantiated with the same concrete verification fields. -/
+and public-key codecs round-trip. The fast `UInt32`/`Int64` arithmetic kernels are no longer
+assumed equal to their specification-level counterparts: that is now discharged by
+`Falcon.Concrete.negacyclicMulU32_eq_negacyclicMul` (unconditional) and
+`Falcon.Concrete.pairL2NormSqU32_eq_pairL2NormSq` (under the `UInt64` no-overflow bound
+`hn_ovf`, which holds with vast headroom for every Falcon degree). The abstract verifier is
+instantiated with the same concrete verification fields. -/
 theorem concrete_verify_eq_verify
     (p : Falcon.Params) (hn : p.n = 2 ^ p.logn) (hsbytelen : 0 < p.sbytelen)
-    (hsigDecode : ∀ (salt : Bytes 40) (compSig : List Byte),
-      compSig ≠ [] →
-        Falcon.Concrete.sigDecode (Falcon.Concrete.sigEncode salt compSig p.logn) p.logn =
-          some (salt, compSig))
-    (hpkDecode : ∀ h : Falcon.Rq p.n,
-      Falcon.Concrete.pkDecode p.n
-        ((Falcon.Concrete.publicKeyBytes p.logn h).extract 1
-          (Falcon.Concrete.publicKeyBytes p.logn h).size) = some h)
-    (hmul : ∀ s2 h : Falcon.Rq p.n,
-      Falcon.Concrete.negacyclicMulU32 s2 h = Falcon.negacyclicMul s2 h)
-    (hnorm : ∀ s1 s2 : Falcon.Rq p.n,
-      Falcon.Concrete.pairL2NormSqU32 s1 s2 = Falcon.pairL2NormSq s1 s2)
+    (hn_ovf : 2 * p.n * (Falcon.modulus / 2) ^ 2 < 2 ^ 64) (hn4 : 4 ∣ p.n)
     (pk : Falcon.PublicKey p) (msg : List Falcon.Byte) (sig : Falcon.Signature) :
     let prims := verifyPrimitives p hn;
     Falcon.Concrete.concreteVerify p (prims.publicKeyBytes pk.h) msg
@@ -135,10 +128,8 @@ theorem concrete_verify_eq_verify
         Falcon.verify p prims pk msg sig := by
   dsimp
   by_cases hcomp : sig.compressedS2 = []
-  · have hslen : sig.compressedS2.length < p.sbytelen := by
-      simpa [hcomp] using hsbytelen
-    have hdecomp : (verifyPrimitives p hn).decompress [] p.sbytelen = none := by
-      simp [verifyPrimitives, Falcon.Concrete.decompress, hsbytelen]
+  · have hdecomp : (verifyPrimitives p hn).decompress [] p.sbytelen = none := by
+      simp [verifyPrimitives, Falcon.Concrete.decompress, hsbytelen.ne]
     have hleft :
         Falcon.Concrete.concreteVerify p ((verifyPrimitives p hn).publicKeyBytes pk.h) msg
           (Falcon.Concrete.sigEncode sig.salt [] p.logn) = false := by
@@ -147,9 +138,15 @@ theorem concrete_verify_eq_verify
     have hright : Falcon.verify p (verifyPrimitives p hn) pk msg sig = false := by
       simp [Falcon.verify, hcomp, hdecomp]
     simpa [hcomp] using hleft.trans hright.symm
-  · simp [Falcon.Concrete.concreteVerify, Falcon.verify,
-      hsigDecode sig.salt sig.compressedS2 hcomp, Falcon.Primitives.hashToPointForPublicKey,
-      verifyPrimitives, hpkDecode, hmul, hnorm]
+  · have hsig := Falcon.Concrete.sigDecode_sigEncode sig.salt sig.compressedS2 p.logn hcomp
+    have hpk : Falcon.Concrete.pkDecode p.n
+        ((Falcon.Concrete.publicKeyBytes p.logn pk.h).extract 1
+          (Falcon.Concrete.publicKeyBytes p.logn pk.h).size) = some pk.h := by
+      rw [Falcon.Concrete.publicKeyBytes_extract, Falcon.Concrete.pkDecode_pkEncode p.n pk.h hn4]
+    simp [Falcon.Concrete.concreteVerify, Falcon.verify,
+      hsig, Falcon.Primitives.hashToPointForPublicKey,
+      verifyPrimitives, hpk, Falcon.Concrete.negacyclicMulU32_eq_negacyclicMul,
+      Falcon.Concrete.pairL2NormSqU32_eq_pairL2NormSq hn_ovf]
     rfl
 
 end

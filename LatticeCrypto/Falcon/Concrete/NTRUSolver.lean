@@ -5,6 +5,8 @@ Authors: Quang Dao
 -/
 import LatticeCrypto.Falcon.Concrete.BigInt31
 import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
+import LatticeCrypto.Falcon.Concrete.FXR
+import LatticeCrypto.Falcon.Concrete.PolyBigInt
 
 /-!
 # NTRU Equation Solver for Falcon Key Generation
@@ -54,48 +56,17 @@ def WORD_WIN : Array Nat := #[1, 1, 2, 2, 2, 3, 3, 4, 5, 7]
 /-- Minimum depth at which intermediate `(f, g)` are saved during descent. -/
 def MIN_SAVE_FG : Array Nat := #[0, 0, 1, 2, 2, 2, 2, 2, 2, 3, 3]
 
-/-! ## FXR (Fixed-point Real) type stubs
+/-! ## FXR and big-integer polynomial operations
 
-The FXR type is a 32.32 fixed-point number stored as `UInt64`.
-Full implementation will come from a dedicated FXR module
-(port of `kgen_fxp.c`). -/
+The 32.32 fixed-point arithmetic (`FXR`, `fxr_*`) and the FFT-based vector
+operations (`vect_*`) are provided by `Falcon.Concrete.FXR`; the big-integer
+polynomial conversion `poly_big_to_small` lives in `Falcon.Concrete.PolyBigInt`.
+Both are opened here so the descent/ascent and `check_ortho_norm` paths run
+against the real, fully-implemented routines (ports of `kgen_fxp.c` /
+`kgen_poly.c`). -/
 
-abbrev FXR := UInt64
-
-namespace FXR
-
-@[inline] def zero : FXR := 0
-
-@[inline] def ofInt (j : Int32) : FXR := j.toUInt32.toUInt64 <<< 32
-
-@[inline] def add (x y : FXR) : FXR := x + y
-
-@[inline] def sqr (_x : FXR) : FXR := sorry
-
-@[inline] def lt (x y : FXR) : Bool := x.toInt64 < y.toInt64
-
-@[inline] def ofScaled32 (x : UInt64) : FXR := x
-
-end FXR
-
-/-! ## Stub operations for modules not yet ported
-
-These functions will be provided by `PolyBigInt` and `FXR` modules once
-they are ported from `kgen_fxp.c` and `kgen_poly.c`. -/
-
-private def poly_big_to_small (_logn : Nat) (_s : Array UInt32) (_off : Nat)
-    (_lim : Int32) : Option (Array Int8) := sorry
-
-private def vect_set (_logn : Nat) (_f : Array Int8) : Array FXR := sorry
-private def vect_FFT (_logn : Nat) (_f : Array FXR) : Array FXR := sorry
-private def vect_iFFT (_logn : Nat) (_f : Array FXR) : Array FXR := sorry
-private def vect_invnorm_fft (_logn : Nat) (_a _b : Array FXR) (_e : Nat) :
-    Array FXR := sorry
-private def vect_adj_fft (_logn : Nat) (_a : Array FXR) : Array FXR := sorry
-private def vect_mul_realconst (_logn : Nat) (_a : Array FXR) (_c : FXR) :
-    Array FXR := sorry
-private def vect_mul_selfadj_fft (_logn : Nat) (_a _b : Array FXR) :
-    Array FXR := sorry
+open Falcon.Concrete.FXR
+open Falcon.Concrete.PolyBigInt (poly_big_to_small)
 
 /-! ## Helper types and conversions -/
 
@@ -409,6 +380,13 @@ suffices for all modular arithmetic.
 6. Verify `f·G - g·F ≡ q·R (mod p)` for all NTT slots.
 7. Convert back via inverse NTT and normalize. -/
 
+-- NOTE (s13): a full line-by-line port of `kgen_ntru.c:1575-1766` was written and
+-- compiles, but FAILS end-to-end validation at logn=1 (the lift leaves (F,G)
+-- un-reduced / the internal `f·G − g·F ≡ q` gate rejects). Preserved with the
+-- diagnostic findings in `docs/agents/falcon-ntru-depth0-wip.lean`; the bug is most
+-- likely a deeper-(F,G) buffer-format / sign-convention mismatch from
+-- `solve_NTRU_deepest` (itself never runtime-validated), to be localised by
+-- differential-tracing against the now-available C backend. Kept `sorry` until correct.
 def solve_NTRU_depth0 (_logn : Nat) (_f _g : Array Int8)
     (_buf : Array UInt32) : Option (Array UInt32) := sorry
 
@@ -453,8 +431,10 @@ def solve_NTRU (logn : Nat) (f g : Array Int8) :
   let buf ← solve_NTRU_deepest logn f g
   let buf ← liftIntermediateLevels logn f g buf
   let buf ← solve_NTRU_depth0 logn f g buf
-  let capF ← poly_big_to_small logn buf 0 127
-  let capG ← poly_big_to_small logn buf n 127
+  let (capF, okF) := poly_big_to_small logn (buf.extract 0 n) 127
+  if !okF then none else
+  let (capG, okG) := poly_big_to_small logn (buf.extract n (2 * n)) 127
+  if !okG then none else
   pure (capF, capG)
 
 /-! ## check_ortho_norm
@@ -473,21 +453,21 @@ Falcon specification). -/
 
 def check_ortho_norm (logn : Nat) (f g : Array Int8) : Bool := Id.run do
   let n := 1 <<< logn
-  let mut rt1 := vect_FFT logn (vect_set logn f)
-  let mut rt2 := vect_FFT logn (vect_set logn g)
+  let mut rt1 := vect_FFT logn (vect_set logn (f.map (·.toInt32)))
+  let mut rt2 := vect_FFT logn (vect_set logn (g.map (·.toInt32)))
   let rt3 := vect_invnorm_fft logn rt1 rt2 0
   rt1 := vect_adj_fft logn rt1
   rt2 := vect_adj_fft logn rt2
-  rt1 := vect_mul_realconst logn rt1 (FXR.ofInt 12289)
-  rt2 := vect_mul_realconst logn rt2 (FXR.ofInt 12289)
+  rt1 := vect_mul_realconst logn rt1 (fxr_of 12289)
+  rt2 := vect_mul_realconst logn rt2 (fxr_of 12289)
   rt1 := vect_mul_selfadj_fft logn rt1 rt3
   rt2 := vect_mul_selfadj_fft logn rt2 rt3
   rt1 := vect_iFFT logn rt1
   rt2 := vect_iFFT logn rt2
-  let mut sn : FXR := FXR.zero
+  let mut sn : FXR := fxr_zero
   for i in [:n] do
-    sn := FXR.add sn
-      (FXR.add (FXR.sqr (rt1.getD i 0)) (FXR.sqr (rt2.getD i 0)))
-  return FXR.lt sn (FXR.ofScaled32 72251709809335)
+    sn := fxr_add sn
+      (fxr_add (fxr_sqr (rt1.getD i 0)) (fxr_sqr (rt2.getD i 0)))
+  return fxr_lt sn (fxr_of_scaled32 72251709809335)
 
 end Falcon.Concrete.NTRUSolver

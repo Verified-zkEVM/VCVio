@@ -19,7 +19,9 @@ import LatticeCrypto.Falcon.Concrete.SamplerZ
 import LatticeCrypto.Falcon.Concrete.Sampling
 import LatticeCrypto.Falcon.Concrete.Sign
 import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
+import LatticeCrypto.Falcon.Correctness
 import LatticeCrypto.Falcon.Encoding
+import LatticeCrypto.Falcon.NonVacuity
 import LatticeCrypto.Falcon.Params
 import LatticeCrypto.Falcon.Primitives
 import LatticeCrypto.Falcon.Scheme
