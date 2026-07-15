@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract structured documentation fragments from the VCV-io codebase.
+"""Extract structured documentation fragments from the VCVio codebase.
 
 Generates markdown tables for:
 1. Tactic declarations (from ProgramLogic/)
