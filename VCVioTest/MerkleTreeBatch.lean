@@ -48,19 +48,19 @@ def selectNone : LeafData Bool fourLeafSkeleton :=
 def firstIndex : SkeletonLeafIndex fourLeafSkeleton :=
   .ofLeft (.ofLeft .ofLeaf)
 
-def firstSelected : selectFirst.get firstIndex = true := by decide
+theorem firstSelected : selectFirst.get firstIndex = true := by decide
 
-def firstNonempty : selectFirst.anySelected = true := by decide
+theorem firstNonempty : selectFirst.anySelected = true := by decide
 
 def firstProof : BatchProof Nat selectFirst :=
   generateBatchProof cache selectFirst firstNonempty
 
-def outerNonempty : selectOuter.anySelected = true := by decide
+theorem outerNonempty : selectOuter.anySelected = true := by decide
 
 def outerProof : BatchProof Nat selectOuter :=
   generateBatchProof cache selectOuter outerNonempty
 
-def allNonempty : selectAll.anySelected = true := by decide
+theorem allNonempty : selectAll.anySelected = true := by decide
 
 def allProof : BatchProof Nat selectAll :=
   generateBatchProof cache selectAll allNonempty
@@ -144,19 +144,19 @@ def bothProof : BatchProof Nat selectBoth :=
 def pairLeftIndex : SkeletonLeafIndex pairSkeleton :=
   .ofLeft .ofLeaf
 
-def leftSelected : selectLeft.get pairLeftIndex = true := rfl
+theorem leftSelected : selectLeft.get pairLeftIndex = true := rfl
 
-def bothLeftSelected : selectBoth.get pairLeftIndex = true := rfl
+theorem bothLeftSelected : selectBoth.get pairLeftIndex = true := rfl
 
 def constantHash (_left _right : Nat) : Nat :=
   0
 
-def selectedValuesDiffer :
+theorem selectedValuesDiffer :
     selectedValueAt leftValues pairLeftIndex leftSelected ≠
       selectedValueAt bothValues pairLeftIndex bothLeftSelected := by
   native_decide
 
-def putativeRootsAgree :
+theorem putativeRootsAgree :
     getPutativeBatchRootWithHash constantHash leftValues leftProof =
       getPutativeBatchRootWithHash constantHash bothValues bothProof :=
   rfl

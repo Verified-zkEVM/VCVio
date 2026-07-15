@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Elab.Tactic
+import Lean.Elab.Tactic.Basic
 import Lean.Meta.Match.MatcherApp
 import VCVio.OracleComp.Constructions.Replicate
 import VCVio.ProgramLogic.NotationCore

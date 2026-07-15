@@ -209,8 +209,8 @@ process sampler type is unchanged from the synchronous runtime: the
 noncomputable def runStepsAsync
     {m : Type → Type} [Monad m]
     {Γ : Spec.Node.Context}
-    {State : Type} {Event : Type}
-    (process : ProcessOver Γ)
+    {State : Type} {Event : Type} {P : Type}
+    (process : ProcessOver P Γ)
     (envAction : Interaction.UC.EnvAction m Event State)
     (procScheduler :
       Interaction.UC.ProcessScheduler m process.Proc State
@@ -249,8 +249,8 @@ trace bookkeeping pass, and is reused by
 -/
 theorem runStepsAsync_empty_trivial_eq
     {m : Type → Type} [Monad m] [LawfulMonad m]
-    {Γ : Spec.Node.Context}
-    (process : ProcessOver Γ)
+    {Γ : Spec.Node.Context} {P : Type}
+    (process : ProcessOver P Γ)
     (sampler : (s : process.Proc) → Spec.Sampler m (process.step s).spec)
     (fuel : ℕ) (s : process.Proc) :
     runStepsAsync (m := m) process (Interaction.UC.EnvAction.empty Unit)

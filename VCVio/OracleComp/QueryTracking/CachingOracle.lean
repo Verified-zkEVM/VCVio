@@ -433,8 +433,13 @@ lemma withCacheOverlay_map {α β : Type u} (cache : spec.QueryCache)
 lemma withCacheOverlay_bind_pure {α β : Type u} (cache : spec.QueryCache)
     (oa : OracleComp spec α) (f : α → β) :
     withCacheOverlay cache (oa >>= fun x => pure (f x)) =
-      f <$> withCacheOverlay cache oa :=
-  withCacheOverlay_map cache f oa
+      f <$> withCacheOverlay cache oa := by
+  calc
+    withCacheOverlay cache (oa >>= fun x => pure (f x)) =
+        withCacheOverlay cache (f <$> oa) := by
+      rw [map_eq_bind_pure_comp]
+      rfl
+    _ = _ := withCacheOverlay_map cache f oa
 
 private lemma fst_map_cachingOracle_run_some (cache : spec.QueryCache) (t : spec.Domain)
     (v : spec.Range t) (hv : cache t = some v) :

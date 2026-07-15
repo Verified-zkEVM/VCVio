@@ -393,7 +393,10 @@ lemma simulateQ_optionT_liftM_run_eq_of_query
         OracleComp spec₂' (Option α))
       = (some <$> simulateQ impl₁ oa : m' (Option α)) := by
   have hrun : ((liftM oa : OptionT (OracleComp spec₂') α) : OracleComp spec₂' (Option α))
-      = some <$> (liftM oa : OracleComp spec₂' α) := rfl
+      = some <$> (liftM oa : OracleComp spec₂' α) := by
+    change OptionT.run (OptionT.lift (liftM oa : OracleComp spec₂' α)) = _
+    rw [map_eq_bind_pure_comp]
+    rfl
   rw [hrun, simulateQ_map, QueryImpl.simulateQ_liftM_eq_of_query impl impl₁ h oa]
 
 end simulateQ_optionT_liftM_run

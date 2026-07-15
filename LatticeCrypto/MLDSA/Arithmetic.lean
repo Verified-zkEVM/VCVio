@@ -128,7 +128,7 @@ end Norms
 section Rounding
 
 /-- Abstract rounding operations for ML-DSA, parameterized by `2 * γ₂`. -/
-abbrev RoundingOps (alpha : ℕ) := LatticeCrypto.RoundingOps coeffRing alpha
+abbrev RoundingOps (alpha : ℕ) := LatticeCrypto.RoundingOps.{0, 0} coeffRing alpha
 
 /-- Abstract power-2 rounding operations for ML-DSA, parameterized by `d = 13`. -/
 abbrev Power2RoundOps := LatticeCrypto.Power2RoundOps coeffRing droppedBits

@@ -97,7 +97,8 @@ lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
 @[simp] lemma add_apply_inr {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
     (t : ι') : (spec + spec') (.inr t) = spec' t := rfl
 
-@[simp] lemma toPFunctor_add {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
+@[simp] lemma toPFunctor_add {ι : Type u} {ι' : Type u'}
+    (spec : OracleSpec ι) (spec' : OracleSpec ι') :
     (spec + spec').toPFunctor = spec.toPFunctor + spec'.toPFunctor := rfl
 
 @[simp] lemma ofPFunctor_add (P P' : PFunctor) :
@@ -150,7 +151,8 @@ instance {ι ι'} : HMul (OracleSpec ι) (OracleSpec ι') (OracleSpec (ι × ι'
 @[simp] lemma mul_apply {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
     (t : ι × ι') : (spec * spec').Range t = (spec.Range t.1 ⊕ spec'.Range t.2) := rfl
 
-@[simp] lemma toPFunctor_mul {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
+@[simp] lemma toPFunctor_mul {ι : Type u} {ι' : Type u'}
+    (spec : OracleSpec ι) (spec' : OracleSpec ι') :
     (spec * spec').toPFunctor = spec.toPFunctor * spec'.toPFunctor := rfl
 
 @[simp] lemma ofPFunctor_mul (P P' : PFunctor) :

@@ -21,7 +21,7 @@ rewind.
 The main export is `Fork.replayForkingBound`: the Fiat-Shamir-specific
 analogue of Firsov-Janku's `forking_lemma_ro`, stated at the `OracleComp`
 level. Callers in `FiatShamir.Sigma.Security` compose it with
-`ReplayFork.forkReplay_propertyTransfer` to drive the NMA-to-extraction step
+`ReplayFork.contextFork_propertyTransfer` to drive the NMA-to-extraction step
 of `euf_nma_bound`.
 -/
 
@@ -736,9 +736,9 @@ private theorem queryLog_extends_l₀
 /-- Outer-log **prefix**-determinism for `runTrace`'s inner simulation. If the two outer
 logs share a common prefix `p` (with `#{Sum.inr ()} = j` in `p`), then the first
 `l₀.length + j` positions of the final internal `queryLog`s coincide. This is the
-bisimulation up to the fork query that powers `target_eq_of_mem_forkReplay`: a common outer
-prefix fixes the adversary's state (and hence the next cache-miss input) up through the
-fork. -/
+bisimulation up to the focused query used by
+`runTrace_target_eq_of_mem_contextFork`: a common outer prefix fixes the
+adversary's state (and hence the next cache-miss input) through that query. -/
 private theorem inner_prefix_det
     {γ : Type} (Y : OracleComp (unifSpec + (M × Commit →ₒ Chal)) γ)
     (c₀ : (M × Commit →ₒ Chal).QueryCache) (l₀ : List (M × Commit))
@@ -1302,16 +1302,17 @@ lemma runTrace_queryLog_take_eq
 
 end Coupling
 
-/-- If two successful replay-fork runs of `runTrace` select the same fork index, then their
-forgery targets agree. -/
-lemma runTrace_target_eq_of_mem_forkReplay
+/-- If two successful contextual forks select the same fork index, their
+forgery targets agree. The proof reads the common erased prefix directly from
+the shared occurrence; no replay cursor or observed-log invariant is involved. -/
+lemma runTrace_target_eq_of_mem_contextFork
     [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal] [SampleableType Chal] [Inhabited Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (pk : Stmt)
     (x₁ x₂ : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
     (s : Fin (qH + 1))
-    (hsup : some (x₁, x₂) ∈ support (forkReplay (runTrace σ hr M nmaAdv pk)
+    (hsup : some (x₁, x₂) ∈ support (contextFork (runTrace σ hr M nmaAdv pk)
       (fun j : ℕ ⊕ Unit => match j with | .inl _ => 0 | .inr () => qH) (Sum.inr ())
       (forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH)))
     (h₁ : forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)
@@ -1322,133 +1323,111 @@ lemma runTrace_target_eq_of_mem_forkReplay
   letI : Fintype Chal := Fintype.ofFinite Chal
   letI : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
     IsUniformSpec.ofFintypeInhabited _
-  classical
-  obtain ⟨log₁, log₂, s', hx₁, hx₂, hcf₁, _hcf₂, _hneq, replacement, st, hz, hlog₂,
-    _hmismatch, hfork, _hprefix⟩ := forkReplay_success_log_props
-      (main := runTrace σ hr M nmaAdv pk)
-      (qb := fun j => match j with | .inl _ => 0 | .inr () => qH) (i := Sum.inr ())
-      (cf := forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH)
-      hsup
-  cases Option.some.inj (hcf₁.symm.trans h₁)
-  set main : OracleComp (wrappedSpec Chal)
-      (Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) :=
-    runTrace σ hr M nmaAdv pk
-  have htrace_eq : st.trace = log₁ :=
-    replayRunWithTraceValue_trace_eq
-      (main := main) (i := Sum.inr ())
-      (trace := log₁) (forkQuery := (↑s : ℕ)) (replacement := replacement) hz
-  have hforkq : st.forkQuery = (↑s : ℕ) :=
-    replayRunWithTraceValue_forkQuery_eq
-      (main := main) (i := Sum.inr ())
-      (trace := log₁) (forkQuery := (↑s : ℕ)) (replacement := replacement) hz
-  obtain ⟨hcur_pos, htrace_in, hobs_in⟩ :=
-    replayRunWithTraceValue_forkConsumed_imp_last_input
-      (main := main) (i := Sum.inr ())
-      (trace := log₁) (forkQuery := (↑s : ℕ)) (replacement := replacement) hz hfork
-  change 0 < st.cursor at hcur_pos
-  change QueryLog.inputAt? st.trace (st.cursor - 1) = some (Sum.inr ()) at htrace_in
-  change QueryLog.inputAt? st.observed (st.cursor - 1) = some (Sum.inr ()) at hobs_in
-  rw [htrace_eq] at htrace_in
-  rw [hlog₂] at hobs_in
-  have hInv := replayRunWithTraceValue_preservesPrefixInvariant
-    (main := main) (i := Sum.inr ())
-    (trace := log₁) (forkQuery := (↑s : ℕ)) (replacement := replacement) hz
-  have hcur_trace : st.cursor ≤ log₁.length := by rw [← htrace_eq]; exact hInv.1
-  have hcur_obs : st.cursor ≤ log₂.length := by rw [← hlog₂]; exact hInv.2.1
-  have hc1_lt_t : st.cursor - 1 < log₁.length := by omega
-  have hc1_lt_o : st.cursor - 1 < log₂.length := by omega
-  have hcount_obs :=
-    replayRunWithTraceValue_forkConsumed_imp_prefix_count
-      (main := main) (i := Sum.inr ())
-      (trace := log₁) (forkQuery := (↑s : ℕ)) (replacement := replacement) hz hfork
-  change (QueryLog.getQ (st.observed.take (st.cursor - 1))
-    (· = Sum.inr ())).length = st.forkQuery at hcount_obs
-  rw [hforkq, hlog₂] at hcount_obs
-  have htake_len₁ : (log₁.take (st.cursor - 1)).length = st.cursor - 1 :=
-    List.length_take_of_le (by omega)
-  have htake_len₂ : (log₂.take (st.cursor - 1)).length = st.cursor - 1 :=
-    List.length_take_of_le (by omega)
-  have hprefix_val : log₁.take (st.cursor - 1) = log₂.take (st.cursor - 1) := by
-    apply List.ext_getElem?
-    intro n
-    by_cases hn : n < st.cursor - 1
-    · have hgetEq : st.observed[n]? = st.trace[n]? :=
-        replayRunWithTraceValue_prefix_getElem?_eq
-          (main := main) (i := Sum.inr ())
-          (trace := log₁) (forkQuery := (↑s : ℕ)) (replacement := replacement) hz
-          (n := n) (by rw [if_pos hfork]; exact hn)
-      rw [hlog₂, htrace_eq] at hgetEq
-      have hn_t : n < log₁.length := by omega
-      have hn_o : n < log₂.length := by omega
-      have hlen₁ : n < (log₁.take (st.cursor - 1)).length := by rw [htake_len₁]; exact hn
-      have hlen₂ : n < (log₂.take (st.cursor - 1)).length := by rw [htake_len₂]; exact hn
-      rw [List.getElem?_eq_getElem hlen₁, List.getElem?_eq_getElem hlen₂,
-        List.getElem_take, List.getElem_take,
-        ← List.getElem?_eq_getElem hn_t, ← List.getElem?_eq_getElem hn_o]
-      exact hgetEq.symm
-    · push Not at hn
-      have hlen₁ : (log₁.take (st.cursor - 1)).length ≤ n := by rw [htake_len₁]; exact hn
-      have hlen₂ : (log₂.take (st.cursor - 1)).length ≤ n := by rw [htake_len₂]; exact hn
-      rw [List.getElem?_eq_none hlen₁, List.getElem?_eq_none hlen₂]
-  have entry_inr : ∀ (L : (wrappedSpec Chal).QueryLog) (hlt : st.cursor - 1 < L.length),
-      QueryLog.inputAt? L (st.cursor - 1) = some (Sum.inr ()) →
-      ∃ v : Chal, L[st.cursor - 1]'hlt =
-        (⟨Sum.inr (), v⟩ : (i : ℕ ⊕ Unit) × (wrappedSpec Chal).Range i) := by
-    intro L hlt hin
-    rw [QueryLog.inputAt?, List.getElem?_eq_getElem hlt] at hin
-    rcases hsig : L[st.cursor - 1]'hlt with ⟨i, v⟩
-    rw [hsig] at hin
-    cases i with
-    | inl n => simp at hin
-    | inr u => cases u; exact ⟨v, rfl⟩
-  obtain ⟨v₁, hv₁⟩ := entry_inr log₁ hc1_lt_t htrace_in
-  obtain ⟨v₂, hv₂⟩ := entry_inr log₂ hc1_lt_o hobs_in
-  have hcsub : st.cursor - 1 + 1 = st.cursor := by omega
-  have decomp : ∀ (L : (wrappedSpec Chal).QueryLog) (hlt : st.cursor - 1 < L.length) (v : Chal),
-      L[st.cursor - 1]'hlt =
-        (⟨Sum.inr (), v⟩ : (i : ℕ ⊕ Unit) × (wrappedSpec Chal).Range i) →
-      L = L.take (st.cursor - 1) ++ (⟨Sum.inr (), v⟩ :: L.drop st.cursor) := by
-    intro L hlt v hv
-    conv_lhs => rw [← List.take_append_drop (st.cursor - 1) L,
-      List.drop_eq_getElem_cons hlt, hcsub, hv]
-  have hdec₁ := decomp log₁ hc1_lt_t v₁ hv₁
-  have hdec₂ : log₂ = log₁.take (st.cursor - 1) ++
-      (⟨Sum.inr (), v₂⟩ :: log₂.drop st.cursor) := by
-    rw [hprefix_val]; exact decomp log₂ hc1_lt_o v₂ hv₂
-  have hpref_count :
-      QueryLog.countQ (log₁.take (st.cursor - 1)) (· = Sum.inr ()) = (↑s : ℕ) := by
-    unfold QueryLog.countQ
-    rw [hprefix_val]
-    exact hcount_obs
-  have htakeEq :
-      x₁.queryLog.take (QueryLog.countQ (log₁.take (st.cursor - 1)) (· = Sum.inr ()) + 1) =
-        x₂.queryLog.take
-          (QueryLog.countQ (log₁.take (st.cursor - 1)) (· = Sum.inr ()) + 1) :=
-    runTrace_queryLog_take_eq σ hr M (Resp := Resp) nmaAdv pk
-      (x₁ := x₁) (x₂ := x₂) (outerLog₁ := log₁) (outerLog₂ := log₂) hx₁ hx₂
-      (p := log₁.take (st.cursor - 1)) (v₁ := v₁) (v₂ := v₂)
-      (rest₁ := log₁.drop st.cursor) (rest₂ := log₂.drop st.cursor) hdec₁ hdec₂
-  rw [hpref_count] at htakeEq
+  let qb : ℕ ⊕ Unit → ℕ := fun j => match j with | .inl _ => 0 | .inr () => qH
+  let cf := forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH
+  let main := runTrace σ hr M nmaAdv pk
+  obtain ⟨path, s', located, second, hpath, hcf₁, _hsecond,
+      _hne, _hcf₂, hx₁, hx₂⟩ :=
+    contextFork_success main qb (Sum.inr ()) cf hsup
+  have hs' : s' = s := by
+    apply Option.some.inj
+    calc
+      some s' = cf (PFunctor.FreeM.output main path) := hcf₁.symm
+      _ = cf x₁ := by rw [hx₁]
+      _ = some s := h₁
+  subst s'
+  let commonLog : QueryLog (wrappedSpec Chal) := located.occurrence.before
+  have hfirst := replayPathResult_mem_support_replayFirstRun main path hpath
+  have hsecond := replayPathResult_mem_support_replayFirstRun main second.path
+    (mem_support_replayFirstPath main second.path)
+  have hxlog₁ : (x₁, (replayPathResult main path).2) ∈
+      support (replayFirstRun main) := by
+    simpa [replayPathResult, hx₁] using hfirst
+  have hxlog₂ : (x₂, (replayPathResult main second.path).2) ∈
+      support (replayFirstRun main) := by
+    simpa [replayPathResult, hx₂] using hsecond
+  have hlog₁ : (replayPathResult main path).2 =
+      commonLog ++
+        (⟨Sum.inr (), located.completion.answer⟩ ::
+          (replayPathResult (located.occurrence.resume
+            located.completion.answer) located.completion.suffix).2) := by
+    have htrace := congrArg
+      (fun p : PFunctor.FreeM.Path main =>
+        (show QueryLog (wrappedSpec Chal) from
+          PFunctor.FreeM.Path.trace main p)) located.path_eq
+    calc
+      (replayPathResult main path).2
+          = (replayPathResult main located.completion.path).2 := htrace.symm
+      _ = _ := by
+        change PFunctor.FreeM.Path.trace main located.completion.path =
+          List.append
+            (show PFunctor.TraceList (wrappedSpec Chal).toPFunctor from
+              commonLog)
+            (⟨Sum.inr (), located.completion.answer⟩ ::
+              PFunctor.FreeM.Path.trace
+                (located.occurrence.resume located.completion.answer)
+                located.completion.suffix)
+        unfold commonLog
+        exact PFunctor.FreeM.Cursor.Occurrence.trace_plug
+          located.occurrence located.completion.answer
+            located.completion.suffix
+  have hlog₂ : (replayPathResult main second.path).2 =
+      commonLog ++
+        (⟨Sum.inr (), second.answer⟩ ::
+          (replayPathResult (located.occurrence.resume second.answer)
+            second.suffix).2) := by
+    change PFunctor.FreeM.Path.trace main second.path =
+      List.append
+        (show PFunctor.TraceList (wrappedSpec Chal).toPFunctor from
+          commonLog)
+        (⟨Sum.inr (), second.answer⟩ ::
+          PFunctor.FreeM.Path.trace
+            (located.occurrence.resume second.answer) second.suffix)
+    unfold commonLog
+    exact PFunctor.FreeM.Cursor.Occurrence.trace_plug
+      located.occurrence second.answer second.suffix
+  have htakeEq := runTrace_queryLog_take_eq σ hr M (Resp := Resp) nmaAdv pk
+    (x₁ := x₁) (x₂ := x₂)
+    (outerLog₁ := (replayPathResult main path).2)
+    (outerLog₂ := (replayPathResult main second.path).2)
+    hxlog₁ hxlog₂
+    (p := commonLog)
+    (v₁ := located.completion.answer) (v₂ := second.answer)
+    (rest₁ := (replayPathResult (located.occurrence.resume
+      located.completion.answer) located.completion.suffix).2)
+    (rest₂ := (replayPathResult (located.occurrence.resume second.answer)
+      second.suffix).2) hlog₁ hlog₂
+  have hprefixCount : commonLog.countQ
+      (fun x => x = Sum.inr ()) = (↑s : ℕ) := by
+    calc
+      commonLog.countQ (fun x => x = Sum.inr ()) =
+          PFunctor.TraceList.occurrences (P := (wrappedSpec Chal).toPFunctor)
+            (Sum.inr ())
+            (show PFunctor.TraceList (wrappedSpec Chal).toPFunctor from
+              commonLog) := QueryLog.countQ_eq_occurrences commonLog (Sum.inr ())
+      _ = (↑s : ℕ) := by
+        simp [commonLog]
+  rw [hprefixCount] at htakeEq
   have htgt₁ : x₁.queryLog[(↑s : ℕ)]? = some x₁.target :=
     forkPoint_getElem?_eq_some_target (M := M) (Commit := Commit) (Resp := Resp)
       (Chal := Chal) h₁
   have htgt₂ : x₂.queryLog[(↑s : ℕ)]? = some x₂.target :=
     forkPoint_getElem?_eq_some_target (M := M) (Commit := Commit) (Resp := Resp)
       (Chal := Chal) h₂
-  have hgetElem_take (l : List (M × Commit)) :
+  have hgetElemTake (l : List (M × Commit)) :
       (l.take ((↑s : ℕ) + 1))[(↑s : ℕ)]? = l[(↑s : ℕ)]? :=
     List.getElem?_take_of_lt (Nat.lt_succ_self _)
-  have : some x₁.target = some x₂.target := by
-    rw [← htgt₁, ← htgt₂, ← hgetElem_take x₁.queryLog, ← hgetElem_take x₂.queryLog, htakeEq]
-  exact Option.some.inj this
+  apply Option.some.inj
+  rw [← htgt₁, ← htgt₂, ← hgetElemTake x₁.queryLog,
+    ← hgetElemTake x₂.queryLog, htakeEq]
 
 /-- Managed-RO replay-fork convenience theorem at a fixed public key, stated at the
 `OracleComp (unifSpec + (Unit →ₒ Chal))` level.
 
 Packages the replay-forking quantitative bound with the distinct-answer and
 postcondition-transfer facts for the wrapped managed random-oracle trace experiment,
-composing `le_probEvent_isSome_forkReplay` (quantitative bound) and
-`forkReplay_propertyTransfer` (postcondition transfer).
+composing `le_probEvent_isSome_contextFork` with the contextual
+postcondition-transfer theorem.
 
 **On the level of the statement.** We state the bound at the `OracleComp` level rather than
 lifting through `simulateQ` to `ProbComp`. Each caller (e.g. `euf_nma_bound`) can bridge to
@@ -1459,9 +1438,9 @@ lemma focused on the forking-lemma content.
 `x₁.target = x₂.target` (i.e. message-commit pair coincidence at the fork point), matching
 Firsov-Janku's `forking_lemma_ro`. In the Lean formalization this conjunct is consumed by the
 downstream reduction `euf_nma_bound` to align the cached challenges `ω_i = x_i.roCache target`.
-Since it relies on a value-level log-prefix invariant across `replayRunWithTraceValue` plus a
-correspondence between the adversary's internal `queryLog` and the outer `QueryLog`, it is
-extracted through the caller-provided `P_out` transfer predicate: the caller may choose `P_out`
+It follows from the occurrence's intrinsic common-prefix decomposition plus a correspondence
+between the adversary's internal `queryLog` and the outer `QueryLog`. It is extracted through
+the caller-provided `P_out` transfer predicate: the caller may choose `P_out`
 so that `P_out x log` pins `x.target` to a deterministic function of `(log, cf x)`, and then
 derive target-equality from the distinct-answer disagreement on the outer log.
 
@@ -1473,16 +1452,9 @@ queries: each cache miss in `roImpl` appends to both simultaneously, so a logica
 into the trace's list corresponds to the same physical position in the outer log. Callers
 discharge `hreach` by establishing this correspondence at the level of `runTrace`.
 
-**On typeclass requirements.** The `wrappedSpec Chal` oracle space is
-`unifSpec + (Unit →ₒ Chal)`, and the quantitative section of `ReplayFork.lean` requires the
-typeclass `[OracleSpec.LawfulSubSpec unifSpec spec]` (to factor `probOutput_uniformSample`
-through `liftComp` on the `forkReplay` side). This instance is discharged by Mathlib
-automation at this call site.
-
-The proof composes `le_probEvent_isSome_forkReplay` (transitively via
-`sq_probOutput_main_le_noGuardReplayComp` with the two prefix-faithfulness building
-blocks `evalDist_uniform_bind_fst_replayRunWithTraceValue_takeBeforeForkAt` and
-`tsum_probOutput_replayFirstRun_weight_takeBeforeForkAt`). -/
+The proof uses the PolyFun context decomposition directly: program
+factorization and resampling are handled by the typed occurrence machinery,
+while the VCVio theorem supplies only the collision and probability bounds. -/
 theorem replayForkingBound
     [DecidableEq M] [DecidableEq Commit]
     [DecidableEq Chal] [SampleableType Chal] [Fintype Chal] [Inhabited Chal]
@@ -1518,7 +1490,7 @@ theorem replayForkingBound
               QueryLog.getQueryValue? log₂ (Sum.inr ()) ↑s ∧
             P_out x₁ log₁ ∧
             P_out x₂ log₂
-        | forkReplay wrappedMain qb (Sum.inr ()) cf] := by
+        | contextFork wrappedMain qb (Sum.inr ()) cf] := by
   letI : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
     IsUniformSpec.ofFintypeInhabited _
   intro wrappedMain cf qb acc
@@ -1547,9 +1519,10 @@ theorem replayForkingBound
     _ ≤ Pr[ fun r : Option
             (Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) ×
               Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) =>
-              r.isSome | forkReplay wrappedMain qb (Sum.inr ()) cf] := by
-        have hbound := le_probEvent_isSome_forkReplay
-          (main := wrappedMain) (qb := qb) (i := Sum.inr ()) (cf := cf) hreach
+              r.isSome | contextFork wrappedMain qb (Sum.inr ()) cf] := by
+        have hbound := le_probEvent_isSome_contextFork
+          (main := wrappedMain) (qb := qb) (i := Sum.inr ()) (cf := cf)
+          hreach.toPathCfReachable
         simp only at hbound
         rwa [hH_inv] at hbound
     _ ≤ _ := by
@@ -1558,7 +1531,7 @@ theorem replayForkingBound
         rcases r with _ | ⟨x₁, x₂⟩
         · simp at hisSome
         obtain ⟨log₁, log₂, s, hcf₁, hcf₂, hP₁, hP₂, hneq⟩ :=
-          forkReplay_propertyTransfer
+          contextFork_propertyTransfer
             (main := wrappedMain) (qb := qb) (i := Sum.inr ()) (cf := cf)
             (P_out := P_out) (hP := hP) hr
         exact ⟨x₁, x₂, s, log₁, log₂, rfl, hcf₁, hcf₂, hneq, hP₁, hP₂⟩

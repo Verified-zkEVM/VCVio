@@ -18,33 +18,31 @@ package VCVio where
   ]
 
 /-
-Interop backends are intentionally disabled for the Lean 4.31 baseline. Their
+Interop backends are intentionally disabled for the Lean 4.32 baseline. Their
 source remains under `Interop/`, isolated from the trusted libraries by
 `scripts/check-interop-isolation.sh`, but the aggregate module and CI do not
 build it. Re-enable a backend only once its upstream Lean library supports the
 repository's Lean version without a local compatibility layer.
 
-Hax still targets Lean 4.29.0-rc1 and does not build with Lean 4.31.0 as of
-2026-07-11. Subdirectory: `hax-lib/proof-libs/lean`.
+The pinned Hax revision still targets Lean 4.29.0-rc1 and is not part of the
+Lean 4.32 build. Subdirectory: `hax-lib/proof-libs/lean`.
 -/
 -- require Hax from git
 --   "https://github.com/cryspen/hax" @
 --   "492a34e3" / "hax-lib/proof-libs/lean"
 
 /-
-Loom2: foundation for the Loom-style WP / Triple program-logic
-abstractions used in `VCVio/ProgramLogic/`. Tracks Volo Gladshtein's unmerged
-upstream PR https://github.com/leanprover/lean4/pull/12965 in the
-`Std.Internal.Do.{WPMonad,PredTrans,Triple,Assertion,ExceptPost}` namespace
-(temporarily prefixed `Std.Do'` in Loom2 to avoid clashing once it merges).
+Loom2 provides the Loom-style WP / Triple program-logic abstractions used in
+`VCVio/ProgramLogic/`. Lean 4.32 includes the stable `Std.Do` foundations, but
+Loom2's `Std.Do'` layer retains the three-parameter `PredTrans`, `EPost`, and
+relational APIs consumed by VCVio. Migrating those clients to the redesigned
+`PostShape` API is separate work.
 
-Tracks the Lean 4.31 compatibility branch based on upstream revision
-`876296fc`. When upstream Lean ships these foundations in a stable release,
-drop this require and re-import from `Std.Do.…` directly.
+The exact pin below is the validated Lean 4.32 compatibility commit.
 -/
 require loom2 from git
   "https://github.com/quangvdao/loom2" @
-  "lean-4.31"
+  "2f65f311fae959c302586b07aa45390999b935d4"
 
 /-
 Aeneas now natively pins Lean and Mathlib v4.31.0. This dormant pin follows its
@@ -56,11 +54,11 @@ Subdirectory: `backends/lean`.
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
-require "leanprover-community" / "mathlib" @ git "v4.31.0"
+require "leanprover-community" / "mathlib" @ git "v4.32.0"
 
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "04a12b67fa2048c9412fdd26ed9e446f25919d37"
+  "97a262ce2ba7513448b76635e1f6a07f61f40de5"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
@@ -86,7 +84,7 @@ lean_lib ToMathlib
 /-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
 Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
 `Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
-excluded from the Lean 4.31 baseline build. -/
+excluded from the Lean 4.32 baseline build. -/
 lean_lib Interop
 
 -- Compile the shared FIPS 202 (SHA-3/SHAKE) FFI wrapper.
