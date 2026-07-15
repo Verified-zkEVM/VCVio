@@ -1,8 +1,6 @@
-# VCVio
+# Machine-Checked Cryptographic Proofs in Lean
 
-*Verifying Cryptography via Interactions and Oracles*
-
-VCVio is a Lean 4 library for machine-checked proofs about cryptographic games, primitives,
+VCVio is a Lean library for machine-checked proofs about cryptographic games, primitives,
 protocols, and implementations. The core framework provides:
 
 * A monadic syntax for representing computations with oracle access (`OracleComp`), with probabilistic computations (`ProbComp`) as a special case of having uniform selection oracles.
@@ -18,7 +16,7 @@ proof-level abstractions and executable concrete implementations. `HashSig` cove
 (SPHINCS+, FIPS 205), and the interaction layer supports computational interpretations of
 interactive and UC-style systems.
 
-Assuming Lean 4 and lake are already installed, the project can be built by just running:
+Assuming Lean and Lake are already installed, the project can be built by just running:
 
 ```
 lake exe cache get && lake build
@@ -152,11 +150,13 @@ Predicates and tools for computations:
 
 **VCVio** stands for **Verifying Cryptography via Interactions and Oracles**.
 
-Interactions arise between protocol participants, between computations and their oracle
-environments, and between specifications and implementations through simulation and effect
-handlers. Oracles provide a common abstraction for cryptographic games, reductions,
+The initials **VCV** also admit the Latin motto *Veritas cryptographica vincit*
+(“cryptographic truth prevails”). The **io** suffix reflects the interactions and oracles at the
+heart of the library: interactions arise between protocol participants, between computations and
+their oracle environments, and between specifications and implementations through simulation and
+effect handlers; oracles provide a common abstraction for cryptographic games, reductions,
 probabilistic semantics, and executable interpretations.
 
 VCVio is inspired by FCF (see [FCF-REPO](REFERENCES.md#fcf-repo) and
-[FCF14](REFERENCES.md#fcf14)), the Foundational Cryptography Framework for Coq, whose
-foundational approach influenced VCVio's machine-checked cryptographic security proofs.
+[FCF14](REFERENCES.md#fcf14)), the Foundational Cryptography Framework for Rocq (formerly Coq).
+FCF's foundational approach influenced VCVio's machine-checked cryptographic security proofs.
