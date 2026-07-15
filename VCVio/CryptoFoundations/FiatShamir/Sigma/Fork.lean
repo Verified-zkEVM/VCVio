@@ -1138,7 +1138,7 @@ lemma runTrace_queryLog_length_eq
     (hx : (x, outerLog) ∈ support (replayFirstRun (runTrace σ hr M nmaAdv pk))) :
     x.queryLog.length = outerLog.countQ (· = Sum.inr ()) := by
   classical
-  unfold replayFirstRun runTrace at hx
+  unfold replayFirstRun withQueryLog runTrace at hx
   simp only [bind_pure_comp, simulateQ_map, WriterT.run_map', support_map] at hx
   obtain ⟨a, ha_mem, ha_eq⟩ := hx
   have hxqueryLog : x.queryLog = a.1.2.2 := by
@@ -1166,7 +1166,7 @@ lemma runTrace_cache_outer_lockstep
       ∃ ω, x.roCache (x.queryLog[i]'h_hi) = some ω ∧
         QueryLog.getQueryValue? outerLog (Sum.inr ()) i = some ω := by
   classical
-  unfold replayFirstRun runTrace at hx
+  unfold replayFirstRun withQueryLog runTrace at hx
   simp only [bind_pure_comp, simulateQ_map, WriterT.run_map', support_map] at hx
   obtain ⟨a, ha_mem, ha_eq⟩ := hx
   have hxqueryLog : x.queryLog = a.1.2.2 := by
@@ -1205,7 +1205,7 @@ lemma exists_cached_verify_of_runTrace_verified
     ∃ ω, x.roCache x.target = some ω ∧
       σ.verify pk x.target.2 ω x.forgery.2.2 = true := by
   classical
-  unfold replayFirstRun runTrace at hx
+  unfold replayFirstRun withQueryLog runTrace at hx
   simp only [bind_pure_comp, simulateQ_map, WriterT.run_map', support_map] at hx
   obtain ⟨a, _, ha_eq⟩ := hx
   obtain ⟨⟨⟨forgery, advCache⟩, ⟨roCache, queryLog⟩⟩, log_a⟩ := a
@@ -1275,7 +1275,7 @@ lemma runTrace_queryLog_take_eq
     x₁.queryLog.take (p.countQ (· = Sum.inr ()) + 1) =
       x₂.queryLog.take (p.countQ (· = Sum.inr ()) + 1) := by
   classical
-  unfold replayFirstRun runTrace at h₁ h₂
+  unfold replayFirstRun withQueryLog runTrace at h₁ h₂
   simp only [bind_pure_comp, simulateQ_map, WriterT.run_map', support_map] at h₁ h₂
   obtain ⟨a₁, ha_mem₁, ha_eq₁⟩ := h₁
   obtain ⟨a₂, ha_mem₂, ha_eq₂⟩ := h₂
@@ -1342,10 +1342,10 @@ lemma runTrace_target_eq_of_mem_contextFork
     (mem_support_replayFirstPath main second.path)
   have hxlog₁ : (x₁, (replayPathResult main path).2) ∈
       support (replayFirstRun main) := by
-    simpa [replayPathResult, hx₁] using hfirst
+    simpa [replayPathResult, pathLogResult, hx₁] using hfirst
   have hxlog₂ : (x₂, (replayPathResult main second.path).2) ∈
       support (replayFirstRun main) := by
-    simpa [replayPathResult, hx₂] using hsecond
+    simpa [replayPathResult, pathLogResult, hx₂] using hsecond
   have hlog₁ : (replayPathResult main path).2 =
       commonLog ++
         (⟨Sum.inr (), located.completion.answer⟩ ::
