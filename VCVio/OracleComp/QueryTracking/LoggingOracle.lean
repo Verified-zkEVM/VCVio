@@ -203,7 +203,7 @@ end QueryImpl
 /-- Simulation oracle for tracking the queries in a `QueryLog`, without modifying the actual
 behavior of the oracle. Each query/response pair is appended to a single `WriterT` log via
 `QueryImpl.withLogging`, leaving the underlying `OracleComp` computation unchanged. -/
-def OracleSpec.loggingOracle {spec : OracleSpec ι} :
+def OracleSpec.loggingOracle {ι : Type u} {spec : OracleSpec.{u, u} ι} :
     QueryImpl spec (WriterT (QueryLog spec) (OracleComp spec)) :=
   (QueryImpl.ofLift spec (OracleComp spec)).withLogging
 

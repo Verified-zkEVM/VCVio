@@ -36,7 +36,7 @@ variable {α : Type}
 /-- `singleHash` makes exactly one oracle query, hence has total query bound `1`. -/
 lemma singleHash_isTotalQueryBound (left right : α) :
     IsTotalQueryBound (singleHash (m := OracleComp (spec α)) left right) 1 := by
-  simp only [singleHash, HasQuery.instOfMonadLift_query, isTotalQueryBound_query_bind_iff]
+  simp only [singleHash, HasQuery.instOfMonadLift_query]
   exact ⟨Nat.zero_lt_one, fun _ => trivial⟩
 
 /-- `getPutativeRoot` makes one oracle query per level of `idx`, so it has total query

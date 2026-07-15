@@ -179,7 +179,7 @@ Allows inductive definitions on computations by considering the two cases:
 See `oracleComp_emptySpec_equiv` for an example of using this in a proof.
 If the final result needs to be a `Type` and not a `Prop`, see `OracleComp.construct`. -/
 @[elab_as_elim]
-protected def inductionOn {α} {C : OracleComp spec α → Prop}
+protected theorem inductionOn {α} {C : OracleComp spec α → Prop}
     (pure : (a : α) → C (pure a))
     (query_bind : (t : spec.Domain) →
       (oa : spec.Range t → OracleComp spec α) →
@@ -190,7 +190,7 @@ protected def inductionOn {α} {C : OracleComp spec α → Prop}
 /-- Version of `OracleComp.inductionOn` that includes an `OptionT` in the monad stack
 and requires an explicit case to handle `failure`. -/
 @[elab_as_elim]
-protected def inductionOnOptional {α} {C : OptionT (OracleComp spec) α → Prop}
+protected theorem inductionOnOptional {α} {C : OptionT (OracleComp spec) α → Prop}
     (pure : (a : α) → C (pure a))
     (query_bind : (t : spec.Domain) →
       (oa : spec.Range t → OptionT (OracleComp spec) α) → (∀ u, C (oa u)) →
@@ -203,7 +203,7 @@ protected def inductionOnOptional {α} {C : OptionT (OracleComp spec) α → Pro
 
 /-- Version of `OracleComp.inductionOn` with the computation at the start. -/
 @[elab_as_elim]
-protected def induction {α} {C : OracleComp spec α → Prop}
+protected theorem induction {α} {C : OracleComp spec α → Prop}
     (oa : OracleComp spec α) (pure : (a : α) → C (pure a))
     (query_bind : (t : spec.Domain) →
       (oa : spec.Range t → OracleComp spec α) → (∀ u, C (oa u)) → C (query t >>= oa)) : C oa :=
@@ -211,7 +211,7 @@ protected def induction {α} {C : OracleComp spec α → Prop}
 
 /-- Version of `OracleComp.inductionOnOptional` with the computation at the start. -/
 @[elab_as_elim]
-protected def inductionOptional {α} {C : OptionT (OracleComp spec) α → Prop}
+protected theorem inductionOptional {α} {C : OptionT (OracleComp spec) α → Prop}
     (oa : OptionT (OracleComp spec) α) (pure : (a : α) → C (pure a))
     (query_bind : (t : spec.Domain) →
       (oa : spec.Range t → OptionT (OracleComp spec) α) → (∀ u, C (oa u)) →

@@ -256,6 +256,9 @@ instance : Monoid (QueryCount ι) where
   one := 0
   one_mul := zero_add
   mul_one := add_zero
+  npow n qc := n • qc
+  npow_zero qc := AddMonoid.nsmul_zero qc
+  npow_succ n qc := AddMonoid.nsmul_succ n qc
 
 @[simp] lemma monoid_mul_def (qc qc' : QueryCount ι) :
   (@HMul.hMul _ _ _ (@instHMul _ (Monoid.toMulOneClass.toMul)) qc qc')

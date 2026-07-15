@@ -1368,7 +1368,7 @@ lemma runTrace_target_eq_of_mem_contextFork
                 (located.occurrence.resume located.completion.answer)
                 located.completion.suffix)
         unfold commonLog
-        exact PFunctor.FreeM.Path.Occurrence.trace_plug
+        exact PFunctor.FreeM.Cursor.Occurrence.trace_plug
           located.occurrence located.completion.answer
             located.completion.suffix
   have hlog₂ : (replayPathResult main second.path).2 =
@@ -1384,7 +1384,7 @@ lemma runTrace_target_eq_of_mem_contextFork
           PFunctor.FreeM.Path.trace
             (located.occurrence.resume second.answer) second.suffix)
     unfold commonLog
-    exact PFunctor.FreeM.Path.Occurrence.trace_plug
+    exact PFunctor.FreeM.Cursor.Occurrence.trace_plug
       located.occurrence second.answer second.suffix
   have htakeEq := runTrace_queryLog_take_eq σ hr M (Resp := Resp) nmaAdv pk
     (x₁ := x₁) (x₂ := x₂)
@@ -1401,7 +1401,7 @@ lemma runTrace_target_eq_of_mem_contextFork
       (fun x => x = Sum.inr ()) = (↑s : ℕ) := by
     calc
       commonLog.countQ (fun x => x = Sum.inr ()) =
-          PFunctor.FreeM.Path.occurrences (P := (wrappedSpec Chal).toPFunctor)
+          PFunctor.TraceList.occurrences (P := (wrappedSpec Chal).toPFunctor)
             (Sum.inr ())
             (show PFunctor.TraceList (wrappedSpec Chal).toPFunctor from
               commonLog) := QueryLog.countQ_eq_occurrences commonLog (Sum.inr ())
