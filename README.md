@@ -157,6 +157,9 @@ their oracle environments, and between specifications and implementations throug
 effect handlers; oracles provide a common abstraction for cryptographic games, reductions,
 probabilistic semantics, and executable interpretations.
 
-VCVio is inspired by FCF (see [FCF-REPO](REFERENCES.md#fcf-repo) and
-[FCF14](REFERENCES.md#fcf14)), the Foundational Cryptography Framework for Rocq (formerly Coq).
-FCF's foundational approach influenced VCVio's machine-checked cryptographic security proofs.
+VCVio's framework is inspired by FCF (see [FCF-REPO](REFERENCES.md#fcf-repo) and
+[FCF14](REFERENCES.md#fcf14)), the Foundational Cryptography Framework for Rocq (formerly Coq),
+particularly its use of embedded probabilistic and oracle-aided computations with semantic models
+and derived rules for game-based reasoning. Where FCF gives each computation a single oracle
+interface, VCVio uses indexed oracle families represented by polynomial functors and provides
+compositional infrastructure for combining, simulating, and interpreting them.
