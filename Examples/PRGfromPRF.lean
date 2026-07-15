@@ -473,6 +473,9 @@ lemma tvDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
           𝒟[($ᵗ (List.Vector O (N + 1)))] =
             𝒟[(do let p ← $ᵗ (S × O); (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N)))] := by
         rw [evalDist_uniformSample_vector_succ_pair (S := S) N]
+        congr 1
+        refine bind_congr fun p => ?_
+        rw [map_eq_bind_pure_comp]
         rfl
       -- Rewrite the goal as a TV distance between two binds over the shared pair `p : S × O`.
       rw [hLHS]

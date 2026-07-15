@@ -301,7 +301,8 @@ private lemma nma_lift_unif_run
         simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
           OracleQuery.cont_query, id_map, StateT.run_bind]
         simp only [monad_norm, StateT.run_mk, impl₁]
-        exact bind_congr (m := ProbComp) fun u => ih u s
+        refine bind_congr (m := ProbComp) fun u => ?_
+        simpa only [impl₁, pure_bind, map_eq_bind_pure_comp, Function.comp_apply] using ih u s
   exact QueryImpl.simulateQ_liftM_eq_of_query
     (impl := nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr)
     (impl₁ := impl₁)
