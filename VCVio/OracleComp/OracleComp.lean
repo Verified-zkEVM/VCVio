@@ -18,6 +18,7 @@ open OracleSpec
 /-- `OracleComp spec α` represents computations with oracle access to oracles in `spec`,
 where the final return value has type `α`, represented as a free monad over the `PFunctor`
 corresponding to `spec.` -/
+@[reducible]
 def OracleComp {ι : Type u} (spec : OracleSpec.{u, v} ι) :
     Type w → Type (max u v w) :=
   PFunctor.FreeM spec.toPFunctor
@@ -34,21 +35,16 @@ This is the explicit abstraction boundary for generic PolyFun constructions;
 downstream semantics should use this function instead of unfolding
 `OracleComp`. -/
 @[reducible]
-def ofFreeM {α : Type w} (oa : PFunctor.FreeM spec.toPFunctor α) :
-    OracleComp spec α :=
-  oa
+def ofFreeM {α : Type w} (oa : PFunctor.FreeM spec.toPFunctor α) : OracleComp spec α := oa
 
 /-- Expose the polynomial free program underlying an oracle computation. -/
 @[reducible]
-def toFreeM {α : Type w} (oa : OracleComp spec α) :
-    PFunctor.FreeM spec.toPFunctor α :=
-  oa
+def toFreeM {α : Type w} (oa : OracleComp spec α) : PFunctor.FreeM spec.toPFunctor α := oa
 
 theorem ofFreeM_toFreeM {α : Type w} (oa : OracleComp spec α) :
     ofFreeM (toFreeM oa) = oa := rfl
 
-theorem toFreeM_ofFreeM {α : Type w}
-    (oa : PFunctor.FreeM spec.toPFunctor α) :
+theorem toFreeM_ofFreeM {α : Type w} (oa : PFunctor.FreeM spec.toPFunctor α) :
     toFreeM (ofFreeM oa) = oa := rfl
 
 /-- Make one oracle query at input `t`, then continue with `k` on the response.
@@ -60,15 +56,6 @@ the `@[match_pattern]` attribute makes it usable both as a term and as a
 def queryBind {α} (t : spec.Domain) (k : spec.Range t → OracleComp spec α) :
     OracleComp spec α :=
   PFunctor.FreeM.liftBind t k
-
-instance (spec : OracleSpec ι) : Monad (OracleComp spec) :=
-  inferInstanceAs (Monad (PFunctor.FreeM spec.toPFunctor))
-
-instance (spec : OracleSpec ι) : LawfulMonad (OracleComp spec) :=
-  inferInstanceAs (LawfulMonad (PFunctor.FreeM spec.toPFunctor))
-
-instance : MonadLift (OracleQuery spec) (OracleComp spec) :=
-  inferInstanceAs (MonadLift (PFunctor.Obj spec.toPFunctor) (PFunctor.FreeM spec.toPFunctor))
 
 theorem ofFreeM_pure {α : Type v} (x : α) :
     ofFreeM (PFunctor.FreeM.pure x : PFunctor.FreeM spec.toPFunctor α) =

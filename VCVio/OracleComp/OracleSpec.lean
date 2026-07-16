@@ -29,6 +29,7 @@ namespace OracleSpec
 
 variable {ι : Type u}
 
+@[reducible]
 def toPFunctor (spec : OracleSpec ι) : PFunctor := { A := ι, B := spec }
 
 @[reducible, inline]
@@ -97,7 +98,10 @@ lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
 @[simp] lemma add_apply_inr {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
     (t : ι') : (spec + spec') (.inr t) = spec' t := rfl
 
-@[simp] lemma toPFunctor_add {ι : Type u} {ι' : Type u'}
+/-- Deliberately not `@[simp]`: `toPFunctor` occurs inside the (instance-carrying)
+type of an `OracleComp`, so rewriting with this under a `simulateQ`/`liftM` strands
+the goal in a form the `simulateQ_query` family can no longer match. -/
+lemma toPFunctor_add {ι : Type u} {ι' : Type u'}
     (spec : OracleSpec ι) (spec' : OracleSpec ι') :
     (spec + spec').toPFunctor = spec.toPFunctor + spec'.toPFunctor := rfl
 

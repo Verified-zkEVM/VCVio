@@ -563,6 +563,18 @@ same pattern preprocessing and lookup cost profile as future core tactics,
 and the migration to `Sym.Simp.*`-driven rewriting is a localised follow-up
 in two registry files rather than a framework rewrite.
 
+**Key alignment invariant**: `Sym.DiscrTree.getMatch` is purely structural, so
+goal-side query terms must be normalized with the *same* preprocessing the
+pattern side gets at registration time. All registry query functions therefore
+route the extracted computation through `symMatchKey`
+(`Tactics/Common/Core.lean`), which applies `Sym.preprocessType`
+(unfold-reducible + beta/zeta/eta). This matters because `OracleComp` is a
+reducible alias of `PFunctor.FreeM`: the stored patterns carry unfolded
+`FreeM`-form keys at the monad argument of `Bind.bind` and friends, and an
+unnormalized query key diverges there, making every lookup silently return no
+candidates (symptom: `vcstep` reports "no matching rule applied" on plain
+`pure`/`>>=` goals while manual `rw [wp_pure]`/`rw [wp_bind]` works).
+
 ### Registries and what they index
 
 | File | Attribute | Role |

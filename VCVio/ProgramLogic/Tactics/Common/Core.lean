@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 import Lean.Elab.Tactic.Basic
 import Lean.Meta.Match.MatcherApp
+import Lean.Meta.Sym.Pattern
 import VCVio.OracleComp.Constructions.Replicate
 import VCVio.ProgramLogic.NotationCore
 
@@ -256,6 +257,16 @@ def renderPassReplayLine (steps : Array PlannedStep) : Option String :=
 
 def whnfReducible (e : Expr) : MetaM Expr :=
   withReducible <| whnf e
+
+/-- Normalize a goal-side computation the same way `Sym.mkPatternFromDeclWithKey`
+normalizes rule statements (`Sym.preprocessType`: unfold reducible definitions,
+then beta/zeta/eta reduce). `Sym.DiscrTree.getMatch` is purely structural, so
+query keys must agree with the pattern keys computed at registration time.
+`OracleComp` is reducible over `PFunctor.FreeM`, so an unnormalized query
+diverges from the stored patterns at the monad argument of `Bind.bind` and
+friends, and every registry lookup silently returns no candidates. -/
+def symMatchKey (e : Expr) : MetaM Expr := do
+  Lean.Meta.Sym.preprocessType (← instantiateMVars e)
 
 def headConstName? (e : Expr) : Option Name :=
   e.consumeMData.getAppFn.constName?
