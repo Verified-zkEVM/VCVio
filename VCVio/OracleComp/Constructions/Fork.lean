@@ -244,4 +244,52 @@ theorem sq_probOutput_map_le_observedForkPair [spec.DecidableEq] [IsUniformSpec 
         rw [hidFun, id_map]
       rw [hid]
 
+/-! ## Focused-answer collision bound
+
+The two focused answers of a completed fork collide with probability at most the
+inverse answer-space cardinality: the second focused answer is a fresh uniform
+draw, independent of the first path and of the resampled suffix. -/
+
+/-- Completing an occurrence resamples the focused answer as a fresh `query i`:
+any event on that answer marginalizes the resampled suffix away. -/
+theorem probEvent_answer_ofFreeM_complete [spec.DecidableEq] [IsProbabilitySpec spec]
+    {main : OracleComp spec α} {i : ι} {n : Nat}
+    (occ : PFunctor.FreeM.Cursor.Occurrence i main n) (P : spec.Range i → Prop) :
+    Pr[fun completion => P completion.answer | OracleComp.ofFreeM occ.complete] =
+      Pr[P | (query i : OracleComp spec (spec.Range i))] := by
+  classical
+  unfold PFunctor.FreeM.Cursor.Occurrence.complete
+  rw [PFunctor.FreeM.liftBind_eq, probEvent_ofFreeM_bind_eq_tsum,
+    probEvent_eq_tsum_ite (query i)]
+  refine tsum_congr fun a => ?_
+  rw [probEvent_ofFreeM_map]
+  change Pr[= a | OracleComp.ofFreeM (PFunctor.FreeM.lift (P := spec.toPFunctor) i)] *
+      Pr[fun _ => P a | OracleComp.ofFreeM
+        (PFunctor.FreeM.withPath (occ.resume a))] =
+      if P a then Pr[= a | (query i : OracleComp spec (spec.Range i))] else 0
+  rw [probEvent_const]
+  have hquery : Pr[= a | OracleComp.ofFreeM
+      (PFunctor.FreeM.lift (P := spec.toPFunctor) i)] =
+      Pr[= a | (query i : OracleComp spec (spec.Range i))] := rfl
+  rw [hquery]
+  by_cases hPa : P a <;> simp [hPa]
+
+/-- The two focused answers of a located fork collide with probability at most
+the inverse answer-space cardinality: the second answer is a fresh uniform
+draw, independent of the first completion. Any additional guard on the first
+output only tightens the event. -/
+theorem probEvent_focusCollision_ofFreeM_fork_le [spec.DecidableEq] [IsUniformSpec spec]
+    {main : OracleComp spec α} {i : ι} {n : Nat} {path : PFunctor.FreeM.Path main}
+    (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
+    Pr[fun view => view.firstAnswer = view.secondAnswer ∧
+        accept (PFunctor.FreeM.output main view.firstPath) |
+          OracleComp.ofFreeM located.fork] ≤
+      (Fintype.card (spec.Range i) : ℝ≥0∞)⁻¹ := by
+  classical
+  rw [PFunctor.FreeM.Cursor.Located.fork_eq_map_complete, probEvent_ofFreeM_map]
+  refine (probEvent_mono (fun completion _ h => h.1)).trans ?_
+  exact (probEvent_answer_ofFreeM_complete located.occurrence
+    (fun a => located.completion.answer = a)).trans_le
+    (probEvent_query_le_inv_of_unique i _ fun x y hx hy => hx.symm.trans hy)
+
 end OracleComp

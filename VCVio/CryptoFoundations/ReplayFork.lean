@@ -195,18 +195,6 @@ private def classifyForkView
         cf (PFunctor.FreeM.output main view.secondPath) = some s := by
   grind [classifyForkView]
 
-private theorem classifyForkView_eq_some_iff
-    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
-    (view : PFunctor.FreeM.Cursor.ForkView i main s) (x₁ x₂ : α) :
-    classifyForkView main qb i cf s view = some (x₁, x₂) ↔
-      view.firstAnswer ≠ view.secondAnswer ∧
-        cf (PFunctor.FreeM.output main view.firstPath) = some s ∧
-        cf (PFunctor.FreeM.output main view.secondPath) = some s ∧
-        x₁ = PFunctor.FreeM.output main view.firstPath ∧
-        x₂ = PFunctor.FreeM.output main view.secondPath := by
-  grind [classifyForkView]
-
 private theorem classifyForkView_component_iff
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
@@ -214,14 +202,6 @@ private theorem classifyForkView_component_iff
     (classifyForkView main qb i cf s view).map (cf ∘ Prod.fst) =
         some (some s) ↔
       (classifyForkView main qb i cf s view).isSome := by
-  grind [classifyForkView]
-
-private theorem classifyForkView_component_ne
-    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1))) (t s : Fin (qb i + 1))
-    (view : PFunctor.FreeM.Cursor.ForkView i main t) (hne : t ≠ s) :
-    (classifyForkView main qb i cf t view).map (cf ∘ Prod.fst) ≠
-      some (some s) := by
   grind [classifyForkView]
 
 /-- Semantic result of a dynamically selected fork.  The selecting ordinal,
@@ -361,7 +341,6 @@ theorem contextForkWitness_success
         exact ⟨hsecond, hne, hfirst, hsecondCf⟩
       · rw [acceptContextForkWitness, if_neg haccept] at hresult
         cases hresult
-
 
 /-- Successful contextual forks expose the selected path, its certified
 occurrence, and the independently sampled second completion. -/
@@ -526,7 +505,7 @@ noncomputable def contextForkPair (main : OracleComp spec α) (qb : ι → ℕ) 
     OracleComp spec (Option (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1)))) :=
   observedForkPair main i s cf
 
-/- Fixed-index success squares under two independent completions of the
+/-- Fixed-index success squares under two independent completions of the
 PolyFun occurrence context. This is the analytic core of replay forking and
 does not use query logs, replay cursors, or a bespoke oracle interpreter. -/
 theorem sq_probOutput_main_le_contextForkPair [IsUniformSpec spec]
