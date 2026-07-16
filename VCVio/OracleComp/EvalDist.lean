@@ -384,13 +384,8 @@ variable [IsProbabilitySpec spec]
     support (guard p : OptionT (OracleComp spec) Unit) = if p then {()} else ∅ := by
   rw [OracleComp.guard_eq]; split_ifs <;> simp
 
-/-- For any `Unit`-valued computation in a monad with a subprobabilistic denotation, the
-probability of returning `()` is the complementary mass of its failure probability. This is the
-monad-generic semantic fact, stated for an arbitrary monad `m` with a `MonadLiftT m SPMF`
-denotation; it is the stable route used to turn a `SecExp` advantage (`1 - probFailure`) into an
-output probability. The OracleComp-specialized `probOutput_eq_sub_probFailure_of_unit` below is a
-compatibility wrapper around this fact that keeps the established public named `spec := …`
-argument. -/
+/-- For any `PUnit`-valued computation in an arbitrary monad with an `SPMF` denotation, the
+probability of returning `()` is the complementary mass of its failure probability. -/
 lemma probOutput_punit_eq_sub_probFailure {m : Type → Type*} [Monad m] [MonadLiftT m SPMF]
     {oa : m PUnit} :
     Pr[= () | oa] = 1 - Pr[⊥ | oa] := by
@@ -400,11 +395,9 @@ lemma probOutput_punit_eq_sub_probFailure {m : Type → Type*} [Monad m] [MonadL
   rw [hunit] at h
   exact ENNReal.eq_sub_of_add_eq (ne_top_of_le_ne_top one_ne_top probFailure_le_one) h
 
-/-- For any `PUnit`-valued oracle computation, the probability of returning `()` is the
-complementary mass of its failure probability. This preserves the established public signature
-`{oa : OracleComp spec PUnit}` and, in particular, keeps the usable named argument `spec := …` for
-downstream callers; it is a thin compatibility wrapper around the monad-generic
-`probOutput_punit_eq_sub_probFailure`. -/
+/-- The `OracleComp` instance of `probOutput_punit_eq_sub_probFailure`: for a `PUnit`-valued
+oracle computation, the probability of returning `()` is the complementary mass of its failure
+probability. -/
 lemma probOutput_eq_sub_probFailure_of_unit {oa : OracleComp spec PUnit} :
     Pr[= () | oa] = 1 - Pr[⊥ | oa] :=
   probOutput_punit_eq_sub_probFailure
