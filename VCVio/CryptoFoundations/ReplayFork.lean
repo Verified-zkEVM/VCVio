@@ -3,12 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
+import PolyFun.PFunctor.Free.Cursor.Fork
+import ToMathlib.Data.ENNReal.SumSquares
 import VCVio.EvalDist.Option
 import VCVio.OracleComp.Constructions.Fork
 import VCVio.OracleComp.QueryTracking.LoggingOracle
 import VCVio.OracleComp.QueryTracking.Structures
-import ToMathlib.Data.ENNReal.SumSquares
-import PolyFun.PFunctor.Free.Cursor.Fork
 
 /-!
 # Replay-Based Forking
@@ -21,6 +21,35 @@ VCVio layer responsible only for probability and collision estimates.
 
 The accompanying `QueryLog` view is an erasure interface for applications such
 as Fiat--Shamir that state postconditions over transcripts.
+
+Dependent path and zipper APIs identify `QueryLog` entries with erased polynomial
+trace events, so this file makes `PFunctor.Idx` locally reducible in order for
+`simp` and `rw` to match through it. The attribute is scoped to this file because
+`PFunctor.Idx` is a Mathlib definition.
+
+## Main definitions
+
+* `replayFirstRun`: the first run of the main computation, instrumented with a query log.
+* `replayFirstPath`: the intrinsic execution path taken by that first run.
+* `CfReachable` / `PathCfReachable`: reachability of a selected occurrence from an output.
+* `contextFork`: two independent completions of the occurrence context chosen by the first path.
+* `contextForkWitness`: the fork together with the transcript data witnessing success.
+* `guardedContextFork`: `contextFork` restricted to forks whose focused answers differ.
+* `contextForkCollision`: the event that both completions return the same focused answer.
+
+## Main results
+
+* `contextForkWitness_success`: a successful witness yields two accepting transcripts.
+* `contextFork_success`: the analogous statement for `contextFork`.
+* `contextFork_propertyTransfer`: postconditions of the main computation transfer to both branches.
+* `sq_probOutput_main_le_contextForkPair`: the squaring step for two independent completions.
+* `le_probEvent_isSome_contextFork`: the replay forking bound.
+
+## References
+
+* M. Bellare and G. Neven, *Multi-Signatures in the Plain Public-Key Model and a General
+  Forking Lemma*, CCS 2006. The seed-based presentation is mechanized in
+  `VCVio.CryptoFoundations.SeededFork`.
 -/
 
 open OracleSpec OracleComp ENNReal Function Finset
@@ -28,9 +57,6 @@ open OracleSpec OracleComp ENNReal Function Finset
 open scoped OracleSpec.PrimitiveQuery
 open scoped PFunctor
 
--- Dependent path/zipper APIs identify `QueryLog` entries with erased polynomial
--- trace events, so `PFunctor.Idx` must unfold during `simp`/`rw` matching in
--- this file. Kept local: `Idx` is a Mathlib definition.
 set_option allowUnsafeReducibility true in
 attribute [local reducible] PFunctor.Idx
 
@@ -45,21 +71,21 @@ def replayFirstRun (main : OracleComp spec α) : OracleComp spec (α × QueryLog
 
 /-- The first run represented intrinsically: executing `main` returns the
 typed root-to-leaf path selected by its oracle answers. -/
-def replayFirstPath (main : OracleComp spec α) :
-    OracleComp spec (PFunctor.FreeM.Path main) :=
+def replayFirstPath (main : OracleComp spec α) : OracleComp spec (PFunctor.FreeM.Path main) :=
   PFunctor.FreeM.withPath main
 
 /-- Forget an intrinsic first-run path into the output/transcript pair used by
 the probability-facing replay API. -/
-def replayPathResult (main : OracleComp spec α)
-    (path : PFunctor.FreeM.Path main) : α × QueryLog spec :=
+def replayPathResult (main : OracleComp spec α) (path : PFunctor.FreeM.Path main) :
+    α × QueryLog spec :=
   pathLogResult main path
 
+/-- The intrinsic first-run path of a query-bind: query `t`, then for each answer `u`
+prepend that answer to the path taken by the continuation `next u`. -/
 @[simp] theorem replayFirstPath_query_bind (t : spec.Domain)
     (next : spec.Range t → OracleComp spec α) :
     replayFirstPath (liftM (query t) >>= next) =
-      OracleComp.queryBind t fun u =>
-        PFunctor.FreeM.map
+      OracleComp.queryBind t fun u => PFunctor.FreeM.map
           (fun path : PFunctor.FreeM.Path (next u) =>
             (⟨u, path⟩ : PFunctor.FreeM.Path (OracleComp.queryBind t next)))
           (replayFirstPath (next u)) :=
@@ -69,8 +95,7 @@ def replayPathResult (main : OracleComp spec α)
 run after erasing the path to its output and trace. This is the bridge that
 lets replay proofs use typed paths without changing their probability API. -/
 theorem map_replayPathResult_replayFirstPath (main : OracleComp spec α) :
-    PFunctor.FreeM.map (replayPathResult main) (replayFirstPath main) =
-      replayFirstRun main :=
+    PFunctor.FreeM.map (replayPathResult main) (replayFirstPath main) = replayFirstRun main :=
   map_pathLogResult_withPath main
 
 /-- A supported intrinsic path erases to a supported legacy first-run result. -/
@@ -79,16 +104,13 @@ lemma replayPathResult_mem_support_replayFirstRun
     (hpath : path ∈ support (replayFirstPath main)) :
     replayPathResult main path ∈ support (replayFirstRun main) := by
   rw [← map_replayPathResult_replayFirstPath]
-  change replayPathResult main path ∈ support
-    ((replayPathResult main <$> replayFirstPath main) : OracleComp spec _)
-  rw [support_map, Set.mem_image]
-  exact ⟨path, hpath, rfl⟩
+  exact (support_map (replayPathResult main) (replayFirstPath main)).symm ▸
+    Set.mem_image_of_mem _ hpath
 
 /-- Every well-typed path through an oracle computation is supported. Oracle
 queries have universal symbolic support, so a `Path` already contains all the
 evidence needed to select its successive branches. -/
-lemma mem_support_replayFirstPath (main : OracleComp spec α)
-    (path : PFunctor.FreeM.Path main) :
+lemma mem_support_replayFirstPath (main : OracleComp spec α) (path : PFunctor.FreeM.Path main) :
     path ∈ support (replayFirstPath main) := by
   induction main with
   | pure x =>
@@ -104,26 +126,24 @@ lemma mem_support_replayFirstPath (main : OracleComp spec α)
             replayFirstPath (next u)) : OracleComp spec _))
       rw [mem_support_bind_iff]
       refine ⟨answer, by simp, ?_⟩
-      rw [support_map, Set.mem_image]
-      exact ⟨tail, ih answer tail, rfl⟩
+      rw [support_map]
+      exact Set.mem_image_of_mem _ (ih answer tail)
 
 /-- Forgetting the path produced by the intrinsic first run recovers the
 original oracle computation. -/
 @[simp] theorem map_output_replayFirstPath (main : OracleComp spec α) :
-    (PFunctor.FreeM.output main <$> replayFirstPath main : OracleComp spec α) = main :=
+    PFunctor.FreeM.output main <$> replayFirstPath main = main :=
   PFunctor.FreeM.map_output_withPath main
 
 /-- The selected entry of an occurrence completion's erased trace is exactly
 its focused answer. -/
-lemma getQueryValue?_completion_path_eq_answer [spec.DecidableEq]
-    {main : OracleComp spec α} {i : ι} {n : Nat}
-    (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n)
+lemma getQueryValue?_completion_path_eq_answer [spec.DecidableEq] {main : OracleComp spec α} {i : ι}
+    {n : Nat} (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n)
     (completion : occurrence.Completion) :
-    QueryLog.getQueryValue?
-      (PFunctor.FreeM.Path.trace main completion.path) i n =
-        some completion.answer := by
+    QueryLog.getQueryValue? (PFunctor.FreeM.Path.trace main completion.path) i n =
+      some completion.answer := by
   rw [QueryLog.getQueryValue?_eq_getAt?]
-  exact PFunctor.FreeM.Cursor.Occurrence.getAt?_trace_completion_path occurrence completion
+  exact occurrence.getAt?_trace_completion_path completion
 
 section quantitative
 
@@ -134,8 +154,8 @@ of `main` outputs `x` and the recorded log is `log`, every selected fork index
 `s = cf x` actually corresponds to an `i`-query in `log` (i.e. the `s`-th
 `i`-query exists in the log). In Fiat--Shamir applications `cf` extracts the
 index of a recorded query, so this property holds by construction. -/
-def CfReachable (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1))) : Prop :=
+def CfReachable (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1))) :
+    Prop :=
   ∀ {x : α} {log : QueryLog spec},
     (x, log) ∈ support (replayFirstRun main) →
     ∀ s : Fin (qb i + 1), cf x = some s →
@@ -150,18 +170,14 @@ def PathCfReachable (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
       (PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor) i main path s).isSome
 
 /-- Transcript reachability implies the canonical path-level condition. -/
-theorem CfReachable.toPathCfReachable
-    {main : OracleComp spec α} {qb : ι → ℕ} {i : ι}
+theorem CfReachable.toPathCfReachable {main : OracleComp spec α} {qb : ι → ℕ} {i : ι}
     {cf : α → Option (Fin (qb i + 1))} (hreach : CfReachable main qb i cf) :
     PathCfReachable main qb i cf := by
   intro path s hcf
-  have hrun := replayPathResult_mem_support_replayFirstRun main path
-    (mem_support_replayFirstPath main path)
-  have hsome := hreach hrun s (by simpa [replayPathResult] using hcf)
-  rw [QueryLog.getQueryValue?_eq_getAt?,
-    PFunctor.TraceList.getAt?_isSome_iff_lt_occurrences] at hsome
-  rw [PFunctor.FreeM.Cursor.locateAt?_isSome_iff_lt_occurrences]
-  exact hsome
+  rw [PFunctor.FreeM.Cursor.locateAt?_isSome_iff_lt_occurrences,
+    ← PFunctor.TraceList.getAt?_isSome_iff_lt_occurrences, ← QueryLog.getQueryValue?_eq_getAt?]
+  exact hreach (replayPathResult_mem_support_replayFirstRun main path
+    (mem_support_replayFirstPath main path)) s (by simpa [replayPathResult] using hcf)
 
 /-! ## Intrinsic quantitative games -/
 
@@ -171,11 +187,8 @@ def contextForkView (main : OracleComp spec α) (i : ι) (s : Nat) :
     OracleComp spec (Option (PFunctor.FreeM.Cursor.ForkView i main s)) :=
   PFunctor.FreeM.Cursor.locateAndForkAt (P := spec.toPFunctor) i main s
 
-/-- Pure success classifier shared by fixed and dynamically selected context
-experiments. All probabilistic structure remains in PolyFun's forking
-combinators. -/
-private def classifyForkView
-    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+-- Shared success classifier for the fixed and dynamically selected context-fork experiments.
+private def classifyForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
     (view : PFunctor.FreeM.Cursor.ForkView i main s) : Option (α × α) :=
   let x₁ := PFunctor.FreeM.output main view.firstPath
@@ -185,9 +198,8 @@ private def classifyForkView
   else none
 
 @[simp] private theorem classifyForkView_isSome
-    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
-    (view : PFunctor.FreeM.Cursor.ForkView i main s) :
+    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
+    (s : Fin (qb i + 1)) (view : PFunctor.FreeM.Cursor.ForkView i main s) :
     (classifyForkView main qb i cf s view).isSome ↔
       view.firstAnswer ≠ view.secondAnswer ∧
         cf (PFunctor.FreeM.output main view.firstPath) = some s ∧
@@ -195,11 +207,9 @@ private def classifyForkView
   grind [classifyForkView]
 
 private theorem classifyForkView_component_iff
-    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
-    (view : PFunctor.FreeM.Cursor.ForkView i main s) :
-    (classifyForkView main qb i cf s view).map (cf ∘ Prod.fst) =
-        some (some s) ↔
+    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
+    (s : Fin (qb i + 1)) (view : PFunctor.FreeM.Cursor.ForkView i main s) :
+    (classifyForkView main qb i cf s view).map (cf ∘ Prod.fst) = some (some s) ↔
       (classifyForkView main qb i cf s view).isSome := by
   grind [classifyForkView]
 
@@ -207,56 +217,54 @@ private theorem classifyForkView_component_iff
 shared occurrence context, and both completions remain available to
 reduction-facing proofs. -/
 abbrev ContextForkWitness (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) :=
-  PFunctor.FreeM.Cursor.SelectedForkView i main (Fin (qb i + 1)) (fun s => (s : Nat))
+  PFunctor.FreeM.Cursor.SelectedForkView i main (Fin (qb i + 1)) Fin.val
 
-private def acceptContextForkWitness
-    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+private def acceptContextForkWitness (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
     (view : PFunctor.FreeM.Cursor.ForkView i main s) :
     Option (ContextForkWitness main qb i) :=
   if (classifyForkView main qb i cf s view).isSome then some ⟨s, view⟩ else none
 
 @[simp] private theorem acceptContextForkWitness_eq_some
-    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
-    (view : PFunctor.FreeM.Cursor.ForkView i main s) :
+    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
+    (s : Fin (qb i + 1)) (view : PFunctor.FreeM.Cursor.ForkView i main s) :
     acceptContextForkWitness main qb i cf s view = some ⟨s, view⟩ ↔
       view.firstAnswer ≠ view.secondAnswer ∧
         cf (PFunctor.FreeM.output main view.firstPath) = some s ∧
         cf (PFunctor.FreeM.output main view.secondPath) = some s := by
   simp [acceptContextForkWitness]
 
-/-- Canonical rich forking experiment.  Probability statements may project
+/-- Canonical rich forking experiment. Probability statements may project
 its output pair, while Fiat--Shamir reductions can consume the typed
 occurrence and the two completions directly. -/
 def contextForkWitness (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) :
     OracleComp spec (Option (ContextForkWitness main qb i)) :=
   PFunctor.FreeM.Cursor.filterMapLocateAndForkSelected (P := spec.toPFunctor)
-    i main cf (fun s => (s : Nat)) fun selected =>
+    i main cf Fin.val fun selected =>
       acceptContextForkWitness main qb i cf selected.label selected.view
 
 omit [spec.DecidableEq] in
+/-- The `outputs` pair of a contextual-fork witness is the pair of oracle outputs read at its
+first and second fork paths. -/
 @[simp] theorem contextForkWitness_outputs (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (witness : ContextForkWitness main qb i) :
     (PFunctor.FreeM.Cursor.SelectedForkView.outputs witness) =
       (PFunctor.FreeM.output main witness.view.firstPath,
         PFunctor.FreeM.output main witness.view.secondPath) := rfl
 
-private def contextForkImpl (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+private def contextForkByClassify (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) : OracleComp spec (Option (α × α)) :=
   PFunctor.FreeM.Cursor.filterMapLocateAndForkBy (P := spec.toPFunctor)
-    i main cf (fun s => (s : Nat)) (classifyForkView main qb i cf)
+    i main cf Fin.val (classifyForkView main qb i cf)
 
-/-- Projecting the rich contextual-fork witness gives the pair-valued
-probability interface. -/
-private theorem map_contextForkWitness_outputs_eq_contextForkImpl
+private theorem map_contextForkWitness_outputs_eq_contextForkByClassify
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) :
     PFunctor.FreeM.map
         (Option.map PFunctor.FreeM.Cursor.SelectedForkView.outputs)
-        (contextForkWitness main qb i cf) = contextForkImpl main qb i cf := by
-  unfold contextForkWitness contextForkImpl
+        (contextForkWitness main qb i cf) = contextForkByClassify main qb i cf := by
+  unfold contextForkWitness contextForkByClassify
   rw [PFunctor.FreeM.Cursor.filterMapLocateAndForkSelected_eq_filterMapLocateAndForkBy]
   unfold PFunctor.FreeM.Cursor.filterMapLocateAndForkBy
   rw [← PFunctor.FreeM.comp_map,
@@ -280,17 +288,16 @@ private theorem map_contextForkWitness_outputs_eq_contextForkImpl
 /-- Canonical dynamically selected fork. The first execution chooses an
 ordinal through `cf`; PolyFun locates that occurrence and independently
 completes the same typed context a second time. -/
-def contextFork (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1))) : OracleComp spec (Option (α × α)) :=
+def contextFork (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1))) :
+    OracleComp spec (Option (α × α)) :=
   PFunctor.FreeM.map
     (Option.map PFunctor.FreeM.Cursor.SelectedForkView.outputs)
     (contextForkWitness main qb i cf)
 
-private theorem contextFork_eq_contextForkImpl
-    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+private theorem contextFork_eq_contextForkByClassify (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) :
-    contextFork main qb i cf = contextForkImpl main qb i cf :=
-  map_contextForkWitness_outputs_eq_contextForkImpl main qb i cf
+    contextFork main qb i cf = contextForkByClassify main qb i cf :=
+  map_contextForkWitness_outputs_eq_contextForkByClassify main qb i cf
 
 /-- Every supported rich witness carries a supported second completion and
 the pure success conditions checked by the contextual fork. -/
@@ -306,40 +313,23 @@ theorem contextForkWitness_success
   rw [contextForkWitness,
     PFunctor.FreeM.Cursor.filterMapLocateAndForkSelected_eq_filterMapLocateAndForkBy,
     PFunctor.FreeM.Cursor.filterMapLocateAndForkBy_eq_bind_complete] at h
-  change some witness ∈ support
-    (Cursor.withPath main >>= _) at h
-  obtain ⟨path, _hpath, h⟩ := mem_support_bind_peel _ _ h
+  obtain ⟨path, _, h⟩ := mem_support_bind_peel _ _ h
   rcases hcf : cf (PFunctor.FreeM.output main path) with _ | s
   · simp only [hcf] at h
     cases eq_of_mem_support_pure none h
-  · simp only [hcf] at h
-    rcases hlocated : PFunctor.FreeM.Cursor.locateAt?
-        (P := spec.toPFunctor) i main path s with _ | located
-    · simp only [hlocated] at h
-      cases eq_of_mem_support_pure none h
-    · simp only [hlocated] at h
-      change some witness ∈ _root_.support
-        ((fun second ↦ acceptContextForkWitness main qb i cf s {
-            occurrence := located.occurrence
-            first := located.completion
-            second := second }) <$> Cursor.completeOccurrence located.occurrence) at h
-      obtain ⟨second, hsecond, hresult⟩ := mem_support_map_peel _ _ h
-      change some witness = acceptContextForkWitness main qb i cf s {
-          occurrence := located.occurrence
-          first := located.completion
-          second := second } at hresult
-      by_cases haccept : (classifyForkView main qb i cf s {
-          occurrence := located.occurrence
-          first := located.completion
-          second := second }).isSome
-      · rw [acceptContextForkWitness, if_pos haccept] at hresult
-        simp only [Option.some.injEq] at hresult
-        subst witness
-        rcases (classifyForkView_isSome main qb i cf s _).mp haccept with
-          ⟨hne, hfirst, hsecondCf⟩
-        exact ⟨hsecond, hne, hfirst, hsecondCf⟩
-      · rw [acceptContextForkWitness, if_neg haccept] at hresult
-        cases hresult
+  rcases hlocated : PFunctor.FreeM.Cursor.locateAt?
+      (P := spec.toPFunctor) i main path s with _ | located
+  · simp only [hcf, hlocated] at h
+    cases eq_of_mem_support_pure none h
+  simp only [hcf, hlocated] at h
+  obtain ⟨second, hsecond, hresult⟩ := mem_support_map_peel _ _ h
+  by_cases haccept : (classifyForkView main qb i cf s
+      { occurrence := located.occurrence, first := located.completion, second := second }).isSome
+  · rw [acceptContextForkWitness, if_pos haccept, Option.some.injEq] at hresult
+    subst hresult
+    exact ⟨hsecond, (classifyForkView_isSome main qb i cf s _).mp haccept⟩
+  · rw [acceptContextForkWitness, if_neg haccept] at hresult
+    cases hresult
 
 /-- Successful contextual forks expose the selected path, its certified
 occurrence, and the independently sampled second completion. -/
@@ -364,12 +354,10 @@ theorem contextFork_success
   · simp only [Option.map, Option.some.injEq] at houtputs
     obtain ⟨hsecond, hne, hcf₁, hcf₂⟩ :=
       contextForkWitness_success main qb i cf hresult
-    let located := PFunctor.FreeM.Cursor.Located.ofCompletion witness.view.first
-    refine ⟨witness.view.firstPath, witness.label, located, witness.view.second,
+    exact ⟨witness.view.firstPath, witness.label,
+      .ofCompletion witness.view.first, witness.view.second,
       mem_support_replayFirstPath main witness.view.firstPath, hcf₁, hsecond, hne,
-      hcf₂, ?_, ?_⟩
-    · exact congrArg Prod.fst houtputs
-    · exact congrArg Prod.snd houtputs
+      hcf₂, congrArg Prod.fst houtputs, congrArg Prod.snd houtputs⟩
 
 /-- Transfer first-run log invariants through a successful contextual fork.
 The differing selected entries follow directly from the two completions of
@@ -390,29 +378,16 @@ theorem contextFork_propertyTransfer [IsUniformSpec spec]
       hne, hcf₂, hx₁, hx₂⟩ := contextFork_success main qb i cf h
   let log₁ : QueryLog spec := PFunctor.FreeM.Path.trace main path
   let log₂ : QueryLog spec := PFunctor.FreeM.Path.trace main second.path
-  have hrun₁ : (x₁, log₁) ∈ support (replayFirstRun main) := by
-    simpa [log₁, replayPathResult, hx₁] using
+  have hlookup₁ : QueryLog.getQueryValue? log₁ i s = some located.completion.answer := by
+    simpa [log₁] using congrArg (PFunctor.FreeM.Path.trace main) located.path_eq ▸
+      getQueryValue?_completion_path_eq_answer located.occurrence located.completion
+  refine ⟨log₁, log₂, s, hx₁ ▸ hcf₁, hx₂ ▸ hcf₂, hP ?_, hP ?_, ?_⟩
+  · simpa [log₁, replayPathResult, hx₁] using
       replayPathResult_mem_support_replayFirstRun main path hpath
-  have hrun₂ : (x₂, log₂) ∈ support (replayFirstRun main) := by
-    simpa [log₂, replayPathResult, hx₂] using
+  · simpa [log₂, replayPathResult, hx₂] using
       replayPathResult_mem_support_replayFirstRun main second.path
         (mem_support_replayFirstPath main second.path)
-  have hlookup₁ : QueryLog.getQueryValue? log₁ i s =
-      some located.completion.answer := by
-    have htrace := congrArg
-      (fun path : PFunctor.FreeM.Path main => (replayPathResult main path).2)
-      located.path_eq
-    change PFunctor.FreeM.Path.trace main located.completion.path =
-      PFunctor.FreeM.Path.trace main path at htrace
-    have hlookup := getQueryValue?_completion_path_eq_answer
-      located.occurrence located.completion
-    simpa [log₁] using htrace ▸ hlookup
-  have hlookup₂ : QueryLog.getQueryValue? log₂ i s = some second.answer :=
-    getQueryValue?_completion_path_eq_answer located.occurrence second
-  refine ⟨log₁, log₂, s, ?_, ?_, hP hrun₁, hP hrun₂, ?_⟩
-  · simpa only [hx₁] using hcf₁
-  · simpa only [hx₂] using hcf₂
-  · rw [hlookup₁, hlookup₂]
+  · rw [hlookup₁, getQueryValue?_completion_path_eq_answer located.occurrence second]
     exact fun heq => hne (Option.some.inj heq)
 
 /-- The fixed-index guarded context experiment. It succeeds exactly when both
@@ -420,13 +395,11 @@ outputs select `s` and the two focused oracle answers differ. -/
 def guardedContextFork (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :
     OracleComp spec (Option (α × α)) :=
-  PFunctor.FreeM.Cursor.filterMapLocateAndForkAt (P := spec.toPFunctor)
-    i main s (classifyForkView main qb i cf s)
+  PFunctor.FreeM.Cursor.filterMapLocateAndForkAt i main s (classifyForkView main qb i cf s)
 
 private def collideForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :
-    Option (PFunctor.FreeM.Cursor.ForkView i main (s : Nat)) →
-      Option (Fin (qb i + 1))
+    Option (PFunctor.FreeM.Cursor.ForkView i main s) → Option (Fin (qb i + 1))
   | none => none
   | some view => if view.firstAnswer = view.secondAnswer ∧
       cf (PFunctor.FreeM.output main view.firstPath) = some s ∧
@@ -434,9 +407,8 @@ private def collideForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : �
       then some s else none
 
 @[simp] private theorem collideForkView_eq_some
-    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
-    (view : PFunctor.FreeM.Cursor.ForkView i main s) :
+    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
+    (s : Fin (qb i + 1)) (view : PFunctor.FreeM.Cursor.ForkView i main s) :
     collideForkView main qb i cf s (some view) = some s ↔
       view.firstAnswer = view.secondAnswer ∧
         cf (PFunctor.FreeM.output main view.firstPath) = some s ∧
@@ -448,21 +420,27 @@ private def contextForkViewCollision (main : OracleComp spec α) (qb : ι → �
     OracleComp spec (Option (Fin (qb i + 1))) :=
   PFunctor.FreeM.map (collideForkView main qb i cf s) (contextForkView main i s)
 
-/-- Equal focused answers form the sole collision branch removed by
-`guardedContextFork`. -/
-noncomputable def contextForkCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :
-    OracleComp spec (Option (Fin (qb i + 1))) := do
-  let path ← PFunctor.FreeM.withPath main
+/-- Per-path continuation of `contextForkCollision`. Locate occurrence `s` on `path`; if it is
+present, resample the focused answer and report `some s` exactly when the fresh answer collides
+with the first completion's answer and the path already selected `s`. -/
+noncomputable def contextForkCollisionCont (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+    (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) (path : PFunctor.FreeM.Path main) :
+    OracleComp spec (Option (Fin (qb i + 1))) :=
   match PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor) i main path s with
   | none => pure none
-  | some located =>
+  | some located => do
       let secondAnswer ← spec.query i
       if located.completion.answer = secondAnswer ∧ cf (PFunctor.FreeM.output main path) = some s
         then pure (some s) else pure none
 
-private theorem probEvent_classifyForkView_isSome_eq_zero_of_first_ne
-    [IsProbabilitySpec spec]
+/-- Equal focused answers form the sole collision branch removed by
+`guardedContextFork`. -/
+noncomputable def contextForkCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+    (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :
+    OracleComp spec (Option (Fin (qb i + 1))) :=
+  PFunctor.FreeM.withPath main >>= contextForkCollisionCont main qb i cf s
+
+private theorem probEvent_classifyForkView_isSome_eq_zero_of_first_ne [IsProbabilitySpec spec]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
     {path : PFunctor.FreeM.Path main}
@@ -478,8 +456,7 @@ private theorem probEvent_classifyForkView_isSome_eq_zero_of_first_ne
   convert probEvent_False (ofFreeM located.occurrence.complete)
   simp [PFunctor.FreeM.Cursor.ForkView.firstPath, hfirst]
 
-private theorem probEvent_classifyForkView_component_ne_eq_zero
-    [IsProbabilitySpec spec]
+private theorem probEvent_classifyForkView_component_eq_zero_of_ne [IsProbabilitySpec spec]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (t s : Fin (qb i + 1))
     {path : PFunctor.FreeM.Path main}
@@ -493,10 +470,12 @@ private theorem probEvent_classifyForkView_component_ne_eq_zero
           second := second }) located.occurrence.complete)] = 0 := by
   rw [probEvent_ofFreeM_map]
   convert probEvent_False _
-  simp [classifyForkView]
-  grind only
+  grind [classifyForkView]
 
-noncomputable def contextForkPair (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+/-- The pair of `cf`-classifications observed from the two completions of the fixed
+occurrence at index `i` and position `s`: the `contextForkView`-family specialization of
+`observedForkPair` over which the replay-forking squaring and partition bounds are stated. -/
+def contextForkPair (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :
     OracleComp spec (Option (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1)))) :=
   observedForkPair main i s cf
@@ -511,9 +490,8 @@ theorem sq_probOutput_main_le_contextForkPair [IsUniformSpec spec]
     Pr[= s | cf <$> main] ^ 2 ≤
       Pr[= (some (some s, some s) : Option
             (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1)))) |
-          contextForkPair main qb i cf s] := by
-  exact sq_probOutput_map_le_observedForkPair main i s cf s (fun path hcf =>
-    hreach path s hcf)
+          contextForkPair main qb i cf s] :=
+  sq_probOutput_map_le_observedForkPair main i s cf s (fun path => hreach path s)
 
 /-- Fixed-index pair success partitions into a genuine guarded fork or an
 equal-answer collision, all as observations of the same `ForkView`. -/
@@ -538,17 +516,13 @@ theorem probOutput_contextForkPair_le_guarded_add_collision [IsUniformSpec spec]
   let collisionGood : Option (PFunctor.FreeM.Cursor.ForkView i main (s : Nat)) → Prop :=
     fun view? => collideForkView main qb i cf s view? = some s
   have hpoint : ∀ view?, pairGood view? → guardGood view? ∨ collisionGood view? := by
-    rintro (_ | view)
-    · simp [pairGood]
-    · grind [classifyForkView, collideForkView]
+    rintro (_ | view) <;> simp only [pairGood] <;> grind [classifyForkView, collideForkView]
   have hpair :
       Pr[= (some (some s, some s) : Option
             (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1)))) |
           contextForkPair main qb i cf s] = Pr[pairGood | source] := by
     rw [← probEvent_eq_eq_probOutput, contextForkPair, observedForkPair, probEvent_map]
-    congr 1
-    funext view?
-    rcases view? with _ | view <;> simp [pairGood]
+    congr 1 with (_ | view) <;> simp [pairGood]
   have hguard : Pr[guardGood | source] =
       Pr[fun result : Option (α × α) => result.isSome |
         guardedContextFork main qb i cf s] := by
@@ -567,7 +541,7 @@ theorem probOutput_contextForkPair_le_guarded_add_collision [IsUniformSpec spec]
   rw [hpair]
   calc
     Pr[pairGood | source] ≤ Pr[fun view? => guardGood view? ∨ collisionGood view? |
-        source] := probEvent_mono (mx := source) fun view? _ hgood => hpoint view? hgood
+        source] := probEvent_mono (mx := source) fun view? _ => hpoint view?
     _ ≤ Pr[guardGood | source] + Pr[collisionGood | source] :=
       probEvent_or_le source guardGood collisionGood
     _ = _ := by rw [hguard, hcollision]
@@ -581,27 +555,17 @@ theorem probOutput_contextForkCollision_le_main_div [IsUniformSpec spec]
         contextForkCollision main qb i cf s] ≤
       Pr[= (some s : Option (Fin (qb i + 1))) | cf <$> main] /
         Fintype.card (spec.Range i) := by
-  let paths : OracleComp spec (PFunctor.FreeM.Path main) := Cursor.withPath main
-  let collision : PFunctor.FreeM.Path main →
-      OracleComp spec (Option (Fin (qb i + 1))) := fun path =>
-    match PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor)
-        i main path s with
-    | none => pure none
-    | some located => do
-        let secondAnswer ← spec.query i
-        if located.completion.answer = secondAnswer ∧
-            cf (PFunctor.FreeM.output main path) = some s then
-          pure (some s)
-        else pure none
+  let paths : OracleComp spec (PFunctor.FreeM.Path main) := PFunctor.FreeM.withPath main
+  let collision : PFunctor.FreeM.Path main → OracleComp spec (Option (Fin (qb i + 1))) :=
+    contextForkCollisionCont main qb i cf s
   rw [← probEvent_eq_eq_probOutput]
-  change Pr[fun result => result = some s | paths >>= collision] ≤ _
   calc
     Pr[fun result => result = some s | paths >>= collision] ≤
         Pr[fun path => cf (PFunctor.FreeM.output main path) = some s | paths] /
           Fintype.card (spec.Range i) := by
       apply probEvent_bind_le_probEvent_div
       · intro path _ hcf
-        simp only [collision]
+        simp only [collision, contextForkCollisionCont]
         rcases hlocated : PFunctor.FreeM.Cursor.locateAt?
             (P := spec.toPFunctor) i main path s with _ | located
         · simp
@@ -615,35 +579,28 @@ theorem probOutput_contextForkCollision_le_main_div [IsUniformSpec spec]
               Pr[fun secondAnswer => located.completion.answer = secondAnswer |
                 (liftM (spec.query i) : OracleComp spec (spec.Range i))] := by
                 rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
-                refine tsum_congr fun secondAnswer ↦ ?_
+                refine tsum_congr fun secondAnswer => ?_
                 by_cases heq : located.completion.answer = secondAnswer <;>
                   simp [hcf, heq]
-            _ ≤ (Fintype.card (spec.Range i) : ℝ≥0∞)⁻¹ := by
-              exact probEvent_query_le_inv_of_unique i _
-                (fun (x y : spec.Range i) (hx : located.completion.answer = x)
-                  (hy : located.completion.answer = y) ↦ hx.symm.trans hy)
+            _ ≤ (Fintype.card (spec.Range i) : ℝ≥0∞)⁻¹ := probEvent_query_le_inv_of_unique i _
+              (fun (x y : spec.Range i) (hx : located.completion.answer = x)
+                (hy : located.completion.answer = y) => hx.symm.trans hy)
       · intro path _ hcf
-        simp only [collision]
+        simp only [collision, contextForkCollisionCont]
         rcases hlocated : PFunctor.FreeM.Cursor.locateAt?
             (P := spec.toPFunctor) i main path s with _ | located
         · simp
         · rw [probEvent_bind_eq_tsum]
-          refine ENNReal.tsum_eq_zero.mpr fun secondAnswer ↦ ?_
+          refine ENNReal.tsum_eq_zero.mpr fun secondAnswer => ?_
           by_cases heq : located.completion.answer = secondAnswer <;> simp [hcf, heq]
     _ = Pr[= (some s : Option (Fin (qb i + 1))) | cf <$> main] /
           Fintype.card (spec.Range i) := by
+      have hpaths : (PFunctor.FreeM.output main <$> paths : OracleComp spec α) = main :=
+        PFunctor.FreeM.map_output_withPath main
       congr 1
       rw [← probEvent_eq_eq_probOutput]
-      calc
-        Pr[fun path => cf (PFunctor.FreeM.output main path) = some s | paths] =
-            Pr[fun result => result = some s |
-              cf <$> (PFunctor.FreeM.output main <$> paths)] := by
-          rw [probEvent_map, probEvent_map]
-          rfl
-        _ = Pr[fun result => result = some s | cf <$> main] := by
-          have hpaths : (PFunctor.FreeM.output main <$> paths : OracleComp spec α) = main :=
-            PFunctor.FreeM.map_output_withPath main
-          rw [hpaths]
+      conv_rhs => rw [← hpaths, probEvent_map, probEvent_map]
+      rfl
 
 /-- Requiring the colliding second completion to finish successfully can only
 decrease the path-first equal-answer collision probability. -/
@@ -691,8 +648,6 @@ theorem probOutput_contextForkViewCollision_le_collision [IsUniformSpec spec]
         (P := spec.toPFunctor) i main path s with _ | located
     · rfl
     · simp [PFunctor.FreeM.Cursor.Located.fork]
-  have hlift : (PFunctor.FreeM.lift (P := spec.toPFunctor) i :
-      OracleComp spec (spec.Range i)) = OracleComp.lift (spec.query i) := rfl
   have hinner : ∀ path : PFunctor.FreeM.Path main,
       Pr[= (some s : Option (Fin (qb i + 1))) | viewCollision path] ≤
         Pr[= (some s : Option (Fin (qb i + 1))) | answerCollision path] := by
@@ -701,8 +656,7 @@ theorem probOutput_contextForkViewCollision_le_collision [IsUniformSpec spec]
     rcases hlocated : PFunctor.FreeM.Cursor.locateAt?
         (P := spec.toPFunctor) i main path s with _ | located
     · simp
-    · rw [hlift]
-      let continuation : spec.Range i →
+    · let continuation : spec.Range i →
           OracleComp spec (Option (Fin (qb i + 1))) := fun secondAnswer =>
         (fun secondSuffix =>
           collideForkView main qb i cf s (some {
@@ -717,9 +671,7 @@ theorem probOutput_contextForkViewCollision_le_collision [IsUniformSpec spec]
       let firstAnswer : spec.Range i := located.completion.answer
       by_cases heq : firstAnswer = secondAnswer
       · by_cases hcf : cf (PFunctor.FreeM.output main path) = some s
-        · have hfirst : cf (PFunctor.FreeM.output main located.completion.path) =
-              some s := by rw [located.path_eq]; exact hcf
-          simp [continuation, firstAnswer, heq, hcf, collideForkView,
+        · simp [continuation, firstAnswer, heq, hcf, collideForkView,
             probOutput_query]
         · have hfirst : cf (PFunctor.FreeM.output main located.completion.path) ≠
               some s := by rw [located.path_eq]; exact hcf
@@ -741,6 +693,7 @@ theorem probOutput_contextForkViewCollision_le_collision [IsUniformSpec spec]
           contextForkCollision main qb i cf s] := by
         simp only [contextForkCollision, paths, answerCollision]
         rw [probOutput_bind_eq_tsum]
+        rfl
 
 /-- The successful equal-answer branch of the intrinsic context experiment is
 bounded by one uniform-answer collision against the original success event. -/
@@ -765,20 +718,15 @@ theorem sq_sub_div_le_probEvent_guardedContextFork [IsUniformSpec spec]
       Pr[fun result : Option (α × α) => result.isSome |
         guardedContextFork main qb i cf s] := by
   set h : ℝ≥0∞ := ↑(Fintype.card (spec.Range i))
-  apply (tsub_le_iff_right).2
-  have hsquare := sq_probOutput_main_le_contextForkPair
-    main qb i cf hreach s
-  have hpartition := probOutput_contextForkPair_le_guarded_add_collision
-    main qb i cf s
-  have hcollision := probOutput_contextForkViewCollision_le_main_div
-    main qb i cf s
-  exact hsquare.trans <| hpartition.trans <|
-    add_le_add_right (by simpa [h] using hcollision) _
+  refine tsub_le_iff_right.2 <|
+    (sq_probOutput_main_le_contextForkPair main qb i cf hreach s).trans <|
+    (probOutput_contextForkPair_le_guarded_add_collision main qb i cf s).trans <|
+      add_le_add_right (by simpa [h] using
+        probOutput_contextForkViewCollision_le_main_div main qb i cf s) _
 
-/-- Finite aggregation of the fixed-occurrence bounds.  This is the
+/-- Finite aggregation of the fixed-occurrence bounds. This is the
 probability-facing interface consumed by the dynamic context fork. -/
-theorem sum_sq_sub_div_le_probEvent_guardedContextFork
-    [IsUniformSpec spec]
+theorem sum_sq_sub_div_le_probEvent_guardedContextFork [IsUniformSpec spec]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1)))
     (hreach : PathCfReachable main qb i cf) :
@@ -803,16 +751,8 @@ theorem probEvent_guardedContextFork_eq_contextFork_component
         contextFork main qb i cf] := by
   letI : spec.toPFunctor.DecidableEq :=
     (inferInstance : spec.DecidableEq).toDecidableEq
-  rw [contextFork_eq_contextForkImpl]
-  unfold contextForkImpl
-  change Pr[fun result : Option (α × α) => result.isSome |
-      OracleComp.ofFreeM (PFunctor.FreeM.Cursor.filterMapLocateAndForkAt
-        (P := spec.toPFunctor) i main s (classifyForkView main qb i cf s))] =
-    Pr[fun result : Option (α × α) =>
-        result.map (cf ∘ Prod.fst) = some (some s) |
-      OracleComp.ofFreeM (PFunctor.FreeM.Cursor.filterMapLocateAndForkBy
-        (P := spec.toPFunctor) i main cf (fun t => (t : Nat))
-          (classifyForkView main qb i cf))]
+  rw [contextFork_eq_contextForkByClassify]
+  unfold guardedContextFork contextForkByClassify
   rw [PFunctor.FreeM.Cursor.filterMapLocateAndForkAt_eq_bind_complete,
     PFunctor.FreeM.Cursor.filterMapLocateAndForkBy_eq_bind_complete,
     probEvent_ofFreeM_bind_eq_tsum, probEvent_ofFreeM_bind_eq_tsum]
@@ -845,40 +785,30 @@ theorem probEvent_guardedContextFork_eq_contextFork_component
             occurrence := located.occurrence
             first := located.completion
             second := second }).symm
-    · rcases hlocFixed : PFunctor.FreeM.Cursor.locateAt?
-          (P := spec.toPFunctor) i main path s with _ | locatedFixed
-      · rw [probEvent_ofFreeM_pure]
-        simp only [Option.isSome_none, Bool.false_eq_true, if_false]
-        rcases hlocDynamic : PFunctor.FreeM.Cursor.locateAt?
-            (P := spec.toPFunctor) i main path t with _ | locatedDynamic
+    · trans (0 : ℝ≥0∞)
+      · rcases hlocFixed : PFunctor.FreeM.Cursor.locateAt?
+            (P := spec.toPFunctor) i main path s with _ | locatedFixed
         · rw [probEvent_ofFreeM_pure]
           simp
-        · rw [probEvent_classifyForkView_component_ne_eq_zero
-            main qb i cf t s locatedDynamic hts]
+        · dsimp only
+          have hfirstNe :
+              cf (PFunctor.FreeM.output main locatedFixed.completion.path) ≠ some s := by
+            simp only [locatedFixed.path_eq, hcf]
+            grind
+          rw [probEvent_classifyForkView_isSome_eq_zero_of_first_ne
+            main qb i cf s locatedFixed hfirstNe]
       · dsimp only
-        have hfirstFixed :
-            cf (PFunctor.FreeM.output main locatedFixed.completion.path) =
-              some t := by
-          simpa only [locatedFixed.path_eq] using hcf
-        have hfirstNe :
-            cf (PFunctor.FreeM.output main locatedFixed.completion.path) ≠
-              some s := by
-          grind
-        rw [probEvent_classifyForkView_isSome_eq_zero_of_first_ne
-          main qb i cf s locatedFixed hfirstNe]
         rcases hlocDynamic : PFunctor.FreeM.Cursor.locateAt?
             (P := spec.toPFunctor) i main path t with _ | locatedDynamic
         · rw [probEvent_ofFreeM_pure]
           simp
-        · rw [probEvent_classifyForkView_component_ne_eq_zero
+        · rw [probEvent_classifyForkView_component_eq_zero_of_ne
             main qb i cf t s locatedDynamic hts]
 
-/-- The fixed guarded components form disjoint selector events inside the
-dynamic semantic fork. -/
-theorem sum_probEvent_guardedContextFork_le_isSome
-    [IsUniformSpec spec]
-    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1))) :
+/-- The summed success probabilities of the per-selector guarded context forks
+are bounded by the success probability of the context fork. -/
+theorem sum_probEvent_guardedContextFork_le_isSome [IsProbabilitySpec spec]
+    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1))) :
     ∑ s : Fin (qb i + 1),
         Pr[fun result : Option (α × α) => result.isSome |
           guardedContextFork main qb i cf s] ≤
@@ -904,29 +834,19 @@ theorem le_probEvent_isSome_contextFork [IsUniformSpec spec]
      let q := qb i + 1
      acc * (acc / q - h⁻¹)) ≤ Pr[fun r => r.isSome | contextFork main qb i cf] := by
   simp only
-  set ps : Fin (qb i + 1) → ℝ≥0∞ :=
-    fun s => Pr[= (some s : Option _) | cf <$> main]
-  set acc : ℝ≥0∞ := ∑ s, ps s
+  set ps : Fin (qb i + 1) → ℝ≥0∞ := fun s => Pr[= (some s : Option _) | cf <$> main]
   set h : ℝ≥0∞ := ↑(Fintype.card (spec.Range i))
-  have hacc_ne_top : acc ≠ ⊤ :=
-    ne_top_of_le_ne_top one_ne_top
-      (sum_probOutput_some_le_one (mx := cf <$> main)
-        (α := Fin (qb i + 1)))
-  have halgebra :
-      acc * (acc / ↑(qb i + 1) - h⁻¹) ≤
-        ∑ s, (ps s ^ 2 - ps s / h) := by
-    have hsum : (∑ s, ps s) ≠ ⊤ := by simpa [acc] using hacc_ne_top
-    simpa [Finset.card_univ, Fintype.card_fin] using
-      ENNReal.mul_tsub_inv_le_sum_sq_sub_div
-        (Finset.univ : Finset (Fin (qb i + 1))) ps h hsum
-  refine halgebra.trans ?_
+  have hsum : (∑ s, ps s) ≠ ⊤ :=
+    ne_top_of_le_ne_top one_ne_top (sum_probOutput_some_le_one (mx := cf <$> main))
   calc
-    ∑ s, (ps s ^ 2 - ps s / h) ≤
-        ∑ s, Pr[fun result : Option (α × α) => result.isSome |
+    (∑ s, ps s) * ((∑ s, ps s) / ↑(qb i + 1) - h⁻¹)
+        ≤ ∑ s, (ps s ^ 2 - ps s / h) := by
+          simpa [Finset.card_univ, Fintype.card_fin] using
+            ENNReal.mul_tsub_inv_le_sum_sq_sub_div univ ps h hsum
+    _ ≤ ∑ s, Pr[fun result : Option (α × α) => result.isSome |
           guardedContextFork main qb i cf s] := by
-      simpa only [ps, h] using
-        sum_sq_sub_div_le_probEvent_guardedContextFork
-          main qb i cf hreach
+          simpa only [ps, h] using
+            sum_sq_sub_div_le_probEvent_guardedContextFork main qb i cf hreach
     _ ≤ _ := sum_probEvent_guardedContextFork_le_isSome main qb i cf
 
 end quantitative
