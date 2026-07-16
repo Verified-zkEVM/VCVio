@@ -14,11 +14,11 @@ This file defines structural predicates for checking whether all or some reachab
 possible oracle outputs.
 
 The predicates are phrased in terms of `PFunctor.FreeM.Cursor`: a cursor is a typed path prefix
-into the underlying free-monad tree, so quantifying over cursors whose recorded answers stay
+into the underlying free-monad tree, so quantifying over cursors whose recorded directions stay
 within the possible outputs simultaneously reaches every demanded query node (via non-terminal
-cursors) and every reachable final output (via terminal cursors). Two generic helpers,
-`PFunctor.TraceList.WithinOn` and `PFunctor.FreeM.Cursor.Sat`, express the answer-membership
-filter and the per-cursor demand.
+cursors) and every reachable final output (via terminal cursors). The generic PolyFun predicates
+`PFunctor.TraceList.DirectionsWithin` and `PFunctor.FreeM.RootSatisfies` express the trace filter
+and the demand made by the selected residual root.
 
 It also connects those structural predicates to the denotational set `supportWhen`, so proofs can
 move cleanly between the syntax-level traversal view and the reachable-output view.
@@ -26,59 +26,9 @@ move cleanly between the syntax-level traversal view and the reachable-output vi
 
 open OracleSpec
 
-universe u v w
+universe u v
 
 open scoped OracleSpec.PrimitiveQuery
-
-namespace PFunctor
-
-variable {P : PFunctor.{u, v}} {α : Type w}
-
-namespace TraceList
-
-/-- Every event recorded on a trace answers within the allowed fibers.
-Generic over the polynomial `P`; a candidate for upstreaming into `PolyFun`. -/
-def WithinOn (allowed : (a : P.A) → Set (P.B a)) (events : PFunctor.TraceList P) : Prop :=
-  ∀ e ∈ events, e.2 ∈ allowed e.1
-
-@[simp] lemma withinOn_nil (allowed : (a : P.A) → Set (P.B a)) :
-    WithinOn allowed ([] : PFunctor.TraceList P) :=
-  fun _ he => absurd he (List.not_mem_nil)
-
-@[simp] lemma withinOn_cons (allowed : (a : P.A) → Set (P.B a))
-    (e : P.Idx) (es : PFunctor.TraceList P) :
-    WithinOn allowed (e :: es) ↔ e.2 ∈ allowed e.1 ∧ WithinOn allowed es :=
-  List.forall_mem_cons
-
-end TraceList
-
-namespace FreeM.Cursor
-
-/-- The demand a cursor places on a pair of predicates: a cursor selecting a leaf demands the
-leaf predicate on its payload, while a cursor selecting an internal query node demands the node
-predicate on its label. Generic over the polynomial `P`; a candidate for upstreaming into
-`PolyFun`. -/
-def Sat (nodePred : P.A → Prop) (leafPred : α → Prop)
-    {program : PFunctor.FreeM P α} (c : PFunctor.FreeM.Cursor program) : Prop :=
-  match c.residual with
-  | .pure x => leafPred x
-  | .liftBind a _ => nodePred a
-
-@[simp] lemma sat_root_pure (nodePred : P.A → Prop) (leafPred : α → Prop) (x : α) :
-    Sat nodePred leafPred (root (.pure x : PFunctor.FreeM P α)) = leafPred x := rfl
-
-@[simp] lemma sat_root_liftBind (nodePred : P.A → Prop) (leafPred : α → Prop)
-    (a : P.A) (next : P.B a → PFunctor.FreeM P α) :
-    Sat nodePred leafPred (root (.liftBind a next)) = nodePred a := rfl
-
-@[simp] lemma sat_down (nodePred : P.A → Prop) (leafPred : α → Prop)
-    {a : P.A} {next : P.B a → PFunctor.FreeM P α}
-    (answer : P.B a) (tail : PFunctor.FreeM.Cursor (next answer)) :
-    Sat nodePred leafPred (down answer tail) = Sat nodePred leafPred tail := rfl
-
-end FreeM.Cursor
-
-end PFunctor
 
 namespace OracleComp
 
@@ -89,26 +39,28 @@ variable {ι : Type u} {spec : OracleSpec.{u, v} ι} {α β γ : Type v}
 /-- Given that oracle outputs are bounded by `possibleOutputs`, every reachable query input in the
 computation satisfies `queryPred`, and every reachable pure output satisfies `outputPred`.
 
-Phrased as: every cursor into the computation whose recorded answers stay within
-`possibleOutputs` satisfies its demand (`PFunctor.FreeM.Cursor.Sat`). Non-terminal cursors
+Phrased as: every cursor into the computation whose recorded directions stay within
+`possibleOutputs` satisfies its root demand (`PFunctor.FreeM.RootSatisfies`). Non-terminal cursors
 reach every demanded query node — including nodes with no possible continuation below them —
 while terminal cursors reach every possible final output. -/
 def allPathsSatisfy (queryPred : spec.Domain → Prop) (outputPred : α → Prop)
     (possibleOutputs : (x : spec.Domain) → Set (spec.Range x))
     (oa : OracleComp spec α) : Prop :=
   ∀ c : PFunctor.FreeM.Cursor oa,
-    TraceList.WithinOn possibleOutputs c.trace → FreeM.Cursor.Sat queryPred outputPred c
+    TraceList.DirectionsWithin possibleOutputs c.trace →
+      FreeM.RootSatisfies queryPred outputPred c.residual
 
 /-- Given that oracle outputs are bounded by `possibleOutputs`, some reachable query input in the
 computation satisfies `queryPred`, or some reachable pure output satisfies `outputPred`.
 
-Phrased as: some cursor into the computation whose recorded answers stay within
-`possibleOutputs` satisfies its demand (`PFunctor.FreeM.Cursor.Sat`). -/
+Phrased as: some cursor into the computation whose recorded directions stay within
+`possibleOutputs` satisfies its root demand (`PFunctor.FreeM.RootSatisfies`). -/
 def somePathSatisfies (queryPred : spec.Domain → Prop) (outputPred : α → Prop)
     (possibleOutputs : (x : spec.Domain) → Set (spec.Range x))
     (oa : OracleComp spec α) : Prop :=
   ∃ c : PFunctor.FreeM.Cursor oa,
-    TraceList.WithinOn possibleOutputs c.trace ∧ FreeM.Cursor.Sat queryPred outputPred c
+    TraceList.DirectionsWithin possibleOutputs c.trace ∧
+      FreeM.RootSatisfies queryPred outputPred c.residual
 
 /-- Output-only view of [`OracleComp.allPathsSatisfy`]: every output reachable under
 `possibleOutputs` satisfies `outputPred`. -/
@@ -159,15 +111,16 @@ lemma allPathsSatisfy_query_bind (q : spec.Domain)
   · intro h
     refine ⟨h (PFunctor.FreeM.Cursor.root _) (by simp), fun u hu c hc => ?_⟩
     exact h (PFunctor.FreeM.Cursor.down u c)
-      (by simp only [PFunctor.FreeM.Cursor.trace_down, TraceList.withinOn_cons]; exact ⟨hu, hc⟩)
+      (by
+        simp only [PFunctor.FreeM.Cursor.trace_down, TraceList.directionsWithin_cons]
+        exact ⟨hu, hc⟩)
   · rintro ⟨hq, h⟩ ⟨res, sp⟩ hw
     cases sp with
     | root => exact hq
     | down answer tail =>
         simp only [show (⟨res, PFunctor.FreeM.Cursor.Spine.down answer tail⟩ :
-            PFunctor.FreeM.Cursor _) = PFunctor.FreeM.Cursor.down answer ⟨res, tail⟩ from rfl,
-          PFunctor.FreeM.Cursor.trace_down, TraceList.withinOn_cons,
-          FreeM.Cursor.sat_down] at hw ⊢
+          PFunctor.FreeM.Cursor _) = PFunctor.FreeM.Cursor.down answer ⟨res, tail⟩ from rfl,
+          PFunctor.FreeM.Cursor.trace_down, TraceList.directionsWithin_cons] at hw ⊢
         exact h answer hw.1 ⟨res, tail⟩ hw.2
 
 @[simp]
@@ -186,14 +139,13 @@ lemma somePathSatisfies_query_bind (q : spec.Domain)
     | root => exact Or.inl hc
     | down answer tail =>
         simp only [show (⟨res, PFunctor.FreeM.Cursor.Spine.down answer tail⟩ :
-            PFunctor.FreeM.Cursor _) = PFunctor.FreeM.Cursor.down answer ⟨res, tail⟩ from rfl,
-          PFunctor.FreeM.Cursor.trace_down, TraceList.withinOn_cons,
-          FreeM.Cursor.sat_down] at hw hc
+          PFunctor.FreeM.Cursor _) = PFunctor.FreeM.Cursor.down answer ⟨res, tail⟩ from rfl,
+          PFunctor.FreeM.Cursor.trace_down, TraceList.directionsWithin_cons] at hw hc
         exact Or.inr ⟨answer, hw.1, ⟨res, tail⟩, hw.2, hc⟩
   · rintro (hq | ⟨u, hu, c, hw, hc⟩)
     · exact ⟨PFunctor.FreeM.Cursor.root _, by simp, hq⟩
     · refine ⟨PFunctor.FreeM.Cursor.down u c, ?_, hc⟩
-      simp only [PFunctor.FreeM.Cursor.trace_down, TraceList.withinOn_cons]
+      simp only [PFunctor.FreeM.Cursor.trace_down, TraceList.directionsWithin_cons]
       exact ⟨hu, hw⟩
 
 /-- Every output of `oa` reachable under `possibleOutputs` satisfies `outputPred` exactly when
