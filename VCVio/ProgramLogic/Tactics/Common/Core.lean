@@ -258,15 +258,27 @@ def renderPassReplayLine (steps : Array PlannedStep) : Option String :=
 def whnfReducible (e : Expr) : MetaM Expr :=
   withReducible <| whnf e
 
-/-- Normalize a goal-side computation the same way `Sym.mkPatternFromDeclWithKey`
-normalizes rule statements (`Sym.preprocessType`: unfold reducible definitions,
-then beta/zeta/eta reduce). `Sym.DiscrTree.getMatch` is purely structural, so
-query keys must agree with the pattern keys computed at registration time.
-`OracleComp` is reducible over `PFunctor.FreeM`, so an unnormalized query
-diverges from the stored patterns at the monad argument of `Bind.bind` and
-friends, and every registry lookup silently returns no candidates. -/
+/-- Normalize the reducible oracle wrappers in a goal-side computation so its
+key agrees with the patterns produced by `Sym.mkPatternFromDeclWithKey`.
+`Sym.DiscrTree.getMatch` is purely structural, and those stored patterns unfold
+`OracleComp`, `OracleQuery`, `OracleSpec.toPFunctor`, and the generic
+`PFunctor.ofFamily` constructor used by the latter.
+
+Do not use the more general `Sym.preprocessType` here. Besides being intended
+for declaration types rather than terms, in Lean 4.32 it also unfolds reducible
+user programs. A program containing a matcher can then make later
+definitional equality reduce a matcher with loose de Bruijn variables and
+panic in `whnfEasyCases`. The wrappers below are the only newly
+reducible declarations whose shapes registry lookup needs to expose. -/
 def symMatchKey (e : Expr) : MetaM Expr := do
-  Lean.Meta.Sym.preprocessType (← instantiateMVars e)
+  let e ← instantiateMVars e
+  Meta.transform e (pre := fun e => do
+    let some declName := e.getAppFn.constName? | return .continue
+    unless declName == ``OracleComp || declName == ``OracleQuery ||
+        declName == ``OracleSpec.toPFunctor || declName == ``PFunctor.ofFamily do
+      return .continue
+    let some value ← unfoldDefinition? e | return .continue
+    return .visit value)
 
 def headConstName? (e : Expr) : Option Name :=
   e.consumeMData.getAppFn.constName?
