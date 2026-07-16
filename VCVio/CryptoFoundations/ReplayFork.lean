@@ -28,12 +28,11 @@ open OracleSpec OracleComp ENNReal Function Finset
 open scoped OracleSpec.PrimitiveQuery
 open scoped PFunctor
 
--- Dependent path/zipper APIs must see that an oracle specification's
--- polynomial positions and directions are its domain and ranges. Keep this
--- transparency local: exporting it changes simplifier normal forms in
--- unrelated OracleComp proofs.
+-- Dependent path/zipper APIs identify `QueryLog` entries with erased polynomial
+-- trace events, so `PFunctor.Idx` must unfold during `simp`/`rw` matching in
+-- this file. Kept local: `Idx` is a Mathlib definition.
 set_option allowUnsafeReducibility true in
-attribute [local reducible] OracleSpec.toPFunctor PFunctor.Idx
+attribute [local reducible] PFunctor.Idx
 
 namespace OracleComp
 
@@ -359,9 +358,6 @@ theorem contextFork_success
       x₁ = PFunctor.FreeM.output main path ∧
       x₂ = PFunctor.FreeM.output main second.path := by
   rw [contextFork] at h
-  change some (x₁, x₂) ∈ support
-    (Option.map PFunctor.FreeM.Cursor.SelectedForkView.outputs <$>
-      contextForkWitness main qb i cf) at h
   obtain ⟨result, hresult, houtputs⟩ := mem_support_map_peel _ _ h
   rcases result with _ | witness
   · simp at houtputs
