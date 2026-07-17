@@ -30,7 +30,7 @@ namespace OracleSpec
 variable {ι : Type u}
 
 @[reducible]
-def toPFunctor (spec : OracleSpec ι) : PFunctor := PFunctor.ofFamily spec
+def toPFunctor (spec : OracleSpec ι) : PFunctor := PFunctor.mk ι spec
 
 @[reducible, inline]
 def ofPFunctor (P : PFunctor) : OracleSpec P.A := P.B
