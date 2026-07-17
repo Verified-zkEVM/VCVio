@@ -261,8 +261,8 @@ def whnfReducible (e : Expr) : MetaM Expr :=
 /-- Normalize the reducible oracle wrappers in a goal-side computation so its
 key agrees with the patterns produced by `Sym.mkPatternFromDeclWithKey`.
 `Sym.DiscrTree.getMatch` is purely structural, and those stored patterns unfold
-`OracleComp`, `OracleQuery`, `OracleSpec.toPFunctor`, and the generic
-`PFunctor.ofFamily` constructor used by the latter.
+`OracleComp`, `OracleQuery`, and `OracleSpec.toPFunctor` to the underlying
+structure constructor.
 
 Do not use the more general `Sym.preprocessType` here. Besides being intended
 for declaration types rather than terms, in Lean 4.32 it also unfolds reducible
@@ -275,7 +275,7 @@ def symMatchKey (e : Expr) : MetaM Expr := do
   Meta.transform e (pre := fun e => do
     let some declName := e.getAppFn.constName? | return .continue
     unless declName == ``OracleComp || declName == ``OracleQuery ||
-        declName == ``OracleSpec.toPFunctor || declName == ``PFunctor.ofFamily do
+        declName == ``OracleSpec.toPFunctor do
       return .continue
     let some value ← unfoldDefinition? e | return .continue
     return .visit value)
