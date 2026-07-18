@@ -67,9 +67,8 @@ noncomputable def oneRound : KnowledgeExtractionFamily 1 where
   relation := fun _ w => w = true
   rejects := fun ctx _ => ctx = 0
 
-/-- Regression for the PR #475 API break: the specialized
-`OracleComp.probOutput_eq_sub_probFailure_of_unit` must still accept the public named argument
-`spec := …`. -/
+/-- The specialized `OracleComp.probOutput_eq_sub_probFailure_of_unit` accepts `spec` as a named
+argument. -/
 example {ι : Type} {spec : OracleSpec ι} [IsProbabilitySpec spec] (oa : OracleComp spec PUnit) :
     Pr[= () | oa] = 1 - Pr[⊥ | oa] :=
   probOutput_eq_sub_probFailure_of_unit (spec := spec)
@@ -102,8 +101,7 @@ theorem oneRound_escape_prob (context : oneRound.Context (0 : Fin 1).castSucc)
     refine probEvent_ext (fun c _ => ?_)
     fin_cases c <;> simp only [KnowledgeExtractionFamily.escapeEvent, oneRound] <;> decide
   -- Normalize the dependent challenge type `oneRound.Challenge 0` to the concrete sampler
-  -- `$ᵗ (Fin 2)` definitionally, so the subsequent rewrites never cross the unresolved
-  -- dependent abbreviation (which fails under Lean 4.31 tactic instance transparency).
+  -- `$ᵗ (Fin 2)` before rewriting through the probability lemmas.
   change Pr[oneRound.escapeEvent 0 context message | $ᵗ (Fin 2)] = 1 / 2
   rw [hev, probEvent_uniformSample]
   have hc : (Finset.univ.filter (fun c : Fin 2 => c ≠ 0)).card = 1 := by decide

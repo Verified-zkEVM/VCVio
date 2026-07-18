@@ -65,11 +65,7 @@ namespace GameFamily
 
 variable {Round : Type u} {Context : Round → Type v}
 
-/-- The failure-based experiment that succeeds exactly when the indexed event occurs.
-
-The guard predicate is made decidable through a term-level classical local instance, so the
-definition stays a transparent structure literal and its `advantage` reduces through the stable
-semantic lemmas rather than a tactic block. -/
+/-- The failure-based experiment that succeeds exactly when the indexed event occurs. -/
 def experiment (games : GameFamily Round Context)
     (round : Round) (context : Context round) : SecExp (OptionT ProbComp) :=
   letI : DecidablePred (games.event round context) := fun _ => Classical.propDecidable _
@@ -78,11 +74,7 @@ def experiment (games : GameFamily Round Context)
       let result ← games.sample round context
       guard (games.event round context result) }
 
-/-- The advantage of the indexed experiment is the probability of its event.
-
-The advantage `1 - probFailure` of the guarded experiment is routed through the stable semantic
-lemmas `SPMFSemantics.ofMonadLift_probFailure`, the monad-generic
-`probOutput_punit_eq_sub_probFailure`, and the public `probOutput_bind_guard_eq_probEvent`. -/
+/-- The advantage of the indexed experiment is the probability of its event. -/
 @[simp]
 theorem experiment_advantage (games : GameFamily Round Context)
     (round : Round) (context : Context round) :
