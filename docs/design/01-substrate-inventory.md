@@ -47,8 +47,13 @@ Three strata, and the disconnection is precisely between the second and third:
 1. **PolyFun abstract**: `OpenTheory` (`PolyFun/Interaction/UC/OpenTheory.lean`) — boundary-indexed
    `Obj` with `map/par/wire/plug` and the lawfulness ladder `IsLawful → IsMonoidal → IsTraced →
    IsCompactClosed → HasPlugWireFactor`. `Emulates`/`UCSecure` and the composition theorems
-   (`Emulates.par_compose`, `wire_compose`, `plug_compose`) are proved **at `HasPlugWireFactor`
-   strength**. The free/syntactic models (`Expr.theory`, `Interp.theory`) instantiate the whole
+   (`Emulates.par_compose` at line ~457, `wire_compose` ~494, `plug_compose` ~526 of
+   `Emulates.lean`) are proved **at `HasPlugWireFactor` strength**. One escape hatch exists:
+   `plug_right_of_observes_plug_comm` / `plug_compose_of_observes_plug_comm` replace the strict
+   `plug_comm` with a per-model hypothesis "`plug` commutes up to `Obs`" — **but only for the
+   plug-composition leg**; `par_compose`/`wire_compose` have no up-to variants, and the file's own
+   docstring warns that "a scheduler-only structural relation is not sufficient by itself" as the
+   observation. The free/syntactic models (`Expr.theory`, `Interp.theory`) instantiate the whole
    ladder.
 2. **PolyFun concrete**: `OpenProcessModel.lean` — the process-backed `openTheory` over
    `OpenProcess m Party Δ` instantiates **only `IsLawful`**; associativity/commutativity/snake hold
@@ -62,9 +67,13 @@ Three strata, and the disconnection is precisely between the second and third:
    `ProcessScheduler`/`EnvScheduler` pairs and env alphabets (`EnvAction`, `MomentaryCorruption`).
 
 **The load-bearing gap:** the composition theorems live at tier `HasPlugWireFactor`; the only
-model with probabilistic content lives at tier `IsLawful`. Today UC composition is therefore a
-theorem about the *syntax* of open systems, not about any system you can run. Closing this gap is
-Direction 1 (`02`).
+model with probabilistic content lives at tier `IsLawful`. The `_of_observes_plug_comm` escape
+hatch could in principle reach the process model, but it (a) covers only plug composition, not
+`par`/`wire`, and (b) shifts the burden to supplying, per model, an observation that both
+commutes with `plug` and retains the security-relevant events — which is the activation-
+equivalence tax again in different clothing. Today UC composition is therefore a theorem about
+the *syntax* of open systems, not about any system you can run. Closing this gap is Direction 1
+(`02`).
 
 ### 1.6 Examples and schemes (consumers to improve)
 
@@ -77,7 +86,7 @@ as rent-test targets throughout the suite:
 
 | Consumer | Pain today | Direction that buys it |
 |---|---|---|
-| `TwoPhaseGame` | unfolds `◃`-composition by hand | ledger A6 (destructor triple) — already a PolyFun deliverable |
+| `TwoPhaseGame` (**off-main**: k-l-examples, §1.7) | unfolds `◃`-composition by hand | ledger A6 (destructor triple) — already a PolyFun deliverable; routed through G-0b |
 | PRFTagReader hybrids | per-hybrid glue, eager/lazy setup lemmas | `03` (run-canonicity + package algebra) |
 | CommitmentScheme LoggingBounds | logging lemmas re-proved per wrapper | `04` (decorations) |
 | SimpleTwoServerPIR | privacy via manual coupling | `04` (relational display) |
@@ -87,9 +96,10 @@ as rent-test targets throughout the suite:
 ### 1.7 Off-main assets
 
 The ledger (`vcv-connection.md`) cites `WireK`, `RunLimit`, `Coinductive/Machine`
-(`Implements`/`IsSimulation`) on branch `dtumad/k-l-examples`; on `main`, `OracleComp/Coinductive/`
-holds only `Bridge.lean`. Plans in this suite reference the k-l-examples material as *evidence and
-lemma bank*, not as merged surface — same discipline ArkLib's suite applies to its prototype tree.
+(`Implements`/`IsSimulation`), and `TwoPhaseGame` on branch `dtumad/k-l-examples`; on `main`,
+`OracleComp/Coinductive/` holds only `Bridge.lean` and none of these names resolve (verified
+2026-07-20). Plans in this suite reference the k-l-examples material as *evidence and lemma
+bank*, not as merged surface — same discipline ArkLib's suite applies to its prototype tree.
 
 ## 2. PolyFun today: merged vs in-flight
 
@@ -102,8 +112,11 @@ lemma bank*, not as merged surface — same discipline ArkLib's suite applies to
   operations from comonoids** (#63), **cofree mates** — dynamical behavior identified with mates
   (#67), **finite projections / Prop 8.49** (#68), finite vertices of M-types (#56).
 - **Dynamical**: `DynSystem`, behavior, simulation/bisimulation/refinement, `Responder` (systems
-  over `q ⊸ X` with the Kleisli–Mealy `equivStateHandler`), games via `eval` wiring, `RunN`,
-  `DynComputation`, `IOMachine.seqComp` + fuel-exact bind law.
+  over `q ⊸ X` with the Kleisli–Mealy `equivStateHandler`), games via `eval` wiring
+  (`DynSystem.game`/`closedGame`), `RunN`, `DynComputation`, `IOMachine.seqComp` +
+  `runWithInput_seqComp` fuel-exact bind law — **note**: `IOMachine` is scheduled for removal by
+  open PR #83; `DynComputation`'s exact sequential composition (#79) is the successor carrier, so
+  new consumers should target `DynComputation`, not `IOMachine`.
 - **Lens/monoidal**: full lens calculus, cartesian/vertical factorization, duoidal, internal hom +
   eval/curry, adjunctions, comonoids, `Comonoid.Hom` retrofunctors (`Cat♯`).
 - **Interaction**: `TypeTree` (now literally sequential-spec-as-type-tree, #64), decorations,

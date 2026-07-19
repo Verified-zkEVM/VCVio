@@ -36,11 +36,15 @@ that fail their rent test are dropped, not defended.
 | [`05-scheduling-and-ownership.md`](05-scheduling-and-ownership.md) | Direction 4: `∥`, schedulers as interleaving policies, SSP typing as the race-freedom discipline | normative interfaces, research internals |
 | [`06-unbounded-participants.md`](06-unbounded-participants.md) | Direction 5: indexed polynomials, mode-dependent comonoids, spawning as reindexing, composition = functoriality | research (paper-3 core) |
 | [`07-references.md`](07-references.md) | Annotated bibliography, including papers to acquire into paper-note | operational |
-| [`08-roadmap.md`](08-roadmap.md) | Phases, PR slices, gates, rent tests, risks, kill criteria | fluid by design |
+| [`08-roadmap.md`](08-roadmap.md) | Phases, tracks, gates, rent tests, risks, kill criteria | fluid by design |
+| [`08a-phase1-pr-plan.md`](08a-phase1-pr-plan.md) | Exact Phase 0/1 PR slices with files, declarations, gates | operational |
+| [`09-verification-ledger.md`](09-verification-ledger.md) | Every named anchor, verified location, merge status; correction history | **normative** (as fact base) |
 
-Reading order for a new contributor (or agent): 00 → 01 → 02 → 03 → 04 → 05 → 06 → 08, with 07 as
-lookup. Docs 02 and 03 are the implementation front line; 04 runs in parallel; 05 and 06 are staged
-behind them.
+Reading order for a new contributor (or agent): 00 → 01 → 02 → 03 → 04 → 05 → 06 → 08 → 08a, with
+07 and 09 as lookup. Docs 02 and 03 are the implementation front line; 04 runs in parallel; 05 and
+06 are staged behind them. An implementation session takes its slice from 08a and greps its anchors
+from 09 before writing code. A verification review round (declaration names, file paths, tier
+claims checked against both trees) was completed 2026-07-20; corrections are logged in 09.
 
 ## Resolved decisions (log)
 

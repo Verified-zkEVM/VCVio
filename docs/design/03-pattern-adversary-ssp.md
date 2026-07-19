@@ -57,10 +57,12 @@ downstream*:
 One VCVio definition becomes the single point through which experiments are run:
 
 ```lean
-/-- Run adversary `A` against stateful matter `h` from `s₀`: THE experiment. -/
+/-- Run adversary `A` against stateful matter `h` from `s₀`: THE experiment.
+Existing API (verified on main): `Stateful.run h s₀ A = (simulateQ h A).run' s₀ : OracleComp I α`
+(final state discarded; the state-retaining sibling threads `.run`). -/
 def runExp (h : QueryImpl.Stateful I E σ) (s₀ : σ) (A : OracleComp E α) :
-    OracleComp I (α × σ) :=
-  -- today: (simulateQ h A).run s₀
+    OracleComp I α :=
+  -- today: h.run s₀ A
   -- end state: the Kleisli instance of FreeP.runThrough at h's responder
 ```
 

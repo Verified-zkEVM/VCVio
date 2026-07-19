@@ -57,8 +57,11 @@ Then three obligations:
 
 ### 2.1 Current state
 
-- One-boundary (SSP): `StateFrame`-style data — two vwb `PFunctor.Lens.State` lenses into a joint
-  state with `separated`: updates don't cross, updates commute. Used by `linkWith`/`parSumWith`.
+- One-boundary (SSP): `QueryImpl.Stateful.Frame σ σ₁ σ₂`
+  (`OracleComp/SimSemantics/StateT/StateSeparating.lean:64`) — two vwb `PFunctor.Lens.State`
+  lenses into a joint state with a `separated : PFunctor.Lens.State.IsSeparated left right`
+  field: updates don't cross, updates commute. Consumed by `linkWith` (`:222`) and `parSumWith`
+  (`:462`).
 - Two-boundary (UC): shared state (global RO, common reference string) has *no* story: the
   composition-unification memo explicitly rules out disjoint-union defaults, and
   `Wiring.evalParallel` exposes absence-of-contraction by duplicating inputs.

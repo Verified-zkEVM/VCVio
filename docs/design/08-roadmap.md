@@ -19,9 +19,10 @@ branch is documentation provenance, **not an implementation base** (same rule as
 ## Phase 1 — the two normative directions in parallel
 
 **Track A (= `02`, behavior model):** A1 mate + homomorphism theorems → A2 `behaviorTheory` at
-`IsMonoidal` (gate G-2a) → A3 `IsTraced` (G-2b; consumes `05` step-1 interchange lemmas) → A4
-copy-cat + `HasPlugWireFactor` (G-2c) → A5 VCVio `Semantics.ofBehavior` + pilot UC statement
-(R-2.1–R-2.3).
+`IsMonoidal` (gate G-2a) → **A2.5 plug-composition pilot via `plug_compose_of_observes_plug_comm`
+at mate-equality** (cheap early milestone; also an early-warning probe for G-2c) → A3 `IsTraced`
+(G-2b; consumes `05` step-1 interchange lemmas) → A4 copy-cat + `HasPlugWireFactor` (G-2c) → A5
+VCVio `Semantics.ofBehavior` + pilot UC statement (R-2.1–R-2.3). Exact slices: `08a`.
 
 **Track B (= `03`, experiment engine):** B1 Kleisli lemma pack for `runThrough` → B2 `runExp` +
 identification (kill-checked here) → B3 derive link-assoc + simulation-invariance, delete twins

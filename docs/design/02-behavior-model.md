@@ -32,6 +32,14 @@ carrier; no quotients") — this doc is that rule executed on the UC layer.
 - `OpenTheory` composition theorems (`Emulates.lean`) are proved at `HasPlugWireFactor` strength;
   the docstring itself notes the process model "instantiates only `IsLawful`" and that its
   coherence holds "up to `OpenProcessActivationEquiv`, not strict equality".
+- The existing partial remedy, `plug_compose_of_observes_plug_comm`, must be acknowledged and is
+  insufficient: it restores only the plug leg (not `par_compose`/`wire_compose`), demands a
+  per-model `plug`-commutation observation, and its own docstring warns that a scheduler-only
+  structural relation does not qualify. The behavior model subsumes it: with strict coherence,
+  the `hcomm` hypothesis is discharged by `rfl`-grade lemmas once, and all three composition
+  theorems apply. (Cheap intermediate milestone, usable before G-2c: instantiate
+  `plug_compose_of_observes_plug_comm` at the behavior model's mate-equality observation — this
+  gives a *plug-composition* pilot after G-2a only.)
 - The process model (`OpenProcessModel.lean`) proves the up-to-equivalence versions by explicit
   step-relation matches (e.g. `openTheory_par_assoc_activation_equiv` with a hand-supplied
   state-triple relation) — exactly the per-theorem cost this direction deletes.
