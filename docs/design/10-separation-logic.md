@@ -106,8 +106,23 @@ b₂`, complete by the M-type's limit property.** Under this identification:
   (asynchronous couplings = coupling the seed, not the sample site); Eris's *error credits* are
   a resource-algebra rendering of the union-bound bookkeeping VCVio does by hand in
   `IdenticalUntilBad`/`Advantage` chains.
-- **Papers**: Bluebell (POPL 2025, arXiv 2402.18708), PSL (POPL 2020), Lilac (PLDI 2023) now in
-  paper-note; Bluebell PDF also in the fork's `paper/` directory.
+- **Papers** (all in paper-note; source-verified 2026-07-20): Bluebell (Bao–D'Osualdo–Farzan,
+  POPL 2025, arXiv 2402.18708; PDF also in the fork's `paper/` directory) — its programs are
+  imperative with *statically bounded* `repeat N` loops over first-order stores, assertions are
+  upward-closed predicates over `I`-indexed resources (probability-space fragments paired with
+  permissions — distributions over stores, ownable in pieces), and relational lifting `⌊R⌋` is
+  defined as coupling-existence with the relation holding with probability 1 — the same
+  mathematical object as `CouplingPost`, which is what makes the S2b bridge near-definitional in
+  the qualitative case. Lineage: PSL (Barthe–Hsu–Liao, POPL 2020) made `∗` = independence via a
+  new probabilistic BI model; DIBI (Bao et al., LICS 2021) added conditional independence;
+  Lilac (Li–Ahmed–Holtzen, PLDI 2023) made separation = independence of σ-algebras and added a
+  conditioning modality; Bluebell subsumes the line with joint conditioning over indexed
+  programs.
+- **One more fork caveat** (from its own `notes/rules_progress.md` audit): besides the missing
+  program layer, the fork records a *known discrepancy between the paper's WP definition and
+  the Lean `wp`*. S2a therefore includes aligning the WP definition with the paper (or
+  documenting the deliberate divergence) as part of supplying the semantics — the bridge must
+  not inherit an unexamined definition.
 
 ## 3. Design
 
@@ -155,13 +170,20 @@ exact, and it is the same fit twice:
   coupling-existence carrier, so every S2 proof discharges into today's ecosystem. Respecting the
   carrier discipline: the hyper-assertion layer enters as a *producer* of `CouplingPost` facts via
   this bridge — it is not registered as a third ambient Loom carrier.
-- **S2c: the crypto pilots are the founding examples of the field.** PSL's showcase proofs are
-  one-time pad, Shamir secret sharing, and simple ORAM — all *independence* statements. VCVio's
-  OTP privacy is currently a coupling/`evalDist` computation. Pilot: prove OTP privacy (and one
-  secret-sharing statement) as `key ⊥ message ⇒ ciphertext ⊥ message` in the S2 layer, discharged
-  through the frame-independence transfer theorem of §1.1. This is where "structural upstairs,
-  distributional downstairs" becomes visible in a *proof style*: frame reasoning until the last
-  step, one independence fact at the end.
+- **S2c: the crypto pilots are the founding examples of the field.** PSL's warm-up is the
+  one-time pad, and its case studies are private information retrieval, oblivious transfer,
+  secure multi-party addition (secret-sharing style), and simple ORAM — all *independence*
+  statements, all information-theoretic. Two of these already live in VCVio as pain points: OTP
+  privacy (currently a coupling/`evalDist` computation) and `SimpleTwoServerPIR` (named by `01`
+  §1.6 and `04` R-4.4 as a rewrite candidate). Pilot: prove OTP privacy (and one
+  secret-sharing-style statement) as `key ⊥ message ⇒ ciphertext ⊥ message` in the S2 layer,
+  discharged through the frame-independence transfer theorem of §1.1. **Coordination note:**
+  `04` R-4.4 targets SimpleTwoServerPIR as a *relational display*; this doc's natural treatment
+  of the same example is an *independence* proof. Do both only if the first lands cheaply — the
+  two treatments of one example are a feature for the paper-2 comparison table, but the second
+  is not allowed to become its own project. This is where "structural upstairs, distributional
+  downstairs" becomes visible in a *proof style*: frame reasoning until the last step, one
+  independence fact at the end.
 
 ### 3.3 What the two tracks do *not* attempt
 

@@ -34,6 +34,16 @@ compressed oracle as the quantum counterpart of the caching mate.
 | SSP package *shape* (interfaces + composition) | `QueryImpl.Stateful` | **shape survives** — packages with quantum implementations are channels between register interfaces; the wiring diagrams are the same diagrams |
 | scheduling/ownership disciplines (`05`) | affine wiring, no contraction | **survive with new significance** — see §3.4: the no-contraction discipline is exactly the fragment compatible with no-cloning |
 
+The break rows are not folklore: BDF+11 (the paper that defined the QROM) names exactly four
+classical proof techniques that do not carry over offhand — **adaptive programmability,
+extractability/preimage awareness, efficient simulation (on-the-fly lazy sampling), and
+rewinding/partial consistency** — and additionally exhibits a *separation*: a (contrived)
+two-party protocol secure in the classical ROM — even against quantum attackers with classical
+oracle access — yet insecure in the QROM and under every concrete instantiation of the hash. So
+"classical ROM theorem + PQ assumption" is
+formally *not* a post-quantum security statement, which is the entire reason this direction
+exists; VCVio currently cannot even state the distinction.
+
 The table is the design: everything in rows marked "survives" must be *shared* between the two
 analysis paths; everything marked "breaks" must live *below* the carrier index, never in a game
 definition. A game definition that mentions transcripts, lazy sampling, or rewinding is at the
@@ -70,9 +80,19 @@ classical security is `G S Classical`-hardness and quantum security is `G S Quan
 one game, two statements, which is precisely the litmus test. The `SecExp`/advantage layer needs
 only `SPMF Bool` out of `runWith`, so it is carrier-generic already.
 
+Precedent that this split is the right architecture, not an invention: post-quantum-sound
+CryptoVerif (Blanchet–Jacomme, CSF 2024) had to do exactly this to its own system — the paper's
+summary is that it "required an update of the whole semantics in order to define it for any
+**black-box interactive attacker** and not just probabilistic Turing machines," after which
+every game transformation was re-validated against that attacker class. Their semantics update
+is our `StrategyModel`; their transformation re-validation is Q1 below.
+
 ### 2.2 What is deliberately *not* parametrized
 
-Honest parties, functionalities, and reductions stay classical (`OracleComp`) this cycle.
+Honest parties, functionalities, and reductions stay classical (`OracleComp`) this cycle —
+which is also BDF+11's own modeling decision ("honest parties and the scheme's algorithms can
+access O only via classical bit strings"); the litmus test's demand is the QROM's original
+design point, not an extra constraint.
 Parametrizing the *matter* side (quantum functionalities, quantum channels between parties) is a
 real research direction (quantum UC) explicitly out of scope; the seam left for it is that
 `MatterFor` is already a parameter of the class rather than fixed to `QueryImpl`.
@@ -88,15 +108,23 @@ made explicit in the hop discipline of `11`:
 
 - each `game_hop` step (registry application, `guess`, statistical distance, algebraic rewrite,
   black-box reduction with same-boundary wiring) carries or lacks a **`QuantumSound`
-  certificate**; the certified set is the EasyPQC/CV-PQ audited list (no rewinding, no
-  transcript inspection, no classical-only lazy-sampling arguments, no `up_to_bad` without an
-  O2H replacement);
+  certificate**; the certified set is the EasyPQC/CV-PQ audited list, whose forbidden side is
+  BDF+11's four named techniques (no adaptive programming, no extractability/preimage
+  awareness, no on-the-fly lazy sampling, no rewinding) plus `up_to_bad` without an O2H
+  replacement;
+- the certificate idiom has a *pedigree older than the audit lists*: BDF+11's **history-free
+  reductions** are exactly a certificate on a classical proof — a reduction that answers RO
+  queries independently of the query history — with the meta-theorem "history-free classical
+  security proof ⇒ quantum security," and GPV signatures are their flagship instance. So
+  `QuantumSound` should be a *structured* type with (at least) constructors for
+  `historyFree`-style whole-reduction certificates and per-hop step certificates, not a bare
+  marker Prop;
 - **transfer theorem (Q1 keystone, initially assumption-grade):** a hop chain all of whose steps
   are `QuantumSound`, from a game whose assumptions are stated at the `Quantum` instance,
   yields the `Quantum`-instance bound. Its Lean status is an explicitly `axiom`-tagged
-  meta-theorem citation until Q3 gives it semantics — the suite's honesty rules require saying
-  so in the statement's docstring, and the axiom is quarantined in one file so consumers are
-  greppable.
+  meta-theorem citation (BDF+11 Thms for the history-free constructor; EasyPQC/CV-PQ for the
+  step lists) until Q3 gives it semantics — the suite's honesty rules require saying so in the
+  statement's docstring, and the axiom is quarantined in one file so consumers are greppable.
 
 Q1's payoff is real despite the axiom grade: the PQ schemes already in-tree (ML-KEM, ML-DSA,
 SLH-DSA, Falcon) get *stated* quantum security theorems whose proofs are audits of existing hop
@@ -110,13 +138,25 @@ The QROM's working lemmas have *classical statements*: they bound advantages by 
 One-way-to-hiding (semi-classical O2H, Ambainis–Hamburg–Unruh), measure-and-reprogram,
 compressed-oracle bounds (collision/preimage), small-range distributions — each is
 `∀ A : Strat Quantum roSpec α, advantage-inequality(queries A, …)` with no quantum object in the
-*statement*. Stage Q2 states them as interfaces over the parametric games (axiom-tagged like
-Q1, with literature citations pinned), and re-derives one flagship result through them: the
-existing `FujisakiOkamoto` development restated so its ROM theorem (today's) and QROM theorem
-(via the O2H interface) share the game definitions. Comparison baseline: Unruh's qrhl-tool FO
-verification (ePrint 2020/962, in paper-note) — the only mechanized QROM FO proof in existence,
-in a bespoke logic; matching its *statement* through interfaces while sharing the classical
-game with the classical proof would already be a first.
+*statement*. AHU's own precision matters for the interface shapes: a *semi-classical oracle*
+measures only whether the query lies in a forbidden set `S` (nothing else), it appears **only in
+intermediate games** — final statements remain plain QROM — and the modern O2H bounds are
+parametrized by query number `q` *and query depth* `d` (parallelism), support non-uniform oracle
+distributions, multiple reprogrammed points, and joint input/oracle distributions, with
+square-root-of-probability forms for guessing games. The Q2 interface therefore carries `(q, d)`
+from day one and does not bake in uniformity of the oracle distribution. Stage Q2 states these
+as interfaces over the parametric games (axiom-tagged like Q1, with literature citations
+pinned), and re-derives one flagship result through them: the existing `FujisakiOkamoto`
+development restated so its ROM theorem (today's) and QROM theorem (via the O2H interface) share
+the game definitions. Comparison baselines, chosen with care because **the QROM-FO literature
+has a live flaw**: the December 2021 revision of AHU carries a notice that its Appendix B FO
+proof is broken (found by Maram) with "we do not know whether the theorem can be fixed" — so the
+baselines are Zhandry's compressed-oracle FO proof (ePrint 2018/276, which also removes the
+extra hash term earlier proofs needed) and Unruh's qrhl-tool FO verification (ePrint 2020/962),
+the only mechanized QROM FO proof in existence, in a bespoke logic. Matching the *statement*
+through interfaces while sharing the classical game with the classical proof would already be a
+first — and the AHU flaw is the standing exhibit for why this literature deserves mechanization
+at all.
 
 ### 3.3 Stage Q3 — combs as the honest carrier (research)
 
@@ -130,12 +170,22 @@ query/answer types):
   Chiribella–D'Ariano–Perinotti quantum comb over the dilated boundary (PRA 2009, in
   paper-note); `runWith` is comb contraction against the matter channel;
 - **compressed oracle as the dilated mate**: Zhandry's construction (how-to-record-quantum-
-  queries) is *purified lazy sampling* — the database register in superposition is the dilation
-  of the caching handler's cache state. In suite vocabulary: the classical RO's matter is the
-  cofree mate of the caching responder (`03`/`04`); the QROM's matter is that responder's
-  dilation, and the compressed-oracle invariants are `04`-style displayed invariants on the
-  database register. This is the precise sense in which the substrate's *shape* survives: same
-  responder, new base category.
+  queries) breaks what his paper names the **recording barrier** — recording a query is a
+  measurement the adversary can detect by uncomputing, so naive on-the-fly simulation is
+  distinguishable from a true random oracle. The resolution's own slogan is the design cue:
+  since the adversary is entangled with a uniform superposition of oracles and entanglement is
+  symmetric, *the oracle may record what the adversary knows* — yielding "efficient on-the-fly
+  simulation of random oracles, roughly analogous to the usual classical simulation" (the
+  paper's abstract), i.e. purified lazy sampling with a superposed database register. In suite
+  vocabulary: the classical RO's matter is the cofree mate of the caching responder
+  (`03`/`04`); the QROM's matter is that responder's dilation, and the compressed-oracle
+  invariants are `04`-style displayed invariants on the database register. This is the precise
+  sense in which the substrate's *shape* survives: same responder, new base category. Payoff
+  evidence that this is the right Q3 centerpiece: the technique's launch results include the
+  first quantum indifferentiability proof for Merkle–Damgård — domain extension is exactly the
+  hash-construction reasoning the VCVio/ArkLib stack (Merkle trees, BCS) will eventually need
+  quantumly, and BDF+11-era techniques provably cannot do it (any indifferentiability simulator
+  *must* record queries).
 - **substrate**: fin-dim Hilbert spaces, unitaries, channels, measurement — mathlib's matrix
   analysis plus the growing Lean quantum-information layer (Lean-QuantumInfo, indexed in
   paper-note) are the candidate bases; a serious gap analysis is a Q3 entry task, not assumed
@@ -182,9 +232,11 @@ own multi-year project).
 - **R-12.2 (litmus)**: one PQ scheme — ML-KEM via the FO development — carries classical and
   quantum security statements sharing one game definition; the quantum one is proved from Q1/Q2
   interfaces with its axiom-dependencies explicitly listed by a `#print axioms`-grade check.
-- **R-12.3 (audit pays)**: one existing hop chain (`GPVHashAndSign` is the designated candidate)
-  is marked hop-by-hop with `QuantumSound` certificates and pushed through the transfer theorem;
-  any hop that fails the audit is documented with its O2H-style replacement or with an honest
+- **R-12.3 (audit pays)**: one existing hop chain (`GPVHashAndSign` is the designated candidate
+  — deliberately, because BDF+11 *proved GPV quantum-secure via a history-free reduction*, so
+  the ground truth is known) is certified and pushed through the transfer theorem, ideally by
+  establishing the `historyFree` certificate for the existing reduction rather than step-by-step
+  auditing; any hop that fails is documented with its O2H-style replacement or with an honest
   "classical-only" verdict in the file.
 - **R-12.4 (stretch)**: semi-classical O2H stated as a Q2 interface and consumed by one FO-QROM
   bound.

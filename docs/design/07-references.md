@@ -20,7 +20,7 @@ map, keyed by direction.
 | Hancock–Setzer; Indexed Containers (AGHMM15); ITrees (POPL 2020); Escardó–Oliva | PolyFun `REFERENCES.md` | substrate |
 | iris-lean, iris-bluebell, loom2-lean, cslib | workspace checkouts | `04` bridges, `05` kill-criterion comparison, `10` |
 | Bao–D'Osualdo–Farzan, *Bluebell* (POPL 2025) | Papers: `Bluebell_Bao_DOsualdo_Farzan_POPL2025_arxiv_2402.18708`; also `iris-bluebell/paper/` | `10` S2 |
-| Barthe–Hsu–Ying, *A Probabilistic Separation Logic* (POPL 2020) | Papers: `PSL_Barthe_Hsu_Ying_…_arxiv_1907.10708` | `10` §1.1, S2c pilots |
+| Barthe–Hsu–Liao, *A Probabilistic Separation Logic* (POPL 2020; correction 2026-07-20 — an earlier revision misattributed the third author as Ying) | Papers: `PSL_Barthe_Hsu_Liao_…_arxiv_1907.10708` | `10` §1.1, S2c pilots |
 | Li–Ahmed–Holtzen, *Lilac* (PLDI 2023) | Papers: `Lilac_Li_Ahmed_Holtzen_…_arxiv_2304.01339` | `10` (conditioning lineage) |
 | Clutch / Eris / Tachis / Foxtrot (Iris-Rocq probabilistic family) | Papers: `Clutch_POPL2024`, `Eris_ICFP2024`, `Tachis_OOPSLA2024`, `Foxtrot_arxiv_2511.10135` | `10` §2 (design sources; tapes = seeded oracle, error credits = bad-event ledger) |
 | Blanchet, CryptoVerif corpus: foundational (ePrint 2005/401), long semantics (arXiv 2310.14658), manual v2.12, TLS 1.3 composition (CSF 2018), dynamic compromise (CSF 2024), PQ-sound (CSF 2024), CV2EC (CSF 2024) | Papers: `Blanchet_*`, `cryptoverif-manual-v2.12`, `CryptoVerif_Blanchet_…_arxiv_2310.14658` | `11` §1, `12` Q1 |
@@ -30,21 +30,24 @@ map, keyed by direction.
 
 ## B. To acquire (priority order; all open-access)
 
-**Status 2026-07-20:** original items 1–4, 6, 8, 10 are acquired (see §A last row); item 5's
-JUC/EUC materials and item 9 (Nominal-SSProve — acquired) resolved; item 7's EasyUC/ILC pending
-below. New acquisitions for docs 10–12, **all ePrint (user is downloading these by hand;
-cloudflare blocks scripted fetch from this network)**:
+**Status 2026-07-20 (evening): the nine ePrint items below are all acquired and indexed in
+paper-note** (Owl 2023/473, OwlC 2025/1092, IPDL 2021/147, Zhandry 2018/276, BDF+11 2010/428,
+AHU 2018/904, EasyUC 2019/582, CCL 2014/553, iUC 2019/1073), and the Owl + IPDL artifacts were
+inspected at source (`github.com/secure-foundations/owl`, `github.com/ipdl/ipdl`) for the
+baseline numbers now cited in `11`. Original items 1–4, 6, 8, 10 were already acquired (§A last
+row); item 9 (Nominal-SSProve) likewise. The nine, with their consumers:
 
 1. **Owl** — Gancher–Gibson–Singh–Dharanikota–Parno, ePrint 2023/473 (S&P 2023). `11` §2.
 2. **OwlC** — Singh–Gancher–Parno, ePrint 2025/1092 (USENIX Sec 2025). `11` §2.
-3. **IPDL** — Gancher–Sojakova–Fan–Shi–Morrisett, ePrint 2021/147 (POPL 2023). `11` §2, R-11.2
-   baseline.
+3. **IPDL** — Morrisett–Shi–Sojakova–Fan–Gancher (author order randomized in publication),
+   ePrint 2021/147 (POPL 2023). `11` §2, R-11.2 baseline.
 4. **Zhandry, compressed oracles** — ePrint 2018/276 (CRYPTO 2019). `12` §3.3.
 5. **BDF+11, Random Oracles in a Quantum World** — ePrint 2010/428 (ASIACRYPT 2011). `12` §1.
 6. **Ambainis–Hamburg–Unruh, semi-classical O2H** — ePrint 2018/904 (CRYPTO 2019). `12` R-12.4.
 7. **EasyUC** — Canetti–Stoughton–Varia, ePrint 2019/582 (CSF 2019). `06`/`11` baselines.
 8. **Canetti–Cohen–Lindell, simpler UC** — ePrint 2014/553. `06` requirements.
-9. **iUC** — Camenisch–Krenn–Küsters–Rausch, ePrint 2019/1324. `06` requirements.
+9. **iUC** — Camenisch–Krenn–Küsters–Rausch, ePrint 2019/1073. `06` requirements. (Correction
+   2026-07-20: an earlier revision of this list cited 2019/1324, which is an unrelated paper.)
 
 Original list (retained for provenance):
 
@@ -58,7 +61,8 @@ Original list (retained for provenance):
    TOSCA 2011). The resource/converter/distinguisher trinity ↔ `Obj`/`map`/`plug`; the
    "equality up to simulator" algebra `02` §3.4 should be compared against.
 4. **Küsters–Tuengerthal(–Rausch), *The IITM Model*** (J. Cryptology 2020 version) and **iUC**
-   (ePrint 2019/1324). The directory/replication discipline `06` adopts; read §on runtime
+   (ePrint 2019/1073; a prior revision of this doc wrote 2019/1324 — wrong paper). The
+   directory/replication discipline `06` adopts; read §on runtime
    accounting for the R5 boundary.
 5. **Canetti–Cohen–Lindell, *A simpler variant of UC*** (ePrint 2014/553) and **Canetti–Sarkar–
    Wang JUC/EUC materials** as needed by the `!F_com` pilot's joint-state exclusions.

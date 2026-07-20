@@ -95,11 +95,29 @@ External checkouts (workspace-relative; **revision facts, will drift**):
 | Fact | Location | Consumed by |
 |---|---|---|
 | iris-lean upstream: MoSeL, `UPred`, abstract WP (#475), `UFrac` port (#507), setoid→type port in flight (#502) | `~/Documents/Lean/iris-lean` @ `5a790ae` | `10` §2, S1 |
-| iris-bluebell (Verified-zkEVM fork): `PSp`/`PermissionRat`/`PSpPm`/`IndexedPSpPm`, `HyperAssertion`, `assertSampledFrom`, `jointCondition`, `wp` over opaque `t : IndexedPSpPmRat I α V → IndexedPSpPmRat I α V` — **no program syntax; rules `sorry`-grade** (own audit: `notes/rules_progress.md`) | `~/Documents/Lean/iris-bluebell` @ `0926a38`, `src/Bluebell/` | `10` §2, S2 |
+| iris-bluebell (Verified-zkEVM fork): `PSp`/`PermissionRat`/`PSpPm`/`IndexedPSpPm`, `HyperAssertion`, `assertSampledFrom`, `jointCondition`, `wp` over opaque `t : IndexedPSpPmRat I α V → IndexedPSpPmRat I α V` — **no program syntax; rules `sorry`-grade; own audit also flags a paper-vs-Lean WP-definition discrepancy** (`notes/rules_progress.md`) | `~/Documents/Lean/iris-bluebell` @ `0926a38`, `src/Bluebell/` | `10` §2, S2 |
+| IPDL artifact (Rocq): case-study line counts at repo HEAD — `Chan/` 279, `OTP/` 257, `CoinFlip/` 472, `Branch/` 589, `GMW/` 614, `DHKE/` 744, `OT/` 2220; core `theories/*.v` ≈3.8k; paper's own comparison: multi-use secure network 195 lines vs 12,203 counted for EasyUC's single-use analogue (KE excluded) | `github.com/ipdl/ipdl` (shallow clone, 2026-07-20) | `11` §2, R-11.2 |
+| Owl artifact: Haskell typechecker + Z3 (`prelude.smt2`), Rust extraction; case-study `.owl` sources incl. `kerberos`, `lak`/`mw` (RFID), `kem`/`pke`; WireGuard spec `tests/wip/wireguard.owl` ≈672 lines; `hpke/owl-hpke` + `wg/` benchmark harnesses (OwlC) | `github.com/secure-foundations/owl` (shallow clone, 2026-07-20) | `11` §2 |
 | New sketches (SK): `StrategyModel`/`Classical`/`Quantum`/`MatterFor`, `QuantumSound` certificates, `@[game_equiv]` registry, `game_hop`/`guess`/`up_to_bad`/epoch combinators, frame-independence transfer, behavior COFE, Bluebell `wp` constructor | docs 10–12 | **SK** |
 
 ## Correction history
 
+- 2026-07-20 (directions 6–8 source-review round, evening): all nine §B acquisitions read
+  against docs 10–12; corrections applied — **PSL third author is Liao, not Ying** (07, paper
+  index, PDF filename); **iUC is ePrint 2019/1073, not 2019/1324** (07, both occurrences; user
+  caught during download); IPDL author order matched to publication (Morrisett–Shi–Sojakova–
+  Fan–Gancher, randomized); IPDL restrictions restated paper-accurately in 11 §2 (write-once
+  channels/reactions, statically bounded loops, static corruption, fully adversarial
+  scheduling — replacing the looser "fixed topology / no state" gloss); Owl soundness phrasing
+  fixed in 11 §2 ("once-and-for-all on-paper proof", not "logical relation") and Owl's
+  name-based hierarchical corruption/`corr_case`/module-types/asymptotic-only facts added;
+  PSL case-study list corrected in 10 §3.2 (PIR, OT, multi-party addition, simple ORAM; OTP is
+  the warm-up); Bluebell fork's paper-vs-Lean WP discrepancy surfaced into 10; 12 upgraded with
+  BDF+11's four non-transferring techniques + separation result + history-free-reduction
+  certificates (GPV ground truth for R-12.3), PQ-CryptoVerif's black-box-attacker semantics as
+  the §2 precedent, AHU (q,d)/semi-classical precision, and the AHU Appendix-B FO flaw notice
+  (Maram) steering the R-12.2 baselines to Zhandry-FO + qrhl-FO. Artifact facts (IPDL/Owl
+  clones) added to the anchor table above.
 - 2026-07-20 (directions 6–8 extension): added docs 10–12 and their anchor section above;
   verified `OracleSpec`/`SecExp`/`FujisakiOkamoto`/`GPVHashAndSign` locations and the
   iris-lean/iris-bluebell checkout states cited by doc 10.
