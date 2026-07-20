@@ -43,6 +43,32 @@ early) → D2 discipline-indexing naming pass (R-5.1) → D3 `OwnershipFrame` + 
 (R-5.2) → D4 shared-RO frame (R-5.3, joint with C2's cache display) → D5 dummy-adversary
 derivation (joint with A4).
 
+## Phase 2b — outward tracks (directions 6–8, added 2026-07-20)
+
+Three tracks from docs 10–12. None blocks Phases 1–3; each names its entry condition.
+
+**Track S (= `10`, separation logic):** S0 frame-independence transfer theorem over `runExp`
+(entry: B3; feeds R-5.3) → S1a frame camera in a bridge repo (entry: none; runs the `05`
+kill-criterion comparison) → S1b behavior COFE via finite projections (entry: A1) → S2a Bluebell
+`wp` gets VCVio-backed programs (bridge repo) → S2b `SPMF` conditioning + lifting→`CouplingPost`
+bridge → S2c OTP/secret-sharing independence pilots (R-10.1–R-10.4).
+
+**Track P (= `11`, protocol track):** P0 assumption registry + bundle format (entry: B3; **must
+carry the `QuantumSound` certificate slot from day one** — D8) → P1 `game_hop` matching +
+advantage ledger → P2 `guess`/`up_to_bad` combinators → P3 replay pilot + IPDL parity case
+(entry for parity case: G-2a) → P4 epoch combinator + signed-DH FS pilot (R-11.1–R-11.4) →
+(next cycle) TLS-handshake-core skeleton.
+
+**Track Q (= `12`, quantum):** Q0 parametric `StrategyModel` + zero-breakage gate R-12.1
+(entry: none, pure interface work — but co-designed with P0's bundle format) → Q1 `QuantumSound`
+certificates + axiom-tagged transfer theorem; PQ schemes get stated quantum theorems (entry: P1)
+→ Q2 QROM interface pack (O2H et al.) + FO restatement (R-12.2, R-12.4) → Q3 comb carrier +
+compressed oracle (research; separate resourcing decision, not scheduled by this roadmap).
+
+Ordering pressure across tracks: P0/Q0 are the cheapest high-leverage steps (formats and
+interfaces others must conform to) and should land before P1/Q1 consumers exist; S0 is a single
+theorem with three consumers (`05`, `10`, `03`'s honest column) and can go anytime after B3.
+
 ## Phase 3 — the paper-3 pilot (= `06`)
 
 E1 `Topology` + reindexing-spawn carrier → E2 one-session `F_com` on the behavior model (reuses
@@ -70,10 +96,17 @@ R-3.1 landed (the pilot must not hand-roll what Phases 1–2 made derivable).
 | universe collisions in indexed carriers | `06` §4 kill criterion |
 | open-PR churn under the suite | Phase 0 G-0a pinning |
 | line-count honesty (paper Table 4) | every direction's honest column; report in paper drafts |
+| iris-lean/iris-bluebell drift; mathlib measure-theory friction | `10` §6; bridge repos with pinned revisions |
+| matching brittleness in `game_hop` | `11` §5 kill criterion (regress to marked hops) |
+| parametric-game elaboration noise breaking R-12.1 | `12` §5 kill criterion (EasyPQC mirror fallback) |
+| axiom-grade quantum middle years | `12` §6; axiom tagging + `#print axioms` checks |
 
 ## Success snapshot (what "done" looks like, one line each)
 
 Pilot UC statement through `wire_compose` with zero activation-equivalence lemmas; SSP reduction
 lemma derived; one hybrid chain deglued; counting/logging/cache as displays; one displayed
 relational proof; discipline-named async theorems; race-free-wiring theorem; `!F_com` with
-spawning as reindexing. Those eight artifacts *are* the paper-2/paper-3 evidence base.
+spawning as reindexing. Those eight artifacts *are* the paper-2/paper-3 evidence base. From the
+outward tracks: OTP privacy as an independence proof; a hop-engine replay of an existing hybrid;
+signed-DH with a forward-secrecy statement; ML-KEM with classical and quantum security statements
+sharing one game definition.

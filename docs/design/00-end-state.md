@@ -7,9 +7,12 @@ The near-term scope is: game-based cryptography as currently practiced in VCVio 
 2026/899), upgraded in place; state-separating proofs and UC security unified over the PolyFun
 interaction substrate; and the machinery for paper 2 (coalgebraic adversaries) and paper 3
 (categorical UC) — the §10 promise of paper 1 — built so that each intermediate stage already
-improves the library. Quantum access, non-standard corruption models beyond the existing
-`CorruptionModel`/`MomentaryCorruption` data, and rational/composable-with-incentives settings are
-out of scope; the architecture must leave seams for them without pretending to cover them.
+improves the library. Rational/composable-with-incentives settings are out of scope; the
+architecture must leave seams for them without pretending to cover them. Two former out-of-scope
+items were promoted on 2026-07-20: quantum access now has a staged design (`12` — the interface
+core is in scope this cycle, the comb semantics is research), and protocol-scale proofs with
+compromise events have a track (`11`); corruption models beyond the existing
+`CorruptionModel`/`MomentaryCorruption` data remain scoped by `05`/`06`.
 
 ## 1. The ambition
 

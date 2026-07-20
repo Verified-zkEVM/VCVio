@@ -18,9 +18,35 @@ map, keyed by direction.
 | UC-AGM | Papers: `2021-1218` | later (worlds/instrumentation) |
 | Strict poly-time simulation/extraction | Papers: `2002-043` | R5 boundary in `06` |
 | Hancock–Setzer; Indexed Containers (AGHMM15); ITrees (POPL 2020); Escardó–Oliva | PolyFun `REFERENCES.md` | substrate |
-| iris-lean, iris-bluebell, loom2-lean, cslib | workspace checkouts | `04` bridges, `05` kill-criterion comparison |
+| iris-lean, iris-bluebell, loom2-lean, cslib | workspace checkouts | `04` bridges, `05` kill-criterion comparison, `10` |
+| Bao–D'Osualdo–Farzan, *Bluebell* (POPL 2025) | Papers: `Bluebell_Bao_DOsualdo_Farzan_POPL2025_arxiv_2402.18708`; also `iris-bluebell/paper/` | `10` S2 |
+| Barthe–Hsu–Ying, *A Probabilistic Separation Logic* (POPL 2020) | Papers: `PSL_Barthe_Hsu_Ying_…_arxiv_1907.10708` | `10` §1.1, S2c pilots |
+| Li–Ahmed–Holtzen, *Lilac* (PLDI 2023) | Papers: `Lilac_Li_Ahmed_Holtzen_…_arxiv_2304.01339` | `10` (conditioning lineage) |
+| Clutch / Eris / Tachis / Foxtrot (Iris-Rocq probabilistic family) | Papers: `Clutch_POPL2024`, `Eris_ICFP2024`, `Tachis_OOPSLA2024`, `Foxtrot_arxiv_2511.10135` | `10` §2 (design sources; tapes = seeded oracle, error credits = bad-event ledger) |
+| Blanchet, CryptoVerif corpus: foundational (ePrint 2005/401), long semantics (arXiv 2310.14658), manual v2.12, TLS 1.3 composition (CSF 2018), dynamic compromise (CSF 2024), PQ-sound (CSF 2024), CV2EC (CSF 2024) | Papers: `Blanchet_*`, `cryptoverif-manual-v2.12`, `CryptoVerif_Blanchet_…_arxiv_2310.14658` | `11` §1, `12` Q1 |
+| Unruh, *Quantum Relational Hoare Logic* (POPL 2019) + qRHL-FO (ePrint 2020/962); EasyPQC (CCS 2021) | Papers: `Unruh_Quantum_Relational_Hoare_Logic_…`, `Unruh_qRHL_FO_2020`, `EasyPQC_Barthe_2021` | `12` §3 baselines |
+| Chiribella–D'Ariano–Perinotti, *Theoretical Framework for Quantum Networks* (PRA 2009) | Papers: `Chiribella_DAriano_Perinotti_…_arxiv_0904.4483` | `12` §3.3 (combs) |
+| SSP (ePrint 2018/306), SSProve (TOPLAS 2023), Nominal-SSProve (CSF 2025), CryptHOL-CC (CSF 2019), Broadbent–Karvonen (LMCS 2024), Maurer/Maurer–Renner, IITM (JoC 2020), Canetti 2000/067, GUC (2006/432), Myers book, Libkind Operads/DOTS, Spivak–Niu book + reference | Papers (various; §B items 1–4, 6, 8, 10 of the original list — acquired) | `02`–`06` |
 
 ## B. To acquire (priority order; all open-access)
+
+**Status 2026-07-20:** original items 1–4, 6, 8, 10 are acquired (see §A last row); item 5's
+JUC/EUC materials and item 9 (Nominal-SSProve — acquired) resolved; item 7's EasyUC/ILC pending
+below. New acquisitions for docs 10–12, **all ePrint (user is downloading these by hand;
+cloudflare blocks scripted fetch from this network)**:
+
+1. **Owl** — Gancher–Gibson–Singh–Dharanikota–Parno, ePrint 2023/473 (S&P 2023). `11` §2.
+2. **OwlC** — Singh–Gancher–Parno, ePrint 2025/1092 (USENIX Sec 2025). `11` §2.
+3. **IPDL** — Gancher–Sojakova–Fan–Shi–Morrisett, ePrint 2021/147 (POPL 2023). `11` §2, R-11.2
+   baseline.
+4. **Zhandry, compressed oracles** — ePrint 2018/276 (CRYPTO 2019). `12` §3.3.
+5. **BDF+11, Random Oracles in a Quantum World** — ePrint 2010/428 (ASIACRYPT 2011). `12` §1.
+6. **Ambainis–Hamburg–Unruh, semi-classical O2H** — ePrint 2018/904 (CRYPTO 2019). `12` R-12.4.
+7. **EasyUC** — Canetti–Stoughton–Varia, ePrint 2019/582 (CSF 2019). `06`/`11` baselines.
+8. **Canetti–Cohen–Lindell, simpler UC** — ePrint 2014/553. `06` requirements.
+9. **iUC** — Camenisch–Krenn–Küsters–Rausch, ePrint 2019/1324. `06` requirements.
+
+Original list (retained for provenance):
 
 1. **Brzuska–Delignat-Lavaud–Fournet–Kohbrok–Kohlweiss, *State-Separating Proofs*** — ePrint
    2018/306. The SSP source of truth; `03` names its reduction lemma as derivation target.

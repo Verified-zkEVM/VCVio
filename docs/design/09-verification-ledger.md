@@ -77,8 +77,32 @@ a name has moved, update this ledger in the same PR that adapts to the move. Sta
 | `DynComputation` exact seqcomp / variance / bounds / termination; resumption coinduction/truncation; IOMachine removal | `issue32/*` branches | #76–#83 |
 | Dependent `TypeTree` chain append | `feat/dependent-chain-append` | #66 (draft) |
 
+## Docs 10–12 anchors (added 2026-07-20; verified against the named checkouts)
+
+VCVio-side facts consumed by the new directions (all **M** unless noted):
+
+| Anchor | Location | Consumed by |
+|---|---|---|
+| `OracleSpec ι := ι → Type v`; `toPFunctor`/`ofPFunctor` round-trip | `VCVio/OracleComp/OracleSpec.lean:25` | `12` §2 (boundary neutrality) |
+| `SecExp` advantage layer is carrier-generic (`ProbComp.boolBiasAdvantage`, `SPMF.boolDistAdvantage` need only `SPMF Bool`) | `VCVio/CryptoFoundations/SecExp.lean` | `12` §2.1 |
+| `FujisakiOkamoto` (ROM development, QROM pilot target) | `VCVio/CryptoFoundations/FujisakiOkamoto{,.lean}` | `12` R-12.2 |
+| `GPVHashAndSign` (docstring cites BDF+11; ROM-only proof — the audit's first file) | `VCVio/CryptoFoundations/GPVHashAndSign.lean:61` | `12` §1, R-12.3 |
+| `@[vcspec]`/`@[wpStep]` discr-tree registries (precedent for `@[game_equiv]`) | `VCVio/ProgramLogic/` + `docs/agents/program-logic.md` | `11` §3.1 |
+| `SeededOracle` (deferred sampling; = Clutch presampling tapes, semantically) | `VCVio/OracleComp/QueryTracking/SeededOracle.lean` | `10` §2 |
+
+External checkouts (workspace-relative; **revision facts, will drift**):
+
+| Fact | Location | Consumed by |
+|---|---|---|
+| iris-lean upstream: MoSeL, `UPred`, abstract WP (#475), `UFrac` port (#507), setoid→type port in flight (#502) | `~/Documents/Lean/iris-lean` @ `5a790ae` | `10` §2, S1 |
+| iris-bluebell (Verified-zkEVM fork): `PSp`/`PermissionRat`/`PSpPm`/`IndexedPSpPm`, `HyperAssertion`, `assertSampledFrom`, `jointCondition`, `wp` over opaque `t : IndexedPSpPmRat I α V → IndexedPSpPmRat I α V` — **no program syntax; rules `sorry`-grade** (own audit: `notes/rules_progress.md`) | `~/Documents/Lean/iris-bluebell` @ `0926a38`, `src/Bluebell/` | `10` §2, S2 |
+| New sketches (SK): `StrategyModel`/`Classical`/`Quantum`/`MatterFor`, `QuantumSound` certificates, `@[game_equiv]` registry, `game_hop`/`guess`/`up_to_bad`/epoch combinators, frame-independence transfer, behavior COFE, Bluebell `wp` constructor | docs 10–12 | **SK** |
+
 ## Correction history
 
+- 2026-07-20 (directions 6–8 extension): added docs 10–12 and their anchor section above;
+  verified `OracleSpec`/`SecExp`/`FujisakiOkamoto`/`GPVHashAndSign` locations and the
+  iris-lean/iris-bluebell checkout states cited by doc 10.
 - 2026-07-20 (this review): added the `_of_observes_plug_comm` escape-hatch nuance (docs 01/02);
   moved `TwoPhaseGame` to OFF status (docs 01); fixed `runExp` sketch to match `Stateful.run`'s
   actual signature (doc 03); named `Frame`/`IsSeparated` exactly (doc 05); annotated `IOMachine`
