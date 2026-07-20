@@ -49,9 +49,14 @@ Three tracks from docs 10–12. None blocks Phases 1–3; each names its entry c
 
 **Track S (= `10`, separation logic):** S0 frame-independence transfer theorem over `runExp`
 (entry: B3; feeds R-5.3) → S1a frame camera in a bridge repo (entry: none; runs the `05`
-kill-criterion comparison) → S1b behavior COFE via finite projections (entry: A1) → S2a Bluebell
-`wp` gets VCVio-backed programs (bridge repo) → S2b `SPMF` conditioning + lifting→`CouplingPost`
-bridge → S2c OTP/secret-sharing independence pilots (R-10.1–R-10.4).
+kill-criterion comparison; build against `iProp`/`gFunctors`, not bare `UPred` — `10` §2.1) →
+S1b behavior COFE via finite projections (entry: A1) → S2a Bluebell `wp` gets VCVio-backed
+programs (bridge repo) → S2b `SPMF` conditioning + lifting→`CouplingPost` bridge → S2c
+OTP/secret-sharing independence pilots (R-10.1–R-10.4) → **S2d ghost-coupling layer** (`10`
+§2.3/§4.2): spec resource + adequacy bridge (R-10.5), seed tapes over `SeededOracle` + erasure
+theorem with Clutch-§7 negative tests, `C`-modality-as-ghost-agreement probe (R-10.6); S2d.3
+(relational error credits) waits on Track P's ledger format so the two stay one accounting
+object.
 
 **Track P (= `11`, protocol track):** P0 assumption registry + bundle format (entry: B3; **must
 carry the `QuantumSound` certificate slot from day one** — D8) → P1 `game_hop` matching +
@@ -96,7 +101,7 @@ R-3.1 landed (the pilot must not hand-roll what Phases 1–2 made derivable).
 | universe collisions in indexed carriers | `06` §4 kill criterion |
 | open-PR churn under the suite | Phase 0 G-0a pinning |
 | line-count honesty (paper Table 4) | every direction's honest column; report in paper drafts |
-| iris-lean/iris-bluebell drift; mathlib measure-theory friction | `10` §6; bridge repos with pinned revisions |
+| iris-lean/iris-bluebell drift; mathlib measure-theory friction | `10` §7; bridge repos with pinned revisions |
 | matching brittleness in `game_hop` | `11` §5 kill criterion (regress to marked hops) |
 | parametric-game elaboration noise breaking R-12.1 | `12` §5 kill criterion (EasyPQC mirror fallback) |
 | axiom-grade quantum middle years | `12` §6; axiom tagging + `#print axioms` checks |

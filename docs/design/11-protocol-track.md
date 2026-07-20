@@ -146,6 +146,10 @@ One tactic-visible layer, three components, all consuming existing machinery:
    conditions (discharged against `QueryBound`/`04` decorations), producing at chain's end a
    single triangle-inequality bound in the existing `Advantage`/`Asymptotics` vocabulary. This
    deletes the per-example "sum the hybrids" arithmetic that every current example hand-rolls.
+   **Design constraint from `10` §2.2/§2.3:** the ledger must stay isomorphic to a relational
+   error-credit resource (Eris/Approxis `£ε` — Approxis's mechanized PRP/PRF switching and
+   IND$-CPA proofs are exactly this ledger living inside a separation logic), so that `10`'s
+   ghost-coupling layer and this tactic-level ledger remain two views of one accounting object.
 
 Two named combinators complete the engine, both standard-technique gaps found by the CryptoVerif
 comparison rather than new ideas:

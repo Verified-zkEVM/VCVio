@@ -39,7 +39,7 @@ that fail their rent test are dropped, not defended.
 | [`08-roadmap.md`](08-roadmap.md) | Phases, tracks, gates, rent tests, risks, kill criteria | fluid by design |
 | [`08a-phase1-pr-plan.md`](08a-phase1-pr-plan.md) | Exact Phase 0/1 PR slices with files, declarations, gates | operational |
 | [`09-verification-ledger.md`](09-verification-ledger.md) | Every named anchor, verified location, merge status; correction history | **normative** (as fact base) |
-| [`10-separation-logic.md`](10-separation-logic.md) | Direction 6: Iris/Bluebell over the substrate — three identifications (frames = resource PCMs, BI = joint displays, step-indexing = finite projections); tracks S1/S2 | normative core, fluid periphery |
+| [`10-separation-logic.md`](10-separation-logic.md) | Direction 6: Iris/Bluebell over the substrate — three identifications (frames = resource PCMs, BI = joint displays, step-indexing = finite projections); zoom-in on the full Iris feature set (higher-order ghost state, camera catalogue as crypto bookkeeping, couplings as ghost state à la Clutch/Approxis, tapes = seed stores); tracks S1/S2 incl. the S2d ghost-coupling layer | normative core, fluid periphery |
 | [`11-protocol-track.md`](11-protocol-track.md) | Direction 7: CryptoVerif's hop discipline, IPDL's equations, Owl's types; `game_hop` engine; signed-DH → TLS ladder | normative core, fluid periphery |
 | [`12-quantum.md`](12-quantum.md) | Direction 8: boundary–carrier split, transfer certificates, QROM via compressed-oracle-as-dilated-mate, comb carrier | research (normative interface core) |
 

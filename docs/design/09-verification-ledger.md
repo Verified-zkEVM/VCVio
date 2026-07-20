@@ -94,7 +94,9 @@ External checkouts (workspace-relative; **revision facts, will drift**):
 
 | Fact | Location | Consumed by |
 |---|---|---|
-| iris-lean upstream: MoSeL, `UPred`, abstract WP (#475), `UFrac` port (#507), setoid→type port in flight (#502) | `~/Documents/Lean/iris-lean` @ `5a790ae` | `10` §2, S1 |
+| iris-lean upstream (feature inventory corrected 2026-07-20, verified at source): MoSeL, `UPred`, camera library (`Auth`/`Agree`/`Excl`/`Csum`/`Frac`/`DFrac`/`UFrac`/`View`/`HeapView`/`GhostMap`/`MonoNat`/`ReservationMap`), **`Algebra/COFESolver.lean` (America–Rutten, Carneiro–Graf 2025) + `Algebra/IProp.lean` (`BundledGFunctors` = `gFunctors`) — higher-order ghost state available**, namespaced invariants (`inv_alloc`), cancelable (`CInvariants`) + non-atomic invariants, `FUpd` fancy updates, later credits, `ProphMap`, abstract WP (#475) + `Adequacy` over `EctxLanguage`, HeapLang instance; setoid→type port in flight (#502) | `~/Documents/Lean/iris-lean` @ `5a790ae` | `10` §2.1–§2.2, S1 |
+| Clutch mechanism (paper, read at source): refinement = unary WP (guarded fixpoint over per-step coupling modality `execCoupl`) + ghost `spec(e')` + `specCtx` invariant from two auth-camera instances, run-ahead spec execution via fancy updates; presampling tapes `ι ↪ (N,ns)` as ghost future randomness, adequacy-level erasure; §7 counterexamples: unrestricted presampling unsound | Clutch POPL 2024 (paper-note) | `10` §2.3, S2d |
+| Approxis (POPL 2025, arXiv 2407.14107, acquired + indexed 2026-07-20): relational error credits over the spec-resource architecture; internalized ε→0 limiting argument; mechanized case studies incl. **PRP/PRF switching lemma and IND$-CPA** | paper-note | `10` §2.3, `11` §3.1 ledger constraint |
 | iris-bluebell (Verified-zkEVM fork): `PSp`/`PermissionRat`/`PSpPm`/`IndexedPSpPm`, `HyperAssertion`, `assertSampledFrom`, `jointCondition`, `wp` over opaque `t : IndexedPSpPmRat I α V → IndexedPSpPmRat I α V` — **no program syntax; rules `sorry`-grade; own audit also flags a paper-vs-Lean WP-definition discrepancy** (`notes/rules_progress.md`) | `~/Documents/Lean/iris-bluebell` @ `0926a38`, `src/Bluebell/` | `10` §2, S2 |
 | IPDL artifact (Rocq): case-study line counts at repo HEAD — `Chan/` 279, `OTP/` 257, `CoinFlip/` 472, `Branch/` 589, `GMW/` 614, `DHKE/` 744, `OT/` 2220; core `theories/*.v` ≈3.8k; paper's own comparison: multi-use secure network 195 lines vs 12,203 counted for EasyUC's single-use analogue (KE excluded) | `github.com/ipdl/ipdl` (shallow clone, 2026-07-20) | `11` §2, R-11.2 |
 | Owl artifact: Haskell typechecker + Z3 (`prelude.smt2`), Rust extraction; case-study `.owl` sources incl. `kerberos`, `lak`/`mw` (RFID), `kem`/`pke`; WireGuard spec `tests/wip/wireguard.owl` ≈672 lines; `hpke/owl-hpke` + `wg/` benchmark harnesses (OwlC) | `github.com/secure-foundations/owl` (shallow clone, 2026-07-20) | `11` §2 |
@@ -102,6 +104,18 @@ External checkouts (workspace-relative; **revision facts, will drift**):
 
 ## Correction history
 
+- 2026-07-20 (doc 10 Iris zoom-in, late evening): added `10` §2 (step-indexing's two jobs;
+  camera catalogue as crypto bookkeeping; couplings-as-ghost-state; invariants/persistence),
+  S2d ghost-coupling layer, R-10.5/R-10.6, and renumbered `10` §§2–6 → §§3–7 (roadmap risk-table
+  ref updated). **Fact correction: the earlier revision undersold iris-lean** — verified at
+  source that `COFESolver`/`iProp`/`gFunctors`, namespaced + cancelable + non-atomic invariants,
+  `FUpd`, later credits, `GhostMap`, `ProphMap`, and abstract-WP adequacy are all present, i.e.
+  higher-order ghost state is available in Lean today; ledger row updated. Clutch read at source
+  (spec-resource/`specCtx`/`execCoupl`/run-ahead/tape-erasure mechanism; §7 unsoundness
+  counterexamples adopted as negative tests). **Approxis (POPL 2025) acquired and indexed** —
+  relational error credits with mechanized PRP/PRF switching + IND$-CPA — cited as the existence
+  proof that quantitative game-hopping is ghost-state manipulation; `11`'s ledger now carries an
+  isomorphism constraint to it.
 - 2026-07-20 (directions 6–8 source-review round, evening): all nine §B acquisitions read
   against docs 10–12; corrections applied — **PSL third author is Liao, not Ying** (07, paper
   index, PDF filename); **iUC is ePrint 2019/1073, not 2019/1324** (07, both occurrences; user
@@ -111,7 +125,7 @@ External checkouts (workspace-relative; **revision facts, will drift**):
   scheduling — replacing the looser "fixed topology / no state" gloss); Owl soundness phrasing
   fixed in 11 §2 ("once-and-for-all on-paper proof", not "logical relation") and Owl's
   name-based hierarchical corruption/`corr_case`/module-types/asymptotic-only facts added;
-  PSL case-study list corrected in 10 §3.2 (PIR, OT, multi-party addition, simple ORAM; OTP is
+  PSL case-study list corrected in 10 §4.2/S2c — §3.2 pre-renumbering (PIR, OT, multi-party addition, simple ORAM; OTP is
   the warm-up); Bluebell fork's paper-vs-Lean WP discrepancy surfaced into 10; 12 upgraded with
   BDF+11's four non-transferring techniques + separation result + history-free-reduction
   certificates (GPV ground truth for R-12.3), PQ-CryptoVerif's black-box-attacker semantics as

@@ -81,12 +81,150 @@ b₂`, complete by the M-type's limit property.** Under this identification:
 - Iris's "later credits"/step-counting machinery lines up with `RunLimit`-style bounded execution
   (k-l-examples; `08` G-0b) — a reconciliation note, not a dependency.
 
-## 2. Current state (precise; audited 2026-07-20)
+## 2. Zoom-in: the Iris feature set against the crypto workload
 
-- **iris-lean** (workspace checkout, upstream `leanprover-community/iris-lean`): MoSeL proofmode,
-  `UPred` base logic, a selection of resource algebras (`UFrac` recently ported), **abstract
-  weakest precondition landed (#475)**, and an in-flight setoid→type port (#502) — the tree is
-  moving; any consumer pins a revision. No probability anywhere.
+§1 deliberately used only entry-level separation logic. This section confronts the features that
+make Iris *Iris* — step-indexing, ghost state up to higher order, invariants, fancy updates —
+and assigns each a crypto job or an honest "not needed yet." The organizing discovery (from
+reading the Rocq probabilistic-Iris line at the source): **the coupling arguments at the heart of
+game-hopping are already, in published and mechanized form, ghost-state definition and
+manipulation.** That is not an analogy to be built; it is a design to be ported and then
+generalized in the Bluebell direction.
+
+### 2.1 Step-indexing does two different jobs — keep them separate
+
+- **Job 1: guarded recursion over program execution.** Iris WPs are guarded fixpoints (recursive
+  occurrence under `▷`); Clutch's probabilistic WP has exactly this shape. This is the job §1.3
+  already identified with finite projections of the cofree comonoid: the behavior COFE makes
+  Löb induction available for coinductive facts about open systems. Nothing new here — except
+  the warning that *probabilistic* adequacy under step-indexing is where the Rocq line spent its
+  real effort (Clutch's per-step coupling modality `execCoupl` and its erasure theorem), so any
+  S1c-style WP must budget for the adequacy proof, not the logic.
+- **Job 2: breaking the circularity of impredicative invariants and higher-order ghost state.**
+  Storing arbitrary propositions in invariants or in resources forces the recursive domain
+  equation `iProp ≅ uPred(Res(iProp))`, solved by the America–Rutten construction over OFEs.
+  **Status correction, verified at source 2026-07-20: iris-lean has this today** —
+  `Algebra/COFESolver.lean` (Carneiro–Graf, 2025) solves the domain equation,
+  `Algebra/IProp.lean` builds `iProp` over `BundledGFunctors` (the `gFunctors` mechanism, so
+  users register cameras exactly as in Rocq Iris), and the derived layer includes namespaced
+  invariants with `inv_alloc`/accessors, fancy updates (`FUpd`, view-shift derivation),
+  **cancelable and non-atomic invariants**, **later credits**, `GhostMap`, and prophecy-variable
+  machinery (`ProphMap`), plus an abstract WP with adequacy over an `EctxLanguage` interface and
+  a worked HeapLang instance. The earlier revision of this doc undersold iris-lean as "MoSeL +
+  UPred + some RAs"; in fact the *entire* higher-order-ghost-state stack is ported or in
+  reachable distance.
+- **When does crypto need Job 2?** Honest triage. First-order cameras cover the bulk of
+  crypto bookkeeping (§2.2). Higher-order ghost state earns its keep exactly where proofs
+  quantify over *program-shaped* objects: (a) Clutch-style spec resources — the specification
+  *program* lives in ghost state, and `specCtx` is an invariant holding a configuration; (b)
+  logical-relations arguments — the plumbing behind a soundness proof for an Owl-style type
+  system (`11` §3.3's long-range version) and Approxis's credit-quantified logical relation;
+  (c) any future "environment as a logical variable" treatment of UC emulation. None of these
+  are this-cycle deliverables, but (a) is next-cycle-real (§2.3), which is why S1's bridge repo
+  should build against `iProp`/`gFunctors` from the start rather than against bare `UPred`.
+
+### 2.2 The camera catalogue, read as crypto bookkeeping
+
+Iris's second killer feature is that *protocol-specific reasoning is encoded by choosing a
+resource algebra*, with frame-preserving update as the licensing judgment for ghost moves. The
+catalogue that iris-lean already ships maps onto VCVio's standing bookkeeping burdens almost
+line-by-line:
+
+| Camera (in iris-lean today) | Crypto bookkeeping job |
+|---|---|
+| `Auth` (`●`/`◯`) | one authority, many partial views: RO cache (authoritative table vs. per-caller fragments), spec-program configuration (§2.3) |
+| `GhostMap` / `HeapView` | per-entry ownership of an oracle table: RO entries as individually owned, transferable points-to facts — the fine-grained version of `QueryTracking`'s monolithic cache state |
+| `Agree` | public data that all parties must concur on: transcripts, public keys, CRS |
+| `Excl` / one-shot (`Csum`) | unique-event tokens: "challenge issued," "key extracted," commitment opened — the one-shot camera *is* the commit-then-open shape |
+| `Frac`/`DFrac`/`UFrac` | divisible read access to shared state — the fractional refinement of `05`'s frames already anticipated in S1a |
+| `MonoNat` | monotone counters: query counters with once-exceeded-always-exceeded budget facts — the ghost form of `IsQueryBound` |
+| cancelable invariants (`CInvariants`) | **invariant-until-bad**: an invariant with a cancellation token is precisely the `IdenticalUntilBad` shape — cancel at the bad event, keep the token as the bad-event witness. The `11` `up_to_bad` combinator and this camera should be one design |
+| later credits | amortized `▷`-elimination; bookkeeping, listed for completeness |
+| `ProphMap` (prophecy variables) | reasoning *now* about values determined *later* — the deterministic ancestor of presampling tapes (§2.3); prophecy erasure and tape erasure are the same proof pattern |
+| Eris-style error credits (`ℝ≥0`-valued, not yet in iris-lean) | **the advantage ledger as a resource**: `£ε` splits by union bound, is spent to exclude bad events, and the adequacy theorem converts remaining credit into a probability bound. `11`'s hop-chain ledger is this camera wearing tactic clothing — the two designs must stay isomorphic so a later unification is a refactor, not a rewrite |
+
+The design consequence: S1a's "frame camera" is not one instance but a *policy* — each VCVio
+bookkeeping idiom gets the standard camera above instead of a bespoke lemma family, and the rent
+test for any single row is that the ghost version deletes the hand-rolled twin.
+
+### 2.3 Couplings as ghost state — the load-bearing zoom
+
+The published mechanism (Clutch, POPL 2024, read at source; CaReSL is the ancestor): to prove
+`e ≾ e'`, the right-hand program is *not* part of the judgment's program position — it is a
+**ghost resource** `spec(e')`, tied by an invariant `specCtx` (two authoritative camera
+instances: one for the spec configuration, one for the spec heap/tapes) to the coupling built by
+a *unary* WP. The refinement judgment is
+
+```
+specCtx ∗ spec(e') ⊢ wp e { v. ∃v'. spec(v') ∗ φ(v, v') }
+```
+
+and its reading is exactly the user-level slogan: **advancing the coupled program is a ghost
+move** (a fancy update rewriting `spec(K[e'])`, with "run-ahead" permitted — the spec side may
+be executed independently of the physical side), and choosing a coupling is a per-step
+obligation inside the WP (`execCoupl`), discharged rule-by-rule. Adequacy extracts an honest
+probabilistic coupling, and `μ₁ ∼ μ₂ : (=) ⇒ μ₁ = μ₂` lands distribution equality. Three
+transfers for this suite:
+
+1. **Presampling tapes are ghost seed stores — VCVio already owns the operational half.**
+   Clutch's tapes `ι ↪ (N, n̄s)` exist to make couplings *asynchronous*: a ghost presampling
+   step on one side is coupled with a real sampling on the other, the tape is read later, and
+   the adequacy-level **erasure theorem** removes tapes from the final statement (their §2
+   flagship: lazy/eager coin equivalence). VCVio's `SeededOracle`/deferred-sampling engine
+   (#465) is semantically the same object *minus the logic*: seeds are presampled randomness,
+   and the eager/lazy switch lemmas are hand-proved erasure instances. Deliverable shape
+   (S2d below): a ghost seed-coupling layer over `SeededOracle` — couple seeds at presampling
+   time, consume at query time — turning today's per-example eager/lazy lemmas into instances
+   of one erasure theorem. Caution imported with the design: Clutch §7 gives counterexamples
+   showing *unrestricted* presampling rules are unsound; the tape discipline is load-bearing,
+   not decoration.
+2. **Approximate couplings close the loop to game hops.** Approxis (POPL 2025, same family;
+   acquired 2026-07-20) recasts Eris's error credits *relationally* over the same
+   spec-resource architecture: hops carry `£ε`, credits compose along the chain, a limiting
+   argument (`ε → 0` internally) recovers exact equivalences — and its mechanized case studies
+   are **the PRP/PRF switching lemma and IND$-CPA of an encryption scheme**. That is an
+   existence proof, in a proof assistant, that *game-hopping with quantitative advantages is
+   ghost-state manipulation* — the strongest external validation this direction has. It also
+   fixes the interface obligation on `11`: the advantage ledger and relational error credits
+   must be the same accounting object viewed from tactic-land and logic-land respectively.
+3. **Bluebell is the symmetric, n-ary limit of the spec-resource idea — and conditioning has a
+   ghost-state reading.** Clutch is asymmetric: one physical program, one ghost program.
+   Bluebell's `I`-indexed model makes *every* program's distribution a resource (there is no
+   physical side), which is why it can state hyper-properties Clutch cannot; what it lacks is
+   Clutch's dynamics (ghost moves, invariants, adequacy-by-erasure). The synthesis hypothesis,
+   stated as such: **joint conditioning is ghost agreement** — `C^{X←x}` conditions the
+   indexed resources on an outcome; operationally that is allocating an `Agree`-style witness
+   of the conditioned value and reasoning under it, with the C-merge rules as agreement
+   composition. If this holds even for the discrete/`SPMF` fragment, Bluebell's most exotic
+   connective becomes a derived construction over standard cameras — a genuinely new result,
+   and one that would make the S2 layer *definable inside* an iris-lean-based logic rather
+   than a separate model. R-10.6 makes this falsifiable; it is a hypothesis, not a claim.
+
+### 2.4 Invariants, persistence, atomicity — quick hits
+
+- **Persistent vs. exclusive is the public/secret split.** Transcripts, public keys, and CRS
+  are persistent knowledge (`□`); secret keys and one-shot capabilities are exclusive
+  resources. This is vocabulary worth adopting even in prose.
+- **Oracle queries are atomic by construction.** VCVio's programs interact with state only
+  through handler steps, so the invariant-opening discipline (masks, atomicity side
+  conditions) degenerates pleasantly: every query is a single atomic step and invariants can
+  be opened around it without HeapLang's fine-grained-concurrency caveats. The async runtime
+  (`05`) is where genuine interleaving returns and the full discipline earns its keep.
+- **Impredicative invariants** (storing arbitrary `iProp`s) are what §2.1 Job 2 buys; the
+  crypto consumer is the spec-resource invariant `specCtx` (§2.3) and, long-range,
+  environment-quantified UC arguments. First-order invariants suffice for everything else
+  named in this doc.
+
+## 3. Current state (precise; audited 2026-07-20)
+
+- **iris-lean** (workspace checkout, upstream `leanprover-community/iris-lean`): substantially
+  the full Iris stack — MoSeL proofmode, `UPred`, the camera library (`Auth`, `Agree`, `Excl`,
+  `Csum`, `Frac`/`DFrac`/`UFrac`, `View`/`HeapView`, `GhostMap`, `MonoNat`, `ReservationMap`),
+  **the COFE solver and `iProp` over `gFunctors`** (higher-order ghost state is available, §2.1),
+  namespaced/cancelable/non-atomic invariants, fancy updates, later credits, prophecy maps,
+  abstract WP (#475) with adequacy over `EctxLanguage`, and a worked HeapLang instance. In-flight
+  setoid→type port (#502) — the tree is moving; any consumer pins a revision. No probability
+  anywhere.
 - **iris-bluebell** (workspace checkout, Verified-zkEVM fork of iris-lean): Bluebell's model laid
   out in `src/Bluebell/`: `PSp` (probability-space RA), `PermissionRat`, `PSpPm` (predicated
   product), `IndexedPSpPm` (= the paper's `Hyp[I]{PSpPmRA}`), `HyperAssertion` (upward-closed
@@ -124,9 +262,9 @@ b₂`, complete by the M-type's limit property.** Under this identification:
   documenting the deliberate divergence) as part of supplying the semantics — the bridge must
   not inherit an unexamined definition.
 
-## 3. Design
+## 4. Design
 
-### 3.1 Track S1 — iris-lean as engine for the structural/concurrent layer
+### 4.1 Track S1 — iris-lean as engine for the structural/concurrent layer
 
 - **S1a (entry point, cheap): the frame camera.** Package `05`'s `OwnershipFrame` as a resource
   algebra instance for iris-lean: elements = lens-frame components (with fractional-permission
@@ -142,12 +280,15 @@ b₂`, complete by the M-type's limit property.** Under this identification:
   re-prove one `02` coherence lemma by Löb induction and compare against the `M.bisim` proof.
 - **S1c (contingent): abstract WP over `OracleComp`.** iris-lean's abstract WP (#475) is
   parameter-shaped; instantiating it at `simulateQ`-semantics would seed a "Clutch-for-Lean."
-  Deliberately *not* scheduled this cycle: Loom already occupies the extrinsic-WP niche, and a
-  second ambient WP violates the spirit of the `outParam` discipline. Revisit only if S1a/S1b pay
-  and a concurrency-heavy consumer (async runtime proofs, `05`) demands invariants/ghost state
-  that Loom cannot express.
+  Deliberately *not* scheduled this cycle *as a unary program logic*: Loom already occupies the
+  extrinsic-WP niche, and a second ambient WP violates the spirit of the `outParam` discipline.
+  Scope refinement after §2.3: S2d.1 does instantiate an Iris-style WP, but at *coupling*
+  semantics (the `execCoupl` shape) as internal machinery of the ghost-coupling layer — a
+  relational device discharging into `CouplingPost`, not a user-facing unary logic. The
+  unary-logic version of S1c stays gated on S1a/S1b paying and a concurrency-heavy consumer
+  (async runtime proofs, `05`) demanding invariants/ghost state Loom cannot express.
 
-### 3.2 Track S2 — Bluebell into VCVio
+### 4.2 Track S2 — Bluebell into VCVio
 
 The strategic fact: Bluebell's missing half (program semantics) is VCVio's strongest layer, and
 VCVio's missing relational vocabulary (independence, conditioning) is Bluebell's core. The fit is
@@ -184,8 +325,24 @@ exact, and it is the same fit twice:
   is not allowed to become its own project. This is where "structural upstairs, distributional
   downstairs" becomes visible in a *proof style*: frame reasoning until the last step, one
   independence fact at the end.
+- **S2d: the ghost-coupling layer (couplings as spec resources + seed tapes).** The §2.3
+  transfer, staged to stay falsifiable:
+  1. *Spec resource over VCVio programs*: define `specRes : OracleComp spec α → iProp` with the
+     Clutch architecture (auth camera for the spec configuration; `specCtx` invariant; ghost
+     moves = fancy updates advancing the spec program by `simulateQ` steps, run-ahead allowed),
+     and prove the adequacy bridge `specCtx ∗ specRes e' ⊢ wp e {v. ∃v', specRes (pure v') ∗
+     φ v v'}` ⟹ `CouplingPost e e' φ`. This *re-derives* the existing carrier from ghost
+     dynamics rather than replacing it — decision D9's bridge discipline applies unchanged.
+  2. *Seed tapes*: expose `SeededOracle`'s seed store as a tape resource `ι ↪ seeds` with
+     presample/consume ghost rules and one erasure theorem into `evalDist`-equality, subsuming
+     the hand-proved eager/lazy switch lemmas (#465's engine becomes the operational semantics
+     of a logic-level device). Clutch's §7 unsoundness counterexamples transfer as the test
+     suite: the same examples must be *unprovable* here.
+  3. *Approxis-shaped credits*: only after `11`'s ledger stabilizes — the relational
+     error-credit camera and the hop ledger must be one accounting object (see §2.2 table,
+     last row); building both independently is the failure mode this bullet exists to prevent.
 
-### 3.3 What the two tracks do *not* attempt
+### 4.3 What the two tracks do *not* attempt
 
 - No port of Iris invariants/fancy updates into PolyFun (upstairs stays elementary);
 - no probabilistic cofree comonoid (the `02` §3.3 caveat stands — S2 works over `evalDist`,
@@ -196,7 +353,7 @@ exact, and it is the same fit twice:
 - no unification of Loom, displays, and BI into one logic. Three surfaces, bridge theorems, per
   decision D3 — now with the §1 identifications as the reason bridges exist at all.
 
-## 4. Integration levers (order)
+## 5. Integration levers (order)
 
 | Step | Repo | Deliverable |
 |---|---|---|
@@ -206,8 +363,11 @@ exact, and it is the same fit twice:
 | 4 | bridge repo | S2a `wp`-transformer constructor from indexed VCVio programs; derived `wp_bind`/`wp_query` |
 | 5 | VCVio | S2b `SPMF` conditioning lemma pack + lifting→`CouplingPost` bridge |
 | 6 | bridge repo | S2c OTP + secret-sharing independence pilots |
+| 7 | bridge repo | S2d.1 spec resource + adequacy bridge to `CouplingPost` (R-10.5) |
+| 8 | bridge repo | S2d.2 seed tapes over `SeededOracle` + erasure theorem; Clutch-§7 negative tests |
+| 9 | bridge repo | R-10.6 probe: one `C`-modality rule via ghost agreement over `SPMF` |
 
-## 5. Rent tests
+## 6. Rent tests
 
 - **R-10.1**: OTP privacy proved in the independence style at length ≤ the current
   coupling-style proof, with the statement strengthened (independence, not just distribution
@@ -219,6 +379,15 @@ exact, and it is the same fit twice:
   discharges to `CouplingPost`.
 - **R-10.4**: one Löb-style proof over the behavior COFE replaces one `M.bisim` argument at
   comparable or smaller size.
+- **R-10.5**: the spec-resource adequacy bridge exists (`specRes` refinement ⟹ `CouplingPost`),
+  and one existing coupling proof is re-done as ghost moves — including at least one step where
+  run-ahead or a seed-tape presampling does something the aligned-step `rvcgen` style cannot
+  (an *asynchronous* coupling), so the layer demonstrates new capability, not re-packaging. The
+  eager/lazy switch lemmas of #465 follow from the single erasure theorem.
+- **R-10.6** (probe, allowed to fail): one Bluebell `C`-modality rule (a conditioning
+  introduction or merge rule) derived over `SPMF` from an `Agree`-style ghost witness encoding.
+  Success upgrades §2.3(3) from hypothesis to design; failure is recorded there with the
+  obstruction.
 - **Kill criteria**: if mathlib measure-theory friction (Bluebell's `ProbabilitySpace (α → V)`
   with `AEMeasurable` plumbing) makes S2a cost more than the `SPMF`-level reformulation, rebuild
   the S2 layer directly over `SPMF` in VCVio and demote the iris-bluebell bridge to
@@ -227,7 +396,7 @@ exact, and it is the same fit twice:
   camera duplicates `OwnershipFrame` at equal cost with an extra dependency, record the
   comparison in `05` and stop S1 at the writeup.
 
-## 6. Risks and honest column
+## 7. Risks and honest column
 
 - **Two moving dependencies.** iris-lean is mid-refactor (setoid→type port); iris-bluebell is a
   research fork on its own toolchain with `sorry`-grade rules. Everything lands in a bridge repo
@@ -242,7 +411,15 @@ exact, and it is the same fit twice:
   almost-everywhere plumbing). The `SPMF` (discrete) setting avoids the worst of it — VCVio's
   distributions are countably supported — so S2b should be stated over `SPMF` first and only
   generalized if a consumer demands continuous distributions.
+- **Ghost-coupling soundness is subtle, and the literature says so out loud.** Clutch §7
+  exhibits counterexamples where slightly-too-liberal presampling rules break soundness, and
+  its adequacy/erasure proof (not the surface logic) is where the difficulty lives; Approxis's
+  credit-quantified logical relation is another layer of hard metatheory. S2d budgets
+  accordingly: adequacy bridges first, surface rules second, and the Rocq artifacts are the
+  reference implementations to diff against, not just citations.
 - **Scope honesty:** nothing in this direction advances UC composition, forking, or the quantum
-  question; it is a proof-ergonomics and relational-vocabulary direction. Its paper value is as a
-  section of paper 2 (the coalgebraic-adversary paper's "program logics over the substrate"
-  story), not a standalone.
+  question; it is a proof-ergonomics and relational-vocabulary direction — though S2d gives it
+  a second face: the ghost-coupling layer is *shared infrastructure* with `11`'s ledger (one
+  accounting object) and with `03`'s deferred-sampling engine (one erasure theorem). Its paper
+  value is as a section of paper 2 (the coalgebraic-adversary paper's "program logics over the
+  substrate" story), not a standalone.
