@@ -94,34 +94,42 @@ noncomputable def probCompUniformOfFintype (X : Type) [Fintype X] [Nonempty X] :
   $ᵗ X
 
 /--
-Canonical uniform sampler on a `TypeTree.Fintype`-ornamented tree, built by
-recursion on the ornament: each node samples uniformly from its move
-space using `probCompUniformOfFintype`, and the continuation samplers
-are produced recursively from the per-branch ornament.
+Canonical uniform sampler on a finite, nonempty-branching tree, built by
+recursion on the two ornaments: each node samples uniformly from its move
+space using `probCompUniformOfFintype`, and the continuation samplers are
+produced recursively from the corresponding per-branch ornaments.
 
 This is the interaction-spec analogue of `SampleableType` for
 `OracleSpec`: concrete `spec` trees whose move types all carry `Fintype`
-and `Nonempty` synthesize an instance of `TypeTree.Fintype spec`
-automatically, yielding `Sampler.uniform spec` as the canonical
-coin-flip-only sampler for downstream runtime semantics
-(`processSemanticsProbComp`, etc.).
+and `Nonempty` synthesize separate `TypeTree.Fintype spec` and
+`TypeTree.Nonempty spec` instances automatically, yielding `Sampler.uniform
+spec` as the canonical coin-flip-only sampler for downstream runtime
+semantics (`processSemanticsProbComp`, etc.).
 -/
 noncomputable def Sampler.uniform :
-    (spec : TypeTree.{0}) → TypeTree.Fintype spec → Sampler ProbComp spec
-  | .done, _ => ⟨⟩
-  | .node X rest, .node hFin hNon hRec =>
-      (@probCompUniformOfFintype X hFin hNon, fun x => Sampler.uniform (rest x) (hRec x))
+    (spec : TypeTree.{0}) → TypeTree.Fintype spec → TypeTree.Nonempty spec →
+      Sampler ProbComp spec
+  | .done, _, _ => ⟨⟩
+  | .node X rest, .node hFin hFinRec, hNon =>
+      (@probCompUniformOfFintype X hFin (TypeTree.Nonempty.rootNonempty hNon),
+        fun x => Sampler.uniform (rest x) (hFinRec x) (TypeTree.Nonempty.rest hNon x))
 
 /-- Instance-argument form of `Sampler.uniform`. -/
 @[reducible]
-noncomputable def Sampler.uniformI (spec : TypeTree.{0}) [h : TypeTree.Fintype spec] :
+noncomputable def Sampler.uniformI (spec : TypeTree.{0})
+    [hFin : TypeTree.Fintype spec] [hNon : TypeTree.Nonempty spec] :
     Sampler ProbComp spec :=
-  Sampler.uniform spec h
+  Sampler.uniform spec hFin hNon
 
-/-! Smoke test: typeclass synthesis builds a `TypeTree.Fintype` instance for a
-concrete spec, and `Sampler.uniformI` elaborates against it. -/
+/-! Smoke test: typeclass synthesis builds separate `TypeTree.Fintype` and
+`TypeTree.Nonempty` instances for a concrete spec, and `Sampler.uniformI`
+elaborates against both. -/
 
 private example : TypeTree.Fintype
+    (TypeTree.node Bool (fun _ => TypeTree.node (Fin 4) (fun _ => TypeTree.done))) :=
+  inferInstance
+
+private example : TypeTree.Nonempty
     (TypeTree.node Bool (fun _ => TypeTree.node (Fin 4) (fun _ => TypeTree.done))) :=
   inferInstance
 

@@ -458,9 +458,9 @@ abbrev otpTree (sp : ℕ) : Interaction.TypeTree.{0} :=
   TypeTree.node (BitVec sp) (fun _ => TypeTree.done)
 
 /-- The canonical uniform `ProbComp`-sampler for `otpTree sp`,
-synthesized from the `TypeTree.Fintype (otpTree sp)` instance built by
-typeclass synthesis from `Fintype (BitVec sp)` and
-`Nonempty (BitVec sp)`. -/
+synthesized from the separate `TypeTree.Fintype (otpTree sp)` and
+`TypeTree.Nonempty (otpTree sp)` instances built by typeclass synthesis from
+`Fintype (BitVec sp)` and `Nonempty (BitVec sp)`. -/
 noncomputable def uniformOtpSampler (sp : ℕ) :
     TypeTree.Sampler ProbComp (otpTree sp) :=
   TypeTree.Sampler.uniformI _
