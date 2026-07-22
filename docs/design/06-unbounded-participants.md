@@ -54,7 +54,7 @@ Key structural decisions:
 - **Spawning is reindexing along an inclusion** `T ↪ T'`: a cartesian lens
   `protoIface T' ⇆ protoIface T ⊗ (new instance's iface)`. Cartesianness is the payoff: the
   existing probability-preservation discipline (paper Thm 5.1 / ledger A3) applies to spawns with
-  zero new probabilistic argument. The g3/g5 verified-reindexing machinery is the tool.
+  zero new probabilistic argument. The g3/g5 displayed-reindexing machinery is the tool.
 - **An unbounded execution is a colimit over finite stages**: behaviors at growing topologies
   with restriction maps (the `Display`-restriction-along-cursors machinery, #58, is the
   finite-stage restriction). R1 is met without any infinite carrier beyond the M-types we have.

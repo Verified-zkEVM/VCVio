@@ -1,7 +1,7 @@
 # 04 — Direction 3: Displayed Structure as the Intrinsic Program Logic
 
-**Claim.** Aberlé's displayed-polynomial machinery (G-series #88–#98: `Display`, displayed
-handlers, verified responders/presentations, displayed parallel) is a *second* program logic for
+**Claim.** Aberlé's merged display series (#74–#75, #84–#88, and #91–#98: `Display`, displayed
+handlers, responder coalgebras and presentations, displayed parallel) is a *second* program logic for
 VCVio — intrinsic and proof-relevant where Loom is extrinsic and semantic. Its immediate cash
 value in VCVio is (a) instrumentation (`QueryTracking`) re-derived as decorations/displays with
 transport for free, and (b) relational reasoning re-founded: a coupling of two oracle programs is
@@ -14,8 +14,8 @@ are the invariant-carrying layer underneath, connected by bridge theorems per ca
 | | Loom (today) | Displayed (G-series) |
 |---|---|---|
 | style | extrinsic: `wp`/triples computed over a finished program | intrinsic: evidence carried at each node |
-| carrier | `MAlgOrdered` / `MAlgRelOrdered` over `Prop`/`ℝ≥0∞` | `Display P` (Set-valued, proof-relevant) over positions/directions |
-| invariants | pre/post at boundaries | per-node, preserved coalgebraically (verified responders) |
+| carrier | `MAlgOrdered` / `MAlgRelOrdered` over `Prop`/`ℝ≥0∞` | `Display P` (Type-valued, proof-relevant) over positions/directions |
+| invariants | pre/post at boundaries | per-node, preserved by displayed responder coalgebras |
 | transport | per-handler lemmas (`HandlerSpecs`, `SimulateQ` rules) | one theorem: displayed handlers compose along wiring (Abe26 Thm 5.3) |
 | relational | `CouplingPost` (coupling existence over `evalDist`) | joint display over `P ∥ Q`'s `.both` branch — evidence "need not factor into unary pieces" |
 | user surface | `vcgen`/`rvcgen`, EasyCrypt vocabulary | none yet (and none planned this cycle) |
@@ -35,11 +35,11 @@ tax** are exactly the places where displayed transport is one theorem.
 - PolyFun merged: `FreeM` **displayed free machinery already on main** (`Free/Displayed`,
   `Displayed/Decoration`, displayed cursors) — decorations exist and are consumed by the
   Interaction layer, not by VCVio.
-- PolyFun in flight (G-series): `Display` over polynomials with fiberwise morphisms (g6a),
-  verified presentation morphisms — simulation maps carrying proof-relevant invariants (g6b),
+- PolyFun merged (G-series): `Display` over polynomials with fiberwise morphisms (g6a),
+  `PresentationHom` — witness-preserving simulation maps between responder presentations (g6b),
   displayed handlers + Sigma variant, `Wiring.lean` (Thm 3.1 eval-wiring; Thm 5.3 local handler
   composition), parallel displays with genuinely relational joint components (g6c), displayed
-  lockstep execution (g6d), verified responder parallel coherence (g6e–g6g), bridges (g6h).
+  lockstep execution (g6d), displayed responder parallel coherence (g6e–g6g), and bridges (g6h).
 
 ## 3. Design
 
@@ -95,11 +95,12 @@ lemma pack states congruence rules for exactly the compositions that hold (mirro
 seq rule demands aligned intermediate assertions — the counterexample is why that alignment is
 not optional).
 
-### 3.3 Verified presentations = simulation proofs with content
+### 3.3 Presentation homomorphisms = witness-preserving simulations
 
-g6b's verified presentation morphisms give simulation maps that carry invariants. VCVio consumer:
+g6b's `PresentationHom` maps give simulations that preserve dependent witnesses. VCVio consumer:
 `SimSemantics` correctness statements ("this handler stack implements that spec preserving I")
-become verified presentations; the routing lemmas of #451 (simulateq routing) are candidates for
+become responder presentations and witness-preserving homomorphisms; the routing lemmas of #451
+(simulateq routing) are candidates for
 re-derivation. Kept as an opportunistic third track — pursued only where a routing proof is
 already painful.
 
@@ -108,7 +109,7 @@ already painful.
 | Step | Repo | Deliverable |
 |---|---|---|
 | 1 | VCVio | counting as decoration over merged displayed-free machinery (R-4.1) — needs no G-series |
-| 2 | PolyFun | land g6a–g6d at least; Kleisli-instance lemma pack for displayed handlers |
+| 2 | PolyFun | use merged g6a–g6h; add the Kleisli-instance lemma pack for displayed handlers |
 | 3 | VCVio | logging + RO-cache displays; LoggingBounds example re-derivation (R-4.2) |
 | 4 | VCVio | `RelDisplayed` + qualitative soundness bridge (R-4.3) |
 | 5 | VCVio | SimpleTwoServerPIR privacy or OTP as displayed relational pilot (R-4.4) |
@@ -130,9 +131,9 @@ already painful.
 
 ## 6. Risks and honest column
 
-- The G-series is open and chained (#91→#98); step 2 pins its merge. Slices are sized so step 1
-  proceeds on today's main regardless.
-- Proof-relevant evidence can bloat elaboration (Set-valued displays over every node); the
+- The G-series is merged through #98; step 2 pins a `main` revision containing that API. Slices
+  are sized so step 1 remains independent of responder-presentation machinery.
+- Proof-relevant evidence can bloat elaboration (Type-valued displays over every node); the
   1500-line/file and lint gates on PolyFun will surface this early. If display-heavy files are
   slow, restrict displays to instrumentation boundaries rather than whole programs.
 - EasyCrypt-honesty: pRHL with SMT remains shorter for flat games. The claim defended here is

@@ -1,8 +1,8 @@
 # 01 — Substrate Inventory: What Exists, What Is Merged, What Is Disconnected
 
-Audit date 2026-07-20. VCVio `main` = `a5f474fd` ("derive replay forking from PolyFun contexts",
-#488). PolyFun `main` = `6a2d4bb` ("finite cofree projections and Proposition 8.49", #68).
-Everything in this doc is a checkable claim about those trees or about named open PRs.
+Audit date 2026-07-22. VCVio `main` = `a5f474fd` ("derive replay forking from PolyFun contexts",
+#488). PolyFun `main` = `f887c096` ("Consolidate proof and validation infrastructure", #99).
+Everything in this doc is a checkable claim about those trees or named merged PRs.
 
 ## 1. VCVio today, layer by layer
 
@@ -101,7 +101,7 @@ The ledger (`vcv-connection.md`) cites `WireK`, `RunLimit`, `Coinductive/Machine
 2026-07-20). Plans in this suite reference the k-l-examples material as *evidence and lemma
 bank*, not as merged surface — same discipline ArkLib's suite applies to its prototype tree.
 
-## 2. PolyFun today: merged vs in-flight
+## 2. PolyFun today
 
 ### 2.1 Merged on `main` (usable now)
 
@@ -113,33 +113,38 @@ bank*, not as merged surface — same discipline ArkLib's suite applies to its p
   (#67), **finite projections / Prop 8.49** (#68), finite vertices of M-types (#56).
 - **Dynamical**: `DynSystem`, behavior, simulation/bisimulation/refinement, `Responder` (systems
   over `q ⊸ X` with the Kleisli–Mealy `equivStateHandler`), games via `eval` wiring
-  (`DynSystem.game`/`closedGame`), `RunN`, `DynComputation`, `IOMachine.seqComp` +
-  `runWithInput_seqComp` fuel-exact bind law — **note**: `IOMachine` is scheduled for removal by
-  open PR #83; `DynComputation`'s exact sequential composition (#79) is the successor carrier, so
-  new consumers should target `DynComputation`, not `IOMachine`.
+  (`DynSystem.game`/`closedGame`), `RunN`, and `DynComputation` with variance, exact sequential
+  composition, bounded execution, and qualitative termination (#78–#82). Legacy `IOMachine` was
+  removed by #83; new consumers target `DynComputation`.
 - **Lens/monoidal**: full lens calculus, cartesian/vertical factorization, duoidal, internal hom +
   eval/curry, adjunctions, comonoids, `Comonoid.Hom` retrofunctors (`Cat♯`).
-- **Interaction**: `TypeTree` (now literally sequential-spec-as-type-tree, #64), decorations,
+- **Interaction**: `TypeTree` (now literally sequential-spec-as-type-tree, #64), dependent chain
+  concatenation (#66), decorations,
   two-party/multiparty, concurrent processes/machines/traces/fairness, UC open-process +
   `OpenTheory` + `Emulates` + corruption/env-action data.
 - **ITree**: M-type ITrees, strong bisim as definitional equality, weak bisim, cross-signature
   simulation, lawful iteration (#47), generalized handlers (#44).
 
-### 2.2 Open PR chains (the "recent works" this suite integrates)
+### 2.2 Recently merged trains integrated by this suite
 
-- **Pattern-runs-on-matter** (#71 formalize Ξ, #72 operationalize; branches
-  `feat/pattern-runs-on-matter-*`): `FreeP.runOn`/`xi` with `runOn_eq_xi`, module laws
+- **Pattern-runs-on-matter** (#71 formalized Ξ; #72 operationalized it): `FreeP.runOn`/`xi`
+  with `runOn_eq_xi`, module laws
   (`runOn_unit`, `runOn_assoc`), naturality, `runThrough` (generic `m p ⊗ c q → m r` schema),
   `runAgainst` (internal-hom evaluation), `runAgainstMonoid`, `DynSystem.runPattern` agreeing with
   finite game semantics, and **behavior/simulation invariance**
   (`runBehaviorThrough_eq_of_{obsEq,isSimulation,isStrongSimulation}`). Direction 2's engine.
-- **Aberlé G-series** (#88–#98, replacing frozen #89; source: Abe26, arXiv 2604.01303): `Display`
-  (Set-valued displays over polynomials), display morphisms (g6a), **verified presentation
-  morphisms** (g6b), **parallel sum `P ∥ Q`** with `≃ₚ (P + Q) + (P ⊗ Q)` (g6c), free/displayed
+- **Aberlé display series** (#74–#75, #84–#88, and #91–#98, replacing superseded #89; source:
+  Abe26, arXiv 2604.01303): `Display` (Type-valued displays over polynomials), display morphisms (g6a),
+  witness-preserving responder `PresentationHom`s (g6b), **parallel sum `P ∥ Q`** with
+  `≃ₚ (P + Q) + (P ⊗ Q)` (g6c), free/displayed
   parallel execution incl. lockstep `FreeM.parallel` (g6d), responder parallel semantics (g6e),
   coherence (g6f/g6g), wiring/reconstruction bridges (g6h); plus g1–g5 (coalgebra displays,
-  wiring, verified reindexing, indexed M-types, categorical identification of verified
-  reindexing). Also `PFunctor/Wiring.lean`: Aberlé Thm 3.1 (`eval` as recursive wiring) and Thm
+  wiring, displayed behavior reindexing, indexed M-types, and its categorical identification).
+  The state-free API is `toDisplayedBehavior`, `reindexDisplayedBehavior`,
+  `mapDisplayedBehavior`, `displayedTotalStep`, and `PresentationHom`; the modules are
+  `Responder/Presentation.lean`, `Responder/Parallel/Presentation.lean`,
+  `DisplayedAssociativity.lean`, and `DisplayedCoherence.lean`. Also `PFunctor/Wiring.lean`:
+  Aberlé Thm 3.1 (`eval` as recursive wiring) and Thm
   5.3 (local displayed handlers compose along wiring). Directions 3 and 4's engine.
   **Known boundary fact**: unrestricted Kleisli interchange for `FreeM.parallel` is *refuted* by a
   committed counterexample; `Wiring.evalParallel` deliberately targets duplicated inputs to
@@ -148,7 +153,7 @@ bank*, not as merged surface — same discipline ArkLib's suite applies to its p
   characterization, `DynComputation` variance/observational equivalence/exact seqcomp/bounded
   execution/qualitative termination, resumption truncation, remove legacy `IOMachine`. Cleans the
   machine layer Directions 1–2 sit on.
-- **#66** (draft): dependent `TypeTree` chain append — n-ary sequential composition carrier.
+- **#66**: dependent `TypeTree` chain concatenation — the n-ary sequential-composition carrier.
 
 ### 2.3 PolyFun roadmap position (from `docs/reading/roadmap.md`)
 
@@ -175,11 +180,11 @@ Directions 1, 2, 5 are, in ledger terms, *the VCVio consumers that give Phase D 
 6. **Off-main coinductive machine layer**: `Implements`/`IsSimulation`/`RunLimit` referenced by the
    ledger live on k-l-examples. Directions 1–2 must either merge or re-derive them. → `08` gate.
 
-## 4. Merge-train constraints
+## 4. Dependency constraints after the merge train
 
-- PolyFun open PRs are chained (#91→…→#98 explicitly ordered; pattern PRs and issue-32 chain
-  independent of the G-series but touching shared files). VCVio consumer PRs pin PolyFun revisions
-  via the lake manifest, so each VCVio slice in `08` names the minimal PolyFun PR set it needs.
+- The relevant PolyFun trains are merged. VCVio consumer PRs still pin PolyFun revisions via the
+  lake manifest, so each VCVio slice in `08` names the minimal merged revision it needs rather
+  than depending on a feature branch.
 - Toolchain: both repos on Lean v4.32.0 / synced Mathlib+cslib; VCVio completed its 4.31→4.32
   migration on main. Keep the train in lockstep (same discipline as ArkLib's AR-0).
 - PolyFun's crypto-free rule (AGENTS gotcha 2) means every direction splits into an upstream

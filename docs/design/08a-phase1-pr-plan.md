@@ -5,14 +5,14 @@ and its acceptance gate. Branch naming: `design-int/<slice-id>` in both repos. E
 obeys PolyFun AGENTS rules (crypto-free, import DAG, no `sorry`, `./scripts/update-lib.sh`,
 `./scripts/validate.sh --lint --test`); every VCVio slice keeps `ofFreeM`/`toFreeM` as the sole
 unfolding seam and leaves the `Interaction/UC` public API additive. Anchors: see `09`; statuses
-verified 2026-07-20.
+verified 2026-07-22.
 
 ## Phase 0
 
-### P0-1 (process) — merge-train pinning
-Not a code PR. Record in the tracking issue: which of #71/#72 (pattern), #88–#98 (G-series),
-#76–#83 (issue32) are merged at each slice's start; each slice below lists its minimal set. If a
-needed PR is frozen/replaced (as #89 was by #91–#98), update this file, not the slice.
+### P0-1 (process) — merge-train pinning (complete)
+As of 2026-07-22, #66, #71/#72, #76–#83, #88, and #91–#98 are merged on PolyFun `main`; #89 was
+superseded. Record the exact merged PolyFun revision at each slice's start rather than naming an
+open branch.
 
 ### P0-2 (VCVio) — k-l-examples triage (gate G-0b)
 Branch from VCVio main. For each off-main asset (`WireK`, `RunLimit`, `Implements`/`IsSimulation`,
@@ -63,7 +63,7 @@ Gate: wire-associativity + superposition strict; kill criterion from `02` §5 ch
 (transport-lemma count vs process-model activation-lemma count — record both numbers in the PR).
 
 ### A4 (PolyFun) — copy-cat `idWire` and `HasPlugWireFactor` (gate G-2c)
-Needs: A3; g6h wiring bridges (#98) merged (reconstruction lemmas).
+Needs: A3; uses the merged g6h wiring bridges from #98 (reconstruction lemmas).
 Declarations: relay behavior (`idWire`), zig-zag laws, `HasPlugWireFactor` instance.
 Gate: R-2.2 fully met. If blocked > budget: fall back per `02` §3.1(2), re-scope, update `08`.
 
@@ -76,7 +76,7 @@ Gate: pilot statement's proof-term closure has zero `OpenProcessActivationEquiv`
 ## Phase 1 — Track B (experiment engine, `03`)
 
 ### B1 (PolyFun) — Kleisli lemma pack for `runThrough`
-Needs: #71/#72 merged.
+Needs: merged #71/#72 (available on PolyFun `main`).
 Files: extend `PatternRunsOnMatter/Operational.lean` (or new `Operational/Kleisli.lean`).
 Declarations: `runThrough` instance lemmas at `m := StateT σ n` for lawful `n`-handlers:
 step/bind/pure equations shaped for `simulateQ`-style rewriting (match VCVio's `simp` idiom).
@@ -115,7 +115,7 @@ Files: `QueryTracking/CountingOracle.lean` + new `QueryTracking/Decorations.lean
 Gate: all existing counting consumers elaborate unchanged; transport lemma imported, not local.
 
 ### D1 (PolyFun) — `SchedulingDiscipline` + restricted interchange packs
-Needs: #93/#94 (parallel sum + lockstep + counterexample) merged.
+Needs: merged #93/#94 (parallel sum + lockstep + counterexample; available on PolyFun `main`).
 Files: new `PolyFun/Interaction/Concurrent/Discipline.lean` (or `PFunctor/Free/Parallel/…`).
 Declarations: the three disciplines of `05` §1.2; lockstep interchange for
 synchronization-preserving handlers; sequential-activation invariances.

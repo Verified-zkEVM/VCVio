@@ -1,10 +1,10 @@
 # 09 — Verification Ledger: Named Anchors and Their Status
 
 Every load-bearing declaration/file named by docs 00–08, with its verified location and merge
-status. **Verified 2026-07-20** against VCVio `main` `a5f474fd`, PolyFun `main` `6a2d4bb`, and the
-named PR worktrees. Implementation agents: grep these names *at these locations* before coding; if
+status. **Verified 2026-07-22** against VCVio `main` `a5f474fd` and PolyFun `main` `f887c096`.
+Implementation agents: grep these names *at these locations* before coding; if
 a name has moved, update this ledger in the same PR that adapts to the move. Status legend:
-**M** = merged on main; **PR#n** = exists only on the open PR's branch; **OFF** = only on
+**M** = merged on main; **OFF** = only on
 `dtumad/k-l-examples` (VCVio); **SK** = design sketch, does not exist yet.
 
 ## VCVio (`Verified-zkEVM/VCVio`)
@@ -47,7 +47,7 @@ a name has moved, update this ledger in the same PR that adapts to the move. Sta
 | `DynSystem` (= lens `selfMonomial S ⇆ p`), behavior, simulation | `PolyFun/PFunctor/Dynamical/{Basic,Trajectory,Behavior,Simulation,Bisimulation}.lean` |
 | Cofree mate; `DynSystem.cofreeMate_comp_projectionN` | `Dynamical/CofreeMate.lean`, `Dynamical/CofreeMate/FiniteProjection.lean` |
 | `Responder`, `equivStateHandler`; `DynSystem.game`/`closedGame` | `Dynamical/Responder.lean`, `Dynamical/Game.lean` |
-| `IOMachine.seqComp`, `runWithInput_seqComp` — **removal pending (#83)**; successor: `DynComputation` seqcomp (#79) | `Dynamical/IOMachine.lean` |
+| `DynComputation` variance and exact `seqComp`, bounded execution, and termination (#78–#82); legacy `IOMachine` removed (#83) | `Dynamical/DynComputation.lean`, `Dynamical/DynComputation/{Bounded,Termination}.lean` |
 | `TypeTree` (+ `done`/`node` `match_pattern` invariant), decorations, samplers, `Sampler.interleave` | `PolyFun/Interaction/Basic/…` |
 | Concurrent processes/machines/frontiers/traces | `PolyFun/Interaction/Concurrent/…` |
 | `PortBoundary(.Hom/.swap/.tensor)`, `OpenTheory` + ladder (`IsLawful`→`IsMonoidal`→`IsTraced`→`IsCompactClosed`→`HasPlugWireFactor`), `HasUnit`/`HasIdWire` | `PolyFun/Interaction/UC/{Interface,OpenTheory}.lean` |
@@ -59,23 +59,24 @@ a name has moved, update this ledger in the same PR that adapts to the move. Sta
 | `IPFunctor I`, indexed `FreeM`/`FreeM₂` | `PolyFun/IPFunctor/{Basic,Free/…}.lean` |
 | ITrees: M-type carrier, strong bisim = `Eq`, weak bisim, cross-signature sim, lawful iter | `PolyFun/ITree/…` |
 
-## PolyFun — open-PR anchors (worktree-verified)
+## PolyFun — recently merged train anchors
 
-| Anchor | Location (branch) | PR |
+| Anchor | Location | Status / provenance |
 |---|---|---|
-| `FreeP.runOn`, `FreeP.xi`, `runOn_eq_xi` | `PFunctor/PatternRunsOnMatter/{Universal,Module}.lean` (`feat/pattern-runs-on-matter-*`) | #71 |
-| `runOn_unit`, `runOn_assoc`, naturality; `CofreeP.laxUnit/laxTensor` | `PatternRunsOnMatter/Module.lean` + `Cofree/LaxMonoidal.lean` | #71 |
-| `FreeP.runThrough`, `FreeP.runAgainst`, `runAgainstMonoid`, `DynSystem.runPattern`, `runPattern_game`, `runBehaviorThrough_eq_of_{obsEq,isSimulation,isStrongSimulation}` | `PatternRunsOnMatter/{Operational,Dynamical,Applications}.lean` | #72 |
-| `Display` (+ Chart/Coalgebra/Indexed/Free/Handler/Lens/Category) | `PFunctor/Display/…` (`agent/aberle-g*`) | #88–#92 |
-| `ParallelChoice`, `PFunctor.parallelSum` (`P ∥ Q`), `≃ₚ (P+Q)+(P⊗Q)` | `PFunctor/Parallel.lean` | #93 |
-| `Display.parallelSumComponents`/`parallelSum` (separable) | `PFunctor/Display/Parallel.lean` | #93 |
-| `FreeM.parallel` (lockstep), `parallelAfterLeftReturn`; **interchange counterexample** (regression suite) | `PFunctor/Free/Parallel.lean` + tests | #94 |
-| `Responder.parallel/sum`, parallel coalgebras/behaviors, `VerifiedPresentation`, `respondDisplayed`, coherence | `Dynamical/Responder/{Parallel/…,VerifiedPresentation,Behavior}.lean` | #95–#97 |
-| `Wiring`, `Wiring.evalParallel` (+ race-freedom disclaimer), Abe26 Thm 3.1/5.3 | `PFunctor/Wiring.lean`, `Wiring/Parallel.lean` | #98 (+g2) |
-| `IPFunctor/M.lean` (indexed M-types), `Display/M.lean` | g-series | #g4/#88+ |
-| Displayed restriction along cursors | merged (`#58`) | M |
-| `DynComputation` exact seqcomp / variance / bounds / termination; resumption coinduction/truncation; IOMachine removal | `issue32/*` branches | #76–#83 |
-| Dependent `TypeTree` chain append | `feat/dependent-chain-append` | #66 (draft) |
+| `FreeP.runOn`, `FreeP.xi`, `runOn_eq_xi` | `PFunctor/PatternRunsOnMatter/{Universal,Module}.lean` | M (#71) |
+| `runOn_unit`, `runOn_assoc`, naturality; `CofreeP.laxUnit/laxTensor` | `PatternRunsOnMatter/Module.lean` + `Cofree/LaxMonoidal.lean` | M (#71) |
+| `FreeP.runThrough`, `FreeP.runAgainst`, `runAgainstMonoid`, `DynSystem.runPattern`, `runPattern_game`, `runBehaviorThrough_eq_of_{obsEq,isSimulation,isStrongSimulation}` | `PatternRunsOnMatter/{Operational,Dynamical,Applications}.lean` | M (#72) |
+| `Display` (+ Chart/Coalgebra/Indexed/Free/Handler/Lens/Category) | `PFunctor/Display/…` | M (#74–#75, #84–#88, #91) |
+| `toDisplayedBehavior`, `reindexDisplayedBehavior`, `mapDisplayedBehavior`; `PresentationHom`, `displayedTotalStep` | `Dynamical/Responder/{Behavior,Lens,Presentation}.lean` | M (#87, #92; names cut over by #99) |
+| `ParallelChoice`, `PFunctor.parallelSum` (`P ∥ Q`), `≃ₚ (P+Q)+(P⊗Q)` | `PFunctor/Parallel.lean` | M (#93) |
+| `Display.parallelSumComponents`/`parallelSum` (separable) | `PFunctor/Display/Parallel.lean` | M (#93) |
+| `FreeM.parallel` (lockstep), `parallelAfterLeftReturn`; **interchange counterexample** (regression suite) | `PFunctor/Free/Parallel.lean` + tests | M (#94) |
+| `Responder.parallel/sum`, `sumDisplayedBehavior`, `parallelDisplayedBehavior`, parallel presentation homomorphisms and displayed coherence | `Dynamical/Responder/Parallel/{Behavior,Presentation,DisplayedAssociativity,DisplayedCoherence}.lean` | M (#95–#97; names cut over by #99) |
+| `Wiring`, `Wiring.evalParallel` (+ race-freedom disclaimer), Abe26 Thm 3.1/5.3 | `PFunctor/Wiring.lean`, `Wiring/Parallel.lean` | M (#98, plus g2) |
+| indexed M-types; displayed M-types | `IPFunctor/M.lean`, `PFunctor/Display/M.lean` | M (g4/G-series) |
+| Displayed restriction along cursors | `PFunctor/Free/Displayed/Cursor.lean` | M (#58) |
+| `DynComputation` exact seqcomp / variance / bounds / termination; resumption coinduction/truncation; `IOMachine` removal | `Dynamical/DynComputation{,/…}.lean`, `PFunctor/Resumption{,/Truncate}.lean`, `ITree/Resumption.lean` | M (#76–#83) |
+| Dependent `TypeTree.Chain` concatenation | `Interaction/Basic/TypeTree.lean` | M (#66) |
 
 ## Docs 10–12 anchors (added 2026-07-20; verified against the named checkouts)
 
@@ -103,6 +104,12 @@ External checkouts (workspace-relative; **revision facts, will drift**):
 | New sketches (SK): `StrategyModel`/`Classical`/`Quantum`/`MatterFor`, `QuantumSound` certificates, `@[game_equiv]` registry, `game_hop`/`guess`/`up_to_bad`/epoch combinators, frame-independence transfer, behavior COFE, Bluebell `wp` constructor | docs 10–12 | **SK** |
 
 ## Correction history
+
+- 2026-07-22 (post-merge naming cutover): re-audited against PolyFun `f887c096` after #66,
+  #71–#72, #76–#83, #88, #91–#98, and #99 merged. Moved those anchors from the open-PR ledger
+  to merged state; recorded #89 as superseded; replaced the application-loaded `Verified*` API
+  with the structural `Displayed*`/`PresentationHom` names introduced by #99. “Verified” remains
+  only for factual audit claims or application-level correctness claims, not generic displays.
 
 - 2026-07-20 (doc 10 Iris zoom-in, late evening): added `10` §2 (step-indexing's two jobs;
   camera catalogue as crypto bookkeeping; couplings-as-ghost-state; invariants/persistence),

@@ -1,7 +1,7 @@
 # 03 — Direction 2: Pattern-Runs-on-Matter as the Experiment Engine; SSP as Its One-Boundary Case
 
-**Claim.** The Libkind–Spivak module action `Ξ : Free(P) ⊗ Cofree(Q) → Free(P ⊗ Q)` (PolyFun PRs
-#71/#72) is the canonical semantics of "run the adversary against the implementation": the
+**Claim.** The Libkind–Spivak module action `Ξ : Free(P) ⊗ Cofree(Q) → Free(P ⊗ Q)` (merged in
+PolyFun #71/#72) is the canonical semantics of "run the adversary against the implementation": the
 adversary is the pattern, the package/functionality/oracle is the matter, and the module laws are
 the composition laws of security experiments. VCVio's state-separating layer is the one-boundary
 instance: `QueryImpl.Stateful` *is* a responder (matter), package composition *is* responder
@@ -40,7 +40,8 @@ downstream*:
   `separated` non-interference (`SimSemantics/StateT/StateSeparating.lean`); advantage/hybrid/
   identical-until-bad layers over it (`StateSeparating/`); everything proved directly against
   `simulateQ`-algebra.
-- PolyFun: #71/#72 open. `FreeP.runOn`/`xi` + `runOn_eq_xi` (categorical = operational),
+- PolyFun: #71/#72 are merged on `main`. `FreeP.runOn`/`xi` + `runOn_eq_xi`
+  (categorical = operational),
   naturality, module laws, `runThrough` (any lawful monadic handler target), `runAgainst`
   (internal-hom evaluation — the same `eval` wiring as `DynSystem.game`), substitution
   compatibility, dynamical presentation `DynSystem.runPattern` agreeing with existing finite game
@@ -80,8 +81,8 @@ Rename/annotate rather than rebuild: a `QueryImpl.Stateful I E σ` is an *open i
 import boundary `I`, export boundary `E`, and state `σ`*. Composition `linkWith` is boundary
 composition; `parSumWith` is tensor. Document the correspondence to bicomodules (Phase D1) in the
 module docstring **but do not block on D1**: the SSP layer needs only the module action and
-simulation invariance, both in #71/#72. When D1 lands, the docstring claim upgrades to a theorem
-(`Stateful I E σ` ↔ bicomodule between the state comonoids); that upgrade is `06`'s business.
+simulation invariance, all available on `main`. When D1 lands, the docstring claim upgrades to the
+theorem `Stateful I E σ` ↔ bicomodule between the state comonoids; that upgrade is `06`'s business.
 
 ### 3.3 What deletes, what stays
 
@@ -112,7 +113,7 @@ Bellare–Neven fork step through `runExp` + cursor-fork and diff the proof.
 
 | Step | Repo | Deliverable |
 |---|---|---|
-| 1 | PolyFun | land #71/#72 (with review hardening); add the Kleisli-target instance lemma pack for `runThrough` at `StateT σ (OracleComp I)` |
+| 1 | PolyFun | build on merged #71/#72; add the Kleisli-target instance lemma pack for `runThrough` at `StateT σ (OracleComp I)` |
 | 2 | VCVio | `runExp` + `runExp_eq_runThrough`; no consumer changes |
 | 3 | VCVio | derive link-assoc + simulation-invariance; delete bespoke twins (R-3.1) |
 | 4 | VCVio | hybrid combinator over run-canonicity; port one PRFTagReader hybrid (R-3.2) |

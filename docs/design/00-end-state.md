@@ -61,12 +61,12 @@ experiments         Ξ / runAgainst / runThrough                simulateQ + eval
 packages            one-boundary bicomodules                   QueryImpl.Stateful + state frames
 open systems        comonoids + bicomodules / OpenTheory       Semantics, ObservedCompEmulates, EXEC
 equality            mate equality (Eq, by finality)            evalDist/tvDist equality, asymptotics
-program logic       displayed programs / verified responders   Loom WP/RelWP carriers, tactics
+program logic       displayed programs / responder presentations Loom WP/RelWP carriers, tactics
 scheduling          ∥, interleaving policies, disciplines      ProcessScheduler/EnvScheduler instances
 party topology      indexed pfunctors, mode-dependent comonoids MachineId/Sid/Pid directories, corruption
 ```
 
-Every row's left cell is a PolyFun deliverable (some landed, some in open PRs, some new tickets);
+Every row's left cell is a PolyFun deliverable (some landed, some still new tickets);
 every row's right cell is a VCVio consumer with named files in `01`. The dependency direction never
 reverses.
 

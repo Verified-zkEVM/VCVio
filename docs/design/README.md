@@ -1,8 +1,9 @@
 # VCVio × PolyFun Integration Design Suite (v1)
 
-**Date:** 2026-07-20. **Status:** normative architecture, pre-implementation.
-**Provenance:** a source-level audit of VCVio `main` (`a5f474fd`), PolyFun `main` (`6a2d4bb`), the
-open PolyFun PR chains (#66, #71–#72, #76–#83, #88–#98), the PolyFun reading-note suite
+**Date:** 2026-07-22. **Status:** normative architecture, pre-implementation.
+**Provenance:** a source-level audit of VCVio `main` (`a5f474fd`) and PolyFun `main`
+(`f887c096`, through #99), including the now-merged PolyFun trains #66, #71–#72, #76–#83,
+#88, and #91–#98, plus the PolyFun reading-note suite
 (`docs/reading/` — `vcv-connection.md`, `composition-unification.md`, `roadmap.md`,
 `aberle-parallel.md`, `pattern-runs-on-matter.md`, `coalgebra-related-work.md`), and the VCVio
 paper (ePrint 2026/899). This suite is the companion, on the VCVio side, to PolyFun's own reading
@@ -50,7 +51,8 @@ logic, the protocol track, and quantum — and are read after their dependencies
 11 after 02/03, 12 after 11 (its Q1 certificates ride the hop engine). An implementation session
 takes its slice from 08a and greps its anchors from 09 before writing code. A verification review
 round (declaration names, file paths, tier claims checked against both trees) was completed
-2026-07-20; corrections are logged in 09.
+2026-07-20 and the post-merge API/status cutover was re-audited 2026-07-22; corrections are
+logged in 09.
 
 ## Resolved decisions (log)
 

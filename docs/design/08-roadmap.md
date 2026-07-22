@@ -6,10 +6,9 @@ branch is documentation provenance, **not an implementation base** (same rule as
 
 ## Phase 0 — unblocking (before any direction lands)
 
-- **G-0a Merge-train hygiene.** Land or explicitly re-scope the open PolyFun chains this suite
-  depends on: pattern PRs #71/#72 (feeds `03`), G-series #88–#98 (feeds `04`/`05`), issue-32
-  chain #76–#83 (cleans the machine layer under `02`). Each VCVio slice pins the minimal PolyFun
-  revision. Chain order for G-series is fixed in the PR bodies (#91→#98).
+- **G-0a Merge-train hygiene — passed 2026-07-22.** Pattern PRs #71/#72, the G-series (#88 and
+  #91–#98; #89 was superseded), the issue-32 chain #76–#83, and dependent-chain PR #66 are on
+  PolyFun `main`. Each VCVio slice now pins the minimal merged PolyFun revision it needs.
 - **G-0b k-l-examples reconciliation.** `WireK`, `RunLimit`, `Coinductive/Machine`
   (`Implements`/`IsSimulation`) exist off-main. Decide per artifact: merge, re-derive as
   mate-facts (preferred for `Implements`/`IsSimulation`, per `02`), or retire. Blocking for
@@ -99,7 +98,7 @@ R-3.1 landed (the pilot must not hand-roll what Phases 1–2 made derivable).
 | display elaboration cost | `04` §6 |
 | interchange lemmas resist proof | `05` §4 (shared fate with G-2b) |
 | universe collisions in indexed carriers | `06` §4 kill criterion |
-| open-PR churn under the suite | Phase 0 G-0a pinning |
+| upstream API churn after the merged train | pin a reviewed PolyFun `main` revision per slice |
 | line-count honesty (paper Table 4) | every direction's honest column; report in paper drafts |
 | iris-lean/iris-bluebell drift; mathlib measure-theory friction | `10` §7; bridge repos with pinned revisions |
 | matching brittleness in `game_hop` | `11` §5 kill criterion (regress to marked hops) |
