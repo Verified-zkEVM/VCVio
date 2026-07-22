@@ -160,12 +160,19 @@ This keeps ordinary rule ordering stable when new `@[vcspec]` lemmas are added.
 
 | Tactic | Goal shape | What it does |
 |--------|-----------|--------------|
-| `handler_step` | handler-heavy `QueryImpl` / `simulateQ` / `StateT` goals | Runs one `simp only [handler_simp]` normalization pass to expose the next handler body or run-shape |
+| `handler_step` | handler-heavy `FreeM` / `QueryImpl` / `simulateQ` / transformer goals | Runs one `simp only [handler_nf, handler_simp]` normalization pass to expose the next handler body or run-shape |
 
 `handler_step` is deliberately thin. Use it when a proof is stuck behind
 handler combinators such as cache overlays, logging handlers, counting
 handlers, or state-transformer maps; then continue with `vcstep`, `rvcstep`,
 `rvcgen`, or direct proof steps.
+
+PolyFun owns the generic `handler_nf` rules for `FreeM`,
+`PFunctor.Handler.Stateful`, `StateT`, and standard `WriterT`. VCVio's
+`handler_simp` set adds only oracle simulation, query instrumentation,
+caching, and local WriterT compatibility equations. Downstream code can use
+the two sets independently; `handler_step` composes them in generic-to-specific
+order.
 
 **Opt-in `wp`-rewrite lookup**: mark an equational rewrite of shape
 `wp comp post = …` with `@[wpStep]` to extend the inner `wp`-stepping driver
