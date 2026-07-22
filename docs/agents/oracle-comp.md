@@ -136,12 +136,19 @@ When lifting `OracleComp spec α` to `OracleComp superSpec α` (e.g., a sub-comp
 
 ### QueryImpl
 
-Maps each oracle input to a monadic response:
+`QueryImpl` maps each oracle input to a monadic response:
 
 ```lean
 @[reducible] def QueryImpl (spec : OracleSpec ι) (m : Type u → Type v) :=
   (x : spec.Domain) → m (spec.Range x)
 ```
+
+This is definitionally `PFunctor.Handler m spec.toPFunctor`, recorded by
+`QueryImpl.eq_handler`. The source definition retains the oracle-shaped
+dependent function because it gives Lean better expected-type information for
+polymorphic query code; the PolyFun theorem makes clear that the same object
+can interpret any free program over the interface, not only oracle-specific
+syntax.
 
 Constructors:
 

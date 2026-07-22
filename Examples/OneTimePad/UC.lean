@@ -266,7 +266,7 @@ noncomputable def msgClosed (sp : ℕ) (msg : BitVec sp) :
     T.Closed where
   Proc := BitVec sp
   step := fun _ =>
-    { spec := .done
+    { tree := .done
       semantics := ⟨⟩
       next := fun _ => msg }
   stepSampler := fun _ => ⟨⟩
@@ -451,19 +451,19 @@ def Δ_otp (sp : ℕ) : PortBoundary where
   In := Interface.sum (bvInInterface sp) (bvInInterface sp)
   Out := bvOutInterface sp
 
-/-- The single-round interaction spec at the core of both real and
+/-- The single-round interaction tree at the core of both real and
 ideal OTP processes: one node samples a `BitVec sp` (the key for the
 real world, the ciphertext for the ideal world), then terminates. -/
-abbrev otpSpec (sp : ℕ) : Interaction.Spec.{0} :=
-  Spec.node (BitVec sp) (fun _ => Spec.done)
+abbrev otpTree (sp : ℕ) : Interaction.TypeTree.{0} :=
+  TypeTree.node (BitVec sp) (fun _ => TypeTree.done)
 
-/-- The canonical uniform `ProbComp`-sampler for `otpSpec sp`,
-synthesized from the `Spec.Fintype (otpSpec sp)` instance built by
+/-- The canonical uniform `ProbComp`-sampler for `otpTree sp`,
+synthesized from the `TypeTree.Fintype (otpTree sp)` instance built by
 typeclass synthesis from `Fintype (BitVec sp)` and
 `Nonempty (BitVec sp)`. -/
 noncomputable def uniformOtpSampler (sp : ℕ) :
-    Spec.Sampler ProbComp (otpSpec sp) :=
-  Spec.Sampler.uniformI _
+    TypeTree.Sampler ProbComp (otpTree sp) :=
+  TypeTree.Sampler.uniformI _
 
 /-- Lift a `ProbComp`-valued sampler to an `OptionT ProbComp`-valued
 one by applying `liftM : ProbComp X → OptionT ProbComp X` at every
@@ -472,10 +472,10 @@ node of the spec tree via `Decoration.map`.
 This is how we thread a real uniform sampler through an open process
 whose surface monad is `OptionT ProbComp` (the observation monad used
 by the bundled `UC.Semantics` above). -/
-noncomputable def liftSamplerToOptionT {spec : Interaction.Spec.{0}}
-    (s : Spec.Sampler ProbComp spec) :
-    Spec.Sampler (OptionT ProbComp) spec :=
-  PFunctor.FreeM.Displayed.Decoration.map
+noncomputable def liftSamplerToOptionT {spec : Interaction.TypeTree.{0}}
+    (s : TypeTree.Sampler ProbComp spec) :
+    TypeTree.Sampler (OptionT ProbComp) spec :=
+  TypeTree.Decoration.map
     (Γ := fun X => ProbComp X) (Δ := fun X => OptionT ProbComp X)
     (fun _ (x : ProbComp _) => (liftM x : OptionT ProbComp _)) spec s
 
@@ -484,13 +484,13 @@ by lifting `uniformOtpSampler`. Both `realOtp` and `idealOtp` thread
 this same sampler, so their distributional content lives in the
 boundary emission, not in the sampler. -/
 noncomputable def otpStepSampler (sp : ℕ) :
-    Spec.Sampler (OptionT ProbComp) (otpSpec sp) :=
+    TypeTree.Sampler (OptionT ProbComp) (otpTree sp) :=
   liftSamplerToOptionT (uniformOtpSampler sp)
 
 /-! ### Boundary emissions: real vs ideal -/
 
 /-- Real-world boundary emission. On the unique sample node of
-`otpSpec sp`, when the sampler produces `k : BitVec sp`, emit one
+`otpTree sp`, when the sampler produces `k : BitVec sp`, emit one
 packet on the single output port of `Δ_otp sp` carrying the
 ciphertext `k ⊕ msg`. -/
 def realEmit (sp : ℕ) (msg : BitVec sp) :
@@ -498,7 +498,7 @@ def realEmit (sp : ℕ) (msg : BitVec sp) :
   fun k => [⟨(), k ^^^ msg⟩]
 
 /-- Ideal-world boundary emission. On the unique sample node of
-`otpSpec sp`, when the sampler produces `c : BitVec sp`, emit it
+`otpTree sp`, when the sampler produces `c : BitVec sp`, emit it
 verbatim on the single output port of `Δ_otp sp`.
 
 Under the uniform sampler this is already the correct distribution
@@ -509,7 +509,7 @@ def idealEmit (sp : ℕ) :
     PFunctor.Trace (Δ_otp sp).Out (BitVec sp) :=
   fun c => [⟨(), c⟩]
 
-/-- The open-node context at the unique sample node of `otpSpec sp`:
+/-- The open-node context at the unique sample node of `otpTree sp`:
 trivial controllers and views, and the given boundary emission
 action. -/
 def otpOpenNode (sp : ℕ)
@@ -522,11 +522,11 @@ def otpOpenNode (sp : ℕ)
     { isActivated := false
       emit := emit }
 
-/-- Decoration for `otpSpec sp` bundling a single `otpOpenNode` at the
+/-- Decoration for `otpTree sp` bundling a single `otpOpenNode` at the
 root and the trivial `PUnit` decoration at the terminal leaf. -/
 def otpDecoration (sp : ℕ)
     (emit : PFunctor.Trace (Δ_otp sp).Out (BitVec sp)) :
-    PFunctor.FreeM.Displayed.Decoration (UC.OpenNodeContext Party (Δ_otp sp)) (otpSpec sp) :=
+    TypeTree.Decoration (UC.OpenNodeContext Party (Δ_otp sp)) (otpTree sp) :=
   ⟨otpOpenNode sp emit, fun _ => ⟨⟩⟩
 
 /-! ### Real and ideal open processes -/
@@ -534,14 +534,14 @@ def otpDecoration (sp : ℕ)
 /-- **Real-world OTP open process** at `Δ_otp sp`.
 
 State space `Unit` (single-round, one-shot). Every step runs the
-single-sample `otpSpec sp`, emitting the ciphertext `k ⊕ msg` on the
+single-sample `otpTree sp`, emitting the ciphertext `k ⊕ msg` on the
 output port via `realEmit`, with the uniform sampler threaded through
 `otpStepSampler`. -/
 noncomputable def realOtp (sp : ℕ) (msg : BitVec sp) :
     T.Obj (Δ_otp sp) where
   Proc := Unit
   step := fun _ =>
-    { spec := otpSpec sp
+    { tree := otpTree sp
       semantics := otpDecoration sp (realEmit sp msg)
       next := fun _ => () }
   stepSampler := fun _ => otpStepSampler sp
@@ -559,7 +559,7 @@ collapses the two bundled `SPMF Unit` observations. -/
 noncomputable def idealOtp (sp : ℕ) : T.Obj (Δ_otp sp) where
   Proc := Unit
   step := fun _ =>
-    { spec := otpSpec sp
+    { tree := otpTree sp
       semantics := otpDecoration sp (idealEmit sp)
       next := fun _ => () }
   stepSampler := fun _ => otpStepSampler sp
@@ -571,7 +571,7 @@ one-step transcript as the emitted ciphertext packet. -/
 @[simp]
 theorem realOtp_boundaryTrace (sp : ℕ) (msg k : BitVec sp) :
     Interaction.UC.OpenStep.boundaryTrace ((realOtp sp msg).step ())
-      (⟨k, ⟨⟩⟩ : Spec.Transcript (otpSpec sp)) =
+      (⟨k, ⟨⟩⟩ : TypeTree.Path (otpTree sp)) =
       [(⟨(), k ^^^ msg⟩ : Σ _ : Unit, BitVec sp)] := by
   rfl
 
@@ -580,13 +580,13 @@ one-step transcript as the emitted uniform ciphertext packet. -/
 @[simp]
 theorem idealOtp_boundaryTrace (sp : ℕ) (c : BitVec sp) :
     Interaction.UC.OpenStep.boundaryTrace ((idealOtp sp).step ())
-      (⟨c, ⟨⟩⟩ : Spec.Transcript (otpSpec sp)) =
+      (⟨c, ⟨⟩⟩ : TypeTree.Path (otpTree sp)) =
       [(⟨(), c⟩ : Σ _ : Unit, BitVec sp)] := by
   rfl
 
 /-- For any nonzero plaintext `msg`, the real and ideal OTP open
 processes at `Δ_otp sp` are not equal: they agree on `Proc`,
-`step.spec`, `step.next`, and `stepSampler`, but their
+`step.tree`, `step.next`, and `stepSampler`, but their
 `step.semantics`'s boundary emissions disagree on the all-zero key
 (`0#sp ^^^ msg = msg ≠ 0#sp`). -/
 theorem realOtp_ne_idealOtp (sp : ℕ) {msg : BitVec sp}
@@ -599,11 +599,11 @@ theorem realOtp_ne_idealOtp (sp : ℕ) {msg : BitVec sp}
     eq_of_heq hstep
   have hstep0 := congrFun hstep' ()
   change
-    ({ spec := otpSpec sp,
+    ({ tree := otpTree sp,
        semantics := otpDecoration sp (realEmit sp msg),
        next := fun _ => () } :
       Concurrent.StepOver (UC.OpenNodeContext Party (Δ_otp sp)) Unit) =
-    { spec := otpSpec sp,
+    { tree := otpTree sp,
       semantics := otpDecoration sp (idealEmit sp),
       next := fun _ => () } at hstep0
   injection hstep0 with _ hsem _
