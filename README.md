@@ -28,6 +28,16 @@ The build timing report parses per-file timings for that same set.
 Test libraries and test executables are intentionally outside the timed build; CI
 only times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
+VCVio can also be used as a dependency in another Lake project via a
+`[[require]]` on this repository, and that works out of the box. The native C
+backends under `third_party/` live in git submodules, which Lake does not fetch
+for dependencies, so the corresponding `extern_lib` targets fall back to empty
+stub archives when those sources are absent. Downstream executables still link
+unless they call VCVio's native FFI symbols; to enable the real backends, run
+`git submodule update --init --recursive` inside `.lake/packages/VCVio` and
+rebuild. (In this repository itself the same command at the repo root — or
+`scripts/build-project.sh --ffi` — enables the native test executables.)
+
 Mathematical foundations such as probability theory, computational complexity, and algebraic structures are based on or written to the Mathlib project (see [MATHLIB4](REFERENCES.md#mathlib4)), making all of that library usable in constructions and proofs.
 
 The project aims to enable proof effort comparable to that found in Mathlib. It is particularly
