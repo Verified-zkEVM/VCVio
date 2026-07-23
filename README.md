@@ -22,8 +22,8 @@ Assuming Lean and Lake are already installed, the project can be built by just r
 lake exe cache get && lake build
 ```
 
-CI's timed build covers the non-test Lean libraries `ToMathlib`, `VCVio`, `FFI`,
-`LatticeCrypto`, `Examples`, `VCVioWidgets`, and `Interop`.
+CI's timed build covers the non-test Lean libraries `ToMathlib`, `VCVio`,
+`LatticeCrypto`, `Extern`, `HashSig`, `Examples`, and `VCVioWidgets`.
 The build timing report parses per-file timings for that same set.
 Test libraries and test executables are intentionally outside the timed build; CI
 only times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
@@ -51,13 +51,14 @@ infrastructure and some tooling and automation remain under active development.
 
 - `VCVio/` contains the oracle-computation framework, probability semantics, program logic, and generic crypto abstractions.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
+- `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
 - `HashSig/` contains hash-based signatures, including proof-level specifications and security for SLH-DSA.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
 - `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.
 - `Interop/` contains experimental bridges to Rust verification frontends such as hax and Aeneas.
 - `csrc/` contains C FFI bridges for the native ML-DSA, ML-KEM, and Falcon implementations used in tests.
-- `third_party/` contains the vendored native backends used by the FFI layer.
+- `third_party/` contains the native backends as git submodules, used by the `Extern` FFI layer and differential tests.
 - `ToMathlib/` contains supporting constructions that may eventually move to a separate project.
 
 For agent-oriented repo guidance, see [`AGENTS.md`](AGENTS.md) and the focused docs in

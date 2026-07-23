@@ -63,15 +63,19 @@ require PolyFun from git
 /-- Main library. -/
 @[default_target] lean_lib VCVio
 
-/-- Shared FFI bindings (SHA-3 / FIPS 202, etc.). -/
-lean_lib FFI
+/-- Native FFI surface: `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA,
+Falcon) and every module whose transitive imports reach them. Isolated here so
+`VCVio`/`LatticeCrypto` stay link-safe when the `third_party/` native backends
+are not checked out. May import `VCVio`/`LatticeCrypto`/`ToMathlib`; nothing in
+those libraries may import `Extern`. -/
+lean_lib Extern
 
 /-- Lattice-based cryptography: ring arithmetic, hardness assumptions, and scheme definitions. -/
 lean_lib LatticeCrypto
 
 /-- Hash-based signatures: SLH-DSA (SPHINCS+, FIPS 205) proof-level specs and security.
 Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but nothing in
-`VCVio`/`ToMathlib`/`FFI`/`Interop` may import it. -/
+`VCVio`/`ToMathlib`/`Extern`/`Interop` may import it. -/
 lean_lib HashSig
 
 /-- Example constructions of cryptographic primitives. -/
