@@ -257,6 +257,19 @@ lemma probEvent_query (t : spec.Domain) (p : spec.Range t → Prop) [DecidablePr
       Finset.card {x | p x} / Fintype.card (spec.Range t) := by
   simp [probEvent_liftM_eq_div]; rfl
 
+/-- An event selecting at most one response to a uniform oracle query has
+probability at most the inverse response-space cardinality. -/
+lemma probEvent_query_le_inv_of_unique (t : spec.Domain) (p : spec.Range t → Prop)
+    (hunique : ∀ x y, p x → p y → x = y) :
+    Pr[ p | (query t : OracleComp spec _)] ≤
+      (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ := by
+  classical
+  rw [probEvent_query, div_eq_mul_inv]
+  refine (mul_le_mul' ?_ le_rfl).trans_eq (one_mul _)
+  exact_mod_cast Finset.card_le_one.mpr fun x hx y hy ↦ by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx hy
+    exact hunique x y hx hy
+
 end evalDist
 
 section supportEvalDist
@@ -575,6 +588,38 @@ lemma mem_support_map_peel (g : α → β) (mx : OracleComp spec α) {y : β}
   exact ⟨a, ha, hy.symm⟩
 
 end supportPeel
+
+section freeMProbability
+
+variable [IsProbabilitySpec spec]
+
+/-- Probability of an event after mapping a raw polynomial free program,
+viewed through the `OracleComp` semantic bridge. -/
+lemma probEvent_ofFreeM_map (mx : spec.toPFunctor.FreeM α) (f : α → β)
+    (event : β → Prop) :
+    Pr[event | OracleComp.ofFreeM (PFunctor.FreeM.map f mx)] =
+      Pr[event ∘ f | OracleComp.ofFreeM mx] :=
+  probEvent_map (OracleComp.ofFreeM mx) f event
+
+/-- Probability of an event for a raw polynomial `pure`, viewed through
+`OracleComp`. -/
+lemma probEvent_ofFreeM_pure (x : α) (event : α → Prop) [DecidablePred event] :
+    Pr[event | OracleComp.ofFreeM
+      (pure x : spec.toPFunctor.FreeM α)] = if event x then 1 else 0 := by
+  change Pr[event | (pure x : OracleComp spec α)] = _
+  exact probEvent_pure x event
+
+/-- Bind decomposition for a raw polynomial free program, viewed through
+`OracleComp`. -/
+lemma probEvent_ofFreeM_bind_eq_tsum (mx : spec.toPFunctor.FreeM α)
+    (next : α → spec.toPFunctor.FreeM β) (event : β → Prop) :
+    Pr[event | OracleComp.ofFreeM (PFunctor.FreeM.bind mx next)] =
+      ∑' x, Pr[= x | OracleComp.ofFreeM mx] *
+        Pr[event | OracleComp.ofFreeM (next x)] :=
+  probEvent_bind_eq_tsum (OracleComp.ofFreeM mx)
+    (fun x => OracleComp.ofFreeM (next x)) event
+
+end freeMProbability
 
 end OracleComp
 

@@ -109,7 +109,7 @@ private lemma simulateQ_prfReal_oracleOutputs (k : K) (n : ℕ) (s : S) :
   | succ n ih =>
     simp only [oracleOutputs, streamOutputs, simulateQ_bind, simulateQ_query,
       OracleQuery.cont_query, id_map, OracleQuery.input_query]
-    show prfRealQueryImpl prf k (Sum.inr s) >>= _ = _
+    change prfRealQueryImpl prf k (Sum.inr s) >>= _ = _
     simp only [prfRealQueryImpl, QueryImpl.add_apply_inr]
     cases h : prf.eval k s with
     | mk s' out =>

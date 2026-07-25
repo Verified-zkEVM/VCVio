@@ -104,6 +104,7 @@ import VCVio.OracleComp.Coercions.Add
 import VCVio.OracleComp.Coercions.SubSpec
 import VCVio.OracleComp.Coinductive.Bridge
 import VCVio.OracleComp.Constructions.BitVec
+import VCVio.OracleComp.Constructions.Fork
 import VCVio.OracleComp.Constructions.GenerateSeed
 import VCVio.OracleComp.Constructions.Replicate
 import VCVio.OracleComp.Constructions.SampleableType

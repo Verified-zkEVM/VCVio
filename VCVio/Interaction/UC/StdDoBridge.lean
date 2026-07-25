@@ -12,7 +12,7 @@ import VCVio.ProgramLogic.Unary.StdDoBridge
 # `Std.Do` / `mvcgen` bridge for the Interaction / UC runtime
 
 Equip the runtime primitives in `VCVio.Interaction.UC.Runtime`
-(`Spec.sampleTranscript`, `Concurrent.StepOver.sample`,
+(`TypeTree.samplePath`, `Concurrent.StepOver.sample`,
 `Concurrent.ProcessOver.runSteps`) with the equational and Hoare-triple
 machinery `mvcgen` needs, so users can prove triples about UC executions
 in the same style as `VCVio.ProgramLogic.Unary.HandlerSpecs`.
@@ -20,7 +20,7 @@ in the same style as `VCVio.ProgramLogic.Unary.HandlerSpecs`.
 ## Architecture
 
 The runtime primitives are defined by structural recursion over the
-`Interaction.Spec` tree (for transcript sampling) or over fuel `ℕ` (for
+`Interaction.TypeTree` (for path sampling) or over fuel `ℕ` (for
 `runSteps`). Neither recursion is walked by `mvcgen`, so we expose the
 recursive equations as `@[simp]` lemmas and provide a closed-form
 `runSteps_triple_preserves_invariant` for the most common
@@ -35,10 +35,10 @@ since both carry `Std.Do.WPMonad` instances via
 
 ## Main results
 
-* `Spec.sampleTranscript_done`, `Spec.sampleTranscript_node` — rfl-level
-  unfolding of `Spec.sampleTranscript` for base and step cases.
+* `TypeTree.samplePath_done`, `TypeTree.samplePath_node` — rfl-level
+  unfolding of `TypeTree.samplePath` for base and step cases.
 * `Concurrent.StepOver.sample_eq` — unfolds `StepOver.sample` in terms
-  of `sampleTranscript`.
+  of `samplePath`.
 * `Concurrent.ProcessOver.runSteps_zero`,
   `Concurrent.ProcessOver.runSteps_succ` — base and step unfolding of
   `runSteps` on fuel.
@@ -47,7 +47,7 @@ since both carry `Std.Do.WPMonad` instances via
   induction on fuel.
 
 These equations are tagged `@[simp]` so that `mvcgen` can walk an
-exposed `sampleTranscript` / `sample` / `runSteps` body in one simp pass
+exposed `samplePath` / `sample` / `runSteps` body in one simp pass
 before the usual `do`-block traversal. The bind-shaped definitions hold
 by `rfl`; `Concurrent.StepOver.sample_eq` rephrases the map-shaped
 `StepOver.sample` and needs `[LawfulMonad m]`.
@@ -57,39 +57,39 @@ open Std.Do OracleComp
 
 namespace Interaction
 
-namespace Spec
+namespace TypeTree
 
 section unfolding
 
 variable {m : Type → Type} [Monad m]
 
 @[simp]
-theorem sampleTranscript_done (samp : Sampler m .done) :
-    sampleTranscript .done samp = pure ⟨⟩ := rfl
+theorem samplePath_done (samp : Sampler m .done) :
+    samplePath .done samp = pure ⟨⟩ := rfl
 
 @[simp]
-theorem sampleTranscript_node {X : Type}
-    (rest : X → Spec.{0}) (samp : m X) (sampRest : ∀ x, Sampler m (rest x)) :
-    sampleTranscript (.node X rest) ⟨samp, sampRest⟩ =
+theorem samplePath_node {X : Type}
+    (rest : X → TypeTree.{0}) (samp : m X) (sampRest : ∀ x, Sampler m (rest x)) :
+    samplePath (.node X rest) ⟨samp, sampRest⟩ =
       (do let x ← samp
-          let tr ← sampleTranscript (rest x) (sampRest x)
+          let tr ← samplePath (rest x) (sampRest x)
           return ⟨x, tr⟩) := rfl
 
 end unfolding
 
-end Spec
+end TypeTree
 
 namespace Concurrent
 
 section StepOver
 
 variable {m : Type → Type} [Monad m]
-variable {Γ : Interaction.Spec.Node.Context.{0, 0}} {P : Type}
+variable {Γ : Interaction.TypeTree.Node.Context.{0, 0}} {P : Type}
 
 @[simp]
 theorem StepOver.sample_eq [LawfulMonad m] (step : StepOver Γ P)
-    (sampler : Spec.Sampler m step.spec) : step.sample sampler =
-      (do let tr ← Spec.sampleTranscript step.spec sampler
+    (sampler : TypeTree.Sampler m step.tree) : step.sample sampler =
+      (do let tr ← TypeTree.samplePath step.tree sampler
           return step.next tr) := by
   rw [StepOver.sample, map_eq_pure_bind]
 
@@ -98,16 +98,17 @@ end StepOver
 section ProcessOver
 
 variable {m : Type → Type} [Monad m]
-variable {Γ : Interaction.Spec.Node.Context.{0, 0}}
+variable {Γ : Interaction.TypeTree.Node.Context.{0, 0}}
 
 @[simp]
 theorem ProcessOver.runSteps_zero {P : Type} (process : ProcessOver P Γ)
-    (sampler : ∀ p : process.Proc, Spec.Sampler m (process.step p).spec) (s : process.Proc) :
+    (sampler : ∀ p : process.Proc, TypeTree.Sampler m (process.step p).tree)
+    (s : process.Proc) :
     process.runSteps sampler 0 s = pure s := rfl
 
 @[simp]
 theorem ProcessOver.runSteps_succ {P : Type} (process : ProcessOver P Γ)
-    (sampler : ∀ p : process.Proc, Spec.Sampler m (process.step p).spec) (n : ℕ)
+    (sampler : ∀ p : process.Proc, TypeTree.Sampler m (process.step p).tree) (n : ℕ)
     (s : process.Proc) :
     process.runSteps sampler (n + 1) s =
       (do let s' ← (process.step s).sample (sampler s)
@@ -124,7 +125,7 @@ namespace ProcessOver
 
 variable {m : Type → Type} [Monad m]
 variable {ps : PostShape} [WPMonad m ps]
-variable {Γ : Interaction.Spec.Node.Context.{0, 0}}
+variable {Γ : Interaction.TypeTree.Node.Context.{0, 0}}
 
 /-- If every one-step execution preserves an invariant `I` on the
 process state, then `runSteps n` preserves `I` for any fuel `n`.
@@ -134,7 +135,7 @@ This is the process-runtime analogue of
 a generic invariant lemma that factors out the fuel induction so
 downstream proofs stay inside the `Std.Do` world. -/
 theorem runSteps_triple_preserves_invariant {P : Type} (process : ProcessOver P Γ)
-    (sampler : ∀ p : process.Proc, Spec.Sampler m (process.step p).spec)
+    (sampler : ∀ p : process.Proc, TypeTree.Sampler m (process.step p).tree)
     (I : process.Proc → Prop) (hstep : ∀ p : process.Proc,
       Std.Do.Triple ((process.step p).sample (sampler p))
         (spred(⌜I p⌝))
@@ -170,20 +171,20 @@ namespace Interaction.Concurrent.ProcessOver
 namespace Example
 
 /-- Trivial node context carrying no per-node metadata. -/
-private abbrev trivCtx : Interaction.Spec.Node.Context.{0, 0} := fun _ => PUnit
+private abbrev trivCtx : Interaction.TypeTree.Node.Context.{0, 0} := fun _ => PUnit
 
 /-- Always-increment process: each step has no moves and bumps the
 counter by one. -/
 private def incrementProcess : ProcessOver ℕ trivCtx :=
   ProcessOver.ofStep ℕ fun p =>
-    { spec := .done
+    { tree := .done
       semantics := PUnit.unit
       next := fun _ => p + 1 }
 
 /-- Trivial sampler for the always-`.done` step-spec family. -/
 private def trivSampler :
     ∀ p : incrementProcess.Proc,
-      Interaction.Spec.Sampler ProbComp (incrementProcess.step p).spec :=
+      Interaction.TypeTree.Sampler ProbComp (incrementProcess.step p).tree :=
   fun _ => PUnit.unit
 
 private theorem incrementProcess_step_triple (p₀ p : ℕ) :

@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 import LatticeCrypto.Falcon.Concrete.FloatLike
-import FFI.Hashing
+import Extern.Hashing
 
 /-!
 # Concrete Discrete Gaussian Sampler (SamplerZ)
