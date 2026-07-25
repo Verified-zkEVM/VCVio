@@ -100,7 +100,6 @@ For `k = 320`, both are negligible.
 - [Pre17]: Prest. ASIACRYPT 2017. Rényi-based precision analysis for Klein's sampler.
 -/
 
-
 open OracleComp OracleSpec ENNReal
 
 namespace Falcon
@@ -234,16 +233,21 @@ With exact arithmetic (infinite precision), `r_p = 1` and the sampler loss vanis
 **On the GPV laws (`hCorrect`/`hReg`/`hNeverFail`).** These are taken on the support of `hr.gen`
 (honestly generated keys) only, via the valid-key-restricted `GPVHashAndSign.euf_cma_split_bound`.
 The universal forms would be *unsatisfiable* for the Falcon PSF — `isShort` is the norm bound
-`‖·‖₂² ≤ betaSquared`, `PublicKey` is unconstrained, and a key with `h = 0` together with a
-large-norm target `c` (`‖c‖² > betaSquared`) has no short preimage — so no sampler could be both
-correct and total at *every* key. Restricting to `support hr.gen` (where the NTRU geometry of a
-valid key guarantees short preimages — the honest-key regime in which Falcon signatures verify)
-makes the hypotheses satisfiable, so this theorem is conditional, not vacuous. The ideal sampler
-`idealPSF` shares the deterministic `eval`/`isShort` of `falconPSF` (`hEval`/`hShort`); `hTransport`
-carries the finite-precision concrete→ideal gap as the [FGdG+25] Rényi term `samplerLoss`, assumed
-here in the
-same way MLWE/SIS hardness is assumed. The collision branch is discharged by
-`collisionFindingAdvantage_eq_ntruPSF`. -/
+`‖·‖₂² ≤ betaSquared`, `PublicKey` is unconstrained, and at a key with `h = 0` a target `c` of
+large norm (`‖c‖² > betaSquared`) has no short preimage — so no sampler could be both correct and
+total at *every* key at Falcon's parameters. Restricting to `support hr.gen`, where the NTRU
+geometry of a valid key guarantees short preimages (the honest-key regime in which Falcon
+signatures verify), is what makes the hypotheses satisfiable in principle, so this theorem is
+conditional rather than vacuous. That is a statement about the *shape* of the hypotheses: the
+banked witness `Falcon.Concrete.NonVacuity.falcon_eufcma_hyps_inhabited` certifies their joint
+consistency only at a degenerate instance — degree one, `h = 0`, and a `betaSquared` inflated until
+shortness accepts everything — and therefore exhibits no honest-key NTRU geometry and no
+quantitative content.
+
+The ideal sampler `idealPSF` shares the deterministic `eval`/`isShort` of `falconPSF`
+(`hEval`/`hShort`); `hTransport` carries the finite-precision concrete→ideal gap as the [FGdG+25]
+Rényi term `samplerLoss`, assumed here in the same way MLWE/SIS hardness is assumed. The collision
+branch is discharged by `collisionFindingAdvantage_eq_ntruPSF`. -/
 theorem euf_cma_security
     (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
     [SampleableType (Rq p.n)] [Inhabited (Rq p.n)]

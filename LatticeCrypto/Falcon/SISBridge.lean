@@ -31,6 +31,9 @@ from the coefficientwise bound `(a − b)² ≤ 2·a² + 2·b²` on centered rep
   is exactly a decisional-NTRU assumption and is not formalized here.
 - `euf_cma_security_ntruSIS`: the EUF-CMA bound of `euf_cma_security` restated with the
   collision term replaced by the keyed NTRU-SIS advantage.
+- `euf_cma_collision_security_ntruSIS`: the same translation applied to
+  `euf_cma_collision_security`, giving the fully priced headline — keyed NTRU-SIS plus the
+  min-entropy, salt-birthday, and per-call sampler terms — for every query-bounded adversary.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -227,7 +230,6 @@ theorem advantage_le_ntruSISProblemKeyed [SampleableType (Rq p.n)]
     rw [hval]
     simp
 
-
 /-! ## The EUF-CMA bound in NTRU-SIS terms -/
 
 /-- **EUF-CMA security of Falcon down to keyed NTRU-SIS.** The bound of
@@ -283,6 +285,66 @@ theorem euf_cma_security_ntruSIS
   obtain ⟨cRed, eRed, hbound⟩ := euf_cma_security p prims Salt hr qSign qHash samplerLoss adv
     idealPSF hEval hShort hCorrect hReg hNeverFail hTransport
   refine ⟨collisionToKernelAdv p prims hr cRed, eRed, le_trans hbound ?_⟩
+  gcongr
+  exact advantage_le_ntruSISProblemKeyed p prims hr cRed
+
+/-- **Falcon EUF-CMA down to keyed NTRU-SIS, with every other branch priced.** For an adversary
+obeying the query bound `(qSign, qHash)`, under the per-call sampler-approximation budget `ε_step`
+(`samplerTransport`) and the ideal-sampler guessing-probability bound `εpp`
+(`idealSamplerGuessBound`),
+
+  `Adv^EUF-CMA(A) ≤ Adv^NTRU-SIS_keyed(B) + (qSign + qHash + 1) · εpp`
+  `                 + collisionBound Salt qSign (qHash + 1) + qSign · ε_step`
+
+This is `euf_cma_collision_security` with its one remaining cryptographic residual — the Falcon-PSF
+collision problem — translated through `advantage_le_ntruSISProblemKeyed` into a kernel-vector
+lattice problem: the four terms are the lattice assumption, the min-entropy branch at the
+multi-target factor, the salt birthday bound, and the accumulated finite-precision sampler loss.
+
+The challenge of `ntruSISProblemKeyed` is drawn from Falcon's honest key distribution `hr.gen`
+rather than uniformly over `Rq p.n`; closing that gap to the uniform-challenge `ntruSISProblem` is
+exactly a decisional-NTRU assumption and is not formalized here. -/
+theorem euf_cma_collision_security_ntruSIS
+    (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
+    [SampleableType (Rq p.n)] [Inhabited (Rq p.n)]
+    (hr : GenerableRelation (PublicKey p) (SecretKey p)
+      (validKeyPair p))
+    (qSign qHash : ℕ)
+    (ε_step : ℝ) (hε : 0 ≤ ε_step) (εpp : ℝ≥0∞)
+    (adv : SignatureAlg.unforgeableAdv
+      (falconSignatureAlg p prims Salt hr))
+    (idealPSF : PreimageSampleableFunction
+      (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
+    (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
+    (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
+    (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
+    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
+      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+        𝒟[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
+              : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
+        𝒟[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
+              : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))])
+    (hNeverFail : ∀ pk sk, (pk, sk) ∈ support hr.gen →
+      ∀ c, NeverFail (idealPSF.trapdoorSample pk sk c))
+    (hStep : samplerTransport p prims hr idealPSF ε_step)
+    (hQ : ∀ pk, GPVHashAndSign.signHashQueryBound
+      (M := List Byte) (Salt := Salt) (Range := Rq p.n)
+      (S' := Salt × (Rq p.n × Rq p.n))
+      (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv.main pk)
+      (qSign := qSign) (qHash := qHash))
+    (hGuess : idealSamplerGuessBound p hr idealPSF εpp) :
+    ∃ sisReduction : SIS.Adversary (ntruSISProblemKeyed p hr),
+      adv.advantage
+          (GPVHashAndSign.runtime
+            (Range := Rq p.n) (List Byte) Salt) ≤
+        SIS.advantage (ntruSISProblemKeyed p hr) sisReduction +
+        ((qSign + (qHash + 1) : ℕ) : ENNReal) * εpp +
+        GPVHashAndSign.collisionBound Salt qSign (qHash + 1) +
+        ENNReal.ofReal (qSign * ε_step) := by
+  obtain ⟨cRed, hbound⟩ :=
+    euf_cma_collision_security p prims Salt hr qSign qHash ε_step hε εpp adv idealPSF
+      hEval hShort hCorrect hReg hNeverFail hStep hQ hGuess
+  refine ⟨collisionToKernelAdv p prims hr cRed, le_trans hbound ?_⟩
   gcongr
   exact advantage_le_ntruSISProblemKeyed p prims hr cRed
 

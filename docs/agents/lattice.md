@@ -58,7 +58,9 @@ Use `VCVio/` when you are changing framework abstractions such as `SignatureAlg`
 - `LatticeCrypto/Falcon/Primitives.lean`: abstract primitive operations such as sampling, hashing, and compression.
 - `LatticeCrypto/Falcon/Scheme.lean`: scheme semantics and the GPV bridge.
 - `LatticeCrypto/Falcon/Security.lean`: high-level security statements.
+- `LatticeCrypto/Falcon/SISBridge.lean`: PSF collisions to NTRU-SIS kernel vectors, and the EUF-CMA bounds restated against the keyed NTRU-SIS problem.
 - `LatticeCrypto/Falcon/Concrete/`: executable FFT, NTT, floating-point emulation, keygen, sampling, signing, and FFI support.
+- `LatticeCrypto/Falcon/Concrete/NonVacuity.lean`: a degree-one instance witnessing that the security theorems' hypotheses are jointly satisfiable.
 
 ## How It Connects To `VCVio`
 

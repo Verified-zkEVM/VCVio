@@ -39,7 +39,7 @@ witnessing `ForgesQueriedPoint` and `signHashQueryBound 0 1`; the advantage boun
 
 open OracleComp OracleSpec Falcon LatticeCrypto
 
-namespace Examples.FalconNonVacuity
+namespace Falcon.Concrete.NonVacuity
 
 /-! ## Degree-one parameters, primitives, and the negacyclic-multiplication bridge -/
 
@@ -379,8 +379,8 @@ theorem toy_advantage_bound :
 /-! ## The hypothesis-consistency certificate -/
 
 /-- **Consistency (inhabitance) witness for the `Falcon.euf_cma_security` hypotheses.** For the
-degree-one toy
-parameters `toyP`, primitives `toyPrims`, salt `Unit`, honest relation `toyHr`, query counts
+degree-one toy parameters `toyP`, primitives `toyPrims`, salt `Unit`, honest relation `toyHr`,
+query counts
 `0`/`1`, sampler loss `1`, headline adversary `toyAdv`, and ideal PSF `toyIdealPSF`, every
 hypothesis of `Falcon.euf_cma_security` holds simultaneously: the shared deterministic
 `eval`/`isShort` (`hEval`/`hShort`), the GPV laws on honest keys (`hCorrect`/`hReg`/`hNeverFail`),
@@ -423,8 +423,8 @@ theorem falcon_eufcma_hyps_inhabited :
 
 /-! ## The per-call sampler-transport witness
 
-`Falcon.euf_cma_security_of_samplerTransport` replaces the monolithic `hTransport` package by
-the per-call bound `Falcon.samplerTransport` plus the query bound and the
+`Falcon.euf_cma_security_of_samplerTransport` states the concrete-to-ideal gap in terms of a
+per-call sampler budget — the bound `Falcon.samplerTransport` plus the query bound and the
 `ForgesQueriedPoint` convention on the adversary's own `main`.  The witnesses below extend
 the consistency certificate to that decomposed frontier, still at the degree-one toy
 instance and still **consistency-only**: the trivial budget `ε_step = 1` carries no
@@ -555,4 +555,4 @@ theorem toy_euf_cma_collision_security :
     (fun pk sk _ c => toy_neverFail pk sk c)
     toy_samplerTransport toy_signHashQueryBound toy_idealSamplerGuessBound
 
-end Examples.FalconNonVacuity
+end Falcon.Concrete.NonVacuity

@@ -14,13 +14,13 @@ import LatticeCrypto.Falcon.Concrete.Instance
 import LatticeCrypto.Falcon.Concrete.KeyGen
 import LatticeCrypto.Falcon.Concrete.NTRUSolver
 import LatticeCrypto.Falcon.Concrete.NTT
+import LatticeCrypto.Falcon.Concrete.NonVacuity
 import LatticeCrypto.Falcon.Concrete.PolyBigInt
 import LatticeCrypto.Falcon.Concrete.SamplerZ
 import LatticeCrypto.Falcon.Concrete.Sampling
 import LatticeCrypto.Falcon.Concrete.Sign
 import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
 import LatticeCrypto.Falcon.Encoding
-import LatticeCrypto.Falcon.NonVacuity
 import LatticeCrypto.Falcon.Params
 import LatticeCrypto.Falcon.Primitives
 import LatticeCrypto.Falcon.SISBridge
