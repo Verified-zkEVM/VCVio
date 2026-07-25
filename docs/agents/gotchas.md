@@ -253,8 +253,9 @@ This regenerates the root import files covered by the build import check:
 
 ### 25. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.29.0`. When upgrading, update both `lean-toolchain` and
-`lakefile.lean`'s `require mathlib` line simultaneously.
+Both currently `v4.31.0`: `lean-toolchain` pins `leanprover/lean4:v4.31.0` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.31.0"`.
+When upgrading, update both lines simultaneously.
 
 ### 26. Use public references in shared docs
 
