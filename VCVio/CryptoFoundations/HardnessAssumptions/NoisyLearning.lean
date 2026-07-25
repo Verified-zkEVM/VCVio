@@ -196,8 +196,3 @@ def lpnProblem (n m k d : ℕ) [NeZero d] :
 end LPN
 
 end NoisyLearning
-
-/-- The reviewer-facing name for the master structure: a noisy-learning problem
-covering LWE-, module-LWE-, and LPN-style assumptions. -/
-abbrev NoisyLearningProblem (Sample Secret Output : Type) :=
-  NoisyLearning.Problem Sample Secret Output
