@@ -20,12 +20,12 @@ instantiation, and no security claim about concrete ML-DSA follows from it.
 
 The witness `seedRevealingPrims` is `concretePrimitives` with the public `ρ`-component of
 `expandSeed`
-overridden to be the identity in the seed.  Every field consumed by the thirteen banked
-`concrete_*` laws is definitionally unchanged, so those laws transfer verbatim; the only remaining
-field, the determinacy assumption `keyVector_t0_determined`, holds trivially because the override
-makes the published seed-component injective (matching `ρ` forces the same seed, hence the same
-`t₀`).  This is the structural feature distinguishing the *satisfiable* `keyVector_t0_determined`
-from the *unsatisfiable* (cardinality-false) `expandS_honest_sampling` it replaced.
+overridden to be the identity in the seed.  Every field consumed by the thirteen `concrete_*` laws
+is definitionally unchanged, so those laws transfer verbatim; the only remaining field, the
+determinacy assumption `keyVector_t0_determined`, holds trivially because the override makes the
+published seed-component injective (matching `ρ` forces the same seed, hence the same `t₀`).
+Injectivity of the published seed-component is exactly what makes `keyVector_t0_determined`
+satisfiable.
 
 **Trust surface.**  `mldsa_laws_inhabited` depends on `propext`, `Classical.choice`, `Quot.sound`,
 **and** the pre-existing `native_decide` certificate for the concrete `256×256` NTT matrix inversion
@@ -59,7 +59,7 @@ def seedRevealingPrims (p : Params) : MLDSA.Primitives p :=
 
 /-- `Primitives.Laws (seedRevealingPrims p) concreteNTTRingOps` for any approved `p`.  Thirteen
 fields are
-the banked `concrete_*` lemmas (they typecheck because every field consumed there is defeq between
+the `concrete_*` lemmas (they typecheck because every field consumed there is defeq between
 `seedRevealingPrims p` and `concretePrimitives p`); `keyVector_t0_determined` needs only the
 hypothesis
 `((seedRevealingPrims p).expandSeed s).1 = ((seedRevealingPrims p).expandSeed s').1`, which

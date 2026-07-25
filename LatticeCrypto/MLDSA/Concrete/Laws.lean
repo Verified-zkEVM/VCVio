@@ -10,7 +10,7 @@ import LatticeCrypto.MLDSA.Concrete.Instance
 
 This file discharges the deterministically-provable fields of `MLDSA.Primitives.Laws` for the
 concrete `concretePrimitives` instance built from the FIPS 204 rounding, NTT, and byte-encoding
-layers, for any approved parameter set. Each provable field is banked as a standalone theorem
+layers, for any approved parameter set. Each provable field is stated as a standalone theorem
 (`concrete_*`).
 
 ## What is proven
@@ -36,7 +36,7 @@ roundtrip in `Concrete/Encoding.lean`:
   abstract `Set.InjOn` field, whose validity set is exactly the image of `highBits`.
 
 Two further sampler-bound fields are discharged from the fuel-recursive rejection samplers in
-`Concrete/Sampling.lean` (whose structural output ranges are now provable by fuel induction):
+`Concrete/Sampling.lean`, whose structural output ranges follow by fuel induction:
 
 - `sampleInBall_norm` (`concrete_sampleInBall_norm`): `SampleInBall(c̃)`'s accumulator only ever
   holds the values `0`, `+1`, `-1`, so every coefficient has centered absolute value at most `1`.
@@ -44,8 +44,8 @@ Two further sampler-bound fields are discharged from the fuel-recursive rejectio
   values (`2 - u` for `η = 2`, `4 - t` for `η = 4`; nothing otherwise), so every coefficient of
   both secret vectors has centered absolute value at most `η`.
 
-A thirteenth field, the challenge-product bound, is also discharged from the convolution-norm
-infrastructure now present in the tree:
+A thirteenth field, the challenge-product bound, is discharged from the convolution-norm
+infrastructure:
 
 - `sampleInBall_smul_bound` (`concrete_sampleInBall_smul_bound`): `SampleInBall(c̃)` has at most `τ`
   nonzero `±1` coefficients, so for `‖s‖∞ ≤ η` the challenge–secret product `c · s` satisfies
@@ -57,14 +57,14 @@ infrastructure now present in the tree:
 
 ## What is NOT proven (and why)
 
-One field remains, in a single honest category — there are no false-as-stated fields:
+One field remains, in a single category:
 
 **Random-oracle modeling assumption** (inherent to the ML-DSA security model, not derivable
 from any fixed deterministic instantiation — see its docstring in `Primitives.lean`):
 - `keyVector_t0_determined`: a standard ROM idealization of the SHAKE XOFs
   (`ExpandSeed` / `ExpandS`). This is a model assumption, left abstract.
 
-The abstract `Primitives.Laws` statement is **not** modified by this file; the banked `concrete_*`
+The abstract `Primitives.Laws` statement is **not** modified by this file; the `concrete_*`
 theorems make explicit which concrete obligations are discharged and which remain.
 -/
 
@@ -85,7 +85,7 @@ theorem polyNorm_eq_cInfNorm (f : Rq) : polyNorm f = LatticeCrypto.cInfNorm f :=
 
 variable (p : Params)
 
-/-! ## Provable algebraic fields (banked) -/
+/-! ## Provable algebraic fields -/
 
 /-- `Primitives.Laws.transform` for the concrete instance. -/
 theorem concrete_transform : NTTRingLaws concreteNTTRingOps :=
@@ -139,7 +139,7 @@ theorem concrete_power2Round_bound (r : Rq) :
   rw [← concretePower2Round_remainder_eq_low]
   exact concretePower2Round_bound r
 
-/-! ## `expandMask_bound` (restated to the FIPS-204 `z`-range, now provable)
+/-! ## `expandMask_bound` at the FIPS-204 `z`-range
 
 The concrete `expandMask` decodes each coefficient through `polyZUnpack p`, i.e.
 `bitUnpackPoly bytes (-γ₁ + 1) γ₁`. By the decode-range bound `bitUnpackPoly_get`, every coefficient
@@ -187,7 +187,7 @@ theorem concrete_expandMask_bound (hp : p.isApproved) (rhoDoublePrime : Bytes 64
   -- since `polyZUnpack p bytes = bitUnpackPoly bytes (-γ₁ + 1) γ₁`.
   exact bitUnpackPoly_z_cInfNorm_le _ p.gamma1 hwidth hq
 
-/-! ## `w1Encode_injective` (restated to `Set.InjOn` on the valid range, now provable)
+/-! ## `w1Encode_injective` as `Set.InjOn` on the valid range
 
 The concrete `w1Encode` packs each `High` coefficient via `simpleBitPackPoly` at the bit width
 `simpleWidth ((q-1)/(2γ₂) - 1)`. On the valid commitment range — every component an actual
@@ -225,12 +225,12 @@ theorem concrete_w1Encode_injOn (hp : p.isApproved) :
     exact highBits_coeff_val_lt_width p hp r c
   · exact MLDSA.Concrete.w1Encode_injOn p
 
-/-! ## Sampler-bound fields (now provable from the fuel-recursive samplers)
+/-! ## Sampler-bound fields, from the fuel-recursive samplers
 
 The `sampleInBall` and `expandS` rejection samplers are defined by fuel-bounded structural recursion
 (see `Concrete/Sampling.lean`), which exposes equation lemmas. Their structural output ranges are
-banked as `sampleInBall_norm` and `expandS_bound` there; the `concrete_*` wrappers below state them
-at the `concretePrimitives` interface. -/
+established as `sampleInBall_norm` and `expandS_bound` there; the `concrete_*` wrappers below
+state them at the `concretePrimitives` interface. -/
 
 /-- `Primitives.Laws.sampleInBall_norm` for the concrete instance: `SampleInBall(c̃)` has centered
 infinity norm at most `1` (its coefficients lie in `{-1, 0, +1}`). -/
@@ -276,7 +276,7 @@ theorem concrete_sampleInBall_smul_bound
 
 /-! ## `Primitives.Laws` status for `concretePrimitives` (no full witness — by design)
 
-Thirteen `Primitives.Laws` fields are now **proven axiom-clean** for the concrete instance at any
+Thirteen `Primitives.Laws` fields are **proven axiom-clean** for the concrete instance at any
 approved parameter set: the eight algebraic fields (`concrete_transform`,
 `concrete_high_low_decomp`, `concrete_lowBits_bound`, `concrete_hide_low`,
 `concrete_highBitsShift_injective`, `concrete_useHint_makeHint`, `concrete_power2Round_decomp`,
@@ -285,7 +285,7 @@ approved parameter set: the eight algebraic fields (`concrete_transform`,
 `concrete_expandS_bound` (extracted by fuel induction from the structural-recursion samplers in
 `Concrete/Sampling.lean`); and the challenge-product bound `concrete_sampleInBall_smul_bound`
 (assembled from the generic negacyclic-convolution infinity-norm bound and the challenge `ℓ₁`
-count). There are no longer any false-as-stated fields.
+count). Every field listed above is proven as stated.
 
 We deliberately do **not** assemble a full `Primitives.Laws (concretePrimitives p) …` witness here,
 because one field remains undischarged for a reason that is not a statement bug:
@@ -293,10 +293,11 @@ because one field remains undischarged for a reason that is not a statement bug:
 * `keyVector_t0_determined`: an inherent ROM modeling assumption, left abstract (see its docstring
   in `Primitives.lean`).
 
-A `sorry`-backed aggregate witness is intentionally omitted: it would assert the still-abstract ROM
-field, which is unsound to bank. The thirteen proven `concrete_*` lemmas above stand on their own
-and are safe to consume. A full `Primitives.Laws` witness is now inhabitable once the single
-`keyVector_t0_determined` modeling assumption is supplied as a hypothesis (it is satisfiable, e.g.
-when `ExpandSeed` is injective on the relevant data). -/
+A `sorry`-backed aggregate witness is intentionally omitted: it would assert the abstract ROM field,
+which is unsound to assume. The thirteen proven `concrete_*` lemmas above stand on their own and are
+safe to consume. A full `Primitives.Laws` witness is inhabitable once the single
+`keyVector_t0_determined` modeling assumption is supplied as a hypothesis; it is satisfiable, e.g.
+when `ExpandSeed` is injective on the relevant data (see
+`MLDSA.mldsa_laws_inhabited` in `Concrete/NonVacuity.lean`). -/
 
 end MLDSA.Concrete
