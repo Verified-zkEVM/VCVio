@@ -28,15 +28,15 @@ roundtrip in `Concrete/Encoding.lean`:
 - `expandMask_bound` (`concrete_expandMask_bound`): every `expandMask` coefficient is a value
   decoded by `polyZUnpack` over the range `[-γ₁ + 1, γ₁]`, so its centered infinity norm is at
   most `γ₁`. This is a property of the decoder's output window (`bitUnpackPoly_get`) and is
-  independent of the opaque SHAKE byte stream. It matches the restated abstract bound `γ₁`.
+  independent of the opaque SHAKE byte stream. It matches the abstract field's bound `γ₁`.
 - `w1Encode_injective` (`concrete_w1Encode_injOn`): on the valid commitment range — every
   component an actual `highBits` output — each coefficient lies in `[0, (q-1)/(2γ₂) - 1]`
   (`highBits_coeff_val_lt_m`), which fits the `w₁` packer's bit width, so `simpleBitPackPoly` is
-  inverted by `simpleBitUnpackPoly` and `w1Encode` is injective. This matches the restated
-  abstract `Set.InjOn` field, whose validity set is exactly the image of `highBits`.
+  inverted by `simpleBitUnpackPoly` and `w1Encode` is injective. This matches the abstract
+  `Set.InjOn` field, whose validity set is exactly the image of `highBits`.
 
 Two further sampler-bound fields are discharged from the fuel-recursive rejection samplers in
-`Concrete/Sampling.lean` (whose structural output ranges are now provable by fuel induction):
+`Concrete/Sampling.lean`, whose structural output ranges follow by fuel induction:
 
 - `sampleInBall_norm` (`concrete_sampleInBall_norm`): `SampleInBall(c̃)`'s accumulator only ever
   holds the values `0`, `+1`, `-1`, so every coefficient has centered absolute value at most `1`.
@@ -44,8 +44,8 @@ Two further sampler-bound fields are discharged from the fuel-recursive rejectio
   values (`2 - u` for `η = 2`, `4 - t` for `η = 4`; nothing otherwise), so every coefficient of
   both secret vectors has centered absolute value at most `η`.
 
-A thirteenth field, the challenge-product bound, is also discharged from the convolution-norm
-infrastructure now present in the tree:
+A thirteenth field, the challenge-product bound, is discharged from the convolution-norm
+infrastructure:
 
 - `sampleInBall_smul_bound` (`concrete_sampleInBall_smul_bound`): `SampleInBall(c̃)` has at most `τ`
   nonzero `±1` coefficients, so for `‖s‖∞ ≤ η` the challenge–secret product `c · s` satisfies
@@ -139,7 +139,7 @@ theorem concrete_power2Round_bound (r : Rq) :
   rw [← concretePower2Round_remainder_eq_low]
   exact concretePower2Round_bound r
 
-/-! ## `expandMask_bound` (restated to the FIPS-204 `z`-range, now provable)
+/-! ## `expandMask_bound` at the FIPS-204 `z`-range
 
 The concrete `expandMask` decodes each coefficient through `polyZUnpack p`, i.e.
 `bitUnpackPoly bytes (-γ₁ + 1) γ₁`. By the decode-range bound `bitUnpackPoly_get`, every coefficient
@@ -170,7 +170,7 @@ private theorem approved_gamma1_width (hp : p.isApproved) :
       2 * p.gamma1 < modulus := by
   rcases hp with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩
 
-/-- `Primitives.Laws.expandMask_bound` (restated bound `γ₁`) for the concrete instance, at any
+/-- `Primitives.Laws.expandMask_bound` (bound `γ₁`) for the concrete instance, at any
 approved parameter set. -/
 theorem concrete_expandMask_bound (hp : p.isApproved) (rhoDoublePrime : Bytes 64) (kappa : ℕ) :
     polyVecBounded ((concretePrimitives p).expandMask rhoDoublePrime kappa) p.gamma1 := by
@@ -187,14 +187,14 @@ theorem concrete_expandMask_bound (hp : p.isApproved) (rhoDoublePrime : Bytes 64
   -- since `polyZUnpack p bytes = bitUnpackPoly bytes (-γ₁ + 1) γ₁`.
   exact bitUnpackPoly_z_cInfNorm_le _ p.gamma1 hwidth hq
 
-/-! ## `w1Encode_injective` (restated to `Set.InjOn` on the valid range, now provable)
+/-! ## `w1Encode_injective` as `Set.InjOn` on the valid range
 
 The concrete `w1Encode` packs each `High` coefficient via `simpleBitPackPoly` at the bit width
 `simpleWidth ((q-1)/(2γ₂) - 1)`. On the valid commitment range — every component an actual
 `highBits` output — each coefficient lies in `[0, (q-1)/(2γ₂) - 1]` (`highBits_coeff_val_lt_m`),
 which fits in that bit width, so the packer is inverted by `simpleBitUnpackPoly` and is injective.
-This is exactly the `Set.InjOn` predicate of the restated abstract field, since the abstract
-validity set is the image of `highBits`. -/
+This is exactly the `Set.InjOn` predicate of the abstract field, since the abstract validity set
+is the image of `highBits`. -/
 
 /-- Every approved-parameter `highBits` coefficient fits in the `w₁` packer's bit width. -/
 private theorem highBits_coeff_val_lt_width (hp : p.isApproved) (r : Rq) (c : Fin ringDegree) :
@@ -208,7 +208,7 @@ private theorem highBits_coeff_val_lt_width (hp : p.isApproved) (r : Rq) (c : Fi
     rcases hp with rfl | rfl | rfl <;> decide
   omega
 
-/-- `Primitives.Laws.w1Encode_injective` (restated to `Set.InjOn`) for the concrete instance, at any
+/-- `Primitives.Laws.w1Encode_injective` for the concrete instance, at any
 approved parameter set: `w1Encode` is injective on commitment vectors all of whose components are
 `highBits` outputs. -/
 theorem concrete_w1Encode_injOn (hp : p.isApproved) :
@@ -225,7 +225,7 @@ theorem concrete_w1Encode_injOn (hp : p.isApproved) :
     exact highBits_coeff_val_lt_width p hp r c
   · exact MLDSA.Concrete.w1Encode_injOn p
 
-/-! ## Sampler-bound fields (now provable from the fuel-recursive samplers)
+/-! ## Sampler-bound fields from the fuel-recursive samplers
 
 The `sampleInBall` and `expandS` rejection samplers are defined by fuel-bounded structural recursion
 (see `Concrete/Sampling.lean`), which exposes equation lemmas. Their structural output ranges are
@@ -276,7 +276,7 @@ theorem concrete_sampleInBall_smul_bound
 
 /-! ## `Primitives.Laws` status for `concretePrimitives` (no full witness — by design)
 
-Thirteen `Primitives.Laws` fields are now **proven axiom-clean** for the concrete instance at any
+Thirteen `Primitives.Laws` fields are **proven axiom-clean** for the concrete instance at any
 approved parameter set: the eight algebraic fields (`concrete_transform`,
 `concrete_high_low_decomp`, `concrete_lowBits_bound`, `concrete_hide_low`,
 `concrete_highBitsShift_injective`, `concrete_useHint_makeHint`, `concrete_power2Round_decomp`,
@@ -285,7 +285,7 @@ approved parameter set: the eight algebraic fields (`concrete_transform`,
 `concrete_expandS_bound` (extracted by fuel induction from the structural-recursion samplers in
 `Concrete/Sampling.lean`); and the challenge-product bound `concrete_sampleInBall_smul_bound`
 (assembled from the generic negacyclic-convolution infinity-norm bound and the challenge `ℓ₁`
-count). There are no longer any false-as-stated fields.
+count).
 
 We deliberately do **not** assemble a full `Primitives.Laws (concretePrimitives p) …` witness here,
 because one field remains undischarged for a reason that is not a statement bug:
@@ -295,8 +295,9 @@ because one field remains undischarged for a reason that is not a statement bug:
 
 A `sorry`-backed aggregate witness is intentionally omitted: it would assert the still-abstract ROM
 field, which is unsound to bank. The thirteen proven `concrete_*` lemmas above stand on their own
-and are safe to consume. A full `Primitives.Laws` witness is now inhabitable once the single
-`keyVector_t0_determined` modeling assumption is supplied as a hypothesis (it is satisfiable, e.g.
-when `ExpandSeed` is injective on the relevant data). -/
+and are safe to consume. A full `Primitives.Laws` witness is inhabitable once the single
+`keyVector_t0_determined` modeling assumption is supplied as a hypothesis — it is satisfiable, e.g.
+when `ExpandSeed` is injective on the relevant data, as exhibited by
+`MLDSA.seedRevealingPrims_laws` in `Concrete/NonVacuity.lean`. -/
 
 end MLDSA.Concrete

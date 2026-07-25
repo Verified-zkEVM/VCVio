@@ -8,11 +8,13 @@ import LatticeCrypto.MLDSA.Concrete.Laws
 /-!
 # Hypothesis-consistency certificate for `MLDSA.Primitives.Laws` (issue #228)
 
-`MLDSA.euf_cma_security_of_nma` is gated on `h_laws : Primitives.Laws prims nttOps`.  A conditional
-theorem asserts nothing if its hypothesis is uninhabitable, and `#print axioms` cannot detect that.
-This file rules that out with a kernel-checked witness: after the honest-sampling reformulation
-(the false `expandS_honest_sampling` uniformity field is gone, its gap carried as the explicit
-additive `honestSamplingSlack`/`idealGap`), `Primitives.Laws` is genuinely **inhabitable**.
+The ML-DSA correctness and zero-knowledge theorems — `MLDSA.idsWithAbort_complete`
+(`MLDSA/Security.lean`), `MLDSA.idsWithAbort_hvzk` (`MLDSA/SecurityHVZK.lean`),
+`MLDSA.fipsSign_fipsVerify_correct` (`MLDSA/Signature.lean`), and the algebraic lemmas they run on
+(`MLDSA.keyGenFromSeed_wApprox_eq`, `MLDSA.recoverT0_eq`) — are each gated on
+`h_laws : Primitives.Laws prims nttOps`.  A conditional theorem asserts nothing if its hypothesis is
+uninhabitable, and `#print axioms` cannot detect that.  This file rules that out with a
+kernel-checked witness: `Primitives.Laws` is genuinely **inhabitable**.
 
 This is a **logical consistency (inhabitance) witness only**: `seedRevealingPrims` publishes the
 key-generation seed as the public `ρ`, so it is neither a faithful nor a secure ML-DSA
@@ -24,18 +26,17 @@ overridden to be the identity in the seed.  Every field consumed by the thirteen
 `concrete_*` laws is definitionally unchanged, so those laws transfer verbatim; the only remaining
 field, the determinacy assumption `keyVector_t0_determined`, holds trivially because the override
 makes the published seed-component injective (matching `ρ` forces the same seed, hence the same
-`t₀`).  This is the structural feature distinguishing the *satisfiable* `keyVector_t0_determined`
-from the *unsatisfiable* (cardinality-false) `expandS_honest_sampling` it replaced.
+`t₀`).  Injectivity of the published seed-component is precisely the structural feature that makes
+`keyVector_t0_determined` satisfiable by a deterministic bundle.
 
 **Trust surface.**  `mldsa_laws_inhabited` depends on `propext`, `Classical.choice`, `Quot.sound`,
-**and** the pre-existing `native_decide` certificate for the concrete `256×256` NTT matrix inversion
+**and** the `native_decide` certificate for the concrete `256×256` NTT matrix inversion
 (`MLDSA.Concrete.invNTTMatrix_nttMatrix_entry`, routed in through `concrete_transform`).  That
-`native_decide` axiom is **not** introduced here — it is already carried by every concrete ML-DSA
-fact (e.g. `concrete_transform` itself), since `concreteNTTRingOps` is the only `NTTRingLaws`
-instance in the tree.  The *abstract* headline `MLDSA.euf_cma_security_of_nma` (quantified over
-`nttOps`) is itself axiom-clean `[propext, Classical.choice, Quot.sound]`; this certificate only
-witnesses that its `Laws` hypothesis can be met by the concrete layer (whose NTT-correctness trust
-assumption it inherits).
+`native_decide` axiom is carried by every concrete ML-DSA fact (e.g. `concrete_transform` itself),
+since `concreteNTTRingOps` is the only `NTTRingLaws` instance in the tree.  The *abstract*
+`Laws`-gated theorems (quantified over `nttOps`) are themselves axiom-clean
+`[propext, Classical.choice, Quot.sound]`; this certificate only witnesses that their `Laws`
+hypothesis can be met by the concrete layer (whose NTT-correctness trust assumption it inherits).
 -/
 
 open MLDSA
@@ -88,9 +89,10 @@ theorem seedRevealingPrims_laws (p : Params) (hp : p.isApproved) :
     rfl
 
 /-- **The #228 non-vacuity certificate.**  There is an approved parameter set and a primitive
-bundle whose `Primitives.Laws` is inhabited — so `MLDSA.euf_cma_security_of_nma` is not
-true-but-vacuous.  (See the trust-surface note in the module docstring on the inherited concrete
-NTT `native_decide` axiom.) -/
+bundle whose `Primitives.Laws` is inhabited — so the `Laws`-gated ML-DSA theorems
+(`MLDSA.idsWithAbort_complete`, `MLDSA.idsWithAbort_hvzk`, `MLDSA.fipsSign_fipsVerify_correct`,
+`MLDSA.keyGenFromSeed_wApprox_eq`, `MLDSA.recoverT0_eq`) are not true-but-vacuous.  (See the
+trust-surface note in the module docstring on the inherited concrete NTT `native_decide` axiom.) -/
 theorem mldsa_laws_inhabited :
     ∃ (p : Params) (prims : MLDSA.Primitives p),
       Nonempty (MLDSA.Primitives.Laws prims MLDSA.Concrete.concreteNTTRingOps) :=

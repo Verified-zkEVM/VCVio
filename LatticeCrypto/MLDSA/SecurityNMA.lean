@@ -50,7 +50,7 @@ the matrix is *defined* as `Â := ExpandA(ρ)` wherever it is used, so that
 `noiseless s₁ ρ = ExpandA(ρ)·s₁`.
 This is the standard ROM modeling of Dilithium with `ExpandA` a random oracle, and it makes the
 distinguisher `B` total: it consumes `(ρ, t)` and forms `pk = (ρ, Power2Round(t).1)` directly with
-no embedding. The `MlweEmbedding` record is therefore gone.
+no embedding witness.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -323,14 +323,15 @@ from the same uniform `seed` that produces `ρ = (ExpandSeed seed).1`) differs f
 derivation (drawing `s₁`, `s₂` independently and uniformly while keeping the same `ρ`) by total
 variation distance at most `idealGap`.
 
-This is the quantitative replacement for the (false-as-equality) honest-sampling idealization:
-`ExpandSeed`/`ExpandS` are deterministic XOFs, so the real derivation is a deterministic image of
-at most `2^256` seeds and can never *equal* a full-support uniform over the vastly larger secret
-space. The honest model carries the residual distance as an explicit real `idealGap` that enters
-the security bound additively (and is `0` exactly in the idealized limit). It is satisfiable for
-any concrete `prims` — `tvDist` is always at most `1`, so `idealGap = 1` is a trivial witness, and
-the genuine ROM-modeling bound supplies the meaningful value. It is consumed only by
-`MLDSA.NMA.nma_keyswap_hop` to bound the `(H0)` real-branch residue. -/
+The predicate is quantitative rather than an exact-equality idealization, because
+`ExpandSeed`/`ExpandS` are deterministic XOFs: the real derivation is a deterministic image of at
+most `2^256` seeds and can never *equal* a full-support uniform over the vastly larger secret
+space. The honest model therefore carries the residual distance as an explicit real `idealGap`
+that enters the security bound additively, and is `0` exactly in the idealized limit. It is
+satisfiable for any concrete `prims` — `tvDist` is always at most `1`, so `idealGap = 1` is a
+trivial witness (`honestSamplingSlack_one`), while the genuine ROM-modeling bound supplies the
+meaningful value. It is consumed only by `MLDSA.NMA.nma_keyswap_hop` to bound the `(H0)`
+real-branch residue. -/
 def honestSamplingSlack (idealGap : ℝ) : Prop :=
   ∀ {γ : Type}
     [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] [IsUniformSpec unifSpec]
@@ -345,6 +346,20 @@ def honestSamplingSlack (idealGap : ℝ) : Prop :=
         let s₁ ← $ᵗ (RqVec p.l)
         let s₂ ← $ᵗ (RqVec p.k)
         f (prims.expandSeed seed).1 s₁ s₂) ≤ idealGap
+
+omit nttOps [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
+  [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)]
+  [SampleableType (CommitHashBytes p)] in
+/-- The slack `idealGap = 1` is always attainable: total variation distance between two
+computations never exceeds `1`, so every `prims` satisfies `honestSamplingSlack p prims 1`.
+
+This certifies that `honestSamplingSlack` is a satisfiable hypothesis, and therefore that the
+statements gated on it are not vacuous. It carries **no quantitative content**: at `idealGap = 1`
+the additive term of `nma_keyswap_hop` / `nma_security` swamps every probability, so a meaningful
+security bound needs a sharp `idealGap` supplied by the ROM modeling of `ExpandSeed`/`ExpandS`. -/
+theorem honestSamplingSlack_one : honestSamplingSlack p prims 1 := by
+  intro _ _ _ _ _
+  exact tvDist_le_one _ _
 
 /-- **The MLWE key-swap hop (Lemma 7, Step 1).** For every NMA forging strategy `main`, the gap
 between the real-`t` and uniform-`t` EUF-NMA games is bounded by the decisional
@@ -369,10 +384,10 @@ support), so `(H0)` is genuinely an inequality with the residual carried by `ide
 This is the first of the three steps of `nma_security`; steps 2 and 3 (the `H₁` reprogramming and
 the SelfTargetMSIS extraction) are handled elsewhere. The bound is stated on `toReal` because the
 NMA advantages are `ℝ≥0∞` while MLWE advantage and `idealGap` are `ℝ`. -/
-theorem nma_keyswap_hop (_h_laws : Primitives.Laws prims nttOps)
+theorem nma_keyswap_hop
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
     (maxAttempts : ℕ)
-    (idealGap : ℝ) (_hGap : 0 ≤ idealGap)
+    (idealGap : ℝ)
     (hSlack : honestSamplingSlack p prims idealGap)
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
@@ -670,7 +685,7 @@ prims M`, and
 
 This is the EUF-NMA half (Lemma 7) of the ML-DSA security proof; the CMA-to-NMA statistical step
 (`euf_cma_security`) composes on top of it. -/
-theorem nma_security (h_laws : Primitives.Laws prims nttOps)
+theorem nma_security
     (idealGap : ℝ) (hGap : 0 ≤ idealGap)
     (hSlack : honestSamplingSlack p prims idealGap)
     (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
@@ -740,7 +755,7 @@ theorem nma_security (h_laws : Primitives.Laws prims nttOps)
   have hbias : pc0.boolDistAdvantage pc1 ≤
       LearningWithErrors.advantage (mldsaMLWE p prims)
         (distinguisherB p prims hr maxAttempts adv.main) + idealGap := by
-    have hk := nma_keyswap_hop p prims h_laws hr maxAttempts idealGap hGap hSlack
+    have hk := nma_keyswap_hop p prims hr maxAttempts idealGap hSlack
       (M := M) adv.main
     rw [ProbComp.boolDistAdvantage, ← hg0, ← hg1]
     exact hk
@@ -773,10 +788,10 @@ end Headline
 
 /-! ## Status
 
-**Re-seed-base done.** `MlweEmbedding` is gone: `mldsaMLWE` is now phrased over the public *seed*
-`ρ` (sampled through `ExpandSeed`), with the matrix defined on demand as `ExpandA(ρ)`;
-`distinguisherB` consumes `(ρ, t)` directly and is total. The whole `nma_security` headline is
-proven and axiom-clean (`[propext, Classical.choice, Quot.sound]`), assembled from:
+**Seed-based MLWE.** `mldsaMLWE` is phrased over the public *seed* `ρ` (sampled through
+`ExpandSeed`), with the matrix defined on demand as `ExpandA(ρ)`; `distinguisherB` consumes
+`(ρ, t)` directly and is total. The whole `nma_security` headline is proven and axiom-clean
+(`[propext, Classical.choice, Quot.sound]`), assembled from:
 
 1. **`(Hadv)`/`(H1)`/`(H0)` MLWE key-swap (`nma_keyswap_hop`).** `(Hadv)` and the uniform branch
    `(H1)` are pure runtime-plumbing rewrites (`advantage_eq_game_boolDistAdvantage`,
@@ -789,9 +804,9 @@ proven and axiom-clean (`[propext, Classical.choice, Quot.sound]`), assembled fr
    match a full-support independent-uniform secret law — so `(H0)` is bounded by the total-variation
    slack hypothesis `honestSamplingSlack idealGap` (`abs_probOutput_toReal_sub_le_tvDist`), carried
    additively as the explicit real `idealGap`. The slack is satisfiable for any concrete `prims`
-   (`tvDist ≤ 1`, so `idealGap = 1` is a trivial witness; the genuine ROM bound gives the meaningful
-   value), so it is a quantitative ROM modeling assumption, not a false equality. Instantiating a
-   sharp `idealGap` on a concrete `prims` is the one remaining modeling decision.
+   (`tvDist ≤ 1`, so `idealGap = 1` is a trivial witness, `honestSamplingSlack_one`; the genuine ROM
+   bound gives the meaningful value), so it is a quantitative ROM modeling assumption.
+   Instantiating a sharp `idealGap` on a concrete `prims` is the one remaining modeling decision.
 
 2. **STMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** Both `Pr[= true]`s reduce, through the
    shared `withStateOracle` semantics, to: sample the uniform-`t` key, run the forger against the
