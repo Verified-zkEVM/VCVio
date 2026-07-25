@@ -613,51 +613,18 @@ theorem tvDist_runtime_real_programmed_le_bad [Finite Range] [Inhabited Range] {
   exact tvDist_simulateQ_randomOracle_withProgramming_le_probEvent_bad
     (spec := (Salt × M →ₒ Range)) policy ob ∅
 
-omit [DecidableEq Range] [SampleableType Salt] in
-/-- **U2 headline (conditional on the bad-event bound).**
-
-The sign-then-hash hop is correct up to the salt-collision birthday bound: if the programming bad
-event of `policy` on the run `ob` is bounded by `collisionBound Salt qSign qHash` (the Part-C
-obligation discharged by regularity + the salt-collision union bound
-`probEvent_salt_collision_le_collisionBound`), then the total-variation distance between the real
-GPV runtime output and the programmed (sign-then-hash) output is at most
-`(collisionBound Salt qSign qHash).toReal`.
-
-This packages the full U2 statement with the bad-event obligation taken as the
-hypothesis `hbad`. The proof chains the up-to-bad core
-`tvDist_runtime_real_programmed_le_bad` with `hbad`. -/
-theorem tvDist_runtime_real_programmed_le_collisionBound [Finite Range] [Inhabited Range]
-    [Nonempty Salt] {α : Type} (qSign qHash : ℕ)
-    (policy : OracleSpec.ProgrammingPolicy (Salt × M →ₒ Range))
-    (ob : OracleComp (Salt × M →ₒ Range) α)
-    (hbad : Pr[ fun z : α × (Salt × M →ₒ Range).QueryCache × Bool => z.2.2 = true |
-        (simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) ob).run (∅, false)]
-        ≤ collisionBound Salt qSign qHash) :
-    SPMF.tvDist
-        ((runtime M Salt).evalDist (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
-        (liftM (StateT.run'
-          (simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) ob) (∅, false))
-          : SPMF α)
-      ≤ (collisionBound Salt qSign qHash).toReal := by
-  refine (tvDist_runtime_real_programmed_le_bad M Salt policy ob).trans ?_
-  refine ENNReal.toReal_mono ?_ hbad
-  refine (ENNReal.div_lt_top ?_ ?_).ne
-  · simp
-  · simp only [ne_eq, mul_eq_zero, OfNat.ofNat_ne_zero, Nat.cast_eq_zero, false_or]
-    exact Fintype.card_ne_zero
-
 /-! ## U2 (re-stated, salt-inclusive cache-hit bad event)
 
-The headline `tvDist_runtime_real_programmed_le_collisionBound` above bounds the sign-then-hash TV
+The up-to-bad core `tvDist_runtime_real_programmed_le_bad` above bounds the sign-then-hash TV
 distance by the `withProgramming` *fire-on-miss* bad event over the random-oracle-only computation
 `ob`. As the *salt-collision coupling and the hash-only granularity* section records, that bad event
 is the wrong shape for GPV: the fire-on-miss flag is set the **first** time the policy fires on an
 uncached point, so for the GPV
 simulator (which programs at every fresh signing point) it fires *deterministically* — its
-probability is near `1`, not `collisionBound`. Concretely, routing the salt-collision through the
-fire-on-miss `hbad` is **unsound**: the genuine salt-collision probability is
-`≈ collisionBound ≪ 1` while the fire-on-miss probability is `≈ 1`, so the inequality
-"fire-on-miss ≤ salt-collision" needed to reuse the headline is *false* for the GPV policy. Moreover
+probability is near `1`, not `collisionBound`. Closing the core against `collisionBound` by way of
+the fire-on-miss flag would therefore need the inequality "fire-on-miss ≤ salt-collision", which is
+*false* for the GPV policy: the genuine salt-collision probability is `≈ collisionBound ≪ 1` while
+the fire-on-miss probability is `≈ 1`. Moreover
 the fresh signing salts — drawn in `unifSpec`, one step *before* each random-oracle query — are
 invisible at `ob`'s granularity, so the `card / |Salt|` averaging is structurally absent from the
 fire-on-miss flag.
@@ -670,7 +637,7 @@ are the recorded random-oracle inputs seen by the `j`-th signing query; the stan
 cache-growth bound `card (c j) ≤ j + qHash` (the `j` prior signing salts plus the up to `qHash`
 adversary hash queries) is supplied as `hcache`.
 
-Crucially, the lemma does **not** route through the headline U2's fire-on-miss `hbad`; it takes the
+Crucially, the lemma does **not** route through the fire-on-miss bad event; it takes the
 genuine *up-to-bad* coupling directly as `hcouple`: the total-variation distance between the real
 and programmed runs is bounded by the salt-collision probability `Pr[saltSeq c qSign = true]`. This
 is the correct identical-until-bad statement for the GPV game with bad event = cache-HIT salt

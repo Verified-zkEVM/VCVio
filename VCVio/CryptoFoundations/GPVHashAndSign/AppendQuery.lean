@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
+import VCVio.CryptoFoundations.GPVHashAndSign.MinEntropy
 import VCVio.CryptoFoundations.GPVHashAndSign.Security
 
 /-! # GPV Hash-and-Sign: The Append-Forgery-Query Compiler
@@ -26,7 +27,10 @@ produced is a deterministic cache hit.
 
 Chaining these through `euf_cma_split_bound` yields the all-adversaries corollary
 `euf_cma_split_bound_of_queryBound`, whose only structural hypothesis on the adversary is the
-query bound: the `ForgesQueriedPoint` hypothesis is discharged by the compiler.
+query bound: the `ForgesQueriedPoint` hypothesis is discharged by the compiler.  Pricing the
+remaining exact-match term by the sampler's guessing probability
+(`programmedPreimageAdvantage_le_trapdoorGuessingProbability`) gives the closed collision-style
+headline `euf_cma_collision_bound_of_queryBound`.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -133,8 +137,8 @@ omit [DecidableEq Range] [SampleableType Range] [Fintype Salt] in
 /-- **A programmed random-oracle read step caches its point.** After running the programmed
 fresh-flag handler on the random-oracle query at `mc`, the resulting cache maps `mc` to a
 `some` value, for every initial state: on a hit the entry is preserved, on a miss the handler
-programs `cacheQuery mc _`.  This generalizes the concrete witness step lemma of
-`Examples.GPVNonVacuity` to arbitrary parameters. -/
+programs `cacheQuery mc _`.  This is the single-step core of the unconditional
+`ForgesQueriedPoint` discharge `forgesQueriedPoint_appendForgeQuery`. -/
 lemma progGameRunImplNoRecFlagFresh_read_caches (domainSample : PK → ProbComp Domain)
     (pk : PK) (mc : Salt × M)
     (s : ((Salt × M →ₒ Range).QueryCache × Finset M) × Bool)
@@ -347,5 +351,46 @@ theorem euf_cma_split_bound_of_queryBound [DecidableEq Domain]
   refine ⟨collisionRed, exactMatchRed, ?_⟩
   rw [← advantage_appendForgeQuery psf hr M Salt adv]
   exact hbound
+
+/-- **Collision-style GPV PFDH bound for every query-bounded adversary, with the exact-match branch
+already priced by the trapdoor sampler's min-entropy.** For *any* adversary obeying the query bound
+`(qSign, qHash)`, the EUF-CMA advantage is at most
+
+  `Adv^collision(B) + (qSign + qHash + 1) · trapdoorGuessingProbability + collisionBound`
+
+at hash budget `qHash + 1`.  Both structural side conditions of `euf_cma_collision_bound` are
+discharged here rather than assumed: the forger-queries-its-forgery-point convention by the
+append-forgery-query compiler (`euf_cma_split_bound_of_queryBound`), and the exact-match parameter
+`εpp` by the generic guessing-probability bound
+`programmedPreimageAdvantage_le_trapdoorGuessingProbability`, which prices the programmed-preimage
+branch at the largest pointwise output mass `psf.trapdoorSample` assigns at an honest key.  What
+remains for a concrete PSF is to bound `trapdoorGuessingProbability` — for a discrete-Gaussian
+trapdoor sampler above the smoothing parameter this is negligible. -/
+theorem euf_cma_collision_bound_of_queryBound [DecidableEq Domain]
+    [Inhabited Range] [Nonempty Salt]
+    (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
+    (hreg : ∃ domainSample : PK → ProbComp Domain, ∀ (pk : PK) (sk : SK),
+      (pk, sk) ∈ support hr.gen →
+      𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+            : ProbComp (Range × Domain))])
+    (qSign qHash : ℕ)
+    (adv : SignatureAlg.unforgeableAdv
+      (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
+    (hNF : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
+      ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
+    (hQ : ∀ pk, signHashQueryBound
+      (S' := Salt × Domain) (α := M × (Salt × Domain))
+      (oa := adv.main pk) (qSign := qSign) (qHash := qHash)) :
+    ∃ collisionRed : CollisionAdversary (PK := PK) (Domain := Domain),
+      adv.advantage (runtime M Salt) ≤
+        collisionFindingAdvantage (psf := psf) (hr := hr) collisionRed +
+          ((qSign + (qHash + 1) : ℕ) : ENNReal) * trapdoorGuessingProbability psf hr +
+          collisionBound Salt qSign (qHash + 1) := by
+  obtain ⟨collisionRed, exactMatchRed, hbound⟩ :=
+    euf_cma_split_bound_of_queryBound psf hr M Salt hcorrect hreg qSign qHash adv hNF hQ
+  refine ⟨collisionRed, hbound.trans ?_⟩
+  gcongr
+  exact programmedPreimageAdvantage_le_trapdoorGuessingProbability psf hr exactMatchRed
 
 end GPVHashAndSign

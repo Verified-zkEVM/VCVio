@@ -24,10 +24,11 @@ and then forges at that same point, so its forgery key is constant and always ca
 `ForgesQueriedPoint`.
 
 * `bijPSF_correct` / `bijPSF_regularity` — the PSF-side conditions.
-* `bijPSF_hForge` — the forger queries its forgery point.
+* `bijPSF_neverFail` — the trapdoor sampler never fails.
+* `bijPSF_hForge` — the forger queries its forgery point, for *every* domain sampler.
 * `adv_signHashQueryBound` — the adversary makes `0` signing and `1` random-oracle queries.
-* `gpv188_hyps_inhabited` — all four side conditions hold for the single instance
-  `(bijPSF, hr, adv)`.
+* `gpv188_hyps_inhabited` — all five side conditions hold for the single instance
+  `(bijPSF, hr, adv)`, in exactly the shape the headline bounds consume them.
 -/
 
 open OracleComp OracleSpec
@@ -61,38 +62,14 @@ noncomputable def adv :
 /-- The domain sampler witnessing regularity (uniform on `Bool`). -/
 noncomputable def domainSample : Unit → ProbComp Bool := fun _ => ($ᵗ Bool)
 
-/-- Helper: after running the fresh-flag handler on the random-oracle query at `((), ())`, the
-resulting cache maps `((), ())` to a `some` value, for every initial state.  On a cache hit the
-value is preserved; on a miss the handler writes `cacheQuery ((), ()) _`, `some` at `((), ())`. -/
-lemma step_caches (pk : Unit)
-    (s : ((Unit × Unit →ₒ Bool).QueryCache × Finset Unit) × Bool)
-    (z : (Bool) × (((Unit × Unit →ₒ Bool).QueryCache × Finset Unit) × Bool))
-    (hz : z ∈ support ((GPVHashAndSign.progGameRunImplNoRecFlagFresh bijPSF Unit Unit
-      domainSample pk (.inl (.inr ((), ())))).run s)) :
-    z.2.1.1 ((), ()) ≠ none := by
-  rw [GPVHashAndSign.progGameRunImplNoRecFlagFresh_run_inl,
-    GPVHashAndSign.progGameRunImplNoRec_run_read] at hz
-  cases h : s.1.1 ((), ()) with
-  | some v =>
-      rw [h] at hz
-      dsimp only at hz
-      simp only [support_map, support_pure, Set.image_singleton] at hz
-      have hz : z = (v, (s.1.1, s.1.2), s.2) := hz
-      subst hz
-      simp only [h, ne_eq, reduceCtorEq, not_false_eq_true]
-  | none =>
-      rw [h] at hz
-      dsimp only at hz
-      simp only [support_map] at hz
-      obtain ⟨_, ⟨sd, _, rfl⟩, rfl⟩ := hz
-      simp only
-      rw [QueryCache.cacheQuery_self]
-      exact Option.some_ne_none _
-
-/-- The forger queries its forgery point: for every run in the support, the cache at the (constant)
-forged key `((), ())` is non-`none`. -/
-theorem bijPSF_hForge :
-    GPVHashAndSign.ForgesQueriedPoint bijPSF hr Unit Unit adv domainSample := by
+/-- The forger queries its forgery point, for every domain sampler: for every run in the support,
+the cache at the (constant) forged key `((), ())` is non-`none`.  The single random-oracle query
+`adv` makes is at exactly that point, and a programmed read step always leaves its point cached
+(`GPVHashAndSign.progGameRunImplNoRecFlagFresh_read_caches`) — on a hit the entry is preserved, on
+a miss the handler programs it.  This is the `∀ ds` shape consumed by `euf_cma_split_bound` and
+`euf_cma_collision_bound`. -/
+theorem bijPSF_hForge (ds : Unit → ProbComp Bool) :
+    GPVHashAndSign.ForgesQueriedPoint bijPSF hr Unit Unit adv ds := by
   unfold GPVHashAndSign.ForgesQueriedPoint
   intro pk z hz
   rw [show adv.main pk = (liftM (OracleSpec.query
@@ -102,7 +79,9 @@ theorem bijPSF_hForge :
   rw [support_bind] at hz
   simp only [Set.mem_iUnion] at hz
   obtain ⟨⟨c, smid⟩, hmid, hrest⟩ := hz
-  have hcache : smid.1.1 ((), ()) ≠ none := step_caches pk _ _ hmid
+  have hcache : smid.1.1 ((), ()) ≠ none :=
+    GPVHashAndSign.progGameRunImplNoRecFlagFresh_read_caches bijPSF Unit Unit ds pk ((), ())
+      _ _ hmid
   rw [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hrest
   subst hrest
   exact hcache
@@ -130,6 +109,15 @@ theorem bijPSF_correct : bijPSF.Correct := by
   subst hx
   exact ⟨rfl, rfl⟩
 
+/-- The witness PSF has a never-failing trapdoor sampler: at every key pair and target it is the
+deterministic `pure`, which has no failure branch. -/
+theorem bijPSF_neverFail :
+    ∀ (pk sk : Unit), (pk, sk) ∈ support hr.gen →
+      ∀ c : Bool, NeverFail (bijPSF.trapdoorSample pk sk c) := by
+  intro pk sk _ c
+  change NeverFail (pure c : ProbComp Bool)
+  infer_instance
+
 /-- The witness PSF satisfies GPV regularity with `domainSample = $ᵗ Bool`: forward-sampling a short
 preimage and hashing it forward is identical to sampling a uniform target and inverting it. -/
 theorem bijPSF_regularity : bijPSF.Regularity := by
@@ -137,17 +125,23 @@ theorem bijPSF_regularity : bijPSF.Regularity := by
   simp only [bijPSF, domainSample, pure_bind]
 
 /-- **Consistency (inhabitance) witness for the GPV #188 headline hypotheses.** For the concrete
-bijective PSF,
-the generable relation `hr`, and the query-then-forge adversary `adv`, all the standard GPV side
-conditions hold simultaneously: the forger queries its forgery point (`ForgesQueriedPoint`), the
-adversary makes `0` signing and `1` random-oracle queries (`signHashQueryBound`), the PSF is correct
-(`Correct`), and the PSF is regular (`Regularity`).  The hypothesis conjunction of the headline
-bounds is therefore inhabitable; this witness carries no quantitative security content. -/
+bijective PSF, the generable relation `hr`, and the query-then-forge adversary `adv`, all the
+standard GPV side conditions hold simultaneously: the forger queries its forgery point for every
+domain sampler (`ForgesQueriedPoint`), the adversary makes `0` signing and `1` random-oracle queries
+(`signHashQueryBound`), the PSF is correct (`Correct`), the trapdoor sampler never fails
+(`NeverFail`), and the PSF is regular (`Regularity`).  Each conjunct is stated in the exact shape
+the headline bounds `GPVHashAndSign.euf_cma_split_bound` and
+`GPVHashAndSign.euf_cma_collision_bound` consume — in particular `ForgesQueriedPoint` universally
+quantified over the domain sampler — so their hypothesis conjunction is inhabitable.  This witness
+carries no quantitative security content. -/
 theorem gpv188_hyps_inhabited :
-    GPVHashAndSign.ForgesQueriedPoint bijPSF hr Unit Unit adv domainSample ∧
+    (∀ ds : Unit → ProbComp Bool,
+      GPVHashAndSign.ForgesQueriedPoint bijPSF hr Unit Unit adv ds) ∧
     (∀ pk : Unit, GPVHashAndSign.signHashQueryBound Unit Unit (adv.main pk) 0 1) ∧
     bijPSF.Correct ∧
+    (∀ (pk sk : Unit), (pk, sk) ∈ support hr.gen →
+      ∀ c : Bool, NeverFail (bijPSF.trapdoorSample pk sk c)) ∧
     bijPSF.Regularity :=
-  ⟨bijPSF_hForge, adv_signHashQueryBound, bijPSF_correct, bijPSF_regularity⟩
+  ⟨bijPSF_hForge, adv_signHashQueryBound, bijPSF_correct, bijPSF_neverFail, bijPSF_regularity⟩
 
 end Examples.GPVNonVacuity

@@ -375,10 +375,11 @@ against the recorded inputs `c j` of size `≤ j + qHash`, collides with probabi
 `collisionBound Salt qSign qHash`. This is the salt-AVERAGED combined "draw salt, then check" step
 that a per-query `withProgramming` framework cannot express.
 
-The U2 hypothesis `hbad` of `tvDist_runtime_real_programmed_le_collisionBound` cannot be supplied
-from this telescope at that statement's granularity, for two independent structural reasons:
+The `withProgramming` fire-on-miss bad event bounded by the U2 core
+`tvDist_runtime_real_programmed_le_bad` cannot be supplied from this telescope at that statement's
+granularity, for two independent structural reasons:
 
-1. **Wrong event.** The `hbad` left-hand side is the `withProgramming` *bad flag*, which fires on a
+1. **Wrong event.** That bad event is the `withProgramming` *bad flag*, which fires on a
    cache-*miss* whose query input lies in the programming policy's support
    (`cache t = none ∧ policy t = some v`; see `QueryImpl.withProgramming`). For the GPV simulator
    policy (which programs at every fresh signing point) this fires *deterministically* once an
@@ -387,7 +388,7 @@ from this telescope at that statement's granularity, for two independent structu
    already-recorded entry (a cache *hit* at a programmed point), which the monotone fire-on-miss
    flag does not record.
 
-2. **Invisible salt draws.** `hbad` is phrased over `ob : OracleComp (Salt × M →ₒ Range)`, a
+2. **Invisible salt draws.** That bad event is phrased over `ob : OracleComp (Salt × M →ₒ Range)`, a
    random-oracle-only computation. The GPV signing salts are drawn in `unifSpec`/`ProbComp`, i.e.
    *outside* the `(Salt × M →ₒ Range)` spec, one step before each random-oracle query. By the time a
    query input `(r, m)` reaches the `withProgramming` handler the salt `r` is already a fixed value,
@@ -399,8 +400,10 @@ states U2 over the salt-inclusive signing run with the bad event instrumented as
 collision `saltSeq c qSign`, and discharges the loss-free `tvDist ≤ collisionBound.toReal`
 conclusion *given* the up-to-bad coupling
 `hcouple : tvDist(real, programmed) ≤ Pr[saltSeq c qSign = true]`. It does **not** route through the
-fire-on-miss `hbad` (which, per reason 1 above, would require the false inequality
-"fire-on-miss ≤ salt-collision").
+fire-on-miss bad event (which, per reason 1 above, would require the false inequality
+"fire-on-miss ≤ salt-collision").  The GPV-instantiated Step-1 hop actually consumed by the headline
+bounds is `gpv_tvDist_real_programmed_le_collisionBound`, which is unconditional over the pinned
+game runs; the salt-inclusive re-statement is its hash-only surface analogue.
 
 The coupling `hcouple` is the identical-until-bad coupling between the real GPV run (lazy random
 oracle, fresh uniform answer at each `(r, m)`) and the programmed run (answer `psf.eval pk s`),
