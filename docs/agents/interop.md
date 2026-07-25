@@ -33,7 +33,7 @@ The contract is therefore enforced at three levels:
    so it is fast and never blocks on Mathlib cache or build flakiness.
 3. **Reverse direction**: `Interop/**` may import from `VCVio/**`,
    `ToMathlib/**`, `Hax.…`, and `Aeneas.…`, but **not** from
-   `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `FFI/**`,
+   `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `Extern/**`,
    `VCVioWidgets/**`, or `VCVioTest/**`.
    Those libraries are themselves clients of VCVio, so Interop depending on
    them would create circular layering and pull user-facing libraries into the

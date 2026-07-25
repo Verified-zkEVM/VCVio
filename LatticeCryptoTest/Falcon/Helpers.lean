@@ -3,16 +3,16 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Concrete.Instance
-import LatticeCrypto.Falcon.Concrete.FFI
+import Extern.Falcon.Instance
+import Extern.Falcon.FFI
 import LatticeCrypto.Falcon.Concrete.FPR
-import LatticeCrypto.Falcon.Concrete.SamplerZ
+import Extern.Falcon.SamplerZ
 import LatticeCrypto.Falcon.Concrete.FloatLike
-import LatticeCrypto.Falcon.Concrete.FFT
+import Extern.Falcon.FFT
 import LatticeCrypto.Falcon.Concrete.BigInt31
 import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
 import LatticeCrypto.Falcon.Concrete.FXR
-import LatticeCrypto.Falcon.Concrete.Sign
+import Extern.Falcon.Sign
 
 /-!
 # Falcon Test Helpers
