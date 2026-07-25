@@ -16,5 +16,5 @@ declare_aesop_rule_sets [UnfoldEvalDist]
 /-- Simp set for game-hopping proofs: evalDist, probOutput, simulateQ, wp, relTriple rules. -/
 register_simp_attr game_rule
 
-/-- Simp set for opening common query-handler definitions and run-shapes. -/
+/-- VCVio-specific extension of PolyFun's `handler_nf` normalization set. -/
 register_simp_attr handler_simp
