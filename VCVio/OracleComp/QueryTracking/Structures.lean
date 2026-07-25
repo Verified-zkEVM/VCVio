@@ -5,6 +5,7 @@ Authors: Devon Tuma, Quang Dao
 -/
 import Mathlib.Data.Real.ENatENNReal
 import Mathlib.Data.Set.Card
+import PolyFun.PFunctor.Trace
 import VCVio.OracleComp.SimSemantics.SimulateQ
 
 /-!
@@ -15,6 +16,10 @@ simulation oracles and implementation transformers defined in the same directory
 -/
 
 open ENNReal OracleSpec OracleComp
+
+-- Query logs are definitionally PolyFun traces for an oracle specification.
+set_option allowUnsafeReducibility true in
+attribute [local reducible] OracleSpec.toPFunctor PFunctor.Idx
 
 universe u v w
 
@@ -358,6 +363,129 @@ lemma countQ_append (log log' : QueryLog spec) (p : spec.Domain → Prop) [Decid
   simp [countQ, List.length_append]
 
 end countQ
+
+/-! ### Lookup by oracle occurrence -/
+
+/-- The `n`-th answer in the log for queries to oracle `t`, if it exists. -/
+def getQueryValue? [spec.DecidableEq] (log : QueryLog spec) (t : ι) (n : Nat) :
+    Option (spec.Range t) :=
+  match (log.getQ (· = t))[n]? with
+  | none => none
+  | some ⟨t', u⟩ => if h : t' = t then some (h ▸ u) else none
+
+/-- Decompose `getQ` across a `logQuery` step. -/
+lemma getQ_logQuery (log : QueryLog spec) (t : ι) (u : spec.Range t)
+    (p : ι → Prop) [DecidablePred p] :
+    (log.logQuery t u).getQ p = log.getQ p ++ (if p t then [⟨t, u⟩] else []) := by
+  simp [QueryLog.logQuery, QueryLog.singleton]
+
+/-- If `getQueryValue? log t n = some u`, then the `n`-th `t`-filtered entry of
+`log` is `⟨t, u⟩`. -/
+lemma getQ_getElem?_eq_of_getQueryValue?_eq_some [spec.DecidableEq]
+    (log : QueryLog spec) (t : ι) (n : Nat) (u : spec.Range t)
+    (h : getQueryValue? log t n = some u) :
+    (log.getQ (· = t))[n]? = some ⟨t, u⟩ := by
+  rcases hopt : (log.getQ (· = t))[n]? with _ | ⟨t', u'⟩
+  · simp [getQueryValue?, hopt] at h
+  · obtain rfl : t' = t := by by_contra ht; simp [getQueryValue?, hopt, ht] at h
+    simpa [getQueryValue?, hopt] using h
+
+/-- Converse: if the `n`-th `t`-filtered entry is `⟨t, u⟩`, then
+`getQueryValue? log t n = some u`. -/
+lemma getQueryValue?_eq_some_of_getQ_getElem? [spec.DecidableEq]
+    (log : QueryLog spec) (t : ι) (n : Nat) (u : spec.Range t)
+    (h : (log.getQ (· = t))[n]? = some ⟨t, u⟩) :
+    getQueryValue? log t n = some u := by simp [getQueryValue?, h]
+
+/-- Every entry of `log.getQ (· = t)` has its first component equal to `t`. -/
+lemma getQ_eq_mem [spec.DecidableEq] (log : QueryLog spec) (t : ι)
+    {entry : (t' : ι) × spec.Range t'} (h : entry ∈ log.getQ (· = t)) :
+    entry.1 = t := by
+  induction log <;> grind [QueryLog.getQ_cons, QueryLog.getQ_nil]
+
+/-- If the `t`-filtered log has at least `n + 1` entries, then the indexed
+lookup succeeds. -/
+lemma getQueryValue?_isSome_of_lt [spec.DecidableEq]
+    (log : QueryLog spec) (t : ι) (n : Nat)
+    (h : n < (log.getQ (· = t)).length) :
+    (getQueryValue? log t n).isSome := by
+  simp [getQueryValue?, List.getElem?_eq_getElem h,
+    getQ_eq_mem log t (List.getElem_mem h)]
+
+/-- Prepending an entry whose oracle index does not match `t` leaves the
+`t`-indexed view of the log unchanged. -/
+lemma getQueryValue?_cons_of_ne [spec.DecidableEq]
+    (entry : (t' : ι) × spec.Range t') (log : QueryLog spec) (t : ι) (n : Nat)
+    (h : entry.1 ≠ t) :
+    getQueryValue? (entry :: log) t n = getQueryValue? log t n := by
+  simp [getQueryValue?, QueryLog.getQ_cons, h]
+
+/-- The first matching entry is the zeroth indexed query value. -/
+@[simp] lemma getQueryValue?_cons_self_zero [spec.DecidableEq]
+    (t : ι) (u : spec.Range t) (log : QueryLog spec) :
+    getQueryValue? (⟨t, u⟩ :: log) t 0 = some u :=
+  getQueryValue?_eq_some_of_getQ_getElem? _ _ _ _ (by simp [QueryLog.getQ_cons])
+
+/-- Prepending a matching entry shifts later indexed lookups by one. -/
+@[simp] lemma getQueryValue?_cons_self_succ [spec.DecidableEq]
+    (t : ι) (u : spec.Range t) (log : QueryLog spec) (n : Nat) :
+    getQueryValue? (⟨t, u⟩ :: log) t (n + 1) = getQueryValue? log t n := by
+  simp [getQueryValue?, QueryLog.getQ_cons]
+
+/-- The entry immediately following a prefix is found at the prefix's count
+of matching oracle queries. -/
+lemma getQueryValue?_append_self_at_countQ [spec.DecidableEq]
+    (before after : QueryLog spec) (t : ι) (u : spec.Range t) :
+    getQueryValue? (before ++ ⟨t, u⟩ :: after) t (before.countQ (· = t)) = some u :=
+  getQueryValue?_eq_some_of_getQ_getElem? _ _ _ _ (by simp [QueryLog.countQ])
+
+/-- Query-log counting is the `OracleSpec` specialization of PolyFun's
+generic occurrence count on erased polynomial traces. -/
+lemma countQ_eq_occurrences [spec.DecidableEq] (log : QueryLog spec) (t : ι) :
+    log.countQ (· = t) = PFunctor.TraceList.occurrences (P := spec.toPFunctor) t
+      (show PFunctor.TraceList spec.toPFunctor from log) := by
+  induction log with
+  | nil => rfl
+  | cons entry log ih =>
+      rcases entry with ⟨t', u⟩
+      by_cases h : t' = t
+      · subst t'
+        simp only [QueryLog.countQ, QueryLog.getQ_cons, if_pos trivial,
+          List.length_cons]
+        rw [PFunctor.TraceList.occurrences,
+          List.countP_cons_of_pos (by simp)]
+        rw [PFunctor.TraceList.occurrences] at ih
+        simpa [QueryLog.countQ] using ih
+      · simp only [QueryLog.countQ, QueryLog.getQ_cons, if_neg h]
+        rw [PFunctor.TraceList.occurrences,
+          List.countP_cons_of_neg (by simp [h])]
+        rw [PFunctor.TraceList.occurrences] at ih
+        simpa [QueryLog.countQ] using ih
+
+/-- Query-log lookup is the `OracleSpec` specialization of dependent lookup
+on PolyFun traces. -/
+lemma getQueryValue?_eq_getAt? [spec.DecidableEq]
+    (log : QueryLog spec) (t : ι) (n : Nat) :
+    getQueryValue? log t n =
+      PFunctor.TraceList.getAt?
+        (show PFunctor.TraceList spec.toPFunctor from log) t n := by
+  induction log generalizing n with
+  | nil => rfl
+  | cons entry log ih =>
+      rcases entry with ⟨t', u⟩
+      by_cases h : t' = t
+      · subst t'
+        cases n with
+        | zero =>
+            rw [getQueryValue?_cons_self_zero,
+              PFunctor.TraceList.getAt?_cons_self_zero]
+        | succ n =>
+            rw [getQueryValue?_cons_self_succ,
+              PFunctor.TraceList.getAt?_cons_self_succ]
+            exact ih n
+      · rw [getQueryValue?_cons_of_ne ⟨t', u⟩ log t n (by simpa using h),
+          PFunctor.TraceList.getAt?_cons_of_ne h]
+        exact ih n
 
 /-- Check if an element was ever queried in a log of queries.
 Relies on decidable equality of the domain types of oracles. -/

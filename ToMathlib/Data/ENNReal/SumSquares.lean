@@ -79,6 +79,38 @@ lemma sq_sum_div_card_le_sum_sq {ι' : Type*}
       _ = ∑ i ∈ s, f i ^ 2 := by
           rw [← mul_assoc, ENNReal.inv_mul_cancel hN_ne_zero hN_ne_top, one_mul]
 
+/-- The finite aggregation step common to forking lemmas: divided
+Cauchy--Schwarz controls the square term, while the collision penalty
+distributes over the selector fibers. -/
+lemma mul_tsub_inv_le_sum_sq_sub_div {ι' : Type*}
+    (s : Finset ι') (f : ι' → ℝ≥0∞) (h : ℝ≥0∞)
+    (hsum : (∑ i ∈ s, f i) ≠ ⊤) :
+    (∑ i ∈ s, f i) *
+        ((∑ i ∈ s, f i) / (s.card : ℝ≥0∞) - h⁻¹) ≤
+      ∑ i ∈ s, (f i ^ 2 - f i / h) := by
+  calc
+    (∑ i ∈ s, f i) *
+          ((∑ i ∈ s, f i) / (s.card : ℝ≥0∞) - h⁻¹)
+        = (∑ i ∈ s, f i) ^ 2 / (s.card : ℝ≥0∞) -
+            (∑ i ∈ s, f i) / h := by
+          rw [ENNReal.mul_sub (fun _ _ ↦ hsum)]
+          simp only [sq, div_eq_mul_inv]
+          ring_nf
+    _ ≤ (∑ i ∈ s, f i ^ 2) - (∑ i ∈ s, f i) / h := by
+          gcongr
+          exact sq_sum_div_card_le_sum_sq s f
+    _ = (∑ i ∈ s, f i ^ 2) - ∑ i ∈ s, f i / h := by
+          simp_rw [div_eq_mul_inv]
+          rw [Finset.sum_mul]
+    _ ≤ ∑ i ∈ s, (f i ^ 2 - f i / h) := by
+          rw [tsub_le_iff_right]
+          calc
+            ∑ i ∈ s, f i ^ 2 ≤
+                ∑ i ∈ s, ((f i ^ 2 - f i / h) + f i / h) :=
+              Finset.sum_le_sum fun i hi ↦ le_tsub_add
+            _ = (∑ i ∈ s, (f i ^ 2 - f i / h)) + ∑ i ∈ s, f i / h := by
+              rw [Finset.sum_add_distrib]
+
 private lemma tsum_mul_tsum_eq {α : Type*} (g h : α → ℝ≥0∞) :
     (∑' a, g a) * (∑' b, h b) = ∑' a, ∑' b, g a * h b := by
   rw [← ENNReal.tsum_mul_right]; congr 1; ext a
