@@ -1,4 +1,5 @@
 import ToMathlib.Analysis.MeanInequalities
+import ToMathlib.Analysis.SumIntegralComparisons
 import ToMathlib.Combinatorics.FinPairs
 import ToMathlib.Control.AlternativeMonad
 import ToMathlib.Control.Lawful.MonadControl
