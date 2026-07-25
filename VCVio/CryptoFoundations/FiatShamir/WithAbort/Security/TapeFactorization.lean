@@ -54,8 +54,7 @@ single value-free cross-term atom. The reduction chain:
   (`deferredDrawReadImpl_run_readlist_length_le`), so the read-recording run's readlist length is at
   most `s.readlist.length + qH`;
 * the expected drawn-list length of the read-recording run is at most
-  `s.drawnlist.length + qSrem · (1/(1-p))` (`deferredDrawRead_run_expected_drawnlist_length_le`, the
-  read-recording counterpart of `deferredDraw_run_expected_length_le`);
+  `s.drawnlist.length + qSrem · (1/(1-p))` (`deferredDrawRead_run_expected_drawnlist_length_le`);
 * the genuine content is then the **value-free per-pair atom** `readRecord_expected_pairs_le`:
   the expected pair count is at most `ε` times the expected `readlist.length · drawnlist.length`,
   because each recorded drawn commit is a fresh raw `Prod.fst <$> ids.commit` draw (mass `≤ ε`) and
@@ -110,6 +109,46 @@ private lemma sum_map_count_comm {α : Type} [DecidableEq α] (l d : List α) :
         · subst h; simp [add_comm]
         · simp [h, Ne.symm h]
       rw [key, count_eq_sum_map_ite, add_comm]
+
+omit [SampleableType Stmt] in
+/-- **Per-signing-query attempt-count fold.** The per-signing-query attempt mass
+`∑_{a<maxAttempts} ofReal p^a` — one term per attempt, each attempt `a` being reached with
+probability `≤ pᵃ`, *including* the accepting one — is at most `ofReal (1/(1-p))`. This is the
+geometric sum that turns a per-signing-query charge carrying the factor `∑_{a<maxAttempts} pᵃ`
+into the `1/(1-p)` factor of the target bound `qS·(qH+1)·ε/(1-p)`. -/
+lemma geomAttemptSum_le {p_abort : ℝ} (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) :
+    (∑ a ∈ Finset.range maxAttempts, ENNReal.ofReal p_abort ^ a)
+      ≤ ENNReal.ofReal (1 / (1 - p_abort)) := by
+  have h1p : (0 : ℝ) < 1 - p_abort := by linarith
+  set S : ℝ := ∑ a ∈ Finset.range maxAttempts, p_abort ^ a with hSdef
+  have hg_eq : (∑ a ∈ Finset.range maxAttempts, ENNReal.ofReal p_abort ^ a)
+      = ENNReal.ofReal S := by
+    rw [hSdef, ENNReal.ofReal_sum_of_nonneg (fun a _ => pow_nonneg hp₀ a)]
+    exact Finset.sum_congr rfl fun a _ => by rw [← ENNReal.ofReal_pow hp₀]
+  rw [hg_eq]
+  refine ENNReal.ofReal_le_ofReal ?_
+  rw [hSdef, le_div_iff₀ h1p]
+  have hmul := geom_sum_mul p_abort maxAttempts
+  nlinarith [pow_nonneg hp₀ maxAttempts]
+
+omit [SampleableType Stmt] in
+/-- **General geometric fold.** For any number of terms `n`, the geometric sum
+`∑_{a<n} ofReal p^a` is at most `ofReal (1/(1-p))`. The general-`n` companion of
+`geomAttemptSum_le` (which fixes `n = maxAttempts`); it is used at `n = maxAttempts + 1`, where the
+attempt-count charge is `∑_{a≤maxAttempts} p^a = (reject sum) + 1`. -/
+lemma geomSum_le {p_abort : ℝ} (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) (n : ℕ) :
+    (∑ a ∈ Finset.range n, ENNReal.ofReal p_abort ^ a)
+      ≤ ENNReal.ofReal (1 / (1 - p_abort)) := by
+  have h1p : (0 : ℝ) < 1 - p_abort := by linarith
+  have hg_eq : (∑ a ∈ Finset.range n, ENNReal.ofReal p_abort ^ a)
+      = ENNReal.ofReal (∑ a ∈ Finset.range n, p_abort ^ a) := by
+    rw [ENNReal.ofReal_sum_of_nonneg (fun a _ => pow_nonneg hp₀ a)]
+    exact Finset.sum_congr rfl fun a _ => by rw [← ENNReal.ofReal_pow hp₀]
+  rw [hg_eq]
+  refine ENNReal.ofReal_le_ofReal ?_
+  rw [le_div_iff₀ h1p]
+  have hmul := geom_sum_mul p_abort n
+  nlinarith [pow_nonneg hp₀ n]
 
 omit [SampleableType Stmt] in
 /-- **Deterministic readlist-length bound.** Every reachable final state of the read-recording run
@@ -175,8 +214,8 @@ omit [SampleableType Stmt] in
 /-- **Per-step expected drawn-list length growth of the read-recording handler.** One step of
 `deferredDrawReadImpl` grows the expected drawn-list length by at most `1/(1-p)` on a signing query
 and by `0` on uniform / random-oracle-read queries (which leave the drawn list `s.1.1.2`
-untouched). Identical to `deferredDrawImpl_step_expected_length_le` on the underlying deferred
-state; the extra read-commit list is irrelevant to the drawn-list length. -/
+untouched). The recorded read-commit list is irrelevant to the drawn-list length, so the charge is
+carried entirely by the underlying deferred state. -/
 lemma deferredDrawReadImpl_step_expected_drawnlist_length_le (pk : Stmt) (sk : Wit)
     {p_abort : ℝ} (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (hAbort : Pr[= none | ids.honestExecution pk sk] ≤ ENNReal.ofReal p_abort)
@@ -247,10 +286,9 @@ omit [SampleableType Stmt] in
 /-- **Run-level expected drawn-list length of the read-recording run.** By induction on `oa`, the
 expected final drawn-list length of the read-recording run from a start state `s` is at most
 `s.drawnlist.length + qSrem · (1/(1-p))`, where `qSrem` bounds the number of signing queries. The
-read-recording counterpart of `deferredDraw_run_expected_length_le`: the drawn list evolves
-identically (the recorded read-commit list never affects it), so the per-step charge
-`deferredDrawReadImpl_step_expected_drawnlist_length_le` telescopes against the signing-query budget
-exactly as before. -/
+The recorded read-commit list never affects the drawn list, so the per-step charge
+`deferredDrawReadImpl_step_expected_drawnlist_length_le` telescopes against the signing-query
+budget. -/
 theorem deferredDrawRead_run_expected_drawnlist_length_le {γ : Type} (pk : Stmt) (sk : Wit)
     {p_abort : ℝ} (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (hAbort : Pr[= none | ids.honestExecution pk sk] ≤ ENNReal.ofReal p_abort)
@@ -340,9 +378,8 @@ omit [SampleableType Stmt] in
 /-- **Per-step expected attempt-count growth of the read-recording handler.** One step of
 `deferredDrawReadImpl` grows the expected combined size `drawnlist.length + signedlist.length` by at
 most `1/(1-p)` on a signing query and by `0` on a uniform or random-oracle-read query (which leave
-both lists untouched). The read-recording counterpart of
-`deferredDrawImpl_step_expected_attemptCount_le`; the recorded read-commit list never affects the
-drawn or signed lists, so the charge is identical. -/
+both lists untouched). The recorded read-commit list never affects the drawn or signed lists, so
+the charge is carried entirely by the underlying deferred state. -/
 lemma deferredDrawReadImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
     {p_abort : ℝ} (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (hAbort : Pr[= none | ids.honestExecution pk sk] ≤ ENNReal.ofReal p_abort)
@@ -418,8 +455,7 @@ omit [SampleableType Stmt] in
 /-- **Run-level expected attempt count of the read-recording run.** By induction on `oa`, the
 expected combined size `drawnlist.length + signedlist.length` of the read-recording run from a start
 state `s` is at most `(s.drawnlist.length + s.signedlist.length) + qSrem · (1/(1-p))`, where `qSrem`
-bounds the number of signing queries. The read-recording counterpart of
-`deferredDraw_run_expected_attemptCount_le`. Subtracting the start signed-list length `l.length`
+bounds the number of signing queries. Subtracting the start signed-list length `l.length`
 gives the attempt-count mean `≤ qSrem/(1-p)` used by the sound `#attempts`-form coincidence
 bound. -/
 theorem deferredDrawRead_run_expected_attemptCount_le {γ : Type} (pk : Stmt) (sk : Wit)
@@ -609,8 +645,8 @@ omit [SampleableType Stmt] in
 /-- **Read-recording attempt-count mean.** The constructed attempt count
 `(drawnlist.length) + (signedlist.length - l.length)` (= #rejects + #signing-queries, the count that
 soundly dominates the consumed-attempt positions) of the read-recording run from the empty-draw
-start `((((re, l), []), false), [])` has mean at most `qSrem/(1-p)`. Mirrors
-`deferredDraw_attemptKn_mean_le`: recover the total combined size by adding back `l.length`, valid
+start `((((re, l), []), false), [])` has mean at most `qSrem/(1-p)`: recover the total combined
+size by adding back `l.length`, valid
 because `l` is a signed-list prefix (`deferredDrawRead_run_signed_prefix`); bound by the run-level
 attempt-count fold `deferredDrawRead_run_expected_attemptCount_le`, then cancel `l.length` (run mass
 `1`, `deferredDrawRead_run_neverFail`). -/
@@ -718,17 +754,18 @@ interleaved signing query's draw block commutes to the very front, so the whole 
   `drawList (ids.commit pk sk) L >>= fun tape => (simulateQ tapeDrawReadImpl oa).run (s, tape)`,
 
 a single independent front draw block of `L := maxAttempts · #signing-queries` commitments followed
-by a tape-*consuming* run. This is the genuine framework content the campaign reduced to: once the
-draws are front-loaded, the recorded drawn list is a function of the tape and the value-free read
-list is a function of the non-tape randomness, so the read list is independent of the tape.
+by a tape-*consuming* run. Once the draws are front-loaded, the recorded drawn list is a function
+of the tape and the value-free read list is a function of the non-tape randomness, so the read list
+is independent of the tape.
 
 The tape-consuming handler `tapeDrawReadImpl` carries a draw tape in its state; a signing query
 consumes the first `maxAttempts` tape entries (running `tapeSignBody` on them and dropping them)
 instead of drawing inline, while reads/uniform behave exactly as `deferredDrawReadImpl`. The
 fold equality is proved by `inductionOn oa`: at a read/uniform step the answer is independent of the
-tape so the front draw block commutes trivially; at a signing step the banked per-body factorization
-splices in the body's `drawList maxAttempts` block, which then commutes to the front of the
-remaining tape via the i.i.d. resampling commute `evalDist_bind_comm_probComp`. -/
+tape so the front draw block commutes trivially; at a signing step the per-body factorization
+`evalDist_ghostSignDrawBody_eq_drawList_tapeSignBody` splices in the body's `drawList maxAttempts`
+block, which then commutes to the front of the remaining tape via the i.i.d. resampling commute
+`evalDist_bind_comm_probComp`. -/
 
 /-- The tape-consuming read-recording handler. Its state extends `DeferredReadState` with a *draw
 tape* `List (Commit × PrvState)`: a signing query consumes the first `maxAttempts` entries of the
@@ -946,7 +983,7 @@ query consumes its `maxAttempts`-prefix and the unused suffix is discarded on ea
 The proof inducts on `oa`. At a **read/uniform** step the query answer is independent of the tape,
 so the front draw block commutes past it (the i.i.d. resampling commute
 `evalDist_bind_comm_probComp`),
-matching the inductive hypothesis for the continuation. At a **signing** step the banked per-body
+matching the inductive hypothesis for the continuation. At a **signing** step the per-body
 factorization `evalDist_ghostSignDrawBody_eq_drawList_tapeSignBody` recasts the body's inline draws
 as a `drawList maxAttempts` block; that block is split off the front via `drawList_commit_add` (the
 remaining `maxAttempts · (qSrem-1)` block feeding the continuation by the inductive hypothesis) and
@@ -1715,7 +1752,7 @@ theorem ghostSignDrawBody_continuation_charge {γ : Type}
 
 
 omit [SampleableType Stmt] in
-/-- **The sign-step value-free charge (the isolated remaining core of the #228 ghost-read bound).**
+/-- **The sign-step value-free charge.**
 This is the single-query step of the inline-run induction
 `readRecord_expected_pairs_nontape_general` at a *signing* query `Sum.inr msg`. The signing body
 `ghostSignDrawBody` draws `maxAttempts` fresh commitments inline, records the *rejected* ones into
@@ -1734,7 +1771,7 @@ random oracle at exactly that value, so the per-output charge is not `≤ ε`. T
 averaging each rejected commitment over the fresh `ids.commit pk sk` draw
 (`tsum_probOutput_commit_mul_count_le`).
 
-The statement is **TRUE** (verified): the recorded read list is *value-free* — the continuation's
+Why the bound holds: the recorded read list is *value-free* — the continuation's
 reads answer via `roStep` on the real layer and never the drawn (rejected) values, and the rejected
 commitments are write-only (never cached; only accepted commitments are, via `cacheQuery`). The
 value-substitution lemma `deferredDrawRead_run_count_dl_invariant` makes this precise: the
@@ -2157,7 +2194,7 @@ theorem readRecord_expected_pairs_nontape_le {γ : Type}
   exact hgen
 
 omit [SampleableType Stmt] in
-/-- **The per-position charge in the tape-factored representation (the isolated remaining core).**
+/-- **The per-position charge in the tape-factored representation.**
 After the fold-level tape factorization `evalDist_deferredDrawRead_eq_drawList_tapeDrawRead`, the
 read-recording run is `drawList (ids.commit pk sk) (maxAttempts·qSrem) >>= fun tape => …`, with the
 draw tape sampled *upfront* as one independent block. In this representation the recorded drawn list
@@ -2172,18 +2209,17 @@ draw of mass `≤ ε` (`hGuess`), independent of the value-free `rc` and of whet
 (reach depends only on *earlier* tape entries). Summing gives `≤ ε · readlist.length · #consumed`.
 The RHS therefore uses `#attempts := drawnlist.length + (signedlist.length − l.length)`
 (= #rejects + #signing-queries `≥` #consumed), whose mean is the same `qSrem/(1-p)`
-(`deferredDrawRead_attemptKn_mean_le`). The earlier `drawnlist.length`-form RHS is provably FALSE
-(reject-conditioning / accept-undercounting: charging all consumed positions exceeds the
-rejected-only count by the accepted positions, `ε · E[#accepts]`); this `#attempts` form is the
-sound restatement and keeps the public `euf_cma` bound byte-identical (the consumer
-`readRecord_expected_coincidences_le` uses `E[#attempts] ≤ qSrem/(1-p)`).
+(`deferredDrawRead_attemptKn_mean_le`). A `drawnlist.length`-form right-hand side would *not* be
+sound: charging every consumed position exceeds the rejected-only count by the accepted positions,
+`ε · E[#accepts]`. The `#attempts` form avoids that accept-undercounting while leaving the public
+`euf_cma` bound unchanged, since the consumer `readRecord_expected_coincidences_le` only uses
+`E[#attempts] ≤ qSrem/(1-p)`.
 
-This is strictly better-isolated than the pre-transport atom: the tape is an explicit front variable
-(no longer hidden inside the opaque `simulateQ (oa)` fold), so the tape⊥read-list independence is a
-property of an explicit `bind` rather than the genuine multi-week joint coupling the fold-level
-factorization (now banked) resolved.
+In this representation the tape is an explicit front variable rather than randomness hidden inside
+the opaque `simulateQ (oa)` fold, so the tape ⊥ read-list independence is a property of an explicit
+`bind`.
 
-**The sole remaining structural crux (sharpened: it is FUNCTIONAL, not distributional).** The
+**The structural crux is FUNCTIONAL, not distributional.** The
 per-position charge reduces to one independence over `tapeDrawReadImpl`: the recorded read list is
 independent of a *rejected* tape position's `Commit` value. The sharp form is a *support-level
 value-substitution* fact, not a distributional conditional independence: the accept/reject decision
@@ -2194,11 +2230,14 @@ any other `w'` leaves the output, the real cache, and (therefore, through the va
 read channel) the entire recorded read list unchanged — only the recorded drawn list changes (`w'`
 instead of `w`). The accept branch returns `(some (w, z), [])` (so `w` enters the output/signature
 there — the reason the reject indicator must be kept to exclude accepted positions); the reject
-branch records `w` write-only into the drawn list. So the crux is a property of the explicit-tape
-run's *support / dependence structure*, provable by a value-substitution argument rather than a
-joint PMF×PMF coupling. Formalizing it still requires an inductive lemma over the `simulateQ (oa)`
-fold carrying the invariant "the recorded read list does not depend on the `Commit` part of any
-already-consumed-and-rejected tape position". -/
+branch records `w` write-only into the drawn list. The crux is therefore a property of the run's
+*support / dependence structure*, established by value substitution rather than by a joint PMF×PMF
+coupling.
+
+**Proof.** The two sides are transported back to the non-tape `deferredDrawReadImpl` run by the
+fold equality `evalDist_deferredDrawRead_eq_drawList_tapeDrawRead` (every tape probability equals
+the corresponding non-tape run probability), where the recorded draws are inline-fresh at each sign
+step, and the charge is discharged there by `readRecord_expected_pairs_nontape_le`. -/
 theorem readRecord_expected_pairs_tape_le {γ : Type}
     (qH : ℕ) (ε p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) (hε : 0 ≤ ε)
     (pk : Stmt) (sk : Wit)
@@ -2224,29 +2263,14 @@ theorem readRecord_expected_pairs_tape_le {γ : Type}
                   (((((re, l), []), false), []), tape)] *
             ((z.2.1.1.2.length + (z.2.1.1.1.2.length - l.length) : ℕ) :
               ℝ≥0∞) := by
-  -- The remaining content is the per-position value-free charge over the explicit front tape. Two
-  -- equivalent routes, both reducing to the SAME crux structural lemma (see the docstring):
-  -- * drop-reject per-position: `Σ_{rc∈readlist} drawnlist.count rc =
-  --   Σ_k 1[reached k]·1[rejects k]·readlist.count tape[k].1`; expand `tape[k]` by its i.i.d. `w`
-  --   (`Pr[tape[k]=w] = commit w`); factor `reached-k ⊥ tape[k]` (reach depends only on `tape[<k]`)
-  --   and `readlist ⊥ tape[k].1` GIVEN `k` rejects (THE CRUX — a rejected position's value is
-  --   write-only, never enters a signature/read target); drop `1[w rejects] ≤ 1` AFTER factoring on
-  --   the i.i.d. value `w`; then `Σ_w commit(w)·readlist.count w = Σ_{rc∈readlist} commit(rc) ≤
-  --   |readlist|·ε`; finally `Σ_k E[1[reached k]·|readlist|·ε] = ε·E[|readlist|·#consumed] ≤
-  --   ε·E[|readlist|·#attempts]`.
-  -- * resampling equality: `(readlist, drawnlist) =d (readlist, fresh i.i.d. draws ⊥ readlist of
-  --   the same length)`, after which the pair expectation is `Σ_pairs E[1[rc=d']] ≤
-  --   ε·|readlist|·#rejects ≤ ε·|readlist|·#attempts` by independence + `hGuess`.
-  -- Both routes need the crux independence `readlist ⊥ (rejected tape position's VALUE)` over
-  -- `tapeDrawReadImpl`: the tape→readlist channel is ONLY via signatures (= ACCEPTED entries), so a
-  -- rejected position's `Commit` value never enters any read target or query answer (reads answer
-  -- via `roStep` on the real layer). This is the genuine independence the campaign isolated; it is
-  -- NOT resolved by the (banked) fold-level tape factorization
-  -- `evalDist_deferredDrawRead_eq_drawList_tapeDrawRead`, which only front-loaded the draws.
-  -- Transport BACK to the non-tape run via the STEP B fold equality: every tape probability equals
-  -- the corresponding non-tape `deferredDrawReadImpl` run probability. This makes the recorded
-  -- draws *inline-fresh* (drawn at each sign step) rather than front-loaded, which is the position
-  -- in which each rejected draw is independent of the (value-free) final read list.
+  -- The charge is the per-position value-free bound: the tape→readlist channel runs ONLY through
+  -- signatures (= accepted entries), so a rejected position's `Commit` value never enters any read
+  -- target or query answer (reads answer via `roStep` on the real layer), and each tape entry is a
+  -- fresh raw `Prod.fst <$> ids.commit` draw of mass `≤ ε` by `hGuess`.
+  -- Transport back to the non-tape run via the fold equality: every tape probability equals the
+  -- corresponding non-tape `deferredDrawReadImpl` run probability. That makes the recorded draws
+  -- inline-fresh (drawn at each sign step) rather than front-loaded, which is the position in which
+  -- each rejected draw is independent of the (value-free) final read list.
   have hfold := evalDist_deferredDrawRead_eq_drawList_tapeDrawRead ids M maxAttempts pk sk oa qSrem
     hQ.1 ((((re, l), []), false), [])
   have hpr : ∀ z : γ × DeferredReadState M Commit Chal,
@@ -2263,45 +2287,37 @@ theorem readRecord_expected_pairs_tape_le {γ : Type}
     hGuess hAbort oa hQ.2 re l
 
 omit [SampleableType Stmt] in
-/-- **The value-free per-pair atom (the sole open core of the #228 ghost-read bound).** The expected
-pair count — the expected number of coinciding `(recorded read-commit, recorded drawn commit)`
-pairs, `E[Σ_{rc ∈ readlist} drawnlist.count rc]` — is at most `ε` times the expected
-`readlist.length · drawnlist.length`.
+/-- **The value-free per-pair atom.** The expected pair count — the expected number of coinciding
+`(recorded read-commit, recorded drawn commit)` pairs, `E[Σ_{rc ∈ readlist} drawnlist.count rc]` —
+is at most `ε` times the expected `readlist.length + #attempts` charge, where
+`#attempts := drawnlist.length + (signedlist.length − l.length)`.
 
-This is the genuine probabilistic content, isolated to its cleanest form. It is the per-pair
-value-free independence: for every `(read slot, draw slot)` pair, `E[1[rc = d]] ≤ ε`, because
+The probabilistic content is a per-pair value-free independence: for every `(read slot, draw slot)`
+pair, `E[1[rc = d]] ≤ ε`, because
 * each recorded drawn commit `d` is a fresh i.i.d. raw `Prod.fst <$> ids.commit pk sk` draw of mass
   `≤ ε` (`hGuess`), recorded write-only on rejected attempts (the accept branch records `[]`);
 * the recorded read-commit list is **value-free** — the reads answer from the real RO layer via
   `roStep`, never the drawn values (`blindStepProj_map_ghostBlindImpl_indep` /
   `ghostHybridImpl_proj_trans`), so the readlist is jointly independent of the drawn *values*.
 
-Summing the per-pair bound over the `readlist.length · drawnlist.length` pairs gives the claim. The
-genuine difficulty (confirmed multi-week, see the campaign record) is that the factoring
-`E[Σ_pairs 1[rc=d]] = Σ_pairs E[1[rc=d]]` with each factor `≤ ε` must be lifted through the opaque
-adversary `simulateQ (oa)` fold: a draw-before-read pair has its draw resolved before the later
-read, so the read-step increment is deterministic in the pre-state and is not `≤ ε` at that single
-step. Bounding it needs the global factoring of the readlist law from the drawn-value law — the
-fold-level value-free commute (`OracleComp.probEvent_bind_fire_eq_defer` lifted across all
-interleaved attempts).
+Summing the per-pair bound over the pairs gives the claim. The step that carries the weight is
+lifting the factoring `E[Σ_pairs 1[rc=d]] = Σ_pairs E[1[rc=d]]` through the opaque adversary
+`simulateQ (oa)` fold: a draw-before-read pair has its draw resolved before the later read, so the
+read-step increment is deterministic in the pre-state and is not `≤ ε` at that single step, and the
+bound needs the global factoring of the readlist law from the drawn-value law.
 
-**Tape factorization (the banked per-body half).** The *body-level* half of that fold-lift is now
-proved and axiom-clean: `evalDist_ghostSignDrawBody_eq_drawList_tapeSignBody` recasts one signing
-body's inline attempt draws as consumption from a pre-drawn tape
-(`𝒟[(ghostSignDrawBody … n).run re] = 𝒟[drawList (ids.commit pk sk) n >>= tapeSignBody … tape]`),
-front-loading that body's commitment block as one independent `drawList` draw via the local i.i.d.
-resampling commute `evalDist_bind_comm_probComp`. The remaining open content is to lift this
-*across* the `simulateQ (oa)` fold: the per-query tape blocks of every interleaved signing query
-must commute to the very front (a single independent draw block of `≤ maxAttempts · qSrem`
-commitments) past the adaptive read points, so that the front draw block is independent of the
-value-free recorded readlist. That fold-level `bind`-commutation is the genuine multi-week PMF×PMF
-joint coupling; the front-loaded game is not the image of `oa` under any handler, so no inductive
-(per-step) coupling produces it.
+**Proof.** Transport both expectations through the fold-level tape factorization
+`evalDist_deferredDrawRead_eq_drawList_tapeDrawRead`, which recasts the run as a pre-drawn tape
+`drawList (ids.commit pk sk) (maxAttempts · qSrem)` followed by a tape-consuming run; its per-body
+half `evalDist_ghostSignDrawBody_eq_drawList_tapeSignBody` front-loads one signing body's
+commitment block as an independent `drawList` draw via the i.i.d. resampling commute
+`evalDist_bind_comm_probComp`. In the tape-factored representation the recorded drawn list is a
+function of the tape while the read list is value-free, and the charge is discharged by
+`readRecord_expected_pairs_tape_le`.
 
 The surrounding reduction (`countP_mem_le_sum_count`, the deterministic readlist-length bound
-`deferredDrawReadImpl_run_readlist_length_le`, the expected drawn-list length fold
-`deferredDrawRead_run_expected_drawnlist_length_le`, and the final arithmetic) is fully proven and
-axiom-clean. -/
+`deferredDrawReadImpl_run_readlist_length_le`, and the expected drawn-list length fold
+`deferredDrawRead_run_expected_drawnlist_length_le`) supplies the arithmetic around it. -/
 theorem readRecord_expected_pairs_le {γ : Type}
     (qH : ℕ) (ε p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) (hε : 0 ≤ ε)
     (pk : Stmt) (sk : Wit)
@@ -2322,9 +2338,9 @@ theorem readRecord_expected_pairs_le {γ : Type}
             ((z.2.1.1.2.length + (z.2.1.1.1.2.length - l.length) : ℕ) :
               ℝ≥0∞) := by
   classical
-  -- STEP C: transport both expectations through the fold-level tape factorization, so the recorded
-  -- draws become a function of the front tape and the value-free read list becomes independent of
-  -- the tape values.
+  -- Transport both expectations through the fold-level tape factorization, so the recorded draws
+  -- become a function of the front tape and the value-free read list becomes independent of the
+  -- tape values.
   have hfold := evalDist_deferredDrawRead_eq_drawList_tapeDrawRead ids M maxAttempts pk sk oa qSrem
     hQ.1 ((((re, l), []), false), [])
   have hpr : ∀ z : γ × DeferredReadState M Commit Chal,
@@ -2345,30 +2361,31 @@ theorem readRecord_expected_pairs_le {γ : Type}
     hGuess hAbort oa qSrem hQ re l
 
 omit [SampleableType Stmt] in
-/-- **The expected-coincidence-count bound (the numeric remaining obligation, first-moment route).**
+/-- **The expected-coincidence-count bound (first-moment route).**
 The read-recording run's expected coincidence count
-`E[#{ rc ∈ readlist : rc ∈ drawnlist }]` — the first moment fed by the banked Markov step
+`E[#{ rc ∈ readlist : rc ∈ drawnlist }]` — the first moment fed to the Markov step
 `readRecord_pred_le_expected_coincidences` — is at most `qSrem · (qH+1) · ε / (1-p)`.
 
-This is the σ-free numeric form of the remaining open content (no front-loaded game, no all-miss
-strategy `σ`): both the headline ghost-read bound and the `euf_cma` proof are charged through this
-single numeric inequality.
+This is the σ-free numeric form of the ghost-read charge (no front-loaded game, no all-miss strategy
+`σ`): both the headline ghost-read bound and the `euf_cma` proof are charged through this single
+numeric inequality.
 
-**The accounting (why this is TRUE and additive — no per-output skew).** The coincidence count is a
-double sum `Σ_{rc ∈ readlist} Σ_{d ∈ drawnlist} 1[rc = d]`, hence purely additive; the
-rejection-conditioning skew that broke every `Pr[bad]` / per-output route lives in
-output-conditioning, never in a SUM. Bounding `E[count]` decomposes over (read, draw) pairs:
+**The accounting (why it is additive — no per-output skew).** The coincidence count is a double sum
+`Σ_{rc ∈ readlist} Σ_{d ∈ drawnlist} 1[rc = d]`, hence purely additive; the rejection-conditioning
+skew that obstructs a per-output `Pr[bad]` route lives in output-conditioning, never in a sum.
+Bounding `E[count]` decomposes over (read, draw) pairs:
 * each recorded drawn commit `d` is a fresh i.i.d. raw `Prod.fst <$> ids.commit pk sk` draw of mass
   `≤ ε` (`hGuess`), recorded write-only on rejected attempts (the accept branch records `[]`);
 * the recorded read-commit list is **value-free** — the reads answer from the real RO layer via
   `roStep`, never the drawn values (`blindStepProj_map_ghostBlindImpl_indep` /
   `ghostHybridImpl_proj_trans`), so the readlist is jointly independent of the drawn *values*;
 * by that independence, for each pair `E[1[rc = d]] ≤ ε`, and there are `≤ (qH+1) · E[#attempts]`
-  pairs (`(qH+1)` reads by `hQ`, `E[#attempts] ≤ qSrem/(1-p)` by `deferredDraw_attemptKn_mean_le`),
+  pairs (`(qH+1)` reads by `hQ`, `E[#attempts] ≤ qSrem/(1-p)` by
+  `deferredDrawRead_attemptKn_mean_le`),
   giving `E[count] ≤ (qH+1) · ε · E[#attempts] ≤ qSrem · (qH+1) · ε / (1-p)`.
 
-**The reduction (banked) and the sole open core.** The bound reduces by elementary arithmetic to a
-single value-free atom (see the scaffolding lemmas above):
+**The reduction.** The bound reduces by elementary arithmetic to a single value-free atom (see the
+scaffolding lemmas above):
 * the coincidence count is dominated pointwise by the pair count
   `Σ_{rc ∈ readlist} drawnlist.count rc` (`countP_mem_le_sum_count`);
 * the recorded readlist has length `≤ qH` on the whole support — a *deterministic* bound from the
@@ -2378,16 +2395,15 @@ single value-free atom (see the scaffolding lemmas above):
 * the genuine content is the **value-free per-pair atom** `readRecord_expected_pairs_le`:
   `E[Σ_{rc ∈ readlist} drawnlist.count rc] ≤ ε · E[readlist.length · drawnlist.length]`.
 
-**The sole open core (the value-free fold-lift), isolated in `readRecord_expected_pairs_le`.** The
-arithmetic after factoring the joint expectation is linear and discharged here; the factoring itself
-— that each fresh draw is conditionally i.i.d. and `⊥` the recorded readlist *through the opaque
-adversary `simulateQ (oa)` fold* — is the genuine PMF×PMF joint independence. A direct threaded fold
+**Where the weight sits.** The arithmetic after factoring the joint expectation is linear and
+discharged here; the factoring itself — that each fresh draw is conditionally i.i.d. and `⊥` the
+recorded readlist *through the opaque adversary `simulateQ (oa)` fold* — is the joint independence
+carried by `readRecord_expected_pairs_le` through the tape factorization. A direct threaded fold
 charges the *sign* steps cleanly (each fresh draw `⊥` the *current* readlist, value-free, additive),
 but a *draw-before-read* pair has its draw resolved before the later read, so the read-step
 increment `1[mc.2 ∈ drawnlist]` is deterministic in the pre-state and is not `≤ ε` at that single
-step; bounding it needs the global factoring of the readlist law from the drawn-value law, which is
-the same fold-level value-free commute as `OracleComp.probEvent_bind_fire_eq_defer` lifted across
-all interleaved attempts.
+step; that is why the bound goes through the global factoring of the readlist law from the
+drawn-value law rather than a per-step charge.
 
 The start drawn list is empty (`ws₀ = []`): the bound is sound only with no pre-existing draws,
 since the adversary's read points are value-free w.r.t. the run's fresh draws but can
@@ -2479,14 +2495,14 @@ theorem readRecord_expected_coincidences_le {γ : Type}
   field_simp
 
 omit [SampleableType Stmt] in
-/-- **Ghost-blind ghost-read bound** (the sound headline target). The ghost-blind run's
+/-- **Ghost-blind ghost-read bound.** The ghost-blind run's
 adversarial-read bad mass is at most `qS·(qH+1)·ε/(1-p)`, via the first-moment route: the eager bad
 mass is reduced to the deferred-draw run (`ghostBlind_bad_le_deferredDraw`), then to the
 read-recording final-state read-hit predicate (`deferredDraw_bad_le_readRecord`), then to the
-expected coincidence count by the banked Markov step (`readRecord_pred_le_expected_coincidences`),
-which is finally charged by the numeric value-free bound `readRecord_expected_coincidences_le`.
+expected coincidence count by the Markov step (`readRecord_pred_le_expected_coincidences`), which
+is finally charged by the numeric value-free bound `readRecord_expected_coincidences_le`.
 Chaining with `probEvent_ghostHybridImpl_bad_le_ghostBlind` discharges the eager form
-(`probEvent_ghostRead_bad_le`) without the unsound eager↔lazy detour. -/
+(`probEvent_ghostRead_bad_le`). -/
 theorem probEvent_ghostBlindImpl_bad_le
     (qS qH : ℕ) (ε p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) (hε : 0 ≤ ε)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
@@ -2501,9 +2517,9 @@ theorem probEvent_ghostBlindImpl_bad_le
             ((M × Commit →ₒ Chal).QueryCache × (M × Commit →ₒ Chal).QueryCache) ×
               List M), false)]
       ≤ ENNReal.ofReal (qS * ((qH : ℝ) + 1) * ε / (1 - p_abort)) := by
-  -- The sound first-moment route: reduce the eager bad mass to the deferred-draw run (Piece A),
-  -- then to the read-recording final-state predicate, then to the expected coincidence count (the
-  -- banked Markov step), and charge that count by the numeric value-free bound.
+  -- The first-moment route: reduce the eager bad mass to the deferred-draw run, then to the
+  -- read-recording final-state predicate, then to the expected coincidence count (the Markov
+  -- step), and charge that count by the numeric value-free bound.
   refine le_trans (ghostBlind_bad_le_deferredDraw ids M maxAttempts pk sk (adv.main pk)
     ((((∅, ∅), []), false) : GhostState M Commit Chal)
     ((((∅, []), []), false) : DeferredState M Commit Chal)
@@ -2549,11 +2565,9 @@ lemma probEvent_ghostRead_bad_le
             ((M × Commit →ₒ Chal).QueryCache × (M × Commit →ₒ Chal).QueryCache) ×
               List M), false)]
       ≤ ENNReal.ofReal (qS * (qH + 1) * ε / (1 - p_abort)) := by
-  -- M1 reduces the eager ghost-read bad mass to the ghost-blind run's bad mass
-  -- (`probEvent_ghostHybridImpl_bad_le_ghostBlind`, identical until bad), and the ghost-blind
-  -- bound `probEvent_ghostBlindImpl_bad_le` (the first-moment route) closes it at
-  -- `qS·(qH+1)·ε/(1-p)`. The residual `readRecord_expected_coincidences_le` carries the one
-  -- open obligation; all downstream steps are banked axiom-clean.
+  -- The identical-until-bad reduction sends the eager ghost-read bad mass to the ghost-blind
+  -- run's bad mass (`probEvent_ghostHybridImpl_bad_le_ghostBlind`), and the ghost-blind bound
+  -- `probEvent_ghostBlindImpl_bad_le` (the first-moment route) closes it at `qS·(qH+1)·ε/(1-p)`.
   refine (probEvent_ghostHybridImpl_bad_le_ghostBlind ids hr M maxAttempts adv pk sk).trans ?_
   refine le_trans (probEvent_ghostBlindImpl_bad_le ids hr M maxAttempts adv qS qH ε p_abort
     hp₀ hp hε hQ pk sk hGuess hAbort) (le_of_eq ?_)

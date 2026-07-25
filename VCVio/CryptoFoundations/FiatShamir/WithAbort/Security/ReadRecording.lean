@@ -45,14 +45,15 @@ variable (adv : SignatureAlg.unforgeableAdv
 /-! ### Read-recording handler: bad as a final-state predicate
 
 The deferred-draw run's bad flag is set at *read time*: a read fires when its target commitment is
-in the drawn list **as it stands at that read**. Because the drawn list only grows
-(`deferredDraw_run_drawn_prefix`), a read that hits the drawn-so-far list certainly hits the *final*
-drawn list, so the bad event is dominated by the final-state predicate "some recorded read-commit
+in the drawn list **as it stands at that read**. Because the drawn list only grows — uniform and
+read steps leave it untouched and a signing step appends to it — a read that hits the drawn-so-far
+list certainly hits the *final* drawn list, so the bad event is dominated by the final-state
+predicate "some recorded read-commit
 is in the final drawn list". The handler `deferredDrawReadImpl` records, in an extra `List Commit`
 component, the commitment `mc.2` of every adversarial read; its read step is otherwise identical to
 `deferredDrawImpl` (same answer via `roStep`, same drawn list, same bad flag). The reduction
-`deferredDraw_bad_le_readRecord` is the Piece A-style pointwise coupling that reads the bad ordering
-off the run; it converts the *read-time* bad flag into the *final-state* membership predicate
+`deferredDraw_bad_le_readRecord` is a pointwise coupling that reads the bad ordering off the run;
+it converts the *read-time* bad flag into the *final-state* membership predicate
 `∃ rc ∈ readlist, rc ∈ drawnlist`, which removes the read-time/final-state mismatch that obstructs a
 direct expectation bound (see the residual docstring). The recorded read commits are **value-free**
 (answers come from the real layer via `roStep`; the drawn *values* never feed the read points), the

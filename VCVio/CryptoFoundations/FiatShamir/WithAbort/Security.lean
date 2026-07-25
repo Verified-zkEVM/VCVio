@@ -6,8 +6,6 @@ Authors: Quang Dao
 
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.Loss
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.BodyHops
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.GhostReadCharge
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.HiddenReadFold
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.CouplingEngine
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.ReadRecording
 import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.TapeFactorization
@@ -40,8 +38,10 @@ scheme (e.g. `MLDSA.nma_security_short`).
 
 The development is split along its proof phases: `Loss` (the loss functions),
 `BodyHops` (the per-query Trans → Sim hop core and the verification tail),
-`GhostReadCharge`, `HiddenReadFold`, `CouplingEngine` (banked measure-level
-coupling infrastructure, off the live path), `ReadRecording`,
-`TapeFactorization`, `HopLemmas`, `NMAReduction`, and `Assembly` (the headline
-`euf_cma_to_nma`). This umbrella module re-exports all of them.
+`CouplingEngine` (the ghost-blind reduction, the deferred-draw handler, and the
+per-body tape factorization), `ReadRecording` (the read-recording refinement and
+the first-moment Markov step), `TapeFactorization` (the fold-level tape
+factorization and the coincidence-count bound), `HopLemmas`, `NMAReduction`, and
+`Assembly` (the headline `euf_cma_to_nma`). This umbrella module re-exports all
+of them.
 -/

@@ -51,9 +51,9 @@ The managed NMA run is a two-layer nested simulation: an *inner managed* handler
 the inner cache, and an *outer runtime* handler `nmaInnerImpl` (`unifFwdImpl + randomOracle`)
 re-simulates the residual live queries. Their `link`, `nmaLinkImpl pk`, is the single
 combined simulation over the product cache that the per-step state-coupling projects onto.
-These were previously inline `letI` bindings inside `simulatedNmaAdv` and
-`managedRun_eq_link_run`; promoting them to top level makes `nmaLinkImpl pk` a nameable
-handler so the coupling can be stated and proved one query step at a time. -/
+Naming them at top level makes `nmaLinkImpl pk` a handler that can be referred to directly, so
+the coupling against the layered ghost-tagged run is stated and proved one query step at a
+time. -/
 
 omit [SampleableType Stmt] [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
 /-- **Uniform-only nested-simulation collapse (sub-lemma (b), part (i) — PROVEN, axiom-clean).**
@@ -166,13 +166,12 @@ Hence the consistent per-step projection is:
   inner cache; and
 * `outer := base` — the live-read base layer only.
 
-This is the corrected projection: an earlier attempt set `inner := baseEmbed base` and
-`outer := overlayCache base ghost`, which is inconsistent — the random-oracle step writes a
-live read into the inner cache (so it must carry the overlay), while the signing step writes
-the programmed transcript into the inner cache and never touches the outer (so the outer must
-exclude ghost points). With `inner := baseEmbed (overlay base ghost)` and `outer := base` both
-the RO step and the sign step become exact per-step equalities. The signed-message list is
-forgotten — the linked handler carries no such list. -/
+The orientation is forced: the random-oracle step writes a live read into the inner cache, so
+the inner slot must carry the overlay, while the signing step writes the programmed transcript
+into the inner cache and never touches the outer, so the outer slot must exclude ghost points.
+With `inner := baseEmbed (overlay base ghost)` and `outer := base` both the RO step and the sign
+step are exact per-step equalities. The signed-message list is forgotten — the linked handler
+carries no such list. -/
 def proj2 (s : NmaGhostState M Commit Chal) :
     (unifSpec + (M × Commit →ₒ Chal)).QueryCache × (M × Commit →ₒ Chal).QueryCache :=
   (baseEmbed M (overlayCache M s.1.1 s.1.2), s.1.1)
@@ -239,11 +238,10 @@ omit [SampleableType Stmt] in
 point `mc` whose ghost layer already holds a value `v` (`hgh : s.1.2 mc = some v`), the layered
 ghost-tagged handler `ghostNmaImpl`, projected by `proj2`, matches the linked managed handler
 `nmaLinkImpl` applied to the projected state. `ghostNmaImpl` returns the ghost value leaving its
-state untouched; under the *redesigned* `proj2` the inner managed cache is `baseEmbed (overlay
-base ghost)`, which carries the ghost value at `.inr mc` (`overlayCache_apply_ghost_some`), so the
-linked `roSim` finds it and short-circuits without touching either layer. (Under the earlier
-`proj2 = (baseEmbed base, …)` this case diverged — the inner cache did not hold ghost points — and
-needed a reachability invariant; the redesign makes it exact.) -/
+state untouched; under `proj2` the inner managed cache is `baseEmbed (overlay base ghost)`, which
+carries the ghost value at `.inr mc` (`overlayCache_apply_ghost_some`), so the linked `roSim` finds
+it and short-circuits without touching either layer. Carrying the overlay in the inner slot is what
+makes this case an exact equality rather than a reachability-conditioned one. -/
 lemma hproj2_ro_ghost_hit (pk : Stmt) (sk : Wit) (mc : M × Commit) (v : Chal)
     (s : NmaGhostState M Commit Chal) (hgh : s.1.2 mc = some v) :
     Prod.map id (proj2 M) <$> (ghostNmaImpl M maxAttempts sim pk sk (.inl (.inr mc))).run s =
@@ -322,22 +320,21 @@ lemma hproj2_ro_fresh (pk : Stmt) (sk : Wit) (mc : M × Commit)
 omit [SampleableType Stmt] in
 /-- **Sub-lemma (b), signing-query step — exact per-step equality.**
 
-On a signing query, the layered ghost-tagged handler `ghostNmaImpl`, projected by the
-*redesigned* `proj2 ((base, ghost), signed) = (baseEmbed (overlayCache base ghost), base)`,
-equals the linked managed handler `nmaLinkImpl` applied to the projected state — *unconditionally*
-(no collision hypothesis).
+On a signing query, the layered ghost-tagged handler `ghostNmaImpl`, projected by
+`proj2 ((base, ghost), signed) = (baseEmbed (overlayCache base ghost), base)`, equals the linked
+managed handler `nmaLinkImpl` applied to the projected state — *unconditionally* (no collision
+hypothesis).
 
-The redesign is what makes this exact. The linked managed `sigSim` writes the accepted transcript
-into the *inner managed cache* (`cacheQuery (.inr (msg, w)) c`) and leaves the *outer runtime
-cache* untouched. The layered run writes the same transcript into the *ghost layer*, leaving the
-base layer untouched. Under the new `proj2`, the inner managed cache is recovered as `baseEmbed`
-of the *full overlay* `overlayCache base ghost`, so the ghost-layer write surfaces in `proj2`'s
-*first* slot exactly where `sigSim` writes (`overlayCache_cacheQuery_ghost` then
-`baseEmbed_cacheQuery`), while the outer cache is `proj2`'s *second* slot `base`, untouched on both
-sides. There is no slot swap and no dependence on whether `(msg, w)` coincides with a prior live
-read: `proj2`'s first component carries the full overlay, so the sign point lands in the same inner
-slot regardless. (This supersedes the earlier `proj2 = (baseEmbed base, overlayCache base ghost)`
-projection, for which this step was provably *not* a per-step state function.)
+The linked managed `sigSim` writes the accepted transcript into the *inner managed cache*
+(`cacheQuery (.inr (msg, w)) c`) and leaves the *outer runtime cache* untouched. The layered run
+writes the same transcript into the *ghost layer*, leaving the base layer untouched. Since `proj2`
+recovers the inner managed cache as `baseEmbed` of the *full overlay* `overlayCache base ghost`,
+the ghost-layer write surfaces in `proj2`'s *first* slot exactly where `sigSim` writes
+(`overlayCache_cacheQuery_ghost` then `baseEmbed_cacheQuery`), while the outer cache is `proj2`'s
+*second* slot `base`, untouched on both sides. There is no slot swap and no dependence on whether
+`(msg, w)` coincides with a prior live read: `proj2`'s first component carries the full overlay, so
+the sign point lands in the same inner slot regardless — which is exactly why this step is a
+per-step state function.
 
 PROOF SHAPE. `link_impl_apply_run` exposes the linked RHS as the nested simulation
 `simulateQ nmaInnerImpl ((nmaOuterImpl pk (.inr msg)).run outerCache)`; `simp [nmaOuterImpl]`
@@ -385,8 +382,8 @@ lemma hproj2_sign (pk : Stmt) (sk : Wit) (msg : M)
   refine evalDist_bind_congr (m := SPMF) (mx := 𝒟[firstSome (sim pk) maxAttempts])
     fun a _ha => ?_
   simp only [SPMF.evalDist_def]
-  -- Case-split on the accepted transcript; under the redesigned `proj2` the `some` branch aligns
-  -- the ghost-layer write with the inner-cache write unconditionally (no collision hypothesis).
+  -- Case-split on the accepted transcript; under `proj2` the `some` branch aligns the ghost-layer
+  -- write with the inner-cache write unconditionally (no collision hypothesis).
   cases a with
   | none =>
       -- The all-abort outcome programs no point on either side; both reduce to `(none, proj2 s)`.
@@ -413,8 +410,8 @@ lemma hproj2_sign (pk : Stmt) (sk : Wit) (msg : M)
         PFunctor.Lens.State.put, PFunctor.Lens.State.mk]
       conv_lhs => erw [evalDist_pure]; rw [map_pure]
       simp only [proj2, Prod.map, id_eq]
-      -- Off the collision (`hbase : s.1.1 (msg, w) = none`) the two pure values agree exactly under
-      -- the *redesigned* `proj2 ((base, ghost), signed) = (baseEmbed (overlay base ghost), base)`.
+      -- Off the collision (`hbase : s.1.1 (msg, w) = none`) the two pure values agree exactly
+      -- under `proj2 ((base, ghost), signed) = (baseEmbed (overlay base ghost), base)`.
       -- Both sides write the accepted transcript into the inner managed cache and leave the outer
       -- (live-read) cache `base` untouched:
       --   LHS = (some (w, z), baseEmbed (overlay base (ghost.cacheQuery (msg, w) c)), base)
@@ -422,10 +419,10 @@ lemma hproj2_sign (pk : Stmt) (sk : Wit) (msg : M)
       -- The ghost-layer write surfaces in the inner cache (`proj2`'s *first* slot, via the overlay)
       -- exactly where the linked `sigSim` writes `.inr (msg, w) ↦ c`, and the live-read layer
       -- `base` (`proj2`'s *second* slot = the linked outer cache) is untouched on both sides — so
-      -- the per-step sign equality is now exact (no slot swap). The `hbase` no-collision hypothesis
-      -- is not even needed for the cache algebra under the redesigned projection: `proj2`'s first
-      -- component carries the full overlay, so the sign point lands in the same inner slot whether
-      -- or not it coincides with a prior live read.
+      -- the per-step sign equality is exact (no slot swap). The `hbase` no-collision hypothesis is
+      -- not needed for the cache algebra: `proj2`'s first component carries the full overlay, so
+      -- the sign point lands in the same inner slot whether or not it coincides with a prior live
+      -- read.
       rw [overlayCache_cacheQuery_ghost, baseEmbed_cacheQuery]
 
 omit [SampleableType Stmt] in
@@ -433,9 +430,9 @@ omit [SampleableType Stmt] in
 every layered state `s`, the `proj2`-projected layered NMA step has the same output/state
 distribution as the linked managed step on the projected state. This bundles the four per-step
 lemmas (`hproj2_unif`, `hproj2_ro`/`hproj2_ro_ghost_hit`/`hproj2_ro_fresh`, `hproj2_sign`): under
-the redesigned `proj2 ((base, ghost), signed) = (baseEmbed (overlayCache base ghost), base)` each
-step is an exact equality (the random-oracle and signing steps no longer depend on any reachability
-or no-collision side condition), so the coupling holds unconditionally on all of `t`. This is the
+`proj2 ((base, ghost), signed) = (baseEmbed (overlayCache base ghost), base)` each step is an exact
+equality (neither the random-oracle nor the signing step carries a reachability or no-collision
+side condition), so the coupling holds unconditionally on all of `t`. This is the
 per-query hypothesis for the whole-run state-projection `relTriple_simulateQ_run`. -/
 lemma hproj2_evalDist (pk : Stmt) (sk : Wit)
     (t : ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp))).Domain)
@@ -555,7 +552,7 @@ noncomputable def simulatedNmaAdv :
     -- `(msg, w')`; clearing that entry makes `withCacheOverlay advCache verify` miss
     -- there and fall through to the live oracle, so the managed-RO experiment agrees
     -- with the plain EUF-NMA verification on *every* forgery. In particular a replayed
-    -- signed `(msg, w')` no longer wins through the programmed challenge, which is what
+    -- signed `(msg, w')` cannot win through the programmed challenge, which is what
     -- makes the bridge to `eufNmaAdv.advantage` sound. Other programmed entries sit at
     -- different points and are never read by `verify`.
     (simulateQ ((unifSim + roSim) + sigSim) (adv.main pk)).run ∅ >>= fun result =>
@@ -706,157 +703,44 @@ lemma hybridSimRun_le_managedRun_verify (pk : Stmt) (sk : Wit) :
               (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
           (withCacheOverlay p.1.2 ((FiatShamirWithAbort ids hr M maxAttempts).verify
             pk p.1.1.1 p.1.1.2))).run p.2] := by
-  -- Step 1 (banked, axiom-clean): collapse the explicit `.run ∅` re-simulation boundary on
-  -- the RHS. Distributing the outer `simulateQ` over `simulatedNmaAdv`'s post-processing bind
-  -- (`simulateQ_bind`/`StateT.run_bind`) exposes the nested managed run
+  -- The proof runs in three parts.
+  --
+  -- (1) LINK FUSION. Distributing the outer `simulateQ` over `simulatedNmaAdv`'s post-processing
+  -- bind (`simulateQ_bind`/`StateT.run_bind`) exposes the nested managed run
   --   `(simulateQ (unifFwd+ro) ((simulateQ ((unifSim+roSim)+sigSim) (adv.main pk)).run ∅)).run ∅`,
-  -- which `managedRun_eq_link_run` rewrites to the canonical `linkReshape` of a *single*
-  -- linked simulation `(simulateQ (outer.link inner) (adv.main pk)).run (∅, ∅)` over the
-  -- product cache `(inner managed cache, outer runtime cache)`. After this rewrite the RHS is
-  -- a single `simulateQ` whose state is genuinely the inner/outer cache pair, so the coupling
-  -- to the hybrid is a plain `map_run_simulateQ_eq_of_query_map_eq_inv'` state-projection (no
-  -- nesting). The fusion lemma `managedRun_eq_link_run` is proven and axiom-clean.
+  -- which `managedRun_eq_link_run` rewrites — modulo the canonical `linkReshape` regrouping of the
+  -- final state — into a *single* linked simulation
+  -- `(simulateQ (nmaLinkImpl … pk) (adv.main pk)).run (∅, ∅)` over the product cache
+  -- `(inner managed cache, outer runtime cache)`.
   --
-  -- RESIDUAL SUBGOAL (the genuinely hard, still-open content): the state-projection coupling
-  -- of `impl₁ := hybridBaseImpl + hybridSignImpl simSignBody` (single state `(reCache, signed)
-  -- : (M × Commit →ₒ Chal).QueryCache × List M`) against `impl₂ := outer.link inner` (state
-  -- `(innerCache, outerCache) : spec.QueryCache × (M × Commit →ₒ Chal).QueryCache`), followed
-  -- by the verify-tail split.
+  -- (2) A COMMON LAYERED RUN. Both sides are projections of the layered ghost-tagged run
+  -- `(simulateQ (ghostNmaImpl …) (adv.main pk)).run ((∅, ∅), [])`, whose state
+  -- `((base, ghost), signed) : NmaGhostState` tags each cached point as a live random-oracle read
+  -- (base layer) or a signing-programmed transcript (ghost layer):
+  --   * the hybrid side is recovered by `map_run_simulateQ_ghostNmaImpl_overlay_empty`, projecting
+  --     by `overlayCache` onto the single hybrid cache;
+  --   * the linked managed side by `evalDist_map_run_simulateQ_ghostNmaImpl_proj2`, projecting by
+  --     `proj2 ((base, ghost), signed) = (baseEmbed (overlayCache base ghost), base)` — inner
+  --     managed cache = full overlay (live reads plus sign points), outer runtime cache = live-read
+  --     layer only — with the per-step equalities `hproj2_unif`, `hproj2_ro`,
+  --     `hproj2_ro_ghost_hit`, `hproj2_ro_fresh`, `hproj2_sign` bundled by `hproj2_evalDist`.
+  -- The layer tag is what makes the split a *function of the state*: the linked `outerCache` is not
+  -- a function of the plain hybrid state `(reCache, signed)`, since a point `(msg, w)` with
+  -- `msg ∈ signed` may have entered `reCache` either by a live read (then it is in `outerCache`) or
+  -- by `signProgramCont` (then it is absent from `outerCache`), and the plain state records no flag
+  -- distinguishing the two. The layered state does.
   --
-  -- DESIGN OBSTRUCTION FOUND (corrects the original `proj` recipe). A per-step replay of both
-  -- handlers shows the linked caches evolve as:
-  --   * `outerCache` accumulates *only live RO reads* (`roSim` forwards inner misses to `fwd`,
-  --     re-simulated by `inner`'s `randomOracle`, which writes the outer layer); signing's
-  --     `sigSim` programs the *inner* layer only and never forwards to the outer oracle;
-  --   * `innerCache` accumulates *both* live RO reads *and* the signing-programmed points.
-  -- Hence `reCache = innerCache` and `overlayCache outerCache innerCache = reCache`
-  -- throughout — matching the docstring's overlay claim. The problem is that the verifying
-  -- direction of `map_run_simulateQ_eq_of_query_map_eq_inv'` requires `proj` to be a *total
-  -- function of the hybrid state* `(reCache, signed)` whose value reproduces the linked state
-  -- pair *exactly* (not just up to overlay): `(impl₂ t).run (proj s) = Prod.map id proj <$>
-  -- (impl₁ t).run s`. But `outerCache = reCache ∖ {signing-only-programmed points}` is **not a
-  -- function of `(reCache, signed)`**: a point `(msg, w)` with `msg ∈ signed` may have entered
-  -- `reCache` either by a live RO read (then it is in `outerCache`) or by `signProgramCont`
-  -- (then it is *absent* from `outerCache`), and the current hybrid state records no flag
-  -- distinguishing the two. Defining `proj.outerCache := reCache` fails on the signing step
-  -- (hybrid writes the programmed point to `reCache`, so `proj.outerCache` would gain it, but
-  -- the linked `outerCache` does not), and the restricted-by-`signed` choice fails on live
-  -- reads at signed messages (those *are* in the linked `outerCache`). The split therefore
-  -- depends on per-query programming history that neither the hybrid `(reCache, signed)` nor
-  -- the linked cache pair records on its own — so the coupling is *not* a single
-  -- `map_run_simulateQ_eq_of_query_map_eq_inv'` over the existing states.
+  -- (3) VERIFY-TAIL ALIGNMENT. On that common run the two tails are compared by
+  -- `probOutput_hybridVerifyCont_le_managed_verify`: on `msg ∈ signed` the freshness conjunct
+  -- zeroes the hybrid side (`probOutput_true_hybridVerifyCont_of_mem`), and on fresh forgeries the
+  -- overlay verification agrees with the live verification (`withCacheOverlay_verify_eq_of_miss`,
+  -- `hybridVerifyCont_cache_congr`), gated by the whole-run ghost-domain invariant
+  -- `ghostNmaImpl_run_signed_inv`. The `linkReshape` / Option-B post-processing regrouping is
+  -- threaded by `managedRun_eq_link_run` + `bind_map_left`.
   --
-  -- RESOLUTION (not yet built; ~150–250 lines of new infrastructure). Run the hybrid (or the
-  -- linked managed handler) on an *enriched, layered* cache state that explicitly tags each
-  -- entry as live-read vs signing-programmed — the same `overlayCache`/ghost-layer device
-  -- already used for the Prog→Trans hop in `GhostBodies` (`ghostHybridImpl`, `GhostState`,
-  -- `run_ghostSignBody_overlay`/`_fst`). On that layered state the partition *is* a function
-  -- of the state, both projection directions (`overlay`-to-hybrid and `forget`-to-managed) are
-  -- per-step state projections, and `map_run_simulateQ_eq_of_query_map_eq_inv'` applies. The
-  -- verify-tail then splits on `result.1.1 ∈ signed` exactly as in the original recipe:
-  -- `probOutput_true_hybridVerifyCont_of_mem` zeroes the LHS on `msg ∈ signed`, while on fresh
-  -- forgeries `withCacheOverlay_verify_eq_of_miss` + `hybridVerifyCont_cache_congr` align the
-  -- overlay verification with the live verification. The fusion (Step 1) and the verify-tail
-  -- toolkit are in place; the open content is the layered-state projection.
-  --
-  -- STEP 1 (executed below, axiom-clean): the mechanical link-fusion plumbing. Distributing
-  -- `simulateQ_bind`/`StateT.run_bind` over `simulatedNmaAdv.main`'s Option-B post-processing
-  -- bind exposes the bare nested managed run, and `managedRun_eq_link_run` rewrites it to the
-  -- single linked simulation `(simulateQ (outer.link inner) (adv.main pk)).run (∅, ∅)`.
+  -- Part (1), executed here: distributing `simulateQ_bind`/`StateT.run_bind` over
+  -- `simulatedNmaAdv.main`'s post-processing bind exposes the bare nested managed run.
   simp only [simulatedNmaAdv, simulateQ_bind, StateT.run_bind, bind_assoc]
-  -- The RHS is now `(fun x => x.1) <$> do let p ← (simulateQ (unifFwd+ro)
-  --   ((simulateQ ((unifSim+roSim)+sigSim) (adv.main pk)).run ∅)).run ∅; (Option-B post)…`,
-  -- with the bare nested managed run exposed. `managedRun_eq_link_run` equates this nested
-  -- run (modulo the canonical `linkReshape <$> _` regrouping of the final state) with the
-  -- single linked simulation `(simulateQ (outer.link inner) (adv.main pk)).run (∅, ∅)`.
-  --
-  -- REMAINING SUBGOAL (the genuine still-open content). With the nested boundary exposed, the
-  -- bound is the state-projection coupling described above: a layered ghost-tagged handler that
-  -- partitions each cache point as live-read (base layer) vs signing-programmed (ghost layer),
-  -- projecting (a) by `overlayCache` to the single hybrid cache and (b) by the
-  -- `randomOracle_run_eq_roStep` round-trip to the linked (inner,outer) pair under the invariant
-  -- "every ghost-tagged point's msg ∈ signed", then (c) the verify-tail split on `msg ∈ signed`
-  -- (`probOutput_true_hybridVerifyCont_of_mem`, `withCacheOverlay_verify_eq_of_miss`,
-  -- `hybridVerifyCont_cache_congr`). The fusion `simp only` above is the executed, axiom-clean
-  -- Step 1; the layered-state projection is the open content.
-  --
-  -- BANKED (sub-lemma (a), axiom-clean, `GhostBodies.lean`). The layered ghost-tagged handler
-  -- is now built: `ghostNmaImpl` over the state `((baseCache, ghostCache), signed)` (abbrev
-  -- `NmaGhostState`), with `simGhostSignBody`/`ghostSignProgramCont` writing the accepted
-  -- transcript to the ghost layer and the base oracles writing live RO reads to the base layer.
-  -- The overlay projection back to the plain single-cache hybrid is proven:
-  --   `ghostNmaImpl_proj_hybrid` (per step) and
-  --   `map_run_simulateQ_ghostNmaImpl_overlay`/`_empty` (full run), via
-  --   `OracleComp.map_run_simulateQ_eq_of_query_map_eq` with
-  --   `proj ((base, ghost), signed) = (overlayCache base ghost, signed)`.
-  -- Hence the hybrid LHS equals `Pr[= true | (overlay-projected ghostNmaImpl run) >>= …]`.
-  --
-  -- EXACT OPEN RESIDUAL (sub-lemma (b), not landed; ~2-3 weeks). Couple the *same* layered run
-  -- `(simulateQ (ghostNmaImpl …) (adv.main pk)).run ((∅,∅), [])` to the linked managed run
-  -- `(simulateQ (outer.link inner) (adv.main pk)).run (∅, ∅)` (from `managedRun_eq_link_run`)
-  -- under the projection `proj₂ ((base, ghost), signed) = (baseEmbed base, overlayCache base
-  -- ghost)` onto the linked `(outerCache : spec.QueryCache, innerCache : (M×Commit→ₒChal).
-  -- QueryCache)` pair (outer = live-read layer = base, inner = full hybrid cache = overlay).
-  -- The per-step `hproj` linchpin is NOT a primitive-query projection against `outer.link inner`:
-  -- by `linkWith_apply_run`, each `(outer.link inner) t` step is itself a *nested*
-  -- `simulateQ inner ((outer t).run …)`, where `outer t` (roSim/sigSim) is a multi-query
-  -- composite — roSim does an inner cache lookup then forwards a miss to `fwd` (re-simulated by
-  -- `inner`'s `randomOracle`, the `randomOracle_run_eq_roStep` round-trip), and sigSim runs a
-  -- whole `simulateQ unifSim (firstSome (sim pk) maxAttempts)`. So (b) requires coupling
-  -- `ghostNmaImpl` against the *nested-simulation* form of the managed handler step-by-step,
-  -- under the ghost-domain invariant "every ghost point's msg ∈ signed" (cf.
-  -- `ghostHybridImpl_preserves_signed_inv` for the sibling hop), so that on the RO step the
-  -- live read writes the base layer and outer cache identically, while the signing step's ghost
-  -- write matches the inner cache's `cacheQuery (.inr (msg, w)) c` and never touches the outer.
-  -- This is the genuine multi-week content; (a) and the verify-tail toolkit (c) are in place.
-  --
-  -- BANKED toward (b) (axiom-clean, `GhostBodies.lean`). The ghost-domain *gate* and the left
-  -- component of `proj₂` are now built and proven:
-  --   * `ghostNmaImpl_preserves_signed_inv` — the invariant "every ghost-layer point's msg ∈
-  --     signed" is preserved by every `ghostNmaImpl` step (NMA analogue of
-  --     `ghostHybridImpl_preserves_signed_inv`), backed by the new support fact
-  --     `simGhostSignBody_support_ghost` (the signing body only writes ghost points whose msg is
-  --     the signed message). This is exactly the `inv` to feed
-  --     `map_run_simulateQ_eq_of_query_map_eq_inv'`.
-  --   * `baseEmbed` (+ `baseEmbed_inr`/`baseEmbed_inl`/`baseEmbed_cacheQuery`) — the embedding
-  --     of a base RO cache (keyed by `M × Commit`) into the outer runtime cache (keyed by the
-  --     sum spec), i.e. the left component of `proj₂ ((base,ghost),signed) = (baseEmbed base,
-  --     overlayCache base ghost)`; `baseEmbed_cacheQuery` provides the RO-step algebra
-  --     `baseEmbed (base.cacheQuery mc v) = (baseEmbed base).cacheQuery (.inr mc) v`.
-  -- DONE: the local `outer`/`inner`/`roSim`/`sigSim`/`unifSim` lets of
-  -- `simulatedNmaAdv`/`managedRun_eq_link_run` are now top-level handlers `nmaOuterImpl`,
-  -- `nmaInnerImpl`, and `nmaLinkImpl := (nmaOuterImpl …).link (nmaInnerImpl …)`, so the linked
-  -- handler is nameable; `managedRun_eq_link_run` is re-expressed in terms of them and stays
-  -- axiom-clean. The per-step coupling is stated as
-  --   `hproj₂ : Prod.map id proj₂ <$> (ghostNmaImpl t).run s
-  --              = (nmaLinkImpl M maxAttempts sim pk t).run (proj₂ s)`
-  -- with `proj₂ ((base, ghost), signed) = (baseEmbed base, overlayCache base ghost)`, split into
-  -- `hproj2_unif`, `hproj2_ro`, `hproj2_ro_fresh` (all PROVEN, axiom-clean) and `hproj2_sign`.
-  --
-  -- R21 RESOLUTION (the per-step sign equality is now PROVEN — UNCONDITIONALLY). The earlier
-  -- obstruction (the sign step is not a per-step state function under `proj₂ = (baseEmbed base,
-  -- overlayCache base ghost)`) is fixed by *redesigning* `proj₂` to
-  -- `proj2 ((base, ghost), signed) = (baseEmbed (overlayCache base ghost), base)` — inner managed
-  -- cache = full hybrid overlay (live reads + sign points), outer runtime cache = live-read base
-  -- layer only. Under this projection ALL per-step couplings are exact unconditional equalities
-  -- (`hproj2_unif`, `hproj2_ro`, `hproj2_ro_ghost_hit`, `hproj2_ro_fresh`, `hproj2_sign`), bundled
-  -- into `hproj2_evalDist` and lifted to the whole run by
-  -- `evalDist_map_run_simulateQ_ghostNmaImpl_proj2` (via `relTriple_simulateQ_run` + the graph
-  -- coupling `relTriple_graph_of_evalDist_map_eq`). The `signLiveCollision` reframe is no longer
-  -- needed: the redesigned projection carries the sign point in the inner slot whether or not it
-  -- coincides with a prior live read.
-  --
-  -- ASSEMBLY (the verify-tail split, executed below). With (a)
-  -- `map_run_simulateQ_ghostNmaImpl_overlay_empty` and (b)
-  -- `evalDist_map_run_simulateQ_ghostNmaImpl_proj2` both PROVEN, the hybrid LHS run and the
-  -- linked managed RHS run are both projections of the *same* layered ghost-tagged run
-  -- `(simulateQ ghostNmaImpl (adv.main pk)).run ((∅,∅), [])`. The two verify tails are aligned on
-  -- this common run by `probOutput_hybridVerifyCont_le_managed_verify` — on `msg ∈ signed` the
-  -- freshness conjunct zeroes the hybrid side (`probOutput_true_hybridVerifyCont_of_mem`), and on
-  -- fresh forgeries the overlay verification agrees with the live verification
-  -- (`withCacheOverlay_verify_eq_of_miss`, `hybridVerifyCont_cache_congr`), gated by the whole-run
-  -- ghost-domain invariant `ghostNmaImpl_run_signed_inv`. The `linkReshape` / Option-B
-  -- post-processing regrouping is threaded by `managedRun_eq_link_run` + `bind_map_left`.
   --
   -- Reduce the Option-B post-processing `pure` (re-simulated under `nmaInner`) to its value, and
   -- pull the outer `(fun x => x.1) <$> _` past the head bind. The RHS is now `nestedManaged >>= K`

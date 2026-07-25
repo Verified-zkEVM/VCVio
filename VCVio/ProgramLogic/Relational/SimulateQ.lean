@@ -3303,9 +3303,9 @@ upstream draws. The averaged bad mass
 telescopes through the free monad exactly like `expectedQuerySlack`, but the read step's
 charge is now `∑' p, ν p · 1_{mc ∈ slot(p)} = Pr_{p∼ν}[mc ∈ slot(p)]`, a genuine
 probability over the state law. When `ν` is the pushforward of the upstream commit draws,
-this collapses (by Fubini / `tsum`-swap over the pending draws) to the *same* mass the lazy
-handler charges at the read — `probOutput_lazyGhostFire_one` is its single-pending base
-case. This is the missing-framework analogue of `expectedQuerySlack`: it carries a
+this collapses (by Fubini / `tsum`-swap over the pending draws) to the *same* mass a lazy
+handler charges at the read, whose single-pending base case is one deferred draw hitting the
+read point. This is the state-law analogue of `expectedQuerySlack`: it carries a
 state-**law** plus an averaged-output invariant rather than a per-state resource charge.
 
 This section builds the reusable telescoping scaffold (`avgBadM`, its `pure`/`query_bind`

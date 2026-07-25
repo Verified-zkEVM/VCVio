@@ -146,7 +146,7 @@ def blindStepProj
   fun z => (z.1, z.2.1.1.1, z.2.1.2, z.2.2)
 
 omit [SampleableType Stmt] in
-/-- **Value-free foundation (Stage 1).** The observable projection (output, real cache, signed
+/-- **Value-free foundation.** The observable projection (output, real cache, signed
 list, bad flag — see `blindStepProj`) of a single ghost-blind step is *independent of the ghost
 layer's values*. For any query `t` and any two input ghost layers `gh₁, gh₂` sharing the real
 cache `re`, signed list `l`, bad flag `bf`, and key *domain* (`gh₁ q = none ↔ gh₂ q = none`),
@@ -164,9 +164,9 @@ read off branch-by-branch from the real handler:
   `transSignBody` loop), so the projected step is the same for either input ghost layer.
 
 The ghost values therefore influence neither the run's outputs nor its read points; they are
-consulted only to set the bad flag. Stage 2 defers a single signing query's rejected-attempt
-commitment draws to a front block on the strength of this independence; Stage 3 lifts the
-deferral through the full `simulateQ` fold. -/
+consulted only to set the bad flag. This independence is what licenses deferring a signing
+query's rejected-attempt commitment draws to a front block, and lifting that deferral through the
+full `simulateQ` fold. -/
 lemma blindStepProj_map_ghostBlindImpl_indep (pk : Stmt) (sk : Wit)
     (t : ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp))).Domain)
     (re gh₁ gh₂ : (M × Commit →ₒ Chal).QueryCache) (l : List M) (bf : Bool)

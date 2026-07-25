@@ -38,6 +38,7 @@ The development is split along its phases: `Bodies` (retry loops and the four
 signing bodies), `GhostLayer` (the two-layer cache presentation and the
 ghost-instrumented handlers), `Projections` (projections onto both hybrid
 games and the ghost-domain invariant), `BodyBounds` (the body-level collision
-and deferred-sampling bounds), and `NMAHandler` (the layered ghost-tagged NMA
-handler). This umbrella module re-exports all of them.
+and abort bounds and the two cores of the Sign → Prog hop), and `NMAHandler`
+(the layered ghost-tagged NMA handler). This umbrella module re-exports all of
+them.
 -/
