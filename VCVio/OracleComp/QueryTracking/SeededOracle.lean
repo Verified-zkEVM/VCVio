@@ -7,6 +7,7 @@ import VCVio.OracleComp.Coercions.SubSpec
 import VCVio.OracleComp.Constructions.GenerateSeed
 import VCVio.OracleComp.QueryTracking.QueryBound
 import VCVio.OracleComp.QueryTracking.Structures
+import ToMathlib.Data.ENNReal.SumSquares
 
 /-!
 # Pre-computing Results of Oracle Queries
@@ -894,6 +895,46 @@ lemma tsum_probOutput_generateSeed_weight_takeAtIndex
         exact tsum_probOutput_generateSeed_prependValues_weight_aux qc js t i₀ i₀ k k
           (mx u₀) u₀ x hcount (takeAtIndex_prependValues_singleton_of_ne_aux t i₀ hti k u₀)
           (ih u₀ _ js.dedup k) h
+
+/-- Conditional-square bound for seeded replay. The full-seed and truncated-seed
+executions have the same weighted marginal, while the weighted faithfulness law
+identifies the second moment with their product. -/
+lemma sq_tsum_probOutput_generateSeed_le_tsum_mul_takeAtIndex
+    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
+    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
+    [unifSpec ˡ⊂ₒ spec₀] [IsUniformSpec spec₀]
+    (qc : ι₀ → ℕ) (js : List ι₀) (i₀ : ι₀) (k : ℕ)
+    {α : Type} (oa : OracleComp spec₀ α) (x : α) :
+    (∑' σ, Pr[= σ | generateSeed spec₀ qc js] *
+      Pr[= x | (simulateQ seededOracle oa).run' σ]) ^ 2 ≤
+      ∑' σ, Pr[= σ | generateSeed spec₀ qc js] *
+        (Pr[= x | (simulateQ seededOracle oa).run' σ] *
+          Pr[= x | (simulateQ seededOracle oa).run' (σ.takeAtIndex i₀ k)]) := by
+  let w : QuerySeed spec₀ → ENNReal := fun σ ↦ Pr[= σ | generateSeed spec₀ qc js]
+  let Q : QuerySeed spec₀ → ENNReal := fun σ ↦
+    Pr[= x | (simulateQ seededOracle oa).run' (σ.takeAtIndex i₀ k)]
+  have hmean :
+      ∑' σ, w σ * Pr[= x | (simulateQ seededOracle oa).run' σ] =
+        ∑' σ, w σ * Q σ := by
+    simpa [w, Q] using tsum_probOutput_generateSeed_weight_takeAtIndex
+      qc js i₀ k oa x (fun _ ↦ 1)
+  have hsecond :
+      ∑' σ, w σ *
+          (Q σ * Pr[= x | (simulateQ seededOracle oa).run' σ]) =
+        ∑' σ, w σ * (Q σ * Q σ) := by
+    simpa [w, Q] using tsum_probOutput_generateSeed_weight_takeAtIndex
+      qc js i₀ k oa x
+        (fun τ ↦ Pr[= x | (simulateQ seededOracle oa).run' τ])
+  rw [show (∑' σ, Pr[= σ | generateSeed spec₀ qc js] *
+      Pr[= x | (simulateQ seededOracle oa).run' σ]) =
+        ∑' σ, w σ * Q σ by simpa [w] using hmean]
+  refine (ENNReal.sq_tsum_le_tsum_sq w Q
+    (tsum_probOutput_le_one (mx := generateSeed spec₀ qc js))).trans_eq ?_
+  rw [show (∑' σ, w σ * Q σ ^ 2) =
+      ∑' σ, w σ * (Q σ * Q σ) by simp [sq], ← hsecond]
+  refine tsum_congr fun σ ↦ ?_
+  simp only [w, Q]
+  ring
 
 section queryBounds
 
