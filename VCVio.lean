@@ -104,6 +104,8 @@ import VCVio.OracleComp.Coercions.SubSpec
 import VCVio.OracleComp.Coinductive.Bridge
 import VCVio.OracleComp.Coinductive.DynSystem
 import VCVio.OracleComp.Coinductive.Machine
+import VCVio.OracleComp.Coinductive.Responder
+import VCVio.OracleComp.Coinductive.WiredRun
 import VCVio.OracleComp.Constructions.BitVec
 import VCVio.OracleComp.Constructions.Fork
 import VCVio.OracleComp.Constructions.GenerateSeed
