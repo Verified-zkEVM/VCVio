@@ -33,11 +33,11 @@ jobs:
       - name: Check for all imports in VCVio
         run: lake exe mk_all --lib VCVio --check
 
-      - name: Check for all imports in FFI
-        run: lake exe mk_all --lib FFI --check
-
       - name: Check for all imports in LatticeCrypto
         run: lake exe mk_all --lib LatticeCrypto --check
+
+      - name: Check for all imports in Extern
+        run: lake exe mk_all --lib Extern --check
 
       - name: Check for all imports in HashSig
         run: lake exe mk_all --lib HashSig --check
@@ -47,6 +47,51 @@ jobs:
 
       - name: Check for all imports in VCVioWidgets
         run: lake exe mk_all --lib VCVioWidgets --check
+
+  downstream_stub_link:
+    name: Downstream Consumer Build (no submodules)
+    runs-on: ubuntu-latest
+    steps:
+      # No `submodules:` input on purpose: this job reproduces issue #495. A
+      # downstream `require VCVio` never has the third_party/ submodules
+      # checked out, yet Lake links every dependency `extern_lib` into any
+      # consumer `lean_exe`, so the native targets must degrade gracefully.
+      - uses: actions/checkout@v4
+      - name: Set up Lean environment
+        uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Build a scratch consumer requiring VCVio by path
+        env:
+          # The consumer's Main imports nothing, so Mathlib's olean cache is
+          # dead weight; skip its post-update `lake exe cache get` hook.
+          MATHLIB_NO_CACHE_ON_UPDATE: "1"
+        run: |
+          consumer="$RUNNER_TEMP/vcvio-consumer"
+          mkdir -p "$consumer"
+          cp lean-toolchain "$consumer/"
+          {
+            echo 'name = "consumer"'
+            echo 'defaultTargets = ["consumer"]'
+            echo ''
+            echo '[[require]]'
+            echo 'name = "VCVio"'
+            echo "path = \"$GITHUB_WORKSPACE\""
+            echo ''
+            echo '[[lean_exe]]'
+            echo 'name = "consumer"'
+            echo 'root = "Main"'
+          } > "$consumer/lakefile.toml"
+          printf 'def main : IO Unit := IO.println "consumer ok"\n' > "$consumer/Main.lean"
+          cd "$consumer"
+          lake update
+          lake build
+          ./.lake/build/bin/consumer
 
   build:
     name: Build Project
@@ -73,8 +118,8 @@ jobs:
           echo "BUILD_TIMING_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_SOURCE_BRANCH=${{ github.head_ref || github.ref_name }}" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_BASE_REF=" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_CLEAN_COMMAND=rm -rf .lake/build && lake build ToMathlib VCVio FFI LatticeCrypto HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_WARM_COMMAND=lake build ToMathlib VCVio FFI LatticeCrypto HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_CLEAN_COMMAND=rm -rf .lake/build && lake build ToMathlib VCVio LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_WARM_COMMAND=lake build ToMathlib VCVio LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_NAME=Smoke test" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_COMMAND=lake env lean VCVioTest/Smoke.lean" >> "$GITHUB_ENV"
           {
@@ -114,14 +159,14 @@ jobs:
           python3 ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/clean_build.log" \
             --path-prefix ToMathlib/ \
             --path-prefix VCVio/ \
-            --path-prefix FFI/ \
+            --path-prefix Extern/ \
             --path-prefix LatticeCrypto/ \
             --path-prefix HashSig/ \
             --path-prefix Examples/ \
             --path-prefix VCVioWidgets/ \
             --path-prefix ToMathlib.lean \
             --path-prefix VCVio.lean \
-            --path-prefix FFI.lean \
+            --path-prefix Extern.lean \
             --path-prefix LatticeCrypto.lean \
             --path-prefix HashSig.lean \
             --path-prefix Examples.lean \

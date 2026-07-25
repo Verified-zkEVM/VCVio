@@ -145,7 +145,7 @@ whose only content is a chain of `import X.A; import X.B`. Each caller imports t
 specific submodule it actually uses.
 
 **Allowed umbrellas** (strictly top-level roots only): root imports such as
-`VCVio.lean`, `ToMathlib.lean`, `FFI.lean`, `Examples.lean`, `LatticeCrypto.lean`,
+`VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `Examples.lean`, `LatticeCrypto.lean`,
 `Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
 `LatticeCryptoTest.lean`.
 When a new top-level root is added, extend this list alongside it.
@@ -175,8 +175,9 @@ diacritics in cited author names, which the Mathlib allowlist would otherwise re
 ### 20. After adding new `.lean` files, run `./scripts/update-lib.sh`
 
 This regenerates the root import files covered by the build import check:
-`ToMathlib.lean`, `VCVio.lean`, `FFI.lean`, `LatticeCrypto.lean`,
-`Examples.lean`, and `Interop.lean`. CI checks those are up to date.
+`ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
+`HashSig.lean`, `Examples.lean`, and `Interop.lean`. CI checks those are up to
+date.
 
 ### 21. Lean toolchain and Mathlib version must stay in sync
 

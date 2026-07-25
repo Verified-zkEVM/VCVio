@@ -2,12 +2,13 @@
 
 ## What Lives Where
 
-The lattice stack is split into four layers:
+The lattice stack is split into five layers:
 
-- `LatticeCrypto/`: generic lattice algebra, hardness assumptions, scheme specs, security theorems, and executable concrete implementations.
+- `LatticeCrypto/`: generic lattice algebra, hardness assumptions, scheme specs, security theorems, and FFI-free executable concrete implementations.
+- `Extern/`: the native FFI surface — `@[extern]` bindings (`Extern/Hashing.lean`, `Extern/*/FFI.lean`) and every FFI-backed module reaching them (sampling, instances, and for Falcon also FFT/keygen/signing). No proof library may import it.
 - `LatticeCryptoTest/`: ACVP vectors, randomized regression tests, and differential checks against native reference code.
 - `csrc/`: small C shims that expose the native ML-DSA, ML-KEM, and Falcon implementations to Lean.
-- `third_party/`: vendored native backends used by the FFI and test harnesses.
+- `third_party/`: native backends as git submodules; when absent, the native `extern_lib` targets build as empty stubs.
 
 Use `VCVio/` when you are changing framework abstractions such as `SignatureAlg`, `IdenSchemeWithAbort`, `GPVHashAndSign`, or `FujisakiOkamoto`. Use `LatticeCrypto/` when you are instantiating those abstractions for a lattice scheme.
 
@@ -38,7 +39,8 @@ Use `VCVio/` when you are changing framework abstractions such as `SignatureAlg`
 - `LatticeCrypto/MLDSA/Scheme.lean`: proof-level identification scheme with aborts.
 - `LatticeCrypto/MLDSA/Signature.lean`: FIPS-style signing and verification layer built on the proof-level scheme.
 - `LatticeCrypto/MLDSA/Security.lean`: reduction statements from the signature / IDS surfaces to underlying assumptions.
-- `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, sampling, rounding, encoding, and FFI-backed instances.
+- `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, rounding, and encoding.
+- `Extern/MLDSA/`: FFI bindings, SHAKE-backed sampling, and the FFI-backed instance.
 
 ### ML-KEM
 
@@ -49,7 +51,8 @@ Use `VCVio/` when you are changing framework abstractions such as `SignatureAlg`
 - `LatticeCrypto/MLKEM/Internal.lean`: deterministic internal algorithms following the FIPS decomposition.
 - `LatticeCrypto/MLKEM/KEM.lean`: top-level checked KEM interface.
 - `LatticeCrypto/MLKEM/Security.lean`: IND-CPA and IND-CCA theorem surfaces.
-- `LatticeCrypto/MLKEM/Concrete/`: executable CBD, encoding, NTT, FFI, and instance wiring.
+- `LatticeCrypto/MLKEM/Concrete/`: executable CBD, encoding, and NTT.
+- `Extern/MLKEM/`: FFI bindings and the FFI-backed instance wiring.
 
 ### Falcon
 
@@ -58,7 +61,8 @@ Use `VCVio/` when you are changing framework abstractions such as `SignatureAlg`
 - `LatticeCrypto/Falcon/Primitives.lean`: abstract primitive operations such as sampling, hashing, and compression.
 - `LatticeCrypto/Falcon/Scheme.lean`: scheme semantics and the GPV bridge.
 - `LatticeCrypto/Falcon/Security.lean`: high-level security statements.
-- `LatticeCrypto/Falcon/Concrete/`: executable FFT, NTT, floating-point emulation, keygen, sampling, signing, and FFI support.
+- `LatticeCrypto/Falcon/Concrete/`: executable NTT, floating-point emulation (FPR/FXR), encodings, and the NTRU solver.
+- `Extern/Falcon/`: FFI bindings plus the SHAKE-backed sampler, FFT, keygen, signing, and instance layers.
 
 ## How It Connects To `VCVio`
 
@@ -76,13 +80,13 @@ When the task is about:
 
 - proof-level semantics or reduction statements: start in `Scheme.lean` or `Security.lean`
 - FIPS algorithm structure: start in `Signature.lean`, `KEM.lean`, or `Internal.lean`
-- executable arithmetic or codec behavior: start in `Concrete/`
-- native differential tests or vector failures: start in `LatticeCryptoTest/` and then follow the import chain into `Concrete/` or `csrc/`
+- executable arithmetic or codec behavior: start in `Concrete/`; FFI-backed sampling, instances, and Falcon FFT/keygen/signing live under `Extern/`
+- native differential tests or vector failures: start in `LatticeCryptoTest/` and then follow the import chain into `Extern/`, `Concrete/`, or `csrc/`
 - generic security-game surfaces: start in `VCVio/CryptoFoundations/`
 
 ## Common Gotchas
 
-- Keep the proof-level and executable layers distinct. `Scheme.lean` is usually the semantic model; `Concrete/` files are the executable realization.
+- Keep the proof-level and executable layers distinct. `Scheme.lean` is usually the semantic model; `Concrete/` and `Extern/` files are the executable realization (the FFI-touching parts under `Extern/`).
 - ML-DSA has both an identification-scheme layer and a FIPS signing layer. Changes to challenge formation, abort conditions, or rounding often need updates in both `Scheme.lean` and `Signature.lean`.
 - ML-KEM separates K-PKE, deterministic internal algorithms, and the top-level checked KEM wrapper. Put changes at the lowest layer that matches the semantics you need.
 - Falcon uses GPV-style abstractions at the proof layer and FFT / FPR machinery at the executable layer. Do not mix those concerns unless you are explicitly proving the bridge.
