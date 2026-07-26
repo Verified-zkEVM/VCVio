@@ -50,33 +50,39 @@ Two failure modes to recognize under this regime:
 
 Relatedly, `OracleSpec.toPFunctor_add` is deliberately **not** `@[simp]`: `toPFunctor` occurs inside the instance-carrying type of an `OracleComp`, and rewriting `(spec + spec').toPFunctor` under a `simulateQ`/`liftM` strands goals in a form the `simulateQ_query` family can no longer match (typically visible as `simulateQ impl (liftM (query (Sum.inl t)))` refusing to simplify).
 
-### 8. Structure values that close over `Fintype.ofFinite` / `SampleableType.ofFintype` are whnf-hostile
+### 8. Concrete subtype samplers built with `Fintype.ofFinite` can be whnf-hostile
 
-Subtype-uniform samplers and similar definitions typically contain closures of the form
+Subtype-uniform samplers and similar definitions sometimes close over noncomputable instances:
 
 ```lean
 letI : Fintype {v // P v} := .ofFinite _
 letI : SampleableType {v // P v} := .ofFintype _
 ```
 
-Unfolding `SampleableType.ofFintype` runs through `ofEquiv (Fintype.equivFin α).symm` into
-`$ᵗ (Fin (Fintype.card α))`, whose `Fin` instance forces whnf of `Fintype.card` applied to a
-`Classical.choice`-backed `Fintype.ofFinite` value. Nothing there reduces, so an elaboration
-step that must whnf through such a value can diverge.
+If elaboration later unfolds this concrete sampler, `SampleableType.ofFintype` runs through
+`ofEquiv (Fintype.equivFin α).symm` into `$ᵗ (Fin (Fintype.card α))`. The `Fin` instance can
+then force whnf of `Fintype.card` applied to a `Classical.choice`-backed
+`Fintype.ofFinite` value and hit a recursion or heartbeat limit. This is not a reason to avoid
+`Fintype.ofFinite` generally; the problem is forcing reduction through a concrete closure that
+captures it.
 
-**Symptom**: `maxRecDepth` or heartbeat timeouts when a structure instance is written with
-`where` field syntax, or when a concrete value of this kind sits in a binder or expected-type
-position.
+**Symptom**: a `maxRecDepth` or heartbeat timeout appears when a structure is written with
+`where` field syntax, or when the concrete sampler occurs in a binder or expected-type
+position, even though the same fields elaborate separately.
 
-**Fix**:
+**Workarounds** (use only the one that avoids the observed reduction):
 
-- Build the structure with the anonymous constructor `⟨…⟩` instead of `where`.
-- State theorems over an abstract value plus a pinning equality —
-  `(stmsis : Problem …) (hStmsis : stmsis = concreteValue)` — rather than baking the concrete
-  value into binder or conclusion positions; callers instantiate the equality at the use site.
-- If `decide` over a large `∃` inside such a definition times out, the `Decidable` search is
-  diverging before the classical fallback: supply `Classical.propDecidable` explicitly (and
-  `@decide_eq_true_iff _ (Classical.propDecidable _)` in the accompanying `iff` lemma).
+- Try the anonymous constructor `⟨…⟩` when `where` syntax forces normalization of the expected
+  structure type.
+- If a theorem statement itself forces the concrete value, quantify over an abstract value and
+  pin it with an equality such as
+  `(stmsis : Problem …) (hStmsis : stmsis = concreteValue)`. Use this only when callers can
+  discharge the equality directly; it is an interface workaround, not an extra mathematical
+  assumption.
+- If elaborating or reducing `decide` over a large proposition selects an expensive
+  computational `Decidable`, pass `Classical.propDecidable` explicitly. For example, use
+  `@decide_eq_true_iff _ (Classical.propDecidable _)` when rewriting an accompanying `iff`
+  lemma instead of asking Lean to reduce the decision procedure.
 
 ### 9. Universe polymorphism
 
@@ -146,17 +152,22 @@ A conditional theorem whose hypotheses are jointly uninhabitable is vacuously tr
 Two failure classes recur:
 
 - **Relation-pinning pairs**: a pair `(hr : GenerableRelation _ _ r) (hGen : hr.gen = myGen)`
-  is uninhabitable whenever `support myGen ⊄ r`, because `GenerableRelation.gen_sound` forces
-  the generator's support into the relation. Check `gen_sound` compatibility *before* stating
-  the theorem; if the supports do not fit, widen the relation (e.g. an ∃-material variant of
-  key validity) rather than pinning an incompatible generator.
+  is uninhabitable if some `(x, w) ∈ support myGen` has `r x w = false`, because
+  `GenerableRelation.gen_sound` requires every supported pair to satisfy the relation. Check
+  `gen_sound` compatibility *before* stating the theorem; if the support does not fit, widen
+  the relation (e.g. an ∃-material variant of key validity) rather than pinning an incompatible
+  generator.
 - **Cardinality mismatches**: the deterministic image of a small seed space can never equal —
   or be uniformly distributed on — a strictly larger space. A hypothesis asserting such an
-  equality or uniformity is false at every parameter.
+  equality or uniformity is false at every parameter where the strict cardinality inequality
+  holds.
 
-**Fix**: every new hypothesis pair ships with a kernel-checked inhabitance certificate — an
-explicit-witness proof of `∃ hr, hr.gen = …` (or the analogous inhabitance statement) — in the
-same commit that introduces it.
+**Fix**: when compatibility of a new hypothesis bundle is not immediate, ship a kernel-checked
+witness for the whole bundle (or at least each nontrivial compatibility pair) in the same PR.
+For example, prove `∃ hr, hr.gen = …` with an explicit witness rather than merely showing each
+hypothesis type is separately inhabited. A toy witness establishes logical consistency only;
+label it accordingly and do not present it as evidence that the assumptions are
+cryptographically strong or achievable at real parameters.
 
 ## Module Structure
 
@@ -211,35 +222,41 @@ Building Mathlib from source takes hours. Always fetch the precompiled cache fir
 ### 21. Warm-start new worktrees from a built donor worktree
 
 `lake exe cache get` only covers Mathlib; the repo's own libraries still rebuild from scratch
-in a cold `git worktree`, and a warm-copied cache still forces a large rebuild if the branch
-content diverges from the copy's source. Copying the build tree from an already-built worktree
-whose branch content matches makes the next build a near-no-op replay:
+in a cold `git worktree`. When two worktrees use the same toolchain, dependency revisions, and
+preferably the same commit, copying the root build tree from an already-built donor can make
+the target's next build a near-no-op. Do this before the target has its own `.lake/build`;
+the explicit check prevents `cp` from nesting or merging build directories accidentally:
 
 ```bash
-cp -a <built-donor-worktree>/.lake/build <new-worktree>/.lake/build
+mkdir -p "<new-worktree>/.lake"
+test ! -e "<new-worktree>/.lake/build"
+cp -a "<built-donor-worktree>/.lake/build" "<new-worktree>/.lake/"
 ```
 
-Always sanity-check with a no-op `lake build` afterwards, and stop immediately if Mathlib
-starts mass-rebuilding — that means a toolchain mismatch or a poisoned cache, and continuing
-burns hours.
+Run `lake exe cache get` in the target as usual, then run `lake build` so Lake checks the copied
+artifacts against the target sources and rebuilds anything affected. If Mathlib itself starts
+rebuilding at scale, stop and check the toolchain, dependency revisions, and whether the
+Mathlib cache was fetched; copying the root build tree does not replace the Mathlib cache.
 
-### 22. `lake env lean` and the LSP do not check olean staleness
+### 22. Direct Lean and the LSP can observe stale imported oleans
 
-Both elaborate a file against whatever import `.olean`s are on disk, even when those were
-built from a different source version (mid-edit builds, `git checkout`, branch switches).
-Elaborating against mismatched import terms produces deterministic phantom failures that
-perfectly mimic genuine elaboration pathologies:
+`lake env lean File.lean` invokes Lean directly; it does not ask Lake to rebuild imported
+modules first. The language server can likewise consume the compiled imports already on disk.
+After mid-edit builds, branch switches, or source changes outside the file being checked, those
+imports can be stale. Elaborating against mismatched imports can produce phantom failures that
+mimic genuine elaboration pathologies:
 
-- whnf/heartbeat timeouts that no `maxHeartbeats` bump cures — two derivations of the "same"
-  instance defeq-diverge against stale baked-in terms;
+- whnf/heartbeat timeouts that no `maxHeartbeats` bump cures because nominally matching terms
+  came from different compiled source states;
 - "unknown identifier" and "has already been declared" errors for declarations that match the
   source in front of you;
-- apparent section-dependence: inside a `section`, use sites share the same instance fvars, so
-  the cross-term defeq that diverges elsewhere never runs — the "bug" seems to vanish inside
-  the section and reappear outside it.
+- apparent section-dependence, where sharing local instance variables happens to avoid the
+  mismatched imported term and makes the symptom disappear inside a section.
 
-**Fix**: before diagnosing *any* elaboration pathology, run a no-op `lake build <lib>` to
-re-sync oleans. Only trust symptoms that still reproduce afterwards.
+**Fix**: before diagnosing an elaboration problem involving imported declarations or
+instances, run `lake build <target>` to synchronize the affected modules, then reproduce the
+problem with `lake env lean` or the LSP. The build may be a no-op when the imports are already
+current; only trust the suspected stale-import symptom if it survives this check.
 
 ### 23. Do not disable linters to silence warnings
 
@@ -281,20 +298,27 @@ Agents dispatched to `git worktree` clones need to read `AGENTS.md`, `docs/agent
 
 ### 29. Restack with `--onto` after folding commits into a base branch
 
-When a stacked branch's early commits get folded (cherry-picked or squashed) into its base
-branch, do not rebase from the branch's own pre-fold fork point — that replay range silently
-drops the mid-stack commits. Restack explicitly from the old base tip, so only the branch's
-own commits replay:
+When a stacked branch's base is cherry-picked or squashed into a new base, the old base commits
+may not be ancestors of the new base. Record the old base tip and the pre-rebase branch tip,
+then select only the branch-owned commits explicitly:
 
 ```bash
-git rebase --onto <new-base> <old-base-tip> <branch> --empty=drop
+git rebase --empty=drop --onto <new-base> <old-base-tip> <branch>
 ```
 
-Then gate on tree byte-identity before pushing — after a correct restack the final tree is
-unchanged, because the folded content now arrives via the base:
+Inspect how those commits were replayed before pushing:
 
 ```bash
-git diff <rebased-tip> <pre-rebase-tip> --quiet
+git range-diff <old-base-tip>..<pre-rebase-tip> <new-base>..<rebased-tip>
 ```
 
-A non-empty diff means the restack dropped or altered content; investigate before pushing.
+Conflict resolutions or commits made empty by the new base can produce legitimate differences,
+so review the range diff and rerun the relevant build/tests. A final-tree byte-identity check
+
+```bash
+git diff <pre-rebase-tip> <rebased-tip> --quiet
+```
+
+is an additional strong gate only when the new base differs from the old stack solely by
+folding the same content. Do not require tree identity when the new base also contains unrelated
+changes; those changes should appear in the rebased tree.
