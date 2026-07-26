@@ -331,7 +331,13 @@ private lemma IND_CPA_stepAdversary_game_eq_hybridBranch [Inhabited M]
   have hresume := IND_CPA_stepPrefix_resume_eq_hybridLR (encAlg' := encAlg')
     pk_sk.1 k bit (adversary pk_sk.1) (∅, 0) (Nat.zero_le k)
   dsimp at hresume
+  have hmap (mx : ProbComp Bool) :
+      (do let b' ← mx; pure (bit == b')) = (bit == ·) <$> mx := by
+    rw [map_eq_bind_pure_comp]
+    rfl
   refine evalDist_ext fun y => ?_
+  conv_rhs =>
+    rw [StateT.run'_eq, hmap]
   refine Eq.trans ?_ (probOutput_map_eq_of_evalDist_eq hresume (bit == ·) y)
   simp only [monad_norm]
   refine probOutput_bind_congr'

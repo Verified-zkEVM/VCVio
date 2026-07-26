@@ -6,10 +6,10 @@ let VCVio reason about Lean code emitted by Rust verification frontends:
 - [hax](https://github.com/cryspen/hax): MIR → Lean/F\*/Coq/EasyCrypt/ProVerif/SSProve via a 35-phase OCaml engine. Lean target produces code in the `Hax.RustM := ExceptT Error Option` monad.
 - [aeneas](https://github.com/AeneasVerif/aeneas): MIR → Lean/Coq/F\* via Charon's LLBC + functional translation. Lean target produces code in an inductive `Aeneas.Std.Result α := ok | fail | div`.
 
-**Current baseline (Lean 4.31):** both integrations are dormant and the
+**Current baseline (Lean 4.32):** both integrations are dormant and the
 aggregate `Interop` target is excluded from CI. Hax is not yet Lean
-4.31-compatible. Aeneas now publishes a Lean 4.31 build, but its VCVio bridge
-must be revalidated independently before being enabled.
+4.32-compatible. Aeneas publishes a Lean 4.31 build, so its VCVio bridge must
+be ported and revalidated independently before being enabled.
 
 Both backends collapse panic + divergence into the same shape; VCVio adds
 oracle access on top. The framework-side target monad is
@@ -33,7 +33,7 @@ The contract is therefore enforced at three levels:
    so it is fast and never blocks on Mathlib cache or build flakiness.
 3. **Reverse direction**: `Interop/**` may import from `VCVio/**`,
    `ToMathlib/**`, `Hax.…`, and `Aeneas.…`, but **not** from
-   `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `FFI/**`,
+   `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `Extern/**`,
    `VCVioWidgets/**`, or `VCVioTest/**`.
    Those libraries are themselves clients of VCVio, so Interop depending on
    them would create circular layering and pull user-facing libraries into the
@@ -81,12 +81,12 @@ oracle-aware Rust target monad for both backends.
 state:
 
 ```lean
--- Disabled: upstream Hax does not build under Lean 4.31.
+-- Disabled: upstream Hax does not build under Lean 4.32.
 -- require Hax from git
 --   "https://github.com/cryspen/hax" @
 --   "492a34e3" / "hax-lib/proof-libs/lean"
 
--- Disabled pending bridge validation; upstream pin uses Lean 4.31.
+-- Disabled pending a Lean 4.32 port; upstream pin uses Lean 4.31.
 -- require aeneas from git
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"

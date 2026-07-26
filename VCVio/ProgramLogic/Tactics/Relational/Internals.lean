@@ -465,8 +465,8 @@ def runRelBindBijRuleUsing (f : TSyntax `term) : TacticM Bool := do
   -- Best-effort normalization so `<$>` / `bind_pure_comp` shapes are also
   -- recognized as bind-on-both-sides for the purposes of the recipe.
   let _ ← tryEvalTacticSyntax (← `(tactic|
-    try simp only [bind_assoc, pure_bind, bind_pure_comp, Functor.map_map, map_pure,
-      map_bind, OracleComp.bind_pure_comp]))
+    try simp only [bind_assoc, pure_bind, map_eq_bind_pure_comp, Functor.map_map,
+      map_pure, map_bind]))
   if ← tryEvalTacticSyntax (← `(tactic|
       first
         | refine OracleComp.ProgramLogic.Relational.relTriple_bind_uniformSample_bij
@@ -487,8 +487,8 @@ def runRelBindBijRuleUsing (f : TSyntax `term) : TacticM Bool := do
   saved.restore
   let saved ← saveState
   let _ ← tryEvalTacticSyntax (← `(tactic|
-    try simp only [bind_assoc, pure_bind, bind_pure_comp, Functor.map_map, map_pure,
-      map_bind, OracleComp.bind_pure_comp]))
+    try simp only [bind_assoc, pure_bind, map_eq_bind_pure_comp, Functor.map_map,
+      map_pure, map_bind]))
   unless ← tryEvalTacticSyntax (← `(tactic|
       refine OracleComp.ProgramLogic.Relational.relTriple_bind
         (R := fun a b => b = $f a) ?_ ?_)) do

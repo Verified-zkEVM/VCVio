@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import LatticeCrypto.Falcon.Concrete.FloatLike
 import LatticeCrypto.Falcon.Concrete.GMTable
-import LatticeCrypto.Falcon.Concrete.SamplerZ
+import Extern.Falcon.SamplerZ
 
 /-!
 # FFT, FPoly Operations, and ffSampling for Falcon

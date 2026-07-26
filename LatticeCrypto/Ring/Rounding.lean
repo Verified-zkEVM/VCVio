@@ -25,16 +25,18 @@ interfaces are consumed by `MLDSA.Scheme` and `MLDSA.Signature`.
 
 namespace LatticeCrypto
 
+universe u v
+
 /-- Abstract rounding operations on a `NegacyclicRing`, parameterized by a
 rounding modulus `α` (typically `2 · γ₂` in the ML-DSA specification).
 
 Bundles the `highBits` / `lowBits` decomposition, the `shift` embedding,
 and the `makeHint` / `useHint` pair used by ML-DSA signing and verification
 to recover `w₁` from a hint vector. -/
-structure RoundingOps {Coeff : Type*} [CommRing Coeff]
+structure RoundingOps {Coeff : Type u} [CommRing Coeff]
     (ring : NegacyclicRing Coeff) (α : ℕ) where
-  High : Type*
-  Hint : Type*
+  High : Type v
+  Hint : Type v
   lowBits : ring.Poly → ring.Poly
   highBits : ring.Poly → High
   shift : High → ring.Poly

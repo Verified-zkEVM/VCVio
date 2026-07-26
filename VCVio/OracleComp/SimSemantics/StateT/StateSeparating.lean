@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 import VCVio.OracleComp.Coercions.Add
 import VCVio.OracleComp.SimSemantics.StateT.Basic
+import PolyFun.PFunctor.Handler.Stateful
 import PolyFun.PFunctor.Lens.State
 
 /-!
@@ -37,11 +38,19 @@ state, via `link` and `par`, or an explicit `Frame` that describes how two
 component states are embedded as separated lawful state lenses inside a larger
 state.
 -/
-def Stateful
+@[reducible] def Stateful
     {ιᵢ : Type uᵢ} {ιₑ : Type uₑ}
     (I : OracleSpec.{uᵢ, vᵢ} ιᵢ) (E : OracleSpec.{uₑ, v} ιₑ) (σ : Type v) :
     Type _ :=
   QueryImpl E (StateT σ (OracleComp I))
+
+/-- `QueryImpl.Stateful` is definitionally PolyFun's generic effectful
+stateful-handler interface specialized to oracle computations. -/
+theorem Stateful.eq_handler
+    {ιᵢ : Type uᵢ} {ιₑ : Type uₑ}
+    (I : OracleSpec.{uᵢ, vᵢ} ιᵢ) (E : OracleSpec.{uₑ, v} ιₑ) (σ : Type v) :
+    QueryImpl.Stateful I E σ =
+      PFunctor.Handler.Stateful (OracleComp I) σ E.toPFunctor := rfl
 
 namespace Stateful
 
@@ -138,6 +147,12 @@ state. -/
 def runState {α : Type v} (h : QueryImpl.Stateful I E σ) (s₀ : σ) (A : OracleComp E α) :
     OracleComp I (α × σ) :=
   (simulateQ h A).run s₀
+
+/-- `QueryImpl.Stateful.runState` is the `OracleSpec` specialization of the
+generic PolyFun effectful-stateful handler runner. -/
+theorem runState_eq_handler_run {α : Type v} (h : QueryImpl.Stateful I E σ)
+    (s₀ : σ) (A : OracleComp E α) :
+    h.runState s₀ A = PFunctor.Handler.Stateful.run h A s₀ := rfl
 
 /-- Run a stateful handler from the default initial state, keeping the final
 state. -/

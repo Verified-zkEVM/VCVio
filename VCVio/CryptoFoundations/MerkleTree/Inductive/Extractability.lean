@@ -300,7 +300,7 @@ private lemma singleHash_withQueryLog (a b : α) :
     (singleHash (m := OracleComp (spec α)) a b).withQueryLog =
       (liftM ((spec α).query (a, b)) : OracleComp (spec α) α) >>=
         fun u => pure (u, ([⟨(a, b), u⟩] : (spec α).QueryLog)) := by
-  simp [singleHash, bind_pure, OracleComp.withQueryLog_query]
+  simp [singleHash, OracleComp.withQueryLog_query]
 
 private lemma getPutativeRoot_step_withQueryLog_decompose
     (prog : OracleComp (spec α) α) (mkPair : α → α × α)
@@ -551,7 +551,7 @@ private lemma probOutput_singleHash_eq_inv_card
                   OracleComp (spec α) α)] =
       (Fintype.card α : ENNReal)⁻¹ := by
   rw [show (singleHash (m := OracleComp (spec α)) a b : OracleComp (spec α) α) =
-        (liftM ((spec α).query (a, b)) : OracleComp (spec α) α) from bind_pure _,
+        (liftM ((spec α).query (a, b)) : OracleComp (spec α) α) by simp [singleHash],
     probOutput_query (spec := spec α) (a, b) root]
 
 /--

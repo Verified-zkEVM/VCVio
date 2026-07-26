@@ -129,7 +129,7 @@ term `(t+2) * (t+1) / (2 * |Y|)` — a `(t+2)`-query game once the two
 verification queries are accounted for.
 
 Closes one of the layers requested in
-[Verified-zkEVM/VCV-io#284](https://github.com/Verified-zkEVM/VCV-io/issues/284).
+[Verified-zkEVM/VCVio#284](https://github.com/Verified-zkEVM/VCVio/issues/284).
 -/
 
 /-- The random-oracle spec with domain `X` and range `Y`, as seen by the
