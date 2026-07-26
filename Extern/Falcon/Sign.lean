@@ -3,8 +3,8 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Concrete.FFT
-import LatticeCrypto.Falcon.Concrete.Sampling
+import Extern.Falcon.FFT
+import Extern.Falcon.Sampling
 import LatticeCrypto.Falcon.Concrete.Encoding
 import LatticeCrypto.Falcon.Concrete.NTT
 import LatticeCrypto.Falcon.Params

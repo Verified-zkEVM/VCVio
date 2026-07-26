@@ -160,7 +160,7 @@ private structure BalancedDecomp (alpha m : ℕ) : Prop where
   hqm1 : alpha * m = modulus - 1
   hsmall : 2 * (alpha + 1) < modulus
 
-private def BalancedDecomp.ofApproved {p : Params} (hp : p.isApproved) :
+private theorem BalancedDecomp.ofApproved {p : Params} (hp : p.isApproved) :
     BalancedDecomp (2 * p.gamma2) ((modulus - 1) / (2 * p.gamma2)) where
   hα     := by rcases hp with rfl | rfl | rfl <;> decide
   heven  := by simp only [even_two, Even.mul_right]

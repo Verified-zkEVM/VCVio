@@ -112,8 +112,7 @@ theorem simulateQ_run_writerPreservesInv
       simpa only [mul_one] using hs₀
   | query_bind t oa ih =>
       intro s₀ hs₀ z hz
-      simp only [OracleSpec.query_def, ofPFunctor_toPFunctor, simulateQ_bind, simulateQ_query,
-        OracleQuery.input_apply, OracleQuery.cont_apply, id_map, WriterT.run_bind, support_bind,
+      simp only [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind, support_bind,
         support_map, Set.mem_iUnion, Set.mem_image, Prod.exists, exists_prop] at hz
       obtain ⟨u, w, hus, v, w', hvs, rfl⟩ := hz
       simpa only [mul_assoc] using ih u (s₀ * w) (himpl t s₀ hs₀ (u, w) hus) (v, w') hvs

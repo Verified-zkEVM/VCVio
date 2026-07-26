@@ -41,7 +41,14 @@ The bare `query` identifier is the `export`ed `HasQuery.query`, so writing `quer
 
 ### 7. Core types are `@[reducible]` thin wrappers
 
-`OracleSpec`, `QueryImpl`, and `OracleComp` are all `def`/`abbrev`/`@[reducible]` over `PFunctor` machinery. Lean may unfold them aggressively. Use `OracleComp.inductionOn` / `OracleComp.construct` as canonical eliminators rather than pattern matching on `PFunctor.FreeM.pure`/`roll`.
+`OracleSpec`, `QueryImpl`, `OracleComp`, `OracleQuery`, and `OracleSpec.toPFunctor` are all `def`/`abbrev`/`@[reducible]` over `PFunctor` machinery, and the `Monad`/`Functor` instances come directly from `PFunctor.FreeM`/`PFunctor.Obj`. Lean may unfold them aggressively. Use `OracleComp.inductionOn` / `OracleComp.construct` as canonical eliminators rather than pattern matching on `PFunctor.FreeM.pure`/`roll`.
+
+Two failure modes to recognize under this regime:
+
+- **Dot notation on monadic results fails.** The inferred type of `oa >>= ob` or `liftM (query t)` has head `PFunctor.FreeM`, not `OracleComp`, so `(query t >>= oa).myOracleCompLemma` reports `Invalid field … PFunctor.FreeM.myOracleCompLemma`. State such lemmas in prefix form (`myOracleCompLemma … (query t >>= oa)`); dot notation on plain variables of ascribed type `OracleComp spec α` still works.
+- **Never `attribute [local reducible]` a definition that instance keys mention.** Instance discrimination-tree keys are computed at declaration site; changing transparency locally makes queries normalize differently and instances like `MonadLiftT (OracleComp spec) SetM` silently vanish (`support`, `evalDist`, `Pr[…]` all stop elaborating). `toPFunctor` is globally reducible for exactly this consistency reason.
+
+Relatedly, `OracleSpec.toPFunctor_add` is deliberately **not** `@[simp]`: `toPFunctor` occurs inside the instance-carrying type of an `OracleComp`, and rewriting `(spec + spec').toPFunctor` under a `simulateQ`/`liftM` strands goals in a form the `simulateQ_query` family can no longer match (typically visible as `simulateQ impl (liftM (query (Sum.inl t)))` refusing to simplify).
 
 ### 8. Universe polymorphism
 
@@ -138,7 +145,7 @@ whose only content is a chain of `import X.A; import X.B`. Each caller imports t
 specific submodule it actually uses.
 
 **Allowed umbrellas** (strictly top-level roots only): root imports such as
-`VCVio.lean`, `ToMathlib.lean`, `FFI.lean`, `Examples.lean`, `LatticeCrypto.lean`,
+`VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `Examples.lean`, `LatticeCrypto.lean`,
 `Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
 `LatticeCryptoTest.lean`.
 When a new top-level root is added, extend this list alongside it.
@@ -168,8 +175,9 @@ diacritics in cited author names, which the Mathlib allowlist would otherwise re
 ### 20. After adding new `.lean` files, run `./scripts/update-lib.sh`
 
 This regenerates the root import files covered by the build import check:
-`ToMathlib.lean`, `VCVio.lean`, `FFI.lean`, `LatticeCrypto.lean`,
-`Examples.lean`, and `Interop.lean`. CI checks those are up to date.
+`ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
+`HashSig.lean`, `Examples.lean`, and `Interop.lean`. CI checks those are up to
+date.
 
 ### 21. Lean toolchain and Mathlib version must stay in sync
 
