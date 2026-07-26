@@ -419,6 +419,41 @@ def _root_.OracleComp.OracleMachine.stepD {ι : Type} {spec : OracleSpec.{0, 0} 
     (s : M.State) : M.State :=
   (M.view s).elim (fun _ => s) (fun q => q.2 (h q.1))
 
+/-- The deterministic run through a handler reads out the `stepD` trajectory: fuelled
+`runWith` at `m := Id` is the readout after `k` deterministic steps — unconditionally,
+since returns are absorbing (`stepD` fixes returned states). Replaces the old
+stability-conditioned readout lemma. -/
+theorem _root_.OracleComp.OracleMachine.runWith_eq_output_iterate_stepD
+    {ι : Type} {spec : OracleSpec.{0, 0} ι} {α' β' : Type}
+    (M : OracleMachine spec α' β') (h : OracleHandler spec) (k : ℕ) (s : M.State) :
+    M.runWith h.toQueryImpl k s = M.output ((M.stepD h)^[k] s) := by
+  induction k generalizing s with
+  | zero =>
+    cases hview : M.view s with
+    | inl b =>
+      rw [M.runWith_return h.toQueryImpl 0 s b hview, Function.iterate_zero, id_eq,
+        M.output_of_view_return hview]
+      rfl
+    | inr q =>
+      rw [M.runWith_query_zero h.toQueryImpl s q.1 q.2 hview, Function.iterate_zero,
+        id_eq]
+      simp [OracleMachine.output, hview]
+      rfl
+  | succ k ih =>
+    cases hview : M.view s with
+    | inl b =>
+      have hfix : M.stepD h s = s := by
+        simp only [OracleMachine.stepD, hview, Sum.elim_inl]
+      rw [Function.iterate_succ_apply, hfix, ← ih s,
+        M.runWith_return h.toQueryImpl (k + 1) s b hview,
+        M.runWith_return h.toQueryImpl k s b hview]
+    | inr q =>
+      have hstep : M.stepD h s = q.2 (h q.1) := by
+        simp only [OracleMachine.stepD, hview, Sum.elim_inr]
+      rw [M.runWith_query_succ h.toQueryImpl k s q.1 q.2 hview,
+        Function.iterate_succ_apply, hstep]
+      exact ih (q.2 (h q.1))
+
 /-- The state at round `j` of the deterministic run against handler `h` on input `x`. -/
 def stateAt (D : MachineAdversary bd) (n : ℕ) (h : OracleHandler (spec n))
     (x : α n) (j : ℕ) : (D.M n).State :=
