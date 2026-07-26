@@ -42,6 +42,7 @@ import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 import VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget
+import VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning
 import VCVio.CryptoFoundations.HardnessAssumptions.OneWay
 import VCVio.CryptoFoundations.HashCommitment
 import VCVio.CryptoFoundations.IdenSchemeWithAbort
