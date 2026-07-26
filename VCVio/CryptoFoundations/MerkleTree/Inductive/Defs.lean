@@ -38,7 +38,7 @@ as defined in `ToMathlib.Data.IndexedBinaryTree`.
 - [x] Collision Lemma (See SNARGs book 18.3)
   - (this is really not a lemma about oracles, so it could go with the binary tree API)
 - [ ] Extractibility (See SNARGs book 18.5)
-- [ ] Multi-leaf proofs
+- [x] Multi-leaf proofs (see `VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs`)
 - [ ] Arbirary arity trees
 - [ ] Multi-instance
 

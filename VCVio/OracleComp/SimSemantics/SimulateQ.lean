@@ -24,7 +24,7 @@ section simulateQ
 implementation in `r α` by substituting `impl t` for `query t` throughout. -/
 def simulateQ {ι} {spec : OracleSpec ι} {r : Type u → Type _} [Monad r]
     (impl : QueryImpl spec r) {α : Type u} (mx : OracleComp spec α) : r α :=
-  PFunctor.FreeM.mapM impl mx
+  PFunctor.FreeM.liftM impl mx
 
 variable {ι} {spec : OracleSpec ι} {r m n : Type u → Type*}
     [Monad r] (impl : QueryImpl spec r)
@@ -36,7 +36,7 @@ lemma simulateQ_pure (x : α) :
 @[simp, grind =, game_rule]
 lemma simulateQ_bind [LawfulMonad r] (mx : OracleComp spec α) (my : α → OracleComp spec β) :
     simulateQ impl (mx >>= my) = simulateQ impl mx >>= fun x => simulateQ impl (my x) := by
-  unfold simulateQ; exact PFunctor.FreeM.mapM_bind' impl mx my
+  unfold simulateQ; exact PFunctor.FreeM.liftM_bind impl mx my
 
 /-- Version of `simulateQ` that bundles into a monad hom. -/
 @[reducible]
@@ -196,7 +196,7 @@ variable {ι} {spec : OracleSpec ι} {n : Type u → Type v}
   [Monad n] [LawfulMonad n] (impl : QueryImpl spec n)
 
 lemma simulateQ_def (impl : QueryImpl spec n) (mx : OracleComp spec α) :
-    simulateQ impl mx = PFunctor.FreeM.mapMHom impl mx := rfl
+    simulateQ impl mx = PFunctor.FreeM.liftMHom impl mx := rfl
 
 /-- `QueryImpl.id'` is an identity for `simulateQ` with implementation in `OracleComp spec`. -/
 @[simp, grind =]

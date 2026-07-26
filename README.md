@@ -1,46 +1,64 @@
-# Formally Verified Cryptography Proofs in Lean 4
+# Machine-Checked Cryptographic Proofs in Lean
 
-This library aims to provide a foundational framework in Lean for reasoning about cryptographic protocols in the computational model. The core part of the framework provides:
+VCVio is a Lean library for machine-checked proofs about cryptographic games, primitives,
+protocols, and implementations. The core framework provides:
 
 * A monadic syntax for representing computations with oracle access (`OracleComp`), with probabilistic computations (`ProbComp`) as a special case of having uniform selection oracles.
 * A denotational semantics (`evalDist`) for assigning probability distributions to probabilistic computations, and tools for reasoning about the probabilities of particular outputs or events (`probOutput`/`probEvent`/`probFailure`).
 * An operational semantics (`simulateQ`) for implementing/simulating the behavior of a computation's oracles, including implementations of random oracles, query logging, reductions, etc.
 * A program logic with relational (pRHL-style) and unary (Hoare-style) proof modes, with interactive tactics for stepping through game-based proofs.
 
-It also provides definitions for cryptographic primitives such as symmetric/asymmetric encryption, signatures, $\Sigma$-protocols, and transforms like Fiat-Shamir and Fischlin.
+It also provides definitions for cryptographic primitives such as symmetric/asymmetric encryption,
+signatures, $\Sigma$-protocols, and transforms like Fiat-Shamir and Fischlin.
 
-On top of that generic framework, the repo now contains a dedicated `LatticeCrypto` library for
-ML-DSA, ML-KEM, and Falcon, including both proof-level abstractions and executable concrete
-implementations.
+On top of the generic framework, `LatticeCrypto` covers ML-DSA, ML-KEM, and Falcon, including
+proof-level abstractions and executable concrete implementations. `HashSig` covers SLH-DSA
+(SPHINCS+, FIPS 205), and the interaction layer supports computational interpretations of
+interactive and UC-style systems.
 
-Assuming Lean 4 and lake are already installed, the project can be built by just running:
+Assuming Lean and Lake are already installed, the project can be built by just running:
 
 ```
 lake exe cache get && lake build
 ```
 
-CI's timed build covers the non-test Lean libraries `ToMathlib`, `VCVio`, `FFI`,
-`LatticeCrypto`, `Examples`, `VCVioWidgets`, and `Interop`.
+CI's timed build covers the non-test Lean libraries `ToMathlib`, `VCVio`,
+`LatticeCrypto`, `Extern`, `HashSig`, `Examples`, and `VCVioWidgets`.
 The build timing report parses per-file timings for that same set.
 Test libraries and test executables are intentionally outside the timed build; CI
 only times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
+VCVio can also be used as a dependency in another Lake project via a
+`[[require]]` on this repository, and that works out of the box. The native C
+backends under `third_party/` live in git submodules, which Lake does not fetch
+for dependencies, so the corresponding `extern_lib` targets fall back to empty
+stub archives when those sources are absent. Downstream executables still link
+unless they call VCVio's native FFI symbols; to enable the real backends, run
+`git submodule update --init --recursive` inside `.lake/packages/VCVio` and
+rebuild. (In this repository itself the same command at the repo root — or
+`scripts/build-project.sh --ffi` — enables the native test executables.)
+
 Mathematical foundations such as probability theory, computational complexity, and algebraic structures are based on or written to the Mathlib project (see [MATHLIB4](REFERENCES.md#mathlib4)), making all of that library usable in constructions and proofs.
 
-Generally the project aims to enable proof complexity comparable to that found in Mathlib.
-It's most well suited to proving concrete security bounds for reductions, and for establishing the security of individual cryptographic primitives.
-It allows for fully foundational proofs of things like forking/rewinding adversaries and Fiat-Shamir style transforms, but has less support for composing a large number of primitives into complex protocols.
-Asymptotic reasoning is also supported, but tooling and automation for this is currently limited.
-Computational complexity is not considered.
+The project aims to enable proof effort comparable to that found in Mathlib. It is particularly
+well suited to concrete security bounds for reductions and to the security of individual
+cryptographic primitives. It supports foundational arguments about forking and rewinding
+adversaries, Fiat-Shamir-style transforms, interactive systems, and UC-style composition.
+Asymptotic security and query-cost and expected-cost reasoning are also supported. Polynomial-time
+infrastructure and some tooling and automation remain under active development.
 
 ## Repository Map
 
 - `VCVio/` contains the oracle-computation framework, probability semantics, program logic, and generic crypto abstractions.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
+- `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
+- `HashSig/` contains hash-based signatures, including proof-level specifications and security for SLH-DSA.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
+- `HashSigTest/` contains hash-signature test and validation modules.
 - `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.
+- `Interop/` contains experimental bridges to Rust verification frontends such as hax and Aeneas.
 - `csrc/` contains C FFI bridges for the native ML-DSA, ML-KEM, and Falcon implementations used in tests.
-- `third_party/` contains the vendored native backends used by the FFI layer.
+- `third_party/` contains the native backends as git submodules, used by the `Extern` FFI layer and differential tests.
 - `ToMathlib/` contains supporting constructions that may eventually move to a separate project.
 
 For agent-oriented repo guidance, see [`AGENTS.md`](AGENTS.md) and the focused docs in
@@ -139,8 +157,20 @@ Predicates and tools for computations:
 * `IsQueryBound` - bound the number of queries a computation makes (with per-index variant `IsPerIndexQueryBound`)
 * `QueryImpl.withLogging`/`withCaching`/`withPregen` - modifiers that wrap a query implementation with logging, caching, or pre-generated answers
 
-## Trivia
+## Name
 
-`VCV-io` is inspired by FCF (see [FCF-REPO](REFERENCES.md#fcf-repo) and [FCF14](REFERENCES.md#fcf14)), a foundational framework for verified cryptography in Coq. Similar to FCF, we formalize the notion of oracle computations as central to modeling cryptographic games, primitives, and protocols. In contrast to FCF, our handling of oracles is much more refined — we allow for an *indexed* family of oracles via polynomial functors, and build significant infrastructure for combining and simulation of oracles.
+**VCVio** stands for **Verifying Cryptography via Interactions and Oracles**.
 
-The name `VCV` is reverse of `FCF` under the involution `F <=> V` (same number of characters going from the beginning, versus the end, of the English alphabet). One backronym for the name is "Verified Cryptography via Indexed Oracles".
+The initials **VCV** also admit the Latin motto *Veritas cryptographica vincit*
+(“cryptographic truth prevails”). The **io** suffix reflects the interactions and oracles at the
+heart of the library: interactions arise between protocol participants, between computations and
+their oracle environments, and between specifications and implementations through simulation and
+effect handlers; oracles provide a common abstraction for cryptographic games, reductions,
+probabilistic semantics, and executable interpretations.
+
+VCVio's framework is inspired by FCF (see [FCF-REPO](REFERENCES.md#fcf-repo) and
+[FCF14](REFERENCES.md#fcf14)), the Foundational Cryptography Framework for Rocq (formerly Coq),
+particularly its use of embedded probabilistic and oracle-aided computations with semantic models
+and derived rules for game-based reasoning. Where FCF gives each computation a single oracle
+interface, VCVio uses indexed oracle families represented by polynomial functors and provides
+compositional infrastructure for combining, simulating, and interpreting them.

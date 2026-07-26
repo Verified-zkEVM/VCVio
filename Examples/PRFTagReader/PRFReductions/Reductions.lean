@@ -298,12 +298,13 @@ theorem prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp
   congr 1
   unfold PRFScheme.prfRealExp unlinkMultipleExp unlinkToMultiplePRFReduction
   refine bind_congr (m := ProbComp) fun k => ?_
+  rw [StateT.run'_eq, StateT.run'_eq, map_eq_bind_pure_comp]
   change simulateQ (PRFScheme.prfRealQueryImpl prfs.multiplePRFScheme k)
       ((simulateQ unlinkToMultiplePRFQueryImpl adversary).run UnlinkState.init >>=
         fun p => pure p.1) = _
   rw [simulateQ_bind,
     simulateQ_prfReal_unlinkToMultiplePRFQueryImpl_run prfs k adversary UnlinkState.init]
-  rfl
+  simp only [simulateQ_pure, bind_pure_comp]
 
 omit [Fintype TagId] [Nonempty TagId] [DecidableEq Nonce] [DecidableEq Digest]
   [SampleableType Digest] [NeZero sessionsPerTag] in
@@ -458,12 +459,13 @@ theorem prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp
   congr 1
   unfold PRFScheme.prfRealExp unlinkSingleExp unlinkToSinglePRFReduction
   refine bind_congr (m := ProbComp) fun k => ?_
+  rw [StateT.run'_eq, StateT.run'_eq, map_eq_bind_pure_comp]
   change simulateQ (PRFScheme.prfRealQueryImpl prfs.singlePRFScheme k)
       ((simulateQ unlinkToSinglePRFQueryImpl adversary).run UnlinkState.init >>=
         fun p => pure p.1) = _
   rw [simulateQ_bind,
     simulateQ_prfReal_unlinkToSinglePRFQueryImpl_run prfs k adversary UnlinkState.init]
-  rfl
+  simp only [simulateQ_pure, bind_pure_comp]
 
 end UnlinkReduction
 

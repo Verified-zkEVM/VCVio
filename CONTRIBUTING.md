@@ -1,4 +1,4 @@
-# Contributing to VCV-io
+# Contributing to VCVio
 
 Thanks for contributing.
 

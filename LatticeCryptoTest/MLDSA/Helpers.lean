@@ -4,8 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 import LatticeCrypto.MLDSA.Signature
-import LatticeCrypto.MLDSA.Concrete.Instance
-import LatticeCrypto.MLDSA.Concrete.FFI
+import Extern.MLDSA.Instance
+import Extern.MLDSA.FFI
 
 /-!
 # ML-DSA Test Helpers
