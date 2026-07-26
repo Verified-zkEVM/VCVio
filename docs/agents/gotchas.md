@@ -61,8 +61,8 @@ letI : SampleableType {v // P v} := .ofFintype _
 
 Unfolding `SampleableType.ofFintype` runs through `ofEquiv (Fintype.equivFin α).symm` into
 `$ᵗ (Fin (Fintype.card α))`, whose `Fin` instance forces whnf of `Fintype.card` applied to a
-`Classical.choice`-backed `Fintype.ofFinite` value. Nothing there reduces, so any elaboration
-step that must whnf through such a value diverges.
+`Classical.choice`-backed `Fintype.ofFinite` value. Nothing there reduces, so an elaboration
+step that must whnf through such a value can diverge.
 
 **Symptom**: `maxRecDepth` or heartbeat timeouts when a structure instance is written with
 `where` field syntax, or when a concrete value of this kind sits in a binder or expected-type
@@ -192,8 +192,8 @@ whose only content is a chain of `import X.A; import X.B`. Each caller imports t
 specific submodule it actually uses.
 
 **Allowed umbrellas** (strictly top-level roots only): root imports such as
-`VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `Examples.lean`, `LatticeCrypto.lean`,
-`Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
+`VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `HashSig.lean`, `Examples.lean`,
+`LatticeCrypto.lean`, `Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
 `LatticeCryptoTest.lean`.
 When a new top-level root is added, extend this list alongside it.
 
@@ -261,8 +261,8 @@ date.
 
 ### 25. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.31.0`: `lean-toolchain` pins `leanprover/lean4:v4.31.0` and
-`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.31.0"`.
+Both currently `v4.32.0`: `lean-toolchain` pins `leanprover/lean4:v4.32.0` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.32.0"`.
 When upgrading, update both lines simultaneously.
 
 ### 26. Use public references in shared docs
