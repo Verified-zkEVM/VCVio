@@ -49,14 +49,14 @@ import VCVio.CryptoFoundations.KEMDEM
 import VCVio.CryptoFoundations.KeyEncapMech
 import VCVio.CryptoFoundations.MacAlg
 import VCVio.CryptoFoundations.MacFromPRF
+import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
+import VCVio.CryptoFoundations.MerkleTree.Addressed.Level
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Completeness
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractability
 import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Uniqueness
-import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
-import VCVio.CryptoFoundations.MerkleTree.Addressed.Level
 import VCVio.CryptoFoundations.MerkleTree.Vector.Completeness
 import VCVio.CryptoFoundations.MerkleTree.Vector.Defs
 import VCVio.CryptoFoundations.PRF

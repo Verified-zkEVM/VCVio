@@ -118,6 +118,7 @@ def getPutativeRootAddressedWithHash :
     nh .here proof.head (getPutativeRootAddressedWithHash (fun a => nh (.inR a)) idxRight
       leafValue proof.tail)
 
+omit [DecidableEq α] in
 /-- **Completeness of the engine**: an honestly generated authentication path
 recomputes the honest root, for every address-dependent hash. -/
 theorem addressed_functional_completeness {s : Skeleton}
@@ -133,16 +134,14 @@ theorem addressed_functional_completeness {s : Skeleton}
     | internal dl dr =>
       simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
         getPutativeRootAddressedWithHash, InductiveMerkleTree.generateProof,
-        List.Vector.tail_cons, List.Vector.head_cons, BinaryTree.LeafData.get,
-        BinaryTree.FullData.getRootValue]
+        List.Vector.head_cons, BinaryTree.LeafData.get, BinaryTree.FullData.getRootValue]
       exact congrArg (fun z => nodeHash .here z _) (ih dl (fun a => nodeHash (.inL a)))
   | ofRight idxRight ih =>
     cases leaf_data_tree with
     | internal dl dr =>
       simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
         getPutativeRootAddressedWithHash, InductiveMerkleTree.generateProof,
-        List.Vector.tail_cons, List.Vector.head_cons, BinaryTree.LeafData.get,
-        BinaryTree.FullData.getRootValue]
+        List.Vector.head_cons, BinaryTree.LeafData.get, BinaryTree.FullData.getRootValue]
       exact congrArg (nodeHash .here _) (ih dr (fun a => nodeHash (.inR a)))
 
 /-- An address-tagged collision: two *distinct* input pairs with equal digest under
@@ -227,7 +226,9 @@ theorem findCollisionAddressed_isSome {s : Skeleton}
     (hne : x ≠ y) :
     (findCollisionAddressed nodeHash idx proof₁ proof₂ x y).isSome := by
   induction idx with
-  | ofLeaf => simp [getPutativeRootAddressedWithHash] at hroot; exact absurd hroot hne
+  | ofLeaf =>
+    simp only [vector_eq_nil] at hroot
+    exact absurd hroot hne
   | ofLeft idxLeft ih =>
     rw [findCollisionAddressed]
     split
@@ -281,8 +282,8 @@ are the honestly-precommitted hash inputs at that node. -/
 @[simp]
 def childPairAt : {s : Skeleton} → FullData α s → NodeAddress s → α × α
   | _, .internal _ L R, .here => (L.getRootValue, R.getRootValue)
-  | _, .internal _ L R, .inL a => childPairAt L a
-  | _, .internal _ L R, .inR a => childPairAt R a
+  | _, .internal _ L _, .inL a => childPairAt L a
+  | _, .internal _ _ R, .inR a => childPairAt R a
 
 /-- **Orientation**: against an honest first opening, the collision's first endpoint
 is the precommitted child pair at the returned address. -/
@@ -328,7 +329,8 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
       split
       · rename_i hagree
         simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree, SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
+          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
+          SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
           BinaryTree.LeafData.get, hsub, Prod.mk.injEq] at hagree
         obtain ⟨a', c, hwalk⟩ := ih (fun a => nodeHash (.inL a)) dl proof₂.tail
           (show getPutativeRootAddressedWithHash (fun a => nodeHash (.inL a)) idxLeft y
@@ -338,7 +340,8 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
           (by simpa using hne)
         refine ⟨.inL a', c, ?_⟩
         simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree, SkeletonLeafIndex.depth, List.Vector.tail_cons,
+          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
+          SkeletonLeafIndex.depth, List.Vector.tail_cons,
           BinaryTree.LeafData.get] at hwalk ⊢
         rw [hwalk]
         simp [childPairAt]
@@ -346,12 +349,14 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
         · refine ⟨.here, (getPutativeRootAddressedWithHash (fun a => nodeHash (.inL a))
             idxLeft y proof₂.tail, proof₂.head), ?_⟩
           simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree, SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
-            BinaryTree.LeafData.get, hsub, childPairAt, Option.some.injEq]
+            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
+            SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
+            BinaryTree.LeafData.get, hsub, childPairAt]
         · rename_i hne2
           refine absurd ?_ hne2
           simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree, SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
+            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
+            SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
             BinaryTree.LeafData.get, hsub]
           exact hroot'.symm
   | ofRight idxRight ih =>
@@ -375,7 +380,8 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
       split
       · rename_i hagree
         simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree, SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
+          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
+          SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
           BinaryTree.LeafData.get, hsub, Prod.mk.injEq] at hagree
         obtain ⟨a', c, hwalk⟩ := ih (fun a => nodeHash (.inR a)) dr proof₂.tail
           (show getPutativeRootAddressedWithHash (fun a => nodeHash (.inR a)) idxRight y
@@ -385,7 +391,8 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
           (by simpa using hne)
         refine ⟨.inR a', c, ?_⟩
         simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree, SkeletonLeafIndex.depth, List.Vector.tail_cons,
+          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
+          SkeletonLeafIndex.depth, List.Vector.tail_cons,
           BinaryTree.LeafData.get] at hwalk ⊢
         rw [hwalk]
         simp [childPairAt]
@@ -393,15 +400,18 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
         · refine ⟨.here, (proof₂.head, getPutativeRootAddressedWithHash
             (fun a => nodeHash (.inR a)) idxRight y proof₂.tail), ?_⟩
           simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree, SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
-            BinaryTree.LeafData.get, hsub, childPairAt, Option.some.injEq]
+            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
+            SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
+            BinaryTree.LeafData.get, hsub, childPairAt]
         · rename_i hne2
           refine absurd ?_ hne2
           simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree, SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
+            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
+            SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
             BinaryTree.LeafData.get, hsub]
           exact hroot'.symm
 
+omit [DecidableEq α] in
 /-- **Oriented binding, user-facing**: an adversarial opening that verifies against an
 honestly built root with a different leaf value yields a collision whose first
 endpoint is the honestly-precommitted child pair at the tagged address — the
@@ -417,6 +427,7 @@ theorem addressed_oriented_binding {s : Skeleton}
       nodeHash a (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).1
           (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).2
         = nodeHash a c.1 c.2 := by
+  letI : DecidableEq α := Classical.decEq α
   obtain ⟨a, c, hwalk⟩ :=
     findCollisionAddressed_oriented nodeHash ld idx y proof₂ hroot hne
   have hcol := findCollisionAddressed_sound nodeHash idx _ proof₂ (ld.get idx) y _ hwalk
@@ -433,6 +444,7 @@ instance), and the level-separated (`Tweaked`) development factors through
 
 section Instances
 
+omit [DecidableEq α] in
 /-- **Ordinary instance**: a constant `nodeHash` recovers the unaddressed
 putative-root computation. -/
 theorem getPutativeRootAddressed_const (h : α → α → α) {s : Skeleton}
@@ -444,6 +456,7 @@ theorem getPutativeRootAddressed_const (h : α → α → α) {s : Skeleton}
   | ofLeft idxLeft ih => simp [getPutativeRootAddressedWithHash, ih]
   | ofRight idxRight ih => simp [getPutativeRootAddressedWithHash, ih]
 
+omit [DecidableEq α] in
 /-- **Ordinary instance**: a constant `nodeHash` recovers the unaddressed cache
 construction. -/
 theorem populateUpAddressed_const (h : α → α → α) {s : Skeleton}

@@ -37,6 +37,7 @@ def getPutativeRootLevel (th : TweakableHash PkSeed Tweak (Y × Y) Y) (pk : PkSe
     (proof : List.Vector Y idx.depth) : Y :=
   getPutativeRootAddressedWithHash (levelNodeHash th pk tweakAt) idx leafValue proof
 
+omit [DecidableEq Y] in
 /-- Completeness for the level-separated tree — the engine's completeness at
 `levelNodeHash`. -/
 theorem level_functional_completeness (th : TweakableHash PkSeed Tweak (Y × Y) Y)
@@ -44,9 +45,11 @@ theorem level_functional_completeness (th : TweakableHash PkSeed Tweak (Y × Y) 
     (idx : SkeletonLeafIndex s) (ld : LeafData Y s) :
     getPutativeRootLevel th pk tweakAt idx (ld.get idx)
       (generateProof (buildMerkleTreeLevel th pk tweakAt ld) idx)
-    = (buildMerkleTreeLevel th pk tweakAt ld).getRootValue :=
-  addressed_functional_completeness idx ld (levelNodeHash th pk tweakAt)
+    = (buildMerkleTreeLevel th pk tweakAt ld).getRootValue := by
+  letI : DecidableEq Y := Classical.decEq Y
+  exact addressed_functional_completeness idx ld (levelNodeHash th pk tweakAt)
 
+omit [DecidableEq Y] in
 /-- **Oriented binding** for the level-separated tree — the engine's oriented
 binding at `levelNodeHash`: an adversarial opening verifying against an honestly
 built root with a different leaf yields two distinct pairs with equal digest under
@@ -63,7 +66,8 @@ theorem level_oriented_binding (th : TweakableHash PkSeed Tweak (Y × Y) Y)
       th.eval pk (tweakAt a.subtreeDepth)
           ((childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a).1,
            (childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a).2)
-        = th.eval pk (tweakAt a.subtreeDepth) (c.1, c.2) :=
-  addressed_oriented_binding (levelNodeHash th pk tweakAt) ld idx y proof₂ hroot hne
+        = th.eval pk (tweakAt a.subtreeDepth) (c.1, c.2) := by
+  letI : DecidableEq Y := Classical.decEq Y
+  exact addressed_oriented_binding (levelNodeHash th pk tweakAt) ld idx y proof₂ hroot hne
 
 end AddressedMerkleTree
