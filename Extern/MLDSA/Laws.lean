@@ -4,23 +4,30 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 import Extern.MLDSA.Instance
+import LatticeCrypto.MLDSA.Concrete.LawBounds
 
 /-!
 # Concrete ML-DSA Primitive Laws
 
 This file discharges the deterministically-provable fields of `MLDSA.Primitives.Laws` for the
-concrete `concretePrimitives` instance built from the FIPS 204 rounding, NTT, and byte-encoding
-layers, for any approved parameter set. Each provable field is banked as a standalone theorem
-(`concrete_*`).
+concrete `MLDSA.Concrete.concretePrimitives` instance built from the FIPS 204 rounding, NTT,
+sampling, and byte-encoding layers, for any approved parameter set. Each provable field is banked
+as a standalone theorem (`concrete_*`).
+
+The bundle `concretePrimitives` wires in the SHAKE-driven samplers of `Extern/MLDSA/Sampling.lean`,
+so every statement below reaches the native FFI surface and lives here rather than in
+`LatticeCrypto/`. The purely algebraic range and roundtrip bounds these proofs consume are banked
+in `LatticeCrypto/MLDSA/Concrete/LawBounds.lean`, which stays inside the proof library.
 
 ## What is proven
 
 The eight rounding/transform fields follow directly from the verified concrete rounding lemmas
 in `LatticeCrypto/MLDSA/Concrete/Rounding.lean` and the concrete NTT laws in
-`LatticeCrypto/MLDSA/Concrete/NTT.lean`, bridged across the `polyNorm` /
-`LatticeCrypto.cInfNorm` definitional identity (`polyNorm_eq_cInfNorm`):
+`LatticeCrypto/MLDSA/Concrete/NTT.lean`, bridged across the `polyNorm` / `LatticeCrypto.cInfNorm`
+definitional identity (`polyNorm_eq_cInfNorm`):
 
-- `transform`, `high_low_decomp`, `lowBits_bound`, `hide_low`, `highBitsShift_injective`,
+- `transform` (`MLDSA.Concrete.concrete_transform`, banked in `LawBounds.lean` since it names only
+  the NTT backend), `high_low_decomp`, `lowBits_bound`, `hide_low`, `highBitsShift_injective`,
   `useHint_makeHint`, `power2Round_decomp`, `power2Round_bound`.
 
 Two further fields are discharged from the concrete byte-encoding decode ranges and packer
@@ -28,12 +35,12 @@ roundtrip in `LatticeCrypto/MLDSA/Concrete/Encoding.lean`:
 
 - `expandMask_bound` (`concrete_expandMask_bound`): every `expandMask` coefficient is a value
   decoded by `polyZUnpack` over the range `[-γ₁ + 1, γ₁]`, so its centered infinity norm is at
-  most `γ₁`. This is a property of the decoder's output window (`bitUnpackPoly_get`) and is
-  independent of the opaque SHAKE byte stream. It matches the abstract field's bound `γ₁`.
+  most `γ₁`. This is a property of the decoder's output window (`bitUnpackPoly_z_cInfNorm_le`) and
+  is independent of the opaque SHAKE byte stream. It matches the abstract field's bound `γ₁`.
 - `w1Encode_injective` (`concrete_w1Encode_injOn`): on the valid commitment range — every
   component an actual `highBits` output — each coefficient lies in `[0, (q-1)/(2γ₂) - 1]`
-  (`highBits_coeff_val_lt_m`), which fits the `w₁` packer's bit width, so `simpleBitPackPoly` is
-  inverted by `simpleBitUnpackPoly` and `w1Encode` is injective. This matches the abstract
+  (`highBits_coeff_val_lt_width`), which fits the `w₁` packer's bit width, so `simpleBitPackPoly`
+  is inverted by `simpleBitUnpackPoly` and `w1Encode` is injective. This matches the abstract
   `Set.InjOn` field, whose validity set is exactly the image of `highBits`.
 
 Two further sampler-bound fields are discharged from the fuel-recursive rejection samplers in
@@ -77,21 +84,9 @@ open MLDSA LatticeCrypto
 
 set_option maxRecDepth 4000
 
-/-- The ML-DSA centered infinity norm `polyNorm` agrees with the backend-generic
-`LatticeCrypto.cInfNorm` on the canonical vector backend. This is the bridge that lets the
-`polyNorm`-stated `Primitives.Laws` fields consume the `cInfNorm`-stated rounding lemmas. -/
-theorem polyNorm_eq_cInfNorm (f : Rq) : polyNorm f = LatticeCrypto.cInfNorm f := by
-  unfold polyNorm normOps LatticeCrypto.cInfNorm LatticeCrypto.zmodPolyNormOps
-    LatticeCrypto.normOpsOfCenteredView
-  rfl
-
 variable (p : Params)
 
 /-! ## Provable algebraic fields (banked) -/
-
-/-- `Primitives.Laws.transform` for the concrete instance. -/
-theorem concrete_transform : NTTRingLaws concreteNTTRingOps :=
-  concreteNTTRingLaws
 
 /-- `Primitives.Laws.high_low_decomp` for the concrete instance. -/
 theorem concrete_high_low_decomp (r : Rq) :
@@ -143,34 +138,10 @@ theorem concrete_power2Round_bound (r : Rq) :
 
 /-! ## `expandMask_bound` at the FIPS-204 `z`-range
 
-The concrete `expandMask` decodes each coefficient through `polyZUnpack p`, i.e.
-`bitUnpackPoly bytes (-γ₁ + 1) γ₁`. By the decode-range bound `bitUnpackPoly_get`, every coefficient
-is `γ₁ - v` for a `width`-bit value `v` with `width = rangeWidth (-γ₁ + 1) γ₁`. For the approved
-parameter sets `2 ^ width = 2 γ₁`, so `v ≤ 2 γ₁ - 1` and `γ₁ - v ∈ [-(γ₁ - 1), γ₁]`, whose centered
-representative (since `2 γ₁ < q`) is `γ₁ - v` itself, of absolute value at most `γ₁`. The argument
-is purely about the decoder's output range and independent of the opaque SHAKE byte stream. -/
-
-/-- Decode-range infinity-norm bound for a `z`-range `bitUnpackPoly`: every coefficient of
-`bitUnpackPoly bytes (-γ + 1) γ` has centered absolute value at most `γ`, provided the bit width
-satisfies `2 ^ width = 2 γ` (true for FIPS-204 `γ₁`, a power of two) and `2 γ < q`. -/
-theorem bitUnpackPoly_z_cInfNorm_le (bytes : ByteArray) (γ : ℕ)
-    (hwidth : (2 : ℕ) ^ rangeWidth (-(γ : ℤ) + 1) (γ : ℤ) = 2 * γ)
-    (hq : 2 * γ < modulus) :
-    LatticeCrypto.cInfNorm (bitUnpackPoly bytes (-(γ : ℤ) + 1) (γ : ℤ)) ≤ γ := by
-  rw [LatticeCrypto.cInfNorm_le_iff]
-  intro i
-  obtain ⟨v, hv, hget⟩ := bitUnpackPoly_get bytes (-(γ : ℤ) + 1) (γ : ℤ) i
-  rw [hget, hwidth] at *
-  have hbound : ((γ : ℤ) - (v : ℤ)).natAbs ≤ γ := by omega
-  rw [LatticeCrypto.centeredRepr_intCast_eq_of_natAbs_le ((γ : ℤ) - (v : ℤ)) hbound (by omega)]
-  exact hbound
-
-/-- For each approved parameter set the `z`-range bit width satisfies `2 ^ width = 2 γ₁` (because
-`γ₁` is a power of two) and `2 γ₁ < q`. -/
-private theorem approved_gamma1_width (hp : p.isApproved) :
-    (2 : ℕ) ^ rangeWidth (-(p.gamma1 : ℤ) + 1) (p.gamma1 : ℤ) = 2 * p.gamma1 ∧
-      2 * p.gamma1 < modulus := by
-  rcases hp with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩
+The concrete `expandMask` decodes each coefficient through `polyZUnpack p`. The decode-range bound
+`bitUnpackPoly_z_cInfNorm_le` holds for any byte input, so it applies to the opaque SHAKE stream
+after generalizing the byte argument; the two side conditions on the `z`-range bit width come from
+`approved_gamma1_width`. -/
 
 /-- `Primitives.Laws.expandMask_bound` (bound `γ₁`) for the concrete instance, at any
 approved parameter set. -/
@@ -191,24 +162,10 @@ theorem concrete_expandMask_bound (hp : p.isApproved) (rhoDoublePrime : Bytes 64
 
 /-! ## `w1Encode_injective` as `Set.InjOn` on the valid range
 
-The concrete `w1Encode` packs each `High` coefficient via `simpleBitPackPoly` at the bit width
-`simpleWidth ((q-1)/(2γ₂) - 1)`. On the valid commitment range — every component an actual
-`highBits` output — each coefficient lies in `[0, (q-1)/(2γ₂) - 1]` (`highBits_coeff_val_lt_m`),
-which fits in that bit width, so the packer is inverted by `simpleBitUnpackPoly` and is injective.
-This is exactly the `Set.InjOn` predicate of the abstract field, since the abstract validity set
-is the image of `highBits`. -/
-
-/-- Every approved-parameter `highBits` coefficient fits in the `w₁` packer's bit width. -/
-private theorem highBits_coeff_val_lt_width (hp : p.isApproved) (r : Rq) (c : Fin ringDegree) :
-    ((MLDSA.Concrete.highBits p r).get c).val
-      < 2 ^ MLDSA.Concrete.simpleWidth ((modulus - 1) / (2 * p.gamma2) - 1) := by
-  have hlt : ((MLDSA.Concrete.highBits p r).get c).val < (modulus - 1) / (2 * p.gamma2) :=
-    MLDSA.Concrete.highBits_coeff_val_lt_m p hp r c
-  -- `(q-1)/(2γ₂) ≤ 2 ^ simpleWidth ((q-1)/(2γ₂) - 1)`.
-  have hwin : (modulus - 1) / (2 * p.gamma2)
-      ≤ 2 ^ MLDSA.Concrete.simpleWidth ((modulus - 1) / (2 * p.gamma2) - 1) := by
-    rcases hp with rfl | rfl | rfl <;> decide
-  omega
+On the valid commitment range — every component an actual `highBits` output — each coefficient fits
+in the `w₁` packer's bit width (`highBits_coeff_val_lt_width`), so the packer is inverted by
+`simpleBitUnpackPoly` and is injective. This is exactly the `Set.InjOn` predicate of the abstract
+field, since the abstract validity set is the image of `highBits`. -/
 
 /-- `Primitives.Laws.w1Encode_injective` for the concrete instance, at any
 approved parameter set: `w1Encode` is injective on commitment vectors all of whose components are
