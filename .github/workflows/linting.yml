@@ -6,7 +6,7 @@ on:
     paths:
       - "ToMathlib/**/*.lean"
       - "VCVio/**/*.lean"
-      - "FFI/**/*.lean"
+      - "Extern/**/*.lean"
       - "LatticeCrypto/**/*.lean"
       - "Examples/**/*.lean"
       - "VCVioWidgets/**/*.lean"
@@ -20,7 +20,7 @@ on:
     paths:
       - "ToMathlib/**/*.lean"
       - "VCVio/**/*.lean"
-      - "FFI/**/*.lean"
+      - "Extern/**/*.lean"
       - "LatticeCrypto/**/*.lean"
       - "Examples/**/*.lean"
       - "VCVioWidgets/**/*.lean"
@@ -78,4 +78,4 @@ jobs:
       # project deliberately defines no `lint-style` exe, so it does not link the
       # FFI backends). Pass the libraries explicitly for full coverage.
       - name: Run text-based style linters
-        run: lake exe lint-style ToMathlib VCVio FFI LatticeCrypto Examples VCVioWidgets Interop
+        run: lake exe lint-style ToMathlib VCVio Extern LatticeCrypto Examples VCVioWidgets Interop

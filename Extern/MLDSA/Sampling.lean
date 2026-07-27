@@ -3,7 +3,7 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import FFI.Hashing
+import Extern.Hashing
 import LatticeCrypto.MLDSA.Concrete.Encoding
 import LatticeCrypto.MLDSA.Concrete.NTT
 
@@ -228,7 +228,7 @@ def sampleInBall (p : Params) (seed : CommitHashBytes p) : Rq :=
 
 The following lemmas extract the structural value ranges of the rejection samplers from their fuel
 recursion. They are the facts the abstract `Primitives.Laws` sampler-bound fields require, and are
-consumed by the `concrete_*` theorems in `Concrete/Laws.lean`. -/
+consumed by the `concrete_*` theorems in `Extern/MLDSA/Laws.lean`. -/
 
 set_option maxRecDepth 4000
 

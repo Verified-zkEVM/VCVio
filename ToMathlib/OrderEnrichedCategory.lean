@@ -24,7 +24,7 @@ universe w v u u₁ u₂
 namespace Preord
 
 /-- The category of preorders is monoidal. -/
-instance : MonoidalCategory (Preord) where
+instance : MonoidalCategory (Preord.{u}) where
   tensorObj X Y := ⟨X.carrier × Y.carrier⟩
   whiskerLeft X Y := fun f => ofHom ⟨fun x => (x.1, f.1 x.2),
       by
@@ -141,7 +141,7 @@ class RelativeMonadHom.IsStrict (M N : RelativeMonad C D J) (F : RelativeMonadHo
 end EnrichedCategory
 
 /-- Categories enriched over the monoidal category of preorders are preorder-enriched categories. -/
-abbrev PreordEnrichedCategory (C : Type u) := EnrichedCategory Preord C
+abbrev PreordEnrichedCategory (C : Type u) := EnrichedCategory (Preord.{v}) C
 
 namespace PreordEnrichedCategory
 

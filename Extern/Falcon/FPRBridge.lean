@@ -6,7 +6,7 @@ Authors: Quang Dao
 import Batteries.Data.Rat.Float
 import LatticeCrypto.Falcon.Scheme
 import LatticeCrypto.Falcon.Concrete.FPR
-import LatticeCrypto.Falcon.Concrete.Instance
+import Extern.Falcon.Instance
 import LatticeCrypto.Falcon.Concrete.Encoding
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 

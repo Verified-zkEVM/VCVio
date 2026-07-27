@@ -701,13 +701,11 @@ theorem statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
     (oa := (SourceSigAlg (σ := σ) (hr := hr) (M := M)).verify ps.1 msg (c, resp))]
   cases hcache : cache (msg, c) with
   | some ch =>
-      simpa [monad_norm] using
-        fiatShamirVerify_run_eq_cmaRealSourceFullSum_run_signedFresh_cache_some
-          σ hr M ps msg c resp bad signed cache keypair ch hcache
+      exact fiatShamirVerify_run_eq_cmaRealSourceFullSum_run_signedFresh_cache_some
+        σ hr M ps msg c resp bad signed cache keypair ch hcache
   | none =>
-      simpa [monad_norm] using
-        fiatShamirVerify_run_eq_cmaRealSourceFullSum_run_signedFresh_cache_none
-          σ hr M ps msg c resp bad signed cache keypair hcache
+      exact fiatShamirVerify_run_eq_cmaRealSourceFullSum_run_signedFresh_cache_none
+        σ hr M ps msg c resp bad signed cache keypair hcache
 
 /-- Fixed-key public post-keygen experiment in the WriterT signing-log form. -/
 @[reducible] private noncomputable def postKeygenFreshWriterComp

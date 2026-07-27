@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 import LatticeCrypto.MLKEM.Internal
-import LatticeCrypto.MLKEM.Concrete.Instance
+import Extern.MLKEM.Instance
 
 /-!
 # ML-KEM Test Helpers

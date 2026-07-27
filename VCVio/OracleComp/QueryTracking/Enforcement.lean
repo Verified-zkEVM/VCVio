@@ -68,7 +68,8 @@ theorem fst_map_run_simulateQ {oa : OracleComp spec α} {qb : ι → ℕ}
       fun p => (simulateQ enforceOracle (mx p.1)).run p.2) = liftM (query t) >>= mx
     rw [run_apply, if_pos hpos]
     simp only [monad_norm, Function.comp]
-    exact bind_congr fun u => ih u (hcont u)
+    exact bind_congr fun u => by
+      simpa only [map_eq_bind_pure_comp] using ih u (hcont u)
 
 section Probability
 

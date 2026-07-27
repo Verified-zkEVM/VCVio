@@ -387,8 +387,11 @@ lemma probOutput_uniformSample_fun_eval [Finite TagId] [Finite Nonce] [Fintype D
   -- ∑' u, Pr[= u | $ᵗ Digest] * Pr[= v | pure u] = Pr[= v | $ᵗ Digest]
   rw [show (∑' u : Digest, Pr[= u | ($ᵗ Digest)] * Pr[= v | (pure u : ProbComp Digest)]) =
         Pr[= v | (do let u ← ($ᵗ Digest); pure u : ProbComp Digest)]
-      from (probOutput_bind_eq_tsum _ _ _).symm]
-  rw [bind_pure, probOutput_uniformSample]
+      from by
+        simpa only [bind_pure] using
+          (probOutput_bind_eq_tsum (($ᵗ Digest) : ProbComp Digest)
+            (fun u => pure u) v).symm]
+  rw [probOutput_uniformSample]
 
 omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce] in
 /-- **Per-step uniform-table bound on `cacheBadReader`.** Sampling a uniform fine-grained

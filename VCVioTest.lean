@@ -1,5 +1,6 @@
 import VCVioTest.GrindFailFast
 import VCVioTest.LongChainPrograms
+import VCVioTest.MerkleTreeBatch
 import VCVioTest.MonadProbability
 import VCVioTest.ProbabilityTactics
 import VCVioTest.SampleableType

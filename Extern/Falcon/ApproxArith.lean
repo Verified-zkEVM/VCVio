@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 import LatticeCrypto.Falcon.Concrete.FloatLike
-import LatticeCrypto.Falcon.Concrete.FPRBridge
+import Extern.Falcon.FPRBridge
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
 /-!

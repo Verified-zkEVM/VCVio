@@ -6,7 +6,7 @@ Authors: Quang Dao
 import LatticeCrypto.MLDSA.Encoding
 import LatticeCrypto.MLDSA.Concrete.Rounding
 import LatticeCrypto.MLDSA.Concrete.NTT
-import LatticeCrypto.MLDSA.Concrete.Sampling
+import Extern.MLDSA.Sampling
 import LatticeCrypto.MLDSA.Concrete.Encoding
 
 /-!
