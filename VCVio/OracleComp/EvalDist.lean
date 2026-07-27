@@ -397,7 +397,10 @@ variable [IsProbabilitySpec spec]
     support (guard p : OptionT (OracleComp spec) Unit) = if p then {()} else ∅ := by
   rw [OracleComp.guard_eq]; split_ifs <;> simp
 
-lemma probOutput_eq_sub_probFailure_of_unit {oa : OracleComp spec PUnit} :
+/-- For any `PUnit`-valued computation in an arbitrary monad with an `SPMF` denotation, the
+probability of returning `()` is the complementary mass of its failure probability. -/
+lemma probOutput_punit_eq_sub_probFailure {m : Type → Type*} [Monad m] [MonadLiftT m SPMF]
+    {oa : m PUnit} :
     Pr[= () | oa] = 1 - Pr[⊥ | oa] := by
   have h := tsum_probOutput_add_probFailure oa
   have hunit : ∑' x : PUnit, Pr[= x | oa] = Pr[= () | oa] :=
@@ -405,7 +408,18 @@ lemma probOutput_eq_sub_probFailure_of_unit {oa : OracleComp spec PUnit} :
   rw [hunit] at h
   exact ENNReal.eq_sub_of_add_eq (ne_top_of_le_ne_top one_ne_top probFailure_le_one) h
 
-private lemma probOutput_bind_guard_eq_probEvent {α : Type} (oa : OracleComp spec α)
+/-- The `OracleComp` instance of `probOutput_punit_eq_sub_probFailure`: for a `PUnit`-valued
+oracle computation, the probability of returning `()` is the complementary mass of its failure
+probability. -/
+lemma probOutput_eq_sub_probFailure_of_unit {oa : OracleComp spec PUnit} :
+    Pr[= () | oa] = 1 - Pr[⊥ | oa] :=
+  probOutput_punit_eq_sub_probFailure
+
+/-- Guarding a computation `oa` by a decidable predicate `p` and asking for the probability of a
+successful `()` output recovers exactly the event probability `Pr[p | oa]`: the failure mass of the
+`guard` removes precisely the outputs falsifying `p`. Public guard-section API used by failure-based
+security experiments. -/
+lemma probOutput_bind_guard_eq_probEvent {α : Type} (oa : OracleComp spec α)
     (p : α → Prop) [DecidablePred p] :
     Pr[= () | (do let a ← oa; guard (p a) : OptionT (OracleComp spec) Unit)] = Pr[ p | oa] := by
   simp only [probOutput_bind_eq_tsum, OptionT.probOutput_liftM, probOutput_guard,
