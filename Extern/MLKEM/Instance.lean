@@ -7,7 +7,7 @@ import LatticeCrypto.MLKEM.Primitives
 import LatticeCrypto.MLKEM.Concrete.NTT
 import LatticeCrypto.MLKEM.Concrete.Encoding
 import LatticeCrypto.MLKEM.Concrete.CBD
-import LatticeCrypto.MLKEM.Concrete.FFI
+import Extern.MLKEM.FFI
 
 /-!
 # Concrete ML-KEM Instance

@@ -787,7 +787,7 @@ theorem simulateQ_run_cellPreserved
         simpa [simulateQ_bind, OracleComp.liftM_def] using hz
       rcases (mem_support_bind_iff _ _ _).1 hz' with ⟨us, hus, hzcont⟩
       refine (ih us.1 us.2 z hzcont).trans (himpl t h us ?_)
-      simpa [OracleSpec.query_def, simulateQ_spec_query] using hus
+      simpa [simulateQ_spec_query] using hus
 
 end OracleComp
 

@@ -361,9 +361,16 @@ theorem wp_ExceptT_monadLift {ε : Type} (oa : OracleComp spec α) (post : α �
     Std.Do'.wp (MonadLift.monadLift oa : ExceptT ε (OracleComp spec) α) post epost =
       Std.Do'.wp oa post Lean.Order.bot := by
   change MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞)
-      (oa >>= fun a => pure (Except.ok a)) (epost.pushExcept post) =
+      (Except.ok <$> oa) (epost.pushExcept post) =
     MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa post
-  simp only [MAlgOrdered.wp_bind, MAlgOrdered.wp_pure]
+  rw [map_eq_bind_pure_comp]
+  rw [MAlgOrdered.wp_bind]
+  congr 1
+  funext a
+  change MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞)
+      (pure (Except.ok a)) (epost.pushExcept post) = post a
+  exact MAlgOrdered.wp_pure (m := OracleComp spec) (l := ℝ≥0∞)
+    (Except.ok a) (epost.pushExcept post)
 
 /-! ## `ReaderT (OracleComp spec)` WP normalization -/
 

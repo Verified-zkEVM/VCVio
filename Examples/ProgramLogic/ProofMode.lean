@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Relational
+import VCVio.ProgramLogic.Tactics
 
 /-!
 # Proof-Mode Entry / Exit Tactic Examples
@@ -24,6 +24,19 @@ universe u
 variable {ι : Type u} {spec : OracleSpec ι}
 variable [IsUniformSpec spec]
 variable {α β γ : Type}
+
+/-! ## Handler normalization -/
+
+section HandlerNormalization
+
+/-- `handler_step` consumes PolyFun's generic handler normal form. -/
+example {m : Type → Type} [Monad m] [LawfulMonad m]
+    (h : PFunctor.Handler.Stateful m Nat (PFunctor.monomial Bool Nat))
+    (query : Bool) (state : Nat) :
+    h.run (PFunctor.FreeM.lift query) state = (h query).run state := by
+  handler_step
+
+end HandlerNormalization
 
 /-! ## `game_trans` -/
 

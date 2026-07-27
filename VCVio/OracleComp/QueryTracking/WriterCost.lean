@@ -198,7 +198,7 @@ of its cost marginal.
 
 This expectation is computed over the base monad's subdistribution semantics on `oa.costs`. In
 particular, if the underlying computation can fail, the missing mass contributes `0`, exactly as
-for other `wp`-style expectations in VCV-io. -/
+for other `wp`-style expectations in VCVio. -/
 noncomputable def expectedCost
     (oa : AddWriterT ω m α) (val : ω → ENNReal) : ENNReal :=
   ∑' w : ω, Pr[= w | oa.costs] * val w

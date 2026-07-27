@@ -4,16 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Elab.Tactic
+import Lean.Elab.Tactic.Basic
 import VCVio.OracleComp.QueryTracking.HandlerSimp
 
 /-!
 # Handler Normalization Tactic
 
-`handler_step` performs one small normalization pass using the `handler_simp`
-set. It is intentionally thin: use it to expose the next handler body or
-run-shape, then continue with `mvcgen`, `vcstep`, `rvcstep`, or direct proof
-steps.
+`handler_step` performs one small normalization pass using PolyFun's generic
+`handler_nf` set followed by VCVio's `handler_simp` extension. It is
+intentionally thin: use it to expose the next handler body or run-shape, then
+continue with `mvcgen`, `vcstep`, `rvcstep`, or direct proof steps.
 -/
 
 open Lean Elab Tactic
@@ -24,6 +24,6 @@ syntax "handler_step" : tactic
 
 elab_rules : tactic
   | `(tactic| handler_step) => do
-      evalTactic (← `(tactic| simp only [handler_simp]))
+      evalTactic (← `(tactic| simp only [handler_nf, handler_simp]))
 
 end OracleComp.ProgramLogic
