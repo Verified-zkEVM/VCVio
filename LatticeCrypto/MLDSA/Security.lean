@@ -252,11 +252,9 @@ end Properties
 
 /-! ### EUF-NMA Security (Lemma 7)
 
-The EUF-NMA security theorems `MLDSA.nma_security_short` and `MLDSA.nma_security_fips` are
-assembled downstream in `LatticeCrypto.MLDSA.SecurityNMA`, where the concrete short-secret MLWE
-key-swap distinguisher and the SelfTargetMSIS extractor are defined. They compose the exact
-short-key MLWE key-swap hop with the SelfTargetMSIS extraction bound, the FIPS-keygen form adding
-the `ExpandS` XOF-replacement term; see that file for the statements and proofs. -/
+The EUF-NMA reduction infrastructure — the concrete MLWE key-swap distinguisher and the
+SelfTargetMSIS extractor — is assembled downstream in `LatticeCrypto.MLDSA.SecurityNMA`, together
+with the SelfTargetMSIS extraction bound; see that file for the definitions and proofs. -/
 
 /-! ### CMA-to-NMA Statistical Loss (Theorem 4) -/
 
