@@ -173,9 +173,10 @@ private def shake256Prefix (input : ByteArray) (len : Nat) : ByteArray :=
 
 /-- Fuel-bounded structural recursion replacing the inner `while !found` rejection loop of
 `sampleInBall`. Each iteration reads the byte at `pos`, advances `pos` by 1, and stops as soon as a
-byte `b ≤ i` is found, returning that byte together with the next read position.
-`fuel := stream.size` is a safe upper bound; on valid SHAKE inputs a byte `≤ i` is always found
-before exhaustion. -/
+byte `b ≤ i` is found, returning that byte together with the next read position. The fixed
+SHAKE stream used by `sampleInBall` is longer than the outer loop can consume before an
+out-of-bounds read defaults to `0 ≤ i`; `fuel := stream.size` is therefore a safe bound for that
+caller. -/
 private def sampleInBallFindChosen (stream : ByteArray) (i : Nat) :
     Nat → Nat → Nat × Nat
   | 0, pos => (0, pos)

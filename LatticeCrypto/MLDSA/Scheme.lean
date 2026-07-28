@@ -125,6 +125,14 @@ noncomputable def validKeyPair (pk : PublicKey p prims) (sk : SecretKey p) : Boo
       ∃ seed : Bytes 32, keyGenFromSeed p prims seed = (pk, sk) := by
   simp [validKeyPair]
 
+/-! ### Short-secret idealized key validity
+
+The idealized proof-level ML-DSA model samples the short secrets `(s₁, s₂)` directly on the
+`η`-bounded box rather than deriving them deterministically from a seed. `validKeyPairShort`
+is the ∃-material analogue of `validKeyPair` that such key generators satisfy by construction;
+it is the key relation carried by `identificationSchemeShort` and the short-model security
+statements. -/
+
 /-- A key pair is *short-valid* when it is built from bounded key material: there are seeds
 `ρ`, `K` and `η`-bounded short vectors `(s₁, s₂)` such that the pair is exactly the key
 assembled from that material — `t = ExpandA(ρ) · s₁ + s₂` split by `Power2Round` into the

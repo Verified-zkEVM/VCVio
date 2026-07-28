@@ -3,6 +3,7 @@ Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
+
 import Extern.MLDSA.Instance
 import LatticeCrypto.MLDSA.Concrete.LawBounds
 
@@ -235,8 +236,10 @@ theorem concrete_sampleInBall_smul_bound
 
 /-! ## `Primitives.Laws` status for `concretePrimitives` (no full witness — by design)
 
-Thirteen `Primitives.Laws` fields are **proven axiom-clean** for the concrete instance at any
-approved parameter set: the eight algebraic fields (`concrete_transform`,
+Thirteen `Primitives.Laws` fields are proven for the concrete instance at any approved parameter
+set. The transform field inherits the repository's disclosed `native_decide` certificate for
+the concrete NTT matrix inversion; the remaining proofs introduce no additional project-specific
+trust assumptions. These fields are: the eight algebraic fields (`concrete_transform`,
 `concrete_high_low_decomp`, `concrete_lowBits_bound`, `concrete_hide_low`,
 `concrete_highBitsShift_injective`, `concrete_useHint_makeHint`, `concrete_power2Round_decomp`,
 `concrete_power2Round_bound`); the two byte-encoding fields `concrete_expandMask_bound` and
