@@ -108,6 +108,124 @@ theorem keyFromMaterial_eq (seed : Bytes 32) :
       keyGenFromSeed p prims seed := by
   simp only [keyFromMaterial, keyGenFromSeed]
 
+/-! ### Short-secret sampling and the idealized key generators
+
+The FIPS key generator derives everything deterministically from one seed
+(`keygen0` above). The idealized proof-level model instead samples the matrix
+seed `ρ`, the signing key `K`, and the short secrets `(s₁, s₂)` independently,
+with `(s₁, s₂)` uniform on the `η`-bounded box `S_η^ℓ × S_η^k` — the
+distribution the Module-LWE assumption for ML-DSA is stated over. The key-swap
+hop is then an exact monad identity against `mldsaMLWEShort` (no statistical
+slack); the deterministic-XOF derivation is not part of this hop and is handled
+separately by a named XOF-replacement assumption. -/
+
+/-- `polyVecBounded` is a decidable predicate: it is a `≤` test on the computed
+centered infinity norm. -/
+instance {k b : ℕ} : DecidablePred (fun v : RqVec k => polyVecBounded v b) := fun _ => by
+  unfold polyVecBounded
+  exact Nat.decLe _ _
+
+omit nttOps in
+/-- The zero vector lies in every `η`-bounded box. -/
+lemma polyVecBounded_zero (k b : ℕ) : polyVecBounded (0 : RqVec k) b := by
+  unfold polyVecBounded polyVecNorm
+  rw [LatticeCrypto.PolyVec.cInfNorm_le_iff]
+  intro j
+  have hz : (0 : RqVec k).get j = (0 : Rq) := by
+    change (0 : Vector Rq k).get j = 0
+    simp [Vector.get]
+  rw [hz]
+  have h0 : polyNorm (0 : Rq) = 0 := by
+    simp only [polyNorm, normOps, LatticeCrypto.zmodPolyNormOps,
+      LatticeCrypto.normOpsOfCenteredView, LatticeCrypto.cInfNormOf]
+    simp only [vectorNegacyclicRing_backend, vectorBackend_coeff, Finset.sup_eq_zero,
+      Finset.mem_univ, Int.natAbs_eq_zero, forall_const]
+    intro i
+    have hci : Vector.get (0 : Rq) i = (0 : Coeff) :=
+      LatticeCrypto.NegacyclicRing.coeff_zero coeffRing i
+    rw [hci]
+    simp only [LatticeCrypto.zmodCenteredCoeffView, LatticeCrypto.centeredRepr, ZMod.val_zero,
+      Int.natCast_zero]
+    split <;> omega
+  calc normOps.cInfNorm (0 : Rq) = polyNorm (0 : Rq) := rfl
+    _ = 0 := h0
+    _ ≤ b := Nat.zero_le b
+
+/-- **Uniform sampling from the `η`-bounded box.** The uniform distribution on
+`S_b^k = { v : RqVec k | ‖v‖∞ ≤ b }`, i.e. every coefficient of every component
+uniform on the centered interval `[-b, b]`. This is the secret/error
+distribution of the Module-LWE assumption used by ML-DSA (`η ∈ {2, 4}` for the
+approved parameter sets). -/
+noncomputable def sampleShortVec (k b : ℕ) [SampleableType (RqVec k)] : ProbComp (RqVec k) :=
+  letI : Fintype {v : RqVec k // polyVecBounded v b} := .ofFinite _
+  letI : Nonempty {v : RqVec k // polyVecBounded v b} := ⟨0, polyVecBounded_zero k b⟩
+  letI : SampleableType {v : RqVec k // polyVecBounded v b} := .ofFintype _
+  Subtype.val <$> ($ᵗ {v : RqVec k // polyVecBounded v b})
+
+/-- **Idealized key generation (real `t`).** Sample the matrix seed `ρ`, the
+signing key `K`, and the short secrets `(s₁, s₂)` independently — `(s₁, s₂)`
+uniform on the `η`-bounded box — and form `t = ExpandA(ρ) · s₁ + s₂`. This is
+the honestly-sampled key distribution of the idealized proof-level ML-DSA
+model; the deterministic seed-expanded `keygen0` is related to it by a separate
+XOF-replacement assumption. -/
+noncomputable def keygenShort : ProbComp (PublicKey p prims × SecretKey p) := do
+  let key ← $ᵗ (Bytes 32)
+  let rho ← $ᵗ (Bytes 32)
+  let s1 ← sampleShortVec p.l p.eta
+  let s2 ← sampleShortVec p.k p.eta
+  let t := prims.expandA rho * s1 + s2
+  return keyFromMaterial p prims rho key s1 s2 t
+
+/-- **Idealized key generation (uniform `t`).** Identical to `keygenShort`
+except the public vector `t` is sampled uniformly. The gap between the two is
+exactly the `mldsaMLWEShort` distinguishing advantage of the induced
+distinguisher (`nma_keyswap_hop_short`). -/
+noncomputable def keygenShort1 : ProbComp (PublicKey p prims × SecretKey p) := do
+  let key ← $ᵗ (Bytes 32)
+  let rho ← $ᵗ (Bytes 32)
+  let s1 ← sampleShortVec p.l p.eta
+  let s2 ← sampleShortVec p.k p.eta
+  let t ← $ᵗ (RqVec p.k)
+  return keyFromMaterial p prims rho key s1 s2 t
+
+omit nttOps in
+/-- Every output of `sampleShortVec k b` lies in the `b`-bounded box: the sampler draws from
+the subtype `{v // polyVecBounded v b}` and projects out the value, so support membership
+carries the bound. -/
+lemma mem_support_sampleShortVec {k b : ℕ} [SampleableType (RqVec k)] {v : RqVec k}
+    (hv : v ∈ support (sampleShortVec k b)) : polyVecBounded v b := by
+  simp only [sampleShortVec, support_map] at hv
+  obtain ⟨u, -, rfl⟩ := hv
+  exact u.property
+
+/-- The generable relation carried by the idealized short-key model: the generator is
+`keygenShort`, and every generated pair is material-valid. Each pair drawn by `keygenShort`
+is literally `keyFromMaterial ρ K s₁ s₂ (ExpandA(ρ)·s₁ + s₂)` for uniform `ρ`, `K` and
+box-sampled `(s₁, s₂)`, and `sampleShortVec` outputs are `η`-bounded on their support
+(`mem_support_sampleShortVec`) — exactly the witness `validKeyPairShort` asks for. This
+inhabits the `hGen` hypothesis of the short-model security headlines
+(`keygenShort_generable`). -/
+noncomputable def hrShort :
+    GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims) :=
+  ⟨keygenShort p prims, fun pk sk hmem => by
+    rw [validKeyPairShort_eq_true_iff]
+    simp only [keygenShort, mem_support_bind_iff] at hmem
+    obtain ⟨key, -, rho, -, s1, hs1, s2, hs2, hpure⟩ := hmem
+    refine ⟨rho, key, s1, s2, mem_support_sampleShortVec hs1,
+      mem_support_sampleShortVec hs2, ?_⟩
+    simpa only [keyFromMaterial] using (eq_of_mem_support_pure _ hpure).symm⟩
+
+omit [DecidableEq prims.High] in
+/-- **Satisfiability certificate for the short-model `hGen` hypothesis.** Some generable
+relation over `validKeyPairShort` has `keygenShort` as its generator — witnessed by
+`hrShort`. The short-model security statements hypothesize such a relation via
+`hGen : hr.gen = keygenShort p prims`; this theorem records that the hypothesis pair
+`(hr, hGen)` is inhabited, so those statements have non-vacuous instances. -/
+theorem keygenShort_generable :
+    ∃ hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims),
+      hr.gen = keygenShort p prims :=
+  ⟨hrShort p prims, rfl⟩
+
 end KeyGen
 
 section Game
@@ -149,6 +267,40 @@ noncomputable def nmaAdvantage
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) : ℝ≥0∞ :=
   Pr[= true | nmaGame p prims hr maxAttempts keygen main]
+
+/-! ### Short-model EUF-NMA game -/
+
+/-- The EUF-NMA game over the idealized short-key scheme: identical to `nmaGame` except the
+signature scheme is `FiatShamirWithAbort` over `identificationSchemeShort`, whose key relation
+`validKeyPairShort` is the material-based one that `keygenShort` generates (`hrShort`). The
+observed runtime, the forging interface, and the verify recomputation are unchanged. -/
+noncomputable def nmaGameShort
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
+    (maxAttempts : ℕ)
+    (keygen : ProbComp (PublicKey p prims × SecretKey p))
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims))) :
+    SPMF Bool :=
+  (FiatShamirWithAbort.runtime (Commit := Commitment p prims)
+    (Chal := CommitHashBytes p) M).evalDist do
+      let (pk, _) ← (FiatShamirWithAbort.runtime (Commit := Commitment p prims)
+        (Chal := CommitHashBytes p) M).liftProbComp keygen
+      let (msg, σ) ← main pk
+      (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
+
+/-- The advantage of the short-model NMA game with key generator `keygen` is its
+`true`-probability. The exact short hop identifies
+`|nmaAdvantageShort keygenShort − nmaAdvantageShort keygenShort1|` with the `mldsaMLWEShort`
+advantage of `distinguisherBShort`. -/
+noncomputable def nmaAdvantageShort
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
+    (maxAttempts : ℕ)
+    (keygen : ProbComp (PublicKey p prims × SecretKey p))
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims))) : ℝ≥0∞ :=
+  Pr[= true | nmaGameShort p prims hr maxAttempts keygen main]
 
 end Game
 
@@ -231,6 +383,192 @@ noncomputable def distinguisherB
     simulateToProbComp p prims (M := M) do
       let (msg, σ) ← main pk
       (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify pk msg σ
+
+/-! ### Short-secret MLWE problems and the seed-to-matrix bridge
+
+The idealized short-key model states its Module-LWE assumption over short `(s₁, s₂)`
+(`mldsaMLWEShort`, seed-based; `mldsaMatrixMLWE`, uniform-matrix form). The seed-based problem
+reduces to the standard matrix form under the `expandAIdealization` XOF assumption
+(`advantage_mldsaMLWEShort_le_matrix`), and `distinguisherBShort` is the induced distinguisher
+whose advantage the short key-swap hop bounds. -/
+
+/-- **The short-secret Module-LWE problem for ML-DSA** (seed-based form). The public
+challenge is the matrix seed `ρ` itself (uniform), the secret `s₁` and the additive
+error `s₂` are uniform on the `η`-bounded box (`sampleShortVec`), and the decision
+target is `t = ExpandA(ρ) · s₁ + s₂` versus uniform `t`. This is the distribution the
+ML-DSA literature states its MLWE assumption over; unlike a uniform-error variant it
+is not information-theoretically trivial, since `ExpandA(ρ) · s₁ + s₂` with short
+`(s₁, s₂)` is far from uniform. Bridging the seed-based challenge to the standard
+uniform-matrix form is `advantage_mldsaMLWEShort_le_matrix`, under the explicit
+`expandAIdealization` assumption. -/
+noncomputable def mldsaMLWEShort (p : Params) (prims : Primitives p)
+    [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] :
+    LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
+  sampleChallenge := $ᵗ (Bytes 32)
+  sampleSecret := sampleShortVec p.l p.eta
+  sampleError := sampleShortVec p.k p.eta
+  noiseless := fun s1 rho => prims.expandA rho * s1
+  sampleUniform := $ᵗ (RqVec p.k)
+
+/-- **The matrix-based short Module-LWE problem for ML-DSA.** The standard form: the
+public challenge is a uniform matrix `A`, the secret and error are uniform on the
+`η`-bounded box, and the decision target is `A · s₁ + s₂` versus uniform. This is the
+literature-facing hardness assumption; `mldsaMLWEShort` reduces to it under
+`expandAIdealization` (`advantage_mldsaMLWEShort_le_matrix`). -/
+noncomputable def mldsaMatrixMLWE (p : Params)
+    [SampleableType (TqMatrix p.k p.l)]
+    [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] :
+    LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k) where
+  sampleChallenge := $ᵗ (TqMatrix p.k p.l)
+  sampleSecret := sampleShortVec p.l p.eta
+  sampleError := sampleShortVec p.k p.eta
+  noiseless := fun s1 A => A * s1
+  sampleUniform := $ᵗ (RqVec p.k)
+
+/-- **ExpandA idealization (quantified XOF-as-random-matrix step).** For every
+distinguisher `D` receiving both the seed and the matrix, the pair
+`(ρ, ExpandA(ρ))` for uniform `ρ` is `εA`-indistinguishable from `(ρ, A)` with `A`
+uniform and independent of `ρ`.
+
+This is the standard random-oracle reading of `ExpandA` (Dilithium's `A = ExpandA(ρ)`
+with `ExpandA` modeled as a random function), stated once with inspectable content
+rather than supplied per-reduction. For a fixed deterministic `prims.expandA` the
+unrestricted-quantifier form is only satisfiable at large `εA` (a distinguisher may
+recompute `ExpandA(ρ)` and compare); pending the cost-model infrastructure (#460) it
+should be read computationally, against bounded distinguishers, where it is the
+assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
+def expandAIdealization (p : Params) (prims : Primitives p)
+    [SampleableType (TqMatrix p.k p.l)] (εA : ℝ) : Prop :=
+  ∀ [IsUniformSpec unifSpec] (D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool),
+    |(Pr[= true | do
+        let rho ← $ᵗ (Bytes 32)
+        D rho (prims.expandA rho)]).toReal -
+      (Pr[= true | do
+        let rho ← $ᵗ (Bytes 32)
+        let A ← $ᵗ (TqMatrix p.k p.l)
+        D rho A]).toReal| ≤ εA
+
+/-- The short-model MLWE distinguisher: form `pk = (ρ, Power2Round(t).1)` from the challenge
+`(ρ, t)`, run the NMA forging strategy
+`main` on `pk`, simulate the random oracle to verify the returned forgery, and output the
+validity bit — typed against the short-secret problem `mldsaMLWEShort` and the short-key
+scheme `identificationSchemeShort`. When `(ρ, t)` is real it reproduces
+`nmaGameShort … keygenShort`; when `t` is uniform it reproduces `nmaGameShort … keygenShort1`
+(`nma_keyswap_hop_short`). -/
+noncomputable def distinguisherBShort
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
+    (maxAttempts : ℕ)
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims))) :
+    LearningWithErrors.Adversary (mldsaMLWEShort p prims) :=
+  fun (challenge : Bytes 32 × RqVec p.k) =>
+    let rho := challenge.1
+    let t := challenge.2
+    let pk : PublicKey p prims := ⟨rho, (prims.power2RoundVec t).1⟩
+    simulateToProbComp p prims (M := M) do
+      let (msg, σ) ← main pk
+      (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
+
+/-- Lift a seed-based short-MLWE adversary to the uniform-matrix problem: run it on a
+freshly sampled seed and the challenged target vector, discarding the matrix. -/
+noncomputable def matrixLift
+    (B : LearningWithErrors.Adversary (mldsaMLWEShort p prims)) :
+    LearningWithErrors.Adversary (mldsaMatrixMLWE p) :=
+  fun c => do
+    let rho ← $ᵗ (Bytes 32)
+    B (rho, c.2)
+
+omit [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
+  [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
+/-- **Seed-to-matrix bridge.** Under `expandAIdealization`, any adversary against the
+seed-based short problem yields one against the standard uniform-matrix problem: the
+matrix adversary runs the seed adversary on a freshly sampled seed and the challenged
+target vector. The uniform branches agree exactly (both present an independent uniform
+`t`), and the real branches differ by one application of the idealization at the
+distinguisher `D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s₂)`.
+
+Proof recipe: rewrite both advantages via `advantage_eq_game_boolDistAdvantage` and
+`ProbComp.boolDistAdvantage`; the `game1` branches are identified by stripping the
+unused matrix draw (`probOutput_bind_const`, with `Pr[⊥ | $ᵗ _] = 0`) and commuting
+the independent uniform draws (`evalDist_bind_bind_swap`); the `game0` branches
+are `≤ εA` by `hA` applied at `D` above, after `bind_assoc` normalization. Conclude
+by the triangle inequality. -/
+lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
+    (hA : expandAIdealization p prims εA)
+    (B : LearningWithErrors.Adversary (mldsaMLWEShort p prims)) :
+    LearningWithErrors.advantage (mldsaMLWEShort p prims) B ≤
+      LearningWithErrors.advantage (mldsaMatrixMLWE p) (matrixLift p prims B) + εA := by
+  set Bm : LearningWithErrors.Adversary (mldsaMatrixMLWE p) :=
+    matrixLift p prims B with hBm
+  set D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool :=
+    (fun rho A => do
+      let s1 ← sampleShortVec p.l p.eta
+      let s2 ← sampleShortVec p.k p.eta
+      B (rho, A * s1 + s2)) with hD
+  -- Local copy of the generic `advantage = boolDistAdvantage` bridge (its named form lives later
+  -- in the file, in the `Hop` section, so it is not yet in scope here).
+  have hadv : ∀ {S Sec O : Type} [Add O] (problem : LearningWithErrors.Problem S Sec O)
+      (adv : LearningWithErrors.Adversary problem),
+      LearningWithErrors.advantage problem adv =
+        (LearningWithErrors.game0 problem adv).boolDistAdvantage
+          (LearningWithErrors.game1 problem adv) := by
+    intro S Sec O _ problem adv
+    rw [LearningWithErrors.advantage,
+      show LearningWithErrors.experiment problem adv = (do
+        let b ← ($ᵗ Bool)
+        let z ← if b then LearningWithErrors.game0 problem adv
+                      else LearningWithErrors.game1 problem adv
+        pure (b == z)) by
+        simp only [LearningWithErrors.experiment, LearningWithErrors.game0,
+          LearningWithErrors.game1, bind_assoc]]
+    exact ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch _ _
+  rw [hadv (mldsaMLWEShort p prims) B, hadv (mldsaMatrixMLWE p) Bm,
+    ProbComp.boolDistAdvantage, ProbComp.boolDistAdvantage]
+  have h1 : Pr[= true | LearningWithErrors.game1 (mldsaMLWEShort p prims) B] =
+      Pr[= true | LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm] := by
+    simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, mldsaMLWEShort,
+      mldsaMatrixMLWE, hBm, matrixLift, bind_assoc, pure_bind]
+    -- Strip the unused leading matrix draw on the right, then commute the two uniform draws.
+    rw [probOutput_bind_const, probFailure_uniformSample]
+    simp only [tsub_zero, one_mul]
+    rw [probOutput_def, probOutput_def,
+      evalDist_bind_bind_swap
+        ($ᵗ (Bytes 32)) ($ᵗ (RqVec p.k)) (fun rho t => B (rho, t))]
+  have h0 : |(Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B]).toReal -
+      (Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm]).toReal| ≤ εA := by
+    have hreal : Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B] =
+        Pr[= true | do let rho ← $ᵗ (Bytes 32); D rho (prims.expandA rho)] := by
+      simp only [LearningWithErrors.game0, LearningWithErrors.distr, mldsaMLWEShort, hD,
+        bind_assoc, pure_bind]
+    have hunif : Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] =
+        Pr[= true | do
+          let rho ← $ᵗ (Bytes 32)
+          let A ← $ᵗ (TqMatrix p.k p.l)
+          D rho A] := by
+      simp only [LearningWithErrors.game0, LearningWithErrors.distr, mldsaMatrixMLWE, hBm,
+        matrixLift, hD,
+        bind_assoc, pure_bind]
+      -- Commute the trailing `ρ` draw to the front (three independent-draw transpositions).
+      rw [probOutput_def, probOutput_def]
+      congr 1
+      refine Eq.trans (evalDist_bind_congr' _ (fun A => evalDist_bind_congr' _ (fun s1 =>
+        evalDist_bind_bind_swap (sampleShortVec p.k p.eta) ($ᵗ (Bytes 32))
+          (fun s2 rho => B (rho, A * s1 + s2))))) ?_
+      refine Eq.trans (evalDist_bind_congr' _ (fun A =>
+        evalDist_bind_bind_swap (sampleShortVec p.l p.eta) ($ᵗ (Bytes 32))
+          (fun s1 rho => sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2)))) ?_
+      exact evalDist_bind_bind_swap
+        ($ᵗ (TqMatrix p.k p.l)) ($ᵗ (Bytes 32))
+        (fun A rho => sampleShortVec p.l p.eta >>= fun s1 =>
+          sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2))
+    rw [hreal, hunif]
+    exact hA D
+  rw [h1]
+  refine le_trans (abs_sub_le _
+    (Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm].toReal) _) ?_
+  rw [add_comm]
+  exact add_le_add le_rfl h0
 
 end Distinguisher
 
@@ -393,6 +731,101 @@ theorem nma_keyswap_hop (h_laws : Primitives.Laws prims nttOps)
           ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩ d.1 d.2)))
   -- The hop is in fact an *equality* modulo (H0)/(H1): after rewriting both NMA games into the
   -- matching MLWE games the bound becomes `|x - y| = |x - y|`, closed by reflexivity.
+  rw [hH0, hH1]
+
+/-! ### The exact short-model key-swap hop -/
+
+omit [SampleableType (RqVec p.k)] in
+/-- Short-model NMA-game / distinguisher plumbing: the `nmaGame_eq_keygen_bind` rewrite at the
+short scheme. Pushing the `keygen` sampling out of the Fiat-Shamir-with-aborts runtime, the
+`Pr[= true]` of `nmaGameShort … keygen` equals that of first sampling `(pk, _) ← keygen` in
+plain `ProbComp` and then running the forge-and-verify tail through `simulateToProbComp` —
+exactly the body of `distinguisherBShort` evaluated at `pk`. -/
+theorem nmaGameShort_eq_keygen_bind
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
+    (maxAttempts : ℕ)
+    (keygen : ProbComp (PublicKey p prims × SecretKey p))
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims))) :
+    nmaGameShort p prims hr maxAttempts keygen main =
+      𝒟[(do
+        let (pk, _) ← keygen
+        simulateToProbComp p prims (M := M) (do
+          let (msg, σ) ← main pk
+          (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify
+            pk msg σ))] := by
+  classical
+  let ro : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p)
+      (StateT ((M × Commitment p prims →ₒ CommitHashBytes p).QueryCache) ProbComp) := randomOracle
+  let impl : QueryImpl (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+      (StateT ((M × Commitment p prims →ₒ CommitHashBytes p).QueryCache) ProbComp) :=
+    unifFwdImpl (M × Commitment p prims →ₒ CommitHashBytes p) + ro
+  let rest : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) Bool := fun pk => do
+    let (msg, σ) ← main pk
+    (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
+  unfold nmaGameShort FiatShamirWithAbort.runtime ProbCompRuntime.evalDist
+    ProbCompRuntime.liftProbComp SPMFSemantics.evalDist SemanticsVia.denote
+  change 𝒟[(simulateQ impl (liftM keygen >>= fun pk => rest pk.1)).run' ∅] =
+    𝒟[keygen >>= fun pk => simulateToProbComp p prims (rest pk.1)]
+  rw [simulateQ_bind,
+    roSim.run'_liftM_bind (ro := ro) (oa := keygen)
+      (rest := fun pk => simulateQ impl (rest pk.1)) (s := ∅)]
+  rw [evalDist_bind, evalDist_bind]
+  simp only [simulateToProbComp, roImpl]
+  rfl
+
+/-- **The exact short-model key-swap hop.** Against the idealized key generators
+`keygenShort` / `keygenShort1`, the short-model NMA-game gap **is** the `mldsaMLWEShort`
+distinguishing advantage of `distinguisherBShort` — both branch identifications are pure
+monad-rewriting identities, with no statistical slack: the key generators sample
+`ρ`, `K`, `s₁`, `s₂` independently, exactly as the problem's `distr`/`uniformDistr`
+do (the unused `K` draw strips off, being the leading draw).
+
+Proof recipe: both branches follow the same shape: `rw [nmaGameShort_eq_keygen_bind]`,
+`simp only [LearningWithErrors.game0/1, LearningWithErrors.distr/uniformDistr,
+distinguisherBShort, mldsaMLWEShort, keygenShort/1, keyFromMaterial, bind_assoc, pure_bind]`,
+strip the leading `K` draw with `probOutput_bind_const` (`Pr[⊥ | $ᵗ (Bytes 32)] = 0`), and
+close with `probOutput_def`/`SPMF.evalDist_def`. -/
+theorem nma_keyswap_hop_short
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
+    (maxAttempts : ℕ)
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims))) :
+    |(nmaAdvantageShort p prims hr maxAttempts (keygenShort p prims) main).toReal -
+        (nmaAdvantageShort p prims hr maxAttempts (keygenShort1 p prims) main).toReal| ≤
+      LearningWithErrors.advantage (mldsaMLWEShort p prims)
+        (distinguisherBShort p prims hr maxAttempts main) := by
+  set B := distinguisherBShort p prims hr maxAttempts main (M := M) with hB
+  -- `Pr[= true | 𝒟[Y]] = Pr[= true | Y]` holds definitionally (the SPMF self-lift is `id`).
+  have peel : ∀ (Y : ProbComp Bool), Pr[= true | 𝒟[Y]] = Pr[= true | Y] := fun _ => rfl
+  have hkey : Pr[⊥ | ($ᵗ (Bytes 32) : ProbComp (Bytes 32))] = 0 := probFailure_uniformSample _
+  have hss : ∀ (k b : ℕ) [SampleableType (RqVec k)], Pr[⊥ | sampleShortVec k b] = 0 := by
+    intro k b _
+    simp only [sampleShortVec, probFailure_map, probFailure_uniformSample]
+  rw [advantage_eq_game_boolDistAdvantage (mldsaMLWEShort p prims) B,
+    ProbComp.boolDistAdvantage, nmaAdvantageShort, nmaAdvantageShort]
+  have hH1 : Pr[= true | nmaGameShort p prims hr maxAttempts (keygenShort1 p prims) main] =
+      Pr[= true | LearningWithErrors.game1 (mldsaMLWEShort p prims) B] := by
+    rw [nmaGameShort_eq_keygen_bind]
+    simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, hB,
+      distinguisherBShort, mldsaMLWEShort, keygenShort1, keyFromMaterial, bind_assoc, pure_bind]
+    -- Strip the unused leading `key` draw, then the unused `s₁`, `s₂` draws under `ρ`.
+    rw [peel, probOutput_bind_const, hkey]
+    simp only [tsub_zero, one_mul]
+    refine probOutput_bind_congr' _ true (fun rho => ?_)
+    rw [probOutput_bind_const, hss, probOutput_bind_const, hss]
+    simp only [tsub_zero, one_mul]
+  have hH0 : Pr[= true | nmaGameShort p prims hr maxAttempts (keygenShort p prims) main] =
+      Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B] := by
+    rw [nmaGameShort_eq_keygen_bind]
+    simp only [LearningWithErrors.game0, LearningWithErrors.distr, hB, distinguisherBShort,
+      mldsaMLWEShort, keygenShort, keyFromMaterial, bind_assoc, pure_bind]
+    -- Only the leading `key` draw is unused here (`s₁`, `s₂` build `t`).
+    rw [peel, probOutput_bind_const, hkey]
+    simp only [tsub_zero, one_mul]
   rw [hH0, hH1]
 
 end Hop
