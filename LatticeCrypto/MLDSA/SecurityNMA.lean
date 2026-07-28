@@ -421,10 +421,28 @@ noncomputable def mldsaSTMSIS (M : Type) :
   sampleParams := do
     let (pk, _) ← keygen1 p prims
     return (prims.expandA pk.rho, pk)
-  isValid := fun aHat pk cTilde (z, h) =>
-    -- Recover the commitment `w'` from `(pk, c̃, (z, h))` and run the identification verifier.
+  isValid := fun aHat pk hashInput cTilde (z, h) =>
+    -- Recover the commitment `w'` from `(pk, c̃, (z, h))`, bind it to the commitment component
+    -- of the hashed preimage (the self-target binding), and run the identification verifier.
     let w' := prims.useHintVec h (computeWApprox p prims aHat (prims.sampleInBall cTilde) z pk.t1)
-    (identificationScheme p prims).verify pk w' cTilde (z, h)
+    decide (hashInput.2 = w') && (identificationScheme p prims).verify pk w' cTilde (z, h)
+
+omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
+/-- **Self-target binding, made explicit.** An accepted `mldsaSTMSIS` solution is exactly the
+identification-verifier acceptance *and* the binding of the recovered commitment `w'` to the
+commitment component of the hashed preimage. Exposing the binding as its own conjunct keeps the
+self-target requirement visible and hard to drop from the tailored relation: an instantiation that
+silently ignored the preimage would fail this characterization. -/
+theorem mldsaSTMSIS_isValid_eq_true_iff (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims)
+    (hashInput : M × Commitment p prims) (cTilde : CommitHashBytes p)
+    (z : RqVec p.l) (h : Vector prims.Hint p.k) :
+    (mldsaSTMSIS p prims M).isValid aHat pk hashInput cTilde (z, h) = true ↔
+      hashInput.2 = prims.useHintVec h
+          (computeWApprox p prims aHat (prims.sampleInBall cTilde) z pk.t1) ∧
+        (identificationScheme p prims).verify pk
+          (prims.useHintVec h (computeWApprox p prims aHat (prims.sampleInBall cTilde) z pk.t1))
+          cTilde (z, h) = true := by
+  simp only [mldsaSTMSIS, Bool.and_eq_true, decide_eq_true_iff]
 
 /-- **The SelfTargetMSIS extractor `C` (Lemma 7, Step 3).**
 
@@ -483,7 +501,8 @@ private theorem stmsis_tail_le
             ((extractorC p prims main).run (prims.expandA pk.rho, pk))).run ∅
         match cache hashInput with
         | some hashOutput =>
-            pure ((mldsaSTMSIS p prims M).isValid (prims.expandA pk.rho) pk hashOutput response)
+            pure ((mldsaSTMSIS p prims M).isValid (prims.expandA pk.rho) pk hashInput hashOutput
+              response)
         | none => pure false] := by
   classical
   -- Decompose both tails over the shared simulation of `main pk` from the empty cache.
@@ -528,15 +547,18 @@ private theorem stmsis_tail_le
         subst hu
         exact QueryCache.cacheQuery_self _ (msg, w') u
     rw [hcache]
-    -- An accepted NMA forgery is a valid STMSIS solution (commitment recoverability is exactly the
-    -- middle conjunct of `verify`, which `isValid` discharges by `decide (X = X)`).
+    -- An accepted NMA forgery is a valid STMSIS solution. The self-target binding
+    -- `hashInput.2 = w'` holds because the queried preimage is exactly `(msg, w')`, so the binding
+    -- reduces to `decide (w' = w') = true`; commitment recoverability is the middle conjunct of
+    -- `verify`, which `isValid` discharges by `decide (X = X)`.
     rw [probOutput_pure, probOutput_pure]
     by_cases hverify :
         (identificationScheme p prims).verify pk w' cc.1 (z, h) = true
     · -- Accepted: `isValid` recovers `w'` as the very `useHintVec …` value `verify` checks against,
-      -- so its middle conjunct is `decide (X = X) = true` and `isValid = true`.
+      -- and the preimage's commitment component `(msg, w').2` is `w'`, so both conjuncts hold.
       have hvalid :
-          (mldsaSTMSIS p prims M).isValid (prims.expandA pk.rho) pk cc.1 (z, h) = true := by
+          (mldsaSTMSIS p prims M).isValid (prims.expandA pk.rho) pk (msg, w') cc.1 (z, h)
+            = true := by
         simp only [mldsaSTMSIS, identificationScheme] at hverify ⊢
         revert hverify
         grind
