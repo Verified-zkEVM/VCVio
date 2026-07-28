@@ -7,18 +7,35 @@ Authors: Richard Goodman
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
 import VCVio.CryptoFoundations.TweakableHash
 
-/-! # Node-Addressed Merkle Trees: the one engine
+/-! # Node-Addressed Merkle Trees
 
 Merkle trees whose node hash may depend on the **full address** of the node being
 hashed — the typed root-path position `NodeAddress s` — via
 `nodeHash : NodeAddress s → α → α → α`.
 
-This is the single engine of which the ordinary tree (constant `nodeHash`), the
+Tree building, putative-root recomputation, completeness, and constructive collision
+tracing are defined and proven **once here**, for an arbitrary `nodeHash`. Every hash
+discipline expressible as a `nodeHash` — the ordinary tree (constant), the
 level-separated tree (`nodeHash` through the depth of the addressed subtree), and
 XMSS/SLH-DSA-style fully-addressed trees (`nodeHash` through an arbitrary
-address-to-tweak map) are instances: tree building, putative-root recomputation,
-completeness, and constructive collision tracing are defined and proven **once**,
-and every instance inherits them by specializing `nodeHash`.
+address-to-tweak map) — inherits all of it by specialization.
+
+**Scope note (staged, deliberately).** The pre-existing unaddressed API in
+`MerkleTree.Inductive` is *not* re-expressed as a wrapper around this engine: its
+definitions (`getPutativeRootWithHash`, `populateUp`, `findCollision`) stand
+unchanged, and this module is added alongside them. What the `Instances` section
+below establishes instead is that the unaddressed API is **propositionally
+subsumed** at the constant instance — its build and putative-root computations are
+recovered (`populateUpAddressed_const`, `getPutativeRootAddressed_const`), its
+completeness theorem is *re-derived* from this engine's rather than reproved
+(`functional_completeness_of_addressed`), and its constructive collision walk is
+literally this engine's walk with the address tag erased
+(`findCollisionAddressed_const`). Turning that propositional subsumption into a
+definitional one — redefining the unaddressed entry points as constant
+specializations — would change a load-bearing upstream API consumed by
+`Inductive.Extractability`, `Inductive.Batch`, `Uniqueness` and `QueryBound`, so it
+is left as a follow-up for the maintainers rather than performed inside this
+contribution.
 
 Design: at each recursion step into a child, the engine passes the *reindexed* hash
 `fun a => nodeHash (.inL a)` (resp. `.inR`) — the address is threaded by
@@ -434,13 +451,20 @@ theorem addressed_oriented_binding {s : Skeleton}
   exact ⟨a, c, by simpa [AddressedCollision, Prod.ext_iff] using hcol.1,
     by simpa [AddressedCollision] using hcol.2⟩
 
-/-! ## Instances: one engine, three trees
+/-! ## Instances: three hash disciplines, one engine
 
 The three hash disciplines are specializations of `nodeHash`; the theorems above
-specialize with them. The recovery theorems below are the dedup certificates: the
-unaddressed engine's core functions are *definitionally subsumed* (constant
-instance), and the level-separated (`Tweaked`) development factors through
-`NodeAddress.subtreeDepth`. -/
+specialize with them. The theorems below are the **subsumption certificates** for the
+constant instance: they exhibit the unaddressed `MerkleTree.Inductive` API as this
+engine specialized, at the level of its computations
+(`populateUpAddressed_const`, `getPutativeRootAddressed_const`,
+`buildMerkleTreeAddressed_const`), its completeness theorem
+(`functional_completeness_of_addressed`, derived here rather than reproved) and its
+constructive collision kernel (`findCollisionAddressed_const`: address erasure sends
+one to the other on the nose). The subsumption is propositional, not definitional —
+see the scope note in the module header. The level-separated (`Tweaked`) development
+factors through `NodeAddress.subtreeDepth` and is *definitionally* an instance
+(`levelNodeHash_eq_addressed` is `rfl`). -/
 
 section Instances
 
@@ -465,6 +489,50 @@ theorem populateUpAddressed_const (h : α → α → α) {s : Skeleton}
   induction ld with
   | leaf v => rfl
   | internal dl dr ihl ihr => simp [populateUpAddressed, BinaryTree.populateUp, ihl, ihr]
+
+omit [DecidableEq α] in
+/-- **Ordinary instance**: a constant `nodeHash` recovers the unaddressed build. -/
+theorem buildMerkleTreeAddressed_const (h : α → α → α) {s : Skeleton}
+    (ld : LeafData α s) :
+    buildMerkleTreeAddressedWithHash ld (fun _ => h)
+      = InductiveMerkleTree.buildMerkleTreeWithHash ld h :=
+  populateUpAddressed_const h ld
+
+omit [DecidableEq α] in
+/-- **Subsumption certificate (completeness)**: the unaddressed completeness theorem
+is a consequence of the engine's, at the constant instance. This is not a second
+proof of completeness — it is the first one, specialized. -/
+theorem functional_completeness_of_addressed (h : α → α → α) {s : Skeleton}
+    (idx : SkeletonLeafIndex s) (ld : LeafData α s) :
+    InductiveMerkleTree.getPutativeRootWithHash idx (ld.get idx)
+        (InductiveMerkleTree.generateProof
+          (InductiveMerkleTree.buildMerkleTreeWithHash ld h) idx) h
+      = (InductiveMerkleTree.buildMerkleTreeWithHash ld h).getRootValue := by
+  rw [← buildMerkleTreeAddressed_const h ld, ← getPutativeRootAddressed_const h]
+  exact addressed_functional_completeness idx ld (fun _ => h)
+
+/-- **Subsumption certificate (collision kernel)**: erasing the address tag from the
+engine's constructive collision walk yields *exactly* the unaddressed `findCollision`.
+So the two collision kernels are not parallel implementations that happen to agree on
+their statements — they are one function, up to the address decoration. -/
+theorem findCollisionAddressed_const (h : α → α → α) {s : Skeleton}
+    (idx : SkeletonLeafIndex s) (proof₁ proof₂ : List.Vector α idx.depth) (x y : α) :
+    (findCollisionAddressed (fun _ => h) idx proof₁ proof₂ x y).map (fun w => w.2)
+      = InductiveMerkleTree.findCollision h idx proof₁ proof₂ x y := by
+  induction idx with
+  | ofLeaf => rfl
+  | ofLeft idxLeft ih =>
+    rw [findCollisionAddressed, InductiveMerkleTree.findCollision]
+    simp only [getPutativeRootAddressed_const, dite_eq_ite]
+    split
+    · rw [Option.map_map]; exact ih proof₁.tail proof₂.tail
+    · split <;> rfl
+  | ofRight idxRight ih =>
+    rw [findCollisionAddressed, InductiveMerkleTree.findCollision]
+    simp only [getPutativeRootAddressed_const, dite_eq_ite]
+    split
+    · rw [Option.map_map]; exact ih proof₁.tail proof₂.tail
+    · split <;> rfl
 
 /-- **Level-separated instance**: hash through the depth of the addressed subtree.
 This is the discipline of the `Tweaked` development: per-level domain separation. -/
