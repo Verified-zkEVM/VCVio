@@ -10,7 +10,7 @@ import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.GhostReadCharge
 # EUF-CMA for Fiat-Shamir with aborts: HiddenReadFold
 
 The direct route for the eager ghost-read bad probability: the averaged
-multi-key hidden-read fold `hiddenReadList_fold_le_target` reducing to the banked
+multi-key hidden-read fold `hiddenReadList_fold_le_target` reducing to the
 multi-key first-fire bound, and the per-query eager↔lazy deferred-sampling coupling
 at the ghost-read leaf, with its bookkeeping support lemmas.
 
@@ -45,17 +45,19 @@ variable (adv : SignatureAlg.unforgeableAdv
 
 /-! ## Direct route: averaged multi-key hidden-read fold to the target
 
-The direct route bounds the eager ghost-read bad probability by the banked multi-key
+The direct route bounds the eager ghost-read bad probability by the multi-key
 hidden-target first-fire bound `OracleComp.probEvent_hiddenReadList_le` (`≤ n·(qH+1)·ε`
 for `n` ghost keys), then averages the per-key-count bound over the run's key-count law.
 The averaging step is the pure-`ℝ≥0∞` arithmetic fold `hiddenReadList_fold_le_target`
 below: it takes any sub-probability weight `P : ℕ → ℝ≥0∞` over the number of ghost keys
-whose mean is bounded by the expected attempt count `qS/(1-p)` (the banked
+whose mean is bounded by the expected attempt count `qS/(1-p)` (the
 `tsum_probOutput_commit_mul_abort_le` aggregate) and folds the per-count bound
-`k·(qH+1)·ε` into the target `qS·(qH+1)·ε/(1-p)`. It is the closed `[fold]` step of the
-direct chain `Pr[eager bad] ≤[D1] Pr[readManyList …] =[D2] Pr[hiddenReadList …] ≤ n·(qH+1)·ε
-≤[fold] target`; the remaining `[D1]`/`[D2]` connection is the deferred-sampling
-commutation isolated in `eagerGhostRead_bad_le_lazyGhostRead_bad`. -/
+`k·(qH+1)·ε` into the target `qS·(qH+1)·ε/(1-p)`. It is the `[fold]` step of the chain
+`Pr[eager bad] ≤ Pr[readManyList …] = Pr[hiddenReadList …] ≤ n·(qH+1)·ε ≤[fold] target`,
+consumed by `probEvent_ghostBlind_bad_le_of_fac` once that chain's deferred-sampling
+factorization is supplied as the hypothesis `hfac`. The headline instead charges the
+ghost-read bound through the first-moment route of
+`Security/TapeFactorization.lean`. -/
 lemma hiddenReadList_fold_le_target (qS qH : ℕ) (ε p_abort : ℝ) (hp : p_abort < 1)
     (P : ℕ → ℝ≥0∞)
     (hmean : ∑' k : ℕ, P k * (k : ℝ≥0∞) ≤ ENNReal.ofReal (qS / (1 - p_abort))) :
@@ -120,7 +122,7 @@ lemma geomSum_le {p_abort : ℝ} (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) (n :
 /-! ## Deferred-sampling eager↔lazy coupling (ghost-read leaf) -/
 
 omit [SampleableType Stmt] in
-/-- **Uniform-branch per-query coupling for the eager↔lazy ghost handlers** (banked). On a
+/-- **Uniform-branch per-query coupling for the eager↔lazy ghost handlers.** On a
 uniform query both `ghostHybridImpl … true` and `lazyGhostHybridImpl` forward the draw and
 leave the state untouched (`lazyGhostHybridImpl_run_unif_eq`), so they are coupled by the
 identity coupling on the shared uniform sample with *equal outputs* and the bad-flag
@@ -141,7 +143,7 @@ theorem relTriple_ghostHybrid_lazyGhost_unif (pk : Stmt) (sk : Wit)
   exact OracleComp.ProgramLogic.Relational.relTriple_pure_pure ⟨rfl, hRel⟩
 
 omit [SampleableType Stmt] in
-/-- **Signing-branch per-query coupling for the eager↔lazy ghost handlers** (banked). On a
+/-- **Signing-branch per-query coupling for the eager↔lazy ghost handlers.** On a
 signing query both handlers run the *same* `ghostSignBody` over the layered cache, prepend
 `msg` to the signed-message list, and leave the bad flag untouched
 (`lazyGhostHybridImpl_run_sign_eq`); they are therefore identical, so coupled by the
@@ -171,8 +173,8 @@ theorem relTriple_ghostHybrid_lazyGhost_sign (pk : Stmt) (sk : Wit)
 /-! ## Measure-level eager↔lazy coupling: support lemmas
 
 The lemmas in this section supply bookkeeping used by `avgBadM_eager_le_lazy_joint`
-(banked below as a reusable two-measure coupling engine). Both handlers agree on uniform
-and signing steps (banked as `relTriple_ghostHybrid_lazyGhost_unif` /
+(the reusable two-measure coupling engine of `Security/CouplingEngine.lean`). Both
+handlers agree on uniform and signing steps (`relTriple_ghostHybrid_lazyGhost_unif` /
 `relTriple_ghostHybrid_lazyGhost_sign`), so the per-step premises concern the per-step
 invariant-preservation at those steps: expected ghost-cache size, flag-preservation,
 charge-carry, and charge-K bookkeeping. For the uniform and signing branches both handlers
@@ -274,7 +276,7 @@ lemma ghostHybridImpl_read_expected_enncard (pk : Stmt) (sk : Wit)
 omit [SampleableType Stmt] in
 /-- Sign step grows the per-state expected ghost size by at most `∑ attempts ≤ 1/(1-p)`: the
 signing body's accepted-transcript / rejected-attempt programming writes to the ghost layer
-(banked `tsum_probOutput_run_ghostSignBody_mul_ghost_enncard_le` plus the geometric fold). -/
+(`tsum_probOutput_run_ghostSignBody_mul_ghost_enncard_le` plus the geometric fold). -/
 lemma ghostHybridImpl_sign_expected_enncard_le (pk : Stmt) (sk : Wit) (msg : M)
     {p_abort : ℝ}
     (hAbort : Pr[= none | ids.honestExecution pk sk] ≤ ENNReal.ofReal p_abort)
@@ -334,7 +336,7 @@ lemma ghostHybridImpl_sign_expected_enncard_le (pk : Stmt) (sk : Wit) (msg : M)
 /-- **Per-state ghost charge accumulator** for the threaded eager-charge bound: the
 mass-weighted total size of the ghost cache layer. Linear in the state measure `ν`, preserved
 by read/uniform steps (which never write the ghost layer) and grown additively by sign steps
-(banked `tsum_probOutput_run_ghostSignBody_mul_ghost_enncard_le`). -/
+(`tsum_probOutput_run_ghostSignBody_mul_ghost_enncard_le`). -/
 noncomputable def ghostChargeK (ν : GhostState M Commit Chal → ℝ≥0∞) : ℝ≥0∞ :=
   ∑' p : GhostState M Commit Chal, ν p * QueryCache.enncard (p.1.1.2)
 
@@ -342,9 +344,9 @@ noncomputable def ghostChargeK (ν : GhostState M Commit Chal → ℝ≥0∞) : 
 `ν`-averaged membership charge at `mc` is dominated by the ghost-size accumulator scaled by
 `ofReal ε`. This is the carried invariant of the threaded eager-charge bound: it holds at the
 empty-cache Dirac start (`0 ≤ 0`), is preserved by reads (ghost layer untouched) and signs
-(banked (a) raises the charge by `≤ (attempts)·ε`, matching the enncard growth of
-`ghostChargeK`). It is only an *averaged* fact — pointwise per state it is false, since a
-single ghost entry costs `1`, not `ε`. -/
+(a sign step raises the charge by `≤ (attempts)·ε`, matching the enncard growth of
+`ghostChargeK` — `ghostHybridImpl_sign_expected_enncard_le`). It is only an *averaged*
+fact — pointwise per state it is false, since a single ghost entry costs `1`, not `ε`. -/
 def ghostChargeInv (ε : ℝ) (ν : GhostState M Commit Chal → ℝ≥0∞) : Prop :=
   ∀ mc : M × Commit,
     (∑' p : GhostState M Commit Chal, ν p * memCharge M p.1.1.2 mc)
@@ -483,7 +485,8 @@ lemma avgBadM_ghostHybridImpl_threaded_carry
 omit [SampleableType Stmt] in
 /-- **`h_K` premise of the threaded bound for the ghost handler.** The ghost-size accumulator
 `ghostChargeK` telescopes across one step, growing by `≤ ofReal (1/(1-p)) · mass ν` on a sign
-step (banked (a)/(c)); reads and uniform steps preserve it (the ghost layer is untouched). -/
+step (`ghostHybridImpl_sign_expected_enncard_le`); reads and uniform steps preserve it (the
+ghost layer is untouched). -/
 lemma avgBadM_ghostHybridImpl_threaded_K
     (ε p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) (_hε : 0 ≤ ε)
     (pk : Stmt) (sk : Wit)

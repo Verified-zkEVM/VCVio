@@ -315,7 +315,7 @@ lemma probEvent_lazyGhostHybridImpl_bad_le
               List M), false)]
       ≤ ENNReal.ofReal (qS * (qH + 1) * ε / (1 - p_abort)) := by
   classical
-  -- ASSEMBLY RECIPE (all ingredients PROVEN; blocked only by elaboration performance).
+  -- The assembly, in three stages, executed below.
   --
   -- (1) Single-world accumulator
   --     `OracleComp.ProgramLogic.Relational.probEvent_bad_simulateQ_run_le_expectedQuerySlack`

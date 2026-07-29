@@ -40,7 +40,7 @@ scheme (e.g. `MLDSA.nma_security_short`).
 
 The development is split along its proof phases: `Loss` (the loss functions),
 `BodyHops` (the per-query Trans → Sim hop core and the verification tail),
-`GhostReadCharge`, `HiddenReadFold`, `CouplingEngine` (banked measure-level
+`GhostReadCharge`, `HiddenReadFold`, `CouplingEngine` (reusable measure-level
 coupling infrastructure, off the live path), `ReadRecording`,
 `TapeFactorization`, `HopLemmas`, `NMAReduction`, and `Assembly` (the headline
 `euf_cma_to_nma`). This umbrella module re-exports all of them.

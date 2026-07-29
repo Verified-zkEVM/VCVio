@@ -9,10 +9,10 @@ import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.HiddenReadFold
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: CouplingEngine
 
-`avgBadM_eager_le_lazy_joint`, a banked, axiom-clean, reusable free-monad
-telescoping engine for dominating averaged bad masses under a two-measure coupling
-invariant, together with its deferral primitives and the attempt-count law. Not on
-the live path of the ghost-read bound; retained as general infrastructure.
+`avgBadM_eager_le_lazy_joint`, a reusable free-monad telescoping engine for
+dominating averaged bad masses under a two-measure coupling invariant, together
+with its deferral primitives and the attempt-count law. Not on the live path of
+the ghost-read bound; retained as general infrastructure.
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
 transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` re-exports
@@ -45,11 +45,12 @@ variable (adv : SignatureAlg.unforgeableAdv
 
 /-! ## Measure-level eager↔lazy coupling engine
 
-`avgBadM_eager_le_lazy_joint` is a banked, axiom-clean, reusable free-monad telescoping
-engine for dominating averaged bad masses under a two-measure coupling invariant. It is not
-currently on the live path of the #228 ghost-read bound (the live path goes through the sound
-M1→M2→M3 ghost-blind factorization route). It is retained here as general infrastructure for
-a future joint-law approach to the eager↔lazy comparison.
+`avgBadM_eager_le_lazy_joint` is a reusable free-monad telescoping engine for dominating
+averaged bad masses under a two-measure coupling invariant. It is not on the live path of
+the ghost-read bound, which goes through the ghost-blind first-moment route
+(`probEvent_ghostHybridImpl_bad_le_ghostBlind` into `probEvent_ghostBlindImpl_bad_le`). It
+is retained here as general infrastructure for a joint-law approach to the eager↔lazy
+comparison.
 
 The engine carries a **two-measure coupling invariant** `Inv νe νl` through the free-monad
 induction on `oa`: the uniform and signing steps preserve `Inv` on the per-output post-step
@@ -145,8 +146,8 @@ lemma avgBadM_eager_le_lazy_joint (pk : Stmt) (sk : Wit)
         exact ih u _ _ (h_step_eq νe νl hInv (Sum.inr msg) (by simp) u)
 
 omit [SampleableType Stmt] in
-/-- **M1: the identical-until-bad / ghost-blind reduction** (foundational step of the sound
-#228 ghost-read bound). The eager hybrid handler `ghostHybridImpl … true` and the ghost-blind
+/-- **M1: the identical-until-bad / ghost-blind reduction** (foundational step of the
+ghost-read bound). The eager hybrid handler `ghostHybridImpl … true` and the ghost-blind
 handler `ghostBlindImpl` flip the adversarial-read bad flag with *exactly the same*
 probability at the empty-cache Dirac start:
 
@@ -160,7 +161,7 @@ unsets it (`ghostHybridImpl_bad_mono` / `ghostBlindImpl_bad_mono`). The blind ha
 a hit from the real layer instead of returning the ghost value, so the ghost-key values never
 influence the run — they are consulted only to record the would-hit. Because the runs differ
 only on the already-bad trajectory (where both flags read `true`), the bad marginals coincide,
-by the banked exact identical-until-bad bad-event equality
+by the exact identical-until-bad bad-event equality
 `probEvent_output_bad_eq'`. -/
 lemma probEvent_ghostHybridImpl_bad_eq_ghostBlind (pk : Stmt) (sk : Wit) :
     Pr[ fun z : (M × Option (Commit × Resp)) × GhostState M Commit Chal => z.2.2 = true |
@@ -184,7 +185,7 @@ lemma probEvent_ghostHybridImpl_bad_eq_ghostBlind (pk : Stmt) (sk : Wit) :
 omit [SampleableType Stmt] in
 /-- **M1 (≤ form).** The eager ghost-read bad mass is bounded by the ghost-blind handler's
 bad mass at the empty-cache Dirac start; immediate from the equality
-`probEvent_ghostHybridImpl_bad_eq_ghostBlind`. This is the reduction the sound #228 spine
+`probEvent_ghostHybridImpl_bad_eq_ghostBlind`. This is the reduction the read-bound spine
 chains with M2 (reads ⊥ ghost-key values) and M3 (geometric first-fire charge). -/
 lemma probEvent_ghostHybridImpl_bad_le_ghostBlind (pk : Stmt) (sk : Wit) :
     Pr[ fun z : (M × Option (Commit × Resp)) × GhostState M Commit Chal => z.2.2 = true |
@@ -205,7 +206,7 @@ lemma probEvent_ghostHybridImpl_bad_le_ghostBlind (pk : Stmt) (sk : Wit) :
 factorization `hfac` — the ghost-blind run's bad marginal exhibited as the value-free
 multi-key hidden-target game `kn >>= hiddenReadList (Prod.fst <$> ids.commit pk sk) (qH+1) σ`
 (rejected commitment values deferred to a front block, read off by the adversary's adaptive
-all-miss strategy `σ`) — the target bound `qS·(qH+1)·ε/(1-p)` follows by the banked
+all-miss strategy `σ`) — the target bound `qS·(qH+1)·ε/(1-p)` follows by the
 union-bound + geometric-fold pipeline:
 
 * per-target guessing bound `hGuess` (raw `Pr[= w | commit] ≤ ε`) feeds the multi-key
@@ -335,11 +336,12 @@ lemma ghostBlind_singleDraw_fire_le {α : Type} (pk : Stmt) (sk : Wit) {ε : ℝ
       ≤ (q : ℝ≥0∞) * ε :=
   OracleComp.probEvent_bind_fire_le_of_gen hGuess q gen k hk
 
-/-! ### M2: the deferred-sampling factorization (the single open obligation)
+/-! ### M2: the deferred-sampling factorization
 
 The **M2** content is the ghost-blind run's bad marginal *factoring* as a value-free deferred-draw
-game. This is the crux of the sound route and is the single open obligation; it is genuinely
-multi-week-class. The headline charges it through the σ-free first-moment residual
+game. In this module it appears as the hypothesis `hfac` of `probEvent_ghostBlind_bad_le_of_fac`,
+which is the σ-indexed (front-loaded hidden-target) form of the factorization. The headline takes
+the σ-free route instead, charging the ghost-read bound through the first-moment residual
 `readRecord_expected_coincidences_le` (the expected coincidence count of the value-free recorded
 read-commit list with the recorded rejected draws).
 
@@ -359,15 +361,16 @@ value-free recorded read-commit list. The expected coincidence count is then bou
 qS/(1-p)` the aggregate of `tsum_probOutput_commit_mul_abort_le` over the `qS` signing queries
 (each rejected attempt is reached with geometric probability, summed by `geomAttemptSum_le`).
 
-Banked tools for the eventual discharge: the read-marginal equalities
+Supporting tools for the σ-indexed form: the read-marginal equalities
 `probEvent_ghostHybridImpl_read_bad_single_eq_lazyFire` /
 `probOutput_eagerMultiReadBad_eq_lazyFire_or` (the signing-time→read-time draw commutation, here
 applied to the value-free `ghostBlindImpl` continuation rather than the eager one whose
 continuation depends on the read value), `probOutput_lazyGhostFire_one`, and the value-free
 read-answer agreement (`ghostBlindImpl`'s hit branch is `roStep`, the same `map`-of-`roStep` as a
-miss and as the lazy handler). The crux is lifting the output-irrelevance through the `simulateQ`
-fold so that the per-rejected-attempt draws commute to the front independently of the intervening
-adversary computation.
+miss and as the lazy handler). Lifting the output-irrelevance through the `simulateQ` fold, so that
+the per-rejected-attempt draws commute to the front independently of the intervening adversary
+computation, is carried out on the σ-free route by
+`evalDist_deferredDrawRead_eq_drawList_tapeDrawRead` in `Security/TapeFactorization.lean`.
 
 This factorization route is sound precisely because `ghostBlindImpl` reads never feed the ghost
 value into the run, so the draws are genuinely deferrable. -/
@@ -477,9 +480,10 @@ each attempt, commutes the recursive front block `drawList n` past the inline
 `uniformSample`/`respond` draws (`evalDist_bind_comm_probComp`, the i.i.d. resampling step) and
 matches the reject-branch recursion to the inductive hypothesis.
 
-This is the local, tractable `bind`-commutation; the remaining open content of
-`readRecord_expected_pairs_le` is to lift it across the *opaque adversary* `simulateQ (oa)` fold:
-the interleaved per-query draw blocks all commuting to the front, past the adaptive read points. -/
+This is the local, per-body `bind`-commutation. Its lift across the *opaque adversary*
+`simulateQ (oa)` fold — the interleaved per-query draw blocks all commuting to the front, past the
+adaptive read points — is `evalDist_deferredDrawRead_eq_drawList_tapeDrawRead` in
+`Security/TapeFactorization.lean`. -/
 
 /-- **i.i.d. bind-commutation at the distribution level for `ProbComp`.** Two independent draws
 `oa`, `ob` feeding a common continuation `k` may be drawn in either order without changing the
@@ -576,8 +580,8 @@ the inline `uniformSample`/`respond` draws (the i.i.d. resampling step
 `evalDist_bind_comm_probComp`), the accepting branch discards the unused suffix
 (`evalDist_bind_const_neverFails`, `drawList` never
 fails), and the rejecting branch matches the inductive hypothesis. This is the per-body half of the
-tape factorization; lifting it across the opaque adversary fold is the remaining content of
-`readRecord_expected_pairs_le`. -/
+tape factorization; its lift across the opaque adversary fold is
+`evalDist_deferredDrawRead_eq_drawList_tapeDrawRead`. -/
 theorem evalDist_ghostSignDrawBody_eq_drawList_tapeSignBody (pk : Stmt) (sk : Wit) (msg : M)
     (n : ℕ) (re : (M × Commit →ₒ Chal).QueryCache) :
     𝒟[(ghostSignDrawBody ids M pk sk msg n).run re] =
@@ -895,12 +899,11 @@ recorded commitment is a raw `Prod.fst <$> ids.commit pk sk` draw — distribute
 head — and its `readMany` test matches the fresh head's, while the recursive rejected list is
 dominated by the recursive fresh list (induction). The read strategy `σ` is *fixed* (the read points
 are determined by the all-miss reply history; the drawn values never feed them — value-freeness),
-which is what lets a single `σ` dominate both sides. Lifting this per-query over-count across the
-opaque adversary `simulateQ` fold — front-loading every signing query's interleaved draws into one
-aggregate `drawList` block indexed by the run's attempt count — is the remaining fold-level deferral
-commute, the same value-free fold-lift isolated in `readRecord_expected_coincidences_le`. This lemma
-is a banked single-body over-count partial; it is not on the live headline path (which charges the
-expected coincidence count directly). -/
+which is what lets a single `σ` dominate both sides. The corresponding fold-level statement —
+front-loading every signing query's interleaved draws into one aggregate `drawList` block — is
+`evalDist_deferredDrawRead_eq_drawList_tapeDrawRead`, which the headline uses on the σ-free
+first-moment route. This lemma is the single-body over-count in σ-indexed form; it is not on the
+live headline path (which charges the expected coincidence count directly). -/
 lemma ghostSignDrawBody_readManyList_le_drawList (pk : Stmt) (sk : Wit) (msg : M)
     (q : ℕ) (σ : List Bool → Commit) :
     ∀ (n : ℕ) (re : (M × Commit →ₒ Chal).QueryCache),
@@ -1177,9 +1180,8 @@ The deferred run's bad marginal is then carried — through the read-recording r
 
 This reduction uses the pointwise coupling because the bad flags *are* pointwise linkable (eager
 ghost-membership ⟹ deferred commitment-membership, since the drawn list grows in lockstep with the
-ghost cache), so the pointwise `relTriple_simulateQ_run_mono` route applies and Piece A is genuine,
-bankable coupling content. The remaining open content is the value-free fold-lift isolated in
-`readRecord_expected_coincidences_le`.
+ghost cache), so the pointwise `relTriple_simulateQ_run_mono` route applies. The value-free charge
+that this reduction feeds into is `readRecord_expected_coincidences_le`.
 
 The state invariant linking the eager `GhostState` and the deferred `DeferredState`: real cache and
 signed-message list agree, every key in the ghost cache has its commitment recorded in the drawn

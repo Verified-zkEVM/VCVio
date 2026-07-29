@@ -51,12 +51,26 @@ drawn list, so the bad event is dominated by the final-state predicate "some rec
 is in the final drawn list". The handler `deferredDrawReadImpl` records, in an extra `List Commit`
 component, the commitment `mc.2` of every adversarial read; its read step is otherwise identical to
 `deferredDrawImpl` (same answer via `roStep`, same drawn list, same bad flag). The reduction
-`deferredDraw_bad_le_readRecord` is the Piece A-style pointwise coupling that reads the bad ordering
-off the run; it converts the *read-time* bad flag into the *final-state* membership predicate
+`deferredDraw_bad_le_readRecord` is the pointwise coupling that reads the bad ordering off the run;
+it converts the *read-time* bad flag into the *final-state* membership predicate
 `∃ rc ∈ readlist, rc ∈ drawnlist`, which removes the read-time/final-state mismatch that obstructs a
-direct expectation bound (see the residual docstring). The recorded read commits are **value-free**
-(answers come from the real layer via `roStep`; the drawn *values* never feed the read points), the
-content reused by the remaining deferral commute. -/
+direct expectation bound. The recorded read commits are **value-free** (answers come from the real
+layer via `roStep`; the drawn *values* never feed the read points), which is what
+`Security/TapeFactorization.lean` charges against the recorded draws.
+
+Why a bespoke handler rather than generic query instrumentation. The framework's generic
+`QueryImpl` decorations (`withLogging`, `withTrace`/`withTraceBefore`, and cursor/path-style
+wrappers) instrument *occurrences of queries in the computation being simulated*: they observe the
+query's input, and optionally its answer, at each node of the original tree. That is enough for the
+read half of the state here — the adversary's random-oracle reads *are* nodes of `adv.main pk`, so
+their commitment components could be logged generically. It is not enough for the draw half. The
+commitment draws being recorded are not occurrences in the adversary's tree at all: they are
+introduced *inside the signing handler*, by `ghostSignDrawBody`, when the handler answers a signing
+query, and their number is itself random (one per rejected attempt). No input-only instrumentation
+of the adversary's queries can name them, so the drawn list has to be a component of the handler's
+own state, written by the signing branch. Recording both lists in one handler state is also what
+makes the pair `(readlist, drawnlist)` available at a single final state, which is the form the
+first-moment charge consumes. -/
 
 /-- State of the read-recording deferred-draw handler: the underlying `DeferredState` together with
 the accumulated list of commitment components `mc.2` of every adversarial random-oracle read. The
@@ -225,10 +239,10 @@ recorded read-commits that lie in the drawn list.
 This is the elementary first-moment (Markov) step of the per-position route: a firing run has at
 least one coincidence, so the indicator of the firing event is dominated by the (nonnegative,
 integer-valued) coincidence count, and `Pr[fire] ≤ E[count]` by the Markov core
-`probEvent_le_tsum_probOutput_mul_cost`. The remaining content — bounding `E[count]` by
-`(qH+1)·ε·E[#attempts]` — is the genuine per-position independence of each fresh draw from the
-value-free recorded read-commit list (see `readRecord_expected_coincidences_le`). This lemma is
-axiom-clean and isolates that independence as the sole open content. -/
+`probEvent_le_tsum_probOutput_mul_cost`. The probabilistic content — bounding `E[count]` by
+`(qH+1)·ε·E[#attempts]` — is the per-position independence of each fresh draw from the
+value-free recorded read-commit list, supplied by `readRecord_expected_coincidences_le`. This
+lemma is exactly the step that isolates that independence from the firing event. -/
 theorem readRecord_pred_le_expected_coincidences {γ : Type}
     (pk : Stmt) (sk : Wit)
     (oa : OracleComp ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp))) γ)

@@ -349,8 +349,8 @@ cache via `roStep` — exactly as it does on a *miss* — instead of returning t
 So the ghost-key values are pure side-data: they are consulted only to set the bad flag and
 never influence the run's behaviour. Structurally this is the Trans-side instrumented handler
 `ghostHybridImpl … false`, whose hit branch already answers from the real layer while flipping
-the flag; `ghostBlindImpl` is a named alias for that handler, isolating the ghost-blind role
-of the sound (#228) read-bound spine from the Prog→Trans hop usage of the Trans handler. -/
+the flag; `ghostBlindImpl` is a named alias for that handler, isolating its ghost-blind role
+in the read-bound spine from the Prog→Trans hop usage of the Trans handler. -/
 
 /-- Ghost-blind hybrid handler: identical to `ghostHybridImpl … true` except that an
 adversarial random-oracle read at a ghost-cache hit answers from the real layer (`roStep`,

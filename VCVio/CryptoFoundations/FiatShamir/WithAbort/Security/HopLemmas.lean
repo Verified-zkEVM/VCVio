@@ -338,10 +338,10 @@ expected number of attempts per signing query is at most `1/(1-p)` (`hAbort`, vi
 `ProgramLogic/Relational/SimulateQ.lean`) with the bad event tracked on the hybrid
 state, plus the expected-attempt-count machinery of `WithAbort/ExpectedCost.lean`.
 
-The nonnegativity hypothesis `hp₀` is necessary: for `p_abort < 0` the claimed loss
-shrinks below the genuine adversarial-collision gap `qS·qH·ε` of an abort-free scheme
-(the `1/(1-p)` factors fall below `1`), so the statement would be false. The
-corresponding bound is available at every call site from the good-key event. -/
+The abort probability is assumed to lie in `[0, 1)` (`hp₀`, `hp`). Nonnegativity is what
+keeps the geometric factors `1/(1 - p_abort)` at least `1`, so that the claimed loss
+dominates the adversarial-collision gap `qS·qH·ε` already present in an abort-free scheme;
+the bound `0 ≤ p_abort` is available at every call site from the good-key event. -/
 lemma probOutput_hybridExpAtKey_real_le_prog
     (qS qH : ℕ) (ε p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M

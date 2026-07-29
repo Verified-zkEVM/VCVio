@@ -290,7 +290,7 @@ noncomputable def lazyGhostFire (pk : Stmt) (sk : Wit) (w' : Commit) :
     pure (decide (w = w') || b)
 
 omit [SampleableType Stmt] [SampleableType Chal] in
-/-- **Single-pending deferred-sampling read** (banked draw-commutation, term form). With
+/-- **Single-pending deferred-sampling read** (draw-commutation, term form). With
 exactly one pending ghost attempt the lazy read `lazyGhostFire … 1` is the deferred draw
 `do w ← ids.commit pk sk; pure (decide (w = w'))`: a fresh commitment is sampled at read
 time and compared against the adversary's read point `w'`. This is the term-level
@@ -304,7 +304,7 @@ lemma lazyGhostFire_one_eq (pk : Stmt) (sk : Wit) (w' : Commit) :
   simp only [lazyGhostFire, pure_bind, Bool.or_false]
 
 omit [SampleableType Stmt] [SampleableType Chal] in
-/-- **Single-pending lazy fire marginal** (banked draw-commutation, probability form). The
+/-- **Single-pending lazy fire marginal** (draw-commutation, probability form). The
 deferred read fires with probability exactly the commitment law's mass at the read point:
 `Pr[fire | lazyGhostFire … 1] = Pr[= w' | Prod.fst <$> ids.commit pk sk]`. This is the
 read-time marginal that the body-level deferred-sampling commutation must match against the
@@ -342,7 +342,8 @@ lemma probOutput_ghostHybridImpl_read_bad
       simp [probEvent_eq_zero]
 
 omit [SampleableType Stmt] in
-/-- **Single-pending deferred-sampling commutation** (the inductive base case of #228, B1).
+/-- **Single-pending deferred-sampling commutation** (the base case of the deferred-sampling
+induction; the multi-pending iteration is `probOutput_eagerMultiReadBad_eq_lazyFire_or`).
 
 The eager handler reads the *already-sampled* ghost key `w` from the ghost cache and fires
 the bad flag deterministically iff the adversary's read point `mc` matches the written entry
@@ -358,7 +359,7 @@ time (lazy) for a single pending key. The averaging over the upstream draw — n
 per-state eager value — is what reproduces the lazy mass: at a *fixed* drawn `w` the eager
 read is deterministic `0`/`1`, but its expectation over `w ← commit` is exactly the lazy
 `lazyGhostFire … 1` firing probability. The general leaf iterates this peel over the random
-number of pending keys (B2). -/
+number of pending keys (`probOutput_eagerMultiReadBad_eq_lazyFire_or`). -/
 lemma probEvent_ghostHybridImpl_read_bad_single_eq_lazyFire
     (pk : Stmt) (sk : Wit) (msg : M) (mc : M × Commit) (hmc : mc.1 = msg)
     (re : (M × Commit →ₒ Chal).QueryCache) (c : Chal) :
@@ -390,7 +391,8 @@ lemma probEvent_ghostHybridImpl_read_bad_single_eq_lazyFire
   simp
 
 omit [SampleableType Stmt] in
-/-- **Eager multi-pending ghost read marginal** (the deferred-sampling iteration of #228, B2).
+/-- **Eager multi-pending ghost read marginal** (the deferred-sampling iteration over the
+number of pending ghost keys).
 
 The eager read at a ghost cache holding the entries `(msg, w_i)` for `n` signing-time-drawn
 keys fires the bad flag iff the adversary's read point `mc` matches one of those `n` entries.
@@ -400,7 +402,7 @@ mass equals the deferred read `lazyGhostFire … n`, in which all `n` commitment
 read time*.
 
 This is the iteration of the single-pending commutation
-`probEvent_ghostHybridImpl_read_bad_single_eq_lazyFire` (B1) over the number of pending keys:
+`probEvent_ghostHybridImpl_read_bad_single_eq_lazyFire` over the number of pending keys:
 the membership event `mc ∈ {(msg, w_i)}` is the union `∃ i, w_i = mc.2`, whose marginal over
 iid draws is exactly the union event of `lazyGhostFire`. The induction peels one draw — the
 freshly written entry decides one disjunct (`decide (w = mc.2)`), the remaining `n` entries
@@ -419,7 +421,8 @@ noncomputable def eagerMultiReadBad (pk : Stmt) (sk : Wit) (msg : M) (mc : M × 
     eagerMultiReadBad pk sk msg mc (re.cacheQuery (msg, w) c) c n
 
 omit [SampleableType Stmt] [SampleableType Chal] in
-/-- **Eager multi-pending read = lazy fire (union form)** (the B2 iteration core).
+/-- **Eager multi-pending read = lazy fire (union form)** (the iteration core over the
+pending count).
 
 By induction on the pending count `n`, the eager `n`-write membership read over an arbitrary
 base layer `re` equals the deferred `lazyGhostFire … n` *or-ed* with the base-layer membership
@@ -485,7 +488,7 @@ lemma probOutput_eagerMultiReadBad_eq_lazyFire_or
         cases b <;> cases (decide (w = mc.2)) <;> cases (decide (re mc ≠ none)) <;> rfl
 
 omit [SampleableType Stmt] [SampleableType Chal] in
-/-- **Eager multi-pending read = lazy fire** (B2, empty base case). With an *empty* base layer
+/-- **Eager multi-pending read = lazy fire** (empty base case). With an *empty* base layer
 (`re = ∅`, the actual initial real cache of the leaf), the eager `n`-write membership read has
 exactly the firing probability of the deferred read `lazyGhostFire … n`: the union over the
 `n` signing-time draws equals the union over the `n` read-time redraws. -/
@@ -719,10 +722,10 @@ a fixed starting state `p` splits by the ghost-domain test `p.1.1.2 mc`:
   unchanged, so the inner `∑'z` is left untouched.
 
 This is the per-state structural decomposition that isolates the read-step's HIT charge — the
-quantity whose `μ`-average against the upstream commit draws is the genuine deferred-sampling
-residual. It is the eager-side companion of the lazy read step (`lazyGhostHybridImpl` over the
-pending ghost count) and is purely structural (no probabilistic content beyond the banked HIT
-collapse). -/
+quantity whose `μ`-average against the upstream commit draws carries the deferred-sampling
+content. It is the eager-side companion of the lazy read step (`lazyGhostHybridImpl` over the
+pending ghost count) and is purely structural (no probabilistic content beyond the HIT
+collapse `tsum_ghostHybridImpl_read_hit_eq`). -/
 lemma tsum_ghostHybridImpl_read_step_split
     (pk : Stmt) (sk : Wit) (mc : M × Commit)
     (cont : Chal → OracleComp ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp)))
@@ -1365,7 +1368,7 @@ a **miss** the contribution is exactly the miss-branch continuation and `memChar
 the read pays at most `memCharge` above its miss-branch continuation — and the `memCharge`
 term is precisely what the averaged charge invariant
 (`tsum_probOutput_run_ghostSignBody_mul_memCharge_le`) bounds by `attempts · ε`. Built on the
-banked HIT/MISS split `tsum_ghostHybridImpl_read_step_split`. -/
+HIT/MISS split `tsum_ghostHybridImpl_read_step_split`. -/
 lemma tsum_ghostHybridImpl_read_step_charge_le
     (pk : Stmt) (sk : Wit) (mc : M × Commit)
     (cont : Chal → OracleComp ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp)))

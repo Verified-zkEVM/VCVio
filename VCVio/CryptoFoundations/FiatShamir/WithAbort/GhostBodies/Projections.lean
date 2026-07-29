@@ -125,7 +125,7 @@ lemma ghostHybridImpl_run_sign (progSide : Bool) (pk : Stmt) (sk : Wit)
 
 /-! ### Ghost-value independence of the ghost-blind step (the value-free foundation)
 
-The single structural fact powering the sound (#228) read-bound spine: in the ghost-blind
+The single structural fact powering the read-bound spine: in the ghost-blind
 run the stored ghost *values* are pure write-only side-data. `blindStepProj` forgets exactly
 the ghost layer, retaining the run's observable component — the step output, the real cache,
 the signed-message list, and the bad flag. `blindStepProj_map_ghostBlindImpl_indep` proves
