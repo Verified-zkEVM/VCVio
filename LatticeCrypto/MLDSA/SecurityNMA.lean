@@ -19,10 +19,11 @@ and the **SelfTargetMSIS extractor**:
    runtime-plumbing rewrites; the real-branch `(H0)` is discharged from the honest-sampling field
    `Primitives.Laws.expandS_honest_sampling` (the ROM idealization of `ExpandSeed`/`ExpandS`).
 2. **SelfTargetMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** Once `t` is uniform the key
-   carries no secret, so a forgery is a short vector satisfying the SelfTargetMSIS relation; the
-   extractor `extractorC` reads `(z, c̃)` out of the forged signature. This is fully proven: the
-   shared random-oracle simulation lines up the NMA `verify` query with the extractor's RO read-back
-   (`stmsis_tail_le`), and an accepted forgery is a valid SelfTargetMSIS solution by commitment
+   carries no secret, so a forgery is a short vector satisfying the *tailored* SelfTargetMSIS
+   relation of `mldsaSTMSIS` (see *Tailored vs. standard SelfTargetMSIS* below); the extractor
+   `extractorC` reads `(z, c̃)` out of the forged signature. This is fully proven: the shared
+   random-oracle simulation lines up the NMA `verify` query with the extractor's RO read-back
+   (`stmsis_tail_le`), and an accepted forgery is a valid solution of that problem by commitment
    recoverability.
 
 The `H₁` reprogramming step of the paper folds into the random-oracle modeling and is not separated
@@ -49,6 +50,23 @@ the matrix is *defined* as `Â := ExpandA(ρ)` wherever it is used, so that
 This is the standard ROM modeling of Dilithium with `ExpandA` a random oracle, and it makes the
 distinguisher `B` total: it consumes `(ρ, t)` and forms `pk = (ρ, Power2Round(t).1)` directly with
 no embedding. The `MlweEmbedding` record is therefore gone.
+
+## Tailored vs. standard SelfTargetMSIS
+
+The problems `mldsaSTMSIS` and `mldsaSTMSISShort` are **tailored** SelfTargetMSIS problems: their
+validity predicate *is* the ML-DSA verifier relation, namely the norm gates `‖z‖∞ < γ₁ − β` and
+`weight(h) ≤ ω`, the hint-recovered equation
+`w' = UseHint(h, Â·z − SampleInBall(c̃)·(t₁·2^d))` over `R_q`, and the self-target binding
+`hashInput.2 = w'` (with the RO consistency of `c̃` supplied by the surrounding
+`SelfTargetMSIS.experiment`). What is proved here is the extraction into that tailored problem
+together with its algebraic characterization (`stmsisAlgebraicSolution`,
+`mldsaSTMSISShort_isValid_iff`, `mldsaSTMSISShort_isValid_expandA_iff`).
+
+This is deliberately *not* the standard SelfTargetMSIS normal form used in the literature, which
+states the linear relation as `[I_m | A] · y` with the challenge occupying the final coefficient
+block of the short preimage `y`. Reducing the tailored relation to that normal form — absorbing
+`UseHint` and the `2^d` shift into a single short vector — is follow-up work, and no declaration
+in this file claims it.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -1074,8 +1092,10 @@ bridge `mldsaSTMSISShort_isValid_iff`: the verifier's norm gates `‖z‖∞ < �
 `hashInput.2 = w'` tying the recovered commitment to the pair hashed to produce `c̃`, whose
 RO consistency is enforced by the surrounding `SelfTargetMSIS.experiment`. At the matched
 parameters published by `sampleParams` acceptance is the norm gates plus the binding
-(`mldsaSTMSISShort_isValid_expandA_iff`); see the module docstring for the remaining
-distance to the literature normal form. -/
+(`mldsaSTMSISShort_isValid_expandA_iff`). The relation is the tailored verifier relation, not
+the standard SelfTargetMSIS normal form `[I_m | A] · y` with the challenge in the final
+coefficient block of `y`; reducing the tailored relation to that normal form is follow-up
+work. -/
 noncomputable def mldsaSTMSISShort (M : Type) :
     SelfTargetMSIS.Problem (TqMatrix p.k p.l) (Response p prims) (PublicKey p prims)
       (M × Commitment p prims) (CommitHashBytes p) where
@@ -1093,8 +1113,10 @@ noncomputable def mldsaSTMSISShort (M : Type) :
 `mldsaSTMSISShort.isValid` is defined through the identification-scheme verifier plus the
 self-target binding. The declarations below re-express an accepted solution in explicit
 algebraic form — the norm gates, the hint-recovered matrix equation over `R_q`, and the
-binding of the recovered commitment to the hashed preimage — and record the remaining
-distance to the literature SelfTargetMSIS normal form. -/
+binding of the recovered commitment to the hashed preimage. That algebraic form is the
+endpoint reached here: it is the tailored verifier relation, and reducing it to the standard
+SelfTargetMSIS normal form `[I_m | A] · y` (challenge in the final coefficient block of the
+short preimage `y`) is follow-up work. -/
 
 omit [DecidableEq prims.High] [DecidableEq (Commitment p prims)] [SampleableType (RqVec p.l)]
   [SampleableType (RqVec p.k)] [SampleableType (CommitHashBytes p)] in
@@ -1120,9 +1142,14 @@ omit [DecidableEq (Commitment p prims)] [SampleableType (RqVec p.k)]
 `‖z‖∞ < γ₁ − β` and `weight(h) ≤ ω` hold and the published commitment `w₁` satisfies the
 self-target matrix equation `UseHint(h, ExpandA(ρ)·z − c·(t₁·2^d)) = w₁` over `R_q`. In the
 Fiat-Shamir game `w₁` is the very commitment hashed to produce `c̃`, so an accepted NMA
-forgery carries the full literature SelfTargetMSIS relation; see the module docstring for
-how much of it survives in the tailored problem `mldsaSTMSISShort`. -/
-theorem identificationSchemeShort_verify_eq_true_iff (h_laws : Primitives.Laws prims nttOps)
+forgery carries the tailored algebraic verifier relation, which is exactly the relation the
+tailored problem `mldsaSTMSISShort` checks. Reducing that relation to the standard
+SelfTargetMSIS normal form `[I_m | A] · y`, with the challenge in the final coefficient block
+of the short preimage `y`, remains follow-up work.
+
+Only the transform-isomorphism laws `NTTRingLaws` are consumed (via
+`computeWApprox_eq_mul_sub_smul`), not the full `Primitives.Laws`. -/
+theorem identificationSchemeShort_verify_eq_true_iff (h_transform : NTTRingLaws nttOps)
     (pk : PublicKey p prims) (w1 : Commitment p prims) (cTilde : CommitHashBytes p)
     (z : RqVec p.l) (h : Vector prims.Hint p.k) :
     (identificationSchemeShort p prims).verify pk w1 cTilde (z, h) = true ↔
@@ -1131,7 +1158,7 @@ theorem identificationSchemeShort_verify_eq_true_iff (h_laws : Primitives.Laws p
       prims.useHintVec h (prims.expandA pk.rho * z -
         prims.sampleInBall cTilde • prims.power2RoundShiftVec pk.t1) = w1 := by
   simp only [identificationSchemeShort, identificationScheme,
-    computeWApprox_eq_mul_sub_smul p prims h_laws.transform, Bool.and_eq_true,
+    computeWApprox_eq_mul_sub_smul p prims h_transform, Bool.and_eq_true,
     decide_eq_true_eq]
   tauto
 
@@ -1174,15 +1201,17 @@ omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
 `mldsaSTMSISShort` solution is exactly an `stmsisAlgebraicSolution`: the verifier's norm
 gates, the hint-recovered matrix equation over `R_q` with the recovered commitment `w'`
 exhibited explicitly, and the self-target binding of `w'` to the commitment component of
-the hashed preimage. Only the transform-isomorphism laws of `h_laws` are consumed (via
-`computeWApprox_eq_mul_sub_smul`). -/
-theorem mldsaSTMSISShort_isValid_iff (h_laws : Primitives.Laws prims nttOps)
+the hashed preimage. Only the transform-isomorphism laws `NTTRingLaws` are consumed (via
+`computeWApprox_eq_mul_sub_smul`), not the full `Primitives.Laws`. The characterization is
+of the tailored relation; the standard SelfTargetMSIS normal form `[I_m | A] · y` is not
+reached here. -/
+theorem mldsaSTMSISShort_isValid_iff (h_transform : NTTRingLaws nttOps)
     (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims) (hashInput : M × Commitment p prims)
     (cTilde : CommitHashBytes p) (z : RqVec p.l) (h : Vector prims.Hint p.k) :
     (mldsaSTMSISShort p prims M).isValid aHat pk hashInput cTilde (z, h) = true ↔
       stmsisAlgebraicSolution p prims aHat pk hashInput cTilde (z, h) := by
   simp only [mldsaSTMSISShort, identificationSchemeShort, identificationScheme,
-    stmsisAlgebraicSolution, computeWApprox_eq_mul_sub_smul p prims h_laws.transform,
+    stmsisAlgebraicSolution, computeWApprox_eq_mul_sub_smul p prims h_transform,
     Bool.and_eq_true, decide_eq_true_eq]
   constructor
   · rintro ⟨hbind, ⟨hz, hw⟩, hweight⟩
