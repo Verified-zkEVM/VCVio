@@ -39,8 +39,12 @@ Use `VCVio/` when you are changing framework abstractions such as `SignatureAlg`
 - `LatticeCrypto/MLDSA/Scheme.lean`: proof-level identification scheme with aborts.
 - `LatticeCrypto/MLDSA/Signature.lean`: FIPS-style signing and verification layer built on the proof-level scheme.
 - `LatticeCrypto/MLDSA/Security.lean`: reduction statements from the signature / IDS surfaces to underlying assumptions.
-- `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, rounding, and encoding.
-- `Extern/MLDSA/`: FFI bindings, SHAKE-backed sampling, and the FFI-backed instance.
+- `LatticeCrypto/MLDSA/SecurityNMA.lean`: the no-message-attack chain, with the key swap modelled over short-box MLWE.
+- `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, rounding, and encoding, plus
+  `LawBounds.lean` — the algebraic range and bit-width bounds behind the `Primitives.Laws` fields.
+- `Extern/MLDSA/`: FFI bindings, SHAKE-backed sampling, and the FFI-backed instance. `Laws.lean`
+  discharges the `Primitives.Laws` fields that mention `concretePrimitives`, and `NonVacuity.lean`
+  banks the `seedRevealingPrims` inhabitance witness for `Primitives.Laws`.
 
 ### ML-KEM
 

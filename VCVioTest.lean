@@ -3,5 +3,6 @@ import VCVioTest.LongChainPrograms
 import VCVioTest.MerkleTreeBatch
 import VCVioTest.MonadProbability
 import VCVioTest.ProbabilityTactics
+import VCVioTest.RoundByRound.OneRound
 import VCVioTest.SampleableType
 import VCVioTest.Smoke

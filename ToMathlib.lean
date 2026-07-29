@@ -1,4 +1,5 @@
 import ToMathlib.Analysis.MeanInequalities
+import ToMathlib.Analysis.SumIntegralComparisons
 import ToMathlib.Combinatorics.FinPairs
 import ToMathlib.Computability.BitEncoding
 import ToMathlib.Computability.CslibPolyTime
