@@ -19,6 +19,7 @@ import LatticeCrypto.HardnessAssumptions.LearningWithErrors
 import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 import LatticeCrypto.MLDSA.Arithmetic
 import LatticeCrypto.MLDSA.Concrete.Encoding
+import LatticeCrypto.MLDSA.Concrete.LawBounds
 import LatticeCrypto.MLDSA.Concrete.NTT
 import LatticeCrypto.MLDSA.Concrete.Rounding
 import LatticeCrypto.MLDSA.Encoding

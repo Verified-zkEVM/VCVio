@@ -239,6 +239,12 @@ theorem cInfNorm_le_halfq (p : Poly (ZMod q) n) : cInfNorm p ≤ q / 2 :=
   have hneg : (-f).get i = -(f.get i) := Poly.get_neg f i
   rw [hneg, centeredRepr_natAbs_neg]
 
+/-- The `ℓ₁` norm expands as the sum of the centered absolute values of the coefficients. -/
+theorem l1Norm_eq_sum (p : Poly (ZMod q) n) :
+    l1Norm p = ∑ i : Fin n, (centeredRepr (p.get i)).natAbs := by
+  unfold l1Norm l1NormOf
+  rfl
+
 theorem l1Norm_le_of_cInfNorm_le {p : Poly (ZMod q) n} {b : ℕ}
     (h : cInfNorm p ≤ b) : l1Norm p ≤ n * b := by
   unfold l1Norm l1NormOf
@@ -255,6 +261,111 @@ theorem l2NormSq_le_of_cInfNorm_le {p : Poly (ZMod q) n} {b : ℕ}
       ≤ ∑ _i : Fin n, b ^ 2 :=
         Finset.sum_le_sum fun i _ => Nat.pow_le_pow_left (cInfNorm_le_iff.mp h i) 2
     _ = n * b ^ 2 := by simp [Finset.sum_const]
+
+/-! ### Negacyclic-convolution infinity-norm bound
+
+The centered `ℓ∞` norm of a negacyclic product is bounded by the `ℓ₁` norm of one
+factor times the `ℓ∞` norm of the other. Each output coefficient is an integer
+negacyclic-convolution sum of at most `l1Norm f` terms, each of absolute value at
+most `cInfNorm g`; the bound is unconditional via a case split on whether the
+right-hand side already exceeds `q / 2`. This is the algebraic heart of the
+ML-DSA `‖c · s‖∞ ≤ τ · η` challenge-product bound. -/
+
+/-- The integer-domain negacyclic convolution of the centered-representative lifts of
+`f` and `g` at output index `k`. Casting this integer back into `ZMod q` recovers
+`negacyclicConvCoeff f g k`, and its absolute value is bounded by `l1Norm f * cInfNorm g`. -/
+private def intConvCoeff (f g : Fin n → ZMod q) (k : Fin n) : ℤ :=
+  ∑ ij : Fin n × Fin n,
+    if (ij.1.val + ij.2.val) % n = k.val then
+      if ij.1.val + ij.2.val < n then centeredRepr (f ij.1) * centeredRepr (g ij.2)
+      else -(centeredRepr (f ij.1) * centeredRepr (g ij.2))
+    else 0
+
+/-- `negacyclicConvCoeff` is the `ZMod q` reduction of the integer convolution `intConvCoeff`
+of the centered lifts. -/
+private theorem negacyclicConvCoeff_eq_intCast (f g : Fin n → ZMod q) (k : Fin n) :
+    negacyclicConvCoeff f g k = ((intConvCoeff f g k : ℤ) : ZMod q) := by
+  rw [intConvCoeff, negacyclicConvCoeff, Int.cast_sum]
+  apply Finset.sum_congr rfl
+  intro ij _
+  by_cases h1 : (ij.1.val + ij.2.val) % n = k.val
+  · by_cases h2 : ij.1.val + ij.2.val < n
+    · simp only [h1, h2, if_true, Int.cast_mul]
+      rw [← centeredRepr_intCast (f ij.1), ← centeredRepr_intCast (g ij.2)]
+    · simp only [h1, h2, if_true, if_false, Int.cast_neg, Int.cast_mul]
+      rw [← centeredRepr_intCast (f ij.1), ← centeredRepr_intCast (g ij.2)]
+  · simp [h1]
+
+omit [NeZero q] in
+/-- The integer negacyclic convolution at any output index is bounded in absolute value by
+`(∑ |centeredRepr (f i)|) * bg`, where `bg` bounds every `|centeredRepr (g j)|`. The negacyclic
+wrap index `(i + j) % n = k` matches at most one `j` per `i`, removing the spurious factor `n`. -/
+private theorem intConvCoeff_natAbs_le (f g : Fin n → ZMod q) (k : Fin n) (bg : ℕ)
+    (hg : ∀ j, (centeredRepr (g j)).natAbs ≤ bg) :
+    (intConvCoeff f g k).natAbs ≤ (∑ i : Fin n, (centeredRepr (f i)).natAbs) * bg := by
+  refine (Int.natAbs_sum_le _ _).trans ?_
+  have hterm : ∀ ij : Fin n × Fin n,
+      (if (ij.1.val + ij.2.val) % n = k.val then
+        if ij.1.val + ij.2.val < n then centeredRepr (f ij.1) * centeredRepr (g ij.2)
+        else -(centeredRepr (f ij.1) * centeredRepr (g ij.2))
+      else 0).natAbs ≤
+      (if (ij.1.val + ij.2.val) % n = k.val then (centeredRepr (f ij.1)).natAbs * bg else 0) := by
+    intro ij
+    split_ifs with h1 h2
+    · rw [Int.natAbs_mul]; exact Nat.mul_le_mul_left _ (hg ij.2)
+    · rw [Int.natAbs_neg, Int.natAbs_mul]; exact Nat.mul_le_mul_left _ (hg ij.2)
+    · simp
+  refine (Finset.sum_le_sum (fun ij _ => hterm ij)).trans ?_
+  rw [Fintype.sum_prod_type, Finset.sum_mul]
+  apply Finset.sum_le_sum
+  intro i _
+  simp only []
+  rw [← Finset.sum_filter]
+  have hcard : (Finset.univ.filter (fun j : Fin n => (i.val + j.val) % n = k.val)).card ≤ 1 := by
+    rw [Finset.card_le_one]
+    intro a ha b hb
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at ha hb
+    have hmod : (i.val + a.val) % n = (i.val + b.val) % n := by rw [ha, hb]
+    have hab : a.val % n = b.val % n := by
+      have := Nat.ModEq.add_left_cancel' i.val (show Nat.ModEq n _ _ from hmod)
+      simpa [Nat.ModEq] using this
+    exact Fin.ext (by rwa [Nat.mod_eq_of_lt a.isLt, Nat.mod_eq_of_lt b.isLt] at hab)
+  refine (Finset.sum_le_card_nsmul _ _ ((centeredRepr (f i)).natAbs * bg)
+    (fun x _ => le_refl _)).trans ?_
+  calc _ ≤ 1 • ((centeredRepr (f i)).natAbs * bg) := Nat.mul_le_mul_right _ hcard
+    _ = (centeredRepr (f i)).natAbs * bg := one_smul _ _
+
+omit [NeZero q] in
+/-- The `k`-th coefficient of the negacyclic product equals the negacyclic convolution of the
+component coefficient functions. -/
+private theorem mul_get_eq_convCoeff (f g : (vectorNegacyclicRing (ZMod q) n).Poly) (i : Fin n) :
+    (f * g).get i = negacyclicConvCoeff f.get g.get i := by
+  have h1 : (f * g) = (vectorNegacyclicRing (ZMod q) n).mul f g := rfl
+  rw [h1, vectorNegacyclicRing_mul]
+  have h2 : (negacyclicMulPure (vectorKernel (ZMod q) n) f g).get i
+      = (vectorBackend (ZMod q) n).coeff (negacyclicMulPure (vectorKernel (ZMod q) n) f g) i := rfl
+  rw [h2, negacyclicMulPure_coeff]; rfl
+
+/-- **Negacyclic-convolution infinity-norm bound.** For coefficient-domain polynomials in
+`ℤ_q[X] / (X^n + 1)`, the centered `ℓ∞` norm of the product is bounded by the `ℓ₁` norm of the
+first factor times the `ℓ∞` norm of the second. Unconditional: the no-wraparound argument applies
+when `l1Norm f * cInfNorm g < q / 2`, and otherwise `cInfNorm_le_halfq` already gives the bound. -/
+theorem cInfNorm_mul_le (f g : (vectorNegacyclicRing (ZMod q) n).Poly) :
+    cInfNorm (f * g) ≤ l1Norm f * cInfNorm g := by
+  set bound := l1Norm f * cInfNorm g with hbound
+  rw [cInfNorm_le_iff]
+  intro k
+  have hZle : (intConvCoeff f.get g.get k).natAbs ≤ bound := by
+    rw [hbound]
+    refine (intConvCoeff_natAbs_le f.get g.get k (cInfNorm g) ?_).trans (le_refl _)
+    intro j; exact coeff_le_cInfNorm g j
+  rw [mul_get_eq_convCoeff, negacyclicConvCoeff_eq_intCast]
+  by_cases hsmall : 2 * bound < q
+  · rw [centeredRepr_intCast_eq_of_natAbs_le _ hZle hsmall]
+    exact hZle
+  · push Not at hsmall
+    refine (centeredRepr_abs_le _).trans ?_
+    omega
 
 end SpecializedVectorNorms
 
