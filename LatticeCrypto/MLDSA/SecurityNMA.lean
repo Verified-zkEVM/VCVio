@@ -1835,7 +1835,7 @@ theorem nma_security_fips
   exact add_le_add hshort' (ENNReal.ofReal_le_ofReal hbias)
 
 open scoped Classical in
-/-- **EUF-CMA security of ML-DSA in the idealized short-key model, wired end to end.**
+/-- **EUF-CMA security of the commitment-carrying short-key ML-DSA signature.**
 
 The CMA-to-NMA-to-hardness composition over the idealized short-secret key generation
 `keygenShort`: for any EUF-CMA adversary `adv` against the Fiat-Shamir-with-aborts ML-DSA
@@ -1858,7 +1858,17 @@ The relation of `hr` is the material-based `validKeyPairShort`, so `hGen` is inh
 model the withheld key part `t₀` is not determined by the public key across material-valid
 pairs, so no single simulator is exact-on-accept for every valid pair; the hypothesis is
 satisfiable (any simulator at `ζ_zk = 1`, since `tvDist ≤ 1`), and a quantitative discharge
-needs a bound accounting for the hint mismatch across colliding keys. -/
+needs a bound accounting for the hint mismatch across colliding keys.
+
+**Scope: commitment-carrying, not yet the end-to-end FIPS CMA headline.** This theorem is
+stated for the standard Fiat-Shamir-with-aborts signature whose commitment is *carried* in the
+signature (the generic `Option (Commitment × Response)` type). FIPS-204 ML-DSA instead
+*recovers* the commitment at verification rather than carrying it; reaching that form via
+commitment recovery costs one extra hash query per signing query, so the end-to-end loss grows
+by `qS` to `qH + qS` — the distinction recorded in `FiatShamirWithAbort.cmaToNmaLoss`. Supplying
+that commitment-recovery bridge, and composing it with the FIPS seed-derived key generation, is
+follow-up work: `nma_security_fips` currently gives the seed-derived-key result at the NMA level
+only. -/
 theorem euf_cma_security_of_nma_short [SampleableType (PublicKey p prims)]
     (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
     (stmsis : SelfTargetMSIS.Problem
@@ -2276,13 +2286,15 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
   [SampleableType (TqMatrix p.k p.l)]
   [SampleableType (CommitHashBytes p)]
 
-/-- **The literature-facing NMA headline.** `nma_security_short` with the abstract-problem
+/-- **The matrix-MLWE-facing NMA headline.** `nma_security_short` with the abstract-problem
 bridge discharged: the MLWE leg lands on the standard uniform-matrix short-secret problem
 `mldsaMatrixMLWE`, at the cost of one application of the `expandAIdealization` assumption
-(`advantage_mldsaMLWEShort_le_matrix`, supplying the bridge slack `εA`), and the
-SelfTargetMSIS leg on `mldsaSTMSISShort`. No caller-supplied inequality remains: every
-hypothesis is a satisfiable pinned equality (`keygenShort_generable`), a proven reduction,
-or the named XOF idealization. -/
+(`advantage_mldsaMLWEShort_le_matrix`, supplying the bridge slack `εA`). The SelfTargetMSIS leg
+still lands on the *tailored* `mldsaSTMSISShort`, not the standard SelfTargetMSIS normal form —
+that second bridge is follow-up work, so only the MLWE side is stated against a standard
+literature problem here. No caller-supplied inequality remains: every hypothesis is a
+satisfiable pinned equality (`keygenShort_generable`), a proven reduction, or the named XOF
+idealization. -/
 theorem nma_security_short_matrix (maxAttempts : ℕ) (εA : ℝ)
     (hA : NMA.expandAIdealization p prims εA)
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))

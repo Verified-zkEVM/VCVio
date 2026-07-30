@@ -6,5 +6,6 @@ import LatticeCryptoTest.Falcon.Helpers
 import LatticeCryptoTest.Falcon.TestVectors
 import LatticeCryptoTest.MLDSA.ACVPVectors
 import LatticeCryptoTest.MLDSA.Helpers
+import LatticeCryptoTest.MLDSA.NonVacuity
 import LatticeCryptoTest.MLKEM.ACVPVectors
 import LatticeCryptoTest.MLKEM.Helpers
