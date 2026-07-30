@@ -17,6 +17,12 @@ unkeyed party U. At the end of the protocol, both parties output a key, which
 is guaranteed to be indistinguishable from random, and T is authenticated to U
 (but not vice-versa).
 
+NOTE: The UAKE security game assumes that a scheme is well-formed: namely that
+when run honestly, it transfers exactly `Scheme.rounds` messages, that both
+parties produce outputs only once the protocol is complete, and that party T
+speaks last. We capture the round-count and output constraints via the
+`Scheme.WellFormed` predicate, but not the T-speaks-last convention.
+
 Model simplifications
 * **Revealing unfinished sessions:** DF'17 only allows the reveal query after
   T's last message. We accept reveal queries at any time, but a reveal before
@@ -35,16 +41,15 @@ Model simplifications
   alternative that gives the adversary the most power, so we choose that option
   here.
 * **WLOG protocol assumptions:** DF'17 assumes (explicitly) that T speaks last.
-  We do not enforce this in our model, nor do we enforce that a protocol has
-  the stated number of rounds. Moreover, we do not enforce that U outputs K0
-  only at completion, which DF'17 (implicitly) assumes. Such ill-formed
-  protocols will be vacuously insecure (if they are correct), because the
-  ping-pong predicate will not fire on an honest relay, allowing the trivial
-  adversary to win.
-* **No 1-round protocols:** Our model can represent only ≥2-round protocols, since a
-  party's init function has no variant to indicate that it is done at that
-  stage. This is fine for UAKE, since such protocols (where only T contributes
-  to the final key) are trivially insecure (if they are correct).
+  We do not enforce this in our model. However, since the ping-pong predicate
+  depends on the parity of `Scheme.rounds` to determine who should speak first,
+  a protocol with a correct value of `rounds` (ensured by `Scheme.WellFormed`)
+  where T does *not* speak last is trivially insecure (assuming U ever accepts
+  in an honest run).
+* **No 1-round protocols:** Our model can represent only ≥2-round protocols,
+  since a party's init function has no variant to indicate that it is done at
+  that stage. However, note that DF'17 also do not consider UAKE protocols with
+  fewer than 2 rounds.
 -/
 
 open OracleSpec OracleComp
@@ -58,10 +63,10 @@ variable {K UK TK W : Type} {m : Type → Type}
 structure Scheme (m : Type → Type) (K UK TK W : Type) where
   /-- The total number of protocol messages sent (not round trips) in an honest
     execution of the protocol, which we assume to be fixed for a given
-    protocol. We do *not* enforce that the two parties follow this behavior. We
-    use this field in conjunction with the "T speaks last" convention of DF'17
-    to determine the first speaker in the ping-pong predicates used in the
-    security game. -/
+    protocol. This is not enforced structurally but is captured by the
+    `Scheme.WellFormed` predicate below. We use this field in conjunction with
+    the "T speaks last" convention of DF'17 to determine the first speaker in
+    the ping-pong predicates used in the security game. -/
   rounds : ℕ
   /-- Create the initial key material used by U and T. In the security game,
     this is called just once by the challenger (as opposed to T's init
@@ -79,12 +84,25 @@ structure Scheme (m : Type → Type) (K UK TK W : Type) where
   either party outputs ⊥). -/
 def CorrectExp [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W) : m Bool := do
   let (uk, tk) ← proto.setup
-  let (uOut, tOut) ← proto.U.runHonest proto.T uk tk (proto.rounds + 1)
+  let (uOut, tOut, _) ← proto.U.runHonest proto.T uk tk (proto.rounds + 1)
   return decide (uOut.join = none ∨ tOut.join = none ∨ uOut.join = tOut.join)
 
+/-- True if the correctness experiment always returns true. -/
 def PerfectlyCorrect [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W)
     (runtime : ProbCompRuntime m) : Prop :=
   Pr[= true | runtime.evalDist (CorrectExp proto)] = 1
+
+/-- True if
+  1. both parties output iff the protocol run is complete, and
+  2. an honest run of the protocol transfers exactly `rounds` messages.
+
+  This does *not* enforce the WLOG T-speaks-last convention from DF'17. -/
+def Scheme.WellFormed [Monad m] [MonadLiftT m SetM] (proto : Scheme m K UK TK W) : Prop :=
+  proto.U.OutputsOnlyAtCompletion ∧ proto.T.OutputsOnlyAtCompletion ∧
+    ∀ uk tk, (uk, tk) ∈ support proto.setup →
+      ∀ uOut tOut ms, (uOut, tOut, ms) ∈
+          support (proto.U.runHonest proto.T uk tk (proto.rounds + 1)) →
+        ms.length = proto.rounds
 
 /-- The state of a single copy of the T oracle state in the UAKE security
   experiment. -/
@@ -95,7 +113,7 @@ structure TSession (proto : Scheme m K UK TK W) where
   transcript : Transcript W
   /-- The final key output by T for this session:
     * none: Session has not yet completed, assuming a well-formed party
-      who outputs a key or an explicit ⊥ when complete
+      who satisfies `Party.OutputsOnlyAtCompletion`
     * some none: Session completed with T outputing ⊥
     * some (some k): Session completed with T outputing k -/
   key : Option (Option K)

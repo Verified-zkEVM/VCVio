@@ -60,44 +60,54 @@ namespace Party
 
 variable {m : Type → Type} {In W Out : Type}
 
-/-- True if the final output message of a party is deterministic given the
-   state. I.e., all non-determinism is in the init and step functions. -/
-def RecoveryDeterministic [Monad m] (P : Party m In W Out) : Prop :=
-  ∀ st : P.State, ∃ out, P.output st = pure out
-
-/-- True if a party outputs a final message only once the protocol is complete. -/
-def OutputsAtCompletion [MonadLiftT m SetM] (P : Party m In W Out) : Prop :=
-  (∀ i r, r ∈ support (P.init i) → ∀ out ∈ support (P.output r.state), out = none) ∧
-    (∀ st w st' w', StepResult.acceptAndSend st' w' false ∈ support (P.step st w) →
-      ∀ out ∈ support (P.output st'), out = none)
+/-- True if a party is well-formed, i.e., if it outputs iff the state is
+  the result of an execution of the step function that returns `done = true`
+  or `.complete` (assuming the state is reachable). -/
+def OutputsOnlyAtCompletion [MonadLiftT m SetM] (P : Party m In W Out) : Prop :=
+  let init_output := ∀ i r, r ∈ support (P.init i) →
+    ∀ out ∈ support (P.output r.state), out = none;
+  let complete_output := ∀ st w st', .complete st' ∈ support (P.step st w) →
+    ∀ out ∈ support (P.output st'), out ≠ none;
+  let accept_output := ∀ st w st' w' (done : Bool),
+    .acceptAndSend st' w' done ∈ support (P.step st w) →
+      ∀ out ∈ support (P.output st'), out ≠ none ↔ done;
+  init_output ∧ complete_output ∧ accept_output
 
 def runHonestLoop [Monad m] {InP OutP InQ OutQ : Type}
     (P : Party m InP W OutP) (Q : Party m InQ W OutQ) :
-    ℕ → P.State → Q.State → W → Bool → m (P.State × Q.State)
-  | 0, pState, qState, _, _ => pure (pState, qState)
+    ℕ → P.State → Q.State → W → Bool → m (P.State × Q.State × List W)
+  | 0, pState, qState, _, _ => pure (pState, qState, [])
   | fuel + 1, pState, qState, w, true => do
       match ← Q.step qState w with
-      | .acceptAndSend qState' w' _ => runHonestLoop P Q fuel pState qState' w' false
-      | .complete qState' => pure (pState, qState')
-      | .reject => pure (pState, qState)
+      | .acceptAndSend qState' w' _ => do
+          let (pFinal, qFinal, ms) ← runHonestLoop P Q fuel pState qState' w' false
+          pure (pFinal, qFinal, w' :: ms)
+      | .complete qState' => pure (pState, qState', [])
+      | .reject => pure (pState, qState, [])
   | fuel + 1, pState, qState, w, false => do
       match ← P.step pState w with
-      | .acceptAndSend pState' w' _ => runHonestLoop P Q fuel pState' qState w' true
-      | .complete pState' => pure (pState', qState)
-      | .reject => pure (pState, qState)
+      | .acceptAndSend pState' w' _ => do
+          let (pFinal, qFinal, ms) ← runHonestLoop P Q fuel pState' qState w' true
+          pure (pFinal, qFinal, w' :: ms)
+      | .complete pState' => pure (pState', qState, [])
+      | .reject => pure (pState, qState, [])
 
 def runHonest [Monad m] {InP OutP InQ OutQ : Type}
     (P : Party m InP W OutP) (Q : Party m InQ W OutQ) (inP : InP) (inQ : InQ) (fuel : ℕ) :
-    m (Option OutP × Option OutQ) := do
+    m (Option OutP × Option OutQ × List W) := do
   let pInit ← P.init inP
   let qInit ← Q.init inQ
-  let (pState', qState') ← match pInit.opening, qInit.opening with
-    | some w, _ => runHonestLoop P Q fuel pInit.state qInit.state w true
-    | none, some w => runHonestLoop P Q fuel pInit.state qInit.state w false
-    | none, none => pure (pInit.state, qInit.state)
+  let (pState', qState', ms) ← match pInit.opening, qInit.opening with
+    | some w, _ => do
+        let (pState', qState', ms) ← runHonestLoop P Q fuel pInit.state qInit.state w true
+        pure (pState', qState', w :: ms)
+    | none, some w => do
+        let (pState', qState', ms) ← runHonestLoop P Q fuel pInit.state qInit.state w false
+        pure (pState', qState', w :: ms)
+    | none, none => pure (pInit.state, qInit.state, [])
   let pOut ← P.output pState'
   let qOut ← Q.output qState'
-  pure (pOut, qOut)
+  pure (pOut, qOut, ms)
 
 end Party
 
