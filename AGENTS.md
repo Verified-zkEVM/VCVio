@@ -121,6 +121,11 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - DLog / CDH / DDH via HHS: `VCVio/CryptoFoundations/HardnessAssumptions/DiffieHellman.lean`
 - Cost model / polynomial time: `VCVio/OracleComp/QueryTracking/CostModel.lean`
 - Query cost / weighted expected cost: `VCVio/OracleComp/QueryTracking/QueryCost.lean`, `VCVio/OracleComp/QueryTracking/WriterCost.lean`
+- TM-grounded polynomial-time adversaries (`MachineAdversary`, `OracleComp.IsPolyTime`): `VCVio/OracleComp/Coinductive/PolyTime.lean`
+- Bounded coin-fold poly-time combinator: `VCVio/OracleComp/Coinductive/CoinFold.lean`
+- Poly-time non-triviality certificate (counting + diagonalization): `VCVio/OracleComp/Coinductive/PolyTimeNontrivial.lean`
+- Encoded poly-time witnesses and bit-encoding families: `ToMathlib/Computability/CslibPolyTime.lean`, `ToMathlib/Computability/BitEncoding.lean`
+- Security against poly-time adversaries: `VCVio/CryptoFoundations/Asymptotics/PolyTime.lean`
 - Asymptotic security games: `VCVio/CryptoFoundations/Asymptotics/Security.lean`
 - Negligible function algebra: `VCVio/CryptoFoundations/Asymptotics/Negligible.lean`
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
@@ -198,6 +203,7 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **LatticeCrypto layout and workflows**: [`docs/agents/lattice.md`](docs/agents/lattice.md)
 - **OracleComp / SubSpec / SimSemantics**: [`docs/agents/oracle-comp.md`](docs/agents/oracle-comp.md)
 - **Query tracking / weighted cost / expected runtime**: [`docs/agents/query-tracking.md`](docs/agents/query-tracking.md)
+- **TM-grounded polynomial-time adversary model**: [`docs/agents/polytime-model.md`](docs/agents/polytime-model.md)
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)
