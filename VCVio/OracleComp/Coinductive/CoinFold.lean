@@ -13,23 +13,22 @@ number of times, folding each answer into a finite-state accumulator, then read 
 value. `coinFoldProg step readout` is that program family, and `isPolyTime_coinFold`
 bundles the whole Turing-machine polynomial-time witness for it once and for all, so a
 concrete instance collapses to supplying `step`/`readout`, the encodings, and two
-encoding-length bounds — no hand-built `OracleMachine`/`PolyTimeAdversary` needed.
+encoding-length bounds — no hand-built `OracleMachine`/`MachineAdversary` needed.
 
-* `coinFoldProg` — the fold program; `coinFoldMachine` — the machine realizing it, with the
-  read-out map folded into `output` and the round counter as `Fin (rounds + 1)`.
-* `coinFoldMachine_implements` (via the simulation relation `CoinFoldRel`) and
-  `coinFoldMachine_steadyBy` (via the round invariant) give the coalgebraic side.
-* `coinFoldAdversary` / `isPolyTime_coinFold` — the fully assembled `PolyTimeAdversary` and
-  `OracleComp.IsPolyTime`.
+* `coinFoldProg` — the fold program; `coinFoldMachine` — the machine realizing it, with
+  the read-out map folded into `output` and the round counter as `Fin (rounds + 1)`.
+* `coinFoldMachine_implementsWithin` — the machine implements the program family within
+  `rounds` rounds, by a direct induction on the fuelled unrolling (returns are absorbing
+  by construction, so no separate stability argument is needed).
+* `coinFoldAdversary` / `coinFoldWitness` / `isPolyTime_coinFold` — the fully assembled
+  `MachineAdversary`, its certificate, and `OracleComp.IsPolyTime`, with all four step
+  witnesses discharged by finite tables for accumulators of polynomially bounded
+  cardinality; the `…OfWitnesses` variants accept explicit machine families for
+  superpolynomially large accumulators.
 
-Worked instances: `Examples.DynamicalSystems.XorFlips` (single-`Bool` accumulator, `readout`
-the identity) and `KatzLindell.Chapter03.SamplerMachine` (`BitVec` accumulator, nontrivial
-`readout`), which collapse onto this combinator.
-
-Specialized to `coinSpec` (the coin oracle, answers `Bool`): both current consumers use it,
-and it keeps the simulation free of the dependent answer-type transport that an
-arbitrary-spec version would incur. Generalizing the fold to an arbitrary oracle is future
-work.
+Specialized to `coinSpec` (the coin oracle, answers `Bool`): this keeps the simulation
+free of the dependent answer-type transport that an arbitrary-spec version would incur.
+Generalizing the fold to an arbitrary oracle is future work.
 -/
 
 open OracleSpec OracleComp Computability
@@ -126,9 +125,9 @@ theorem coinFoldMachine_unroll (rounds : ℕ) (init₀ : σ) :
       (funext fun b => coinFoldMachine_unroll rounds init₀ m k (by omega)
         (step acc m b) (by omega))
 
-/-- The fold machine implements the fold program family within `rounds` rounds. The
-old simulation-relation and steadiness developments are unnecessary: returns are
-absorbing by construction, and resolution is derivable from this via
+/-- The fold machine implements the fold program family within `rounds` rounds, by a
+direct induction on the fuelled unrolling: returns are absorbing by construction, and
+resolution within the budget is derivable via
 `DynComputation.ImplementsWithin.resolvesIn`. -/
 theorem coinFoldMachine_implementsWithin (rounds : ℕ) (init₀ : σ) :
     (coinFoldMachine step readout rounds init₀).ImplementsWithin
@@ -234,8 +233,6 @@ noncomputable def coinFoldWitness :
       (fun _ => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) (steps.eval n)
     rw [← hrnd n]
     exact coinFoldMachine_implementsWithin (step n) (readout n) (rnd n) (init₀ n)
-  queryBound n _ := (isTotalQueryBound_coinFoldProg (step n) (readout n) (rnd n)
-    (init₀ n)).mono (le_of_eq (hrnd n))
 
 include steps hrnd st Sc hcard in
 /-- **The bounded coin fold is polynomial time.** Filling `rnd n` coin answers into an
@@ -301,8 +298,6 @@ noncomputable def coinFoldWitnessOfWitnesses :
       (fun _ => coinFoldProg (step n) (readout n) (rnd n) (init₀ n)) (steps.eval n)
     rw [← hrnd n]
     exact coinFoldMachine_implementsWithin (step n) (readout n) (rnd n) (init₀ n)
-  queryBound n _ := (isTotalQueryBound_coinFoldProg (step n) (readout n) (rnd n)
-    (init₀ n)).mono (le_of_eq (hrnd n))
 
 include steps hrnd st initF exposeF updateF outputF in
 /-- **The bounded coin fold is polynomial time, given machine families for its step

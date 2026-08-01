@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Devon Tuma
+Authors: Devon Tuma, Elias Judin
 -/
 import VCVio.OracleComp.Coinductive.PolyTimeClosure
 import ToMathlib.Computability.MachineCounting
@@ -27,13 +27,12 @@ model's soundness certificate, and their history is the model's design rationale
   a function chosen (classically) to differ from every `2^{n/4}`-sized composite
   behavior defeats every polynomial bundle at large `n`.
 
-The proofs are staged (see `docs/agents/polytime-model.md`): the run-factorization
+The proof is staged (see `docs/agents/polytime-model.md`): the run-factorization
 lemma (the "compiled run": the deterministic run against a fixed handler is an iterate
 of the witness string functions), machine counting and normalization to `Fin d` state
 spaces, elementary `p.eval n ≤ 2^(n/4)` growth bounds, and the diagonal construction.
-The `sorry`s below are those staged proofs' end products, recorded as the model's
-falsifiable acceptance criteria rather than smuggled as axioms — nothing downstream
-may depend on them.
+All stages are fully proved; the two headline theorems at the end of the file are the
+model's falsifiable acceptance criteria.
 -/
 
 open OracleSpec OracleComp Computability
@@ -244,20 +243,20 @@ at the coin boundary, the input→output behavior `x ↦ (M n).output (run …)`
 is realized by an `EncPolyTime` initialization/output pair whose description sizes are
 bounded by a single polynomial `q` in the adversary's `descBound` and `steps`.
 
-Proof. Specialize `(himpl n).runK_eq` to `m := Id` and the deterministic constant-`true`
-coin handler; the pure simulation collapses to `runD hdl (steps.eval n) (init x) = f n x`,
-and `runD_eq_output_stateAfter` (using the adversary's `stable` readout to absorb early
-termination) turns this into a readout of the fixed-fuel iterate of the one-step state map
-`g = advanceOnce hdl M.toDynSystem`. That one-step map is compiled at the encoding level as
-`updateF` precomposed with the fixed canonical coin answer `[true]` (built by the local
-`Computability.EncPolyTime.appendBit` / `Cslib.Turing.SingleTapeTM.snocComputer` support), and its
-`steps.eval n`-fold composition is assembled by `Computability.EncPolyTime.exists_iterate`.
-Composition adds machine-state counts, so the compiled initialization
-`initF ▸ g^[steps.eval n]` has description size at most
-`descBound + 1 + steps * (2 + descBound)` evaluated at `n` — one uniform polynomial `q`,
-with the (parameter-specific) iteration time absorbed into `RealizableLE`'s time component.
-This is the general-`steps` input to the diagonal contradiction; the `steps = 0` special
-case is proved directly by `realizable_of_implements_steps_eq_zero`. -/
+Proof. Specialize `(himpl n).runWithInput_eq` to `m := Id` and the deterministic
+constant-`true` coin handler `hdl`; `runWith_eq_output_iterate_stepD` (unconditional,
+since returns are absorbing) turns the resulting run equation into a readout of the
+fixed-fuel iterate of the one-step state map `g = stepD hdl`. That one-step map is
+compiled at the encoding level as `updateF` precomposed with the fixed canonical coin
+answer `[true]` (built by the local `Computability.EncPolyTime.appendBit` /
+`Cslib.Turing.SingleTapeTM.snocComputer` support), and its `steps.eval n`-fold
+composition is assembled by `Computability.EncPolyTime.exists_iterate`. Composition
+adds machine-state counts, so the composition of the `initF` witness with the iterate
+has description size at most `descBound + 1 + steps * (2 + descBound)` evaluated at
+`n` — one uniform polynomial `q`; the iterate's parameter-specific running time needs
+no accounting, since `RealizableLE` constrains only description sizes. This is the
+general-`steps` input to the diagonal contradiction; the `steps = 0` special case is
+proved directly by `realizable_of_implements_steps_eq_zero`. -/
 theorem exists_poly_realizable_of_implements
     (A : MachineAdversary (BoundaryData.coin BitEncFam.bitVecX BitEncFam.bool))
     (f : (n : ℕ) → BitVec n → Bool)
@@ -346,10 +345,11 @@ theorem exists_poly_realizable_of_implements
     exact hout_le.trans (by omega)
 
 /-- **Milestone A, realizability step (real).** A round-free adversary implementing
-`pure ∘ f` realizes `f n` within its description bound: at `steps = 0` the run is the plain
-readout of the initial state (`runK_zero`), so `(M n).output ((M n).init x) = some (f n x)`,
-and the initialization and output witness families supply the required `EncPolyTime` pair
-with sizes bounded by `descBound`. -/
+`pure ∘ f` realizes `f n` within its description bound: at `steps = 0` the run is the
+plain readout of the initial state (the zero-fuel case of
+`runWith_eq_output_iterate_stepD`), so `(M n).output ((M n).init x) = some (f n x)`,
+and the initialization and output witness families supply the required `EncPolyTime`
+pair with sizes bounded by `descBound`. -/
 private theorem realizable_of_implements_steps_eq_zero
     (A : MachineAdversary (BoundaryData.coin BitEncFam.bitVecX BitEncFam.bool))
     (f : (n : ℕ) → BitVec n → Bool)

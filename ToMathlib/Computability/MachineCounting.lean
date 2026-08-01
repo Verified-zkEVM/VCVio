@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Devon Tuma
+Authors: Devon Tuma, Elias Judin
 -/
 module
 
@@ -297,14 +297,13 @@ end Determinism
 
 /-! ## State normalization -/
 
-/-- Every `SingleTapeTM Bool` computing a string function with at most `d` states computes
-the same function as `reify` of some `TMTable d` — the state space is relabeled to `Fin d`
-along `Fintype.equivFin`, preserving the `Outputs` relation. It is the machine-theoretic
-input to `exists_realizableLE_covering`. -/
-theorem exists_tmTable_of_card_le {f : List Bool → List Bool} (h : PolyTimeComputable f)
-    {d : ℕ} (hd : Fintype.card h.tm.State ≤ d) :
-    ∃ t : TMTable d, ∀ l l', (reify t).Outputs l l' ↔ h.tm.Outputs l l' := by
-  set tm := h.tm with htm
+/-- Every `SingleTapeTM Bool` with at most `d` states has the same `Outputs` relation as
+`reify` of some `TMTable d` — the state space is relabeled to `Fin d` along
+`Fintype.equivFin`. It is the machine-theoretic input to
+`exists_realizableLE_covering`. -/
+theorem exists_tmTable_of_card_le (tm : SingleTapeTM Bool)
+    {d : ℕ} (hd : Fintype.card tm.State ≤ d) :
+    ∃ t : TMTable d, ∀ l l', (reify t).Outputs l l' ↔ tm.Outputs l l' := by
   refine ⟨normTable tm (embFin hd) (decFin (α := tm.State)), fun l l' => ?_⟩
   have hdec : ∀ s, decFin (α := tm.State) (embFin hd s) = some s := decFin_embFin hd
   have hemb : Function.Injective (embFin (α := tm.State) hd) := embFin_injective hd
@@ -385,8 +384,8 @@ theorem exists_realizableLE_covering (n d : ℕ) :
   refine ⟨Finset.image (tablePairPred n d)
     (Finset.univ : Finset (TMTable d × TMTable d)), ?_, ?_⟩
   · rintro g ⟨σ, es, init, output, i, o, hi, ho, hg⟩
-    obtain ⟨t₁, ht₁⟩ := exists_tmTable_of_card_le i.polyTime (d := d) hi
-    obtain ⟨t₂, ht₂⟩ := exists_tmTable_of_card_le o.polyTime (d := d) ho
+    obtain ⟨t₁, ht₁⟩ := exists_tmTable_of_card_le i.polyTime.tm (d := d) hi
+    obtain ⟨t₂, ht₂⟩ := exists_tmTable_of_card_le o.polyTime.tm (d := d) ho
     refine Finset.mem_coe.mpr (Finset.mem_image.mpr ⟨(t₁, t₂), Finset.mem_univ _, ?_⟩)
     funext x
     have hrun1 : (reify t₁).Outputs (BitEncFam.bitVecX.enc n x) (es (init x)) := by

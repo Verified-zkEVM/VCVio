@@ -21,9 +21,10 @@ machine on encoded states, whereas the continuations of a program tree have no b
 syntactic presentation.
 
 `OracleComp.IsPolyTime bd oa` holds when some adversary carries a `PolyTimeWitness`
-for the program family `oa`: it implements `oa` (`OracleMachine.Implements`) within its
-round budget, and `oa` is syntactically query-bounded by that budget. It is the
-intended instantiation of the `isPPT` predicate of `SecurityGame.secureAgainst`.
+for the program family `oa`: it implements `oa` (`MachineAdversary.Implements`) within
+its round budget — which also yields the syntactic query bound on `oa`
+(`PolyTimeWitness.queryBound`). It is the intended instantiation of the `isPPT`
+predicate of `SecurityGame.secureAgainst`.
 
 ## Model
 
@@ -337,25 +338,17 @@ open scoped MachineAdversary
 /-! ## The polynomial-time certificate and predicate -/
 
 /-- A certificate that the program family `oa` is polynomial time at boundaries `bd`:
-an adversary together with proofs that it implements `oa` within its round budget and
-that `oa` itself respects that budget syntactically. Proof-relevant data, mirroring
-`OracleComp.PolyQueries`; the Prop-level predicate is `OracleComp.IsPolyTime`.
+an adversary together with a proof that it implements `oa` within its round budget.
+Proof-relevant data, mirroring `OracleComp.PolyQueries`; the Prop-level predicate is
+`OracleComp.IsPolyTime`.
 
-The `queryBound` field is definitional, not a wart: "makes polynomially many queries"
-is part of what polynomial time means, it feeds the `PolyQueries` bridge directly, and
-every route to `implements` produces it as an input or byproduct. It is *conjectured*
-to follow from `implements` alone, but the extraction is genuinely hard:
-
-* A counting handler cannot do it. `Implements` quantifies over
-  `ProbHandler spec = QueryImpl spec SPMF`, and `SPMF` has no writer component, so no
-  handler admissible in the quantification observes query counts.
-* The plausible route drives the program along *scaled* handlers `H_ε` (each answer
-  distribution scaled to total mass `ε ∈ (0, 1]`): the output mass of the fuelled run
-  is a polynomial of degree at most the budget in `ε`, while a program family
-  violating the bound contributes a positive higher-degree monomial to the mass of
-  `some <$> simulateQ H_ε`, and agreement on `(0, 1]` forces equal coefficients. The
-  coefficient-extraction step over `ℝ≥0∞` is the hard part; it is recorded here as a
-  conjecture rather than smuggled as an axiom. -/
+The syntactic query bound on `oa` — "makes polynomially many queries" — is part of
+what polynomial time means, but it is not a field: `DynComputation.ImplementsWithin`
+is the fuel-`k` unroll equality `M.run k x = FreeM.map some (oa x)`, whose bounded
+half already carries the bound
+(`DynComputation.implementsWithin_iff_implements_and_bound`), and
+`OracleComp.IsTotalQueryBound` is definitionally `PFunctor.FreeM.IsTotalRollBound`.
+`PolyTimeWitness.queryBound` exports it as a theorem. -/
 structure PolyTimeWitness {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
     (bd : BoundaryData spec α β)
     (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) where
@@ -363,13 +356,14 @@ structure PolyTimeWitness {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β
   A : MachineAdversary bd
   /-- The adversary implements the program family within its round budget. -/
   implements : A ⊨ oa
-  /-- The program family syntactically respects the round budget. -/
-  queryBound : ∀ n x, OracleComp.IsTotalQueryBound (oa n x) (A.steps.eval n)
 
 /-- A program family is polynomial time at pinned boundaries `bd` when it carries a
-`PolyTimeWitness`. This is the intended `isPPT` instantiation for
-`SecurityGame.secureAgainst`; `bd` must be a fixed parameter of the enclosing security
-statement (see the module docstring's statement-site discipline). -/
+`PolyTimeWitness`. The class is **non-uniform (P/poly)**: the witness supplies a
+machine per security parameter, under single polynomials bounding time, rounds, state
+length, and description size across the family — nothing computes the `n`-th machine
+from `n` (see the module docstring's *Model* section). This is the intended `isPPT`
+instantiation for `SecurityGame.secureAgainst`; `bd` must be a fixed parameter of the
+enclosing security statement (see the statement-site discipline). -/
 def OracleComp.IsPolyTime {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
     (bd : BoundaryData spec α β)
     (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) : Prop :=
@@ -380,12 +374,23 @@ namespace PolyTimeWitness
 variable {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)} {α β : ℕ → Type}
   {bd : BoundaryData spec α β} {oa : (n : ℕ) → α n → OracleComp (spec n) (β n)}
 
-/-- Resolution within the round budget is derivable for any certified adversary: the
-old `steady` field, now a theorem (via `DynComputation.ImplementsWithin.resolvesIn`) —
+/-- Resolution within the round budget is derivable for any certified adversary, as a
+theorem rather than a bundle field (via `DynComputation.ImplementsWithin.resolvesIn`) —
 and handler-free, since `ResolvesIn` quantifies over every typed answer path. -/
 theorem resolvesIn (w : PolyTimeWitness bd oa) (n : ℕ) (x : α n) :
     (w.A.M n).ResolvesIn (w.A.steps.eval n) ((w.A.M n).init x) :=
   (w.implements n).resolvesIn x
+
+/-- The program family syntactically respects the adversary's round budget: the
+bounded half of the implements relation
+(`DynComputation.implementsWithin_iff_implements_and_bound`), read through the
+definitional equality of `OracleComp.IsTotalQueryBound` with
+`PFunctor.FreeM.IsTotalRollBound`. This is the query-bound conjunct that
+`SecurityGame.secureAgainstPolyTime_of_advantage_le_mul_totalQueries` consumes. -/
+theorem queryBound (w : PolyTimeWitness bd oa) (n : ℕ) (x : α n) :
+    OracleComp.IsTotalQueryBound (oa n x) (w.A.steps.eval n) :=
+  ((PFunctor.DynSystem.DynComputation.implementsWithin_iff_implements_and_bound
+    (w.A.M n) (oa n) (w.A.steps.eval n)).mp (w.implements n)).2 x
 
 end PolyTimeWitness
 
@@ -421,8 +426,7 @@ def _root_.OracleComp.OracleMachine.stepD {ι : Type} {spec : OracleSpec.{0, 0} 
 
 /-- The deterministic run through a handler reads out the `stepD` trajectory: fuelled
 `runWith` at `m := Id` is the readout after `k` deterministic steps — unconditionally,
-since returns are absorbing (`stepD` fixes returned states). Replaces the old
-stability-conditioned readout lemma. -/
+since returns are absorbing (`stepD` fixes returned states). -/
 theorem _root_.OracleComp.OracleMachine.runWith_eq_output_iterate_stepD
     {ι : Type} {spec : OracleSpec.{0, 0} ι} {α' β' : Type}
     (M : OracleMachine spec α' β') (h : OracleHandler spec) (k : ℕ) (s : M.State) :
@@ -465,8 +469,10 @@ def answerAt (D : MachineAdversary bd) (n : ℕ) (h : OracleHandler (spec n))
   ⟨(D.M n).expose (D.stateAt n h x j), h ((D.M n).expose (D.stateAt n h x j))⟩
 
 /-- The total Turing-machine time of the deterministic run against handler `h` on
-input `x`: the initialization cost plus, per round, the expose, update, and readout
-costs, each evaluated at the encoded lengths actually occurring along the run. -/
+input `x`: the initialization cost, plus, per round, the expose, update, and readout
+costs, plus the final readout at the budget state (the run's answer is
+`output (stepD^[steps] s)`, so the readout at round `steps` is a real evaluation and
+is charged), each evaluated at the encoded lengths actually occurring along the run. -/
 noncomputable def detTotalTime (D : MachineAdversary bd) (n : ℕ)
     (h : OracleHandler (spec n)) (x : α n) : ℕ :=
   ((D.initF.wit n).time).eval (bd.eIn.enc n x).length +
@@ -475,7 +481,9 @@ noncomputable def detTotalTime (D : MachineAdversary bd) (n : ℕ)
         ((D.updateF.wit n).time).eval
           ((D.state.pairVar bd.eIface.encAns).enc n
             (D.stateAt n h x j, D.answerAt n h x j)).length +
-        ((D.outputF.wit n).time).eval (D.state.enc n (D.stateAt n h x j)).length)
+        ((D.outputF.wit n).time).eval (D.state.enc n (D.stateAt n h x j)).length) +
+    ((D.outputF.wit n).time).eval
+      (D.state.enc n (D.stateAt n h x (D.steps.eval n))).length
 
 /-- **Total-time bound, hypothesis-free**: the total machine time of any run is bounded
 by an explicit polynomial expression in `n` — the canonical fixed input width bounds
@@ -489,8 +497,11 @@ theorem detTotalTime_le (D : MachineAdversary bd)
           (D.exposeF.time.eval (n + D.state.bound.eval n) +
             D.updateF.time.eval
               (n + (D.state.bound.eval n + bd.eIface.encAns.widBound.eval n)) +
-            D.outputF.time.eval (n + D.state.bound.eval n)) := by
-  refine Nat.add_le_add ?_ ?_
+            D.outputF.time.eval (n + D.state.bound.eval n)) +
+        D.outputF.time.eval (n + D.state.bound.eval n) := by
+  refine Nat.add_le_add (Nat.add_le_add ?_ ?_)
+    ((D.outputF.time_le n _).trans (Polynomial.eval_le_eval
+      (Nat.add_le_add_left (D.state.len_le n _) n)))
   · refine (D.initF.time_le n _).trans (Polynomial.eval_le_eval ?_)
     have h1 : (bd.eIn.enc n x).length ≤ bd.eIn.widBound.eval n :=
       (bd.eIn.len_eq n x).le.trans (bd.eIn.wid_le n)
@@ -526,7 +537,8 @@ theorem exists_polynomial_detTotalTime_le (D : MachineAdversary bd) :
   refine ⟨D.initF.time.comp (.X + bd.eIn.widBound) +
     D.steps * (D.exposeF.time.comp (.X + D.state.bound) +
       D.updateF.time.comp (.X + (D.state.bound + bd.eIface.encAns.widBound)) +
-      D.outputF.time.comp (.X + D.state.bound)),
+      D.outputF.time.comp (.X + D.state.bound)) +
+    D.outputF.time.comp (.X + D.state.bound),
     fun n h x => (D.detTotalTime_le n h x).trans_eq ?_⟩
   simp [Polynomial.eval_comp]
 
@@ -588,8 +600,7 @@ theorem OracleComp.isPolyTime_pure_of_witnesses
       updateF := updateF.copy _
         (fun n p => congrFun (OracleMachine.updateFlat_ofPureFn (f n)).symm p)
       outputF := outputF }
-    implements := fun n => ?_
-    queryBound := fun n x => trivial }⟩
+    implements := fun n => ?_ }⟩
   intro x
   simp only [Polynomial.eval_zero]
   rfl

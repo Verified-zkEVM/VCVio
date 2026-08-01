@@ -23,9 +23,9 @@ functions, in Cslib's `Cslib.Turing.SingleTapeTM` model:
   polynomial-time computable** relative to an injective encoding — but with a
   description size (`EncPolyTime.size_ofFintype_le`) that grows with the domain's
   total encoded length, so a *family* of tables stays within a polynomial advice
-  bound (`PolyTimeAdversary.descBound`) only on domains of polynomially bounded
+  bound (`MachineAdversary.descBound`) only on domains of polynomially bounded
   cardinality. Within that regime it subsumes constants, relabelings, and projections,
-  and discharges all four per-step machine witnesses of `PolyTimeAdversary` for
+  and discharges all four per-step machine witnesses of `MachineAdversary` for
   small-state oracle machines.
 
 The machines follow one design: **clear the input moving right, then write the output
@@ -37,10 +37,8 @@ left lands the head on its first symbol, which is exactly the halting configurat
 Base machines for *unbounded* domains (symbol relabeling, projections with respect to
 paired encodings of infinite types) would follow the same skeleton and remain future
 work; together with `EncPolyTime.comp` (from Cslib's proven machine composition) they
-would extend the generic witnesses beyond finite domains. The declared frontier of
-those combinators — stated in the raw-encoding family form
-(`Computability.EncPolyTimeFam`) that the adversary layer consumes — is
-`ToMathlib.Computability.MachineCombinators`.
+would extend the generic witnesses beyond finite domains, stated in the raw-encoding
+family form (`Computability.EncPolyTimeFam`) that the adversary layer consumes.
 -/
 
 @[expose] public section
@@ -177,9 +175,10 @@ noncomputable def constPolyTimeComputable (out : List Symbol) :
       omega
 
 /-- The constant-function machine has at most `out.length + 2` states: one clearing
-state plus one writing state per output symbol. -/
-theorem size_constPolyTimeComputable_le (out : List Symbol) :
-    (constPolyTimeComputable (Symbol := Symbol) out).size ≤ out.length + 2 := by
+state plus one writing state per output symbol. Stated over `Bool`, the alphabet
+`PolyTimeComputable.size` is defined at. -/
+theorem size_constPolyTimeComputable_le (out : List Bool) :
+    (constPolyTimeComputable out).size ≤ out.length + 2 := by
   cases out with
   | nil =>
     change Fintype.card Unit ≤ 2
@@ -434,8 +433,8 @@ injective input encoding: the machine reads the input into state through the pre
 tree of the finitely many valid encodings, then writes the encoded output. The trade is
 time for description: the machine has one reading state per prefix of a valid input
 (`size_ofFintype_le`), so families of these witnesses respect a polynomial advice bound
-only on domains of polynomially bounded cardinality. Instantiated at the `boolify` of a
-`PackedEncoding` (injective by `PackedEncoding.boolify_injective`), this discharges the
+only on domains of polynomially bounded cardinality. Instantiated at the injective
+encodings of `Computability.BitEncFam` / `Computability.StrEncFam`, this discharges the
 per-step machine witnesses of small-state oracle machines. -/
 noncomputable def ofFintype {α : Type u} {β : Type v} [Fintype α]
     (ea : α → List Bool) (hea : Function.Injective ea) (eb : β → List Bool)
@@ -452,7 +451,7 @@ noncomputable def ofFintype {α : Type u} {β : Type v} [Fintype α]
 /-- The finite-table witness runs in time linear in the input plus the longest encoded
 output: with a pointwise bound `B` on the output encodings, evaluation at `k` is at
 most `k + (B + 1)`. This is the shape that discharges the uniform per-step time bounds
-of `PolyTimeAdversary`. -/
+of `MachineAdversary`. -/
 theorem time_ofFintype_eval_le {α : Type u} {β : Type v} [Fintype α]
     {ea : α → List Bool} (hea : Function.Injective ea) {eb : β → List Bool}
     {f : α → β} {B : ℕ} (hB : ∀ a, (eb (f a)).length ≤ B) (k : ℕ) :
@@ -503,7 +502,7 @@ theorem size_ofFintype_le {α : Type u} {β : Type v} [Fintype α]
 
 /-- Discharge form of `size_ofFintype_le`: a cardinality bound on the domain and
 pointwise bounds on both encodings give the table size bound consumed by
-`PolyTimeAdversary.descBound` fields. -/
+`MachineAdversary.descBound` fields. -/
 theorem size_ofFintype_le_of_bounds {α : Type u} {β : Type v} [Fintype α]
     {ea : α → List Bool} (hea : Function.Injective ea) {eb : β → List Bool}
     {f : α → β} {A La B : ℕ} (hcard : Fintype.card α ≤ A)

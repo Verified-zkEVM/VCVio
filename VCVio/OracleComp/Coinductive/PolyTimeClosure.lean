@@ -55,12 +55,19 @@ namespace OracleComp.OracleMachine
 
 variable {spec : OracleSpec.{0, 0} ι} {m : Type → Type} [Monad m]
 
+/-- Replace a machine's initialization map (possibly changing the input type), keeping
+its dynamics. Reducible so that runs and views of `M.setInit g` reduce to those of `M`.
+Upstream candidate for `DynComputation`. -/
+@[reducible] def setInit {α α' β : Type} (M : OracleMachine spec α β)
+    (g : α' → M.State) : OracleMachine spec α' β :=
+  ⟨M.toMachine, g⟩
+
 /-- Fuelled unrolling ignores the initialization field: replacing `init` (possibly
 changing the input type) leaves `unroll` unchanged from any state. Upstream candidate
 for `DynComputation/Bounded`. -/
 theorem unroll_setInit {α α' β : Type}
     (M : OracleMachine spec α β) (g : α' → M.State) (k : ℕ) (s : M.State) :
-    PFunctor.DynSystem.DynComputation.unroll ⟨M.toMachine, g⟩ k s = M.unroll k s := by
+    PFunctor.DynSystem.DynComputation.unroll (M.setInit g) k s = M.unroll k s := by
   induction k generalizing s with
   | zero =>
     rw [PFunctor.DynSystem.DynComputation.unroll_zero,
@@ -85,27 +92,27 @@ theorem unroll_setInit {α α' β : Type}
       exact congrArg (PFunctor.FreeM.liftBind q.1) (funext fun d => ih (q.2 d))
 
 /-- The TM-facing accessors ignore the initialization field, definitionally: they
-scrutinize `toMachine`, which `⟨M.toMachine, g⟩` shares with `M`. -/
+scrutinize `toMachine`, which `M.setInit g` shares with `M`. -/
 theorem output_setInit {α α' β : Type} (M : OracleMachine spec α β) (g : α' → M.State)
     (s : M.State) :
-    output (⟨M.toMachine, g⟩ : OracleMachine spec α' β) s = M.output s := rfl
+    output (M.setInit g) s = M.output s := rfl
 
 @[simp] theorem expose_setInit [Inhabited ι] {α α' β : Type} (M : OracleMachine spec α β)
     (g : α' → M.State) (s : M.State) :
-    expose (⟨M.toMachine, g⟩ : OracleMachine spec α' β) s = M.expose s := rfl
+    expose (M.setInit g) s = M.expose s := rfl
 
 theorem updateFlat_setInit [DecidableEq ι] {α α' β : Type} (M : OracleMachine spec α β)
     (g : α' → M.State) (p : M.State × ((t : ι) × spec.Range t)) :
-    updateFlat (⟨M.toMachine, g⟩ : OracleMachine spec α' β) p = M.updateFlat p := rfl
+    updateFlat (M.setInit g) p = M.updateFlat p := rfl
 
 /-- The run of a machine ignores the initialization field, in any monad. -/
 theorem runWith_setInit {α α' β : Type}
     (M : OracleMachine spec α β) (g : α' → M.State) (H : QueryImpl spec m) (k : ℕ)
     (s : M.State) :
-    PFunctor.DynSystem.DynComputation.runWith ⟨M.toMachine, g⟩ H k s =
+    PFunctor.DynSystem.DynComputation.runWith (M.setInit g) H k s =
       M.runWith H k s := by
   change PFunctor.FreeM.liftM H
-      (PFunctor.DynSystem.DynComputation.unroll ⟨M.toMachine, g⟩ k s) = _
+      (PFunctor.DynSystem.DynComputation.unroll (M.setInit g) k s) = _
   rw [unroll_setInit]
   rfl
 
@@ -183,7 +190,7 @@ noncomputable def precomp (D : MachineAdversary bd)
     (f : (n : ℕ) → γ n → α n) [∀ n, Fintype (γ n)] (eIn' : BitEncFam γ)
     (cardIn : Polynomial ℕ) (hcard : ∀ n, Fintype.card (γ n) ≤ cardIn.eval n) :
     MachineAdversary (bd.withIn eIn') where
-  M n := ⟨(D.M n).toMachine, fun x => (D.M n).init (f n x)⟩
+  M n := (D.M n).setInit fun x => (D.M n).init (f n x)
   steps := D.steps
   state := D.state
   initF := .ofFintype eIn'.enc_injective (fun n x => (D.M n).init (f n x))
@@ -201,7 +208,7 @@ noncomputable def precomp (D : MachineAdversary bd)
     [∀ n, Fintype (γ n)] (eIn' : BitEncFam γ) (cardIn : Polynomial ℕ)
     (hcard : ∀ n, Fintype.card (γ n) ≤ cardIn.eval n) (n : ℕ) :
     (D.precomp f eIn' cardIn hcard).M n =
-      ⟨(D.M n).toMachine, fun x => (D.M n).init (f n x)⟩ := rfl
+      (D.M n).setInit fun x => (D.M n).init (f n x) := rfl
 
 @[simp] theorem precomp_steps (D : MachineAdversary bd) (f : (n : ℕ) → γ n → α n)
     [∀ n, Fintype (γ n)] (eIn' : BitEncFam γ) (cardIn : Polynomial ℕ)
@@ -217,8 +224,8 @@ theorem precomp_implements {D : MachineAdversary bd} (f : (n : ℕ) → γ n →
     D.precomp f eIn' cardIn hcard ⊨ fun n x => oa n (f n x) := by
   intro n x
   change PFunctor.DynSystem.DynComputation.unroll
-      (⟨(D.M n).toMachine, fun x => (D.M n).init (f n x)⟩ :
-        OracleMachine (spec n) (γ n) (β n)) (D.steps.eval n) ((D.M n).init (f n x)) = _
+      ((D.M n).setInit fun x => (D.M n).init (f n x)) (D.steps.eval n)
+      ((D.M n).init (f n x)) = _
   rw [OracleMachine.unroll_setInit]
   exact h n (f n x)
 
@@ -231,7 +238,7 @@ noncomputable def precompComp (D : MachineAdversary bd) (f : (n : ℕ) → γ n 
     (eIn' : Computability.BitEncFam γ)
     (wit : Computability.EncPolyTimeFam eIn'.enc bd.eIn.enc f) :
     MachineAdversary (bd.withIn eIn') where
-  M n := ⟨(D.M n).toMachine, fun x => (D.M n).init (f n x)⟩
+  M n := (D.M n).setInit fun x => (D.M n).init (f n x)
   steps := D.steps
   state := D.state
   initF := wit.comp D.initF
@@ -246,7 +253,7 @@ noncomputable def precompComp (D : MachineAdversary bd) (f : (n : ℕ) → γ n 
     (eIn' : Computability.BitEncFam γ)
     (wit : Computability.EncPolyTimeFam eIn'.enc bd.eIn.enc f) (n : ℕ) :
     (D.precompComp f eIn' wit).M n =
-      ⟨(D.M n).toMachine, fun x => (D.M n).init (f n x)⟩ := rfl
+      (D.M n).setInit fun x => (D.M n).init (f n x) := rfl
 
 @[simp] theorem precompComp_steps (D : MachineAdversary bd) (f : (n : ℕ) → γ n → α n)
     (eIn' : Computability.BitEncFam γ)
@@ -262,8 +269,8 @@ theorem precompComp_implements {D : MachineAdversary bd} (f : (n : ℕ) → γ n
     D.precompComp f eIn' wit ⊨ fun n x => oa n (f n x) := by
   intro n x
   change PFunctor.DynSystem.DynComputation.unroll
-      (⟨(D.M n).toMachine, fun x => (D.M n).init (f n x)⟩ :
-        OracleMachine (spec n) (γ n) (β n)) (D.steps.eval n) ((D.M n).init (f n x)) = _
+      ((D.M n).setInit fun x => (D.M n).init (f n x)) (D.steps.eval n)
+      ((D.M n).init (f n x)) = _
   rw [OracleMachine.unroll_setInit]
   exact h n (f n x)
 
@@ -359,8 +366,7 @@ theorem OracleComp.IsPolyTime.precomp {spec : (n : ℕ) → OracleSpec.{0, 0} (�
   obtain ⟨w⟩ := hoa
   exact ⟨{
     A := w.A.precomp f eIn' cardIn hcard'
-    implements := MachineAdversary.precomp_implements f eIn' cardIn hcard' w.implements
-    queryBound := fun n x => w.queryBound n (f n x) }⟩
+    implements := MachineAdversary.precomp_implements f eIn' cardIn hcard' w.implements }⟩
 
 /-- `OracleComp.IsPolyTime` is closed under pure input precomposition from a supplied
 machine witness between the canonical input encodings — the unbounded-input sibling of
@@ -376,8 +382,7 @@ theorem OracleComp.IsPolyTime.precompComp {spec : (n : ℕ) → OracleSpec.{0, 0
   obtain ⟨w⟩ := hoa
   exact ⟨{
     A := w.A.precompComp f eIn' wit
-    implements := MachineAdversary.precompComp_implements f eIn' wit w.implements
-    queryBound := fun n x => w.queryBound n (f n x) }⟩
+    implements := MachineAdversary.precompComp_implements f eIn' wit w.implements }⟩
 
 /-- `OracleComp.IsPolyTime` is closed under a pure **output** map on per-parameter
 finite output types of polynomially bounded cardinality, on an abstract hypothesis:
@@ -398,8 +403,4 @@ theorem OracleComp.IsPolyTime.map {spec : (n : ℕ) → OracleSpec.{0, 0} (ι n)
   obtain ⟨w⟩ := hoa
   exact ⟨{
     A := w.A.mapComp g eOut' (.optionMap bd.eOut eOut' g cardβ hcard')
-    implements := MachineAdversary.mapComp_implements g eOut' _ w.implements
-    queryBound := fun n x => by
-      simp only [MachineAdversary.mapComp_steps]
-      rw [map_eq_bind_pure_comp]
-      exact isTotalQueryBound_bind (n₂ := 0) (w.queryBound n x) fun _ => trivial }⟩
+    implements := MachineAdversary.mapComp_implements g eOut' _ w.implements }⟩

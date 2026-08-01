@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import ToMathlib.Computability.PolyTimeTM
+public import Mathlib.Data.Nat.Bitwise
 public import Mathlib.Data.Nat.Log
 
 /-!
@@ -44,9 +45,9 @@ must fix it explicitly). This file provides that representation:
   produce these; the closure combinators (`comp`, `id`, `const`, `ofFintype`) compose
   them; a polynomial-time adversary carries four of them.
 
-Everything here is raw `α → List Bool`: no `PackedEncoding` alphabets and no one-hot
-`boolify` relabeling on the canonical side (the legacy `Computability.PackedEncoding`
-layer remains available for machine-internal state representations).
+Everything here is raw `α → List Bool`: no intermediate alphabet types and no one-hot
+symbol relabeling — encodings are binary from the start, so encoded lengths are the
+bit-lengths the polynomial bounds speak about.
 -/
 
 @[expose] public section
@@ -313,7 +314,11 @@ string encodings, a single polynomial bounding all running times (in `n` plus th
 input length), and a single polynomial bounding all description sizes (the advice
 bound — without it, per-parameter table machines smuggle unbounded advice). This is
 the reusable unit of the polynomial-time adversary model: base machines produce these,
-combinators compose them, and an adversary's four step functions each carry one. -/
+combinators compose them, and an adversary's four step functions each carry one.
+
+Like `EncPolyTime`, the structure imposes nothing on the encodings themselves; its
+certifying power comes from the call site pinning the injective families
+(`Computability.BitEncFam`, `Computability.StrEncFam`). -/
 structure EncPolyTimeFam {α β : ℕ → Type u}
     (ea : (n : ℕ) → α n → List Bool) (eb : (n : ℕ) → β n → List Bool)
     (f : (n : ℕ) → α n → β n) : Type (u + 1) where
@@ -374,7 +379,12 @@ def copy {f : (n : ℕ) → α n → β n} (h : EncPolyTimeFam ea eb f)
 
 /-- Composition of uniform families: witnesses compose by `EncPolyTime.comp`; the
 uniform time bound composes through the output-length envelope, and description
-sizes add. -/
+sizes add.
+
+The composed time bound substitutes one polynomial into another, so degrees multiply:
+a fixed number of `comp`s stays polynomial, but iterating to a depth that grows with
+`n` does not. Polynomial-length runs account time additively per step instead
+(`MachineAdversary.detTotalTime`); only description size composes additively. -/
 noncomputable def comp {f : (n : ℕ) → α n → β n} {g : (n : ℕ) → β n → γ n}
     (h : EncPolyTimeFam ea eb f) (h' : EncPolyTimeFam eb ec g) :
     EncPolyTimeFam ea ec (fun n => g n ∘ f n) where

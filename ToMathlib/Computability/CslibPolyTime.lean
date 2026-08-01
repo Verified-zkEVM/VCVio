@@ -7,7 +7,6 @@ module
 
 public import Cslib.Computability.Machines.Turing.SingleTape.Deterministic
 public import Mathlib.Algebra.Polynomial.Eval.Degree
-public import ToMathlib.Computability.Encoding
 
 /-!
 # Encoded Polynomial-Time Computability
@@ -17,8 +16,10 @@ of raw string functions `List Symbol → List Symbol`. This file adds the encodi
 `Computability.EncPolyTime ea eb f` witnesses that a function `f : α → β` between
 arbitrary types is polynomial-time computable relative to `Bool`-string encodings
 `ea : α → List Bool` and `eb : β → List Bool`, by bundling a machine-computed total
-string function that intertwines the encodings. Encodings typically arise from a
-`Computability.PackedEncoding` via `PackedEncoding.boolify`.
+string function that intertwines the encodings. The encodings are supplied by call
+sites; the adversary model pins the injective fixed-width and length-bounded families
+of `ToMathlib.Computability.BitEncoding` (`Computability.BitEncFam`,
+`Computability.StrEncFam`) at its boundaries.
 
 Identity and composition (`EncPolyTime.id`, `EncPolyTime.comp`) lift directly from
 Cslib's proven `PolyTimeComputable.id` and `PolyTimeComputable.comp`; the monotone
@@ -32,13 +33,13 @@ witnesses indexed by a security parameter: a finite-table machine looks up any f
 in linear time using one state per valid input, so without a size bound a family of
 witnesses smuggles unbounded advice and the induced "polynomial-time" class contains
 every function on polynomially-encodable domains. Families must therefore bound
-`size` polynomially as well (see `PolyTimeAdversary.descBound`), giving the standard
+`size` polynomially as well (see `MachineAdversary.descBound`), giving the standard
 non-uniform P/poly model.
 -/
 
 @[expose] public section
 
-universe u v w u_1 u_2
+universe u v w u' v'
 
 /-- Evaluation of a natural-number polynomial is monotone in the argument. -/
 theorem Polynomial.eval_le_eval {p : Polynomial ℕ} {m n : ℕ} (h : m ≤ n) :
@@ -65,15 +66,21 @@ theorem PolyTimeComputable.monotone_normalize_timeBound {f : List Symbol → Lis
     (h : PolyTimeComputable f) : Monotone h.normalize.timeBound :=
   fun _ _ hmn => Polynomial.eval_le_eval hmn
 
-/-- The description size of a machine witness: its number of states. Over a fixed tape
-alphabet the transition table has one row per state, so this measures the machine's
-description — the "advice" of a non-uniform family. Time bounds alone do not control
-it: a table machine looks up any function on a finite domain in linear time using one
-state per valid input. -/
-def PolyTimeComputable.size {f : List Symbol → List Symbol}
+/-- The description size of a machine witness over the two-symbol tape alphabet: its
+number of states. Over the fixed `Bool` alphabet the transition table has exactly three
+rows per state, so the state count measures the machine's description up to a constant
+factor — the "advice" of a non-uniform family, and the quantity the machine-counting
+bound `B` counts. Time bounds alone do not control it: a table machine looks up any
+function on a finite domain in linear time using one state per valid input.
+
+Deliberately restricted to `Symbol := Bool`: over a family of growing alphabets the
+transition table has `Fintype.card Symbol + 1` rows per state, so a bare state count
+would undercount the description (a one-state machine over an alphabet of size `2 ^ n`
+hides `2 ^ n` advice bits in its transition row). -/
+def PolyTimeComputable.size {f : List Bool → List Bool}
     (h : PolyTimeComputable f) : ℕ := Fintype.card h.tm.State
 
-@[simp] theorem PolyTimeComputable.size_normalize {f : List Symbol → List Symbol}
+@[simp] theorem PolyTimeComputable.size_normalize {f : List Bool → List Bool}
     (h : PolyTimeComputable f) : h.normalize.size = h.size := rfl
 
 end Cslib.Turing.SingleTapeTM
@@ -89,7 +96,10 @@ encodings of its domain and codomain: a total string function, computed by a sin
 machine in polynomial time, that maps the encoding of `a` to the encoding of `f a`.
 
 The string function is total: its behavior on strings outside the range of `ea` is
-unconstrained. -/
+unconstrained. The structure imposes nothing on `ea` and `eb` themselves — with a
+non-injective codomain encoding it is trivially inhabited — so its certifying power
+comes from the call site pinning injective encoding families
+(`Computability.BitEncFam`, `Computability.StrEncFam`). -/
 structure EncPolyTime (ea : α → List Bool) (eb : β → List Bool) (f : α → β) where
   /-- The total string function the machine computes. -/
   toFun : List Bool → List Bool
@@ -136,7 +146,7 @@ each `a'` exactly as `ea` encodes `φ a'`, and `eb'` encodes each `g a'` exactly
 encodes `f (φ a')`, the same machine witnesses `g` relative to `ea'`/`eb'`. The machine,
 time, and size are untouched — this discharges pure re-bracketings and re-taggings of
 encoded data (`cons`/append associativity, pair/sum reshuffles) with no machine content. -/
-def recode {α' : Type u_1} {β' : Type u_2} {ea' : α' → List Bool} {eb' : β' → List Bool}
+def recode {α' : Type u'} {β' : Type v'} {ea' : α' → List Bool} {eb' : β' → List Bool}
     {f : α → β} (h : EncPolyTime ea eb f) (φ : α' → α) (g : α' → β')
     (hin : ∀ a', ea' a' = ea (φ a')) (hout : ∀ a', eb' (g a') = eb (f (φ a'))) :
     EncPolyTime ea' eb' g where
@@ -145,19 +155,24 @@ def recode {α' : Type u_1} {β' : Type u_2} {ea' : α' → List Bool} {eb' : β
   map_encode a' := by rw [hin, h.map_encode, ← hout]
 
 /-- Recoding preserves the machine's time polynomial. -/
-@[simp] theorem time_recode {α' : Type u_1} {β' : Type u_2} {ea' : α' → List Bool}
+@[simp] theorem time_recode {α' : Type u'} {β' : Type v'} {ea' : α' → List Bool}
     {eb' : β' → List Bool} {f : α → β} (h : EncPolyTime ea eb f) (φ : α' → α) (g : α' → β')
     (hin : ∀ a', ea' a' = ea (φ a')) (hout : ∀ a', eb' (g a') = eb (f (φ a'))) :
     (h.recode φ g hin hout).time = h.time := rfl
 
 /-- Recoding preserves the machine, hence the description size. -/
-@[simp] theorem size_recode {α' : Type u_1} {β' : Type u_2} {ea' : α' → List Bool}
+@[simp] theorem size_recode {α' : Type u'} {β' : Type v'} {ea' : α' → List Bool}
     {eb' : β' → List Bool} {f : α → β} (h : EncPolyTime ea eb f) (φ : α' → α) (g : α' → β')
     (hin : ∀ a', ea' a' = ea (φ a')) (hout : ∀ a', eb' (g a') = eb (f (φ a'))) :
     (h.recode φ g hin hout).size = h.size := rfl
 
 /-- Composition of encoded polynomial-time witnesses, from Cslib's
-`PolyTimeComputable.comp`. -/
+`PolyTimeComputable.comp`.
+
+Time bounds compose by substitution (`comp_time`), so degrees multiply: iterating
+`comp` to polynomial depth does not stay polynomial-time, and polynomial-length runs
+must instead account time additively per step (as `MachineAdversary.detTotalTime`
+does). Only the description size composes additively (`size_comp`). -/
 noncomputable def comp {f : α → β} {f' : β → γ}
     (h : EncPolyTime ea eb f) (h' : EncPolyTime eb ec f') :
     EncPolyTime ea ec (f' ∘ f) where
