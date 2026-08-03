@@ -24,13 +24,6 @@ speaks last. We capture the round-count and output constraints via the
 `Scheme.WellFormed` predicate, but not the T-speaks-last convention.
 
 Model simplifications
-* **Revealing unfinished sessions:** DF'17 only allows the reveal query after
-  T's last message. We accept reveal queries at any time, but a reveal before
-  completion returns none (the session key is recorded only at completion)
-  while still marking the session revealed for the full-ping-pong check. This
-  penalizes only the adversary, and is WLOG because an early reveal returns no
-  information: any adversary making one has an equivalent adversary that defers
-  it.
 * **Rejected protocol messages:** DF'17 does not talk about what happens when a
   protocol message is rejected, but it seems necessary to model this in real
   protocols. We allow protocol messages to be rejected, in which case we a)
@@ -117,7 +110,8 @@ structure TSession (proto : Scheme m K UK TK W) where
     * some none: Session completed with T outputing ⊥
     * some (some k): Session completed with T outputing k -/
   key : Option (Option K)
-  /-- Whether the adversary has called reveal on this session -/
+  /-- Whether the key for this session has been revealed to the adversary
+    through a reveal query -/
   revealed : Bool
 
 /-- Challenge environment for the UAKE security experiment -/
@@ -139,7 +133,8 @@ inductive Op (W : Type) where
   /-- Increment an existing session with a given message. Returns the next
     protocol message. -/
   | stepT : ℕ → W → Op W
-  /-- Reveal the key for this session -/
+  /-- Reveal the key for this session. This is a no-op until the session is
+    complete. -/
   | revealT : ℕ → Op W
   /-- Increment the challenge session (created up front) -/
   | stepChallenge : W → Op W
@@ -191,8 +186,11 @@ def opImpl [Monad m] (proto : Scheme m K UK TK W) (tk : TK) :
       match env.tSessions[sid]? with
       | none => pure none
       | some t =>
-        set { env with tSessions := env.tSessions.set sid { t with revealed := true } }
-        pure t.key.join
+        match t.key with
+        | none => pure none
+        | some key =>
+          set { env with tSessions := env.tSessions.set sid { t with revealed := true } }
+          pure key
   | .stepChallenge w => do
       let env ← get
       if env.challengeDone then pure (.inr ())
@@ -246,8 +244,8 @@ def isPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
     (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1) cr.oracleTrs cr.challengeTr
 
-/-- True if the challenge transcript is ping-pong and the adversary called
-   reveal on the session. -/
+/-- True if the challenge transcript is ping-pong and a session whose transcript
+  matches has been revealed to the adversary through a reveal query. -/
 def fullPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
     (env : Env proto) (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1)
