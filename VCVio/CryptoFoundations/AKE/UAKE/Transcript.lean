@@ -20,24 +20,6 @@ variable {W : Type}
 structure Transcript (W : Type) where
   entries : List (W × ℕ)
 
-namespace Transcript
-
-def relabel {A B : Type} (f : A → B) (t : Transcript A) : Transcript B :=
-  ⟨t.entries.map fun p => (f p.1, p.2)⟩
-
-def merge {A : Type} (t1 t2 : Transcript A) : Transcript A :=
-  ⟨(t1.entries ++ t2.entries).mergeSort fun p q => decide (p.2 ≤ q.2)⟩
-
-def combine {A B : Type} (ta : Transcript A) (tb : Transcript B) :
-    Transcript (A ⊕ B) :=
-  (ta.relabel Sum.inl).merge (tb.relabel Sum.inr)
-
-def prefixWith {A B : Type} (a : A) (t : ℕ) (tb : Transcript B) :
-    Transcript (A ⊕ B) :=
-  ⟨(Sum.inl a, t) :: tb.entries.map fun p => (Sum.inr p.1, p.2)⟩
-
-end Transcript
-
 structure Session (σ W : Type) where
   state : σ
   transcript : Transcript W
