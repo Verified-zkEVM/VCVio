@@ -28,11 +28,9 @@ Model simplifications
   protocol message is rejected, but it seems necessary to model this in real
   protocols. We allow protocol messages to be rejected, in which case we a)
   drop the message from the transcript and b) continue the session. Other
-  choices would be to record the message and halt the session (record and
-  continue is degenerate, since an adversary could avoid ping-pong by injecting
-  a garbage message), however allowing the adversary to retry is the
-  alternative that gives the adversary the most power, so we choose that option
-  here.
+  choices would be to record the message and either halt the session (which
+  prevents the adversary from retrying) or continue (allowing the adversary to
+  win by injecting a rejected dummy message that prevents transcript matching).
 * **WLOG protocol assumptions:** DF'17 assumes (explicitly) that T speaks last.
   We do not enforce this in our model. However, since the ping-pong predicate
   depends on the parity of `Scheme.rounds` to determine who should speak first,
