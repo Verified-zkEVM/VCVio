@@ -682,9 +682,9 @@ theorem evalDist_eval_domainSample_eq_uniform (pk : PK) (sk : SK)
     rw [probOutput_bind_const, (hNF a).probFailure_eq_zero]
     simp
   calc 𝒟[(do let a ← ($ᵗ Range); let _ ← psf.trapdoorSample pk sk a; pure a : ProbComp Range)]
-      = 𝒟[(do let a ← ($ᵗ Range); pure a : ProbComp Range)] :=
-        evalDist_bind_congr fun a _ => hinner a
-    _ = 𝒟[($ᵗ Range : ProbComp Range)] := by simp
+      = 𝒟[((($ᵗ Range) >>= pure) : ProbComp Range)] :=
+        evalDist_bind_congr' _ fun a => hinner a
+    _ = 𝒟[($ᵗ Range : ProbComp Range)] := by rw [bind_pure]
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Off-bad agreement of the two tape handlers on a uniform query.** The uniform-query branch of
