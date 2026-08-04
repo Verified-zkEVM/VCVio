@@ -16,7 +16,7 @@ matching Theorem 3 of Barbosa et al. (CRYPTO 2023). Instantiates
 `cmaToNmaLoss` plus `euf_cma_bound` / `euf_cma_bound_perfectHVZK`.
 
 The scheme-specific NMA-to-hard-problem reduction lives with each concrete
-scheme (e.g. `MLDSA.nma_security`).
+scheme (e.g. the ML-DSA MLWE + SelfTargetMSIS reduction).
 -/
 
 universe u v
@@ -81,7 +81,7 @@ abort probability `p`, the simulator error `ζ_zk`, the regularity failure proba
 and the query bounds `qS`, `qH`; it is captured here by `cmaToNmaLoss`.
 
 The scheme-specific reduction from NMA to computational assumptions (e.g., MLWE +
-SelfTargetMSIS for ML-DSA) is stated separately; see `MLDSA.nma_security` and
+SelfTargetMSIS for ML-DSA) is stated separately with each scheme; see
 `MLDSA.euf_cma_security`.
 
 **WARNING: this is a placeholder statement, not the final theorem.** The current shape is

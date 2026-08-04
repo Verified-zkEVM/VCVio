@@ -15,7 +15,7 @@
 #
 # 2. INTEROP → DOWNSTREAM (forbidden):
 #    No file under `Interop/**` may import from `LatticeCrypto.…`,
-#    `Examples.…`, `LatticeCryptoTest.…`, `FFI.…`, `VCVioWidgets.…`, or
+#    `Examples.…`, `LatticeCryptoTest.…`, `Extern.…`, `VCVioWidgets.…`, or
 #    `VCVioTest.…`. Those libraries are themselves clients of VCVio, so
 #    Interop depending on them would create circular layering and pull
 #    user-facing libraries into the Interop TCB. Interop may freely import
@@ -54,12 +54,12 @@ fi
 # Forbidden modules in core libraries. Anchored on `import ` plus a word
 # boundary at the end of the head segment so e.g. `import VCVioTest.…`
 # isn't accidentally matched by an `Interop` rule.
-CORE_LIBS=(VCVio LatticeCrypto LatticeCryptoTest Examples ToMathlib FFI VCVioWidgets VCVioTest)
+CORE_LIBS=(VCVio LatticeCrypto LatticeCryptoTest Examples ToMathlib Extern VCVioWidgets VCVioTest)
 CORE_FORBIDDEN_HEADS=(Interop Hax Aeneas)
 
 # Forbidden imports from inside Interop. We explicitly list downstream
 # libraries to avoid catching `import VCVio.…` (which is allowed).
-INTEROP_FORBIDDEN_HEADS=(LatticeCrypto LatticeCryptoTest Examples FFI VCVioWidgets VCVioTest)
+INTEROP_FORBIDDEN_HEADS=(LatticeCrypto LatticeCryptoTest Examples Extern VCVioWidgets VCVioTest)
 
 violations=0
 

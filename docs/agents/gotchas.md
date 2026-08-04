@@ -41,9 +41,50 @@ The bare `query` identifier is the `export`ed `HasQuery.query`, so writing `quer
 
 ### 7. Core types are `@[reducible]` thin wrappers
 
-`OracleSpec`, `QueryImpl`, and `OracleComp` are all `def`/`abbrev`/`@[reducible]` over `PFunctor` machinery. Lean may unfold them aggressively. Use `OracleComp.inductionOn` / `OracleComp.construct` as canonical eliminators rather than pattern matching on `PFunctor.FreeM.pure`/`roll`.
+`OracleSpec`, `QueryImpl`, `OracleComp`, `OracleQuery`, and `OracleSpec.toPFunctor` are all `def`/`abbrev`/`@[reducible]` over `PFunctor` machinery, and the `Monad`/`Functor` instances come directly from `PFunctor.FreeM`/`PFunctor.Obj`. Lean may unfold them aggressively. Use `OracleComp.inductionOn` / `OracleComp.construct` as canonical eliminators rather than pattern matching on `PFunctor.FreeM.pure`/`roll`.
 
-### 8. Universe polymorphism
+Two failure modes to recognize under this regime:
+
+- **Dot notation on monadic results fails.** The inferred type of `oa >>= ob` or `liftM (query t)` has head `PFunctor.FreeM`, not `OracleComp`, so `(query t >>= oa).myOracleCompLemma` reports `Invalid field … PFunctor.FreeM.myOracleCompLemma`. State such lemmas in prefix form (`myOracleCompLemma … (query t >>= oa)`); dot notation on plain variables of ascribed type `OracleComp spec α` still works.
+- **Never `attribute [local reducible]` a definition that instance keys mention.** Instance discrimination-tree keys are computed at declaration site; changing transparency locally makes queries normalize differently and instances like `MonadLiftT (OracleComp spec) SetM` silently vanish (`support`, `evalDist`, `Pr[…]` all stop elaborating). `toPFunctor` is globally reducible for exactly this consistency reason.
+
+Relatedly, `OracleSpec.toPFunctor_add` is deliberately **not** `@[simp]`: `toPFunctor` occurs inside the instance-carrying type of an `OracleComp`, and rewriting `(spec + spec').toPFunctor` under a `simulateQ`/`liftM` strands goals in a form the `simulateQ_query` family can no longer match (typically visible as `simulateQ impl (liftM (query (Sum.inl t)))` refusing to simplify).
+
+### 8. Concrete subtype samplers built with `Fintype.ofFinite` can be whnf-hostile
+
+Subtype-uniform samplers and similar definitions sometimes close over noncomputable instances:
+
+```lean
+letI : Fintype {v // P v} := .ofFinite _
+letI : SampleableType {v // P v} := .ofFintype _
+```
+
+If elaboration later unfolds this concrete sampler, `SampleableType.ofFintype` runs through
+`ofEquiv (Fintype.equivFin α).symm` into `$ᵗ (Fin (Fintype.card α))`. The `Fin` instance can
+then force whnf of `Fintype.card` applied to a `Classical.choice`-backed
+`Fintype.ofFinite` value and hit a recursion or heartbeat limit. This is not a reason to avoid
+`Fintype.ofFinite` generally; the problem is forcing reduction through a concrete closure that
+captures it.
+
+**Symptom**: a `maxRecDepth` or heartbeat timeout appears when a structure is written with
+`where` field syntax, or when the concrete sampler occurs in a binder or expected-type
+position, even though the same fields elaborate separately.
+
+**Workarounds** (use only the one that avoids the observed reduction):
+
+- Try the anonymous constructor `⟨…⟩` when `where` syntax forces normalization of the expected
+  structure type.
+- If a theorem statement itself forces the concrete value, quantify over an abstract value and
+  pin it with an equality such as
+  `(stmsis : Problem …) (hStmsis : stmsis = concreteValue)`. Use this only when callers can
+  discharge the equality directly; it is an interface workaround, not an extra mathematical
+  assumption.
+- If elaborating or reducing `decide` over a large proposition selects an expensive
+  computational `Decidable`, pass `Classical.propDecidable` explicitly. For example, use
+  `@decide_eq_true_iff _ (Classical.propDecidable _)` when rewriting an accompanying `iff`
+  lemma instead of asking Lean to reduce the decision procedure.
+
+### 9. Universe polymorphism
 
 `OracleComp` has 3 universe parameters, `SubSpec` has 3 (`u, v, w`: indices `ι : Type u`, `τ : Type v`, shared response universe `w`). Universe unification errors are still common when composing specs or building reductions because the lens-style `MonadLift` parent can drag extra metavariables in.
 
@@ -51,7 +92,7 @@ The bare `query` identifier is the `export`ed `HasQuery.query`, so writing `quer
 
 ## Proof Patterns
 
-### 9. `grind`/`simp` tagging is split deliberately on probability lemmas
+### 10. `grind`/`simp` tagging is split deliberately on probability lemmas
 
 `probOutput_bind_eq_tsum` is `@[grind =]` but NOT `@[simp]`: `simp` won't unfold `probOutput` of a
 bind, so use `rw [probOutput_bind_eq_tsum]` or `grind`.
@@ -76,7 +117,7 @@ Downstream escape hatches, since these tags are inherited by importing projects:
 (disable per call), `grind only [...]` (ignore the default set), `attribute [-grind] lemma`
 (unset for a file), and `grind?` (print a minimal `grind only` call).
 
-### 10. Plain `vcstep` may solve a probability equality when you only wanted a rewrite
+### 11. Plain `vcstep` may solve a probability equality when you only wanted a rewrite
 
 On `Pr[...] = Pr[...]` goals, plain `vcstep` heuristically tries swap, congruence, and
 small bounded compositions. If you need to rewrite and continue, use `vcstep rw` for a
@@ -88,11 +129,11 @@ rw [probEvent_bind_bind_swap]
 simp only [probEvent_eq_eq_probOutput]
 ```
 
-### 11. Avoid `guard` in experiments
+### 12. Avoid `guard` in experiments
 
 Use `return (b == b')` or `return decide (r x w)` instead. `guard` requires `OptionT` / `Alternative`.
 
-### 12. `do`-notation bind uses a different `Bind` instance (Lean 4.29+)
+### 13. `do`-notation bind uses a different `Bind` instance (Lean 4.29+)
 
 Lean 4.29 changed `do`-block elaboration so the desugared bind may use a `Bind` instance
 that differs syntactically from `Monad.toBind`. This means `pure_bind`, `bind_assoc`, and
@@ -104,9 +145,33 @@ that differs syntactically from `Monad.toBind`. This means `pure_bind`, `bind_as
 `do_pure_bind`, `do_bind_pure`, `do_bind_assoc`, `do_bind_pure_comp`, `do_map_bind`,
 `do_bind_map_left`. All are `@[simp]`.
 
+### 14. Hypothesis satisfiability is a proof obligation
+
+A conditional theorem whose hypotheses are jointly uninhabitable is vacuously true, and
+`#print axioms` cannot detect it: the proof is axiom-clean while the statement asserts nothing.
+Two failure classes recur:
+
+- **Relation-pinning pairs**: a pair `(hr : GenerableRelation _ _ r) (hGen : hr.gen = myGen)`
+  is uninhabitable if some `(x, w) ∈ support myGen` has `r x w = false`, because
+  `GenerableRelation.gen_sound` requires every supported pair to satisfy the relation. Check
+  `gen_sound` compatibility *before* stating the theorem; if the support does not fit, widen
+  the relation (e.g. an ∃-material variant of key validity) rather than pinning an incompatible
+  generator.
+- **Cardinality mismatches**: the deterministic image of a small seed space can never equal —
+  or be uniformly distributed on — a strictly larger space. A hypothesis asserting such an
+  equality or uniformity is false at every parameter where the strict cardinality inequality
+  holds.
+
+**Fix**: when compatibility of a new hypothesis bundle is not immediate, ship a kernel-checked
+witness for the whole bundle (or at least each nontrivial compatibility pair) in the same PR.
+For example, prove `∃ hr, hr.gen = …` with an explicit witness rather than merely showing each
+hypothesis type is separately inhabited. A toy witness establishes logical consistency only;
+label it accordingly and do not present it as evidence that the assumptions are
+cryptographically strong or achievable at real parameters.
+
 ## Module Structure
 
-### 13. `EvalDist/` must never import from `OracleComp/`
+### 15. `EvalDist/` must never import from `OracleComp/`
 
 Check the module layering DAG before adding imports:
 ```
@@ -115,31 +180,31 @@ ToMathlib → Prelude → EvalDist/Defs → OracleComp core → EvalDist bridge
   → {ProgramLogic, CryptoFoundations, CryptoFoundations/Asymptotics} → Examples
 ```
 
-### 14. Preserve partial proof attempts with `stop`
+### 16. Preserve partial proof attempts with `stop`
 
 When a proof attempt is not finished or is currently broken, insert a local `stop` marker instead of deleting large proof blocks. This preserves search context for later agents.
 
-### 15. `OracleComp.inductionOn` is the canonical eliminator
+### 17. `OracleComp.inductionOn` is the canonical eliminator
 
 Pattern: `| pure x => ... | query_bind t oa ih => ...`. Use `simulateQ_bind`,
 `simulateQ_query`, `simulateQ_pure` simp lemmas in the `query_bind` case.
 See `simulateQ_id'` in `VCVio/OracleComp/SimSemantics/SimulateQ.lean` for a
 clean example.
 
-### 16. Full cutover, no backward-compatibility shims
+### 18. Full cutover, no backward-compatibility shims
 
 When refactoring APIs, notations, or proof infrastructure, update all call sites in one
 pass. Do not add deprecated aliases, migration wrappers, or compatibility layers.
 
-### 17. Module organization: no thin re-export umbrellas except at the repository top level
+### 19. Module organization: no thin re-export umbrellas except at the repository top level
 
 When splitting a file into a folder of submodules, do **not** add a sibling `X.lean`
 whose only content is a chain of `import X.A; import X.B`. Each caller imports the
 specific submodule it actually uses.
 
 **Allowed umbrellas** (strictly top-level roots only): root imports such as
-`VCVio.lean`, `ToMathlib.lean`, `FFI.lean`, `Examples.lean`, `LatticeCrypto.lean`,
-`Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
+`VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `HashSig.lean`, `Examples.lean`,
+`LatticeCrypto.lean`, `Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
 `LatticeCryptoTest.lean`.
 When a new top-level root is added, extend this list alongside it.
 
@@ -150,11 +215,50 @@ cohesive", callers must import the specific submodule they use.
 
 ## Build and Tooling
 
-### 18. Always run `lake exe cache get` before `lake build`
+### 20. Always run `lake exe cache get` before `lake build`
 
 Building Mathlib from source takes hours. Always fetch the precompiled cache first.
 
-### 19. Do not disable linters to silence warnings
+### 21. Warm-start new worktrees from a built donor worktree
+
+`lake exe cache get` only covers Mathlib; the repo's own libraries still rebuild from scratch
+in a cold `git worktree`. When two worktrees use the same toolchain, dependency revisions, and
+preferably the same commit, copying the root build tree from an already-built donor can make
+the target's next build a near-no-op. Do this before the target has its own `.lake/build`;
+the explicit check prevents `cp` from nesting or merging build directories accidentally:
+
+```bash
+mkdir -p "<new-worktree>/.lake"
+test ! -e "<new-worktree>/.lake/build"
+cp -a "<built-donor-worktree>/.lake/build" "<new-worktree>/.lake/"
+```
+
+Run `lake exe cache get` in the target as usual, then run `lake build` so Lake checks the copied
+artifacts against the target sources and rebuilds anything affected. If Mathlib itself starts
+rebuilding at scale, stop and check the toolchain, dependency revisions, and whether the
+Mathlib cache was fetched; copying the root build tree does not replace the Mathlib cache.
+
+### 22. Direct Lean and the LSP can observe stale imported oleans
+
+`lake env lean File.lean` invokes Lean directly; it does not ask Lake to rebuild imported
+modules first. The language server can likewise consume the compiled imports already on disk.
+After mid-edit builds, branch switches, or source changes outside the file being checked, those
+imports can be stale. Elaborating against mismatched imports can produce phantom failures that
+mimic genuine elaboration pathologies:
+
+- whnf/heartbeat timeouts that no `maxHeartbeats` bump cures because nominally matching terms
+  came from different compiled source states;
+- "unknown identifier" and "has already been declared" errors for declarations that match the
+  source in front of you;
+- apparent section-dependence, where sharing local instance variables happens to avoid the
+  mismatched imported term and makes the symptom disappear inside a section.
+
+**Fix**: before diagnosing an elaboration problem involving imported declarations or
+instances, run `lake build <target>` to synchronize the affected modules, then reproduce the
+problem with `lake env lean` or the LSP. The build may be a no-op when the imports are already
+current; only trust the suspected stale-import symptom if it survives this check.
+
+### 23. Do not disable linters to silence warnings
 
 Do not add `set_option linter.* false`, `set_option weak.linter.* false`, or repo-level
 `leanOptions` that turn lints off just to get a clean build. Treat linter failures as real
@@ -165,27 +269,56 @@ off via `weak.linter.unicodeLinter, false` in `lakefile.lean`. This is a policy 
 dodge: VCVio docstrings legitimately use FIPS-204 math notation (a combining tilde on `c`) and
 diacritics in cited author names, which the Mathlib allowlist would otherwise reject.
 
-### 20. After adding new `.lean` files, run `./scripts/update-lib.sh`
+### 24. After adding new `.lean` files, run `./scripts/update-lib.sh`
 
 This regenerates the root import files covered by the build import check:
-`ToMathlib.lean`, `VCVio.lean`, `FFI.lean`, `LatticeCrypto.lean`,
-`Examples.lean`, and `Interop.lean`. CI checks those are up to date.
+`ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
+`HashSig.lean`, `Examples.lean`, and `Interop.lean`. CI checks those are up to
+date.
 
-### 21. Lean toolchain and Mathlib version must stay in sync
+### 25. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.29.0`. When upgrading, update both `lean-toolchain` and
-`lakefile.lean`'s `require mathlib` line simultaneously.
+Both currently `v4.32.0`: `lean-toolchain` pins `leanprover/lean4:v4.32.0` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.32.0"`.
+When upgrading, update both lines simultaneously.
 
-### 22. Use public references in shared docs
+### 26. Use public references in shared docs
 
 When a proof framework follows an external paper, cite the public paper by title, venue,
 or URL rather than pointing agents at a repo-local file path.
 
-### 23. Public reference papers are authoritative for design work
+### 27. Public reference papers are authoritative for design work
 
 For relational program logic, start with
 *A Quantitative Probabilistic Relational Hoare Logic* ([ERHL25](../../REFERENCES.md#erhl25)).
 
-### 24. Agent guidance files must be committed
+### 28. Agent guidance files must be committed
 
 Agents dispatched to `git worktree` clones need to read `AGENTS.md`, `docs/agents/`, and any other guidance files. Ensure these are committed so all worktrees see them.
+
+### 29. Restack with `--onto` after folding commits into a base branch
+
+When a stacked branch's base is cherry-picked or squashed into a new base, the old base commits
+may not be ancestors of the new base. Record the old base tip and the pre-rebase branch tip,
+then select only the branch-owned commits explicitly:
+
+```bash
+git rebase --empty=drop --onto <new-base> <old-base-tip> <branch>
+```
+
+Inspect how those commits were replayed before pushing:
+
+```bash
+git range-diff <old-base-tip>..<pre-rebase-tip> <new-base>..<rebased-tip>
+```
+
+Conflict resolutions or commits made empty by the new base can produce legitimate differences,
+so review the range diff and rerun the relevant build/tests. A final-tree byte-identity check
+
+```bash
+git diff <pre-rebase-tip> <rebased-tip> --quiet
+```
+
+is an additional strong gate only when the new base differs from the old stack solely by
+folding the same content. Do not require tree identity when the new base also contains unrelated
+changes; those changes should appear in the rebased tree.

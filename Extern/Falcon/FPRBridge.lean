@@ -6,7 +6,7 @@ Authors: Quang Dao
 import Batteries.Data.Rat.Float
 import LatticeCrypto.Falcon.Scheme
 import LatticeCrypto.Falcon.Concrete.FPR
-import LatticeCrypto.Falcon.Concrete.Instance
+import Extern.Falcon.Instance
 import LatticeCrypto.Falcon.Concrete.Encoding
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
@@ -135,10 +135,9 @@ theorem concrete_verify_eq_verify
         Falcon.verify p prims pk msg sig := by
   dsimp
   by_cases hcomp : sig.compressedS2 = []
-  · have hslen : sig.compressedS2.length < p.sbytelen := by
-      simpa [hcomp] using hsbytelen
-    have hdecomp : (verifyPrimitives p hn).decompress [] p.sbytelen = none := by
-      simp [verifyPrimitives, Falcon.Concrete.decompress, hsbytelen]
+  · have hdecomp : (verifyPrimitives p hn).decompress [] p.sbytelen = none := by
+      apply Falcon.Concrete.decompress_eq_none_of_length_ne
+      simpa using Nat.ne_of_lt hsbytelen
     have hleft :
         Falcon.Concrete.concreteVerify p ((verifyPrimitives p hn).publicKeyBytes pk.h) msg
           (Falcon.Concrete.sigEncode sig.salt [] p.logn) = false := by

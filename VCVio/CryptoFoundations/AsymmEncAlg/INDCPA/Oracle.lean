@@ -5,6 +5,7 @@ Authors: Devon Tuma, Quang Dao
 -/
 import VCVio.CryptoFoundations.AsymmEncAlg.Defs
 import VCVio.OracleComp.Coercions.SubSpec
+import VCVio.OracleComp.Coinductive.WiredRun
 import VCVio.OracleComp.ProbComp
 import VCVio.OracleComp.QueryTracking.QueryBound
 import VCVio.OracleComp.SimSemantics.Append
@@ -81,6 +82,81 @@ def IND_CPA_queryImpl' (encAlg : AsymmEncAlg ProbComp M PK SK C)
   IND_CPA_queryImplFromChallenge encAlg
     (IND_CPA_cachedChallengeOracle encAlg pk
       (fun mm => if b then mm.1 else mm.2))
+
+/-- The cached left/right oracle as a probabilistic responder. This is a thin wrapper around
+`IND_CPA_queryImpl'`; the existing `StateT ProbComp` implementation remains the source of truth. -/
+@[reducible] noncomputable def IND_CPA_responder (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (pk : PK) (b : Bool) : ProbResponder encAlg.IND_CPA_oracleSpec :=
+  .ofStateQueryImpl (encAlg.IND_CPA_queryImpl' pk b)
+
+@[simp] theorem IND_CPA_responder_state (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (pk : PK) (b : Bool) : (encAlg.IND_CPA_responder pk b).State = encAlg.IND_CPA_Cache := rfl
+
+/-- Running a program against the responder is the evaluation distribution of the existing
+cached `StateT ProbComp` interpretation. -/
+theorem run_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (pk : PK) (b : Bool) {γ : Type} (oa : OracleComp encAlg.IND_CPA_oracleSpec γ)
+    (cache : encAlg.IND_CPA_Cache) :
+    (simulateQ (encAlg.IND_CPA_responder pk b).toQueryImpl oa).run cache =
+      𝒟[(simulateQ (encAlg.IND_CPA_queryImpl' pk b) oa).run cache] :=
+  ProbResponder.run_simulateQ_toQueryImpl_ofStateQueryImpl
+    (encAlg.IND_CPA_queryImpl' pk b) oa cache
+
+/-- Machine-level reading of the existing IND-CPA oracle execution: any machine implementing
+the program adversary within fuel `k` has exactly the same joint output/cache distribution. -/
+theorem runAgainst_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (adversary : encAlg.IND_CPA_adversary)
+    (machine : OracleMachine encAlg.IND_CPA_oracleSpec PK Bool) {k : ℕ}
+    (himp : machine.ImplementsWithin adversary k) (pk : PK) (b : Bool)
+    (cache : encAlg.IND_CPA_Cache) :
+    machine.runAgainst (encAlg.IND_CPA_responder pk b) k (cache, machine.init pk) =
+      (fun p => (some p.1, p.2)) <$>
+        𝒟[(simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache] :=
+  calc machine.runAgainst (encAlg.IND_CPA_responder pk b) k (cache, machine.init pk)
+      = (machine.runWithInput (encAlg.IND_CPA_responder pk b).toQueryImpl k pk).run cache :=
+        rfl
+    _ = (some <$> simulateQ (encAlg.IND_CPA_responder pk b).toQueryImpl
+          (adversary pk)).run cache := by
+        rw [himp.simulateQ_run_eq (encAlg.IND_CPA_responder pk b).toQueryImpl pk]
+    _ = (fun p => (some p.1, p.2)) <$>
+          𝒟[(simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache] := by
+        rw [StateT.run_map, run_IND_CPA_responder_eq]
+
+/-! ## Left/right message swapping as a PolyFun reduction -/
+
+/-- The interface lens that swaps the two messages in a challenge query. Responses are
+unchanged. -/
+def IND_CPA_swapChallengeLens :
+    PFunctor.Lens (M × M →ₒ C).toPFunctor (M × M →ₒ C).toPFunctor where
+  toFunA mm := (mm.2, mm.1)
+  toFunB _ := id
+
+/-- The IND-CPA interface reduction that leaves randomness queries alone and swaps the two
+messages at every challenge query. -/
+def IND_CPA_swapLens (encAlg : AsymmEncAlg ProbComp M PK SK C) :
+    PFunctor.Lens encAlg.IND_CPA_oracleSpec.toPFunctor
+      encAlg.IND_CPA_oracleSpec.toPFunctor :=
+  PFunctor.Lens.sumMap (PFunctor.Lens.id unifSpec.toPFunctor) IND_CPA_swapChallengeLens
+
+omit [DecidableEq M] in
+@[simp] theorem IND_CPA_swapLens_query_left (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (t : unifSpec.Domain) : encAlg.IND_CPA_swapLens.toFunA (.inl t) = .inl t := rfl
+
+omit [DecidableEq M] in
+@[simp] theorem IND_CPA_swapLens_query_right (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (mm : M × M) : encAlg.IND_CPA_swapLens.toFunA (.inr mm) = .inr (mm.2, mm.1) := rfl
+
+omit [DecidableEq M] in
+/-- Wrapping an IND-CPA machine with message swapping is exactly responder pullback along the
+same PolyFun lens: a one-line specialization of the generic wrap/pullback adjunction
+`OracleMachine.runAgainst_wrap`, with no protocol-specific run induction. -/
+theorem runAgainst_IND_CPA_swap (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (machine : OracleMachine encAlg.IND_CPA_oracleSpec PK Bool)
+    (R : ProbResponder encAlg.IND_CPA_oracleSpec) (k : ℕ) (r : R.State)
+    (s : machine.State) :
+    OracleMachine.runAgainst (machine.wrap encAlg.IND_CPA_swapLens) R k (r, s) =
+      machine.runAgainst (R.pullback encAlg.IND_CPA_swapLens) k (r, s) :=
+  OracleMachine.runAgainst_wrap encAlg.IND_CPA_swapLens machine R k r s
 
 /-- Oracle IND-CPA experiment with caching on the LR oracle. -/
 def IND_CPA_experiment {encAlg : AsymmEncAlg ProbComp M PK SK C}

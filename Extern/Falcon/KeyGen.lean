@@ -4,9 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 import LatticeCrypto.Falcon.Concrete.NTRUSolver
-import LatticeCrypto.Falcon.Concrete.FFT
+import Extern.Falcon.FFT
 import LatticeCrypto.Falcon.Concrete.NTT
-import LatticeCrypto.Falcon.Concrete.SamplerZ
+import Extern.Falcon.SamplerZ
 
 /-!
 # Concrete Falcon Key Generation

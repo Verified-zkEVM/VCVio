@@ -160,12 +160,19 @@ This keeps ordinary rule ordering stable when new `@[vcspec]` lemmas are added.
 
 | Tactic | Goal shape | What it does |
 |--------|-----------|--------------|
-| `handler_step` | handler-heavy `QueryImpl` / `simulateQ` / `StateT` goals | Runs one `simp only [handler_simp]` normalization pass to expose the next handler body or run-shape |
+| `handler_step` | handler-heavy `FreeM` / `QueryImpl` / `simulateQ` / transformer goals | Runs one `simp only [handler_nf, handler_simp]` normalization pass to expose the next handler body or run-shape |
 
 `handler_step` is deliberately thin. Use it when a proof is stuck behind
 handler combinators such as cache overlays, logging handlers, counting
 handlers, or state-transformer maps; then continue with `vcstep`, `rvcstep`,
 `rvcgen`, or direct proof steps.
+
+PolyFun owns the generic `handler_nf` rules for `FreeM`,
+`PFunctor.Handler.Stateful`, `StateT`, and standard `WriterT`. VCVio's
+`handler_simp` set adds only oracle simulation, query instrumentation,
+caching, and local WriterT compatibility equations. Downstream code can use
+the two sets independently; `handler_step` composes them in generic-to-specific
+order.
 
 **Opt-in `wp`-rewrite lookup**: mark an equational rewrite of shape
 `wp comp post = …` with `@[wpStep]` to extend the inner `wp`-stepping driver
@@ -562,6 +569,19 @@ Building on `Sym.Pattern` + `Sym.DiscrTree` means our registries share the
 same pattern preprocessing and lookup cost profile as future core tactics,
 and the migration to `Sym.Simp.*`-driven rewriting is a localised follow-up
 in two registry files rather than a framework rewrite.
+
+**Key alignment invariant**: `Sym.DiscrTree.getMatch` is purely structural, so
+goal-side query terms must expose the same oracle-wrapper shapes as the pattern
+side. All registry query functions therefore route the extracted computation
+through `symMatchKey` (`Tactics/Common/Core.lean`), which recursively unfolds
+only `OracleComp`, `OracleQuery`, and `OracleSpec.toPFunctor`. This targeted
+normalization is necessary because `OracleComp` is a reducible alias of
+`PFunctor.FreeM`, while deliberately avoiding `Sym.preprocessType`: applying
+that declaration-oriented preprocessing to terms can unfold reducible user
+programs and panic when a matcher contains loose de Bruijn variables. Without
+the targeted unfolding, lookup can silently return no candidates (symptom:
+`vcstep` reports "no matching rule applied" while the corresponding manual
+rewrite works).
 
 ### Registries and what they index
 

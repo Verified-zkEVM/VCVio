@@ -160,7 +160,7 @@ private structure BalancedDecomp (alpha m : ℕ) : Prop where
   hqm1 : alpha * m = modulus - 1
   hsmall : 2 * (alpha + 1) < modulus
 
-private def BalancedDecomp.ofApproved {p : Params} (hp : p.isApproved) :
+private theorem BalancedDecomp.ofApproved {p : Params} (hp : p.isApproved) :
     BalancedDecomp (2 * p.gamma2) ((modulus - 1) / (2 * p.gamma2)) where
   hα     := by rcases hp with rfl | rfl | rfl <;> decide
   heven  := by simp only [even_two, Even.mul_right]
@@ -651,6 +651,23 @@ theorem highBitsShift_injective_of_isApproved (p : Params)
   have hcoeff : (2 * p.gamma2 : ℕ) * x.get j = (2 * p.gamma2 : ℕ) * y.get j := by
     simpa [highBitsShift] using congrArg (fun v : Rq => v.get j) hxy
   exact IsUnit.mul_right_injective (BalancedDecomp.ofApproved hp).hunit hcoeff
+
+/-- For approved parameters, each `HighBits` coefficient lies in the valid commitment window
+`[0, (q - 1) / (2 γ₂) - 1]`: its `ZMod` value is strictly below `(q - 1) / (2 γ₂)`. This is the
+range produced by Algorithm 37 and the domain on which the `w₁` packer is injective. -/
+theorem highBits_coeff_val_lt_m (p : Params) (hp : p.isApproved) (r : Rq) (i : Fin ringDegree) :
+    ((highBits p r).get i).val < (modulus - 1) / (2 * p.gamma2) := by
+  have hcoeff : highBitsCoeff (r.get i) p.gamma2 < (modulus - 1) / (2 * p.gamma2) := by
+    have ctx := BalancedDecomp.ofApproved hp
+    have h2 : (2 * p.gamma2) / 2 = p.gamma2 := by
+      rcases hp with rfl | rfl | rfl <;> decide
+    have := highBitsCoeff_lt_m ctx (r.get i)
+    rwa [h2] at this
+  have hval : ((highBits p r).get i).val = highBitsCoeff (r.get i) p.gamma2 := by
+    simp only [highBits, Vector.get_ofFn]
+    rw [ZMod.val_natCast_of_lt (lt_of_lt_of_le hcoeff (by
+      rcases hp with rfl | rfl | rfl <;> decide))]
+  rw [hval]; exact hcoeff
 
 /-- Concrete `Power2RoundOps` with `Power2High = Rq`. -/
 def concretePower2RoundOps : MLDSA.Power2RoundOps where

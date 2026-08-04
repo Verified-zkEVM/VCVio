@@ -11,8 +11,8 @@ import LatticeCrypto.Falcon.Concrete.FloatLike
 import LatticeCrypto.Falcon.Concrete.NTT
 import LatticeCrypto.Falcon.Concrete.Encoding
 import LatticeCrypto.Falcon.Concrete.FXR
-import LatticeCrypto.Falcon.Concrete.SamplerZ
-import LatticeCrypto.Falcon.Concrete.Sampling
+import Extern.Falcon.SamplerZ
+import Extern.Falcon.Sampling
 import VCVio.OracleComp.Constructions.SampleableType
 
 /-!

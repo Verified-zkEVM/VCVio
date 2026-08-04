@@ -69,7 +69,11 @@ lemma withStateOracle_evalDist_bind_pure
     (hashImpl : QueryImpl hashSpec (StateT σ ProbComp)) (s : σ)
     {α β : Type} (mx : OracleComp (unifSpec + hashSpec) α) (f : α → β) :
     (SPMFSemantics.withStateOracle hashImpl s).evalDist (mx >>= fun x => pure (f x)) =
-      f <$> (SPMFSemantics.withStateOracle hashImpl s).evalDist mx :=
-  withStateOracle_evalDist_map hashImpl s f mx
+      f <$> (SPMFSemantics.withStateOracle hashImpl s).evalDist mx := by
+  calc
+    _ = (SPMFSemantics.withStateOracle hashImpl s).evalDist (f <$> mx) := by
+      rw [map_eq_bind_pure_comp]
+      rfl
+    _ = _ := withStateOracle_evalDist_map hashImpl s f mx
 
 end SPMFSemantics

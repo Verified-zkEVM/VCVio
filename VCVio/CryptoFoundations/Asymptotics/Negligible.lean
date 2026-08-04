@@ -27,7 +27,7 @@ open ENNReal Asymptotics Filter
 def negligible (f : ℕ → ℝ≥0∞) : Prop :=
   SuperpolynomialDecay atTop (fun x => ↑x) f
 
-@[simp] def negligible_iff (f : ℕ → ℝ≥0∞) :
+@[simp] theorem negligible_iff (f : ℕ → ℝ≥0∞) :
     negligible f ↔ SuperpolynomialDecay atTop (fun x => ↑x) f := Iff.rfl
 
 lemma negligible_zero : negligible 0 := superpolynomialDecay_zero _ _

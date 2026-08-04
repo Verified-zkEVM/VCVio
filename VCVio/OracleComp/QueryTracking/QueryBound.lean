@@ -80,7 +80,11 @@ lemma isQueryBound_query_iff (t : ι) (b : B)
     (canQuery : ι → B → Prop) (cost : ι → B → B) :
     IsQueryBound (liftM (spec.query t) : OracleComp spec _) b canQuery cost ↔
     canQuery t b :=
-  PFunctor.FreeM.isRollBound_liftA_iff (P := spec.toPFunctor) t b canQuery cost
+  by
+    simpa [IsQueryBound, OracleSpec.query_def, OracleComp.liftM_def,
+      PFunctor.FreeM.liftObj] using
+      PFunctor.FreeM.isRollBound_lift_iff
+        (P := spec.toPFunctor) t b canQuery cost
 
 private lemma isQueryBound_map_aux (oa : OracleComp spec α) (f : α → β)
     (canQuery : ι → B → Prop) (cost : ι → B → B) :

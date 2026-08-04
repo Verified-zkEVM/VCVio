@@ -23,7 +23,7 @@ A binding adversary outputting two openings `(c, m₁, s₁, m₂, s₂)` with
 `bindingAdvantage H.toCommitment A ≤ keyedCRAdvantage H (bindingAdv_toCRAdv A)`.
 
 This is the standard-model layer of the
-[#284](https://github.com/Verified-zkEVM/VCV-io/issues/284) consolidation
+[#284](https://github.com/Verified-zkEVM/VCVio/issues/284) consolidation
 chain `binding ≤ keyed-CR ≤ birthday`.
 
 ## Main Definitions
