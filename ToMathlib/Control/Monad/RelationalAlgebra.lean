@@ -473,9 +473,9 @@ noncomputable instance instExceptTRight (ε : Type u) :
           simp [gRun]
     exact le_trans hmono <|
       by
-        simpa [ExceptT.run_bind, gRun, collapse] using
-          (MAlgRelOrdered.rwp_bind_le (m₁ := m₁) (m₂ := m₂) (l := l)
-            x y.run f gRun collapse)
+        convert MAlgRelOrdered.rwp_bind_le (m₁ := m₁) (m₂ := m₂) (l := l)
+          x y.run f gRun collapse using 1
+        all_goals rfl
 
 /-- Left `ExceptT` lift (interpreting exceptions as `⊥`). -/
 noncomputable instance instExceptTLeft (ε : Type u) :
@@ -520,9 +520,9 @@ noncomputable instance instExceptTLeft (ε : Type u) :
           simp [fRun]
     exact le_trans hmono <|
       by
-        simpa [ExceptT.run_bind, fRun, collapse] using
-          (MAlgRelOrdered.rwp_bind_le (m₁ := m₁) (m₂ := m₂) (l := l)
-            x.run y fRun g collapse)
+        convert MAlgRelOrdered.rwp_bind_le (m₁ := m₁) (m₂ := m₂) (l := l)
+          x.run y fRun g collapse using 1
+        all_goals rfl
 
 end FailureInstances
 
@@ -584,7 +584,7 @@ instance instStrictBindStateTLeft [StrictBind m₁ m₂ l] (σ : Type u) :
     have h := StrictBind.rwp_bind (m₁ := m₁) (m₂ := m₂) (l := l)
       (x := x.run s) (y := y) (f := fun xs => (f xs.1).run xs.2) (g := g)
       (post := fun zs d => post zs.1 d zs.2)
-    simpa [StateT.run_bind] using h
+    convert h using 1 <;> rfl
 
 /-- Strictness lifts through the right `StateT` instance. -/
 instance instStrictBindStateTRight [StrictBind m₁ m₂ l] (σ : Type u) :
@@ -594,7 +594,7 @@ instance instStrictBindStateTRight [StrictBind m₁ m₂ l] (σ : Type u) :
     have h := StrictBind.rwp_bind (m₁ := m₁) (m₂ := m₂) (l := l)
       (x := x) (y := y.run s) (f := f) (g := fun ys => (g ys.1).run ys.2)
       (post := fun c td => post c td.1 td.2)
-    simpa [StateT.run_bind] using h
+    convert h using 1 <;> rfl
 
 /-- Strictness lifts through the two-sided `StateT` instance. -/
 instance instStrictBindStateTBoth [StrictBind m₁ m₂ l] (σ₁ σ₂ : Type u) :
@@ -605,7 +605,7 @@ instance instStrictBindStateTBoth [StrictBind m₁ m₂ l] (σ₁ σ₂ : Type u
       (x := x.run s₁) (y := y.run s₂)
       (f := fun p₁ => (f p₁.1).run p₁.2) (g := fun p₂ => (g p₂.1).run p₂.2)
       (post := fun p₁ p₂ => post p₁.1 p₂.1 p₁.2 p₂.2)
-    simpa [StateT.run_bind] using h
+    convert h using 1 <;> rfl
 
 end StrictBindInstances
 

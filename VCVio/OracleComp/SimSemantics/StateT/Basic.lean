@@ -15,7 +15,7 @@ This file gives lemmas about `QueryImpl spec m` when `m` is something like `Stat
 TODO: should generalize things to `MonadState` once laws for it exist.
 -/
 
-universe u v w
+universe u v w x
 
 open OracleSpec
 
@@ -58,9 +58,9 @@ theorem simulateQ_mapStateTBase_run' {ι₀ ι₁ : Type _}
 /-- Given implementations for oracles in `spec₁` and `spec₂` in terms of state monads for
 two different contexts `σ₁` and `σ₂`, implement the combined set `spec₁ + spec₂` in terms
 of a combined `σ₁ × σ₂` state. -/
-def parallelStateT {ι₁ ι₂ : Type _}
-    {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {m : Type _ → Type _} [Functor m] {σ₁ σ₂ : Type _}
+def parallelStateT {ι₁ : Type u} {ι₂ : Type v}
+    {spec₁ : OracleSpec.{u, w} ι₁} {spec₂ : OracleSpec.{v, w} ι₂}
+    {m : Type w → Type x} [Functor m] {σ₁ σ₂ : Type w}
     (impl₁ : QueryImpl spec₁ (StateT σ₁ m))
     (impl₂ : QueryImpl spec₂ (StateT σ₂ m)) :
     QueryImpl (spec₁ + spec₂) (StateT (σ₁ × σ₂) m)
@@ -88,9 +88,9 @@ def flattenStateT {ι : Type _} {spec : OracleSpec ι}
 
 /-- Indexed version of `QueryImpl.parallelStateT`. Note that `m` cannot vary with `t`.
 dtumad: The `Function.update` thing is nice but forces `DecidableEq`. -/
-def piStateT {τ : Type} [DecidableEq τ] {ι : τ → Type _}
-    {spec : (t : τ) → OracleSpec (ι t)}
-    {m : Type _ → Type _} [Monad m] {σ : τ → Type _}
+def piStateT {τ : Type} [DecidableEq τ] {ι : τ → Type v}
+    {spec : (t : τ) → OracleSpec.{v, w} (ι t)}
+    {m : Type w → Type x} [Monad m] {σ : τ → Type w}
     (impl : (t : τ) → QueryImpl (spec t) (StateT (σ t) m)) :
     QueryImpl (OracleSpec.sigma spec) (StateT ((t : τ) → σ t) m)
   | ⟨t, q⟩ => StateT.mk fun s => Prod.map id (Function.update s t) <$> (impl t q).run (s t)
@@ -98,8 +98,8 @@ def piStateT {τ : Type} [DecidableEq τ] {ι : τ → Type _}
 /-- Lift a stateful query implementation to a `(state × Bool)`-stateful version that threads
 the boolean (bad) flag unchanged. The output value and updated state come from the
 underlying `impl`; the second `Bool` component is preserved verbatim across each query. -/
-def withBadFlag {ι : Type _} {spec : OracleSpec ι}
-    {m : Type _ → Type _} [Functor m] {σ : Type _}
+def withBadFlag {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    {m : Type v → Type w} [Functor m] {σ : Type v}
     (impl : QueryImpl spec (StateT σ m)) :
     QueryImpl spec (StateT (σ × Bool) m) := fun t =>
   StateT.mk fun | (s, b) => Prod.map id (·, b) <$> (impl t).run s
@@ -107,8 +107,8 @@ def withBadFlag {ι : Type _} {spec : OracleSpec ι}
 /-- Lift a stateful query implementation to a `(state × Bool)`-stateful version that OR-updates
 the boolean (bad) flag with a predicate `f` evaluated on the pre-state and produced output.
 The flag is monotone: if it was already `true`, it stays `true`. -/
-def withBadUpdate {ι : Type _} {spec : OracleSpec ι}
-    {m : Type _ → Type _} [Functor m] {σ : Type _}
+def withBadUpdate {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    {m : Type v → Type w} [Functor m] {σ : Type v}
     (impl : QueryImpl spec (StateT σ m))
     (f : (t : spec.Domain) → σ → spec.Range t → Bool) :
     QueryImpl spec (StateT (σ × Bool) m) := fun t =>
@@ -116,16 +116,16 @@ def withBadUpdate {ι : Type _} {spec : OracleSpec ι}
 
 /-- Run-shape of `withBadFlag`: the lifted implementation maps the underlying run by tagging
 each `(value, state)` pair with the unchanged bad flag `b`. -/
-@[simp, grind =] lemma withBadFlag_apply_run {ι : Type _} {spec : OracleSpec ι}
-    {m : Type _ → Type _} [Functor m] {σ : Type _}
+@[simp, grind =] lemma withBadFlag_apply_run {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    {m : Type v → Type w} [Functor m] {σ : Type v}
     (impl : QueryImpl spec (StateT σ m)) (t : spec.Domain) (s : σ) (b : Bool) :
     (impl.withBadFlag t).run (s, b) =
       (fun (vs : spec.Range t × σ) => (vs.1, vs.2, b)) <$> (impl t).run s := rfl
 
 /-- Run-shape of `withBadUpdate`: the lifted implementation maps the underlying run by
 appending the OR-updated bad flag `b || f t s vs.1`. -/
-@[simp, grind =] lemma withBadUpdate_apply_run {ι : Type _} {spec : OracleSpec ι}
-    {m : Type _ → Type _} [Functor m] {σ : Type _}
+@[simp, grind =] lemma withBadUpdate_apply_run {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    {m : Type v → Type w} [Functor m] {σ : Type v}
     (impl : QueryImpl spec (StateT σ m))
     (f : (t : spec.Domain) → σ → spec.Range t → Bool)
     (t : spec.Domain) (s : σ) (b : Bool) :

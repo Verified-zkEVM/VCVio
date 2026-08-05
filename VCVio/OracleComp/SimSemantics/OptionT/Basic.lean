@@ -129,7 +129,9 @@ lemma simulateQ_optionT_vector_mapM_pure {k : ℕ}
       Option.map List.toArray <$>
         ((xs.toList.mapM f : OptionT (OracleComp spec) (List β)) :
           OracleComp spec (Option (List β))) := by
-    simpa only [OptionT.run_map] using congrArg OptionT.run h_vl
+    have h := congrArg OptionT.run h_vl
+    rw [OptionT.run_map, OptionT.run_map] at h
+    exact h
   have h_sim := congrArg (simulateQ impl) h_run
   rw [simulateQ_map, simulateQ_map, simulateQ_optionT_list_mapM_pure impl f g xs.toList hfg]
     at h_sim

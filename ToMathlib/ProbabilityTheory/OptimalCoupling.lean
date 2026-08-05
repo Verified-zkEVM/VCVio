@@ -62,7 +62,11 @@ lemma map_fst_eval (c : SPMF (α × β)) (a : α) :
     · intro a' _ ha'
       have ha'' : a ≠ a' := by simpa [eq_comm] using ha'
       simp [ha'']
-  simpa [hsimp] using hmain
+  simp only [Option.map_none, reduceCtorEq, ↓reduceIte, zero_add, Option.map_some,
+    Option.some.injEq]
+  change (∑ x, if a = x.1 then c.toPMF (some x) else 0) =
+    ∑ b, c.toPMF (some (a, b))
+  exact hmain
 
 open scoped Classical in
 lemma map_snd_eval (c : SPMF (α × β)) (b : β) :
@@ -91,7 +95,11 @@ lemma map_snd_eval (c : SPMF (α × β)) (b : β) :
     · intro b' _ hb'
       have hb'' : b ≠ b' := by simpa [eq_comm] using hb'
       simp [hb'']
-  simpa [hsimp] using hmain
+  simp only [Option.map_none, reduceCtorEq, ↓reduceIte, zero_add, Option.map_some,
+    Option.some.injEq]
+  change (∑ x, if b = x.2 then c.toPMF (some x) else 0) =
+    ∑ a, c.toPMF (some (a, b))
+  exact hmain
 
 private lemma pmf_none_eq {γ : Type u} [Finite γ] (p : PMF (Option γ)) :
     letI := Fintype.ofFinite γ

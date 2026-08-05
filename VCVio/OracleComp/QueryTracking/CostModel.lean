@@ -136,7 +136,7 @@ expectation of the instrumented `costDist`. -/
 theorem expectedCost_eq_wp_costDist (oa : OracleComp spec α) (cm : CostModel spec ω)
     (val : ω → ℝ≥0∞) :
     expectedCost oa cm val =
-      wp (costDist oa cm) (fun z => val z.2) :=
+      wp (costDist oa cm) (fun z => val (Multiplicative.toAdd z.2)) :=
   AddWriterT.expectedCost_eq_wp_run _ val
 
 @[simp]
@@ -149,7 +149,7 @@ theorem expectedCost_pure (x : α) (cm : CostModel spec ω)
 This is the key bridge from worst-case (support) bounds to expected bounds. -/
 theorem expectedCost_le_of_support_bound (oa : OracleComp spec α) (cm : CostModel spec ω)
     (val : ω → ℝ≥0∞) (c : ℝ≥0∞)
-    (h : ∀ z ∈ support (costDist oa cm), val z.2 ≤ c) :
+    (h : ∀ z ∈ support (costDist oa cm), val (Multiplicative.toAdd z.2) ≤ c) :
     expectedCost oa cm val ≤ c := by
   rw [expectedCost_eq_wp_costDist, ← wp_const (costDist oa cm) c, wp_eq_tsum, wp_eq_tsum]
   refine ENNReal.tsum_le_tsum fun z => ?_
@@ -174,7 +174,7 @@ theorem worstCaseCostBound_iff_support_bound [AddCommMonoid ω] [Preorder ω]
     [IsUniformSpec spec]
     (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) :
     WorstCaseCostBound oa cm bound ↔
-      ∀ z ∈ support (costDist oa cm), z.2 ≤ bound := by
+      ∀ z ∈ support (costDist oa cm), Multiplicative.toAdd z.2 ≤ bound := by
   unfold WorstCaseCostBound costDist instrumentedRun AddWriterT.PathwiseCostAtMost
   rfl
 
@@ -205,7 +205,8 @@ theorem WorstCaseCostBound.toExpectedCostBound [Preorder ω]
 The probability that the valued cost exceeds `t`, times `t`, is at most `expectedCost`. -/
 theorem probEvent_cost_gt_mul_le_expectedCost
     (oa : OracleComp spec α) (cm : CostModel spec ω) (val : ω → ℝ≥0∞) (t : ℝ≥0∞) :
-    Pr[ fun z => t < val z.2 | costDist oa cm] * t ≤ expectedCost oa cm val := by
+    Pr[ fun z => t < val (Multiplicative.toAdd z.2) | costDist oa cm] * t ≤
+      expectedCost oa cm val := by
   rw [expectedCost_eq_wp_costDist, probEvent_eq_wp_indicator, ← wp_const_mul]
   exact wp_mono _ fun z => by split_ifs with h <;> simp [h, le_of_lt]
 
@@ -213,7 +214,8 @@ theorem probEvent_cost_gt_mul_le_expectedCost
 theorem probEvent_cost_gt_le_expectedCost_div
     (oa : OracleComp spec α) (cm : CostModel spec ω) (val : ω → ℝ≥0∞)
     (t : ℝ≥0∞) (ht : 0 < t) (ht' : t ≠ ⊤) :
-    Pr[ fun z => t < val z.2 | costDist oa cm] ≤ expectedCost oa cm val / t :=
+    Pr[ fun z => t < val (Multiplicative.toAdd z.2) | costDist oa cm] ≤
+      expectedCost oa cm val / t :=
   (ENNReal.le_div_iff_mul_le (.inl ht.ne') (.inl ht')).mpr
     (probEvent_cost_gt_mul_le_expectedCost oa cm val t)
 
@@ -274,7 +276,8 @@ private lemma mem_support_costDist_unit_query_bind_of_mem_support
 private theorem isPerIndexQueryBound_of_unit_support_bound
     [DecidableEq ι] [IsUniformSpec spec]
     {oa : OracleComp spec α} {bound : ℕ}
-    (hSupport : ∀ z ∈ support (costDist oa CostModel.unit), z.2 ≤ bound) :
+    (hSupport : ∀ z ∈ support (costDist oa CostModel.unit),
+      Multiplicative.toAdd z.2 ≤ bound) :
     IsPerIndexQueryBound oa (fun _ => bound) := by
   induction oa using OracleComp.inductionOn generalizing bound with
   | pure x =>
@@ -309,7 +312,7 @@ theorem WorstCaseCostBound.toIsPerIndexQueryBound_unit
     (h : WorstCaseCostBound oa CostModel.unit bound) :
     IsPerIndexQueryBound oa (fun _ => bound) :=
   isPerIndexQueryBound_of_unit_support_bound fun z hz => by
-    simpa [WorstCaseCostBound, costDist, instrumentedRun] using h z hz
+    exact h z hz
 
 private lemma sum_update_pred_eq
     [DecidableEq ι] [Fintype ι]
@@ -375,4 +378,3 @@ abbrev probCompUnitQueryRun {β : Type} (oa : ProbComp β) :
   simulateQ ((QueryImpl.ofLift unifSpec ProbComp).withUnitCost) oa
 
 end OracleComp
-

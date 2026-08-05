@@ -398,6 +398,7 @@ theorem game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
       let h ← liftM ($ᵗ M)
       let c : Rand × M := (tdp.forward pk r, h)
       adv.guess st c)).run' ∅
+  change Pr[= true | do let b ← $ᵗ Bool; let b' ← f b; return decide (b = b')] = 1 / 2
   simpa [game2, f] using
     (probOutput_decide_eq_uniformBool_half f (by rfl))
 

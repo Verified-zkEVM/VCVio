@@ -218,7 +218,7 @@ class Monad.AssertAssume (m : Type u → Type v) [∀ α, Preorder (m α)] where
   assert_assume {α} : _root_.AssertAssume (m α)
 
 section KanExtension
-variable {w : Type u → Type v} [Monad w] [OrderedMonad w]
+variable {w : Type u → Type v} [OrderedMonad w]
 
 def leftKanExtension {α β : Type u} (f : w β) (p : w α) :=
   { ext : α → w β // p >>= ext ≤ₘ f ∧ (∀ w', p >>= w' ≤ₘ f → ∀ b, w' b ≤ₘ ext b) }

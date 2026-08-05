@@ -391,8 +391,15 @@ theorem run_cached_logging_proj_eq_cachingOracle
       rw [simulateQ_query_bind, StateT.run_bind, simulateQ_query_bind, StateT.run_bind]
       cases ht : cache₀ t with
       | some u =>
-          simp [ht, StateT.run_bind, StateT.run_get, monad_norm]
-          simpa [simulateQ_map, StateT.map, StateT.run, Function.comp_def] using ih u cache₀
+          simp only [OracleQuery.input_query, QueryImpl.withCaching_apply,
+            QueryImpl.ofLift_apply, monadLift_self, StateT.run_bind, StateT.run_get,
+            pure_bind, ht, id_eq, simulateQ_map, StateT.run_map,
+            map_bind, Functor.map_map, Prod.map_apply]
+          rw [show (fun a ↦ (a.1.1, a.2)) = Prod.map Prod.fst id by
+            funext a
+            rcases a with ⟨⟨x, l⟩, c⟩
+            rfl]
+          exact ih u cache₀
       | none =>
           simp only [OracleQuery.input_query, QueryImpl.withCaching_apply,
             QueryImpl.ofLift_apply, monadLift_self, StateT.run_bind,
@@ -402,8 +409,11 @@ theorem run_cached_logging_proj_eq_cachingOracle
             bind_map_left, map_bind, Prod.map_apply]
           refine bind_congr ?_
           intro u
-          simpa [simulateQ_map, StateT.map, StateT.run, Function.comp_def] using
-            ih u (cache₀.cacheQuery t u)
+          rw [show (fun a ↦ (a.1.1, a.2)) = Prod.map Prod.fst id by
+            funext a
+            rcases a with ⟨⟨x, l⟩, c⟩
+            rfl]
+          exact ih u (cache₀.cacheQuery t u)
 
 omit [DecidableEq M] [DecidableEq S] [Finite C] [Inhabited C] in
 lemma queryLog_countQ_pos_of_mem
@@ -553,7 +563,7 @@ lemma wp_querySaltIndicator_prepend_eq_one
       (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
         OracleComp.ProgramLogic.propInd
           (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) = 1 := by
-  rw [simulateQ_map]
+  rw [simulateQ_map, StateT.run_map]
   change OracleComp.ProgramLogic.wp
       (((fun zz : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
           ((zz.1.1,
@@ -602,7 +612,7 @@ lemma wp_querySaltIndicator_prepend_eq_of_ne
       (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
         OracleComp.ProgramLogic.propInd
           (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) := by
-  rw [simulateQ_map]
+  rw [simulateQ_map, StateT.run_map]
   change OracleComp.ProgramLogic.wp
       (((fun zz : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
           ((zz.1.1,
@@ -774,7 +784,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
               simp only [cachingOracle.apply_eq, liftM, MonadLiftT.monadLift, MonadLift.monadLift,
                 StateT.run_bind, StateT.run_get, pure_bind, hcache_none]
               change (StateT.lift
-                  (PFunctor.FreeM.lift ((CMOracle M S C).query t))
+                  (PFunctor.FreeM.lift (P := (CMOracle M S C).toPFunctor) t)
                   (cache₀.cacheQuery (m, s) cm) >>= _) = _
               simp only [StateT.lift, modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
                 StateT.modifyGet, StateT.run, monad_norm]
@@ -789,7 +799,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
               simp only [cachingOracle.apply_eq, liftM, MonadLiftT.monadLift, MonadLift.monadLift,
                 StateT.run_bind, StateT.run_get, pure_bind, ht]
               change (StateT.lift
-                (PFunctor.FreeM.lift ((CMOracle M S C).query t))
+                (PFunctor.FreeM.lift (P := (CMOracle M S C).toPFunctor) t)
                 cache₀ >>= _) = _
               simp only [StateT.lift, monad_norm,
                 modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,

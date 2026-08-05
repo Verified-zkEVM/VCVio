@@ -194,9 +194,9 @@ private lemma fischlinSearchAuxWithAddCost_pathwiseCostAtMost
       (challenges.length • w) := by
   induction challenges generalizing best with
   | nil =>
-      simpa using
-        (AddWriterT.pathwiseCostAtMost_pure
-          (m := m) ((best.map fun (ω, resp, _) => (ω, resp)) : Option (Chal × Resp)))
+      rw [fischlinSearchAuxWithAddCost]
+      simpa using AddWriterT.pathwiseCostAtMost_pure
+        (m := m) ((best.map fun (ω, resp, _) => (ω, resp)) : Option (Chal × Resp))
   | cons chal rest ih =>
       let hashStep : Resp → AddWriterT κ m (Option (Chal × Resp)) := fun resp =>
         (AddWriterT.addTell (M := m) (costFn ⟨pk, msg, comList, i, chal, resp⟩) :
@@ -213,7 +213,8 @@ private lemma fischlinSearchAuxWithAddCost_pathwiseCostAtMost
                       if h.val < h'.val then some (chal, resp, h) else some (ω', resp', h'))
                   costFn
       change AddWriterT.PathwiseCostAtMost
-        ((monadLift (σ.respond pk sk sc chal) : AddWriterT κ m Resp) >>= hashStep)
+        ((monadLift ((monadLift (σ.respond pk sk sc chal) : m Resp)) : AddWriterT κ m Resp) >>=
+          hashStep)
         ((rest.length + 1) • w)
       have hstep : ∀ resp, AddWriterT.PathwiseCostAtMost (hashStep resp) (w + rest.length • w) := by
         intro resp
@@ -442,9 +443,10 @@ theorem sign_usesAtMostRhoCardOmegaQueries
     have hstep :
         AddWriterT.QueryBoundedAboveBy
           (liftM (σ.commit pk sk) : AddWriterT ℕ m (Commit × PrvState)) 0 := by
-      simpa [WriterT.liftM_def] using
-        (AddWriterT.queryBoundedAboveBy_monadLift
-          (monadLift (σ.commit pk sk) : m (Commit × PrvState)))
+      change AddWriterT.QueryBoundedAboveBy
+        (monadLift (monadLift (σ.commit pk sk) : m (Commit × PrvState)) :
+          AddWriterT ℕ m (Commit × PrvState)) 0
+      exact AddWriterT.queryBoundedAboveBy_monadLift _
     simpa [commitComp] using
       (AddWriterT.queryBoundedAboveBy_fin_mOfFn (n := ρ) (k := 0)
         (f := fun _ => (liftM (σ.commit pk sk) : AddWriterT ℕ m (Commit × PrvState)))
@@ -474,11 +476,12 @@ theorem sign_usesAtMostRhoCardOmegaQueries
         match result with
         | some (ω, resp) => pure (comVec i, ω, resp)
         | none => pure (comVec i, default, default)
-      simpa [finish] using congrArg finish
+      convert congrArg finish
         (fischlinSearchAux_eq_withUnitCost
           σ (runtime := runtime) (pk := pk) (sk := sk) (sc := (commits i).2)
           (msg := msg) (comList := comList) (i := i)
-          (challenges := FinEnum.toList Chal) (best := none))
+          (challenges := FinEnum.toList Chal) (best := none)) using 1;
+        rfl
     simpa [HasQuery.UsesAtMostQueries, hsign] using this
   simpa [Nat.zero_add] using
     (AddWriterT.queryBoundedAboveBy_bind (n₁ := 0) (n₂ := ρ * FinEnum.card Chal) hcommit
@@ -556,9 +559,10 @@ theorem sign_usesWeightedQueryCostAtMost
     have hstep :
         AddWriterT.PathwiseCostAtMost
           (liftM (σ.commit pk sk) : AddWriterT κ m (Commit × PrvState)) 0 := by
-      simpa [WriterT.liftM_def] using
-        (AddWriterT.pathwiseCostAtMost_monadLift
-          (m := m) (monadLift (σ.commit pk sk) : m (Commit × PrvState)))
+      change AddWriterT.PathwiseCostAtMost
+        (monadLift (monadLift (σ.commit pk sk) : m (Commit × PrvState)) :
+          AddWriterT κ m (Commit × PrvState)) 0
+      exact AddWriterT.pathwiseCostAtMost_monadLift _
     simpa [commitComp] using
       (AddWriterT.pathwiseCostAtMost_fin_mOfFn (n := ρ) (k := 0)
         (f := fun _ => (liftM (σ.commit pk sk) : AddWriterT κ m (Commit × PrvState)))
@@ -588,11 +592,12 @@ theorem sign_usesWeightedQueryCostAtMost
         match result with
         | some (ω, resp) => pure (comVec i, ω, resp)
         | none => pure (comVec i, default, default)
-      simpa [finish] using congrArg finish
+      convert congrArg finish
         (fischlinSearchAux_eq_withAddCost
           σ (runtime := runtime) (pk := pk) (sk := sk) (sc := (commits i).2)
           (msg := msg) (comList := comList) (i := i)
-          (challenges := FinEnum.toList Chal) (best := none) (costFn := costFn))
+          (challenges := FinEnum.toList Chal) (best := none) (costFn := costFn)) using 1;
+        rfl
     simpa [HasQuery.UsesCostAtMost, hsign] using this
   simpa [zero_add] using
     (AddWriterT.pathwiseCostAtMost_bind (w₁ := 0) (w₂ := ρ • (FinEnum.card Chal • w)) hcommit

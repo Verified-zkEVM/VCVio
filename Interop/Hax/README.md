@@ -5,11 +5,10 @@ to VCVio's `RustOracleComp`.
 
 ## Status
 
-`require Hax` is **active** in `lakefile.lean`, pinned to commit
-`492a34e3` (hax `main` as of 2026-04-16). Hax compiles cleanly against our
-Lean v4.29.0 / Mathlib v4.29.0 stack: `lake build Hax` succeeds in 91 jobs
-with 2 harmless `@[reducible]` warnings in hax's own
-`rust_primitives/USize64.lean`.
+`require Hax` is **disabled** for VCVio's Lean 4.31 baseline. Both the old
+pin (`492a34e3`) and Hax upstream `main` as of 2026-07-09 fail under Lean
+4.31 in Hax's signed-integer lemmas. CI therefore excludes the aggregate
+`Interop` target; the bridge source remains available for later revalidation.
 
 Bridge code is in place:
 

@@ -264,7 +264,10 @@ theorem ofReal_tvDist_map_private_right_bad_le
       show (liftM (pub <$> oa) : SPMF β) = liftM ((liftM (pub <$> oa) : PMF β)) from rfl,
       show (liftM ob : SPMF β) = liftM ((liftM ob : PMF β)) from rfl,
       hp_pub]
-  simpa [hleft, hbase] using h
+  have hbad : Pr[bad | q] = Pr[bad | ob] := by
+    change probEvent (liftM q : SPMF β) bad = probEvent (liftM ob : SPMF β) bad
+    rfl
+  simpa [hleft, hbase, hbad] using h
 
 theorem evalDist_bind_ignore
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
@@ -389,8 +392,11 @@ private lemma evalDist_map_val_pack_eq {ι : Type u} {spec : OracleSpec ι} [IsU
   simp only [Functor.map_map]
   calc
     Pr[= x | (val ∘ pack) <$> 𝒟[oa]]
-        = Pr[ fun y : α => val (pack y) = x | 𝒟[oa]] := by
-          simpa using probEvent_map (mx := 𝒟[oa]) (f := val ∘ pack) (q := fun y : α => y = x)
+      = Pr[ fun y : α => val (pack y) = x | 𝒟[oa]] := by
+          change Pr[= x | (val ∘ pack) <$> 𝒟[oa]] =
+            Pr[((fun y : α => y = x) ∘ val ∘ pack) | 𝒟[oa]]
+          rw [← probEvent_eq_eq_probOutput]
+          exact probEvent_map (mx := 𝒟[oa]) (f := val ∘ pack) (q := fun y : α => y = x)
     _ = Pr[ fun y : α => y = x | 𝒟[oa]] :=
           probEvent_ext fun y hy => by
             simp [hpack y (mem_finSupport_of_mem_support_evalDist (oa := oa) (x := y) hy)]
@@ -838,8 +844,8 @@ private lemma probOutput_diag_le_min_marginals
         _root_.probEvent_mono fun z _ hz => by
           simp [hz]
       _ = Pr[fun x : α => x = a | Prod.fst <$> c.1] := by
-        simpa only [Function.comp_apply] using
-          (probEvent_map (mx := c.1) (f := Prod.fst) (q := fun x : α => x = a)).symm
+        change Pr[((fun x : α => x = a) ∘ Prod.fst) | c.1] = _
+        exact (probEvent_map (mx := c.1) (f := Prod.fst) (q := fun x : α => x = a)).symm
       _ = Pr[= a | Prod.fst <$> c.1] := by
         rw [probEvent_eq_eq_probOutput]
       _ = Pr[= a | 𝒟[oa]] := by
@@ -851,8 +857,8 @@ private lemma probOutput_diag_le_min_marginals
         _root_.probEvent_mono fun z _ hz => by
           simp [hz]
       _ = Pr[fun x : α => x = a | Prod.snd <$> c.1] := by
-        simpa only [Function.comp_apply] using
-          (probEvent_map (mx := c.1) (f := Prod.snd) (q := fun x : α => x = a)).symm
+        change Pr[((fun x : α => x = a) ∘ Prod.snd) | c.1] = _
+        exact (probEvent_map (mx := c.1) (f := Prod.snd) (q := fun x : α => x = a)).symm
       _ = Pr[= a | Prod.snd <$> c.1] := by
         rw [probEvent_eq_eq_probOutput]
       _ = Pr[= a | 𝒟[ob]] := by

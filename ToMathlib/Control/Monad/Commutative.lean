@@ -39,8 +39,8 @@ export Monad.Commutative (bind_comm)
 
 attribute [simp] bind_comm
 
--- Instance for accessing bind_comm directly
-instance {m} [Monad m] [Commutative m] {α β} (ma : m α) (mb : m β) :
+/-- Accessing `bind_comm` directly: any two actions of a `Commutative` monad commute. -/
+theorem commutativeAt_of_commutative {m} [Monad m] [Commutative m] {α β} (ma : m α) (mb : m β) :
     CommutativeAt m ma mb := bind_comm ma mb
 
 -- The main commutativity lemma for composed computations
@@ -61,7 +61,8 @@ instance {m} [Monad m] [Commutative m] {α β} (ma : m α) (mb : m β) :
 
 alias bind_swap := bind_comm_comp
 
-@[simp] theorem CommutativeAt.bind_comm {m} [Monad m] [LawfulMonad m] {α β}
+@[simp] theorem CommutativeAt.bind_comm {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    {α β : Type u}
     (ma : m α) (mb : m β) (h : CommutativeAt m ma mb) :
       (ma >>= fun a => mb >>= fun b => pure (a, b)) =
         (mb >>= fun b => ma >>= fun a => pure (a, b)) :=
@@ -192,7 +193,7 @@ attribute [local instance] Set.monad
 
 /-- The set monad is commutative. This is not registered as an instance similar to how
   `Set.monad` is not registered as an instance. -/
-@[reducible] def Set.monadComm : Commutative Set where
+theorem Set.monadComm : Commutative Set where
   bind_comm := fun ma mb => by
     dsimp [CommutativeAt, Pure.pure, Bind.bind]
     aesop

@@ -774,8 +774,8 @@ theorem tvDist_simulateQ_le_probEvent_bad
       h_bad_eq
   have h_map :
       tvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤ tvDist sim₁ sim₂ := by
-    simpa [sim₁, sim₂, StateT.run'] using
-      (tvDist_map_le (m := OracleComp spec) (α := α × σ) (β := α) Prod.fst sim₁ sim₂)
+    rw [StateT.run']
+    exact tvDist_map_le (m := OracleComp spec) (α := α × σ) (β := α) Prod.fst sim₁ sim₂
   exact le_trans h_map h_tv_joint
 
 /-! ## Distributional "identical until bad"
@@ -899,8 +899,8 @@ theorem tvDist_simulateQ_le_probEvent_bad_dist
   let sim₂ := (simulateQ impl₂ oa).run s₀
   calc tvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
       ≤ tvDist sim₁ sim₂ := by
-        simpa [sim₁, sim₂, StateT.run'] using
-          (tvDist_map_le (m := OracleComp spec) (α := α × σ) (β := α) Prod.fst sim₁ sim₂)
+        rw [StateT.run']
+        exact tvDist_map_le (m := OracleComp spec) (α := α × σ) (β := α) Prod.fst sim₁ sim₂
     _ ≤ Pr[bad ∘ Prod.snd | sim₁].toReal :=
         tvDist_le_probEvent_of_probOutput_eq_of_not (mx := sim₁) (my := sim₂) (bad ∘ Prod.snd)
           (fun xs hxs => by
@@ -1033,8 +1033,8 @@ theorem tvDist_simulateQ_le_probEvent_output_bad
       tvDist ((simulateQ impl₁ oa).run' (s₀, false))
           ((simulateQ impl₂ oa).run' (s₀, false))
         ≤ tvDist sim₁ sim₂ := by
-    simpa [sim₁, sim₂, StateT.run'] using
-      tvDist_map_le (m := OracleComp spec) (α := α × σ × Bool) (β := α) Prod.fst sim₁ sim₂
+    rw [StateT.run']
+    exact tvDist_map_le (m := OracleComp spec) (α := α × σ × Bool) (β := α) Prod.fst sim₁ sim₂
   exact h_map.trans <|
     tvDist_le_probEvent_of_probOutput_eq_of_not (mx := sim₁) (my := sim₂)
       (fun z : α × σ × Bool => z.2.2 = true) h_eq
@@ -1518,9 +1518,9 @@ theorem tvDist_simulateQ_le_qeps_plus_probEvent_output_bad
     tvDist_simulateQ_run_le_qeps_plus_probEvent_output_bad_aux
       impl₁ impl₂ hε h_step_tv h_mono₁ oa h_qb (s₀, false)
   refine le_trans ?_ h_joint
-  simpa [StateT.run'] using
-    (tvDist_map_le (m := OracleComp spec') (α := α × σ × Bool) (β := α) Prod.fst
-      ((simulateQ impl₁ oa).run (s₀, false)) ((simulateQ impl₂ oa).run (s₀, false)))
+  rw [StateT.run']
+  exact tvDist_map_le (m := OracleComp spec') (α := α × σ × Bool) (β := α) Prod.fst
+    ((simulateQ impl₁ oa).run (s₀, false)) ((simulateQ impl₂ oa).run (s₀, false))
 
 end IdenticalUntilBadEpsilon
 
@@ -1716,9 +1716,9 @@ theorem tvDist_simulateQ_le_queryBound_mul_slack_plus_probEvent_bad
     tvDist_simulateQ_run_le_queryBound_mul_slack_plus_probEvent_bad
       impl₁ impl₂ hε S h_step_tv_S h_step_eq_nS h_mono₁ oa h_qb s₀
   refine le_trans ?_ h_joint
-  simpa [StateT.run'] using
-    (tvDist_map_le (m := OracleComp spec') (α := α × σ × Bool) (β := α) Prod.fst
-      ((simulateQ impl₁ oa).run (s₀, false)) ((simulateQ impl₂ oa).run (s₀, false)))
+  rw [StateT.run']
+  exact tvDist_map_le (m := OracleComp spec') (α := α × σ × Bool) (β := α) Prod.fst
+    ((simulateQ impl₁ oa).run (s₀, false)) ((simulateQ impl₂ oa).run (s₀, false))
 
 /-! #### Query-bounded TV budget without a bad event
 
@@ -2415,9 +2415,9 @@ theorem ofReal_tvDist_simulateQ_le_expectedQuerySlack_plus_probEvent_output_bad
           ((simulateQ impl₂ oa).run' (s₀, false))
         ≤ tvDist ((simulateQ impl₁ oa).run (s₀, false))
             ((simulateQ impl₂ oa).run (s₀, false)) := by
-    simpa [StateT.run'] using
-      (tvDist_map_le (m := OracleComp spec') (α := α × σ × Bool) (β := α) Prod.fst
-        ((simulateQ impl₁ oa).run (s₀, false)) ((simulateQ impl₂ oa).run (s₀, false)))
+    rw [StateT.run']
+    exact tvDist_map_le (m := OracleComp spec') (α := α × σ × Bool) (β := α) Prod.fst
+      ((simulateQ impl₁ oa).run (s₀, false)) ((simulateQ impl₂ oa).run (s₀, false))
   exact le_trans (ENNReal.ofReal_le_ofReal h_map_real) h_joint
 
 /-! #### Constant-ε corollary (Phase A2 regression)

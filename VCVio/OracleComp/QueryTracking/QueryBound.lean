@@ -80,7 +80,11 @@ lemma isQueryBound_query_iff (t : ι) (b : B)
     (canQuery : ι → B → Prop) (cost : ι → B → B) :
     IsQueryBound (liftM (spec.query t) : OracleComp spec _) b canQuery cost ↔
     canQuery t b :=
-  PFunctor.FreeM.isRollBound_liftA_iff (P := spec.toPFunctor) t b canQuery cost
+  by
+    simpa [IsQueryBound, OracleSpec.query_def, OracleComp.liftM_def,
+      PFunctor.FreeM.liftObj] using
+      PFunctor.FreeM.isRollBound_lift_iff
+        (P := spec.toPFunctor) t b canQuery cost
 
 private lemma isQueryBound_map_aux (oa : OracleComp spec α) (f : α → β)
     (canQuery : ι → B → Prop) (cost : ι → B → B) :
@@ -495,7 +499,7 @@ private lemma update_add_eq_update_add {qb₁ qb₂ : ι → ℕ} {t : ι} (ht :
     Function.update qb₁ t (qb₁ t - 1) + qb₂ =
       Function.update (qb₁ + qb₂) t ((qb₁ + qb₂) t - 1) := by
   funext j
-  by_cases hj : j = t <;> simp [Function.update_apply, hj, Pi.add_apply]
+  by_cases hj : j = t <;> simp [hj, Pi.add_apply]
   omega
 
 /-- Split a per-index budget at index `t` into one unit at `t` plus the decremented

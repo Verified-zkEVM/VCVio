@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean
 import VCVio.ProgramLogic.Tactics.Common.Core
 
 /-! # VC Spec Intermediate Representation

@@ -79,6 +79,24 @@ lemma probOutput_pure_self [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (x : α
     Pr[= x | (pure x : m α)] = 1 := by
   aesop (rule_sets := [UnfoldEvalDist])
 
+/-- Boolean monotonicity of `pure` outcome probability into a disjunction: if `win` implies
+`inner ∨ outer`, then the probability of outcome `true` under `pure win` is bounded by the sum of
+the probabilities under `pure inner` and `pure outer`. -/
+lemma probOutput_pure_bool_le_or {m : Type → Type} [Monad m]
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    (win inner outer : Bool) (h : win = true → inner = true ∨ outer = true) :
+    Pr[= true | (pure win : m Bool)] ≤
+      Pr[= true | (pure inner : m Bool)] + Pr[= true | (pure outer : m Bool)] := by
+  cases win <;> cases inner <;> cases outer <;> simp_all
+
+/-- Boolean monotonicity of `pure` outcome probability: if `b₁` implies `b₂`, then the probability
+of outcome `true` under `pure b₁` is bounded by that under `pure b₂`. -/
+lemma probOutput_pure_bool_le {m : Type → Type} [Monad m]
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    (b₁ b₂ : Bool) (h : b₁ = true → b₂ = true) :
+    Pr[= true | (pure b₁ : m Bool)] ≤ Pr[= true | (pure b₂ : m Bool)] := by
+  simpa using probOutput_pure_bool_le_or (m := m) b₁ b₂ false (fun hw => Or.inl (h hw))
+
 /-- Fallback when we don't have decidable equality. -/
 @[grind =]
 lemma probOutput_pure_eq_indicator [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (x y : α) :
@@ -258,6 +276,41 @@ lemma probEvent_bind_le_probEvent [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
   · by_cases hx : x ∈ support mx
     · simp [h x hx hp]
     · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- If a continuation event is bounded by `ε` exactly on a prefix event and is
+impossible off that event, then only the prefix mass is charged. -/
+lemma probEvent_bind_le_probEvent_mul [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {ε : ENNReal}
+    (hle : ∀ x ∈ support mx, p x → Pr[ q | my x] ≤ ε)
+    (hzero : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] = 0) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] * ε := by
+  classical
+  rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_indicator, ← ENNReal.tsum_mul_right]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  by_cases hx : x ∈ support mx
+  · by_cases hp : p x
+    · exact (mul_le_mul' le_rfl (hle x hx hp)).trans_eq (by simp [hp])
+    · simp [hp, hzero x hx hp]
+  · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- Division-form corollary of `probEvent_bind_le_probEvent_mul`. -/
+lemma probEvent_bind_le_probEvent_div [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {c : ENNReal}
+    (hle : ∀ x ∈ support mx, p x → Pr[ q | my x] ≤ c⁻¹)
+    (hzero : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] = 0) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] / c := by
+  simpa [div_eq_mul_inv] using probEvent_bind_le_probEvent_mul hle hzero
+
+omit [Monad m] in
+/-- Partition an event pointwise into a main event and an exceptional event. -/
+lemma probEvent_le_add_of_imp_or [MonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {p q r : α → Prop}
+    (h : ∀ x ∈ support mx, p x → q x ∨ r x) :
+    Pr[ p | mx] ≤ Pr[ q | mx] + Pr[ r | mx] :=
+  (probEvent_mono h).trans (probEvent_or_le mx q r)
 
 /-- Prefix-event split for a bind. Prefix points satisfying `p` are charged in
 full; off-prefix continuations are charged by the uniform tail bound `ε`. -/
@@ -595,6 +648,30 @@ lemma probEvent_bind_mono {mx : m α} {my oc : α → m β} {q : β → Prop}
   refine ENNReal.tsum_le_tsum fun x => ?_
   by_cases hx : x ∈ support mx
   · exact mul_le_mul' le_rfl (h x hx)
+  · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- Pointwise division bounds on bind continuations factor through the bind. -/
+lemma probOutput_bind_mono_div_const {mx : m α}
+    {ob₁ ob₂ : α → m β} {y : β} {r : ℝ≥0∞}
+    (h : ∀ x ∈ support mx, Pr[= y | ob₁ x] ≤ Pr[= y | ob₂ x] / r) :
+    Pr[= y | mx >>= ob₁] ≤ Pr[= y | mx >>= ob₂] / r := by
+  simp only [probOutput_bind_eq_tsum, div_eq_mul_inv]
+  rw [← ENNReal.tsum_mul_right]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  by_cases hx : x ∈ support mx
+  · simpa only [div_eq_mul_inv, mul_assoc] using mul_le_mul' le_rfl (h x hx)
+  · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- Event form of `probOutput_bind_mono_div_const`. -/
+lemma probEvent_bind_mono_div_const {mx : m α}
+    {ob₁ ob₂ : α → m β} {q : β → Prop} {r : ℝ≥0∞}
+    (h : ∀ x ∈ support mx, Pr[ q | ob₁ x] ≤ Pr[ q | ob₂ x] / r) :
+    Pr[ q | mx >>= ob₁] ≤ Pr[ q | mx >>= ob₂] / r := by
+  simp only [probEvent_bind_eq_tsum, div_eq_mul_inv]
+  rw [← ENNReal.tsum_mul_right]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  by_cases hx : x ∈ support mx
+  · simpa only [div_eq_mul_inv, mul_assoc] using mul_le_mul' le_rfl (h x hx)
   · simp [probOutput_eq_zero_of_not_mem_support hx]
 
 lemma probOutput_bind_congr_div_const {mx : m α}

@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean
 import Lean.Meta.Sym.Pattern
 import Lean.Meta.Sym.Simp.DiscrTree
 import Lean.Elab.Tactic.Do.Attr
@@ -448,6 +447,7 @@ private def headOfWhnf (e : Expr) : MetaM (Option Name) := do
 `whnf`-free counterpart is `getRegisteredUnaryVCSpecEntriesNoWhnf`. -/
 def getRegisteredUnaryVCSpecEntries (comp : Expr) : MetaM (Array VCSpecEntry) := do
   let comp ← whnfReducible (← instantiateMVars comp)
+  let comp ← symMatchKey comp
   let registry := vcSpecRegistry.getState (← getEnv)
   return Lean.Meta.Sym.getMatch registry.unary comp
 
@@ -457,7 +457,7 @@ This is only for raw `wp` structural dispatch, where the syntactic head is alrea
 the surface we want to step and reducing zero/nil iterator terms can unfold into
 larger monadic expressions. -/
 def getRegisteredUnaryVCSpecEntriesNoWhnf (comp : Expr) : MetaM (Array VCSpecEntry) := do
-  let comp ← instantiateMVars comp
+  let comp ← symMatchKey comp
   let registry := vcSpecRegistry.getState (← getEnv)
   return Lean.Meta.Sym.getMatch registry.unary comp
 
@@ -465,7 +465,7 @@ def getRegisteredUnaryVCSpecEntriesNoWhnf (comp : Expr) : MetaM (Array VCSpecEnt
 and whose `rightHead?` equals the head constant of the right computation `ob`, queried
 from the `relational` discrimination tree after reducing `oa` with reducible `whnf`. -/
 def getRegisteredRelationalVCSpecEntries (oa ob : Expr) : MetaM (Array VCSpecEntry) := do
-  let oa ← whnfReducible (← instantiateMVars oa)
+  let oa ← symMatchKey (← whnfReducible (← instantiateMVars oa))
   let some rightHead ← headOfWhnf ob | return #[]
   let registry := vcSpecRegistry.getState (← getEnv)
   let candidates := Lean.Meta.Sym.getMatch registry.relational oa

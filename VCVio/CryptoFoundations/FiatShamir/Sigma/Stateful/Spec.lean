@@ -106,12 +106,12 @@ and public-key oracles. -/
 instance {M Commit Chal Resp Stmt : Type}
     [Fintype Chal] [Fintype Commit] [Fintype Resp] [Fintype Stmt] :
     (cmaSpec M Commit Chal Resp Stmt).Fintype where
-  fintype_B q := by cases q <;> dsimp [cmaSpec] <;> infer_instance
+  fintypeB q := by cases q <;> dsimp [cmaSpec] <;> infer_instance
 
 instance {M Commit Chal Resp Stmt : Type}
     [Inhabited Chal] [Inhabited Commit] [Inhabited Resp] [Inhabited Stmt] :
     (cmaSpec M Commit Chal Resp Stmt).Inhabited where
-  inhabited_B q := by cases q <;> dsimp [cmaSpec] <;> infer_instance
+  inhabitedB q := by cases q <;> dsimp [cmaSpec] <;> infer_instance
 
 /-- The non-signing portion of the CMA adversary's oracle view. -/
 @[reducible] def cmaPublicSpec (M Commit Chal Stmt : Type) :

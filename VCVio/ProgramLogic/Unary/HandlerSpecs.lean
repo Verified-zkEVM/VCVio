@@ -77,9 +77,7 @@ registrations, but the underlying `WPMonad` synthesis remains expensive.
 Each handler section ends with one or more `example` blocks demonstrating
 that `mvcgen` actually closes goals composed from the per-query specs:
 two-, three-, and four-query bind chains for caching; a no-fallthrough
-chain for seeded; an in-order log-extension chain for logging; and prefix /
-replacement chains for the replay fork in
-`VCVio.CryptoFoundations.ReplayForkStdDo`.
+chain for seeded; and an in-order log-extension chain for logging.
 
 ## Stacked / multi-handler examples
 
@@ -99,12 +97,6 @@ This single-`StateT`-layer pattern is preferred over genuinely stacked
 * The product-state representation matches the FiatShamir / forking
   proofs already in `VCVio/CryptoFoundations`, so there is a direct path
   from these examples to research-grade proofs.
-
-## Related
-
-The replay-fork handler `replayOracle` lives in
-`VCVio.CryptoFoundations.ReplayFork`; its `Std.Do.Triple` specifications
-are in `VCVio.CryptoFoundations.ReplayForkStdDo`.
 
 ## Limitations
 
@@ -391,6 +383,7 @@ theorem seededOracle_triple_of_cons (t : spec.Domain)
   rw [triple_stateT_iff_forall_support]
   intro seed hseed v seed' hmem
   rw [hseed] at hmem
+  change v = u ∧ seed' = Function.update seed₀ t us
   simpa only [seededOracle.apply_eq, StateT.run, StateT.mk, h, support_pure,
     Set.mem_singleton_iff, Prod.mk.injEq] using hmem
 

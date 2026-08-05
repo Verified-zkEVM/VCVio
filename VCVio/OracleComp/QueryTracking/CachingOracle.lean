@@ -126,7 +126,10 @@ theorem withCachingAux_run'_eq
       (simulateQ base.withCaching oa).run' cache := by
   have hmap := congrArg (Prod.fst <$> ·)
     (withCachingAux_run_proj_eq base hit miss hmiss oa cache q)
-  simpa [StateT.run'] using hmap
+  rw [StateT.run', StateT.run']
+  change (fun a => id a.1) <$> (simulateQ (withCachingAux hit miss) oa).run (cache, q) =
+    Prod.fst <$> (simulateQ base.withCaching oa).run cache
+  simpa only [Functor.map_map, Function.comp_def, Prod.map] using hmap
 
 end CacheAuxProjection
 
@@ -430,8 +433,13 @@ lemma withCacheOverlay_map {α β : Type u} (cache : spec.QueryCache)
 lemma withCacheOverlay_bind_pure {α β : Type u} (cache : spec.QueryCache)
     (oa : OracleComp spec α) (f : α → β) :
     withCacheOverlay cache (oa >>= fun x => pure (f x)) =
-      f <$> withCacheOverlay cache oa :=
-  withCacheOverlay_map cache f oa
+      f <$> withCacheOverlay cache oa := by
+  calc
+    withCacheOverlay cache (oa >>= fun x => pure (f x)) =
+        withCacheOverlay cache (f <$> oa) := by
+      rw [map_eq_bind_pure_comp]
+      rfl
+    _ = _ := withCacheOverlay_map cache f oa
 
 private lemma fst_map_cachingOracle_run_some (cache : spec.QueryCache) (t : spec.Domain)
     (v : spec.Range t) (hv : cache t = some v) :

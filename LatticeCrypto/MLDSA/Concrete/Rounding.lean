@@ -160,7 +160,7 @@ private structure BalancedDecomp (alpha m : ℕ) : Prop where
   hqm1 : alpha * m = modulus - 1
   hsmall : 2 * (alpha + 1) < modulus
 
-private def BalancedDecomp.ofApproved {p : Params} (hp : p.isApproved) :
+private theorem BalancedDecomp.ofApproved {p : Params} (hp : p.isApproved) :
     BalancedDecomp (2 * p.gamma2) ((modulus - 1) / (2 * p.gamma2)) where
   hα     := by rcases hp with rfl | rfl | rfl <;> decide
   heven  := by simp only [even_two, Even.mul_right]
@@ -404,8 +404,7 @@ private theorem highBitsCoeff_eq_of_repr {alpha m : ℕ} (ctx : BalancedDecomp a
         · simp [hn1, hval, ctx.hqm1]
         · left; exact ⟨by omega, by left; exact ⟨ctx.hqm1, hr1z⟩⟩
       · refine ⟨m - 1, alpha + 1 - n, ?_, by omega, ?_⟩
-        · change r.val = alpha * (m - 1) + (alpha + 1 - n)
-          rw [hval, Nat.mul_sub, mul_one, ctx.hqm1]
+        · rw [hval, Nat.mul_sub, mul_one, ctx.hqm1]
           zify [show n ≤ alpha + 1 by omega,
                 ctx.hqm1 ▸ Nat.le_mul_of_pos_right alpha ctx.hm,
                 show 1 ≤ modulus by omega, hnltq.le]
@@ -415,8 +414,7 @@ private theorem highBitsCoeff_eq_of_repr {alpha m : ℕ} (ctx : BalancedDecomp a
           · rw [Nat.sub_add_cancel (by omega)]; left; exact ⟨ctx.hqm1, hr1z⟩
     | inr hr1pos =>
       refine ⟨r1 - 1, alpha - n, ?_, by omega, ?_⟩
-      · change r.val = alpha * (r1 - 1) + (alpha - n)
-        have hnle : n ≤ alpha * r1 :=
+      · have hnle : n ≤ alpha * r1 :=
           le_trans hn_lt.le (Nat.le_mul_of_pos_right alpha hr1pos)
         have hval : r.val = alpha * r1 - n := by
           have hrcast : r = ((alpha * r1 - n : ℕ) : Coeff) := by
@@ -654,6 +652,23 @@ theorem highBitsShift_injective_of_isApproved (p : Params)
     simpa [highBitsShift] using congrArg (fun v : Rq => v.get j) hxy
   exact IsUnit.mul_right_injective (BalancedDecomp.ofApproved hp).hunit hcoeff
 
+/-- For approved parameters, each `HighBits` coefficient lies in the valid commitment window
+`[0, (q - 1) / (2 γ₂) - 1]`: its `ZMod` value is strictly below `(q - 1) / (2 γ₂)`. This is the
+range produced by Algorithm 37 and the domain on which the `w₁` packer is injective. -/
+theorem highBits_coeff_val_lt_m (p : Params) (hp : p.isApproved) (r : Rq) (i : Fin ringDegree) :
+    ((highBits p r).get i).val < (modulus - 1) / (2 * p.gamma2) := by
+  have hcoeff : highBitsCoeff (r.get i) p.gamma2 < (modulus - 1) / (2 * p.gamma2) := by
+    have ctx := BalancedDecomp.ofApproved hp
+    have h2 : (2 * p.gamma2) / 2 = p.gamma2 := by
+      rcases hp with rfl | rfl | rfl <;> decide
+    have := highBitsCoeff_lt_m ctx (r.get i)
+    rwa [h2] at this
+  have hval : ((highBits p r).get i).val = highBitsCoeff (r.get i) p.gamma2 := by
+    simp only [highBits, Vector.get_ofFn]
+    rw [ZMod.val_natCast_of_lt (lt_of_lt_of_le hcoeff (by
+      rcases hp with rfl | rfl | rfl <;> decide))]
+  rw [hval]; exact hcoeff
+
 /-- Concrete `Power2RoundOps` with `Power2High = Rq`. -/
 def concretePower2RoundOps : MLDSA.Power2RoundOps where
   Power2High := Power2High
@@ -723,9 +738,10 @@ theorem concreteRoundingLaws_of_isApproved (p : Params) (hp : p.isApproved) :
   lowBits_bound r := by
     let ctx := BalancedDecomp.ofApproved hp
     have hγ : 0 <  p.gamma2 := by haveI := ctx.hα; omega
-    simpa using concreteRounding_lowBits_bound p hγ ctx.hq r
+    simpa [concreteRoundingOps] using concreteRounding_lowBits_bound p hγ ctx.hq r
   hide_low r s b hs hlow :=
-    concreteRounding_hide_low_of_isApproved p hp r s b hs (by simpa using hlow)
+    concreteRounding_hide_low_of_isApproved p hp r s b hs (by
+      simpa [concreteRoundingOps] using hlow)
   shift_injective := highBitsShift_injective_of_isApproved p hp
   useHint_correct z r hz :=
     concreteRounding_useHint_correct_of_isApproved p hp z r (by simpa using hz)

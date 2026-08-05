@@ -162,7 +162,7 @@ theorem probLeakFree_map_fst
     {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : ProbLeakFree oa₁ oa₂) {δ : Type} (f₁ : α → γ) (f₂ : β → δ) :
     ProbLeakFree (Prod.map f₁ id <$> oa₁) (Prod.map f₂ id <$> oa₂) := by
-  simpa only [ProbLeakFree, Functor.map_map] using h
+  simpa only [ProbLeakFree, Functor.map_map, Function.comp_def, Prod.map, id_eq] using h
 
 /-- Mapping the result component preserves approximate trace independence. -/
 theorem leakageBound_map_fst
@@ -170,7 +170,7 @@ theorem leakageBound_map_fst
     {ε : ℝ} {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : LeakageBound ε oa₁ oa₂) {δ : Type} (f₁ : α → γ) (f₂ : β → δ) :
     LeakageBound ε (Prod.map f₁ id <$> oa₁) (Prod.map f₂ id <$> oa₂) := by
-  simpa only [LeakageBound, Functor.map_map] using h
+  simpa only [LeakageBound, Functor.map_map, Function.comp_def, Prod.map, id_eq] using h
 
 /-- Mapping the result component preserves trace noninterference. -/
 theorem traceNoninterference_map_fst

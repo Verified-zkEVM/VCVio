@@ -580,9 +580,12 @@ private lemma cmaReal_cmaSignLog_liftM_run_eq_cmaRealSourceFullSum_run
         Prod.map id (cmaRealAppendProj (M := M) (Commit := Commit)
           (Chal := Chal) (Stmt := Stmt) (Wit := Wit)) <$>
           (simulateQ (cmaRealSourceFullSum M Commit Chal σ hr) oa).run st := by
-    simpa [st, cmaRealAppendProj] using ((cmaRealAppendOrnament (σ := σ) (hr := hr)
+    let orn := cmaRealAppendOrnament (σ := σ) (hr := hr)
       (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
-      (Stmt := Stmt) (Wit := Wit)).run_eq oa st trivial).symm
+      (Stmt := Stmt) (Wit := Wit)
+    have h := (orn.run_eq oa st trivial).symm
+    dsimp only [orn, cmaRealAppendOrnament, cmaRealAppendProj, st] at h
+    exact h
   rw [hlogged, cmaRealLoggedProdImpl_liftAdv_run (σ := σ) (hr := hr)
     (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
     (oa := oa) (st := (signed, st)), happend]
@@ -698,13 +701,11 @@ theorem statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
     (oa := (SourceSigAlg (σ := σ) (hr := hr) (M := M)).verify ps.1 msg (c, resp))]
   cases hcache : cache (msg, c) with
   | some ch =>
-      simpa [monad_norm] using
-        fiatShamirVerify_run_eq_cmaRealSourceFullSum_run_signedFresh_cache_some
-          σ hr M ps msg c resp bad signed cache keypair ch hcache
+      exact fiatShamirVerify_run_eq_cmaRealSourceFullSum_run_signedFresh_cache_some
+        σ hr M ps msg c resp bad signed cache keypair ch hcache
   | none =>
-      simpa [monad_norm] using
-        fiatShamirVerify_run_eq_cmaRealSourceFullSum_run_signedFresh_cache_none
-          σ hr M ps msg c resp bad signed cache keypair hcache
+      exact fiatShamirVerify_run_eq_cmaRealSourceFullSum_run_signedFresh_cache_none
+        σ hr M ps msg c resp bad signed cache keypair hcache
 
 /-- Fixed-key public post-keygen experiment in the WriterT signing-log form. -/
 @[reducible] private noncomputable def postKeygenFreshWriterComp

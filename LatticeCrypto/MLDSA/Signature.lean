@@ -145,7 +145,7 @@ private lemma rq_add_neg_cancel (a b : Rq) : a + b + (-b) = a :=
 omit nttOps in
 private lemma neg_rq_get (f : Rq) (i : Fin ringDegree) : (-f).get i = -(f.get i) := by
   change (coeffRing.neg f).get i = _
-  simp [LatticeCrypto.vectorNegacyclicRing]
+  simp
 
 omit nttOps in
 private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
@@ -154,9 +154,7 @@ private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
   unfold LatticeCrypto.cInfNormOf
   apply Finset.sup_congr rfl
   intro i _
-  simp only [LatticeCrypto.zmodCenteredCoeffView, polyBackend,
-    LatticeCrypto.vectorNegacyclicRing, LatticeCrypto.vectorBackend]
-  rw [neg_rq_get]
+  simp only [LatticeCrypto.zmodCenteredCoeffView, coeffRing.coeff_neg]
   exact LatticeCrypto.centeredRepr_natAbs_neg _
 
 /-! ### Correctness -/
@@ -273,9 +271,9 @@ lemma useHintVec_makeHintVec_eq_highBitsVec
     simp only [Vector.get_eq_getElem, Vector.getElem_sub]
   · exact Nat.le_of_lt h_ct0_lt
   · simpa [Primitives.lowBitsVec, r_j] using h_r0_lt
-  · unfold polyNorm normOps
-    simpa [LatticeCrypto.zmodPolyNormOps, LatticeCrypto.normOpsOfCenteredView,
-      LatticeCrypto.cInfNorm] using h_cs2_bound jj
+  · set_option maxRecDepth 1000 in
+      change LatticeCrypto.cInfNorm (cs2.get jj) ≤ p.beta
+    exact h_cs2_bound jj
 
 /-- Correctness of FIPS ML-DSA, conditional on the algebraic key identity (`h_wApprox_eq`)
 and the challenge-product norm bound (`h_cs2_bound`, for the challenge `c = SampleInBall(c̃)`).

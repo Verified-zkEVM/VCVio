@@ -413,10 +413,12 @@ lemma IND_CPA_OneTime_DDHReduction_openCost_pathwiseCostEqOnSupport
       (IND_CPA_OneTime_DDHReduction_openCost
         (State := State) (ω := ω) intrinsic g A B T)
       (OneTimeINDCPACapability.reductionProfile intrinsic) := by
-  simpa [IND_CPA_OneTime_DDHReduction_openCost] using
+  convert
     (IND_CPA_OneTime_DDHReduction_openProfiled_pathwiseCostEqOnSupport
       (State := State) (ω := ω) (κ := OneTimeINDCPACapability)
-      intrinsic (fun k ↦ ResourceProfile.single (ω := ω) k) g A B T)
+      intrinsic (fun k ↦ ResourceProfile.single (ω := ω) k) g A B T) using 1 <;>
+    ext <;> simp [IND_CPA_OneTime_DDHReduction_openCost,
+      OneTimeINDCPACapability.reductionProfile, add_assoc]
 
 end OpenCostTheorems
 
@@ -515,7 +517,7 @@ lemma IND_CPA_OneTime_DDHReduction_intrinsicProfile_pathwiseCostEqOnSupport
               ResourceProfile.ofIntrinsic (κ := κ) distinguishCost)
         adv g A B T)
       (ResourceProfile.ofIntrinsic (κ := κ) (intrinsic + chooseCost + distinguishCost)) := by
-  simpa [OneTimeINDCPACapability.reductionTransform_ofIntrinsic, add_assoc] using
+  convert
     IND_CPA_OneTime_DDHReduction_profiled_pathwiseCostEqOnSupport
       (F := F) (G := G) (gen := gen) (ω := ω) (κ := κ)
       intrinsic
@@ -524,7 +526,8 @@ lemma IND_CPA_OneTime_DDHReduction_intrinsicProfile_pathwiseCostEqOnSupport
             ResourceProfile.ofIntrinsic (κ := κ) chooseCost
         | OneTimeINDCPACapability.distinguish =>
             ResourceProfile.ofIntrinsic (κ := κ) distinguishCost)
-      adv g A B T
+      adv g A B T using 1
+  all_goals ext <;> simp [add_assoc]
 
 /-- Cost-aware reduction packaging for the one-time ElGamal DDH reduction.
 
@@ -672,7 +675,7 @@ theorem oneTimeINDCPA_secureAgainst_of_ddh_secureAgainst_withCost
     (R := oneTimeDDHReductionWithCost (F := F) (G := G) (gen := gen) intrinsic advCost)
     ?_ hmap hsecure
   intro adv n
-  simpa using le_of_eq
+  simpa [oneTimeDDHReductionWithCost] using le_of_eq
     (oneTimeINDCPASecurityGame_advantage_eq_oneTimeDDHReductionSecurityGame_advantage
       (F := F) (G := G) (gen := gen) hg adv n)
 
@@ -689,10 +692,12 @@ lemma IND_CPA_OneTime_DDHReduction_costed_pathwiseCostEqOnSupport
         (F := F) (G := G) (gen := gen) (ω := ω) intrinsic adv g A B T)
       (OneTimeINDCPACapability.reductionProfile intrinsic) := by
   letI := (oneTimeINDCPAImpl (gen := gen) adv).toHasQuery
-  simpa [IND_CPA_OneTime_DDHReduction_costed] using
+  convert
     (IND_CPA_OneTime_DDHReduction_profiled_pathwiseCostEqOnSupport
       (F := F) (G := G) (gen := gen) (ω := ω) (κ := OneTimeINDCPACapability)
-      intrinsic (fun k ↦ ResourceProfile.single (ω := ω) k) adv g A B T)
+      intrinsic (fun k ↦ ResourceProfile.single (ω := ω) k) adv g A B T) using 1 <;>
+    ext <;> simp [IND_CPA_OneTime_DDHReduction_costed,
+      OneTimeINDCPACapability.reductionProfile, add_assoc]
 
 end IND_CPA
 

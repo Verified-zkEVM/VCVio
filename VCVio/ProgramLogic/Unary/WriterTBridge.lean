@@ -83,7 +83,7 @@ instance instWPAppend {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
 `bind`. Requires `LawfulAppend ω` (so `s ++ ∅ = s` and `++` is associative)
 and lawfulness of the inner monad. -/
 instance instWPMonadAppend {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    [Monad m] [LawfulMonad m] [WPMonad m ps]
+    [Monad m] [WPMonad m ps]
     [EmptyCollection ω] [Append ω] [LawfulAppend ω] :
     WPMonad (WriterT ω m) (.arg ω ps) where
   toLawfulMonad := inferInstance
@@ -135,7 +135,7 @@ preserves `pure` and `bind`, using the `Monoid` laws. Registered at `low`
 priority for the same reason as `instWPMonoid`. -/
 instance (priority := low) instWPMonadMonoid
     {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    [Monad m] [LawfulMonad m] [WPMonad m ps] [Monoid ω] :
+    [Monad m] [WPMonad m ps] [Monoid ω] :
     WPMonad (WriterT ω m) (.arg ω ps) where
   toLawfulMonad := inferInstance
   toWP := instWPMonoid
@@ -167,7 +167,7 @@ namespace Std.Do.WP
 
 @[simp]
 theorem tell_WriterT {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    [Monad m] [LawfulMonad m] [WPMonad m ps] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    [Monad m] [WPMonad m ps] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
     (w : ω) (Q : PostCond PUnit (.arg ω ps)) :
     wp⟦MonadWriter.tell w : WriterT ω m PUnit⟧ Q = fun s => Q.1 ⟨⟩ (s ++ w) := by
   simp only [WP.wp, WriterT.wpAppend, WriterT.run_tell, WPMonad.wp_pure,
@@ -176,7 +176,7 @@ theorem tell_WriterT {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
 
 @[simp]
 theorem monadLift_WriterT {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}} {α : Type u}
-    [Monad m] [LawfulMonad m] [WPMonad m ps] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    [Monad m] [WPMonad m ps] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
     (x : m α) (Q : PostCond α (.arg ω ps)) :
     wp⟦MonadLift.monadLift x : WriterT ω m α⟧ Q
         = fun s => wp⟦x⟧ (fun a => Q.1 a s, Q.2) := by
@@ -187,7 +187,7 @@ theorem monadLift_WriterT {m : Type u → Type v} {ω : Type u} {ps : PostShape.
 
 @[simp]
 theorem tell_WriterT_monoid {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    [Monad m] [LawfulMonad m] [WPMonad m ps] [Monoid ω] (w : ω) (Q : PostCond PUnit (.arg ω ps)) :
+    [Monad m] [WPMonad m ps] [Monoid ω] (w : ω) (Q : PostCond PUnit (.arg ω ps)) :
     wp⟦MonadWriter.tell w : WriterT ω m PUnit⟧ Q = fun s => Q.1 ⟨⟩ (s * w) := by
   simp only [WP.wp, WriterT.wpMonoid, WriterT.run_tell, WPMonad.wp_pure,
     PredTrans.apply_pushArg, PredTrans.apply_Functor_map,
@@ -195,7 +195,7 @@ theorem tell_WriterT_monoid {m : Type u → Type v} {ω : Type u} {ps : PostShap
 
 @[simp]
 theorem monadLift_WriterT_monoid {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    {α : Type u} [Monad m] [LawfulMonad m] [WPMonad m ps] [Monoid ω]
+    {α : Type u} [Monad m] [WPMonad m ps] [Monoid ω]
     (x : m α) (Q : PostCond α (.arg ω ps)) :
     wp⟦MonadLift.monadLift x : WriterT ω m α⟧ Q
         = fun s => wp⟦x⟧ (fun a => Q.1 a s, Q.2) := by
@@ -224,7 +224,7 @@ attribute [spec] WriterT.run
 state being the old state appended with the written value `w`. -/
 @[spec]
 theorem tell_WriterT {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    [Monad m] [LawfulMonad m] [WPMonad m ps] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    [Monad m] [WPMonad m ps] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
     (w : ω) {Q : PostCond PUnit (.arg ω ps)} :
     Triple (m := WriterT ω m) (MonadWriter.tell w)
       (spred(fun s => Q.1 ⟨⟩ (s ++ w)))
@@ -236,7 +236,7 @@ computation `x : m α` runs in the inner monad with the writer state
 unchanged (since the lift writes `∅` and `s ++ ∅ = s`). -/
 @[spec]
 theorem monadLift_WriterT {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}} {α : Type u}
-    [Monad m] [LawfulMonad m] [WPMonad m ps] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    [Monad m] [WPMonad m ps] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
     (x : m α) {Q : PostCond α (.arg ω ps)} :
     Triple (m := WriterT ω m) (MonadLift.monadLift x)
       (spred(fun s => wp⟦x⟧ (fun a => Q.1 a s, Q.2)))
@@ -247,7 +247,7 @@ theorem monadLift_WriterT {m : Type u → Type v} {ω : Type u} {ps : PostShape.
 at the new state `s * w`, where `*` is the monoid operation on `ω`. -/
 @[spec]
 theorem tell_WriterT_monoid {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    [Monad m] [LawfulMonad m] [WPMonad m ps] [Monoid ω] (w : ω) {Q : PostCond PUnit (.arg ω ps)} :
+    [Monad m] [WPMonad m ps] [Monoid ω] (w : ω) {Q : PostCond PUnit (.arg ω ps)} :
     Triple (m := WriterT ω m) (MonadWriter.tell w)
       (spred(fun s => Q.1 ⟨⟩ (s * w)))
       Q := by
@@ -259,7 +259,7 @@ and `s * 1 = s`). -/
 @[spec]
 theorem monadLift_WriterT_monoid {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
     {α : Type u}
-    [Monad m] [LawfulMonad m] [WPMonad m ps] [Monoid ω] (x : m α) {Q : PostCond α (.arg ω ps)} :
+    [Monad m] [WPMonad m ps] [Monoid ω] (x : m α) {Q : PostCond α (.arg ω ps)} :
     Triple (m := WriterT ω m) (MonadLift.monadLift x)
       (spred(fun s => wp⟦x⟧ (fun a => Q.1 a s, Q.2)))
       Q := by

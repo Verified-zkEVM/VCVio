@@ -135,7 +135,7 @@ example (f : Nat → α × Nat) (post : α → Nat → ℝ≥0∞) :
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : ℝ≥0∞) :
     Std.Do'.Triple (wp⟦oa⟧ post)
       (MonadLift.monadLift oa : OptionT (OracleComp spec) α)
-      post epost⟨nonePost⟩ := by
+      post (Std.Do'.EPost.cons.mk nonePost Std.Do'.EPost.nil.mk) := by
   vcgen
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : ℝ≥0∞) :
@@ -143,13 +143,13 @@ example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : ℝ≥0
       (do
         let a ← (MonadLift.monadLift oa : OptionT (OracleComp spec) α)
         pure a)
-      post epost⟨nonePost⟩ := by
+      post (Std.Do'.EPost.cons.mk nonePost Std.Do'.EPost.nil.mk) := by
   vcgen
 
 example (post : α → ℝ≥0∞) (nonePost : ℝ≥0∞) :
     Std.Do'.Triple nonePost
       (failure : OptionT (OracleComp spec) α)
-      post epost⟨nonePost⟩ := by
+      post (Std.Do'.EPost.cons.mk nonePost Std.Do'.EPost.nil.mk) := by
   vcgen
 
 /-! ## `ExceptT (OracleComp spec)` transformer steps -/
@@ -157,7 +157,7 @@ example (post : α → ℝ≥0∞) (nonePost : ℝ≥0∞) :
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
     Std.Do'.Triple (wp⟦oa⟧ post)
       (MonadLift.monadLift oa : ExceptT String (OracleComp spec) α)
-      post epost⟨errPost⟩ := by
+      post (Std.Do'.EPost.cons.mk errPost Std.Do'.EPost.nil.mk) := by
   vcgen
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
@@ -165,13 +165,13 @@ example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String �
       (do
         let a ← (MonadLift.monadLift oa : ExceptT String (OracleComp spec) α)
         pure a)
-      post epost⟨errPost⟩ := by
+      post (Std.Do'.EPost.cons.mk errPost Std.Do'.EPost.nil.mk) := by
   vcgen
 
 example (err : String) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
     Std.Do'.Triple (errPost err)
       (throw err : ExceptT String (OracleComp spec) α)
-      post epost⟨errPost⟩ := by
+      post (Std.Do'.EPost.cons.mk errPost Std.Do'.EPost.nil.mk) := by
   vcgen
 
 /-! ## `ReaderT (OracleComp spec)` transformer steps -/
@@ -201,7 +201,7 @@ example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) (non
         let a ← (MonadLift.monadLift (OptionT.lift oa) :
           StateT Nat (OptionT (OracleComp spec)) α)
         pure (s, a))
-      post epost⟨nonePost⟩ := by
+      post (Std.Do'.EPost.cons.mk nonePost Std.Do'.EPost.nil.mk) := by
   vcgen
 
 /-! ## `WriterT (OracleComp spec)` transformer steps -/
@@ -368,7 +368,7 @@ example :
 
 @[local vcspec] theorem stdDoTriple_wrappedTrue :
     Std.Do'.Triple (1 : ℝ≥0∞) (wrappedTrue (spec := spec))
-      (fun y => if y = true then (1 : ℝ≥0∞) else 0) epost⟨⟩ := by
+      (fun y => if y = true then (1 : ℝ≥0∞) else 0) Std.Do'.EPost.nil.mk := by
   exact triple_wrappedTrue (spec := spec)
 
 example :
@@ -377,18 +377,18 @@ example :
 
 example :
     Std.Do'.Triple (1 : ℝ≥0∞) (wrappedTrue (spec := spec))
-      (fun _ => (1 : ℝ≥0∞)) epost⟨⟩ := by
+      (fun _ => (1 : ℝ≥0∞)) Std.Do'.EPost.nil.mk := by
   vcstep
 
 @[local vcspec] theorem rawWP_wrappedTrue :
     (1 : ℝ≥0∞) ⊑
       Std.Do'.wp (wrappedTrue (spec := spec))
-        (fun y => if y = true then (1 : ℝ≥0∞) else 0) epost⟨⟩ := by
+        (fun y => if y = true then (1 : ℝ≥0∞) else 0) Std.Do'.EPost.nil.mk := by
   exact Std.Do'.Triple.iff.mp (stdDoTriple_wrappedTrue (spec := spec))
 
 example :
     (1 : ℝ≥0∞) ⊑
-      Std.Do'.wp (wrappedTrue (spec := spec)) (fun _ => (1 : ℝ≥0∞)) epost⟨⟩ := by
+      Std.Do'.wp (wrappedTrue (spec := spec)) (fun _ => (1 : ℝ≥0∞)) Std.Do'.EPost.nil.mk := by
   vcstep
 
 @[irreducible] def wrappedTrueStep : OracleComp spec Bool := pure true
