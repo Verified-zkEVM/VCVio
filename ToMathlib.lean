@@ -1,6 +1,10 @@
 import ToMathlib.Analysis.MeanInequalities
 import ToMathlib.Analysis.SumIntegralComparisons
 import ToMathlib.Combinatorics.FinPairs
+import ToMathlib.Computability.BitEncoding
+import ToMathlib.Computability.CslibPolyTime
+import ToMathlib.Computability.MachineCounting
+import ToMathlib.Computability.PolyTimeTM
 import ToMathlib.Control.AlternativeMonad
 import ToMathlib.Control.Lawful.MonadControl
 import ToMathlib.Control.Lawful.MonadFunctor
@@ -20,6 +24,7 @@ import ToMathlib.Control.Monad.Transformer
 import ToMathlib.Control.OptionT
 import ToMathlib.Control.StateT
 import ToMathlib.Control.WriterT
+import ToMathlib.Data.BitVec
 import ToMathlib.Data.ENNReal.AbsDiff
 import ToMathlib.Data.ENNReal.Gauss
 import ToMathlib.Data.ENNReal.SumSquares
