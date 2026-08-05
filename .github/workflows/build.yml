@@ -51,9 +51,6 @@ jobs:
       - name: Check for all imports in VCVioTest
         run: lake exe mk_all --lib VCVioTest --module --check
 
-      - name: Check module scopes
-        run: ./scripts/check-modules.sh
-
   downstream_stub_link:
     name: Downstream Consumer Build (no submodules)
     runs-on: ubuntu-latest

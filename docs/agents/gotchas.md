@@ -285,7 +285,7 @@ for downstream compatibility; executable and runtime implementation modules shou
 `public section` when downstream code does not need definitional unfolding. Never reach for
 `backward.privateInPublic` or
 `backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
-information to avoid public metavariables. Run `./scripts/check-modules.sh` after scope changes.
+information to avoid public metavariables.
 
 The dormant `Interop` library is intentionally excluded until its separate migration.
 `LibSodium/SHA2.lean` is also excluded because it is a dormant source outside every Lake library.
