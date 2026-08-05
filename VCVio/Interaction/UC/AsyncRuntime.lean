@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.Interaction.UC.EnvOpenProcess
-import VCVio.Interaction.UC.Runtime
+
+module
+public import PolyFun.Interaction.UC.EnvOpenProcess
+public import VCVio.Interaction.UC.Runtime
 
 /-!
 # Asynchronous runtime semantics for env-open processes
@@ -59,6 +61,8 @@ because the runtime needs `m (RuntimeEvent Event)` to typecheck, and
 universe `0`, so this is not a restriction in practice. The same
 universe-`0` constraint applies to `processSemantics`.
 -/
+
+@[expose] public section
 
 universe u
 
@@ -275,7 +279,7 @@ namespace UC
 
 open Concurrent
 
-private abbrev Closed (Party : Type u) (m : Type → Type)
+abbrev AsyncClosed (Party : Type u) (m : Type → Type)
     (schedulerSampler : m (ULift Bool)) :=
   (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Closed
 
@@ -305,11 +309,11 @@ noncomputable def processSemanticsAsync
     {Event : Type} {State : Type}
     (envAction : EnvAction m Event State)
     (initEnvState : State)
-    (init : ∀ p : Closed Party m schedulerSampler, p.Proc)
-    (envScheduler : ∀ p : Closed Party m schedulerSampler,
+    (init : ∀ p : AsyncClosed Party m schedulerSampler, p.Proc)
+    (envScheduler : ∀ p : AsyncClosed Party m schedulerSampler,
       EnvScheduler m p.Proc State Event)
     (fuel : ℕ)
-    (observe : ∀ p : Closed Party m schedulerSampler,
+    (observe : ∀ p : AsyncClosed Party m schedulerSampler,
       p.Proc → State → RuntimeTrace Event → m Result) :
     Semantics (openTheory.{u, 0, 0, 0} Party m schedulerSampler) where
   Result := Result
@@ -336,11 +340,11 @@ noncomputable def processSemanticsAsyncProbComp
     {Event : Type} {State : Type}
     (envAction : EnvAction ProbComp Event State)
     (initEnvState : State)
-    (init : ∀ p : Closed Party ProbComp schedulerSampler, p.Proc)
-    (envScheduler : ∀ p : Closed Party ProbComp schedulerSampler,
+    (init : ∀ p : AsyncClosed Party ProbComp schedulerSampler, p.Proc)
+    (envScheduler : ∀ p : AsyncClosed Party ProbComp schedulerSampler,
       EnvScheduler ProbComp p.Proc State Event)
     (fuel : ℕ)
-    (observe : ∀ p : Closed Party ProbComp schedulerSampler,
+    (observe : ∀ p : AsyncClosed Party ProbComp schedulerSampler,
       p.Proc → State → RuntimeTrace Event → ProbComp Result) :
     Semantics (openTheory.{u, 0, 0, 0} Party ProbComp schedulerSampler) :=
   processSemanticsAsync Party schedulerSampler
@@ -369,9 +373,9 @@ theorem processSemantics_eq_processSemanticsAsync_trivial
     {Result : Type}
     (schedulerSampler : m (ULift Bool))
     (sem : SPMFSemantics.{0, 0, 0} m)
-    (init : ∀ p : Closed Party m schedulerSampler, p.Proc)
+    (init : ∀ p : AsyncClosed Party m schedulerSampler, p.Proc)
     (fuel : ℕ)
-    (observe : ∀ p : Closed Party m schedulerSampler, p.Proc → m Result) :
+    (observe : ∀ p : AsyncClosed Party m schedulerSampler, p.Proc → m Result) :
     processSemantics Party schedulerSampler sem init fuel observe =
       processSemanticsAsync Party schedulerSampler sem
         (EnvAction.empty Unit) ()
@@ -402,9 +406,9 @@ theorem processSemanticsProbComp_eq_processSemanticsAsyncProbComp_trivial
     (Party : Type u)
     {Result : Type}
     (schedulerSampler : ProbComp (ULift Bool))
-    (init : ∀ p : Closed Party ProbComp schedulerSampler, p.Proc)
+    (init : ∀ p : AsyncClosed Party ProbComp schedulerSampler, p.Proc)
     (fuel : ℕ)
-    (observe : ∀ p : Closed Party ProbComp schedulerSampler,
+    (observe : ∀ p : AsyncClosed Party ProbComp schedulerSampler,
       p.Proc → ProbComp Result) :
     processSemanticsProbComp Party schedulerSampler
         init fuel observe =

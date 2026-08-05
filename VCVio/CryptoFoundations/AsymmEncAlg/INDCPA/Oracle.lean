@@ -3,15 +3,17 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.Coinductive.WiredRun
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.QueryTracking.QueryBound
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.ProgramLogic.Relational.SimulateQ
-import ToMathlib.Control.StateT
-import ToMathlib.Data.ENNReal.Gauss
+
+module
+public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.Coinductive.WiredRun
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.ProgramLogic.Relational.SimulateQ
+public import ToMathlib.Control.StateT
+public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # Asymmetric Encryption Schemes: IND-CPA Oracle Games
@@ -19,6 +21,8 @@ import ToMathlib.Data.ENNReal.Gauss
 This file contains the oracle-based IND-CPA interface together with the counted left/right hybrid
 machinery used in generic multi-query proofs.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 
@@ -55,14 +59,14 @@ def IND_CPA_adversary.MakesAtMostQueries {encAlg : AsymmEncAlg ProbComp M PK SK 
 abbrev IND_CPA_Cache (_encAlg : AsymmEncAlg ProbComp M PK SK C) :=
   (M × M →ₒ C).QueryCache
 
-private def IND_CPA_queryImplFromChallenge
+def IND_CPA_queryImplFromChallenge
     (encAlg : AsymmEncAlg ProbComp M PK SK C)
     {σ : Type}
     (challenge : QueryImpl (M × M →ₒ C) (StateT σ ProbComp)) :
     QueryImpl encAlg.IND_CPA_oracleSpec (StateT σ ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) + challenge
 
-private def IND_CPA_cachedChallengeOracle
+def IND_CPA_cachedChallengeOracle
     (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (pk : PK) (select : M × M → M) :
     QueryImpl (M × M →ₒ C) (StateT encAlg.IND_CPA_Cache ProbComp) := fun mm => do
@@ -179,7 +183,7 @@ variable {encAlg' : AsymmEncAlg ProbComp M PK SK C}
 abbrev IND_CPA_CountedState (_encAlg : AsymmEncAlg ProbComp M PK SK C) :=
   _encAlg.IND_CPA_Cache × ℕ
 
-private def IND_CPA_countedChallengeOracle
+def IND_CPA_countedChallengeOracle
     (pk : PK) (select : ℕ → M × M → M) :
     QueryImpl (M × M →ₒ C)
       (StateT encAlg'.IND_CPA_CountedState ProbComp) := fun mm => do

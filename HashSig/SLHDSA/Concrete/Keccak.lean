@@ -3,7 +3,9 @@ Copyright (c) 2026 Vitalik Buterin, Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Vitalik Buterin, Nicolas Consigny
 -/
-import HashSig.SLHDSA.Params
+
+module
+public import HashSig.SLHDSA.Params
 
 /-!
 # Pure-Lean Keccak-f[1600] / keccak256 (and SHA3-256)
@@ -18,6 +20,8 @@ hash used by the C13 SLH-DSA variant (`keccak256` substituted for SHAKE-256, tru
 
 - FIPS 202 (Keccak / SHA-3); Ethereum `KECCAK256` (original `0x01` padding)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.Concrete.Keccak

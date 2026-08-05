@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aristotle (Harmonic), Elias Judin
 -/
 
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.Constructions.SampleableType
+module
+
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Round-indexed event games
@@ -42,6 +44,8 @@ TODO: the deferred computational layer needs a security-indexed family of encode
 extractors together with negligible per-round error, and lives behind the separate polytime
 framework. This module deliberately does not add that layer or depend on an unmerged branch.
 -/
+
+@[expose] public section
 
 noncomputable section
 

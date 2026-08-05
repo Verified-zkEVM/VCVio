@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Relational.QuantitativeDefs
-import VCVio.EvalDist.TVDist
-import VCVio.ProgramLogic.Unary.HoareTriple
-import ToMathlib.ProbabilityTheory.OptimalCoupling
+module
+
+public import VCVio.ProgramLogic.Relational.QuantitativeDefs
+public import VCVio.EvalDist.TVDist
+public import VCVio.ProgramLogic.Unary.HoareTriple
+public import ToMathlib.ProbabilityTheory.OptimalCoupling
 
 /-!
 # Quantitative Relational Program Logic (eRHL)
@@ -37,6 +39,8 @@ pRHL (exact)    apRHL (ε-approx)   stat-distance
 indicator R      1-ε, indicator R    1, indicator(=)
 ```
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 
@@ -108,7 +112,7 @@ private lemma nonempty_spmf_coupling
 namespace PMF
 
 /-- Fiber of a deterministic observation map. -/
-private def fiber {α β : Type*} (f : α → β) (b : β) : Set α := {a | f a = b}
+def fiber {α β : Type*} (f : α → β) (b : β) : Set α := {a | f a = b}
 
 /-- Conditional distribution of a PMF along a deterministic observation map.
 

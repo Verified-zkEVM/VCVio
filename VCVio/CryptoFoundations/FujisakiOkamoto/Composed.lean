@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.FujisakiOkamoto.UTransform
+
+module
+public import VCVio.CryptoFoundations.FujisakiOkamoto.UTransform
 
 /-!
 # Composed Fujisaki-Okamoto Transform
@@ -11,6 +13,8 @@ import VCVio.CryptoFoundations.FujisakiOkamoto.UTransform
 This file exposes the composed two-RO Fujisaki-Okamoto transform together with a single-RO
 specialization for the `H(m)` branch.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

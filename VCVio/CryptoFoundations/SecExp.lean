@@ -3,12 +3,14 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.EvalDist.Defs.Instances
-import VCVio.EvalDist.Defs.Semantics
-import VCVio.EvalDist.TVDist
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.QueryTracking.QueryBound
+
+module
+public import VCVio.EvalDist.Defs.Instances
+public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.TVDist
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # Security Experiments
@@ -20,6 +22,8 @@ on the ambient monad.
 
 We also define `BoundedAdversary α β` as an oracle computation bundled with a query bound.
 -/
+
+@[expose] public section
 
 universe u v w
 

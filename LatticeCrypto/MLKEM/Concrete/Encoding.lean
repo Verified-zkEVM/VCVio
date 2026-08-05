@@ -3,10 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.Encoding
-import Mathlib.Data.List.GetD
-import Mathlib.Data.List.OfFn
-import Mathlib.Data.Nat.Digits.Lemmas
+
+module
+import all Mathlib.Data.Nat.Digits.Lemmas
+public import LatticeCrypto.MLKEM.Encoding
+public import Mathlib.Data.List.GetD
+public import Mathlib.Data.List.OfFn
+public import Mathlib.Data.Nat.Digits.Lemmas
 
 /-!
 # Concrete Encoding for ML-KEM
@@ -14,6 +17,8 @@ import Mathlib.Data.Nat.Digits.Lemmas
 Pure-Lean executable implementation of the byte-encoding (FIPS 203 Algorithms 4–5) and
 compression / decompression (FIPS 203 Section 4.2.1) operations.
 -/
+
+public section
 
 namespace MLKEM.Concrete
 
@@ -699,7 +704,7 @@ private theorem byteDecode12VecPoly_byteEncode12Vec_eq {k : Nat} (v : TqVec k) (
   rw [Vector.toArray_ofFn, Vector.toArray_ofFn]
   exact congrArg Array.ofFn hfun
 
-private theorem byteDecode12Vec_byteEncode12Vec {k : Nat} (v : TqVec k) :
+theorem byteDecode12Vec_byteEncode12Vec {k : Nat} (v : TqVec k) :
     byteDecode12Vec k (byteEncode12Vec v) = v := by
   have hfun :
       (fun idx : Fin k => byteDecode12VecPoly (byteEncode12Vec v) idx)
@@ -868,13 +873,13 @@ private theorem compressVec_bound {d k : Nat} (hpow : (1 <<< d) < modulus) (v : 
   intro poly coeff
   simpa [compressVec] using compressPoly_bound (d := d) hpow (f := v[poly.val]) coeff
 
-private def byteEncode1Msg (f : Rq) : Message :=
+def byteEncode1Msg (f : Rq) : Message :=
   let bits : Array Nat := Array.ofFn fun idx : Fin ringDegree =>
     (((f.get idx : Coeff).val) % 2)
   let ba := bitsToBytes bits
   Vector.ofFn fun ⟨i, _⟩ => ba[i]!
 
-private def byteDecode1Msg (msg : Message) : Rq :=
+def byteDecode1Msg (msg : Message) : Rq :=
   let bits := bytesToBits (ByteArray.mk msg.toArray)
   Vector.ofFn fun idx =>
     ((bits.getD idx.val 0 : Nat) : Coeff)
@@ -999,7 +1004,7 @@ private theorem byteDecode1Msg_byteEncode1Msg_of_bound (f : Rq)
 /-! ## Concrete `Encoding` instance -/
 
 /-- Build the concrete `Encoding` instance for a given parameter set. -/
-def concreteEncoding (params : Params) : Encoding params where
+@[expose] def concreteEncoding (params : Params) : Encoding params where
   EncodedTHat := ByteArray
   EncodedU := ByteArray
   EncodedV := ByteArray

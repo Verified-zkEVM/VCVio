@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import ToMathlib.Data.IndexedBinaryTree.Basic
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+module
+
+public import ToMathlib.Data.IndexedBinaryTree.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 
 /-!
 # Inductive Merkle Trees
@@ -43,6 +45,8 @@ as defined in `ToMathlib.Data.IndexedBinaryTree`.
 - [ ] Multi-instance
 
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 

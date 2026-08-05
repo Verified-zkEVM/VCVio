@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.PRF
-import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
-import VCVio.OracleComp.QueryTracking.QueryBound
+module
+
+public import VCVio.CryptoFoundations.PRF
+public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # PRF Tag/Reader Protocol — Definitions
@@ -19,6 +21,8 @@ the unlinkability games, and the bad-event world.
 The auth→PRF reduction and the security theorems built on these definitions live in the sibling
 `Auth`, `Collision`, and `BadEvent` modules.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

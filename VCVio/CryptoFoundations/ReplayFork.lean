@@ -3,12 +3,14 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.PFunctor.Free.Cursor.Fork
-import ToMathlib.Data.ENNReal.SumSquares
-import VCVio.EvalDist.Option
-import VCVio.OracleComp.Constructions.Fork
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.Structures
+
+module
+public import PolyFun.PFunctor.Free.Cursor.Fork
+public import ToMathlib.Data.ENNReal.SumSquares
+public import VCVio.EvalDist.Option
+public import VCVio.OracleComp.Constructions.Fork
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.Structures
 
 /-!
 # Replay-Based Forking
@@ -51,6 +53,8 @@ trace events, so this file makes `PFunctor.Idx` locally reducible in order for
   Forking Lemma*, CCS 2006. The seed-based presentation is mechanized in
   `VCVio.CryptoFoundations.SeededFork`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal Function Finset
 
@@ -188,7 +192,7 @@ def contextForkView (main : OracleComp spec α) (i : ι) (s : Nat) :
   PFunctor.FreeM.Cursor.locateAndForkAt (P := spec.toPFunctor) i main s
 
 -- Shared success classifier for the fixed and dynamically selected context-fork experiments.
-private def classifyForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+def classifyForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
     (view : PFunctor.FreeM.Cursor.ForkView i main s) : Option (α × α) :=
   let x₁ := PFunctor.FreeM.output main view.firstPath
@@ -219,7 +223,7 @@ reduction-facing proofs. -/
 abbrev ContextForkWitness (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) :=
   PFunctor.FreeM.Cursor.SelectedForkView i main (Fin (qb i + 1)) Fin.val
 
-private def acceptContextForkWitness (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+def acceptContextForkWitness (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
     (view : PFunctor.FreeM.Cursor.ForkView i main s) :
     Option (ContextForkWitness main qb i) :=
@@ -253,7 +257,7 @@ first and second fork paths. -/
       (PFunctor.FreeM.output main witness.view.firstPath,
         PFunctor.FreeM.output main witness.view.secondPath) := rfl
 
-private def contextForkByClassify (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+def contextForkByClassify (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) : OracleComp spec (Option (α × α)) :=
   PFunctor.FreeM.Cursor.filterMapLocateAndForkBy (P := spec.toPFunctor)
     i main cf Fin.val (classifyForkView main qb i cf)
@@ -397,7 +401,7 @@ def guardedContextFork (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     OracleComp spec (Option (α × α)) :=
   PFunctor.FreeM.Cursor.filterMapLocateAndForkAt i main s (classifyForkView main qb i cf s)
 
-private def collideForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+def collideForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :
     Option (PFunctor.FreeM.Cursor.ForkView i main s) → Option (Fin (qb i + 1))
   | none => none
@@ -415,7 +419,7 @@ private def collideForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : �
         cf (PFunctor.FreeM.output main view.secondPath) = some s := by
   simp [collideForkView]
 
-private def contextForkViewCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+def contextForkViewCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :
     OracleComp spec (Option (Fin (qb i + 1))) :=
   PFunctor.FreeM.map (collideForkView main qb i cf s) (contextForkView main i s)

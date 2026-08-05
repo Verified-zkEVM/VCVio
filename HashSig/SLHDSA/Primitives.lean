@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Address
+
+module
+public import HashSig.SLHDSA.Address
 
 /-!
 # SLH-DSA Primitive Interfaces
@@ -40,6 +42,8 @@ against the generic `VCVio.CryptoFoundations` tweakable-hash / multi-target surf
 
 - NIST FIPS 205, §4.1 (the six functions), §11 (their instantiations)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA

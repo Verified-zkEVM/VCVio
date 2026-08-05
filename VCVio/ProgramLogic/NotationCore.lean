@@ -4,11 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Unary.HoareTriple
-import VCVio.EvalDist.TVDist
-import VCVio.ProgramLogic.Relational.Basic
-import VCVio.ProgramLogic.Relational.QuantitativeDefs
-import ToMathlib.Control.Monad.RelWP
+module
+
+public import VCVio.ProgramLogic.Unary.HoareTriple
+public import VCVio.EvalDist.TVDist
+public import VCVio.ProgramLogic.Relational.Basic
+public import VCVio.ProgramLogic.Relational.QuantitativeDefs
+public import ToMathlib.Control.Monad.RelWP
 
 /-!
 # Ergonomic Notation and Convenience Layer for Program Logic
@@ -41,6 +43,8 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 - `GameEquiv g₁ g₂` — two games have the same output distribution
 - `AdvBound game ε` — advantage of a game is at most `ε`
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 

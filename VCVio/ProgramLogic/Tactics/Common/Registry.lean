@@ -4,11 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Meta.Sym.Pattern
-import Lean.Meta.Sym.Simp.DiscrTree
-import Lean.Elab.Tactic.Do.Attr
-import ToMathlib.Control.Monad.RelWP
-import VCVio.ProgramLogic.Tactics.Common.SpecIR
+module
+
+public meta import Lean.Meta.Sym.Pattern
+public meta import Lean.Meta.Sym.Simp.DiscrTree
+public meta import Lean.Elab.Tactic.Do.Attr
+public import ToMathlib.Control.Monad.RelWP
+public meta import VCVio.ProgramLogic.Tactics.Common.SpecIR
 
 /-!
 # VCSpec Registry
@@ -66,6 +68,8 @@ lookup path in `getRegisteredUnaryVCSpecEntries` /
 through `VCSpecEntry.declName?` / `VCSpecEntry.theoremName!` and is
 insulated from `Sym` API churn.
 -/
+
+public meta section
 
 open Lean Elab Meta Lean.Meta
 open Lean.Elab.Tactic.Do.SpecAttr (SpecProof)

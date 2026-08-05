@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Extern.Hashing
+
+module
+public import Extern.Hashing
 
 /-!
 # ML-KEM FFI Bindings
@@ -23,6 +25,8 @@ Two groups of functions are exposed:
 The C side is compiled from `csrc/mlkem/lean_mlkem_ffi.c`, which `#include`s
 mlkem-native's monolithic `mlkem_native.c` (pinned at `v1.1.0`).
 -/
+
+@[expose] public section
 
 
 namespace MLKEM.Concrete.FFI

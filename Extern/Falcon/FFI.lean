@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
+module
+
 /-!
 # Falcon FFI Bindings
 
@@ -21,6 +23,8 @@ Falcon-1024 (logn=10):
 The C side is compiled from `csrc/falcon/lean_falcon_ffi.c`, which links
 against the c-fn-dsa SCU amalgamation (`csrc/falcon/fndsa_native.c`).
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Concrete.FFI

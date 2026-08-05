@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.QueryBounds
-import VCVio.CryptoFoundations.FiatShamir.Sigma
-import VCVio.CryptoFoundations.ReplayFork
-import VCVio.CryptoFoundations.SeededFork
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
+public import VCVio.CryptoFoundations.FiatShamir.Sigma
+public import VCVio.CryptoFoundations.ReplayFork
+public import VCVio.CryptoFoundations.SeededFork
 
 /-!
 # Fiat-Shamir forking infrastructure
@@ -41,6 +43,8 @@ of `euf_nma_bound`.
 * `runTrace_target_eq_of_mem_contextFork`: both fork branches agree on the forgery target.
 * `replayForkingBound`: the Fiat-Shamir replay forking bound.
 -/
+
+@[expose] public section
 
 universe u v
 

@@ -3,7 +3,9 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio
+
+module
+public import VCVio
 
 /-!
 # Generic-monad probability tactic benchmark
@@ -23,6 +25,8 @@ As in the concrete battery: where a fact closes by both `simp` and `grind`, both
 mirror); otherwise a single terminal tactic + a `target(...)` note. Operations with no probability
 API yet are recorded as `target` gaps at the end.
 -/
+
+@[expose] public section
 
 open OracleComp ProbComp ENNReal
 

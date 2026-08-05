@@ -3,14 +3,18 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.EvalDist.Defs.NeverFails
-import VCVio.EvalDist.Monad.Map
+
+module
+public import VCVio.EvalDist.Defs.NeverFails
+public import VCVio.EvalDist.Monad.Map
 
 /-!
 # Evaluation Distributions on Boolean-Valued Computations
 
 Specialization lemmas for `MonadLiftT m SPMF` computations returning `Bool`.
 -/
+
+@[expose] public section
 
 variable {m : Type _ → Type _} [Monad m] [MonadLiftT m SPMF] {α β : Type _}
 

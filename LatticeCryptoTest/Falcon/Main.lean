@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCryptoTest.Falcon.Helpers
-import LatticeCryptoTest.Falcon.TestVectors
+
+module
+public import LatticeCryptoTest.Falcon.Helpers
+public import LatticeCryptoTest.Falcon.TestVectors
 
 /-!
 # Falcon Test Runner
@@ -22,6 +24,8 @@ lake build falcon_test
 .lake/build/bin/falcon_test
 ```
 -/
+
+@[expose] public section
 
 set_option maxRecDepth 2048
 

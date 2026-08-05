@@ -3,9 +3,11 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.SimSemantics.SimulateQ
+
+module
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.SimSemantics.SimulateQ
 
 /-!
 # Basic Constructions of Simulation Oracles
@@ -39,6 +41,8 @@ side effect and delegate" — wrappers whose control flow is conditional on exte
 or the would-be response (cache-on-hit, seed fallback, budget gating) genuinely need a
 custom `QueryImpl` and stay outside this hierarchy.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp Prod Sum
 

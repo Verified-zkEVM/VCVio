@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Init.Data.Vector.Basic
-import Mathlib.LinearAlgebra.Matrix.Defs
-import Mathlib.RingTheory.Ideal.Operations
-import Mathlib.RingTheory.Ideal.Quotient.Basic
-import Mathlib.RingTheory.Polynomial.Basic
+
+module
+public import Init.Data.Vector.Basic
+public import Mathlib.LinearAlgebra.Matrix.Defs
+public import Mathlib.RingTheory.Ideal.Operations
+public import Mathlib.RingTheory.Ideal.Quotient.Basic
+public import Mathlib.RingTheory.Polynomial.Basic
 
 /-!
 # Generic Negacyclic Ring Core
@@ -22,6 +24,8 @@ All definitions here are purely semantic — no executable array operations or m
 state. Executable array exposure is layered on top in `LatticeCrypto.Ring.Kernel`, and
 the canonical vector-backed instantiation lives in `LatticeCrypto.Ring.VectorBackend`.
 -/
+
+@[expose] public section
 
 
 open scoped BigOperators

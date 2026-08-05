@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.DataEncapMech
-import VCVio.CryptoFoundations.KeyEncapMech
-import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
-import VCVio.ProgramLogic.Relational.Quantitative
+module
+
+public import VCVio.CryptoFoundations.DataEncapMech
+public import VCVio.CryptoFoundations.KeyEncapMech
+public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
+public import VCVio.ProgramLogic.Relational.Quantitative
 
 /-!
 # KEM + DEM Composition
@@ -15,6 +17,8 @@ import VCVio.ProgramLogic.Relational.Quantitative
 This file defines the textbook KEM+DEM public-key encryption construction and the proof-ladders A1
 reduction skeleton against the repo's existing KEM and one-time IND-CPA interfaces.
 -/
+
+@[expose] public section
 
 universe u v
 

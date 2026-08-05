@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Ring.VectorBackend
-import Mathlib.RingTheory.Polynomial.Basic
+
+module
+public import LatticeCrypto.Ring.VectorBackend
+public import Mathlib.RingTheory.Polynomial.Basic
 
 /-!
 # Schoolbook Negacyclic Multiplication Soundness
@@ -19,6 +21,8 @@ quotient ring `R[X] / (X^n + 1)`. The proof decomposes into:
 4. **Assembly**: connecting the above to the `NegacyclicRingSemantics` obligation.
 -/
 
+@[expose] public section
+
 open scoped BigOperators
 open Polynomial
 
@@ -26,10 +30,10 @@ namespace LatticeCrypto
 
 variable {R : Type*} [CommRing R] {n : Nat}
 
-/-- Private alias for the canonical quotient map onto `R[X] / (X^n + 1)`. Reducible
+/-- Canonical alias for the quotient map onto `R[X] / (X^n + 1)`. Reducible
 so that proofs treat `mkQ R n p` and `Ideal.Quotient.mk (Ideal.span …) p` as the same
 expression, while keeping local theorem statements compact. -/
-private noncomputable abbrev mkQ (R : Type*) [CommRing R] (n : Nat) :
+noncomputable abbrev mkQ (R : Type*) [CommRing R] (n : Nat) :
     Polynomial R →+* NegacyclicQuotient R n :=
   Ideal.Quotient.mk _
 
@@ -201,7 +205,7 @@ theorem negacyclicMulPure_sound
 /-- The constant-`1` vector maps to `1` in `R[X] / (X^n + 1)` for `n > 0`.
 For `n = 0`, `X^0 + 1 = 2` and `mk(0) = 1` fails for general `CommRing`
 (e.g. `ℤ[X] / (2)`), so this theorem requires positivity. -/
-private theorem vectorNegacyclicSemantics_one_sound
+theorem vectorNegacyclicSemantics_one_sound
     (Coeff : Type*) [CommRing Coeff] {n : Nat} (hn : 0 < n) :
     NegacyclicQuotient.ofBackend (vectorBackend Coeff n)
         (vectorNegacyclicRing Coeff n).one = 1 := by

@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Mathlib.Data.ZMod.Basic
-import LatticeCrypto.Ring.VectorBackend
+
+module
+public import Mathlib.Data.ZMod.Basic
+public import LatticeCrypto.Ring.VectorBackend
 
 /-!
 # Integral Lifts For Negacyclic Rings
@@ -21,6 +23,8 @@ the generic ring layer. Defines:
 - `vectorIntegralLift`: the canonical instance lifting `Vector ℤ n` to
   `Vector (ZMod q) n` via `PolyBackend.mapCoeffs`.
 -/
+
+@[expose] public section
 
 
 namespace LatticeCrypto

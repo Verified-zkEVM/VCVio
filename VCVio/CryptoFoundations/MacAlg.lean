@@ -4,12 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.EvalDist.Defs.Instances
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.ProbCompLift
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+module
+
+public import VCVio.EvalDist.Defs.Instances
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbCompLift
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 
 /-!
 # Message Authentication Codes
@@ -17,6 +19,8 @@ import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 This file defines keyed message-authentication-code algorithms together with their standard
 UF-CMA security game.
 -/
+
+@[expose] public section
 
 universe u v
 

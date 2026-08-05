@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.DirectCoupling
-import Examples.PRFTagReader.DirectCoupling.StepLemmas
-import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
-import VCVio.EvalDist.Monad.Disagreement
+module
+
+public import Examples.PRFTagReader.DirectCoupling
+public import Examples.PRFTagReader.DirectCoupling.StepLemmas
+public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
+public import VCVio.EvalDist.Monad.Disagreement
 
 /-!
 # PRF Tag/Reader Protocol — Direct Coupling, Reader Step
@@ -30,6 +32,8 @@ unit.
 * `dcAux_reader_step` — the reader induction step of the direct-coupling aux, taking the induction
   hypothesis as an explicit premise.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
+module
+
 /-!
 # Multi-Precision Big Integer Arithmetic with 31-bit Limbs
 
@@ -37,6 +39,8 @@ We also port the small modular-arithmetic helpers from `kgen_inner.h`:
 - `zint_add_scaled_mul_small` — scaled multiply-add
 - `zint_sub_scaled` — scaled subtract
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Concrete.BigInt31

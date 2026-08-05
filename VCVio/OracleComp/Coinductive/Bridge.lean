@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.OracleComp
-import PolyFun.ITree.Basic
+
+module
+public import VCVio.OracleComp.OracleComp
+public import PolyFun.ITree.Basic
 
 /-! # Bridge between `OracleComp` and `ITree`
 
@@ -27,6 +29,8 @@ To keep the polynomial functor uniform-universe, we specialise to
 `Poly F α` to live in `Type (max u v + 1)`, which is at odds with our
 single-universe ITree definition.
 -/
+
+@[expose] public section
 
 universe u
 

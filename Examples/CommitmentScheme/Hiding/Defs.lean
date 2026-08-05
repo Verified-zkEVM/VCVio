@@ -3,7 +3,9 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import Examples.CommitmentScheme.Common
+
+module
+public import Examples.CommitmentScheme.Common
 
 /-!
 # Hiding for the random-oracle commitment scheme — definitions
@@ -61,6 +63,8 @@ unavoidable: a trivial adversary always querying salt `s` makes
 `Pr[bad] = 1`. See `hiding_bound_avg` in
 `Examples/CommitmentScheme/Hiding/Main.lean`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

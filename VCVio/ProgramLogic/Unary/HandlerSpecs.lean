@@ -4,16 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Std.Tactic.Do
-import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.QueryTracking.CountingOracle
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.SeededOracle
-import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
-import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
-import VCVio.ProgramLogic.Unary.StdDoBridge
-import VCVio.ProgramLogic.Unary.WriterTBridge
+module
+
+public import Std.Tactic.Do
+public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.SeededOracle
+public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
+public import VCVio.ProgramLogic.Unary.StdDoBridge
+public import VCVio.ProgramLogic.Unary.WriterTBridge
 
 /-!
 # `Std.Do` handler specifications for `OracleComp` simulators
@@ -125,6 +127,8 @@ This single-`StateT`-layer pattern is preferred over genuinely stacked
   use `do` with `get` / `set` / `pure` would make it `mvcgen`-friendly,
   but is non-trivial given the existing dependents.
 -/
+
+@[expose] public section
 
 open Std.Do OracleSpec OracleComp
 

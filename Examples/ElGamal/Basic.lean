@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import Examples.ElGamal.Common
-import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
-import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+
+module
+public import Examples.ElGamal.Common
+public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 
 /-!
 # ElGamal Encryption: IND-CPA via the generic one-time lift
@@ -40,6 +42,8 @@ payloads (for example elliptic-curve points), and `gen : G` is a fixed public ge
    `AsymmEncAlg.IND_CPA_advantage_toReal_le_q_mul_of_oneTime_signedAdvantageReal_bound`
    with one-time loss `2 * ε`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

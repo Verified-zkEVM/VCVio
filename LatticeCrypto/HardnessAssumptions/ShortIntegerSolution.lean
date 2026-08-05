@@ -4,14 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.Coercions.Add
-import Mathlib.LinearAlgebra.Matrix.DotProduct
+module
+
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.Coercions.Add
+public import Mathlib.LinearAlgebra.Matrix.DotProduct
 
 /-!
 # Short Integer Solution (SIS) and SelfTargetMSIS
@@ -43,6 +45,8 @@ query cache.
 - Fixing and Mechanizing the Security Proof of Fiat-Shamir with Aborts and Dilithium
   (CRYPTO 2023, ePrint 2023/246)
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal Matrix

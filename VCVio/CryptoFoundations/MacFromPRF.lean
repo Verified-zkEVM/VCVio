@@ -4,12 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Lacramioara Astefanoaei
 -/
 
-import VCVio.CryptoFoundations.PRF
-import VCVio.CryptoFoundations.MacAlg
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.SimSemantics.Append
-import ToMathlib.Control.StateT
+module
+
+public import VCVio.CryptoFoundations.PRF
+public import VCVio.CryptoFoundations.MacAlg
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.SimSemantics.Append
+public import ToMathlib.Control.StateT
 
 /-!
 # Deterministic MAC from a PRF
@@ -36,6 +38,8 @@ The standard construction of a message authentication code from a pseudorandom f
 - [Boneh, Shoup, *A Graduate Course in Applied Cryptography*, v0.6, §6.3]
   (https://crypto.stanford.edu/~dabo/cryptobook/BonehShoup_0_6.pdf)
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -79,7 +83,7 @@ has exactly one valid tag, so the two notions coincide.
 variable [DecidableEq D] [DecidableEq R]
 
 /-- Query the `(D →ₒ R)` component of the PRF oracle spec. -/
-private def prfFuncQuery (msg : D) :
+def prfFuncQuery (msg : D) :
     OracleComp (unifSpec + (D →ₒ R)) R :=
   (unifSpec + (D →ₒ R)).query (Sum.inr msg)
 

@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import ToMathlib.Control.Monad.RelWP
-import VCVio.ProgramLogic.Unary.Loom.Probabilistic
-import VCVio.ProgramLogic.Relational.Quantitative
+module
+
+public import ToMathlib.Control.Monad.RelWP
+public import VCVio.ProgramLogic.Unary.Loom.Probabilistic
+public import VCVio.ProgramLogic.Relational.Quantitative
 
 /-!
 # Probabilistic `RelWP` carrier for `OracleComp` (`Prob`, scoped)
@@ -43,6 +45,8 @@ nose, so quantitative theorems still apply after coercing through
 `.val`.
 -/
 
+@[expose] public section
+
 universe u
 
 open ENNReal Std.Do' OracleComp.ProgramLogic.Loom
@@ -73,12 +77,12 @@ private lemma eRelWP_le_one_of_post_le_one
 
 /-- The underlying `ℝ≥0∞`-valued relational WP, packaged for use inside
 the `Prob` constructor. -/
-private noncomputable def rwpVal
+noncomputable def rwpVal
     (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (post : α → β → Prob) : ℝ≥0∞ :=
   OracleComp.ProgramLogic.Relational.eRelWP oa ob (fun a b => (post a b).val)
 
-private theorem rwpVal_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
+theorem rwpVal_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (post : α → β → Prob) : rwpVal oa ob post ≤ 1 :=
   eRelWP_le_one_of_post_le_one oa ob _ (fun a b => (post a b).val_le_one)
 

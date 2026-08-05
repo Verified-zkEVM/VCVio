@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.PRFReductions
+module
+
+public import Examples.PRFTagReader.PRFReductions
 
 /-!
 # PRF Tag/Reader Protocol — Composed-Handler Eager-Table Equivalence
@@ -23,6 +25,8 @@ All declarations live inside `section EagerComposed`, whose variable block drops
 relative to the enclosing `UnlinkReduction` section (the PRF key type does not appear in
 the eager-table reformulation).
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
