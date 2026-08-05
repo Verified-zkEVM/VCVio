@@ -203,7 +203,7 @@ times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
 After adding new `.lean` files: `./scripts/update-lib.sh`
 
-Lean toolchain and Mathlib must stay in sync (both currently `v4.32.0`). Keep files
+Lean toolchain and Mathlib must stay in sync (both currently `v4.32.2`). Keep files
 reasonably sized, but there is no hard line-count limit (the file-length linter is off).
 
 ## Further Reading
