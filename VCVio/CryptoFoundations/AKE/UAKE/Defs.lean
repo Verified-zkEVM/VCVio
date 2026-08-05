@@ -245,9 +245,9 @@ def isPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
 /-- True if the challenge transcript is ping-pong and a session whose transcript
   matches has been revealed to the adversary through a reveal query. -/
 def fullPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
-    (env : Env proto) (cr : ChallengeResult proto) : Bool :=
+    (tSessions : List (TSession proto)) (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1)
-    ((env.tSessions.filter (·.revealed)).map (·.transcript)) cr.challengeTr
+    ((tSessions.filter (·.revealed)).map (·.transcript)) cr.challengeTr
 
 /-- Final stage in the security experiment:
   1. Pick between `Kb = K1` (if `b = true`) or `Kb = K0` (otherwise)
@@ -265,7 +265,7 @@ def finalize [DecidableEq W] [Monad m] (lift : ProbCompLift m)
   let Kb := if b then K1 else cr.K0
   let env := { env with challengeDone := true }
   let (b', env') ← (simulateQ (oracleImpl lift proto tk) (A.post aSt Kb)).run env
-  if fullPingPong env' cr then lift.liftProbComp ($ᵗ Bool) else pure (b' == b)
+  if fullPingPong env'.tSessions cr then lift.liftProbComp ($ᵗ Bool) else pure (b' == b)
 
 /-- The security experiment from Sec. 3 of DF'17:
   1. Run setup
