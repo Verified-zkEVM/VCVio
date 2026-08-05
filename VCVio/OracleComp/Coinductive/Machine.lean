@@ -3,9 +3,11 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.Coinductive.DynSystem
-import PolyFun.PFunctor.Dynamical.DynComputation.Bounded
-import PolyFun.PFunctor.Dynamical.Simulation
+
+module
+public import VCVio.OracleComp.Coinductive.DynSystem
+public import PolyFun.PFunctor.Dynamical.DynComputation.Bounded
+public import PolyFun.PFunctor.Dynamical.Simulation
 
 /-!
 # Oracle machines: `DynComputation` presentations of `OracleComp` programs
@@ -50,6 +52,8 @@ What this file adds is the `OracleSpec`-side reading of that theory:
 * `DynComputation.ImplementsWithin.probOutput_none_runWithInput` — no probability mass on
   fuel exhaustion under a probabilistic handler.
 -/
+
+@[expose] public section
 
 universe u v w
 

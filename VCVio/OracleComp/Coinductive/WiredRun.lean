@@ -3,9 +3,11 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.Coinductive.Machine
-import VCVio.OracleComp.Coinductive.Responder
-import PolyFun.PFunctor.Handler.Normalization
+
+module
+public import VCVio.OracleComp.Coinductive.Machine
+public import VCVio.OracleComp.Coinductive.Responder
+public import PolyFun.PFunctor.Handler.Normalization
 
 /-!
 # Wired Machine Runs: Fuelled Machines Against Stateful Responders
@@ -39,6 +41,8 @@ responder back (`ProbResponder.pullback`) along the same lens. This is the run-l
 combinator behind same-interface security reductions (`OracleStrategy.reduce` is the
 sub-spec special case).
 -/
+
+@[expose] public section
 
 universe u
 

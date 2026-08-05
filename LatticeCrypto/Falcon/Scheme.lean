@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Primitives
-import VCVio.CryptoFoundations.GPVHashAndSign
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.Coercions.Add
+
+module
+public import LatticeCrypto.Falcon.Primitives
+public import VCVio.CryptoFoundations.GPVHashAndSign
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.Coercions.Add
 
 /-!
 # Falcon Signature Scheme
@@ -39,6 +41,8 @@ matching the concrete executable signer in `LatticeCrypto.Falcon.Concrete.Sign`.
 - FIPS 206 (FN-DSA) draft
 - GPV08: Gentry, Peikert, Vaikuntanathan. STOC 2008.
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec

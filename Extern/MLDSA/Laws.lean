@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import Extern.MLDSA.Instance
-import LatticeCrypto.MLDSA.Concrete.LawBounds
+module
+
+public import Extern.MLDSA.Instance
+public import LatticeCrypto.MLDSA.Concrete.LawBounds
 
 /-!
 # Concrete ML-DSA Primitive Laws
@@ -78,6 +80,8 @@ The abstract `Primitives.Laws` statement is **not** modified by this file; the b
 theorems make explicit which concrete obligations are discharged and which remain.
 -/
 
+@[expose] public section
+
 
 namespace MLDSA.Concrete
 
@@ -148,18 +152,11 @@ after generalizing the byte argument; the two side conditions on the `z`-range b
 approved parameter set. -/
 theorem concrete_expandMask_bound (hp : p.isApproved) (rhoDoublePrime : Bytes 64) (kappa : ℕ) :
     polyVecBounded ((concretePrimitives p).expandMask rhoDoublePrime kappa) p.gamma1 := by
-  obtain ⟨hwidth, hq⟩ := approved_gamma1_width p hp
   rw [polyVecBounded, polyVecNorm, LatticeCrypto.PolyVec.cInfNorm_le_iff]
   intro j
-  -- Each component is `polyZUnpack p (<opaque SHAKE stream>)`; the bound is a decode-range
-  -- property, so generalize the opaque byte argument and apply the decoder bound.
-  change polyNorm ((MLDSA.Concrete.expandMask rhoDoublePrime kappa p).get j) ≤ p.gamma1
-  rw [polyNorm_eq_cInfNorm]
-  unfold MLDSA.Concrete.expandMask
-  rw [Vector.get_ofFn]
-  -- The decoder argument is an opaque SHAKE stream; the bound holds for any byte input,
-  -- since `polyZUnpack p bytes = bitUnpackPoly bytes (-γ₁ + 1) γ₁`.
-  exact bitUnpackPoly_z_cInfNorm_le _ p.gamma1 hwidth hq
+  change LatticeCrypto.cInfNorm
+      ((MLDSA.Concrete.expandMask rhoDoublePrime kappa p).get j) ≤ p.gamma1
+  exact MLDSA.Concrete.expandMask_get_cInfNorm_le p hp rhoDoublePrime kappa j
 
 /-! ## `w1Encode_injective` as `Set.InjOn` on the valid range
 

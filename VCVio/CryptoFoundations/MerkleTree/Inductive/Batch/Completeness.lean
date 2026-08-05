@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Abraxas1010 (IAOM / Apoth3osis)
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 
 /-!
 # Completeness of Batch Openings for Inductive Merkle Trees
@@ -25,6 +27,8 @@ As with the single-index case, the proof is split into two pieces:
   under the random oracle, reducing through `simulateQ` exactly as the single-index
   `completeness` theorem does.
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 

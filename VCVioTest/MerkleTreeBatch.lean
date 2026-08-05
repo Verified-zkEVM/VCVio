@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
+public meta import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 
 /-!
 # Inductive Merkle Batch-Opening Canaries
@@ -15,6 +17,8 @@ Concrete examples that pin the public behavior of path-pruned batch openings: ha
 order, pruning shape, the singleton reduction to an ordinary authentication path, the
 all-selected and empty-selector boundaries, and cross-selector collision extraction.
 -/
+
+@[expose] public section
 
 namespace VCVioTest.MerkleTreeBatch
 

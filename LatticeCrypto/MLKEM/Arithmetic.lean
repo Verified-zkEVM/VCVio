@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.Params
-import LatticeCrypto.Ring.SchoolbookCert
-import LatticeCrypto.Ring.Transform
+
+module
+public import LatticeCrypto.MLKEM.Params
+public import LatticeCrypto.Ring.SchoolbookCert
+public import LatticeCrypto.Ring.Transform
 
 /-!
 # ML-KEM Arithmetic Assembly
@@ -28,6 +30,8 @@ ML-KEM does not use rounding or norm bundles at the arithmetic layer.
 This module is mixed: the executable aliases are computable, while
 `coeffSemantics` and `quotientOfRq` are `noncomputable`.
 -/
+
+@[expose] public section
 
 
 namespace MLKEM

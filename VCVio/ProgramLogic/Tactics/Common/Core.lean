@@ -4,17 +4,21 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Elab.Tactic.Basic
-import Lean.Meta.Match.MatcherApp
-import Lean.Meta.Sym.Pattern
-import VCVio.OracleComp.Constructions.Replicate
-import VCVio.ProgramLogic.NotationCore
+module
+
+public meta import Lean.Elab.Tactic.Basic
+public meta import Lean.Meta.Match.MatcherApp
+public meta import Lean.Meta.Sym.Pattern
+public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.ProgramLogic.NotationCore
 
 /-!
 # VCGen Planner Core
 
 Shared planning infrastructure for the unary and relational VCGen tactics.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 

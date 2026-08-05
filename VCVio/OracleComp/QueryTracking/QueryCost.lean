@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.OracleComp.QueryTracking.WriterCost
+module
+
+public import VCVio.OracleComp.QueryTracking.WriterCost
 
 /-!
 # Query Cost Accounting
@@ -14,6 +16,8 @@ A direct-style program is evaluated against a concrete `QueryImpl`, and query-co
 are phrased by running that implementation through the writer-cost instrumentation from
 `WriterCost.lean`.
 -/
+
+@[expose] public section
 
 open OracleSpec
 open scoped BigOperators

@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Unary.Loom.Probabilistic
-import VCVio.ProgramLogic.Unary.Loom.Qualitative
+module
+
+public import VCVio.ProgramLogic.Unary.Loom.Probabilistic
+public import VCVio.ProgramLogic.Unary.Loom.Qualitative
 
 /-!
 # Cross-tier coherence for the unary `WP` carriers
@@ -48,6 +50,8 @@ via the keystone `rfl` lemmas in the per-carrier files.
 See `.ignore/wp-cutover-plan.md` §"Three-tier carrier design" for the
 broader story.
 -/
+
+@[expose] public section
 
 universe u
 

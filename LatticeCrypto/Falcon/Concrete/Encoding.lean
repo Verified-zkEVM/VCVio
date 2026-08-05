@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Batteries.Data.ByteArray
-import Batteries.Data.Array.Lemmas
-import LatticeCrypto.Falcon.Arithmetic
+
+module
+public import Batteries.Data.ByteArray
+public import Batteries.Data.Array.Lemmas
+public import LatticeCrypto.Falcon.Arithmetic
 
 /-!
 # Concrete Falcon Encoding
@@ -32,6 +34,8 @@ packed 4 coefficients into 7 bytes.
 - c-fn-dsa: `codec.c` (comp_encode, comp_decode, mqpoly_encode, mqpoly_decode)
 - Falcon specification v1.2, Section 3.12 (Algorithms 17–18)
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Concrete

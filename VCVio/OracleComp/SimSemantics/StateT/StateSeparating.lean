@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.StateT.Basic
-import PolyFun.PFunctor.Handler.Stateful
-import PolyFun.PFunctor.Lens.State
+
+module
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import PolyFun.PFunctor.Handler.Stateful
+public import PolyFun.PFunctor.Lens.State
 
 /-!
 # Stateful query implementations
@@ -17,6 +19,8 @@ unbundled stateful-handler layer used by state-separating proofs: the handler
 and initial state are supplied separately instead of being bundled in a package
 record.
 -/
+
+@[expose] public section
 
 universe uᵢ uₘ uₑ vᵢ v
 

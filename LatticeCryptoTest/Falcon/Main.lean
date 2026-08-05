@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCryptoTest.Falcon.Helpers
-import LatticeCryptoTest.Falcon.TestVectors
+
+module
+public import LatticeCryptoTest.Falcon.Helpers
+public import LatticeCryptoTest.Falcon.TestVectors
 
 /-!
 # Falcon Test Runner
@@ -23,26 +25,28 @@ lake build falcon_test
 ```
 -/
 
+public section
+
 set_option maxRecDepth 2048
 
 open Falcon Falcon.Concrete Falcon.Concrete.FPR Falcon.Concrete.SamplerZ
      Falcon.Concrete.FFTOps Falcon.Concrete.Sign Falcon.Test
 
-private def testFalcon512 : Params where
+def testFalcon512 : Params where
   n := 512
   sigma := 0
   sigmaMin := 0
   betaSquared := 34034726
   sbytelen := 625
 
-private def testFalcon1024 : Params where
+def testFalcon1024 : Params where
   n := 1024
   sigma := 0
   sigmaMin := 0
   betaSquared := 70265242
   sbytelen := 1239
 
-private def u64ToHex (v : UInt64) : String := Id.run do
+def u64ToHex (v : UInt64) : String := Id.run do
   let mut s := ""
   for i in [0:16] do
     let nibble := ((v >>> ((15 - i) * 4).toUInt64) &&& 0xF).toNat
@@ -51,12 +55,12 @@ private def u64ToHex (v : UInt64) : String := Id.run do
     s := s.push digit
   return s
 
-private def checkFPR (st : IO.Ref TestState) (name : String)
+def checkFPR (st : IO.Ref TestState) (name : String)
     (got expected : FPR) : IO Unit :=
   check st name (got == expected)
     s!"got=0x{u64ToHex got} exp=0x{u64ToHex expected}"
 
-private def flush : IO Unit := IO.getStdout >>= IO.FS.Stream.flush
+def flush : IO Unit := IO.getStdout >>= IO.FS.Stream.flush
 
 /-- Generate a 40-byte salt (nonce) from the PRNG state.
 
@@ -65,7 +69,7 @@ Diagnostic-only helper: the production signer derives its salts from
 `LatticeCrypto/Falcon/Concrete/Sign.lean`), which is why this definition was
 removed from the library; the target-vector diagnostic below only needs a
 deterministic salt drawn from a `PRNGState`. -/
-private def prngNextSalt (s : PRNGState) : Bytes 40 × PRNGState := Id.run do
+def prngNextSalt (s : PRNGState) : Bytes 40 × PRNGState := Id.run do
   let mut st := s
   let mut bytes : Array UInt8 := Array.mkEmpty 40
   for _ in [0:40] do

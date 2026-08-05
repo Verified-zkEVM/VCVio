@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Bolton Bailey
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
-import VCVio.OracleComp.QueryTracking.Birthday
-import ToMathlib.Data.IndexedBinaryTree.Lemmas
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
+public import VCVio.OracleComp.QueryTracking.Birthday
+public import ToMathlib.Data.IndexedBinaryTree.Lemmas
 
 /-!
 # Inductive Merkle Tree Extractability
@@ -59,6 +61,8 @@ A future improvement might be to re-structure the proof to recover the tighter b
 * [Building Cryptographic Proofs from Hash Functions by Chiesa and Yogev](https://snargsbook.org/), Lemma 18.5.1.
 
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 

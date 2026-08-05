@@ -3,7 +3,9 @@ Copyright (c) 2026 XC0R. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: XC0R
 -/
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
+
+module
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
 
 /-!
 # Merkle Opening Uniqueness
@@ -34,6 +36,8 @@ positions producing the same root is normal Merkle tree operation.
   (Merkle-tree string commitment binding property)
 - Vitalik Buterin. `Binding.lean` (PR #384) — same-index collision extraction
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 

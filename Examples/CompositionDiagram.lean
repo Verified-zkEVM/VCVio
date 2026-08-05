@@ -3,10 +3,14 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.Interaction.UC.Notation
-import VCVioWidgets.OpenSyntax.Render
-import VCVioWidgets.OpenSyntax.Panel
-import VCVioWidgets.OpenSyntax.TreePanel
+
+module
+public meta import PolyFun.Interaction.UC.Interface
+public meta import VCVioWidgets.OpenSyntax.Render
+public import PolyFun.Interaction.UC.Notation
+public import VCVioWidgets.OpenSyntax.Render
+public import VCVioWidgets.OpenSyntax.Panel
+public import VCVioWidgets.OpenSyntax.TreePanel
 
 /-!
 # Diffie-Hellman key exchange as a composition diagram
@@ -32,6 +36,8 @@ Two layout variants are shown in the infoview for comparison:
 Use `Raw.toDot` to export Graphviz DOT strings for external rendering.
 -/
 
+public section
+
 show_panel_widgets [
   local VCVioWidgets.OpenSyntax.CompositionPanel,
   local VCVioWidgets.OpenSyntax.TreePanel]
@@ -40,10 +46,10 @@ open Interaction.UC
 open Interaction.UC.OpenSyntax
 
 -- Symmetric boundary where In = Out, so `swap bd = bd` definitionally.
-private abbrev bd : PortBoundary :=
+abbrev bd : PortBoundary :=
   ⟨⟨Unit, fun _ => Unit⟩, ⟨Unit, fun _ => Unit⟩⟩
 
-private abbrev bd2 : PortBoundary := bd ⊗ᵇ bd
+abbrev bd2 : PortBoundary := bd ⊗ᵇ bd
 
 /--
 Protocol components for a DH key exchange in the UC paradigm.

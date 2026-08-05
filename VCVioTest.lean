@@ -1,8 +1,10 @@
-import VCVioTest.GrindFailFast
-import VCVioTest.LongChainPrograms
-import VCVioTest.MerkleTreeBatch
-import VCVioTest.MonadProbability
-import VCVioTest.ProbabilityTactics
-import VCVioTest.RoundByRound.OneRound
-import VCVioTest.SampleableType
-import VCVioTest.Smoke
+module  -- shake: keep-all --deprecated_module: ignore
+
+public import VCVioTest.GrindFailFast
+public import VCVioTest.LongChainPrograms
+public import VCVioTest.MerkleTreeBatch
+public import VCVioTest.MonadProbability
+public import VCVioTest.ProbabilityTactics
+public import VCVioTest.RoundByRound.OneRound
+public import VCVioTest.SampleableType
+public import VCVioTest.Smoke

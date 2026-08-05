@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Extern.MLDSA.Laws
+module
+
+public import Extern.MLDSA.Laws
 
 /-!
 # Hypothesis-consistency certificate for `MLDSA.Primitives.Laws` (issue #228)
@@ -39,6 +41,8 @@ since `concreteNTTRingOps` is the only `NTTRingLaws` instance in the tree.  The 
 `[propext, Classical.choice, Quot.sound]`; this certificate only witnesses that their `Laws`
 hypothesis can be met by the concrete layer (whose NTT-correctness trust assumption it inherits).
 -/
+
+@[expose] public section
 
 open MLDSA
 

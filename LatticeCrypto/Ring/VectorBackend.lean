@@ -3,8 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Init.Data.Vector.Algebra
-import LatticeCrypto.Ring.Kernel
+
+module
+
+import all Init.Data.Vector.Algebra
+
+public import Init.Data.Vector.Algebra
+public import LatticeCrypto.Ring.Kernel
 
 /-!
 # Vector Backend For Negacyclic Rings
@@ -23,6 +28,8 @@ polynomial carrier. Provides:
 All three scheme `Arithmetic.lean` modules (`MLDSA`, `MLKEM`, `Falcon`)
 instantiate their coefficient-domain rings through `vectorNegacyclicRing`.
 -/
+
+@[expose] public section
 
 
 universe u
@@ -146,7 +153,7 @@ section VectorRingSimp
 
 variable {Coeff : Type u} [CommRing Coeff] {n : Nat}
 
-private abbrev vRing (Coeff : Type u) [CommRing Coeff] (n : Nat) :=
+abbrev vRing (Coeff : Type u) [CommRing Coeff] (n : Nat) :=
   vectorNegacyclicRing Coeff n
 
 omit [CommRing Coeff] in

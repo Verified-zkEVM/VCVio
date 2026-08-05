@@ -3,8 +3,10 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import Examples.CommitmentScheme.Common
-import ToMathlib.Data.ENNReal.Gauss
+
+module
+public import Examples.CommitmentScheme.Common
+public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # Binding for the random-oracle commitment scheme
@@ -53,6 +55,8 @@ The birthday term uses `probEvent_cacheCollision_le_birthday_total_tight`;
 the unpredictability term uses `probEvent_from_fresh_query_le_inv` from
 `Examples/CommitmentScheme/Common.lean`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

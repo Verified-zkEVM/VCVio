@@ -4,12 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Elab.Tactic.Basic
-import Lean.Meta.Sym.Simp.Goal
-import Lean.Meta.Sym.Simp.Rewrite
-import Lean.Meta.Sym.Util
-import VCVio.ProgramLogic.Tactics.Common.WpStepRegistry
-import VCVio.ProgramLogic.Unary.SimulateQ
+module
+
+public meta import Lean.Elab.Tactic.Basic
+public meta import Lean.Meta.Sym.Simp.Goal
+public meta import Lean.Meta.Sym.Simp.Rewrite
+public meta import Lean.Meta.Sym.Util
+public meta import VCVio.ProgramLogic.Tactics.Common.WpStepRegistry
+public import VCVio.ProgramLogic.Unary.SimulateQ
 
 /-!
 # `runWpStepRules` Dispatch
@@ -24,6 +26,8 @@ The registrations live here (rather than in the rule files themselves) because
 infrastructure in the import DAG, mirroring the centralized `attribute [vcspec]`
 block in `VCVio/ProgramLogic/Tactics/Relational/Internals.lean`.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 
