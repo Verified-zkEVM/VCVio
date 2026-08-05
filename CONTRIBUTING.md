@@ -12,6 +12,7 @@ Before sending work for review:
 
 - Run `lake exe cache get && lake build`.
 - After adding new `.lean` files, run `./scripts/update-lib.sh`.
+- Run `./scripts/check-modules.sh` when changing module headers, scopes, or imports.
 - Avoid leaving `sorry` in finished work unless the change is explicitly meant to preserve partial work.
 - Keep repo-wide Lean options in `lakefile.lean`. Do not restate `autoImplicit = false` with per-file `set_option` lines.
 - Do not disable linters locally or globally to make warnings disappear. Fix the underlying issue instead of adding `set_option linter.* false`, `set_option weak.linter.* false`, or repo-level linter suppressions.
@@ -55,10 +56,30 @@ When in doubt, prefer:
 - For ordinary Lean source files, use this prologue layout:
   1. copyright / license / authors header
   2. one blank line
-  3. imports
-  4. one blank line
-  5. module docstring
+  3. `module`
+  4. public and private imports
+  5. one blank line
+  6. module docstring
   Keep exactly one blank line between these blocks.
+
+## Module Scopes
+
+All active Lean libraries and tests use the module system. Put ordinary declarations in a
+`public section` and tactic/elaborator declarations in a `public meta section`. Existing source
+files generally use `@[expose] public section` to preserve pre-migration definitional equality;
+new definitions can instead be exposed individually with `@[expose]` when unfolding is part of
+their intended public API. Executable and runtime implementation modules should use opaque
+`public section` when callers do not need to unfold their definitions.
+
+Use `public import` for a dependency that downstream importers should receive transitively,
+`public meta import` for exported compile-time dependencies, and plain `import` for a private
+implementation dependency. `import all` is appropriate in a proof module that deliberately needs
+an imported module's private implementation. Do not use the transitional
+`backward.privateInPublic` or `backward.proofsInPublic` options.
+
+`LatticeCryptoTest.lean` is intentionally curated rather than generated because its executable
+modules define colliding root-level `main` declarations. For the same reason, `HashSigTest` has no
+generated root umbrella; build its named executables and modules directly.
 
 ### Section Headers Within A File
 

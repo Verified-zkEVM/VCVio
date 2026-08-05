@@ -271,32 +271,48 @@ diacritics in cited author names, which the Mathlib allowlist would otherwise re
 
 ### 24. After adding new `.lean` files, run `./scripts/update-lib.sh`
 
-This regenerates the root import files covered by the build import check:
+This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
-`HashSig.lean`, `Examples.lean`, and `Interop.lean`. CI checks those are up to
-date.
+`HashSig.lean`, `Examples.lean`, `VCVioWidgets.lean`, and `VCVioTest.lean`.
+It also updates the legacy `Interop.lean` umbrella without enabling module mode.
+CI checks the active module roots; `Interop` remains dormant and is migrated separately.
 
-### 25. Lean toolchain and Mathlib version must stay in sync
+### 25. Active Lean sources use explicit module scopes
+
+Start active source files with `module`, use public imports deliberately, and put declarations in
+`public section` or `public meta section`. Existing ordinary files use `@[expose] public section`
+for downstream compatibility; executable and runtime implementation modules should use opaque
+`public section` when downstream code does not need definitional unfolding. Never reach for
+`backward.privateInPublic` or
+`backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
+information to avoid public metavariables. Run `./scripts/check-modules.sh` after scope changes.
+
+The dormant `Interop` library is intentionally excluded until its separate migration.
+`LibSodium/SHA2.lean` is also excluded because it is a dormant source outside every Lake library.
+`LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
+their executable modules contain colliding root-level `main` declarations.
+
+### 26. Lean toolchain and Mathlib version must stay in sync
 
 Both currently `v4.32.0`: `lean-toolchain` pins `leanprover/lean4:v4.32.0` and
 `lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.32.0"`.
 When upgrading, update both lines simultaneously.
 
-### 26. Use public references in shared docs
+### 27. Use public references in shared docs
 
 When a proof framework follows an external paper, cite the public paper by title, venue,
 or URL rather than pointing agents at a repo-local file path.
 
-### 27. Public reference papers are authoritative for design work
+### 28. Public reference papers are authoritative for design work
 
 For relational program logic, start with
 *A Quantitative Probabilistic Relational Hoare Logic* ([ERHL25](../../REFERENCES.md#erhl25)).
 
-### 28. Agent guidance files must be committed
+### 29. Agent guidance files must be committed
 
 Agents dispatched to `git worktree` clones need to read `AGENTS.md`, `docs/agents/`, and any other guidance files. Ensure these are committed so all worktrees see them.
 
-### 29. Restack with `--onto` after folding commits into a base branch
+### 30. Restack with `--onto` after folding commits into a base branch
 
 When a stacked branch's base is cherry-picked or squashed into a new base, the old base commits
 may not be ancestors of the new base. Record the old base tip and the pre-rebase branch tip,

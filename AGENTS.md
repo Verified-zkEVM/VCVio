@@ -17,12 +17,29 @@ Machine-checked cryptographic proofs in Lean, built on Mathlib.
 Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repo's explicit attribution policy.
 
 - New Lean files should use the standard copyright / license / authors header and a module docstring.
-- For ordinary Lean source files, use the standard prologue layout: header, blank line, imports, blank line, module docstring.
+- For ordinary Lean source files, use the standard prologue layout: header, blank line, `module`, public imports, blank line, module docstring.
 - Docstrings must be intrinsic and descriptive. Cross-reference live sibling definitions when helpful, but do not mention removed or renamed declarations, change history, or use reactive wording such as "replaces" or "renamed from".
 - Preserve existing headers on routine edits.
 - Only rewrite attribution when a file is genuinely new or materially replaced.
 - Do not add a separate AI-attribution line.
 - For inline section breaks within a Lean file, use Mathlib-style doc-comment headers `/-! ## Title -/` (or the multi-line `/-! ## Title \n\n explanation -/` form). **Do not use ASCII banners** such as `-- ====...===` flanking a `-- § Title` line. The `/-!` form is rendered by `doc-gen4`; ASCII banners are not, and they make the file feel artificially partitioned. If a section is large enough to want a loud header, it is usually large enough to want its own `namespace` or its own file. See *Section Headers Within A File* in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## Module Scopes
+
+Active Lean libraries and tests use Lean's module system. Put declarations in a `public section`;
+use `public meta section` for tactic and elaborator code. During this compatibility-first migration,
+ordinary source files use `@[expose] public section` so existing downstream definitional equalities
+remain available. New code may expose individual definitions instead when an opaque API boundary is
+intentional and covered by public lemmas. Executable and runtime implementation modules should use
+opaque `public section` when callers do not need to unfold their definitions.
+
+- Use `public import` for dependencies that form part of the module's transitive public surface and
+  `public meta import` for exported tactic/elaborator dependencies.
+- Use plain `import` for implementation-only dependencies. A proof module may use `import all` to
+  access an unexposed implementation from the same dependency when proving its public API.
+- Do not enable `backward.privateInPublic` or `backward.proofsInPublic`; resolve visibility and
+  proof-metavariable issues directly.
+- Keep the dormant `Interop` library outside this policy until it is migrated separately.
 
 ## What This Project Is
 

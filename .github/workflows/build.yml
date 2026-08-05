@@ -28,25 +28,31 @@ jobs:
           use-mathlib-cache: false
 
       - name: Check for all imports in ToMathlib
-        run: lake exe mk_all --lib ToMathlib --check
+        run: lake exe mk_all --lib ToMathlib --module --check
 
       - name: Check for all imports in VCVio
-        run: lake exe mk_all --lib VCVio --check
+        run: lake exe mk_all --lib VCVio --module --check
 
       - name: Check for all imports in LatticeCrypto
-        run: lake exe mk_all --lib LatticeCrypto --check
+        run: lake exe mk_all --lib LatticeCrypto --module --check
 
       - name: Check for all imports in Extern
-        run: lake exe mk_all --lib Extern --check
+        run: lake exe mk_all --lib Extern --module --check
 
       - name: Check for all imports in HashSig
-        run: lake exe mk_all --lib HashSig --check
+        run: lake exe mk_all --lib HashSig --module --check
 
       - name: Check for all imports in Examples
-        run: lake exe mk_all --lib Examples --check
+        run: lake exe mk_all --lib Examples --module --check
 
       - name: Check for all imports in VCVioWidgets
-        run: lake exe mk_all --lib VCVioWidgets --check
+        run: lake exe mk_all --lib VCVioWidgets --module --check
+
+      - name: Check for all imports in VCVioTest
+        run: lake exe mk_all --lib VCVioTest --module --check
+
+      - name: Check module scopes
+        run: ./scripts/check-modules.sh
 
   downstream_stub_link:
     name: Downstream Consumer Build (no submodules)
@@ -68,8 +74,8 @@ jobs:
           use-mathlib-cache: false
       - name: Build a scratch consumer requiring VCVio by path
         env:
-          # The consumer's Main imports nothing, so Mathlib's olean cache is
-          # dead weight; skip its post-update `lake exe cache get` hook.
+          # The consumer imports VCVio but does not need Mathlib's source cache;
+          # skip its post-update `lake exe cache get` hook.
           MATHLIB_NO_CACHE_ON_UPDATE: "1"
         run: |
           consumer="$RUNNER_TEMP/vcvio-consumer"
@@ -87,7 +93,15 @@ jobs:
             echo 'name = "consumer"'
             echo 'root = "Main"'
           } > "$consumer/lakefile.toml"
-          printf 'def main : IO Unit := IO.println "consumer ok"\n' > "$consumer/Main.lean"
+          {
+            echo 'module'
+            echo ''
+            echo 'import VCVio'
+            echo ''
+            echo '#check OracleComp'
+            echo ''
+            echo 'public def main : IO Unit := IO.println "consumer ok"'
+          } > "$consumer/Main.lean"
           cd "$consumer"
           lake update
           lake build
