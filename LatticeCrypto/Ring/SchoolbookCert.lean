@@ -205,7 +205,7 @@ theorem negacyclicMulPure_sound
 /-- The constant-`1` vector maps to `1` in `R[X] / (X^n + 1)` for `n > 0`.
 For `n = 0`, `X^0 + 1 = 2` and `mk(0) = 1` fails for general `CommRing`
 (e.g. `ℤ[X] / (2)`), so this theorem requires positivity. -/
-theorem vectorNegacyclicSemantics_one_sound
+private theorem vectorNegacyclicSemantics_one_sound
     (Coeff : Type*) [CommRing Coeff] {n : Nat} (hn : 0 < n) :
     NegacyclicQuotient.ofBackend (vectorBackend Coeff n)
         (vectorNegacyclicRing Coeff n).one = 1 := by
@@ -235,7 +235,7 @@ noncomputable def vectorNegacyclicSemantics (Coeff : Type*) [CommRing Coeff]
     unfold NegacyclicQuotient.ofBackend NegacyclicQuotient.ofPolynomial PolyBackend.toPolynomial
     simp [vectorBackend_coeff, Finset.sum_const_zero, map_zero]
     rfl
-  one_sound := vectorNegacyclicSemantics_one_sound Coeff hn
+  one_sound := by exact vectorNegacyclicSemantics_one_sound Coeff hn
   add_sound f g := by
     have hpoly : (vectorBackend Coeff n).toPolynomial ((vectorNegacyclicRing Coeff n).add f g) =
         (vectorBackend Coeff n).toPolynomial f + (vectorBackend Coeff n).toPolynomial g := by

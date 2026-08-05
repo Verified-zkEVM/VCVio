@@ -154,7 +154,7 @@ constructor. -/
 noncomputable def wpVal (oa : OracleComp spec α) (post : α → Prob) : ℝ≥0∞ :=
   MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa (fun a => (post a).val)
 
-theorem wpVal_le_one (oa : OracleComp spec α) (post : α → Prob) :
+private theorem wpVal_le_one (oa : OracleComp spec α) (post : α → Prob) :
     wpVal oa post ≤ 1 := by
   unfold wpVal
   calc MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa (fun a => (post a).val)
@@ -179,7 +179,7 @@ probabilistic carrier. -/
 noncomputable scoped instance (priority := 1100) instWP_prob :
     Std.Do'.WP (OracleComp spec) Prob Std.Do'.EPost.nil where
   wpTrans oa := ⟨fun post _epost =>
-    ⟨wpVal oa post, wpVal_le_one oa post⟩⟩
+    ⟨wpVal oa post, by exact wpVal_le_one oa post⟩⟩
   wp_trans_pure x := by
     intro post _epost
     change (post x).val ≤ wpVal (pure x) post
@@ -187,7 +187,8 @@ noncomputable scoped instance (priority := 1100) instWP_prob :
     rw [MAlgOrdered.wp_pure]
   wp_trans_bind oa f := by
     intro post _epost
-    change wpVal oa (fun a => ⟨wpVal (f a) post, wpVal_le_one (f a) post⟩) ≤
+    change wpVal oa (fun a =>
+      ⟨wpVal (f a) post, by exact wpVal_le_one (f a) post⟩) ≤
             wpVal (oa >>= f) post
     unfold wpVal
     rw [MAlgOrdered.wp_bind]

@@ -704,7 +704,7 @@ private theorem byteDecode12VecPoly_byteEncode12Vec_eq {k : Nat} (v : TqVec k) (
   rw [Vector.toArray_ofFn, Vector.toArray_ofFn]
   exact congrArg Array.ofFn hfun
 
-theorem byteDecode12Vec_byteEncode12Vec {k : Nat} (v : TqVec k) :
+private theorem byteDecode12Vec_byteEncode12Vec {k : Nat} (v : TqVec k) :
     byteDecode12Vec k (byteEncode12Vec v) = v := by
   have hfun :
       (fun idx : Fin k => byteDecode12VecPoly (byteEncode12Vec v) idx)
@@ -1010,7 +1010,7 @@ private theorem byteDecode1Msg_byteEncode1Msg_of_bound (f : Rq)
   EncodedV := ByteArray
   byteEncode12Vec := byteEncode12Vec
   byteDecode12Vec := byteDecode12Vec params.k
-  byteDecode12Vec_byteEncode12Vec := byteDecode12Vec_byteEncode12Vec
+  byteDecode12Vec_byteEncode12Vec := by exact byteDecode12Vec_byteEncode12Vec
   compressDU := compressVec params.du
   decompressDU := decompressVec params.du
   byteEncodeDUVec := byteEncodeVec params.du

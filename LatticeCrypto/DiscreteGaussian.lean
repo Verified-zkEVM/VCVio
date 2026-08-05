@@ -132,7 +132,7 @@ theorem discreteGaussianPMF_summable (σ μ : ℝ) (hσ : 0 < σ) :
   by_contra hns
   simp [tsum_eq_zero_of_not_summable hns] at h
 
-theorem hasSum_ofReal_discreteGaussian (σ μ : ℝ) (hσ : 0 < σ) :
+private theorem hasSum_ofReal_discreteGaussian (σ μ : ℝ) (hσ : 0 < σ) :
     HasSum (fun z => ENNReal.ofReal (discreteGaussianPMF σ μ z)) 1 := by
   rw [ENNReal.summable.hasSum_iff, ← ENNReal.ofReal_one,
     ← discreteGaussianPMF_sum_eq_one σ μ hσ]
@@ -142,7 +142,7 @@ theorem hasSum_ofReal_discreteGaussian (σ μ : ℝ) (hσ : 0 < σ) :
 /-- The discrete Gaussian distribution as a Mathlib `PMF ℤ`. -/
 noncomputable def discreteGaussianDist (σ μ : ℝ) (hσ : 0 < σ) : PMF ℤ :=
   ⟨fun z => ENNReal.ofReal (discreteGaussianPMF σ μ z),
-    hasSum_ofReal_discreteGaussian σ μ hσ⟩
+    by exact hasSum_ofReal_discreteGaussian σ μ hσ⟩
 
 @[simp]
 theorem discreteGaussianDist_apply (σ μ : ℝ) (hσ : 0 < σ) (z : ℤ) :

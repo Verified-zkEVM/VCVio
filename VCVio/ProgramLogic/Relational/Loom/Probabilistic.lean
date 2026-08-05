@@ -82,7 +82,7 @@ noncomputable def rwpVal
     (post : α → β → Prob) : ℝ≥0∞ :=
   OracleComp.ProgramLogic.Relational.eRelWP oa ob (fun a b => (post a b).val)
 
-theorem rwpVal_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
+private theorem rwpVal_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (post : α → β → Prob) : rwpVal oa ob post ≤ 1 :=
   eRelWP_le_one_of_post_le_one oa ob _ (fun a b => (post a b).val_le_one)
 
@@ -103,14 +103,15 @@ noncomputable scoped instance (priority := 1100) instRelWP_prob :
     Std.Do'.RelWP (OracleComp spec₁) (OracleComp spec₂) Prob
       Std.Do'.EPost.nil Std.Do'.EPost.nil where
   rwpTrans oa ob post _epost₁ _epost₂ :=
-    ⟨rwpVal oa ob post, rwpVal_le_one oa ob post⟩
+    ⟨rwpVal oa ob post, by exact rwpVal_le_one oa ob post⟩
   rwp_trans_pure a b := by
     intro post _epost₁ _epost₂
     change (post a b).val ≤ rwpVal (pure a : OracleComp spec₁ _) (pure b : OracleComp spec₂ _) post
     rw [rwpVal, OracleComp.ProgramLogic.Relational.eRelWP_pure]
   rwp_trans_bind_le {α β γ δ} oa ob f g := by
     intro post _epost₁ _epost₂
-    change rwpVal oa ob (fun a b => ⟨rwpVal (f a) (g b) post, rwpVal_le_one (f a) (g b) post⟩) ≤
+    change rwpVal oa ob (fun a b =>
+      ⟨rwpVal (f a) (g b) post, by exact rwpVal_le_one (f a) (g b) post⟩) ≤
             rwpVal (oa >>= f) (ob >>= g) post
     exact OracleComp.ProgramLogic.Relational.eRelWP_bind_le
       (spec₁ := spec₁) (spec₂ := spec₂) oa ob f g _

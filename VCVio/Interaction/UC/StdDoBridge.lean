@@ -196,7 +196,7 @@ def trivSampler :
       Interaction.TypeTree.Sampler ProbComp (incrementProcess.step p).tree :=
   fun _ => PUnit.unit
 
-theorem incrementProcess_step_triple (p₀ p : ℕ) :
+private theorem incrementProcess_step_triple (p₀ p : ℕ) :
     Std.Do.Triple
       ((incrementProcess.step p).sample (trivSampler p) : ProbComp _)
       (spred(⌜p₀ ≤ p⌝))
