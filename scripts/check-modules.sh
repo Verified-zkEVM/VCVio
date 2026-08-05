@@ -18,13 +18,13 @@ root_modules=(
 
 status=0
 
-while IFS= read -r file; do
-  if ! rg -q '^module([[:space:]]|$)' "$file"; then
+while IFS= read -r -d '' file; do
+  if ! grep -Eq '^module([[:space:]]|$)' "$file"; then
     echo "ERROR: $file does not enable module mode with a 'module' command." >&2
     status=1
   fi
 
-  if ! rg -q '^(@\[expose\][[:space:]]+)?public([[:space:]]+meta)?[[:space:]]+section([[:space:]]|$)' "$file"; then
+  if ! grep -Eq '^(@\[expose\][[:space:]]+)?public([[:space:]]+meta)?[[:space:]]+section([[:space:]]|$)' "$file"; then
     case "$file" in
       VCVio/CryptoFoundations/Fischlin.lean)
         # Deliberate import-only internal umbrella.
@@ -35,21 +35,21 @@ while IFS= read -r file; do
         ;;
     esac
   fi
-done < <(rg --files "${source_roots[@]}" --glob '*.lean')
+done < <(find "${source_roots[@]}" -type f -name '*.lean' -print0)
 
 for file in "${root_modules[@]}"; do
-  if ! rg -q '^module([[:space:]]|$)' "$file"; then
+  if ! grep -Eq '^module([[:space:]]|$)' "$file"; then
     echo "ERROR: $file does not enable module mode." >&2
     status=1
   fi
-  if rg -n '^(meta[[:space:]]+)?import[[:space:]]' "$file"; then
+  if grep -En '^(meta[[:space:]]+)?import[[:space:]]' "$file"; then
     echo "ERROR: $file contains a non-public umbrella import." >&2
     status=1
   fi
 done
 
-if rg -n 'backward\.(privateInPublic|proofsInPublic)' \
-    "${source_roots[@]}" "${root_modules[@]}" --glob '*.lean'; then
+if grep -ERn --include='*.lean' 'backward\.(privateInPublic|proofsInPublic)' \
+    "${source_roots[@]}" "${root_modules[@]}"; then
   echo "ERROR: transitional module-system backward-compatibility options are forbidden." >&2
   status=1
 fi
