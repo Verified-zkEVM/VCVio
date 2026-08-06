@@ -73,38 +73,53 @@ def OutputsOnlyAtCompletion [MonadLiftT m SetM] (P : Party m In W Out) : Prop :=
       ∀ out ∈ support (P.output st'), out ≠ none ↔ done;
   init_output ∧ complete_output ∧ accept_output
 
+/-- Helper function for runHonest. Run the two parties against each other. The
+  messages sent are returned in chronological order, along with P's and Q's
+  states.
+  * The `fuel` argument is an upper bound on the number of party step functions
+    that may be run before the protocol completes.
+  * The Boolean indicates whether this is Q's (true) or P's (false) turn.
+  * The `sent` list contains the messages sent in the protocol so far. Note
+    that the `sent` list must be passed to this function in *reverse*
+    chronological order. This is to support easy cons-ing of new messages. -/
 def runHonestLoop [Monad m] {InP OutP InQ OutQ : Type}
     (P : Party m InP W OutP) (Q : Party m InQ W OutQ) :
-    ℕ → P.State → Q.State → W → Bool → m (P.State × Q.State × List W)
-  | 0, pState, qState, _, _ => pure (pState, qState, [])
-  | fuel + 1, pState, qState, w, true => do
+    ℕ → P.State → Q.State → W → Bool → List W → m (P.State × Q.State × List W)
+  | 0, pState, qState, _, _, sent => pure (pState, qState, sent.reverse)
+  | fuel + 1, pState, qState, w, true, sent => do
       match ← Q.step qState w with
-      | .acceptAndSend qState' w' _ => do
-          let (pFinal, qFinal, ms) ← runHonestLoop P Q fuel pState qState' w' false
-          pure (pFinal, qFinal, w' :: ms)
-      | .complete qState' => pure (pState, qState', [])
-      | .reject => pure (pState, qState, [])
-  | fuel + 1, pState, qState, w, false => do
+      | .acceptAndSend qState' w' _ =>
+          runHonestLoop P Q fuel pState qState' w' false (w' :: sent)
+      | .complete qState' => pure (pState, qState', sent.reverse)
+      | .reject => pure (pState, qState, sent.reverse)
+  | fuel + 1, pState, qState, w, false, sent => do
       match ← P.step pState w with
-      | .acceptAndSend pState' w' _ => do
-          let (pFinal, qFinal, ms) ← runHonestLoop P Q fuel pState' qState w' true
-          pure (pFinal, qFinal, w' :: ms)
-      | .complete pState' => pure (pState', qState, [])
-      | .reject => pure (pState, qState, [])
+      | .acceptAndSend pState' w' _ =>
+          runHonestLoop P Q fuel pState' qState w' true (w' :: sent)
+      | .complete pState' => pure (pState', qState, sent.reverse)
+      | .reject => pure (pState, qState, sent.reverse)
 
+/-- Start an honest run of the protocol, initiating the loop function based on
+  which party opens. -/
+def runHonestStart [Monad m] {InP OutP InQ OutQ : Type}
+    (P : Party m InP W OutP) (Q : Party m InQ W OutQ) (fuel : ℕ)
+    (pInit : InitResult P.State W) (qInit : InitResult Q.State W) :
+    m (P.State × Q.State × List W) :=
+  match pInit.opening, qInit.opening with
+  | some w, _ => runHonestLoop P Q fuel pInit.state qInit.state w true [w]
+  | none, some w => runHonestLoop P Q fuel pInit.state qInit.state w false [w]
+  | none, none => pure (pInit.state, qInit.state, [])
+
+/-- Execute an honest run of the protocol. The result is a triple of P's
+  output, Q's output, and the message list. The `fuel` argument is an upper
+  bound on how many party step functions may be run in the execution of the
+  protocol. -/
 def runHonest [Monad m] {InP OutP InQ OutQ : Type}
     (P : Party m InP W OutP) (Q : Party m InQ W OutQ) (inP : InP) (inQ : InQ) (fuel : ℕ) :
     m (Option OutP × Option OutQ × List W) := do
   let pInit ← P.init inP
   let qInit ← Q.init inQ
-  let (pState', qState', ms) ← match pInit.opening, qInit.opening with
-    | some w, _ => do
-        let (pState', qState', ms) ← runHonestLoop P Q fuel pInit.state qInit.state w true
-        pure (pState', qState', w :: ms)
-    | none, some w => do
-        let (pState', qState', ms) ← runHonestLoop P Q fuel pInit.state qInit.state w false
-        pure (pState', qState', w :: ms)
-    | none, none => pure (pInit.state, qInit.state, [])
+  let (pState', qState', ms) ← runHonestStart P Q fuel pInit qInit
   let pOut ← P.output pState'
   let qOut ← Q.output qState'
   pure (pOut, qOut, ms)
