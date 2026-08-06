@@ -50,6 +50,8 @@ import VCVio.CryptoFoundations.KEMDEM
 import VCVio.CryptoFoundations.KeyEncapMech
 import VCVio.CryptoFoundations.MacAlg
 import VCVio.CryptoFoundations.MacFromPRF
+import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
+import VCVio.CryptoFoundations.MerkleTree.Addressed.Level
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
 import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
