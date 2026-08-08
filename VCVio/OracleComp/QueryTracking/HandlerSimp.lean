@@ -3,16 +3,18 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
+import PolyFun.PFunctor.Handler.Normalization
 import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
 import VCVio.OracleComp.QueryTracking.CountingOracle
 import VCVio.OracleComp.QueryTracking.SeededOracle
 import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
 /-!
-# `handler_simp` for Query Handlers
+# Handler Normalization for Query Handlers
 
-Small normalization simp-set for the common handler transformers and their
-`StateT` / `WriterT` run-shapes.
+The `handler_simp` simp set extends PolyFun's generic `handler_nf` normal form
+with VCVio query simulation, instrumentation, caching, and local WriterT
+compatibility equations.
 
 The goal is not to create a second proof mode; it is just the shared "open the
 handler one step" surface that proof scripts can use before handing control
@@ -45,16 +47,7 @@ attribute [handler_simp]
   cachingOracle.apply_eq
   seededOracle.apply_eq
   cachingLoggingOracle.apply_eq
-  StateT.run_bind
-  StateT.run_get
-  StateT.run_set
-  StateT.run_modifyGet
-  StateT.run_pure
-  StateT.run_monadLift
-  WriterT.run_bind
   WriterT.run_bind'
   WriterT.run_monadLift
   WriterT.run_monadLift'
-  WriterT.run_pure
   WriterT.run_pure'
-  WriterT.run_tell

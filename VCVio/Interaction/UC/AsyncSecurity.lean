@@ -92,10 +92,10 @@ extensions that match `runStepsAsync`:
 * `state n` is the *joint* runtime state at step `n`, i.e. the
   residual process state plus the env-action bookkeeping state.
 * `event n` records which side fired at step `n`: a `processTick`
-  consumes the `procTranscript`, while an `envTick e` consumes the
+  consumes the `procPath`, while an `envTick e` consumes the
   `envSample`.
 * `next_state n` enforces the coherence law of one async step: at
-  process ticks the proc field advances by the chosen transcript;
+  process ticks the proc field advances by the chosen path;
   at env ticks the env state advances to the sampled new state.
 
 This is a freer object than the runtime's randomized executions
@@ -106,33 +106,33 @@ runtime distribution, exactly as
 `ProcessOver.Run`.
 -/
 structure AsyncRun
-    {Γ : Spec.Node.Context} {m : Type → Type} [Pure m] {State Event P : Type}
+    {Γ : TypeTree.Node.Context} {m : Type → Type} [Pure m] {State Event P : Type}
     (process : Concurrent.ProcessOver P Γ)
     (envAction : EnvAction m Event State) where
   /-- The joint runtime state at each step. -/
   state : ℕ → AsyncRuntimeState process.Proc State
   /-- The runtime event chosen at each step. -/
   event : ℕ → RuntimeEvent Event
-  /-- The process-side transcript chosen at each step. Only constrained
+  /-- The process-side path chosen at each step. Only constrained
   to be coherent when `event n = .processTick`; left unconstrained
   in the env-tick branch. -/
-  procTranscript : (n : ℕ) → (process.step (state n).proc).spec.Transcript
+  procPath : (n : ℕ) → (process.step (state n).proc).tree.Path
   /-- The env-state result sampled at each step. Only constrained to be
   coherent when `event n = .envTick e`. -/
   envSample : ℕ → State
   /-- One-step coherence: at process ticks the proc field advances by
-  the chosen transcript, at env ticks the env state advances to the
+  the chosen path, at env ticks the env state advances to the
   sampled new state. -/
   next_state : ∀ n, state (n + 1) =
     match event n with
     | .processTick =>
         { state n with
-          proc := (process.step (state n).proc).next (procTranscript n) }
+          proc := (process.step (state n).proc).next (procPath n) }
     | .envTick _ => { state n with envState := envSample n }
 
 namespace AsyncRun
 
-variable {Γ : Spec.Node.Context}
+variable {Γ : TypeTree.Node.Context}
 variable {m : Type → Type} [Pure m]
 variable {State Event P : Type}
 variable {process : Concurrent.ProcessOver P Γ}
@@ -171,7 +171,7 @@ structure Ticketed
   toEnvProcess : EnvOpenProcess.{0, 0, 0, 0, 0} m Party Δ Event State
   /-- The stable obligation type. -/
   Ticket : Type
-  /-- The stable ticket assigned to each complete process-step transcript. -/
+  /-- The stable ticket assigned to each complete process-step path. -/
   ticket : toEnvProcess.process.toProcess.Tickets Ticket
 
 namespace Ticketed
@@ -193,7 +193,7 @@ def envAction (ticketed : Ticketed Party m Δ Event State) :
 
 /--
 A process ticket is *enabled* at step `n` of an async run when
-some transcript through the current process spec carries that
+some path through the current process type tree carries that
 ticket.
 
 Equivalent to the synchronous
@@ -205,18 +205,18 @@ def enabledAt
     (ticketed : Ticketed Party m Δ Event State)
     (run : AsyncRun ticketed.process.toProcess ticketed.envAction)
     (ticket : ticketed.Ticket) (n : ℕ) : Prop :=
-  ∃ tr : (ticketed.process.step (run.state n).proc).spec.Transcript,
+  ∃ tr : (ticketed.process.step (run.state n).proc).tree.Path,
     ticketed.ticket (run.state n).proc tr = ticket
 
 /--
 A process ticket *fires* at step `n` of an async run when:
 
 1. the runtime fired a `processTick` at step `n`, and
-2. the chosen transcript carries that ticket.
+2. the chosen path carries that ticket.
 
 Note the asymmetry with the synchronous `firedAt`: an `envTick`
 at step `n` cannot fire a process ticket, even though the
-recorded `procTranscript n` is still well-formed. This matches
+recorded `procPath n` is still well-formed. This matches
 the operational reading that env ticks do not advance the
 process side.
 -/
@@ -225,7 +225,7 @@ def firedAt
     (run : AsyncRun ticketed.process.toProcess ticketed.envAction)
     (ticket : ticketed.Ticket) (n : ℕ) : Prop :=
   run.event n = .processTick ∧
-    ticketed.ticket (run.state n).proc (run.procTranscript n) = ticket
+    ticketed.ticket (run.state n).proc (run.procPath n) = ticket
 
 /--
 *Weak fairness* for a single process ticket: continuously enabled
@@ -279,7 +279,7 @@ theorem fired_implies_enabled
     (run : AsyncRun ticketed.process.toProcess ticketed.envAction)
     (ticket : ticketed.Ticket) (n : ℕ) :
     firedAt ticketed run ticket n → enabledAt ticketed run ticket n :=
-  fun ⟨_, hticket⟩ => ⟨run.procTranscript n, hticket⟩
+  fun ⟨_, hticket⟩ => ⟨run.procPath n, hticket⟩
 
 /-- Strong fairness implies weak fairness on the same ticket. -/
 theorem weakFairOn_of_strongFairOn
@@ -314,7 +314,7 @@ structure SchedulerPair
     (State Event : Type) where
   /-- The process-side sampler, indexed by closed processes. -/
   proc : ∀ p : (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Closed,
-    ProcessScheduler m p.Proc State (fun st => (p.step st.proc).spec)
+    ProcessScheduler m p.Proc State (fun st => (p.step st.proc).tree)
   /-- The env-side sampler, indexed by closed processes. -/
   env : ∀ p : (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Closed,
     EnvScheduler m p.Proc State Event

@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 import PolyFun.Interaction.Basic.Sampler
-import PolyFun.Interaction.Basic.SpecFintype
+import PolyFun.Interaction.Basic.TypeTreeFintype
 import PolyFun.Interaction.UC.OpenProcessModel
 import VCVio.Interaction.UC.Computational
 import VCVio.OracleComp.Constructions.SampleableType
@@ -16,7 +16,7 @@ This file bridges the structural `OpenProcess` layer to the bundled
 sub-probabilistic semantics (`UC.Semantics`) by defining how to execute
 a closed process.
 
-The core runtime primitives (`Spec.Sampler`, `sampleTranscript`,
+The core runtime primitives (`TypeTree.Sampler`, `samplePath`,
 `StepOver.sample`, `ProcessOver.runSteps`) are parameterized by an
 arbitrary monad `m : Type → Type`. This generality lets the execution
 intermediate monad carry additional capabilities, such as shared oracle
@@ -44,11 +44,10 @@ Common instantiations:
 
 ## Main definitions
 
-* `Spec.Sampler m spec` provides an `m X` computation at each node of
-  a `Spec` tree, resolving each move in the intermediate monad.
+* `TypeTree.Sampler m spec` provides an `m X` computation at each node of
+  a `TypeTree`, resolving each move in the intermediate monad.
 
-* `Spec.sampleTranscript` executes a sampler to produce a full
-  transcript in `m`.
+* `TypeTree.samplePath` executes a sampler to produce a full path in `m`.
 
 * `StepOver.sample` runs one step by sampling a transcript and applying
   the continuation.
@@ -80,7 +79,7 @@ open OracleComp
 
 namespace Interaction
 
-namespace Spec
+namespace TypeTree
 
 /--
 Uniform selection from a nonempty finite type as a `ProbComp` primitive,
@@ -95,43 +94,51 @@ noncomputable def probCompUniformOfFintype (X : Type) [Fintype X] [Nonempty X] :
   $ᵗ X
 
 /--
-Canonical uniform sampler on a `Spec.Fintype`-ornamented spec, built by
-recursion on the ornament: each node samples uniformly from its move
-space using `probCompUniformOfFintype`, and the continuation samplers
-are produced recursively from the per-branch ornament.
+Canonical uniform sampler on a finite, nonempty-branching tree, built by
+recursion on the two ornaments: each node samples uniformly from its move
+space using `probCompUniformOfFintype`, and the continuation samplers are
+produced recursively from the corresponding per-branch ornaments.
 
 This is the interaction-spec analogue of `SampleableType` for
 `OracleSpec`: concrete `spec` trees whose move types all carry `Fintype`
-and `Nonempty` synthesize an instance of `Spec.Fintype spec`
-automatically, yielding `Sampler.uniform spec` as the canonical
-coin-flip-only sampler for downstream runtime semantics
-(`processSemanticsProbComp`, etc.).
+and `Nonempty` synthesize separate `TypeTree.Fintype spec` and
+`TypeTree.Nonempty spec` instances automatically, yielding `Sampler.uniform
+spec` as the canonical coin-flip-only sampler for downstream runtime
+semantics (`processSemanticsProbComp`, etc.).
 -/
 noncomputable def Sampler.uniform :
-    (spec : Spec.{0}) → Spec.Fintype spec → Sampler ProbComp spec
-  | .done, _ => ⟨⟩
-  | .node X rest, .node hFin hNon hRec =>
-      (@probCompUniformOfFintype X hFin hNon, fun x => Sampler.uniform (rest x) (hRec x))
+    (spec : TypeTree.{0}) → TypeTree.Fintype spec → TypeTree.Nonempty spec →
+      Sampler ProbComp spec
+  | .done, _, _ => ⟨⟩
+  | .node X rest, .node hFin hFinRec, hNon =>
+      (@probCompUniformOfFintype X hFin (TypeTree.Nonempty.rootNonempty hNon),
+        fun x => Sampler.uniform (rest x) (hFinRec x) (TypeTree.Nonempty.rest hNon x))
 
 /-- Instance-argument form of `Sampler.uniform`. -/
 @[reducible]
-noncomputable def Sampler.uniformI (spec : Spec.{0}) [h : Spec.Fintype spec] :
+noncomputable def Sampler.uniformI (spec : TypeTree.{0})
+    [hFin : TypeTree.Fintype spec] [hNon : TypeTree.Nonempty spec] :
     Sampler ProbComp spec :=
-  Sampler.uniform spec h
+  Sampler.uniform spec hFin hNon
 
-/-! Smoke test: typeclass synthesis builds a `Spec.Fintype` instance for a
-concrete spec, and `Sampler.uniformI` elaborates against it. -/
+/-! Smoke test: typeclass synthesis builds separate `TypeTree.Fintype` and
+`TypeTree.Nonempty` instances for a concrete spec, and `Sampler.uniformI`
+elaborates against both. -/
 
-private example : Spec.Fintype
-    (Spec.node Bool (fun _ => Spec.node (Fin 4) (fun _ => Spec.done))) :=
+private example : TypeTree.Fintype
+    (TypeTree.node Bool (fun _ => TypeTree.node (Fin 4) (fun _ => TypeTree.done))) :=
+  inferInstance
+
+private example : TypeTree.Nonempty
+    (TypeTree.node Bool (fun _ => TypeTree.node (Fin 4) (fun _ => TypeTree.done))) :=
   inferInstance
 
 private noncomputable example :
     Sampler ProbComp
-      (Spec.node Bool (fun _ => Spec.node (Fin 4) (fun _ => Spec.done))) :=
+      (TypeTree.node Bool (fun _ => TypeTree.node (Fin 4) (fun _ => TypeTree.done))) :=
   Sampler.uniformI _
 
-end Spec
+end TypeTree
 
 namespace Concurrent
 
@@ -140,18 +147,18 @@ Run one step of a `ProcessOver` by sampling a transcript from the step's
 spec and applying the continuation to get the next state.
 -/
 noncomputable def StepOver.sample {m : Type → Type} [Monad m]
-    {Γ : Spec.Node.Context} {P : Type}
-    (step : StepOver Γ P) (sampler : Spec.Sampler m step.spec) : m P :=
-  step.next <$> Spec.sampleTranscript step.spec sampler
+    {Γ : TypeTree.Node.Context} {P : Type}
+    (step : StepOver Γ P) (sampler : TypeTree.Sampler m step.tree) : m P :=
+  step.next <$> TypeTree.samplePath step.tree sampler
 
 /--
 Run `fuel` steps of a process, starting from state `s`, using a
 state-dependent sampler at each step.
 -/
 noncomputable def ProcessOver.runSteps {m : Type → Type} [Monad m]
-    {Γ : Spec.Node.Context} {P : Type}
+    {Γ : TypeTree.Node.Context} {P : Type}
     (process : ProcessOver P Γ)
-    (sampler : (p : process.Proc) → Spec.Sampler m (process.step p).spec) :
+    (sampler : (p : process.Proc) → TypeTree.Sampler m (process.step p).tree) :
     ℕ → process.Proc → m process.Proc
   | 0, s => pure s
   | n + 1, s => (process.step s).sample (sampler s) >>= runSteps process sampler n

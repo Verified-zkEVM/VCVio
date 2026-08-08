@@ -119,7 +119,9 @@ def main : IO Unit := do
     | some bytes =>
       match decompress n bytes 666 with
       | none => check st "decompress should succeed" false
-      | some s' => check st "decompress(compress(s)) = s" (s == s')
+      | some s' =>
+        check st "decompress(compress(s)) = s" (s == s')
+        check st "decompress rejects trailing bytes" ((decompress n (bytes ++ [0]) 666).isNone)
   IO.println ""
   -- ── 4. Public key encode/decode roundtrip ─────
   IO.println "4. Public key encode/decode roundtrip"

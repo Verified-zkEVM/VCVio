@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 import Lean.Elab.Tactic.Basic
 import Lean.Meta.Match.MatcherApp
+import Lean.Meta.Sym.Pattern
 import VCVio.OracleComp.Constructions.Replicate
 import VCVio.ProgramLogic.NotationCore
 
@@ -256,6 +257,28 @@ def renderPassReplayLine (steps : Array PlannedStep) : Option String :=
 
 def whnfReducible (e : Expr) : MetaM Expr :=
   withReducible <| whnf e
+
+/-- Normalize the reducible oracle wrappers in a goal-side computation so its
+key agrees with the patterns produced by `Sym.mkPatternFromDeclWithKey`.
+`Sym.DiscrTree.getMatch` is purely structural, and those stored patterns unfold
+`OracleComp`, `OracleQuery`, and `OracleSpec.toPFunctor` to the underlying
+structure constructor.
+
+Do not use the more general `Sym.preprocessType` here. Besides being intended
+for declaration types rather than terms, in Lean 4.32 it also unfolds reducible
+user programs. A program containing a matcher can then make later
+definitional equality reduce a matcher with loose de Bruijn variables and
+panic in `whnfEasyCases`. The wrappers below are the only newly
+reducible declarations whose shapes registry lookup needs to expose. -/
+def symMatchKey (e : Expr) : MetaM Expr := do
+  let e ← instantiateMVars e
+  Meta.transform e (pre := fun e => do
+    let some declName := e.getAppFn.constName? | return .continue
+    unless declName == ``OracleComp || declName == ``OracleQuery ||
+        declName == ``OracleSpec.toPFunctor do
+      return .continue
+    let some value ← unfoldDefinition? e | return .continue
+    return .visit value)
 
 def headConstName? (e : Expr) : Option Name :=
   e.consumeMData.getAppFn.constName?

@@ -355,6 +355,14 @@ theorem coeffScalarVecMul_add {k} (c : ring.Poly)
              Vector.getElem_map, Vector.getElem_add]
   rw [laws.toHat_add u[i] v[i], laws.mul_add, fromHat_addHat ops]
 
+/-- Coefficient-domain scalar-vector multiplication acts component-wise as the underlying
+ring multiplication: the `j`-th entry of `coeffScalarVecMul c v` is `c * v.get j`. Follows from
+the transform being a ring isomorphism (`toHat_mul` and `fromHat_toHat`). -/
+theorem coeffScalarVecMul_get {k} (c : ring.Poly) (v : PolyVec ring.Poly k) (j : Fin k) :
+    (ops.coeffScalarVecMul c v).get j = c * (v.get j) := by
+  simp only [coeffScalarVecMul, unhatVec_get, scalarVecMul, hatVec_get, Vector.get_map]
+  rw [← laws.toHat_mul, laws.fromHat_toHat]
+
 theorem dot_scalar_right {k} (cHat : Hat)
     (row v : PolyVec Hat k) :
     ops.dot row (ops.scalarVecMul cHat v) = ops.mulHat cHat (ops.dot row v) := by

@@ -98,7 +98,7 @@ theorem simulateQ_run_preservesInv
         simpa [simulateQ_bind, OracleComp.liftM_def] using hz
       rcases (mem_support_bind_iff _ _ _).1 hz' with ⟨us, hus, hzcont⟩
       have hus' : us ∈ support ((impl t).run σ0) := by
-        simpa [OracleSpec.query_def, simulateQ_query] using hus
+        simpa [simulateQ_spec_query] using hus
       exact ih us.1 us.2 (himpl t σ0 hσ0 us hus') z hzcont
 
 end OracleComp
