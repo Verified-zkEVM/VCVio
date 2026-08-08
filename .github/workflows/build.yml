@@ -27,6 +27,9 @@ jobs:
           use-github-cache: false
           use-mathlib-cache: false
 
+      - name: Check PolyFun public boundary
+        run: bash scripts/check-polyfun-boundary.sh
+
       - name: Check for all imports in ToMathlib
         run: lake exe mk_all --lib ToMathlib --module --check
 
@@ -94,8 +97,11 @@ jobs:
             echo 'module'
             echo ''
             echo 'import VCVio'
+            echo 'import VCVio.EvalDist.PFunctor'
             echo ''
             echo '#check OracleComp'
+            echo '#check PFunctor.IsProbabilitySpec'
+            echo '#check PFunctor.Handler.preInsert'
             echo ''
             echo 'public def main : IO Unit := IO.println "consumer ok"'
           } > "$consumer/Main.lean"
@@ -196,6 +202,8 @@ jobs:
         run: lake env lean VCVioTest/RoundByRound/OneRound.lean
       - name: Check Merkle batch-opening canaries
         run: lake env lean VCVioTest/MerkleTreeBatch.lean
+      - name: Check PFunctor façade canaries
+        run: lake env lean VCVioTest/PFunctorFacade.lean
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
         run: lake exe slhdsa_kat
       - name: Run SLH-DSA-C13 differential KAT

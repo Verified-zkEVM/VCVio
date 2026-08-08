@@ -76,6 +76,10 @@ implementation dependency. `import all` is appropriate in a proof module that de
 an imported module's private implementation. Do not use the transitional
 `backward.privateInPublic` or `backward.proofsInPublic` options.
 
+Cross-package `import all PolyFun.…` is forbidden: add a public PolyFun law or API instead. See
+[`docs/agents/module-system.md`](docs/agents/module-system.md) for the visibility decision tree and
+the long-term VCVio/PolyFun boundary.
+
 `LatticeCryptoTest.lean` is intentionally curated rather than generated because its executable
 modules define colliding root-level `main` declarations. For the same reason, `HashSigTest` has no
 generated root umbrella; build its named executables and modules directly.

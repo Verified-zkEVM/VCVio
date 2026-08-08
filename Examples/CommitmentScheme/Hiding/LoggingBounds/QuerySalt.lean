@@ -669,30 +669,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
   | pure x =>
       simp [simulateQ_pure, QueryLog.countQ]
   | query_bind t mx ih =>
-      change
-        OracleComp.ProgramLogic.wp
-          ((simulateQ cachingOracle
-            ((liftM ((CMOracle M S C).query t)) >>= fun u =>
-              (fun p : α × QueryLog (CMOracle M S C) =>
-                (p.1,
-                  (⟨t, u⟩ :
-                    (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) :: p.2)) <$>
-                (simulateQ loggingOracle (mx u)).run)).run
-            (cache₀.cacheQuery (m, s) cm))
-          (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
-            OracleComp.ProgramLogic.propInd
-              (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) =
-        OracleComp.ProgramLogic.wp
-          ((simulateQ cachingOracle
-            ((liftM ((CMOracle M S C).query t)) >>= fun u =>
-              (fun p : α × QueryLog (CMOracle M S C) =>
-                (p.1,
-                  (⟨t, u⟩ :
-                    (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) :: p.2)) <$>
-                (simulateQ loggingOracle (mx u)).run)).run cache₀)
-          (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
-            OracleComp.ProgramLogic.propInd
-              (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s)))
+      rw [OracleComp.run_simulateQ_loggingOracle_query_bind]
       simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind]
       rw [OracleComp.ProgramLogic.wp_bind, OracleComp.ProgramLogic.wp_bind]
       by_cases hsalt : t.2 = s

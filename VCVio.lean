@@ -94,6 +94,7 @@ public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Map
 public import VCVio.EvalDist.Monad.Seq
 public import VCVio.EvalDist.Option
+public import VCVio.EvalDist.PFunctor
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.RenyiDivergence
 public import VCVio.EvalDist.TVDist

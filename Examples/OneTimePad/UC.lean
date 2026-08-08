@@ -6,8 +6,6 @@ Authors: Quang Dao
 
 module
 
-import all PolyFun.Interaction.UC.OpenProcess
-
 public import Examples.OneTimePad.Basic
 public import VCVio.Interaction.UC.Computational
 public import PolyFun.Interaction.UC.OpenProcessModel
@@ -580,6 +578,11 @@ theorem realOtp_boundaryTrace (sp : ℕ) (msg k : BitVec sp) :
     Interaction.UC.OpenStep.boundaryTrace ((realOtp sp msg).step ())
       (⟨k, ⟨⟩⟩ : TypeTree.Path (otpTree sp)) =
       [(⟨(), k ^^^ msg⟩ : Σ _ : Unit, BitVec sp)] := by
+  rw [Interaction.UC.OpenStep.boundaryTrace_eq]
+  change Interaction.UC.OpenNodeContext.boundaryTrace (otpTree sp)
+    (otpDecoration sp (realEmit sp msg)) ⟨k, ⟨⟩⟩ = _
+  rw [Interaction.UC.OpenNodeContext.boundaryTrace_node]
+  simp [otpDecoration, otpOpenNode, realEmit]
   rfl
 
 /-- The generic PolyFun boundary-trace extractor reads the ideal OTP
@@ -589,6 +592,11 @@ theorem idealOtp_boundaryTrace (sp : ℕ) (c : BitVec sp) :
     Interaction.UC.OpenStep.boundaryTrace ((idealOtp sp).step ())
       (⟨c, ⟨⟩⟩ : TypeTree.Path (otpTree sp)) =
       [(⟨(), c⟩ : Σ _ : Unit, BitVec sp)] := by
+  rw [Interaction.UC.OpenStep.boundaryTrace_eq]
+  change Interaction.UC.OpenNodeContext.boundaryTrace (otpTree sp)
+    (otpDecoration sp (idealEmit sp)) ⟨c, ⟨⟩⟩ = _
+  rw [Interaction.UC.OpenNodeContext.boundaryTrace_node]
+  simp [otpDecoration, otpOpenNode, idealEmit]
   rfl
 
 /-- For any nonzero plaintext `msg`, the real and ideal OTP open
