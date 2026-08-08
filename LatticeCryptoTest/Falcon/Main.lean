@@ -78,11 +78,9 @@ def prngNextSalt (s : PRNGState) : Bytes 40 × PRNGState := Id.run do
     st := s'
   return (Vector.ofFn fun ⟨i, _⟩ => bytes.getD i 0, st)
 
-def main : IO Unit := do
-  let st ← IO.mkRef ({} : TestState)
-  IO.println "=== Falcon Correctness Tests ==="
-  IO.println ""
-  flush
+-- Keep the test groups in separate opaque declarations. Lean's compiler `simp`
+-- pass scales poorly when all of these tests are generated from one large `do` block.
+def runFalconProtocolTests (st : IO.Ref TestState) : IO Unit := do
   -- ── 1. NTT roundtrip ──────────────────────────
   IO.println "1. NTT roundtrip (invNTT ∘ NTT = id) for Falcon"
   do
@@ -369,6 +367,8 @@ def main : IO Unit := do
       check st s!"Falcon-{paramName} wrong key: FFI rejects" (verCross == 0)
   IO.println ""
   flush
+
+def runFalconFloatingPointTests (st : IO.Ref TestState) : IO Unit := do
   -- ── 16. FloatLike Float arithmetic ──────────────
   IO.println "16. FloatLike Float arithmetic (native IEEE-754)"
   do
@@ -523,6 +523,8 @@ def main : IO Unit := do
       FPR.rint (aFFT.getD i 0) == FPR.rint (diff.getD i 0)
     check st "fpolyAdd then fpolySub ≈ identity" addSubOk
   IO.println ""
+
+def runFalconLowLevelTests (st : IO.Ref TestState) : IO Unit := do
   -- ── 23. BigInt31 basic ops ──────────────────────
   IO.println "23. BigInt31 basic ops"
   do
@@ -697,6 +699,8 @@ def main : IO Unit := do
       IO.println s!"  logn={logn}: selfadj split f0 size={sa0.size}, f1 size={sa1.size}"
   IO.println ""
   IO.println ""
+
+def runFalconSigningTests (st : IO.Ref TestState) : IO Unit := do
   -- ── 28. Pure-Lean signing smoke test ────────────
   IO.println "28. Pure-Lean signing smoke test (Float)"
   do
@@ -776,6 +780,16 @@ def main : IO Unit := do
           let lv3 := concreteVerify testFalcon512 pk2 msg.toList sig
           check st "wrong pk: Lean verify rejects pure-Lean sig" (!lv3)
   IO.println ""
+
+def main : IO Unit := do
+  let st ← IO.mkRef ({} : TestState)
+  IO.println "=== Falcon Correctness Tests ==="
+  IO.println ""
+  flush
+  runFalconProtocolTests st
+  runFalconFloatingPointTests st
+  runFalconLowLevelTests st
+  runFalconSigningTests st
   -- ── Summary ────────────────────────────────────
   let s ← st.get
   IO.println s!"=== {s.passed} passed, {s.failed} failed ==="
