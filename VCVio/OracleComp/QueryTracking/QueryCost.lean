@@ -89,10 +89,11 @@ lemma queryBoundedAboveBy_withUnitCost_query
         (fun [HasQuery spec (AddWriterT ℕ m)] =>
           HasQuery.query (spec := spec) (m := AddWriterT ℕ m) t)
         runtime)
-      1 :=
-  AddWriterT.queryBoundedAboveBy_bind (n₁ := 1) (n₂ := 0)
-    (AddWriterT.queryBoundedAboveBy_addTell 1)
-    fun _ ↦ AddWriterT.queryBoundedAboveBy_monadLift (runtime t)
+      1 := by
+  simpa [HasQuery.Program.withUnitCost] using
+    AddWriterT.queryBoundedAboveBy_bind (n₁ := 1) (n₂ := 0)
+      (AddWriterT.queryBoundedAboveBy_addTell 1)
+      fun _ ↦ AddWriterT.queryBoundedAboveBy_monadLift (runtime t)
 
 lemma queryBoundedBelowBy_withUnitCost_query
     [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
@@ -102,10 +103,11 @@ lemma queryBoundedBelowBy_withUnitCost_query
         (fun [HasQuery spec (AddWriterT ℕ m)] =>
           HasQuery.query (spec := spec) (m := AddWriterT ℕ m) t)
         runtime)
-      1 :=
-  AddWriterT.queryBoundedBelowBy_bind (n₁ := 1) (n₂ := 0)
-    (AddWriterT.queryBoundedBelowBy_addTell 1)
-    fun _ ↦ AddWriterT.queryBoundedBelowBy_monadLift (runtime t)
+      1 := by
+  simpa [HasQuery.Program.withUnitCost] using
+    AddWriterT.queryBoundedBelowBy_bind (n₁ := 1) (n₂ := 0)
+      (AddWriterT.queryBoundedBelowBy_addTell 1)
+      fun _ ↦ AddWriterT.queryBoundedBelowBy_monadLift (runtime t)
 
 lemma queryCostExactly_withUnitCost_query
     [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]

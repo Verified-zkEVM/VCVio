@@ -7,6 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Instances.OptionT
+public import VCVio.EvalDist.PFunctor
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 
 /-!
@@ -27,18 +28,18 @@ namespace OracleSpec
 
 variable {ι} {spec : OracleSpec ι}
 
-/-- A per-query distribution on an `OracleSpec`. Each query index `t : ι` is
-assigned a `PMF (spec t)` for its responses. This is the abstract data needed
-to lift `OracleComp spec` into `PMF`; uniformity is **not** assumed — see
-`IsUniformSpec` for the uniform-sampling specialization.
+/-- A per-query distribution on an `OracleSpec`, definitionally the generic
+probability specification on its underlying polynomial functor. -/
+abbrev IsProbabilitySpec (spec : OracleSpec ι) :=
+  PFunctor.IsProbabilitySpec spec.toPFunctor
 
-Specs that should opt into uniform sampling are best registered via
-`IsUniformSpec`, which extends this class and additionally carries
-`Fintype` / `Inhabited` on each range plus a propositional witness that
-`toPMF` is the canonical uniform distribution. -/
-class IsProbabilitySpec (spec : OracleSpec ι) where
-  /-- The distribution of responses to query `t`. -/
-  toPMF (t : ι) : PMF (spec t)
+namespace IsProbabilitySpec
+
+/-- The distribution of responses to query `t`. -/
+abbrev toPMF [IsProbabilitySpec spec] (t : spec.Domain) : PMF (spec.Range t) :=
+  PFunctor.IsProbabilitySpec.toPMF (P := spec.toPFunctor) t
+
+end IsProbabilitySpec
 
 /-- An `OracleSpec` whose responses are uniformly sampled from finite, inhabited
 ranges. Bundles `spec.Fintype`, `spec.Inhabited`, and `IsProbabilitySpec spec`
@@ -79,6 +80,17 @@ noncomputable instance instIsUniformSpecAdd {ι ι'} (spec : OracleSpec ι)
     (spec' : OracleSpec ι') [IsUniformSpec spec] [IsUniformSpec spec'] :
     IsUniformSpec (spec + spec') := IsUniformSpec.ofFintypeInhabited _
 
+/-- Package uniform oracle semantics as generic uniform semantics on the
+underlying polynomial functor. This is an explicit conversion rather than an
+instance so it cannot participate in overly broad `toPFunctor` unification. -/
+@[reducible]
+noncomputable def IsUniformSpec.toPFunctor [h : IsUniformSpec spec] :
+    PFunctor.IsUniformSpec spec.toPFunctor where
+  toPMF := h.toPMF
+  fintype := h.fintype.toFintype
+  inhabited := h.inhabited.toInhabited
+  toPMF_eq_uniform := h.toPMF_eq_uniform
+
 /-- Successor to the legacy empty marker `OracleSpec.IsProbSpec`. The replacement
 `IsUniformSpec` bundles `Fintype`, `Inhabited`, `IsProbabilitySpec`, and a uniformity
 witness. -/
@@ -94,33 +106,6 @@ namespace OracleComp
 variable {ι ι'} {spec : OracleSpec ι} {spec' : OracleSpec ι'} {α β γ : Type w}
 
 section evalDist_main
-
-/-- Embed `OracleComp` into `PMF` by interpreting each query via the per-query
-distribution provided by `IsProbabilitySpec`. -/
-noncomputable instance instMonadLiftTPMF [IsProbabilitySpec spec] :
-    MonadLiftT (OracleComp spec) PMF where
-  monadLift mx := simulateQ IsProbabilitySpec.toPMF mx
-
-noncomputable instance instLawfulMonadLiftTPMF [IsProbabilitySpec spec] :
-    LawfulMonadLiftT (OracleComp spec) PMF where
-  monadLift_pure := simulateQ_pure _
-  monadLift_bind := simulateQ_bind _
-
-/-- Direct `MonadLiftT (OracleComp spec) SetM`: the syntactic / operational
-support of `mx`, computed by folding queries to `Set.univ`. Independent of any
-probability structure on `spec` — works for arbitrary specs without `Fintype`
-or `Inhabited`. The bridge to the probability side is `EvalDistCompatible`
-below, supplied only when `[IsUniformSpec spec]`.
-
-Note: This is the *only* `MonadLiftT (OracleComp spec) SetM` instance Lean will
-find. The generic `MonadLiftT SPMF SetM` is declared as `MonadLiftT` (not
-`MonadLift`), so `monadLiftTrans` cannot chain `OracleComp → SPMF → SetM`. -/
-instance instMonadLiftTSetM : MonadLiftT (OracleComp spec) SetM where
-  monadLift mx := simulateQ (r := SetM) (fun _ => Set.univ) mx
-
-instance instLawfulMonadLiftTSetM : LawfulMonadLiftT (OracleComp spec) SetM where
-  monadLift_pure := simulateQ_pure _
-  monadLift_bind := simulateQ_bind _
 
 lemma evalDist_eq_simulateQ [IsProbabilitySpec spec] (mx : OracleComp spec α) :
     𝒟[mx] = simulateQ IsProbabilitySpec.toPMF mx := rfl
@@ -217,7 +202,10 @@ variable [IsUniformSpec spec]
 lemma evalDist_liftM (q : OracleQuery spec α) :
     𝒟[(liftM q : OracleComp spec α)] =
       (PMF.uniformOfFintype (spec.Range q.input)).map q.cont := by
-  rw [evalDist_liftM_toPMF, IsUniformSpec.toPMF_eq_uniform]
+  rw [evalDist_liftM_toPMF]
+  exact congrArg (fun p : PMF (spec.Range q.input) =>
+      ((PMF.map q.cont p : PMF α) : SPMF α))
+    (IsUniformSpec.toPMF_eq_uniform q.input)
 
 @[simp, grind =]
 lemma evalDist_query (t : spec.Domain) :
@@ -280,26 +268,21 @@ section supportEvalDist
 
 variable [IsUniformSpec spec] (oa : OracleComp spec α) (x : α)
 
-/-- Bridge: support computed via the direct `MonadLiftT SetM` agrees with `SPMF.support` of the
-distribution semantics. This is the field body for the `EvalDistCompatible (OracleComp spec)`
-instance below. The equality is uniform-content: it relies on every response having nonzero
-probability, which requires `IsUniformSpec`. -/
-private lemma support_eq_SPMF_support (oa : OracleComp spec α) :
-    support oa = SPMF.support (𝒟[oa]) := by
-  induction oa using OracleComp.inductionOn with
-  | pure y => simp
-  | query_bind t mx ih => ext z; simp [ih]
-
 /-- `OracleComp spec` admits the bridge between its direct `support` semantics and the
 `SPMF.support` of its `evalDist`. -/
-instance instEvalDistCompatible : EvalDistCompatible (OracleComp spec) where
-  support_eq_SPMF_support oa := support_eq_SPMF_support oa
+instance instEvalDistCompatible : EvalDistCompatible (OracleComp spec) := by
+  letI : PFunctor.IsUniformSpec spec.toPFunctor := IsUniformSpec.toPFunctor
+  exact PFunctor.FreeM.instEvalDistCompatible
+
+private lemma support_eq_evalDist_support :
+    support oa = SPMF.support (𝒟[oa]) :=
+  EvalDistCompatible.support_eq_SPMF_support oa
 
 /-- An output has non-zero probability in `evalDist` iff it is in computation support. -/
 @[simp]
 lemma mem_support_evalDist_iff :
     some x ∈ (𝒟[oa]).run.support ↔ x ∈ support oa := by
-  rw [support_eq_SPMF_support, PMF.mem_support_iff, SPMF.mem_support_iff,
+  rw [support_eq_evalDist_support, PMF.mem_support_iff, SPMF.mem_support_iff,
     SPMF.apply_eq_toPMF_some, SPMF.run_eq_toPMF]
 
 alias ⟨mem_support_of_mem_support_evalDist, mem_support_evalDist⟩ := mem_support_evalDist_iff

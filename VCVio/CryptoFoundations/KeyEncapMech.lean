@@ -186,11 +186,9 @@ theorem IND_CPA_Game_eq_IND_CCA_Game_toIND_CCA
         HasQuery.toQueryImpl (spec := spec) (m := OracleComp (spec + (C →ₒ Option K))) =
         QueryImpl.id' spec := by
       ext t
-      simp only [QueryImpl.compose, QueryImpl.id']
-      change simulateQ (QueryImpl.id' spec + impl₂)
-        (liftM (liftM (spec.query t) :
-          OracleQuery (spec + (C →ₒ Option K)) _)) = _
-      simp [simulateQ_query]
+      simp [QueryImpl.compose, HasQuery.toQueryImpl_eq_id']
+      simpa using
+        (QueryImpl.simulateQ_add_liftM_query_left (QueryImpl.id' spec) impl₂ t)
     rw [this, simulateQ_id']
   simp only [IND_CPA_Game, IND_CCA_Game, IND_CPA_Adversary.toIND_CCA,
     IND_CCA_preChallengeImpl, IND_CCA_postChallengeImpl, IND_CCA_oracleSpec, h]
