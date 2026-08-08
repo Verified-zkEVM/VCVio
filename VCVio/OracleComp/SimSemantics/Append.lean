@@ -59,14 +59,18 @@ variable {ι₁' : Type} {ι₂' : Type}
   {α : Type} {m' : Type → Type v} [Monad m'] [LawfulMonad m']
   (impl₁' : QueryImpl spec₁' m') (impl₂' : QueryImpl spec₂' m')
 
-private lemma simulateQ_add_liftM_query_left (t : spec₁'.Domain) :
+/-- Simulating a query-level lift from the left summand routes it to the left
+implementation. -/
+lemma simulateQ_add_liftM_query_left (t : spec₁'.Domain) :
     simulateQ (impl₁' + impl₂')
       (liftM (spec₁'.query t) : OracleComp (spec₁' + spec₂') _) =
     impl₁' t := by
   change simulateQ (impl₁' + impl₂') (liftM ((spec₁' + spec₂').query (Sum.inl t))) = _
   simp
 
-private lemma simulateQ_add_liftM_query_right (t : spec₂'.Domain) :
+/-- Simulating a query-level lift from the right summand routes it to the right
+implementation. -/
+lemma simulateQ_add_liftM_query_right (t : spec₂'.Domain) :
     simulateQ (impl₁' + impl₂')
       (liftM (spec₂'.query t) : OracleComp (spec₁' + spec₂') _) =
     impl₂' t := by

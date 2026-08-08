@@ -61,6 +61,15 @@ def writerTMapBase
     QueryImpl spec₀ (WriterT ω m₁) := fun t =>
   WriterT.mk (simulateQ outer ((inner t).run))
 
+omit [EmptyCollection ω] [Append ω] in
+@[simp]
+theorem writerTMapBase_apply
+    (outer : QueryImpl spec₁ m₁)
+    (inner : QueryImpl spec₀ (WriterT ω (OracleComp spec₁)))
+    (t : spec₀.Domain) :
+    (outer.writerTMapBase inner t).run = simulateQ outer ((inner t).run) := by
+  rfl
+
 /-- Running a `WriterT` handler and then interpreting its base oracle
 computations is the same as first mapping the handler's base through the
 outer interpreter. -/
@@ -91,7 +100,10 @@ lemma withLogging_eq_withTraceAppend (so : QueryImpl spec m) :
 
 @[simp, grind =]
 lemma withLogging_apply (so : QueryImpl spec m) (t : spec.Domain) :
-    so.withLogging t = do let u ← so t; tell [⟨t, u⟩]; return u := rfl
+    so.withLogging t = do let u ← so t; tell [⟨t, u⟩]; return u := by
+  rw [withLogging_eq_withTraceAppend]
+  exact withTraceAppend_apply so
+    (fun (t : spec.Domain) u => ([⟨t, u⟩] : QueryLog spec)) t
 
 lemma fst_map_run_withLogging [LawfulMonad m] (so : QueryImpl spec m) (mx : OracleComp spec α) :
     Prod.fst <$> (simulateQ (so.withLogging) mx).run =
@@ -142,7 +154,8 @@ lemma appendInputLog_eq_preInsert (so : QueryImpl loggedSpec m₀) :
 @[simp, grind =]
 lemma appendInputLog_apply [LawfulMonad m₀] (so : QueryImpl loggedSpec m₀)
     (t : loggedSpec.Domain) :
-    appendInputLog so t = (do modify (· ++ [t]); liftM (so t)) := rfl
+    appendInputLog so t = (do modify (· ++ [t]); liftM (so t)) := by
+  exact preInsert_apply so (fun t => modify (· ++ [t])) t
 
 @[simp]
 lemma run_withLogging_apply [LawfulMonad m₀] (so : QueryImpl loggedSpec m₀)

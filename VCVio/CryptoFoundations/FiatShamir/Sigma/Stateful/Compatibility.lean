@@ -895,9 +895,9 @@ private lemma fsBaseImpl_writerTMapBase_signingOracle_eq
       implS := by
   funext t
   rcases t with (n | mc) | m <;> ext cache
-  · simp [QueryImpl.writerTMapBase, QueryImpl.liftTarget_apply,
+  · simp [QueryImpl.writerTMapBase,
       HasQuery.toQueryImpl_apply, fsBaseImpl, unifFwdImpl]
-  · simp [QueryImpl.writerTMapBase, QueryImpl.liftTarget_apply,
+  · simp [QueryImpl.writerTMapBase,
       HasQuery.toQueryImpl_apply, fsBaseImpl, unifFwdImpl, randomOracle]
   · simp [QueryImpl.writerTMapBase, SignatureAlg.signingOracle,
       QueryImpl.withLogging_apply, cmaRealFixedSign, SourceSigAlg, FiatShamir,

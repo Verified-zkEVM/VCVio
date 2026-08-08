@@ -412,12 +412,12 @@ private def cmaSimLoggedLeftOrnament
     rcases t with ((n | mc) | m)
     · simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
         QueryImpl.mapStateTBase, QueryImpl.Stateful.Frame.linkReshape,
-        QueryImpl.Stateful.linkWith, QueryImpl.liftTarget_apply]
+        QueryImpl.Stateful.linkWith]
     · cases hcache : cache mc with
       | some ch =>
           simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
             QueryImpl.mapStateTBase, QueryImpl.Stateful.Frame.linkReshape,
-            QueryImpl.Stateful.linkWith, QueryImpl.liftTarget_apply, hcache]
+            QueryImpl.Stateful.linkWith, hcache]
       | none =>
           conv_lhs =>
             simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
