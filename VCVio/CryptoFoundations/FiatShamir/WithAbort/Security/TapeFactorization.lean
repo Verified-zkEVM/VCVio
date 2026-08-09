@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.ReadRecording
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.ReadRecording
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: TapeFactorization
@@ -18,6 +20,8 @@ Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
 transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` re-exports
 all of its modules and holds the overview docstring.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -2073,7 +2077,7 @@ theorem readRecord_expected_pairs_nontape_general {γ : Type}
         -- apply the inductive hypothesis directly (drawn / signed / read lists unchanged, budget
         -- unchanged: uniform queries are not read queries).
         have hQ2' : ∀ u, (ob u).IsQueryBoundP (· matches Sum.inl (Sum.inr _)) qH := by
-          intro u; have := hQ2 u; simpa using this
+          intro u; exact hQ2 u
         refine ENNReal.tsum_le_tsum fun x => ?_
         by_cases hx : x ∈ support ((deferredDrawReadImpl ids M maxAttempts pk sk
             (Sum.inl (Sum.inl n))).run s)
@@ -2094,7 +2098,7 @@ theorem readRecord_expected_pairs_nontape_general {γ : Type}
           · exact h
         have hQ2' : ∀ cu : Chal × (M × Commit →ₒ Chal).QueryCache,
             (ob cu.1).IsQueryBoundP (· matches Sum.inl (Sum.inr _)) (qH - 1) := by
-          intro cu; have := hQ2 cu.1; simpa using this
+          intro cu; exact hQ2 cu.1
         refine ENNReal.tsum_le_tsum fun x => ?_
         by_cases hx : x ∈ support ((deferredDrawReadImpl ids M maxAttempts pk sk
             (Sum.inl (Sum.inr mc))).run s)
@@ -2119,7 +2123,7 @@ theorem readRecord_expected_pairs_nontape_general {γ : Type}
         -- is not a read query), so the continuation's `readlist.length` is bounded by the same
         -- constant `s.2.length + qH`. This is the value-free sign-step charge.
         have hQ2' : ∀ u, (ob u).IsQueryBoundP (· matches Sum.inl (Sum.inr _)) qH := by
-          intro u; have := hQ2 u; simpa using this
+          intro u; exact hQ2 u
         exact nontape_signStep_charge ids M maxAttempts qH ε p_abort hp₀ hp hε pk sk hGuess
           hAbort msg ob s hQ2' (fun u s' hQ' => ih u qH hQ' s')
 

@@ -4,11 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Bodies
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.GhostLayer
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Projections
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.BodyBounds
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.NMAHandler
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Bodies
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.GhostLayer
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Projections
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.BodyBounds
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.NMAHandler
 
 /-!
 # Hybrid signing bodies and ghost-layer machinery for Fiat-Shamir with aborts
@@ -41,3 +43,5 @@ games and the ghost-domain invariant), `BodyBounds` (the body-level collision
 and deferred-sampling bounds), and `NMAHandler` (the layered ghost-tagged NMA
 handler). This umbrella module re-exports all of them.
 -/
+
+@[expose] public section

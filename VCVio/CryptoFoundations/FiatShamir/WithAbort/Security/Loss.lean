@@ -4,13 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Mathlib.Data.Nat.Choose.Cast
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies
-import VCVio.CryptoFoundations.FiatShamir.QueryBounds
-import VCVio.ProgramLogic.Relational.SimulateQ
-import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
-import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
-import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
+module
+
+public import Mathlib.Data.Nat.Choose.Cast
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies
+public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
+public import VCVio.ProgramLogic.Relational.SimulateQ
+public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
+public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
+public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: Loss
@@ -22,6 +24,8 @@ Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
 transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` re-exports
 all of its modules and holds the overview docstring.
 -/
+
+@[expose] public section
 
 universe u v
 

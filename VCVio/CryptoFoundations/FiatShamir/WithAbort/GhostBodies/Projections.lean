@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.GhostLayer
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.GhostLayer
 
 /-!
 # Ghost-layer machinery for Fiat-Shamir with aborts: Projections
@@ -18,6 +20,8 @@ Part of the hybrid signing-body development for the CMA-to-NMA reduction;
 `VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies` re-exports all of
 its modules and holds the overview docstring.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 open scoped BigOperators ENNReal
