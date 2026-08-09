@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aristotle (Harmonic), Elias Judin
 -/
 
-import VCVio.CryptoFoundations.RoundByRound
+module
+
+public import VCVio.CryptoFoundations.RoundByRound
 
 /-!
 # One-round regression for round-by-round knowledge extraction
@@ -52,6 +54,8 @@ so that `extract`'s output satisfies it, and then:
 * `oneRoundValid_extensionalConditions` bundles all three clauses at `error = 0`, since showing
   each hypothesis separately inhabited is weaker than a witness for the whole bundle.
 -/
+
+@[expose] public section
 
 open scoped ENNReal
 

@@ -3,7 +3,9 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import LatticeCrypto.MLDSA.Security
+
+module
+public import LatticeCrypto.MLDSA.Security
 
 /-!
 # ML-DSA EUF-NMA Security: reduction scaffolding
@@ -50,6 +52,8 @@ This is the standard ROM modeling of Dilithium with `ExpandA` a random oracle, a
 distinguisher `B` total: it consumes `(ρ, t)` and forms `pk = (ρ, Power2Round(t).1)` directly with
 no embedding witness required.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 open LatticeCrypto TransformOps

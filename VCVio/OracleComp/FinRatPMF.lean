@@ -3,8 +3,10 @@ Copyright (c) 2025 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.EvalDist.Instances.FinRatPMF
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.EvalDist.Instances.FinRatPMF
 
 /-!
 # Executable `FinRatPMF` Semantics for `OracleComp`
@@ -12,6 +14,8 @@ import VCVio.EvalDist.Instances.FinRatPMF
 This file provides a computable oracle evaluator using `FinRatPMF.Raw` and proves that its
 denotational semantics agree with the existing `evalDist` semantics of `OracleComp`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 

@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Mathlib.Probability.ProbabilityMassFunction.Constructions
-import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
-import ToMathlib.Analysis.MeanInequalities
-import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
+
+module
+public import Mathlib.Probability.ProbabilityMassFunction.Constructions
+public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
+public import ToMathlib.Analysis.MeanInequalities
+public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
 
 /-!
 # Rényi Divergence for PMFs
@@ -51,6 +53,8 @@ is used because:
   with Errors." 2014. (multiplicative convention for lattice crypto)
 - Fouque, P.-A., et al. "A closer look at Falcon." ePrint 2024/1769.
 -/
+
+@[expose] public section
 
 
 noncomputable section

@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.SimpAttr
-import VCVio.OracleComp.OracleSpec
-import VCVio.OracleComp.QueryTracking.Structures
-import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
+
+module
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.SimpAttr
+public import VCVio.OracleComp.OracleSpec
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 
 /-!
 # Oracle interfaces and plain states for the stateful Fiat-Shamir CMA proof
@@ -19,6 +21,8 @@ The `fs_simp` simp attribute used to tag handler definitions, frames, lenses,
 and adversary wrappers throughout the stateful FS-CMA development is declared
 in `Stateful/SimpAttr.lean` and imported above.
 -/
+
+@[expose] public section
 
 open OracleSpec
 

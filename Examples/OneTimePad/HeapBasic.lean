@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.StateSeparating.DistEquiv
-import VCVio.OracleComp.Constructions.BitVec
-import ToMathlib.Data.Heap
+
+module
+public import VCVio.StateSeparating.DistEquiv
+public import VCVio.OracleComp.Constructions.BitVec
+public import ToMathlib.Data.Heap
 
 /-!
 # One-Time Pad as a state-separating handler
@@ -72,6 +74,8 @@ directly, in the SSProve-style "handler as bounded-query gate" idiom.
 The arithmetic core, "XOR with a uniform key is uniform", is shared
 verbatim via `evalDist_map_bijective_uniform_cross` against the XOR
 involution. -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 open scoped QueryImpl.Stateful

@@ -3,8 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Batteries.Data.Vector.Lemmas
-import LatticeCrypto.Ring.Kernel
+
+module
+
+import all Init.Data.Vector.Algebra
+
+public import Batteries.Data.Vector.Lemmas
+public import LatticeCrypto.Ring.Kernel
 
 /-!
 # Generic Transform Layer For Negacyclic Rings
@@ -24,6 +29,8 @@ coefficient-domain `NegacyclicRing`. Defines:
 Scheme-specific concrete NTTs (under `Concrete/NTT.lean`) provide executable
 `TransformOps` instances. Proof-oriented uses consume `TransformOps.Laws`.
 -/
+
+@[expose] public section
 
 
 universe u v

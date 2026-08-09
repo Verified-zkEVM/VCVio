@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import ToMathlib.Control.Monad.RelWP
-import VCVio.ProgramLogic.Relational.Basic
+module
+
+public import ToMathlib.Control.Monad.RelWP
+public import VCVio.ProgramLogic.Relational.Basic
 
 /-!
 # Qualitative `RelWP` carrier for `OracleComp` (`Prop`, scoped)
@@ -58,6 +60,8 @@ do not redefine them here.
 See `.ignore/wp-cutover-plan.md` §"Three-tier carrier design" and
 §"Scoped instances" for the broader design.
 -/
+
+@[expose] public section
 
 universe u
 

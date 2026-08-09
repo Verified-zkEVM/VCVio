@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Address
+
+module
+public import HashSig.SLHDSA.Address
 
 /-!
 # C13 primitive interfaces
@@ -23,6 +25,8 @@ As with the FIPS abstract layer, the bundle carries plain functions (no algebrai
 correctness is a deterministic hash-tree identity; the cryptographic assumptions live in the
 security layer.
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.C13

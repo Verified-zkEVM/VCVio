@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Arithmetic
-import LatticeCrypto.DiscreteGaussian
-import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
+
+module
+public import LatticeCrypto.Falcon.Arithmetic
+public import LatticeCrypto.DiscreteGaussian
+public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
 
 /-!
 # Falcon Primitive Interfaces
@@ -32,6 +34,8 @@ The `Float` type is intentionally avoided; see the plan for rationale.
 - Falcon specification v1.2, Section 3.9 (Algorithms 10–13)
 - Falcon specification v1.2, Section 3.8 (Algorithm 9: ffLDL*)
 -/
+
+@[expose] public section
 
 
 open OracleComp

@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Arithmetic
-import LatticeCrypto.MLKEM.Arithmetic
-import LatticeCrypto.Falcon.Arithmetic
-import LatticeCrypto.Ring.Transform
+
+module
+public import LatticeCrypto.MLDSA.Arithmetic
+public import LatticeCrypto.MLKEM.Arithmetic
+public import LatticeCrypto.Falcon.Arithmetic
+public import LatticeCrypto.Ring.Transform
 
 /-!
 # Generic Ring Smoke Checks
@@ -23,6 +25,8 @@ that the type-level wiring compiles for:
 
 No runtime assertions — this file is purely a typecheck-time regression guard.
 -/
+
+@[expose] public section
 
 
 namespace LatticeCrypto

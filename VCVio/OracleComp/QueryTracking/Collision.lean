@@ -3,10 +3,12 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.QueryBound
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # ROM Collision Infrastructure
@@ -27,6 +29,8 @@ inside `cachingOracle`.
 * `OracleComp.cache_entry_in_log_or_initial`: every new cache entry has a
   corresponding log entry.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal Finset
 

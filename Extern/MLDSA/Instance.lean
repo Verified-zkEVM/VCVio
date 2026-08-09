@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Encoding
-import LatticeCrypto.MLDSA.Concrete.Rounding
-import LatticeCrypto.MLDSA.Concrete.NTT
-import Extern.MLDSA.Sampling
-import LatticeCrypto.MLDSA.Concrete.Encoding
+
+module
+public import LatticeCrypto.MLDSA.Encoding
+public import LatticeCrypto.MLDSA.Concrete.Rounding
+public import LatticeCrypto.MLDSA.Concrete.NTT
+public import Extern.MLDSA.Sampling
+public import LatticeCrypto.MLDSA.Concrete.Encoding
 
 /-!
 # Concrete ML-DSA Instance
@@ -16,12 +18,14 @@ Wires the concrete rounding, NTT, sampling, hashing, and byte encoding layers in
 abstract `Primitives` and `Encoding` bundles used by the ML-DSA specification.
 -/
 
+@[expose] public section
+
 
 namespace MLDSA.Concrete
 
 open MLDSA
 
-private def hintWeightVec {k : Nat} (h : Vector Hint k) : Nat :=
+def hintWeightVec {k : Nat} (h : Vector Hint k) : Nat :=
   h.toList.foldl (fun acc hi => acc + MLDSA.Concrete.hintWeight hi) 0
 
 /-- Concrete ML-DSA primitives obtained by wiring the concrete FIPS 204 algorithms into the

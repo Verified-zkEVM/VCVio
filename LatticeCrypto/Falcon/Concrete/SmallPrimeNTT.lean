@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
+module
+
 /-!
 # NTT over small 31-bit primes for NTRU solving
 
@@ -25,6 +27,8 @@ Each entry of the `PRIMES` table stores:
 
 Ported from `c-fn-dsa/kgen_mp31.c` and `c-fn-dsa/kgen_inner.h`.
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Concrete.SmallPrimeNTT
@@ -108,7 +112,7 @@ def PRIMES : Array SmallPrime := #[
 
 /-! ## Bit-reversal table (10-bit) -/
 
-private def REV10 : Array UInt16 := #[
+def REV10 : Array UInt16 := #[
      0,  512,  256,  768,  128,  640,  384,  896,   64,  576,  320,  832,
    192,  704,  448,  960,   32,  544,  288,  800,  160,  672,  416,  928,
     96,  608,  352,  864,  224,  736,  480,  992,   16,  528,  272,  784,

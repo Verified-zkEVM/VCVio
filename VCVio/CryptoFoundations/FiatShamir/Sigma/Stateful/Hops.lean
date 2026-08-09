@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Mathlib.Data.Real.ENatENNReal
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
-import VCVio.ProgramLogic.Relational.Quantitative
-import VCVio.StateSeparating.IdenticalUntilBad
+
+module
+public import Mathlib.Data.Real.ENatENNReal
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
+public import VCVio.ProgramLogic.Relational.Quantitative
+public import VCVio.StateSeparating.IdenticalUntilBad
 
 /-!
 # Native stateful Fiat-Shamir CMA game hops
@@ -14,6 +16,8 @@ import VCVio.StateSeparating.IdenticalUntilBad
 The theorems here are stated directly over `QueryImpl.Stateful` handlers and the
 concrete `CmaState` product state.
 -/
+
+@[expose] public section
 
 universe u
 

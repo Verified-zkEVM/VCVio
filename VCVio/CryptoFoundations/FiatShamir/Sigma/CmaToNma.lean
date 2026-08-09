@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.Sigma
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Fork
-import VCVio.CryptoFoundations.FiatShamir.QueryBounds
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.Sigma
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Fork
+public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 
 /-!
 # CMA-to-NMA reduction for Fiat-Shamir on Σ-protocols
@@ -26,6 +28,8 @@ The quantitative CMA-to-NMA theorem itself lives in
 `Sigma/Stateful/Chain.lean`, so the public proof path has a single stateful
 source of truth.
 -/
+
+@[expose] public section
 
 universe u v
 

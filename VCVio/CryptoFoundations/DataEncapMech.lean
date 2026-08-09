@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.ProbCompLift
+
+module
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbCompLift
 
 /-!
 # Data Encapsulation Mechanisms
@@ -13,6 +15,8 @@ import VCVio.OracleComp.ProbCompLift
 This file defines data encapsulation mechanisms (DEMs), their correctness notion, and the
 one-time IND-CPA game used by the KEM+DEM composition theorem.
 -/
+
+@[expose] public section
 
 universe u v
 

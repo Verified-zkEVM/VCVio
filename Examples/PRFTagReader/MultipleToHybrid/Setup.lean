@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.Table
+module
+
+public import Examples.PRFTagReader.Table
 
 /-!
 # PRF Tag/Reader Protocol — Instrumented multiple-session handler
@@ -25,6 +27,8 @@ Includes:
 This infrastructure is consumed by the eager-table handlers in the sibling
 `MultipleToHybrid.EagerSetup` module and by the direct-coupling chain under `DirectCoupling/`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

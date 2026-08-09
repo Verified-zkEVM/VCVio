@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning
+
+module
+public import VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning
 
 /-!
 # Learning With Errors
@@ -15,6 +17,8 @@ ring-LWE, and LPN); this module re-exports them under the historical
 `LearningWithErrors` namespace used by the lattice schemes' security
 statements.
 -/
+
+@[expose] public section
 
 namespace LearningWithErrors
 

@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Primitives
+
+module
+public import LatticeCrypto.MLDSA.Primitives
 
 /-!
 # ML-DSA Encoding Interfaces
@@ -16,6 +18,8 @@ semantic objects consumed by the spec-level KeyGen, Sign, and Verify algorithms.
 
 - NIST FIPS 204, Section 7.1–7.2 (key and signature encodings)
 -/
+
+@[expose] public section
 
 
 namespace MLDSA

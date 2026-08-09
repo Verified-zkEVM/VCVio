@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Std.Tactic.Do
-import ToMathlib.Control.WriterT
+module
+
+public import Std.Tactic.Do
+public import ToMathlib.Control.WriterT
 
 /-!
 # `Std.Do` weakest-precondition bridge for `WriterT`
@@ -48,6 +50,8 @@ i.e., the writer log is threaded through as state and accumulated via
 `++`. The `LawfulAppend` law (`empty_append`, `append_empty`,
 `append_assoc`) is what makes `wp` preserve `pure` and `bind`.
 -/
+
+@[expose] public section
 
 open Std.Do
 

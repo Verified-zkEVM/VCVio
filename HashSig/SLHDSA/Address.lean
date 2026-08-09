@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Params
+
+module
+public import HashSig.SLHDSA.Params
 
 /-!
 # SLH-DSA Addresses (ADRS)
@@ -26,6 +28,8 @@ proof-level development never unfolds them.
 
 - NIST FIPS 205, §4.2 (ADRS), Table 1 (member functions), §11.2.1 (ADRSc compression)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA
