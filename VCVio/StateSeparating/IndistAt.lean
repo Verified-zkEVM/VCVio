@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.StateSeparating.Hybrid
+
+module
+public import VCVio.StateSeparating.Hybrid
 
 /-!
 # State-separating handlers: ε-indistinguishability
@@ -12,6 +14,8 @@ import VCVio.StateSeparating.Hybrid
 distinguishing advantage between two stateful handlers from explicit initial
 states.
 -/
+
+@[expose] public section
 
 universe uₑ uₘ
 

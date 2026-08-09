@@ -4,13 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Unary.Internals
+module
+
+public meta import VCVio.ProgramLogic.Tactics.Unary.Internals
 
 /-!
 # Unary VC Tactics
 
 User-facing unary VCGen tactics and finish passes.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 

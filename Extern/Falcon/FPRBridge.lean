@@ -3,12 +3,15 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Batteries.Data.Rat.Float
-import LatticeCrypto.Falcon.Scheme
-import LatticeCrypto.Falcon.Concrete.FPR
-import Extern.Falcon.Instance
-import LatticeCrypto.Falcon.Concrete.Encoding
-import Mathlib.Analysis.SpecialFunctions.Pow.Real
+
+module
+import all Extern.Falcon.Instance
+public import Batteries.Data.Rat.Float
+public import LatticeCrypto.Falcon.Scheme
+public import LatticeCrypto.Falcon.Concrete.FPR
+public import Extern.Falcon.Instance
+public import LatticeCrypto.Falcon.Concrete.Encoding
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
 /-!
 # FPR ↔ ℝ Bridge Theorems
@@ -43,6 +46,8 @@ where `ε_renyi < 2^{-64}` for 53-bit mantissa precision.
 - Pornin 2019 (eprint 2019/893), Section 3 (precision analysis)
 - Falcon specification v1.2, Section 2.5.2 (sampler quality)
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Concrete.FPRBridge
@@ -135,10 +140,9 @@ theorem concrete_verify_eq_verify
         Falcon.verify p prims pk msg sig := by
   dsimp
   by_cases hcomp : sig.compressedS2 = []
-  · have hslen : sig.compressedS2.length < p.sbytelen := by
-      simpa [hcomp] using hsbytelen
-    have hdecomp : (verifyPrimitives p hn).decompress [] p.sbytelen = none := by
-      simp [verifyPrimitives, Falcon.Concrete.decompress, hsbytelen]
+  · have hdecomp : (verifyPrimitives p hn).decompress [] p.sbytelen = none := by
+      apply Falcon.Concrete.decompress_eq_none_of_length_ne
+      simpa using Nat.ne_of_lt hsbytelen
     have hleft :
         Falcon.Concrete.concreteVerify p ((verifyPrimitives p hn).publicKeyBytes pk.h) msg
           (Falcon.Concrete.sigEncode sig.salt [] p.logn) = false := by

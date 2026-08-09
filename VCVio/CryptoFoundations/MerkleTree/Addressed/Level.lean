@@ -4,13 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Richard Goodman
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
+module
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
 
 /-! # Level-Separated Merkle Trees, as an instance of the addressed engine
 
 Per-**level** domain separation — every node at the same subtree depth hashes under
 the same tweak — obtained by specializing the node-addressed engine's `nodeHash`
-through `NodeAddress.subtreeDepth`. Nothing here is proven from scratch: building,
+through `SkeletonInternalIndex.subtreeDepth`. Nothing here is proven from scratch: building,
 completeness, and the (oriented) collision kernel are the engine's theorems at
 `levelNodeHash`.
 
@@ -18,6 +19,8 @@ This is deliberately **not** the XMSS / SLH-DSA layout, which separates by full 
 address; that is the engine itself (`addressedNodeHash`), of which this file is the
 depth-collapsed special case (`levelNodeHash_eq_addressed`).
 -/
+
+@[expose] public section
 
 namespace AddressedMerkleTree
 
@@ -61,7 +64,7 @@ theorem level_oriented_binding (th : TweakableHash PkSeed Tweak (Y × Y) Y)
     (hroot : getPutativeRootLevel th pk tweakAt idx y proof₂
       = (buildMerkleTreeLevel th pk tweakAt ld).getRootValue)
     (hne : ld.get idx ≠ y) :
-    ∃ (a : NodeAddress s) (c : Y × Y),
+    ∃ (a : SkeletonInternalIndex s) (c : Y × Y),
       (childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a) ≠ c ∧
       th.eval pk (tweakAt a.subtreeDepth)
           ((childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a).1,

@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics
+module
+
+public import VCVio.ProgramLogic.Tactics
 
 /-!
 # Proof-Mode Entry / Exit Tactic Examples
@@ -13,6 +15,8 @@ This file validates proof-mode entry and exit tactics from
 `VCVio.ProgramLogic.Tactics`: `game_trans`, `by_equiv`, `by_upto`, `by_dist`,
 `rel_dist`, and relational simulation rules.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open OracleComp.ProgramLogic

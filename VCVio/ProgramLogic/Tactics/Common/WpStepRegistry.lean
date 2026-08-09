@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Meta.Sym.Pattern
-import Lean.Meta.Sym.Simp.DiscrTree
-import Lean.Elab.Tactic.Do.Attr
-import VCVio.ProgramLogic.Tactics.Common.Core
+module
+
+public meta import Lean.Meta.Sym.Pattern
+public meta import Lean.Meta.Sym.Simp.DiscrTree
+public meta import Lean.Elab.Tactic.Do.Attr
+public meta import VCVio.ProgramLogic.Tactics.Common.Core
 
 /-!
 # `@[wpStep]` Registry
@@ -51,6 +53,8 @@ development upstream. If a toolchain bump breaks the registry, the affected
 surface is confined to the selector in `buildWpStepEntry` and the lookup
 path in `getRegisteredWpStepEntries`; downstream tactic dispatch works
 through `WpStepEntry.declName?` and is insulated from `Sym` API churn. -/
+
+public meta section
 
 open Lean Elab Meta Lean.Meta
 open Lean.Elab.Tactic.Do.SpecAttr (SpecProof)

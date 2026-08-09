@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Xmss
+
+module
+public import HashSig.SLHDSA.Xmss
 
 /-!
 # FORS (FIPS 205 §8)
@@ -21,6 +23,8 @@ Because the FORS public key compresses the *whole-tree* roots (which are message
 
 - NIST FIPS 205, §8 (Algorithms 14–17)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA

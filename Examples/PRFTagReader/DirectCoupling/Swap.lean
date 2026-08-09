@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.Table
+module
+
+public import Examples.PRFTagReader.Table
 
 /-!
 # PRF Tag/Reader Protocol — Cell-Swap Permutations and the Swap-Bridge
@@ -30,6 +32,8 @@ distribution over a uniform table draw.
 * `singleTableHandler_cache_swap_eq` — the cache-extension swap-bridge for the slot-positive
   Case M-miss of the direct-coupling aux.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

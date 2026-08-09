@@ -3,11 +3,13 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.CryptoFoundations.SymmEncAlg
-import VCVio.OracleComp.Constructions.BitVec
-import VCVio.ProgramLogic.Tactics.Relational
-import VCVioWidgets.GameHop.Panel
-import Mathlib.Data.Vector.Zip
+
+module
+public import VCVio.CryptoFoundations.SymmEncAlg
+public import VCVio.OracleComp.Constructions.BitVec
+public import VCVio.ProgramLogic.Tactics.Relational
+public import VCVioWidgets.GameHop.Panel
+public import Mathlib.Data.Vector.Zip
 
 /-!
 # One Time Pad
@@ -22,6 +24,8 @@ The file includes two proof styles:
    proves that any two messages yield the same ciphertext distribution via a bijection
    coupling, using the `by_equiv` / `rvcstep` tactic workflow.
 -/
+
+@[expose] public section
 
 show_panel_widgets [local VCVioWidgets.GameHop.GameHopPanel]
 

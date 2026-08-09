@@ -4,14 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Richard Goodman
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
-import VCVio.CryptoFoundations.TweakableHash
+module
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
+public import VCVio.CryptoFoundations.TweakableHash
 
 /-! # Node-Addressed Merkle Trees
 
 Merkle trees whose node hash may depend on the **full address** of the node being
-hashed — the typed root-path position `NodeAddress s` — via
-`nodeHash : NodeAddress s → α → α → α`.
+hashed — the typed root-path position `SkeletonInternalIndex s` — via
+`nodeHash : SkeletonInternalIndex s → α → α → α`.
 
 Tree building, putative-root recomputation, completeness, and constructive collision
 tracing are defined and proven **once here**, for an arbitrary `nodeHash`. Every hash
@@ -38,13 +39,13 @@ is left as a follow-up for the maintainers rather than performed inside this
 contribution.
 
 Design: at each recursion step into a child, the engine passes the *reindexed* hash
-`fun a => nodeHash (.inL a)` (resp. `.inR`) — the address is threaded by
+`fun a => nodeHash (.ofLeft a)` (resp. `.ofRight`) — the address is threaded by
 precomposition, so no explicit path accumulator or embedding parameter appears.
 
 Contents:
 
-* `NodeAddress` — typed addresses of **internal** nodes (only internal nodes hash);
-  `NodeAddress.subtreeDepth` recovers the height of the addressed subtree (the
+* `SkeletonInternalIndex` — typed addresses of **internal** nodes (only internal nodes hash);
+  `SkeletonInternalIndex.subtreeDepth` recovers the height of the addressed subtree (the
   level-separation data), and the full constructor path is the XMSS address.
 * `populateUpAddressed` / `buildMerkleTreeAddressedWithHash` — cache construction.
 * `getPutativeRootAddressedWithHash` — putative-root recomputation from a leaf, an
@@ -65,74 +66,47 @@ target-registration time). The oriented reduction against a sampled-target game 
 the follow-up consumer of the address tag.
 -/
 
+@[expose] public section
+
 namespace AddressedMerkleTree
 
 open List OracleSpec OracleComp BinaryTree InductiveMerkleTree
 
 variable {α : Type _} [DecidableEq α]
 
-/-- A typed address of an **internal** node of a skeleton: the path from the root.
-Leaf skeletons have no addresses — only internal nodes hash. -/
-inductive NodeAddress : Skeleton → Type
-  /-- The root of an internal skeleton. -/
-  | here {l r : Skeleton} : NodeAddress (.internal l r)
-  /-- An address inside the left child. -/
-  | inL {l r : Skeleton} (a : NodeAddress l) : NodeAddress (.internal l r)
-  /-- An address inside the right child. -/
-  | inR {l r : Skeleton} (a : NodeAddress r) : NodeAddress (.internal l r)
-  deriving DecidableEq
-
-namespace NodeAddress
-
-/-- Distance of the addressed node from the root. -/
-@[simp]
-def pathDepth : {s : Skeleton} → NodeAddress s → ℕ
-  | _, .here => 0
-  | _, .inL a => a.pathDepth + 1
-  | _, .inR a => a.pathDepth + 1
-
-/-- The height (`Skeleton.depth`) of the subtree rooted at the addressed node.
-This is the datum a *level-separated* hash depends on. -/
-@[simp]
-def subtreeDepth : {s : Skeleton} → NodeAddress s → ℕ
-  | .internal l r, .here => (Skeleton.internal l r).depth
-  | _, .inL a => a.subtreeDepth
-  | _, .inR a => a.subtreeDepth
-
-end NodeAddress
 
 /-- Build the full cache of a Merkle tree under an address-dependent hash: each
 internal node stores `nodeHash addr leftRoot rightRoot` where `addr` is that node's
-address. The address is threaded by reindexing `nodeHash` along `.inL` / `.inR`. -/
+address. The address is threaded by reindexing `nodeHash` along `.ofLeft` / `.ofRight`. -/
 @[simp, grind]
-def populateUpAddressed : {s : Skeleton} → (nodeHash : NodeAddress s → α → α → α) →
+def populateUpAddressed : {s : Skeleton} → (nodeHash : SkeletonInternalIndex s → α → α → α) →
     LeafData α s → FullData α s
   | .leaf, _, .leaf v => .leaf v
   | .internal _ _, nh, .internal dl dr =>
-    let L := populateUpAddressed (fun a => nh (.inL a)) dl
-    let R := populateUpAddressed (fun a => nh (.inR a)) dr
-    .internal (nh .here L.getRootValue R.getRootValue) L R
+    let L := populateUpAddressed (fun a => nh (.ofLeft a)) dl
+    let R := populateUpAddressed (fun a => nh (.ofRight a)) dr
+    .internal (nh .ofInternal L.getRootValue R.getRootValue) L R
 
 /-- Alias matching the naming of the unaddressed engine. -/
 @[simp, grind]
 def buildMerkleTreeAddressedWithHash {s : Skeleton} (leaf_tree : LeafData α s)
-    (nodeHash : NodeAddress s → α → α → α) : FullData α s :=
+    (nodeHash : SkeletonInternalIndex s → α → α → α) : FullData α s :=
   populateUpAddressed nodeHash leaf_tree
 
 /-- Recompute the putative root from a leaf value, its index, and an authentication
 path, hashing each step under the address of the node being reconstituted. The
-node reconstituted by the *last* step is the root (`.here`); descending into the
+node reconstituted by the *last* step is the root (`.ofInternal`); descending into the
 index reindexes the hash along the path. -/
 @[simp, grind]
 def getPutativeRootAddressedWithHash :
-    {s : Skeleton} → (nodeHash : NodeAddress s → α → α → α) →
+    {s : Skeleton} → (nodeHash : SkeletonInternalIndex s → α → α → α) →
       (idx : SkeletonLeafIndex s) → (leafValue : α) → List.Vector α idx.depth → α
   | _, _, .ofLeaf, leafValue, _ => leafValue
   | _, nh, .ofLeft idxLeft, leafValue, proof =>
-    nh .here (getPutativeRootAddressedWithHash (fun a => nh (.inL a)) idxLeft
+    nh .ofInternal (getPutativeRootAddressedWithHash (fun a => nh (.ofLeft a)) idxLeft
       leafValue proof.tail) proof.head
   | _, nh, .ofRight idxRight, leafValue, proof =>
-    nh .here proof.head (getPutativeRootAddressedWithHash (fun a => nh (.inR a)) idxRight
+    nh .ofInternal proof.head (getPutativeRootAddressedWithHash (fun a => nh (.ofRight a)) idxRight
       leafValue proof.tail)
 
 omit [DecidableEq α] in
@@ -140,7 +114,7 @@ omit [DecidableEq α] in
 recomputes the honest root, for every address-dependent hash. -/
 theorem addressed_functional_completeness {s : Skeleton}
     (idx : SkeletonLeafIndex s) (leaf_data_tree : LeafData α s)
-    (nodeHash : NodeAddress s → α → α → α) :
+    (nodeHash : SkeletonInternalIndex s → α → α → α) :
     getPutativeRootAddressedWithHash nodeHash idx (leaf_data_tree.get idx)
       (generateProof (buildMerkleTreeAddressedWithHash leaf_data_tree nodeHash) idx)
     = (buildMerkleTreeAddressedWithHash leaf_data_tree nodeHash).getRootValue := by
@@ -152,54 +126,54 @@ theorem addressed_functional_completeness {s : Skeleton}
       simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
         getPutativeRootAddressedWithHash, InductiveMerkleTree.generateProof,
         List.Vector.head_cons, BinaryTree.LeafData.get, BinaryTree.FullData.getRootValue]
-      exact congrArg (fun z => nodeHash .here z _) (ih dl (fun a => nodeHash (.inL a)))
+      exact congrArg (fun z => nodeHash .ofInternal z _) (ih dl (fun a => nodeHash (.ofLeft a)))
   | ofRight idxRight ih =>
     cases leaf_data_tree with
     | internal dl dr =>
       simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
         getPutativeRootAddressedWithHash, InductiveMerkleTree.generateProof,
         List.Vector.head_cons, BinaryTree.LeafData.get, BinaryTree.FullData.getRootValue]
-      exact congrArg (nodeHash .here _) (ih dr (fun a => nodeHash (.inR a)))
+      exact congrArg (nodeHash .ofInternal _) (ih dr (fun a => nodeHash (.ofRight a)))
 
 /-- An address-tagged collision: two *distinct* input pairs with equal digest under
 the hash **at that address**. -/
-def AddressedCollision {s : Skeleton} (nodeHash : NodeAddress s → α → α → α)
-    (w : NodeAddress s × α × α × α × α) : Prop :=
+def AddressedCollision {s : Skeleton} (nodeHash : SkeletonInternalIndex s → α → α → α)
+    (w : SkeletonInternalIndex s × α × α × α × α) : Prop :=
   (w.2.1, w.2.2.1) ≠ (w.2.2.2.1, w.2.2.2.2) ∧
     nodeHash w.1 w.2.1 w.2.2.1 = nodeHash w.1 w.2.2.2.1 w.2.2.2.2
 
 /-- Walk two verifying branches at the same leaf index looking for the level at
 which they merge; return the collision **as data, tagged with its address**. -/
-def findCollisionAddressed : {s : Skeleton} → (nodeHash : NodeAddress s → α → α → α) →
+def findCollisionAddressed : {s : Skeleton} → (nodeHash : SkeletonInternalIndex s → α → α → α) →
     (idx : SkeletonLeafIndex s) → (proof₁ proof₂ : List.Vector α idx.depth) →
-    (x y : α) → Option (NodeAddress s × α × α × α × α)
+    (x y : α) → Option (SkeletonInternalIndex s × α × α × α × α)
   | _, _, .ofLeaf, _, _, _, _ => none
   | _, nh, .ofLeft idxLeft, proof₁, proof₂, x, y =>
-    let subL1 := getPutativeRootAddressedWithHash (fun a => nh (.inL a)) idxLeft x proof₁.tail
-    let subL2 := getPutativeRootAddressedWithHash (fun a => nh (.inL a)) idxLeft y proof₂.tail
+    let subL1 := getPutativeRootAddressedWithHash (fun a => nh (.ofLeft a)) idxLeft x proof₁.tail
+    let subL2 := getPutativeRootAddressedWithHash (fun a => nh (.ofLeft a)) idxLeft y proof₂.tail
     if (subL1, proof₁.head) = (subL2, proof₂.head) then
-      (findCollisionAddressed (fun a => nh (.inL a)) idxLeft proof₁.tail proof₂.tail x y).map
-        (fun w => (.inL w.1, w.2))
-    else if nh .here subL1 proof₁.head = nh .here subL2 proof₂.head then
-      some (.here, subL1, proof₁.head, subL2, proof₂.head)
+      (findCollisionAddressed (fun a => nh (.ofLeft a)) idxLeft proof₁.tail proof₂.tail x y).map
+        (fun w => (.ofLeft w.1, w.2))
+    else if nh .ofInternal subL1 proof₁.head = nh .ofInternal subL2 proof₂.head then
+      some (.ofInternal, subL1, proof₁.head, subL2, proof₂.head)
     else
       none
   | _, nh, .ofRight idxRight, proof₁, proof₂, x, y =>
-    let subR1 := getPutativeRootAddressedWithHash (fun a => nh (.inR a)) idxRight x proof₁.tail
-    let subR2 := getPutativeRootAddressedWithHash (fun a => nh (.inR a)) idxRight y proof₂.tail
+    let subR1 := getPutativeRootAddressedWithHash (fun a => nh (.ofRight a)) idxRight x proof₁.tail
+    let subR2 := getPutativeRootAddressedWithHash (fun a => nh (.ofRight a)) idxRight y proof₂.tail
     if (proof₁.head, subR1) = (proof₂.head, subR2) then
-      (findCollisionAddressed (fun a => nh (.inR a)) idxRight proof₁.tail proof₂.tail x y).map
-        (fun w => (.inR w.1, w.2))
-    else if nh .here proof₁.head subR1 = nh .here proof₂.head subR2 then
-      some (.here, proof₁.head, subR1, proof₂.head, subR2)
+      (findCollisionAddressed (fun a => nh (.ofRight a)) idxRight proof₁.tail proof₂.tail x y).map
+        (fun w => (.ofRight w.1, w.2))
+    else if nh .ofInternal proof₁.head subR1 = nh .ofInternal proof₂.head subR2 then
+      some (.ofInternal, proof₁.head, subR1, proof₂.head, subR2)
     else
       none
 
 /-- **Soundness of the kernel**: anything returned is an address-tagged collision. -/
 theorem findCollisionAddressed_sound {s : Skeleton}
-    (nodeHash : NodeAddress s → α → α → α) (idx : SkeletonLeafIndex s)
+    (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
     (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
-    (w : NodeAddress s × α × α × α × α)
+    (w : SkeletonInternalIndex s × α × α × α × α)
     (hw : findCollisionAddressed nodeHash idx proof₁ proof₂ x y = some w) :
     AddressedCollision nodeHash w := by
   induction idx with
@@ -209,7 +183,7 @@ theorem findCollisionAddressed_sound {s : Skeleton}
     split at hw
     · simp only [Option.map_eq_some_iff] at hw
       obtain ⟨w', hw', rfl⟩ := hw
-      exact ih (fun a => nodeHash (.inL a)) proof₁.tail proof₂.tail w' hw'
+      exact ih (fun a => nodeHash (.ofLeft a)) proof₁.tail proof₂.tail w' hw'
     · rename_i hneq
       split at hw
       · rename_i heq
@@ -222,7 +196,7 @@ theorem findCollisionAddressed_sound {s : Skeleton}
     split at hw
     · simp only [Option.map_eq_some_iff] at hw
       obtain ⟨w', hw', rfl⟩ := hw
-      exact ih (fun a => nodeHash (.inR a)) proof₁.tail proof₂.tail w' hw'
+      exact ih (fun a => nodeHash (.ofRight a)) proof₁.tail proof₂.tail w' hw'
     · rename_i hneq
       split at hw
       · rename_i heq
@@ -236,7 +210,7 @@ somewhere (in leaf value or path), `findCollisionAddressed` finds a collision: t
 walk only returns `none` when the two branches agree at every compared level, which
 forces the leaf values to agree. -/
 theorem findCollisionAddressed_isSome {s : Skeleton}
-    (nodeHash : NodeAddress s → α → α → α) (idx : SkeletonLeafIndex s)
+    (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
     (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx x proof₁
       = getPutativeRootAddressedWithHash nodeHash idx y proof₂)
@@ -252,7 +226,7 @@ theorem findCollisionAddressed_isSome {s : Skeleton}
     · rename_i hagree
       simp only [Prod.mk.injEq] at hagree
       simp only [Option.isSome_map]
-      exact ih (fun a => nodeHash (.inL a)) proof₁.tail proof₂.tail hagree.1
+      exact ih (fun a => nodeHash (.ofLeft a)) proof₁.tail proof₂.tail hagree.1
     · split
       · simp
       · rename_i hne'
@@ -263,7 +237,7 @@ theorem findCollisionAddressed_isSome {s : Skeleton}
     · rename_i hagree
       simp only [Prod.mk.injEq] at hagree
       simp only [Option.isSome_map]
-      exact ih (fun a => nodeHash (.inR a)) proof₁.tail proof₂.tail hagree.2
+      exact ih (fun a => nodeHash (.ofRight a)) proof₁.tail proof₂.tail hagree.2
     · split
       · simp
       · rename_i hne'
@@ -272,7 +246,7 @@ theorem findCollisionAddressed_isSome {s : Skeleton}
 /-- **Binding, user-facing**: two openings of the same index recomputing the same
 root with distinct leaf values yield an address-tagged collision, as data. -/
 theorem getPutativeRootAddressedWithHash_binding_collision {s : Skeleton}
-    (nodeHash : NodeAddress s → α → α → α) (idx : SkeletonLeafIndex s)
+    (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
     (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx x proof₁
       = getPutativeRootAddressedWithHash nodeHash idx y proof₂)
@@ -297,20 +271,20 @@ kept separate. -/
 /-- The pair of child root values stored at an internal address of a cache. These
 are the honestly-precommitted hash inputs at that node. -/
 @[simp]
-def childPairAt : {s : Skeleton} → FullData α s → NodeAddress s → α × α
-  | _, .internal _ L R, .here => (L.getRootValue, R.getRootValue)
-  | _, .internal _ L _, .inL a => childPairAt L a
-  | _, .internal _ _ R, .inR a => childPairAt R a
+def childPairAt : {s : Skeleton} → FullData α s → SkeletonInternalIndex s → α × α
+  | _, .internal _ L R, .ofInternal => (L.getRootValue, R.getRootValue)
+  | _, .internal _ L _, .ofLeft a => childPairAt L a
+  | _, .internal _ _ R, .ofRight a => childPairAt R a
 
 /-- **Orientation**: against an honest first opening, the collision's first endpoint
 is the precommitted child pair at the returned address. -/
 theorem findCollisionAddressed_oriented {s : Skeleton}
-    (nodeHash : NodeAddress s → α → α → α) (ld : LeafData α s)
+    (nodeHash : SkeletonInternalIndex s → α → α → α) (ld : LeafData α s)
     (idx : SkeletonLeafIndex s) (y : α) (proof₂ : List.Vector α idx.depth)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx y proof₂
       = (buildMerkleTreeAddressedWithHash ld nodeHash).getRootValue)
     (hne : ld.get idx ≠ y) :
-    ∃ (a : NodeAddress s) (c : α × α),
+    ∃ (a : SkeletonInternalIndex s) (c : α × α),
       findCollisionAddressed nodeHash idx
         (InductiveMerkleTree.generateProof
           (buildMerkleTreeAddressedWithHash ld nodeHash) idx) proof₂
@@ -328,18 +302,18 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
   | ofLeft idxLeft ih =>
     cases ld with
     | internal dl dr =>
-      have hsub : getPutativeRootAddressedWithHash (fun a => nodeHash (.inL a)) idxLeft
+      have hsub : getPutativeRootAddressedWithHash (fun a => nodeHash (.ofLeft a)) idxLeft
           (dl.get idxLeft)
           (InductiveMerkleTree.generateProof
-            (populateUpAddressed (fun a => nodeHash (.inL a)) dl) idxLeft)
-        = (populateUpAddressed (fun a => nodeHash (.inL a)) dl).getRootValue :=
-        addressed_functional_completeness idxLeft dl (fun a => nodeHash (.inL a))
-      have hroot' : nodeHash .here
-          (getPutativeRootAddressedWithHash (fun a => nodeHash (.inL a)) idxLeft y
+            (populateUpAddressed (fun a => nodeHash (.ofLeft a)) dl) idxLeft)
+        = (populateUpAddressed (fun a => nodeHash (.ofLeft a)) dl).getRootValue :=
+        addressed_functional_completeness idxLeft dl (fun a => nodeHash (.ofLeft a))
+      have hroot' : nodeHash .ofInternal
+          (getPutativeRootAddressedWithHash (fun a => nodeHash (.ofLeft a)) idxLeft y
             proof₂.tail) proof₂.head
-        = nodeHash .here
-            (populateUpAddressed (fun a => nodeHash (.inL a)) dl).getRootValue
-            (populateUpAddressed (fun a => nodeHash (.inR a)) dr).getRootValue := by
+        = nodeHash .ofInternal
+            (populateUpAddressed (fun a => nodeHash (.ofLeft a)) dl).getRootValue
+            (populateUpAddressed (fun a => nodeHash (.ofRight a)) dr).getRootValue := by
         simpa only [getPutativeRootAddressedWithHash, buildMerkleTreeAddressedWithHash,
           populateUpAddressed, FullData.internal_getRootValue] using hroot
       rw [findCollisionAddressed]
@@ -349,13 +323,13 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
           InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
           SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
           BinaryTree.LeafData.get, hsub, Prod.mk.injEq] at hagree
-        obtain ⟨a', c, hwalk⟩ := ih (fun a => nodeHash (.inL a)) dl proof₂.tail
-          (show getPutativeRootAddressedWithHash (fun a => nodeHash (.inL a)) idxLeft y
+        obtain ⟨a', c, hwalk⟩ := ih (fun a => nodeHash (.ofLeft a)) dl proof₂.tail
+          (show getPutativeRootAddressedWithHash (fun a => nodeHash (.ofLeft a)) idxLeft y
               proof₂.tail
-            = (buildMerkleTreeAddressedWithHash dl (fun a => nodeHash (.inL a))).getRootValue
+            = (buildMerkleTreeAddressedWithHash dl (fun a => nodeHash (.ofLeft a))).getRootValue
             from hagree.1.symm)
           (by simpa using hne)
-        refine ⟨.inL a', c, ?_⟩
+        refine ⟨.ofLeft a', c, ?_⟩
         simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
           InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
           SkeletonLeafIndex.depth, List.Vector.tail_cons,
@@ -363,7 +337,7 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
         rw [hwalk]
         simp [childPairAt]
       · split
-        · refine ⟨.here, (getPutativeRootAddressedWithHash (fun a => nodeHash (.inL a))
+        · refine ⟨.ofInternal, (getPutativeRootAddressedWithHash (fun a => nodeHash (.ofLeft a))
             idxLeft y proof₂.tail, proof₂.head), ?_⟩
           simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
             InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
@@ -379,18 +353,18 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
   | ofRight idxRight ih =>
     cases ld with
     | internal dl dr =>
-      have hsub : getPutativeRootAddressedWithHash (fun a => nodeHash (.inR a)) idxRight
+      have hsub : getPutativeRootAddressedWithHash (fun a => nodeHash (.ofRight a)) idxRight
           (dr.get idxRight)
           (InductiveMerkleTree.generateProof
-            (populateUpAddressed (fun a => nodeHash (.inR a)) dr) idxRight)
-        = (populateUpAddressed (fun a => nodeHash (.inR a)) dr).getRootValue :=
-        addressed_functional_completeness idxRight dr (fun a => nodeHash (.inR a))
-      have hroot' : nodeHash .here proof₂.head
-          (getPutativeRootAddressedWithHash (fun a => nodeHash (.inR a)) idxRight y
+            (populateUpAddressed (fun a => nodeHash (.ofRight a)) dr) idxRight)
+        = (populateUpAddressed (fun a => nodeHash (.ofRight a)) dr).getRootValue :=
+        addressed_functional_completeness idxRight dr (fun a => nodeHash (.ofRight a))
+      have hroot' : nodeHash .ofInternal proof₂.head
+          (getPutativeRootAddressedWithHash (fun a => nodeHash (.ofRight a)) idxRight y
             proof₂.tail)
-        = nodeHash .here
-            (populateUpAddressed (fun a => nodeHash (.inL a)) dl).getRootValue
-            (populateUpAddressed (fun a => nodeHash (.inR a)) dr).getRootValue := by
+        = nodeHash .ofInternal
+            (populateUpAddressed (fun a => nodeHash (.ofLeft a)) dl).getRootValue
+            (populateUpAddressed (fun a => nodeHash (.ofRight a)) dr).getRootValue := by
         simpa only [getPutativeRootAddressedWithHash, buildMerkleTreeAddressedWithHash,
           populateUpAddressed, FullData.internal_getRootValue] using hroot
       rw [findCollisionAddressed]
@@ -400,13 +374,13 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
           InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
           SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
           BinaryTree.LeafData.get, hsub, Prod.mk.injEq] at hagree
-        obtain ⟨a', c, hwalk⟩ := ih (fun a => nodeHash (.inR a)) dr proof₂.tail
-          (show getPutativeRootAddressedWithHash (fun a => nodeHash (.inR a)) idxRight y
+        obtain ⟨a', c, hwalk⟩ := ih (fun a => nodeHash (.ofRight a)) dr proof₂.tail
+          (show getPutativeRootAddressedWithHash (fun a => nodeHash (.ofRight a)) idxRight y
               proof₂.tail
-            = (buildMerkleTreeAddressedWithHash dr (fun a => nodeHash (.inR a))).getRootValue
+            = (buildMerkleTreeAddressedWithHash dr (fun a => nodeHash (.ofRight a))).getRootValue
             from hagree.2.symm)
           (by simpa using hne)
-        refine ⟨.inR a', c, ?_⟩
+        refine ⟨.ofRight a', c, ?_⟩
         simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
           InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
           SkeletonLeafIndex.depth, List.Vector.tail_cons,
@@ -414,8 +388,8 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
         rw [hwalk]
         simp [childPairAt]
       · split
-        · refine ⟨.here, (proof₂.head, getPutativeRootAddressedWithHash
-            (fun a => nodeHash (.inR a)) idxRight y proof₂.tail), ?_⟩
+        · refine ⟨.ofInternal, (proof₂.head, getPutativeRootAddressedWithHash
+            (fun a => nodeHash (.ofRight a)) idxRight y proof₂.tail), ?_⟩
           simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
             InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
             SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
@@ -434,12 +408,12 @@ honestly built root with a different leaf value yields a collision whose first
 endpoint is the honestly-precommitted child pair at the tagged address — the
 directional configuration a target-collision reduction consumes. -/
 theorem addressed_oriented_binding {s : Skeleton}
-    (nodeHash : NodeAddress s → α → α → α) (ld : LeafData α s)
+    (nodeHash : SkeletonInternalIndex s → α → α → α) (ld : LeafData α s)
     (idx : SkeletonLeafIndex s) (y : α) (proof₂ : List.Vector α idx.depth)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx y proof₂
       = (buildMerkleTreeAddressedWithHash ld nodeHash).getRootValue)
     (hne : ld.get idx ≠ y) :
-    ∃ (a : NodeAddress s) (c : α × α),
+    ∃ (a : SkeletonInternalIndex s) (c : α × α),
       (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a) ≠ c ∧
       nodeHash a (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).1
           (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).2
@@ -463,7 +437,7 @@ engine specialized, at the level of its computations
 constructive collision kernel (`findCollisionAddressed_const`: address erasure sends
 one to the other on the nose). The subsumption is propositional, not definitional —
 see the scope note in the module header. The level-separated (`Tweaked`) development
-factors through `NodeAddress.subtreeDepth` and is *definitionally* an instance
+factors through `SkeletonInternalIndex.subtreeDepth` and is *definitionally* an instance
 (`levelNodeHash_eq_addressed` is `rfl`). -/
 
 section Instances
@@ -537,7 +511,7 @@ theorem findCollisionAddressed_const (h : α → α → α) {s : Skeleton}
 /-- **Level-separated instance**: hash through the depth of the addressed subtree.
 This is the discipline of the `Tweaked` development: per-level domain separation. -/
 def levelNodeHash {PkSeed Tweak Y : Type} (th : TweakableHash PkSeed Tweak (Y × Y) Y)
-    (pk : PkSeed) (tweakAt : ℕ → Tweak) {s : Skeleton} : NodeAddress s → Y → Y → Y :=
+    (pk : PkSeed) (tweakAt : ℕ → Tweak) {s : Skeleton} : SkeletonInternalIndex s → Y → Y → Y :=
   fun a l r => th.eval pk (tweakAt a.subtreeDepth) (l, r)
 
 /-- **Fully-addressed (XMSS-style) instance**: hash through an arbitrary map out of
@@ -545,8 +519,8 @@ the full typed address — per-node domain separation. Any concrete addressing s
 (layer, horizontal index, domain tag) factors through `tweakOf`; nothing about the
 address is discarded before the user's map is applied. -/
 def addressedNodeHash {PkSeed Tweak Y : Type} (th : TweakableHash PkSeed Tweak (Y × Y) Y)
-    (pk : PkSeed) {s : Skeleton} (tweakOf : NodeAddress s → Tweak) :
-    NodeAddress s → Y → Y → Y :=
+    (pk : PkSeed) {s : Skeleton} (tweakOf : SkeletonInternalIndex s → Tweak) :
+    SkeletonInternalIndex s → Y → Y → Y :=
   fun a l r => th.eval pk (tweakOf a) (l, r)
 
 /-- The level instance factors through the fully-addressed one — level separation is

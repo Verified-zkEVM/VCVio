@@ -3,14 +3,18 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.EvalDist.Monad.Seq
-import ToMathlib.Data.ENNReal.SumSquares
+
+module
+public import VCVio.EvalDist.Monad.Seq
+public import ToMathlib.Data.ENNReal.SumSquares
 
 /-!
 # Evaluation Distributions of Computations with `Prod`
 
 Lemmas about `evalDist` and `support` involving `Prod`, ported to generic `[MonadLiftT m SPMF]`.
 -/
+
+@[expose] public section
 
 open ENNReal Prod
 

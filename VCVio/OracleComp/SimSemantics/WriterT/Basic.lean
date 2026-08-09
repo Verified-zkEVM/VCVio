@@ -3,8 +3,10 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.EvalDist
-import ToMathlib.Control.WriterT
+
+module
+public import VCVio.OracleComp.EvalDist
+public import ToMathlib.Control.WriterT
 
 /-!
 # Simulation through `WriterT` Handlers
@@ -13,6 +15,8 @@ Combinators and output-preservation lemmas for writer-instrumented query impleme
 The combinators here mirror the StateT/ReaderT versions in
 `SimSemantics/StateT/Basic.lean` and `SimSemantics/ReaderT/Basic.lean`.
 -/
+
+@[expose] public section
 
 open OracleSpec Function Prod
 

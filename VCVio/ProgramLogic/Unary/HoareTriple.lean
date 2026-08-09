@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Unary.Loom.Quantitative
-import VCVio.OracleComp.Constructions.Replicate
-import VCVio.OracleComp.Constructions.SampleableType
+module
+
+public import VCVio.ProgramLogic.Unary.Loom.Quantitative
+public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Quantitative Hoare triples for `OracleComp`
@@ -33,6 +35,8 @@ directly into the `Std.Do'` shape. The `Std.Do'.Triple` analogue is
 inductive (not definitional) and bridged via `Std.Do'.Triple.iff`
 (`pre ⊑ wp …`) and `triple_ofLE`.
 -/
+
+@[expose] public section
 
 open ENNReal
 open Std.Do'

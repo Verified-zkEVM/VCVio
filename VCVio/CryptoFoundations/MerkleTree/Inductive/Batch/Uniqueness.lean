@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Abraxas1010 (IAOM / Apoth3osis)
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
 
 /-!
 # Batch Opening Uniqueness
@@ -39,6 +41,8 @@ Two points specific to the batch setting:
 - `getPutativeBatchRootWithHash_batch_roots_ne_of_ne` — contrapositive: distinct claimed
   values at the same selector produce distinct roots
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 

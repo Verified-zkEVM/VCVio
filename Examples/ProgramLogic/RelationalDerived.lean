@@ -4,13 +4,20 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Relational
+module
+
+public import VCVio.OracleComp.OracleSpec
+public import Cslib.Foundations.Data.PFunctor.Free
+
+public import VCVio.ProgramLogic.Tactics.Relational
 
 /-!
 # Derived Relational Tactic Examples
 
 This file validates relational consequence, inlining, and `@[vcspec]` lookup.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open OracleComp.ProgramLogic

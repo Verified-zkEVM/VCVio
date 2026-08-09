@@ -3,8 +3,10 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.EvalDist.Defs.Support
-import ToMathlib.ProbabilityTheory.SPMF
+
+module
+public import VCVio.EvalDist.Defs.Support
+public import ToMathlib.ProbabilityTheory.SPMF
 
 /-!
 # Typeclasses for Denotational Monad Semantics
@@ -15,6 +17,8 @@ probability semantics to monadic computations. We also introduce functions
 
 -- dtumad: document various probability notation definitions here
 -/
+
+@[expose] public section
 
 open ENNReal
 

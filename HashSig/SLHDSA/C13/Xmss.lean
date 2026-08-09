@@ -3,8 +3,10 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.C13.WotsC
-import HashSig.SLHDSA.Xmss
+
+module
+public import HashSig.SLHDSA.C13.WotsC
+public import HashSig.SLHDSA.Xmss
 
 /-!
 # C13 XMSS layer (XMSS over WOTS+C)
@@ -19,6 +21,8 @@ the Merkle auth-path consistency lemma.
 
 - NIST FIPS 205 §6 (XMSS); ePrint 2025/2203 (the C-series leaf OTS)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.C13

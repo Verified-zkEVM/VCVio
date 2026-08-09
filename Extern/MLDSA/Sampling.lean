@@ -3,9 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Extern.Hashing
-import LatticeCrypto.MLDSA.Concrete.Encoding
-import LatticeCrypto.MLDSA.Concrete.NTT
+
+module
+import all LatticeCrypto.MLDSA.Concrete.Encoding
+import LatticeCrypto.MLDSA.Concrete.LawBounds
+public import Extern.Hashing
+public import LatticeCrypto.MLDSA.Concrete.Encoding
+public import LatticeCrypto.MLDSA.Concrete.NTT
 
 /-!
 # Concrete Sampling and Hash Wiring for ML-DSA
@@ -20,6 +24,8 @@ FIPS 204:
 - `ExpandMask`
 - message / commitment hash wrappers
 -/
+
+public section
 
 
 namespace MLDSA.Concrete
@@ -147,7 +153,7 @@ private def requireFullEtaSample (coeffs : Array ℤ) : Array ℤ :=
   else
     panic! s!"ML-DSA eta sampler produced {coeffs.size} coefficients; expected {ringDegree}"
 
-private def sampleEtaPoly (eta : Nat) (seed : Bytes 64) (nonce : Nat) : Rq :=
+def sampleEtaPoly (eta : Nat) (seed : Bytes 64) (nonce : Nat) : Rq :=
   let stream := shake256Stream (vectorToByteArray seed) nonce 1024
   let coeffs := requireFullEtaSample <| rejEtaCoeffs eta stream
   Vector.ofFn fun i => (coeffs.getD i.val 0 : Coeff)
@@ -165,6 +171,16 @@ def expandMask (rhoPrime : Bytes 64) (kappa : ℕ) (p : Params) : RqVec p.l :=
   let seed := vectorToByteArray rhoPrime
   Vector.ofFn fun i =>
     polyZUnpack p <| shake256Stream seed (kappa + i.val) (polyZPackedBytes p)
+
+/-- Every component produced by `expandMask` lies in the FIPS-204 `z` window for an approved
+parameter set. -/
+theorem expandMask_get_cInfNorm_le (p : Params) (hp : p.isApproved) (rhoPrime : Bytes 64)
+    (kappa : ℕ) (j : Fin p.l) :
+    LatticeCrypto.cInfNorm ((expandMask rhoPrime kappa p).get j) ≤ p.gamma1 := by
+  obtain ⟨hwidth, hq⟩ := approved_gamma1_width p hp
+  unfold expandMask
+  rw [Vector.get_ofFn]
+  exact bitUnpackPoly_z_cInfNorm_le _ p.gamma1 hwidth hq
 
 /-! ## Challenge sampling -/
 

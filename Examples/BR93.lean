@@ -4,13 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-import VCVio.CryptoFoundations.HardnessAssumptions.OneWay
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.SimSemantics.Append
+module
+
+public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
+public import VCVio.CryptoFoundations.HardnessAssumptions.OneWay
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
 # Bellare-Rogaway 1993 Encryption
@@ -36,6 +38,8 @@ The bad event is then reduced to the repo's trapdoor-preimage experiment
 (`tdpAdvantage`) by inspecting the adversary's random-oracle queries. The proof
 bodies remain `sorry` for now.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OneWay
 
@@ -105,7 +109,7 @@ structure CPA_Adv where
 
 /-- Shared implementation of the BR93 random-oracle world: the left component handles uniform
 sampling, while the right component is a lazy random oracle on `Rand → M`. -/
-private def roQueryImpl :
+def roQueryImpl :
     QueryImpl (RO_Spec Rand M) (StateT ((Rand →ₒ M).QueryCache) ProbComp) :=
   let ro : QueryImpl (Rand →ₒ M) (StateT ((Rand →ₒ M).QueryCache) ProbComp) := randomOracle
   let idImpl := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget

@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
+module
+
 /-!
 # SHA-3 / FIPS 202 FFI Bindings
 
@@ -12,6 +14,8 @@ implementation from [mlkem-native](https://github.com/pq-code-package/mlkem-nati
 
 These primitives are shared across ML-KEM (FIPS 203) and ML-DSA (FIPS 204).
 -/
+
+@[expose] public section
 
 
 namespace FFI.Hashing

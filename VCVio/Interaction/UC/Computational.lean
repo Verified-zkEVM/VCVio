@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.Interaction.UC.Emulates
-import VCVio.CryptoFoundations.Asymptotics.Negligible
-import VCVio.CryptoFoundations.Asymptotics.Security
-import VCVio.EvalDist.Defs.Semantics
-import VCVio.EvalDist.TVDist
+
+module
+public import PolyFun.Interaction.UC.Emulates
+public import VCVio.CryptoFoundations.Asymptotics.Negligible
+public import VCVio.CryptoFoundations.Asymptotics.Security
+public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.TVDist
 
 /-!
 # Computational observation layer for UC security
@@ -86,6 +88,8 @@ This lets the same framework express:
 * `AsympObservedCompEmulates.iff_secureAgainst`: `AsympObservedCompEmulates` is
   equivalent to security of the UC distinguishing game.
 -/
+
+@[expose] public section
 
 universe u
 

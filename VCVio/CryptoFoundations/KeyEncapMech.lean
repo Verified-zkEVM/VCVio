@@ -4,13 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.OracleComp.ProbCompLift
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.SimSemantics.Append
+module
+
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.ProbCompLift
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
 # Key Encapsulation Mechanisms
@@ -18,6 +20,8 @@ import VCVio.OracleComp.SimSemantics.Append
 This file defines a type to represent protocols for key encapsulation mechanisms.
 We also define basic correctness and security properties for these protocols.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

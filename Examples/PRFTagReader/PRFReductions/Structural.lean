@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.PRFReductions.IdealHandlers
+module
+
+public import Examples.PRFTagReader.PRFReductions.IdealHandlers
 
 /-!
 # PRF Tag/Reader Protocol — Structural `query_bind` Reductions
@@ -13,6 +15,8 @@ Structural `query_bind`-decomposition lemmas for the composed ideal handlers (tu
 coupling induction into a sequence of `bind`-decomposition steps), together with per-query
 reductions and `bad` monotonicity for `unlinkBadQueryImpl`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

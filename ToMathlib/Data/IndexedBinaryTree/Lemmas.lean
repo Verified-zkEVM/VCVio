@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import ToMathlib.Data.IndexedBinaryTree.Basic
+module
+
+public import ToMathlib.Data.IndexedBinaryTree.Basic
 
 
 /-!
@@ -21,6 +23,8 @@ import ToMathlib.Data.IndexedBinaryTree.Basic
 
 
 -/
+
+@[expose] public section
 
 namespace BinaryTree
 

@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Loom.WP.Basic
-import VCVio.ProgramLogic.Unary.HoareTriple
+module
+
+public import Loom.WP.Basic
+public import VCVio.ProgramLogic.Unary.HoareTriple
 
 /-!
 # Probabilistic `WP` carrier for `OracleComp` (`Prob`, scoped)
@@ -40,6 +42,8 @@ goals never invoke `Markov` / `KL_div` lemmas.
 See `.ignore/wp-cutover-plan.md` §"Three-tier carrier design" for the
 broader story (Galois connections, coherence lemmas).
 -/
+
+@[expose] public section
 
 universe u
 
@@ -106,7 +110,7 @@ instance instPartialOrder : Lean.Order.PartialOrder Prob where
   rel_antisymm h₁ h₂ := ext (le_antisymm h₁ h₂)
 
 /-- Underlying `ℝ≥0∞` set for a `Prob`-valued predicate. -/
-private def valImage (c : Prob → Prop) : Set ℝ≥0∞ :=
+def valImage (c : Prob → Prop) : Set ℝ≥0∞ :=
   {x : ℝ≥0∞ | ∃ p : Prob, c p ∧ p.val = x}
 
 /-- Supremum on `Prob` of a predicate-encoded subset.
@@ -147,7 +151,7 @@ variable {α β : Type}
 
 /-- The underlying `ℝ≥0∞`-valued WP, packaged for use inside the `Prob`
 constructor. -/
-private noncomputable def wpVal (oa : OracleComp spec α) (post : α → Prob) : ℝ≥0∞ :=
+noncomputable def wpVal (oa : OracleComp spec α) (post : α → Prob) : ℝ≥0∞ :=
   MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa (fun a => (post a).val)
 
 private theorem wpVal_le_one (oa : OracleComp spec α) (post : α → Prob) :
@@ -175,7 +179,7 @@ probabilistic carrier. -/
 noncomputable scoped instance (priority := 1100) instWP_prob :
     Std.Do'.WP (OracleComp spec) Prob Std.Do'.EPost.nil where
   wpTrans oa := ⟨fun post _epost =>
-    ⟨wpVal oa post, wpVal_le_one oa post⟩⟩
+    ⟨wpVal oa post, by exact wpVal_le_one oa post⟩⟩
   wp_trans_pure x := by
     intro post _epost
     change (post x).val ≤ wpVal (pure x) post
@@ -183,7 +187,8 @@ noncomputable scoped instance (priority := 1100) instWP_prob :
     rw [MAlgOrdered.wp_pure]
   wp_trans_bind oa f := by
     intro post _epost
-    change wpVal oa (fun a => ⟨wpVal (f a) post, wpVal_le_one (f a) post⟩) ≤
+    change wpVal oa (fun a =>
+      ⟨wpVal (f a) post, by exact wpVal_le_one (f a) post⟩) ≤
             wpVal (oa >>= f) post
     unfold wpVal
     rw [MAlgOrdered.wp_bind]

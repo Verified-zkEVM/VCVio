@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.Arithmetic
+
+module
+public import LatticeCrypto.MLKEM.Arithmetic
 
 /-!
 # ML-KEM Encoding Interfaces
@@ -12,6 +14,8 @@ This file records the compression and byte-encoding operations referenced by the
 pseudocode. In this first phase they are kept abstract, but their types match the semantic objects
 consumed by the spec-level `K-PKE` and `ML-KEM` algorithms.
 -/
+
+@[expose] public section
 
 
 namespace MLKEM

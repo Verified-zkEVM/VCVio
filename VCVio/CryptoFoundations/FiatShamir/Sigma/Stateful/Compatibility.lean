@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
-import VCVio.StateSeparating.Advantage
+
+module
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
+public import VCVio.StateSeparating.Advantage
 
 /-!
 # Compatibility endpoints for the stateful Fiat-Shamir CMA proof
@@ -19,6 +21,8 @@ equating that legacy public experiment with the full-state CMA game necessarily
 relates two interpreters. Such theorems belong here, not in the main stateful
 bridge.
 -/
+
+@[expose] public section
 
 universe u v
 

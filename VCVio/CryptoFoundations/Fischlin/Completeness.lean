@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.Fischlin.Defs
+module
+
+public import VCVio.CryptoFoundations.Fischlin.Defs
 
 /-!
 # Fischlin Transform: Completeness
@@ -14,6 +16,8 @@ random-oracle game is analysed through an equivalent pure-probability model game
 `G`, culminating in `almostComplete`: an honest proof verifies except with
 probability at most `completenessError ρ b S (FinEnum.card Chal)`.
 -/
+
+@[expose] public section
 
 universe u v
 

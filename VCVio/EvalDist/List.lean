@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import ToMathlib.General
-import VCVio.EvalDist.Defs.NeverFails
+
+module
+public import ToMathlib.General
+public import VCVio.EvalDist.Defs.NeverFails
 
 /-!
 # Distribution Semantics for Computations with Lists and Vectors
@@ -14,6 +16,8 @@ We also include `Vector` as a related case.
 
 All lemmas are generic over any monad `m` with `[MonadLiftT m SPMF]`.
 -/
+
+@[expose] public section
 
 universe u v w
 

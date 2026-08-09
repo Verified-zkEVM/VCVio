@@ -6,8 +6,8 @@ Authors: Devon Tuma
 module
 
 public import Mathlib.Probability.ProbabilityMassFunction.Monad
-import Batteries.Control.AlternativeMonad
-import PolyFun.Control.Monad.Hom
+public import Batteries.Control.AlternativeMonad
+public import PolyFun.Control.Monad.Hom
 public import ToMathlib.General
 
 /-!

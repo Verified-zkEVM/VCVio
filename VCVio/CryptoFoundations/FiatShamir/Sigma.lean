@@ -4,17 +4,19 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.CryptoFoundations.SigmaProtocol
-import VCVio.CryptoFoundations.SignatureAlg
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.OracleComp.HasQuery.Morphism
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.QueryTracking.QueryCost
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
-import VCVio.ProgramLogic.NotationCore
-import VCVio.ProgramLogic.Tactics.Unary
+module
+
+public import VCVio.CryptoFoundations.SigmaProtocol
+public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.OracleComp.HasQuery.Morphism
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.ProgramLogic.NotationCore
+public import VCVio.ProgramLogic.Tactics.Unary
 
 /-!
 # Fiat-Shamir transform for Σ-protocols
@@ -29,6 +31,8 @@ the naturality theorem, cost accounting, and completeness. The forking-lemma
 bridge lives in `FiatShamir.Sigma.Fork` and the EUF-CMA reduction in
 `FiatShamir.Sigma.Security`.
 -/
+
+@[expose] public section
 
 universe u v
 

@@ -3,9 +3,11 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import ToMathlib.Control.OptionT
-import VCVio.EvalDist.Defs.AlternativeMonad
-import VCVio.EvalDist.Option
+
+module
+public import ToMathlib.Control.OptionT
+public import VCVio.EvalDist.Defs.AlternativeMonad
+public import VCVio.EvalDist.Option
 
 /-!
 # Probability Distributions on Potentially Failing Computations
@@ -14,6 +16,8 @@ This file lifts `MonadLiftT _ SetM` and `MonadLiftT _ SPMF` semantics through th
 `OptionT` monad transformer, providing `support`, `finSupport`, and `evalDist`-based
 probability lemmas for `OptionT m α` in terms of the underlying `m (Option α)`.
 -/
+
+@[expose] public section
 
 universe u v w
 

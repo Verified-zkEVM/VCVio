@@ -3,7 +3,9 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import VCVio.OracleComp.ProbComp
+
+module
+public import VCVio.OracleComp.ProbComp
 
 /-!
 # ε-Cell First-Fire Bound
@@ -37,6 +39,8 @@ in every state.
   hidden-target read, against an opaque continuation.
 * `drawList` : the explicit i.i.d. front-tape form of the per-attempt draws.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 open scoped ENNReal

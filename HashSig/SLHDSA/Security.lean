@@ -3,11 +3,13 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Scheme
-import HashSig.SLHDSA.WotsChecksum
-import VCVio.CryptoFoundations.PRF
-import VCVio.CryptoFoundations.TweakableHash
-import VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget
+
+module
+public import HashSig.SLHDSA.Scheme
+public import HashSig.SLHDSA.WotsChecksum
+public import VCVio.CryptoFoundations.PRF
+public import VCVio.CryptoFoundations.TweakableHash
+public import VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget
 
 /-!
 # SLH-DSA Security (EUF-CMA)
@@ -56,6 +58,8 @@ gap. These are honest gaps in the proof and instrumentation, not vacuity in the 
 - Hülsing, Rijneveld, Song, Schwabe, "Mitigating Multi-Target Attacks in Hash-Based Signatures"
 - NIST FIPS 205, §10 (security)
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal

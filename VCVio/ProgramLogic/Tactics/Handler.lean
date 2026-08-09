@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Elab.Tactic.Basic
-import VCVio.OracleComp.QueryTracking.HandlerSimp
+module
+
+public meta import Lean.Elab.Tactic.Basic
+public import VCVio.OracleComp.QueryTracking.HandlerSimp
 
 /-!
 # Handler Normalization Tactic
@@ -15,6 +17,8 @@ import VCVio.OracleComp.QueryTracking.HandlerSimp
 intentionally thin: use it to expose the next handler body or run-shape, then
 continue with `mvcgen`, `vcstep`, `rvcstep`, or direct proof steps.
 -/
+
+public meta section
 
 open Lean Elab Tactic
 

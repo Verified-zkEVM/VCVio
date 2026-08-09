@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.Collision.ForgeStep
+module
+
+public import Examples.PRFTagReader.Collision.ForgeStep
 
 /-!
 # PRF Tag/Reader Protocol — Collision Bound
@@ -17,6 +19,8 @@ over the adversary, and the collision-bound theorems culminating in
 The per-step random-oracle cache and forge-bound infrastructure these proofs consume lives in
 `Examples.PRFTagReader.Collision.ForgeStep`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

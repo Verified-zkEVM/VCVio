@@ -4,12 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Relational.Basic
-import VCVio.EvalDist.TVDist
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.QueryTracking.QueryBound
-import VCVio.OracleComp.SimSemantics.StateT.StateProjection
-import VCVio.OracleComp.SimSemantics.StateT.Basic
+module
+
+public import VCVio.ProgramLogic.Relational.Basic
+public import VCVio.EvalDist.TVDist
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-!
 # Relational `simulateQ` Rules
@@ -27,6 +29,8 @@ relational coupling through oracle simulation, and the "identical until bad" lem
   agree whenever a "bad" flag is unset, the TV distance between their simulations is bounded
   by the probability of bad being set.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open scoped OracleSpec.PrimitiveQuery

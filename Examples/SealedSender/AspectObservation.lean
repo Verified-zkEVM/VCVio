@@ -3,7 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.Interaction.Multiparty.ObservationProfile
+
+module
+
+import all PolyFun.Interaction.Multiparty.Observation
+
+public import PolyFun.Interaction.Multiparty.ObservationProfile
 
 /-!
 # Sketch: aspect-indexed observation kernels for sealed-sender messaging
@@ -41,6 +46,8 @@ the named `Observation.top` / `Observation.bot` / `Observation.Refines` /
 the notation buys readability and lets profile-level facts come through
 `Pi`-instance lifting.
 -/
+
+@[expose] public section
 
 universe u
 

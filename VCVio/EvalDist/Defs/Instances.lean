@@ -3,13 +3,17 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.EvalDist.Monad.Basic
+
+module
+public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # Monad Evaluation Semantics Instances
 
 This file defines various instances of evaluation semantics for different monads
 -/
+
+@[expose] public section
 
 universe u v w
 
