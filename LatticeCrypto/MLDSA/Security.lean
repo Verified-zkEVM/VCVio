@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Scheme
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
-import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
-import LatticeCrypto.HardnessAssumptions.LearningWithErrors
+
+module
+public import LatticeCrypto.MLDSA.Scheme
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
+public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
+public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
 
 /-!
 # ML-DSA Security
@@ -44,6 +46,8 @@ The proof follows the structure:
 - NIST FIPS 204, Section 3.2 (security properties)
 - EasyCrypt `FSabort.eca`, `HVZK_FSa.ec`, `SimplifiedScheme.ec` (formosa-crypto/dilithium)
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal
@@ -252,10 +256,9 @@ end Properties
 
 /-! ### EUF-NMA Security (Lemma 7)
 
-The EUF-NMA security theorem `MLDSA.nma_security` is assembled downstream in
-`LatticeCrypto.MLDSA.SecurityNMA`, where the concrete MLWE key-swap distinguisher and the
-SelfTargetMSIS extractor are defined. It composes the MLWE key-swap hop with the SelfTargetMSIS
-extraction bound; see that file for the statement and proof. -/
+The EUF-NMA reduction infrastructure — the concrete MLWE key-swap distinguisher and the
+SelfTargetMSIS extractor — is assembled downstream in `LatticeCrypto.MLDSA.SecurityNMA`, together
+with the SelfTargetMSIS extraction bound; see that file for the definitions and proofs. -/
 
 /-! ### CMA-to-NMA Statistical Loss (Theorem 4) -/
 

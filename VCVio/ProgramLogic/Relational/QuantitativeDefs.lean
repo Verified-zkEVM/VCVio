@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Relational.Basic
+module
+
+public import VCVio.ProgramLogic.Relational.Basic
 
 /-!
 # Core eRHL Definitions
@@ -13,6 +15,8 @@ This file contains the lightweight definitions for the quantitative relational l
 It is intentionally separated from the heavier coupling-development file so downstream users
 that only need the interfaces and notation do not import the full theorem stack.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 

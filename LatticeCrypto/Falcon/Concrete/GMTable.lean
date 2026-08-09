@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
+module
+
 /-! # Precomputed Twiddle Factor Table
 
 This file contains the precomputed twiddle factor (GM) table used in Falcon's FFT,
@@ -15,6 +17,8 @@ floating-point bit patterns for the complex twiddle factors used in Falcon's FFT
 The `invSigmaRaw` array stores 11 `UInt64` values (for `logn` 0..10) representing the
 inverse of the normalization factor `sigma`.
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Concrete.GMTable

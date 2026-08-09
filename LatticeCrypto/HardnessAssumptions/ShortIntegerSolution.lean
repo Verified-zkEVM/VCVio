@@ -4,14 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.Coercions.Add
-import Mathlib.LinearAlgebra.Matrix.DotProduct
+module
+
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.Coercions.Add
+public import Mathlib.LinearAlgebra.Matrix.DotProduct
 
 /-!
 # Short Integer Solution (SIS) and SelfTargetMSIS
@@ -28,9 +30,13 @@ over a finite coefficient ring.
 ## SelfTargetMSIS
 
 The SelfTargetMSIS problem (introduced in the Dilithium security proof): given a random matrix
-`A` and access to a random oracle `H`, find `(c, z)` such that `Az = c*t + w` where `w` has
-high bits matching a specific target, and `z` is short. The "self-target" refers to the fact
-that the adversary must produce a hash preimage `c = H(...)` as part of the solution.
+`A` and access to a random oracle `H`, find a hash preimage `(μ, w)` and a short response `z`
+such that `c = H(μ, w)` and `Az = c*t + w'` where the recomputed commitment `w'` matches `w`.
+The "self-target" is this binding of the solution to its own hash preimage: `isValid` receives
+the preimage alongside the RO output `c`, and an instantiation must require the commitment it
+recomputes from the response to equal the commitment component `w` of the hashed preimage. The
+experiment enforces the RO side of the binding by looking the preimage up in the oracle's
+query cache.
 
 ## References
 
@@ -39,6 +45,8 @@ that the adversary must produce a hash preimage `c = H(...)` as part of the solu
 - Fixing and Mechanizing the Security Proof of Fiat-Shamir with Aborts and Dilithium
   (CRYPTO 2023, ePrint 2023/246)
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal Matrix
@@ -99,8 +107,9 @@ namespace SelfTargetMSIS
 
 The adversary receives a matrix `A` and a target vector `t`, and has access to a random
 oracle `H`. The adversary must produce `(hashInput, response)` such that:
-1. `c = H(hashInput)` (self-targeting: the adversary must have queried the RO on `hashInput`)
-2. `isValid(challenge, target, c, response)` holds (shortness bound + verification equation)
+1. `c = H(hashInput)` (RO consistency: the adversary must have queried the RO on `hashInput`)
+2. `isValid(challenge, target, hashInput, c, response)` holds (shortness bound + verification
+   equation binding the recomputed commitment to `hashInput`'s commitment component)
 
 The experiment enforces RO consistency by looking up `hashInput` in the RO's query cache.
 If the adversary never queried `H(hashInput)`, the check fails automatically.
@@ -109,8 +118,12 @@ This captures the core hardness assumption in the ML-DSA/Dilithium security proo
 structure Problem (Challenge Response Target HashInput HashOutput : Type) where
   /-- Sample the public parameters (matrix + target). -/
   sampleParams : ProbComp (Challenge × Target)
-  /-- Check whether a purported solution is valid, given the hash output from the RO. -/
-  isValid : Challenge → Target → HashOutput → Response → Bool
+  /-- Check whether a purported solution is valid, given the hash preimage the adversary
+  queried and the hash output the RO cached for it. Receiving the preimage is what makes the
+  problem *self-targeting*: an instantiation must require the commitment recomputed from the
+  response to equal the commitment component of the hashed preimage, binding the solution to
+  the very input hashed to produce the challenge. -/
+  isValid : Challenge → Target → HashInput → HashOutput → Response → Bool
 
 section Experiment
 
@@ -130,7 +143,7 @@ variable [DecidableEq HashInput] [SampleableType HashOutput]
 /-- The SelfTargetMSIS experiment in the ROM: sample parameters, run the adversary with
 uniform randomness and a lazy random oracle for `H`, then enforce:
 1. The adversary actually queried `H(hashInput)` (RO consistency check via the query cache)
-2. The solution passes `isValid` with the RO's cached output -/
+2. The solution passes `isValid` with the queried preimage and the RO's cached output -/
 noncomputable def experiment
     {problem : Problem Challenge Response Target HashInput HashOutput}
     (adv : Adversary problem) :
@@ -143,7 +156,7 @@ noncomputable def experiment
   let ((hashInput, response), cache) ←
     StateT.run (simulateQ (idImpl + ro) (adv.run params)) ∅
   match cache hashInput with
-  | some hashOutput => return problem.isValid params.1 params.2 hashOutput response
+  | some hashOutput => return problem.isValid params.1 params.2 hashInput hashOutput response
   | none => return false
 
 /-- Advantage of a SelfTargetMSIS adversary. -/

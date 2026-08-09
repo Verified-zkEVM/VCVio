@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Common.Core
+module
+
+public meta import VCVio.ProgramLogic.Tactics.Common.Core
 
 /-! # VC Spec Intermediate Representation
 
@@ -14,6 +16,8 @@ structural candidate filtering. The discrimination-tree indexing itself lives
 in `Registry.lean` and operates on `Lean.Meta.Sym.Pattern`; the IR defined
 here is a light-weight summary attached to each `@[vcspec]` entry.
 -/
+
+public meta section
 
 open Lean Elab Meta
 

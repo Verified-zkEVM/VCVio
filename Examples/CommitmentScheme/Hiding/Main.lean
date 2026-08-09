@@ -3,7 +3,9 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import Examples.CommitmentScheme.Hiding.LoggingBounds
+
+module
+public import Examples.CommitmentScheme.Hiding.LoggingBounds
 
 /-!
 # Hiding for the random-oracle commitment scheme — main theorems
@@ -26,6 +28,8 @@ through the TV distance.
 The per-salt bound `tvDist(real(s), sim(s)) ≤ t / |S|` is FALSE: a trivial
 adversary always querying salt `s` makes `Pr[bad(s)] = 1`. The averaging
 over the uniform salt is essential. -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

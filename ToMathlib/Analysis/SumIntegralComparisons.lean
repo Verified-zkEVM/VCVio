@@ -3,8 +3,10 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import Mathlib.Analysis.SumIntegralComparisons
-import Mathlib.MeasureTheory.Integral.IntegralEqImproper
+
+module
+public import Mathlib.Analysis.SumIntegralComparisons
+public import Mathlib.MeasureTheory.Integral.IntegralEqImproper
 
 /-!
 # Improper Integrals Of One-Sided Monotone Functions Versus Unit-Grid Sums
@@ -26,6 +28,8 @@ Both directions ask for integrability on the ray and summability of the grid val
 each is proved by comparing the two limits termwise along the truncations `[c, c + N]` and
 `[c - N, c]` respectively.
 -/
+
+@[expose] public section
 
 open Filter MeasureTheory Set
 

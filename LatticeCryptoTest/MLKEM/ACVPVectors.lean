@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCryptoTest.MLKEM.Helpers
+
+module
+public import LatticeCryptoTest.MLKEM.Helpers
 
 /-!
 # ML-KEM-768 Test Vectors
@@ -15,6 +17,8 @@ Encapsulation vectors specify keygen coins `d`, `z` and an encaps message `m` (a
 The test generates keys, encapsulates, decapsulates, and compares Lean vs mlkem-native
 byte-exactly.
 -/
+
+@[expose] public section
 
 
 namespace MLKEM.Test.ACVP

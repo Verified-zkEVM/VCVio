@@ -3,16 +3,18 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Extern.Falcon.Instance
-import Extern.Falcon.FFI
-import LatticeCrypto.Falcon.Concrete.FPR
-import Extern.Falcon.SamplerZ
-import LatticeCrypto.Falcon.Concrete.FloatLike
-import Extern.Falcon.FFT
-import LatticeCrypto.Falcon.Concrete.BigInt31
-import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
-import LatticeCrypto.Falcon.Concrete.FXR
-import Extern.Falcon.Sign
+
+module
+public import Extern.Falcon.Instance
+public import Extern.Falcon.FFI
+public import LatticeCrypto.Falcon.Concrete.FPR
+public import Extern.Falcon.SamplerZ
+public import LatticeCrypto.Falcon.Concrete.FloatLike
+public import Extern.Falcon.FFT
+public import LatticeCrypto.Falcon.Concrete.BigInt31
+public import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
+public import LatticeCrypto.Falcon.Concrete.FXR
+public import Extern.Falcon.Sign
 
 /-!
 # Falcon Test Helpers
@@ -20,6 +22,8 @@ import Extern.Falcon.Sign
 Shared test infrastructure: pass/fail counter, hex formatting, and utility
 functions used by the Falcon test suite.
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Test

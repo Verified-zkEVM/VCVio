@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.GhostReadCharge
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.GhostReadCharge
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: HiddenReadFold
@@ -18,6 +20,8 @@ Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
 transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` re-exports
 all of its modules and holds the overview docstring.
 -/
+
+@[expose] public section
 
 universe u v
 

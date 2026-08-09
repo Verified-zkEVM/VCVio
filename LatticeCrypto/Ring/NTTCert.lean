@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Mathlib.Algebra.BigOperators.Ring.Finset
-import LatticeCrypto.Ring.VectorBackend
+
+module
+public import Mathlib.Algebra.BigOperators.Ring.Finset
+public import LatticeCrypto.Ring.VectorBackend
 
 /-!
 # Shared Matrix Certification Scaffolding For Concrete NTTs
@@ -25,6 +27,8 @@ This module provides `basis`, `applyMatrix`, `idMatrix`, and the composition /
 identity / additivity lemmas that the scheme-specific `Concrete/NTT.lean` files
 use.
 -/
+
+@[expose] public section
 
 
 open scoped BigOperators

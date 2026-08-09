@@ -3,7 +3,9 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio
+
+module
+public import VCVio
 
 /-!
 # Fail-fast and opt-in gates for `grind` on probability goals
@@ -35,6 +37,8 @@ as mirrors at the end). The gate is loud in both failure directions:
   gate below times out rather than failing fast, which is why `probEvent_ne_zero_iff_nonempty` is
   not in the default set.)
 -/
+
+@[expose] public section
 
 open OracleComp ProbComp ENNReal
 

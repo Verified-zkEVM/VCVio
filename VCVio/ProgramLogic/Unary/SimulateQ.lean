@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Unary.HoareTriple
-import VCVio.OracleComp.SimSemantics.SimulateQ
-import VCVio.OracleComp.SimSemantics.StateT.Basic
-import VCVio.OracleComp.Coercions.SubSpec
+module
+
+public import VCVio.ProgramLogic.Unary.HoareTriple
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.Coercions.SubSpec
 
 /-!
 # Oracle-Aware Unary WP Rules
@@ -22,6 +24,8 @@ providing rules that let program logic proofs pass through oracle simulation bou
 - `wp_simulateQ_run'_eq`: Stateful oracle implementations that preserve distributions
   preserve `wp`.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 

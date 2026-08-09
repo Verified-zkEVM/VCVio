@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Ring.Core
+
+module
+public import LatticeCrypto.Ring.Core
 
 /-!
 # Generic Negacyclic Ring Kernels
@@ -29,6 +31,8 @@ The executable / proof boundary is enforced structurally: `NegacyclicRing` is
 computable and carries no quotient types, while `NegacyclicRingSemantics` is
 `noncomputable` and provides the algebraic soundness bridge.
 -/
+
+@[expose] public section
 
 
 open scoped BigOperators

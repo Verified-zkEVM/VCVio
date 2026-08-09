@@ -36,12 +36,10 @@ initialize registerBuiltinAttribute {
   descr := "Register a theorem as the root of an inferred game-hop diagram."
   add := fun decl _ kind => MetaM.run' do
     let info ← getConstInfo decl
-    match info with
-    | .thmInfo _ =>
-        let modName ← getDeclModule decl
-        gameHopRootExt.add { modName, declName := decl } kind
-    | _ =>
-        throwError m!"@[game_hop_root] only supports theorems/lemmas, got `{decl}` of type:{indentExpr info.type}"
+    unless ← isProp info.type do
+      throwError m!"@[game_hop_root] only supports propositions, got `{decl}` of type:{indentExpr info.type}"
+    let modName ← getDeclModule decl
+    gameHopRootExt.add { modName, declName := decl } kind
 }
 
 /-- Return all root theorems registered for a module. -/

@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.PRFReductions.Reductions
+module
+
+public import Examples.PRFTagReader.PRFReductions.Reductions
 
 /-!
 # PRF Tag/Reader Protocol — Composed Ideal Handlers
@@ -13,6 +15,8 @@ The two ideal-PRF experiments collapsed into single stateful handlers `multipleI
 `singleIdealQueryImpl` over the unlinkability oracle interface, with their per-query reduction
 lemmas exposing the lazy-random-oracle behaviour via `idealCacheStep` / `idealCacheMapM`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

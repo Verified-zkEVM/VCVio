@@ -3,7 +3,9 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import LatticeCrypto.MLDSA.Security
+
+module
+public import LatticeCrypto.MLDSA.Security
 
 /-!
 # ML-DSA Honest-Verifier Zero-Knowledge: simulators and the quantitative bound
@@ -62,6 +64,8 @@ two transcripts coincide, so this bound is exact rather than a slack inequality.
 - EasyCrypt `HVZK_FSa.ec`, `SimplifiedScheme.ec` (formosa-crypto/dilithium)
 - NIST FIPS 204, Algorithms 7 and 8
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal

@@ -3,7 +3,9 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio
+
+module
+public import VCVio
 
 /-!
 # Probability tactic benchmark
@@ -29,6 +31,8 @@ Conventions:
 (`probFailure_eq_one_iff_not_nonempty`, `support_uniformSample_nonempty`) keep `Pr[⊥]=1` reasoning
 reachable. `ProbComp` itself never fails — interesting `Pr[⊥ | _]` lives in `OptionT ProbComp`.
 -/
+
+@[expose] public section
 
 open OracleComp ProbComp ENNReal
 

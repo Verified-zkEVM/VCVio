@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Abraxas1010 (IAOM / Apoth3osis)
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
 
 /-!
 # Batch Openings for Inductive Merkle Trees
@@ -72,6 +74,8 @@ query indices. A conversion API (sparse index set → dense selector, with `getL
 correspondence lemmas) should be added before those consumers land, so they neither pay
 for nor expose a full-tree selection mask.
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 

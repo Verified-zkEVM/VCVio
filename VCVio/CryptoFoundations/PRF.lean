@@ -4,11 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.SimSemantics.Append
+module
+
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
 # Pseudorandom Functions (PRFs)
@@ -27,6 +29,8 @@ distinguish the real function `PRF.eval k` (for a random key `k`) from a truly r
 - `prfIdealExp` — the ideal experiment (adversary queries a random oracle).
 - `prfAdvantage` — distinguishing advantage.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

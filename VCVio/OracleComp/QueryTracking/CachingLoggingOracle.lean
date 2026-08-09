@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.QueryTracking.LoggingOracle
+
+module
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
 
 /-!
 # Combined Caching + Logging Handlers
@@ -20,6 +22,8 @@ the second state component after every query.
 `QueryImpl.withCachingLogging` and `OracleSpec.cachingLoggingOracle` are the
 canonical specializations to `QueryLog spec`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 
