@@ -3,11 +3,15 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import Examples.CommitmentScheme.Hiding.Defs
+
+module
+public import Examples.CommitmentScheme.Hiding.Defs
 
 /-!
 # Count bounds for commitment-scheme hiding
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

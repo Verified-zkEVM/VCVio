@@ -4,16 +4,20 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Relational.Quantitative
-import VCVio.ProgramLogic.Relational.Loom.Quantitative
-import VCVio.ProgramLogic.Relational.SimulateQ
-import VCVio.ProgramLogic.Tactics.Common
+module
+
+public import VCVio.ProgramLogic.Relational.Quantitative
+public import VCVio.ProgramLogic.Relational.Loom.Quantitative
+public import VCVio.ProgramLogic.Relational.SimulateQ
+public meta import VCVio.ProgramLogic.Tactics.Common
 
 /-!
 # Relational VCGen Internals
 
 Implementation details for the relational VCGen planner and step selection.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 

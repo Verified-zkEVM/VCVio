@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
-import VCVio.OracleComp.QueryTracking.QueryBound
-import ToMathlib.Data.IndexedBinaryTree.Lemmas
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import ToMathlib.Data.IndexedBinaryTree.Lemmas
 
 /-!
 # Total query bounds for inductive Merkle tree primitives
@@ -24,6 +26,8 @@ defined in `Defs.lean`:
 These bounds are consumed downstream by the extractability argument, which
 needs to know the total number of queries any honest Merkle operation issues.
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 

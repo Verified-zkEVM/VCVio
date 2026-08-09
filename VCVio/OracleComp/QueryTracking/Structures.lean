@@ -3,10 +3,12 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import Mathlib.Data.Real.ENatENNReal
-import Mathlib.Data.Set.Card
-import PolyFun.PFunctor.Trace
-import VCVio.OracleComp.SimSemantics.SimulateQ
+
+module
+public import Mathlib.Data.Real.ENatENNReal
+public import Mathlib.Data.Set.Card
+public import PolyFun.PFunctor.Trace
+public import VCVio.OracleComp.SimSemantics.SimulateQ
 
 /-!
 # Structures For Tracking a Computation's Oracle Queries
@@ -14,6 +16,8 @@ import VCVio.OracleComp.SimSemantics.SimulateQ
 This file defines types like `QueryLog` and `QueryCache` for use with
 simulation oracles and implementation transformers defined in the same directory.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 

@@ -3,8 +3,10 @@ Copyright (c) 2026 Vitalik Buterin, Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Vitalik Buterin, Nicolas Consigny
 -/
-import Mathlib.Algebra.BigOperators.Group.List.Basic
-import Mathlib.Tactic.Ring
+
+module
+public import Mathlib.Algebra.BigOperators.Group.List.Basic
+public import Mathlib.Tactic.Ring
 
 /-!
 # WOTS+ Checksum Incomparability
@@ -21,6 +23,8 @@ layer; the WOTS+ one-wayness reduction (in `HashSig.SLHDSA.Security`) consumes
 
 See FIPS 205 §5 for the WOTS+ specification this validates.
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.WotsChecksum

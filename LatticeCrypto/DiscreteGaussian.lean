@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ToMathlib.Analysis.SumIntegralComparisons
-import Mathlib.Analysis.SpecialFunctions.Gaussian.GaussianIntegral
-import Mathlib.Probability.ProbabilityMassFunction.Basic
-import Mathlib.Topology.Algebra.InfiniteSum.Real
+
+module
+public import ToMathlib.Analysis.SumIntegralComparisons
+public import Mathlib.Analysis.SpecialFunctions.Gaussian.GaussianIntegral
+public import Mathlib.Probability.ProbabilityMassFunction.Basic
+public import Mathlib.Topology.Algebra.InfiniteSum.Real
 
 /-!
 # Discrete Gaussian Distribution
@@ -32,6 +34,8 @@ framework, Falcon) and masking (ML-DSA / Dilithium).
 - Gentry, Peikert, Vaikuntanathan. STOC 2008.
 - Micciancio, Regev. "Lattice-based Cryptography." 2009.
 -/
+
+@[expose] public section
 
 
 open Real BigOperators
@@ -138,7 +142,7 @@ private theorem hasSum_ofReal_discreteGaussian (σ μ : ℝ) (hσ : 0 < σ) :
 /-- The discrete Gaussian distribution as a Mathlib `PMF ℤ`. -/
 noncomputable def discreteGaussianDist (σ μ : ℝ) (hσ : 0 < σ) : PMF ℤ :=
   ⟨fun z => ENNReal.ofReal (discreteGaussianPMF σ μ z),
-    hasSum_ofReal_discreteGaussian σ μ hσ⟩
+    by exact hasSum_ofReal_discreteGaussian σ μ hσ⟩
 
 @[simp]
 theorem discreteGaussianDist_apply (σ μ : ℝ) (hσ : 0 < σ) (z : ℤ) :

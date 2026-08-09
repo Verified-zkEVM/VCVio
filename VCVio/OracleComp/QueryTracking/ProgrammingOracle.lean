@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.SimSemantics.StateT.StateProjection
+
+module
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
 /-!
 # Programmable Oracles
@@ -46,6 +48,8 @@ of `withProgramming`); see `OracleComp.ProgramLogic.Relational.ProgrammingOracle
 actual TV-distance bound (`tvDist_simulateQ_withCaching_withProgramming_le_probEvent_bad`)
 and its `programming_collision_bound{,_qP_qH_β}` repackagings.
 -/
+
+@[expose] public section
 
 universe u v
 

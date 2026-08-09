@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
+
+module
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 
 /-!
 # State-separating handlers: advantage and `evalDist` congruences
@@ -14,6 +16,8 @@ This file contains the probability-facing lower API for
 literature while leaving the core handler object as the unbundled
 `QueryImpl.Stateful I E σ`.
 -/
+
+@[expose] public section
 
 universe uₑ
 

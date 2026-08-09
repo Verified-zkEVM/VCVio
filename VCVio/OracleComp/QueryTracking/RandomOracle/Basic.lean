@@ -3,7 +3,9 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.CachingOracle
+
+module
+public import VCVio.OracleComp.QueryTracking.CachingOracle
 
 /-!
 # Lazy Random Oracle
@@ -12,6 +14,8 @@ The (lazy) random oracle samples a fresh uniform value on first query and caches
 for future consistency. Same input always yields same output. State: `QueryCache`.
 This is `uniformSampleImpl.withCaching`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 

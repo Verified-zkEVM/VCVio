@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Scheme
-import LatticeCrypto.MLDSA.Encoding
+
+module
+public import LatticeCrypto.MLDSA.Scheme
+public import LatticeCrypto.MLDSA.Encoding
 
 /-!
 # ML-DSA FIPS 204 Signature Algorithms
@@ -27,6 +29,8 @@ Unlike the IDS-core in `Scheme.lean`, this layer:
 
 - NIST FIPS 204, Algorithms 1–3 (outer API) and 6–8 (internal algorithms)
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec

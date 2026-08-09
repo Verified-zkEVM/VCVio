@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Concrete.BigInt31
-import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
+
+module
+public import LatticeCrypto.Falcon.Concrete.BigInt31
+public import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
 
 /-!
 # NTRU Equation Solver for Falcon Key Generation
@@ -33,6 +35,8 @@ finds short polynomials `F, G` satisfying `fG - gF = q` where `q = 12289`.
 - Pornin 2025, eprint 2025/1239
 - `c-fn-dsa/kgen_ntru.c`, `c-fn-dsa/kgen_inner.h`
 -/
+
+public section
 
 
 namespace Falcon.Concrete.NTRUSolver

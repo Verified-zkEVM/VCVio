@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.PRF
-import VCVio.CryptoFoundations.PRG
-import VCVio.EvalDist.TVDist
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
+
+module
+public import VCVio.CryptoFoundations.PRF
+public import VCVio.CryptoFoundations.PRG
+public import VCVio.EvalDist.TVDist
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 
 /-!
 # PRG from PRF
@@ -23,6 +25,8 @@ The proof outline follows the standard switching argument:
    identical to the ideal PRG world of independent uniform outputs.
 3. Bound the remaining gap by the probability of a state collision.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal PRFScheme PRGScheme
 open List (Vector)

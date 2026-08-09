@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.Fischlin.Completeness
+module
+
+public import VCVio.CryptoFoundations.Fischlin.Completeness
 
 /-!
 # Fischlin Transform: Online Extraction / Knowledge Soundness
@@ -14,6 +16,8 @@ extractor `onlineExtract` observes the prover's random-oracle queries, and the
 extraction failure probability is bounded via a supermartingale potential
 argument, culminating in `knowledgeSoundness`.
 -/
+
+@[expose] public section
 
 universe u v
 

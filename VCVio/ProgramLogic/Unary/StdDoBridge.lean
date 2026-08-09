@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Std.Tactic.Do
-import VCVio.ProgramLogic.Unary.HoareTriple
-import VCVio.ProgramLogic.Unary.WriterTBridge
+module
+
+public import Std.Tactic.Do
+public import VCVio.ProgramLogic.Unary.HoareTriple
+public import VCVio.ProgramLogic.Unary.WriterTBridge
 
 /-!
 # `Std.Do` / `mvcgen` bridge for `OracleComp`
@@ -15,6 +17,8 @@ This module provides a proposition-level bridge on top of the quantitative WP in
 `ProgramLogic.Unary.HoareTriple`, with a `Std.Do.WPMonad` instance for `.pure` post-shape.
 The bridge is scoped to almost-sure correctness (`= 1`).
 -/
+
+@[expose] public section
 
 open ENNReal
 open Std.Do

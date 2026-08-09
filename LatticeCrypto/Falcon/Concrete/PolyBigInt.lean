@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import LatticeCrypto.Falcon.Concrete.BigInt31
-import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
+module
+
+public import LatticeCrypto.Falcon.Concrete.BigInt31
+public import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
 
 /-!
 # Polynomial Big-Integer Operations for Falcon Key Generation
@@ -28,6 +30,8 @@ in NTRU equation solving.
 - `poly_sub_scaled` — subtract a scaled polynomial (quadratic, general-case)
 - `poly_sub_scaled_ntt` — subtract scaled polynomial using NTT
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Concrete.PolyBigInt

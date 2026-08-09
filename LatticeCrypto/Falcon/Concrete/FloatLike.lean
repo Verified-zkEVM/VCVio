@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Concrete.FPR
+
+module
+public import LatticeCrypto.Falcon.Concrete.FPR
 
 /-!
 # FloatLike: Typeclass for IEEE-754-like Floating-Point Operations
@@ -17,6 +19,8 @@ The typeclass captures exactly the operations used by the Falcon signing
 pipeline: FFT, LDL decomposition, discrete Gaussian sampling, and the
 FACCT exponential approximation.
 -/
+
+public section
 
 
 /-- Floating-point-like operations needed by the executable Falcon implementation. -/
@@ -79,28 +83,28 @@ instance : FloatLike FPR where
 
 /-! ## Float instance -/
 
-private def floatOfInt64 (i : Int64) : Float :=
+def floatOfInt64 (i : Int64) : Float :=
   if i.toInt >= 0 then Float.ofNat i.toInt.toNat
   else Float.neg (Float.ofNat (-i.toInt).toNat)
 
-private def floatOfInt32 (i : Int32) : Float := floatOfInt64 i.toInt64
+def floatOfInt32 (i : Int32) : Float := floatOfInt64 i.toInt64
 
-private def floatScaled (i : Int64) (sc : Int32) : Float :=
+def floatScaled (i : Int64) (sc : Int32) : Float :=
   (floatOfInt64 i).scaleB sc.toInt
 
-private def floatExpmP63 (x ccs : Float) : UInt64 :=
+def floatExpmP63 (x ccs : Float) : UInt64 :=
   let v := ccs * Float.exp (-x)
   let twoTo63 : Float := 9223372036854775808.0
   let result := v * twoTo63
   if result <= 0.0 then 0
   else result.toUInt64
 
-private def floatFloorInt64 (x : Float) : Int64 :=
+def floatFloorInt64 (x : Float) : Int64 :=
   let r := Float.floor x
   if r >= 0.0 then r.toUInt64.toInt64
   else (0 : Int64) - ((-r).toUInt64).toInt64
 
-private def floatRint (x : Float) : Int64 :=
+def floatRint (x : Float) : Int64 :=
   let floorInt := floatFloorInt64 x
   let frac := x - Float.floor x
   if frac < 0.5 then

@@ -3,11 +3,16 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Examples.OneTimePad.Basic
-import VCVio.Interaction.UC.Computational
-import PolyFun.Interaction.UC.OpenProcessModel
-import VCVio.Interaction.UC.Runtime
-import VCVio.OracleComp.Constructions.BitVec
+
+module
+
+import all PolyFun.Interaction.UC.OpenProcess
+
+public import Examples.OneTimePad.Basic
+public import VCVio.Interaction.UC.Computational
+public import PolyFun.Interaction.UC.OpenProcessModel
+public import VCVio.Interaction.UC.Runtime
+public import VCVio.OracleComp.Constructions.BitVec
 
 /-!
 # One-Time Pad at the UC Observation Layer
@@ -117,6 +122,8 @@ processes at every boundary.
   §3.2 on perfect secrecy of the one-time pad.
 -/
 
+@[expose] public section
+
 open Interaction Interaction.UC OracleComp ENNReal
 
 namespace oneTimePad
@@ -133,7 +140,7 @@ noncomputable def demoSchedulerSampler : OptionT ProbComp (ULift Bool) :=
   pure (ULift.up true)
 
 /-- Shorthand for the concrete closed-Party open theory used in the demo. -/
-private noncomputable abbrev T :=
+noncomputable abbrev T :=
   openTheory.{0, 0, 0, 0} Party (OptionT ProbComp) demoSchedulerSampler
 
 /-! ## Real vs ideal cipher observation -/

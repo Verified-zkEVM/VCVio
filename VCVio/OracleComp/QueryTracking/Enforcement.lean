@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.QueryBound
+
+module
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # Enforcement Oracle
@@ -21,6 +23,8 @@ the budget. This implements EasyCrypt's `Enforce`/`Bounder` pattern.
 - `enforceOracle.fst_map_run_simulateQ`: Enforcement is transparent for computations
   within their query bound.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 

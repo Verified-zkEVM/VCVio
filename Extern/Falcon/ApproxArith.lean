@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Concrete.FloatLike
-import Extern.Falcon.FPRBridge
-import Mathlib.Analysis.SpecialFunctions.Pow.Real
+
+module
+public import LatticeCrypto.Falcon.Concrete.FloatLike
+public import Extern.Falcon.FPRBridge
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
 /-!
 # Approximate Arithmetic Framework
@@ -39,6 +41,8 @@ This factoring separates two concerns:
 - Pornin, T. "Constant-time Falcon implementation." ePrint 2019/893, Section 3.
 - IEEE 754-2019, Section 4 (rounding).
 -/
+
+@[expose] public section
 
 
 noncomputable section

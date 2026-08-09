@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Params
+
+module
+public import HashSig.SLHDSA.Params
 
 /-!
 # Pure-Lean SHA-256 (FIPS 180-4) with MGF1 and HMAC
@@ -18,6 +20,8 @@ All arithmetic is `UInt32`/`UInt8` (wrapping mod `2^32`/`2^8`); words are big-en
 
 - FIPS 180-4 (SHA-256), FIPS 198-1 (HMAC), RFC 8017 §B.2.1 (MGF1)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.Concrete.Sha2
@@ -122,7 +126,7 @@ def mgf1 (seed : ByteArray) (outLen : Nat) : ByteArray := Id.run do
   return out.extract 0 outLen
 
 /-- Zero-pad (or hash-then-pad) a key to the 64-byte SHA-256 block. -/
-private def hmacKey0 (key : ByteArray) : ByteArray := Id.run do
+def hmacKey0 (key : ByteArray) : ByteArray := Id.run do
   let k := if key.size > 64 then sha256 key else key
   let mut out := k
   for _ in [0:64 - k.size] do
@@ -130,7 +134,7 @@ private def hmacKey0 (key : ByteArray) : ByteArray := Id.run do
   return out
 
 /-- XOR every byte of a 64-byte block with a constant. -/
-private def xorConst (block : ByteArray) (c : UInt8) : ByteArray := Id.run do
+def xorConst (block : ByteArray) (c : UInt8) : ByteArray := Id.run do
   let mut out := ByteArray.empty
   for i in [0:block.size] do
     out := out.push (block[i]! ^^^ c)

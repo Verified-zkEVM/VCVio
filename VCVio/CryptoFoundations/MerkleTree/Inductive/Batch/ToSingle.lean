@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Abraxas1010 (IAOM / Apoth3osis)
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
 
 /-!
 # Reduction of Batch Openings to Single-Index Openings
@@ -50,6 +52,8 @@ openings:
   exhibited by `findCollision`.
 -/
 
+@[expose] public section
+
 namespace InductiveMerkleTree
 
 open List OracleSpec OracleComp BinaryTree
@@ -82,12 +86,16 @@ def batchToSingleProof (hashFn : α → α → α) : {s : Skeleton} → {sel : L
       (batchToSingleProof hashFn v.2 pr idxR (by simpa using h))
   | _, _, v, .pruneRight _ rightRoot pl, .ofLeft idxL, h =>
     List.Vector.cons rightRoot (batchToSingleProof hashFn v.1 pl idxL (by simpa using h))
-  | _, _, _, .pruneRight hr _ _, .ofRight idxR, h =>
-    absurd (LeafData.anySelected_of_get idxR (by simpa using h)) (by simp [hr])
+  | _, .internal _ r, _, .pruneRight hr _ _, .ofRight idxR, h =>
+    have hget : r.get idxR = true := by simpa using h
+    have hany : r.anySelected = true := LeafData.anySelected_of_get idxR hget
+    False.elim (by simp [hr] at hany)
   | _, _, v, .pruneLeft _ leftRoot pr, .ofRight idxR, h =>
     List.Vector.cons leftRoot (batchToSingleProof hashFn v.2 pr idxR (by simpa using h))
-  | _, _, _, .pruneLeft hl _ _, .ofLeft idxL, h =>
-    absurd (LeafData.anySelected_of_get idxL (by simpa using h)) (by simp [hl])
+  | _, .internal l _, _, .pruneLeft hl _ _, .ofLeft idxL, h =>
+    have hget : l.get idxL = true := by simpa using h
+    have hany : l.anySelected = true := LeafData.anySelected_of_get idxL hget
+    False.elim (by simp [hl] at hany)
 
 /--
 **Root preservation.** The single-index opening extracted from a batch opening at any

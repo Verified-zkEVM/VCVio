@@ -3,8 +3,10 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.QueryTracking.QueryBound
-import VCVio.OracleComp.Constructions.Replicate
+
+module
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.Constructions.Replicate
 
 /-!
 # Query Bounds for Iteration Constructs
@@ -24,6 +26,8 @@ counting-oracle support point of `oa` lifts to an `n`-fold copy in
 For the variable-body case (`List.mapM` / `List.foldlM`), only the forward
 direction is available: the loop bound is the element-wise sum of body bounds.
 -/
+
+@[expose] public section
 
 open OracleSpec
 

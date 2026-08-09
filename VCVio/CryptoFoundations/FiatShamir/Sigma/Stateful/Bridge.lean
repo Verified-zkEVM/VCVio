@@ -3,13 +3,15 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.FiatShamir.QueryBounds
-import VCVio.CryptoFoundations.FiatShamir.Sigma
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Games
-import VCVio.CryptoFoundations.SignatureAlg
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.QueryTracking.SubSpec
+
+module
+public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
+public import VCVio.CryptoFoundations.FiatShamir.Sigma
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Games
+public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.SubSpec
 
 /-!
 # Bridge helpers for the stateful Fiat-Shamir CMA games
@@ -18,6 +20,8 @@ This file contains the adversary wrappers and query-bound bookkeeping that
 connect the public `SignatureAlg.unforgeableAdv` interface to the direct
 `QueryImpl.Stateful` CMA games.
 -/
+
+@[expose] public section
 
 universe u v
 

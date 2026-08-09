@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Fawad Haider
 -/
 
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+module
+
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 
 /-!
   # Merkle Trees as a vector commitment
@@ -25,6 +27,8 @@ import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
   - Dealing with arbitrary trees (may have arity > 2, or is not complete)
   - Path pruning optimization
 -/
+
+@[expose] public section
 
 namespace MerkleTree
 

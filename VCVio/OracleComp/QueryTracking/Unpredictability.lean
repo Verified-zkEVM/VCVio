@@ -3,9 +3,11 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters, Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.Birthday
-import VCVio.OracleComp.QueryTracking.ProgrammingOracle
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.OracleComp.QueryTracking.Birthday
+public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # ROM Unpredictability and Collision Win Bounds
@@ -29,6 +31,8 @@ The TV-distance "programming collision" bound that consumes this typeclass lives
 its `qP * qH * β` repackaging), keeping the relational theorem in the `ProgramLogic` layer
 while the unpredictability primitive stays here in `QueryTracking`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal Finset
 

@@ -4,11 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Unary.HoareTriple
+module
+
+public import VCVio.ProgramLogic.Unary.HoareTriple
 
 /-!
 # Examples for quantitative `OracleComp` triples
 -/
+
+@[expose] public section
 
 open ENNReal
 

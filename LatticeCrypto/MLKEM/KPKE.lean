@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.Encoding
-import LatticeCrypto.MLKEM.Primitives
-import VCVio.CryptoFoundations.AsymmEncAlg.Defs
+
+module
+public import LatticeCrypto.MLKEM.Encoding
+public import LatticeCrypto.MLKEM.Primitives
+public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
 
 /-!
 # ML-KEM K-PKE
@@ -14,6 +16,8 @@ This file gives a spec-level implementation of the `K-PKE` component used by ML-
 arithmetic, encoding, and primitive operations are supplied abstractly, but the algorithm structure
 follows FIPS 203 Section 5 closely.
 -/
+
+@[expose] public section
 
 
 namespace MLKEM
