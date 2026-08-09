@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.Auth
+module
+
+public import Examples.PRFTagReader.Auth
 
 /-!
 # PRF Tag/Reader Protocol — Collision Bound, Per-Step Forge Infrastructure
@@ -18,6 +20,8 @@ log characterization `authRFLookup_mapM_logs_eq`.
 The collision-bound theorems built on this infrastructure live in the parent module
 `Examples.PRFTagReader.Collision`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

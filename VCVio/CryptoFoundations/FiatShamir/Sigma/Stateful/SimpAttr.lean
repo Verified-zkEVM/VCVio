@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Mathlib.Tactic.Attr.Register
+
+module
+public import Mathlib.Tactic.Attr.Register
 
 /-!
 # `fs_simp` simp attribute for the stateful Fiat-Shamir CMA development
@@ -23,6 +25,8 @@ adversary helpers. The attribute is registered in its own file because
 `register_simp_attr` does not take effect within the same Lean file as its
 first use.
 -/
+
+@[expose] public section
 
 /-- Simp set for unfolding stateful Fiat-Shamir CMA handlers, frames, lenses,
 and adversary wrappers in one shot. Local to `Sigma/Stateful/`. -/

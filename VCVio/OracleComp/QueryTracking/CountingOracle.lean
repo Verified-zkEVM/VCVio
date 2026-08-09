@@ -3,9 +3,11 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.QueryTracking.Structures
-import VCVio.OracleComp.QueryTracking.Tracing
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.QueryTracking.Tracing
 
 /-!
 # Counting Queries Made by a Computation
@@ -22,6 +24,8 @@ specialisations of `QueryImpl.withTraceBefore` (see `Tracing.lean`): the cost is
 *before* the underlying handler runs, so failed queries still incur their cost. The counting
 case picks `QueryCount.single` as the trace function.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 

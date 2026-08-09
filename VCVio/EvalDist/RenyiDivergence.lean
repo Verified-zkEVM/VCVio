@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
-import VCVio.EvalDist.Monad.Map
+
+module
+public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
+public import VCVio.EvalDist.Monad.Map
 
 /-!
 # Rényi Divergence for SPMFs and Monadic Computations
@@ -30,6 +32,8 @@ where `concreteSamplerZ` uses FPR arithmetic and `idealSamplerZ` samples from th
 discrete Gaussian. The probability preservation theorem then translates this into a
 security loss factor in the Falcon EUF-CMA proof.
 -/
+
+@[expose] public section
 
 noncomputable section
 

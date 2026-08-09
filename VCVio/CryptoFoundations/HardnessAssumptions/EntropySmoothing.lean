@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Entropy Smoothing
@@ -14,6 +16,8 @@ This file defines the entropy-smoothing distinguishing game used by hashed ElGam
 constructions: the adversary distinguishes a real hash output `hash hk (z • g)` from an
 independent uniform element of the output space.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

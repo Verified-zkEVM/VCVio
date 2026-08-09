@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCryptoTest.MLKEM.Helpers
-import LatticeCryptoTest.MLKEM.ACVPVectors
+
+module
+public import LatticeCryptoTest.MLKEM.Helpers
+public import LatticeCryptoTest.MLKEM.ACVPVectors
 
 /-!
 # ML-KEM-768 Test Runner
@@ -21,6 +23,8 @@ lake build mlkem_test
 .lake/build/bin/mlkem_test
 ```
 -/
+
+@[expose] public section
 
 set_option maxRecDepth 2048
 

@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import Mathlib.Algebra.Polynomial.Eval.Degree
-import Mathlib.Analysis.Asymptotics.SuperpolynomialDecay
+
+module
+public import Mathlib.Algebra.Polynomial.Eval.Degree
+public import Mathlib.Analysis.Asymptotics.SuperpolynomialDecay
 
 /-!
 # Negligible Functions
@@ -20,6 +22,8 @@ as this is usually the situation for cryptographic reductions.
 - `negligible_sum`: Finite sum of negligible functions is negligible.
 - `negligible_const_mul`: Constant multiple of negligible is negligible.
 -/
+
+@[expose] public section
 
 open ENNReal Asymptotics Filter
 

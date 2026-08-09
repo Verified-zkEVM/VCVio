@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.C13.Concrete
+
+module
+public import HashSig.SLHDSA.C13.Concrete
 
 /-!
 # C13 known-answer test (keccak256, 32-byte ADRS)
@@ -18,6 +20,8 @@ digest slicing, the WOTS+C counter packing, and the 3688-byte wire decoder byte-
 Only verification (~hundreds of hashes) runs in Lean; C13 key generation / signing are ~10⁹
 hashes and stay in the external reference signer.
 -/
+
+public section
 
 
 namespace SLHDSA.C13.KAT
@@ -142,4 +146,3 @@ end SLHDSA.C13.KAT
 /-- Executable entry point for the `slhdsa_c13_kat` differential KAT. `lean_exe` resolves the
 root-level `main`, so this forwards to the namespaced `runKat`. -/
 def main : IO Unit := SLHDSA.C13.KAT.runKat
-

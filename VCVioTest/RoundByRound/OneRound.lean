@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aristotle (Harmonic), Elias Judin
 -/
 
-import VCVio.CryptoFoundations.RoundByRound
+module
+
+public import VCVio.CryptoFoundations.RoundByRound
 
 /-!
 # One-round regression for round-by-round knowledge extraction
@@ -34,6 +36,8 @@ instead of restating `KnowledgeExtractionFamily.extractionCondition_iff_isBounde
 The final `oneRound_extractionCondition_iff_isBounded` still exercises the generic bridge on this
 concrete family.
 -/
+
+@[expose] public section
 
 open scoped ENNReal
 

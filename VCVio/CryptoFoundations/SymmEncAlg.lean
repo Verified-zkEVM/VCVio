@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.EvalDist.Prod
-import VCVio.OracleComp.ProbComp
+
+module
+public import VCVio.EvalDist.Prod
+public import VCVio.OracleComp.ProbComp
 
 /-!
 # Symmetric Encryption Schemes
@@ -23,6 +25,8 @@ form) and `perfectSecrecyJointFactorizationAt` (factorization with named margina
 `_iff_` lemmas record the equivalences. `perfectSecrecyAtAllPriors` is the strong PMF-level
 quantification, equivalent to `ciphertextRowsEqualAt` over finite message spaces.
 -/
+
+@[expose] public section
 
 universe u
 

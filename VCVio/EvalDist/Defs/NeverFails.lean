@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.EvalDist.Defs.AlternativeMonad
-import VCVio.EvalDist.Monad.Seq
+module
+
+public import VCVio.EvalDist.Defs.AlternativeMonad
+public import VCVio.EvalDist.Monad.Seq
 
 /-!
 # Computations that Never Fail
@@ -25,6 +27,8 @@ Instances involving `bind` should be added manually as needed.
 The existence of a `MonadLiftT m PMF` instance implies that `NeverFail mx` holds for any computation
 in the monad, since the `PMF` doesn't allow any probability of failing.
 -/
+
+@[expose] public section
 
 universe u v w
 

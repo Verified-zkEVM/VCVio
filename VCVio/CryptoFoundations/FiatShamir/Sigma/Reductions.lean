@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Chain
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Compatibility
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.EvalDist.Inequalities
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Chain
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Compatibility
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.EvalDist.Inequalities
 
 /-!
 # Fiat-Shamir reductions for Sigma protocols
@@ -16,6 +18,8 @@ This file exposes the CMA-to-NMA reduction used by the public Sigma security
 theorem. The proof is discharged by the direct stateful game chain; callers
 depend only on the reduction statement here.
 -/
+
+@[expose] public section
 
 namespace FiatShamir
 

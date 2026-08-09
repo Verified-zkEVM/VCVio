@@ -3,8 +3,10 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.EvalDist.Instances.OptionT
+
+module
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.EvalDist.Instances.OptionT
 
 /-!
 # Compositional probability reasoning via `MonadLiftT`
@@ -23,6 +25,8 @@ the two views where needed — and without introducing a diamond.
 The example: sample a Boolean uniformly and `guard` on heads, so half of
 the runs succeed with `()` and the other half fail.
 -/
+
+@[expose] public section
 
 open OracleComp ENNReal
 

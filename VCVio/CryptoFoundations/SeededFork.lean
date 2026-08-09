@@ -3,9 +3,11 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import ToMathlib.Data.ENNReal.SumSquares
-import VCVio.OracleComp.QueryTracking.CostModel
-import VCVio.OracleComp.QueryTracking.SeededOracle
+
+module
+public import ToMathlib.Data.ENNReal.SumSquares
+public import VCVio.OracleComp.QueryTracking.CostModel
+public import VCVio.OracleComp.QueryTracking.SeededOracle
 
 /-!
 # Seed-Based Forking Lemma (Bellare-Neven)
@@ -44,6 +46,8 @@ queries.
 * M. Bellare and G. Neven, *Multi-Signatures in the Plain Public-Key Model and a General
   Forking Lemma*, CCS 2006.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal Function Finset
 

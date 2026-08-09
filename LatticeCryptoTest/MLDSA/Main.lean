@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCryptoTest.MLDSA.Helpers
-import LatticeCryptoTest.MLDSA.ACVPVectors
+
+module
+public import LatticeCryptoTest.MLDSA.Helpers
+public import LatticeCryptoTest.MLDSA.ACVPVectors
 
 /-!
 # ML-DSA-65 Test Runner
@@ -21,6 +23,8 @@ lake build mldsa_test
 .lake/build/bin/mldsa_test
 ```
 -/
+
+@[expose] public section
 
 set_option maxRecDepth 2048
 open MLDSA MLDSA.Concrete MLDSA.Test

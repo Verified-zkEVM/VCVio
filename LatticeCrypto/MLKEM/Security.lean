@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.KEM
-import LatticeCrypto.HardnessAssumptions.LearningWithErrors
-import VCVio.CryptoFoundations.FujisakiOkamoto.Composed
-import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
+
+module
+public import LatticeCrypto.MLKEM.KEM
+public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
+public import VCVio.CryptoFoundations.FujisakiOkamoto.Composed
+public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
 
 /-!
 # ML-KEM Security
@@ -42,6 +44,8 @@ MLWE + PRF + correctness parameters.
 - HHK17: A Modular Analysis of the Fujisaki-Okamoto Transformation (TCC 2017)
 - CRYSTALS-KYBER (TCHES 2018), Section 3 (security analysis)
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal AsymmEncAlg

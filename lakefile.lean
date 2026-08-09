@@ -54,11 +54,11 @@ Subdirectory: `backends/lean`.
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
-require "leanprover-community" / "mathlib" @ git "v4.32.0"
+require "leanprover-community" / "mathlib" @ git "v4.32.2"
 
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "29644990ebc2828ca09170bc9d398649cd9f5950"
+  "v4.32.2"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio

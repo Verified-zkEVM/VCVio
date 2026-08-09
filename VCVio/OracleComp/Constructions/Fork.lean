@@ -3,9 +3,11 @@ Copyright (c) 2026 Devon Tuma, Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import PolyFun.PFunctor.Free.Cursor.Fork
-import VCVio.EvalDist.Prod
-import VCVio.OracleComp.EvalDist
+
+module
+public import PolyFun.PFunctor.Free.Cursor.Fork
+public import VCVio.EvalDist.Prod
+public import VCVio.OracleComp.EvalDist
 
 /-!
 # Probability Bounds for Forking Oracle Computations
@@ -33,6 +35,8 @@ theorems below.
 * `probEvent_focusCollision_ofFreeM_fork_le`: the two focused answers of a located fork collide
   with probability at most the inverse answer-space cardinality.
 -/
+
+@[expose] public section
 
 open OracleSpec ENNReal
 

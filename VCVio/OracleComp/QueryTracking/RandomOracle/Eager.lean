@@ -3,7 +3,9 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.Constructions.GenerateSeed
+
+module
+public import VCVio.OracleComp.Constructions.GenerateSeed
 
 /-!
 # Eager Random Oracle
@@ -17,6 +19,8 @@ This gives INDEPENDENT samples (each call consumes a different seed value), unli
 When averaged over a uniformly sampled seed, the eager version matches the fresh
 independent-query semantics of `evalDist`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 

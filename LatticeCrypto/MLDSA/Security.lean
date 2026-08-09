@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Scheme
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
-import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
-import LatticeCrypto.HardnessAssumptions.LearningWithErrors
+
+module
+public import LatticeCrypto.MLDSA.Scheme
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
+public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
+public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
 
 /-!
 # ML-DSA Security
@@ -44,6 +46,8 @@ The proof follows the structure:
 - NIST FIPS 204, Section 3.2 (security properties)
 - EasyCrypt `FSabort.eca`, `HVZK_FSa.ec`, `SimplifiedScheme.ec` (formosa-crypto/dilithium)
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal

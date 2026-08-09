@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Fors
+
+module
+public import HashSig.SLHDSA.Fors
 
 /-!
 # Hypertree (FIPS 205 §7)
@@ -22,6 +24,8 @@ fold; it is intentionally out of scope here so the `d = 1` development stays ful
 - NIST FIPS 205, §7 (Algorithms 12–13)
 -/
 
+@[expose] public section
+
 
 namespace SLHDSA
 
@@ -31,7 +35,7 @@ variable {p : Params}
 abbrev HtSig (p : Params) (prims : Primitives p) := XmssSig p prims
 
 /-- The address of the single hypertree layer (layer `0`, tree `idxTree`). -/
-private def htAdrs (adrs : Adrs) (idxTree : ℕ) : Adrs :=
+def htAdrs (adrs : Adrs) (idxTree : ℕ) : Adrs :=
   (adrs.setLayerAddress 0).setTreeAddress idxTree
 
 /-- Hypertree signing for `d = 1` (FIPS 205 Algorithm 12): XMSS-sign `msg` at the chosen leaf

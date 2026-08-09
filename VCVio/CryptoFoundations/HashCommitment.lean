@@ -3,9 +3,11 @@ Copyright (c) 2026 XC0R. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: XC0R
 -/
-import VCVio.CryptoFoundations.CommitmentScheme
-import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.CryptoFoundations.CommitmentScheme
+public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Hash-Based Commitment Schemes — Binding via Collision Resistance
@@ -32,6 +34,8 @@ chain `binding ≤ keyed-CR ≤ birthday`.
 - `bindingAdv_toCRAdv` — reduction adversary from binding to keyed-CR.
 - `bindingAdvantage_toCommitment_le_keyedCRAdvantage` — the binding bound.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal CommitmentScheme
 

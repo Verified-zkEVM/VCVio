@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.Fischlin.Defs
+module
+
+public import VCVio.CryptoFoundations.Fischlin.Defs
 
 /-!
 # Fischlin Transform: Query-Cost Accounting
@@ -13,6 +15,8 @@ Query-complexity accounting for the Fischlin transform: bounds on the number of
 random-oracle queries made by `verify` and `sign`, their weighted query cost,
 and the corresponding expected-query bounds.
 -/
+
+@[expose] public section
 
 universe u v
 

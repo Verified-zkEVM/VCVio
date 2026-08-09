@@ -3,7 +3,9 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import PolyFun.PFunctor.Basic
+
+module
+public import PolyFun.PFunctor.Basic
 
 /-!
 # Specifications of Available Oracles
@@ -17,6 +19,8 @@ empty specification `[]ₒ` provides no oracles.
 This file also defines the standard sampling specifications `coinSpec`, `unifSpec`, and
 `probSpec`.
 -/
+
+@[expose] public section
 
 universe u u' v w
 

@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.EvalDist.TVDist
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.EvalDist.TVDist
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Identification Scheme with Aborts
@@ -41,6 +43,8 @@ The structure follows the EasyCrypt formalization in `IDSabort.ec` (formosa-cryp
   (CRYPTO 2023, ePrint 2023/246)
 - EasyCrypt `IDSabort.ec`
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 

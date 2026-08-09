@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Ring.Kernel
+
+module
+public import LatticeCrypto.Ring.Kernel
 
 /-!
 # Rounding And Decomposition For Negacyclic Rings
@@ -21,6 +23,8 @@ parameterized by a `NegacyclicRing`. Defines:
 Concrete implementations live in `MLDSA.Concrete.Rounding`. The abstract
 interfaces are consumed by `MLDSA.Scheme` and `MLDSA.Signature`.
 -/
+
+@[expose] public section
 
 
 namespace LatticeCrypto

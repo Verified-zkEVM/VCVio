@@ -3,7 +3,9 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
+
+module
+public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 
 /-!
 # Deferred sampling: tape factorization of answer-irrelevant draws
@@ -37,6 +39,8 @@ The genuinely hard, scheme-specific glue — proving a particular state machine'
 a tape factorization — is not generic and stays with each scheme. What this module
 provides is the toolbox that those proofs are built out of.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 open scoped BigOperators ENNReal

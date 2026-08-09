@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Params
+
+module
+public import HashSig.SLHDSA.Params
 
 /-!
 # C13 parameter set (WOTS+C / FORS+C, keccak256)
@@ -35,6 +37,8 @@ KAT — reuses the shared `SLHDSA.Merkle` core and the `SLHDSA.WotsChecksum` inc
 - The SPHINCs- research repo: `src/SPHINCs-C13Asm.sol`, `SECURITY-REVIEW-C13-SLHDSA.md`
 - ePrint 2025/2203 (the C-series WOTS+C and FORS+C primitives), NIST FIPS 205 §11.2.2
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.C13

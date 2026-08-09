@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.ProgramLogic.Relational.Quantitative
-import VCVio.EvalDist.TVDist
+
+module
+public import VCVio.ProgramLogic.Relational.Quantitative
+public import VCVio.EvalDist.TVDist
 
 /-!
 # Leakage Judgments for Side-Channel Reasoning
@@ -30,6 +32,8 @@ computations (outputs of `runObs`) that produce a result paired with an accumula
 * `probLeakFree_iff_leakageBound_zero`: `ProbLeakFree` is the `ε = 0` case of `LeakageBound`.
 * `leakageBound_triangle`: transitivity for game-hopping arguments.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

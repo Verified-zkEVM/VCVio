@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.Collision
+module
+
+public import Examples.PRFTagReader.Collision
 
 /-!
 # PRF Tag/Reader Protocol — Bad-Event Bound
@@ -13,6 +15,8 @@ The bad-event world for the multiple-session unlinkability game, which records n
 across repeated sessions of a tag. Proves the per-step bad-event bounds and the overall session
 collision bound `unlinkBadExp_le_sessionCollisionBound`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import LatticeCrypto.Falcon.Concrete.FPR
-import LatticeCrypto.Falcon.Concrete.GMTable
+module
+
+public import LatticeCrypto.Falcon.Concrete.FPR
+public import LatticeCrypto.Falcon.Concrete.GMTable
 
 /-!
 # FXR: 64-bit Fixed-Point Arithmetic (32.32 format) for Key Generation
@@ -32,6 +34,8 @@ Division uses a bit-by-bit long-division algorithm.
 - `c-fn-dsa/kgen_fxp.c` — fixed-point computations and GM_TAB
 - `c-fn-dsa/kgen_inner.h` — inline helpers (`fxr_mul`, `fxr_sqr`, etc.)
 -/
+
+public section
 
 
 namespace Falcon.Concrete.FXR
