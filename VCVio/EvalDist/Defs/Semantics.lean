@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.EvalDist.Defs.Basic
+
+module
+public import VCVio.EvalDist.Defs.Basic
 
 /-!
 # Bundled Probability Semantics
@@ -35,6 +37,8 @@ These semantics are deliberately *bundled* rather than typeclasses so that a con
 carry its intended semantics locally without forcing a single global instance on the ambient
 monad.
 -/
+
+@[expose] public section
 
 /-!
 ## Design Note

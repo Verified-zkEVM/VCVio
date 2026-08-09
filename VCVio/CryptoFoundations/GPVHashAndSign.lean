@@ -4,21 +4,23 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.Basic
-import VCVio.CryptoFoundations.GPVHashAndSign.MinEntropy
-import VCVio.CryptoFoundations.GPVHashAndSign.CollisionTelescope
-import VCVio.CryptoFoundations.GPVHashAndSign.Factorization
-import VCVio.CryptoFoundations.GPVHashAndSign.GameRuns
-import VCVio.CryptoFoundations.GPVHashAndSign.TapeFactorization
-import VCVio.CryptoFoundations.GPVHashAndSign.FlagHandlers
-import VCVio.CryptoFoundations.GPVHashAndSign.CombinedHandler
-import VCVio.CryptoFoundations.GPVHashAndSign.GameIdentification
-import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
-import VCVio.CryptoFoundations.GPVHashAndSign.TrapCount
-import VCVio.CryptoFoundations.GPVHashAndSign.EmbedIndex
-import VCVio.CryptoFoundations.GPVHashAndSign.Security
-import VCVio.CryptoFoundations.GPVHashAndSign.AppendQuery
-import VCVio.CryptoFoundations.GPVHashAndSign.SamplerTransport
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.Basic
+public import VCVio.CryptoFoundations.GPVHashAndSign.MinEntropy
+public import VCVio.CryptoFoundations.GPVHashAndSign.CollisionTelescope
+public import VCVio.CryptoFoundations.GPVHashAndSign.Factorization
+public import VCVio.CryptoFoundations.GPVHashAndSign.GameRuns
+public import VCVio.CryptoFoundations.GPVHashAndSign.TapeFactorization
+public import VCVio.CryptoFoundations.GPVHashAndSign.FlagHandlers
+public import VCVio.CryptoFoundations.GPVHashAndSign.CombinedHandler
+public import VCVio.CryptoFoundations.GPVHashAndSign.GameIdentification
+public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
+public import VCVio.CryptoFoundations.GPVHashAndSign.TrapCount
+public import VCVio.CryptoFoundations.GPVHashAndSign.EmbedIndex
+public import VCVio.CryptoFoundations.GPVHashAndSign.Security
+public import VCVio.CryptoFoundations.GPVHashAndSign.AppendQuery
+public import VCVio.CryptoFoundations.GPVHashAndSign.SamplerTransport
 
 /-!
 # GPV Hash-and-Sign Framework
@@ -82,3 +84,5 @@ experiment), `CollisionTelescope`, `Factorization`, `GameRuns`, `TapeFactorizati
 `SamplerTransport` (the adaptive trapdoor-sampler-swap accumulation).
 This umbrella module re-exports all of them.
 -/
+
+@[expose] public section

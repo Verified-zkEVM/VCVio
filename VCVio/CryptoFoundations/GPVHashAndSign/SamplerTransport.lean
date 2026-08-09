@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.AppendQuery
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.AppendQuery
 
 /-! # GPV Hash-and-Sign: Adaptive Sampler-Transport Accumulation
 
@@ -28,6 +30,8 @@ The headline accumulation is `advantage_le_advantage_add_of_trapdoorSample_tvDis
 `ℝ≥0∞` form, the shape consumed by scheme-level security statements) together with the
 symmetric two-sided corollary `abs_advantage_toReal_sub_le_of_trapdoorSample_tvDist`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

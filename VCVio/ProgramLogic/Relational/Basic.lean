@@ -4,16 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import ToMathlib.Control.Monad.RelationalAlgebra
-import ToMathlib.ProbabilityTheory.Coupling
-import VCVio.EvalDist.Defs.Instances
-import VCVio.EvalDist.Defs.NeverFails
-import VCVio.EvalDist.Monad.Basic
-import VCVio.EvalDist.Monad.Map
-import VCVio.OracleComp.Constructions.Replicate
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.EvalDist
-import VCVio.ProgramLogic.Unary.HoarePropTriple
+module
+
+public import ToMathlib.Control.Monad.RelationalAlgebra
+public import ToMathlib.ProbabilityTheory.Coupling
+public import VCVio.EvalDist.Defs.Instances
+public import VCVio.EvalDist.Defs.NeverFails
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.EvalDist.Monad.Map
+public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.EvalDist
+public import VCVio.ProgramLogic.Unary.HoarePropTriple
 
 /-!
 # Relational program-logic baseline
@@ -23,6 +25,8 @@ This file defines `RelTriple` via the generic two-monad algebra interface
 
 `HasCoupling` and coupling lemmas remain as semantic bridge lemmas.
 -/
+
+@[expose] public section
 
 universe u v w x
 

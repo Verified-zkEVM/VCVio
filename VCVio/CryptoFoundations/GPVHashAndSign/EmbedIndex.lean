@@ -4,13 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.TrapCount
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.TrapCount
 
 /-! # GPV Hash-and-Sign: Index-Embedding Handlers
 
 The signed-set-augmented index embed handlers realizing the pre-sampled
 embed-index programming of the random oracle.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

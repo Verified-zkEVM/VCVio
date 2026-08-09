@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.EmbedIndex
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.EmbedIndex
 
 /-! # GPV Hash-and-Sign: Security Bounds
 
@@ -12,6 +14,8 @@ The trap-count to fresh-signature projections, the reservoir extraction of the
 programmed-preimage branch, the forgery dichotomy, and the headline EUF-CMA
 bounds.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import VCVio.OracleComp.QueryTracking.QueryBound
-import VCVio.OracleComp.QueryTracking.QueryCost
-import VCVio.ProgramLogic.Unary.HoareTriple
+
+module
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.ProgramLogic.Unary.HoareTriple
 
 /-!
 # Cost Models for Oracle Computations
@@ -36,6 +38,8 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 - `probEvent_cost_gt_le_expectedCost_div`: Markov's inequality for cost distributions.
 - `WorstCasePolyTime.toExpectedPolyTime`: Strict polynomial time implies expected polynomial time.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal
 open scoped BigOperators

@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Primitives
-import LatticeCrypto.MLDSA.Concrete.Rounding
-import Mathlib.Data.List.OfFn
+
+module
+public import LatticeCrypto.MLDSA.Primitives
+public import LatticeCrypto.MLDSA.Concrete.Rounding
+public import Mathlib.Data.List.OfFn
 
 /-!
 # Concrete Byte Encoding for ML-DSA
@@ -19,6 +21,8 @@ immediately into the abstract `Encoding.Laws` surface. The concrete ML-DSA carri
 FIPS-valid compressed ranges, while the standardized encodings are only injective on the
 well-formed subset actually produced by the concrete primitives.
 -/
+
+public section
 
 
 namespace MLDSA.Concrete

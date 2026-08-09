@@ -4,13 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.GameRuns
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.GameRuns
 
 /-! # GPV Hash-and-Sign: The Front Salt-Tape Factorization
 
 The front salt-tape factorization of the game runs and the direct front-tape
 derivation of the Step-1 total-variation bound.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

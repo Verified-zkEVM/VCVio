@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.Basic
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.Basic
 
 /-! # GPV Hash-and-Sign: Min-Entropy Bound for the Programmed-Preimage Experiment
 
@@ -31,6 +33,7 @@ turns the exact-match branch of `GPVHashAndSign.euf_cma_collision_bound` into a 
 negligible term.
 -/
 
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

@@ -3,13 +3,15 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
-import VCVio.CryptoFoundations.FujisakiOkamoto.Defs
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.HasQuery.Morphism
-import VCVio.OracleComp.QueryTracking.QueryCost
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+
+module
+public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
+public import VCVio.CryptoFoundations.FujisakiOkamoto.Defs
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.HasQuery.Morphism
+public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 
 /-!
 # Fujisaki-Okamoto T Transform
@@ -19,6 +21,8 @@ This file defines the derandomizing T transform:
 - coins are derived from a random oracle on the plaintext
 - decryption re-derives the coins and checks re-encryption
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal

@@ -4,13 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
 
 /-! # GPV Hash-and-Sign: The Counter-Augmented Trap Run
 
 The N5 counter-augmented trap run tagging the forged point with its programming
 index, and its agreement with the untagged run.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

@@ -3,17 +3,21 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.FujisakiOkamoto.TTransform
-import VCVio.CryptoFoundations.KeyEncapMech
-import VCVio.CryptoFoundations.PRF
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+
+module
+public import VCVio.CryptoFoundations.FujisakiOkamoto.TTransform
+public import VCVio.CryptoFoundations.KeyEncapMech
+public import VCVio.CryptoFoundations.PRF
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 
 /-!
 # Fujisaki-Okamoto U Transform
 
 This file defines the U-transform family on top of the T-transform oracle world.
 -/
+
+@[expose] public section
 
 
 universe u v

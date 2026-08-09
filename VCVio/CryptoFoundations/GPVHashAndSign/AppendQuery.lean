@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.MinEntropy
-import VCVio.CryptoFoundations.GPVHashAndSign.Security
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.MinEntropy
+public import VCVio.CryptoFoundations.GPVHashAndSign.Security
 
 /-! # GPV Hash-and-Sign: The Append-Forgery-Query Compiler
 
@@ -32,6 +34,8 @@ remaining exact-match term by the sampler's guessing probability
 (`programmedPreimageAdvantage_le_trapdoorGuessingProbability`) gives the closed collision-style
 headline `euf_cma_collision_bound_of_queryBound`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

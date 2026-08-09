@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Hops
-import VCVio.CryptoFoundations.FiatShamir.Sigma.CmaToNma
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Fork
-import VCVio.CryptoFoundations.FiatShamir.QueryBounds
-import VCVio.ProgramLogic.Relational.SimulateQ
+
+module
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Hops
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.CmaToNma
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Fork
+public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
+public import VCVio.ProgramLogic.Relational.SimulateQ
 
 /-!
 # Native stateful Fiat-Shamir CMA-to-NMA chain
@@ -16,6 +18,8 @@ This file assembles the non-heap Fiat-Shamir EUF-CMA chain. The top-level
 statement is factored so the H1/H2/H3 arithmetic is native immediately, while
 the H5 replay-forking boundary can be ported as a focused lemma.
 -/
+
+@[expose] public section
 
 universe u
 

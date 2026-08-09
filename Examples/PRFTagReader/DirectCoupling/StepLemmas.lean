@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.DirectCoupling
-import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
+module
+
+public import Examples.PRFTagReader.DirectCoupling
+public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
 
 /-!
 # PRF Tag/Reader Protocol — Direct-Coupling Handler Step Lemmas
@@ -26,6 +28,8 @@ reads the realized slot `⟨s.sessionsUsed tag, hslot⟩`, which is non-zero the
 * `evalDist_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant` — Fine-run distributions
   after a `cacheBad` projection do not depend on the initial state's `cacheBad` field.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

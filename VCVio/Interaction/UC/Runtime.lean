@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.Interaction.Basic.Sampler
-import PolyFun.Interaction.Basic.TypeTreeFintype
-import PolyFun.Interaction.UC.OpenProcessModel
-import VCVio.Interaction.UC.Computational
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import PolyFun.Interaction.Basic.Sampler
+public import PolyFun.Interaction.Basic.TypeTreeFintype
+public import PolyFun.Interaction.UC.OpenProcessModel
+public import VCVio.Interaction.UC.Computational
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Runtime execution semantics for open processes
@@ -72,6 +74,8 @@ The runtime layer requires the spec and state type universes to be `0`,
 since `ProbComp : Type → Type` operates in `Type`. This is satisfied by
 concrete protocols whose move types and state types live in `Type`.
 -/
+
+@[expose] public section
 
 universe u
 
@@ -169,7 +173,7 @@ namespace UC
 
 open Concurrent
 
-private abbrev Closed (Party : Type u) (m : Type → Type) (schedulerSampler : m (ULift Bool)) :=
+abbrev RuntimeClosed (Party : Type u) (m : Type → Type) (schedulerSampler : m (ULift Bool)) :=
   (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Closed
 
 /--
@@ -187,8 +191,8 @@ and `processSemanticsOracle` for the shared-oracle specialization.
 -/
 noncomputable def processSemantics (Party : Type u) {m : Type → Type} [Monad m] {Result : Type}
     (schedulerSampler : m (ULift Bool)) (sem : SPMFSemantics.{0, 0, 0} m)
-    (init : ∀ (p : Closed Party m schedulerSampler), p.Proc) (fuel : ℕ)
-    (observe : ∀ (p : Closed Party m schedulerSampler), p.Proc → m Result) :
+    (init : ∀ (p : RuntimeClosed Party m schedulerSampler), p.Proc) (fuel : ℕ)
+    (observe : ∀ (p : RuntimeClosed Party m schedulerSampler), p.Proc → m Result) :
     Semantics (openTheory.{u, 0, 0, 0} Party m schedulerSampler) where
   Result := Result
   m := m
@@ -207,8 +211,8 @@ shared oracles and no deliberate failure mass.
 -/
 noncomputable def processSemanticsProbComp (Party : Type u) {Result : Type}
     (schedulerSampler : ProbComp (ULift Bool))
-    (init : ∀ (p : Closed Party ProbComp schedulerSampler), p.Proc) (fuel : ℕ)
-    (observe : ∀ (p : Closed Party ProbComp schedulerSampler), p.Proc → ProbComp Result) :
+    (init : ∀ (p : RuntimeClosed Party ProbComp schedulerSampler), p.Proc) (fuel : ℕ)
+    (observe : ∀ (p : RuntimeClosed Party ProbComp schedulerSampler), p.Proc → ProbComp Result) :
     Semantics (openTheory.{u, 0, 0, 0} Party ProbComp schedulerSampler) :=
   processSemantics Party schedulerSampler (SPMFSemantics.ofMonadLift ProbComp)
     init fuel observe
@@ -233,8 +237,8 @@ noncomputable def processSemanticsOracle (Party : Type u) {ι : Type}
     {superSpec : OracleSpec.{0, 0} ι} {σ : Type} {Result : Type}
     (schedulerSampler : OracleComp superSpec (ULift Bool))
     (impl : QueryImpl superSpec (StateT σ ProbComp)) (initOracle : σ)
-    (init : ∀ (p : Closed Party (OracleComp superSpec) schedulerSampler), p.Proc) (fuel : ℕ)
-    (observe : ∀ (p : Closed Party (OracleComp superSpec) schedulerSampler),
+    (init : ∀ (p : RuntimeClosed Party (OracleComp superSpec) schedulerSampler), p.Proc) (fuel : ℕ)
+    (observe : ∀ (p : RuntimeClosed Party (OracleComp superSpec) schedulerSampler),
       p.Proc → OracleComp superSpec Result) :
     Semantics (openTheory.{u, 0, 0, 0} Party (OracleComp superSpec) schedulerSampler) :=
   let oracleSem : SPMFSemantics.{0, 0, 0} (OracleComp superSpec) :=

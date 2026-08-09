@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
+module
+
 /-!
 # Falcon-512 Test Vectors
 
@@ -14,6 +16,8 @@ APIs.
 All vectors use `logn = 9` (Falcon-512) with raw message mode (no pre-hashing,
 no domain-separation context).
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Test

@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.Basic
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.Basic
 
 /-! # GPV Hash-and-Sign: The Salt-Collision Telescope
 
@@ -12,6 +14,8 @@ The proof decomposition overview, the salt-averaged collision telescope over the
 combined draw-then-query step, the salt-collision coupling at hash-only
 granularity, and the salt-inclusive identical-until-bad coupling primitives.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

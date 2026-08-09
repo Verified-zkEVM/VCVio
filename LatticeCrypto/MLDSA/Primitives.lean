@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Arithmetic
+
+module
+public import LatticeCrypto.MLDSA.Arithmetic
 
 /-!
 # ML-DSA Primitive Interfaces
@@ -24,6 +26,8 @@ spec executable without committing to one implementation yet.
 
 - NIST FIPS 204, Section 7 (supporting algorithms)
 -/
+
+@[expose] public section
 
 
 namespace MLDSA

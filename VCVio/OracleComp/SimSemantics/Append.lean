@@ -3,12 +3,16 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
-import VCVio.OracleComp.Coercions.Add
+
+module
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+public import VCVio.OracleComp.Coercions.Add
 
 /-!
 # Append/Add Operation for Simulation Oracles
 -/
+
+@[expose] public section
 
 universe u v w
 

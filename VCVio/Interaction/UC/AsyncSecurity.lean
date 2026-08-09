@@ -3,9 +3,14 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.Interaction.Concurrent.Fairness
-import VCVio.Interaction.UC.AsyncRuntime
-import VCVio.Interaction.UC.Computational
+
+module
+
+import all PolyFun.Interaction.Concurrent.Fairness
+
+public import PolyFun.Interaction.Concurrent.Fairness
+public import VCVio.Interaction.UC.AsyncRuntime
+public import VCVio.Interaction.UC.Computational
 
 /-!
 # Fair PPT security for asynchronous env-open processes
@@ -72,6 +77,8 @@ matches the universe constraints already imposed by
 through the runtime), and is required for `(openTheory.{u, 0, 0}
 Party).Closed` to be well-formed.
 -/
+
+@[expose] public section
 
 universe u
 

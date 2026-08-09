@@ -3,8 +3,10 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Lazy Random Oracle Equals Eager Full-Table Sampling
@@ -29,6 +31,8 @@ fresh on-demand uniform draw into the pre-sampled table.
 * `evalDist_simulateQ_randomOracle_run'_empty_eq_uniformTable`: the empty-cache
   corollary — the lazy-vs-eager equivalence proper.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 

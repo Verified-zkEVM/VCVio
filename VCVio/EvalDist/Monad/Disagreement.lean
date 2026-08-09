@@ -3,7 +3,9 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import VCVio.EvalDist.Monad.Basic
+
+module
+public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # Disagreement-Aware Additive Bind Bounds
@@ -22,6 +24,8 @@ specialisation is `m = ProbComp`.
 * `probEvent_bind_le_add_bad_of_disagree'` — 3-way with per-step bad term in the IH.
 * `probEvent_bind_le_add_bad_disagree` — 4-way merge.
 -/
+
+@[expose] public section
 
 universe u v
 

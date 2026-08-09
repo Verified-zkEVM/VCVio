@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Examples.ElGamal.Basic
-import VCVio.CryptoFoundations.Asymptotics.ReductionCost
-import VCVio.OracleComp.QueryTracking.QueryCost
-import VCVio.OracleComp.QueryTracking.ResourceProfile
+module
+
+public import Examples.ElGamal.Basic
+public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
+public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.OracleComp.QueryTracking.ResourceProfile
 
 /-!
 # ElGamal Reduction Cost Accounting
@@ -22,6 +24,8 @@ implementation. This is the right level for reduction-cost theorems: the reducti
 its own intrinsic overhead and its interface usage before those external calls are instantiated by
 concrete adversaries.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

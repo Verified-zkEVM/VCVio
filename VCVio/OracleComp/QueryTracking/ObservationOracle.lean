@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ToMathlib.Control.WriterT
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.HasQuery.Basic
-import VCVio.OracleComp.QueryTracking.CountingOracle
+
+module
+public import ToMathlib.Control.WriterT
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.HasQuery.Basic
+public import VCVio.OracleComp.QueryTracking.CountingOracle
 
 /-!
 # Observation Oracle for Side-Channel Leakage Modeling
@@ -41,6 +43,8 @@ values. The definitions `eraseObs` and `runObs` are parameterized by a base orac
 * `probFailure_runObs`: observations do not change failure probability (`[MonadLiftT m SPMF]`).
 * `neverFail_runObs_iff`: `NeverFail` is preserved by observation (`[MonadLiftT m SPMF]`).
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 

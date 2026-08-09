@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Scheme
-import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
-import VCVio.EvalDist.RenyiDivergence
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import LatticeCrypto.Falcon.Scheme
+public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
+public import VCVio.EvalDist.RenyiDivergence
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Falcon Security
@@ -85,6 +87,8 @@ For `k = 320`, both are negligible.
 - GPV08: Gentry, Peikert, Vaikuntanathan. STOC 2008, Propositions 6.1–6.2.
 - [Pre17]: Prest. ASIACRYPT 2017. Rényi-based precision analysis for Klein's sampler.
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal

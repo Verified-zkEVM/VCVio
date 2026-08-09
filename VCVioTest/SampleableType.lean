@@ -3,7 +3,9 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio
+
+module
+public import VCVio
 
 /-!
 # Regression tests for `SampleableType` and `HasUniformSelect` instance coverage
@@ -13,6 +15,8 @@ Inferable smoke tests for the instances added under issue #117. If any of these
 changes so that it no longer fires), the build fails and the regression surfaces
 without needing a runtime check.
 -/
+
+@[expose] public section
 
 open OracleComp ProbComp ENNReal
 

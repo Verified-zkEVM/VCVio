@@ -3,10 +3,12 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import Examples.CommitmentScheme.Hiding.Defs
-import Examples.CommitmentScheme.Hiding.CountBounds
-import Examples.CommitmentScheme.Hiding.LoggingBounds
-import Examples.CommitmentScheme.Hiding.Main
+
+module
+public import Examples.CommitmentScheme.Hiding.Defs
+public import Examples.CommitmentScheme.Hiding.CountBounds
+public import Examples.CommitmentScheme.Hiding.LoggingBounds
+public import Examples.CommitmentScheme.Hiding.Main
 
 /-!
 # Hiding security for the random-oracle commitment scheme
@@ -45,3 +47,5 @@ is therefore bounded by `Pr[bad(s)]`. Averaging `Pr[bad(s)]` over `s` and
 using the fact that the adversary makes at most `t` total salt-bearing
 queries gives the `t / |S|` bound. The bound is *intrinsically averaged*:
 the per-salt version is false. -/
+
+@[expose] public section

@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Ring.VectorBackend
-import Mathlib.Data.ZMod.Basic
-import Mathlib.Data.ZMod.ValMinAbs
+
+module
+public import LatticeCrypto.Ring.VectorBackend
+public import Mathlib.Data.ZMod.Basic
+public import Mathlib.Data.ZMod.ValMinAbs
 
 /-!
 # Norms For Negacyclic Ring Backends
@@ -26,6 +28,8 @@ Backend-generic norm infrastructure for the lattice ring layer. Defines:
 `MLDSA.Arithmetic` and `Falcon.Arithmetic` assemble scheme-local norm aliases
 from `zmodPolyNormOps`.
 -/
+
+@[expose] public section
 
 
 open scoped BigOperators

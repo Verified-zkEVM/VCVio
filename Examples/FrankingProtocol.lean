@@ -1,3 +1,5 @@
+module
+
 -- /-
 -- Copyright (c) 2025 Gabe Robison. All rights reserved.
 -- Released under Apache 2.0 license as described in the file LICENSE.
@@ -13,6 +15,8 @@
 -- messaging systems, allowing recipients to verifiably report abusive messages while
 -- maintaining encryption of legitimate messages.
 -- -/
+
+@[expose] public section
 
 -- -- nonce generation using OracleComp
 -- def generate_nonce : OracleComp unifSpec (BitVec 256) :=

@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import PolyFun.PFunctor.Free.Cursor
+
+module
+public import VCVio.OracleComp.EvalDist
+public import PolyFun.PFunctor.Free.Cursor
 
 /-!
 # Traversing Possible Paths of a Computation
@@ -23,6 +25,8 @@ and the demand made by the selected residual root.
 It also connects those structural predicates to the denotational set `supportWhen`, so proofs can
 move cleanly between the syntax-level traversal view and the reachable-output view.
 -/
+
+@[expose] public section
 
 open OracleSpec
 

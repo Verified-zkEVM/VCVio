@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.PFunctor.Handler.Normalization
-import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
-import VCVio.OracleComp.QueryTracking.CountingOracle
-import VCVio.OracleComp.QueryTracking.SeededOracle
-import VCVio.OracleComp.SimSemantics.StateT.StateProjection
+
+module
+public import PolyFun.PFunctor.Handler.Normalization
+public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.SeededOracle
+public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
 /-!
 # Handler Normalization for Query Handlers
@@ -20,6 +22,8 @@ The goal is not to create a second proof mode; it is just the shared "open the
 handler one step" surface that proof scripts can use before handing control
 back to `mvcgen`, `vcstep`, `rvcstep`, or ordinary support reasoning.
 -/
+
+@[expose] public section
 
 attribute [handler_simp]
   simulateQ_pure

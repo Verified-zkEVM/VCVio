@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader
-import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
-import VCVio.ProgramLogic.Relational.SimulateQ
+module
+
+public import Examples.PRFTagReader
+public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
+public import VCVio.ProgramLogic.Relational.SimulateQ
 
 /-!
 # PRF Tag/Reader Protocol — Reductions and Bridge Lemmas
@@ -16,6 +18,8 @@ single-session worlds, together with the PRF-real faithfulness lemmas
 (`prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp` and
 `prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp`).
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

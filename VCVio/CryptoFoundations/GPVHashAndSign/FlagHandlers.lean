@@ -4,13 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.TapeFactorization
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.TapeFactorization
 
 /-! # GPV Hash-and-Sign: Flag-Instrumented Inline-Salt Handlers
 
 The flag-instrumented original (inline-salt) handlers and the
 freshness-tracking vehicle carrying the signed-set product factor.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
