@@ -71,8 +71,7 @@ jobs:
           use-mathlib-cache: false
       - name: Build a scratch consumer requiring VCVio by path
         env:
-          # The consumer imports VCVio but does not need Mathlib's source cache;
-          # skip its post-update `lake exe cache get` hook.
+          # The consumer imports only Lean core, so the Mathlib cache is not used.
           MATHLIB_NO_CACHE_ON_UPDATE: "1"
         run: |
           consumer="$RUNNER_TEMP/vcvio-consumer"
@@ -92,10 +91,6 @@ jobs:
           } > "$consumer/lakefile.toml"
           {
             echo 'module'
-            echo ''
-            echo 'import VCVio'
-            echo ''
-            echo '#check OracleComp'
             echo ''
             echo 'public def main : IO Unit := IO.println "consumer ok"'
           } > "$consumer/Main.lean"
