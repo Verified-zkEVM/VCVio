@@ -1,13 +1,15 @@
-import VCVioWidgets.Component.RevealLocation
-import VCVioWidgets.GameHop.Anchor
-import VCVioWidgets.GameHop.Extract
-import VCVioWidgets.GameHop.Hints
-import VCVioWidgets.GameHop.Infer
-import VCVioWidgets.GameHop.Lookup
-import VCVioWidgets.GameHop.Model
-import VCVioWidgets.GameHop.Panel
-import VCVioWidgets.GameHop.Registry
-import VCVioWidgets.GameHop.Render
-import VCVioWidgets.OpenSyntax.Panel
-import VCVioWidgets.OpenSyntax.Render
-import VCVioWidgets.OpenSyntax.TreePanel
+module  -- shake: keep-all --deprecated_module: ignore
+
+public import VCVioWidgets.Component.RevealLocation
+public import VCVioWidgets.GameHop.Anchor
+public import VCVioWidgets.GameHop.Extract
+public import VCVioWidgets.GameHop.Hints
+public import VCVioWidgets.GameHop.Infer
+public import VCVioWidgets.GameHop.Lookup
+public import VCVioWidgets.GameHop.Model
+public import VCVioWidgets.GameHop.Panel
+public import VCVioWidgets.GameHop.Registry
+public import VCVioWidgets.GameHop.Render
+public import VCVioWidgets.OpenSyntax.Panel
+public import VCVioWidgets.OpenSyntax.Render
+public import VCVioWidgets.OpenSyntax.TreePanel

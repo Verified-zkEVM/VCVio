@@ -3,12 +3,16 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import VCVio.ProgramLogic.Unary.SimulateQ
-import Examples.CommitmentScheme.Hiding.CountBounds
+
+module
+public import VCVio.ProgramLogic.Unary.SimulateQ
+public import Examples.CommitmentScheme.Hiding.CountBounds
 
 /-!
 # Averaged logging bounds for commitment-scheme hiding
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

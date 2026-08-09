@@ -4,16 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.Loss
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.BodyHops
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.GhostReadCharge
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.HiddenReadFold
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.CouplingEngine
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.ReadRecording
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.TapeFactorization
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.HopLemmas
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.NMAReduction
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.Assembly
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.Loss
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.BodyHops
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.GhostReadCharge
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.HiddenReadFold
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.CouplingEngine
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.ReadRecording
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.TapeFactorization
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.HopLemmas
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.NMAReduction
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.Assembly
 
 /-!
 # EUF-CMA security of Fiat-Shamir with aborts
@@ -45,3 +47,5 @@ coupling infrastructure, off the live path), `ReadRecording`,
 `TapeFactorization`, `HopLemmas`, `NMAReduction`, and `Assembly` (the headline
 `euf_cma_to_nma`). This umbrella module re-exports all of them.
 -/
+
+@[expose] public section

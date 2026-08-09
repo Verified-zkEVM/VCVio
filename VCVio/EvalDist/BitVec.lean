@@ -3,7 +3,9 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.EvalDist.Monad.Map
+
+module
+public import VCVio.EvalDist.Monad.Map
 
 /-!
 # Evaluation Distributions of Computations with `BitVec`
@@ -13,6 +15,8 @@ Lemmas about `probOutput` involving `BitVec`, generic over any monad `m` with `[
 The `SampleableType (BitVec n)` instance is defined in
 `VCVio.OracleComp.Constructions.SampleableType`.
 -/
+
+@[expose] public section
 
 open BitVec
 

@@ -3,16 +3,20 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.EvalDist.Defs.Instances
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.ProbCompLift
-import PolyFun.Control.Monad.Hom
+
+module
+public import VCVio.EvalDist.Defs.Instances
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.ProbCompLift
+public import PolyFun.Control.Monad.Hom
 
 /-!
 # Asymmetric Encryption Schemes
 
 Core definitions for asymmetric encryption schemes and correctness.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

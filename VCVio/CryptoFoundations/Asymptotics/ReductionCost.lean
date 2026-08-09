@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.Asymptotics.Security
+module
+
+public import VCVio.CryptoFoundations.Asymptotics.Security
 
 /-!
 # Cost-Aware Security Reductions
@@ -22,6 +24,8 @@ objects being transformed. Users can instantiate the resulting meta-theorems wit
 structured resource profiles, interface-profile bounds, or any other preordered asymptotic notion
 that is closed under the transform carried by the reduction.
 -/
+
+@[expose] public section
 
 namespace SecurityGame
 

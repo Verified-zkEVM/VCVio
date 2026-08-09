@@ -3,11 +3,13 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.Constructions.GenerateSeed
-import VCVio.OracleComp.QueryTracking.QueryBound
-import VCVio.OracleComp.QueryTracking.Structures
-import ToMathlib.Data.ENNReal.SumSquares
+
+module
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.Constructions.GenerateSeed
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.QueryTracking.Structures
+public import ToMathlib.Data.ENNReal.SumSquares
 
 /-!
 # Pre-computing Results of Oracle Queries
@@ -20,6 +22,8 @@ Note that ordering is subtle, for example `so.withCaching.withPregen` will first
 and not cache the result if one is found, while `so.withPregen.withCaching` checks the cache first,
 and include seed values into the cache after returning them.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 

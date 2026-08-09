@@ -3,9 +3,11 @@ Copyright (c) 2026 XC0R. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: XC0R
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.QueryTracking.Birthday
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.QueryTracking.Birthday
 
 /-!
 # Collision-Resistant Hash Functions
@@ -54,6 +56,8 @@ protocol parameter.
 - `VCVio/OracleComp/QueryTracking/Collision.lean` — `CacheHasCollision`
   predicates and birthday bounds used to bound ROM-level collision probability.
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal

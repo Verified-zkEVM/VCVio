@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Relational.Loom.Probabilistic
-import VCVio.ProgramLogic.Relational.Loom.Qualitative
+module
+
+public import VCVio.ProgramLogic.Relational.Loom.Probabilistic
+public import VCVio.ProgramLogic.Relational.Loom.Qualitative
 
 /-!
 # Cross-tier coherence for the relational `RelWP` carriers
@@ -50,6 +52,8 @@ per-carrier files (`rwp_eq_eRelWP`, `rwp_eq_couplingPost`,
 See `.ignore/wp-cutover-plan.md` §"Three-tier carrier design" for the
 broader story.
 -/
+
+@[expose] public section
 
 universe u
 

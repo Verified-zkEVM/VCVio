@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 
+module
+
 -- TODO minimize imports
-import Mathlib.Tactic.Use
-import Mathlib.Data.Set.Basic
+public import Mathlib.Tactic.Use
+public import Mathlib.Data.Set.Basic
 
 
 /-!
@@ -39,6 +41,8 @@ that decompose the trees as much as possible.
   - get? functions
 
 -/
+
+@[expose] public section
 
 namespace BinaryTree
 

@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.C13.Xmss
+
+module
+public import HashSig.SLHDSA.C13.Xmss
 
 /-!
 # C13 hypertree (d = 2)
@@ -20,6 +22,8 @@ scheme, not part of this root-reconstruction lemma.)
 
 - NIST FIPS 205 §7 (hypertree); the SPHINCs- repo verifier `src/SPHINCs-C13Asm.sol`
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.C13

@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Examples.PRFTagReader.Defs
-import Examples.PRFTagReader.Auth
-import Examples.PRFTagReader.Collision
-import Examples.PRFTagReader.BadEvent
+module
+
+public import Examples.PRFTagReader.Defs
+public import Examples.PRFTagReader.Auth
+public import Examples.PRFTagReader.Collision
+public import Examples.PRFTagReader.BadEvent
 
 /-!
 # PRF Tag/Reader Protocol
@@ -37,3 +39,5 @@ The content is split across the `Examples.PRFTagReader.*` modules:
 - `Collision`: the random-oracle infrastructure and collision-bound theorems;
 - `BadEvent`: the bad-event world and the session collision bound.
 -/
+
+@[expose] public section

@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.Constructions.SampleableType
-import Mathlib.LinearAlgebra.Matrix.DotProduct
+
+module
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Constructions.SampleableType
+public import Mathlib.LinearAlgebra.Matrix.DotProduct
 
 /-!
 # Noisy learning problems
@@ -36,6 +38,8 @@ instantiations live downstream (e.g. `LatticeCrypto.HardnessAssumptions`,
 which re-exports this namespace under its historical `LearningWithErrors`
 name).
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal Matrix
 

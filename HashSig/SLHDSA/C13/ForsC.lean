@@ -3,9 +3,11 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.C13.Params
-import HashSig.SLHDSA.C13.Primitives
-import HashSig.SLHDSA.Xmss
+
+module
+public import HashSig.SLHDSA.C13.Params
+public import HashSig.SLHDSA.C13.Primitives
+public import HashSig.SLHDSA.Xmss
 
 /-!
 # FORS+C (C13)
@@ -24,6 +26,8 @@ randomizer is ground to satisfy).
 
 - ePrint 2025/2203 (FORS+C); the SPHINCs- repo verifier `src/SPHINCs-C13Asm.sol`
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.C13

@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Params
+
+module
+public import HashSig.SLHDSA.Params
 
 /-!
 # SLH-DSA Integer / Byte / Base Helpers
@@ -19,6 +21,8 @@ and by the message-digest split (`Scheme.splitDigest`).
 - NIST FIPS 205, §4.4 (Algorithms 2, 3, 4)
 -/
 
+@[expose] public section
+
 
 namespace SLHDSA
 
@@ -33,14 +37,14 @@ def toByte (x len : ℕ) : List Byte :=
 /-- Consume bytes from the front of `inp` into the `(total, bits)` accumulator until at least
 `b` bits are buffered (the inner `while` of `base2b`). Returns the leftover input and the
 updated accumulator. -/
-private def base2bFill (b : ℕ) : List Byte → ℕ → ℕ → (List Byte × ℕ × ℕ)
+def base2bFill (b : ℕ) : List Byte → ℕ → ℕ → (List Byte × ℕ × ℕ)
   | [], total, bits => ([], total, bits)
   | x :: xs, total, bits =>
       if b ≤ bits then (x :: xs, total, bits)
       else base2bFill b xs (total * 256 + x.toNat) (bits + 8)
 
 /-- Emit `out` big-endian `b`-bit digits, threading the `(total, bits)` bit buffer. -/
-private def base2bGo (b : ℕ) : ℕ → List Byte → ℕ → ℕ → List ℕ
+def base2bGo (b : ℕ) : ℕ → List Byte → ℕ → ℕ → List ℕ
   | 0, _, _, _ => []
   | out + 1, inp, total, bits =>
       let r := base2bFill b inp total bits

@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import LatticeCrypto.MLDSA.SecurityNMA
+module
+public import LatticeCrypto.MLDSA.SecurityNMA
 
 /-!
 # ML-DSA short-model CMA headline: joint hypothesis-consistency witness
@@ -43,6 +44,8 @@ The witness values are:
   `advantage_mldsaMLWEShort_le_matrix` under `expandAIdealization p prims 1`, which holds
   unconditionally (`expandAIdealization_one`) since advantages are differences of probabilities.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 open LatticeCrypto TransformOps

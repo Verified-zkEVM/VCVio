@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Arithmetic
+
+module
+public import LatticeCrypto.MLDSA.Arithmetic
 
 /-!
 # ML-DSA Primitive Interfaces
@@ -24,6 +26,8 @@ spec executable without committing to one implementation yet.
 
 - NIST FIPS 204, Section 7 (supporting algorithms)
 -/
+
+@[expose] public section
 
 
 namespace MLDSA
@@ -155,9 +159,10 @@ structure Primitives.Laws {p : Params} (prims : Primitives p) (nttOps : NTTRingO
   expandS_bound : ∀ rhoPrime,
     polyVecBounded (prims.expandS rhoPrime).1 p.eta ∧
     polyVecBounded (prims.expandS rhoPrime).2 p.eta
-  /-- `ExpandMask(ρ'', κ)` produces masking vectors bounded by `γ₁ - 1`. -/
+  /-- `ExpandMask(ρ'', κ)` produces masking vectors bounded by `γ₁`. The FIPS 204 `ExpandMask`
+  output coefficients lie in `[-γ₁ + 1, γ₁]`, so their centered infinity norm is at most `γ₁`. -/
   expandMask_bound : ∀ rhoDoublePrime kappa,
-    polyVecBounded (prims.expandMask rhoDoublePrime kappa) (p.gamma1 - 1)
+    polyVecBounded (prims.expandMask rhoDoublePrime kappa) p.gamma1
   /-- Generic transform laws for the instantiated ring backend. -/
   transform : NTTRingLaws nttOps
   /-- Decomposition identity: `highBitsShift(highBits(r)) + lowBits(r) = r`. -/
@@ -185,35 +190,19 @@ structure Primitives.Laws {p : Params} (prims : Primitives p) (nttOps : NTTRingO
   /-- The low-order remainder of `Power2Round` is bounded by `2^(d-1)`. -/
   power2Round_bound : ∀ r : Rq,
     polyNorm (prims.power2Round r).2 ≤ 2 ^ (droppedBits - 1)
-  /-- `w1Encode` is injective: distinct commitments encode to distinct byte strings. -/
-  w1Encode_injective : Function.Injective prims.w1Encode
+  /-- `w1Encode` is injective on the valid commitment range: distinct commitment vectors whose
+  every component is an actual `highBits` output encode to distinct byte strings. The commitment
+  `w₁` always arises as a vector of `highBits` representatives, so injectivity on this range is
+  exactly what the commitment-binding argument needs; the encoder is a truncating packer and is
+  not injective on the full `Vector High p.k` carrier. -/
+  w1Encode_injective : Set.InjOn prims.w1Encode
+    { w : Vector prims.High p.k | ∀ i : Fin p.k, w.get i ∈ Set.range prims.highBits }
   /-- The challenge-secret product `c · s` has infinity norm at most `β = τ·η` whenever the
   vector `s` is bounded by `η`. This reflects that `SampleInBall(c̃)` has exactly `τ` nonzero
   coefficients, each in `{-1, +1}`, so `‖c · sⱼ‖∞ ≤ τ·η = β`. -/
   sampleInBall_smul_bound : ∀ (cTilde : CommitHashBytes p) {k : ℕ} (s : RqVec k),
     polyVecBounded s p.eta →
     polyVecNorm (nttOps.coeffScalarVecMul (prims.sampleInBall cTilde) s) ≤ p.beta
-  /-- **Honest sampling of the secret vectors (random-oracle modeling of `ExpandS`/`ExpandSeed`).**
-  Over a uniform `seed`, the derived secrets `(s₁, s₂) = ExpandS((ExpandSeed seed).2.1)` are jointly
-  uniform on `RqVec p.l × RqVec p.k` and independent of the public seed `ρ = (ExpandSeed seed).1`.
-  Concretely, for every continuation `f` taking `(ρ, s₁, s₂)`, sampling the secrets through
-  `ExpandS` produces the same distribution as drawing `s₁`, `s₂` independently and uniformly while
-  keeping the same `ρ`. This is the standard ROM idealization of the `ExpandSeed`/`ExpandS` XOFs and
-  is not derivable from the deterministic `prims`; it is what the MLWE key-swap hop `(H0)` residue
-  requires (see `MLDSA.NMA.nma_keyswap_hop`). -/
-  expandS_honest_sampling : ∀ {γ : Type}
-    [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] [IsUniformSpec unifSpec]
-    (f : Bytes 32 → RqVec p.l → RqVec p.k → ProbComp γ),
-    evalDist (do
-        let seed ← $ᵗ (Bytes 32)
-        f (prims.expandSeed seed).1
-          (prims.expandS (prims.expandSeed seed).2.1).1
-          (prims.expandS (prims.expandSeed seed).2.1).2) =
-      evalDist (do
-        let seed ← $ᵗ (Bytes 32)
-        let s₁ ← $ᵗ (RqVec p.l)
-        let s₂ ← $ᵗ (RqVec p.k)
-        f (prims.expandSeed seed).1 s₁ s₂)
   /-- **Public determinacy of the withheld key part `t₀` (key-generation collision-freeness).**
   Any two seeds that agree on the published key data — the public seed `ρ = (ExpandSeed ·).1`
   and the rounded part `t₁ = (Power2Round (Â·s₁ + s₂)).1` — also agree on the withheld part
@@ -228,8 +217,8 @@ structure Primitives.Laws {p : Params} (prims : Primitives p) (nttOps : NTTRingO
   functions; the map `seed ↦ (ρ, t₁)` sends the `2^256` seeds into a space of at least
   `2^256 · 2^{2560·k}` values, so two distinct seeds collide on `(ρ, t₁)` — the only way the
   hypotheses can hold with differing `t₀` — except with probability about `2^{511 - 2560·k}`.
-  Like `expandS_honest_sampling`, this field is a random-oracle-style modeling assumption
-  about the XOFs and is not derivable from a fixed concrete instantiation. -/
+  This field is a random-oracle-style modeling assumption about the XOFs and is not derivable
+  from a fixed concrete instantiation. -/
   keyVector_t0_determined : ∀ s s' : Bytes 32,
     (prims.expandSeed s).1 = (prims.expandSeed s').1 →
     (prims.power2RoundVec (prims.keyVector nttOps s)).1 =

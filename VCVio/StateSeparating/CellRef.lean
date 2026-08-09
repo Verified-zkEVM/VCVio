@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ToMathlib.Data.Heap
-import VCVio.EvalDist.Defs.Instances
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+
+module
+public import ToMathlib.Data.Heap
+public import VCVio.EvalDist.Defs.Instances
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
 
 /-!
 # State-separating cell references
@@ -27,6 +29,8 @@ The file is organized around four small layers:
 * deterministic specializations for `StateT (Heap Ident) Id`;
 * handler-level footprints for `QueryImpl`.
 -/
+
+@[expose] public section
 
 universe u v uι u₀
 

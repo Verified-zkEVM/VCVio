@@ -1,3 +1,5 @@
+module
+
 -- import VCVio
 
 -- /-!
@@ -11,6 +13,8 @@
 -- coercion from `ℕ` to `Fin
 -- n` via taking modulo `n`. This breaks the proofs. Someone should fix this.
 -- -/
+
+@[expose] public section
 
 -- open Mathlib OracleSpec OracleComp AsymmEncAlg
 

@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.QueryTracking.QueryBound
+
+module
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # Query bounds and oracle-spec inclusions
@@ -12,6 +14,8 @@ import VCVio.OracleComp.QueryTracking.QueryBound
 This file contains preservation lemmas for structural query bounds under
 `SubSpec` lifting.
 -/
+
+@[expose] public section
 
 open OracleSpec
 

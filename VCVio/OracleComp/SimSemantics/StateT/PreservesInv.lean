@@ -3,10 +3,12 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.SimSemantics.StateT.Basic
-import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
-import VCVio.EvalDist.Monad.Basic
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # `StateT σ ProbComp` Invariant Theory
@@ -36,6 +38,8 @@ The `WriterT` analogue of this theory lives in
 - `StateT.outputIndependent_after_preservesInv` — non-interference: output-independent
   computation remains so after sequencing with an invariant-preserving computation
 -/
+
+@[expose] public section
 
 noncomputable section
 

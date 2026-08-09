@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.Primitives
-import LatticeCrypto.MLKEM.Concrete.NTT
-import LatticeCrypto.MLKEM.Concrete.Encoding
-import LatticeCrypto.MLKEM.Concrete.CBD
-import Extern.MLKEM.FFI
+
+module
+public import LatticeCrypto.MLKEM.Primitives
+public import LatticeCrypto.MLKEM.Concrete.NTT
+public import LatticeCrypto.MLKEM.Concrete.Encoding
+public import LatticeCrypto.MLKEM.Concrete.CBD
+public import Extern.MLKEM.FFI
 
 /-!
 # Concrete ML-KEM Instance
@@ -17,6 +19,8 @@ SHA-3 / SHAKE primitives to produce fully executable `NTTRingOps`, `Encoding`, a
 instances for ML-KEM.
 -/
 
+@[expose] public section
+
 
 namespace MLKEM.Concrete
 
@@ -24,10 +28,10 @@ open MLKEM
 
 /-! ## Conversion helpers -/
 
-private def vectorToByteArray {n : Nat} (v : Vector UInt8 n) : ByteArray :=
+def vectorToByteArray {n : Nat} (v : Vector UInt8 n) : ByteArray :=
   ByteArray.mk v.toArray
 
-private def byteArrayToVector (ba : ByteArray) (offset : Nat) (n : Nat) : Vector UInt8 n :=
+def byteArrayToVector (ba : ByteArray) (offset : Nat) (n : Nat) : Vector UInt8 n :=
   Vector.ofFn fun ⟨i, _⟩ => ba.get! (offset + i)
 
 /-! ## SampleNTT (FIPS 203 Algorithm 7) — rejection sampling from SHAKE-128 -/
@@ -35,7 +39,7 @@ private def byteArrayToVector (ba : ByteArray) (offset : Nat) (n : Nat) : Vector
 /-- Rejection-sample 256 NTT-domain coefficients from a SHAKE-128 byte stream.
     Each 3-byte group yields up to two candidates `d₁, d₂ ∈ [0, 4096)`;
     a candidate is accepted iff it is `< q = 3329`. -/
-private def rejectionSample (stream : ByteArray) : Array Coeff := Id.run do
+def rejectionSample (stream : ByteArray) : Array Coeff := Id.run do
   let mut acc : Array Coeff := Array.mkEmpty 256
   let numChunks := stream.size / 3
   for chunk in [0:numChunks] do
@@ -53,7 +57,7 @@ private def rejectionSample (stream : ByteArray) : Array Coeff := Id.run do
   return acc
 
 /-- Reject silent zero-padding by requiring a full 256-coefficient output. -/
-private def requireFullRejectionSample (coeffs : Array Coeff) : Array Coeff :=
+def requireFullRejectionSample (coeffs : Array Coeff) : Array Coeff :=
   if _h : coeffs.size = ringDegree then
     coeffs
   else
@@ -75,7 +79,7 @@ def rejectionSampleForTest (stream : ByteArray) : Tq :=
 /-! ## PRF + CBD (FIPS 203 Algorithms 6 + 8) -/
 
 /-- `PRF_η(σ, N) = SHAKE-256(σ ‖ N, 64η)` followed by `CBD_η`. -/
-private def prfCBD (eta : Nat) (sigma : Seed32) (n : Nat) : Rq :=
+def prfCBD (eta : Nat) (sigma : Seed32) (n : Nat) : Rq :=
   let input := vectorToByteArray sigma |>.push n.toUInt8
   let prfOutput := FFI.shake256 input (64 * eta).toUSize
   samplePolyCBD eta prfOutput
@@ -83,12 +87,12 @@ private def prfCBD (eta : Nat) (sigma : Seed32) (n : Nat) : Rq :=
 /-! ## Hash wrappers -/
 
 /-- `G(input) = SHA3-512(input)`, split into two 32-byte halves. -/
-private def hashG (input : ByteArray) : Seed32 × Seed32 :=
+def hashG (input : ByteArray) : Seed32 × Seed32 :=
   let hash := FFI.sha3_512 input
   (byteArrayToVector hash 0 32, byteArrayToVector hash 32 32)
 
 /-- `H(input) = SHA3-256(input)` as a 32-byte vector. -/
-private def hashH (input : ByteArray) : Vector UInt8 32 :=
+def hashH (input : ByteArray) : Vector UInt8 32 :=
   byteArrayToVector (FFI.sha3_256 input) 0 32
 
 /-! ## Concrete `Primitives` instance -/
@@ -141,14 +145,14 @@ theorem mlkem1024EncodingLaws : mlkem1024Encoding.Laws :=
 
 /-- Concrete primitives for ML-KEM-512. -/
 def mlkem512Primitives : Primitives mlkem512 mlkem512Encoding :=
-  concretePrimitives mlkem512 mlkem512Encoding rfl rfl rfl
+  concretePrimitives mlkem512 mlkem512Encoding (by rfl) (by rfl) (by rfl)
 
 /-- Concrete primitives for ML-KEM-768. -/
 def mlkem768Primitives : Primitives mlkem768 mlkem768Encoding :=
-  concretePrimitives mlkem768 mlkem768Encoding rfl rfl rfl
+  concretePrimitives mlkem768 mlkem768Encoding (by rfl) (by rfl) (by rfl)
 
 /-- Concrete primitives for ML-KEM-1024. -/
 def mlkem1024Primitives : Primitives mlkem1024 mlkem1024Encoding :=
-  concretePrimitives mlkem1024 mlkem1024Encoding rfl rfl rfl
+  concretePrimitives mlkem1024 mlkem1024Encoding (by rfl) (by rfl) (by rfl)
 
 end MLKEM.Concrete

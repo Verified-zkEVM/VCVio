@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Relational.SimulateQ
-import VCVio.StateSeparating.Advantage
+module
+
+public import VCVio.ProgramLogic.Relational.SimulateQ
+public import VCVio.StateSeparating.Advantage
 
 /-!
 # State-separating handlers: identical-until-bad
@@ -13,6 +15,8 @@ import VCVio.StateSeparating.Advantage
 Identical-until-bad wrappers for `QueryImpl.Stateful` handlers whose state is
 of the form `σ × Bool`, with the Boolean component acting as the bad flag.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp ProbComp
 open OracleComp.ProgramLogic.Relational

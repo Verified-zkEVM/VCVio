@@ -3,8 +3,10 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Multi-Target Hash Assumptions (SM-PRE, SM-TCR)
@@ -26,6 +28,8 @@ functions so that a (seed-fixed) `TweakableHash` can be plugged in.
 - Bernstein et al., SPHINCS+ (the multi-target preimage / target-collision treatment)
 - Hülsing, Rijneveld, Song, Schwabe, "Mitigating Multi-Target Attacks in Hash-Based Signatures"
 -/
+
+@[expose] public section
 
 open OracleComp ENNReal
 

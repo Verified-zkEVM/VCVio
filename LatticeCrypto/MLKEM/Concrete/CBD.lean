@@ -3,14 +3,18 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.Arithmetic
-import VCVio.OracleComp.ProbComp
+
+module
+public import LatticeCrypto.MLKEM.Arithmetic
+public import VCVio.OracleComp.ProbComp
 
 /-!
 # Concrete CBD Sampling for ML-KEM
 
 Pure-Lean executable implementation of FIPS 203 Algorithm 8 (SamplePolyCBD_η).
 -/
+
+public section
 
 
 namespace MLKEM.Concrete

@@ -3,14 +3,18 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.Prelude
-import ToMathlib.Control.OptionT
+
+module
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.Prelude
+public import ToMathlib.Control.OptionT
 
 /-!
 # Simulation Semantics for Oracles in a Computation
 
 -/
+
+@[expose] public section
 
 open OracleComp Prod
 

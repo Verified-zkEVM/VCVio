@@ -3,7 +3,9 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.EvalDist.Defs.Basic
+
+module
+public import VCVio.EvalDist.Defs.Basic
 
 /-!
 # Evaluation Semantics for ReaderT
@@ -32,6 +34,8 @@ For cryptographic games with random oracles, the typical pattern is:
 3. Compose with the table distribution to get overall game probability
 
 -/
+
+@[expose] public section
 
 universe u v
 

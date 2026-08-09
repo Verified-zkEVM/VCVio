@@ -3,10 +3,12 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.ProbComp
-import VCVio.EvalDist.Bool
+
+module
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Bool
 
 /-!
 # Discrete Logarithm Assumptions (DLog / CDH / DDH)
@@ -36,6 +38,8 @@ We model a cyclic group as:
 - **CDH**: given `(g, a • g, b • g)`, find `(a * b) • g`
 - **DDH**: distinguish `(g, a • g, b • g, (a * b) • g)` from `(g, a • g, b • g, c • g)`
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal

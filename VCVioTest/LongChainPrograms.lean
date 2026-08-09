@@ -3,7 +3,9 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio
+
+module
+public import VCVio
 
 /-!
 # Long-chain probability tactic benchmark
@@ -33,6 +35,8 @@ Conventions (as in the sibling files):
   with a `target(...)` note.
 * **Only stable tactics.** No example hangs or explodes.
 -/
+
+@[expose] public section
 
 open OracleComp ProbComp ENNReal
 

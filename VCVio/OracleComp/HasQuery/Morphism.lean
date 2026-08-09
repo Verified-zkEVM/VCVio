@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.OracleComp.HasQuery.Basic
-import VCVio.OracleComp.ProbComp
-import PolyFun.Control.Monad.Hom
+module
+
+public import VCVio.OracleComp.HasQuery.Basic
+public import VCVio.OracleComp.ProbComp
+public import PolyFun.Control.Monad.Hom
 
 /-!
 # Morphisms of `HasQuery` Monads
@@ -19,6 +21,8 @@ instead.
 Use this module for proofs that a monad morphism preserves oracle queries, or
 that it commutes with the canonical lift of public randomness.
 -/
+
+@[expose] public section
 
 universe u v w x
 

@@ -3,8 +3,10 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Scheme
-import HashSig.SLHDSA.Concrete.Sha2
+
+module
+public import HashSig.SLHDSA.Scheme
+public import HashSig.SLHDSA.Concrete.Sha2
 
 /-!
 # Concrete SLH-DSA-SHA2-128-24 instantiation
@@ -29,6 +31,8 @@ FORS trees — ~`10^9` hashes); `verify` is ~`400` hashes and is the executable 
 
 - NIST FIPS 205, §11.2.1 (SHA-2 category-1 instantiation), Fig 17 (signature layout)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.Concrete

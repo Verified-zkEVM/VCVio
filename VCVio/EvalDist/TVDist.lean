@@ -3,10 +3,12 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
-import VCVio.EvalDist.Defs.Basic
-import VCVio.EvalDist.Monad.Basic
-import VCVio.EvalDist.Defs.NeverFails
+
+module
+public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
+public import VCVio.EvalDist.Defs.Basic
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.EvalDist.Defs.NeverFails
 
 /-!
 # Total Variation Distance for SPMFs and Monadic Computations
@@ -17,6 +19,8 @@ This file extends the TV distance from `PMF` (defined in
 1. `SPMF.tvDist` — on sub-probability mass functions (via `toPMF`)
 2. `tvDist` — on any monad with `MonadLiftT m SPMF` (via `evalDist`)
 -/
+
+@[expose] public section
 
 noncomputable section
 

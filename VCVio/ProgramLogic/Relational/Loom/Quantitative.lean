@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import ToMathlib.Control.Monad.RelWP
-import VCVio.ProgramLogic.Relational.Quantitative
-import VCVio.ProgramLogic.Unary.Loom.Quantitative
+module
+
+public import ToMathlib.Control.Monad.RelWP
+public import VCVio.ProgramLogic.Relational.Quantitative
+public import VCVio.ProgramLogic.Unary.Loom.Quantitative
 
 /-!
 # Quantitative `RelWP` carrier for `OracleComp` (Loom2-style default)
@@ -46,6 +48,8 @@ The `Lean.Order.{PartialOrder, CompleteLattice}` adapters for `ℝ≥0∞`
 are shipped by `VCVio/ProgramLogic/Unary/Loom/Quantitative.lean` and
 re-used here unchanged. We do not redefine them.
 -/
+
+@[expose] public section
 
 open ENNReal Std.Do' OracleComp.ProgramLogic.Loom
 
