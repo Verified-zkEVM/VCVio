@@ -187,6 +187,14 @@ jobs:
         run: |
           bash scripts/build_timing_report.sh run test_path "$BUILD_TIMING_RESULTS" -- \
             bash -eo pipefail -c 'lake env lean VCVioTest/Smoke.lean'
+      # Report-only during the initial soak; flip to enforcing by dropping the
+      # trailing `|| echo ...` once the baseline has survived a few PRs.
+      # Sweeps the non-test libraries; Interop (the declared TCB) is bounded by
+      # its import-isolation gate instead.
+      - name: Axiom sweep (report-only)
+        run: |
+          lake exe axiomsweep --check || \
+            echo "::warning::axiomsweep found new axiom/sorry taint (report-only during soak)"
       - name: Check round-by-round extraction regression
         run: lake env lean VCVioTest/RoundByRound/OneRound.lean
       - name: Check Merkle batch-opening canaries
