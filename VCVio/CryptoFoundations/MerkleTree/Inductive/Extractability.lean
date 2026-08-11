@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Bolton Bailey
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
-import VCVio.OracleComp.QueryTracking.Birthday
-import ToMathlib.Data.IndexedBinaryTree.Lemmas
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
+public import VCVio.OracleComp.QueryTracking.Birthday
+public import ToMathlib.Data.IndexedBinaryTree.Lemmas
 
 /-!
 # Inductive Merkle Tree Extractability
@@ -59,6 +61,8 @@ A future improvement might be to re-structure the proof to recover the tighter b
 * [Building Cryptographic Proofs from Hash Functions by Chiesa and Yogev](https://snargsbook.org/), Lemma 18.5.1.
 
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 
@@ -300,7 +304,7 @@ private lemma singleHash_withQueryLog (a b : α) :
     (singleHash (m := OracleComp (spec α)) a b).withQueryLog =
       (liftM ((spec α).query (a, b)) : OracleComp (spec α) α) >>=
         fun u => pure (u, ([⟨(a, b), u⟩] : (spec α).QueryLog)) := by
-  simp [singleHash, bind_pure, OracleComp.withQueryLog_query]
+  simp [singleHash, OracleComp.withQueryLog_query]
 
 private lemma getPutativeRoot_step_withQueryLog_decompose
     (prog : OracleComp (spec α) α) (mkPair : α → α × α)
@@ -551,7 +555,7 @@ private lemma probOutput_singleHash_eq_inv_card
                   OracleComp (spec α) α)] =
       (Fintype.card α : ENNReal)⁻¹ := by
   rw [show (singleHash (m := OracleComp (spec α)) a b : OracleComp (spec α) α) =
-        (liftM ((spec α).query (a, b)) : OracleComp (spec α) α) from bind_pure _,
+        (liftM ((spec α).query (a, b)) : OracleComp (spec α) α) by simp [singleHash],
     probOutput_query (spec := spec α) (a, b) root]
 
 /--

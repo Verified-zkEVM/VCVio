@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 
+module
+
 -- TODO minimize imports
-import Mathlib.Tactic.Use
-import Mathlib.Data.Set.Basic
+public import Mathlib.Tactic.Use
+public import Mathlib.Data.Set.Basic
 
 
 /-!
@@ -39,6 +41,8 @@ that decompose the trees as much as possible.
   - get? functions
 
 -/
+
+@[expose] public section
 
 namespace BinaryTree
 
@@ -450,6 +454,35 @@ theorem FullData.get_internal_ofRight {α} {s_left s_right : Skeleton}
   rfl
 
 end get
+
+section anySelected
+
+/-- Does a boolean selector select any leaf of the tree? -/
+@[simp, grind]
+def LeafData.anySelected {s : Skeleton} : LeafData Bool s → Bool
+  | .leaf b => b
+  | .internal l r => l.anySelected || r.anySelected
+
+/-- A selector selects some leaf as soon as it selects a particular one: `get idx = true`
+implies `anySelected = true`. -/
+theorem LeafData.anySelected_of_get {s : Skeleton} {sel : LeafData Bool s}
+    (idx : SkeletonLeafIndex s) (h : sel.get idx = true) : sel.anySelected = true := by
+  induction idx with
+  | ofLeaf =>
+    cases sel with
+    | leaf b => simpa using h
+  | ofLeft idxL ih =>
+    cases sel with
+    | internal l r =>
+      simp only [LeafData.anySelected, Bool.or_eq_true]
+      exact Or.inl (ih (by simpa using h))
+  | ofRight idxR ih =>
+    cases sel with
+    | internal l r =>
+      simp only [LeafData.anySelected, Bool.or_eq_true]
+      exact Or.inr (ih (by simpa using h))
+
+end anySelected
 
 section forget
 

@@ -3,7 +3,9 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+
+module
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 
 /-!
 # Query Implementations with Reader Monads
@@ -13,7 +15,9 @@ This file gives lemmas about `QueryImpl spec m` when `m` is something like `Read
 TODO: should generalize things to `MonadReader` once laws for it exist.
 -/
 
-universe u v w
+@[expose] public section
+
+universe u v w x
 
 open OracleSpec
 
@@ -22,9 +26,9 @@ namespace QueryImpl
 /-- Given implementations for oracles in `spec₁` and `spec₂` in terms of reader monads for
 two different contexts `ρ₁` and `ρ₂`, implement the combined set `spec₁ + spec₂` in terms
 of a combined `ρ₁ × ρ₂` state. The binary analogue of `QueryImpl.sigmaReaderT`. -/
-def addReaderT {ι₁ ι₂ : Type _}
-    {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {m : Type _ → Type _} {ρ₁ ρ₂ : Type _}
+def addReaderT {ι₁ : Type u} {ι₂ : Type v}
+    {spec₁ : OracleSpec.{u, w} ι₁} {spec₂ : OracleSpec.{v, w} ι₂}
+    {m : Type w → Type x} {ρ₁ ρ₂ : Type w}
     (impl₁ : QueryImpl spec₁ (ReaderT ρ₁ m))
     (impl₂ : QueryImpl spec₂ (ReaderT ρ₂ m)) :
     QueryImpl (spec₁ + spec₂) (ReaderT (ρ₁ × ρ₂) m)
@@ -44,8 +48,8 @@ def sigmaReaderT {τ : Type} {ι : τ → Type _}
 
 The outer context is the first component of the product; the inner/base context is the
 second. This is the reader-transformer analogue of `flattenStateT` and `flattenWriterT`. -/
-def flattenReaderT {ι : Type _} {spec : OracleSpec ι}
-    {m : Type _ → Type _} {ρ₁ ρ₂ : Type _}
+def flattenReaderT {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    {m : Type v → Type w} {ρ₁ ρ₂ : Type v}
     (impl : QueryImpl spec (ReaderT ρ₁ (ReaderT ρ₂ m))) :
     QueryImpl spec (ReaderT (ρ₁ × ρ₂) m) := fun t =>
   ReaderT.mk fun (r₁, r₂) => ((impl t).run r₁).run r₂

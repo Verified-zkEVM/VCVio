@@ -3,9 +3,11 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import VCVio.OracleComp.QueryTracking.Collision
-import ToMathlib.Combinatorics.FinPairs
-import ToMathlib.Data.ENNReal.Gauss
+
+module
+public import VCVio.OracleComp.QueryTracking.Collision
+public import ToMathlib.Combinatorics.FinPairs
+public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # ROM Birthday Bound
@@ -14,6 +16,8 @@ Per-pair collision bounds and union bound birthday argument for random oracle
 collision probability. Covers both log-based and cache-based collision bounds,
 with per-index corollaries.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal Finset
 
@@ -335,7 +339,7 @@ private lemma run_simulateQ_cachingOracle_query_bind_of_miss {α : Type} {t : sp
       (liftM (query t) >>= fun u => pure (u, cache₀.cacheQuery t u) : OracleComp spec _) := by
     simp only [cachingOracle.apply_eq, liftM, MonadLiftT.monadLift, MonadLift.monadLift,
       StateT.run_bind, StateT.run_get, pure_bind, ht_none]
-    change (StateT.lift (PFunctor.FreeM.lift (query t)) cache₀ >>= _) = _
+    change (StateT.lift (PFunctor.FreeM.lift (P := spec.toPFunctor) t) cache₀ >>= _) = _
     simp only [StateT.lift, monad_norm, modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet, StateT.run]; rfl
   rw [hstep]; simp [monad_norm]

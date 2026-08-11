@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.DirectCoupling.Compose
-import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
+module
+
+public import Examples.PRFTagReader.DirectCoupling.Compose
+public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
 
 /-!
 # PRF Tag/Reader Protocol — Multiple-Bad Collision Bound
@@ -20,6 +22,8 @@ random-function gap of the headline reduction:
   the instrumented multiple-bad handler, and `unlinkPRFIdeal_gap_le_unlinkBad` packages the
   middle hop of the headline reduction.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

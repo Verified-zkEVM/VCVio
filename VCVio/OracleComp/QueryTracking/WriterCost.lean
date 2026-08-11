@@ -4,15 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.OracleComp.QueryTracking.CountingOracle
-import VCVio.OracleComp.ProbComp
-import VCVio.EvalDist.Monad.Map
-import ToMathlib.Control.WriterT
-import ToMathlib.General
-import ToMathlib.Probability.ProbabilityMassFunction.TailSums
-import Mathlib.Algebra.Order.Monoid.Defs
-import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
+module
+
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Monad.Map
+public import ToMathlib.Control.WriterT
+public import ToMathlib.General
+public import ToMathlib.Probability.ProbabilityMassFunction.TailSums
+public import Mathlib.Algebra.Order.Monoid.Defs
+public import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
 
 /-!
 # Writer Cost Accounting
@@ -20,6 +22,8 @@ import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
 This file collects reusable `AddWriterT` facts for pathwise and expected cost reasoning.
 It also equips `QueryImpl` with additive writer-cost instrumentation.
 -/
+
+@[expose] public section
 
 open OracleSpec
 open scoped BigOperators
@@ -198,7 +202,7 @@ of its cost marginal.
 
 This expectation is computed over the base monad's subdistribution semantics on `oa.costs`. In
 particular, if the underlying computation can fail, the missing mass contributes `0`, exactly as
-for other `wp`-style expectations in VCV-io. -/
+for other `wp`-style expectations in VCVio. -/
 noncomputable def expectedCost
     (oa : AddWriterT ω m α) (val : ω → ENNReal) : ENNReal :=
   ∑' w : ω, Pr[= w | oa.costs] * val w

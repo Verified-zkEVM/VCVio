@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.PRF
-import VCVio.CryptoFoundations.PRG
-import VCVio.EvalDist.TVDist
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
+
+module
+public import VCVio.CryptoFoundations.PRF
+public import VCVio.CryptoFoundations.PRG
+public import VCVio.EvalDist.TVDist
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 
 /-!
 # PRG from PRF
@@ -23,6 +25,8 @@ The proof outline follows the standard switching argument:
    identical to the ideal PRG world of independent uniform outputs.
 3. Bound the remaining gap by the probability of a state collision.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal PRFScheme PRGScheme
 open List (Vector)
@@ -109,7 +113,7 @@ private lemma simulateQ_prfReal_oracleOutputs (k : K) (n : ℕ) (s : S) :
   | succ n ih =>
     simp only [oracleOutputs, streamOutputs, simulateQ_bind, simulateQ_query,
       OracleQuery.cont_query, id_map, OracleQuery.input_query]
-    show prfRealQueryImpl prf k (Sum.inr s) >>= _ = _
+    change prfRealQueryImpl prf k (Sum.inr s) >>= _ = _
     simp only [prfRealQueryImpl, QueryImpl.add_apply_inr]
     cases h : prf.eval k s with
     | mk s' out =>
@@ -473,6 +477,9 @@ lemma tvDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
           𝒟[($ᵗ (List.Vector O (N + 1)))] =
             𝒟[(do let p ← $ᵗ (S × O); (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N)))] := by
         rw [evalDist_uniformSample_vector_succ_pair (S := S) N]
+        congr 1
+        refine bind_congr fun p => ?_
+        rw [map_eq_bind_pure_comp]
         rfl
       -- Rewrite the goal as a TV distance between two binds over the shared pair `p : S × O`.
       rw [hLHS]

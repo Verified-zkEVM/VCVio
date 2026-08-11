@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.Internal
-import VCVio.CryptoFoundations.KeyEncapMech
+
+module
+public import LatticeCrypto.MLKEM.Internal
+public import VCVio.CryptoFoundations.KeyEncapMech
 
 /-!
 # ML-KEM Top-Level KEM
@@ -12,6 +14,8 @@ import VCVio.CryptoFoundations.KeyEncapMech
 This file packages the probabilistic top-level algorithms from FIPS 203 Section 7 on top of the
 deterministic internal algorithms from `Examples.MLKEM.Internal`.
 -/
+
+@[expose] public section
 
 
 namespace MLKEM

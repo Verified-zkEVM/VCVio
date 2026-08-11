@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Concrete.Instance
+
+module
+public import HashSig.SLHDSA.Concrete.Instance
 
 /-!
 # SLH-DSA-SHA2-128-24 known-answer regression test
@@ -19,6 +21,8 @@ A deterministic reference vector produced by the SPHINCs- C reference
 HMAC, `H_msg`, leaf-index split, `F`/`H`/`T_ℓ`, the 22-byte `ADRSc` layout, FORS / WOTS+ / XMSS
 reconstruction, and the FIPS 205 signature wire format). Run with `lake exe slhdsa_kat`.
 -/
+
+public section
 
 
 namespace SLHDSA.Concrete.KAT

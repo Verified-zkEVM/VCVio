@@ -3,7 +3,10 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import VCVio.CryptoFoundations.GPVHashAndSign
+
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign
 
 /-!
 # GPV #188 EUF-CMA: hypothesis-consistency witness
@@ -30,6 +33,8 @@ and then forges at that same point, so its forgery key is constant and always ca
 * `gpv188_hyps_inhabited` — all five side conditions hold for the single instance
   `(bijPSF, hr, adv)`, in exactly the shape the headline bounds consume them.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 

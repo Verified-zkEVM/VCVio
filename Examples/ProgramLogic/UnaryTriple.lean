@@ -4,14 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Unary
-import VCVio.OracleComp.Constructions.Replicate
+module
+
+public import VCVio.ProgramLogic.Tactics.Unary
+public import VCVio.OracleComp.Constructions.Replicate
 
 /-!
 # Unary Triple / VCGen Examples
 
 This file validates unary `Triple` stepping and structural `vcgen` decomposition.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open Lean.Order

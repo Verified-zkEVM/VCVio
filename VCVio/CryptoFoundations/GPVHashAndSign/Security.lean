@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.EmbedIndex
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.EmbedIndex
 
 /-! # GPV Hash-and-Sign: Security Bounds
 
@@ -12,6 +14,8 @@ The trap-count to fresh-signature projections, the reservoir extraction of the
 programmed-preimage branch, the forgery dichotomy, and the headline EUF-CMA
 bounds.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
@@ -103,6 +107,7 @@ lemma progGameRunImplCombinedTrapCount_freshSig_proj (pk : PK) (sk : SK)
               -- RO miss: the trapdoor sample `x` is recorded write-only in the table (which the
               -- projection drops), so the projected output is `x`-independent and `x` drops out.
               simp only [map_bind, map_pure, Prod.map, id_eq]
+              rw [map_eq_bind_pure_comp]
               refine evalDist_bind_congr' _ (fun v => ?_)
               rw [OracleComp.DeferredSampling.evalDist_bind_const_neverFails
                 (psf.trapdoorSample pk sk v) (hNF v).probFailure_eq_zero _]

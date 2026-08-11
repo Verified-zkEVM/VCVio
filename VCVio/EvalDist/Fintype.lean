@@ -3,7 +3,9 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.EvalDist.Monad.Basic
+
+module
+public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # Lemmas for Probability Over Finite Spaces
@@ -12,6 +14,8 @@ This file houses lemmas about computations with `MonadLiftT m SPMF` semantics wh
 `mx : m α` is defined via a binding/mapping operation over a finite type.
 In particular it provides `Finset.sum` versions of many `tsum` related probability lemmas.
 -/
+
+@[expose] public section
 
 universe u v w
 

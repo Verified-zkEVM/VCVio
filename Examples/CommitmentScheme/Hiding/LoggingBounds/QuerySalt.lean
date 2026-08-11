@@ -3,7 +3,9 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import Examples.CommitmentScheme.Hiding.LoggingBounds.Average
+
+module
+public import Examples.CommitmentScheme.Hiding.LoggingBounds.Average
 
 /-!
 # Query-Salt Logging Bounds
@@ -12,6 +14,8 @@ Bounds on the probability that the adversary's salt-specific query count
 exceeds a threshold, obtained via counting-oracle projections and
 indicator function analysis. These feed into the averaged hiding bound.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 
@@ -563,7 +567,7 @@ lemma wp_querySaltIndicator_prepend_eq_one
       (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
         OracleComp.ProgramLogic.propInd
           (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) = 1 := by
-  rw [simulateQ_map]
+  rw [simulateQ_map, StateT.run_map]
   change OracleComp.ProgramLogic.wp
       (((fun zz : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
           ((zz.1.1,
@@ -612,7 +616,7 @@ lemma wp_querySaltIndicator_prepend_eq_of_ne
       (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
         OracleComp.ProgramLogic.propInd
           (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) := by
-  rw [simulateQ_map]
+  rw [simulateQ_map, StateT.run_map]
   change OracleComp.ProgramLogic.wp
       (((fun zz : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
           ((zz.1.1,
@@ -784,7 +788,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
               simp only [cachingOracle.apply_eq, liftM, MonadLiftT.monadLift, MonadLift.monadLift,
                 StateT.run_bind, StateT.run_get, pure_bind, hcache_none]
               change (StateT.lift
-                  (PFunctor.FreeM.lift ((CMOracle M S C).query t))
+                  (PFunctor.FreeM.lift (P := (CMOracle M S C).toPFunctor) t)
                   (cache₀.cacheQuery (m, s) cm) >>= _) = _
               simp only [StateT.lift, modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
                 StateT.modifyGet, StateT.run, monad_norm]
@@ -799,7 +803,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
               simp only [cachingOracle.apply_eq, liftM, MonadLiftT.monadLift, MonadLift.monadLift,
                 StateT.run_bind, StateT.run_get, pure_bind, ht]
               change (StateT.lift
-                (PFunctor.FreeM.lift ((CMOracle M S C).query t))
+                (PFunctor.FreeM.lift (P := (CMOracle M S C).toPFunctor) t)
                 cache₀ >>= _) = _
               simp only [StateT.lift, monad_norm,
                 modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,

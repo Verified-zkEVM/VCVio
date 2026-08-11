@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.Factorization
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.Factorization
 
 /-! # GPV Hash-and-Sign: Game Runs and Tape Handlers
 
@@ -13,6 +15,8 @@ runtime indirection, dropping the preimage-record component, the tape-consuming
 implementations, the flag-instrumented tape handlers carrying the
 identical-until-bad collision flag, and the per-query tape-to-unified bridges.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

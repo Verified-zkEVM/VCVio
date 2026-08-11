@@ -1,95 +1,62 @@
-  name: PR Review
+name: PR Review
 
-  on:
-    pull_request:
-      types: [opened]
-    issue_comment:
-      types: [created]
+# Review runs ONLY on demand, via a `/review` comment from a repo member. It is
+# deliberately NOT run on PR open: the review path builds and elaborates the
+# PR's Lean code with the OpenRouter secret and a write token in scope, so until
+# the two-stage secret-free split (S2) lands, running it is safe only for code a
+# trusted maintainer has chosen to review. See the review action README.
+on:
+  issue_comment:
+    types: [created]
 
-  concurrency:
-    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
-    cancel-in-progress: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
 
-  jobs:
-    review:
-      if: >-
-        (
-          github.event_name == 'pull_request' &&
-          (
-            github.event.pull_request.author_association == 'OWNER' ||
-            github.event.pull_request.author_association == 'MEMBER' ||
-            github.event.pull_request.author_association == 'COLLABORATOR' ||
-            github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-          )
-        ) ||
-        (
-          github.event_name == 'issue_comment' &&
-          github.event.issue.pull_request &&
-          startsWith(github.event.comment.body, '/review') &&
-          (
-            github.event.comment.author_association == 'OWNER' ||
-            github.event.comment.author_association == 'MEMBER' ||
-            github.event.comment.author_association == 'COLLABORATOR'
-          )
-        )
-      runs-on: ubuntu-latest
-      timeout-minutes: 90
-      permissions:
-        contents: read
-        pull-requests: write
-      steps:
-        - name: Extract arguments from comment
-          id: get_args
-          if: github.event_name == 'issue_comment'
-          env:
-            COMMENT_BODY: ${{ github.event.comment.body }}
-          run: |
-            EOF=$(openssl rand -hex 8)
+jobs:
+  review:
+    # The COMMENT author (not the PR author) is the trust boundary.
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/review') &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # Everything after `/review` is freeform focus text; URLs and existing
+      # repo paths it mentions become review context automatically.
+      - name: Extract instructions from /review comment
+        id: get_args
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          EOF=$(openssl rand -hex 8)
+          {
+            echo "instructions<<$EOF"
+            printf '%s\n' "$COMMENT_BODY" | sed -E '1s|^/review[[:space:]]*||'
+            echo "$EOF"
+          } >> "$GITHUB_OUTPUT"
+        shell: bash
 
-            awk -v eof="$EOF" -v gh_out="$GITHUB_OUTPUT" '
-              BEGIN {
-                ext = ""
-                repo = ""
-                com = ""
-                section = ""
-              }
-              /^External:/ { section="ext"; next }
-              /^Internal:/ { section="repo"; next }
-              /^Comments:/ { section="com"; next }
-              {
-                gsub(/\r/, "", $0);
-                gsub(/^[ \t]+|[ \t]+$/, "", $0);
-                if ($0 == "" || $0 == "/review") { next }
-
-                if (section == "ext") {
-                  sub(/^- +/, "");
-                  if (ext != "") { ext = ext "," $0 } else { ext = $0 }
-                }
-                else if (section == "repo") {
-                  sub(/^- +/, "");
-                  if (repo != "") { repo = repo "," $0 } else { repo = $0 }
-                }
-                else if (section == "com") {
-                  if (com != "") { com = com "\n" $0 } else { com = $0 }
-                }
-              }
-              END {
-                printf "external_refs=%s\n", ext >> gh_out
-                printf "repo_context_refs=%s\n", repo >> gh_out
-                printf "additional_comments<<%s\n", eof >> gh_out
-                printf "%s\n", com >> gh_out
-                printf "%s\n", eof >> gh_out
-              }
-            ' <<< "$COMMENT_BODY"
-          shell: bash
-
-        - uses: alexanderlhicks/lean-review-workflow@main
-          with:
-            github_token: ${{ secrets.GITHUB_TOKEN }}
-            api_key: ${{ secrets.GEMINI_API_KEY }}
-            provider: gemini
-            model: gemini-3.1-pro-preview
-            pr_number: ${{ github.event.issue.number || github.event.pull_request.number }}
-            external_refs: "${{ steps.get_args.outputs.external_refs }}"
-            repo_context_refs: "${{ steps.get_args.outputs.repo_context_refs }}"
-            additional_comments: "${{ steps.get_args.outputs.additional_comments }}"
+      - uses: alexanderlhicks/lean4repo-utils/review@0.3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          api_key: ${{ secrets.OPENROUTER_KEY }}
+          pr_number: ${{ github.event.issue.number }}
+          # URLs and repo paths mentioned in the /review comment are extracted
+          # into external/spec/repo context automatically.
+          additional_comments: "${{ steps.get_args.outputs.instructions }}"
+          # Ground the review in this repo's curated knowledge base (spec/KB docs).
+          spec_refs: 'REFERENCES.md'
+          # Everything else uses the action defaults (deep agents on z-ai/glm-5.2,
+          # verification on deepseek/deepseek-v4-pro, lean_tools + verify_findings
+          # on). See the review action README to override models or tune
+          # spec_refs / escape_hatch_allowlist / dependent_impact_max.

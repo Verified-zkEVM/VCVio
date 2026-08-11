@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Ring.VectorBackend
-import Mathlib.RingTheory.Polynomial.Basic
+
+module
+public import LatticeCrypto.Ring.VectorBackend
+public import Mathlib.RingTheory.Polynomial.Basic
 
 /-!
 # Schoolbook Negacyclic Multiplication Soundness
@@ -19,6 +21,8 @@ quotient ring `R[X] / (X^n + 1)`. The proof decomposes into:
 4. **Assembly**: connecting the above to the `NegacyclicRingSemantics` obligation.
 -/
 
+@[expose] public section
+
 open scoped BigOperators
 open Polynomial
 
@@ -26,10 +30,10 @@ namespace LatticeCrypto
 
 variable {R : Type*} [CommRing R] {n : Nat}
 
-/-- Private alias for the canonical quotient map onto `R[X] / (X^n + 1)`. Reducible
+/-- Canonical alias for the quotient map onto `R[X] / (X^n + 1)`. Reducible
 so that proofs treat `mkQ R n p` and `Ideal.Quotient.mk (Ideal.span …) p` as the same
 expression, while keeping local theorem statements compact. -/
-private noncomputable abbrev mkQ (R : Type*) [CommRing R] (n : Nat) :
+noncomputable abbrev mkQ (R : Type*) [CommRing R] (n : Nat) :
     Polynomial R →+* NegacyclicQuotient R n :=
   Ideal.Quotient.mk _
 
@@ -231,7 +235,7 @@ noncomputable def vectorNegacyclicSemantics (Coeff : Type*) [CommRing Coeff]
     unfold NegacyclicQuotient.ofBackend NegacyclicQuotient.ofPolynomial PolyBackend.toPolynomial
     simp [vectorBackend_coeff, Finset.sum_const_zero, map_zero]
     rfl
-  one_sound := vectorNegacyclicSemantics_one_sound Coeff hn
+  one_sound := by exact vectorNegacyclicSemantics_one_sound Coeff hn
   add_sound f g := by
     have hpoly : (vectorBackend Coeff n).toPolynomial ((vectorNegacyclicRing Coeff n).add f g) =
         (vectorBackend Coeff n).toPolynomial f + (vectorBackend Coeff n).toPolynomial g := by

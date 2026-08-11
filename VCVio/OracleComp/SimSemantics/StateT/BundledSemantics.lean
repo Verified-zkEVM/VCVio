@@ -3,12 +3,14 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.StateT.Basic
-import VCVio.EvalDist.Defs.Semantics
-import ToMathlib.Control.StateT
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.EvalDist.Defs.Semantics
+public import ToMathlib.Control.StateT
 
 /-!
 # Bundled Subprobability Semantics for Oracle Simulations
@@ -21,6 +23,8 @@ the crypto constructions in this repo:
 3. the final semantics is obtained by running the hidden state from a fixed initial cache and then
    observing the resulting `ProbComp` as an `SPMF`
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 
@@ -69,7 +73,11 @@ lemma withStateOracle_evalDist_bind_pure
     (hashImpl : QueryImpl hashSpec (StateT σ ProbComp)) (s : σ)
     {α β : Type} (mx : OracleComp (unifSpec + hashSpec) α) (f : α → β) :
     (SPMFSemantics.withStateOracle hashImpl s).evalDist (mx >>= fun x => pure (f x)) =
-      f <$> (SPMFSemantics.withStateOracle hashImpl s).evalDist mx :=
-  withStateOracle_evalDist_map hashImpl s f mx
+      f <$> (SPMFSemantics.withStateOracle hashImpl s).evalDist mx := by
+  calc
+    _ = (SPMFSemantics.withStateOracle hashImpl s).evalDist (f <$> mx) := by
+      rw [map_eq_bind_pure_comp]
+      rfl
+    _ = _ := withStateOracle_evalDist_map hashImpl s f mx
 
 end SPMFSemantics

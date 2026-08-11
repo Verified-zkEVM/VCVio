@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import PolyFun.Control.Monad.Algebra
-import VCVio.EvalDist.Monad.Basic
-import VCVio.OracleComp.EvalDist
+module
+
+public import PolyFun.Control.Monad.Algebra
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.OracleComp.EvalDist
 
 /-!
 # Qualitative `Prop`-valued Hoare triples for `OracleComp`
@@ -24,6 +26,8 @@ in `VCVio/ProgramLogic/Unary/HoareTriple.lean`. Together they let
 `MAlgRelOrdered.Anchored` (in `ToMathlib/Control/Monad/RelationalAlgebra.lean`) state
 its anchoring axioms uniformly across the qualitative and quantitative settings.
 -/
+
+@[expose] public section
 
 universe u
 

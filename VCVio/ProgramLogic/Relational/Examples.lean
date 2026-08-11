@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Relational
+module
+
+public import VCVio.ProgramLogic.Tactics.Relational
 
 /-!
 # Relational program-logic examples
@@ -13,6 +15,8 @@ This file gives small compositionality examples for:
 - heterogeneous transformer stacks (`StateT` vs `OptionT`/`ExceptT`), and
 - the `OracleComp` relational API (`RelTriple`).
 -/
+
+@[expose] public section
 
 universe u v₁ v₂
 

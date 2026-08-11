@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import Batteries.Control.OptionT
+
+module
+public import VCVio.OracleComp.EvalDist
+public import Batteries.Control.OptionT
 
 /-!
 # Computations with Uniform Selection Oracles
@@ -29,6 +31,8 @@ useful lemmas out of the box, in particular when using subtypes.
 
 TODO: Some lemmas here don't exist at the `PMF`/`SPMF` levels.
 -/
+
+@[expose] public section
 
 
 open OracleComp BigOperators ENNReal
@@ -90,11 +94,11 @@ Allows inductive definitions on computations by considering the two cases:
 See `oracleComp_emptySpec_equiv` for an example of using this in a proof.
 If the final result needs to be a `Type` and not a `Prop`, see `OracleComp.construct`. -/
 @[elab_as_elim]
-protected def inductionOn {α} {C : ProbComp α → Prop}
+protected theorem inductionOn {α} {C : ProbComp α → Prop}
     (pure : (a : α) → C (pure a))
     (query_bind : (n : ℕ) → (mx : Fin (n + 1) → ProbComp α) → (∀ m, C (mx m)) → C ($[0..n] >>= mx))
     (oa : ProbComp α) : C oa :=
-  PFunctor.FreeM.inductionOn pure query_bind oa
+  PFunctor.FreeM.induction pure query_bind oa
 
 end uniformFin
 

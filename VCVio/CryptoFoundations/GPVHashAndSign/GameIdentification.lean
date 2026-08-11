@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.CombinedHandler
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.CombinedHandler
 
 /-! # GPV Hash-and-Sign: Game Identification
 
@@ -13,6 +15,8 @@ games on the freshness-tracking vehicle, the state-threading bridge from the
 runtime to the bare random oracle, the U2 sign-then-hash hop up to the
 programming bad event, and the Step-1 wiring toward the headline bounds.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

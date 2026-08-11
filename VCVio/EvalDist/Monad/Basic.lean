@@ -3,14 +3,18 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.EvalDist.Defs.Basic
-import ToMathlib.Data.ENNReal.Gauss
+
+module
+public import VCVio.EvalDist.Defs.Basic
+public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # Evaluation Distributions of Computations with `Bind`
 
 File for lemmas about `evalDist` and `support` involving the monadic `pure` and `bind`.
 -/
+
+@[expose] public section
 
 universe u v w
 
@@ -276,6 +280,41 @@ lemma probEvent_bind_le_probEvent [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
   · by_cases hx : x ∈ support mx
     · simp [h x hx hp]
     · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- If a continuation event is bounded by `ε` exactly on a prefix event and is
+impossible off that event, then only the prefix mass is charged. -/
+lemma probEvent_bind_le_probEvent_mul [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {ε : ENNReal}
+    (hle : ∀ x ∈ support mx, p x → Pr[ q | my x] ≤ ε)
+    (hzero : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] = 0) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] * ε := by
+  classical
+  rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_indicator, ← ENNReal.tsum_mul_right]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  by_cases hx : x ∈ support mx
+  · by_cases hp : p x
+    · exact (mul_le_mul' le_rfl (hle x hx hp)).trans_eq (by simp [hp])
+    · simp [hp, hzero x hx hp]
+  · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- Division-form corollary of `probEvent_bind_le_probEvent_mul`. -/
+lemma probEvent_bind_le_probEvent_div [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {c : ENNReal}
+    (hle : ∀ x ∈ support mx, p x → Pr[ q | my x] ≤ c⁻¹)
+    (hzero : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] = 0) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] / c := by
+  simpa [div_eq_mul_inv] using probEvent_bind_le_probEvent_mul hle hzero
+
+omit [Monad m] in
+/-- Partition an event pointwise into a main event and an exceptional event. -/
+lemma probEvent_le_add_of_imp_or [MonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {p q r : α → Prop}
+    (h : ∀ x ∈ support mx, p x → q x ∨ r x) :
+    Pr[ p | mx] ≤ Pr[ q | mx] + Pr[ r | mx] :=
+  (probEvent_mono h).trans (probEvent_or_le mx q r)
 
 /-- Prefix-event split for a bind. Prefix points satisfying `p` are charged in
 full; off-prefix continuations are charged by the uniform tail bound `ε`. -/
@@ -613,6 +652,30 @@ lemma probEvent_bind_mono {mx : m α} {my oc : α → m β} {q : β → Prop}
   refine ENNReal.tsum_le_tsum fun x => ?_
   by_cases hx : x ∈ support mx
   · exact mul_le_mul' le_rfl (h x hx)
+  · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- Pointwise division bounds on bind continuations factor through the bind. -/
+lemma probOutput_bind_mono_div_const {mx : m α}
+    {ob₁ ob₂ : α → m β} {y : β} {r : ℝ≥0∞}
+    (h : ∀ x ∈ support mx, Pr[= y | ob₁ x] ≤ Pr[= y | ob₂ x] / r) :
+    Pr[= y | mx >>= ob₁] ≤ Pr[= y | mx >>= ob₂] / r := by
+  simp only [probOutput_bind_eq_tsum, div_eq_mul_inv]
+  rw [← ENNReal.tsum_mul_right]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  by_cases hx : x ∈ support mx
+  · simpa only [div_eq_mul_inv, mul_assoc] using mul_le_mul' le_rfl (h x hx)
+  · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- Event form of `probOutput_bind_mono_div_const`. -/
+lemma probEvent_bind_mono_div_const {mx : m α}
+    {ob₁ ob₂ : α → m β} {q : β → Prop} {r : ℝ≥0∞}
+    (h : ∀ x ∈ support mx, Pr[ q | ob₁ x] ≤ Pr[ q | ob₂ x] / r) :
+    Pr[ q | mx >>= ob₁] ≤ Pr[ q | mx >>= ob₂] / r := by
+  simp only [probEvent_bind_eq_tsum, div_eq_mul_inv]
+  rw [← ENNReal.tsum_mul_right]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  by_cases hx : x ∈ support mx
+  · simpa only [div_eq_mul_inv, mul_assoc] using mul_le_mul' le_rfl (h x hx)
   · simp [probOutput_eq_zero_of_not_mem_support hx]
 
 lemma probOutput_bind_congr_div_const {mx : m α}

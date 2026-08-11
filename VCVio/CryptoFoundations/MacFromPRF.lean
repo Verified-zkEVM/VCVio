@@ -4,12 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Lacramioara Astefanoaei
 -/
 
-import VCVio.CryptoFoundations.PRF
-import VCVio.CryptoFoundations.MacAlg
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.SimSemantics.Append
-import ToMathlib.Control.StateT
+module
+
+public import VCVio.CryptoFoundations.PRF
+public import VCVio.CryptoFoundations.MacAlg
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.SimSemantics.Append
+public import ToMathlib.Control.StateT
 
 /-!
 # Deterministic MAC from a PRF
@@ -36,6 +38,8 @@ The standard construction of a message authentication code from a pseudorandom f
 - [Boneh, Shoup, *A Graduate Course in Applied Cryptography*, v0.6, §6.3]
   (https://crypto.stanford.edu/~dabo/cryptobook/BonehShoup_0_6.pdf)
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -79,7 +83,7 @@ has exactly one valid tag, so the two notions coincide.
 variable [DecidableEq D] [DecidableEq R]
 
 /-- Query the `(D →ₒ R)` component of the PRF oracle spec. -/
-private def prfFuncQuery (msg : D) :
+def prfFuncQuery (msg : D) :
     OracleComp (unifSpec + (D →ₒ R)) R :=
   (unifSpec + (D →ₒ R)).query (Sum.inr msg)
 
@@ -127,21 +131,25 @@ private theorem simulateQ_prfReal_macToPRFQueryImpl_run
     simulateQ (prfRealQueryImpl prf k)
         ((simulateQ (macToPRFQueryImpl (D := D) (R := R)) oa).run) =
       (simulateQ (ufCmaImpl prf k) oa).run := by
-  induction oa using OracleComp.inductionOn with
-  | pure x =>
-    simp only [simulateQ_pure, WriterT.run_pure]
-  | query_bind t f ih =>
-    simp only [simulateQ_bind, WriterT.run_bind']
-    erw [simulateQ_bind]
-    cases t <;>
-      · simp only [macToPRFQueryImpl, ufCmaImpl, QueryImpl.add_apply_inl,
-          QueryImpl.add_apply_inr, QueryImpl.liftTarget_apply, QueryImpl.withLogging_apply,
-          prfFuncQuery, toMacAlg, MacAlg.taggingOracle, simulateQ_spec_query,
-          HasQuery.toQueryImpl_apply]
-        erw [simulateQ_bind]
-        refine bind_congr fun ⟨v, w⟩ => ?_
-        rw [simulateQ_map]
-        exact congrArg _ (ih v)
+  rw [QueryImpl.simulateQ_writerTMapBase_run]
+  congr 2
+  funext t
+  cases t with
+  | inl n =>
+      ext
+      change (fun a => (a, ([] : QueryLog (D →ₒ R)))) <$>
+          simulateQ (prfRealQueryImpl prf k)
+            (OracleComp.liftComp
+              (liftM (unifSpec.query n) : OracleComp unifSpec _)
+              (unifSpec + (D →ₒ R))) =
+        (fun a => (a, ([] : QueryLog (D →ₒ R)))) <$>
+          (liftM (unifSpec.query n) : ProbComp _)
+      rw [simulateQ_prfRealQueryImpl_liftComp]
+  | inr d =>
+      ext
+      simp [QueryImpl.writerTMapBase, macToPRFQueryImpl, ufCmaImpl,
+        prfFuncQuery, prfRealQueryImpl, toMacAlg, MacAlg.taggingOracle,
+        map_eq_bind_pure_comp]
 
 /-- The prfRealExp with the reduction equals the UF-CMA body as a `ProbComp` computation. -/
 private theorem prfRealExp_macToPRFReduction_eq_body (prf : PRFScheme K D R)
@@ -206,20 +214,31 @@ private theorem log_cache_invariant_step_unif [SampleableType R]
     StateT.run_bind] at hmem
   simp only [support_bind, Set.mem_iUnion, exists_prop] at hmem
   obtain ⟨⟨⟨val, log_q⟩, cache_mid⟩, hu, hmem⟩ := hmem
-  erw [simulateQ_bind, simulateQ_spec_query] at hu
-  simp only [monadLift_self, StateT.run_bind, support_bind, Set.mem_iUnion, exists_prop] at hu
-  obtain ⟨⟨u, s⟩, hq, hc⟩ := hu
-  simp only [Function.comp] at hc
-  obtain ⟨⟨rfl, rfl⟩, rfl⟩ := hc
-  erw [StateT.run_monadLift] at hq
-  simp only [support_bind, Set.mem_iUnion,
-    support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hq
-  obtain ⟨_, _, rfl, hcache_eq⟩ := hq
-  dsimp only [Prod.fst, Prod.snd] at hmem
-  simp only [show ∀ x : QueryLog (D →ₒ R), ∅ ++ x = x from List.nil_append,
-    show (Prod.map (@id α) fun x : QueryLog (D →ₒ R) => x) = id from
-      funext fun ⟨_, _⟩ => rfl, id_map] at hmem
-  exact hcache_eq ▸ ih val cache_mid z hmem hcache
+  change ((val, log_q), cache_mid) ∈ support
+    ((simulateQ prfIdealQueryImpl
+      ((fun u => (u, ([] : QueryLog (D →ₒ R)))) <$>
+        OracleComp.liftComp
+          (liftM (unifSpec.query n) : OracleComp unifSpec _)
+          (unifSpec + (D →ₒ R)))).run cache₀) at hu
+  rw [simulateQ_map, simulateQ_prfIdealQueryImpl_liftComp] at hu
+  simp only [StateT.run_map, StateT.run_monadLift, support_map] at hu
+  obtain ⟨u, hu, hvalue⟩ := hu
+  have hlog : log_q = ([] : QueryLog (D →ₒ R)) :=
+    (congrArg (fun x => x.1.2) hvalue).symm
+  have hmem' : z ∈ support ((simulateQ prfIdealQueryImpl
+      (simulateQ macToPRFQueryImpl (f val)).run).run cache_mid) := by
+    simpa only [hlog, List.nil_append, macToPRFQueryImpl, show
+        (Prod.map (@id α) fun x : QueryLog (D →ₒ R) => x) = id from
+          funext fun ⟨_, _⟩ => rfl, id_map] using hmem
+  simp only [support_bind, Set.mem_iUnion, exists_prop,
+    support_pure, Set.mem_singleton_iff] at hu
+  obtain ⟨answer, _, hu_eq⟩ := hu
+  rcases ih val cache_mid z hmem' hcache with hcache' | hlog'
+  · left
+    have hcache_eq : cache₀ = cache_mid :=
+      (congrArg Prod.snd hu_eq).symm.trans (congrArg Prod.snd hvalue)
+    rwa [hcache_eq]
+  · exact Or.inr hlog'
 
 /-- Inductive step of `log_cache_invariant_aux` for a `(D →ₒ R)` query: forwarding the
 query through `macToPRFQueryImpl` logs `msg'`. If the tracked point `msg` equals `msg'`

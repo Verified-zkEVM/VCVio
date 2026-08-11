@@ -3,8 +3,10 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import LatticeCrypto.Falcon.Security
-import LatticeCrypto.Falcon.Concrete.Instance
+
+module
+public import LatticeCrypto.Falcon.Security
+public import Extern.Falcon.Instance
 
 /-!
 # Falcon EUF-CMA: hypothesis-consistency witness
@@ -36,6 +38,8 @@ witnessing `ForgesQueriedPoint` and `signHashQueryBound 0 1`; the advantage boun
 * `toy_ForgesQueriedPoint` / `toy_signHashQueryBound` / `toy_advantage_bound` — the transport data.
 * `falcon_eufcma_hyps_inhabited` — all hypotheses hold for the single instance.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec Falcon LatticeCrypto
 
@@ -72,7 +76,8 @@ theorem schoolbook_eq_pure_n1 (f g : Poly ℤ 1) :
     List.size_toArray, List.length_cons, List.length_nil, zero_add, List.getElem_toArray,
     List.getElem_cons_zero, List.setIfInBounds_toArray, List.set_cons_zero, pure_bind, Fin.zero_eta,
     Fin.isValue, negacyclicConvCoeff, Vector.toArray_ofFn, Array.getElem_ofFn]
-  change f[0] * g[0] = _
+  change (Vector.ofFn fun _ : Fin 1 => f[0] * g[0])[0] = _
+  rw [Vector.getElem_ofFn]
   have h : (∑ _x : Fin 1 × Fin 1, f[0] * g[0]) = f[0] * g[0] := by
     rw [Finset.sum_const, Finset.card_univ, Fintype.card_prod, Fintype.card_fin]; simp
   exact h.symm
@@ -117,10 +122,11 @@ theorem intPolyMul_const_const (a b : ℤ) :
 theorem toRq_intPolyConst_zero : (IntPoly.toRq (intPolyConst (n := 1) (0 : ℤ)) : Rq 1) = 0 := by
   apply Poly.ext_get_eq
   intro i
-  fin_cases i
+  have hz : Vector.get (0 : Rq 1) i = 0 := Poly.get_zero i
+  rw [hz]
   simp only [IntPoly.toRq, integralLift, vectorIntegralLift, intPolyConst, constPoly,
-    PolyBackend.mapCoeffs, vectorBackend, Vector.get]
-  exact (Poly.get_zero (n := 1) ⟨0, by norm_num⟩).symm
+    PolyBackend.mapCoeffs, vectorBackend, Vector.get, Vector.getElem_toArray,
+    Vector.getElem_ofFn, ite_self, Int.cast_zero]
 
 /-- Left multiplication by `0` in `R_q` is `0`. -/
 theorem negacyclicMul_zero_left {n : ℕ} (h : Rq n) : negacyclicMul (0 : Rq n) h = 0 := by

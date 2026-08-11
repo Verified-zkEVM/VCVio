@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Concrete.FloatLike
-import LatticeCrypto.Falcon.Concrete.GMTable
-import LatticeCrypto.Falcon.Concrete.SamplerZ
+
+module
+public import LatticeCrypto.Falcon.Concrete.FloatLike
+public import LatticeCrypto.Falcon.Concrete.GMTable
+public import Extern.Falcon.SamplerZ
 
 /-!
 # FFT, FPoly Operations, and ffSampling for Falcon
@@ -25,6 +27,8 @@ the first `n/2` entries as real parts and the last `n/2` as imaginary parts
 The `ffsamp` functions use a flat buffer layout matching the C reference,
 organized into regions indexed by multiples of `qn = n/4`.
 -/
+
+public section
 
 
 namespace Falcon.Concrete.FFTOps

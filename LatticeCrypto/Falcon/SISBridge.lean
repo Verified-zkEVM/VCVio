@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import LatticeCrypto.Falcon.Security
+module
+public import LatticeCrypto.Falcon.Security
 
 /-! # Falcon: PSF Collisions Yield NTRU-SIS Kernel Vectors
 
@@ -35,6 +36,8 @@ from the coefficientwise bound `(a − b)² ≤ 2·a² + 2·b²` on centered rep
   `euf_cma_collision_security`, giving the fully priced headline — keyed NTRU-SIS plus the
   min-entropy, salt-birthday, and per-call sampler terms — for every query-bounded adversary.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

@@ -3,10 +3,12 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.SimSemantics.SimulateQ
-import ToMathlib.General
-import PolyFun.PFunctor.Lens.Cartesian
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import ToMathlib.General
+public import PolyFun.PFunctor.Lens.Cartesian
 
 /-!
 # Coercions Between Computations With Additional Oracles
@@ -42,6 +44,8 @@ distribution under lifting (`evalDist_liftComp`); see
 `LawfulSubSpec.toLens_isCartesian` for the bridge to the lens-level
 predicate.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp BigOperators ENNReal
 
@@ -256,8 +260,8 @@ lemma liftComp_map (mx : OracleComp spec α) (f : α → β) :
 lemma liftComp_bind_pure (oa : OracleComp spec α) (f : α → β) :
     OracleComp.liftComp (do let a ← oa; pure (f a)) superSpec =
       f <$> OracleComp.liftComp oa superSpec := by
-  change (f <$> oa).liftComp superSpec = f <$> oa.liftComp superSpec
-  exact liftComp_map superSpec oa f
+  rw [liftComp_bind, map_eq_bind_pure_comp]
+  rfl
 
 /-- One-directional, assumption-light variant of `mem_support_liftComp_iff`: under just a
 query-level lift (no `SubSpec` or lawfulness assumptions), the support of a lifted computation

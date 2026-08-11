@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Examples.ElGamal.Common
-import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
-import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
-import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
-import VCVio.EvalDist.Bool
+
+module
+public import Examples.ElGamal.Common
+public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
+public import VCVio.EvalDist.Bool
 
 /-!
 # Hashed ElGamal Encryption
@@ -36,6 +38,8 @@ Main theorem: `|Pr[CPA wins] - 1/2| ≤ ddhAdvantage + esAdvantage`.
 
 Port of EasyCrypt's `hashed_elgamal_std.ec`.
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal DiffieHellman

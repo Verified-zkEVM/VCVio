@@ -3,9 +3,18 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.Arithmetic
-import LatticeCrypto.Ring.NTTCert
-import Mathlib.Algebra.BigOperators.Ring.Finset
+
+module
+import all Init.Data.Array.Basic
+import all Init.Data.Vector.Algebra
+import all LatticeCrypto.MLKEM.Arithmetic
+public meta import LatticeCrypto.MLKEM.Arithmetic
+public meta import LatticeCrypto.MLKEM.Params
+public meta import Mathlib.Data.Fintype.Defs
+public meta import Mathlib.Data.ZMod.Defs
+public import LatticeCrypto.MLKEM.Arithmetic
+public import LatticeCrypto.Ring.NTTCert
+public import Mathlib.Algebra.BigOperators.Ring.Finset
 
 /-!
 # Concrete NTT for ML-KEM
@@ -48,6 +57,8 @@ and [mlkem-native](https://github.com/pq-code-package/mlkem-native). Correctness
 verified byte-for-byte against mlkem-native for multiple key pairs, encapsulations, and
 decapsulations (see `MLKEMTest.lean`).
 -/
+
+public section
 
 
 open scoped BigOperators
@@ -312,14 +323,6 @@ private theorem negacyclicMul_coeff (a b : Rq) (k : Fin ringDegree) :
       LatticeCrypto.negacyclicConvCoeff (polyBackend.coeff a) (polyBackend.coeff b) k :=
   LatticeCrypto.negacyclicMulPure_coeff polyKernel a b k
 
-private theorem negacyclicMul_add_right (a b c : Rq) :
-    negacyclicMul a (b + c) = negacyclicMul a b + negacyclicMul a c :=
-  LatticeCrypto.vectorRing_mul_add_right a b c
-
-private theorem negacyclicMul_sub_right (a b c : Rq) :
-    negacyclicMul a (b - c) = negacyclicMul a b - negacyclicMul a c :=
-  LatticeCrypto.vectorRing_mul_sub_right a b c
-
 /-- Concrete `NTTRingOps` instance for ML-KEM. -/
 @[reducible] def concreteNTTRingOps : NTTRingOps where
   toHat := ntt
@@ -328,7 +331,7 @@ private theorem negacyclicMul_sub_right (a b c : Rq) :
 
 /-- Proof bundle showing that the concrete ML-KEM NTT implementation satisfies the abstract
 `NTTRingLaws`. -/
-@[reducible] noncomputable def concreteNTTRingLaws : NTTRingLaws concreteNTTRingOps where
+theorem concreteNTTRingLaws : NTTRingLaws concreteNTTRingOps where
   fromHat_toHat := invNTT_ntt
   toHat_fromHat := ntt_invNTT
   toHat_zero := by
@@ -347,12 +350,14 @@ private theorem negacyclicMul_sub_right (a b c : Rq) :
     change multiplyNTTs f (g + h) = multiplyNTTs f g + multiplyNTTs f h
     simp only [multiplyNTTs, invNTT_add]
     rw [← ntt_add]
-    exact congrArg ntt (negacyclicMul_add_right _ _ _)
+    exact congrArg ntt (LatticeCrypto.vectorRing_mul_add_right
+      (Coeff := Coeff) (n := ringDegree) _ _ _)
   mul_sub f g h := by
     change multiplyNTTs f (g - h) = multiplyNTTs f g - multiplyNTTs f h
     simp only [multiplyNTTs, invNTT_sub]
     rw [← ntt_sub]
-    exact congrArg ntt (negacyclicMul_sub_right _ _ _)
+    exact congrArg ntt (LatticeCrypto.vectorRing_mul_sub_right
+      (Coeff := Coeff) (n := ringDegree) _ _ _)
   mul_comm f g := by
     change multiplyNTTs f g = multiplyNTTs g f
     simp only [multiplyNTTs, LatticeCrypto.vectorRing_mul_comm]

@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.PRFReductions.Reductions
+module
+
+public import Examples.PRFTagReader.PRFReductions.Reductions
 
 /-!
 # PRF Tag/Reader Protocol — Composed Ideal Handlers
@@ -13,6 +15,8 @@ The two ideal-PRF experiments collapsed into single stateful handlers `multipleI
 `singleIdealQueryImpl` over the unlinkability oracle interface, with their per-query reduction
 lemmas exposing the lazy-random-oracle behaviour via `idealCacheStep` / `idealCacheMapM`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -108,13 +112,9 @@ lemma prfIdealExp_unlinkToMultiplePRFReduction_eq_run'
       (simulateQ (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adv).run' (UnlinkState.init, ∅) := by
   unfold PRFScheme.prfIdealExp unlinkToMultiplePRFReduction
-  rw [StateT.run']
-  change (simulateQ PRFScheme.prfIdealQueryImpl
-      ((simulateQ unlinkToMultiplePRFQueryImpl adv).run UnlinkState.init >>=
-        fun p => pure p.1)).run' ∅ = _
-  rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind,
-    simulateQ_multipleIdeal_collapse adv UnlinkState.init ∅, map_bind, bind_map_left]
-  rfl
+  simp only [StateT.run'_eq, simulateQ_map, StateT.run_map]
+  rw [simulateQ_multipleIdeal_collapse adv UnlinkState.init ∅]
+  simp only [Functor.map_map]
 
 omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- The single-session ideal-PRF experiment is the composed handler `singleIdealQueryImpl`
@@ -126,13 +126,9 @@ lemma prfIdealExp_unlinkToSinglePRFReduction_eq_run'
       (simulateQ (singleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adv).run' (UnlinkState.init, ∅) := by
   unfold PRFScheme.prfIdealExp unlinkToSinglePRFReduction
-  rw [StateT.run']
-  change (simulateQ PRFScheme.prfIdealQueryImpl
-      ((simulateQ unlinkToSinglePRFQueryImpl adv).run UnlinkState.init >>=
-        fun p => pure p.1)).run' ∅ = _
-  rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind,
-    simulateQ_singleIdeal_collapse adv UnlinkState.init ∅, map_bind, bind_map_left]
-  rfl
+  simp only [StateT.run'_eq, simulateQ_map, StateT.run_map]
+  rw [simulateQ_singleIdeal_collapse adv UnlinkState.init ∅]
+  simp only [Functor.map_map]
 
 /-! ### Per-query reduction lemmas for the composed ideal handlers
 
@@ -204,7 +200,9 @@ lemma simulateQ_prfIdeal_query_inr {D : Type} [DecidableEq D]
   change (uniformSampleImpl.withCaching d).run c = _
   unfold idealCacheStep
   cases hc : c d with
-  | none => rw [QueryImpl.withCaching_run_none uniformSampleImpl hc]; rfl
+  | none =>
+      rw [QueryImpl.withCaching_run_none uniformSampleImpl hc, map_eq_bind_pure_comp]
+      rfl
   | some u => rw [QueryImpl.withCaching_run_some uniformSampleImpl hc]
 
 /-- Folding the lazy-random-oracle lookup `idealCacheStep` over a list of domain points, threading

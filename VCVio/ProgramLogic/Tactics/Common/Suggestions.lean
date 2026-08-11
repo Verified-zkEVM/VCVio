@@ -4,13 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Meta.Tactic.TryThis
+module
+
+public meta import Lean.Meta.Tactic.TryThis
 
 /-!
 # VCGen Suggestions
 
 Helpers for attaching `Try this` suggestions to tactic diagnostics.
 -/
+
+public meta section
 
 open Lean Meta
 

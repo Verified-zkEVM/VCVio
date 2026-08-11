@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Examples.Schnorr.SigmaProtocol
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Security
-import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+
+module
+public import Examples.Schnorr.SigmaProtocol
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Security
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 
 /-!
 # Schnorr Signature via Fiat-Shamir: an end-to-end EUF-CMA proof
@@ -109,6 +111,8 @@ The Schnorr-specific inputs are exactly:
 * `Schnorr.sigma_simCommitPredictability` — the simulator's commit is uniform
                                           on `G`, giving `β = 1/|F|`.
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec DiffieHellman

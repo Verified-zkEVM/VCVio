@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Meta.Sym.Pattern
-import Lean.Meta.Sym.Simp.DiscrTree
-import Lean.Elab.Tactic.Do.Attr
-import VCVio.ProgramLogic.Tactics.Common.Core
+module
+
+public meta import Lean.Meta.Sym.Pattern
+public meta import Lean.Meta.Sym.Simp.DiscrTree
+public meta import Lean.Elab.Tactic.Do.Attr
+public meta import VCVio.ProgramLogic.Tactics.Common.Core
 
 /-!
 # `@[wpStep]` Registry
@@ -51,6 +53,8 @@ development upstream. If a toolchain bump breaks the registry, the affected
 surface is confined to the selector in `buildWpStepEntry` and the lookup
 path in `getRegisteredWpStepEntries`; downstream tactic dispatch works
 through `WpStepEntry.declName?` and is insulated from `Sym` API churn. -/
+
+public meta section
 
 open Lean Elab Meta Lean.Meta
 open Lean.Elab.Tactic.Do.SpecAttr (SpecProof)
@@ -177,6 +181,7 @@ tries each rewrite, so over-approximation here is harmless. -/
 def getRegisteredWpStepEntries (oa : Expr) : MetaM (Array WpStepEntry) := do
   let oa ← instantiateMVars oa
   let oa ← withReducible <| whnf oa
+  let oa ← symMatchKey oa
   let registry := wpStepRegistry.getState (← getEnv)
   return Lean.Meta.Sym.getMatch registry.compTree oa
 
@@ -186,7 +191,7 @@ Raw `wp` dispatch uses this as the first pass so syntactic zero/nil iterator
 redexes are offered to their exact rewrite rules before normalized fallback
 candidates such as successor/cons unfoldings. -/
 def getRegisteredWpStepEntriesNoWhnf (oa : Expr) : MetaM (Array WpStepEntry) := do
-  let oa ← instantiateMVars oa
+  let oa ← symMatchKey oa
   let registry := wpStepRegistry.getState (← getEnv)
   return Lean.Meta.Sym.getMatch registry.compTree oa
 

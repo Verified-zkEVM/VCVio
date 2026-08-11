@@ -3,18 +3,20 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.SimSemantics.SimulateQ
-import VCVio.OracleComp.EvalDist
-import VCVio.EvalDist.Bool
-import VCVio.EvalDist.Prod
-import VCVio.EvalDist.Fintype
-import ToMathlib.Data.FinEnum
-import Init.Data.UInt.Lemmas
-import Mathlib.Data.FinEnum
-import Mathlib.Data.Fintype.Perm
-import Mathlib.Data.Fintype.Pi
-import Mathlib.Data.Fintype.Vector
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.EvalDist
+public import VCVio.EvalDist.Bool
+public import VCVio.EvalDist.Prod
+public import VCVio.EvalDist.Fintype
+public import ToMathlib.Data.FinEnum
+public import Init.Data.UInt.Lemmas
+public import Mathlib.Data.FinEnum
+public import Mathlib.Data.Fintype.Perm
+public import Mathlib.Data.Fintype.Pi
+public import Mathlib.Data.Fintype.Vector
 
 /-!
 # Uniform Selection Over a Type
@@ -25,6 +27,8 @@ operation, using the `ProbComp` monad.
 As compared to `HasUniformSelect` this provides much more structure on the behavior,
 enforcing that every possible output has the same output probability never fails.
 -/
+
+@[expose] public section
 
 universe u v w
 

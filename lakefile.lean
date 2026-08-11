@@ -18,33 +18,31 @@ package VCVio where
   ]
 
 /-
-Interop backends are intentionally disabled for the Lean 4.31 baseline. Their
+Interop backends are intentionally disabled for the Lean 4.32 baseline. Their
 source remains under `Interop/`, isolated from the trusted libraries by
 `scripts/check-interop-isolation.sh`, but the aggregate module and CI do not
 build it. Re-enable a backend only once its upstream Lean library supports the
 repository's Lean version without a local compatibility layer.
 
-Hax still targets Lean 4.29.0-rc1 and does not build with Lean 4.31.0 as of
-2026-07-11. Subdirectory: `hax-lib/proof-libs/lean`.
+The pinned Hax revision still targets Lean 4.29.0-rc1 and is not part of the
+Lean 4.32 build. Subdirectory: `hax-lib/proof-libs/lean`.
 -/
 -- require Hax from git
 --   "https://github.com/cryspen/hax" @
 --   "492a34e3" / "hax-lib/proof-libs/lean"
 
 /-
-Loom2: foundation for the Loom-style WP / Triple program-logic
-abstractions used in `VCVio/ProgramLogic/`. Tracks Volo Gladshtein's unmerged
-upstream PR https://github.com/leanprover/lean4/pull/12965 in the
-`Std.Internal.Do.{WPMonad,PredTrans,Triple,Assertion,ExceptPost}` namespace
-(temporarily prefixed `Std.Do'` in Loom2 to avoid clashing once it merges).
+Loom2 provides the Loom-style WP / Triple program-logic abstractions used in
+`VCVio/ProgramLogic/`. Lean 4.32 includes the stable `Std.Do` foundations, but
+Loom2's `Std.Do'` layer retains the three-parameter `PredTrans`, `EPost`, and
+relational APIs consumed by VCVio. Migrating those clients to the redesigned
+`PostShape` API is separate work.
 
-Tracks the Lean 4.31 compatibility branch based on upstream revision
-`876296fc`. When upstream Lean ships these foundations in a stable release,
-drop this require and re-import from `Std.Do.…` directly.
+The exact pin below is the validated Lean 4.32 compatibility commit.
 -/
 require loom2 from git
   "https://github.com/quangvdao/loom2" @
-  "lean-4.31"
+  "2f65f311fae959c302586b07aa45390999b935d4"
 
 /-
 Aeneas now natively pins Lean and Mathlib v4.31.0. This dormant pin follows its
@@ -56,24 +54,28 @@ Subdirectory: `backends/lean`.
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
-require "leanprover-community" / "mathlib" @ git "v4.31.0"
+require "leanprover-community" / "mathlib" @ git "v4.32.2"
 
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "04a12b67fa2048c9412fdd26ed9e446f25919d37"
+  "v4.32.2"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
 
-/-- Shared FFI bindings (SHA-3 / FIPS 202, etc.). -/
-lean_lib FFI
+/-- Native FFI surface: `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA,
+Falcon) and every module whose transitive imports reach them. Isolated here so
+`VCVio`/`LatticeCrypto` stay link-safe when the `third_party/` native backends
+are not checked out. May import `VCVio`/`LatticeCrypto`/`ToMathlib`; nothing in
+those libraries may import `Extern`. -/
+lean_lib Extern
 
 /-- Lattice-based cryptography: ring arithmetic, hardness assumptions, and scheme definitions. -/
 lean_lib LatticeCrypto
 
 /-- Hash-based signatures: SLH-DSA (SPHINCS+, FIPS 205) proof-level specs and security.
 Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but nothing in
-`VCVio`/`ToMathlib`/`FFI`/`Interop` may import it. -/
+`VCVio`/`ToMathlib`/`Extern`/`Interop` may import it. -/
 lean_lib HashSig
 
 /-- Example constructions of cryptographic primitives. -/
@@ -86,8 +88,60 @@ lean_lib ToMathlib
 /-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
 Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
 `Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
-excluded from the Lean 4.31 baseline build. -/
+excluded from the Lean 4.32 baseline build. -/
 lean_lib Interop
+
+/-
+The four `extern_lib` targets below compile C sources that live in git
+submodules under `third_party/`. Fresh clones do not have those submodules
+checked out, and Lake never checks them out for dependencies, yet it links
+every `extern_lib` of every transitive dependency into any `lean_exe` it
+builds. Each `extern_lib` therefore probes for a source file of its backend
+first and falls back to an empty stub archive when the submodule is absent;
+linking still succeeds as long as the executable does not reference the
+native FFI symbols. Run `git submodule update --init --recursive` to enable
+the real backends.
+-/
+
+/-- `true` if `marker` — a file that one of the native-backend `.o` targets
+reads from a `third_party/` submodule — exists in this checkout. -/
+private def nativeSrcPresent (pkg : NPackage __name__)
+    (marker : System.FilePath) : FetchM Bool := do
+  (pkg.dir / marker).pathExists
+
+/-- Build an empty stub archive for `libName`, logging that the native backend
+from `submodule` is disabled. A missing submodule is the expected state when
+VCVio is built as a dependency (`logInfo`) but usually an oversight when
+building in-repo (`logWarning`). -/
+private def buildNativeStub (pkg : NPackage __name__)
+    (libName submodule : String) : FetchM (Job System.FilePath) := do
+  let msg := s!"{libName}: native backend disabled because '{submodule}' is \
+not checked out; building an empty stub archive instead. Executables still \
+link unless they reference VCVio's native FFI symbols. To enable the \
+backend, run `git submodule update --init --recursive` in '{pkg.dir}' and \
+rebuild."
+  if pkg.isRoot then logWarning msg else logInfo msg
+  buildStaticLib (pkg.staticLibDir / nameToStaticLib libName) #[]
+
+/-- `third_party/mlkem-native` marker for `leanhashing`: the FIPS 202 header
+included by `csrc/hashing/lean_hashing_ffi.c`. -/
+private def mlkemFips202Header : System.FilePath :=
+  "third_party" / "mlkem-native" / "mlkem" / "src" / "fips202" / "fips202.h"
+
+/-- `third_party/mlkem-native` marker for `leanmlkem`: the amalgamated source
+compiled by the `mlkem_native*.o` targets. -/
+private def mlkemNativeSrc : System.FilePath :=
+  "third_party" / "mlkem-native" / "mlkem" / "mlkem_native.c"
+
+/-- `third_party/mldsa-native` marker for `leanmldsa`: the amalgamated source
+compiled by the `mldsa_native*.o` targets. -/
+private def mldsaNativeSrc : System.FilePath :=
+  "third_party" / "mldsa-native" / "mldsa" / "mldsa_native.c"
+
+/-- `third_party/c-fn-dsa` marker for `leanfalcon`: the API header included by
+`csrc/falcon/lean_falcon_ffi.c`. -/
+private def fndsaHeader : System.FilePath :=
+  "third_party" / "c-fn-dsa" / "fndsa.h"
 
 -- Compile the shared FIPS 202 (SHA-3/SHAKE) FFI wrapper.
 -- Uses mlkem-native's FIPS 202 headers for the underlying implementation.
@@ -103,9 +157,12 @@ target hashing_ffi.o pkg : System.FilePath := do
   buildO oFile srcJob weakArgs #["-fPIC"] "cc" getLeanTrace
 
 extern_lib leanhashing pkg := do
-  let hashO ← hashing_ffi.o.fetch
-  let name := nameToStaticLib "leanhashing"
-  buildStaticLib (pkg.staticLibDir / name) #[hashO]
+  if ← nativeSrcPresent pkg mlkemFips202Header then
+    let hashO ← hashing_ffi.o.fetch
+    let name := nameToStaticLib "leanhashing"
+    buildStaticLib (pkg.staticLibDir / name) #[hashO]
+  else
+    buildNativeStub pkg "leanhashing" "third_party/mlkem-native"
 
 -- Compile mlkem-native core and Lean FFI wrappers.
 -- Supports multiple parameter sets (512, 768, 1024) via separate TUs.
@@ -161,15 +218,18 @@ target mlkem1024_ffi.o pkg : System.FilePath := do
   buildO oFile srcJob weakArgs traceArgs "cc" getLeanTrace
 
 extern_lib leanmlkem pkg := do
-  let nativeO ← mlkem_native.o.fetch
-  let ffiO ← mlkem_ffi.o.fetch
-  let native512 ← mlkem_native_512.o.fetch
-  let ffi512 ← mlkem512_ffi.o.fetch
-  let native1024 ← mlkem_native_1024.o.fetch
-  let ffi1024 ← mlkem1024_ffi.o.fetch
-  let name := nameToStaticLib "leanmlkem"
-  buildStaticLib (pkg.staticLibDir / name)
-    #[nativeO, ffiO, native512, ffi512, native1024, ffi1024]
+  if ← nativeSrcPresent pkg mlkemNativeSrc then
+    let nativeO ← mlkem_native.o.fetch
+    let ffiO ← mlkem_ffi.o.fetch
+    let native512 ← mlkem_native_512.o.fetch
+    let ffi512 ← mlkem512_ffi.o.fetch
+    let native1024 ← mlkem_native_1024.o.fetch
+    let ffi1024 ← mlkem1024_ffi.o.fetch
+    let name := nameToStaticLib "leanmlkem"
+    buildStaticLib (pkg.staticLibDir / name)
+      #[nativeO, ffiO, native512, ffi512, native1024, ffi1024]
+  else
+    buildNativeStub pkg "leanmlkem" "third_party/mlkem-native"
 
 -- Compile mldsa-native core and Lean FFI wrappers.
 -- Supports multiple parameter sets (44, 65, 87) via separate TUs.
@@ -228,15 +288,18 @@ target mldsa87_ffi.o pkg : System.FilePath := do
   buildO oFile srcJob weakArgs traceArgs "cc" getLeanTrace
 
 extern_lib leanmldsa pkg := do
-  let nativeO ← mldsa_native.o.fetch
-  let ffiO ← mldsa_ffi.o.fetch
-  let native44 ← mldsa_native_44.o.fetch
-  let ffi44 ← mldsa44_ffi.o.fetch
-  let native87 ← mldsa_native_87.o.fetch
-  let ffi87 ← mldsa87_ffi.o.fetch
-  let name := nameToStaticLib "leanmldsa"
-  buildStaticLib (pkg.staticLibDir / name)
-    #[nativeO, ffiO, native44, ffi44, native87, ffi87]
+  if ← nativeSrcPresent pkg mldsaNativeSrc then
+    let nativeO ← mldsa_native.o.fetch
+    let ffiO ← mldsa_ffi.o.fetch
+    let native44 ← mldsa_native_44.o.fetch
+    let ffi44 ← mldsa44_ffi.o.fetch
+    let native87 ← mldsa_native_87.o.fetch
+    let ffi87 ← mldsa87_ffi.o.fetch
+    let name := nameToStaticLib "leanmldsa"
+    buildStaticLib (pkg.staticLibDir / name)
+      #[nativeO, ffiO, native44, ffi44, native87, ffi87]
+  else
+    buildNativeStub pkg "leanmldsa" "third_party/mldsa-native"
 
 -- Compile c-fn-dsa (Falcon / FN-DSA) core and Lean FFI wrapper.
 private def falconCFlags (pkg : NPackage __name__) :
@@ -264,10 +327,13 @@ target fndsa_ffi.o pkg : System.FilePath := do
   buildO oFile srcJob weakArgs traceArgs "cc" getLeanTrace
 
 extern_lib leanfalcon pkg := do
-  let nativeO ← fndsa.o.fetch
-  let ffiO ← fndsa_ffi.o.fetch
-  let name := nameToStaticLib "leanfalcon"
-  buildStaticLib (pkg.staticLibDir / name) #[nativeO, ffiO]
+  if ← nativeSrcPresent pkg fndsaHeader then
+    let nativeO ← fndsa.o.fetch
+    let ffiO ← fndsa_ffi.o.fetch
+    let name := nameToStaticLib "leanfalcon"
+    buildStaticLib (pkg.staticLibDir / name) #[nativeO, ffiO]
+  else
+    buildNativeStub pkg "leanfalcon" "third_party/c-fn-dsa"
 
 /-- Test support modules (helpers, vectors). -/
 lean_lib VCVioTest

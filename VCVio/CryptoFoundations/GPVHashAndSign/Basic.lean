@@ -4,14 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.SignatureAlg
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
-import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
-import VCVio.ProgramLogic.Relational.ProgrammingOracle
+module
+
+public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
+public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.ProgramLogic.Relational.ProgrammingOracle
 
 /-! # GPV Hash-and-Sign: Preimage Sampleable Functions and the Scheme
 
@@ -20,6 +22,8 @@ signature construction in the random-oracle model, its runtime bundle, the
 structural query-bound predicates, and the collision-finding and
 programmed-preimage adversary interfaces with their experiments.
 -/
+
+@[expose] public section
 
 universe v
 

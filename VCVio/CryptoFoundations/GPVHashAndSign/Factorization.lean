@@ -4,13 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.CollisionTelescope
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.CollisionTelescope
 
 /-! # GPV Hash-and-Sign: The Adaptive-to-signRunF Factorization
 
 The factorization of the adaptive game runs through the fixed signing-step
 recursion, and the concrete GPV per-step answer handlers witnessing it.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

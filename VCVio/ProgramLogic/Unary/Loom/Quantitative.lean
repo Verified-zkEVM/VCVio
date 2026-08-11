@@ -4,14 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import PolyFun.Control.Monad.Algebra
-import ToMathlib.Control.OptionT
-import ToMathlib.Control.StateT
-import ToMathlib.Control.WriterT
-import VCVio.EvalDist.Monad.Basic
-import VCVio.OracleComp.EvalDist
-import Loom.WP.Basic
-import Loom.Triple.Basic
+module
+
+public import PolyFun.Control.Monad.Algebra
+public import ToMathlib.Control.OptionT
+public import ToMathlib.Control.StateT
+public import ToMathlib.Control.WriterT
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.OracleComp.EvalDist
+public import Loom.WP.Basic
+public import Loom.Triple.Basic
 
 /-!
 # Quantitative `WP` carrier for `OracleComp` (Loom2 default)
@@ -67,6 +69,8 @@ When Volo's PR #12965 lands upstream and the `Std.Do.{WP,…}` API
 stabilizes, this bridge collapses to a re-export and the lattice
 adapters can move to a shared `ToMathlib/Order/LeanOrderAdapter.lean`.
 -/
+
+@[expose] public section
 
 open ENNReal
 open Lean.Order
@@ -361,9 +365,16 @@ theorem wp_ExceptT_monadLift {ε : Type} (oa : OracleComp spec α) (post : α �
     Std.Do'.wp (MonadLift.monadLift oa : ExceptT ε (OracleComp spec) α) post epost =
       Std.Do'.wp oa post Lean.Order.bot := by
   change MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞)
-      (oa >>= fun a => pure (Except.ok a)) (epost.pushExcept post) =
+      (Except.ok <$> oa) (epost.pushExcept post) =
     MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa post
-  simp only [MAlgOrdered.wp_bind, MAlgOrdered.wp_pure]
+  rw [map_eq_bind_pure_comp]
+  rw [MAlgOrdered.wp_bind]
+  congr 1
+  funext a
+  change MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞)
+      (pure (Except.ok a)) (epost.pushExcept post) = post a
+  exact MAlgOrdered.wp_pure (m := OracleComp spec) (l := ℝ≥0∞)
+    (Except.ok a) (epost.pushExcept post)
 
 /-! ## `ReaderT (OracleComp spec)` WP normalization -/
 

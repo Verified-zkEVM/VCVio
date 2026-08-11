@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.GameIdentification
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.GameIdentification
 
 /-! # GPV Hash-and-Sign: The Verification Bridge
 
@@ -12,6 +14,8 @@ The O1 data-processing bridge from Step-1 to the post-processed verification
 game, the forger-queries-its-forgery-point predicate, and the programmed
 verify-game machinery it feeds.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

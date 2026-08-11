@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.UnlinkReduction
-import VCVio.CryptoFoundations.Asymptotics.Security
+module
+
+public import Examples.PRFTagReader.UnlinkReduction
+public import VCVio.CryptoFoundations.Asymptotics.Security
 
 /-!
 # Asymptotic Unlinkability
@@ -49,6 +51,8 @@ negation.
   polynomial bounds on `|TagId λ|` and `sessionsPerTag λ` are real modeling assumptions, surfaced
   explicitly.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal Filter
 

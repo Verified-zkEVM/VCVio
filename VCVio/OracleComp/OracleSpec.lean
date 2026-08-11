@@ -3,7 +3,9 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import PolyFun.PFunctor.Basic
+
+module
+public import PolyFun.PFunctor.Basic
 
 /-!
 # Specifications of Available Oracles
@@ -18,6 +20,8 @@ This file also defines the standard sampling specifications `coinSpec`, `unifSpe
 `probSpec`.
 -/
 
+@[expose] public section
+
 universe u u' v w
 
 /-- An `OracleSpec ι` specifies a set of oracles indexed by `ι`.
@@ -29,7 +33,8 @@ namespace OracleSpec
 
 variable {ι : Type u}
 
-def toPFunctor (spec : OracleSpec ι) : PFunctor := { A := ι, B := spec }
+@[reducible]
+def toPFunctor (spec : OracleSpec ι) : PFunctor := PFunctor.mk ι spec
 
 @[reducible, inline]
 def ofPFunctor (P : PFunctor) : OracleSpec P.A := P.B
@@ -97,7 +102,11 @@ lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
 @[simp] lemma add_apply_inr {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
     (t : ι') : (spec + spec') (.inr t) = spec' t := rfl
 
-@[simp] lemma toPFunctor_add {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
+/-- Deliberately not `@[simp]`: `toPFunctor` occurs inside the (instance-carrying)
+type of an `OracleComp`, so rewriting with this under a `simulateQ`/`liftM` strands
+the goal in a form the `simulateQ_query` family can no longer match. -/
+lemma toPFunctor_add {ι : Type u} {ι' : Type u'}
+    (spec : OracleSpec ι) (spec' : OracleSpec ι') :
     (spec + spec').toPFunctor = spec.toPFunctor + spec'.toPFunctor := rfl
 
 @[simp] lemma ofPFunctor_add (P P' : PFunctor) :
@@ -150,7 +159,8 @@ instance {ι ι'} : HMul (OracleSpec ι) (OracleSpec ι') (OracleSpec (ι × ι'
 @[simp] lemma mul_apply {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
     (t : ι × ι') : (spec * spec').Range t = (spec.Range t.1 ⊕ spec'.Range t.2) := rfl
 
-@[simp] lemma toPFunctor_mul {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
+@[simp] lemma toPFunctor_mul {ι : Type u} {ι' : Type u'}
+    (spec : OracleSpec ι) (spec' : OracleSpec ι') :
     (spec * spec').toPFunctor = spec.toPFunctor * spec'.toPFunctor := rfl
 
 @[simp] lemma ofPFunctor_mul (P P' : PFunctor) :

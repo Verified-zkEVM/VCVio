@@ -3,12 +3,16 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
-import VCVio.OracleComp.Coercions.Add
+
+module
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+public import VCVio.OracleComp.Coercions.Add
 
 /-!
 # Append/Add Operation for Simulation Oracles
 -/
+
+@[expose] public section
 
 universe u v w
 
@@ -393,7 +397,10 @@ lemma simulateQ_optionT_liftM_run_eq_of_query
         OracleComp spec₂' (Option α))
       = (some <$> simulateQ impl₁ oa : m' (Option α)) := by
   have hrun : ((liftM oa : OptionT (OracleComp spec₂') α) : OracleComp spec₂' (Option α))
-      = some <$> (liftM oa : OracleComp spec₂' α) := rfl
+      = some <$> (liftM oa : OracleComp spec₂' α) := by
+    change OptionT.run (OptionT.lift (liftM oa : OracleComp spec₂' α)) = _
+    rw [map_eq_bind_pure_comp]
+    rfl
   rw [hrun, simulateQ_map, QueryImpl.simulateQ_liftM_eq_of_query impl impl₁ h oa]
 
 end simulateQ_optionT_liftM_run

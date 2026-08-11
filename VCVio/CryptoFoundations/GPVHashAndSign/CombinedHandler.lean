@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.GPVHashAndSign.FlagHandlers
+module
+
+public import VCVio.CryptoFoundations.GPVHashAndSign.FlagHandlers
 
 /-! # GPV Hash-and-Sign: The Combined Programmed-Game and Collision-Reduction Handler
 
@@ -12,6 +14,8 @@ The combined handler running the programmed game and the collision reduction in
 lockstep, its projections onto each factor, the write-only-table deferral, and
 the cache/table coherence invariant.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

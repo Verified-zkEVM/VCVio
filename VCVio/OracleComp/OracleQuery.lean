@@ -3,13 +3,17 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.OracleSpec
+
+module
+public import VCVio.OracleComp.OracleSpec
 
 /-!
 # Oracle Queries
 
 This file defines `OracleQuery`, the single-query functor induced by an `OracleSpec`.
 -/
+
+@[expose] public section
 
 universe u v w z
 
@@ -20,6 +24,7 @@ defined to be the object type of the corresponding `PFunctor`.
 In particular an element of `OracleQuery spec α` consists of an input value `t : spec.Domain`,
 and a continuation `f : spec.Range t → α` specifying what to do with the result.
 See `OracleSpec.query` for the case when the continuation `f` just returns the query result. -/
+@[reducible]
 def OracleQuery {ι : Type u} (spec : OracleSpec.{u, v} ι) :
     Type w → Type (max u v w) :=
   PFunctor.Obj spec.toPFunctor
@@ -72,13 +77,6 @@ end OracleSpec.PrimitiveQuery
 namespace OracleQuery
 
 variable {ι : Type u} {spec : OracleSpec.{u, v} ι}
-
-/-- `OracleQuery spec` inherits the functorial structure from `PFunctor.Obj`. -/
-instance {spec : OracleSpec ι} : Functor (OracleQuery spec) where
-  map := spec.toPFunctor.map
-
-instance {spec : OracleSpec ι} : LawfulFunctor (OracleQuery spec) :=
-  inferInstanceAs (LawfulFunctor (PFunctor.Obj spec.toPFunctor))
 
 /-- The oracle input used in an oracle query. -/
 @[inline, reducible]

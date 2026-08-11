@@ -3,9 +3,11 @@ Copyright (c) 2026 XC0R. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: XC0R
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.QueryTracking.Birthday
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.QueryTracking.Birthday
 
 /-!
 # Collision-Resistant Hash Functions
@@ -54,6 +56,8 @@ protocol parameter.
 - `VCVio/OracleComp/QueryTracking/Collision.lean` — `CacheHasCollision`
   predicates and birthday bounds used to bound ROM-level collision probability.
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal
@@ -129,7 +133,7 @@ term `(t+2) * (t+1) / (2 * |Y|)` — a `(t+2)`-query game once the two
 verification queries are accounted for.
 
 Closes one of the layers requested in
-[Verified-zkEVM/VCV-io#284](https://github.com/Verified-zkEVM/VCV-io/issues/284).
+[Verified-zkEVM/VCVio#284](https://github.com/Verified-zkEVM/VCVio/issues/284).
 -/
 
 /-- The random-oracle spec with domain `X` and range `Y`, as seen by the

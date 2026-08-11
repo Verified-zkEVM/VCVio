@@ -3,9 +3,11 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters, Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.Birthday
-import VCVio.OracleComp.QueryTracking.ProgrammingOracle
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.OracleComp.QueryTracking.Birthday
+public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # ROM Unpredictability and Collision Win Bounds
@@ -29,6 +31,8 @@ The TV-distance "programming collision" bound that consumes this typeclass lives
 its `qP * qH * β` repackaging), keeping the relational theorem in the `ProgramLogic` layer
 while the unpredictability primitive stays here in `QueryTracking`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal Finset
 
@@ -142,7 +146,7 @@ theorem probEvent_cache_has_value_le_of_unique_preimage {α : Type}
               pure (u, cache₀.cacheQuery t u) : OracleComp spec _) := by
           simp only [cachingOracle.apply_eq, liftM, MonadLiftT.monadLift, MonadLift.monadLift,
             StateT.run_bind, StateT.run_get, pure_bind, ht_none]
-          change (StateT.lift (PFunctor.FreeM.lift (query t)) cache₀ >>= _) = _
+          change (StateT.lift (PFunctor.FreeM.lift (P := spec.toPFunctor) t) cache₀ >>= _) = _
           simp only [StateT.lift, monad_norm,
             modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
             StateT.modifyGet, StateT.run]
