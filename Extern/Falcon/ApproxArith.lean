@@ -22,6 +22,15 @@ The `HasRealSemantics` class asserts that a `FloatLike F` type has a denotation 
 such that each arithmetic operation satisfies a relative error bound with machine epsilon
 `ε`. For IEEE-754 binary64 (the precision used by Falcon), `ε = 2^{-52}`.
 
+No finite floating-point format can satisfy such a bound *unconditionally*: overflow
+alone produces a result whose magnitude is unrelated to the exact one, so it cannot be
+within any bounded relative epsilon of it. Every operation is therefore stated on a
+`Valid` operand predicate and an `InRange` predicate on the exact real result, and each
+operation's `_valid` field closes `Valid` under that same restriction, so a chain of
+operations can carry `Valid`/`InRange` for every intermediate result through a compound
+expression (see `compound_add_mul_error`, `horner_step_error`, and the `butterfly_*`
+lemmas below).
+
 This factoring separates two concerns:
 1. **Algorithmic correctness** (generic over `FloatLike F`): "If the arithmetic were exact,
    the algorithm would produce the right answer."
@@ -50,26 +59,53 @@ noncomputable section
 namespace FloatLike
 
 /-- A `FloatLike F` type has real semantics with machine epsilon `ε` if there is a
-denotation `interp : F → ℝ` such that each operation satisfies a relative error bound.
+denotation `interp : F → ℝ`, a validity predicate `Valid` on `F`, and a range predicate
+`InRange` on `ℝ`, such that each operation satisfies a relative error bound — and
+preserves `Valid` — on `Valid`, `InRange` operands.
+
+`Valid` restricts operands to the format's well-behaved region (e.g. normal, finite
+binary64 values, excluding subnormals and Inf/NaN); `InRange` restricts the *exact*
+mathematical result of an operation to the magnitude window the format can round without
+overflow or underflow. Neither restriction can be dropped: a finite format has no way to
+honor a relative-error bound once the exact result leaves its representable range. The
+`_valid` fields are what let the compound lemmas below chain several operations while
+re-deriving `Valid`/`InRange` for each intermediate result from the same starting
+hypotheses, rather than needing it assumed at every step.
 
 The machine epsilon for IEEE-754 binary64 is `2^{-52} ≈ 2.22 × 10^{-16}`. -/
 class HasRealSemantics (F : Type) [FloatLike F] (ε : outParam ℝ) where
   interp : F → ℝ
+  /-- The operands on which this format's arithmetic laws are guaranteed to hold
+  (e.g. normal, finite binary64 values). -/
+  Valid : F → Prop
+  /-- The exact real results this format can round without overflow or underflow. -/
+  InRange : ℝ → Prop
   ε_nonneg : 0 ≤ ε
   ε_lt_one : ε < 1
   interp_zero : interp FloatLike.zero = 0
   interp_one : interp FloatLike.one = 1
-  add_error : ∀ (a b : F),
+  add_error : ∀ (a b : F), Valid a → Valid b → InRange (interp a + interp b) →
     |interp (FloatLike.add a b) - (interp a + interp b)| ≤ ε * |interp a + interp b|
-  mul_error : ∀ (a b : F),
+  add_valid : ∀ (a b : F), Valid a → Valid b → InRange (interp a + interp b) →
+    Valid (FloatLike.add a b)
+  mul_error : ∀ (a b : F), Valid a → Valid b → InRange (interp a * interp b) →
     |interp (FloatLike.mul a b) - interp a * interp b| ≤ ε * |interp a * interp b|
-  div_error : ∀ (a b : F), interp b ≠ 0 →
+  mul_valid : ∀ (a b : F), Valid a → Valid b → InRange (interp a * interp b) →
+    Valid (FloatLike.mul a b)
+  div_error : ∀ (a b : F), Valid a → Valid b → interp b ≠ 0 →
+    InRange (interp a / interp b) →
     |interp (FloatLike.div a b) - interp a / interp b| ≤ ε * |interp a / interp b|
-  sqrt_error : ∀ (a : F), 0 ≤ interp a →
+  div_valid : ∀ (a b : F), Valid a → Valid b → interp b ≠ 0 →
+    InRange (interp a / interp b) → Valid (FloatLike.div a b)
+  sqrt_error : ∀ (a : F), Valid a → 0 ≤ interp a →
     |interp (FloatLike.sqrt a) - Real.sqrt (interp a)| ≤ ε * Real.sqrt (interp a)
+  sqrt_valid : ∀ (a : F), Valid a → 0 ≤ interp a → Valid (FloatLike.sqrt a)
   neg_exact : ∀ (a : F), interp (FloatLike.neg a) = -interp a
-  sub_error : ∀ (a b : F),
+  neg_valid : ∀ (a : F), Valid a → Valid (FloatLike.neg a)
+  sub_error : ∀ (a b : F), Valid a → Valid b → InRange (interp a - interp b) →
     |interp (FloatLike.sub a b) - (interp a - interp b)| ≤ ε * |interp a - interp b|
+  sub_valid : ∀ (a b : F), Valid a → Valid b → InRange (interp a - interp b) →
+    Valid (FloatLike.sub a b)
 
 namespace HasRealSemantics
 
@@ -87,34 +123,45 @@ private theorem result_bounds_of_error {target result : ℝ}
   · linarith [abs_sub_abs_le_abs_sub target result, abs_sub_comm target result]
   · linarith [abs_sub_abs_le_abs_sub result target]
 
-/-- The result of an addition lies in `[(1-ε)(a+b), (1+ε)(a+b)]`. -/
-theorem add_result_bounds (a b : F) :
+/-- The result of an addition lies in `[(1-ε)(a+b), (1+ε)(a+b)]`, on `Valid`, `InRange`
+operands. -/
+theorem add_result_bounds (a b : F) (ha : self.Valid a) (hb : self.Valid b)
+    (hr : self.InRange (self.interp a + self.interp b)) :
     (1 - ε) * |self.interp a + self.interp b| ≤ |self.interp (FloatLike.add a b)| ∧
     |self.interp (FloatLike.add a b)| ≤
       (1 + ε) * |self.interp a + self.interp b| :=
-  result_bounds_of_error (self.add_error a b)
+  result_bounds_of_error (self.add_error a b ha hb hr)
 
-/-- The result of a multiplication lies in `[(1-ε)(a·b), (1+ε)(a·b)]`. -/
-theorem mul_result_bounds (a b : F) :
+/-- The result of a multiplication lies in `[(1-ε)(a·b), (1+ε)(a·b)]`, on `Valid`, `InRange`
+operands. -/
+theorem mul_result_bounds (a b : F) (ha : self.Valid a) (hb : self.Valid b)
+    (hr : self.InRange (self.interp a * self.interp b)) :
     (1 - ε) * |self.interp a * self.interp b| ≤ |self.interp (FloatLike.mul a b)| ∧
     |self.interp (FloatLike.mul a b)| ≤
       (1 + ε) * |self.interp a * self.interp b| :=
-  result_bounds_of_error (self.mul_error a b)
+  result_bounds_of_error (self.mul_error a b ha hb hr)
 
 /-! ### Compound Expression Error Bounds -/
 
 /-- Error bound for `a * b + c * d`: the accumulated relative error is at most
 `2ε + ε²`, the standard depth-2 relative-error bound `(1 + ε)^2 - 1`. -/
-theorem compound_add_mul_error (a b c d : F) :
+theorem compound_add_mul_error (a b c d : F)
+    (ha : self.Valid a) (hb : self.Valid b) (hc : self.Valid c) (hd : self.Valid d)
+    (hrab : self.InRange (self.interp a * self.interp b))
+    (hrcd : self.InRange (self.interp c * self.interp d))
+    (hradd : self.InRange
+      (self.interp (FloatLike.mul a b) + self.interp (FloatLike.mul c d))) :
     |self.interp (FloatLike.add (FloatLike.mul a b) (FloatLike.mul c d)) -
       (self.interp a * self.interp b + self.interp c * self.interp d)| ≤
     (2 * ε + ε ^ 2) *
       (|self.interp a * self.interp b| + |self.interp c * self.interp d|) := by
-  have h_mul_ab := self.mul_error a b
-  have h_mul_cd := self.mul_error c d
-  have h_add := self.add_error (FloatLike.mul a b) (FloatLike.mul c d)
-  have h_mul_ab_ub := (self.mul_result_bounds a b).2
-  have h_mul_cd_ub := (self.mul_result_bounds c d).2
+  have h_mul_ab := self.mul_error a b ha hb hrab
+  have h_mul_cd := self.mul_error c d hc hd hrcd
+  have hvab : self.Valid (FloatLike.mul a b) := self.mul_valid a b ha hb hrab
+  have hvcd : self.Valid (FloatLike.mul c d) := self.mul_valid c d hc hd hrcd
+  have h_add := self.add_error (FloatLike.mul a b) (FloatLike.mul c d) hvab hvcd hradd
+  have h_mul_ab_ub := (self.mul_result_bounds a b ha hb hrab).2
+  have h_mul_cd_ub := (self.mul_result_bounds c d hc hd hrcd).2
   have hε := self.ε_nonneg
   set u := self.interp (FloatLike.mul a b) with hu
   set v := self.interp (FloatLike.mul c d) with hv
@@ -136,14 +183,18 @@ theorem compound_add_mul_error (a b c d : F) :
 
 /-- Error bound for a Horner evaluation step `a * x + b`: the accumulated error is at
 most `2ε + ε²` relative to the exact value. -/
-theorem horner_step_error (a x b : F) :
+theorem horner_step_error (a x b : F)
+    (ha : self.Valid a) (hx : self.Valid x) (hb : self.Valid b)
+    (hrmul : self.InRange (self.interp a * self.interp x))
+    (hradd : self.InRange (self.interp (FloatLike.mul a x) + self.interp b)) :
     |self.interp (FloatLike.add (FloatLike.mul a x) b) -
       (self.interp a * self.interp x + self.interp b)| ≤
     (2 * ε + ε ^ 2) *
       (|self.interp a * self.interp x| + |self.interp b|) := by
-  have h_mul := self.mul_error a x
-  have h_add := self.add_error (FloatLike.mul a x) b
-  have h_mul_ub := (self.mul_result_bounds a x).2
+  have h_mul := self.mul_error a x ha hx hrmul
+  have hvmul : self.Valid (FloatLike.mul a x) := self.mul_valid a x ha hx hrmul
+  have h_add := self.add_error (FloatLike.mul a x) b hvmul hb hradd
+  have h_mul_ub := (self.mul_result_bounds a x ha hx hrmul).2
   have hε := self.ε_nonneg
   have h_tri : |self.interp (FloatLike.add (FloatLike.mul a x) b) -
       (self.interp a * self.interp x + self.interp b)| ≤
@@ -163,14 +214,18 @@ theorem horner_step_error (a x b : F) :
 
 /-- Error bound for one FFT butterfly step: given `a, b` and twiddle factor `w`,
 the output `a + w·b` has accumulated error at most `2ε + ε²`. -/
-theorem butterfly_add_error (a b w : F) :
+theorem butterfly_add_error (a b w : F)
+    (ha : self.Valid a) (hw : self.Valid w) (hb : self.Valid b)
+    (hrmul : self.InRange (self.interp w * self.interp b))
+    (hradd : self.InRange (self.interp a + self.interp (FloatLike.mul w b))) :
     |self.interp (FloatLike.add a (FloatLike.mul w b)) -
       (self.interp a + self.interp w * self.interp b)| ≤
     (2 * ε + ε ^ 2) *
       (|self.interp a| + |self.interp w * self.interp b|) := by
-  have h_mul := self.mul_error w b
-  have h_add := self.add_error a (FloatLike.mul w b)
-  have h_mul_ub := (self.mul_result_bounds w b).2
+  have h_mul := self.mul_error w b hw hb hrmul
+  have hvmul : self.Valid (FloatLike.mul w b) := self.mul_valid w b hw hb hrmul
+  have h_add := self.add_error a (FloatLike.mul w b) ha hvmul hradd
+  have h_mul_ub := (self.mul_result_bounds w b hw hb hrmul).2
   have hε := self.ε_nonneg
   have h_tri : |self.interp (FloatLike.add a (FloatLike.mul w b)) -
       (self.interp a + self.interp w * self.interp b)| ≤
@@ -187,14 +242,18 @@ theorem butterfly_add_error (a b w : F) :
     linarith [abs_add_le (self.interp a) (self.interp (FloatLike.mul w b))]
   nlinarith [abs_nonneg (self.interp a), abs_nonneg (self.interp w * self.interp b)]
 
-theorem butterfly_sub_error (a b w : F) :
+theorem butterfly_sub_error (a b w : F)
+    (ha : self.Valid a) (hw : self.Valid w) (hb : self.Valid b)
+    (hrmul : self.InRange (self.interp w * self.interp b))
+    (hrsub : self.InRange (self.interp a - self.interp (FloatLike.mul w b))) :
     |self.interp (FloatLike.sub a (FloatLike.mul w b)) -
       (self.interp a - self.interp w * self.interp b)| ≤
     (2 * ε + ε ^ 2) *
       (|self.interp a| + |self.interp w * self.interp b|) := by
-  have h_mul := self.mul_error w b
-  have h_sub := self.sub_error a (FloatLike.mul w b)
-  have h_mul_ub := (self.mul_result_bounds w b).2
+  have h_mul := self.mul_error w b hw hb hrmul
+  have hvmul : self.Valid (FloatLike.mul w b) := self.mul_valid w b hw hb hrmul
+  have h_sub := self.sub_error a (FloatLike.mul w b) ha hvmul hrsub
+  have h_mul_ub := (self.mul_result_bounds w b hw hb hrmul).2
   have hε := self.ε_nonneg
   have h_tri : |self.interp (FloatLike.sub a (FloatLike.mul w b)) -
       (self.interp a - self.interp w * self.interp b)| ≤
@@ -237,34 +296,58 @@ theorem ieee754_machineEpsilon_lt_one : ieee754_machineEpsilon < 1 := by
   norm_num
 
 -- open Falcon.Concrete.FPR in
-/- FPR satisfies `HasRealSemantics` with machine epsilon `2^{-52}`.
+/- FPR satisfies `HasRealSemantics` with machine epsilon `2^{-52}`, restricted to normal,
+finite operands (`FPR.IsNormal`) and to exact results that land in the correctly-rounded
+magnitude window (`FPR.InNormalMagnitudeRange`).
 
-The `interp` denotation is `FPRBridge.toReal` (IEEE-754 bit interpretation).
-The per-operation error bounds come from `FPRBridge.lean`.
+The `interp` denotation is `FPRBridge.toReal`, a pure `Nat`/`Bool`/`ℝ` decoding of the
+IEEE-754 bit fields (`FPR.decode` + `FPR.Bits.toReal`) with no dependence on the opaque
+`Float.ofBits`/`Float.toRat0` runtime path. Consequently `interp_zero`, `interp_one`, and
+`neg_exact` are fully proved below (`toReal_zero`, `toReal_one`, `toReal_neg`), and
+`add_error`, `mul_error`, `sqrt_error` are literally `FPRBridge`'s theorems of the same
+name — their statements already carry exactly the `IsNormal`/`InNormalMagnitudeRange`
+hypotheses this class's fields ask for. `div_error` needs its hypotheses supplied in a
+different order than `FPRBridge.div_error` uses, but is otherwise the same theorem.
 
-**Not provable as stated.** The four `sorry` fields (`interp_zero`, `interp_one`, `neg_exact`,
-`sub_error`) require reasoning about `FPRBridge.toReal`, which is defined via
-`Float.ofBits` and `Float.toRat0`. Both are opaque to the Lean kernel:
+What remains open:
 
-- `Float.ofBits : UInt64 → Float` is an `extern` call into the runtime.
-- `Float.toRat0 : Float → Rat` roundtrips through hardware floats.
+- The bodies of `add_error`, `mul_error`, `div_error`, `sqrt_error` in `FPRBridge.lean`
+  are `sorry` (the correctly-rounded three-stage pipeline proof is future work).
+- The `_valid` closure fields (`add_valid`, `mul_valid`, `div_valid`, `sqrt_valid`,
+  `sub_valid`) have no counterpart in `FPRBridge.lean` yet; each needs a bit-level
+  argument that a correctly-rounded, in-range result stays normal (no separate
+  `IsNormal`-losing failure mode beyond the overflow/underflow `InRange` already rules
+  out, but that still needs to be proved).
+- `neg_valid` should be an easy corollary of the file-private `decode_neg_exponent`
+  (negation only flips the sign bit, so it preserves the exponent field and hence
+  `IsNormal`); it just needs a public wrapper, since `decode_neg_exponent` itself is
+  `private` to `FPRBridge.lean`.
+- `sub_error`/`sub_valid` have no bit-level pipeline of their own to prove: `FPR.sub a b`
+  unfolds to `FPR.add a (FPR.neg b)`, so both should reduce compositionally to
+  `add_error`/`add_valid` plus `neg_exact`/`neg_valid`, without a fresh sorry beyond the
+  one `add_error` already carries.
 
-To discharge these obligations we would need either:
-1. An axiomatized IEEE-754 model (`axiom float_ofBits_zero : Float.ofBits 0 = ...`), or
-2. A verified pure-Lean IEEE-754 decoder that replaces the opaque `Float` path.
-
-Until then, these remain axiomatic trust assumptions about the FPR encoding. -/
+Until these are discharged, this instance stays commented out. -/
 -- instance : FloatLike.HasRealSemantics FPR ieee754_machineEpsilon where
 --   interp := Falcon.Concrete.FPRBridge.toReal
+--   Valid := Falcon.Concrete.FPR.IsNormal
+--   InRange := Falcon.Concrete.FPR.InNormalMagnitudeRange
 --   ε_nonneg := le_of_lt ieee754_machineEpsilon_pos
 --   ε_lt_one := ieee754_machineEpsilon_lt_one
---   interp_zero := by sorry
---   interp_one := by sorry
+--   interp_zero := Falcon.Concrete.FPRBridge.toReal_zero
+--   interp_one := Falcon.Concrete.FPRBridge.toReal_one
 --   add_error := Falcon.Concrete.FPRBridge.add_error
+--   add_valid := _   -- open: FPR.add stays IsNormal on a normal, in-range result
 --   mul_error := Falcon.Concrete.FPRBridge.mul_error
---   div_error := fun a b hb => Falcon.Concrete.FPRBridge.div_error a b hb
---   sqrt_error := fun a ha => Falcon.Concrete.FPRBridge.sqrt_error a ha
---   neg_exact := fun _ => by sorry
---   sub_error := fun _ _ => by sorry
+--   mul_valid := _   -- open: same shape as `add_valid`, for `FPR.mul`
+--   div_error := fun a b ha hb hbne hr =>
+--     Falcon.Concrete.FPRBridge.div_error a b hbne ha hb hr
+--   div_valid := _   -- open: same shape as `add_valid`, for `FPR.div`
+--   sqrt_error := Falcon.Concrete.FPRBridge.sqrt_error
+--   sqrt_valid := _  -- open: same shape as `add_valid`, for `FPR.sqrt`
+--   neg_exact := Falcon.Concrete.FPRBridge.toReal_neg
+--   neg_valid := _   -- open here, but should follow from `decode_neg_exponent`
+--   sub_error := _   -- open, but should reduce compositionally to `add_error`
+--   sub_valid := _   -- open, but should reduce compositionally to `add_valid`
 
 end
