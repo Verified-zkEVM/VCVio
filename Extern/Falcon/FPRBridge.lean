@@ -348,12 +348,14 @@ def FPR.ExactInNormalRange (r : ℝ) : Prop :=
 /-! ## Bit-pattern magnitude compare (toward `FPR.add`'s compare-and-swap step)
 
 `FPR.add` opens by comparing its two operands' magnitudes as unsigned 63-bit integers
-(`za := (x &&& M63) - (y &&& M63)`, testing the top bit of `za`) and conditionally swapping so
-the larger-magnitude operand leads. The lemmas below give the two halves of that step's
-correctness: `FPR.Bits.abs_toReal_lt_iff_magKey_lt` shows the packed exponent/mantissa integer
-orders identically to real magnitude, and `toNat_and_low63Mask_eq_magKey` shows the concrete
-`x &&& M63` computation produces exactly that packed integer. Neither lemma reaches
-`FPR.add` itself yet (the tie-break via `za'`, the conditional swap, and every later pipeline
+(`za := (x &&& M63) - (y &&& M63)`) and conditionally swapping, via the tie-broken comparator
+`za' := za ||| ((za - 1) &&& x)`, so the larger-magnitude operand leads (with ties broken by `x`'s
+own sign bit). The lemmas below give the ingredients of that step's correctness:
+`FPR.Bits.abs_toReal_lt_iff_magKey_lt` shows the packed exponent/mantissa integer orders
+identically to real magnitude, `toNat_and_low63Mask_eq_magKey` shows the concrete `x &&& M63`
+computation produces exactly that packed integer, and `za'_shiftRight_63_eq_one_iff` decides the
+swap test `za' >>> 63` — tie-break included — in terms of the two packed integers and `x`'s sign
+bit. None of the three reaches `FPR.add` itself yet (the conditional swap and every later pipeline
 stage — alignment/sticky-bit shift, sign combination, leading-zero renormalization, final
 round-to-nearest — remain open); they are reusable infrastructure for that larger proof. -/
 
@@ -524,6 +526,77 @@ theorem sub_shiftRight_63_eq_one_iff_lt (p q : UInt64)
     rw [hdiv]
     omega
 
+/-- Shifting a `UInt64` right by the literal `63` denotes plain `Nat` division by `2 ^ 63`: the
+shift-count truncation `63 % 64` folds away since `63` is already below the word size. -/
+private theorem toNat_shiftRight_sixtyThree (w : UInt64) :
+    (w >>> 63).toNat = w.toNat / 2 ^ 63 := by
+  rw [UInt64.toNat_shiftRight, show (63 : UInt64).toNat % 64 = 63 from by decide,
+    Nat.shiftRight_eq_div_pow]
+
+/-- Whenever the plain subtraction `p - q` is nonzero, folding in `(p - q - 1) &&& x` leaves its
+top bit unchanged: the fold can only move bit `63` on an exact tie `p - q = 0`, the case
+`za'_shiftRight_63_eq_one_iff` handles separately. Consumed by that lemma, this is what lets
+`sub_shiftRight_63_eq_one_iff_lt`'s plain "subtract and test the top bit" trick decide the
+non-tied cases of `FPR.add`'s tie-broken comparator `za'`. -/
+theorem or_and_sub_one_shiftRight_63_eq_of_ne_zero (p q x : UInt64) (h : p ≠ q)
+    (hp : p < ((1 : UInt64) <<< 63)) (hq : q < ((1 : UInt64) <<< 63)) :
+    ((p - q) ||| ((p - q - 1) &&& x)) >>> 63 = (p - q) >>> 63 := by
+  have h63 : ((1 : UInt64) <<< 63).toNat = 2 ^ 63 := by decide
+  rw [UInt64.lt_iff_toNat_lt, h63] at hp hq
+  have hne : p.toNat ≠ q.toNat := fun hc => h (UInt64.toNat_inj.mp hc)
+  have hzaN : (p - q).toNat = (2 ^ 64 - q.toNat + p.toNat) % 2 ^ 64 := UInt64.toNat_sub p q
+  rw [← UInt64.toNat_inj, toNat_shiftRight_sixtyThree, toNat_shiftRight_sixtyThree]
+  rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
+  · -- p < q: `p - q` already wraps into the upper half, and or-ing in more bits cannot clear it.
+    have hle : (p - q) ≤ (p - q) ||| ((p - q - 1) &&& x) := UInt64.left_le_or
+    have hle' : (p - q).toNat ≤ ((p - q) ||| ((p - q - 1) &&& x)).toNat :=
+      UInt64.le_iff_toNat_le.mp hle
+    have hup : ((p - q) ||| ((p - q - 1) &&& x)).toNat < 2 ^ 64 := UInt64.toNat_lt _
+    omega
+  · -- p > q: `p - q` stays below the half, and so does the `&&&`-bounded fold or-ed into it.
+    have hsub1N : (p - q - 1).toNat = (2 ^ 64 - 1 + (p - q).toNat) % 2 ^ 64 :=
+      UInt64.toNat_sub (p - q) 1
+    have hzalt : (p - q).toNat < 2 ^ 63 := by omega
+    have hsub1lt : (p - q - 1).toNat < 2 ^ 63 := by omega
+    have hand : ((p - q - 1) &&& x).toNat ≤ (p - q - 1).toNat :=
+      UInt64.le_iff_toNat_le.mp UInt64.and_le_left
+    have handlt : ((p - q - 1) &&& x).toNat < 2 ^ 63 := by omega
+    have hor : ((p - q) ||| ((p - q - 1) &&& x)).toNat < 2 ^ 63 :=
+      Nat.or_lt_two_pow hzalt handlt
+    omega
+
+/-- All-ones (`(0 : UInt64) - 1`) is neutral for `&&&`: this is what a tied magnitude comparison
+`p - q = 0` collapses `FPR.add`'s tie-broken comparator `za' := (p - q) ||| ((p - q - 1) &&& x)`
+down to (`(p - q - 1)` wraps to all-ones), leaving `za' = x` and its top bit exactly `x`'s sign
+bit. -/
+private theorem allOnes_and (x : UInt64) : ((0 : UInt64) - 1) &&& x = x := by
+  have h0 : ((0 : UInt64) - 1).toNat = 2 ^ 64 - 1 := by decide
+  rw [← UInt64.toNat_inj, UInt64.toNat_and, h0, Nat.and_comm,
+    Nat.and_two_pow_sub_one_eq_mod]
+  exact Nat.mod_eq_of_lt x.toNat_lt_size
+
+/-- Bit `63` of `FPR.add`'s tie-broken magnitude comparator `za' := (p - q) ||| ((p - q - 1) &&&
+x)`: it is set exactly when the packed magnitude `p` is strictly below `q`, or the two are equal
+and `x`'s own sign bit is set. This is the correctness of `FPR.add`'s conditional-swap test
+`(x ^^^ y) &&& (0 - (za' >>> 63))`, including the tie-break the plain "subtract and test the top
+bit" trick (`sub_shiftRight_63_eq_one_iff_lt`) does not cover on its own: on an exact tie
+`p - q = 0`, `p - q - 1` wraps to all-ones, so `za'` collapses to `x` itself
+(`allOnes_and`), and the swap keys on `x`'s sign bit. -/
+theorem za'_shiftRight_63_eq_one_iff (p q x : UInt64)
+    (hp : p < ((1 : UInt64) <<< 63)) (hq : q < ((1 : UInt64) <<< 63)) :
+    ((p - q) ||| ((p - q - 1) &&& x)) >>> 63 = 1 ↔ p < q ∨ (p = q ∧ x >>> 63 = 1) := by
+  by_cases heq : p = q
+  · subst heq
+    rw [UInt64.sub_self, allOnes_and]
+    simp
+  · rw [or_and_sub_one_shiftRight_63_eq_of_ne_zero p q x heq hp hq,
+      sub_shiftRight_63_eq_one_iff_lt p q hp hq]
+    constructor
+    · exact Or.inl
+    · rintro (h | ⟨h, -⟩)
+      · exact h
+      · exact absurd h heq
+
 end
 
 /-! ## Bit-level structure of the `FPR` arithmetic kernels
@@ -543,8 +616,9 @@ operation, in terms of the actual `UInt64` / `UInt32` / `Int32` objects the kern
   and never loses zero-ness (`stickyShift_eq_zero_iff`).
 * `lzcnt_nonzero_spec` / `lzcnt64_nonzero_spec` / `lzcnt64_nonzero_unique`: the five-step binary
   search counts leading zeros exactly, so the shifted significand has its top bit set
-  (`fpr_ulsh_lzcnt64_top_bit`) and loses no bits (`fpr_ulsh_lzcnt64_toNat`); `norm64_pairToReal`
-  packages this as value-preservation of the `(significand, exponent)` pair.
+  (`fpr_ulsh_lzcnt64_top_bit`) and loses no bits (`fpr_ulsh_lzcnt64_toNat`); combined with
+  `toInt_sub_lzcnt64_nonzero_or_one_toInt32` this covers both halves of the `(significand,
+  exponent)` pair `FPR.add` and `FPR.scaled` renormalise to.
 * `roundQuarterTiesEven` and `roundTableBit`: the constant table `0xC8` implements
   round-to-nearest-ties-even on the two bits discarded by `m >>> 2`, and the final assembly
   `FPR.make` / `FPR.make_z` denotes `± m * 2 ^ e` up to relative error `2 ^ (-53)`
@@ -552,7 +626,7 @@ operation, in terms of the actual `UInt64` / `UInt32` / `Int32` objects the kern
   overflows the mantissa field into the exponent field.
 
 Several statements mention `Falcon.Concrete.FPR`'s `private` helpers (`fpr_ulsh`, `fpr_ursh`,
-`lzcnt_nonzero`, `lzcnt64_nonzero`, `norm64`, `make`, `make_z`), reachable here through the
+`lzcnt_nonzero`, `lzcnt64_nonzero`, `make`, `make_z`), reachable here through the
 `import all` above, and are therefore `private` themselves. -/
 
 /-! ### The sticky fold on `ℕ` -/
@@ -754,8 +828,10 @@ theorem toNat_or_fold_shiftRight (v k : UInt64) (hk : k.toNat < 64) :
       = stickyShift v.toNat k.toNat := by
   rw [or_fold_shiftRight v k hk, toNat_shiftRight_or_sticky v k hk]
 
-/-- The or-fold preserves zero-ness exactly: the folded value vanishes iff the input did.
-This is what makes the subsequent `make_z` zero-detection faithful. -/
+/-- The or-fold preserves zero-ness exactly: the folded value vanishes iff the input did. This is
+what makes the subsequent `make_z` zero-detection faithful: a caller who reduces a working
+significand's collapse to a statement about the *pre-fold* value being `0` can transport it
+through here, then land on `toRealBits_make_z_of_zero` for the resulting denotation. -/
 theorem or_fold_shiftRight_eq_zero_iff (v k : UInt64) (hk : k.toNat < 64) :
     (v ||| ((v &&& ((1 : UInt64) <<< k - 1)) + ((1 : UInt64) <<< k - 1))) >>> k = 0 ↔ v = 0 := by
   have h0 : (0 : UInt64).toNat = 0 := rfl
@@ -1198,24 +1274,33 @@ private theorem lzcnt64_nonzero_spec (x : UInt64) (hx : x ≠ 0) :
     omega
 
 /-- The bracket of `lzcnt64_nonzero_spec` pins the count down: `FPR.lzcnt64_nonzero x` is the
-*unique* `c ≤ 63` with `2 ^ (63 - c) ≤ x < 2 ^ (64 - c)`. -/
-private theorem lzcnt64_nonzero_unique (x : UInt64) (c : ℕ) (hc : c ≤ 63)
+*unique* `c` with `2 ^ (63 - c) ≤ x < 2 ^ (64 - c)`. No explicit `c ≤ 63` hypothesis is needed:
+for `c ≥ 64` the two `Nat`-truncated exponents `63 - c` and `64 - c` both collapse to `0`, so the
+hypotheses would demand `1 ≤ x.toNat < 1`, which is unsatisfiable. -/
+private theorem lzcnt64_nonzero_unique (x : UInt64) (c : ℕ)
     (h1 : 2 ^ (63 - c) ≤ x.toNat) (h2 : x.toNat < 2 ^ (64 - c)) :
     (lzcnt64_nonzero x).toNat = c := by
-  have hx : x ≠ 0 := by
-    intro h0
-    rw [h0] at h1
-    simp only [show (0 : UInt64).toNat = 0 from by decide] at h1
-    exact absurd h1 (by simp)
-  have hd := lzcnt64_nonzero_toNat_le x
-  obtain ⟨hl, hh⟩ := lzcnt64_nonzero_spec x hx
-  by_contra hne
-  rcases Nat.lt_or_ge (lzcnt64_nonzero x).toNat c with hlt | hge
-  · have : (2 : ℕ) ^ (64 - c) ≤ 2 ^ (63 - (lzcnt64_nonzero x).toNat) :=
-      Nat.pow_le_pow_right (by norm_num) (by omega)
-    omega
-  · have : (2 : ℕ) ^ (64 - (lzcnt64_nonzero x).toNat) ≤ 2 ^ (63 - c) :=
-      Nat.pow_le_pow_right (by norm_num) (by omega)
+  by_cases hc : c ≤ 63
+  · have hx : x ≠ 0 := by
+      intro h0
+      rw [h0] at h1
+      simp only [show (0 : UInt64).toNat = 0 from by decide] at h1
+      exact absurd h1 (by simp)
+    have hd := lzcnt64_nonzero_toNat_le x
+    obtain ⟨hl, hh⟩ := lzcnt64_nonzero_spec x hx
+    by_contra hne
+    rcases Nat.lt_or_ge (lzcnt64_nonzero x).toNat c with hlt | hge
+    · have : (2 : ℕ) ^ (64 - c) ≤ 2 ^ (63 - (lzcnt64_nonzero x).toNat) :=
+        Nat.pow_le_pow_right (by norm_num) (by omega)
+      omega
+    · have : (2 : ℕ) ^ (64 - (lzcnt64_nonzero x).toNat) ≤ 2 ^ (63 - c) :=
+        Nat.pow_le_pow_right (by norm_num) (by omega)
+      omega
+  · exfalso
+    have h63 : 63 - c = 0 := by omega
+    have h64 : 64 - c = 0 := by omega
+    rw [h63] at h1
+    rw [h64] at h2
     omega
 
 /-! ### The `||| 1` guard and the normalising shift
@@ -1299,15 +1384,12 @@ private theorem fpr_ulsh_lzcnt64_top_bit (m : UInt64) (hm : m ≠ 0) :
   rwa [← pow_add, show 63 - (lzcnt64_nonzero (m ||| 1)).toNat
       + (lzcnt64_nonzero (m ||| 1)).toNat = 63 from by omega] at hkey
 
-/-! ### `norm64` -/
+/-! ### The `FPR.add` / `FPR.scaled` exponent decrement
 
-/-- The significand component of `FPR.norm64`. -/
-private theorem norm64_fst (m : UInt64) (e : Int32) :
-    (norm64 m e).1 = fpr_ulsh m (lzcnt64_nonzero (m ||| 1)) := rfl
-
-/-- The exponent component of `FPR.norm64`. -/
-private theorem norm64_snd (m : UInt64) (e : Int32) :
-    (norm64 m e).2 = e - (lzcnt64_nonzero (m ||| 1)).toInt32 := rfl
+`FPR.add`'s `ex'' := ex' - c_add.toInt32` (with `c_add := lzcnt64_nonzero (zu ||| 1)`) and
+`FPR.scaled`'s `sc' := sc - c_sc.toInt32` (with `c_sc := lzcnt64_nonzero (m ||| 1)`) both inline
+this same exponent decrement rather than routing through `FPR.norm64`; the lemma below is stated
+directly in that inlined shape. -/
 
 /-- Reinterpreting a small `UInt32` as an `Int32` preserves its value. -/
 private theorem toInt_toInt32_of_lt {y : UInt32} (hy : y.toNat < 2 ^ 31) :
@@ -1317,26 +1399,16 @@ private theorem toInt_toInt32_of_lt {y : UInt32} (hy : y.toNat < 2 ^ 31) :
     BitVec.toInt_eq_toNat_of_lt (by simp only [UInt32.toNat_toBitVec]; omega),
     UInt32.toNat_toBitVec]
 
-/-- `FPR.norm64`'s significand is `m` shifted fully left, with no bits lost. -/
-private theorem norm64_fst_toNat (m : UInt64) (e : Int32) (hm : m ≠ 0) :
-    (norm64 m e).1.toNat = m.toNat * 2 ^ (lzcnt64_nonzero (m ||| 1)).toNat := by
-  rw [norm64_fst, fpr_ulsh_lzcnt64_toNat m hm]
-
-/-- `FPR.norm64`'s significand is left-aligned: its top bit is set (and, being a `UInt64`, it lies
-below `2 ^ 64`). This is the invariant `FPR.make` / `FPR.make_z` rely on when they read the
-implicit leading `1` out of bit 54 of `m >>> 2`. -/
-private theorem norm64_fst_top_bit (m : UInt64) (e : Int32) (hm : m ≠ 0) :
-    2 ^ 63 ≤ (norm64 m e).1.toNat ∧ (norm64 m e).1.toNat < 2 ^ 64 :=
-  ⟨by rw [norm64_fst]; exact fpr_ulsh_lzcnt64_top_bit m hm, UInt64.toNat_lt _⟩
-
-/-- `FPR.norm64`'s exponent is decremented by exactly the shift amount. The hypothesis rules out
-`Int32` underflow, which cannot occur for the exponents `FPR.scaled` / `FPR.add` actually pass
-(they live near `±1100`, while the bound only excludes `e < -2 ^ 31 + 63`). -/
-private theorem norm64_snd_toInt (m : UInt64) (e : Int32)
+/-- The exponent decrement `e - (lzcnt64_nonzero (m ||| 1)).toInt32` computed by `FPR.add` and
+`FPR.scaled` is exactly the shift amount subtracted as an integer, with no `Int32` wraparound. The
+hypothesis rules out underflow, which cannot occur for the exponents `FPR.scaled` / `FPR.add`
+actually pass (they live near `±1100`, while the bound only excludes `e < -2 ^ 31 + 63`). -/
+private theorem toInt_sub_lzcnt64_nonzero_or_one_toInt32 (m : UInt64) (e : Int32)
     (hnf : -(2 ^ 31 : ℤ) ≤ e.toInt - ((lzcnt64_nonzero (m ||| 1)).toNat : ℤ)) :
-    (norm64 m e).2.toInt = e.toInt - ((lzcnt64_nonzero (m ||| 1)).toNat : ℤ) := by
+    (e - (lzcnt64_nonzero (m ||| 1)).toInt32).toInt
+      = e.toInt - ((lzcnt64_nonzero (m ||| 1)).toNat : ℤ) := by
   have hc := lzcnt64_nonzero_toNat_le (m ||| 1)
-  rw [norm64_snd, Int32.toInt_sub, toInt_toInt32_of_lt (by omega)]
+  rw [Int32.toInt_sub, toInt_toInt32_of_lt (by omega)]
   refine Int.bmod_eq_of_le_mul_two ?_ ?_
   · have h := Int32.le_toInt e
     push_cast
@@ -1344,26 +1416,6 @@ private theorem norm64_snd_toInt (m : UInt64) (e : Int32)
   · have h := Int32.toInt_lt e
     push_cast
     omega
-
-/-- The real number denoted by a raw `(significand, exponent)` pair, `m * 2 ^ e`. `FPR.make` and
-`FPR.make_z` consume such a pair after adding a fixed bias to the exponent, so the statement of
-`norm64_pairToReal` quantifies over that bias. -/
-private noncomputable def pairToReal (m : UInt64) (e : ℤ) : ℝ := (m.toNat : ℝ) * (2 : ℝ) ^ e
-
-/-- `FPR.norm64` preserves the value its `(significand, exponent)` output denotes, at any fixed
-exponent bias `k`: multiplying the significand by `2 ^ c` and subtracting `c` from the exponent
-cancel. Together with `norm64_fst_top_bit` this is the full correctness of the renormalisation
-step feeding `FPR.make` / `FPR.make_z`. -/
-private theorem norm64_pairToReal (m : UInt64) (e : Int32) (hm : m ≠ 0)
-    (hnf : -(2 ^ 31 : ℤ) ≤ e.toInt - ((lzcnt64_nonzero (m ||| 1)).toNat : ℤ)) (k : ℤ) :
-    pairToReal (norm64 m e).1 ((norm64 m e).2.toInt + k) = pairToReal m (e.toInt + k) := by
-  unfold pairToReal
-  rw [norm64_fst_toNat m e hm, norm64_snd_toInt m e hnf]
-  push_cast
-  rw [show e.toInt - ((lzcnt64_nonzero (m ||| 1)).toNat : ℤ) + k
-      = (e.toInt + k) - ((lzcnt64_nonzero (m ||| 1)).toNat : ℤ) from by ring,
-    zpow_sub₀ (by norm_num : (2 : ℝ) ≠ 0), zpow_natCast]
-  field_simp
 
 /-! ### Round-to-nearest, ties-to-even on `ℕ`
 
@@ -1710,7 +1762,16 @@ private theorem toRealBits_make (s : UInt64) (e : Int32) (m : UInt64)
 relative error `2 ^ (-53)`. This packages `abs_roundQuarterTiesEven_sub_div_four_le` (rounding
 moves the significand by at most half a unit) together with `toRealBits_make` (the packing,
 including its self-normalizing carry, is exact), and is the final-assembly half of the
-per-operation `2 ^ (-52)` relative-error bounds. -/
+per-operation `2 ^ (-52)` relative-error bounds.
+
+This route is direct, phrased in the pre-rounding pair `(m, e)` that `FPR.make` consumes, rather
+than through the general-theory `FPR.ulpOfExponent` / `FPR.ulpOfExponent_le_two_pow_neg52_mul_abs`
+(which bound the spacing between adjacent representable values at a *decoded* exponent field).
+The two routes agree in substance — in the no-carry case, `FPR.ulpOfExponent` at the decoded
+output's exponent field `(e.toInt + 1076).toNat + 1` works out to the same scale factor
+`2 ^ (e.toInt + 2)` that `toRealBits_make` produces — but formally connecting them would need that
+equality re-derived alongside a case split on the rounding carry, for no shorter a proof than the
+direct route already gives. -/
 private theorem abs_toRealBits_make_sub_le (s : UInt64) (e : Int32) (m : UInt64)
     (hs : s.toNat ≤ 1) (he1 : -1076 ≤ e.toInt) (he2 : e.toInt ≤ 968)
     (hm1 : 2 ^ 54 ≤ m.toNat) (hm2 : m.toNat < 2 ^ 55) :
@@ -1820,6 +1881,56 @@ private theorem abs_toRealBits_make_z_sub_le (s : UInt64) (e : Int32) (m : UInt6
         |(if s.toNat = 1 then (-1 : ℝ) else 1) * (m.toNat : ℝ) * (2 : ℝ) ^ e.toInt| := by
   rw [FPR.make_z_eq_make s e m hm1 hm2]
   exact abs_toRealBits_make_sub_le s e m hs he1 he2 hm1 hm2
+
+/-! ### The `m = 0` branch of `FPR.make_z`
+
+The denotation lemmas above all require `2 ^ 54 ≤ m.toNat`, the normalized-significand range a
+caller establishes with `fpr_ulsh_lzcnt64_top_bit` — which excludes exactly the collapsed case
+`m = 0` that `FPR.make_z`'s extra `&&& ((0 : UInt32) - (m >>> 54).toUInt32)` mask exists to
+handle (exact cancellation in `FPR.add`, or a zero operand in `FPR.mul` / `FPR.div`). On `m = 0`
+that mask is `(0 : UInt32) - 0 = 0`, so it clears the exponent field outright regardless of what
+`e` was computed, and the rounding fold of `m >>> 2` is `0` too: `FPR.make_z s e 0` is exactly
+IEEE-754's signed-zero bit pattern, denoting `0`. This is the fact `or_fold_shiftRight_eq_zero_iff`
+/ `stickyShift_eq_zero_iff` exist to feed: a caller who has shown a working significand's
+pre-fold value was `0` (via those two) lands here for the resulting `FPR.make_z` call's
+denotation. -/
+
+/-- `FPR.make_z` collapses to the signed-zero bit pattern `s <<< 63` on a zero significand: the
+mask `(0 : UInt32) - (m >>> 54).toUInt32` is `0` when `m = 0`, clearing the exponent field, and
+`m >>> 2 = 0` together with `roundTableBit 0 = 0` clears the mantissa field. -/
+private theorem make_z_of_zero (s : UInt64) (e : Int32) : make_z s e 0 = s <<< 63 := by
+  rw [make_z_eq_roundQuarterTiesEven]
+  have h0 : ((0 : UInt64) >>> 54).toUInt32 = 0 := by decide
+  have hr : roundQuarterTiesEven (0 : UInt64).toNat = 0 := by decide
+  rw [h0, hr]
+  simp
+
+/-- Decode of `FPR.make_z` on a zero significand: the sign bit is returned unchanged, and both
+the exponent and mantissa fields are `0` — IEEE-754's signed-zero bit pattern — independently of
+`e`. -/
+private theorem FPR.decode_make_z_of_zero (s : UInt64) (e : Int32) (hs : s.toNat ≤ 1) :
+    FPR.decode (make_z s e 0) =
+      { sign := decide (s.toNat = 1), exponent := 0, mantissa := 0 } := by
+  rw [make_z_of_zero]
+  have hA : (s <<< 63 : UInt64).toNat = s.toNat * 2 ^ 63 := by
+    rw [UInt64.toNat_shiftLeft]
+    simp only [UInt64.reduceToNat, Nat.reduceMod, Nat.shiftLeft_eq, Nat.reducePow]
+    omega
+  unfold FPR.decode
+  rw [hA]
+  simp only [Nat.testBit_eq_decide_div_mod_eq, Nat.shiftRight_eq_div_pow, FPR.Bits.mk.injEq,
+    decide_eq_decide]
+  refine ⟨?_, ?_, ?_⟩ <;> omega
+
+/-- `FPR.make_z` denotes exactly `0` on a zero significand, for any sign `s` and any exponent
+`e`: the collapsed-significand counterpart to `abs_toRealBits_make_z_sub_le`'s normalized-range
+relative-error bound. -/
+private theorem toRealBits_make_z_of_zero (s : UInt64) (e : Int32) (hs : s.toNat ≤ 1) :
+    toRealBits (make_z s e 0) = 0 := by
+  unfold toRealBits
+  rw [FPR.decode_make_z_of_zero s e hs]
+  unfold FPR.Bits.toReal
+  norm_num
 
 /-! ### Sanity witnesses -/
 
