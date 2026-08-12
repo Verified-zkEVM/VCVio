@@ -3908,6 +3908,25 @@ theorem add_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
     rw [h52]
     exact add_error_combine hδ hδ16 hasm hfold herr
 
+/-- Negation preserves normality: flipping the sign bit leaves the exponent field alone. -/
+theorem FPR.isNormal_neg {b : FPR} (hb : FPR.IsNormal b) : FPR.IsNormal (FPR.neg b) := by
+  unfold FPR.IsNormal FPR.Bits.IsNormal at hb ⊢
+  rw [decode_neg_exponent]
+  exact hb
+
+/-- Relative error bound for `FPR.sub`, on the same domain as `add_error`. Subtraction is
+addition against a negated operand, and negation is exact, so the bound transfers with no
+further rounding analysis. -/
+theorem sub_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a - toReal b)) :
+    |toReal (FPR.sub a b) - (toReal a - toReal b)| ≤
+    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a - toReal b| := by
+  have hsum : toReal a + toReal (FPR.neg b) = toReal a - toReal b := by
+    rw [toReal_neg]; ring
+  have h := add_error a (FPR.neg b) ha (FPR.isNormal_neg hb) (by rw [hsum]; exact hr)
+  rw [hsum] at h
+  exact h
+
 /-- Relative error bound for `FPR.mul`, on normal operands whose exact product stays in the
 correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
 why both the operand- and result-side restrictions are necessary. -/
