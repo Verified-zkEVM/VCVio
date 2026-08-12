@@ -1946,6 +1946,477 @@ example :
     (List.range 8).map (fun i => (roundTableBit (UInt64.ofNat i)).toNat) =
       [0, 0, 0, 1, 0, 0, 1, 1] := by decide
 
+/-! ## The `FPR.add` pipeline, named field by field
+
+`FPR.add` is one straight-line chain of `let`s (no branch on data values), so it can be pinned to
+the kernel term by `rfl`. `AddPipeline` names every intermediate of that chain as a structure
+field, computed by the exact same `let`-chain as `FPR.add`'s body
+(`LatticeCrypto/Falcon/Concrete/FPR.lean`) so the sharing between fields is preserved;
+`add_eq_make_z` then identifies `FPR.add` with the final assembly call over two of those fields,
+by `rfl`. Each field-projection equation below (`addPipeline_za`, `addPipeline_za'`, …) is *also*
+`rfl`, and is proved independently of the others, so no proof in this file ever has to re-unfold
+the whole pipeline more than once or twice at a time. -/
+
+/-- Every named intermediate of `FPR.add`'s pipeline, in the order `FPR.add` computes them. -/
+private structure AddPipeline where
+  /-- The raw (possibly-wrapping) magnitude comparison `FPR.add` opens with. -/
+  za : UInt64
+  /-- The tie-broken magnitude comparator: bit `63` decides whether `x` or `y` leads. -/
+  za' : UInt64
+  /-- The conditional-swap mask: all-ones when `y` has the larger (or tied, sign-broken)
+  magnitude, zero otherwise. -/
+  sw : UInt64
+  /-- The larger-or-equal-magnitude operand after the conditional swap. -/
+  x' : FPR
+  /-- The smaller-or-equal-magnitude operand after the conditional swap. -/
+  y' : FPR
+  ex_ : UInt32
+  /-- The sign bit of `x'`. -/
+  sx : UInt32
+  /-- The biased exponent field of `x'`. -/
+  ex : UInt32
+  /-- The extended significand of `x'`, scaled by `8` with the implicit leading bit folded in at
+  position `55`. -/
+  xu : UInt64
+  /-- The working exponent paired with `xu`: `ex - 1078`. -/
+  ex' : Int32
+  ey_ : UInt32
+  /-- The sign bit of `y'`. -/
+  sy : UInt32
+  /-- The biased exponent field of `y'`. -/
+  ey : UInt32
+  /-- The extended significand of `y'`, scaled by `8` with the implicit leading bit folded in at
+  position `55`, before alignment to `x'`'s scale. -/
+  yu_ : UInt64
+  /-- The exponent gap between `x'` and `y'`. -/
+  n : UInt32
+  /-- `yu_`, flushed to zero once the exponent gap reaches `60`. -/
+  yu' : UInt64
+  /-- The alignment shift amount, reduced mod `64`. -/
+  n' : UInt32
+  m : UInt64
+  /-- `y'`'s significand, aligned to `x'`'s scale via a sticky right shift. -/
+  yu : UInt64
+  /-- All-ones when the two (post-swap) operands' signs differ (subtract), zero when they agree
+  (add). -/
+  dm : UInt64
+  /-- The combined, aligned significand: `xu + yu` on matching signs, `xu - yu` on differing
+  signs. -/
+  zu : UInt64
+  /-- The renormalising left-shift count. -/
+  c : UInt32
+  /-- The renormalised (top-bit-set) combined significand. -/
+  zu' : UInt64
+  ex'' : Int32
+  /-- The final rounded (9-bit sticky-folded) significand handed to `make_z`. -/
+  zu'' : UInt64
+  /-- The final exponent handed to `make_z`, after both the renormalising shift and the nine-bit
+  rounding fold. -/
+  ex''' : Int32
+
+/-- The pipeline of `FPR.add x y`, field by field, computed by the exact same `let`-chain as
+`FPR.add`'s body. -/
+private def addPipeline (x y : FPR) : AddPipeline :=
+  let za := (x &&& M63) - (y &&& M63)
+  let za' := za ||| ((za - 1) &&& x)
+  let sw := (x ^^^ y) &&& ((0 : UInt64) - (za' >>> 63))
+  let x' := x ^^^ sw
+  let y' := y ^^^ sw
+  let ex_ := (x' >>> 52).toUInt32
+  let sx := ex_ >>> 11
+  let ex := ex_ &&& 0x7FF
+  let xu := ((x' &&& M52) <<< 3) ||| (((ex + 0x7FF) >>> 11).toUInt64 <<< 55)
+  let ex' : Int32 := (ex - 1078).toInt32
+  let ey_ := (y' >>> 52).toUInt32
+  let sy := ey_ >>> 11
+  let ey := ey_ &&& 0x7FF
+  let yu_ := ((y' &&& M52) <<< 3) ||| (((ey + 0x7FF) >>> 11).toUInt64 <<< 55)
+  let n := ex - ey
+  let yu' := yu_ &&& ((0 : UInt64) - ((n - 60) >>> 31).toUInt64)
+  let n' := n &&& 63
+  let m := fpr_ulsh 1 n' - 1
+  let yu := fpr_ursh (yu' ||| ((yu' &&& m) + m)) n'
+  let dm := (0 - (sx ^^^ sy).toUInt64)
+  let zu := xu + yu - (dm &&& (yu <<< 1))
+  let c := lzcnt64_nonzero (zu ||| 1)
+  let zu' := fpr_ulsh zu c
+  let ex'' := ex' - c.toInt32
+  let zu'' := (zu' ||| ((zu' &&& 0x1FF) + 0x1FF)) >>> 9
+  let ex''' := ex'' + 9
+  { za, za', sw, x', y', ex_, sx, ex, xu, ex', ey_, sy, ey, yu_, n, yu', n', m, yu, dm, zu, c, zu',
+    ex'', zu'', ex''' }
+
+/-- `FPR.add` is the final assembly call `make_z` applied to two fields of `addPipeline`, pinning
+the model to the kernel term exactly as `FPR.add` computes it. -/
+private theorem add_eq_make_z (x y : FPR) :
+    FPR.add x y =
+      make_z (addPipeline x y).sx.toUInt64 (addPipeline x y).ex''' (addPipeline x y).zu'' :=
+  rfl
+
+private theorem addPipeline_za (x y : FPR) : (addPipeline x y).za = (x &&& M63) - (y &&& M63) :=
+  rfl
+
+private theorem addPipeline_za' (x y : FPR) :
+    (addPipeline x y).za' = (addPipeline x y).za ||| (((addPipeline x y).za - 1) &&& x) := rfl
+
+private theorem addPipeline_sw (x y : FPR) :
+    (addPipeline x y).sw = (x ^^^ y) &&& ((0 : UInt64) - ((addPipeline x y).za' >>> 63)) := rfl
+
+private theorem addPipeline_x' (x y : FPR) : (addPipeline x y).x' = x ^^^ (addPipeline x y).sw :=
+  rfl
+
+private theorem addPipeline_y' (x y : FPR) : (addPipeline x y).y' = y ^^^ (addPipeline x y).sw :=
+  rfl
+
+private theorem addPipeline_ex_ (x y : FPR) :
+    (addPipeline x y).ex_ = ((addPipeline x y).x' >>> 52).toUInt32 := rfl
+
+private theorem addPipeline_sx (x y : FPR) : (addPipeline x y).sx = (addPipeline x y).ex_ >>> 11 :=
+  rfl
+
+private theorem addPipeline_ex (x y : FPR) :
+    (addPipeline x y).ex = (addPipeline x y).ex_ &&& 0x7FF := rfl
+
+private theorem addPipeline_xu (x y : FPR) :
+    (addPipeline x y).xu =
+      ((addPipeline x y).x' &&& M52) <<< 3
+        ||| (((addPipeline x y).ex + 0x7FF) >>> 11).toUInt64 <<< 55 := rfl
+
+private theorem addPipeline_ex' (x y : FPR) :
+    (addPipeline x y).ex' = ((addPipeline x y).ex - 1078).toInt32 := rfl
+
+private theorem addPipeline_ey_ (x y : FPR) :
+    (addPipeline x y).ey_ = ((addPipeline x y).y' >>> 52).toUInt32 := rfl
+
+private theorem addPipeline_sy (x y : FPR) : (addPipeline x y).sy = (addPipeline x y).ey_ >>> 11 :=
+  rfl
+
+private theorem addPipeline_ey (x y : FPR) :
+    (addPipeline x y).ey = (addPipeline x y).ey_ &&& 0x7FF := rfl
+
+private theorem addPipeline_yu_ (x y : FPR) :
+    (addPipeline x y).yu_ =
+      ((addPipeline x y).y' &&& M52) <<< 3
+        ||| (((addPipeline x y).ey + 0x7FF) >>> 11).toUInt64 <<< 55 := rfl
+
+private theorem addPipeline_n (x y : FPR) :
+    (addPipeline x y).n = (addPipeline x y).ex - (addPipeline x y).ey := rfl
+
+private theorem addPipeline_yu' (x y : FPR) :
+    (addPipeline x y).yu' =
+      (addPipeline x y).yu_ &&& ((0 : UInt64) - (((addPipeline x y).n - 60) >>> 31).toUInt64) :=
+  rfl
+
+private theorem addPipeline_n' (x y : FPR) : (addPipeline x y).n' = (addPipeline x y).n &&& 63 :=
+  rfl
+
+private theorem addPipeline_m (x y : FPR) :
+    (addPipeline x y).m = fpr_ulsh 1 (addPipeline x y).n' - 1 := rfl
+
+private theorem addPipeline_yu (x y : FPR) :
+    (addPipeline x y).yu =
+      fpr_ursh
+        ((addPipeline x y).yu'
+          ||| (((addPipeline x y).yu' &&& (addPipeline x y).m) + (addPipeline x y).m))
+        (addPipeline x y).n' := rfl
+
+private theorem addPipeline_dm (x y : FPR) :
+    (addPipeline x y).dm =
+      (0 : UInt64) - ((addPipeline x y).sx ^^^ (addPipeline x y).sy).toUInt64 := rfl
+
+private theorem addPipeline_zu (x y : FPR) :
+    (addPipeline x y).zu =
+      (addPipeline x y).xu + (addPipeline x y).yu
+        - ((addPipeline x y).dm &&& ((addPipeline x y).yu <<< 1)) := rfl
+
+private theorem addPipeline_c (x y : FPR) :
+    (addPipeline x y).c = lzcnt64_nonzero ((addPipeline x y).zu ||| 1) := rfl
+
+private theorem addPipeline_zu' (x y : FPR) :
+    (addPipeline x y).zu' = fpr_ulsh (addPipeline x y).zu (addPipeline x y).c := rfl
+
+private theorem addPipeline_ex'' (x y : FPR) :
+    (addPipeline x y).ex'' = (addPipeline x y).ex' - ((addPipeline x y).c).toInt32 := rfl
+
+private theorem addPipeline_zu'' (x y : FPR) :
+    (addPipeline x y).zu'' =
+      ((addPipeline x y).zu' ||| (((addPipeline x y).zu' &&& 0x1FF) + 0x1FF)) >>> 9 := rfl
+
+private theorem addPipeline_ex''' (x y : FPR) :
+    (addPipeline x y).ex''' = (addPipeline x y).ex'' + 9 := rfl
+
+/-! ### Step 2: the assembly mantissa-range hypotheses
+
+Whenever the combined significand `zu` is nonzero, the renormalised `zu'` has its top bit set
+(`fpr_ulsh_lzcnt64_top_bit`), and the nine-bit rounding fold transfers that bracket through
+`stickyShift` to land `zu''` exactly inside the `[2 ^ 54, 2 ^ 55)` window
+`abs_toRealBits_make_z_sub_le` needs. -/
+
+/-- The `stickyShift`-by-`9` image of a value already known to occupy the top bit of a 64-bit
+word lands in `[2 ^ 54, 2 ^ 55)`, the significand window `FPR.make_z` expects. -/
+private theorem stickyShift_nine_mem {v : ℕ} (h1 : 2 ^ 63 ≤ v) (h2 : v < 2 ^ 64) :
+    2 ^ 54 ≤ stickyShift v 9 ∧ stickyShift v 9 < 2 ^ 55 := by
+  rw [stickyShift_eq]
+  have hd1 : 2 ^ 53 ≤ v / 2 ^ 10 := by
+    have := Nat.div_le_div_right (c := 2 ^ 10) h1
+    norm_num at this
+    omega
+  have hd2 : v / 2 ^ 10 < 2 ^ 54 := by
+    have := Nat.div_le_div_right (c := 2 ^ 10) h2.le
+    norm_num at this
+    omega
+  split_ifs <;> omega
+
+/-- Whenever the combined significand `zu` is nonzero, the final rounded significand `zu''`
+handed to `make_z` lands in `[2 ^ 54, 2 ^ 55)`. -/
+private theorem addPipeline_zu''_mem (a b : FPR) (h : (addPipeline a b).zu ≠ 0) :
+    2 ^ 54 ≤ (addPipeline a b).zu''.toNat ∧ (addPipeline a b).zu''.toNat < 2 ^ 55 := by
+  have hge : 2 ^ 63 ≤ (addPipeline a b).zu'.toNat := by
+    rw [addPipeline_zu', addPipeline_c]
+    exact fpr_ulsh_lzcnt64_top_bit _ h
+  have hlt : (addPipeline a b).zu'.toNat < 2 ^ 64 := (addPipeline a b).zu'.toNat_lt_size
+  rw [addPipeline_zu'', toNat_or_fold_shiftRight_nine]
+  exact stickyShift_nine_mem hge hlt
+
+/-! ### Step 3a: the conditional swap
+
+`za'`'s top bit decides whether `FPR.add` swaps its operands, per `za'_shiftRight_63_eq_one_iff`.
+The lemmas below identify that condition with the two operands' packed magnitude comparison, and
+conclude that the pipeline's `x'` always carries the larger-or-equal magnitude. -/
+
+/-- The top bit of a right shift by `63` is always `0` or `1`. -/
+private theorem shiftRight63_eq_zero_or_one (w : UInt64) : w >>> 63 = 0 ∨ w >>> 63 = 1 := by
+  have hmod := toNat_shiftRight_sixtyThree w
+  have hb : w.toNat < 2 ^ 64 := w.toNat_lt_size
+  have h2 : w.toNat / 2 ^ 63 = 0 ∨ w.toNat / 2 ^ 63 = 1 := by omega
+  rcases h2 with h2 | h2
+  · exact Or.inl (by rw [← UInt64.toNat_inj, hmod, h2]; rfl)
+  · exact Or.inr (by rw [← UInt64.toNat_inj, hmod, h2]; rfl)
+
+/-- Masking an `FPR` word with `M63` computes exactly its decoded `magKey`, restated with `M63`
+in place of the literal mask so it can be `rw`-ed directly against `addPipeline`'s fields. -/
+private theorem toNat_and_M63_eq_magKey (x : FPR) : (x &&& M63).toNat = (FPR.decode x).magKey :=
+  toNat_and_low63Mask_eq_magKey x
+
+/-- Masking an `FPR` word with `M63` always stays below `2 ^ 63`, restated with `M63` in place of
+the literal mask. -/
+private theorem and_M63_lt (x : FPR) : x &&& M63 < (1 : UInt64) <<< 63 := by
+  rw [UInt64.lt_iff_toNat_lt, show (x &&& M63).toNat = x.toNat % 2 ^ 63 from toNat_and_low63Mask x,
+    show ((1 : UInt64) <<< 63).toNat = 2 ^ 63 from by decide]
+  exact Nat.mod_lt _ (by norm_num)
+
+/-- `FPR.add`'s tie-broken swap test, restated as a comparison of the two operands' decoded
+`magKey`s. -/
+private theorem addPipeline_za'_shiftRight (a b : FPR) :
+    (addPipeline a b).za' >>> 63 = 1 ↔
+      (FPR.decode a).magKey < (FPR.decode b).magKey ∨
+        ((FPR.decode a).magKey = (FPR.decode b).magKey ∧ a >>> 63 = 1) := by
+  rw [addPipeline_za', addPipeline_za,
+    za'_shiftRight_63_eq_one_iff (a &&& M63) (b &&& M63) a (and_M63_lt a) (and_M63_lt b),
+    UInt64.lt_iff_toNat_lt, toNat_and_M63_eq_magKey, toNat_and_M63_eq_magKey, ← UInt64.toNat_inj,
+    toNat_and_M63_eq_magKey, toNat_and_M63_eq_magKey]
+
+/-- `FPR.add`'s pipeline always orders `x'` above `y'` in decoded magnitude, and `(x', y')` is
+always `a, b` in one of the two possible orders. -/
+private theorem addPipeline_swap_cases (a b : FPR) :
+    ((addPipeline a b).x' = a ∧ (addPipeline a b).y' = b ∨
+        (addPipeline a b).x' = b ∧ (addPipeline a b).y' = a) ∧
+      (FPR.decode (addPipeline a b).y').magKey ≤ (FPR.decode (addPipeline a b).x').magKey := by
+  by_cases hswap : (addPipeline a b).za' >>> 63 = 1
+  · have hsw : (addPipeline a b).sw = a ^^^ b := by
+      rw [addPipeline_sw, hswap]
+      change (a ^^^ b) &&& ((0 : UInt64) - 1) = a ^^^ b
+      rw [UInt64.and_comm, allOnes_and]
+    have hx' : (addPipeline a b).x' = b := by
+      rw [addPipeline_x', hsw, ← UInt64.xor_assoc, UInt64.xor_self, UInt64.zero_xor]
+    have hy' : (addPipeline a b).y' = a := by
+      rw [addPipeline_y', hsw, UInt64.xor_comm a b, ← UInt64.xor_assoc, UInt64.xor_self,
+        UInt64.zero_xor]
+    refine ⟨Or.inr ⟨hx', hy'⟩, ?_⟩
+    rw [hx', hy']
+    rcases (addPipeline_za'_shiftRight a b).mp hswap with h | ⟨h, -⟩
+    · exact h.le
+    · exact h.le
+  · have hbit : (addPipeline a b).za' >>> 63 = 0 :=
+      (shiftRight63_eq_zero_or_one _).resolve_right hswap
+    have hsw : (addPipeline a b).sw = 0 := by
+      rw [addPipeline_sw, hbit]
+      change (a ^^^ b) &&& ((0 : UInt64) - 0) = 0
+      norm_num
+    have hx' : (addPipeline a b).x' = a := by rw [addPipeline_x', hsw, UInt64.xor_zero]
+    have hy' : (addPipeline a b).y' = b := by rw [addPipeline_y', hsw, UInt64.xor_zero]
+    refine ⟨Or.inl ⟨hx', hy'⟩, ?_⟩
+    rw [hx', hy']
+    by_contra hcontra
+    push Not at hcontra
+    exact hswap ((addPipeline_za'_shiftRight a b).mpr (Or.inl hcontra))
+
+/-! ### Step 3b: field extraction
+
+`xu` (resp. `yu_`) packs the decoded mantissa of `x'` (resp. `y'`), left-shifted by `3`, together
+with an implicit leading bit set exactly when the operand is normal, at bit position `55`. This
+section identifies that packed value with `8 *` the operand's `FPR.Bits.significand`. -/
+
+/-- A value known to fit below `2 ^ k`, or-ed with a bit-`k` flag scaled by `2 ^ k`, is exactly
+their sum: the two contributions occupy disjoint bit ranges. -/
+private theorem or_two_pow_add_of_lt (a k : ℕ) (ha : a < 2 ^ k) : a ||| 2 ^ k = a + 2 ^ k := by
+  apply Nat.eq_of_testBit_eq
+  intro j
+  rw [Nat.testBit_or, Nat.testBit_two_pow]
+  rcases Nat.lt_trichotomy j k with hjk | hjk | hjk
+  · rw [show decide (k = j) = false from by simp; omega, Bool.or_false]
+    have hpow : (2 : ℕ) ^ k = 2 ^ j * 2 ^ (k - j) := by rw [← pow_add]; congr 1; omega
+    have hdiv : (a + 2 ^ k) / 2 ^ j = a / 2 ^ j + 2 ^ (k - j) := by
+      rw [hpow, Nat.add_mul_div_left a _ (Nat.two_pow_pos j)]
+    have heven : (2 : ℕ) ^ (k - j) % 2 = 0 := by
+      have : (2 : ℕ) ^ (k - j) = 2 * 2 ^ (k - j - 1) := by rw [← pow_succ']; congr 1; omega
+      omega
+    rw [Nat.testBit_eq_decide_div_mod_eq, Nat.testBit_eq_decide_div_mod_eq, hdiv,
+      show (a / 2 ^ j + 2 ^ (k - j)) % 2 = a / 2 ^ j % 2 from by omega]
+  · subst hjk
+    rw [show decide (j = j) = true from by simp, Bool.or_true]
+    have hdiv : (a + 2 ^ j) / 2 ^ j = 1 := by
+      have hd0 : a / 2 ^ j = 0 := Nat.div_eq_of_lt ha
+      have := Nat.add_div_right a (Nat.two_pow_pos j)
+      omega
+    rw [Nat.testBit_eq_decide_div_mod_eq, hdiv]
+    rfl
+  · rw [show decide (k = j) = false from by simp; omega, Bool.or_false]
+    have hpow : (2 : ℕ) ^ (k + 1) = 2 ^ k + 2 ^ k := by rw [pow_succ]; ring
+    have hle : (2 : ℕ) ^ (k + 1) ≤ 2 ^ j := Nat.pow_le_pow_right (by norm_num) (by omega)
+    have hja : a + 2 ^ k < 2 ^ j := by omega
+    have hja0 : a < 2 ^ j := lt_of_lt_of_le ha (Nat.pow_le_pow_right (by norm_num) (by omega))
+    rw [Nat.testBit_lt_two_pow hja0]
+    exact (Nat.testBit_lt_two_pow hja).symm
+
+/-- The `bit ≤ 1` generalisation of `or_two_pow_add_of_lt`, matching the shape of the implicit-bit
+fold `xu`/`yu_` use. -/
+private theorem or_mul_two_pow_add_of_lt (a k bit : ℕ) (hbit : bit ≤ 1) (ha : a < 2 ^ k) :
+    a ||| bit * 2 ^ k = a + bit * 2 ^ k := by
+  interval_cases bit
+  · simp
+  · simpa using or_two_pow_add_of_lt a k ha
+
+/-- Masking an `FPR` word with `M52` computes exactly its decoded mantissa. -/
+private theorem toNat_and_M52_eq_mantissa (w : FPR) :
+    (w &&& M52).toNat = (FPR.decode w).mantissa := by
+  have h : (w &&& M52).toNat = w.toNat % 2 ^ 52 :=
+    toNat_and_one_shiftLeft_sub_one w (52 : UInt64) (by decide)
+  rw [h]
+  rfl
+
+/-- The implicit-bit fold `((e + 0x7FF) >>> 11).toUInt64`, for an exponent field `e` below
+`2 ^ 11`, is `1` exactly when `e` is nonzero and `0` when `e` is zero. -/
+private theorem toNat_implicitBit_of_lt {e : UInt32} (he : e.toNat < 2 ^ 11) :
+    (((e + 0x7FF) >>> 11).toUInt64).toNat = if e.toNat = 0 then 0 else 1 := by
+  rw [UInt32.toNat_toUInt64, UInt32.toNat_shiftRight]
+  have hadd : (e + 0x7FF).toNat = e.toNat + 2047 := by
+    rw [UInt32.toNat_add, show (0x7FF : UInt32).toNat = 2047 from by decide]
+    omega
+  rw [hadd, show (11 : UInt32).toNat % 32 = 11 from by decide, Nat.shiftRight_eq_div_pow]
+  split_ifs with h0 <;> omega
+
+/-- The significand-packing formula `xu`/`yu_` both use, parametrised by the operand `w` and its
+already-extracted exponent field `ex`: it computes exactly `8 *` the operand's decoded
+significand. -/
+private theorem toNat_significand_pack (w : FPR) (ex : UInt32)
+    (hex : ex.toNat = (FPR.decode w).exponent) :
+    (((w &&& M52) <<< 3) ||| (((ex + 0x7FF) >>> 11).toUInt64 <<< 55)).toNat =
+      8 * (FPR.decode w).significand := by
+  have hmlt : (w &&& M52).toNat < 2 ^ 52 := by
+    rw [toNat_and_M52_eq_mantissa]; exact FPR.decode_mantissa_lt w
+  have hA : ((w &&& M52) <<< 3).toNat = (w &&& M52).toNat * 8 := by
+    rw [UInt64.toNat_shiftLeft, show (3 : UInt64).toNat % 64 = 3 from by decide,
+      Nat.shiftLeft_eq, Nat.mod_eq_of_lt (show (w &&& M52).toNat * 2 ^ 3 < 2 ^ 64 from by omega)]
+    norm_num
+  have hexlt : ex.toNat < 2 ^ 11 := hex ▸ FPR.decode_exponent_lt w
+  have hbit := toNat_implicitBit_of_lt hexlt
+  have hB : (((ex + 0x7FF) >>> 11).toUInt64 <<< 55).toNat =
+      (if ex.toNat = 0 then 0 else 1) * 2 ^ 55 := by
+    rw [UInt64.toNat_shiftLeft, show (55 : UInt64).toNat % 64 = 55 from by decide,
+      Nat.shiftLeft_eq, hbit]
+    exact Nat.mod_eq_of_lt (by split_ifs <;> norm_num)
+  rw [UInt64.toNat_or, hA, hB,
+    or_mul_two_pow_add_of_lt ((w &&& M52).toNat * 8) 55 (if ex.toNat = 0 then 0 else 1)
+      (by split_ifs <;> omega) (by omega),
+    toNat_and_M52_eq_mantissa]
+  unfold FPR.Bits.significand
+  rw [hex]
+  split_ifs <;> ring
+
+/-- The combined sign+exponent word `(w >>> 52).toUInt32` computed from any `FPR` word `w` is
+exactly `w.toNat / 2 ^ 52`, with no truncation from the `UInt64 → UInt32` narrowing (the value
+never exceeds `2 ^ 12`). -/
+private theorem toNat_ex_of (w : FPR) : ((w >>> 52).toUInt32).toNat = w.toNat / 2 ^ 52 := by
+  rw [UInt64.toNat_toUInt32, UInt64.toNat_shiftRight,
+    show (52 : UInt64).toNat % 64 = 52 from by decide, Nat.shiftRight_eq_div_pow]
+  have hb : w.toNat < 2 ^ 64 := w.toNat_lt_size
+  exact Nat.mod_eq_of_lt (by omega)
+
+/-- The sign-bit extraction `((w >>> 52).toUInt32) >>> 11` recovers the top bit of `w`. -/
+private theorem toNat_sx_of (w : FPR) :
+    (((w >>> 52).toUInt32) >>> 11).toNat = w.toNat / 2 ^ 63 := by
+  rw [UInt32.toNat_shiftRight, toNat_ex_of,
+    show (11 : UInt32).toNat % 32 = 11 from by decide, Nat.shiftRight_eq_div_pow,
+    Nat.div_div_eq_div_mul, show (2 : ℕ) ^ 52 * 2 ^ 11 = 2 ^ 63 from by norm_num]
+
+/-- The exponent-field extraction `((w >>> 52).toUInt32) &&& 0x7FF` recovers exactly
+`FPR.decode`'s exponent field. -/
+private theorem toNat_ex_field_of (w : FPR) :
+    (((w >>> 52).toUInt32) &&& 0x7FF).toNat = (FPR.decode w).exponent := by
+  rw [UInt32.toNat_and, toNat_ex_of, show (0x7FF : UInt32).toNat = 2 ^ 11 - 1 from by decide,
+    Nat.and_two_pow_sub_one_eq_mod]
+  unfold FPR.decode
+  rw [Nat.shiftRight_eq_div_pow]
+
+/-- The pipeline's `ex` field is exactly `x'`'s decoded exponent field. -/
+private theorem addPipeline_ex_eq_exponent (a b : FPR) :
+    (addPipeline a b).ex.toNat = (FPR.decode (addPipeline a b).x').exponent := by
+  rw [addPipeline_ex, addPipeline_ex_, UInt32.toNat_and, toNat_ex_of,
+    show (0x7FF : UInt32).toNat = 2 ^ 11 - 1 from by decide, Nat.and_two_pow_sub_one_eq_mod]
+  unfold FPR.decode
+  rw [Nat.shiftRight_eq_div_pow]
+
+/-- The pipeline's `ey` field is exactly `y'`'s decoded exponent field. -/
+private theorem addPipeline_ey_eq_exponent (a b : FPR) :
+    (addPipeline a b).ey.toNat = (FPR.decode (addPipeline a b).y').exponent := by
+  rw [addPipeline_ey, addPipeline_ey_, UInt32.toNat_and, toNat_ex_of,
+    show (0x7FF : UInt32).toNat = 2 ^ 11 - 1 from by decide, Nat.and_two_pow_sub_one_eq_mod]
+  unfold FPR.decode
+  rw [Nat.shiftRight_eq_div_pow]
+
+/-- The pipeline's `xu` field packs `8 *` `x'`'s decoded significand. -/
+private theorem addPipeline_xu_toNat (a b : FPR) :
+    (addPipeline a b).xu.toNat = 8 * (FPR.decode (addPipeline a b).x').significand := by
+  rw [addPipeline_xu]
+  exact toNat_significand_pack _ _ (addPipeline_ex_eq_exponent a b)
+
+/-- The pipeline's `yu_` field packs `8 *` `y'`'s decoded significand. -/
+private theorem addPipeline_yuRaw_toNat (a b : FPR) :
+    (addPipeline a b).yu_.toNat = 8 * (FPR.decode (addPipeline a b).y').significand := by
+  rw [addPipeline_yu_]
+  exact toNat_significand_pack _ _ (addPipeline_ey_eq_exponent a b)
+
+/-- The sign-bit extraction `((w >>> 52).toUInt32) >>> 11` recovers exactly `FPR.decode`'s sign
+field, as a `0`/`1` natural number. -/
+private theorem toNat_sign_field_of (w : FPR) :
+    (((w >>> 52).toUInt32) >>> 11).toNat = if (FPR.decode w).sign then 1 else 0 := by
+  rw [toNat_sx_of]
+  have hb : w.toNat < 2 ^ 64 := w.toNat_lt_size
+  have hb2 : w.toNat / 2 ^ 63 < 2 := by omega
+  unfold FPR.decode
+  rw [Nat.testBit_eq_decide_div_mod_eq]
+  interval_cases h : (w.toNat / 2 ^ 63) <;> simp_all
+
+/-- The pipeline's `sx` field is exactly `x'`'s decoded sign bit. -/
+private theorem addPipeline_sx_toNat (a b : FPR) :
+    (addPipeline a b).sx.toNat = if (FPR.decode (addPipeline a b).x').sign then 1 else 0 := by
+  rw [addPipeline_sx, addPipeline_ex_, toNat_sign_field_of]
+
+/-- The pipeline's `sy` field is exactly `y'`'s decoded sign bit. -/
+private theorem addPipeline_sy_toNat (a b : FPR) :
+    (addPipeline a b).sy.toNat = if (FPR.decode (addPipeline a b).y').sign then 1 else 0 := by
+  rw [addPipeline_sy, addPipeline_ey_, toNat_sign_field_of]
 
 noncomputable section
 
