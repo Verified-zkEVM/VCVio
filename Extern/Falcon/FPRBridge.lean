@@ -162,6 +162,165 @@ theorem toReal_neg (a : FPR) : toReal (FPR.neg a) = -toReal a := by
   rw [decode_neg_exponent, decode_neg_mantissa, decode_neg_sign]
   cases (FPR.decode a).sign <;> simp <;> split_ifs <;> ring
 
+/-! ## Structural facts: field bounds, uniform reconstruction, representability, and ulp
+
+Reusable structural infrastructure over `FPR.decode` / `toRealBits`, needed by (but proven
+independently of) the per-operation rounding bounds. None of this depends on the internals
+of `FPR.add` / `FPR.mul` / `FPR.div` / `FPR.sqrt`; it is pure algebra on the IEEE-754 field
+decomposition itself. -/
+
+/-- The biased exponent field extracted by `FPR.decode` is always below `2^11`: it is
+literally reduced modulo `2^11` in the definition of `FPR.decode`. -/
+theorem FPR.decode_exponent_lt (x : FPR) : (FPR.decode x).exponent < 2 ^ 11 := by
+  unfold FPR.decode
+  exact Nat.mod_lt _ (by norm_num)
+
+/-- The mantissa field extracted by `FPR.decode` is always below `2^52`: it is literally
+reduced modulo `2^52` in the definition of `FPR.decode`. -/
+theorem FPR.decode_mantissa_lt (x : FPR) : (FPR.decode x).mantissa < 2 ^ 52 := by
+  unfold FPR.decode
+  exact Nat.mod_lt _ (by norm_num)
+
+/-- The integer significand of a decoded field triple: the mantissa with the implicit
+leading bit folded in when the exponent field is nonzero (normal), or bare when it is zero
+(subnormal or zero). Together with `FPR.Bits.workExp`, this gives every finite `FPR.Bits`
+value a single uniform `significand * 2^(workExp - 1023 - 52)` shape, erasing the
+subnormal/normal case split that `FPR.Bits.toReal` itself makes; see
+`FPR.Bits.toReal_eq_of_exponent_ne_2047`. -/
+def FPR.Bits.significand (b : FPR.Bits) : ℕ :=
+  b.mantissa + (if b.exponent = 0 then 0 else 2 ^ 52)
+
+/-- The working exponent of a decoded field triple: the biased exponent field itself when
+normal, or `1` when the exponent field is `0` (subnormal/zero), matching the convention
+that subnormals scale by `2^(1 - 1023 - 52) = 2^(-1074)`. Paired with
+`FPR.Bits.significand` in `FPR.Bits.toReal_eq_of_exponent_ne_2047`. -/
+def FPR.Bits.workExp (b : FPR.Bits) : ℕ := max b.exponent 1
+
+/-- Every finite (non-Inf/NaN) decoded field triple denotes `± significand * 2^(workExp -
+1023 - 52)`, a single algebraic form unifying the subnormal and normal branches of
+`FPR.Bits.toReal`. This is the form the ulp/spacing facts below are built from. -/
+theorem FPR.Bits.toReal_eq_of_exponent_ne_2047 (b : FPR.Bits) (h : b.exponent ≠ 2047) :
+    b.toReal = (if b.sign then -1 else 1) * (b.significand : ℝ) *
+      (2 : ℝ) ^ ((b.workExp : ℤ) - 1023 - 52) := by
+  unfold FPR.Bits.toReal FPR.Bits.significand FPR.Bits.workExp
+  by_cases he : b.exponent = 0
+  · simp only [he]
+    norm_num
+  · rw [if_neg he, if_neg h, if_neg he, max_eq_left (by omega : 1 ≤ b.exponent)]
+    have key : (2 : ℝ) ^ ((b.exponent : ℤ) - 1023 - 52) =
+        (2 : ℝ) ^ ((b.exponent : ℤ) - 1023) / 2 ^ (52 : ℕ) := by
+      rw [show (b.exponent : ℤ) - 1023 - 52 = ((b.exponent : ℤ) - 1023) - (52 : ℤ) by ring,
+        zpow_sub₀ (by norm_num : (2 : ℝ) ≠ 0)]
+      norm_num
+    rw [key]
+    push_cast
+    field_simp
+    ring
+
+/-- The magnitude of a decoded field triple's real value, stripped of the sign factor:
+`|b.toReal|` reduces to the same case split as `FPR.Bits.toReal` itself, minus the `±1`. -/
+theorem FPR.Bits.abs_toReal_eq (b : FPR.Bits) :
+    |b.toReal| = if b.exponent = 0 then (b.mantissa : ℝ) * (2 : ℝ) ^ (-(1074 : ℤ))
+      else if b.exponent = 2047 then 0
+      else (1 + (b.mantissa : ℝ) / 2 ^ 52) * (2 : ℝ) ^ ((b.exponent : ℤ) - 1023) := by
+  have hsign1 : |(if b.sign then (-1 : ℝ) else 1)| = 1 := by cases b.sign <;> simp
+  unfold FPR.Bits.toReal
+  by_cases h1 : b.exponent = 0
+  · rw [if_pos h1, if_pos h1, abs_mul, abs_mul, hsign1,
+      abs_of_nonneg (by positivity : (0 : ℝ) ≤ (b.mantissa : ℝ)),
+      abs_of_nonneg (by positivity : (0 : ℝ) ≤ (2 : ℝ) ^ (-(1074 : ℤ)))]
+    ring
+  · rw [if_neg h1, if_neg h1]
+    by_cases h2 : b.exponent = 2047
+    · rw [if_pos h2, if_pos h2, abs_zero]
+    · rw [if_neg h2, if_neg h2, abs_mul, abs_mul, hsign1,
+        abs_of_nonneg (by positivity : (0 : ℝ) ≤ 1 + (b.mantissa : ℝ) / 2 ^ 52),
+        abs_of_nonneg (by positivity : (0 : ℝ) ≤ (2 : ℝ) ^ ((b.exponent : ℤ) - 1023))]
+      ring
+
+/-- A real number is exactly representable as a finite (non-Inf/NaN) IEEE-754 binary64
+value when it arises as `FPR.Bits.toReal` of some field triple with a valid (in-range)
+exponent and mantissa. -/
+def IsFPRRepresentable (r : ℝ) : Prop :=
+  ∃ b : FPR.Bits, b.exponent < 2047 ∧ b.mantissa < 2 ^ 52 ∧ r = b.toReal
+
+/-- Non-finite bit patterns (biased exponent field `2047`, i.e. Inf/NaN) decode to `0`
+under `toRealBits`, matching the "non-finite denotes `0`" convention documented at
+`FPR.Bits.toReal`. -/
+theorem toRealBits_eq_zero_of_exponent_eq_2047 (x : FPR)
+    (h : (FPR.decode x).exponent = 2047) : toRealBits x = 0 := by
+  unfold toRealBits FPR.Bits.toReal
+  simp [h]
+
+/-- Every `FPR` bit pattern denotes an exactly representable real: the finite ones via
+their own decoded field triple, and the non-finite ones via the all-zero triple, since
+`toRealBits` maps them both to `0`. -/
+theorem toRealBits_isFPRRepresentable (x : FPR) : IsFPRRepresentable (toRealBits x) := by
+  have hexp := FPR.decode_exponent_lt x
+  by_cases h : (FPR.decode x).exponent = 2047
+  · refine ⟨⟨false, 0, 0⟩, by norm_num, by norm_num, ?_⟩
+    rw [toRealBits_eq_zero_of_exponent_eq_2047 x h]
+    simp [FPR.Bits.toReal]
+  · exact ⟨FPR.decode x, by omega, FPR.decode_mantissa_lt x, rfl⟩
+
+/-- The spacing ("unit in the last place") between adjacent representable binary64 values
+sharing biased exponent field `e`: `2^(-1074)` at the subnormal/zero exponent (`e = 0`,
+via the working-exponent convention `FPR.Bits.workExp` maps it to `1`), and
+`2^(e - 1023 - 52)` for normal `e`. -/
+def FPR.ulpOfExponent (e : ℕ) : ℝ := (2 : ℝ) ^ ((max e 1 : ℤ) - 1023 - 52)
+
+/-- The key ulp/magnitude relation for normal (nonzero, finite) exponent fields: the
+spacing to the next representable value is at most `2^(-52)` of the value's own
+magnitude. This is the fact that ultimately controls the relative rounding error of any
+correctly-rounded binary64 operation, since a correctly-rounded result is within half a
+ulp of the exact value. -/
+theorem FPR.ulpOfExponent_le_two_pow_neg52_mul_abs (b : FPR.Bits)
+    (he0 : b.exponent ≠ 0) (he : b.exponent ≠ 2047) :
+    FPR.ulpOfExponent b.exponent ≤ (2 : ℝ) ^ (-(52 : ℤ)) * |b.toReal| := by
+  rw [FPR.Bits.abs_toReal_eq, if_neg he0, if_neg he]
+  unfold FPR.ulpOfExponent
+  rw [max_eq_left (show (1 : ℤ) ≤ (b.exponent : ℤ) by omega)]
+  have hcomb : (2 : ℝ) ^ (-(52 : ℤ)) * (2 : ℝ) ^ ((b.exponent : ℤ) - 1023) =
+      (2 : ℝ) ^ ((b.exponent : ℤ) - 1023 - 52) := by
+    rw [← zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0)]
+    ring_nf
+  rw [show (2 : ℝ) ^ (-(52 : ℤ)) *
+        ((1 + (b.mantissa : ℝ) / 2 ^ 52) * (2 : ℝ) ^ ((b.exponent : ℤ) - 1023)) =
+      (1 + (b.mantissa : ℝ) / 2 ^ 52) *
+        ((2 : ℝ) ^ (-(52 : ℤ)) * (2 : ℝ) ^ ((b.exponent : ℤ) - 1023)) by ring,
+    hcomb]
+  have h1le : (1 : ℝ) ≤ 1 + (b.mantissa : ℝ) / 2 ^ 52 := le_add_of_nonneg_right (by positivity)
+  nlinarith [zpow_pos (by norm_num : (0 : ℝ) < 2) ((b.exponent : ℤ) - 1023 - 52)]
+
+/-- The gap between two decoded values that agree on sign and exponent and whose mantissas
+differ by exactly `1` is exactly `FPR.ulpOfExponent` at that exponent — the ulp/spacing
+fact stated directly as a distance between adjacent representable values, rather than as
+a bound relative to one endpoint's magnitude (`FPR.ulpOfExponent_le_two_pow_neg52_mul_abs`).
+Holds uniformly across the subnormal/normal boundary via the significand/workExp
+reconstruction, `FPR.Bits.toReal_eq_of_exponent_ne_2047`. -/
+theorem FPR.Bits.abs_toReal_sub_of_succ_mantissa (b : FPR.Bits) (he : b.exponent ≠ 2047) :
+    |({ b with mantissa := b.mantissa + 1 } : FPR.Bits).toReal - b.toReal| =
+      FPR.ulpOfExponent b.exponent := by
+  have he' : ({ b with mantissa := b.mantissa + 1 } : FPR.Bits).exponent ≠ 2047 := he
+  rw [FPR.Bits.toReal_eq_of_exponent_ne_2047 _ he', FPR.Bits.toReal_eq_of_exponent_ne_2047 b he]
+  have hsig : ({ b with mantissa := b.mantissa + 1 } : FPR.Bits).significand =
+      b.significand + 1 := by
+    unfold FPR.Bits.significand
+    dsimp only
+    split_ifs <;> omega
+  have hwork : ({ b with mantissa := b.mantissa + 1 } : FPR.Bits).workExp = b.workExp := rfl
+  have hsign : ({ b with mantissa := b.mantissa + 1 } : FPR.Bits).sign = b.sign := rfl
+  rw [hsig, hwork, hsign]
+  unfold FPR.ulpOfExponent FPR.Bits.workExp
+  have hsign1 : |(if b.sign then (-1 : ℝ) else 1)| = 1 := by cases b.sign <;> simp
+  push_cast
+  rw [show (if b.sign then (-1 : ℝ) else 1) * ((b.significand : ℝ) + 1) *
+        (2 : ℝ) ^ ((max b.exponent 1 : ℤ) - 1023 - 52) -
+      (if b.sign then (-1 : ℝ) else 1) * (b.significand : ℝ) *
+        (2 : ℝ) ^ ((max b.exponent 1 : ℤ) - 1023 - 52) =
+      (if b.sign then (-1 : ℝ) else 1) * (2 : ℝ) ^ ((max b.exponent 1 : ℤ) - 1023 - 52) by ring,
+    abs_mul, hsign1, one_mul, abs_of_nonneg (by positivity)]
+
 /-! ## Verification-only concrete primitives -/
 
 /-- Concrete primitive bundle restricted to the fields used by `Falcon.verify`.
