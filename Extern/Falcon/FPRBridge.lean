@@ -338,11 +338,14 @@ def FPR.minNormalReal : ℝ := (2 : ℝ) ^ (-(1022 : ℤ))
 def FPR.maxFiniteReal : ℝ := (2 - (2 : ℝ) ^ (-(52 : ℤ))) * (2 : ℝ) ^ (1023 : ℤ)
 
 /-- `r` is either exactly `0`, or has magnitude bracketed in `[FPR.minNormalReal,
-FPR.maxFiniteReal]`: the range a correctly-rounded binary64 operation can represent with
-the standard `2^(-52)` relative-error guarantee, excluding both overflow (magnitude above
+FPR.maxFiniteReal]`: the magnitude window a correctly-rounded binary64 operation can land in
+with the standard `2^(-52)` relative-error guarantee, excluding both overflow (magnitude above
 `maxFiniteReal`) and underflow into the subnormal range (nonzero magnitude strictly below
-`minNormalReal`). -/
-def FPR.ExactInNormalRange (r : ℝ) : Prop :=
+`minNormalReal`). This is a pure magnitude bracket: it carries no claim that `r` itself is
+exactly representable in binary64 (`IsFPRRepresentable`), only that *if* `r` is the exact
+mathematical result of an operation, no correctly-rounded binary64 encoding of it can overflow
+or underflow. -/
+def FPR.InNormalMagnitudeRange (r : ℝ) : Prop :=
   r = 0 ∨ (FPR.minNormalReal ≤ |r| ∧ |r| ≤ FPR.maxFiniteReal)
 
 /-! ## Bit-pattern magnitude compare (toward `FPR.add`'s compare-and-swap step)
@@ -1853,29 +1856,182 @@ def verifyPrimitives (p : Falcon.Params) (hn : p.n = 2 ^ p.logn) : Falcon.Primit
 
 /-! ## Per-operation error bounds -/
 
-/-- Relative error bound for `FPR.add`. -/
-theorem add_error (a b : FPR) :
+/-- Relative error bound for `FPR.add`, on normal (non-subnormal, finite) operands whose exact
+sum stays in the correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`):
+neither overflowing past `FPR.maxFiniteReal` nor underflowing into the open subnormal band below
+`FPR.minNormalReal`. Both restrictions are load-bearing: two maximal-magnitude normal operands
+overflow the exponent field on summation, and two normal operands whose exact difference is
+subnormal (e.g. `2^-1022` and its next-representable neighbor) are mis-rounded by the alignment
+step, in both cases producing a result unrelated to the true sum. -/
+theorem add_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a + toReal b)) :
     |toReal (FPR.add a b) - (toReal a + toReal b)| ≤
     (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a + toReal b| := by
   sorry
 
-/-- Relative error bound for `FPR.mul`. -/
-theorem mul_error (a b : FPR) :
+/-- Relative error bound for `FPR.mul`, on normal operands whose exact product stays in the
+correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
+why both the operand- and result-side restrictions are necessary. -/
+theorem mul_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a * toReal b)) :
     |toReal (FPR.mul a b) - toReal a * toReal b| ≤
     (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a * toReal b| := by
   sorry
 
-/-- Relative error bound for `FPR.div`. -/
-theorem div_error (a b : FPR) (hb : toReal b ≠ 0) :
+/-- Relative error bound for `FPR.div`, on normal operands whose exact quotient stays in the
+correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
+why both the operand- and result-side restrictions are necessary. -/
+theorem div_error (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a) (hb' : FPR.IsNormal b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a / toReal b)) :
     |toReal (FPR.div a b) - toReal a / toReal b| ≤
     (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a / toReal b| := by
   sorry
 
-/-- Relative error bound for `FPR.sqrt`. -/
-theorem sqrt_error (a : FPR) (ha : 0 ≤ toReal a) :
+/-- Relative error bound for `FPR.sqrt`, on a normal, nonnegative operand. Unlike `add_error` /
+`mul_error` / `div_error`, no separate magnitude-range hypothesis on the exact result is needed:
+the square root of a value already bracketed in `[FPR.minNormalReal, FPR.maxFiniteReal]` lands in
+`[2 ^ (-511), 2 ^ 512]`, hundreds of bits inside that same window on both ends, so a normal operand
+can never drive `FPR.sqrt` to overflow or underflow. -/
+theorem sqrt_error (a : FPR) (ha' : FPR.IsNormal a) (ha : 0 ≤ toReal a) :
     |toReal (FPR.sqrt a) - Real.sqrt (toReal a)| ≤
     (2 : ℝ) ^ (-(52 : ℤ)) * Real.sqrt (toReal a) := by
   sorry
+
+/-! ## Non-vacuity witnesses for the per-operation error bounds
+
+Concrete instances showing the domain hypotheses added to `add_error`, `mul_error`, `div_error`
+and `sqrt_error` above are jointly satisfiable by ordinary values, not merely by a degenerate
+operand such as zero. -/
+
+/-- `toReal` is nonnegative whenever the sign bit is unset, uniformly across the
+subnormal/normal/non-finite case split of `FPR.Bits.toReal`. -/
+theorem FPR.Bits.toReal_nonneg_of_sign_false {b : FPR.Bits} (h : b.sign = false) :
+    0 ≤ b.toReal := by
+  unfold FPR.Bits.toReal
+  simp only [h, Bool.false_eq_true, if_false]
+  split_ifs <;> positivity
+
+private theorem decode_two : FPR.decode FPR.two = ⟨false, 1024, 0⟩ := by
+  unfold FPR.decode FPR.two; decide
+
+/-- `toReal` of the `FPR` constant `2`. -/
+theorem toReal_two : toReal FPR.two = 2 := by
+  unfold toReal toRealBits
+  rw [decode_two]
+  simp [FPR.Bits.toReal]
+
+/-- The bit pattern of the binary64 value `1.5`. -/
+private def onePointFive : FPR := (0x3FF8000000000000 : UInt64)
+
+private theorem decode_onePointFive :
+    FPR.decode onePointFive = ⟨false, 1023, 2 ^ 51⟩ := by
+  unfold FPR.decode onePointFive; decide
+
+private theorem toReal_onePointFive : toReal onePointFive = 1.5 := by
+  unfold toReal toRealBits
+  rw [decode_onePointFive]
+  norm_num [FPR.Bits.toReal]
+
+/-- The bit pattern of the binary64 value `2.25`. -/
+private def twoPointTwoFive : FPR := (0x4002000000000000 : UInt64)
+
+private theorem decode_twoPointTwoFive :
+    FPR.decode twoPointTwoFive = ⟨false, 1024, 2 ^ 49⟩ := by
+  unfold FPR.decode twoPointTwoFive; decide
+
+private theorem toReal_twoPointTwoFive : toReal twoPointTwoFive = 2.25 := by
+  unfold toReal toRealBits
+  rw [decode_twoPointTwoFive]
+  norm_num [FPR.Bits.toReal]
+
+private theorem FPR.minNormalReal_le_two_pow {k : ℤ} (hk : -1022 ≤ k) :
+    FPR.minNormalReal ≤ (2 : ℝ) ^ k :=
+  zpow_le_zpow_right₀ (by norm_num) hk
+
+private theorem FPR.two_pow_le_maxFiniteReal {k : ℤ} (hk : k ≤ 1023) :
+    (2 : ℝ) ^ k ≤ FPR.maxFiniteReal := by
+  unfold FPR.maxFiniteReal
+  have h1 : (2 : ℝ) ^ k ≤ (2 : ℝ) ^ (1023 : ℤ) := zpow_le_zpow_right₀ (by norm_num) hk
+  have h2 : (2 : ℝ) ^ (-(52 : ℤ)) ≤ (1 : ℝ) := by
+    calc (2 : ℝ) ^ (-(52 : ℤ)) ≤ (2 : ℝ) ^ (0 : ℤ) :=
+          zpow_le_zpow_right₀ (by norm_num) (by omega)
+      _ = 1 := by norm_num
+  have h3 : (1 : ℝ) ≤ 2 - (2 : ℝ) ^ (-(52 : ℤ)) := by linarith
+  calc (2 : ℝ) ^ k ≤ (2 : ℝ) ^ (1023 : ℤ) := h1
+    _ = 1 * (2 : ℝ) ^ (1023 : ℤ) := (one_mul _).symm
+    _ ≤ (2 - (2 : ℝ) ^ (-(52 : ℤ))) * (2 : ℝ) ^ (1023 : ℤ) :=
+        mul_le_mul_of_nonneg_right h3 (le_of_lt (zpow_pos (by norm_num) _))
+
+/-- Any positive real bracketed between two powers of two with exponents inside `[-1022, 1023]`
+lands in `FPR.InNormalMagnitudeRange`: the reusable step behind the concrete witnesses below. -/
+private theorem FPR.in_normal_range_of_pos_le {r : ℝ} {k1 k2 : ℤ}
+    (hk1 : -1022 ≤ k1) (hk2 : k2 ≤ 1023)
+    (hr0 : (2 : ℝ) ^ k1 ≤ r) (hr1 : r ≤ (2 : ℝ) ^ k2) :
+    FPR.InNormalMagnitudeRange r := by
+  right
+  have hpos : 0 < r := lt_of_lt_of_le (zpow_pos (by norm_num) _) hr0
+  rw [abs_of_pos hpos]
+  exact ⟨(FPR.minNormalReal_le_two_pow hk1).trans hr0,
+    hr1.trans (FPR.two_pow_le_maxFiniteReal hk2)⟩
+
+private theorem isNormal_one : FPR.IsNormal FPR.one := by
+  unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode FPR.one; decide
+
+private theorem isNormal_two : FPR.IsNormal FPR.two := by
+  unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode FPR.two; decide
+
+private theorem isNormal_onePointFive : FPR.IsNormal onePointFive := by
+  unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode onePointFive; decide
+
+private theorem isNormal_twoPointTwoFive : FPR.IsNormal twoPointTwoFive := by
+  unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode twoPointTwoFive; decide
+
+private theorem isNormal_q : FPR.IsNormal FPR.q := by
+  unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode FPR.q; decide
+
+private theorem decode_q_sign_false : (FPR.decode FPR.q).sign = false := by
+  unfold FPR.decode FPR.q; decide
+
+/-- `add_error` is not vacuous: `1.0 + 1.0` is an ordinary witness satisfying every hypothesis. -/
+example : FPR.IsNormal FPR.one ∧ FPR.IsNormal FPR.one ∧
+    FPR.InNormalMagnitudeRange (toReal FPR.one + toReal FPR.one) := by
+  refine ⟨isNormal_one, isNormal_one, ?_⟩
+  rw [toReal_one]
+  exact FPR.in_normal_range_of_pos_le (k1 := 0) (k2 := 1)
+    (by norm_num) (by norm_num) (by norm_num) (by norm_num)
+
+/-- `add_error` is not vacuous: `1.5 + 2.25` is a second, non-round-number witness. -/
+example : FPR.IsNormal onePointFive ∧ FPR.IsNormal twoPointTwoFive ∧
+    FPR.InNormalMagnitudeRange (toReal onePointFive + toReal twoPointTwoFive) := by
+  refine ⟨isNormal_onePointFive, isNormal_twoPointTwoFive, ?_⟩
+  rw [toReal_onePointFive, toReal_twoPointTwoFive]
+  exact FPR.in_normal_range_of_pos_le (k1 := 0) (k2 := 2)
+    (by norm_num) (by norm_num) (by norm_num) (by norm_num)
+
+/-- `mul_error` is not vacuous: `2.0 * 2.0` is an ordinary witness. -/
+example : FPR.IsNormal FPR.two ∧ FPR.IsNormal FPR.two ∧
+    FPR.InNormalMagnitudeRange (toReal FPR.two * toReal FPR.two) := by
+  refine ⟨isNormal_two, isNormal_two, ?_⟩
+  rw [toReal_two]
+  exact FPR.in_normal_range_of_pos_le (k1 := 0) (k2 := 2)
+    (by norm_num) (by norm_num) (by norm_num) (by norm_num)
+
+/-- `div_error` is not vacuous: `2.0 / 1.0` is an ordinary witness. -/
+example : toReal FPR.one ≠ 0 ∧ FPR.IsNormal FPR.two ∧ FPR.IsNormal FPR.one ∧
+    FPR.InNormalMagnitudeRange (toReal FPR.two / toReal FPR.one) := by
+  refine ⟨by rw [toReal_one]; norm_num, isNormal_two, isNormal_one, ?_⟩
+  rw [toReal_two, toReal_one, div_one]
+  exact FPR.in_normal_range_of_pos_le (k1 := 0) (k2 := 1)
+    (by norm_num) (by norm_num) (by norm_num) (by norm_num)
+
+/-- `sqrt_error` is not vacuous: `FPR.q`, the Falcon modulus `12289` used throughout the concrete
+NTT/FFT and rounding kernels (`FPR.q` in `LatticeCrypto/Falcon/Concrete/FPR.lean`), is a normal,
+nonnegative operand — and, unlike `add_error` / `mul_error` / `div_error`, needs no further
+magnitude side condition; see `sqrt_error`'s docstring for why. -/
+example : FPR.IsNormal FPR.q ∧ 0 ≤ toReal FPR.q := by
+  refine ⟨isNormal_q, ?_⟩
+  unfold toReal toRealBits
+  exact FPR.Bits.toReal_nonneg_of_sign_false decode_q_sign_false
 
 /-! ## Sampler quality -/
 
