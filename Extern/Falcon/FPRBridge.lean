@@ -321,6 +321,209 @@ theorem FPR.Bits.abs_toReal_sub_of_succ_mantissa (b : FPR.Bits) (he : b.exponent
       (if b.sign then (-1 : ℝ) else 1) * (2 : ℝ) ^ ((max b.exponent 1 : ℤ) - 1023 - 52) by ring,
     abs_mul, hsign1, one_mul, abs_of_nonneg (by positivity)]
 
+/-! ## Domain restriction: normal, in-range operands and results -/
+
+/-- A decoded field triple denotes a normal (non-subnormal), finite (non-Inf/NaN) value:
+its biased exponent field avoids both the subnormal/zero marker `0` and the non-finite
+marker `2047`. -/
+def FPR.Bits.IsNormal (b : FPR.Bits) : Prop := b.exponent ≠ 0 ∧ b.exponent ≠ 2047
+
+/-- An `FPR` bit pattern decodes to a normal, finite IEEE-754 binary64 value. -/
+def FPR.IsNormal (x : FPR) : Prop := (FPR.decode x).IsNormal
+
+/-- The smallest positive magnitude of a normal binary64 value, `2^(-1022)`. -/
+def FPR.minNormalReal : ℝ := (2 : ℝ) ^ (-(1022 : ℤ))
+
+/-- The largest finite representable binary64 magnitude, `(2 - 2^(-52)) * 2^1023`. -/
+def FPR.maxFiniteReal : ℝ := (2 - (2 : ℝ) ^ (-(52 : ℤ))) * (2 : ℝ) ^ (1023 : ℤ)
+
+/-- `r` is either exactly `0`, or has magnitude bracketed in `[FPR.minNormalReal,
+FPR.maxFiniteReal]`: the range a correctly-rounded binary64 operation can represent with
+the standard `2^(-52)` relative-error guarantee, excluding both overflow (magnitude above
+`maxFiniteReal`) and underflow into the subnormal range (nonzero magnitude strictly below
+`minNormalReal`). -/
+def FPR.ExactInNormalRange (r : ℝ) : Prop :=
+  r = 0 ∨ (FPR.minNormalReal ≤ |r| ∧ |r| ≤ FPR.maxFiniteReal)
+
+/-! ## Bit-pattern magnitude compare (toward `FPR.add`'s compare-and-swap step)
+
+`FPR.add` opens by comparing its two operands' magnitudes as unsigned 63-bit integers
+(`za := (x &&& M63) - (y &&& M63)`, testing the top bit of `za`) and conditionally swapping so
+the larger-magnitude operand leads. The lemmas below give the two halves of that step's
+correctness: `FPR.Bits.abs_toReal_lt_iff_magKey_lt` shows the packed exponent/mantissa integer
+orders identically to real magnitude, and `toNat_and_low63Mask_eq_magKey` shows the concrete
+`x &&& M63` computation produces exactly that packed integer. Neither lemma reaches
+`FPR.add` itself yet (the tie-break via `za'`, the conditional swap, and every later pipeline
+stage — alignment/sticky-bit shift, sign combination, leading-zero renormalization, final
+round-to-nearest — remain open); they are reusable infrastructure for that larger proof. -/
+
+/-- The unsigned integer packing of a decoded field triple's exponent and mantissa fields into
+a single natural number, `exponent * 2^52 + mantissa`. Orders identically to real magnitude via
+`FPR.Bits.abs_toReal_lt_iff_magKey_lt`, and is exactly what masking an `FPR` word's sign bit off
+computes via `toNat_and_low63Mask_eq_magKey`. -/
+def FPR.Bits.magKey (b : FPR.Bits) : ℕ := b.exponent * 2 ^ 52 + b.mantissa
+
+/-- Two finite (non-Inf/NaN) decoded field triples are ordered by real magnitude exactly as
+their `FPR.Bits.magKey` values are ordered: a strictly larger exponent always dominates any
+mantissa difference (the significand fraction is always below `2`), and for equal exponents the
+comparison reduces to the mantissa alone. Holds uniformly across the subnormal/normal boundary
+(no `FPR.Bits.IsNormal` hypothesis is needed). -/
+theorem FPR.Bits.abs_toReal_lt_iff_magKey_lt (b1 b2 : FPR.Bits)
+    (hm1 : b1.mantissa < 2 ^ 52) (hm2 : b2.mantissa < 2 ^ 52)
+    (h1 : b1.exponent ≠ 2047) (h2 : b2.exponent ≠ 2047) :
+    |b1.toReal| < |b2.toReal| ↔ b1.magKey < b2.magKey := by
+  unfold FPR.Bits.magKey
+  rw [FPR.Bits.abs_toReal_eq, FPR.Bits.abs_toReal_eq]
+  rw [if_neg h1, if_neg h2]
+  split_ifs with he1 he2 he2
+  · have hpos : (0 : ℝ) < (2 : ℝ) ^ (-(1074 : ℤ)) := by positivity
+    rw [he1, he2]
+    simp only [Nat.zero_mul, Nat.zero_add]
+    rw [mul_lt_mul_iff_of_pos_right hpos]
+    exact_mod_cast Iff.rfl
+  · have he2' : 1 ≤ b2.exponent := by omega
+    refine iff_of_true ?_ (by omega)
+    have hm1' : (b1.mantissa : ℝ) < 2 ^ 52 := by exact_mod_cast hm1
+    have hstep1 : (b1.mantissa : ℝ) * (2 : ℝ) ^ (-(1074 : ℤ)) <
+        (2 : ℝ) ^ (52 : ℕ) * (2 : ℝ) ^ (-(1074 : ℤ)) := by
+      apply mul_lt_mul_of_pos_right hm1' (by positivity)
+    have hcomb : (2 : ℝ) ^ (52 : ℕ) * (2 : ℝ) ^ (-(1074 : ℤ)) = (2 : ℝ) ^ (-(1022 : ℤ)) := by
+      rw [← zpow_natCast (2 : ℝ) 52, ← zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0)]
+      norm_num
+    have hstep2 : (2 : ℝ) ^ (-(1022 : ℤ)) ≤ (2 : ℝ) ^ ((b2.exponent : ℤ) - 1023) := by
+      apply zpow_le_zpow_right₀ (by norm_num : (1 : ℝ) ≤ 2)
+      omega
+    have hstep3 : (2 : ℝ) ^ ((b2.exponent : ℤ) - 1023) ≤
+        (1 + (b2.mantissa : ℝ) / 2 ^ 52) * (2 : ℝ) ^ ((b2.exponent : ℤ) - 1023) := by
+      apply le_mul_of_one_le_left (by positivity)
+      have : (0 : ℝ) ≤ (b2.mantissa : ℝ) / 2 ^ 52 := by positivity
+      linarith
+    rw [hcomb] at hstep1
+    linarith
+  · have he1' : 1 ≤ b1.exponent := by omega
+    refine iff_of_false ?_ (by omega)
+    have hm2' : (b2.mantissa : ℝ) < 2 ^ 52 := by exact_mod_cast hm2
+    have hstep1 : (b2.mantissa : ℝ) * (2 : ℝ) ^ (-(1074 : ℤ)) <
+        (2 : ℝ) ^ (52 : ℕ) * (2 : ℝ) ^ (-(1074 : ℤ)) := by
+      apply mul_lt_mul_of_pos_right hm2' (by positivity)
+    have hcomb : (2 : ℝ) ^ (52 : ℕ) * (2 : ℝ) ^ (-(1074 : ℤ)) = (2 : ℝ) ^ (-(1022 : ℤ)) := by
+      rw [← zpow_natCast (2 : ℝ) 52, ← zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0)]
+      norm_num
+    have hstep2 : (2 : ℝ) ^ (-(1022 : ℤ)) ≤ (2 : ℝ) ^ ((b1.exponent : ℤ) - 1023) := by
+      apply zpow_le_zpow_right₀ (by norm_num : (1 : ℝ) ≤ 2)
+      omega
+    have hstep3 : (2 : ℝ) ^ ((b1.exponent : ℤ) - 1023) ≤
+        (1 + (b1.mantissa : ℝ) / 2 ^ 52) * (2 : ℝ) ^ ((b1.exponent : ℤ) - 1023) := by
+      apply le_mul_of_one_le_left (by positivity)
+      have : (0 : ℝ) ≤ (b1.mantissa : ℝ) / 2 ^ 52 := by positivity
+      linarith
+    rw [hcomb] at hstep1
+    linarith
+  · have hm1' : (b1.mantissa : ℝ) < 2 ^ 52 := by exact_mod_cast hm1
+    have hm2' : (b2.mantissa : ℝ) < 2 ^ 52 := by exact_mod_cast hm2
+    rcases lt_trichotomy b1.exponent b2.exponent with hlt | heq | hgt
+    · refine iff_of_true ?_ (by omega)
+      have hstep1 : (1 + (b1.mantissa : ℝ) / 2 ^ 52) * (2 : ℝ) ^ ((b1.exponent : ℤ) - 1023) <
+          2 * (2 : ℝ) ^ ((b1.exponent : ℤ) - 1023) := by
+        apply mul_lt_mul_of_pos_right (by linarith) (by positivity)
+      have hcomb : (2 : ℝ) * (2 : ℝ) ^ ((b1.exponent : ℤ) - 1023) =
+          (2 : ℝ) ^ ((b1.exponent : ℤ) + 1 - 1023) := by
+        rw [show (b1.exponent : ℤ) + 1 - 1023 = ((b1.exponent : ℤ) - 1023) + 1 by ring,
+          zpow_add_one₀ (by norm_num : (2 : ℝ) ≠ 0)]
+        ring
+      have hstep2 : (2 : ℝ) ^ ((b1.exponent : ℤ) + 1 - 1023) ≤
+          (2 : ℝ) ^ ((b2.exponent : ℤ) - 1023) := by
+        apply zpow_le_zpow_right₀ (by norm_num : (1 : ℝ) ≤ 2)
+        omega
+      have hstep3 : (2 : ℝ) ^ ((b2.exponent : ℤ) - 1023) ≤
+          (1 + (b2.mantissa : ℝ) / 2 ^ 52) * (2 : ℝ) ^ ((b2.exponent : ℤ) - 1023) := by
+        apply le_mul_of_one_le_left (by positivity)
+        have : (0 : ℝ) ≤ (b2.mantissa : ℝ) / 2 ^ 52 := by positivity
+        linarith
+      rw [hcomb] at hstep1
+      linarith
+    · rw [heq]
+      have hp : (0 : ℝ) < (2 : ℝ) ^ ((b2.exponent : ℤ) - 1023) := by positivity
+      rw [mul_lt_mul_iff_of_pos_right hp]
+      constructor
+      · intro h
+        have hnat : b1.mantissa < b2.mantissa := by
+          have : (b1.mantissa : ℝ) < (b2.mantissa : ℝ) := by linarith
+          exact_mod_cast this
+        omega
+      · intro h
+        have hnat : b1.mantissa < b2.mantissa := by omega
+        have : (b1.mantissa : ℝ) < (b2.mantissa : ℝ) := by exact_mod_cast hnat
+        linarith
+    · refine iff_of_false ?_ (by omega)
+      have hstep1 : (1 + (b2.mantissa : ℝ) / 2 ^ 52) * (2 : ℝ) ^ ((b2.exponent : ℤ) - 1023) <
+          2 * (2 : ℝ) ^ ((b2.exponent : ℤ) - 1023) := by
+        apply mul_lt_mul_of_pos_right (by linarith) (by positivity)
+      have hcomb : (2 : ℝ) * (2 : ℝ) ^ ((b2.exponent : ℤ) - 1023) =
+          (2 : ℝ) ^ ((b2.exponent : ℤ) + 1 - 1023) := by
+        rw [show (b2.exponent : ℤ) + 1 - 1023 = ((b2.exponent : ℤ) - 1023) + 1 by ring,
+          zpow_add_one₀ (by norm_num : (2 : ℝ) ≠ 0)]
+        ring
+      have hstep2 : (2 : ℝ) ^ ((b2.exponent : ℤ) + 1 - 1023) ≤
+          (2 : ℝ) ^ ((b1.exponent : ℤ) - 1023) := by
+        apply zpow_le_zpow_right₀ (by norm_num : (1 : ℝ) ≤ 2)
+        omega
+      have hstep3 : (2 : ℝ) ^ ((b1.exponent : ℤ) - 1023) ≤
+          (1 + (b1.mantissa : ℝ) / 2 ^ 52) * (2 : ℝ) ^ ((b1.exponent : ℤ) - 1023) := by
+        apply le_mul_of_one_le_left (by positivity)
+        have : (0 : ℝ) ≤ (b1.mantissa : ℝ) / 2 ^ 52 := by positivity
+        linarith
+      rw [hcomb] at hstep1
+      intro hcontra
+      linarith
+
+/-- Masking a `UInt64` with the low-63-bit all-ones pattern strips its top (sign) bit: the
+result's underlying `Nat` is the original reduced modulo `2^63`. -/
+theorem toNat_and_low63Mask (x : UInt64) :
+    (x &&& (((1 : UInt64) <<< 63) - 1)).toNat = x.toNat % 2 ^ 63 := by
+  rw [UInt64.toNat_and]
+  have h1 : (((1 : UInt64) <<< 63) - 1).toNat = 2 ^ 63 - 1 := by decide
+  rw [h1]
+  exact Nat.and_two_pow_sub_one_eq_mod x.toNat 63
+
+/-- Masking an `FPR` word with the low-63-bit all-ones pattern (the sign-stripping mask `M63`
+used inside `FPR.add`'s compare-and-swap step) computes exactly `FPR.Bits.magKey` of its
+decoded fields. -/
+theorem toNat_and_low63Mask_eq_magKey (x : FPR) :
+    (x &&& (((1 : UInt64) <<< 63) - 1)).toNat = (FPR.decode x).magKey := by
+  rw [toNat_and_low63Mask]
+  unfold FPR.decode FPR.Bits.magKey
+  simp only [Nat.shiftRight_eq_div_pow]
+  omega
+
+/-- The classic "subtract and test the top bit" unsigned-comparison trick, valid on 63-bit
+`UInt64` patterns (the sign-stripped operand shape `FPR.add`'s `za := (x &&& M63) - (y &&& M63)`
+step produces): the top bit of `p - q` is set exactly when `p < q`. Proved by unfolding to the
+underlying `Nat` subtraction modulo `2^64` and case-splitting on whether it wraps. -/
+theorem sub_shiftRight_63_eq_one_iff_lt (p q : UInt64)
+    (hp : p < ((1 : UInt64) <<< 63)) (hq : q < ((1 : UInt64) <<< 63)) :
+    (p - q) >>> 63 = 1 ↔ p < q := by
+  rw [UInt64.lt_iff_toNat_lt, ← UInt64.toNat_inj]
+  rw [UInt64.lt_iff_toNat_lt] at hp hq
+  have h63 : ((1 : UInt64) <<< 63).toNat = 2 ^ 63 := by decide
+  rw [h63] at hp hq
+  rw [UInt64.toNat_shiftRight, UInt64.toNat_sub]
+  have hshift : (63 : UInt64).toNat = 63 := by decide
+  rw [hshift]
+  have h1 : (1 : UInt64).toNat = 1 := by decide
+  rw [h1, Nat.shiftRight_eq_div_pow]
+  by_cases hle : q.toNat ≤ p.toNat
+  · have heq : (2 ^ 64 - q.toNat + p.toNat) % 2 ^ 64 = p.toNat - q.toNat := by omega
+    rw [heq]
+    have hdiv : (p.toNat - q.toNat) / 2 ^ 63 = 0 := by omega
+    rw [hdiv]
+    omega
+  · have heq : (2 ^ 64 - q.toNat + p.toNat) % 2 ^ 64 = 2 ^ 64 - q.toNat + p.toNat := by omega
+    rw [heq]
+    have hdiv : (2 ^ 64 - q.toNat + p.toNat) / 2 ^ 63 = 1 := by omega
+    rw [hdiv]
+    omega
+
 /-! ## Verification-only concrete primitives -/
 
 /-- Concrete primitive bundle restricted to the fields used by `Falcon.verify`.
