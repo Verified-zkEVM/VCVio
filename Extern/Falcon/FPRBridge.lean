@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 import all Extern.Falcon.Instance
-public import Batteries.Data.Rat.Float
+import all LatticeCrypto.Falcon.Concrete.FPR
 public import LatticeCrypto.Falcon.Scheme
 public import LatticeCrypto.Falcon.Concrete.FPR
 public import Extern.Falcon.Instance
@@ -58,9 +58,109 @@ noncomputable section
 
 /-! ## Interpretation: FPR → ℝ -/
 
+/-! ### Layer 1: bit-level decomposition (pure `Nat`/`Bool`, no `ℝ`) -/
+
+/-- The three IEEE-754 binary64 bit fields of an `FPR` word: sign bit, 11-bit biased
+exponent, and 52-bit mantissa (implicit leading `1` for normal values), matching the
+layout documented in `FPR.lean`'s module docstring (bit 63 / bits 62-52 / bits 51-0). -/
+structure FPR.Bits where
+  /-- The sign bit: `true` means negative. -/
+  sign : Bool
+  /-- The 11-bit biased exponent (bias `1023`). -/
+  exponent : Nat
+  /-- The 52-bit mantissa (implicit leading `1` for normal values). -/
+  mantissa : Nat
+deriving DecidableEq, Repr
+
+/-- Split an `FPR` bit pattern into its sign, exponent, and mantissa fields. -/
+def FPR.decode (x : FPR) : FPR.Bits where
+  sign := x.toNat.testBit 63
+  exponent := (x.toNat >>> 52) % 2 ^ 11
+  mantissa := x.toNat % 2 ^ 52
+
+/-! ### Layer 2: interpretation into `ℝ` -/
+
+/-- Interpret decoded IEEE-754 fields as a real number. Non-finite patterns (biased
+exponent all-ones, i.e. Inf/NaN) denote `0`, matching the existing `toRat0`-based
+convention. Subnormals (exponent = 0) have no implicit leading bit; normals do. -/
+noncomputable def FPR.Bits.toReal (b : FPR.Bits) : ℝ :=
+  if b.exponent = 0 then
+    (if b.sign then -1 else 1) * (b.mantissa : ℝ) * (2 : ℝ) ^ (-(1074 : ℤ))
+  else if b.exponent = 2047 then
+    0
+  else
+    (if b.sign then -1 else 1) * (1 + (b.mantissa : ℝ) / 2 ^ 52) *
+      (2 : ℝ) ^ ((b.exponent : ℤ) - 1023)
+
+/-- An `FPR` bit pattern interpreted as a real number, by splitting it into its IEEE-754
+binary64 fields with `FPR.decode` and denoting those fields with `FPR.Bits.toReal`. The
+whole chain is elementary arithmetic on `Nat`, `Bool` and `ℝ`, so it reduces in the
+kernel. -/
+noncomputable def toRealBits (x : FPR) : ℝ := (FPR.decode x).toReal
+
 /-- Interpret an `FPR` word as the corresponding IEEE-754 value in `ℝ`,
 mapping non-finite bit patterns to `0`. -/
-def toReal (x : FPR) : ℝ := ((Float.ofBits x).toRat0 : ℝ)
+def toReal (x : FPR) : ℝ := toRealBits x
+
+/-! ## Structural theorems: zero, one, negation -/
+
+private theorem neg_toNat (x : FPR) : (FPR.neg x).toNat = x.toNat ^^^ 2 ^ 63 := by
+  simp [FPR.neg, UInt64.toNat_xor]
+
+private theorem decode_neg_sign (x : FPR) :
+    (FPR.decode (FPR.neg x)).sign = !(FPR.decode x).sign := by
+  unfold FPR.decode; simp only; rw [neg_toNat, Nat.testBit_xor, Nat.testBit_two_pow]; simp
+
+private theorem decode_neg_exponent (x : FPR) :
+    (FPR.decode (FPR.neg x)).exponent = (FPR.decode x).exponent := by
+  unfold FPR.decode
+  simp only
+  apply Nat.eq_of_testBit_eq
+  intro i
+  rw [Nat.testBit_mod_two_pow, Nat.testBit_mod_two_pow]
+  by_cases hi : i < 11
+  · simp only [hi, decide_true, Bool.true_and, Nat.testBit_shiftRight]
+    rw [neg_toNat, Nat.testBit_xor, Nat.testBit_two_pow_of_ne (by omega : (63 : Nat) ≠ 52 + i)]
+    simp
+  · simp [hi]
+
+private theorem decode_neg_mantissa (x : FPR) :
+    (FPR.decode (FPR.neg x)).mantissa = (FPR.decode x).mantissa := by
+  unfold FPR.decode
+  simp only
+  apply Nat.eq_of_testBit_eq
+  intro i
+  rw [Nat.testBit_mod_two_pow, Nat.testBit_mod_two_pow]
+  by_cases hi : i < 52
+  · simp only [hi, decide_true, Bool.true_and]
+    rw [neg_toNat, Nat.testBit_xor, Nat.testBit_two_pow_of_ne (by omega : (63 : Nat) ≠ i)]
+    simp
+  · simp [hi]
+
+private theorem decode_zero : FPR.decode FPR.zero = ⟨false, 0, 0⟩ := by
+  unfold FPR.decode FPR.zero; decide
+
+private theorem decode_one : FPR.decode FPR.one = ⟨false, 1023, 0⟩ := by
+  unfold FPR.decode FPR.one; decide
+
+/-- `toReal` of the `FPR` zero bit pattern is `0`. -/
+theorem toReal_zero : toReal FPR.zero = 0 := by
+  unfold toReal toRealBits
+  rw [decode_zero]
+  unfold FPR.Bits.toReal
+  norm_num
+
+/-- `toReal` of the `FPR` one bit pattern is `1`. -/
+theorem toReal_one : toReal FPR.one = 1 := by
+  unfold toReal toRealBits
+  rw [decode_one]
+  simp [FPR.Bits.toReal]
+
+/-- Negating an `FPR` value (flipping its sign bit) negates its real interpretation. -/
+theorem toReal_neg (a : FPR) : toReal (FPR.neg a) = -toReal a := by
+  unfold toReal toRealBits FPR.Bits.toReal
+  rw [decode_neg_exponent, decode_neg_mantissa, decode_neg_sign]
+  cases (FPR.decode a).sign <;> simp <;> split_ifs <;> ring
 
 /-! ## Verification-only concrete primitives -/
 
