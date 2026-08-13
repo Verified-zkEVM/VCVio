@@ -192,16 +192,15 @@ jobs:
       # tool build breakage) always fail so the soak cannot silently rot.
       # Sweeps the non-test libraries; Interop (the declared TCB) is bounded by
       # its import-isolation gate instead.
-      - name: Axiom sweep (report-only)
-        run: |
-          status=0
-          lake exe axiomsweep --check || status=$?
-          if [ "$status" -eq 1 ]; then
-            echo "::warning::axiomsweep found new axiom/sorry taint (report-only during soak)"
-          elif [ "$status" -ne 0 ]; then
-            echo "::error::axiomsweep infrastructure failure (exit $status) — not a taint verdict"
-            exit "$status"
-          fi
+      # Exercise the sweep against its own fixtures before trusting its verdict on the
+      # library: the fixtures carry synthetic taint of each shape the tool reasons about
+      # (direct and transitive `sorryAx`, an axiom occurring only in a type, a mutual
+      # family whose taint crosses the cycle, generated `._native.` name shapes), plus
+      # the exit-code matrix CI depends on.
+      - name: Test the axiom sweep tool
+        run: ./scripts/test-axiomsweep.sh
+      - name: Axiom sweep
+        run: lake exe axiomsweep --check
       - name: Check round-by-round extraction regression
         run: lake env lean VCVioTest/RoundByRound/OneRound.lean
       - name: Check Merkle batch-opening canaries

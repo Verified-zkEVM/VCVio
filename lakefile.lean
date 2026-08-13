@@ -381,3 +381,13 @@ lean_exe axiomsweep where
   srcDir := "scripts"
   root := `AxiomSweep
   supportInterpreter := true
+
+/-- Isolated fixtures for the axiom-sweep mutation matrix, exercised by
+`scripts/test-axiomsweep.sh`. Not a default target, and deliberately carrying synthetic
+kernel taint: `sorryAx` reached directly and transitively, an axiom occurring only in a
+type, a mutual-inductive family whose taint crosses the cycle, and names that imitate the
+generated `._native.` suffix. Kept out of every aggregate so the taint stays quarantined
+from the swept libraries. -/
+lean_lib AxiomSweepTestFixtures where
+  srcDir := "scripts"
+  globs := #[.submodules `AxiomSweepTestFixtures]
