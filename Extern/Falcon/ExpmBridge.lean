@@ -47,6 +47,20 @@ private theorem toNat_shiftRight_32_uint64 (v : UInt64) : (v >>> 32).toNat = v.t
   rw [UInt64.toNat_shiftRight, show (32 : UInt64).toNat % 64 = 32 from by decide,
     Nat.shiftRight_eq_div_pow]
 
+/-- Three `UInt64` additions whose exact sum fits a register agree with addition on `ℕ`. -/
+private theorem toNat_add3_of_lt {x y z : UInt64}
+    (h : x.toNat + y.toNat + z.toNat < 2 ^ 64) :
+    (x + y + z).toNat = x.toNat + y.toNat + z.toNat := by
+  have h1 : (x + y).toNat = x.toNat + y.toNat := toNat_add_of_lt_uint64 (by omega)
+  rw [toNat_add_of_lt_uint64 (by omega : (x + y).toNat + z.toNat < 2 ^ 64), h1]
+
+/-- Four `UInt64` additions whose exact sum fits a register agree with addition on `ℕ`. -/
+private theorem toNat_add4_of_lt {x y z w : UInt64}
+    (h : x.toNat + y.toNat + z.toNat + w.toNat < 2 ^ 64) :
+    (x + y + z + w).toNat = x.toNat + y.toNat + z.toNat + w.toNat := by
+  have h3 : (x + y + z).toNat = x.toNat + y.toNat + z.toNat := toNat_add3_of_lt (by omega)
+  rw [toNat_add_of_lt_uint64 (by omega : (x + y + z).toNat + w.toNat < 2 ^ 64), h3]
+
 /-- The limb identity behind `mulHi64`, as plain arithmetic on `ℕ`: the high half of the product
 is the top partial product plus the carries out of the two cross terms and the middle column. -/
 private theorem mulHi_limbs (aHi aLo bHi bLo : ℕ) :
@@ -86,6 +100,33 @@ private theorem mulHi_limbs (aHi aLo bHi bLo : ℕ) :
   rw [hlow, ← add_assoc, ← add_mul]
   have hfit : s * 2 ^ 32 + r3 < 2 ^ 64 := by nlinarith [hs, hr3]
   omega
+
+/-- The final column of `mulHi64`, assembled. Given the exact values of the top partial product
+`X`, of the two cross carries `Y` and `Z`, and of the three middle-column pieces `u`, `v`, `w`,
+the column sums without leaving its register and equals the high half of `A * B`. -/
+private theorem toNat_finalColumn {X Y Z u v w : UInt64} {A B : ℕ}
+    (hA : A < 2 ^ 64) (hB : B < 2 ^ 64)
+    (hX : X.toNat = A / 2 ^ 32 * (B / 2 ^ 32))
+    (hY : Y.toNat = A / 2 ^ 32 * (B % 2 ^ 32) / 2 ^ 32)
+    (hZ : Z.toNat = A % 2 ^ 32 * (B / 2 ^ 32) / 2 ^ 32)
+    (hu : u.toNat = A % 2 ^ 32 * (B % 2 ^ 32) / 2 ^ 32)
+    (hv : v.toNat = A / 2 ^ 32 * (B % 2 ^ 32) % 2 ^ 32)
+    (hw : w.toNat = A % 2 ^ 32 * (B / 2 ^ 32) % 2 ^ 32)
+    (hmid : u.toNat + v.toNat + w.toNat < 2 ^ 64) :
+    (X + Y + Z + ((u + v + w) >>> 32)).toNat = A * B / 2 ^ 64 := by
+  -- the middle column, as exact arithmetic, then its carry out
+  have hcarry : ((u + v + w) >>> 32).toNat
+      = (A % 2 ^ 32 * (B % 2 ^ 32) / 2 ^ 32 + A / 2 ^ 32 * (B % 2 ^ 32) % 2 ^ 32
+        + A % 2 ^ 32 * (B / 2 ^ 32) % 2 ^ 32) / 2 ^ 32 := by
+    rw [toNat_shiftRight_32_uint64, toNat_add3_of_lt hmid, hu, hv, hw]
+  -- the limb identity, with the limbs of `A` and `B` reassembled
+  have key := mulHi_limbs (A / 2 ^ 32) (A % 2 ^ 32) (B / 2 ^ 32) (B % 2 ^ 32)
+  rw [Nat.div_add_mod' A (2 ^ 32), Nat.div_add_mod' B (2 ^ 32)] at key
+  have hlt : A * B / 2 ^ 64 < 2 ^ 64 :=
+    Nat.div_lt_of_lt_mul (Nat.mul_lt_mul_of_lt_of_lt hA hB)
+  have hsum : X.toNat + Y.toNat + Z.toNat + ((u + v + w) >>> 32).toNat = A * B / 2 ^ 64 := by
+    rw [hX, hY, hZ, hcarry, key]
+  exact (toNat_add4_of_lt (by omega)).trans hsum
 
 /-- `mulHi64` is the high half of the exact product: `⌊a * b / 2 ^ 64⌋`. -/
 private theorem toNat_mulHi64 (a b : UInt64) :
@@ -135,7 +176,8 @@ private theorem toNat_mulHi64 (a b : UInt64) :
   -- the middle column, then the final sum; neither leaves its register
   have hmidlt : ((((a &&& (0xFFFFFFFF : UInt64)) * (b &&& (0xFFFFFFFF : UInt64))) >>> 32).toNat
       + (((a >>> 32) * (b &&& (0xFFFFFFFF : UInt64))) &&& (0xFFFFFFFF : UInt64)).toNat
-      + (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) &&& (0xFFFFFFFF : UInt64)).toNat) < 2 ^ 64 := by
+      + (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) &&& (0xFFFFFFFF : UInt64)).toNat)
+        < 2 ^ 64 := by
     have h1 : ((a.toNat % 2 ^ 32) * (b.toNat % 2 ^ 32)) / 2 ^ 32 < 2 ^ 32 := by
       refine Nat.div_lt_of_lt_mul ?_
       calc (a.toNat % 2 ^ 32) * (b.toNat % 2 ^ 32) < 2 ^ 32 * 2 ^ 32 :=
@@ -146,36 +188,9 @@ private theorem toNat_mulHi64 (a b : UInt64) :
     have h3 : ((a.toNat % 2 ^ 32) * (b.toNat / 2 ^ 32)) % 2 ^ 32 < 2 ^ 32 :=
       Nat.mod_lt _ (Nat.two_pow_pos _)
     rw [s00, m10, m01]; omega
-  -- bounds on the four summands of the final column
-  have b11 : ((a >>> 32) * (b >>> 32)).toNat ≤ (2 ^ 32 - 1) * (2 ^ 32 - 1) := by
-    rw [p11]; exact Nat.mul_le_mul (by omega) (by omega)
-  have b10 : (((a >>> 32) * (b &&& (0xFFFFFFFF : UInt64))) >>> 32).toNat < 2 ^ 32 := by
-    rw [s10]
-    refine Nat.div_lt_of_lt_mul ?_
-    calc a.toNat / 2 ^ 32 * (b.toNat % 2 ^ 32) < 2 ^ 32 * 2 ^ 32 :=
-          Nat.mul_lt_mul_of_lt_of_lt (by omega) (by omega)
-      _ = 2 ^ 32 * 2 ^ 32 := rfl
-  have b01 : (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) >>> 32).toNat < 2 ^ 32 := by
-    rw [s01]
-    refine Nat.div_lt_of_lt_mul ?_
-    calc (a.toNat % 2 ^ 32) * (b.toNat / 2 ^ 32) < 2 ^ 32 * 2 ^ 32 :=
-          Nat.mul_lt_mul_of_lt_of_lt (by omega) (by omega)
-      _ = 2 ^ 32 * 2 ^ 32 := rfl
-  have bmid : ((((a &&& (0xFFFFFFFF : UInt64)) * (b &&& (0xFFFFFFFF : UInt64))) >>> 32
-      + (((a >>> 32) * (b &&& (0xFFFFFFFF : UInt64))) &&& (0xFFFFFFFF : UInt64))
-      + (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) &&& (0xFFFFFFFF : UInt64)))
-        >>> 32).toNat < 2 ^ 32 := by
-    rw [toNat_shiftRight_32_uint64]
-    refine Nat.div_lt_of_lt_mul ?_
-    have := (((a &&& (0xFFFFFFFF : UInt64)) * (b &&& (0xFFFFFFFF : UInt64))) >>> 32
-      + (((a >>> 32) * (b &&& (0xFFFFFFFF : UInt64))) &&& (0xFFFFFFFF : UInt64))
-      + (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) &&& (0xFFFFFFFF : UInt64))).toNat_lt_size
-    omega
-  -- WIP. Everything above is proved; what remains is threading `.toNat` through the four
-  -- nested `UInt64` additions of the final column and closing with `mulHi_limbs`. Each addition
-  -- needs a no-overflow side condition, and the bounds for all four summands are `b11`, `b10`,
-  -- `b01`, `bmid` above. The last attempt failed only because `omega` was not given `b11` in the
-  -- outermost step.
-  sorry
+  -- the top partial product, then the whole final column
+  have t11 : ((a >>> 32) * (b >>> 32)).toNat = a.toNat / 2 ^ 32 * (b.toNat / 2 ^ 32) := by
+    rw [p11, haHi, hbHi]
+  exact toNat_finalColumn ha hb t11 s10 s01 s00 m10 m01 hmidlt
 
 end Falcon.Concrete.FPRBridge
