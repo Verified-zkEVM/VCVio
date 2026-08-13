@@ -16,10 +16,12 @@ budget is **4096 units**.
 `FPR.facctCoeffs` is a minimax fit of degree 12, not a Taylor truncation — every coefficient
 is perturbed from `2 ^ 63 / k!` (the linear one by `-47104`, the degree-12 one by `-1.3e8`).
 Its uniform error against `exp (-x)` over the interval is **3562 units**, i.e. 87% of the
-budget on its own. The fixed-point work — the `mtwop63` conversions and twelve `mulHi64`
-truncations — is comparatively free, contributing on the order of 15 units. So a proof has
-about **534 units of slack**, and any bound that overestimates `sup |P - exp|` by more than
-that cannot close.
+budget on its own. The fixed-point work is comparatively free: `mtwop63` is now proved
+*exact* (`⌊2 ^ 63 * toReal x⌋`, no rounding of its own), so the only truncation is the twelve
+`mulHi64` floors and the final one — measured at **1.55 units** over 60000 exact-arithmetic
+samples, and provably under about 4 by the geometric bound `e i ≤ ζ * e (i-1) + 1` with
+`ζ < 0.694`. So a proof has about **530 units of slack**, and any bound that overestimates
+`sup |P - exp|` by more than that cannot close.
 
 ## What does not work, and why
 
@@ -97,6 +99,7 @@ than these representative ones.
    plus the 32 (or 128) subinterval certificates.
 3. Assembly: add the two, compare against 4096 units.
 
-Step 1 is worth doing first regardless — it is ordinary proof engineering, it is needed under
-every variant of step 2, and it will confirm the ~15-unit truncation figure that the whole
-margin analysis rests on.
+Step 1 was worth doing first, and has already paid: the truncation figure it was meant to
+confirm turns out to be **1.55 units, not the ~15 first estimated**, because `mtwop63`
+contributes nothing at all. `mulHi_limbs`, `toNat_mulHi64` and `toNat_mtwop63` are proved in
+`Extern/Falcon/ExpmBridge.lean`; the Horner induction is what remains.
