@@ -289,9 +289,45 @@ def Exp [SampleableType K] [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     let K1 ← some <$> lift.liftProbComp ($ᵗ K)
     finalize lift A st cr b K1
 
+/-- An adversary's advantage in the UAKE security experiment as expressed in
+  Def. 8 of DF'17. This allows theorems about UAKE to be expressed exactly as
+  they are in the paper. Note however, that the UAKE game in the paper is total
+  (`Pr[= true | ...] + Pr[= false | ...] = 1`), since aborts in functions
+  comprising a UAKE scheme are not considered. For example, `Scheme.setup`
+  could abort if the `m` monad allows for this, inflating the adversary's
+  advantage with no substantive attack. For a more meaningful security notion
+  in the presence of aborts, we define `UAKE.boolBiasAdvantage`, below. -/
 noncomputable def advantage [SampleableType K] [DecidableEq W] [Monad m]
     {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m)
     (A : Adversary proto) : ℝ :=
   |(Pr[= true | runtime.evalDist (Exp runtime.toProbCompLift A)]).toReal - 1 / 2|
+
+/-- An adversary's advantage in the UAKE game, expressed using the standard
+  `boolBiasAdvantage` idiom. This does not correspond to the advantage defined
+  in Def. 8 of DF'17 (unless the monad and runtime underlying `UAKE.Scheme` is
+  total), but it allows expressing UAKE security in cases where the security
+  experiment could abort. -/
+noncomputable def boolBiasAdvantage [SampleableType K] [DecidableEq W] [Monad m]
+    {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m)
+    (A : Adversary proto) : ℝ :=
+  (runtime.evalDist (Exp runtime.toProbCompLift A)).boolBiasAdvantage
+
+/-- In the `ProbCompRuntime.probComp` runtime, the UAKE security experiment
+  never fails. -/
+instance instNeverFailEvalDistExp [SampleableType K] [DecidableEq W]
+    {proto : Scheme ProbComp K UK TK W}
+    (A : Adversary proto) :
+    NeverFail (ProbCompRuntime.probComp.evalDist
+      (Exp ProbCompRuntime.probComp.toProbCompLift A)) := by
+  have h : Pr[⊥ | Exp ProbCompRuntime.probComp.toProbCompLift A] = 0 := probFailure_eq_zero
+  exact NeverFail.mk h
+
+/-- When the UAKE security experiment is `NeverFail`, `UAKE.boolBiasAdvantage` is
+  exactly twice `UAKE.advantage`. -/
+lemma boolBiasAdvantage_eq_two_mul_advantage [SampleableType K] [DecidableEq W] [Monad m]
+    {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m) (A : Adversary proto)
+    [NeverFail (runtime.evalDist (Exp runtime.toProbCompLift A))] :
+    boolBiasAdvantage runtime A = 2 * advantage runtime A :=
+  SPMF.boolBiasAdvantage_eq_two_mul_abs_sub_half _ probOutput_true_add_false_of_neverFail
 
 end AKE.UAKE
