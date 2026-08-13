@@ -291,6 +291,20 @@ def runFalconProtocolTests (st : IO.Ref TestState) : IO Unit := do
     let prng2 := PRNGState.init seed
     let (accept1, _) := berExp prng2 zero half
     check st s!"berExp(zero, half) likely accepts (got {accept1})" accept1
+    -- `berExpReduce` must land `r` in `[0, log 2)`: `expm_p63` reads only `|r|`, so a
+    -- negative `r` is evaluated as `exp |r|` and inflates the acceptance weight by up to
+    -- `2x`. Rounding the quotient to nearest instead of toward `-∞` puts `r` below zero for
+    -- about half of all inputs, and `k / 32` catches it at 100 of the 199 points below.
+    let log2Bound : FPR := 0x3FE62E42FEFA39F7  -- `log 2`, rounded up by 8 ulp
+    let mut redBad : Nat := 0
+    let mut redCount : Nat := 0
+    for k in [1:200] do
+      let (_, r) := berExpReduce (scaled (Int64.ofNat k) (-5))
+      if (r >>> 63) != 0 || r > log2Bound then
+        redBad := if redBad == 0 then k else redBad
+        redCount := redCount + 1
+    check st s!"berExpReduce(k/32) ∈ [0, log 2] for k < 200" (redCount == 0)
+      s!"{redCount} of 199 outside, first at k={redBad}"
   IO.println ""
   -- ── 13. Falcon-1024 FFI end-to-end ─────────────
   IO.println "13. Falcon-1024 FFI end-to-end"

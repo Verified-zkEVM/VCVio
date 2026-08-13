@@ -163,9 +163,25 @@ instance : Inhabited F := ⟨FloatLike.zero⟩
 private def log2Const : F := FloatLike.scaled (6243314768165359 : Int64) (-53 : Int32)
 private def invLog2Const : F := FloatLike.scaled (6497320848556798 : Int64) (-52 : Int32)
 
+/-- Reduce `x ≥ 0` modulo `log 2`, returning `(si, r)` with `si` a nonnegative integer and
+`r` in `[0, log 2)` such that `x = si * log 2 + r` up to rounding.
+
+The quotient is rounded toward negative infinity, which is what places `r` on the nonnegative
+side. That side matters to the caller: `FloatLike.expm_p63` reads only its argument's
+magnitude, so it evaluates a negative `r` as `exp (|r|)` rather than `exp (-r)`. The reference
+rounds toward zero, which agrees with `floor_` on the `x ≥ 0` its caller guarantees. -/
+def berExpReduce (x : F) : Int64 × F :=
+  let si := FloatLike.floor_ (FloatLike.mul x (invLog2Const (F := F)))
+  (si, FloatLike.sub x (FloatLike.mul (FloatLike.ofInt si) (log2Const (F := F))))
+
+/-- Sample a bit with probability `ccs * exp (-x)`, for `x ≥ 0`.
+
+Writing `x = si * log 2 + r` via `berExpReduce` factors `ccs * exp (-x)` as
+`ccs * exp (-r) / 2 ^ si`: `FloatLike.expm_p63` supplies the first factor on the reduced
+range and `si` becomes a right shift. `si ≥ 64` is saturated to 63, a bias the reference
+bounds by `2 ^ (-96)`. -/
 def berExp (s : PRNGState) (x ccs : F) : Bool × PRNGState := Id.run do
-  let si := FloatLike.rint (FloatLike.mul x (invLog2Const (F := F)))
-  let r := FloatLike.sub x (FloatLike.mul (FloatLike.ofInt si) (log2Const (F := F)))
+  let (si, r) := berExpReduce x
   let mut sShift := si.toUInt64.toUInt32
   sShift := sShift ||| (((63 : UInt32) - sShift) >>> 26)
   sShift := sShift &&& 63

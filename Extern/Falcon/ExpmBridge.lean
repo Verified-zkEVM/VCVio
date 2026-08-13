@@ -575,35 +575,31 @@ private theorem scaledArg_le_toReal (x : FPR) (h0 : 0 ≤ toReal x)
   push_cast
   nlinarith
 
-/-- On `expm_p63`'s documented domain the argument is below `0.694`, the contraction factor the
-error induction runs on. -/
+/-- Quantisation only ever rounds the argument down, so the bound on `toReal x` carries to
+`scaledArg x` — and `0.694` is the contraction factor the error induction runs on. -/
 private theorem scaledArg_le_694 (x : FPR) (h0 : 0 ≤ toReal x)
-    (hlog : toReal x < Real.log 2) : scaledArg x ≤ 694 / 1000 := by
-  have hlog9 : Real.log 2 < 0.6931471808 := Real.log_two_lt_d9
-  have h1 : toReal x < 1 := by norm_num at hlog9; linarith
-  have := scaledArg_le_toReal x h0 h1
-  norm_num at hlog9 ⊢
-  linarith
+    (hub : toReal x ≤ 694 / 1000) : scaledArg x ≤ 694 / 1000 :=
+  le_trans (scaledArg_le_toReal x h0 (by linarith)) hub
 
 /-- **(a)** Every Horner iterate of the fixed-point loop tracks the exact real recurrence at the
 same quantised argument to within `4`. -/
 private theorem hornerMachine_sub_hornerExact_le (x : FPR)
-    (h0 : 0 ≤ toReal x) (hlog : toReal x < Real.log 2) (i : ℕ) (hi : i ≤ 12) :
+    (h0 : 0 ≤ toReal x) (hub : toReal x ≤ 694 / 1000) (i : ℕ) (hi : i ≤ 12) :
     |((hornerMachine ((mtwop63 x) <<< 1) i).toNat : ℝ) - hornerExact (scaledArg x) i| ≤ 4 :=
-  (hornerMachine_error rfl (scaledArg_le_694 x h0 hlog) i hi).2
+  (hornerMachine_error rfl (scaledArg_le_694 x h0 hub) i hi).2
 
 /-- The loop's `UInt64` subtractions never wrap: every iterate stays below its own coefficient. -/
 private theorem hornerMachine_le_coeff (x : FPR) (h0 : 0 ≤ toReal x)
-    (hlog : toReal x < Real.log 2) (i : ℕ) (hi : i ≤ 12) :
+    (hub : toReal x ≤ 694 / 1000) (i : ℕ) (hi : i ≤ 12) :
     (hornerMachine ((mtwop63 x) <<< 1) i).toNat ≤ (facctCoeffs[i]!).toNat :=
-  (hornerMachine_error rfl (scaledArg_le_694 x h0 hlog) i hi).1
+  (hornerMachine_error rfl (scaledArg_le_694 x h0 hub) i hi).1
 
 /-- **(b)** The whole pipeline, including the final scaling multiply: `expm_p63 x ccs` tracks
 `scaledArg ccs * hornerExact (scaledArg x) 12` to within `5`. -/
 private theorem expm_p63_sub_exact_le (x ccs : FPR)
-    (h0 : 0 ≤ toReal x) (hlog : toReal x < Real.log 2) :
+    (h0 : 0 ≤ toReal x) (hub : toReal x ≤ 694 / 1000) :
     |((expm_p63 x ccs).toNat : ℝ) - scaledArg ccs * hornerExact (scaledArg x) 12| ≤ 5 := by
-  have hy := hornerMachine_sub_hornerExact_le x h0 hlog 12 le_rfl
+  have hy := hornerMachine_sub_hornerExact_le x h0 hub 12 le_rfl
   obtain ⟨hb1, hb2⟩ := mulHi64_bracket ((mtwop63 ccs) <<< 1) (hornerMachine ((mtwop63 x) <<< 1) 12)
   rw [show (((mtwop63 ccs) <<< 1).toNat : ℝ) / 2 ^ 64 = scaledArg ccs from rfl] at hb1 hb2
   have hs0 := scaledArg_nonneg ccs
@@ -729,20 +725,17 @@ private theorem hornerExact_lipschitz (s t : ℝ) (hs0 : 0 ≤ s) (ht0 : 0 ≤ t
 The two quantisation gaps contribute `2 ^ 65 * 2 ^ (-63) = 4` through the argument and
 `2 ^ (-63) * 2 ^ 63 = 1` through the scale, on top of the truncation bound `5`. -/
 private theorem expm_p63_sub_trueArg_le (x ccs : FPR)
-    (h0 : 0 ≤ toReal x) (hlog : toReal x < Real.log 2)
+    (h0 : 0 ≤ toReal x) (hub : toReal x ≤ 694 / 1000)
     (hc0 : 0 ≤ toReal ccs) (hc1 : toReal ccs < 1) :
     |((expm_p63 x ccs).toNat : ℝ) - toReal ccs * hornerExact (toReal x) 12| ≤ 10 := by
-  have h9 : Real.log 2 < 0.6931471808 := Real.log_two_lt_d9
-  norm_num at h9
   have hx1 : toReal x < 1 := by linarith
-  have hxle : toReal x ≤ 694 / 1000 := by linarith
   have hsx := scaledArg_bracket x h0 hx1
   have hsc := scaledArg_bracket ccs hc0 hc1
   rw [two_zpow_neg_63] at hsx hsc
-  have hmain := expm_p63_sub_exact_le x ccs h0 hlog
+  have hmain := expm_p63_sub_exact_le x ccs h0 hub
   have hLip := hornerExact_lipschitz (scaledArg x) (toReal x) (scaledArg_nonneg x) h0
-    (scaledArg_le_694 x h0 hlog) hxle 12 le_rfl
-  have hmag := hornerExact_abs_le (toReal x) h0 hxle 12 le_rfl
+    (scaledArg_le_694 x h0 hub) hub 12 le_rfl
+  have hmag := hornerExact_abs_le (toReal x) h0 hub 12 le_rfl
   have hdx : |scaledArg x - toReal x| ≤ 1 / 2 ^ (63 : ℕ) := by
     rw [abs_sub_comm, abs_of_nonneg (by linarith [hsx.1])]
     linarith [hsx.2]
@@ -1766,7 +1759,15 @@ private theorem abs_taylorExpNeg_sub_exp_le (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t �
   nlinarith [abs_nonneg (-t)]
 
 /-- Absolute approximation bound for the FACCT-based `expm_p63` routine, on the domain the
-routine is written for: `x` in `[0, log 2)` and `ccs` in `[0, 1)`.
+routine is written for: `x` in `[0, 0.694]` and `ccs` in `[0, 1)`.
+
+The routine is documented for `x` in `[0, log 2)`, and `0.694` is the smallest constant above
+`log 2` that the proof already carries — it is the contraction factor of the Horner error
+induction (`scaledArg_le_694`), and the Chebyshev certificates run to `89/128 = 0.6953125`.
+Stating the hypothesis at `0.694` rather than `log 2` is what lets a caller feed a *computed*
+reduction: `Falcon.Concrete.SamplerZ.berExpReduce` produces its `r` by rounding a floating-point
+quotient, which can land a few ulps above `log 2` when `x` is near a multiple of it, and no
+statement closed at `log 2` would apply there.
 
 Both sides of the `ccs` restriction are load-bearing. `expm_p63` reads its operands through a
 fixed-point conversion that keeps `⌊2 ^ 63 * ccs⌋` in 63 bits and drops the sign bit, so the scale
@@ -1785,13 +1786,11 @@ applying a triangle inequality to those coefficients discards exactly the cancel
 relies on. Subdividing restores locality, which is why the bound is a family of per-interval
 certificates rather than a single estimate. -/
 theorem expm_p63_error (x ccs : FPR)
-    (hx : 0 ≤ toReal x) (hx' : toReal x < Real.log 2)
+    (hx : 0 ≤ toReal x) (hx' : toReal x ≤ 694 / 1000)
     (hccs : 0 ≤ toReal ccs) (hccs' : toReal ccs < 1) :
     abs ((((FPR.expm_p63 x ccs).toNat : ℕ) : ℝ) / (2 : ℝ) ^ 63 -
       (toReal ccs * Real.exp (-(toReal x)))) ≤
     (2 : ℝ) ^ (-(51 : ℤ)) := by
-  have h9 : Real.log 2 < 0.6931471808 := Real.log_two_lt_d9
-  norm_num at h9
   have ht89 : toReal x ≤ 89 / 128 := by linarith
   have ht1 : toReal x ≤ 1 := by linarith
   have hmain := expm_p63_sub_trueArg_le x ccs hx hx' hccs hccs'
@@ -1842,11 +1841,56 @@ private theorem toReal_half : toReal half = 0.5 := by
 
 /-- `expm_p63_error` is not vacuous: `x = 0`, `ccs = 0.5` meets all four side conditions. Note
 `FPR.zero` is *not* a normal operand, so the bound genuinely covers the zero-exponent case. -/
-example : 0 ≤ toReal FPR.zero ∧ toReal FPR.zero < Real.log 2 ∧
+example : 0 ≤ toReal FPR.zero ∧ toReal FPR.zero ≤ 694 / 1000 ∧
     0 ≤ toReal half ∧ toReal half < 1 := by
-  refine ⟨by rw [toReal_zero], ?_, by rw [toReal_half]; norm_num,
-    by rw [toReal_half]; norm_num⟩
-  rw [toReal_zero]
-  exact Real.log_pos (by norm_num)
+  refine ⟨by rw [toReal_zero], by rw [toReal_zero]; norm_num,
+    by rw [toReal_half]; norm_num, by rw [toReal_half]; norm_num⟩
+
+/-! ## Sign-blindness
+
+`expm_p63` reaches its argument only through `mtwop63`, which reads the significand and the
+exponent field and never the sign bit. The routine therefore computes `exp (-|x|)`, not
+`exp (-x)`, and the two agree only on the nonnegative domain `expm_p63_error` is stated for.
+That is what makes the sign of the reduced argument a correctness question for the caller
+rather than a matter of taste: see `Falcon.Concrete.SamplerZ.berExpReduce`, which must round its
+quotient toward negative infinity to keep the remainder on the correct side. -/
+
+/-- `mtwop63` discards the sign bit: the shift by `10` carries it out of the word, and the
+exponent mask keeps only bits `52` through `62`. -/
+private theorem mtwop63_neg (x : FPR) : mtwop63 (FPR.neg x) = mtwop63 x := by
+  have hm : ((((FPR.neg x) <<< 10) ||| ((1 : UInt64) <<< 62)) &&& M63)
+      = (((x <<< 10) ||| ((1 : UInt64) <<< 62)) &&& M63) := by
+    rw [← UInt64.toNat_inj, toNat_m_of, toNat_m_of, decode_neg_mantissa]
+  have he : (((FPR.neg x) >>> 52).toUInt32 &&& (0x7FF : UInt32))
+      = ((x >>> 52).toUInt32 &&& (0x7FF : UInt32)) := by
+    rw [← UInt32.toNat_inj, toNat_ex_field_of, toNat_ex_field_of, decode_neg_exponent]
+  simp only [mtwop63]
+  rw [hm, he]
+
+/-- `expm_p63` is invariant under negating its argument. -/
+theorem expm_p63_neg (x ccs : FPR) : FPR.expm_p63 (FPR.neg x) ccs = FPR.expm_p63 x ccs := by
+  simp only [FPR.expm_p63, mtwop63_neg]
+
+/-- `expm_p63_error` on the whole symmetric domain: the routine approximates `exp (-|x|)`.
+
+This is the form a caller wants when the argument is *computed* rather than assumed nonnegative,
+since it separates the approximation question from the sign question. Note that it is not an
+extension of `expm_p63_error` to negative arguments in the naive sense — on `toReal x < 0` the
+value approximated is `Real.exp (-|toReal x|)`, which is `Real.exp (toReal x)`, the reciprocal of
+what an unwary reader of `expm_p63` might expect. -/
+theorem expm_p63_error_abs (x ccs : FPR)
+    (hx : |toReal x| ≤ 694 / 1000)
+    (hccs : 0 ≤ toReal ccs) (hccs' : toReal ccs < 1) :
+    abs ((((FPR.expm_p63 x ccs).toNat : ℕ) : ℝ) / (2 : ℝ) ^ 63 -
+      (toReal ccs * Real.exp (-|toReal x|))) ≤ (2 : ℝ) ^ (-(51 : ℤ)) := by
+  rcases le_or_gt 0 (toReal x) with h | h
+  · rw [abs_of_nonneg h] at hx ⊢
+    exact expm_p63_error x ccs h hx hccs hccs'
+  · have hneg : toReal (FPR.neg x) = -toReal x := toReal_neg x
+    have h0 : 0 ≤ toReal (FPR.neg x) := by rw [hneg]; linarith
+    have habs : |toReal x| = toReal (FPR.neg x) := by
+      rw [hneg, abs_of_neg h]
+    rw [habs, ← expm_p63_neg x ccs]
+    exact expm_p63_error _ ccs h0 (by rw [← habs]; exact hx) hccs hccs'
 
 end Falcon.Concrete.FPRBridge
