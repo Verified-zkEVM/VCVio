@@ -5112,6 +5112,10 @@ private def divStep (yu : UInt64) (s : UInt64 × UInt64) : UInt64 × UInt64 :=
   (q_, xu_)
 
 private structure DivPipeline where
+  /-- The extended significand of the numerator. -/
+  xu : UInt64
+  /-- The extended significand of the divisor. -/
+  yu : UInt64
   /-- The state `(q, x)` left by the restoring-division loop. -/
   loopRes : UInt64 × UInt64
   /-- The quotient with its final sticky bit folded in. -/
@@ -5145,7 +5149,7 @@ private def divPipeline (x y : FPR) : DivPipeline :=
   let dzu := tbmask (ex - 1)
   let e' : Int32 := (e ^^^ (dzu &&& (e ^^^ ((0 : UInt32) - 1076)))).toInt32
   let dm := (dzu &&& 1).toUInt64 - 1
-  { loopRes, q0, es, q1, ex, ey, e, sg, dzu, e', dm }
+  { xu, yu, loopRes, q0, es, q1, ex, ey, e, sg, dzu, e', dm }
 
 /-- `FPR.div` is the final assembly call `make` over three fields of `divPipeline`. -/
 private theorem div_eq_make (x y : FPR) :
@@ -5161,6 +5165,20 @@ private theorem divPipeline_loopRes (x y : FPR) :
       = (divStep ((y &&& M52) ||| ((1 : UInt64) <<< 52)))^[55]
           (0, (x &&& M52) ||| ((1 : UInt64) <<< 52)) :=
   forIn_range_eq_iterate _ _ _
+
+private theorem divPipeline_xu (x y : FPR) :
+    (divPipeline x y).xu = (x &&& M52) ||| ((1 : UInt64) <<< 52) := rfl
+
+private theorem divPipeline_yu (x y : FPR) :
+    (divPipeline x y).yu = (y &&& M52) ||| ((1 : UInt64) <<< 52) := rfl
+
+/-- The extended significand of any word: the mantissa with the implicit leading bit folded in.
+Shared by the `mul`, `div` and `sqrt` pipelines. -/
+private theorem significand_pack_toNat (w : FPR) :
+    ((w &&& M52) ||| ((1 : UInt64) <<< 52)).toNat = (FPR.decode w).mantissa + 2 ^ 52 := by
+  rw [UInt64.toNat_or, toNat_and_M52_eq_mantissa,
+    show ((1 : UInt64) <<< 52).toNat = 2 ^ 52 from by decide]
+  exact or_two_pow_add_of_lt _ 52 (FPR.decode_mantissa_lt w)
 
 /-- Induction over `FPR.div`'s loop: prove an invariant of the state `(q, x)` holds initially and
 is preserved by one restoring-division step, and it holds of the state the loop leaves. -/
@@ -5262,6 +5280,146 @@ private theorem divPipeline_quotient_lt (x y : FPR) :
         ≤ (q ||| (b &&& 1)).toNat * 2 := Nat.mod_le _ _
       _ < 2 ^ (k + 1) * 2 := by omega
       _ = 2 ^ (k + 1 + 1) := by ring
+
+/-! ### What one restoring-division step does -/
+
+private theorem allOnes_toNat : ((0 : UInt64) - 1).toNat = 2 ^ 64 - 1 := by decide
+
+/-- The loop's comparison mask: all-ones exactly when the running remainder is at least the
+divisor, zero otherwise. The bounds rule out the wraparound reading the sign bit would
+otherwise pick up. -/
+private theorem divStep_mask (r yu : UInt64) (hr : r.toNat < 2 ^ 54) (hy : yu.toNat < 2 ^ 53) :
+    ((r - yu) >>> 63) - 1 = if yu.toNat ≤ r.toNat then (0 : UInt64) - 1 else 0 := by
+  by_cases h : yu.toNat ≤ r.toNat
+  · rw [if_pos h]
+    have hsub : (r - yu).toNat = r.toNat - yu.toNat := toNat_sub_of_le_uint64 r yu h
+    have hsh : ((r - yu) >>> 63) = 0 := by
+      rw [← UInt64.toNat_inj, toNat_shiftRight_63_uint64, hsub]
+      simp only [UInt64.toNat_ofNat]
+      omega
+    rw [hsh]
+  · rw [if_neg h]
+    push Not at h
+    have hsub : (r - yu).toNat = 2 ^ 64 - (yu.toNat - r.toNat) := by
+      rw [UInt64.toNat_sub]
+      have := yu.toNat_lt_size
+      omega
+    have hsh : ((r - yu) >>> 63) = 1 := by
+      rw [← UInt64.toNat_inj, toNat_shiftRight_63_uint64, hsub]
+      simp only [UInt64.toNat_ofNat]
+      omega
+    rw [hsh]
+    decide
+
+private theorem uint64_zero_and (w : UInt64) : (0 : UInt64) &&& w = 0 := by
+  rw [← UInt64.toNat_inj, UInt64.toNat_and]; simp
+
+/-- One restoring-division step, read as arithmetic: conditionally subtract the divisor, append
+the quotient bit, then double both. -/
+private theorem divStep_toNat (yu : UInt64) (s : UInt64 × UInt64)
+    (hy : yu.toNat < 2 ^ 53) (hr : s.2.toNat < 2 * yu.toNat)
+    (hq : s.1.toNat < 2 ^ 62) (hqe : s.1.toNat % 2 = 0) :
+    (divStep yu s).1.toNat = 2 * (s.1.toNat + (if yu.toNat ≤ s.2.toNat then 1 else 0))
+      ∧ (divStep yu s).2.toNat
+        = 2 * (s.2.toNat - (if yu.toNat ≤ s.2.toNat then yu.toNat else 0)) := by
+  simp only [divStep]
+  rw [divStep_mask _ _ (by omega) hy]
+  by_cases h : yu.toNat ≤ s.2.toNat
+  · rw [if_pos h]
+    have hand : ((0 : UInt64) - 1) &&& yu = yu := allOnes_and yu
+    have hand1 : ((0 : UInt64) - 1) &&& 1 = 1 := by decide
+    rw [hand, hand1]
+    have hsub : (s.2 - yu).toNat = s.2.toNat - yu.toNat := toNat_sub_of_le_uint64 _ _ h
+    have hor : (s.1 ||| 1).toNat = s.1.toNat + 1 := by
+      rw [UInt64.toNat_or, show (1 : UInt64).toNat = 1 from rfl, or_one_eq]; omega
+    refine ⟨?_, ?_⟩
+    · rw [toNat_shiftLeft_one, hor, if_pos h]
+      have : (s.1.toNat + 1) * 2 < 2 ^ 64 := by omega
+      omega
+    · rw [toNat_shiftLeft_one, hsub, if_pos h]
+      have : (s.2.toNat - yu.toNat) * 2 < 2 ^ 64 := by omega
+      omega
+  · rw [if_neg h]
+    push Not at h
+    rw [uint64_zero_and, uint64_zero_and]
+    have hsub : (s.2 - 0).toNat = s.2.toNat := by simp
+    have hor : (s.1 ||| 0).toNat = s.1.toNat := by rw [UInt64.toNat_or]; simp
+    refine ⟨?_, ?_⟩
+    · rw [toNat_shiftLeft_one, hor, if_neg (by omega)]
+      have : s.1.toNat * 2 < 2 ^ 64 := by omega
+      omega
+    · rw [toNat_shiftLeft_one, hsub, if_neg (by omega)]
+      have : s.2.toNat * 2 < 2 ^ 64 := by omega
+      omega
+
+/-! ### What the whole division loop computes
+
+The loop is exact restoring division: after `n` steps the running remainder and the quotient
+satisfy `yu * q + r = 2 ^ n * xu`, with `r` held below `2 * yu`. At `n = 55` this pins the
+quotient `FPR.div` hands to its sticky and renormalisation steps. -/
+private theorem divLoop_invariant (xu yu : UInt64)
+    (hx : xu.toNat < 2 ^ 53) (hy1 : 2 ^ 52 ≤ yu.toNat) (hy2 : yu.toNat < 2 ^ 53) :
+    ∀ n : ℕ, n ≤ 60 →
+    yu.toNat * ((divStep yu)^[n] (0, xu)).1.toNat + ((divStep yu)^[n] (0, xu)).2.toNat
+        = 2 ^ n * xu.toNat
+      ∧ ((divStep yu)^[n] (0, xu)).2.toNat < 2 * yu.toNat
+      ∧ ((divStep yu)^[n] (0, xu)).1.toNat < 2 ^ (n + 1)
+      ∧ ((divStep yu)^[n] (0, xu)).1.toNat % 2 = 0 := by
+  intro n
+  induction n with
+  | zero =>
+    intro _
+    simp only [Function.iterate_zero, id_eq]
+    exact ⟨by simp, by simpa using (show xu.toNat < 2 * yu.toNat by omega), by simp, by simp⟩
+  | succ k ih =>
+    intro hk
+    obtain ⟨hinv, hrem, hqlt, hqe⟩ := ih (by omega)
+    have hq62 : ((divStep yu)^[k] (0, xu)).1.toNat < 2 ^ 62 := by
+      have : (2 : ℕ) ^ (k + 1) ≤ 2 ^ 61 := Nat.pow_le_pow_right (by norm_num) (by omega)
+      omega
+    rw [Function.iterate_succ_apply']
+    obtain ⟨hq', hr'⟩ := divStep_toNat yu ((divStep yu)^[k] (0, xu)) hy2 hrem hq62 hqe
+    set q := ((divStep yu)^[k] (0, xu)).1.toNat with hqdef
+    set r := ((divStep yu)^[k] (0, xu)).2.toNat with hrdef
+    have hpow : (2 : ℕ) ^ (k + 1) * xu.toNat = 2 * (2 ^ k * xu.toNat) := by ring
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · rw [hq', hr', hpow]
+      by_cases h : yu.toNat ≤ r
+      · rw [if_pos h, if_pos h,
+          show yu.toNat * (2 * (q + 1)) = 2 * (yu.toNat * q) + 2 * yu.toNat from by ring]
+        omega
+      · rw [if_neg h, if_neg h,
+          show yu.toNat * (2 * (q + 0)) = 2 * (yu.toNat * q) from by ring]
+        omega
+    · rw [hr']
+      by_cases h : yu.toNat ≤ r
+      · rw [if_pos h]; omega
+      · rw [if_neg h]; omega
+    · rw [hq']
+      have hp : (2 : ℕ) ^ (k + 1 + 1) = 2 * 2 ^ (k + 1) := by ring
+      by_cases h : yu.toNat ≤ r
+      · rw [if_pos h, hp]; omega
+      · rw [if_neg h, hp]; omega
+    · rw [hq']; omega
+
+/-- The invariant, read off `FPR.div`'s pipeline. -/
+private theorem divPipeline_loop_invariant (x y : FPR) :
+    (divPipeline x y).yu.toNat * (divPipeline x y).loopRes.1.toNat
+        + (divPipeline x y).loopRes.2.toNat
+      = 2 ^ 55 * (divPipeline x y).xu.toNat
+    ∧ (divPipeline x y).loopRes.2.toNat < 2 * (divPipeline x y).yu.toNat
+    ∧ (divPipeline x y).loopRes.1.toNat < 2 ^ 56
+    ∧ (divPipeline x y).loopRes.1.toNat % 2 = 0 := by
+  have hxu : ((x &&& M52) ||| ((1 : UInt64) <<< 52)).toNat = (FPR.decode x).mantissa + 2 ^ 52 :=
+    significand_pack_toNat x
+  have hyu : ((y &&& M52) ||| ((1 : UInt64) <<< 52)).toNat = (FPR.decode y).mantissa + 2 ^ 52 :=
+    significand_pack_toNat y
+  have hmx := FPR.decode_mantissa_lt x
+  have hmy := FPR.decode_mantissa_lt y
+  have h := divLoop_invariant ((x &&& M52) ||| ((1 : UInt64) <<< 52))
+    ((y &&& M52) ||| ((1 : UInt64) <<< 52)) (by omega) (by omega) (by omega) 55 (by norm_num)
+  rw [divPipeline_xu, divPipeline_yu, divPipeline_loopRes]
+  exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
 
 /-- Relative error bound for `FPR.div`, on normal operands whose exact quotient stays in the
 correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
