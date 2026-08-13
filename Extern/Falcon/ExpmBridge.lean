@@ -10,6 +10,7 @@ import all Extern.Falcon.FPRBridge
 public import LatticeCrypto.Falcon.Concrete.FPR
 public import Extern.Falcon.FPRBridge
 public import Mathlib.Algebra.Order.Floor.Semifield
+public import Mathlib.Analysis.Complex.ExponentialBounds
 
 /-!
 # The fixed-point layer of Falcon's `expm_p63`
@@ -379,5 +380,171 @@ private theorem toNat_mtwop63 (x : FPR) (hn : FPR.IsNormal x)
     have hD : (2 : ℕ) ^ 63 ≤ 2 ^ (1022 - (FPR.decode x).exponent) :=
       Nat.pow_le_pow_right (by norm_num) h.le
     rw [min_eq_right h.le, Nat.div_eq_of_lt hN, Nat.div_eq_of_lt (lt_of_lt_of_le hN hD)]
+
+/-! ## The Horner pipeline
+
+`expm_p63` evaluates the FACCT coefficient table by Horner's rule in `UInt64` fixed point and then
+applies a second `mtwop63` reading as a scale. Every step truncates, since `mulHi64` keeps only the
+high half of a `128`-bit product. This section reads the loop as the exact real Horner recurrence
+`hornerExact` on the same coefficients at the same quantised argument, and bounds the accumulated
+truncation.
+
+The bound is a fixed point of the step estimate `e ↦ ζ * e + 1`: one unit of fresh truncation per
+step, on top of the incoming error scaled by the argument `ζ`, which `mtwop63` pins below `0.694`.
+The same estimate also shows the `UInt64` subtraction `facctCoeffs[i] - mulHi64 z y` never wraps —
+in fact `mulHi64 z y ≤ y` outright, so the wrap-freedom needs no numeric input at all. -/
+
+/-- The fixed-point reading of `mtwop63 v <<< 1` as a real in `[0, 1)`. Both the polynomial's
+argument `z` and its final scale `w` take this form. -/
+private noncomputable def scaledArg (v : FPR) : ℝ := (((mtwop63 v) <<< 1).toNat : ℝ) / 2 ^ 64
+
+/-- The `UInt64` Horner sequence that `expm_p63`'s loop computes. -/
+private def hornerMachine (z : UInt64) : ℕ → UInt64
+  | 0 => facctCoeffs[0]!
+  | (i + 1) => facctCoeffs[i + 1]! - mulHi64 z (hornerMachine z i)
+
+/-- The exact real Horner sequence on the same coefficients at the same quantised argument: the
+value `hornerMachine` would compute if `mulHi64` did not truncate. -/
+private noncomputable def hornerExact (ζ : ℝ) : ℕ → ℝ
+  | 0 => ((facctCoeffs[0]!).toNat : ℝ)
+  | (i + 1) => ((facctCoeffs[i + 1]!).toNat : ℝ) - ζ * hornerExact ζ i
+
+/-- `expm_p63`'s loop, unrolled: its twelve iterations are exactly `hornerMachine`. -/
+private theorem expm_p63_eq (x ccs : FPR) :
+    expm_p63 x ccs = mulHi64 ((mtwop63 ccs) <<< 1) (hornerMachine ((mtwop63 x) <<< 1) 12) := by
+  simp only [expm_p63, Id.run, Std.Legacy.Range.forIn_eq_forIn_range',
+    show ((Std.Legacy.Range.mk 1 facctCoeffs.size 1 (by decide)).size) = 12 from by decide,
+    List.range'_succ, List.range'_zero, List.forIn_cons, List.forIn_nil, hornerMachine]
+  rfl
+
+/-- `mulHi64` never exceeds its second operand: the high half of `a * b` is at most `b`, whatever
+`a` is. This alone rules out wraparound in the loop's subtraction. -/
+private theorem toNat_mulHi64_le (a b : UInt64) : (mulHi64 a b).toNat ≤ b.toNat := by
+  rw [toNat_mulHi64]
+  calc a.toNat * b.toNat / 2 ^ 64 ≤ 2 ^ 64 * b.toNat / 2 ^ 64 :=
+        Nat.div_le_div_right (Nat.mul_le_mul_right _ a.toNat_lt_size.le)
+    _ = b.toNat := Nat.mul_div_cancel_left _ (by norm_num)
+
+/-- `mulHi64 a b` is `⌊(a / 2 ^ 64) * b⌋`: the fixed-point product, truncated by less than one. -/
+private theorem mulHi64_bracket (a b : UInt64) :
+    ((mulHi64 a b).toNat : ℝ) ≤ (a.toNat : ℝ) / 2 ^ 64 * (b.toNat : ℝ) ∧
+      (a.toNat : ℝ) / 2 ^ 64 * (b.toNat : ℝ) < ((mulHi64 a b).toNat : ℝ) + 1 := by
+  have hval : (a.toNat : ℝ) / 2 ^ 64 * (b.toNat : ℝ)
+      = ((a.toNat * b.toNat : ℕ) : ℝ) / ((2 ^ 64 : ℕ) : ℝ) := by push_cast; ring
+  have hfl : ((mulHi64 a b).toNat : ℝ)
+      = ((⌊((a.toNat * b.toNat : ℕ) : ℝ) / ((2 ^ 64 : ℕ) : ℝ)⌋₊ : ℕ) : ℝ) := by
+    rw [Nat.floor_div_eq_div, toNat_mulHi64]
+  rw [hval, hfl]
+  exact ⟨Nat.floor_le (by positivity), Nat.lt_floor_add_one _⟩
+
+/-- The coefficient table is nondecreasing, so a bound at one index carries to the next. -/
+private theorem facctCoeffs_mono {i : ℕ} (hi : i < 12) :
+    (facctCoeffs[i]!).toNat ≤ (facctCoeffs[i + 1]!).toNat := by
+  interval_cases i <;> decide
+
+/-- One Horner step. The `UInt64` subtraction cannot wrap, since `mulHi64 z y ≤ y ≤ c`; and the
+step's own truncation costs at most `1`, on top of the incoming error scaled by `ζ`. -/
+private theorem horner_step {z y c : UInt64} {Y ζ : ℝ}
+    (hζ : ζ = (z.toNat : ℝ) / 2 ^ 64) (hζ1 : ζ ≤ 694 / 1000)
+    (hyc : y.toNat ≤ c.toNat) (hy : |(y.toNat : ℝ) - Y| ≤ 4) :
+    (c - mulHi64 z y).toNat ≤ c.toNat ∧
+      |((c - mulHi64 z y).toNat : ℝ) - ((c.toNat : ℝ) - ζ * Y)| ≤ 4 := by
+  have hmc : (mulHi64 z y).toNat ≤ c.toNat := le_trans (toNat_mulHi64_le z y) hyc
+  have hsub : (c - mulHi64 z y).toNat = c.toNat - (mulHi64 z y).toNat :=
+    toNat_sub_of_le_uint64 c _ hmc
+  refine ⟨by omega, ?_⟩
+  obtain ⟨hb1, hb2⟩ := mulHi64_bracket z y
+  rw [← hζ] at hb1 hb2
+  have hζ0 : 0 ≤ ζ := by rw [hζ]; positivity
+  rw [hsub, Nat.cast_sub hmc,
+    show (c.toNat : ℝ) - ((mulHi64 z y).toNat : ℝ) - ((c.toNat : ℝ) - ζ * Y)
+      = ζ * Y - ((mulHi64 z y).toNat : ℝ) from by ring, abs_le]
+  rw [abs_le] at hy
+  exact ⟨by nlinarith [mul_le_mul_of_nonneg_left hy.2 hζ0],
+    by nlinarith [mul_le_mul_of_nonneg_left hy.1 hζ0]⟩
+
+/-- The loop invariant: each iterate stays under its own coefficient — so the next subtraction
+cannot wrap — and tracks the exact recurrence to within `4`. -/
+private theorem hornerMachine_error {z : UInt64} {ζ : ℝ}
+    (hζ : ζ = (z.toNat : ℝ) / 2 ^ 64) (hζ1 : ζ ≤ 694 / 1000) :
+    ∀ i, i ≤ 12 → (hornerMachine z i).toNat ≤ (facctCoeffs[i]!).toNat ∧
+      |((hornerMachine z i).toNat : ℝ) - hornerExact ζ i| ≤ 4 := by
+  intro i
+  induction i with
+  | zero => intro _; simp [hornerMachine, hornerExact]
+  | succ k ih =>
+    intro hk
+    obtain ⟨hle, herr⟩ := ih (by omega)
+    have hstep := horner_step hζ hζ1 (le_trans hle (facctCoeffs_mono (by omega))) herr
+    rw [show hornerMachine z (k + 1)
+        = facctCoeffs[k + 1]! - mulHi64 z (hornerMachine z k) from rfl,
+      show hornerExact ζ (k + 1)
+        = ((facctCoeffs[k + 1]!).toNat : ℝ) - ζ * hornerExact ζ k from rfl]
+    exact hstep
+
+/-- `scaledArg` lands in `[0, 1]`, which is all the final scaling multiply needs of it. -/
+private theorem scaledArg_nonneg (v : FPR) : 0 ≤ scaledArg v := by
+  unfold scaledArg; positivity
+
+private theorem scaledArg_le_one (v : FPR) : scaledArg v ≤ 1 := by
+  unfold scaledArg
+  rw [div_le_one (by norm_num)]
+  exact_mod_cast ((mtwop63 v) <<< 1).toNat_lt_size.le
+
+/-- `mtwop63 x <<< 1` reads `2 ^ 64 * toReal x` rounded down, so `scaledArg x` never exceeds
+`toReal x`. -/
+private theorem scaledArg_le_toReal (x : FPR) (hn : FPR.IsNormal x) (h0 : 0 ≤ toReal x)
+    (h1 : toReal x < 1) : scaledArg x ≤ toReal x := by
+  have hm : (mtwop63 x).toNat = ⌊(2 : ℝ) ^ 63 * toReal x⌋₊ := toNat_mtwop63 x hn h0 h1
+  have hlt : (mtwop63 x).toNat < 2 ^ 63 := by
+    rw [hm]
+    exact (Nat.floor_lt (by positivity)).mpr (by push_cast; nlinarith)
+  have hsh : ((mtwop63 x) <<< 1).toNat = (mtwop63 x).toNat * 2 := by
+    rw [toNat_shiftLeft_one]
+    exact Nat.mod_eq_of_lt (by omega)
+  have hfl : ((mtwop63 x).toNat : ℝ) ≤ (2 : ℝ) ^ 63 * toReal x := by
+    rw [hm]; exact Nat.floor_le (by positivity)
+  unfold scaledArg
+  rw [hsh, div_le_iff₀ (by norm_num : (0 : ℝ) < 2 ^ 64)]
+  push_cast
+  nlinarith
+
+/-- On `expm_p63`'s documented domain the argument is below `0.694`, the contraction factor the
+error induction runs on. -/
+private theorem scaledArg_le_694 (x : FPR) (hn : FPR.IsNormal x) (h0 : 0 ≤ toReal x)
+    (hlog : toReal x < Real.log 2) : scaledArg x ≤ 694 / 1000 := by
+  have hlog9 : Real.log 2 < 0.6931471808 := Real.log_two_lt_d9
+  have h1 : toReal x < 1 := by norm_num at hlog9; linarith
+  have := scaledArg_le_toReal x hn h0 h1
+  norm_num at hlog9 ⊢
+  linarith
+
+/-- **(a)** Every Horner iterate of the fixed-point loop tracks the exact real recurrence at the
+same quantised argument to within `4`. -/
+private theorem hornerMachine_sub_hornerExact_le (x : FPR) (hn : FPR.IsNormal x)
+    (h0 : 0 ≤ toReal x) (hlog : toReal x < Real.log 2) (i : ℕ) (hi : i ≤ 12) :
+    |((hornerMachine ((mtwop63 x) <<< 1) i).toNat : ℝ) - hornerExact (scaledArg x) i| ≤ 4 :=
+  (hornerMachine_error rfl (scaledArg_le_694 x hn h0 hlog) i hi).2
+
+/-- The loop's `UInt64` subtractions never wrap: every iterate stays below its own coefficient. -/
+private theorem hornerMachine_le_coeff (x : FPR) (hn : FPR.IsNormal x) (h0 : 0 ≤ toReal x)
+    (hlog : toReal x < Real.log 2) (i : ℕ) (hi : i ≤ 12) :
+    (hornerMachine ((mtwop63 x) <<< 1) i).toNat ≤ (facctCoeffs[i]!).toNat :=
+  (hornerMachine_error rfl (scaledArg_le_694 x hn h0 hlog) i hi).1
+
+/-- **(b)** The whole pipeline, including the final scaling multiply: `expm_p63 x ccs` tracks
+`scaledArg ccs * hornerExact (scaledArg x) 12` to within `5`. -/
+private theorem expm_p63_sub_exact_le (x ccs : FPR) (hn : FPR.IsNormal x)
+    (h0 : 0 ≤ toReal x) (hlog : toReal x < Real.log 2) :
+    |((expm_p63 x ccs).toNat : ℝ) - scaledArg ccs * hornerExact (scaledArg x) 12| ≤ 5 := by
+  have hy := hornerMachine_sub_hornerExact_le x hn h0 hlog 12 le_rfl
+  obtain ⟨hb1, hb2⟩ := mulHi64_bracket ((mtwop63 ccs) <<< 1) (hornerMachine ((mtwop63 x) <<< 1) 12)
+  rw [show (((mtwop63 ccs) <<< 1).toNat : ℝ) / 2 ^ 64 = scaledArg ccs from rfl] at hb1 hb2
+  have hs0 := scaledArg_nonneg ccs
+  have hs1 := scaledArg_le_one ccs
+  rw [expm_p63_eq, abs_le]
+  rw [abs_le] at hy
+  exact ⟨by nlinarith [mul_le_mul_of_nonneg_left hy.1 hs0],
+    by nlinarith [mul_le_mul_of_nonneg_left hy.2 hs0]⟩
 
 end Falcon.Concrete.FPRBridge
