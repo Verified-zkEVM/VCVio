@@ -6173,6 +6173,380 @@ private theorem nat_sqrt_bracket {q N : ℕ} (h1 : q ^ 2 ≤ N) (h2 : N < (q + 1
     push_cast at this
     linarith
 
+/-! ### `FPR.sqrt`'s pipeline fields -/
+
+private theorem sqrtPipeline_xuRaw (x : FPR) :
+    (sqrtPipeline x).xu_ = (x &&& M52) ||| ((1 : UInt64) <<< 52) := rfl
+
+private theorem sqrtPipeline_exRaw (x : FPR) :
+    (sqrtPipeline x).ex_ = ((x >>> 52).toUInt32) &&& 0x7FF := rfl
+
+private theorem sqrtPipeline_eRaw (x : FPR) :
+    (sqrtPipeline x).e_ = (sqrtPipeline x).ex_.toInt32 - 1023 := rfl
+
+private theorem sqrtPipeline_xu_eq (x : FPR) :
+    (sqrtPipeline x).xu
+      = (sqrtPipeline x).xu_
+        + ((sqrtPipeline x).xu_ &&& (0 - ((sqrtPipeline x).e_.toUInt32 &&& 1).toUInt64)) := rfl
+
+private theorem sqrtPipeline_e_eq (x : FPR) :
+    (sqrtPipeline x).e = (fpr_arsh32 (sqrtPipeline x).e_.toUInt32 1).toInt32 := rfl
+
+private theorem sqrtPipeline_q1_eq (x : FPR) :
+    (sqrtPipeline x).q1
+      = ((sqrtPipeline x).loopRes.2.1 <<< 1)
+        ||| (((sqrtPipeline x).loopRes.1 ||| (0 - (sqrtPipeline x).loopRes.1)) >>> 63) := rfl
+
+private theorem sqrtPipeline_e'_eq (x : FPR) : (sqrtPipeline x).e' = (sqrtPipeline x).e - 54 := rfl
+
+private theorem sqrtPipeline_q2_eq (x : FPR) :
+    (sqrtPipeline x).q2
+      = (sqrtPipeline x).q1 &&& ((0 : UInt64) - (((sqrtPipeline x).ex_ + 0x7FF) >>> 11).toUInt64) :=
+  rfl
+
+/-! ### The halved exponent -/
+
+/-- Reinterpreting a large `UInt32` as an `Int32` subtracts the modulus. -/
+private theorem toInt_toInt32_of_ge {y : UInt32} (hy : 2 ^ 31 ≤ y.toNat) :
+    y.toInt32.toInt = (y.toNat : ℤ) - 2 ^ 32 := by
+  have h : y.toNat < 2 ^ 32 := y.toNat_lt_size
+  unfold Int32.toInt
+  rw [UInt32.toBitVec_toInt32, BitVec.toInt_eq_toNat_bmod, UInt32.toNat_toBitVec]
+  simp only [Int.bmod]
+  norm_num
+  omega
+
+/-- `fpr_arsh32 v 1` is the arithmetic right shift by one: a logical shift with the sign bit
+replicated into the vacated top position. -/
+private theorem toNat_fpr_arsh32_one (v : UInt32) :
+    (fpr_arsh32 v 1).toNat = v.toNat / 2 + (if v.toNat < 2 ^ 31 then 0 else 2 ^ 31) := by
+  have hv : v.toNat < 2 ^ 32 := v.toNat_lt_size
+  have hsh31 : (v >>> 31).toNat = v.toNat / 2 ^ 31 := toNat_shiftRight_31_uint32 v
+  have hsh1 : (v >>> 1).toNat = v.toNat / 2 := by
+    rw [UInt32.toNat_shiftRight, show (1 : UInt32).toNat % 32 = 1 from by decide,
+      Nat.shiftRight_eq_div_pow, pow_one]
+  change ((v >>> 1) ||| (((0 : UInt32) - (v >>> 31)) <<< 31)).toNat = _
+  by_cases h : v.toNat < 2 ^ 31
+  · have hz : (v >>> 31) = 0 := by
+      rw [← UInt32.toNat_inj, hsh31, show (0 : UInt32).toNat = 0 from rfl]; omega
+    rw [hz, if_pos h, show (((0 : UInt32) - 0) <<< 31) = 0 from by decide, UInt32.toNat_or, hsh1,
+      show (0 : UInt32).toNat = 0 from rfl, Nat.or_zero, Nat.add_zero]
+  · have hz : (v >>> 31) = 1 := by
+      rw [← UInt32.toNat_inj, hsh31, show (1 : UInt32).toNat = 1 from rfl]; omega
+    rw [hz, if_neg h, show (((0 : UInt32) - 1) <<< 31) = 0x80000000 from by decide,
+      UInt32.toNat_or, hsh1, show (0x80000000 : UInt32).toNat = 2 ^ 31 from by decide]
+    exact or_two_pow_add_of_lt _ 31 (by omega)
+
+private theorem sqrtPipeline_exRaw_toNat (x : FPR) :
+    (sqrtPipeline x).ex_.toNat = (FPR.decode x).exponent := by
+  rw [sqrtPipeline_exRaw]; exact toNat_ex_field_of x
+
+private theorem sqrtPipeline_eRaw_toUInt32 (x : FPR) :
+    (sqrtPipeline x).e_.toUInt32 = (sqrtPipeline x).ex_ - 1023 := by
+  rw [sqrtPipeline_eRaw, Int32.toUInt32_sub, UInt32.toUInt32_toInt32,
+    show ((1023 : Int32).toUInt32) = 1023 from by decide]
+
+private theorem sqrtPipeline_eRaw_toUInt32_toNat (x : FPR) :
+    ((sqrtPipeline x).e_.toUInt32).toNat
+      = if 1023 ≤ (FPR.decode x).exponent then (FPR.decode x).exponent - 1023
+        else 2 ^ 32 + (FPR.decode x).exponent - 1023 := by
+  have hex : (sqrtPipeline x).ex_.toNat = (FPR.decode x).exponent := sqrtPipeline_exRaw_toNat x
+  have hlt : (FPR.decode x).exponent < 2 ^ 11 := FPR.decode_exponent_lt x
+  rw [sqrtPipeline_eRaw_toUInt32, UInt32.toNat_sub,
+    show (1023 : UInt32).toNat = 1023 from by decide]
+  split_ifs <;> omega
+
+/-- The parity bit `FPR.sqrt` folds into its significand, and the halved exponent it pairs it
+with: `e_ = 2 * e + p` with `p = 1` exactly when the biased exponent field is even. -/
+private theorem sqrtPipeline_e_spec (x : FPR)
+    (h1 : 1 ≤ (FPR.decode x).exponent) (h2 : (FPR.decode x).exponent ≤ 2046) :
+    ((sqrtPipeline x).e_.toUInt32 &&& 1).toNat
+        = (if (FPR.decode x).exponent % 2 = 0 then 1 else 0)
+      ∧ 2 * (sqrtPipeline x).e.toInt
+          + (if (FPR.decode x).exponent % 2 = 0 then (1 : ℤ) else 0)
+        = ((FPR.decode x).exponent : ℤ) - 1023 := by
+  have hu := sqrtPipeline_eRaw_toUInt32_toNat x
+  refine ⟨?_, ?_⟩
+  · rw [UInt32.toNat_and, show (1 : UInt32).toNat = 2 ^ 1 - 1 from by decide,
+      Nat.and_two_pow_sub_one_eq_mod, hu]
+    split_ifs <;> omega
+  · rw [sqrtPipeline_e_eq]
+    have hr := toNat_fpr_arsh32_one (sqrtPipeline x).e_.toUInt32
+    by_cases hc : 1023 ≤ (FPR.decode x).exponent
+    · rw [if_pos hc] at hu
+      rw [hu, if_pos (by omega)] at hr
+      rw [toInt_toInt32_of_lt (by omega), hr]
+      split_ifs <;> omega
+    · rw [if_neg hc] at hu
+      rw [hu, if_neg (by omega)] at hr
+      rw [toInt_toInt32_of_ge (by omega), hr]
+      split_ifs <;> omega
+
+/-- The halved exponent stays far inside `Int32`: `e ∈ [-511, 511]` for a normal operand. -/
+private theorem sqrtPipeline_e_mem (x : FPR)
+    (h1 : 1 ≤ (FPR.decode x).exponent) (h2 : (FPR.decode x).exponent ≤ 2046) :
+    -511 ≤ (sqrtPipeline x).e.toInt ∧ (sqrtPipeline x).e.toInt ≤ 511 := by
+  have he := (sqrtPipeline_e_spec x h1 h2).2
+  have hcast : (1 : ℤ) ≤ ((FPR.decode x).exponent : ℤ) ∧ ((FPR.decode x).exponent : ℤ) ≤ 2046 := by
+    constructor <;> exact_mod_cast ‹_›
+  split_ifs at he <;> omega
+
+private theorem sqrtPipeline_e'_toInt (x : FPR)
+    (h1 : 1 ≤ (FPR.decode x).exponent) (h2 : (FPR.decode x).exponent ≤ 2046) :
+    (sqrtPipeline x).e'.toInt = (sqrtPipeline x).e.toInt - 54 := by
+  obtain ⟨hlo, hhi⟩ := sqrtPipeline_e_mem x h1 h2
+  rw [sqrtPipeline_e'_eq, Int32.toInt_sub, show ((54 : Int32).toInt) = 54 from by decide]
+  exact Int.bmod_eq_of_le_mul_two (by omega) (by omega)
+
+/-! ### The doubled significand -/
+
+private theorem sqrtPipeline_xuRaw_toNat (x : FPR) :
+    (sqrtPipeline x).xu_.toNat = (FPR.decode x).mantissa + 2 ^ 52 := by
+  rw [sqrtPipeline_xuRaw]; exact significand_pack_toNat x
+
+/-- The parity bit doubles the significand: `xu = xu_ * (1 + p)`. -/
+private theorem sqrtPipeline_xu_toNat_of_bit (x : FPR) {p : ℕ} (hp : p ≤ 1)
+    (hbit : ((sqrtPipeline x).e_.toUInt32 &&& 1).toNat = p) :
+    (sqrtPipeline x).xu.toNat = (sqrtPipeline x).xu_.toNat * (1 + p) := by
+  have hxu := sqrtPipeline_xuRaw_toNat x
+  have hm := FPR.decode_mantissa_lt x
+  rw [sqrtPipeline_xu_eq]
+  interval_cases p
+  · have hw : ((sqrtPipeline x).e_.toUInt32 &&& 1) = 0 := by
+      rw [← UInt32.toNat_inj, hbit]; rfl
+    rw [hw, show ((0 : UInt32).toUInt64) = 0 from by decide,
+      show ((0 : UInt64) - 0) = 0 from by decide, and_zero_uint64, UInt64.add_zero]
+    omega
+  · have hw : ((sqrtPipeline x).e_.toUInt32 &&& 1) = 1 := by
+      rw [← UInt32.toNat_inj, hbit]; rfl
+    rw [hw, show ((1 : UInt32).toUInt64) = 1 from by decide,
+      show ((0 : UInt64) - 1) = 0xFFFFFFFFFFFFFFFF from by decide, and_allOnes_uint64,
+      toNat_add_of_lt_uint64 (by omega)]
+    omega
+
+/-- The loop's operand range: the doubled significand is `54` bits wide. -/
+private theorem sqrtPipeline_xu_mem (x : FPR)
+    (h1 : 1 ≤ (FPR.decode x).exponent) (h2 : (FPR.decode x).exponent ≤ 2046) :
+    2 ^ 52 ≤ (sqrtPipeline x).xu.toNat ∧ (sqrtPipeline x).xu.toNat < 2 ^ 54 := by
+  have hbit := (sqrtPipeline_e_spec x h1 h2).1
+  have hxu := sqrtPipeline_xuRaw_toNat x
+  have hm := FPR.decode_mantissa_lt x
+  by_cases hc : (FPR.decode x).exponent % 2 = 0
+  · rw [if_pos hc] at hbit
+    rw [sqrtPipeline_xu_toNat_of_bit x (by norm_num) hbit]; omega
+  · rw [if_neg hc] at hbit
+    rw [sqrtPipeline_xu_toNat_of_bit x (by norm_num) hbit]; omega
+
+/-! ### The root word -/
+
+private theorem sqrtPipeline_isqrt (x : FPR) (hxu : (sqrtPipeline x).xu.toNat < 2 ^ 54) :
+    (sqrtPipeline x).loopRes.2.1.toNat ^ 2 ≤ 2 ^ 54 * (sqrtPipeline x).xu.toNat
+      ∧ 2 ^ 54 * (sqrtPipeline x).xu.toNat
+        < ((sqrtPipeline x).loopRes.2.1.toNat + 1) ^ 2 := by
+  rw [sqrtPipeline_loopRes]; exact sqrtLoop_isqrt _ hxu
+
+private theorem sqrtPipeline_remainder (x : FPR) (hxu : (sqrtPipeline x).xu.toNat < 2 ^ 54) :
+    (sqrtPipeline x).loopRes.2.1.toNat ^ 2 * 2 ^ 54
+        + 2 ^ 53 * (sqrtPipeline x).loopRes.1.toNat
+      = 2 ^ 108 * (sqrtPipeline x).xu.toNat := by
+  rw [sqrtPipeline_loopRes]; exact (sqrtLoop_at_54 _ hxu).1
+
+/-- The root the loop leaves is `54` bits wide. -/
+private theorem sqrtPipeline_root_lt (x : FPR) (hxu : (sqrtPipeline x).xu.toNat < 2 ^ 54) :
+    (sqrtPipeline x).loopRes.2.1.toNat < 2 ^ 54 := by
+  by_contra hcon
+  push Not at hcon
+  have hsq : ((2 : ℕ) ^ 54) ^ 2 ≤ (sqrtPipeline x).loopRes.2.1.toNat ^ 2 :=
+    Nat.pow_le_pow_left hcon 2
+  have hle := (sqrtPipeline_isqrt x hxu).1
+  have hlt : (2 : ℕ) ^ 54 * (sqrtPipeline x).xu.toNat < 2 ^ 54 * 2 ^ 54 :=
+    (Nat.mul_lt_mul_left (Nat.two_pow_pos 54)).mpr hxu
+  have he : ((2 : ℕ) ^ 54) ^ 2 = 2 ^ 54 * 2 ^ 54 := by rw [← pow_mul, ← pow_add]
+  omega
+
+/-- The root the loop leaves is at least `2 ^ 53`, since the operand is at least `2 ^ 52`. -/
+private theorem sqrtPipeline_root_ge (x : FPR) (hlo : 2 ^ 52 ≤ (sqrtPipeline x).xu.toNat)
+    (hxu : (sqrtPipeline x).xu.toNat < 2 ^ 54) :
+    2 ^ 53 ≤ (sqrtPipeline x).loopRes.2.1.toNat := by
+  by_contra hcon
+  push Not at hcon
+  have hsq : ((sqrtPipeline x).loopRes.2.1.toNat + 1) ^ 2 ≤ ((2 : ℕ) ^ 53) ^ 2 :=
+    Nat.pow_le_pow_left (by omega) 2
+  have hgt := (sqrtPipeline_isqrt x hxu).2
+  have hbig : (2 : ℕ) ^ 54 * 2 ^ 52 ≤ 2 ^ 54 * (sqrtPipeline x).xu.toNat :=
+    Nat.mul_le_mul_left _ hlo
+  have he : ((2 : ℕ) ^ 53) ^ 2 = 2 ^ 54 * 2 ^ 52 := by rw [← pow_mul, ← pow_add]
+  omega
+
+private theorem sqrtPipeline_q1_toNat (x : FPR) (hq : (sqrtPipeline x).loopRes.2.1.toNat < 2 ^ 54) :
+    (sqrtPipeline x).q1.toNat
+      = 2 * (sqrtPipeline x).loopRes.2.1.toNat
+        + (if (sqrtPipeline x).loopRes.1.toNat = 0 then 0 else 1) := by
+  have hsl : ((sqrtPipeline x).loopRes.2.1 <<< 1).toNat
+      = 2 * (sqrtPipeline x).loopRes.2.1.toNat := by
+    rw [toNat_shiftLeft_one]; omega
+  rw [sqrtPipeline_q1_eq,
+    or_bit_of_even (by rw [hsl]; omega) (by rw [or_neg_shiftRight_63]; split <;> omega),
+    or_neg_shiftRight_63, hsl]
+
+/-- The significand `FPR.sqrt` hands to `FPR.make_z` is normalized. -/
+private theorem sqrtPipeline_q1_mem (x : FPR)
+    (h1 : 1 ≤ (FPR.decode x).exponent) (h2 : (FPR.decode x).exponent ≤ 2046) :
+    2 ^ 54 ≤ (sqrtPipeline x).q1.toNat ∧ (sqrtPipeline x).q1.toNat < 2 ^ 55 := by
+  obtain ⟨hlo, hhi⟩ := sqrtPipeline_xu_mem x h1 h2
+  have hq := sqrtPipeline_root_lt x hhi
+  have hq' := sqrtPipeline_root_ge x hlo hhi
+  rw [sqrtPipeline_q1_toNat x hq]
+  split <;> omega
+
+/-! ### The flush-to-zero guard is inactive on a normal operand -/
+
+private theorem sqrtPipeline_q2_eq_q1 (x : FPR)
+    (h1 : 1 ≤ (FPR.decode x).exponent) (h2 : (FPR.decode x).exponent ≤ 2046) :
+    (sqrtPipeline x).q2 = (sqrtPipeline x).q1 := by
+  have hex := sqrtPipeline_exRaw_toNat x
+  have hadd : ((sqrtPipeline x).ex_ + 0x7FF).toNat = (FPR.decode x).exponent + 2047 := by
+    rw [UInt32.toNat_add, show (0x7FF : UInt32).toNat = 2047 from by decide]
+    omega
+  have hsh : (((sqrtPipeline x).ex_ + 0x7FF) >>> 11) = 1 := by
+    rw [← UInt32.toNat_inj, UInt32.toNat_shiftRight,
+      show (11 : UInt32).toNat % 32 = 11 from by decide, Nat.shiftRight_eq_div_pow, hadd,
+      show (1 : UInt32).toNat = 1 from rfl]
+    omega
+  rw [sqrtPipeline_q2_eq, hsh, show ((1 : UInt32).toUInt64) = 1 from by decide,
+    show ((0 : UInt64) - 1) = 0xFFFFFFFFFFFFFFFF from by decide, and_allOnes_uint64]
+
+/-! ### The exact square root, in the scale `FPR.sqrt`'s exponent field uses -/
+
+/-- Both exponent parities collapse to one formula: the operand is exactly `xu * 2 ^ (2 e - 52)`,
+with `xu` the (possibly doubled) significand and `e` the halved exponent. -/
+private theorem sqrtPipeline_toReal_eq (x : FPR) (ha' : FPR.IsNormal x) (ha : 0 ≤ toReal x)
+    (h1 : 1 ≤ (FPR.decode x).exponent) (h2 : (FPR.decode x).exponent ≤ 2046) :
+    toReal x = ((sqrtPipeline x).xu.toNat : ℝ)
+      * (2 : ℝ) ^ (2 * (sqrtPipeline x).e.toInt - 52) := by
+  obtain ⟨hbit, he⟩ := sqrtPipeline_e_spec x h1 h2
+  have habs : |toReal x| = ((sqrtPipeline x).xu_.toNat : ℝ)
+      * (2 : ℝ) ^ (((FPR.decode x).exponent : ℤ) - 1075) := by
+    rw [sqrtPipeline_xuRaw, significand_pack_toNat]
+    change |(FPR.decode x).toReal| = _
+    rw [abs_toReal_eq_significand_mul_two_zpow ha'.1 ha'.2]
+    unfold FPR.Bits.significand
+    rw [if_neg ha'.1]
+  rw [← abs_of_nonneg ha, habs]
+  by_cases hc : (FPR.decode x).exponent % 2 = 0
+  · rw [if_pos hc] at hbit he
+    rw [sqrtPipeline_xu_toNat_of_bit x (by norm_num) hbit,
+      show ((FPR.decode x).exponent : ℤ) - 1075 = (2 * (sqrtPipeline x).e.toInt - 52) + 1 by omega,
+      zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0), zpow_one]
+    push_cast
+    ring
+  · rw [if_neg hc] at hbit he
+    rw [sqrtPipeline_xu_toNat_of_bit x (by norm_num) hbit,
+      show ((FPR.decode x).exponent : ℤ) - 1075 = 2 * (sqrtPipeline x).e.toInt - 52 by omega]
+    push_cast
+    ring
+
+/-- The exact square root, on the scale the assembled exponent field `e' = e - 54` uses. -/
+private theorem sqrtPipeline_sqrt_toReal (x : FPR) (ha' : FPR.IsNormal x) (ha : 0 ≤ toReal x)
+    (h1 : 1 ≤ (FPR.decode x).exponent) (h2 : (FPR.decode x).exponent ≤ 2046) :
+    Real.sqrt (toReal x)
+      = Real.sqrt (2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ))
+        * (2 : ℝ) ^ ((sqrtPipeline x).e.toInt - 53) := by
+  have hnn : (0 : ℝ) ≤ 2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ) := by positivity
+  have hRnn : (0 : ℝ) ≤ Real.sqrt (2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ))
+      * (2 : ℝ) ^ ((sqrtPipeline x).e.toInt - 53) := by positivity
+  have e1 : ((2 : ℝ) ^ ((sqrtPipeline x).e.toInt - 53)) ^ 2
+      = (2 : ℝ) ^ (2 * (sqrtPipeline x).e.toInt - 106) := by
+    rw [← zpow_natCast ((2 : ℝ) ^ ((sqrtPipeline x).e.toInt - 53)) 2, ← zpow_mul]
+    congr 1
+    push_cast
+    ring
+  have e2 : (2 : ℝ) ^ (54 : ℕ) * (2 : ℝ) ^ (2 * (sqrtPipeline x).e.toInt - 106)
+      = (2 : ℝ) ^ (2 * (sqrtPipeline x).e.toInt - 52) := by
+    rw [two_pow_mul_zpow]
+    congr 1
+    push_cast
+    ring
+  have hsq : (Real.sqrt (2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ))
+      * (2 : ℝ) ^ ((sqrtPipeline x).e.toInt - 53)) ^ 2 = toReal x := by
+    rw [mul_pow, Real.sq_sqrt hnn, e1, sqrtPipeline_toReal_eq x ha' ha h1 h2, ← e2]
+    ring
+  rw [← hsq, Real.sqrt_sq hRnn]
+
+/-! ### The real-valued root bracket -/
+
+private theorem sqrtPipeline_real_bracket (x : FPR)
+    (h1 : 1 ≤ (FPR.decode x).exponent) (h2 : (FPR.decode x).exponent ≤ 2046) :
+    (((sqrtPipeline x).q1.toNat : ℝ) - 1) * 1
+        < 2 * Real.sqrt (2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ))
+      ∧ 2 * Real.sqrt (2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ))
+        < (((sqrtPipeline x).q1.toNat : ℝ) + 1) * 1 := by
+  obtain ⟨hlo, hhi⟩ := sqrtPipeline_xu_mem x h1 h2
+  have hq := sqrtPipeline_root_lt x hhi
+  have hnn : (0 : ℝ) ≤ 2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ) := by positivity
+  have hcast : ((2 ^ 54 * (sqrtPipeline x).xu.toNat : ℕ) : ℝ)
+      = 2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ) := by push_cast; ring
+  obtain ⟨hb1, hb2⟩ := nat_sqrt_bracket (sqrtPipeline_isqrt x hhi).1 (sqrtPipeline_isqrt x hhi).2
+  rw [hcast] at hb1 hb2
+  have hq1 := sqrtPipeline_q1_toNat x hq
+  have hrem := sqrtPipeline_remainder x hhi
+  by_cases hz : (sqrtPipeline x).loopRes.1.toNat = 0
+  · rw [if_pos hz] at hq1
+    have hexact : (sqrtPipeline x).loopRes.2.1.toNat ^ 2 * 2 ^ 54
+        = (2 ^ 54 * (sqrtPipeline x).xu.toNat) * 2 ^ 54 := by
+      rw [show (2 ^ 54 * (sqrtPipeline x).xu.toNat) * 2 ^ 54 = 2 ^ 108 * (sqrtPipeline x).xu.toNat
+        from by ring, ← hrem, hz]
+      ring
+    have hroot : (sqrtPipeline x).loopRes.2.1.toNat ^ 2 = 2 ^ 54 * (sqrtPipeline x).xu.toNat :=
+      Nat.eq_of_mul_eq_mul_right (Nat.two_pow_pos 54) hexact
+    have hR : Real.sqrt (2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ))
+        = ((sqrtPipeline x).loopRes.2.1.toNat : ℝ) := by
+      rw [← hcast, ← hroot]
+      push_cast
+      exact Real.sqrt_sq (by positivity)
+    rw [hq1, hR]
+    push_cast
+    constructor <;> linarith
+  · rw [if_neg hz] at hq1
+    have hstrict : (sqrtPipeline x).loopRes.2.1.toNat ^ 2 * 2 ^ 54
+        < (2 ^ 54 * (sqrtPipeline x).xu.toNat) * 2 ^ 54 := by
+      rw [show (2 ^ 54 * (sqrtPipeline x).xu.toNat) * 2 ^ 54 = 2 ^ 108 * (sqrtPipeline x).xu.toNat
+        from by ring, ← hrem]
+      have : 0 < 2 ^ 53 * (sqrtPipeline x).loopRes.1.toNat :=
+        Nat.mul_pos (Nat.two_pow_pos 53) (Nat.pos_of_ne_zero hz)
+      omega
+    have hroot : (sqrtPipeline x).loopRes.2.1.toNat ^ 2 < 2 ^ 54 * (sqrtPipeline x).xu.toNat :=
+      Nat.lt_of_mul_lt_mul_right hstrict
+    have hrootR : (((sqrtPipeline x).loopRes.2.1.toNat : ℝ)) ^ 2
+        < 2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ) := by
+      rw [← hcast]
+      exact_mod_cast hroot
+    have hS : Real.sqrt (2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ)) ^ 2
+        = 2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ) := Real.sq_sqrt hnn
+    have hSnn : (0 : ℝ) ≤ Real.sqrt (2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ)) :=
+      Real.sqrt_nonneg _
+    have hlt : ((sqrtPipeline x).loopRes.2.1.toNat : ℝ)
+        < Real.sqrt (2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ)) := by nlinarith
+    rw [hq1]
+    push_cast
+    constructor <;> linarith
+
+private theorem sqrtPipeline_key (x : FPR)
+    (h1 : 1 ≤ (FPR.decode x).exponent) (h2 : (FPR.decode x).exponent ≤ 2046) :
+    (2 : ℝ) ^ (53 : ℕ) * 1 + 1 ≤ 2 * Real.sqrt (2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ)) := by
+  obtain ⟨hlo, hhi⟩ := sqrtPipeline_xu_mem x h1 h2
+  have hq' := sqrtPipeline_root_ge x hlo hhi
+  have hcast : ((2 ^ 54 * (sqrtPipeline x).xu.toNat : ℕ) : ℝ)
+      = 2 ^ 54 * ((sqrtPipeline x).xu.toNat : ℝ) := by push_cast; ring
+  obtain ⟨hb1, -⟩ := nat_sqrt_bracket (sqrtPipeline_isqrt x hhi).1 (sqrtPipeline_isqrt x hhi).2
+  rw [hcast] at hb1
+  have hqR : (2 : ℝ) ^ (53 : ℕ) ≤ ((sqrtPipeline x).loopRes.2.1.toNat : ℝ) := by
+    exact_mod_cast hq'
+  have hone : (1 : ℝ) ≤ (2 : ℝ) ^ (53 : ℕ) := one_le_pow₀ (by norm_num)
+  linarith
+
+/-! ### The bound -/
+
 /-- Relative error bound for `FPR.sqrt`, on a normal, nonnegative operand. Unlike `add_error` /
 `mul_error` / `div_error`, no separate magnitude-range hypothesis on the exact result is needed:
 the square root of a value already bracketed in `[FPR.minNormalReal, FPR.maxFiniteReal]` lands in
@@ -6181,7 +6555,46 @@ can never drive `FPR.sqrt` to overflow or underflow. -/
 theorem sqrt_error (a : FPR) (ha' : FPR.IsNormal a) (ha : 0 ≤ toReal a) :
     |toReal (FPR.sqrt a) - Real.sqrt (toReal a)| ≤
     (2 : ℝ) ^ (-(52 : ℤ)) * Real.sqrt (toReal a) := by
-  sorry
+  have h1 : 1 ≤ (FPR.decode a).exponent := Nat.one_le_iff_ne_zero.mpr ha'.1
+  have h2 : (FPR.decode a).exponent ≤ 2046 := by
+    have := FPR.decode_exponent_lt a; have := ha'.2; omega
+  obtain ⟨hm1, hm2⟩ := sqrtPipeline_q1_mem a h1 h2
+  obtain ⟨helo, hehi⟩ := sqrtPipeline_e_mem a h1 h2
+  have he' := sqrtPipeline_e'_toInt a h1 h2
+  have hq2 := sqrtPipeline_q2_eq_q1 a h1 h2
+  have hc : (0 : ℝ) < (2 : ℝ) ^ ((sqrtPipeline a).e.toInt - 54) := zpow_pos (by norm_num) _
+  -- the rounding step
+  have hMV : |toReal (FPR.sqrt a) - 1 * (((sqrtPipeline a).q1.toNat : ℝ) * 1
+        * (2 : ℝ) ^ ((sqrtPipeline a).e.toInt - 54))|
+      ≤ (2 : ℝ) ^ (-(53 : ℤ)) * |1 * (((sqrtPipeline a).q1.toNat : ℝ) * 1
+        * (2 : ℝ) ^ ((sqrtPipeline a).e.toInt - 54))| := by
+    have h := abs_toRealBits_make_z_sub_le 0 (sqrtPipeline a).e' (sqrtPipeline a).q2
+      (by decide) (by omega) (by omega) (by rw [hq2]; exact hm1) (by rw [hq2]; exact hm2)
+    have hsq : toRealBits (make_z 0 (sqrtPipeline a).e' (sqrtPipeline a).q2)
+        = toReal (FPR.sqrt a) := by rw [sqrt_eq_make_z]; rfl
+    have hform : (if ((0 : UInt64)).toNat = 1 then (-1 : ℝ) else 1)
+        * (((sqrtPipeline a).q2.toNat : ℝ)) * (2 : ℝ) ^ ((sqrtPipeline a).e'.toInt)
+        = 1 * (((sqrtPipeline a).q1.toNat : ℝ) * 1
+            * (2 : ℝ) ^ ((sqrtPipeline a).e.toInt - 54)) := by
+      rw [if_neg (by decide : ¬ ((0 : UInt64)).toNat = 1), hq2, he']
+      ring
+    rw [hsq, hform] at h
+    exact h
+  -- the exact root, in the same scale
+  have hPc : (1 : ℝ) * ((2 * Real.sqrt (2 ^ 54 * ((sqrtPipeline a).xu.toNat : ℝ)))
+      * (2 : ℝ) ^ ((sqrtPipeline a).e.toInt - 54)) = Real.sqrt (toReal a) := by
+    rw [sqrtPipeline_sqrt_toReal a ha' ha h1 h2,
+      show ((sqrtPipeline a).e.toInt - 53) = 1 + ((sqrtPipeline a).e.toInt - 54) by ring,
+      zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0), zpow_one]
+    ring
+  obtain ⟨hbr1, hbr2⟩ := sqrtPipeline_real_bracket a h1 h2
+  have key := mul_error_combine (M := toReal (FPR.sqrt a)) (σ := 1) (K := 1)
+    (W := ((sqrtPipeline a).q1.toNat : ℝ))
+    (P := 2 * Real.sqrt (2 ^ 54 * ((sqrtPipeline a).xu.toNat : ℝ)))
+    (c := (2 : ℝ) ^ ((sqrtPipeline a).e.toInt - 54))
+    (Or.inl rfl) hc (by positivity) one_pos hMV hbr1 hbr2 (sqrtPipeline_key a h1 h2)
+  rw [hPc, abs_of_nonneg (Real.sqrt_nonneg _)] at key
+  exact key
 
 /-! ## Non-vacuity witnesses for the per-operation error bounds
 
