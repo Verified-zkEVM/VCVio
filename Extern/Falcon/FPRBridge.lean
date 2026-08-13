@@ -6060,7 +6060,21 @@ fixed-point conversion that keeps `⌊2 ^ 63 * ccs⌋` in 63 bits and drops the 
 factor must be a nonnegative fraction below one. At `ccs = 1` the conversion wraps to `0`, and with
 it the whole product, for every `x` in range — against a true value of `Real.exp (-(toReal x))`,
 never below one half. Above `1` the claim fails outright: the returned `UInt64` read at scale
-`2 ^ 63` is smaller than `2`, while `toReal ccs * Real.exp (-(toReal x))` grows without bound. -/
+`2 ^ 63` is smaller than `2`, while `toReal ccs * Real.exp (-(toReal x))` grows without bound.
+
+The `2 ^ (-51)` here is very nearly saturated, and by the approximation itself rather than by the
+arithmetic around it. `FPR.facctCoeffs` is a minimax fit, not a Taylor truncation, and its uniform
+error against `Real.exp (-x)` over `[0, Real.log 2)` is already about `2 ^ (-51.2)` — roughly `87%`
+of the bound, leaving the fixed-point conversion and the twelve Horner steps only the remaining
+eighth. Perturbing the coefficient table, or widening either operand range, is therefore liable to
+make this statement false rather than merely harder to prove.
+
+That also fixes the shape a proof has to take. Comparing the table to the Taylor coefficients term
+by term and adding a Lagrange remainder is off by more than four orders of magnitude (it yields
+about `2 ^ (-35.8)`): a minimax fit earns its accuracy from cancellation *across* the interval,
+which a per-coefficient triangle inequality discards. What the bound needs instead is a rigorous
+enclosure of `|P x - Real.exp (-x)|` over the whole interval, tight to within the eighth of the
+budget that is left over. -/
 theorem expm_p63_error (x ccs : FPR)
     (hx : 0 ≤ toReal x) (hx' : toReal x < Real.log 2)
     (hccs : 0 ≤ toReal ccs) (hccs' : toReal ccs < 1) :
