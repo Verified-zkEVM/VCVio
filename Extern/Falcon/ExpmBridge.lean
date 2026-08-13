@@ -1765,7 +1765,26 @@ private theorem abs_taylorExpNeg_sub_exp_le (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t �
   rw [hc]
   nlinarith [abs_nonneg (-t)]
 
-theorem expm_p63_error' (x ccs : FPR)
+/-- Absolute approximation bound for the FACCT-based `expm_p63` routine, on the domain the
+routine is written for: `x` in `[0, log 2)` and `ccs` in `[0, 1)`.
+
+Both sides of the `ccs` restriction are load-bearing. `expm_p63` reads its operands through a
+fixed-point conversion that keeps `⌊2 ^ 63 * ccs⌋` in 63 bits and drops the sign bit, so the scale
+factor must be a nonnegative fraction below one. At `ccs = 1` the conversion wraps to `0`, and with
+it the whole product, for every `x` in range — against a true value of `Real.exp (-(toReal x))`,
+never below one half. Above `1` the claim fails outright: the returned `UInt64` read at scale
+`2 ^ 63` is smaller than `2`, while `toReal ccs * Real.exp (-(toReal x))` grows without bound.
+
+The `2 ^ (-51)` is very nearly saturated, and by the approximation rather than the arithmetic
+around it. Measured in units of `2 ^ (-63)`, against a budget of `4096`: the fixed-point pipeline
+costs `10` (`expm_p63_sub_trueArg_le`), the Chebyshev certificates covering `[0, 89/128]` cost
+`3574` (`abs_certQ_le`), and the degree-`19` Taylor truncation of `Real.exp` costs `80`. That
+`3574` is where the difficulty lies: `FPR.facctCoeffs` is a minimax fit rather than a Taylor
+truncation, so `P - T` carries `O(1)` coefficients while being `O(2 ^ (-51))`, and any bound
+applying a triangle inequality to those coefficients discards exactly the cancellation the fit
+relies on. Subdividing restores locality, which is why the bound is a family of per-interval
+certificates rather than a single estimate. -/
+theorem expm_p63_error (x ccs : FPR)
     (hx : 0 ≤ toReal x) (hx' : toReal x < Real.log 2)
     (hccs : 0 ≤ toReal ccs) (hccs' : toReal ccs < 1) :
     abs ((((FPR.expm_p63 x ccs).toNat : ℕ) : ℝ) / (2 : ℝ) ^ 63 -
@@ -1809,5 +1828,25 @@ theorem expm_p63_error' (x ccs : FPR)
     div_le_iff₀ (by positivity : (0 : ℝ) < (2 : ℝ) ^ 63)]
   refine le_trans key ?_
   norm_num
+
+/-- The bit pattern of the binary64 value `0.5`. -/
+private def half : FPR := (0x3FE0000000000000 : UInt64)
+
+private theorem decode_half : FPR.decode half = ⟨false, 1022, 0⟩ := by
+  unfold FPR.decode half; decide
+
+private theorem toReal_half : toReal half = 0.5 := by
+  unfold toReal toRealBits
+  rw [decode_half]
+  norm_num [FPR.Bits.toReal]
+
+/-- `expm_p63_error` is not vacuous: `x = 0`, `ccs = 0.5` meets all four side conditions. Note
+`FPR.zero` is *not* a normal operand, so the bound genuinely covers the zero-exponent case. -/
+example : 0 ≤ toReal FPR.zero ∧ toReal FPR.zero < Real.log 2 ∧
+    0 ≤ toReal half ∧ toReal half < 1 := by
+  refine ⟨by rw [toReal_zero], ?_, by rw [toReal_half]; norm_num,
+    by rw [toReal_half]; norm_num⟩
+  rw [toReal_zero]
+  exact Real.log_pos (by norm_num)
 
 end Falcon.Concrete.FPRBridge
