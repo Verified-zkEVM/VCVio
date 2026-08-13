@@ -5285,31 +5285,36 @@ private theorem divPipeline_quotient_lt (x y : FPR) :
 
 private theorem allOnes_toNat : ((0 : UInt64) - 1).toNat = 2 ^ 64 - 1 := by decide
 
-/-- The loop's comparison mask: all-ones exactly when the running remainder is at least the
-divisor, zero otherwise. The bounds rule out the wraparound reading the sign bit would
-otherwise pick up. -/
-private theorem divStep_mask (r yu : UInt64) (hr : r.toNat < 2 ^ 54) (hy : yu.toNat < 2 ^ 53) :
-    ((r - yu) >>> 63) - 1 = if yu.toNat ≤ r.toNat then (0 : UInt64) - 1 else 0 := by
-  by_cases h : yu.toNat ≤ r.toNat
+/-- Generalised comparison mask: all-ones exactly when `c ≤ a`, zero otherwise. Same shape as
+`divStep_mask`, but with bounds tailored to the square-root loop's operands. -/
+private theorem sub_mask_of_lt (a c : UInt64) (ha : a.toNat < 2 ^ 63) (hc : c.toNat < 2 ^ 63) :
+    ((a - c) >>> 63) - 1 = if c.toNat ≤ a.toNat then (0 : UInt64) - 1 else 0 := by
+  by_cases h : c.toNat ≤ a.toNat
   · rw [if_pos h]
-    have hsub : (r - yu).toNat = r.toNat - yu.toNat := toNat_sub_of_le_uint64 r yu h
-    have hsh : ((r - yu) >>> 63) = 0 := by
+    have hsub : (a - c).toNat = a.toNat - c.toNat := toNat_sub_of_le_uint64 a c h
+    have hsh : ((a - c) >>> 63) = 0 := by
       rw [← UInt64.toNat_inj, toNat_shiftRight_63_uint64, hsub]
       simp only [UInt64.toNat_ofNat]
       omega
     rw [hsh]
   · rw [if_neg h]
     push Not at h
-    have hsub : (r - yu).toNat = 2 ^ 64 - (yu.toNat - r.toNat) := by
+    have hsub : (a - c).toNat = 2 ^ 64 - (c.toNat - a.toNat) := by
       rw [UInt64.toNat_sub]
-      have := yu.toNat_lt_size
+      have := c.toNat_lt_size
       omega
-    have hsh : ((r - yu) >>> 63) = 1 := by
+    have hsh : ((a - c) >>> 63) = 1 := by
       rw [← UInt64.toNat_inj, toNat_shiftRight_63_uint64, hsub]
       simp only [UInt64.toNat_ofNat]
       omega
     rw [hsh]
     decide
+
+/-- The division loop's comparison mask: all-ones exactly when the running remainder is at least
+the divisor, zero otherwise. -/
+private theorem divStep_mask (r yu : UInt64) (hr : r.toNat < 2 ^ 54) (hy : yu.toNat < 2 ^ 53) :
+    ((r - yu) >>> 63) - 1 = if yu.toNat ≤ r.toNat then (0 : UInt64) - 1 else 0 :=
+  sub_mask_of_lt r yu (by omega) (by omega)
 
 private theorem uint64_zero_and (w : UInt64) : (0 : UInt64) &&& w = 0 := by
   rw [← UInt64.toNat_inj, UInt64.toNat_and]; simp
@@ -5903,6 +5908,184 @@ theorem div_error (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a) (hb' :
       = (if (divPipeline a b).sg.toNat = 1 then (-1 : ℝ) else 1) * W
         * (2 : ℝ) ^ (divPipeline a b).e'.toInt from by rw [hScale]; ring]
   exact hMV
+
+/-! ### What `FPR.sqrt`'s digit-recurrence loop computes
+
+Each iteration appends one bit to the root and keeps a scaled remainder. Writing `q` for the
+partial root, `s` for its double, `r` for the bit weight and `xp` for the remainder, the loop
+maintains `q ^ 2 * 2 ^ k + 2 ^ 53 * xp = 2 ^ (54 + k) * xu`, with `xp` held below
+`4 * q + 2 ^ (55 - k)`.
+The invariant and the bit weight `r = 2 ^ (53 - k)` are mutually dependent: the quadratic term
+telescopes precisely because `r * 2 ^ (k + 1) = 2 ^ 54`. -/
+
+private theorem toNat_add_of_lt_uint64 {a b : UInt64} (h : a.toNat + b.toNat < 2 ^ 64) :
+    (a + b).toNat = a.toNat + b.toNat := by
+  rw [UInt64.toNat_add, Nat.mod_eq_of_lt h]
+
+private theorem sqrtStep_toNat (v : UInt64 × UInt64 × UInt64 × UInt64)
+    (hq : v.2.1.toNat < 2 ^ 54) (hs : v.2.2.1.toNat < 2 ^ 55) (hr : v.2.2.2.toNat ≤ 2 ^ 53)
+    (hxp : v.1.toNat < 2 ^ 57) :
+    (sqrtStep v).2.2.2.toNat = v.2.2.2.toNat / 2
+      ∧ (sqrtStep v).2.1.toNat = v.2.1.toNat
+          + (if v.2.2.1.toNat + v.2.2.2.toNat ≤ v.1.toNat then v.2.2.2.toNat else 0)
+      ∧ (sqrtStep v).2.2.1.toNat = v.2.2.1.toNat
+          + 2 * (if v.2.2.1.toNat + v.2.2.2.toNat ≤ v.1.toNat then v.2.2.2.toNat else 0)
+      ∧ (sqrtStep v).1.toNat = 2 * (v.1.toNat
+          - (if v.2.2.1.toNat + v.2.2.2.toNat ≤ v.1.toNat
+              then v.2.2.1.toNat + v.2.2.2.toNat else 0)) := by
+  simp only [sqrtStep]
+  have htr : (v.2.2.1 + v.2.2.2).toNat = v.2.2.1.toNat + v.2.2.2.toNat :=
+    toNat_add_of_lt_uint64 (by omega)
+  have hb : (v.1 - (v.2.2.1 + v.2.2.2)) >>> 63 - 1
+      = if v.2.2.1.toNat + v.2.2.2.toNat ≤ v.1.toNat then (0 : UInt64) - 1 else 0 := by
+    rw [sub_mask_of_lt v.1 (v.2.2.1 + v.2.2.2) (by omega) (by rw [htr]; omega), htr]
+  rw [hb]
+  by_cases hbit : v.2.2.1.toNat + v.2.2.2.toNat ≤ v.1.toNat
+  · simp only [if_pos hbit]
+    have e2 : v.2.2.2 &&& ((0 : UInt64) - 1) = v.2.2.2 := by rw [UInt64.and_comm, allOnes_and]
+    have e3 : ((0 : UInt64) - 1) &&& (v.2.2.2 <<< (1 : UInt64)) = v.2.2.2 <<< (1 : UInt64) :=
+      allOnes_and _
+    have e4 : (v.2.2.1 + v.2.2.2) &&& ((0 : UInt64) - 1) = v.2.2.1 + v.2.2.2 := by
+      rw [UInt64.and_comm, allOnes_and]
+    rw [e2, e3, e4]
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · rw [UInt64.toNat_shiftRight, show (1 : UInt64).toNat % 64 = 1 from by decide,
+        Nat.shiftRight_eq_div_pow, pow_one]
+    · exact toNat_add_of_lt_uint64 (by omega)
+    · have hshl : (v.2.2.2 <<< (1 : UInt64)).toNat = 2 * v.2.2.2.toNat := by
+        rw [toNat_shiftLeft_one]; omega
+      rw [toNat_add_of_lt_uint64 (by rw [hshl]; omega), hshl]
+    · have hsub2 : (v.1 - (v.2.2.1 + v.2.2.2)).toNat
+          = v.1.toNat - (v.2.2.1.toNat + v.2.2.2.toNat) := by
+        rw [toNat_sub_of_le_uint64 _ _ (by rw [htr]; omega), htr]
+      rw [toNat_shiftLeft_one, hsub2]
+      omega
+  · simp only [if_neg hbit]
+    have e2 : v.2.2.2 &&& (0 : UInt64) = 0 := by rw [UInt64.and_comm]; exact uint64_zero_and _
+    have e3 : (0 : UInt64) &&& (v.2.2.2 <<< (1 : UInt64)) = 0 := uint64_zero_and _
+    have e4 : (v.2.2.1 + v.2.2.2) &&& (0 : UInt64) = 0 := by
+      rw [UInt64.and_comm]; exact uint64_zero_and _
+    rw [e2, e3, e4]
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · rw [UInt64.toNat_shiftRight, show (1 : UInt64).toNat % 64 = 1 from by decide,
+        Nat.shiftRight_eq_div_pow, pow_one]
+    · simp
+    · simp
+    · rw [UInt64.sub_zero, toNat_shiftLeft_one]; omega
+
+private theorem sqrtLoop_invariant (xu : UInt64) (hxu : xu.toNat < 2 ^ 54) :
+    ∀ n : ℕ, n ≤ 53 →
+      (sqrtStep^[n] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).2.2.2.toNat = 2 ^ (53 - n)
+      ∧ (sqrtStep^[n] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).2.2.1.toNat
+          = 2 * (sqrtStep^[n] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).2.1.toNat
+      ∧ (sqrtStep^[n] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).2.1.toNat ^ 2 * 2 ^ n
+          + 2 ^ 53 * (sqrtStep^[n] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).1.toNat
+          = 2 ^ (54 + n) * xu.toNat
+      ∧ (sqrtStep^[n] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).1.toNat
+          < 4 * (sqrtStep^[n] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).2.1.toNat + 2 ^ (55 - n) := by
+  intro n
+  induction n with
+  | zero =>
+    intro _
+    simp only [Function.iterate_zero, id_eq]
+    have h1 : (xu <<< 1).toNat = 2 * xu.toNat := by rw [toNat_shiftLeft_one]; omega
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · exact show ((1 : UInt64) <<< 53).toNat = 2 ^ 53 from by decide
+    · simp
+    · rw [show UInt64.toNat 0 = 0 from rfl, h1]; ring
+    · rw [show UInt64.toNat 0 = 0 from rfl, h1]
+      have : (2:ℕ) ^ 55 = 2 * 2 ^ 54 := by ring
+      omega
+  | succ k ih =>
+    intro hk
+    obtain ⟨hr_k, hs_k, hinv_k, hbnd_k⟩ := ih (by omega)
+    set state := sqrtStep^[k] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53) with hstate
+    rw [Function.iterate_succ_apply', ← hstate]
+    have hq_k54 : state.2.1.toNat < 2 ^ 54 := by
+      by_contra hcon
+      push Not at hcon
+      have hsq : ((2 : ℕ) ^ 54) ^ 2 ≤ state.2.1.toNat ^ 2 := Nat.pow_le_pow_left hcon 2
+      have e108 : ((2 : ℕ) ^ 54) ^ 2 = 2 ^ 108 := by rw [← pow_mul]
+      have hlow : (2 : ℕ) ^ 108 * 2 ^ k ≤ state.2.1.toNat ^ 2 * 2 ^ k := by
+        rw [← e108]; exact Nat.mul_le_mul_right _ hsq
+      have hxu54 : (2 : ℕ) ^ (54 + k) * xu.toNat < 2 ^ (54 + k) * 2 ^ 54 :=
+        (Nat.mul_lt_mul_left (Nat.two_pow_pos (54 + k))).mpr hxu
+      have e108k : (2 : ℕ) ^ (54 + k) * 2 ^ 54 = 2 ^ (108 + k) := by
+        rw [← pow_add]; congr 1; omega
+      have e108k' : (2 : ℕ) ^ 108 * 2 ^ k = 2 ^ (108 + k) := by rw [← pow_add]
+      omega
+    have hs_k55 : state.2.2.1.toNat < 2 ^ 55 := by
+      have e2 : (2 : ℕ) ^ 55 = 2 * 2 ^ 54 := by norm_num
+      omega
+    have hr_k53 : state.2.2.2.toNat ≤ 2 ^ 53 := by
+      rw [hr_k]; exact Nat.pow_le_pow_right (by norm_num) (by omega)
+    have hxp_k57 : state.1.toNat < 2 ^ 57 := by
+      have e1 : (2 : ℕ) ^ (55 - k) ≤ 2 ^ 55 := Nat.pow_le_pow_right (by norm_num) (by omega)
+      have e2 : (4 : ℕ) * 2 ^ 54 = 2 ^ 56 := by norm_num
+      have e3 : (2 : ℕ) ^ 56 + 2 ^ 55 < 2 ^ 57 := by norm_num
+      omega
+    obtain ⟨hstep_r, hstep_q, hstep_s, hstep_xp⟩ :=
+      sqrtStep_toNat state hq_k54 hs_k55 hr_k53 hxp_k57
+    have hnewr : (sqrtStep state).2.2.2.toNat = 2 ^ (53 - (k + 1)) := by
+      rw [hstep_r, hr_k]
+      have hexp : 53 - k = 53 - (k + 1) + 1 := by omega
+      rw [hexp, pow_succ]
+      omega
+    by_cases hbit : state.2.2.1.toNat + state.2.2.2.toNat ≤ state.1.toNat
+    · simp only [if_pos hbit] at hstep_q hstep_s hstep_xp
+      refine ⟨hnewr, by rw [hstep_s, hstep_q, hs_k]; ring, ?_, ?_⟩
+      · obtain ⟨d, hd⟩ := Nat.le.dest hbit
+        have hxpd : state.1.toNat - (state.2.2.1.toNat + state.2.2.2.toNat) = d := by omega
+        rw [hstep_q, hstep_xp, hxpd]
+        rw [show (54 + (k + 1) : ℕ) = 55 + k from by omega]
+        have hinv_k' : state.2.1.toNat ^ 2 * 2 ^ k
+            + 2 ^ 53 * (state.2.2.1.toNat + state.2.2.2.toNat + d) = 2 ^ (54 + k) * xu.toNat := by
+          rw [hd]; exact hinv_k
+        rw [hs_k] at hinv_k'
+        have hp1 : state.2.2.2.toNat * 2 ^ (k + 2) = 2 ^ 55 := by
+          rw [hr_k, ← pow_add]; congr 1; omega
+        have hp2 : state.2.2.2.toNat * 2 ^ (k + 1) = 2 ^ 54 := by
+          rw [hr_k, ← pow_add]; congr 1; omega
+        have hexpand : (state.2.1.toNat + state.2.2.2.toNat) ^ 2 * 2 ^ (k + 1)
+            = 2 * (state.2.1.toNat ^ 2 * 2 ^ k)
+              + state.2.1.toNat * (state.2.2.2.toNat * 2 ^ (k + 2))
+              + state.2.2.2.toNat * (state.2.2.2.toNat * 2 ^ (k + 1)) := by
+          ring
+        rw [hexpand, hp1, hp2]
+        have hdist : (2 : ℕ) ^ 53 * (2 * state.2.1.toNat + state.2.2.2.toNat + d)
+            = 2 ^ 54 * state.2.1.toNat + 2 ^ 53 * state.2.2.2.toNat + 2 ^ 53 * d := by ring
+        rw [hdist] at hinv_k'
+        have hdist2 : (2 : ℕ) ^ 53 * (2 * d) = 2 ^ 54 * d := by ring
+        rw [hdist2]
+        have h2kxu : (2 : ℕ) * (2 ^ (54 + k) * xu.toNat) = 2 ^ (55 + k) * xu.toNat := by
+          rw [show (55 + k : ℕ) = (54 + k) + 1 from by omega, pow_succ]; ring
+        omega
+      · rw [hstep_q, hstep_xp]
+        rw [show (55 - (k + 1) : ℕ) = 54 - k from by omega]
+        have h54 : (2 : ℕ) ^ (54 - k) = 2 * 2 ^ (53 - k) := by
+          rw [show (54 - k : ℕ) = (53 - k) + 1 from by omega, pow_succ]; ring
+        have h55 : (2 : ℕ) ^ (55 - k) = 4 * 2 ^ (53 - k) := by
+          rw [show (55 - k : ℕ) = (53 - k) + 2 from by omega, pow_add]; ring
+        omega
+    · simp only [if_neg hbit] at hstep_q hstep_s hstep_xp
+      refine ⟨hnewr, by rw [hstep_s, hstep_q]; omega, ?_, ?_⟩
+      · rw [hstep_q, hstep_xp]
+        rw [show (54 + (k + 1) : ℕ) = 55 + k from by omega]
+        have h2kxu : (2 : ℕ) * (2 ^ (54 + k) * xu.toNat) = 2 ^ (55 + k) * xu.toNat := by
+          rw [show (55 + k : ℕ) = (54 + k) + 1 from by omega, pow_succ]; ring
+        have hexpand2 : (state.2.1.toNat + 0) ^ 2 * 2 ^ (k + 1)
+            = 2 * (state.2.1.toNat ^ 2 * 2 ^ k) := by ring
+        have hdist3 : (2 : ℕ) ^ 53 * (2 * (state.1.toNat - 0))
+            = 2 * (2 ^ 53 * state.1.toNat) := by
+          rw [Nat.sub_zero]; ring
+        rw [hexpand2, hdist3]
+        omega
+      · rw [hstep_q, hstep_xp]
+        rw [show (55 - (k + 1) : ℕ) = 54 - k from by omega]
+        have h54 : (2 : ℕ) ^ (54 - k) = 2 * 2 ^ (53 - k) := by
+          rw [show (54 - k : ℕ) = (53 - k) + 1 from by omega, pow_succ]; ring
+        rw [h54]
+        omega
 
 /-- Relative error bound for `FPR.sqrt`, on a normal, nonnegative operand. Unlike `add_error` /
 `mul_error` / `div_error`, no separate magnitude-range hypothesis on the exact result is needed:
