@@ -547,4 +547,169 @@ private theorem expm_p63_sub_exact_le (x ccs : FPR) (hn : FPR.IsNormal x)
   exact ⟨by nlinarith [mul_le_mul_of_nonneg_left hy.1 hs0],
     by nlinarith [mul_le_mul_of_nonneg_left hy.2 hs0]⟩
 
+/-! ## From the quantised arguments to the true ones
+
+The bounds above are stated at `scaledArg x` and `scaledArg ccs`, the arguments the machine
+actually uses. Because `mtwop63` is exact, each differs from the operand it stands for by a pure
+floor error below `2 ^ (-63)`, and transporting the bound across that gap costs a little over one
+unit at each of the two places an argument enters: through the polynomial's argument, where the
+Lipschitz constant is about `2 ^ 63`, and through the final scale, where the polynomial's own
+magnitude is about `2 ^ 63`. -/
+
+private theorem two_zpow_neg_63 : (2 : ℝ) ^ (-63 : ℤ) = 1 / 2 ^ (63 : ℕ) := by norm_num
+
+/-- `scaledArg v` is exactly `⌊2 ^ 63 * toReal v⌋ / 2 ^ 63`: the shift by one cannot overflow, so
+the doubling cancels one power of two against the `2 ^ 64` scale. -/
+private theorem scaledArg_eq (v : FPR) (hn : FPR.IsNormal v) (h0 : 0 ≤ toReal v)
+    (h1 : toReal v < 1) :
+    scaledArg v = ((⌊(2 : ℝ) ^ 63 * toReal v⌋₊ : ℕ) : ℝ) / 2 ^ 63 := by
+  have hm : (mtwop63 v).toNat = ⌊(2 : ℝ) ^ 63 * toReal v⌋₊ := toNat_mtwop63 v hn h0 h1
+  have hlt : (mtwop63 v).toNat < 2 ^ 63 := by
+    rw [hm]
+    exact (Nat.floor_lt (by positivity)).mpr (by push_cast; nlinarith)
+  have hsh : ((mtwop63 v) <<< 1).toNat = (mtwop63 v).toNat * 2 := by
+    rw [toNat_shiftLeft_one]
+    exact Nat.mod_eq_of_lt (by omega)
+  unfold scaledArg
+  rw [hsh, hm]
+  push_cast
+  ring
+
+/-- **(1)** The quantisation gap: `scaledArg v` sits within `2 ^ (-63)` below `toReal v`. -/
+private theorem scaledArg_bracket (v : FPR) (hn : FPR.IsNormal v)
+    (h0 : 0 ≤ toReal v) (h1 : toReal v < 1) :
+    scaledArg v ≤ toReal v ∧ toReal v < scaledArg v + (2 : ℝ) ^ (-63 : ℤ) := by
+  refine ⟨scaledArg_le_toReal v hn h0 h1, ?_⟩
+  have hfl := Nat.lt_floor_add_one ((2 : ℝ) ^ 63 * toReal v)
+  rw [scaledArg_eq v hn h0 h1, two_zpow_neg_63,
+    show ((⌊(2 : ℝ) ^ 63 * toReal v⌋₊ : ℕ) : ℝ) / 2 ^ (63 : ℕ) + 1 / 2 ^ (63 : ℕ)
+      = (((⌊(2 : ℝ) ^ 63 * toReal v⌋₊ : ℕ) : ℝ) + 1) / 2 ^ (63 : ℕ) from by ring,
+    lt_div_iff₀ (by positivity : (0 : ℝ) < 2 ^ (63 : ℕ))]
+  linarith
+
+/-- Every coefficient fits in `63` bits. -/
+private theorem facctCoeffs_le {i : ℕ} (hi : i ≤ 12) : (facctCoeffs[i]!).toNat ≤ 2 ^ 63 := by
+  interval_cases i <;> decide
+
+/-- The exact Horner iterates stay in `[0, facctCoeffs[i]]`: nonnegative because the table grows
+faster than the argument shrinks it, and bounded by the coefficient because the subtracted term is
+nonnegative. -/
+private theorem hornerExact_mem (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 694 / 1000) :
+    ∀ i, i ≤ 12 → 0 ≤ hornerExact t i ∧ hornerExact t i ≤ ((facctCoeffs[i]!).toNat : ℝ) := by
+  intro i
+  induction i with
+  | zero =>
+    intro _
+    rw [show hornerExact t 0 = ((facctCoeffs[0]!).toNat : ℝ) from rfl]
+    exact ⟨Nat.cast_nonneg _, le_rfl⟩
+  | succ k ih =>
+    intro hk
+    obtain ⟨hlo, hhi⟩ := ih (by omega)
+    have hmono : ((facctCoeffs[k]!).toNat : ℝ) ≤ ((facctCoeffs[k + 1]!).toNat : ℝ) :=
+      Nat.cast_le.mpr (facctCoeffs_mono (by omega))
+    have hprod : t * hornerExact t k ≤ 694 / 1000 * ((facctCoeffs[k]!).toNat : ℝ) :=
+      mul_le_mul ht1 hhi hlo (by norm_num)
+    have hck : (0 : ℝ) ≤ ((facctCoeffs[k]!).toNat : ℝ) := Nat.cast_nonneg _
+    rw [show hornerExact t (k + 1)
+      = ((facctCoeffs[k + 1]!).toNat : ℝ) - t * hornerExact t k from rfl]
+    exact ⟨by linarith, by nlinarith [mul_nonneg ht0 hlo]⟩
+
+/-- The exact Horner iterates never exceed `2 ^ 63` in magnitude. -/
+private theorem hornerExact_abs_le (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 694 / 1000) (i : ℕ)
+    (hi : i ≤ 12) : |hornerExact t i| ≤ 2 ^ 63 := by
+  obtain ⟨hlo, hhi⟩ := hornerExact_mem t ht0 ht1 i hi
+  rw [abs_of_nonneg hlo]
+  exact le_trans hhi (by exact_mod_cast facctCoeffs_le hi)
+
+/-- **(2)** The exact Horner sequence is Lipschitz in its argument, with constant `2 ^ 65`. The
+step estimate is `d ↦ t * d + 2 ^ 63`, whose fixed point needs a constant at least
+`2 ^ 63 / (1 - 0.694) ≈ 3.27 * 2 ^ 63`; `2 ^ 65` is the next power of two above that, and closes
+the induction since `0.694 * 4 + 1 ≤ 4`. -/
+private theorem hornerExact_lipschitz (s t : ℝ) (hs0 : 0 ≤ s) (ht0 : 0 ≤ t)
+    (hs1 : s ≤ 694 / 1000) (ht1 : t ≤ 694 / 1000) :
+    ∀ i, i ≤ 12 → |hornerExact s i - hornerExact t i| ≤ (2 : ℝ) ^ 65 * |s - t| := by
+  intro i
+  induction i with
+  | zero =>
+    intro _
+    rw [show hornerExact s 0 = ((facctCoeffs[0]!).toNat : ℝ) from rfl,
+      show hornerExact t 0 = ((facctCoeffs[0]!).toNat : ℝ) from rfl, sub_self, abs_zero]
+    positivity
+  | succ k ih =>
+    intro hk
+    have ihk := ih (by omega)
+    have hmag := hornerExact_abs_le t ht0 ht1 k (by omega)
+    have hkey : hornerExact s (k + 1) - hornerExact t (k + 1)
+        = (t - s) * hornerExact t k + s * (hornerExact t k - hornerExact s k) := by
+      rw [show hornerExact s (k + 1)
+          = ((facctCoeffs[k + 1]!).toNat : ℝ) - s * hornerExact s k from rfl,
+        show hornerExact t (k + 1)
+          = ((facctCoeffs[k + 1]!).toNat : ℝ) - t * hornerExact t k from rfl]
+      ring
+    have h1 : |(t - s) * hornerExact t k| ≤ |s - t| * 2 ^ 63 := by
+      rw [abs_mul, abs_sub_comm]
+      exact mul_le_mul_of_nonneg_left hmag (abs_nonneg _)
+    have h2 : |s * (hornerExact t k - hornerExact s k)|
+        ≤ 694 / 1000 * ((2 : ℝ) ^ 65 * |s - t|) := by
+      rw [abs_mul, abs_of_nonneg hs0, abs_sub_comm]
+      exact mul_le_mul hs1 ihk (abs_nonneg _) (by norm_num)
+    calc |hornerExact s (k + 1) - hornerExact t (k + 1)|
+        ≤ |(t - s) * hornerExact t k| + |s * (hornerExact t k - hornerExact s k)| := by
+          rw [hkey]; exact abs_add_le _ _
+      _ ≤ |s - t| * 2 ^ 63 + 694 / 1000 * ((2 : ℝ) ^ 65 * |s - t|) := add_le_add h1 h2
+      _ ≤ (2 : ℝ) ^ 65 * |s - t| := by nlinarith [abs_nonneg (s - t)]
+
+/-- **(3)** The whole fixed-point pipeline against the exact polynomial at the *true* operands.
+The two quantisation gaps contribute `2 ^ 65 * 2 ^ (-63) = 4` through the argument and
+`2 ^ (-63) * 2 ^ 63 = 1` through the scale, on top of the truncation bound `5`. -/
+private theorem expm_p63_sub_trueArg_le (x ccs : FPR)
+    (hn : FPR.IsNormal x) (h0 : 0 ≤ toReal x) (hlog : toReal x < Real.log 2)
+    (hcn : FPR.IsNormal ccs) (hc0 : 0 ≤ toReal ccs) (hc1 : toReal ccs < 1) :
+    |((expm_p63 x ccs).toNat : ℝ) - toReal ccs * hornerExact (toReal x) 12| ≤ 10 := by
+  have h9 : Real.log 2 < 0.6931471808 := Real.log_two_lt_d9
+  norm_num at h9
+  have hx1 : toReal x < 1 := by linarith
+  have hxle : toReal x ≤ 694 / 1000 := by linarith
+  have hsx := scaledArg_bracket x hn h0 hx1
+  have hsc := scaledArg_bracket ccs hcn hc0 hc1
+  rw [two_zpow_neg_63] at hsx hsc
+  have hmain := expm_p63_sub_exact_le x ccs hn h0 hlog
+  have hLip := hornerExact_lipschitz (scaledArg x) (toReal x) (scaledArg_nonneg x) h0
+    (scaledArg_le_694 x hn h0 hlog) hxle 12 le_rfl
+  have hmag := hornerExact_abs_le (toReal x) h0 hxle 12 le_rfl
+  have hdx : |scaledArg x - toReal x| ≤ 1 / 2 ^ (63 : ℕ) := by
+    rw [abs_sub_comm, abs_of_nonneg (by linarith [hsx.1])]
+    linarith [hsx.2]
+  have hdc : |scaledArg ccs - toReal ccs| ≤ 1 / 2 ^ (63 : ℕ) := by
+    rw [abs_sub_comm, abs_of_nonneg (by linarith [hsc.1])]
+    linarith [hsc.2]
+  have hHd : |hornerExact (scaledArg x) 12 - hornerExact (toReal x) 12| ≤ 4 :=
+    le_trans hLip (by
+      calc (2 : ℝ) ^ 65 * |scaledArg x - toReal x|
+          ≤ (2 : ℝ) ^ 65 * (1 / 2 ^ (63 : ℕ)) := mul_le_mul_of_nonneg_left hdx (by positivity)
+        _ = 4 := by norm_num)
+  have hkey : |scaledArg ccs * hornerExact (scaledArg x) 12
+      - toReal ccs * hornerExact (toReal x) 12| ≤ 5 := by
+    calc |scaledArg ccs * hornerExact (scaledArg x) 12
+            - toReal ccs * hornerExact (toReal x) 12|
+        ≤ |scaledArg ccs * (hornerExact (scaledArg x) 12 - hornerExact (toReal x) 12)|
+          + |(scaledArg ccs - toReal ccs) * hornerExact (toReal x) 12| := by
+          rw [show scaledArg ccs * hornerExact (scaledArg x) 12
+              - toReal ccs * hornerExact (toReal x) 12
+              = scaledArg ccs * (hornerExact (scaledArg x) 12 - hornerExact (toReal x) 12)
+                + (scaledArg ccs - toReal ccs) * hornerExact (toReal x) 12 from by ring]
+          exact abs_add_le _ _
+      _ ≤ 1 * 4 + 1 / 2 ^ (63 : ℕ) * 2 ^ 63 := by
+          rw [abs_mul, abs_mul, abs_of_nonneg (scaledArg_nonneg ccs)]
+          exact add_le_add
+            (mul_le_mul (scaledArg_le_one ccs) hHd (abs_nonneg _) (by norm_num))
+            (mul_le_mul hdc hmag (abs_nonneg _) (by positivity))
+      _ = 5 := by norm_num
+  calc |((expm_p63 x ccs).toNat : ℝ) - toReal ccs * hornerExact (toReal x) 12|
+      ≤ |((expm_p63 x ccs).toNat : ℝ) - scaledArg ccs * hornerExact (scaledArg x) 12|
+        + |scaledArg ccs * hornerExact (scaledArg x) 12
+          - toReal ccs * hornerExact (toReal x) 12| := abs_sub_le _ _ _
+    _ ≤ 5 + 5 := add_le_add hmain hkey
+    _ = 10 := by norm_num
+
 end Falcon.Concrete.FPRBridge
