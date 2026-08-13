@@ -6087,6 +6087,92 @@ private theorem sqrtLoop_invariant (xu : UInt64) (hxu : xu.toNat < 2 ^ 54) :
         rw [h54]
         omega
 
+/-! ### The loop's closing step, and the integer square root it computes
+
+The bit weight `r` reaches zero on the final iteration, so the `r = 2 ^ (53 - k)` conjunct of
+`sqrtLoop_invariant` stops at `k = 53`; the remaining conjuncts survive one more step. That last
+step is what turns the invariant into an exact integer square root. -/
+
+private theorem sqrtLoop_at_54 (xu : UInt64) (hxu : xu.toNat < 2 ^ 54) :
+    (sqrtStep^[54] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).2.1.toNat ^ 2 * 2 ^ 54
+        + 2 ^ 53 * (sqrtStep^[54] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).1.toNat
+        = 2 ^ 108 * xu.toNat
+      ∧ (sqrtStep^[54] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).1.toNat
+        < 4 * (sqrtStep^[54] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).2.1.toNat + 2 := by
+  obtain ⟨hr, hs, hinv, hbnd⟩ := sqrtLoop_invariant xu hxu 53 (by norm_num)
+  set st := sqrtStep^[53] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53) with hst
+  rw [show (54 : ℕ) = 53 + 1 from rfl, Function.iterate_succ_apply', ← hst]
+  -- the overflow bounds one more step needs
+  have hq54 : st.2.1.toNat < 2 ^ 54 := by
+    by_contra hcon
+    push Not at hcon
+    have hsq : ((2 : ℕ) ^ 54) ^ 2 ≤ st.2.1.toNat ^ 2 := Nat.pow_le_pow_left hcon 2
+    have e108 : ((2 : ℕ) ^ 54) ^ 2 = 2 ^ 108 := by rw [← pow_mul]
+    have hlow : (2 : ℕ) ^ 108 * 2 ^ 53 ≤ st.2.1.toNat ^ 2 * 2 ^ 53 := by
+      rw [← e108]; exact Nat.mul_le_mul_right _ hsq
+    have hhi : (2 : ℕ) ^ (54 + 53) * xu.toNat < 2 ^ (54 + 53) * 2 ^ 54 :=
+      (Nat.mul_lt_mul_left (Nat.two_pow_pos (54 + 53))).mpr hxu
+    have e1 : (2 : ℕ) ^ (54 + 53) * 2 ^ 54 = 2 ^ 161 := by rw [← pow_add]
+    have e2 : (2 : ℕ) ^ 108 * 2 ^ 53 = 2 ^ 161 := by rw [← pow_add]
+    omega
+  have hs55 : st.2.2.1.toNat < 2 ^ 55 := by
+    have : (2 : ℕ) ^ 55 = 2 * 2 ^ 54 := by norm_num
+    omega
+  have hr53 : st.2.2.2.toNat ≤ 2 ^ 53 := by rw [hr]; norm_num
+  have hxp57 : st.1.toNat < 2 ^ 57 := by
+    have e1 : (4 : ℕ) * 2 ^ 54 = 2 ^ 56 := by norm_num
+    have e2 : (2 : ℕ) ^ (55 - 53) = 4 := by norm_num
+    omega
+  obtain ⟨hstep_r, hstep_q, hstep_s, hstep_xp⟩ := sqrtStep_toNat st hq54 hs55 hr53 hxp57
+  rw [hr] at hstep_q hstep_s hstep_xp
+  norm_num at hstep_q hstep_xp
+  have hinv' : st.2.1.toNat ^ 2 * 2 ^ 53 + 2 ^ 53 * st.1.toNat = 2 ^ 107 * xu.toNat := by
+    rw [show (54 : ℕ) + 53 = 107 from by norm_num] at hinv; exact hinv
+  have hsplit : (2 : ℕ) ^ 108 * xu.toNat = 2 * (2 ^ 107 * xu.toNat) := by ring
+  rw [show (53 : ℕ) + 1 = 54 from rfl]
+  by_cases hbit : st.2.2.1.toNat < st.1.toNat
+  · rw [if_pos hbit] at hstep_q hstep_xp
+    rw [hs] at hbit hstep_xp
+    obtain ⟨d, hd⟩ := Nat.le.dest hbit
+    have hxpd : st.1.toNat - (2 * st.2.1.toNat + 1) = d := by omega
+    rw [hstep_q, hstep_xp, hxpd]
+    refine ⟨?_, by omega⟩
+    rw [hsplit, ← hinv', show st.1.toNat = 2 * st.2.1.toNat + 1 + d from by omega]
+    ring
+  · rw [if_neg hbit] at hstep_q hstep_xp
+    rw [hstep_q, hstep_xp, Nat.sub_zero, add_zero]
+    refine ⟨?_, by omega⟩
+    rw [hsplit, ← hinv']
+    ring
+
+/-- The loop computes an exact integer square root: `q ^ 2 ≤ 2 ^ 54 * xu < (q + 1) ^ 2`. -/
+private theorem sqrtLoop_isqrt (xu : UInt64) (hxu : xu.toNat < 2 ^ 54) :
+    (sqrtStep^[54] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).2.1.toNat ^ 2 ≤ 2 ^ 54 * xu.toNat
+      ∧ 2 ^ 54 * xu.toNat
+        < ((sqrtStep^[54] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).2.1.toNat + 1) ^ 2 := by
+  obtain ⟨hinv, hbnd⟩ := sqrtLoop_at_54 xu hxu
+  set q := (sqrtStep^[54] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).2.1.toNat with hq
+  set xp := (sqrtStep^[54] (xu <<< 1, 0, 0, (1 : UInt64) <<< 53)).1.toNat with hxp
+  have h108 : (2 : ℕ) ^ 108 = 2 ^ 54 * 2 ^ 54 := by norm_num
+  have hexp : (q + 1) ^ 2 * 2 ^ 54 = q ^ 2 * 2 ^ 54 + 2 ^ 55 * q + 2 ^ 54 := by ring
+  constructor
+  · nlinarith [hinv, h108]
+  · nlinarith [hinv, hbnd, hexp, h108]
+
+/-- The integer square root brackets the real one. -/
+private theorem nat_sqrt_bracket {q N : ℕ} (h1 : q ^ 2 ≤ N) (h2 : N < (q + 1) ^ 2) :
+    (q : ℝ) ≤ Real.sqrt (N : ℝ) ∧ Real.sqrt (N : ℝ) < (q : ℝ) + 1 := by
+  constructor
+  · rw [show ((q : ℝ)) = Real.sqrt ((q : ℝ) ^ 2) from
+      (Real.sqrt_sq (by positivity)).symm]
+    exact Real.sqrt_le_sqrt (by exact_mod_cast h1)
+  · rw [show ((q : ℝ) + 1) = Real.sqrt (((q : ℝ) + 1) ^ 2) from
+      (Real.sqrt_sq (by positivity)).symm]
+    refine Real.sqrt_lt_sqrt (by positivity) ?_
+    have : ((N : ℕ) : ℝ) < (((q + 1) ^ 2 : ℕ) : ℝ) := by exact_mod_cast h2
+    push_cast at this
+    linarith
+
 /-- Relative error bound for `FPR.sqrt`, on a normal, nonnegative operand. Unlike `add_error` /
 `mul_error` / `div_error`, no separate magnitude-range hypothesis on the exact result is needed:
 the square root of a value already bracketed in `[FPR.minNormalReal, FPR.maxFiniteReal]` lands in
