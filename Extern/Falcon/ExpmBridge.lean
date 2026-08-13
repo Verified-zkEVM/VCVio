@@ -106,11 +106,76 @@ private theorem toNat_mulHi64 (a b : UInt64) :
       calc u.toNat * v.toNat < 2 ^ 32 * 2 ^ 32 := Nat.mul_lt_mul_of_lt_of_lt hu hv
         _ = 2 ^ 64 := by norm_num
     rw [UInt64.toNat_mul, Nat.mod_eq_of_lt hlt]
-  -- WIP: `mulHi_limbs` above carries the whole mathematical content; what remains is pushing
-  -- `.toNat` through the unfolded expression tree, one `UInt64.toNat_*` lemma per node with a
-  -- no-overflow side condition (all discharged by `hprod`, `hb32`, `haLo`/`hbLo`/`haHi`/`hbHi`),
-  -- and then `exact mulHi_limbs _ _ _ _`.
   simp only [mulHi64]
+  -- the four limbs, and the four partial products they form
+  have hAH : (a >>> 32).toNat < 2 ^ 32 := by rw [haHi]; exact hb32 _ ha
+  have hAL : (a &&& (0xFFFFFFFF : UInt64)).toNat < 2 ^ 32 := by rw [haLo]; omega
+  have hBH : (b >>> 32).toNat < 2 ^ 32 := by rw [hbHi]; exact hb32 _ hb
+  have hBL : (b &&& (0xFFFFFFFF : UInt64)).toNat < 2 ^ 32 := by rw [hbLo]; omega
+  have p11 := hprod _ _ hAH hBH
+  have p10 := hprod _ _ hAH hBL
+  have p01 := hprod _ _ hAL hBH
+  have p00 := hprod _ _ hAL hBL
+  -- each partial product's high and low halves
+  have s10 : (((a >>> 32) * (b &&& (0xFFFFFFFF : UInt64))) >>> 32).toNat
+      = (a.toNat / 2 ^ 32 * (b.toNat % 2 ^ 32)) / 2 ^ 32 := by
+    rw [toNat_shiftRight_32_uint64, p10, haHi, hbLo]
+  have s01 : (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) >>> 32).toNat
+      = ((a.toNat % 2 ^ 32) * (b.toNat / 2 ^ 32)) / 2 ^ 32 := by
+    rw [toNat_shiftRight_32_uint64, p01, haLo, hbHi]
+  have s00 : (((a &&& (0xFFFFFFFF : UInt64)) * (b &&& (0xFFFFFFFF : UInt64))) >>> 32).toNat
+      = ((a.toNat % 2 ^ 32) * (b.toNat % 2 ^ 32)) / 2 ^ 32 := by
+    rw [toNat_shiftRight_32_uint64, p00, haLo, hbLo]
+  have m10 : (((a >>> 32) * (b &&& (0xFFFFFFFF : UInt64))) &&& (0xFFFFFFFF : UInt64)).toNat
+      = (a.toNat / 2 ^ 32 * (b.toNat % 2 ^ 32)) % 2 ^ 32 := by
+    rw [toNat_and_low32, p10, haHi, hbLo]
+  have m01 : (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) &&& (0xFFFFFFFF : UInt64)).toNat
+      = ((a.toNat % 2 ^ 32) * (b.toNat / 2 ^ 32)) % 2 ^ 32 := by
+    rw [toNat_and_low32, p01, haLo, hbHi]
+  -- the middle column, then the final sum; neither leaves its register
+  have hmidlt : ((((a &&& (0xFFFFFFFF : UInt64)) * (b &&& (0xFFFFFFFF : UInt64))) >>> 32).toNat
+      + (((a >>> 32) * (b &&& (0xFFFFFFFF : UInt64))) &&& (0xFFFFFFFF : UInt64)).toNat
+      + (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) &&& (0xFFFFFFFF : UInt64)).toNat) < 2 ^ 64 := by
+    have h1 : ((a.toNat % 2 ^ 32) * (b.toNat % 2 ^ 32)) / 2 ^ 32 < 2 ^ 32 := by
+      refine Nat.div_lt_of_lt_mul ?_
+      calc (a.toNat % 2 ^ 32) * (b.toNat % 2 ^ 32) < 2 ^ 32 * 2 ^ 32 :=
+            Nat.mul_lt_mul_of_lt_of_lt (by omega) (by omega)
+        _ = 2 ^ 32 * 2 ^ 32 := rfl
+    have h2 : (a.toNat / 2 ^ 32 * (b.toNat % 2 ^ 32)) % 2 ^ 32 < 2 ^ 32 :=
+      Nat.mod_lt _ (Nat.two_pow_pos _)
+    have h3 : ((a.toNat % 2 ^ 32) * (b.toNat / 2 ^ 32)) % 2 ^ 32 < 2 ^ 32 :=
+      Nat.mod_lt _ (Nat.two_pow_pos _)
+    rw [s00, m10, m01]; omega
+  -- bounds on the four summands of the final column
+  have b11 : ((a >>> 32) * (b >>> 32)).toNat ≤ (2 ^ 32 - 1) * (2 ^ 32 - 1) := by
+    rw [p11]; exact Nat.mul_le_mul (by omega) (by omega)
+  have b10 : (((a >>> 32) * (b &&& (0xFFFFFFFF : UInt64))) >>> 32).toNat < 2 ^ 32 := by
+    rw [s10]
+    refine Nat.div_lt_of_lt_mul ?_
+    calc a.toNat / 2 ^ 32 * (b.toNat % 2 ^ 32) < 2 ^ 32 * 2 ^ 32 :=
+          Nat.mul_lt_mul_of_lt_of_lt (by omega) (by omega)
+      _ = 2 ^ 32 * 2 ^ 32 := rfl
+  have b01 : (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) >>> 32).toNat < 2 ^ 32 := by
+    rw [s01]
+    refine Nat.div_lt_of_lt_mul ?_
+    calc (a.toNat % 2 ^ 32) * (b.toNat / 2 ^ 32) < 2 ^ 32 * 2 ^ 32 :=
+          Nat.mul_lt_mul_of_lt_of_lt (by omega) (by omega)
+      _ = 2 ^ 32 * 2 ^ 32 := rfl
+  have bmid : ((((a &&& (0xFFFFFFFF : UInt64)) * (b &&& (0xFFFFFFFF : UInt64))) >>> 32
+      + (((a >>> 32) * (b &&& (0xFFFFFFFF : UInt64))) &&& (0xFFFFFFFF : UInt64))
+      + (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) &&& (0xFFFFFFFF : UInt64)))
+        >>> 32).toNat < 2 ^ 32 := by
+    rw [toNat_shiftRight_32_uint64]
+    refine Nat.div_lt_of_lt_mul ?_
+    have := (((a &&& (0xFFFFFFFF : UInt64)) * (b &&& (0xFFFFFFFF : UInt64))) >>> 32
+      + (((a >>> 32) * (b &&& (0xFFFFFFFF : UInt64))) &&& (0xFFFFFFFF : UInt64))
+      + (((a &&& (0xFFFFFFFF : UInt64)) * (b >>> 32)) &&& (0xFFFFFFFF : UInt64))).toNat_lt_size
+    omega
+  -- WIP. Everything above is proved; what remains is threading `.toNat` through the four
+  -- nested `UInt64` additions of the final column and closing with `mulHi_limbs`. Each addition
+  -- needs a no-overflow side condition, and the bounds for all four summands are `b11`, `b10`,
+  -- `b01`, `bmid` above. The last attempt failed only because `omega` was not given `b11` in the
+  -- outermost step.
   sorry
 
 end Falcon.Concrete.FPRBridge
