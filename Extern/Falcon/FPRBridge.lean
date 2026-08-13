@@ -5491,6 +5491,150 @@ private theorem divPipeline_q0_bracket (x y : FPR) :
           + (divPipeline x y).yu.toNat from by ring]
     omega
 
+/-- A one-bit sticky shift moves the value by at most one unit — sharper than the generic
+`stickyShift_mul_lt` / `lt_stickyShift_mul_add` pair, which would allow two. This sharpness is
+what keeps `FPR.div`'s renormalisation inside the error budget. -/
+private theorem stickyShift_one_bracket (v : ℕ) :
+    stickyShift v 1 * 2 ≤ v + 1 ∧ v ≤ stickyShift v 1 * 2 + 1 := by
+  rw [stickyShift_eq v 1]
+  have h4 : v % 4 < 4 := Nat.mod_lt _ (by norm_num)
+  have hd : v = 4 * (v / 2 ^ (1 + 1)) + v % 4 := by
+    rw [show (2 : ℕ) ^ (1 + 1) = 4 from by norm_num]; omega
+  by_cases h : v % 2 ^ (1 + 1) = 0
+  · rw [if_pos h]
+    rw [show (2 : ℕ) ^ (1 + 1) = 4 from by norm_num] at h
+    omega
+  · rw [if_neg h]
+    rw [show (2 : ℕ) ^ (1 + 1) = 4 from by norm_num] at h
+    omega
+
+/-! ### The renormalisation step -/
+
+private theorem divPipeline_q0_lt (x y : FPR) : (divPipeline x y).q0.toNat < 2 ^ 56 := by
+  obtain ⟨-, -, hqlt, hqe⟩ := divPipeline_loop_invariant x y
+  have h := divPipeline_q0_toNat x y
+  rw [h]; split <;> omega
+
+private theorem divPipeline_le_q0 (x y : FPR) : 2 ^ 54 ≤ (divPipeline x y).q0.toNat := by
+  obtain ⟨-, hbr⟩ := divPipeline_q0_bracket x y
+  have hxu : (divPipeline x y).xu.toNat = (FPR.decode x).mantissa + 2 ^ 52 := by
+    rw [divPipeline_xu]; exact significand_pack_toNat x
+  have hyu : (divPipeline x y).yu.toNat = (FPR.decode y).mantissa + 2 ^ 52 := by
+    rw [divPipeline_yu]; exact significand_pack_toNat y
+  have hmx := FPR.decode_mantissa_lt x
+  have hmy := FPR.decode_mantissa_lt y
+  by_contra hc
+  push Not at hc
+  have h1 : (2 : ℕ) ^ 107 ≤ 2 ^ 55 * (divPipeline x y).xu.toNat := by
+    calc (2 : ℕ) ^ 107 = 2 ^ 55 * 2 ^ 52 := by norm_num
+      _ ≤ 2 ^ 55 * (divPipeline x y).xu.toNat := Nat.mul_le_mul_left _ (by omega)
+  have hprod : (divPipeline x y).q0.toNat * (divPipeline x y).yu.toNat
+      ≤ (2 ^ 54 - 1) * (2 ^ 53 - 1) := Nat.mul_le_mul (by omega) (by omega)
+  norm_num at hprod h1
+  omega
+
+private theorem divPipeline_es_toNat (x y : FPR) :
+    (divPipeline x y).es.toNat = (divPipeline x y).q0.toNat / 2 ^ 55 := by
+  change ((divPipeline x y).q0 >>> 55).toNat = _
+  rw [UInt64.toNat_shiftRight, show (55 : UInt64).toNat % 64 = 55 from by decide,
+    Nat.shiftRight_eq_div_pow]
+
+private theorem divPipeline_es_le_one (x y : FPR) : (divPipeline x y).es.toNat ≤ 1 := by
+  rw [divPipeline_es_toNat]
+  have := divPipeline_q0_lt x y
+  omega
+
+private theorem divPipeline_q1_toNat (x y : FPR) :
+    (divPipeline x y).q1.toNat
+      = stickyShift (divPipeline x y).q0.toNat (divPipeline x y).es.toNat := by
+  change (((divPipeline x y).q0 >>> (divPipeline x y).es) ||| ((divPipeline x y).q0 &&& 1)).toNat
+    = _
+  exact toNat_shiftRight_or_and_one _ _ (divPipeline_es_le_one x y)
+
+/-- The renormalised quotient lands in the window `FPR.make`'s rounding analysis needs. -/
+private theorem divPipeline_q1_mem (x y : FPR) :
+    2 ^ 54 ≤ (divPipeline x y).q1.toNat ∧ (divPipeline x y).q1.toNat < 2 ^ 55 := by
+  have hes := divPipeline_es_le_one x y
+  have hlo := divPipeline_le_q0 x y
+  have hhi := divPipeline_q0_lt x y
+  have hsr := divPipeline_es_toNat x y
+  rw [divPipeline_q1_toNat]
+  interval_cases h : (divPipeline x y).es.toNat
+  · rw [stickyShift_zero]
+    omega
+  · refine ⟨le_trans ?_ (le_stickyShift _ _), stickyShift_lt_two_pow (by norm_num) ?_⟩ <;>
+      · simp only [pow_one]; omega
+
+/-- The renormalised quotient still brackets the exact value to one unit in *its* last place.
+The one-bit sticky shift is what keeps this at one unit rather than two. -/
+private theorem divPipeline_q1_bracket (x y : FPR) :
+    (divPipeline x y).q1.toNat * 2 ^ (divPipeline x y).es.toNat * (divPipeline x y).yu.toNat
+        < 2 ^ 55 * (divPipeline x y).xu.toNat
+          + 2 ^ (divPipeline x y).es.toNat * (divPipeline x y).yu.toNat
+      ∧ 2 ^ 55 * (divPipeline x y).xu.toNat
+        < (divPipeline x y).q1.toNat * 2 ^ (divPipeline x y).es.toNat
+            * (divPipeline x y).yu.toNat
+          + 2 ^ (divPipeline x y).es.toNat * (divPipeline x y).yu.toNat := by
+  obtain ⟨hb1, hb2⟩ := divPipeline_q0_bracket x y
+  have hes := divPipeline_es_le_one x y
+  have hq1 := divPipeline_q1_toNat x y
+  interval_cases h : (divPipeline x y).es.toNat
+  · rw [hq1, stickyShift_zero]; simpa using ⟨hb1, hb2⟩
+  · have hsb := stickyShift_one_bracket (divPipeline x y).q0.toNat
+    have hmul1 : stickyShift (divPipeline x y).q0.toNat 1 * 2 * (divPipeline x y).yu.toNat
+        ≤ ((divPipeline x y).q0.toNat + 1) * (divPipeline x y).yu.toNat :=
+      Nat.mul_le_mul_right _ hsb.1
+    have hmul2 : (divPipeline x y).q0.toNat * (divPipeline x y).yu.toNat
+        ≤ (stickyShift (divPipeline x y).q0.toNat 1 * 2 + 1) * (divPipeline x y).yu.toNat :=
+      Nat.mul_le_mul_right _ hsb.2
+    rw [add_mul, one_mul] at hmul1 hmul2
+    rw [hq1]
+    simp only [pow_one]
+    constructor
+    · calc stickyShift (divPipeline x y).q0.toNat 1 * 2 * (divPipeline x y).yu.toNat
+          ≤ (divPipeline x y).q0.toNat * (divPipeline x y).yu.toNat
+            + (divPipeline x y).yu.toNat := hmul1
+        _ < 2 ^ 55 * (divPipeline x y).xu.toNat + 2 * (divPipeline x y).yu.toNat := by omega
+    · calc 2 ^ 55 * (divPipeline x y).xu.toNat
+          < (divPipeline x y).q0.toNat * (divPipeline x y).yu.toNat
+            + (divPipeline x y).yu.toNat := hb2
+        _ ≤ stickyShift (divPipeline x y).q0.toNat 1 * 2 * (divPipeline x y).yu.toNat
+            + 2 * (divPipeline x y).yu.toNat := by omega
+
+/-! ### The flush-to-zero guard is inactive on a normal numerator -/
+
+private theorem divPipeline_ex_toNat (x y : FPR) :
+    (divPipeline x y).ex.toNat = (FPR.decode x).exponent := by
+  change (((x >>> 52).toUInt32) &&& 0x7FF).toNat = _
+  exact toNat_ex_field_of x
+
+private theorem divPipeline_ey_toNat (x y : FPR) :
+    (divPipeline x y).ey.toNat = (FPR.decode y).exponent := by
+  change (((y >>> 52).toUInt32) &&& 0x7FF).toNat = _
+  exact toNat_ex_field_of y
+
+private theorem divPipeline_dzu_eq_zero (x y : FPR) (ha : FPR.IsNormal x) :
+    (divPipeline x y).dzu = 0 := by
+  have hx1 : 1 ≤ (divPipeline x y).ex.toNat := by
+    rw [divPipeline_ex_toNat]; exact Nat.one_le_iff_ne_zero.mpr ha.1
+  have hxlt : (divPipeline x y).ex.toNat < 2 ^ 11 := by
+    rw [divPipeline_ex_toNat]; exact FPR.decode_exponent_lt x
+  have hsx : ((divPipeline x y).ex - 1).toNat = (divPipeline x y).ex.toNat - 1 :=
+    toNat_sub_of_le_uint32 (by simpa using hx1)
+  have hsh : (((divPipeline x y).ex - 1) >>> 31) = 0 := by
+    rw [← UInt32.toNat_inj, toNat_shiftRight_31_uint32, show (0 : UInt32).toNat = 0 from rfl]
+    omega
+  change tbmask ((divPipeline x y).ex - 1) = 0
+  unfold tbmask
+  rw [hsh]
+  decide
+
+private theorem divPipeline_dm_eq (x y : FPR) (ha : FPR.IsNormal x) :
+    (divPipeline x y).dm = 0xFFFFFFFFFFFFFFFF := by
+  change (((divPipeline x y).dzu &&& 1).toUInt64 - 1) = _
+  rw [divPipeline_dzu_eq_zero x y ha]
+  decide
+
 /-- Relative error bound for `FPR.div`, on normal operands whose exact quotient stays in the
 correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
 why both the operand- and result-side restrictions are necessary. -/
