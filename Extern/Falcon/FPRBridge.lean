@@ -5062,6 +5062,207 @@ theorem mul_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
         * (2 : ℝ) ^ (mulPipeline a b).e'.toInt from by rw [he'I, hScale]; ring]
   exact hMV
 
+/-! ## Trading the `FPR.div` / `FPR.sqrt` loops for induction
+
+Unlike `FPR.add` and `FPR.mul`, these two kernels are not straight-line: each runs a fixed-length
+`for _ in [0:n]` loop over a mutable state. Neither body reads the loop index, so the fold is
+iteration of a single step function, and an invariant of the state becomes ordinary induction on
+the step count. The pipeline records below name the loop's result as a field, pinned to the kernel
+term by `rfl` exactly as `addPipeline` and `mulPipeline` are; `divPipeline_loop_induction` and
+`sqrtPipeline_loop_induction` are the entry points for reasoning about what the loops compute. -/
+
+/-- A `for _ in [a:b]` loop whose body ignores the index is iteration of that body. -/
+private theorem forIn_range'_eq_iterate {α : Type} (f : α → α) :
+    ∀ (n s step : ℕ) (init : α),
+      (forIn (List.range' s n step) init (fun _ b => pure (ForInStep.yield (f b))) : Id α)
+        = f^[n] init := by
+  intro n
+  induction n with
+  | zero => intro s step init; rfl
+  | succ k ih =>
+    intro s step init
+    rw [List.range'_succ]
+    simp only [List.forIn_cons]
+    rw [Function.iterate_succ_apply]
+    exact ih (s + step) step (f init)
+
+private theorem forIn_range_eq_iterate {α : Type} (n : ℕ) (init : α) (f : α → α) :
+    (forIn [0:n] init (fun _ b => pure (ForInStep.yield (f b))) : Id α) = f^[n] init := by
+  rw [Std.Legacy.Range.forIn_eq_forIn_range']
+  simpa using forIn_range'_eq_iterate f _ _ _ init
+
+/-- Step-indexed induction for an index-independent `for _ in [0:n]` loop. -/
+private theorem forIn_range_induction {α : Type} (n : ℕ) (init : α) (f : α → α)
+    (P : ℕ → α → Prop) (h0 : P 0 init) (hstep : ∀ k a, P k a → P (k + 1) (f a)) :
+    P n (forIn [0:n] init (fun _ b => pure (ForInStep.yield (f b))) : Id α) := by
+  rw [forIn_range_eq_iterate]
+  induction n with
+  | zero => exact h0
+  | succ k ih => rw [Function.iterate_succ_apply']; exact hstep k _ ih
+
+/-- One iteration of `FPR.div`'s restoring-division loop, over the state `(q, x)`. -/
+private def divStep (yu : UInt64) (s : UInt64 × UInt64) : UInt64 × UInt64 :=
+  let q_ := s.1
+  let xu_ := s.2
+  let b := (xu_ - yu) >>> 63 - 1
+  let xu_ := xu_ - (b &&& yu)
+  let q_ := q_ ||| b &&& 1
+  let xu_ := xu_ <<< 1
+  let q_ := q_ <<< 1
+  (q_, xu_)
+
+private structure DivPipeline where
+  /-- The state `(q, x)` left by the restoring-division loop. -/
+  loopRes : UInt64 × UInt64
+  /-- The quotient with its final sticky bit folded in. -/
+  q0 : UInt64
+  /-- The renormalising right-shift count. -/
+  es : UInt64
+  /-- The renormalised quotient handed to `make`. -/
+  q1 : UInt64
+  ex : UInt32
+  ey : UInt32
+  e : UInt32
+  sg : UInt64
+  /-- All-ones when the numerator's exponent field is zero (the flush-to-zero guard). -/
+  dzu : UInt32
+  e' : Int32
+  dm : UInt64
+
+private def divPipeline (x y : FPR) : DivPipeline :=
+  let xu : UInt64 := (x &&& M52) ||| ((1 : UInt64) <<< 52)
+  let yu : UInt64 := (y &&& M52) ||| ((1 : UInt64) <<< 52)
+  let loopRes : UInt64 × UInt64 :=
+    (forIn [0:55] ((0 : UInt64), xu) (fun _ s => pure (ForInStep.yield (divStep yu s)))
+      : Id (UInt64 × UInt64))
+  let q0 := loopRes.1 ||| ((loopRes.2 ||| (0 - loopRes.2)) >>> 63)
+  let es := q0 >>> 55
+  let q1 := (q0 >>> es) ||| (q0 &&& 1)
+  let ex := (x >>> 52).toUInt32 &&& 0x7FF
+  let ey := (y >>> 52).toUInt32 &&& 0x7FF
+  let e := ex - ey - 55 + es.toUInt32
+  let sg := (x ^^^ y) >>> 63
+  let dzu := tbmask (ex - 1)
+  let e' : Int32 := (e ^^^ (dzu &&& (e ^^^ ((0 : UInt32) - 1076)))).toInt32
+  let dm := (dzu &&& 1).toUInt64 - 1
+  { loopRes, q0, es, q1, ex, ey, e, sg, dzu, e', dm }
+
+/-- `FPR.div` is the final assembly call `make` over three fields of `divPipeline`. -/
+private theorem div_eq_make (x y : FPR) :
+    FPR.div x y =
+      make ((divPipeline x y).sg &&& (divPipeline x y).dm) (divPipeline x y).e'
+        ((divPipeline x y).q1 &&& (divPipeline x y).dm) :=
+  rfl
+
+/-- The loop field is exactly `55` iterations of `divStep`: this is where the `for` loop is
+traded for an induction principle. -/
+private theorem divPipeline_loopRes (x y : FPR) :
+    (divPipeline x y).loopRes
+      = (divStep ((y &&& M52) ||| ((1 : UInt64) <<< 52)))^[55]
+          (0, (x &&& M52) ||| ((1 : UInt64) <<< 52)) :=
+  forIn_range_eq_iterate _ _ _
+
+/-- Induction over `FPR.div`'s loop: prove an invariant of the state `(q, x)` holds initially and
+is preserved by one restoring-division step, and it holds of the state the loop leaves. -/
+private theorem divPipeline_loop_induction (x y : FPR)
+    (P : ℕ → UInt64 × UInt64 → Prop)
+    (h0 : P 0 (0, (x &&& M52) ||| ((1 : UInt64) <<< 52)))
+    (hstep : ∀ k s, P k s → P (k + 1) (divStep ((y &&& M52) ||| ((1 : UInt64) <<< 52)) s)) :
+    P 55 (divPipeline x y).loopRes := by
+  rw [divPipeline_loopRes]
+  induction 55 with
+  | zero => exact h0
+  | succ k ih => rw [Function.iterate_succ_apply']; exact hstep k _ ih
+
+/-- One iteration of `FPR.sqrt`'s digit-by-digit loop, over the state `(x, q, s, r)`. -/
+private def sqrtStep (v : UInt64 × UInt64 × UInt64 × UInt64) :
+    UInt64 × UInt64 × UInt64 × UInt64 :=
+  let xu' := v.1
+  let q_ := v.2.1
+  let s_ := v.2.2.1
+  let r := v.2.2.2
+  let t := s_ + r
+  let b := (xu' - t) >>> 63 - 1
+  let s_ := s_ + (b &&& r <<< 1)
+  let xu' := xu' - (t &&& b)
+  let q_ := q_ + (r &&& b)
+  let xu' := xu' <<< 1
+  let r := r >>> 1
+  (xu', q_, s_, r)
+
+private structure SqrtPipeline where
+  xu_ : UInt64
+  ex_ : UInt32
+  e_ : Int32
+  xu : UInt64
+  e : Int32
+  /-- The state `(x, q, s, r)` left by the digit-by-digit loop. -/
+  loopRes : UInt64 × UInt64 × UInt64 × UInt64
+  /-- The root, doubled and with its final sticky bit folded in. -/
+  q1 : UInt64
+  e' : Int32
+  /-- The root after the zero-operand flush guard. -/
+  q2 : UInt64
+
+private def sqrtPipeline (x : FPR) : SqrtPipeline :=
+  let xu_ : UInt64 := (x &&& M52) ||| ((1 : UInt64) <<< 52)
+  let ex_ := (x >>> 52).toUInt32 &&& 0x7FF
+  let e_ : Int32 := ex_.toInt32 - 1023
+  let xu := xu_ + (xu_ &&& (0 - (e_.toUInt32 &&& 1).toUInt64))
+  let e := (fpr_arsh32 e_.toUInt32 1).toInt32
+  let loopRes : UInt64 × UInt64 × UInt64 × UInt64 :=
+    (forIn [0:54] (xu <<< 1, (0 : UInt64), (0 : UInt64), (1 : UInt64) <<< 53)
+      (fun _ v => pure (ForInStep.yield (sqrtStep v)))
+      : Id (UInt64 × UInt64 × UInt64 × UInt64))
+  let q1 := (loopRes.2.1 <<< 1) ||| ((loopRes.1 ||| (0 - loopRes.1)) >>> 63)
+  let e' := e - 54
+  let q2 := q1 &&& ((0 : UInt64) - ((ex_ + 0x7FF) >>> 11).toUInt64)
+  { xu_, ex_, e_, xu, e, loopRes, q1, e', q2 }
+
+/-- `FPR.sqrt` is the final assembly call `make_z` over two fields of `sqrtPipeline`. -/
+private theorem sqrt_eq_make_z (x : FPR) :
+    FPR.sqrt x = make_z 0 (sqrtPipeline x).e' (sqrtPipeline x).q2 :=
+  rfl
+
+private theorem sqrtPipeline_loopRes (x : FPR) :
+    (sqrtPipeline x).loopRes
+      = sqrtStep^[54] ((sqrtPipeline x).xu <<< 1, 0, 0, (1 : UInt64) <<< 53) :=
+  forIn_range_eq_iterate _ _ _
+
+/-- Induction over `FPR.sqrt`'s loop. -/
+private theorem sqrtPipeline_loop_induction (x : FPR)
+    (P : ℕ → UInt64 × UInt64 × UInt64 × UInt64 → Prop)
+    (h0 : P 0 ((sqrtPipeline x).xu <<< 1, 0, 0, (1 : UInt64) <<< 53))
+    (hstep : ∀ k v, P k v → P (k + 1) (sqrtStep v)) :
+    P 54 (sqrtPipeline x).loopRes := by
+  rw [sqrtPipeline_loopRes]
+  induction 54 with
+  | zero => exact h0
+  | succ k ih => rw [Function.iterate_succ_apply']; exact hstep k _ ih
+
+/-- The loop emits one quotient bit per iteration, so after `k` steps the quotient occupies at
+most `k + 1` bits. This is the first invariant carried through `divPipeline_loop_induction`, and
+bounds the quotient `FPR.div` hands to its renormalisation step. -/
+private theorem divPipeline_quotient_lt (x y : FPR) :
+    (divPipeline x y).loopRes.1.toNat < 2 ^ 56 := by
+  have h := divPipeline_loop_induction x y (fun k s => s.1.toNat < 2 ^ (k + 1)) (by norm_num) ?_
+  · exact h
+  · rintro k ⟨q, xw⟩ hk
+    simp only [divStep] at *
+    set b : UInt64 := (xw - ((y &&& M52) ||| ((1 : UInt64) <<< 52))) >>> 63 - 1 with hb
+    have hbit : (b &&& 1).toNat ≤ 1 := by
+      rw [UInt64.toNat_and, show (1 : UInt64).toNat = 2 ^ 1 - 1 from rfl,
+        Nat.and_two_pow_sub_one_eq_mod]
+      omega
+    have hor : (q ||| (b &&& 1)).toNat < 2 ^ (k + 1) := by
+      rw [UInt64.toNat_or]
+      exact Nat.or_lt_two_pow hk (by omega)
+    rw [toNat_shiftLeft_one]
+    calc (q ||| (b &&& 1)).toNat * 2 % 2 ^ 64
+        ≤ (q ||| (b &&& 1)).toNat * 2 := Nat.mod_le _ _
+      _ < 2 ^ (k + 1) * 2 := by omega
+      _ = 2 ^ (k + 1 + 1) := by ring
+
 /-- Relative error bound for `FPR.div`, on normal operands whose exact quotient stays in the
 correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
 why both the operand- and result-side restrictions are necessary. -/
