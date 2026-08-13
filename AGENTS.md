@@ -201,14 +201,22 @@ The timing report parses per-file build times only for that same set.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
-After the build, CI runs `lake exe axiomsweep --check` (report-only during its
-initial soak): kernel-level axiom/`sorry` accounting for every declaration in
-the non-test libraries, gated against the committed baseline
-`scripts/axiom_baseline.json`. It fails only on *new* `sorryAx` or
-non-standard-axiom taint; after intentionally adding or closing a `sorry`, run
+After the build, CI runs `./scripts/test-axiomsweep.sh` and then
+`lake exe axiomsweep --check`: kernel-level axiom/`sorry` accounting for every
+declaration in the non-test libraries, gated against the committed baseline
+`scripts/axiom_baseline.json`. It fails on *new* `sorryAx` or non-standard-axiom
+taint; after intentionally adding or closing a `sorry`, run
 `lake exe axiomsweep --update-baseline` and commit the diff. `Interop` (the
 declared TCB) is excluded — its boundary is enforced by the import-isolation
 gate instead.
+
+The baseline is an allowlist for `sorryAx` debt only. Native trust
+(`native_decide`, which mints per-declaration `._native.` axioms) is held to a
+zero-debt rule: anything outside the explicit `grandfatheredNativeTrust` list in
+`scripts/AxiomSweep.lean` fails `--check` and cannot be greened by editing the
+baseline, since accepting it would widen the trusted computing base. The
+`AxiomSweepTestFixtures` library carries synthetic taint for the tool's own
+tests and is deliberately excluded from every aggregate.
 
 After adding new `.lean` files: `./scripts/update-lib.sh`
 
