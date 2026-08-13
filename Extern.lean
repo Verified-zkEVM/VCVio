@@ -1,6 +1,7 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import Extern.Falcon.ApproxArith
+public import Extern.Falcon.ExpmBridge
 public import Extern.Falcon.FFI
 public import Extern.Falcon.FFT
 public import Extern.Falcon.FPRBridge
