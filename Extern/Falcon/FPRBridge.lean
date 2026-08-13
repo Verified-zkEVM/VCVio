@@ -5421,6 +5421,76 @@ private theorem divPipeline_loop_invariant (x y : FPR) :
   rw [divPipeline_xu, divPipeline_yu, divPipeline_loopRes]
   exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
 
+/-- The loop's closing sticky test: `r ||| (0 - r)` has its top bit set exactly when `r` is
+nonzero, since one of `r` and its two's-complement negation always does. -/
+private theorem or_neg_shiftRight_63 (r : UInt64) :
+    ((r ||| (0 - r)) >>> 63).toNat = if r.toNat = 0 then 0 else 1 := by
+  rw [toNat_shiftRight_63_uint64, UInt64.toNat_or]
+  by_cases h : r.toNat = 0
+  · rw [if_pos h]
+    have hr : r = 0 := by rw [← UInt64.toNat_inj, h]; rfl
+    rw [hr]
+    simp
+  · rw [if_neg h]
+    have hneg : ((0 : UInt64) - r).toNat = 2 ^ 64 - r.toNat := by
+      rw [UInt64.toNat_sub]
+      have := r.toNat_lt_size
+      simp only [UInt64.toNat_ofNat]
+      omega
+    have hlt := r.toNat_lt_size
+    have hbig : 2 ^ 63 ≤ r.toNat ||| ((0 : UInt64) - r).toNat := by
+      rcases Nat.lt_or_ge r.toNat (2 ^ 63) with hc | hc
+      · refine le_trans ?_ (Nat.right_le_or)
+        rw [hneg]; omega
+      · exact le_trans hc (Nat.left_le_or)
+    have hsmall : r.toNat ||| ((0 : UInt64) - r).toNat < 2 ^ 64 :=
+      Nat.or_lt_two_pow hlt (by rw [hneg]; omega)
+    omega
+
+private theorem or_bit_of_even {q b : UInt64} (hqe : q.toNat % 2 = 0) (hb : b.toNat ≤ 1) :
+    (q ||| b).toNat = q.toNat + b.toNat := by
+  rw [UInt64.toNat_or]
+  interval_cases h : b.toNat
+  · rw [Nat.or_zero]; omega
+  · rw [or_one_eq]; omega
+
+/-- The quotient word `FPR.div` hands to its renormalisation step: the loop's quotient with a
+sticky bit recording whether the division was inexact. -/
+private theorem divPipeline_q0_toNat (x y : FPR) :
+    (divPipeline x y).q0.toNat
+      = (divPipeline x y).loopRes.1.toNat
+        + (if (divPipeline x y).loopRes.2.toNat = 0 then 0 else 1) := by
+  have hqe := (divPipeline_loop_invariant x y).2.2.2
+  change ((divPipeline x y).loopRes.1 |||
+    (((divPipeline x y).loopRes.2 ||| (0 - (divPipeline x y).loopRes.2)) >>> 63)).toNat = _
+  rw [or_bit_of_even hqe (by rw [or_neg_shiftRight_63]; split <;> omega),
+    or_neg_shiftRight_63]
+
+/-- One unit in the last place is all the division loop plus its sticky bit can be off by: the
+quotient word brackets the exact `2 ^ 55 * xu / yu` from both sides. -/
+private theorem divPipeline_q0_bracket (x y : FPR) :
+    (divPipeline x y).q0.toNat * (divPipeline x y).yu.toNat
+        < 2 ^ 55 * (divPipeline x y).xu.toNat + (divPipeline x y).yu.toNat
+      ∧ 2 ^ 55 * (divPipeline x y).xu.toNat
+        < (divPipeline x y).q0.toNat * (divPipeline x y).yu.toNat
+          + (divPipeline x y).yu.toNat := by
+  obtain ⟨hinv, hrem, -, -⟩ := divPipeline_loop_invariant x y
+  have hq0 := divPipeline_q0_toNat x y
+  have hyu : (divPipeline x y).yu.toNat = (FPR.decode y).mantissa + 2 ^ 52 := by
+    rw [divPipeline_yu]; exact significand_pack_toNat y
+  have hypos : 0 < (divPipeline x y).yu.toNat := by omega
+  rw [hq0]
+  by_cases h : (divPipeline x y).loopRes.2.toNat = 0
+  · rw [if_pos h, add_zero,
+      show (divPipeline x y).loopRes.1.toNat * (divPipeline x y).yu.toNat
+        = (divPipeline x y).yu.toNat * (divPipeline x y).loopRes.1.toNat from by ring]
+    omega
+  · rw [if_neg h,
+      show ((divPipeline x y).loopRes.1.toNat + 1) * (divPipeline x y).yu.toNat
+        = (divPipeline x y).yu.toNat * (divPipeline x y).loopRes.1.toNat
+          + (divPipeline x y).yu.toNat from by ring]
+    omega
+
 /-- Relative error bound for `FPR.div`, on normal operands whose exact quotient stays in the
 correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
 why both the operand- and result-side restrictions are necessary. -/
