@@ -3,7 +3,9 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.SimSemantics.WriterT.Basic
+
+module
+public import VCVio.OracleComp.SimSemantics.WriterT.Basic
 
 /-!
 # `WriterT ω` Invariant Theory
@@ -27,6 +29,8 @@ the threaded state.
   with a writer-invariant-preserving implementation preserves `Inv` on the final
   accumulated writer value
 -/
+
+@[expose] public section
 
 noncomputable section
 

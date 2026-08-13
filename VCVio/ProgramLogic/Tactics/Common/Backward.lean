@@ -4,14 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Meta.Sym.Apply
-import VCVio.ProgramLogic.Tactics.Common.Registry
+module
+
+public meta import Lean.Meta.Sym.Apply
+public meta import VCVio.ProgramLogic.Tactics.Common.Registry
 
 /-!
 # Backward application for VCSpec entries
 
 Shared native application helpers for `@[vcspec]` entries.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 
@@ -35,7 +39,7 @@ Carrier, WP/RWP instance, exception-post, and state arguments remain abstracted
 in the cached proof and are reopened freshly at each application. If future local
 or structurally specialized entries are cached, this key should be widened
 rather than reused. -/
-private abbrev VCSpecBackwardRuleCacheKey := Name × Bool × Nat
+abbrev VCSpecBackwardRuleCacheKey := Name × Bool × Nat
 
 private def VCSpecKind.cacheKey : VCSpecKind → Nat
   | .unaryTriple => 0

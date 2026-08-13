@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.ProbComp
+
+module
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ProbComp
 
 /-!
 # One-Way Functions and Trapdoor Permutations
@@ -32,6 +34,8 @@ invert given only `pk`; the secret key enables efficient inversion via `f⁻¹(s
 - `TDPAdversary PK X` — an adversary trying to invert the TDP.
 - `tdpExp` — the TDP inversion experiment.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

@@ -3,10 +3,12 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.Constructions.Replicate
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.QueryTracking.Structures
-import VCVio.OracleComp.QueryTracking.CostModel
+
+module
+public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.QueryTracking.CostModel
 
 /-!
 # Generating Random Seeds for Oracle Queries
@@ -16,6 +18,8 @@ oracle specification `spec`, seeding `qc j` values for each oracle `j ∈ js`.
 
 The definition is recursive on the list `js`, making it easy to prove properties by induction.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 

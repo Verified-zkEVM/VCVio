@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.MultipleBadCollision
+module
+
+public import Examples.PRFTagReader.MultipleBadCollision
 
 /-!
 # Unlinkability PRF Reduction
@@ -32,6 +34,8 @@ yields the explicit session-collision bounds in
 The two existential PRF-adversary witnesses are concrete: they are the explicit reductions
 `unlinkToMultiplePRFReduction` and `unlinkToSinglePRFReduction` applied to the unlinkability
 adversary, so the bounds carry honest reduction content rather than mere existence claims. -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Fawad Haider
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Vector.Defs
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Vector.Defs
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 
 /-!
 # Completeness of vector Merkle trees
@@ -26,6 +28,8 @@ The auxiliary `buildLayer_neverFails` and `buildMerkleTree_neverFails` lemmas
 record that honest tree construction never fails under the random-oracle
 simulation, which the completeness reduction relies on.
 -/
+
+@[expose] public section
 
 namespace MerkleTree
 

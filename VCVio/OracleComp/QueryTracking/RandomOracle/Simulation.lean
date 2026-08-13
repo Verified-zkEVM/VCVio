@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.QueryTracking.Structures
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+
+module
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 
 /-!
 # Random-Oracle Simulation Helpers
@@ -31,6 +33,8 @@ Then the `roSim` namespace lemmas apply to `simulateQ impl`.
 
 * `unifFwdImpl`: the identity forwarding implementation for `unifSpec`, lifted to `StateT`
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 

@@ -3,12 +3,14 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Arithmetic
-import LatticeCrypto.Ring.Norms
-import Batteries.Data.Vector.Lemmas
-import Mathlib.Data.Int.Lemmas
-import Mathlib.Data.Int.NatAbs
-import Mathlib.Data.ZMod.ValMinAbs
+
+module
+public import LatticeCrypto.MLDSA.Arithmetic
+public import LatticeCrypto.Ring.Norms
+public import Batteries.Data.Vector.Lemmas
+public import Mathlib.Data.Int.Lemmas
+public import Mathlib.Data.Int.NatAbs
+public import Mathlib.Data.ZMod.ValMinAbs
 
 /-!
 # Concrete Rounding for ML-DSA
@@ -26,6 +28,8 @@ The concrete high-order representations are kept in `Rq`, matching the rest of t
 ML-DSA ring layer and avoiding conversion overhead in the verifier equation
 `Az - c · (t₁ · 2^d)`.
 -/
+
+@[expose] public section
 
 
 namespace MLDSA.Concrete

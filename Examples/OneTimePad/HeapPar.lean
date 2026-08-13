@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Examples.OneTimePad.HeapBasic
-import VCVio.StateSeparating.DistEquiv
+
+module
+public import Examples.OneTimePad.HeapBasic
+public import VCVio.StateSeparating.DistEquiv
 
 /-!
 # Two parallel OTP channels via `QueryImpl.Stateful.parSum`
@@ -71,6 +73,8 @@ channel handlers each touch only one half of the heap, with the
 other half threaded through opaquely, and frame reasoning reduces
 to `Heap.split.symm ∘ Heap.split = id` (definitional).
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 open scoped QueryImpl.Stateful

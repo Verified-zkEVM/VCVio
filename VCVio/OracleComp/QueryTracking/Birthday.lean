@@ -3,9 +3,11 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import VCVio.OracleComp.QueryTracking.Collision
-import ToMathlib.Combinatorics.FinPairs
-import ToMathlib.Data.ENNReal.Gauss
+
+module
+public import VCVio.OracleComp.QueryTracking.Collision
+public import ToMathlib.Combinatorics.FinPairs
+public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # ROM Birthday Bound
@@ -14,6 +16,8 @@ Per-pair collision bounds and union bound birthday argument for random oracle
 collision probability. Covers both log-based and cache-based collision bounds,
 with per-index corollaries.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal Finset
 

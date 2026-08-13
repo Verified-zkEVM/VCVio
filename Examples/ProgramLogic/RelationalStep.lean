@@ -4,14 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Relational
-import VCVio.OracleComp.Constructions.Replicate
+module
+
+public import VCVio.ProgramLogic.Tactics.Relational
+public import VCVio.OracleComp.Constructions.Replicate
 
 /-!
 # Relational VCGen Step Examples
 
 This file validates one-step relational tactic behavior.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open OracleComp.ProgramLogic

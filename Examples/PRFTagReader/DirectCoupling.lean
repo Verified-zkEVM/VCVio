@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.Table
+module
+
+public import Examples.PRFTagReader.Table
 
 /-!
 # PRF Tag/Reader Protocol — Direct M_ideal/S_ideal Coupling Foundations
@@ -45,6 +47,8 @@ The `slotZeroEmbed` and `slotZeroSubTable` names are thin, intent-naming aliases
 established sibling `projectTable`; the distribution and cell-subset lemmas re-derive the
 underlying facts in the explicit shape used by the direct coupling argument.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

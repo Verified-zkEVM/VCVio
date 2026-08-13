@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.EvalDist.Defs.Semantics
-import PolyFun.Control.Monad.Hom
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Defs.Semantics
+public import PolyFun.Control.Monad.Hom
 
 /-!
 # Bundled Lifts from `ProbComp`
@@ -22,6 +24,8 @@ can be carried independently of whatever denotational semantics the construction
 defines `ProbCompRuntime`, the common crypto-facing bundle that pairs public-randomness lifting
 with bundled `SPMF` semantics for an ambient monad.
 -/
+
+@[expose] public section
 
 universe v w
 

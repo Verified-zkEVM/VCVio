@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Mathlib.Logic.Equiv.Sum
+
+module
+public import Mathlib.Logic.Equiv.Sum
 
 /-!
 # Typed heaps over identifier sets
@@ -37,6 +39,8 @@ example : stepped.get .flag    = false := by simp [stepped]
 
 Stateful handlers can use this layer as a typed cell-keyed state convention:
 `Heap Ident` stores one value of the cell-specific type at every identifier. -/
+
+@[expose] public section
 
 universe u v
 

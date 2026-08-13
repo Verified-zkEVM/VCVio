@@ -3,13 +3,15 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.SimSemantics.SimulateQ
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import PolyFun.PFunctor.Dynamical.Behavior
-import PolyFun.PFunctor.Dynamical.Run
-import PolyFun.PFunctor.Free.Path
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import PolyFun.PFunctor.Dynamical.Behavior
+public import PolyFun.PFunctor.Dynamical.Run
+public import PolyFun.PFunctor.Free.Path
 
 /-!
 # Oracle strategies: the coalgebra dual of `OracleComp`
@@ -40,6 +42,8 @@ The probabilistic Kleisli lift, the headline `iterate = simulateQ` correspondenc
 to `OracleComp.withQueryLog` live further down this file. The inductive-to-coinductive embedding
 `toITree` is in `VCVio.OracleComp.Coinductive.Bridge`.
 -/
+
+@[expose] public section
 
 universe u v w
 

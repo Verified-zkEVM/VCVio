@@ -1,53 +1,55 @@
-import LatticeCrypto.DiscreteGaussian
-import LatticeCrypto.Falcon.Arithmetic
-import LatticeCrypto.Falcon.Concrete.BigInt31
-import LatticeCrypto.Falcon.Concrete.Encoding
-import LatticeCrypto.Falcon.Concrete.FPR
-import LatticeCrypto.Falcon.Concrete.FXR
-import LatticeCrypto.Falcon.Concrete.FloatLike
-import LatticeCrypto.Falcon.Concrete.GMTable
-import LatticeCrypto.Falcon.Concrete.NTRUSolver
-import LatticeCrypto.Falcon.Concrete.NTT
-import LatticeCrypto.Falcon.Concrete.PolyBigInt
-import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
-import LatticeCrypto.Falcon.Encoding
-import LatticeCrypto.Falcon.Params
-import LatticeCrypto.Falcon.Primitives
-import LatticeCrypto.Falcon.Scheme
-import LatticeCrypto.Falcon.Security
-import LatticeCrypto.HardnessAssumptions.LearningWithErrors
-import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
-import LatticeCrypto.MLDSA.Arithmetic
-import LatticeCrypto.MLDSA.Concrete.Encoding
-import LatticeCrypto.MLDSA.Concrete.LawBounds
-import LatticeCrypto.MLDSA.Concrete.NTT
-import LatticeCrypto.MLDSA.Concrete.Rounding
-import LatticeCrypto.MLDSA.Encoding
-import LatticeCrypto.MLDSA.Params
-import LatticeCrypto.MLDSA.Primitives
-import LatticeCrypto.MLDSA.Scheme
-import LatticeCrypto.MLDSA.Security
-import LatticeCrypto.MLDSA.SecurityHVZK
-import LatticeCrypto.MLDSA.SecurityNMA
-import LatticeCrypto.MLDSA.Signature
-import LatticeCrypto.MLKEM.Arithmetic
-import LatticeCrypto.MLKEM.Concrete.CBD
-import LatticeCrypto.MLKEM.Concrete.Encoding
-import LatticeCrypto.MLKEM.Concrete.NTT
-import LatticeCrypto.MLKEM.Encoding
-import LatticeCrypto.MLKEM.Internal
-import LatticeCrypto.MLKEM.KEM
-import LatticeCrypto.MLKEM.KPKE
-import LatticeCrypto.MLKEM.Params
-import LatticeCrypto.MLKEM.Primitives
-import LatticeCrypto.MLKEM.Security
-import LatticeCrypto.Ring.Core
-import LatticeCrypto.Ring.IntegralLift
-import LatticeCrypto.Ring.Kernel
-import LatticeCrypto.Ring.NTTCert
-import LatticeCrypto.Ring.Norms
-import LatticeCrypto.Ring.Rounding
-import LatticeCrypto.Ring.SchoolbookCert
-import LatticeCrypto.Ring.Smoke
-import LatticeCrypto.Ring.Transform
-import LatticeCrypto.Ring.VectorBackend
+module  -- shake: keep-all --deprecated_module: ignore
+
+public import LatticeCrypto.DiscreteGaussian
+public import LatticeCrypto.Falcon.Arithmetic
+public import LatticeCrypto.Falcon.Concrete.BigInt31
+public import LatticeCrypto.Falcon.Concrete.Encoding
+public import LatticeCrypto.Falcon.Concrete.FPR
+public import LatticeCrypto.Falcon.Concrete.FXR
+public import LatticeCrypto.Falcon.Concrete.FloatLike
+public import LatticeCrypto.Falcon.Concrete.GMTable
+public import LatticeCrypto.Falcon.Concrete.NTRUSolver
+public import LatticeCrypto.Falcon.Concrete.NTT
+public import LatticeCrypto.Falcon.Concrete.PolyBigInt
+public import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
+public import LatticeCrypto.Falcon.Encoding
+public import LatticeCrypto.Falcon.Params
+public import LatticeCrypto.Falcon.Primitives
+public import LatticeCrypto.Falcon.Scheme
+public import LatticeCrypto.Falcon.Security
+public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
+public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
+public import LatticeCrypto.MLDSA.Arithmetic
+public import LatticeCrypto.MLDSA.Concrete.Encoding
+public import LatticeCrypto.MLDSA.Concrete.LawBounds
+public import LatticeCrypto.MLDSA.Concrete.NTT
+public import LatticeCrypto.MLDSA.Concrete.Rounding
+public import LatticeCrypto.MLDSA.Encoding
+public import LatticeCrypto.MLDSA.Params
+public import LatticeCrypto.MLDSA.Primitives
+public import LatticeCrypto.MLDSA.Scheme
+public import LatticeCrypto.MLDSA.Security
+public import LatticeCrypto.MLDSA.SecurityHVZK
+public import LatticeCrypto.MLDSA.SecurityNMA
+public import LatticeCrypto.MLDSA.Signature
+public import LatticeCrypto.MLKEM.Arithmetic
+public import LatticeCrypto.MLKEM.Concrete.CBD
+public import LatticeCrypto.MLKEM.Concrete.Encoding
+public import LatticeCrypto.MLKEM.Concrete.NTT
+public import LatticeCrypto.MLKEM.Encoding
+public import LatticeCrypto.MLKEM.Internal
+public import LatticeCrypto.MLKEM.KEM
+public import LatticeCrypto.MLKEM.KPKE
+public import LatticeCrypto.MLKEM.Params
+public import LatticeCrypto.MLKEM.Primitives
+public import LatticeCrypto.MLKEM.Security
+public import LatticeCrypto.Ring.Core
+public import LatticeCrypto.Ring.IntegralLift
+public import LatticeCrypto.Ring.Kernel
+public import LatticeCrypto.Ring.NTTCert
+public import LatticeCrypto.Ring.Norms
+public import LatticeCrypto.Ring.Rounding
+public import LatticeCrypto.Ring.SchoolbookCert
+public import LatticeCrypto.Ring.Smoke
+public import LatticeCrypto.Ring.Transform
+public import LatticeCrypto.Ring.VectorBackend

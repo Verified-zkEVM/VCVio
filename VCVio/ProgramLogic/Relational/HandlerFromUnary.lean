@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Relational.FromUnary
-import VCVio.ProgramLogic.Relational.SimulateQ
-import VCVio.ProgramLogic.Unary.HandlerSpecs
+module
+
+public import VCVio.ProgramLogic.Relational.FromUnary
+public import VCVio.ProgramLogic.Relational.SimulateQ
+public import VCVio.ProgramLogic.Unary.HandlerSpecs
 
 /-!
 # Lifting `Std.Do` handler triples to relational triples
@@ -51,6 +53,8 @@ The whole-program lift fixes `OracleSpec.{0, 0}` because the unary
 `triple_stateT_iff_forall_support` bridge in
 `VCVio.ProgramLogic.Unary.HandlerSpecs` is stated at that universe.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open Std.Do

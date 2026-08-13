@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.MultipleToHybrid.Setup
+module
+
+public import Examples.PRFTagReader.MultipleToHybrid.Setup
 
 /-!
 # PRF Tag/Reader Protocol — Multiple-to-hybrid eager coupling, shared setup
@@ -31,6 +33,8 @@ module hosts:
 These shared definitions and bridges supply the eager-table instrumentation consumed by the
 direct-coupling headline in `DirectCoupling.Compose`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

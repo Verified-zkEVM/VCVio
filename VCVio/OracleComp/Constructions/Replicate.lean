@@ -3,11 +3,13 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.EvalDist
-import VCVio.EvalDist.List
-import VCVio.OracleComp.Constructions.SampleableType
-import Init.Data.Vector.Lemmas
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.EvalDist
+public import VCVio.EvalDist.List
+public import VCVio.OracleComp.Constructions.SampleableType
+public import Init.Data.Vector.Lemmas
 
 /-!
 # Running a Computation Multiple Times
@@ -17,6 +19,8 @@ returning the result as a list of length `n`.
 
 Note that while the executions are independent, they may no longer be after calling `simulate`.
 -/
+
+@[expose] public section
 
 open OracleSpec
 

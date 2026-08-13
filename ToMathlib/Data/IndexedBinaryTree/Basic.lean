@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 
+module
+
 -- TODO minimize imports
-import Mathlib.Tactic.Use
-import Mathlib.Data.Set.Basic
+public import Mathlib.Tactic.Use
+public import Mathlib.Data.Set.Basic
 
 
 /-!
@@ -39,6 +41,8 @@ that decompose the trees as much as possible.
   - get? functions
 
 -/
+
+@[expose] public section
 
 namespace BinaryTree
 
@@ -83,6 +87,7 @@ inductive SkeletonInternalIndex : Skeleton → Type
       SkeletonInternalIndex (Skeleton.internal left right)
   | ofRight {left right : Skeleton} (idxRight : SkeletonInternalIndex right) :
       SkeletonInternalIndex (Skeleton.internal left right)
+  deriving DecidableEq
 
 /-- Type of indices of any node of a skeleton -/
 inductive SkeletonNodeIndex : Skeleton → Type
@@ -578,6 +583,14 @@ def SkeletonInternalIndex.depth {s : Skeleton} : SkeletonInternalIndex s → Nat
   | SkeletonInternalIndex.ofInternal => 0
   | SkeletonInternalIndex.ofLeft idxLeft => idxLeft.depth + 1
   | SkeletonInternalIndex.ofRight idxRight => idxRight.depth + 1
+
+/-- The height of the subtree rooted at an internal-node index. -/
+@[simp]
+def SkeletonInternalIndex.subtreeDepth :
+    {s : Skeleton} → SkeletonInternalIndex s → Nat
+  | .internal left right, .ofInternal => (Skeleton.internal left right).depth
+  | _, .ofLeft idxLeft => idxLeft.subtreeDepth
+  | _, .ofRight idxRight => idxRight.subtreeDepth
 
 /-- Depth of a SkeletonNodeIndex -/
 def SkeletonNodeIndex.depth {s : Skeleton} : SkeletonNodeIndex s → Nat

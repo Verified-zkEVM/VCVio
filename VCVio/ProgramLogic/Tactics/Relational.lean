@@ -4,14 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Common.Suggestions
-import VCVio.ProgramLogic.Tactics.Relational.Internals
+module
+
+public meta import VCVio.ProgramLogic.Tactics.Common.Suggestions
+public meta import VCVio.ProgramLogic.Tactics.Relational.Internals
 
 /-!
 # Relational VC Tactics
 
 User-facing relational VCGen tactics and syntax.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 

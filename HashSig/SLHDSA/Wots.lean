@@ -3,9 +3,11 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Primitives
-import HashSig.SLHDSA.Encoding
-import HashSig.SLHDSA.WotsChecksum
+
+module
+public import HashSig.SLHDSA.Primitives
+public import HashSig.SLHDSA.Encoding
+public import HashSig.SLHDSA.WotsChecksum
 
 /-!
 # WOTS+ (FIPS 205 §5)
@@ -24,6 +26,8 @@ drives XMSS/hypertree correctness downstream.
 
 - NIST FIPS 205, §5 (Algorithms 5–8), §5.4 (the checksum, validated in `WotsChecksum`)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA

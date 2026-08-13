@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.SimSemantics.SimulateQ
-import ToMathlib.Control.OptionT
+
+module
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import ToMathlib.Control.OptionT
 
 /-!
 # Simulation Semantics through `OptionT` Handlers
@@ -17,6 +19,8 @@ These lemmas appeal to the central `simulateQ` theory in
 `SimSemantics/OptionT/` to mirror the per-transformer organization used for
 `StateT`, `WriterT`, and `ReaderT`.
 -/
+
+@[expose] public section
 
 open OracleComp Prod
 

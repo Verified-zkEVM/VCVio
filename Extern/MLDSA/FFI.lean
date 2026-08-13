@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
+module
+
 /-!
 # ML-DSA FFI Bindings
 
@@ -17,6 +19,8 @@ parameter sets: ML-DSA-44, ML-DSA-65, and ML-DSA-87.
 The C side is compiled from `csrc/mldsa/lean_mldsa{,44,87}_ffi.c`, linking
 against mldsa-native's monolithic `mldsa_native.c`.
 -/
+
+@[expose] public section
 
 
 namespace MLDSA.Concrete.FFI

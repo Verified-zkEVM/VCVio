@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.ProgramLogic.Tactics.Relational
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.ProgramLogic.Tactics.Relational
 
 /-!
 # Information-Theoretic Private Information Retrieval (PIR)
@@ -36,6 +38,8 @@ regardless of `iâ‚€`. So the distribution of `s` alone reveals nothing about `iâ
 
 Port of EasyCrypt's `PIR.ec`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

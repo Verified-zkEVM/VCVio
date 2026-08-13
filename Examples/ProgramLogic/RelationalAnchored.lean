@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Relational.Quantitative
-import ToMathlib.Control.Monad.RelationalAlgebraAnchored
+module
+
+public import VCVio.ProgramLogic.Relational.Quantitative
+public import ToMathlib.Control.Monad.RelationalAlgebraAnchored
 
 /-!
 # Honest Exception Relational WP Examples
@@ -20,6 +22,8 @@ The `MAlgRelOrdered.Anchored` instance for two `OracleComp` monads (proved in
 `VCVio.ProgramLogic.Relational.Quantitative` for `ℝ≥0∞`) is what makes the cross-corner
 reductions and the bind laws available.
 -/
+
+@[expose] public section
 
 universe u
 

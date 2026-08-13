@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Primitives
-import VCVio.CryptoFoundations.IdenSchemeWithAbort
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import LatticeCrypto.MLDSA.Primitives
+public import VCVio.CryptoFoundations.IdenSchemeWithAbort
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # ML-DSA Identification Scheme Core
@@ -44,6 +46,8 @@ This file models the **proof-level IDS** used in the Fiat-Shamir-with-aborts sec
 - EasyCrypt `IDSabort.ec`, `SimplifiedScheme.ec` (formosa-crypto/dilithium)
 - NIST FIPS 204, Algorithms 7 and 8 (for the underlying arithmetic)
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec

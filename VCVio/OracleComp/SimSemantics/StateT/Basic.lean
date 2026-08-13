@@ -3,9 +3,11 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.ProbComp
-import ToMathlib.Control.StateT
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ProbComp
+public import ToMathlib.Control.StateT
 
 /-!
 # Query Implementations with State Monads
@@ -14,6 +16,8 @@ This file gives lemmas about `QueryImpl spec m` when `m` is something like `Stat
 
 TODO: should generalize things to `MonadState` once laws for it exist.
 -/
+
+@[expose] public section
 
 universe u v w x
 

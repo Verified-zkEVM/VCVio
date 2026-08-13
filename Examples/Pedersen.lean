@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.CommitmentScheme
-import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
-import VCVio.ProgramLogic.NotationCore
+
+module
+public import VCVio.CryptoFoundations.CommitmentScheme
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+public import VCVio.ProgramLogic.NotationCore
 
 /-!
 # Pedersen Commitment Scheme
@@ -25,6 +27,8 @@ Uses the same additive `Module F G` notation as `DiffieHellman.lean`:
 - Commitment to message `m : F`: sample `d ← $ᵗ F`, output `(d • g + m • h, d)`
 - Verification: check `c = d • g + m • h`
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal DiffieHellman CommitmentScheme
 

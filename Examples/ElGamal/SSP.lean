@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.StateSeparating.Hybrid
-import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+
+module
+public import VCVio.StateSeparating.Hybrid
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
 
 /-!
 # State-Separating Proofs: ElGamal IND-CPA via DDH
@@ -82,6 +84,8 @@ versus `elgamalLR_right`. The three program-equivalence hops (1, 3, 5) are disch
 DDH advantages of the shifted reduction adversaries `dhToLR_{left,right}.shiftLeft A`; they
 appear on the right-hand side of the final bound `elgamalLR_left_advantage_right_le`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ProbComp
 
