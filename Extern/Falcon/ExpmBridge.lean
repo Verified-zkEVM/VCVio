@@ -9,6 +9,7 @@ import all LatticeCrypto.Falcon.Concrete.FPR
 import all Extern.Falcon.FPRBridge
 public import LatticeCrypto.Falcon.Concrete.FPR
 public import Extern.Falcon.FPRBridge
+public import Mathlib.Algebra.Order.Floor.Semifield
 
 /-!
 # The fixed-point layer of Falcon's `expm_p63`
@@ -192,5 +193,191 @@ private theorem toNat_mulHi64 (a b : UInt64) :
   have t11 : ((a >>> 32) * (b >>> 32)).toNat = a.toNat / 2 ^ 32 * (b.toNat / 2 ^ 32) := by
     rw [p11, haHi, hbHi]
   exact toNat_finalColumn ha hb t11 s10 s01 s00 m10 m01 hmidlt
+
+/-! ## The `63`-bit fixed-point conversion
+
+`mtwop63` converts an `FPR` in `[0, 1)` to a `63`-bit fixed-point fraction. It reassembles the
+significand into bits `62..10` of a register by a shift, an implicit-bit `|||`, and a mask, and
+then rescales it by a right shift whose amount saturates at `63`. Both halves are exact: the
+saturation bites only for operands below `2 ^ (-64)`, where the answer is `0` on either reading. -/
+
+/-- Setting bit `k` of a value and then truncating to `k + 1` bits keeps the low `k` bits and
+forces bit `k`. -/
+private theorem or_two_pow_mod_two_pow_succ (A k : ℕ) :
+    (A ||| 2 ^ k) % 2 ^ (k + 1) = A % 2 ^ k + 2 ^ k := by
+  rw [← or_two_pow_add_of_lt _ k (Nat.mod_lt _ (Nat.two_pow_pos _))]
+  refine Nat.eq_of_testBit_eq fun j => ?_
+  simp only [Nat.testBit_mod_two_pow, Nat.testBit_or, Nat.testBit_two_pow]
+  rcases Nat.lt_trichotomy j k with h | h | h
+  · simp [h, show j < k + 1 by omega, show ¬ k = j by omega]
+  · subst h; simp
+  · simp [show ¬ j < k by omega, show ¬ j < k + 1 by omega, show ¬ k = j by omega]
+
+/-- Masking to six bits is the identity below `64`. -/
+private theorem and_63_of_lt {n : ℕ} (h : n < 64) : n &&& 63 = n := by
+  rw [show (63 : ℕ) = 2 ^ 6 - 1 from by norm_num, Nat.and_two_pow_sub_one_eq_mod]
+  exact Nat.mod_eq_of_lt h
+
+/-- A value carrying all sixteen low bits saturates the six-bit mask. -/
+private theorem and_63_or_65535 (n : ℕ) : (n ||| 65535) &&& 63 = 63 := by
+  rw [show (65535 : ℕ) = 2 ^ 16 - 1 from by norm_num,
+    show (63 : ℕ) = 2 ^ 6 - 1 from by norm_num]
+  refine Nat.eq_of_testBit_eq fun j => ?_
+  simp only [Nat.testBit_and, Nat.testBit_or, Nat.testBit_two_pow_sub_one]
+  by_cases hj : j < 6
+  · simp [hj, show j < 16 from by omega]
+  · simp [hj]
+
+/-- The fraction word `mtwop63` builds before shifting: the operand's significand, scaled by
+`2 ^ 10`. The sign bit is shifted out and the implicit-bit `|||` overwrites the one exponent bit
+that survives, so no field of the operand other than its mantissa reaches the result. -/
+private theorem toNat_m_of (x : FPR) :
+    ((((x <<< 10) ||| ((1 : UInt64) <<< 62)) &&& M63)).toNat
+      = 2 ^ 10 * ((FPR.decode x).mantissa + 2 ^ 52) := by
+  have hM63 : (M63 : UInt64).toNat = 2 ^ 63 - 1 := by decide
+  have hbit : ((1 : UInt64) <<< 62).toNat = 2 ^ 62 := by decide
+  have hshl : (x <<< (10 : UInt64)).toNat = x.toNat * 2 ^ 10 % 2 ^ 64 := by
+    rw [UInt64.toNat_shiftLeft, show ((10 : UInt64).toNat % 64) = 10 from by decide,
+      Nat.shiftLeft_eq]
+  rw [UInt64.toNat_and, hM63, Nat.and_two_pow_sub_one_eq_mod, UInt64.toNat_or, hbit,
+    show (63 : ℕ) = 62 + 1 from rfl, or_two_pow_mod_two_pow_succ, hshl,
+    Nat.mod_mod_of_dvd _ (pow_dvd_pow 2 (by norm_num : (62 : ℕ) ≤ 64)),
+    show (2 : ℕ) ^ 62 = 2 ^ 52 * 2 ^ 10 from by norm_num, Nat.mul_mod_mul_right]
+  unfold FPR.decode
+  ring
+
+/-- The shift amount `mtwop63` derives from `e`: the true gap when it fits in six bits, and a
+saturated `63` otherwise. Beyond `63` the `UInt32` subtraction `63 - e` wraps, and the top half of
+the wrapped value fills all six low bits of the mask. -/
+private theorem toNat_ue_of (e : UInt32) (he : e.toNat < 2 ^ 16) :
+    ((e ||| ((63 - e) >>> 16)) &&& 63).toNat = min e.toNat 63 := by
+  have h63 : (63 : UInt32).toNat = 63 := by decide
+  have h16 : (16 : UInt32).toNat % 32 = 16 := by decide
+  rw [UInt32.toNat_and, UInt32.toNat_or, h63, UInt32.toNat_shiftRight, h16,
+    Nat.shiftRight_eq_div_pow]
+  rcases le_or_gt e.toNat 63 with h | h
+  · have hsub : ((63 : UInt32) - e).toNat = 63 - e.toNat := by
+      rw [toNat_sub_of_le_uint32 (by rw [h63]; exact h), h63]
+    rw [hsub, Nat.div_eq_of_lt (show 63 - e.toNat < 2 ^ 16 by omega), Nat.or_zero,
+      and_63_of_lt (by omega), min_eq_left h]
+  · have hsub : ((63 : UInt32) - e).toNat = 2 ^ 32 - e.toNat + 63 := by
+      rw [UInt32.toNat_sub, h63]
+      exact Nat.mod_eq_of_lt (by omega)
+    have hdiv : (2 ^ 32 - e.toNat + 63) / 2 ^ 16 = 65535 :=
+      Nat.div_eq_of_lt_le (by norm_num; omega) (by norm_num; omega)
+    rw [hsub, hdiv, and_63_or_65535, min_eq_right h.le]
+
+/-- The final shift of `mtwop63`, read as a division. -/
+private theorem toNat_shiftRight_ue {m : UInt64} {e : UInt32} {k : ℕ} (he : e.toNat = k)
+    (hk : k < 2 ^ 16) :
+    (m >>> (((e ||| ((63 - e) >>> 16)) &&& 63).toUInt64)).toNat = m.toNat / 2 ^ min k 63 := by
+  have hue : ((e ||| ((63 - e) >>> 16)) &&& 63).toNat = min k 63 := by
+    rw [toNat_ue_of e (by omega), he]
+  rw [UInt64.toNat_shiftRight, UInt32.toNat_toUInt64, hue, Nat.mod_eq_of_lt (by omega),
+    Nat.shiftRight_eq_div_pow]
+
+/-- The exponent word `mtwop63` forms: the true gap `1022 - ex`, with no wraparound. -/
+private theorem toNat_e_of (x : FPR) (hexle : (FPR.decode x).exponent ≤ 1022) :
+    ((1022 : UInt32) - ((x >>> 52).toUInt32 &&& 0x7FF)).toNat
+      = 1022 - (FPR.decode x).exponent := by
+  have hfield : ((x >>> 52).toUInt32 &&& 0x7FF).toNat = (FPR.decode x).exponent :=
+    toNat_ex_field_of x
+  have h1022 : (1022 : UInt32).toNat = 1022 := by decide
+  rw [toNat_sub_of_le_uint32 (by rw [hfield, h1022]; exact hexle), hfield, h1022]
+
+/-- `mtwop63`, read as exact arithmetic on `ℕ`: the significand scaled by `2 ^ 10`, divided by
+`2 ^ (1022 - ex)` with the shift amount saturated at `63`. -/
+private theorem toNat_mtwop63_aux (x : FPR) (hexle : (FPR.decode x).exponent ≤ 1022) :
+    (mtwop63 x).toNat = 2 ^ 10 * ((FPR.decode x).mantissa + 2 ^ 52)
+      / 2 ^ min (1022 - (FPR.decode x).exponent) 63 := by
+  simp only [mtwop63]
+  rw [toNat_shiftRight_ue (toNat_e_of x hexle) (by omega), toNat_m_of]
+
+/-- A normal operand with nonnegative value denotes `significand * 2 ^ (ex - 1075)`: the sign bit
+is clear, so the case split in `FPR.Bits.toReal` collapses. -/
+private theorem toReal_eq_significand_of_nonneg (x : FPR) (hn : FPR.IsNormal x)
+    (h0 : 0 ≤ toReal x) :
+    toReal x = (((FPR.decode x).mantissa + 2 ^ 52 : ℕ) : ℝ)
+      * (2 : ℝ) ^ (((FPR.decode x).exponent : ℤ) - 1075) := by
+  obtain ⟨hne0, hne2047⟩ := hn
+  have hsig : (FPR.decode x).significand = (FPR.decode x).mantissa + 2 ^ 52 := by
+    unfold FPR.Bits.significand
+    rw [if_neg hne0]
+  have hkey := toReal_eq_significand_mul_two_zpow hne0 hne2047
+  rw [hsig] at hkey
+  change toReal x = _ at hkey
+  have hpos : (0 : ℝ) < (((FPR.decode x).mantissa + 2 ^ 52 : ℕ) : ℝ) := by
+    have h : 0 < (FPR.decode x).mantissa + 2 ^ 52 := by omega
+    exact_mod_cast h
+  have hzpos : (0 : ℝ) < (2 : ℝ) ^ (((FPR.decode x).exponent : ℤ) - 1075) := by positivity
+  by_cases hs : (FPR.decode x).sign = true
+  · rw [hkey, if_pos hs] at h0
+    nlinarith
+  · rw [hkey, if_neg hs]
+    ring
+
+/-- An operand below `1` has biased exponent at most `1022`: with the implicit leading bit, an
+exponent field of `1023` already denotes a value of at least `1`. -/
+private theorem exponent_le_of_toReal_lt_one (x : FPR) (hn : FPR.IsNormal x)
+    (h0 : 0 ≤ toReal x) (h1 : toReal x < 1) : (FPR.decode x).exponent ≤ 1022 := by
+  by_contra hcon
+  have hc : 1022 < (FPR.decode x).exponent := by omega
+  rw [toReal_eq_significand_of_nonneg x hn h0] at h1
+  have hsig : (2 : ℝ) ^ (52 : ℕ) ≤ (((FPR.decode x).mantissa + 2 ^ 52 : ℕ) : ℝ) := by
+    have h : (2 : ℕ) ^ 52 ≤ (FPR.decode x).mantissa + 2 ^ 52 := by omega
+    exact_mod_cast h
+  have hz : (2 : ℝ) ^ ((1023 : ℤ) - 1075)
+      ≤ (2 : ℝ) ^ (((FPR.decode x).exponent : ℤ) - 1075) :=
+    zpow_le_zpow_right₀ (by norm_num) (by omega)
+  have hzpos : (0 : ℝ) < (2 : ℝ) ^ ((1023 : ℤ) - 1075) := by positivity
+  have hone : (2 : ℝ) ^ (52 : ℕ) * (2 : ℝ) ^ ((1023 : ℤ) - 1075) = 1 := by
+    rw [show ((1023 : ℤ) - 1075) = (-52 : ℤ) from by norm_num,
+      ← zpow_natCast (2 : ℝ) 52, ← zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0)]
+    norm_num
+  nlinarith [mul_le_mul hsig hz hzpos.le (by positivity : (0 : ℝ) ≤
+    (((FPR.decode x).mantissa + 2 ^ 52 : ℕ) : ℝ))]
+
+/-- The exact value `mtwop63` is asked for, as a quotient of naturals. -/
+private theorem floor_two_pow_63_mul_toReal (x : FPR) (hn : FPR.IsNormal x)
+    (h0 : 0 ≤ toReal x) (h1 : toReal x < 1) :
+    ⌊(2 : ℝ) ^ 63 * toReal x⌋₊ = 2 ^ 10 * ((FPR.decode x).mantissa + 2 ^ 52)
+      / 2 ^ (1022 - (FPR.decode x).exponent) := by
+  have hexle := exponent_le_of_toReal_lt_one x hn h0 h1
+  have hexz : ((1022 - (FPR.decode x).exponent : ℕ) : ℤ)
+      = (1022 : ℤ) - ((FPR.decode x).exponent : ℤ) := by omega
+  have hcast : ((2 ^ (1022 - (FPR.decode x).exponent) : ℕ) : ℝ)
+      = (2 : ℝ) ^ ((1022 : ℤ) - ((FPR.decode x).exponent : ℤ)) := by
+    rw [← hexz, zpow_natCast]
+    push_cast
+    ring
+  have hval : (2 : ℝ) ^ 63 * toReal x
+      = ((2 ^ 10 * ((FPR.decode x).mantissa + 2 ^ 52) : ℕ) : ℝ)
+        / ((2 ^ (1022 - (FPR.decode x).exponent) : ℕ) : ℝ) := by
+    rw [toReal_eq_significand_of_nonneg x hn h0, eq_div_iff (by positivity), hcast]
+    have hexp : (2 : ℝ) ^ (63 : ℕ) * (2 : ℝ) ^ (((FPR.decode x).exponent : ℤ) - 1075)
+        * (2 : ℝ) ^ ((1022 : ℤ) - ((FPR.decode x).exponent : ℤ)) = (2 : ℝ) ^ (10 : ℕ) := by
+      rw [← zpow_natCast (2 : ℝ) 63, ← zpow_natCast (2 : ℝ) 10,
+        ← zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0), ← zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0)]
+      congr 1
+      push_cast
+      ring
+    push_cast
+    linear_combination (((FPR.decode x).mantissa : ℝ) + 2 ^ 52) * hexp
+  rw [hval, Nat.floor_div_natCast, Nat.floor_natCast]
+
+/-- `mtwop63` converts an `FPR` in `[0, 1)` to a `63`-bit fixed-point fraction: it computes
+`⌊2 ^ 63 * toReal x⌋`, exactly and with no rounding of its own. -/
+private theorem toNat_mtwop63 (x : FPR) (hn : FPR.IsNormal x)
+    (h0 : 0 ≤ toReal x) (h1 : toReal x < 1) :
+    (mtwop63 x).toNat = ⌊(2 : ℝ) ^ 63 * toReal x⌋₊ := by
+  have hexle := exponent_le_of_toReal_lt_one x hn h0 h1
+  have hmanlt : (FPR.decode x).mantissa < 2 ^ 52 := FPR.decode_mantissa_lt x
+  rw [floor_two_pow_63_mul_toReal x hn h0 h1, toNat_mtwop63_aux x hexle]
+  rcases le_or_gt (1022 - (FPR.decode x).exponent) 63 with h | h
+  · rw [min_eq_left h]
+  · have hN : 2 ^ 10 * ((FPR.decode x).mantissa + 2 ^ 52) < 2 ^ 63 := by omega
+    have hD : (2 : ℕ) ^ 63 ≤ 2 ^ (1022 - (FPR.decode x).exponent) :=
+      Nat.pow_le_pow_right (by norm_num) h.le
+    rw [min_eq_right h.le, Nat.div_eq_of_lt hN, Nat.div_eq_of_lt (lt_of_lt_of_le hN hD)]
 
 end Falcon.Concrete.FPRBridge
