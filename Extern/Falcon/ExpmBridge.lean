@@ -11,6 +11,7 @@ public import LatticeCrypto.Falcon.Concrete.FPR
 public import Extern.Falcon.FPRBridge
 public import Mathlib.Algebra.Order.Floor.Semifield
 public import Mathlib.Analysis.Complex.ExponentialBounds
+public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Chebyshev.RootsExtrema
 
 /-!
 # The fixed-point layer of Falcon's `expm_p63`
@@ -33,7 +34,7 @@ of a different character, described in `docs/agents/expm-certification.md`.
 
 namespace Falcon.Concrete.FPRBridge
 
-open Falcon.Concrete.FPR
+open Falcon.Concrete.FPR Polynomial
 
 /-! ## The high half of a 64-bit product
 
@@ -711,5 +712,318 @@ private theorem expm_p63_sub_trueArg_le (x ccs : FPR)
           - toReal ccs * hornerExact (toReal x) 12| := abs_sub_le _ _ _
     _ ≤ 5 + 5 := add_le_add hmain hkey
     _ = 10 := by norm_num
+
+/-! ## Certifying the coefficient polynomial
+
+The remaining obligation is `sup |certQ|` over `[0, log 2)`, where `certQ` is the exact Horner
+polynomial measured against a degree-18 Taylor truncation of `exp (-x)`, in units of `2 ^ (-63)`.
+`facctCoeffs` is a minimax fit, so `certQ` is `O(1)` in these units while its coefficients are
+`O(2 ^ 63)`: every bound that applies a triangle inequality to coefficients discards exactly the
+cancellation that makes the fit good, and misses by orders of magnitude.
+
+What survives is subdivision in a Chebyshev basis. On a subinterval parameterised by
+`x = (p + q * y) / s` with `y ∈ [-1, 1]`, writing `D * certQ` as `∑ j, N j * T j y` gives
+`|certQ| ≤ (∑ j, |N j|) / D` from `|T j y| ≤ 1` alone, and the cancellation is carried by the
+coefficients rather than thrown away.
+
+Two things make the certificates cheap. The interval endpoints are *dyadic*, so `s` is a power of
+two and the cleared coefficients stay near 60 digits rather than the ~330 that equal subdivision
+of `[0, r]` by a decimal `r` would force; and `certQ_expand` clears `18!` once, so every
+per-certificate identity is a polynomial identity over `ℤ` with no division. -/
+
+/-- Monomial form of `Chebyshev.T` at the reals, degree 0. -/
+private theorem chebEval0 (y : ℝ) : (Chebyshev.T ℝ (0 : ℤ)).eval y = 1 := by
+  simp [Chebyshev.T_zero]
+
+private theorem chebEval1 (y : ℝ) : (Chebyshev.T ℝ (1 : ℤ)).eval y = y := by
+  simp [Chebyshev.T_one]
+
+private theorem chebEval2 (y : ℝ) : (Chebyshev.T ℝ (2 : ℤ)).eval y =
+    (-1) + 2 * y ^ 2
+    := by
+  rw [show (2 : ℤ) = 0 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (0 : ℤ) + 1 = 1 from by norm_num,
+    chebEval1, chebEval0]
+  ring
+
+private theorem chebEval3 (y : ℝ) : (Chebyshev.T ℝ (3 : ℤ)).eval y =
+    (-3) * y + 4 * y ^ 3
+    := by
+  rw [show (3 : ℤ) = 1 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (1 : ℤ) + 1 = 2 from by norm_num,
+    chebEval2, chebEval1]
+  ring
+
+private theorem chebEval4 (y : ℝ) : (Chebyshev.T ℝ (4 : ℤ)).eval y =
+    1 + (-8) * y ^ 2 + 8 * y ^ 4
+    := by
+  rw [show (4 : ℤ) = 2 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (2 : ℤ) + 1 = 3 from by norm_num,
+    chebEval3, chebEval2]
+  ring
+
+private theorem chebEval5 (y : ℝ) : (Chebyshev.T ℝ (5 : ℤ)).eval y =
+    5 * y + (-20) * y ^ 3 + 16 * y ^ 5
+    := by
+  rw [show (5 : ℤ) = 3 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (3 : ℤ) + 1 = 4 from by norm_num,
+    chebEval4, chebEval3]
+  ring
+
+private theorem chebEval6 (y : ℝ) : (Chebyshev.T ℝ (6 : ℤ)).eval y =
+    (-1) + 18 * y ^ 2 + (-48) * y ^ 4 + 32 * y ^ 6
+    := by
+  rw [show (6 : ℤ) = 4 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (4 : ℤ) + 1 = 5 from by norm_num,
+    chebEval5, chebEval4]
+  ring
+
+private theorem chebEval7 (y : ℝ) : (Chebyshev.T ℝ (7 : ℤ)).eval y =
+    (-7) * y + 56 * y ^ 3 + (-112) * y ^ 5 + 64 * y ^ 7
+    := by
+  rw [show (7 : ℤ) = 5 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (5 : ℤ) + 1 = 6 from by norm_num,
+    chebEval6, chebEval5]
+  ring
+
+private theorem chebEval8 (y : ℝ) : (Chebyshev.T ℝ (8 : ℤ)).eval y =
+    1 + (-32) * y ^ 2 + 160 * y ^ 4 + (-256) * y ^ 6 + 128 * y ^ 8
+    := by
+  rw [show (8 : ℤ) = 6 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (6 : ℤ) + 1 = 7 from by norm_num,
+    chebEval7, chebEval6]
+  ring
+
+private theorem chebEval9 (y : ℝ) : (Chebyshev.T ℝ (9 : ℤ)).eval y =
+    9 * y + (-120) * y ^ 3 + 432 * y ^ 5 + (-576) * y ^ 7 + 256 * y ^ 9
+    := by
+  rw [show (9 : ℤ) = 7 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (7 : ℤ) + 1 = 8 from by norm_num,
+    chebEval8, chebEval7]
+  ring
+
+private theorem chebEval10 (y : ℝ) : (Chebyshev.T ℝ (10 : ℤ)).eval y =
+    (-1) + 50 * y ^ 2 + (-400) * y ^ 4 + 1120 * y ^ 6 + (-1280) * y ^ 8 + 512 * y ^ 10
+    := by
+  rw [show (10 : ℤ) = 8 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (8 : ℤ) + 1 = 9 from by norm_num,
+    chebEval9, chebEval8]
+  ring
+
+private theorem chebEval11 (y : ℝ) : (Chebyshev.T ℝ (11 : ℤ)).eval y =
+    (-11) * y + 220 * y ^ 3 + (-1232) * y ^ 5 + 2816 * y ^ 7 + (-2816) * y ^ 9 + 1024 * y ^ 11
+    := by
+  rw [show (11 : ℤ) = 9 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (9 : ℤ) + 1 = 10 from by norm_num,
+    chebEval10, chebEval9]
+  ring
+
+private theorem chebEval12 (y : ℝ) : (Chebyshev.T ℝ (12 : ℤ)).eval y =
+    1 + (-72) * y ^ 2 + 840 * y ^ 4 + (-3584) * y ^ 6 + 6912 * y ^ 8 + (-6144) * y ^ 10 + 2048 * y
+      ^ 12
+    := by
+  rw [show (12 : ℤ) = 10 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (10 : ℤ) + 1 = 11 from by norm_num,
+    chebEval11, chebEval10]
+  ring
+
+private theorem chebEval13 (y : ℝ) : (Chebyshev.T ℝ (13 : ℤ)).eval y =
+    13 * y + (-364) * y ^ 3 + 2912 * y ^ 5 + (-9984) * y ^ 7 + 16640 * y ^ 9 + (-13312) * y ^ 11 +
+      4096 * y ^ 13
+    := by
+  rw [show (13 : ℤ) = 11 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (11 : ℤ) + 1 = 12 from by norm_num,
+    chebEval12, chebEval11]
+  ring
+
+private theorem chebEval14 (y : ℝ) : (Chebyshev.T ℝ (14 : ℤ)).eval y =
+    (-1) + 98 * y ^ 2 + (-1568) * y ^ 4 + 9408 * y ^ 6 + (-26880) * y ^ 8 + 39424 * y ^ 10 +
+      (-28672) * y ^ 12 + 8192 * y ^ 14
+    := by
+  rw [show (14 : ℤ) = 12 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (12 : ℤ) + 1 = 13 from by norm_num,
+    chebEval13, chebEval12]
+  ring
+
+private theorem chebEval15 (y : ℝ) : (Chebyshev.T ℝ (15 : ℤ)).eval y =
+    (-15) * y + 560 * y ^ 3 + (-6048) * y ^ 5 + 28800 * y ^ 7 + (-70400) * y ^ 9 + 92160 * y ^ 11
+      + (-61440) * y ^ 13 + 16384 * y ^ 15
+    := by
+  rw [show (15 : ℤ) = 13 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (13 : ℤ) + 1 = 14 from by norm_num,
+    chebEval14, chebEval13]
+  ring
+
+private theorem chebEval16 (y : ℝ) : (Chebyshev.T ℝ (16 : ℤ)).eval y =
+    1 + (-128) * y ^ 2 + 2688 * y ^ 4 + (-21504) * y ^ 6 + 84480 * y ^ 8 + (-180224) * y ^ 10 +
+      212992 * y ^ 12 + (-131072) * y ^ 14 + 32768 * y ^ 16
+    := by
+  rw [show (16 : ℤ) = 14 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (14 : ℤ) + 1 = 15 from by norm_num,
+    chebEval15, chebEval14]
+  ring
+
+private theorem chebEval17 (y : ℝ) : (Chebyshev.T ℝ (17 : ℤ)).eval y =
+    17 * y + (-816) * y ^ 3 + 11424 * y ^ 5 + (-71808) * y ^ 7 + 239360 * y ^ 9 + (-452608) * y ^
+      11 + 487424 * y ^ 13 + (-278528) * y ^ 15 + 65536 * y ^ 17
+    := by
+  rw [show (17 : ℤ) = 15 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (15 : ℤ) + 1 = 16 from by norm_num,
+    chebEval16, chebEval15]
+  ring
+
+private theorem chebEval18 (y : ℝ) : (Chebyshev.T ℝ (18 : ℤ)).eval y =
+    (-1) + 162 * y ^ 2 + (-4320) * y ^ 4 + 44352 * y ^ 6 + (-228096) * y ^ 8 + 658944 * y ^ 10 +
+      (-1118208) * y ^ 12 + 1105920 * y ^ 14 + (-589824) * y ^ 16 + 131072 * y ^ 18
+    := by
+  rw [show (18 : ℤ) = 16 + 2 from by norm_num, Chebyshev.T_add_two]
+  simp only [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_X, show (16 : ℤ) + 1 = 17 from by norm_num,
+    chebEval17, chebEval16]
+  ring
+
+/-- **Chebyshev certificate.** If `D * Q` on the interval parameterised by `x = (p + q*y)/s`,
+`y ∈ [-1, 1]`, expands in the Chebyshev basis with coefficients `N`, then `|Q| ≤ B` there,
+provided `∑ |N j| ≤ D * B`. All the cancellation lives in the coefficients: the only analytic
+input is `|T j t| ≤ 1`. -/
+private theorem abs_le_of_chebCert {p q s D B : ℝ} (hq : 0 < q) (hs : 0 < s) (hD : 0 < D)
+    {n : ℕ} (Q : ℝ → ℝ) (N : ℕ → ℝ)
+    (hQ : ∀ y : ℝ, D * Q ((p + q * y) / s)
+      = ∑ j ∈ Finset.range (n + 1), N j * (Chebyshev.T ℝ (j : ℤ)).eval y)
+    (hB : ∑ j ∈ Finset.range (n + 1), |N j| ≤ D * B)
+    (x : ℝ) (hx0 : (p - q) / s ≤ x) (hx1 : x ≤ (p + q) / s) :
+    |Q x| ≤ B := by
+  rw [div_le_iff₀ hs] at hx0
+  rw [le_div_iff₀ hs] at hx1
+  have hy : |(s * x - p) / q| ≤ 1 := by
+    rw [abs_div, abs_of_pos hq, div_le_one hq, abs_le]
+    constructor <;> linarith
+  have h1 := hQ ((s * x - p) / q)
+  rw [show (p + q * ((s * x - p) / q)) / s = x from by field_simp; ring] at h1
+  have h2 : |D * Q x| ≤ ∑ j ∈ Finset.range (n + 1), |N j| := by
+    rw [h1]
+    refine le_trans (Finset.abs_sum_le_sum_abs _ _) (Finset.sum_le_sum fun j _ => ?_)
+    rw [abs_mul]
+    calc |N j| * |(Chebyshev.T ℝ (j : ℤ)).eval ((s * x - p) / q)| ≤ |N j| * 1 :=
+          mul_le_mul_of_nonneg_left (Chebyshev.abs_eval_T_real_le_one _ hy) (abs_nonneg _)
+      _ = |N j| := mul_one _
+  rw [abs_mul, abs_of_pos hD] at h2
+  exact le_of_mul_le_mul_left (by linarith) hD
+
+private theorem facctVal0 : (facctCoeffs[0]!).toNat = 19127174051 := by decide
+private theorem facctVal1 : (facctCoeffs[1]!).toNat = 233346759686 := by decide
+private theorem facctVal2 : (facctCoeffs[2]!).toNat = 2542029181962 := by decide
+private theorem facctVal3 : (facctCoeffs[3]!).toNat = 25415798087749 := by decide
+private theorem facctVal4 : (facctCoeffs[4]!).toNat = 228754078003076 := by decide
+private theorem facctVal5 : (facctCoeffs[5]!).toNat = 1830034511206115 := by decide
+private theorem facctVal6 : (facctCoeffs[6]!).toNat = 12810238987800554 := by decide
+private theorem facctVal7 : (facctCoeffs[7]!).toNat = 76861433589428176 := by decide
+private theorem facctVal8 : (facctCoeffs[8]!).toNat = 384307168197152512 := by decide
+private theorem facctVal9 : (facctCoeffs[9]!).toNat = 1537228672812056320 := by decide
+private theorem facctVal10 : (facctCoeffs[10]!).toNat = 4611686018427565056 := by decide
+private theorem facctVal11 : (facctCoeffs[11]!).toNat = 9223372036854728704 := by decide
+private theorem facctVal12 : (facctCoeffs[12]!).toNat = 9223372036854775808 := by decide
+
+/-- The degree-18 Taylor truncation of `exp (-x)`. -/
+private noncomputable def taylorExpNeg (n : ℕ) (x : ℝ) : ℝ :=
+  ∑ i ∈ Finset.range (n + 1), (-x) ^ i / (i.factorial : ℝ)
+
+/-- The certification target, in units of `2 ^ (-63)`. -/
+private noncomputable def certQ (x : ℝ) : ℝ :=
+  hornerExact x 12 - 2 ^ 63 * taylorExpNeg 18 x
+
+/-- `18! * certQ` has integer coefficients. -/
+private theorem certQ_expand (x : ℝ) :
+    (6402373705728000 : ℝ) * certQ x = 0 + 301577411034611712000 * x + 1134193306717126656000 * x
+      ^ 2 + (-18739867347641696256000) * x ^ 3 + (-32842982000626237440000) * x ^ 4 +
+      326702176168714253107200 * x ^ 5 + 305549933392096365772800 * x ^ 6 +
+      (-2413115680306070554214400) * x ^ 7 + (-1208665697255858877235200) * x ^ 8 +
+      8596251864142770040012800 * x ^ 9 + 2017429890733951881707520 * x ^ 10 +
+      (-14609216358110315699896320) * x ^ 11 + (-821012305358570167664640) * x ^ 12 +
+      9483102193412606294753280 * x ^ 13 + (-677364442386614735339520) * x ^ 14 +
+      45157629492440982355968 * x ^ 15 + (-2822351843277561397248) * x ^ 16 +
+      166020696663385964544 * x ^ 17 + (-9223372036854775808) * x ^ 18 := by
+  unfold certQ taylorExpNeg
+  simp only [hornerExact, Nat.reduceAdd, Finset.sum_range_succ, Finset.sum_range_zero, facctVal0,
+    facctVal1, facctVal2, facctVal3, facctVal4, facctVal5, facctVal6, facctVal7, facctVal8,
+    facctVal9, facctVal10, facctVal11, facctVal12]
+  norm_num [Nat.factorial]
+  ring
+
+/-- The same after clearing the denominator of an affine substitution `u = v / s`. -/
+private theorem certQ_shift (s u v : ℝ) (hv : s * u = v) :
+    ((6402373705728000 : ℝ) * s ^ 18) * certQ u = 0 * s ^ 18 + 301577411034611712000 * s ^ 17 * v
+      + 1134193306717126656000 * s ^ 16 * v ^ 2 + (-18739867347641696256000) * s ^ 15 * v ^ 3 +
+      (-32842982000626237440000) * s ^ 14 * v ^ 4 + 326702176168714253107200 * s ^ 13 * v ^ 5 +
+      305549933392096365772800 * s ^ 12 * v ^ 6 + (-2413115680306070554214400) * s ^ 11 * v ^ 7 +
+      (-1208665697255858877235200) * s ^ 10 * v ^ 8 + 8596251864142770040012800 * s ^ 9 * v ^ 9 +
+      2017429890733951881707520 * s ^ 8 * v ^ 10 + (-14609216358110315699896320) * s ^ 7 * v ^ 11
+      + (-821012305358570167664640) * s ^ 6 * v ^ 12 + 9483102193412606294753280 * s ^ 5 * v ^ 13
+      + (-677364442386614735339520) * s ^ 4 * v ^ 14 + 45157629492440982355968 * s ^ 3 * v ^ 15 +
+      (-2822351843277561397248) * s ^ 2 * v ^ 16 + 166020696663385964544 * s ^ 1 * v ^ 17 +
+      (-9223372036854775808) * v ^ 18 := by
+  subst hv
+  rw [show ((6402373705728000 : ℝ) * s ^ 18) * certQ u = s ^ 18 * ((6402373705728000 : ℝ) * certQ
+    u) from by ring, certQ_expand u]
+  ring
+
+private def certN0 : ℕ → ℤ
+  | 0 => 11881511226875854183730651234993383627649187840
+  | 1 => 11645475310696677515549319626459146108734013440
+  | 2 => (-419008747506919410591667375759940143546368000)
+  | 3 => (-180829873027354429998784145600280879169536000)
+  | 4 => 2909414929571706713745068551077661759242240
+  | 5 => 759499094382365726934447714249898595450880
+  | 6 => (-8313529238396370481691713960732168028160)
+  | 7 => (-1346451996606859545604784226645735112704)
+  | 8 => 10703486790517088849614248869955108864
+  | 9 => 1155152406970669618050048975372812288
+  | 10 => (-6370672649408901769145347813146624)
+  | 11 => (-475568451610850344956206537244672)
+  | 12 => 1556967932400366019615559516160
+  | 13 => 75296752412977559323583447040
+  | 14 => (-84036456362858841838190592)
+  | 15 => 87537882057808162062336
+  | 16 => (-85486624439304978432)
+  | 17 => 78531518502273024
+  | 18 => (-70368744177664)
+  | _ => 0
+
+private theorem cert0_id (y : ℝ) :
+    (7925754756788606011539581299392692355072000 : ℝ) * certQ ((1 + 1 * y) / 32)
+      = ∑ j ∈ Finset.range 19, ((certN0 j : ℤ) : ℝ) * (Chebyshev.T ℝ (j : ℤ)).eval y := by
+  rw [show (7925754756788606011539581299392692355072000 : ℝ) = (6402373705728000 : ℝ) * (32 : ℝ) ^
+    18 from by norm_num,
+    certQ_shift (32 : ℝ) ((1 + 1 * y) / 32) (1 + 1 * y) (by ring)]
+  simp only [Finset.sum_range_succ, Finset.sum_range_zero, certN0, Nat.cast_ofNat, Nat.cast_zero,
+    Nat.cast_one, chebEval0, chebEval1, chebEval2, chebEval3, chebEval4, chebEval5, chebEval6,
+    chebEval7, chebEval8, chebEval9, chebEval10, chebEval11, chebEval12, chebEval13, chebEval14,
+    chebEval15, chebEval16, chebEval17, chebEval18]
+  push_cast
+  ring
+
+/-- Certificate for `[0, 1/16]`: `|certQ| ≤ 3045` units. -/
+private theorem cert0 (x : ℝ) (hx0 : (1 - 1 : ℝ) / 32 ≤ x)
+    (hx1 : x ≤ (1 + 1 : ℝ) / 32) : |certQ x| ≤ 3045 :=
+  abs_le_of_chebCert (by norm_num) (by norm_num) (by norm_num) certQ
+    (fun j => ((certN0 j : ℤ) : ℝ)) cert0_id (by
+      simp only [Finset.sum_range_succ, Finset.sum_range_zero, certN0]
+      norm_num) x hx0 hx1
 
 end Falcon.Concrete.FPRBridge
