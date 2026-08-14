@@ -179,7 +179,13 @@ def berExpReduce (x : F) : Int64 × F :=
 Writing `x = si * log 2 + r` via `berExpReduce` factors `ccs * exp (-x)` as
 `ccs * exp (-r) / 2 ^ si`: `FloatLike.expm_p63` supplies the first factor on the reduced
 range and `si` becomes a right shift. `si ≥ 64` is saturated to 63, a bias the reference
-bounds by `2 ^ (-96)`. -/
+bounds by `2 ^ (-96)`.
+
+`x ≥ 0` is a genuine precondition rather than a convenience. The saturation
+`s ||| (63 - s) >>> 26` detects `si ≥ 64` through the borrow bit and has no negative branch,
+so a negative `si` truncates to `63 + si` and the shift drives the acceptance weight to
+zero — where the correct weight for `x < 0` is above one. `samplerZLoop` is what supplies the
+precondition; see its docstring for what that rests on. -/
 def berExp (s : PRNGState) (x ccs : F) : Bool × PRNGState := Id.run do
   let (si, r) := berExpReduce x
   let mut sShift := si.toUInt64.toUInt32
@@ -237,6 +243,14 @@ private def sigmaMinConsts : Array F := #[
   | some sigmaMin => sigmaMin
   | none => panic! s!"Falcon samplerZ does not support logn={logn}"
 
+/-- One rejection round: draw `z` from the bimodal half-Gaussian and keep it with probability
+`ccs * exp (-x)`, where `x = (z - r) ^ 2 / (2 * σ ^ 2) - z0 ^ 2 / (2 * σ₀ ^ 2)`.
+
+The `x ≥ 0` that `berExp` requires holds because `|z - r| ≥ z0` for either value of `b` when `r`
+is in `[0, 1)`, together with `σ ≤ σ₀`. That second half is a key-generation invariant rather
+than anything checked here, and in floating point it is tight: at the representable `1 / σ`
+nearest `1 / σ₀` from above, `r = 0` and `b = 0` give `x = 0` exactly, while one ulp further —
+`σ` just past `σ₀` — gives `x < 0`. -/
 partial def samplerZLoop (state : PRNGState) (sInt : Int64)
     (r dss ccs : F) : Int32 × PRNGState :=
   let (z0, s') := gaussian0 state

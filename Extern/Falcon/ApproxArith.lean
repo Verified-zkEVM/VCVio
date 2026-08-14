@@ -309,10 +309,8 @@ name — their statements already carry exactly the `IsNormal`/`InNormalMagnitud
 hypotheses this class's fields ask for. `div_error` needs its hypotheses supplied in a
 different order than `FPRBridge.div_error` uses, but is otherwise the same theorem.
 
-What remains open:
+What remains open is the `_valid` half of the class, not the error bounds:
 
-- The bodies of `add_error`, `mul_error`, `div_error`, `sqrt_error` in `FPRBridge.lean`
-  are `sorry` (the correctly-rounded three-stage pipeline proof is future work).
 - The `_valid` closure fields (`add_valid`, `mul_valid`, `div_valid`, `sqrt_valid`,
   `sub_valid`) have no counterpart in `FPRBridge.lean` yet; each needs a bit-level
   argument that a correctly-rounded, in-range result stays normal (no separate
@@ -322,12 +320,12 @@ What remains open:
   (negation only flips the sign bit, so it preserves the exponent field and hence
   `IsNormal`); it just needs a public wrapper, since `decode_neg_exponent` itself is
   `private` to `FPRBridge.lean`.
-- `sub_error`/`sub_valid` have no bit-level pipeline of their own to prove: `FPR.sub a b`
-  unfolds to `FPR.add a (FPR.neg b)`, so both should reduce compositionally to
-  `add_error`/`add_valid` plus `neg_exact`/`neg_valid`, without a fresh sorry beyond the
-  one `add_error` already carries.
+- `sub_valid` has no bit-level pipeline of its own: `FPR.sub a b` unfolds to
+  `FPR.add a (FPR.neg b)`, so it should reduce compositionally to `add_valid` and
+  `neg_valid`, the way `sub_error` already reduces to `add_error` and `neg_exact`.
 
-Until these are discharged, this instance stays commented out. -/
+Until these are discharged, this instance stays commented out, and so the error bounds
+proved in `FPRBridge.lean` do not yet reach any downstream Falcon theorem. -/
 -- instance : FloatLike.HasRealSemantics FPR ieee754_machineEpsilon where
 --   interp := Falcon.Concrete.FPRBridge.toReal
 --   Valid := Falcon.Concrete.FPR.IsNormal
