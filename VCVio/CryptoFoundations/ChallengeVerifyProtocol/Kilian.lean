@@ -27,6 +27,21 @@ the "Micali transformation" [Micali '00]).
 The majority of the Kilian paper is actually a beautiful way to make the classic GMW graph-coloring
 zero-knowledge proof more efficient while keeping zero knowledge by implementing a
 "notarized envelope" primitive. But I think this file should just focus on the succinctness part.
+
+## Main results
+
+- `PCP`: probabilistically checkable proofs with adaptive deterministic verifier queries, and their
+  correctness/soundness notions.
+- `KilianTransformation`: the succinct interactive argument built from a `PCP` and a
+  `BatchOpeningVectorCommitment`.
+- `KilianTransformation_perfectlyComplete`: perfect completeness, from PCP completeness and
+  commitment correctness.
+- `KilianTransformation_sound`: statistical soundness with the PCP's soundness error, from perfect
+  batch position binding — a straight-line argument in which the commitment itself pins down the
+  effective proof string (`BatchOpeningVectorCommitment.committedValue`), with no extractor.
+
+Knowledge soundness (extraction) and the computational refinement of soundness — where binding may
+fail on a negligible-probability event, as for hash-based Merkle commitments — are future work.
 -/
 
 @[expose] public section
@@ -189,7 +204,7 @@ A batch-opening commitment is the natural primitive here: Kilian opens a whole s
 once, so a construction that amortizes work across that set (a shared-path Merkle proof, say) is
 exactly what makes the argument succinct.
 
-Modeling choices for this definition (correctness/soundness are deferred):
+Modeling choices for this definition:
 
 - Positions of the proof string are the commitment indices `Fin pcp.length`; the value at a position
   is a PCP symbol.
@@ -199,8 +214,11 @@ Modeling choices for this definition (correctness/soundness are deferred):
 - `Resp` is the claimed `(position, value)` pairs together with a single batch opening. Succinctness
   is what makes Kilian interesting: only the positions the verifier actually queries are opened, and
   `verify` rejects (via the `none` branch of the lookup) if it ever reads an unclaimed position.
-- `boolRel` is the `Bool`-valued relation of the resulting protocol; relating it to `pcp.rel` is
-  part of the deferred security analysis. -/
+
+Security: `KilianTransformation_perfectlyComplete` derives perfect completeness from PCP
+completeness and commitment correctness, and `KilianTransformation_sound` derives statistical
+soundness (with the PCP's soundness error) from perfect batch position binding of the
+commitment. -/
 noncomputable def KilianTransformation
     (pcp : PCP Stmt Wit) [BEq pcp.Symbol]
     {m : Type → Type} [Monad m] [MonadLiftT ProbComp m]
@@ -272,6 +290,38 @@ theorem claimAnswer_run (f : ι → Sym) (claims : List (ι × Sym)) {β : Type 
       rw [simulateQ_spec_query]; rfl
     simp only [simulateQ_bind, simulateQ_spec_query, ht, evalWithAnswerFn_bind, hq]
     exact ih (f t) (fun t' ht' => h t' (by rw [pathLog_query]; exact List.mem_cons_of_mem _ ht'))
+
+/-- **Binding replay lemma.** If every claimed value agrees with the answer function `f`, then a
+successful (`some`-valued) replay against the claims coincides with the pure run on `f`: every
+query the replay manages to answer is answered with `f`'s value, so the replay path *is* the
+`f`-path. This is the soundness-side complement of `claimAnswer_run`: there the claims are known
+to cover the `f`-path and the replay is shown to succeed; here the replay is assumed to succeed
+and its result is pinned down, with no coverage hypothesis at all. -/
+theorem eq_of_claimAnswer_run_eq_some (f : ι → Sym) (claims : List (ι × Sym))
+    (hbound : ∀ i v, (i, v) ∈ claims → v = f i) {β : Type u}
+    (comp : OracleComp (ι →ₒ Sym) β) (b : β) :
+    (simulateQ (claimAnswer claims) comp).run = some b →
+      evalWithAnswerFn (QueryImpl.ofFn f) comp = b := by
+  induction comp using OracleComp.inductionOn with
+  | pure x => exact fun h => Option.some.inj h
+  | query_bind t oa ih =>
+    intro h
+    rw [simulateQ_bind, simulateQ_spec_query] at h
+    cases hlook : claims.lookup t with
+    | none =>
+      rw [show claimAnswer claims t = (failure : OptionT Id Sym) from by
+        simp only [claimAnswer, QueryImpl.ofFn?, hlook]; rfl] at h
+      -- A failed lookup fails the whole replay, contradicting the `some`-valued run.
+      exact absurd h.symm (Option.some_ne_none b)
+    | some v =>
+      rw [show claimAnswer claims t = (pure v : OptionT Id Sym) from by
+        simp only [claimAnswer, QueryImpl.ofFn?, hlook]; rfl, pure_bind] at h
+      obtain rfl : v = f t := hbound t v (List.mem_of_lookup_eq_some hlook)
+      have hq : evalWithAnswerFn (QueryImpl.ofFn f) (liftM ((ι →ₒ Sym).query t)) = f t := by
+        change simulateQ (QueryImpl.ofFn f) (liftM ((ι →ₒ Sym).query t)) = f t
+        rw [simulateQ_spec_query]; rfl
+      rw [evalWithAnswerFn_bind, hq]
+      exact ih (f t) h
 
 end ReplayInfrastructure
 
@@ -448,3 +498,88 @@ theorem KilianTransformation_perfectlyComplete
       exact hAccept x w hxw proof hproof coins hcoins
 
 end Completeness
+
+section Soundness
+
+open scoped NNReal ENNReal
+
+variable {Stmt Wit : Type}
+
+/-- **Deterministic soundness core.** Whatever response the Kilian verifier accepts against an
+(adversarial) commitment `c`, batch position binding forces every accepted claim to read off the
+committed proof string `bovc.committedValue c`, and the successful replay then reproduces the PCP
+verifier's run on that string: the PCP verifier accepts `committedValue c` on these coins. No
+extractor or rewinding appears — the commitment itself determines the proof string. -/
+theorem runVerifier_committedValue_of_KilianTransformation_verify
+    (pcp : PCP Stmt Wit) (rel : Stmt → Wit → Bool) [BEq pcp.Symbol] [Inhabited pcp.Symbol]
+    {m : Type → Type} [Monad m] [MonadLiftT ProbComp m] {Commit State BatchOpening : Type}
+    (bovc : BatchOpeningVectorCommitment m (Fin pcp.length) pcp.Symbol Commit State BatchOpening)
+    (hbind : bovc.BatchPositionBinding)
+    (x : Stmt) (c : Commit) (coins : pcp.Coins)
+    (resp : List (Fin pcp.length × pcp.Symbol) × BatchOpening)
+    (hacc : (KilianTransformation pcp bovc rel).verify x c coins resp = true) :
+    pcp.runVerifier x coins (List.Vector.ofFn (bovc.committedValue c)) = true := by
+  obtain ⟨claims, op⟩ := resp
+  change (bovc.verifyBatch c claims op &&
+    (Id.run (simulateQ (claimAnswer claims) (pcp.Verifier x coins)).run == some true)) = true
+    at hacc
+  rw [Bool.and_eq_true, beq_iff_eq] at hacc
+  obtain ⟨hbatch, hrun⟩ := hacc
+  have hbound : ∀ i v, (i, v) ∈ claims → v = bovc.committedValue c i :=
+    fun i v hm => (hbind.committedValue_eq hbatch hm).symm
+  have hf := eq_of_claimAnswer_run_eq_some (bovc.committedValue c) claims hbound
+    (pcp.Verifier x coins) true hrun
+  rw [runVerifier_eq_evalWithAnswerFn,
+    show (List.Vector.ofFn (bovc.committedValue c)).get = bovc.committedValue c from
+      funext fun i => List.Vector.get_ofFn _ i]
+  exact hf
+
+/-- **Statistical soundness of the Kilian transformation** under perfect position binding. If the
+batch-opening vector commitment is (perfectly, information-theoretically) batch position binding
+and the PCP is sound with error `ε`, the resulting interactive argument is sound with the same
+error `ε`, against arbitrary — even computationally unbounded and adaptive — provers.
+
+The argument is the classical one, made straight-line by perfect binding: a cheating prover's
+commitment `pc` pins down a single proof string `bovc.committedValue pc` (no extractor or
+rewinding is needed), any response the verifier would accept replays the PCP verifier's run on
+that string (`runVerifier_committedValue_of_KilianTransformation_verify`), and PCP soundness
+bounds the probability over the verifier's coins that this fixed string is accepted.
+
+For a commitment that is only *computationally* binding (a hash-based Merkle tree, say), this
+perfect-binding statement is the information-theoretic core; the computational statement — where
+`BatchPositionBinding` may fail on a negligible-probability event — is future work, as is
+knowledge soundness. `hfaithful` is the same distribution-faithfulness of the `ProbComp` lift
+required by `KilianTransformation_perfectlyComplete`. -/
+theorem KilianTransformation_sound
+    (pcp : PCP Stmt Wit) (rel : Stmt → Wit → Bool) [BEq pcp.Symbol] [Inhabited pcp.Symbol]
+    {m : Type → Type} [Monad m] [MonadLiftT ProbComp m]
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    {Commit State BatchOpening : Type}
+    (bovc : BatchOpeningVectorCommitment m (Fin pcp.length) pcp.Symbol Commit State BatchOpening)
+    (hbind : bovc.BatchPositionBinding)
+    {ε : ℝ≥0} (hpcp : pcp.soundness rel ε)
+    (hfaithful : ∀ {β : Type} (mx : ProbComp β), 𝒟[(liftM mx : m β)] = 𝒟[mx]) :
+    (KilianTransformation pcp bovc rel).Sound ε := by
+  intro x hx pc
+  set proofStr := List.Vector.ofFn (bovc.committedValue pc) with hproofStr
+  -- Move the probability from the protocol's lifted challenge sampler to its `ProbComp` source.
+  have hswap : ∀ p : pcp.Coins → Prop,
+      Pr[ p | (liftM pcp.sampleCoins : m pcp.Coins) ] = Pr[ p | pcp.sampleCoins ] := fun p => by
+    unfold probEvent
+    rw [hfaithful pcp.sampleCoins]
+  have hchal : (KilianTransformation pcp bovc rel).sampleChal
+      = (liftM pcp.sampleCoins : m pcp.Coins) := rfl
+  rw [hchal, hswap]
+  -- PCP soundness at the committed proof string, in event-over-coins form.
+  have hfinal : Pr[ fun coins => pcp.runVerifier x coins proofStr = true | pcp.sampleCoins ]
+      ≤ (ε : ℝ≥0∞) := by
+    have h := hpcp x hx proofStr
+    simp only [bind_pure_comp, probEvent_map] at h
+    exact h
+  refine (probEvent_mono fun coins _ hcoins => ?_).trans hfinal
+  obtain ⟨resp, hresp⟩ := hcoins
+  exact runVerifier_committedValue_of_KilianTransformation_verify
+    pcp rel bovc hbind x pc coins resp hresp
+
+end Soundness

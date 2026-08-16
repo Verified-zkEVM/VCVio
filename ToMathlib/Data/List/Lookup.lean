@@ -31,4 +31,17 @@ theorem map_lookup (f : ι → Sym) (t : ι) :
     · rw [show (t == a) = false from by simpa using hat.symm]
       exact map_lookup f t L ((List.mem_cons.1 h).resolve_left (fun h' => hat h'.symm))
 
+/-- A successful lookup pinpoints an entry of the association list. -/
+theorem mem_of_lookup_eq_some : ∀ {l : List (ι × Sym)} {t : ι} {v : Sym},
+    l.lookup t = some v → (t, v) ∈ l
+  | [], _, _, h => by simp at h
+  | (a, w) :: l, t, v, h => by
+    rw [List.lookup_cons] at h
+    split at h
+    · next heq =>
+      obtain rfl : t = a := eq_of_beq heq
+      obtain rfl : w = v := Option.some.inj h
+      exact List.mem_cons_self ..
+    · next _ => exact List.mem_cons_of_mem _ (mem_of_lookup_eq_some h)
+
 end List

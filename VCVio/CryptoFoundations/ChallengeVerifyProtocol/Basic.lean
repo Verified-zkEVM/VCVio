@@ -12,7 +12,8 @@ public import VCVio.EvalDist.TVDist
 
 This file defines `ChallengeVerifyProtocol`, a monad-generic abstraction for public-coin
 commit–challenge–response protocols, together with the standard security properties:
-completeness, special soundness, and honest-verifier zero-knowledge (HVZK).
+completeness, soundness (as an interactive argument), special soundness, and honest-verifier
+zero-knowledge (HVZK).
 
 It is a close relative of `VCVio.CryptoFoundations.SigmaProtocol.SigmaProtocol`. The difference is
 that the prover's computations live in an *arbitrary* monad `m` carrying probability semantics,
@@ -90,6 +91,32 @@ def PerfectlyComplete (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Cha
       return σ.verify x pc ω π] = 1
 
 end complete
+
+section sound
+
+open scoped NNReal
+
+/-- Soundness of a challenge-verify protocol as an interactive argument, against arbitrary — even
+computationally unbounded and adaptive — provers: for every statement outside the relation's
+language and every adversarially chosen commitment, the probability over the verifier's challenge
+that *some* response would be accepted is at most `soundnessError`.
+
+Because the protocol is public-coin and `verify` is deterministic, quantifying existentially over
+the response after the challenge is drawn dominates every prover strategy, so no prover model is
+needed: whatever computation produces the response, it can do no better than the best response for
+the sampled challenge. -/
+def Sound (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+    (soundnessError : ℝ≥0) : Prop :=
+  ∀ x : Stmt, (¬ ∃ w : Wit, rel x w) → ∀ pc : Commit,
+    Pr[ fun chal => ∃ resp : Resp, σ.verify x pc chal resp = true | σ.sampleChal ]
+      ≤ soundnessError
+
+/-- A protocol is perfectly sound if it is sound with no error: outside the language, the set of
+challenges admitting any accepted response has probability zero. -/
+def PerfectlySound (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) : Prop :=
+  σ.Sound 0
+
+end sound
 
 section speciallySound
 

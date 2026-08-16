@@ -166,6 +166,13 @@ def PerfectlyCorrect
       ∀ op ∈ support (bovc.openBatch st is),
         bovc.verifyBatch c (is.map fun i => (i, bovc.decode st i)) op = true
 
+end Security
+
+section Binding
+
+/-! Binding properties and the committed-value function are stated purely in terms of the
+deterministic `verifyBatch` field, so they need no monadic structure on `m` at all. -/
+
 /-- A batch-opening vector commitment is **position binding** if no commitment can be opened at a
 single position to two different values: any two (singleton) batch openings that both verify at the
 same position and commitment must certify the same value. -/
@@ -173,6 +180,54 @@ def PositionBinding (bovc : BatchOpeningVectorCommitment m ι α Commit State Ba
   ∀ (c : Commit) (i : ι) (v₁ v₂ : α) (op₁ op₂ : BatchOpening),
     bovc.verifyBatch c [(i, v₁)] op₁ = true → bovc.verifyBatch c [(i, v₂)] op₂ = true → v₁ = v₂
 
-end Security
+/-- **Batch position binding**: across any two verifying batch openings under the same commitment,
+claims at a common position certify the same value. This is the batch-level strengthening of
+`PositionBinding` (which it recovers via singleton claim lists) and is the shape a consumer needs
+when adversarial claim lists are checked whole, as in the Kilian transformation: it lets every
+claimed value be read off a single function of the commitment (`committedValue`). Taking the two
+openings equal also makes each individual claim list self-consistent across duplicate positions. -/
+def BatchPositionBinding
+    (bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening) : Prop :=
+  ∀ (c : Commit) (claims₁ claims₂ : List (ι × α)) (op₁ op₂ : BatchOpening) (i : ι) (v₁ v₂ : α),
+    bovc.verifyBatch c claims₁ op₁ = true → bovc.verifyBatch c claims₂ op₂ = true →
+    (i, v₁) ∈ claims₁ → (i, v₂) ∈ claims₂ → v₁ = v₂
+
+/-- Batch position binding restricted to singleton claim lists is position binding. -/
+theorem BatchPositionBinding.positionBinding
+    {bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening}
+    (h : bovc.BatchPositionBinding) : bovc.PositionBinding :=
+  fun c i v₁ v₂ op₁ op₂ h₁ h₂ =>
+    h c [(i, v₁)] [(i, v₂)] op₁ op₂ i v₁ v₂ h₁ h₂
+      (List.mem_singleton_self _) (List.mem_singleton_self _)
+
+open scoped Classical in
+/-- The value pinned at position `i` by a commitment `c`: an arbitrary value appearing for `i` in
+some verifying batch, or `default` if no batch can open `i` at all. Under `BatchPositionBinding`
+the choice is unique, so every verifying claim reads off this function
+(`BatchPositionBinding.committedValue_eq`): an adversary interacting from a fixed commitment is
+semantically committed to the full vector `bovc.committedValue c`, with no extractor needed. -/
+noncomputable def committedValue [Inhabited α]
+    (bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening)
+    (c : Commit) (i : ι) : α :=
+  if h : ∃ v : α, ∃ claims : List (ι × α), ∃ op : BatchOpening,
+      (i, v) ∈ claims ∧ bovc.verifyBatch c claims op = true
+  then h.choose else default
+
+/-- Under batch position binding, any claim in a verifying batch equals the committed value at its
+position. -/
+theorem BatchPositionBinding.committedValue_eq [Inhabited α]
+    {bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening}
+    (hbind : bovc.BatchPositionBinding) {c : Commit} {claims : List (ι × α)}
+    {op : BatchOpening} {i : ι} {v : α}
+    (hver : bovc.verifyBatch c claims op = true) (hmem : (i, v) ∈ claims) :
+    bovc.committedValue c i = v := by
+  have hex : ∃ v' : α, ∃ claims' : List (ι × α), ∃ op' : BatchOpening,
+      (i, v') ∈ claims' ∧ bovc.verifyBatch c claims' op' = true := ⟨v, claims, op, hmem, hver⟩
+  unfold committedValue
+  rw [dif_pos hex]
+  obtain ⟨claims', op', hmem', hver'⟩ := hex.choose_spec
+  exact hbind c claims' claims op' op i _ v hver' hver hmem' hmem
+
+end Binding
 
 end BatchOpeningVectorCommitment
