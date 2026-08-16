@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Batteries.Data.ByteArray
-import Batteries.Data.Array.Lemmas
-import LatticeCrypto.Falcon.Arithmetic
+
+module
+public import Batteries.Data.ByteArray
+public import Batteries.Data.Array.Lemmas
+public import LatticeCrypto.Falcon.Arithmetic
 
 /-!
 # Concrete Falcon Encoding
@@ -32,6 +34,8 @@ packed 4 coefficients into 7 bytes.
 - c-fn-dsa: `codec.c` (comp_encode, comp_decode, mqpoly_encode, mqpoly_decode)
 - Falcon specification v1.2, Section 3.12 (Algorithms 17–18)
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Concrete
@@ -69,9 +73,12 @@ def compress (n : ℕ) (s : IntPoly n) (dlen : ℕ) : Option (List UInt8) := Id.
     out := out.push 0
   return some out.toList
 
-/-- Decompress a Falcon signature polynomial from its compressed byte representation. -/
+/-- Decompress a fixed-length Falcon signature polynomial.
+
+`compress` pads every successful output to exactly `dlen` bytes. Accordingly, this decoder
+accepts exactly that length; the optional unpadded Falcon representation is outside its format. -/
 def decompress (n : ℕ) (d : List UInt8) (dlen : ℕ) : Option (IntPoly n) := Id.run do
-  if d.length < dlen then return none
+  if d.length ≠ dlen then return none
   let bytes := d.toArray
   let mut acc : UInt32 := 0
   let mut accLen : UInt32 := 0
@@ -110,6 +117,10 @@ def decompress (n : ℕ) (d : List UInt8) (dlen : ℕ) : Option (IntPoly n) := I
     if bytes[j]! != 0 then return none
     j := j + 1
   return some (Vector.ofFn fun ⟨i, _⟩ => result.getD i 0)
+
+@[simp] theorem decompress_eq_none_of_length_ne (n d dlen) (h : d.length ≠ dlen) :
+    decompress n d dlen = none := by
+  simp [decompress, h]
 
 /-! ## Public key encoding (14 bits per coefficient) -/
 
@@ -196,7 +207,8 @@ def sigDecode (d : ByteArray) (logn : ℕ) : Option (Bytes 40 × List UInt8) := 
   cases salt with
   | mk xs hxs =>
       have hsalt : ({ data := xs } : ByteArray).size = 40 := by
-        simpa using hxs
+        change xs.size = 40
+        exact hxs
       have hone : ({ data := #[48 + UInt8.ofNat logn] } : ByteArray).size = 1 := rfl
       have hempty : ({ data := #[] } : ByteArray).size = 0 := rfl
       simp [sigDecode, sigEncode, hsalt, hone, hempty]

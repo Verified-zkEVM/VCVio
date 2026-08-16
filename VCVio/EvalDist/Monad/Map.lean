@@ -3,7 +3,9 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.EvalDist.Monad.Basic
+
+module
+public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # Evaluation Distributions of Computations with `map`
@@ -17,6 +19,8 @@ More generally we can consier `f` with `InjOn f (support mx)` and get good lemma
 
 TODO: many lemmas should probably have mirrored `bind_pure` versions.
 -/
+
+@[expose] public section
 
 universe u v w
 
@@ -124,6 +128,15 @@ lemma probFailure_map : Pr[⊥ | f <$> mx] = Pr[⊥ | mx] := by
 @[simp, grind =]
 lemma probEvent_map (q : β → Prop) : Pr[ q | f <$> mx] = Pr[ q ∘ f | mx] := by
   grind [= map_eq_bind_pure_comp]
+
+/-- Outcome probability of a `map`, as a pulled-back event: `Pr[= y | f <$> mx]` is the probability
+that the source lands in the `f`-preimage of `y`. The `probOutput` companion to `probEvent_map`.
+Tagged `@[grind =]` only (not `@[simp]`): `simp` keeps its injective/equiv-map normal forms
+(`probOutput_map_equiv`, `…_eq_probOutput_inverse`), which this pulled-back-event form would clash
+with. -/
+@[grind =]
+lemma probOutput_map (y : β) : Pr[= y | f <$> mx] = Pr[ fun x => f x = y | mx] := by
+  rw [← probEvent_eq_eq_probOutput, probEvent_map]; rfl
 
 lemma probEvent_comp (q : β → Prop) : Pr[ q ∘ f | mx] = Pr[ q | f <$> mx] :=
   symm <| probEvent_map mx f q

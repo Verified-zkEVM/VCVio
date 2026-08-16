@@ -3,7 +3,9 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Wots
+
+module
+public import HashSig.SLHDSA.Wots
 
 /-!
 # Merkle trees and XMSS (FIPS 205 §6)
@@ -22,6 +24,8 @@ leaves with WOTS+ public keys, and `xmssPkFromSig_xmssSign` derives XMSS correct
 
 - NIST FIPS 205, §6 (Algorithms 9–11)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.Merkle

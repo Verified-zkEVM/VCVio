@@ -3,11 +3,13 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.QueryBound
-import VCVio.OracleComp.QueryTracking.Structures
-import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
-import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
-import VCVio.OracleComp.SimSemantics.StateT.StateProjection
+
+module
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
 /-!
 # Caching Queries Made by a Computation
@@ -18,6 +20,8 @@ cache results to return to the same query in the future.
 We also define `cachingOracle`, which caches queries to the oracles in `spec`,
 querying fresh values from `spec` if no cached value exists.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 
@@ -126,7 +130,10 @@ theorem withCachingAux_run'_eq
       (simulateQ base.withCaching oa).run' cache := by
   have hmap := congrArg (Prod.fst <$> ·)
     (withCachingAux_run_proj_eq base hit miss hmiss oa cache q)
-  simpa [StateT.run'] using hmap
+  rw [StateT.run', StateT.run']
+  change (fun a => id a.1) <$> (simulateQ (withCachingAux hit miss) oa).run (cache, q) =
+    Prod.fst <$> (simulateQ base.withCaching oa).run cache
+  simpa only [Functor.map_map, Function.comp_def, Prod.map] using hmap
 
 end CacheAuxProjection
 
@@ -430,8 +437,13 @@ lemma withCacheOverlay_map {α β : Type u} (cache : spec.QueryCache)
 lemma withCacheOverlay_bind_pure {α β : Type u} (cache : spec.QueryCache)
     (oa : OracleComp spec α) (f : α → β) :
     withCacheOverlay cache (oa >>= fun x => pure (f x)) =
-      f <$> withCacheOverlay cache oa :=
-  withCacheOverlay_map cache f oa
+      f <$> withCacheOverlay cache oa := by
+  calc
+    withCacheOverlay cache (oa >>= fun x => pure (f x)) =
+        withCacheOverlay cache (f <$> oa) := by
+      rw [map_eq_bind_pure_comp]
+      rfl
+    _ = _ := withCacheOverlay_map cache f oa
 
 private lemma fst_map_cachingOracle_run_some (cache : spec.QueryCache) (t : spec.Domain)
     (v : spec.Range t) (hv : cache t = some v) :

@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.Defs
+module
+
+public import Examples.PRFTagReader.Defs
 
 /-!
 # PRF Tag/Reader Protocol — Authentication
@@ -20,6 +22,8 @@ the random-function authentication experiment `authRFExp`, and proves:
   (`authRFExp_eq_authRFDirectExp`).
 -/
 
+@[expose] public section
+
 open OracleComp OracleSpec ENNReal
 
 namespace PRFTagReader
@@ -32,7 +36,7 @@ variable {TagId Nonce Digest : Type}
   [DecidableEq Digest]
 
 /-- Query the PRF oracle on `(tag, nonce)` to obtain its digest. -/
-private def authPRFQuery (tag : TagId) (nonce : Nonce) :
+def authPRFQuery (tag : TagId) (nonce : Nonce) :
     OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Digest :=
   (unifSpec + ((TagId × Nonce) →ₒ Digest)).query (Sum.inr (tag, nonce))
 

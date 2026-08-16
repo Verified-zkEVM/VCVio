@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import VCVio.CryptoFoundations.Fischlin.Defs
+module
+
+public import VCVio.CryptoFoundations.Fischlin.Defs
 
 /-!
 # Fischlin Transform: Completeness
@@ -14,6 +16,8 @@ random-oracle game is analysed through an equivalent pure-probability model game
 `G`, culminating in `almostComplete`: an honest proof verifies except with
 probability at most `completenessError ρ b S (FinEnum.card Chal)`.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -218,13 +222,17 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
       ≤ Pr[fun o => minGt k o | minUnifAux b cs.length (best.map (fun t => t.2.2))] := by
   induction cs generalizing best with
   | nil =>
-      simp only [fischlinUnifSearch, minUnifAux]
+      rw [fischlinUnifSearch]
+      unfold minUnifAux
+      simp only [List.length_nil]
       rw [probEvent_pure_eq_indicator, probEvent_pure_eq_indicator]
       refine le_of_eq ?_
       by_cases h : minGt k (Option.map (fun t => t.2.2) best) <;>
         simp [Set.indicator, Set.mem_setOf_eq, h]
   | cons ω rest ih =>
-      simp only [fischlinUnifSearch, minUnifAux]
+      rw [fischlinUnifSearch]
+      unfold minUnifAux
+      simp only [List.length_cons]
       refine probEvent_bind_le_of_forall_le (fun resp _ => ?_)
       rw [probEvent_bind_eq_tsum, probEvent_bind_eq_tsum]
       refine ENNReal.tsum_le_tsum (fun h => ?_)
@@ -406,7 +414,6 @@ from a search result `p : Option (Chal × Resp)`. On `none` (an unreachable bran
 challenge list is nonempty, since the search always keeps a best) we return a dummy `default`
 record; it is never consulted in the games below. -/
 private def searchRecord (pk : Stmt) (msg : M) (comList : List Commit) (i : Fin ρ)
-    [Inhabited Chal] [Inhabited Resp]
     (p : Option (Chal × Resp)) : FischlinROInput Stmt Commit Chal Resp ρ M :=
   match p with
   | some (ω, resp) => ⟨pk, msg, comList, i, ω, resp⟩

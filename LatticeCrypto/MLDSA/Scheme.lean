@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Primitives
-import VCVio.CryptoFoundations.IdenSchemeWithAbort
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import LatticeCrypto.MLDSA.Primitives
+public import VCVio.CryptoFoundations.IdenSchemeWithAbort
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # ML-DSA Identification Scheme Core
@@ -44,6 +46,8 @@ This file models the **proof-level IDS** used in the Fiat-Shamir-with-aborts sec
 - EasyCrypt `IDSabort.ec`, `SimplifiedScheme.ec` (formosa-crypto/dilithium)
 - NIST FIPS 204, Algorithms 7 and 8 (for the underlying arithmetic)
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec
@@ -125,6 +129,45 @@ noncomputable def validKeyPair (pk : PublicKey p prims) (sk : SecretKey p) : Boo
       ∃ seed : Bytes 32, keyGenFromSeed p prims seed = (pk, sk) := by
   simp [validKeyPair]
 
+/-! ### Short-secret idealized key validity
+
+The idealized proof-level ML-DSA model samples the short secrets `(s₁, s₂)` directly on the
+`η`-bounded box rather than deriving them deterministically from a seed. `validKeyPairShort`
+is the ∃-material analogue of `validKeyPair` that such key generators satisfy by construction;
+it is the key relation carried by `identificationSchemeShort` and the short-model security
+statements. -/
+
+/-- A key pair is *short-valid* when it is built from bounded key material: there are seeds
+`ρ`, `K` and `η`-bounded short vectors `(s₁, s₂)` such that the pair is exactly the key
+assembled from that material — `t = ExpandA(ρ) · s₁ + s₂` split by `Power2Round` into the
+published `t₁` and withheld `t₀`, with `tr = H(ρ, t₁)`. This is the ∃-material analogue of the
+∃-seed `validKeyPair`: it captures the algebraic key relationship (`t = A·s₁ + s₂`,
+`(t₁, t₀) = Power2Round(t)`, `s₁, s₂` bounded by `η`) without tying the material to a
+deterministic seed derivation, so it holds for idealized key generators that sample the
+material directly (e.g. `(s₁, s₂)` uniform on the `η`-bounded box). The predicate is decidable
+because all material spaces are finite; the instance is supplied classically. -/
+noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) : Bool :=
+  @decide _ <| Classical.propDecidable
+    (∃ (rho key : Bytes 32) (s1 : RqVec p.l) (s2 : RqVec p.k),
+    polyVecBounded s1 p.eta ∧ polyVecBounded s2 p.eta ∧
+    ((⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩,
+      ⟨rho, key,
+        prims.hashPublicKey rho (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1,
+        s1, s2, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).2⟩) :
+      PublicKey p prims × SecretKey p) = (pk, sk))
+
+@[simp] theorem validKeyPairShort_eq_true_iff (pk : PublicKey p prims) (sk : SecretKey p) :
+    validKeyPairShort p prims pk sk = true ↔
+      ∃ (rho key : Bytes 32) (s1 : RqVec p.l) (s2 : RqVec p.k),
+        polyVecBounded s1 p.eta ∧ polyVecBounded s2 p.eta ∧
+        ((⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩,
+          ⟨rho, key,
+            prims.hashPublicKey rho (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1,
+            s1, s2, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).2⟩) :
+          PublicKey p prims × SecretKey p) = (pk, sk) := by
+  unfold validKeyPairShort
+  exact @decide_eq_true_iff _ (Classical.propDecidable _)
+
 /-! ### Identification Scheme -/
 
 /-- The core identification scheme with aborts for ML-DSA.
@@ -174,6 +217,23 @@ def identificationScheme
     decide (polyVecNorm z < p.gamma1 - p.beta) &&
     decide (w1' = w1) &&
     decide (prims.hintWeight h ≤ p.omega)
+
+/-- The core ML-DSA identification scheme with aborts, tagged at the material-based key
+relation `validKeyPairShort`. The commit / respond / verify algorithms are exactly those of
+`identificationScheme` — the relation is only a type-level index of `IdenSchemeWithAbort`,
+never consumed by the operations — so every per-key fact about the operations transports
+between the two scheme constants. This is the scheme used by the idealized short-key security
+statements, whose key generators produce material-valid rather than seed-derived pairs. -/
+def identificationSchemeShort
+    [DecidableEq prims.High] [SampleableType (RqVec p.l)] :
+    IdenSchemeWithAbort
+      (PublicKey p prims) (SecretKey p)
+      (Commitment p prims) (SigningState p)
+      (CommitHashBytes p) (Response p prims)
+      (validKeyPairShort p prims) :=
+  ⟨(identificationScheme p prims).commit,
+    (identificationScheme p prims).respond,
+    (identificationScheme p prims).verify⟩
 
 /-! ### Key Generation Algebraic Properties -/
 

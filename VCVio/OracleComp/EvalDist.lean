@@ -3,15 +3,19 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.EvalDist.Defs.NeverFails
-import VCVio.EvalDist.Instances.OptionT
-import VCVio.OracleComp.SimSemantics.SimulateQ
+
+module
+public import VCVio.EvalDist.Defs.NeverFails
+public import VCVio.EvalDist.Instances.OptionT
+public import VCVio.OracleComp.SimSemantics.SimulateQ
 
 /-!
 # Output Distribution of Computations
 
 This file defines the `MonadLiftT`-based probability and support semantics for `OracleComp`.
 -/
+
+@[expose] public section
 
 open OracleSpec Option ENNReal BigOperators
 
@@ -257,6 +261,19 @@ lemma probEvent_query (t : spec.Domain) (p : spec.Range t → Prop) [DecidablePr
       Finset.card {x | p x} / Fintype.card (spec.Range t) := by
   simp [probEvent_liftM_eq_div]; rfl
 
+/-- An event selecting at most one response to a uniform oracle query has
+probability at most the inverse response-space cardinality. -/
+lemma probEvent_query_le_inv_of_unique (t : spec.Domain) (p : spec.Range t → Prop)
+    (hunique : ∀ x y, p x → p y → x = y) :
+    Pr[ p | (query t : OracleComp spec _)] ≤
+      (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ := by
+  classical
+  rw [probEvent_query, div_eq_mul_inv]
+  refine (mul_le_mul' ?_ le_rfl).trans_eq (one_mul _)
+  exact_mod_cast Finset.card_le_one.mpr fun x hx y hy ↦ by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx hy
+    exact hunique x y hx hy
+
 end evalDist
 
 section supportEvalDist
@@ -380,7 +397,14 @@ variable [IsProbabilitySpec spec]
   · -- See note above.
     simp [OptionT.probFailure_eq, OptionT.run_failure]
 
-lemma probOutput_eq_sub_probFailure_of_unit {oa : OracleComp spec PUnit} :
+@[simp] lemma support_guard {p : Prop} [Decidable p] :
+    support (guard p : OptionT (OracleComp spec) Unit) = if p then {()} else ∅ := by
+  rw [OracleComp.guard_eq]; split_ifs <;> simp
+
+/-- For any `PUnit`-valued computation in an arbitrary monad with an `SPMF` denotation, the
+probability of returning `()` is the complementary mass of its failure probability. -/
+lemma probOutput_punit_eq_sub_probFailure {m : Type → Type*} [Monad m] [MonadLiftT m SPMF]
+    {oa : m PUnit} :
     Pr[= () | oa] = 1 - Pr[⊥ | oa] := by
   have h := tsum_probOutput_add_probFailure oa
   have hunit : ∑' x : PUnit, Pr[= x | oa] = Pr[= () | oa] :=
@@ -388,7 +412,18 @@ lemma probOutput_eq_sub_probFailure_of_unit {oa : OracleComp spec PUnit} :
   rw [hunit] at h
   exact ENNReal.eq_sub_of_add_eq (ne_top_of_le_ne_top one_ne_top probFailure_le_one) h
 
-private lemma probOutput_bind_guard_eq_probEvent {α : Type} (oa : OracleComp spec α)
+/-- The `OracleComp` instance of `probOutput_punit_eq_sub_probFailure`: for a `PUnit`-valued
+oracle computation, the probability of returning `()` is the complementary mass of its failure
+probability. -/
+lemma probOutput_eq_sub_probFailure_of_unit {oa : OracleComp spec PUnit} :
+    Pr[= () | oa] = 1 - Pr[⊥ | oa] :=
+  probOutput_punit_eq_sub_probFailure
+
+/-- Guarding a computation `oa` by a decidable predicate `p` and asking for the probability of a
+successful `()` output recovers exactly the event probability `Pr[p | oa]`: the failure mass of the
+`guard` removes precisely the outputs falsifying `p`. Public guard-section API used by failure-based
+security experiments. -/
+lemma probOutput_bind_guard_eq_probEvent {α : Type} (oa : OracleComp spec α)
     (p : α → Prop) [DecidablePred p] :
     Pr[= () | (do let a ← oa; guard (p a) : OptionT (OracleComp spec) Unit)] = Pr[ p | oa] := by
   simp only [probOutput_bind_eq_tsum, OptionT.probOutput_liftM, probOutput_guard,
@@ -404,6 +439,46 @@ lemma probOutput_guard_eq_sub_probOutput_guard_not {α : Type} {oa : OracleComp 
     (by simpa only [probFailure_of_liftM_PMF, tsub_zero] using probEvent_compl oa p)
 
 end guard
+
+/-! ## Probabilities of `orElse` (`<|>`)
+
+`oa <|> oa'` runs `oa`, falling back to `oa'` only when `oa` returns `none`. The base `OracleComp`
+never fails, so the two failure events are independent: `oa <|> oa'` fails exactly when both do, and
+an output comes either from `oa` or — on `oa`'s failure mass — from `oa'`. (`support_orElse` is left
+as a future addition; it follows from `probOutput_orElse` via the support↔probability bridge.) -/
+
+section orElse
+
+variable [IsProbabilitySpec spec] {α : Type}
+
+@[simp]
+lemma probFailure_orElse (oa oa' : OptionT (OracleComp spec) α) :
+    Pr[⊥ | oa <|> oa'] = Pr[⊥ | oa] * Pr[⊥ | oa'] := by
+  classical
+  rw [OracleComp.orElse_def, OptionT.probFailure_eq, OptionT.probFailure_eq, OptionT.probFailure_eq,
+    OptionT.run_mk, probFailure_of_liftM_PMF, probFailure_of_liftM_PMF, probFailure_of_liftM_PMF,
+    zero_add, zero_add, zero_add, probOutput_bind_eq_tsum, tsum_option _ ENNReal.summable]
+  simp [probOutput_pure]
+
+@[simp]
+lemma probOutput_orElse (oa oa' : OptionT (OracleComp spec) α) (x : α) :
+    Pr[= x | oa <|> oa'] = Pr[= x | oa] + Pr[⊥ | oa] * Pr[= x | oa'] := by
+  classical
+  rw [OracleComp.orElse_def, OptionT.probOutput_eq, OptionT.probOutput_eq, OptionT.probFailure_eq,
+    OptionT.probOutput_eq, OptionT.run_mk, probFailure_of_liftM_PMF, zero_add,
+    probOutput_bind_eq_tsum, tsum_option _ ENNReal.summable,
+    tsum_eq_single x (fun b hb => by simp [probOutput_pure, Ne.symm hb])]
+  simp [probOutput_pure, add_comm]
+
+@[simp]
+lemma probEvent_orElse (oa oa' : OptionT (OracleComp spec) α) (p : α → Prop) :
+    Pr[ p | oa <|> oa'] = Pr[ p | oa] + Pr[⊥ | oa] * Pr[ p | oa'] := by
+  classical
+  simp only [probEvent_eq_tsum_ite, probOutput_orElse]
+  conv_rhs => rw [← ENNReal.tsum_mul_left, ← ENNReal.tsum_add]
+  refine tsum_congr fun b => ?_; split_ifs <;> ring
+
+end orElse
 
 section simulateQ_evalDist
 
@@ -486,4 +561,104 @@ noncomputable def evalDistWhen (d : QueryImpl spec SPMF) (mx : OracleComp spec �
 
 end evalDistWhen
 
+section supportPeel
+
+/-- `obtain`-friendly bind support peeler at the bare `OracleComp` level. Unlike `rw
+[mem_support_bind_iff]`, applying this lemma to a hypothesis uses *definitional* unification to
+match `mx >>= f`, so it engages through the `Monad`/`MonadLift` instance-tree mismatches that block
+the syntactic `rw` (the elaborated `OracleComp.instMonad`/`Bind.bind` spelling produced by
+unfolding nested protocol definitions differs syntactically from the canonical `>>=`). -/
+lemma mem_support_bind_peel (mx : OracleComp spec α) (f : α → OracleComp spec β) {y : β}
+    (hy : y ∈ support (mx >>= f)) :
+    ∃ a, a ∈ support mx ∧ y ∈ support (f a) := by
+  rwa [mem_support_bind_iff] at hy
+
+/-- `obtain`-friendly `pure` support resolver at the bare `OracleComp` level: `y ∈ support (pure
+a)` forces `y = a`, matched by definitional unification (so it engages on the
+`PFunctor.FreeM.pure` spelling that the syntactic `support_pure` `rw` rejects). -/
+lemma eq_of_mem_support_pure (a : α) {y : α}
+    (hy : y ∈ support (pure a : OracleComp spec α)) : y = a := by
+  rwa [support_pure, Set.mem_singleton_iff] at hy
+
+/-- `obtain`-friendly `<$>` (map) support peeler at the bare `OracleComp` level: `y ∈ support (g
+<$> mx)` yields a preimage `a ∈ support mx` with `y = g a`, matched by definitional unification
+(so it engages on the elaborated `Functor.map`/`OracleComp.instMonad` spelling that the syntactic
+`support_map` `rw` rejects). -/
+lemma mem_support_map_peel (g : α → β) (mx : OracleComp spec α) {y : β}
+    (hy : y ∈ support (g <$> mx)) :
+    ∃ a, a ∈ support mx ∧ y = g a := by
+  rw [support_map, Set.mem_image] at hy
+  obtain ⟨a, ha, hy⟩ := hy
+  exact ⟨a, ha, hy.symm⟩
+
+end supportPeel
+
+section freeMProbability
+
+variable [IsProbabilitySpec spec]
+
+/-- Probability of an event after mapping a raw polynomial free program,
+viewed through the `OracleComp` semantic bridge. -/
+lemma probEvent_ofFreeM_map (mx : spec.toPFunctor.FreeM α) (f : α → β)
+    (event : β → Prop) :
+    Pr[event | OracleComp.ofFreeM (PFunctor.FreeM.map f mx)] =
+      Pr[event ∘ f | OracleComp.ofFreeM mx] :=
+  probEvent_map (OracleComp.ofFreeM mx) f event
+
+/-- Probability of an event for a raw polynomial `pure`, viewed through
+`OracleComp`. -/
+lemma probEvent_ofFreeM_pure (x : α) (event : α → Prop) [DecidablePred event] :
+    Pr[event | OracleComp.ofFreeM
+      (pure x : spec.toPFunctor.FreeM α)] = if event x then 1 else 0 := by
+  change Pr[event | (pure x : OracleComp spec α)] = _
+  exact probEvent_pure x event
+
+/-- Bind decomposition for a raw polynomial free program, viewed through
+`OracleComp`. -/
+lemma probEvent_ofFreeM_bind_eq_tsum (mx : spec.toPFunctor.FreeM α)
+    (next : α → spec.toPFunctor.FreeM β) (event : β → Prop) :
+    Pr[event | OracleComp.ofFreeM (PFunctor.FreeM.bind mx next)] =
+      ∑' x, Pr[= x | OracleComp.ofFreeM mx] *
+        Pr[event | OracleComp.ofFreeM (next x)] :=
+  probEvent_bind_eq_tsum (OracleComp.ofFreeM mx)
+    (fun x => OracleComp.ofFreeM (next x)) event
+
+end freeMProbability
+
 end OracleComp
+
+namespace OptionT
+
+variable {ι : Type} {spec : OracleSpec ι} {α β : Type}
+
+/-- Support-level peeler for an `OptionT`-monadic bind, stated at the underlying
+`OracleComp`-level `.run`: every element `y` of the support of the *run* of `mx >>= f` factors
+through an intermediate `some a` in `mx`'s run support and a `y` in the run support of `f a`,
+unless `mx`'s run can produce `none` (in which case `y` may be that `none`). Companion to
+`OptionT.mem_support_bind_mk` for the case where the `OptionT.run` has already been stripped to
+the bare underlying computation.
+
+Applies to a hypothesis `y ∈ support oa` whenever `oa` is *definitionally* `(mx >>= f).run`
+(the `OptionT.run` is identity), so callers need not respell the full bind term. -/
+lemma mem_support_run_bind
+    (mx : OptionT (OracleComp spec) α) (f : α → OptionT (OracleComp spec) β) {y : Option β}
+    (hy : y ∈ support ((mx >>= f : OptionT (OracleComp spec) β).run)) :
+    (none ∈ support mx.run ∧ y = none) ∨
+      ∃ a, some a ∈ support mx.run ∧ y ∈ support ((f a).run) := by
+  rw [OptionT.run_bind, Option.elimM, mem_support_bind_iff] at hy
+  obtain ⟨o, ho, hy⟩ := hy
+  cases o with
+  | none => exact Or.inl ⟨ho, by simpa using hy⟩
+  | some a => exact Or.inr ⟨a, ho, hy⟩
+
+/-- `OptionT.lift`-headed specialization of `mem_support_run_bind`: a `lift`ed (hence
+never-failing) first computation `oa` peels cleanly, with the intermediate value living in
+`support oa` directly (no `none` branch). -/
+lemma mem_support_run_lift_bind
+    (oa : OracleComp spec α) (f : α → OptionT (OracleComp spec) β) {y : Option β}
+    (hy : y ∈ support ((OptionT.lift oa >>= f : OptionT (OracleComp spec) β).run)) :
+    ∃ a, a ∈ support oa ∧ y ∈ support ((f a).run) := by
+  rwa [OptionT.run_bind, OptionT.run_lift, Option.elimM, bind_pure_comp, bind_map_left,
+    mem_support_bind_iff] at hy
+
+end OptionT

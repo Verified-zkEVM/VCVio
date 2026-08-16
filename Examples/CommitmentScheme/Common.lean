@@ -3,13 +3,15 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.QueryTracking.Unpredictability
-import VCVio.EvalDist.TVDist
-import VCVio.ProgramLogic.Notation
-import VCVio.ProgramLogic.Relational.SimulateQ
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.QueryTracking.Unpredictability
+public import VCVio.EvalDist.TVDist
+public import VCVio.ProgramLogic.Notation
+public import VCVio.ProgramLogic.Relational.SimulateQ
 
 /-!
 # Random-oracle commitment scheme — shared definitions
@@ -40,6 +42,8 @@ exactly `1/|C|`. Composed with the birthday bound on cache collisions and
 identical-until-bad TV-distance bounds, this fact powers the binding,
 extractability, and hiding theorems.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 
@@ -112,7 +116,8 @@ lemma probEvent_from_fresh_query_le_inv
           pure (u, cache₀.cacheQuery t u)) := by
       simp only [cachingOracle.apply_eq, liftM, MonadLiftT.monadLift, MonadLift.monadLift,
         StateT.run_bind, StateT.run_get, monad_norm, hfresh]
-      change (StateT.lift (PFunctor.FreeM.lift ((CMOracle M S C).query t)) cache₀ >>= _) = _
+      change (StateT.lift
+        (PFunctor.FreeM.lift (P := (CMOracle M S C).toPFunctor) t) cache₀ >>= _) = _
       simp only [StateT.lift, monad_norm,
         modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
         StateT.modifyGet, StateT.run]

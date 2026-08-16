@@ -3,10 +3,12 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
-import VCVio.EvalDist.Defs.Basic
-import VCVio.EvalDist.Monad.Basic
-import VCVio.EvalDist.Defs.NeverFails
+
+module
+public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
+public import VCVio.EvalDist.Defs.Basic
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.EvalDist.Defs.NeverFails
 
 /-!
 # Total Variation Distance for SPMFs and Monadic Computations
@@ -17,6 +19,8 @@ This file extends the TV distance from `PMF` (defined in
 1. `SPMF.tvDist` — on sub-probability mass functions (via `toPMF`)
 2. `tvDist` — on any monad with `MonadLiftT m SPMF` (via `evalDist`)
 -/
+
+@[expose] public section
 
 noncomputable section
 
@@ -53,7 +57,8 @@ lemma tvDist_map_le {α' : Type w} {β : Type w} (f : α' → β)
 universe w in
 lemma tvDist_bind_right_le {α' : Type w} {β : Type w} (f : α' → SPMF β)
     (p q : SPMF α') : SPMF.tvDist (p >>= f) (q >>= f) ≤ SPMF.tvDist p q := by
-  simpa only [SPMF.tvDist, SPMF.toPMF_bind] using PMF.tvDist_bind_right_le _ p.toPMF q.toPMF
+  simpa only [SPMF.tvDist, SPMF.toPMF_bind, Option.elimM, PMF.monad_bind_eq_bind] using
+    PMF.tvDist_bind_right_le _ p.toPMF q.toPMF
 
 end SPMF
 
@@ -186,9 +191,11 @@ private lemma spmf_tvDist_bind_left_le_liftM
         ((liftM p : SPMF α) >>= fun a => liftM (f a))
         ((liftM p : SPMF α) >>= fun a => liftM (g a)) ≤
       ∑' a, (p a).toReal * SPMF.tvDist (liftM (f a)) (liftM (g a)) := by
-  simpa [SPMF.tvDist, SPMF.toPMF_bind, SPMF.toPMF_liftM, Option.elimM, PMF.monad_bind_eq_bind]
-    using pmf_tvDist_bind_left_le p (fun a => PMF.map Option.some (f a))
-      (fun a => PMF.map Option.some (g a))
+  have h := pmf_tvDist_bind_left_le p (fun a => PMF.map Option.some (f a))
+    (fun a => PMF.map Option.some (g a))
+  simp_rw [← PMF.bind_pure_comp] at h
+  simpa [SPMF.tvDist, SPMF.toPMF_bind, SPMF.toPMF_liftM, Option.elimM,
+    PMF.monad_bind_eq_bind, Function.comp_def] using h
 
 lemma tvDist_bind_left_le
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]

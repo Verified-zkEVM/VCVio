@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.EvalDist.BitVec
-import VCVio.EvalDist.Prod
+
+module
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.EvalDist.BitVec
+public import VCVio.EvalDist.Prod
 
 /-!
 # Probability lemmas for uniform `BitVec` sampling
@@ -14,6 +16,8 @@ Lemmas about `probOutput` for `ProbComp (BitVec n)` computations involving XOR w
 uniformly sampled keys. These are reusable building blocks for encryption proofs
 (e.g., one-time pad privacy).
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

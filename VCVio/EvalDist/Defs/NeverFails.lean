@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.EvalDist.Defs.AlternativeMonad
-import VCVio.EvalDist.Monad.Seq
+module
+
+public import VCVio.EvalDist.Defs.AlternativeMonad
+public import VCVio.EvalDist.Monad.Seq
 
 /-!
 # Computations that Never Fail
@@ -25,6 +27,8 @@ Instances involving `bind` should be added manually as needed.
 The existence of a `MonadLiftT m PMF` instance implies that `NeverFail mx` holds for any computation
 in the monad, since the `PMF` doesn't allow any probability of failing.
 -/
+
+@[expose] public section
 
 universe u v w
 
@@ -73,7 +77,7 @@ lemma neverFail_iff (mx : m α) : NeverFail mx ↔ Pr[⊥ | mx] = 0 :=
 lemma neverFail_bind_iff [MonadLiftT m SetM] [EvalDistCompatible m]
     (mx : m α) (my : α → m β) :
     NeverFail (mx >>= my) ↔ NeverFail mx ∧ ∀ x ∈ support mx, NeverFail (my x) := by
-  grind
+  simp [neverFail_iff, probFailure_bind_eq_add_tsum_support, add_eq_zero]
 
 @[simp, grind =]
 lemma neverFail_map_iff [LawfulMonad m] (mx : m α) (f : α → β) :
@@ -132,7 +136,7 @@ lemma bind_of_mem_support [MonadLiftT m SetM] [EvalDistCompatible m]
     {mx : m α} {my : α → m β}
     [hx : NeverFail mx] (hy : ∀ x ∈ support mx, NeverFail (my x)) :
     NeverFail (mx >>= my) where
-  probFailure_eq_zero := by grind
+  probFailure_eq_zero := ((neverFail_bind_iff mx my).mpr ⟨hx, hy⟩).probFailure_eq_zero
 
 /--
 Weak bind lemma: if the right-hand side never fails for every possible input (`∀ x`),

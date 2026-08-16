@@ -4,13 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.DirectCoupling
-import Examples.PRFTagReader.DirectCoupling.StepLemmas
-import Examples.PRFTagReader.DirectCoupling.Swap
-import Examples.PRFTagReader.DirectCoupling.ReaderCase
-import Examples.PRFTagReader.DirectCoupling.TagSlotPositive
-import Examples.PRFTagReader.DirectCoupling.TagSlotZero
-import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
+module
+
+public import Examples.PRFTagReader.DirectCoupling
+public import Examples.PRFTagReader.DirectCoupling.StepLemmas
+public import Examples.PRFTagReader.DirectCoupling.Swap
+public import Examples.PRFTagReader.DirectCoupling.ReaderCase
+public import Examples.PRFTagReader.DirectCoupling.TagSlotPositive
+public import Examples.PRFTagReader.DirectCoupling.TagSlotZero
+public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
 
 /-!
 # PRF Tag/Reader Protocol — Direct M_ideal/S_ideal Coupling, Headline Composition
@@ -74,6 +76,8 @@ explicit premise.
 The downstream wrappers (the lazy headline `multipleIdeal_le_singleIdeal_add_bad_DC`, slack-term
 packaging) are thin compositions.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

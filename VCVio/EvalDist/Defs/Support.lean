@@ -3,8 +3,10 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.Prelude
-import ToMathlib.ProbabilityTheory.SPMF
+
+module
+public import VCVio.Prelude
+public import ToMathlib.ProbabilityTheory.SPMF
 
 /-!
 # Support of a Monadic Computation
@@ -15,6 +17,8 @@ This file defines `support mx` — the set of possible outputs of a monadic comp
 The support is built directly on `MonadLiftT m SetM`: any monad with a lift into `SetM`
 (possibly via the canonical `PMF → SPMF → SetM` chain) automatically has `support`.
 -/
+
+@[expose] public section
 
 open ENNReal
 

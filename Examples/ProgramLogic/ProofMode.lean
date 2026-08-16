@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Relational
+module
+
+public import VCVio.ProgramLogic.Tactics
 
 /-!
 # Proof-Mode Entry / Exit Tactic Examples
@@ -13,6 +15,8 @@ This file validates proof-mode entry and exit tactics from
 `VCVio.ProgramLogic.Tactics`: `game_trans`, `by_equiv`, `by_upto`, `by_dist`,
 `rel_dist`, and relational simulation rules.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open OracleComp.ProgramLogic
@@ -24,6 +28,19 @@ universe u
 variable {ι : Type u} {spec : OracleSpec ι}
 variable [IsUniformSpec spec]
 variable {α β γ : Type}
+
+/-! ## Handler normalization -/
+
+section HandlerNormalization
+
+/-- `handler_step` consumes PolyFun's generic handler normal form. -/
+example {m : Type → Type} [Monad m] [LawfulMonad m]
+    (h : PFunctor.Handler.Stateful m Nat (PFunctor.monomial Bool Nat))
+    (query : Bool) (state : Nat) :
+    h.run (PFunctor.FreeM.lift query) state = (h query).run state := by
+  handler_step
+
+end HandlerNormalization
 
 /-! ## `game_trans` -/
 

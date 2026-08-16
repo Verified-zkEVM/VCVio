@@ -3,13 +3,17 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Shared ElGamal-family helpers
 
 Small distribution lemmas shared by the plain and hashed ElGamal examples.
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal

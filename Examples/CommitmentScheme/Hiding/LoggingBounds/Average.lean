@@ -3,12 +3,16 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import VCVio.ProgramLogic.Unary.SimulateQ
-import Examples.CommitmentScheme.Hiding.CountBounds
+
+module
+public import VCVio.ProgramLogic.Unary.SimulateQ
+public import Examples.CommitmentScheme.Hiding.CountBounds
 
 /-!
 # Averaged logging bounds for commitment-scheme hiding
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 
@@ -121,13 +125,7 @@ lemma run_simulateQ_hidingAvgComp_eq_bind [Inhabited M] [Inhabited S]
             (impl₁' := hidingAvgLeftImpl) (impl₂' := hidingAvgRightImpl)
             (hidingOa A s))]
   rw [run_simulateQ_hidingAvgRightImpl_eq_liftComp]
-  change
-    ((fun a : Bool × HidingCountState M S C => ((s, a.1), a.2)) <$>
-      (((simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0)).liftComp
-        (HidingAvgSpec M S C))) =
-    ((fun a : Bool × HidingCountState M S C => ((s, a.1), a.2)) <$>
-      (((simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0)).liftComp
-        (HidingAvgSpec M S C)))
+  simp only [simulateQ_pure, StateT.run_pure, bind_pure_comp]
   rfl
 
 /-- Averaged-mass bridge for hiding.

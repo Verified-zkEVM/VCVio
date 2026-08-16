@@ -3,8 +3,10 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import Examples.CommitmentScheme.Common
-import ToMathlib.Data.ENNReal.Gauss
+
+module
+public import Examples.CommitmentScheme.Common
+public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # Extractability for the random-oracle commitment scheme
@@ -56,6 +58,8 @@ The same shape of bound as `binding_bound` in
 unpredictability, but here applied to a two-phase adversary with separate
 commit and open phases.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 
@@ -534,7 +538,7 @@ private lemma extractability_win_le_textbook_bound [Inhabited M] [Inhabited S]
         (by
           simpa using
             (probEvent_cacheCollision_le_birthday_total_tight commitPart A.t₁
-              hcommit_bound Fintype.card_pos (fun _ => le_refl _)))
+              hcommit_bound (fun _ => le_refl _)))
         (by
           rintro ⟨⟨⟨cm, aux⟩, tr⟩, cache₁⟩ hx hno
           simpa [restPart, extractabilityRestOa] using

@@ -3,9 +3,11 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import VCVio.OracleComp.QueryTracking.Collision
-import ToMathlib.Combinatorics.FinPairs
-import ToMathlib.Data.ENNReal.Gauss
+
+module
+public import VCVio.OracleComp.QueryTracking.Collision
+public import ToMathlib.Combinatorics.FinPairs
+public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # ROM Birthday Bound
@@ -14,6 +16,8 @@ Per-pair collision bounds and union bound birthday argument for random oracle
 collision probability. Covers both log-based and cache-based collision bounds,
 with per-index corollaries.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal Finset
 
@@ -152,7 +156,6 @@ theorem probEvent_pair_collision_le {α : Type}
     [Inhabited ι]
     (oa : OracleComp spec α)
     (n : ℕ)
-    (_hbound : IsTotalQueryBound oa n)
     (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t))
     (i j : Fin n) (hij : i ≠ j) :
     Pr[fun z => z.2.length > i.val ∧ z.2.length > j.val ∧
@@ -227,7 +230,7 @@ theorem probEvent_logCollision_le_birthday_total_tight {α : Type}
         · refine (probEvent_exists_finset_le_sum pairs _ E).trans (Finset.sum_le_sum ?_)
           intro ⟨i, j⟩ hij
           simp only [pairs, Finset.mem_filter, Finset.mem_univ, true_and] at hij
-          exact probEvent_pair_collision_le oa n hbound hrange i j (Fin.ne_of_lt hij)
+          exact probEvent_pair_collision_le oa n hrange i j (Fin.ne_of_lt hij)
         · intro z hz hcoll
           obtain ⟨i, j, hij, hdist, heq⟩ := hcoll
           have hlen := log_length_le_of_mem_support_run_simulateQ hbound hz
@@ -336,7 +339,7 @@ private lemma run_simulateQ_cachingOracle_query_bind_of_miss {α : Type} {t : sp
       (liftM (query t) >>= fun u => pure (u, cache₀.cacheQuery t u) : OracleComp spec _) := by
     simp only [cachingOracle.apply_eq, liftM, MonadLiftT.monadLift, MonadLift.monadLift,
       StateT.run_bind, StateT.run_get, pure_bind, ht_none]
-    change (StateT.lift (PFunctor.FreeM.lift (query t)) cache₀ >>= _) = _
+    change (StateT.lift (PFunctor.FreeM.lift (P := spec.toPFunctor) t) cache₀ >>= _) = _
     simp only [StateT.lift, monad_norm, modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet, StateT.run]; rfl
   rw [hstep]; simp [monad_norm]
@@ -444,15 +447,14 @@ theorem probEvent_cacheCollision_le_birthday_total_tight {α : Type}
     [Inhabited ι]
     (oa : OracleComp spec α)
     (n : ℕ)
-    (_hbound : IsTotalQueryBound oa n)
-    (_hC : 0 < Fintype.card (spec.Range default))
-    (_hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t)) :
+    (hbound : IsTotalQueryBound oa n)
+    (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t)) :
     Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle oa).run ∅] ≤
       ((n * (n - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card (spec.Range default)) := by
   let C := (Fintype.card (spec.Range default) : ℝ≥0∞)
   calc Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle oa).run ∅]
       ≤ ∑ j ∈ range n, ((0 + j : ℕ) : ℝ≥0∞) * C⁻¹ :=
-        probEvent_cacheCollision_run_le_sum_aux _hrange oa n 0 _hbound ∅
+        probEvent_cacheCollision_run_le_sum_aux hrange oa n 0 hbound ∅
           (by intro ⟨t₁, _, _, _, _, h1, _, _⟩; simp at h1)
           ⟨∅, by simp, fun t ht => absurd (by simp : (∅ : QueryCache spec) t = none) ht⟩
     _ = ∑ j ∈ range n, (j : ℝ≥0∞) * C⁻¹ := by simp
@@ -468,13 +470,12 @@ theorem probEvent_cacheCollision_le_birthday_total {α : Type}
     (oa : OracleComp spec α)
     (n : ℕ)
     (hbound : IsTotalQueryBound oa n)
-    (hC : 0 < Fintype.card (spec.Range default))
     (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t)) :
     Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle oa).run ∅] ≤
       (n ^ 2 : ℝ≥0∞) / (2 * Fintype.card (spec.Range default)) := by
   calc Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle oa).run ∅]
       ≤ ((n * (n - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card (spec.Range default)) :=
-        probEvent_cacheCollision_le_birthday_total_tight oa n hbound hC hrange
+        probEvent_cacheCollision_le_birthday_total_tight oa n hbound hrange
     _ ≤ (n ^ 2 : ℝ≥0∞) / (2 * Fintype.card (spec.Range default)) := by
         gcongr; exact_mod_cast (show n * (n - 1) ≤ n ^ 2 by rw [pow_two]; gcongr; lia)
 
@@ -486,13 +487,12 @@ theorem probEvent_cacheCollision_le_birthday {α : Type} {t : ℕ}
     [Inhabited ι] [Fintype ι]
     (oa : OracleComp spec α)
     (hbound : IsPerIndexQueryBound oa (fun _ => t))
-    (hC : 0 < Fintype.card (spec.Range default))
     (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t)) :
     Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle oa).run ∅] ≤
       ((Fintype.card ι * t) ^ 2 : ℝ≥0∞) / (2 * Fintype.card (spec.Range default)) := by
   have htotal := IsTotalQueryBound.of_perIndex hbound
   simp only [Finset.sum_const, Finset.card_univ, smul_eq_mul] at htotal
-  exact_mod_cast probEvent_cacheCollision_le_birthday_total oa _ htotal hC hrange
+  exact_mod_cast probEvent_cacheCollision_le_birthday_total oa _ htotal hrange
 
 omit [spec.DecidableEq] in
 /-- **WARNING: vacuously true.** The `[Unique ι]` hypothesis means `ι` has exactly one element,
@@ -504,10 +504,9 @@ theorem probEvent_cacheCollision_le_birthday' {α : Type} {t : ℕ}
     [Inhabited ι] [Unique ι]
     (oa : OracleComp spec α)
     (hbound : IsPerIndexQueryBound oa (fun _ => t))
-    (hC : 0 < Fintype.card (spec.Range default))
     (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t)) :
     Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle oa).run ∅] ≤
       (t ^ 2 : ℝ≥0∞) / (2 * Fintype.card (spec.Range default)) := by
-  simpa using probEvent_cacheCollision_le_birthday oa hbound hC hrange
+  simpa using probEvent_cacheCollision_le_birthday oa hbound hrange
 
 end OracleComp

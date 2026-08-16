@@ -3,10 +3,12 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import Examples.CommitmentScheme.Common
-import Examples.CommitmentScheme.Binding
-import Examples.CommitmentScheme.Extractability
-import Examples.CommitmentScheme.Hiding
+
+module
+public import Examples.CommitmentScheme.Common
+public import Examples.CommitmentScheme.Binding
+public import Examples.CommitmentScheme.Extractability
+public import Examples.CommitmentScheme.Hiding
 
 /-!
 # Random-oracle commitment scheme: an end-to-end ROM proof
@@ -98,3 +100,5 @@ experiments. The standard-model `binding ≤ keyed-CR ≤ birthday` chain that
 ROM-instantiated counterpart that exercises the random-oracle layer
 directly rather than abstracting through `KeyedHashFamily`.
 -/
+
+@[expose] public section

@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.SimSemantics.StateT.StateProjection
+
+module
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
 /-!
 # Programmable Oracles
@@ -46,6 +48,8 @@ of `withProgramming`); see `OracleComp.ProgramLogic.Relational.ProgrammingOracle
 actual TV-distance bound (`tvDist_simulateQ_withCaching_withProgramming_le_probEvent_bad`)
 and its `programming_collision_bound{,_qP_qH_β}` repackagings.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -269,8 +273,13 @@ theorem withProgramming_empty_run'_eq
     (oa : OracleComp spec α) (cache : spec.QueryCache) (bad : Bool) :
     (simulateQ (so.withProgramming ProgrammingPolicy.empty) oa).run' (cache, bad) =
       (simulateQ so.withCaching oa).run' cache := by
-  simpa [StateT.run'] using
-    congrArg (fun p => Prod.fst <$> p) (withProgramming_empty_run_proj_eq so oa cache bad)
+  rw [StateT.run', StateT.run']
+  have hmap := congrArg (fun p => Prod.fst <$> p)
+    (withProgramming_empty_run_proj_eq so oa cache bad)
+  change (fun a => id a.1) <$>
+      (simulateQ (so.withProgramming ProgrammingPolicy.empty) oa).run (cache, bad) =
+    Prod.fst <$> (simulateQ so.withCaching oa).run cache
+  simpa only [Functor.map_map, Function.comp_def, Prod.map] using hmap
 
 /-! ## `withCachingTrackingPolicy` ≡ `withCaching` (cache-side projection) -/
 
@@ -300,8 +309,13 @@ theorem withCachingTrackingPolicy_run'_eq'
     (oa : OracleComp spec α) (cache : spec.QueryCache) (bad : Bool) :
     (simulateQ (so.withCachingTrackingPolicy policy) oa).run' (cache, bad) =
       (simulateQ so.withCaching oa).run' cache := by
-  simpa [StateT.run'] using congrArg (fun p => Prod.fst <$> p)
+  rw [StateT.run', StateT.run']
+  have hmap := congrArg (fun p => Prod.fst <$> p)
     (withCachingTrackingPolicy_run_proj_eq' so policy oa cache bad)
+  change (fun a => id a.1) <$>
+      (simulateQ (so.withCachingTrackingPolicy policy) oa).run (cache, bad) =
+    Prod.fst <$> (simulateQ so.withCaching oa).run cache
+  simpa only [Functor.map_map, Function.comp_def, Prod.map] using hmap
 
 /-- `ProbComp` specialization of `withCachingTrackingPolicy_run_proj_eq'`. -/
 theorem withCachingTrackingPolicy_run_proj_eq

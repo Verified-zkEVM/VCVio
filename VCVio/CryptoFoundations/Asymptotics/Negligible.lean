@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import Mathlib.Algebra.Polynomial.Eval.Degree
-import Mathlib.Analysis.Asymptotics.SuperpolynomialDecay
+
+module
+public import Mathlib.Algebra.Polynomial.Eval.Degree
+public import Mathlib.Analysis.Asymptotics.SuperpolynomialDecay
 
 /-!
 # Negligible Functions
@@ -21,13 +23,15 @@ as this is usually the situation for cryptographic reductions.
 - `negligible_const_mul`: Constant multiple of negligible is negligible.
 -/
 
+@[expose] public section
+
 open ENNReal Asymptotics Filter
 
 /-- A function `f` is negligible if it decays faster than any polynomial function. -/
 def negligible (f : ℕ → ℝ≥0∞) : Prop :=
   SuperpolynomialDecay atTop (fun x => ↑x) f
 
-@[simp] def negligible_iff (f : ℕ → ℝ≥0∞) :
+@[simp] theorem negligible_iff (f : ℕ → ℝ≥0∞) :
     negligible f ↔ SuperpolynomialDecay atTop (fun x => ↑x) f := Iff.rfl
 
 lemma negligible_zero : negligible 0 := superpolynomialDecay_zero _ _

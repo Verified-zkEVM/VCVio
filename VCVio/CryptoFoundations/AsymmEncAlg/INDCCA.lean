@@ -4,18 +4,22 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.CryptoFoundations.SecExp
+module
+
+public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.CryptoFoundations.SecExp
 
 /-!
 # Asymmetric Encryption Schemes: IND-CCA
 
 IND-CCA interfaces and games for asymmetric encryption schemes.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

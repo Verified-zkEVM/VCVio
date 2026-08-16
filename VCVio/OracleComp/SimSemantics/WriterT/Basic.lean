@@ -3,8 +3,10 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.EvalDist
-import ToMathlib.Control.WriterT
+
+module
+public import VCVio.OracleComp.EvalDist
+public import ToMathlib.Control.WriterT
 
 /-!
 # Simulation through `WriterT` Handlers
@@ -14,9 +16,11 @@ The combinators here mirror the StateT/ReaderT versions in
 `SimSemantics/StateT/Basic.lean` and `SimSemantics/ReaderT/Basic.lean`.
 -/
 
+@[expose] public section
+
 open OracleSpec Function Prod
 
-universe u v w
+universe u v w x
 
 open scoped OracleSpec.PrimitiveQuery
 
@@ -25,9 +29,9 @@ namespace QueryImpl
 /-- Given implementations for oracles in `spec₁` and `spec₂` in terms of writer monads for
 two different log monoids `ω₁` and `ω₂`, implement the combined set `spec₁ + spec₂` in terms
 of the product monoid `ω₁ × ω₂`. Each side leaves the other component at the identity. -/
-def parallelWriterT {ι₁ ι₂ : Type _}
-    {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {m : Type _ → Type _} [Functor m] {ω₁ ω₂ : Type _} [Monoid ω₁] [Monoid ω₂]
+def parallelWriterT {ι₁ : Type u} {ι₂ : Type v}
+    {spec₁ : OracleSpec.{u, w} ι₁} {spec₂ : OracleSpec.{v, w} ι₂}
+    {m : Type w → Type x} [Functor m] {ω₁ ω₂ : Type w} [Monoid ω₁] [Monoid ω₂]
     (impl₁ : QueryImpl spec₁ (WriterT ω₁ m))
     (impl₂ : QueryImpl spec₂ (WriterT ω₂ m)) :
     QueryImpl (spec₁ + spec₂) (WriterT (ω₁ × ω₂) m)
@@ -37,9 +41,9 @@ def parallelWriterT {ι₁ ι₂ : Type _}
 /-- Indexed version of `QueryImpl.parallelWriterT`. Each query for index `t` writes into the
 `t`-th component of the pi-product `(t : τ) → ω t`, leaving every other component at the
 identity. Note that `m` cannot vary with `t`. -/
-def sigmaWriterT {τ : Type} [DecidableEq τ] {ι : τ → Type _}
-    {spec : (t : τ) → OracleSpec (ι t)}
-    {m : Type _ → Type _} [Functor m] {ω : τ → Type _} [(t : τ) → Monoid (ω t)]
+def sigmaWriterT {τ : Type} [DecidableEq τ] {ι : τ → Type v}
+    {spec : (t : τ) → OracleSpec.{v, w} (ι t)}
+    {m : Type w → Type x} [Functor m] {ω : τ → Type w} [(t : τ) → Monoid (ω t)]
     (impl : (t : τ) → QueryImpl (spec t) (WriterT (ω t) m)) :
     QueryImpl (OracleSpec.sigma spec) (WriterT ((t : τ) → ω t) m)
   | ⟨t, q⟩ => WriterT.mk <| Prod.map id (Function.update (fun _ => 1) t) <$> (impl t q).run

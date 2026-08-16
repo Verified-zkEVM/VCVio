@@ -3,13 +3,15 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.FiatShamir.QueryBounds
-import VCVio.CryptoFoundations.FiatShamir.Sigma
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Games
-import VCVio.CryptoFoundations.SignatureAlg
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.QueryTracking.SubSpec
+
+module
+public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
+public import VCVio.CryptoFoundations.FiatShamir.Sigma
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Games
+public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.SubSpec
 
 /-!
 # Bridge helpers for the stateful Fiat-Shamir CMA games
@@ -18,6 +20,8 @@ This file contains the adversary wrappers and query-bound bookkeeping that
 connect the public `SignatureAlg.unforgeableAdv` interface to the direct
 `QueryImpl.Stateful` CMA games.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -359,12 +363,12 @@ private theorem liftAdv_cmaSignHashQueryBound
       (superSpec := cmaSpec M Commit Chal Resp Stmt)
       (q := IsCostlyQuery (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) (Stmt := Stmt))
-      (hpq := by rintro ((n | mc) | m) <;> simp [IsCostlyQuery]) hQ.1
+      (hpq := by rintro ((n | mc) | m) <;> simp [IsCostlyQuery, SubSpec.onQuery]) hQ.1
   · exact OracleComp.IsQueryBoundP.liftComp_subSpec
       (superSpec := cmaSpec M Commit Chal Resp Stmt)
       (q := IsHashQuery (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) (Stmt := Stmt))
-      (hpq := by rintro ((n | mc) | m) <;> simp [IsHashQuery]) hQ.2
+      (hpq := by rintro ((n | mc) | m) <;> simp [IsHashQuery, SubSpec.onQuery]) hQ.2
 
 omit [DecidableEq M]
   [DecidableEq Commit] [SampleableType Chal] in
@@ -404,7 +408,7 @@ theorem signedCandidateAdv_cmaSignHashQueryBound
     (candidateAdv σ hr M adv) [] qS qH (by
       rw [candidateAdv, cmaSignHashQueryBound_query_bind_iff]
       refine ⟨⟨by simp [IsCostlyQuery], by simp [IsHashQuery]⟩, fun pk => ?_⟩
-      simpa [cmaSignHashQueryBound] using
+      simpa [postKeygenCandidateAdv, cmaSignHashQueryBound, IsCostlyQuery, IsHashQuery] using
         liftAdv_cmaSignHashQueryBound (M := M) (Commit := Commit)
           (Chal := Chal) (Resp := Resp) (Stmt := Stmt)
           (oa := adv.main pk) qS qH (hQ pk))
@@ -432,10 +436,13 @@ theorem signedFreshAdv_cmaSignHashQueryBound
         adv qS qH hQ)
       (fun p => by
         rcases p with ⟨⟨pk, msg, sig⟩, _⟩
-        simpa using
-          fiatShamir_verify_cmaSignHashQueryBound (σ := σ) (hr := hr) (M := M)
-            (Commit := Commit) (Chal := Chal) (Resp := Resp) pk msg sig 0 1
-            (Nat.succ_pos 0))
+        have hv := fiatShamir_verify_cmaSignHashQueryBound (σ := σ) (hr := hr) (M := M)
+          (Commit := Commit) (Chal := Chal) (Resp := Resp) pk msg sig 0 1
+          (Nat.succ_pos 0)
+        simp only [verifyFreshComp, bind_pure_comp]
+        rw [cmaSignHashQueryBound]
+        exact ⟨(isQueryBoundP_map_iff _ _ _).mpr hv.1,
+          (isQueryBoundP_map_iff _ _ _).mpr hv.2⟩)
 
 omit [DecidableEq Commit] [SampleableType Chal] in
 /-- Predicate-targeted signing-query bound for the final freshness-preserving

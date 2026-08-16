@@ -3,14 +3,18 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.Prelude
-import ToMathlib.Control.OptionT
+
+module
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.Prelude
+public import ToMathlib.Control.OptionT
 
 /-!
 # Simulation Semantics for Oracles in a Computation
 
 -/
+
+@[expose] public section
 
 open OracleComp Prod
 
@@ -24,7 +28,7 @@ section simulateQ
 implementation in `r α` by substituting `impl t` for `query t` throughout. -/
 def simulateQ {ι} {spec : OracleSpec ι} {r : Type u → Type _} [Monad r]
     (impl : QueryImpl spec r) {α : Type u} (mx : OracleComp spec α) : r α :=
-  PFunctor.FreeM.mapM impl mx
+  PFunctor.FreeM.liftM impl mx
 
 variable {ι} {spec : OracleSpec ι} {r m n : Type u → Type*}
     [Monad r] (impl : QueryImpl spec r)
@@ -36,7 +40,7 @@ lemma simulateQ_pure (x : α) :
 @[simp, grind =, game_rule]
 lemma simulateQ_bind [LawfulMonad r] (mx : OracleComp spec α) (my : α → OracleComp spec β) :
     simulateQ impl (mx >>= my) = simulateQ impl mx >>= fun x => simulateQ impl (my x) := by
-  unfold simulateQ; exact PFunctor.FreeM.mapM_bind' impl mx my
+  unfold simulateQ; exact PFunctor.FreeM.liftM_bind impl mx my
 
 /-- Version of `simulateQ` that bundles into a monad hom. -/
 @[reducible]
@@ -65,6 +69,36 @@ explicit `spec.query t`. -/
 lemma simulateQ_spec_query [LawfulMonad r] (t : spec.Domain) :
     simulateQ impl (liftM (spec.query t)) = impl t := by
   simp [simulateQ_query]
+
+/-- Companion to `simulateQ_query` for a query entering the computation through a
+*query-level lift chain*: simulating a query lifted from a sub-spec `spec'` applies the
+implementation to the lifted query.
+
+The `(liftM q : OracleComp spec α)` on the left elaborates through the canonical
+`MonadLift (OracleQuery spec) (OracleComp spec)` composed (via `instMonadLiftTOfMonadLift`)
+with the given `MonadLiftT (OracleQuery spec') (OracleQuery spec)` — e.g. a `SubSpec`
+embedding chain such as `spec₂ ⊂ₒ spec₁ + spec₂ ⊂ₒ spec + (spec₁ + spec₂)`. This is the
+term shape produced by lifting a query helper (`liftM (liftM (spec'.query t))`) into a
+larger interface, as `OracleSpec.SubSpec`-based protocol verifiers do. `simulateQ_query`
+itself cannot match it: its query's spec is forced to equal the simulated spec, while here
+the query lives in `spec'`.
+
+The right-hand side is deliberately `mapQuery` of the *single* term `liftM q` rather than
+the unbundled `(liftM q).cont <$> impl (liftM q).input`: the type of `.cont` depends on
+`.input`, so the unbundled form blocks all further `simp` rewriting of the lifted query
+(the dependent-motive trap). With `mapQuery`, the lifted query can then be normalized in
+place (everything in the `SubSpec` lift chain is definitional) and landed on the
+implementation with `mapQuery_mk`.
+
+Not `@[simp]`: for the common sum-spec layouts the specialized routing lemmas
+(`QueryImpl.simulateQ_add_add_liftM_query_left` and friends in `SimSemantics/Append.lean`)
+resolve the routed query in one step; this general form would preempt them and strand the
+goal at an un-normalized `mapQuery (liftM q)`. Use it manually for bespoke lift chains. -/
+lemma simulateQ_liftM_query [LawfulMonad r] {ι' : Type*} {spec' : OracleSpec ι'}
+    [MonadLiftT (OracleQuery spec') (OracleQuery spec)] (q : OracleQuery spec' α) :
+    simulateQ impl (liftM q : OracleComp spec α) =
+      impl.mapQuery (liftM q : OracleQuery spec α) :=
+  simulateQ_query impl (liftM q)
 
 /-- Evaluate an oracle computation by answering each query with a total answer function.
 
@@ -107,6 +141,21 @@ theorem evalWithAnswerFn_map {ι} {spec : OracleSpec ι} (f : QueryImpl spec Id)
     evalWithAnswerFn f (g <$> mx) = g (evalWithAnswerFn f mx) := by
   change simulateQ f (g <$> mx) = g (simulateQ f mx)
   rw [simulateQ_map]; rfl
+
+/-- Two `simulateQ`'d binds whose bodies agree up to a pure post-map `f` agree up to mapping
+`f` over the whole simulation. Companion to `simulateQ_bind` for establishing map-relations
+between two simulations without unfolding the shared leading computation `oa`. -/
+lemma simulateQ_bind_map_eq_of_body [LawfulMonad r]
+    (oa : OracleComp spec α) (body₁ : α → OracleComp spec β)
+    (body₂ : α → OracleComp spec γ) (f : γ → β)
+    (hBody : ∀ a, simulateQ impl (body₁ a) = f <$> simulateQ impl (body₂ a)) :
+    simulateQ impl (oa >>= body₁) = f <$> simulateQ impl (oa >>= body₂) := by
+  rw [← simulateQ_map]
+  simp only [map_eq_bind_pure_comp, simulateQ_bind, simulateQ_pure, bind_assoc,
+    Function.comp]
+  congr 1
+  funext a
+  exact (hBody a).trans (map_eq_bind_pure_comp _ _ _)
 
 @[simp]
 lemma simulateQ_seq [LawfulMonad r] (og : OracleComp spec (α → β)) (mx : OracleComp spec α) :
@@ -151,7 +200,7 @@ variable {ι} {spec : OracleSpec ι} {n : Type u → Type v}
   [Monad n] [LawfulMonad n] (impl : QueryImpl spec n)
 
 lemma simulateQ_def (impl : QueryImpl spec n) (mx : OracleComp spec α) :
-    simulateQ impl mx = PFunctor.FreeM.mapMHom impl mx := rfl
+    simulateQ impl mx = PFunctor.FreeM.liftMHom impl mx := rfl
 
 /-- `QueryImpl.id'` is an identity for `simulateQ` with implementation in `OracleComp spec`. -/
 @[simp, grind =]

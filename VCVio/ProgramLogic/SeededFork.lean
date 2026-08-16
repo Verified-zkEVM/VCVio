@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.SeededFork
-import VCVio.ProgramLogic.Unary.HoareTriple
+
+module
+public import VCVio.CryptoFoundations.SeededFork
+public import VCVio.ProgramLogic.Unary.HoareTriple
 
 /-!
 # Seed-Based Forking Lemma — Program Logic Bridge
@@ -13,6 +15,8 @@ Wraps the probabilistic seeded forking lemma bounds from
 `CryptoFoundations/SeededFork.lean` as quantitative Hoare triples (`Triple`) for use in the
 program logic framework.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

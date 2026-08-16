@@ -4,14 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import PolyFun.Control.Monad.Hom
-import VCVio.EvalDist.Defs.Instances
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.ProbCompLift
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+module
+
+public import PolyFun.Control.Monad.Hom
+public import VCVio.EvalDist.Defs.Instances
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbCompLift
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 
 /-!
 # Signature Algorithms
@@ -28,6 +30,8 @@ and signature space `S`.
 * `SignatureAlg.unforgeableExp`, `eufNmaExp`, `managedRoNmaExp`: the EUF-CMA, EUF-NMA, and
   managed-random-oracle NMA security experiments, with the corresponding adversary advantages.
 -/
+
+@[expose] public section
 
 universe u v
 

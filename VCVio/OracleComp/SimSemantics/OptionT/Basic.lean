@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.SimSemantics.SimulateQ
-import ToMathlib.Control.OptionT
+
+module
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import ToMathlib.Control.OptionT
 
 /-!
 # Simulation Semantics through `OptionT` Handlers
@@ -18,6 +20,8 @@ These lemmas appeal to the central `simulateQ` theory in
 `StateT`, `WriterT`, and `ReaderT`.
 -/
 
+@[expose] public section
+
 open OracleComp Prod
 
 universe u v w
@@ -28,12 +32,12 @@ variable {ι} {spec : OracleSpec ι} {r n : Type u → Type*}
     [Monad n] [LawfulMonad n] (impl : QueryImpl spec n)
 
 omit [LawfulMonad n] in
-@[simp] lemma simulateQ_option_elim (x : Option α) (my : OracleComp spec β)
+@[simp, grind =] lemma simulateQ_option_elim (x : Option α) (my : OracleComp spec β)
     (my' : α → OracleComp spec β) : simulateQ impl (x.elim my my') =
     x.elim (simulateQ impl my) (fun x => simulateQ impl (my' x)) := by
   cases x <;> simp
 
-@[simp] lemma simulateQ_option_elimM (mx : OracleComp spec (Option α))
+@[simp, grind =] lemma simulateQ_option_elimM (mx : OracleComp spec (Option α))
     (my : OracleComp spec β) (my' : α → OracleComp spec β) :
     simulateQ impl (Option.elimM mx my my') =
     Option.elimM (simulateQ impl mx) (simulateQ impl my) (fun x => simulateQ impl (my' x)) := by
@@ -129,7 +133,9 @@ lemma simulateQ_optionT_vector_mapM_pure {k : ℕ}
       Option.map List.toArray <$>
         ((xs.toList.mapM f : OptionT (OracleComp spec) (List β)) :
           OracleComp spec (Option (List β))) := by
-    simpa only [OptionT.run_map] using congrArg OptionT.run h_vl
+    have h := congrArg OptionT.run h_vl
+    rw [OptionT.run_map, OptionT.run_map] at h
+    exact h
   have h_sim := congrArg (simulateQ impl) h_run
   rw [simulateQ_map, simulateQ_map, simulateQ_optionT_list_mapM_pure impl f g xs.toList hfg]
     at h_sim
@@ -142,6 +148,116 @@ lemma simulateQ_optionT_vector_mapM_pure {k : ℕ}
   rw [h_simp_rhs] at h_sim
   exact (map_inj_right
     (fun h => Option.map_injective (fun _ _ => Vector.toArray_inj.mp) h)).mp h_sim
+
+/-! ## `forIn` over `OptionT`
+
+The `List` companions to `simulateQ_optionT_bind`/`_lift` for an `OptionT`-monadic loop. -/
+
+/-- `simulateQ` distributes over an `OptionT`-monadic `forIn` on a list: the `OptionT`-loop
+sibling of `simulateQ_list_forIn`. The body lives in `OptionT (OracleComp spec)`, so the loop is
+decomposed via `simulateQ_optionT_bind` (rather than the `OracleComp`-level `simulateQ_bind` that
+`simulateQ_list_forIn` uses). Needed to push `simulateQ` past a verifier's spot-check
+`for j in List.finRange t do …` when that loop is `OptionT`-monadic. -/
+lemma simulateQ_optionT_list_forIn (xs : List α) (init : β)
+    (body : α → β → OptionT (OracleComp spec) (ForInStep β)) :
+    simulateQ impl ((forIn xs init body : OptionT (OracleComp spec) β) :
+        OracleComp spec (Option β))
+      = ((forIn xs init (fun a b => simulateQ impl (body a b)) : OptionT n β) :
+        n (Option β)) := by
+  induction xs generalizing init with
+  | nil =>
+      rw [List.forIn_nil, List.forIn_nil]
+      exact simulateQ_pure impl (some init)
+  | cons x rest ih =>
+      rw [List.forIn_cons, List.forIn_cons, simulateQ_optionT_bind]
+      refine bind_congr fun step ↦ ?_
+      cases step with
+      | done b =>
+          change simulateQ impl ((pure b : OptionT (OracleComp spec) β) :
+            OracleComp spec (Option β)) = _
+          exact simulateQ_pure impl (some b)
+      | yield b => exact ih b
+
+/-- If under `simulateQ` every loop body resolves to `pure (some (ForInStep.yield init))` (yields
+the accumulator unchanged at the initial value), the whole `OptionT`-monadic `forIn` resolves to
+`pure (some init)`. Discharges a verifier spot-check loop whose body is a sequence of oracle reads
+followed by an always-passing `guard` (under the relevant accept hypothesis). The constant-yield
+`OptionT` companion to `simulateQ_list_forIn`. -/
+lemma simulateQ_optionT_forIn_yield_pure_some (xs : List α) (init : β)
+    (body : α → β → OptionT (OracleComp spec) (ForInStep β))
+    (hbody : ∀ a, simulateQ impl ((body a init : OptionT (OracleComp spec) (ForInStep β)) :
+        OracleComp spec (Option (ForInStep β)))
+      = (pure (some (ForInStep.yield init)) : n (Option (ForInStep β)))) :
+    simulateQ impl ((forIn xs init body : OptionT (OracleComp spec) β) :
+        OracleComp spec (Option β))
+      = (pure (some init) : n (Option β)) := by
+  rw [simulateQ_optionT_list_forIn]
+  induction xs with
+  | nil =>
+      rw [List.forIn_nil]
+      rfl
+  | cons x rest ih =>
+      rw [List.forIn_cons]
+      change ((simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
+          OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β)) >>= _ :
+          OptionT n β) = _
+      rw [show (simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
+          OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β))
+          = (pure (ForInStep.yield init) : OptionT n (ForInStep β)) from hbody x, pure_bind]
+      exact ih
+
+omit [LawfulMonad n] in
+/-- `simulateQ` maps an `OptionT` `failure` (whose run is the underlying `pure none`) to
+`failure`: the `failure` companion of `simulateQ_pure` for `OptionT`-monadic computations.
+Both sides are definitionally `pure none`, but the `failure` spelling is what a failed
+`guard` rewrites to in a simulated verifier body. -/
+lemma simulateQ_optionT_failure :
+    simulateQ impl ((failure : OptionT (OracleComp spec) α) : OracleComp spec (Option α))
+      = (failure : OptionT n α) :=
+  simulateQ_pure impl none
+
+/-- Failing companion to `simulateQ_optionT_forIn_yield_pure_some`: if each loop body, under
+`simulateQ`, resolves to `pure (some (ForInStep.yield init))` when its per-element condition
+`cond a` holds and to `pure none` otherwise, and *some* element of the list fails its
+condition, then the whole `OptionT`-monadic `forIn` resolves to `pure none` (the failure
+propagates through the remaining `OptionT` binds). Together the two lemmas characterize a
+guarded spot-check loop: `pure (some init)` iff every condition holds, `pure none`
+otherwise. -/
+lemma simulateQ_optionT_forIn_yield_pure_none (xs : List α) (init : β)
+    (body : α → β → OptionT (OracleComp spec) (ForInStep β))
+    (cond : α → Prop) [DecidablePred cond]
+    (hbody : ∀ a, simulateQ impl ((body a init : OptionT (OracleComp spec) (ForInStep β)) :
+        OracleComp spec (Option (ForInStep β)))
+      = (pure (if cond a then some (ForInStep.yield init) else none) :
+          n (Option (ForInStep β))))
+    (hfail : ¬ ∀ a ∈ xs, cond a) :
+    simulateQ impl ((forIn xs init body : OptionT (OracleComp spec) β) :
+        OracleComp spec (Option β))
+      = (pure none : n (Option β)) := by
+  rw [simulateQ_optionT_list_forIn]
+  induction xs with
+  | nil => exact absurd (List.forall_mem_nil _) hfail
+  | cons x rest ih =>
+      rw [List.forIn_cons]
+      by_cases hx : cond x
+      · change ((simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
+            OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β)) >>= _ :
+            OptionT n β) = _
+        rw [show (simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
+            OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β))
+            = (pure (ForInStep.yield init) : OptionT n (ForInStep β)) by
+          rw [hbody x, if_pos hx]
+          rfl, pure_bind]
+        exact ih (fun hall ↦ hfail (List.forall_mem_cons.mpr ⟨hx, hall⟩))
+      · change ((simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
+            OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β)) >>= _ :
+            OptionT n β) = _
+        rw [show (simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
+            OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β))
+            = (failure : OptionT n (ForInStep β)) by
+          rw [hbody x, if_neg hx]
+          rfl, failure_bind]
+        rfl
 
 @[deprecated (since := "2026-06-25")]
 alias simulateQ_optionT_mapM_pure := simulateQ_optionT_vector_mapM_pure

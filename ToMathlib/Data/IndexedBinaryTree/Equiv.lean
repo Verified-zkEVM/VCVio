@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import ToMathlib.Data.IndexedBinaryTree.Basic
-import Mathlib.Logic.Equiv.Prod
+module
+
+public import ToMathlib.Data.IndexedBinaryTree.Basic
+public import Mathlib.Logic.Equiv.Prod
 
 /-!
 # Equivalences
@@ -13,6 +15,8 @@ import Mathlib.Logic.Equiv.Prod
 This section contains theorems about equivalences between different tree indexing types
 and data structures.
 -/
+
+@[expose] public section
 
 namespace BinaryTree
 

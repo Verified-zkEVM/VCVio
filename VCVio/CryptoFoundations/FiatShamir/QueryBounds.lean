@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.QueryTracking.QueryBound
+module
+
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # Query-count bounds for Fiat-Shamir adversaries
@@ -18,6 +20,8 @@ The two non-aborting EUF-CMA variants use exactly the same predicates, so they
 live here in the shared `FiatShamir` namespace. With-aborts call sites
 reference them via their fully qualified name.
 -/
+
+@[expose] public section
 
 universe u v
 

@@ -3,9 +3,11 @@ Copyright (c) 2026 XC0R. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: XC0R
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.QueryTracking.Birthday
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.QueryTracking.Birthday
 
 /-!
 # Collision-Resistant Hash Functions
@@ -54,6 +56,8 @@ protocol parameter.
 - `VCVio/OracleComp/QueryTracking/Collision.lean` — `CacheHasCollision`
   predicates and birthday bounds used to bound ROM-level collision probability.
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal
@@ -129,7 +133,7 @@ term `(t+2) * (t+1) / (2 * |Y|)` — a `(t+2)`-query game once the two
 verification queries are accounted for.
 
 Closes one of the layers requested in
-[Verified-zkEVM/VCV-io#284](https://github.com/Verified-zkEVM/VCV-io/issues/284).
+[Verified-zkEVM/VCVio#284](https://github.com/Verified-zkEVM/VCVio/issues/284).
 -/
 
 /-- The random-oracle spec with domain `X` and range `Y`, as seen by the
@@ -141,8 +145,8 @@ def ROMHashSpec (X Y : Type) : OracleSpec X := fun _ => Y
 
 instance {X Y : Type} [DecidableEq X] [DecidableEq Y] :
     (ROMHashSpec X Y).DecidableEq where
-  decidableEq_A := (inferInstanceAs (DecidableEq X))
-  decidableEq_B := fun _ => (inferInstanceAs (DecidableEq Y))
+  decidableEqA := (inferInstanceAs (DecidableEq X))
+  decidableEqB := fun _ => (inferInstanceAs (DecidableEq Y))
 
 /-- The post-simulation companion to `ROMHashSpec`: definitionally the same
 `OracleSpec X`, but with a distinct head symbol so the `IsUniformSpec`
@@ -152,15 +156,15 @@ computation only via `simulateQ ROMHashSpec.cachingOracle`. -/
 def ROMHashSpec.cached (X Y : Type) : OracleSpec X := fun _ => Y
 
 instance {X Y : Type} [Fintype Y] : (ROMHashSpec.cached X Y).Fintype where
-  fintype_B := fun _ => (inferInstanceAs (Fintype Y))
+  fintypeB := fun _ => (inferInstanceAs (Fintype Y))
 
 instance {X Y : Type} [Inhabited Y] : (ROMHashSpec.cached X Y).Inhabited where
-  inhabited_B := fun _ => (inferInstanceAs (Inhabited Y))
+  inhabitedB := fun _ => (inferInstanceAs (Inhabited Y))
 
 instance {X Y : Type} [DecidableEq X] [DecidableEq Y] :
     (ROMHashSpec.cached X Y).DecidableEq where
-  decidableEq_A := (inferInstanceAs (DecidableEq X))
-  decidableEq_B := fun _ => (inferInstanceAs (DecidableEq Y))
+  decidableEqA := (inferInstanceAs (DecidableEq X))
+  decidableEqB := fun _ => (inferInstanceAs (DecidableEq Y))
 
 noncomputable instance {X Y : Type} [Fintype Y] [Inhabited Y] :
     IsUniformSpec (ROMHashSpec.cached X Y) := IsUniformSpec.ofFintypeInhabited _
@@ -268,15 +272,16 @@ private lemma romCRWin_implies_collision [DecidableEq X] [DecidableEq Y] [Finite
     cachingOracle_query_caches x' cache₂ y' cache₃ hmem₃, heq_of_eq hyy⟩
 
 /-- **ROM Collision Resistance birthday bound**: for any `t`-query ROM-CR
-adversary `A` over a hash range of cardinality `|Y| > 0`, the advantage is
-bounded by `(t+2) * (t+1) / (2 * |Y|)`. The two extra queries account for the
-experiment's verification queries, which share the adversary's cache. -/
+adversary `A` over a hash range `Y`, the advantage is bounded by
+`(t+2) * (t+1) / (2 * |Y|)` (a vacuous bound when `|Y| = 0`). The two extra
+queries account for the experiment's verification queries, which share the
+adversary's cache. -/
 theorem romCRAdvantage_le_birthday [DecidableEq X] [DecidableEq Y] [Fintype Y] [Inhabited X]
-    [Inhabited Y] {t : ℕ} (hY : 0 < Fintype.card Y) (A : BoundedROMCRAdversary X Y t) :
+    [Inhabited Y] {t : ℕ} (A : BoundedROMCRAdversary X Y t) :
     romCRAdvantage A ≤ (((t + 2) * (t + 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card Y) := by
   simp only [romCRAdvantage, romCRExp_eq]
   exact (probEvent_mono (romCRWin_implies_collision A)).trans <|
     probEvent_cacheCollision_le_birthday_total_tight (spec := ROMHashSpec.cached X Y)
-      (romCRInner A) (t + 2) (romCRInner_totalBound A) hY fun _ => le_rfl
+      (romCRInner A) (t + 2) (romCRInner_totalBound A) fun _ => le_rfl
 
 end CollisionResistance

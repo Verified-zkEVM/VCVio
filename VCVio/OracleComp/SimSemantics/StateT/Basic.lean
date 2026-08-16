@@ -3,7 +3,11 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.EvalDist
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ProbComp
+public import ToMathlib.Control.StateT
 
 /-!
 # Query Implementations with State Monads
@@ -13,7 +17,9 @@ This file gives lemmas about `QueryImpl spec m` when `m` is something like `Stat
 TODO: should generalize things to `MonadState` once laws for it exist.
 -/
 
-universe u v w
+@[expose] public section
+
+universe u v w x
 
 open OracleSpec
 
@@ -56,9 +62,9 @@ theorem simulateQ_mapStateTBase_run' {ι₀ ι₁ : Type _}
 /-- Given implementations for oracles in `spec₁` and `spec₂` in terms of state monads for
 two different contexts `σ₁` and `σ₂`, implement the combined set `spec₁ + spec₂` in terms
 of a combined `σ₁ × σ₂` state. -/
-def parallelStateT {ι₁ ι₂ : Type _}
-    {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {m : Type _ → Type _} [Functor m] {σ₁ σ₂ : Type _}
+def parallelStateT {ι₁ : Type u} {ι₂ : Type v}
+    {spec₁ : OracleSpec.{u, w} ι₁} {spec₂ : OracleSpec.{v, w} ι₂}
+    {m : Type w → Type x} [Functor m] {σ₁ σ₂ : Type w}
     (impl₁ : QueryImpl spec₁ (StateT σ₁ m))
     (impl₂ : QueryImpl spec₂ (StateT σ₂ m)) :
     QueryImpl (spec₁ + spec₂) (StateT (σ₁ × σ₂) m)
@@ -77,7 +83,7 @@ def flattenStateT {ι : Type _} {spec : OracleSpec ι}
   StateT.mk fun (s, q) =>
     (fun ((u, s'), q') => (u, (s', q'))) <$> ((impl t).run s |>.run q)
 
-@[simp] theorem flattenStateT_liftTarget_apply_run {ι : Type _} {spec : OracleSpec ι}
+@[simp, grind =] theorem flattenStateT_liftTarget_apply_run {ι : Type _} {spec : OracleSpec ι}
     {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ τ : Type u}
     (impl : QueryImpl spec (StateT τ m)) (t : spec.Domain) (s : σ) (q : τ) :
     ((impl.liftTarget (StateT σ (StateT τ m))).flattenStateT t).run (s, q) =
@@ -86,9 +92,9 @@ def flattenStateT {ι : Type _} {spec : OracleSpec ι}
 
 /-- Indexed version of `QueryImpl.parallelStateT`. Note that `m` cannot vary with `t`.
 dtumad: The `Function.update` thing is nice but forces `DecidableEq`. -/
-def piStateT {τ : Type} [DecidableEq τ] {ι : τ → Type _}
-    {spec : (t : τ) → OracleSpec (ι t)}
-    {m : Type _ → Type _} [Monad m] {σ : τ → Type _}
+def piStateT {τ : Type} [DecidableEq τ] {ι : τ → Type v}
+    {spec : (t : τ) → OracleSpec.{v, w} (ι t)}
+    {m : Type w → Type x} [Monad m] {σ : τ → Type w}
     (impl : (t : τ) → QueryImpl (spec t) (StateT (σ t) m)) :
     QueryImpl (OracleSpec.sigma spec) (StateT ((t : τ) → σ t) m)
   | ⟨t, q⟩ => StateT.mk fun s => Prod.map id (Function.update s t) <$> (impl t q).run (s t)
@@ -96,8 +102,8 @@ def piStateT {τ : Type} [DecidableEq τ] {ι : τ → Type _}
 /-- Lift a stateful query implementation to a `(state × Bool)`-stateful version that threads
 the boolean (bad) flag unchanged. The output value and updated state come from the
 underlying `impl`; the second `Bool` component is preserved verbatim across each query. -/
-def withBadFlag {ι : Type _} {spec : OracleSpec ι}
-    {m : Type _ → Type _} [Functor m] {σ : Type _}
+def withBadFlag {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    {m : Type v → Type w} [Functor m] {σ : Type v}
     (impl : QueryImpl spec (StateT σ m)) :
     QueryImpl spec (StateT (σ × Bool) m) := fun t =>
   StateT.mk fun | (s, b) => Prod.map id (·, b) <$> (impl t).run s
@@ -105,8 +111,8 @@ def withBadFlag {ι : Type _} {spec : OracleSpec ι}
 /-- Lift a stateful query implementation to a `(state × Bool)`-stateful version that OR-updates
 the boolean (bad) flag with a predicate `f` evaluated on the pre-state and produced output.
 The flag is monotone: if it was already `true`, it stays `true`. -/
-def withBadUpdate {ι : Type _} {spec : OracleSpec ι}
-    {m : Type _ → Type _} [Functor m] {σ : Type _}
+def withBadUpdate {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    {m : Type v → Type w} [Functor m] {σ : Type v}
     (impl : QueryImpl spec (StateT σ m))
     (f : (t : spec.Domain) → σ → spec.Range t → Bool) :
     QueryImpl spec (StateT (σ × Bool) m) := fun t =>
@@ -114,16 +120,16 @@ def withBadUpdate {ι : Type _} {spec : OracleSpec ι}
 
 /-- Run-shape of `withBadFlag`: the lifted implementation maps the underlying run by tagging
 each `(value, state)` pair with the unchanged bad flag `b`. -/
-@[simp] lemma withBadFlag_apply_run {ι : Type _} {spec : OracleSpec ι}
-    {m : Type _ → Type _} [Functor m] {σ : Type _}
+@[simp, grind =] lemma withBadFlag_apply_run {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    {m : Type v → Type w} [Functor m] {σ : Type v}
     (impl : QueryImpl spec (StateT σ m)) (t : spec.Domain) (s : σ) (b : Bool) :
     (impl.withBadFlag t).run (s, b) =
       (fun (vs : spec.Range t × σ) => (vs.1, vs.2, b)) <$> (impl t).run s := rfl
 
 /-- Run-shape of `withBadUpdate`: the lifted implementation maps the underlying run by
 appending the OR-updated bad flag `b || f t s vs.1`. -/
-@[simp] lemma withBadUpdate_apply_run {ι : Type _} {spec : OracleSpec ι}
-    {m : Type _ → Type _} [Functor m] {σ : Type _}
+@[simp, grind =] lemma withBadUpdate_apply_run {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    {m : Type v → Type w} [Functor m] {σ : Type v}
     (impl : QueryImpl spec (StateT σ m))
     (f : (t : spec.Domain) → σ → spec.Range t → Bool)
     (t : spec.Domain) (s : σ) (b : Bool) :
@@ -310,3 +316,88 @@ theorem support_simulateQ_run'_subset
 end support_simulateQ_StateT
 
 end OracleComp
+
+section probEventSimulateQ
+
+open OracleComp
+
+/-- `run'`-level corollary of `simulateQ_bind_map_eq_of_body`: if the two bodies of a bind agree
+under `simulateQ` up to a pure post-map `f`, then so do the `run'`s of the simulated binds from
+any initial state. -/
+lemma StateT.run'_simulateQ_bind_map_eq_of_body
+    {ι : Type} {σ α β γ : Type} {spec : OracleSpec ι}
+    {n : Type → Type} [Monad n] [LawfulMonad n]
+    (impl : QueryImpl spec (StateT σ n))
+    (oa : OracleComp spec α) (body₁ : α → OracleComp spec β)
+    (body₂ : α → OracleComp spec γ) (f : γ → β) (s : σ)
+    (hBody : ∀ a, simulateQ impl (body₁ a) = f <$> simulateQ impl (body₂ a)) :
+    (simulateQ impl (oa >>= body₁)).run' s =
+      f <$> (simulateQ impl (oa >>= body₂)).run' s := by
+  rw [← StateT.run'_map']
+  exact congrArg (fun mx : StateT σ n β ↦ mx.run' s)
+    (simulateQ_bind_map_eq_of_body impl oa body₁ body₂ f hBody)
+
+/-- If all outputs of the original `OracleComp` are successful (`some`) and satisfy `P`, then
+the simulated `OptionT`-wrapped computation satisfies `P` with probability one. The success
+hypothesis is at the level of the *original* computation's support, which bounds the simulated
+support by `support_simulateQ_run'_subset`. -/
+lemma OptionT.probEvent_eq_one_of_simulateQ_support
+    {ι σ α : Type} {spec : OracleSpec ι}
+    (impl : QueryImpl spec (StateT σ ProbComp))
+    (oa : OracleComp spec (Option α)) (s₀ : σ) (P : α → Prop)
+    (h : ∀ x ∈ support oa, ∃ a, x = some a ∧ P a) :
+    Pr[P | OptionT.mk ((simulateQ impl oa).run' s₀)] = 1 := by
+  letI := Classical.decPred P
+  rw [probEvent_eq_one_iff]
+  constructor
+  · rw [OptionT.probFailure_eq, OptionT.run_mk, probFailure_eq_zero, _root_.zero_add]
+    exact probOutput_eq_zero_of_not_mem_support fun hnone ↦
+      let ⟨_, hsome, _⟩ := h none (support_simulateQ_run'_subset impl oa s₀ hnone)
+      by cases hsome
+  · intro x hx
+    rw [OptionT.mem_support_iff] at hx
+    obtain ⟨a, ha, hP⟩ := h (some x) (support_simulateQ_run'_subset impl oa s₀ hx)
+    cases ha
+    exact hP
+
+/-- Bind-prefixed variant of `OptionT.probEvent_eq_one_of_simulateQ_support`: the simulated
+`OptionT` computation may sample its initial state `s₀` from an arbitrary `ProbComp σ`. Since
+`support_simulateQ_run'_subset` bounds the support uniformly in `s₀`, the support hypothesis
+`h` (independent of `s₀`) still discharges both the never-fail and all-outputs-`P`
+obligations. -/
+lemma OptionT.probEvent_eq_one_of_simulateQ_support_bind
+    {ι σ α : Type} {spec : OracleSpec ι}
+    (init : ProbComp σ)
+    (impl : QueryImpl spec (StateT σ ProbComp))
+    (oa : OracleComp spec (Option α)) (P : α → Prop)
+    (h : ∀ x ∈ support oa, ∃ a, x = some a ∧ P a) :
+    Pr[P | OptionT.mk (do let s ← init; (simulateQ impl oa).run' s)] = 1 := by
+  letI := Classical.decPred P
+  rw [probEvent_eq_one_iff]
+  refine ⟨?_, ?_⟩
+  · rw [OptionT.probFailure_eq, OptionT.run_mk, add_eq_zero]
+    refine ⟨probFailure_eq_zero, ?_⟩
+    refine probOutput_eq_zero_of_not_mem_support fun hnone ↦ ?_
+    rw [mem_support_bind_iff] at hnone
+    obtain ⟨s, _, hnone⟩ := hnone
+    obtain ⟨_, hsome, _⟩ := h none (support_simulateQ_run'_subset impl oa s hnone)
+    cases hsome
+  · intro x hx
+    rw [OptionT.mem_support_iff, OptionT.run_mk, mem_support_bind_iff] at hx
+    obtain ⟨s, _, hx⟩ := hx
+    obtain ⟨a, ha, hP⟩ := h (some x) (support_simulateQ_run'_subset impl oa s hx)
+    cases ha
+    exact hP
+
+/-- Properties of `Option`-valued outputs of an underlying `OracleComp` propagate to elements
+in the support of the simulated, run, and `OptionT`-wrapped version. -/
+lemma OptionT.aux_mem_support_simulateQ_run'
+    {ι σ α : Type} {spec : OracleSpec ι}
+    (impl : QueryImpl spec (StateT σ ProbComp))
+    (oa : OracleComp spec (Option α)) (s₀ : σ) (P : α → Prop)
+    (h : ∀ x ∈ support oa, ∀ a, x = some a → P a)
+    {x : α} (hx : x ∈ support (OptionT.mk ((simulateQ impl oa).run' s₀))) : P x := by
+  rw [OptionT.mem_support_iff] at hx
+  exact h (some x) (support_simulateQ_run'_subset impl oa s₀ hx) x rfl
+
+end probEventSimulateQ

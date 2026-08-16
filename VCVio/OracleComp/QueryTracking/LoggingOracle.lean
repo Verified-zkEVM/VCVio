@@ -3,12 +3,15 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.QueryBound
-import VCVio.OracleComp.QueryTracking.Structures
-import VCVio.OracleComp.QueryTracking.Tracing
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import ToMathlib.Control.WriterT
+
+module
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.QueryTracking.Tracing
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import PolyFun.PFunctor.Free.Path.Execution
+public import ToMathlib.Control.WriterT
 
 /-!
 # Logging Queries Made by a Computation
@@ -26,11 +29,17 @@ matches the pre-existing `Monad (WriterT (QueryLog spec) m)` instance the
 rest of `WriterTBridge` / `mvcgen` infrastructure already targets.
 -/
 
+@[expose] public section
+
 universe u v w
 
 open OracleSpec OracleComp
 
 open scoped OracleSpec.PrimitiveQuery
+
+-- `QueryLog spec` is the list presentation of the corresponding PolyFun trace.
+set_option allowUnsafeReducibility true in
+attribute [local reducible] OracleSpec.toPFunctor PFunctor.Idx
 
 variable {ι} {spec : OracleSpec ι} {α β γ : Type u}
 
@@ -203,7 +212,7 @@ end QueryImpl
 /-- Simulation oracle for tracking the queries in a `QueryLog`, without modifying the actual
 behavior of the oracle. Each query/response pair is appended to a single `WriterT` log via
 `QueryImpl.withLogging`, leaving the underlying `OracleComp` computation unchanged. -/
-def OracleSpec.loggingOracle {spec : OracleSpec ι} :
+def OracleSpec.loggingOracle {ι : Type u} {spec : OracleSpec.{u, u} ι} :
     QueryImpl spec (WriterT (QueryLog spec) (OracleComp spec)) :=
   (QueryImpl.ofLift spec (OracleComp spec)).withLogging
 
@@ -365,6 +374,69 @@ end isQueryBound
 @[reducible] def withQueryLog {α} (mx : OracleComp spec α) :
     OracleComp spec (α × QueryLog spec) :=
   WriterT.run (simulateQ (QueryImpl.ofLift spec (OracleComp spec)).withLogging mx)
+
+/-- Erase an intrinsic execution path to its output and query log. -/
+@[reducible] def pathLogResult {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}
+    (mx : OracleComp oSpec β) (path : PFunctor.FreeM.Path mx) :
+    β × QueryLog oSpec :=
+  (PFunctor.FreeM.output mx path, PFunctor.FreeM.Path.trace mx path)
+
+@[reducible] private def loggedPath
+    {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}
+    (mx : OracleComp oSpec β) : OracleComp oSpec (PFunctor.FreeM.Path mx) :=
+  PFunctor.FreeM.withPath mx
+
+@[simp] private theorem loggedPath_query_bind
+    {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}
+    (t : oSpec.Domain) (next : oSpec.Range t → OracleComp oSpec β) :
+    loggedPath (liftM (query t) >>= next) =
+      OracleComp.queryBind t fun u =>
+        PFunctor.FreeM.map
+          (fun path : PFunctor.FreeM.Path (next u) =>
+            (⟨u, path⟩ : PFunctor.FreeM.Path (OracleComp.queryBind t next)))
+          (loggedPath (next u)) :=
+  rfl
+
+@[reducible] private def loggedRun
+    {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}
+    (mx : OracleComp oSpec β) : OracleComp oSpec (β × QueryLog oSpec) :=
+  (simulateQ oSpec.loggingOracle mx).run
+
+private theorem map_pathLogResult_loggedPath
+    {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}
+    (mx : OracleComp oSpec β) :
+    PFunctor.FreeM.map (pathLogResult mx) (loggedPath mx) = loggedRun mx := by
+  induction mx using OracleComp.inductionOn with
+  | pure x => rfl
+  | query_bind t next ih =>
+      rw [loggedRun, OracleComp.run_simulateQ_loggingOracle_query_bind,
+        loggedPath_query_bind]
+      simp only [PFunctor.FreeM.map]
+      change
+        OracleComp.queryBind t (fun u =>
+          PFunctor.FreeM.map
+            (pathLogResult (OracleComp.queryBind t next))
+            (PFunctor.FreeM.map
+              (fun path : PFunctor.FreeM.Path (next u) =>
+                (⟨u, path⟩ : PFunctor.FreeM.Path (OracleComp.queryBind t next)))
+              (loggedPath (next u)))) =
+          OracleComp.queryBind t (fun u =>
+            PFunctor.FreeM.map
+              (fun p : β × QueryLog oSpec => (p.1, ⟨t, u⟩ :: p.2))
+              (loggedRun (next u)))
+      apply congrArg (OracleComp.queryBind t)
+      funext u
+      rw [← ih u, ← PFunctor.FreeM.comp_map, ← PFunctor.FreeM.comp_map]
+      rfl
+
+/-- Retaining a computation's intrinsic path and then erasing it to an
+output/log pair is writer-style query logging. -/
+theorem map_pathLogResult_withPath
+    {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}
+    (mx : OracleComp oSpec β) :
+    PFunctor.FreeM.map (pathLogResult mx) (PFunctor.FreeM.withPath mx) =
+      mx.withQueryLog := by
+  exact map_pathLogResult_loggedPath mx
 
 /-- `withQueryLog` distributes over `bind`: the combined log is the
 concatenation of the prefix's log and the continuation's log. -/

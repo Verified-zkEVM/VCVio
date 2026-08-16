@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.Interaction.UC.EnvOpenProcess
-import VCVio.Interaction.UC.Runtime
+
+module
+public import PolyFun.Interaction.UC.EnvOpenProcess
+public import VCVio.Interaction.UC.Runtime
 
 /-!
 # Asynchronous runtime semantics for env-open processes
@@ -35,7 +37,7 @@ developments will reach for.
   bookkeeping state.
 * `ProcessScheduler` / `EnvScheduler` — the two sibling samplers
   driving the async runtime. The process scheduler reuses the existing
-  `Spec.Sampler m` from `Runtime.lean`; the env scheduler is a separate
+  `TypeTree.Sampler m` from `Runtime.lean`; the env scheduler is a separate
   monadic choice over `RuntimeEvent`.
 * `Concurrent.runStepsAsync` — the recursive engine. Mirrors
   `Concurrent.ProcessOver.runSteps` from `Runtime.lean`, with explicit
@@ -60,6 +62,8 @@ universe `0`, so this is not a restriction in practice. The same
 universe-`0` constraint applies to `processSemantics`.
 -/
 
+@[expose] public section
+
 universe u
 
 open OracleComp
@@ -71,12 +75,12 @@ namespace UC
 
 /--
 One tick of the async runtime: either a process step (no payload, the
-actual move is sampled inside the `Spec`-driven `procScheduler`) or an
+actual move is sampled inside the `TypeTree`-driven `procScheduler`) or an
 environment event carrying its alphabet symbol.
 
 The sum is *non-symmetric* on purpose: `processTick` carries no payload
 because the move space at a process step is determined by the process's
-`Spec`, not by the runtime trace; `envTick` carries the alphabet symbol
+`TypeTree`, not by the runtime trace; `envTick` carries the alphabet symbol
 because the `EnvAction.react` reaction is keyed by the symbol.
 -/
 inductive RuntimeEvent (Event : Type) where
@@ -140,18 +144,18 @@ end AsyncRuntimeState
 /-! ## Schedulers -/
 
 /--
-A process scheduler picks a process-side `Spec.Sampler` at each step,
+A process scheduler picks a process-side `TypeTree.Sampler` at each step,
 parameterized by the joint async-runtime state.
 
-The sampler-side type `Spec.Sampler m (specOf st)` is the existing one
+The sampler-side type `TypeTree.Sampler m (specOf st)` is the existing one
 from `Runtime.lean`, unchanged. The extra `AsyncRuntimeState`-dependent
 argument lets a scheduler refuse to schedule, e.g., a corrupted
 machine's tick.
 -/
 abbrev ProcessScheduler
     (m : Type → Type) (Proc : Type) (State : Type)
-    (specOf : AsyncRuntimeState Proc State → Spec.{0}) : Type :=
-  ∀ st : AsyncRuntimeState Proc State, Spec.Sampler m (specOf st)
+    (specOf : AsyncRuntimeState Proc State → TypeTree.{0}) : Type :=
+  ∀ st : AsyncRuntimeState Proc State, TypeTree.Sampler m (specOf st)
 
 /--
 An env scheduler chooses the next runtime event in the monad `m`.
@@ -203,18 +207,18 @@ Mirrors the recursion shape of `Concurrent.ProcessOver.runSteps` with
 explicit env-event interleaving. The env reaction lives in the same
 runtime monad `m` (`EnvAction.react : Event → State → m State`). The
 process sampler type is unchanged from the synchronous runtime: the
-`ProcessScheduler` carries the existing `Spec.Sampler m` from
+`ProcessScheduler` carries the existing `TypeTree.Sampler m` from
 `Runtime.lean`.
 -/
 noncomputable def runStepsAsync
     {m : Type → Type} [Monad m]
-    {Γ : Spec.Node.Context}
-    {State : Type} {Event : Type}
-    (process : ProcessOver Γ)
+    {Γ : TypeTree.Node.Context}
+    {State : Type} {Event : Type} {P : Type}
+    (process : ProcessOver P Γ)
     (envAction : Interaction.UC.EnvAction m Event State)
     (procScheduler :
       Interaction.UC.ProcessScheduler m process.Proc State
-        (fun st => (process.step st.proc).spec))
+        (fun st => (process.step st.proc).tree))
     (envScheduler :
       Interaction.UC.EnvScheduler m process.Proc State Event) :
     ℕ → AsyncRuntimeState process.Proc State →
@@ -249,9 +253,9 @@ trace bookkeeping pass, and is reused by
 -/
 theorem runStepsAsync_empty_trivial_eq
     {m : Type → Type} [Monad m] [LawfulMonad m]
-    {Γ : Spec.Node.Context}
-    (process : ProcessOver Γ)
-    (sampler : (s : process.Proc) → Spec.Sampler m (process.step s).spec)
+    {Γ : TypeTree.Node.Context} {P : Type}
+    (process : ProcessOver P Γ)
+    (sampler : (s : process.Proc) → TypeTree.Sampler m (process.step s).tree)
     (fuel : ℕ) (s : process.Proc) :
     runStepsAsync (m := m) process (Interaction.UC.EnvAction.empty Unit)
         (fun st => sampler st.proc)
@@ -275,7 +279,7 @@ namespace UC
 
 open Concurrent
 
-private abbrev Closed (Party : Type u) (m : Type → Type)
+abbrev AsyncClosed (Party : Type u) (m : Type → Type)
     (schedulerSampler : m (ULift Bool)) :=
   (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Closed
 
@@ -305,11 +309,11 @@ noncomputable def processSemanticsAsync
     {Event : Type} {State : Type}
     (envAction : EnvAction m Event State)
     (initEnvState : State)
-    (init : ∀ p : Closed Party m schedulerSampler, p.Proc)
-    (envScheduler : ∀ p : Closed Party m schedulerSampler,
+    (init : ∀ p : AsyncClosed Party m schedulerSampler, p.Proc)
+    (envScheduler : ∀ p : AsyncClosed Party m schedulerSampler,
       EnvScheduler m p.Proc State Event)
     (fuel : ℕ)
-    (observe : ∀ p : Closed Party m schedulerSampler,
+    (observe : ∀ p : AsyncClosed Party m schedulerSampler,
       p.Proc → State → RuntimeTrace Event → m Result) :
     Semantics (openTheory.{u, 0, 0, 0} Party m schedulerSampler) where
   Result := Result
@@ -336,11 +340,11 @@ noncomputable def processSemanticsAsyncProbComp
     {Event : Type} {State : Type}
     (envAction : EnvAction ProbComp Event State)
     (initEnvState : State)
-    (init : ∀ p : Closed Party ProbComp schedulerSampler, p.Proc)
-    (envScheduler : ∀ p : Closed Party ProbComp schedulerSampler,
+    (init : ∀ p : AsyncClosed Party ProbComp schedulerSampler, p.Proc)
+    (envScheduler : ∀ p : AsyncClosed Party ProbComp schedulerSampler,
       EnvScheduler ProbComp p.Proc State Event)
     (fuel : ℕ)
-    (observe : ∀ p : Closed Party ProbComp schedulerSampler,
+    (observe : ∀ p : AsyncClosed Party ProbComp schedulerSampler,
       p.Proc → State → RuntimeTrace Event → ProbComp Result) :
     Semantics (openTheory.{u, 0, 0, 0} Party ProbComp schedulerSampler) :=
   processSemanticsAsync Party schedulerSampler
@@ -369,9 +373,9 @@ theorem processSemantics_eq_processSemanticsAsync_trivial
     {Result : Type}
     (schedulerSampler : m (ULift Bool))
     (sem : SPMFSemantics.{0, 0, 0} m)
-    (init : ∀ p : Closed Party m schedulerSampler, p.Proc)
+    (init : ∀ p : AsyncClosed Party m schedulerSampler, p.Proc)
     (fuel : ℕ)
-    (observe : ∀ p : Closed Party m schedulerSampler, p.Proc → m Result) :
+    (observe : ∀ p : AsyncClosed Party m schedulerSampler, p.Proc → m Result) :
     processSemantics Party schedulerSampler sem init fuel observe =
       processSemanticsAsync Party schedulerSampler sem
         (EnvAction.empty Unit) ()
@@ -402,9 +406,9 @@ theorem processSemanticsProbComp_eq_processSemanticsAsyncProbComp_trivial
     (Party : Type u)
     {Result : Type}
     (schedulerSampler : ProbComp (ULift Bool))
-    (init : ∀ p : Closed Party ProbComp schedulerSampler, p.Proc)
+    (init : ∀ p : AsyncClosed Party ProbComp schedulerSampler, p.Proc)
     (fuel : ℕ)
-    (observe : ∀ p : Closed Party ProbComp schedulerSampler,
+    (observe : ∀ p : AsyncClosed Party ProbComp schedulerSampler,
       p.Proc → ProbComp Result) :
     processSemanticsProbComp Party schedulerSampler
         init fuel observe =

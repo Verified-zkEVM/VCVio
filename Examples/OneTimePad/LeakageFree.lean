@@ -3,8 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Examples.OneTimePad.Basic
-import VCVio.ProgramLogic.Relational.Leakage
+
+module
+public import Examples.OneTimePad.Basic
+public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.ProgramLogic.Relational.Leakage
 
 /-!
 # OTP Side-Channel Leakage Analysis
@@ -25,6 +28,8 @@ the constant-time model: every oracle query is indistinguishable to the observer
 * `oneTimePad.otp_probLeakFree`: distributional trace independence.
 * `oneTimePad.otp_traceNoninterference_post`: compositionality under post-processing.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

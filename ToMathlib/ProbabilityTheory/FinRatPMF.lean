@@ -415,16 +415,13 @@ lemma support_uniformList_of_nodup [DecidableEq α] {l : List α} (hl : l ≠ []
 /-- Point probabilities of `Raw.uniform`. -/
 @[simp] lemma prob_uniform [FinEnum α] [Inhabited α] (x : α) :
     (Raw.uniform (α := α)).prob x = (Fintype.card α : ℚ≥0)⁻¹ := by
-  simpa [Raw.uniform, FinEnum.card_eq_fintypeCard] using
-    prob_uniformList_of_nodup
-      (α := α)
-      (l := FinEnum.toList α)
-      (by
-        intro hnil
-        have hmem : default ∈ FinEnum.toList α := FinEnum.mem_toList default
-        simp [hnil] at hmem)
-      FinEnum.nodup_toList
-      x
+  have hl : FinEnum.toList α ≠ [] := by
+    intro hnil
+    have hmem : default ∈ FinEnum.toList α := FinEnum.mem_toList default
+    simp [hnil] at hmem
+  rw [Raw.uniform, prob_uniformList_of_nodup hl FinEnum.nodup_toList,
+    if_pos (FinEnum.mem_toList x)]
+  congr 1
 
 /-- `Raw.uniform` has full finite support. -/
 @[simp] lemma support_uniform [DecidableEq α] [FinEnum α] [Inhabited α] :
@@ -486,9 +483,8 @@ private lemma probOfList_map_mul [DecidableEq α] (l : List (α × ℚ≥0)) (p 
     probOfList (l.map fun (a, q) => (a, p * q)) x = p * probOfList l x := by
   unfold probOfList
   rw [filter_map_mul_eq]
-  rw [List.map_map]
-  simp only [Function.comp_def]
-  simpa using List.sum_map_mul_left ((l.filter fun a => a.1 = x).map Prod.snd) id p
+  simpa [List.map_map, Function.comp_def] using
+    List.sum_map_mul_left ((l.filter fun a => a.1 = x).map Prod.snd) id p
 
 private lemma list_sum_prob_mul_eq [DecidableEq α] (l : List (α × ℚ≥0)) (w : α → ℚ≥0) :
     (l.map Prod.fst |>.toFinset).sum (fun x => probOfList l x * w x) =
@@ -689,8 +685,9 @@ private lemma probOfNormalizeMap_eq_prob [DecidableEq α] [BEq α] [Hashable α]
   | some q =>
     have hacc' : q = p.prob x := by simpa [hopt] using hacc
     by_cases hq : q = 0
-    · have hprob : p.prob x = 0 := by simpa [hacc'] using hq
-      simpa [hq] using hprob.symm
+    · have hprob : p.prob x = 0 := hacc'.symm.trans hq
+      rw [Option.filter_some, if_neg (by simp [hq]), Option.getD_none]
+      exact hprob.symm
     · have hprob : p.prob x ≠ 0 := by simpa [hacc'] using hq
       calc
         (Option.filter (fun q => decide (q ≠ 0)) (some q)).getD 0 = q := by
@@ -774,7 +771,7 @@ noncomputable def toPMF [DecidableEq α] (p : Raw α) : PMF α :=
       have hsum : p.support.sum p.prob = (1 : ℚ≥0) := by
         rw [sum_prob_eq_sum]
         simpa [Raw.toList] using p.sum_eq_one
-      rw [← ENNReal.coe_finsetSum, ← NNRat.cast_sum (K := NNReal)]
+      rw [← ENNReal.ofNNReal_finsetSum, ← NNRat.cast_sum (K := NNReal)]
       change (((p.support.sum p.prob : ℚ≥0) : NNReal) : ENNReal) = 1
       simpa using congrArg (fun q : ℚ≥0 => ((q : NNReal) : ENNReal)) hsum)
     (fun a ha => by simp [prob_eq_zero_of_not_mem_support p ha])
@@ -807,7 +804,7 @@ noncomputable def toPMF [DecidableEq α] (p : Raw α) : PMF α :=
       ∑' a, m.toPMF a * (f a).toPMF y
   rw [tsum_eq_sum (s := m.support)]
   · simp_rw [Raw.toPMF_apply, ← ENNReal.coe_mul, ← NNRat.cast_mul]
-    rw [← ENNReal.coe_finsetSum, ← NNRat.cast_sum (K := NNReal), Raw.prob_bind]
+    rw [← ENNReal.ofNNReal_finsetSum, ← NNRat.cast_sum (K := NNReal), Raw.prob_bind]
   · intro x hx
     simp [Raw.toPMF_apply, prob_eq_zero_of_not_mem_support m hx]
 
@@ -877,8 +874,8 @@ lemma SameDist.bind_congr {p q : Raw α}
 lemma SameDist.map_congr {p q : Raw α}
     (hpq : SameDist p q) (f : α → β) :
     SameDist (f <$> p) (f <$> q) := by
-  simpa [Functor.map] using
-    (SameDist.bind_congr (β := β) hpq fun x => SameDist.refl (Raw.pure (f x)))
+  change SameDist (p.bind (fun x => Raw.pure (f x))) (q.bind (fun x => Raw.pure (f x)))
+  exact SameDist.bind_congr (β := β) hpq fun x => SameDist.refl (Raw.pure (f x))
 
 instance : IsEquiv (Raw α) SameDist where
   refl := SameDist.refl

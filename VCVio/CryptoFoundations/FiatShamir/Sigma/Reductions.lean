@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Chain
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Compatibility
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.EvalDist.Inequalities
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Chain
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Compatibility
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.EvalDist.Inequalities
 
 /-!
 # Fiat-Shamir reductions for Sigma protocols
@@ -16,6 +18,8 @@ This file exposes the CMA-to-NMA reduction used by the public Sigma security
 theorem. The proof is discharged by the direct stateful game chain; callers
 depend only on the reduction statement here.
 -/
+
+@[expose] public section
 
 namespace FiatShamir
 
@@ -139,7 +143,7 @@ variable [SampleableType Wit] [SampleableType Chal]
 
 /-- The branch the NMA extractor takes on a forking-lemma result: from two traces sharing a
 commitment whose distinct cached challenges accept, run `σ.extract`; otherwise resample. This is
-the post-`forkReplay` continuation of `nmaForkExtract`. -/
+the post-`contextFork` continuation of `nmaForkExtract`. -/
 private noncomputable def nmaForkExtractBranch :
     Option (Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) ×
       Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) →
@@ -165,7 +169,7 @@ private noncomputable def nmaForkExtract
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (pk : Stmt) :
     OracleComp (unifSpec + (Unit →ₒ Chal)) Wit :=
-  forkReplay (Fork.runTrace σ hr M nmaAdv pk) (nmaForkBudget qH) (Sum.inr ())
+  contextFork (Fork.runTrace σ hr M nmaAdv pk) (nmaForkBudget qH) (Sum.inr ())
     (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH) >>=
     nmaForkExtractBranch (M := M) (Chal := Chal) σ
 
@@ -211,7 +215,7 @@ private theorem forkSupportInvariant_of_mem_replayFirstRun
 omit [Fintype Stmt] [Fintype Commit] [Fintype Resp]
   [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] in
 /-- Given the structural forking event on `pk`, the NMA reduction recovers a valid witness
-with probability at least that of the fork event under `forkReplay`. -/
+with probability at least that of the fork event under `contextFork`. -/
 private theorem perPk_extraction_bound
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
@@ -234,7 +238,7 @@ private theorem perPk_extraction_bound
             QueryLog.getQueryValue? log₂ (Sum.inr ()) ↑s ∧
           forkSupportInvariant σ M qH pk x₁ log₁ ∧
           forkSupportInvariant σ M qH pk x₂ log₂
-        | forkReplay (Fork.runTrace σ hr M nmaAdv pk) (nmaForkBudget qH) (Sum.inr ())
+        | contextFork (Fork.runTrace σ hr M nmaAdv pk) (nmaForkBudget qH) (Sum.inr ())
           (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
             (Chal := Chal) qH)] ≤
       Pr[ fun w : Wit => rel pk w = true | nmaReduction σ hr M nmaAdv qH pk] := by
@@ -249,7 +253,7 @@ private theorem perPk_extraction_bound
       exact probEvent_simulateQ_unifChalImpl _ _]
   set branchFn := nmaForkExtractBranch (M := M) (Chal := Chal) σ with hbranchFn_def
   have hforkExtract_eq : nmaForkExtract σ hr M nmaAdv qH pk =
-      forkReplay wrappedMain qb (Sum.inr ()) cf >>= branchFn := rfl
+      contextFork wrappedMain qb (Sum.inr ()) cf >>= branchFn := rfl
   rw [hforkExtract_eq, probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
   refine ENNReal.tsum_le_tsum fun r => ?_
   by_cases hE :
@@ -266,7 +270,7 @@ private theorem perPk_extraction_bound
   · rw [if_neg hE]
     exact zero_le
   rw [if_pos hE]
-  by_cases hsupp : r ∈ support (forkReplay wrappedMain qb (Sum.inr ()) cf)
+  by_cases hsupp : r ∈ support (contextFork wrappedMain qb (Sum.inr ()) cf)
   swap
   · rw [probOutput_eq_zero_of_not_mem_support hsupp, zero_mul]
   obtain ⟨x₁, x₂, s, log₁, log₂, hreq, hcf₁, hcf₂, hneq, hP₁, hP₂⟩ := hE
@@ -276,7 +280,7 @@ private theorem perPk_extraction_bound
   have hω_ne : ω₁ ≠ ω₂ := fun heq => hneq (by rw [hlog₁, hlog₂, heq])
   -- The two forgeries share a target hash point, so they share a commitment.
   have hc_eq : x₁.forgery.2.1 = x₂.forgery.2.1 :=
-    congrArg Prod.snd <| Fork.runTrace_target_eq_of_mem_forkReplay σ hr M nmaAdv qH pk
+    congrArg Prod.snd <| Fork.runTrace_target_eq_of_mem_contextFork σ hr M nmaAdv qH pk
       x₁ x₂ s (hreq ▸ hsupp) hcf₁ hcf₂
   -- On the live fork event, `branchFn` reduces to the witness extractor `σ.extract`.
   have hbranch : branchFn r = liftComp (σ.extract ω₁ x₁.forgery.2.2 ω₂ x₂.forgery.2.2)

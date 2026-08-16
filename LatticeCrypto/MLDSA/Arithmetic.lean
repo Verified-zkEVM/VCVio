@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Params
-import LatticeCrypto.Ring.SchoolbookCert
-import LatticeCrypto.Ring.Transform
-import LatticeCrypto.Ring.Norms
-import LatticeCrypto.Ring.Rounding
+
+module
+public import LatticeCrypto.MLDSA.Params
+public import LatticeCrypto.Ring.SchoolbookCert
+public import LatticeCrypto.Ring.Transform
+public import LatticeCrypto.Ring.Norms
+public import LatticeCrypto.Ring.Rounding
 
 /-!
 # ML-DSA Arithmetic Assembly
@@ -31,6 +33,8 @@ Provides:
 This module is mixed: the executable aliases are computable, while
 `coeffSemantics` and `quotientOfRq` are `noncomputable`.
 -/
+
+@[expose] public section
 
 
 namespace MLDSA
@@ -128,7 +132,7 @@ end Norms
 section Rounding
 
 /-- Abstract rounding operations for ML-DSA, parameterized by `2 * γ₂`. -/
-abbrev RoundingOps (alpha : ℕ) := LatticeCrypto.RoundingOps coeffRing alpha
+abbrev RoundingOps (alpha : ℕ) := LatticeCrypto.RoundingOps.{0, 0} coeffRing alpha
 
 /-- Abstract power-2 rounding operations for ML-DSA, parameterized by `d = 13`. -/
 abbrev Power2RoundOps := LatticeCrypto.Power2RoundOps coeffRing droppedBits

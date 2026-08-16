@@ -3,8 +3,10 @@ Copyright (c) 2025 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.EvalDist.Instances.FinRatPMF
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.EvalDist.Instances.FinRatPMF
 
 /-!
 # Executable `FinRatPMF` Semantics for `OracleComp`
@@ -12,6 +14,8 @@ import VCVio.EvalDist.Instances.FinRatPMF
 This file provides a computable oracle evaluator using `FinRatPMF.Raw` and proves that its
 denotational semantics agree with the existing `evalDist` semantics of `OracleComp`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 
@@ -31,7 +35,7 @@ namespace finRatImpl
 variable [spec.Inhabited] [∀ t : spec.Domain, FinEnum (spec.Range t)]
 
 local instance instSpecFintypeOfFinEnum : spec.Fintype where
-  fintype_B _ := inferInstance
+  fintypeB _ := inferInstance
 
 noncomputable local instance instIsUniformSpec : IsUniformSpec spec :=
   IsUniformSpec.ofFintypeInhabited _
@@ -39,7 +43,13 @@ noncomputable local instance instIsUniformSpec : IsUniformSpec spec :=
 @[simp] lemma toPMF_apply (t : spec.Domain) :
     @Raw.toPMF _ (Classical.decEq _) (finRatImpl (spec := spec) t) =
       PMF.uniformOfFintype (spec.Range t) := by
-  convert Raw.toPMF_uniform (α := spec.Range t) using 2
+  letI : DecidableEq (spec.Range t) := Classical.decEq _
+  ext x
+  simp only [finRatImpl, Raw.toPMF_apply, PMF.uniformOfFintype_apply]
+  rw [Raw.prob_eq_prob (Classical.decEq _) FinEnum.decEq, Raw.prob_uniform]
+  have hcard : Fintype.card (spec.Range t) ≠ 0 := Fintype.card_ne_zero
+  rw [NNRat.cast_inv, ENNReal.coe_inv (by exact_mod_cast hcard)]
+  simp
 
 @[simp] lemma evalDist_apply (t : spec.Domain) :
     𝒟[finRatImpl (spec := spec) t] = liftM (PMF.uniformOfFintype (spec.Range t)) := by

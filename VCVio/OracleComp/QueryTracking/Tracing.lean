@@ -3,12 +3,14 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.Structures
-import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.SimSemantics.WriterT.Basic
-import PolyFun.Control.Trace
-import ToMathlib.Control.WriterT
+
+module
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.SimSemantics.WriterT.Basic
+public import PolyFun.Control.Trace
+public import ToMathlib.Control.WriterT
 
 /-!
 # Generic Trace Instrumentation for Query Implementations
@@ -56,6 +58,8 @@ form of `Idx spec.toPFunctor → ω`, which is precisely
 oracle-level counterpart of the abstract `Control.Trace` / `PFunctor.Trace`
 infrastructure in `ToMathlib`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 

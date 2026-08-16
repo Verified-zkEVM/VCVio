@@ -4,15 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.OracleComp.QueryTracking.CountingOracle
-import VCVio.OracleComp.ProbComp
-import VCVio.EvalDist.Monad.Map
-import ToMathlib.Control.WriterT
-import ToMathlib.General
-import ToMathlib.Probability.ProbabilityMassFunction.TailSums
-import Mathlib.Algebra.Order.Monoid.Defs
-import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
+module
+
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Monad.Map
+public import ToMathlib.Control.WriterT
+public import ToMathlib.General
+public import ToMathlib.Probability.ProbabilityMassFunction.TailSums
+public import Mathlib.Algebra.Order.Monoid.Defs
+public import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
 
 /-!
 # Writer Cost Accounting
@@ -20,6 +22,8 @@ import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
 This file collects reusable `AddWriterT` facts for pathwise and expected cost reasoning.
 It also equips `QueryImpl` with additive writer-cost instrumentation.
 -/
+
+@[expose] public section
 
 open OracleSpec
 open scoped BigOperators
@@ -198,7 +202,7 @@ of its cost marginal.
 
 This expectation is computed over the base monad's subdistribution semantics on `oa.costs`. In
 particular, if the underlying computation can fail, the missing mass contributes `0`, exactly as
-for other `wp`-style expectations in VCV-io. -/
+for other `wp`-style expectations in VCVio. -/
 noncomputable def expectedCost
     (oa : AddWriterT ω m α) (val : ω → ENNReal) : ENNReal :=
   ∑' w : ω, Pr[= w | oa.costs] * val w
@@ -267,7 +271,7 @@ lemma expectedCost_le_of_support_bound
         ≤ ∑' w : ω, Pr[= w | oa.costs] * c :=
           ENNReal.tsum_le_tsum fun w ↦ by
             by_cases hw : w ∈ support oa.costs
-            · exact mul_le_mul_of_nonneg_left (h w hw) zero_le'
+            · exact mul_le_mul_of_nonneg_left (h w hw) zero_le
             · rw [probOutput_eq_zero_of_not_mem_support hw, zero_mul, zero_mul]
     _ = (∑' w : ω, Pr[= w | oa.costs]) * c := ENNReal.tsum_mul_right
     _ ≤ 1 * c := by gcongr; exact tsum_probOutput_le_one
@@ -555,8 +559,10 @@ lemma pathwiseCostAtMost_fin_mOfFn [LawfulMonad m] [IsOrderedAddMonoid ω] {n : 
     PathwiseCostAtMost (Fin.mOfFn n f) (n • k) := by
   induction n with
   | zero =>
-      simpa [zero_nsmul] using
-        (pathwiseCostAtMost_pure (m := m) (ω := ω) (x := (Fin.elim0 : Fin 0 → α)))
+      have hf : f = (Fin.elim0 : Fin 0 → AddWriterT ω m α) := funext fun i => Fin.elim0 i
+      subst f
+      rw [Fin.mOfFn, zero_nsmul]
+      exact pathwiseCostAtMost_pure (m := m) (ω := ω) (x := (Fin.elim0 : Fin 0 → α))
   | succ n ih =>
       simp only [Fin.mOfFn, succ_nsmul']
       simpa [add_comm] using
@@ -569,8 +575,10 @@ lemma pathwiseCostAtLeast_fin_mOfFn [LawfulMonad m] [IsOrderedAddMonoid ω] {n :
     PathwiseCostAtLeast (Fin.mOfFn n f) (n • k) := by
   induction n with
   | zero =>
-      simpa [zero_nsmul] using
-        (pathwiseCostAtLeast_pure (m := m) (ω := ω) (x := (Fin.elim0 : Fin 0 → α)))
+      have hf : f = (Fin.elim0 : Fin 0 → AddWriterT ω m α) := funext fun i => Fin.elim0 i
+      subst f
+      rw [Fin.mOfFn, zero_nsmul]
+      exact pathwiseCostAtLeast_pure (m := m) (ω := ω) (x := (Fin.elim0 : Fin 0 → α))
   | succ n ih =>
       simp only [Fin.mOfFn, succ_nsmul']
       simpa [add_comm] using

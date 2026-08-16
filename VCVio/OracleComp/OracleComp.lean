@@ -3,13 +3,17 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.HasQuery.Basic
-import PolyFun.PFunctor.Free.Basic
+
+module
+public import VCVio.OracleComp.HasQuery.Basic
+public import PolyFun.PFunctor.Free.Basic
 
 /-!
 # Computations with Oracle Access
 
 -/
+
+@[expose] public section
 
 universe u v w
 
@@ -18,6 +22,7 @@ open OracleSpec
 /-- `OracleComp spec α` represents computations with oracle access to oracles in `spec`,
 where the final return value has type `α`, represented as a free monad over the `PFunctor`
 corresponding to `spec.` -/
+@[reducible]
 def OracleComp {ι : Type u} (spec : OracleSpec.{u, v} ι) :
     Type w → Type (max u v w) :=
   PFunctor.FreeM spec.toPFunctor
@@ -28,24 +33,47 @@ namespace OracleComp
 
 open scoped OracleSpec.PrimitiveQuery
 
+/-- Interpret a raw polynomial free program as an oracle computation.
+
+This is the explicit abstraction boundary for generic PolyFun constructions;
+downstream semantics should use this function instead of unfolding
+`OracleComp`. -/
+@[reducible]
+def ofFreeM {α : Type w} (oa : PFunctor.FreeM spec.toPFunctor α) : OracleComp spec α := oa
+
+/-- Expose the polynomial free program underlying an oracle computation. -/
+@[reducible]
+def toFreeM {α : Type w} (oa : OracleComp spec α) : PFunctor.FreeM spec.toPFunctor α := oa
+
+theorem ofFreeM_toFreeM {α : Type w} (oa : OracleComp spec α) :
+    ofFreeM (toFreeM oa) = oa := rfl
+
+theorem toFreeM_ofFreeM {α : Type w} (oa : PFunctor.FreeM spec.toPFunctor α) :
+    toFreeM (ofFreeM oa) = oa := rfl
+
 /-- Make one oracle query at input `t`, then continue with `k` on the response.
 
-This is the `PFunctor.FreeM.roll` constructor specialized to `OracleComp`;
+This is the `PFunctor.FreeM.liftBind` constructor specialized to `OracleComp`;
 the `@[match_pattern]` attribute makes it usable both as a term and as a
 `match` pattern. -/
 @[match_pattern, reducible]
 def queryBind {α} (t : spec.Domain) (k : spec.Range t → OracleComp spec α) :
     OracleComp spec α :=
-  PFunctor.FreeM.roll t k
+  PFunctor.FreeM.liftBind t k
 
-instance (spec : OracleSpec ι) : Monad (OracleComp spec) :=
-  inferInstanceAs (Monad (PFunctor.FreeM spec.toPFunctor))
+theorem ofFreeM_pure {α : Type v} (x : α) :
+    ofFreeM (PFunctor.FreeM.pure x : PFunctor.FreeM spec.toPFunctor α) =
+      (pure x : OracleComp spec α) := rfl
 
-instance (spec : OracleSpec ι) : LawfulMonad (OracleComp spec) :=
-  inferInstanceAs (LawfulMonad (PFunctor.FreeM spec.toPFunctor))
+theorem ofFreeM_bind {α β : Type v}
+    (oa : PFunctor.FreeM spec.toPFunctor α)
+    (next : α → PFunctor.FreeM spec.toPFunctor β) :
+    ofFreeM (PFunctor.FreeM.bind oa next) =
+      (ofFreeM oa >>= fun x => ofFreeM (next x)) := rfl
 
-instance : MonadLift (OracleQuery spec) (OracleComp spec) :=
-  inferInstanceAs (MonadLift (PFunctor.Obj spec.toPFunctor) (PFunctor.FreeM spec.toPFunctor))
+theorem ofFreeM_map {α β : Type v}
+    (f : α → β) (oa : PFunctor.FreeM spec.toPFunctor α) :
+    ofFreeM (PFunctor.FreeM.map f oa) = f <$> ofFreeM oa := rfl
 
 /-- Manually lift an `OracleQuery` to an `OracleComp`. -/
 @[reducible]
@@ -53,15 +81,15 @@ protected def lift {ι} {spec : OracleSpec ι} {α} (q : OracleQuery spec α) :
     OracleComp spec α := liftM q
 
 protected lemma liftM_def (q : OracleQuery spec α) :
-    liftM (n := OracleComp spec) q = PFunctor.FreeM.lift q := rfl
+    liftM (n := OracleComp spec) q = PFunctor.FreeM.liftObj q := rfl
 
 @[simp, grind .]
 lemma liftM_ne_pure (q : OracleQuery spec α) (x : α) :
-    liftM (n := OracleComp spec) q ≠ pure x := PFunctor.FreeM.lift_ne_pure q x
+    liftM (n := OracleComp spec) q ≠ pure x := PFunctor.FreeM.liftObj_ne_pure q x
 
 @[simp, grind .]
 lemma pure_ne_liftM (x : α) (q : OracleQuery spec α) :
-    pure x ≠ liftM (n := OracleComp spec) q := PFunctor.FreeM.pure_ne_lift q x
+    pure x ≠ liftM (n := OracleComp spec) q := PFunctor.FreeM.pure_ne_liftObj q x
 
 @[simp, grind =]
 protected lemma liftM_map (q : OracleQuery spec α) (f : α → β) :
@@ -142,45 +170,45 @@ Allows inductive definitions on computations by considering the two cases:
 See `oracleComp_emptySpec_equiv` for an example of using this in a proof.
 If the final result needs to be a `Type` and not a `Prop`, see `OracleComp.construct`. -/
 @[elab_as_elim]
-protected def inductionOn {α} {C : OracleComp spec α → Prop}
+protected theorem inductionOn {α} {C : OracleComp spec α → Prop}
     (pure : (a : α) → C (pure a))
     (query_bind : (t : spec.Domain) →
       (oa : spec.Range t → OracleComp spec α) →
         (∀ u, C (oa u)) → C (query t >>= oa))
     (oa : OracleComp spec α) : C oa :=
-  PFunctor.FreeM.inductionOn pure query_bind oa
+  PFunctor.FreeM.induction pure query_bind oa
 
 /-- Version of `OracleComp.inductionOn` that includes an `OptionT` in the monad stack
 and requires an explicit case to handle `failure`. -/
 @[elab_as_elim]
-protected def inductionOnOptional {α} {C : OptionT (OracleComp spec) α → Prop}
+protected theorem inductionOnOptional {α} {C : OptionT (OracleComp spec) α → Prop}
     (pure : (a : α) → C (pure a))
     (query_bind : (t : spec.Domain) →
       (oa : spec.Range t → OptionT (OracleComp spec) α) → (∀ u, C (oa u)) →
       C (query t >>= oa))
     (failure : C failure)
     (oa : OptionT (OracleComp spec) α) : C oa :=
-  PFunctor.FreeM.inductionOn
+  PFunctor.FreeM.induction
     (fun | some x => pure x | none => failure)
     (fun t => query_bind t) oa
 
 /-- Version of `OracleComp.inductionOn` with the computation at the start. -/
 @[elab_as_elim]
-protected def induction {α} {C : OracleComp spec α → Prop}
+protected theorem induction {α} {C : OracleComp spec α → Prop}
     (oa : OracleComp spec α) (pure : (a : α) → C (pure a))
     (query_bind : (t : spec.Domain) →
       (oa : spec.Range t → OracleComp spec α) → (∀ u, C (oa u)) → C (query t >>= oa)) : C oa :=
-  PFunctor.FreeM.inductionOn pure query_bind oa
+  PFunctor.FreeM.induction pure query_bind oa
 
 /-- Version of `OracleComp.inductionOnOptional` with the computation at the start. -/
 @[elab_as_elim]
-protected def inductionOptional {α} {C : OptionT (OracleComp spec) α → Prop}
+protected theorem inductionOptional {α} {C : OptionT (OracleComp spec) α → Prop}
     (oa : OptionT (OracleComp spec) α) (pure : (a : α) → C (pure a))
     (query_bind : (t : spec.Domain) →
       (oa : spec.Range t → OptionT (OracleComp spec) α) → (∀ u, C (oa u)) →
       C (query t >>= oa))
     (failure : C failure) : C oa :=
-  PFunctor.FreeM.inductionOn
+  PFunctor.FreeM.induction
     (fun | some x => pure x | none => failure)
     query_bind oa
 
@@ -197,7 +225,7 @@ protected def construct {α}
       (oa : spec.Range t → OracleComp spec α) →
       ((u : spec.Range t) → C (oa u)) → C (query t >>= oa))
     (oa : OracleComp spec α) : C oa :=
-  PFunctor.FreeM.construct pure query_bind oa
+  OracleComp.recOn oa pure query_bind
 
 @[simp] lemma construct_pure {α} (x : α)
     {C : OracleComp spec α → Type*} (h_pure : (a : α) → C (pure a))
@@ -252,7 +280,7 @@ end noConfusion
 /-- Given a computation `oa : OracleComp spec α`, construct a value `x : α`,
 by assuming each query returns the `default` value given by the `Inhabited` instance. -/
 def defaultResult [spec.Inhabited] (oa : OracleComp spec α) : α :=
-  PFunctor.FreeM.mapM (m := Id) (fun _ => default) oa
+  PFunctor.FreeM.liftM (m := Id) (fun _ => default) oa
 
 /-- Total number of queries in a computation across all possible execution paths.
 Can be a helpful alternative to `sizeOf` when proving recursive calls terminate. -/

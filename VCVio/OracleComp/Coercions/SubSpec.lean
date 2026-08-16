@@ -3,10 +3,12 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.SimSemantics.SimulateQ
-import ToMathlib.General
-import PolyFun.PFunctor.Lens.Cartesian
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import ToMathlib.General
+public import PolyFun.PFunctor.Lens.Cartesian
 
 /-!
 # Coercions Between Computations With Additional Oracles
@@ -42,6 +44,8 @@ distribution under lifting (`evalDist_liftComp`); see
 `LawfulSubSpec.toLens_isCartesian` for the bridge to the lens-level
 predicate.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp BigOperators ENNReal
 
@@ -251,6 +255,30 @@ lemma liftComp_map (mx : OracleComp spec α) (f : α → β) :
     liftComp (f <$> mx) superSpec = f <$> liftComp mx superSpec := by
   simp [liftComp]
 
+/-- `bind`-`pure` form of `liftComp_map`, matching the term shape produced by `do`-notation
+(`do let a ← oa; pure (f a)`) before any `bind_pure_comp` normalization. -/
+lemma liftComp_bind_pure (oa : OracleComp spec α) (f : α → β) :
+    OracleComp.liftComp (do let a ← oa; pure (f a)) superSpec =
+      f <$> OracleComp.liftComp oa superSpec := by
+  rw [liftComp_bind, map_eq_bind_pure_comp]
+  rfl
+
+/-- One-directional, assumption-light variant of `mem_support_liftComp_iff`: under just a
+query-level lift (no `SubSpec` or lawfulness assumptions), the support of a lifted computation
+is bounded by the support of the original. The reverse inclusion can fail without lawfulness,
+since an arbitrary embedding need not reach all responses of the original oracles. -/
+lemma mem_support_of_mem_support_liftComp (oa : OracleComp spec α) (x : α) :
+    x ∈ support (oa.liftComp superSpec) → x ∈ support oa := by
+  intro hx
+  induction oa using OracleComp.inductionOn generalizing x with
+  | pure y =>
+      simpa using hx
+  | query_bind q oa ih =>
+      rw [OracleComp.liftComp_bind, mem_support_bind_iff] at hx
+      rw [mem_support_bind_iff]
+      obtain ⟨u, _hu, hx⟩ := hx
+      exact ⟨u, OracleComp.mem_support_query q u, ih u x hx⟩
+
 @[simp]
 lemma liftComp_seq (og : OracleComp spec (α → β)) (mx : OracleComp spec α) :
     liftComp (og <*> mx) superSpec = liftComp og superSpec <*> liftComp mx superSpec := by
@@ -330,7 +358,7 @@ does not change which outputs are reachable. This is the support analogue of
         ((monadLift : OracleQuery spec _ → OracleQuery superSpec _) (OracleSpec.query t))) = _
       rw [support_liftM, show (monadLift (OracleSpec.query t) : OracleQuery superSpec _) =
         ⟨h.onQuery t, h.onResponse t⟩ from by
-          simpa only [ofPFunctor_toPFunctor] using h.liftM_eq_lift (OracleSpec.query t)]
+          convert h.liftM_eq_lift (OracleSpec.query t) using 1 <;> rfl]
       exact (LawfulSubSpec.onResponse_bijective (h := h) t).surjective.range_eq
     rw [hs]; simp
 
@@ -369,6 +397,26 @@ instance (priority := low) [MonadLift (OracleQuery spec) (OracleQuery superSpec)
 @[simp, aesop safe norm]
 lemma liftComp_eq_liftM [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     (mx : OracleComp spec α) : liftComp mx superSpec = (liftM mx : OracleComp superSpec α) := rfl
+
+/-- Peel the outermost step off a *chained* `OracleComp`-level lift: a `liftM` whose
+`MonadLiftT (OracleComp spec) (OracleComp spec₃)` instance is the transitive composition of
+the query-keyed `MonadLift (OracleComp superSpec) (OracleComp spec₃)` step with a remaining
+chain `MonadLiftT (OracleComp spec) (OracleComp superSpec)` is the `liftComp` of the
+remaining lift. Typeclass resolution builds exactly this shape (via
+`instMonadLiftTOfMonadLift`) when lifting across two or more `OracleSpec.add` layers, e.g.
+`OracleComp spec₂ → OracleComp (spec + (spec₁ + spec₂))` through the intermediate
+`spec + spec₂`. None of the single-step lemmas (`liftComp_eq_liftM`, `liftComp_query`, …)
+can engage such a chain directly, since their statements bake in the one-step instance.
+
+Not `@[simp]`: with `spec = superSpec` the remaining chain can be `MonadLiftT.refl`, and the
+right-hand side would then re-match the left-hand side. Use via explicit `rw`, then rewrite
+the inner lift with `← liftComp_eq_liftM` and proceed with the `liftComp` API. -/
+lemma liftM_eq_liftComp_liftM {κ : Type*} {spec₃ : OracleSpec κ}
+    [MonadLift (OracleQuery superSpec) (OracleQuery spec₃)]
+    [MonadLiftT (OracleComp spec) (OracleComp superSpec)]
+    (mx : OracleComp spec α) :
+    (liftM mx : OracleComp spec₃ α) =
+      liftComp (liftM mx : OracleComp superSpec α) spec₃ := rfl
 
 instance [MonadLift (OracleQuery spec) (OracleQuery superSpec)] :
     LawfulMonadLift (OracleComp spec) (OracleComp superSpec) where

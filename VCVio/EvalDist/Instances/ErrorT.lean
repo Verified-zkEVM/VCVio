@@ -3,8 +3,10 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.EvalDist.Monad.Map
-import Mathlib.Control.Lawful
+
+module
+public import VCVio.EvalDist.Monad.Map
+public import Mathlib.Control.Lawful
 
 /-!
 # Evaluation Semantics for ExceptT (ErrorT)
@@ -30,6 +32,8 @@ error cases contribute failure mass. We map:
 This means we only support one layer of failure. If you need nested error handling,
 you'll need to work with the underlying `m (Except ε α)` type directly.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -196,7 +200,8 @@ lemma evalDist_eq (mx : ExceptT ε m α) :
 @[grind =]
 lemma probOutput_eq (mx : ExceptT ε m α) (x : α) :
     Pr[= x | mx] = Pr[= Except.ok x | mx.run] := by
-  simpa only [probOutput_def] using toSPMF'_apply_eq mx x
+  change ExceptT.toSPMF' mx x = (liftM mx.run : SPMF _) (Except.ok x)
+  exact toSPMF'_apply_eq mx x
 
 @[grind =]
 lemma probFailure_eq (mx : ExceptT ε m α) :

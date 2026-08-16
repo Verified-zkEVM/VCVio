@@ -3,18 +3,20 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.SimSemantics.SimulateQ
-import VCVio.OracleComp.EvalDist
-import VCVio.EvalDist.Bool
-import VCVio.EvalDist.Prod
-import VCVio.EvalDist.Fintype
-import ToMathlib.Data.FinEnum
-import Init.Data.UInt.Lemmas
-import Mathlib.Data.FinEnum
-import Mathlib.Data.Fintype.Perm
-import Mathlib.Data.Fintype.Pi
-import Mathlib.Data.Fintype.Vector
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.EvalDist
+public import VCVio.EvalDist.Bool
+public import VCVio.EvalDist.Prod
+public import VCVio.EvalDist.Fintype
+public import ToMathlib.Data.FinEnum
+public import Init.Data.UInt.Lemmas
+public import Mathlib.Data.FinEnum
+public import Mathlib.Data.Fintype.Perm
+public import Mathlib.Data.Fintype.Pi
+public import Mathlib.Data.Fintype.Vector
 
 /-!
 # Uniform Selection Over a Type
@@ -25,6 +27,8 @@ operation, using the `ProbComp` monad.
 As compared to `HasUniformSelect` this provides much more structure on the behavior,
 enforcing that every possible output has the same output probability never fails.
 -/
+
+@[expose] public section
 
 universe u v w
 
@@ -203,6 +207,16 @@ lemma support_uniformSample : support ($ᵗ α) = Set.univ :=
 
 lemma mem_support_uniformSample {x : α} : x ∈ support ($ᵗ α) := by grind
 
+/-- Uniform sampling never fails, so its support is nonempty (which in turn witnesses `Nonempty α`).
+Tagged `@[grind]` rather than `@[simp]` because `simp` rewrites `support ($ᵗ α)` to `Set.univ`
+first, after which it would need a separate `Nonempty α` fact. -/
+@[grind .]
+lemma support_uniformSample_nonempty : (support ($ᵗ α)).Nonempty := by
+  rw [Set.nonempty_iff_ne_empty]
+  intro h
+  rw [← probFailure_eq_one_iff, probFailure_uniformSample] at h
+  exact zero_ne_one h
+
 @[simp, grind =]
 lemma finSupport_uniformSample [Fintype α] [DecidableEq α] :
     finSupport ($ᵗ α) = Finset.univ := by aesop
@@ -237,11 +251,11 @@ instance {ι ι'} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
   | .inr t => h' t
 
 /-- Select a uniform element from `α × β` by independently selecting from `α` and `β`. -/
-instance (α β : Type) [Fintype α] [Fintype β] [Inhabited α] [Inhabited β]
-    [SampleableType α] [SampleableType β] : SampleableType (α × β) where
+instance (α β : Type) [SampleableType α] [SampleableType β] : SampleableType (α × β) where
   selectElem := (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)
   mem_support_selectElem x := by simp
-  probOutput_selectElem_eq x y := by simp
+  probOutput_selectElem_eq x y := by
+    simp only [probOutput_seq_map_prod_mk_eq_mul]; grind
 
 /-- A type equivalent to a `SampleableType` is also `SampleableType`. -/
 @[reducible] def SampleableType.ofEquiv {α β : Type} [SampleableType α] (e : α ≃ β) :
@@ -264,6 +278,10 @@ than an `instance` to avoid overlap with `FinEnum.SampleableType`. -/
     [Fintype α] [Nonempty α] : SampleableType α :=
   haveI : NeZero (Fintype.card α) := ⟨Fintype.card_ne_zero⟩
   SampleableType.ofEquiv (Fintype.equivFin α).symm
+
+/-- This typeclass shouldn't cause diamonds since `Nonempty` is propositional. -/
+instance SampleableType.Nonempty (α : Type) [h : SampleableType α] : Nonempty α :=
+  ⟨OracleComp.defaultResult h.selectElem⟩
 
 /-- This typeclass shouldn't cause diamonds since `Finite` is propositional. -/
 instance SampleableType.Finite (α : Type) [SampleableType α] : Finite α :=

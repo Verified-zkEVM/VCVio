@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
+module
+
 /-!
 # FPR: Integer-Only IEEE-754 Binary64 Emulation
 
@@ -29,6 +31,8 @@ branches on data values.
 - c-fn-dsa: `sign_fpr.c`
 - Pornin 2019 (eprint 2019/893), Section 3.1
 -/
+
+public section
 
 
 namespace Falcon.Concrete.FPR

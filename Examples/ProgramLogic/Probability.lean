@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Unary
+module
+
+public import VCVio.ProgramLogic.Tactics.Unary
 
 /-!
 # Probability Rewrite Tactic Examples
@@ -14,6 +16,8 @@ This file validates probability-rewrite tactics from
 `vcstep rw congr`, `vcstep rw congr'`, and the exhaustive `vcgen` driver
 on `Pr[ ...] = Pr[ ...]` goals.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open OracleComp.ProgramLogic

@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.SigmaProtocol
-import VCVio.ProgramLogic.Tactics.Unary
-import VCVio.ProgramLogic.Tactics.Relational
+
+module
+public import VCVio.CryptoFoundations.SigmaProtocol
+public import VCVio.ProgramLogic.Tactics.Unary
+public import VCVio.ProgramLogic.Tactics.Relational
 
 /-!
 # Schnorr Σ-protocol
@@ -66,6 +68,8 @@ control the signing-simulator's collisions with the random oracle.
   `(r • g, c, r + c · sk)` with `r, c ← $ᵗ F` independent, the joint
   marginal on `(commit, chal)` factors as `Pr[commit] · 1/|F|`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp SigmaProtocol
 open scoped ENNReal

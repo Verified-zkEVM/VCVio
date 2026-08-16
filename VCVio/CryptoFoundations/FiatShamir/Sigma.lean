@@ -4,17 +4,19 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.CryptoFoundations.SigmaProtocol
-import VCVio.CryptoFoundations.SignatureAlg
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.OracleComp.HasQuery.Morphism
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.QueryTracking.QueryCost
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
-import VCVio.ProgramLogic.NotationCore
-import VCVio.ProgramLogic.Tactics.Unary
+module
+
+public import VCVio.CryptoFoundations.SigmaProtocol
+public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.OracleComp.HasQuery.Morphism
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.ProgramLogic.NotationCore
+public import VCVio.ProgramLogic.Tactics.Unary
 
 /-!
 # Fiat-Shamir transform for Σ-protocols
@@ -29,6 +31,8 @@ the naturality theorem, cost accounting, and completeness. The forking-lemma
 bridge lives in `FiatShamir.Sigma.Fork` and the EUF-CMA reduction in
 `FiatShamir.Sigma.Security`.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -266,12 +270,13 @@ private lemma sign_costs_withAddCost_eq {ω : Type} [AddMonoid ω]
         let a ← WriterT.run (monadLift (σ.commit pk sk) : AddWriterT ω m (Commit × PrvState))
         let r ← runtime (msg, a.1.1)
         (fun z : Resp × Multiplicative ω ↦
-          a.2 * (Multiplicative.ofAdd (costFn (msg, a.1.1)) * z.2)) <$>
+          Multiplicative.toAdd a.2 +
+            (costFn (msg, a.1.1) + Multiplicative.toAdd z.2)) <$>
           WriterT.run (monadLift (σ.respond pk sk a.1.2 r) : AddWriterT ω m Resp)) =
       (do
         let a ← (monadLift (σ.commit pk sk) : m (Commit × PrvState))
         let r ← runtime (msg, a.1)
-        (fun _ ↦ Multiplicative.ofAdd (costFn (msg, a.1))) <$>
+        (fun _ ↦ costFn (msg, a.1)) <$>
           (monadLift (σ.respond pk sk a.2 r) : m Resp)) by
     simpa [HasQuery.Program.eval, HasQuery.Program.withAddCost, AddWriterT.costs, FiatShamir,
       QueryImpl.withAddCost_apply, AddWriterT.addTell] using h
@@ -280,7 +285,8 @@ private lemma sign_costs_withAddCost_eq {ω : Type} [AddMonoid ω]
         AddWriterT ω m (Commit × PrvState))
       let r ← runtime (msg, a.1.1)
       (fun z : Resp × Multiplicative ω ↦
-        a.2 * (Multiplicative.ofAdd (costFn (msg, a.1.1)) * z.2)) <$>
+        Multiplicative.toAdd a.2 +
+          (costFn (msg, a.1.1) + Multiplicative.toAdd z.2)) <$>
         WriterT.run (monadLift ((monadLift (σ.respond pk sk a.1.2 r) : m Resp)) :
           AddWriterT ω m Resp)) = _
   simp [bind_map_left]
@@ -338,8 +344,11 @@ omit [SampleableType Stmt] [SampleableType Wit] in
 theorem sign_usesExactlyOneQuery
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) :
     Queries[ (FiatShamir σ hr M).sign pk sk msg in runtime ] = 1 := by
-  simpa [HasQuery.Program.withUnitCost] using
-    sign_usesCostAsQueryCost σ hr M runtime pk sk msg fun _ ↦ (1 : ℕ)
+  change HasQuery.UsesCostAs
+    (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
+      (FiatShamir (m := AddWriterT ℕ m) σ hr M).sign pk sk msg)
+    runtime (fun _ ↦ 1) (fun _ ↦ 1)
+  exact sign_usesCostAsQueryCost σ hr M runtime pk sk msg fun _ ↦ (1 : ℕ)
 
 omit [SampleableType Stmt] [SampleableType Wit] in
 /-- Fiat-Shamir verification incurs exactly the weighted cost assigned to the single
@@ -442,7 +451,10 @@ private lemma perfectlyCorrect_evalDist_eq [SampleableType Chal] (msg : M) :
     simp only [ro, randomOracle, QueryImpl.withCaching_apply, StateT.run_bind,
       StateT.run_get, pure_bind, uniformSampleImpl, bind_assoc, map_bind,
       liftM, MonadLiftT.monadLift,
-      MonadLift.monadLift, StateT.run_lift, StateT.run_modifyGet]
+      MonadLift.monadLift, QueryCache.empty_apply]
+    simp only [StateT.run_lift, StateT.run_modifyGet]
+    rw [bind_assoc]
+    simp only [pure_bind]
   simp only [monad_norm]
   simp_rw [hpeel, hro_miss, hpeel]
   have hro_hit : ∀ {β : Type} (q : M × Commit) (r : Chal)

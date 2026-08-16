@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Examples.Schnorr.SigmaProtocol
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Security
-import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+
+module
+public import Examples.Schnorr.SigmaProtocol
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Security
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 
 /-!
 # Schnorr Signature via Fiat-Shamir: an end-to-end EUF-CMA proof
@@ -110,6 +112,8 @@ The Schnorr-specific inputs are exactly:
                                           on `G`, giving `β = 1/|F|`.
 -/
 
+@[expose] public section
+
 
 open OracleComp OracleSpec DiffieHellman
 open scoped ENNReal
@@ -128,7 +132,7 @@ def signature (g : G) (M : Type) [DecidableEq M] :
       (M := M) (PK := G) (SK := F) (S := G × F) :=
   FiatShamir (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
 
-omit [Fintype F] in
+omit [Fintype F] [DecidableEq F] in
 /-- Completeness of the Schnorr signature follows from completeness of the
 underlying Schnorr Σ-protocol via the generic Fiat-Shamir completeness theorem. -/
 theorem signature_complete (g : G) (M : Type) [DecidableEq M] :

@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.Sigma
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Fork
-import VCVio.CryptoFoundations.FiatShamir.QueryBounds
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.Sigma
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Fork
+public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 
 /-!
 # CMA-to-NMA reduction for Fiat-Shamir on Σ-protocols
@@ -26,6 +28,8 @@ The quantitative CMA-to-NMA theorem itself lives in
 `Sigma/Stateful/Chain.lean`, so the public proof path has a single stateful
 source of truth.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -88,7 +92,7 @@ noncomputable def simulatedNmaBaseSim
 
 noncomputable def simulatedNmaSigSim
     [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [Inhabited Chal] [SampleableType Chal]
+    [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (M →ₒ (Commit × Resp))
       (StateT (fsRoSpec M Commit Chal).QueryCache
@@ -103,7 +107,7 @@ noncomputable def simulatedNmaSigSim
 
 noncomputable def simulatedNmaImpl
     [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [Inhabited Chal] [SampleableType Chal]
+    [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (cmaOracleSpec M Commit Chal Resp)
       (StateT (fsRoSpec M Commit Chal).QueryCache
@@ -124,7 +128,7 @@ and returns the final cache together with the forgery.
 This is the concrete-interface reduction entering the replay-forking lemma. -/
 noncomputable def simulatedNmaAdv
     [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [Inhabited Chal] [SampleableType Chal]
+    [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M)) :

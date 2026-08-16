@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Concrete.FFT
-import LatticeCrypto.Falcon.Concrete.Sampling
-import LatticeCrypto.Falcon.Concrete.Encoding
-import LatticeCrypto.Falcon.Concrete.NTT
-import LatticeCrypto.Falcon.Params
+
+module
+public import Extern.Falcon.FFT
+public import Extern.Falcon.Sampling
+public import LatticeCrypto.Falcon.Concrete.Encoding
+public import LatticeCrypto.Falcon.Concrete.NTT
+public import LatticeCrypto.Falcon.Params
 
 /-!
 # Falcon Signing Core
@@ -33,6 +35,8 @@ generic over `FloatLike F`.
 - Falcon specification v1.2, Section 3.8 (Sign algorithm)
 - FIPS 206 (FN-DSA) draft
 -/
+
+public section
 
 
 namespace Falcon.Concrete.Sign

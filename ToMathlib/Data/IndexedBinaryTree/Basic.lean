@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 
+module
+
 -- TODO minimize imports
-import Mathlib.Tactic.Use
-import Mathlib.Data.Set.Basic
+public import Mathlib.Tactic.Use
+public import Mathlib.Data.Set.Basic
 
 
 /-!
@@ -39,6 +41,8 @@ that decompose the trees as much as possible.
   - get? functions
 
 -/
+
+@[expose] public section
 
 namespace BinaryTree
 
@@ -83,6 +87,7 @@ inductive SkeletonInternalIndex : Skeleton → Type
       SkeletonInternalIndex (Skeleton.internal left right)
   | ofRight {left right : Skeleton} (idxRight : SkeletonInternalIndex right) :
       SkeletonInternalIndex (Skeleton.internal left right)
+  deriving DecidableEq
 
 /-- Type of indices of any node of a skeleton -/
 inductive SkeletonNodeIndex : Skeleton → Type
@@ -451,6 +456,35 @@ theorem FullData.get_internal_ofRight {α} {s_left s_right : Skeleton}
 
 end get
 
+section anySelected
+
+/-- Does a boolean selector select any leaf of the tree? -/
+@[simp, grind]
+def LeafData.anySelected {s : Skeleton} : LeafData Bool s → Bool
+  | .leaf b => b
+  | .internal l r => l.anySelected || r.anySelected
+
+/-- A selector selects some leaf as soon as it selects a particular one: `get idx = true`
+implies `anySelected = true`. -/
+theorem LeafData.anySelected_of_get {s : Skeleton} {sel : LeafData Bool s}
+    (idx : SkeletonLeafIndex s) (h : sel.get idx = true) : sel.anySelected = true := by
+  induction idx with
+  | ofLeaf =>
+    cases sel with
+    | leaf b => simpa using h
+  | ofLeft idxL ih =>
+    cases sel with
+    | internal l r =>
+      simp only [LeafData.anySelected, Bool.or_eq_true]
+      exact Or.inl (ih (by simpa using h))
+  | ofRight idxR ih =>
+    cases sel with
+    | internal l r =>
+      simp only [LeafData.anySelected, Bool.or_eq_true]
+      exact Or.inr (ih (by simpa using h))
+
+end anySelected
+
 section forget
 
 /-- Convert a `FullData` to a `LeafData` by dropping the internal node values. -/
@@ -549,6 +583,14 @@ def SkeletonInternalIndex.depth {s : Skeleton} : SkeletonInternalIndex s → Nat
   | SkeletonInternalIndex.ofInternal => 0
   | SkeletonInternalIndex.ofLeft idxLeft => idxLeft.depth + 1
   | SkeletonInternalIndex.ofRight idxRight => idxRight.depth + 1
+
+/-- The height of the subtree rooted at an internal-node index. -/
+@[simp]
+def SkeletonInternalIndex.subtreeDepth :
+    {s : Skeleton} → SkeletonInternalIndex s → Nat
+  | .internal left right, .ofInternal => (Skeleton.internal left right).depth
+  | _, .ofLeft idxLeft => idxLeft.subtreeDepth
+  | _, .ofRight idxRight => idxRight.subtreeDepth
 
 /-- Depth of a SkeletonNodeIndex -/
 def SkeletonNodeIndex.depth {s : Skeleton} : SkeletonNodeIndex s → Nat

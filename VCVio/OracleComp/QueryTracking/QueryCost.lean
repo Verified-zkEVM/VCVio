@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.OracleComp.QueryTracking.WriterCost
+module
+
+public import VCVio.OracleComp.QueryTracking.WriterCost
 
 /-!
 # Query Cost Accounting
@@ -14,6 +16,8 @@ A direct-style program is evaluated against a concrete `QueryImpl`, and query-co
 are phrased by running that implementation through the writer-cost instrumentation from
 `WriterCost.lean`.
 -/
+
+@[expose] public section
 
 open OracleSpec
 open scoped BigOperators
@@ -51,6 +55,11 @@ def withUnitCost (oa : Program spec (AddWriterT ℕ m) α)
     (impl : QueryImpl spec m) : AddWriterT ℕ m α := by
   letI := impl.withUnitCost.toHasQuery
   exact oa
+
+theorem withUnitCost_eq_withAddCost (oa : Program spec (AddWriterT ℕ m) α)
+    (impl : QueryImpl spec m) :
+    withUnitCost oa impl = withAddCost oa impl (fun _ ↦ 1) := by
+  rfl
 
 end instrumentation
 
@@ -262,7 +271,8 @@ lemma expectedQueries_eq_tsum_tail_probs
     (oa : Computation spec (AddWriterT ℕ m) α) (runtime : QueryImpl spec m) :
     HasQuery.expectedQueries oa runtime =
       ∑' i : ℕ, Pr[ fun c ↦ i < c | HasQuery.queryCountDist oa runtime ] := by
-  simpa [HasQuery.expectedQueryCost] using
+  simpa [HasQuery.expectedQueryCost, HasQuery.queryCountDist, HasQuery.queryCostDist,
+    AddWriterT.expectedCostNat, HasQuery.Program.withUnitCost_eq_withAddCost] using
     AddWriterT.expectedCostNat_eq_tsum_tail_probs (oa := HasQuery.Program.withUnitCost oa runtime)
 
 omit [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
@@ -287,7 +297,8 @@ lemma expectedQueries_eq_sum_tail_probs_of_usesAtMostQueries [LawfulMonad m]
     (h : HasQuery.UsesAtMostQueries oa runtime n) :
     HasQuery.expectedQueries oa runtime =
       ∑ i ∈ Finset.range n, Pr[ fun c ↦ i < c | HasQuery.queryCountDist oa runtime ] := by
-  simpa [HasQuery.expectedQueryCost, HasQuery.queryCostDist] using
+  simpa [HasQuery.expectedQueryCost, HasQuery.queryCostDist,
+    HasQuery.Program.withUnitCost_eq_withAddCost] using
     (AddWriterT.expectedCostNat_eq_sum_tail_probs_of_pathwiseCostAtMost
       (oa := HasQuery.Program.withUnitCost oa runtime) h)
 
@@ -318,7 +329,7 @@ lemma expectedQueries_le_of_usesAtMostQueries [LawfulMonad m]
     {oa : Computation spec (AddWriterT ℕ m) α} {runtime : QueryImpl spec m} {n : ℕ}
     (h : HasQuery.UsesAtMostQueries oa runtime n) :
     HasQuery.expectedQueries oa runtime ≤ n := by
-  simpa [HasQuery.expectedQueryCost] using
+  simpa [HasQuery.expectedQueryCost, HasQuery.Program.withUnitCost_eq_withAddCost] using
     (AddWriterT.expectedCost_le_of_pathwiseCostAtMost
       (oa := HasQuery.Program.withUnitCost oa runtime) (w := n) (val := fun k ↦ (k : ENNReal)) h
       Nat.mono_cast)
@@ -336,7 +347,7 @@ lemma le_expectedQueryCost_of_usesCostAtLeast
     {costFn : spec.Domain → ω} {w : ω} {val : ω → ENNReal}
     (h : HasQuery.UsesCostAtLeast oa runtime costFn w) (hval : Monotone val) :
     val w ≤ HasQuery.expectedQueryCost oa runtime costFn val := by
-  simpa [HasQuery.expectedQueryCost] using
+  simpa [HasQuery.expectedQueryCost, HasQuery.Program.withUnitCost_eq_withAddCost] using
     (AddWriterT.le_expectedCost_of_pathwiseCostAtLeast
       (oa := HasQuery.Program.withAddCost oa runtime costFn) (w := w) (val := val) h hval)
 
@@ -359,7 +370,7 @@ lemma le_expectedQueries_of_usesAtLeastQueries [LawfulMonad m]
     {oa : Computation spec (AddWriterT ℕ m) α} {runtime : QueryImpl spec m} {n : ℕ}
     (h : HasQuery.UsesAtLeastQueries oa runtime n) :
     (n : ENNReal) ≤ HasQuery.expectedQueries oa runtime := by
-  simpa [HasQuery.expectedQueryCost] using
+  simpa [HasQuery.expectedQueryCost, HasQuery.Program.withUnitCost_eq_withAddCost] using
     (AddWriterT.le_expectedCost_of_pathwiseCostAtLeast
       (oa := HasQuery.Program.withUnitCost oa runtime) (w := n) (val := fun k ↦ (k : ENNReal)) h
       Nat.mono_cast)

@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.OracleComp.OracleQuery
+module
+
+public import VCVio.OracleComp.OracleQuery
 
 /-!
 # Basic `HasQuery` Capability
@@ -18,6 +20,8 @@ this file when they need the class or the bare `query` export.
 Do not add `QueryImpl`, `ProbComp`, or monad-morphism APIs here; those live in
 downstream modules with explicit imports.
 -/
+
+@[expose] public section
 
 universe u v w
 

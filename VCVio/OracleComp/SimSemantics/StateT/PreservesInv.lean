@@ -3,10 +3,12 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.SimSemantics.StateT.Basic
-import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
-import VCVio.EvalDist.Monad.Basic
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # `StateT σ ProbComp` Invariant Theory
@@ -36,6 +38,8 @@ The `WriterT` analogue of this theory lives in
 - `StateT.outputIndependent_after_preservesInv` — non-interference: output-independent
   computation remains so after sequencing with an invariant-preserving computation
 -/
+
+@[expose] public section
 
 noncomputable section
 
@@ -98,7 +102,7 @@ theorem simulateQ_run_preservesInv
         simpa [simulateQ_bind, OracleComp.liftM_def] using hz
       rcases (mem_support_bind_iff _ _ _).1 hz' with ⟨us, hus, hzcont⟩
       have hus' : us ∈ support ((impl t).run σ0) := by
-        simpa [OracleSpec.query_def, simulateQ_query] using hus
+        simpa [simulateQ_spec_query] using hus
       exact ih us.1 us.2 (himpl t σ0 hσ0 us hus') z hzcont
 
 end OracleComp

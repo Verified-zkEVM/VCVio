@@ -3,13 +3,18 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.EvalDist.Monad.Seq
+
+module
+public import VCVio.EvalDist.Monad.Seq
+public import ToMathlib.Data.ENNReal.SumSquares
 
 /-!
 # Evaluation Distributions of Computations with `Prod`
 
 Lemmas about `evalDist` and `support` involving `Prod`, ported to generic `[MonadLiftT m SPMF]`.
 -/
+
+@[expose] public section
 
 open ENNReal Prod
 
@@ -78,7 +83,11 @@ section prod_mk
 
 variable (mx : m α) (my : m β) (f : α → γ) (g : β → δ)
 
-@[simp high]
+/- `@[grind norm]` (not `@[grind =]`): `Seq.seq`'s thunk argument makes the LHS an invalid
+E-matching pattern, but `grind`'s simp-based normalization phase needs no pattern indexing. This
+lets bare `grind` factor an independent applicative product (and e.g. close equiprobability of a
+uniform product), which E-matching alone cannot. -/
+@[simp high, grind norm]
 lemma probOutput_seq_map_prod_mk_eq_mul (z : α × β) :
     Pr[= z | Prod.mk <$> mx <*> my] = Pr[= z.1 | mx] * Pr[= z.2 | my] :=
   probOutput_seq_map_eq_mul_of_injective2 mx my Prod.mk Prod.mk.injective2 z.1 z.2
@@ -142,6 +151,34 @@ lemma probOutput_bind_bind_prod_mk_eq_mul'
     (mx : m α) (my : m β) (f : α → γ) (g : β → δ) (x : γ) (y : δ) :
     Pr[= (x, y) | do let a ← mx; let b ← my; return (f a, g b)] =
       Pr[= x | f <$> mx] * Pr[= y | g <$> my] := by simp
+
+/-- Two conditionally independent executions dominate the square of the
+corresponding single-execution output probability. -/
+lemma sq_probOutput_bind_le_probOutput_bind_prod
+    (source : m α) (kernel : α → m β) (y : β) :
+    Pr[= y | source >>= kernel] ^ 2 ≤
+      Pr[= (y, y) | source >>= fun x => do
+        let a ← kernel x
+        let b ← kernel x
+        pure (a, b)] := by
+  have hfactor (x : α) :
+      Pr[= (y, y) | do
+        let a ← kernel x
+        let b ← kernel x
+        pure (a, b)] = Pr[= y | kernel x] * Pr[= y | kernel x] := by
+    rw [probOutput_bind_bind_prod_mk_eq_mul']
+    simp only [show (fun a : β ↦ a) = id from rfl, id_map]
+  rw [probOutput_bind_eq_tsum source kernel y,
+    probOutput_bind_eq_tsum source (fun x ↦ do
+      let a ← kernel x
+      let b ← kernel x
+      pure (a, b)) (y, y)]
+  refine (ENNReal.sq_tsum_le_tsum_sq
+    (fun x ↦ Pr[= x | source]) (fun x ↦ Pr[= y | kernel x])
+      (tsum_probOutput_le_one (mx := source))).trans_eq ?_
+  refine tsum_congr fun x ↦ ?_
+  rw [hfactor]
+  simp [sq]
 
 @[simp]
 lemma probOutput_prod_mk_fst_map [DecidableEq β] (mx : m α) (y : β) (z : α × β) :

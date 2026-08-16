@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import FFI.Hashing
-import LatticeCrypto.Falcon.Arithmetic
+
+module
+public import Extern.Hashing
+public import LatticeCrypto.Falcon.Arithmetic
 
 /-!
 # Concrete HashToPoint for Falcon
@@ -23,6 +25,8 @@ the 16-bit value is `< 61445 = 5 · 12289`, then reduces mod `q`.
 - FIPS 206 (FN-DSA), Section 6.2 (HashToPoint)
 - c-fn-dsa: `util.c` (hash_to_point), `vrfy.c` (inner_verify)
 -/
+
+public section
 
 
 namespace Falcon.Concrete
