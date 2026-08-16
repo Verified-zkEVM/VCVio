@@ -3,7 +3,9 @@ Copyright (c) 2026 Bolton Bailey. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
-import Mathlib.Data.List.Basic
+module
+
+public import Mathlib.Data.List.Basic
 
 /-!
 # Looking up an entry of a self-indexed association list
@@ -12,6 +14,8 @@ import Mathlib.Data.List.Basic
 `L.map (fun i => (i, f i))`: for any key `t` present in `L`, the lookup returns `some (f t)`. This
 is the shape produced when one tabulates a function `f` over a list of keys.
 -/
+
+@[expose] public section
 
 namespace List
 

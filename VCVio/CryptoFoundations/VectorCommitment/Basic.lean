@@ -3,7 +3,9 @@ Copyright (c) 2026 Bolton Bailey. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
-import VCVio.EvalDist.TVDist
+module
+
+public import VCVio.EvalDist.TVDist
 
 /-!
 # Vector Commitments
@@ -47,6 +49,8 @@ As with `ChallengeVerifyProtocol`, probability reasoning is expressed through th
 `MonadLiftT m SetM` lift introduced in the `EvalDist` layer, so `support` is available for the
 monadic `commit` / `openAt` fields.
 -/
+
+@[expose] public section
 
 /-- A vector commitment whose `commit` and `openAt` operations run in the monad `m`.
 

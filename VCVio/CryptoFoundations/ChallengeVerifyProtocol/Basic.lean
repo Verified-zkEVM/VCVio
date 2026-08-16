@@ -3,7 +3,9 @@ Copyright (c) 2026 Bolton Bailey. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
-import VCVio.EvalDist.TVDist
+module
+
+public import VCVio.EvalDist.TVDist
 
 /-!
 # Challenge-Verify Protocols
@@ -39,6 +41,8 @@ Probability reasoning is expressed through the standard `MonadLiftT` lifts intro
 `EvalDist` layer: `MonadLiftT m SPMF` (for `evalDist` / `Pr[…]` / `tvDist`), `MonadLiftT m SetM`
 (for `support`), and the bridge class `EvalDistCompatible m` tying the two together.
 -/
+
+@[expose] public section
 
 universe u v
 

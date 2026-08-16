@@ -3,9 +3,11 @@ Copyright (c) 2026 Bolton Bailey. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
-import VCVio.CryptoFoundations.VectorCommitment.Basic
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Completeness
+module
+
+public import VCVio.CryptoFoundations.VectorCommitment.Basic
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Completeness
 
 /-!
 # Inductive Merkle trees as (batch-opening) vector commitments
@@ -30,6 +32,8 @@ monad. Positions are laid out on a caller-supplied skeleton `s` via a position-t
 `e : ι ≃ SkeletonLeafIndex s`; an opening is the authentication path (the sibling hashes along the
 leaf's branch), carried as a plain `List` of hashes.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec BinaryTree
 

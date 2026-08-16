@@ -4,11 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 
-import VCVio.CryptoFoundations.VectorCommitment.Basic
-import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Basic
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import ToMathlib.Data.List.Lookup
+module
+
+public import VCVio.CryptoFoundations.VectorCommitment.Basic
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Basic
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import ToMathlib.Data.List.Lookup
 
 /-!
 
@@ -26,6 +28,8 @@ The majority of the Kilian paper is actually a beautiful way to make the classic
 zero-knowledge proof more efficient while keeping zero knowledge by implementing a
 "notarized envelope" primitive. But I think this file should just focus on the succinctness part.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 
@@ -349,8 +353,6 @@ theorem perfectCorrectness_accepts_liftedProver
   rw [probEvent_eq_one_iff] at h1
   refine h1.2 _ ?_
   rw [mem_support_bind_iff]
-  refine ⟨pcp.runVerifier x coins proof, ?_, by rw [support_pure]; rfl⟩
-  rw [mem_support_bind_iff]
   refine ⟨proof, hlift _ hproof, ?_⟩
   rw [mem_support_bind_iff]
   exact ⟨coins, hlift _ hcoins, by rw [support_pure]; rfl⟩
@@ -369,8 +371,7 @@ theorem neverFail_of_perfectCorrectness
   simp only [ENNReal.coe_zero, tsub_zero, ge_iff_le] at hpr
   have h1 := le_antisymm probEvent_le_one hpr
   rw [probEvent_eq_one_iff] at h1
-  obtain ⟨hinner, -⟩ := (probFailure_bind_eq_zero_iff _ _).mp h1.1
-  obtain ⟨hProverF, hRest⟩ := (probFailure_bind_eq_zero_iff _ _).mp hinner
+  obtain ⟨hProverF, hRest⟩ := (probFailure_bind_eq_zero_iff _ _).mp h1.1
   refine ⟨⟨hProverF⟩, ?_⟩
   have hne : (support (pcp.Prover x w)).Nonempty := by
     rw [Set.nonempty_iff_ne_empty, ne_eq, ← probFailure_eq_one_iff, hProverF]
