@@ -541,9 +541,9 @@ private noncomputable def cmaSimSignPublicDist
   let (c, ch, π) ← simT pk
   pure (cmaSignPublicOfTranscript pk sk (c, ch, π))
 
-omit [DecidableEq M] [DecidableEq Commit] in
+omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 private lemma cmaRealSignPublicDist_some
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (hr : GenerableRelation Stmt Wit rel)
     (log : OuterState M) (cache : RoCache M Commit Chal) (key : Stmt × Wit) :
     cmaRealSignPublicDist M Commit Chal σ hr (log, cache, some key) =
@@ -559,9 +559,9 @@ private lemma cmaSimSignPublicDist_some
       cmaSignPublicOfTranscript key.1 key.2 <$> simT key.1 := by
   simp [cmaSimSignPublicDist, cmaSignKeySource, map_eq_bind_pure_comp]
 
-omit [DecidableEq M] [DecidableEq Commit] in
+omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 private lemma cmaRealSignPublicDist_none
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (hr : GenerableRelation Stmt Wit rel)
     (log : OuterState M) (cache : RoCache M Commit Chal) :
     cmaRealSignPublicDist M Commit Chal σ hr (log, cache, none) =
