@@ -3,8 +3,10 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Tweakable Hash Families
@@ -23,6 +25,8 @@ With `Tweak := Unit` this is definitionally a keyed hash family
 (`seedGen : ProbComp PkSeed`, `eval : PkSeed → M → Y`), so nothing is lost relative to the
 existing `KeyedHashFamily` surface.
 -/
+
+@[expose] public section
 
 open OracleComp
 

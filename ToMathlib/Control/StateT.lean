@@ -42,11 +42,11 @@ lemma monad_pure_def [Monad m] (x : α) :
 lemma monad_bind_def [Monad m] (x : StateT σ m α) (f : α → StateT σ m β) :
     x >>= f = StateT.bind x f := rfl
 
-lemma monad_failure_eq [Monad m] [Alternative m] :
+lemma monad_failure_eq [AlternativeMonad m] :
     (failure : StateT σ m α) = StateT.failure := rfl
 
 @[simp]
-lemma run_failure' [Monad m] [Alternative m] :
+lemma run_failure' [AlternativeMonad m] :
     (failure : StateT σ m α).run = fun _ => failure := by
   funext s
   simp
@@ -81,6 +81,14 @@ lemma run'_map' (x : StateT σ m α) (f : α → β) (s : σ) :
 lemma run'_lift' (x : m α) (s : σ) :
     (StateT.lift x : StateT σ m α).run' s = x := by
   simp [StateT.run'_eq, map_eq_bind_pure_comp, bind_assoc]
+
+/-- If two `StateT` computations agree after mapping into a common result type, then they
+still agree after projecting away the final state with `run'` from any initial state. -/
+lemma map_run'_eq_of_map_eq {γ : Type u} {f : α → γ} {g : β → γ}
+    {mx : StateT σ m α} {my : StateT σ m β} (s : σ)
+    (h : f <$> mx = g <$> my) :
+    f <$> mx.run' s = g <$> my.run' s := by
+  rw [← StateT.run'_map', ← StateT.run'_map', h]
 
 end run'
 

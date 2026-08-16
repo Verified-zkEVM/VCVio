@@ -3,8 +3,10 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.EvalDist.Defs.Basic
-import ToMathlib.Data.ENNReal.Gauss
+
+module
+public import VCVio.EvalDist.Defs.Basic
+public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # Evaluation Distributions of Computations with `Bind`
@@ -12,11 +14,25 @@ import ToMathlib.Data.ENNReal.Gauss
 File for lemmas about `evalDist` and `support` involving the monadic `pure` and `bind`.
 -/
 
+@[expose] public section
+
 universe u v w
 
 variable {α β γ : Type u} {m : Type u → Type v} [Monad m]
 
 open ENNReal
+
+/- The monad/functor laws are confluent (terminating) rewrites. Tagging them for `grind` lets it
+normalize a computation's structure (`mx >>= pure = mx`, reassociation, `f <$> pure a = pure (f a)`)
+*before* it falls into `probOutput`/`tsum` expansion — turning what would otherwise be a `grind`
+explosion on a structured-computation equality into a quick solve. `pure_bind` is not listed: core
+already ships it in the default set (`attribute [grind <=] pure_bind` in `Init.Control.Lawful`),
+and re-tagging it would add a redundant E-match entry. (The analogous
+`bind_pure_comp`/`map_eq_bind` laws are deliberately omitted: their function argument sits under a
+binder that `grind`'s pattern compiler cannot index; so do `pure_seq`/`seq_pure`, whose `Seq.seq`
+thunk argument makes even their LHS an invalid pattern. `Functor.map_map` is binder-free and joins
+the set.) -/
+attribute [grind =] bind_pure bind_assoc map_pure Functor.map_map
 
 /-! ## Probabilities of `pure` -/
 
@@ -29,6 +45,12 @@ lemma mem_support_pure_iff [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] (x y : 
     x ∈ support (pure y : m α) ↔ x = y := by grind
 lemma mem_support_pure_iff' [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] (x y : α) :
     x ∈ support (pure y : m α) ↔ y = x := by aesop
+
+/-- `obtain`-friendly forward direction of `mem_support_pure_iff`: membership in the support
+of a `pure` forces equality with the pure value. -/
+lemma eq_of_mem_support_pure [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    {x y : α} (h : y ∈ support (pure x : m α)) : y = x := by
+  simpa [mem_support_pure_iff] using h
 
 @[simp, grind =]
 lemma finSupport_pure [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [HasEvalFinset m]
@@ -60,6 +82,24 @@ lemma probOutput_pure [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [DecidableEq
 lemma probOutput_pure_self [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (x : α) :
     Pr[= x | (pure x : m α)] = 1 := by
   aesop (rule_sets := [UnfoldEvalDist])
+
+/-- Boolean monotonicity of `pure` outcome probability into a disjunction: if `win` implies
+`inner ∨ outer`, then the probability of outcome `true` under `pure win` is bounded by the sum of
+the probabilities under `pure inner` and `pure outer`. -/
+lemma probOutput_pure_bool_le_or {m : Type → Type} [Monad m]
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    (win inner outer : Bool) (h : win = true → inner = true ∨ outer = true) :
+    Pr[= true | (pure win : m Bool)] ≤
+      Pr[= true | (pure inner : m Bool)] + Pr[= true | (pure outer : m Bool)] := by
+  cases win <;> cases inner <;> cases outer <;> simp_all
+
+/-- Boolean monotonicity of `pure` outcome probability: if `b₁` implies `b₂`, then the probability
+of outcome `true` under `pure b₁` is bounded by that under `pure b₂`. -/
+lemma probOutput_pure_bool_le {m : Type → Type} [Monad m]
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    (b₁ b₂ : Bool) (h : b₁ = true → b₂ = true) :
+    Pr[= true | (pure b₁ : m Bool)] ≤ Pr[= true | (pure b₂ : m Bool)] := by
+  simpa using probOutput_pure_bool_le_or (m := m) b₁ b₂ false (fun hw => Or.inl (h hw))
 
 /-- Fallback when we don't have decidable equality. -/
 @[grind =]
@@ -120,6 +160,13 @@ lemma mem_support_bind_iff [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] (mx : m
     (my : α → m β) (y : β) :
     y ∈ support (mx >>= my) ↔ ∃ x ∈ support mx, y ∈ support (my x) := by simp
 
+/-- `obtain`-friendly forward direction of `mem_support_bind_iff`: peel an element of the
+support of a bind into a witness for the first computation and membership for the second. -/
+lemma support_bind_exists [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    {x : m α} {f : α → m β} {y : β}
+    (hy : y ∈ support (x >>= f)) : ∃ a, a ∈ support x ∧ y ∈ support (f a) := by
+  simpa [mem_support_bind_iff] using hy
+
 @[simp, grind =]
 lemma finSupport_bind [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [HasEvalFinset m]
     [DecidableEq α] [DecidableEq β] (mx : m α) (my : α → m β) : finSupport (mx >>= my) =
@@ -172,6 +219,8 @@ lemma probFailure_bind_eq_add_tsum_support [MonadLiftT m SPMF] [LawfulMonadLiftT
   refine tsum_congr fun x => ?_
   aesop (add simp Set.indicator)
 
+-- `grind`-safe in isolation: this support-quantifier characterization saturates `grind` only in
+-- combination with the `probEvent_eq_one_iff` family (kept `simp`-only). See `probability.md`.
 @[simp, grind =]
 lemma probFailure_bind_eq_zero_iff [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     [MonadLiftT m SetM] [EvalDistCompatible m] (mx : m α) (my : α → m β) :
@@ -213,6 +262,125 @@ lemma probEvent_bind_le_of_forall_le [MonadLiftT m SPMF] [LawfulMonadLiftT m SPM
     _ = (∑' x : α, Pr[= x | mx]) * ε := ENNReal.tsum_mul_right
     _ ≤ 1 * ε := mul_le_mul' tsum_probOutput_le_one le_rfl
     _ = ε := one_mul _
+
+/-- If the continuation can satisfy `q` only after a support point satisfying `p`,
+then the probability of `q` after the bind is at most the probability of `p` in
+the prefix computation. -/
+lemma probEvent_bind_le_probEvent [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop}
+    (h : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] = 0) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] := by
+  classical
+  rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_indicator]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  by_cases hp : p x
+  · refine le_trans (mul_le_mul' le_rfl probEvent_le_one) ?_
+    simp [hp]
+  · by_cases hx : x ∈ support mx
+    · simp [h x hx hp]
+    · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- If a continuation event is bounded by `ε` exactly on a prefix event and is
+impossible off that event, then only the prefix mass is charged. -/
+lemma probEvent_bind_le_probEvent_mul [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {ε : ENNReal}
+    (hle : ∀ x ∈ support mx, p x → Pr[ q | my x] ≤ ε)
+    (hzero : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] = 0) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] * ε := by
+  classical
+  rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_indicator, ← ENNReal.tsum_mul_right]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  by_cases hx : x ∈ support mx
+  · by_cases hp : p x
+    · exact (mul_le_mul' le_rfl (hle x hx hp)).trans_eq (by simp [hp])
+    · simp [hp, hzero x hx hp]
+  · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- Division-form corollary of `probEvent_bind_le_probEvent_mul`. -/
+lemma probEvent_bind_le_probEvent_div [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {c : ENNReal}
+    (hle : ∀ x ∈ support mx, p x → Pr[ q | my x] ≤ c⁻¹)
+    (hzero : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] = 0) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] / c := by
+  simpa [div_eq_mul_inv] using probEvent_bind_le_probEvent_mul hle hzero
+
+omit [Monad m] in
+/-- Partition an event pointwise into a main event and an exceptional event. -/
+lemma probEvent_le_add_of_imp_or [MonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {p q r : α → Prop}
+    (h : ∀ x ∈ support mx, p x → q x ∨ r x) :
+    Pr[ p | mx] ≤ Pr[ q | mx] + Pr[ r | mx] :=
+  (probEvent_mono h).trans (probEvent_or_le mx q r)
+
+/-- Prefix-event split for a bind. Prefix points satisfying `p` are charged in
+full; off-prefix continuations are charged by the uniform tail bound `ε`. -/
+lemma probEvent_bind_le_probEvent_add [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {ε : ENNReal}
+    (h : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] ≤ ε) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] + ε := by
+  classical
+  rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_indicator]
+  calc ∑' x, Pr[= x | mx] * Pr[ q | my x]
+      ≤ ∑' x, ({x | p x}.indicator (Pr[= · | mx]) x
+          + {x | ¬ p x}.indicator (fun x ↦ Pr[= x | mx] * ε) x) := by
+        refine ENNReal.tsum_le_tsum fun x ↦ ?_
+        by_cases hp : p x
+        · refine le_trans (mul_le_mul' le_rfl probEvent_le_one) ?_
+          simp [hp]
+        · by_cases hx : x ∈ support mx
+          · refine le_trans (mul_le_mul' le_rfl (h x hx hp)) ?_
+            simp [hp]
+          · simp [probOutput_eq_zero_of_not_mem_support hx]
+    _ = (∑' x, {x | p x}.indicator (Pr[= · | mx]) x)
+          + ∑' x, {x | ¬ p x}.indicator (fun x ↦ Pr[= x | mx] * ε) x := ENNReal.tsum_add
+    _ ≤ (∑' x, {x | p x}.indicator (Pr[= · | mx]) x) + ε := by
+        refine add_le_add le_rfl ?_
+        refine le_trans (ENNReal.tsum_le_tsum fun x ↦ Set.indicator_le_self _ _ x) ?_
+        rw [ENNReal.tsum_mul_right]
+        exact le_trans (mul_le_mul' tsum_probOutput_le_one le_rfl) (one_mul ε).le
+
+/-- Convex prefix-event split for a bind. The off-prefix tail bound `ε` is charged
+only on the mass outside `p`, giving `Pr[p] + (1 - Pr[p]) * ε`. -/
+lemma probEvent_bind_le_probEvent_convex [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [EvalDistCompatible m]
+    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {ε : ENNReal}
+    (h : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] ≤ ε) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] + (1 - Pr[ p | mx]) * ε := by
+  classical
+  have hsplit : Pr[ q | mx >>= my] ≤ Pr[ p | mx] + Pr[ fun x ↦ ¬ p x | mx] * ε := by
+    rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_indicator (p := p),
+      probEvent_eq_tsum_indicator (p := fun x ↦ ¬ p x)]
+    calc ∑' x, Pr[= x | mx] * Pr[ q | my x]
+        ≤ ∑' x, ({x | p x}.indicator (Pr[= · | mx]) x
+            + {x | ¬ p x}.indicator (fun x ↦ Pr[= x | mx] * ε) x) := by
+          refine ENNReal.tsum_le_tsum fun x ↦ ?_
+          by_cases hp : p x
+          · refine le_trans (mul_le_mul' le_rfl probEvent_le_one) ?_
+            simp [hp]
+          · by_cases hx : x ∈ support mx
+            · refine le_trans (mul_le_mul' le_rfl (h x hx hp)) ?_
+              simp [hp]
+            · simp [probOutput_eq_zero_of_not_mem_support hx]
+      _ = (∑' x, {x | p x}.indicator (Pr[= · | mx]) x)
+            + ∑' x, {x | ¬ p x}.indicator (fun x ↦ Pr[= x | mx] * ε) x :=
+          ENNReal.tsum_add
+      _ = (∑' x, {x | p x}.indicator (Pr[= · | mx]) x)
+            + (∑' x, {x | ¬ p x}.indicator (Pr[= · | mx]) x) * ε := by
+          rw [← ENNReal.tsum_mul_right]
+          refine congrArg _ (tsum_congr fun x ↦ ?_)
+          by_cases hp : p x <;> simp [Set.indicator, hp]
+  have hle_one : Pr[ p | mx] + Pr[ fun x ↦ ¬ p x | mx] ≤ 1 := by
+    rw [probEvent_eq_tsum_indicator (p := p), probEvent_eq_tsum_indicator (p := fun x ↦ ¬ p x),
+      ← ENNReal.tsum_add]
+    refine le_trans (ENNReal.tsum_le_tsum fun x ↦ ?_) (tsum_probOutput_le_one (mx := mx))
+    by_cases hp : p x <;> simp [Set.indicator, hp]
+  refine le_trans hsplit (add_le_add le_rfl (mul_le_mul' ?_ le_rfl))
+  exact ENNReal.le_sub_of_add_le_left probEvent_ne_top hle_one
 
 lemma probOutput_bind_eq_sum_finSupport [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     [MonadLiftT m SetM] [EvalDistCompatible m] [HasEvalFinset m]
@@ -484,6 +652,30 @@ lemma probEvent_bind_mono {mx : m α} {my oc : α → m β} {q : β → Prop}
   refine ENNReal.tsum_le_tsum fun x => ?_
   by_cases hx : x ∈ support mx
   · exact mul_le_mul' le_rfl (h x hx)
+  · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- Pointwise division bounds on bind continuations factor through the bind. -/
+lemma probOutput_bind_mono_div_const {mx : m α}
+    {ob₁ ob₂ : α → m β} {y : β} {r : ℝ≥0∞}
+    (h : ∀ x ∈ support mx, Pr[= y | ob₁ x] ≤ Pr[= y | ob₂ x] / r) :
+    Pr[= y | mx >>= ob₁] ≤ Pr[= y | mx >>= ob₂] / r := by
+  simp only [probOutput_bind_eq_tsum, div_eq_mul_inv]
+  rw [← ENNReal.tsum_mul_right]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  by_cases hx : x ∈ support mx
+  · simpa only [div_eq_mul_inv, mul_assoc] using mul_le_mul' le_rfl (h x hx)
+  · simp [probOutput_eq_zero_of_not_mem_support hx]
+
+/-- Event form of `probOutput_bind_mono_div_const`. -/
+lemma probEvent_bind_mono_div_const {mx : m α}
+    {ob₁ ob₂ : α → m β} {q : β → Prop} {r : ℝ≥0∞}
+    (h : ∀ x ∈ support mx, Pr[ q | ob₁ x] ≤ Pr[ q | ob₂ x] / r) :
+    Pr[ q | mx >>= ob₁] ≤ Pr[ q | mx >>= ob₂] / r := by
+  simp only [probEvent_bind_eq_tsum, div_eq_mul_inv]
+  rw [← ENNReal.tsum_mul_right]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  by_cases hx : x ∈ support mx
+  · simpa only [div_eq_mul_inv, mul_assoc] using mul_le_mul' le_rfl (h x hx)
   · simp [probOutput_eq_zero_of_not_mem_support hx]
 
 lemma probOutput_bind_congr_div_const {mx : m α}
@@ -768,3 +960,51 @@ lemma probEvent_exists_finset_le_sum
   gcongr
 
 end union_bound
+
+/-! ## Expectation algebra for nonnegative functionals -/
+
+section tsum_probOutput_mul
+
+variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+
+/-- Expectation of a nonnegative functional under a `pure` computation. -/
+@[simp]
+lemma tsum_probOutput_pure_mul (y : α) (f : α → ℝ≥0∞) :
+    ∑' z, Pr[= z | (pure y : m α)] * f z = f y := by
+  have : DecidableEq α := Classical.decEq α
+  rw [tsum_eq_single y fun z hz => by rw [probOutput_pure, if_neg hz, zero_mul]]
+  rw [probOutput_pure_self, one_mul]
+
+/-- Tonelli-style rearrangement: the expectation of a nonnegative functional under a
+`bind` is the outer expectation of the inner expectations. -/
+lemma tsum_probOutput_bind_mul (mx : m α) (g : α → m β) (f : β → ℝ≥0∞) :
+    ∑' z, Pr[= z | mx >>= g] * f z =
+      ∑' x, Pr[= x | mx] * ∑' z, Pr[= z | g x] * f z := by
+  simp_rw [probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_right]
+  rw [ENNReal.tsum_comm]
+  simp_rw [mul_assoc, ENNReal.tsum_mul_left]
+
+/-- Expectation of a nonnegative functional under a `Functor.map`: the functional is
+precomposed with the map. -/
+lemma tsum_probOutput_map_mul [LawfulMonad m] (mx : m α) (f : α → β) (g : β → ℝ≥0∞) :
+    ∑' z, Pr[= z | f <$> mx] * g z = ∑' x, Pr[= x | mx] * g (f x) := by
+  rw [map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
+  refine tsum_congr fun x => ?_
+  simp only [Function.comp_apply]
+  rw [tsum_probOutput_pure_mul]
+
+omit [Monad m] [LawfulMonadLiftT m SPMF] in
+/-- The expectation of a nonnegative functional `F` that is constant (equal to `c`) on the
+support of a never-failing (sub)probability computation equals `c`. -/
+lemma tsum_probOutput_mul_of_const_on_support [MonadLiftT m SetM] [EvalDistCompatible m]
+    (mx : m α) {c : ℝ≥0∞}
+    {F : α → ℝ≥0∞} (hconst : ∀ z ∈ support mx, F z = c) (hmass : Pr[⊥ | mx] = 0) :
+    ∑' z, Pr[= z | mx] * F z = c := by
+  have hsum : (∑' z, Pr[= z | mx] * F z) = ∑' z, Pr[= z | mx] * c := by
+    refine tsum_congr fun z => ?_
+    by_cases hz : z ∈ support mx
+    · rw [hconst z hz]
+    · rw [probOutput_eq_zero_of_not_mem_support hz, zero_mul, zero_mul]
+  rw [hsum, ENNReal.tsum_mul_right, tsum_probOutput_eq_one' hmass, one_mul]
+
+end tsum_probOutput_mul

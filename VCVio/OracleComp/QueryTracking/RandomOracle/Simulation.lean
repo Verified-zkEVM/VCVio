@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.QueryTracking.Structures
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+
+module
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 
 /-!
 # Random-Oracle Simulation Helpers
@@ -31,6 +33,8 @@ Then the `roSim` namespace lemmas apply to `simulateQ impl`.
 
 * `unifFwdImpl`: the identity forwarding implementation for `unifSpec`, lifted to `StateT`
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 
@@ -208,3 +212,15 @@ theorem probEvent_eq_one_simulateQ_randomOracle_run_iff
     exact ha ▸ h f hf
 
 end OracleComp
+
+/-- Simulating the random oracle leaves a mapped uniform `Fin` sample unchanged: the query is
+intercepted, but from the empty cache it misses and resamples uniformly, and the updated cache is
+then discarded by `run'`, so the distribution over results is identical to the original sample. -/
+lemma simulateQ_randomOracle_map_uniformFin {α : Type} (n : ℕ) (f : Fin (n + 1) → α) :
+    ((simulateQ (unifSpec.randomOracle :
+      QueryImpl unifSpec (StateT unifSpec.QueryCache ProbComp))
+      (f <$> uniformSample (Fin (n + 1)) : ProbComp α) :
+        StateT unifSpec.QueryCache ProbComp α).run' ∅) =
+      (f <$> uniformSample (Fin (n + 1))) := by
+  rw [simulateQ_map, StateT.run'_map']
+  congr 1

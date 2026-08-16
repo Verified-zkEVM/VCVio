@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.ProbComp
+
+module
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ProbComp
 
 /-!
 # Commitment Schemes
@@ -26,6 +28,8 @@ properties: correctness, hiding, and binding.
 - `TrapdoorExtractor PP TD C M` — trapdoor-based message extraction algorithm.
 - `CommitmentScheme.extractExp` — extraction experiment (game-based, allows error).
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

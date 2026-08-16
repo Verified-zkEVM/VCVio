@@ -4,11 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.SignatureAlg
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+module
+
+public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 
 /-!
 # GPV Hash-and-Sign Framework
@@ -60,6 +62,8 @@ The proof decomposes into:
 - GPV08: Gentry, Peikert, Vaikuntanathan. STOC 2008, Propositions 6.1–6.2.
 - BDF+11: Boneh et al. "Random Oracles in a Quantum World." ASIACRYPT 2011.
 -/
+
+@[expose] public section
 
 universe v
 

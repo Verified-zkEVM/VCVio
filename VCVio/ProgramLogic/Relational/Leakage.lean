@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.ProgramLogic.Relational.Quantitative
-import VCVio.EvalDist.TVDist
+
+module
+public import VCVio.ProgramLogic.Relational.Quantitative
+public import VCVio.EvalDist.TVDist
 
 /-!
 # Leakage Judgments for Side-Channel Reasoning
@@ -30,6 +32,8 @@ computations (outputs of `runObs`) that produce a result paired with an accumula
 * `probLeakFree_iff_leakageBound_zero`: `ProbLeakFree` is the `ε = 0` case of `LeakageBound`.
 * `leakageBound_triangle`: transitivity for game-hopping arguments.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 
@@ -162,7 +166,7 @@ theorem probLeakFree_map_fst
     {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : ProbLeakFree oa₁ oa₂) {δ : Type} (f₁ : α → γ) (f₂ : β → δ) :
     ProbLeakFree (Prod.map f₁ id <$> oa₁) (Prod.map f₂ id <$> oa₂) := by
-  simpa only [ProbLeakFree, Functor.map_map] using h
+  simpa only [ProbLeakFree, Functor.map_map, Function.comp_def, Prod.map, id_eq] using h
 
 /-- Mapping the result component preserves approximate trace independence. -/
 theorem leakageBound_map_fst
@@ -170,7 +174,7 @@ theorem leakageBound_map_fst
     {ε : ℝ} {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : LeakageBound ε oa₁ oa₂) {δ : Type} (f₁ : α → γ) (f₂ : β → δ) :
     LeakageBound ε (Prod.map f₁ id <$> oa₁) (Prod.map f₂ id <$> oa₂) := by
-  simpa only [LeakageBound, Functor.map_map] using h
+  simpa only [LeakageBound, Functor.map_map, Function.comp_def, Prod.map, id_eq] using h
 
 /-- Mapping the result component preserves trace noninterference. -/
 theorem traceNoninterference_map_fst

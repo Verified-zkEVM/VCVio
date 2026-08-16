@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.Encoding
+
+module
+public import LatticeCrypto.MLKEM.Encoding
 
 /-!
 # ML-KEM Primitive Interfaces
@@ -12,6 +14,8 @@ This file keeps the hash, PRF, and XOF components abstract while exposing the se
 the FIPS 203 pseudocode needs. The intent is to keep the spec executable once a concrete primitive
 bundle is supplied, without committing to one implementation yet.
 -/
+
+@[expose] public section
 
 
 namespace MLKEM

@@ -3,13 +3,15 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import PolyFun.PFunctor.Bound
-import ToMathlib.General
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.QueryTracking.CountingOracle
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.StateT.Basic
+
+module
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import PolyFun.PFunctor.Bound
+public import ToMathlib.General
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-!
 # Bounding Queries Made by a Computation
@@ -27,6 +29,8 @@ satisfies the bound with the updated budget `cost t b`.
 The classical per-index and total query bounds are recovered by `IsPerIndexQueryBound`
 and `IsTotalQueryBound`.
 -/
+
+@[expose] public section
 
 open OracleSpec
 
@@ -80,7 +84,11 @@ lemma isQueryBound_query_iff (t : ι) (b : B)
     (canQuery : ι → B → Prop) (cost : ι → B → B) :
     IsQueryBound (liftM (spec.query t) : OracleComp spec _) b canQuery cost ↔
     canQuery t b :=
-  PFunctor.FreeM.isRollBound_liftA_iff (P := spec.toPFunctor) t b canQuery cost
+  by
+    simpa [IsQueryBound, OracleSpec.query_def, OracleComp.liftM_def,
+      PFunctor.FreeM.liftObj] using
+      PFunctor.FreeM.isRollBound_lift_iff
+        (P := spec.toPFunctor) t b canQuery cost
 
 private lemma isQueryBound_map_aux (oa : OracleComp spec α) (f : α → β)
     (canQuery : ι → B → Prop) (cost : ι → B → B) :
@@ -495,7 +503,7 @@ private lemma update_add_eq_update_add {qb₁ qb₂ : ι → ℕ} {t : ι} (ht :
     Function.update qb₁ t (qb₁ t - 1) + qb₂ =
       Function.update (qb₁ + qb₂) t ((qb₁ + qb₂) t - 1) := by
   funext j
-  by_cases hj : j = t <;> simp [Function.update_apply, hj, Pi.add_apply]
+  by_cases hj : j = t <;> simp [hj, Pi.add_apply]
   omega
 
 /-- Split a per-index budget at index `t` into one unit at `t` plus the decremented

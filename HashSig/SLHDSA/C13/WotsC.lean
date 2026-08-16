@@ -3,8 +3,10 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.C13.Params
-import HashSig.SLHDSA.C13.Primitives
+
+module
+public import HashSig.SLHDSA.C13.Params
+public import HashSig.SLHDSA.C13.Primitives
 
 /-!
 # WOTS+C (C13)
@@ -26,6 +28,8 @@ pk-recovery correctness, but underpins unforgeability via the constant-sum speci
 
 - ePrint 2025/2203 (WOTS+C); the SPHINCs- repo verifier `src/SPHINCs-C13Asm.sol`
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.C13

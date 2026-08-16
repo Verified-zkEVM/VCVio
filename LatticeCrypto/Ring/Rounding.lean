@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Ring.Kernel
+
+module
+public import LatticeCrypto.Ring.Kernel
 
 /-!
 # Rounding And Decomposition For Negacyclic Rings
@@ -22,8 +24,12 @@ Concrete implementations live in `MLDSA.Concrete.Rounding`. The abstract
 interfaces are consumed by `MLDSA.Scheme` and `MLDSA.Signature`.
 -/
 
+@[expose] public section
+
 
 namespace LatticeCrypto
+
+universe u v
 
 /-- Abstract rounding operations on a `NegacyclicRing`, parameterized by a
 rounding modulus `α` (typically `2 · γ₂` in the ML-DSA specification).
@@ -31,10 +37,10 @@ rounding modulus `α` (typically `2 · γ₂` in the ML-DSA specification).
 Bundles the `highBits` / `lowBits` decomposition, the `shift` embedding,
 and the `makeHint` / `useHint` pair used by ML-DSA signing and verification
 to recover `w₁` from a hint vector. -/
-structure RoundingOps {Coeff : Type*} [CommRing Coeff]
+structure RoundingOps {Coeff : Type u} [CommRing Coeff]
     (ring : NegacyclicRing Coeff) (α : ℕ) where
-  High : Type*
-  Hint : Type*
+  High : Type v
+  Hint : Type v
   lowBits : ring.Poly → ring.Poly
   highBits : ring.Poly → High
   shift : High → ring.Poly

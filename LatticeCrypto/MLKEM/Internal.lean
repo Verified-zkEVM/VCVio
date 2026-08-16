@@ -3,13 +3,17 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.KPKE
+
+module
+public import LatticeCrypto.MLKEM.KPKE
 
 /-!
 # ML-KEM Internal Algorithms
 
 This file models the deterministic internal algorithms from FIPS 203 Section 6.
 -/
+
+@[expose] public section
 
 
 namespace MLKEM

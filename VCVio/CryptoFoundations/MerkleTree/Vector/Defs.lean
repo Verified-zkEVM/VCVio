@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Fawad Haider
 -/
 
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+module
+
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 
 /-!
   # Merkle Trees as a vector commitment
@@ -25,6 +27,8 @@ import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
   - Dealing with arbitrary trees (may have arity > 2, or is not complete)
   - Path pruning optimization
 -/
+
+@[expose] public section
 
 namespace MerkleTree
 
@@ -75,6 +79,16 @@ def Cache.upper (n : ℕ) (cache : Cache α (n + 1)) :
 def Cache.leaves (n : ℕ) (cache : Cache α (n + 1)) :
     List.Vector α (2 ^ (n + 1)) := cache (Fin.last _)
 
+/-- The unique cache layer of a depth-zero tree. -/
+def Cache.base (leaves : List.Vector α 1) : Cache α 0 :=
+  Fin.cases leaves (fun j => Fin.elim0 j)
+
+omit [DecidableEq α] [Inhabited α] [Fintype α] in
+@[simp]
+lemma Cache.base_zero (leaves : List.Vector α 1) : Cache.base α leaves 0 = leaves := by
+  unfold Cache.base
+  exact Fin.cases_zero
+
 omit [DecidableEq α] [Inhabited α] [Fintype α] in
 @[simp, grind =]
 lemma Cache.upper_cons (n : ℕ) (leaves : List.Vector α (2 ^ (n + 1))) (cache : Cache α n) :
@@ -102,12 +116,10 @@ def buildLayer {m : Type _ → Type _} [Monad m] [HasQuery (spec α) m]
 /-- Build the full Merkle tree, returning the cache -/
 def buildMerkleTree (α) {m : Type _ → Type _} [Monad m] [HasQuery (spec α) m]
     (n : ℕ) (leaves : List.Vector α (2 ^ n)) :
-    m (Cache α n) := do
+    m (Cache α n) :=
   match n with
   | 0 => do
-    return fun j => (by
-      rw [Fin.val_eq_zero j]
-      exact leaves)
+    return Cache.base α leaves
   | n + 1 => do
     let lastLayer ← buildLayer α n leaves
     let cache ← buildMerkleTree α n lastLayer
@@ -138,18 +150,35 @@ def findNeighbors {n : ℕ} (i : Fin (2 ^ n)) (layer : Fin n) :
 
 end
 
+@[simp]
+theorem getRoot_base (leaves : List.Vector α 1) :
+    getRoot α (Cache.base α leaves) = leaves.head := by
+  simp [getRoot, List.Vector.head]
+
+@[simp, grind =]
+theorem getRoot_zero {m : Type _ → Type _} [Monad m] [LawfulMonad m]
+    [HasQuery (spec α) m] (leaves : List.Vector α 1) :
+    getRoot α <$> buildMerkleTree (m := m) α 0 leaves = pure leaves.head := by
+  let cache : Cache α 0 := Cache.base α leaves
+  change getRoot α <$> (pure cache : m (Cache α 0)) = pure leaves.head
+  rw [map_pure]
+  simp [cache]
+
 @[simp, grind =]
 theorem getRoot_trivial {m : Type _ → Type _} [Monad m] [LawfulMonad m]
     [HasQuery (spec α) m] (a : α) :
     getRoot α <$> (buildMerkleTree (m := m) α 0 ⟨[a], rfl⟩) = pure a := by
-  simp [buildMerkleTree, List.Vector.head]
+  calc
+    _ = pure (List.Vector.head (⟨[a], rfl⟩ : List.Vector α 1)) :=
+      getRoot_zero (m := m) α ⟨[a], rfl⟩
+    _ = pure a := rfl
 
 @[simp, grind =]
 theorem getRoot_single (a b : α) :
     getRoot α <$> buildMerkleTree (m := OracleComp (spec α)) α 1 ⟨[a, b], rfl⟩ =
       ((spec α).query (a, b)) := by
-  simp [buildMerkleTree, buildLayer, singleHash, List.Vector.ofFn, List.Vector.get,
-    Cache.cons, Fin.snoc]
+  simp [buildMerkleTree, buildLayer, singleHash, List.Vector.ofFn,
+    List.Vector.get, Cache.cons]
 
 section
 
@@ -180,8 +209,8 @@ according to its index.
 -/
 def getPutativeRoot {m : Type _ → Type _} [Monad m] [HasQuery (spec α) m]
     {n : ℕ} (i : Fin (2 ^ n)) (leaf : α) (proof : List.Vector α n) :
-    m α := do
-  match h : n with
+    m α :=
+  match n with
   | 0 => do
     return leaf
   | n + 1 => do
@@ -217,10 +246,7 @@ def buildLayer_with_hash (n : ℕ) (leaves : List.Vector α (2 ^ (n + 1))) (hash
 def buildMerkleTree_with_hash (n : ℕ) (leaves : List.Vector α (2 ^ n)) (hashFn : α × α → α) :
     Cache α n :=
   match n with
-  | 0 =>
-      fun j => by
-        rw [Fin.val_eq_zero j]
-        exact leaves
+  | 0 => Cache.base α leaves
   | n + 1 =>
       let lastLayer := buildLayer_with_hash (α := α) n leaves hashFn
       let cache := buildMerkleTree_with_hash n lastLayer hashFn

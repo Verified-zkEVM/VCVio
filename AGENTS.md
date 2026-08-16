@@ -1,6 +1,6 @@
-# VCV-io — AI Agent Guide
+# VCVio — AI Agent Guide
 
-Formally verified cryptography proofs in Lean 4, built on Mathlib.
+Machine-checked cryptographic proofs in Lean, built on Mathlib.
 
 ## Fast Start
 
@@ -17,24 +17,41 @@ Formally verified cryptography proofs in Lean 4, built on Mathlib.
 Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repo's explicit attribution policy.
 
 - New Lean files should use the standard copyright / license / authors header and a module docstring.
-- For ordinary Lean source files, use the standard prologue layout: header, blank line, imports, blank line, module docstring.
+- For ordinary Lean source files, use the standard prologue layout: header, blank line, `module`, public imports, blank line, module docstring.
 - Docstrings must be intrinsic and descriptive. Cross-reference live sibling definitions when helpful, but do not mention removed or renamed declarations, change history, or use reactive wording such as "replaces" or "renamed from".
 - Preserve existing headers on routine edits.
 - Only rewrite attribution when a file is genuinely new or materially replaced.
 - Do not add a separate AI-attribution line.
 - For inline section breaks within a Lean file, use Mathlib-style doc-comment headers `/-! ## Title -/` (or the multi-line `/-! ## Title \n\n explanation -/` form). **Do not use ASCII banners** such as `-- ====...===` flanking a `-- § Title` line. The `/-!` form is rendered by `doc-gen4`; ASCII banners are not, and they make the file feel artificially partitioned. If a section is large enough to want a loud header, it is usually large enough to want its own `namespace` or its own file. See *Section Headers Within A File* in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## Module Scopes
+
+Active Lean libraries and tests use Lean's module system. Put declarations in a `public section`;
+use `public meta section` for tactic and elaborator code. During this compatibility-first migration,
+ordinary source files use `@[expose] public section` so existing downstream definitional equalities
+remain available. New code may expose individual definitions instead when an opaque API boundary is
+intentional and covered by public lemmas. Executable and runtime implementation modules should use
+opaque `public section` when callers do not need to unfold their definitions.
+
+- Use `public import` for dependencies that form part of the module's transitive public surface and
+  `public meta import` for exported tactic/elaborator dependencies.
+- Use plain `import` for implementation-only dependencies. A proof module may use `import all` to
+  access an unexposed implementation from the same dependency when proving its public API.
+- Do not enable `backward.privateInPublic` or `backward.proofsInPublic`; resolve visibility and
+  proof-metavariable issues directly.
+- Keep the dormant `Interop` library outside this policy until it is migrated separately.
+
 ## What This Project Is
 
 VCVio is a framework for formal cryptographic proofs built around `OracleComp spec α`, the free monad on the polynomial functor induced by an oracle signature `OracleSpec ι := ι → Type`. Its universal fold `simulateQ impl : OracleComp spec α → r α` is the unique monad morphism extending any `impl : QueryImpl spec r` to the free monad. For `OracleComp`, `support` is definitionally `simulateQ` into `SetM` with queries interpreted by `Set.univ`; `evalDist` / `probOutput` / `Pr[…]` are definitionally `simulateQ` into `PMF` using the per-query distributions supplied by `[IsProbabilitySpec spec]`. Uniform cardinality lemmas and the `support`/probability bridge use `[IsUniformSpec spec]`, which bundles `[spec.Fintype]`, `[spec.Inhabited]`, and uniform sampling. `ProbComp α := OracleComp unifSpec α` specializes to computations whose only oracle is uniform selection.
 
-The repo also includes a first-class lattice cryptography library under `LatticeCrypto/`, built on top of the `VCVio` framework. That layer contains generic lattice algebra plus ML-DSA, ML-KEM, and Falcon specifications, security statements, concrete implementations, FFI bridges, and tests.
+The repo also includes a first-class lattice cryptography library under `LatticeCrypto/`, built on top of the `VCVio` framework. That layer contains generic lattice algebra plus ML-DSA, ML-KEM, and Falcon specifications, security statements, concrete implementations, and tests; the native FFI bridges live in the separate `Extern/` library.
 
 ## Repo Map
 
 - `VCVio/`: generic oracle-computation framework, program logic, crypto abstractions, and generic reductions.
 - `ToMathlib/`: local Mathlib-facing utilities and lemmas intended to remain below the framework layer.
-- `FFI/`: shared Lean FFI bindings used by concrete implementations.
+- `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
 - `HashSig/`: hash-based signatures — SLH-DSA (SPHINCS+, FIPS 205) proof-level specs and security. Peer of `LatticeCrypto/`; depends on `VCVio`/`ToMathlib` but nothing in those imports it back.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
@@ -43,7 +60,7 @@ The repo also includes a first-class lattice cryptography library under `Lattice
 - `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs.
 - `Interop/`: experimental bridges to Rust verification frontends (hax, aeneas). **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.
-- `third_party/`: vendored native backends used by the FFI and test harnesses.
+- `third_party/`: native backends as git submodules; when they are not checked out (fresh clones, Lake dependency checkouts), the native `extern_lib` targets build as empty stub archives.
 
 ## Module Layering
 
@@ -64,10 +81,18 @@ For `LatticeCrypto/`, the rough dependency direction is:
   → HardnessAssumptions
   → {MLDSA, MLKEM, Falcon}
   → Concrete implementations / security wrappers
+  → Extern (FFI bindings + FFI-backed instances)
   → LatticeCryptoTest
 ```
 
 Scheme-specific code in `LatticeCrypto/` may depend on `VCVio/CryptoFoundations`, but not the other way around.
+
+The native FFI surface lives in `Extern/`: it may import `VCVio`, `LatticeCrypto`,
+and `ToMathlib`, but no proof library (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`,
+`HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) may import `Extern.…`. That
+keeps every proof library — and any downstream Lake project requiring VCVio —
+link-safe when the `third_party/` submodules are absent. Enforced by
+`scripts/check-extern-isolation.sh` on every PR.
 
 For `Interop/`, the dependency contract is one-way:
 
@@ -76,7 +101,7 @@ Interop/{Hax,Aeneas,Rust}/  →  VCVio/, ToMathlib/, (Hax.…), (Aeneas.…)
 ```
 
 `Interop/**` may **never** be imported from `VCVio/`, `LatticeCrypto/`,
-`LatticeCryptoTest/`, `Examples/`, `ToMathlib/`, `FFI/`, `VCVioWidgets/`,
+`LatticeCryptoTest/`, `Examples/`, `ToMathlib/`, `Extern/`, `VCVioWidgets/`,
 or `VCVioTest/`. This contract is enforced by
 `scripts/check-interop-isolation.sh` and the
 `Interop TCB Isolation` GitHub workflow on every PR.
@@ -90,7 +115,8 @@ or `VCVioTest/`. This contract is enforced by
 5. **Commented-out code is legacy** — follow only uncommented code. Use `Examples/OneTimePad/Basic.lean` as canonical reference.
 6. **Preserve partial proofs** with `stop` instead of deleting large proof blocks.
 7. **Do not disable linters to silence errors**. Do not use `set_option linter.* false`, `set_option weak.linter.* false`, or add repo-level `leanOptions` that turn lints off to dodge a fixable issue. Fix the root cause instead. (The one deliberate, documented exception is `weak.linter.unicodeLinter, false` in `lakefile.lean`, off so FIPS-204 math notation and diacritics in cited author names are allowed.)
-8. **Interop TCB isolation is mandatory**. Core VCVio (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `Examples/`, `LatticeCryptoTest/`, `FFI/`, `VCVioWidgets/`, `VCVioTest/`) must never `import Interop.…`, `import Hax.…`, or `import Aeneas.…`. CI fails the PR if it does. See `docs/agents/interop.md`.
+8. **Interop TCB isolation is mandatory**. Core VCVio (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `Examples/`, `LatticeCryptoTest/`, `Extern/`, `VCVioWidgets/`, `VCVioTest/`) must never `import Interop.…`, `import Hax.…`, or `import Aeneas.…`. CI fails the PR if it does. See `docs/agents/interop.md`.
+9. **Extern link-safety isolation is mandatory**. Proof libraries (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) must never `import Extern.…`: the native backends behind it are built as empty stubs whenever the `third_party/` submodules are absent — always the case for Lake dependency checkouts — so importing `Extern` would break downstream executable links. Test libraries may import it. Enforced by `scripts/check-extern-isolation.sh` in CI.
 
 For the full list, see `docs/agents/gotchas.md`.
 
@@ -169,15 +195,15 @@ lake exe cache get && lake build
 ```
 
 CI runs the timed build on the non-test Lean libraries:
-`ToMathlib`, `VCVio`, `FFI`, `LatticeCrypto`, `HashSig`, `Examples`,
-`VCVioWidgets`, and `Interop`.
+`ToMathlib`, `VCVio`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
+and `VCVioWidgets`. The dormant `Interop` target remains excluded.
 The timing report parses per-file build times only for that same set.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
 After adding new `.lean` files: `./scripts/update-lib.sh`
 
-Lean toolchain and Mathlib must stay in sync (both currently `v4.30.0`). Keep files
+Lean toolchain and Mathlib must stay in sync (both currently `v4.32.2`). Keep files
 reasonably sized, but there is no hard line-count limit (the file-length linter is off).
 
 ## Further Reading

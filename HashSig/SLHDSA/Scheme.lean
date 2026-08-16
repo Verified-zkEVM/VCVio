@@ -3,8 +3,10 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Hypertree
-import VCVio.CryptoFoundations.SignatureAlg
+
+module
+public import HashSig.SLHDSA.Hypertree
+public import VCVio.CryptoFoundations.SignatureAlg
 
 /-!
 # SLH-DSA Scheme (FIPS 205 §9–10)
@@ -27,6 +29,8 @@ across the sampling of seeds via the support characterization of `Pr[… ] = 1`.
 
 - NIST FIPS 205, §9 (Algorithms 18–22, 24), §10 (external API), §4.1 (the H_msg digest split)
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec

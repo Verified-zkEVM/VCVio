@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
+
+module
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 
 /-!
 # State-separating handlers: advantage and `evalDist` congruences
@@ -14,6 +16,8 @@ This file contains the probability-facing lower API for
 literature while leaving the core handler object as the unbundled
 `QueryImpl.Stateful I E σ`.
 -/
+
+@[expose] public section
 
 universe uₑ
 
@@ -144,7 +148,7 @@ lemma simulateQ_StateT_evalDist_congr_of_bij {α : Type} {σ₁ σ₂ : Type}
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query,
       id_map, StateT.run_bind, map_bind, evalDist_bind, hh t s, monad_norm]
     refine bind_congr fun ⟨x, s'⟩ => ?_
-    simpa [Prod.map, Equiv.apply_symm_apply] using ih x (φ.symm s')
+    simpa [Equiv.apply_symm_apply, Function.comp_def] using ih x (φ.symm s')
 
 /-! ## Functoriality of `runProb` -/
 

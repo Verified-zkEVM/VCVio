@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Bolton Bailey
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
-import VCVio.OracleComp.QueryTracking.Birthday
-import ToMathlib.Data.IndexedBinaryTree.Lemmas
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
+public import VCVio.OracleComp.QueryTracking.Birthday
+public import ToMathlib.Data.IndexedBinaryTree.Lemmas
 
 /-!
 # Inductive Merkle Tree Extractability
@@ -59,6 +61,8 @@ A future improvement might be to re-structure the proof to recover the tighter b
 * [Building Cryptographic Proofs from Hash Functions by Chiesa and Yogev](https://snargsbook.org/), Lemma 18.5.1.
 
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 
@@ -205,7 +209,10 @@ private lemma extractabilityGame_logged_prefix_map_unit_eq
       (do let (_root, aux) ← 𝒜.commit
           let ⟨_idx, _leaf, _proof⟩ ← 𝒜.opening aux
           pure ()) := by
-  simpa [map_bind, map_pure] using loggingOracle.run_simulateQ_bind_fst 𝒜.commit
+  change ((fun _ => ()) <$> ((simulateQ loggingOracle 𝒜.commit).run >>= fun x =>
+    𝒜.opening x.1.2 >>= fun q => pure ((x.1, x.2), q))) = _
+  simpa [map_bind, map_pure] using
+    loggingOracle.run_simulateQ_bind_fst 𝒜.commit
     (fun (_, aux) => 𝒜.opening aux >>= fun _ => pure ())
 
 /--
@@ -297,7 +304,7 @@ private lemma singleHash_withQueryLog (a b : α) :
     (singleHash (m := OracleComp (spec α)) a b).withQueryLog =
       (liftM ((spec α).query (a, b)) : OracleComp (spec α) α) >>=
         fun u => pure (u, ([⟨(a, b), u⟩] : (spec α).QueryLog)) := by
-  simp [singleHash, bind_pure, OracleComp.withQueryLog_query]
+  simp [singleHash, OracleComp.withQueryLog_query]
 
 private lemma getPutativeRoot_step_withQueryLog_decompose
     (prog : OracleComp (spec α) α) (mkPair : α → α × α)
@@ -306,13 +313,8 @@ private lemma getPutativeRoot_step_withQueryLog_decompose
       (prog >>= fun a => let (l, r') := mkPair a; singleHash l r').withQueryLog) :
     ∃ a log_a, (a, log_a) ∈ support prog.withQueryLog
       ∧ log_v = log_a ++ [⟨mkPair a, r⟩] := by
-  rw [OracleComp.withQueryLog_bind, mem_support_bind_iff] at hmem
-  obtain ⟨⟨a, log_a⟩, h_rec, hmem⟩ := hmem
-  rw [singleHash_withQueryLog, support_map, Set.mem_image] at hmem
-  obtain ⟨⟨_, _⟩, h_q, rfl, rfl⟩ := hmem
-  rw [mem_support_bind_iff] at h_q
-  obtain ⟨_, _, rfl, rfl⟩ := h_q
-  exact ⟨a, log_a, h_rec, rfl⟩
+  simp only [OracleComp.withQueryLog_bind, singleHash_withQueryLog] at hmem
+  grind
 
 /--
 Predicate stating that `log` contains a hash chain from `leaf` (combined with the
@@ -384,8 +386,7 @@ private lemma chainInLog_of_mem_support_verifyProof
     (hmem : (true, log_v) ∈ support
         (verifyProof (m := OracleComp (spec α)) idx leaf root proof).withQueryLog) :
     ChainInLog log_v leaf root idx proof := by
-  grind [verifyProof, OracleComp.withQueryLog_bind, OracleComp.withQueryLog_pure,
-    chainInLog_of_mem_support_getPutativeRoot]
+  grind [ChainInLog, OracleComp.withQueryLog_bind, chainInLog_of_mem_support_getPutativeRoot]
 
 /-- **Log-level binding (Collision Lemma at the log level).** Log-formalized
 analog of `getPutativeRootWithHash_binding_collision`: two distinct openings
@@ -554,7 +555,7 @@ private lemma probOutput_singleHash_eq_inv_card
                   OracleComp (spec α) α)] =
       (Fintype.card α : ENNReal)⁻¹ := by
   rw [show (singleHash (m := OracleComp (spec α)) a b : OracleComp (spec α) α) =
-        (liftM ((spec α).query (a, b)) : OracleComp (spec α) α) from bind_pure _,
+        (liftM ((spec α).query (a, b)) : OracleComp (spec α) α) by simp [singleHash],
     probOutput_query (spec := spec α) (a, b) root]
 
 /--
@@ -709,7 +710,8 @@ theorem extractability [DecidableEq α] [Fintype α] [Inhabited α]
         (extractabilityGame 𝒜) (qb + s.depth)
         (extractabilityGame_isTotalQueryBound 𝒜 qb h_IsQueryBound_qb)
         (fun _ => le_rfl) using 2
-      norm_cast
+      · rfl
+      all_goals norm_cast
     _ ≤ ((qb + s.depth) ^ 2 : ENNReal) / (2 * Fintype.card α) +
         1 / (Fintype.card α) := by
       have h' := extractabilityGame_not_logHasCollision_wins_le_inv_card 𝒜

@@ -4,16 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import ToMathlib.Control.Monad.RelationalAlgebra
-import ToMathlib.ProbabilityTheory.Coupling
-import VCVio.EvalDist.Defs.Instances
-import VCVio.EvalDist.Defs.NeverFails
-import VCVio.EvalDist.Monad.Basic
-import VCVio.EvalDist.Monad.Map
-import VCVio.OracleComp.Constructions.Replicate
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.EvalDist
-import VCVio.ProgramLogic.Unary.HoarePropTriple
+module
+
+public import ToMathlib.Control.Monad.RelationalAlgebra
+public import ToMathlib.ProbabilityTheory.Coupling
+public import VCVio.EvalDist.Defs.Instances
+public import VCVio.EvalDist.Defs.NeverFails
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.EvalDist.Monad.Map
+public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.EvalDist
+public import VCVio.ProgramLogic.Unary.HoarePropTriple
 
 /-!
 # Relational program-logic baseline
@@ -23,6 +25,8 @@ This file defines `RelTriple` via the generic two-monad algebra interface
 
 `HasCoupling` and coupling lemmas remain as semantic bridge lemmas.
 -/
+
+@[expose] public section
 
 universe u v w x
 
@@ -70,8 +74,10 @@ noncomputable instance instMAlgRelOrdered :
       if hcut : CouplingPost (fa a) (fb b) post then (Classical.choose hcut).1 else failure
     have hd : ∀ a b, c.1.1 (some (a, b)) ≠ 0 →
         _root_.SPMF.IsCoupling (d a b) (𝒟[fa a]) (𝒟[fb b]) := fun a b hmass => by
-      have hcut : CouplingPost (fa a) (fb b) post := hcCut (a, b)
-        ((mem_support_iff c.1 (a, b)).2 (by simpa [SPMF.apply_eq_toPMF_some] using hmass))
+      have hab : (a, b) ∈ support c.1 := by
+        apply (_root_.SPMF.mem_support_iff c.1 (a, b)).2
+        exact hmass
+      have hcut : CouplingPost (fa a) (fb b) post := hcCut (a, b) hab
       simpa [d, hcut] using (Classical.choose hcut).2
     refine ⟨⟨c.1 >>= fun p => d p.1 p.2, ?_⟩, fun z hz => ?_⟩
     · simpa [evalDist_bind] using _root_.SPMF.IsCoupling.bind c d hd

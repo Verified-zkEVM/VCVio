@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.ProgramLogic.Tactics.Relational
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.ProgramLogic.Tactics.Relational
 
 /-!
 # Information-Theoretic Private Information Retrieval (PIR)
@@ -36,6 +38,8 @@ regardless of `i₀`. So the distribution of `s` alone reveals nothing about `i�
 
 Port of EasyCrypt's `PIR.ec`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -71,16 +75,28 @@ def pirQuery (i₀ : Fin N) : ProbComp (List (Fin N) × List (Fin N)) :=
 /-- The imperative-style `pirQuery'` (using `for`/`let mut`) and the functional-style
 `pirQuery` (using `List.foldlM`) compute exactly the same oracle computation.
 
-Uses the general `List.forIn_mprod_yield_eq_foldlM` bridge from `ToMathlib.General`
-to convert the `for`/`let mut` desugaring (which uses `forIn` + `MProd` state +
-`ForInStep.yield`) into the direct `foldlM` formulation. The only proof obligation
-is showing that each branch of the loop body wraps its result in `ForInStep.yield`. -/
+Uses Lean's `List.forIn_yield_eq_foldlM` bridge to convert the `for`/`let mut`
+desugaring (which uses `forIn` with product state and `ForInStep.yield`) into the
+direct `foldlM` formulation. The local `ite` lemmas normalize the elaborator's
+branchwise `pure`/`yield` terms to the form expected by that bridge. -/
 theorem pirQuery'_eq_pirQuery (i₀ : Fin N) : pirQuery' i₀ = pirQuery i₀ := by
-  simp only [pirQuery', pirQuery, monad_norm]
-  exact List.forIn_mprod_yield_eq_foldlM _ _ _ _ _ (fun j b c => by
-    simp only [monad_norm]
-    congr 1; ext b₁
-    split <;> split <;> simp)
+  simp only [pirQuery', pirQuery, monad_norm, Prod.eta, bind_pure]
+  have ite_pure {α : Type} (p : Prop) [Decidable p] (x y : α) :
+      (if p then pure x else pure y : ProbComp α) = pure (if p then x else y) := by
+    split <;> rfl
+  have ite_yield {α : Type} (p : Prop) [Decidable p] (x y : α) :
+      (if p then ForInStep.yield x else .yield y) = .yield (if p then x else y) := by
+    split <;> rfl
+  simp only [ite_pure, ite_yield]
+  simpa only [map_eq_pure_bind] using
+    (List.forIn_yield_eq_foldlM
+      (l := List.finRange N)
+      (f := fun _ _ => ($ᵗ Bool))
+      (g := fun j acc b =>
+        if j = i₀ then
+          if b then (j :: acc.1, acc.2) else (acc.1, j :: acc.2)
+        else if b then (j :: acc.1, j :: acc.2) else acc)
+      (init := ([], [])))
 
 /-! ## Response computation and main protocol -/
 

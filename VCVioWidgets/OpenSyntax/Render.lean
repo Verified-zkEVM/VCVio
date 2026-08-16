@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.Interaction.UC.OpenSyntax.Raw
+
+module
+public import PolyFun.Interaction.UC.OpenSyntax.Raw
 
 /-!
 # Graphviz DOT rendering for Raw expressions
@@ -36,6 +38,8 @@ are abstract at this level.
 
 The output can be piped to `dot -Tsvg` or pasted into any Graphviz renderer.
 -/
+
+public section
 
 universe u
 

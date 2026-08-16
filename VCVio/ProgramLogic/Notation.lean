@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.NotationCore
-import VCVio.ProgramLogic.Relational.Quantitative
+module
+
+public import VCVio.ProgramLogic.NotationCore
+public import VCVio.ProgramLogic.Relational.Quantitative
 
 /-!
 # Ergonomic Notation and Convenience Layer for Program Logic
@@ -13,6 +15,8 @@ import VCVio.ProgramLogic.Relational.Quantitative
 This file extends `VCVio.ProgramLogic.NotationCore` with the heavier quantitative
 bridge lemmas that depend on the full eRHL development.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 

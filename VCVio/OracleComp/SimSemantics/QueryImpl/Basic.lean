@@ -3,9 +3,12 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import Mathlib.Algebra.MvPolynomial.Eval
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import VCVio.OracleComp.OracleComp
+
+module
+public import Mathlib.Algebra.MvPolynomial.Eval
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import VCVio.OracleComp.OracleComp
+public import PolyFun.PFunctor.Handler
 
 /-!
 # Implementing Oracle Queries in Other Monads
@@ -16,23 +19,30 @@ It also provides the bridge between explicit `QueryImpl`s and the lightweight
 `HasQuery` capability from `VCVio.OracleComp.HasQuery.Basic`.
 -/
 
+@[expose] public section
+
 open OracleSpec OracleComp
 
 universe u v w
 
 open scoped OracleSpec.PrimitiveQuery
 
-/-- Specifies a way to implement queries to oracles in `spec` using the monad `m`.
-This is defined in terms of a mapping of input elements to oracle outputs,
-which extends to a mapping on `OracleQuery spec` by copying over the continuation,
-and then further to `OracleComp spec` by preserving the pure and bind operations.
-See `QueryImpl.mapQuery` and `simulateQ` for these two operations. -/
+/-- A monadic handler for the polynomial interface induced by `spec`.
+
+Concretely, this maps every oracle input `x` to a computation returning an
+answer of type `spec.Range x`. It extends first to `OracleQuery spec` by
+applying the continuation, then to `OracleComp spec` by preserving `pure` and
+`bind`; see `QueryImpl.mapQuery` and `simulateQ`. -/
 @[reducible] def QueryImpl {ι} (spec : OracleSpec ι) (m : Type u → Type v) :=
   (x : spec.Domain) → m (spec.Range x)
 
 namespace QueryImpl
 
 variable {ι} {spec : OracleSpec ι} {m : Type u → Type v} {n : Type u → Type w}
+
+/-- `QueryImpl` is definitionally PolyFun's generic monadic handler for the
+polynomial interface induced by an oracle specification. -/
+theorem eq_handler : QueryImpl spec m = PFunctor.Handler m spec.toPFunctor := rfl
 
 instance [spec.Inhabited] [Pure m] : Inhabited (QueryImpl spec m) where
   default _ := pure default
@@ -59,6 +69,13 @@ def mapQuery {α} [Functor m] (impl : QueryImpl spec m)
 @[simp] lemma mapQuery_query [Functor m] [LawfulFunctor m] (impl : QueryImpl spec m)
     (t : spec.Domain) : impl.mapQuery (query t) = impl t := by
   simp [mapQuery]
+
+/-- Reduce `mapQuery` on an explicit constructor-form query. Companion to `mapQuery_query`
+for queries that arise from `SubSpec`-lift normalization (which produces
+`OracleQuery.mk`/anonymous-constructor forms rather than `OracleSpec.query`). -/
+@[simp] lemma mapQuery_mk {α} [Functor m] (impl : QueryImpl spec m)
+    (t : spec.Domain) (f : spec.Range t → α) :
+    impl.mapQuery (OracleQuery.mk t f) = f <$> impl t := rfl
 
 section liftTarget
 

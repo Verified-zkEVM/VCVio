@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import ToMathlib.Data.IndexedBinaryTree.Basic
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+module
+
+public import ToMathlib.Data.IndexedBinaryTree.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 
 /-!
 # Inductive Merkle Trees
@@ -38,11 +40,13 @@ as defined in `ToMathlib.Data.IndexedBinaryTree`.
 - [x] Collision Lemma (See SNARGs book 18.3)
   - (this is really not a lemma about oracles, so it could go with the binary tree API)
 - [ ] Extractibility (See SNARGs book 18.5)
-- [ ] Multi-leaf proofs
+- [x] Multi-leaf proofs (see `VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs`)
 - [ ] Arbirary arity trees
 - [ ] Multi-instance
 
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 

@@ -4,16 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Std.Tactic.Do
-import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.QueryTracking.CountingOracle
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.SeededOracle
-import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
-import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
-import VCVio.ProgramLogic.Unary.StdDoBridge
-import VCVio.ProgramLogic.Unary.WriterTBridge
+module
+
+public import Std.Tactic.Do
+public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.SeededOracle
+public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
+public import VCVio.ProgramLogic.Unary.StdDoBridge
+public import VCVio.ProgramLogic.Unary.WriterTBridge
 
 /-!
 # `Std.Do` handler specifications for `OracleComp` simulators
@@ -77,9 +79,7 @@ registrations, but the underlying `WPMonad` synthesis remains expensive.
 Each handler section ends with one or more `example` blocks demonstrating
 that `mvcgen` actually closes goals composed from the per-query specs:
 two-, three-, and four-query bind chains for caching; a no-fallthrough
-chain for seeded; an in-order log-extension chain for logging; and prefix /
-replacement chains for the replay fork in
-`VCVio.CryptoFoundations.ReplayForkStdDo`.
+chain for seeded; and an in-order log-extension chain for logging.
 
 ## Stacked / multi-handler examples
 
@@ -99,12 +99,6 @@ This single-`StateT`-layer pattern is preferred over genuinely stacked
 * The product-state representation matches the FiatShamir / forking
   proofs already in `VCVio/CryptoFoundations`, so there is a direct path
   from these examples to research-grade proofs.
-
-## Related
-
-The replay-fork handler `replayOracle` lives in
-`VCVio.CryptoFoundations.ReplayFork`; its `Std.Do.Triple` specifications
-are in `VCVio.CryptoFoundations.ReplayForkStdDo`.
 
 ## Limitations
 
@@ -133,6 +127,8 @@ are in `VCVio.CryptoFoundations.ReplayForkStdDo`.
   use `do` with `get` / `set` / `pure` would make it `mvcgen`-friendly,
   but is non-trivial given the existing dependents.
 -/
+
+@[expose] public section
 
 open Std.Do OracleSpec OracleComp
 
@@ -391,6 +387,7 @@ theorem seededOracle_triple_of_cons (t : spec.Domain)
   rw [triple_stateT_iff_forall_support]
   intro seed hseed v seed' hmem
   rw [hseed] at hmem
+  change v = u ∧ seed' = Function.update seed₀ t us
   simpa only [seededOracle.apply_eq, StateT.run, StateT.mk, h, support_pure,
     Set.mem_singleton_iff, Prod.mk.injEq] using hmem
 

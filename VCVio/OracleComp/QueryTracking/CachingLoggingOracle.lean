@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.QueryTracking.LoggingOracle
+
+module
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
 
 /-!
 # Combined Caching + Logging Handlers
@@ -20,6 +22,8 @@ the second state component after every query.
 `QueryImpl.withCachingLogging` and `OracleSpec.cachingLoggingOracle` are the
 canonical specializations to `QueryLog spec`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 
@@ -163,7 +167,10 @@ theorem run'_simulateQ_eq {α : Type u}
     (simulateQ cachingLoggingOracle oa).run' s =
       (simulateQ cachingOracle oa).run' s.1 := by
   have hmap := congrArg (fun p => Prod.fst <$> p) (fst_map_run_simulateQ oa s)
-  simpa [StateT.run'] using hmap
+  rw [StateT.run', StateT.run']
+  change (fun a => id a.1) <$> (simulateQ cachingLoggingOracle oa).run s =
+    Prod.fst <$> (simulateQ cachingOracle oa).run s.1
+  simpa only [Functor.map_map, Function.comp_def, Prod.map] using hmap
 
 /-! ### Forward-direction query bounds
 

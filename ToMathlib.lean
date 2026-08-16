@@ -1,40 +1,44 @@
-import ToMathlib.Analysis.MeanInequalities
-import ToMathlib.Combinatorics.FinPairs
-import ToMathlib.Control.AlternativeMonad
-import ToMathlib.Control.Lawful.MonadControl
-import ToMathlib.Control.Lawful.MonadFunctor
-import ToMathlib.Control.Lawful.MonadReader
-import ToMathlib.Control.Lawful.MonadState
-import ToMathlib.Control.Monad.Commutative
-import ToMathlib.Control.Monad.Dijkstra
-import ToMathlib.Control.Monad.Graded
-import ToMathlib.Control.Monad.Indexed
-import ToMathlib.Control.Monad.Ordered
-import ToMathlib.Control.Monad.RelWP
-import ToMathlib.Control.Monad.Relation
-import ToMathlib.Control.Monad.RelationalAlgebra
-import ToMathlib.Control.Monad.RelationalAlgebraAnchored
-import ToMathlib.Control.Monad.Relative
-import ToMathlib.Control.Monad.Transformer
-import ToMathlib.Control.OptionT
-import ToMathlib.Control.StateT
-import ToMathlib.Control.WriterT
-import ToMathlib.Data.ENNReal.AbsDiff
-import ToMathlib.Data.ENNReal.Gauss
-import ToMathlib.Data.ENNReal.SumSquares
-import ToMathlib.Data.ENNReal.TsumDistrib
-import ToMathlib.Data.FinEnum
-import ToMathlib.Data.Heap
-import ToMathlib.Data.IndexedBinaryTree.Basic
-import ToMathlib.Data.IndexedBinaryTree.Equiv
-import ToMathlib.Data.IndexedBinaryTree.Lemmas
-import ToMathlib.Data.List.Lookup
-import ToMathlib.General
-import ToMathlib.OrderEnrichedCategory
-import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
-import ToMathlib.Probability.ProbabilityMassFunction.TailSums
-import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
-import ToMathlib.ProbabilityTheory.Coupling
-import ToMathlib.ProbabilityTheory.FinRatPMF
-import ToMathlib.ProbabilityTheory.OptimalCoupling
-import ToMathlib.ProbabilityTheory.SPMF
+module  -- shake: keep-all --deprecated_module: ignore
+
+public import ToMathlib.Analysis.MeanInequalities
+public import ToMathlib.Analysis.SumIntegralComparisons
+public import ToMathlib.Combinatorics.FinPairs
+public import ToMathlib.Control.AlternativeMonad
+public import ToMathlib.Control.Lawful.MonadControl
+public import ToMathlib.Control.Lawful.MonadFunctor
+public import ToMathlib.Control.Lawful.MonadReader
+public import ToMathlib.Control.Lawful.MonadState
+public import ToMathlib.Control.Monad.Commutative
+public import ToMathlib.Control.Monad.Dijkstra
+public import ToMathlib.Control.Monad.Graded
+public import ToMathlib.Control.Monad.Indexed
+public import ToMathlib.Control.Monad.Ordered
+public import ToMathlib.Control.Monad.RelWP
+public import ToMathlib.Control.Monad.Relation
+public import ToMathlib.Control.Monad.RelationalAlgebra
+public import ToMathlib.Control.Monad.RelationalAlgebraAnchored
+public import ToMathlib.Control.Monad.Relative
+public import ToMathlib.Control.Monad.Transformer
+public import ToMathlib.Control.OptionT
+public import ToMathlib.Control.StateT
+public import ToMathlib.Control.WriterT
+public import ToMathlib.Data.ENNReal.AbsDiff
+public import ToMathlib.Data.ENNReal.Gauss
+public import ToMathlib.Data.ENNReal.SumSquares
+public import ToMathlib.Data.ENNReal.TsumDistrib
+public import ToMathlib.Data.FinEnum
+public import ToMathlib.Data.Heap
+public import ToMathlib.Data.IndexedBinaryTree.Basic
+public import ToMathlib.Data.IndexedBinaryTree.Equiv
+public import ToMathlib.Data.IndexedBinaryTree.Lemmas
+public import ToMathlib.Data.List.Lookup
+public import ToMathlib.Data.Vector
+public import ToMathlib.General
+public import ToMathlib.OrderEnrichedCategory
+public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
+public import ToMathlib.Probability.ProbabilityMassFunction.TailSums
+public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
+public import ToMathlib.ProbabilityTheory.Coupling
+public import ToMathlib.ProbabilityTheory.FinRatPMF
+public import ToMathlib.ProbabilityTheory.OptimalCoupling
+public import ToMathlib.ProbabilityTheory.SPMF

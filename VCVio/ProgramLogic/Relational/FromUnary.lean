@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Relational.Basic
-import VCVio.ProgramLogic.Unary.StdDoBridge
+module
+
+public import VCVio.ProgramLogic.Relational.Basic
+public import VCVio.ProgramLogic.Unary.StdDoBridge
 
 /-!
 # Lifting unary `Std.Do` triples to relational couplings
@@ -27,6 +29,8 @@ These lemmas let proofs established against the stateful `Std.Do`/`mvcgen` proof
 be composed into relational arguments (e.g. game-hopping reductions) without redoing
 the underlying analysis.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open Std.Do

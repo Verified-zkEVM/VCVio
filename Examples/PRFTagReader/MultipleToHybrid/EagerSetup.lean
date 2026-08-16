@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.MultipleToHybrid.Setup
+module
+
+public import Examples.PRFTagReader.MultipleToHybrid.Setup
 
 /-!
 # PRF Tag/Reader Protocol — Multiple-to-hybrid eager coupling, shared setup
@@ -31,6 +33,8 @@ module hosts:
 These shared definitions and bridges supply the eager-table instrumentation consumed by the
 direct-coupling headline in `DirectCoupling.Compose`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -59,7 +63,7 @@ how `Pr[bad]` absorbs the tag-side nonce-collision mass.
 
 Lives in this module (rather than `DirectCoupling.Compose`) so that the instrumented fine handler
 `multipleBadTableHandlerFine` defined below can reach it without inducing an import cycle. -/
-def cacheBadReader [Fintype TagId]
+def cacheBadReader
     (T : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (t : TagTranscript Nonce Digest) : Bool :=
   decide (∃ tag : TagId, ∃ sid : Fin sessionsPerTag, sid ≠ 0 ∧ T ((tag, sid), t.nonce) = t.auth)
@@ -80,7 +84,7 @@ lemma cacheBadReader_eq_true_iff
 flag, leaving every other field of the bad state untouched. This is the reader-side analogue of
 `multipleBadAdvance`, but mutating `cacheBad` instead of `bad`. The two flags are independent:
 reader steps never touch `bad`, tag steps never touch `cacheBad`. -/
-def multipleBadReaderAdvance [Fintype TagId]
+def multipleBadReaderAdvance
     (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (transcript : TagTranscript Nonce Digest)
     (sB : UnlinkBadState TagId Nonce Digest) : UnlinkBadState TagId Nonce Digest :=
@@ -387,8 +391,11 @@ lemma probOutput_uniformSample_fun_eval [Finite TagId] [Finite Nonce] [Fintype D
   -- ∑' u, Pr[= u | $ᵗ Digest] * Pr[= v | pure u] = Pr[= v | $ᵗ Digest]
   rw [show (∑' u : Digest, Pr[= u | ($ᵗ Digest)] * Pr[= v | (pure u : ProbComp Digest)]) =
         Pr[= v | (do let u ← ($ᵗ Digest); pure u : ProbComp Digest)]
-      from (probOutput_bind_eq_tsum _ _ _).symm]
-  rw [bind_pure, probOutput_uniformSample]
+      from by
+        simpa only [bind_pure] using
+          (probOutput_bind_eq_tsum (($ᵗ Digest) : ProbComp Digest)
+            (fun u => pure u) v).symm]
+  rw [probOutput_uniformSample]
 
 omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce] in
 /-- **Per-step uniform-table bound on `cacheBadReader`.** Sampling a uniform fine-grained

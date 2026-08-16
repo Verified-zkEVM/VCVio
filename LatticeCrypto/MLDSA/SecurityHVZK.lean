@@ -3,7 +3,9 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import LatticeCrypto.MLDSA.Security
+
+module
+public import LatticeCrypto.MLDSA.Security
 
 /-!
 # ML-DSA Honest-Verifier Zero-Knowledge: simulators and the quantitative bound
@@ -62,6 +64,8 @@ two transcripts coincide, so this bound is exact rather than a slack inequality.
 - EasyCrypt `HVZK_FSa.ec`, `SimplifiedScheme.ec` (formosa-crypto/dilithium)
 - NIST FIPS 204, Algorithms 7 and 8
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal
@@ -296,7 +300,7 @@ omit nttOps [SampleableType (RqVec p.l)] [SampleableType (CommitHashBytes p)]
   [DecidableEq prims.High] in
 private lemma neg_rq_get (f : Rq) (i : Fin ringDegree) : (-f).get i = -(f.get i) := by
   change (coeffRing.neg f).get i = _
-  simp [LatticeCrypto.vectorNegacyclicRing]
+  simp
 
 omit nttOps [SampleableType (RqVec p.l)] [SampleableType (CommitHashBytes p)]
   [DecidableEq prims.High] in
@@ -306,9 +310,7 @@ private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
   unfold LatticeCrypto.cInfNormOf
   apply Finset.sup_congr rfl
   intro i _
-  simp only [LatticeCrypto.zmodCenteredCoeffView, polyBackend,
-    LatticeCrypto.vectorNegacyclicRing, LatticeCrypto.vectorBackend]
-  rw [neg_rq_get]
+  simp only [LatticeCrypto.zmodCenteredCoeffView, coeffRing.coeff_neg]
   exact LatticeCrypto.centeredRepr_natAbs_neg _
 
 omit [SampleableType (RqVec p.l)] [SampleableType (CommitHashBytes p)]

@@ -3,9 +3,11 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.C13.Scheme
-import HashSig.SLHDSA.Concrete.Keccak
-import HashSig.SLHDSA.Concrete.Instance
+
+module
+public import HashSig.SLHDSA.C13.Scheme
+public import HashSig.SLHDSA.Concrete.Keccak
+public import HashSig.SLHDSA.Concrete.Instance
 
 /-!
 # Concrete C13 instantiation (keccak256, 32-byte ADRS)
@@ -23,6 +25,8 @@ Wires pure-Lean `keccak256` into the C13 abstract bundle, following `SPHINCs-C13
 A fixed-width decoder for the 3688-byte C13 signature and an executable `verifyBytes` are
 provided for byte-exact KAT checks against the on-chain verifier.
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.C13.Concrete

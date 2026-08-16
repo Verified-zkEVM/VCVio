@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
-import VCVio.OracleComp.QueryTracking.QueryBound
-import ToMathlib.Data.IndexedBinaryTree.Lemmas
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import ToMathlib.Data.IndexedBinaryTree.Lemmas
 
 /-!
 # Total query bounds for inductive Merkle tree primitives
@@ -25,6 +27,8 @@ These bounds are consumed downstream by the extractability argument, which
 needs to know the total number of queries any honest Merkle operation issues.
 -/
 
+@[expose] public section
+
 namespace InductiveMerkleTree
 
 open OracleSpec OracleComp BinaryTree
@@ -36,7 +40,7 @@ variable {α : Type}
 /-- `singleHash` makes exactly one oracle query, hence has total query bound `1`. -/
 lemma singleHash_isTotalQueryBound (left right : α) :
     IsTotalQueryBound (singleHash (m := OracleComp (spec α)) left right) 1 := by
-  simp only [singleHash, HasQuery.instOfMonadLift_query, isTotalQueryBound_query_bind_iff]
+  simp only [singleHash, HasQuery.instOfMonadLift_query]
   exact ⟨Nat.zero_lt_one, fun _ => trivial⟩
 
 /-- `getPutativeRoot` makes one oracle query per level of `idx`, so it has total query

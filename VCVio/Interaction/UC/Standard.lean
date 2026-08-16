@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.Interaction.UC.Computational
-import PolyFun.Interaction.UC.Notation
+
+module
+public import VCVio.Interaction.UC.Computational
+public import PolyFun.Interaction.UC.Notation
 
 /-!
 # Textbook UC vocabulary over the abstract open-system theory
@@ -60,6 +62,8 @@ packaged as the reusable capability `HasDummyAdversaryFactor`.
 * `observedCompEmulates_toUCSecure_id`: `ObservedCompEmulates sem ε π F` implies
   `UCSecure (Execution.ofSemantics sem) ε π F` with the identity simulator `S := A`.
 -/
+
+@[expose] public section
 
 universe u
 

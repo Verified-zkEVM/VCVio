@@ -3,9 +3,11 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
-import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
-import ToMathlib.Control.StateT
+
+module
+public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
+public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
+public import ToMathlib.Control.StateT
 
 /-!
 # Asymmetric Encryption Schemes: Generic IND-CPA Lifts
@@ -13,6 +15,8 @@ import ToMathlib.Control.StateT
 This file contains the generic step-adversary extraction and the planned one-time-to-many-time
 IND-CPA lift.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 
@@ -30,7 +34,7 @@ variable {encAlg' : AsymmEncAlg ProbComp M PK SK C}
 /-- Result of running the generic step-adversary prefix simulation. Either the oracle adversary
 has already terminated, or we have paused exactly at the target fresh LR query and captured the
 messages plus the continuation waiting for the challenge ciphertext. -/
-private inductive IND_CPA_StepResult (α : Type)
+inductive IND_CPA_StepResult (α : Type)
   | done (a : α) : IND_CPA_StepResult α
   | paused (mm : M × M) (cont : C → OracleComp encAlg'.IND_CPA_oracleSpec α) :
       IND_CPA_StepResult α
@@ -38,7 +42,7 @@ private inductive IND_CPA_StepResult (α : Type)
 /-- Prefix simulation for the generic step adversary. Starting from counter value `n ≤ k`, it
 answers the first `k - n` fresh LR queries with the left branch, stops at the next fresh LR
 query, and records the continuation. -/
-private def IND_CPA_stepPrefix (pk : PK) (k : ℕ) {α : Type} :
+def IND_CPA_stepPrefix (pk : PK) (k : ℕ) {α : Type} :
     OracleComp encAlg'.IND_CPA_oracleSpec α →
       StateT encAlg'.IND_CPA_CountedState ProbComp (IND_CPA_StepResult (encAlg' := encAlg') α) :=
   OracleComp.construct
@@ -66,7 +70,7 @@ private def IND_CPA_stepPrefix (pk : PK) (k : ℕ) {α : Type} :
 /-- State carried by the generic extracted one-time adversary for the `k`-th adjacent hybrid
 gap. If the original oracle adversary already terminated before issuing the target fresh query,
 we store its final guess. Otherwise we store the paused continuation and counted cache state. -/
-private inductive IND_CPA_StepState
+inductive IND_CPA_StepState
   | done (guess : Bool) : IND_CPA_StepState
   | paused (pk : PK) (mm : M × M) (st : encAlg'.IND_CPA_CountedState)
       (cont : C → OracleComp encAlg'.IND_CPA_oracleSpec Bool) : IND_CPA_StepState
@@ -331,7 +335,13 @@ private lemma IND_CPA_stepAdversary_game_eq_hybridBranch [Inhabited M]
   have hresume := IND_CPA_stepPrefix_resume_eq_hybridLR (encAlg' := encAlg')
     pk_sk.1 k bit (adversary pk_sk.1) (∅, 0) (Nat.zero_le k)
   dsimp at hresume
+  have hmap (mx : ProbComp Bool) :
+      (do let b' ← mx; pure (bit == b')) = (bit == ·) <$> mx := by
+    rw [map_eq_bind_pure_comp]
+    rfl
   refine evalDist_ext fun y => ?_
+  conv_rhs =>
+    rw [StateT.run'_eq, hmap]
   refine Eq.trans ?_ (probOutput_map_eq_of_evalDist_eq hresume (bit == ·) y)
   simp only [monad_norm]
   refine probOutput_bind_congr'

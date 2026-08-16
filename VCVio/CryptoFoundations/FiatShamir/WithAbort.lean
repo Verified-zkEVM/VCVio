@@ -4,14 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.CryptoFoundations.IdenSchemeWithAbort
-import VCVio.CryptoFoundations.SignatureAlg
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.HasQuery.Basic
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+module
+
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.CryptoFoundations.IdenSchemeWithAbort
+public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.HasQuery.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 
 /-!
 # Fiat-Shamir-with-aborts transform
@@ -34,6 +36,8 @@ lemmas, expected-cost PMFs, and the EUF-CMA security statement live in the
 - EasyCrypt `FSabort.eca`, `SimplifiedScheme.ec`
 - NIST FIPS 204, Algorithms 2 (ML-DSA.Sign) and 3 (ML-DSA.Verify)
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -266,7 +270,7 @@ lemma probOutput_false_signVerify_le_probOutput_none_sign
             w' z p.2 c₀ hcached hverify]
           simp [probOutput_pure]
         rw [hVerifyTrue, mul_zero]
-        exact zero_le'
+        exact zero_le
       · simp [probOutput_eq_zero_of_not_mem_support hmem]
 
 /-- Correctness of the Fiat-Shamir with aborts signature scheme: the canonical

@@ -3,14 +3,18 @@ Copyright (c) 2025 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ToMathlib.ProbabilityTheory.FinRatPMF
-import VCVio.EvalDist.Defs.Basic
+
+module
+public import ToMathlib.ProbabilityTheory.FinRatPMF
+public import VCVio.EvalDist.Defs.Basic
 
 /-!
 # EvalDist Instances for `FinRatPMF.Raw`
 
 This file exposes the executable `FinRatPMF.Raw` monad to the generic `EvalDist` API.
 -/
+
+@[expose] public section
 
 universe u
 

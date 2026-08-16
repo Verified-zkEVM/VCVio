@@ -1,6 +1,6 @@
 # Interaction Integration
 
-VCV-io depends on PolyFun for the generic interaction framework.
+VCVio depends on PolyFun for the generic interaction framework.
 Do not duplicate PolyFun's interaction guide here.
 Use this page for VCV-specific runtime, computational, and example integration only.
 
@@ -13,11 +13,11 @@ Generic protocol theory lives in PolyFun:
 - Generic UC interfaces, open processes, structural boundary traces, open theory, notation, environment actions, and leakage scaffolding: `PolyFun.Interaction.UC.*`
 
 For conceptual background, read PolyFun's `docs/wiki/interaction.md` and the module docstrings in the PolyFun dependency.
-VCV-io should only document how those generic APIs are instantiated with probabilistic semantics, oracle computations, and crypto examples.
+VCVio should only document how those generic APIs are instantiated with probabilistic semantics, oracle computations, and crypto examples.
 
 ## VCV-Specific Layers
 
-VCV-io retains the computational and runtime interpretation of PolyFun's generic UC layer:
+VCVio retains the computational and runtime interpretation of PolyFun's generic UC layer:
 
 | File | Purpose |
 |------|---------|
@@ -25,8 +25,8 @@ VCV-io retains the computational and runtime interpretation of PolyFun's generic
 | `VCVio/Interaction/UC/Runtime.lean` | Synchronous runtime semantics for closed open processes, including `processSemantics`, `processSemanticsProbComp`, and `processSemanticsOracle`. |
 | `VCVio/Interaction/UC/AsyncRuntime.lean` | Asynchronous runtime semantics with process ticks and environment events. |
 | `VCVio/Interaction/UC/AsyncSecurity.lean` | Fair-PPT security wrappers for asynchronous env-open executions. |
-| `VCVio/Interaction/UC/Standard.lean` | Standard VCV-io UC imports and conveniences. |
-| `VCVio/Interaction/UC/StdDoBridge.lean` | Bridges from VCV-io program-logic/Std.Do idioms into the UC runtime layer. |
+| `VCVio/Interaction/UC/Standard.lean` | Standard VCVio UC imports and conveniences. |
+| `VCVio/Interaction/UC/StdDoBridge.lean` | Bridges from VCVio program-logic/Std.Do idioms into the UC runtime layer. |
 
 These files may import PolyFun interaction modules.
 Generic interaction modules should not be reintroduced under `VCVio/Interaction` or `ToMathlib`.
@@ -34,8 +34,8 @@ Generic interaction modules should not be reintroduced under `VCVio/Interaction`
 ## Runtime Semantics
 
 `OpenProcess m Party Δ` comes from PolyFun and carries its per-step `Spec.Sampler m` intrinsically.
-VCV-io's runtime layer interprets a closed process by running those samplers and then observing the resulting state in a probabilistic semantics.
-Use PolyFun's `OpenStep.boundaryTrace` when you need to read the emitted output packets from a completed open-step transcript; routing and probabilistic interpretation remain VCV-io runtime concerns.
+VCVio's runtime layer interprets a closed process by running those samplers and then observing the resulting state in a probabilistic semantics.
+Use PolyFun's `OpenStep.boundaryTrace` when you need to read the emitted output packets from a completed open-step transcript; routing and probabilistic interpretation remain VCVio runtime concerns.
 
 Use the synchronous entry points in `VCVio/Interaction/UC/Runtime.lean`:
 
@@ -76,7 +76,7 @@ Important definitions:
 - `Execution T` is the distributional experiment consumed by paper-level `Standard.UCSecure`.
 
 The generic equivalence-style UC judgments live in PolyFun.
-The VCV-io layer gives them a crypto-facing distributional interpretation.
+The VCVio layer gives them a crypto-facing distributional interpretation.
 Use the `Observed*` definitions when you intentionally work relative to a chosen observer.
 Use `Standard.UCSecure exec ε π F` when stating textbook UC security for a fixed execution experiment; `Execution.ofSemantics` is an explicit bridge from an observer to such an execution.
 
@@ -107,4 +107,4 @@ import VCVio.Interaction.UC.Computational
 import VCVio.Interaction.UC.Standard
 ```
 
-When editing VCV-io, prefer importing the specific PolyFun module you need rather than re-exporting large generic surfaces through VCV-io.
+When editing VCVio, prefer importing the specific PolyFun module you need rather than re-exporting large generic surfaces through VCVio.

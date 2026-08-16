@@ -3,7 +3,9 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.ProbComp
+
+module
+public import VCVio.OracleComp.ProbComp
 
 /-!
 # Hard Relations
@@ -19,6 +21,8 @@ In the actual implementation all of these are indexed by some security parameter
 This is a simplified version without the asymptotic security parameter framework.
 A full asymptotic version needs `OracleAlg` to be redesigned.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 

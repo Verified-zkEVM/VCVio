@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Loom.WP.Basic
-import Loom.ExceptPost
-import VCVio.ProgramLogic.Unary.HoarePropTriple
+module
+
+public import Loom.WP.Basic
+public import Loom.ExceptPost
+public import VCVio.ProgramLogic.Unary.HoarePropTriple
 
 /-!
 # Qualitative `WP` carrier for `OracleComp` (`Prop`, scoped)
@@ -55,6 +57,8 @@ shipped by Loom2 in `Loom/LatticeExt.lean`, transitively imported via
 See `.ignore/wp-cutover-plan.md` §"Three-tier carrier design" and
 §"Scoped instances" for the broader design.
 -/
+
+@[expose] public section
 
 universe u
 

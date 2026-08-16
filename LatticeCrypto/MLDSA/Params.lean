@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # ML-DSA Parameters
@@ -16,6 +18,8 @@ named NIST-approved instantiations.
 
 - NIST FIPS 204, Section 4 (Table 1: ML-DSA parameter sets)
 -/
+
+@[expose] public section
 
 
 namespace MLDSA

@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Mathlib.Data.Finsupp.Basic
-import Mathlib.Data.Finsupp.Order
+module
+
+public import Mathlib.Data.Finsupp.Basic
+public import Mathlib.Data.Finsupp.Order
 
 /-!
 # Structured Resource Profiles
@@ -21,6 +23,8 @@ This split is useful for reduction proofs. We can first analyze an open reductio
 its intrinsic overhead and interface usage, and only later instantiate those interface calls with
 the cost profiles of the adversaries or subroutines that implement them.
 -/
+
+@[expose] public section
 
 open scoped BigOperators
 
@@ -100,8 +104,14 @@ noncomputable instance [AddMonoid ω] : AddMonoid (ResourceProfile ω κ) where
   zero_add a := by ext <;> simp
   add_zero a := by ext <;> simp
   add_assoc a b c := by ext <;> simp [add_assoc]
-  nsmul_zero a := by ext <;> simp
-  nsmul_succ n a := by ext <;> simp [succ_nsmul]
+  nsmul_zero a := by
+    apply ResourceProfile.ext
+    · exact AddMonoid.nsmul_zero a.intrinsic
+    · exact AddMonoid.nsmul_zero a.usage
+  nsmul_succ n a := by
+    apply ResourceProfile.ext
+    · exact AddMonoid.nsmul_succ n a.intrinsic
+    · exact AddMonoid.nsmul_succ n a.usage
 
 @[simp] lemma intrinsic_nsmul [AddMonoid ω] (n : ℕ) (a : ResourceProfile ω κ) :
     (n • a).intrinsic = n • a.intrinsic := rfl

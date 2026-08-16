@@ -3,11 +3,13 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.EvalDist
-import VCVio.EvalDist.List
-import VCVio.OracleComp.Constructions.SampleableType
-import Init.Data.Vector.Lemmas
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.EvalDist
+public import VCVio.EvalDist.List
+public import VCVio.OracleComp.Constructions.SampleableType
+public import Init.Data.Vector.Lemmas
 
 /-!
 # Running a Computation Multiple Times
@@ -17,6 +19,8 @@ returning the result as a list of length `n`.
 
 Note that while the executions are independent, they may no longer be after calling `simulate`.
 -/
+
+@[expose] public section
 
 open OracleSpec
 
@@ -43,14 +47,14 @@ def replicateTR {ι} {spec : OracleSpec ι} {α : Type v}
 variable {ι} {spec : OracleSpec ι} {α β : Type v}
   (oa : OracleComp spec α) (n : ℕ)
 
-@[simp]
+@[simp, grind =]
 lemma replicate_zero : replicate 0 oa = return [] := rfl
 
-@[simp]
+@[simp, grind =]
 lemma replicateTR_zero : replicateTR 0 oa = return [] := rfl
 
 /-- Bind-style unfolding of `replicate`, convenient for program-logic proofs. -/
-@[simp]
+@[simp, grind =]
 lemma replicate_succ_bind :
     replicate (n + 1) oa = (do
       let x ← oa
@@ -60,7 +64,7 @@ lemma replicate_succ_bind :
 /-- The tail-recursive `replicateTR` agrees with the recursive `replicate`. The
 `@[simp]` annotation lets every later proof about `replicateTR` reduce to the
 recursive form automatically. -/
-@[simp]
+@[simp, grind =]
 lemma replicateTR_eq_replicate : replicateTR n oa = replicate n oa := by
   simp only [replicateTR, ← List.replicate_eq_replicateTR]
   induction n with
@@ -70,7 +74,7 @@ lemma replicateTR_eq_replicate : replicateTR n oa = replicate n oa := by
 lemma replicate_succ : replicate (n + 1) oa = List.cons <$> oa <*> replicate n oa := by
   simp [replicate_succ_bind, monad_norm, Function.comp]
 
-@[simp]
+@[simp, grind =]
 lemma replicate_pure (x : α) :
     (pure x : OracleComp spec α).replicate n = pure (List.replicate n x) := by
   induction n with
@@ -160,5 +164,21 @@ lemma simulateQ_replicate :
       List.replicate, List.mapM_cons, ih]
 
 end SimulateQ
+
+section VectorMapM
+
+/-- Index-extraction for `(Vector.ofFn id).mapM` over an `OracleComp`: any element in the
+support of the monadic `mapM` has each component lying in the support of the corresponding
+inner computation. -/
+lemma support_ofFn_mapM_index
+    {ι α : Type} {spec : OracleSpec ι} {L : ℕ}
+    (f : Fin L → OracleComp spec α)
+    {v : Vector α L}
+    (hv : v ∈ support ((Vector.ofFn (id : Fin L → Fin L)).mapM f))
+    (i : Fin L) : v[i] ∈ support (f i) := by
+  simpa using
+    Vector.support_mapM_index (Vector.ofFn (id : Fin L → Fin L)) f hv i
+
+end VectorMapM
 
 end OracleComp

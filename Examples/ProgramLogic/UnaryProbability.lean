@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Unary
+module
+
+public import VCVio.ProgramLogic.Tactics.Unary
 
 /-!
 # Unary Probability Goal Examples
@@ -12,6 +14,8 @@ import VCVio.ProgramLogic.Tactics.Unary
 This file validates probability lowering, probability equalities,
 and `by_hoare` support in the unary tactic layer.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open Lean.Order

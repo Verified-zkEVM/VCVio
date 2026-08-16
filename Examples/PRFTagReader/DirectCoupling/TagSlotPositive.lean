@@ -4,11 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.DirectCoupling
-import Examples.PRFTagReader.DirectCoupling.StepLemmas
-import Examples.PRFTagReader.DirectCoupling.Swap
-import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
-import VCVio.EvalDist.Monad.Disagreement
+module
+
+public import Examples.PRFTagReader.DirectCoupling
+public import Examples.PRFTagReader.DirectCoupling.StepLemmas
+public import Examples.PRFTagReader.DirectCoupling.Swap
+public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
+public import VCVio.EvalDist.Monad.Disagreement
 
 /-!
 # PRF Tag/Reader Protocol — Direct Coupling, Slot-Positive Tag Step
@@ -32,6 +34,8 @@ incurred.
 * `dcAux_tag_slotPositive` — the slot-positive tag induction step of the direct-coupling aux,
   taking the induction hypothesis as an explicit premise.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 

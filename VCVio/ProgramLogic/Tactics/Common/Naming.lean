@@ -4,13 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Common.Core
+module
+
+public meta import VCVio.ProgramLogic.Tactics.Common.Core
 
 /-!
 # VCGen Naming Helpers
 
 Utilities for choosing user-facing binder and support-hypothesis names in VCGen tactics.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 

@@ -3,8 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Batteries.Data.Vector.Lemmas
-import LatticeCrypto.Ring.Kernel
+
+module
+
+import all Init.Data.Vector.Algebra
+
+public import Batteries.Data.Vector.Lemmas
+public import LatticeCrypto.Ring.Kernel
 
 /-!
 # Generic Transform Layer For Negacyclic Rings
@@ -24,6 +29,8 @@ coefficient-domain `NegacyclicRing`. Defines:
 Scheme-specific concrete NTTs (under `Concrete/NTT.lean`) provide executable
 `TransformOps` instances. Proof-oriented uses consume `TransformOps.Laws`.
 -/
+
+@[expose] public section
 
 
 universe u v
@@ -354,6 +361,14 @@ theorem coeffScalarVecMul_add {k} (c : ring.Poly)
   simp only [coeffScalarVecMul, unhatVec, scalarVecMul, hatVec,
              Vector.getElem_map, Vector.getElem_add]
   rw [laws.toHat_add u[i] v[i], laws.mul_add, fromHat_addHat ops]
+
+/-- Coefficient-domain scalar-vector multiplication acts component-wise as the underlying
+ring multiplication: the `j`-th entry of `coeffScalarVecMul c v` is `c * v.get j`. Follows from
+the transform being a ring isomorphism (`toHat_mul` and `fromHat_toHat`). -/
+theorem coeffScalarVecMul_get {k} (c : ring.Poly) (v : PolyVec ring.Poly k) (j : Fin k) :
+    (ops.coeffScalarVecMul c v).get j = c * (v.get j) := by
+  simp only [coeffScalarVecMul, unhatVec_get, scalarVecMul, hatVec_get, Vector.get_map]
+  rw [← laws.toHat_mul, laws.fromHat_toHat]
 
 theorem dot_scalar_right {k} (cHat : Hat)
     (row v : PolyVec Hat k) :

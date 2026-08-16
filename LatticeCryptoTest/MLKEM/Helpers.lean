@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLKEM.Internal
-import LatticeCrypto.MLKEM.Concrete.Instance
+
+module
+public import LatticeCrypto.MLKEM.Internal
+public import Extern.MLKEM.Instance
 
 /-!
 # ML-KEM Test Helpers
@@ -12,6 +14,8 @@ import LatticeCrypto.MLKEM.Concrete.Instance
 Shared test infrastructure: pass/fail counter, hex formatting, and FIPS 203 serialization
 helpers used by the ML-KEM test suite.
 -/
+
+@[expose] public section
 
 
 open MLKEM MLKEM.Concrete
