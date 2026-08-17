@@ -2,6 +2,8 @@ module  -- shake: keep-all --deprecated_module: ignore
 
 public import ToMathlib.Analysis.MeanInequalities
 public import ToMathlib.Analysis.SumIntegralComparisons
+public import ToMathlib.Combinatorics.ChallengeTree
+public import ToMathlib.Combinatorics.CoordinateWise
 public import ToMathlib.Combinatorics.FinPairs
 public import ToMathlib.Control.AlternativeMonad
 public import ToMathlib.Control.Lawful.MonadControl
@@ -31,9 +33,12 @@ public import ToMathlib.Data.Heap
 public import ToMathlib.Data.IndexedBinaryTree.Basic
 public import ToMathlib.Data.IndexedBinaryTree.Equiv
 public import ToMathlib.Data.IndexedBinaryTree.Lemmas
+public import ToMathlib.Data.List.Set
 public import ToMathlib.Data.Vector
 public import ToMathlib.General
 public import ToMathlib.OrderEnrichedCategory
+public import ToMathlib.Probability.BernoulliTable
+public import ToMathlib.Probability.NegativeHypergeometric
 public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
 public import ToMathlib.Probability.ProbabilityMassFunction.TailSums
 public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
