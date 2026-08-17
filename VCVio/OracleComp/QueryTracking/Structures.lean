@@ -8,6 +8,7 @@ module
 public import Mathlib.Data.Real.ENatENNReal
 public import Mathlib.Data.Set.Card
 public import PolyFun.PFunctor.Trace
+public import ToPolyFun.PFunctor.Supply
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 
 /-!
@@ -675,6 +676,77 @@ lemma takeAtIndex_addValues_drop (seed : QuerySeed spec) (i : ι) (n : ℕ) :
   ext j; by_cases hj : j = i
   · subst hj; simp [takeAtIndex, addValues, List.take_append_drop]
   · simp [takeAtIndex, addValues, Function.update_of_ne hj]
+
+/-! ### Point substitution
+
+A `QuerySeed` is definitionally a `PFunctor.Supply` for the spec's polynomial functor, so the
+point substitution below and all of its laws are that structure's, instantiated here. Keeping the
+general form in `ToPolyFun` lets it move upstream unchanged. -/
+
+omit [DecidableEq ι] in
+/-- A query seed is exactly a positional answer supply for the spec's polynomial functor. -/
+theorem querySeed_eq_supply : QuerySeed spec = PFunctor.Supply spec.toPFunctor := rfl
+
+/-- Replace the value at position `n` of the seed at index `i`, leaving every other position of
+that seed — and every other oracle's seed — untouched.
+
+This is the point substitution `takeAtIndex` cannot express. Truncating with `takeAtIndex i n`
+discards the values past position `n`, so a rerun draws fresh answers there; `setAtIndex` keeps
+them, and a rerun is presented exactly the same supply apart from the `n`-th answer to oracle
+`i`. An out-of-range `n` leaves the seed unchanged. -/
+def setAtIndex (seed : QuerySeed spec) (i : ι) (n : ℕ) (u : spec.Range i) : QuerySeed spec :=
+  PFunctor.Supply.setAt (P := spec.toPFunctor) seed i n u
+
+theorem takeAtIndex_eq_takeAt (seed : QuerySeed spec) (i : ι) (n : ℕ) :
+    seed.takeAtIndex i n = PFunctor.Supply.takeAt (P := spec.toPFunctor) seed i n := rfl
+
+theorem setAtIndex_eq_setAt (seed : QuerySeed spec) (i : ι) (n : ℕ) (u : spec.Range i) :
+    seed.setAtIndex i n u = PFunctor.Supply.setAt (P := spec.toPFunctor) seed i n u := rfl
+
+@[simp] lemma setAtIndex_apply_self (seed : QuerySeed spec) (i : ι) (n : ℕ) (u : spec.Range i) :
+    seed.setAtIndex i n u i = (seed i).set n u :=
+  PFunctor.Supply.setAt_apply_self (P := spec.toPFunctor) seed i n u
+
+@[simp] lemma setAtIndex_apply_of_ne (seed : QuerySeed spec) (i : ι) (n : ℕ) (u : spec.Range i)
+    (j : ι) (hj : j ≠ i) : seed.setAtIndex i n u j = seed j :=
+  PFunctor.Supply.setAt_apply_of_ne (P := spec.toPFunctor) seed i n u hj
+
+lemma length_setAtIndex (seed : QuerySeed spec) (i : ι) (n : ℕ) (u : spec.Range i) :
+    (seed.setAtIndex i n u i).length = (seed i).length :=
+  PFunctor.Supply.length_setAt (P := spec.toPFunctor) seed i n u
+
+/-- Substituting at position `n` does not change the truncation at `n`: the two seeds present the
+same answers strictly before the substituted query. -/
+@[simp] lemma takeAtIndex_setAtIndex (seed : QuerySeed spec) (i : ι) (n : ℕ) (u : spec.Range i) :
+    (seed.setAtIndex i n u).takeAtIndex i n = seed.takeAtIndex i n :=
+  PFunctor.Supply.takeAt_setAt (P := spec.toPFunctor) seed i n u
+
+/-- The substituted position really does carry the new value. -/
+lemma getElem?_setAtIndex_self (seed : QuerySeed spec) (i : ι) {n : ℕ}
+    (u : spec.Range i) (hn : n < (seed i).length) :
+    (seed.setAtIndex i n u i)[n]? = some u :=
+  PFunctor.Supply.getElem?_setAt_self (P := spec.toPFunctor) seed i u hn
+
+/-- Only the last substitution at a position survives, so the seeds obtained by varying one
+position form a family indexed by the replacement value alone. -/
+@[simp] lemma setAtIndex_setAtIndex (seed : QuerySeed spec) (i : ι) (n : ℕ)
+    (u u' : spec.Range i) :
+    (seed.setAtIndex i n u).setAtIndex i n u' = seed.setAtIndex i n u' :=
+  PFunctor.Supply.setAt_setAt (P := spec.toPFunctor) seed i n u u'
+
+/-- A seed is the member of its own substitution family at its current value. -/
+lemma setAtIndex_getElem_self (seed : QuerySeed spec) (i : ι) {n : ℕ}
+    (hn : n < (seed i).length) : seed.setAtIndex i n (seed i)[n] = seed :=
+  PFunctor.Supply.setAt_getElem_self (P := spec.toPFunctor) seed i hn
+
+/-- Substitution factors through the existing truncate-and-append operations: truncate at `n`,
+append the new answer, then restore the untouched tail. The final `addValues` is exactly what
+`takeAtIndex` throws away. -/
+lemma setAtIndex_eq_addValues_drop (seed : QuerySeed spec) (i : ι) {n : ℕ} (u : spec.Range i)
+    (hn : n < (seed i).length) :
+    seed.setAtIndex i n u =
+      (((seed.takeAtIndex i n).addValue i u).addValues ((seed i).drop (n + 1))) :=
+  PFunctor.Supply.setAt_eq_addValues_drop (P := spec.toPFunctor) seed i u hn
 
 /-- Pop one value from index `i`, returning the consumed value and updated seed when nonempty. -/
 def pop (seed : QuerySeed spec) (i : ι) : Option (spec.Range i × QuerySeed spec) :=

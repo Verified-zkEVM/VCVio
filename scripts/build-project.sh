@@ -33,5 +33,5 @@ echo "# Linting Files"
 # `lake exe lint-style` resolves to Mathlib's text-based linter; pass the project
 # libraries explicitly so it lints all of them (the default would be only the
 # `@[default_target]` `VCVio` lib).
-lake exe lint-style ToMathlib VCVio Extern LatticeCrypto Examples VCVioWidgets Interop \
+lake exe lint-style ToMathlib ToPolyFun VCVio Extern LatticeCrypto Examples VCVioWidgets Interop \
   && echo "All files okay"

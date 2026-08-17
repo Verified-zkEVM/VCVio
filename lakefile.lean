@@ -85,6 +85,10 @@ lean_lib VCVioWidgets
 /-- Seperate section of the project for things that should be ported. -/
 lean_lib ToMathlib
 
+/-- Structural material destined for PolyFun: depends only on `PFunctor`/Mathlib (and
+`ToMathlib`), never on `VCVio`, so each file can be moved upstream unchanged. -/
+lean_lib ToPolyFun
+
 /-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
 Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
 `Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
