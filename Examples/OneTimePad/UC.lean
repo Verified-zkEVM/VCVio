@@ -600,7 +600,8 @@ theorem realOtp_boundaryTrace (sp : ℕ) (msg k : BitVec sp) :
   change Interaction.UC.OpenNodeContext.boundaryTrace (otpTree sp)
     (otpDecoration sp (realEmit sp msg)) ⟨k, ⟨⟩⟩ = _
   rw [Interaction.UC.OpenNodeContext.boundaryTrace_node]
-  simp [otpDecoration, otpOpenNode, realEmit]
+  simp only [otpDecoration, otpOpenNode, realEmit, id_eq,
+    Interaction.UC.OpenNodeContext.boundaryTrace_done]
   exact mul_one _
 
 /-- The generic PolyFun boundary-trace extractor reads the ideal OTP
@@ -614,7 +615,8 @@ theorem idealOtp_boundaryTrace (sp : ℕ) (c : BitVec sp) :
   change Interaction.UC.OpenNodeContext.boundaryTrace (otpTree sp)
     (otpDecoration sp (idealEmit sp)) ⟨c, ⟨⟩⟩ = _
   rw [Interaction.UC.OpenNodeContext.boundaryTrace_node]
-  simp [otpDecoration, otpOpenNode, idealEmit]
+  simp only [otpDecoration, otpOpenNode, idealEmit, id_eq,
+    Interaction.UC.OpenNodeContext.boundaryTrace_done]
   exact mul_one _
 
 /-- For any nonzero plaintext `msg`, the real and ideal OTP open
