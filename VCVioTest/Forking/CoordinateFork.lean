@@ -37,10 +37,10 @@ abbrev Chal : Type := Fin 2 → Fin 5
 
 /-- The instance bundle of the headline is satisfiable at concrete types: this elaborates, so
 `[SampleableType (Fin 2 → Fin 5)]` is discharged rather than assumed. -/
-example (D : ProbComp (Chal → Bool)) (hmass : Pr[⊥ | D] = 0) :
+example (D : ProbComp (Chal → Bool)) :
     acceptRatio D - (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 5)
       ≤ Pr[GoodOutput 2 | coordFork 2 D] :=
-  sub_div_le_probEvent_goodOutput_coordFork 2 D hmass
+  sub_div_le_probEvent_goodOutput_coordFork 2 D
 
 /-- At these parameters the loss is `2/5`, so the bound is not truncated away. -/
 example : (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 5) = 2 / 5 := by
@@ -70,7 +70,7 @@ instance hypotheses have hollowed the statement out. -/
 theorem three_fifths_le_probEvent_goodOutput :
     (3 : ℝ≥0∞) / 5 ≤ Pr[GoodOutput 2 | coordFork 2 (pure allAccept : ProbComp (Chal → Bool))] := by
   have h := sub_div_le_probEvent_goodOutput_coordFork 2
-    (pure allAccept : ProbComp (Chal → Bool)) (by simp)
+    (pure allAccept : ProbComp (Chal → Bool))
   refine le_trans (le_of_eq ?_) h
   rw [acceptRatio_allAccept,
     show (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 5) = 2 / 5 from by simp,
@@ -83,5 +83,36 @@ theorem goodOutput_empty_false (k : ℕ) (ρ : Chal → Bool) :
   rintro ⟨ρ', X, hEq, ⟨⟨e, heX, -⟩, -⟩, -⟩
   rw [Option.some.injEq, Prod.mk.injEq] at hEq
   exact absurd (hEq.2 ▸ heX) (Finset.notMem_empty e)
+
+/-! ## The transcript layer -/
+
+/-- The trivial verifier that reads a `Bool` response as its own verdict. -/
+def selfVerify : Chal → Bool → Bool := fun _ y => y
+
+/-- Responses in the model are a strict generalization: at `Y := Bool` with the verdict-reading
+verifier the induced acceptance table is the response table itself. -/
+theorem acceptTable_selfVerify (D : ProbComp (Chal → Bool)) :
+    acceptTable selfVerify D = D := by
+  simp [acceptTable, selfVerify]
+
+/-- **Non-vacuity of the transcript headline.** The same `3/5` bound, now on the event that the
+extractor returns `ℓ(k-1)+1` *accepting transcripts* whose challenges are `SS(S, ℓ, k)`. -/
+theorem three_fifths_le_probEvent_goodTranscripts :
+    (3 : ℝ≥0∞) / 5 ≤ Pr[GoodTranscripts selfVerify 2 |
+      coordForkT selfVerify 2 (pure allAccept : ProbComp (Chal → Bool))] := by
+  have h := sub_div_le_probEvent_goodTranscripts_coordForkT selfVerify 2
+    (pure allAccept : ProbComp (Chal → Bool))
+  refine le_trans (le_of_eq ?_) h
+  rw [acceptTable_selfVerify, acceptRatio_allAccept,
+    show (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 5) = 2 / 5 from by simp,
+    one_sub_two_fifths]
+
+/-- **Payload sensitivity, transcript layer.** An empty transcript set fails `GoodTranscripts`, so
+the transcript headline is not a bound on `isSome` either. -/
+theorem goodTranscripts_empty_false (k : ℕ) (τ : Chal → Bool) :
+    ¬ GoodTranscripts selfVerify k (some (τ, (∅ : Finset Chal))) := by
+  rw [goodTranscripts_some_iff]
+  rintro ⟨⟨⟨e, heX, -⟩, -⟩, -⟩
+  exact absurd heX (Finset.notMem_empty e)
 
 end VCVioTest.Forking

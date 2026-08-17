@@ -24,6 +24,12 @@ values (`coordForkCore_isSome_iff`), which is `OracleComp.EvalDist.goodSet` — 
 probability is a cardinality ratio and the bound is the already-proved counting inequality
 averaged over tables.
 
+Prover responses enter as a second layer rather than a generalization of the core: a response
+table `τ : (ι → S) → Y` and a verifier `V : (ι → S) → Y → Bool` induce the acceptance table
+`fun c => V c (τ c)`, so `coordForkT` is `coordFork` composed with `acceptTable`
+(`coordFork_acceptTable`) and its output guarantee `GoodTranscripts` is the paper's output clause:
+`ℓ(k-1)+1` accepting *transcripts* whose challenges are `SS(S, ℓ, k)`.
+
 Collecting the replacements is a *total* operation here: which `k - 1` accepting values a
 coordinate contributes is irrelevant to both success and the output's special-soundness, so the
 extractor takes the first `k - 1` in enumeration order. Sampling that order uniformly is what buys
@@ -239,10 +245,132 @@ queries. This object consumes a pre-sampled acceptance table rather than queryin
 so it establishes the information-theoretic content of the lemma and not its efficiency. See the
 module docstring. -/
 theorem sub_div_le_probEvent_goodOutput_coordFork [Nonempty S] (k : ℕ)
-    (D : ProbComp ((ι → S) → Bool)) (hmass : Pr[⊥ | D] = 0) :
+    (D : ProbComp ((ι → S) → Bool)) :
     acceptRatio D - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
       ≤ Pr[GoodOutput k | coordFork k D] := by
   rw [probEvent_goodOutput_coordFork, probEvent_isSome_coordFork]
-  exact sub_div_le_tsum_probOutput_mul_goodSet D k hmass
+  exact sub_div_le_tsum_probOutput_mul_goodSet D k (by simp)
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+theorem goodOutput_some_iff (k : ℕ) (ρ' : (ι → S) → Bool) (X : Finset (ι → S)) :
+    GoodOutput k (some (ρ', X)) ↔ IsCoordSpecialSound k X ∧ ∀ c ∈ X, ρ' c := by
+  refine ⟨fun ⟨ρ'', X', hEq, hss, hacc⟩ => ?_, fun ⟨hss, hacc⟩ => ⟨ρ', X, rfl, hss, hacc⟩⟩
+  obtain ⟨rfl, rfl⟩ : ρ'' = ρ' ∧ X' = X := by simpa [eq_comm] using hEq
+  exact ⟨hss, hacc⟩
+
+/-! ## Transcripts
+
+The paper's Lemma 7.1 outputs *pairs* `(cᵢ, yᵢ)` — challenge and prover response — where the
+acceptance table above records only whether a challenge is accepted. Recording the response
+instead, with a verification predicate, recovers the paper's output shape.
+
+Nothing above needs generalizing: a response table `τ : (ι → S) → Y` together with a verifier
+`V : (ι → S) → Y → Bool` induces the acceptance table `fun c => V c (τ c)`, and at `Y := Bool`
+with `V c y := y` that is the identity. -/
+
+section Transcripts
+
+variable {Y : Type} [DecidableEq Y]
+
+/-- The acceptance table a response table induces under a verifier. -/
+noncomputable def acceptTable (V : (ι → S) → Y → Bool) (D : ProbComp ((ι → S) → Y)) :
+    ProbComp ((ι → S) → Bool) :=
+  (fun τ c => V c (τ c)) <$> D
+
+/-- The accepting transcripts carried by a challenge set, read off the response table. -/
+def transcripts (τ : (ι → S) → Y) (X : Finset (ι → S)) : Finset ((ι → S) × Y) :=
+  X.image fun c => (c, τ c)
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+theorem mem_transcripts {τ : (ι → S) → Y} {X : Finset (ι → S)} {c : ι → S} {y : Y} :
+    (c, y) ∈ transcripts τ X ↔ c ∈ X ∧ y = τ c := by
+  simp only [transcripts, Finset.mem_image, Prod.mk.injEq]
+  exact ⟨fun ⟨c', hc', h1, h2⟩ => ⟨h1 ▸ hc', by rw [← h2, h1]⟩,
+    fun ⟨hc, hy⟩ => ⟨c, hc, rfl, hy.symm⟩⟩
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+@[simp] theorem image_fst_transcripts (τ : (ι → S) → Y) (X : Finset (ι → S)) :
+    (transcripts τ X).image Prod.fst = X := by
+  ext c; simp [transcripts]
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+theorem card_transcripts (τ : (ι → S) → Y) (X : Finset (ι → S)) :
+    (transcripts τ X).card = X.card :=
+  Finset.card_image_of_injective X fun c c' h => by simpa using congrArg Prod.fst h
+
+/-- What the extractor promises with responses in play: `ℓ(k-1)+1` transcripts, all accepted by
+the verifier, whose challenges form an `SS(S, ℓ, k)` set. This is the output clause of Lemma 7.1
+as the paper states it. -/
+def GoodTranscripts (V : (ι → S) → Y → Bool) (k : ℕ)
+    (r : Option (((ι → S) → Y) × Finset (ι → S))) : Prop :=
+  ∃ τ X, r = some (τ, X) ∧ IsCoordSpecialSound k X ∧ ∀ p ∈ transcripts τ X, V p.1 p.2
+
+/-- Reading a response table as its induced acceptance table. -/
+def toAcceptPair (V : (ι → S) → Y → Bool)
+    (p : ((ι → S) → Y) × Finset (ι → S)) : ((ι → S) → Bool) × Finset (ι → S) :=
+  (fun c => V c (p.1 c), p.2)
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+theorem goodTranscripts_some_iff (V : (ι → S) → Y → Bool) (k : ℕ) (τ : (ι → S) → Y)
+    (X : Finset (ι → S)) :
+    GoodTranscripts V k (some (τ, X)) ↔ IsCoordSpecialSound k X ∧ ∀ c ∈ X, V c (τ c) := by
+  refine ⟨fun ⟨τ', X', hEq, hss, hacc⟩ => ?_, fun ⟨hss, hacc⟩ =>
+    ⟨τ, X, rfl, hss, fun p hp => by
+      obtain ⟨c, y⟩ := p
+      obtain ⟨h1, rfl⟩ := mem_transcripts.mp hp
+      exact hacc c h1⟩⟩
+  obtain ⟨h1, h2⟩ := Prod.ext_iff.mp (Option.some.inj hEq)
+  subst h1; subst h2
+  exact ⟨hss, fun c hc => hacc (c, τ c) (mem_transcripts.mpr ⟨hc, rfl⟩)⟩
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+theorem goodTranscripts_iff_goodOutput (V : (ι → S) → Y → Bool) (k : ℕ)
+    (r : Option (((ι → S) → Y) × Finset (ι → S))) :
+    GoodTranscripts V k r ↔ GoodOutput k (r.map (toAcceptPair V)) := by
+  cases r with
+  | none => simp [GoodTranscripts, GoodOutput]
+  | some p =>
+      obtain ⟨τ, X⟩ := p
+      rw [goodTranscripts_some_iff]
+      exact (goodOutput_some_iff k _ X).symm
+
+/-- The extractor with responses: sample a response table and a challenge, run the core against
+the induced acceptance table, and return the table with the challenge set it found. -/
+noncomputable def coordForkT (V : (ι → S) → Y → Bool) (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
+    ProbComp (Option (((ι → S) → Y) × Finset (ι → S))) := do
+  let τ ← D
+  let c₀ ← $ᵗ (ι → S)
+  return (coordForkCore k (fun c => V c (τ c)) c₀).map fun X => (τ, X)
+
+omit [DecidableEq Y] in
+/-- The response-carrying extractor is a faithful relabelling of the acceptance-table one. -/
+theorem coordFork_acceptTable (V : (ι → S) → Y → Bool) (k : ℕ)
+    (D : ProbComp ((ι → S) → Y)) :
+    coordFork k (acceptTable V D) =
+      (fun r => r.map (toAcceptPair V)) <$> coordForkT V k D := by
+  simp only [coordFork, coordForkT, acceptTable, map_eq_bind_pure_comp, bind_assoc, pure_bind,
+    Function.comp_apply]
+  refine bind_congr fun τ => bind_congr fun c₀ => ?_
+  cases coordForkCore k (fun c => V c (τ c)) c₀ <;> rfl
+
+theorem probEvent_goodTranscripts_coordForkT (V : (ι → S) → Y → Bool) (k : ℕ)
+    (D : ProbComp ((ι → S) → Y)) :
+    Pr[GoodTranscripts V k | coordForkT V k D] =
+      Pr[GoodOutput k | coordFork k (acceptTable V D)] := by
+  rw [coordFork_acceptTable, probEvent_map]
+  exact congrArg _ (funext fun r => propext (goodTranscripts_iff_goodOutput V k r))
+
+/-- **Lemma 7.1 with responses.** With probability at least `ε - ℓ(k-1)/N` the extractor returns
+`ℓ(k-1)+1` accepting *transcripts* whose challenges form an `SS(S, ℓ, k)` set — the paper's output
+clause verbatim. -/
+theorem sub_div_le_probEvent_goodTranscripts_coordForkT [Nonempty S] (V : (ι → S) → Y → Bool)
+    (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
+    acceptRatio (acceptTable V D) - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
+      ≤ Pr[GoodTranscripts V k | coordForkT V k D] := by
+  rw [probEvent_goodTranscripts_coordForkT]
+  exact sub_div_le_probEvent_goodOutput_coordFork k _
+
+end Transcripts
 
 end OracleComp
+

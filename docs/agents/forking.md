@@ -84,6 +84,16 @@ as the multi-round layer does, by instantiating at an independent Bernoulli tabl
 [`ToMathlib/Probability/BernoulliTable.lean`](../../ToMathlib/Probability/BernoulliTable.lean) — is
 a modelling decision about the extractor's randomness, not a theorem.
 
+### Transcripts
+
+The core is `Bool`-valued, but the paper's extractor outputs *pairs* `(cᵢ, yᵢ)`. That is a layer on
+top rather than a generalization: a response table `τ : (ι → S) → Y` and a verifier
+`V : (ι → S) → Y → Bool` induce the acceptance table `fun c => V c (τ c)`, so `coordForkT` is
+`coordFork` composed with `acceptTable`, `coordFork_acceptTable` exhibits the two as the same
+computation up to relabelling, and `sub_div_le_probEvent_goodTranscripts_coordForkT` carries the
+bound over to `GoodTranscripts` — `ℓ(k-1)+1` accepting transcripts whose challenges are
+`SS(S, ℓ, k)`. The `ToMathlib` counting core never sees `Y`.
+
 ### What is and is not proved
 
 Each paper lemma is a three-conjunct existential over *an oracle algorithm with oracle access to
@@ -93,7 +103,7 @@ the adversary*. The status is:
 |---|---|---|
 | expected query count | **not proved** | **not proved** |
 | success probability | proved | proved |
-| output structure | proved | `μ = 1` only |
+| output structure (accepting transcripts) | proved | `μ = 1` only |
 
 - `sub_div_le_probEvent_goodOutput_coordFork` carries the success bound and the output guarantee
   together, so it is sensitive to what the extractor returns.
