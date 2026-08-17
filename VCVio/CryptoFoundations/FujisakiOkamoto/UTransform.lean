@@ -213,8 +213,9 @@ theorem encaps_usesExactFamilyWeightedCost {ω : Type} [AddMonoid ω]
       let k ← (runtime.withAddCost costFn) (Sum.inr (kdInput msg c))
       pure (c, k))
   ] = wCoins + wKey
+  simp_rw [QueryImpl.withAddCost_apply_inl, QueryImpl.withAddCost_apply_inr]
   rw [AddWriterT.hasCost_iff]
-  simp [QueryImpl.withAddCost_apply, AddWriterT.outputs, AddWriterT.costs, hCoins, hKeys]
+  simp [AddWriterT.outputs, AddWriterT.costs, hCoins, hKeys]
 
 /-- Under per-family upper bounds on the two U-transform oracle families, encapsulation incurs
 weighted query cost at most the sum of those bounds. -/

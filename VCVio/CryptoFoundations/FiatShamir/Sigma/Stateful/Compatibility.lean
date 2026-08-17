@@ -897,8 +897,12 @@ private lemma fsBaseImpl_writerTMapBase_signingOracle_eq
   rcases t with (n | mc) | m <;> ext cache
   · simp [QueryImpl.writerTMapBase,
       HasQuery.toQueryImpl_apply, fsBaseImpl, unifFwdImpl]
+    erw [QueryImpl.simulateQ_add_query_left]
+    simp
   · simp [QueryImpl.writerTMapBase,
       HasQuery.toQueryImpl_apply, fsBaseImpl, unifFwdImpl, randomOracle]
+    erw [QueryImpl.simulateQ_add_query_right]
+    simp [QueryImpl.withCaching_apply]
   · simp [QueryImpl.writerTMapBase, SignatureAlg.signingOracle,
       QueryImpl.withLogging_apply, cmaRealFixedSign, SourceSigAlg, FiatShamir,
       fsBaseImpl, randomOracle, StateT.run_bind, roSim.run_liftM]

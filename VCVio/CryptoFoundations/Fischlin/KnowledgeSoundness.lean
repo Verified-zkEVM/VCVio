@@ -497,6 +497,7 @@ private theorem mem_support_run_correspondence {ι : Type} {hashSpec : OracleSpe
               rw [loggedROW_run_run_none hc, support_map] at hp
               obtain ⟨v, hv, hpe⟩ := hp
               obtain ⟨⟨rfl, rfl⟩, rfl⟩ := hpe
+              change hashSpec.Range j at u
               refine ⟨le_trans (QueryCache.le_cacheQuery _ hc) hmono, ?_, ?_⟩
               · intro e he
                 simp only [Prod.map, id, List.cons_append, List.nil_append,
@@ -2019,8 +2020,10 @@ private lemma loggedImpl_run_run_inr_none {ι : Type} {hashSpec : OracleSpec ι}
     QueryImpl.withCaching_run_none _ h]
   rw [show uniformSampleImpl (spec := hashSpec) j = ($ᵗ hashSpec.Range j) from rfl]
   rw [map_eq_bind_pure_comp, bind_assoc]
-  simp only [Function.comp_apply, pure_bind, map_eq_bind_pure_comp]
-  rfl
+  simp only [Function.comp_apply, pure_bind, StateT.run_pure]
+  exact (map_eq_bind_pure_comp ProbComp
+    (fun u : hashSpec.Range j => ((u, ([⟨j, u⟩] : QueryLog hashSpec)), c.cacheQuery j u))
+    ($ᵗ hashSpec.Range j)).symm
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
@@ -2075,7 +2078,8 @@ private theorem dropLog_run_eq {ι : Type} {hashSpec : OracleSpec ι} [Decidable
       cases t with
       | inl i =>
           rw [loggedImpl_run_run_inl, unloggedImpl_run_inl]
-          simp only [bind_map_left, Functor.map_map, Prod.map_fst, id_eq]
+          simp only [Functor.map_map, Prod.map_fst, id_eq]
+          erw [bind_map_left]
           exact bind_congr fun u => ih u cache
       | inr j =>
           cases hc : cache j with
@@ -2085,7 +2089,9 @@ private theorem dropLog_run_eq {ι : Type} {hashSpec : OracleSpec ι} [Decidable
               exact ih u cache
           | none =>
               rw [loggedImpl_run_run_inr_none hc, unloggedImpl_run_inr_none hc]
-              simp only [bind_map_left, Functor.map_map, Prod.map_fst, id_eq]
+              simp only [Functor.map_map, Prod.map_fst, id_eq]
+              erw [bind_map_left]
+              erw [bind_map_left]
               exact bind_congr fun u => ih u (cache.cacheQuery j u)
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]

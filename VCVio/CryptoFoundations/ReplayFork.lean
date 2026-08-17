@@ -61,8 +61,7 @@ open OracleSpec OracleComp ENNReal Function Finset
 open scoped OracleSpec.PrimitiveQuery
 open scoped PFunctor
 
-set_option allowUnsafeReducibility true in
-attribute [local reducible] PFunctor.Idx
+attribute [local implicit_reducible] FreeMonoid PFunctor.Idx
 
 namespace OracleComp
 

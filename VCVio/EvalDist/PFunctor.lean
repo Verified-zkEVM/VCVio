@@ -27,6 +27,10 @@ universe u v uA
 
 namespace PFunctor
 
+/- Lean 4.33 compares the syntax-only `SetM = Set` handler at implicit
+transparency when applying the generic `FreeM.liftM_lift` law. -/
+attribute [local implicit_reducible] SetM
+
 /-- Per-operation probability distributions for a polynomial interface. -/
 class IsProbabilitySpec (P : PFunctor.{uA, u}) where
   /-- The distribution of directions available at an operation. -/
@@ -116,6 +120,16 @@ theorem support_lift (operation : P.A) :
   change SetM.run ((FreeM.lift operation).liftM fun _ => Set.univ) = Set.univ
   rw [FreeM.liftM_lift]
   rfl
+
+/-- The support of an operation with a result continuation is the range of
+that continuation. -/
+@[simp]
+theorem support_liftObj (object : P.Obj α) :
+    support (FreeM.liftObj object : FreeM P α) = Set.range object.2 := by
+  change SetM.run ((FreeM.liftObj object).liftM fun _ => Set.univ) =
+    Set.range object.2
+  rw [FreeM.liftM_liftObj]
+  exact Set.image_univ
 
 /-- Syntactic support and distribution support agree for a uniformly
 interpreted polynomial free monad. -/

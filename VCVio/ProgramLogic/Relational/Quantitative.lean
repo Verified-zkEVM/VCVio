@@ -877,7 +877,9 @@ private lemma eRelWP_indicator_eqRel_le
   refine iSup_le fun c => ?_
   calc ∑' z, Pr[= z | c.1] * RelPost.indicator (EqRel α) z.1 z.2
       = ∑' z : α × α, if z.1 = z.2 then Pr[= z | c.1] else 0 := by
-        congr 1; ext ⟨a, b⟩; simp [RelPost.indicator, EqRel]
+        congr 1
+        ext ⟨a, b⟩
+        by_cases h : a = b <;> simp [RelPost.indicator, EqRel, h]
     _ = ∑' a, Pr[= (a, a) | c.1] := by
         rw [ENNReal.tsum_prod']
         congr 1; ext a

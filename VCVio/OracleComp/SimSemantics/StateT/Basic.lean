@@ -59,6 +59,26 @@ theorem simulateQ_mapStateTBase_run' {ι₀ ι₁ : Type _}
       (simulateQ (outer.mapStateTBase inner) oa).run' s := by
   simp [simulateQ_mapStateTBase_run]
 
+/-- Interpreting the base oracle of a stateful query implementation preserves every
+state invariant already preserved by the inner implementation, provided the outer
+interpreter preserves support. -/
+theorem mapStateTBase_preserves_inv {ι₀ ι₁ ι₂ : Type u}
+    {spec₀ : OracleSpec ι₀} {spec₁ : OracleSpec ι₁}
+    {spec₂ : OracleSpec ι₂} [IsUniformSpec spec₂] {σ : Type u}
+    (outer : QueryImpl spec₁ (OracleComp spec₂))
+    (inner : QueryImpl spec₀ (StateT σ (OracleComp spec₁)))
+    (inv : σ → Prop)
+    (houter : ∀ {α : Type u} (oa : OracleComp spec₁ α),
+      support (simulateQ outer oa) = support oa)
+    (hinner : ∀ t s, inv s →
+      ∀ y ∈ support ((inner t).run s), inv y.2) :
+    ∀ t s, inv s →
+      ∀ y ∈ support ((outer.mapStateTBase inner t).run s), inv y.2 := by
+  intro t s hs y hy
+  change y ∈ support (simulateQ outer ((inner t).run s)) at hy
+  rw [houter] at hy
+  exact hinner t s hs y hy
+
 /-- Given implementations for oracles in `spec₁` and `spec₂` in terms of state monads for
 two different contexts `σ₁` and `σ₂`, implement the combined set `spec₁ + spec₂` in terms
 of a combined `σ₁ × σ₂` state. -/

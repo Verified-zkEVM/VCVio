@@ -42,8 +42,7 @@ open OracleSpec ENNReal
 
 open scoped PFunctor
 
-set_option allowUnsafeReducibility true in
-attribute [local reducible] OracleSpec.toPFunctor PFunctor.Idx
+attribute [local implicit_reducible] PFunctor.Idx
 
 namespace OracleComp
 

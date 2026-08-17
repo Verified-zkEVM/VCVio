@@ -33,7 +33,7 @@ variable {ι : Type u} {spec : OracleSpec ι}
 
 /-- Type to represent a cache of queries to oracles in `spec`.
 Defined to be a function from (indexed) inputs to an optional output. -/
-def QueryCache (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
+@[reducible] def QueryCache (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
   (t : spec.Domain) → Option (spec.Range t)
 
 namespace QueryCache
@@ -196,11 +196,11 @@ protected def snd (cache : QueryCache (spec₁ + spec₂)) : QueryCache spec₂ 
 
 /-- Embed a cache for `spec₁` into one for `spec₁ + spec₂`. -/
 protected def inl (cache : QueryCache spec₁) : QueryCache (spec₁ + spec₂) :=
-  fun | .inl t => cache t | .inr _ => none
+  Sum.rec cache (fun _ => none)
 
 /-- Embed a cache for `spec₂` into one for `spec₁ + spec₂`. -/
 protected def inr (cache : QueryCache spec₂) : QueryCache (spec₁ + spec₂) :=
-  fun | .inl _ => none | .inr t => cache t
+  Sum.rec (fun _ => none) cache
 
 @[simp] lemma fst_apply (cache : QueryCache (spec₁ + spec₂)) (t : ι₁) :
     cache.fst t = cache (.inl t) := rfl
@@ -231,6 +231,26 @@ protected def inr (cache : QueryCache spec₂) : QueryCache (spec₁ + spec₂) 
 
 @[simp] lemma snd_inl (cache : QueryCache spec₁) :
     (cache.inl : QueryCache (spec₁ + spec₂)).snd = ∅ := rfl
+
+/-- Embedding a left-component cache commutes with caching a left-component query. -/
+@[simp]
+lemma inl_cacheQuery [DecidableEq ι₁] [DecidableEq ι₂]
+    (cache : QueryCache spec₁) (t : spec₁.Domain) (u : spec₁.Range t) :
+    (cache.cacheQuery t u).inl =
+      (cache.inl : QueryCache (spec₁ + spec₂)).cacheQuery (.inl t) u := by
+  unfold QueryCache.cacheQuery QueryCache.inl
+  exact Sum.rec_update_left (γ := fun t => Option ((spec₁ + spec₂).Range t))
+    cache (fun _ => none) t (some u)
+
+/-- Embedding a right-component cache commutes with caching a right-component query. -/
+@[simp]
+lemma inr_cacheQuery [DecidableEq ι₁] [DecidableEq ι₂]
+    (cache : QueryCache spec₂) (t : spec₂.Domain) (u : spec₂.Range t) :
+    (cache.cacheQuery t u).inr =
+      (cache.inr : QueryCache (spec₁ + spec₂)).cacheQuery (.inr t) u := by
+  unfold QueryCache.cacheQuery QueryCache.inr
+  exact Sum.rec_update_right (γ := fun t => Option ((spec₁ + spec₂).Range t))
+    (fun _ => none) cache t (some u)
 
 @[simp] lemma fst_empty :
     (∅ : QueryCache (spec₁ + spec₂)).fst = (∅ : QueryCache spec₁) := rfl
@@ -555,7 +575,7 @@ end QueryLog
 
 /-- A store of pre-generated seed values for oracle queries, indexed by oracle.
 Maps each oracle index `i` to a list of outputs `List (spec.Range i)`. -/
-def QuerySeed (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
+@[reducible] def QuerySeed (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
   (i : ι) → List (spec.Range i)
 
 namespace QuerySeed
@@ -699,7 +719,8 @@ lemma pop_eq_some_of_cons (seed : QuerySeed spec) (i : ι)
     (u : spec.Range i) (us : List (spec.Range i))
     (h : seed i = u :: us) :
     seed.pop i = some (u, Function.update seed i us) := by
-  unfold pop; simp [h]; rfl
+  unfold pop
+  simp [h]
 
 lemma cons_of_pop_eq_some (seed : QuerySeed spec) (i : ι)
     (u : spec.Range i) (rest : QuerySeed spec)

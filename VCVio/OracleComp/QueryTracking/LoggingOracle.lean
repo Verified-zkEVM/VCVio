@@ -38,8 +38,7 @@ open OracleSpec OracleComp
 open scoped OracleSpec.PrimitiveQuery
 
 -- `QueryLog spec` is the list presentation of the corresponding PolyFun trace.
-set_option allowUnsafeReducibility true in
-attribute [local reducible] OracleSpec.toPFunctor PFunctor.Idx
+attribute [local implicit_reducible] PFunctor.Idx
 
 variable {ι} {spec : OracleSpec ι} {α β γ : Type u}
 
@@ -249,15 +248,20 @@ theorem map_run_withLogging_inputs_eq_run_appendInputLog
   induction oa using OracleComp.inductionOn generalizing initialInputs with
   | pure x => simp
   | query_bind t oa ih =>
+      dsimp only
       cases t with
-      | inl t' => simp [ih]
+      | inl t' =>
+          rw [simulateQ_add_query_bind_left, simulateQ_add_query_bind_left]
+          simp only [QueryImpl.liftTarget_apply, WriterT.run_bind', WriterT.run_liftM,
+            StateT.run_bind, StateT.run_monadLift, monadLift_self, map_bind,
+            monad_norm, List.empty_eq]
+          exact bind_congr fun u => by
+            simpa [Function.comp_apply] using ih u initialInputs
       | inr t' =>
-          simp only [OracleSpec.add_apply_inr, simulateQ_bind, simulateQ_query,
-            OracleQuery.input_query, OracleQuery.cont_query, add_apply_inr, withLogging_apply,
-            bind_pure_comp, map_bind, monad_norm, WriterT.run_bind', WriterT.run_liftM,
-            List.empty_eq, WriterT.run_tell, List.cons_append, List.nil_append,
-            appendInputLog_apply, modify, StateT.run_bind, StateT.run_modifyGet,
-            StateT.run_monadLift, monadLift_self]
+          rw [simulateQ_add_query_bind_right, simulateQ_add_query_bind_right]
+          simp only [WriterT.run_bind', StateT.run_bind, map_bind]
+          rw [run_withLogging_apply, run_appendInputLog_apply]
+          simp only [bind_assoc, pure_bind, Functor.map_map]
           exact bind_congr fun u => by simpa [List.append_assoc] using ih u (initialInputs ++ [t'])
 
 end inputLog

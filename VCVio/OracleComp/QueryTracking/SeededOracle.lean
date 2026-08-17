@@ -57,10 +57,9 @@ lemma withPregen_apply (so : QueryImpl spec m) (t : spec.Domain) :
 /-- Seed-hit: `withPregen` returns the head of the seed list without invoking `so`. -/
 lemma withPregen_run_cons (so : QueryImpl spec m) {t : spec.Domain}
     {seed : QuerySeed spec} {u : spec.Range t} {us : List (spec.Range t)}
-    (h : seed t = u :: us) :
+  (h : seed t = u :: us) :
     (so.withPregen t).run seed = pure (u, Function.update seed t us) := by
   rw [withPregen_apply, StateT.run_mk, h]
-  rfl
 
 /-- Seed-miss: `withPregen` falls back to a single call of `so`, threading the seed unchanged. -/
 lemma withPregen_run_nil (so : QueryImpl spec m) {t : spec.Domain}
@@ -402,7 +401,7 @@ private lemma pop_addValue_self_nil_aux {seed : QuerySeed spec} {i : ι} (h : se
     simp [QuerySeed.addValue, QuerySeed.addValues, h]
   rw [QuerySeed.pop_eq_some_of_cons _ _ v [] hlist]
   suffices Function.update (seed.addValue i v) i ([] : List (spec.Range i)) = seed by
-    rw [this]; rfl
+    rw [this]
   funext j; by_cases hj : j = i
   · subst hj; simp [h]
   · rw [Function.update_of_ne hj]
@@ -416,7 +415,7 @@ private lemma pop_addValue_self_cons_aux {seed : QuerySeed spec} {i : ι} {u₀ 
     simp [QuerySeed.addValue, QuerySeed.addValues, h]
   rw [QuerySeed.pop_eq_some_of_cons _ _ u₀ (rest ++ [v]) hlist]
   suffices Function.update (seed.addValue i v) i (rest ++ [v]) =
-      QuerySeed.addValue (Function.update seed i rest) i v by rw [this]; rfl
+      QuerySeed.addValue (Function.update seed i rest) i v by rw [this]
   funext j; by_cases hj : j = i
   · subst hj; simp [QuerySeed.addValue, QuerySeed.addValues]
   · simp [Function.update_of_ne hj, QuerySeed.addValue, QuerySeed.addValues]
@@ -434,7 +433,7 @@ private lemma pop_addValue_of_ne_cons_aux {seed : QuerySeed spec} {i t : ι} {u�
     (QuerySeed.addValues_of_ne seed [_] hti).trans h
   rw [QuerySeed.pop_eq_some_of_cons _ _ u₀ rest hlist]
   suffices Function.update (seed.addValue i v) t rest =
-      QuerySeed.addValue (Function.update seed t rest) i v by rw [this]; rfl
+      QuerySeed.addValue (Function.update seed t rest) i v by rw [this]
   change Function.update (Function.update seed i (seed i ++ [v])) t rest =
     Function.update (Function.update seed t rest) i
       ((Function.update seed t rest) i ++ [v])

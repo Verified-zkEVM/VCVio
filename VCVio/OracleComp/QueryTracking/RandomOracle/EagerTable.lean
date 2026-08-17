@@ -36,6 +36,8 @@ fresh on-demand uniform draw into the pre-sampled table.
 
 open OracleComp OracleSpec
 
+attribute [local implicit_reducible] OracleSpec
+
 universe u v w
 
 namespace OracleComp

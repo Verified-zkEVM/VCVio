@@ -105,6 +105,11 @@ namespace OracleComp
 
 variable {ι ι'} {spec : OracleSpec ι} {spec' : OracleSpec ι'} {α β γ : Type w}
 
+/- `supportWhen` presents Mathlib's `SetM` interpreter as ordinary sets in
+its public API. Lean 4.33 requires that wrapper at implicit transparency when
+specializing the generic simulation laws. -/
+attribute [local implicit_reducible] SetM
+
 section evalDist_main
 
 lemma evalDist_eq_simulateQ [IsProbabilitySpec spec] (mx : OracleComp spec α) :
@@ -127,9 +132,8 @@ lemma evalDist_query_toPMF [IsProbabilitySpec spec] (t : spec.Domain) :
 
 @[simp, grind =] lemma support_liftM (q : OracleQuery spec α) :
     support (liftM q : OracleComp spec α) = Set.range q.cont := by
-  change SetM.run (simulateQ (r := SetM) (fun _ => Set.univ) (liftM q)) = Set.range q.cont
-  rw [simulateQ_query]
-  exact Set.image_univ
+  rw [OracleComp.liftM_def]
+  exact PFunctor.FreeM.support_liftObj q
 
 @[grind =] lemma support_query (t : spec.Domain) :
     support (query t : OracleComp spec _) = Set.univ := by

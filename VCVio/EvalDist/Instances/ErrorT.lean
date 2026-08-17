@@ -116,7 +116,8 @@ lemma finSupport_def [DecidableEq α] (mx : ExceptT ε m α) :
 @[simp low]
 lemma mem_finSupport_iff' [DecidableEq α] (mx : ExceptT ε m α) (x : α) :
     x ∈ finSupport mx ↔ Except.ok x ∈ finSupport mx.run := by
-  simp [finSupport_def, Finset.mem_preimage]
+  rw [finSupport_def]
+  exact Finset.mem_preimage
 
 @[simp]
 lemma finSupport_liftM [LawfulMonad m] [DecidableEq α] (mx : m α) :

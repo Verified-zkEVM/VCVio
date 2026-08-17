@@ -118,7 +118,7 @@ inductive BatchProof (α : Type u) : {s : Skeleton} → LeafData Bool s → Type
 
 /-- The tuple of claimed values for the leaves selected by `sel`: one `α` per selected
 leaf, `PUnit` at unselected leaves, products at internal nodes. -/
-@[simp, grind]
+@[simp, grind, implicit_reducible]
 def SelectedValues (α : Type u) : {s : Skeleton} → LeafData Bool s → Type u
   | _, .leaf true => α
   | _, .leaf false => PUnit

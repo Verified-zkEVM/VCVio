@@ -240,6 +240,7 @@ lemma evalDist_generateSeed_eq_of_countEq [IsUniformSpec spec]
     (hcount : ∀ i, qc i * js.count i = qc' i * js'.count i) :
     𝒟[generateSeed spec qc js] = 𝒟[generateSeed spec qc' js'] := by
   classical
+  let _ : DecidableEq (QuerySeed spec) := Classical.decEq _
   have hsupp : support (generateSeed spec qc js) = support (generateSeed spec qc' js') := by
     simp only [support_generateSeed, hcount]
   ext seed

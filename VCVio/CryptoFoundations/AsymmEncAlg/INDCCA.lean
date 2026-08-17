@@ -55,14 +55,15 @@ structure IND_CCA_Adversary (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C) w
 /-- Pre-challenge decryption oracle for the IND-CCA game. -/
 def IND_CCA_preChallengeImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     (sk : SK) : QueryImpl (IND_CCA_oracleSpec encAlg) (OracleComp spec) :=
-  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) + fun c => encAlg.decrypt sk c
+  QueryImpl.add (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec))
+    fun c => encAlg.decrypt sk c
 
 /-- Post-challenge decryption oracle for the IND-CCA game.
 The challenge ciphertext itself is answered with `none`, while all other ciphertexts are
 decrypted normally. -/
 def IND_CCA_postChallengeImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     (sk : SK) (cStar : C) : QueryImpl (IND_CCA_oracleSpec encAlg) (OracleComp spec) :=
-  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) + fun c =>
+  QueryImpl.add (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) fun c =>
     if c = cStar then return none else encAlg.decrypt sk c
 
 /-- IND-CCA security game in the standard two-phase form.
