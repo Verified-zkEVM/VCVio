@@ -11,9 +11,9 @@ public import VCVio.CryptoFoundations.SigmaProtocol
 /-!
 # Coordinate-wise special soundness as a protocol property
 
-Definition 2.29 of Fenzi–Moghaddas–Nguyen for a Σ-protocol whose challenge space is a product
-`ι → S`: a `k`-ary extractor turns any set of accepting transcripts whose challenges form an
-`SS(S, ℓ, k)` set into a valid witness.
+The fixed-statement, extensional part of Definition 2.29 of Fenzi–Moghaddas–Nguyen for a
+Σ-protocol whose challenge space is a product `ι → S`: a `k`-ary extractor turns any set of
+accepting transcripts whose challenges form an `SS(S, ℓ, k)` set into a valid witness.
 
 Two shape decisions, both following existing practice in
 `VCVio/CryptoFoundations/SigmaProtocol.lean`:
@@ -22,9 +22,9 @@ Two shape decisions, both following existing practice in
   so a `k`-ary extractor cannot be one; `HVZK` takes `simTranscript` as a parameter for the same
   reason, since the `sim` field only produces a commitment.
 * The property is a `Prop` over the extractor's `support`, with no runtime clause, exactly like
-  `SigmaProtocol.SpeciallySoundAt`. The paper additionally demands the extractor be polynomial
-  time; there is no `IsPolyTime` predicate in the repository to state that against, so this is the
-  extensional half of Definition 2.29.
+  `SigmaProtocol.SpeciallySoundAt`. The paper additionally quantifies over the security parameter
+  and demands polynomial time. Neither is represented here, so this is only its extensional,
+  fixed-statement component. `Stmt` may bundle the paper's index and statement.
 
 `CoordSpeciallySoundAt` at `ℓ = 1` is ordinary `k`-special soundness
 (`coordSpeciallySoundAt_iff_kSpeciallySoundAt`), and at `k = 2` it is implied by the repository's
@@ -44,23 +44,24 @@ variable {k : ℕ} {x : Stmt}
 
 /-! ## The definition -/
 
-/-- **Definition 2.29** at a particular statement. `ext` is `ℓ`-coordinate-wise `k`-special sound
-if every witness it can return from a set of accepting transcripts whose challenges form an
-`SS(S, ℓ, k)` set is valid for `x`.
+/-- The fixed-statement, extensional clause of **Definition 2.29**. `ext` is
+`ℓ`-coordinate-wise `k`-special sound if every witness it can return from a set of accepting
+transcripts whose challenges form an `SS(S, ℓ, k)` set is valid for `x`.
 
 The transcripts share the commitment `pc`, as in the paper, where the extractor is given
-`(a, cᵢ, zᵢ)` with a common first message `a`. -/
+`(a, cᵢ, zᵢ)` with a common first message `a`. The statement is an explicit extractor input, as it
+is in the paper; it must not be recovered from the transcripts. -/
 def CoordSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
-    (ext : Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
+    (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
   ∀ (pc : Commit) (T : Finset ((ι → S) × Resp)),
     (∀ p ∈ T, σ.verify x pc p.1 p.2 = true) →
     IsCoordSpecialSound k (T.image Prod.fst) →
-    ∀ w ∈ support (ext pc T), rel x w = true
+    ∀ w ∈ support (ext x pc T), rel x w = true
 
 /-- A Σ-protocol is `ℓ`-coordinate-wise `k`-special sound if `CoordSpeciallySoundAt` holds at every
 statement. -/
 def CoordSpeciallySound (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
-    (ext : Commit → Finset ((ι → S) × Resp) → ProbComp Wit) : Prop :=
+    (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) : Prop :=
   ∀ x, σ.CoordSpeciallySoundAt k ext x
 
 /-- Ordinary `k`-special soundness at a statement, stated for a `k`-ary extractor: any set of
@@ -68,11 +69,11 @@ accepting transcripts with `k` distinct challenges yields a valid witness. This 
 shape, kept separate so the collapse below is a statement about two independently-written
 definitions. -/
 def KSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
-    (ext : Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
+    (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
   ∀ (pc : Commit) (T : Finset ((ι → S) × Resp)),
     (∀ p ∈ T, σ.verify x pc p.1 p.2 = true) →
     (T.image Prod.fst).card = k →
-    ∀ w ∈ support (ext pc T), rel x w = true
+    ∀ w ∈ support (ext x pc T), rel x w = true
 
 /-! ## The `ℓ = 1` collapse -/
 
@@ -82,7 +83,7 @@ omit [DecidableEq ι] [Fintype S] in
 `k = 0` the truncated `k - 1` makes `SS(S, ℓ, 0)` and `SS(S, ℓ, 1)` the same condition. -/
 theorem coordSpeciallySoundAt_iff_kSpeciallySoundAt [Unique ι]
     (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) {k : ℕ} (hk : 1 ≤ k)
-    (ext : Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) :
+    (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) :
     σ.CoordSpeciallySoundAt k ext x ↔ σ.KSpeciallySoundAt k ext x :=
   ⟨fun h pc T hacc hcard => h pc T hacc ((isCoordSpecialSound_iff_of_unique hk).mpr hcard),
     fun h pc T hacc hss => h pc T hacc ((isCoordSpecialSound_iff_of_unique hk).mp hss)⟩
@@ -97,8 +98,9 @@ This is the honest bridge to `SigmaProtocol.extract`: that field has arity two, 
 as `ext` directly, but `hfactor` says `ext` is built from it. -/
 theorem coordSpeciallySoundAt_two_of_speciallySoundAt
     (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
-    (ext : Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (hss : σ.SpeciallySoundAt x)
-    (hfactor : ∀ pc T, ∀ w ∈ support (ext pc T),
+    (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit)
+    (hss : σ.SpeciallySoundAt x)
+    (hfactor : ∀ pc T, ∀ w ∈ support (ext x pc T),
       ∃ p₁ ∈ T, ∃ p₂ ∈ T, p₁.1 ≠ p₂.1 ∧ w ∈ support (σ.extract p₁.1 p₁.2 p₂.1 p₂.2)) :
     σ.CoordSpeciallySoundAt 2 ext x := by
   intro pc T hacc _ w hw

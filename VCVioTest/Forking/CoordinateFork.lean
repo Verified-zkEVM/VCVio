@@ -8,9 +8,9 @@ module
 public import VCVio.CryptoFoundations.CoordinateFork.MultiRound
 
 /-!
-# Regression checks for coordinate-wise forking
+# Adversarial regression checks for coordinate-wise table forking
 
-Two things a green build does not establish on its own.
+These checks exercise facts that a green build does not establish on its own.
 
 **Non-vacuity.** `docs/agents/gotchas.md` §14 asks for a kernel-checked witness whenever a
 hypothesis bundle's joint satisfiability is not immediate. The coordinate-fork headline carries
@@ -19,9 +19,12 @@ hypothesis bundle's joint satisfiability is not immediate. The coordinate-fork h
 instantiate it at `ι = Fin 2`, `S = Fin 5`, `k = 2` — so `ℓ * (k - 1) = 2 < 5 = N` — and exhibit a
 strictly positive bound.
 
-**Payload sensitivity.** The success bound is only Lemma 7.1 if it constrains what the extractor
-returns. `goodOutput_empty_false` witnesses that: an extractor emitting an empty challenge set
-would fail `GoodOutput`, so the bound cannot be satisfied vacuously by a degenerate payload.
+**Payload sensitivity.** A meaningful output bound must constrain what the computation returns.
+`goodOutput_empty_false` witnesses that an empty challenge set fails `GoodOutput`.
+
+**Adversarial cases.** Further checks use a nonconstant table, exhibit equal marginals with
+different joint fork behavior, exercise `μ = 2`, and pin down truncation and empty-coordinate
+boundaries.
 -/
 
 @[expose] public section
@@ -114,5 +117,114 @@ theorem goodTranscripts_empty_false (k : ℕ) (τ : Chal → Bool) :
   rw [goodTranscripts_some_iff]
   rintro ⟨⟨⟨e, heX, -⟩, -⟩, -⟩
   exact absurd heX (Finset.notMem_empty e)
+
+/-! ## Coupling sensitivity -/
+
+/-- The smallest challenge space on which two table entries can be correlated differently. -/
+abbrev CouplingChal : Type := Fin 1 → Fin 2
+
+/-- Both entries take the same uniformly chosen bit. -/
+def correlatedTable (b : Bool) : CouplingChal → Bool := fun _ => b
+
+/-- Exactly one of the two entries accepts; the chosen bit decides which one. -/
+def anticorrelatedTable (b : Bool) (c : CouplingChal) : Bool :=
+  if c 0 = 0 then b else !b
+
+/-- The two table families have identical uniform `1/2` marginals at every challenge. -/
+theorem coupling_tables_same_marginal_counts :
+    ∀ c : CouplingChal,
+      (Finset.univ.filter fun b : Bool => correlatedTable b c).card = 1 ∧
+      (Finset.univ.filter fun b : Bool => anticorrelatedTable b c).card = 1 := by
+  decide
+
+/-- The correlated coupling has two successful `(table, centre)` pairs at `k = 2`. -/
+theorem sum_goodSet_correlated :
+    (∑ b : Bool, (goodSet 2 (correlatedTable b)).card) = 2 := by
+  decide
+
+/-- The anticorrelated coupling has none, despite having the same marginals. This is a negative
+control against silently treating `forkSuccOf` as a function of marginals alone. -/
+theorem sum_goodSet_anticorrelated :
+    (∑ b : Bool, (goodSet 2 (anticorrelatedTable b)).card) = 0 := by
+  decide
+
+/-! ## A nonconstant table -/
+
+/-- One coordinate over five values; exactly challenges `0` and `1` accept. -/
+abbrev PartialChal : Type := Fin 1 → Fin 5
+
+def partialAccept (c : PartialChal) : Bool := decide (c 0 < 2)
+
+example : partialAccept ![0] = true := by decide
+example : partialAccept ![3] = false := by decide
+
+/-- An accepting centre with both accepting values in its column is good at `k = 2`. -/
+example : ![0] ∈ goodSet 2 partialAccept := by decide
+
+/-- A rejecting centre is not good. -/
+example : ![3] ∉ goodSet 2 partialAccept := by decide
+
+theorem acceptRatio_partialAccept :
+    acceptRatio (pure partialAccept : ProbComp (PartialChal → Bool)) = 2 / 5 := by
+  rw [acceptRatio]
+  simp only [probEvent_pure]
+  rw [← Finset.natCast_card_filter]
+  have hcard : (Finset.univ.filter fun c : PartialChal => partialAccept c).card = 2 := by
+    decide
+  rw [hcard]
+  norm_num
+
+private theorem two_fifths_sub_one_fifth : (2 : ℝ≥0∞) / 5 - 1 / 5 = 1 / 5 := by
+  refine ENNReal.sub_eq_of_eq_add (by finiteness) ?_
+  rw [ENNReal.div_add_div_same, show (1 : ℝ≥0∞) + 1 = 2 by norm_num]
+
+/-- A nonconstant acceptance table leaves a strictly positive `1/5` lower bound. -/
+theorem one_fifth_le_probEvent_goodOutput_partial :
+    (1 : ℝ≥0∞) / 5 ≤
+      Pr[GoodOutput 2 | coordFork 2 (pure partialAccept : ProbComp (PartialChal → Bool))] := by
+  have h := sub_div_le_probEvent_goodOutput_coordFork 2
+    (pure partialAccept : ProbComp (PartialChal → Bool))
+  refine le_trans (le_of_eq ?_) h
+  rw [acceptRatio_partialAccept,
+    show (Fintype.card (Fin 1) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 5) = 1 / 5 from by simp,
+    two_fifths_sub_one_fifth]
+
+/-! ## Boundary canaries -/
+
+/-- Because subtraction is truncated, `k = 0` and `k = 1` are definitionally identical. -/
+example (X : Finset PartialChal) :
+    IsCoordSpecialSound 0 X ↔ IsCoordSpecialSound 1 X := Iff.rfl
+
+/-- With no coordinates the per-round loss is zero. -/
+example : roundLoss (Fin 0) (Fin 3) 2 = 0 := by simp [roundLoss]
+
+/-- Asking for a column thicker than the alphabet makes even the all-accepting table fail. -/
+example : goodSet 4 (fun _ : Fin 1 → Fin 3 => true) = ∅ := by decide
+
+/-- The zero-round recurrence is exactly its input value. -/
+example (p : Transcript (Fin 1) (Fin 3) 0 → ℝ≥0∞) : multiSucc 2 p = p PUnit.unit := rfl
+
+/-! ## A nontrivial two-round recurrence -/
+
+def twoRoundAlways : Transcript (Fin 1) (Fin 5) 2 → ℝ≥0∞ := fun _ => 1
+
+/-- At `μ = 2`, the analytic recurrence has the positive lower bound `1 - 2/5 = 3/5`. This checks
+the induction beyond its definitional zero- and one-round cases; it is not an execution theorem. -/
+theorem three_fifths_le_multiSucc_two :
+    (3 : ℝ≥0∞) / 5 ≤ multiSucc 2 twoRoundAlways := by
+  have h := sub_le_multiSucc (ι := Fin 1) (S := Fin 5) 2 twoRoundAlways (by
+    intro t
+    simp [twoRoundAlways])
+  refine le_trans (le_of_eq ?_) h
+  have havg : avgTranscript twoRoundAlways = 1 := by
+    simp only [avgTranscript, twoRoundAlways, Finset.sum_const, Finset.card_univ, nsmul_eq_mul,
+      mul_one]
+    rw [ENNReal.div_self (by norm_num) (by finiteness)]
+    rw [mul_one, ENNReal.div_self (by norm_num) (by finiteness)]
+  rw [havg]
+  simp only [roundLoss, Fintype.card_fin, Nat.cast_one, Nat.reduceSub, one_mul]
+  norm_num only [Nat.cast_ofNat, Nat.cast_one, mul_one]
+  rw [← mul_div_assoc, mul_one]
+  exact one_sub_two_fifths.symm
 
 end VCVioTest.Forking

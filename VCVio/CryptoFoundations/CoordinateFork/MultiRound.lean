@@ -8,24 +8,24 @@ module
 public import VCVio.CryptoFoundations.CoordinateFork
 
 /-!
-# Coordinate-wise rewinding for multi-round protocols
+# An analytic multi-round recurrence for coordinate-wise table forking
 
-Lemma 7.2 of Fenzi–Moghaddas–Nguyen: against a `(2μ + 1)`-round public-coin protocol whose every
-round draws a challenge from `ι → S`, the coordinate-wise extractor succeeds with probability at
-least `ε - μ * ℓ * (k - 1) / N`.
+This module proves the numeric recurrence behind the success-probability calculation in Lemma 7.2
+of Fenzi–Moghaddas–Nguyen. It shows that recursively applying the single-round table bound loses at
+most `μ * ℓ * (k - 1) / N`.
 
-The extractor is built by recursion on the number of rounds: the round-1 extractor treats "the
-sub-extractor succeeds on the curried adversary" as its acceptance event. That event is
-*randomized*, which is exactly why the single-round bound is stated over an arbitrary distribution
-of acceptance tables — instantiating it at `PMF.bernoulliTable` with the sub-extractor's success
-probabilities as biases is all the multi-round step needs.
+The numeric recurrence treats "the subproblem succeeds on the curried input" as its next-round
+acceptance probability. It instantiates the single-round table bound at `PMF.bernoulliTable` with
+those probabilities as biases.
 
 `avgTranscript` is defined by the same recursion as `multiSucc`, so the averaging (Fubini) step of
 the paper's proof is definitional here rather than a lemma.
 
-Only success probabilities recurse; realizing the multi-round extractor as a `ProbComp` would
-additionally require sampling `PMF.bernoulliTable` at the sub-extractor's success probabilities,
-which is left to the query-cost development along with the expected query bounds.
+Only numbers recurse. `multiSucc` is not a `ProbComp`, does not execute a prover or verifier, and
+does not return a transcript tree. Each step chooses an independent Bernoulli-table coupling from
+the supplied marginal probabilities. A theorem connecting that coupling to a concrete recursive
+oracle algorithm, its outputs, and its expected cost remains absent. Thus the results below are an
+analytic ingredient, not a formalization of the full extractor or Lemma 7.2.
 -/
 
 @[expose] public section
@@ -64,8 +64,8 @@ theorem avgTranscript_succ {μ : ℕ} (p : Transcript ι S (μ + 1) → ℝ≥0�
 
 /-! ## Success probabilities -/
 
-/-- The single-round extractor's success probability against an adversary accepting challenge `c`
-with probability `q c`.
+/-- The success functional of the single-round table computation when entry `c` has marginal
+accepting probability `q c` under the selected independent coupling.
 
 Biases above `1` are clamped, so that the recursion in `multiSucc` carries no proof obligation;
 `le_forkSucc_add` shows the clamp is invisible for genuine probabilities. -/
@@ -78,14 +78,12 @@ theorem forkSucc_eq_forkSuccOf (k : ℕ) (q : (ι → S) → ℝ≥0∞) (hq : �
     forkSucc k q = forkSuccOf k (PMF.bernoulliTable q hq : PMF ((ι → S) → Bool)) := by
   rw [forkSucc, PMF.bernoulliTable_congr _ hq (funext fun c => min_eq_left (hq c))]
 
-/-- **The extractor bridge.** `forkSucc` is not merely a convenient functional: it *is* the
-coordinate fork's success probability, at any `ProbComp` table distribution realizing the
-Bernoulli table with biases `q`.
+/-- **Single-step bridge.** `forkSucc` is the coordinate table fork's success probability at any
+`ProbComp` table distribution realizing the Bernoulli table with biases `q`.
 
-This is what pins the multi-round bound to the extractor. Without it `sub_le_multiSucc` would be a
-fixed-point inequality about an abstract functional — `forkSucc k q := 1` would satisfy it. What
-remains open is only *realizability*: whether a `ProbComp` with these marginals exists for the
-sub-extractor's success probabilities. -/
+This prevents `forkSucc` from being an unconstrained abstract functional. The hypothesis equates
+the entire table distribution, not merely its marginals. It neither constructs the recursive
+multi-round computation nor justifies independent table bits for correlated prover executions. -/
 theorem forkSucc_eq_probEvent_isSome_coordFork [SampleableType (ι → S)] (k : ℕ)
     (q : (ι → S) → ℝ≥0∞) (hq : ∀ c, q c ≤ 1) (D : ProbComp ((ι → S) → Bool))
     (hD : ∀ ρ, Pr[= ρ | D] = Pr[= ρ | (PMF.bernoulliTable q hq : PMF ((ι → S) → Bool))]) :
@@ -93,8 +91,8 @@ theorem forkSucc_eq_probEvent_isSome_coordFork [SampleableType (ι → S)] (k : 
   rw [probEvent_isSome_coordFork, forkSucc_eq_forkSuccOf k q hq, forkSuccOf, forkSuccOf]
   exact tsum_congr fun ρ => by rw [hD ρ]
 
-/-- The multi-round extractor's success probability. At each round the sub-extractor's success
-probability plays the role of the adversary's accepting probability. -/
+/-- The analytic multi-round success functional. At each round the recursive value plays the role
+of the next table's marginal accepting probability. This is not itself a computation. -/
 noncomputable def multiSucc (k : ℕ) : ∀ {μ : ℕ}, (Transcript ι S μ → ℝ≥0∞) → ℝ≥0∞
   | 0, p => p PUnit.unit
   | _ + 1, p => forkSucc k fun c => multiSucc k fun r => p (c, r)
@@ -105,7 +103,7 @@ noncomputable def multiSucc (k : ℕ) : ∀ {μ : ℕ}, (Transcript ι S μ → 
 theorem multiSucc_succ (k : ℕ) {μ : ℕ} (p : Transcript ι S (μ + 1) → ℝ≥0∞) :
     multiSucc k p = forkSucc k fun c => multiSucc (μ := μ) k fun r => p (c, r) := rfl
 
-/-- One round of the multi-round recursion is exactly the single-round extractor. -/
+/-- One round of the analytic recursion is exactly the single-round table functional. -/
 theorem multiSucc_one (k : ℕ) (p : Transcript ι S 1 → ℝ≥0∞) :
     multiSucc k p = forkSucc k fun c => p (c, PUnit.unit) := rfl
 
@@ -149,9 +147,8 @@ theorem le_forkSucc_add [Nonempty S] (k : ℕ) (q : (ι → S) → ℝ≥0∞) (
       PMF ((ι → S) → Bool))) k (by simp)
   rwa [acceptRatio_bernoulliTable, hclamp] at hbound
 
-/-- **Lemma 7.2** of Fenzi–Moghaddas–Nguyen, in additive form.
-
-The `μ`-round coordinate-wise extractor loses at most `μ` times the single-round loss. -/
+/-- The additive numeric recurrence underlying the success bound in **Lemma 7.2** of
+Fenzi–Moghaddas–Nguyen. It does not construct the paper's extractor. -/
 theorem avgTranscript_le_multiSucc_add [Nonempty S] (k : ℕ) :
     ∀ {μ : ℕ} (p : Transcript ι S μ → ℝ≥0∞), (∀ t, p t ≤ 1) →
       avgTranscript p ≤ multiSucc k p + μ * roundLoss ι S k
@@ -181,8 +178,9 @@ theorem avgTranscript_le_multiSucc_add [Nonempty S] (k : ℕ) :
             push_cast
             ring
 
-/-- **Lemma 7.2**, in the paper's subtracted form: the `μ`-round coordinate-wise extractor succeeds
-with probability at least `ε - μ * ℓ * (k - 1) / N`. -/
+/-- The numeric recurrence in the subtracted form used by **Lemma 7.2**:
+`avgTranscript p - μ * ℓ * (k - 1) / N ≤ multiSucc k p`. Here `multiSucc` is the analytic
+functional above, not the success probability of a constructed multi-round extractor. -/
 theorem sub_le_multiSucc [Nonempty S] (k : ℕ) {μ : ℕ} (p : Transcript ι S μ → ℝ≥0∞)
     (hp : ∀ t, p t ≤ 1) :
     avgTranscript p - μ * roundLoss ι S k ≤ multiSucc k p :=

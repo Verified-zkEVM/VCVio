@@ -14,16 +14,17 @@ public import VCVio.EvalDist.Monad.Basic
 # Averaging a coordinate-wise rewinding bound over a distribution of acceptance tables
 
 An *acceptance table* `ρ : (ι → S) → Bool` records, for every challenge vector, whether the
-adversary is accepted on it. A coordinate-wise rewinding extractor succeeds exactly when the
-sampled challenge accepts and every one of its columns holds at least `k` accepting values — a
-predicate on the challenge alone, so the whole success bound is the finite counting inequality
+table entry is accepted. The table computation succeeds exactly when the sampled challenge accepts
+and every one of its columns holds at least `k` accepting values. This is a predicate on the
+challenge alone, so its success bound is the finite counting inequality
 `CoordinateWise.sub_div_le_div_card_filter`.
 
 A *randomized* adversary is a distribution over tables. Because the counting bound holds pointwise
 in `ρ`, it survives averaging over an *arbitrary* distribution `D`, and
 `le_tsum_probOutput_mul_goodSet` records that: only the marginals `Pr[ρ c]` appear on the left, and
-no independence hypothesis is needed. That is what lets one lemma serve both the single-round and
-the multi-round bound, where the "marginal" is a sub-extractor's success probability.
+no independence hypothesis is needed. The analytic multi-round recurrence later instantiates this
+at a particular independent Bernoulli coupling; connecting that coupling to executions of a
+multi-round prover is separate and unproved.
 
 Note what this does *not* say. `forkSuccOf k D` depends on all of `D`, not just its marginals, so
 picking a particular coupling — as the multi-round layer does, by instantiating at an independent
@@ -47,12 +48,12 @@ variable {ι S : Type} [DecidableEq ι] [Fintype ι] [DecidableEq S] [Fintype S]
 def acceptSet (ρ : (ι → S) → Bool) : Finset (ι → S) :=
   Finset.univ.filter fun c => ρ c
 
-/-- The challenges on which a coordinate-wise rewinding extractor succeeds: accepting, with at
-least `k` accepting values in every column. -/
+/-- The challenges on which the table core succeeds: accepting, with at least `k` accepting values
+in every column. -/
 def goodSet (k : ℕ) (ρ : (ι → S) → Bool) : Finset (ι → S) :=
   Finset.univ.filter fun c => ρ c ∧ ∀ j, k ≤ columnCount (fun c' => ρ c' = true) j c
 
-/-- The adversary's accepting probability against a uniform challenge: the `ε` of Lemma 7.1. -/
+/-- The average accepting probability of the table distribution against a uniform challenge. -/
 noncomputable def acceptRatio (D : m ((ι → S) → Bool)) : ℝ≥0∞ :=
   (∑ c : ι → S, Pr[fun ρ => ρ c | D]) / Fintype.card (ι → S)
 
@@ -125,8 +126,8 @@ theorem le_tsum_probOutput_mul_goodSet [Nonempty S] (D : m ((ι → S) → Bool)
           tsum_probOutput_eq_one' hmass, one_mul]
 
 omit [Monad m] [DecidableEq S] in
-/-- The subtracted form, matching Lemma 7.1 of Fenzi–Moghaddas–Nguyen: the extractor succeeds with
-probability at least `ε - ℓ * (k - 1) / N`. -/
+/-- The averaged table-counting bound, in the subtracted form used by Lemma 7.1 of
+Fenzi–Moghaddas–Nguyen. -/
 theorem sub_div_le_tsum_probOutput_mul_goodSet [Nonempty S] (D : m ((ι → S) → Bool)) (k : ℕ)
     (hmass : Pr[⊥ | D] = 0) :
     acceptRatio D - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S

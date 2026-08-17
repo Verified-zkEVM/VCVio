@@ -1,7 +1,8 @@
 # Forking Lemmas
 
-Three forking lemmas live in this repository. They differ in what gets pre-sampled and in the
-shape of the bound they deliver. See [crypto.md](crypto.md) for the surrounding primitive and
+Three forking developments live in this repository. They differ in what gets pre-sampled and in
+the shape of the bound they deliver. The coordinate-wise development is currently a table model,
+not the paper's oracle extractor. See [crypto.md](crypto.md) for the surrounding primitive and
 reduction machinery.
 
 ## Which one to reach for
@@ -19,11 +20,11 @@ answer as a fresh query, and the collision bound on the two focused answers. Bot
 `ENNReal.mul_tsub_inv_le_sum_sq_sub_div` from
 [`ToMathlib/Data/ENNReal/SumSquares.lean`](../../ToMathlib/Data/ENNReal/SumSquares.lean).
 
-**The coordinate-wise lemma uses none of that.** Its bound is *linear* in the accepting
-probability, not quadratic, because the extractor of Fenzi–Moghaddas–Nguyen (eprint 2023/846 §7)
-spends an *expected* rather than a fixed number of queries. No Cauchy–Schwarz step appears, and
-nothing from `SumSquares` is used. If you are looking for a Jensen-style estimate in that
-development, there isn't one and there shouldn't be.
+**The coordinate-wise table bound uses none of that.** Its loss is subtracted from the accepting
+probability rather than from a quadratic expression. No Cauchy–Schwarz step and nothing from
+`SumSquares` is used. Fenzi–Moghaddas–Nguyen (eprint 2023/846 §7) obtain this shape with an
+expected-query oracle extractor; the present formalization proves the corresponding table-counting
+inequality, not that algorithm or its expected cost.
 
 ## Quadratic forks: seeded vs replay
 
@@ -61,14 +62,13 @@ the centre in only one coordinate determines that coordinate.
 
 ### The organizing idea: acceptance tables
 
-The extractor samples `c₀`, checks it accepts, then resamples each coordinate until `k − 1` further
-accepting values are found. **Whether it succeeds does not depend on the order it tries them** — it
-succeeds exactly when `c₀` accepts and every column of `c₀` holds at least `k` accepting values.
-Success is therefore a deterministic predicate on `c₀` given the *acceptance table*
-`ρ : (ι → S) → Bool`, and the whole probabilistic content collapses to a counting inequality
+The local computation samples an entire table and `c₀`, then selects `k − 1` accepting neighbours
+per coordinate. It succeeds exactly when `c₀` accepts and every column of `c₀` holds at least `k`
+accepting values. Success is therefore a deterministic predicate on `c₀` given the *acceptance table*
+`ρ : (ι → S) → Bool`, and the table-model probability calculation collapses to a counting inequality
 (`sub_div_le_div_card_filter`) with no probability monad in sight.
 
-A randomized adversary is then a distribution over tables, and
+In this model, randomized behavior is represented by a distribution over complete tables, and
 [`VCVio/EvalDist/CoordinateFork.lean`](../../VCVio/EvalDist/CoordinateFork.lean) averages the
 counting bound over an *arbitrary* such distribution:
 
@@ -94,16 +94,17 @@ computation up to relabelling, and `sub_div_le_probEvent_goodTranscripts_coordFo
 bound over to `GoodTranscripts` — `ℓ(k-1)+1` accepting transcripts whose challenges are
 `SS(S, ℓ, k)`. The `ToMathlib` counting core never sees `Y`.
 
-### From the extractor to a knowledge-soundness statement
+### Fixed-statement extraction
 
 [`VCVio/CryptoFoundations/CoordinateFork/SpecialSoundness.lean`](../../VCVio/CryptoFoundations/CoordinateFork/SpecialSoundness.lean)
-states Definition 2.29 against a `SigmaProtocol` whose challenge type is `ι → S`:
+states the fixed-statement, extensional clause of Definition 2.29 against a `SigmaProtocol` whose
+challenge type is `ι → S`:
 
 ```lean
 def CoordSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
-    (ext : Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
+    (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
   ∀ pc T, (∀ p ∈ T, σ.verify x pc p.1 p.2 = true) →
-    IsCoordSpecialSound k (T.image Prod.fst) → ∀ w ∈ support (ext pc T), rel x w = true
+    IsCoordSpecialSound k (T.image Prod.fst) → ∀ w ∈ support (ext x pc T), rel x w = true
 ```
 
 The extractor is a **parameter**, not a field: `SigmaProtocol.extract` is hardwired to arity two, so
@@ -112,12 +113,14 @@ a `k`-ary extractor cannot be one. `HVZK` takes `simTranscript` as a parameter f
 through a pair.
 
 [`CoordinateFork/Extraction.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Extraction.lean)
-composes that with the fork to give **Lemma 2.31 at `μ = 1`**: `coordExtract` runs the fork against
-the prover's response table and hands the accepting transcripts to `ext`, and
+composes that with the table fork to prove the fixed-statement extraction-success inequality used
+in **Lemma 2.31 at `μ = 1`**: `coordExtract` runs against the prover's response table, hands the
+accepting transcripts to `ext`, and
 `sub_div_le_probEvent_extracted_coordExtract` bounds the probability of the event
 `Extracted rel x` — *a valid witness was returned* — below by `ε - ℓ(k-1)/|S|`. Aborting runs fail
-that event, so it is not a termination bound. The prover is modelled by its response table after
-committing, which is exactly a distribution over `Chal → Resp`.
+that event, so it is not a termination bound. A full Definition 2.28/2.31 result would additionally
+need the security-parameter experiment, the joint bad event, an oracle implementation, and an
+expected-polynomial-time proof.
 
 ### What is and is not proved
 
@@ -127,30 +130,33 @@ the adversary*. The status is:
 | Clause | Lemma 7.1 | Lemma 7.2 |
 |---|---|---|
 | expected query count | **not proved** | **not proved** |
-| success probability | proved | proved |
-| output structure (accepting transcripts) | proved | `μ = 1` only |
+| success probability | **table model only** | **analytic recurrence only** |
+| output structure (accepting transcripts) | **table model only** | `μ = 1` only |
 
 - `sub_div_le_probEvent_goodOutput_coordFork` carries the success bound and the output guarantee
   together, so it is sensitive to what the extractor returns.
 - `sub_le_multiSucc` in
   [`VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean`](../../VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean)
-  gives the `μ`-round bound `ε − μℓ(k−1)/N`, pinned to the extractor by
-  `forkSucc_eq_probEvent_isSome_coordFork`.
+  proves a recurrence with the numeric bound `ε − μℓ(k−1)/N`. `multiSucc` is not a computation;
+  `forkSucc_eq_probEvent_isSome_coordFork` only identifies one recurrence step when an entire
+  independent Bernoulli table distribution is supplied.
 - The object consumes a pre-sampled acceptance table rather than querying an adversary, so what is
-  established is the information-theoretic content, not efficiency.
-  [`ToMathlib/Probability/NegativeHypergeometric.lean`](../../ToMathlib/Probability/NegativeHypergeometric.lean)
-  is the groundwork for the deferred query count, and
+  established is a table-model inequality, not the oracle algorithm or efficiency. A future query
+  proof must model sampling without replacement, including exhaustion when fewer than `k`
+  accepting values exist, and connect that costed process to the table event. The challenge-only
   [`ToMathlib/Combinatorics/ChallengeTree.lean`](../../ToMathlib/Combinatorics/ChallengeTree.lean)
-  for the deferred multi-round output.
+  supplies only the combinatorial projection needed by a future multi-round output theorem.
 
-Non-vacuity and payload-sensitivity checks live in
-`VCVioTest/Forking/CoordinateFork.lean` and run in CI.
+Non-vacuity, payload-sensitivity, coupling, boundary, and bad-extractor checks live in
+`VCVioTest/Forking/CoordinateFork.lean` and
+`VCVioTest/Forking/CoordSpecialSoundness.lean`; both run in CI.
 
-## Why §7 needs its own extractor
+## Why §7 introduces its own extractor
 
 Coordinate-wise `k`-special soundness is a special case of Attema–Fehr–Rambaud's `Γ`-out-of-`C`
-special soundness, whose generic extractor runs in expected time `2 ^ tᵧ - 1`. §7.3 of the paper
-shows that is exponential here, and
+special soundness. Their Lemma 5 gives the generic extractor an expected-query upper bound
+`2 * tᵧ - 1`. The local formalization proves that the relevant `tᵧ` can be exponential, so plugging
+it into that published upper bound does not certify polynomial complexity:
 [`ToMathlib/Combinatorics/MonotoneStructure.lean`](../../ToMathlib/Combinatorics/MonotoneStructure.lean)
 formalizes the bound:
 
@@ -162,21 +168,14 @@ theorem pow_add_one_le_tValue [Nontrivial S] [Nonempty ι] :
 The argument is pure `Finset` combinatorics with no probability: the slice of challenges fixing one
 coordinate contains no `SS(S, ℓ, 2)` set, because two challenges differing only in that coordinate
 cannot both lie in it — but adjoining a single challenge off the slice creates one. So every
-untaken slice element stays useful, and then one element off the slice is useful again. The
-`2 ^ t - 1` runtime itself is cited from [AFR23], not proved.
+untaken slice element stays useful, and then one element off the slice is useful again. This is not
+a lower bound on the extractor's actual running time. Neither the generic extractor nor its cost is
+formalized here.
 
-## Rewinding primitives
+## Deferred oracle semantics
 
-Two distinct notions, easy to conflate:
-
-- **By position** — go back to the `n`-th query to an oracle, change that answer, and keep every
-  later answer. That is `PFunctor.Supply.setAt` in
-  [`ToPolyFun/PFunctor/Supply.lean`](../../ToPolyFun/PFunctor/Supply.lean), instantiated as
-  `OracleSpec.QuerySeed.setAtIndex`. Contrast `takeAtIndex`, which *truncates*, so a rerun draws
-  fresh answers past the cut; `setAt_eq_addValues_drop` exhibits the restored tail as exactly what
-  truncation throws away.
-- **By value** — re-run on a different input. This is what coordinate-wise forking does
-  (`Function.update c j x` on the challenge vector), and it needs no seed machinery at all.
-
-Reaching for a seed when the resampling is by value is the most common way to over-engineer one of
-these developments.
+The table proof changes a challenge vector by value (`Function.update c j x`). The paper's
+extractor instead needs an operational account of rerunning a prover, fixing a prefix, and varying
+the selected challenge while preserving the appropriate surrounding randomness. No positional
+rewind primitive in this PR is consumed by the proofs, so that machinery is deliberately deferred
+until a concrete costed extractor specifies exactly which state must be retained.

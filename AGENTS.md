@@ -51,7 +51,6 @@ The repo also includes a first-class lattice cryptography library under `Lattice
 
 - `VCVio/`: generic oracle-computation framework, program logic, crypto abstractions, and generic reductions.
 - `ToMathlib/`: local Mathlib-facing utilities and lemmas intended to remain below the framework layer.
-- `ToPolyFun/`: structural material destined for PolyFun. Depends only on `PFunctor`/Mathlib (and `ToMathlib`), **never on `VCVio`**, so each file can be moved upstream unchanged. `OracleSpec.QuerySeed` is definitionally `PFunctor.Supply spec.toPFunctor`; the seed operations are that structure's, instantiated in `VCVio`.
 - `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
 - `HashSig/`: hash-based signatures — SLH-DSA (SPHINCS+, FIPS 205) proof-level specs and security. Peer of `LatticeCrypto/`; depends on `VCVio`/`ToMathlib` but nothing in those imports it back.
@@ -144,8 +143,7 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
 - Seeded (Bellare-Neven) forking lemma: `VCVio/CryptoFoundations/SeededFork.lean`
 - Replay-based forking lemma: `VCVio/CryptoFoundations/ReplayFork.lean`
-- Coordinate-wise forking (eprint 2023/846 §7): `VCVio/CryptoFoundations/CoordinateFork.lean`, `VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean`, over `VCVio/EvalDist/CoordinateFork.lean` and the combinatorics in `ToMathlib/Combinatorics/CoordinateWise.lean`
-- Positional answer supplies (the PolyFun-destined form of `QuerySeed`): `ToPolyFun/PFunctor/Supply.lean`
+- Coordinate-wise table forking and its analytic multi-round recurrence (ingredients from eprint 2023/846 §7): `VCVio/CryptoFoundations/CoordinateFork.lean`, `VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean`, over `VCVio/EvalDist/CoordinateFork.lean` and the combinatorics in `ToMathlib/Combinatorics/CoordinateWise.lean`
 - Fischlin transform: `VCVio/CryptoFoundations/Fischlin.lean`
 - Interaction spec and transcript: `PolyFun/Interaction/Basic/Spec.lean`
 - Two-party roles and strategies: `PolyFun/Interaction/TwoParty/Strategy.lean`
@@ -198,8 +196,8 @@ lake exe cache get && lake build
 ```
 
 CI runs the timed build on the non-test Lean libraries:
-`ToMathlib`, `ToPolyFun`, `VCVio`, `LatticeCrypto`, `Extern`, `HashSig`,
-`Examples`, and `VCVioWidgets`. The dormant `Interop` target remains excluded.
+`ToMathlib`, `VCVio`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
+and `VCVioWidgets`. The dormant `Interop` target remains excluded.
 The timing report parses per-file build times only for that same set.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.

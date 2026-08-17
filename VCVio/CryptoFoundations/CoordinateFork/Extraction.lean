@@ -8,25 +8,28 @@ module
 public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 
 /-!
-# Coordinate-wise special soundness implies knowledge soundness, Σ-protocol case
+# A fixed-statement extraction bound for coordinate-wise special soundness
 
-Lemma 2.31 of Fenzi–Moghaddas–Nguyen at `μ = 1`: composing the coordinate-wise rewinding extractor
-of `VCVio/CryptoFoundations/CoordinateFork.lean` with an `ℓ`-coordinate-wise `k`-special sound
-extractor yields a valid witness with probability at least `ε - ℓ(k-1)/|S|`, where `ε` is the
-prover's accepting probability.
+This module proves the fixed-statement, table-model extraction-success inequality underlying the
+`μ = 1` case of Lemma 2.31 of Fenzi–Moghaddas–Nguyen. Composing the coordinate-wise table fork with
+an extensional `ℓ`-coordinate-wise `k`-special sound extractor yields a valid witness with
+probability at least `ε - ℓ(k-1)/|S|`, where `ε` is the prover's accepting probability.
 
 `coordExtract` is the composite: fork on the prover's response table to obtain `ℓ(k-1)+1` accepting
 transcripts whose challenges are `SS(S, ℓ, k)`, then hand them to `ext`. Its success event is
 `∃ w, r = some w ∧ rel x w`, which no aborting run satisfies — so the bound is a statement about
 witnesses produced, not merely about the extractor terminating.
 
-The prover is modelled by its *response table* `P : ProbComp ((ι → S) → Resp)` after committing to
-`pc`: a malicious prover that has sent its first message is exactly a distribution over functions
-from challenges to responses. What is not modelled is the query count — see the module docstring of
-`CoordinateFork.lean` and `docs/agents/forking.md`.
+The input `P : ProbComp ((ι → S) → Resp)` is a distribution of complete response tables after the
+commitment `pc`. This can encode a responder whose coins are fixed before answering challenges,
+but no theorem here derives such a table distribution, or its cross-rewind coupling, from an
+interactive malicious prover. Query count is also absent; see `CoordinateFork.lean` and
+`docs/agents/forking.md`.
 
-Only `μ = 1` is reachable here. The multi-round case needs a transcript-producing multi-round
-extractor, which `CoordinateFork/MultiRound.lean` does not yet provide.
+This is not the paper's full knowledge-soundness theorem: it has no security-parameter
+quantification, joint bad-event experiment, oracle-query semantics, or expected-polynomial-time
+claim. Only `μ = 1` is represented. The multi-round case needs a transcript-producing multi-round
+extractor, which `CoordinateFork/MultiRound.lean` does not provide.
 -/
 
 @[expose] public section
@@ -46,12 +49,13 @@ variable {k : ℕ} {x : Stmt}
 apply the `k`-ary extractor to the accepting transcripts it returns. Aborts exactly when the fork
 does. -/
 noncomputable def coordExtract (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
-    (k : ℕ) (ext : Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) (pc : Commit)
+    (k : ℕ) (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
+    (pc : Commit)
     (P : ProbComp ((ι → S) → Resp)) : ProbComp (Option Wit) :=
   coordForkT (σ.verify x pc) k P >>= fun r =>
     match r with
     | none => pure none
-    | some (τ, X) => some <$> ext pc (transcripts τ X)
+    | some (τ, X) => some <$> ext x pc (transcripts τ X)
 
 /-- The event that the composite extractor produced a valid witness. Aborting runs fail it, so a
 bound on this event is not a bound on termination. -/
@@ -65,10 +69,10 @@ omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
 /-- On a good fork the composite extractor certainly produces a valid witness. -/
 theorem probEvent_extracted_eq_one_of_goodTranscripts
     {σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel}
-    {ext : Commit → Finset ((ι → S) × Resp) → ProbComp Wit} {pc : Commit}
+    {ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit} {pc : Commit}
     (hss : σ.CoordSpeciallySoundAt k ext x) {τ : (ι → S) → Resp} {X : Finset (ι → S)}
     (hgood : GoodTranscripts (σ.verify x pc) k (some (τ, X))) :
-    Pr[Extracted rel x | (some <$> ext pc (transcripts τ X) : ProbComp (Option Wit))] = 1 := by
+    Pr[Extracted rel x | (some <$> ext x pc (transcripts τ X) : ProbComp (Option Wit))] = 1 := by
   rw [goodTranscripts_some_iff] at hgood
   obtain ⟨hsound, hacc⟩ := hgood
   rw [probEvent_map]
@@ -79,15 +83,15 @@ theorem probEvent_extracted_eq_one_of_goodTranscripts
     exact hacc c h1
   · rwa [image_fst_transcripts]
 
-/-- **Lemma 2.31, Σ-protocol case.** Against an `ℓ`-coordinate-wise `k`-special sound extractor,
-the composite extractor returns a valid witness with probability at least `ε - ℓ(k-1)/|S|`, where
-`ε` is the probability that the prover's response is accepted on a uniform challenge.
+/-- The fixed-statement, table-model extraction-success inequality underlying the `μ = 1`
+Σ-protocol case of **Lemma 2.31**. Against an extensional `ℓ`-coordinate-wise `k`-special sound
+extractor, the composite returns a valid witness with probability at least `ε - ℓ(k-1)/|S|`,
+where `ε` is the probability that the prover's response is accepted on a uniform challenge.
 
-The knowledge error is therefore `ℓ(k-1)/|S|`. Not proved: the extractor's expected running time,
-the paper's other clause. -/
+This theorem alone is not a knowledge-soundness definition or an efficiency theorem. -/
 theorem sub_div_le_probEvent_extracted_coordExtract [Nonempty S]
     (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
-    (ext : Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
+    (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (hss : σ.CoordSpeciallySoundAt k ext x) (pc : Commit)
     (P : ProbComp ((ι → S) → Resp)) :
     acceptRatio (acceptTable (σ.verify x pc) P)

@@ -13,18 +13,20 @@ public import ToMathlib.Combinatorics.CoordinateWise
 # Monotone structures and the `t`-value of coordinate-wise special soundness
 
 Section 7.3 of Fenzi–Moghaddas–Nguyen, *Lattice-Based Polynomial Commitments* (eprint 2023/846):
-why the generic `Γ`-out-of-`C` extractor of Attema–Fehr–Rambaud cannot be used for coordinate-wise
-special soundness.
+why the published complexity guarantee for the generic `Γ`-out-of-`C` extractor of
+Attema–Fehr–Rambaud does not establish an efficient coordinate-wise extractor.
 
 Coordinate-wise `k`-special soundness is the special case of `Γ`-out-of-`C` special soundness at
-`C := S ^ ℓ` and `Γ := {C' : ∃ X ∈ SS(S, ℓ, k), X ⊆ C'}` (`coordStructure`). The generic extractor's
-expected runtime is `2 ^ tᵧ - 1`, where `tᵧ` is the `t`-value of Definition 7.4, so a lower bound on
-`tᵧ` is a lower bound on that runtime. The result here is
+`C := S ^ ℓ` and `Γ := {C' : ∃ X ∈ SS(S, ℓ, k), X ⊆ C'}` (`coordStructure`). The result here is
 
 `Fintype.card S ^ (Fintype.card ι - 1) + 1 ≤ tValue (coordStructure 2) ∅`
 
-(`pow_add_one_le_tValue`), exponential in `ℓ = Fintype.card ι` — whereas the extractor of §7 is
-linear in `ℓ`. The `2 ^ t - 1` runtime itself is Lemma 5 of [AFR23] and is cited, not proved here.
+(`pow_add_one_le_tValue`), exponential in `ℓ = Fintype.card ι` when `|S| > 1`.
+
+Lemma 5 of [AFR23] gives its generic extractor an expected query-count **upper bound** of
+`2 * tᵧ - 1`. Consequently this lower bound on `tᵧ` shows that substituting the available bound
+does not yield a polynomial guarantee. It does **not** prove a lower bound on the extractor's
+actual running time, and this file formalizes neither extractor nor cost semantics.
 
 ## Main definitions
 
@@ -325,10 +327,12 @@ theorem card_coordSlice (j₀ : ι) (d : S) :
     Fintype.card_subtype_compl, Fintype.card_subtype_eq]
 
 omit [DecidableEq ι] in
-/-- **Section 7.3.** The `t`-value of the coordinate-wise monotone structure is at least
-`|S| ^ (ℓ - 1) + 1`. Since the generic `Γ`-out-of-`C` extractor of [AFR23] runs in expected time
-`2 ^ tᵧ - 1`, its runtime is exponential in `ℓ`, whereas the extractor of §7 is linear in `ℓ`. That
-is why coordinate-wise special soundness needs its own extractor. -/
+/-- **Section 7.3, combinatorial lower bound.** The `t`-value of the coordinate-wise monotone
+structure is at least `|S| ^ (ℓ - 1) + 1`.
+
+Combined externally with [AFR23]'s expected-query upper bound `2 * tᵧ - 1`, this shows that the
+published generic bound does not certify polynomial complexity at these parameters. It does not
+give a lower bound on the generic extractor's actual runtime. -/
 theorem pow_add_one_le_tValue [Nontrivial S] [Nonempty ι] :
     Fintype.card S ^ (Fintype.card ι - 1) + 1 ≤
       tValue (coordStructure 2) (∅ : Finset (ι → S)) := by

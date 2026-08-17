@@ -42,9 +42,10 @@ def toySigma : SigmaProtocol (Fin 3) (Fin 3) Unit Unit SChal (Fin 3) (fun x w =>
   sim _ := pure ()
   extract _ r₁ _ _ := pure r₁
 
-/-- The toy extractor: return the response of any one transcript it is handed. -/
-noncomputable def toyExt : Unit → Finset (SChal × Fin 3) → ProbComp (Fin 3) :=
-  fun _ T => pure ((T.toList.head?).elim 0 Prod.snd)
+/-- The toy extractor: return the response of any one transcript it is handed. It accepts the
+statement explicitly, matching the paper's extractor interface, but does not need to inspect it. -/
+noncomputable def toyExt : Fin 3 → Unit → Finset (SChal × Fin 3) → ProbComp (Fin 3) :=
+  fun _ _ T => pure ((T.toList.head?).elim 0 Prod.snd)
 
 /-- The toy verifier rejects some transcripts, so accepting is a real constraint. -/
 example : toySigma.verify 0 () 0 1 = false := by decide
@@ -102,9 +103,9 @@ private theorem one_sub_two_thirds : (1 : ℝ≥0∞) - 2 / 3 = 1 / 3 := by
   rw [ENNReal.div_add_div_same, show (1 : ℝ≥0∞) + 2 = 3 by norm_num,
     ENNReal.div_self (by simp) (by finiteness)]
 
-/-- **Non-vacuity of the knowledge-soundness bound.** Against the always-accepting prover the
-composite extractor returns a *valid witness* with probability at least `1 - 2/3 = 1/3`, so the
-knowledge error `ℓ(k-1)/|S| = 2/3` leaves real slack at these parameters. -/
+/-- **Non-vacuity of the fixed-statement extraction bound.** Against the always-accepting prover,
+the composite returns a valid witness with probability at least `1 - 2/3 = 1/3`, so the table-model
+loss `ℓ(k-1)/|S| = 2/3` leaves real slack at these parameters. -/
 theorem one_third_le_probEvent_extracted (x : Fin 3) :
     (1 : ℝ≥0∞) / 3 ≤ Pr[Extracted (fun x w => x == w) x |
       toySigma.coordExtract 2 toyExt x () (toyProver x)] := by
@@ -115,11 +116,27 @@ theorem one_third_le_probEvent_extracted (x : Fin 3) :
     show (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 3) = 2 / 3 from by simp,
     one_sub_two_thirds]
 
-/-! ## The generic extractor's `t`-value -/
+/-! ## A deliberately wrong extractor -/
 
-/-- **Non-vacuity of the §7.3 lower bound.** At `ℓ = 2`, `|S| = 3` the generic extractor's `t`-value
-is at least `3 ^ 1 + 1 = 4`, so its `2 ^ t - 1` expected runtime is already 15 where the §7
-extractor takes `ℓ(k-1)+1 = 3` transcripts. The instance bundle is discharged at concrete types. -/
+/-- An extractor that always returns zero, ignoring both the statement and the transcripts. -/
+def badToyExt : Fin 3 → Unit → Finset (SChal × Fin 3) → ProbComp (Fin 3) :=
+  fun _ _ _ => pure 0
+
+/-- **Negative control.** The non-vacuous transcript hypotheses reject a bad extractor: at
+statement `1`, always returning witness `0` violates the relation. -/
+theorem not_toySigma_coordSpeciallySoundAt_bad :
+    ¬ toySigma.CoordSpeciallySoundAt 2 badToyExt 1 := by
+  rintro hbad
+  obtain ⟨T, hacc, hss⟩ := exists_accepting_toySigma 1
+  have hw : (0 : Fin 3) ∈ support (badToyExt 1 () T) := by simp [badToyExt]
+  have := hbad () T hacc hss 0 hw
+  simp at this
+
+/-! ## The generic structure's `t`-value -/
+
+/-- **Non-vacuity of the §7.3 combinatorial bound.** At `ℓ = 2`, `|S| = 3`, the relevant monotone
+structure's `t`-value is at least `3 ^ 1 + 1 = 4`. This checks only the structural lower bound; it
+does not assert a runtime lower bound for the generic extractor. -/
 theorem four_le_tValue :
     4 ≤ tValue (coordStructure 2) (∅ : Finset SChal) := by
   have h := pow_add_one_le_tValue (ι := Fin 2) (S := Fin 3)

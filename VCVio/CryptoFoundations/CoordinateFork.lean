@@ -10,12 +10,13 @@ public import VCVio.EvalDist.CoordinateFork
 public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
-# The coordinate-wise rewinding extractor
+# A coordinate-wise fork over pre-sampled response tables
 
-Lemma 7.1 of Fenzi–Moghaddas–Nguyen: for a challenge space `ι → S` and an adversary accepting a
-`ε` fraction of challenges, an extractor that resamples one coordinate at a time recovers a
-coordinate-wise `k`-special sound set of accepting challenges with probability at least
-`ε - ℓ * (k - 1) / N`, where `ℓ = Fintype.card ι` and `N = Fintype.card S`.
+This module proves the information-theoretic, pre-sampled-table inequality underlying Lemma 7.1 of
+Fenzi–Moghaddas–Nguyen. For a challenge space `ι → S` and a distribution of response tables with
+accepting ratio `ε`, it returns a coordinate-wise `k`-special sound set of accepting transcripts
+with probability at least `ε - ℓ * (k - 1) / N`, where `ℓ = Fintype.card ι` and
+`N = Fintype.card S`.
 
 Following `seededFork`, randomness comes first and the core is deterministic: `coordFork` samples
 an *acceptance table* `ρ : (ι → S) → Bool` and a challenge `c₀`, then runs `coordForkCore`. The
@@ -28,13 +29,14 @@ Prover responses enter as a second layer rather than a generalization of the cor
 table `τ : (ι → S) → Y` and a verifier `V : (ι → S) → Y → Bool` induce the acceptance table
 `fun c => V c (τ c)`, so `coordForkT` is `coordFork` composed with `acceptTable`
 (`coordFork_acceptTable`) and its output guarantee `GoodTranscripts` is the paper's output clause:
-`ℓ(k-1)+1` accepting *transcripts* whose challenges are `SS(S, ℓ, k)`.
+at the data level it contains `ℓ(k-1)+1` accepting transcripts whose challenges are
+`SS(S, ℓ, k)`.
 
-Collecting the replacements is a *total* operation here: which `k - 1` accepting values a
-coordinate contributes is irrelevant to both success and the output's special-soundness, so the
-extractor takes the first `k - 1` in enumeration order. Sampling that order uniformly is what buys
-the paper's expected query count of `ℓ * (k - 1) + 1`; it is not needed for the success bound and
-is left to the query-cost development.
+Collecting replacements is a *total* lookup here: which `k - 1` accepting values a coordinate
+contributes is irrelevant to the counting argument, so the core takes the first `k - 1` in
+enumeration order. This is not the paper's oracle algorithm: the entire table is already available,
+and neither query order, exhaustion, repeated execution, nor expected cost is represented. The
+paper's expected-query clause therefore remains unproved.
 -/
 
 @[expose] public section
@@ -55,12 +57,12 @@ keep the challenge accepting. -/
 def hitSet (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) : Finset S :=
   (Finset.univ.erase (c₀ j)).filter fun x => ρ (Function.update c₀ j x)
 
-/-- The `k - 1` replacements the extractor keeps at coordinate `j`. Any choice would do; this one
+/-- The `k - 1` replacements the table core keeps at coordinate `j`. Any choice would do; this one
 takes the first `k - 1` in enumeration order. -/
 noncomputable def replacementSet (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) : Finset S :=
   ((hitSet ρ c₀ j).toList.take (k - 1)).toFinset
 
-/-- The extractor's deterministic core: abort unless `c₀` accepts and every coordinate offers
+/-- The deterministic table core: abort unless `c₀` accepts and every coordinate offers
 `k - 1` accepting replacements, and otherwise return the challenge family they generate. -/
 noncomputable def coordForkCore (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
     Option (Finset (ι → S)) :=
@@ -157,10 +159,8 @@ theorem coordForkCore_success {X : Finset (ι → S)} (h : coordForkCore k ρ c�
     · exact accept_of_mem_replacementSet hu
   · exact absurd h (by simp)
 
-/-- The single-round output read as a one-round tree of challenges (Definition 2.30).
-
-This is the `μ = 1` case of Lemma 7.2's output clause. The general case needs a multi-round
-extractor that emits transcripts rather than a success probability, and is deferred. -/
+/-- The single-round output read as a one-round tree in the challenge-only projection of
+Definition 2.30. This says nothing about prover-message prefix consistency. -/
 theorem isChallengeTree_of_coordForkCore_success {X : Finset (ι → S)}
     (h : coordForkCore k ρ c₀ = some X) :
     IsChallengeTree k 1 (X.image fun c => [c]) :=
@@ -233,17 +233,15 @@ theorem probEvent_goodOutput_coordFork (k : ℕ) (D : ProbComp ((ι → S) → B
     rfl
   · exact goodOutput_of_mem_support hr hs
 
-/-- **Lemma 7.1** of Fenzi–Moghaddas–Nguyen, success probability and output guarantee in a single
-statement: with probability at least `ε - ℓ * (k - 1) / N` the extractor returns an `SS(S, ℓ, k)`
-set of `ℓ * (k - 1) + 1` challenges, all accepting under the sampled table.
+/-- The pre-sampled acceptance-table success and output inequality underlying **Lemma 7.1** of
+Fenzi–Moghaddas–Nguyen: with probability at least `ε - ℓ * (k - 1) / N`, the computation returns an
+`SS(S, ℓ, k)` set of `ℓ * (k - 1) + 1` challenges, all accepting under the sampled table.
 
-Because `GoodOutput` constrains the payload, the bound is sensitive to what the extractor actually
-returns — an extractor emitting `some (ρ, ∅)` would fail it.
+Because `GoodOutput` constrains the payload, the bound is sensitive to what the computation
+actually returns — one emitting `some (ρ, ∅)` would fail it.
 
-Not proved here: the paper's third clause, that the extractor makes an *expected* `ℓ(k-1)+1`
-queries. This object consumes a pre-sampled acceptance table rather than querying an adversary,
-so it establishes the information-theoretic content of the lemma and not its efficiency. See the
-module docstring. -/
+Not proved here: existence of the paper's oracle extractor or its expected-query clause. This
+object consumes a pre-sampled acceptance table rather than querying an adversary. -/
 theorem sub_div_le_probEvent_goodOutput_coordFork [Nonempty S] (k : ℕ)
     (D : ProbComp ((ι → S) → Bool)) :
     acceptRatio D - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
@@ -262,7 +260,7 @@ theorem goodOutput_some_iff (k : ℕ) (ρ' : (ι → S) → Bool) (X : Finset (�
 
 The paper's Lemma 7.1 outputs *pairs* `(cᵢ, yᵢ)` — challenge and prover response — where the
 acceptance table above records only whether a challenge is accepted. Recording the response
-instead, with a verification predicate, recovers the paper's output shape.
+instead, with a verification predicate, recovers that data shape in the table model.
 
 Nothing above needs generalizing: a response table `τ : (ι → S) → Y` together with a verifier
 `V : (ι → S) → Y → Bool` induces the acceptance table `fun c => V c (τ c)`, and at `Y := Bool`
@@ -298,9 +296,8 @@ theorem card_transcripts (τ : (ι → S) → Y) (X : Finset (ι → S)) :
     (transcripts τ X).card = X.card :=
   Finset.card_image_of_injective X fun c c' h => by simpa using congrArg Prod.fst h
 
-/-- What the extractor promises with responses in play: `ℓ(k-1)+1` transcripts, all accepted by
-the verifier, whose challenges form an `SS(S, ℓ, k)` set. This is the output clause of Lemma 7.1
-as the paper states it. -/
+/-- What the table computation promises with responses in play: `ℓ(k-1)+1` transcripts, all
+accepted by the verifier, whose challenges form an `SS(S, ℓ, k)` set. -/
 def GoodTranscripts (V : (ι → S) → Y → Bool) (k : ℕ)
     (r : Option (((ι → S) → Y) × Finset (ι → S))) : Prop :=
   ∃ τ X, r = some (τ, X) ∧ IsCoordSpecialSound k X ∧ ∀ p ∈ transcripts τ X, V p.1 p.2
@@ -334,8 +331,8 @@ theorem goodTranscripts_iff_goodOutput (V : (ι → S) → Y → Bool) (k : ℕ)
       rw [goodTranscripts_some_iff]
       exact (goodOutput_some_iff k _ X).symm
 
-/-- The extractor with responses: sample a response table and a challenge, run the core against
-the induced acceptance table, and return the table with the challenge set it found. -/
+/-- The table computation with responses: sample a response table and a challenge, run the core
+against the induced acceptance table, and return the table with the challenge set it found. -/
 noncomputable def coordForkT (V : (ι → S) → Y → Bool) (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
     ProbComp (Option (((ι → S) → Y) × Finset (ι → S))) := do
   let τ ← D
@@ -360,9 +357,9 @@ theorem probEvent_goodTranscripts_coordForkT (V : (ι → S) → Y → Bool) (k 
   rw [coordFork_acceptTable, probEvent_map]
   exact congrArg _ (funext fun r => propext (goodTranscripts_iff_goodOutput V k r))
 
-/-- **Lemma 7.1 with responses.** With probability at least `ε - ℓ(k-1)/N` the extractor returns
-`ℓ(k-1)+1` accepting *transcripts* whose challenges form an `SS(S, ℓ, k)` set — the paper's output
-clause verbatim. -/
+/-- The response-table form of the inequality underlying **Lemma 7.1**. With probability at least
+`ε - ℓ(k-1)/N`, it returns `ℓ(k-1)+1` accepting transcripts whose challenges form an
+`SS(S, ℓ, k)` set. -/
 theorem sub_div_le_probEvent_goodTranscripts_coordForkT [Nonempty S] (V : (ι → S) → Y → Bool)
     (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
     acceptRatio (acceptTable V D) - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
@@ -373,4 +370,3 @@ theorem sub_div_le_probEvent_goodTranscripts_coordForkT [Nonempty S] (V : (ι �
 end Transcripts
 
 end OracleComp
-

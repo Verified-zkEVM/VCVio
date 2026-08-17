@@ -21,11 +21,12 @@ per-entry masses, each of which is `p c + (1 - p c) = 1`.
 The two facts a caller needs are the pointwise weight (`bernoulliTable_apply`, definitionally the
 product) and the marginal of a single entry (`sum_filter_bernoulliTable`).
 
-A coordinate-wise rewinding bound holds pointwise in the table, so *averaging* it needs only the
-marginals and no independence. Choosing this particular coupling is nonetheless a modelling
-decision, not a consequence: the averaged quantity depends on the whole joint distribution, and
-independence is what makes it the success probability of an extractor whose calls use fresh
-randomness. `sum_filter_bernoulliTable` is where the product structure is actually used.
+A coordinate-wise table bound holds pointwise, so *averaging* it needs only the marginals and no
+independence. Choosing this particular coupling is nonetheless a modelling decision, not a
+consequence: the averaged quantity depends on the whole joint distribution. Independent entries
+are the coupling used by the analytic multi-round recurrence; this file does not connect them to
+executions of an oracle extractor. `sum_filter_bernoulliTable` is where the product structure is
+actually used.
 -/
 
 @[expose] public section

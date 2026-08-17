@@ -27,8 +27,8 @@ PROGRAM_LOGIC_DIR = REPO_ROOT / "VCVio" / "ProgramLogic"
 VCVIO_DIR = REPO_ROOT / "VCVio"
 
 LEAN_PATH_RE = re.compile(
-    r'`(?:VCVio|Examples|ToMathlib|ToPolyFun|LibSodium)/[A-Za-z0-9_/]+\.lean`'
-    r'|(?:VCVio|Examples|ToMathlib|ToPolyFun|LibSodium)/[A-Za-z0-9_/]+\.lean'
+    r'`(?:VCVio|Examples|ToMathlib|LibSodium)/[A-Za-z0-9_/]+\.lean`'
+    r'|(?:VCVio|Examples|ToMathlib|LibSodium)/[A-Za-z0-9_/]+\.lean'
 )
 
 TACTIC_MACRO_RE = re.compile(r'(?:macro|syntax)\s+"([\w\']+)".*:\s*tactic')

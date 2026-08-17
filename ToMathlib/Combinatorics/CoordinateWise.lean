@@ -23,9 +23,8 @@ central vector having `k - 1` neighbours in **every** coordinate, and has exactl
 `ℓ * (k - 1) + 1` members the paper's `SS(S, ℓ, k)` prescribes.
 
 `coordFamily` builds such a set from a centre and a family of per-coordinate replacement values,
-which is the shape a coordinate-wise rewinding extractor produces: run once to obtain the centre,
-then resample each coordinate `k - 1` times. `card_coordFamily` records that the result has
-exactly `Fintype.card ι * (k - 1) + 1` elements, and `isCoordSpecialSound_iff_of_unique` records
+which is the output shape targeted by coordinate-wise rewinding. `card_coordFamily` records its
+exact size `Fintype.card ι * (k - 1) + 1`, and `isCoordSpecialSound_iff_of_unique` records
 that a single coordinate recovers ordinary `k`-special soundness.
 
 ## Main definitions
@@ -40,17 +39,16 @@ that a single coordinate recovers ordinary `k`-special soundness.
 
 ## Main results
 
-Together these are the combinatorial content of Lemma 7.1 of Fenzi–Moghaddas–Nguyen. A
-coordinate-wise rewinding extractor samples a challenge `c`, checks that it accepts, and resamples
-each coordinate until `k - 1` further accepting values are found; it succeeds exactly when `c`
-accepts and every column of `c` holds at least `k` accepting values — a condition on `c` alone,
-since which orderings the resampling loop tries affects only its running time.
+Together these are the combinatorial ingredients used in Lemma 7.1 of
+Fenzi–Moghaddas–Nguyen. In the pre-sampled-table model, success means that `c` accepts and every
+column of `c` holds at least `k` accepting values. The operational resampling loop and its running
+time are outside this file.
 
-* `CoordinateWise.sub_div_le_div_card_filter` — the success condition holds for at least an
+* `CoordinateWise.sub_div_le_div_card_filter` — the table success condition holds for at least an
   `ε - ℓ * (k - 1) / N` fraction of challenges, where `ε` is the accepting fraction. This is the
-  whole probabilistic content of Lemma 7.1, as a ratio of cardinalities.
+  counting inequality used in Lemma 7.1; it does not construct or cost an oracle extractor.
 * `CoordinateWise.isCoordSpecialSound_coordFamily` and `CoordinateWise.card_coordFamily` — what
-  the extractor produces on success is an `SS(S, ℓ, k)` set.
+  the table core's candidate output must satisfy to be an `SS(S, ℓ, k)` set.
 * `CoordinateWise.le_card_of_hasCoordNeighbours` — the paper's cardinality is already forced as a
   lower bound by the neighbour condition alone.
 
@@ -152,7 +150,7 @@ theorem le_card_of_hasCoordNeighbours (h : HasCoordNeighbours k X) :
   omega
 
 /-- The challenge set centred at `e` whose coordinate-`j` neighbours replace `e j` by each value
-of `A j`. This is exactly what a coordinate-wise rewinding extractor collects. -/
+of `A j`. This is the output shape targeted by coordinate-wise rewinding. -/
 def coordFamily (e : ι → S) (A : ι → Finset S) : Finset (ι → S) :=
   insert e (Finset.univ.biUnion fun j => (A j).image fun u => Function.update e j u)
 
@@ -187,7 +185,7 @@ theorem pairwiseDisjoint_neighbours (hA : ∀ j, e j ∉ A j) :
     rwa [Function.update_of_ne hjj' _ _, Function.update_self] at h
   exact hA j (by rw [key]; exact hu)
 
-/-- The extractor's output has exactly `ℓ * (k - 1) + 1` challenges. -/
+/-- A coordinate family has exactly `ℓ * (k - 1) + 1` challenges. -/
 theorem card_coordFamily (hA : ∀ j, e j ∉ A j) (hcard : ∀ j, (A j).card = k - 1) :
     (coordFamily e A).card = Fintype.card ι * (k - 1) + 1 := by
   rw [coordFamily, Finset.card_insert_of_notMem (centre_notMem_biUnion hA),
@@ -369,7 +367,7 @@ theorem mem_filter_coord_self (hacc : accept c) (j : ι) :
 
 
 omit [DecidableEq S] in
-/-- The union bound of Lemma 7.1, as a counting inequality: scaled by `Fintype.card S`, the
+/-- The union-bound counting inequality used in Lemma 7.1: scaled by `Fintype.card S`, the
 accepting challenges that fail somewhere exceed those that succeed everywhere by at most
 `ℓ * (k - 1) * |ι → S|`.
 
@@ -421,7 +419,7 @@ theorem card_mul_card_filter_accept_le [Nonempty S] (k : ℕ) :
         Finset.card_univ]
 
 omit [DecidableEq S] in
-/-- The success bound of Lemma 7.1, as a ratio of cardinalities.
+/-- The table success bound used in Lemma 7.1, as a ratio of cardinalities.
 
 Writing `ε` for the fraction of accepting challenges and `N = Fintype.card S`, the fraction of
 challenges that both accept and have every column thick is at least `ε - ℓ * (k - 1) / N`.

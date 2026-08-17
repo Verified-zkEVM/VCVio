@@ -19,9 +19,9 @@ multi-round extractor's induction consumes: peeling one round exposes the root c
 together with a level-`(μ - 1)` tree under each of its members. `card_of_isChallengeTree` records
 that a tree holds exactly `(ℓ * (k - 1) + 1) ^ μ` transcripts.
 
-This is Definition 2.30 of Fenzi–Moghaddas–Nguyen, with the prover messages left implicit: only
-the challenge structure is combinatorial, and the transcripts carrying it are supplied by the
-protocol.
+This is only the recursively branching **challenge projection** of Definition 2.30 of
+Fenzi–Moghaddas–Nguyen. Prover messages, their prefix consistency, acceptance, and the connection
+to an executed protocol are not represented by this type.
 -/
 
 @[expose] public section
@@ -61,8 +61,8 @@ theorem isChallengeTree_biUnion {μ : ℕ} {children : Finset (ι → S)}
     IsChallengeTree k (μ + 1) (children.biUnion fun c => (sub c).image fun t => c :: t) :=
   ⟨children, sub, hss, hsub, rfl⟩
 
-/-- A coordinate-wise `k`-special sound challenge set is exactly a one-round tree of challenges:
-its members, read as single-round transcripts, satisfy Definition 2.30 at `μ = 1`. -/
+/-- A coordinate-wise `k`-special sound challenge set is exactly a one-round tree in this
+challenge-only projection. -/
 theorem isChallengeTree_one {children : Finset (ι → S)} (hss : IsCoordSpecialSound k children) :
     IsChallengeTree k 1 (children.image fun c => [c]) := by
   have h := isChallengeTree_biUnion (μ := 0) (sub := fun _ => ({[]} : Finset (List (ι → S))))
