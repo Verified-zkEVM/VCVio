@@ -65,6 +65,22 @@ def usefulElements (Γ : Finset C → Prop) (T : Finset C) : Set C :=
 omit [Finite C] in
 theorem notMem_of_mem_usefulElements {c : C} (h : c ∈ usefulElements Γ T) : c ∉ T := h.1
 
+omit [Finite C] in
+/-- A useful element belongs to every witnessing `Γ`-set: otherwise removing it would change
+nothing. -/
+theorem mem_of_witness {c : C} {A : Finset C} (hA : Γ A) (herase : ¬ Γ (A.erase c)) : c ∈ A := by
+  by_contra hc
+  exact herase (by rwa [Finset.erase_eq_of_notMem hc])
+
+omit [Finite C] in
+/-- The paper writes `T ⊂ A` in Definition 7.3, this file writes `T ⊆ A`; the two agree, because a
+useful element lies in the witness and outside `T`. -/
+theorem mem_usefulElements_iff {c : C} :
+    c ∈ usefulElements Γ T ↔ c ∉ T ∧ ∃ A : Finset C, Γ A ∧ T ⊂ A ∧ ¬ Γ (A.erase c) := by
+  refine ⟨fun ⟨hcT, A, hA, hTA, herase⟩ => ⟨hcT, A, hA, ⟨hTA, fun hAT => hcT ?_⟩, herase⟩,
+    fun ⟨hcT, A, hA, hTA, herase⟩ => ⟨hcT, A, hA, hTA.subset, herase⟩⟩
+  exact hAT (mem_of_witness hA herase)
+
 /-- The witness sequences of **Definition 7.4**: each entry is useful given the starting set
 together with the entries before it. -/
 def IsUsefulSequence (Γ : Finset C → Prop) : Finset C → List C → Prop
@@ -107,6 +123,11 @@ noncomputable def tValue (Γ : Finset C → Prop) (T : Finset C) : ℕ :=
 theorem bddAbove_useful_lengths :
     BddAbove {t | ∃ cs : List C, cs.length = t ∧ IsUsefulSequence Γ T cs} :=
   ⟨Nat.card C, fun _ ⟨_, hlen, h⟩ => hlen ▸ length_le_card_of_isUsefulSequence h⟩
+
+/-- The `t`-value is finite, so the lower bound below is a statement with content. -/
+theorem tValue_le_card : tValue Γ T ≤ Nat.card C :=
+  csSup_le ⟨0, [], rfl, trivial⟩ fun _ ⟨_, hlen, h⟩ =>
+    hlen ▸ length_le_card_of_isUsefulSequence h
 
 /-- Every useful sequence bounds the `t`-value from below. -/
 theorem length_le_tValue (h : IsUsefulSequence Γ T cs) : cs.length ≤ tValue Γ T :=
