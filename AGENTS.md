@@ -215,7 +215,7 @@ The baseline is an allowlist for `sorryAx` debt only. Native trust
 zero-debt rule: anything outside the explicit `grandfatheredNativeTrust` list in
 `scripts/AxiomSweep.lean` fails `--check` and cannot be greened by editing the
 baseline, since accepting it would widen the trusted computing base. The
-`AxiomSweepTestFixtures` library carries synthetic taint for the tool's own
+`VCVioAxiomSweepTestFixtures` library carries synthetic taint for the tool's own
 tests and is deliberately excluded from every aggregate.
 
 After adding new `.lean` files: `./scripts/update-lib.sh`

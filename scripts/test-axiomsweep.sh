@@ -41,11 +41,11 @@ UNIMPORTED_REPORT="$FIXTURE_TMP/unimported.json"
 printf '{"sorry": [], "nonstandard": []}\n' >"$EMPTY_BASELINE"
 printf '{not-json}\n' >"$INVALID_BASELINE"
 
-lake build AxiomSweepTestFixtures
-lake exe axiomsweep --root AxiomSweepTestFixtures.Clean --out "$CLEAN_REPORT"
-lake exe axiomsweep --root AxiomSweepTestFixtures.Tainted --out "$TAINTED_REPORT"
-lake exe axiomsweep --root AxiomSweepTestFixtures.Tainted --out "$TAINTED_REPORT_2"
-lake exe axiomsweep --root AxiomSweepTestFixtures.Unimported --out "$UNIMPORTED_REPORT"
+lake build VCVioAxiomSweepTestFixtures
+lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Clean --out "$CLEAN_REPORT"
+lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Tainted --out "$TAINTED_REPORT"
+lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Tainted --out "$TAINTED_REPORT_2"
+lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Unimported --out "$UNIMPORTED_REPORT"
 
 # The sweep must be deterministic: same build, byte-identical report.
 cmp "$TAINTED_REPORT" "$TAINTED_REPORT_2"
@@ -70,7 +70,7 @@ unimported_entries = {entry["name"]: entry for entry in unimported["declarations
 assert clean_entries
 assert all(not entry["axioms"] for entry in clean_entries.values())
 
-prefix = "AxiomSweepTestFixtures.Tainted."
+prefix = "VCVioAxiomSweepTestFixtures.Tainted."
 
 # `sorryAx` reached directly, and through an intervening definition.
 assert "sorryAx" in tainted_entries[prefix + "directSorry"]["axioms"]
@@ -97,7 +97,7 @@ assert prefix + "Collision._native.native_decide.ax_x_34" in all_axioms
 assert prefix + "Collision._native.native_decide.ax_12_34.extra" in all_axioms
 
 # A file no root transitively imports is invisible to any environment-walking census.
-hidden = "AxiomSweepTestFixtures.Unimported.hiddenSorry"
+hidden = "VCVioAxiomSweepTestFixtures.Unimported.hiddenSorry"
 assert hidden not in tainted_entries
 assert hidden in unimported_entries
 assert "sorryAx" in unimported_entries[hidden]["axioms"]
@@ -122,36 +122,36 @@ PY
 # --- gate directions -------------------------------------------------------------------
 
 expect_status 0 clean-check \
-  lake exe axiomsweep --root AxiomSweepTestFixtures.Clean \
+  lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Clean \
     --check --baseline "$EMPTY_BASELINE"
 expect_status 1 uncovered-taint \
-  lake exe axiomsweep --root AxiomSweepTestFixtures.Tainted \
+  lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Tainted \
     --check --baseline "$EMPTY_BASELINE"
 
 # Full coverage still fails: the fixtures mint `._native.` axioms outside
 # `grandfatheredNativeTrust`, and no baseline edit may green those.
 expect_status 1 native-trust-floor \
-  lake exe axiomsweep --root AxiomSweepTestFixtures.Tainted \
+  lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Tainted \
     --check --baseline "$COVERING_BASELINE"
 grep -q "never-allowlistable" "$FIXTURE_TMP/native-trust-floor.log"
 
 # --- infrastructure failures must never read as a taint verdict ------------------------
 
 expect_status 2 missing-baseline \
-  lake exe axiomsweep --root AxiomSweepTestFixtures.Clean \
+  lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Clean \
     --check --baseline "$MISSING_BASELINE"
 expect_status 2 invalid-baseline \
-  lake exe axiomsweep --root AxiomSweepTestFixtures.Clean \
+  lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Clean \
     --check --baseline "$INVALID_BASELINE"
 expect_status 2 conflicting-flags \
-  lake exe axiomsweep --root AxiomSweepTestFixtures.Clean \
+  lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Clean \
     --check --update-baseline --baseline "$EMPTY_BASELINE"
 expect_status 2 unknown-flag \
   lake exe axiomsweep --bogus
 expect_status 2 bad-root \
   lake exe axiomsweep --root NoSuchModule --check --baseline "$EMPTY_BASELINE"
 expect_status 2 unwritable-out \
-  lake exe axiomsweep --root AxiomSweepTestFixtures.Clean \
+  lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Clean \
     --out "$FIXTURE_TMP/no-such-dir/report.json"
 
 # --- baseline writing -------------------------------------------------------------------
@@ -159,7 +159,7 @@ expect_status 2 unwritable-out \
 # Shrinking is allowed once the debt is gone.
 cp "$COVERING_BASELINE" "$FIXTURE_TMP/shrink.json"
 expect_status 0 shrink-baseline \
-  lake exe axiomsweep --root AxiomSweepTestFixtures.Clean \
+  lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Clean \
     --update-baseline --baseline "$FIXTURE_TMP/shrink.json"
 python3 -c "
 import json,sys
@@ -171,7 +171,7 @@ assert b['sorry'] == [] and b['nonstandard'] == [], b
 cp "$EMPTY_BASELINE" "$FIXTURE_TMP/growth.json"
 cp "$FIXTURE_TMP/growth.json" "$FIXTURE_TMP/growth-before.json"
 expect_status 1 reject-native-trust-growth \
-  lake exe axiomsweep --root AxiomSweepTestFixtures.Tainted \
+  lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Tainted \
     --update-baseline --baseline "$FIXTURE_TMP/growth.json"
 cmp "$FIXTURE_TMP/growth-before.json" "$FIXTURE_TMP/growth.json"
 

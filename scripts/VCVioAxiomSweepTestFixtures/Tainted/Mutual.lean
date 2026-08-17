@@ -9,7 +9,7 @@ module
 
 public section
 
-namespace AxiomSweepTestFixtures.Tainted
+namespace VCVioAxiomSweepTestFixtures.Tainted
 
 axiom mutualAxiom : True
 
@@ -22,4 +22,4 @@ mutual
     | fromLeft : MutualLeft → MutualRight
 end
 
-end AxiomSweepTestFixtures.Tainted
+end VCVioAxiomSweepTestFixtures.Tainted

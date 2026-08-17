@@ -9,10 +9,10 @@ module
 
 public section
 
-namespace AxiomSweepTestFixtures.Tainted
+namespace VCVioAxiomSweepTestFixtures.Tainted
 
 opaque directSorry : Nat := sorryAx Nat true
 
 def transitiveSorry : Nat := directSorry
 
-end AxiomSweepTestFixtures.Tainted
+end VCVioAxiomSweepTestFixtures.Tainted

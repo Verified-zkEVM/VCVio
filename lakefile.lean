@@ -388,6 +388,6 @@ kernel taint: `sorryAx` reached directly and transitively, an axiom occurring on
 type, a mutual-inductive family whose taint crosses the cycle, and names that imitate the
 generated `._native.` suffix. Kept out of every aggregate so the taint stays quarantined
 from the swept libraries. -/
-lean_lib AxiomSweepTestFixtures where
+lean_lib VCVioAxiomSweepTestFixtures where
   srcDir := "scripts"
-  globs := #[.submodules `AxiomSweepTestFixtures]
+  globs := #[.submodules `VCVioAxiomSweepTestFixtures]

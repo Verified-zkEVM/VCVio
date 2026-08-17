@@ -9,13 +9,13 @@ module
 
 public section
 
-namespace AxiomSweepTestFixtures.Tainted.Generated._native.native_decide
+namespace VCVioAxiomSweepTestFixtures.Tainted.Generated._native.native_decide
 
 axiom ax_12_34 : True
 
-end AxiomSweepTestFixtures.Tainted.Generated._native.native_decide
+end VCVioAxiomSweepTestFixtures.Tainted.Generated._native.native_decide
 
-namespace AxiomSweepTestFixtures.Tainted.Collision._native.native_decide
+namespace VCVioAxiomSweepTestFixtures.Tainted.Collision._native.native_decide
 
 axiom ax_12_extra : True
 axiom ax_x_34 : True
@@ -26,9 +26,9 @@ axiom extra : True
 
 end ax_12_34
 
-end AxiomSweepTestFixtures.Tainted.Collision._native.native_decide
+end VCVioAxiomSweepTestFixtures.Tainted.Collision._native.native_decide
 
-namespace AxiomSweepTestFixtures.Tainted
+namespace VCVioAxiomSweepTestFixtures.Tainted
 
 theorem generatedNativeUser : True := Generated._native.native_decide.ax_12_34
 
@@ -39,4 +39,4 @@ theorem collisionNondecimalUser : True := Collision._native.native_decide.ax_x_3
 theorem collisionExtraSegmentUser : True :=
   Collision._native.native_decide.ax_12_34.extra
 
-end AxiomSweepTestFixtures.Tainted
+end VCVioAxiomSweepTestFixtures.Tainted

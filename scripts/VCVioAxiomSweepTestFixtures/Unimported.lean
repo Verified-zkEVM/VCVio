@@ -9,8 +9,8 @@ module
 
 public section
 
-namespace AxiomSweepTestFixtures.Unimported
+namespace VCVioAxiomSweepTestFixtures.Unimported
 
 opaque hiddenSorry : Nat := sorryAx Nat true
 
-end AxiomSweepTestFixtures.Unimported
+end VCVioAxiomSweepTestFixtures.Unimported

@@ -55,7 +55,7 @@ explicit `grandfatheredNativeTrust` list, so no baseline edit can widen the trus
 computing base. Exit codes are a contract with CI — `1` is a taint verdict, anything else
 an infrastructure failure — which is why `main` traps uncaught exceptions into `2`.
 
-`scripts/test-axiomsweep.sh` exercises all of this against the `AxiomSweepTestFixtures`
+`scripts/test-axiomsweep.sh` exercises all of this against the `VCVioAxiomSweepTestFixtures`
 library, whose fixtures carry synthetic taint of each shape this file reasons about.
 -/
 
