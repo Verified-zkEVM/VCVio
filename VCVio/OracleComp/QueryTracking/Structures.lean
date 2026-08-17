@@ -21,9 +21,9 @@ simulation oracles and implementation transformers defined in the same directory
 
 open ENNReal OracleSpec OracleComp
 
--- Query logs are definitionally PolyFun traces for an oracle specification.
-set_option allowUnsafeReducibility true in
-attribute [local reducible] OracleSpec.toPFunctor PFunctor.Idx
+/- Query logs are definitionally PolyFun traces for an oracle specification. Lean 4.33
+needs these reducers at implicit transparency when specializing that generic API. -/
+attribute [local implicit_reducible] PFunctor.Idx FreeMonoid
 
 universe u v w
 
@@ -354,6 +354,12 @@ section countQ
 /-- Count the number of queries with inputs satisfying `p`. -/
 def countQ (log : QueryLog spec) (p : spec.Domain → Prop) [DecidablePred p] : ℕ :=
   (log.getQ p).length
+
+@[simp]
+lemma countQ_cons (entry : (t : spec.Domain) × spec.Range t) (log : QueryLog spec)
+    (p : spec.Domain → Prop) [DecidablePred p] :
+    countQ (entry :: log) p = if p entry.1 then countQ log p + 1 else countQ log p := by
+  by_cases hp : p entry.1 <;> simp [countQ, getQ_cons, hp, Nat.add_comm]
 
 @[simp]
 lemma countQ_singleton (t : spec.Domain) (u : spec.Range t)

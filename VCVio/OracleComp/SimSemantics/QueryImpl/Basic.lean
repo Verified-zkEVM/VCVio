@@ -51,6 +51,26 @@ instance [spec.Inhabited] [Pure m] : Inhabited (QueryImpl spec m) where
 @[ext] lemma ext {so so' : QueryImpl spec m}
     (h : ∀ x : spec.Domain, so x = so' x) : so = so' := funext h
 
+/-- Restrict an implementation of a sum specification to its left component. -/
+def restrictLeft {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    (impl : QueryImpl (spec₁ + spec₂) m) : QueryImpl spec₁ m :=
+  fun t ↦ impl (Sum.inl t)
+
+/-- Restrict an implementation of a sum specification to its right component. -/
+def restrictRight {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    (impl : QueryImpl (spec₁ + spec₂) m) : QueryImpl spec₂ m :=
+  fun t ↦ impl (Sum.inr t)
+
+/-- Applying a left restriction is the original implementation on a left input. -/
+lemma restrictLeft_apply {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    (impl : QueryImpl (spec₁ + spec₂) m) (t : spec₁.Domain) :
+    impl.restrictLeft t = impl (Sum.inl t) := rfl
+
+/-- Applying a right restriction is the original implementation on a right input. -/
+lemma restrictRight_apply {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    (impl : QueryImpl (spec₁ + spec₂) m) (t : spec₂.Domain) :
+    impl.restrictRight t = impl (Sum.inr t) := rfl
+ 
 /-- View a concrete query implementation as query capability in the same monad. This is useful
 when instantiating a generic `HasQuery` construction directly inside an analysis monad such as
 `StateT σ ProbComp` or `WriterT ω (OracleComp spec)`. -/

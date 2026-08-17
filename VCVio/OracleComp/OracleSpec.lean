@@ -90,7 +90,8 @@ section add
 /-- `spec₁ + spec₂` specifies access to oracles in both `spec₁` and `spec₂`.
 The input is split as a sum type of the two original input sets.
 This corresponds exactly to addition of the corresponding `PFunctor`. -/
-instance {ι ι'} : HAdd (OracleSpec ι) (OracleSpec ι') (OracleSpec (ι ⊕ ι')) where
+@[implicit_reducible] instance {ι ι'} :
+    HAdd (OracleSpec ι) (OracleSpec ι') (OracleSpec (ι ⊕ ι')) where
   hAdd spec spec' := Sum.elim spec spec'
 
 lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
