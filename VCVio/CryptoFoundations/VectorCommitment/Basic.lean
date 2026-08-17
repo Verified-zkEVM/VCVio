@@ -227,3 +227,60 @@ theorem BatchPositionBinding.committedValue_eq [Inhabited α]
 end Binding
 
 end BatchOpeningVectorCommitment
+
+namespace VectorCommitment
+
+variable {m : Type → Type} [Monad m] [LawfulMonad m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+  {ι α Commit State Opening : Type}
+
+/-- `toBatchOpening` preserves perfect correctness: an honest batch opening is the list of the
+individual honest openings keyed by their positions, so each claimed `(position, value)` pair is
+matched by an entry whose opening verifies by single-position correctness. Instances therefore
+only ever need to prove correctness of their single-position opening. -/
+theorem PerfectlyCorrect.toBatchOpening [DecidableEq ι]
+    {vc : VectorCommitment m ι α Commit State Opening}
+    (h : vc.PerfectlyCorrect) : vc.toBatchOpening.PerfectlyCorrect := by
+  intro data is c st hcst op hop
+  -- An honest batch opening lists the requested keys in order, each with an honest opening.
+  have hsupp : ∀ (is : List ι) (op : List (ι × Opening)),
+      op ∈ support (is.mapM fun i => do
+          let o ← vc.openAt st i
+          return (i, o)) →
+        op.map Prod.fst = is ∧ ∀ entry ∈ op, entry.2 ∈ support (vc.openAt st entry.1) := by
+    intro is
+    induction is with
+    | nil =>
+      intro op hop
+      simp only [List.mapM_nil, support_pure, Set.mem_singleton_iff] at hop
+      subst hop
+      exact ⟨rfl, by simp⟩
+    | cons a as ih =>
+      intro op hop
+      simp only [List.mapM_cons, mem_support_bind_iff, support_pure,
+        Set.mem_singleton_iff] at hop
+      obtain ⟨x, ⟨o, ho, rfl⟩, xs, hxs, rfl⟩ := hop
+      obtain ⟨hkeys, hentries⟩ := ih xs hxs
+      refine ⟨by simp [hkeys], fun entry hentry => ?_⟩
+      rcases List.mem_cons.1 hentry with rfl | hentry
+      · exact ho
+      · exact hentries entry hentry
+  simp only [VectorCommitment.toBatchOpening] at hop
+  obtain ⟨hkeys, hentries⟩ := hsupp is op hop
+  simp only [VectorCommitment.toBatchOpening, List.all_eq_true, List.mem_map,
+    forall_exists_index, and_imp]
+  rintro _ i hi rfl
+  dsimp only
+  -- Look up position `i` in the batch opening; it is present because `i ∈ is`, the key list.
+  rcases hfind : op.find? (fun entry => decide (entry.1 = i)) with _ | entry
+  · rw [List.find?_eq_none] at hfind
+    rw [← hkeys] at hi
+    obtain ⟨entry, hentry, hkey⟩ := List.mem_map.1 hi
+    exact ((hfind entry hentry) (by simp [hkey])).elim
+  · have hkey : entry.1 = i := by simpa using List.find?_some hfind
+    have hopen := hentries entry (List.mem_of_find?_eq_some hfind)
+    rw [hkey] at hopen
+    rw [hfind]
+    exact h data i c st hcst entry.2 hopen
+
+end VectorCommitment

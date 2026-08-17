@@ -85,12 +85,6 @@ def naiveBatchOpenMerkleTree {ι : Type} {m : Type → Type} [Monad m]
 
 /-! ### Correctness -/
 
-/-- Mapping a pure-valued effect over a list collapses to a pure mapped list. -/
-theorem mapM_pure_map {m : Type → Type} [Monad m] [LawfulMonad m] {β γ : Type} (g : β → γ) :
-    ∀ is : List β, (is.mapM fun i => (pure (g i) : m γ)) = pure (is.map g)
-  | [] => by simp
-  | a :: as => by simp [List.mapM_cons, mapM_pure_map g as]
-
 /-- Eta for `List.Vector`: rebuilding the subtype from `v.toList` returns `v`. -/
 @[simp]
 theorem vector_mk_toList {n : ℕ} (v : List.Vector α n) (h : v.toList.length = n) :
@@ -152,48 +146,14 @@ theorem vectorCommitment_commit {ι : Type} {m : Type → Type} [Monad m] [Decid
       pure (let t := buildMerkleTreeWithHash (leafDataOfFn s fun i => data (e.symm i)) hashFn;
         (t.getRootValue, t)) := rfl
 
-/-- **Perfect correctness of the naive batch-opening Merkle commitment.** A batch opening of any
-list of positions verifies the committed claims. Since the batch opening is just the list of the
-individual authentication paths, this reduces to `vectorCommitment_perfectlyCorrect`. -/
+/-- **Perfect correctness of the naive batch-opening Merkle commitment**: immediate from
+single-position correctness, since `VectorCommitment.toBatchOpening` preserves it
+(`VectorCommitment.PerfectlyCorrect.toBatchOpening`). -/
 theorem naiveBatchOpenMerkleTree_perfectlyCorrect {ι : Type} {m : Type → Type}
     [Monad m] [LawfulMonad m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
     [DecidableEq α] [DecidableEq ι]
     (s : Skeleton) (e : ι ≃ SkeletonLeafIndex s) (hashFn : α → α → α) :
-    (naiveBatchOpenMerkleTree (m := m) s e hashFn).PerfectlyCorrect := by
-  have hvc := vectorCommitment_perfectlyCorrect (m := m) s e hashFn
-  intro data is c st hcst op hop
-  simp only [naiveBatchOpenMerkleTree, VectorCommitment.toBatchOpening, vectorCommitment_commit,
-    support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hcst
-  obtain ⟨rfl, rfl⟩ := hcst
-  set tree := buildMerkleTreeWithHash (leafDataOfFn s fun i => data (e.symm i)) hashFn with htree
-  simp only [naiveBatchOpenMerkleTree, VectorCommitment.toBatchOpening, vectorCommitment_openAt,
-    bind_pure_comp, map_pure, mapM_pure_map, support_pure, Set.mem_singleton_iff] at hop
-  subst hop
-  -- The batch opening is `is.map g`, with `g i` the position paired with its authentication path.
-  set g : ι → ι × List α := fun i => (i, (generateProof tree (e i)).toList) with hg
-  -- The honestly built commitment/state, used to invoke single-position correctness.
-  have hc : (tree.getRootValue, tree) ∈
-      support ((vectorCommitment (m := m) s e hashFn).commit data) := by
-    simp only [vectorCommitment_commit, htree, support_pure, Set.mem_singleton_iff]
-  -- Each opened position verifies its committed value against the root, via `hvc`.
-  have hverify : ∀ i, (vectorCommitment (m := m) s e hashFn).verifyOpen tree.getRootValue i
-      (data i) (generateProof tree (e i)).toList = true := by
-    intro i
-    have ho : (generateProof tree (e i)).toList ∈
-        support ((vectorCommitment (m := m) s e hashFn).openAt tree i) := by
-      simp only [vectorCommitment_openAt, support_pure, Set.mem_singleton_iff]
-    exact hvc data i tree.getRootValue tree hc _ ho
-  simp only [naiveBatchOpenMerkleTree, VectorCommitment.toBatchOpening,
-    List.all_eq_true, List.mem_map, forall_exists_index, and_imp]
-  rintro _ i hi rfl
-  dsimp only
-  -- Look up position `i` in the batch opening; it is present because `i ∈ is`.
-  rcases hfind : (List.map g is).find? (fun entry => decide (entry.1 = i)) with _ | entry
-  · rw [List.find?_eq_none] at hfind
-    exact ((hfind (g i) (List.mem_map_of_mem hi)) (by simp [hg])).elim
-  · obtain ⟨j, _, rfl⟩ := List.mem_map.1 (List.mem_of_find?_eq_some hfind)
-    have hj : j = i := by simpa [hg] using List.find?_some hfind
-    rw [hfind]
-    simp [hg, hj, hverify]
+    (naiveBatchOpenMerkleTree (m := m) s e hashFn).PerfectlyCorrect :=
+  (vectorCommitment_perfectlyCorrect (m := m) s e hashFn).toBatchOpening
 
 end InductiveMerkleTree
