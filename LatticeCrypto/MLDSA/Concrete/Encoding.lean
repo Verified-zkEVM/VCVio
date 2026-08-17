@@ -90,6 +90,26 @@ private def unpackNatArray (count width : Nat) (bytes : ByteArray) : Array Nat :
   Array.ofFn fun idx : Fin count =>
     Nat.ofDigits 2 <| List.ofFn fun j : Fin width => bits.getD (idx.val * width + j.val) 0
 
+private theorem bytesToBits_size (bytes : ByteArray) :
+    (bytesToBits bytes).size = bytes.size * 8 := by
+  simp [bytesToBits]
+
+private theorem bytesToBits_getElem (bytes : ByteArray) (i : Nat)
+    (hi : i < (bytesToBits bytes).size) :
+    (bytesToBits bytes)[i]'hi = bitOf (getByteD bytes (i / 8)) (i % 8) := by
+  simp only [bytesToBits, Array.getElem_ofFn]
+
+private theorem unpackNatArray_size (count width : Nat) (bytes : ByteArray) :
+    (unpackNatArray count width bytes).size = count := by
+  simp [unpackNatArray]
+
+private theorem unpackNatArray_getElem (count width : Nat) (bytes : ByteArray) (i : Nat)
+    (hi : i < (unpackNatArray count width bytes).size) :
+    (unpackNatArray count width bytes)[i]'hi =
+      Nat.ofDigits 2 (List.ofFn fun j : Fin width =>
+        (bytesToBits bytes).getD (i * width + j.val) 0) := by
+  simp only [unpackNatArray, Array.getElem_ofFn]
+
 /-- FIPS 204 Algorithm 16 on a single polynomial. -/
 def simpleBitPackPoly (f : Rq) (b : Nat) : ByteArray :=
   let width := simpleWidth b
@@ -137,8 +157,7 @@ private theorem bytesToBits_getD_lt_two (bytes : ByteArray) (i : Nat) :
     (bytesToBits bytes).getD i 0 < 2 := by
   by_cases hi : i < (bytesToBits bytes).size
   · rw [array_getD_eq_getElem (a := bytesToBits bytes) (i := i) (fallback := 0) hi]
-    unfold bytesToBits
-    rw [Array.getElem_ofFn]
+    rw [bytesToBits_getElem]
     exact bitOf_lt_two _ _
   · rw [Array.getD_eq_getD_getElem?, Array.getElem?_eq_none (by omega)]
     norm_num
@@ -149,9 +168,8 @@ private theorem unpackNatArray_getD_lt (count width : Nat) (bytes : ByteArray) (
     (unpackNatArray count width bytes).getD i 0 < 2 ^ width := by
   by_cases hi : i < (unpackNatArray count width bytes).size
   · rw [array_getD_eq_getElem (a := unpackNatArray count width bytes) (i := i) (fallback := 0) hi]
-    unfold unpackNatArray
-    rw [Array.getElem_ofFn]
-    set idx : Fin count := ⟨i, by simpa [unpackNatArray] using hi⟩ with hidx
+    rw [unpackNatArray_getElem]
+    set idx : Fin count := ⟨i, by simpa [unpackNatArray_size] using hi⟩ with hidx
     calc Nat.ofDigits 2 (List.ofFn fun j : Fin width =>
             (bytesToBits bytes).getD (idx.val * width + j.val) 0)
         < 2 ^ (List.ofFn fun j : Fin width =>
@@ -336,8 +354,7 @@ private theorem bytesToBits_bitsToBytes_getD {bits : Array Nat} {i : Nat}
   have hilt : i < (bytesToBits (bitsToBytes bits)).size := by
     simp only [bytesToBits, Array.size_ofFn, hbsize]; omega
   rw [array_getD_eq_getElem (a := bytesToBits (bitsToBytes bits)) 0 hilt]
-  unfold bytesToBits
-  rw [Array.getElem_ofFn]
+  rw [bytesToBits_getElem]
   have hbyte : i / 8 < (bits.size + 7) / 8 := by omega
   have hbit : i % 8 < 8 := Nat.mod_lt _ (by decide)
   have hindex : 8 * (i / 8) + i % 8 = i := by omega

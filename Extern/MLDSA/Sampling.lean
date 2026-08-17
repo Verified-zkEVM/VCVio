@@ -239,7 +239,7 @@ def sampleInBall (p : Params) (seed : CommitHashBytes p) : Rq :=
   let coeffs : Array Coeff :=
     sampleInBallLoop stream signs ringDegree p.tau (ringDegree - p.tau)
       (Array.replicate ringDegree 0) 8 0
-  Vector.ofFn fun i => coeffs.getD i.val 0
+  LatticeCrypto.Poly.ofPi fun i => coeffs.getD i.val 0
 
 /-! ## Structural output bounds for the rejection samplers
 
@@ -311,7 +311,7 @@ theorem sampleInBall_coeff_mem (p : Params) (seed : CommitHashBytes p) (i : Fin 
     (sampleInBall p seed).get i = 0 ∨ (sampleInBall p seed).get i = 1 ∨
       (sampleInBall p seed).get i = -1 := by
   unfold sampleInBall
-  simp only [Vector.get_ofFn]
+  rw [LatticeCrypto.Poly.get_ofPi]
   apply sampleInBallLoop_mem
   intro j
   left
@@ -471,15 +471,16 @@ private theorem countNZ_replicate_zero : countNZ (Array.replicate ringDegree (0 
 
 /-- The `ℓ₁` norm of a polynomial materialized by `Vector.ofFn` from a defaulted-array lookup is the
 nonzero count of that array. -/
-private theorem l1Norm_ofFn_eq_countNZ (coeffs : Array Coeff) :
-    LatticeCrypto.l1Norm (Vector.ofFn (fun i : Fin ringDegree => coeffs.getD i.val 0))
+private theorem l1Norm_ofPi_eq_countNZ (coeffs : Array Coeff) :
+    LatticeCrypto.l1Norm (LatticeCrypto.Poly.ofPi
+      (fun i : Fin ringDegree => coeffs.getD i.val 0))
       = countNZ coeffs := by
   rw [LatticeCrypto.l1Norm_eq_sum]
   unfold countNZ
   rw [Finset.sum_range (fun j => (LatticeCrypto.centeredRepr (coeffs.getD j 0)).natAbs)]
   apply Finset.sum_congr rfl
   intro i _
-  rw [Vector.get_ofFn]
+  rw [LatticeCrypto.Poly.get_ofPi]
 
 set_option maxRecDepth 4000 in
 /-- The challenge loop, run from the all-zero accumulator over `[ringDegree - τ, ringDegree)`,
@@ -504,7 +505,7 @@ coefficients). This is the count needed for the challenge-product bound `‖c ·
 theorem sampleInBall_l1Norm (p : Params) (seed : CommitHashBytes p) :
     LatticeCrypto.l1Norm (sampleInBall p seed) ≤ p.tau := by
   unfold sampleInBall
-  rw [l1Norm_ofFn_eq_countNZ]
+  rw [l1Norm_ofPi_eq_countNZ]
   exact countNZ_sampleInBallLoop_le _ _ p
 
 /-- After a `push`, the defaulted lookup at any index is either the pushed value or the prior
