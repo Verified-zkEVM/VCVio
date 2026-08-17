@@ -5,6 +5,7 @@ public import ToMathlib.Analysis.SumIntegralComparisons
 public import ToMathlib.Combinatorics.ChallengeTree
 public import ToMathlib.Combinatorics.CoordinateWise
 public import ToMathlib.Combinatorics.FinPairs
+public import ToMathlib.Combinatorics.MonotoneStructure
 public import ToMathlib.Control.AlternativeMonad
 public import ToMathlib.Control.Lawful.MonadControl
 public import ToMathlib.Control.Lawful.MonadFunctor

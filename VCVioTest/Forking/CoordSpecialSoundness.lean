@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
+public import ToMathlib.Combinatorics.MonotoneStructure
 public import VCVio.CryptoFoundations.CoordinateFork.Extraction
 
 /-!
@@ -113,5 +114,15 @@ theorem one_third_le_probEvent_extracted (x : Fin 3) :
   rw [acceptTable_toyProver, acceptRatio_pure_const_true,
     show (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 3) = 2 / 3 from by simp,
     one_sub_two_thirds]
+
+/-! ## The generic extractor's `t`-value -/
+
+/-- **Non-vacuity of the §7.3 lower bound.** At `ℓ = 2`, `|S| = 3` the generic extractor's `t`-value
+is at least `3 ^ 1 + 1 = 4`, so its `2 ^ t - 1` expected runtime is already 15 where the §7
+extractor takes `ℓ(k-1)+1 = 3` transcripts. The instance bundle is discharged at concrete types. -/
+theorem four_le_tValue :
+    4 ≤ tValue (coordStructure 2) (∅ : Finset SChal) := by
+  have h := pow_add_one_le_tValue (ι := Fin 2) (S := Fin 3)
+  simpa using h
 
 end VCVioTest.Forking

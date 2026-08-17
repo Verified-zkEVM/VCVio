@@ -146,6 +146,25 @@ the adversary*. The status is:
 Non-vacuity and payload-sensitivity checks live in
 `VCVioTest/Forking/CoordinateFork.lean` and run in CI.
 
+## Why §7 needs its own extractor
+
+Coordinate-wise `k`-special soundness is a special case of Attema–Fehr–Rambaud's `Γ`-out-of-`C`
+special soundness, whose generic extractor runs in expected time `2 ^ tᵧ - 1`. §7.3 of the paper
+shows that is exponential here, and
+[`ToMathlib/Combinatorics/MonotoneStructure.lean`](../../ToMathlib/Combinatorics/MonotoneStructure.lean)
+formalizes the bound:
+
+```lean
+theorem pow_add_one_le_tValue [Nontrivial S] [Nonempty ι] :
+    Fintype.card S ^ (Fintype.card ι - 1) + 1 ≤ tValue (coordStructure 2) (∅ : Finset (ι → S))
+```
+
+The argument is pure `Finset` combinatorics with no probability: the slice of challenges fixing one
+coordinate contains no `SS(S, ℓ, 2)` set, because two challenges differing only in that coordinate
+cannot both lie in it — but adjoining a single challenge off the slice creates one. So every
+untaken slice element stays useful, and then one element off the slice is useful again. The
+`2 ^ t - 1` runtime itself is cited from [AFR23], not proved.
+
 ## Rewinding primitives
 
 Two distinct notions, easy to conflate:
