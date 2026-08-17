@@ -12,6 +12,7 @@ public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.CoordinateFork
 public import VCVio.CryptoFoundations.CoordinateFork.MultiRound
+public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 public import VCVio.CryptoFoundations.FiatShamir.Sigma

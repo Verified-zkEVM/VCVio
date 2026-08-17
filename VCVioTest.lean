@@ -1,5 +1,6 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import VCVioTest.Forking.CoordSpecialSoundness
 public import VCVioTest.Forking.CoordinateFork
 public import VCVioTest.GrindFailFast
 public import VCVioTest.LongChainPrograms
