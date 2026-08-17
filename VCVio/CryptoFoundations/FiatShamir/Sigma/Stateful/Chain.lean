@@ -31,7 +31,7 @@ universe u
 
 open ENNReal OracleSpec OracleComp ProbComp OracleComp.ProgramLogic.Relational
 
-attribute [local implicit_reducible] OracleSpec.instHAddSum PFunctor.Obj
+attribute [local implicit_reducible] PFunctor.Obj
 
 namespace FiatShamir.Stateful
 

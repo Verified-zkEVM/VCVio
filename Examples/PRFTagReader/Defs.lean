@@ -175,6 +175,25 @@ def UnlinkOracleSpec (TagId Nonce Digest : Type) :=
   (TagId →ₒ Option (TagTranscript Nonce Digest)) +
     ((TagTranscript Nonce Digest) →ₒ ReaderReply)
 
+/-- The tag side of the authentication interface returns a concrete transcript. -/
+@[simp] lemma authOracleSpec_range_inl {TagId Nonce Digest : Type} (tag : TagId) :
+    (AuthOracleSpec TagId Nonce Digest).Range (Sum.inl tag) = TagTranscript Nonce Digest := rfl
+
+/-- The reader side of the authentication interface returns a concrete reader reply. -/
+@[simp] lemma authOracleSpec_range_inr {TagId Nonce Digest : Type}
+    (transcript : TagTranscript Nonce Digest) :
+    (AuthOracleSpec TagId Nonce Digest).Range (Sum.inr transcript) = ReaderReply := rfl
+
+/-- The tag side of the unlinkability interface returns an optional transcript. -/
+@[simp] lemma unlinkOracleSpec_range_inl {TagId Nonce Digest : Type} (tag : TagId) :
+    (UnlinkOracleSpec TagId Nonce Digest).Range (Sum.inl tag) =
+      Option (TagTranscript Nonce Digest) := rfl
+
+/-- The reader side of the unlinkability interface returns a concrete reader reply. -/
+@[simp] lemma unlinkOracleSpec_range_inr {TagId Nonce Digest : Type}
+    (transcript : TagTranscript Nonce Digest) :
+    (UnlinkOracleSpec TagId Nonce Digest).Range (Sum.inr transcript) = ReaderReply := rfl
+
 /-- Authentication adversaries are oracle computations over the tag and reader interfaces. -/
 abbrev AuthAdversary (TagId Nonce Digest : Type) :=
   OracleComp (AuthOracleSpec TagId Nonce Digest) Unit
@@ -489,10 +508,10 @@ theorem neverFail_unlinkMultipleQueryImpl_run {K : Type}
   · simp only [unlinkMultipleQueryImpl, QueryImpl.add_apply_inl]
     unfold unlinkTagQueryImpl
     refine NeverFail.of_probFailure_eq_zero _ ?_
-    rw [StateT.run]; simp
+    simp
   · simp only [unlinkMultipleQueryImpl, QueryImpl.add_apply_inr, unlinkReaderQueryImpl]
     refine NeverFail.of_probFailure_eq_zero _ ?_
-    rw [StateT.run]; simp
+    simp
 
 omit [Nonempty TagId] [DecidableEq Nonce] [NeZero sessionsPerTag] in
 /-- Every oracle step of the single-session handler never fails: the tag step samples a nonce via
@@ -506,10 +525,10 @@ theorem neverFail_unlinkSingleQueryImpl_run {K : Type}
   · simp only [unlinkSingleQueryImpl, QueryImpl.add_apply_inl]
     unfold unlinkTagQueryImpl
     refine NeverFail.of_probFailure_eq_zero _ ?_
-    rw [StateT.run]; simp
+    simp
   · simp only [unlinkSingleQueryImpl, QueryImpl.add_apply_inr, unlinkReaderQueryImpl]
     refine NeverFail.of_probFailure_eq_zero _ ?_
-    rw [StateT.run]; simp
+    simp
 
 omit [Nonempty TagId] [DecidableEq Nonce] [NeZero sessionsPerTag] in
 /-- The multiple-session unlinkability experiment never fails, provided the key sampler never fails

@@ -107,7 +107,8 @@ lemma run_simulateQ_hidingAvgComp_eq_bind [Inhabited M] [Inhabited S]
             OracleComp (HidingAvgSpec M S C) S)).run
           (∅, fun _ => 0) =
         (liftM ((Unit →ₒ S).query ()) >>= fun s => pure (s, (∅, fun _ => 0))) := by
-    simp [hidingAvgQueryImpl, hidingAvgLeftImpl, simulateQ_query]
+    rw [simulateQ_spec_query, hidingAvgQueryImpl, QueryImpl.add_apply_inl]
+    simp [hidingAvgLeftImpl]
   rw [hidingAvgComp, simulateQ_bind, StateT.run_bind, hleftrun]
   change
     (liftM ((Unit →ₒ S).query ()) >>= fun s =>

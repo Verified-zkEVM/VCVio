@@ -280,8 +280,7 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest]
           refine bind_congr fun gS => ?_
           refine bind_congr fun gFine => ?_
           rw [multipleBadTableFine_run_query_bind', hMstep gS gFine]
-          rw [map_bind]
-          exact pure_bind _ _
+          simp only [unlinkOracleSpec_range_inl, pure_bind]
         have hRHS_eq :
             (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce)
@@ -316,8 +315,7 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest]
           refine bind_congr fun gS => ?_
           refine bind_congr fun gFine => ?_
           rw [multipleBadTableFine_run_query_bind', hMstep gS gFine]
-          rw [map_bind]
-          exact pure_bind _ _
+          simp only [unlinkOracleSpec_range_inl, pure_bind]
         rw [probOutput_congr rfl (congrArg evalDist hLHS_eq),
             probOutput_congr rfl (congrArg evalDist hRHS_eq),
             probEvent_congr' (fun _ _ => Iff.rfl) (congrArg evalDist hBAD_eq)]

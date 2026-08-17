@@ -35,7 +35,7 @@ universe u v
 
 open OracleComp OracleSpec
 
-attribute [local implicit_reducible] OracleSpec.instHAddSum PFunctor.Obj
+attribute [local implicit_reducible] PFunctor.Obj
 
 namespace FiatShamir
 
