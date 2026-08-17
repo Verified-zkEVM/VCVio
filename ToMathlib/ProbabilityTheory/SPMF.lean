@@ -133,11 +133,18 @@ end zero
 @[simp, grind =]
 lemma toPMF_bind (p : SPMF α) (q : α → SPMF β) :
     (p >>= q).toPMF = Option.elimM p.toPMF (PMF.pure none) (fun x => (q x).toPMF) := by
-  simp only [SPMF, ← run_eq_toPMF, OptionT.run_bind, PMF.monad_pure_eq_pure]
+  unfold SPMF at p q ⊢
+  unfold SPMF.toPMF
+  unfold SPMF.instAlternativeMonad
+  rw [OptionT.run_bind]
+  rfl
 
 @[simp, grind =]
 lemma toPMF_map (p : SPMF α) (f : α → β) : (f <$> p).toPMF = Option.map f <$> p.toPMF := by
-  simp [SPMF, ← run_eq_toPMF]
+  unfold SPMF at p ⊢
+  unfold SPMF.toPMF
+  unfold SPMF.instAlternativeMonad
+  rw [OptionT.run_map]
 
 @[simp, grind =]
 lemma mk_pure_some (x : α) : SPMF.mk (PMF.pure (some x)) = pure x := rfl

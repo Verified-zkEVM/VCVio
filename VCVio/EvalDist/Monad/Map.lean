@@ -67,7 +67,6 @@ lemma probEvent_bind_pure_comp (q : β → Prop) :
   have := Classical.decPred q
   rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
   simp only [Function.comp_apply, probEvent_pure, mul_ite, mul_one, mul_zero]
-  rfl
 
 variable [LawfulMonad m]
 
@@ -79,7 +78,7 @@ lemma probOutput_map_eq_tsum_subtype [MonadLiftT m SetM] [LawfulMonadLiftT m Set
     [EvalDistCompatible m] (y : β) :
     Pr[= y | f <$> mx] = ∑' x : {x ∈ support mx | y = f x}, Pr[= x | mx] := by
   simp only [map_eq_bind_pure_comp, tsum_subtype _, probOutput_bind_eq_tsum, Function.comp_apply,
-    Set.indicator, Set.mem_setOf_eq]
+    Set.indicator, Set.mem_ofPred_eq]
   refine tsum_congr fun x => ?_
   by_cases hy : y = f x <;> by_cases hx : x ∈ support mx <;>
     simp [hy, hx, probOutput_eq_zero_of_not_mem_support]

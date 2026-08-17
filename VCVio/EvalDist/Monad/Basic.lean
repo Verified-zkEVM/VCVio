@@ -197,7 +197,7 @@ lemma probOutput_bind_eq_tsum [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (mx 
 lemma probEvent_bind_eq_tsum [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (mx : m α)
     (my : α → m β) (q : β → Prop) :
     Pr[ q | mx >>= my] = ∑' x : α, Pr[= x | mx] * Pr[ q | my x] := by
-  simp only [probEvent_eq_tsum_indicator, Set.indicator, Set.mem_setOf_eq, probOutput_bind_eq_tsum,
+  simp only [probEvent_eq_tsum_indicator, Set.indicator, Set.mem_ofPred_eq, probOutput_bind_eq_tsum,
     ← ENNReal.tsum_mul_left, mul_ite, mul_zero]
   rw [ENNReal.tsum_comm]
   refine tsum_congr fun x => by split_ifs <;> simp

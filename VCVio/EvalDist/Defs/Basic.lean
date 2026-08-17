@@ -922,7 +922,7 @@ alias ⟨_, one_eq_probEvent'⟩ := one_eq_probEvent_iff'
 @[simp]
 lemma function_support_probOutput :
     Function.support (Pr[= · | mx]) = support mx := by
-  simp only [Function.support, ne_eq, probOutput_eq_zero_iff, not_not, Set.setOf_mem_eq]
+  simp only [Function.support, ne_eq, probOutput_eq_zero_iff, not_not, Set.ofPred_mem_eq]
 
 lemma mem_support_iff_of_evalDist_eq {m n} [Monad m] [MonadLiftT m SPMF]
     [MonadLiftT m SetM] [EvalDistCompatible m]

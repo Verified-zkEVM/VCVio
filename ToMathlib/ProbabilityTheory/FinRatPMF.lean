@@ -315,7 +315,10 @@ lemma sum_prob_eq_sum [DecidableEq α] (p : Raw α) :
         intro x _ hx
         exact prob_eq_zero_of_not_mem_support p hx)
     _ = (p.toList.map Prod.snd).sum := by
-      simpa [s, prob, probOfList] using list_sum_prob_eq p.toList
+      change (p.toList.map Prod.fst |>.toFinset).sum
+        (fun x => (p.toList.filter (fun a => a.1 = x) |>.map Prod.snd).sum) =
+          (p.toList.map Prod.snd).sum
+      exact list_sum_prob_eq p.toList
 
 lemma sum_prob_eq_one [DecidableEq α] (p : Raw α) : p.support.sum p.prob = 1 := by
   rw [sum_prob_eq_sum]
