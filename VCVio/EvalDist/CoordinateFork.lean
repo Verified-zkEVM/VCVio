@@ -66,6 +66,17 @@ drifting apart. -/
 noncomputable def forkSuccOf (k : ℕ) (D : m ((ι → S) → Bool)) : ℝ≥0∞ :=
   ∑' ρ, Pr[= ρ | D] * (((goodSet k ρ).card : ℝ≥0∞) / Fintype.card (ι → S))
 
+omit [DecidableEq S] in
+/-- The all-accepting table accepts every challenge, so `ε = 1`. Together with a positive
+`ℓ * (k - 1) / N` this is what keeps the truncated subtraction in the headline bounds from
+collapsing to `0 ≤ _`. -/
+@[simp] theorem acceptRatio_pure_const_true [Nonempty S] [LawfulMonadLiftT m SPMF] :
+    acceptRatio (pure (fun _ => true) : m ((ι → S) → Bool)) = 1 := by
+  have hone : ∀ c : ι → S,
+      Pr[fun ρ => ρ c | (pure (fun _ => true) : m ((ι → S) → Bool))] = 1 := fun c => by simp
+  rw [acceptRatio, Finset.sum_congr rfl fun c _ => hone c, Finset.sum_const, Finset.card_univ,
+    nsmul_eq_mul, mul_one, ENNReal.div_self (by simp) (by finiteness)]
+
 omit [Monad m] [DecidableEq S] in
 /-- The expected number of accepting challenges is the sum of the per-challenge marginals. -/
 theorem tsum_probOutput_mul_card_acceptSet (D : m ((ι → S) → Bool)) :

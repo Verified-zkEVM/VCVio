@@ -11,6 +11,7 @@ public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.CoordinateFork
+public import VCVio.CryptoFoundations.CoordinateFork.Extraction
 public import VCVio.CryptoFoundations.CoordinateFork.MultiRound
 public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 public import VCVio.CryptoFoundations.DataEncapMech

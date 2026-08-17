@@ -94,6 +94,31 @@ computation up to relabelling, and `sub_div_le_probEvent_goodTranscripts_coordFo
 bound over to `GoodTranscripts` — `ℓ(k-1)+1` accepting transcripts whose challenges are
 `SS(S, ℓ, k)`. The `ToMathlib` counting core never sees `Y`.
 
+### From the extractor to a knowledge-soundness statement
+
+[`VCVio/CryptoFoundations/CoordinateFork/SpecialSoundness.lean`](../../VCVio/CryptoFoundations/CoordinateFork/SpecialSoundness.lean)
+states Definition 2.29 against a `SigmaProtocol` whose challenge type is `ι → S`:
+
+```lean
+def CoordSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (ext : Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
+  ∀ pc T, (∀ p ∈ T, σ.verify x pc p.1 p.2 = true) →
+    IsCoordSpecialSound k (T.image Prod.fst) → ∀ w ∈ support (ext pc T), rel x w = true
+```
+
+The extractor is a **parameter**, not a field: `SigmaProtocol.extract` is hardwired to arity two, so
+a `k`-ary extractor cannot be one. `HVZK` takes `simTranscript` as a parameter for the same reason.
+`coordSpeciallySoundAt_two_of_speciallySoundAt` is the bridge back for extractors that do factor
+through a pair.
+
+[`CoordinateFork/Extraction.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Extraction.lean)
+composes that with the fork to give **Lemma 2.31 at `μ = 1`**: `coordExtract` runs the fork against
+the prover's response table and hands the accepting transcripts to `ext`, and
+`sub_div_le_probEvent_extracted_coordExtract` bounds the probability of the event
+`Extracted rel x` — *a valid witness was returned* — below by `ε - ℓ(k-1)/|S|`. Aborting runs fail
+that event, so it is not a termination bound. The prover is modelled by its response table after
+committing, which is exactly a distribution over `Chal → Resp`.
+
 ### What is and is not proved
 
 Each paper lemma is a three-conjunct existential over *an oracle algorithm with oracle access to

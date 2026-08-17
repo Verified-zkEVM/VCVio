@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
+public import VCVio.CryptoFoundations.CoordinateFork.Extraction
 
 /-!
 # Non-vacuity of coordinate-wise special soundness
@@ -22,7 +22,9 @@ The witness set is a `coordFamily`, whose special soundness is checked by `decid
 
 @[expose] public section
 
-open Finset CoordinateWise OracleComp SigmaProtocol
+open Finset CoordinateWise OracleComp OracleComp.EvalDist SigmaProtocol
+
+open scoped ENNReal
 
 namespace VCVioTest.Forking
 
@@ -84,5 +86,32 @@ theorem exists_accepting_toySigma (x : Fin 3) :
       IsCoordSpecialSound 2 (T.image Prod.fst) :=
   exists_accepting_isCoordSpecialSound toySigma () centre replacements (by decide) (by decide)
     (fun _ => x) fun _ _ => by simp [toySigma]
+
+/-! ## The composite extractor -/
+
+/-- The honest-looking prover that always answers with the statement, so every challenge accepts. -/
+def toyProver (x : Fin 3) : ProbComp (SChal → Fin 3) := pure fun _ => x
+
+theorem acceptTable_toyProver (x : Fin 3) :
+    acceptTable (toySigma.verify x ()) (toyProver x) = pure fun _ => true := by
+  simp [acceptTable, toyProver, toySigma]
+
+private theorem one_sub_two_thirds : (1 : ℝ≥0∞) - 2 / 3 = 1 / 3 := by
+  refine ENNReal.sub_eq_of_eq_add (by finiteness) ?_
+  rw [ENNReal.div_add_div_same, show (1 : ℝ≥0∞) + 2 = 3 by norm_num,
+    ENNReal.div_self (by simp) (by finiteness)]
+
+/-- **Non-vacuity of the knowledge-soundness bound.** Against the always-accepting prover the
+composite extractor returns a *valid witness* with probability at least `1 - 2/3 = 1/3`, so the
+knowledge error `ℓ(k-1)/|S| = 2/3` leaves real slack at these parameters. -/
+theorem one_third_le_probEvent_extracted (x : Fin 3) :
+    (1 : ℝ≥0∞) / 3 ≤ Pr[Extracted (fun x w => x == w) x |
+      toySigma.coordExtract 2 toyExt x () (toyProver x)] := by
+  have h := sub_div_le_probEvent_extracted_coordExtract toySigma 2 toyExt x
+    (toySigma_coordSpeciallySoundAt x) () (toyProver x)
+  refine le_trans (le_of_eq ?_) h
+  rw [acceptTable_toyProver, acceptRatio_pure_const_true,
+    show (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 3) = 2 / 3 from by simp,
+    one_sub_two_thirds]
 
 end VCVioTest.Forking
