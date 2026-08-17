@@ -10,6 +10,8 @@ public import VCVio.CryptoFoundations.Asymptotics.Negligible
 public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme
+public import VCVio.CryptoFoundations.CoordinateFork
+public import VCVio.CryptoFoundations.CoordinateFork.MultiRound
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 public import VCVio.CryptoFoundations.FiatShamir.Sigma
@@ -78,6 +80,7 @@ public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.EvalDist.BitVec
 public import VCVio.EvalDist.Bool
+public import VCVio.EvalDist.CoordinateFork
 public import VCVio.EvalDist.Defs.AlternativeMonad
 public import VCVio.EvalDist.Defs.Basic
 public import VCVio.EvalDist.Defs.Instances
