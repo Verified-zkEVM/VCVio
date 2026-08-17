@@ -55,10 +55,12 @@ monadic `commit` / `openAt` fields.
 /-- A vector commitment whose `commit` and `openAt` operations run in the monad `m`.
 
 `commit data` commits to the whole vector `data : ι → α`, producing a public `Commit` together with
-private `State`. `decode st i` reads back the committed value at position `i` from that state (the
-committer always knows what it committed). `openAt st i` produces an `Opening` for position `i`, and
-`verifyOpen c i v op` deterministically checks that `op` certifies value `v` at position `i` under
-commitment `c`.
+private `State`. `openAt st i` produces an `Opening` for position `i`, and `verifyOpen c i v op`
+deterministically checks that `op` certifies value `v` at position `i` under commitment `c`.
+
+The committed values themselves are not read back through the interface: the committer already
+knows `data` and simply retains it (alongside `State`) for as long as it needs to produce claims.
+Correctness (`PerfectlyCorrect`) is therefore stated directly against the committed `data`.
 
 The monad is left abstract so an instance may be purely functional (Merkle trees with an explicit
 hash function), randomized (`ProbComp`), or oracle-querying. -/
@@ -66,8 +68,6 @@ structure VectorCommitment
     (m : Type → Type) (ι α Commit State Opening : Type) where
   /-- Commit to the whole vector `data`, returning a public commitment and private opener state. -/
   commit (data : ι → α) : m (Commit × State)
-  /-- Read back the committed value at position `i` from the opener's state. -/
-  decode (st : State) (i : ι) : α
   /-- Produce an opening for the value at position `i`. -/
   openAt (st : State) (i : ι) : m Opening
   /-- Deterministically check that `op` certifies value `v` at position `i` under commitment `c`. -/
@@ -84,7 +84,7 @@ produced commitment/state opens at that position to the committed value and pass
 def PerfectlyCorrect (vc : VectorCommitment m ι α Commit State Opening) : Prop :=
   ∀ (data : ι → α) (i : ι) (c : Commit) (st : State),
     (c, st) ∈ support (vc.commit data) →
-      ∀ op ∈ support (vc.openAt st i), vc.verifyOpen c i (vc.decode st i) op = true
+      ∀ op ∈ support (vc.openAt st i), vc.verifyOpen c i (data i) op = true
 
 /-- A vector commitment is **position binding** if no commitment can be opened at a single position
 to two different values: any two openings that both verify at the same position and commitment must
@@ -107,8 +107,6 @@ structure BatchOpeningVectorCommitment
     (m : Type → Type) (ι α Commit State BatchOpening : Type) where
   /-- Commit to the whole vector `data`, returning a public commitment and private opener state. -/
   commit (data : ι → α) : m (Commit × State)
-  /-- Read back the committed value at position `i` from the opener's state. -/
-  decode (st : State) (i : ι) : α
   /-- Produce a single opening covering all positions in `is`. -/
   openBatch (st : State) (is : List ι) : m BatchOpening
   /-- Check that `op` certifies every `(position, value)` pair in `claims` under commitment `c`. -/
@@ -120,20 +118,19 @@ variable {m : Type → Type} [Monad m] {ι α Commit State Opening : Type}
 
 /-- Turn a single-position `VectorCommitment` into a `BatchOpeningVectorCommitment` by opening each
 requested position individually and bundling the results. A batch opening is the list of
-`(position, value, opening)` triples; `verifyBatch` checks that each claim is matched by such a
-triple whose opening verifies. -/
-def toBatchOpening [DecidableEq ι] [DecidableEq α]
+`(position, opening)` pairs; `verifyBatch` checks that each claimed `(position, value)` pair is
+matched by an entry whose opening verifies that value. -/
+def toBatchOpening [DecidableEq ι]
     (vc : VectorCommitment m ι α Commit State Opening) :
-    BatchOpeningVectorCommitment m ι α Commit State (List (ι × α × Opening)) where
+    BatchOpeningVectorCommitment m ι α Commit State (List (ι × Opening)) where
   commit := vc.commit
-  decode := vc.decode
   openBatch st is := is.mapM fun i => do
     let op ← vc.openAt st i
-    return (i, vc.decode st i, op)
+    return (i, op)
   verifyBatch c claims op :=
     claims.all fun iv =>
       match op.find? (fun e => decide (e.1 = iv.1)) with
-      | some e => decide (e.2.1 = iv.2) && vc.verifyOpen c iv.1 iv.2 e.2.2
+      | some e => vc.verifyOpen c iv.1 iv.2 e.2
       | none => false
 
 end VectorCommitment
@@ -147,7 +144,6 @@ verifying singleton batches. The opening type is the underlying `BatchOpening`. 
 def toVectorCommitment (bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening) :
     VectorCommitment m ι α Commit State BatchOpening where
   commit := bovc.commit
-  decode := bovc.decode
   openAt st i := bovc.openBatch st [i]
   verifyOpen c i v op := bovc.verifyBatch c [(i, v)] op
 
@@ -157,14 +153,14 @@ variable [Monad m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
 
 /-- A batch-opening vector commitment is **perfectly correct** if, for every vector and every list
 of positions, any honestly produced commitment/state opens that list to a batch opening that
-verifies the corresponding decoded claims. The claim list `is.map (fun i => (i, decode st i))` is
+verifies the corresponding committed claims. The claim list `is.map (fun i => (i, data i))` is
 exactly the shape consumers (such as the Kilian transformation) hand to `verifyBatch`. -/
 def PerfectlyCorrect
     (bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening) : Prop :=
   ∀ (data : ι → α) (is : List ι) (c : Commit) (st : State),
     (c, st) ∈ support (bovc.commit data) →
       ∀ op ∈ support (bovc.openBatch st is),
-        bovc.verifyBatch c (is.map fun i => (i, bovc.decode st i)) op = true
+        bovc.verifyBatch c (is.map fun i => (i, data i)) op = true
 
 end Security
 

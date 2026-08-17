@@ -189,9 +189,10 @@ the heart of Kilian's protocol, parameterized by an arbitrary batch-opening vect
 over the PCP's symbol alphabet (e.g. the inductive Merkle tree of
 `VCVio.CryptoFoundations.VectorCommitment.MerkleTree`):
 
-1. the prover commits to its PCP proof string with `bovc.commit` (`commit`);
+1. the prover commits to its PCP proof string with `bovc.commit`, retaining the proof string
+   alongside the opener state as its private state (`commit`);
 2. the verifier sends random coins (`sampleChal := pcp.sampleCoins`);
-3. the prover simulates `pcp.Verifier stmt coins` against its committed proof to learn exactly which
+3. the prover simulates `pcp.Verifier stmt coins` against its retained proof to learn exactly which
    positions the verifier reads, and opens *exactly* that set in one shot with `bovc.openBatch`,
    returning the claimed `(position, value)` pairs alongside the batch opening (`respond`);
 4. the verifier checks the batch opening against the commitment with `bovc.verifyBatch`, then
@@ -227,21 +228,22 @@ noncomputable def KilianTransformation
     (rel : Stmt → Wit → Bool) :
     ChallengeVerifyProtocol Stmt Wit
       Commit                                                  -- Commit: the vector commitment
-      State                                                   -- PrvState: the opener's state
+      (State × (Fin pcp.length → pcp.Symbol))                 -- PrvState: opener state + proof
       pcp.Coins                                               -- Chal: the verifier's coins
       (List (Fin pcp.length × pcp.Symbol) × BatchOpening)     -- Resp: claims + batch opening
       rel m where
   commit stmt wit := do
     let proof ← pcp.Prover stmt wit
-    bovc.commit proof.get
+    let cs ← bovc.commit proof.get
+    return (cs.1, (cs.2, proof.get))
   sampleChal := liftM pcp.sampleCoins
   respond stmt _wit st coins := do
-    -- Simulate the verifier against the committed proof, logging the positions it reads.
+    -- Simulate the verifier against the retained proof, logging the positions it reads.
     let queried : List (Fin pcp.length) :=
-      (pathLog (bovc.decode st) (pcp.Verifier stmt coins)).dedup
+      (pathLog st.2 (pcp.Verifier stmt coins)).dedup
     -- Open exactly the queried positions as a single batch, alongside the claimed values.
-    let op ← bovc.openBatch st queried
-    return (queried.map (fun i => (i, bovc.decode st i)), op)
+    let op ← bovc.openBatch st.1 queried
+    return (queried.map (fun i => (i, st.2 i)), op)
   verify stmt c coins resp :=
     -- Check the batch opening, then replay the verifier answering each position from its claimed
     -- value; an unclaimed position fails the run, as does a batch opening that does not verify.
@@ -329,13 +331,14 @@ section Completeness
 
 variable {Stmt Wit : Type} {rel : Stmt → Wit → Bool}
 
-/-- **Deterministic completeness core.** For a fixed honestly committed state `st` and coins, the
-Kilian verifier accepts the honest prover's response, provided:
+/-- **Deterministic completeness core.** For fixed coins and any answer function `data` (for the
+honest prover, its PCP proof string), the Kilian verifier accepts the response built from `data`,
+provided:
 
-* `hcov` — the opened set `queried` covers every position the PCP verifier reads against the
-  committed values (it does, since the prover opens exactly the logged positions);
+* `hcov` — the opened set `queried` covers every position the PCP verifier reads against `data`
+  (it does, since the prover opens exactly the logged positions);
 * `hbatch` — the batch opening verifies (vector-commitment correctness); and
-* `haccept` — the PCP verifier accepts the committed proof (PCP completeness).
+* `haccept` — the PCP verifier accepts `data` (PCP completeness).
 
 The novel content is the `claimAnswer_run` replay: the verifier's failing `OptionT` replay against
 the openings reproduces the bare PCP run, so it accepts exactly when the PCP run does. -/
@@ -344,18 +347,18 @@ theorem KilianTransformation_verify_eq_true
     {m : Type → Type} [Monad m] [MonadLiftT ProbComp m] {Commit State BatchOpening : Type}
     (bovc : BatchOpeningVectorCommitment m (Fin pcp.length) pcp.Symbol Commit State BatchOpening)
     (boolRel : Stmt → Wit → Bool)
-    (x : Stmt) (c : Commit) (st : State) (coins : pcp.Coins) (op : BatchOpening)
-    (queried : List (Fin pcp.length))
-    (hcov : pathLog (bovc.decode st) (pcp.Verifier x coins) ⊆ queried)
-    (hbatch : bovc.verifyBatch c (queried.map fun i => (i, bovc.decode st i)) op = true)
-    (haccept : evalWithAnswerFn (QueryImpl.ofFn (bovc.decode st)) (pcp.Verifier x coins) = true) :
+    (x : Stmt) (c : Commit) (data : Fin pcp.length → pcp.Symbol) (coins : pcp.Coins)
+    (op : BatchOpening) (queried : List (Fin pcp.length))
+    (hcov : pathLog data (pcp.Verifier x coins) ⊆ queried)
+    (hbatch : bovc.verifyBatch c (queried.map fun i => (i, data i)) op = true)
+    (haccept : evalWithAnswerFn (QueryImpl.ofFn data) (pcp.Verifier x coins) = true) :
     (KilianTransformation pcp bovc boolRel).verify x c coins
-      (queried.map (fun i => (i, bovc.decode st i)), op) = true := by
-  have hreplay := claimAnswer_run (bovc.decode st)
-    (queried.map fun i => (i, bovc.decode st i)) (pcp.Verifier x coins)
-    (fun t ht => claimAnswer_map (bovc.decode st) queried t (hcov ht))
-  change (bovc.verifyBatch c (queried.map fun i => (i, bovc.decode st i)) op
-      && (Id.run ((simulateQ (claimAnswer (queried.map fun i => (i, bovc.decode st i)))
+      (queried.map (fun i => (i, data i)), op) = true := by
+  have hreplay := claimAnswer_run data
+    (queried.map fun i => (i, data i)) (pcp.Verifier x coins)
+    (fun t ht => claimAnswer_map data queried t (hcov ht))
+  change (bovc.verifyBatch c (queried.map fun i => (i, data i)) op
+      && (Id.run ((simulateQ (claimAnswer (queried.map fun i => (i, data i)))
         (pcp.Verifier x coins)).run) == some true)) = true
   rw [hbatch, hreplay, haccept]; rfl
 
@@ -430,15 +433,14 @@ theorem neverFail_of_perfectCorrectness
   exact ⟨((probFailure_bind_eq_zero_iff _ _).mp (hRest proof hproof)).1⟩
 
 /-- **Perfect completeness of the Kilian transformation.** If the underlying batch-opening vector
-commitment is complete (perfectly correct) and faithfully decodes its committed vector, and the PCP
+commitment is complete (perfectly correct), and the PCP
 is complete (its honest prover's proof is accepted on every sampled coin set), then the resulting
 interactive argument is perfectly complete: the honest prover always convinces the verifier.
 
 The hypotheses isolate the moving parts:
 
 * `hbovc` — the batch-opening vector commitment is complete: an honest commitment opens its
-  decoded claims to a batch opening that verifies;
-* `hdecode` — the committer's state decodes to exactly the vector it committed to;
+  committed claims to a batch opening that verifies;
 * `hpcp` — the PCP is complete (`pcp.perfectCorrectness`); together with `hfaithful` (lifting
   `ProbComp` into `m` preserves the distribution) this gives, via
   `perfectCorrectness_accepts_liftedProver`, that the honest proof is accepted on every sampled coin
@@ -456,8 +458,6 @@ theorem KilianTransformation_perfectlyComplete
     {Commit State BatchOpening : Type}
     (bovc : BatchOpeningVectorCommitment m (Fin pcp.length) pcp.Symbol Commit State BatchOpening)
     (hbovc : bovc.PerfectlyCorrect)
-    (hdecode : ∀ (data : Fin pcp.length → pcp.Symbol) (c : Commit) (st : State),
-      (c, st) ∈ support (bovc.commit data) → bovc.decode st = data)
     (hpcp : pcp.perfectCorrectness rel)
     (hfaithful : ∀ {β : Type} (mx : ProbComp β), 𝒟[(liftM mx : m β)] = 𝒟[mx])
     (hCommit : ∀ data, NeverFail (bovc.commit data))
@@ -488,13 +488,12 @@ theorem KilianTransformation_perfectlyComplete
     intro y hy
     simp only [KilianTransformation, mem_support_bind_iff, support_pure,
       Set.mem_singleton_iff] at hy
-    obtain ⟨⟨pc, sc⟩, ⟨proof, hproof, hcommit⟩, coins, hcoins, _, ⟨op, hop, rfl⟩, rfl⟩ :=
-      hy
-    have hdec : bovc.decode sc = proof.get := hdecode proof.get pc sc hcommit
-    refine KilianTransformation_verify_eq_true pcp bovc rel x pc sc coins op _
+    obtain ⟨pcsc, ⟨proof, hproof, cs, hcommit, rfl⟩, coins, hcoins, _, ⟨op, hop, rfl⟩,
+      rfl⟩ := hy
+    refine KilianTransformation_verify_eq_true pcp bovc rel x cs.1 proof.get coins op _
       (List.subset_dedup _) ?_ ?_
-    · exact hbovc proof.get _ pc sc hcommit op hop
-    · rw [hdec, ← runVerifier_eq_evalWithAnswerFn]
+    · exact hbovc proof.get _ cs.1 cs.2 hcommit op hop
+    · rw [← runVerifier_eq_evalWithAnswerFn]
       exact hAccept x w hxw proof hproof coins hcoins
 
 end Completeness

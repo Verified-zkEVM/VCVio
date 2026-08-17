@@ -63,7 +63,6 @@ def vectorCommitment {ι : Type} {m : Type → Type} [Monad m] [DecidableEq α]
   commit data :=
     let tree := buildMerkleTreeWithHash (leafDataOfFn s fun i => data (e.symm i)) hashFn
     pure (tree.getRootValue, tree)
-  decode tree i := tree.toLeafData.get (e i)
   openAt tree i := pure (generateProof tree (e i)).toList
   verifyOpen root i v op :=
     if h : op.length = (e i).depth then
@@ -74,14 +73,14 @@ def vectorCommitment {ι : Type} {m : Type → Type} [Monad m] [DecidableEq α]
 `InductiveMerkleTree.vectorCommitment` via `VectorCommitment.toBatchOpening`.
 
 A batch opening for a list of positions is simply the list of their individual authentication paths
-(each as `(position, value, path)`); verification checks each claimed position against its path
+(each as `(position, path)`); verification checks each claimed position/value against its path
 independently. This shares no interior hashes between paths, hence *naive* — a dedicated multi-leaf
 Merkle proof could compress the common prefixes — but it is correct and requires nothing beyond the
 single-position instance. -/
 def naiveBatchOpenMerkleTree {ι : Type} {m : Type → Type} [Monad m]
     [DecidableEq ι] [DecidableEq α]
     (s : Skeleton) (e : ι ≃ SkeletonLeafIndex s) (hashFn : α → α → α) :
-    BatchOpeningVectorCommitment m ι α α (FullData α s) (List (ι × α × List α)) :=
+    BatchOpeningVectorCommitment m ι α α (FullData α s) (List (ι × List α)) :=
   (vectorCommitment s e hashFn).toBatchOpening
 
 /-! ### Correctness -/
@@ -109,9 +108,20 @@ theorem toLeafData_buildMerkleTreeWithHash {s : Skeleton}
       simp only [buildMerkleTreeWithHash, populateUp_internal, FullData.toLeafData_internal] at *
       rw [ihl, ihr]
 
+/-- Reading a leaf of the leaf data built from a function recovers the function's value there. -/
+@[simp]
+theorem get_leafDataOfFn : ∀ {s : Skeleton} (f : SkeletonLeafIndex s → α)
+    (l : SkeletonLeafIndex s), (leafDataOfFn s f).get l = f l
+  | Skeleton.leaf, _, SkeletonLeafIndex.ofLeaf => rfl
+  | Skeleton.internal _ _, f, SkeletonLeafIndex.ofLeft il =>
+      get_leafDataOfFn (fun i => f (SkeletonLeafIndex.ofLeft i)) il
+  | Skeleton.internal _ _, f, SkeletonLeafIndex.ofRight ir =>
+      get_leafDataOfFn (fun i => f (SkeletonLeafIndex.ofRight i)) ir
+
 /-- **Perfect correctness of the Merkle vector commitment.** Every position opened honestly against
-an honestly built tree verifies against the committed root. The opening's authentication path is
-`generateProof`, and the check reduces to `InductiveMerkleTree.functional_completeness`. -/
+an honestly built tree verifies the committed value against the committed root. The opening's
+authentication path is `generateProof`, and the check reduces to
+`InductiveMerkleTree.functional_completeness`. -/
 theorem vectorCommitment_perfectlyCorrect {ι : Type} {m : Type → Type} [Monad m]
     [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [DecidableEq α]
     (s : Skeleton) (e : ι ≃ SkeletonLeafIndex s) (hashFn : α → α → α) :
@@ -122,17 +132,12 @@ theorem vectorCommitment_perfectlyCorrect {ι : Type} {m : Type → Type} [Monad
   simp only [vectorCommitment, support_pure, Set.mem_singleton_iff] at hop
   subst hop
   simp only [vectorCommitment, List.Vector.toList_length, dite_true,
-    toLeafData_buildMerkleTreeWithHash, decide_eq_true_eq, vector_mk_toList]
-  exact functional_completeness (e i) _ hashFn
+    decide_eq_true_eq, vector_mk_toList]
+  simpa [get_leafDataOfFn] using
+    functional_completeness (e i) (leafDataOfFn s fun j => data (e.symm j)) hashFn
 
-/-! Per-field reductions for the Merkle vector commitment, letting proofs unfold `commit` / `decode`
-/ `openAt` without also unfolding `verifyOpen` into its `dite`. -/
-
-@[simp]
-theorem vectorCommitment_decode {ι : Type} {m : Type → Type} [Monad m] [DecidableEq α]
-    (s : Skeleton) (e : ι ≃ SkeletonLeafIndex s) (hashFn : α → α → α)
-    (st : FullData α s) (i : ι) :
-    (vectorCommitment (m := m) s e hashFn).decode st i = st.toLeafData.get (e i) := rfl
+/-! Per-field reductions for the Merkle vector commitment, letting proofs unfold `commit` /
+`openAt` without also unfolding `verifyOpen` into its `dite`. -/
 
 @[simp]
 theorem vectorCommitment_openAt {ι : Type} {m : Type → Type} [Monad m] [DecidableEq α]
@@ -148,7 +153,7 @@ theorem vectorCommitment_commit {ι : Type} {m : Type → Type} [Monad m] [Decid
         (t.getRootValue, t)) := rfl
 
 /-- **Perfect correctness of the naive batch-opening Merkle commitment.** A batch opening of any
-list of positions verifies the decoded claims. Since the batch opening is just the list of the
+list of positions verifies the committed claims. Since the batch opening is just the list of the
 individual authentication paths, this reduces to `vectorCommitment_perfectlyCorrect`. -/
 theorem naiveBatchOpenMerkleTree_perfectlyCorrect {ι : Type} {m : Type → Type}
     [Monad m] [LawfulMonad m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
@@ -162,25 +167,23 @@ theorem naiveBatchOpenMerkleTree_perfectlyCorrect {ι : Type} {m : Type → Type
   obtain ⟨rfl, rfl⟩ := hcst
   set tree := buildMerkleTreeWithHash (leafDataOfFn s fun i => data (e.symm i)) hashFn with htree
   simp only [naiveBatchOpenMerkleTree, VectorCommitment.toBatchOpening, vectorCommitment_openAt,
-    vectorCommitment_decode, bind_pure_comp, map_pure, mapM_pure_map, support_pure,
-    Set.mem_singleton_iff] at hop
+    bind_pure_comp, map_pure, mapM_pure_map, support_pure, Set.mem_singleton_iff] at hop
   subst hop
-  -- The batch opening is `is.map g`, with `g i` the leaf value and authentication path at `i`.
-  set g : ι → ι × α × List α :=
-    fun i => (i, tree.toLeafData.get (e i), (generateProof tree (e i)).toList) with hg
+  -- The batch opening is `is.map g`, with `g i` the position paired with its authentication path.
+  set g : ι → ι × List α := fun i => (i, (generateProof tree (e i)).toList) with hg
   -- The honestly built commitment/state, used to invoke single-position correctness.
   have hc : (tree.getRootValue, tree) ∈
       support ((vectorCommitment (m := m) s e hashFn).commit data) := by
     simp only [vectorCommitment_commit, htree, support_pure, Set.mem_singleton_iff]
-  -- Each opened position verifies against the root, via the single-position correctness `hvc`.
+  -- Each opened position verifies its committed value against the root, via `hvc`.
   have hverify : ∀ i, (vectorCommitment (m := m) s e hashFn).verifyOpen tree.getRootValue i
-      (tree.toLeafData.get (e i)) (generateProof tree (e i)).toList = true := by
+      (data i) (generateProof tree (e i)).toList = true := by
     intro i
     have ho : (generateProof tree (e i)).toList ∈
         support ((vectorCommitment (m := m) s e hashFn).openAt tree i) := by
       simp only [vectorCommitment_openAt, support_pure, Set.mem_singleton_iff]
-    simpa only [vectorCommitment_decode] using hvc data i tree.getRootValue tree hc _ ho
-  simp only [naiveBatchOpenMerkleTree, VectorCommitment.toBatchOpening, vectorCommitment_decode,
+    exact hvc data i tree.getRootValue tree hc _ ho
+  simp only [naiveBatchOpenMerkleTree, VectorCommitment.toBatchOpening,
     List.all_eq_true, List.mem_map, forall_exists_index, and_imp]
   rintro _ i hi rfl
   dsimp only
