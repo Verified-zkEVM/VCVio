@@ -1077,8 +1077,9 @@ private lemma forkVerifyFreshComp_project
         forkWrappedUniformImpl, hcache]
       congr 1
   | none =>
-      simp [forkVerifyFreshComp, simLoggedVerifyFreshComp, forkLoggedProj,
-        forkWrappedUniformImpl, hcache]
+      simp only [forkWrappedUniformImpl, QueryImpl.ofLift_eq_id',
+        forkVerifyFreshComp, hcache, add_apply_inr, bind_pure_comp,
+        simulateQ_map, simLoggedVerifyFreshComp, forkLoggedProj]
       congr 1
       exact simulateQ_id_add_uniform_query_inr (Unit →ₒ Chal) ()
 
@@ -1304,7 +1305,8 @@ private lemma forkWrappedUniform_forkSim_query_inl_run
         (liftM (unifSpec.query n) : ProbComp
           ((unifSpec + (M × Commit →ₒ Chal)).Range (Sum.inl n))) := by
   rw [Fork.simulateQ_unifForward_add_roImpl_query_inl_run]
-  simp [Fork.wrappedUniformQuery, forkWrappedUniformImpl]
+  simp only [add_apply_inl, bind_pure_comp, simulateQ_map, Prod.mk.injEq,
+    and_true, imp_self, implies_true, map_inj_right_of_nonempty]
   exact simulateQ_id_add_uniform_query_inl (Unit →ₒ Chal) n
 
 omit [Finite Chal] [Inhabited Chal] in
