@@ -18,10 +18,6 @@ universe u v w
 
 namespace QueryImpl
 
-/- Lean 4.33 checks component and sum-spec response types at implicit transparency in the
-routing statements below. -/
-attribute [local implicit_reducible] OracleSpec.instHAddSum
-
 variable {ι₁ ι₂} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂} {m n r : Type u → Type*}
 
 /-- Simplest version of adding queries when all implementations are in the same monad.
