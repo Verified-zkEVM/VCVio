@@ -1765,9 +1765,9 @@ The routine is documented for `x` in `[0, log 2)`, and `0.694` is the smallest c
 `log 2` that the proof already carries — it is the contraction factor of the Horner error
 induction (`scaledArg_le_694`), and the Chebyshev certificates run to `89/128 = 0.6953125`.
 Stating the hypothesis at `0.694` rather than `log 2` is what lets a caller feed a *computed*
-reduction: `Falcon.Concrete.SamplerZ.berExpReduce` produces its `r` by rounding a floating-point
-quotient, which can land a few ulps above `log 2` when `x` is near a multiple of it, and no
-statement closed at `log 2` would apply there.
+reduction. A caller that reduces modulo `log 2` by rounding a floating-point quotient obtains a
+remainder that can sit a few ulps above `log 2` when the argument is near a multiple of it, so no
+statement closed at `log 2` would apply to one.
 
 Both sides of the `ccs` restriction are load-bearing. `expm_p63` reads its operands through a
 fixed-point conversion that keeps `⌊2 ^ 63 * ccs⌋` in 63 bits and drops the sign bit, so the scale
@@ -1852,8 +1852,9 @@ example : 0 ≤ toReal FPR.zero ∧ toReal FPR.zero ≤ 694 / 1000 ∧
 exponent field and never the sign bit. The routine therefore computes `exp (-|x|)`, not
 `exp (-x)`, and the two agree only on the nonnegative domain `expm_p63_error` is stated for.
 That is what makes the sign of the reduced argument a correctness question for the caller
-rather than a matter of taste: see `Falcon.Concrete.SamplerZ.berExpReduce`, which must round its
-quotient toward negative infinity to keep the remainder on the correct side. -/
+rather than a matter of taste: a caller reducing modulo `log 2` must round its quotient toward
+negative infinity, since rounding to nearest leaves the remainder below zero for roughly half of
+all arguments, where this routine reads it as `exp (|r|)`. -/
 
 /-- `mtwop63` discards the sign bit: the shift by `10` carries it out of the word, and the
 exponent mask keeps only bits `52` through `62`. -/

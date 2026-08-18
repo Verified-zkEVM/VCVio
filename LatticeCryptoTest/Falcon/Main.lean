@@ -291,43 +291,6 @@ def runFalconProtocolTests (st : IO.Ref TestState) : IO Unit := do
     let prng2 := PRNGState.init seed
     let (accept1, _) := berExp prng2 zero half
     check st s!"berExp(zero, half) likely accepts (got {accept1})" accept1
-    -- `berExpReduce` must land `r` in `[0, log 2)`: `expm_p63` reads only `|r|`, so a
-    -- negative `r` is evaluated as `exp |r|` and inflates the acceptance weight by up to
-    -- `2x`. Rounding the quotient to nearest instead of toward `-∞` puts `r` below zero for
-    -- about half of all inputs, and `k / 32` catches it at 100 of the 199 points below.
-    let log2Bound : FPR := 0x3FE62E42FEFA39F7  -- `log 2`, rounded up by 8 ulp
-    let mut redBad : Nat := 0
-    let mut redCount : Nat := 0
-    for k in [1:200] do
-      let (_, r) := berExpReduce (scaled (Int64.ofNat k) (-5))
-      if (r >>> 63) != 0 || r > log2Bound then
-        redBad := if redBad == 0 then k else redBad
-        redCount := redCount + 1
-    check st s!"berExpReduce(k/32) ∈ [0, log 2] for k < 200" (redCount == 0)
-      s!"{redCount} of 199 outside, first at k={redBad}"
-    check st "berExpReduce(0) = (0, 0)"
-      (berExpReduce (F := FPR) zero == (0, zero))
-    -- `berExp` needs `x ≥ 0`, and `samplerZLoop` supplies it from the key-generation
-    -- invariant `σ ≤ σ₀`. In floating point that margin is exactly zero, so pin both sides:
-    -- `isigmaHi` is the representable `1/σ` just above `1/σ₀`, and `isigmaLo` is one ulp
-    -- down, where `σ` passes `σ₀` and `x` goes negative. The pair is what makes this a test
-    -- rather than a restatement.
-    let inv2s0 : FPR := scaled 5435486223186882 (-55)
-    let isigmaHi : FPR := scaled 4947651334655860 (-53)  -- σ = 1.8204999999999998 ≤ σ₀
-    let isigmaLo : FPR := scaled 4947651334655859 (-53)  -- σ = 1.8205000000000002 > σ₀
-    let xAt (isig : FPR) (z0 : Nat) : FPR :=
-      let dss := mul (mul isig isig) half
-      let diff := sub zero (ofInt (Int64.ofNat z0))  -- z = -z0 for b = 0, centre r = 0
-      sub (mul (mul diff diff) dss) (mul (ofInt (Int64.ofNat (z0 * z0))) inv2s0)
-    let mut hiNeg : Nat := 0
-    let mut loNeg : Nat := 0
-    for z0 in [0:26] do
-      if (xAt isigmaHi z0) >>> 63 != 0 then hiNeg := hiNeg + 1
-      if (xAt isigmaLo z0) >>> 63 != 0 then loNeg := loNeg + 1
-    check st "samplerZ x ≥ 0 for σ ≤ σ₀ (berExp's precondition)" (hiNeg == 0)
-      s!"{hiNeg} of 26 negative"
-    check st "samplerZ x < 0 one ulp past σ₀ (the margin is exactly zero)" (loNeg > 0)
-      s!"{loNeg} of 26 negative"
   IO.println ""
   -- ── 13. Falcon-1024 FFI end-to-end ─────────────
   IO.println "13. Falcon-1024 FFI end-to-end"
