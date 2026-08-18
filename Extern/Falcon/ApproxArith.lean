@@ -320,18 +320,23 @@ cancellation is an `IsNormal`-losing failure mode that `InRange` does not exclud
 domain binary64 arithmetic is genuinely closed under. It still excludes subnormals and the
 non-finite encodings, both of which would break the relative-error bounds. Against that `Valid`:
 
-- `add_isNormalOrZero` and `sub_isNormalOrZero` are proved, with the `1 + (-1)` cancellation
-  banked as a witness that the zero disjunct is reachable and load-bearing.
-- `FPR.isNormalOrZero_neg` is proved, giving `neg_valid`.
-- `mul_valid`, `div_valid` and `sqrt_valid` are not. Each needs the exponent-window argument
-  `add_isNormalOrZero` runs on, transposed to `FPR.make` and that operation's pipeline. Their
-  results cannot cancel — a product, quotient, or square root of *nonzero* normals is nonzero —
-  so for these three the `IsNormal` reading is not refuted, only unproved.
-- The `_error` fields must then be widened from `IsNormal` to `IsNormalOrZero` operands, since
-  `Valid` now admits zero. Every zero-operand case is exact rather than approximate (`x + 0`,
-  `x * 0`, `sqrt 0`), and `div_error` already carries the `interp b ≠ 0` it needs.
+All six closure properties are now proved, at normal operands: `add_isNormalOrZero`,
+`sub_isNormalOrZero`, `mul_isNormalOrZero`, `div_isNormalOrZero`, `sqrt_isNormalOrZero` and
+`FPR.isNormalOrZero_neg`. The `1 + (-1)` cancellation is banked alongside them as a witness that
+the zero disjunct is reachable and load-bearing. Only addition and subtraction can cancel; a
+product, quotient or square root of nonzero normals is nonzero, so those three always land in the
+`IsNormal` disjunct.
 
-Until those are discharged this instance stays commented out, and so the error bounds proved in
+One step remains before this instance can be uncommented. Every statement above, and every
+`_error` bound, restricts its *operands* to `FPR.IsNormal`, while the `Valid` the class needs is
+`FPR.IsNormalOrZero`. Widening them requires each pipeline evaluated at a zero operand. The
+underlying facts hold bit-exactly — `FPR.add x 0 = x`, `FPR.mul x 0` and `FPR.div 0 x` are `±0`,
+`FPR.sqrt 0 = 0` — and every one of those cases is exact rather than approximate, so no new error
+analysis is involved; what it needs is the alignment and significand-packing steps traced at an
+operand whose exponent field is `0`. Note `FPR.add` is not bit-preserving there: `(+0) + (-0)` is
+`+0`, so the widened statements have to be phrased on `toReal`, not on the bit pattern.
+
+Until that is discharged this instance stays commented out, and so the error bounds proved in
 `FPRBridge.lean` do not yet reach any downstream Falcon theorem. -/
 -- instance : FloatLike.HasRealSemantics FPR ieee754_machineEpsilon where
 --   interp := Falcon.Concrete.FPRBridge.toReal
@@ -344,12 +349,13 @@ Until those are discharged this instance stays commented out, and so the error b
 --   add_error := Falcon.Concrete.FPRBridge.add_error
 --   add_valid := Falcon.Concrete.FPRBridge.add_isNormalOrZero
 --   mul_error := Falcon.Concrete.FPRBridge.mul_error
---   mul_valid := _   -- open: `add_isNormalOrZero`'s argument, transposed to `FPR.mul`
+--   mul_valid := Falcon.Concrete.FPRBridge.mul_isNormalOrZero
 --   div_error := fun a b ha hb hbne hr =>
 --     Falcon.Concrete.FPRBridge.div_error a b hbne ha hb hr
---   div_valid := _   -- open: `add_isNormalOrZero`'s argument, transposed to `FPR.div`
+--   div_valid := fun a b ha hb hbne hr =>
+--     Falcon.Concrete.FPRBridge.div_isNormalOrZero a b hbne ha hb hr
 --   sqrt_error := Falcon.Concrete.FPRBridge.sqrt_error
---   sqrt_valid := _  -- open: `add_isNormalOrZero`'s argument, transposed to `FPR.sqrt`
+--   sqrt_valid := Falcon.Concrete.FPRBridge.sqrt_isNormalOrZero
 --   neg_exact := Falcon.Concrete.FPRBridge.toReal_neg
 --   neg_valid := fun _ => Falcon.Concrete.FPRBridge.FPR.isNormalOrZero_neg
 --   sub_error := Falcon.Concrete.FPRBridge.sub_error
