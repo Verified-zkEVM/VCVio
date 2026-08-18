@@ -146,7 +146,7 @@ protected def id' {ι} (spec : OracleSpec ι) :
     (QueryImpl.id' spec).mapQuery q = q := by
   simp only [mapQuery, id'_apply]
   rw [← OracleComp.liftM_map]
-  rfl
+  exact congrArg OracleComp.lift (mapQuery_id q)
 
 end id
 

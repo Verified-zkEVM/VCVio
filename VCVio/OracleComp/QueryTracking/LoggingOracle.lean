@@ -66,8 +66,7 @@ theorem writerTMapBase_apply
     (outer : QueryImpl spec₁ m₁)
     (inner : QueryImpl spec₀ (WriterT ω (OracleComp spec₁)))
     (t : spec₀.Domain) :
-    (outer.writerTMapBase inner t).run = simulateQ outer ((inner t).run) := by
-  rfl
+    (outer.writerTMapBase inner t).run = simulateQ outer ((inner t).run) := rfl
 
 /-- Running a `WriterT` handler and then interpreting its base oracle
 computations is the same as first mapping the handler's base through the

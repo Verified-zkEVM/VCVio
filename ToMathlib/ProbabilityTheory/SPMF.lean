@@ -137,7 +137,7 @@ lemma toPMF_bind (p : SPMF α) (q : α → SPMF β) :
   unfold SPMF.toPMF
   unfold SPMF.instAlternativeMonad
   rw [OptionT.run_bind]
-  rfl
+  rw [PMF.monad_pure_eq_pure]
 
 @[simp, grind =]
 lemma toPMF_map (p : SPMF α) (f : α → β) : (f <$> p).toPMF = Option.map f <$> p.toPMF := by

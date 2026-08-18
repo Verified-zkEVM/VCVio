@@ -126,11 +126,7 @@ lemma buildLayer_zero (a b : α) :
     buildLayer (m := OracleComp (spec α)) α 0 ⟨[a, b], rfl⟩ =
       (do
         let h ← ((spec α).query (a, b) : OracleComp (spec α) α)
-        pure (⟨[h], rfl⟩ : List.Vector α (2 ^ 0))) := by
-  change (do
-    let h ← ((spec α).query (a, b) : OracleComp (spec α) α)
-    pure (⟨[h], rfl⟩ : List.Vector α (2 ^ 0))) = _
-  rfl
+        pure (⟨[h], rfl⟩ : List.Vector α (2 ^ 0))) := rfl
 
 /-- Build the full Merkle tree, returning the cache -/
 def buildMerkleTree (α) {m : Type _ → Type _} [Monad m] [HasQuery (spec α) m]

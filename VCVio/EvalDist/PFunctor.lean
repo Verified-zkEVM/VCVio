@@ -87,14 +87,12 @@ instance instLawfulMonadLiftTSetM : LawfulMonadLiftT (FreeM P) SetM where
 /-- The distribution semantics of a polynomial free program is its universal
 fold into `PMF`. -/
 theorem evalDist_eq_liftM [P.IsProbabilitySpec] (program : FreeM P α) :
-    𝒟[program] = program.liftM IsProbabilitySpec.toPMF :=
-  rfl
+    𝒟[program] = program.liftM IsProbabilitySpec.toPMF := rfl
 
 /-- The support semantics of a polynomial free program is its universal fold
 with every operation direction available. -/
 theorem support_eq_liftM (program : FreeM P α) :
-    support program = SetM.run (program.liftM fun _ => Set.univ) :=
-  rfl
+    support program = SetM.run (program.liftM fun _ => Set.univ) := rfl
 
 /-- A single operation evaluates to its configured direction distribution. -/
 @[simp]
@@ -119,7 +117,7 @@ theorem support_lift (operation : P.A) :
     support (FreeM.lift operation : FreeM P (P.B operation)) = Set.univ := by
   change SetM.run ((FreeM.lift operation).liftM fun _ => Set.univ) = Set.univ
   rw [FreeM.liftM_lift]
-  rfl
+  exact SetM.run_eq Set.univ
 
 /-- The support of an operation with a result continuation is the range of
 that continuation. -/
