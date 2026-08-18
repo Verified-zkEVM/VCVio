@@ -331,6 +331,25 @@ def FPR.Bits.IsNormal (b : FPR.Bits) : Prop := b.exponent ≠ 0 ∧ b.exponent �
 /-- An `FPR` bit pattern decodes to a normal, finite IEEE-754 binary64 value. -/
 def FPR.IsNormal (x : FPR) : Prop := (FPR.decode x).IsNormal
 
+/-- A decoded field triple denotes exactly `±0`: the zero/subnormal exponent marker with an
+empty significand. Distinct from `toReal b = 0`, which also holds on the non-finite encodings,
+since `FPR.Bits.toReal` sends those to `0` as well. -/
+def FPR.Bits.IsZero (b : FPR.Bits) : Prop := b.exponent = 0 ∧ b.mantissa = 0
+
+/-- An `FPR` bit pattern is one of the two zero encodings. -/
+def FPR.IsZero (x : FPR) : Prop := (FPR.decode x).IsZero
+
+/-- The operand domain binary64 arithmetic is actually closed under: normal and finite, or
+exactly `±0`.
+
+`FPR.IsNormal` alone is not closed, because exact cancellation leaves the normal range: at
+`1 + (-1)` both operands are normal, the exact sum `0` satisfies `FPR.InNormalMagnitudeRange`
+through its `r = 0` disjunct, and `FPR.add` returns `+0`, whose exponent field is `0`. Admitting
+the zero encodings repairs that without admitting subnormals (exponent `0` with a nonzero
+significand) or the non-finite encodings (exponent `2047`), both of which would break the
+relative-error bounds. -/
+def FPR.IsNormalOrZero (x : FPR) : Prop := FPR.IsNormal x ∨ FPR.IsZero x
+
 /-- The smallest positive magnitude of a normal binary64 value, `2^(-1022)`. -/
 def FPR.minNormalReal : ℝ := (2 : ℝ) ^ (-(1022 : ℤ))
 
@@ -3908,11 +3927,73 @@ theorem add_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
     rw [h52]
     exact add_error_combine hδ hδ16 hasm hfold herr
 
+/-- Closure for `FPR.add` on the domain `add_error` covers: the rounded sum is normal, except
+under exact cancellation, where it is `±0`.
+
+Cancellation is why this cannot be stated with `FPR.IsNormal` on the right. At `1 + (-1)` both
+operands are normal and the exact sum `0` satisfies `FPR.InNormalMagnitudeRange` through its
+`r = 0` disjunct, but `FPR.add` returns `+0`, whose exponent field is `0`. The rounding carry is
+the other boundary: it raises the packed exponent by two rather than one, and is ruled out at the
+top of the window by `addPipeline_no_carry`, so the result never reaches the non-finite marker. -/
+theorem add_isNormalOrZero (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a + toReal b)) :
+    FPR.IsNormalOrZero (FPR.add a b) := by
+  have hs : ((addPipeline a b).sx.toUInt64).toNat ≤ 1 := by
+    rcases addPipeline_sx_eq_zero_or_one a b with hc | hc <;> rw [hc] <;> decide
+  rcases hr with h0 | ⟨hmin, hmax⟩
+  · right
+    unfold FPR.IsZero FPR.Bits.IsZero
+    rw [add_eq_make_z, addPipeline_zu''_eq_zero_of_zu_eq_zero a b
+        (addPipeline_zu_eq_zero_of_sum_eq_zero a b ha hb h0),
+      FPR.decode_make_z_of_zero _ _ hs]
+    exact ⟨rfl, rfl⟩
+  · left
+    have hmn : FPR.minNormalReal = (2 : ℝ) ^ (-(1022 : ℤ)) := rfl
+    obtain ⟨herr, hBmin⟩ := addPipeline_pre_round a b ha hb hmin
+    have hb31 : -(2 ^ 31 : ℤ) + 63 ≤ (addPipeline a b).ex'.toInt := by
+      have := addPipeline_ex'_ge' a b ha hb
+      omega
+    have hzu : (addPipeline a b).zu ≠ 0 := by
+      intro hc
+      rw [hc, hmn] at hBmin
+      have hz : (((0 : UInt64).toNat : ℝ)) * (2 : ℝ) ^ (addPipeline a b).ex'.toInt = 0 := by
+        norm_num
+      rw [hz] at hBmin
+      exact absurd hBmin (not_le.mpr (two_zpow_pos (-(1022 : ℤ))))
+    have hlt := addPipeline_pre_round_lt a b ha hb hmin hmax
+    obtain ⟨he1, he2⟩ := addPipeline_ex'''_window a b hzu hb31 hBmin hlt
+    have hmem := addPipeline_zu''_mem a b hzu
+    have hround := roundQuarterTiesEven_mem_of_normalized _ hmem.1 hmem.2
+    unfold FPR.IsNormal FPR.Bits.IsNormal
+    rw [add_eq_make_z]
+    rcases lt_or_ge (roundQuarterTiesEven (addPipeline a b).zu''.toNat) (2 ^ 53) with hnc | hcar
+    · rw [FPR.decode_make_z_of_no_carry _ _ _ hs he1 he2 hmem.1 hmem.2 hnc]
+      simp only
+      omega
+    · have hceq : roundQuarterTiesEven (addPipeline a b).zu''.toNat = 2 ^ 53 := by omega
+      have h968 : (addPipeline a b).ex'''.toInt ≤ 968 := by
+        by_contra hcon
+        exact absurd (addPipeline_no_carry a b ha hb hzu hb31 hmax (by omega)) (by omega)
+      rw [FPR.decode_make_z_of_carry _ _ _ hs he1 he2 hmem.1 hmem.2 hceq]
+      simp only
+      omega
+
 /-- Negation preserves normality: flipping the sign bit leaves the exponent field alone. -/
 theorem FPR.isNormal_neg {b : FPR} (hb : FPR.IsNormal b) : FPR.IsNormal (FPR.neg b) := by
   unfold FPR.IsNormal FPR.Bits.IsNormal at hb ⊢
   rw [decode_neg_exponent]
   exact hb
+
+/-- Negation preserves the closed operand domain: it touches neither the exponent field nor the
+significand, so it carries both disjuncts of `FPR.IsNormalOrZero`. -/
+theorem FPR.isNormalOrZero_neg {b : FPR} (hb : FPR.IsNormalOrZero b) :
+    FPR.IsNormalOrZero (FPR.neg b) := by
+  rcases hb with h | h
+  · exact Or.inl (FPR.isNormal_neg h)
+  · right
+    unfold FPR.IsZero FPR.Bits.IsZero at h ⊢
+    rw [decode_neg_exponent, decode_neg_mantissa]
+    exact h
 
 /-- Relative error bound for `FPR.sub`, on the same domain as `add_error`. Subtraction is
 addition against a negated operand, and negation is exact, so the bound transfers with no
@@ -3926,6 +4007,26 @@ theorem sub_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
   have h := add_error a (FPR.neg b) ha (FPR.isNormal_neg hb) (by rw [hsum]; exact hr)
   rw [hsum] at h
   exact h
+
+/-- Closure for `FPR.sub`, on the same domain as `sub_error`: subtraction is addition against a
+negated operand, so it inherits `add_isNormalOrZero` — including the cancellation case, which for
+subtraction is the ordinary `a - a`. -/
+theorem sub_isNormalOrZero (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a - toReal b)) :
+    FPR.IsNormalOrZero (FPR.sub a b) := by
+  have hsum : toReal a + toReal (FPR.neg b) = toReal a - toReal b := by
+    rw [toReal_neg]; ring
+  exact add_isNormalOrZero a (FPR.neg b) ha (FPR.isNormal_neg hb) (by rw [hsum]; exact hr)
+
+/-- The cancellation case is real and is now covered: `1 + (-1)` lands in the zero disjunct.
+This is the input that refutes the same statement with `FPR.IsNormal` on the right. -/
+example : FPR.IsNormalOrZero (FPR.add FPR.one (FPR.neg FPR.one))
+    ∧ ¬ FPR.IsNormal (FPR.add FPR.one (FPR.neg FPR.one)) := by
+  refine ⟨add_isNormalOrZero FPR.one (FPR.neg FPR.one) ?_ ?_ ?_, ?_⟩
+  · unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode; decide
+  · unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode; decide
+  · exact Or.inl (by rw [toReal_neg, toReal_one]; ring)
+  · unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode; decide
 
 /-! ## The `FPR.mul` pipeline, named field by field
 
