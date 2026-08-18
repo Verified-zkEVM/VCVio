@@ -21,8 +21,8 @@ simulation oracles and implementation transformers defined in the same directory
 
 open ENNReal OracleSpec OracleComp
 
-/- Query logs are definitionally PolyFun traces for an oracle specification. Lean 4.33
-needs these reducers at implicit transparency when specializing that generic API. -/
+/- Query logs are definitionally PolyFun traces for an oracle specification. These reducers
+must remain available at implicit transparency when specializing that generic API. -/
 attribute [local implicit_reducible] PFunctor.Idx FreeMonoid
 
 universe u v w
