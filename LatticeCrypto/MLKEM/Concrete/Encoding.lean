@@ -820,6 +820,10 @@ private theorem byteDecodeVec_byteEncodeVec_of_bound {d k : Nat} (hd : 0 < d) (v
       simp only [Array.getElem_ofFn]
       rw [getByteD_byteEncodeVec (hd := hd) (v := v) (poly := i) (j := j) hi hj]
       rw [getByteD_eq_getElem hjEnc, ByteArray.getElem_eq_getElem_data]
+      exact getElem_congr
+        (c := (byteEncode d (v[i]'hi)).data)
+        (d := (byteEncode d (v[i]'hi)).data)
+        (i := j) (j := j) (by simp) (by simp) hj2
   simp only [byteDecodeVec, Vector.getElem_ofFn]
   rw [hbytes]
   exact byteDecode_byteEncode_of_bound hd (f := v[i]'hi) (hbound := hbound ⟨i, hi⟩)
@@ -915,7 +919,9 @@ private theorem messageToArray_ofByteArray (ba : ByteArray) (hsize : ba.size = 3
   · intro i hi1 hi2
     have hi : i < ba.size := by simpa [hsize] using hi1
     rw [Array.getElem_ofFn]
-    simp [hi, ByteArray.getElem_eq_getElem_data]
+    calc
+      ba[i]! = ba[i]'hi := getElem!_pos ba i hi
+      _ = ba.data[i]'hi2 := ByteArray.getElem_eq_getElem_data
 
 private theorem toArray_byteEncode1Msg (f : Rq) :
     (byteEncode1Msg f).toArray = (byteEncode 1 f).data := by
