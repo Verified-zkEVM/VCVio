@@ -89,7 +89,7 @@ def prfFuncQuery (msg : D) :
 
 /-- Oracle implementation for the reduction: forwards `unifSpec` queries transparently
 and forwards `(D →ₒ R)` queries to the ambient oracle while logging them. -/
-noncomputable def macToPRFQueryImpl :
+def macToPRFQueryImpl :
     QueryImpl (unifSpec + (D →ₒ R))
       (WriterT (QueryLog (D →ₒ R)) (OracleComp (unifSpec + (D →ₒ R)))) :=
   let fwdTag : QueryImpl (D →ₒ R) (OracleComp (unifSpec + (D →ₒ R))) :=
@@ -103,7 +103,7 @@ noncomputable def macToPRFQueryImpl :
 logged-and-forwarded oracles, then verifies the forgery via one additional oracle query.
 If the forger makes Q tagging queries, the reduction makes Q + 1 oracle queries total;
 this can be tracked separately via `IsTotalQueryBound`. -/
-noncomputable def macToPRFReduction (prf : PRFScheme K D R)
+def macToPRFReduction (prf : PRFScheme K D R)
     (adversary : (prf.toMacAlg).UF_CMA_Adversary) :
     PRFAdversary D R :=
   ((simulateQ (macToPRFQueryImpl (D := D) (R := R)) adversary.main).run >>=

@@ -143,7 +143,7 @@ variable [SampleableType Wit] [SampleableType Chal]
 /-- The branch the NMA extractor takes on a forking-lemma result: from two traces sharing a
 commitment whose distinct cached challenges accept, run `σ.extract`; otherwise resample. This is
 the post-`contextFork` continuation of `nmaForkExtract`. -/
-private noncomputable def nmaForkExtractBranch :
+private def nmaForkExtractBranch :
     Option (Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) ×
       Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) →
       OracleComp (unifSpec + (Unit →ₒ Chal)) Wit
@@ -163,7 +163,7 @@ private noncomputable def nmaForkExtractBranch :
 
 /-- Witness-extraction computation used by the NMA reduction: replay the forking lemma, then
 take the `nmaForkExtractBranch` continuation on the resulting trace pair. -/
-private noncomputable def nmaForkExtract
+private def nmaForkExtract
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (pk : Stmt) :
@@ -174,7 +174,7 @@ private noncomputable def nmaForkExtract
 
 /-- NMA reduction for `nma_to_hard_relation_bound`: simulate the challenge oracle of
 `nmaForkExtract` down to `ProbComp`. -/
-private noncomputable def nmaReduction
+private def nmaReduction
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) : Stmt → ProbComp Wit := fun pk =>

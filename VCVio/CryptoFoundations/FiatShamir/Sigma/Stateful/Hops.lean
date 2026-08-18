@@ -487,7 +487,7 @@ private def CmaRealSignGhost.public
   challenge := x.challenge
   response := x.ghostResponse
 
-private noncomputable def cmaSignKeySource
+private def cmaSignKeySource
     (hr : GenerableRelation Stmt Wit rel)
     (s : CmaData M Commit Chal Stmt Wit) :
     ProbComp (Stmt × Wit) :=
@@ -503,7 +503,7 @@ private def cmaSignKeyedData
   | some _ => s
   | none => (s.1, s.2.1, some (pk, sk))
 
-private noncomputable def cmaRealSignGhostDist
+private def cmaRealSignGhostDist
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (m : M)
@@ -524,7 +524,7 @@ private noncomputable def cmaRealSignGhostDist
         pk := pk, sk := sk, commit := c, privateState := prv,
         challenge := ch, ghostResponse := ghostResp, actualResponse := ghostResp }
 
-private noncomputable def cmaRealSignPublicDist
+private def cmaRealSignPublicDist
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (s : CmaData M Commit Chal Stmt Wit) :
@@ -532,7 +532,7 @@ private noncomputable def cmaRealSignPublicDist
   let (pk, sk) ← cmaSignKeySource M Commit Chal hr s
   cmaSignPublicOfTranscript pk sk <$> σ.realTranscript pk sk
 
-private noncomputable def cmaSimSignPublicDist
+private def cmaSimSignPublicDist
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (s : CmaData M Commit Chal Stmt Wit) :

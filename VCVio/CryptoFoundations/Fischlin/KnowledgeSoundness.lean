@@ -73,7 +73,7 @@ The key property enabling this extractor is `UniqueResponses`: given the same
 `(statement, commitment, challenge)`, there is at most one valid response.
 So finding a second valid query at a different challenge gives a proper
 input pair for the Σ-protocol extractor. -/
-noncomputable def onlineExtract
+def onlineExtract
     (x : Stmt) (π : FischlinProof Commit Chal Resp ρ)
     (log : QueryLog (fischlinROSpec Stmt Commit Chal Resp ρ b M)) : ProbComp (Option Wit) :=
   let comList := List.ofFn fun i => (π i).1
@@ -243,7 +243,7 @@ output is either `none` or an invalid witness.
 
 The `prover` argument is the raw function rather than `KnowledgeSoundnessAdv`
 to keep type inference tractable. -/
-noncomputable def knowledgeSoundnessExp
+def knowledgeSoundnessExp
     (prover : Stmt → M →
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
         (FischlinProof Commit Chal Resp ρ))
@@ -266,7 +266,7 @@ noncomputable def knowledgeSoundnessExp
 
 /-- The verification step of `knowledgeSoundnessExp`, as a standalone computation
 (definitionally the same term). -/
-private noncomputable def ksVerify (x : Stmt) (msg : M) (π : FischlinProof Commit Chal Resp ρ)
+private def ksVerify (x : Stmt) (msg : M) (π : FischlinProof Commit Chal Resp ρ)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache) :
     ProbComp (Bool × (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache) :=
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
@@ -279,7 +279,7 @@ private noncomputable def ksVerify (x : Stmt) (msg : M) (π : FischlinProof Comm
 
 /-- The sampling phase of `knowledgeSoundnessExp` (prover run + verification), keeping the proof,
 the random-oracle log, and the verdict, but discarding the extractor. -/
-private noncomputable def ksSample
+private def ksSample
     (prover : Stmt → M →
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
         (FischlinProof Commit Chal Resp ρ))
@@ -369,20 +369,20 @@ private lemma knowledgeSoundnessExp_bad_le_misses
 
 /-- The lifted `unifSpec` forwarder on the logging stack, exactly as in
 `knowledgeSoundnessExp`. -/
-private noncomputable def idImplW {ι : Type} (hashSpec : OracleSpec ι) :
+private def idImplW {ι : Type} (hashSpec : OracleSpec ι) :
     QueryImpl unifSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
     (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp))
 
 /-- The logged random oracle, exactly as in `knowledgeSoundnessExp`. -/
-private noncomputable def loggedROW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
+private def loggedROW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
     [hashSpec.DecidableEq] [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl hashSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   (hashSpec.randomOracle).withLogging
 
 /-- The combined logging implementation, exactly the `idImpl + loggedRO` of
 `knowledgeSoundnessExp` and `ksSample`. -/
-private noncomputable def compositeW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
+private def compositeW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
     [hashSpec.DecidableEq] [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl (unifSpec + hashSpec)
       (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
@@ -1431,7 +1431,7 @@ private lemma EP_bind_le_const {α β : Type} {mx : ProbComp α} {my : α → Pr
 
 /-- The lazy random-oracle simulation for a constant-range hash spec: forward `unifSpec`
 queries, lazily sample-and-cache hash queries. Abstract analogue of `fischlinImpl`. -/
-@[reducible] private noncomputable def roImpl (b' : ℕ) (T : Type) [DecidableEq T] :
+@[reducible] private def roImpl (b' : ℕ) (T : Type) [DecidableEq T] :
     QueryImpl (unifSpec + (T →ₒ Fin (2 ^ b')))
       (StateT (T →ₒ Fin (2 ^ b')).QueryCache ProbComp) :=
   unifFwdImpl (T →ₒ Fin (2 ^ b')) + randomOracle (spec := T →ₒ Fin (2 ^ b'))
