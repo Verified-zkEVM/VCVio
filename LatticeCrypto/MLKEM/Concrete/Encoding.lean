@@ -818,12 +818,13 @@ private theorem byteDecodeVec_byteEncodeVec_of_bound {d k : Nat} (hd : 0 < d) (v
       have hjEnc : j < (byteEncode d (v[i]'hi)).size := by
         simpa [byteEncode_size] using hj
       simp only [Array.getElem_ofFn]
-      rw [getByteD_byteEncodeVec (hd := hd) (v := v) (poly := i) (j := j) hi hj]
-      rw [getByteD_eq_getElem hjEnc, ByteArray.getElem_eq_getElem_data]
-      exact getElem_congr
-        (c := (byteEncode d (v[i]'hi)).data)
-        (d := (byteEncode d (v[i]'hi)).data)
-        (i := j) (j := j) (by simp) (by simp) hj2
+      calc
+        getByteD (byteEncodeVec d v) (i * (32 * d) + j) =
+            getByteD (byteEncode d (v[i]'hi)) j :=
+          getByteD_byteEncodeVec (hd := hd) (v := v) (poly := i) (j := j) hi hj
+        _ = (byteEncode d (v[i]'hi))[j]'hjEnc := getByteD_eq_getElem hjEnc
+        _ = (byteEncode d (v[i]'hi)).data[j]'hj2 :=
+          ByteArray.getElem_eq_getElem_data
   simp only [byteDecodeVec, Vector.getElem_ofFn]
   rw [hbytes]
   exact byteDecode_byteEncode_of_bound hd (f := v[i]'hi) (hbound := hbound ⟨i, hi⟩)
