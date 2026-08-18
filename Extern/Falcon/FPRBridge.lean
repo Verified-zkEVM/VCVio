@@ -1857,6 +1857,33 @@ private theorem FPR.make_z_eq_make (s : UInt64) (e : Int32) (m : UInt64)
     omega
   rw [hand]
 
+/-- The packed result of `FPR.make` is normal, on a normalized significand inside the exponent
+window.
+
+This is the shared final step of every closure proof. `FPR.decode_make_of_no_carry` puts the
+biased exponent at `(e + 1076) + 1`, which the window `-1076 ≤ e ≤ 969` places inside
+`[1, 2046]`. A rounding carry writes `(e + 1076) + 2` instead, which would reach the non-finite
+marker `2047` at the top of the window — so each caller must supply the fact that its own
+pipeline cannot carry there. -/
+private theorem FPR.isNormal_make (s : UInt64) (e : Int32) (m : UInt64)
+    (hs : s.toNat ≤ 1) (he1 : -1076 ≤ e.toInt) (he2 : e.toInt ≤ 969)
+    (hm1 : 2 ^ 54 ≤ m.toNat) (hm2 : m.toNat < 2 ^ 55)
+    (hnc : e.toInt = 969 → roundQuarterTiesEven m.toNat < 2 ^ 53) :
+    FPR.IsNormal (make s e m) := by
+  unfold FPR.IsNormal FPR.Bits.IsNormal
+  have hround := roundQuarterTiesEven_mem_of_normalized _ hm1 hm2
+  rcases lt_or_ge (roundQuarterTiesEven m.toNat) (2 ^ 53) with hno | hcar
+  · rw [FPR.decode_make_of_no_carry s e m hs he1 he2 hm1 hm2 hno]
+    simp only
+    omega
+  · have hceq : roundQuarterTiesEven m.toNat = 2 ^ 53 := by omega
+    have h968 : e.toInt ≤ 968 := by
+      by_contra hc
+      exact absurd (hnc (by omega)) (by omega)
+    rw [FPR.decode_make_of_carry s e m hs he1 he2 hm2 hceq]
+    simp only
+    omega
+
 /-- Decode round-trip for `FPR.make_z`, ordinary case. -/
 private theorem FPR.decode_make_z_of_no_carry (s : UInt64) (e : Int32) (m : UInt64)
     (hs : s.toNat ≤ 1) (he1 : -1076 ≤ e.toInt) (he2 : e.toInt ≤ 969)
@@ -4994,13 +5021,15 @@ private theorem toReal_ne_zero_of_isNormal {w : FPR} (h : FPR.IsNormal w) : toRe
   have hp : (0 : ℝ) < (2 : ℝ) ^ (((FPR.decode w).exponent : ℤ) - 1075) := zpow_pos (by norm_num) _
   nlinarith
 
-/-- Relative error bound for `FPR.mul`, on normal operands whose exact product stays in the
-correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
-why both the operand- and result-side restrictions are necessary. -/
-theorem mul_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+/-- The error bound and the closure property for `FPR.mul`, proved together.
+
+Both conclusions rest on the same exponent-window analysis, and the window is most of the work,
+so they are established in one pass and projected out below. -/
+private theorem mul_error_aux (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
     (hr : FPR.InNormalMagnitudeRange (toReal a * toReal b)) :
-    |toReal (FPR.mul a b) - toReal a * toReal b| ≤
-    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a * toReal b| := by
+    (|toReal (FPR.mul a b) - toReal a * toReal b| ≤
+      (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a * toReal b|)
+    ∧ FPR.IsNormal (FPR.mul a b) := by
   have hne : toReal a * toReal b ≠ 0 :=
     mul_ne_zero (toReal_ne_zero_of_isNormal ha) (toReal_ne_zero_of_isNormal hb)
   rcases hr with h0 | ⟨hlo, hhi⟩
@@ -5155,13 +5184,33 @@ theorem mul_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
       _ = (if (mulPipeline a b).s.toNat = 1 then (-1 : ℝ) else 1) * |toReal a * toReal b| := by
           rw [mulPipeline_sign_factor, abs_mul]
       _ = (if (mulPipeline a b).s.toNat = 1 then (-1 : ℝ) else 1) * (P * c) := by rw [habsQ]
-  rw [hQsign]
-  refine mul_error_combine (by split_ifs <;> simp) hc (by rw [hWdef]; positivity) hK ?_
-    hbr1 hbr2 hkey
-  rw [show (if (mulPipeline a b).s.toNat = 1 then (-1 : ℝ) else 1) * (W * K * c)
-      = (if (mulPipeline a b).s.toNat = 1 then (-1 : ℝ) else 1) * W
-        * (2 : ℝ) ^ (mulPipeline a b).e'.toInt from by rw [he'I, hScale]; ring]
-  exact hMV
+  refine ⟨?_, ?_⟩
+  · rw [hQsign]
+    refine mul_error_combine (by split_ifs <;> simp) hc (by rw [hWdef]; positivity) hK ?_
+      hbr1 hbr2 hkey
+    rw [show (if (mulPipeline a b).s.toNat = 1 then (-1 : ℝ) else 1) * (W * K * c)
+        = (if (mulPipeline a b).s.toNat = 1 then (-1 : ℝ) else 1) * W
+          * (2 : ℝ) ^ (mulPipeline a b).e'.toInt from by rw [he'I, hScale]; ring]
+    exact hMV
+  · rw [hmul]
+    exact FPR.isNormal_make _ _ _ (mulPipeline_s_le_one a b) hge hle969 hmem.1 hmem.2 hnc
+
+/-- Relative error bound for `FPR.mul`, on normal operands whose exact product stays in the
+correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
+why both the operand- and result-side restrictions are necessary. -/
+theorem mul_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a * toReal b)) :
+    |toReal (FPR.mul a b) - toReal a * toReal b| ≤
+    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a * toReal b| :=
+  (mul_error_aux a b ha hb hr).1
+
+/-- Closure for `FPR.mul` on the domain `mul_error` covers. Unlike addition, multiplication
+cannot cancel: a product of nonzero normals is nonzero, so the result is always normal and the
+zero disjunct of `FPR.IsNormalOrZero` is never needed here. -/
+theorem mul_isNormalOrZero (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a * toReal b)) :
+    FPR.IsNormalOrZero (FPR.mul a b) :=
+  Or.inl (mul_error_aux a b ha hb hr).2
 
 /-! ## Trading the `FPR.div` / `FPR.sqrt` loops for induction
 
@@ -5862,13 +5911,14 @@ private theorem divPipeline_real_bracket (x y : FPR) :
   · rw [div_lt_iff₀ hy, add_mul]
     nlinarith [hb2']
 
-/-- Relative error bound for `FPR.div`, on normal operands whose exact quotient stays in the
-correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
-why both the operand- and result-side restrictions are necessary. -/
-theorem div_error (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a) (hb' : FPR.IsNormal b)
+/-- The error bound and the closure property for `FPR.div`, proved together: both rest on the
+same exponent-window analysis. -/
+private theorem div_error_aux (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a)
+    (hb' : FPR.IsNormal b)
     (hr : FPR.InNormalMagnitudeRange (toReal a / toReal b)) :
-    |toReal (FPR.div a b) - toReal a / toReal b| ≤
-    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a / toReal b| := by
+    (|toReal (FPR.div a b) - toReal a / toReal b| ≤
+      (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a / toReal b|)
+    ∧ FPR.IsNormal (FPR.div a b) := by
   have hne : toReal a / toReal b ≠ 0 :=
     div_ne_zero (toReal_ne_zero_of_isNormal ha) hb
   rcases hr with h0 | ⟨hlo, hhi⟩
@@ -6002,13 +6052,33 @@ theorem div_error (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a) (hb' :
       _ = (if (divPipeline a b).sg.toNat = 1 then (-1 : ℝ) else 1)
             * |toReal a / toReal b| := by rw [divPipeline_sign_factor, abs_div]
       _ = (if (divPipeline a b).sg.toNat = 1 then (-1 : ℝ) else 1) * (P * c) := by rw [habsQ]
-  rw [hQsign]
-  refine mul_error_combine (by split_ifs <;> simp) hc (by positivity) hK ?_
-    hbr1 hbr2 hkey
-  rw [show (if (divPipeline a b).sg.toNat = 1 then (-1 : ℝ) else 1) * (W * K * c)
-      = (if (divPipeline a b).sg.toNat = 1 then (-1 : ℝ) else 1) * W
-        * (2 : ℝ) ^ (divPipeline a b).e'.toInt from by rw [hScale]; ring]
-  exact hMV
+  refine ⟨?_, ?_⟩
+  · rw [hQsign]
+    refine mul_error_combine (by split_ifs <;> simp) hc (by positivity) hK ?_
+      hbr1 hbr2 hkey
+    rw [show (if (divPipeline a b).sg.toNat = 1 then (-1 : ℝ) else 1) * (W * K * c)
+        = (if (divPipeline a b).sg.toNat = 1 then (-1 : ℝ) else 1) * W
+          * (2 : ℝ) ^ (divPipeline a b).e'.toInt from by rw [hScale]; ring]
+    exact hMV
+  · rw [hmul]
+    exact FPR.isNormal_make _ _ _ (divPipeline_sg_le_one a b) hge hle969 hmem.1 hmem.2 hnc
+
+/-- Relative error bound for `FPR.div`, on normal operands whose exact quotient stays in the
+correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
+why both the operand- and result-side restrictions are necessary. -/
+theorem div_error (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a) (hb' : FPR.IsNormal b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a / toReal b)) :
+    |toReal (FPR.div a b) - toReal a / toReal b| ≤
+    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a / toReal b| :=
+  (div_error_aux a b hb ha hb' hr).1
+
+/-- Closure for `FPR.div` on the domain `div_error` covers. A quotient of nonzero normals is
+nonzero, so as with multiplication the result is always normal. -/
+theorem div_isNormalOrZero (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a)
+    (hb' : FPR.IsNormal b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a / toReal b)) :
+    FPR.IsNormalOrZero (FPR.div a b) :=
+  Or.inl (div_error_aux a b hb ha hb' hr).2
 
 /-! ### What `FPR.sqrt`'s digit-recurrence loop computes
 
@@ -6696,6 +6766,29 @@ theorem sqrt_error (a : FPR) (ha' : FPR.IsNormal a) (ha : 0 ≤ toReal a) :
     (Or.inl rfl) hc (by positivity) one_pos hMV hbr1 hbr2 (sqrtPipeline_key a h1 h2)
   rw [hPc, abs_of_nonneg (Real.sqrt_nonneg _)] at key
   exact key
+
+/-- Closure for `FPR.sqrt` on normal operands.
+
+The square root of a normal value cannot cancel, so the result is always normal. It is also the
+one operation whose no-carry obligation is vacuous: `sqrtPipeline`'s exponent lands in
+`[-565, 457]`, five hundred bits below the `969` at which a rounding carry could reach the
+non-finite marker. -/
+theorem sqrt_isNormalOrZero (a : FPR) (ha' : FPR.IsNormal a) (_ha : 0 ≤ toReal a) :
+    FPR.IsNormalOrZero (FPR.sqrt a) := by
+  have h1 : 1 ≤ (FPR.decode a).exponent := Nat.one_le_iff_ne_zero.mpr ha'.1
+  have h2 : (FPR.decode a).exponent ≤ 2046 := by
+    have := FPR.decode_exponent_lt a; have := ha'.2; omega
+  obtain ⟨hm1, hm2⟩ := sqrtPipeline_q1_mem a h1 h2
+  obtain ⟨helo, hehi⟩ := sqrtPipeline_e_mem a h1 h2
+  have he' := sqrtPipeline_e'_toInt a h1 h2
+  have hq2 := sqrtPipeline_q2_eq_q1 a h1 h2
+  have hmk : FPR.sqrt a = make 0 (sqrtPipeline a).e' (sqrtPipeline a).q2 := by
+    rw [sqrt_eq_make_z,
+      FPR.make_z_eq_make _ _ _ (by rw [hq2]; exact hm1) (by rw [hq2]; exact hm2)]
+  refine Or.inl ?_
+  rw [hmk]
+  exact FPR.isNormal_make _ _ _ (by decide) (by omega) (by omega)
+    (by rw [hq2]; exact hm1) (by rw [hq2]; exact hm2) (fun h => absurd h (by omega))
 
 /-! ## Non-vacuity witnesses for the per-operation error bounds
 
