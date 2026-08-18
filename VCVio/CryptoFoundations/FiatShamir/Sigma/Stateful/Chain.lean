@@ -447,10 +447,10 @@ private def cmaSimLoggedLeftOrnament
     rcases s with ⟨signed, ⟨⟨log, cache, keypair⟩, bad⟩⟩
     simp only [cmaSimFixedKeyInv] at hs
     rcases t with ((n | mc) | m)
-    · simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
+    · simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
         QueryImpl.mapStateTBase, QueryImpl.Stateful.Frame.linkReshape,
-        QueryImpl.Stateful.linkWith]
-      exact (simulateQ_id_add_uniform_query_inl (M × Commit →ₒ Chal) n).symm
+        QueryImpl.Stateful.linkWith] using
+          (simulateQ_id_add_uniform_query_inl (M × Commit →ₒ Chal) n).symm
     · cases hcache : cache mc with
       | some ch =>
           simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
@@ -1442,24 +1442,17 @@ private def forkLoggedProbOrnament
   project_step := fun t s hs => by
     rcases s with ⟨⟨advCache, liveCache, queryLog⟩, signed⟩
     rcases t with ((n | mc) | m)
-    · simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
-        QueryImpl.mapStateTBase]
-      have hleft := forkWrappedUniform_forkSim_query_inl_run
+    · have hleft := forkWrappedUniform_forkSim_query_inl_run
         (M := M) (Commit := Commit) (Chal := Chal) n (liveCache, queryLog)
       have hright := simulateQ_id_add_uniform_query_inl
         (M × Commit →ₒ Chal) n
-      calc
-        _ = (fun a => (a.1, advCache, signed)) <$>
-              ((fun u => (u, (liveCache, queryLog))) <$>
-                (liftM (unifSpec.query n) : ProbComp
-                  ((unifSpec + (M × Commit →ₒ Chal)).Range (Sum.inl n)))) :=
-            congrArg (fun q => (fun a => (a.1, advCache, signed)) <$> q) hleft
-        _ = (fun u => (u, advCache, signed)) <$>
-              (liftM (unifSpec.query n) : ProbComp
-                ((unifSpec + (M × Commit →ₒ Chal)).Range (Sum.inl n))) := by
-            simp only [Functor.map_map]
-        _ = _ := congrArg (fun q => (fun u => (u, advCache, signed)) <$> q)
-          hright.symm
+      have hleft' := congrArg
+        (fun q => (fun a => (a.1, advCache, signed)) <$> q) hleft
+      simp only [Functor.map_map] at hleft'
+      have hright' := congrArg
+        (fun q => (fun u => (u, advCache, signed)) <$> q) hright.symm
+      simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
+        QueryImpl.mapStateTBase] using hleft'.trans hright'
     · cases hadv : advCache (.inr mc) with
       | some ch =>
           change Chal at ch
@@ -1472,16 +1465,16 @@ private def forkLoggedProbOrnament
               rw [hadv] at hcontra
               cases hcontra
           | none =>
-              simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
-                QueryImpl.mapStateTBase, hadv]
               have hleft := forkWrappedUniform_forkSim_query_inr_run_none_map_fst
                 (M := M) (Commit := Commit) (Chal := Chal)
                 (fun v => (v, advCache.cacheQuery (.inr mc) v, signed))
                 mc liveCache queryLog hlive
               have hright := simulateQ_id_add_uniform_query_inr
                 (M × Commit →ₒ Chal) mc
-              exact hleft.trans (congrArg (fun q => (fun v =>
-                (v, advCache.cacheQuery (.inr mc) v, signed)) <$> q) hright.symm)
+              simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
+                QueryImpl.mapStateTBase, hadv] using
+                  hleft.trans (congrArg (fun q => (fun v =>
+                    (v, advCache.cacheQuery (.inr mc) v, signed)) <$> q) hright.symm)
     · simp only [add_apply_inr, fs_simp, QueryImpl.mapStateTBase,
         QueryImpl.ofLift_eq_id', QueryImpl.extendState, QueryImpl.flattenStateT,
         QueryImpl.add_apply_inr, StateT.run_bind, StateT.run_modifyGet,
