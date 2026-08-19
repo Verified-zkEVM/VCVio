@@ -103,4 +103,74 @@ theorem sub_div_le_probEvent_extracted_coordExtract [Nonempty S]
   obtain ⟨τ, X, rfl, hpay⟩ := hgood
   exact le_of_eq (probEvent_extracted_eq_one_of_goodTranscripts hss ⟨τ, X, rfl, hpay⟩).symm
 
+/-! ## Sampling the first message
+
+The bound above fixes the prover's first message. Averaging it over a distribution of
+`(pc, τ)` pairs covers commitment generation as well: the prover picks a first message and, with
+its coins then fixed, the table of responses it will give. Only the first message is added; the
+challenge is still uniform and the response table is still pre-sampled. -/
+
+section Commit
+
+/-- The composite extractor when the prover chooses its first message too. -/
+noncomputable def coordExtractCommit (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+    (k : ℕ) (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
+    (P : ProbComp (Commit × ((ι → S) → Resp))) : ProbComp (Option Wit) :=
+  P >>= fun p => σ.coordExtract k ext x p.1 (pure p.2)
+
+/-- The `ε` of the bound below: the probability that the prover's transcript verifies, over its own
+first message and response table and a uniform challenge. -/
+noncomputable def verifyProb (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+    (x : Stmt) (P : ProbComp (Commit × ((ι → S) → Resp))) : ℝ≥0∞ :=
+  Pr[fun b => b = true | (do
+    let p ← P
+    let c ← $ᵗ (ι → S)
+    return σ.verify x p.1 c (p.2 c))]
+
+omit [DecidableEq S] [DecidableEq Resp] in
+/-- For an already-fixed response table the accepting ratio is the verification probability on a
+uniform challenge. -/
+theorem acceptRatio_acceptTable_pure (V : (ι → S) → Resp → Bool) (τ : (ι → S) → Resp) :
+    acceptRatio (acceptTable V (pure τ) : ProbComp ((ι → S) → Bool))
+      = Pr[fun b => b = true | (do let c ← $ᵗ (ι → S); return V c (τ c) : ProbComp Bool)] := by
+  classical
+  rw [acceptTable, map_pure, acceptRatio, probEvent_bind_eq_tsum]
+  simp only [probOutput_uniformSample, probEvent_pure, probEvent_pure]
+  rw [ENNReal.tsum_mul_left, tsum_fintype (L := .unconditional _), div_eq_mul_inv, mul_comm]
+
+omit [DecidableEq S] [DecidableEq Resp] in
+/-- Averaging the fixed-first-message accepting ratio over the prover's choice. -/
+theorem verifyProb_eq_tsum (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+    (x : Stmt) (P : ProbComp (Commit × ((ι → S) → Resp))) :
+    verifyProb σ x P
+      = ∑' p : Commit × ((ι → S) → Resp),
+          Pr[= p | P] * acceptRatio (acceptTable (σ.verify x p.1) (pure p.2)) := by
+  rw [verifyProb, probEvent_bind_eq_tsum]
+  exact tsum_congr fun p => by rw [acceptRatio_acceptTable_pure]
+
+/-- The `μ = 1` extraction bound with the prover's first message sampled rather than fixed. The
+loss is unchanged: averaging a pointwise bound over the first message costs nothing. -/
+theorem sub_div_le_probEvent_extracted_coordExtractCommit [Nonempty S]
+    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
+    (hss : σ.CoordSpeciallySoundAt k ext x) (P : ProbComp (Commit × ((ι → S) → Resp))) :
+    verifyProb σ x P - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
+      ≤ Pr[Extracted rel x | σ.coordExtractCommit k ext x P] := by
+  set L : ℝ≥0∞ := (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S with hL
+  rw [tsub_le_iff_right, verifyProb_eq_tsum, coordExtractCommit, probEvent_bind_eq_tsum]
+  calc ∑' p : Commit × ((ι → S) → Resp),
+        Pr[= p | P] * acceptRatio (acceptTable (σ.verify x p.1) (pure p.2))
+      ≤ ∑' p, Pr[= p | P] *
+          (Pr[Extracted rel x | σ.coordExtract k ext x p.1 (pure p.2)] + L) :=
+        tsum_probOutput_mul_mono P fun p => tsub_le_iff_right.mp
+          (sub_div_le_probEvent_extracted_coordExtract σ k ext x hss p.1 (pure p.2))
+    _ = (∑' p, Pr[= p | P] * Pr[Extracted rel x | σ.coordExtract k ext x p.1 (pure p.2)])
+          + (∑' p : Commit × ((ι → S) → Resp), Pr[= p | P]) * L := by
+        simp_rw [mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right]
+    _ ≤ (∑' p, Pr[= p | P] * Pr[Extracted rel x | σ.coordExtract k ext x p.1 (pure p.2)]) + L := by
+        gcongr
+        exact le_of_le_of_eq (mul_le_mul' tsum_probOutput_le_one le_rfl) (one_mul L)
+
+end Commit
+
 end SigmaProtocol

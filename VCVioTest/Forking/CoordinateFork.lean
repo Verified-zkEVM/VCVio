@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import VCVio.CryptoFoundations.CoordinateFork.MultiRound
+public import VCVio.CryptoFoundations.CoordinateFork.Realizability
 
 /-!
 # Adversarial regression checks for coordinate-wise table forking
@@ -25,6 +25,12 @@ strictly positive bound.
 **Adversarial cases.** Further checks use a nonconstant table, exhibit equal marginals with
 different joint fork behavior, exercise `μ = 2`, and pin down truncation and empty-coordinate
 boundaries.
+
+**Realizability.** The table bound is only interesting if some ordinary adversary induces a table
+distribution with a known accepting ratio. `advSucc_partialAdv` computes one, and
+`one_fifth_le_probEvent_goodTranscripts_indepTable` is the resulting strictly positive bound.
+`probEvent_coord_mOfFn_failFactor` is the matching negative control: without the no-failure
+hypothesis the coordinate marginal of an independent product is not the factor's own.
 -/
 
 @[expose] public section
@@ -188,6 +194,64 @@ theorem one_fifth_le_probEvent_goodOutput_partial :
   rw [acceptRatio_partialAccept,
     show (Fintype.card (Fin 1) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 5) = 1 / 5 from by simp,
     two_fifths_sub_one_fifth]
+
+/-! ## Realizing a response table by an adversary -/
+
+/-- The adversary of `partialAccept`, read as a computation: it answers `true` exactly on the two
+accepting challenges and never fails. -/
+def partialAdv (c : PartialChal) : ProbComp Bool := pure (partialAccept c)
+
+/-- Reading the response itself as the verdict. -/
+def selfVerify1 : PartialChal → Bool → Bool := fun _ y => y
+
+/-- The adversary convinces the verifier on exactly two of five challenges. -/
+theorem advSucc_partialAdv : advSucc selfVerify1 partialAdv = 2 / 5 := by
+  rw [advSucc_eq_sum_div]
+  simp only [partialAdv, selfVerify1, probEvent_pure]
+  rw [← Finset.natCast_card_filter]
+  have hcard : (Finset.univ.filter fun c : PartialChal => partialAccept c).card = 2 := by decide
+  rw [hcard]
+  norm_num
+
+/-- The table the adversary induces has the adversary's own accepting ratio: the transfer is not
+vacuous. -/
+theorem acceptRatio_indepTable_partialAdv :
+    acceptRatio (acceptTable selfVerify1 (indepTable partialAdv)) = 2 / 5 := by
+  rw [acceptRatio_acceptTable_indepTable selfVerify1 partialAdv, advSucc_partialAdv]
+
+/-- **Lemma 7.1 against an actual adversary**, with a strictly positive bound. -/
+theorem one_fifth_le_probEvent_goodTranscripts_indepTable :
+    (1 : ℝ≥0∞) / 5 ≤
+      Pr[GoodTranscripts selfVerify1 2 | coordForkT selfVerify1 2 (indepTable partialAdv)] := by
+  have h := sub_div_le_probEvent_goodTranscripts_indepTable selfVerify1 2 partialAdv
+  refine le_trans (le_of_eq ?_) h
+  rw [advSucc_partialAdv,
+    show (Fintype.card (Fin 1) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 5) = 1 / 5 from by simp,
+    two_fifths_sub_one_fifth]
+
+/-- A two-factor independent product whose second factor always fails. A `ProbComp` cannot fail,
+so this lives in `OptionT ProbComp`, where the marginal lemma's hypothesis has content. -/
+def failFactor : Fin 2 → OptionT ProbComp Bool := fun i => if i = 0 then pure true else failure
+
+/-- The first factor accepts with certainty. -/
+theorem probEvent_failFactor_zero : Pr[fun b => b = true | failFactor 0] = 1 := by
+  simp [failFactor]
+
+/-- Yet the product's first coordinate accepts with probability zero: a failing factor removes mass
+from every coordinate at once. So the `Pr[⊥ | ·] = 0` hypothesis of `probEvent_coord_mOfFn` is
+load-bearing, and only `probEvent_coord_mOfFn_le` survives without it. -/
+theorem probEvent_coord_mOfFn_failFactor :
+    Pr[fun v => v 0 = true | Fin.mOfFn 2 failFactor] = 0 := by
+  simp [Fin.mOfFn, failFactor]
+
+/-- `PMF.pi` really multiplies: two independent fair bits give joint weight `1/4`, where a
+perfectly correlated pair with the same marginals would give `1/2`. -/
+example : PMF.bernoulliTable (fun _ : Fin 2 => (1 : ℝ≥0∞) / 2) (fun _ => by norm_num)
+    ![true, true] = 1 / 4 := by
+  rw [PMF.bernoulliTable_apply, Fin.prod_univ_two]
+  simp only [PMF.tableWeight, Matrix.cons_val_zero, Matrix.cons_val_one, if_true, one_div]
+  rw [← ENNReal.mul_inv (by norm_num) (by norm_num)]
+  norm_num
 
 /-! ## Boundary canaries -/
 

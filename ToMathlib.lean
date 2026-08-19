@@ -38,6 +38,7 @@ public import ToMathlib.Data.Vector
 public import ToMathlib.General
 public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.BernoulliTable
+public import ToMathlib.Probability.ProbabilityMassFunction.Pi
 public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
 public import ToMathlib.Probability.ProbabilityMassFunction.TailSums
 public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation

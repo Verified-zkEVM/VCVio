@@ -116,6 +116,38 @@ theorem one_third_le_probEvent_extracted (x : Fin 3) :
     show (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 3) = 2 / 3 from by simp,
     one_sub_two_thirds]
 
+/-! ## Sampling the first message -/
+
+/-- The always-accepting prover, with its (trivial) first message sampled alongside the response
+table it will answer with. -/
+def toyProverCommit (x : Fin 3) : ProbComp (Unit × (SChal → Fin 3)) := pure ((), fun _ => x)
+
+/-- A prover that answers every challenge wrongly. -/
+def badProverCommit (x : Fin 3) : ProbComp (Unit × (SChal → Fin 3)) := pure ((), fun _ => x + 1)
+
+theorem verifyProb_toyProverCommit (x : Fin 3) :
+    verifyProb toySigma x (toyProverCommit x) = 1 := by
+  simp [verifyProb, toyProverCommit, toySigma]
+
+/-- **Payload sensitivity.** A prover that never convinces the verifier has `ε = 0`, so
+`verifyProb` really reads the sampled response table rather than being vacuously one. -/
+theorem verifyProb_badProverCommit (x : Fin 3) :
+    verifyProb toySigma x (badProverCommit x) = 0 := by
+  have hne : ∀ x : Fin 3, x + 1 ≠ x := by decide
+  simp [verifyProb, badProverCommit, toySigma, hne]
+
+/-- **Non-vacuity of the commitment-sampled bound.** Averaging the `μ = 1` bound over the prover's
+first message leaves the same `1 - 2/3 = 1/3` slack. -/
+theorem one_third_le_probEvent_extracted_commit (x : Fin 3) :
+    (1 : ℝ≥0∞) / 3 ≤ Pr[Extracted (fun x w => x == w) x |
+      toySigma.coordExtractCommit 2 toyExt x (toyProverCommit x)] := by
+  have h := sub_div_le_probEvent_extracted_coordExtractCommit toySigma 2 toyExt x
+    (toySigma_coordSpeciallySoundAt x) (toyProverCommit x)
+  refine le_trans (le_of_eq ?_) h
+  rw [verifyProb_toyProverCommit,
+    show (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 3) = 2 / 3 from by simp,
+    one_sub_two_thirds]
+
 /-! ## A deliberately wrong extractor -/
 
 /-- An extractor that always returns zero, ignoring both the statement and the transcripts. -/

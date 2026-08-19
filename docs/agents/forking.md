@@ -1,9 +1,9 @@
 # Forking Lemmas
 
 Three forking developments live in this repository. They differ in what gets pre-sampled and in
-the shape of the bound they deliver. The coordinate-wise development is currently a table model,
-not the paper's oracle extractor. See [crypto.md](crypto.md) for the surrounding primitive and
-reduction machinery.
+the shape of the bound they deliver. The coordinate-wise development is a table model with a
+realizability bridge to ordinary adversaries; it is not the paper's *costed* oracle extractor. See
+[crypto.md](crypto.md) for the surrounding primitive and reduction machinery.
 
 ## Which one to reach for
 
@@ -23,8 +23,8 @@ answer as a fresh query, and the collision bound on the two focused answers. Bot
 **The coordinate-wise table bound uses none of that.** Its loss is subtracted from the accepting
 probability rather than from a quadratic expression. No Cauchy–Schwarz step and nothing from
 `SumSquares` is used. Fenzi–Moghaddas–Nguyen (eprint 2023/846 §7) obtain this shape with an
-expected-query oracle extractor; the present formalization proves the corresponding table-counting
-inequality, not that algorithm or its expected cost.
+expected-query oracle extractor; the present formalization proves the corresponding counting
+inequality and transfers it to an adversary, but not that algorithm's expected cost.
 
 ## Quadratic forks: seeded vs replay
 
@@ -122,6 +122,44 @@ that event, so it is not a termination bound. A full Definition 2.28/2.31 result
 need the security-parameter experiment, the joint bad event, an oracle implementation, and an
 expected-polynomial-time proof.
 
+`coordExtractCommit` averages that over the prover's first message: the prover samples a pair
+`(pc, τ)` — a commitment together with the response table its now-fixed coins commit it to — and
+`sub_div_le_probEvent_extracted_coordExtractCommit` gives the same bound with `ε` read off the
+whole experiment (`verifyProb`). The loss is unchanged, because averaging a pointwise bound over
+the first message costs nothing.
+
+### Realizing a table by an adversary
+
+[`CoordinateFork/Realizability.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Realizability.lean)
+closes the gap between "a distribution of response tables" and "an adversary". For
+`A : (ι → S) → ProbComp Y`, `indepTable A := Fintype.mPi A` runs `A` independently at every
+challenge, and
+
+```lean
+theorem acceptRatio_acceptTable_indepTable (V) (A) :
+    acceptRatio (acceptTable V (indepTable A)) = advSucc V A
+```
+
+identifies the accepting ratio the table bound consumes with `ε_V(A)`, the adversary's own success
+probability on a uniform challenge. The transfer is cheap precisely because
+`le_tsum_probOutput_mul_goodSet` reads only the *marginals* of the table distribution, so realizing
+some distribution with the adversary's marginals is all it needs. No side condition appears: a
+`ProbComp` never fails (`probFailure_of_liftM_PMF`), so the full-mass hypothesis the general
+marginal lemma requires is automatic.
+
+`probOutput_acceptTable_indepTable_eq_bernoulliTable` then computes the *whole* joint law, not just
+the marginals, and finds the independent Bernoulli table at the adversary's per-challenge
+acceptance probabilities — which is what makes the multi-round coupling realizable.
+
+The independent-product machinery underneath is generic and lives below the crypto layer:
+[`VCVio/EvalDist/IndepProduct.lean`](../../VCVio/EvalDist/IndepProduct.lean) gives `Fin.mOfFn` and
+`Fintype.mPi` their joint law (`probOutput_mOfFn`, `probEvent_forall_coord_mOfFn`) and coordinate
+marginals, and [`ToMathlib/Probability/ProbabilityMassFunction/Pi.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/Pi.lean)
+gives the corresponding `PMF.pi`, of which `PMF.bernoulliTable` is now the `Bool`-valued instance.
+The marginal is an equality only under a full-mass hypothesis; `probEvent_coord_mOfFn_le` is what
+survives without it, and `probEvent_coord_mOfFn_failFactor` in the test file is the negative
+control showing the difference is real.
+
 ### What is and is not proved
 
 Each paper lemma is a three-conjunct existential over *an oracle algorithm with oracle access to
@@ -130,20 +168,27 @@ the adversary*. The status is:
 | Clause | Lemma 7.1 | Lemma 7.2 |
 |---|---|---|
 | expected query count | **not proved** | **not proved** |
-| success probability | **table model only** | **analytic recurrence only** |
-| output structure (accepting transcripts) | **table model only** | `μ = 1` only |
+| success probability | proved for a fixed-coin adversary | analytic recurrence, one step anchored |
+| output structure (accepting transcripts) | proved for a fixed-coin adversary | `μ = 1` only |
 
 - `sub_div_le_probEvent_goodOutput_coordFork` carries the success bound and the output guarantee
   together, so it is sensitive to what the extractor returns.
+- *Fixed-coin adversary* is what
+  [`CoordinateFork/Realizability.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Realizability.lean)
+  supplies, and it is not a weakening the paper avoids — §7.1's own proof needs it. FMN reason
+  about `Xᵢ = |{x ∈ S : V (C x) (A (C x))}|` and use `Pr[V = 1 ∣ Xᵢ = l] = l/N`; both statements
+  require `A` to be a *function* of the challenge, i.e. its coins fixed before any challenge is
+  drawn. Such an `A` is exactly a response table.
 - `sub_le_multiSucc` in
   [`VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean`](../../VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean)
-  proves a recurrence with the numeric bound `ε − μℓ(k−1)/N`. `multiSucc` is not a computation;
-  `forkSucc_eq_probEvent_isSome_coordFork` only identifies one recurrence step when an entire
-  independent Bernoulli table distribution is supplied.
-- The object consumes a pre-sampled acceptance table rather than querying an adversary, so what is
-  established is a table-model inequality, not the oracle algorithm or efficiency. A future query
-  proof must model sampling without replacement, including exhaustion when fewer than `k`
-  accepting values exist, and connect that costed process to the table event. The challenge-only
+  proves a recurrence with the numeric bound `ε − μℓ(k−1)/N`. `multiSucc` is still not a
+  computation, but its single-step bridge is no longer conditional on a distribution nothing
+  produces: `forkSucc_eq_probEvent_isSome_coordFork_indepTable` discharges the Bernoulli-table
+  hypothesis outright, because the acceptance table an adversary induces *is* that Bernoulli table.
+- What remains missing is the cost. `indepTable` runs the adversary once per challenge, so it is
+  not the paper's extractor, which queries it `ℓ(k−1)+1` times in expectation. A future query proof
+  must model sampling without replacement, including exhaustion when fewer than `k` accepting
+  values exist, and connect that costed process to the table event. The challenge-only
   [`ToMathlib/Combinatorics/ChallengeTree.lean`](../../ToMathlib/Combinatorics/ChallengeTree.lean)
   supplies only the combinatorial projection needed by a future multi-round output theorem.
 

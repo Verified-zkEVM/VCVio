@@ -143,7 +143,8 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
 - Seeded (Bellare-Neven) forking lemma: `VCVio/CryptoFoundations/SeededFork.lean`
 - Replay-based forking lemma: `VCVio/CryptoFoundations/ReplayFork.lean`
-- Coordinate-wise table forking and its analytic multi-round recurrence (ingredients from eprint 2023/846 §7): `VCVio/CryptoFoundations/CoordinateFork.lean`, `VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean`, over `VCVio/EvalDist/CoordinateFork.lean` and the combinatorics in `ToMathlib/Combinatorics/CoordinateWise.lean`
+- Coordinate-wise table forking, its realizability bridge to an ordinary adversary, and its analytic multi-round recurrence (ingredients from eprint 2023/846 §7): `VCVio/CryptoFoundations/CoordinateFork.lean`, `VCVio/CryptoFoundations/CoordinateFork/Realizability.lean`, `VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean`, over `VCVio/EvalDist/CoordinateFork.lean` and the combinatorics in `ToMathlib/Combinatorics/CoordinateWise.lean`
+- Independent products of computations and of `PMF`s: `VCVio/EvalDist/IndepProduct.lean`, `ToMathlib/Probability/ProbabilityMassFunction/Pi.lean`
 - Fischlin transform: `VCVio/CryptoFoundations/Fischlin.lean`
 - Interaction spec and transcript: `PolyFun/Interaction/Basic/Spec.lean`
 - Two-party roles and strategies: `PolyFun/Interaction/TwoParty/Strategy.lean`

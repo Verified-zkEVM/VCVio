@@ -13,6 +13,7 @@ public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.CoordinateFork
 public import VCVio.CryptoFoundations.CoordinateFork.Extraction
 public import VCVio.CryptoFoundations.CoordinateFork.MultiRound
+public import VCVio.CryptoFoundations.CoordinateFork.Realizability
 public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
@@ -90,6 +91,7 @@ public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Defs.Semantics
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Fintype
+public import VCVio.EvalDist.IndepProduct
 public import VCVio.EvalDist.Inequalities
 public import VCVio.EvalDist.Instances.ErrorT
 public import VCVio.EvalDist.Instances.FinRatPMF
