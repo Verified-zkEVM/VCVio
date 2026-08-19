@@ -335,27 +335,38 @@ theorem three_fifths_le_multiSucc_two :
 instantiating an independent Bernoulli coupling; `multiForkOp` produces that coupling by running
 the sub-extractor independently at each first challenge, and hits the same `3/5`. -/
 theorem three_fifths_le_probEvent_isSome_multiForkOp :
-    (3 : ℝ≥0∞) / 5 ≤ Pr[fun r => r.isSome |
+    (3 : ℝ≥0∞) / 5 ≤ Pr[fun r => r.1.isSome |
       multiForkOp 2 2 (fun _ : Transcript (Fin 1) (Fin 5) 2 => true)] := by
   rw [probEvent_isSome_multiForkOp]
   refine le_trans three_fifths_le_multiSucc_two (le_of_eq (congrArg (multiSucc 2) ?_))
   funext t
   simp [twoRoundAlways]
 
+/-- **Per level.** Each round looks at at most `1 + ℓ(k-1) = 2` of the level below. -/
+theorem expectedValue_cost_multiForkOp_partial_le :
+    expectedValue (multiForkOp 2 2 (fun _ : Transcript (Fin 1) (Fin 5) 2 => true))
+      (fun r => (r.2 : ℝ≥0∞)) ≤ 2 := by
+  have h := expectedValue_cost_multiForkOp_le (ι := Fin 1) (S := Fin 5) 1 2 (fun _ => true)
+  refine h.trans (le_of_eq ?_)
+  simp
+  norm_num
+
 /-- **Both clauses at once.** Some run succeeds, and what it returns is a tree of challenges of the
 size Definition 2.30 prescribes, `(ℓ(k-1)+1)^μ = 4`. -/
 theorem exists_good_output_multiForkOp :
-    ∃ T : Finset (Transcript (Fin 1) (Fin 5) 2),
-      some T ∈ support (multiForkOp 2 2 (fun _ : Transcript (Fin 1) (Fin 5) 2 => true)) ∧
+    ∃ (T : Finset (Transcript (Fin 1) (Fin 5) 2)) (cost : ℕ),
+      (some T, cost) ∈ support (multiForkOp 2 2 (fun _ : Transcript (Fin 1) (Fin 5) 2 => true)) ∧
         IsChallengeTree 2 2 (T.image Transcript.toList) ∧
         (T.image Transcript.toList).card = 4 := by
-  have hpos : 0 < Pr[fun r => r.isSome |
+  have hpos : 0 < Pr[fun r => r.1.isSome |
       multiForkOp 2 2 (fun _ : Transcript (Fin 1) (Fin 5) 2 => true)] :=
     lt_of_lt_of_le (by norm_num) three_fifths_le_probEvent_isSome_multiForkOp
   obtain ⟨r, hr, hsome⟩ := probEvent_pos_iff.mp hpos
-  obtain ⟨T, rfl⟩ := Option.isSome_iff_exists.mp hsome
-  obtain ⟨htree, -⟩ := multiForkOp_success 2 2 _ T hr
-  refine ⟨T, hr, htree, ?_⟩
+  obtain ⟨T, hT⟩ := Option.isSome_iff_exists.mp hsome
+  have hr' : (some T, r.2) ∈ support (multiForkOp 2 2
+      (fun _ : Transcript (Fin 1) (Fin 5) 2 => true)) := by rw [← hT]; exact hr
+  obtain ⟨htree, -⟩ := multiForkOp_success 2 2 _ T r.2 hr'
+  refine ⟨T, r.2, hr', htree, ?_⟩
   rw [card_of_isChallengeTree htree]
   simp
 

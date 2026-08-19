@@ -167,7 +167,7 @@ the adversary*. The status is:
 
 | Clause | Lemma 7.1 | Lemma 7.2 |
 |---|---|---|
-| expected query count | proved, for the paper's algorithm | **not proved** |
+| expected query count | proved, for the paper's algorithm | per level only |
 | success probability | proved, for the paper's algorithm | proved, for the paper's recursion |
 | output structure (accepting transcripts) | proved, for the paper's algorithm | proved, for the paper's recursion |
 
@@ -267,10 +267,16 @@ challenge sequences form a tree of challenges, which is exactly what
 asks for. (Definition 2.30 also fixes the prover messages at the nodes; Lemma 7.2's *conclusion*
 speaks only of the challenge tree, so that is what is delivered here.)
 
-The multi-round expected-query count is not proved. The paper's `(ℓ(k−1)+1)^μ` multiplies the
-per-round count by the sub-extractor's, which is Wald's identity over the resampling loop — a
-different argument from the `μ = 1` column count, and the one §8.2 has to refine once the
-sub-extractor's cost varies with the entry.
+`expectedValue_cost_multiForkOp_le` bounds each *level*: one round looks at at most `1 + ℓ(k−1)` of
+the level below, in expectation. The paper's `(ℓ(k−1)+1)^μ` is the product of these, and that
+composition is not proved. It is Wald's identity — the base-level work is `∑ᵢ Xᵢ` over the `T`
+lookups the top loop makes, and `𝔼[∑_{i≤T} Xᵢ] = 𝔼[T]·𝔼[X]` needs `{T ≥ i}` independent of the
+`i`-th sub-run. That holds because the loop picks which challenge to look at *before* reading it —
+but the eager `Fintype.mPi` table, which is exactly what makes the coupling derivable for the
+success bound, cannot express "queried before read". Closing it means letting the loop consume its
+table through an *oracle*, at which point the count becomes `expectedQueries`
+([`query-tracking.md`](query-tracking.md)) rather than returned data. §8.2 has to refine the same
+step again once the sub-extractor's cost varies with the entry.
 
 ### Draw counts
 

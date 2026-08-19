@@ -49,23 +49,23 @@ variable [SampleableType (ι → S)]
 /-- The `μ`-round extractor: extract recursively at every first challenge, then fork on the table
 of which of those extractions succeeded. -/
 noncomputable def multiForkOp : (μ : ℕ) → (k : ℕ) → (ρ : Transcript ι S μ → Bool) →
-    ProbComp (Option (Finset (Transcript ι S μ)))
-  | 0, _, ρ => pure (if ρ PUnit.unit then some {PUnit.unit} else none)
+    ProbComp (Option (Finset (Transcript ι S μ)) × ℕ)
+  | 0, _, ρ => pure (if ρ PUnit.unit then some {PUnit.unit} else none, 1)
   | μ + 1, k, ρ => do
       let tbl ← Fintype.mPi fun c => multiForkOp μ k fun t => ρ (c, t)
-      let r ← coordForkOp k fun c => (tbl c).isSome
-      return r.1.map fun X => X.biUnion fun c => ((tbl c).getD ∅).image fun t => (c, t)
+      let r ← coordForkOp k fun c => (tbl c).1.isSome
+      return (r.1.map fun X => X.biUnion fun c => ((tbl c).1.getD ∅).image fun t => (c, t), r.2)
 
 @[simp] theorem multiForkOp_zero (k : ℕ) (ρ : Transcript ι S 0 → Bool) :
-    multiForkOp 0 k ρ = pure (if ρ PUnit.unit then some {PUnit.unit} else none) := rfl
+    multiForkOp 0 k ρ = pure (if ρ PUnit.unit then some {PUnit.unit} else none, 1) := rfl
 
 theorem multiForkOp_succ (μ k : ℕ) (ρ : Transcript ι S (μ + 1) → Bool) :
     multiForkOp (μ + 1) k ρ =
       (do
         let tbl ← Fintype.mPi fun c => multiForkOp μ k fun t => ρ (c, t)
-        let r ← coordForkOp k fun c => (tbl c).isSome
-        return r.1.map fun X =>
-          X.biUnion fun c => ((tbl c).getD ∅).image fun t => (c, t)) := rfl
+        let r ← coordForkOp k fun c => (tbl c).1.isSome
+        return (r.1.map fun X =>
+          X.biUnion fun c => ((tbl c).1.getD ∅).image fun t => (c, t), r.2)) := rfl
 
 /-! ## The output -/
 
@@ -93,11 +93,12 @@ theorem image_toList_image_prod {μ : ℕ} (c : ι → S) (T : Finset (Transcrip
 /-- **The output clause of Lemma 7.2.** A successful run returns accepting transcripts whose
 challenge sequences form a tree of challenges in the sense of Definition 2.30. -/
 theorem multiForkOp_success : ∀ (μ k : ℕ) (ρ : Transcript ι S μ → Bool)
-    (T : Finset (Transcript ι S μ)), some T ∈ support (multiForkOp μ k ρ) →
+    (T : Finset (Transcript ι S μ)) (cost : ℕ), (some T, cost) ∈ support (multiForkOp μ k ρ) →
       IsChallengeTree k μ (T.image Transcript.toList) ∧ ∀ t ∈ T, ρ t
-  | 0, k, ρ, T, h => by
+  | 0, k, ρ, T, cost, h => by
       classical
       rw [multiForkOp_zero, support_pure, Set.mem_singleton_iff] at h
+      obtain ⟨h, -⟩ := Prod.ext_iff.mp h
       by_cases hρ : ρ PUnit.unit
       · rw [if_pos hρ] at h
         obtain rfl : T = {PUnit.unit} := Option.some.inj h
@@ -113,13 +114,14 @@ theorem multiForkOp_success : ∀ (μ k : ℕ) (ρ : Transcript ι S μ → Bool
           exact hρ
       · rw [if_neg hρ] at h
         exact absurd h (by simp)
-  | μ + 1, k, ρ, T, h => by
+  | μ + 1, k, ρ, T, cost, h => by
       classical
       rw [multiForkOp_succ, mem_support_bind_iff] at h
       obtain ⟨tbl, htbl, h⟩ := h
       rw [mem_support_bind_iff] at h
       obtain ⟨r, hr, h⟩ := h
       simp only [support_pure, Set.mem_singleton_iff] at h
+      obtain ⟨h, -⟩ := Prod.ext_iff.mp h
       cases hr1 : r.1 with
       | none => rw [hr1] at h; simp at h
       | some X =>
@@ -128,17 +130,17 @@ theorem multiForkOp_success : ∀ (μ k : ℕ) (ρ : Transcript ι S μ → Bool
       subst h
       obtain ⟨hss, hacc⟩ := coordForkOp_success (X := X) (cost := r.2) (by rw [← hr1]; exact hr)
       -- Every child challenge names a successful sub-extraction.
-      have hchild : ∀ c ∈ X, IsChallengeTree k μ (((tbl c).getD ∅).image Transcript.toList) ∧
-          ∀ t ∈ (tbl c).getD ∅, ρ (c, t) := by
+      have hchild : ∀ c ∈ X, IsChallengeTree k μ (((tbl c).1.getD ∅).image Transcript.toList) ∧
+          ∀ t ∈ (tbl c).1.getD ∅, ρ (c, t) := by
         intro c hc
-        obtain ⟨Tc, hTc⟩ : ∃ Tc, tbl c = some Tc := Option.isSome_iff_exists.mp (hacc c hc)
-        have hsub : some Tc ∈ support (multiForkOp μ k fun t => ρ (c, t)) := by
+        obtain ⟨Tc, hTc⟩ : ∃ Tc, (tbl c).1 = some Tc := Option.isSome_iff_exists.mp (hacc c hc)
+        have hsub : (some Tc, (tbl c).2) ∈ support (multiForkOp μ k fun t => ρ (c, t)) := by
           rw [← hTc]; exact mem_support_mPi _ tbl htbl c
         rw [hTc]
-        exact multiForkOp_success μ k _ Tc hsub
+        exact multiForkOp_success μ k _ Tc (tbl c).2 hsub
       refine ⟨?_, ?_⟩
       · rw [Finset.biUnion_image,
-          Finset.biUnion_congr rfl fun a _ => image_toList_image_prod a ((tbl a).getD ∅)]
+          Finset.biUnion_congr rfl fun a _ => image_toList_image_prod a ((tbl a).1.getD ∅)]
         exact isChallengeTree_biUnion hss fun c hc => (hchild c hc).1
       · intro t ht
         obtain ⟨c, hc, ht⟩ := Finset.mem_biUnion.mp ht
@@ -150,43 +152,44 @@ theorem multiForkOp_success : ∀ (μ k : ℕ) (ρ : Transcript ι S μ → Bool
 /-- One round of the recursion, in the shape `Realizability.lean` identifies with an independent
 Bernoulli table: the sub-extractors run independently, one per first challenge. -/
 theorem probEvent_isSome_multiForkOp_succ (μ k : ℕ) (ρ : Transcript ι S (μ + 1) → Bool) :
-    Pr[fun r => r.isSome | multiForkOp (μ + 1) k ρ]
-      = forkSucc k fun c => Pr[fun r => r.isSome | multiForkOp μ k fun t => ρ (c, t)] := by
+    Pr[fun r => r.1.isSome | multiForkOp (μ + 1) k ρ]
+      = forkSucc k fun c => Pr[fun r => r.1.isSome | multiForkOp μ k fun t => ρ (c, t)] := by
   classical
-  set sub : (ι → S) → ProbComp (Option (Finset (Transcript ι S μ))) :=
+  set sub : (ι → S) → ProbComp (Option (Finset (Transcript ι S μ)) × ℕ) :=
     fun c => multiForkOp μ k fun t => ρ (c, t) with hsub
-  set q : (ι → S) → ℝ≥0∞ := fun c => Pr[fun r => r.isSome | sub c] with hq
+  set q : (ι → S) → ℝ≥0∞ := fun c => Pr[fun r => r.1.isSome | sub c] with hq
   have hq1 : ∀ c, q c ≤ 1 := fun _ => probEvent_le_one
   -- Discarding the returned tree leaves the single-round loop's success event.
-  have hmap : Pr[fun r => r.isSome | multiForkOp (μ + 1) k ρ]
+  have hmap : Pr[fun r => r.1.isSome | multiForkOp (μ + 1) k ρ]
       = expectedValue (Fintype.mPi sub)
-        (fun tbl => Pr[fun r => r.1.isSome | coordForkOp k fun c => (tbl c).isSome]) := by
+        (fun tbl => Pr[fun r => r.1.isSome | coordForkOp k fun c => (tbl c).1.isSome]) := by
     rw [multiForkOp_succ, probEvent_bind_eq_tsum, expectedValue_def]
     refine tsum_congr fun tbl => congrArg _ ?_
     rw [bind_pure_comp, probEvent_map]
     exact congrArg _ (funext fun r => by simp)
   -- The single-round success probability is a functional of the sampled table.
-  have hcount : ∀ tbl : (ι → S) → Option (Finset (Transcript ι S μ)),
-      Pr[fun r => r.1.isSome | coordForkOp k fun c => (tbl c).isSome]
-        = ((goodSet k fun c => (tbl c).isSome).card : ℝ≥0∞) / Fintype.card (ι → S) := fun tbl =>
+  have hcount : ∀ tbl : (ι → S) → Option (Finset (Transcript ι S μ)) × ℕ,
+      Pr[fun r => r.1.isSome | coordForkOp k fun c => (tbl c).1.isSome]
+        = ((goodSet k fun c => (tbl c).1.isSome).card : ℝ≥0∞) / Fintype.card (ι → S) := fun tbl =>
     probEvent_isSome_coordForkOp k _
   rw [hmap]
   simp only [hcount]
   -- Reading the sampled table through `isSome` is exactly `acceptTable` on `indepTable`.
   rw [show expectedValue (Fintype.mPi sub)
-        (fun tbl => ((goodSet k fun c => (tbl c).isSome).card : ℝ≥0∞) / Fintype.card (ι → S))
-      = expectedValue (acceptTable (fun _ y => (Option.isSome y)) (indepTable sub))
+        (fun tbl => ((goodSet k fun c => (tbl c).1.isSome).card : ℝ≥0∞) / Fintype.card (ι → S))
+      = expectedValue (acceptTable (fun _ y => (Option.isSome y.1)) (indepTable sub))
         (fun ρ' => ((goodSet k ρ').card : ℝ≥0∞) / Fintype.card (ι → S)) from by
       rw [acceptTable, indepTable, expectedValue_map]]
   rw [forkSucc_eq_forkSuccOf k q hq1, forkSuccOf, expectedValue_def]
   refine tsum_congr fun ρ' => congrArg (· * _) ?_
-  rw [probOutput_acceptTable_indepTable_eq_bernoulliTable (fun _ y => (Option.isSome y)) sub ρ']
+  exact probOutput_acceptTable_indepTable_eq_bernoulliTable
+    (fun (_ : ι → S) (y : Option (Finset (Transcript ι S μ)) × ℕ) => y.1.isSome) sub ρ'
 
 /-- **The recursion's success probability is the analytic functional.** The independent Bernoulli
 coupling `multiSucc` is defined by is not assumed here: it is what running the sub-extractor
 independently at each first challenge produces. -/
 theorem probEvent_isSome_multiForkOp : ∀ (μ k : ℕ) (ρ : Transcript ι S μ → Bool),
-    Pr[fun r => r.isSome | multiForkOp μ k ρ]
+    Pr[fun r => r.1.isSome | multiForkOp μ k ρ]
       = multiSucc k fun t => if ρ t then 1 else 0
   | 0, k, ρ => by
       classical
@@ -202,8 +205,42 @@ theorem probEvent_isSome_multiForkOp : ∀ (μ k : ℕ) (ρ : Transcript ι S μ
 theorem sub_le_probEvent_isSome_multiForkOp [Nonempty S] (μ k : ℕ)
     (ρ : Transcript ι S μ → Bool) :
     avgTranscript (fun t => if ρ t then 1 else 0) - μ * roundLoss ι S k
-      ≤ Pr[fun r => r.isSome | multiForkOp μ k ρ] := by
+      ≤ Pr[fun r => r.1.isSome | multiForkOp μ k ρ] := by
   rw [probEvent_isSome_multiForkOp]
   exact sub_le_multiSucc k _ fun t => by split <;> simp
+
+/-! ## The number of lookups, per level -/
+
+/-- **Each round looks at at most `1 + ℓ(k-1)` of the level below**, in expectation. The count
+`multiForkOp` reports is the number of level-`μ` extractions the top-level loop examined.
+
+The paper's `(ℓ(k-1)+1)^μ` is the product of these across levels, and that composition is *not*
+proved here. It is Wald's identity — the total base-level work is `∑ᵢ Xᵢ` over the `T` lookups the
+top loop makes, and `𝔼[∑ᵢ≤T Xᵢ] = 𝔼[T] · 𝔼[X]` needs `{T ≥ i}` to be independent of the `i`-th
+sub-run. That holds because the loop chooses which challenge to look at *before* reading it, but
+that fact is not available here: `multiForkOp` pre-samples the whole table of sub-extractions
+through `Fintype.mPi`, which is what makes the coupling derivable for the success bound, and an
+eager table cannot express "queried before read". Doing so needs the loop to consume its table
+through an oracle, at which point the count is `expectedQueries` rather than returned data. -/
+theorem expectedValue_cost_multiForkOp_le [Nonempty S] (μ k : ℕ)
+    (ρ : Transcript ι S (μ + 1) → Bool) :
+    expectedValue (multiForkOp (μ + 1) k ρ) (fun r => (r.2 : ℝ≥0∞))
+      ≤ 1 + Fintype.card ι * (k - 1 : ℕ) := by
+  have hinner : ∀ tbl : (ι → S) → Option (Finset (Transcript ι S μ)) × ℕ,
+      expectedValue (do
+          let r ← coordForkOp k fun c => (tbl c).1.isSome
+          return (r.1.map fun X : Finset (ι → S) =>
+            X.biUnion fun c => ((tbl c).1.getD ∅).image fun t : Transcript ι S μ =>
+              show Transcript ι S (μ + 1) from (c, t), r.2))
+        (fun p => (p.2 : ℝ≥0∞))
+        ≤ 1 + Fintype.card ι * (k - 1 : ℕ) := by
+    intro tbl
+    rw [expectedValue_bind]
+    refine le_trans (le_of_eq (tsum_congr fun r => congrArg _ ?_))
+      (expectedValue_cost_coordForkOp_le k fun c => (tbl c).1.isSome)
+    exact expectedValue_pure _ _
+  rw [multiForkOp_succ, expectedValue_bind]
+  exact le_trans (expectedValue_mono _ hinner)
+    (le_of_eq (expectedValue_const (probFailure_of_liftM_PMF _) _))
 
 end OracleComp
