@@ -69,7 +69,7 @@ lemma withAddCost_apply_inr {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {s
       AddWriterT.addTell (costFn (Sum.inr t))
       liftM (impl.restrictRight t)) := by
   rw [withAddCost_apply, restrictRight_apply]
- 
+
 /-- Instrument an implementation with unit additive cost for every query. -/
 def withUnitCost (impl : QueryImpl spec m) :
     QueryImpl spec (AddWriterT ℕ m) :=

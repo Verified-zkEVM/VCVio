@@ -70,7 +70,7 @@ lemma restrictLeft_apply {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec
 lemma restrictRight_apply {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     (impl : QueryImpl (spec₁ + spec₂) m) (t : spec₂.Domain) :
     impl.restrictRight t = impl (Sum.inr t) := rfl
- 
+
 /-- View a concrete query implementation as query capability in the same monad. This is useful
 when instantiating a generic `HasQuery` construction directly inside an analysis monad such as
 `StateT σ ProbComp` or `WriterT ω (OracleComp spec)`. -/
