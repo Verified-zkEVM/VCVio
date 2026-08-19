@@ -281,6 +281,17 @@ theorem probEvent_isSome_coordForkOp_exhausted :
   rw [probEvent_isSome_coordForkOp, show (goodSet 4 partialAccept).card = 0 from by decide]
   simp
 
+/-- **The expected-query clause at concrete parameters.** One lookup for the sampled challenge and
+at most `k - 1 = 1` more for the single coordinate. The bound is tight here: two of the five
+challenges accept, each with one further accepting value in its column, so the loop makes
+`(1/5)(2·(1 + 5/2) + 3·1) = 2` lookups on average. -/
+theorem expectedValue_cost_coordForkOp_partial_le :
+    expectedValue (coordForkOp 2 partialAccept) (fun r => (r.2 : ℝ≥0∞)) ≤ 2 := by
+  have h := expectedValue_cost_coordForkOp_le (ι := Fin 1) (S := Fin 5) 2 partialAccept
+  refine h.trans (le_of_eq ?_)
+  simp
+  norm_num
+
 /-! ## Boundary canaries -/
 
 /-- Because subtraction is truncated, `k = 0` and `k = 1` are definitionally identical. -/

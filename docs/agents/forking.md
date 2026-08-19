@@ -167,9 +167,16 @@ the adversary*. The status is:
 
 | Clause | Lemma 7.1 | Lemma 7.2 |
 |---|---|---|
-| expected query count | **not proved** | **not proved** |
+| expected query count | proved, for the paper's algorithm | **not proved** |
 | success probability | proved, for the paper's algorithm | analytic recurrence, one step anchored |
 | output structure (accepting transcripts) | proved, for the paper's algorithm | `μ = 1` only |
+
+All three clauses of Lemma 7.1 hold for `coordForkOp` against a fixed acceptance table — which is
+the setting §7.1 needs, since its own analysis treats the adversary as a function of the challenge.
+What is *not* covered is a security-parameter experiment, a multi-round extractor, or an
+`OracleComp`-level identification of "table lookups" with "oracle queries": the count is returned
+as data by the loop rather than measured by the cost model in
+[`query-tracking.md`](query-tracking.md).
 
 - `sub_div_le_probEvent_goodOutput_coordFork` carries the success bound and the output guarantee
   together, so it is sensitive to what the extractor returns.
@@ -190,9 +197,13 @@ the adversary*. The status is:
   `coordForkOp`, which is Figure 11 itself — sample a challenge, and on acceptance resample each
   coordinate without replacement until `k − 1` further accepting values turn up or that coordinate
   is exhausted. See *The resampling loop* below.
-- What remains missing is the cost. The analytic ingredient is in place (see *Draw counts* below)
-  and `coordForkOp` returns its own lookup count, but nothing yet assembles those into the paper's
-  `1 + ℓ(k−1)` bound. The challenge-only
+- The cost clause is `expectedValue_cost_coordForkOp_le`: the loop looks at one table entry for the
+  sampled challenge and, averaged over that challenge, at most `k − 1` more per coordinate. Its
+  counting step is `CoordinateWise.card_mul_sum_div_columnCount_le` — give every accepting challenge
+  weight `w` divided by its own column count, and each column contributes at most `w` whatever its
+  count, because a column with `l` accepting values gives each of them `w / l`. At `w = (k−1)|S|`
+  the weight is exactly the expected number of draws that coordinate's resampling makes. The
+  challenge-only
   [`ToMathlib/Combinatorics/ChallengeTree.lean`](../../ToMathlib/Combinatorics/ChallengeTree.lean)
   supplies only the combinatorial projection needed by a future multi-round output theorem.
 

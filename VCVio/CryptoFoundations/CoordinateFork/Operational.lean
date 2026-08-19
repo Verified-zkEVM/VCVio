@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.CryptoFoundations.CoordinateFork
+public import VCVio.EvalDist.Expectation
 public import VCVio.EvalDist.IndepProduct
 public import VCVio.OracleComp.Constructions.WithoutReplacement
 
@@ -240,6 +241,135 @@ theorem sub_div_le_probEvent_isSome_coordForkOp [Nonempty S] (k : ℕ) (ρ : (ι
       ≤ Pr[fun r => r.1.isSome | coordForkOp k ρ] := by
   rw [probEvent_isSome_coordForkOp]
   exact CoordinateWise.sub_div_le_div_card_filter (accept := fun c => ρ c = true) k
+
+/-! ## The expected number of lookups -/
+
+omit [SampleableType (ι → S)] in
+/-- The loop's expected cost at a fixed challenge: one lookup for the challenge itself, and then
+one negative hypergeometric experiment per coordinate. -/
+theorem expectedValue_cost_coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
+    expectedValue (coordForkOpAt k ρ c₀) (fun r => (r.2 : ℝ≥0∞))
+      = if ρ c₀ then
+          1 + ∑ j, NegHypergeom.expectedDraws (Fintype.card S - 1) ((hitSet ρ c₀ j).card) (k - 1)
+        else 1 := by
+  classical
+  rw [coordForkOpAt]
+  by_cases hacc : ρ c₀
+  · rw [if_pos hacc, if_pos hacc, expectedValue_bind]
+    have hinner : ∀ d : ι → List S,
+        expectedValue
+          (if ∀ j, (collected ρ c₀ d j).card = k - 1 then
+              (pure (some (coordFamily c₀ (collected ρ c₀ d)), 1 + ∑ j, (d j).length) :
+                ProbComp (Option (Finset (ι → S)) × ℕ))
+            else pure (none, 1 + ∑ j, (d j).length))
+          (fun r => (r.2 : ℝ≥0∞))
+          = 1 + ∑ j, ((d j).length : ℝ≥0∞) := by
+      intro d
+      split <;> · rw [expectedValue_pure]; push_cast; rfl
+    rw [expectedValue_congr (fun _ => rfl) _, Finset.sum_congr rfl (fun _ _ => rfl)]
+    simp only [hinner]
+    rw [expectedValue_add, expectedValue_const (probFailure_of_liftM_PMF _),
+      expectedValue_finsetSum]
+    refine congrArg (1 + ·) (Finset.sum_congr rfl fun j _ => ?_)
+    rw [expectedValue_coord_mPi (coordDraws k ρ c₀) (fun i => probFailure_of_liftM_PMF _) j
+        (fun d => (d.length : ℝ≥0∞)),
+      coordDraws, expectedValue_length_drawUntil _ (altPool c₀ j).length _ _ rfl,
+      length_altPool, countP_altPool]
+  · rw [if_neg hacc, if_neg hacc, expectedValue_pure]
+    push_cast
+    ring
+
+omit [Fintype ι] [SampleableType (ι → S)] in
+/-- One coordinate's experiment costs at most `(k - 1) * |S|` divided by that coordinate's column
+count, which is the weight the counting lemma is stated for. -/
+theorem expectedDraws_hitSet_le (hacc : ρ c₀) (j : ι) :
+    NegHypergeom.expectedDraws (Fintype.card S - 1) ((hitSet ρ c₀ j).card) (k - 1)
+      ≤ ((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card S : ℝ≥0∞)
+          / ((columnCount (fun c => ρ c = true) j c₀ : ℕ) : ℝ≥0∞) := by
+  classical
+  have hpos : 0 < columnCount (fun c => ρ c = true) j c₀ :=
+    Finset.card_pos.mpr ⟨c₀ j, mem_filter_coord_self (accept := fun c => ρ c = true) hacc j⟩
+  have hle : columnCount (fun c => ρ c = true) j c₀ ≤ Fintype.card S := by
+    simpa [columnCount, Finset.card_univ] using
+      Finset.card_le_card (Finset.filter_subset _ (Finset.univ : Finset S))
+  have hcard : (hitSet ρ c₀ j).card = columnCount (fun c => ρ c = true) j c₀ - 1 := by
+    have := card_hitSet_succ hacc j
+    omega
+  rw [hcard]
+  exact NegHypergeom.expectedDraws_resample_le hpos hle
+
+omit [SampleableType (ι → S)] in
+/-- **The counting step.** Averaged over the sampled challenge, one coordinate's resampling costs
+at most `k - 1` lookups. -/
+theorem sum_expectedDraws_le [Nonempty S] (k : ℕ) (ρ : (ι → S) → Bool) (j : ι) :
+    ∑ c₀ : ι → S, (if ρ c₀ then
+        NegHypergeom.expectedDraws (Fintype.card S - 1) ((hitSet ρ c₀ j).card) (k - 1) else 0)
+      ≤ (k - 1 : ℕ) * Fintype.card (ι → S) := by
+  classical
+  have hNne : (Fintype.card S : ℝ≥0∞) ≠ 0 := by simp [Fintype.card_ne_zero]
+  have hNtop : (Fintype.card S : ℝ≥0∞) ≠ ⊤ := by finiteness
+  refine (ENNReal.mul_le_mul_iff_right hNne hNtop).mp ?_
+  calc (Fintype.card S : ℝ≥0∞) * ∑ c₀ : ι → S, (if ρ c₀ then
+          NegHypergeom.expectedDraws (Fintype.card S - 1) ((hitSet ρ c₀ j).card) (k - 1) else 0)
+      ≤ (Fintype.card S : ℝ≥0∞) * ∑ c₀ : ι → S, (if ρ c₀ then
+          ((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card S : ℝ≥0∞)
+            / ((columnCount (fun c => ρ c = true) j c₀ : ℕ) : ℝ≥0∞) else 0) := by
+        refine mul_le_mul' le_rfl (Finset.sum_le_sum fun c₀ _ => ?_)
+        by_cases hacc : ρ c₀
+        · rw [if_pos hacc, if_pos hacc]
+          exact expectedDraws_hitSet_le hacc j
+        · rw [if_neg hacc, if_neg hacc]
+    _ ≤ ((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card S : ℝ≥0∞) * (Fintype.card (ι → S) : ℝ≥0∞) :=
+        CoordinateWise.card_mul_sum_div_columnCount_le j _
+    _ = (Fintype.card S : ℝ≥0∞) * (((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card (ι → S) : ℝ≥0∞)) := by
+        ring
+
+/-- **The expected-query clause of Lemma 7.1.** The resampling loop looks at one table entry for
+the sampled challenge and, on average, at most `k - 1` further entries per coordinate. Together
+with `sub_div_le_probEvent_isSome_coordForkOp` and `coordForkOp_success` this is all three clauses
+of Lemma 7.1, for the paper's algorithm, at a fixed acceptance table. -/
+theorem expectedValue_cost_coordForkOp_le [Nonempty S] (k : ℕ) (ρ : (ι → S) → Bool) :
+    expectedValue (coordForkOp k ρ) (fun r => (r.2 : ℝ≥0∞))
+      ≤ 1 + Fintype.card ι * (k - 1 : ℕ) := by
+  classical
+  have hCne : (Fintype.card (ι → S) : ℝ≥0∞) ≠ 0 := by simp [Fintype.card_ne_zero]
+  have hCtop : (Fintype.card (ι → S) : ℝ≥0∞) ≠ ⊤ := by finiteness
+  have hfin : ((Fintype.card (ι → S) : ℝ≥0∞))⁻¹ *
+      ((Fintype.card (ι → S) : ℝ≥0∞)
+        + (Fintype.card ι : ℝ≥0∞) * (((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card (ι → S) : ℝ≥0∞)))
+      = 1 + (Fintype.card ι : ℝ≥0∞) * ((k - 1 : ℕ) : ℝ≥0∞) := by
+    rw [mul_add, ENNReal.inv_mul_cancel hCne hCtop]
+    refine congrArg (1 + ·) ?_
+    rw [show (Fintype.card ι : ℝ≥0∞) * (((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card (ι → S) : ℝ≥0∞))
+        = ((Fintype.card ι : ℝ≥0∞) * ((k - 1 : ℕ) : ℝ≥0∞)) * (Fintype.card (ι → S) : ℝ≥0∞)
+        from by ring,
+      ← mul_assoc, mul_right_comm, ENNReal.inv_mul_cancel hCne hCtop, one_mul]
+  have hsplit : ∀ c₀ : ι → S,
+      (if ρ c₀ then
+          1 + ∑ j, NegHypergeom.expectedDraws (Fintype.card S - 1) ((hitSet ρ c₀ j).card) (k - 1)
+        else 1)
+        = 1 + ∑ j, (if ρ c₀ then
+            NegHypergeom.expectedDraws (Fintype.card S - 1) ((hitSet ρ c₀ j).card) (k - 1)
+          else 0) := by
+    intro c₀
+    by_cases hacc : ρ c₀ <;> simp [hacc]
+  rw [coordForkOp, expectedValue_bind, expectedValue_def]
+  simp only [expectedValue_cost_coordForkOpAt, hsplit, probOutput_uniformSample]
+  rw [ENNReal.tsum_mul_left, tsum_fintype (L := .unconditional _), Finset.sum_add_distrib,
+    Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one, Finset.sum_comm]
+  calc (Fintype.card (ι → S) : ℝ≥0∞)⁻¹ *
+        ((Fintype.card (ι → S) : ℝ≥0∞) + ∑ j : ι, ∑ c₀ : ι → S, (if ρ c₀ then
+          NegHypergeom.expectedDraws (Fintype.card S - 1) ((hitSet ρ c₀ j).card) (k - 1) else 0))
+      ≤ (Fintype.card (ι → S) : ℝ≥0∞)⁻¹ *
+          ((Fintype.card (ι → S) : ℝ≥0∞)
+            + ∑ _j : ι, (((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card (ι → S) : ℝ≥0∞))) :=
+        mul_le_mul' le_rfl
+          (add_le_add le_rfl (Finset.sum_le_sum fun j _ => sum_expectedDraws_le k ρ j))
+    _ = (Fintype.card (ι → S) : ℝ≥0∞)⁻¹ *
+          ((Fintype.card (ι → S) : ℝ≥0∞)
+            + (Fintype.card ι : ℝ≥0∞) * (((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card (ι → S) : ℝ≥0∞)))
+          := by rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+    _ = 1 + Fintype.card ι * (k - 1 : ℕ) := hfin
 
 end Op
 

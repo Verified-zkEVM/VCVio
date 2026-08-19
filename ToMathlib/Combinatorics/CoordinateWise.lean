@@ -357,6 +357,70 @@ theorem card_mul_card_filter_columnCount_lt [Nonempty S] (j : ι) (k : ℕ) :
         rw [Finset.sum_const_nat (m := k - 1) fun _ _ => rfl]; ring
     _ = (k - 1) * Fintype.card (ι → S) := by rw [htotal]
 
+omit [DecidableEq S] in
+/-- **Weighted column counting.** Give every accepting challenge a weight of `w` divided by its own
+column count at `j`. Each column then contributes at most `w` in total, whatever its count, because
+a column with `l` accepting values gives each of them weight `w / l`. Summed over the
+`|ι → S| / |S|` columns this is at most `w * |ι → S| / |S|`, which is the statement below with the
+division cleared.
+
+This is the counting content of the `𝔼[Tᵢ] ≤ k - 1` step in Lemma 7.1 of
+Fenzi–Moghaddas–Nguyen: there `w = (k - 1) * |S|`, and the weight attached to an accepting
+challenge is the expected number of draws its coordinate resampling makes. -/
+theorem card_mul_sum_div_columnCount_le [Nonempty S] (j : ι) (w : ℝ≥0∞) :
+    (Fintype.card S : ℝ≥0∞) *
+        ∑ c : ι → S, (if accept c then w / columnCount accept j c else 0)
+      ≤ w * Fintype.card (ι → S) := by
+  classical
+  obtain ⟨d⟩ := (inferInstance : Nonempty S)
+  set reps : Finset (ι → S) :=
+    (Finset.univ : Finset (ι → S)).image fun c => Function.update c j d with hreps
+  have hmaps : ∀ c ∈ (Finset.univ : Finset (ι → S)), Function.update c j d ∈ reps := fun c _ =>
+    Finset.mem_image_of_mem _ (Finset.mem_univ c)
+  have hrj : ∀ r ∈ reps, r j = d := by
+    rintro r hr
+    obtain ⟨c₀, -, rfl⟩ := Finset.mem_image.mp hr
+    simp
+  have hcard_fiber : ∀ r ∈ reps,
+      ((Finset.univ : Finset (ι → S)).filter fun c => Function.update c j d = r).card
+        = Fintype.card S := by
+    intro r hr
+    rw [filter_update_eq_image (hrj r hr),
+      Finset.card_image_of_injective _ (Function.update_injective r j), Finset.card_univ]
+  have htotal : reps.card * Fintype.card S = Fintype.card (ι → S) := by
+    have hsum := Finset.card_eq_sum_card_fiberwise hmaps
+    rw [Finset.card_univ] at hsum
+    rw [hsum, Finset.sum_const_nat hcard_fiber]
+  -- A single column contributes at most `w`, whether or not it holds an accepting challenge.
+  have hcol : ∀ r ∈ reps,
+      (∑ c ∈ (Finset.univ : Finset (ι → S)).filter fun c => Function.update c j d = r,
+        (if accept c then w / columnCount accept j c else 0)) ≤ w := by
+    intro r hr
+    rw [filter_update_eq_image (hrj r hr),
+      Finset.sum_image fun x _ y _ h => Function.update_injective r j h]
+    have hconst : ∀ x : S,
+        (if accept (Function.update r j x) then w / columnCount accept j (Function.update r j x)
+          else 0) = if accept (Function.update r j x) then w / columnCount accept j r else 0 := by
+      intro x
+      rw [columnCount_update]
+    rw [Finset.sum_congr rfl fun x _ => hconst x, ← Finset.sum_filter, Finset.sum_const,
+      nsmul_eq_mul, ← columnCount]
+    rcases Nat.eq_zero_or_pos (columnCount accept j r) with hzero | hpos
+    · simp [hzero]
+    · refine le_of_eq (ENNReal.mul_div_cancel ?_ (by finiteness))
+      exact_mod_cast hpos.ne'
+  calc (Fintype.card S : ℝ≥0∞) *
+        ∑ c : ι → S, (if accept c then w / columnCount accept j c else 0)
+      = (Fintype.card S : ℝ≥0∞) * ∑ r ∈ reps,
+          ∑ c ∈ (Finset.univ : Finset (ι → S)).filter fun c => Function.update c j d = r,
+            (if accept c then w / columnCount accept j c else 0) := by
+        rw [Finset.sum_fiberwise_of_maps_to hmaps]
+    _ ≤ (Fintype.card S : ℝ≥0∞) * ∑ _r ∈ reps, w :=
+        mul_le_mul' le_rfl (Finset.sum_le_sum hcol)
+    _ = w * ((reps.card : ℝ≥0∞) * Fintype.card S) := by
+        rw [Finset.sum_const, nsmul_eq_mul]; ring
+    _ = w * Fintype.card (ι → S) := by rw [← Nat.cast_mul, htotal]
+
 variable {c : ι → S}
 
 omit [Fintype ι] [DecidableEq S] in
