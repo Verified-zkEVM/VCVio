@@ -411,8 +411,8 @@ private lemma find?_append_left_false {α : Type} (xs ys : List α) (pred : α �
   rw [List.find?_append,
     List.find?_eq_none.2 fun x hx => by rw [h x hx]; exact Bool.false_ne_true, Option.none_or]
 
-omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand] [Inhabited M]
-  [SampleableType M] [AddCommGroup M] in
+omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand] [Inhabited Rand]
+  [Inhabited M] [SampleableType M] [AddCommGroup M] in
 /-- If the transcript contains a right-oracle query at `r`, then searching it for a query whose
 forward image matches `tdp.forward pk r` succeeds with a right-oracle entry whose preimage has the
 matching forward image. This is the pointwise heart of the bad-event reduction: a bad transcript

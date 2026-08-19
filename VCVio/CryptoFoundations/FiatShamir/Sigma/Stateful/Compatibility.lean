@@ -698,7 +698,7 @@ theorem statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
   simp only [Prod.mk.eta, monad_norm, Function.comp_apply]
   refine bind_congr (m := ProbComp) fun z => ?_
   rcases z with ⟨⟨msg, c, resp⟩, ⟨signed, cache, keypair⟩, bad⟩
-  letI : HasQuery (roSpec M Commit Chal) (StateT (RoCache M Commit Chal) ProbComp) :=
+  let : HasQuery (roSpec M Commit Chal) (StateT (RoCache M Commit Chal) ProbComp) :=
     (randomOracle : QueryImpl (roSpec M Commit Chal) _).toHasQuery
   rw [simulateQ_cmaReal_liftM_fsRo_eq_sourceCma (σ := σ) (hr := hr) (M := M)
     (Commit := Commit) (Chal := Chal) (Resp := Resp) (Stmt := Stmt)
@@ -795,7 +795,7 @@ private theorem postKeygenWriterLog_eq_inputLog
         StateT (RoCache M Commit Chal) ProbComp
           ((M × (Commit × Resp)) × List M)) := by
   let runtime := fsBaseImpl (M := M) (Commit := Commit) (Chal := Chal)
-  letI : HasQuery (unifSpec + roSpec M Commit Chal)
+  let : HasQuery (unifSpec + roSpec M Commit Chal)
       (StateT (RoCache M Commit Chal) ProbComp) := runtime.toHasQuery
   let so := cmaRealFixedSign (M := M) (Commit := Commit) (Chal := Chal)
     (Resp := Resp) σ hr pk sk
@@ -814,11 +814,11 @@ private theorem postKeygenFreshWriterProb_eq_postKeygenFreshProb
       (Commit := Commit) (Chal := Chal) (Resp := Resp) adv pk sk := by
   unfold postKeygenFreshWriterProb
   let runtime := fsBaseImpl (M := M) (Commit := Commit) (Chal := Chal)
-  letI : HasQuery (unifSpec + roSpec M Commit Chal)
+  let : HasQuery (unifSpec + roSpec M Commit Chal)
       (StateT (RoCache M Commit Chal) ProbComp) := runtime.toHasQuery
   let so := cmaRealFixedSign (M := M) (Commit := Commit) (Chal := Chal)
     (Resp := Resp) σ hr pk sk
-  letI : HasQuery (roSpec M Commit Chal)
+  let : HasQuery (roSpec M Commit Chal)
       (StateT (RoCache M Commit Chal) ProbComp) :=
     (randomOracle : QueryImpl (roSpec M Commit Chal) _).toHasQuery
   let baseW : QueryImpl (unifSpec + roSpec M Commit Chal)
@@ -895,12 +895,22 @@ private lemma fsBaseImpl_writerTMapBase_signingOracle_eq
       implS := by
   funext t
   rcases t with (n | mc) | m <;> ext cache
-  · simp [QueryImpl.writerTMapBase,
-      HasQuery.toQueryImpl_apply, fsBaseImpl, unifFwdImpl]
+  · simp only [add_apply_inl, QueryImpl.writerTMapBase, fsBaseImpl, unifFwdImpl,
+      QueryImpl.add_apply_inl, PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor,
+      HasQuery.toQueryImpl_apply, HasQuery.instOfMonadLift_query, WriterT.run_liftM,
+      List.empty_eq, simulateQ_map, WriterT.run_mk, StateT.run_map,
+      PFunctor.selfMonomial_B, StateT.run_monadLift, monadLift_self, bind_pure_comp,
+      Functor.map_map]
     erw [QueryImpl.simulateQ_add_query_left]
     simp
-  · simp [QueryImpl.writerTMapBase,
-      HasQuery.toQueryImpl_apply, fsBaseImpl, unifFwdImpl, randomOracle]
+  · simp only [add_apply_inl, add_apply_inr, QueryImpl.writerTMapBase, fsBaseImpl,
+      unifFwdImpl, randomOracle, QueryImpl.add_apply_inl, PFunctor.Handler.liftTarget_apply,
+      ofPFunctor_toPFunctor, HasQuery.toQueryImpl_apply, HasQuery.instOfMonadLift_query,
+      WriterT.run_liftM, List.empty_eq, simulateQ_map, WriterT.run_mk, StateT.run_map,
+      QueryImpl.add_apply_inr, QueryImpl.withCaching_apply, uniformSampleImpl_apply, map_bind,
+      StateT.run_bind, StateT.run_get, pure_bind, Prod.mk.injEq, and_true, and_imp,
+      Prod.forall, forall_apply_eq_imp_iff, forall_eq', Prod.mk.eta, implies_true,
+      map_inj_right_of_nonempty]
     erw [QueryImpl.simulateQ_add_query_right]
     simp [QueryImpl.withCaching_apply]
   · simp [QueryImpl.writerTMapBase, SignatureAlg.signingOracle,
@@ -948,7 +958,7 @@ private theorem simulateQ_fsBaseImpl_postKeygenFreshWriterComp_run'_eq
   rw [QueryImpl.simulateQ_writerTMapBase_run
     (outer := fsBaseImpl (M := M) (Commit := Commit) (Chal := Chal))
     (inner := implW) (oa := adv.main pk), hmap]
-  letI : DecidableEq (Commit × Resp) := Classical.decEq _
+  let : DecidableEq (Commit × Resp) := Classical.decEq _
   conv_lhs =>
     simp [implS, baseS, fsBaseImpl, cmaRealFixedSign, SourceSigAlg, FiatShamir,
       randomOracle, QueryLog.wasQueried_eq_decide_mem_map_fst, StateT.run_bind]
