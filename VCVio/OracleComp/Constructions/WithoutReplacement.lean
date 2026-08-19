@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import ToMathlib.Probability.NegativeHypergeometric
+public import VCVio.EvalDist.Expectation
 public import VCVio.OracleComp.ProbComp
 
 /-!
@@ -15,19 +16,18 @@ public import VCVio.OracleComp.ProbComp
 accepting values have been collected, or when the pool runs out. It returns the values drawn, in
 order, so a caller can read off both how many draws it made and which of them accepted.
 
-`expectedLength_drawUntil` identifies its expected number of draws with the negative
-hypergeometric recursion `NegHypergeom.expectedDraws`, and `expectedLength_drawUntil_le` gives the
-resulting closed-form bound. Exhaustion needs no separate treatment: the loop simply returns the
-whole pool, and `NegHypergeom.expectedDraws_le` already covers that case.
+`expectedValue_length_drawUntil` identifies its expected number of draws with the negative
+hypergeometric recursion `NegHypergeom.expectedDraws`, and `expectedValue_length_drawUntil_le`
+gives the resulting closed-form bound. Exhaustion needs no separate treatment: the loop simply
+returns the whole pool, and `NegHypergeom.expectedDraws_le` already covers that case.
 
 The pool is a `List`, not a `Finset`, because a draw is an index rather than a value: that keeps
 the loop in `ProbComp` with no failure branch, makes the recursion terminate on the pool's length,
 and costs nothing, since positions are what the counting argument uses anyway. Duplicates in the
 pool are allowed and are counted as distinct.
 
-`expectedLength` is the expected length of a list-valued computation, which is how the draw count
-is read here. It is not a general expectation operator; its three laws below are exactly what the
-recursion consumes.
+The draw count is read as the expected length of the returned list, through
+`OracleComp.EvalDist.expectedValue`.
 -/
 
 @[expose] public section
@@ -108,43 +108,14 @@ variable {S : Type}
 
 /-! ## Expected length of a list-valued computation -/
 
-/-- The expected length of a list-valued computation. -/
-noncomputable def expectedLength (mx : ProbComp (List S)) : ℝ≥0∞ :=
-  ∑' d : List S, Pr[= d | mx] * d.length
-
-@[simp] theorem expectedLength_pure (d : List S) :
-    expectedLength (pure d : ProbComp (List S)) = d.length := by
-  classical
-  rw [expectedLength]
-  refine (tsum_eq_single d fun d' hd' => ?_).trans ?_
-  · rw [probOutput_pure, if_neg hd', zero_mul]
-  · rw [probOutput_pure_self, one_mul]
-
-theorem expectedLength_bind {α : Type} (mx : ProbComp α) (f : α → ProbComp (List S)) :
-    expectedLength (mx >>= f) = ∑' x : α, Pr[= x | mx] * expectedLength (f x) := by
-  simp only [expectedLength, probOutput_bind_eq_tsum]
-  calc ∑' d : List S, (∑' x : α, Pr[= x | mx] * Pr[= d | f x]) * (d.length : ℝ≥0∞)
-      = ∑' (d : List S) (x : α), Pr[= x | mx] * (Pr[= d | f x] * (d.length : ℝ≥0∞)) := by
-        refine tsum_congr fun d => ?_
-        rw [← ENNReal.tsum_mul_right]
-        exact tsum_congr fun x => by ring
-    _ = ∑' (x : α) (d : List S), Pr[= x | mx] * (Pr[= d | f x] * (d.length : ℝ≥0∞)) :=
-        ENNReal.tsum_comm
-    _ = ∑' x : α, Pr[= x | mx] * ∑' d : List S, Pr[= d | f x] * (d.length : ℝ≥0∞) :=
-        tsum_congr fun _ => ENNReal.tsum_mul_left
-
-theorem expectedLength_map {α : Type} (mx : ProbComp α) (f : α → List S) :
-    expectedLength (f <$> mx) = ∑' x : α, Pr[= x | mx] * (f x).length := by
-  rw [map_eq_bind_pure_comp, expectedLength_bind]
-  exact tsum_congr fun x => by rw [Function.comp_apply, expectedLength_pure]
-
+open OracleComp.EvalDist in
 /-- Prefixing a fixed value adds exactly one to the expected length. -/
-theorem expectedLength_cons_map (y : S) (mc : ProbComp (List S)) :
-    expectedLength ((y :: ·) <$> mc) = expectedLength mc + 1 := by
-  rw [expectedLength_map]
-  simp only [List.length_cons, Nat.cast_add, Nat.cast_one, mul_add, mul_one]
-  rw [ENNReal.tsum_add, tsum_probOutput_eq_one' (probFailure_of_liftM_PMF mc)]
-  rfl
+theorem expectedValue_length_cons_map (y : S) (mc : ProbComp (List S)) :
+    expectedValue ((y :: ·) <$> mc) (fun d => (d.length : ℝ≥0∞))
+      = expectedValue mc (fun d => (d.length : ℝ≥0∞)) + 1 := by
+  rw [expectedValue_map]
+  simp only [List.length_cons, Nat.cast_add, Nat.cast_one]
+  rw [expectedValue_add, expectedValue_const (probFailure_of_liftM_PMF mc)]
 
 /-! ## The loop -/
 
@@ -313,11 +284,12 @@ private theorem sum_fin_ite (l : List S) (p : S → Bool) (a b : ℝ≥0∞) :
       List.ofFn_getElem_eq_map l (fun y => if p y then a else b),
     sum_map_ite]
 
+open OracleComp.EvalDist in
 /-- The loop's expected number of draws is the negative hypergeometric expectation at the pool's
 size and accepting count. -/
-theorem expectedLength_drawUntil (accept : S → Bool) (n : ℕ) :
+theorem expectedValue_length_drawUntil (accept : S → Bool) (n : ℕ) :
     ∀ (r : ℕ) (l : List S), l.length = n →
-      expectedLength (drawUntil accept r l)
+      expectedValue (drawUntil accept r l) (fun d => (d.length : ℝ≥0∞))
         = NegHypergeom.expectedDraws n (l.countP accept) r := by
   induction n with
   | zero =>
@@ -343,10 +315,10 @@ theorem expectedLength_drawUntil (accept : S → Bool) (n : ℕ) :
         -- Drawing at index `i` leaves a pool one shorter, with one fewer accepting value exactly
         -- when the drawn value accepted.
         have hstep : ∀ i : Fin (xs.length + 1),
-            expectedLength ((((x :: xs)[(i : ℕ)]'(by simpa using i.isLt)) :: ·) <$>
+            expectedValue ((((x :: xs)[(i : ℕ)]'(by simpa using i.isLt)) :: ·) <$>
                 drawUntil accept
                   (if accept ((x :: xs)[(i : ℕ)]'(by simpa using i.isLt)) then r else r + 1)
-                  ((x :: xs).eraseIdx i))
+                  ((x :: xs).eraseIdx i)) (fun d => (d.length : ℝ≥0∞))
               = (if accept ((x :: xs)[(i : ℕ)]'(by simpa using i.isLt)) then
                   NegHypergeom.expectedDraws xs.length (G - 1) r
                 else NegHypergeom.expectedDraws xs.length G (r + 1)) + 1 := by
@@ -354,7 +326,7 @@ theorem expectedLength_drawUntil (accept : S → Bool) (n : ℕ) :
           have hi : (i : ℕ) < (x :: xs).length := by simpa using i.isLt
           have hlen : ((x :: xs).eraseIdx i).length = xs.length := by
             rw [List.length_eraseIdx_of_lt hi]; simp
-          rw [expectedLength_cons_map, ih _ _ hlen]
+          rw [expectedValue_length_cons_map, ih _ _ hlen]
           congr 1
           cases hacc : accept ((x :: xs)[(i : ℕ)]'(by simpa using i.isLt)) with
           | false =>
@@ -367,7 +339,7 @@ theorem expectedLength_drawUntil (accept : S → Bool) (n : ℕ) :
                 omega
               rw [hcount]
         -- Average the step over a uniform index.
-        rw [drawUntil_cons, expectedLength_bind]
+        rw [drawUntil_cons, expectedValue_bind, expectedValue_def]
         simp only [hstep, probOutput_uniformFin_eq_div]
         rw [ENNReal.tsum_mul_left, tsum_fintype (L := .unconditional _), Finset.sum_add_distrib,
           Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul, mul_one]
@@ -389,12 +361,13 @@ theorem expectedLength_drawUntil (accept : S → Bool) (n : ℕ) :
         rw [mul_add, mul_add, hcancel]
         ring
 
+open OracleComp.EvalDist in
 /-- The closed-form bound on the loop's expected number of draws. Exhaustion is covered: when the
 pool holds fewer than `r` accepting values the loop draws all of it, and the bound still holds. -/
-theorem expectedLength_drawUntil_le (accept : S → Bool) (r : ℕ) (l : List S) :
-    expectedLength (drawUntil accept r l)
+theorem expectedValue_length_drawUntil_le (accept : S → Bool) (r : ℕ) (l : List S) :
+    expectedValue (drawUntil accept r l) (fun d => (d.length : ℝ≥0∞))
       ≤ r * (l.length + 1) / (l.countP accept + 1) := by
-  rw [expectedLength_drawUntil accept l.length r l rfl]
+  rw [expectedValue_length_drawUntil accept l.length r l rfl]
   exact NegHypergeom.expectedDraws_le List.countP_le_length
 
 end ProbComp

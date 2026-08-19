@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import ToMathlib.General
-public import VCVio.EvalDist.Monad.Map
+public import VCVio.EvalDist.Expectation
 
 /-!
 # Independent products of computations
@@ -317,5 +317,21 @@ lemma probEvent_coord_mPi (f : ι → m α) (hf : ∀ i, Pr[⊥ | f i] = 0) (i :
   have h := probEvent_coord_mOfFn (Fintype.card ι)
     (fun k => f ((Fintype.equivFin ι).symm k)) (fun k => hf _) (Fintype.equivFin ι i) p
   simpa [Function.comp_def, Equiv.arrowCongr] using h
+
+/-- Reading off one coordinate of a finite independent product recovers that factor's output
+distribution. -/
+lemma probOutput_coord_mPi (f : ι → m α) (hf : ∀ i, Pr[⊥ | f i] = 0) (i : ι) (x : α) :
+    Pr[= x | (fun v => v i) <$> Fintype.mPi f] = Pr[= x | f i] := by
+  rw [probOutput_map]
+  exact (probEvent_coord_mPi f hf i (· = x)).trans (probEvent_eq_eq_probOutput _ x)
+
+/-- Expectations of a functional of one coordinate are computed in that factor alone. This is
+what makes the total cost of an independent family split as a sum over the family. -/
+lemma expectedValue_coord_mPi (f : ι → m α) (hf : ∀ i, Pr[⊥ | f i] = 0) (i : ι)
+    (g : α → ℝ≥0∞) :
+    OracleComp.EvalDist.expectedValue (Fintype.mPi f) (fun v => g (v i))
+      = OracleComp.EvalDist.expectedValue (f i) g := by
+  rw [← OracleComp.EvalDist.expectedValue_map (Fintype.mPi f) (fun v => v i) g]
+  exact OracleComp.EvalDist.expectedValue_congr (probOutput_coord_mPi f hf i) g
 
 end mPi

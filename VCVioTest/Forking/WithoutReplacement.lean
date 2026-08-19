@@ -23,7 +23,7 @@ why the coordinate-wise extractor can use one bound for both cases.
 
 @[expose] public section
 
-open ProbComp NegHypergeom
+open ProbComp NegHypergeom OracleComp.EvalDist
 
 open scoped ENNReal
 
@@ -47,9 +47,9 @@ theorem expectedDraws_pool3 : expectedDraws 3 1 1 = 2 := by
   rw [show (4 : ℝ≥0∞) = 2 * 2 from by norm_num,
     ENNReal.mul_div_cancel_right (by norm_num) (by finiteness)]
 
-theorem expectedLength_drawUntil_pool3 :
-    expectedLength (drawUntil acceptZero 1 pool3) = 2 := by
-  rw [expectedLength_drawUntil acceptZero pool3.length 1 pool3 rfl,
+theorem expectedValue_length_drawUntil_pool3 :
+    expectedValue (drawUntil acceptZero 1 pool3) (fun d => (d.length : ℝ≥0∞)) = 2 := by
+  rw [expectedValue_length_drawUntil acceptZero pool3.length 1 pool3 rfl,
     show pool3.length = 3 from rfl, show pool3.countP acceptZero = 1 from rfl,
     expectedDraws_pool3]
 
@@ -62,9 +62,9 @@ theorem expectedDraws_one_one_two : expectedDraws 1 1 2 = 1 := by
   simp
 
 /-- Wanting two successes from a pool holding one: the loop drains the pool after a single draw. -/
-theorem expectedLength_drawUntil_exhausted :
-    expectedLength (drawUntil acceptZero 2 [(0 : Fin 3)]) = 1 := by
-  rw [expectedLength_drawUntil acceptZero [(0 : Fin 3)].length 2 _ rfl,
+theorem expectedValue_length_drawUntil_exhausted :
+    expectedValue (drawUntil acceptZero 2 [(0 : Fin 3)]) (fun d => (d.length : ℝ≥0∞)) = 1 := by
+  rw [expectedValue_length_drawUntil acceptZero [(0 : Fin 3)].length 2 _ rfl,
     show [(0 : Fin 3)].length = 1 from rfl,
     show [(0 : Fin 3)].countP acceptZero = 1 from rfl, expectedDraws_one_one_two]
 
@@ -80,17 +80,19 @@ theorem expectedDraws_ne_closedForm_of_exhaustion :
   norm_num
 
 /-- The general bound still holds there, with slack. -/
-theorem expectedLength_drawUntil_exhausted_le :
-    expectedLength (drawUntil acceptZero 2 [(0 : Fin 3)]) ≤ 2 := by
-  rw [expectedLength_drawUntil_exhausted]
+theorem expectedValue_length_drawUntil_exhausted_le :
+    expectedValue (drawUntil acceptZero 2 [(0 : Fin 3)]) (fun d => (d.length : ℝ≥0∞)) ≤ 2 := by
+  rw [expectedValue_length_drawUntil_exhausted]
   norm_num
 
 /-! ## Degenerate cases -/
 
 /-- Wanting nothing draws nothing. -/
-example (l : List (Fin 3)) : expectedLength (drawUntil acceptZero 0 l) = 0 := by simp
+example (l : List (Fin 3)) :
+    expectedValue (drawUntil acceptZero 0 l) (fun d => (d.length : ℝ≥0∞)) = 0 := by simp
 
 /-- An empty pool draws nothing. -/
-example (r : ℕ) : expectedLength (drawUntil acceptZero r []) = 0 := by simp
+example (r : ℕ) :
+    expectedValue (drawUntil acceptZero r []) (fun d => (d.length : ℝ≥0∞)) = 0 := by simp
 
 end VCVioTest.Forking

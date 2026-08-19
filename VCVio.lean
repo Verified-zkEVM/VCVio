@@ -91,6 +91,7 @@ public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Defs.Semantics
 public import VCVio.EvalDist.Defs.Support
+public import VCVio.EvalDist.Expectation
 public import VCVio.EvalDist.Fintype
 public import VCVio.EvalDist.IndepProduct
 public import VCVio.EvalDist.Inequalities

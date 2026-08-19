@@ -145,6 +145,7 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - Replay-based forking lemma: `VCVio/CryptoFoundations/ReplayFork.lean`
 - Coordinate-wise table forking, its realizability bridge to an ordinary adversary, and its analytic multi-round recurrence (ingredients from eprint 2023/846 §7): `VCVio/CryptoFoundations/CoordinateFork.lean`, `VCVio/CryptoFoundations/CoordinateFork/Realizability.lean`, `VCVio/CryptoFoundations/CoordinateFork/Operational.lean`, `VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean`, over `VCVio/EvalDist/CoordinateFork.lean` and the combinatorics in `ToMathlib/Combinatorics/CoordinateWise.lean`
 - Independent products of computations and of `PMF`s: `VCVio/EvalDist/IndepProduct.lean`, `ToMathlib/Probability/ProbabilityMassFunction/Pi.lean`
+- Expected values of `ℝ≥0∞`-valued functionals: `VCVio/EvalDist/Expectation.lean`
 - Drawing without replacement and its expected draw count: `VCVio/OracleComp/Constructions/WithoutReplacement.lean`, `ToMathlib/Probability/NegativeHypergeometric.lean`
 - Fischlin transform: `VCVio/CryptoFoundations/Fischlin.lean`
 - Interaction spec and transcript: `PolyFun/Interaction/Basic/Spec.lean`
