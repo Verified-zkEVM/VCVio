@@ -16,6 +16,7 @@ public import VCVio.CryptoFoundations.CoordinateFork.MultiRound
 public import VCVio.CryptoFoundations.CoordinateFork.MultiRoundOp
 public import VCVio.CryptoFoundations.CoordinateFork.Operational
 public import VCVio.CryptoFoundations.CoordinateFork.Realizability
+public import VCVio.CryptoFoundations.CoordinateFork.SamplingGame
 public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.FiatShamir.QueryBounds

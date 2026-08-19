@@ -320,7 +320,7 @@ theorem sum_expectedDraws_le [Nonempty S] (k : ℕ) (ρ : (ι → S) → Bool) (
           exact expectedDraws_hitSet_le hacc j
         · rw [if_neg hacc, if_neg hacc]
     _ ≤ ((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card S : ℝ≥0∞) * (Fintype.card (ι → S) : ℝ≥0∞) :=
-        CoordinateWise.card_mul_sum_div_columnCount_le j _
+        CoordinateWise.card_mul_sum_div_columnCount_le_card j _
     _ = (Fintype.card S : ℝ≥0∞) * (((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card (ι → S) : ℝ≥0∞)) := by
         ring
 

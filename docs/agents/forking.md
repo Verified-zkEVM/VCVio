@@ -278,6 +278,51 @@ table through an *oracle*, at which point the count becomes `expectedQueries`
 ([`query-tracking.md`](query-tracking.md)) rather than returned data. §8.2 has to refine the same
 step again once the sub-extractor's cost varies with the entry.
 
+### The abstract sampling game
+
+[`CoordinateFork/SamplingGame.lean`](../../VCVio/CryptoFoundations/CoordinateFork/SamplingGame.lean)
+is Figure 12, the game §8 analyses on the way to Fiat–Shamir knowledge soundness. An *array*
+`M : (Q × ι → S) → Bool × Q` assigns a challenge value to every (random oracle query, coordinate)
+pair and records whether the deterministic prover's forgery verifies and *which* query it uses. The
+game draws an assignment uniformly, stops if the entry rejects, and otherwise resamples each
+coordinate of the winning query's block until `k − 1` further hits for that same query turn up.
+
+The only structural difference from §7's `coordForkOp` is that the block being resampled is named
+by the entry rather than fixed in advance, so `ProbComp.drawUntil` and the negative hypergeometric
+bound carry over unchanged. What changes is the counting: `blockCount M i j` is Equation (29)'s
+`aᵢ(j)`, and `columnCount_le_blockCount` relaxes the per-coordinate count of
+[`CoordinateWise.lean`](../../ToMathlib/Combinatorics/CoordinateWise.lean) to it. That relaxation is
+strict in general — `columnCount_lt_blockCount_wide` in the test file exhibits a block whose column
+through one coordinate is empty while the block still holds a hit.
+
+`expectedValue_cost_samplingGame_le` is the first half of Lemma 8.1:
+
+```lean
+theorem expectedValue_cost_samplingGame_le [Nonempty S] [SampleableType (Q × ι → S)] (k : ℕ)
+    (M : (Q × ι → S) → Bool × Q) :
+    expectedValue (samplingGame k M) (fun r => (r.2 : ℝ≥0∞))
+      ≤ 1 + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞) * blockHitTotal M
+```
+
+`blockHitTotal` is the paper's `P`, and despite the name it is not a probability: it sums, over the
+query index, the chance that that query's block holds a hit, so it ranges up to the number of
+queries (`blockHitTotal_le_card`, and `blockHitTotal_forkedArray` in the test file exhibits
+`P = 9/5`). `expectedValue_cost_samplingGame_le_card` is the resulting `1 + Q·ℓ(k−1)`, which is the
+budget §8.2's extractor works against. `expectedValue_cost_samplingGame_gatedArray_le` shows the
+bound is attained, not merely valid.
+
+Getting here needed the counting lemma sharpened. `card_mul_sum_div_columnCount_le` used to bound
+the weighted column sum by `w · |ι → S|`; it now bounds it by `w` times the number of assignments
+whose column is *nonempty*, and the cruder form survives as
+`card_mul_sum_div_columnCount_le_card` for §7's use. Without the sharpening `P` would collapse to
+`1` and Lemma 8.1 would say nothing beyond `1 + ℓ(k−1)`.
+
+**Lemma 8.1's other half is not formalized.** Its success bound
+`Pr[⋀ₗ Xₗ = k] ≥ N/(N−k+1)·(Pr[V=1] − P·ℓ(k−1)/N)` explicitly reuses a bound of Attema–Fehr–Klooß
+rather than proving it, so §8 is not self-contained in the paper either; formalizing it means
+formalizing that citation first. Lemma 8.2's weighted game, Figure 13's extractor, and Lemma 2.32's
+knowledge error are likewise not formalized.
+
 ### Draw counts
 
 The inner loop of FMN's Figure 11 resamples one challenge coordinate *without replacement* until
@@ -312,8 +357,9 @@ single-round and multi-round success bounds as quantitative Hoare triples, match
 seeded fork.
 
 Non-vacuity, payload-sensitivity, coupling, boundary, and bad-extractor checks live in
-`VCVioTest/Forking/CoordinateFork.lean` and
-`VCVioTest/Forking/CoordSpecialSoundness.lean`; both run in CI.
+`VCVioTest/Forking/CoordinateFork.lean`,
+`VCVioTest/Forking/CoordSpecialSoundness.lean`, and `VCVioTest/Forking/SamplingGame.lean`; all run
+in CI.
 
 ## Why §7 introduces its own extractor
 

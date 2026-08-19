@@ -195,6 +195,8 @@ jobs:
         run: lake env lean VCVioTest/Forking/CoordSpecialSoundness.lean
       - name: Check without-replacement draw-count regressions
         run: lake env lean VCVioTest/Forking/WithoutReplacement.lean
+      - name: Check abstract sampling game regressions
+        run: lake env lean VCVioTest/Forking/SamplingGame.lean
       - name: Check Merkle batch-opening canaries
         run: lake env lean VCVioTest/MerkleTreeBatch.lean
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
