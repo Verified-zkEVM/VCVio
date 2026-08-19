@@ -71,10 +71,11 @@ jobs:
           test: false
           lint: false
           use-github-cache: false
+          # The scratch consumer has its own package directory, hydrated below.
           use-mathlib-cache: false
       - name: Build a scratch consumer requiring VCVio by path
         env:
-          # The consumer imports only Lean core, so the Mathlib cache is not used.
+          # Defer cache hydration until the scratch consumer's manifest exists.
           MATHLIB_NO_CACHE_ON_UPDATE: "1"
         run: |
           consumer="$RUNNER_TEMP/vcvio-consumer"
@@ -106,6 +107,7 @@ jobs:
           } > "$consumer/Main.lean"
           cd "$consumer"
           lake update
+          lake exe cache get
           lake build
           ./.lake/build/bin/consumer
 
