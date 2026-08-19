@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
+public import VCVio.CryptoFoundations.CoordinateFork.Operational
 public import VCVio.CryptoFoundations.CoordinateFork.Realizability
 
 /-!
@@ -252,6 +253,33 @@ example : PMF.bernoulliTable (fun _ : Fin 2 => (1 : ℝ≥0∞) / 2) (fun _ => b
   simp only [PMF.tableWeight, Matrix.cons_val_zero, Matrix.cons_val_one, if_true, one_div]
   rw [← ENNReal.mul_inv (by norm_num) (by norm_num)]
   norm_num
+
+/-! ## The resampling loop -/
+
+/-- At these parameters exactly the two accepting challenges are good. -/
+theorem card_goodSet_partial : (goodSet 2 partialAccept).card = 2 := by decide
+
+/-- **The loop is faithful to the table core.** Resampling the column in a random order until two
+accepting values are found succeeds exactly on `goodSet`, so with probability `2/5` here. -/
+theorem probEvent_isSome_coordForkOp_partial :
+    Pr[fun r => r.1.isSome | coordForkOp 2 partialAccept] = 2 / 5 := by
+  rw [probEvent_isSome_coordForkOp, card_goodSet_partial]
+  simp
+
+/-- The Lemma 7.1 bound for the loop, at parameters where it is strictly positive. -/
+theorem one_fifth_le_probEvent_isSome_coordForkOp :
+    (1 : ℝ≥0∞) / 5 ≤ Pr[fun r => r.1.isSome | coordForkOp 2 partialAccept] := by
+  rw [probEvent_isSome_coordForkOp_partial]
+  gcongr
+  norm_num
+
+/-- **Exhaustion.** Asking for four accepting values in a column that holds two, the loop drains
+every coordinate and never succeeds. This is behaviour the total-lookup core cannot exhibit, since
+it reads the column rather than sampling it. -/
+theorem probEvent_isSome_coordForkOp_exhausted :
+    Pr[fun r => r.1.isSome | coordForkOp 4 partialAccept] = 0 := by
+  rw [probEvent_isSome_coordForkOp, show (goodSet 4 partialAccept).card = 0 from by decide]
+  simp
 
 /-! ## Boundary canaries -/
 

@@ -168,8 +168,8 @@ the adversary*. The status is:
 | Clause | Lemma 7.1 | Lemma 7.2 |
 |---|---|---|
 | expected query count | **not proved** | **not proved** |
-| success probability | proved for a fixed-coin adversary | analytic recurrence, one step anchored |
-| output structure (accepting transcripts) | proved for a fixed-coin adversary | `μ = 1` only |
+| success probability | proved, for the paper's algorithm | analytic recurrence, one step anchored |
+| output structure (accepting transcripts) | proved, for the paper's algorithm | `μ = 1` only |
 
 - `sub_div_le_probEvent_goodOutput_coordFork` carries the success bound and the output guarantee
   together, so it is sensitive to what the extractor returns.
@@ -185,13 +185,46 @@ the adversary*. The status is:
   computation, but its single-step bridge is no longer conditional on a distribution nothing
   produces: `forkSucc_eq_probEvent_isSome_coordFork_indepTable` discharges the Bernoulli-table
   hypothesis outright, because the acceptance table an adversary induces *is* that Bernoulli table.
-- What remains missing is the cost. `indepTable` runs the adversary once per challenge, so it is
-  not the paper's extractor, which queries it `ℓ(k−1)+1` times in expectation. The analytic
-  ingredient for that clause is in place (see *Draw counts* below); what is still absent is an
-  extractor built from it and a proof that its adversary-query count is the draw count. The
-  challenge-only
+- *For the paper's algorithm* means
+  [`CoordinateFork/Operational.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Operational.lean)'s
+  `coordForkOp`, which is Figure 11 itself — sample a challenge, and on acceptance resample each
+  coordinate without replacement until `k − 1` further accepting values turn up or that coordinate
+  is exhausted. See *The resampling loop* below.
+- What remains missing is the cost. The analytic ingredient is in place (see *Draw counts* below)
+  and `coordForkOp` returns its own lookup count, but nothing yet assembles those into the paper's
+  `1 + ℓ(k−1)` bound. The challenge-only
   [`ToMathlib/Combinatorics/ChallengeTree.lean`](../../ToMathlib/Combinatorics/ChallengeTree.lean)
   supplies only the combinatorial projection needed by a future multi-round output theorem.
+
+### The resampling loop
+
+`coordForkCore` in [`CoordinateFork.lean`](../../VCVio/CryptoFoundations/CoordinateFork.lean) is a
+*total lookup*: it reads a whole column and keeps the first `k − 1` accepting values in enumeration
+order. That is not what Figure 11 does. `coordForkOp` is:
+
+```lean
+noncomputable def coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
+    ProbComp (Option (Finset (ι → S)) × ℕ) :=
+  if ρ c₀ then do
+    let d ← Fintype.mPi (coordDraws k ρ c₀)
+    let cost : ℕ := 1 + ∑ j, (d j).length
+    if ∀ j, (collected ρ c₀ d j).card = k - 1 then
+      return (some (coordFamily c₀ (collected ρ c₀ d)), cost)
+    else return (none, cost)
+  else return (none, 1)
+```
+
+The two agree on everything the bound sees. `probEvent_isSome_coordForkOp` proves the loop succeeds
+with exactly the core's probability — which column order it happened to draw is irrelevant, because
+it stops only on success or on exhaustion (`countP_of_mem_support_drawUntil` is what pins that
+down) — and `coordForkOp_success` proves a successful run returns a coordinate-wise `k`-special
+sound set of accepting challenges. Both the core and the loop reach that conclusion through the
+same `coordFamily_success`, which asks only for `k − 1` accepting replacements per coordinate and
+does not care which ones.
+
+So the success and output clauses of Lemma 7.1 hold for the paper's algorithm, against a fixed
+acceptance table — which is the setting §7.1 needs, since its own analysis treats the adversary as
+a function of the challenge.
 
 ### Draw counts
 

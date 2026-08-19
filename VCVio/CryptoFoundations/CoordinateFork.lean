@@ -103,6 +103,22 @@ theorem coordForkCore_isSome_iff :
   simp only [goodSet, Finset.mem_filter, Finset.mem_univ, true_and, ← hiff]
   split <;> simp_all
 
+/-- For an accepting centre, membership of `goodSet` is exactly having `k - 1` replacements
+available in every coordinate. This is the form the resampling loop's success condition takes. -/
+theorem mem_goodSet_iff_of_accept (hacc : ρ c₀) :
+    c₀ ∈ goodSet k ρ ↔ ∀ j, k - 1 ≤ (hitSet ρ c₀ j).card := by
+  classical
+  simp only [goodSet, Finset.mem_filter, Finset.mem_univ, true_and]
+  constructor
+  · rintro ⟨-, hall⟩ j
+    have h1 := card_hitSet_succ hacc j
+    have h2 := hall j
+    omega
+  · refine fun hall => ⟨hacc, fun j => ?_⟩
+    have h1 := card_hitSet_succ hacc j
+    have h2 := hall j
+    omega
+
 /-- The set of challenges on which the core succeeds is exactly `goodSet`. -/
 theorem filter_isSome_coordForkCore (k : ℕ) (ρ : (ι → S) → Bool) :
     (Finset.univ.filter fun c₀ : ι → S => (coordForkCore k ρ c₀).isSome) = goodSet k ρ := by
@@ -140,6 +156,22 @@ theorem accept_of_mem_replacementSet {j : ι} {x : S} (hx : x ∈ replacementSet
   rw [Finset.mem_toList, hitSet, Finset.mem_filter] at this
   exact this.2
 
+omit [Fintype S] in
+/-- **The output guarantee, for any admissible family of replacements.** A centre that accepts,
+together with `k - 1` accepting replacements per coordinate none of which is the centre's own
+value, generates a coordinate-wise `k`-special sound set of accepting challenges.
+
+Both the deterministic core and the resampling loop of Figure 11 produce such a family; they
+differ only in which `k - 1` replacements they pick, which the conclusion does not see. -/
+theorem coordFamily_success {R : ι → Finset S} (hacc : ρ c₀)
+    (hnot : ∀ j, c₀ j ∉ R j) (hcards : ∀ j, (R j).card = k - 1)
+    (hR : ∀ j, ∀ x ∈ R j, ρ (Function.update c₀ j x)) :
+    IsCoordSpecialSound k (coordFamily c₀ R) ∧ ∀ c ∈ coordFamily c₀ R, ρ c := by
+  refine ⟨isCoordSpecialSound_coordFamily hnot hcards, fun c hc => ?_⟩
+  rcases mem_coordFamily.mp hc with rfl | ⟨j, u, hu, rfl⟩
+  · exact hacc
+  · exact hR j u hu
+
 /-- **The core's output guarantee.** On success the extractor returns a coordinate-wise
 `k`-special sound set of accepting challenges, of size `ℓ * (k - 1) + 1`. -/
 theorem coordForkCore_success {X : Finset (ι → S)} (h : coordForkCore k ρ c₀ = some X) :
@@ -150,13 +182,8 @@ theorem coordForkCore_success {X : Finset (ι → S)} (h : coordForkCore k ρ c�
   · rename_i hcond
     obtain ⟨hacc, hall⟩ := hcond
     obtain rfl : X = coordFamily c₀ (replacementSet k ρ c₀) := (Option.some.inj h).symm
-    have hnot : ∀ j, c₀ j ∉ replacementSet k ρ c₀ j := notMem_replacementSet k ρ c₀
-    have hcards : ∀ j, (replacementSet k ρ c₀ j).card = k - 1 := fun j =>
-      card_replacementSet (hall j)
-    refine ⟨isCoordSpecialSound_coordFamily hnot hcards, fun c hc => ?_⟩
-    rcases mem_coordFamily.mp hc with rfl | ⟨j, u, hu, rfl⟩
-    · exact hacc
-    · exact accept_of_mem_replacementSet hu
+    exact coordFamily_success hacc (notMem_replacementSet k ρ c₀)
+      (fun j => card_replacementSet (hall j)) fun _ _ hu => accept_of_mem_replacementSet hu
   · exact absurd h (by simp)
 
 /-- The single-round output read as a one-round tree in the challenge-only projection of

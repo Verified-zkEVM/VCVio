@@ -58,6 +58,30 @@ theorem countP_eraseIdx_of_pos {l : List α} {i : ℕ} (hi : i < l.length) (hp :
   simp
   omega
 
+/-- `countP` as a sum of indicators, the form that matches `Finset.card_filter`. -/
+theorem countP_eq_sum_map (l : List α) (p : α → Bool) :
+    l.countP p = (l.map fun x => if p x then 1 else 0).sum := by
+  induction l with
+  | nil => simp
+  | cons x xs ih =>
+      rw [countP_cons, map_cons, sum_cons, ih]
+      cases p x
+      · simp
+      · simp; omega
+
+/-- In a duplicate-free list, deleting a position removes that value entirely. -/
+theorem getElem_notMem_eraseIdx {l : List α} (hl : l.Nodup) {i : ℕ} (hi : i < l.length) :
+    l[i] ∉ l.eraseIdx i := by
+  have hsplit : l = l.take i ++ l[i] :: l.drop (i + 1) := by
+    conv_lhs => rw [← List.take_append_drop i l]
+    rw [← List.getElem_cons_drop hi]
+  rw [eraseIdx_eq_take_drop_succ, mem_append]
+  rw [hsplit, nodup_append] at hl
+  obtain ⟨-, htail, hdisj⟩ := hl
+  refine fun hmem => hmem.elim (fun htake => ?_) (fun hdrop => ?_)
+  · exact hdisj _ htake _ (mem_cons_self ..) rfl
+  · exact (nodup_cons.mp htail).1 hdrop
+
 /-- Deleting a rejecting position leaves the accepting count alone. -/
 theorem countP_eraseIdx_of_neg {l : List α} {i : ℕ} (hi : i < l.length) (hp : p l[i] = false) :
     (l.eraseIdx i).countP p = l.countP p := by
@@ -67,6 +91,16 @@ theorem countP_eraseIdx_of_neg {l : List α} {i : ℕ} (hi : i < l.length) (hp :
   simp
 
 end List
+
+namespace Finset
+
+/-- Counting a `Finset`'s elements through its list is filtering it. -/
+theorem countP_toList {α : Type u} (s : Finset α) (p : α → Bool) :
+    s.toList.countP p = (s.filter fun x => p x).card := by
+  classical
+  rw [List.countP_eq_sum_map, Finset.sum_map_toList, Finset.card_filter]
+
+end Finset
 
 namespace ProbComp
 
@@ -144,6 +178,117 @@ theorem drawUntil_cons (accept : S → Bool) (r : ℕ) (x : S) (xs : List S) :
         (y :: ·) <$>
           drawUntil accept (if accept y then r else r + 1) ((x :: xs).eraseIdx i)) := by
   rw [drawUntil]
+
+
+/-! ## What the loop returns
+
+Success is a property of the pool alone: the loop collects `r` accepting values exactly when the
+pool holds that many, and otherwise stops having drained it. That is what lets the extractor read
+its own success off the acceptance table. -/
+
+theorem mem_of_mem_support_drawUntil (accept : S → Bool) (n : ℕ) :
+    ∀ (r : ℕ) (l : List S), l.length = n → ∀ d ∈ support (drawUntil accept r l),
+      ∀ y ∈ d, y ∈ l := by
+  induction n with
+  | zero =>
+      intro r l hl d hd
+      obtain rfl : l = [] := List.length_eq_zero_iff.mp hl
+      simp_all
+  | succ n ih =>
+      intro r l hl d hd
+      cases r with
+      | zero => simp_all
+      | succ r =>
+        obtain ⟨x, xs, rfl⟩ : ∃ x xs, l = x :: xs := by
+          cases l with
+          | nil => simp at hl
+          | cons x xs => exact ⟨x, xs, rfl⟩
+        have hxs : xs.length = n := by simpa using hl
+        rw [drawUntil_cons, mem_support_bind_iff] at hd
+        obtain ⟨i, -, hd⟩ := hd
+        rw [support_map] at hd
+        obtain ⟨rest, hrest, rfl⟩ := hd
+        have hi : (i : ℕ) < (x :: xs).length := by simpa using i.isLt
+        have hlen : ((x :: xs).eraseIdx i).length = n := by
+          rw [List.length_eraseIdx_of_lt hi]; simpa using hxs
+        intro y hy
+        rcases List.mem_cons.mp hy with rfl | hy
+        · exact List.getElem_mem hi
+        · exact List.mem_of_mem_eraseIdx (ih _ _ hlen rest hrest y hy)
+
+theorem nodup_of_mem_support_drawUntil (accept : S → Bool) (n : ℕ) :
+    ∀ (r : ℕ) (l : List S), l.length = n → l.Nodup → ∀ d ∈ support (drawUntil accept r l),
+      d.Nodup := by
+  induction n with
+  | zero =>
+      intro r l hl _ d hd
+      obtain rfl : l = [] := List.length_eq_zero_iff.mp hl
+      simp_all
+  | succ n ih =>
+      intro r l hl hnd d hd
+      cases r with
+      | zero => simp_all
+      | succ r =>
+        obtain ⟨x, xs, rfl⟩ : ∃ x xs, l = x :: xs := by
+          cases l with
+          | nil => simp at hl
+          | cons x xs => exact ⟨x, xs, rfl⟩
+        have hxs : xs.length = n := by simpa using hl
+        rw [drawUntil_cons, mem_support_bind_iff] at hd
+        obtain ⟨i, -, hd⟩ := hd
+        rw [support_map] at hd
+        obtain ⟨rest, hrest, rfl⟩ := hd
+        have hi : (i : ℕ) < (x :: xs).length := by simpa using i.isLt
+        have hlen : ((x :: xs).eraseIdx i).length = n := by
+          rw [List.length_eraseIdx_of_lt hi]; simpa using hxs
+        refine List.nodup_cons.mpr ⟨fun hmem => ?_, ih _ _ hlen (hnd.eraseIdx i) rest hrest⟩
+        exact List.getElem_notMem_eraseIdx hnd hi
+          (mem_of_mem_support_drawUntil accept _ _ _ hlen rest hrest _ hmem)
+
+/-- The loop collects `min r (accepting values in the pool)` of them: it stops either because it
+has enough or because the pool ran out. -/
+theorem countP_of_mem_support_drawUntil (accept : S → Bool) (n : ℕ) :
+    ∀ (r : ℕ) (l : List S), l.length = n → ∀ d ∈ support (drawUntil accept r l),
+      d.countP accept = min r (l.countP accept) := by
+  induction n with
+  | zero =>
+      intro r l hl d hd
+      obtain rfl : l = [] := List.length_eq_zero_iff.mp hl
+      simp_all
+  | succ n ih =>
+      intro r l hl d hd
+      cases r with
+      | zero => simp_all
+      | succ r =>
+        obtain ⟨x, xs, rfl⟩ : ∃ x xs, l = x :: xs := by
+          cases l with
+          | nil => simp at hl
+          | cons x xs => exact ⟨x, xs, rfl⟩
+        have hxs : xs.length = n := by simpa using hl
+        rw [drawUntil_cons, mem_support_bind_iff] at hd
+        obtain ⟨i, -, hd⟩ := hd
+        rw [support_map] at hd
+        obtain ⟨rest, hrest, rfl⟩ := hd
+        have hi : (i : ℕ) < (x :: xs).length := by simpa using i.isLt
+        have hlen : ((x :: xs).eraseIdx i).length = n := by
+          rw [List.length_eraseIdx_of_lt hi]; simpa using hxs
+        cases hacc : accept ((x :: xs)[(i : ℕ)]) with
+        | false =>
+            rw [hacc] at hrest
+            simp only [Bool.false_eq_true, if_false] at hrest
+            have hcount := ih _ _ hlen rest hrest
+            have hneg := List.countP_eraseIdx_of_neg hi hacc
+            rw [List.countP_cons, hacc]
+            simp only [Bool.false_eq_true, if_false]
+            omega
+        | true =>
+            rw [hacc] at hrest
+            simp only [if_true] at hrest
+            have hcount := ih _ _ hlen rest hrest
+            have hpos := List.countP_eraseIdx_of_pos hi hacc
+            rw [List.countP_cons, hacc]
+            simp only [if_true]
+            omega
 
 /-! ## Expected number of draws -/
 
