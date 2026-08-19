@@ -478,7 +478,7 @@ lemma IND_CPA_OneTime_DDHReduction_profiled_pathwiseCostEqOnSupport
       (IND_CPA_OneTime_DDHReduction_profiled
         (F := F) (G := G) (gen := gen) (ω := ω) (κ := κ) intrinsic profile adv g A B T)
       (OneTimeINDCPACapability.reductionTransform intrinsic profile) := by
-  letI := (oneTimeINDCPAImpl (gen := gen) adv).toHasQuery
+  let := (oneTimeINDCPAImpl (gen := gen) adv).toHasQuery
   simpa [IND_CPA_OneTime_DDHReduction_profiled] using
     (IND_CPA_OneTime_DDHReduction_openProfiled_pathwiseCostEqOnSupport
       (State := adv.State) (ω := ω) (κ := κ) intrinsic profile g A B T)
@@ -695,7 +695,7 @@ lemma IND_CPA_OneTime_DDHReduction_costed_pathwiseCostEqOnSupport
       (IND_CPA_OneTime_DDHReduction_costed
         (F := F) (G := G) (gen := gen) (ω := ω) intrinsic adv g A B T)
       (OneTimeINDCPACapability.reductionProfile intrinsic) := by
-  letI := (oneTimeINDCPAImpl (gen := gen) adv).toHasQuery
+  let := (oneTimeINDCPAImpl (gen := gen) adv).toHasQuery
   convert
     (IND_CPA_OneTime_DDHReduction_profiled_pathwiseCostEqOnSupport
       (F := F) (G := G) (gen := gen) (ω := ω) (κ := OneTimeINDCPACapability)

@@ -275,7 +275,7 @@ variable [IsUniformSpec spec] (oa : OracleComp spec α) (x : α)
 /-- `OracleComp spec` admits the bridge between its direct `support` semantics and the
 `SPMF.support` of its `evalDist`. -/
 instance instEvalDistCompatible : EvalDistCompatible (OracleComp spec) := by
-  letI : PFunctor.IsUniformSpec spec.toPFunctor := IsUniformSpec.toPFunctor
+  let : PFunctor.IsUniformSpec spec.toPFunctor := IsUniformSpec.toPFunctor
   exact PFunctor.FreeM.instEvalDistCompatible
 
 private lemma support_eq_evalDist_support :

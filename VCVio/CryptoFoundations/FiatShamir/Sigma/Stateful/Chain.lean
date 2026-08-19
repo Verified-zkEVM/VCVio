@@ -592,7 +592,7 @@ private lemma cmaSimVerifyFreshComp_project
         (Chal := Chal) (Resp := Resp) σ pk x
         (cmaSimLoggedProj (M := M) (Commit := Commit)
           (Chal := Chal) (Stmt := Stmt) (Wit := Wit) st) := by
-  letI : Fintype Chal := Fintype.ofFinite Chal
+  let : Fintype Chal := Fintype.ofFinite Chal
   rcases x with ⟨msg, c, resp⟩
   rcases st with ⟨signed, ⟨⟨log, cache, keypair⟩, bad⟩⟩
   cases hcache : cache (msg, c) with
@@ -659,7 +659,7 @@ private lemma simulatedNmaUnifFork_flatten_preserves_state
           (simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal))).flattenStateT
         A).run (advCache, liveSt))) :
     z.2 = (advCache, liveSt) := by
-  letI : Fintype Chal := Fintype.ofFinite Chal
+  let : Fintype Chal := Fintype.ofFinite Chal
   exact OracleComp.simulateQ_run_preserves_inv_of_query
     (impl := ((Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal).mapStateTBase
       (simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal))).flattenStateT)
@@ -689,7 +689,7 @@ private lemma simulatedNmaUnifFork_nested_preserves_state
         ((simulateQ (simulatedNmaUnifSim (M := M) (Commit := Commit)
           (Chal := Chal)) A).run advCache)).run liveSt)) :
     z.1.2 = advCache ∧ z.2 = liveSt := by
-  letI : Fintype Chal := Fintype.ofFinite Chal
+  let : Fintype Chal := Fintype.ofFinite Chal
   rw [OracleComp.simulateQ_mapStateTBase_run_eq_map_flattenStateT
     (outer := Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
     (inner := simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal))
@@ -870,7 +870,7 @@ private lemma forkLoggedImpl_preserves_inv
       (Commit := Commit) (Chal := Chal) (Resp := Resp) simT pk) A).run
       (forkInitialState M Commit Chal))) :
     forkAwareInv (M := M) (Commit := Commit) (Chal := Chal) z.2 := by
-  letI : Fintype Chal := Fintype.ofFinite Chal
+  let : Fintype Chal := Fintype.ofFinite Chal
   exact OracleComp.simulateQ_run_preserves_inv_of_query
     (impl := forkLoggedImpl (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) simT pk)
@@ -889,7 +889,7 @@ private lemma forkLoggedImpl_preserves_live_adv_inv_step
       ∀ z ∈ support ((forkLoggedImpl (M := M) (Commit := Commit)
         (Chal := Chal) (Resp := Resp) simT pk t).run s),
         forkLiveCacheAdvCacheInv (M := M) (Commit := Commit) (Chal := Chal) z.2 := by
-  letI : Fintype Chal := Fintype.ofFinite Chal
+  let : Fintype Chal := Fintype.ofFinite Chal
   intro t s hs z hz
   rcases s with ⟨⟨advCache, liveCache, queryLog⟩, signed⟩
   rcases t with ((n | mc) | m)
@@ -1002,7 +1002,7 @@ private lemma forkLoggedImpl_preserves_live_adv_inv
       (Commit := Commit) (Chal := Chal) (Resp := Resp) simT pk) A).run
       (forkInitialState M Commit Chal))) :
     forkLiveCacheAdvCacheInv (M := M) (Commit := Commit) (Chal := Chal) z.2 := by
-  letI : Fintype Chal := Fintype.ofFinite Chal
+  let : Fintype Chal := Fintype.ofFinite Chal
   exact OracleComp.simulateQ_run_preserves_inv_of_query
     (impl := forkLoggedImpl (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) simT pk)
@@ -1968,7 +1968,7 @@ private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
           (Commit := Commit) (Chal := Chal) (Resp := Resp) simT ps.1)
           (adv.main ps.1)).run
           ((∅ : (fsRoSpec M Commit Chal).QueryCache), ([] : List M)) := by
-    letI : Fintype Chal := Fintype.ofFinite Chal
+    let : Fintype Chal := Fintype.ofFinite Chal
     simpa [hproj0, cmaSimLoggedLeftOrnament] using
       (cmaSimLoggedLeftOrnament (M := M) (Commit := Commit)
         (Chal := Chal) (Resp := Resp) (Stmt := Stmt) (Wit := Wit)
@@ -2039,7 +2039,7 @@ theorem nma_runProb_shiftLeft_signedFreshAdv_le_fork
             (signedFreshAdv σ hr M adv))]
       ≤ Fork.advantage σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT)
           qH := by
-  letI : Fintype Chal := Fintype.ofFinite Chal
+  let : Fintype Chal := Fintype.ofFinite Chal
   have hbridge :
       Pr[= true |
           (nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr).runProb

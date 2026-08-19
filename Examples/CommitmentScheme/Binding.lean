@@ -168,8 +168,8 @@ private lemma binding_rest_noCollision_le_inv [Finite M] [Finite S] [Fintype C]
         let c₁ ← (CMOracle M S C).query (m₁, s₁)
         return (decide (m₀ ≠ m₁) && (c₀ == c) && (c₁ == c))).run cache₁] ≤
       (Fintype.card C : ℝ≥0∞)⁻¹ := by
-  haveI : Fintype M := Fintype.ofFinite M
-  haveI : Fintype S := Fintype.ofFinite S
+  have : Fintype M := Fintype.ofFinite M
+  have : Fintype S := Fintype.ofFinite S
   by_cases hneq : m₀ ≠ m₁
   · let q₀ : (CMOracle M S C).Domain := (m₀, s₀)
     let q₁ : (CMOracle M S C).Domain := (m₁, s₁)
@@ -286,8 +286,8 @@ private lemma binding_win_le_advCollision_add_fresh {t : ℕ}
     Pr[fun z => z.1 = true | bindingGame A] ≤
     Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle A.run).run ∅] +
     (Fintype.card C : ℝ≥0∞)⁻¹ := by
-  haveI : Fintype M := Fintype.ofFinite M
-  haveI : Fintype S := Fintype.ofFinite S
+  have : Fintype M := Fintype.ofFinite M
+  have : Fintype S := Fintype.ofFinite S
   let restPart : (C × M × S × M × S) → OracleComp (CMOracle M S C) Bool
     | (c, m₀, s₀, m₁, s₁) => do
         let c₀ ← (CMOracle M S C).query (m₀, s₀)
@@ -336,8 +336,8 @@ theorem binding_bound [Finite M] [Finite S] [Fintype C]
     {t : ℕ} (A : BindingAdversary M S C t) :
     Pr[fun z => z.1 = true | bindingGame A] ≤
     ((t * (t - 1) + 2 : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) := by
-  haveI : Fintype M := Fintype.ofFinite M
-  haveI : Fintype S := Fintype.ofFinite S
+  have : Fintype M := Fintype.ofFinite M
+  have : Fintype S := Fintype.ofFinite S
   calc Pr[fun z => z.1 = true | bindingGame A]
       ≤ Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle A.run).run ∅] +
         (Fintype.card C : ℝ≥0∞)⁻¹ := binding_win_le_advCollision_add_fresh A

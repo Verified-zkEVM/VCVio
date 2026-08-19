@@ -197,7 +197,7 @@ theorem negacyclicMulPure_sound
   · -- n = 0: both sums are over Fin 0, hence empty
     push Not at hn
     have hd : backend.degree = 0 := by omega
-    haveI : IsEmpty (Fin backend.degree) := hd ▸ inferInstance
+    have : IsEmpty (Fin backend.degree) := hd ▸ inferInstance
     simp [Finset.univ_eq_empty]
 
 /-! ### `one_sound` for the vector backend -/

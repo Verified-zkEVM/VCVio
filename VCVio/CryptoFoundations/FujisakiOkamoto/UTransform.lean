@@ -368,7 +368,7 @@ theorem decaps_usesWeightedQueryCostAtMost {ω : Type}
         (pk := pk) (sk := sk) (fb := fb) (c := c) (costFn := costFn) hdec)
       zero_le
   | some msg =>
-    letI := (runtime.withAddCost costFn).toHasQuery
+    let := (runtime.withAddCost costFn).toHasQuery
     simp only [HasQuery.Program.withAddCost, UTransform, FujisakiOkamoto.scheme, hdec]
     refine AddWriterT.pathwiseCostAtMost_bind (w₁ := wCoins) (w₂ := wKey) ?_ ?_
     · exact HasQuery.usesCostAtMost_query_of_le

@@ -230,8 +230,8 @@ theorem sq_probOutput_map_le_observedForkPair [spec.DecidableEq] [IsUniformSpec 
       Pr[= (some (some value, some value) : Option (Option β × Option β)) |
         observedForkPair main i n observe] := by
   classical
-  letI : DecidableEq spec.Domain := inferInstance
-  letI (j : spec.Domain) : DecidableEq (spec.Range j) := inferInstance
+  let : DecidableEq spec.Domain := inferInstance
+  let (j : spec.Domain) : DecidableEq (spec.Range j) := inferInstance
   set y : Option β := some value
   let splitComp : OracleComp spec
       {split : PFunctor.FreeM.Cursor.Split i main n // split.Valid} :=

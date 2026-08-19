@@ -188,8 +188,8 @@ lemma log_length_le_of_mem_support_run_cached_logging
     (hz : z ∈ support
       ((simulateQ cachingOracle ((simulateQ loggingOracle oa).run)).run cache₀)) :
     z.1.2.length ≤ n := by
-  haveI : Fintype M := Fintype.ofFinite M
-  haveI : Fintype S := Fintype.ofFinite S
+  have : Fintype M := Fintype.ofFinite M
+  have : Fintype S := Fintype.ofFinite S
   classical
   let cost : QueryCache (CMOracle M S C) → ℕ := fun _ => 0
   have hstep :
@@ -232,7 +232,7 @@ lemma sum_wp_querySaltIndicators_le_queryBound_of_run_cached_logging
         (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
           OracleComp.ProgramLogic.propInd
             (0 < QueryLog.countQ z.1.2 (fun t : (CMOracle M S C).Domain => t.2 = s)))) ≤ n := by
-  haveI : Fintype M := Fintype.ofFinite M
+  have : Fintype M := Fintype.ofFinite M
   classical
   have hsum :=
     wp_finset_sum
@@ -286,7 +286,7 @@ lemma sum_wp_distinguish_incrementIndicators_le_queryResidual_of_choose_count_su
         (fun z : Bool × HidingCountState M S C =>
           OracleComp.ProgramLogic.propInd (qch.2.2 s < z.2.2 s))) ≤
       (t - ∑ s : S, qchoose.2.2 s) := by
-  haveI : Fintype M := Fintype.ofFinite M
+  have : Fintype M := Fintype.ofFinite M
   have hbound :
       IsTotalQueryBound (A.distinguish qchoose.1.2 cm) (t - ∑ s : S, qchoose.2.2 s) :=
     hiding_distinguish_totalBound_of_choose_count_support
@@ -852,7 +852,7 @@ lemma sum_wp_freshDistinguishIncrement_le_queryResidual_of_choose_support [Finty
               OracleComp.ProgramLogic.propInd
                 (qchoose.2.2 s = 0 ∧ qch.2.2 s < z.2.2 s)))) ≤
       (t - ∑ s : S, qchoose.2.2 s) := by
-  haveI : Fintype M := Fintype.ofFinite M
+  have : Fintype M := Fintype.ofFinite M
   classical
   rw [sum_wp_freshDistinguishIncrement_eq_query (M := M) (S := S) (C := C) A hqchoose]
   let freshTerm : S → ℝ≥0∞ := fun s =>
@@ -973,7 +973,7 @@ theorem sum_probEvent_hidingBad_le [Fintype S] [Inhabited S] [Finite M] {AUX : T
     (A : HidingAdversary M S C AUX t) :
     (∑ s : S, Pr[hidingBad ∘ Prod.snd |
       (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)]) ≤ t := by
-  haveI : Fintype M := Fintype.ofFinite M
+  have : Fintype M := Fintype.ofFinite M
   classical
   calc
     (∑ s : S, Pr[hidingBad ∘ Prod.snd |

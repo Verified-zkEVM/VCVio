@@ -201,7 +201,7 @@ private lemma expectedQueryCount_seededForkWithSeedValue_le_aux [spec.DecidableE
     (hmain : IsPerIndexQueryBound main qb) (hseed : ∀ t, qb t ≤ (seed t).length) :
     wp ($ᵗ spec.Range i) (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u)
       CostModel.unit (fun n : ℕ => (n : ENNReal))) ≤ qb i := by
-  letI : Fintype ι := Fintype.ofFinite ι
+  let : Fintype ι := Fintype.ofFinite ι
   rw [← wp_const ($ᵗ spec.Range i) (qb i : ENNReal)]
   refine wp_mono _ fun u => ?_
   have hbound := isPerIndexQueryBound_seededForkWithSeedValue
@@ -221,7 +221,7 @@ theorem expectedQueryCount_seededForkWithSeedValue_le
     wp (generateSeed spec qb js) (fun seed => wp ($ᵗ spec.Range i)
       (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u) CostModel.unit
         (fun n : ℕ => (n : ENNReal)))) ≤ qb i := by
-  letI : Fintype ι := Fintype.ofFinite ι
+  let : Fintype ι := Fintype.ofFinite ι
   rw [wp_eq_tsum]
   conv_rhs => rw [← wp_const (generateSeed spec qb js) (qb i : ENNReal), wp_eq_tsum]
   refine ENNReal.tsum_le_tsum fun seed => ?_

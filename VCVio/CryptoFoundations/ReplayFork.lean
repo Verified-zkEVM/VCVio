@@ -640,7 +640,7 @@ theorem probOutput_contextForkViewCollision_le_collision [IsUniformSpec spec]
         else pure none
   have hsource : contextForkViewCollision main qb i cf s =
       paths >>= viewCollision := by
-    letI : spec.toPFunctor.DecidableEq :=
+    let : spec.toPFunctor.DecidableEq :=
       (inferInstance : spec.DecidableEq).toDecidableEq
     unfold contextForkViewCollision contextForkView
     rw [PFunctor.FreeM.Cursor.map_locateAndForkAt]
@@ -752,7 +752,7 @@ theorem probEvent_guardedContextFork_eq_contextFork_component
       Pr[fun result : Option (α × α) =>
           result.map (cf ∘ Prod.fst) = some (some s) |
         contextFork main qb i cf] := by
-  letI : spec.toPFunctor.DecidableEq :=
+  let : spec.toPFunctor.DecidableEq :=
     (inferInstance : spec.DecidableEq).toDecidableEq
   rw [contextFork_eq_contextForkByClassify]
   unfold guardedContextFork contextForkByClassify

@@ -367,7 +367,7 @@ lemma OptionT.probEvent_eq_one_of_simulateQ_support
     (oa : OracleComp spec (Option α)) (s₀ : σ) (P : α → Prop)
     (h : ∀ x ∈ support oa, ∃ a, x = some a ∧ P a) :
     Pr[P | OptionT.mk ((simulateQ impl oa).run' s₀)] = 1 := by
-  letI := Classical.decPred P
+  let := Classical.decPred P
   rw [probEvent_eq_one_iff]
   constructor
   · rw [OptionT.probFailure_eq, OptionT.run_mk, probFailure_eq_zero, _root_.zero_add]
@@ -392,7 +392,7 @@ lemma OptionT.probEvent_eq_one_of_simulateQ_support_bind
     (oa : OracleComp spec (Option α)) (P : α → Prop)
     (h : ∀ x ∈ support oa, ∃ a, x = some a ∧ P a) :
     Pr[P | OptionT.mk (do let s ← init; (simulateQ impl oa).run' s)] = 1 := by
-  letI := Classical.decPred P
+  let := Classical.decPred P
   rw [probEvent_eq_one_iff]
   refine ⟨?_, ?_⟩
   · rw [OptionT.probFailure_eq, OptionT.run_mk, add_eq_zero]

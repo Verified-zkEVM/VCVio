@@ -298,7 +298,7 @@ private lemma evalDist_uniformSample_vector_succ (N : ℕ) :
     𝒟[($ᵗ (List.Vector O (N + 1)))] =
       𝒟[(do let out ← $ᵗ O; let rest ← $ᵗ (List.Vector O N); pure (out ::ᵥ rest))] := by
   classical
-  haveI : Fintype O := Fintype.ofFinite O
+  have : Fintype O := Fintype.ofFinite O
   refine evalDist_ext fun v => ?_
   obtain ⟨out, rest, rfl⟩ : ∃ out rest, v = out ::ᵥ rest :=
     ⟨v.head, v.tail, (List.Vector.cons_head_tail v).symm⟩
@@ -417,7 +417,7 @@ lemma tvDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
     tvDist ((simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
           (oracleOutputs N s)).run' c) ($ᵗ (List.Vector O N)) ≤
       (Pr[= true | genCollisionExp N s c]).toReal := by
-  haveI : Fintype O := Fintype.ofFinite O
+  have : Fintype O := Fintype.ofFinite O
   induction N generalizing s c with
   | zero =>
     refine le_trans (le_of_eq ?_) ENNReal.toReal_nonneg
@@ -627,7 +627,7 @@ private lemma enncard_eq_sum_isCached (c : (S →ₒ S × O).QueryCache) :
   unfold QueryCache.enncard
   have himg : Sigma.fst '' c.toSet = {s : S | c.isCached s = true} := by
     ext s
-    simp only [Set.mem_image, Set.mem_setOf_eq]
+    simp only [Set.mem_image, Set.mem_ofPred_eq]
     constructor
     · rintro ⟨⟨t, u⟩, ht, rfl⟩
       rw [QueryCache.mem_toSet] at ht
@@ -646,7 +646,7 @@ private lemma enncard_eq_sum_isCached (c : (S →ₒ S × O).QueryCache) :
     rw [← himg, hinj.encard_image]
   rw [hencard, Set.encard_eq_coe_toFinset_card, Finset.sum_ite, Finset.sum_const, Finset.sum_const]
   simp only [mul_one, mul_zero, add_zero, nsmul_eq_mul]
-  rw [Set.toFinset_setOf]
+  rw [Set.toFinset_ofPred]
   norm_cast
 
 omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [Inhabited O]

@@ -100,7 +100,7 @@ lemma hiding_distinguish_totalBound_of_choose_count_support
     {x : (M × AUX) × (QueryCache (CMOracle M S C) × (S → ℕ))}
     (hx : x ∈ support ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))) :
     ∀ cm : C, IsTotalQueryBound (A.distinguish x.1.2 cm) (t - ∑ s : S, x.2.2 s) := by
-  haveI : Fintype M := Fintype.ofFinite M
+  have : Fintype M := Fintype.ofFinite M
   have hres :
       IsTotalQueryBound
         (((CMOracle M S C).query (x.1.1, default) : OracleComp (CMOracle M S C) _) >>= fun cm =>
@@ -1001,7 +1001,7 @@ lemma count_pred_le_queryBound_of_mem_support_run_hidingImplCountAll
     {z : Bool × (QueryCache (CMOracle M S C) × (S → ℕ))}
     (hz : z ∈ support ((simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0))) :
     z.2.2 s - 1 ≤ t := by
-  haveI : Fintype S := Fintype.ofFinite S
+  have : Fintype S := Fintype.ofFinite S
   have hsum :
       (∑ s' : S, z.2.2 s') ≤ t + 1 := by
       simpa using
@@ -1026,7 +1026,7 @@ lemma bad_indicator_le_queryBound_of_mem_support_run_hidingImplCountAll
     {z : Bool × (QueryCache (CMOracle M S C) × (S → ℕ))}
     (hz : z ∈ support ((simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0))) :
     (if 2 ≤ z.2.2 s then (1 : ℝ≥0∞) else 0) ≤ t := by
-  haveI : Fintype S := Fintype.ofFinite S
+  have : Fintype S := Fintype.ofFinite S
   exact le_trans
     (bad_indicator_le_count_pred_of_mem_support_run_hidingImplCountAll
       (M := M) (S := S) (C := C) A s hz)
@@ -1065,7 +1065,7 @@ lemma wp_countPred_le_queryBound_of_run_hidingImplCountAll
       ((simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0))
       (fun z : Bool × (QueryCache (CMOracle M S C) × (S → ℕ)) =>
         (z.2.2 s - 1 : ℝ≥0∞)) ≤ t := by
-  haveI : Fintype S := Fintype.ofFinite S
+  have : Fintype S := Fintype.ofFinite S
   rw [OracleComp.ProgramLogic.wp_eq_tsum]
   calc
     ∑' z, Pr[= z | (simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0)] *
@@ -1172,7 +1172,7 @@ lemma sum_wp_countIncrementIndicators_le_queryBound_of_run_hidingImplCountAll
         ((simulateQ hidingImplCountAll oa).run st₀)
         (fun z : α × (QueryCache (CMOracle M S C) × (S → ℕ)) =>
           OracleComp.ProgramLogic.propInd (st₀.2 s < z.2.2 s))) ≤ n := by
-  haveI : Fintype M := Fintype.ofFinite M
+  have : Fintype M := Fintype.ofFinite M
   classical
   let run := ((simulateQ hidingImplCountAll oa).run st₀)
   have hsum :

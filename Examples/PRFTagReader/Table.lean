@@ -164,7 +164,7 @@ lemma evalDist_idealCacheStep_bind_uniformTable {D : Type} [DecidableEq D] [Fini
           pure (ψ (OracleComp.tableExtending r.2 g))] =
       𝒟[do let g ← $ᵗ (D → Digest); pure (ψ (OracleComp.tableExtending c g))] := by
   classical
-  haveI : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
+  have : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   unfold idealCacheStep
   rcases hc : c d with _ | u
   · dsimp only

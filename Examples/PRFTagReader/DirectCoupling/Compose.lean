@@ -461,7 +461,7 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
   -- for any continuation `F`, the distribution of `$ᵗ gM >>= F gM` equals the distribution of
   -- `$ᵗ gS >>= F (slotZeroSubTable gS)`. We package this as a generic helper and apply it twice
   -- (once for the success term, once for the bad term).
-  haveI : Nonempty Digest :=
+  have : Nonempty Digest :=
     ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   have hbridge : ∀ {X : Type} (F : (TagId × Nonce → Digest) → ProbComp X),
       𝒟[($ᵗ (TagId × Nonce → Digest)) >>= F] =

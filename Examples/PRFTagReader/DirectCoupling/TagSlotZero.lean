@@ -627,7 +627,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest]
   rcases hc : c ((tag, (0 : Fin sessionsPerTag)), n) with _ | u₀
   · -- Case B: cache miss. Marginalize cell via `evalDist_uniformSample_bind_update`, then
     -- apply IH at extended cache `c.cacheQuery ((tag, 0), n) u`.
-    haveI : Nonempty Digest :=
+    have : Nonempty Digest :=
       ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
     have hmarg : ∀ {β : Type}
         (Mψ : ((TagId × Fin sessionsPerTag) × Nonce → Digest) → ProbComp β),

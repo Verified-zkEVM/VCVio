@@ -815,12 +815,12 @@ noncomputable def toPMFHom : Raw →ᵐ PMF where
   toFun _ p := @Raw.toPMF _ (Classical.decEq _) p
   toFun_pure' := by
     intro α x
-    letI := Classical.decEq α
+    let := Classical.decEq α
     exact Raw.toPMF_pure (α := α) x
   toFun_bind' := by
     intro α β x y
-    letI := Classical.decEq α
-    letI := Classical.decEq β
+    let := Classical.decEq α
+    let := Classical.decEq β
     exact Raw.toPMF_bind (α := α) (β := β) x y
 
 end Raw

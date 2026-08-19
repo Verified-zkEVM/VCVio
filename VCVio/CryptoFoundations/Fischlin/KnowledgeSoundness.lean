@@ -667,7 +667,7 @@ private lemma probOutput_mOfFn_uniformSample {α : Type} [SampleableType α] [Fi
     (n : ℕ) (w : Fin n → α) :
     Pr[= w | Fin.mOfFn n (fun _ => ($ᵗ α : ProbComp α))]
       = (Fintype.card α : ℝ≥0∞)⁻¹ ^ n := by
-  letI : DecidableEq α := Classical.decEq α
+  let : DecidableEq α := Classical.decEq α
   induction n with
   | zero =>
     have hw : w = Fin.elim0 := funext fun i => i.elim0
@@ -1165,7 +1165,7 @@ private lemma partialSmallSumCount_le_pow (g : Fin ρ → Option (Fin (2 ^ b))) 
     refine Finset.card_le_card_of_injOn
       (fun v j => v j.1) (fun v _ => Finset.mem_univ _) ?_
     intro v hv w hw hvw
-    simp only [Finset.coe_filter, Finset.mem_univ, true_and, Set.mem_setOf_eq] at hv hw
+    simp only [Finset.coe_filter, Finset.mem_univ, true_and, Set.mem_ofPred_eq] at hv hw
     funext j
     by_cases hj : g j = none
     · exact congrFun hvw ⟨j, Finset.mem_filter.mpr ⟨Finset.mem_univ j, hj⟩⟩
@@ -2448,7 +2448,7 @@ private lemma knowledgeSoundness_badEvent_le
     Pr[= true | knowledgeSoundnessExp σ hr ρ b S M adv.run x msg]
       ≤ (↑(Q + 1) : ℝ≥0∞) * ↑(smallSumCount ρ b S) / ((↑(2 ^ b) : ℝ≥0∞) ^ ρ) := by
   classical
-  letI : ∀ c, DecidablePred (ksDead σ ρ b M x msg c) := fun _ => Classical.decPred _
+  let : ∀ c, DecidablePred (ksDead σ ρ b M x msg c) := fun _ => Classical.decPred _
   -- Step 1: bound the bad event by the verifier-accepts-while-scan-misses event.
   refine le_trans (knowledgeSoundnessExp_bad_le_misses' σ hr ρ b S M hss adv.run x msg) ?_
   -- Step 2: factor the miss event through the logged prover run as an expected payoff.

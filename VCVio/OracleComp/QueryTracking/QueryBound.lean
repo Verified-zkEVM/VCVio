@@ -1112,8 +1112,8 @@ theorem IsTotalQueryBound.residual_of_mem_support_run_simulateQ_le_cost
     {st₀ : σ} {z : α × σ}
     (hz : z ∈ support ((simulateQ impl oa).run st₀)) :
     IsTotalQueryBound (ob z.1) (n - (cost z.2 - cost st₀)) := by
-  letI : DecidableEq ι := Classical.decEq ι
-  letI : Fintype ι := Fintype.ofFinite ι
+  let : DecidableEq ι := Classical.decEq ι
+  let : Fintype ι := Fintype.ofFinite ι
   rcases countingOracle.exists_mem_support_simulate_of_mem_support_run_simulateQ_le_cost
       (spec := spec) (ι := ι) (impl := impl) cost hstep hz with
     ⟨qc, hqc, hcost⟩

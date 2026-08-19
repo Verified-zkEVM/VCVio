@@ -1260,8 +1260,8 @@ lemma runTrace_target_eq_of_mem_contextFork
     (h₂ : forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)
       qH x₂ = some s) :
     x₁.target = x₂.target := by
-  letI : Fintype Chal := Fintype.ofFinite Chal
-  letI : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
+  let : Fintype Chal := Fintype.ofFinite Chal
+  let : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
     IsUniformSpec.ofFintypeInhabited _
   let qb : ℕ ⊕ Unit → ℕ := fun j => match j with | .inl _ => 0 | .inr () => qH
   let cf := forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH
@@ -1425,7 +1425,7 @@ theorem replayForkingBound
             P_out x₁ log₁ ∧
             P_out x₂ log₂
         | contextFork wrappedMain qb (Sum.inr ()) cf] := by
-  letI : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
+  let : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
     IsUniformSpec.ofFintypeInhabited _
   intro wrappedMain cf qb acc
   classical
