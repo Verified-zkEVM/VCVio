@@ -22,10 +22,14 @@ those probabilities as biases.
 the paper's proof is definitional here rather than a lemma.
 
 Only numbers recurse. `multiSucc` is not a `ProbComp`, does not execute a prover or verifier, and
-does not return a transcript tree. Each step chooses an independent Bernoulli-table coupling from
-the supplied marginal probabilities. A theorem connecting that coupling to a concrete recursive
-oracle algorithm, its outputs, and its expected cost remains absent. Thus the results below are an
-analytic ingredient, not a formalization of the full extractor or Lemma 7.2.
+does not return a transcript tree; each step instantiates an independent Bernoulli-table coupling
+from the supplied marginal probabilities.
+
+That coupling is not an assumption about the extractor.
+`VCVio/CryptoFoundations/CoordinateFork/MultiRoundOp.lean` builds the recursion of §7.2 as a
+computation and proves its success probability is exactly `multiSucc`, because running the
+sub-extractor independently at each first challenge produces that very table. What remains outside
+this file is the extractor's output and its expected cost.
 -/
 
 @[expose] public section
@@ -44,6 +48,14 @@ variable {ι S : Type} [DecidableEq ι] [Fintype ι] [DecidableEq S] [Fintype S]
 def Transcript (ι S : Type) : ℕ → Type
   | 0 => PUnit
   | μ + 1 => (ι → S) × Transcript ι S μ
+
+instance instDecidableEqTranscript : ∀ μ : ℕ, DecidableEq (Transcript ι S μ)
+  | 0 => inferInstanceAs (DecidableEq PUnit)
+  | μ + 1 => @instDecidableEqProd _ _ _ (instDecidableEqTranscript μ)
+
+instance instFintypeTranscript : ∀ μ : ℕ, Fintype (Transcript ι S μ)
+  | 0 => inferInstanceAs (Fintype PUnit)
+  | μ + 1 => @instFintypeProd _ _ _ (instFintypeTranscript μ)
 
 /-- The average of `p` over a uniformly random transcript, by recursion on the number of rounds.
 
@@ -82,8 +94,9 @@ theorem forkSucc_eq_forkSuccOf (k : ℕ) (q : (ι → S) → ℝ≥0∞) (hq : �
 `ProbComp` table distribution realizing the Bernoulli table with biases `q`.
 
 This prevents `forkSucc` from being an unconstrained abstract functional. The hypothesis equates
-the entire table distribution, not merely its marginals. It neither constructs the recursive
-multi-round computation nor justifies independent table bits for correlated prover executions. -/
+the entire table distribution, not merely its marginals; `CoordinateFork/Realizability.lean`
+discharges it for the table an adversary induces, and `CoordinateFork/MultiRoundOp.lean` for the
+one the recursion produces. -/
 theorem forkSucc_eq_probEvent_isSome_coordFork [SampleableType (ι → S)] (k : ℕ)
     (q : (ι → S) → ℝ≥0∞) (hq : ∀ c, q c ≤ 1) (D : ProbComp ((ι → S) → Bool))
     (hD : ∀ ρ, Pr[= ρ | D] = Pr[= ρ | (PMF.bernoulliTable q hq : PMF ((ι → S) → Bool))]) :

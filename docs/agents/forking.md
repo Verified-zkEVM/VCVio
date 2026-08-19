@@ -168,8 +168,8 @@ the adversary*. The status is:
 | Clause | Lemma 7.1 | Lemma 7.2 |
 |---|---|---|
 | expected query count | proved, for the paper's algorithm | **not proved** |
-| success probability | proved, for the paper's algorithm | analytic recurrence, one step anchored |
-| output structure (accepting transcripts) | proved, for the paper's algorithm | `μ = 1` only |
+| success probability | proved, for the paper's algorithm | proved, for the paper's recursion |
+| output structure (accepting transcripts) | proved, for the paper's algorithm | proved, for the paper's recursion |
 
 All three clauses of Lemma 7.1 hold for `coordForkOp` against a fixed acceptance table — which is
 the setting §7.1 needs, since its own analysis treats the adversary as a function of the challenge.
@@ -236,6 +236,41 @@ does not care which ones.
 So the success and output clauses of Lemma 7.1 hold for the paper's algorithm, against a fixed
 acceptance table — which is the setting §7.1 needs, since its own analysis treats the adversary as
 a function of the challenge.
+
+### The multi-round recursion
+
+[`CoordinateFork/MultiRoundOp.lean`](../../VCVio/CryptoFoundations/CoordinateFork/MultiRoundOp.lean)
+is §7.2's recursion: to extract from a `(2μ+1)`-round protocol, extract a level-`μ−1` tree at every
+possible first challenge, then run Figure 11 against the table of which of those succeeded.
+
+```lean
+noncomputable def multiForkOp : (μ : ℕ) → (k : ℕ) → (ρ : Transcript ι S μ → Bool) →
+    ProbComp (Option (Finset (Transcript ι S μ)))
+  | 0, _, ρ => pure (if ρ PUnit.unit then some {PUnit.unit} else none)
+  | μ + 1, k, ρ => do
+      let tbl ← Fintype.mPi fun c => multiForkOp μ k fun t => ρ (c, t)
+      let r ← coordForkOp k fun c => (tbl c).isSome
+      return r.1.map fun X => X.biUnion fun c => ((tbl c).getD ∅).image fun t => (c, t)
+```
+
+`probEvent_isSome_multiForkOp` is the payoff: its success probability **is** `multiSucc`, the
+analytic functional of [`MultiRound.lean`](../../VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean).
+That functional is defined by instantiating an independent Bernoulli table, which used to be a
+modelling decision with nothing producing it — the coupling is now *derived*, because running the
+sub-extractor independently at each first challenge is what `Fintype.mPi` does, and
+`probOutput_acceptTable_indepTable_eq_bernoulliTable` identifies the result. The
+`ε − μℓ(k−1)/N` bound then reads off `sub_le_multiSucc`.
+
+`multiForkOp_success` is the output clause: a successful run returns accepting transcripts whose
+challenge sequences form a tree of challenges, which is exactly what
+[`ChallengeTree.lean`](../../ToMathlib/Combinatorics/ChallengeTree.lean) defines and what Lemma 7.2
+asks for. (Definition 2.30 also fixes the prover messages at the nodes; Lemma 7.2's *conclusion*
+speaks only of the challenge tree, so that is what is delivered here.)
+
+The multi-round expected-query count is not proved. The paper's `(ℓ(k−1)+1)^μ` multiplies the
+per-round count by the sub-extractor's, which is Wald's identity over the resampling loop — a
+different argument from the `μ = 1` column count, and the one §8.2 has to refine once the
+sub-extractor's cost varies with the entry.
 
 ### Draw counts
 
