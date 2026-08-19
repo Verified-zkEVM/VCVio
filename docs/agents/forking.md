@@ -186,11 +186,40 @@ the adversary*. The status is:
   produces: `forkSucc_eq_probEvent_isSome_coordFork_indepTable` discharges the Bernoulli-table
   hypothesis outright, because the acceptance table an adversary induces *is* that Bernoulli table.
 - What remains missing is the cost. `indepTable` runs the adversary once per challenge, so it is
-  not the paper's extractor, which queries it `ℓ(k−1)+1` times in expectation. A future query proof
-  must model sampling without replacement, including exhaustion when fewer than `k` accepting
-  values exist, and connect that costed process to the table event. The challenge-only
+  not the paper's extractor, which queries it `ℓ(k−1)+1` times in expectation. The analytic
+  ingredient for that clause is in place (see *Draw counts* below); what is still absent is an
+  extractor built from it and a proof that its adversary-query count is the draw count. The
+  challenge-only
   [`ToMathlib/Combinatorics/ChallengeTree.lean`](../../ToMathlib/Combinatorics/ChallengeTree.lean)
   supplies only the combinatorial projection needed by a future multi-round output theorem.
+
+### Draw counts
+
+The inner loop of FMN's Figure 11 resamples one challenge coordinate *without replacement* until
+`k − 1` further accepting values are found, or the coordinate is exhausted.
+[`VCVio/OracleComp/Constructions/WithoutReplacement.lean`](../../VCVio/OracleComp/Constructions/WithoutReplacement.lean)
+is that loop as a `ProbComp`, and
+
+```lean
+theorem expectedLength_drawUntil (accept : S → Bool) (n : ℕ) :
+    ∀ (r : ℕ) (l : List S), l.length = n →
+      expectedLength (drawUntil accept r l)
+        = NegHypergeom.expectedDraws n (l.countP accept) r
+```
+
+identifies its expected number of draws with the negative hypergeometric recursion in
+[`ToMathlib/Probability/NegativeHypergeometric.lean`](../../ToMathlib/Probability/NegativeHypergeometric.lean).
+The pool is a `List` rather than a `Finset` so that a draw is an *index*: that keeps the loop in
+`ProbComp` with no failure branch and lets it terminate on the pool's length.
+
+Exhaustion needs no separate treatment. The classical closed form `r(M+1)/(G+1)` requires `r ≤ G`,
+and below that it is not merely unproved but false — `expectedDraws_ne_closedForm_of_exhaustion`
+in the test file exhibits a pool of one where the loop stops after one draw and the formula reads
+two. What survives is `NegHypergeom.expectedDraws_le`, the same expression as an *upper* bound with
+no hypothesis relating `r` to `G`; above the base cases its induction step is still the same
+equality. That single inequality covers the finishing and the exhausting case at once, which is
+exactly what the paper's `E[Tᵢ] ≤ k − 1` step needs: at `Xᵢ = l < k` the loop drains the coordinate,
+and `(k−1)N/l` already exceeds the `N − 1` values available.
 
 Non-vacuity, payload-sensitivity, coupling, boundary, and bad-extractor checks live in
 `VCVioTest/Forking/CoordinateFork.lean` and
