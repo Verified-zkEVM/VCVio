@@ -306,6 +306,11 @@ equality. That single inequality covers the finishing and the exhausting case at
 exactly what the paper's `E[Tᵢ] ≤ k − 1` step needs: at `Xᵢ = l < k` the loop drains the coordinate,
 and `(k−1)N/l` already exceeds the `N − 1` values available.
 
+[`VCVio/ProgramLogic/CoordinateFork.lean`](../../VCVio/ProgramLogic/CoordinateFork.lean) wraps the
+single-round and multi-round success bounds as quantitative Hoare triples, matching what
+[`VCVio/ProgramLogic/SeededFork.lean`](../../VCVio/ProgramLogic/SeededFork.lean) does for the
+seeded fork.
+
 Non-vacuity, payload-sensitivity, coupling, boundary, and bad-extractor checks live in
 `VCVioTest/Forking/CoordinateFork.lean` and
 `VCVioTest/Forking/CoordSpecialSoundness.lean`; both run in CI.

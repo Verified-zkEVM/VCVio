@@ -182,6 +182,7 @@ public import VCVio.OracleComp.SimSemantics.WriterT.Basic
 public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
 public import VCVio.OracleComp.Traversal
 public import VCVio.Prelude
+public import VCVio.ProgramLogic.CoordinateFork
 public import VCVio.ProgramLogic.Notation
 public import VCVio.ProgramLogic.NotationCore
 public import VCVio.ProgramLogic.Relational.Basic
