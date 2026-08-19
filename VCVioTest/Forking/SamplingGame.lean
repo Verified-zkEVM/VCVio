@@ -18,6 +18,10 @@ concrete parameters.
 assignments, each with one further accepting value in its block's single column, so the game
 examines `(23 + 2·(1 + 5/2))/25 = 6/5` entries on average, which is exactly `1 + 1·1·(1/5)`.
 
+`one_twentyfifth_le_probEvent_isSome_samplingGame_gatedArray` is the matching check on the success
+bound: the accepting ratio `2/25` less the loss `1/25` leaves a strictly positive `1/25`, against an
+actual success probability of `2/25`.
+
 Two canaries guard the reading of `P`. `blockHitTotal_forkedArray` exhibits a `P` strictly above
 one, so `blockHitTotal` must not be read as a probability — it is a sum over the query index, and
 `blockHitTotal_le_card` is the only bound available. `columnCount_lt_blockCount_wide` exhibits a
@@ -80,6 +84,45 @@ theorem expectedValue_cost_samplingGame_gatedArray_le :
     rw [← ENNReal.div_add_div_same, ENNReal.div_self (by norm_num) (by finiteness)]]
   norm_num
 
+/-! ## The success bound -/
+
+/-- Both accepting assignments are good: each has a second accepting value in the one column of
+query `0`'s block. -/
+theorem card_gameGoodSet_gatedArray : (gameGoodSet 2 gatedArray).card = 2 := by decide
+
+theorem card_filter_accept_gatedArray :
+    (Finset.univ.filter fun j : Slot => (gatedArray j).1).card = 2 := by decide
+
+/-- The game succeeds exactly on those two assignments. -/
+theorem probEvent_isSome_samplingGame_gatedArray :
+    Pr[fun r => r.1.isSome | samplingGame 2 gatedArray] = 2 / 25 := by
+  rw [probEvent_isSome_samplingGame, card_gameGoodSet_gatedArray, card_slot]
+  norm_num
+
+private theorem loss_gatedArray :
+    (Fintype.card (Fin 1) : ℝ≥0∞) * ((2 - 1 : ℕ) : ℝ≥0∞) / Fintype.card (Fin 5)
+        * blockHitTotal gatedArray = 1 / 25 := by
+  rw [blockHitTotal_gatedArray]
+  simp only [Fintype.card_fin, Nat.cast_one, one_mul, show (2 - 1 : ℕ) = 1 from rfl]
+  rw [one_div, one_div, one_div, ← ENNReal.mul_inv (by norm_num) (by norm_num)]
+  norm_num
+
+private theorem two_sub_one_twentyfifth : (2 : ℝ≥0∞) / 25 - 1 / 25 = 1 / 25 := by
+  refine ENNReal.sub_eq_of_eq_add (by finiteness) ?_
+  rw [ENNReal.div_add_div_same, show (1 : ℝ≥0∞) + 1 = 2 by norm_num]
+
+/-- **Lemma 8.1's success bound at concrete parameters**, and it is not truncated away: the
+accepting ratio is `2/25` and the loss `P·ℓ(k-1)/N` is `1/25`, leaving `1/25` — half the game's
+actual `2/25` success probability. -/
+theorem one_twentyfifth_le_probEvent_isSome_samplingGame_gatedArray :
+    (1 : ℝ≥0∞) / 25 ≤ Pr[fun r => r.1.isSome | samplingGame 2 gatedArray] := by
+  have h := sub_le_probEvent_isSome_samplingGame (Q := Fin 2) (ι := Fin 1) (S := Fin 5)
+    2 gatedArray
+  refine le_trans (le_of_eq ?_) h
+  rw [card_filter_accept_gatedArray, card_slot, loss_gatedArray]
+  push_cast
+  rw [two_sub_one_twentyfifth]
+
 /-! ## A rejecting array -/
 
 /-- An array that never verifies. -/
@@ -97,6 +140,13 @@ theorem expectedValue_cost_samplingGame_deadArray_le :
   have h := expectedValue_cost_samplingGame_le (Q := Fin 2) (ι := Fin 1) (S := Fin 5) 2 deadArray
   refine h.trans (le_of_eq ?_)
   rw [blockHitTotal_deadArray]
+  simp
+
+/-- A rejecting array is never good, so the game never succeeds — the negative control for
+`one_twentyfifth_le_probEvent_isSome_samplingGame_gatedArray`. -/
+theorem probEvent_isSome_samplingGame_deadArray :
+    Pr[fun r => r.1.isSome | samplingGame 2 deadArray] = 0 := by
+  rw [probEvent_isSome_samplingGame, show (gameGoodSet 2 deadArray).card = 0 from by decide]
   simp
 
 /-! ## `P` is not a probability -/

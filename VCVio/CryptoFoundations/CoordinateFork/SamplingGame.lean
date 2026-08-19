@@ -24,10 +24,15 @@ is chosen by the array entry rather than fixed in advance: `M j` names the query
 worth rewinding. Everything else is the same loop, so `ProbComp.drawUntil` and the negative
 hypergeometric bound carry over unchanged.
 
-`expectedValue_cost_samplingGame_le` is the first half of Lemma 8.1: the game examines at most
-`1 + ℓ(k-1)·P` array entries on average, where `P` sums, over queries, the chance that the query's
-block holds a hit at all. That is the half of Lemma 8.1 the paper proves from scratch. Its success
-half explicitly reuses a bound of Attema–Fehr–Klooß and is not formalized here.
+`expectedValue_cost_samplingGame_le` is Lemma 8.1's expected-samples bound: the game examines at
+most `1 + ℓ(k-1)·P` array entries on average, where `P` sums, over queries, the chance that the
+query's block holds a hit at all. `sub_le_probEvent_isSome_samplingGame` is its success bound,
+`Pr[V = 1] - P·ℓ(k-1)/N`, proved by the same column counting that carries §7.
+
+Fenzi–Moghaddas–Nguyen state the success bound with an extra factor `N/(N-k+1) ≥ 1`, which they
+obtain by reusing a bound of Attema–Fehr–Klooß rather than proving it. That factor is dropped here:
+it only ever improves the bound, so nothing downstream depends on it, and what remains needs no
+external citation.
 -/
 
 @[expose] public section
@@ -287,5 +292,229 @@ theorem expectedValue_cost_samplingGame_le_card [Nonempty S] [SampleableType (Q 
       ≤ 1 + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞) * Fintype.card Q :=
   (expectedValue_cost_samplingGame_le k M).trans
     (add_le_add le_rfl (mul_le_mul' le_rfl (blockHitTotal_le_card M)))
+
+/-! ## When the game succeeds -/
+
+variable {k : ℕ} {M : (Q × ι → S) → Bool × Q} {i : Q} {j : Q × ι → S} {d : ι → List S}
+
+omit [Fintype Q] in
+/-- A run collects as many hits as it was asked for, or as many as the column held. -/
+theorem card_gameCollected (hd : d ∈ support (Fintype.mPi (gameDraws k M i j))) (l : ι) :
+    (gameCollected M i j d l).card
+      = min (k - 1) ((hitSet (fun j' => hitsAt M i j') j (i, l)).card) := by
+  classical
+  have hl := mem_support_mPi _ d hd l
+  have hnodup : (d l).Nodup :=
+    nodup_of_mem_support_drawUntil _ _ _ _ rfl (nodup_altPool j (i, l)) _ hl
+  have hcount := countP_of_mem_support_drawUntil
+    (fun x => hitsAt M i (Function.update j (i, l) x)) (altPool j (i, l)).length (k - 1) _ rfl _ hl
+  rw [gameCollected, List.toFinset_card_of_nodup (hnodup.filter _), ← List.countP_eq_length_filter,
+    hcount, countP_altPool]
+
+/-- The assignments the game succeeds on: the entry accepts, and every coordinate of the winning
+query's block holds at least `k` hits for that query. -/
+def gameGoodSet (k : ℕ) (M : (Q × ι → S) → Bool × Q) : Finset (Q × ι → S) :=
+  Finset.univ.filter fun j => (M j).1 ∧
+    ∀ l : ι, k ≤ columnCount (fun j' => hitsAt M (M j).2 j' = true) ((M j).2, l) j
+
+omit [DecidableEq S] in
+theorem accept_of_mem_gameGoodSet (h : j ∈ gameGoodSet k M) : (M j).1 := by
+  classical
+  simpa [gameGoodSet] using (Finset.mem_filter.mp h).2.1
+
+/-- On an accepting assignment the game succeeds exactly when the assignment is good. Which values
+the block's coordinates were resampled to cannot matter, because each coordinate's loop stops only
+on success or on exhaustion. -/
+theorem forall_card_gameCollected_iff (hacc : (M j).1)
+    (hd : d ∈ support (Fintype.mPi (gameDraws k M (M j).2 j))) :
+    (∀ l, (gameCollected M (M j).2 j d l).card = k - 1) ↔ j ∈ gameGoodSet k M := by
+  classical
+  simp only [gameGoodSet, Finset.mem_filter, Finset.mem_univ, true_and]
+  have hcol : ∀ l : ι, (hitSet (fun j' => hitsAt M (M j).2 j') j ((M j).2, l)).card + 1
+      = columnCount (fun j' => hitsAt M (M j).2 j' = true) ((M j).2, l) j :=
+    fun l => card_hitSet_succ (hitsAt_snd hacc) ((M j).2, l)
+  refine ⟨fun h => ⟨hacc, fun l => ?_⟩, fun h l => ?_⟩
+  · have h1 := hcol l
+    have h2 := card_gameCollected hd l
+    have h3 := h l
+    omega
+  · have h1 := hcol l
+    have h2 := card_gameCollected hd l
+    have h3 := h.2 l
+    omega
+
+/-- At a fixed assignment the game succeeds with certainty or not at all. -/
+theorem probEvent_isSome_samplingGameAt (k : ℕ) (M : (Q × ι → S) → Bool × Q) (j : Q × ι → S) :
+    Pr[fun r => r.1.isSome | samplingGameAt k M j] = if j ∈ gameGoodSet k M then 1 else 0 := by
+  classical
+  by_cases hacc : (M j).1
+  · rw [samplingGameAt, if_pos hacc]
+    by_cases hgood : j ∈ gameGoodSet k M
+    · refine (probEvent_eq_one ⟨probFailure_of_liftM_PMF _, fun r hr => ?_⟩).trans
+        (if_pos hgood).symm
+      rw [mem_support_bind_iff] at hr
+      obtain ⟨d, hd, hr⟩ := hr
+      rw [if_pos ((forall_card_gameCollected_iff hacc hd).mpr hgood)] at hr
+      simp only [support_pure, Set.mem_singleton_iff] at hr
+      subst hr
+      simp
+    · refine (probEvent_eq_zero fun r hr => ?_).trans (if_neg hgood).symm
+      rw [mem_support_bind_iff] at hr
+      obtain ⟨d, hd, hr⟩ := hr
+      rw [if_neg fun hc => hgood ((forall_card_gameCollected_iff hacc hd).mp hc)] at hr
+      simp only [support_pure, Set.mem_singleton_iff] at hr
+      subst hr
+      simp
+  · have hgood : j ∉ gameGoodSet k M := fun h => hacc (accept_of_mem_gameGoodSet h)
+    rw [samplingGameAt, if_neg hacc, if_neg hgood]
+    simp
+
+/-- **The success probability of Figure 12.** -/
+theorem probEvent_isSome_samplingGame [SampleableType (Q × ι → S)] (k : ℕ)
+    (M : (Q × ι → S) → Bool × Q) :
+    Pr[fun r => r.1.isSome | samplingGame k M]
+      = ((gameGoodSet k M).card : ℝ≥0∞) / Fintype.card (Q × ι → S) := by
+  classical
+  rw [samplingGame, probEvent_bind_eq_tsum]
+  simp only [probEvent_isSome_samplingGameAt, probOutput_uniformSample]
+  rw [ENNReal.tsum_mul_left, tsum_fintype (L := .unconditional _), Finset.sum_ite_mem,
+    Finset.univ_inter, Finset.sum_const, nsmul_eq_mul, mul_one, div_eq_mul_inv, mul_comm]
+
+/-! ## How often the game succeeds -/
+
+omit [DecidableEq S] in
+/-- Every accepting entry is a hit for exactly one query, so the accepting assignments partition
+by the query their forgery uses. -/
+theorem card_filter_accept_eq_sum (M : (Q × ι → S) → Bool × Q) :
+    (Finset.univ.filter fun j : Q × ι → S => (M j).1).card
+      = ∑ i : Q, (Finset.univ.filter fun j : Q × ι → S => hitsAt M i j).card := by
+  classical
+  rw [Finset.card_eq_sum_card_fiberwise (f := fun j : Q × ι → S => (M j).2)
+    (t := Finset.univ) fun _ _ => Finset.mem_univ _]
+  refine Finset.sum_congr rfl fun i _ => congrArg Finset.card (Finset.ext fun j => ?_)
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and, hitsAt_iff]
+
+omit [DecidableEq S] in
+/-- The same partition on the good assignments. -/
+theorem card_gameGoodSet_eq_sum (k : ℕ) (M : (Q × ι → S) → Bool × Q) :
+    (gameGoodSet k M).card
+      = ∑ i : Q, (Finset.univ.filter fun j : Q × ι → S =>
+          hitsAt M i j ∧
+            ∀ l : ι, k ≤ columnCount (fun j' => hitsAt M i j' = true) (i, l) j).card := by
+  classical
+  rw [gameGoodSet, Finset.card_eq_sum_card_fiberwise (f := fun j : Q × ι → S => (M j).2)
+    (t := Finset.univ) fun _ _ => Finset.mem_univ _]
+  refine Finset.sum_congr rfl fun i _ => congrArg Finset.card (Finset.ext fun j => ?_)
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+  constructor
+  · rintro ⟨⟨hacc, hall⟩, rfl⟩
+    exact ⟨hitsAt_snd hacc, hall⟩
+  · rintro ⟨hhit, hall⟩
+    obtain ⟨hacc, rfl⟩ := hitsAt_iff.mp hhit
+    exact ⟨⟨hacc, hall⟩, rfl⟩
+
+/-- **The counting content of Lemma 8.1's success bound.** Scaled by `|S|`, the accepting
+assignments exceed the good ones by at most `ℓ(k-1)` per query whose block holds a hit.
+
+Applying the union bound one query at a time is what keeps the loss proportional to `P` rather
+than to the number of queries: a query whose block holds no hit contributes nothing. -/
+theorem card_mul_card_filter_accept_le_gameGoodSet [Nonempty S] (k : ℕ)
+    (M : (Q × ι → S) → Bool × Q) :
+    (Fintype.card S : ℝ≥0∞) * (Finset.univ.filter fun j : Q × ι → S => (M j).1).card
+      ≤ (Fintype.card S : ℝ≥0∞) * (gameGoodSet k M).card
+          + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞) *
+              ∑ i : Q, ((Finset.univ.filter fun j : Q × ι → S =>
+                0 < blockCount M i j).card : ℝ≥0∞) := by
+  classical
+  rw [card_filter_accept_eq_sum, card_gameGoodSet_eq_sum, Nat.cast_sum, Nat.cast_sum,
+    Finset.mul_sum, Finset.mul_sum, Finset.mul_sum, ← Finset.sum_add_distrib]
+  refine Finset.sum_le_sum fun i _ => ?_
+  -- The block of query `i`, as a set of coordinates of the whole assignment.
+  set T : Finset (Q × ι) := {i} ×ˢ (Finset.univ : Finset ι) with hT
+  have hforall : ∀ j' : Q × ι → S,
+      (∀ p ∈ T, k ≤ columnCount (fun j'' => hitsAt M i j'' = true) p j')
+        ↔ ∀ l : ι, k ≤ columnCount (fun j'' => hitsAt M i j'' = true) (i, l) j' := by
+    refine fun j' => ⟨fun h l => h (i, l) (by simp [hT]), ?_⟩
+    rintro h ⟨i', l⟩ hp
+    rw [hT, Finset.mem_product, Finset.mem_singleton] at hp
+    obtain ⟨rfl, -⟩ := hp
+    exact h l
+  have hbase := CoordinateWise.card_mul_card_filter_accept_le_sum
+    (accept := fun j' : Q × ι → S => hitsAt M i j' = true) k T
+  rw [Finset.filter_congr fun (j' : Q × ι → S) _ =>
+    (and_congr_right fun _ => hforall j' : _ ↔ _)] at hbase
+  refine hbase.trans (add_le_add le_rfl ?_)
+  -- Each column of the block is contained in the block, and there are `ℓ` of them.
+  have hcol : ∀ p ∈ T, ((k - 1 : ℕ) : ℝ≥0∞) *
+        ((Finset.univ.filter fun j' : Q × ι → S =>
+          0 < columnCount (fun j'' => hitsAt M i j'' = true) p j').card : ℝ≥0∞)
+      ≤ ((k - 1 : ℕ) : ℝ≥0∞) *
+        ((Finset.univ.filter fun j' : Q × ι → S => 0 < blockCount M i j').card : ℝ≥0∞) := by
+    rintro ⟨i', l⟩ hp
+    rw [hT, Finset.mem_product, Finset.mem_singleton] at hp
+    obtain ⟨rfl, -⟩ := hp
+    refine mul_le_mul' le_rfl ?_
+    have hsub : (Finset.univ.filter fun j' : Q × ι → S =>
+          0 < columnCount (fun j'' => hitsAt M i' j'' = true) (i', l) j')
+        ⊆ (Finset.univ.filter fun j' : Q × ι → S => 0 < blockCount M i' j') := by
+      intro j' hj'
+      rw [Finset.mem_filter] at hj' ⊢
+      exact ⟨hj'.1, lt_of_lt_of_le hj'.2 (columnCount_le_blockCount M i' l j')⟩
+    exact_mod_cast Finset.card_le_card hsub
+  refine (Finset.sum_le_sum hcol).trans (le_of_eq ?_)
+  rw [Finset.sum_const, hT, Finset.card_product, Finset.card_singleton, Finset.card_univ, one_mul,
+    nsmul_eq_mul, ← mul_assoc]
+
+theorem blockHitTotal_eq_sum_div (M : (Q × ι → S) → Bool × Q) :
+    blockHitTotal M
+      = (∑ i : Q, ((Finset.univ.filter fun j : Q × ι → S => 0 < blockCount M i j).card : ℝ≥0∞))
+          / Fintype.card (Q × ι → S) := by
+  simp only [blockHitTotal, div_eq_mul_inv, ← Finset.sum_mul]
+
+/-- **The success half of Lemma 8.1**, in the form the counting argument gives directly: the game
+succeeds with probability at least `Pr[V = 1] - P·ℓ(k-1)/N`.
+
+Fenzi–Moghaddas–Nguyen state a stronger bound, with an extra factor `N/(N-k+1) ≥ 1`, and obtain it
+by reusing a bound of Attema–Fehr–Klooß rather than proving it. Dropping that factor costs nothing
+downstream — it only ever improves the bound — and what remains is proved here from the same
+column-counting argument that carries §7. -/
+theorem sub_le_probEvent_isSome_samplingGame [Nonempty S] [SampleableType (Q × ι → S)] (k : ℕ)
+    (M : (Q × ι → S) → Bool × Q) :
+    ((Finset.univ.filter fun j : Q × ι → S => (M j).1).card : ℝ≥0∞)
+          / Fintype.card (Q × ι → S)
+        - Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞) / Fintype.card S * blockHitTotal M
+      ≤ Pr[fun r => r.1.isSome | samplingGame k M] := by
+  classical
+  have hN : (Fintype.card S : ℝ≥0∞) ≠ 0 := by simp
+  have hNtop : (Fintype.card S : ℝ≥0∞) ≠ ⊤ := by finiteness
+  have hcN := ENNReal.mul_inv_cancel hN hNtop
+  rw [probEvent_isSome_samplingGame, blockHitTotal_eq_sum_div, tsub_le_iff_right,
+    div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv]
+  calc ((Finset.univ.filter fun j : Q × ι → S => (M j).1).card : ℝ≥0∞) *
+        ((Fintype.card (Q × ι → S) : ℝ≥0∞))⁻¹
+      = ((Fintype.card S : ℝ≥0∞) *
+            ((Finset.univ.filter fun j : Q × ι → S => (M j).1).card : ℝ≥0∞)) *
+          ((Fintype.card S : ℝ≥0∞)⁻¹ * ((Fintype.card (Q × ι → S) : ℝ≥0∞))⁻¹) := by
+        rw [show ((Fintype.card S : ℝ≥0∞) *
+                ((Finset.univ.filter fun j : Q × ι → S => (M j).1).card : ℝ≥0∞)) *
+              ((Fintype.card S : ℝ≥0∞)⁻¹ * ((Fintype.card (Q × ι → S) : ℝ≥0∞))⁻¹)
+            = ((Fintype.card S : ℝ≥0∞) * (Fintype.card S : ℝ≥0∞)⁻¹) *
+              (((Finset.univ.filter fun j : Q × ι → S => (M j).1).card : ℝ≥0∞) *
+                ((Fintype.card (Q × ι → S) : ℝ≥0∞))⁻¹) from by ring, hcN, one_mul]
+    _ ≤ ((Fintype.card S : ℝ≥0∞) * ((gameGoodSet k M).card : ℝ≥0∞)
+          + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞) *
+              ∑ i : Q, ((Finset.univ.filter fun j : Q × ι → S =>
+                0 < blockCount M i j).card : ℝ≥0∞)) *
+          ((Fintype.card S : ℝ≥0∞)⁻¹ * ((Fintype.card (Q × ι → S) : ℝ≥0∞))⁻¹) := by
+        gcongr
+        exact card_mul_card_filter_accept_le_gameGoodSet k M
+    _ = _ := by
+        rw [add_mul,
+          show ((Fintype.card S : ℝ≥0∞) * ((gameGoodSet k M).card : ℝ≥0∞)) *
+              ((Fintype.card S : ℝ≥0∞)⁻¹ * ((Fintype.card (Q × ι → S) : ℝ≥0∞))⁻¹)
+            = ((Fintype.card S : ℝ≥0∞) * (Fintype.card S : ℝ≥0∞)⁻¹) *
+              (((gameGoodSet k M).card : ℝ≥0∞) *
+                ((Fintype.card (Q × ι → S) : ℝ≥0∞))⁻¹) from by ring, hcN, one_mul]
+        ring
 
 end OracleComp

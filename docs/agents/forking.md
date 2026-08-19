@@ -311,17 +311,35 @@ queries (`blockHitTotal_le_card`, and `blockHitTotal_forkedArray` in the test fi
 budget §8.2's extractor works against. `expectedValue_cost_samplingGame_gatedArray_le` shows the
 bound is attained, not merely valid.
 
-Getting here needed the counting lemma sharpened. `card_mul_sum_div_columnCount_le` used to bound
-the weighted column sum by `w · |ι → S|`; it now bounds it by `w` times the number of assignments
-whose column is *nonempty*, and the cruder form survives as
-`card_mul_sum_div_columnCount_le_card` for §7's use. Without the sharpening `P` would collapse to
-`1` and Lemma 8.1 would say nothing beyond `1 + ℓ(k−1)`.
+`sub_le_probEvent_isSome_samplingGame` is the success bound:
 
-**Lemma 8.1's other half is not formalized.** Its success bound
-`Pr[⋀ₗ Xₗ = k] ≥ N/(N−k+1)·(Pr[V=1] − P·ℓ(k−1)/N)` explicitly reuses a bound of Attema–Fehr–Klooß
-rather than proving it, so §8 is not self-contained in the paper either; formalizing it means
-formalizing that citation first. Lemma 8.2's weighted game, Figure 13's extractor, and Lemma 2.32's
-knowledge error are likewise not formalized.
+```lean
+theorem sub_le_probEvent_isSome_samplingGame [Nonempty S] [SampleableType (Q × ι → S)] (k : ℕ)
+    (M : (Q × ι → S) → Bool × Q) :
+    ((Finset.univ.filter fun j : Q × ι → S => (M j).1).card : ℝ≥0∞)
+          / Fintype.card (Q × ι → S)
+        - Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞) / Fintype.card S * blockHitTotal M
+      ≤ Pr[fun r => r.1.isSome | samplingGame k M]
+```
+
+**The paper's version of this is the one place §8 is not self-contained, and it is avoidable.** FMN
+state `Pr[⋀ₗ Xₗ = k] ≥ N/(N−k+1)·(Pr[V=1] − P·ℓ(k−1)/N)` and obtain the extra factor `N/(N−k+1)`
+by reusing a per-coordinate bound of Attema–Fehr–Klooß rather than proving it. Dropping that factor
+— it is `≥ 1`, so it only ever improves the bound, and nothing downstream depends on it — leaves
+exactly what §7's column counting already gives, applied one query at a time. So the bound above
+carries no citation.
+
+Getting here needed the counting sharpened twice. `card_mul_sum_div_columnCount_le` used to bound
+the weighted column sum by `w · |ι → S|`; it now bounds it by `w` times the number of assignments
+whose column is *nonempty* (the cruder form survives as `card_mul_sum_div_columnCount_le_card` for
+§7's use). Alongside it, `card_mul_card_filter_columnCount_lt_le` is the same refinement of the
+union-bound step, and `card_mul_card_filter_accept_le_sum` runs that union bound over a *chosen*
+`Finset` of coordinates rather than all of them, which is what lets §8 apply it to one block at a
+time. Without these `P` would collapse to `1` in both halves, and Lemma 8.1 would say nothing
+beyond `1 + ℓ(k−1)` and `Pr[V=1] − ℓ(k−1)/N`.
+
+Lemma 8.2's weighted game, Figure 13's extractor, and Lemma 2.32's knowledge error are not
+formalized.
 
 ### Draw counts
 
