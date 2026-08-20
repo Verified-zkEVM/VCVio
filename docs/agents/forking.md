@@ -331,8 +331,25 @@ theorem probEvent_mem_drawUntil_mul_countP (accept : S → Bool) (r : ℕ) (l : 
 ```
 
 with `probEvent_mem_drawUntil_mul_countP_not` the rejecting counterpart, sharing out what the
-negative hypergeometric expectation leaves over. What remains for the composition is the column
-bound above and the weighted fork it feeds.
+negative hypergeometric expectation leaves over.
+
+The column bound itself is `sum_probEvent_mem_erase_le`, and its weighted form is what a cost bound
+consumes:
+
+```lean
+theorem sum_expectedValue_sum_map_erase_le (a : S → Bool) (r : ℕ) (g : S → ℝ≥0∞) :
+    ∑ v ∈ Finset.univ.filter (fun v => a v),
+        expectedValue (drawUntil a r ((Finset.univ.erase v).toList))
+          (fun d => (d.map g).sum)
+      ≤ (r : ℝ≥0∞) * ∑ x : S, g x
+```
+
+Charge every drawn value a weight and a column's expected charge is at most `r` times the column's
+total weight, whatever the weights are. The proof splits on whether the fixed value accepts: the
+accepting ones share out the loop's accepting draws exactly, while for a rejecting one either the
+budget binds — and `NegHypergeom.mul_expectedDraws` makes the accounting exact — or the column runs
+out first and each centre draws it at most once. What remains for the composition is the weighted
+fork this feeds.
 
 `evalDist_drawUntil_eq_map_drawAll` is the reformulation that made the uniformity statement natural
 to find:

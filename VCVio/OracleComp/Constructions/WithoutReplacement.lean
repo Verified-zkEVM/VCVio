@@ -933,4 +933,195 @@ theorem probEvent_mem_drawUntil_mul_countP_not (accept : S → Bool) (r : ℕ)
     Finset.sum_const, nsmul_eq_mul, hcard]
   ring
 
+/-! ## The column bound
+
+A *column* is a coordinate's worth of values: `Fintype.card S` of them, of which `countP` accept.
+A resampling loop centred on an accepting value `v` draws from the rest of the column, so across
+all the accepting centres a fixed value `x` can be drawn many times over.
+`sum_probEvent_mem_erase_le` says it is drawn at most `r` times in total — the same budget one loop
+has.
+
+That is the counting step of a *weighted* cost bound: charge each drawn value a weight, and the
+column's total charge is at most `r` times the column's total weight, whatever the weights are. -/
+
+section Column
+
+variable [DecidableEq S] [Fintype S]
+
+omit [DecidableEq S] [Fintype S] in
+open OracleComp.EvalDist in
+theorem probEvent_mem_drawUntil_eq_zero (a : S → Bool) (r : ℕ) (l : List S) {x : S}
+    (hx : x ∉ l) : Pr[fun d => x ∈ d | drawUntil a r l] = 0 :=
+  probEvent_eq_zero fun d hd hxd =>
+    hx (mem_of_mem_support_drawUntil a l.length r l rfl d hd x hxd)
+
+theorem countP_toList_erase (a : S → Bool) {v : S} (hv : a v) :
+    ((Finset.univ.erase v).toList).countP a = (Finset.univ.filter fun y => a y).card - 1 := by
+  classical
+  have hmem : v ∈ Finset.univ.filter (fun y => a y) :=
+    Finset.mem_filter.mpr ⟨Finset.mem_univ _, hv⟩
+  rw [Finset.countP_toList,
+    show (Finset.univ.erase v).filter (fun y => a y)
+      = (Finset.univ.filter fun y => a y).erase v from by
+        refine Finset.ext fun y => ?_
+        simp only [Finset.mem_filter, Finset.mem_erase, Finset.mem_univ, true_and]
+        tauto,
+    Finset.card_erase_of_mem hmem]
+
+theorem length_toList_erase (v : S) :
+    ((Finset.univ.erase v).toList).length = Fintype.card S - 1 := by
+  rw [Finset.length_toList, Finset.card_erase_of_mem (Finset.mem_univ _), Finset.card_univ]
+
+theorem countP_not_toList_erase (a : S → Bool) {v : S} (hv : a v) :
+    ((Finset.univ.erase v).toList).countP (fun y => !a y)
+      = Fintype.card S - (Finset.univ.filter fun y => a y).card := by
+  have hlen := List.length_eq_countP_add_countP_not ((Finset.univ.erase v).toList) a
+  rw [length_toList_erase, countP_toList_erase a hv] at hlen
+  have hHpos : 0 < (Finset.univ.filter fun y => a y).card :=
+    Finset.card_pos.mpr ⟨v, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hv⟩⟩
+  have hHle : (Finset.univ.filter fun y => a y).card ≤ Fintype.card S := by
+    rw [← Finset.card_univ]; exact Finset.card_le_card (Finset.filter_subset _ _)
+  have hNpos : 0 < Fintype.card S := lt_of_lt_of_le hHpos hHle
+  omega
+
+open OracleComp.EvalDist in
+/-- **The column bound.** Summed over the accepting centres of a column, the chance that a
+resampling loop starting there draws a fixed value `x` is at most the loop's own budget. -/
+theorem sum_probEvent_mem_erase_le (a : S → Bool) (r : ℕ) (x : S) :
+    ∑ v ∈ Finset.univ.filter (fun v => a v),
+        Pr[fun d => x ∈ d | drawUntil a r ((Finset.univ.erase v).toList)]
+      ≤ (r : ℝ≥0∞) := by
+  classical
+  set A : Finset S := Finset.univ.filter (fun v => a v) with hA
+  set H : ℕ := A.card with hH
+  set N : ℕ := Fintype.card S with hN
+  have hHle : H ≤ N := by
+    have hc : A.card ≤ (Finset.univ : Finset S).card :=
+      Finset.card_le_card (by rw [hA]; exact Finset.filter_subset _ _)
+    simpa [hH, hN] using hc
+  set P : ℝ≥0∞ :=
+    ∑ v ∈ A, Pr[fun d => x ∈ d | drawUntil a r ((Finset.univ.erase v).toList)] with hP
+  by_cases hax : a x
+  · -- `x` accepts: only the other `H - 1` accepting centres can draw it, and they share out the
+    -- loop's accepting draws.
+    have hxA : x ∈ A := Finset.mem_filter.mpr ⟨Finset.mem_univ _, hax⟩
+    rcases Nat.lt_or_ge H 2 with hH1 | hH2
+    · have hAx : A = {x} := Finset.eq_singleton_iff_unique_mem.mpr
+        ⟨hxA, fun y hy => Finset.card_le_one.mp (by omega) y hy x hxA⟩
+      rw [hP, hAx, Finset.sum_singleton, probEvent_mem_drawUntil_eq_zero a r _ (by simp)]
+      exact zero_le
+    · have hterm : ∀ v ∈ A,
+          Pr[fun d => x ∈ d | drawUntil a r ((Finset.univ.erase v).toList)]
+              * ((H - 1 : ℕ) : ℝ≥0∞)
+            = if v = x then 0 else ((min r (H - 1) : ℕ) : ℝ≥0∞) := by
+        intro v hv
+        have hav : a v := (Finset.mem_filter.mp hv).2
+        by_cases hvx : v = x
+        · rw [if_pos hvx, hvx, probEvent_mem_drawUntil_eq_zero a r _ (by simp), zero_mul]
+        · rw [if_neg hvx, ← countP_toList_erase a hav]
+          exact probEvent_mem_drawUntil_mul_countP a r _ (Finset.nodup_toList _)
+            (by simp [Ne.symm hvx]) hax
+      have hsum : P * ((H - 1 : ℕ) : ℝ≥0∞)
+          = ((H - 1 : ℕ) : ℝ≥0∞) * ((min r (H - 1) : ℕ) : ℝ≥0∞) := by
+        rw [hP, Finset.sum_mul, Finset.sum_congr rfl hterm, ← Finset.sum_erase_add A _ hxA,
+          if_pos rfl, add_zero,
+          Finset.sum_congr rfl (fun v hv => if_neg (Finset.ne_of_mem_erase hv)),
+          Finset.sum_const, Finset.card_erase_of_mem hxA, nsmul_eq_mul]
+      refine (ENNReal.mul_le_mul_iff_left
+        (show ((H - 1 : ℕ) : ℝ≥0∞) ≠ 0 by exact_mod_cast (by omega : (H - 1 : ℕ) ≠ 0))
+        (by finiteness)).mp ?_
+      rw [hsum, mul_comm]
+      exact mul_le_mul' (by exact_mod_cast Nat.min_le_left r (H - 1)) le_rfl
+  · -- `x` rejects: every accepting centre can draw it.
+    have hxA : x ∉ A := fun h => hax (Finset.mem_filter.mp h).2
+    have hHlt : H < N := by
+      refine lt_of_le_of_ne hHle fun h => hxA ?_
+      have hAu : A = Finset.univ := Finset.eq_univ_of_card A (by rw [← hH, h, hN])
+      rw [hAu]
+      exact Finset.mem_univ _
+    rcases Nat.lt_or_ge r H with hrH | hHr
+    · have hterm : ∀ v ∈ A,
+          Pr[fun d => x ∈ d | drawUntil a r ((Finset.univ.erase v).toList)]
+              * ((N - H : ℕ) : ℝ≥0∞) + (r : ℝ≥0∞)
+            = NegHypergeom.expectedDraws (N - 1) (H - 1) r := by
+        intro v hv
+        have hav : a v := (Finset.mem_filter.mp hv).2
+        have h := probEvent_mem_drawUntil_mul_countP_not a r ((Finset.univ.erase v).toList)
+          (Finset.nodup_toList _) (x := x)
+          (by
+            have hne : x ≠ v := fun h => hax (by rw [h]; exact hav)
+            simp [hne])
+          (by simpa using hax)
+        rwa [countP_not_toList_erase a hav, countP_toList_erase a hav, length_toList_erase,
+          show min r (H - 1) = r from Nat.min_eq_left (by omega)] at h
+      have hED : (H : ℝ≥0∞) * NegHypergeom.expectedDraws (N - 1) (H - 1) r
+          = (r : ℝ≥0∞) * N := by
+        have h := NegHypergeom.mul_expectedDraws (N - 1) (H - 1) r (by omega) (by omega)
+        have hc1 : ((H - 1 : ℕ) : ℝ≥0∞) + 1 = (H : ℝ≥0∞) := by
+          have hh : (H - 1 : ℕ) + 1 = H := by omega
+          exact_mod_cast congrArg (fun n : ℕ => (n : ℝ≥0∞)) hh
+        have hc2 : ((N - 1 : ℕ) : ℝ≥0∞) + 1 = (N : ℝ≥0∞) := by
+          have hh : (N - 1 : ℕ) + 1 = N := by omega
+          exact_mod_cast congrArg (fun n : ℕ => (n : ℝ≥0∞)) hh
+        rwa [hc1, hc2] at h
+      have hstep : P * ((N - H : ℕ) : ℝ≥0∞) + (H : ℝ≥0∞) * (r : ℝ≥0∞) = (r : ℝ≥0∞) * N := by
+        have h1 := Finset.sum_congr rfl hterm
+        rw [Finset.sum_add_distrib, ← Finset.sum_mul, Finset.sum_const, Finset.sum_const,
+          nsmul_eq_mul, nsmul_eq_mul, ← hP, ← hH, hED] at h1
+        exact h1
+      have hrN : (r : ℝ≥0∞) * N
+          = (r : ℝ≥0∞) * ((N - H : ℕ) : ℝ≥0∞) + (H : ℝ≥0∞) * (r : ℝ≥0∞) := by
+        have hc : (N : ℝ≥0∞) = ((N - H : ℕ) : ℝ≥0∞) + (H : ℝ≥0∞) := by
+          have hh : N = (N - H : ℕ) + H := by omega
+          exact_mod_cast congrArg (fun n : ℕ => (n : ℝ≥0∞)) hh
+        rw [hc, mul_add, mul_comm (r : ℝ≥0∞) (H : ℝ≥0∞)]
+      rw [hrN] at hstep
+      have hP' : P * ((N - H : ℕ) : ℝ≥0∞) = (r : ℝ≥0∞) * ((N - H : ℕ) : ℝ≥0∞) :=
+        (ENNReal.add_left_inj (by finiteness)).mp hstep
+      refine (ENNReal.mul_le_mul_iff_left
+        (show ((N - H : ℕ) : ℝ≥0∞) ≠ 0 by exact_mod_cast (by omega : (N - H : ℕ) ≠ 0))
+        (by finiteness)).mp (le_of_eq hP')
+    · calc P ≤ ∑ _v ∈ A, (1 : ℝ≥0∞) := Finset.sum_le_sum fun v _ => probEvent_le_one
+        _ = (H : ℝ≥0∞) := by rw [Finset.sum_const, nsmul_eq_mul, mul_one, hH]
+        _ ≤ (r : ℝ≥0∞) := by exact_mod_cast hHr
+
+open OracleComp.EvalDist in
+/-- **The weighted column bound.** Charge every drawn value a weight; summed over the accepting
+centres, a column's expected charge is at most `r` times the column's total weight, whatever the
+weights are.
+
+This is the form a weighted cost bound consumes: `sum_probEvent_mem_erase_le` says no value is
+drawn more than `r` times across the centres, and weights are then just linear. -/
+theorem sum_expectedValue_sum_map_erase_le (a : S → Bool) (r : ℕ) (g : S → ℝ≥0∞) :
+    ∑ v ∈ Finset.univ.filter (fun v => a v),
+        expectedValue (drawUntil a r ((Finset.univ.erase v).toList))
+          (fun d => (d.map g).sum)
+      ≤ (r : ℝ≥0∞) * ∑ x : S, g x := by
+  classical
+  have hterm : ∀ v : S,
+      expectedValue (drawUntil a r ((Finset.univ.erase v).toList)) (fun d => (d.map g).sum)
+        = ∑ x : S, g x * Pr[fun d => x ∈ d | drawUntil a r ((Finset.univ.erase v).toList)] := by
+    intro v
+    rw [expectedValue_sum_map_drawUntil a r _ (Finset.nodup_toList _) g,
+      Finset.toList_toFinset]
+    refine Finset.sum_subset (Finset.subset_univ _) fun x _ hx => ?_
+    have hxv : x = v := by
+      by_contra hne
+      exact hx (Finset.mem_erase.mpr ⟨hne, Finset.mem_univ _⟩)
+    rw [hxv, probEvent_mem_drawUntil_eq_zero a r _ (by simp), mul_zero]
+  calc ∑ v ∈ Finset.univ.filter (fun v => a v),
+        expectedValue (drawUntil a r ((Finset.univ.erase v).toList)) (fun d => (d.map g).sum)
+      = ∑ v ∈ Finset.univ.filter (fun v => a v), ∑ x : S,
+          g x * Pr[fun d => x ∈ d | drawUntil a r ((Finset.univ.erase v).toList)] :=
+        Finset.sum_congr rfl fun v _ => hterm v
+    _ = ∑ x : S, g x * ∑ v ∈ Finset.univ.filter (fun v => a v),
+          Pr[fun d => x ∈ d | drawUntil a r ((Finset.univ.erase v).toList)] := by
+        rw [Finset.sum_comm]
+        exact Finset.sum_congr rfl fun x _ => (Finset.mul_sum ..).symm
+    _ ≤ ∑ x : S, g x * (r : ℝ≥0∞) :=
+        Finset.sum_le_sum fun x _ => mul_le_mul' le_rfl (sum_probEvent_mem_erase_le a r x)
+    _ = (r : ℝ≥0∞) * ∑ x : S, g x := by rw [← Finset.sum_mul, mul_comm]
+
+end Column
+
 end ProbComp

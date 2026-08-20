@@ -124,6 +124,24 @@ theorem probEvent_mem_drawUntil_pool3_ne :
   rw [eq_comm, ENNReal.div_eq_one_iff (by norm_num) (by finiteness)] at h
   norm_num at h
 
+/-! ## The column bound -/
+
+/-- No value of a column is drawn more often than one loop's budget allows, summed over all the
+accepting centres that could draw it. -/
+example (x : Fin 3) :
+    ∑ v ∈ Finset.univ.filter (fun v => acceptZero v),
+        Pr[fun d => x ∈ d | drawUntil acceptZero 1 ((Finset.univ.erase v).toList)]
+      ≤ (1 : ℝ≥0∞) := by
+  simpa using sum_probEvent_mem_erase_le acceptZero 1 x
+
+/-- Its weighted form at unit weights, which is the shape a cost bound consumes. -/
+example :
+    ∑ v ∈ Finset.univ.filter (fun v => acceptZero v),
+        expectedValue (drawUntil acceptZero 1 ((Finset.univ.erase v).toList))
+          (fun d => (d.map (fun _ => (1 : ℝ≥0∞))).sum)
+      ≤ (1 : ℝ≥0∞) * ∑ _x : Fin 3, (1 : ℝ≥0∞) := by
+  simpa using sum_expectedValue_sum_map_erase_le acceptZero 1 (fun _ => 1)
+
 /-! ## Exhaustion -/
 
 /-- The exhausting experiment stops after draining its one-element pool. -/
