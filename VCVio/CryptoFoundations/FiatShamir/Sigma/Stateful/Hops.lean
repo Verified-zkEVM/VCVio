@@ -658,7 +658,7 @@ private lemma cmaRealSignGhost_public_evalDist_eq_publicDist
       cmaRealSignGhostDist M Commit Chal σ hr m s] =
     𝒟[cmaRealSignPublicDist M Commit Chal σ hr s] := by
   rcases s with ⟨log, cache, keypair⟩
-  simp only [cmaRealSignGhostDist, cmaRealSignPublicDist, SigmaProtocol.realTranscript,
+  simp only [cmaRealSignGhostDist, cmaRealSignPublicDist, ChallengeVerifyProtocol.realTranscript,
     cmaSignPublicOfTranscript, evalDist_bind, evalDist_map, map_bind, bind_pure_comp,
     Functor.map_map]
   refine bind_congr fun key => ?_
