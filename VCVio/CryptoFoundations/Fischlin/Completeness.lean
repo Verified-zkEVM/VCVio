@@ -254,7 +254,7 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
 /-- The full simulation implementation (`unifFwdImpl + randomOracle`) interpreting the Fischlin
 random-oracle world into `StateT QueryCache ProbComp`. This is definitionally the implementation
 used by the bundled `withStateOracle` runtime. -/
-@[reducible] noncomputable def fischlinImpl :
+@[reducible] def fischlinImpl :
     QueryImpl (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
       (StateT (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache ProbComp) :=
   unifFwdImpl (fischlinROSpec Stmt Commit Chal Resp ρ b M)
@@ -292,7 +292,7 @@ Mirrors `keygen >>= sign >>= verify`, but the prover's per-repetition search use
 `fischlinUnifSearch` (fresh uniform draws) and the verifier reads the kept hash value
 directly from the search result instead of re-querying the random oracle. Returns the verdict
 `allVerified && (hashSum ≤ S)`. -/
-private noncomputable def modelGame : ProbComp Bool := do
+private def modelGame : ProbComp Bool := do
   let (pk, sk) ← hr.gen
   let commits : Fin ρ → Commit × PrvState ← Fin.mOfFn ρ fun _ => σ.commit pk sk
   let comVec : Fin ρ → Commit := fun i => (commits i).1

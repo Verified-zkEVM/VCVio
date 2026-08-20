@@ -43,7 +43,7 @@ variable {ι : Type} {hashSpec : OracleSpec ι}
 /-- The identity forwarding implementation for `unifSpec` queries, lifted to
 `StateT hashSpec.QueryCache ProbComp`. Each uniform query passes through to the underlying
 `ProbComp` without touching the cache state. -/
-noncomputable def unifFwdImpl (hashSpec : OracleSpec ι) :
+def unifFwdImpl (hashSpec : OracleSpec ι) :
     QueryImpl unifSpec (StateT hashSpec.QueryCache ProbComp) :=
   (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
     (StateT hashSpec.QueryCache ProbComp)

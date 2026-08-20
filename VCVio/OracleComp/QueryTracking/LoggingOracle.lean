@@ -55,7 +55,7 @@ variable {ω : Type u} [EmptyCollection ω] [Append ω]
 
 /-- Push an outer oracle interpretation through the base monad of a
 `WriterT`-valued query implementation. -/
-noncomputable def writerTMapBase
+def writerTMapBase
     (outer : QueryImpl spec₁ m₁)
     (inner : QueryImpl spec₀ (WriterT ω (OracleComp spec₁))) :
     QueryImpl spec₀ (WriterT ω m₁) := fun t =>
