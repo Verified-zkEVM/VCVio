@@ -143,6 +143,10 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
 - Seeded (Bellare-Neven) forking lemma: `VCVio/CryptoFoundations/SeededFork.lean`
 - Replay-based forking lemma: `VCVio/CryptoFoundations/ReplayFork.lean`
+- Coordinate-wise table forking, its realizability bridge to an ordinary adversary, and its analytic multi-round recurrence (ingredients from eprint 2023/846 §7 and the §8 sampling game): `VCVio/CryptoFoundations/CoordinateFork.lean`, `VCVio/CryptoFoundations/CoordinateFork/Realizability.lean`, `VCVio/CryptoFoundations/CoordinateFork/Operational.lean`, `VCVio/CryptoFoundations/CoordinateFork/MultiRound.lean`, `VCVio/CryptoFoundations/CoordinateFork/MultiRoundOp.lean`, `VCVio/CryptoFoundations/CoordinateFork/SamplingGame.lean`, over `VCVio/EvalDist/CoordinateFork.lean` and the combinatorics in `ToMathlib/Combinatorics/CoordinateWise.lean`
+- Independent products of computations and of `PMF`s: `VCVio/EvalDist/IndepProduct.lean`, `ToMathlib/Probability/ProbabilityMassFunction/Pi.lean`
+- Expected values of `ℝ≥0∞`-valued functionals: `VCVio/EvalDist/Expectation.lean`
+- Drawing without replacement and its expected draw count: `VCVio/OracleComp/Constructions/WithoutReplacement.lean`, `ToMathlib/Probability/NegativeHypergeometric.lean`
 - Fischlin transform: `VCVio/CryptoFoundations/Fischlin.lean`
 - Interaction spec and transcript: `PolyFun/Interaction/Basic/Spec.lean`
 - Two-party roles and strategies: `PolyFun/Interaction/TwoParty/Strategy.lean`
@@ -217,6 +221,7 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **Query tracking / weighted cost / expected runtime**: [`docs/agents/query-tracking.md`](docs/agents/query-tracking.md)
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
+- **Forking lemmas (seeded / replay / coordinate-wise)**: [`docs/agents/forking.md`](docs/agents/forking.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)
 - **Program logic tactics**: [`docs/agents/program-logic.md`](docs/agents/program-logic.md)
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)

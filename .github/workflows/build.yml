@@ -189,6 +189,14 @@ jobs:
             bash -eo pipefail -c 'lake env lean VCVioTest/Smoke.lean'
       - name: Check round-by-round extraction regression
         run: lake env lean VCVioTest/RoundByRound/OneRound.lean
+      - name: Check coordinate-fork adversarial regressions
+        run: lake env lean VCVioTest/Forking/CoordinateFork.lean
+      - name: Check coordinate-special-soundness and extraction regressions
+        run: lake env lean VCVioTest/Forking/CoordSpecialSoundness.lean
+      - name: Check without-replacement draw-count regressions
+        run: lake env lean VCVioTest/Forking/WithoutReplacement.lean
+      - name: Check abstract sampling game regressions
+        run: lake env lean VCVioTest/Forking/SamplingGame.lean
       - name: Check Merkle batch-opening canaries
         run: lake env lean VCVioTest/MerkleTreeBatch.lean
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
