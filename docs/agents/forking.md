@@ -303,13 +303,39 @@ that already carries `expectedValue_cost_coordForkOp_le` and §8.1. Both this in
 `(1 + ℓ(k−1)) · 𝔼[Γ]` bound it implies have been checked exhaustively at small parameters; neither
 is formalized.
 
-The missing Lean primitive is the per-element draw probability for `drawUntil` — only the expected
-*length* is available (`expectedValue_length_drawUntil`). Getting it needs the loop's
-exchangeability: permuting a pool within its accept classes leaves the law of the drawn set alone,
-so all accepting values of a column are equally likely to be drawn, as are all rejecting ones.
+The per-element draw probabilities that needs are now available. Getting them meant proving the
+loop exchangeable — relabelling a pool within its accept classes leaves the law alone, so all
+accepting values are equally likely to be drawn, as are all rejecting ones — which in turn rests on
+the loop being *uniform* over its outcomes:
 
-`evalDist_drawUntil_eq_map_drawAll` is the first step, and the reason exchangeability is reachable
-at all:
+```lean
+theorem probOutput_drawUntil (accept : S → Bool) (n : ℕ) :
+    ∀ (r : ℕ) (l : List S), l.length = n → l.Nodup →
+      ∀ d ∈ support (drawUntil accept r l),
+        Pr[= d | drawUntil accept r l] = ((n.descFactorial d.length : ℕ) : ℝ≥0∞)⁻¹
+```
+
+An outcome's weight depends only on how many draws it made — not on what was drawn, and not on the
+order the pool was presented in. `support_drawUntil_congr` then says two nodup pools with the same
+values admit the same runs, so `evalDist_drawUntil_congr` makes the whole law a function of the
+pool's *set* of values, and `map_mem_support_drawUntil` carries runs across a relabelling.
+`probEvent_mem_drawUntil_congr` is the payoff, and the two aggregate totals
+(`sum_probEvent_mem_drawUntil`, `sum_probEvent_mem_drawUntil_accept`) pin the individual
+probabilities down:
+
+```lean
+theorem probEvent_mem_drawUntil_mul_countP (accept : S → Bool) (r : ℕ) (l : List S)
+    (hnd : l.Nodup) {x : S} (hx : x ∈ l) (hacc : accept x) :
+    Pr[fun d => x ∈ d | drawUntil accept r l] * (l.countP accept : ℝ≥0∞)
+      = ((min r (l.countP accept) : ℕ) : ℝ≥0∞)
+```
+
+with `probEvent_mem_drawUntil_mul_countP_not` the rejecting counterpart, sharing out what the
+negative hypergeometric expectation leaves over. What remains for the composition is the column
+bound above and the weighted fork it feeds.
+
+`evalDist_drawUntil_eq_map_drawAll` is the reformulation that made the uniformity statement natural
+to find:
 
 ```lean
 theorem evalDist_drawUntil_eq_map_drawAll (accept : S → Bool) (n : ℕ) :

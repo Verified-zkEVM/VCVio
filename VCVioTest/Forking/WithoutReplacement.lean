@@ -81,6 +81,49 @@ example : takeUntil acceptLow 0 [2, 0, 3, 1] = [] := rfl
 /-- Drawing the whole pool is the loop that never spends its budget. -/
 example : drawAll pool3 = drawUntil (fun _ => false) 1 pool3 := rfl
 
+/-! ## Per-element draw probabilities -/
+
+/-- The single accepting value is certain to be drawn: the loop stops only when it has it, or when
+the pool is gone, and here the pool holds it. -/
+theorem probEvent_mem_drawUntil_pool3_zero :
+    Pr[fun d => (0 : Fin 3) ∈ d | drawUntil acceptZero 1 pool3] = 1 := by
+  have h := probEvent_mem_drawUntil_mul_countP acceptZero 1 pool3 (by decide)
+    (show (0 : Fin 3) ∈ pool3 from by decide) (by decide)
+  rw [show pool3.countP acceptZero = 1 from rfl] at h
+  simpa using h
+
+/-- Each of the two rejecting values is drawn half the time — the loop makes two draws on average
+and one of them is the accepting value. -/
+theorem probEvent_mem_drawUntil_pool3_one :
+    Pr[fun d => (1 : Fin 3) ∈ d | drawUntil acceptZero 1 pool3] = 1 / 2 := by
+  have h := probEvent_mem_drawUntil_mul_countP_not acceptZero 1 pool3 (by decide)
+    (show (1 : Fin 3) ∈ pool3 from by decide) (by decide)
+  rw [show pool3.countP (fun y => !acceptZero y) = 2 from rfl,
+    show pool3.countP acceptZero = 1 from rfl, show pool3.length = 3 from rfl,
+    expectedDraws_pool3, show ((min 1 1 : ℕ) : ℝ≥0∞) = 1 from by norm_num,
+    show (2 : ℝ≥0∞) = 1 + 1 from by norm_num] at h
+  rw [add_comm] at h
+  have h2 := (ENNReal.add_right_inj (by finiteness)).mp h
+  push_cast at h2
+  refine (ENNReal.eq_div_iff (by norm_num) (by finiteness)).mpr ?_
+  rw [mul_comm]
+  exact h2
+
+/-- **Exchangeability at concrete data.** The two rejecting values are drawn equally often. -/
+example : Pr[fun d => (1 : Fin 3) ∈ d | drawUntil acceptZero 1 pool3]
+    = Pr[fun d => (2 : Fin 3) ∈ d | drawUntil acceptZero 1 pool3] :=
+  probEvent_mem_drawUntil_congr acceptZero 1 pool3 (by decide) (by decide) (by decide) rfl
+
+/-- **The accept-class hypothesis is load-bearing.** Values the test tells apart are not
+exchangeable: the accepting one is certain, the rejecting one is not. -/
+theorem probEvent_mem_drawUntil_pool3_ne :
+    Pr[fun d => (0 : Fin 3) ∈ d | drawUntil acceptZero 1 pool3]
+      ≠ Pr[fun d => (1 : Fin 3) ∈ d | drawUntil acceptZero 1 pool3] := by
+  rw [probEvent_mem_drawUntil_pool3_zero, probEvent_mem_drawUntil_pool3_one]
+  intro h
+  rw [eq_comm, ENNReal.div_eq_one_iff (by norm_num) (by finiteness)] at h
+  norm_num at h
+
 /-! ## Exhaustion -/
 
 /-- The exhausting experiment stops after draining its one-element pool. -/

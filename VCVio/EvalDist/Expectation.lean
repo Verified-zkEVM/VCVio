@@ -88,6 +88,21 @@ theorem expectedValue_finsetSum {ι' : Type w} (mx : m α) (s : Finset ι') (g :
 
 omit [Monad m] in
 /-- Two computations with the same output distribution have the same expectations. -/
+theorem expectedValue_ite (mx : m α) (p : α → Prop) [DecidablePred p] (c : ℝ≥0∞) :
+    expectedValue mx (fun x => if p x then c else 0) = c * Pr[p | mx] := by
+  rw [expectedValue_def, probEvent_eq_tsum_ite, ← ENNReal.tsum_mul_left]
+  refine tsum_congr fun x => ?_
+  by_cases hx : p x <;> simp [hx, mul_comm]
+
+theorem expectedValue_congr_of_mem_support [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    [EvalDistCompatible m] (mx : m α) {g h : α → ℝ≥0∞}
+    (hgh : ∀ x ∈ support mx, g x = h x) : expectedValue mx g = expectedValue mx h := by
+  refine tsum_congr fun x => ?_
+  by_cases hx : x ∈ support mx
+  · rw [hgh x hx]
+  · rw [probOutput_eq_zero_of_not_mem_support hx, zero_mul, zero_mul]
+
+omit [Monad m] in
 theorem expectedValue_congr {mx my : m α} (h : ∀ x, Pr[= x | mx] = Pr[= x | my]) (g : α → ℝ≥0∞) :
     expectedValue mx g = expectedValue my g :=
   tsum_congr fun x => by rw [h x]
