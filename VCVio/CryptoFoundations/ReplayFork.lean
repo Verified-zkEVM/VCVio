@@ -427,7 +427,7 @@ def contextForkViewCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : 
 /-- Per-path continuation of `contextForkCollision`. Locate occurrence `s` on `path`; if it is
 present, resample the focused answer and report `some s` exactly when the fresh answer collides
 with the first completion's answer and the path already selected `s`. -/
-noncomputable def contextForkCollisionCont (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+def contextForkCollisionCont (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) (path : PFunctor.FreeM.Path main) :
     OracleComp spec (Option (Fin (qb i + 1))) :=
   match PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor) i main path s with
@@ -439,7 +439,7 @@ noncomputable def contextForkCollisionCont (main : OracleComp spec α) (qb : ι 
 
 /-- Equal focused answers form the sole collision branch removed by
 `guardedContextFork`. -/
-noncomputable def contextForkCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+def contextForkCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :
     OracleComp spec (Option (Fin (qb i + 1))) :=
   PFunctor.FreeM.withPath main >>= contextForkCollisionCont main qb i cf s

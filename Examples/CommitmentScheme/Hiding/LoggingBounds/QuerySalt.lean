@@ -68,13 +68,9 @@ lemma sum_querySaltCounts_eq_length [Fintype S]
               QueryLog.countQ log (fun t : (CMOracle M S C).Domain => t.2 = s) := by
         intro s
         by_cases h : s = entry.1.2
-        · simpa [h, Nat.add_comm] using
-            (show
-              QueryLog.countQ (entry :: log) (fun t : (CMOracle M S C).Domain => t.2 = s) =
-                (QueryLog.countQ log (fun t : (CMOracle M S C).Domain => t.2 = s) + 1) by
-              simp [QueryLog.countQ, QueryLog.getQ_cons, h])
+        · simp [QueryLog.countQ_cons, h, Nat.add_comm]
         · have h' : ¬ entry.1.2 = s := by simpa [eq_comm] using h
-          simp [QueryLog.countQ, QueryLog.getQ_cons, h, h']
+          simp [QueryLog.countQ_cons, h, h']
       calc
         (∑ s : S,
           QueryLog.countQ (entry :: log) (fun t : (CMOracle M S C).Domain => t.2 = s))
@@ -593,8 +589,9 @@ lemma wp_querySaltIndicator_prepend_eq_one
           QueryLog.countQ
             ((⟨t, u⟩ : (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) :: z.1.2)
             (fun t' : (CMOracle M S C).Domain => t'.2 = s) := by
-      simp [QueryLog.countQ, QueryLog.getQ_cons, hsalt]
-    simp [OracleComp.ProgramLogic.propInd, hpos]
+      rw [QueryLog.countQ_cons, if_pos hsalt]
+      omega
+    exact OracleComp.ProgramLogic.propInd_eq_one_iff.mpr hpos
   rw [hpost, OracleComp.ProgramLogic.wp_const]
 
 lemma wp_querySaltIndicator_prepend_eq_of_ne
@@ -644,7 +641,8 @@ lemma wp_querySaltIndicator_prepend_eq_of_ne
         OracleComp.ProgramLogic.propInd
           (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) := by
     funext z
-    simp [QueryLog.countQ, QueryLog.getQ_cons, hsalt, OracleComp.ProgramLogic.propInd]
+    simp only [Function.comp_apply]
+    rw [QueryLog.countQ_cons, if_neg hsalt]
   rw [hpost]
 
 lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entries
