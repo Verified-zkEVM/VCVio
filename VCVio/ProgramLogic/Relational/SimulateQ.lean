@@ -16,18 +16,41 @@ public import VCVio.OracleComp.SimSemantics.StateT.Basic
 /-!
 # Relational `simulateQ` Rules
 
-This file provides the highest-leverage theorems for game-hopping proofs:
-relational coupling through oracle simulation, and the "identical until bad" lemma.
+This file provides the highest-leverage theorems for game-hopping proofs: relational coupling
+through oracle simulation, the "identical until bad" fundamental lemma together with its
+ε-perturbed refinements, and accumulators that bound the bad-flag mass itself rather than
+carrying it as an unbounded remainder.
+
+## Main definitions
+
+- `expectedQuerySlack`: the expected total per-query slack accumulated over the charged queries
+  a computation fires, defined by recursion on the free monad. It supports state-dependent
+  per-step gaps through a slack function rather than a single uniform `ε`.
+- `expectedQuerySlackStep`: the single `query_bind` step of `expectedQuerySlack`.
+- `avgBadM`: the bad-flag mass of a run averaged against a bare state measure, with the
+  telescoping helpers `postStepJointM` and `postStepOutM`.
 
 ## Main results
 
-- `relTriple_simulateQ_run`: If two stateful oracle implementations are related by a state
+- `relTriple_simulateQ_run`: if two stateful oracle implementations are related by a state
   invariant and produce equal outputs, then simulating a computation with either implementation
-  preserves the invariant and output equality.
-- `relTriple_simulateQ_run'`: Projection that only asserts output equality.
-- `tvDist_simulateQ_le_probEvent_bad`: "Identical until bad" — if two oracle implementations
-  agree whenever a "bad" flag is unset, the TV distance between their simulations is bounded
-  by the probability of bad being set.
+  preserves the invariant and output equality. `relTriple_simulateQ_run_mono` drops the
+  equal-outputs requirement in exchange for a per-branch recoupling hypothesis, and
+  `relTriple_simulateQ_run'` projects onto output equality alone.
+- `relTriple_simulateQ_run_writerT`: the `WriterT` analogue, transporting a monoid congruence
+  on accumulated logs through the whole simulation.
+- `tvDist_simulateQ_le_probEvent_bad`: "identical until bad" — if two oracle implementations
+  agree whenever a "bad" flag is unset, the TV distance between their simulations is bounded by
+  the probability of bad being set. `tvDist_simulateQ_le_probEvent_output_bad` is the variant
+  whose flag lives in the output, and `identical_until_bad_with_flag` packages the common
+  `σ × Bool` shape.
+- `tvDist_simulateQ_le_qeps_plus_probEvent_output_bad` and
+  `tvDist_simulateQ_le_queryBound_mul_slack_plus_probEvent_bad`: ε-perturbed refinements, where
+  the two implementations may differ by up to `ε` on each (charged) query.
+- `ofReal_tvDist_simulateQ_le_expectedQuerySlack_plus_probEvent_output_bad`: the state-dependent
+  refinement, where the per-step gap is `ε s` and the bound is `expectedQuerySlack`.
+- `probEvent_bad_simulateQ_run_le_expectedQuerySlack`: a single-world accumulator bounding the
+  bad-flag mass directly by a resource-weighted query slack.
 -/
 
 @[expose] public section
@@ -44,9 +67,25 @@ variable {α : Type}
 
 /-! ## Relational simulateQ rules -/
 
-/-- Core relational `simulateQ` theorem with state invariant.
-If two oracle implementations produce equal outputs and preserve a state invariant `R_state`,
-then the full simulation also preserves the invariant and output equality. -/
+/-- **Core relational `simulateQ` rule.** If two stateful oracle implementations answer every
+query with equal outputs while preserving a state invariant `R_state`, then simulating any
+computation `oa` under either implementation preserves both: the two runs are coupled so that
+their outputs agree and their final states remain `R_state`-related.
+
+`R_state` is an arbitrary heterogeneous relation between the two state spaces `σ₁` and `σ₂`, not
+an equivalence on a shared one, so the two simulations may carry entirely different bookkeeping
+(a cache on one side against a lazily sampled table on the other, say).
+
+Applying it: all the probabilistic content sits in `himpl`, a per-query coupling that has to be
+re-established from `R_state s₁ s₂` alone; `oa` is universally quantified, so no hypothesis about
+the simulated program is needed. The postcondition constrains the full `(output, state)` pair,
+which is what `probEvent_le_of_relTriple_simulateQ_run` consumes to transport an event bound.
+
+`relTriple_simulateQ_run_mono` weakens `himpl` to let the two handlers return *different* answers,
+paying for it with a self-referential recoupling hypothesis on the continuation.
+`relTriple_simulateQ_run'` is this rule with the state component projected away, keeping only
+output equality, and `relTriple_simulateQ_run'_of_impl_evalDist_eq` specializes that to a shared
+state space with `Eq` as the invariant. -/
 theorem relTriple_simulateQ_run
     {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     [IsUniformSpec spec₁] [IsUniformSpec spec₂] {σ₁ σ₂ : Type}
@@ -65,14 +104,11 @@ theorem relTriple_simulateQ_run
       (fun p₁ p₂ => p₁.1 = p₂.1 ∧ R_state p₁.2 p₂.2) := by
   induction oa using OracleComp.inductionOn generalizing s₁ s₂ with
   | pure x =>
-    simp only [simulateQ_pure, StateT.run_pure, relTriple_iff_relWP,
-      MAlgRelOrdered.relWP_pure, true_and]
-    exact hs
+    simpa using hs
   | query_bind t oa ih =>
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
-      id_map, StateT.run_bind, relTriple_iff_relWP, relWP_iff_couplingPost]
-    exact (relTriple_bind (himpl t s₁ s₂ hs) (fun ⟨u₁, s₁'⟩ ⟨u₂, s₂'⟩ ⟨eq_u, hs'⟩ => by
-      dsimp at eq_u hs' ⊢; subst eq_u; exact ih u₁ s₁' s₂' hs')) trivial
+      id_map, StateT.run_bind]
+    exact relTriple_bind (himpl t s₁ s₂ hs) fun ⟨u₁, s₁'⟩ ⟨u₂, s₂'⟩ ⟨rfl, hs'⟩ => ih _ s₁' s₂' hs'
 
 /-- **Monotone relational `simulateQ`.** A generalization of `relTriple_simulateQ_run` that
 does *not* require equal per-query outputs. Instead, each per-query coupling must (a) preserve
@@ -108,24 +144,22 @@ theorem relTriple_simulateQ_run_mono
       ((simulateQ impl₂ oa).run s₂)
       (fun p₁ p₂ => R_state p₁.2 p₂.2) := by
   induction oa using OracleComp.inductionOn generalizing s₁ s₂ with
-  | pure x =>
-    simp only [simulateQ_pure, StateT.run_pure, relTriple_iff_relWP,
-      MAlgRelOrdered.relWP_pure]
-    exact hs
-  | query_bind t ob ih =>
+  | pure x => simpa using hs
+  | query_bind t ob _ =>
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
-      id_map, StateT.run_bind, relTriple_iff_relWP, relWP_iff_couplingPost]
-    refine (relTriple_bind (himpl t s₁ s₂ hs) ?_) trivial
-    rintro ⟨u₁, s₁'⟩ ⟨u₂, s₂'⟩ ⟨_, hcont⟩
-    exact hcont ob
+      id_map, StateT.run_bind]
+    -- the induction hypothesis is unused: `himpl`'s continuation clause recouples directly
+    exact relTriple_bind (himpl t s₁ s₂ hs) fun _ _ h => h.2 ob
 
 /-- **Marginal stochastic dominance from a coupling.** If `oa` and `ob` are related by a
 coupling whose post-relation `R` carries an event implication `P a → Q b`, then the marginal
 probability of `P` on the left is at most that of `Q` on the right. This is the one-sided
 (inequality) counterpart of `evalDist_map_eq_of_relTriple`: where the latter extracts a
 distributional equality from output equality, this extracts a probability inequality from an
-output implication. The proof reads off both marginals from the single coupling distribution
-`c` and applies pointwise monotonicity of `probEvent` on `c`. -/
+output implication.
+
+Applying it: `himp` is only demanded on pairs the coupling actually relates, so the tighter the
+post-relation carried by `h`, the weaker the implication that has to be supplied. -/
 theorem probEvent_le_of_relTriple_imp
     {ι₁ : Type u} {ι₂ : Type u}
     {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
@@ -138,17 +172,27 @@ theorem probEvent_le_of_relTriple_imp
     Pr[P | oa] ≤ Pr[Q | ob] := by
   rw [relTriple_iff_relWP, relWP_iff_couplingPost] at h
   obtain ⟨c, hc⟩ := h
-  have hfst : (Prod.fst <$> c.1 : SPMF α) = 𝒟[oa] := c.2.map_fst
-  have hsnd : (Prod.snd <$> c.1 : SPMF β) = 𝒟[ob] := c.2.map_snd
-  calc Pr[P | oa]
-      = Pr[P | (Prod.fst <$> c.1 : SPMF α)] := by rw [hfst]; rfl
-    _ = Pr[fun z => P z.1 | c.1] := probEvent_fst_map _ _
-    _ ≤ Pr[fun z => Q z.2 | c.1] :=
-        probEvent_mono fun z hz hPz => himp z.1 z.2 (hc z hz) hPz
-    _ = Pr[Q | (Prod.snd <$> c.1 : SPMF β)] := (probEvent_snd_map _ _).symm
-    _ = Pr[Q | ob] := by rw [hsnd]; rfl
+  -- read each marginal off the single coupling distribution `c`
+  change Pr[P | 𝒟[oa]] ≤ Pr[Q | 𝒟[ob]]
+  conv_lhs => rw [← c.2.map_fst, probEvent_fst_map]
+  conv_rhs => rw [← c.2.map_snd, probEvent_snd_map]
+  -- pointwise monotonicity of `probEvent` on `c`
+  exact probEvent_mono fun z hz => himp z.1 z.2 (hc z hz)
 
-/-- Projection: relational `simulateQ` preserving only output equality. -/
+/-- **Output-projected relational `simulateQ`.** Under the per-query coupling of
+`relTriple_simulateQ_run` — equal answers while the state invariant `R_state` is preserved — the
+two simulations of `oa` produce equal outputs, the final states being discarded by `run'`.
+
+The hypotheses are exactly those of `relTriple_simulateQ_run`, so all the probabilistic content
+still sits in `himpl`; only the conclusion changes shape, from a relation on `(output, state)`
+pairs to an `EqRel` between two plain computations. That is the form the transport lemmas
+`probOutput_eq_of_relTriple_eqRel` and `evalDist_eq_of_relTriple_eqRel` consume, so reach for it
+whenever the residual states are bookkeeping the statement should not mention; keep
+`relTriple_simulateQ_run` when the conclusion must still constrain them, since the projection
+cannot be undone. `rvcgen` applies this rule on its own, first specializing `R_state` to `Eq`.
+
+`relTriple_simulateQ_run'_of_impl_evalDist_eq` specializes it to a shared state space with `Eq`
+as the invariant, trading `himpl` for a per-query `evalDist` equality. -/
 theorem relTriple_simulateQ_run'
     {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     [IsUniformSpec spec₁] [IsUniformSpec spec₂] {σ₁ σ₂ : Type}
@@ -173,13 +217,20 @@ theorem relTriple_simulateQ_run'
     exact hp.1
   exact relTriple_map h_weak
 
-/-- `probEvent` monotonicity between two relational `simulateQ` runs. Simulating the same adversary
-`oa` under two `StateT` implementations related per query by `rState` (via
-`relTriple_simulateQ_run`), any event implication that holds along the run postcondition
-`z₁.1 = z₂.1 ∧ rState z₁.2 z₂.2` transports to `Pr[p | run impl₁] ≤ Pr[q | run impl₂]`. The
-`simulateQ` form of `probEvent_le_of_relTriple`; the events range over the full `(output, state)`
-pair, so it covers output events, state events, and their conjunctions over the two
-`(output, state)` spaces (the output type is shared; the state spaces `σ₁`/`σ₂` differ). -/
+/-- **Event bound through a relational `simulateQ` run.** If two `StateT` implementations answer
+every query with equal outputs while preserving the state invariant `rState` (hypothesis `himpl`),
+then any event implication valid along the run postcondition `z₁.1 = z₂.1 ∧ rState z₁.2 z₂.2`
+transports to a `probEvent` inequality between the two simulations of the same computation `oa`.
+
+Applying it: `himpl` is verbatim the per-query coupling `relTriple_simulateQ_run` demands, and
+`himp` receives output equality and the state relation as separate arguments rather than as one
+conjunction. The events range over full `(output, state)` pairs, so output events, state events
+and their conjunctions are all in scope (the output type `α` is shared; the state spaces `σ₁` and
+`σ₂` need not be).
+
+`probEvent_le_of_relTriple_imp` states the same event bound for an arbitrary coupling of two
+arbitrary computations; here the coupling is built from a per-query one, so no relational triple
+about `oa` itself has to be supplied. -/
 theorem probEvent_le_of_relTriple_simulateQ_run
     {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     [IsUniformSpec spec₁] [IsUniformSpec spec₂]
@@ -196,16 +247,28 @@ theorem probEvent_le_of_relTriple_simulateQ_run
     {p : α × σ₁ → Prop} {q : α × σ₂ → Prop}
     (himp : ∀ z₁ z₂, z₁.1 = z₂.1 → rState z₁.2 z₂.2 → p z₁ → q z₂) :
     Pr[p | (simulateQ impl₁ oa).run s₁] ≤ Pr[q | (simulateQ impl₂ oa).run s₂] :=
-  probEvent_le_of_relTriple
-    (relTriple_simulateQ_run impl₁ impl₂ rState oa himpl s₁ s₂ hs)
-    (fun z₁ z₂ h => himp z₁ z₂ h.1 h.2)
+  probEvent_le_of_relTriple (relTriple_simulateQ_run impl₁ impl₂ rState oa himpl s₁ s₂ hs)
+    fun z₁ z₂ h => himp z₁ z₂ h.1 h.2
 
 /-- Exact-distribution specialization of `relTriple_simulateQ_run'`.
 
 If corresponding oracle calls have identical full `(output, state)` distributions whenever the
 states are equal, then the simulated computations have identical output distributions. This
 packages the common pattern "prove per-query `evalDist` equality, then use `Eq` as the state
-invariant" into a single theorem. -/
+invariant" into a single theorem.
+
+Applying it leaves `himpl` as the only real side goal: `σ`, the two implementations and `oa` are
+fixed by unification against the conclusion, and `hs` is `rfl` whenever both runs start from the
+same state. `rvcgen` reaches for this rule on its own once both sides of an `EqRel` goal are `run'`
+simulations.
+
+The neighbouring rules tie the two state spaces together differently — `relTriple_simulateQ_run'`
+through an arbitrary state invariant plus a per-query relational triple, and
+`relTriple_simulateQ_run'_of_query_map_eq` through a projection of the first state space onto the
+second. Reach for this one when both simulations share a state space and per-query agreement is an
+equality of distributions rather than of computations. `OracleComp.evalDist_simulateQ_run_congr`
+draws the same conclusion as a bare `evalDist` equality on `run`, but only when both
+implementations also share the ambient spec they simulate into. -/
 theorem relTriple_simulateQ_run'_of_impl_evalDist_eq
     {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     [IsUniformSpec spec₁] [IsUniformSpec spec₂] {σ : Type}
@@ -218,11 +281,9 @@ theorem relTriple_simulateQ_run'_of_impl_evalDist_eq
     RelTriple
       ((simulateQ impl₁ oa).run' s₁)
       ((simulateQ impl₂ oa).run' s₂)
-      (EqRel α) := by
-  refine relTriple_simulateQ_run' impl₁ impl₂ Eq oa ?_ s₁ s₂ hs
-  intro t s₁ s₂ hs'
-  cases hs'
-  exact relTriple_of_evalDist_eq (himpl t s₁) (fun _ => ⟨rfl, rfl⟩)
+      (EqRel α) :=
+  relTriple_simulateQ_run' impl₁ impl₂ Eq oa
+    (fun t s _ h => h ▸ relTriple_of_evalDist_eq (himpl t s) fun _ => ⟨rfl, rfl⟩) s₁ s₂ hs
 
 /-! ### `WriterT` analogue -/
 
@@ -235,7 +296,17 @@ together with the accumulated-log relation.
 `hR_one` witnesses reflexivity at the empty accumulator (the run-start value), and `hR_mul`
 closes `R_writer` under the monoid multiplication used by `WriterT`'s bind. Together these make
 `R_writer` a *monoid congruence* on the two writer spaces, which is precisely the structural
-requirement for whole-program accumulation. -/
+requirement for whole-program accumulation.
+
+Applying it: `himpl` carries all of the probabilistic content, so discharge it first; `hR_one`
+and `hR_mul` are pure monoid bookkeeping. `hR_mul` is quantified over *all* pairs of logs, not
+only the reachable ones, so a relation that merely happens to hold along reachable runs will not
+serve — pick `R_writer` as weak as the downstream consumer tolerates.
+
+`relTriple_simulateQ_run_writerT_of_impl_eq` is the collapsed case where a single writer space is
+shared and the two handlers agree pointwise on `.run`, so the congruence degenerates to equality
+and no monoid hypotheses need supplying. `relTriple_simulateQ_run_writerT'` takes exactly these
+hypotheses but projects the conclusion onto output equality alone, discarding the log relation. -/
 theorem relTriple_simulateQ_run_writerT
     {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     [IsUniformSpec spec₁] [IsUniformSpec spec₂] {ω₁ ω₂ : Type} [Monoid ω₁] [Monoid ω₂]
@@ -254,23 +325,14 @@ theorem relTriple_simulateQ_run_writerT
       (simulateQ impl₂ oa).run
       (fun p₁ p₂ => p₁.1 = p₂.1 ∧ R_writer p₁.2 p₂.2) := by
   induction oa using OracleComp.inductionOn with
-  | pure x =>
-    simp only [simulateQ_pure, WriterT.run_pure, relTriple_iff_relWP,
-      MAlgRelOrdered.relWP_pure, true_and]
-    exact hR_one
+  | pure x => simpa using hR_one
   | query_bind t _ ih =>
-    simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-      OracleQuery.cont_query, id_map, WriterT.run_bind, relTriple_iff_relWP,
-      relWP_iff_couplingPost]
-    refine (relTriple_bind (himpl t) (fun ⟨u₁, w₁⟩ ⟨u₂, w₂⟩ ⟨eq_u, hw⟩ => ?_)) trivial
-    dsimp at eq_u hw ⊢
-    subst eq_u
-    have h_ih := ih u₁
-    refine relTriple_map
-      (R := fun (p₁ : α × ω₁) (p₂ : α × ω₂) => p₁.1 = p₂.1 ∧ R_writer p₁.2 p₂.2) ?_
-    refine relTriple_post_mono h_ih ?_
-    rintro ⟨a, v₁⟩ ⟨b, v₂⟩ ⟨hab, hv⟩
-    exact ⟨hab, hR_mul _ _ _ _ hw hv⟩
+    -- each `WriterT` bind multiplies the query's log into the continuation's, so `hR_mul`
+    -- rebuilds the coupling from the per-query relation and the induction hypothesis
+    simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
+      id_map, WriterT.run_bind]
+    exact relTriple_bind (himpl t) fun ⟨u₁, w₁⟩ ⟨u₂, w₂⟩ ⟨rfl, hw⟩ => relTriple_map
+      (relTriple_post_mono (ih _) fun _ _ ⟨hab, hv⟩ => ⟨hab, hR_mul _ _ _ _ hw hv⟩)
 
 /-- `WriterT` analogue of `relTriple_simulateQ_run_of_impl_eq_preservesInv`.
 
@@ -293,31 +355,19 @@ theorem relTriple_simulateQ_run_writerT_of_impl_eq
       (simulateQ impl₁ oa).run
       (simulateQ impl₂ oa).run
       (EqRel (α × ω)) := by
-  refine relTriple_post_mono
-    (relTriple_simulateQ_run_writerT (spec₁ := spec₁) (spec₂ := spec₁)
-      impl₁ impl₂ (fun (w₁ w₂ : ω) => w₁ = w₂) rfl ?_ oa ?_)
-    (fun _ _ h => Prod.ext_iff.mpr h)
-  · rintro w₁ w₁' w₂ w₂' rfl rfl; rfl
-  · intro t
-    rw [himpl_eq t]
-    apply (relTriple_iff_relWP
-      (oa := (impl₂ t).run) (ob := (impl₂ t).run)
-      (R := fun p₁ p₂ => p₁.1 = p₂.1 ∧ p₁.2 = p₂.2)).2
-    refine ⟨_root_.SPMF.Coupling.refl (𝒟[(impl₂ t).run]), ?_⟩
-    intro z hz
-    rcases (mem_support_bind_iff
-      (𝒟[(impl₂ t).run])
-      (fun a => (pure (a, a) : SPMF ((spec.Range t × ω) × (spec.Range t × ω)))) z).1 hz with
-      ⟨a, _ha, hz'⟩
-    have hzEq : z = (a, a) := by
-      simpa [support_pure, Set.mem_singleton_iff] using hz'
-    subst hzEq
-    exact ⟨rfl, rfl⟩
+  -- `WriterT.run` is the identity on the underlying computation, so pointwise agreement of the
+  -- two handlers' `.run`s already is equality of the handlers themselves
+  obtain rfl : impl₁ = impl₂ := QueryImpl.ext himpl_eq
+  exact relTriple_refl _
 
-/-- Output-probability projection of
-`relTriple_simulateQ_run_writerT_of_impl_eq`: two `WriterT` handlers with
-pointwise-equal `.run` yield identical `(output, accumulator)` probability
-distributions. -/
+/-- Output-probability projection of `relTriple_simulateQ_run_writerT_of_impl_eq`: two `WriterT`
+handlers with pointwise-equal `.run` yield identical `(output, accumulator)` probability
+distributions.
+
+Applying it: `z` ranges over the *joint* pair `α × ω`, so this equates the probability of an
+output together with its accumulated log, never the output marginal alone. Reach for
+`evalDist_simulateQ_run_writerT_eq_of_impl_eq` instead when the next step consumes the whole
+distribution rather than one point mass. -/
 theorem probOutput_simulateQ_run_writerT_eq_of_impl_eq
     {ι₁ : Type u}
     {spec₁ : OracleSpec ι₁} [IsUniformSpec spec₁]
@@ -329,8 +379,13 @@ theorem probOutput_simulateQ_run_writerT_eq_of_impl_eq
   probOutput_eq_of_relTriple_eqRel
     (relTriple_simulateQ_run_writerT_of_impl_eq impl₁ impl₂ himpl_eq oa) z
 
-/-- `evalDist` equality projection of
-`relTriple_simulateQ_run_writerT_of_impl_eq`. -/
+/-- Distribution-level projection of `relTriple_simulateQ_run_writerT_of_impl_eq`: two `WriterT`
+handlers that agree pointwise on `.run` send `oa` to one `(output, accumulator)` distribution.
+
+Applying it: `himpl_eq` carries the entire content, so discharge it first. The conclusion equates
+whole distributions, the shape a surrounding `bind`, `tvDist` or `probEvent` step rewrites with
+directly; `probOutput_simulateQ_run_writerT_eq_of_impl_eq` states the same fact one output pair at
+a time. The two are interderivable through `evalDist_ext`, so pick whichever matches the goal. -/
 theorem evalDist_simulateQ_run_writerT_eq_of_impl_eq
     {ι₁ : Type u}
     {spec₁ : OracleSpec ι₁} [IsUniformSpec spec₁]
@@ -339,10 +394,22 @@ theorem evalDist_simulateQ_run_writerT_eq_of_impl_eq
     (himpl_eq : ∀ (t : spec.Domain), (impl₁ t).run = (impl₂ t).run)
     (oa : OracleComp spec α) :
     𝒟[(simulateQ impl₁ oa).run] = 𝒟[(simulateQ impl₂ oa).run] :=
-  evalDist_eq_of_relTriple_eqRel
-    (relTriple_simulateQ_run_writerT_of_impl_eq impl₁ impl₂ himpl_eq oa)
+  evalDist_eq_of_relTriple_eqRel <|
+    relTriple_simulateQ_run_writerT_of_impl_eq impl₁ impl₂ himpl_eq oa
 
-/-- Projection of `relTriple_simulateQ_run_writerT` onto the output component. -/
+/-- Output projection of `relTriple_simulateQ_run_writerT`: the same monoid-congruence
+hypotheses couple the two `WriterT` simulations, but the conclusion retains only equality of the
+returned values, discarding the accumulated logs entirely.
+
+Applying it: the hypotheses are exactly those of `relTriple_simulateQ_run_writerT`, so `R_writer`
+must still be a monoid congruence even though it no longer appears in the conclusion — it is what
+carries the coupling across each bind. Reach for this form when the accumulator is bookkeeping
+(a query counter, a transcript) whose value is irrelevant downstream, and keep the unprojected
+rule when a later step still needs the log relation.
+
+Unlike `relTriple_simulateQ_run_writerT_of_impl_eq`, the two handlers here may differ, may run
+over different oracle specs, and may accumulate in different monoids; the price is the explicit
+congruence `R_writer` in place of a pointwise equality of handlers. -/
 theorem relTriple_simulateQ_run_writerT'
     {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     [IsUniformSpec spec₁] [IsUniformSpec spec₂] {ω₁ ω₂ : Type} [Monoid ω₁] [Monoid ω₂]
@@ -359,12 +426,10 @@ theorem relTriple_simulateQ_run_writerT'
     RelTriple
       (Prod.fst <$> (simulateQ impl₁ oa).run)
       (Prod.fst <$> (simulateQ impl₂ oa).run)
-      (EqRel α) := by
-  have h := relTriple_simulateQ_run_writerT impl₁ impl₂ R_writer hR_one hR_mul oa himpl
-  have hweak : RelTriple (simulateQ impl₁ oa).run (simulateQ impl₂ oa).run
-      (fun p₁ p₂ => (EqRel α) p₁.1 p₂.1) :=
-    relTriple_post_mono h (fun _ _ hp => hp.1)
-  exact relTriple_map hweak
+      (EqRel α) :=
+  relTriple_map (relTriple_post_mono
+    (relTriple_simulateQ_run_writerT impl₁ impl₂ R_writer hR_one hR_mul oa himpl)
+    fun _ _ hp => hp.1)
 
 /-- If two stateful oracle implementations agree on every query while `Inv` holds, and the
 second implementation preserves `Inv`, then the full simulations have identical `(output, state)`
@@ -489,9 +554,19 @@ theorem probOutput_simulateQ_run_eq_of_impl_eq_queryBound
         exact ih p.1 (cost t budget) (hcont p.1) p.2 (hpres₂ t s budget hs hcan p hp) z
       · simp [(probOutput_eq_zero_iff _ _).2 hp]
 
-/-- Relational transport corollary of `OracleComp.run'_simulateQ_eq_of_query_map_eq`
-(`SimSemantics/StateProjection.lean`): under the same per-step projection hypothesis, the two
-output distributions are related by equality. -/
+/-- Relational form of `OracleComp.run'_simulateQ_eq_of_query_map_eq`: if every oracle call under
+`impl₁` becomes the corresponding `impl₂` call after mapping the state along `proj`, then running
+`oa` from `s` under `impl₁` and from `proj s` under `impl₂` gives outputs related by equality.
+
+Registered as a `@[vcspec]` rule, so `rvcgen` / `rvcstep` can close an output-equality goal between
+two `StateT` simulations and leave `hproj` as the only side goal: the state spaces and `proj` are
+already determined by unification against the goal.
+
+The neighbouring rules tie the two state spaces together more loosely — `relTriple_simulateQ_run'`
+through an arbitrary state invariant plus a per-query relational triple, and
+`relTriple_simulateQ_run'_of_impl_evalDist_eq` through per-query `evalDist` equality on a shared
+state space. Reach for this one when the second implementation is the first one read through a
+state projection, so that `hproj` is an equality of computations rather than of distributions. -/
 theorem relTriple_simulateQ_run'_of_query_map_eq
     {ι : Type} {spec : OracleSpec ι} {σ₁ σ₂ : Type _}
     (impl₁ : QueryImpl spec (StateT σ₁ ProbComp))
@@ -503,28 +578,23 @@ theorem relTriple_simulateQ_run'_of_query_map_eq
       ((simulateQ impl₁ oa).run' s)
       ((simulateQ impl₂ oa).run' (proj s))
       (EqRel α) :=
-  relTriple_eqRel_of_eq
-    (OracleComp.run'_simulateQ_eq_of_query_map_eq impl₁ impl₂ proj hproj oa s)
+  relTriple_eqRel_of_eq <| OracleComp.run'_simulateQ_eq_of_query_map_eq impl₁ impl₂ proj hproj oa s
 
 /-! ## "Identical until bad" fundamental lemma -/
 
 variable [IsUniformSpec spec]
 
-private lemma probOutput_simulateQ_run_eq_zero_of_bad
-    {σ : Type}
-    (impl : QueryImpl spec (StateT σ (OracleComp spec)))
-    (bad : σ → Prop)
-    (h_mono : ∀ (t : spec.Domain) (s : σ), bad s →
-      ∀ x ∈ support ((impl t).run s), bad x.2)
-    (oa : OracleComp spec α) (s₀ : σ) (h_bad : bad s₀)
-    (x : α) (s : σ) (hs : ¬bad s) :
+/-- Bad states are absorbing: if `bad` is closed under the oracle answers of `impl` and the
+initial state `s₀` is bad, then `simulateQ impl oa` never returns a good final state. -/
+private lemma probOutput_simulateQ_run_eq_zero_of_bad {σ : Type}
+    (impl : QueryImpl spec (StateT σ (OracleComp spec))) (bad : σ → Prop)
+    (h_mono : ∀ (t : spec.Domain) (s : σ), bad s → ∀ x ∈ support ((impl t).run s), bad x.2)
+    (oa : OracleComp spec α) (s₀ : σ) (h_bad : bad s₀) (x : α) (s : σ) (hs : ¬bad s) :
     Pr[= (x, s) | (simulateQ impl oa).run s₀] = 0 := by
   induction oa using OracleComp.inductionOn generalizing s₀ with
   | pure a =>
-    rw [simulateQ_pure]
-    show Pr[= (x, s) | (pure a : StateT σ (OracleComp spec) α).run s₀] = 0
-    simp only [StateT.run_pure, probOutput_eq_zero_iff, support_pure, Set.mem_singleton_iff,
-      Prod.ext_iff, not_and]
+    simp only [simulateQ_pure, StateT.run_pure, probOutput_eq_zero_iff, support_pure,
+      Set.mem_singleton_iff, Prod.ext_iff, not_and]
     rintro rfl rfl
     exact hs h_bad
   | query_bind t oa ih =>
@@ -532,8 +602,7 @@ private lemma probOutput_simulateQ_run_eq_zero_of_bad
       id_map, StateT.run_bind, probOutput_eq_zero_iff, support_bind, Set.mem_iUnion, exists_prop,
       Prod.exists, not_exists, not_and]
     intro u s' h_mem
-    rw [← probOutput_eq_zero_iff]
-    exact ih u s' (h_mono t s₀ h_bad (u, s') h_mem)
+    exact (probOutput_eq_zero_iff _ _).1 (ih u s' (h_mono t s₀ h_bad (u, s') h_mem))
 
 private lemma probOutput_simulateQ_run_eq_of_not_bad
     {σ : Type}
@@ -562,55 +631,33 @@ private lemma probOutput_simulateQ_run_eq_of_not_bad
       rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum, h_agree t s₀ h_bad]
       exact tsum_congr (fun ⟨u, s'⟩ => by congr 1; exact ih u s')
 
-private lemma probEvent_not_bad_eq
-    {σ : Type}
+/-- Two implementations that agree away from `bad` and can never leave `bad` assign the same
+probability to the event that the simulation ends in a state that is not `bad`. -/
+private lemma probEvent_not_bad_eq {σ : Type}
     (impl₁ impl₂ : QueryImpl spec (StateT σ (OracleComp spec))) (bad : σ → Prop)
-    (h_agree : ∀ (t : spec.Domain) (s : σ), ¬bad s →
-      (impl₁ t).run s = (impl₂ t).run s)
-    (h_mono₁ : ∀ (t : spec.Domain) (s : σ), bad s →
-      ∀ x ∈ support ((impl₁ t).run s), bad x.2)
-    (h_mono₂ : ∀ (t : spec.Domain) (s : σ), bad s →
-      ∀ x ∈ support ((impl₂ t).run s), bad x.2)
-    (oa : OracleComp spec α) (s₀ : σ) :
-    Pr[ fun x => ¬bad x.2 | (simulateQ impl₁ oa).run s₀] =
-    Pr[ fun x => ¬bad x.2 | (simulateQ impl₂ oa).run s₀] := by
-  classical
-  rw [probEvent_eq_tsum_ite, probEvent_eq_tsum_ite]
-  refine tsum_congr (fun ⟨a, s⟩ => ?_)
-  split_ifs with h
-  · rfl
-  · exact probOutput_simulateQ_run_eq_of_not_bad impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀
-      a s h
+    (h_agree : ∀ (t : spec.Domain) (s : σ), ¬bad s → (impl₁ t).run s = (impl₂ t).run s)
+    (h_mono₁ : ∀ (t : spec.Domain) (s : σ), bad s → ∀ x ∈ support ((impl₁ t).run s), bad x.2)
+    (h_mono₂ : ∀ (t : spec.Domain) (s : σ), bad s → ∀ x ∈ support ((impl₂ t).run s), bad x.2)
+    (oa : OracleComp spec α) (s₀ : σ) : Pr[ fun x => ¬bad x.2 | (simulateQ impl₁ oa).run s₀] =
+      Pr[ fun x => ¬bad x.2 | (simulateQ impl₂ oa).run s₀] := by
+  rw [probEvent_eq_tsum_subtype, probEvent_eq_tsum_subtype]
+  exact tsum_congr fun ⟨⟨a, s⟩, h⟩ =>
+    probOutput_simulateQ_run_eq_of_not_bad impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀ a s h
 
-private lemma probEvent_bad_eq
-    {σ : Type}
+private lemma probEvent_bad_eq {σ : Type}
     (impl₁ impl₂ : QueryImpl spec (StateT σ (OracleComp spec))) (bad : σ → Prop)
-    (h_agree : ∀ (t : spec.Domain) (s : σ), ¬bad s →
-      (impl₁ t).run s = (impl₂ t).run s)
-    (h_mono₁ : ∀ (t : spec.Domain) (s : σ), bad s →
-      ∀ x ∈ support ((impl₁ t).run s), bad x.2)
-    (h_mono₂ : ∀ (t : spec.Domain) (s : σ), bad s →
-      ∀ x ∈ support ((impl₂ t).run s), bad x.2)
-    (oa : OracleComp spec α) (s₀ : σ) :
-    Pr[ bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀] =
-    Pr[ bad ∘ Prod.snd | (simulateQ impl₂ oa).run s₀] := by
+    (h_agree : ∀ (t : spec.Domain) (s : σ), ¬bad s → (impl₁ t).run s = (impl₂ t).run s)
+    (h_mono₁ : ∀ (t : spec.Domain) (s : σ), bad s → ∀ x ∈ support ((impl₁ t).run s), bad x.2)
+    (h_mono₂ : ∀ (t : spec.Domain) (s : σ), bad s → ∀ x ∈ support ((impl₂ t).run s), bad x.2)
+    (oa : OracleComp spec α) (s₀ : σ) : Pr[bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀] =
+      Pr[bad ∘ Prod.snd | (simulateQ impl₂ oa).run s₀] := by
+  -- neither run can fail, so the flagged and unflagged masses sum to `1` on each side
   have h1 := probEvent_compl ((simulateQ impl₁ oa).run s₀) (bad ∘ Prod.snd)
   have h2 := probEvent_compl ((simulateQ impl₂ oa).run s₀) (bad ∘ Prod.snd)
-  simp only [NeverFail.probFailure_eq_zero, tsub_zero] at h1 h2
-  have h_not_bad := probEvent_not_bad_eq impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀
-  have h_not_bad' : Pr[ fun x => ¬(bad ∘ Prod.snd) x | (simulateQ impl₁ oa).run s₀] =
-      Pr[ fun x => ¬(bad ∘ Prod.snd) x | (simulateQ impl₂ oa).run s₀] :=
-    h_not_bad
-  have hne : Pr[ fun x => ¬(bad ∘ Prod.snd) x | (simulateQ impl₁ oa).run s₀] ≠ ⊤ :=
-    ne_top_of_le_ne_top one_ne_top probEvent_le_one
-  calc Pr[ bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀]
-      = 1 - Pr[ fun x => ¬(bad ∘ Prod.snd) x | (simulateQ impl₁ oa).run s₀] := by
-        rw [← h1]; exact (ENNReal.add_sub_cancel_right hne).symm
-    _ = 1 - Pr[ fun x => ¬(bad ∘ Prod.snd) x | (simulateQ impl₂ oa).run s₀] := by
-        rw [h_not_bad']
-    _ = Pr[ bad ∘ Prod.snd | (simulateQ impl₂ oa).run s₀] := by
-        rw [← h2]; exact ENNReal.add_sub_cancel_right
-          (ne_top_of_le_ne_top one_ne_top probEvent_le_one)
+  simp only [NeverFail.probFailure_eq_zero, tsub_zero, Function.comp_apply] at h1 h2
+  -- the unflagged masses already agree; complementation transports that to the flagged ones
+  rw [ENNReal.eq_sub_of_add_eq probEvent_ne_top h1, ENNReal.eq_sub_of_add_eq probEvent_ne_top h2,
+    probEvent_not_bad_eq impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀]
 
 omit [IsUniformSpec spec] in
 /-- **Marginal stochastic dominance through `simulateQ` (self-referential / Fubini form).**
@@ -632,7 +679,15 @@ isolates from the free-monad bookkeeping.
 
 The base hypothesis `h_base` (`R s₁ s₂ → bad₁ s₁ → bad₂ s₂`) discharges the `pure` leaf, where no
 further step can repair the bad flag: there the bad marginal is exactly the indicator of the
-current state, so `R` must already carry the bad implication. -/
+current state, so `R` must already carry the bad implication.
+
+Applying it: `h_step` carries the entire probabilistic obligation, and it is quantified over
+*arbitrary* tails, so it may be discharged query-by-query — trivially wherever the two handlers
+agree, and by the marginal draw-commutation at the one query where they diverge. Reach instead
+for the sibling `probEvent_dist_simulateQ_mono` when no pointwise state relation exists at all:
+that version uses a relation on the two *run distributions*, which applies when the successor
+states are related only through a coupling over a deferred draw, at the price of also having to
+seed the relation at every `pure` leaf. -/
 theorem probEvent_marginal_simulateQ_mono
     {ι₁ : Type u} {ι₂ : Type u}
     {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
@@ -656,24 +711,15 @@ theorem probEvent_marginal_simulateQ_mono
   classical
   induction oa using OracleComp.inductionOn generalizing s₁ s₂ with
   | pure a =>
-    simp only [simulateQ_pure, StateT.run_pure]
     -- both sides are point masses on `(a, s₁)` / `(a, s₂)`; reduce to the base implication.
+    simp only [simulateQ_pure, StateT.run_pure, probEvent_pure]
     by_cases hb : bad₁ s₁
-    · have hb₂ : bad₂ s₂ := h_base s₁ s₂ hR hb
-      calc Pr[fun z => bad₁ z.2 | (pure (a, s₁) : OracleComp spec₁ (α × σ₁))]
-          ≤ 1 := probEvent_le_one
-        _ = Pr[fun z => bad₂ z.2 | (pure (a, s₂) : OracleComp spec₂ (α × σ₂))] := by
-            rw [probEvent_pure]; simp [hb₂]
-    · rw [probEvent_pure]
-      simp [hb]
+    · simp [hb, h_base s₁ s₂ hR hb]
+    · simp [hb]
   | query_bind t ob ih =>
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
       id_map, StateT.run_bind]
-    refine h_step t s₁ s₂ hR
-      (fun p => (simulateQ impl₁ (ob p.1)).run p.2)
-      (fun p => (simulateQ impl₂ (ob p.1)).run p.2) ?_
-    intro u s₁' s₂' hR'
-    exact ih u s₁' s₂' hR'
+    exact h_step t s₁ s₂ hR _ _ ih
 
 omit [IsUniformSpec spec] in
 /-- **Distribution-level stochastic dominance through `simulateQ`.**
@@ -688,21 +734,20 @@ keys into its state versus a deferred-sampling handler that only carries a pendi
 no pointwise state predicate relates the two successor states yet the two run distributions are
 related by a coupling over the deferred draw.
 
-The induction is pure free-monad bookkeeping; the entire probabilistic content is isolated into the
-two premises:
+The entire probabilistic content is isolated into the three premises:
 
 * `h_pure` seeds the relation at the `pure` leaves (the run distributions are the two point masses
   `pure (a, s₁)` / `pure (a, s₂)`);
 * `h_bind` is the distribution-level bind congruence: given a query `t` and any two tails `k₁ k₂`
   whose per-output continuations are already `Rrun`-related, the one-step runs followed by those
   tails are again `Rrun`-related. Discharging `h_bind` at a divergent step *is* the marginal
-  draw-commutation, the hard content this lemma isolates.
+  draw-commutation, the hard content this lemma isolates;
+* `h_bad` reads the ordered bad marginals off any `Rrun`-related pair of run distributions.
 
-Once the relation is established along the whole run, `h_bad` reads off the ordered bad marginals.
-
-`s₁ : σ₁`, `s₂ : σ₂` are the initial states and `hbase : Rrun (pure …) …`-free: instead the
-seed is supplied through `h_pure`, applied at the actual reachable leaves during the induction, so
-no separate base hypothesis on `s₁ s₂` is required beyond what `h_pure`/`h_bind` carry. -/
+Applying it: nothing relates the initial states `s₁ s₂`, because `h_pure` is quantified over *all*
+leaves and so already seeds `Rrun` wherever the induction reaches one. That is the trade against
+`probEvent_marginal_simulateQ_mono`, which seeds only from its `R`-related base but must then
+exhibit a pointwise `R` relating the successor states at every step. -/
 theorem probEvent_dist_simulateQ_mono
     {ι₁ : Type u} {ι₂ : Type u}
     {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
@@ -724,16 +769,14 @@ theorem probEvent_dist_simulateQ_mono
     (oa : OracleComp spec α) (s₁ : σ₁) (s₂ : σ₂) :
     Pr[fun z => bad₁ z.2 | (simulateQ impl₁ oa).run s₁] ≤
       Pr[fun z => bad₂ z.2 | (simulateQ impl₂ oa).run s₂] := by
-  classical
+  -- the induction is pure free-monad bookkeeping; `h_bad` reads the marginals off `Rrun`
   refine h_bad _ _ ?_
   induction oa using OracleComp.inductionOn generalizing s₁ s₂ with
   | pure a =>
-    simp only [simulateQ_pure, StateT.run_pure]
-    exact h_pure a s₁ s₂
+    -- both run distributions are the point masses `pure (a, s₁)` / `pure (a, s₂)`
+    simpa using h_pure a s₁ s₂
   | query_bind t ob ih =>
-    simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
-      id_map, StateT.run_bind]
-    exact h_bind t s₁ s₂ _ _ (fun u s₁' s₂' => ih u s₁' s₂')
+    simpa using h_bind t s₁ s₂ _ _ ih
 
 /-- The fundamental lemma of game playing: if two oracle implementations agree whenever
 a "bad" flag is unset, then the total variation distance between the two simulations
@@ -761,26 +804,21 @@ theorem tvDist_simulateQ_le_probEvent_bad
     tvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
       ≤ Pr[ bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀].toReal := by
   classical
-  have _hs₀ : ¬bad s₀ := h_init
+  have := h_init -- unused in the bound: `bad s₀` would already force the right-hand side to `1`
   let sim₁ := (simulateQ impl₁ oa).run s₀
   let sim₂ := (simulateQ impl₂ oa).run s₀
-  have h_eq : ∀ (x : α) (s : σ), ¬bad s →
-      Pr[= (x, s) | sim₁] = Pr[= (x, s) | sim₂] :=
-    fun x s hs => probOutput_simulateQ_run_eq_of_not_bad impl₁ impl₂ bad h_agree
-      h_mono₁ h_mono₂ oa s₀ x s hs
-  have h_bad_eq : Pr[ bad ∘ Prod.snd | sim₁] = Pr[ bad ∘ Prod.snd | sim₂] :=
-    probEvent_bad_eq impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀
-  have h_tv_joint : tvDist sim₁ sim₂ ≤ Pr[ bad ∘ Prod.snd | sim₁].toReal :=
-    tvDist_le_probEvent_of_probOutput_eq_of_not (mx := sim₁) (my := sim₂) (bad ∘ Prod.snd)
-      (fun xs hxs => by
-        rcases xs with ⟨x, s⟩
-        simpa using h_eq x s hxs)
-      h_bad_eq
-  have h_map :
-      tvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤ tvDist sim₁ sim₂ := by
-    rw [StateT.run']
-    exact tvDist_map_le (m := OracleComp spec) (α := α × σ) (β := α) Prod.fst sim₁ sim₂
-  exact le_trans h_map h_tv_joint
+  calc tvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
+      ≤ tvDist sim₁ sim₂ := by
+        rw [StateT.run']
+        exact tvDist_map_le (m := OracleComp spec) (α := α × σ) (β := α) Prod.fst sim₁ sim₂
+    -- two-sided monotonicity rules out bad-to-non-bad transitions: the two runs put equal mass
+    -- on every non-bad `(x, s)`
+    _ ≤ Pr[ bad ∘ Prod.snd | sim₁].toReal :=
+        tvDist_le_probEvent_of_probOutput_eq_of_not (mx := sim₁) (my := sim₂) (bad ∘ Prod.snd)
+          (fun ⟨x, s⟩ hxs => by
+            simpa using probOutput_simulateQ_run_eq_of_not_bad impl₁ impl₂ bad h_agree
+              h_mono₁ h_mono₂ oa s₀ x s hxs)
+          (probEvent_bad_eq impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀)
 
 /-! ## Distributional "identical until bad"
 
@@ -849,36 +887,21 @@ private lemma probEvent_not_bad_eq_dist
   · exact probOutput_simulateQ_run_eq_of_not_bad_dist impl₁ impl₂ bad h_agree_dist h_mono₁ h_mono₂
       oa s₀ a s h
 
-open scoped Classical in
-private lemma probEvent_bad_eq_dist
-    {σ : Type}
+private lemma probEvent_bad_eq_dist {σ : Type}
     (impl₁ impl₂ : QueryImpl spec (StateT σ (OracleComp spec))) (bad : σ → Prop)
     (h_agree_dist : ∀ (t : spec.Domain) (s : σ), ¬bad s →
       ∀ p, Pr[= p | (impl₁ t).run s] = Pr[= p | (impl₂ t).run s])
-    (h_mono₁ : ∀ (t : spec.Domain) (s : σ), bad s →
-      ∀ x ∈ support ((impl₁ t).run s), bad x.2)
-    (h_mono₂ : ∀ (t : spec.Domain) (s : σ), bad s →
-      ∀ x ∈ support ((impl₂ t).run s), bad x.2)
-    (oa : OracleComp spec α) (s₀ : σ) :
-    Pr[bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀] =
-    Pr[bad ∘ Prod.snd | (simulateQ impl₂ oa).run s₀] := by
+    (h_mono₁ : ∀ (t : spec.Domain) (s : σ), bad s → ∀ x ∈ support ((impl₁ t).run s), bad x.2)
+    (h_mono₂ : ∀ (t : spec.Domain) (s : σ), bad s → ∀ x ∈ support ((impl₂ t).run s), bad x.2)
+    (oa : OracleComp spec α) (s₀ : σ) : Pr[bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀] =
+      Pr[bad ∘ Prod.snd | (simulateQ impl₂ oa).run s₀] := by
+  -- neither run can fail, so the flagged and unflagged masses sum to `1` on each side
   have h1 := probEvent_compl ((simulateQ impl₁ oa).run s₀) (bad ∘ Prod.snd)
   have h2 := probEvent_compl ((simulateQ impl₂ oa).run s₀) (bad ∘ Prod.snd)
-  simp only [NeverFail.probFailure_eq_zero, tsub_zero] at h1 h2
-  have h_not_bad := probEvent_not_bad_eq_dist impl₁ impl₂ bad h_agree_dist h_mono₁ h_mono₂ oa s₀
-  have h_not_bad' : Pr[fun x => ¬(bad ∘ Prod.snd) x | (simulateQ impl₁ oa).run s₀] =
-      Pr[fun x => ¬(bad ∘ Prod.snd) x | (simulateQ impl₂ oa).run s₀] :=
-    h_not_bad
-  have hne : Pr[fun x => ¬(bad ∘ Prod.snd) x | (simulateQ impl₁ oa).run s₀] ≠ ⊤ :=
-    ne_top_of_le_ne_top (by simp) probEvent_le_one
-  calc Pr[bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀]
-      = 1 - Pr[fun x => ¬(bad ∘ Prod.snd) x | (simulateQ impl₁ oa).run s₀] := by
-        rw [← h1]; exact (ENNReal.add_sub_cancel_right hne).symm
-    _ = 1 - Pr[fun x => ¬(bad ∘ Prod.snd) x | (simulateQ impl₂ oa).run s₀] := by
-        rw [h_not_bad']
-    _ = Pr[bad ∘ Prod.snd | (simulateQ impl₂ oa).run s₀] := by
-        rw [← h2]; exact ENNReal.add_sub_cancel_right
-          (ne_top_of_le_ne_top (by simp) probEvent_le_one)
+  simp only [NeverFail.probFailure_eq_zero, tsub_zero, Function.comp_apply] at h1 h2
+  -- the unflagged masses already agree; complementation transports that to the flagged ones
+  rw [ENNReal.eq_sub_of_add_eq probEvent_ne_top h1, ENNReal.eq_sub_of_add_eq probEvent_ne_top h2,
+    probEvent_not_bad_eq_dist impl₁ impl₂ bad h_agree_dist h_mono₁ h_mono₂ oa s₀]
 
 open scoped Classical in
 /-- Distributional variant of `tvDist_simulateQ_le_probEvent_bad`:
@@ -1044,13 +1067,26 @@ theorem tvDist_simulateQ_le_probEvent_output_bad
       (fun z : α × σ × Bool => z.2.2 = true) h_eq
       (probEvent_output_bad_eq impl₁ impl₂ h_agree_good h_mono₁ h_mono₂ oa s₀)
 
-/-- Ergonomic wrapper of `tvDist_simulateQ_le_probEvent_output_bad` for the very common case
-where the underlying oracle implementations live in `StateT σ (OracleComp spec)` and have been
-*lifted* to `StateT (σ × Bool) (OracleComp spec)` by attaching a bad flag.
+/-- **Fundamental lemma of game playing**, in the "identical until bad" form where the
+simulation state is `σ × Bool` and the `Bool` component is the bad flag: the TV distance between
+the output marginals of the two simulations is at most the probability that the flag is set at
+the end of the run of `impl₁`.
 
-This is the exact shape consumed by the `QueryImpl.withProgramming` collision-bound argument:
-the impls agree on `(s, false)` input *modulo* the rare programming-fired step, and the bound
-is the probability of any policy hit during the run. -/
+`h_agree_good` constrains only those single-step transitions that both start *and* end unflagged,
+so the two implementations may disagree arbitrarily on the very step that raises the flag.
+`h_mono₁` and `h_mono₂` say neither implementation ever lowers the flag again, which is what lets
+an unflagged endpoint witness an entirely unflagged history.
+
+Applying it: `impl₂` does not occur on the right-hand side, so instantiate `impl₁` as the world
+whose flag mass you can bound; the remaining obligation is a `Pr[… z.2.2 = true …]` estimate in
+that world alone. This is the shape the `QueryImpl.withProgramming` collision bound is stated in:
+the two implementations agree on `(s, false)` inputs except on a programming-fired step, and the
+bound is the probability that some policy hit occurs during the run.
+
+`tvDist_simulateQ_le_probEvent_bad` instead takes an arbitrary state predicate `bad : σ → Prop`
+and asks the implementations to agree *definitionally* on unflagged states, while
+`tvDist_simulateQ_le_probEvent_output_bad` carries exactly the hypotheses and conclusion below
+under a name spelling out the inequality rather than the cryptographic idiom. -/
 theorem identical_until_bad_with_flag
     {σ : Type}
     (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec)))
@@ -1182,7 +1218,15 @@ non-bad output transition from a non-bad input state (`h_agree_good`) and are ba
 monotone (`h_mono₁`, `h_mono₂`) flip the output bad flag with *exactly the same*
 probability. This is the equality counterpart of `tvDist_simulateQ_run_le_probEvent_output_bad`
 (which bounds only the TV distance): the bad marginals coincide because the two runs differ
-only on the already-bad trajectory, where both flags read `true`. -/
+only on the already-bad trajectory, where both flags read `true`.
+
+Applying it: because the conclusion is an equality, a bound on the flag probability proved in
+either world transports to the other, which is what lets the TV-distance results in this
+section quantify the loss against `impl₁` alone.
+
+Pinning the inner monad to the simulated spec itself gives the same statement over
+`OracleComp spec`; that same-spec form is the private `probEvent_output_bad_eq` earlier in this
+file, which backs `tvDist_simulateQ_le_probEvent_output_bad`. -/
 theorem probEvent_output_bad_eq'
     (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (h_agree_good : ∀ (t : spec.Domain) (s : σ) (u : spec.Range t) (s' : σ),
@@ -1191,8 +1235,7 @@ theorem probEvent_output_bad_eq'
     (h_mono₁ : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = true →
       ∀ z ∈ support ((impl₁ t).run p), z.2.2 = true)
     (h_mono₂ : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = true →
-      ∀ z ∈ support ((impl₂ t).run p), z.2.2 = true)
-    (oa : OracleComp spec α) (s₀ : σ) :
+      ∀ z ∈ support ((impl₂ t).run p), z.2.2 = true) (oa : OracleComp spec α) (s₀ : σ) :
     Pr[fun z : α × σ × Bool => z.2.2 = true | (simulateQ impl₁ oa).run (s₀, false)] =
       Pr[fun z : α × σ × Bool => z.2.2 = true | (simulateQ impl₂ oa).run (s₀, false)] := by
   set sim₁ := (simulateQ impl₁ oa).run (s₀, false)
@@ -1200,28 +1243,20 @@ theorem probEvent_output_bad_eq'
   have h₁ := probEvent_compl sim₁ (fun z : α × σ × Bool => z.2.2 = true)
   have h₂ := probEvent_compl sim₂ (fun z : α × σ × Bool => z.2.2 = true)
   simp only [NeverFail.probFailure_eq_zero, tsub_zero] at h₁ h₂
+  -- both runs put equal mass on every unflagged endpoint, hence on the unflagged event
   have h_not_eq :
       Pr[fun z : α × σ × Bool => ¬z.2.2 = true | sim₁] =
         Pr[fun z : α × σ × Bool => ¬z.2.2 = true | sim₂] := by
     rw [probEvent_eq_tsum_ite, probEvent_eq_tsum_ite]
     refine tsum_congr ?_
-    rintro ⟨a, s, b⟩
-    by_cases hb : b = true
-    · simp [hb]
-    · have hb' : b = false := by cases b <;> simp_all
-      subst hb'
-      simpa using
-        probOutput_simulateQ_run_eq_of_not_output_bad' impl₁ impl₂ h_agree_good
-          h_mono₁ h_mono₂ oa s₀ a s
-  have hne₁ : Pr[fun z : α × σ × Bool => ¬z.2.2 = true | sim₁] ≠ ⊤ :=
-    ne_top_of_le_ne_top one_ne_top probEvent_le_one
-  calc Pr[fun z : α × σ × Bool => z.2.2 = true | sim₁]
-      = 1 - Pr[fun z : α × σ × Bool => ¬z.2.2 = true | sim₁] := by
-        rw [← h₁]; exact (ENNReal.add_sub_cancel_right hne₁).symm
-    _ = 1 - Pr[fun z : α × σ × Bool => ¬z.2.2 = true | sim₂] := by rw [h_not_eq]
-    _ = Pr[fun z : α × σ × Bool => z.2.2 = true | sim₂] := by
-        rw [← h₂]; exact ENNReal.add_sub_cancel_right
-          (ne_top_of_le_ne_top one_ne_top probEvent_le_one)
+    rintro ⟨a, s, _ | _⟩
+    · simpa using probOutput_simulateQ_run_eq_of_not_output_bad' impl₁ impl₂ h_agree_good
+        h_mono₁ h_mono₂ oa s₀ a s
+    · simp
+  -- cancel that common unflagged mass in `flagged + unflagged = 1` on both sides
+  rw [h_not_eq] at h₁
+  exact (ENNReal.add_left_inj (ne_top_of_le_ne_top one_ne_top probEvent_le_one)).mp <|
+    h₁.trans h₂.symm
 
 /-- "Identical until bad" with an output bad flag, on the **joint** output-and-state
 distribution, with the inner monad over an arbitrary uniform spec `spec'`.
@@ -1490,41 +1525,42 @@ private theorem tvDist_simulateQ_run_le_qeps_plus_probEvent_output_bad_aux
 
 /-- **ε-perturbed identical-until-bad with output bad flag.**
 
-If two stateful oracle implementations are ε-CLOSE in TV distance per step on the no-bad
-path (instead of exactly equal as in `tvDist_simulateQ_le_probEvent_output_bad`), and the
-computation makes at most `q` queries, then the TV distance between the two simulations
-is bounded by `q*ε + Pr[bad]`.
+If two stateful oracle implementations are `ε`-close in TV distance per step on the no-bad
+path (rather than exactly equal, as in `tvDist_simulateQ_le_probEvent_output_bad`), and `oa`
+makes at most `q` queries, then the TV distance between the two simulated output
+distributions is at most `q * ε + Pr[bad]`, the bad probability being that of `impl₁`
+finishing with its flag set.
 
-Only `impl₁` requires bad-flag monotonicity (since the bound uses `Pr[bad | sim₁]`); the
-"true" branch in the inductive proof exploits monotonicity to push `Pr[bad | sim₁] = 1`
-which dominates the trivial `tvDist ≤ 1` bound.
+Only `impl₁` needs bad-flag monotonicity, since the bad probability on the right is read off
+`impl₁`; beyond `h_step_tv` the implementation `impl₂` is unconstrained, and the two may
+diverge arbitrarily once the flag is set. At `ε = 0` the bound degenerates to the exact one
+of `tvDist_simulateQ_le_probEvent_output_bad`, which phrases per-step agreement as an
+equality of good-transition probabilities and constrains `impl₂` as well.
 
-The `ε = 0` case recovers the existing identical-until-bad bound (modulo the upgraded
-agreement hypothesis from definitional equality to TV-distance equality, which is
-equivalent for distributions over the same type). -/
+When applying: the left-hand side compares output marginals (`StateT.run'`) while the right
+reads the flag off the joint run (`StateT.run`), which is what keeps the bad event
+observable; `q` is implicit and is fixed by `h_qb`, which charges *every* query, so `q` is a
+total query count.
+
+Two nearby refinements weaken the uniform factor `q * ε`:
+`tvDist_simulateQ_le_queryBound_mul_slack_plus_probEvent_bad` charges only the queries in a
+designated subset (the rest being pointwise equal), and
+`ofReal_tvDist_simulateQ_le_expectedQuerySlack_plus_probEvent_output_bad` uses a state-dependent
+slack and bounds it through `expectedQuerySlack` in `ℝ≥0∞`. -/
 theorem tvDist_simulateQ_le_qeps_plus_probEvent_output_bad
-    (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    {ε : ℝ} (hε : 0 ≤ ε)
+    (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec'))) {ε : ℝ} (hε : 0 ≤ ε)
     (h_step_tv : ∀ (t : spec.Domain) (s : σ),
       tvDist ((impl₁ t).run (s, false)) ((impl₂ t).run (s, false)) ≤ ε)
     (h_mono₁ : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = true →
-      ∀ z ∈ support ((impl₁ t).run p), z.2.2 = true)
-    (oa : OracleComp spec α) {q : ℕ}
+      ∀ z ∈ support ((impl₁ t).run p), z.2.2 = true) (oa : OracleComp spec α) {q : ℕ}
     (h_qb : OracleComp.IsTotalQueryBound oa q) (s₀ : σ) :
-    tvDist ((simulateQ impl₁ oa).run' (s₀, false))
-        ((simulateQ impl₂ oa).run' (s₀, false))
+    tvDist ((simulateQ impl₁ oa).run' (s₀, false)) ((simulateQ impl₂ oa).run' (s₀, false))
       ≤ q * ε + Pr[fun z : α × σ × Bool => z.2.2 = true |
-          (simulateQ impl₁ oa).run (s₀, false)].toReal := by
-  have h_joint :
-      tvDist ((simulateQ impl₁ oa).run (s₀, false)) ((simulateQ impl₂ oa).run (s₀, false))
-        ≤ q * ε + Pr[fun z : α × σ × Bool => z.2.2 = true |
-            (simulateQ impl₁ oa).run (s₀, false)].toReal :=
-    tvDist_simulateQ_run_le_qeps_plus_probEvent_output_bad_aux
-      impl₁ impl₂ hε h_step_tv h_mono₁ oa h_qb (s₀, false)
-  refine le_trans ?_ h_joint
-  rw [StateT.run']
-  exact tvDist_map_le (m := OracleComp spec') (α := α × σ × Bool) (β := α) Prod.fst
-    ((simulateQ impl₁ oa).run (s₀, false)) ((simulateQ impl₂ oa).run (s₀, false))
+          (simulateQ impl₁ oa).run (s₀, false)].toReal :=
+  -- Discard the state through the data-processing inequality for `Prod.fst`, then bound the
+  -- joint (output, state, flag) distributions by the inductive lemma.
+  (tvDist_map_le Prod.fst _ _).trans (tvDist_simulateQ_run_le_qeps_plus_probEvent_output_bad_aux
+    impl₁ impl₂ hε h_step_tv h_mono₁ oa h_qb (s₀, false))
 
 end IdenticalUntilBadEpsilon
 
@@ -1733,30 +1769,24 @@ output-and-state distribution, with no bad-flag plumbing in the state. -/
 /-- Bound the weighted TV sum from `tvDist_bind_left_le` by a uniform pointwise constant:
 the output weights sum to at most one, so the weighted average of per-continuation TV
 distances is at most any uniform bound on them. -/
-private lemma tsum_probOutput_mul_tvDist_le_const
-    {β γ : Type} (mx : OracleComp spec' β) (f₁ f₂ : β → OracleComp spec' γ)
-    {c : ℝ} (hc : 0 ≤ c) (h_le : ∀ z : β, tvDist (f₁ z) (f₂ z) ≤ c) :
+private lemma tsum_probOutput_mul_tvDist_le_const {β γ : Type} (mx : OracleComp spec' β)
+    (f₁ f₂ : β → OracleComp spec' γ) {c : ℝ} (hc : 0 ≤ c)
+    (h_le : ∀ z : β, tvDist (f₁ z) (f₂ z) ≤ c) :
     (∑' z : β, Pr[= z | mx].toReal * tvDist (f₁ z) (f₂ z)) ≤ c := by
-  have h_p_sum_le_one : (∑' z : β, Pr[= z | mx]) ≤ 1 := tsum_probOutput_le_one
-  have h_p_summable : Summable (fun z : β => Pr[= z | mx].toReal) :=
-    ENNReal.summable_toReal (ne_top_of_le_ne_top one_ne_top h_p_sum_le_one)
-  have h_nonneg : ∀ z : β, 0 ≤ Pr[= z | mx].toReal * tvDist (f₁ z) (f₂ z) :=
-    fun z => mul_nonneg ENNReal.toReal_nonneg (tvDist_nonneg _ _)
   have h_le' : ∀ z : β,
       Pr[= z | mx].toReal * tvDist (f₁ z) (f₂ z) ≤ Pr[= z | mx].toReal * c :=
     fun z => mul_le_mul_of_nonneg_left (h_le z) ENNReal.toReal_nonneg
+  have h_rhs_summable : Summable (fun z : β => Pr[= z | mx].toReal * c) :=
+    (ENNReal.summable_toReal tsum_probOutput_ne_top).mul_right c
+  -- the ℝ≥0∞ mass bound transfers to ℝ because every output probability is finite
   have h_sum_toReal_le_one : (∑' z : β, Pr[= z | mx].toReal) ≤ 1 := by
-    have h := ENNReal.toReal_mono one_ne_top h_p_sum_le_one
-    rwa [ENNReal.toReal_one, ENNReal.tsum_toReal_eq
-      (fun z => ne_top_of_le_ne_top one_ne_top probOutput_le_one)] at h
+    simp [← ENNReal.tsum_toReal_eq fun _ => probOutput_ne_top]
   calc (∑' z : β, Pr[= z | mx].toReal * tvDist (f₁ z) (f₂ z))
       ≤ ∑' z : β, Pr[= z | mx].toReal * c :=
-        Summable.tsum_le_tsum h_le'
-          (Summable.of_nonneg_of_le h_nonneg h_le' (h_p_summable.mul_right c))
-          (h_p_summable.mul_right c)
+        Summable.tsum_le_tsum h_le' (h_rhs_summable.of_nonneg_of_le
+          (fun z => mul_nonneg ENNReal.toReal_nonneg (tvDist_nonneg _ _)) h_le') h_rhs_summable
     _ = (∑' z : β, Pr[= z | mx].toReal) * c := tsum_mul_right
-    _ ≤ 1 * c := mul_le_mul_of_nonneg_right h_sum_toReal_le_one hc
-    _ = c := one_mul c
+    _ ≤ c := mul_le_of_le_one_left hc h_sum_toReal_le_one
 
 /-- **Query-bounded total-variation budget for `simulateQ`.**
 
@@ -1902,6 +1932,14 @@ lemma expectedQuerySlack_pure
     (qS : ℕ) (p : σ × Bool) :
     expectedQuerySlack impl S ε (pure x : OracleComp spec α) qS p = 0 := rfl
 
+/-- Defining equation of `expectedQuerySlack` at a query node: the slack of `query t >>= cont`
+is a single `expectedQuerySlackStep` for the query symbol `t`, applied to the continuation
+`fun u => expectedQuerySlack impl S ε (cont u)`; that continuation is left unapplied so the step
+can feed it the post-query budget and state.
+
+Together with `expectedQuerySlack_pure`, this pins `expectedQuerySlack` down on every computation.
+The `expectedQuerySlackStep_*` lemmas then evaluate a single step by cases on the bad flag, on
+`S t`, and on whether the budget `qS` is exhausted. -/
 lemma expectedQuerySlack_query_bind
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (S : spec.Domain → Prop) [DecidablePred S] (ε : σ → ℝ≥0∞)
@@ -1955,6 +1993,19 @@ lemma expectedQuerySlackStep_costly_pos
         Pr[= z | (impl t).run (s, false)] * k z.1 (qS - 1) z.2 := by
   simp [expectedQuerySlackStep, hS, hqS]
 
+/-- Unfolding of `expectedQuerySlackStep` at an *uncharged* query (`¬ S t`) reached with the
+bad flag unset: no slack is paid, and the step is exactly the expectation of the continuation
+`k` over the joint output distribution of `(impl t).run (s, false)`, with the query budget `qS`
+forwarded unchanged.
+
+This is the `¬ S t` half of the case split on the step function; the companions are
+`expectedQuerySlackStep_costly_pos` (charged query with budget left: `ε s` is paid up front and
+the budget forwarded is `qS - 1`) and `expectedQuerySlackStep_bad_eq_zero` (bad flag already
+set: the step is `0`). The remaining case, a charged query with exhausted budget, is also `0`
+and is reached by unfolding `expectedQuerySlackStep` directly.
+
+`hS` is the only side condition, so unlike the charged branch this rewrite applies at every
+budget, `qS = 0` included. -/
 lemma expectedQuerySlackStep_free
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (S : spec.Domain → Prop) [DecidablePred S] (ε : σ → ℝ≥0∞) (t : spec.Domain)
@@ -2013,21 +2064,34 @@ theorem expectedQuerySlack_mono
 
 /-! #### Invariant support congruence for `expectedQuerySlack` -/
 
-/-- If two per-state query slack functions agree on an invariant and the real handler preserves
-that invariant from no-bad states, then `expectedQuerySlack` is insensitive to their values on
-unreachable states.
+/-- Two expectations against the same computation agree as soon as their integrands agree on its
+support, since off-support values are weighted by zero probability. -/
+private lemma tsum_probOutput_mul_congr_of_mem_support {γ : Type} (mx : OracleComp spec' γ)
+    {F G : γ → ℝ≥0∞} (h : ∀ z ∈ support mx, F z = G z) :
+    ∑' z, Pr[= z | mx] * F z = ∑' z, Pr[= z | mx] * G z :=
+  tsum_congr fun z => by
+    by_cases hz : z ∈ support mx
+    · rw [h z hz]
+    · rw [probOutput_eq_zero_of_not_mem_support hz, zero_mul, zero_mul]
 
-The input hypothesis is phrased as `p.2 = false → Inv p.1` so that bad states remain
-vacuous: `expectedQuerySlack` is definitionally zero once the bad flag is set. -/
+/-- If two per-state query slack functions agree on an invariant `Inv`, and the handler preserves
+`Inv` along the support of every query answered from a no-bad state, then `expectedQuerySlack`
+cannot tell the two apart: only invariant-reachable states are ever charged.
+
+Where `expectedQuerySlack_mono` compares two budgets that are ordered at *every* state, this
+compares two budgets that merely agree on the states an execution can reach, so a budget may be
+given arbitrary values off `Inv`. To apply it, instantiate `Inv` with whatever reachability
+predicate `impl` maintains; `h_pres` is then the usual support-level preservation obligation.
+
+The state hypotheses are phrased as `p.2 = false → Inv p.1` so that bad states stay vacuous:
+`expectedQuerySlack` is definitionally zero once the bad flag is set. -/
 theorem expectedQuerySlack_eq_of_inv
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (S : spec.Domain → Prop) [DecidablePred S] {ε ε' : σ → ℝ≥0∞}
     (Inv : σ → Prop)
-    (hε : ∀ s, Inv s → ε s = ε' s)
-    (h_pres : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = false → Inv p.1 →
-      ∀ z ∈ support ((impl t).run p), Inv z.2.1)
-    (oa : OracleComp spec α) (qS : ℕ) (p : σ × Bool)
-    (hp : p.2 = false → Inv p.1) :
+    (hε : ∀ s, Inv s → ε s = ε' s) (h_pres : ∀ (t : spec.Domain) (p : σ × Bool),
+      p.2 = false → Inv p.1 → ∀ z ∈ support ((impl t).run p), Inv z.2.1)
+    (oa : OracleComp spec α) (qS : ℕ) (p : σ × Bool) (hp : p.2 = false → Inv p.1) :
     expectedQuerySlack impl S ε oa qS p = expectedQuerySlack impl S ε' oa qS p := by
   induction oa using OracleComp.inductionOn generalizing qS p with
   | pure x => simp
@@ -2046,30 +2110,16 @@ theorem expectedQuerySlack_eq_of_inv
                   (fun u => expectedQuerySlack impl S ε' (cont u)) qS s hSt hqS,
                 hε s hInv]
               congr 1
-              refine tsum_congr fun z => ?_
-              by_cases hz : z ∈ support ((impl t).run (s, false))
-              · rw [ih z.1 (qS := qS - 1) (p := z.2)]
-                intro _
-                exact h_pres t (s, false) rfl hInv z hz
-              · have hprob :
-                    Pr[= z | (impl t).run (s, false)] = 0 :=
-                  probOutput_eq_zero_of_not_mem_support hz
-                rw [hprob, zero_mul, zero_mul]
+              exact tsum_probOutput_mul_congr_of_mem_support _ fun z hz =>
+                ih z.1 (qS - 1) z.2 fun _ => h_pres t (s, false) rfl hInv z hz
             · simp [expectedQuerySlack_query_bind, expectedQuerySlackStep, hSt, hqS]
           · rw [expectedQuerySlack_query_bind, expectedQuerySlack_query_bind,
               expectedQuerySlackStep_free impl S ε t
                 (fun u => expectedQuerySlack impl S ε (cont u)) qS s hSt,
               expectedQuerySlackStep_free impl S ε' t
                 (fun u => expectedQuerySlack impl S ε' (cont u)) qS s hSt]
-            refine tsum_congr fun z => ?_
-            by_cases hz : z ∈ support ((impl t).run (s, false))
-            · rw [ih z.1 (qS := qS) (p := z.2)]
-              intro _
-              exact h_pres t (s, false) rfl hInv z hz
-            · have hprob :
-                  Pr[= z | (impl t).run (s, false)] = 0 :=
-                probOutput_eq_zero_of_not_mem_support hz
-              rw [hprob, zero_mul, zero_mul]
+            exact tsum_probOutput_mul_congr_of_mem_support _ fun z hz =>
+              ih z.1 qS z.2 fun _ => h_pres t (s, false) rfl hInv z hz
 
 /-! #### Helper lemma: per-summand IH bound implies the bind-sum bound -/
 
@@ -2130,22 +2180,34 @@ private lemma tsum_probOutput_mul_ofReal_tvDist_le_tsum_cost_plus_probEvent_bad
 
 /-! #### Per-step inductive helpers -/
 
-/-- The `query_bind` step for a charged query (`S t ∧ 0 < qS`), state-dep ε version.
-Combines triangle inequality through the coupled mid-distribution `mx >>= f₂` with
-`tvDist_bind_left_le` + the helper lemma to push the IH through the bind. -/
+/-- Triangle bound for a bind in which both the base computation and the continuation
+change: the weighted per-branch continuation distances control the change of continuation,
+and the base distance controls the change of base. -/
+private lemma ofReal_tvDist_bind_le_tsum_add_tvDist {γ β : Type} (mx my : OracleComp spec' γ)
+    (f₁ f₂ : γ → OracleComp spec' β) :
+    ENNReal.ofReal (tvDist (mx >>= f₁) (my >>= f₂))
+      ≤ ENNReal.ofReal (∑' z, Pr[= z | mx].toReal * tvDist (f₁ z) (f₂ z))
+        + ENNReal.ofReal (tvDist mx my) := by
+  refine (ENNReal.ofReal_le_ofReal <|
+    (tvDist_triangle (mx >>= f₁) (mx >>= f₂) (my >>= f₂)).trans <|
+      add_le_add (tvDist_bind_left_le mx f₁ f₂) (tvDist_bind_right_le f₂ mx my)).trans ?_
+  rw [ENNReal.ofReal_add (tsum_nonneg fun z =>
+    mul_nonneg ENNReal.toReal_nonneg (tvDist_nonneg _ _)) (tvDist_nonneg mx my)]
+
+/-- The `query_bind` step of the state-dependent-`ε` slack bound at a *charged* query (`S t`)
+whose budget is not yet exhausted (`0 < qS`): the query step itself is charged `ε s`, and the
+continuations are charged the inductive hypothesis' expected slack with budget `qS - 1`.
+Companion of `ofReal_tvDist_simulateQ_run_free_query_bind_le_expectedQuerySlack`, which
+handles a query outside `S`. -/
 private theorem ofReal_tvDist_simulateQ_run_costly_query_bind_le_expectedQuerySlack
-    (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (S : spec.Domain → Prop) [DecidablePred S] (ε : σ → ℝ≥0∞)
-    (h_step_tv_S : ∀ (t : spec.Domain), S t → ∀ (s : σ),
+    (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec'))) (S : spec.Domain → Prop)
+    [DecidablePred S] (ε : σ → ℝ≥0∞) (h_step_tv_S : ∀ (t : spec.Domain), S t → ∀ (s : σ),
       ENNReal.ofReal (tvDist ((impl₁ t).run (s, false)) ((impl₂ t).run (s, false))) ≤ ε s)
-    (t : spec.Domain) (cont : spec.Range t → OracleComp spec α)
-    {qS : ℕ} (hS : S t) (hqS : 0 < qS)
+    (t : spec.Domain) (cont : spec.Range t → OracleComp spec α) {qS : ℕ} (hS : S t) (hqS : 0 < qS)
     (ih : ∀ (u : spec.Range t) (p' : σ × Bool),
       ENNReal.ofReal (tvDist ((simulateQ impl₁ (cont u)).run p')
-          ((simulateQ impl₂ (cont u)).run p'))
-        ≤ expectedQuerySlack impl₁ S ε (cont u) (qS - 1) p'
-          + Pr[ fun w : α × σ × Bool => w.2.2 = true |
-              (simulateQ impl₁ (cont u)).run p'])
+          ((simulateQ impl₂ (cont u)).run p')) ≤ expectedQuerySlack impl₁ S ε (cont u) (qS - 1) p'
+          + Pr[ fun w : α × σ × Bool => w.2.2 = true | (simulateQ impl₁ (cont u)).run p'])
     (s : σ) :
     ENNReal.ofReal (tvDist ((simulateQ impl₁ (query t >>= cont)).run (s, false))
         ((simulateQ impl₂ (query t >>= cont)).run (s, false)))
@@ -2158,45 +2220,26 @@ private theorem ofReal_tvDist_simulateQ_run_costly_query_bind_le_expectedQuerySl
     fun z => (simulateQ impl₁ (cont z.1)).run z.2 with hf₁_def
   set f₂ : spec.Range t × σ × Bool → OracleComp spec' (α × σ × Bool) :=
     fun z => (simulateQ impl₂ (cont z.1)).run z.2 with hf₂_def
+  -- each run factors as the query step bound to the simulated continuation
   have hsim₁_eq : (simulateQ impl₁ (query t >>= cont)).run (s, false) = mx >>= f₁ := by
     simp [hmx_def, hf₁_def, simulateQ_bind, simulateQ_query,
       OracleQuery.input_query, OracleQuery.cont_query, StateT.run_bind]
   have hsim₂_eq : (simulateQ impl₂ (query t >>= cont)).run (s, false) = my >>= f₂ := by
     simp [hmy_def, hf₂_def, simulateQ_bind, simulateQ_query,
       OracleQuery.input_query, OracleQuery.cont_query, StateT.run_bind]
-  set sim₁ : OracleComp spec' (α × σ × Bool) := mx >>= f₁ with hsim₁_def
-  set sim₂ : OracleComp spec' (α × σ × Bool) := my >>= f₂ with hsim₂_def
-  set mid : OracleComp spec' (α × σ × Bool) := mx >>= f₂ with hmid_def
-  have h_tri_real : tvDist sim₁ sim₂ ≤ tvDist sim₁ mid + tvDist mid sim₂ :=
-    tvDist_triangle _ _ _
-  have h_first_real : tvDist sim₁ mid ≤ ∑' z : spec.Range t × σ × Bool,
-      Pr[= z | mx].toReal * tvDist (f₁ z) (f₂ z) := by
-    rw [hsim₁_def, hmid_def]
-    exact tvDist_bind_left_le _ _ _
-  have h_second_real : tvDist mid sim₂ ≤ tvDist mx my := by
-    rw [hmid_def, hsim₂_def]
-    exact tvDist_bind_right_le _ _ _
-  have h_tri :
-      ENNReal.ofReal (tvDist sim₁ sim₂) ≤
-        ENNReal.ofReal (tvDist sim₁ mid) + ENNReal.ofReal (tvDist mid sim₂) := by
-    refine le_trans (ENNReal.ofReal_le_ofReal h_tri_real) ?_
-    rw [ENNReal.ofReal_add (tvDist_nonneg _ _) (tvDist_nonneg _ _)]
-  have h_second :
-      ENNReal.ofReal (tvDist mid sim₂) ≤ ε s :=
-    le_trans (ENNReal.ofReal_le_ofReal h_second_real)
-      (le_trans (by rw [hmx_def, hmy_def]) (h_step_tv_S t hS s))
-  have h_first :
-      ENNReal.ofReal (tvDist sim₁ mid) ≤
-        (∑' z : spec.Range t × σ × Bool,
+  -- the query step itself is charged `ε s` by hypothesis
+  have h_second : ENNReal.ofReal (tvDist mx my) ≤ ε s :=
+    le_trans (by rw [hmx_def, hmy_def]) (h_step_tv_S t hS s)
+  -- the continuations are charged by the inductive hypothesis, pushed through the bind
+  have h_first : ENNReal.ofReal (∑' z : spec.Range t × σ × Bool,
+        Pr[= z | mx].toReal * tvDist (f₁ z) (f₂ z))
+      ≤ (∑' z : spec.Range t × σ × Bool,
           Pr[= z | mx] * expectedQuerySlack impl₁ S ε (cont z.1) (qS - 1) z.2)
-        + Pr[ fun w : α × σ × Bool => w.2.2 = true | sim₁] := by
-    refine le_trans (ENNReal.ofReal_le_ofReal h_first_real) ?_
-    rw [hsim₁_def]
-    refine tsum_probOutput_mul_ofReal_tvDist_le_tsum_cost_plus_probEvent_bad
-      (mx := mx) (f₁ := f₁) (f₂ := f₂)
-      (cost := fun z => expectedQuerySlack impl₁ S ε (cont z.1) (qS - 1) z.2)
-      (fun z => ?_)
-    simpa [hf₁_def, hf₂_def] using ih z.1 z.2
+        + Pr[ fun w : α × σ × Bool => w.2.2 = true | mx >>= f₁] :=
+    tsum_probOutput_mul_ofReal_tvDist_le_tsum_cost_plus_probEvent_bad mx f₁ f₂
+      (fun z => expectedQuerySlack impl₁ S ε (cont z.1) (qS - 1) z.2)
+      fun z => by simpa [hf₁_def, hf₂_def] using ih z.1 z.2
+  -- the slack at a charged query with positive budget pays `ε s` and recurses on `qS - 1`
   have h_recurse :
       expectedQuerySlack impl₁ S ε (query t >>= cont) qS (s, false) =
         ε s + ∑' z : spec.Range t × σ × Bool,
@@ -2206,21 +2249,19 @@ private theorem ofReal_tvDist_simulateQ_run_costly_query_bind_le_expectedQuerySl
   calc
     ENNReal.ofReal (tvDist ((simulateQ impl₁ (query t >>= cont)).run (s, false))
         ((simulateQ impl₂ (query t >>= cont)).run (s, false)))
-      = ENNReal.ofReal (tvDist sim₁ sim₂) := by rw [hsim₁_eq, hsim₂_eq]
-    _ ≤ ENNReal.ofReal (tvDist sim₁ mid) + ENNReal.ofReal (tvDist mid sim₂) := h_tri
+      = ENNReal.ofReal (tvDist (mx >>= f₁) (my >>= f₂)) := by rw [hsim₁_eq, hsim₂_eq]
+    _ ≤ ENNReal.ofReal (∑' z : spec.Range t × σ × Bool,
+            Pr[= z | mx].toReal * tvDist (f₁ z) (f₂ z)) + ENNReal.ofReal (tvDist mx my) :=
+        ofReal_tvDist_bind_le_tsum_add_tvDist mx my f₁ f₂
     _ ≤ ((∑' z : spec.Range t × σ × Bool,
             Pr[= z | mx] * expectedQuerySlack impl₁ S ε (cont z.1) (qS - 1) z.2)
-          + Pr[ fun w : α × σ × Bool => w.2.2 = true | sim₁])
-          + ε s := add_le_add h_first h_second
-    _ = (ε s + ∑' z : spec.Range t × σ × Bool,
-              Pr[= z | mx] * expectedQuerySlack impl₁ S ε (cont z.1) (qS - 1) z.2)
-          + Pr[fun w : α × σ × Bool => w.2.2 = true | sim₁] := by
-        rw [add_assoc, add_comm (Pr[ fun w : α × σ × Bool => w.2.2 = true | sim₁]) (ε s),
-            ← add_assoc, add_comm (∑' _, _) (ε s)]
+          + Pr[ fun w : α × σ × Bool => w.2.2 = true | mx >>= f₁]) + ε s :=
+        add_le_add h_first h_second
     _ = expectedQuerySlack impl₁ S ε (query t >>= cont) qS (s, false)
           + Pr[fun z : α × σ × Bool => z.2.2 = true |
               (simulateQ impl₁ (query t >>= cont)).run (s, false)] := by
         rw [h_recurse, ← hmx_def, ← hsim₁_eq]
+        ring
 
 /-- The `query_bind` step for a free (non-S) query, state-dep ε version. The impls are
 pointwise equal at this query, so the only contribution is from the IH; the budget `qS`
@@ -2432,12 +2473,38 @@ Specializing `expectedQuerySlack` to a constant query-slack function `fun _ => �
 with the state-dep main lemma this re-derives the selective constant-ε bound
 in `ENNReal` form. -/
 
+/-- Bound a weighted average of a nonnegative functional by a uniform pointwise bound: the
+output weights of `mx` sum to at most one, so the average of `F` is at most any constant
+dominating `F`. -/
+private lemma tsum_probOutput_mul_le_const {β : Type} (mx : OracleComp spec' β) {F : β → ℝ≥0∞}
+    {c : ℝ≥0∞} (h_le : ∀ z : β, F z ≤ c) : (∑' z : β, Pr[= z | mx] * F z) ≤ c :=
+  calc (∑' z : β, Pr[= z | mx] * F z)
+      ≤ ∑' z : β, Pr[= z | mx] * c := tsum_probOutput_mul_mono mx h_le
+    _ = (∑' z : β, Pr[= z | mx]) * c := ENNReal.tsum_mul_right
+    _ ≤ c := mul_le_of_le_one_left zero_le tsum_probOutput_le_one
+
+/-- **Constant-ε query-budget bound for `expectedQuerySlack`.**
+
+For the constant per-query slack `fun _ => ε`, a computation firing at most `queryBudget`
+charged queries accumulates expected slack at most `queryBudget * ε`: the price of a charged
+query does not depend on the simulation state, so the budget simply multiplies it. Free
+queries and runs whose bad flag is already set contribute nothing.
+
+Reach for this when the per-charged-query total-variation gap is a single uniform `ε`;
+composed with `ofReal_tvDist_simulateQ_le_expectedQuerySlack_plus_probEvent_output_bad` it
+recovers the selective `q · ε` bound. A state-dependent slack that admits a uniform upper
+bound can be routed here through `expectedQuerySlack_mono`. When the per-query price
+genuinely scales with a resource carried in the state, use a resource fold instead:
+`expectedQuerySlack_resource_le` (the resource grows by at most one in support),
+`expectedQuerySlack_expected_resource_le` (charged queries grow it by at most `g` in
+expectation, at the cost of a binomial cross-term), or
+`expectedQuerySlack_charged_read_expected_growth_le` (charged queries only read the
+resource, while a separate class of queries grows it). -/
 lemma expectedQuerySlack_const_le_queryBudget_mul
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (chargedQuery : spec.Domain → Prop) [DecidablePred chargedQuery] (ε : ℝ≥0∞)
     (oa : OracleComp spec α) {queryBudget : ℕ}
-    (h_qb : OracleComp.IsQueryBoundP oa chargedQuery queryBudget)
-    (p : σ × Bool) :
+    (h_qb : OracleComp.IsQueryBoundP oa chargedQuery queryBudget) (p : σ × Bool) :
     expectedQuerySlack impl chargedQuery (fun _ => ε) oa queryBudget p ≤ queryBudget * ε := by
   induction oa using OracleComp.inductionOn generalizing queryBudget p with
   | pure x => simp
@@ -2449,71 +2516,22 @@ lemma expectedQuerySlack_const_le_queryBudget_mul
           rw [isQueryBoundP_query_bind_iff] at h_qb
           obtain ⟨h_can, h_cont⟩ := h_qb
           by_cases hSt : chargedQuery t
-          · simp only [hSt, if_true] at h_cont
-            have hq_pos : 0 < queryBudget := h_can.resolve_left (· hSt)
+          -- a charged query pays `ε` up front and passes on a budget one smaller
+          · have hq_pos : 0 < queryBudget := h_can.resolve_left (· hSt)
+            obtain ⟨n, rfl⟩ : ∃ n, queryBudget = n + 1 :=
+              ⟨queryBudget - 1, (Nat.succ_pred_eq_of_pos hq_pos).symm⟩
+            simp only [hSt, if_true, Nat.add_sub_cancel] at h_cont
             rw [expectedQuerySlack_query_bind,
-                expectedQuerySlackStep_costly_pos _ _ _ _ _ _ _ hSt hq_pos]
-            have h_tsum_le : (∑' z : spec.Range t × σ × Bool,
-                Pr[= z | (impl t).run (s, false)] *
-                  expectedQuerySlack impl chargedQuery (fun _ => ε)
-                    (cont z.1) (queryBudget - 1) z.2)
-                ≤ (queryBudget - 1 : ℕ) * ε := by
-              calc (∑' z : spec.Range t × σ × Bool,
-                    Pr[= z | (impl t).run (s, false)] *
-                      expectedQuerySlack impl chargedQuery (fun _ => ε)
-                        (cont z.1) (queryBudget - 1) z.2)
-                  ≤ ∑' z : spec.Range t × σ × Bool,
-                      Pr[= z | (impl t).run (s, false)] *
-                        ((queryBudget - 1 : ℕ) * ε) :=
-                    ENNReal.tsum_le_tsum fun z => by
-                      gcongr
-                      exact ih z.1 (queryBudget := queryBudget - 1) (h_cont z.1) z.2
-                _ = (∑' z : spec.Range t × σ × Bool,
-                        Pr[= z | (impl t).run (s, false)]) *
-                      ((queryBudget - 1 : ℕ) * ε) :=
-                    ENNReal.tsum_mul_right
-                _ ≤ 1 * ((queryBudget - 1 : ℕ) * ε) := by
-                    gcongr
-                    exact tsum_probOutput_le_one
-                _ = (queryBudget - 1 : ℕ) * ε := one_mul _
-            have h_main : ε +
-                  (∑' z : spec.Range t × σ × Bool,
-                    Pr[= z | (impl t).run (s, false)] *
-                      expectedQuerySlack impl chargedQuery (fun _ => ε)
-                        (cont z.1) (queryBudget - 1) z.2)
-                ≤ (queryBudget : ℕ) * ε := by
-              calc ε + (∑' z : spec.Range t × σ × Bool,
-                    Pr[= z | (impl t).run (s, false)] *
-                      expectedQuerySlack impl chargedQuery (fun _ => ε)
-                        (cont z.1) (queryBudget - 1) z.2)
-                  ≤ ε + ((queryBudget - 1 : ℕ) * ε) := by
-                    gcongr
-                _ = ((queryBudget - 1 : ℕ) + 1) * ε := by
-                    rw [add_mul, one_mul, add_comm]
-                _ = (queryBudget : ℕ) * ε := by
-                    congr 2
-                    have : (queryBudget - 1) + 1 = queryBudget := Nat.sub_add_cancel hq_pos
-                    exact_mod_cast this
-            exact h_main
+              expectedQuerySlackStep_costly_pos _ _ _ _ _ _ _ hSt hq_pos, Nat.add_sub_cancel]
+            refine le_trans (add_le_add le_rfl (tsum_probOutput_mul_le_const
+              ((impl t).run (s, false)) fun z => ih z.1 (h_cont z.1) z.2)) (le_of_eq ?_)
+            push_cast
+            ring
+          -- a free query costs nothing and passes on the whole budget
           · simp only [hSt, if_false] at h_cont
-            rw [expectedQuerySlack_query_bind,
-                expectedQuerySlackStep_free _ _ _ _ _ _ _ hSt]
-            calc (∑' z : spec.Range t × σ × Bool,
-                  Pr[= z | (impl t).run (s, false)] *
-                    expectedQuerySlack impl chargedQuery (fun _ => ε)
-                      (cont z.1) queryBudget z.2)
-                ≤ ∑' z : spec.Range t × σ × Bool,
-                    Pr[= z | (impl t).run (s, false)] * ((queryBudget : ℕ) * ε) :=
-                  ENNReal.tsum_le_tsum fun z => by
-                    gcongr
-                    exact ih z.1 (queryBudget := queryBudget) (h_cont z.1) z.2
-              _ = (∑' z : spec.Range t × σ × Bool,
-                      Pr[= z | (impl t).run (s, false)]) * ((queryBudget : ℕ) * ε) :=
-                  ENNReal.tsum_mul_right
-              _ ≤ 1 * ((queryBudget : ℕ) * ε) := by
-                  gcongr
-                  exact tsum_probOutput_le_one
-              _ = (queryBudget : ℕ) * ε := one_mul _
+            rw [expectedQuerySlack_query_bind, expectedQuerySlackStep_free _ _ _ _ _ _ _ hSt]
+            exact tsum_probOutput_mul_le_const ((impl t).run (s, false))
+              fun z => ih z.1 (h_cont z.1) z.2
 
 /-- State-dependent resource bound for `expectedQuerySlack`.
 
@@ -2963,28 +2981,19 @@ variable {ι : Type} {spec : OracleSpec ι}
 variable {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
 variable {σ₁ σ₂ : Type}
 
-/-- Bad propagation for a general (non-flag) bad predicate: starting the simulation from a
-bad state, every output state stays bad. The heterogeneous-state analogue of
-`mem_support_simulateQ_run_of_bad`. -/
+/-- Bad propagation for an arbitrary state predicate: if `bad` survives every single oracle
+call, then a simulation started from a bad state leaves every reachable output state bad.
+`mem_support_simulateQ_run_of_bad` is the special case of a `σ × Bool` state and a flag. -/
 private lemma mem_support_simulateQ_run_of_bad_general
-    (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
-    (bad : σ₁ → Prop)
-    (hmono : ∀ (t : spec.Domain) (s₁ : σ₁), bad s₁ →
-      ∀ z ∈ support ((impl₁ t).run s₁), bad z.2)
+    (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁))) (bad : σ₁ → Prop)
+    (hmono : ∀ (t : spec.Domain) (s₁ : σ₁), bad s₁ → ∀ z ∈ support ((impl₁ t).run s₁), bad z.2)
     (oa : OracleComp spec α) (s₁ : σ₁) (hbad : bad s₁) :
     ∀ z ∈ support ((simulateQ impl₁ oa).run s₁), bad z.2 := by
   induction oa using OracleComp.inductionOn generalizing s₁ with
-  | pure x =>
-      intro z hz
-      simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-      subst hz
-      exact hbad
+  | pure x => simpa using hbad
   | query_bind t cont ih =>
-      intro z hz
-      simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind, support_bind, Set.mem_iUnion,
-        exists_prop] at hz
-      obtain ⟨⟨u, s₁'⟩, h_mem, h_z⟩ := hz
+      simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, mem_support_bind_iff]
+      rintro z ⟨⟨u, s₁'⟩, h_mem, h_z⟩
       exact ih u s₁' (hmono t s₁ hbad (u, s₁') h_mem) z h_z
 
 /-- A simulation started from a bad state has bad probability exactly `1`. The
@@ -3195,6 +3204,81 @@ private lemma tsum_prod_right_bool_eq_of_zero {A B : Type} (f : A × B × Bool �
   refine tsum_congr fun z => ?_
   rw [tsum_bool (f := fun b => f (z.1, z.2, b)), h z, add_zero]
 
+/-- Unfold `expectedQuerySlack` at a `query`-headed computation from a non-flagged state.
+Charged and free queries share the shape *flip charge plus expected continuation slack*:
+the charge `ε s` is paid only on a charged query, which is also the only place the
+continuation budget drops. Bad-flagged output states contribute nothing, their slack being
+`0` by `expectedQuerySlack_bad_eq_zero`. -/
+private lemma expectedQuerySlack_query_bind_good_eq
+    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
+    (S : spec.Domain → Prop) [DecidablePred S] (ε : σ → ℝ≥0∞) (t : spec.Domain)
+    (cont : spec.Range t → OracleComp spec γ) {qS : ℕ} (hqS : S t → 0 < qS) (s : σ) :
+    expectedQuerySlack impl S ε (query t >>= cont) qS (s, false) =
+      (if S t then ε s else 0) + ∑' z : spec.Range t × σ,
+        Pr[= (z.1, z.2, false) | (impl t).run (s, false)] *
+          expectedQuerySlack impl S ε (cont z.1) (if S t then qS - 1 else qS) (z.2, false) := by
+  rw [expectedQuerySlack_query_bind]
+  by_cases h : S t
+  · rw [expectedQuerySlackStep_costly_pos _ _ _ _ _ _ _ h (hqS h), if_pos h, if_pos h,
+      tsum_prod_right_bool_eq_of_zero (f := fun z : spec.Range t × σ × Bool =>
+        Pr[= z | (impl t).run (s, false)] * expectedQuerySlack impl S ε (cont z.1) (qS - 1) z.2)
+        (by rintro ⟨u, s'⟩; simp)]
+  · rw [expectedQuerySlackStep_free _ _ _ _ _ _ _ h, if_neg h, if_neg h, zero_add,
+      tsum_prod_right_bool_eq_of_zero (f := fun z : spec.Range t × σ × Bool =>
+        Pr[= z | (impl t).run (s, false)] * expectedQuerySlack impl S ε (cont z.1) qS z.2)
+        (by rintro ⟨u, s'⟩; simp)]
+
+/-- Inductive `query`-headed step of `probEvent_bad_simulateQ_run_le_expectedQuerySlack`,
+carrying an arbitrary per-state flip charge `w`. The charged and free premises merge into
+the single `if`-guarded head-bind bound matched by `expectedQuerySlack_query_bind_good_eq`,
+against which the inductive hypothesis is pushed through the bind term by term. -/
+private lemma probEvent_bad_simulateQ_run_query_bind_le_expectedQuerySlack
+    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec'))) (charged : spec.Domain → Prop)
+    [DecidablePred charged] (w : σ → ℝ≥0∞)
+    (h_charged_step : ∀ (t : spec.Domain) (s : σ), charged t →
+      ∀ (k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool)),
+        Pr[ fun z : γ × σ × Bool => z.2.2 = true | (impl t).run (s, false) >>= k] ≤ w s +
+          ∑' z : spec.Range t × σ, Pr[= (z.1, z.2, false) | (impl t).run (s, false)] *
+            Pr[ fun y : γ × σ × Bool => y.2.2 = true | k (z.1, z.2, false)])
+    (h_free_step : ∀ (t : spec.Domain) (s : σ), ¬ charged t →
+      ∀ (k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool)),
+        Pr[ fun z : γ × σ × Bool => z.2.2 = true | (impl t).run (s, false) >>= k] ≤
+          ∑' z : spec.Range t × σ, Pr[= (z.1, z.2, false) | (impl t).run (s, false)] *
+            Pr[ fun y : γ × σ × Bool => y.2.2 = true | k (z.1, z.2, false)])
+    (t : spec.Domain) (cont : spec.Range t → OracleComp spec γ) {qS : ℕ}
+    (hvalid : ¬ charged t ∨ 0 < qS) (ih : ∀ (u : spec.Range t) (s' : σ),
+      Pr[ fun z : γ × σ × Bool => z.2.2 = true | (simulateQ impl (cont u)).run (s', false)] ≤
+        expectedQuerySlack impl charged w (cont u) (if charged t then qS - 1 else qS) (s', false))
+    (s : σ) :
+    Pr[ fun z : γ × σ × Bool => z.2.2 = true |
+        (simulateQ impl (query t >>= cont)).run (s, false)] ≤
+      expectedQuerySlack impl charged w (query t >>= cont) qS (s, false) := by
+  -- Rewrite the run to head-bind form.
+  have hsim : (simulateQ impl (query t >>= cont)).run (s, false) =
+      (impl t).run (s, false) >>= fun z => (simulateQ impl (cont z.1)).run z.2 := by
+    simp [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
+      OracleQuery.cont_query, StateT.run_bind]
+  -- Merge the two per-step premises into one `if`-guarded head-bind bound.
+  have hstep : Pr[ fun z : γ × σ × Bool => z.2.2 = true |
+      (impl t).run (s, false) >>= fun z => (simulateQ impl (cont z.1)).run z.2] ≤
+      (if charged t then w s else 0) + ∑' z : spec.Range t × σ,
+        Pr[= (z.1, z.2, false) | (impl t).run (s, false)] *
+          Pr[ fun y : γ × σ × Bool => y.2.2 = true |
+            (simulateQ impl (cont z.1)).run (z.2, false)] := by
+    by_cases h : charged t
+    · -- Charged step: pay the flip charge `w s`.
+      rw [if_pos h]
+      exact h_charged_step t s h _
+    · -- Free step: no charge.
+      rw [if_neg h, zero_add]
+      exact h_free_step t s h _
+  -- Discard the bad-flagged output states, then forward each good one to the IH.
+  rw [hsim, expectedQuerySlack_query_bind_good_eq impl charged w t cont
+    (fun h => hvalid.resolve_left (· h)) s]
+  refine hstep.trans (add_le_add le_rfl (ENNReal.tsum_le_tsum fun z => ?_))
+  gcongr
+  exact ih z.1 z.2
+
 /-- **Single-world resource-charged bad accumulator.**
 
 For `simulateQ impl oa` over a state `σ × Bool` (resource `σ`, never-reset bad flag), if
@@ -3205,82 +3289,48 @@ For `simulateQ impl oa` over a state `σ × Bool` (resource `σ`, never-reset ba
 
 then the probability the flag is set after the whole run from a non-bad state is bounded by
 the resource-weighted query slack
-`expectedQuerySlack impl charged (fun s => R s * ε) oa qS (s, false)`. This is the
-single-world, output-event analogue of
-`probEvent_fst_simulateQ_run_le_add_bad_add_slack`: the inductive structure (good branch
-reduced through the head bind by the per-step premise, bad output states discarded since
-their slack is `0`) is similar, but the conclusion bounds `Pr[bad]` itself rather than
-carrying it as
-an additive remainder. -/
+`expectedQuerySlack impl charged (fun s => R s * ε) oa qS (s, false)`.
+
+The ε-perturbed identical-until-bad results above
+(`tvDist_simulateQ_le_qeps_plus_probEvent_output_bad`,
+`ofReal_tvDist_simulateQ_run_le_expectedQuerySlack_plus_probEvent_output_bad`) bound a TV
+distance and leave `Pr[bad]` standing as an unbounded additive remainder; this one bounds
+that bad mass itself, and is the single-world, output-event counterpart of
+`probEvent_fst_simulateQ_run_le_add_bad_add_slack`.
+
+Tips when applying it. Both step premises quantify over an *arbitrary* continuation `k`,
+so a concrete handler discharges them once per query kind rather than once per computation.
+`R` and `ε` enter only through the product `R s * ε`, so a purely state-dependent charge
+can be supplied through `R` alone with `ε = 1`. The resulting `expectedQuerySlack` is
+normally folded to a closed form by `expectedQuerySlack_resource_le` or
+`expectedQuerySlack_expected_resource_le`. -/
 theorem probEvent_bad_simulateQ_run_le_expectedQuerySlack
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (charged : spec.Domain → Prop) [DecidablePred charged]
-    (R : σ → ℝ≥0∞) (ε : ℝ≥0∞)
+    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec'))) (charged : spec.Domain → Prop)
+    [DecidablePred charged] (R : σ → ℝ≥0∞) (ε : ℝ≥0∞)
     (h_charged_step : ∀ (t : spec.Domain) (s : σ), charged t →
       ∀ (k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool)),
-        Pr[ fun z : γ × σ × Bool => z.2.2 = true | (impl t).run (s, false) >>= k] ≤
-          R s * ε +
-          ∑' z : spec.Range t × σ,
-            Pr[= (z.1, z.2, false) | (impl t).run (s, false)] *
+        Pr[ fun z : γ × σ × Bool => z.2.2 = true | (impl t).run (s, false) >>= k] ≤ R s * ε +
+          ∑' z : spec.Range t × σ, Pr[= (z.1, z.2, false) | (impl t).run (s, false)] *
               Pr[fun w : γ × σ × Bool => w.2.2 = true | k (z.1, z.2, false)])
     (h_free_step : ∀ (t : spec.Domain) (s : σ), ¬ charged t →
       ∀ (k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool)),
         Pr[fun z : γ × σ × Bool => z.2.2 = true | (impl t).run (s, false) >>= k] ≤
-          ∑' z : spec.Range t × σ,
-            Pr[= (z.1, z.2, false) | (impl t).run (s, false)] *
+          ∑' z : spec.Range t × σ, Pr[= (z.1, z.2, false) | (impl t).run (s, false)] *
               Pr[fun w : γ × σ × Bool => w.2.2 = true | k (z.1, z.2, false)])
-    (oa : OracleComp spec γ) :
-    ∀ {qS : ℕ}, OracleComp.IsQueryBoundP oa charged qS →
-      ∀ (s : σ),
+    (oa : OracleComp spec γ) : ∀ {qS : ℕ}, OracleComp.IsQueryBoundP oa charged qS → ∀ (s : σ),
         Pr[fun z : γ × σ × Bool => z.2.2 = true | (simulateQ impl oa).run (s, false)] ≤
           expectedQuerySlack impl charged (fun s => R s * ε) oa qS (s, false) := by
   induction oa using OracleComp.inductionOn with
   | pure x =>
       intro qS _ s
-      simp only [simulateQ_pure, StateT.run_pure, probEvent_pure, expectedQuerySlack_pure,
-        Bool.false_eq_true, if_false, le_refl]
+      simp
   | @query_bind t cont ih =>
       intro qS hqb s
       rw [isQueryBoundP_query_bind_iff] at hqb
       obtain ⟨hvalid, hcont⟩ := hqb
-      -- Rewrite the run to head-bind form.
-      have hsim : (simulateQ impl (query t >>= cont)).run (s, false) =
-          (impl t).run (s, false) >>= fun z => (simulateQ impl (cont z.1)).run z.2 := by
-        simp [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-          OracleQuery.cont_query, StateT.run_bind]
-      rw [hsim]
-      set k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool) :=
-        fun z => (simulateQ impl (cont z.1)).run z.2 with hk
-      rw [expectedQuerySlack_query_bind]
-      by_cases hSt : charged t
-      · -- Charged step: pay `R s · ε` then forward to the IH on the good output states.
-        have hqS_pos : 0 < qS := hvalid.resolve_left (· hSt)
-        rw [expectedQuerySlackStep_costly_pos _ _ _ _ _ _ _ hSt hqS_pos,
-          tsum_prod_right_bool_eq_of_zero
-            (f := fun z : spec.Range t × σ × Bool =>
-              Pr[= z | (impl t).run (s, false)] *
-                expectedQuerySlack impl charged (fun s => R s * ε) (cont z.1) (qS - 1) z.2)
-            (by rintro ⟨u, s'⟩; simp)]
-        refine (h_charged_step t s hSt k).trans
-          (add_le_add le_rfl (ENNReal.tsum_le_tsum fun z => ?_))
-        rcases z with ⟨u, s'⟩
-        simp only [hk]
-        gcongr
-        have := ih u (hcont u) s'
-        rwa [if_pos hSt] at this
-      · -- Free step: no charge.
-        rw [expectedQuerySlackStep_free _ _ _ _ _ _ _ hSt,
-          tsum_prod_right_bool_eq_of_zero
-            (f := fun z : spec.Range t × σ × Bool =>
-              Pr[= z | (impl t).run (s, false)] *
-                expectedQuerySlack impl charged (fun s => R s * ε) (cont z.1) qS z.2)
-            (by rintro ⟨u, s'⟩; simp)]
-        refine (h_free_step t s hSt k).trans (ENNReal.tsum_le_tsum fun z => ?_)
-        rcases z with ⟨u, s'⟩
-        simp only [hk]
-        gcongr
-        have := ih u (hcont u) s'
-        rwa [if_neg hSt] at this
+      exact probEvent_bad_simulateQ_run_query_bind_le_expectedQuerySlack impl charged
+        (fun s => R s * ε) h_charged_step h_free_step t cont hvalid
+        (fun u s' => ih u (hcont u) s') s
 
 end SingleWorldResourceBad
 
@@ -3382,7 +3432,14 @@ lemma avgBadM_pure
 
 /-- **One-step telescoping of `avgBadM` (joint-law form).** Moves one query off the front
 and exposes the post-step joint law, holding for any impl and any measure `ν`. No
-probabilistic content — pure rearrangement. -/
+probabilistic content — pure rearrangement.
+
+The right-hand side is the raw double `tsum`, over the starting state `p` and then the step
+outcome `z`, with the per-state impl step `Pr[= z | (impl t).run p]` left exposed; apply this
+form when that step law itself has to be manipulated.
+`avgBadM_telescope_eq_tsum_postStep` regroups the same right-hand side as a single `tsum`
+against `postStepJointM`, and `avgBadM_query_bind_eq_tsum_output` chains the two into the
+output-indexed form that a free-monad induction consumes. -/
 lemma avgBadM_query_bind_eq
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) (cont : spec.Range t → OracleComp spec γ) :
@@ -3392,14 +3449,7 @@ lemma avgBadM_query_bind_eq
           Pr[= z | (impl t).run p] *
             Pr[fun w : γ × σ × Bool => w.2.2 = true |
               (simulateQ impl (cont z.1)).run z.2] := by
-  rw [avgBadM]
-  refine tsum_congr fun p => ?_
-  congr 1
-  have hsim : (simulateQ impl (query t >>= cont)).run p =
-      (impl t).run p >>= fun z => (simulateQ impl (cont z.1)).run z.2 := by
-    simp [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-      OracleQuery.cont_query, StateT.run_bind]
-  rw [hsim, probEvent_bind_eq_tsum]
+  simp [avgBadM, probEvent_bind_eq_tsum]
 
 /-- **Post-step joint measure of a query step (bare-measure form).** The measure over
 `(output, post-state)` produced by averaging the per-state impl step `Pr[= z | (impl t).run p]`
@@ -3474,35 +3524,23 @@ lemma avgBadM_query_bind_eq_tsum_output
   refine tsum_congr fun s => ?_
   rw [postStepOutM]
 
-open scoped Classical in
 /-- **Weighted post-step rearrangement.** Summing any post-state functional `F` against the
 post-step measure (over output `u` and post-state `s`) equals the `ν`-average of the per-state
 expected value of `F` after one impl step. The Fubini bridge used to push a per-state charge
-bound (e.g. ghost-size or membership-charge growth) through the post-step measure. -/
+bound (e.g. ghost-size or membership-charge growth) through the post-step measure.
+
+Unlike `avgBadM_query_bind_eq_tsum_output`, which regroups the bad mass of one specific
+continuation, this carries an arbitrary `ℝ≥0∞`-valued functional `F` of the post-state and
+mentions no run at all; instantiate `F` at the charge being tracked. -/
 lemma tsum_tsum_postStepOutM_mul
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) (F : σ × Bool → ℝ≥0∞) :
     (∑' u : spec.Range t, ∑' s : σ × Bool, postStepOutM impl ν t u s * F s)
       = ∑' p : σ × Bool, ν p *
           ∑' z : spec.Range t × σ × Bool, Pr[= z | (impl t).run p] * F z.2 := by
-  classical
-  calc (∑' u : spec.Range t, ∑' s : σ × Bool, postStepOutM impl ν t u s * F s)
-      = ∑' z : spec.Range t × σ × Bool, postStepJointM impl ν t z * F z.2 := by
-        simp only [postStepOutM]
-        rw [ENNReal.tsum_prod' (f := fun z => postStepJointM impl ν t z * F z.2)]
-    _ = ∑' z : spec.Range t × σ × Bool,
-          (∑' p : σ × Bool, ν p * Pr[= z | (impl t).run p]) * F z.2 := by
-        refine tsum_congr fun z => ?_
-        rw [postStepJointM]
-    _ = ∑' z : spec.Range t × σ × Bool,
-          ∑' p : σ × Bool, ν p * (Pr[= z | (impl t).run p] * F z.2) := by
-        refine tsum_congr fun z => ?_
-        rw [← ENNReal.tsum_mul_right]
-        exact tsum_congr fun p => by ring
-    _ = ∑' p : σ × Bool, ν p *
-          ∑' z : spec.Range t × σ × Bool, Pr[= z | (impl t).run p] * F z.2 := by
-        rw [ENNReal.tsum_comm]
-        exact tsum_congr fun p => ENNReal.tsum_mul_left
+  rw [← ENNReal.tsum_prod]
+  simp only [postStepOutM, postStepJointM, ← ENNReal.tsum_mul_right, mul_assoc]
+  exact ENNReal.tsum_comm.trans (tsum_congr fun p => ENNReal.tsum_mul_left)
 
 end AveragedStateMeasureBad
 
