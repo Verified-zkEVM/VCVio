@@ -344,11 +344,8 @@ omit [NeZero q] in
 component coefficient functions. -/
 private theorem mul_get_eq_convCoeff (f g : (vectorNegacyclicRing (ZMod q) n).Poly) (i : Fin n) :
     (f * g).get i = negacyclicConvCoeff f.get g.get i := by
-  have h1 : (f * g) = (vectorNegacyclicRing (ZMod q) n).mul f g := rfl
-  rw [h1, vectorNegacyclicRing_mul]
-  have h2 : (negacyclicMulPure (vectorKernel (ZMod q) n) f g).get i
-      = (vectorBackend (ZMod q) n).coeff (negacyclicMulPure (vectorKernel (ZMod q) n) f g) i := rfl
-  rw [h2, negacyclicMulPure_coeff]; rfl
+  rw [vectorRing_mul_apply]
+  exact vectorKernel_mul_get f g i
 
 /-- **Negacyclic-convolution infinity-norm bound.** For coefficient-domain polynomials in
 `ℤ_q[X] / (X^n + 1)`, the centered `ℓ∞` norm of the product is bounded by the `ℓ₁` norm of the
