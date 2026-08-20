@@ -206,6 +206,8 @@ jobs:
         run: lake env lean VCVioTest/RoundByRound/OneRound.lean
       - name: Check Merkle batch-opening canaries
         run: lake env lean VCVioTest/MerkleTreeBatch.lean
+      - name: Check simulation/fork pipeline computability lock
+        run: lake env lean VCVioTest/Computability.lean
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
         run: lake exe slhdsa_kat
       - name: Run SLH-DSA-C13 differential KAT

@@ -1,5 +1,6 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import VCVioTest.Computability
 public import VCVioTest.GrindFailFast
 public import VCVioTest.LongChainPrograms
 public import VCVioTest.MerkleTreeBatch
