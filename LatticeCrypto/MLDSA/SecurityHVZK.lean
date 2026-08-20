@@ -201,7 +201,6 @@ theorem evalDist_honest_pregate (sk : SecretKey p) {γ : Type}
 
 /-! ### Public recovery of the withheld key part `t₀` -/
 
-open Classical in
 /-- Noncomputable recovery of the withheld key part `t₀` from the public key alone: pick any
 seed that key generation maps to `pk` and return its `t₀` (or `0` if `pk` is not honestly
 generated). On valid key pairs this agrees with the actual secret `t₀` exactly under the
@@ -209,9 +208,12 @@ key-generation collision-freeness law `Primitives.Laws.keyVector_t0_determined`
 (`recoverT0_eq`). The HVZK simulator may use it because it is a function of the statement
 only; cryptographically this corresponds to treating the full `t = t₁·2^d + t₀` as public. -/
 noncomputable def recoverT0 (pk : PublicKey p prims) : RqVec p.k :=
-  if h : ∃ seed : Bytes 32, (keyGenFromSeed p prims seed).1 = pk then
-    (keyGenFromSeed p prims (Classical.choose h)).2.t0
-  else 0
+  by
+    letI : Decidable (∃ seed : Bytes 32, (keyGenFromSeed p prims seed).1 = pk) :=
+      Classical.propDecidable _
+    exact if h : ∃ seed : Bytes 32, (keyGenFromSeed p prims seed).1 = pk then
+      (keyGenFromSeed p prims (Classical.choose h)).2.t0
+    else 0
 
 omit [SampleableType (RqVec p.l)] [SampleableType (CommitHashBytes p)]
   [DecidableEq prims.High] in

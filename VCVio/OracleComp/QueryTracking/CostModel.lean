@@ -28,15 +28,12 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 - `costDist oa cm`: Joint distribution of `(output, totalCost)`.
 - `expectedCost oa cm val`: Expected total cost `E[val(cost)]`, computed via `wp`.
 - `WorstCaseCostBound`, `ExpectedCostBound`: Cost bound predicates.
-- `WorstCasePolyTime`, `ExpectedPolyTime`: Asymptotic polynomial-time predicates for computation
-  families indexed by a security parameter.
 
 ## Key Results
 
 - `fst_map_costDist`: Cost instrumentation doesn't change the output distribution.
 - `expectedCost_pure`: Expected cost of a pure computation is `0`.
 - `probEvent_cost_gt_le_expectedCost_div`: Markov's inequality for cost distributions.
-- `WorstCasePolyTime.toExpectedPolyTime`: Strict polynomial time implies expected polynomial time.
 -/
 
 @[expose] public section

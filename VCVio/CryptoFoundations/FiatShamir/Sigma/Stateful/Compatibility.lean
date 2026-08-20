@@ -61,7 +61,7 @@ noncomputable def statefulPostKeygenFreshAdvantage
 
 This packages `cmaRealRun` with the same final freshness predicate as the
 post-keygen normal form. -/
-noncomputable def statefulCmaFreshExperiment
+def statefulCmaFreshExperiment
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) : ProbComp Bool := do
   let z ← cmaRealRun σ hr M adv
   let out := z.1
@@ -164,7 +164,7 @@ theorem statefulCmaFreshAdvantage_eq_statefulPostKeygenFreshAdvantage
 /-! ## Public WriterT compatibility -/
 
 /-- Fixed-key public signing-query handler in the generic `appendInputLog` form. -/
-@[reducible, fs_simp] private noncomputable def postKeygenAppendImpl (pk : Stmt) (sk : Wit) :
+@[reducible, fs_simp] private def postKeygenAppendImpl (pk : Stmt) (sk : Wit) :
     QueryImpl (SourceCmaSpec (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp))
       (StateT (List M) (StateT (RoCache M Commit Chal) ProbComp)) := by
   letI : HasQuery (unifSpec + roSpec M Commit Chal)
@@ -183,7 +183,7 @@ private abbrev postKeygenState (M Commit Chal : Type) := List M × RoCache M Com
 
 /-- Product-state version of `postKeygenAppendImpl`, used to compare with the
 full `CmaState` handler by projection. -/
-@[fs_simp] private noncomputable def postKeygenAppendProdImpl (pk : Stmt) (sk : Wit) :
+@[fs_simp] private def postKeygenAppendProdImpl (pk : Stmt) (sk : Wit) :
     QueryImpl (SourceCmaSpec (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp))
       (StateT (postKeygenState M Commit Chal) ProbComp) := fun t =>
   StateT.mk fun (signed, cache) =>
@@ -333,7 +333,7 @@ private lemma postKeygenAppendProdImpl_eq_flattenStateT
 
 /-- Fixed-key public post-keygen experiment after WriterT logging has been
 converted to an input log. This is split at the candidate/log boundary. -/
-private noncomputable def postKeygenFreshAppendProb
+private def postKeygenFreshAppendProb
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) (pk : Stmt) (sk : Wit) : ProbComp Bool :=
   letI : HasQuery (roSpec M Commit Chal) (StateT (RoCache M Commit Chal) ProbComp) :=
     (randomOracle : QueryImpl (roSpec M Commit Chal) _).toHasQuery
@@ -427,14 +427,14 @@ private theorem postKeygenFreshAppendProb_eq_statefulPostKeygenFreshProb
   | Sum.inl _ => signed
   | Sum.inr m => signed ++ [m]
 
-@[fs_simp] private noncomputable def cmaRealAppendProdImpl :
+@[fs_simp] private def cmaRealAppendProdImpl :
     QueryImpl (SourceCmaSpec (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp))
       (StateT (List M × CmaState M Commit Chal Stmt Wit) ProbComp) :=
   QueryImpl.extendStateLeft (cmaRealSourceFullSum M Commit Chal σ hr)
     (cmaRealAppendAux (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) (Stmt := Stmt) (Wit := Wit))
 
-@[fs_simp] private noncomputable def cmaRealLoggedProdImpl :
+@[fs_simp] private def cmaRealLoggedProdImpl :
     QueryImpl (cmaSpec M Commit Chal Resp Stmt)
       (StateT (List M × CmaState M Commit Chal Stmt Wit) ProbComp) :=
   ((cmaReal M Commit Chal σ hr).mapStateTBase
