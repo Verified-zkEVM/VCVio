@@ -5,6 +5,7 @@ public import Extern.Falcon.ExpmBridge
 public import Extern.Falcon.FFI
 public import Extern.Falcon.FFT
 public import Extern.Falcon.FPRBridge
+public import Extern.Falcon.FPRBridgeRefutations
 public import Extern.Falcon.Instance
 public import Extern.Falcon.KeyGen
 public import Extern.Falcon.SamplerZ

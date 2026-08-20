@@ -72,6 +72,15 @@ honor a relative-error bound once the exact result leaves its representable rang
 re-deriving `Valid`/`InRange` for each intermediate result from the same starting
 hypotheses, rather than needing it assumed at every step.
 
+Carrying a domain that way costs something the unrestricted version did not have to think
+about: the domain has to be non-degenerate, or the laws hold for nothing. `Valid := fun _ =>
+False` satisfies every `_error` and `_valid` field vacuously, and `InRange := fun _ => False`
+does the same, leaving only `interp_zero` / `interp_one` / `neg_exact` with any content — so
+`[HasRealSemantics F ε]` on its own would be an assumption that says nothing, and every
+compound lemma below could be instantiated at it. `valid_zero`, `valid_one` and
+`inRange_of_valid` rule that out: the format's own constants are in the domain, and a value
+the format holds is a result it can round to, so `InRange` is inhabited wherever `Valid` is.
+
 The machine epsilon for IEEE-754 binary64 is `2^{-52} ≈ 2.22 × 10^{-16}`. -/
 class HasRealSemantics (F : Type) [FloatLike F] (ε : outParam ℝ) where
   interp : F → ℝ
@@ -84,6 +93,12 @@ class HasRealSemantics (F : Type) [FloatLike F] (ε : outParam ℝ) where
   ε_lt_one : ε < 1
   interp_zero : interp FloatLike.zero = 0
   interp_one : interp FloatLike.one = 1
+  /-- The format's own constants are valid operands. -/
+  valid_zero : Valid FloatLike.zero
+  /-- The format's own constants are valid operands. -/
+  valid_one : Valid FloatLike.one
+  /-- A value the format holds is a result the format can round to. -/
+  inRange_of_valid : ∀ (a : F), Valid a → InRange (interp a)
   add_error : ∀ (a b : F), Valid a → Valid b → InRange (interp a + interp b) →
     |interp (FloatLike.add a b) - (interp a + interp b)| ≤ ε * |interp a + interp b|
   add_valid : ∀ (a b : F), Valid a → Valid b → InRange (interp a + interp b) →
@@ -295,70 +310,50 @@ theorem ieee754_machineEpsilon_lt_one : ieee754_machineEpsilon < 1 := by
   unfold ieee754_machineEpsilon
   norm_num
 
--- open Falcon.Concrete.FPR in
-/- FPR satisfies `HasRealSemantics` with machine epsilon `2^{-52}`, restricted to operands that
-are normal and finite or exactly zero (`FPR.IsNormalOrZero`) and to exact results that land in the
-correctly-rounded magnitude window (`FPR.InNormalMagnitudeRange`).
+open Falcon.Concrete.FPR in
+/-- **`FPR` satisfies `HasRealSemantics` with machine epsilon `2 ^ (-52)`.**
 
-The `interp` denotation is `FPRBridge.toReal`, a pure `Nat`/`Bool`/`ℝ` decoding of the
-IEEE-754 bit fields (`FPR.decode` + `FPR.Bits.toReal`) with no dependence on the opaque
-`Float.ofBits`/`Float.toRat0` runtime path. Consequently `interp_zero`, `interp_one`, and
-`neg_exact` are fully proved below (`toReal_zero`, `toReal_one`, `toReal_neg`), and
-`add_error`, `mul_error`, `sqrt_error` are literally `FPRBridge`'s theorems of the same
-name — their statements already carry exactly the `IsNormal`/`InNormalMagnitudeRange`
-hypotheses this class's fields ask for. `div_error` needs its hypotheses supplied in a
-different order than `FPRBridge.div_error` uses, but is otherwise the same theorem.
+The domain is `FPR.IsNormalOrZero` — normal and finite, or exactly `±0` — paired with
+`FPR.InNormalMagnitudeRange` on the exact result. It excludes subnormals and the non-finite
+encodings, both of which break the relative-error bounds; `FPRBridge.lean` carries a refutation
+witness for each.
 
-What remains open is the `_valid` half of the class, and the first thing to know is that the
-obvious reading of it is false. With `Valid := FPR.IsNormal`, `add_valid` is refutable at
-`1 + (-1)`: both operands are normal, the exact sum `0` satisfies `FPR.InNormalMagnitudeRange`
-through its `r = 0` disjunct, and `FPR.add` returns `+0`, whose exponent field is `0`. Exact
-cancellation is an `IsNormal`-losing failure mode that `InRange` does not exclude — it explicitly
-*admits* zero. So the open item was the contract rather than a missing proof.
+`FPR.IsNormal` alone would not do, and not for want of a proof: `add_valid` is *refutable* at
+`1 + (-1)`, where both operands are normal, the exact sum `0` is in range through
+`FPR.InNormalMagnitudeRange`'s own `r = 0` disjunct, and `FPR.add` returns `+0`, whose exponent
+field is `0`. Exact cancellation is an `IsNormal`-losing failure mode that `InRange` does not
+exclude — it explicitly *admits* zero. Admitting the two zero encodings repairs that without
+readmitting subnormals or Inf/NaN.
 
-`FPRBridge.FPR.IsNormalOrZero` is the repair: normal and finite, or exactly `±0`, which is the
-domain binary64 arithmetic is genuinely closed under. It still excludes subnormals and the
-non-finite encodings, both of which would break the relative-error bounds. Against that `Valid`:
-
-All six closure properties are now proved, at normal operands: `add_isNormalOrZero`,
-`sub_isNormalOrZero`, `mul_isNormalOrZero`, `div_isNormalOrZero`, `sqrt_isNormalOrZero` and
-`FPR.isNormalOrZero_neg`. The `1 + (-1)` cancellation is banked alongside them as a witness that
-the zero disjunct is reachable and load-bearing. Only addition and subtraction can cancel; a
-product, quotient or square root of nonzero normals is nonzero, so those three always land in the
-`IsNormal` disjunct.
-
-One step remains before this instance can be uncommented. Every statement above, and every
-`_error` bound, restricts its *operands* to `FPR.IsNormal`, while the `Valid` the class needs is
-`FPR.IsNormalOrZero`. Widening them requires each pipeline evaluated at a zero operand. The
-underlying facts hold bit-exactly — `FPR.add x 0 = x`, `FPR.mul x 0` and `FPR.div 0 x` are `±0`,
-`FPR.sqrt 0 = 0` — and every one of those cases is exact rather than approximate, so no new error
-analysis is involved; what it needs is the alignment and significand-packing steps traced at an
-operand whose exponent field is `0`. Note `FPR.add` is not bit-preserving there: `(+0) + (-0)` is
-`+0`, so the widened statements have to be phrased on `toReal`, not on the bit pattern.
-
-Until that is discharged this instance stays commented out, and so the error bounds proved in
-`FPRBridge.lean` do not yet reach any downstream Falcon theorem. -/
--- instance : FloatLike.HasRealSemantics FPR ieee754_machineEpsilon where
---   interp := Falcon.Concrete.FPRBridge.toReal
---   Valid := Falcon.Concrete.FPRBridge.FPR.IsNormalOrZero
---   InRange := Falcon.Concrete.FPRBridge.FPR.InNormalMagnitudeRange
---   ε_nonneg := le_of_lt ieee754_machineEpsilon_pos
---   ε_lt_one := ieee754_machineEpsilon_lt_one
---   interp_zero := Falcon.Concrete.FPRBridge.toReal_zero
---   interp_one := Falcon.Concrete.FPRBridge.toReal_one
---   add_error := Falcon.Concrete.FPRBridge.add_error
---   add_valid := Falcon.Concrete.FPRBridge.add_isNormalOrZero
---   mul_error := Falcon.Concrete.FPRBridge.mul_error
---   mul_valid := Falcon.Concrete.FPRBridge.mul_isNormalOrZero
---   div_error := fun a b ha hb hbne hr =>
---     Falcon.Concrete.FPRBridge.div_error a b hbne ha hb hr
---   div_valid := fun a b ha hb hbne hr =>
---     Falcon.Concrete.FPRBridge.div_isNormalOrZero a b hbne ha hb hr
---   sqrt_error := Falcon.Concrete.FPRBridge.sqrt_error
---   sqrt_valid := Falcon.Concrete.FPRBridge.sqrt_isNormalOrZero
---   neg_exact := Falcon.Concrete.FPRBridge.toReal_neg
---   neg_valid := fun _ => Falcon.Concrete.FPRBridge.FPR.isNormalOrZero_neg
---   sub_error := Falcon.Concrete.FPRBridge.sub_error
---   sub_valid := Falcon.Concrete.FPRBridge.sub_isNormalOrZero
+The `interp` denotation is `FPRBridge.toReal`, a pure `Nat`/`Bool`/`ℝ` decoding of the IEEE-754
+bit fields (`FPR.decode` + `FPR.Bits.toReal`) with no dependence on the opaque
+`Float.ofBits`/`Float.toRat0` runtime path, so it reduces in the kernel. Every field below is a
+theorem of `FPRBridge.lean` under the name it carries here, except that `div_error` / `div_valid`
+take their hypotheses in a different order. -/
+noncomputable instance : FloatLike.HasRealSemantics FPR ieee754_machineEpsilon where
+  interp := Falcon.Concrete.FPRBridge.toReal
+  Valid := Falcon.Concrete.FPRBridge.FPR.IsNormalOrZero
+  InRange := Falcon.Concrete.FPRBridge.FPR.InNormalMagnitudeRange
+  ε_nonneg := le_of_lt ieee754_machineEpsilon_pos
+  ε_lt_one := ieee754_machineEpsilon_lt_one
+  interp_zero := Falcon.Concrete.FPRBridge.toReal_zero
+  interp_one := Falcon.Concrete.FPRBridge.toReal_one
+  valid_zero := Falcon.Concrete.FPRBridge.FPR.isNormalOrZero_zero
+  valid_one := Falcon.Concrete.FPRBridge.FPR.isNormalOrZero_one
+  inRange_of_valid := fun _ h =>
+    Falcon.Concrete.FPRBridge.FPR.inNormalMagnitudeRange_toReal_of_isNormalOrZero h
+  add_error := Falcon.Concrete.FPRBridge.add_error
+  add_valid := Falcon.Concrete.FPRBridge.add_isNormalOrZero
+  mul_error := Falcon.Concrete.FPRBridge.mul_error
+  mul_valid := Falcon.Concrete.FPRBridge.mul_isNormalOrZero
+  div_error := fun a b ha hb hbne hr => Falcon.Concrete.FPRBridge.div_error a b hbne ha hb hr
+  div_valid := fun a b ha hb hbne hr =>
+    Falcon.Concrete.FPRBridge.div_isNormalOrZero a b hbne ha hb hr
+  sqrt_error := Falcon.Concrete.FPRBridge.sqrt_error
+  sqrt_valid := Falcon.Concrete.FPRBridge.sqrt_isNormalOrZero
+  neg_exact := Falcon.Concrete.FPRBridge.toReal_neg
+  neg_valid := fun _ => Falcon.Concrete.FPRBridge.FPR.isNormalOrZero_neg
+  sub_error := Falcon.Concrete.FPRBridge.sub_error
+  sub_valid := Falcon.Concrete.FPRBridge.sub_isNormalOrZero
 
 end
