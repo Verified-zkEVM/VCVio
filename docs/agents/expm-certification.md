@@ -1,34 +1,58 @@
 # Certifying `expm_p63_error`
 
-Working notes for the last `sorry` in `Extern/Falcon/FPRBridge.lean`. Everything here is
-measured, not estimated; the numbers are what a proof attempt has to beat.
+How the FACCT sampler kernel's error bound was proved, and the measurements behind each choice.
+`expm_p63_error` lives in `Extern/Falcon/ExpmBridge.lean`; everything here is measured, not
+estimated.
 
 ## The obligation
 
 ```
 |expm_p63 x ccs / 2 ^ 63 - ccs * exp (-x)| ≤ 2 ^ (-51)
 ```
-for `x ∈ [0, log 2)` and `ccs ∈ [0, 1)`. Throughout, one **unit** means `2 ^ (-63)`, so the
+for `ccs ∈ [0, 1)` and `x ∈ [0, 0.694]`. Throughout, one **unit** means `2 ^ (-63)`, so the
 budget is **4096 units**.
 
-## Why it is tight
+Two things about the domain are worth knowing.
 
-`FPR.facctCoeffs` is a minimax fit of degree 12, not a Taylor truncation — every coefficient
-is perturbed from `2 ^ 63 / k!` (the linear one by `-47104`, the degree-12 one by `-1.3e8`).
-Its uniform error against `exp (-x)` over the interval is **3562 units**, i.e. 87% of the
-budget on its own. The fixed-point work is comparatively free: `mtwop63` is now proved
-*exact* (`⌊2 ^ 63 * toReal x⌋`, no rounding of its own), so the only truncation is the twelve
-`mulHi64` floors and the final one — measured at **1.55 units** over 60000 exact-arithmetic
-samples, and provably under about 4 by the geometric bound `e i ≤ ζ * e (i-1) + 1` with
-`ζ < 0.694`. So a proof has about **530 units of slack**, and any bound that overestimates
-`sup |P - exp|` by more than that cannot close.
+`ccs < 1` is load-bearing on both sides. The routine reads its operands through a fixed-point
+conversion that keeps `⌊2 ^ 63 · ccs⌋` in 63 bits and drops the sign bit. At `ccs = 1` the
+conversion wraps to `0` and the whole product with it, for every `x` in range, against a true
+value never below one half. Above `1` the claim fails outright: the returned `UInt64` read at
+scale `2 ^ 63` is below `2`, while `ccs · exp (-x)` grows without bound.
 
-## What does not work, and why
+`x ≤ 0.694` rather than `x < log 2` is deliberate. `0.694` is the smallest constant above `log 2`
+the proof already carries — it is the contraction factor of the Horner error induction
+(`scaledArg_le_694`), and the certificates run to `89/128 = 0.6953125`. Stating it there is what
+lets a caller feed a *computed* reduction: a caller reducing modulo `log 2` by rounding a
+floating-point quotient can land a few ulps above `log 2` when the argument is near a multiple of
+it, and no statement closed at `log 2` would apply to it.
 
-Write `Q = P - T_n`, the difference between the coefficient polynomial and a Taylor
-truncation of `exp (-x)`. `Q` has `O(1)` coefficients while being `O(2 ^ -51)` — the fit
-earns its accuracy from cancellation *across* the interval. Every bound that applies a
-triangle inequality to coefficients throws that cancellation away:
+## Where the budget goes
+
+| source | lemma | units |
+| --- | --- | --- |
+| fixed-point pipeline | `expm_p63_sub_trueArg_le` | 10 |
+| 15 Chebyshev certificates | `abs_certQ_le` | 3574 |
+| degree-18 Taylor truncation | `abs_taylorExpNeg_sub_exp_le` | 80 |
+| **total** | `expm_p63_error` | **3664** of 4096 |
+
+The bound is very nearly saturated, and by the approximation rather than the arithmetic around
+it. A random sweep over the domain puts the true worst case near 3400 units, so the proved figure
+carries about 10% of headroom over the measured one and 10% under the budget.
+
+The fixed-point half is ordinary: `mulHi64` is the high half of the exact product, `mtwop63` is
+*exactly* `⌊2 ^ 63 · toReal x⌋` with no rounding of its own, and the twelve Horner floors contract
+because each step scales the previous error by `ζ < 0.694`. The loop's `UInt64` subtraction cannot
+wrap for a cheap reason: `mulHi64 a b ≤ b` for **every** `a`.
+
+## Why the obvious bounds do not work
+
+Write `Q = P - T_n`, the difference between the coefficient polynomial and a Taylor truncation of
+`exp (-x)`. `FPR.facctCoeffs` is a minimax fit, not a Taylor truncation — every coefficient is
+perturbed from `2 ^ 63 / k!` (the linear one by `-47104`, the degree-12 one by `-1.3e8`). So `Q`
+has `O(1)` coefficients while being `O(2 ^ -51)`: the fit earns its accuracy from cancellation
+*across* the interval, and every bound that applies a triangle inequality to coefficients throws
+that cancellation away.
 
 | approach | result | vs 4096 |
 | --- | --- | --- |
@@ -36,11 +60,11 @@ triangle inequality to coefficients throws that cancellation away:
 | Chebyshev over the whole interval | 7529 units | 1.8x too weak |
 | Midpoint + Lipschitz, 256 pieces | 2988783 units | 730x too weak |
 
-The Lipschitz failure is the instructive one: bounding `sup |Q'|` coefficient-wise suffers
-the *identical* pathology, so subdividing does not rescue it. What works is subdivision that
-restores locality, applied to `Q` itself.
+The Lipschitz failure is the instructive one: bounding `sup |Q'|` coefficient-wise suffers the
+*identical* pathology, so subdividing does not rescue it. What works is subdivision that restores
+locality, applied to `Q` itself.
 
-## What does work
+## Why Chebyshev, and why 15 pieces
 
 | basis | pieces | bound | margin |
 | --- | --- | --- | --- |
@@ -49,13 +73,17 @@ restores locality, applied to `Q` itself.
 | Taylor form | 256 | 3569 | 13% |
 | **Chebyshev** | **32** | **3585** | **12%** |
 
-Chebyshev at 32 pieces matches Taylor form at 128 — a 4x reduction in certificate count for
-the price of needing `|T_j t| ≤ 1` on `[-1, 1]`.
+Chebyshev at 32 pieces matches Taylor form at 128 — a 4x reduction in certificate count for the
+price of needing `|T_j t| ≤ 1` on `[-1, 1]` (`abs_le_of_chebCert`). The landed proof gets to 15 by
+making the covering non-uniform instead of uniform: `[0, 1/16]` in one piece, `[1/16, 1/8]` in
+four of width `1/64`, `[1/8, 11/16]` in nine of width `1/16`, and `[11/16, 89/128]` in one of
+width `1/128`. `abs_certQ_le` chains them and is where the covering is checked.
 
-The Taylor degree is irrelevant to the bound: `n = 18`, `22` and `26` all give the same
-figure, because the remainder is already negligible at 18 (0.07 units). Use 18.
+The Taylor degree is irrelevant to the bound: `n = 18`, `22` and `26` all give the same figure,
+because the remainder is already negligible at 18 (0.07 units). The proof uses 18, via
+`Real.exp_bound`.
 
-## The cost problem, and its answer
+## Cost, and clearing denominators
 
 Each certificate is a polynomial identity of degree `n` under a linear substitution. Over `ℚ`
 this is slow, and — counter-intuitively — reducing the degree does not help, because the cost
@@ -66,40 +94,27 @@ tracks the coefficient arithmetic rather than the degree:
 | `ℚ`, 481 digits | 26 | 13.4 s |
 | `ℚ`, 326 digits | 18 | 18.3 s |
 
-**Clearing denominators fixes it.** The digit counts are denominator-dominated (`2 ^ 63`,
-`m ^ n`, `n!`); one common scaling makes every coefficient an integer. Measured over `ℤ` at
-degree 18 with 326-digit coefficients, several certificates to one file so the import is
-amortised:
+**Clearing denominators fixes it.** The digit counts are denominator-dominated (`2 ^ 63`, `m ^ n`,
+`n!`); one common scaling makes every coefficient an integer — this is why `certQ_expand` and the
+`certN*` tables are stated over `ℤ`. Measured over `ℤ` at degree 18 with 326-digit coefficients,
+several certificates to a file so the import is amortised: **2.54 s marginal per certificate** on
+a 6.8 s import, against roughly 11.5 s marginal over `ℚ`. The whole certification layer costs
+about 25 s of build time.
 
-| certificates | total |
-| --- | --- |
-| 1 | 9.44 s |
-| 4 | 16.90 s |
-| 8 | 27.04 s |
+Breakpoints are **dyadic** for the same reason: anchoring the split at a decimal bound for `log 2`
+produces 337-digit numerals, and the line-length linter cannot wrap a numeral.
 
-That is **2.54 s marginal per certificate** on a 6.8 s import — against roughly 11.5 s
-marginal over `ℚ`, a 4.5x improvement. So:
+## What was wrong before it was checked
 
-- Chebyshev / 32 pieces: `6.8 + 32 * 2.54` ≈ **88 s**. Acceptable; comparable to other heavy
-  files in the repo.
-- Taylor form / 128 pieces: ≈ 332 s. Still too slow, which settles the basis question —
-  **use Chebyshev**, and pay for the `|T_j t| ≤ 1` lemma.
+Three figures in an earlier draft of this note were wrong, and each was corrected by measurement
+rather than by argument:
 
-Build time is therefore no longer the binding constraint. The remaining lever (proving the
-binomial shift once and instantiating with `norm_num`, rather than a `ring` per certificate)
-is not needed, and should only be revisited if the real certificates prove more expensive
-than these representative ones.
+- The fixed-point truncation was estimated at ~15 units. It is **1.55**, because `mtwop63`
+  contributes nothing at all — it is exact.
+- A `Float`-precision differential check reported the approximation's worst case as *exactly* the
+  4096-unit budget. Near `2 ^ 63` its own rounding is ~2000 units of `2 ^ (-63)`. Redone in exact
+  arithmetic the true worst case is around 3560.
+- Build time was expected to be the binding constraint on the basis choice. After clearing
+  denominators it is not.
 
-## Shape of the eventual proof
-
-1. Fixed-point layer: `mtwop63` semantics, the twelve-step Horner truncation over `UInt64`,
-   the final `mulHi64`. Comparable in size to `mul_error`; no novel mathematics, and it can
-   be built and landed independently of the certification layer.
-2. Certification layer: `n = 18` Taylor truncation with `Real.exp_bound` for the remainder,
-   plus the 32 (or 128) subinterval certificates.
-3. Assembly: add the two, compare against 4096 units.
-
-Step 1 was worth doing first, and has already paid: the truncation figure it was meant to
-confirm turns out to be **1.55 units, not the ~15 first estimated**, because `mtwop63`
-contributes nothing at all. `mulHi_limbs`, `toNat_mulHi64` and `toNat_mtwop63` are proved in
-`Extern/Falcon/ExpmBridge.lean`; the Horner induction is what remains.
+Check tight numeric constants in exact arithmetic, not floats.

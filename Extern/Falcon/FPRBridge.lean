@@ -16,20 +16,35 @@ public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 /-!
 # FPR ↔ ℝ Bridge Theorems
 
-Error bounds connecting the integer-only FPR emulation layer to the
-exact `ℝ` arithmetic used in the abstract Falcon specification.
+Error bounds connecting the integer-only FPR emulation layer to the exact `ℝ` arithmetic used
+in the abstract Falcon specification.
 
-The analytic error bounds in this file are still stated as proof obligations.
-The end-to-end verifier bridge is reduced to explicit codec and fast-kernel
-correctness assumptions so the remaining gap is spelled out precisely.
+`toReal` reads the IEEE-754 binary64 fields straight off the `UInt64` word (`FPR.decode` into
+`FPR.Bits`, denoted by `FPR.Bits.toReal`), so the denotation is elementary arithmetic on `Nat`,
+`Bool` and `ℝ` and reduces in the kernel. Non-finite patterns denote `0`.
 
 ## Per-Operation Error Bounds
 
-Each FPR arithmetic operation introduces at most a relative error of
-`2^{-52}` (matching IEEE-754 binary64 precision):
+Each FPR arithmetic operation is correctly rounded, hence carries at most the relative error
+`2 ^ (-52)` of IEEE-754 binary64 — on the domain the format is closed under, and not outside it:
 
-- `|fpr_add(a, b) - (a_real + b_real)| ≤ 2^{-52} · |a_real + b_real|`
-- `|fpr_mul(a, b) - a_real · b_real| ≤ 2^{-52} · |a_real · b_real|`
+- `add_error`, `sub_error`, `mul_error`, `div_error` bound `|fpr_op a b - (a_real ⋆ b_real)|`
+  by `2 ^ (-52) · |a_real ⋆ b_real|`, for operands in `FPR.IsNormalOrZero` whose *exact* result
+  lands in `FPR.InNormalMagnitudeRange`.
+- `sqrt_error` needs no result-side restriction: a square root cannot leave the window.
+- `expm_p63_error` (in `Extern/Falcon/ExpmBridge.lean`) bounds the FACCT sampler kernel.
+
+Both restrictions are load-bearing rather than defensive. Two maximal-magnitude normals overflow
+the exponent field, which this decoder sends to `0`; two normals whose exact difference is
+subnormal are mis-rounded by the alignment step; and `FPR.sqrt` at `+∞` returns `2 ^ 512` against
+a right-hand side of `0`. The unrestricted readings of these statements are false, and the
+non-vacuity witnesses at the end of this file show the restricted ones still admit ordinary
+values — including, since the widening, exact zeros.
+
+The matching closure facts (`add_isNormalOrZero` and friends) say the domain is closed under each
+operation, which is what lets a compound expression carry the hypotheses through its intermediate
+results. Together they discharge `FloatLike.HasRealSemantics FPR` in
+`Extern/Falcon/ApproxArith.lean`.
 
 ## Accumulated Error in ffSampling
 
@@ -39,7 +54,8 @@ from Pornin 2019, Section 3:
 
   `R_∞(D_FPR ‖ D_ideal) ≤ 1 + ε_renyi`
 
-where `ε_renyi < 2^{-64}` for 53-bit mantissa precision.
+where `ε_renyi < 2^{-64}` for 53-bit mantissa precision. That analysis is quoted from the
+literature here; it is not established in this file.
 
 ## References
 
@@ -3878,7 +3894,7 @@ neither overflowing past `FPR.maxFiniteReal` nor underflowing into the open subn
 overflow the exponent field on summation, and two normal operands whose exact difference is
 subnormal (e.g. `2^-1022` and its next-representable neighbor) are mis-rounded by the alignment
 step, in both cases producing a result unrelated to the true sum. -/
-theorem add_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+private theorem add_error_of_isNormal (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
     (hr : FPR.InNormalMagnitudeRange (toReal a + toReal b)) :
     |toReal (FPR.add a b) - (toReal a + toReal b)| ≤
     (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a + toReal b| := by
@@ -3962,7 +3978,8 @@ operands are normal and the exact sum `0` satisfies `FPR.InNormalMagnitudeRange`
 `r = 0` disjunct, but `FPR.add` returns `+0`, whose exponent field is `0`. The rounding carry is
 the other boundary: it raises the packed exponent by two rather than one, and is ruled out at the
 top of the window by `addPipeline_no_carry`, so the result never reaches the non-finite marker. -/
-theorem add_isNormalOrZero (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+private theorem add_isNormalOrZero_of_isNormal (a b : FPR) (ha : FPR.IsNormal a)
+    (hb : FPR.IsNormal b)
     (hr : FPR.InNormalMagnitudeRange (toReal a + toReal b)) :
     FPR.IsNormalOrZero (FPR.add a b) := by
   have hs : ((addPipeline a b).sx.toUInt64).toNat ≤ 1 := by
@@ -4022,34 +4039,11 @@ theorem FPR.isNormalOrZero_neg {b : FPR} (hb : FPR.IsNormalOrZero b) :
     rw [decode_neg_exponent, decode_neg_mantissa]
     exact h
 
-/-- Relative error bound for `FPR.sub`, on the same domain as `add_error`. Subtraction is
-addition against a negated operand, and negation is exact, so the bound transfers with no
-further rounding analysis. -/
-theorem sub_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
-    (hr : FPR.InNormalMagnitudeRange (toReal a - toReal b)) :
-    |toReal (FPR.sub a b) - (toReal a - toReal b)| ≤
-    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a - toReal b| := by
-  have hsum : toReal a + toReal (FPR.neg b) = toReal a - toReal b := by
-    rw [toReal_neg]; ring
-  have h := add_error a (FPR.neg b) ha (FPR.isNormal_neg hb) (by rw [hsum]; exact hr)
-  rw [hsum] at h
-  exact h
-
-/-- Closure for `FPR.sub`, on the same domain as `sub_error`: subtraction is addition against a
-negated operand, so it inherits `add_isNormalOrZero` — including the cancellation case, which for
-subtraction is the ordinary `a - a`. -/
-theorem sub_isNormalOrZero (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
-    (hr : FPR.InNormalMagnitudeRange (toReal a - toReal b)) :
-    FPR.IsNormalOrZero (FPR.sub a b) := by
-  have hsum : toReal a + toReal (FPR.neg b) = toReal a - toReal b := by
-    rw [toReal_neg]; ring
-  exact add_isNormalOrZero a (FPR.neg b) ha (FPR.isNormal_neg hb) (by rw [hsum]; exact hr)
-
 /-- The cancellation case is real and is now covered: `1 + (-1)` lands in the zero disjunct.
 This is the input that refutes the same statement with `FPR.IsNormal` on the right. -/
 example : FPR.IsNormalOrZero (FPR.add FPR.one (FPR.neg FPR.one))
     ∧ ¬ FPR.IsNormal (FPR.add FPR.one (FPR.neg FPR.one)) := by
-  refine ⟨add_isNormalOrZero FPR.one (FPR.neg FPR.one) ?_ ?_ ?_, ?_⟩
+  refine ⟨add_isNormalOrZero_of_isNormal FPR.one (FPR.neg FPR.one) ?_ ?_ ?_, ?_⟩
   · unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode; decide
   · unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode; decide
   · exact Or.inl (by rw [toReal_neg, toReal_one]; ring)
@@ -5198,7 +5192,7 @@ private theorem mul_error_aux (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNorm
 /-- Relative error bound for `FPR.mul`, on normal operands whose exact product stays in the
 correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
 why both the operand- and result-side restrictions are necessary. -/
-theorem mul_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+private theorem mul_error_of_isNormal (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
     (hr : FPR.InNormalMagnitudeRange (toReal a * toReal b)) :
     |toReal (FPR.mul a b) - toReal a * toReal b| ≤
     (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a * toReal b| :=
@@ -5207,7 +5201,8 @@ theorem mul_error (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
 /-- Closure for `FPR.mul` on the domain `mul_error` covers. Unlike addition, multiplication
 cannot cancel: a product of nonzero normals is nonzero, so the result is always normal and the
 zero disjunct of `FPR.IsNormalOrZero` is never needed here. -/
-theorem mul_isNormalOrZero (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b)
+private theorem mul_isNormalOrZero_of_isNormal (a b : FPR) (ha : FPR.IsNormal a)
+    (hb : FPR.IsNormal b)
     (hr : FPR.InNormalMagnitudeRange (toReal a * toReal b)) :
     FPR.IsNormalOrZero (FPR.mul a b) :=
   Or.inl (mul_error_aux a b ha hb hr).2
@@ -6066,7 +6061,8 @@ private theorem div_error_aux (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNorm
 /-- Relative error bound for `FPR.div`, on normal operands whose exact quotient stays in the
 correctly-rounded binary64 magnitude window (`FPR.InNormalMagnitudeRange`); see `add_error` for
 why both the operand- and result-side restrictions are necessary. -/
-theorem div_error (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a) (hb' : FPR.IsNormal b)
+private theorem div_error_of_isNormal (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a)
+    (hb' : FPR.IsNormal b)
     (hr : FPR.InNormalMagnitudeRange (toReal a / toReal b)) :
     |toReal (FPR.div a b) - toReal a / toReal b| ≤
     (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a / toReal b| :=
@@ -6074,8 +6070,8 @@ theorem div_error (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a) (hb' :
 
 /-- Closure for `FPR.div` on the domain `div_error` covers. A quotient of nonzero normals is
 nonzero, so as with multiplication the result is always normal. -/
-theorem div_isNormalOrZero (a b : FPR) (hb : toReal b ≠ 0) (ha : FPR.IsNormal a)
-    (hb' : FPR.IsNormal b)
+private theorem div_isNormalOrZero_of_isNormal (a b : FPR) (hb : toReal b ≠ 0)
+    (ha : FPR.IsNormal a) (hb' : FPR.IsNormal b)
     (hr : FPR.InNormalMagnitudeRange (toReal a / toReal b)) :
     FPR.IsNormalOrZero (FPR.div a b) :=
   Or.inl (div_error_aux a b hb ha hb' hr).2
@@ -6723,7 +6719,7 @@ private theorem sqrtPipeline_key (x : FPR)
 the square root of a value already bracketed in `[FPR.minNormalReal, FPR.maxFiniteReal]` lands in
 `[2 ^ (-511), 2 ^ 512]`, hundreds of bits inside that same window on both ends, so a normal operand
 can never drive `FPR.sqrt` to overflow or underflow. -/
-theorem sqrt_error (a : FPR) (ha' : FPR.IsNormal a) (ha : 0 ≤ toReal a) :
+private theorem sqrt_error_of_isNormal (a : FPR) (ha' : FPR.IsNormal a) (ha : 0 ≤ toReal a) :
     |toReal (FPR.sqrt a) - Real.sqrt (toReal a)| ≤
     (2 : ℝ) ^ (-(52 : ℤ)) * Real.sqrt (toReal a) := by
   have h1 : 1 ≤ (FPR.decode a).exponent := Nat.one_le_iff_ne_zero.mpr ha'.1
@@ -6773,7 +6769,7 @@ The square root of a normal value cannot cancel, so the result is always normal.
 one operation whose no-carry obligation is vacuous: `sqrtPipeline`'s exponent lands in
 `[-565, 457]`, five hundred bits below the `969` at which a rounding carry could reach the
 non-finite marker. -/
-theorem sqrt_isNormalOrZero (a : FPR) (ha' : FPR.IsNormal a) (_ha : 0 ≤ toReal a) :
+private theorem sqrt_isNormalOrZero_of_isNormal (a : FPR) (ha' : FPR.IsNormal a) :
     FPR.IsNormalOrZero (FPR.sqrt a) := by
   have h1 : 1 ≤ (FPR.decode a).exponent := Nat.one_le_iff_ne_zero.mpr ha'.1
   have h2 : (FPR.decode a).exponent ≤ 2046 := by
@@ -6790,11 +6786,564 @@ theorem sqrt_isNormalOrZero (a : FPR) (ha' : FPR.IsNormal a) (_ha : 0 ≤ toReal
   exact FPR.isNormal_make _ _ _ (by decide) (by omega) (by omega)
     (by rw [hq2]; exact hm1) (by rw [hq2]; exact hm2) (fun h => absurd h (by omega))
 
+/-! ## Widening to the operand domain binary64 is closed under
+
+Every bound above assumes `FPR.IsNormal` operands, while the domain the arithmetic is actually
+closed under is `FPR.IsNormalOrZero` (`add_isNormalOrZero_of_isNormal` and friends can return the
+zero encodings, and Falcon feeds exact zeros constantly). This section closes the gap.
+
+The zero cases are exact rather than approximate, so no new error analysis is involved — what
+they need is each pipeline traced at an operand whose exponent field is `0`:
+
+* `FPR.add` reassembles the other operand unchanged. Nothing is aligned in (`yu` vanishes), the
+  renormalising count is forced to `8`, and the nine-bit sticky fold divides exactly, so the
+  packing round-trips. This is `add_decode_eq_of_significand_eq_zero`, stated on the pipeline's
+  ordered `x'` so that one trace covers both argument orders.
+* `FPR.mul` and `FPR.div` carry an explicit flush guard (`dzu`) that fires on a zero exponent
+  field, clearing the significand *and* substituting the exponent `-1076`, which `make` packs as
+  a bare sign bit.
+* `FPR.sqrt` masks its significand against the same test, and `make_z` collapses on it.
+
+Note `FPR.add` is not bit-preserving here — `(+0) + (-0)` is `+0` — so the statements are phrased
+on `toReal` and on the decoded fields, never on the bit pattern.
+-/
+
+
+/-- A zero encoding has empty significand. -/
+private theorem significand_eq_zero_of_isZero {x : FPR} (h : FPR.IsZero x) :
+    (FPR.decode x).significand = 0 := by
+  unfold FPR.Bits.significand
+  rw [h.1, h.2]; simp
+
+private theorem magKey_eq_zero_of_isZero {x : FPR} (h : FPR.IsZero x) :
+    (FPR.decode x).magKey = 0 := by
+  unfold FPR.Bits.magKey; rw [h.1, h.2]; simp
+
+private theorem two_pow_le_magKey_of_isNormal {x : FPR} (h : FPR.IsNormal x) :
+    2 ^ 52 ≤ (FPR.decode x).magKey := by
+  unfold FPR.Bits.magKey
+  have : 1 ≤ (FPR.decode x).exponent := Nat.one_le_iff_ne_zero.mpr h.1
+  nlinarith [Nat.zero_le (FPR.decode x).mantissa]
+
+
+/-- With the smaller operand's significand empty, the aligned addend `yu` vanishes: the raw
+packing `yu_` is `8 *` that significand, the flush mask can only clear it further, and
+`stickyShift` sends `0` to `0`. -/
+private theorem addPipeline_yu_eq_zero_of_significand (a b : FPR)
+    (hy : (FPR.decode (addPipeline a b).y').significand = 0) :
+    (addPipeline a b).yu = 0 := by
+  have hraw : (addPipeline a b).yu_ = 0 := by
+    rw [← UInt64.toNat_inj, addPipeline_yuRaw_toNat, hy]; rfl
+  have hyu' : (addPipeline a b).yu' = 0 := by
+    rw [addPipeline_yu', hraw, UInt64.zero_and]
+  rw [← UInt64.toNat_inj, addPipeline_yu_toNat, hyu']
+  rw [show ((0 : UInt64).toNat) = 0 from rfl]
+  simp [stickyShift]
+
+/-- With the aligned addend gone, the combined significand is exactly the leading operand's. -/
+private theorem addPipeline_zu_eq_xu (a b : FPR)
+    (hy : (FPR.decode (addPipeline a b).y').significand = 0) :
+    (addPipeline a b).zu = (addPipeline a b).xu := by
+  rw [addPipeline_zu, addPipeline_yu_eq_zero_of_significand a b hy]
+  simp
+
+
+/-- The renormalising shift count is exactly `8` when the combined significand is the leading
+operand's own packing: `xu = 8 * significand` sits in `[2 ^ 55, 2 ^ 56)`, and the `||| 1` guard
+cannot leave that window because `xu` is a multiple of `8`. -/
+private theorem addPipeline_c_eq_eight (a b : FPR)
+    (hx : FPR.IsNormal (addPipeline a b).x')
+    (hy : (FPR.decode (addPipeline a b).y').significand = 0) :
+    (addPipeline a b).c.toNat = 8 := by
+  obtain ⟨hs1, hs2⟩ := significand_mem_of_isNormal hx.1 (FPR.decode_mantissa_lt _)
+  have hxu : (addPipeline a b).xu.toNat = 8 * (FPR.decode (addPipeline a b).x').significand :=
+    addPipeline_xu_toNat a b
+  have hzu : (addPipeline a b).zu.toNat = (addPipeline a b).xu.toNat := by
+    rw [addPipeline_zu_eq_xu a b hy]
+  have hor : ((addPipeline a b).zu ||| 1).toNat = (addPipeline a b).zu.toNat ||| 1 :=
+    UInt64.toNat_or _ _
+  have hval : (addPipeline a b).zu.toNat ||| 1
+      = 2 * ((addPipeline a b).zu.toNat / 2) + 1 := or_one_eq _
+  rw [addPipeline_c]
+  refine lzcnt64_nonzero_unique _ 8 ?_ ?_ <;> rw [hor, hval] <;> omega
+
+
+/-- The rounded significand handed to `FPR.make_z` is exactly `4 *` the leading operand's
+significand: the renormalising shift by `8` leaves the low eleven bits clear, so the nine-bit
+sticky fold is an exact division. -/
+private theorem addPipeline_zu''_eq (a b : FPR)
+    (hx : FPR.IsNormal (addPipeline a b).x')
+    (hy : (FPR.decode (addPipeline a b).y').significand = 0) :
+    (addPipeline a b).zu''.toNat = 4 * (FPR.decode (addPipeline a b).x').significand := by
+  obtain ⟨hs1, hs2⟩ := significand_mem_of_isNormal hx.1 (FPR.decode_mantissa_lt _)
+  have hxu : (addPipeline a b).xu.toNat = 8 * (FPR.decode (addPipeline a b).x').significand :=
+    addPipeline_xu_toNat a b
+  have hzu : (addPipeline a b).zu = (addPipeline a b).xu := addPipeline_zu_eq_xu a b hy
+  have hzune : (addPipeline a b).zu ≠ 0 := by
+    intro h0
+    rw [h0] at hzu
+    rw [← hzu] at hxu
+    simp only [show ((0 : UInt64).toNat) = 0 from rfl] at hxu
+    omega
+  have hzu' : (addPipeline a b).zu'.toNat = (addPipeline a b).zu.toNat * 2 ^ 8 := by
+    rw [addPipeline_zu', addPipeline_c, fpr_ulsh_lzcnt64_toNat _ hzune, ← addPipeline_c,
+      addPipeline_c_eq_eight a b hx hy]
+  rw [addPipeline_zu'', toNat_or_fold_shiftRight_nine, stickyShift_eq, hzu', hzu, hxu]
+  have hmod : 8 * (FPR.decode (addPipeline a b).x').significand * 2 ^ 8 % 2 ^ (9 + 1) = 0 := by
+    omega
+  rw [hmod, if_pos rfl]
+  omega
+
+/-- The packed exponent handed to `FPR.make_z`, as a plain integer. -/
+private theorem addPipeline_ex3_eq (a b : FPR)
+    (hx : FPR.IsNormal (addPipeline a b).x')
+    (hy : (FPR.decode (addPipeline a b).y').significand = 0) :
+    (addPipeline a b).ex'''.toInt
+      = ((FPR.decode (addPipeline a b).x').exponent : ℤ) - 1077 := by
+  rw [addPipeline_ex'''_toInt, addPipeline_ex'_toInt, addPipeline_c_eq_eight a b hx hy,
+    addPipeline_ex_eq_exponent]
+  ring
+
+
+
+/-- **`FPR.add` is exact when one operand is a zero encoding.** With the trailing operand's
+significand empty, nothing is aligned in, nothing is rounded off, and the pipeline reassembles
+the leading operand unchanged: `zu` is `xu`, the renormalising count is `8`, and the nine-bit
+sticky fold divides exactly. Stated on `x'` so that it covers both argument orders at once —
+`addPipeline_swap_cases` identifies `x'` with whichever operand carries the larger magnitude. -/
+private theorem add_decode_eq_of_significand_eq_zero (a b : FPR)
+    (hx : FPR.IsNormal (addPipeline a b).x')
+    (hy : (FPR.decode (addPipeline a b).y').significand = 0) :
+    FPR.decode (FPR.add a b) = FPR.decode (addPipeline a b).x' := by
+  obtain ⟨hs1, hs2⟩ := significand_mem_of_isNormal hx.1 (FPR.decode_mantissa_lt _)
+  have hexp1 : 1 ≤ (FPR.decode (addPipeline a b).x').exponent :=
+    Nat.one_le_iff_ne_zero.mpr hx.1
+  have hexp2 : (FPR.decode (addPipeline a b).x').exponent ≤ 2046 := by
+    have := FPR.decode_exponent_lt (addPipeline a b).x'
+    have := hx.2
+    omega
+  have hzu'' := addPipeline_zu''_eq a b hx hy
+  have hex3 := addPipeline_ex3_eq a b hx hy
+  have hsign : ((addPipeline a b).sx.toUInt64).toNat
+      = if (FPR.decode (addPipeline a b).x').sign then 1 else 0 := by
+    rw [UInt32.toNat_toUInt64]
+    exact addPipeline_sx_toNat a b
+  have hround : roundQuarterTiesEven (addPipeline a b).zu''.toNat
+      = (FPR.decode (addPipeline a b).x').significand := by
+    rw [hzu'', roundQuarterTiesEven_of_mod_four_eq_zero _ (by omega)]
+    omega
+  rw [add_eq_make_z,
+    FPR.decode_make_z_of_no_carry _ _ _ (by rw [hsign]; split_ifs <;> omega)
+      (by rw [hex3]; omega) (by rw [hex3]; omega) (by omega) (by omega)
+      (by rw [hround]; omega)]
+  have hmant : (FPR.decode (addPipeline a b).x').significand - 2 ^ 52
+      = (FPR.decode (addPipeline a b).x').mantissa := by
+    unfold FPR.Bits.significand
+    rw [if_neg hx.1]
+    omega
+  have hsg : decide ((addPipeline a b).sx.toUInt64.toNat = 1)
+      = (FPR.decode (addPipeline a b).x').sign := by
+    rcases Bool.eq_false_or_eq_true (FPR.decode (addPipeline a b).x').sign with hb | hb <;>
+      rw [hb] at hsign ⊢ <;> simp [hsign]
+  have hexf : (((FPR.decode (addPipeline a b).x').exponent : ℤ) - 1077 + 1076).toNat + 1
+      = (FPR.decode (addPipeline a b).x').exponent := by omega
+  rw [hex3, hround, hmant, hsg, hexf]
+
+
+/-- A zero encoding never leads `FPR.add`'s magnitude comparison against a normal operand, so the
+pipeline's ordered pair is `(a, b)` when only `b` is zero. -/
+private theorem addPipeline_no_swap_of_isZero_right (a b : FPR)
+    (ha : FPR.IsNormal a) (hb : FPR.IsZero b) :
+    (addPipeline a b).x' = a ∧ (addPipeline a b).y' = b := by
+  obtain ⟨hcases, hmag⟩ := addPipeline_swap_cases a b
+  rcases hcases with h | h
+  · exact h
+  · exfalso
+    rw [h.1, h.2] at hmag
+    have := two_pow_le_magKey_of_isNormal ha
+    rw [magKey_eq_zero_of_isZero hb] at hmag
+    omega
+
+/-- The mirror of `addPipeline_no_swap_of_isZero_right`: the pipeline swaps, so `x'` is `b`. -/
+private theorem addPipeline_swap_of_isZero_left (a b : FPR)
+    (ha : FPR.IsZero a) (hb : FPR.IsNormal b) :
+    (addPipeline a b).x' = b ∧ (addPipeline a b).y' = a := by
+  obtain ⟨hcases, hmag⟩ := addPipeline_swap_cases a b
+  rcases hcases with h | h
+  · exfalso
+    rw [h.1, h.2] at hmag
+    have := two_pow_le_magKey_of_isNormal hb
+    rw [magKey_eq_zero_of_isZero ha] at hmag
+    omega
+  · exact h
+
+/-- Adding a zero encoding on the right is exact, at the level of decoded fields. -/
+private theorem add_decode_of_isZero_right (a b : FPR)
+    (ha : FPR.IsNormal a) (hb : FPR.IsZero b) :
+    FPR.decode (FPR.add a b) = FPR.decode a := by
+  obtain ⟨hx, hy⟩ := addPipeline_no_swap_of_isZero_right a b ha hb
+  have h := add_decode_eq_of_significand_eq_zero a b (by rw [hx]; exact ha)
+    (by rw [hy]; exact significand_eq_zero_of_isZero hb)
+  rw [h, hx]
+
+/-- Adding a zero encoding on the left is exact, at the level of decoded fields. -/
+private theorem add_decode_of_isZero_left (a b : FPR)
+    (ha : FPR.IsZero a) (hb : FPR.IsNormal b) :
+    FPR.decode (FPR.add a b) = FPR.decode b := by
+  obtain ⟨hx, hy⟩ := addPipeline_swap_of_isZero_left a b ha hb
+  have h := add_decode_eq_of_significand_eq_zero a b (by rw [hx]; exact hb)
+    (by rw [hy]; exact significand_eq_zero_of_isZero ha)
+  rw [h, hx]
+
+/-- Both operands zero: the combined significand is empty. -/
+private theorem addPipeline_zu_eq_zero_of_isZero (a b : FPR)
+    (ha : FPR.IsZero a) (hb : FPR.IsZero b) : (addPipeline a b).zu = 0 := by
+  have hy : (FPR.decode (addPipeline a b).y').significand = 0 := by
+    rcases (addPipeline_swap_cases a b).1 with h | h
+    · rw [h.2]; exact significand_eq_zero_of_isZero hb
+    · rw [h.2]; exact significand_eq_zero_of_isZero ha
+  have hx : (FPR.decode (addPipeline a b).x').significand = 0 := by
+    rcases (addPipeline_swap_cases a b).1 with h | h
+    · rw [h.1]; exact significand_eq_zero_of_isZero ha
+    · rw [h.1]; exact significand_eq_zero_of_isZero hb
+  rw [addPipeline_zu_eq_xu a b hy, ← UInt64.toNat_inj, addPipeline_xu_toNat, hx]
+  rfl
+
+
+/-- Both zero encodings denote `0`. -/
+private theorem toReal_eq_zero_of_isZero {x : FPR} (h : FPR.IsZero x) : toReal x = 0 := by
+  change (FPR.decode x).toReal = 0
+  unfold FPR.Bits.toReal
+  rw [if_pos h.1, h.2]
+  simp
+
+/-- Equal decoded fields denote equal reals. -/
+private theorem toReal_eq_of_decode_eq {x y : FPR} (h : FPR.decode x = FPR.decode y) :
+    toReal x = toReal y := by
+  change (FPR.decode x).toReal = (FPR.decode y).toReal
+  rw [h]
+
+/-- Both operands zero: the sum is a zero encoding. -/
+private theorem add_isZero_of_isZero (a b : FPR) (ha : FPR.IsZero a) (hb : FPR.IsZero b) :
+    FPR.IsZero (FPR.add a b) := by
+  have hzu := addPipeline_zu_eq_zero_of_isZero a b ha hb
+  unfold FPR.IsZero FPR.Bits.IsZero
+  rw [add_eq_make_z, addPipeline_zu''_eq_zero_of_zu_eq_zero a b hzu,
+    FPR.decode_make_z_of_zero _ _
+      (by rcases addPipeline_sx_eq_zero_or_one a b with hc | hc <;> rw [hc] <;> decide)]
+  exact ⟨rfl, rfl⟩
+
+
+theorem add_error (a b : FPR) (ha : FPR.IsNormalOrZero a) (hb : FPR.IsNormalOrZero b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a + toReal b)) :
+    |toReal (FPR.add a b) - (toReal a + toReal b)| ≤
+    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a + toReal b| := by
+  rcases ha with ha | ha
+  · rcases hb with hb | hb
+    · exact add_error_of_isNormal a b ha hb hr
+    · rw [toReal_eq_of_decode_eq (add_decode_of_isZero_right a b ha hb),
+        toReal_eq_zero_of_isZero hb, add_zero, sub_self, abs_zero]
+      positivity
+  · rcases hb with hb | hb
+    · rw [toReal_eq_of_decode_eq (add_decode_of_isZero_left a b ha hb),
+        toReal_eq_zero_of_isZero ha, zero_add, sub_self, abs_zero]
+      positivity
+    · rw [add_toReal_eq_zero_of_zu_eq_zero' a b (addPipeline_zu_eq_zero_of_isZero a b ha hb),
+        toReal_eq_zero_of_isZero ha, toReal_eq_zero_of_isZero hb]
+      simp
+
+theorem add_isNormalOrZero (a b : FPR) (ha : FPR.IsNormalOrZero a)
+    (hb : FPR.IsNormalOrZero b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a + toReal b)) :
+    FPR.IsNormalOrZero (FPR.add a b) := by
+  rcases ha with ha | ha
+  · rcases hb with hb | hb
+    · exact add_isNormalOrZero_of_isNormal a b ha hb hr
+    · exact Or.inl (by unfold FPR.IsNormal; rw [add_decode_of_isZero_right a b ha hb]; exact ha)
+  · rcases hb with hb | hb
+    · exact Or.inl (by unfold FPR.IsNormal; rw [add_decode_of_isZero_left a b ha hb]; exact hb)
+    · exact Or.inr (add_isZero_of_isZero a b ha hb)
+
+
+/-- `FPR.make` on the flushed exponent that `FPR.mul` and `FPR.div` substitute for a zero
+operand: `e + 1076` is `0` and the significand is empty, so nothing but the sign bit survives. -/
+private theorem make_flushed (s : UInt64) :
+    make s (((0 : UInt32) - 1076).toInt32) 0 = s <<< 63 := by
+  have h1 : (((((0 : UInt32) - 1076).toInt32 + 1076).toUInt32.toUInt64) <<< 52 : UInt64) = 0 := by
+    decide
+  have h2 : (((0xC8 : UInt64) >>> ((0 : UInt64).toUInt32 &&& (7 : UInt32)).toUInt64)
+      &&& (1 : UInt64)) = 0 := by decide
+  change (s <<< 63) + (((((0 : UInt32) - 1076).toInt32 + 1076).toUInt32.toUInt64) <<< 52)
+      + ((0 : UInt64) >>> 2)
+      + (((0xC8 : UInt64) >>> ((0 : UInt64).toUInt32 &&& (7 : UInt32)).toUInt64)
+        &&& (1 : UInt64)) = s <<< 63
+  rw [h1, h2, show ((0 : UInt64) >>> 2) = 0 from by decide]
+  simp
+
+/-- Decode of a bare sign bit: the IEEE-754 signed zero. -/
+private theorem decode_shiftLeft_63 (s : UInt64) (hs : s.toNat ≤ 1) :
+    FPR.decode (s <<< 63) = { sign := decide (s.toNat = 1), exponent := 0, mantissa := 0 } := by
+  rw [← make_z_of_zero s 0]
+  exact FPR.decode_make_z_of_zero s 0 hs
+
+/-- A wrapping `UInt32` decrement of `0` is the all-ones word. -/
+private theorem uint32_zero_sub_one_toNat : ((0 : UInt32) - 1).toNat = 2 ^ 32 - 1 := by decide
+
+/-- `FPR.mul`'s flush guard fires when either operand's exponent field is `0`. -/
+private theorem mulPipeline_dzu_eq_allOnes (x y : FPR)
+    (h : (FPR.decode x).exponent = 0 ∨ (FPR.decode y).exponent = 0) :
+    (mulPipeline x y).dzu = 0xFFFFFFFF := by
+  have hor : (((mulPipeline x y).ex - 1) ||| ((mulPipeline x y).ey - 1)).toNat = 2 ^ 32 - 1 := by
+    have hsize : (UInt32.size : Nat) = 2 ^ 32 := by decide
+    have hbnd := (((mulPipeline x y).ex - 1) ||| ((mulPipeline x y).ey - 1)).toNat_lt_size
+    rcases h with h | h
+    · have hz : ((mulPipeline x y).ex - 1).toNat = 2 ^ 32 - 1 := by
+        rw [show (mulPipeline x y).ex = 0 from by
+          rw [← UInt32.toNat_inj, mulPipeline_ex_toNat, h]; rfl]
+        exact uint32_zero_sub_one_toNat
+      have hle : ((mulPipeline x y).ex - 1).toNat
+          ≤ (((mulPipeline x y).ex - 1) ||| ((mulPipeline x y).ey - 1)).toNat :=
+        UInt32.le_iff_toNat_le.mp UInt32.left_le_or
+      omega
+    · have hz : ((mulPipeline x y).ey - 1).toNat = 2 ^ 32 - 1 := by
+        rw [show (mulPipeline x y).ey = 0 from by
+          rw [← UInt32.toNat_inj, mulPipeline_ey_toNat, h]; rfl]
+        exact uint32_zero_sub_one_toNat
+      have hle : ((mulPipeline x y).ey - 1).toNat
+          ≤ (((mulPipeline x y).ex - 1) ||| ((mulPipeline x y).ey - 1)).toNat :=
+        UInt32.le_iff_toNat_le.mp UInt32.right_le_or
+      omega
+  have hsh : ((((mulPipeline x y).ex - 1) ||| ((mulPipeline x y).ey - 1)) >>> 31) = 1 := by
+    rw [← UInt32.toNat_inj, toNat_shiftRight_31_uint32, show (1 : UInt32).toNat = 1 from rfl, hor]
+    norm_num
+  rw [mulPipeline_dzu]
+  unfold tbmask
+  rw [hsh]
+  decide
+
+
+/-- Masking a `UInt32` with the all-ones word is the identity. -/
+private theorem uint32_allOnes_and (w : UInt32) : (0xFFFFFFFF : UInt32) &&& w = w := by
+  have hsize : (UInt32.size : Nat) = 2 ^ 32 := by decide
+  have hlt := w.toNat_lt_size
+  rw [← UInt32.toNat_inj, UInt32.toNat_and,
+    show (0xFFFFFFFF : UInt32).toNat = 2 ^ 32 - 1 from by decide, Nat.and_comm,
+    Nat.and_two_pow_sub_one_eq_mod]
+  omega
+
+/-- **`FPR.mul` flushes to a signed zero when either operand is a zero encoding.** The guard
+`dzu` fires on a zero exponent field, which both empties the significand and substitutes the
+flushed exponent, so the product is the bare sign bit. -/
+private theorem mul_eq_signBit_of_exponent_eq_zero (a b : FPR)
+    (h : (FPR.decode a).exponent = 0 ∨ (FPR.decode b).exponent = 0) :
+    FPR.mul a b = (mulPipeline a b).s <<< 63 := by
+  have hdzu := mulPipeline_dzu_eq_allOnes a b h
+  have hzu : (mulPipeline a b).zu''' = 0 := by
+    rw [mulPipeline_zu''', hdzu,
+      show (((0xFFFFFFFF : UInt32) &&& 1).toUInt64 - 1) = 0 from by decide]
+    simp
+  have he : (mulPipeline a b).e' = ((0 : UInt32) - 1076).toInt32 := by
+    rw [mulPipeline_e', hdzu, uint32_allOnes_and, ← UInt32.xor_assoc, UInt32.xor_self,
+      UInt32.zero_xor]
+  rw [mul_eq_make, hzu, he, make_flushed]
+
+
+/-- `FPR.div`'s flush guard fires when the numerator's exponent field is `0`. -/
+private theorem divPipeline_dzu_eq_allOnes (x y : FPR) (h : (FPR.decode x).exponent = 0) :
+    (divPipeline x y).dzu = 0xFFFFFFFF := by
+  have hex : (divPipeline x y).ex = 0 := by
+    rw [← UInt32.toNat_inj, divPipeline_ex_toNat, h]; rfl
+  have hsh : (((divPipeline x y).ex - 1) >>> 31) = 1 := by
+    rw [← UInt32.toNat_inj, toNat_shiftRight_31_uint32, show (1 : UInt32).toNat = 1 from rfl,
+      hex, uint32_zero_sub_one_toNat]
+    norm_num
+  change tbmask ((divPipeline x y).ex - 1) = 0xFFFFFFFF
+  unfold tbmask
+  rw [hsh]
+  decide
+
+/-- **`FPR.div` flushes to `+0` when the numerator is a zero encoding.** The guard `dzu` fires on
+a zero numerator exponent field, clearing both the sign and the quotient and substituting the
+flushed exponent. -/
+private theorem div_eq_zero_of_exponent_eq_zero (a b : FPR) (h : (FPR.decode a).exponent = 0) :
+    FPR.div a b = 0 := by
+  have hdzu := divPipeline_dzu_eq_allOnes a b h
+  have hdm : (divPipeline a b).dm = 0 := by
+    change (((divPipeline a b).dzu &&& 1).toUInt64 - 1) = _
+    rw [hdzu]; decide
+  have he : (divPipeline a b).e' = ((0 : UInt32) - 1076).toInt32 := by
+    change ((divPipeline a b).e ^^^ ((divPipeline a b).dzu
+      &&& ((divPipeline a b).e ^^^ ((0 : UInt32) - 1076)))).toInt32 = _
+    rw [hdzu, uint32_allOnes_and, ← UInt32.xor_assoc, UInt32.xor_self, UInt32.zero_xor]
+  rw [div_eq_make, hdm, he,
+    show ((divPipeline a b).sg &&& (0 : UInt64)) = 0 from by simp,
+    show ((divPipeline a b).q1 &&& (0 : UInt64)) = 0 from by simp, make_flushed]
+  decide
+
+/-- **`FPR.sqrt` flushes to `+0` on a zero encoding.** -/
+private theorem sqrt_eq_zero_of_exponent_eq_zero (a : FPR) (h : (FPR.decode a).exponent = 0) :
+    FPR.sqrt a = 0 := by
+  have hex : (sqrtPipeline a).ex_ = 0 := by
+    rw [← UInt32.toNat_inj, sqrtPipeline_exRaw_toNat, h]; rfl
+  have hq2 : (sqrtPipeline a).q2 = 0 := by
+    rw [sqrtPipeline_q2_eq, hex, show (((0 : UInt32) + 0x7FF) >>> 11) = 0 from by decide]
+    simp
+  rw [sqrt_eq_make_z, hq2, make_z_of_zero]
+  decide
+
+
+/-- The `+0` word is a zero encoding. -/
+private theorem isZero_zero : FPR.IsZero (0 : FPR) := by
+  unfold FPR.IsZero FPR.Bits.IsZero FPR.decode; exact ⟨rfl, rfl⟩
+
+/-- `FPR.mul` lands on a zero encoding when either operand is one. -/
+private theorem mul_isZero_of_isZero (a b : FPR) (h : FPR.IsZero a ∨ FPR.IsZero b) :
+    FPR.IsZero (FPR.mul a b) := by
+  have hexp : (FPR.decode a).exponent = 0 ∨ (FPR.decode b).exponent = 0 := by
+    rcases h with h | h
+    · exact Or.inl h.1
+    · exact Or.inr h.1
+  unfold FPR.IsZero FPR.Bits.IsZero
+  rw [mul_eq_signBit_of_exponent_eq_zero a b hexp, decode_shiftLeft_63 _ (mulPipeline_s_le_one a b)]
+  exact ⟨rfl, rfl⟩
+
+theorem mul_error (a b : FPR) (ha : FPR.IsNormalOrZero a) (hb : FPR.IsNormalOrZero b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a * toReal b)) :
+    |toReal (FPR.mul a b) - toReal a * toReal b| ≤
+    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a * toReal b| := by
+  rcases ha with ha | ha
+  · rcases hb with hb | hb
+    · exact mul_error_of_isNormal a b ha hb hr
+    · rw [toReal_eq_zero_of_isZero (mul_isZero_of_isZero a b (Or.inr hb)),
+        toReal_eq_zero_of_isZero hb, mul_zero, sub_zero, abs_zero]
+      positivity
+  · rw [toReal_eq_zero_of_isZero (mul_isZero_of_isZero a b (Or.inl ha)),
+      toReal_eq_zero_of_isZero ha, zero_mul, sub_zero, abs_zero]
+    positivity
+
+theorem mul_isNormalOrZero (a b : FPR) (ha : FPR.IsNormalOrZero a) (hb : FPR.IsNormalOrZero b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a * toReal b)) :
+    FPR.IsNormalOrZero (FPR.mul a b) := by
+  rcases ha with ha | ha
+  · rcases hb with hb | hb
+    · exact mul_isNormalOrZero_of_isNormal a b ha hb hr
+    · exact Or.inr (mul_isZero_of_isZero a b (Or.inr hb))
+  · exact Or.inr (mul_isZero_of_isZero a b (Or.inl ha))
+
+theorem div_error (a b : FPR) (hbne : toReal b ≠ 0) (ha : FPR.IsNormalOrZero a)
+    (hb : FPR.IsNormalOrZero b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a / toReal b)) :
+    |toReal (FPR.div a b) - toReal a / toReal b| ≤
+    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a / toReal b| := by
+  have hbn : FPR.IsNormal b := hb.resolve_right (fun hz => hbne (toReal_eq_zero_of_isZero hz))
+  rcases ha with ha | ha
+  · exact div_error_of_isNormal a b hbne ha hbn hr
+  · rw [div_eq_zero_of_exponent_eq_zero a b ha.1, toReal_eq_zero_of_isZero isZero_zero,
+      toReal_eq_zero_of_isZero ha, zero_div, sub_zero, abs_zero]
+    positivity
+
+theorem div_isNormalOrZero (a b : FPR) (hbne : toReal b ≠ 0) (ha : FPR.IsNormalOrZero a)
+    (hb : FPR.IsNormalOrZero b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a / toReal b)) :
+    FPR.IsNormalOrZero (FPR.div a b) := by
+  have hbn : FPR.IsNormal b := hb.resolve_right (fun hz => hbne (toReal_eq_zero_of_isZero hz))
+  rcases ha with ha | ha
+  · exact div_isNormalOrZero_of_isNormal a b hbne ha hbn hr
+  · exact Or.inr (by rw [div_eq_zero_of_exponent_eq_zero a b ha.1]; exact isZero_zero)
+
+theorem sqrt_error (a : FPR) (ha : FPR.IsNormalOrZero a) (h0 : 0 ≤ toReal a) :
+    |toReal (FPR.sqrt a) - Real.sqrt (toReal a)| ≤
+    (2 : ℝ) ^ (-(52 : ℤ)) * Real.sqrt (toReal a) := by
+  rcases ha with ha | ha
+  · exact sqrt_error_of_isNormal a ha h0
+  · rw [sqrt_eq_zero_of_exponent_eq_zero a ha.1, toReal_eq_zero_of_isZero isZero_zero,
+      toReal_eq_zero_of_isZero ha, Real.sqrt_zero, sub_zero, abs_zero]
+    positivity
+
+theorem sqrt_isNormalOrZero (a : FPR) (ha : FPR.IsNormalOrZero a) (_h0 : 0 ≤ toReal a) :
+    FPR.IsNormalOrZero (FPR.sqrt a) := by
+  rcases ha with ha | ha
+  · exact sqrt_isNormalOrZero_of_isNormal a ha
+  · exact Or.inr (by rw [sqrt_eq_zero_of_exponent_eq_zero a ha.1]; exact isZero_zero)
+
+theorem sub_error (a b : FPR) (ha : FPR.IsNormalOrZero a) (hb : FPR.IsNormalOrZero b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a - toReal b)) :
+    |toReal (FPR.sub a b) - (toReal a - toReal b)| ≤
+    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a - toReal b| := by
+  have hsum : toReal a + toReal (FPR.neg b) = toReal a - toReal b := by
+    rw [toReal_neg]; ring
+  have h := add_error a (FPR.neg b) ha (FPR.isNormalOrZero_neg hb) (by rw [hsum]; exact hr)
+  rw [hsum] at h
+  exact h
+
+theorem sub_isNormalOrZero (a b : FPR) (ha : FPR.IsNormalOrZero a) (hb : FPR.IsNormalOrZero b)
+    (hr : FPR.InNormalMagnitudeRange (toReal a - toReal b)) :
+    FPR.IsNormalOrZero (FPR.sub a b) := by
+  have hsum : toReal a + toReal (FPR.neg b) = toReal a - toReal b := by
+    rw [toReal_neg]; ring
+  exact add_isNormalOrZero a (FPR.neg b) ha (FPR.isNormalOrZero_neg hb) (by rw [hsum]; exact hr)
+
+/-- The `FPR` constant `0` is in the closure domain (in its zero disjunct). -/
+theorem FPR.isNormalOrZero_zero : FPR.IsNormalOrZero FPR.zero :=
+  Or.inr (by unfold FPR.IsZero FPR.Bits.IsZero FPR.decode FPR.zero; decide)
+
+/-- The `FPR` constant `1` is in the closure domain (in its normal disjunct). -/
+theorem FPR.isNormalOrZero_one : FPR.IsNormalOrZero FPR.one :=
+  Or.inl (by unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode FPR.one; decide)
+
+/-- Every operand in the closure domain denotes a value inside the correctly-rounded magnitude
+window. This is what keeps `FPR.InNormalMagnitudeRange` from being vacuously restrictive: a value
+the format can hold is a result the format can round to. Both ends are exactly attained — the
+lower by `2 ^ (-1022)` and the upper by `FPR.maxFiniteReal` itself. -/
+theorem FPR.inNormalMagnitudeRange_toReal_of_isNormalOrZero {a : FPR}
+    (h : FPR.IsNormalOrZero a) : FPR.InNormalMagnitudeRange (toReal a) := by
+  rcases h with h | h
+  · right
+    obtain ⟨hs1, hs2⟩ := significand_mem_of_isNormal h.1 (FPR.decode_mantissa_lt a)
+    have he : 1 ≤ (FPR.decode a).exponent := Nat.one_le_iff_ne_zero.mpr h.1
+    have he2 : (FPR.decode a).exponent ≤ 2046 := by
+      have := FPR.decode_exponent_lt a; have := h.2; omega
+    have habs : |toReal a| = ((FPR.decode a).significand : ℝ)
+        * (2 : ℝ) ^ (((FPR.decode a).exponent : ℤ) - 1075) :=
+      abs_toReal_eq_significand_mul_two_zpow h.1 h.2
+    have hlo : (2 : ℝ) ^ (-(1074 : ℤ)) ≤ (2 : ℝ) ^ (((FPR.decode a).exponent : ℤ) - 1075) :=
+      zpow_le_zpow_right₀ (by norm_num) (by omega)
+    have hhi : (2 : ℝ) ^ (((FPR.decode a).exponent : ℤ) - 1075) ≤ (2 : ℝ) ^ (971 : ℤ) :=
+      zpow_le_zpow_right₀ (by norm_num) (by omega)
+    have hsl : (2 : ℝ) ^ (52 : ℕ) ≤ ((FPR.decode a).significand : ℝ) := by exact_mod_cast hs1
+    have hsh : ((FPR.decode a).significand : ℝ) ≤ (2 : ℝ) ^ (53 : ℕ) - 1 := by
+      have : (FPR.decode a).significand ≤ 2 ^ 53 - 1 := by omega
+      have := (Nat.cast_le (α := ℝ)).mpr this
+      push_cast at this
+      linarith
+    have hpos : (0 : ℝ) < (2 : ℝ) ^ (((FPR.decode a).exponent : ℤ) - 1075) :=
+      zpow_pos (by norm_num) _
+    have hmin : FPR.minNormalReal = (2 : ℝ) ^ (52 : ℕ) * (2 : ℝ) ^ (-(1074 : ℤ)) := by
+      unfold FPR.minNormalReal
+      rw [← zpow_natCast (2 : ℝ) 52, ← zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0)]
+      norm_num
+    have h1024 : (2 : ℝ) * (2 : ℝ) ^ (1023 : ℤ) = (2 : ℝ) ^ (1024 : ℤ) := by
+      rw [show (1024 : ℤ) = 1 + 1023 from by norm_num,
+        zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0)]
+      norm_num
+    have hmax : FPR.maxFiniteReal = ((2 : ℝ) ^ (53 : ℕ) - 1) * (2 : ℝ) ^ (971 : ℤ) := by
+      unfold FPR.maxFiniteReal
+      rw [← zpow_natCast (2 : ℝ) 53, sub_mul, sub_mul,
+        ← zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0), ← zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0), h1024]
+      norm_num
+    rw [habs, hmin, hmax]
+    constructor
+    · exact mul_le_mul hsl hlo (by positivity) (by positivity)
+    · exact mul_le_mul hsh hhi (le_of_lt hpos) (by norm_num)
+  · exact Or.inl (toReal_eq_zero_of_isZero h)
+
 /-! ## Non-vacuity witnesses for the per-operation error bounds
 
-Concrete instances showing the domain hypotheses added to `add_error`, `mul_error`, `div_error`
-and `sqrt_error` above are jointly satisfiable by ordinary values, not merely by a degenerate
-operand such as zero. -/
+Concrete instances showing the domain hypotheses of `add_error`, `mul_error`, `div_error` and
+`sqrt_error` are jointly satisfiable by ordinary values, not merely by a degenerate operand such
+as zero. The last two witnesses go the other way, and show that the widening is not cosmetic:
+`FPR.zero` satisfies `FPR.IsNormalOrZero` and not `FPR.IsNormal`, so it is admitted by the
+statements above and by no narrower reading of them. -/
 
 /-- `toReal` is nonnegative whenever the sign bit is unset, uniformly across the
 subnormal/normal/non-finite case split of `FPR.Bits.toReal`. -/
@@ -6886,33 +7435,33 @@ private theorem decode_q_sign_false : (FPR.decode FPR.q).sign = false := by
   unfold FPR.decode FPR.q; decide
 
 /-- `add_error` is not vacuous: `1.0 + 1.0` is an ordinary witness satisfying every hypothesis. -/
-example : FPR.IsNormal FPR.one ∧ FPR.IsNormal FPR.one ∧
+example : FPR.IsNormalOrZero FPR.one ∧ FPR.IsNormalOrZero FPR.one ∧
     FPR.InNormalMagnitudeRange (toReal FPR.one + toReal FPR.one) := by
-  refine ⟨isNormal_one, isNormal_one, ?_⟩
+  refine ⟨Or.inl isNormal_one, Or.inl isNormal_one, ?_⟩
   rw [toReal_one]
   exact FPR.in_normal_range_of_pos_le (k1 := 0) (k2 := 1)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
 
 /-- `add_error` is not vacuous: `1.5 + 2.25` is a second, non-round-number witness. -/
-example : FPR.IsNormal onePointFive ∧ FPR.IsNormal twoPointTwoFive ∧
+example : FPR.IsNormalOrZero onePointFive ∧ FPR.IsNormalOrZero twoPointTwoFive ∧
     FPR.InNormalMagnitudeRange (toReal onePointFive + toReal twoPointTwoFive) := by
-  refine ⟨isNormal_onePointFive, isNormal_twoPointTwoFive, ?_⟩
+  refine ⟨Or.inl isNormal_onePointFive, Or.inl isNormal_twoPointTwoFive, ?_⟩
   rw [toReal_onePointFive, toReal_twoPointTwoFive]
   exact FPR.in_normal_range_of_pos_le (k1 := 0) (k2 := 2)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
 
 /-- `mul_error` is not vacuous: `2.0 * 2.0` is an ordinary witness. -/
-example : FPR.IsNormal FPR.two ∧ FPR.IsNormal FPR.two ∧
+example : FPR.IsNormalOrZero FPR.two ∧ FPR.IsNormalOrZero FPR.two ∧
     FPR.InNormalMagnitudeRange (toReal FPR.two * toReal FPR.two) := by
-  refine ⟨isNormal_two, isNormal_two, ?_⟩
+  refine ⟨Or.inl isNormal_two, Or.inl isNormal_two, ?_⟩
   rw [toReal_two]
   exact FPR.in_normal_range_of_pos_le (k1 := 0) (k2 := 2)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
 
 /-- `div_error` is not vacuous: `2.0 / 1.0` is an ordinary witness. -/
-example : toReal FPR.one ≠ 0 ∧ FPR.IsNormal FPR.two ∧ FPR.IsNormal FPR.one ∧
+example : toReal FPR.one ≠ 0 ∧ FPR.IsNormalOrZero FPR.two ∧ FPR.IsNormalOrZero FPR.one ∧
     FPR.InNormalMagnitudeRange (toReal FPR.two / toReal FPR.one) := by
-  refine ⟨by rw [toReal_one]; norm_num, isNormal_two, isNormal_one, ?_⟩
+  refine ⟨by rw [toReal_one]; norm_num, Or.inl isNormal_two, Or.inl isNormal_one, ?_⟩
   rw [toReal_two, toReal_one, div_one]
   exact FPR.in_normal_range_of_pos_le (k1 := 0) (k2 := 1)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
@@ -6921,10 +7470,27 @@ example : toReal FPR.one ≠ 0 ∧ FPR.IsNormal FPR.two ∧ FPR.IsNormal FPR.one
 NTT/FFT and rounding kernels (`FPR.q` in `LatticeCrypto/Falcon/Concrete/FPR.lean`), is a normal,
 nonnegative operand — and, unlike `add_error` / `mul_error` / `div_error`, needs no further
 magnitude side condition; see `sqrt_error`'s docstring for why. -/
-example : FPR.IsNormal FPR.q ∧ 0 ≤ toReal FPR.q := by
-  refine ⟨isNormal_q, ?_⟩
+example : FPR.IsNormalOrZero FPR.q ∧ 0 ≤ toReal FPR.q := by
+  refine ⟨Or.inl isNormal_q, ?_⟩
   unfold toReal toRealBits
   exact FPR.Bits.toReal_nonneg_of_sign_false decode_q_sign_false
+
+/-- The widening is not cosmetic: `FPR.zero` is admitted by every statement above and by none of
+their `FPR.IsNormal` readings. -/
+example : FPR.IsNormalOrZero FPR.zero ∧ ¬ FPR.IsNormal FPR.zero := by
+  refine ⟨Or.inr ?_, ?_⟩
+  · unfold FPR.IsZero FPR.Bits.IsZero FPR.decode FPR.zero; decide
+  · unfold FPR.IsNormal FPR.Bits.IsNormal FPR.decode FPR.zero; decide
+
+/-- And it is reached: `1.0 + 0` meets `add_error`'s hypotheses with a zero operand, which the
+`FPR.IsNormal` reading rejects. -/
+example : FPR.IsNormalOrZero FPR.one ∧ FPR.IsNormalOrZero FPR.zero ∧
+    FPR.InNormalMagnitudeRange (toReal FPR.one + toReal FPR.zero) := by
+  refine ⟨Or.inl isNormal_one, Or.inr ?_, ?_⟩
+  · unfold FPR.IsZero FPR.Bits.IsZero FPR.decode FPR.zero; decide
+  · rw [toReal_one, toReal_zero, add_zero]
+    exact FPR.in_normal_range_of_pos_le (k1 := 0) (k2 := 0)
+      (by norm_num) (by norm_num) (by norm_num) (by norm_num)
 
 /-! ## End-to-end correctness -/
 
