@@ -526,6 +526,23 @@ theorem expectedValue_weight_coordForkOpW_le (k : ℕ)
         rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, div_eq_mul_inv]
         ring
 
+/-- The form a recursion consumes: if no entry costs more than `B`, the fork costs at most
+`(1 + ℓ(k-1)) · B`. Iterating this `μ` times is the paper's `(ℓ(k-1)+1)^μ`; what it still needs is
+a `μ`-round extractor that runs its sub-extractor at the entries it examines rather than eagerly
+at all of them. -/
+theorem expectedValue_weight_coordForkOpW_le_of_le (k : ℕ) (ρ : (ι → S) → Bool)
+    (Γ : (ι → S) → ℝ≥0∞) {B : ℝ≥0∞} (hΓ : ∀ c, Γ c ≤ B) :
+    expectedValue (coordForkOpW k ρ Γ) (fun r => r.2)
+      ≤ (1 + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞)) * B := by
+  refine (expectedValue_weight_coordForkOpW_le k ρ Γ).trans (mul_le_mul' le_rfl ?_)
+  have hCne : (Fintype.card (ι → S) : ℝ≥0∞) ≠ 0 := by simp [Fintype.card_ne_zero]
+  have hCtop : (Fintype.card (ι → S) : ℝ≥0∞) ≠ ⊤ := by finiteness
+  refine ENNReal.div_le_of_le_mul ?_
+  calc ∑ c : ι → S, Γ c
+      ≤ ∑ _c : ι → S, B := Finset.sum_le_sum fun c _ => hΓ c
+    _ = B * Fintype.card (ι → S) := by
+        rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_comm]
+
 end Weighted
 
 end Op
