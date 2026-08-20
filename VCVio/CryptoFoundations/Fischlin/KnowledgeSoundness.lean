@@ -885,52 +885,6 @@ private lemma partialSmallSumCount_none :
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
-/-- Output probabilities of an independent product `Fin.mOfFn` multiply coordinatewise. -/
-private lemma probOutput_mOfFn {α : Type} [Finite α] (n : ℕ)
-    (g : Fin n → ProbComp α) (v : Fin n → α) :
-    Pr[= v | Fin.mOfFn n g] = ∏ i, Pr[= v i | g i] := by
-  letI : Fintype α := Fintype.ofFinite α
-  letI : DecidableEq α := Classical.decEq α
-  induction n with
-  | zero =>
-      have hv : v = Fin.elim0 := funext fun i => i.elim0
-      subst hv
-      simp [Fin.mOfFn, probOutput_pure]
-  | succ n ih =>
-      simp only [Fin.mOfFn]
-      rw [probOutput_bind_eq_sum_fintype]
-      have hinner : ∀ a : α,
-          Pr[= v | Fin.mOfFn n (fun i => g i.succ) >>= fun rest => pure (Fin.cons a rest)]
-            = if a = v 0 then Pr[= Fin.tail v | Fin.mOfFn n fun i => g i.succ] else 0 := by
-        intro a
-        rw [probOutput_bind_eq_sum_fintype]
-        have hiff : ∀ rest : Fin n → α,
-            (v = Fin.cons a rest) ↔ (a = v 0 ∧ rest = Fin.tail v) := by
-          intro rest
-          constructor
-          · intro hEq
-            refine ⟨by rw [hEq, Fin.cons_zero], funext fun k => ?_⟩
-            have := congrFun hEq k.succ
-            rw [Fin.cons_succ] at this
-            exact this.symm
-          · rintro ⟨rfl, rfl⟩
-            exact (Fin.cons_self_tail v).symm
-        by_cases ha : a = v 0
-        · rw [if_pos ha]
-          subst ha
-          simp only [probOutput_pure, hiff, true_and]
-          simp [mul_ite]
-        · rw [if_neg ha]
-          refine Finset.sum_eq_zero fun rest _ => ?_
-          rw [probOutput_pure, if_neg (fun hEq => ha ((hiff rest).mp hEq).1), mul_zero]
-      simp only [hinner, mul_ite, mul_zero]
-      rw [Finset.sum_ite_eq' Finset.univ (v 0)
-        (fun a => Pr[= a | g 0] * Pr[= Fin.tail v | Fin.mOfFn n fun i => g i.succ]),
-        if_pos (Finset.mem_univ _), ih, Fin.prod_univ_succ]
-      rfl
-
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Sum the per-repetition fold into a `Finset.sum`. -/
 private lemma foldl_add_eq_sum (u : Fin ρ → Fin (2 ^ b)) :
     (List.finRange ρ).foldl (fun acc i => acc + (u i).val) 0 = ∑ i, (u i).val := by

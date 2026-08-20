@@ -994,6 +994,20 @@ lemma tsum_probOutput_map_mul [LawfulMonad m] (mx : m α) (f : α → β) (g : �
   rw [tsum_probOutput_pure_mul]
 
 omit [Monad m] [LawfulMonadLiftT m SPMF] in
+/-- Expectation is monotone in the functional. -/
+lemma tsum_probOutput_mul_mono (mx : m α) {f g : α → ℝ≥0∞} (h : ∀ x, f x ≤ g x) :
+    ∑' x, Pr[= x | mx] * f x ≤ ∑' x, Pr[= x | mx] * g x :=
+  ENNReal.tsum_le_tsum fun x => mul_le_mul' le_rfl (h x)
+
+omit [Monad m] [LawfulMonadLiftT m SPMF] in
+/-- A finite sum inside an expectation may be taken outside: linearity of expectation over a
+`Finset` of summands. -/
+lemma tsum_probOutput_mul_finsetSum {ι' : Type*} (mx : m α) (s : Finset ι') (f : ι' → α → ℝ≥0∞) :
+    ∑' x, Pr[= x | mx] * (∑ i ∈ s, f i x) = ∑ i ∈ s, ∑' x, Pr[= x | mx] * f i x := by
+  simp_rw [Finset.mul_sum]
+  exact Summable.tsum_finsetSum fun _ _ => ENNReal.summable
+
+omit [Monad m] [LawfulMonadLiftT m SPMF] in
 /-- The expectation of a nonnegative functional `F` that is constant (equal to `c`) on the
 support of a never-failing (sub)probability computation equals `c`. -/
 lemma tsum_probOutput_mul_of_const_on_support [MonadLiftT m SetM] [EvalDistCompatible m]
