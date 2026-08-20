@@ -34,6 +34,7 @@ public import ToMathlib.Data.IndexedBinaryTree.Lemmas
 public import ToMathlib.Data.Vector
 public import ToMathlib.General
 public import ToMathlib.OrderEnrichedCategory
+public import ToMathlib.Probability.NegativeHypergeometric
 public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
 public import ToMathlib.Probability.ProbabilityMassFunction.TailSums
 public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation

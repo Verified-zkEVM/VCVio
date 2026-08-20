@@ -204,6 +204,8 @@ jobs:
         run: lake exe axiomsweep --check
       - name: Check round-by-round extraction regression
         run: lake env lean VCVioTest/RoundByRound/OneRound.lean
+      - name: Check without-replacement draw-count regressions
+        run: lake env lean VCVioTest/Forking/WithoutReplacement.lean
       - name: Check Merkle batch-opening canaries
         run: lake env lean VCVioTest/MerkleTreeBatch.lean
       - name: Check simulation/fork pipeline computability lock
