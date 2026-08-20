@@ -167,15 +167,15 @@ the adversary*. The status is:
 
 | Clause | Lemma 7.1 | Lemma 7.2 |
 |---|---|---|
-| expected query count | proved, for the paper's algorithm | per level only |
+| expected query count | proved, for the paper's algorithm | proved, for the paper's recursion |
 | success probability | proved, for the paper's algorithm | proved, for the paper's recursion |
 | output structure (accepting transcripts) | proved, for the paper's algorithm | proved, for the paper's recursion |
 
-All three clauses of Lemma 7.1 hold for `coordForkOp` against a fixed acceptance table — which is
-the setting §7.1 needs, since its own analysis treats the adversary as a function of the challenge.
-What is *not* covered is a security-parameter experiment, a multi-round extractor, or an
-`OracleComp`-level identification of "table lookups" with "oracle queries": the count is returned
-as data by the loop rather than measured by the cost model in
+All three clauses hold against a fixed acceptance table — for `coordForkOp` at `μ = 1` and for
+`multiForkOpW` at any `μ` — which is the setting §7 needs, since its own analysis treats the
+adversary as a function of the challenge. What is *not* covered is a security-parameter experiment,
+or an `OracleComp`-level identification of "table lookups" with "oracle queries": the count is
+returned as data by the loop rather than measured by the cost model in
 [`query-tracking.md`](query-tracking.md).
 
 - `sub_div_le_probEvent_goodOutput_coordFork` carries the success bound and the output guarantee
@@ -268,28 +268,38 @@ asks for. (Definition 2.30 also fixes the prover messages at the nodes; Lemma 7.
 speaks only of the challenge tree, so that is what is delivered here.)
 
 `expectedValue_cost_multiForkOp_le` bounds each *level*: one round looks at at most `1 + ℓ(k−1)` of
-the level below, in expectation. The paper's `(ℓ(k−1)+1)^μ` is the product of these, and that
-composition is **not proved**.
+the level below, in expectation. The paper's `(ℓ(k−1)+1)^μ` is the product of these, and
+`multiForkOpW` is the recursion that composes them:
 
-What closes it is the *weighted* single-round bound — §8.2's refinement at `T = 0` — and not, as one
-might expect, Wald's identity or an oracle-based redesign. Charge each table entry `c` a cost
-`Γ c : ℝ≥0∞` instead of one lookup, and the claim is
+```lean
+theorem expectedValue_weight_multiForkOpW_le [Nonempty S] : ∀ (μ k : ℕ)
+    (ρ : Transcript ι S μ → Bool),
+    expectedValue (multiForkOpW μ k ρ) (fun r => r.2)
+      ≤ (1 + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞)) ^ μ
+```
+
+`multiForkOpW` samples, at every first challenge, the level-below extractor with its coins fixed —
+recording both what that extraction returned and what it cost — and the fork then examines entries
+and is *charged* what each entry recorded. The charge is the running time of an implementation that
+extracts only at the challenges the fork looks at, which is what `(ℓ(k−1)+1)^μ` counts; sampling the
+table up front is the same modelling device as §7's fixed acceptance table.
+`evalDist_map_fst_multiForkOpW` confirms the charging changes nothing about what the recursion
+returns, so `probEvent_isSome_multiForkOpW` and `multiForkOpW_success` carry the other two clauses
+across, and all three clauses of Lemma 7.2 hold of one computation.
+
+What makes the levels multiply is the *weighted* single-round bound — §8.2's refinement at `T = 0`
+— and not, as one might expect, Wald's identity or an oracle-based redesign. Charge each table
+entry `c` a cost `Γ c : ℝ≥0∞` instead of one lookup, and
 
 ```
 𝔼[Γ-weighted cost of coordForkOp] ≤ (1 + ℓ(k−1)) · 𝔼[Γ]
 ```
 
-with `𝔼[Γ]` the average of `Γ` over a uniform challenge. Instantiating `Γ c` at the level-below
-extractor's expected cost and applying `expectedValue_bind` (the tower property) multiplies the
-levels, giving `(1 + ℓ(k−1))^μ` by induction on `μ`.
-
-Two things make this work where the count-only bound does not. The costs compose by the tower
-property rather than by an independence argument, so nothing has to be "queried before read". And
-the loop never examines an entry twice — the centre once, and then each coordinate's resamples are
-drawn without replacement from *that* coordinate's alternatives, so the challenges examined are
-pairwise distinct — which is why running the sub-extractor lazily at each examined entry has the
-same law as consulting the eager `Fintype.mPi` table the success proof already uses. The eager table
-therefore stays exactly as it is; only the accounting changes.
+with `𝔼[Γ]` the average of `Γ` over a uniform challenge. Instantiating `Γ` at the level below and
+applying `expectedValue_bind` (the tower property) multiplies the levels. The costs compose by the
+tower property rather than by an independence argument, so nothing has to be "queried before read",
+and the eager `Fintype.mPi` table the success proof relies on stays exactly as it is — only the
+accounting changes.
 
 The whole thing reduces to one fact about `ProbComp.drawUntil`, per column and per value `x` in it:
 
@@ -299,9 +309,7 @@ The whole thing reduces to one fact about `ProbComp.drawUntil`, per column and p
 
 which is tight (equality when `k − 1 ≤ H − 1`, for `H` the column's accepting count). Summing that
 against `Γ` over the column, then over columns and coordinates, is the same column-counting shape
-that already carries `expectedValue_cost_coordForkOp_le` and §8.1. Both this inequality and the
-`(1 + ℓ(k−1)) · 𝔼[Γ]` bound it implies have been checked exhaustively at small parameters; neither
-is formalized.
+that already carries `expectedValue_cost_coordForkOp_le` and §8.1.
 
 The per-element draw probabilities that needs are now available. Getting them meant proving the
 loop exchangeable — relabelling a pool within its accept classes leaves the law alone, so all
@@ -363,10 +371,8 @@ theorem expectedValue_weight_coordForkOpW_le (k : ℕ) (ρ : (ι → S) → Bool
 ```
 
 Taking `Γ = 1` recovers `expectedValue_cost_coordForkOp_le`; the regressions check both that and a
-skewed charge, where the bound tracks the average. What is left of the composition is the recursion
-itself: a `μ`-round extractor that runs its sub-extractor at the entries it examines rather than
-eagerly at all of them, and the induction that instantiates `Γ` at the level below and multiplies
-through with `expectedValue_bind`.
+skewed charge, where the bound tracks the average. `multiForkOpW` above is the recursion that
+instantiates `Γ` at the level below and multiplies through with `expectedValue_bind`.
 
 `evalDist_drawUntil_eq_map_drawAll` is the reformulation that made the uniformity statement natural
 to find:

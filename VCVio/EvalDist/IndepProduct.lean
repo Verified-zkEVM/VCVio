@@ -325,6 +325,27 @@ lemma probOutput_coord_mPi (f : ι → m α) (hf : ∀ i, Pr[⊥ | f i] = 0) (i 
   rw [probOutput_map]
   exact (probEvent_coord_mPi f hf i (· = x)).trans (probEvent_eq_eq_probOutput _ x)
 
+/-- Independent products of factor-wise equidistributed families are equidistributed. -/
+lemma evalDist_mPi_congr [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    {f g : ι → m α} (h : ∀ i, evalDist (f i) = evalDist (g i)) :
+    evalDist (Fintype.mPi f) = evalDist (Fintype.mPi g) := by
+  refine evalDist_ext fun v => ?_
+  rw [probOutput_mPi, probOutput_mPi]
+  exact Finset.prod_congr rfl fun i _ => evalDist_ext_iff.mp (h i) (v i)
+
+/-- A finite independent product commutes with a coordinatewise map: relabelling every factor and
+then taking the product has the same law as taking the product and relabelling each coordinate. -/
+lemma evalDist_map_coord_mPi [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    {β : Type} (f : ι → m α) (φ : α → β) :
+    evalDist ((fun t i => φ (t i)) <$> Fintype.mPi f)
+      = evalDist (Fintype.mPi fun i => φ <$> f i) := by
+  refine evalDist_ext fun w => ?_
+  rw [probOutput_map,
+    show (fun t : ι → α => (fun i => φ (t i)) = w) = (fun t => ∀ i, φ (t i) = w i) from
+      funext fun t => propext ⟨fun h i => congrFun h i, funext⟩,
+    probEvent_forall_coord_mPi f (fun i x => φ x = w i), probOutput_mPi]
+  exact Finset.prod_congr rfl fun i _ => by rw [probOutput_map]
+
 /-- Expectations of a functional of one coordinate are computed in that factor alone. This is
 what makes the total cost of an independent family split as a sum over the family. -/
 lemma expectedValue_coord_mPi (f : ι → m α) (hf : ∀ i, Pr[⊥ | f i] = 0) (i : ι)

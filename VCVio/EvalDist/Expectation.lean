@@ -87,13 +87,21 @@ theorem expectedValue_finsetSum {ι' : Type w} (mx : m α) (s : Finset ι') (g :
   tsum_probOutput_mul_finsetSum mx s g
 
 omit [Monad m] in
-/-- Two computations with the same output distribution have the same expectations. -/
+/-- Constants factor out of an expectation. -/
+theorem expectedValue_const_mul (mx : m α) (c : ℝ≥0∞) (g : α → ℝ≥0∞) :
+    expectedValue mx (fun x => c * g x) = c * expectedValue mx g := by
+  rw [expectedValue_def, expectedValue_def, ← ENNReal.tsum_mul_left]
+  exact tsum_congr fun x => by ring
+
+omit [Monad m] in
+/-- A scaled indicator's expectation is the scale times the event's probability. -/
 theorem expectedValue_ite (mx : m α) (p : α → Prop) [DecidablePred p] (c : ℝ≥0∞) :
     expectedValue mx (fun x => if p x then c else 0) = c * Pr[p | mx] := by
   rw [expectedValue_def, probEvent_eq_tsum_ite, ← ENNReal.tsum_mul_left]
   refine tsum_congr fun x => ?_
   by_cases hx : p x <;> simp [hx, mul_comm]
 
+/-- Expectations only see a computation's support. -/
 theorem expectedValue_congr_of_mem_support [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
     [EvalDistCompatible m] (mx : m α) {g h : α → ℝ≥0∞}
     (hgh : ∀ x ∈ support mx, g x = h x) : expectedValue mx g = expectedValue mx h := by
@@ -103,6 +111,7 @@ theorem expectedValue_congr_of_mem_support [MonadLiftT m SetM] [LawfulMonadLiftT
   · rw [probOutput_eq_zero_of_not_mem_support hx, zero_mul, zero_mul]
 
 omit [Monad m] in
+/-- Two computations with the same output distribution have the same expectations. -/
 theorem expectedValue_congr {mx my : m α} (h : ∀ x, Pr[= x | mx] = Pr[= x | my]) (g : α → ℝ≥0∞) :
     expectedValue mx g = expectedValue my g :=
   tsum_congr fun x => by rw [h x]

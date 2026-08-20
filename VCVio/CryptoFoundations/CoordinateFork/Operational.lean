@@ -543,6 +543,27 @@ theorem expectedValue_weight_coordForkOpW_le_of_le (k : ℕ) (ρ : (ι → S) �
     _ = B * Fintype.card (ι → S) := by
         rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_comm]
 
+omit [Nonempty S] [SampleableType (ι → S)] in
+/-- Charging instead of counting does not change what the fork *returns*. -/
+theorem map_fst_coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞)
+    (c₀ : ι → S) :
+    (·.1) <$> coordForkOpWAt k ρ Γ c₀ = (·.1) <$> coordForkOpAt k ρ c₀ := by
+  classical
+  rw [coordForkOpWAt, coordForkOpAt]
+  by_cases hacc : ρ c₀
+  · rw [if_pos hacc, if_pos hacc, map_bind, map_bind]
+    refine bind_congr fun d => ?_
+    by_cases hcond : ∀ j, (collected ρ c₀ d j).card = k - 1 <;> simp [hcond]
+  · rw [if_neg hacc, if_neg hacc]
+    simp
+
+omit [Nonempty S] in
+/-- The same, for the whole fork. -/
+theorem map_fst_coordForkOpW (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞) :
+    (·.1) <$> coordForkOpW k ρ Γ = (·.1) <$> coordForkOp k ρ := by
+  rw [coordForkOpW, coordForkOp, map_bind, map_bind]
+  exact bind_congr fun c₀ => map_fst_coordForkOpWAt k ρ Γ c₀
+
 end Weighted
 
 end Op

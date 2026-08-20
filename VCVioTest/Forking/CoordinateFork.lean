@@ -331,6 +331,29 @@ theorem expectedValue_weight_coordForkOpW_partial_skew_le :
     norm_num]
   norm_num
 
+/-! ## The multi-round cost -/
+
+/-- The base level costs exactly one entry. -/
+example (ρ : Transcript (Fin 1) (Fin 5) 0 → Bool) :
+    expectedValue (multiForkOpW 0 2 ρ) (fun r => r.2) = 1 := by
+  rw [multiForkOpW_zero, expectedValue_pure]
+
+/-- **Lemma 7.2's expected-query clause at concrete parameters.** Two rounds over one coordinate at
+`k = 2` cost at most `(1 + 1·1)^2 = 4` entries. -/
+theorem expectedValue_weight_multiForkOpW_two_le (ρ : Transcript (Fin 1) (Fin 5) 2 → Bool) :
+    expectedValue (multiForkOpW 2 2 ρ) (fun r => r.2) ≤ 4 := by
+  have h := expectedValue_weight_multiForkOpW_le (ι := Fin 1) (S := Fin 5) 2 2 ρ
+  refine h.trans (le_of_eq ?_)
+  simp only [Fintype.card_fin, Nat.cast_one, one_mul, show (2 - 1 : ℕ) = 1 from rfl]
+  norm_num
+
+/-- The success and output clauses hold of the same computation: charging instead of counting
+changes nothing about what it returns. -/
+example (μ : ℕ) (ρ : Transcript (Fin 1) (Fin 5) μ → Bool) :
+    Pr[fun r => r.1.isSome | multiForkOpW μ 2 ρ]
+      = Pr[fun r => r.1.isSome | multiForkOp μ 2 ρ] :=
+  probEvent_isSome_multiForkOpW μ 2 ρ
+
 /-! ## Boundary canaries -/
 
 /-- Because subtraction is truncated, `k = 0` and `k = 1` are definitionally identical. -/
