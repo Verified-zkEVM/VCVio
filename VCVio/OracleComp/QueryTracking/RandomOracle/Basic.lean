@@ -37,4 +37,18 @@ lemma apply_eq (t : spec₀.Domain) :
         let u ← $ᵗ spec₀.Range t
         modifyGet fun cache => (u, cache.cacheQuery t u)) := rfl
 
+/-- Running one random-oracle query returns a cached answer when present, or samples and caches a
+fresh answer otherwise. This is the proof-facing cache-step law for `randomOracle`. -/
+lemma run_eq (t : spec₀.Domain) (cache : spec₀.QueryCache) :
+    (spec₀.randomOracle t).run cache =
+      match cache t with
+      | some u => pure (u, cache)
+      | none => ($ᵗ spec₀.Range t) >>= fun u => pure (u, cache.cacheQuery t u) := by
+  cases h : cache t with
+  | none =>
+    rw [QueryImpl.withCaching_run_none uniformSampleImpl h, map_eq_bind_pure_comp]
+    rw [uniformSampleImpl_apply]
+    exact bind_congr fun _ => Eq.refl _
+  | some u => rw [QueryImpl.withCaching_run_some uniformSampleImpl h]
+
 end randomOracle

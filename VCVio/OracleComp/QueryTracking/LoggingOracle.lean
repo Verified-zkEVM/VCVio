@@ -152,6 +152,48 @@ lemma run_withLogging_apply [LawfulMonad m₀] (so : QueryImpl loggedSpec m₀)
         (pure (u, [⟨t, u⟩]) : m₀ (loggedSpec.Range t × QueryLog loggedSpec))) := by
   simp
 
+/-- Every entry emitted while simulating one primitive query records that query's input.
+This response-independent provenance fact is stable even when the query was transported from
+a component of a dependent sum specification. -/
+lemma fst_eq_input_of_mem_support_run_simulateQ_withLogging_liftM
+    [LawfulMonad m₀] [MonadLiftT m₀ SetM] [LawfulMonadLiftT m₀ SetM]
+    {α' : Type} (so : QueryImpl loggedSpec m₀) (q : OracleQuery loggedSpec α')
+    {z : α' × QueryLog loggedSpec}
+    (hz : z ∈ support ((simulateQ so.withLogging
+      (liftM q : OracleComp loggedSpec α')).run))
+    {e : (t : loggedSpec.Domain) × loggedSpec.Range t} (he : e ∈ z.2) :
+    e.1 = q.input := by
+  rw [simulateQ_query, WriterT.run_map', support_map] at hz
+  obtain ⟨y, hy, hz⟩ := hz
+  subst z
+  rw [run_withLogging_apply, mem_support_bind_iff] at hy
+  obtain ⟨u, _, hy⟩ := hy
+  simp only [support_pure, Set.mem_singleton_iff] at hy
+  subst hy
+  simp only [Prod.map_apply, id_eq, List.mem_singleton] at he
+  exact congrArg Sigma.fst he
+
+/-- State-transformer form of
+`fst_eq_input_of_mem_support_run_simulateQ_withLogging_liftM`. -/
+lemma fst_eq_input_of_mem_support_run_simulateQ_withLogging_liftM_stateT
+    {σ : Type} [LawfulMonad m₀] [MonadLiftT m₀ SetM] [LawfulMonadLiftT m₀ SetM]
+    {α' : Type} (so : QueryImpl loggedSpec (StateT σ m₀))
+    (q : OracleQuery loggedSpec α') (s : σ)
+    {z : (α' × QueryLog loggedSpec) × σ}
+    (hz : z ∈ support (((simulateQ so.withLogging
+      (liftM q : OracleComp loggedSpec α')).run).run s))
+    {e : (t : loggedSpec.Domain) × loggedSpec.Range t} (he : e ∈ z.1.2) :
+    e.1 = q.input := by
+  rw [simulateQ_query, WriterT.run_map', StateT.run_map, support_map] at hz
+  obtain ⟨y, hy, hz⟩ := hz
+  subst z
+  rw [run_withLogging_apply, StateT.run_bind, mem_support_bind_iff] at hy
+  obtain ⟨us, _, hy⟩ := hy
+  simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hy
+  subst hy
+  simp only [Prod.map_apply, id_eq, List.mem_singleton] at he
+  exact congrArg Sigma.fst he
+
 lemma run_appendInputLog_apply [LawfulMonad m₀] (so : QueryImpl loggedSpec m₀)
     (t : loggedSpec.Domain) (inputs : List loggedSpec.Domain) :
     (appendInputLog so t).run inputs =
