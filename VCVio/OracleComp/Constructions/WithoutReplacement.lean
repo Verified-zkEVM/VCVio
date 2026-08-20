@@ -261,6 +261,118 @@ theorem countP_of_mem_support_drawUntil (accept : S → Bool) (n : ℕ) :
             simp only [if_true]
             omega
 
+/-! ## The loop is a random ordering, truncated
+
+Taking `accept` to be always false leaves the budget untouched at every draw, so the loop stops
+only when the pool is empty: `drawAll` draws the whole pool, one uniformly chosen element at a
+time. `takeUntil` is the deterministic truncation `drawUntil` performs on such an ordering, and
+`evalDist_drawUntil_eq_map_drawAll` says the two accounts agree.
+
+The point of the reformulation is that a uniformly random ordering depends on the pool only through
+its underlying multiset, which the recursive loop hides. -/
+
+/-- Draw the whole pool, one uniformly chosen element at a time. -/
+noncomputable def drawAll (l : List S) : ProbComp (List S) := drawUntil (fun _ => false) 1 l
+
+@[simp] theorem drawAll_nil : drawAll ([] : List S) = pure [] := drawUntil_nil _ _
+
+theorem drawAll_cons (x : S) (xs : List S) :
+    drawAll (x :: xs) =
+      (do
+        let i ← $[0..xs.length]
+        let y := (x :: xs)[(i : ℕ)]'(by simpa using i.isLt)
+        (y :: ·) <$> drawAll ((x :: xs).eraseIdx i)) := by
+  rw [drawAll, drawUntil_cons]
+  simp only [Bool.false_eq_true, if_false, drawAll]
+
+/-- Keep an ordering's prefix up to and including its `r`-th accepting element. This is what
+`drawUntil` does to the ordering `drawAll` produces. -/
+def takeUntil (accept : S → Bool) : ℕ → List S → List S
+  | 0, _ => []
+  | _, [] => []
+  | r + 1, x :: xs => x :: takeUntil accept (if accept x then r else r + 1) xs
+
+@[simp] theorem takeUntil_zero (accept : S → Bool) (l : List S) :
+    takeUntil accept 0 l = [] := by cases l <;> rfl
+
+@[simp] theorem takeUntil_nil (accept : S → Bool) (r : ℕ) :
+    takeUntil accept r ([] : List S) = [] := by cases r <;> rfl
+
+theorem takeUntil_cons (accept : S → Bool) (r : ℕ) (x : S) (xs : List S) :
+    takeUntil accept (r + 1) (x :: xs)
+      = x :: takeUntil accept (if accept x then r else r + 1) xs := rfl
+
+/-- The loop is total: it only ever samples an index of a nonempty pool. -/
+theorem neverFail_drawUntil (accept : S → Bool) (n : ℕ) :
+    ∀ (r : ℕ) (l : List S), l.length = n → NeverFail (drawUntil accept r l) := by
+  induction n with
+  | zero =>
+      intro r l hl
+      obtain rfl : l = [] := List.length_eq_zero_iff.mp hl
+      rw [drawUntil_nil]
+      infer_instance
+  | succ n ih =>
+      intro r l hl
+      obtain ⟨x, xs, rfl⟩ : ∃ x xs, l = x :: xs := by
+        cases l with
+        | nil => simp at hl
+        | cons x xs => exact ⟨x, xs, rfl⟩
+      have hxs : xs.length = n := by simpa using hl
+      cases r with
+      | zero => rw [drawUntil_zero]; infer_instance
+      | succ r =>
+          rw [drawUntil_cons]
+          refine (neverFail_bind_iff _ _).mpr ⟨inferInstance, fun i _ => ?_⟩
+          rw [neverFail_map_iff]
+          have hi : (i : ℕ) < (x :: xs).length := by simpa using i.isLt
+          exact ih _ _ (by rw [List.length_eraseIdx_of_lt hi]; simpa using hxs)
+
+theorem neverFail_drawAll (l : List S) : NeverFail (drawAll l) :=
+  neverFail_drawUntil _ l.length 1 l rfl
+
+/-- **The loop is a uniformly random ordering, truncated.** -/
+theorem evalDist_drawUntil_eq_map_drawAll (accept : S → Bool) (n : ℕ) :
+    ∀ (r : ℕ) (l : List S), l.length = n →
+      evalDist (drawUntil accept r l) = evalDist (takeUntil accept r <$> drawAll l) := by
+  induction n with
+  | zero =>
+      intro r l hl
+      obtain rfl : l = [] := List.length_eq_zero_iff.mp hl
+      simp
+  | succ n ih =>
+      intro r l hl
+      obtain ⟨x, xs, rfl⟩ : ∃ x xs, l = x :: xs := by
+        cases l with
+        | nil => simp at hl
+        | cons x xs => exact ⟨x, xs, rfl⟩
+      have hxs : xs.length = n := by simpa using hl
+      cases r with
+      | zero =>
+          classical
+          rw [drawUntil_zero,
+            show takeUntil accept 0 = fun _ : List S => ([] : List S) from
+              funext (takeUntil_zero accept)]
+          refine evalDist_ext fun d => ?_
+          rw [probOutput_map_const, (neverFail_drawAll (x :: xs)).probFailure_eq_zero,
+            probOutput_pure]
+          simp
+      | succ r =>
+          rw [drawUntil_cons, drawAll_cons, map_bind]
+          refine evalDist_bind_congr fun i _ => ?_
+          dsimp only
+          have hi : (i : ℕ) < (x :: xs).length := by simpa using i.isLt
+          have hlen : ((x :: xs).eraseIdx i).length = n := by
+            rw [List.length_eraseIdx_of_lt hi]; simpa using hxs
+          have hRHS : takeUntil accept (r + 1) <$> ((fun a : List S => (x :: xs)[(i : ℕ)] :: a)
+                <$> drawAll ((x :: xs).eraseIdx i))
+              = (fun a : List S => (x :: xs)[(i : ℕ)] :: a) <$>
+                  (takeUntil accept (if accept ((x :: xs)[(i : ℕ)]) then r else r + 1)
+                    <$> drawAll ((x :: xs).eraseIdx i)) := by
+            rw [Functor.map_map, Functor.map_map]
+            congr 1
+          rw [hRHS]
+          exact evalDist_map_eq_of_evalDist_eq (ih _ _ hlen) _
+
 /-! ## Expected number of draws -/
 
 private theorem sum_map_ite (l : List S) (p : S → Bool) (a b : ℝ≥0∞) :

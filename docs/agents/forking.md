@@ -303,10 +303,27 @@ that already carries `expectedValue_cost_coordForkOp_le` and §8.1. Both this in
 `(1 + ℓ(k−1)) · 𝔼[Γ]` bound it implies have been checked exhaustively at small parameters; neither
 is formalized.
 
-The missing Lean primitive is the per-element draw probability for `drawUntil` — currently only the
-expected *length* is available (`expectedValue_length_drawUntil`). Getting it needs the loop's
+The missing Lean primitive is the per-element draw probability for `drawUntil` — only the expected
+*length* is available (`expectedValue_length_drawUntil`). Getting it needs the loop's
 exchangeability: permuting a pool within its accept classes leaves the law of the drawn set alone,
 so all accepting values of a column are equally likely to be drawn, as are all rejecting ones.
+
+`evalDist_drawUntil_eq_map_drawAll` is the first step, and the reason exchangeability is reachable
+at all:
+
+```lean
+theorem evalDist_drawUntil_eq_map_drawAll (accept : S → Bool) (n : ℕ) :
+    ∀ (r : ℕ) (l : List S), l.length = n →
+      evalDist (drawUntil accept r l) = evalDist (takeUntil accept r <$> drawAll l)
+```
+
+`drawAll` draws the whole pool — it is `drawUntil` with an always-false `accept`, so the budget
+never falls and the loop stops only on exhaustion — and `takeUntil` is the deterministic truncation
+at the `r`-th accepting element. The recursive loop hides the fact that its law depends on the pool
+only through the underlying multiset; a random *ordering* does not, so exchangeability is a
+statement about `drawAll` alone, with `takeUntil` a fixed function applied afterwards. The identity
+is distributional and not a program equality: at `r = 0` the loop samples nothing while the
+right-hand side still draws an ordering and discards it.
 
 ### The abstract sampling game
 

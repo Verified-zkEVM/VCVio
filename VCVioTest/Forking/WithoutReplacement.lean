@@ -53,6 +53,34 @@ theorem expectedValue_length_drawUntil_pool3 :
     show pool3.length = 3 from rfl, show pool3.countP acceptZero = 1 from rfl,
     expectedDraws_pool3]
 
+/-! ## The loop as a truncated ordering -/
+
+/-- The reformulation instantiates: the loop's law is `takeUntil` applied to a random ordering. -/
+example : evalDist (drawUntil acceptZero 1 pool3)
+    = evalDist (takeUntil acceptZero 1 <$> drawAll pool3) :=
+  evalDist_drawUntil_eq_map_drawAll acceptZero pool3.length 1 pool3 rfl
+
+/-- A four-element alphabet with two accepting values, to exercise the budget. -/
+def acceptLow : Fin 4 → Bool := fun x => x == 0 || x == 1
+
+/-- `takeUntil` keeps the `r`-th accepting element and stops there. -/
+example : takeUntil acceptLow 2 [2, 0, 3, 1, 2] = [2, 0, 3, 1] := rfl
+
+/-- A single accepting value ends it immediately. -/
+example : takeUntil acceptLow 1 [2, 0, 3, 1] = [2, 0] := rfl
+
+/-- The budget counts accepting elements, not draws: with no accepting element in reach it keeps
+the whole ordering rather than stopping at `r` draws. -/
+example : takeUntil acceptLow 1 [2, 3, 2, 3] = [2, 3, 2, 3] := rfl
+
+/-- A zero budget keeps nothing, which is why the reformulation is a distributional identity and
+not a program identity: `drawUntil` at `r = 0` samples nothing, while the right-hand side still
+draws a whole ordering and discards it. -/
+example : takeUntil acceptLow 0 [2, 0, 3, 1] = [] := rfl
+
+/-- Drawing the whole pool is the loop that never spends its budget. -/
+example : drawAll pool3 = drawUntil (fun _ => false) 1 pool3 := rfl
+
 /-! ## Exhaustion -/
 
 /-- The exhausting experiment stops after draining its one-element pool. -/
