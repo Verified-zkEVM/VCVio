@@ -348,8 +348,25 @@ Charge every drawn value a weight and a column's expected charge is at most `r` 
 total weight, whatever the weights are. The proof splits on whether the fixed value accepts: the
 accepting ones share out the loop's accepting draws exactly, while for a rejecting one either the
 budget binds — and `NegHypergeom.mul_expectedDraws` makes the accounting exact — or the column runs
-out first and each centre draws it at most once. What remains for the composition is the weighted
-fork this feeds.
+out first and each centre draws it at most once.
+
+The fork that consumes it is `coordForkOpW` in
+[`CoordinateFork/Operational.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Operational.lean)
+— Figure 11 with each entry examined *charged* `Γ` instead of counted — and its bound is the one
+the composition needs:
+
+```lean
+theorem expectedValue_weight_coordForkOpW_le (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞) :
+    expectedValue (coordForkOpW k ρ Γ) (fun r => r.2)
+      ≤ (1 + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞))
+          * ((∑ c : ι → S, Γ c) / Fintype.card (ι → S))
+```
+
+Taking `Γ = 1` recovers `expectedValue_cost_coordForkOp_le`; the regressions check both that and a
+skewed charge, where the bound tracks the average. What is left of the composition is the recursion
+itself: a `μ`-round extractor that runs its sub-extractor at the entries it examines rather than
+eagerly at all of them, and the induction that instantiates `Γ` at the level below and multiplies
+through with `expectedValue_bind`.
 
 `evalDist_drawUntil_eq_map_drawAll` is the reformulation that made the uniformity statement natural
 to find:

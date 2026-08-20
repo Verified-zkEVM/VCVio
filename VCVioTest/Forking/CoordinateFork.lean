@@ -291,6 +291,46 @@ theorem expectedValue_cost_coordForkOp_partial_le :
   simp
   norm_num
 
+/-! ## The weighted cost -/
+
+/-- **Unit charges recover the count bound.** At the parameters of
+`expectedValue_cost_coordForkOp_partial_le` the weighted bound reads `≤ 2`, the same number. -/
+theorem expectedValue_weight_coordForkOpW_partial_le :
+    expectedValue (coordForkOpW 2 partialAccept (fun _ => 1)) (fun r => r.2) ≤ 2 := by
+  have h := expectedValue_weight_coordForkOpW_le (ι := Fin 1) (S := Fin 5) 2 partialAccept
+    (fun _ => 1)
+  refine h.trans (le_of_eq ?_)
+  rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one,
+    show (Fintype.card (Fin 1 → Fin 5) : ℕ) = 5 from by decide]
+  simp only [Fintype.card_fin, Nat.cast_one, one_mul, show (2 - 1 : ℕ) = 1 from rfl]
+  rw [Nat.cast_ofNat, ENNReal.div_self (by norm_num) (by finiteness), mul_one]
+  norm_num
+
+/-- **The bound tracks the charges.** Charging ten to the single challenge `![0]` and nothing to
+the rest leaves an average charge of two, and the bound doubles it. -/
+theorem expectedValue_weight_coordForkOpW_partial_skew_le :
+    expectedValue (coordForkOpW 2 partialAccept (fun c => if c 0 = 0 then 10 else 0))
+        (fun r => r.2) ≤ 4 := by
+  have h := expectedValue_weight_coordForkOpW_le (ι := Fin 1) (S := Fin 5) 2 partialAccept
+    (fun c => if c 0 = 0 then 10 else 0)
+  refine h.trans (le_of_eq ?_)
+  have hsum : (∑ c : PartialChal, if c 0 = 0 then (10 : ℝ≥0∞) else 0) = 10 := by
+    rw [Finset.sum_eq_single (fun _ => 0 : PartialChal)]
+    · simp
+    · intro c _ hne
+      refine if_neg fun h => hne ?_
+      funext i
+      fin_cases i
+      simpa using h
+    · intro h
+      exact absurd (Finset.mem_univ _) h
+  rw [hsum, show (Fintype.card (Fin 1 → Fin 5) : ℕ) = 5 from by decide]
+  simp only [Fintype.card_fin, Nat.cast_one, one_mul, show (2 - 1 : ℕ) = 1 from rfl]
+  rw [Nat.cast_ofNat, show (10 : ℝ≥0∞) / 5 = 2 from by
+    rw [eq_comm, ENNReal.eq_div_iff (by norm_num) (by finiteness)]
+    norm_num]
+  norm_num
+
 /-! ## Boundary canaries -/
 
 /-- Because subtraction is truncated, `k = 0` and `k = 1` are definitionally identical. -/
