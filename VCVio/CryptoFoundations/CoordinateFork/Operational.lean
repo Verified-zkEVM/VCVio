@@ -187,6 +187,19 @@ theorem coordForkOp_success {X : Finset (ι → S)} {cost : ℕ}
   obtain ⟨c₀, hc₀, hAt⟩ := h
   exact coordForkOpAt_success hAt
 
+/-- **The two-transcript reading of a successful run.** In every coordinate the returned set holds
+two accepting challenges differing there and nowhere else.
+
+This is the form a reduction built on a pair of openings consumes — one pair per coordinate — and
+`k = 2`, the only case Fenzi–Moghaddas–Nguyen treat, is exactly where the returned set holds
+nothing more. -/
+theorem coordForkOp_exists_pair {X : Finset (ι → S)} {cost : ℕ} (hk : 2 ≤ k)
+    (h : (some X, cost) ∈ support (coordForkOp k ρ)) (j : ι) :
+    ∃ c ∈ X, ∃ c' ∈ X, Function.DiffersOnlyAt j c c' ∧ ρ c ∧ ρ c' := by
+  obtain ⟨hss, hacc⟩ := coordForkOp_success h
+  obtain ⟨c, hc, c', hc', hdiff⟩ := hss.exists_pair_differsOnlyAt hk j
+  exact ⟨c, hc, c', hc', hdiff, hacc c hc, hacc c' hc'⟩
+
 /-! ## The success probability -/
 
 omit [SampleableType (ι → S)] in

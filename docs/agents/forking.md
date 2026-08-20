@@ -494,6 +494,51 @@ Non-vacuity, payload-sensitivity, coupling, boundary, and bad-extractor checks l
 `VCVioTest/Forking/CoordSpecialSoundness.lean`, and `VCVioTest/Forking/SamplingGame.lean`; all run
 in CI.
 
+## Downstream: ArkLib
+
+[ArkLib](https://github.com/Verified-zkEVM/ArkLib) is a *downstream* consumer — its `lakefile.toml`
+carries `require VCVio rev = "v4.30.0"`, on Lean 4.30 against this repo's 4.32.2 — so anything the
+coordinate-wise material is to be used for has to be shaped for export, not imported back. A survey
+of it in August 2026 found the following; none of it is acted on here beyond the code shape.
+
+**There is a named consumer waiting.** `ArkLib/Commitments/Functional/Hachi/InnerOuter/Security.lean`
+proves the Greyhound/Hachi inner-outer Ajtai commitment's weak binding by reduction to Module-SIS,
+and states its core theorem `outputToModuleSIS_valid_of_verified` — *two verified weak openings that
+differ yield a Module-SIS witness* — explicitly "independent of how those facts were obtained ...
+reused by the CWSS argument for the evaluation protocol, where the two weak openings are
+reconstructed from special-soundness transcripts". ArkLib's own notes list the other half as an open
+gap. Its openings carry one challenge per block, so the instantiation is `ι` the block index, `S`
+the challenge set, `k = 2`.
+
+That is why `IsCoordSpecialSoundTranscripts` mentions only a `Bool`-valued verifier, and why
+`IsCoordSpecialSoundTranscripts.exists_pair` exists: the pair *is* the reduction's input. Two
+things such an instantiation would still need are recorded in
+[`CoordinateFork/SpecialSoundness.lean`](../../VCVio/CryptoFoundations/CoordinateFork/SpecialSoundness.lean)
+— a `Fintype`/`SampleableType` on the challenge set (which must be the set actually sampled from,
+so that `|S|` in the `ℓ(k−1)/|S|` loss is the right number), and a conversion at the `ℝ≥0∞` / `ℝ≥0`
+boundary.
+
+**ArkLib's rewinding layer is empty**, so none of this duplicates work there.
+`OracleReduction/Security/SpecialSoundness.lean` is an `ArityTree` skeleton/data scaffolding with no
+soundness predicate and no extractor; `Security/Rewinding.lean` is a stub. Its `ArityTree.Data` is
+the natural meeting point for the challenge trees of
+[`ChallengeTree.lean`](../../ToMathlib/Combinatorics/ChallengeTree.lean). What ArkLib does have is
+the *straightline* side — completeness, soundness and knowledge soundness against straightline
+extractors, round-by-round soundness with state functions, and state-restoration soundness — all
+with `ℝ≥0` errors.
+
+**Two upstreaming backlogs point here.** `ArkLib/ToVCVio/` is a handful of small `OracleComp` /
+`EvalDist` / `SubSpec` / `simulateQ` / `Vector.mapM` support lemmas, sorry-free, staged by name for
+this repo. `ArkLib/Data/Probability/Instances.lean` carries an explicit `TODO` to move most of its
+contents here; its uniform-splitting and marginalization theorems overlap
+[`EvalDist/IndepProduct.lean`](../../VCVio/EvalDist/IndepProduct.lean).
+
+**Lattice overlap, noted only.** ArkLib carries a large, nearly sorry-free cyclotomic-ring library
+— `Rq`, Lyubashevsky–Seiler and Micciancio–Young norm bounds, Galois trace, subfield packing,
+`ModuleSIS` — overlapping `LatticeCrypto/Ring/`. This repo cannot import ArkLib without a cycle, and
+the two libraries serve different ends (FIPS schemes here, proof systems there), so merging them is
+a separate question.
+
 ## Why §7 introduces its own extractor
 
 Coordinate-wise `k`-special soundness is a special case of Attema–Fehr–Rambaud's `Γ`-out-of-`C`

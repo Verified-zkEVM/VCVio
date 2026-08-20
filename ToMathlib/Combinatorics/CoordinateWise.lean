@@ -33,9 +33,19 @@ that a single coordinate recovers ordinary `k`-special soundness.
 * `CoordinateWise.HasCoordNeighbours k X` — `X` has a centre with `k - 1` neighbours in every
   coordinate.
 * `CoordinateWise.IsCoordSpecialSound k X` — that, plus the cardinality: `X ∈ SS(S, ℓ, k)`.
+* `CoordinateWise.IsCoordSpecialSoundTranscripts verify k T` — transcripts a verifier accepts,
+  whose challenges form such a set.
 * `CoordinateWise.coordFamily e A` — the challenge set with centre `e` whose coordinate-`j`
   neighbours replace `e j` by each value of `A j`.
 * `CoordinateWise.columnCount accept j c` — how many values of coordinate `j` keep `c` accepting.
+
+`HasCoordNeighbours` is a nested existential, so both predicates carry accessors — `centre`,
+`neighbours j`, and `exists_pair` — that hand back the structure without unfolding. `exists_pair`
+is the one a consumer wants: at `2 ≤ k` it produces, in any prescribed coordinate, two accepting
+transcripts whose challenges differ there and nowhere else. That pair is what a reduction turning
+two openings of a commitment into a hardness witness takes as input, and it is why the verifier
+enters `IsCoordSpecialSoundTranscripts` as a bare `(ι → S) → Resp → Bool` rather than as part of a
+protocol structure.
 
 ## Main results
 
@@ -148,6 +158,145 @@ theorem le_card_of_hasCoordNeighbours (h : HasCoordNeighbours k X) :
   have hpos : 1 ≤ X.card := Finset.card_pos.mpr ⟨e, heX⟩
   rw [hblocks, Finset.card_erase_of_mem heX] at hle
   omega
+
+/-! ### Reading a coordinate-wise special sound set
+
+`HasCoordNeighbours` is a nested existential, so using one means digging the centre and the
+neighbour blocks back out. The accessors below do that once. They are what a downstream reduction
+consumes: such a reduction is typically given *two* accepting transcripts differing in a single
+coordinate, and `IsCoordSpecialSound.exists_differsOnlyAt` is exactly that, per coordinate. -/
+
+section Accessors
+
+omit [DecidableEq ι]
+
+namespace HasCoordNeighbours
+
+/-- The central vector the neighbour condition provides. Well defined by proof irrelevance. -/
+noncomputable def centre (h : HasCoordNeighbours k X) : ι → S := h.choose
+
+theorem centre_mem (h : HasCoordNeighbours k X) : h.centre ∈ X := h.choose_spec.1
+
+/-- The `k - 1` members of `X` differing from the centre in coordinate `j` and nowhere else. -/
+noncomputable def neighbours (h : HasCoordNeighbours k X) (j : ι) : Finset (ι → S) :=
+  (h.choose_spec.2 j).choose
+
+theorem neighbours_subset (h : HasCoordNeighbours k X) (j : ι) :
+    h.neighbours j ⊆ X.erase h.centre := (h.choose_spec.2 j).choose_spec.1
+
+@[simp] theorem card_neighbours (h : HasCoordNeighbours k X) (j : ι) :
+    (h.neighbours j).card = k - 1 := (h.choose_spec.2 j).choose_spec.2.1
+
+theorem differsOnlyAt_of_mem_neighbours (h : HasCoordNeighbours k X) {j : ι} {y : ι → S}
+    (hy : y ∈ h.neighbours j) : DiffersOnlyAt j h.centre y :=
+  (h.choose_spec.2 j).choose_spec.2.2 y hy
+
+theorem mem_of_mem_neighbours (h : HasCoordNeighbours k X) {j : ι} {y : ι → S}
+    (hy : y ∈ h.neighbours j) : y ∈ X :=
+  Finset.mem_of_mem_erase (h.neighbours_subset j hy)
+
+theorem ne_centre_of_mem_neighbours (h : HasCoordNeighbours k X) {j : ι} {y : ι → S}
+    (hy : y ∈ h.neighbours j) : y ≠ h.centre :=
+  Finset.ne_of_mem_erase (h.neighbours_subset j hy)
+
+/-- Below `k = 2` the neighbour blocks are empty, so this is the hypothesis every two-transcript
+consumer needs. -/
+theorem neighbours_nonempty (h : HasCoordNeighbours k X) (hk : 2 ≤ k) (j : ι) :
+    (h.neighbours j).Nonempty :=
+  Finset.card_pos.mp (by rw [h.card_neighbours j]; omega)
+
+end HasCoordNeighbours
+
+namespace IsCoordSpecialSound
+
+/-- The central vector, from the neighbour condition. -/
+noncomputable def centre (h : IsCoordSpecialSound k X) : ι → S := h.1.centre
+
+theorem centre_mem (h : IsCoordSpecialSound k X) : h.centre ∈ X := h.1.centre_mem
+
+/-- The `k - 1` members of `X` differing from the centre in coordinate `j` and nowhere else. -/
+noncomputable def neighbours (h : IsCoordSpecialSound k X) (j : ι) : Finset (ι → S) :=
+  h.1.neighbours j
+
+theorem neighbours_subset (h : IsCoordSpecialSound k X) (j : ι) :
+    h.neighbours j ⊆ X.erase h.centre := h.1.neighbours_subset j
+
+@[simp] theorem card_neighbours (h : IsCoordSpecialSound k X) (j : ι) :
+    (h.neighbours j).card = k - 1 := h.1.card_neighbours j
+
+theorem differsOnlyAt_of_mem_neighbours (h : IsCoordSpecialSound k X) {j : ι} {y : ι → S}
+    (hy : y ∈ h.neighbours j) : DiffersOnlyAt j h.centre y :=
+  h.1.differsOnlyAt_of_mem_neighbours hy
+
+theorem mem_of_mem_neighbours (h : IsCoordSpecialSound k X) {j : ι} {y : ι → S}
+    (hy : y ∈ h.neighbours j) : y ∈ X := h.1.mem_of_mem_neighbours hy
+
+theorem ne_centre_of_mem_neighbours (h : IsCoordSpecialSound k X) {j : ι} {y : ι → S}
+    (hy : y ∈ h.neighbours j) : y ≠ h.centre := h.1.ne_centre_of_mem_neighbours hy
+
+theorem card_eq (h : IsCoordSpecialSound k X) :
+    X.card = Fintype.card ι * (k - 1) + 1 := h.2
+
+/-- **The two-transcript reading.** In every coordinate the set holds a member differing from the
+centre there and nowhere else. This is the form a reduction that turns two openings into a witness
+consumes, one coordinate at a time. -/
+theorem exists_differsOnlyAt (h : IsCoordSpecialSound k X) (hk : 2 ≤ k) (j : ι) :
+    ∃ y ∈ X, DiffersOnlyAt j h.centre y := by
+  obtain ⟨y, hy⟩ := h.1.neighbours_nonempty hk j
+  exact ⟨y, h.mem_of_mem_neighbours hy, h.differsOnlyAt_of_mem_neighbours hy⟩
+
+/-- The unpaired form: two members of `X` differing only at `j`. -/
+theorem exists_pair_differsOnlyAt (h : IsCoordSpecialSound k X) (hk : 2 ≤ k) (j : ι) :
+    ∃ e ∈ X, ∃ y ∈ X, DiffersOnlyAt j e y := by
+  obtain ⟨y, hyX, hdiff⟩ := h.exists_differsOnlyAt hk j
+  exact ⟨h.centre, h.centre_mem, y, hyX, hdiff⟩
+
+end IsCoordSpecialSound
+
+end Accessors
+
+/-! ### Accepting transcripts
+
+The shape a coordinate-wise extractor is handed, and the shape a rewinding argument produces: a
+finite set of transcripts the verifier accepts, whose challenges form an `SS(S, ℓ, k)` set. The
+verifier enters only as a `Bool`-valued function of the challenge and the response, so nothing here
+commits to a particular protocol formalization. -/
+
+/-- Transcripts a verifier accepts, whose challenges are coordinate-wise `k`-special sound. -/
+def IsCoordSpecialSoundTranscripts {Resp : Type*} (verify : (ι → S) → Resp → Bool) (k : ℕ)
+    (T : Finset ((ι → S) × Resp)) : Prop :=
+  (∀ p ∈ T, verify p.1 p.2 = true) ∧ IsCoordSpecialSound k (T.image Prod.fst)
+
+section TranscriptAccessors
+
+omit [DecidableEq ι]
+
+namespace IsCoordSpecialSoundTranscripts
+
+variable {Resp : Type*} {verify : (ι → S) → Resp → Bool} {T : Finset ((ι → S) × Resp)}
+
+theorem verify_of_mem (h : IsCoordSpecialSoundTranscripts verify k T) {p : (ι → S) × Resp}
+    (hp : p ∈ T) : verify p.1 p.2 = true := h.1 p hp
+
+theorem isCoordSpecialSound (h : IsCoordSpecialSoundTranscripts verify k T) :
+    IsCoordSpecialSound k (T.image Prod.fst) := h.2
+
+/-- **The two-transcript reading.** In every coordinate the set holds two accepting transcripts
+whose challenges differ there and nowhere else.
+
+This is what a reduction consuming a pair of openings needs: one such pair per coordinate, with
+both halves verified. -/
+theorem exists_pair (h : IsCoordSpecialSoundTranscripts verify k T) (hk : 2 ≤ k) (j : ι) :
+    ∃ p ∈ T, ∃ q ∈ T, DiffersOnlyAt j p.1 q.1 ∧ verify p.1 p.2 = true ∧ verify q.1 q.2 = true := by
+  classical
+  obtain ⟨e, heX, y, hyX, hdiff⟩ := h.isCoordSpecialSound.exists_pair_differsOnlyAt hk j
+  obtain ⟨p, hp, hpe⟩ := Finset.mem_image.mp heX
+  obtain ⟨q, hq, hqy⟩ := Finset.mem_image.mp hyX
+  exact ⟨p, hp, q, hq, hpe ▸ hqy ▸ hdiff, h.verify_of_mem hp, h.verify_of_mem hq⟩
+
+end IsCoordSpecialSoundTranscripts
+
+end TranscriptAccessors
 
 /-- The challenge set centred at `e` whose coordinate-`j` neighbours replace `e j` by each value
 of `A j`. This is the output shape targeted by coordinate-wise rewinding. -/

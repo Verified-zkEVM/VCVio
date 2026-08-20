@@ -55,8 +55,8 @@ transcript set whose challenges are `SS(Fin 3, 2, 2)` is nonempty, and every acc
 pins the response to the statement. -/
 theorem toySigma_coordSpeciallySoundAt (x : Fin 3) :
     toySigma.CoordSpeciallySoundAt 2 toyExt x := by
-  intro pc T hacc hss w hw
-  obtain ⟨⟨e, heX, -⟩, -⟩ := hss
+  intro pc T ht w hw
+  obtain ⟨hacc, ⟨⟨e, heX, -⟩, -⟩⟩ := ht
   obtain ⟨p, hpT, -⟩ := Finset.mem_image.mp heX
   simp only [toyExt, support_pure, Set.mem_singleton_iff] at hw
   cases hh : T.toList.head? with
@@ -161,8 +161,55 @@ theorem not_toySigma_coordSpeciallySoundAt_bad :
   rintro hbad
   obtain ⟨T, hacc, hss⟩ := exists_accepting_toySigma 1
   have hw : (0 : Fin 3) ∈ support (badToyExt 1 () T) := by simp [badToyExt]
-  have := hbad () T hacc hss 0 hw
+  have := hbad () T ⟨hacc, hss⟩ 0 hw
   simp at this
+
+/-! ## Reading a special sound set
+
+The accessors are what a downstream reduction consumes, so they need checking at concrete data:
+that the pair really differs in the coordinate asked for, and that `2 ≤ k` is load-bearing. -/
+
+/-- Three coordinates over a seven-element alphabet, at `k = 3`. -/
+def exCentre : Fin 3 → Fin 7 := ![0, 0, 0]
+
+def exReplacements : Fin 3 → Finset (Fin 7) := ![{2, 3}, {1, 2}, {5, 4}]
+
+theorem exSS : IsCoordSpecialSound 3 (coordFamily exCentre exReplacements) :=
+  isCoordSpecialSound_coordFamily (by decide) (by decide)
+
+/-- **Non-vacuity of the accessors.** In every coordinate the set really does hold a member
+differing from the centre there and nowhere else. -/
+example (j : Fin 3) :
+    ∃ y ∈ coordFamily exCentre exReplacements, Function.DiffersOnlyAt j exSS.centre y :=
+  exSS.exists_differsOnlyAt (by norm_num) j
+
+/-- Each coordinate's neighbour block has exactly `k - 1 = 2` members. -/
+example (j : Fin 3) : (exSS.neighbours j).card = 2 := exSS.card_neighbours j
+
+/-- The centre is a member, and the neighbours are members other than it. -/
+example : exSS.centre ∈ coordFamily exCentre exReplacements := exSS.centre_mem
+
+example (j : Fin 3) {y : Fin 3 → Fin 7} (hy : y ∈ exSS.neighbours j) : y ≠ exSS.centre :=
+  exSS.ne_centre_of_mem_neighbours hy
+
+/-- **`2 ≤ k` is load-bearing.** At `k = 1` the neighbour blocks are empty, so no coordinate has a
+neighbour to hand back — the `coordFamily` with no replacements is a one-element set. -/
+theorem neighbours_empty_of_one :
+    ∀ j : Fin 3, ((isCoordSpecialSound_coordFamily (k := 1) (e := exCentre)
+      (A := fun _ => (∅ : Finset (Fin 7))) (by decide) (by decide)).neighbours j) = ∅ := by
+  intro j
+  exact Finset.card_eq_zero.mp (by
+    rw [IsCoordSpecialSound.card_neighbours])
+
+/-! ## The transcript reading -/
+
+/-- The two-transcript form the extractor's consumer sees: per coordinate, two accepting
+transcripts whose challenges differ there and nowhere else. -/
+example (x : Fin 3) (T : Finset (SChal × Fin 3))
+    (ht : IsCoordSpecialSoundTranscripts (toySigma.verify x ()) 2 T) (j : Fin 2) :
+    ∃ p ∈ T, ∃ q ∈ T, Function.DiffersOnlyAt j p.1 q.1 ∧
+      toySigma.verify x () p.1 p.2 = true ∧ toySigma.verify x () q.1 q.2 = true :=
+  ht.exists_pair (by norm_num) j
 
 /-! ## The generic structure's `t`-value -/
 

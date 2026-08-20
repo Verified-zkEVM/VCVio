@@ -66,6 +66,25 @@ def Extracted (rel : Stmt → Wit → Bool) (x : Stmt) (r : Option Wit) : Prop :
   simp [Extracted]
 
 omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+/-- A good fork is exactly a coordinate-wise special sound set of accepting transcripts.
+
+Naming this makes the fork's output usable without the extractor: it is the hypothesis of
+`CoordSpeciallySoundAt`, and `CoordinateWise.IsCoordSpecialSoundTranscripts.exists_pair` reads a
+verified pair off it in any prescribed coordinate. -/
+theorem isCoordSpecialSoundTranscripts_of_goodTranscripts
+    {σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel} {pc : Commit}
+    {τ : (ι → S) → Resp} {X : Finset (ι → S)}
+    (hgood : GoodTranscripts (σ.verify x pc) k (some (τ, X))) :
+    IsCoordSpecialSoundTranscripts (σ.verify x pc) k (transcripts τ X) := by
+  rw [goodTranscripts_some_iff] at hgood
+  obtain ⟨hsound, hacc⟩ := hgood
+  refine ⟨fun p hp => ?_, ?_⟩
+  · obtain ⟨c, y⟩ := p
+    obtain ⟨h1, rfl⟩ := mem_transcripts.mp hp
+    exact hacc c h1
+  · rwa [image_fst_transcripts]
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
 /-- On a good fork the composite extractor certainly produces a valid witness. -/
 theorem probEvent_extracted_eq_one_of_goodTranscripts
     {σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel}
@@ -73,15 +92,9 @@ theorem probEvent_extracted_eq_one_of_goodTranscripts
     (hss : σ.CoordSpeciallySoundAt k ext x) {τ : (ι → S) → Resp} {X : Finset (ι → S)}
     (hgood : GoodTranscripts (σ.verify x pc) k (some (τ, X))) :
     Pr[Extracted rel x | (some <$> ext x pc (transcripts τ X) : ProbComp (Option Wit))] = 1 := by
-  rw [goodTranscripts_some_iff] at hgood
-  obtain ⟨hsound, hacc⟩ := hgood
   rw [probEvent_map]
   refine probEvent_eq_one ⟨by simp, fun w hw => ⟨w, rfl, ?_⟩⟩
-  refine hss pc (transcripts τ X) (fun p hp => ?_) ?_ w hw
-  · obtain ⟨c, y⟩ := p
-    obtain ⟨h1, rfl⟩ := mem_transcripts.mp hp
-    exact hacc c h1
-  · rwa [image_fst_transcripts]
+  exact hss pc (transcripts τ X) (isCoordSpecialSoundTranscripts_of_goodTranscripts hgood) w hw
 
 /-- The fixed-statement, table-model extraction-success inequality underlying the `μ = 1`
 Σ-protocol case of **Lemma 2.31**. Against an extensional `ℓ`-coordinate-wise `k`-special sound

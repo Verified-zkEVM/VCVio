@@ -183,17 +183,6 @@ def coordSlice (j₀ : ι) (d : S) : Finset (ι → S) :=
 @[simp] theorem mem_coordSlice {c : ι → S} : c ∈ coordSlice j₀ d ↔ c j₀ = d := by
   simp [coordSlice]
 
-omit [DecidableEq ι] [Fintype S] in
-/-- A coordinate-wise special sound set contains two challenges differing only in any prescribed
-coordinate — the neighbour condition at that coordinate, which needs `2 ≤ k` to be nonempty. -/
-theorem exists_differsOnlyAt_of_isCoordSpecialSound (hk : 2 ≤ k) {X : Finset (ι → S)}
-    (hX : IsCoordSpecialSound k X) (j : ι) :
-    ∃ e ∈ X, ∃ y ∈ X, DiffersOnlyAt j e y := by
-  obtain ⟨⟨e, heX, hnb⟩, -⟩ := hX
-  obtain ⟨J, hJ, hcard, hdiff⟩ := hnb j
-  obtain ⟨y, hy⟩ : J.Nonempty := Finset.card_pos.mp (by omega)
-  exact ⟨e, heX, y, Finset.mem_of_mem_erase (hJ hy), hdiff y hy⟩
-
 /-- Two challenges in a common slice agree in the sliced coordinate, so they cannot differ there
 and nowhere else. -/
 theorem not_differsOnlyAt_of_mem_coordSlice {e y : ι → S} (he : e ∈ coordSlice j₀ d)
@@ -204,7 +193,7 @@ theorem not_differsOnlyAt_of_mem_coordSlice {e y : ι → S} (he : e ∈ coordSl
 theorem not_coordStructure_coordSlice (hk : 2 ≤ k) (j₀ : ι) (d : S) :
     ¬ coordStructure k (coordSlice j₀ d) := by
   rintro ⟨X, hXsub, hX⟩
-  obtain ⟨e, heX, y, hyX, hdiff⟩ := exists_differsOnlyAt_of_isCoordSpecialSound hk hX j₀
+  obtain ⟨e, heX, y, hyX, hdiff⟩ := hX.exists_pair_differsOnlyAt hk j₀
   exact not_differsOnlyAt_of_mem_coordSlice (hXsub heX) (hXsub hyX) hdiff
 
 /-- Adjoining one challenge off the slice creates an `SS(S, ℓ, 2)` set: the adjoined challenge is
@@ -254,7 +243,7 @@ theorem not_coordStructure_erase_update (hk : 2 ≤ k) (d' : S) {c : ι → S}
     · subst hi; rw [mem_coordSlice.mp hyslice, mem_coordSlice.mp hc]
     · rw [← hdiff.2 i hi, hb, Function.update_of_ne hi]
   rintro ⟨X, hXsub, hX⟩
-  obtain ⟨e, heX, y, hyX, hdiff⟩ := exists_differsOnlyAt_of_isCoordSpecialSound hk hX j₀
+  obtain ⟨e, heX, y, hyX, hdiff⟩ := hX.exists_pair_differsOnlyAt hk j₀
   have he := Finset.mem_of_mem_erase (hXsub heX)
   have hy := Finset.mem_of_mem_erase (hXsub hyX)
   rcases Finset.mem_insert.mp he with rfl | heslice

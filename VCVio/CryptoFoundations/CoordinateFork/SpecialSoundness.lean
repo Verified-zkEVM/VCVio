@@ -30,6 +30,28 @@ Two shape decisions, both following existing practice in
 (`coordSpeciallySoundAt_iff_kSpeciallySoundAt`), and at `k = 2` it is implied by the repository's
 two-transcript `SpeciallySoundAt` for any extractor that in fact extracts from a pair of its input
 transcripts (`coordSpeciallySoundAt_two_of_speciallySoundAt`).
+
+## Consuming this from a lattice commitment
+
+A reduction of the shape the coordinate-wise extractor feeds does not want a witness — it wants
+the transcripts, and does its own algebra. `CoordinateWise.IsCoordSpecialSoundTranscripts` is that
+interface, and `IsCoordSpecialSoundTranscripts.exists_pair` hands back, per coordinate, two
+accepting transcripts whose challenges differ only there.
+
+A concrete instance is the Greyhound/Hachi inner-outer Ajtai commitment in ArkLib, whose
+`outputToModuleSIS_valid_of_verified` turns two verified weak openings that differ into a
+Module-SIS witness and is stated independently of how those openings were obtained. Its openings
+carry one challenge per block, so the instantiation is `ι` the block index, `S` the challenge set,
+and `k = 2` — the only case Fenzi–Moghaddas–Nguyen treat.
+
+Two things that instantiation would need, and neither is a change to make here:
+
+* `S` must be a `Fintype` with a `SampleableType (ι → S)`, since the fork samples a challenge
+  vector uniformly. A protocol whose challenges are constrained — short and invertible ring
+  elements, say — instantiates `S` at *that subtype*, not at the ambient ring, so that `|S|` in the
+  `ℓ(k-1)/|S|` loss is the size of the set actually sampled from.
+* The bounds here are `ℝ≥0∞`-valued. A development stating soundness errors in `ℝ≥0` converts at
+  the boundary.
 -/
 
 @[expose] public section
@@ -50,12 +72,16 @@ transcripts whose challenges form an `SS(S, ℓ, k)` set is valid for `x`.
 
 The transcripts share the commitment `pc`, as in the paper, where the extractor is given
 `(a, cᵢ, zᵢ)` with a common first message `a`. The statement is an explicit extractor input, as it
-is in the paper; it must not be recovered from the transcripts. -/
+is in the paper; it must not be recovered from the transcripts.
+
+The hypothesis is `CoordinateWise.IsCoordSpecialSoundTranscripts`, which mentions only a
+`Bool`-valued verifier of a challenge and a response. That is deliberate: it is the shape a
+rewinding argument produces and the shape a downstream reduction consumes, and neither should have
+to adopt `SigmaProtocol` to say it. -/
 def CoordSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
   ∀ (pc : Commit) (T : Finset ((ι → S) × Resp)),
-    (∀ p ∈ T, σ.verify x pc p.1 p.2 = true) →
-    IsCoordSpecialSound k (T.image Prod.fst) →
+    IsCoordSpecialSoundTranscripts (σ.verify x pc) k T →
     ∀ w ∈ support (ext x pc T), rel x w = true
 
 /-- A Σ-protocol is `ℓ`-coordinate-wise `k`-special sound if `CoordSpeciallySoundAt` holds at every
@@ -85,8 +111,8 @@ theorem coordSpeciallySoundAt_iff_kSpeciallySoundAt [Unique ι]
     (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) {k : ℕ} (hk : 1 ≤ k)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) :
     σ.CoordSpeciallySoundAt k ext x ↔ σ.KSpeciallySoundAt k ext x :=
-  ⟨fun h pc T hacc hcard => h pc T hacc ((isCoordSpecialSound_iff_of_unique hk).mpr hcard),
-    fun h pc T hacc hss => h pc T hacc ((isCoordSpecialSound_iff_of_unique hk).mp hss)⟩
+  ⟨fun h pc T hacc hcard => h pc T ⟨hacc, (isCoordSpecialSound_iff_of_unique hk).mpr hcard⟩,
+    fun h pc T ht => h pc T ht.1 ((isCoordSpecialSound_iff_of_unique hk).mp ht.2)⟩
 
 /-! ## Relation to the two-transcript definition -/
 
@@ -103,9 +129,9 @@ theorem coordSpeciallySoundAt_two_of_speciallySoundAt
     (hfactor : ∀ pc T, ∀ w ∈ support (ext x pc T),
       ∃ p₁ ∈ T, ∃ p₂ ∈ T, p₁.1 ≠ p₂.1 ∧ w ∈ support (σ.extract p₁.1 p₁.2 p₂.1 p₂.2)) :
     σ.CoordSpeciallySoundAt 2 ext x := by
-  intro pc T hacc _ w hw
+  intro pc T ht w hw
   obtain ⟨p₁, hp₁, p₂, hp₂, hne, hmem⟩ := hfactor pc T w hw
-  exact hss pc p₁.1 p₂.1 p₁.2 p₂.2 hne (hacc _ hp₁) (hacc _ hp₂) w hmem
+  exact hss pc p₁.1 p₂.1 p₁.2 p₂.2 hne (ht.verify_of_mem hp₁) (ht.verify_of_mem hp₂) w hmem
 
 /-! ## Satisfiability of the hypotheses
 
