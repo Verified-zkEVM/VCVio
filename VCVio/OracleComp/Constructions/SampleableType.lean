@@ -680,6 +680,12 @@ with uniformly random responses by calling the corresponding `uniformSample` at 
 def uniformSampleImpl [∀ i, SampleableType (spec.Range i)] :
     QueryImpl spec ProbComp := fun t => $ᵗ spec.Range t
 
+/-- A uniformly sampled implementation answers each query with the uniform sampler for
+that query's response type. -/
+@[simp]
+lemma uniformSampleImpl_apply [∀ i, SampleableType (spec.Range i)] (t : spec.Domain) :
+    uniformSampleImpl (spec := spec) t = $ᵗ spec.Range t := rfl
+
 namespace uniformSampleImpl
 
 variable [∀ i, SampleableType (spec.Range i)]

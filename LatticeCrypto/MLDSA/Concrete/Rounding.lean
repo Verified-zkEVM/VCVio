@@ -704,8 +704,9 @@ theorem concreteRounding_useHint_bound_of_isApproved (p : Params)
     (hp : p.isApproved) (r : Rq) (h : Hint) :
     cInfNorm (r - highBitsShift p (useHint p h r)) ≤ 2 * p.gamma2 + 1 := by
   refine cInfNorm_le_iff.mpr fun j => ?_
-  simp only [Rq.get_sub, highBitsShift, Nat.cast_mul, Nat.cast_ofNat, useHint, Vector.map_ofFn,
-      Vector.get_ofFn, Function.comp_apply]
+  rw [Rq.get_sub]
+  simp only [highBitsShift, Nat.cast_mul, Nat.cast_ofNat, useHint, Vector.map_ofFn,
+    Vector.get_ofFn, Function.comp_apply]
   simpa using useHintCoeff_shift_sub_le
     (BalancedDecomp.ofApproved hp) (h.get j) (r.get j)
 

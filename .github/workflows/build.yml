@@ -187,10 +187,27 @@ jobs:
         run: |
           bash scripts/build_timing_report.sh run test_path "$BUILD_TIMING_RESULTS" -- \
             bash -eo pipefail -c 'lake env lean VCVioTest/Smoke.lean'
+      # Enforcing from day one: new taint (exit 1: `sorryAx` or non-standard axioms not in
+      # the committed baseline) fails the build, as do infrastructure failures (exit 2:
+      # missing or unparsable baseline, tool breakage) — a broken tool must never read as
+      # a clean verdict.
+      # Sweeps the non-test libraries; Interop (the declared TCB) is bounded by
+      # its import-isolation gate instead.
+      # Exercise the sweep against its own fixtures before trusting its verdict on the
+      # library: the fixtures carry synthetic taint of each shape the tool reasons about
+      # (direct and transitive `sorryAx`, an axiom occurring only in a type, a mutual
+      # family whose taint crosses the cycle, generated `._native.` name shapes), plus
+      # the exit-code matrix CI depends on.
+      - name: Test the axiom sweep tool
+        run: ./scripts/test-axiomsweep.sh
+      - name: Axiom sweep
+        run: lake exe axiomsweep --check
       - name: Check round-by-round extraction regression
         run: lake env lean VCVioTest/RoundByRound/OneRound.lean
       - name: Check Merkle batch-opening canaries
         run: lake env lean VCVioTest/MerkleTreeBatch.lean
+      - name: Check simulation/fork pipeline computability lock
+        run: lake env lean VCVioTest/Computability.lean
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
         run: lake exe slhdsa_kat
       - name: Run SLH-DSA-C13 differential KAT

@@ -198,7 +198,7 @@ private lemma run'_bind_liftM {σ β γ : Type} (N : StateT σ ProbComp β)
 
 /-- The output distribution that the ideal PRF reduction feeds to the PRG adversary:
 sample an initial seed, then read `n` output blocks off the lazy random oracle chain. -/
-noncomputable def idealOutputs (n : ℕ) : ProbComp (List.Vector O n) := do
+def idealOutputs (n : ℕ) : ProbComp (List.Vector O n) := do
   let seed ← $ᵗ S
   (simulateQ (prfIdealQueryImpl (D := S) (R := S × O)) (oracleOutputs n seed)).run' ∅
 
@@ -227,13 +227,13 @@ lemma prfIdealExp_prfReduction_eq (adv : PRGAdversary (List.Vector O n)) :
 /-- The per-seed output distribution: run the lazy random oracle chain for `n` rounds from a
 fixed initial state `seed`, collecting the output blocks. Averaging over `seed ← $ᵗ S` gives
 `idealOutputs`. -/
-noncomputable def seedOutputs (n : ℕ) (seed : S) : ProbComp (List.Vector O n) :=
+def seedOutputs (n : ℕ) (seed : S) : ProbComp (List.Vector O n) :=
   (simulateQ (prfIdealQueryImpl (D := S) (R := S × O)) (oracleOutputs n seed)).run' ∅
 
 /-- The per-seed collision experiment: run the lazy random oracle chain for `n` rounds from a
 fixed initial state `seed`, and test whether any queried state repeats. Averaging over
 `seed ← $ᵗ S` gives `idealCollisionExp`. -/
-noncomputable def seedCollisionExp (n : ℕ) (seed : S) : ProbComp Bool := do
+def seedCollisionExp (n : ℕ) (seed : S) : ProbComp Bool := do
   let states ←
     (simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
       (oracleVisitedStates n seed)).run' ∅
@@ -257,7 +257,7 @@ random oracle chain for `N` rounds from state `s`, the bad event is that the cha
 state (`¬ Nodup`) or revisits a state already present in `c`. For `c = ∅` this reduces to
 `seedCollisionExp`. The generalized cache is the induction vehicle: each fresh step extends
 `c` by the just-visited state. -/
-noncomputable def genCollisionExp (N : ℕ) (s : S) (c : (S →ₒ S × O).QueryCache) :
+def genCollisionExp (N : ℕ) (s : S) (c : (S →ₒ S × O).QueryCache) :
     ProbComp Bool := do
   let states ←
     (simulateQ (prfIdealQueryImpl (D := S) (R := S × O)) (oracleVisitedStates N s)).run' c

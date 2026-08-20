@@ -1,0 +1,123 @@
+{"sorry":
+ ["BR93.br93AsymmEnc.cpaGame_gap_le_badEvent",
+  "BR93.br93AsymmEnc.indcpa_bound",
+  "CategoryTheory.EnrichedCategory.Hom_def",
+  "CategoryTheory.EnrichedCategory.RelativeMonad.inducedFunctor",
+  "CategoryTheory.EnrichedCategory.RelativeMonad.inducedFunctor_map",
+  "CategoryTheory.EnrichedCategory.RelativeMonad.inducedFunctor_obj",
+  "CategoryTheory.EnrichedCategory.comp_def",
+  "CategoryTheory.EnrichedCategory.id_def",
+  "CategoryTheory.EnrichedCategory.instProduct",
+  "Falcon.Concrete.FPRBridge.add_error",
+  "Falcon.Concrete.FPRBridge.div_error",
+  "Falcon.Concrete.FPRBridge.expm_p63_error",
+  "Falcon.Concrete.FPRBridge.mul_error",
+  "Falcon.Concrete.FPRBridge.sqrt_error",
+  "Falcon.Concrete.KeyGen.keyGen",
+  "Falcon.Concrete.NTRUSolver.FXR.sqr",
+  "Falcon.Concrete.NTRUSolver.check_ortho_norm",
+  "Falcon.Concrete.NTRUSolver.solve_NTRU",
+  "Falcon.Concrete.NTRUSolver.solve_NTRU_depth0",
+  "Falcon.Concrete.NTRUSolver.solve_NTRU_intermediate",
+  "Falcon.euf_cma_security",
+  "Falcon.euf_cma_security_bytes40",
+  "Falcon.keyGenFromSeed",
+  "Falcon.sign",
+  "Falcon.verify_sign_correct",
+  "FiatShamirWithAbort.euf_cma_bound",
+  "FiatShamirWithAbort.euf_cma_bound_perfectHVZK",
+  "FujisakiOkamoto.IND_CCA_bound",
+  "GPVHashAndSign.euf_cma_collision_bound",
+  "GPVHashAndSign.euf_cma_split_bound",
+  "GPVHashAndSign.forgery_yields_collision",
+  "GPVHashAndSign.forgery_yields_collision_or_exact_match",
+  "GPVHashAndSign.programmedPreimageReduction",
+  "GPVHashAndSign.reduction",
+  "MLDSA.euf_cma_security",
+  "MLKEM.ind_cca_security",
+  "MLKEM.kpke_delta_correct",
+  "MLKEM.kpke_ind_cpa_security",
+  "PMF.etvDist_sq_le_of_renyiDiv",
+  "SLHDSA.slhdsa_euf_cma_security",
+  "TTransform.OW_PCVA_bound",
+  "UTransform.IND_CCA_bound",
+  "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.liftIntermediateLevels",
+  "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.poly_big_to_small",
+  "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.vect_FFT",
+  "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.vect_adj_fft",
+  "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.vect_iFFT",
+  "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.vect_invnorm_fft",
+  "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.vect_mul_realconst",
+  "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.vect_mul_selfadj_fft",
+  "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.vect_set"],
+ "nonstandard":
+ [{"name": "MLDSA.Concrete.concreteNTTRingLaws",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name": "MLDSA.Concrete.concrete_sampleInBall_smul_bound",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name": "MLDSA.Concrete.concrete_transform",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name": "MLDSA.Concrete.invNTT_ntt",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name": "MLDSA.Concrete.ntt_invNTT",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name": "MLDSA.mldsa_laws_inhabited",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name": "MLDSA.seedRevealingPrims_laws",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name": "MLKEM.Concrete.concreteNTTRingLaws",
+   "axioms":
+   ["_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name": "MLKEM.Concrete.invNTT_ntt",
+   "axioms":
+   ["_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name": "MLKEM.Concrete.ntt_invNTT",
+   "axioms":
+   ["_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name":
+   "_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name":
+   "_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTT_add",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name":
+   "_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTT_sub",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name":
+   "_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.ntt_injective",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name":
+   "_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.ntt_surjective",
+   "axioms":
+   ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name":
+   "_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry",
+   "axioms":
+   ["_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name":
+   "_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTT_add",
+   "axioms":
+   ["_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name":
+   "_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTT_sub",
+   "axioms":
+   ["_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name":
+   "_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.ntt_injective",
+   "axioms":
+   ["_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]},
+  {"name":
+   "_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.ntt_surjective",
+   "axioms":
+   ["_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]}]}
