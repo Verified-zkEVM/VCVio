@@ -339,7 +339,7 @@ variable {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
 inside `StateT QueryCache ProbComp`. Running an oracle computation through this implementation and
 projecting away the final cache turns it into a plain `ProbComp`, which is what the MLWE
 distinguisher must return. -/
-noncomputable def roImpl :
+def roImpl :
     QueryImpl (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
       (StateT ((M × Commitment p prims →ₒ CommitHashBytes p).QueryCache) ProbComp) :=
   unifFwdImpl (M × Commitment p prims →ₒ CommitHashBytes p) +
@@ -350,7 +350,7 @@ noncomputable def roImpl :
 empty cache and discarding the final cache state. This is exactly the `ProbComp` underlying
 `FiatShamirWithAbort.runtime.evalDist` (see `BundledSemantics.withStateOracle`), exposed so the
 MLWE distinguisher — which must inhabit `… → ProbComp Bool` — can run the NMA game internally. -/
-noncomputable def simulateToProbComp {α : Type}
+def simulateToProbComp {α : Type}
     (mx : OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) α) :
     ProbComp α :=
   StateT.run' (simulateQ (roImpl p prims (M := M)) mx) ∅
@@ -372,7 +372,7 @@ The matrix never appears as a free challenge: phrasing the MLWE instance over se
 ROM modeling of Dilithium with `ExpandA` a random oracle, and it makes the distinguisher `B` total
 (no `ExpandA`-surjectivity assumption). Relating an abstract matrix-based MLWE problem to this
 concrete seed-based one is a statement-level bridge obligation. -/
-noncomputable def mldsaMLWE (p : Params) (prims : Primitives p)
+def mldsaMLWE (p : Params) (prims : Primitives p)
     [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] :
     LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := do
@@ -496,7 +496,7 @@ noncomputable def distinguisherBShort
 
 /-- Lift a seed-based short-MLWE adversary to the uniform-matrix problem: run it on a
 freshly sampled seed and the challenged target vector, discarding the matrix. -/
-noncomputable def matrixLift
+def matrixLift
     (B : LearningWithErrors.Adversary (mldsaMLWEShort p prims)) :
     LearningWithErrors.Adversary (mldsaMatrixMLWE p) :=
   fun c => do
@@ -790,7 +790,7 @@ solution.
 
 The `sampleParams` draws the same seed-based key as `keygen1`/`mldsaMLWE`: it samples `ρ` through
 `ExpandSeed`, a uniform `t`, and publishes `(ExpandA(ρ), pk)` with `pk = ⟨ρ, Power2Round(t).1⟩`. -/
-noncomputable def mldsaSTMSIS (M : Type) :
+def mldsaSTMSIS (M : Type) :
     SelfTargetMSIS.Problem (TqMatrix p.k p.l) (Response p prims) (PublicKey p prims)
       (M × Commitment p prims) (CommitHashBytes p) where
   sampleParams := do
@@ -830,7 +830,7 @@ check rejects. The matrix in `params.1` is ignored by `C` (it equals `ExpandA(pa
 The STMSIS experiment then looks up `c̃ = H(msg, w')` in the oracle cache and checks
 `mldsaSTMSIS.isValid Â pk c̃ (z, h)`, which recomputes `w'` from `(pk, c̃, (z, h))` and runs the
 identification verifier — exactly what the NMA `verify` does after querying `H(msg, w')`. -/
-noncomputable def extractorC [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+def extractorC [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
