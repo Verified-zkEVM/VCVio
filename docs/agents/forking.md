@@ -269,14 +269,44 @@ speaks only of the challenge tree, so that is what is delivered here.)
 
 `expectedValue_cost_multiForkOp_le` bounds each *level*: one round looks at at most `1 + ℓ(k−1)` of
 the level below, in expectation. The paper's `(ℓ(k−1)+1)^μ` is the product of these, and that
-composition is not proved. It is Wald's identity — the base-level work is `∑ᵢ Xᵢ` over the `T`
-lookups the top loop makes, and `𝔼[∑_{i≤T} Xᵢ] = 𝔼[T]·𝔼[X]` needs `{T ≥ i}` independent of the
-`i`-th sub-run. That holds because the loop picks which challenge to look at *before* reading it —
-but the eager `Fintype.mPi` table, which is exactly what makes the coupling derivable for the
-success bound, cannot express "queried before read". Closing it means letting the loop consume its
-table through an *oracle*, at which point the count becomes `expectedQueries`
-([`query-tracking.md`](query-tracking.md)) rather than returned data. §8.2 has to refine the same
-step again once the sub-extractor's cost varies with the entry.
+composition is **not proved**.
+
+What closes it is the *weighted* single-round bound — §8.2's refinement at `T = 0` — and not, as one
+might expect, Wald's identity or an oracle-based redesign. Charge each table entry `c` a cost
+`Γ c : ℝ≥0∞` instead of one lookup, and the claim is
+
+```
+𝔼[Γ-weighted cost of coordForkOp] ≤ (1 + ℓ(k−1)) · 𝔼[Γ]
+```
+
+with `𝔼[Γ]` the average of `Γ` over a uniform challenge. Instantiating `Γ c` at the level-below
+extractor's expected cost and applying `expectedValue_bind` (the tower property) multiplies the
+levels, giving `(1 + ℓ(k−1))^μ` by induction on `μ`.
+
+Two things make this work where the count-only bound does not. The costs compose by the tower
+property rather than by an independence argument, so nothing has to be "queried before read". And
+the loop never examines an entry twice — the centre once, and then each coordinate's resamples are
+drawn without replacement from *that* coordinate's alternatives, so the challenges examined are
+pairwise distinct — which is why running the sub-extractor lazily at each examined entry has the
+same law as consulting the eager `Fintype.mPi` table the success proof already uses. The eager table
+therefore stays exactly as it is; only the accounting changes.
+
+The whole thing reduces to one fact about `ProbComp.drawUntil`, per column and per value `x` in it:
+
+```
+∑ over accepting centres c₀ ≠ x in the column, of Pr[x is drawn when the loop starts at c₀]  ≤  k − 1
+```
+
+which is tight (equality when `k − 1 ≤ H − 1`, for `H` the column's accepting count). Summing that
+against `Γ` over the column, then over columns and coordinates, is the same column-counting shape
+that already carries `expectedValue_cost_coordForkOp_le` and §8.1. Both this inequality and the
+`(1 + ℓ(k−1)) · 𝔼[Γ]` bound it implies have been checked exhaustively at small parameters; neither
+is formalized.
+
+The missing Lean primitive is the per-element draw probability for `drawUntil` — currently only the
+expected *length* is available (`expectedValue_length_drawUntil`). Getting it needs the loop's
+exchangeability: permuting a pool within its accept classes leaves the law of the drawn set alone,
+so all accepting values of a column are equally likely to be drawn, as are all rejecting ones.
 
 ### The abstract sampling game
 
@@ -339,7 +369,9 @@ time. Without these `P` would collapse to `1` in both halves, and Lemma 8.1 woul
 beyond `1 + ℓ(k−1)` and `Pr[V=1] − ℓ(k−1)/N`.
 
 Lemma 8.2's weighted game, Figure 13's extractor, and Lemma 2.32's knowledge error are not
-formalized.
+formalized. Lemma 8.2 is the same weighted accounting the §7 multi-round composition needs above,
+with the `γ`-weighted term for entries belonging to a *different* query switched back on; both rest
+on the same missing per-element draw probability.
 
 ### Draw counts
 

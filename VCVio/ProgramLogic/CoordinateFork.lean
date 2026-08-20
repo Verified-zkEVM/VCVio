@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.CryptoFoundations.CoordinateFork.MultiRoundOp
+public import VCVio.CryptoFoundations.CoordinateFork.SamplingGame
 public import VCVio.ProgramLogic.Unary.HoareTriple
 
 /-!
@@ -14,9 +15,10 @@ public import VCVio.ProgramLogic.Unary.HoareTriple
 Wraps the coordinate-wise forking bounds as quantitative Hoare triples, matching what
 `VCVio/ProgramLogic/SeededFork.lean` does for the seeded fork.
 
-`triple_coordForkOp` carries the single-round bound of Figure 11 of Fenzi–Moghaddas–Nguyen and
-`triple_multiForkOp` its `μ`-round recursion. Both are the success bound only; the loop's lookup
-count is data it returns, not part of the postcondition.
+`triple_coordForkOp` carries the single-round bound of Figure 11 of Fenzi–Moghaddas–Nguyen,
+`triple_multiForkOp` its `μ`-round recursion, and `triple_samplingGame` the §8 abstract sampling
+game. All three are the success bound only; the loop's lookup count is data it returns, not part of
+the postcondition.
 -/
 
 @[expose] public section
@@ -48,5 +50,19 @@ theorem triple_multiForkOp (μ k : ℕ) (ρ : Transcript ι S μ → Bool) :
       (fun r => if r.1.isSome then 1 else 0) :=
   triple_ofLE <| le_trans (sub_le_probEvent_isSome_multiForkOp μ k ρ)
     (triple_toLE (triple_probEvent_indicator (multiForkOp μ k ρ) fun r => r.1.isSome))
+
+omit [SampleableType (ι → S)] in
+/-- The abstract sampling game of Figure 12 as a quantitative Hoare triple: the game finds a full
+block with weight at least `Pr[V = 1] - P·ℓ(k-1)/N`. -/
+theorem triple_samplingGame {Q : Type} [DecidableEq Q] [Fintype Q]
+    [SampleableType (Q × ι → S)] (k : ℕ) (M : (Q × ι → S) → Bool × Q) :
+    Triple
+      (((Finset.univ.filter fun j : Q × ι → S => (M j).1).card : ℝ≥0∞)
+          / Fintype.card (Q × ι → S)
+        - Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞) / Fintype.card S * blockHitTotal M)
+      (samplingGame k M)
+      (fun r => if r.1.isSome then 1 else 0) :=
+  triple_ofLE <| le_trans (sub_le_probEvent_isSome_samplingGame k M)
+    (triple_toLE (triple_probEvent_indicator (samplingGame k M) fun r => r.1.isSome))
 
 end OracleComp.ProgramLogic
