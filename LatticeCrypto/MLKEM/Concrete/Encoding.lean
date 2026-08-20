@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+import Batteries.Data.ByteArray
 import all Mathlib.Data.Nat.Digits.Lemmas
 public import LatticeCrypto.MLKEM.Encoding
 public import Mathlib.Data.List.GetD
@@ -71,13 +72,18 @@ private theorem array_getD_eq_getElem {α : Type} (a : Array α) {i : Nat}
     a.getD i fallback = a[i] := by
   simp [Array.getD, hi]
 
+private theorem array_getD_eq_fallback {α : Type} (a : Array α) {i : Nat}
+    {fallback : α} (hi : ¬i < a.size) :
+    a.getD i fallback = fallback := by
+  simp [Array.getD, hi]
+
 /-- Total byte lookup with zero fallback. -/
 private def getByteD (bytes : ByteArray) (i : Nat) : UInt8 :=
   (bytes[i]?).getD 0
 
 /-- Pack an array of individual bits (0/1 as `Nat`) into bytes, little-endian bit order. -/
 private def bitsToBytes (bits : Array Nat) : ByteArray :=
-  ByteArray.mk <| Array.ofFn fun idx : Fin (bits.size / 8) =>
+  ByteArray.ofFn fun idx : Fin (bits.size / 8) =>
     packByte fun j => bits.getD (8 * idx.val + j.val) 0
 
 /-- Unpack bytes into individual bits, little-endian bit order. -/
@@ -93,8 +99,25 @@ private def bytesToBits (bytes : ByteArray) : Array Nat :=
 
 private theorem bitsToBytes_size (bits : Array Nat) :
     (bitsToBytes bits).size = bits.size / 8 := by
-  have h : (bitsToBytes bits).data.size = bits.size / 8 := by simp [bitsToBytes]
-  simpa [ByteArray.size_data] using h
+  simp [bitsToBytes]
+
+private theorem bitsToBytes_getElem (bits : Array Nat) (i : Nat)
+    (hi : i < (bitsToBytes bits).size) :
+    (bitsToBytes bits)[i]'hi =
+      packByte fun j => bits.getD (8 * i + j.val) 0 := by
+  simp only [bitsToBytes, ByteArray.getElem_ofFn]
+
+private theorem bytesToBits_size (bytes : ByteArray) :
+    (bytesToBits bytes).size = bytes.size * 8 := by
+  simp [bytesToBits]
+
+private theorem bytesToBits_getElem (bytes : ByteArray) (i : Nat)
+    (hi : i < (bytesToBits bytes).size) :
+    (bytesToBits bytes)[i]'hi =
+      bitOf (bytes[i / 8]'(Nat.div_lt_of_lt_mul (by
+        have : i < bytes.size * 8 := by simpa [bytesToBits_size] using hi
+        simpa [Nat.mul_comm] using this))) (i % 8) := by
+  simp only [bytesToBits, Array.getElem_ofFn]
 
 private theorem bytesToBits_bitsToBytes_getElem {bits : Array Nat} {i : Nat}
     (hsize : bits.size % 8 = 0)
@@ -132,24 +155,18 @@ private theorem bytesToBits_bitsToBytes_getElem {bits : Array Nat} {i : Nat}
   have hindex : 8 * byteIdx + bitIdx = i := by
     dsimp [byteIdx, bitIdx]
     simpa [Nat.add_comm] using (Nat.mod_add_div i 8)
-  unfold bytesToBits bitsToBytes
-  rw [Array.getElem_ofFn]
-  simp only
-  rw [ByteArray.getElem_eq_getElem_data]
-  rw [Array.getElem_ofFn]
+  rw [bytesToBits_getElem, bitsToBytes_getElem]
   rw [hpacked, hindex]
   simp [hi]
 
 private theorem bitsToBytes_bytesToBits (bytes : ByteArray) :
     bitsToBytes (bytesToBits bytes) = bytes := by
-  apply ByteArray.ext
-  apply Array.ext
-  · simp [bitsToBytes, bytesToBits, ByteArray.size_data]
+  apply ByteArray.ext_getElem
+  · simp [bitsToBytes, bytesToBits]
   · intro i hi1 hi2
     have hi : i < bytes.size := by
-      simpa [bitsToBytes, bytesToBits, ByteArray.size_data] using hi1
-    unfold bitsToBytes
-    rw [Array.getElem_ofFn]
+      simpa [bitsToBytes, bytesToBits] using hi1
+    rw [bitsToBytes_getElem]
     have hbitsEq :
         (fun j : Fin 8 => (bytesToBits bytes).getD (8 * i + j.val) 0) =
           fun j : Fin 8 => bitOf (bytes[i]'hi) j.val := by
@@ -159,8 +176,7 @@ private theorem bitsToBytes_bytesToBits (bytes : ByteArray) :
           omega
         simpa [bytesToBits, Nat.mul_comm] using this
       rw [array_getD_eq_getElem (a := bytesToBits bytes) (i := 8 * i + j.val) (fallback := 0) hij]
-      unfold bytesToBits
-      rw [Array.getElem_ofFn]
+      rw [bytesToBits_getElem]
       have hdiv : (8 * i + j.val) / 8 = i := by
         calc
           (8 * i + j.val) / 8 = (j.val + i * 8) / 8 := by ac_rfl
@@ -177,15 +193,13 @@ private theorem bitsToBytes_bytesToBits (bytes : ByteArray) :
           packByte (fun j => bitOf (bytes[i]'hi) j.val) := by
       simpa using congrArg packByte hbitsEq
     rw [hpack, packByte_bitOf_byte]
-    rw [ByteArray.getElem_eq_getElem_data]
-    rfl
 
 private theorem bytesToBits_getD_lt_two (bytes : ByteArray) (i : Nat) :
     (bytesToBits bytes).getD i 0 < 2 := by
   by_cases hi : i < (bytesToBits bytes).size
   · rw [array_getD_eq_getElem (a := bytesToBits bytes) (i := i) (fallback := 0) hi]
-    unfold bytesToBits
-    rw [Array.getElem_ofFn]
+    have hi' : i < bytes.size * 8 := by simpa [bytesToBits_size] using hi
+    rw [bytesToBits_getElem bytes i hi]
     let byteIdx := i / 8
     let bitIdx := i % 8
     have hbit : bitIdx < 8 := by
@@ -194,10 +208,11 @@ private theorem bytesToBits_getD_lt_two (bytes : ByteArray) (i : Nat) :
     simpa [byteIdx, bitIdx] using
       bitOf_lt_two_fin (b := bytes[byteIdx]'(by
         dsimp [byteIdx]
-        have : i < 8 * bytes.size := by simpa [bytesToBits, Nat.mul_comm] using hi
+        have : i < 8 * bytes.size := by simpa [Nat.mul_comm] using hi'
         exact Nat.div_lt_of_lt_mul this))
         (j := ⟨bitIdx, hbit⟩)
-  · simp [Array.getD, hi]
+  · rw [array_getD_eq_fallback (bytesToBits bytes) hi]
+    decide
 
 private theorem ofDigits_digitsAppend_two {d n : Nat} (hn : n < 2 ^ d) :
     Nat.ofDigits 2 (Nat.digitsAppend 2 d n) = n := by
@@ -577,7 +592,6 @@ private theorem byteDecode12Poly_byteEncode12Poly (f : Tq) :
         (getByteD (byteEncode12Poly f) (3 * pair)).toNat = a % 256 := by
       rw [getByteD_byteEncode12Poly (f := f) (j := 3 * pair) (by omega)]
       simp [byteEncode12PolyByte, a, hdiv0, hmod0]
-      rfl
     have hb1 :
         (getByteD (byteEncode12Poly f) (3 * pair + 1)).toNat = a / 256 + 16 * (b % 16) := by
       have hab' :
@@ -609,7 +623,6 @@ private theorem byteDecode12Poly_byteEncode12Poly (f : Tq) :
               apply Fin.ext
               exact hidx
             simp [hidx', a]
-            rfl
     · have hmod : idx.val % 2 = 1 := by
         have hlt : idx.val % 2 < 2 := Nat.mod_lt _ (by decide)
         omega
@@ -628,7 +641,6 @@ private theorem byteDecode12Poly_byteEncode12Poly (f : Tq) :
               apply Fin.ext
               exact hidx
             simp [hidx', b]
-            rfl
   apply LatticeCrypto.TransformPoly.ext
   apply Vector.toArray_inj.mp
   unfold byteDecode12Poly
@@ -648,10 +660,10 @@ private theorem byteDecode12Poly_byteEncode12Poly (f : Tq) :
             congrArg Array.ofFn hfun
     _ = f.coeffs.toArray := by
       apply Array.ext
-      · simp
+      · exact Array.size_ofFn.trans (Vector.size_toArray f.coeffs).symm
       · intro i hi1 hi2
         rw [Array.getElem_ofFn]
-        rfl
+        exact (Vector.getElem_toArray hi2).symm
 
 private theorem getByteD_byteEncode12Vec_eq_byteEncode12Poly
     {k : Nat} (v : TqVec k) {poly j : Nat} (hpoly : poly < k) (hj : j < 384) :
@@ -806,9 +818,13 @@ private theorem byteDecodeVec_byteEncodeVec_of_bound {d k : Nat} (hd : 0 < d) (v
       have hjEnc : j < (byteEncode d (v[i]'hi)).size := by
         simpa [byteEncode_size] using hj
       simp only [Array.getElem_ofFn]
-      rw [getByteD_byteEncodeVec (hd := hd) (v := v) (poly := i) (j := j) hi hj]
-      rw [getByteD_eq_getElem hjEnc, ByteArray.getElem_eq_getElem_data]
-      rfl
+      calc
+        getByteD (byteEncodeVec d v) (i * (32 * d) + j) =
+            getByteD (byteEncode d (v[i]'hi)) j :=
+          getByteD_byteEncodeVec (hd := hd) (v := v) (poly := i) (j := j) hi hj
+        _ = (byteEncode d (v[i]'hi))[j]'hjEnc := getByteD_eq_getElem hjEnc
+        _ = (byteEncode d (v[i]'hi)).data[j]'hj2 :=
+          ByteArray.getElem_eq_getElem_data
   simp only [byteDecodeVec, Vector.getElem_ofFn]
   rw [hbytes]
   exact byteDecode_byteEncode_of_bound hd (f := v[i]'hi) (hbound := hbound ⟨i, hi⟩)
@@ -904,8 +920,9 @@ private theorem messageToArray_ofByteArray (ba : ByteArray) (hsize : ba.size = 3
   · intro i hi1 hi2
     have hi : i < ba.size := by simpa [hsize] using hi1
     rw [Array.getElem_ofFn]
-    simp [hi, ByteArray.getElem_eq_getElem_data]
-    rfl
+    calc
+      ba[i]! = ba[i]'hi := getElem!_pos ba i hi
+      _ = ba.data[i]'hi2 := ByteArray.getElem_eq_getElem_data
 
 private theorem toArray_byteEncode1Msg (f : Rq) :
     (byteEncode1Msg f).toArray = (byteEncode 1 f).data := by
