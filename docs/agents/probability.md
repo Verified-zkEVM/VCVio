@@ -1,5 +1,9 @@
 # Probability Reasoning (EvalDist and ProbComp)
 
+For the cross-project survey of SPMF, Mathlib measures and kernels, PolyFun
+coalgebraic limits, ArkLib, Bluebell/Iris, and possible long-term migration paths, see
+[`Probability Semantics for Computations: Landscape and Design Options`](../reading/probability-semantics-landscape.md).
+
 ## Core Definitions
 
 | Definition | Type | Notation | Defined in |
