@@ -9,6 +9,8 @@ public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
 public import VCVio.CryptoFoundations.Asymptotics.Negligible
 public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Basic
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
@@ -76,6 +78,8 @@ public import VCVio.CryptoFoundations.SigmaProtocol
 public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.TweakableHash
+public import VCVio.CryptoFoundations.VectorCommitment.Basic
+public import VCVio.CryptoFoundations.VectorCommitment.MerkleTree
 public import VCVio.EvalDist.BitVec
 public import VCVio.EvalDist.Bool
 public import VCVio.EvalDist.Defs.AlternativeMonad

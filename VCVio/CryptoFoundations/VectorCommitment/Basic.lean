@@ -1,0 +1,286 @@
+/-
+Copyright (c) 2026 Bolton Bailey. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bolton Bailey
+-/
+module
+
+public import VCVio.EvalDist.TVDist
+
+/-!
+# Vector Commitments
+
+This file defines `VectorCommitment`, a monad-generic abstraction of a (positional) vector
+commitment: a primitive that commits to a whole vector of values `data : ι → α` with a single short
+`Commit`, and later lets the committer *open* the value at any individual position `i : ι` with a
+short `Opening` that the verifier can check against the commitment alone.
+
+This is the intermediate layer that sits between a concrete construction — such as the inductive
+Merkle tree in `VCVio.CryptoFoundations.MerkleTree.Inductive.Defs` (whose vector-commitment
+instance is in `VCVio.CryptoFoundations.MerkleTree.Inductive.VectorCommitment`) — and consumers that
+only need the positional commit/open/verify interface, such as the Kilian transformation
+(`VCVio.CryptoFoundations.Kilian`).
+
+## Type Parameters
+
+- `m`: the monad in which committing and opening run (e.g. `ProbComp`, or a hash-oracle monad).
+- `ι`: positions / indices into the committed vector.
+- `α`: the value stored at each position.
+- `Commit`: the public commitment, sent to the verifier.
+- `State`: the committer's private state, retained after committing and used to open positions.
+- `Opening`: the per-position opening / proof checked by `verifyOpen`.
+
+Unlike a single-message `CommitmentScheme`, a vector commitment exposes *positional* opening: the
+opener reveals only the positions a verifier asks about, paying a per-position `Opening` rather than
+a decommitment to the entire vector. Succinctness — `Commit` and `Opening` being much smaller than
+the vector — is what makes the primitive interesting, though that is a property of a particular
+instance rather than part of this interface.
+
+We also provide `BatchOpeningVectorCommitment`, a variant whose opening and verification work on a
+*list* of positions at once with a single `BatchOpening`. The two notions are interconvertible:
+`BatchOpeningVectorCommitment.toVectorCommitment` opens singleton batches, and
+`VectorCommitment.toBatchOpening` assembles a batch opening from the individual openings. A genuine
+batch scheme (e.g. one sharing authentication-path hashes across positions) can be more succinct
+than the round-trip through single openings, so the conversions are bridges, not isomorphisms.
+
+## Probability assumptions
+
+As with `ChallengeVerifyProtocol`, probability reasoning is expressed through the standard
+`MonadLiftT m SetM` lift introduced in the `EvalDist` layer, so `support` is available for the
+monadic `commit` / `openAt` fields.
+-/
+
+@[expose] public section
+
+/-- A vector commitment whose `commit` and `openAt` operations run in the monad `m`.
+
+`commit data` commits to the whole vector `data : ι → α`, producing a public `Commit` together with
+private `State`. `openAt st i` produces an `Opening` for position `i`, and `verifyOpen c i v op`
+deterministically checks that `op` certifies value `v` at position `i` under commitment `c`.
+
+The committed values themselves are not read back through the interface: the committer already
+knows `data` and simply retains it (alongside `State`) for as long as it needs to produce claims.
+Correctness (`PerfectlyCorrect`) is therefore stated directly against the committed `data`.
+
+The monad is left abstract so an instance may be purely functional (Merkle trees with an explicit
+hash function), randomized (`ProbComp`), or oracle-querying. -/
+structure VectorCommitment
+    (m : Type → Type) (ι α Commit State Opening : Type) where
+  /-- Commit to the whole vector `data`, returning a public commitment and private opener state. -/
+  commit (data : ι → α) : m (Commit × State)
+  /-- Produce an opening for the value at position `i`. -/
+  openAt (st : State) (i : ι) : m Opening
+  /-- Deterministically check that `op` certifies value `v` at position `i` under commitment `c`. -/
+  verifyOpen (c : Commit) (i : ι) (v : α) (op : Opening) : Bool
+
+namespace VectorCommitment
+
+variable {m : Type → Type} [Monad m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+  {ι α Commit State Opening : Type}
+
+/-- A vector commitment is **perfectly correct** if, for every vector and position, any honestly
+produced commitment/state opens at that position to the committed value and passes verification. -/
+def PerfectlyCorrect (vc : VectorCommitment m ι α Commit State Opening) : Prop :=
+  ∀ (data : ι → α) (i : ι) (c : Commit) (st : State),
+    (c, st) ∈ support (vc.commit data) →
+      ∀ op ∈ support (vc.openAt st i), vc.verifyOpen c i (data i) op = true
+
+/-- A vector commitment is **position binding** if no commitment can be opened at a single position
+to two different values: any two openings that both verify at the same position and commitment must
+certify the same value. This is the property that makes the commitment useful for soundness in
+consumers like the Kilian transformation. -/
+def PositionBinding (vc : VectorCommitment m ι α Commit State Opening) : Prop :=
+  ∀ (c : Commit) (i : ι) (v₁ : α) (op₁ : Opening) (v₂ : α) (op₂ : Opening),
+    vc.verifyOpen c i v₁ op₁ = true → vc.verifyOpen c i v₂ op₂ = true → v₁ = v₂
+
+end VectorCommitment
+
+/-- A **batch-opening** vector commitment: like `VectorCommitment`, but a single `BatchOpening`
+covers a whole *list* of positions, and verification checks a list of position/value `claims` at
+once.
+
+This is the natural interface for constructions that amortize work across positions — for instance a
+Merkle proof that shares interior sibling hashes between several opened leaves — where a combined
+opening can be smaller than the concatenation of per-position openings. -/
+structure BatchOpeningVectorCommitment
+    (m : Type → Type) (ι α Commit State BatchOpening : Type) where
+  /-- Commit to the whole vector `data`, returning a public commitment and private opener state. -/
+  commit (data : ι → α) : m (Commit × State)
+  /-- Produce a single opening covering all positions in `is`. -/
+  openBatch (st : State) (is : List ι) : m BatchOpening
+  /-- Check that `op` certifies every `(position, value)` pair in `claims` under commitment `c`. -/
+  verifyBatch (c : Commit) (claims : List (ι × α)) (op : BatchOpening) : Bool
+
+namespace VectorCommitment
+
+variable {m : Type → Type} [Monad m] {ι α Commit State Opening : Type}
+
+/-- Turn a single-position `VectorCommitment` into a `BatchOpeningVectorCommitment` by opening each
+requested position individually and bundling the results. A batch opening is the list of
+`(position, opening)` pairs; `verifyBatch` checks that each claimed `(position, value)` pair is
+matched by an entry whose opening verifies that value. -/
+def toBatchOpening [DecidableEq ι]
+    (vc : VectorCommitment m ι α Commit State Opening) :
+    BatchOpeningVectorCommitment m ι α Commit State (List (ι × Opening)) where
+  commit := vc.commit
+  openBatch st is := is.mapM fun i => do
+    let op ← vc.openAt st i
+    return (i, op)
+  verifyBatch c claims op :=
+    claims.all fun iv =>
+      match op.find? (fun e => decide (e.1 = iv.1)) with
+      | some e => vc.verifyOpen c iv.1 iv.2 e.2
+      | none => false
+
+end VectorCommitment
+
+namespace BatchOpeningVectorCommitment
+
+variable {m : Type → Type} {ι α Commit State BatchOpening : Type}
+
+/-- Turn a `BatchOpeningVectorCommitment` into a single-position `VectorCommitment` by opening and
+verifying singleton batches. The opening type is the underlying `BatchOpening`. -/
+def toVectorCommitment (bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening) :
+    VectorCommitment m ι α Commit State BatchOpening where
+  commit := bovc.commit
+  openAt st i := bovc.openBatch st [i]
+  verifyOpen c i v op := bovc.verifyBatch c [(i, v)] op
+
+section Security
+
+variable [Monad m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+
+/-- A batch-opening vector commitment is **perfectly correct** if, for every vector and every list
+of positions, any honestly produced commitment/state opens that list to a batch opening that
+verifies the corresponding committed claims. The claim list `is.map (fun i => (i, data i))` is
+exactly the shape consumers (such as the Kilian transformation) hand to `verifyBatch`. -/
+def PerfectlyCorrect
+    (bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening) : Prop :=
+  ∀ (data : ι → α) (is : List ι) (c : Commit) (st : State),
+    (c, st) ∈ support (bovc.commit data) →
+      ∀ op ∈ support (bovc.openBatch st is),
+        bovc.verifyBatch c (is.map fun i => (i, data i)) op = true
+
+end Security
+
+section Binding
+
+/-! Binding properties and the committed-value function are stated purely in terms of the
+deterministic `verifyBatch` field, so they need no monadic structure on `m` at all. -/
+
+/-- A batch-opening vector commitment is **position binding** if no commitment can be opened at a
+single position to two different values: any two (singleton) batch openings that both verify at the
+same position and commitment must certify the same value. -/
+def PositionBinding (bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening) : Prop :=
+  ∀ (c : Commit) (i : ι) (v₁ v₂ : α) (op₁ op₂ : BatchOpening),
+    bovc.verifyBatch c [(i, v₁)] op₁ = true → bovc.verifyBatch c [(i, v₂)] op₂ = true → v₁ = v₂
+
+/-- **Batch position binding**: across any two verifying batch openings under the same commitment,
+claims at a common position certify the same value. This is the batch-level strengthening of
+`PositionBinding` (which it recovers via singleton claim lists) and is the shape a consumer needs
+when adversarial claim lists are checked whole, as in the Kilian transformation: it lets every
+claimed value be read off a single function of the commitment (`committedValue`). Taking the two
+openings equal also makes each individual claim list self-consistent across duplicate positions. -/
+def BatchPositionBinding
+    (bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening) : Prop :=
+  ∀ (c : Commit) (claims₁ claims₂ : List (ι × α)) (op₁ op₂ : BatchOpening) (i : ι) (v₁ v₂ : α),
+    bovc.verifyBatch c claims₁ op₁ = true → bovc.verifyBatch c claims₂ op₂ = true →
+    (i, v₁) ∈ claims₁ → (i, v₂) ∈ claims₂ → v₁ = v₂
+
+/-- Batch position binding restricted to singleton claim lists is position binding. -/
+theorem BatchPositionBinding.positionBinding
+    {bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening}
+    (h : bovc.BatchPositionBinding) : bovc.PositionBinding :=
+  fun c i v₁ v₂ op₁ op₂ h₁ h₂ =>
+    h c [(i, v₁)] [(i, v₂)] op₁ op₂ i v₁ v₂ h₁ h₂
+      (List.mem_singleton_self _) (List.mem_singleton_self _)
+
+open scoped Classical in
+/-- The value pinned at position `i` by a commitment `c`: an arbitrary value appearing for `i` in
+some verifying batch, or `default` if no batch can open `i` at all. Under `BatchPositionBinding`
+the choice is unique, so every verifying claim reads off this function
+(`BatchPositionBinding.committedValue_eq`): an adversary interacting from a fixed commitment is
+semantically committed to the full vector `bovc.committedValue c`, with no extractor needed. -/
+noncomputable def committedValue [Inhabited α]
+    (bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening)
+    (c : Commit) (i : ι) : α :=
+  if h : ∃ v : α, ∃ claims : List (ι × α), ∃ op : BatchOpening,
+      (i, v) ∈ claims ∧ bovc.verifyBatch c claims op = true
+  then h.choose else default
+
+/-- Under batch position binding, any claim in a verifying batch equals the committed value at its
+position. -/
+theorem BatchPositionBinding.committedValue_eq [Inhabited α]
+    {bovc : BatchOpeningVectorCommitment m ι α Commit State BatchOpening}
+    (hbind : bovc.BatchPositionBinding) {c : Commit} {claims : List (ι × α)}
+    {op : BatchOpening} {i : ι} {v : α}
+    (hver : bovc.verifyBatch c claims op = true) (hmem : (i, v) ∈ claims) :
+    bovc.committedValue c i = v := by
+  have hex : ∃ v' : α, ∃ claims' : List (ι × α), ∃ op' : BatchOpening,
+      (i, v') ∈ claims' ∧ bovc.verifyBatch c claims' op' = true := ⟨v, claims, op, hmem, hver⟩
+  unfold committedValue
+  rw [dif_pos hex]
+  obtain ⟨claims', op', hmem', hver'⟩ := hex.choose_spec
+  exact hbind c claims' claims op' op i _ v hver' hver hmem' hmem
+
+end Binding
+
+end BatchOpeningVectorCommitment
+
+namespace VectorCommitment
+
+variable {m : Type → Type} [Monad m] [LawfulMonad m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+  {ι α Commit State Opening : Type}
+
+/-- `toBatchOpening` preserves perfect correctness: an honest batch opening is the list of the
+individual honest openings keyed by their positions, so each claimed `(position, value)` pair is
+matched by an entry whose opening verifies by single-position correctness. Instances therefore
+only ever need to prove correctness of their single-position opening. -/
+theorem PerfectlyCorrect.toBatchOpening [DecidableEq ι]
+    {vc : VectorCommitment m ι α Commit State Opening}
+    (h : vc.PerfectlyCorrect) : vc.toBatchOpening.PerfectlyCorrect := by
+  intro data is c st hcst op hop
+  -- An honest batch opening lists the requested keys in order, each with an honest opening.
+  have hsupp : ∀ (is : List ι) (op : List (ι × Opening)),
+      op ∈ support (is.mapM fun i => do
+          let o ← vc.openAt st i
+          return (i, o)) →
+        op.map Prod.fst = is ∧ ∀ entry ∈ op, entry.2 ∈ support (vc.openAt st entry.1) := by
+    intro is
+    induction is with
+    | nil =>
+      intro op hop
+      simp only [List.mapM_nil, support_pure, Set.mem_singleton_iff] at hop
+      subst hop
+      exact ⟨rfl, by simp⟩
+    | cons a as ih =>
+      intro op hop
+      simp only [List.mapM_cons, mem_support_bind_iff, support_pure,
+        Set.mem_singleton_iff] at hop
+      obtain ⟨x, ⟨o, ho, rfl⟩, xs, hxs, rfl⟩ := hop
+      obtain ⟨hkeys, hentries⟩ := ih xs hxs
+      refine ⟨by simp [hkeys], fun entry hentry => ?_⟩
+      rcases List.mem_cons.1 hentry with rfl | hentry
+      · exact ho
+      · exact hentries entry hentry
+  simp only [VectorCommitment.toBatchOpening] at hop
+  obtain ⟨hkeys, hentries⟩ := hsupp is op hop
+  simp only [VectorCommitment.toBatchOpening, List.all_eq_true, List.mem_map,
+    forall_exists_index, and_imp]
+  rintro _ i hi rfl
+  dsimp only
+  -- Look up position `i` in the batch opening; it is present because `i ∈ is`, the key list.
+  rcases hfind : op.find? (fun entry => decide (entry.1 = i)) with _ | entry
+  · rw [List.find?_eq_none] at hfind
+    rw [← hkeys] at hi
+    obtain ⟨entry, hentry, hkey⟩ := List.mem_map.1 hi
+    exact ((hfind entry hentry) (by simp [hkey])).elim
+  · have hkey : entry.1 = i := by simpa using List.find?_some hfind
+    have hopen := hentries entry (List.mem_of_find?_eq_some hfind)
+    rw [hkey] at hopen
+    rw [hfind]
+    exact h data i c st hcst entry.2 hopen
+
+end VectorCommitment
