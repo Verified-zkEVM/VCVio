@@ -40,6 +40,12 @@ namespace IsProbabilitySpec
 abbrev toPMF [IsProbabilitySpec spec] (t : spec.Domain) : PMF (spec.Range t) :=
   PFunctor.IsProbabilitySpec.toPMF (P := spec.toPFunctor) t
 
+/-- Construct oracle probability semantics from a per-query distribution handler. -/
+@[deprecated PFunctor.IsProbabilitySpec.mk (since := "2026-08-20")]
+abbrev mk (toPMF : (t : spec.Domain) → PMF (spec.Range t)) :
+    IsProbabilitySpec spec :=
+  PFunctor.IsProbabilitySpec.mk toPMF
+
 end IsProbabilitySpec
 
 /-- An `OracleSpec` whose responses are uniformly sampled from finite, inhabited
@@ -105,6 +111,30 @@ export OracleSpec (IsProbabilitySpec IsUniformSpec)
 namespace OracleComp
 
 variable {ι ι'} {spec : OracleSpec ι} {spec' : OracleSpec ι'} {α β γ : Type w}
+
+/-! ## Oracle-facing compatibility names -/
+
+/-- The polynomial-free-monad probability interpreter at the `OracleComp` façade. -/
+@[deprecated PFunctor.FreeM.instMonadLiftTPMF (since := "2026-08-20")]
+noncomputable abbrev instMonadLiftTPMF [IsProbabilitySpec spec] :
+    MonadLiftT (OracleComp spec) PMF :=
+  PFunctor.FreeM.instMonadLiftTPMF
+
+/-- The lawful polynomial-free-monad probability interpreter at the `OracleComp` façade. -/
+@[deprecated PFunctor.FreeM.instLawfulMonadLiftTPMF (since := "2026-08-20")]
+noncomputable abbrev instLawfulMonadLiftTPMF [IsProbabilitySpec spec] :
+    LawfulMonadLiftT (OracleComp spec) PMF :=
+  PFunctor.FreeM.instLawfulMonadLiftTPMF
+
+/-- The polynomial-free-monad support interpreter at the `OracleComp` façade. -/
+@[deprecated PFunctor.FreeM.instMonadLiftTSetM (since := "2026-08-20")]
+abbrev instMonadLiftTSetM : MonadLiftT (OracleComp spec) SetM :=
+  PFunctor.FreeM.instMonadLiftTSetM
+
+/-- The lawful polynomial-free-monad support interpreter at the `OracleComp` façade. -/
+@[deprecated PFunctor.FreeM.instLawfulMonadLiftTSetM (since := "2026-08-20")]
+abbrev instLawfulMonadLiftTSetM : LawfulMonadLiftT (OracleComp spec) SetM :=
+  PFunctor.FreeM.instLawfulMonadLiftTSetM
 
 /- `supportWhen` presents Mathlib's `SetM` interpreter as ordinary sets in
 its public API. Lean 4.33 requires that wrapper at implicit transparency when

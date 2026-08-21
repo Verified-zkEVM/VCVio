@@ -36,6 +36,8 @@ fresh on-demand uniform draw into the pre-sampled table.
 
 open OracleComp OracleSpec
 
+/- The eager-table induction specializes the constant-family `OracleSpec`
+wrapper while matching cached and uncached query branches. -/
 attribute [local implicit_reducible] OracleSpec
 
 universe u v w

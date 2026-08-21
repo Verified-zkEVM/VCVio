@@ -61,6 +61,8 @@ open OracleSpec OracleComp ENNReal Function Finset
 open scoped OracleSpec.PrimitiveQuery
 open scoped PFunctor
 
+/- Replay logs and intrinsic paths meet through their list and dependent-pair
+presentations; these two reducers are needed only while matching that seam. -/
 attribute [local implicit_reducible] FreeMonoid PFunctor.Idx
 
 namespace OracleComp
@@ -532,7 +534,10 @@ theorem probOutput_contextForkPair_le_guarded_add_collision [IsUniformSpec spec]
     unfold guardedContextFork PFunctor.FreeM.Cursor.filterMapLocateAndForkAt
     rw [probEvent_ofFreeM_map]
     unfold source contextForkView guardGood
-    rfl
+    apply congrArg (probEvent (PFunctor.FreeM.Cursor.locateAndForkAt
+      (P := spec.toPFunctor) i main s))
+    funext view?
+    rw [Function.comp_apply]
   have hcollision : Pr[collisionGood | source] =
       Pr[= (some s : Option (Fin (qb i + 1))) |
         contextForkViewCollision main qb i cf s] := by
@@ -540,7 +545,9 @@ theorem probOutput_contextForkPair_le_guarded_add_collision [IsUniformSpec spec]
     change Pr[collisionGood | source] =
       Pr[fun x => x = some s | collideForkView main qb i cf s <$> source]
     rw [probEvent_map]
-    rfl
+    apply congrArg (probEvent source)
+    funext view?
+    rw [Function.comp_apply]
   rw [hpair]
   calc
     Pr[pairGood | source] ≤ Pr[fun view? => guardGood view? ∨ collisionGood view? |
@@ -603,7 +610,9 @@ theorem probOutput_contextForkCollision_le_main_div [IsUniformSpec spec]
       congr 1
       rw [← probEvent_eq_eq_probOutput]
       conv_rhs => rw [← hpaths, probEvent_map, probEvent_map]
-      rfl
+      apply congrArg (probEvent paths)
+      funext path
+      rw [Function.comp_apply, Function.comp_apply]
 
 /-- Requiring the colliding second completion to finish successfully can only
 decrease the path-first equal-answer collision probability. -/
@@ -694,9 +703,7 @@ theorem probOutput_contextForkViewCollision_le_collision [IsUniformSpec spec]
       ENNReal.tsum_le_tsum fun path => mul_le_mul' le_rfl (hinner path)
     _ = Pr[= (some s : Option (Fin (qb i + 1))) |
           contextForkCollision main qb i cf s] := by
-        simp only [contextForkCollision, paths, answerCollision]
-        rw [probOutput_bind_eq_tsum]
-        rfl
+        exact (probOutput_bind_eq_tsum paths answerCollision (some s)).symm
 
 /-- The successful equal-answer branch of the intrinsic context experiment is
 bounded by one uniform-answer collision against the original success event. -/

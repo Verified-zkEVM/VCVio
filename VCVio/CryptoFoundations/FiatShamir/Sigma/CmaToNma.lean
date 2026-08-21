@@ -35,6 +35,8 @@ universe u v
 
 open OracleComp OracleSpec
 
+/- Handler sums expose their dependent response family as `PFunctor.Obj` while
+the simulator normalizes routed query branches. -/
 attribute [local implicit_reducible] PFunctor.Obj
 
 namespace FiatShamir

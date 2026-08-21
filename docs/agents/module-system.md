@@ -106,6 +106,13 @@ missing. A small `apply`, `…_iff`, or constructor equation usually documents
 the abstraction better and makes all downstream users independent of the
 implementation.
 
+Treat a terminal `rfl` immediately after a boundary `rw` or `change` as the
+same diagnostic: the public equation got the proof close, but did not produce
+the intended public normal form. Close the remaining step with the relevant
+application, composition, or extensionality law, or add that law at the owning
+module boundary. Constructor equations and definitions whose reduction is an
+intentional documented API may still use `rfl` directly.
+
 ## Restoring `private` correctly
 
 The module migration changed the meaning of `private`: a public exposed body

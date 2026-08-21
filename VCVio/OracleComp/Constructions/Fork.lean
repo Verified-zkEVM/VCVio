@@ -42,6 +42,8 @@ open OracleSpec ENNReal
 
 open scoped PFunctor
 
+/- Oracle traces are `PFunctor.Idx` values; the cursor probability proofs
+specialize dependent trace entries at implicit transparency. -/
 attribute [local implicit_reducible] PFunctor.Idx
 
 namespace OracleComp
@@ -212,7 +214,9 @@ private theorem probOutput_pair_eq_observedForkPair_found [spec.DecidableEq] [Is
     change _ = PFunctor.FreeM.map (observe ∘ PFunctor.FreeM.output main)
       (PFunctor.FreeM.map PFunctor.FreeM.Cursor.Occurrence.Completion.path occurrence.complete)
     rw [← PFunctor.FreeM.comp_map]
-    rfl
+    apply congrArg (fun f => PFunctor.FreeM.map f occurrence.complete)
+    funext completed
+    rw [Function.comp_apply, Function.comp_apply]
   rw [hkernel]
   have hid : (fun a : Option β => a) <$>
       (Cursor.complete (PFunctor.FreeM.Cursor.Split.found occurrence) >>=

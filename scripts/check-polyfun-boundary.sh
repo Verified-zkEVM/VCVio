@@ -9,6 +9,10 @@
 # Exit code:
 #   0 — no violations.
 #   1 — at least one violation; offending lines are printed to stderr.
+#
+# Usage:
+#   scripts/check-polyfun-boundary.sh              # check repository libraries
+#   scripts/check-polyfun-boundary.sh PATH [...]   # check explicit fixtures/paths
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -25,12 +29,16 @@ LIBS=(
   VCVioTest LatticeCryptoTest HashSigTest Interop
 )
 
-TARGETS=()
-for lib in "${LIBS[@]}"; do
-  TARGETS+=("$lib" "$lib.lean")
-done
+if (( $# > 0 )); then
+  TARGETS=("$@")
+else
+  TARGETS=()
+  for lib in "${LIBS[@]}"; do
+    TARGETS+=("$lib" "$lib.lean")
+  done
+fi
 
-forbidden_re='^[[:space:]]*import[[:space:]]+all[[:space:]]+PolyFun(\.|[[:space:]]|$)'
+forbidden_re='^[[:space:]]*(meta[[:space:]]+)?import[[:space:]]+all[[:space:]]+PolyFun(\.|[[:space:]]|$)'
 violations=0
 
 for target in "${TARGETS[@]}"; do

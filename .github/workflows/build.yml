@@ -28,7 +28,9 @@ jobs:
           use-mathlib-cache: false
 
       - name: Check PolyFun public boundary
-        run: bash scripts/check-polyfun-boundary.sh
+        run: |
+          bash scripts/test-polyfun-boundary.sh
+          bash scripts/check-polyfun-boundary.sh
 
       - name: Check for all imports in ToMathlib
         run: lake exe mk_all --lib ToMathlib --module --check

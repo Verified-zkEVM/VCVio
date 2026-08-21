@@ -572,7 +572,11 @@ end root
 
 section depth
 
-/-- Depth of a SkeletonLeafIndex -/
+/-- Depth of a `SkeletonLeafIndex`.
+
+The reducer is available at implicit transparency because this value indexes
+proof vectors; dependent recursion on an index must identify the tail vector's
+length with the recursive index depth during elaboration. -/
 @[implicit_reducible]
 def SkeletonLeafIndex.depth {s : Skeleton} : SkeletonLeafIndex s → Nat
   | SkeletonLeafIndex.ofLeaf => 0
@@ -580,7 +584,6 @@ def SkeletonLeafIndex.depth {s : Skeleton} : SkeletonLeafIndex s → Nat
   | SkeletonLeafIndex.ofRight idxRight => idxRight.depth + 1
 
 /-- Depth of a SkeletonInternalIndex -/
-@[implicit_reducible]
 def SkeletonInternalIndex.depth {s : Skeleton} : SkeletonInternalIndex s → Nat
   | SkeletonInternalIndex.ofInternal => 0
   | SkeletonInternalIndex.ofLeft idxLeft => idxLeft.depth + 1
@@ -595,7 +598,6 @@ def SkeletonInternalIndex.subtreeDepth :
   | _, .ofRight idxRight => idxRight.subtreeDepth
 
 /-- Depth of a SkeletonNodeIndex -/
-@[implicit_reducible]
 def SkeletonNodeIndex.depth {s : Skeleton} : SkeletonNodeIndex s → Nat
   | SkeletonNodeIndex.ofLeaf => 0
   | SkeletonNodeIndex.ofInternal => 0

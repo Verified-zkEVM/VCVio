@@ -17,12 +17,12 @@ These examples exercise the generic polynomial-functor API directly and the
 handler instrumentation remain usable without unfolding VCVio internals.
 -/
 
-@[expose] public section
+public section
 
 namespace VCVioTest.PFunctorFacade
 
 /-- A one-operation polynomial interface returning one of three directions. -/
-@[reducible] def triPFunctor : PFunctor := ⟨Unit, fun _ => Fin 3⟩
+@[expose, reducible] def triPFunctor : PFunctor := ⟨Unit, fun _ => Fin 3⟩
 
 instance : triPFunctor.Fintype where
   fintypeB _ := by infer_instance
@@ -34,6 +34,7 @@ noncomputable instance : triPFunctor.IsUniformSpec :=
   PFunctor.IsUniformSpec.ofFintypeInhabited _
 
 /-- The direct PFunctor program issuing the three-way operation once. -/
+@[expose]
 def directSample : PFunctor.FreeM triPFunctor (Fin 3) :=
   PFunctor.FreeM.lift ()
 
@@ -51,6 +52,7 @@ example : support directSample = Set.univ := by
 example : EvalDistCompatible (PFunctor.FreeM triPFunctor) := inferInstance
 
 /-- A deterministic handler used to exercise generic instrumentation. -/
+@[expose]
 def zeroHandler : PFunctor.Handler Option triPFunctor :=
   fun _ => some 0
 
@@ -63,10 +65,35 @@ example : zeroHandler.postInsert (fun _ _ => some ()) () = some 0 := by
 /-! ## OracleSpec compatibility -/
 
 /-- The oracle presentation of the same Boolean interface. -/
-@[reducible] def boolOracleSpec : OracleSpec (Fin 1) := fun _ => Bool
+@[expose, reducible] def boolOracleSpec : OracleSpec (Fin 1) := fun _ => Bool
 
 noncomputable instance : IsUniformSpec boolOracleSpec :=
   OracleSpec.IsUniformSpec.ofFintypeInhabited _
+
+#guard_msgs(drop warning) in
+/-- A custom probability interpretation constructed through the oracle compatibility name. -/
+noncomputable abbrev boolOracleProbability : IsProbabilitySpec boolOracleSpec :=
+  OracleSpec.IsProbabilitySpec.mk fun _ => PMF.uniformOfFintype Bool
+
+#guard_msgs(drop warning) in
+noncomputable example : MonadLiftT (OracleComp boolOracleSpec) PMF :=
+  OracleComp.instMonadLiftTPMF
+
+#guard_msgs(drop warning) in
+noncomputable example : LawfulMonadLiftT (OracleComp boolOracleSpec) PMF :=
+  OracleComp.instLawfulMonadLiftTPMF
+
+#guard_msgs(drop warning) in
+example : MonadLiftT (OracleComp boolOracleSpec) SetM :=
+  OracleComp.instMonadLiftTSetM
+
+#guard_msgs(drop warning) in
+example : LawfulMonadLiftT (OracleComp boolOracleSpec) SetM :=
+  OracleComp.instLawfulMonadLiftTSetM
+
+noncomputable example : MonadLiftT (OracleComp boolOracleSpec) PMF := inferInstance
+
+example : MonadLiftT (OracleComp boolOracleSpec) SetM := inferInstance
 
 noncomputable example : PFunctor.IsProbabilitySpec boolOracleSpec.toPFunctor := inferInstance
 

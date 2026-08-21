@@ -54,11 +54,17 @@ Subdirectory: `backends/lean`.
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
-require "leanprover-community" / "mathlib" @ git "v4.33.0"
-
+/-
+List PolyFun before the root Mathlib pin. Lake resolves dependencies in reverse
+declaration order, so this keeps the direct Mathlib requirement authoritative
+over PolyFun's inherited pin and makes `lake update --keep-toolchain`
+idempotent.
+-/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
   "v4.33.1"
+
+require "leanprover-community" / "mathlib" @ git "v4.33.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio

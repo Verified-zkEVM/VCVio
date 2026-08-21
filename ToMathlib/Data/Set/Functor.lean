@@ -16,14 +16,14 @@ This file exposes the `pure`, `bind`, and `map` equations for `SetM` through
 about the monad without relying on reduction through its bundled instance.
 -/
 
-@[expose] public section
+public section
 
 universe u
 
 namespace SetM
 
 /-- Regard a set as a computation in the `SetM` wrapper. -/
-protected def ofSet {α : Type u} (s : Set α) : SetM α := s
+@[expose] protected def ofSet {α : Type u} (s : Set α) : SetM α := s
 
 @[simp]
 lemma run_ofSet {α : Type u} (s : Set α) : SetM.run (SetM.ofSet s) = s := rfl
