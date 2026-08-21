@@ -190,7 +190,7 @@ private lemma mem_support_forkSim_pure_nested_iff
   | .inl _ => signed
   | .inr m => signed ++ [m]
 
-@[fs_simp] private def forkLoggedImpl
+@[fs_simp] private noncomputable def forkLoggedImpl
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (cmaOracleSpec M Commit Chal Resp)
       (StateT (ForkBaseState M Commit Chal × List M)
@@ -205,7 +205,7 @@ private abbrev SimLoggedState (M Commit Chal : Type)
     [DecidableEq M] [DecidableEq Commit] :=
   (fsRoSpec M Commit Chal).QueryCache × List M
 
-@[fs_simp] private def simLoggedVerifyFreshComp
+@[fs_simp] private noncomputable def simLoggedVerifyFreshComp
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (pk : Stmt) (x : M × (Commit × Resp))
     (s : SimLoggedState M Commit Chal) : ProbComp Bool := do
@@ -218,12 +218,12 @@ private abbrev SimLoggedState (M Commit Chal : Type)
       let ch ← ($ᵗ Chal : ProbComp Chal)
       pure (!decide (msg ∈ s.2) && σ.verify pk c ch resp)
 
-@[fs_simp] private def fsUniformImpl :
+@[fs_simp] private noncomputable def fsUniformImpl :
     QueryImpl (fsRoSpec M Commit Chal) ProbComp :=
   QueryImpl.ofLift unifSpec ProbComp +
     (uniformSampleImpl (spec := (M × Commit →ₒ Chal)))
 
-@[fs_simp] private def simulatedNmaLoggedProbImpl
+@[fs_simp] private noncomputable def simulatedNmaLoggedProbImpl
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (cmaOracleSpec M Commit Chal Resp)
       (StateT (SimLoggedState M Commit Chal) ProbComp) :=
@@ -234,7 +234,7 @@ private abbrev SimLoggedState (M Commit Chal : Type)
     (cmaOracleSignLogAux (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp))
 
-@[fs_simp] private def cmaSimLoggedImpl
+@[fs_simp] private noncomputable def cmaSimLoggedImpl
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
     QueryImpl (cmaSpec M Commit Chal Resp Stmt)
@@ -243,7 +243,7 @@ private abbrev SimLoggedState (M Commit Chal : Type)
     (cmaSignLogImpl (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) (Stmt := Stmt))).flattenStateT
 
-@[fs_simp] private def cmaSimLoggedLeftImpl
+@[fs_simp] private noncomputable def cmaSimLoggedLeftImpl
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
     QueryImpl (cmaOracleSpec M Commit Chal Resp)
@@ -1037,12 +1037,12 @@ private lemma forkPoint_isSome_of_mem_verified_length {qH : ℕ}
     (Chal := Chal) (Resp := Resp) trace hverified hmem ?_
   exact (List.findIdx_lt_length_of_exists ⟨trace.target, hmem, by simp⟩).le.trans hlen
 
-@[fs_simp] private def forkWrappedUniformImpl [Fintype Chal] :
+@[fs_simp] private noncomputable def forkWrappedUniformImpl [Fintype Chal] :
     QueryImpl (Fork.wrappedSpec Chal) ProbComp :=
   QueryImpl.ofLift unifSpec ProbComp +
     (uniformSampleImpl (spec := (Unit →ₒ Chal)))
 
-@[fs_simp] private def forkVerifyFreshComp
+@[fs_simp] private noncomputable def forkVerifyFreshComp
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (pk : Stmt) (x : M × (Commit × Resp))
     (s : ForkBaseState M Commit Chal × List M) :
@@ -1083,7 +1083,7 @@ private lemma forkVerifyFreshComp_project
       congr 1
       exact simulateQ_id_add_uniform_query_inr (Unit →ₒ Chal) ()
 
-private def forkFinalQueryTrace
+private noncomputable def forkFinalQueryTrace
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (pk : Stmt) (x : M × (Commit × Resp))
     (s : ForkBaseState M Commit Chal × List M) :
@@ -1267,7 +1267,7 @@ private lemma forkBase_finalQuery_runTrace_eq
   obtain ⟨⟨msg, c, resp⟩, advCache, liveCache, queryLog⟩ := z
   cases hcache : liveCache (msg, c) <;> simp [Fork.roImpl, hcache]
 
-@[fs_simp] private def forkLoggedProbImpl [Fintype Chal]
+@[fs_simp] private noncomputable def forkLoggedProbImpl [Fintype Chal]
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (cmaOracleSpec M Commit Chal Resp)
       (StateT (ForkBaseState M Commit Chal × List M) ProbComp) :=
@@ -1508,7 +1508,7 @@ private lemma probOutput_simulateQ_forkWrappedUniformImpl [Fintype Chal]
       Pr[= x | oa] :=
   congrFun (congrArg DFunLike.coe (evalDist_simulateQ_forkWrappedUniformImpl oa)) x
 
-private def forkH5Body
+private noncomputable def forkH5Body
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
@@ -1520,7 +1520,7 @@ private def forkH5Body
   forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
     (Resp := Resp) σ pk z.1 z.2
 
-private def forkLoggedVerifyBody
+private noncomputable def forkLoggedVerifyBody
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :

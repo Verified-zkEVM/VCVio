@@ -664,9 +664,33 @@ lemma update_idem (seed : QuerySeed spec) (i : ι) (xs ys : List (spec.Range i))
     (seed.update i xs).update i ys = seed.update i ys :=
   functionUpdate_idem seed i xs ys
 
+/-- Updates at distinct seed indices commute. -/
+lemma update_comm (seed : QuerySeed spec) {i j : ι} (h : i ≠ j)
+    (xs : List (spec.Range i)) (ys : List (spec.Range j)) :
+    (seed.update i xs).update j ys = (seed.update j ys).update i xs := by
+  unfold update
+  exact Function.update_comm h xs ys seed
+
 /-- Append a list of values to the seed at index `i`. -/
 def addValues (seed : QuerySeed spec) {i : ι} (us : List (spec.Range i)) : QuerySeed spec :=
   seed.update i (seed i ++ us)
+
+/-- Replacing an index after appending there discards the appended values. -/
+@[simp]
+lemma update_addValues_same (seed : QuerySeed spec) (i : ι)
+    (us xs : List (spec.Range i)) :
+    (seed.addValues (i := i) us).update i xs = seed.update i xs := by
+  unfold addValues
+  exact update_idem seed i _ xs
+
+/-- Appending at one seed index commutes with replacing a distinct index. -/
+lemma update_addValues_comm (seed : QuerySeed spec) {i j : ι} (h : i ≠ j)
+    (us : List (spec.Range i)) (ys : List (spec.Range j)) :
+    (seed.addValues (i := i) us).update j ys =
+      (seed.update j ys).addValues (i := i) us := by
+  unfold addValues
+  rw [update_of_ne seed j ys i h]
+  exact update_comm seed h (seed i ++ us) ys
 
 @[simp]
 lemma addValues_self (seed : QuerySeed spec) {i : ι} (us : List (spec.Range i)) :

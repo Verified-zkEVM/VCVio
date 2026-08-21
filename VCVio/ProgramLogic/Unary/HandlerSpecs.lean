@@ -383,11 +383,11 @@ theorem seededOracle_triple_of_cons (t : spec.Domain)
     Std.Do.Triple
       (seededOracle t : StateT (QuerySeed spec) (OracleComp spec) (spec.Range t))
       (spred(fun seed => ⌜seed = seed₀⌝))
-      (⇓ v seed' => ⌜v = u ∧ seed' = Function.update seed₀ t us⌝) := by
+      (⇓ v seed' => ⌜v = u ∧ seed' = seed₀.update t us⌝) := by
   rw [triple_stateT_iff_forall_support]
   intro seed hseed v seed' hmem
   rw [hseed] at hmem
-  change v = u ∧ seed' = Function.update seed₀ t us
+  change v = u ∧ seed' = seed₀.update t us
   simpa only [seededOracle.apply_eq, StateT.run, StateT.mk, h, support_pure,
     Set.mem_singleton_iff, Prod.mk.injEq] using hmem
 
