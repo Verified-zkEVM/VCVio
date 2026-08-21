@@ -1059,7 +1059,7 @@ theorem computeWApprox_eq_mul_sub_smul (h_transform : NTTRingLaws nttOps)
     (t1 : Vector prims.Power2High p.k) :
     computeWApprox p prims aHat c z t1 =
       aHat * z - c • prims.power2RoundShiftVec t1 := by
-  haveI := h_transform
+  have := h_transform
   simp only [computeWApprox]
   exact nttOps.unhatVec_sub _ _
 
