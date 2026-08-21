@@ -9,7 +9,7 @@
 
 ## What was built
 
-Four files, 331 lines, purely additive — no existing declaration changed.
+Four files, 383 lines of Lean, purely additive — no existing declaration changed.
 
 | File | Content |
 |---|---|
@@ -86,8 +86,20 @@ Recorded because a spike that reports only success is not evidence.
   two places, and discreteness of the answer type discharges one of them via
   `Measurable.of_discrete`. For a *continuous* answer type that obligation is a per-node condition
   which does not factor into a clean hypothesis. So a continuous oracle currently has a
-  **denotation but not compositional reasoning**. This is the main open question and the natural
-  next spike.
+  **denotation but not compositional reasoning**.
+
+  This is the main open question, but it is a limitation of the **free-monad layer specifically**,
+  and the coalgebraic layer looks like it sidesteps rather than inherits it. `Responder.lean`
+  already describes a probabilistic responder as a Mealy machine in the Kleisli category of `SPMF`;
+  with the Giry monad in that position it is a Markov kernel. `Handler`'s answer types are
+  *dependent*, which `Kernel α β` cannot model, but a coalgebra's state space is fixed, so
+  `ProbabilityTheory.Kernel` fits exactly — and it **bundles measurability into the structure**, so
+  `Kernel.comp` carries no hypotheses and `IsMarkovKernel.comp` is an instance. Mathlib's
+  `Kernel.traj` then supplies a measure on the infinite product, which is the trace measure
+  `WiredRun`'s fuel bound exists to avoid needing.
+
+  So the natural next spike is arguably `Kernel` under `Responder`/`DynSystem`, not continuous
+  `bind` over `FreeM`.
 - `IsProbabilityMeasure (denote program)` is not proved.
 - Only the `probOutput` (singleton) correspondence exists; `probEvent` does not.
 - The `tsum` versus `lintegral` simp-normal-form clash predicted in the survey has **not** been
