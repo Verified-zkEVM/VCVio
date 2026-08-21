@@ -141,5 +141,31 @@ theorem denote_eq_toMeasure [P.IsProbabilitySpec] [∀ a, Countable (P.B a)] [Me
       rw [PMF.toMeasure_bind, h a]
       exact Measure.bind_congr_right (Filter.Eventually.of_forall fun b => ih b)
 
+/-- Every `PMF`-valued interpretation induces a measure-valued one, by taking the measure of
+each answer distribution.
+
+Deliberately not an instance, matching `PFunctor.IsUniformSpec.ofFintypeInhabited`: measure
+semantics stay an explicit opt-in rather than being derived silently wherever a `PMF`
+interpretation happens to be in scope. Introduce it with `letI` at a use site; the agreement
+hypothesis of `denote_eq_toMeasure` then holds by `rfl`. -/
+@[instance_reducible]
+noncomputable def _root_.PFunctor.IsProbabilitySpec.toMeasureSpec (P : PFunctor.{uA, u})
+    [∀ a, MeasurableSpace (P.B a)] [P.IsProbabilitySpec] : P.IsMeasureSpec where
+  toMeasure a := (IsProbabilitySpec.toPMF a).toMeasure
+  isProbabilityMeasure _ := PMF.toMeasure.isProbabilityMeasure _
+
+/-- The measure of a singleton is the output probability.
+
+This is the bridge that lets an existing `Pr[= x | _]` result be read off the measure
+denotation instead of reproved against it. -/
+theorem denote_apply_singleton [P.IsProbabilitySpec] [∀ a, Countable (P.B a)]
+    [MeasurableSpace α] [MeasurableSingletonClass α]
+    (h : ∀ a : P.A, IsMeasureSpec.toMeasure a = (IsProbabilitySpec.toPMF a).toMeasure)
+    (program : FreeM P α) (x : α) :
+    denote program {x} = Pr[= x | program] := by
+  rw [denote_eq_toMeasure h program,
+    PMF.toMeasure_apply_singleton _ x (measurableSet_singleton x)]
+  exact (SPMF.liftM_apply _ x).symm
+
 end FreeM
 end PFunctor

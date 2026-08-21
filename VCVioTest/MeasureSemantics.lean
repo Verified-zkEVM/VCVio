@@ -7,6 +7,8 @@ module
 
 public import VCVio.EvalDist.PFunctorMeasure
 public import Mathlib.Probability.Distributions.Gaussian.Real
+public import ToMathlib.MeasureTheory.DiscreteInstances
+public import Examples.OneTimePad.Basic
 
 /-!
 # Canaries for the measure denotation
@@ -26,7 +28,7 @@ statements transport rather than needing reproof.
 
 public section
 
-open MeasureTheory ProbabilityTheory PFunctor
+open MeasureTheory ProbabilityTheory PFunctor OracleSpec OracleComp ENNReal
 
 namespace VCVioTest.MeasureSemantics
 
@@ -78,5 +80,29 @@ theorem denote_eq_toMeasure_coin {α : Type} [MeasurableSpace α]
     (program : FreeM coinSpec α) :
     FreeM.denote program = (program.liftM IsProbabilitySpec.toPMF).toMeasure :=
   FreeM.denote_eq_toMeasure (fun _ => rfl) program
+
+/-! ## Transporting an existing `Pr[…]` result
+
+`unifSpec` is discrete, so it induces a measure interpretation and the singleton bridge
+applies. Any probability already proved about a `ProbComp` is then a fact about its measure
+denotation, with no reproof. -/
+
+noncomputable instance : unifSpec.toPFunctor.IsMeasureSpec :=
+  PFunctor.IsProbabilitySpec.toMeasureSpec _
+
+theorem denote_probComp_apply_singleton {α : Type} [MeasurableSpace α]
+    [MeasurableSingletonClass α] (program : ProbComp α) (x : α) :
+    FreeM.denote program {x} = Pr[= x | program] :=
+  FreeM.denote_apply_singleton (fun _ => rfl) program x
+
+/-- The one-time-pad ciphertext is uniform, read off the measure denotation.
+
+The statement is about a Mathlib `Measure`; the proof is the existing `Pr[…]` result. This is
+the compatibility gate: converting the semantics does not cost the crypto proofs. -/
+example (sp : ℕ) (mgen : ProbComp (BitVec sp)) (σ : BitVec sp) :
+    FreeM.denote ((oneTimePad sp).PerfectSecrecyCipherExp mgen) {σ}
+      = (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
+  rw [denote_probComp_apply_singleton]
+  exact oneTimePad.probOutput_cipher_uniform sp mgen σ
 
 end VCVioTest.MeasureSemantics
