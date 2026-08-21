@@ -135,7 +135,8 @@ Tagged `@[grind =]` only (not `@[simp]`): `simp` keeps its injective/equiv-map n
 with. -/
 @[grind =]
 lemma probOutput_map (y : β) : Pr[= y | f <$> mx] = Pr[ fun x => f x = y | mx] := by
-  rw [← probEvent_eq_eq_probOutput, probEvent_map]; rfl
+  rw [← probEvent_eq_eq_probOutput]
+  simpa only [Function.comp_def] using probEvent_map mx f (· = y)
 
 lemma probEvent_comp (q : β → Prop) : Pr[ q ∘ f | mx] = Pr[ q | f <$> mx] :=
   symm <| probEvent_map mx f q

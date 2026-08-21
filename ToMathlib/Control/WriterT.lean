@@ -194,9 +194,9 @@ lemma run_failure [Monoid ω] {α : Type u} : (failure : WriterT ω m α).run = 
 
 instance [Monoid ω] [LawfulMonad m] : LawfulMonadLift m (WriterT ω m) where
   monadLift_pure x := map_pure (·, 1) x
-  monadLift_bind {α β} x y := by
+  monadLift_bind {_ _} _ _ := by
     ext
-    simp [monadLift_def]
+    simp [MonadLift.monadLift]
 
 end fail
 

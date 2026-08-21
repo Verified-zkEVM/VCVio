@@ -9,6 +9,7 @@ public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Instances.OptionT
 public import VCVio.EvalDist.PFunctor
 public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import ToMathlib.Data.Set.Functor
 
 /-!
 # Output Distribution of Computations
@@ -328,8 +329,9 @@ variable [IsUniformSpec spec] [IsProbabilitySpec spec']
 lemma evalDist_query_bind
     (t : spec.Domain) (ou : spec.Range t → OracleComp spec α) :
     𝒟[(query t : OracleComp spec _) >>= ou] =
-      (OptionT.lift (PMF.uniformOfFintype (spec.Range t))) >>= (evalDist ∘ ou) := by
-  rw [evalDist_bind, evalDist_query]; rfl
+      (PMF.uniformOfFintype (spec.Range t) : SPMF _) >>=
+        fun u => evalDist (ou u) := by
+  rw [evalDist_bind, evalDist_query]
 
 lemma probOutput_congr {x y : α} {oa : OracleComp spec α} {oa' : OracleComp spec' α}
     (h1 : x = y) (h2 : 𝒟[oa] = 𝒟[oa']) : Pr[= x | oa] = Pr[= y | oa'] := by
@@ -493,20 +495,21 @@ section supportWhen
 /-- The possible outputs of `mx` when queries can output values in the specified sets.
 NOTE: currently proofs using this should reduce to `simulateQ`. A full API would be better -/
 def supportWhen (o : QueryImpl spec Set) (mx : OracleComp spec α) : Set α :=
-  simulateQ (r := SetM) o mx
+  SetM.run (simulateQ (r := SetM) (fun t => SetM.ofSet (o t)) mx)
 
 @[simp]
 lemma supportWhen_pure (o : QueryImpl spec Set) (x : α) :
     supportWhen o (pure x : OracleComp spec α) = {x} := by
-  simp [supportWhen]
+  unfold supportWhen
+  rw [simulateQ_pure, SetM.run_pure]
 
 @[simp]
 lemma supportWhen_query_bind (o : QueryImpl spec Set) (q : spec.Domain)
     (oa : spec.Range q → OracleComp spec α) :
     supportWhen o ((query q : OracleComp spec _) >>= oa) =
       ⋃ x ∈ o q, supportWhen o (oa x) := by
-  simp only [supportWhen, simulateQ_query_bind]
-  exact Set.bind_def
+  unfold supportWhen
+  rw [simulateQ_bind, simulateQ_spec_query, SetM.run_bind, SetM.run_ofSet]
 
 /-- Reachable outputs of a bind are the reachable outputs of the continuation over reachable
 outputs of the first computation. -/
@@ -514,8 +517,8 @@ outputs of the first computation. -/
 lemma supportWhen_bind (o : QueryImpl spec Set) (oa : OracleComp spec α)
     (ob : α → OracleComp spec β) :
     supportWhen o (oa >>= ob) = ⋃ x ∈ supportWhen o oa, supportWhen o (ob x) := by
-  simp only [supportWhen, simulateQ_bind]
-  exact Set.bind_def
+  unfold supportWhen
+  rw [simulateQ_bind, SetM.run_bind]
 
 /-- Membership form of [`OracleComp.supportWhen_bind`]. -/
 lemma mem_supportWhen_bind_iff (o : QueryImpl spec Set) (oa : OracleComp spec α)
