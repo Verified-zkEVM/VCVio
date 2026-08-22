@@ -87,14 +87,19 @@ such as the Fischlin transform and the Fiat-Shamir Σ-layer can run them. Dot no
 through the parent projection, so a `SigmaProtocol` uses the interaction properties directly.
 
 The monad `m` carries the participants' computations: `m := ProbComp` is the usual protocol whose
-only randomness is uniform sampling, while a general `m` lets the prover query oracles. Properties
-that watch a run (`PerfectlyComplete`, `realTranscript`, `HVZK`, `PerfectHVZK`) draw the challenge
-as `liftM ($ᵗ Chal)` and so ask for `[SampleableType Chal] [MonadLiftT ProbComp m]`; at
-`m := ProbComp` that is definitionally the plain `$ᵗ Chal` (`realTranscript_probComp`).
+only randomness is uniform sampling, while a general `m` lets the prover query oracles. Each
+property assumes only the semantics it consumes (`MonadLiftT m SPMF` for probability statements,
+`MonadLiftT m SetM` for `SpeciallySound`). `PerfectlyComplete` quantifies over the verifier's
+challenge pointwise, so it needs no sampling structure on `m`; the sampled form is recovered by
+`PerfectlyComplete.probOutput_uniform_challenge_eq_one`. The transcript-facing properties
+(`realTranscript`, `HVZK`, `PerfectHVZK`) draw the challenge as `liftM ($ᵗ Chal)` and so ask for
+`[SampleableType Chal] [MonadLiftT ProbComp m]`; at `m := ProbComp` that is definitionally the
+plain `$ᵗ Chal` (`realTranscript_probComp`).
 `PerfectlyComplete`, `HVZK`, `UniqueResponses`, and `realTranscript` live on
 `ChallengeVerifyProtocol`; `SpeciallySound` lives on `SigmaProtocol`, since it consumes `extract`.
 
-Every `ProbComp`-valued `ChallengeVerifyProtocol` coerces to `IdenSchemeWithAbort` via `toIdenSchemeWithAbort` (wraps `respond` with `some`).
+Every `ProbComp`-valued `ChallengeVerifyProtocol` coerces to `IdenSchemeWithAbort` via
+`toIdenSchemeWithAbort` (wraps `respond` with `some`).
 
 ### Identification scheme with aborts (`IdenSchemeWithAbort`)
 

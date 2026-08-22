@@ -34,9 +34,12 @@ Properties that only concern the interaction — `PerfectlyComplete`, `HVZK`, `P
 `SpeciallySound` lives on `SigmaProtocol`, since it is the property that consumes `extract`.
 
 Both records are parameterized by the monad `m` in which the participants compute, so the prover
-may query oracles as well as sample randomness. The properties that watch a protocol run draw the
-challenge as `liftM ($ᵗ Chal)`, which requires `[MonadLiftT ProbComp m]`; at `m := ProbComp` this
-is definitionally the plain uniform sample.
+may query oracles as well as sample randomness. `PerfectlyComplete` quantifies over the
+verifier's challenge pointwise, so it needs no sampling structure on `m`; the sampled form is
+recovered by `PerfectlyComplete.probOutput_uniform_challenge_eq_one`. The transcript-facing
+properties (`realTranscript`, `HVZK`, `PerfectHVZK`) draw the challenge as `liftM ($ᵗ Chal)`,
+which requires `[MonadLiftT ProbComp m]`; at `m := ProbComp` this is definitionally the plain
+uniform sample (`realTranscript_probComp`).
 
 ## Type Parameters
 
@@ -72,7 +75,8 @@ are in `Resp`, and verification is deterministic.
 
 The prover's computations live in an arbitrary monad `m`; each property assumes only the
 semantics it consumes (a `MonadLiftT m SPMF` lift for probability statements, a
-`MonadLiftT m SetM` lift for `support`-based ones). Taking `m := ProbComp` recovers the usual
+`MonadLiftT m SetM` lift for `support`-based ones, and a `MonadLiftT ProbComp m` lift where the
+uniform challenge is drawn inside the transcript). Taking `m := ProbComp` recovers the usual
 notion of a protocol whose only randomness is uniform sampling, but a general `m` lets the
 prover additionally query oracles (e.g. a hash oracle for the Kilian transform).
 
@@ -111,18 +115,41 @@ variable {m : Type → Type} [Monad m] [MonadLiftT m SPMF]
 
 section complete
 
-variable [SampleableType Chal] [MonadLiftT ProbComp m]
+/-- A protocol is perfectly complete if, on valid statement-witness pairs, the honest prover
+convinces the verifier with probability `1` on every challenge the verifier might send.
 
-/-- A protocol is perfectly complete if the honest prover always convinces the verifier
-on valid statement-witness pairs. -/
+Since the verifier's challenge is drawn uniformly, quantifying over the challenge pointwise is
+equivalent to drawing it and asking for acceptance probability `1` — but the pointwise form
+needs no sampling structure on `m`, and is the shape consumers such as the Fischlin transform
+extract anyway. -/
 def PerfectlyComplete (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) :
     Prop :=
-  ∀ x w, rel x w = true →
+  ∀ x w, rel x w = true → ∀ ω,
     Pr[= true | do
       let (pc, sc) ← σ.commit x w
-      let ω ← (liftM ($ᵗ Chal) : m Chal)
       let π ← σ.respond x w sc ω
       return σ.verify x pc ω π] = 1
+
+/-- Sampled-challenge form of `PerfectlyComplete` for `ProbComp`-valued protocols: the honest
+run that draws its challenge uniformly accepts with probability `1`. -/
+lemma PerfectlyComplete.probOutput_uniform_challenge_eq_one [SampleableType Chal]
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    (hc : σ.PerfectlyComplete) {x : Stmt} {w : Wit} (h : rel x w = true) :
+    Pr[= true | do
+      let (pc, sc) ← σ.commit x w
+      let ω ← $ᵗ Chal
+      let π ← σ.respond x w sc ω
+      return σ.verify x pc ω π] = 1 := by
+  change Pr[= true | σ.commit x w >>= fun a =>
+      ($ᵗ Chal : ProbComp Chal) >>= fun ω =>
+        σ.respond x w a.2 ω >>= fun π => pure (σ.verify x a.1 ω π)] = 1
+  rw [probOutput_bind_bind_swap]
+  have hc' : ∀ ω : Chal, Pr[= true | σ.commit x w >>= fun a =>
+      σ.respond x w a.2 ω >>= fun π => pure (σ.verify x a.1 ω π)] = 1 :=
+    fun ω => hc x w h ω
+  rw [probOutput_bind_eq_tsum]
+  simp only [hc', mul_one]
+  exact tsum_probOutput_eq_one' (by simp)
 
 end complete
 

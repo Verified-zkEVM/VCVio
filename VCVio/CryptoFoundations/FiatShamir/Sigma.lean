@@ -509,7 +509,7 @@ theorem perfectlyCorrect [SampleableType Chal]
             let r ← $ᵗ Chal
             let s ← σ.respond pk sk e r
             pure (σ.verify pk c r s))
-          (x := true) (h := by simpa using hc pk sk hrel))
+          (x := true) (h := by simpa using hc.probOutput_uniform_challenge_eq_one hrel))
     · simpa [OracleComp.ProgramLogic.propInd, hx] using
         (OracleComp.ProgramLogic.triple_zero
           (oa := do
