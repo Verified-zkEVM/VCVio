@@ -824,8 +824,11 @@ theorem mldsaSTMSIS_isValid_eq_true_iff (aHat : TqMatrix p.k p.l) (pk : PublicKe
 `C` runs the NMA forger `main` on the public key `pk` (the STMSIS target). The forger interacts with
 the random oracle `H : (M × Commitment) →ₒ CommitHashBytes`. On a forgery `(msg, some (w', (z, h)))`
 `C` outputs the STMSIS preimage `(msg, w')` together with the response `(z, h)`. An aborting forgery
-`(msg, none)` is mapped to a dummy preimage with a zeroed response, which the STMSIS RO-consistency
-check rejects. The matrix in `params.1` is ignored by `C` (it equals `ExpandA(params.2.ρ)`).
+`(msg, none)` is mapped to a dummy preimage with a zeroed response; the STMSIS experiment then reads
+back `H(msg, default)`, which the forger may well have queried. That costs nothing: the NMA tail is
+deterministically `false` on an abort, and the reduction's target is an upper bound on the NMA side,
+so extra successes on the STMSIS side only add slack in the favorable direction. The matrix in
+`params.1` is ignored by `C` (it equals `ExpandA(params.2.ρ)`).
 
 The STMSIS experiment then looks up `c̃ = H(msg, w')` in the oracle cache and checks
 `mldsaSTMSIS.isValid Â pk c̃ (z, h)`, which recomputes `w'` from `(pk, c̃, (z, h))` and runs the
@@ -845,7 +848,8 @@ def extractorC [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
       let _c ← HasQuery.query (spec := (M × Commitment p prims →ₒ CommitHashBytes p)) (msg, w')
       return ((msg, w'), (z, h))
     | none =>
-      -- Aborting forgery: no valid preimage. Emit a dummy that fails RO consistency / `isValid`.
+      -- Aborting forgery: no valid preimage. Emit a dummy; the NMA tail is deterministically
+      -- `false` here, so any STMSIS-side success on the dummy only loosens the bound favorably.
       return ((msg, default), default)
 
 /-- **Per-key STMSIS read-back comparison.** For a fixed public key `pk`, the NMA forge-and-verify
