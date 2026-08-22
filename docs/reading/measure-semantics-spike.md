@@ -1,22 +1,27 @@
 # Measure-Native Denotation: Spike Findings
 
-> Snapshot date: 2026-08-21. Branch `dtumad/measure-semantics`, stacked on
-> `dtumad/lean-4.33-module-boundary` (#521). Toolchain `v4.33.0`, Mathlib `v4.33.0`,
-> PolyFun `v4.33.1`.
+> Snapshot date: 2026-08-21. Toolchain `v4.33.0`, Mathlib `v4.33.0`, PolyFun `v4.33.1`.
 >
 > Companion to [`probability-semantics-landscape.md`](probability-semantics-landscape.md).
-> That document surveys the options; this one records what happened when one was built.
+> That document surveys the options; this one records what happened when one was built. The
+> resulting accepted design is
+> [`denotational-probability-semantics.md`](denotational-probability-semantics.md).
 
 ## What was built
 
-Four files, 383 lines of Lean, purely additive — no existing declaration changed.
+The spike is additive: existing probability declarations and crypto proofs remain unchanged.
 
 | File | Content |
 |---|---|
 | [`ToMathlib/MeasureTheory/DiscreteInstances.lean`](../../ToMathlib/MeasureTheory/DiscreteInstances.lean) | Discrete measurable-space instances for `BitVec n` |
+| [`ToMathlib/MeasureTheory/MeasurableSpace/Option.lean`](../../ToMathlib/MeasureTheory/MeasurableSpace/Option.lean) | Coproduct measurable space for `Option` |
+| [`ToMathlib/MeasureTheory/MeasurableSpace/Except.lean`](../../ToMathlib/MeasureTheory/MeasurableSpace/Except.lean) | Coproduct measurable space for `Except` |
+| [`ToMathlib/MeasureTheory/Measure/Option.lean`](../../ToMathlib/MeasureTheory/Measure/Option.lean) | Success-only `Measure.dropNone` observer |
 | [`ToMathlib/Probability/ProbabilityMassFunction/Measure.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/Measure.lean) | `PMF.toMeasure_bind` |
-| [`VCVio/EvalDist/PFunctorMeasure.lean`](../../VCVio/EvalDist/PFunctorMeasure.lean) | `IsMeasureSpec`, `FreeM.denote`, the monad-morphism laws, agreement with the `PMF` denotation |
-| [`VCVioTest/MeasureSemantics.lean`](../../VCVioTest/MeasureSemantics.lean) | The capability probe and the compatibility gate |
+| [`VCVio/EvalDist/PFunctorMeasure.lean`](../../VCVio/EvalDist/PFunctorMeasure.lean) | `IsMeasureSpec`, `FreeM.denote`, discrete monad laws, probability preservation, event and PMF agreement |
+| [`VCVio/EvalDist/MeasureSemantics.lean`](../../VCVio/EvalDist/MeasureSemantics.lean) | Effect-preserving transformer measures and reader/state Markov kernels |
+| [`VCVio/EvalDist/ResumptionMeasure.lean`](../../VCVio/EvalDist/ResumptionMeasure.lean) | Total truncation measures and success-only output submeasures |
+| [`VCVioTest/MeasureSemantics.lean`](../../VCVioTest/MeasureSemantics.lean) | Continuous, discrete, transformer, kernel, and resumption gates |
 
 ## The capability question: yes
 
@@ -55,9 +60,9 @@ crypto proof had to change, and none had to be reproved.
   downstream statements add `[MeasurableSingletonClass α]` where they mention singletons. On the
   OTP gate this cost two binders on one helper theorem and zero extra proof steps, because
   `DiscreteInstances` supplies what `BitVec` was missing.
-- **Upstream gaps.** Two, both small: `PMF.toMeasure_bind` (five lines; Mathlib has only the applied
-  `toMeasure_bind_apply`) and the `BitVec` instances (three lines, in the exact style of
-  `Mathlib.MeasureTheory.MeasurableSpace.Instances`). Both are ready-made contribution candidates.
+- **Local Mathlib-facing gaps.** `PMF.toMeasure_bind`, `BitVec` measurability, coproduct measurable
+  spaces for `Option`/`Except`, and the option success submeasure are staged in `ToMathlib`. They
+  deliberately stay local during the design phase and track Mathlib's idiom closely.
 
 ## Friction encountered
 
@@ -80,35 +85,36 @@ Recorded because a spike that reports only success is not evidence.
    defeq do the work is robust where `rw [denote_liftBind]` is not.
 7. **`show` trips the style linter** when it changes the goal; `change` is the intended spelling.
 
+## What this spike settled
+
+- A discrete-answer `FreeM` denotation is a probability measure.
+- Existing `Pr[...]` statements transport at both singleton and arbitrary measurable-event
+  granularity.
+- A continuous query can be followed by a measurable continuous continuation and remains a
+  probability measure. The proof exposes exactly the hypothesis Mathlib's Giry bind requires.
+- Option/error/writer effects should remain in total outcome measures; reader/state semantics are
+  kernels rather than global transformer lifts.
+- PolyFun truncations naturally provide total measures on `Option β`, while discarding cutoff mass
+  gives increasing subprobability measures of returned values; their supremum is the fuel-free
+  returned-output measure.
+
 ## What this spike did *not* settle
 
-- **`denote_bind` for continuous answer types.** The bind law needs the continuation measurable in
-  two places, and discreteness of the answer type discharges one of them via
-  `Measurable.of_discrete`. For a *continuous* answer type that obligation is a per-node condition
-  which does not factor into a clean hypothesis. So a continuous oracle currently has a
-  **denotation but not compositional reasoning**.
-
-  This is the main open question, but it is a limitation of the **free-monad layer specifically**,
-  and the coalgebraic layer looks like it sidesteps rather than inherits it. `Responder.lean`
-  already describes a probabilistic responder as a Mealy machine in the Kleisli category of `SPMF`;
-  with the Giry monad in that position it is a Markov kernel. `Handler`'s answer types are
-  *dependent*, which `Kernel α β` cannot model, but a coalgebra's state space is fixed, so
-  `ProbabilityTheory.Kernel` fits exactly — and it **bundles measurability into the structure**, so
-  `Kernel.comp` carries no hypotheses and `IsMarkovKernel.comp` is an instance. Mathlib's
-  `Kernel.traj` then supplies a measure on the infinite product, which is the trace measure
-  `WiredRun`'s fuel bound exists to avoid needing.
-
-  So the natural next spike is arguably `Kernel` under `Responder`/`DynSystem`, not continuous
-  `bind` over `FreeM`.
-- `IsProbabilityMeasure (denote program)` is not proved.
-- Only the `probOutput` (singleton) correspondence exists; `probEvent` does not.
+- **A universal continuous `FreeM` bind law.** The bind law needs a measurable family at every
+  continuous answer node. Arbitrary Lean continuations do not provide that invariant. The accepted
+  design therefore uses explicit one-step hypotheses and kernels instead of claiming an
+  unrestricted law.
+- **Infinite traces.** A fixed state carrier alone is insufficient: the coalgebra's transition must
+  be measurable. `Kernel.traj` becomes applicable only after a measurable-coalgebra interface and
+  compatible finite-prefix kernels are supplied.
+- The returned-measure fixpoint equation and almost-sure termination API.
 - The `tsum` versus `lintegral` simp-normal-form clash predicted in the survey has **not** been
   encountered, because nothing was converted. It remains a real risk for the client sweep and
   should not be treated as retired.
 
 ## Verdict
 
-The ceiling lifts, and the compatibility surface survives. Both halves of the case hold, so the
-conversion is worth scheduling — while noting that this increment converted no clients, and the
-cost estimate above is drawn from one example, not from the 200 files that use `evalDist` or
-`Pr[…]`.
+The ceiling lifts, the compatibility surface survives, and the transformer/nontermination split
+has a concrete API. Measure and kernel semantics are therefore the baseline for new denotational
+work. Existing clients remain on `Pr[...]` until correspondence lemmas make each migration at least
+as usable as the current discrete proof.

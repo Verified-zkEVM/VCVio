@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import VCVio.EvalDist.PFunctorMeasure
+public import VCVio.EvalDist.ResumptionMeasure
 public import Mathlib.Probability.Distributions.Gaussian.Real
 public import ToMathlib.MeasureTheory.DiscreteInstances
 public import Examples.OneTimePad.Basic
@@ -62,6 +62,25 @@ example (s : Set ℝ) :
     FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit) s = gaussianReal 0 1 s := by
   rw [denote_gauss_lift]
 
+/-- A genuinely continuous continuation composes through the Giry bind once its measurability is
+made explicit. -/
+@[expose] noncomputable def shiftedGaussian : FreeM gaussSpec ℝ :=
+  FreeM.liftBind PUnit.unit fun sample => pure (sample + 1)
+
+theorem denote_shiftedGaussian :
+    FreeM.denote shiftedGaussian =
+      Measure.bind (gaussianReal 0 1) fun sample => Measure.dirac (sample + 1) :=
+  rfl
+
+/-- The continuous composition remains a probability measure. This proof is the canary for the
+measurable-continuation boundary that a `PMF` semantics cannot state. -/
+theorem isProbabilityMeasure_denote_shiftedGaussian :
+    IsProbabilityMeasure (FreeM.denote shiftedGaussian) := by
+  apply FreeM.isProbabilityMeasure_denote_liftBind
+  · change AEMeasurable (fun sample : ℝ => Measure.dirac (sample + 1)) (gaussianReal 0 1)
+    fun_prop
+  · exact Filter.Eventually.of_forall fun _ => ⟨by simp⟩
+
 /-! ## Agreement with the `PMF` denotation on a discrete interface -/
 
 /-- An interface with a single operation, answered by a coin flip. -/
@@ -80,6 +99,92 @@ theorem denote_eq_toMeasure_coin {α : Type} [MeasurableSpace α]
     (program : FreeM coinSpec α) :
     FreeM.denote program = (program.liftM IsProbabilitySpec.toPMF).toMeasure :=
   FreeM.denote_eq_toMeasure (fun _ => rfl) program
+
+/-- Predicate notation transports to arbitrary measurable events, not just singletons. -/
+theorem denote_event_coin {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (program : FreeM coinSpec α) (event : α → Prop) :
+    FreeM.denote program {x | event x} = Pr[event | program] :=
+  FreeM.denote_apply_setOf (fun _ => rfl) program event MeasurableSet.of_discrete
+
+/-! ## Transformer stacks retain their effects -/
+
+/-- The reusable total semantics for the discrete coin interface. -/
+noncomputable def coinMeasureSemantics : MeasureSemantics (FreeM coinSpec) :=
+  MeasureSemantics.freeM
+
+/-- `OptionT` keeps `none` as an observable outcome until a proof explicitly discards it. -/
+example (computation : OptionT (FreeM coinSpec) Bool) :
+    IsProbabilityMeasure (coinMeasureSemantics.optionT computation) :=
+  coinMeasureSemantics.isProbabilityMeasure_optionT computation
+
+/-- `ExceptT` likewise retains the error branch as part of the total outcome space. -/
+example (computation : ExceptT Bool (FreeM coinSpec) Bool) :
+    IsProbabilityMeasure (coinMeasureSemantics.exceptT computation) :=
+  coinMeasureSemantics.isProbabilityMeasure_exceptT computation
+
+/-- `WriterT` retains the produced log alongside the result. -/
+example (computation : WriterT Bool (FreeM coinSpec) Bool) :
+    IsProbabilityMeasure (coinMeasureSemantics.writerT computation) :=
+  coinMeasureSemantics.isProbabilityMeasure_writerT computation
+
+/-- A reader computation exposes its environment as the input of a Markov kernel. -/
+@[expose] def echoEnvironment : ReaderT Bool (FreeM coinSpec) Bool :=
+  fun environment => pure environment
+
+noncomputable def echoEnvironmentKernel : Kernel Bool Bool :=
+  coinMeasureSemantics.readerTKernel echoEnvironment Measurable.of_discrete
+
+example : IsMarkovKernel echoEnvironmentKernel := by
+  unfold echoEnvironmentKernel
+  infer_instance
+
+example (environment : Bool) :
+    echoEnvironmentKernel environment = Measure.dirac environment := rfl
+
+/-- A stateful computation denotes a Markov kernel from initial states to result/final-state
+pairs. Discreteness makes the kernel's measurability obligation immediate. -/
+@[expose] def rememberState : StateT Bool (FreeM coinSpec) Bool :=
+  fun state => pure (state, !state)
+
+noncomputable def rememberStateKernel : Kernel Bool (Bool × Bool) :=
+  coinMeasureSemantics.stateTKernel rememberState Measurable.of_discrete
+
+example : IsMarkovKernel rememberStateKernel := by
+  unfold rememberStateKernel
+  infer_instance
+
+example (state : Bool) :
+    rememberStateKernel state = Measure.dirac (state, !state) := rfl
+
+/-! ## Finite observations of possible nontermination -/
+
+/-- A resumption that needs one visible query before returning. -/
+@[expose] def delayedTrue : Resumption coinSpec Bool :=
+  Resumption.query PUnit.unit fun _ => pure true
+
+/-- At zero fuel the computation has no returned-output mass. -/
+example : Resumption.outputMeasure 0 delayedTrue = 0 := by
+  simp [delayedTrue]
+
+/-- At one unit of fuel it has returned `true`; the cutoff marker has not been conflated with a
+failure result. -/
+theorem outputMeasure_one_delayedTrue :
+    Resumption.outputMeasure 1 delayedTrue = Measure.dirac true := by
+  change (Measure.bind (IsMeasureSpec.toMeasure (P := coinSpec) PUnit.unit)
+    (fun _ => Measure.dirac (some true))).dropNone = Measure.dirac true
+  rw [Measure.bind_const,
+    (IsMeasureSpec.isProbabilityMeasure (P := coinSpec) PUnit.unit).measure_univ, one_smul]
+  simp
+
+/-- The fuel-free returned-output semantics sees the delayed return with total mass one. -/
+example : Resumption.returnedMeasure delayedTrue Set.univ = 1 := by
+  apply le_antisymm (Resumption.returnedMeasure_apply_univ_le_one delayedTrue)
+  calc
+    1 = Resumption.outputMeasure 1 delayedTrue Set.univ := by
+      rw [outputMeasure_one_delayedTrue]
+      simp
+    _ ≤ Resumption.returnedMeasure delayedTrue Set.univ :=
+      (Resumption.outputMeasure_le_returnedMeasure 1 delayedTrue) Set.univ
 
 /-! ## Transporting an existing `Pr[…]` result
 

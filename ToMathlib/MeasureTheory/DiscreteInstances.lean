@@ -15,8 +15,8 @@ Mathlib equips a selection of standard countable types with the discrete σ-alge
 among them. `BitVec n` is not on that list, and it is the type most cryptographic sampling
 statements are phrased over.
 
-Everything here follows the upstream file's style exactly and is a candidate for
-contribution to it; nothing in this file is specific to VCVio.
+Everything here follows the upstream file's style exactly so the local compatibility layer is easy
+to remove if Mathlib gains the same instances; nothing in this file is specific to VCVio.
 
 ## Why `⊤` rather than a blanket instance
 

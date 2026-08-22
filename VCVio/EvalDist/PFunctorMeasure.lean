@@ -7,6 +7,7 @@ module
 
 public import ToMathlib.Probability.ProbabilityMassFunction.Measure
 public import VCVio.EvalDist.PFunctor
+import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 
 /-!
 # Measure semantics for polynomial free monads
@@ -48,8 +49,10 @@ discharge it.
 ## Main statements
 
 * `PFunctor.FreeM.denote_bind_of_discrete` — `denote` is a monad morphism into the Giry monad.
+* `PFunctor.FreeM.isProbabilityMeasure_denote` — discrete programs denote probability measures.
 * `PFunctor.FreeM.denote_eq_toMeasure` — agreement with the `PMF` denotation of
   `VCVio.EvalDist.PFunctor`.
+* `PFunctor.FreeM.denote_apply_setOf` — existing `Pr[...]` facts are measurable-event facts.
 -/
 
 @[expose] public section
@@ -93,6 +96,20 @@ theorem denote_liftBind [MeasurableSpace α] (a : P.A) (cont : P.B a → FreeM P
     denote (FreeM.liftBind a cont)
       = Measure.bind (IsMeasureSpec.toMeasure a) fun b => denote (cont b) := rfl
 
+/-- A one-operation program is a probability measure whenever its continuation is an
+almost-everywhere measurable family of probability measures.
+
+This is the continuous composition boundary. For discrete answer types the hypotheses are
+automatic; for a genuinely continuous oracle they are precisely the obligations represented by
+a Mathlib `Kernel`. -/
+theorem isProbabilityMeasure_denote_liftBind [MeasurableSpace α] (a : P.A)
+    (cont : P.B a → FreeM P α)
+    (hMeasurable : AEMeasurable (fun b => denote (cont b)) (IsMeasureSpec.toMeasure a))
+    (hProbability : ∀ᵐ b ∂IsMeasureSpec.toMeasure a,
+      IsProbabilityMeasure (denote (cont b))) :
+    IsProbabilityMeasure (denote (FreeM.liftBind a cont)) :=
+  MeasureTheory.isProbabilityMeasure_bind hMeasurable hProbability
+
 /-! ### The monad-morphism laws
 
 `denote` sends `pure` to `dirac` definitionally. For `bind` it must know that the continuation
@@ -101,6 +118,20 @@ general statement carries the first as a hypothesis; discreteness of the answer 
 discharges the second, and `denote_bind_of_discrete` discharges both. -/
 
 variable [∀ a, DiscreteMeasurableSpace (P.B a)]
+
+/-- Every program over discrete answer types denotes a probability measure.
+
+This theorem is deliberately stated as a theorem rather than a global instance: a program with a
+continuous answer type needs a measurability argument for each continuation, and typeclass search
+must not hide that boundary. -/
+theorem isProbabilityMeasure_denote [MeasurableSpace α] (program : FreeM P α) :
+    IsProbabilityMeasure (denote program) := by
+  induction program with
+  | pure _ => exact ⟨by simp⟩
+  | lift_bind a cont ih =>
+      exact isProbabilityMeasure_denote_liftBind a cont
+        Measurable.of_discrete.aemeasurable
+        (Filter.Eventually.of_forall ih)
 
 theorem denote_bind [MeasurableSpace α] [MeasurableSpace β]
     (program : FreeM P α) (f : α → FreeM P β)
@@ -166,6 +197,27 @@ theorem denote_apply_singleton [P.IsProbabilitySpec] [∀ a, Countable (P.B a)]
   rw [denote_eq_toMeasure h program,
     PMF.toMeasure_apply_singleton _ x (measurableSet_singleton x)]
   exact (SPMF.liftM_apply _ x).symm
+
+/-- The measure denotation of a measurable predicate is the existing `Pr[...]` value.
+
+The result keeps predicate notation convenient for discrete cryptographic proofs while presenting
+the semantics to Mathlib as an ordinary measurable event. -/
+theorem denote_apply_setOf [P.IsProbabilitySpec] [∀ a, Countable (P.B a)]
+    [MeasurableSpace α]
+    (h : ∀ a : P.A, IsMeasureSpec.toMeasure a = (IsProbabilitySpec.toPMF a).toMeasure)
+    (program : FreeM P α) (p : α → Prop) (hp : MeasurableSet {x | p x}) :
+    denote program {x | p x} = Pr[p | program] := by
+  rw [denote_eq_toMeasure h program,
+    (program.liftM IsProbabilitySpec.toPMF).toMeasure_apply hp,
+    probEvent_eq_tsum_indicator]
+  apply tsum_congr
+  intro x
+  by_cases hx : p x
+  · simp only [Set.indicator, Set.mem_ofPred_eq, hx, ↓reduceIte]
+    change (program.liftM IsProbabilitySpec.toPMF) x =
+      (liftM (program.liftM IsProbabilitySpec.toPMF) : SPMF α) x
+    exact (SPMF.liftM_apply _ x).symm
+  · simp [Set.indicator, hx]
 
 end FreeM
 end PFunctor

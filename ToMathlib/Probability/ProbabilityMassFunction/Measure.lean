@@ -20,8 +20,8 @@ measurable set as a `tsum`.
 `PMF.toMeasure_bind` below is the measure-level equality. It is what a monad-morphism
 argument needs — in particular, transporting a proof about a `PMF`-valued denotation to the
 corresponding `Measure`-valued one — and it is the natural companion to the two lemmas already
-upstream. This file is a candidate for contribution to
-`Mathlib.Probability.ProbabilityMassFunction.Monad`.
+upstream. It stays in `ToMathlib` during the migration and can be removed if the upstream API
+acquires the same equality.
 
 ## Hypotheses
 

@@ -1,13 +1,14 @@
 # Probability Semantics for Computations: Landscape and Design Options
 
-> Status: living design survey, not an accepted migration proposal.
+> Status: living evidence survey. The accepted implementation baseline is
+> [`denotational-probability-semantics.md`](denotational-probability-semantics.md).
 >
 > Snapshot date: 2026-08-21. Independently re-verified against source on disk and
 > against the live repositories on 2026-08-21; see [§19](#19-verification-log).
 >
-> Repository snapshot: VCVio `a27f5452`; pinned dependencies Mathlib `v4.32.2`,
-> PolyFun `v4.32.2`, and cslib `v4.32.0`. Open-PR descriptions and upstream-
-> `master` observations are explicitly identified below.
+> The original repository snapshot used Mathlib/PolyFun `v4.32.2`; implementation findings were
+> rechecked on the current Mathlib `v4.33.0` and PolyFun `v4.33.1` pins. Open-PR descriptions and
+> upstream-`master` observations are explicitly identified below.
 >
 > **Evidence discipline.** Every claim that upstream already provides something must
 > be checked mechanically — reading the declaration in the pinned tree, or `exact?`
@@ -84,8 +85,9 @@ be:
 - a locally bundled subprobability measure/kernel built over Mathlib `Measure`;
 - or, most plausibly, a stratified combination of these.
 
-This document gives criteria and experiments for making that choice; it deliberately
-does not select one yet.
+The experiments now select the stratified combination. This document retains the rejected
+alternatives and evidence; the accepted interfaces and migration policy are recorded in the
+design baseline linked above.
 
 ## 1. Vocabulary: Several Notions Currently Called Support or Failure
 
@@ -508,6 +510,10 @@ Mathlib's
 library supplies measurable kernels, Markov kernels, composition, products,
 disintegration, conditional distributions, and categorical presentations such as
 [`Stoch`](https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Probability/Kernel/Category/Stoch.lean).
+Mathlib also already exposes the Giry construction as the functor
+[`MeasCat.Giry`](https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/MeasureTheory/Category/MeasCat.lean).
+That categorical surface confirms the semantic direction, but it does not turn `Measure` into an
+unrestricted `Type → Type` monad usable by `FreeM.liftM`; measurable morphisms remain the arrows.
 
 For infinite behavior, two upstream constructions are particularly relevant:
 
@@ -520,7 +526,8 @@ For infinite behavior, two upstream constructions are particularly relevant:
   [Kolmogorov process](https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Probability/Process/Kolmogorov.lean)
   infrastructure constructs measures from compatible finite-dimensional marginals.
 
-These are a natural match for PolyFun finite prefixes, but they are not automatic. A
+These are a natural match for PolyFun finite prefixes, but they are not automatic. An arbitrary
+`Resumption` does not carry measurable state or continuation data. A
 probabilistic coalgebra must provide measurable state/direction spaces, measurable
 transition kernels, and compatibility between finite-prefix laws. Starting with finite
 or countable discrete interfaces avoids many of the hardest measurable-space issues and
@@ -708,8 +715,7 @@ to record this table and re-check it at each toolchain bump, not to port.
 
 The
 [`Verified-zkEVM/iris-lean`](https://github.com/Verified-zkEVM/iris-lean) fork contains
-active Bluebell work. The `julek/Dan/refactor` branch inspected for this snapshot has the
-following shape:
+active Bluebell work. The development snapshot inspected for this survey has the following shape:
 
 - `MeasureOnSpace Ω` bundles a measurable space with a measure on that space;
 - `PSpace Ω` adds `IsProbabilityMeasure`;
@@ -1149,9 +1155,9 @@ This phase should not change `evalDist`.
 
 ### Phase 2: measure bridge without backend replacement
 
-- Add canonical total-measure and output-submeasure views of SPMF.
-- Prove pure, bind, map, event, point, failure, uniform, expectation, and product
-  correspondence.
+- Add canonical total-measure and output-submeasure views of SPMF. **In progress:** the PMF/FreeM
+  measure bridge, point/event correspondence, and option success observer are implemented.
+- Prove pure, bind, map, event, point, failure, uniform, expectation, and product correspondence.
 - Re-express a small set of existing theorems through those views while keeping their
   public statements unchanged.
 - Provide the minimum adapter Bluebell needs to consume an OracleComp output measure.
@@ -1166,7 +1172,9 @@ main API during the spikes.
 
 ### Phase 4: backend decision
 
-Choose a quantitative backend only after:
+The accepted design chooses a stratified Measure/Kernel denotational boundary while retaining the
+discrete proof façade. The following remain migration gates rather than reasons to reopen that
+boundary:
 
 - the Mathlib PMF/discrete-measure PRs have a stable outcome;
 - the finite proof and ArkLib canaries are no worse than the current surface;
@@ -1184,12 +1192,13 @@ The decision may explicitly choose a hybrid rather than one universal type.
 - Port one example and one ArkLib consumer per capability before bulk changes.
 - Deprecate representation-specific declarations only after replacements compile in both
   repositories.
-- Upstream generic measure/discrete lemmas to Mathlib or cslib; keep oracle and crypto
-  policy in VCVio.
+- Stage generic measure/discrete lemmas in `ToMathlib` and remove them when stable upstream
+  equivalents land; do not open Mathlib, Lean, or cslib PRs during this design migration.
 
 ### Phase 6: infinite trace semantics
 
-- Implement output submeasures first, using the existing bounded execution factorization.
+- Output submeasures, their fuel monotonicity, and the returned-output supremum are implemented for
+  PolyFun resumptions with lossless discrete responders.
 - Add trace measures only after measurable-state and prefix-compatibility interfaces are
   clear.
 - Prove finite-program agreement and almost-sure-termination bridges before exposing a
@@ -1228,6 +1237,11 @@ Use a simple geometric/rejection-style `DynComputation`:
 - take a measure or subprobability supremum;
 - prove the fixpoint equation and total-mass convergence.
 
+The generic foundations are implemented: resolved truncations are monotone, their measure
+supremum is pointwise on measurable events, and its total mass is at most one. The
+geometric/rejection canary, fixpoint law, finite-program agreement, and termination convergence
+remain.
+
 **Gate:** divergence is represented as missing mass without conflating it with a returned
 `none`, and the finite `OracleComp` case agrees with `evalDist`.
 
@@ -1261,9 +1275,9 @@ users retain ordinary discrete probability notation.
 |---|---|---|
 | Exact monadic return support | Lean core / PolyFun | Probability-independent control semantics |
 | FreeM folds and generic coalgebraic truncation | cslib / PolyFun | Reusable computation structure |
-| General measure, kernel, integral, and uniform-measure lemmas | Mathlib | Broad mathematical scope |
-| Generic discrete-measure conveniences | Mathlib or cslib | Useful beyond cryptography |
-| Experimental bundled subprobability type | ToMathlib initially | Prove the API before proposing upstream |
+| General measure, kernel, integral, and uniform-measure lemmas | ToMathlib for now | Follow Mathlib closely without opening upstream work during the design migration |
+| Generic discrete-measure conveniences | ToMathlib for now | Keep migration utilities local and easy to delete when upstream subsumes them |
+| Experimental bundled subprobability type | ToMathlib initially | Prove the API and reassess its long-term home after the design migration |
 | Oracle query probability interpretation | VCVio | Oracle-specific semantic policy |
 | `evalDist`, `Pr[...]`, crypto distances, and reduction lemmas | VCVio | Stable crypto-facing API |
 | Finite consumer canaries | Examples and ArkLib | Validate ergonomics on real proofs |
@@ -1444,16 +1458,16 @@ read through the GitHub API rather than from PR prose.
 ### 19.3 Measured exposure
 
 Across the non-test libraries (`VCVio/`, `ToMathlib/`, `Examples/`, `LatticeCrypto/`,
-`HashSig/`): **875** occurrences of `PMF` not preceded by another letter — i.e. excluding
-`SPMF` and `FinRatPMF` — across **74** files; 1925 occurrences across 123 files if the
-derived names are counted. Roughly 541 lemma/theorem declarations live under
+`HashSig/`): **884** lexical occurrences of bare `PMF` — i.e. excluding `SPMF`, `FinRatPMF`,
+and longer identifiers — across **74** files; **2718** `PMF` substrings occur across 123 files
+when derived names are counted. Roughly 541 lemma/theorem declarations live under
 `VCVio/EvalDist/` and 240 under `ToMathlib/Probability*`.
 
-Densest files, by bare-`PMF` count: `ProgramLogic/Relational/Quantitative.lean` (104),
-`ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean` (67),
-`.../RenyiDivergence.lean` (66), `EvalDist/TVDist.lean` (59),
-`ToMathlib/ProbabilityTheory/SPMF.lean` (56), `ToMathlib/ProbabilityTheory/Coupling.lean`
-(36), `EvalDist/Defs/Basic.lean` (31).
+Densest files, by bare-`PMF` count: `ProgramLogic/Relational/Quantitative.lean` (138),
+`EvalDist/TVDist.lean` (81),
+`ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean` (76),
+`.../TotalVariation.lean` (75), `ToMathlib/ProbabilityTheory/SPMF.lean` (69),
+`ToMathlib/ProbabilityTheory/Coupling.lean` (45), and `EvalDist/Defs/Basic.lean` (32).
 
 The point of the second number is that the migration cost is concentrated, not uniform:
 the top seven files carry roughly half of the direct exposure, and four of them are
