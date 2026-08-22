@@ -7,7 +7,7 @@ The accepted design for new work is
 [`Denotational Probability Semantics`](../reading/denotational-probability-semantics.md): use
 Mathlib measures for closed denotations, kernels for environment/state-indexed computations,
 effect-preserving outcome types for transformers, and keep `Pr[...]` as the discrete compatibility
-surface.
+surface. [`docs/reading/`](../reading/README.md) indexes the full design record.
 
 ## Core Definitions
 
@@ -19,19 +19,6 @@ surface.
 | `probFailure mx` | `ℝ≥0∞` | `Pr[⊥ \| mx]` | `EvalDist/Defs/Basic.lean` |
 | `support mx` | `Set α` | — | `EvalDist/Defs/Support.lean` |
 | `finSupport mx` | `Finset α` | — | `EvalDist/Defs/Support.lean` |
-
-## Measure-Facing Semantics
-
-Use `PFunctor.FreeM.denote` for a closed measure denotation. For discrete oracle answers,
-`FreeM.isProbabilityMeasure_denote` proves it has mass one and `FreeM.denote_apply_setOf`
-transports an existing `Pr[...]` fact to any measurable event.
-
-`MeasureSemantics` retains `OptionT`/`ExceptT`/`WriterT` outcomes and turns `ReaderT`/`StateT`
-computations into Mathlib Markov kernels. For a potentially nonterminating PolyFun resumption,
-`Resumption.outputMeasure k` is the returned mass visible at fuel `k`, while
-`Resumption.returnedMeasure` is their increasing, fuel-free subprobability limit. Infinite trace
-laws require a measurable coalgebra and should be built with Mathlib kernels rather than from an
-arbitrary continuation.
 
 ## ProbComp and Sampling
 

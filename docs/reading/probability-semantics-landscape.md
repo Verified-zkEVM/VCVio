@@ -1,13 +1,13 @@
 # Probability Semantics for Computations: Landscape and Design Options
 
 > Status: living evidence survey. The accepted implementation baseline is
-> [`denotational-probability-semantics.md`](denotational-probability-semantics.md).
+> `denotational-probability-semantics.md`, which lands with the measure-semantics work.
 >
 > Snapshot date: 2026-08-21. Independently re-verified against source on disk and
 > against the live repositories on 2026-08-21; see [§19](#19-verification-log).
 >
 > The original repository snapshot used Mathlib/PolyFun `v4.32.2`; implementation findings were
-> rechecked on the current Mathlib `v4.33.0` and PolyFun `v4.33.1` pins. Open-PR descriptions and
+> rechecked on the current Mathlib `v4.33.0` and PolyFun `v4.33.2` pins. Open-PR descriptions and
 > upstream-`master` observations are explicitly identified below.
 >
 > **Evidence discipline.** Every claim that upstream already provides something must
@@ -1379,6 +1379,9 @@ users retain ordinary discrete probability notation.
 - [Bluebell paper](https://arxiv.org/abs/2402.18708)
 - [Verified-zkEVM iris-lean](https://github.com/Verified-zkEVM/iris-lean)
 - [Lean community iris-lean](https://github.com/leanprover-community/iris-lean)
+- [`docs/reading/mathlib-integration-shape.md`](mathlib-integration-shape.md)
+- `docs/reading/denotational-probability-semantics.md` and
+  `docs/reading/measure-semantics-spike.md` (they document the prototype and land with it)
 - [`docs/agents/probability.md`](../agents/probability.md)
 - [`docs/agents/program-logic.md`](../agents/program-logic.md)
 
@@ -1476,8 +1479,8 @@ counterpart. That is a different problem from the evaluator migration and should
 separately.
 
 The per-file figures above are the occurrence counts maintained by
-[`scripts/pmf_boundary_baseline.tsv`](../../scripts/pmf_boundary_baseline.tsv), which the CI gate
-regenerates. They supersede an earlier revision of this section whose per-file numbers were
+`scripts/pmf_boundary_baseline.tsv` and its CI gate, which land with the measure-semantics work
+rather than on `main`. They supersede an earlier revision of this section whose per-file numbers were
 produced with `grep -c` and therefore counted matching *lines* rather than occurrences; the totals
 were unaffected, the breakdown was not.
 
@@ -1485,5 +1488,11 @@ were unaffected, the breakdown was not.
 
 Lean's cadence is about four weeks: `v4.31.0` 2026-06-15, `v4.32.0` 2026-07-13,
 `v4.33.0` 2026-08-10, so `v4.34.0` is expected around 2026-09-07. At the time of this
-pass Lean, Mathlib, and cslib all carry `v4.34.0-rc2`; PolyFun's newest tag is `v4.33.1`, so the
-`MonadAttach` workstream still has no tagged dependency to build against.
+pass Lean, Mathlib, and cslib all carry `v4.34.0-rc2`; PolyFun's newest tag is `v4.33.2`. PolyFun
+#138 is still open, so no tagged PolyFun release carries `MonadAttach` and that workstream has
+nothing to build against yet.
+
+This line has gone stale twice in a day — `v4.33.1` was current when §19 was first written, and
+again when it was first corrected. Re-check the tags at the moment of editing rather than trusting
+a recent reading; the substantive claim (no tagged `MonadAttach`) has held throughout, but the tag
+number has not.
