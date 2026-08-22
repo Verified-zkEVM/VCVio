@@ -55,6 +55,7 @@ VCVio/OracleComp/Constructions/SampleableType.lean	1
 VCVio/OracleComp/Constructions/WithoutReplacement.lean	1
 VCVio/OracleComp/EvalDist.lean	24
 VCVio/OracleComp/FinRatPMF.lean	3
+VCVio/OracleComp/OracleSpec.lean	1
 VCVio/OracleComp/ProbComp.lean	2
 VCVio/OracleComp/QueryTracking/Birthday.lean	1
 VCVio/OracleComp/QueryTracking/QueryCost.lean	1
