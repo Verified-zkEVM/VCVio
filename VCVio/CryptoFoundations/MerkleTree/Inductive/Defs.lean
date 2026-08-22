@@ -81,6 +81,15 @@ def singleHash {m : Type _ → Type _} [Monad m] [hq : HasQuery (spec α) m]
   let out ← hq.query ⟨left, right⟩
   return out
 
+/-- Interpreting one Merkle hash query applies the supplied hash implementation. -/
+@[simp]
+lemma simulateQ_singleHash (f : QueryImpl (spec α) Id) (left right : α) :
+    simulateQ f
+        (singleHash (m := OracleComp (spec α)) left right) =
+      f (left, right) := by
+  change simulateQ f (liftM ((spec α).query (left, right))) = _
+  rw [simulateQ_spec_query]
+
 /-- Build the full Merkle tree, returning the tree populated with data on all its nodes -/
 @[simp, grind]
 def buildMerkleTree {m : Type _ → Type _} [Monad m] [HasQuery (spec α) m]
@@ -188,8 +197,12 @@ lemma simulateQ_getPutativeRoot {s} (idx : BinaryTree.SkeletonLeafIndex s) (leaf
   induction idx generalizing leafValue with
   | ofLeaf => rfl
   | ofLeft idxLeft ih | ofRight idxRight ih =>
-    simp only [getPutativeRoot, getPutativeRootWithHash, singleHash, simulateQ_bind, ih]
-    rfl
+    change List.Vector α (_ + 1) at proof
+    simp only [getPutativeRoot, getPutativeRootWithHash,
+      SkeletonLeafIndex.depth]
+    rw [simulateQ_bind, ih]
+    change simulateQ f (singleHash _ _) = _
+    rw [simulateQ_singleHash]
 
 /--
 Verify a Merkle proof `proof` that a given `leaf` at index `i` is in the Merkle tree with given

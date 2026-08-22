@@ -109,7 +109,7 @@ lemma simulateQ_liftM_spec_query (q : hashSpec.Domain) :
   change simulateQ (unifFwdImpl hashSpec + ro)
     (liftM (liftM (hashSpec.query q) :
       OracleQuery (unifSpec + hashSpec) _)) = _
-  simp [simulateQ_query]
+  exact QueryImpl.simulateQ_add_liftM_query_right (unifFwdImpl hashSpec) ro q
 
 /-- Simulating a `HasQuery.query` hash query through `unifFwdImpl + ro` dispatches it to the
 hash-oracle handler `ro`, matching `simulateQ_liftM_spec_query` through the monad-lift form. -/
@@ -128,10 +128,13 @@ variable {ι : Type} {spec : OracleSpec ι} {α : Type}
 
 /-- The random-oracle simulation of a plain `OracleComp` never fails on any starting cache. -/
 theorem neverFail_simulateQ_randomOracle_run
-    [DecidableEq ι] [spec.Inhabited] [(t : spec.Domain) → SampleableType (spec.Range t)]
+    [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
     (oa : OracleComp spec α) (cache : spec.QueryCache) :
     NeverFail ((simulateQ randomOracle oa).run cache) := by
-  grind only [= neverFail_iff, = probFailure_of_liftM_PMF]
+  let : spec.Inhabited :=
+    { inhabitedB := fun t =>
+        Classical.inhabited_of_nonempty (α := spec.Range t) inferInstance }
+  infer_instance
 
 /-- Running the lazy random oracle on an uncached query `t` and binding the result samples the
 fresh answer uniformly, so the support of the bound computation is the union over all answers of

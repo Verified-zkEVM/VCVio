@@ -418,7 +418,7 @@ theorem addressed_oriented_binding {s : Skeleton}
       nodeHash a (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).1
           (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).2
         = nodeHash a c.1 c.2 := by
-  letI : DecidableEq α := Classical.decEq α
+  let : DecidableEq α := Classical.decEq α
   obtain ⟨a, c, hwalk⟩ :=
     findCollisionAddressed_oriented nodeHash ld idx y proof₂ hroot hne
   have hcol := findCollisionAddressed_sound nodeHash idx _ proof₂ (ld.get idx) y _ hwalk

@@ -42,8 +42,9 @@ open OracleSpec ENNReal
 
 open scoped PFunctor
 
-set_option allowUnsafeReducibility true in
-attribute [local reducible] OracleSpec.toPFunctor PFunctor.Idx
+/- Oracle traces are `PFunctor.Idx` values; the cursor probability proofs
+specialize dependent trace entries at implicit transparency. -/
+attribute [local implicit_reducible] PFunctor.Idx
 
 namespace OracleComp
 
@@ -213,7 +214,9 @@ private theorem probOutput_pair_eq_observedForkPair_found [spec.DecidableEq] [Is
     change _ = PFunctor.FreeM.map (observe ∘ PFunctor.FreeM.output main)
       (PFunctor.FreeM.map PFunctor.FreeM.Cursor.Occurrence.Completion.path occurrence.complete)
     rw [← PFunctor.FreeM.comp_map]
-    rfl
+    apply congrArg (fun f => PFunctor.FreeM.map f occurrence.complete)
+    funext completed
+    rw [Function.comp_apply, Function.comp_apply]
   rw [hkernel]
   have hid : (fun a : Option β => a) <$>
       (Cursor.complete (PFunctor.FreeM.Cursor.Split.found occurrence) >>=
@@ -231,8 +234,8 @@ theorem sq_probOutput_map_le_observedForkPair [spec.DecidableEq] [IsUniformSpec 
       Pr[= (some (some value, some value) : Option (Option β × Option β)) |
         observedForkPair main i n observe] := by
   classical
-  letI : DecidableEq spec.Domain := inferInstance
-  letI (j : spec.Domain) : DecidableEq (spec.Range j) := inferInstance
+  let : DecidableEq spec.Domain := inferInstance
+  let (j : spec.Domain) : DecidableEq (spec.Range j) := inferInstance
   set y : Option β := some value
   let splitComp : OracleComp spec
       {split : PFunctor.FreeM.Cursor.Split i main n // split.Valid} :=

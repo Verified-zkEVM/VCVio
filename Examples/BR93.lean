@@ -209,25 +209,14 @@ private lemma forall_inl_of_mem_support_liftLog {β : Type} (p : ProbComp β)
     rw [List.mem_append] at he
     rcases he with he | he
     · -- the single lifted query logs a left-oracle entry
-      have hlog : pp.1.2 = [⟨Sum.inl t, pp.1.1⟩] := by
-        rw [liftComp_query] at hpp
-        simp only [OracleQuery.input_query, OracleQuery.cont_query, Functor.map_id, id_eq] at hpp
-        rw [show (liftM (OracleSpec.query t) :
-            OracleComp (RO_Spec Rand M) (unifSpec.Range t)) =
-            liftM (OracleSpec.query (Sum.inl t) :
-              OracleQuery (RO_Spec Rand M) (unifSpec.Range t)) from rfl] at hpp
-        simp only [simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
-          Functor.map_id, id_eq, roQueryImpl, QueryImpl.withLogging_apply, add_apply_inl,
-          WriterT.run_bind', WriterT.run_monadLift', StateT.run_bind, bind_pure_comp,
-          support_bind, Set.mem_iUnion] at hpp
-        obtain ⟨i, hi, rfl⟩ := hpp
-        rw [StateT.run_map, support_map] at hi
-        obtain ⟨j, _, rfl⟩ := hi
-        rfl
-      rw [hlog] at he
-      simp only [List.mem_singleton] at he
-      subst he
-      exact ⟨t, rfl⟩
+      rw [liftComp_query] at hpp
+      simp only [OracleQuery.input_query, OracleQuery.cont_query, Functor.map_id, id_eq] at hpp
+      have hinput :=
+        QueryImpl.fst_eq_input_of_mem_support_run_simulateQ_withLogging_liftM_stateT
+          (so := roQueryImpl (Rand := Rand) (M := M))
+          (q := (liftM (unifSpec.query t) : OracleQuery (RO_Spec Rand M) _))
+          (s := s) hpp he
+      exact ⟨t, by simpa [OracleQuery.liftM_add_left_def] using hinput⟩
     · exact ih pp.1.1 pp.2 qq hqq e he
 
 omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand]
@@ -422,8 +411,8 @@ private lemma find?_append_left_false {α : Type} (xs ys : List α) (pred : α �
   rw [List.find?_append,
     List.find?_eq_none.2 fun x hx => by rw [h x hx]; exact Bool.false_ne_true, Option.none_or]
 
-omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand] [Inhabited M]
-  [SampleableType M] [AddCommGroup M] in
+omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand] [Inhabited Rand]
+  [Inhabited M] [SampleableType M] [AddCommGroup M] in
 /-- If the transcript contains a right-oracle query at `r`, then searching it for a query whose
 forward image matches `tdp.forward pk r` succeeds with a right-oracle entry whose preimage has the
 matching forward image. This is the pointwise heart of the bad-event reduction: a bad transcript

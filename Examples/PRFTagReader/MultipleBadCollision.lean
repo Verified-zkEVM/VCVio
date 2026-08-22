@@ -87,11 +87,12 @@ lemma multipleBadStep_bad_le
         (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
             (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) (s, c) >>=
           pure ∘ fun r => (r.1, (r.2.1, r.2.2), multipleBadAdvance tag sB r.1)] ≤ _
+    rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot]
+    simp only [unlinkOracleSpec_range_inl]
     rw [probEvent_bind_pure_comp]
     -- Now the event is `(multipleBadAdvance tag sB r.1).bad = true`, evaluated on the multiple-
     -- ideal tag step. Unfold the tag step to its `idealCacheStep` form, factoring the structure
     -- update through a `set` to sidestep the 4.29 rewrite/elaboration quirk on `{ s with … }`.
-    rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot]
     set advU := ({ sessionsUsed :=
         Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) } : UnlinkState TagId)
     change probEvent (($ᵗ Nonce : ProbComp Nonce) >>= fun nonce =>
@@ -381,7 +382,7 @@ lemma simulateQ_multipleBad_prob_le
       · -- Slot exhausted: the tag step is `pure (none, (s, c), sB)`; induct directly.
         rw [multipleBadQueryImpl_tag_run tag ((s, c), sB),
           multipleIdealQueryImpl_tag_run_of_not_lt tag s c hslot]
-        simp only [pure_bind, bind_assoc, multipleBadAdvance]
+        simp only [multipleBadAdvance]
         exact ih none s c sB hbounded hbad hused hsync
     | inr transcript =>
       -- Reader branch: bad-world component untouched; induct on the continuation.

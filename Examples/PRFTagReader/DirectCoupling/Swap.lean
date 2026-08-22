@@ -251,7 +251,7 @@ private lemma singleTableHandler_simulateQ_swap_invariant
              ($ᵗ Nonce >>= fun nonce => pure _) >>= _
         rw [bind_assoc, bind_assoc]
         refine bind_congr fun nonce => ?_
-        rw [pure_bind, pure_bind, hcell_eq nonce]
+        simp only [unlinkOracleSpec_range_inl, pure_bind, hcell_eq nonce]
         refine ih _ _ ?_
         -- Post-step state preserves hAdv: sessionsUsed tag either unchanged (T ≠ tag) or
         -- increased by 1 (T = tag); in either case ≥ s.sessionsUsed tag > slotK.
@@ -291,16 +291,17 @@ private lemma singleTableHandler_simulateQ_swap_invariant
           set tagOut : TagId := tag with htag_def
           unfold unlinkReaderAccepts tagAccepts
           rw [decide_eq_decide]
-          simp only [decide_eq_true_iff, singlePattern]
+          simp only [singlePattern]
           constructor
-          · rintro ⟨T', sid', hsid'⟩
+          · rintro ⟨T', hT'⟩
+            obtain ⟨sid', hsid'⟩ := of_decide_eq_true hT'
             by_cases hCase0 : (T', sid') = (tagOut, (0 : Fin sessionsPerTag))
             · obtain ⟨rfl, rfl⟩ : T' = tagOut ∧ sid' = 0 := Prod.mk.inj hCase0
-              exact ⟨tagOut, slotK, hswap_0 ▸ hsid'⟩
+              exact ⟨tagOut, decide_eq_true ⟨slotK, hswap_0 ▸ hsid'⟩⟩
             · by_cases hCaseK : (T', sid') = (tagOut, slotK)
               · obtain ⟨rfl, rfl⟩ : T' = tagOut ∧ sid' = slotK := Prod.mk.inj hCaseK
-                exact ⟨tagOut, 0, hswap_K ▸ hsid'⟩
-              · refine ⟨T', sid', ?_⟩
+                exact ⟨tagOut, decide_eq_true ⟨0, hswap_K ▸ hsid'⟩⟩
+              · refine ⟨T', decide_eq_true ⟨sid', ?_⟩⟩
                 have h_g_eq : g₁ ((T', sid'), transcript.nonce) =
                     g₂ ((T', sid'), transcript.nonce) := by
                   refine heq ((T', sid'), transcript.nonce) ?_ ?_
@@ -309,14 +310,15 @@ private lemma singleTableHandler_simulateQ_swap_invariant
                   · intro h
                     exact hCaseK (congrArg (fun p => p.1) h)
                 exact h_g_eq ▸ hsid'
-          · rintro ⟨T', sid', hsid'⟩
+          · rintro ⟨T', hT'⟩
+            obtain ⟨sid', hsid'⟩ := of_decide_eq_true hT'
             by_cases hCase0 : (T', sid') = (tagOut, (0 : Fin sessionsPerTag))
             · obtain ⟨rfl, rfl⟩ : T' = tagOut ∧ sid' = 0 := Prod.mk.inj hCase0
-              exact ⟨tagOut, slotK, hswap_K ▸ hsid'⟩
+              exact ⟨tagOut, decide_eq_true ⟨slotK, hswap_K ▸ hsid'⟩⟩
             · by_cases hCaseK : (T', sid') = (tagOut, slotK)
               · obtain ⟨rfl, rfl⟩ : T' = tagOut ∧ sid' = slotK := Prod.mk.inj hCaseK
-                exact ⟨tagOut, 0, hswap_0 ▸ hsid'⟩
-              · refine ⟨T', sid', ?_⟩
+                exact ⟨tagOut, decide_eq_true ⟨0, hswap_0 ▸ hsid'⟩⟩
+              · refine ⟨T', decide_eq_true ⟨sid', ?_⟩⟩
                 have h_g_eq : g₁ ((T', sid'), transcript.nonce) =
                     g₂ ((T', sid'), transcript.nonce) := by
                   refine heq ((T', sid'), transcript.nonce) ?_ ?_

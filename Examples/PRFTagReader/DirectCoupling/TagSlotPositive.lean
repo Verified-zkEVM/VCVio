@@ -628,7 +628,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
   --   asymmetry; rename u_0 ↔ u_K via the two-cell marginalization.
   rcases hc0 : c ((tag, (0 : Fin sessionsPerTag)), n) with _ | u₀
   · -- Case M-miss: c slot-0 = none. Marginalize slot-0 → IH → swap-bridge → re-marginalize.
-    haveI : Nonempty Digest :=
+    have : Nonempty Digest :=
       ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
     -- Step 1: marginalize gS over slot-0 cell (same pattern as slot-zero Case B).
     have hmarg : ∀ {β : Type}

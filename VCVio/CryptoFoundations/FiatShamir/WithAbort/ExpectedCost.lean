@@ -476,7 +476,7 @@ theorem verify_expectedQueryCost_eq
       | none => val 0
       | some (w', _) => val (costFn (msg, w')) := by
   rcases sig with _ | ⟨w', z⟩
-  · letI : DecidableEq ω := Classical.decEq ω
+  · let : DecidableEq ω := Classical.decEq ω
     simp [FiatShamirWithAbort, HasQuery.expectedQueryCost, AddWriterT.expectedCost,
       HasQuery.Program.withAddCost]
   · refine HasQuery.expectedQueryCost_eq_of_usesCostExactly ?_ hval

@@ -127,12 +127,13 @@ structure IND_CCA_Adversary (kem : KEMScheme (OracleComp spec) K PK SK C) where
 /-- Pre-challenge decapsulation oracle. -/
 def IND_CCA_preChallengeImpl (kem : KEMScheme (OracleComp spec) K PK SK C)
     (sk : SK) : QueryImpl (IND_CCA_oracleSpec kem) (OracleComp spec) :=
-  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) + fun c => kem.decaps sk c
+  QueryImpl.add (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec))
+    fun c => kem.decaps sk c
 
 /-- Post-challenge decapsulation oracle: the challenge ciphertext itself maps to `none`. -/
 def IND_CCA_postChallengeImpl (kem : KEMScheme (OracleComp spec) K PK SK C)
     (sk : SK) (cStar : C) : QueryImpl (IND_CCA_oracleSpec kem) (OracleComp spec) :=
-  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) + fun c =>
+  QueryImpl.add (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) fun c =>
     if c = cStar then return none else kem.decaps sk c
 
 /-- IND-CCA real-or-random experiment for a KEM. -/
@@ -177,20 +178,21 @@ theorem IND_CPA_Game_eq_IND_CCA_Game_toIND_CCA
     kem.IND_CPA_Game runtime adversary = kem.IND_CCA_Game runtime adversary.toIND_CCA := by
   have h : ∀ (impl₂ : QueryImpl (C →ₒ Option K) (OracleComp spec))
       {α : Type} (oa : OracleComp spec α),
-      simulateQ ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) + impl₂)
+      simulateQ (QueryImpl.add
+          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) impl₂)
         (simulateQ (HasQuery.toQueryImpl (spec := spec)
           (m := OracleComp (spec + (C →ₒ Option K)))) oa) = oa := by
     intro impl₂ α oa
     rw [← QueryImpl.simulateQ_compose]
-    have : (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec) + impl₂) ∘ₛ
+    have : QueryImpl.add
+          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) impl₂ ∘ₛ
         HasQuery.toQueryImpl (spec := spec) (m := OracleComp (spec + (C →ₒ Option K))) =
-        QueryImpl.id' spec := by
+          QueryImpl.id' spec := by
+      rw [QueryImpl.add_eq_hAdd]
       ext t
-      simp only [QueryImpl.compose, QueryImpl.id']
-      change simulateQ (QueryImpl.id' spec + impl₂)
-        (liftM (liftM (spec.query t) :
-          OracleQuery (spec + (C →ₒ Option K)) _)) = _
-      simp [simulateQ_query]
+      simp [QueryImpl.compose, HasQuery.toQueryImpl_eq_id']
+      simpa using
+        (QueryImpl.simulateQ_add_liftM_query_left (QueryImpl.id' spec) impl₂ t)
     rw [this, simulateQ_id']
   simp only [IND_CPA_Game, IND_CCA_Game, IND_CPA_Adversary.toIND_CCA,
     IND_CCA_preChallengeImpl, IND_CCA_postChallengeImpl, IND_CCA_oracleSpec, h]

@@ -115,54 +115,6 @@ abbrev toMachine {α β : Type u} (program : α → OracleComp spec β) :
 
 end OracleComp
 
-namespace PFunctor.DynSystem.DynComputation
-
-/- Interface transport commutes with fuelled unrolling. Stated at the generic
-`DynComputation` level; an upstream candidate for `DynComputation/Bounded`. -/
-section UnrollWrap
-
-universe u' uA uB uA₂ uB₂ uα uβ
-
-variable {p : PFunctor.{uA, uB}} {q : PFunctor.{uA₂, uB₂}} {α : Type uα} {β : Type uβ}
-
-/-- Fuelled unrolling commutes with interface transport along a lens: the unrolled
-query tree of the wrapped machine is the lens-translated unrolled tree. The syntactic
-(`FreeM`-level) content of interface wrapping, from which handler-level wrapping laws
-follow by `FreeM.liftM` naturality without touching machine states. -/
-theorem unroll_wrap (M : DynComputation.{u'} p α β) (w : PFunctor.Lens p q)
-    (k : ℕ) (s : M.State) :
-    (M.wrap w).unroll k s = PFunctor.FreeM.mapLens w (M.unroll k s) := by
-  induction k generalizing s with
-  | zero =>
-    cases hview : M.view s with
-    | inl b =>
-      rw [M.unroll_return 0 s b hview,
-        (M.wrap w).unroll_return 0 s b (by simp [hview])]
-      rfl
-    | inr qq =>
-      obtain ⟨t, next⟩ := qq
-      rw [M.unroll_query_zero s t next hview,
-        (M.wrap w).unroll_query_zero s (w.toFunA t)
-          (fun d => next (w.toFunB t d)) (by simp [hview])]
-      rfl
-  | succ k ih =>
-    cases hview : M.view s with
-    | inl b =>
-      rw [M.unroll_return (k + 1) s b hview,
-        (M.wrap w).unroll_return (k + 1) s b (by simp [hview])]
-      rfl
-    | inr qq =>
-      obtain ⟨t, next⟩ := qq
-      rw [M.unroll_query_succ k s t next hview,
-        (M.wrap w).unroll_query_succ k s (w.toFunA t)
-          (fun d => next (w.toFunB t d)) (by simp [hview])]
-      exact congrArg (PFunctor.FreeM.liftBind (w.toFunA t))
-        (funext fun d => ih (next (w.toFunB t d)))
-
-end UnrollWrap
-
-end PFunctor.DynSystem.DynComputation
-
 namespace PFunctor.DynSystem.DynComputation.ImplementsWithin
 
 /- The `OracleSpec`/`simulateQ` readings of the fuelled implementation relation live in the

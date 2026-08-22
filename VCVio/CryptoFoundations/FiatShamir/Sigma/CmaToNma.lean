@@ -35,6 +35,10 @@ universe u v
 
 open OracleComp OracleSpec
 
+/- Handler sums expose their dependent response family as `PFunctor.Obj` while
+the simulator normalizes routed query branches. -/
+attribute [local implicit_reducible] PFunctor.Obj
+
 namespace FiatShamir
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type}
@@ -171,9 +175,18 @@ private theorem simulatedNmaRoSim_run_hashQueryBound
     nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := (simulatedNmaRoSim (M := M) (Commit := Commit) (Chal := Chal) mc).run s) 1 := by
   cases hs : s (.inr mc) with
-  | some v => simp [simulatedNmaRoSim, hs, nmaHashQueryBound]
+  | some v =>
+      change Chal at v
+      simp only [simulatedNmaRoSim, StateT.run_bind, StateT.run_get, pure_bind, hs]
+      rw [StateT.run_pure]
+      trivial
   | none =>
-      simpa [simulatedNmaRoSim, hs, nmaHashQueryBound, isQueryBoundP_map_iff] using
+      simp only [simulatedNmaRoSim, StateT.run_bind, StateT.run_get, pure_bind, hs]
+      change nmaHashQueryBound (M := M)
+        ((simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inr mc)).run s >>=
+          fun p : Chal × (fsRoSpec M Commit Chal).QueryCache =>
+            pure (p.1, p.2.cacheQuery (.inr mc) p.1)) 1
+      simpa [nmaHashQueryBound, isQueryBoundP_map_iff] using
         simulatedNmaFwd_run_hashQueryBound (M := M) (.inr mc) s
 
 omit [Fintype Chal] [Finite Commit] [Finite Resp] [Inhabited Resp] [Inhabited Commit] in

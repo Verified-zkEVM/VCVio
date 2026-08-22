@@ -221,7 +221,7 @@ theorem ofBackend_injective
   apply PolyBackend.toPolynomial_injective
   simp only [NegacyclicQuotient.ofBackend, NegacyclicQuotient.ofPolynomial] at heq
   rcases Nat.eq_zero_or_pos backend.degree with hn | hn
-  · haveI : IsEmpty (Fin backend.degree) := hn ▸ inferInstance
+  · have : IsEmpty (Fin backend.degree) := hn ▸ inferInstance
     simp [PolyBackend.toPolynomial]
   have hmem : backend.toPolynomial p - backend.toPolynomial q ∈
       Ideal.span ({negacyclicModulus R backend.degree} : Set (Polynomial R)) := by

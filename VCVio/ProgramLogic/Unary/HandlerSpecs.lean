@@ -383,11 +383,11 @@ theorem seededOracle_triple_of_cons (t : spec.Domain)
     Std.Do.Triple
       (seededOracle t : StateT (QuerySeed spec) (OracleComp spec) (spec.Range t))
       (spred(fun seed => ⌜seed = seed₀⌝))
-      (⇓ v seed' => ⌜v = u ∧ seed' = Function.update seed₀ t us⌝) := by
+      (⇓ v seed' => ⌜v = u ∧ seed' = seed₀.update t us⌝) := by
   rw [triple_stateT_iff_forall_support]
   intro seed hseed v seed' hmem
   rw [hseed] at hmem
-  change v = u ∧ seed' = Function.update seed₀ t us
+  change v = u ∧ seed' = seed₀.update t us
   simpa only [seededOracle.apply_eq, StateT.run, StateT.mk, h, support_pure,
     Set.mem_singleton_iff, Prod.mk.injEq] using hmem
 
@@ -439,8 +439,9 @@ theorem loggingOracle_triple (t : spec.Domain) (log₀ : QueryLog spec) :
         WriterT (QueryLog spec) (OracleComp spec) (spec.Range t))
       (spred(fun log => ⌜log = log₀⌝))
       (⇓ v log' => ⌜log' = log₀ ++ [⟨t, v⟩]⌝) := by
-  unfold loggingOracle QueryImpl.withLogging QueryImpl.withTraceAppend QueryImpl.postInsert
-    QueryImpl.ofLift
+  unfold loggingOracle
+  rw [QueryImpl.withLogging_apply]
+  unfold QueryImpl.ofLift
   mvcgen
   subst_vars
   rw [wpProp_iff_forall_support]
@@ -455,8 +456,9 @@ theorem loggingOracle_triple_prefix (t : spec.Domain) (log₀ : QueryLog spec) :
         WriterT (QueryLog spec) (OracleComp spec) (spec.Range t))
       (spred(fun log => ⌜log = log₀⌝))
       (⇓ _ log' => ⌜log₀ <+: log'⌝) := by
-  unfold loggingOracle QueryImpl.withLogging QueryImpl.withTraceAppend QueryImpl.postInsert
-    QueryImpl.ofLift
+  unfold loggingOracle
+  rw [QueryImpl.withLogging_apply]
+  unfold QueryImpl.ofLift
   mvcgen
   subst_vars
   rw [wpProp_iff_forall_support]
@@ -505,6 +507,7 @@ theorem countingOracle_triple (t : spec.Domain) (qc₀ : QueryCount ι) :
       WriterT (QueryCount ι) (OracleComp spec) (spec.Range t)).run =
         (fun x => (x, QueryCount.single t * (1 : QueryCount ι))) <$>
           (HasQuery.query t : OracleComp spec _) := by
+    rw [OracleSpec.countingOracle_apply]
     change (_ >>= _ : OracleComp _ _) = _
     simp [WriterT.run_tell, HasQuery.instOfMonadLift_query, monad_norm]
   rw [hrun] at hmem
@@ -568,6 +571,7 @@ theorem costOracle_triple (costFn : spec.Domain → ω) (t : spec.Domain) (s₀ 
   have hrun : (costOracle costFn t : WriterT ω (OracleComp spec) (spec.Range t)).run =
       (fun x => (x, costFn t * (1 : ω))) <$>
         (HasQuery.query t : OracleComp spec _) := by
+    rw [costOracle_apply]
     change (_ >>= _ : OracleComp _ _) = _
     simp [WriterT.run_tell, HasQuery.instOfMonadLift_query, monad_norm]
   rw [hrun] at hmem

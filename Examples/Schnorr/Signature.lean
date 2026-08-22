@@ -200,8 +200,8 @@ theorem signature_euf_cma (g : G)
         ((qS : ENNReal) * (qS + qH) * ((Fintype.card F : ℝ≥0∞)⁻¹))
       eps * (eps / (qH + 1 : ENNReal) - FiatShamir.challengeSpaceInv F) ≤
         Pr[= true | dlogExp g reduction] := by
-  haveI : Inhabited F := ⟨0⟩
-  haveI : Inhabited G := ⟨(0 : F) • g⟩
+  have : Inhabited F := ⟨0⟩
+  have : Inhabited G := ⟨(0 : F) • g⟩
   obtain ⟨red, hred⟩ := FiatShamir.euf_cma_bound
     (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
     (Schnorr.sigma_speciallySound F G g)

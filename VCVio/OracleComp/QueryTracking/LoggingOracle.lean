@@ -38,8 +38,7 @@ open OracleSpec OracleComp
 open scoped OracleSpec.PrimitiveQuery
 
 -- `QueryLog spec` is the list presentation of the corresponding PolyFun trace.
-set_option allowUnsafeReducibility true in
-attribute [local reducible] OracleSpec.toPFunctor PFunctor.Idx
+attribute [local implicit_reducible] PFunctor.Idx
 
 variable {ι} {spec : OracleSpec ι} {α β γ : Type u}
 
@@ -60,6 +59,14 @@ def writerTMapBase
     (inner : QueryImpl spec₀ (WriterT ω (OracleComp spec₁))) :
     QueryImpl spec₀ (WriterT ω m₁) := fun t =>
   WriterT.mk (simulateQ outer ((inner t).run))
+
+omit [EmptyCollection ω] [Append ω] in
+@[simp]
+theorem writerTMapBase_apply
+    (outer : QueryImpl spec₁ m₁)
+    (inner : QueryImpl spec₀ (WriterT ω (OracleComp spec₁)))
+    (t : spec₀.Domain) :
+    (outer.writerTMapBase inner t).run = simulateQ outer ((inner t).run) := rfl
 
 /-- Running a `WriterT` handler and then interpreting its base oracle
 computations is the same as first mapping the handler's base through the
@@ -91,7 +98,10 @@ lemma withLogging_eq_withTraceAppend (so : QueryImpl spec m) :
 
 @[simp, grind =]
 lemma withLogging_apply (so : QueryImpl spec m) (t : spec.Domain) :
-    so.withLogging t = do let u ← so t; tell [⟨t, u⟩]; return u := rfl
+    so.withLogging t = do let u ← so t; tell [⟨t, u⟩]; return u := by
+  rw [withLogging_eq_withTraceAppend]
+  exact withTraceAppend_apply so
+    (fun (t : spec.Domain) u => ([⟨t, u⟩] : QueryLog spec)) t
 
 lemma fst_map_run_withLogging [LawfulMonad m] (so : QueryImpl spec m) (mx : OracleComp spec α) :
     Prod.fst <$> (simulateQ (so.withLogging) mx).run =
@@ -142,7 +152,8 @@ lemma appendInputLog_eq_preInsert (so : QueryImpl loggedSpec m₀) :
 @[simp, grind =]
 lemma appendInputLog_apply [LawfulMonad m₀] (so : QueryImpl loggedSpec m₀)
     (t : loggedSpec.Domain) :
-    appendInputLog so t = (do modify (· ++ [t]); liftM (so t)) := rfl
+    appendInputLog so t = (do modify (· ++ [t]); liftM (so t)) := by
+  exact preInsert_apply so (fun t => modify (· ++ [t])) t
 
 @[simp]
 lemma run_withLogging_apply [LawfulMonad m₀] (so : QueryImpl loggedSpec m₀)
@@ -236,15 +247,20 @@ theorem map_run_withLogging_inputs_eq_run_appendInputLog
   induction oa using OracleComp.inductionOn generalizing initialInputs with
   | pure x => simp
   | query_bind t oa ih =>
+      dsimp only
       cases t with
-      | inl t' => simp [ih]
+      | inl t' =>
+          rw [simulateQ_add_query_bind_left, simulateQ_add_query_bind_left]
+          simp only [QueryImpl.liftTarget_apply, WriterT.run_bind', WriterT.run_liftM,
+            StateT.run_bind, StateT.run_monadLift, monadLift_self, map_bind,
+            monad_norm, List.empty_eq]
+          exact bind_congr fun u => by
+            simpa [Function.comp_apply] using ih u initialInputs
       | inr t' =>
-          simp only [OracleSpec.add_apply_inr, simulateQ_bind, simulateQ_query,
-            OracleQuery.input_query, OracleQuery.cont_query, add_apply_inr, withLogging_apply,
-            bind_pure_comp, map_bind, monad_norm, WriterT.run_bind', WriterT.run_liftM,
-            List.empty_eq, WriterT.run_tell, List.cons_append, List.nil_append,
-            appendInputLog_apply, modify, StateT.run_bind, StateT.run_modifyGet,
-            StateT.run_monadLift, monadLift_self]
+          rw [simulateQ_add_query_bind_right, simulateQ_add_query_bind_right]
+          simp only [WriterT.run_bind', StateT.run_bind, map_bind]
+          rw [run_withLogging_apply, run_appendInputLog_apply]
+          simp only [bind_assoc, pure_bind, Functor.map_map]
           exact bind_congr fun u => by simpa [List.append_assoc] using ih u (initialInputs ++ [t'])
 
 end inputLog

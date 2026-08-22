@@ -216,7 +216,7 @@ theorem wp_eq_tsum (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
   change μ (oa >>= fun a => pure (post a)) = _
   rw [μ_bind_eq_tsum]
   refine tsum_congr fun x => congrArg (Pr[= x | oa] * ·) ?_
-  haveI : DecidableEq ℝ≥0∞ := Classical.decEq _
+  have : DecidableEq ℝ≥0∞ := Classical.decEq _
   simp [μ, probOutput_pure]
 
 @[simp] theorem wp_const (oa : OracleComp spec α) (c : ℝ≥0∞) :

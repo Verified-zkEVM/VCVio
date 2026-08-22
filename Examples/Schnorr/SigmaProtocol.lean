@@ -201,7 +201,7 @@ theorem sigma_simCommitPredictability (g : G)
     (sigma F G g).simCommitPredictability (simTranscript F G g)
       ((Fintype.card F : ℝ≥0∞)⁻¹) := by
   classical
-  letI : Fintype G := Fintype.ofBijective _ hg
+  let : Fintype G := Fintype.ofBijective _ hg
   intro pk c₀
   have hcard_FG : Fintype.card G = Fintype.card F := (Fintype.card_of_bijective hg).symm
   have hinv_eq : (Fintype.card F : ℝ≥0∞)⁻¹ = (Fintype.card G : ℝ≥0∞)⁻¹ := by rw [hcard_FG]

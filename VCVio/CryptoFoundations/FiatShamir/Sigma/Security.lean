@@ -158,8 +158,8 @@ theorem euf_cma_bound
           (qS : ENNReal) * (qS + qH) * β)
       (eps * (eps / (qH + 1 : ENNReal) - challengeSpaceInv Chal)) ≤
         Pr[= true | hardRelationExp hr reduction] := by
-  haveI : DecidableEq M := Classical.decEq M
-  haveI : DecidableEq Commit := Classical.decEq Commit
+  have : DecidableEq M := Classical.decEq M
+  have : DecidableEq Commit := Classical.decEq Commit
   obtain ⟨nmaAdv, hAdv⟩ := euf_cma_to_nma σ hr M simTranscript
     ζ_zk hζ_zk hhvzk β hPredSim adv qS qH hQ
   obtain ⟨reduction, hRed⟩ := euf_nma_bound σ hr M hss hss_nf nmaAdv qH

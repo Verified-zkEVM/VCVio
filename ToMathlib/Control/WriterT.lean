@@ -43,11 +43,10 @@ attribute [grind =] LawfulAppend.empty_append
 instance {M : Type u → Type v} {ω : Type u} [Monad M]
     [EmptyCollection ω] [Append ω] [LawfulAppend ω] [LawfulMonad M] :
     LawfulMonad (WriterT ω M) := LawfulMonad.mk'
-  (bind_pure_comp := by simp [bind, WriterT.mk, WriterT.run, pure,
-    map_pure, LawfulAppend.append_empty, bind_pure_comp, Functor.map])
-  (id_map := by simp [Functor.map, WriterT.mk, WriterT.run])
-  (pure_bind := by simp [Bind.bind, Pure.pure, WriterT.mk, WriterT.run])
-  (bind_assoc := by simp [Bind.bind, WriterT.mk, WriterT.run, LawfulAppend.append_assoc])
+  (bind_pure_comp := fun _ _ => by ext; simp)
+  (id_map := fun _ => by ext; simp)
+  (pure_bind := fun _ _ => by ext; simp)
+  (bind_assoc := fun _ _ _ => by ext; simp [LawfulAppend.append_assoc])
 
 instance (α : Type u) : LawfulAppend (List α) where
   empty_append := by simp
@@ -195,9 +194,9 @@ lemma run_failure [Monoid ω] {α : Type u} : (failure : WriterT ω m α).run = 
 
 instance [Monoid ω] [LawfulMonad m] : LawfulMonadLift m (WriterT ω m) where
   monadLift_pure x := map_pure (·, 1) x
-  monadLift_bind {α β} x y := by
-    change WriterT.mk _ = WriterT.mk _
-    simp [monadLift_def, WriterT.mk, WriterT.run]
+  monadLift_bind {_ _} _ _ := by
+    ext
+    simp [MonadLift.monadLift]
 
 end fail
 

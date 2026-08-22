@@ -193,7 +193,7 @@ lemma runtimeWithCache_evalDist_eq_fsBaseImpl
           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)
         = (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) := by
-    simp [QueryImpl.liftTarget_apply, HasQuery.toQueryImpl, funext_iff]
+    simp [HasQuery.toQueryImpl, funext_iff]
   rw [hbase]
   grind
 

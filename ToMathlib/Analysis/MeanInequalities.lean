@@ -41,8 +41,8 @@ with `DiscreteMeasurableSpace`. No `Summable` hypotheses are needed. -/
 theorem inner_le_Lp_mul_Lq_tsum {p q : ℝ} (hpq : p.HolderConjugate q)
     (f g : ι → ℝ≥0∞) :
     ∑' i, f i * g i ≤ (∑' i, f i ^ p) ^ (1 / p) * (∑' i, g i ^ q) ^ (1 / q) := by
-  letI : MeasurableSpace ι := ⊤
-  haveI : DiscreteMeasurableSpace ι := ⟨fun _ => trivial⟩
+  let : MeasurableSpace ι := ⊤
+  have : DiscreteMeasurableSpace ι := ⟨fun _ => trivial⟩
   have := lintegral_mul_le_Lp_mul_Lq (α := ι) Measure.count hpq
     (AEMeasurable.of_discrete (f := f)) (AEMeasurable.of_discrete (f := g))
   simp only [lintegral_count, Pi.mul_apply] at this
