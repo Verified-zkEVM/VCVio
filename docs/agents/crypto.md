@@ -63,19 +63,43 @@ textbook `Commit(m) = (H(m, s), s)` scheme — exercising `cachingOracle`,
 and the
 [ROM commitment scheme walkthrough](end-to-end-examples.md#rom-commitment-scheme).
 
-### Sigma protocols (`SigmaProtocol`)
+### Challenge-verify protocols and sigma protocols (`ChallengeVerifyProtocol`, `SigmaProtocol`)
 
 ```lean
-structure SigmaProtocol
-    (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool) where
-  commit (stmt : Stmt) (wit : Wit) : ProbComp (Commit × PrvState)
-  respond (stmt : Stmt) (wit : Wit) (prvState : PrvState) (chal : Chal) : ProbComp Resp
+structure ChallengeVerifyProtocol
+    (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool)
+    (m : Type → Type) where
+  commit (stmt : Stmt) (wit : Wit) : m (Commit × PrvState)
+  respond (stmt : Stmt) (wit : Wit) (prvState : PrvState) (chal : Chal) : m Resp
   verify (stmt : Stmt) (commit : Commit) (chal : Chal) (resp : Resp) : Bool
-  sim (stmt : Stmt) : ProbComp Commit
-  extract (chal₁ : Chal) (resp₁ : Resp) (chal₂ : Chal) (resp₂ : Resp) : ProbComp Wit
+
+structure SigmaProtocol
+    (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool)
+    (m : Type → Type)
+    extends ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m where
+  sim (stmt : Stmt) : m Commit
+  extract (chal₁ : Chal) (resp₁ : Resp) (chal₂ : Chal) (resp₂ : Resp) : m Wit
 ```
 
-Every `SigmaProtocol` coerces to `IdenSchemeWithAbort` via `toIdenSchemeWithAbort` (wraps `respond` with `some`).
+`ChallengeVerifyProtocol` is the bare commit-challenge-response interaction; take it when the
+extractor is irrelevant. `SigmaProtocol` adds the simulator and extractor as data, so consumers
+such as the Fischlin transform and the Fiat-Shamir Σ-layer can run them. Dot notation resolves
+through the parent projection, so a `SigmaProtocol` uses the interaction properties directly.
+
+The monad `m` carries the participants' computations: `m := ProbComp` is the usual protocol whose
+only randomness is uniform sampling, while a general `m` lets the prover query oracles. Each
+property assumes only the semantics it consumes (`MonadLiftT m SPMF` for probability statements,
+`MonadLiftT m SetM` for `SpeciallySound`). `PerfectlyComplete` quantifies over the verifier's
+challenge pointwise, so it needs no sampling structure on `m`; the sampled form is recovered by
+`PerfectlyComplete.probOutput_uniform_challenge_eq_one`. The transcript-facing properties
+(`realTranscript`, `HVZK`, `PerfectHVZK`) draw the challenge as `liftM ($ᵗ Chal)` and so ask for
+`[SampleableType Chal] [MonadLiftT ProbComp m]`; at `m := ProbComp` that is definitionally the
+plain `$ᵗ Chal` (`realTranscript_probComp`).
+`PerfectlyComplete`, `HVZK`, `UniqueResponses`, and `realTranscript` live on
+`ChallengeVerifyProtocol`; `SpeciallySound` lives on `SigmaProtocol`, since it consumes `extract`.
+
+Every `ProbComp`-valued `ChallengeVerifyProtocol` coerces to `IdenSchemeWithAbort` via
+`toIdenSchemeWithAbort` (wraps `respond` with `some`).
 
 ### Identification scheme with aborts (`IdenSchemeWithAbort`)
 
