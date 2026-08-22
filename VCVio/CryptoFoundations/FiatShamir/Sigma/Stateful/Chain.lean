@@ -1916,7 +1916,6 @@ omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] i
 candidate/verifier split so the final verifier hash query is not charged to H3
 signing replacement. -/
 private theorem signedFreshAdv_H3_bound
-    (hsc : σ.sampleChal = ($ᵗ Chal : ProbComp Chal))
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk β : ℝ≥0∞) (hζ_zk : ζ_zk < ∞)
@@ -1963,7 +1962,7 @@ private theorem signedFreshAdv_H3_bound
   exact cmaReal_cmaSim_advantage_le_H3_bound_of_expectedQuerySlack
     M Commit Chal σ hr simT ζ_zk β A qS
     ((qS : ℝ≥0∞) * ζ_zk + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + qH) * β)
-    (cmaH3StepFacts_of_hvzk_predictability M Commit Chal σ hsc hr simT
+    (cmaH3StepFacts_of_hvzk_predictability M Commit Chal σ hr simT
       ζ_zk β hζ_zk hHVZK hCommit)
     (cmaH3RunFacts_of_queryBound_expectedLoss M Commit Chal σ hr ζ_zk β A qS
       ((qS : ℝ≥0∞) * ζ_zk + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + qH) * β)
@@ -2046,7 +2045,6 @@ This theorem carries the H1/H2/H3/H4 arithmetic directly in the stateful chain.
 The bound is in terms of the verify-wrapped adversary
 `nmaAdvFromCmaWithFinalQuery` at fork slot parameter `qH`. -/
 theorem cma_advantage_le_fork_bound_of_h5
-    (hsc : σ.sampleChal = ($ᵗ Chal : ProbComp Chal))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ) (hζ_zk : 0 ≤ ζ_zk)
     (hHVZK : σ.HVZK simT ζ_zk)
@@ -2088,7 +2086,7 @@ theorem cma_advantage_le_fork_bound_of_h5
     simpa [A, cmaH3Advantage, QueryImpl.Stateful.advantage] using
       signedFreshAdv_H3_bound (σ := σ) (hr := hr) (M := M)
         (Commit := Commit) (Chal := Chal) (Resp := Resp)
-        hsc adv simT (ENNReal.ofReal ζ_zk) β hζ_zk_lt hHVZK' hPredSim qS qH hQ
+        adv simT (ENNReal.ofReal ζ_zk) β hζ_zk_lt hHVZK' hPredSim qS qH hQ
   have hH3_prob :
       Pr[= true | (cmaReal M Commit Chal σ hr).runProb
         (cmaInit M Commit Chal Stmt Wit) A] ≤
@@ -2129,7 +2127,6 @@ omit [SampleableType Stmt] [SampleableType Wit] in
 leaving only the public-to-stateful H1/H2 compatibility premise. -/
 theorem cma_advantage_le_fork_bound_of_h1h2
     [Finite Commit] [Finite Resp] [Inhabited Commit] [Inhabited Resp]
-    (hsc : σ.sampleChal = ($ᵗ Chal : ProbComp Chal))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ) (hζ_zk : 0 ≤ ζ_zk)
     (hHVZK : σ.HVZK simT ζ_zk)
@@ -2150,7 +2147,7 @@ theorem cma_advantage_le_fork_bound_of_h1h2
         (qS : ENNReal) * ((qS : ENNReal) + (qH : ENNReal)) * β :=
   cma_advantage_le_fork_bound_of_h5 (σ := σ) (hr := hr)
     (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
-    (Stmt := Stmt) (Wit := Wit) hsc simT ζ_zk hζ_zk hHVZK β hPredSim
+    (Stmt := Stmt) (Wit := Wit) simT ζ_zk hζ_zk hHVZK β hPredSim
     adv qS qH hQ hH1H2
     (cmaSim_signedFreshAdv_le_fork (σ := σ) (hr := hr)
       (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)

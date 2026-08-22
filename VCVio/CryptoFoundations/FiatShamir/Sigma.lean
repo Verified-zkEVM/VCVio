@@ -43,7 +43,12 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type}
 
 /-- Given a Σ-protocol and a generable relation, the Fiat-Shamir transform produces a
 signature scheme. The signing algorithm commits, queries the random oracle on (message,
-commitment), and then responds to the challenge. -/
+commitment), and then responds to the challenge.
+
+The Σ-protocol's own monad `mσ` is separate from the signature scheme's monad `m`, and is
+required only to lift into it: the transform never samples a challenge from the Σ-protocol, so
+a prover that queries oracles of its own (as the Kilian transform's does) is admissible here.
+Every result below is stated at `mσ := ProbComp`. -/
 def FiatShamir
     {m : Type → Type v} [Monad m]
     {mσ : Type → Type} [Monad mσ]
@@ -476,7 +481,6 @@ omit [SampleableType Stmt] [SampleableType Wit] in
 /-- Completeness of the Fiat-Shamir signature scheme follows from completeness of the
 underlying Σ-protocol. -/
 theorem perfectlyCorrect [SampleableType Chal]
-    (hsc : σ.sampleChal = ($ᵗ Chal : ProbComp Chal))
     (hc : σ.PerfectlyComplete) :
     SignatureAlg.PerfectlyComplete
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M)
@@ -505,7 +509,7 @@ theorem perfectlyCorrect [SampleableType Chal]
             let r ← $ᵗ Chal
             let s ← σ.respond pk sk e r
             pure (σ.verify pk c r s))
-          (x := true) (h := by rw [← hsc]; simpa using hc pk sk hrel))
+          (x := true) (h := by simpa using hc pk sk hrel))
     · simpa [OracleComp.ProgramLogic.propInd, hx] using
         (OracleComp.ProgramLogic.triple_zero
           (oa := do

@@ -90,7 +90,6 @@ def sigma (g : G) : SigmaProtocol G F G F F F
   verify pk R c z := decide (z • g = R + c • pk)
   sim _pk := $ᵗ G
   extract c₁ z₁ c₂ z₂ := pure ((z₁ - z₂) * (c₁ - c₂)⁻¹)
-  sampleChal := $ᵗ F
 
 /-! ## Textbook Σ-protocol security properties
 
@@ -180,7 +179,7 @@ private lemma realTranscript_eq_indep (g : G) (pk : G) (sk : F) :
         let r ← $ᵗ F
         let c ← $ᵗ F
         pure ((r • g, c, r + c * sk) : G × F × F)) := by
-  simp only [ChallengeVerifyProtocol.realTranscript, sigma, monad_norm]
+  simp only [ChallengeVerifyProtocol.realTranscript_probComp, sigma, monad_norm]
 
 omit [DecidableEq F] in
 /-- **Simulator commit-predictability for Schnorr.** With the standard bijection
