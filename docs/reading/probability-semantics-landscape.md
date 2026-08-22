@@ -1479,8 +1479,8 @@ counterpart. That is a different problem from the evaluator migration and should
 separately.
 
 The per-file figures above are the occurrence counts maintained by
-`scripts/pmf_boundary_baseline.tsv` and its CI gate, which land with the measure-semantics work
-rather than on `main`. They supersede an earlier revision of this section whose per-file numbers were
+[`scripts/pmf_boundary_baseline.tsv`](../../scripts/pmf_boundary_baseline.tsv), which the CI gate
+regenerates. They supersede an earlier revision of this section whose per-file numbers were
 produced with `grep -c` and therefore counted matching *lines* rather than occurrences; the totals
 were unaffected, the breakdown was not.
 
