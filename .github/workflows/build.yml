@@ -98,8 +98,10 @@ jobs:
           {
             echo 'module'
             echo ''
-            echo 'import VCVio'
-            echo 'import VCVio.EvalDist.PFunctor'
+            echo '-- `public import`: the universe example below is a `public` declaration, so'
+            echo '-- the names in its type must be publicly imported, not just privately visible.'
+            echo 'public import VCVio'
+            echo 'public import VCVio.EvalDist.PFunctor'
             echo ''
             echo '#check OracleComp'
             echo '#check PFunctor.IsProbabilitySpec'
