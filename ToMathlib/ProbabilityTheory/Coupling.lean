@@ -40,6 +40,10 @@ namespace SPMF
 
 variable {α β : Type u}
 
+/- Lean 4.33 checks the `SPMF = OptionT PMF` boundary at implicit
+transparency while matching the PMF map/bind laws below. -/
+attribute [local implicit_reducible] SPMF
+
 @[ext]
 class IsCoupling (c : SPMF (α × β)) (p : SPMF α) (q : SPMF β) : Prop where
   map_fst : Prod.fst <$> c = p
@@ -88,10 +92,10 @@ theorem IsCoupling.none_iff {α β : Type u} {c : SPMF (α × β)} :
         exact PMF.map_eq_pure_zero _ c _ h1 (some p) (by simp)
   · intro h
     constructor
-    · subst h; rw [SPMF.fmap_eq_map]
-      change PMF.map _ (PMF.pure none) = PMF.pure none; simp [PMF.pure_map]
-    · subst h; rw [SPMF.fmap_eq_map]
-      change PMF.map _ (PMF.pure none) = PMF.pure none; simp [PMF.pure_map]
+    · subst h
+      exact LawfulAlternative.map_failure Prod.fst
+    · subst h
+      exact LawfulAlternative.map_failure Prod.snd
 
 
 /-- Main theorem about coupling and bind operations -/
@@ -100,6 +104,7 @@ theorem IsCoupling.bind {α₁ α₂ β₁ β₂ : Type u}
     (c : Coupling p q) (d : (a₁ : α₁) → (a₂ : α₂) → SPMF (β₁ × β₂))
     (h : ∀ (a₁ : α₁) (a₂ : α₂), c.1.1 (some (a₁, a₂)) ≠ 0 → IsCoupling (d a₁ a₂) (f a₁) (g a₂)) :
     IsCoupling (c.1 >>= fun (p : α₁ × α₂) => d p.1 p.2) (p >>= f) (q >>= g) := by
+  unfold Coupling at c
   obtain ⟨hc₁, hc₂⟩ := c.2
   constructor
   · rw [SPMF.fmap_eq_map, bind_eq_pmf_bind, PMF.map_bind]

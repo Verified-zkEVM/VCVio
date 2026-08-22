@@ -262,7 +262,7 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
       probOutput_congr rfl (congrArg evalDist hRHS_eq),
       probEvent_congr' (fun _ _ => Iff.rfl) (congrArg evalDist hBAD_eq)]
   classical
-  haveI : Nonempty Digest :=
+  have : Nonempty Digest :=
     ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   -- **C1: slot-0 column lazification.** Cache every slot-0 cell of the queried column.
   set cells : List ((TagId × Fin sessionsPerTag) × Nonce) :=
@@ -813,13 +813,13 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
       · -- `E gS`: drop the `false`-run summand (`Pr ≤ 1`); charge it to the `E` term, which is
         -- `1` here.
         rw [hcb, probEvent_pure_eq_indicator]
-        simp only [Set.indicator, Set.mem_setOf_eq, if_true]
+        simp only [Set.indicator, Set.mem_ofPred_eq, if_true]
         exact probOutput_le_one.trans le_add_self
       · -- `¬E gS`: `cacheBadReader gS = false`, so the actual S-run uses the bit `false`, the two
         -- summands coincide, and the `E` term is `0`.
         rw [Bool.not_eq_true] at hcb
         rw [hcb, probEvent_pure_eq_indicator]
-        simp only [Set.indicator, Set.mem_setOf_eq, reduceCtorEq, if_false, add_zero, le_refl]
+        simp only [Set.indicator, Set.mem_ofPred_eq, reduceCtorEq, if_false, add_zero, le_refl]
     -- Flatten the right-hand slack and split the `(qR'+1)` units so the discard's `T·sp/|D|`
     -- and the `≤`-monotone `qR' ≤ qR'+1` headroom land in their own summands.
     have hsplitR : ((qR' + 1) * Fintype.card TagId : ℕ) =

@@ -27,6 +27,11 @@ jobs:
           use-github-cache: false
           use-mathlib-cache: false
 
+      - name: Check PolyFun public boundary
+        run: |
+          bash scripts/test-polyfun-boundary.sh
+          bash scripts/check-polyfun-boundary.sh
+
       - name: Check for all imports in ToMathlib
         run: lake exe mk_all --lib ToMathlib --module --check
 
@@ -68,10 +73,11 @@ jobs:
           test: false
           lint: false
           use-github-cache: false
+          # The scratch consumer has its own package directory, hydrated below.
           use-mathlib-cache: false
       - name: Build a scratch consumer requiring VCVio by path
         env:
-          # The consumer imports only Lean core, so the Mathlib cache is not used.
+          # Defer cache hydration until the scratch consumer's manifest exists.
           MATHLIB_NO_CACHE_ON_UPDATE: "1"
         run: |
           consumer="$RUNNER_TEMP/vcvio-consumer"
@@ -92,10 +98,36 @@ jobs:
           {
             echo 'module'
             echo ''
+            echo '-- `public import`: the universe example below is a `public` declaration, so'
+            echo '-- the names in its type must be publicly imported, not just privately visible.'
+            echo 'public import VCVio'
+            echo 'public import VCVio.EvalDist.PFunctor'
+            echo ''
+            echo '#check OracleComp'
+            echo '#check PFunctor.IsProbabilitySpec'
+            echo '#check PFunctor.Handler.preInsert'
+            echo ''
+            echo '-- A downstream consumer whose oracle responses do not live in `Type 0`.'
+            echo '-- The public simulation-composition laws must apply at that generality:'
+            echo '-- a law that only holds at `Type 0` is not a reusable replacement for a'
+            echo '-- downstream adapter, which is exactly how ArkLib ended up carrying local'
+            echo '-- copies of six of them.'
+            echo 'universe uQuery uTarget'
+            echo ''
+            echo 'public example {i1 : Type} {i2 : Type}'
+            echo '    {s1 : OracleSpec.{0, uQuery} i1} {s2 : OracleSpec.{0, uQuery} i2}'
+            echo '    {t : Type uQuery -> Type uTarget} [Monad t] [LawfulMonad t]'
+            echo '    (f1 : QueryImpl s1 t) (f2 : QueryImpl s2 t)'
+            echo '    {A : Type uQuery} (x : OracleComp s1 A) :'
+            echo '    simulateQ (f1 + f2) (liftM x : OracleComp (s1 + s2) A) ='
+            echo '      simulateQ f1 x :='
+            echo '  QueryImpl.simulateQ_add_liftM_left f1 f2 x'
+            echo ''
             echo 'public def main : IO Unit := IO.println "consumer ok"'
           } > "$consumer/Main.lean"
           cd "$consumer"
           lake update
+          lake exe cache get
           lake build
           ./.lake/build/bin/consumer
 
@@ -202,14 +234,15 @@ jobs:
         run: ./scripts/test-axiomsweep.sh
       - name: Axiom sweep
         run: lake exe axiomsweep --check
-      - name: Check round-by-round extraction regression
-        run: lake env lean VCVioTest/RoundByRound/OneRound.lean
-      - name: Check without-replacement draw-count regressions
-        run: lake env lean VCVioTest/Forking/WithoutReplacement.lean
-      - name: Check Merkle batch-opening canaries
-        run: lake env lean VCVioTest/MerkleTreeBatch.lean
-      - name: Check simulation/fork pipeline computability lock
-        run: lake env lean VCVioTest/Computability.lean
+      # Build the whole canary library rather than a hand-maintained list of
+      # `lake env lean` invocations. Every module reachable from `VCVioTest.lean` is
+      # elaborated, so a canary added in a future PR is covered the moment
+      # `./scripts/update-lib.sh` registers it. `mk_all --lib VCVioTest --module --check`
+      # above only checks that the umbrella's import list is textually complete; it does
+      # not elaborate anything. Kept out of the timed build commands on purpose: the
+      # timing report compares exactly the seven non-test libraries.
+      - name: Build the canary library
+        run: lake build VCVioTest
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
         run: lake exe slhdsa_kat
       - name: Run SLH-DSA-C13 differential KAT

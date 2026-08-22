@@ -81,7 +81,7 @@ private lemma exists_split_of_length_cons {seed : QuerySeed spec}
   | cons j js ih =>
     ext seed
     simp only [generateSeed_cons, mem_support_bind_iff, support_replicate, ih, support_pure,
-      Set.mem_singleton_iff, Set.mem_setOf_eq]
+      Set.mem_singleton_iff, Set.mem_ofPred_eq]
     constructor
     · rintro ⟨xs, ⟨hlen, _⟩, rest, hrest_mem, rfl⟩ i
       rcases eq_or_ne i j with rfl | hi
@@ -218,7 +218,7 @@ lemma probOutput_generateSeed [spec.Fintype] (seed : QuerySeed spec)
   | cons j js ih =>
     have hlen : ∀ i, (seed i).length = qc i * (j :: js).count i := by
       rw [support_generateSeed spec qc (j :: js)] at h
-      simpa [Set.mem_setOf_eq] using h
+      simpa [Set.mem_ofPred_eq] using h
     obtain ⟨xs, rest, hxs_len, hrest_len, hseed_eq⟩ :=
       exists_split_of_length_cons spec qc j js hlen
     have hrest_mem : rest ∈ support (generateSeed spec qc js) := by
@@ -240,6 +240,7 @@ lemma evalDist_generateSeed_eq_of_countEq [IsUniformSpec spec]
     (hcount : ∀ i, qc i * js.count i = qc' i * js'.count i) :
     𝒟[generateSeed spec qc js] = 𝒟[generateSeed spec qc' js'] := by
   classical
+  let _ : DecidableEq (QuerySeed spec) := Classical.decEq _
   have hsupp : support (generateSeed spec qc js) = support (generateSeed spec qc' js') := by
     simp only [support_generateSeed, hcount]
   ext seed
@@ -264,7 +265,7 @@ private lemma support_prependValues_iff_of_count_pos {t : ι} (u : spec.Range t)
         (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1)) js.dedup) := by
   have ht_mem : t ∈ js := by
     by_contra h; simp [List.count_eq_zero_of_not_mem h] at hpos
-  simp only [support_generateSeed, Set.mem_setOf_eq]
+  simp only [support_generateSeed, Set.mem_ofPred_eq]
   constructor <;> intro h i <;> specialize h i <;> rcases eq_or_ne i t with rfl | hi
   · simp only [QuerySeed.prependValues_singleton, List.length_cons, Function.update_self,
       List.count_dedup, ht_mem, ↓reduceIte, mul_one] at h ⊢
@@ -310,7 +311,7 @@ lemma probOutput_generateSeed_prependValues [IsUniformSpec spec]
     have hcount : ∀ i, N i = N i * js.dedup.count i := fun i => by
       by_cases hi : i ∈ js <;> simp [N, List.count_dedup, hi, List.count_eq_zero_of_not_mem]
     have hmem_canon : s'.prependValues [u] ∈ support (generateSeed spec N js.dedup) := by
-      rw [support_generateSeed, Set.mem_setOf_eq] at hmem ⊢
+      rw [support_generateSeed, Set.mem_ofPred_eq] at hmem ⊢
       exact fun i => (hmem i).trans (hcount i)
     rw [probOutput_congr rfl (evalDist_generateSeed_eq_of_countEq spec qc js N js.dedup hcount),
       probOutput_generateSeed spec N js.dedup _ hmem_canon,

@@ -76,6 +76,18 @@ def prfIdealQueryImpl [DecidableEq D] [SampleableType R] :
     (StateT ((D →ₒ R).QueryCache) ProbComp) +
     (D →ₒ R).randomOracle
 
+/-- The real PRF handler answers a function query by evaluating the keyed function. -/
+@[simp]
+lemma prfRealQueryImpl_apply_inr (prf : PRFScheme K D R) (k : K) (d : D) :
+    prf.prfRealQueryImpl k (Sum.inr d) = pure (prf.eval k d) := by
+  rw [prfRealQueryImpl, QueryImpl.add_apply_inr]
+
+/-- The ideal PRF handler routes a function query to the lazy random oracle. -/
+@[simp]
+lemma prfIdealQueryImpl_apply_inr [DecidableEq D] [SampleableType R] (d : D) :
+    prfIdealQueryImpl (D := D) (R := R) (Sum.inr d) = (D →ₒ R).randomOracle d := by
+  rw [prfIdealQueryImpl, QueryImpl.add_apply_inr]
+
 /-- Real PRF experiment: sample a key, let the adversary query `prf.eval k`. -/
 def prfRealExp (prf : PRFScheme K D R) (adversary : PRFAdversary D R) :
     ProbComp Bool := do
@@ -124,7 +136,7 @@ candidate function (real: `prf.eval k`; ideal: the lazy random oracle). -/
     simulateQ (prf.prfRealQueryImpl k)
         (liftM (OracleSpec.query (Sum.inr d) : OracleQuery (PRFOracleSpec D R) R))
       = pure (prf.eval k d) := by
-  simp only [prfRealQueryImpl, simulateQ_spec_query, QueryImpl.add_apply_inr]
+  rw [simulateQ_spec_query, prfRealQueryImpl_apply_inr]
 
 /-- A function query (`Sum.inr`) under the ideal PRF handler is the lazy random oracle at that
 point. -/
@@ -132,7 +144,7 @@ point. -/
     simulateQ (prfIdealQueryImpl (D := D) (R := R))
         (liftM (OracleSpec.query (Sum.inr q) : OracleQuery (PRFOracleSpec D R) R))
       = (D →ₒ R).randomOracle q := by
-  simp [prfIdealQueryImpl]
+  rw [simulateQ_spec_query, prfIdealQueryImpl_apply_inr]
 
 @[simp] lemma simulateQ_prfRealQueryImpl_functionQuery
     (prf : PRFScheme K D R) (k : K) (d : D) :

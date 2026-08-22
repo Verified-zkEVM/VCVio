@@ -24,6 +24,10 @@ either `OracleSpec.add` or `OracleSpec.sigma`. Each instance spells out the
 
 open OracleSpec
 
+/- Lean 4.33 checks the `PFunctor.Obj`/dependent-pair conversion at implicit transparency
+while normalizing nested lifted queries. -/
+attribute [local implicit_reducible] PFunctor.Obj
+
 open scoped OracleSpec.PrimitiveQuery
 
 namespace OracleQuery

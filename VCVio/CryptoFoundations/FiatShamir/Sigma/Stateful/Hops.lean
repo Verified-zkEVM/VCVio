@@ -720,8 +720,8 @@ private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
     Pr[ fun t : Commit × Chal × Resp => ∃ ch, cache (m, t.1) = some ch | simT pk]
       ≤ QueryCache.enncard cache * β := by
   classical
-  letI : DecidableEq M := Classical.decEq M
-  letI : DecidableEq Commit := Classical.decEq Commit
+  let : DecidableEq M := Classical.decEq M
+  let : DecidableEq Commit := Classical.decEq Commit
   let commitDist : ProbComp Commit := Prod.fst <$> simT pk
   let hit : Commit → Prop := fun c => ∃ ch, cache (m, c) = some ch
   let S : Finset Commit := (finSupport commitDist).filter hit

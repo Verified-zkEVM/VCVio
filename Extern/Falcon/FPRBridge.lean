@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 import all Extern.Falcon.Instance
-public import Batteries.Data.Rat.Float
+public import Batteries.Data.Float.Rat
 public import LatticeCrypto.Falcon.Scheme
 public import LatticeCrypto.Falcon.Concrete.FPR
 public import Extern.Falcon.Instance

@@ -237,7 +237,7 @@ lemma support_seq_map_vector_cons [LawfulMonad m] :
     support ((· ::ᵥ ·) <$> mx <*> my) =
     {xs | xs.head ∈ support mx ∧ xs.tail ∈ support my} := by
   ext xs
-  simp only [support_seq_map_eq_image2, Set.mem_image2, Set.mem_setOf_eq]
+  simp only [support_seq_map_eq_image2, Set.mem_image2, Set.mem_ofPred_eq]
   exact ⟨fun ⟨a, ha, b, hb, h⟩ => h ▸ ⟨by simpa using ha, by simpa using hb⟩,
     fun ⟨hh, ht⟩ => ⟨xs.head, hh, xs.tail, ht, xs.cons_head_tail⟩⟩
 

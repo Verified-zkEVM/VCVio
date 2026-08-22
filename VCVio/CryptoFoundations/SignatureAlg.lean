@@ -229,8 +229,8 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
       runtime.evalDist (mx >>= fun x => pure (f x)) = f <$> runtime.evalDist mx)
     (adv : unforgeableAdv sigAlg) :
     adv.advantage runtime ≤ Pr[= true | unforgeableExpNoFresh runtime adv] := by
-  letI : DecidableEq M := Classical.decEq M
-  letI : DecidableEq S := Classical.decEq S
+  let : DecidableEq M := Classical.decEq M
+  let : DecidableEq S := Classical.decEq S
   unfold unforgeableAdv.advantage unforgeableExp unforgeableExpNoFresh
   set joint : OracleComp spec (M × QueryLog (M →ₒ S) × Bool) := do
     let (pk, sk) ← sigAlg.keygen

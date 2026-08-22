@@ -35,6 +35,10 @@ lemma SetM.pure_def (x : α) : (pure x : SetM α) = ({x} : Set α) := rfl
 lemma SetM.bind_def (mx : SetM α) (my : α → SetM β) :
     mx >>= my = ⋃ x ∈ mx.run, my x := rfl
 
+/-- Running the `SetM` wrapper exposes its underlying set. -/
+@[simp]
+lemma SetM.run_eq (mx : SetM α) : mx.run = mx := rfl
+
 /-- The set of possible outputs of running the monadic computation `mx`. -/
 def support [MonadLiftT m SetM] {α : Type u} (mx : m α) : Set α :=
   SetM.run (liftM mx)

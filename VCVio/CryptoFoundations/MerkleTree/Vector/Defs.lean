@@ -32,6 +32,10 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 
 namespace MerkleTree
 
+/- Lean 4.33 checks the subtype presentation of fixed-length lists at implicit transparency
+when normalizing the dependent cache layers below. -/
+attribute [local implicit_reducible] List.Vector
+
 open List OracleSpec OracleComp
 
 open scoped OracleSpec.PrimitiveQuery
@@ -93,13 +97,15 @@ omit [DecidableEq α] [Inhabited α] [Fintype α] in
 @[simp, grind =]
 lemma Cache.upper_cons (n : ℕ) (leaves : List.Vector α (2 ^ (n + 1))) (cache : Cache α n) :
     Cache.upper α n (Cache.cons α n leaves cache) = cache := by
-  simp [Cache.upper, Cache.cons]
+  exact @Fin.init_snoc (n + 1)
+    (fun i : Fin (n + 2) => List.Vector α (2 ^ i.val)) leaves cache
 
 omit [DecidableEq α] [Inhabited α] [Fintype α] in
 @[simp, grind =]
 lemma Cache.leaves_cons (n : ℕ) (leaves : List.Vector α (2 ^ (n + 1))) (cache : Cache α n) :
     Cache.leaves α n (Cache.cons α n leaves cache) = leaves := by
-  simp [Cache.leaves, Cache.cons]
+  exact @Fin.snoc_last (n + 1)
+    (fun i : Fin (n + 2) => List.Vector α (2 ^ i.val)) leaves cache
 
 /-- Compute the next layer of the Merkle tree -/
 def buildLayer {m : Type _ → Type _} [Monad m] [HasQuery (spec α) m]
@@ -112,6 +118,15 @@ def buildLayer {m : Type _ → Type _} [Monad m] [HasQuery (spec α) m]
   let hashes : List.Vector α (2 ^ n) ←
     List.Vector.mmap (fun ⟨left, right⟩ => singleHash α left right) pairs
   return hashes
+
+omit [DecidableEq α] [Inhabited α] [Fintype α] in
+/-- Building the only internal layer of a two-leaf tree makes exactly their hash query. -/
+@[simp]
+lemma buildLayer_zero (a b : α) :
+    buildLayer (m := OracleComp (spec α)) α 0 ⟨[a, b], rfl⟩ =
+      (do
+        let h ← ((spec α).query (a, b) : OracleComp (spec α) α)
+        pure (⟨[h], rfl⟩ : List.Vector α (2 ^ 0))) := rfl
 
 /-- Build the full Merkle tree, returning the cache -/
 def buildMerkleTree (α) {m : Type _ → Type _} [Monad m] [HasQuery (spec α) m]
@@ -129,6 +144,14 @@ def buildMerkleTree (α) {m : Type _ → Type _} [Monad m] [HasQuery (spec α) m
 @[simp, grind]
 def getRoot {n : ℕ} (cache : Cache α n) : α :=
   (cache 0).get ⟨0, by simp⟩
+
+omit [DecidableEq α] [Inhabited α] [Fintype α] in
+/-- Adding a leaf layer to a cache does not change its root. -/
+@[simp high]
+lemma getRoot_cons (n : ℕ) (leaves : List.Vector α (2 ^ (n + 1))) (cache : Cache α n) :
+    getRoot α (Cache.cons α n leaves cache) = getRoot α cache := by
+  change getRoot α (Cache.upper α n (Cache.cons α n leaves cache)) = getRoot α cache
+  rw [Cache.upper_cons]
 
 /-- Figure out the indices of the Merkle tree nodes that are needed to
 recompute the root from the given leaf -/
@@ -177,8 +200,9 @@ theorem getRoot_trivial {m : Type _ → Type _} [Monad m] [LawfulMonad m]
 theorem getRoot_single (a b : α) :
     getRoot α <$> buildMerkleTree (m := OracleComp (spec α)) α 1 ⟨[a, b], rfl⟩ =
       ((spec α).query (a, b)) := by
-  simp [buildMerkleTree, buildLayer, singleHash, List.Vector.ofFn,
-    List.Vector.get, Cache.cons]
+  simp only [buildMerkleTree, buildLayer_zero, map_bind, map_pure, pure_bind, bind_assoc]
+  change ((spec α).query (a, b) : OracleComp (spec α) α) >>= pure = _
+  rw [bind_pure]
 
 section
 

@@ -340,7 +340,7 @@ lemma expectedCost_eq_tsum_outputs_of_costsAs
     (h : oa.CostsAs f) :
     expectedCost oa val = ∑' a : α, Pr[= a | oa.outputs] * val (f a) := by
   classical
-  letI : DecidableEq ω := Classical.decEq ω
+  let : DecidableEq ω := Classical.decEq ω
   unfold expectedCost
   rw [h]
   simp_rw [probOutput_map_eq_tsum, ← ENNReal.tsum_mul_right, mul_assoc]

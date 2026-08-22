@@ -49,7 +49,7 @@ is `2^b - (k+1)` (truncating to `0` once `k+1 > 2^b`), out of `2^b` total. -/
 private lemma probEvent_val_gt_uniformSample (b k : ℕ) :
     Pr[fun (x : Fin (2 ^ b)) => k < x.val | ($ᵗ (Fin (2 ^ b)))]
       = (↑(2 ^ b - (k + 1)) : ℝ≥0∞) / ↑(2 ^ b) := by
-  haveI : NeZero (2 ^ b) := ⟨Nat.two_pow_pos b |>.ne'⟩
+  have : NeZero (2 ^ b) := ⟨Nat.two_pow_pos b |>.ne'⟩
   rw [probEvent_uniformSample]
   simp only [Fintype.card_fin]
   norm_cast
@@ -116,7 +116,7 @@ private lemma minUnifAux_probEvent_gt (b k t : ℕ) (best : Option (Fin (2 ^ b))
         by_cases hx : (x : ℕ) = 0
         · simp only [hx, if_true]
           rw [probEvent_pure_eq_indicator]
-          simp only [minGt, Set.indicator, Set.mem_setOf_eq, hx]
+          simp only [minGt, Set.indicator, Set.mem_ofPred_eq, hx]
           simp
         · simp only [hx, if_false]
           rw [ih]
@@ -229,7 +229,7 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
       rw [probEvent_pure_eq_indicator, probEvent_pure_eq_indicator]
       refine le_of_eq ?_
       by_cases h : minGt k (Option.map (fun t => t.2.2) best) <;>
-        simp [Set.indicator, Set.mem_setOf_eq, h]
+        simp [Set.indicator, Set.mem_ofPred_eq, h]
   | cons ω rest ih =>
       rw [fischlinUnifSearch]
       unfold minUnifAux
@@ -242,7 +242,7 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
       · simp only [hh, if_true]
         rw [probEvent_pure_eq_indicator, probEvent_pure_eq_indicator]
         refine le_of_eq ?_
-        simp [Set.indicator, Set.mem_setOf_eq, minGt]
+        simp [Set.indicator, Set.mem_ofPred_eq, minGt]
       · simp only [hh, if_false]
         refine le_trans (ih _) (le_of_eq ?_)
         congr 1

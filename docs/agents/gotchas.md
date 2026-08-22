@@ -88,7 +88,30 @@ position, even though the same fields elaborate separately.
 
 `OracleComp` has 3 universe parameters, `SubSpec` has 3 (`u, v, w`: indices `ι : Type u`, `τ : Type v`, shared response universe `w`). Universe unification errors are still common when composing specs or building reductions because the lens-style `MonadLift` parent can drag extra metavariables in.
 
-**Fix**: Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently. Keep `α β : Type` (not `Type u`).
+**Fix**: Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.
+
+**How far to generalize depends on what you are writing.**
+
+- A *local* definition, a proof-local variable, or a concrete scheme may pin `α β : Type`.
+  Nothing downstream reuses it, and the pinning keeps elaboration predictable.
+- A *public reusable law* — anything a downstream package will `rw`, `simp`, or `exact` —
+  must be universe-polymorphic. A law that holds only at `Type 0` is not a replacement for
+  the adapter a consumer would otherwise write; it is one more thing they have to work
+  around. Take `{ι : Type*}` for indices and `{α : Type u} {m : Type u → Type*}` for the
+  value universe and target monad.
+
+The composition surface already spells the shape to copy: `QueryImpl.parallelStateT`
+(`VCVio/OracleComp/SimSemantics/StateT/Basic.lean`), `QueryImpl.addReaderT`
+(`.../ReaderT/Basic.lean`), `QueryImpl.parallelWriterT` (`.../WriterT/Basic.lean`), and
+`VCVio/OracleComp/SimSemantics/Append.lean`. The constraint is always the same: **arbitrary
+index universes, one shared response universe, and `α` in that response universe** —
+`spec₁ + spec₂` goes through `Sum.elim`, which forces the response universes to agree but
+leaves the index universes free, and `simulateQ` forces `α` into the target monad's source
+universe.
+
+When adding such a law, add a nonzero-universe consumer alongside it. `VCVioTest/UniversePolymorphism.lean`
+is the in-repo canary, and the downstream scratch-consumer CI job builds one from outside
+the package.
 
 ## Proof Patterns
 
@@ -294,8 +317,8 @@ their executable modules contain colliding root-level `main` declarations.
 
 ### 26. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.32.2`: `lean-toolchain` pins `leanprover/lean4:v4.32.2` and
-`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.32.2"`.
+Both currently `v4.33.0`: `lean-toolchain` pins `leanprover/lean4:v4.33.0` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.33.0"`.
 When upgrading, update both lines simultaneously.
 
 ### 27. Use public references in shared docs

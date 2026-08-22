@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import Batteries.Data.Rat.Float
+public import Batteries.Data.Float.Rat
 public import Mathlib.Algebra.Order.Floor.Ring
 public import Mathlib.Analysis.SpecialFunctions.Exp
 public import LatticeCrypto.Falcon.Primitives

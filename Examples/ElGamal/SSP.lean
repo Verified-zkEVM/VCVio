@@ -96,18 +96,60 @@ namespace VCVio.StateSeparating.Examples.ElGamal
 /-- The LR oracle interface for IND-CPA: `GETPK : Unit →ₒ G` returns the challenger's public
 key, and `LR : (G × G) →ₒ (G × G)` takes a pair of messages and returns a challenge ciphertext
 under the secret bit. The adversary may interleave calls to both oracles in any order. -/
-@[reducible] def lrSpec (G : Type) : OracleSpec (Unit ⊕ (G × G)) :=
-  (Unit →ₒ G) + ((G × G) →ₒ (G × G))
+abbrev lrSpec (G : Type) : OracleSpec (Unit ⊕ (G × G)) :=
+  fun
+    | Sum.inl _ => G
+    | Sum.inr _ => G × G
 
 /-- The DDH oracle interface (multi-query / shared-`a` variant): `GETPK : Unit →ₒ G` returns
 `a • gen`, and `DHCHALLENGE : Unit →ₒ (G × G)` returns `(b • gen, T)` for fresh `b`. -/
-@[reducible] def dhSpec (G : Type) : OracleSpec (Unit ⊕ Unit) :=
-  (Unit →ₒ G) + (Unit →ₒ (G × G))
+abbrev dhSpec (G : Type) : OracleSpec (Unit ⊕ Unit) :=
+  fun
+    | Sum.inl _ => G
+    | Sum.inr _ => G × G
+
+/-- The public-key query of the shared-exponent DDH interface. -/
+def dhGetPublicKey {G : Type} : OracleComp (dhSpec G) G :=
+  (dhSpec G).query (Sum.inl ())
+
+/-- The challenge query of the shared-exponent DDH interface. -/
+def dhChallenge {G : Type} : OracleComp (dhSpec G) (G × G) :=
+  (dhSpec G).query (Sum.inr ())
+
+@[simp] lemma simulateQ_dhGetPublicKey {G : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
+    (impl : QueryImpl (dhSpec G) m) :
+    simulateQ impl dhGetPublicKey = impl (Sum.inl ()) := by
+  rw [dhGetPublicKey, simulateQ_spec_query]
+
+@[simp] lemma simulateQ_dhChallenge {G : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
+    (impl : QueryImpl (dhSpec G) m) :
+    simulateQ impl dhChallenge = impl (Sum.inr ()) := by
+  rw [dhChallenge, simulateQ_spec_query]
 
 variable {F : Type} [CommRing F] [SampleableType F]
 variable {G : Type} [AddCommGroup G] [Module F G]
 
 /-! ### DDH triple handlers -/
+
+/-- Lazily sample the exponent shared by the public-key and challenge queries. -/
+noncomputable def lazyPublicKey (gen : G) : StateT (Option F) ProbComp G :=
+  fun st => match st with
+    | none => do
+        let a ← ($ᵗ F)
+        pure (a • gen, some a)
+    | some a => pure (a • gen, some a)
+
+/-- The real shared-exponent DDH challenge computation. -/
+noncomputable def realDhChallenge (gen : G) :
+    StateT (Option F) ProbComp (G × G) :=
+  fun st => match st with
+    | none => do
+        let a ← ($ᵗ F)
+        let b ← ($ᵗ F)
+        pure ((b • gen, (a * b) • gen), some a)
+    | some a => do
+        let b ← ($ᵗ F)
+        pure ((b • gen, (a * b) • gen), some a)
 
 /-- The "real" DDH handler (multi-query, shared-`a`).
 
@@ -115,19 +157,8 @@ The first exponent `a` is lazily sampled on first access and cached in the state
 returns `a • gen` and `DHCHALLENGE` returns `(b • gen, (a * b) • gen)` for fresh `b`. -/
 noncomputable def dhTripleReal (gen : G) :
     QueryImpl.Stateful unifSpec (dhSpec G) (Option F)
-  | Sum.inl _ => fun st => match st with
-        | none => do
-            let a ← ($ᵗ F)
-            pure (a • gen, some a)
-        | some a => pure (a • gen, some a)
-    | Sum.inr _ => fun st => match st with
-        | none => do
-            let a ← ($ᵗ F)
-            let b ← ($ᵗ F)
-            pure ((b • gen, (a * b) • gen), some a)
-        | some a => do
-            let b ← ($ᵗ F)
-            pure ((b • gen, (a * b) • gen), some a)
+  | Sum.inl _ => lazyPublicKey (F := F) (G := G) gen
+  | Sum.inr _ => realDhChallenge (F := F) (G := G) gen
 
 /-- The "random" DDH handler (multi-query, shared-`a`). Identical to `dhTripleReal` except
 `DHCHALLENGE` returns `(b • gen, c • gen)` for fresh `b, c`. -/
@@ -162,37 +193,17 @@ output, so the equivalence with `dhToLR_left.link dhTripleReal` is definitional 
 alpha-renaming of the sampled exponents (`a, b` on the DDH side and `sk, r` here). -/
 noncomputable def elgamalLR_left (gen : G) :
     QueryImpl.Stateful unifSpec (lrSpec G) (Option F)
-  | Sum.inl _ => fun st => match st with
-        | none => do
-            let sk ← ($ᵗ F)
-            pure (sk • gen, some sk)
-        | some sk => pure (sk • gen, some sk)
-    | Sum.inr (m₀, _) => fun st => match st with
-        | none => do
-            let sk ← ($ᵗ F)
-            let r ← ($ᵗ F)
-            pure ((r • gen, (sk * r) • gen + m₀), some sk)
-        | some sk => do
-            let r ← ($ᵗ F)
-            pure ((r • gen, (sk * r) • gen + m₀), some sk)
+  | Sum.inl _ => lazyPublicKey (F := F) (G := G) gen
+  | Sum.inr (m₀, _) =>
+      (fun bt => (bt.1, bt.2 + m₀)) <$> realDhChallenge (F := F) (G := G) gen
 
 /-- The "right-message" ElGamal LR game. Same as `elgamalLR_left` except `LR (_, m₁)` returns
 `(r • gen, (sk * r) • gen + m₁)`. -/
 noncomputable def elgamalLR_right (gen : G) :
     QueryImpl.Stateful unifSpec (lrSpec G) (Option F)
-  | Sum.inl _ => fun st => match st with
-        | none => do
-            let sk ← ($ᵗ F)
-            pure (sk • gen, some sk)
-        | some sk => pure (sk • gen, some sk)
-    | Sum.inr (_, m₁) => fun st => match st with
-        | none => do
-            let sk ← ($ᵗ F)
-            let r ← ($ᵗ F)
-            pure ((r • gen, (sk * r) • gen + m₁), some sk)
-        | some sk => do
-            let r ← ($ᵗ F)
-            pure ((r • gen, (sk * r) • gen + m₁), some sk)
+  | Sum.inl _ => lazyPublicKey (F := F) (G := G) gen
+  | Sum.inr (_, m₁) =>
+      (fun bt => (bt.1, bt.2 + m₁)) <$> realDhChallenge (F := F) (G := G) gen
 
 /-! ### DDH-to-LR reductions -/
 
@@ -201,17 +212,17 @@ to `GETPK` on `dh`, and forwards `LR (m₀, _)` to `DHCHALLENGE` on `dh`, return
 `(B, T + m₀)` from the DDH challenge `(B, T)`. -/
 def dhToLR_leftHandler {G : Type} [Add G] :
     QueryImpl (lrSpec G) (OracleComp (dhSpec G))
-  | Sum.inl _ => ((dhSpec G).query (Sum.inl ()) : OracleComp (dhSpec G) G)
+  | Sum.inl _ => dhGetPublicKey
   | Sum.inr (m₀, _) => do
-      let bt ← ((dhSpec G).query (Sum.inr ()) : OracleComp (dhSpec G) (G × G))
+      let bt ← dhChallenge
       pure (bt.1, bt.2 + m₀)
 
 /-- Stateless reduction handler encrypting the *right* message. -/
 def dhToLR_rightHandler {G : Type} [Add G] :
     QueryImpl (lrSpec G) (OracleComp (dhSpec G))
-  | Sum.inl _ => ((dhSpec G).query (Sum.inl ()) : OracleComp (dhSpec G) G)
+  | Sum.inl _ => dhGetPublicKey
   | Sum.inr (_, m₁) => do
-      let bt ← ((dhSpec G).query (Sum.inr ()) : OracleComp (dhSpec G) (G × G))
+      let bt ← dhChallenge
       pure (bt.1, bt.2 + m₁)
 
 /-- DDH-to-LR reduction encrypting the left message as a stateless handler. -/
@@ -243,27 +254,10 @@ private theorem composed_real_left_handler_evalDist (gen : G)
     𝒟[(simulateQ (dhTripleReal (F := F) gen)
           ((dhToLR_leftHandler (G := G)) q)).run s] =
       𝒟[((elgamalLR_left (F := F) gen) q).run s] := by
-  rcases q with ⟨⟩ | ⟨m₀, _⟩
-  · cases s with
-    | none =>
-        simp [dhToLR_leftHandler, dhTripleReal, elgamalLR_left,
-          simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query]
-    | some sk =>
-        simp [dhToLR_leftHandler, dhTripleReal, elgamalLR_left,
-          simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query]
-  · cases s with
-    | none =>
-        simp only [dhToLR_leftHandler, dhTripleReal, elgamalLR_left,
-          simulateQ_map, simulateQ_query, OracleQuery.cont_query,
-          OracleQuery.input_query, id_map, StateT.run_map, bind_pure_comp]
-        dsimp only [StateT.run]
-        simp only [map_bind, Functor.map_map]
-    | some sk =>
-        simp only [dhToLR_leftHandler, dhTripleReal, elgamalLR_left,
-          simulateQ_map, simulateQ_query, OracleQuery.cont_query,
-          OracleQuery.input_query, id_map, StateT.run_map, bind_pure_comp]
-        dsimp only [StateT.run]
-        simp only [Functor.map_map]
+  rcases q with val | ⟨m₀, _⟩
+  · rcases val with ⟨⟩
+    simp [dhToLR_leftHandler, dhTripleReal, elgamalLR_left]
+  · simp [dhToLR_leftHandler, dhTripleReal, elgamalLR_left]
 
 /-- Per-(query, state) handler equivalence (under `evalDist`) between the composed
 "reduction ∘ dhTripleReal" and the ElGamal LR-right game. -/
@@ -272,27 +266,10 @@ private theorem composed_real_right_handler_evalDist (gen : G)
     𝒟[(simulateQ (dhTripleReal (F := F) gen)
           ((dhToLR_rightHandler (G := G)) q)).run s] =
       𝒟[((elgamalLR_right (F := F) gen) q).run s] := by
-  rcases q with ⟨⟩ | ⟨_, m₁⟩
-  · cases s with
-    | none =>
-        simp [dhToLR_rightHandler, dhTripleReal, elgamalLR_right,
-          simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query]
-    | some sk =>
-        simp [dhToLR_rightHandler, dhTripleReal, elgamalLR_right,
-          simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query]
-  · cases s with
-    | none =>
-        simp only [dhToLR_rightHandler, dhTripleReal, elgamalLR_right,
-          simulateQ_map, simulateQ_query, OracleQuery.cont_query,
-          OracleQuery.input_query, id_map, StateT.run_map, bind_pure_comp]
-        dsimp only [StateT.run]
-        simp only [map_bind, Functor.map_map]
-    | some sk =>
-        simp only [dhToLR_rightHandler, dhTripleReal, elgamalLR_right,
-          simulateQ_map, simulateQ_query, OracleQuery.cont_query,
-          OracleQuery.input_query, id_map, StateT.run_map, bind_pure_comp]
-        dsimp only [StateT.run]
-        simp only [Functor.map_map]
+  rcases q with val | ⟨_, m₁⟩
+  · rcases val with ⟨⟩
+    simp [dhToLR_rightHandler, dhTripleReal, elgamalLR_right]
+  · simp [dhToLR_rightHandler, dhTripleReal, elgamalLR_right]
 
 /-- Hop #1: linking the DDH-real handler under the *left*-message reduction
 produces the same output distribution as the LR-left game itself. -/
@@ -359,9 +336,7 @@ private theorem composed_rand_swap_handler_evalDist (gen : G)
       𝒟[(simulateQ (dhTripleRand (F := F) gen)
           ((dhToLR_rightHandler (G := G)) q)).run s] := by
   rcases q with ⟨⟩ | ⟨m₀, m₁⟩
-  · -- GETPK: both sides are the same `simulateQ` applied to the identical
-    -- `query (Sum.inl ())`, hence definitionally equal.
-    rfl
+  · simp [dhToLR_leftHandler, dhToLR_rightHandler]
   · -- LR (m₀, m₁): normalise both sides to bind form and apply the uniform-masking lemma.
     -- The `step` helper shows that for any offset `m`, the composed handler reduces to a
     -- concrete `do b; c; pure ((b•gen, c•gen + m), some _)` ProbComp (modulo the state `s`).
@@ -373,9 +348,7 @@ private theorem composed_rand_swap_handler_evalDist (gen : G)
                 ProbComp ((G × G) × Option F))
               pure ((bt.1.1, bt.1.2 + m), bt.2)] := by
       intro m
-      simp only [dhToLR_leftHandler, simulateQ_query_bind, simulateQ_pure,
-        OracleQuery.input_query, StateT.run_bind, monadLift_self, StateT.run_pure]
-      rfl
+      simp [dhToLR_leftHandler]
     -- `dhToLR_leftHandler (Sum.inr (m₀, m₁))` only depends on `m₀`, and `dhToLR_rightHandler
     -- (Sum.inr (m₀, m₁))` only depends on `m₁`. Re-express both handler applications via
     -- the unified `step` helper.
@@ -383,12 +356,14 @@ private theorem composed_rand_swap_handler_evalDist (gen : G)
         𝒟[(simulateQ (dhTripleRand (F := F) gen)
             ((dhToLR_leftHandler (G := G)) (Sum.inr (m₀, m₁)))).run s] =
           𝒟[(simulateQ (dhTripleRand (F := F) gen)
-            ((dhToLR_leftHandler (G := G)) (Sum.inr (m₀, m₀)))).run s] := rfl
+            ((dhToLR_leftHandler (G := G)) (Sum.inr (m₀, m₀)))).run s] := by
+      simp [dhToLR_leftHandler]
     have right_eq :
         𝒟[(simulateQ (dhTripleRand (F := F) gen)
             ((dhToLR_rightHandler (G := G)) (Sum.inr (m₀, m₁)))).run s] =
           𝒟[(simulateQ (dhTripleRand (F := F) gen)
-            ((dhToLR_leftHandler (G := G)) (Sum.inr (m₁, m₁)))).run s] := rfl
+            ((dhToLR_leftHandler (G := G)) (Sum.inr (m₁, m₁)))).run s] := by
+      simp [dhToLR_leftHandler, dhToLR_rightHandler]
     rw [left_eq, right_eq, step m₀, step m₁]
     -- Now the goal depends only on `((dhTripleRand gen) (Sum.inr ())).run s`, which
     -- unfolds to a concrete ProbComp. Case-split on `s` and apply the uniform-masking lemma.

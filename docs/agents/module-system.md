@@ -1,0 +1,159 @@
+# Module Boundaries and the PolyFun Façade
+
+This guide records the intended long-term boundary between PolyFun and VCVio
+under Lean's module system. It is the decision record for visibility,
+`import all`, and the `OracleComp`/`PFunctor.FreeM` relationship.
+
+The normative language behavior is described by Lean's
+[Source Files and Modules](https://lean-lang.org/doc/reference/latest/Source-Files-and-Modules/)
+reference. In particular:
+
+- a plain `import` exposes the dependency's public scope only in the importing
+  module's private scope;
+- a `public import` also re-exports that public scope;
+- `import all` exposes the imported module's private scope;
+- a public definition is opaque to importers unless its body is deliberately
+  exposed; and
+- the type of a public declaration may mention only public names.
+
+## Architectural decision
+
+VCVio is a thin, opinionated façade over PolyFun, rather than either a second
+generic free-monad library or a sealed wrapper that hides PolyFun completely.
+
+PolyFun owns domain-independent structure:
+
+- polynomial functors, lenses, handlers, and `PFunctor.FreeM`;
+- reusable handler transformations such as target lifting, before/after
+  instrumentation, and writer tracing;
+- interaction trees, observations, fairness predicates, processes, and UC
+  structural laws; and
+- public equations needed to reason about those abstractions without opening
+  private definitions.
+
+VCVio owns cryptographic specialization:
+
+- `OracleSpec`, `OracleQuery`, `OracleComp`, `QueryImpl`, and established
+  oracle notation;
+- PMF/SPMF and support semantics, probability lemmas, uniform-oracle policy,
+  query accounting, and program logic;
+- cryptographic games, reductions, and examples; and
+- compatibility names that keep existing oracle-facing developments stable.
+
+Generic code should accept `PFunctor`, `PFunctor.Handler`, or
+`PFunctor.FreeM` directly. Oracle- and cryptography-facing code should use the
+VCVio names. `OracleComp spec` remains definitionally the free monad on
+`spec.toPFunctor`, and `QueryImpl` compatibility operations are thin aliases
+of the generic handler operations.
+
+Probability semantics are PFunctor-parametric but remain in VCVio: PolyFun is
+domain-independent and should not acquire VCVio's PMF/SPMF policy. The
+`OracleSpec.IsProbabilitySpec` name is a definitional façade over
+`PFunctor.IsProbabilitySpec`; the stronger oracle uniformity bundle keeps its
+existing finite/inhabited oracle instances and has an explicit
+`IsUniformSpec.toPFunctor` conversion.
+
+Do not add a conversion instance whose target is headed by the reducible
+expression `spec.toPFunctor`. Such an instance can unify with unrelated
+polynomial functors and pollute generic typeclass search. Prefer a definitional
+alias when the concepts are identical, or an explicit conversion when they
+are not.
+
+## Import policy
+
+Never use `import all PolyFun.…` in this repository. If VCVio needs a PolyFun
+implementation detail, add an intrinsic public law or a deliberately exposed
+definition to PolyFun, then use a plain or public import. The script
+`scripts/check-polyfun-boundary.sh` enforces this package boundary.
+
+Within one package, `import all` is still available for a proof module that
+proves a public API theorem about a private implementation in a sibling
+module. It is not a substitute for an application theorem that ordinary
+consumers will also need.
+
+Choose imports as follows:
+
+| Need | Import form |
+| --- | --- |
+| Dependency used only by this module's implementation or proofs | `import` |
+| Dependency appears in the public API or should be re-exported | `public import` |
+| Exported tactic/elaborator dependency | `public meta import` |
+| Same-package proof of a deliberately private implementation | `import all` |
+
+## Public definitions and definitional equality
+
+Default to an opaque public definition plus public equations. Typical API
+laws are constructor equations, application lemmas, extensionality lemmas,
+and characterization `…_iff` theorems. Mark a definition `@[expose]` only when
+downstream definitional equality is an intentional part of the API and a
+theorem would materially obstruct ordinary use.
+
+`PFunctor.Handler.liftTarget` is one deliberate transparent exception. Its
+pointwise reduction changes only the target monad, and dependent handler
+result types need that reduction during elaboration; an application theorem
+alone leaves casts that Lean's rewriting tactics cannot always normalize.
+The effectful `preInsert` / `postInsert` and tracing combinators remain opaque
+and are consumed through their public application and factorization laws.
+
+The compatibility migration uses broad `@[expose] public section`s so current
+downstream proofs continue to elaborate. New code should expose individual
+definitions instead. Over time, replace broad exposure with explicit laws and
+opaque boundaries, module by module, with downstream canaries in place.
+
+When a former `rfl` proof stops working after an import is made public-only,
+do not reach immediately for `import all`. First determine which public law is
+missing. A small `apply`, `…_iff`, or constructor equation usually documents
+the abstraction better and makes all downstream users independent of the
+implementation.
+
+Treat a terminal `rfl` immediately after a boundary `rw` or `change` as the
+same diagnostic: the public equation got the proof close, but did not produce
+the intended public normal form. Close the remaining step with the relevant
+application, composition, or extensionality law, or add that law at the owning
+module boundary. Constructor equations and definitions whose reduction is an
+intentional documented API may still use `rfl` directly.
+
+## Restoring `private` correctly
+
+The module migration changed the meaning of `private`: a public exposed body
+cannot retain a reference to a private declaration. Classify each affected
+declaration before changing visibility.
+
+1. If it appears in a public type, theorem statement, default argument, or
+   deliberately exposed body, it is part of the public dependency closure.
+   Give it an intentional public name and docstring, or redesign the public
+   declaration so the helper no longer appears.
+2. If it is used only in proofs, keep it `private`. Public theorem proofs are
+   private module data and may use private proof helpers.
+3. If it is an executable helper used only by a public runtime entry point,
+   keep the helper `private` and make the entry point opaque when downstream
+   callers do not need to unfold it.
+4. If it is local example or test scaffolding, keep it private unless the
+   example explicitly demonstrates that declaration as reusable API.
+5. If callers genuinely need to reduce through it, expose the smallest
+   definition and cover it with public laws. Do not enable
+   `backward.privateInPublic` or `backward.proofsInPublic`.
+
+Renaming a private helper merely to make it public avoids a name collision but
+does not answer whether it belongs in the API. Record intentional promotions
+in review; restore all other helpers using the patterns above.
+
+## Validation and coordinated rollout
+
+The boundary has three canaries:
+
+- `scripts/check-polyfun-boundary.sh` rejects cross-package private imports;
+- `VCVioTest/PFunctorFacade.lean` exercises the direct PFunctor API and the
+  OracleSpec compatibility API; and
+- the downstream scratch-consumer CI job imports the generic semantics and
+  checks the public handler operations.
+
+Changes that add PolyFun API and consume it from VCVio require two coordinated
+repository changes:
+
+1. merge and release the PolyFun public API;
+2. update VCVio's PolyFun revision;
+3. merge the VCVio aliases, proofs, and canaries.
+
+During local development, test VCVio against the matching PolyFun worktree,
+but do not merge a VCVio revision that refers to unpublished PolyFun names.

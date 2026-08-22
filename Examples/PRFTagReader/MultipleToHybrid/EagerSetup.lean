@@ -416,7 +416,7 @@ lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
       ((Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
         (Fintype.card Digest : ℝ≥0∞) := by
   classical
-  haveI : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
+  have : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   -- Step 1: expand the predicate. `cacheBadReader g t = true` is `∃ tag sid, sid ≠ 0 ∧
   -- g((tag,sid), t.nonce) = t.auth`; drop the `sid ≠ 0` filter by monotonicity.
   set P : (((TagId × Fin sessionsPerTag) × Nonce) → Digest) → Prop :=
@@ -643,8 +643,7 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
               (Sum.inl tag)) s >>= (fun r => pure (r.1, r.2,
                 multipleBadAdvance tag sB r.1))) >>= _ = _
           rw [multipleTableHandler_tag_run_of_lt _ tag s hslot, ← hadvU]
-          simp only [bind_assoc, pure_bind]
-          exact bind_assoc ..
+          simp only [unlinkOracleSpec_range_inl, bind_assoc, pure_bind]
         refine Eq.trans ?_ (congrArg evalDist hrhs_swap).symm
         rw [evalDist_bind_bind_swap ($ᵗ (TagId × Nonce → Digest)) ($ᵗ Nonce)]
         refine evalDist_bind_congr_of_support _ _ _ fun n _ => ?_
@@ -729,7 +728,8 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
         change (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
             (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g)
             (Sum.inr transcript)) s >>= _ = _
-        rw [multipleTableHandler_reader_run _ transcript s]; rfl
+        rw [multipleTableHandler_reader_run _ transcript s]
+        simp only [unlinkOracleSpec_range_inr, pure_bind]
       rw [hrhs_reader, hMψ]
       have hAccept : decide (∃ d ∈ cells.map (OracleComp.tableExtending c g),
             d = transcript.auth)
@@ -738,15 +738,18 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
             (multiplePattern (TagId := TagId) sessionsPerTag) transcript := by
         unfold unlinkReaderAccepts tagAccepts
         rw [hcells]
+        rw [decide_eq_decide]
         simp only [List.map_map, List.mem_map, Finset.mem_toList, Finset.mem_univ, true_and,
-          multiplePattern, decide_eq_decide, decide_eq_true_eq, Function.comp]
+          multiplePattern, Function.comp]
         constructor
         · rintro ⟨d, ⟨a, rfl⟩, hd⟩
-          exact ⟨a, ⟨⟨0, Nat.pos_of_ne_zero (NeZero.ne sessionsPerTag)⟩, hd⟩⟩
-        · rintro ⟨tag, _, hd⟩
-          exact ⟨_, ⟨tag, rfl⟩, hd⟩
+          refine ⟨a, decide_eq_true ?_⟩
+          exact ⟨⟨0, Nat.pos_of_ne_zero (NeZero.ne sessionsPerTag)⟩, hd⟩
+        · rintro ⟨tag, htag⟩
+          obtain ⟨_, hd⟩ := of_decide_eq_true htag
+          exact ⟨transcript.auth, ⟨tag, hd⟩, Eq.refl transcript.auth⟩
       rw [← hAccept]
-      rfl
+      simp only [unlinkOracleSpec_range_inr, pure_bind]
 
 /-! ### Fine→original eager-table bridge
 
