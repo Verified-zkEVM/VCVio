@@ -2,8 +2,8 @@
 
 > Snapshot date: 2026-08-22. Toolchain `v4.33.0`, Mathlib `v4.33.0`.
 >
-> Scoping companion to `denotational-probability-semantics.md`, which lands with the
-> measure-semantics work. That document settles *what the semantic objects are*; this one asks what VCVio's probability
+> Scoping companion to [`denotational-probability-semantics.md`](denotational-probability-semantics.md).
+> That document settles *what the semantic objects are*; this one asks what VCVio's probability
 > statements should **look like** so that Mathlib's library applies to them, and so that the parts
 > worth contributing are shaped to be contributable.
 
