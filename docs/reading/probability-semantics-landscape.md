@@ -1,7 +1,7 @@
 # Probability Semantics for Computations: Landscape and Design Options
 
 > Status: living evidence survey. The accepted implementation baseline is
-> `denotational-probability-semantics.md`, which lands with the measure-semantics work.
+> [`denotational-probability-semantics.md`](denotational-probability-semantics.md).
 >
 > Snapshot date: 2026-08-21. Independently re-verified against source on disk and
 > against the live repositories on 2026-08-21; see [§19](#19-verification-log).
