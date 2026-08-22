@@ -309,7 +309,11 @@ instance instEvalDistCompatible : EvalDistCompatible (OracleComp spec) := by
   let : PFunctor.IsUniformSpec spec.toPFunctor := IsUniformSpec.toPFunctor
   exact PFunctor.FreeM.instEvalDistCompatible
 
-private lemma support_eq_evalDist_support :
+/-- The reachable outputs of `oa` are exactly the outputs its distribution semantics gives
+nonzero probability. This is `EvalDistCompatible.support_eq_SPMF_support` specialized to the
+oracle façade, and it is the named bridge to reach for when a proof needs to move between the
+two semantics without unfolding either into its `SetM` / `SPMF` interpreter. -/
+lemma support_eq_evalDist_support :
     support oa = SPMF.support (𝒟[oa]) :=
   EvalDistCompatible.support_eq_SPMF_support oa
 

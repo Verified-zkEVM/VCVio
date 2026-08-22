@@ -303,12 +303,10 @@ lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_some_iff
     [DecidableEq M] [DecidableEq Commit]
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
     (log : List (M × Commit)) (v : Chal) (hcache : cache mc = some v)
-    (z : (unifSpec + (M × Commit →ₒ Chal)).Range (Sum.inr mc) ×
-      SimState M Commit Chal) :
+    (z : Chal × SimState M Commit Chal) :
     z ∈ support ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal)
       (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (Sum.inr mc)))).run
       (cache, log)) ↔ z = (v, (cache, log)) := by
-  change Chal × SimState M Commit Chal at z
   rw [simulateQ_unifForward_add_roImpl_query_inr_run_some
     (M := M) (Commit := Commit) (Chal := Chal) mc cache log v hcache]
   change z ∈ support
@@ -323,14 +321,11 @@ lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_none_iff
     [DecidableEq M] [DecidableEq Commit]
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
     (log : List (M × Commit)) (hcache : cache mc = none)
-    (z : (unifSpec + (M × Commit →ₒ Chal)).Range (Sum.inr mc) ×
-      SimState M Commit Chal) :
+    (z : Chal × SimState M Commit Chal) :
     z ∈ support ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal)
       (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (Sum.inr mc)))).run
         (cache, log)) ↔
-      ∃ v : (unifSpec + (M × Commit →ₒ Chal)).Range (Sum.inr mc),
-        z = (v, (cache.cacheQuery mc v, log ++ [mc])) := by
-  change Chal × SimState M Commit Chal at z
+      ∃ v : Chal, z = (v, (cache.cacheQuery mc v, log ++ [mc])) := by
   rw [simulateQ_unifForward_add_roImpl_query_inr_run_none
     (M := M) (Commit := Commit) (Chal := Chal) mc cache log hcache]
   change z ∈ support
@@ -538,22 +533,6 @@ private lemma support_step_inr
       exact hzeq
     · exact absurd h0 (Option.ne_none_iff_exists.mpr ⟨v, hv⟩)
 
-/-- Unfolds one bind step of the layered `unifForward + roImpl` simulation: running the
-simulator on `liftM (query t) >>= oa` from state `s` first runs the single-query step
-`((unifForward + roImpl) t).run s`, then continues the simulation of `oa` from the resulting
-state. Shared opener for the `query_bind` case of every structural induction below. -/
-private lemma simulateQ_add_run_query_bind {γ : Type}
-    (t : (unifSpec + (M × Commit →ₒ Chal)).Domain)
-    (oa : (unifSpec + (M × Commit →ₒ Chal)).Range t →
-      OracleComp (unifSpec + (M × Commit →ₒ Chal)) γ)
-    (s : SimState M Commit Chal) :
-    (simulateQ (unifForward M Commit Chal + roImpl M Commit Chal)
-        ((liftM (query t) : OracleComp _ _) >>= oa)).run s =
-      (((unifForward M Commit Chal + roImpl M Commit Chal) t).run s) >>= fun us =>
-        (simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) (oa us.1)).run us.2 := by
-  simp [simulateQ_bind, simulateQ_query, StateT.run_bind,
-    monad_norm, OracleQuery.cont_query, OracleQuery.input_query]
-
 /-! ### Layered preservation helpers
 
 Two skeletons that capture the entire structural induction `OracleComp.inductionOn`
@@ -585,7 +564,7 @@ private theorem preservesInv_layered {γ : Type}
       subst hz
       simpa using hinit
   | query_bind t oa ih =>
-      rw [simulateQ_add_run_query_bind, simulateQ_bind, WriterT.run_bind', support_bind] at hz
+      rw [run_simulateQ_query_bind, simulateQ_bind, WriterT.run_bind', support_bind] at hz
       simp only [Set.mem_iUnion, support_map, Set.mem_image] at hz
       obtain ⟨us_w, hus_w, pw, hpw, rfl⟩ := hz
       simp only [Prod.map_fst, Prod.map_snd, id_eq, ← List.append_assoc]
@@ -662,7 +641,7 @@ private theorem queryLog_cache_outer_lockstep [DecidableEq Chal] {γ : Type}
       change i < l₀.length at h_hi
       lia
   | query_bind t oa ih =>
-      rw [simulateQ_add_run_query_bind, simulateQ_bind, WriterT.run_bind', support_bind] at hz
+      rw [run_simulateQ_query_bind, simulateQ_bind, WriterT.run_bind', support_bind] at hz
       simp only [Set.mem_iUnion, support_map, Set.mem_image] at hz
       obtain ⟨us_w, hus_w, pw, hpw, hz_eq⟩ := hz
       have hih := ih (u := us_w.1.1) (c₀ := us_w.1.2.1) (l₀ := us_w.1.2.2)
@@ -775,7 +754,7 @@ private theorem queryLog_extends_l₀
       rw [hz_eq]
       exact List.take_length
   | query_bind t oa ih =>
-      rw [simulateQ_add_run_query_bind, simulateQ_bind, WriterT.run_bind', support_bind] at h
+      rw [run_simulateQ_query_bind, simulateQ_bind, WriterT.run_bind', support_bind] at h
       simp only [Set.mem_iUnion, support_map, Set.mem_image] at h
       obtain ⟨us_w, hus_w, pw, hpw, hz_eq⟩ := h
       obtain ⟨hzeq, _⟩ := Prod.mk.inj hz_eq
@@ -837,7 +816,7 @@ private theorem inner_prefix_det
       simp only [QueryLog.countQ, QueryLog.getQ_nil, List.length_nil, add_zero]
       rw [hz₁_eq, hz₂_eq]
   | query_bind t oa ih =>
-      rw [simulateQ_add_run_query_bind, simulateQ_bind, WriterT.run_bind',
+      rw [run_simulateQ_query_bind, simulateQ_bind, WriterT.run_bind',
         support_bind] at h₁ h₂
       simp only [Set.mem_iUnion, support_map, Set.mem_image] at h₁ h₂
       obtain ⟨us_w₁, hus_w₁, pw₁, hpw₁, hz_eq₁⟩ := h₁
@@ -979,7 +958,7 @@ private theorem inner_prefix_det_one_more_inr
       rw [houter₁'] at hlog₁
       simp at hlog₁
   | query_bind t oa ih =>
-      rw [simulateQ_add_run_query_bind, simulateQ_bind, WriterT.run_bind',
+      rw [run_simulateQ_query_bind, simulateQ_bind, WriterT.run_bind',
         support_bind] at h₁ h₂
       simp only [Set.mem_iUnion, support_map, Set.mem_image] at h₁ h₂
       obtain ⟨us_w₁, hus_w₁, pw₁, hpw₁, hz_eq₁⟩ := h₁

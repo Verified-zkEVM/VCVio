@@ -19,7 +19,7 @@ the syntax-only support interpretation in `SetM`. The API is independent of
 polynomial functor.
 -/
 
-public section
+@[expose] public section
 
 open ENNReal
 
@@ -130,7 +130,14 @@ theorem support_liftObj (object : P.Obj α) :
   exact Set.image_univ
 
 /-- Syntactic support and distribution support agree for a uniformly
-interpreted polynomial free monad. -/
+interpreted polynomial free monad.
+
+For an oracle spec this is reached explicitly, not by synthesis:
+`OracleComp.instEvalDistCompatible` supplies the `IsUniformSpec` premise through
+`OracleSpec.IsUniformSpec.toPFunctor`, which is deliberately a definition rather than an
+instance so that nothing unifies against the reducible head `spec.toPFunctor`. Keep it that
+way — promoting that conversion would make this instance and the oracle-level one both
+applicable to the same goal. -/
 instance (priority := 100) instEvalDistCompatible [uniform : P.IsUniformSpec] :
     EvalDistCompatible (FreeM P) where
   support_eq_SPMF_support program := by

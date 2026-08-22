@@ -164,6 +164,19 @@ namespace OracleComp
 variable {ι : Type*} {spec : OracleSpec ι} {m : Type u → Type v} [Monad m] [LawfulMonad m]
   {σ : Type u} (so : QueryImpl spec (StateT σ m))
 
+/-- Simulating a query followed by a continuation, under a stateful handler, runs the handler
+at that query and threads its output state into the simulation of the continuation.
+
+This is the `StateT`-run form of `simulateQ_query_bind`: it is the step lemma that drives an
+`OracleComp.inductionOn` over a computation simulated by a stateful oracle, which would
+otherwise be re-derived per handler at the call site. -/
+lemma run_simulateQ_query_bind {α : Type u} (t : spec.Domain)
+    (oa : spec.Range t → OracleComp spec α) (s : σ) :
+    (simulateQ so ((liftM (spec.query t) : OracleComp spec _) >>= oa)).run s =
+      (so t).run s >>= fun us => (simulateQ so (oa us.1)).run us.2 := by
+  simp [simulateQ_bind, simulateQ_query, StateT.run_bind, monad_norm,
+    OracleQuery.cont_query, OracleQuery.input_query]
+
 /-- If the state type is `Subsingleton`, then we can represent simulation in terms of `simulate'`,
 adding back any state at the end of the computation. -/
 lemma StateT_run_simulateQ_eq_map_run'_simulateQ {α} [Subsingleton σ]
