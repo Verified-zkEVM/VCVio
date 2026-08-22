@@ -23,8 +23,37 @@ PATTERN='(?<![[:alpha:]])PMF(?![[:alpha:]])'
 CURRENT="$(mktemp "${TMPDIR:-/tmp}/vcvio-pmf-boundary.XXXXXX")"
 trap 'rm -f "$CURRENT"' EXIT
 
-rg --pcre2 --count-matches --glob '*.lean' "$PATTERN" "${LIBS[@]}" \
-  | sort | sed $'s/:/\t/' > "$CURRENT"
+if command -v rg >/dev/null 2>&1; then
+  rg --pcre2 --count-matches --glob '*.lean' "$PATTERN" "${LIBS[@]}" \
+    | sort | sed $'s/:/\t/' > "$CURRENT"
+else
+  # GitHub's lean-action image does not guarantee ripgrep. Keep a dependency-free fallback whose
+  # token boundary agrees with the PCRE expression above: only alphabetic neighbours suppress a
+  # match, so `_PMF`, `PMF.` and similar standalone uses still count.
+  while IFS= read -r -d '' file; do
+    count="$(awk '
+      {
+        original = $0
+        offset = 0
+        rest = original
+        while ((position = index(rest, "PMF")) != 0) {
+          absolute = offset + position
+          before = absolute == 1 ? "" : substr(original, absolute - 1, 1)
+          after = substr(original, absolute + 3, 1)
+          if (before !~ /[[:alpha:]]/ && after !~ /[[:alpha:]]/) {
+            total++
+          }
+          offset = absolute + 2
+          rest = substr(original, offset + 1)
+        }
+      }
+      END { print total + 0 }
+    ' "$file")"
+    if (( count > 0 )); then
+      printf '%s\t%s\n' "$file" "$count"
+    fi
+  done < <(find "${LIBS[@]}" -type f -name '*.lean' -print0) | sort > "$CURRENT"
+fi
 
 if [[ "${1:-}" == "--update-baseline" ]]; then
   cp "$CURRENT" "$BASELINE"
