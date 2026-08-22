@@ -70,11 +70,11 @@ Commitments are split into a public part `Commit` (revealed to the verifier) and
 `Chal`; since that challenge is its only message, the protocol is public-coin. Prover responses
 are in `Resp`, and verification is deterministic.
 
-The prover's computations live in an arbitrary monad `m` carrying probability semantics (via the
-standard `MonadLiftT m SPMF` / `MonadLiftT m SetM` lifts and `EvalDistCompatible m`). Taking
-`m := ProbComp` recovers the usual notion of a protocol whose only randomness is uniform
-sampling, but a general `m` lets the prover additionally query oracles (e.g. a hash oracle for
-the Kilian transform).
+The prover's computations live in an arbitrary monad `m`; each property assumes only the
+semantics it consumes (a `MonadLiftT m SPMF` lift for probability statements, a
+`MonadLiftT m SetM` lift for `support`-based ones). Taking `m := ProbComp` recovers the usual
+notion of a protocol whose only randomness is uniform sampling, but a general `m` lets the
+prover additionally query oracles (e.g. a hash oracle for the Kilian transform).
 
 This is the interaction alone. A Σ-protocol additionally carries a witness extractor; see
 `SigmaProtocol`, which extends this structure. -/
@@ -106,9 +106,7 @@ structure SigmaProtocol
 
 namespace ChallengeVerifyProtocol
 
-variable {m : Type → Type} [Monad m]
-  [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+variable {m : Type → Type} [Monad m] [MonadLiftT m SPMF]
   {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
 section complete
@@ -132,9 +130,7 @@ end ChallengeVerifyProtocol
 
 namespace SigmaProtocol
 
-variable {m : Type → Type} [Monad m]
-  [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+variable {m : Type → Type} [MonadLiftT m SetM]
   {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
 section speciallySound
@@ -151,8 +147,6 @@ def SpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel 
 def SpeciallySound (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m) : Prop :=
   ∀ x, SpeciallySoundAt σ x
 
-omit [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonadLiftT m SetM]
-  [EvalDistCompatible m] in
 /-- Special soundness immediately validates any witness returned by the Σ-protocol extractor from
 two accepting transcripts with the same statement and commitment and with distinct challenges. -/
 theorem extract_sound_of_speciallySoundAt
@@ -170,9 +164,7 @@ end SigmaProtocol
 
 namespace ChallengeVerifyProtocol
 
-variable {m : Type → Type} [Monad m]
-  [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+variable {m : Type → Type} [Monad m] [MonadLiftT m SPMF]
   {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
 section hvzk
@@ -220,8 +212,6 @@ def PerfectHVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp
   ∀ x w, rel x w = true →
     𝒟[σ.realTranscript x w] = 𝒟[simTranscript x]
 
-omit [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
-  [EvalDistCompatible m] in
 /-- The perfect HVZK property is equivalent to the approximate HVZK property with `ζ_zk = 0`. -/
 @[grind =]
 lemma perfectHVZK_iff_hvzk_zero
