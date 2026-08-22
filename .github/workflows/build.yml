@@ -32,6 +32,9 @@ jobs:
           bash scripts/test-polyfun-boundary.sh
           bash scripts/check-polyfun-boundary.sh
 
+      - name: Check PMF dependency boundary
+        run: bash scripts/check-pmf-boundary.sh
+
       - name: Check for all imports in ToMathlib
         run: lake exe mk_all --lib ToMathlib --module --check
 
