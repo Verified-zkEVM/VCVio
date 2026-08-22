@@ -6,6 +6,7 @@ public import Extern.Falcon.FFT
 public import Extern.Falcon.FPRBridge
 public import Extern.Falcon.Instance
 public import Extern.Falcon.KeyGen
+public import Extern.Falcon.NonVacuity
 public import Extern.Falcon.SamplerZ
 public import Extern.Falcon.Sampling
 public import Extern.Falcon.Sign

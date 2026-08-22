@@ -20,6 +20,7 @@ public import Examples.ElGamal.ReductionCost
 public import Examples.ElGamal.SSP
 public import Examples.EvalDistCompatible.Basic
 public import Examples.FrankingProtocol
+public import Examples.GPVNonVacuity
 public import Examples.OneTimePad.Basic
 public import Examples.OneTimePad.HeapBasic
 public import Examples.OneTimePad.HeapPar
