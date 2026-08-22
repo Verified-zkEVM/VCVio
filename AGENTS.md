@@ -242,4 +242,5 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)
 - **Proof workflows (game-hopping, reductions)**: [`docs/agents/proof-workflows.md`](docs/agents/proof-workflows.md)
 - **Gotchas and troubleshooting**: [`docs/agents/gotchas.md`](docs/agents/gotchas.md)
+- **Review hardening standard**: [`docs/agents/review-hardening.md`](docs/agents/review-hardening.md)
 - **Module visibility and the PolyFun façade**: [`docs/agents/module-system.md`](docs/agents/module-system.md)
