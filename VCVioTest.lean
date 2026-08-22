@@ -11,3 +11,4 @@ public import VCVioTest.ProbabilityTactics
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.SampleableType
 public import VCVioTest.Smoke
+public import VCVioTest.UniversePolymorphism
