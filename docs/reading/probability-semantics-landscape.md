@@ -1460,8 +1460,8 @@ read through the GitHub API rather than from PR prose.
 Across the non-test libraries (`VCVio/`, `ToMathlib/`, `Examples/`, `LatticeCrypto/`,
 `HashSig/`): **884** lexical occurrences of bare `PMF` — i.e. excluding `SPMF`, `FinRatPMF`,
 and longer identifiers — across **74** files; **2718** `PMF` substrings occur across 123 files
-when derived names are counted. Roughly 541 lemma/theorem declarations live under
-`VCVio/EvalDist/` and 240 under `ToMathlib/Probability*`.
+when derived names are counted. 575 lemma/theorem declarations live under `VCVio/EvalDist/` and
+204 under `ToMathlib/Probability*`.
 
 Densest files, by bare-`PMF` count: `ProgramLogic/Relational/Quantitative.lean` (138),
 `EvalDist/TVDist.lean` (81),
@@ -1469,15 +1469,21 @@ Densest files, by bare-`PMF` count: `ProgramLogic/Relational/Quantitative.lean` 
 `.../TotalVariation.lean` (75), `ToMathlib/ProbabilityTheory/SPMF.lean` (69),
 `ToMathlib/ProbabilityTheory/Coupling.lean` (45), and `EvalDist/Defs/Basic.lean` (32).
 
-The point of the second number is that the migration cost is concentrated, not uniform:
-the top seven files carry roughly half of the direct exposure, and four of them are
-distance/coupling files whose content §4.5 already identifies as having no upstream
-counterpart. That is a different problem from the evaluator migration and should be
-scheduled separately.
+The point of the second number is that the migration cost is concentrated, not uniform: the top
+seven files carry 516 of the 884 direct occurrences — 58%, just under three fifths — and four of
+them are distance/coupling files whose content §4.5 already identifies as having no upstream
+counterpart. That is a different problem from the evaluator migration and should be scheduled
+separately.
+
+The per-file figures above are the occurrence counts maintained by
+[`scripts/pmf_boundary_baseline.tsv`](../../scripts/pmf_boundary_baseline.tsv), which the CI gate
+regenerates. They supersede an earlier revision of this section whose per-file numbers were
+produced with `grep -c` and therefore counted matching *lines* rather than occurrences; the totals
+were unaffected, the breakdown was not.
 
 ### 19.4 Release timing
 
 Lean's cadence is about four weeks: `v4.31.0` 2026-06-15, `v4.32.0` 2026-07-13,
 `v4.33.0` 2026-08-10, so `v4.34.0` is expected around 2026-09-07. At the time of this
-pass `v4.34.0-rc2` exists, as do Mathlib and cslib `v4.34.0-rc1` tags; PolyFun's newest
-tag is `v4.33.1`.
+pass Lean, Mathlib, and cslib all carry `v4.34.0-rc2`; PolyFun's newest tag is `v4.33.1`, so the
+`MonadAttach` workstream still has no tagged dependency to build against.
