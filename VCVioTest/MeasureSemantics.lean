@@ -7,6 +7,7 @@ module
 
 public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.Divergence.KLDivergence
+public import VCVio.EvalDist.ExpectationMeasure
 public import Mathlib.Probability.Distributions.Gaussian.Real
 public import ToMathlib.MeasureTheory.DiscreteInstances
 public import Examples.OneTimePad.Basic
@@ -244,5 +245,27 @@ example : klDiv (FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit))
     (FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit)) = 0 := by
   rw [denote_gauss_lift]
   exact klDiv_self _
+
+/-! ## Expectation as an integral
+
+`expectedValue` keeps its `∑'` definition and every proof written against it, while the same
+quantity becomes a `∫⁻` on request. Monotone convergence is the payoff: there is no `∑'`-shaped
+counterpart to it in the library. -/
+
+open OracleComp.EvalDist in
+/-- The existing sum spelling is untouched. -/
+example (n : ℕ) (mx : ProbComp (BitVec n)) (g : BitVec n → ℝ≥0∞) :
+    expectedValue mx g = ∑' x, Pr[= x | mx] * g x := expectedValue_def mx g
+
+open OracleComp.EvalDist in
+/-- ...and is an integral against the denoted measure. -/
+example (n : ℕ) (mx : ProbComp (BitVec n)) (g : BitVec n → ℝ≥0∞) :
+    expectedValue mx g = ∫⁻ x, g x ∂(toMeasure mx) := expectedValue_eq_lintegral mx g
+
+open OracleComp.EvalDist in
+/-- **Monotone convergence** for a VCVio expectation, from `lintegral_iSup`. -/
+example (n : ℕ) (mx : ProbComp (BitVec n)) (g : ℕ → BitVec n → ℝ≥0∞) (hg : Monotone g) :
+    expectedValue mx (fun x => ⨆ k, g k x) = ⨆ k, expectedValue mx (g k) :=
+  expectedValue_iSup mx g hg
 
 end VCVioTest.MeasureSemantics
