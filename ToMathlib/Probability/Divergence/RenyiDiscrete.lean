@@ -29,9 +29,11 @@ that mentions `PMF` at all. It is expected to disappear once the discrete layer 
 open MeasureTheory
 open scoped ENNReal
 
+universe u
+
 namespace InformationTheory
 
-variable {α : Type*} [MeasurableSpace α] [MeasurableSingletonClass α] [Countable α]
+variable {α : Type u} [MeasurableSpace α] [MeasurableSingletonClass α] [Countable α]
 
 
 /-- **The measure-level Renyi MGF agrees with the `PMF` one.**
@@ -77,5 +79,26 @@ measure-level statement and `renyiMGF_toMeasure`, with no `tsum` manipulation �
 shape every discrete corollary of a measure-level divergence result will take. -/
 example (a : ℝ) (ha : 1 < a) (p : PMF α) : PMF.renyiMGF a p p = 1 := by
   rw [← renyiMGF_toMeasure a ha p p, renyiMGF_self]
+
+/-- **The discrete data processing inequality, as a corollary of the measure-level one.**
+
+`PMF.renyiMGF_map_le` is proved directly in
+`ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence` by a fibrewise Holder argument
+spanning roughly a hundred and twenty lines. Here it is four rewrites and the measure-level
+statement, whose own proof defers the convexity to Mathlib.
+
+That is the concrete form of the payoff: the discrete result is not reproved, and it is not a
+weaker statement — it is the same inequality. -/
+theorem renyiMGF_map_le_of_pmf (a : ℝ) (ha : 1 ≤ a) {β : Type u} [MeasurableSpace β]
+    [MeasurableSingletonClass β] [Countable β] (f : α → β) (p q : PMF α) :
+    PMF.renyiMGF a (f <$> p) (f <$> q) ≤ PMF.renyiMGF a p q := by
+  rcases eq_or_lt_of_le ha with rfl | ha
+  · simp only [PMF.renyiMGF, sub_self, ENNReal.rpow_zero, mul_one, ENNReal.rpow_one]
+    rw [(f <$> p).tsum_coe, p.tsum_coe]
+  have hf : Measurable f := measurable_of_countable f
+  change PMF.renyiMGF a (PMF.map f p) (PMF.map f q) ≤ PMF.renyiMGF a p q
+  rw [← renyiMGF_toMeasure a ha, ← renyiMGF_toMeasure a ha,
+    ← PMF.toMeasure_map f p hf, ← PMF.toMeasure_map f q hf]
+  exact renyiMGF_map_le a ha _ _ hf
 
 end InformationTheory
