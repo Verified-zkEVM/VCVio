@@ -44,23 +44,22 @@ def withPregen (so : QueryImpl spec m) :
     QueryImpl spec (StateT (QuerySeed spec) m) :=
   fun t => StateT.mk fun seed =>
     match seed t with
-    | u :: us => pure (u, Function.update seed t us)
+    | u :: us => pure (u, seed.update t us)
     | [] => (·, seed) <$> so t
 
 @[simp, grind =]
 lemma withPregen_apply (so : QueryImpl spec m) (t : spec.Domain) :
     so.withPregen t = StateT.mk fun seed =>
       match seed t with
-      | u :: us => pure (u, Function.update seed t us)
+      | u :: us => pure (u, seed.update t us)
       | [] => (·, seed) <$> so t := rfl
 
 /-- Seed-hit: `withPregen` returns the head of the seed list without invoking `so`. -/
 lemma withPregen_run_cons (so : QueryImpl spec m) {t : spec.Domain}
     {seed : QuerySeed spec} {u : spec.Range t} {us : List (spec.Range t)}
-    (h : seed t = u :: us) :
-    (so.withPregen t).run seed = pure (u, Function.update seed t us) := by
+  (h : seed t = u :: us) :
+    (so.withPregen t).run seed = pure (u, seed.update t us) := by
   rw [withPregen_apply, StateT.run_mk, h]
-  rfl
 
 /-- Seed-miss: `withPregen` falls back to a single call of `so`, threading the seed unchanged. -/
 lemma withPregen_run_nil (so : QueryImpl spec m) {t : spec.Domain}
@@ -178,7 +177,7 @@ lemma eq_withPregen :
 /-- Seed-hit: `seededOracle t` returns the head of the seed list with no underlying query. -/
 lemma run_cons {t : spec.Domain} {seed : QuerySeed spec} {u : spec.Range t}
     {us : List (spec.Range t)} (h : seed t = u :: us) :
-    (seededOracle t).run seed = pure (u, Function.update seed t us) :=
+    (seededOracle t).run seed = pure (u, seed.update t us) :=
   QueryImpl.withPregen_run_cons _ h
 
 /-- Seed-miss: `seededOracle t` falls back to a single underlying `query t`. -/
@@ -202,7 +201,7 @@ lemma probEvent_liftComp_uniformSample_eq_of_eq
 lemma apply_eq (t : spec.Domain) :
     seededOracle t = StateT.mk fun seed =>
       match seed t with
-      | u :: us => pure (u, Function.update seed t us)
+      | u :: us => pure (u, seed.update t us)
       | [] => (·, seed) <$> OracleSpec.query t := rfl
 
 lemma run_bind_query_eq_pop {α : Type u}
@@ -401,25 +400,18 @@ private lemma pop_addValue_self_nil_aux {seed : QuerySeed spec} {i : ι} (h : se
   have hlist : (seed.addValue i v) i = [v] := by
     simp [QuerySeed.addValue, QuerySeed.addValues, h]
   rw [QuerySeed.pop_eq_some_of_cons _ _ v [] hlist]
-  suffices Function.update (seed.addValue i v) i ([] : List (spec.Range i)) = seed by
-    rw [this]; rfl
-  funext j; by_cases hj : j = i
-  · subst hj; simp [h]
-  · rw [Function.update_of_ne hj]
-    exact QuerySeed.addValues_of_ne seed [v] hj
+  exact congrArg (fun rest => some (v, rest)) <| by
+    simpa only [QuerySeed.addValue, QuerySeed.update_addValues_same, h] using
+      QuerySeed.update_eq_self seed i
 
 private lemma pop_addValue_self_cons_aux {seed : QuerySeed spec} {i : ι} {u₀ : spec.Range i}
     {rest : List (spec.Range i)} (h : seed i = u₀ :: rest) (v : spec.Range i) :
     (seed.addValue i v).pop i =
-      some (u₀, QuerySeed.addValue (Function.update seed i rest) i v) := by
+      some (u₀, QuerySeed.addValue (seed.update i rest) i v) := by
   have hlist : (seed.addValue i v) i = u₀ :: (rest ++ [v]) := by
     simp [QuerySeed.addValue, QuerySeed.addValues, h]
   rw [QuerySeed.pop_eq_some_of_cons _ _ u₀ (rest ++ [v]) hlist]
-  suffices Function.update (seed.addValue i v) i (rest ++ [v]) =
-      QuerySeed.addValue (Function.update seed i rest) i v by rw [this]; rfl
-  funext j; by_cases hj : j = i
-  · subst hj; simp [QuerySeed.addValue, QuerySeed.addValues]
-  · simp [Function.update_of_ne hj, QuerySeed.addValue, QuerySeed.addValues]
+  simp [QuerySeed.addValue, QuerySeed.addValues]
 
 private lemma pop_addValue_of_ne_nil_aux {seed : QuerySeed spec} {i t : ι} (hti : t ≠ i)
     (h : seed t = []) (v : spec.Range i) : (seed.addValue i v).pop t = none := by
@@ -429,19 +421,12 @@ private lemma pop_addValue_of_ne_nil_aux {seed : QuerySeed spec} {i t : ι} (hti
 private lemma pop_addValue_of_ne_cons_aux {seed : QuerySeed spec} {i t : ι} {u₀ : spec.Range t}
     {rest : List (spec.Range t)} (hti : t ≠ i) (h : seed t = u₀ :: rest) (v : spec.Range i) :
     (seed.addValue i v).pop t =
-      some (u₀, QuerySeed.addValue (Function.update seed t rest) i v) := by
+      some (u₀, QuerySeed.addValue (seed.update t rest) i v) := by
   have hlist : (seed.addValue i v) t = u₀ :: rest :=
     (QuerySeed.addValues_of_ne seed [_] hti).trans h
   rw [QuerySeed.pop_eq_some_of_cons _ _ u₀ rest hlist]
-  suffices Function.update (seed.addValue i v) t rest =
-      QuerySeed.addValue (Function.update seed t rest) i v by rw [this]; rfl
-  change Function.update (Function.update seed i (seed i ++ [v])) t rest =
-    Function.update (Function.update seed t rest) i
-      ((Function.update seed t rest) i ++ [v])
-  conv_rhs =>
-    rw [show (Function.update seed t rest) i = seed i from
-      Function.update_of_ne (Ne.symm hti) rest seed]
-  exact Function.update_comm (Ne.symm hti) (seed i ++ [v]) rest seed
+  exact congrArg (fun next => some (u₀, next)) <|
+    QuerySeed.update_addValues_comm seed (Ne.symm hti) [v] rest
 
 /-- Adding a uniform value at index `i` to a seed does not change the distribution of
 running a computation with the seeded oracle. This is because the extra value replaces

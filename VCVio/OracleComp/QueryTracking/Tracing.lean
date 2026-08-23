@@ -80,18 +80,23 @@ variable {ω : Type u} [Monoid ω]
 /-- Wrap an oracle implementation so that each query records `traceFn t` in
 the writer `ω` *before* running the handler. The trace value depends only on
 the query, so a failure inside the handler still leaves the trace recorded. -/
-def withTraceBefore (so : QueryImpl spec m) (traceFn : spec.Domain → ω) :
+abbrev withTraceBefore (so : QueryImpl spec m) (traceFn : spec.Domain → ω) :
     QueryImpl spec (WriterT ω m) :=
-  so.preInsert fun t => tell (traceFn t)
+  PFunctor.Handler.withTraceBefore (P := spec.toPFunctor) so traceFn
 
 @[simp, grind =]
 lemma withTraceBefore_apply (so : QueryImpl spec m) (traceFn : spec.Domain → ω) (t : spec.Domain) :
-    so.withTraceBefore traceFn t = (do tell (traceFn t); so t) := rfl
+    so.withTraceBefore traceFn t = (do tell (traceFn t); so t) := by
+  exact PFunctor.Handler.withTraceBefore_apply (P := spec.toPFunctor) so traceFn t
 
 lemma fst_map_run_withTraceBefore [LawfulMonad m]
     (so : QueryImpl spec m) (traceFn : spec.Domain → ω) (mx : OracleComp spec α) :
-    Prod.fst <$> (simulateQ (so.withTraceBefore traceFn) mx).run = simulateQ so mx :=
-  proj_simulateQ_preInsert so (fun t => tell (traceFn t))
+    Prod.fst <$> (simulateQ (so.withTraceBefore traceFn) mx).run = simulateQ so mx := by
+  have h : so.withTraceBefore traceFn =
+      so.preInsert (fun t => tell (traceFn t)) :=
+    PFunctor.Handler.withTraceBefore_eq_preInsert (P := spec.toPFunctor) so traceFn
+  rw [h]
+  exact proj_simulateQ_preInsert so (fun t => tell (traceFn t))
     (proj := fun {γ} (x : WriterT ω m γ) => Prod.fst <$> x.run)
     WriterT.fst_map_run_pure WriterT.fst_map_run_bind
     (fun t => by simp) mx
@@ -155,21 +160,26 @@ variable {ω : Type u} [Monoid ω]
 /-- Wrap an oracle implementation so that each query records
 `traceFn t u` in the writer `ω` *after* the handler returns response `u`.
 A handler failure skips the trace (the response never materialised). -/
-def withTrace (so : QueryImpl spec m)
+abbrev withTrace (so : QueryImpl spec m)
     (traceFn : (t : spec.Domain) → spec.Range t → ω) :
     QueryImpl spec (WriterT ω m) :=
-  so.postInsert fun t u => tell (traceFn t u)
+  PFunctor.Handler.withTrace (P := spec.toPFunctor) so traceFn
 
 @[simp, grind =]
 lemma withTrace_apply (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
     (t : spec.Domain) :
-    so.withTrace traceFn t = (do let u ← so t; tell (traceFn t u); return u) := rfl
+    so.withTrace traceFn t = (do let u ← so t; tell (traceFn t u); return u) := by
+  exact PFunctor.Handler.withTrace_apply (P := spec.toPFunctor) so traceFn t
 
 lemma fst_map_run_withTrace [LawfulMonad m]
     (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
     (mx : OracleComp spec α) :
-    Prod.fst <$> (simulateQ (so.withTrace traceFn) mx).run = simulateQ so mx :=
-  proj_simulateQ_postInsert so (fun t u => tell (traceFn t u))
+    Prod.fst <$> (simulateQ (so.withTrace traceFn) mx).run = simulateQ so mx := by
+  have h : so.withTrace traceFn =
+      so.postInsert (fun t u => tell (traceFn t u)) :=
+    PFunctor.Handler.withTrace_eq_postInsert (P := spec.toPFunctor) so traceFn
+  rw [h]
+  exact proj_simulateQ_postInsert so (fun t u => tell (traceFn t u))
     (proj := fun {γ} (x : WriterT ω m γ) => Prod.fst <$> x.run)
     WriterT.fst_map_run_pure WriterT.fst_map_run_bind
     (fun t => by simp) mx
@@ -242,22 +252,27 @@ variable {ω : Type u} [EmptyCollection ω] [Append ω]
 uses the `[EmptyCollection ω] [Append ω]` `Monad` instance (`tell` is a single
 push, `bind` concatenates with `++`). The trace value depends only on the
 query, so a failure inside the handler still leaves the trace recorded. -/
-def withTraceAppendBefore (so : QueryImpl spec m) (traceFn : spec.Domain → ω) :
+abbrev withTraceAppendBefore (so : QueryImpl spec m) (traceFn : spec.Domain → ω) :
     QueryImpl spec (WriterT ω m) :=
-  so.preInsert fun t => tell (traceFn t)
+  PFunctor.Handler.withTraceAppendBefore (P := spec.toPFunctor) so traceFn
 
 @[simp, grind =]
 lemma withTraceAppendBefore_apply (so : QueryImpl spec m) (traceFn : spec.Domain → ω)
     (t : spec.Domain) :
-    so.withTraceAppendBefore traceFn t = (do tell (traceFn t); so t) := rfl
+    so.withTraceAppendBefore traceFn t = (do tell (traceFn t); so t) := by
+  exact PFunctor.Handler.withTraceAppendBefore_apply (P := spec.toPFunctor) so traceFn t
 
 lemma fst_map_run_withTraceAppendBefore [LawfulMonad m] [LawfulAppend ω]
     (so : QueryImpl spec m) (traceFn : spec.Domain → ω) (mx : OracleComp spec α) :
-    Prod.fst <$> (simulateQ (so.withTraceAppendBefore traceFn) mx).run = simulateQ so mx :=
-  proj_simulateQ_preInsert so (fun t => tell (traceFn t))
+    Prod.fst <$> (simulateQ (so.withTraceAppendBefore traceFn) mx).run = simulateQ so mx := by
+  have h : so.withTraceAppendBefore traceFn =
+      so.preInsert (fun t => tell (traceFn t)) :=
+    PFunctor.Handler.withTraceAppendBefore_eq_preInsert (P := spec.toPFunctor) so traceFn
+  rw [h]
+  exact proj_simulateQ_preInsert so (fun t => tell (traceFn t))
     (proj := fun {γ} (x : WriterT ω m γ) => Prod.fst <$> x.run)
     WriterT.fst_map_run_pure' WriterT.fst_map_run_bind'
-    (fun t => by simp) mx
+    (fun t => by simp [seqRight_eq_bind]) mx
 
 lemma probFailure_run_simulateQ_withTraceAppendBefore [LawfulMonad m]
     [LawfulAppend ω] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
@@ -312,21 +327,26 @@ variable {ω : Type u} [EmptyCollection ω] [Append ω]
 `traceFn t u` in the writer `ω` *after* the handler returns response `u`,
 using the `[EmptyCollection ω] [Append ω]` `Monad (WriterT ω m)` instance.
 A handler failure skips the trace (the response never materialised). -/
-def withTraceAppend (so : QueryImpl spec m)
+abbrev withTraceAppend (so : QueryImpl spec m)
     (traceFn : (t : spec.Domain) → spec.Range t → ω) :
     QueryImpl spec (WriterT ω m) :=
-  so.postInsert fun t u => tell (traceFn t u)
+  PFunctor.Handler.withTraceAppend (P := spec.toPFunctor) so traceFn
 
 @[simp, grind =]
 lemma withTraceAppend_apply (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
     (t : spec.Domain) :
-    so.withTraceAppend traceFn t = (do let u ← so t; tell (traceFn t u); return u) := rfl
+    so.withTraceAppend traceFn t = (do let u ← so t; tell (traceFn t u); return u) := by
+  exact PFunctor.Handler.withTraceAppend_apply (P := spec.toPFunctor) so traceFn t
 
 lemma fst_map_run_withTraceAppend [LawfulMonad m] [LawfulAppend ω]
     (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
     (mx : OracleComp spec α) :
-    Prod.fst <$> (simulateQ (so.withTraceAppend traceFn) mx).run = simulateQ so mx :=
-  proj_simulateQ_postInsert so (fun t u => tell (traceFn t u))
+    Prod.fst <$> (simulateQ (so.withTraceAppend traceFn) mx).run = simulateQ so mx := by
+  have h : so.withTraceAppend traceFn =
+      so.postInsert (fun t u => tell (traceFn t u)) :=
+    PFunctor.Handler.withTraceAppend_eq_postInsert (P := spec.toPFunctor) so traceFn
+  rw [h]
+  exact proj_simulateQ_postInsert so (fun t u => tell (traceFn t u))
     (proj := fun {γ} (x : WriterT ω m γ) => Prod.fst <$> x.run)
     WriterT.fst_map_run_pure' WriterT.fst_map_run_bind'
     (fun t => by simp) mx

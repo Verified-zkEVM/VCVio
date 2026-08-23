@@ -273,6 +273,24 @@ theorem runStepsAsync_empty_trivial_eq
       rw [runStepsAsync, ProcessOver.runSteps]
       simp only [Interaction.UC.trivialEnvScheduler_apply, monad_norm, ih, List.replicate_succ]
 
+/-- `OpenProcess`-level form of `runStepsAsync_empty_trivial_eq`, retaining the bundled
+step sampler in the statement. -/
+theorem runStepsAsync_empty_trivial_openProcess_eq
+    {m : Type → Type} [Monad m] [LawfulMonad m]
+    {Party : Type u} (process : OpenProcess m Party PortBoundary.empty)
+    (fuel : ℕ) (s : process.Proc) :
+    runStepsAsync process.toProcess (Interaction.UC.EnvAction.empty Unit)
+        (fun st => process.stepSampler st.proc)
+        (Interaction.UC.trivialEnvScheduler (m := m) Unit Empty)
+        fuel
+        (⟨s, ()⟩ : Interaction.UC.AsyncRuntimeState process.Proc Unit) =
+      (do
+        let s' ← ProcessOver.runSteps process.toProcess process.stepSampler fuel s
+        pure
+          ((⟨s', ()⟩ : Interaction.UC.AsyncRuntimeState process.Proc Unit),
+            List.replicate fuel Interaction.UC.RuntimeEvent.processTick)) := by
+  exact runStepsAsync_empty_trivial_eq process.toProcess process.stepSampler fuel s
+
 end Concurrent
 
 namespace UC
@@ -387,8 +405,9 @@ theorem processSemantics_eq_processSemanticsAsync_trivial
   unfold processSemantics processSemanticsAsync
   congr 1
   funext process
+  change OpenProcess m Party PortBoundary.empty at process
   simp only [monad_norm]
-  rw [Concurrent.runStepsAsync_empty_trivial_eq]
+  rw [Concurrent.runStepsAsync_empty_trivial_openProcess_eq]
   simp only [monad_norm]
 
 /--

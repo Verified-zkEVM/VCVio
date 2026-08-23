@@ -269,7 +269,7 @@ key agrees with the patterns produced by `Sym.mkPatternFromDeclWithKey`.
 structure constructor.
 
 Do not use the more general `Sym.preprocessType` here. Besides being intended
-for declaration types rather than terms, in Lean 4.32 it also unfolds reducible
+for declaration types rather than terms, in Lean 4.33 it also unfolds reducible
 user programs. A program containing a matcher can then make later
 definitional equality reduce a matcher with loose de Bruijn variables and
 panic in `whnfEasyCases`. The wrappers below are the only newly

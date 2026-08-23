@@ -43,7 +43,7 @@ noncomputable local instance instIsUniformSpec : IsUniformSpec spec :=
 @[simp] lemma toPMF_apply (t : spec.Domain) :
     @Raw.toPMF _ (Classical.decEq _) (finRatImpl (spec := spec) t) =
       PMF.uniformOfFintype (spec.Range t) := by
-  letI : DecidableEq (spec.Range t) := Classical.decEq _
+  let : DecidableEq (spec.Range t) := Classical.decEq _
   ext x
   simp only [finRatImpl, Raw.toPMF_apply, PMF.uniformOfFintype_apply]
   rw [Raw.prob_eq_prob (Classical.decEq _) FinEnum.decEq, Raw.prob_uniform]

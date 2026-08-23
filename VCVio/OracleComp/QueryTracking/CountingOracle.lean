@@ -74,7 +74,8 @@ lemma withCost_eq_withTraceBefore (so : QueryImpl spec m) (costFn : spec.Domain 
 @[simp, grind =]
 lemma withCost_apply (so : QueryImpl spec m) (costFn : spec.Domain → ω)
     (t : spec.Domain) :
-    so.withCost costFn t = (do tell (costFn t); so t) := rfl
+    so.withCost costFn t = (do tell (costFn t); so t) := by
+  exact withTraceBefore_apply so costFn t
 
 lemma fst_map_run_withCost [LawfulMonad m]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
@@ -139,7 +140,8 @@ def withCounting [DecidableEq ι] (so : QueryImpl spec m) :
 
 @[simp, grind =]
 lemma withCounting_apply [DecidableEq ι] (so : QueryImpl spec m) (t : spec.Domain) :
-    so.withCounting t = (do tell (QueryCount.single t); so t) := rfl
+    so.withCounting t = (do tell (QueryCount.single t); so t) := by
+  exact withCost_apply so (QueryCount.single ·) t
 
 lemma withCounting_eq_withCost [DecidableEq ι] (so : QueryImpl spec m) :
     so.withCounting = so.withCost (QueryCount.single ·) := rfl
@@ -162,6 +164,21 @@ function from oracle indices to counts, to give finer grained information about 
 def OracleSpec.countingOracle [DecidableEq ι] :
     QueryImpl spec (WriterT (QueryCount ι) (OracleComp spec)) :=
   (QueryImpl.ofLift spec (OracleComp spec)).withCounting
+
+/-- Pointwise behavior of the generic cost oracle. -/
+@[simp]
+lemma costOracle_apply {ω : Type u} [Monoid ω] (costFn : spec.Domain → ω)
+    (t : spec.Domain) :
+    costOracle costFn t =
+      (do tell (costFn t); liftM (liftM (spec.query t) : OracleComp spec _)) := by
+  rw [costOracle, QueryImpl.withCost_apply, QueryImpl.ofLift_apply]
+
+/-- Pointwise behavior of the per-index counting oracle. -/
+@[simp]
+lemma OracleSpec.countingOracle_apply [DecidableEq ι] (t : spec.Domain) :
+    spec.countingOracle t =
+      (do tell (QueryCount.single t); liftM (liftM (spec.query t) : OracleComp spec _)) := by
+  rw [OracleSpec.countingOracle, QueryImpl.withCounting_apply, QueryImpl.ofLift_apply]
 
 lemma countingOracle_eq_costOracle [DecidableEq ι] :
     spec.countingOracle = costOracle (QueryCount.single ·) := rfl

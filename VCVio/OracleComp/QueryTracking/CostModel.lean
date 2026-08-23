@@ -352,8 +352,11 @@ theorem IsPerIndexQueryBound.toWorstCaseCostBound_unit_sum
             (oa := instrumentedRun (spec.query t : OracleComp spec (spec.Range t)) CostModel.unit)
             (f := fun u => instrumentedRun (mx u) CostModel.unit)
             (n₂ := ∑ i, Function.update qb t (qb t - 1) i)
-            (HasQuery.queryBoundedAboveBy_withUnitCost_query
-              (QueryImpl.ofLift spec (OracleComp spec)) t) (fun u => ih u (hqb.2 u))
+            (by simpa [instrumentedRun, CostModel.unit,
+                  HasQuery.Program.withUnitCost] using
+              (HasQuery.queryBoundedAboveBy_withUnitCost_query
+                (QueryImpl.ofLift spec (OracleComp spec)) t))
+            (fun u => ih u (hqb.2 u))
           simpa [instrumentedRun, simulateQ_bind] using hbind
         · have := sum_update_pred_eq qb t hqb.1
           omega

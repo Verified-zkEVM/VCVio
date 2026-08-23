@@ -39,7 +39,7 @@ Carrier, WP/RWP instance, exception-post, and state arguments remain abstracted
 in the cached proof and are reopened freshly at each application. If future local
 or structurally specialized entries are cached, this key should be widened
 rather than reused. -/
-abbrev VCSpecBackwardRuleCacheKey := Name × Bool × Nat
+private abbrev VCSpecBackwardRuleCacheKey := Name × Bool × Nat
 
 private def VCSpecKind.cacheKey : VCSpecKind → Nat
   | .unaryTriple => 0
@@ -56,7 +56,7 @@ private def VCSpecKind.traceLabel : VCSpecKind → String
 private def rawGoalTraceLabel (rawGoal : Bool) : String :=
   if rawGoal then "raw" else "folded"
 
-initialize vcSpecBackwardRuleCache :
+private initialize vcSpecBackwardRuleCache :
     IO.Ref (Std.HashMap VCSpecBackwardRuleCacheKey VCSpecBackwardRule) ←
   IO.mkRef {}
 

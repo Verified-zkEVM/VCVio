@@ -70,6 +70,15 @@ lemma simulateQ_spec_query [LawfulMonad r] (t : spec.Domain) :
     simulateQ impl (liftM (spec.query t)) = impl t := by
   simp [simulateQ_query]
 
+/-- A direct-style `HasQuery.query` in `OracleComp` is the canonical primitive query when
+interpreted by `simulateQ`. -/
+@[simp, grind =]
+lemma simulateQ_HasQuery_query [LawfulMonad r] (t : spec.Domain) :
+    simulateQ impl
+        (HasQuery.query (spec := spec) (m := OracleComp spec) t) =
+      impl t := by
+  rw [HasQuery.instOfMonadLift_query, simulateQ_spec_query]
+
 /-- Companion to `simulateQ_query` for a query entering the computation through a
 *query-level lift chain*: simulating a query lifted from a sub-spec `spec'` applies the
 implementation to the lifted query.

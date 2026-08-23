@@ -106,7 +106,7 @@ theorem centeredRepr_natAbs_neg (x : ZMod q) :
     (centeredRepr (-x)).natAbs = (centeredRepr x).natAbs := by
   by_cases hx : x = 0
   · simp [hx]
-  · haveI : NeZero x := ⟨hx⟩
+  · have : NeZero x := ⟨hx⟩
     simp only [centeredRepr, ZMod.val_neg_of_ne_zero]
     have hval := ZMod.val_lt x
     have hpos : 0 < x.val := Nat.pos_of_ne_zero ((ZMod.val_ne_zero x).mpr hx)

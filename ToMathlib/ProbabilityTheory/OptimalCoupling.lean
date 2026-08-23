@@ -42,8 +42,8 @@ lemma map_fst_eval (c : SPMF (α × β)) (a : α) :
     letI := Fintype.ofFinite β
     (Prod.fst <$> c) a = ∑ b, c (a, b) := by
   classical
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofFinite β
+  let := Fintype.ofFinite α
+  let := Fintype.ofFinite β
   erw [SPMF.fmap_eq_map, PMF.map_apply, tsum_fintype, Fintype.sum_option]
   have hsimp :
       ((if some a = Option.map Prod.fst (none : Option (α × β)) then c.gap else 0) +
@@ -72,8 +72,8 @@ open scoped Classical in
 lemma map_snd_eval (c : SPMF (α × β)) (b : β) :
     letI := Fintype.ofFinite α
     (Prod.snd <$> c) b = ∑ a, c (a, b) := by
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofFinite β
+  let := Fintype.ofFinite α
+  let := Fintype.ofFinite β
   erw [SPMF.fmap_eq_map, PMF.map_apply, tsum_fintype, Fintype.sum_option]
   have hsimp :
       ((if some b = Option.map Prod.snd (none : Option (α × β)) then c.gap else 0) +
@@ -122,8 +122,8 @@ def couplings_set (p : SPMF α) (q : SPMF β) : Set (Option (α × β) → ℝ) 
 -- 2. Prove this set is closed and bounded
 lemma isClosed_couplings_set (p : SPMF α) (q : SPMF β) :
     IsClosed (couplings_set p q) := by
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofFinite β
+  let := Fintype.ofFinite α
+  let := Fintype.ofFinite β
   rw [show couplings_set p q =
       {c | ∀ z, 0 ≤ c z} ∩
       {c | ∀ z, c z ≤ 1} ∩
@@ -131,7 +131,7 @@ lemma isClosed_couplings_set (p : SPMF α) (q : SPMF β) :
       {c | ∀ b, ∑ a, c (some (a, b)) = (q b).toReal} ∩
       {c | c none = 1 - (∑ z, c (some z))} by
     ext x
-    simp only [couplings_set, mem_inter_iff, mem_setOf_eq]
+    simp only [couplings_set, mem_inter_iff, Set.mem_ofPred_eq]
     tauto
   ]
   have h1 : IsClosed {c : Option (α × β) → ℝ | ∀ z, 0 ≤ c z} := by
@@ -161,8 +161,8 @@ lemma isClosed_couplings_set (p : SPMF α) (q : SPMF β) :
 
 lemma isBounded_couplings_set (p : SPMF α) (q : SPMF β) :
     Bornology.IsBounded (couplings_set p q) := by
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofFinite β
+  let := Fintype.ofFinite α
+  let := Fintype.ofFinite β
   rw [Metric.isBounded_iff]
   use 1
   intro x hx y hy
@@ -177,17 +177,17 @@ lemma isBounded_couplings_set (p : SPMF α) (q : SPMF β) :
 
 lemma isCompact_couplings_set (p : SPMF α) (q : SPMF β) :
     IsCompact (couplings_set p q) := by
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofFinite β
+  let := Fintype.ofFinite α
+  let := Fintype.ofFinite β
   exact Metric.isCompact_of_isClosed_isBounded (isClosed_couplings_set p q)
     (isBounded_couplings_set p q)
 
 lemma mem_couplings_set_of_isCoupling {p : SPMF α} {q : SPMF β} (c : SPMF (α × β))
     (hc : SPMF.IsCoupling c p q) :
     (fun z => (c.toPMF z).toReal) ∈ couplings_set p q := by
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofFinite β
-  simp only [couplings_set, mem_setOf_eq]
+  let := Fintype.ofFinite α
+  let := Fintype.ofFinite β
+  simp only [couplings_set, Set.mem_ofPred_eq]
   refine ⟨fun z => ENNReal.toReal_nonneg, ?_, ?_, ?_, ?_⟩
   · intro z; exact ENNReal.toReal_mono (by exact ENNReal.one_ne_top) (PMF.coe_le_one c z)
   · intro a
@@ -229,8 +229,8 @@ private lemma sum_option_eq_one_of_none_eq_sub {γ : Type u} [Fintype γ]
 private lemma exists_coupling_of_mem_couplings_set {p : SPMF α} {q : SPMF β}
     {c : Option (α × β) → ℝ} (hc : c ∈ couplings_set p q) :
     ∃ c' : SPMF.Coupling p q, ∀ z, (c'.1.1 z).toReal = c z := by
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofFinite β
+  let := Fintype.ofFinite α
+  let := Fintype.ofFinite β
   rcases hc with ⟨h_nonneg, _, h_row, h_col, h_none⟩
   have h_total_real : ∑ z : Option (α × β), c z = 1 :=
     sum_option_eq_one_of_none_eq_sub h_nonneg h_none
@@ -305,8 +305,8 @@ private lemma objective_eq_ofReal (c : SPMF (α × β))
     letI := Fintype.ofFinite α
     letI := Fintype.ofFinite β
     (∑' z, c.1 z * f z) = ENNReal.ofReal (∑ z, (c.1 z).toReal * (f z).toReal) := by
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofFinite β
+  let := Fintype.ofFinite α
+  let := Fintype.ofFinite β
   rw [tsum_fintype]
   calc
     ∑ z : Option (α × β), c.1 z * f z
@@ -330,8 +330,8 @@ lemma SPMF.exists_max_coupling {p : SPMF α} {q : SPMF β}
     ∃ (c : SPMF.Coupling p q),
       (⨆ c' : SPMF.Coupling p q, ∑' (z : Option (α × β)), (c'.1.1 z) * f z) =
         ∑' (z : Option (α × β)), (c.1.1 z) * f z := by
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofFinite β
+  let := Fintype.ofFinite α
+  let := Fintype.ofFinite β
   let F : (Option (α × β) → ℝ) → ℝ := fun c => ∑ z, c z * (f z).toReal
   have hF_cont : Continuous F := continuous_finsetSum _
     (fun z _ => (continuous_apply z).mul continuous_const)

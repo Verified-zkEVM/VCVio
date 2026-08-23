@@ -47,7 +47,7 @@ This is definitionally equal to `uniformSampleImpl.withPregen` (from `SeededOrac
     QueryImpl spec (StateT (QuerySeed spec) ProbComp) :=
   fun t => StateT.mk fun seed =>
     match seed t with
-    | u :: us => pure (u, Function.update seed t us)
+    | u :: us => pure (u, seed.update t us)
     | [] => (·, seed) <$> ($ᵗ spec.Range t)
 
 namespace eagerRandomOracle
@@ -58,8 +58,19 @@ variable {ι₀ : Type} [DecidableEq ι₀] {spec₀ : OracleSpec.{0, 0} ι₀}
 lemma apply_eq (t : spec₀.Domain) :
     (eagerRandomOracle (spec := spec₀)) t = StateT.mk fun seed =>
       match seed t with
-      | u :: us => pure (u, Function.update seed t us)
+      | u :: us => pure (u, seed.update t us)
       | [] => (·, seed) <$> ($ᵗ spec₀.Range t) := rfl
+
+/-- A seeded eager query consumes the head value through `QuerySeed.update`. -/
+lemma run_cons {t : spec₀.Domain} {seed : QuerySeed spec₀} {u : spec₀.Range t}
+    {us : List (spec₀.Range t)} (h : seed t = u :: us) :
+    (eagerRandomOracle t).run seed = pure (u, seed.update t us) := by
+  rw [apply_eq, StateT.run_mk, h]
+
+/-- An eager query with no seed value samples uniformly and preserves the seed. -/
+lemma run_nil {t : spec₀.Domain} {seed : QuerySeed spec₀} (h : seed t = []) :
+    (eagerRandomOracle t).run seed = (·, seed) <$> ($ᵗ spec₀.Range t) := by
+  rw [apply_eq, StateT.run_mk, h]
 
 /-- With an empty seed, the eager random oracle reduces to `uniformSampleImpl`:
 every query falls through to fresh uniform sampling with no state change.
@@ -98,10 +109,7 @@ private lemma eagerRandomOracle_run'_nil {ι₀ : Type} [DecidableEq ι₀]
       (simulateQ eagerRandomOracle (f p.1)).run p.2) = _
   have h : (eagerRandomOracle (spec := spec₀) t).run seed =
       (fun u => (u, seed)) <$> ($ᵗ spec₀.Range t) := by
-    change (match seed t with
-        | v :: vs => pure (v, Function.update seed t vs)
-        | [] => (·, seed) <$> ($ᵗ spec₀.Range t)) = _
-    rw [ht]
+    exact eagerRandomOracle.run_nil ht
   rw [h]; simp
 
 /-- Helper: the `run'` of the eager oracle bind consumes the head
@@ -112,16 +120,14 @@ private lemma eagerRandomOracle_run'_cons {ι₀ : Type} [DecidableEq ι₀]
     (seed : QuerySeed spec₀) (u : spec₀.Range t) (us : List (spec₀.Range t))
     (ht : seed t = u :: us) :
     (eagerRandomOracle t >>= fun v => simulateQ eagerRandomOracle (f v)).run' seed =
-    (simulateQ eagerRandomOracle (f u)).run' (Function.update seed t us) := by
+    (simulateQ eagerRandomOracle (f u)).run' (seed.update t us) := by
   change Prod.fst <$> ((eagerRandomOracle t).run seed >>= fun p =>
       (simulateQ eagerRandomOracle (f p.1)).run p.2) = _
   have h : (eagerRandomOracle (spec := spec₀) t).run seed =
-      pure (u, Function.update seed t us) := by
-    change (match seed t with
-        | v :: vs => pure (v, Function.update seed t vs)
-        | [] => (·, seed) <$> ($ᵗ spec₀.Range t)) = _
-    rw [ht]
-  rw [h]; rfl
+      pure (u, seed.update t us) := by
+    exact eagerRandomOracle.run_cons ht
+  rw [h, pure_bind]
+  exact (StateT.run'_eq (simulateQ eagerRandomOracle (f u)) (seed.update t us)).symm
 
 /-- Helper for the `query_bind` step of `eagerRandomOracle_evalDist_generateSeed_bind` when
 `qc t * js.count t = 0`: every generated seed has `seed t = []`, so each query falls through
@@ -185,7 +191,7 @@ private lemma eagerRandomOracle_evalDist_generateSeed_bind_step_pos {ι₀ : Typ
       Pr[= seed | generateSeed spec₀ qc js] *
         (match seed t with
           | u :: us => Pr[= x | (simulateQ eagerRandomOracle (f u)).run'
-              (Function.update seed t us)]
+              (seed.update t us)]
           | [] => 0) := by
     intro seed
     by_cases hs : seed ∈ support (generateSeed spec₀ qc js)
@@ -200,14 +206,14 @@ private lemma eagerRandomOracle_evalDist_generateSeed_bind_step_pos {ι₀ : Typ
       by_contra h; exact hseed (by simp [(probOutput_eq_zero_iff _ _).mpr h])
     obtain ⟨u, us, hc⟩ :=
       exists_cons_of_mem_support_generateSeed spec₀ qc js seed t hmem hpos
-    exact ⟨(u, Function.update seed t us),
+    exact ⟨(u, seed.update t us),
       QuerySeed.eq_prependValues_of_pop_eq_some
         (QuerySeed.pop_eq_some_of_cons seed t u us hc)⟩)]
   simp only [QuerySeed.prependValues, List.singleton_append,
-    Function.update_self, Function.update_idem, Function.update_eq_self]
+    QuerySeed.update_self, QuerySeed.update_idem, QuerySeed.update_eq_self]
   rw [ENNReal.tsum_prod']; congr 1; ext u
   simp only [show ∀ b : QuerySeed spec₀,
-      Function.update (u, b).2 t ((u, b).1 :: (u, b).2 t) = b.prependValues [u] from
+      (u, b).2.update t ((u, b).1 :: (u, b).2 t) = b.prependValues [u] from
     fun b => by simp [QuerySeed.prependValues]]
   simp_rw [probOutput_generateSeed_prependValues spec₀ qc js u _ hpos,
     mul_assoc, ENNReal.tsum_mul_left]

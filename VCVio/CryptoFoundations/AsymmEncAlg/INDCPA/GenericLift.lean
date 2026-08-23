@@ -193,6 +193,8 @@ private lemma IND_CPA_queryImpl_hybridLR_counted_run'_inr_none (pk : PK) (leftUn
         let c ← encAlg'.encrypt pk (if st.2 < leftUntil then mm.1 else mm.2)
         (simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk leftUntil)
           (oa c)).run' (st.1.cacheQuery mm c, st.2 + 1)) := by
+  change encAlg'.IND_CPA_oracleSpec.Range (.inr mm) →
+    OracleComp encAlg'.IND_CPA_oracleSpec α at oa
   have hrun :
       (simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk leftUntil)
           (encAlg'.IND_CPA_oracleSpec.query (.inr mm) >>= oa)).run st =
@@ -218,6 +220,8 @@ private lemma IND_CPA_queryImpl_hybridLR_counted_run'_inr_some (pk : PK) (leftUn
     (simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk leftUntil)
         (encAlg'.IND_CPA_oracleSpec.query (.inr mm) >>= oa)).run' st =
       (simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk leftUntil) (oa c)).run' st := by
+  change encAlg'.IND_CPA_oracleSpec.Range (.inr mm) →
+    OracleComp encAlg'.IND_CPA_oracleSpec α at oa
   have hrun :
       (simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk leftUntil)
           (encAlg'.IND_CPA_oracleSpec.query (.inr mm) >>= oa)).run st =

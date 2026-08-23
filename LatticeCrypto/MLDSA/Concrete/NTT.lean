@@ -198,11 +198,11 @@ private theorem ntt_injective : Function.Injective ntt := by
   simpa [invNTT_ntt] using hInv
 
 private theorem ntt_surjective : Function.Surjective ntt := by
-  letI : NeZero modulus := ⟨by norm_num [modulus]⟩
-  letI : Fintype Coeff := by
+  let : NeZero modulus := ⟨by norm_num [modulus]⟩
+  let : Fintype Coeff := by
     dsimp [Coeff]
     exact ZMod.fintype modulus
-  letI : Finite Rq := Finite.of_equiv (Fin ringDegree → Coeff) rqEquivCoeffFun.symm
+  let : Finite Rq := Finite.of_equiv (Fin ringDegree → Coeff) rqEquivCoeffFun.symm
   exact ntt_injective.surjective_of_finite rqEquivTq
 
 /-- The concrete forward transform is a left inverse to the concrete inverse transform. -/
