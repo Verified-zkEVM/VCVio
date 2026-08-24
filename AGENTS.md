@@ -57,6 +57,8 @@ The repo also includes a first-class lattice cryptography library under `Lattice
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
 - `VCVioWidgets/`: optional widget experiments and visualizations.
+- `VCVioComplexity/`: optional isolated Lake package for the complexitylib-backed exact-machine
+  substrate; it is not part of VCVio's default dependency graph.
 - `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs.
 - `Interop/`: experimental bridges to Rust verification frontends (hax, aeneas). **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.
@@ -140,6 +142,23 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - DLog / CDH / DDH via HHS: `VCVio/CryptoFoundations/HardnessAssumptions/DiffieHellman.lean`
 - Cost model / polynomial time: `VCVio/OracleComp/QueryTracking/CostModel.lean`
 - Query cost / weighted expected cost: `VCVio/OracleComp/QueryTracking/QueryCost.lean`, `VCVio/OracleComp/QueryTracking/WriterCost.lean`
+- Quantitative realizability and syntactic resource traces:
+  `PolyFun/Realizability/Quantitative.lean`
+- Strict backend-relative oracle PPT:
+  `VCVio/CryptoFoundations/Asymptotics/ComputationalComplexity.lean`
+- Proof-bearing oracle-handler closure seam:
+  `VCVio/CryptoFoundations/Asymptotics/OracleClosure.lean`
+- Conservative PPT certificate lookup:
+  `VCVio/CryptoFoundations/Asymptotics/ComplexityTactics.lean`
+- Syntactic ElGamal complexity canary:
+  `Examples/ElGamal/ComputationalComplexity.lean`
+- Optional exact complexitylib machine substrate:
+  `VCVioComplexity/VCVioComplexity/Backend/TuringMachine.lean`
+- Complexitylib polynomial adapter and end-to-end pure canary:
+  `VCVioComplexity/VCVioComplexity/Backend/Polynomial.lean`,
+  `VCVioComplexity/VCVioComplexity/Backend/PureCanary.lean`
+- End-to-end complexitylib canary with one enabled fair-coin query:
+  `VCVioComplexity/VCVioComplexity/Backend/OracleCanary.lean`
 - Asymptotic security games: `VCVio/CryptoFoundations/Asymptotics/Security.lean`
 - Negligible function algebra: `VCVio/CryptoFoundations/Asymptotics/Negligible.lean`
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
@@ -237,6 +256,8 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **LatticeCrypto layout and workflows**: [`docs/agents/lattice.md`](docs/agents/lattice.md)
 - **OracleComp / SubSpec / SimSemantics**: [`docs/agents/oracle-comp.md`](docs/agents/oracle-comp.md)
 - **Query tracking / weighted cost / expected runtime**: [`docs/agents/query-tracking.md`](docs/agents/query-tracking.md)
+- **Honest computational-complexity design and implementation status**:
+  [`docs/design/computational-complexity.md`](docs/design/computational-complexity.md)
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)
