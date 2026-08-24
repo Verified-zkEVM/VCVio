@@ -902,14 +902,6 @@ private theorem or_fold_shiftRight_eq_zero_iff (v k : UInt64) (hk : k.toNat < 64
   rw [← UInt64.toNat_inj, ← UInt64.toNat_inj (a := v), h0, toNat_or_fold_shiftRight v k hk]
   exact stickyShift_eq_zero_iff v.toNat k.toNat
 
-/-- The low bit of the or-folded value is the sticky bit: it is set exactly when `v` was not an
-exact multiple of `2 ^ (k + 1)`, i.e. exactly when a subsequent round-to-nearest step must
-break a tie away from even. -/
-private theorem toNat_or_fold_shiftRight_mod_two (v k : UInt64) (hk : k.toNat < 64) :
-    ((v ||| ((v &&& ((1 : UInt64) <<< k - 1)) + ((1 : UInt64) <<< k - 1))) >>> k).toNat % 2
-      = if v.toNat % 2 ^ (k.toNat + 1) = 0 then 0 else 1 := by
-  rw [toNat_or_fold_shiftRight v k hk, stickyShift_mod_two]
-
 /-! ### The `FPR.add` alignment shift
 
 `FPR.add` aligns the smaller operand with `fpr_ursh (yu ||| ((yu &&& m) + m)) n'`, where
@@ -922,18 +914,6 @@ private theorem toNat_toUInt64_and_63_lt (n : UInt32) : ((n &&& 63).toUInt64).to
   have h63 : (63 : UInt32).toNat = 63 := by decide
   omega
 
-/-- The alignment step of `FPR.add`: shifting right by `n &&& 63` after the or-fold keeps the
-shifted value and records in its low bit whether any shifted-out bit of `yu` was set.
-
-This is the shape `fpr_ursh (yu ||| ((yu &&& m) + m)) (n &&& 63)` with
-`m = fpr_ulsh 1 (n &&& 63) - 1`, after unfolding the two inline shift wrappers. -/
-private theorem or_fold_shiftRight_toUInt64_and_63 (yu : UInt64) (n : UInt32) :
-    (yu ||| ((yu &&& ((1 : UInt64) <<< (n &&& 63).toUInt64 - 1))
-          + ((1 : UInt64) <<< (n &&& 63).toUInt64 - 1))) >>> (n &&& 63).toUInt64
-      = (yu >>> (n &&& 63).toUInt64)
-        ||| (if yu &&& ((1 : UInt64) <<< (n &&& 63).toUInt64 - 1) = 0 then 0 else 1) :=
-  or_fold_shiftRight yu (n &&& 63).toUInt64 (toNat_toUInt64_and_63_lt n)
-
 /-- Semantics of the `FPR.add` alignment step. -/
 private theorem toNat_or_fold_shiftRight_toUInt64_and_63 (yu : UInt64) (n : UInt32) :
     ((yu ||| ((yu &&& ((1 : UInt64) <<< (n &&& 63).toUInt64 - 1))
@@ -943,15 +923,6 @@ private theorem toNat_or_fold_shiftRight_toUInt64_and_63 (yu : UInt64) (n : UInt
   exact toNat_or_fold_shiftRight yu (n &&& 63).toUInt64 (toNat_toUInt64_and_63_lt n)
 
 /-! ### The nine-bit rounding fold of `FPR.add` and `FPR.scaled` -/
-
-/-- The final rounding fold of `FPR.add` (and of `FPR.scaled`), with the concrete mask
-`0x1FF = 2 ^ 9 - 1`. -/
-private theorem or_fold_shiftRight_nine (v : UInt64) :
-    (v ||| ((v &&& 0x1FF) + 0x1FF)) >>> 9
-      = (v >>> 9) ||| (if v &&& 0x1FF = 0 then 0 else 1) := by
-  have hmask : (1 : UInt64) <<< (9 : UInt64) - 1 = 0x1FF := by decide
-  have h := or_fold_shiftRight v 9 (by decide)
-  rwa [hmask] at h
 
 /-- Semantics of the nine-bit rounding fold. -/
 private theorem toNat_or_fold_shiftRight_nine (v : UInt64) :
@@ -1504,26 +1475,6 @@ private theorem le_four_mul_roundQuarterTiesEven (n : ℕ) :
     n ≤ 4 * roundQuarterTiesEven n + 2 := by
   unfold roundQuarterTiesEven; split_ifs <;> omega
 
-/-- Ties (the two cases in which `roundQuarterTiesEven n` is at distance exactly `2/4` from
-`n / 4`) are resolved toward an even quotient. -/
-private theorem roundQuarterTiesEven_even_of_tie (n : ℕ)
-    (h : 4 * roundQuarterTiesEven n = n + 2 ∨ n = 4 * roundQuarterTiesEven n + 2) :
-    roundQuarterTiesEven n % 2 = 0 := by
-  revert h; unfold roundQuarterTiesEven; split_ifs <;> omega
-
-/-- The nearest-with-ties-to-even conditions pin the result uniquely, so any `q` satisfying
-them is `roundQuarterTiesEven n`. This is the characterization to use when identifying the
-table output with a rounding operator stated some other way. -/
-private theorem eq_roundQuarterTiesEven (n q : ℕ) (h1 : n ≤ 4 * q + 2) (h2 : 4 * q ≤ n + 2)
-    (h3 : 4 * q = n + 2 ∨ n = 4 * q + 2 → q % 2 = 0) :
-    q = roundQuarterTiesEven n := by
-  by_cases ht : 4 * q = n + 2 ∨ n = 4 * q + 2
-  · have hq := h3 ht
-    unfold roundQuarterTiesEven; split_ifs <;> omega
-  · have ht1 : 4 * q ≠ n + 2 := fun h => ht (Or.inl h)
-    have ht2 : n ≠ 4 * q + 2 := fun h => ht (Or.inr h)
-    unfold roundQuarterTiesEven; split_ifs <;> omega
-
 /-- Rounding never moves the quotient down. -/
 private theorem div_four_le_roundQuarterTiesEven (n : ℕ) : n / 4 ≤ roundQuarterTiesEven n := by
   unfold roundQuarterTiesEven; split_ifs <;> omega
@@ -1593,18 +1544,6 @@ private theorem toNat_roundTableBit (m : UInt64) :
       if 2 < m.toNat % 4 ∨ (m.toNat % 4 = 2 ∧ m.toNat / 4 % 2 = 1) then 1 else 0 := by
   rw [toNat_roundTableBit_eq_ite_mod_eight]
   split_ifs <;> omega
-
-/-- The correction bit is a bit. -/
-private theorem toNat_roundTableBit_le_one (m : UInt64) : (roundTableBit m).toNat ≤ 1 := by
-  rw [toNat_roundTableBit]; split_ifs <;> omega
-
-/-- The rounding table as a `UInt64`-level case split. -/
-private theorem roundTableBit_eq_ite (m : UInt64) :
-    roundTableBit m =
-      if m.toNat % 8 = 3 ∨ m.toNat % 8 = 6 ∨ m.toNat % 8 = 7 then 1 else 0 := by
-  apply UInt64.toNat_inj.mp
-  rw [toNat_roundTableBit_eq_ite_mod_eight]
-  split_ifs <;> rfl
 
 private theorem toNat_shiftRight_two (m : UInt64) : (m >>> 2).toNat = m.toNat / 4 := by
   have h2 : (2 : UInt64).toNat = 2 := rfl
@@ -2762,14 +2701,6 @@ private theorem addPipeline_yu_real_bracket (a b : FPR) :
     exact_mod_cast h2
   exact real_bracket_div hp h1' h2'
 
-/-- The aligned significand is within one unit in the last place of the exactly-scaled one. -/
-private theorem abs_addPipeline_yu_sub_lt (a b : FPR) :
-    |((addPipeline a b).yu.toNat : ℝ)
-        - ((addPipeline a b).yu'.toNat : ℝ) / 2 ^ ((addPipeline a b).n &&& 63).toNat| < 1 := by
-  obtain ⟨h1, h2⟩ := addPipeline_yu_real_bracket a b
-  rw [abs_lt]
-  constructor <;> linarith
-
 /-- The ulp bracket, keyed on the *pre-flush* significand word `yu_` and the raw exponent gap
 `n`, in the shape the later rounding step consumes. -/
 private theorem addPipeline_yu_real_bracket_yuRaw (a b : FPR)
@@ -2784,14 +2715,6 @@ private theorem addPipeline_yu_real_bracket_yuRaw (a b : FPR)
     rw [addPipeline_yu'_eq_yuRaw a b h]
   have := addPipeline_yu_real_bracket a b
   rwa [hk, hv] at this
-
-/-- The low bit of the aligned significand is the sticky bit: it is set exactly when the
-alignment discarded a nonzero bit. -/
-private theorem addPipeline_yu_toNat_mod_two (a b : FPR) :
-    (addPipeline a b).yu.toNat % 2
-      = if (addPipeline a b).yu'.toNat % 2 ^ (((addPipeline a b).n &&& 63).toNat + 1) = 0
-        then 0 else 1 := by
-  rw [addPipeline_yu_toNat, stickyShift_mod_two]
 
 /-! ### Step 4c: the sign combination
 
