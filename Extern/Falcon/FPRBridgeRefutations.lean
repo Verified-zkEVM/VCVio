@@ -100,6 +100,10 @@ private theorem toReal_minNormal : toReal minNormal = (2 : ℝ) ^ (-(1022 : ℤ)
   unfold FPR.Bits.toReal
   norm_num
 
+-- Binary64's own exponent range reaches `2 ^ (-1074)` at the subnormal scale, well past
+-- the default evaluation threshold of `256`. Raised here so the numeric tactics evaluate
+-- the format's constants instead of declining to; it is not a suppressed diagnostic.
+set_option exponentiation.threshold 1100 in
 private theorem toReal_minNormalSucc :
     toReal minNormalSucc = (2 : ℝ) ^ (-(1022 : ℤ)) + (2 : ℝ) ^ (-(1074 : ℤ)) := by
   unfold toReal toRealBits
@@ -109,7 +113,6 @@ private theorem toReal_minNormalSucc :
   rw [show (-(1074 : ℤ)) = (-(1022 : ℤ)) + (-(52 : ℤ)) from by norm_num,
     zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0)]
   norm_num
-  ring
 
 private theorem maxFiniteReal_pos : 0 < FPR.maxFiniteReal := by
   unfold FPR.maxFiniteReal
@@ -246,7 +249,6 @@ theorem not_sub_error_operands_only :
       unfold FPR.decode; decide]
     unfold FPR.Bits.toReal
     norm_num
-    positivity
 
 /-! ## Why the operand domain admits the zero encodings
 

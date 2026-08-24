@@ -172,6 +172,10 @@ theorem toReal_one : toReal FPR.one = 1 := by
   rw [decode_one]
   simp [FPR.Bits.toReal]
 
+-- Binary64's own exponent range reaches `2 ^ (-1074)` at the subnormal scale, well past
+-- the default evaluation threshold of `256`. Raised here so the numeric tactics evaluate
+-- the format's constants instead of declining to; it is not a suppressed diagnostic.
+set_option exponentiation.threshold 1100 in
 /-- Negating an `FPR` value (flipping its sign bit) negates its real interpretation. -/
 theorem toReal_neg (a : FPR) : toReal (FPR.neg a) = -toReal a := by
   unfold toReal toRealBits FPR.Bits.toReal
