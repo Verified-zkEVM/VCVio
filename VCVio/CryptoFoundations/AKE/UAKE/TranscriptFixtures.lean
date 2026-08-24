@@ -3,7 +3,9 @@ Copyright (c) 2026 Galois Inc. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
-import VCVio.CryptoFoundations.AKE.UAKE.Defs
+
+module
+public import VCVio.CryptoFoundations.AKE.UAKE.Defs
 
 /-!
 # Transcript Fixtures
@@ -19,6 +21,8 @@ tick.
 
 These fixtures do *not* exercise `opImpl`, `recordOne`, or `recordOpt`.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 

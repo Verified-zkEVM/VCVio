@@ -3,9 +3,11 @@ Copyright (c) 2026 Galois Inc. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.SimulateQ
+
+module
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.SimulateQ
 
 /-!
 # UAKE Scheme Party Definitions
@@ -17,6 +19,8 @@ function takes the party's state and produces its final output (in UAKE, this
 is the key). It is up to the protocol realization to ensure that the output
 function produces output only at the end.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 

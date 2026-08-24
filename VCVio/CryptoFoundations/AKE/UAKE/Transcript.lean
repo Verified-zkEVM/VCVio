@@ -3,7 +3,9 @@ Copyright (c) 2026 Galois Inc. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
-import Mathlib.Data.List.Chain
+
+module
+public import Mathlib.Data.List.Chain
 
 /-!
 # Transcript Definition for UAKE from DF'17
@@ -11,6 +13,8 @@ import Mathlib.Data.List.Chain
 The transcripts in DF'17 bundle messages with timestamps from a global clock
 incremented whenever a party sends a message.
 -/
+
+@[expose] public section
 
 namespace AKE.UAKE
 

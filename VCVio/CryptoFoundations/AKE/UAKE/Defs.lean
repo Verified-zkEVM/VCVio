@@ -3,9 +3,11 @@ Copyright (c) 2026 Galois Inc. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
-import VCVio.CryptoFoundations.AKE.UAKE.Party
-import VCVio.CryptoFoundations.AKE.UAKE.Transcript
-import VCVio.OracleComp.ProbCompLift
+
+module
+public import VCVio.CryptoFoundations.AKE.UAKE.Party
+public import VCVio.CryptoFoundations.AKE.UAKE.Transcript
+public import VCVio.OracleComp.ProbCompLift
 
 /-!
 # UAKE Core Definitions
@@ -42,6 +44,8 @@ Model simplifications
   that stage. However, note that DF'17 also do not consider UAKE protocols with
   fewer than 2 rounds.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 
