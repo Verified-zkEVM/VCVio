@@ -15,6 +15,7 @@ public import Examples.CommitmentScheme.Hiding.Main
 public import Examples.CompositionDiagram
 public import Examples.ElGamal.Basic
 public import Examples.ElGamal.Common
+public import Examples.ElGamal.ComputationalComplexity
 public import Examples.ElGamal.Hash
 public import Examples.ElGamal.ReductionCost
 public import Examples.ElGamal.SSP

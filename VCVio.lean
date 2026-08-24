@@ -6,7 +6,10 @@ public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.GenericLift
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
+public import VCVio.CryptoFoundations.Asymptotics.ComplexityTactics
+public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
 public import VCVio.CryptoFoundations.Asymptotics.Negligible
+public import VCVio.CryptoFoundations.Asymptotics.OracleClosure
 public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme
@@ -114,6 +117,7 @@ public import VCVio.OracleComp.Coinductive.Bridge
 public import VCVio.OracleComp.Coinductive.DynSystem
 public import VCVio.OracleComp.Coinductive.Machine
 public import VCVio.OracleComp.Coinductive.Responder
+public import VCVio.OracleComp.Coinductive.SecurityFamily
 public import VCVio.OracleComp.Coinductive.WiredRun
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.OracleComp.Constructions.Fork
