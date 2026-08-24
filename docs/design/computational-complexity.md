@@ -1,10 +1,14 @@
 # Honest computational complexity for VCVio
 
 Status: implemented and tested backend-relative foundation plus staged adequacy design,
-audited 2026-08-24. This document fixes the intended meanings, trust boundary,
-layer ownership, and acceptance criteria for the complexity development. It
-distinguishes declarations that exist in the current branches from reserved
-names and later adequacy work.
+audited 2026-08-24. The completed usability spike concludes that the foundation is sound and
+replaceable but not yet broadly usable because bounded sequential and handler composition are
+missing. This document fixes the intended meanings, trust boundary, layer ownership, and
+acceptance criteria. It distinguishes declarations that exist in the current branches from
+reserved names and later adequacy work.
+
+The measured workload matrix, ergonomics score, and promotion decision are in the
+[computational-complexity usability spike](computational-complexity-spike.md).
 
 ## Implementation snapshot
 
@@ -21,14 +25,18 @@ claim that a pull request has been opened or merged.
   exact-category mixins, an explicit `PolynomialModel`, quantitative structural
   mixins, and unbounded `ofFn`, precomposition, result-map, uniform
   sequential-composition, and certified lens-transport constructors are also
-  present.
+  present. `RankedRunCertificate` derives nonvacuous termination from a decreasing rank.
+  Bidirectional trace transports support bounded input precomposition, while bounded result
+  mapping uses an explicit `MapResultCostCertificate`. General bounded `seqComp` is not present.
 - VCVio has `SecurityFamily.packProgram`, response-conforming
   `OracleResourceModel`s, nonempty `OracleContract`s, `StrictPPTWitness`,
   `IsOraclePPTBy`, and the fair-coin specialization `IsPPTBy`. `PureCertificate`
-  derives a complete strict witness from explicit polynomial code for an
-  immediately returning function, and `HandlerCertificate` packages one uniform
-  strict-PPT handler dispatcher plus whole-tree answer conformance. Every such
-  name retains an explicit quantitative backend and pinned `Boundary`.
+  derives a complete strict witness from explicit polynomial code for an immediately returning
+  function. `ResourcePotentialCertificate` derives pathwise bounds from actual local code costs,
+  and `RankedPPTCertificate` packages those bounds into strict PPT. `HandlerCertificate` packages
+  one uniform strict-PPT dispatcher plus whole-tree answer conformance, and semantic handler
+  closing preserves leaf conformance. Every such name retains an explicit quantitative backend
+  and pinned `Boundary`.
 - The ElGamal canary exposes the one-time DDH reduction as fully syntactic open
   oracle code, proves its exact three-query structure, and proves that semantic
   closing recovers the established reduction. The conservative
@@ -43,13 +51,16 @@ claim that a pull request has been opened or merged.
   backend-relative `IsOraclePPTBy` theorem over the empty oracle. Its
   `OracleCanary` uses the same trusted representation and exact-run layer for a
   real enabled fair-coin transition, proves both replies have the same exact
-  resource cost, and derives `oneCoin_isOraclePPTBy`. It does not yet export an
-  inhabitant of the general machine-level closure gates or compile arbitrary
-  PolyFun machines to complexitylib machines.
+  resource cost, and derives `oneCoin_isOraclePPTBy` and the public facade
+  `oneCoin_isPPTBy`. Exact-run output-length lemmas justify
+  `PolynomialCode.toPolyRealizerFromTime`. The package records that its pair codec is incompatible
+  with complexitylib's canonical pairing and tests second-order quantification over two
+  fixed-answer envelopes. It does not yet export an inhabitant of the general machine-level
+  closure gates or compile arbitrary PolyFun machines to complexitylib machines.
 
 The following are design targets, not claims about the current API: a richer
-event-decorated `ResourceTrace`, general polynomial resource laws for structural
-and bind closure, trace projection into all existing VCVio semantics,
+event-decorated `ResourceTrace`, bounded sequential and handler composition, general polynomial
+resource laws for remaining structural closure, trace projection into all existing VCVio semantics,
 efficient-sampler certificates, the resource-substitution theorem that closes a
 caller with a `HandlerCertificate`, an exact-resource instantiation of the
 existing `SecurityGame.ReductionWithCost`, and expected/nonuniform and UC
@@ -157,13 +168,17 @@ adjusted to satisfy the module system, but their meanings may not drift.
 | `ResourceTrace` | Reserved | A richer event decoration adding explicit randomness, final-output, and other resource events to `ExecutionTrace`. |
 | `RunsWithinUnder` | Landed in PolyFun | A componentwise bound on every conforming finite `ExecutionTrace`, relation-restricted resolution, and an allowed answer at every conformingly reachable pending query. It is exact and backend-relative, not asymptotic. |
 | `RunsWithin` | Landed in PolyFun | The specialization of `RunsWithinUnder` allowing every typed answer. |
+| `RankedRunCertificate` | Landed in PolyFun | A natural rank decreasing on every admitted answer, plus explicit query progress; it proves termination but does not invent backend costs. |
+| `MapResultCostCertificate` | Landed in PolyFun | A pathwise comparison between exact mapped-result and source trace costs, used for sound bounded result mapping. |
 | `SecondOrderPolynomial` | Landed in PolyFun | A monotone polynomial expression over base input size and named length functions. |
 | `OracleResourceModel` | Landed in VCVio | A dependent allowed-answer relation and per-interface monotone reply-size functions, with a proof that every allowed typed reply fits its encoded-size envelope. Handler costs are intentionally outside the open contract. |
 | `OracleContract` | Landed in VCVio | A pinned query-to-interface classification, an admissibility predicate on resource models, and evidence that the compatible model space is nonempty. |
 | `IsOraclePPTBy B` | Landed in VCVio | One realization by backend `B` and one second-order resource polynomial bounding every path conforming to every compatible resource model. |
 | `IsPPTBy B` | Landed in VCVio | `IsOraclePPTBy B` specialized to the explicit fair-coin interface. |
 | `PureCertificate` | Landed in VCVio | Explicit polynomial result and resolved-readout code, plus executable unreachable-transition code, sufficient to derive `IsOraclePPTBy` for `pure`. |
-| `HandlerCertificate` | Landed seam in VCVio | One uniform strict-PPT packed handler dispatcher and a proof that every inner-conforming result is admitted by each outer model. The caller/handler trace-substitution theorem remains staged. |
+| `ResourcePotentialCertificate` | Landed in VCVio | Local resource potentials over actual realization costs, paired with PolyFun rank/progress evidence, sufficient for `RunsWithinUnder`. |
+| `RankedPPTCertificate` | Landed in VCVio | One realization, implementation proof, resource polynomial, and model-relative ranked potentials, sufficient for `IsOraclePPTBy`. |
+| `HandlerCertificate` | Landed seam in VCVio | One uniform strict-PPT packed handler dispatcher and a proof that every inner-conforming result is admitted by each outer model. Semantic leaf conformance composes; machine and resource substitution remain staged. |
 | `ppt` | Landed conservative tooling | Exact local-assumption or registered-primitive lookup for goals headed by `PolyRealizer` or `IsOraclePPTBy`; it performs no recursive synthesis or generic proof search. |
 | `VCVioComplexity.IsPPT` | Reserved, not exported | The eventual strict uniform PPT predicate after the complexitylib adequacy theorem. |
 | `IsExpectedPPT` | Reserved | Expected polynomial time with its probability space and tail/independence hypotheses exposed. It has no unrestricted oracle-substitution rule. |
@@ -693,44 +708,50 @@ status annotations below describe this implementation snapshot; compatibility
 preflight was intentionally performed early and does not bypass the adequacy
 gate.
 
-1. **Foundation landed; regression expansion ongoing — record and qualitative
-   baseline (VCVio/PolyFun).** This document, the qualitative-law inventory, and
+1. **Foundation and usability audit landed — record and qualitative baseline
+   (VCVio/PolyFun).** This document, the completed usability-spike report, the
+   optional-backend isolation gate, the qualitative-law inventory, and
    negative fixtures for empty responses, illegal replies, zero-probability
    allowed replies, and uncertified `ppt` lookup are present. Broader regression
    statements for `updateFlat`, encoding-cache, advice, and state-growth failures
    remain staged.
-2. **Core landed; bounded-closure expansion ongoing — quantitative PolyFun.**
+2. **Core and first bounded closure landed — quantitative PolyFun.**
    Type-valued realizers, optional categorical closure, first- and second-order
    polynomials, `PolyRealizer`, polynomial structural models, erasure, conforming
-   typed resource traces, relation-restricted resolution/progress, executable
-   structural mixins, and unbounded machine/program closure are present. Richer
-   events, reachable-state packages, and general backend-independent bounded
-   closure remain staged.
+   typed resource traces, relation-restricted resolution/progress, ranked termination,
+   bidirectional trace transport, bounded precomposition and result mapping, executable
+   structural mixins, and unbounded machine/program closure are present. Richer events,
+   reachable-state packages, and bounded `seqComp` remain staged.
 3. **Core and first proof-bearing constructors landed — backend-neutral VCVio
    bridge.** Packed security families, response-conforming oracle contracts,
    `IsOraclePPTBy`, fair-coin specialization, the conditional total-query
-   corollary, `PureCertificate`, and the `HandlerCertificate` seam are present.
+   corollary, `PureCertificate`, `ResourcePotentialCertificate`, `RankedPPTCertificate`, and the
+   `HandlerCertificate` seam are present. Semantic handler closing preserves leaf conformance.
    General trace projections, probability erasure, efficient samplers,
    caller/handler resource substitution, and the exact-resource instantiation
    of `ReductionWithCost` remain staged.
 4. **Substrate, adapter, and finite canaries landed — optional backend package.** The
    direct compatibility preflight, attributed `PolyBound` adaptation, exact
-   per-machine substrate, Mathlib-polynomial-to-`PolyRealizer` adapter, and
+   per-machine substrate, exact-run output bound, Mathlib-polynomial-to-`PolyRealizer` adapter, and
    concrete unit `PureCertificate`/`IsOraclePPTBy` theorem are present. A second
    end-to-end certificate executes exactly one fair-coin query through concrete
-   head and enabled-update machines and proves a strict bound for both replies.
+   head and enabled-update machines, proves a strict bound for both replies, and exposes the
+   public `IsPPTBy` facade. Pair-codec incompatibility, guarded trust reports, and a two-model
+   second-order acceptance canary are regression-tested.
    The general machine-level category and structural closure gates remain
    uninhabited; a VCVio-owned `OracleTM` semantics remains staged.
 5. **Not landed — adequacy.** Prove PolyFun-to-`OracleTM` compilation, converse
    embedding, transcript/coin preservation, and polynomial overhead. Only then
    export the unqualified concrete `IsPPT` alias.
 6. **Partially landed — end-to-end canaries and tooling.** Direct exact-machine
-   pure and one-query fair-coin canaries reach `IsOraclePPTBy`; the ElGamal
+   pure and one-query fair-coin canaries reach `IsOraclePPTBy`. Honest control-flow and
+   certificate-builder regressions cover two queries, an adaptive branch, and one fixed
+   natural-input parity loop, but do not instantiate backend code or PPT witnesses. The ElGamal
    one-time DDH canary exposes
    open syntax, exact query accounting, primitive-code obligations, and semantic
    closing; and conservative `ppt` lookup is present with rejection tests. A
    Cobham-frontend pure function, a certified sampler/handler closure theorem,
-   a fully bounded adaptive oracle computation, a bounded fold, one-time pad, a complete
+   an end-to-end bounded adaptive oracle computation, a bounded fold, one-time pad, a complete
    quantitative game reduction, compositional tactic rules, and migrated
    security wrappers remain staged.
 7. **Not landed — expected time.** Add expectation and tail certificates,
@@ -748,9 +769,12 @@ or theorem below is present in the current partial implementation. Current
 machine-checked fixtures already cover explicit realizers for `pure`, rejection
 of unregistered or ill-shaped `ppt` goals, illegal-answer nonconformance,
 charging and resolving allowed zero-probability branches, failure on a reachable
-empty response, exact structural query accounting, `HandlerCertificate` API
-shape, ElGamal semantic closing, and the exact complexitylib unit canary. The
-other bullets remain acceptance targets.
+empty response, exact structural query accounting, ranked two/adaptive/parity control flow,
+`HandlerCertificate` API shape and semantic closing, ElGamal semantic closing, exact complexitylib
+pure and one-coin canaries, exact-run output growth, pair-codec incompatibility, and multiple
+second-order environments for a fixed-size response. These do not yet cover bounded `seqComp`,
+quantitative handler substitution, or a genuinely variable-size oracle reply. The other bullets
+remain acceptance targets.
 
 ### Anti-cheating tests
 

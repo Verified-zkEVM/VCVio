@@ -363,6 +363,32 @@ namespace PureCertificate
 
 variable {function : input → output}
 
+/-- Build a certified pure program from one polynomial result realizer and an explicit polynomial
+model.
+
+The model supplies the resolved left-sum readout and the necessarily absent transition. Its
+structural choices are installed locally and remain visible in the result type, so this constructor
+cannot silently mix a boundary assembled with different product, sum, or option representations. -/
+def ofPolyRealizer (model : Q.PolynomialModel)
+    (result : Q.PolyRealizer bd.input bd.out function) :
+    letI := model.kernel.cProd
+    letI := model.kernel.cSum
+    letI := model.kernel.cOption
+    PureCertificate Q bd function := by
+  letI := model.category
+  letI := model.kernel.cProd
+  letI := model.kernel.cSum
+  letI := model.kernel.cOption
+  exact
+    { result := result
+      head := model.structural.inl bd.out bd.pos
+      update :=
+        (model.structural.optionNone (bd.stateIdx bd.out) bd.out).code.castFunction (by
+          funext step
+          exact (PFunctor.DynSystem.DynComputation.update?_of_view_return
+            (PFunctor.DynSystem.DynComputation.ofFn (p := p) function)
+            (PFunctor.DynSystem.DynComputation.view_ofFn function step.1) step.2).symm) }
+
 /-- Quantitative realization assembled from the two certified pure-program primitives. -/
 def realization (certificate : PureCertificate Q bd function) :
     QuantitativeRealization Q bd where
@@ -473,6 +499,15 @@ namespace StrictPPTWitness
 
 variable {contract : OracleContract Q bd.interface label} {program : input → FreeM p output}
 
+/-- Transport a strict-PPT witness across extensional equality of whole program families.
+
+The realization, operational costs, and resource polynomial are unchanged. Only the semantic
+program index is transported, so this constructor cannot manufacture executable evidence. -/
+def congrProgram {program' : input → FreeM p output}
+    (witness : StrictPPTWitness Q bd contract program) (hprogram : program = program') :
+    StrictPPTWitness Q bd contract program' :=
+  hprogram ▸ witness
+
 /-- A strict PPT witness retains quantitative realizability when bounds are forgotten. -/
 theorem isQuantitativelyRealizableBy (witness : StrictPPTWitness Q bd contract program) :
     IsQuantitativelyRealizableBy Q bd program :=
@@ -508,6 +543,13 @@ end StrictPPTWitness
 namespace IsOraclePPTBy
 
 variable {contract : OracleContract Q bd.interface label} {program : input → FreeM p output}
+
+/-- Strict oracle PPT is invariant under extensional equality of whole program families. -/
+theorem congrProgram {program' : input → FreeM p output}
+    (h : IsOraclePPTBy Q bd contract program) (hprogram : program = program') :
+    IsOraclePPTBy Q bd contract program' := by
+  obtain ⟨witness⟩ := h
+  exact ⟨witness.congrProgram hprogram⟩
 
 /-- Strict PPT implies backend-relative quantitative realizability. -/
 theorem isQuantitativelyRealizableBy (h : IsOraclePPTBy Q bd contract program) :

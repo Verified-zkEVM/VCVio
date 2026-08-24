@@ -25,8 +25,10 @@ open OracleComp.Complexity
 #check handlerBoundary
 #check packHandler
 #check closeHandler
+#check leavesSatisfyUnder_closeHandler
 #check HandlerCertificate
 #check HandlerCertificate.packedReturnsAllowed
+#check HandlerCertificate.closeLeavesSatisfyUnder
 #check HandlerCertificate.isOraclePPTBy
 
 universe u

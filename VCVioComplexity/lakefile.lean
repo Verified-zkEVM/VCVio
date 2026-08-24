@@ -31,3 +31,6 @@ require PolyFun from "../.lake/packages/PolyFun"
 require "leanprover-community" / "mathlib" @ git "v4.33.0"
 
 @[default_target] lean_lib VCVioComplexity
+
+/-- Compile-time canaries and guarded trust probes for the optional backend package. -/
+lean_lib VCVioComplexityTest

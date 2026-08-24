@@ -148,6 +148,35 @@ theorem closeHandler_liftBind (handler : ∀ position : p.A, FreeM q (p.B positi
       handler position >>= fun direction ↦ closeHandler handler (next direction) :=
   rfl
 
+/-- Closing an outer program through conforming handlers preserves its leaf contract.
+
+The proof ranges over every answer admitted by the two contracts. It therefore composes the
+semantic obligations needed by oracle substitution without appealing to probabilities or to a
+particular machine backend. -/
+theorem leavesSatisfyUnder_closeHandler
+    (handler : ∀ position : p.A, FreeM q (p.B position))
+    (outerAllows : ∀ position, p.B position → Prop)
+    (innerAllows : ∀ position, q.B position → Prop)
+    (accept : α → Prop)
+    (hhandler : ∀ position,
+      (handler position).LeavesSatisfyUnder innerAllows (outerAllows position))
+    (program : FreeM p α)
+    (hprogram : program.LeavesSatisfyUnder outerAllows accept) :
+    (closeHandler handler program).LeavesSatisfyUnder innerAllows accept := by
+  induction program with
+  | pure result => exact hprogram
+  | lift_bind position next ih =>
+      change
+        (handler position >>= fun direction ↦
+          closeHandler handler (next direction)).LeavesSatisfyUnder innerAllows accept
+      change
+        (FreeM.bind (handler position)
+          (fun direction ↦ closeHandler handler (next direction))).LeavesSatisfyUnder
+          innerAllows accept
+      rw [PFunctor.FreeM.leavesSatisfyUnder_bind_iff]
+      exact (hhandler position).mono fun direction hdirection ↦
+        ih direction (hprogram direction hdirection)
+
 /-- Result conformance of a dependent handler is equivalent to conformance of its packed form. -/
 theorem leavesSatisfyUnder_packHandler_iff
     (handler : ∀ position : p.A, FreeM q (p.B position))
@@ -205,6 +234,20 @@ theorem packedReturnsAllowed
   rw [leavesSatisfyUnder_packHandler_iff]
   exact (certificate.returnsAllowed outerModel innerModel position).mono fun answer hanswer ↦
     ⟨rfl, hanswer⟩
+
+/-- A certified handler transports any outer-model leaf invariant to the closed program under the
+chosen inner model. This is the semantic half of oracle substitution; the quantitative machine
+and bound substitution remain separate obligations. -/
+theorem closeLeavesSatisfyUnder
+    (certificate : HandlerCertificate outer inner outerContract innerContract handler)
+    (outerModel : outerContract.Model) (innerModel : innerContract.Model)
+    (accept : α → Prop) (program : FreeM p α)
+    (hprogram : program.LeavesSatisfyUnder outerModel.resourceModel.allows accept) :
+    (closeHandler handler program).LeavesSatisfyUnder
+      innerModel.resourceModel.allows accept :=
+  leavesSatisfyUnder_closeHandler handler outerModel.resourceModel.allows
+    innerModel.resourceModel.allows accept
+    (certificate.returnsAllowed outerModel innerModel) program hprogram
 
 /-- Forget handler conformance while retaining strict PPT of its packed dispatcher. -/
 theorem isOraclePPTBy

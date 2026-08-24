@@ -10,6 +10,7 @@ public import VCVio.CryptoFoundations.Asymptotics.ComplexityTactics
 public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
 public import VCVio.CryptoFoundations.Asymptotics.Negligible
 public import VCVio.CryptoFoundations.Asymptotics.OracleClosure
+public import VCVio.CryptoFoundations.Asymptotics.RankedRun
 public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme

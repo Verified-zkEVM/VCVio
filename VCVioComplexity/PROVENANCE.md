@@ -26,9 +26,10 @@ Mathlib's polynomial evaluation definitions directly. It omits only `PolyBound.b
 theorem depends on the incompatible upstream asymptotics module. No file under `.lake/packages` is
 patched.
 
-The adapted module should be deleted in favor of the direct upstream declaration once the pinned
-complexitylib asymptotics closure compiles with VCVio's authoritative Lean/Mathlib toolchain. The
-package must not expose both versions as competing implementations.
+Once the pinned complexitylib asymptotics closure compiles with VCVio's authoritative toolchain,
+the adapter should prove a bridge and use the upstream implementation behind the existing local
+abstraction. Client declarations should not change to complexitylib vocabulary, and the package
+must not expose both versions as competing public foundations.
 
 Any future snapshot must likewise preserve the upstream Apache-2.0 headers, live under a distinct
 VCVio namespace, list every copied file and compatibility edit here, and replace rather than
@@ -68,6 +69,13 @@ the supplied time bound has a `PolyBound` proof. Classical choice selects the ha
 proved by complexitylib; the resulting local cost remains the selected run's actual
 `TM.reachesIn` transition count.
 
+`VCVioComplexity.Backend.OutputBounds` ports the base-model portion of Samuel Schlesinger's
+complexitylib output-bound proof into the adapter namespace. It uses only the compiling
+`Complexitylib.Models.TuringMachine` API and proves that a word of length `m` requires at least `m`
+actual transitions. This supplies `PolynomialCode.toPolyRealizerFromTime` without importing or
+patching the blocked upstream `TuringMachine.Internal` module. The new file preserves upstream
+attribution; no declaration is copied into the `Complexity` namespace.
+
 `PolynomialClosureGate` records the direct identity/composition acceptance test. It has no
 exported inhabitant. Passing it requires total exact machines on all words, represented semantic
 correctness, a polynomial run certificate, and a proved inequality for connection overhead. The
@@ -75,6 +83,18 @@ currently failing upstream modules prevent reusing `copyInputToOutputTM` and `co
 Lean 4.33; no closure witness is inferred from their source definitions alone. The gate's adapter
 to `polynomialQuantitativeStepClass.HasCategory` compiles, so supplying a gate is exactly what
 enables PolyFun's categorical constructors for polynomial code.
+
+The closed adapter codec and complexitylib's canonical pairing are not definitionally compatible:
+`WordCodec.pair [] [] = [true]`, while `Complexity.pair [] [] = [false, true]`. The
+`VCVioComplexityTest.Compatibility.pair_codecs_ne` regression records this mismatch. Upstream pair
+split, validation, and emission theorems cannot justify adapter structural closure without a
+proved total translation or an explicit codec migration.
+
+`VCVioComplexityTest.SecondOrderModulus` reuses the one-coin realization unchanged under two
+distinct admissible response-size models. Its conservative resource polynomial reads the response
+modulus and therefore evaluates to different bounds for the two models. This is an acceptance test
+for second-order quantification, not evidence that the fixed two-bit coin answer intrinsically
+needs a growing response modulus.
 
 The more general `QuantitativeClosure` similarly enables categorical composition of arbitrary
 exact `Code` values with a sound cost inequality. `ExactQuantitativeClosure` is a separate,
@@ -84,3 +104,12 @@ prerequisite for sound polynomial closure.
 
 All compatibility work remains local to VCVio and PolyFun for this phase. No PR or issue is opened
 in complexitylib, CSLib, or Mathlib.
+
+Run `scripts/compatibility-preflight.sh` from this package to reproduce the supported build and
+classify both the four current composition failures and the current `Asymptotics.lean` failures.
+Its default reporting mode accepts only the recorded source diagnostics;
+`--require-upstream-stack` exits nonzero while either surface remains unavailable. That strict
+mode tests upstream compatibility only: it does not construct VCVio's closure gates or resolve
+the pair-codec mismatch. Run `scripts/test.sh` for the aggregate canaries, guarded axiom reports,
+proof-escape scan, and compatibility report. Both scripts treat an unexpected dependency revision
+or changed failure mode as a preflight error and never modify dependency sources.

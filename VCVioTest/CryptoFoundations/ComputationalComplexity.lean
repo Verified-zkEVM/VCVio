@@ -35,10 +35,13 @@ open PFunctor.DynSystem.DynComputation
 #check OracleComp.Complexity.OracleContract.Model.modulus_monotone
 #check OracleComp.Complexity.StrictPPTWitness
 #check OracleComp.Complexity.StrictPPTWitness.isTotalRollBound
+#check OracleComp.Complexity.StrictPPTWitness.congrProgram
 #check OracleComp.Complexity.PureCertificate
+#check OracleComp.Complexity.PureCertificate.ofPolyRealizer
 #check OracleComp.Complexity.PureCertificate.strictPPTWitness
 #check OracleComp.Complexity.PureCertificate.isOraclePPTBy
 #check OracleComp.Complexity.IsOraclePPTBy
+#check OracleComp.Complexity.IsOraclePPTBy.congrProgram
 #check OracleComp.Complexity.IsPPTBy
 #check OracleComp.Complexity.OracleProgram.IsOraclePPTBy
 #check OracleComp.Complexity.SecurityFamily.IsOraclePPTBy
@@ -83,7 +86,34 @@ example (certificate : PureCertificate Q bd function)
     IsOraclePPTBy Q bd contract fun input ↦ FreeM.pure (function input) :=
   certificate.isOraclePPTBy contract
 
+example (model : Q.PolynomialModel)
+    (result : Q.PolyRealizer bd.input bd.out function) :
+    letI := model.kernel.cProd
+    letI := model.kernel.cSum
+    letI := model.kernel.cOption
+    PureCertificate Q bd function :=
+  PureCertificate.ofPolyRealizer model result
+
 end CertifiedPure
+
+section ProgramCongruence
+
+variable {p : PFunctor.{u, u}} {C : StepClass.{u, v}}
+  [C.HasProd] [C.HasSum] [C.HasOption] [DecidableEq p.A]
+  {Q : QuantitativeStepClass.{u, v, w} C}
+  {input output : Type u} {bd : Boundary C p input output} {label : Type x}
+  {contract : OracleContract Q bd.interface label}
+  {program program' : input → FreeM p output}
+
+example (witness : StrictPPTWitness Q bd contract program)
+    (program_eq : program = program') : StrictPPTWitness Q bd contract program' :=
+  witness.congrProgram program_eq
+
+example (hPPT : IsOraclePPTBy Q bd contract program)
+    (program_eq : program = program') : IsOraclePPTBy Q bd contract program' :=
+  hPPT.congrProgram program_eq
+
+end ProgramCongruence
 
 section FairCoinContract
 
