@@ -428,23 +428,34 @@ private def cmaSimLoggedLeftOrnament
           simulateQ_map, simulateQ_query, OracleQuery.input_query,
           OracleQuery.cont_query, id_map, bind_assoc, bind_pure_comp, pure_bind,
           map_bind, Functor.map_map, Prod.map_apply, id_eq] using hz
-      rcases Set.mem_iUnion₂.mp hz' with ⟨x, hxmem, hzimg⟩
-      rcases hzimg with ⟨a, ha, rfl⟩
-      have hxinner : x.2 = (cache, some (pk, sk), bad) := by
-        have hxmem' :
-            x ∈ support ((simulateQ
+      rcases hz' with ⟨xCommit, xChal, xResp, xCache, xKeypair, hx⟩
+      have state_eq (xBad : Bool)
+          (hxmem : ((xCommit, xChal, xResp), xCache, xKeypair, xBad) ∈
+            support ((simulateQ
               (nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr)
-              (liftM (simT pk) :
-                OracleComp (nmaSpec M Commit Chal Stmt) (Commit × Chal × Resp))).run
-                (cache, some (pk, sk), bad)) := by
-          simpa [nma] using hxmem
+              (liftM (simT pk))).run (cache, some (pk, sk), bad))) :
+          (xCache, xKeypair, xBad) = (cache, some (pk, sk), bad) := by
+        have hxmem' := hxmem
         rw [nma_lift_unif_run (M := M) (Commit := Commit)
           (Chal := Chal) (Stmt := Stmt) (Wit := Wit) hr (simT pk)
           (cache, some (pk, sk), bad), support_map] at hxmem'
-        rcases hxmem' with ⟨x', _hx', hx⟩
-        exact congrArg Prod.snd hx.symm
-      cases htarget : x.2.1 (m, x.1.1) <;>
-        simp only [htarget] at ha <;> subst ha <;> simp [hxinner]
+        rcases hxmem' with ⟨x', _hx', hx'⟩
+        exact congrArg Prod.snd hx'.symm
+      rcases hx with ⟨hxmem, hnext⟩ | ⟨hxmem, hnext⟩
+      · have hxinner := state_eq false hxmem
+        rcases hnext with ⟨u, nextCache, nextKeypair, hnext⟩
+        rcases hnext with ⟨hu, rfl⟩ | ⟨hu, rfl⟩
+        all_goals
+          cases htarget : xCache (m, xCommit)
+          all_goals simp [htarget] at hu
+          all_goals simp_all
+      · have hxinner := state_eq true hxmem
+        rcases hnext with ⟨u, nextCache, nextKeypair, hnext⟩
+        rcases hnext with ⟨hu, rfl⟩ | ⟨hu, rfl⟩
+        all_goals
+          cases htarget : xCache (m, xCommit)
+          all_goals simp [htarget] at hu
+          all_goals simp_all
   project_step := fun t s hs => by
     rcases s with ⟨signed, ⟨⟨log, cache, keypair⟩, bad⟩⟩
     simp only [cmaSimFixedKeyInv] at hs
@@ -471,8 +482,6 @@ private def cmaSimLoggedLeftOrnament
               QueryImpl.Stateful.linkWith, QueryImpl.liftTarget_apply,
               QueryImpl.simulateQ_add_query_left, QueryImpl.simulateQ_add_query_right,
               QueryImpl.id'_apply, uniformSampleImpl, hcache]
-          congr 1
-          exact (simulateQ_id_add_uniform_query_inr (M × Commit →ₒ Chal) mc).symm
     · subst keypair
       conv_lhs =>
         simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
@@ -673,11 +682,7 @@ private lemma simulatedNmaUnifFork_flatten_preserves_state
         simpa [QueryImpl.flattenStateT, QueryImpl.mapStateTBase,
           simulatedNmaUnifSim, simulatedNmaFwd, Fork.unifForward] using hy
       rcases hy' with ⟨u, _hu, b, hb, rfl⟩
-      change (u, _hu, b) ∈ support
-        ((Fork.unifForward M Commit Chal t).run liveSt) at hb
-      have hstate := (Fork.mem_support_unifForward_run_iff
-        (M := M) (Commit := Commit) (Chal := Chal) t liveSt (u, _hu, b)).mp hb
-      exact congrArg (fun st => (advCache, st)) hstate)
+      rfl)
     A (advCache, liveSt) rfl z hz
 
 omit [SampleableType Chal] in
@@ -721,32 +726,35 @@ private lemma forkLoggedImpl_preserves_inv_step
       simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
         QueryImpl.mapStateTBase] using hz
     rcases hz' with ⟨w, hw, rfl⟩
-    rcases w with ⟨u, st⟩
-    change (u, st) ∈ support
-      ((Fork.unifForward M Commit Chal n).run (liveCache, queryLog)) at hw
-    have hst := (Fork.mem_support_unifForward_run_iff
-      (M := M) (Commit := Commit) (Chal := Chal)
-      n (liveCache, queryLog) (u, st)).mp hw
-    change st = (liveCache, queryLog) at hst
-    subst st
     exact And.intro hfreshInv hlogInv
   · by_cases hadv : advCache (.inr mc) = none
     · have hz' := by
         simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
           QueryImpl.mapStateTBase, hadv] using hz
-      rcases hz' with ⟨w, hw, rfl⟩
-      rcases w with ⟨ch, st⟩
+      rcases hz' with ⟨ch, liveCache', queryLog', hw, rfl⟩
       by_cases hlive : liveCache mc = none
-      · obtain ⟨v, heq⟩ :=
+      · have hw' := hw
+        rw [Fork.roImpl_run_none (M := M) (Commit := Commit) (Chal := Chal)
+          mc liveCache queryLog hlive,
+          ← Fork.simulateQ_unifForward_add_roImpl_query_inr_run_none
+            (M := M) (Commit := Commit) (Chal := Chal)
+            mc liveCache queryLog hlive] at hw'
+        obtain ⟨v, heq⟩ :=
           (Fork.mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_none_iff
           (M := M) (Commit := Commit) (Chal := Chal)
-          mc liveCache queryLog hlive (ch, st)).mp hw
+          mc liveCache queryLog hlive (ch, (liveCache', queryLog'))).mp hw'
         change Chal at v
         have hch : ch = v := congrArg Prod.fst heq
-        have hst : st = (liveCache.cacheQuery mc v, queryLog ++ [mc]) :=
+        have hst : (liveCache', queryLog') =
+            (liveCache.cacheQuery mc v, queryLog ++ [mc]) :=
           congrArg Prod.snd heq
+        have hliveCache' : liveCache' = liveCache.cacheQuery mc v :=
+          congrArg Prod.fst hst
+        have hqueryLog' : queryLog' = queryLog ++ [mc] :=
+          congrArg Prod.snd hst
         subst ch
-        subst st
+        subst liveCache'
+        subst queryLog'
         constructor
         · intro mc' ch' hcache hfresh
           by_cases hmc : mc' = mc
@@ -776,14 +784,25 @@ private lemma forkLoggedImpl_preserves_inv_step
             exact List.mem_append_left [mc] (hlogInv mc' ch' hcache_old)
       · rcases hlive' : liveCache mc with _ | liveCh
         · exact (hlive hlive').elim
-        · have heq :=
-            (Fork.mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_some_iff
-            (M := M) (Commit := Commit) (Chal := Chal)
-            mc liveCache queryLog liveCh hlive' (ch, st)).mp hw
+        · have heq := by
+            have hw' := hw
+            rw [Fork.roImpl_run_some (M := M) (Commit := Commit) (Chal := Chal)
+              mc liveCache queryLog liveCh hlive',
+              ← Fork.simulateQ_unifForward_add_roImpl_query_inr_run_some
+                (M := M) (Commit := Commit) (Chal := Chal)
+                mc liveCache queryLog liveCh hlive'] at hw'
+            exact
+              (Fork.mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_some_iff
+                (M := M) (Commit := Commit) (Chal := Chal)
+                mc liveCache queryLog liveCh hlive' (ch, (liveCache', queryLog'))).mp hw'
           have hch : ch = liveCh := congrArg Prod.fst heq
-          have hst : st = (liveCache, queryLog) := congrArg Prod.snd heq
+          have hst : (liveCache', queryLog') = (liveCache, queryLog) :=
+            congrArg Prod.snd heq
+          have hliveCache' : liveCache' = liveCache := congrArg Prod.fst hst
+          have hqueryLog' : queryLog' = queryLog := congrArg Prod.snd hst
           subst ch
-          subst st
+          subst liveCache'
+          subst queryLog'
           constructor
           · intro mc' ch' hcache hfresh
             by_cases hmc : mc' = mc
@@ -810,10 +829,6 @@ private lemma forkLoggedImpl_preserves_inv_step
           simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
             QueryImpl.mapStateTBase, hadv'] using hz
         rcases hz' with ⟨w, hw, rfl⟩
-        have hw' := (mem_support_forkSim_pure_nested_iff
-          (M := M) (Commit := Commit) (Chal := Chal)
-          advCh advCache (liveCache, queryLog) w).mp hw
-        subst w
         constructor
         · intro mc' ch' hcache' hfresh
           exact hfreshInv mc' ch' hcache' hfresh
@@ -822,11 +837,26 @@ private lemma forkLoggedImpl_preserves_inv_step
   · have hz' := by
       simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
         QueryImpl.mapStateTBase] using hz
-    rcases hz' with ⟨x, _hx, hsigCache, rfl⟩
+    rcases hz' with ⟨xCommit, xChal, xResp, xAdvCache, xLiveCache,
+      xQueryLog, hxmem, rfl⟩
+    let x := (((xCommit, xChal, xResp), xAdvCache), (xLiveCache, xQueryLog))
+    have _hx : x ∈ support
+        ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+          ((simulateQ (simulatedNmaUnifSim (M := M) (Commit := Commit)
+            (Chal := Chal)) (simT pk)).run advCache)).run (liveCache, queryLog)) := by
+      simpa [x] using hxmem
     have hxstate := simulatedNmaUnifFork_nested_preserves_state
       (M := M) (Commit := Commit) (Chal := Chal) (simT pk) advCache
       (liveCache, queryLog) _hx
     rcases hxstate with ⟨hxadv, hxlive⟩
+    have hxAdvCache : xAdvCache = advCache := by simpa [x] using hxadv
+    have hxLiveState : (xLiveCache, xQueryLog) = (liveCache, queryLog) := by
+      simpa [x] using hxlive
+    have hxLiveCache : xLiveCache = liveCache := congrArg Prod.fst hxLiveState
+    have hxQueryLog : xQueryLog = queryLog := congrArg Prod.snd hxLiveState
+    subst xAdvCache
+    subst xLiveCache
+    subst xQueryLog
     constructor
     · intro mc ch hcache' hfresh
       by_cases hmc : mc = (m, x.1.1.1)
@@ -843,13 +873,13 @@ private lemma forkLoggedImpl_preserves_inv_step
               have hcache_update :
                   advCache.cacheQuery (Sum.inr (m, x.1.1.1)) x.1.1.2.1
                     (Sum.inr mc) = some ch := by
-                simpa only [hxadv, htarget] using hcache'
+                simpa only [x, hxadv, htarget] using hcache'
               have hne_cache := QueryCache.cacheQuery_of_ne
                 (cache := advCache) (t := Sum.inr (m, x.1.1.1))
                 (t' := Sum.inr mc) x.1.1.2.1 hsum
               exact hne_cache.symm.trans hcache_update
           | some old =>
-              simpa only [hxadv, htarget] using hcache'
+              simpa only [x, hxadv, htarget] using hcache'
         have hfresh_old : mc.1 ∉ signed := by
           intro hmem
           exact hfresh (by simp [hmem])
@@ -899,14 +929,6 @@ private lemma forkLoggedImpl_preserves_live_adv_inv_step
       simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
         QueryImpl.mapStateTBase] using hz
     rcases hz' with ⟨w, hw, rfl⟩
-    rcases w with ⟨u, st⟩
-    change (u, st) ∈ support
-      ((Fork.unifForward M Commit Chal n).run (liveCache, queryLog)) at hw
-    have hst := (Fork.mem_support_unifForward_run_iff
-      (M := M) (Commit := Commit) (Chal := Chal)
-      n (liveCache, queryLog) (u, st)).mp hw
-    change st = (liveCache, queryLog) at hst
-    subst st
     exact hs
   · cases hadv : advCache (.inr mc) with
     | some ch =>
@@ -914,10 +936,6 @@ private lemma forkLoggedImpl_preserves_live_adv_inv_step
           simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
             QueryImpl.mapStateTBase, hadv] using hz
         rcases hz' with ⟨w, hw, rfl⟩
-        have hw' := (mem_support_forkSim_pure_nested_iff
-          (M := M) (Commit := Commit) (Chal := Chal)
-          ch advCache (liveCache, queryLog) w).mp hw
-        subst w
         simpa using hs
     | none =>
         cases hlive : liveCache mc with
@@ -929,18 +947,29 @@ private lemma forkLoggedImpl_preserves_live_adv_inv_step
             have hz' := by
               simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
                 QueryImpl.mapStateTBase, hadv] using hz
-            rcases hz' with ⟨w, hw, rfl⟩
-            rcases w with ⟨ch, st⟩
+            rcases hz' with ⟨ch, liveCache', queryLog', hw, rfl⟩
+            have hw' := hw
+            rw [Fork.roImpl_run_none (M := M) (Commit := Commit) (Chal := Chal)
+              mc liveCache queryLog hlive,
+              ← Fork.simulateQ_unifForward_add_roImpl_query_inr_run_none
+                (M := M) (Commit := Commit) (Chal := Chal)
+                mc liveCache queryLog hlive] at hw'
             obtain ⟨v, heq⟩ :=
               (Fork.mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_none_iff
               (M := M) (Commit := Commit) (Chal := Chal)
-              mc liveCache queryLog hlive (ch, st)).mp hw
+              mc liveCache queryLog hlive (ch, (liveCache', queryLog'))).mp hw'
             change Chal at v
             have hch : ch = v := congrArg Prod.fst heq
-            have hst : st = (liveCache.cacheQuery mc v, queryLog ++ [mc]) :=
+            have hst : (liveCache', queryLog') =
+                (liveCache.cacheQuery mc v, queryLog ++ [mc]) :=
               congrArg Prod.snd heq
+            have hliveCache' : liveCache' = liveCache.cacheQuery mc v :=
+              congrArg Prod.fst hst
+            have hqueryLog' : queryLog' = queryLog ++ [mc] :=
+              congrArg Prod.snd hst
             subst ch
-            subst st
+            subst liveCache'
+            subst queryLog'
             intro mc' ch' hcache'
             by_cases hmc : mc' = mc
             · subst mc'
@@ -965,10 +994,25 @@ private lemma forkLoggedImpl_preserves_live_adv_inv_step
   · have hz' := by
       simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
         QueryImpl.mapStateTBase] using hz
-    rcases hz' with ⟨x, _hx, hsigCache, rfl⟩
+    rcases hz' with ⟨xCommit, xChal, xResp, xAdvCache, xLiveCache,
+      xQueryLog, hxmem, rfl⟩
+    let x := (((xCommit, xChal, xResp), xAdvCache), (xLiveCache, xQueryLog))
+    have _hx : x ∈ support
+        ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+          ((simulateQ (simulatedNmaUnifSim (M := M) (Commit := Commit)
+            (Chal := Chal)) (simT pk)).run advCache)).run (liveCache, queryLog)) := by
+      simpa [x] using hxmem
     obtain ⟨hxadv, hxlive⟩ := simulatedNmaUnifFork_nested_preserves_state
       (M := M) (Commit := Commit) (Chal := Chal) (simT pk) advCache
       (liveCache, queryLog) _hx
+    have hxAdvCache : xAdvCache = advCache := by simpa [x] using hxadv
+    have hxLiveState : (xLiveCache, xQueryLog) = (liveCache, queryLog) := by
+      simpa [x] using hxlive
+    have hxLiveCache : xLiveCache = liveCache := congrArg Prod.fst hxLiveState
+    have hxQueryLog : xQueryLog = queryLog := congrArg Prod.snd hxLiveState
+    subst xAdvCache
+    subst xLiveCache
+    subst xQueryLog
     intro mc ch hcache'
     have hadv_old' : advCache (.inr mc) = some ch := by
       simpa using hs mc ch (by simpa [hxlive] using hcache')

@@ -108,4 +108,32 @@ example (program : OracleComp boolOracleSpec Bool) :
     𝒟[program] = simulateQ OracleSpec.IsProbabilitySpec.toPMF program :=
   OracleComp.evalDist_eq_simulateQ program
 
+/-! ## Nested coproduct transparency -/
+
+section NestedCoproductTransparency
+
+variable {ι₁ ι₂ ι₃ : Type}
+variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂} {spec₃ : OracleSpec ι₃}
+
+set_option linter.tacticCheckInstances true
+
+example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) (t : spec₂.Domain)
+    (consume : spec₂.Range t → Nat) :
+    consume (impl (.inl (.inr t))) = consume (impl (.inl (.inr t))) := by
+  rfl
+
+example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) (t : spec₃.Domain)
+    (consume : spec₃.Range t → Nat) :
+    consume (impl (.inr t)) = consume (impl (.inr t)) := by
+  rfl
+
+example [IsProbabilitySpec ((spec₁ + spec₂) + spec₃)] (t : spec₃.Domain)
+    (program : OracleComp ((spec₁ + spec₂) + spec₃)
+      ((((spec₁ + spec₂) + spec₃).Range (.inr t)) × Bool)) :
+    Pr[fun z : spec₃.Range t × Bool => z.2 = true | program] =
+      Pr[fun z : spec₃.Range t × Bool => z.2 = true | program] := by
+  rfl
+
+end NestedCoproductTransparency
+
 end VCVioTest.PFunctorFacade
