@@ -42,8 +42,10 @@ non-vacuity witnesses at the end of this file show the restricted ones still adm
 values — including, since the widening, exact zeros.
 
 The matching closure facts (`add_isNormalOrZero` and friends) say the domain is closed under each
-operation, which is what lets a compound expression carry the hypotheses through its intermediate
-results. Together they discharge `FloatLike.HasRealSemantics FPR` in
+operation, which is what lets a compound expression derive *validity* for its intermediate
+results. The range side does not come for free: whether an exact intermediate lands in
+`FPR.InNormalMagnitudeRange` depends on the values an algorithm feeds in, so it stays an explicit
+premise. Together they discharge `FloatLike.HasRealSemantics FPR` in
 `Extern/Falcon/ApproxArith.lean`.
 
 ## Accumulated Error in ffSampling
@@ -78,7 +80,15 @@ noncomputable section
 
 /-- The three IEEE-754 binary64 bit fields of an `FPR` word: sign bit, 11-bit biased
 exponent, and 52-bit mantissa (implicit leading `1` for normal values), matching the
-layout documented in `FPR.lean`'s module docstring (bit 63 / bits 62-52 / bits 51-0). -/
+layout documented in `FPR.lean`'s module docstring (bit 63 / bits 62-52 / bits 51-0).
+
+This is an **unchecked** triple: the field widths describe the intended layout but are not
+enforced by the types, so out-of-range triples such as `⟨false, 2048, 0⟩` inhabit it and even
+satisfy `FPR.Bits.IsNormal`. Nothing produced by `FPR.decode` is out of range —
+`FPR.decode_wellFormed` — so the predicates and denotations below are only ever applied to
+in-range triples in this development. A theorem stated on a raw `FPR.Bits` rather than on
+`FPR.decode x` should say which bounds it needs; see `FPR.Bits.abs_toReal_sub_of_succ_mantissa`
+for one that does not carry them. -/
 structure FPR.Bits where
   /-- The sign bit: `true` means negative. -/
   sign : Bool
@@ -195,11 +205,18 @@ theorem FPR.decode_exponent_lt (x : FPR) : (FPR.decode x).exponent < 2 ^ 11 := b
   unfold FPR.decode
   exact Nat.mod_lt _ (by norm_num)
 
+/-- A field triple whose exponent and mantissa fit the widths the layout documents. -/
+def FPR.Bits.WellFormed (b : FPR.Bits) : Prop := b.exponent < 2 ^ 11 ∧ b.mantissa < 2 ^ 52
+
 /-- The mantissa field extracted by `FPR.decode` is always below `2^52`: it is literally
 reduced modulo `2^52` in the definition of `FPR.decode`. -/
 theorem FPR.decode_mantissa_lt (x : FPR) : (FPR.decode x).mantissa < 2 ^ 52 := by
   unfold FPR.decode
   exact Nat.mod_lt _ (by norm_num)
+
+/-- Everything `FPR.decode` produces respects the documented field widths. -/
+theorem FPR.decode_wellFormed (x : FPR) : (FPR.decode x).WellFormed :=
+  ⟨FPR.decode_exponent_lt x, FPR.decode_mantissa_lt x⟩
 
 /-- The integer significand of a decoded field triple: the mantissa with the implicit
 leading bit folded in when the exponent field is nonzero (normal), or bare when it is zero
@@ -317,7 +334,12 @@ differ by exactly `1` is exactly `FPR.ulpOfExponent` at that exponent — the ul
 fact stated directly as a distance between adjacent representable values, rather than as
 a bound relative to one endpoint's magnitude (`FPR.ulpOfExponent_le_two_pow_neg52_mul_abs`).
 Holds uniformly across the subnormal/normal boundary via the significand/workExp
-reconstruction, `FPR.Bits.toReal_eq_of_exponent_ne_2047`. -/
+reconstruction, `FPR.Bits.toReal_eq_of_exponent_ne_2047`.
+
+Stated on a raw triple, so it does **not** bound `b.mantissa`: at `b.mantissa = 2 ^ 52 - 1` the
+successor leaves the 52-bit field, and the statement then describes a triple that no `FPR` word
+decodes to. Applied to `FPR.decode x` the bound comes from `FPR.decode_mantissa_lt`, and the
+carry case is the business of the packing lemmas rather than this one. -/
 theorem FPR.Bits.abs_toReal_sub_of_succ_mantissa (b : FPR.Bits) (he : b.exponent ≠ 2047) :
     |({ b with mantissa := b.mantissa + 1 } : FPR.Bits).toReal - b.toReal| =
       FPR.ulpOfExponent b.exponent := by
@@ -397,22 +419,22 @@ own sign bit). The lemmas below give the ingredients of that step's correctness:
 identically to real magnitude, `toNat_and_low63Mask_eq_magKey` shows the concrete `x &&& M63`
 computation produces exactly that packed integer, and `za'_shiftRight_63_eq_one_iff` decides the
 swap test `za' >>> 63` — tie-break included — in terms of the two packed integers and `x`'s sign
-bit. None of the three reaches `FPR.add` itself yet (the conditional swap and every later pipeline
-stage — alignment/sticky-bit shift, sign combination, leading-zero renormalization, final
-round-to-nearest — remain open); they are reusable infrastructure for that larger proof. -/
+bit. `addPipeline` below carries the swap and every later stage — alignment/sticky-bit shift,
+sign combination, leading-zero renormalization, final round-to-nearest — through to `add_error`
+and `add_isNormalOrZero`, and these three are the magnitude-comparison layer it rests on. -/
 
 /-- The unsigned integer packing of a decoded field triple's exponent and mantissa fields into
 a single natural number, `exponent * 2^52 + mantissa`. Orders identically to real magnitude via
 `FPR.Bits.abs_toReal_lt_iff_magKey_lt`, and is exactly what masking an `FPR` word's sign bit off
 computes via `toNat_and_low63Mask_eq_magKey`. -/
-def FPR.Bits.magKey (b : FPR.Bits) : ℕ := b.exponent * 2 ^ 52 + b.mantissa
+private def FPR.Bits.magKey (b : FPR.Bits) : ℕ := b.exponent * 2 ^ 52 + b.mantissa
 
 /-- Two finite (non-Inf/NaN) decoded field triples are ordered by real magnitude exactly as
 their `FPR.Bits.magKey` values are ordered: a strictly larger exponent always dominates any
 mantissa difference (the significand fraction is always below `2`), and for equal exponents the
 comparison reduces to the mantissa alone. Holds uniformly across the subnormal/normal boundary
 (no `FPR.Bits.IsNormal` hypothesis is needed). -/
-theorem FPR.Bits.abs_toReal_lt_iff_magKey_lt (b1 b2 : FPR.Bits)
+private theorem FPR.Bits.abs_toReal_lt_iff_magKey_lt (b1 b2 : FPR.Bits)
     (hm1 : b1.mantissa < 2 ^ 52) (hm2 : b2.mantissa < 2 ^ 52)
     (h1 : b1.exponent ≠ 2047) (h2 : b2.exponent ≠ 2047) :
     |b1.toReal| < |b2.toReal| ↔ b1.magKey < b2.magKey := by
@@ -523,7 +545,7 @@ theorem FPR.Bits.abs_toReal_lt_iff_magKey_lt (b1 b2 : FPR.Bits)
 
 /-- Masking a `UInt64` with the low-63-bit all-ones pattern strips its top (sign) bit: the
 result's underlying `Nat` is the original reduced modulo `2^63`. -/
-theorem toNat_and_low63Mask (x : UInt64) :
+private theorem toNat_and_low63Mask (x : UInt64) :
     (x &&& (((1 : UInt64) <<< 63) - 1)).toNat = x.toNat % 2 ^ 63 := by
   rw [UInt64.toNat_and]
   have h1 : (((1 : UInt64) <<< 63) - 1).toNat = 2 ^ 63 - 1 := by decide
@@ -533,7 +555,7 @@ theorem toNat_and_low63Mask (x : UInt64) :
 /-- Masking an `FPR` word with the low-63-bit all-ones pattern (the sign-stripping mask `M63`
 used inside `FPR.add`'s compare-and-swap step) computes exactly `FPR.Bits.magKey` of its
 decoded fields. -/
-theorem toNat_and_low63Mask_eq_magKey (x : FPR) :
+private theorem toNat_and_low63Mask_eq_magKey (x : FPR) :
     (x &&& (((1 : UInt64) <<< 63) - 1)).toNat = (FPR.decode x).magKey := by
   rw [toNat_and_low63Mask]
   unfold FPR.decode FPR.Bits.magKey
@@ -544,7 +566,7 @@ theorem toNat_and_low63Mask_eq_magKey (x : FPR) :
 `UInt64` patterns (the sign-stripped operand shape `FPR.add`'s `za := (x &&& M63) - (y &&& M63)`
 step produces): the top bit of `p - q` is set exactly when `p < q`. Proved by unfolding to the
 underlying `Nat` subtraction modulo `2^64` and case-splitting on whether it wraps. -/
-theorem sub_shiftRight_63_eq_one_iff_lt (p q : UInt64)
+private theorem sub_shiftRight_63_eq_one_iff_lt (p q : UInt64)
     (hp : p < ((1 : UInt64) <<< 63)) (hq : q < ((1 : UInt64) <<< 63)) :
     (p - q) >>> 63 = 1 ↔ p < q := by
   rw [UInt64.lt_iff_toNat_lt, ← UInt64.toNat_inj]
@@ -580,7 +602,7 @@ top bit unchanged: the fold can only move bit `63` on an exact tie `p - q = 0`, 
 `za'_shiftRight_63_eq_one_iff` handles separately. Consumed by that lemma, this is what lets
 `sub_shiftRight_63_eq_one_iff_lt`'s plain "subtract and test the top bit" trick decide the
 non-tied cases of `FPR.add`'s tie-broken comparator `za'`. -/
-theorem or_and_sub_one_shiftRight_63_eq_of_ne_zero (p q x : UInt64) (h : p ≠ q)
+private theorem or_and_sub_one_shiftRight_63_eq_of_ne_zero (p q x : UInt64) (h : p ≠ q)
     (hp : p < ((1 : UInt64) <<< 63)) (hq : q < ((1 : UInt64) <<< 63)) :
     ((p - q) ||| ((p - q - 1) &&& x)) >>> 63 = (p - q) >>> 63 := by
   have h63 : ((1 : UInt64) <<< 63).toNat = 2 ^ 63 := by decide
@@ -624,7 +646,7 @@ and `x`'s own sign bit is set. This is the correctness of `FPR.add`'s conditiona
 bit" trick (`sub_shiftRight_63_eq_one_iff_lt`) does not cover on its own: on an exact tie
 `p - q = 0`, `p - q - 1` wraps to all-ones, so `za'` collapses to `x` itself
 (`allOnes_and`), and the swap keys on `x`'s sign bit. -/
-theorem za'_shiftRight_63_eq_one_iff (p q x : UInt64)
+private theorem za'_shiftRight_63_eq_one_iff (p q x : UInt64)
     (hp : p < ((1 : UInt64) <<< 63)) (hq : q < ((1 : UInt64) <<< 63)) :
     ((p - q) ||| ((p - q - 1) &&& x)) >>> 63 = 1 ↔ p < q ∨ (p = q ∧ x >>> 63 = 1) := by
   by_cases heq : p = q
@@ -676,10 +698,10 @@ Several statements mention `Falcon.Concrete.FPR`'s `private` helpers (`fpr_ulsh`
 /-- The value obtained by shifting `v` right by `k` bits while folding the discarded bits into
 a *sticky bit*: the low bit of the result is additionally set whenever any of the `k` discarded
 bits of `v` was set. -/
-def stickyShift (v k : ℕ) : ℕ := (v >>> k) ||| (if v % 2 ^ k = 0 then 0 else 1)
+private def stickyShift (v k : ℕ) : ℕ := (v >>> k) ||| (if v % 2 ^ k = 0 then 0 else 1)
 
 /-- Bitwise-or with `1` only forces the low bit. -/
-theorem or_one_eq (q : ℕ) : q ||| 1 = 2 * (q / 2) + 1 := by
+private theorem or_one_eq (q : ℕ) : q ||| 1 = 2 * (q / 2) + 1 := by
   have h1 : (q ||| 1) / 2 = q / 2 := by
     have := @Nat.shiftRight_or_distrib 1 q 1
     simpa [Nat.shiftRight_eq_div_pow] using this
@@ -689,7 +711,7 @@ theorem or_one_eq (q : ℕ) : q ||| 1 = 2 * (q / 2) + 1 := by
 
 /-- Adding the all-ones mask `2 ^ k - 1` to a `k`-bit value carries into bit `k` exactly when
 that value is nonzero: this is the core of the sticky-bit idiom. -/
-theorem shiftRight_add_two_pow_sub_one (k r : ℕ) (hr : r < 2 ^ k) :
+private theorem shiftRight_add_two_pow_sub_one (k r : ℕ) (hr : r < 2 ^ k) :
     (r + (2 ^ k - 1)) >>> k = if r = 0 then 0 else 1 := by
   rw [Nat.shiftRight_eq_div_pow]
   have hN : 0 < 2 ^ k := Nat.two_pow_pos k
@@ -702,7 +724,7 @@ theorem shiftRight_add_two_pow_sub_one (k r : ℕ) (hr : r < 2 ^ k) :
 
 /-- Closed form of the sticky fold: it is `v` shifted right by `k + 1` and doubled, plus a single
 low bit that records whether `v` failed to be an exact multiple of `2 ^ (k + 1)`. -/
-theorem stickyShift_eq (v k : ℕ) :
+private theorem stickyShift_eq (v k : ℕ) :
     stickyShift v k = 2 * (v / 2 ^ (k + 1)) + (if v % 2 ^ (k + 1) = 0 then 0 else 1) := by
   have hN : 0 < 2 ^ k := Nat.two_pow_pos k
   have hdiv : v / 2 ^ k / 2 = v / 2 ^ (k + 1) := by
@@ -735,7 +757,7 @@ theorem stickyShift_eq (v k : ℕ) :
     rw [if_neg h', or_one_eq, hdiv]
 
 /-- The sticky fold vanishes exactly on `0`: no information about zero-ness is lost. -/
-theorem stickyShift_eq_zero_iff (v k : ℕ) : stickyShift v k = 0 ↔ v = 0 := by
+private theorem stickyShift_eq_zero_iff (v k : ℕ) : stickyShift v k = 0 ↔ v = 0 := by
   constructor
   · intro h
     rw [stickyShift_eq] at h
@@ -752,7 +774,7 @@ theorem stickyShift_eq_zero_iff (v k : ℕ) : stickyShift v k = 0 ↔ v = 0 := b
 
 /-- The low bit of the sticky fold records whether `v` was an exact multiple of `2 ^ (k + 1)`:
 this is precisely the information a subsequent round-to-nearest-even step needs. -/
-theorem stickyShift_mod_two (v k : ℕ) :
+private theorem stickyShift_mod_two (v k : ℕ) :
     stickyShift v k % 2 = if v % 2 ^ (k + 1) = 0 then 0 else 1 := by
   rw [stickyShift_eq]
   by_cases hR : v % 2 ^ (k + 1) = 0
@@ -762,7 +784,7 @@ theorem stickyShift_mod_two (v k : ℕ) :
     omega
 
 /-- The sticky fold moves the value by strictly less than one output unit in the last place. -/
-theorem stickyShift_mul_lt (v k : ℕ) : stickyShift v k * 2 ^ k < v + 2 ^ k := by
+private theorem stickyShift_mul_lt (v k : ℕ) : stickyShift v k * 2 ^ k < v + 2 ^ k := by
   rw [stickyShift_eq]
   have hN : 0 < (2 : ℕ) ^ k := Nat.two_pow_pos k
   have hp : (2 : ℕ) ^ (k + 1) = 2 * 2 ^ k := by rw [pow_succ]; ring
@@ -778,7 +800,7 @@ theorem stickyShift_mul_lt (v k : ℕ) : stickyShift v k * 2 ^ k < v + 2 ^ k := 
 
 /-- The sticky fold never falls short of the original value by a full output unit in the last
 place either: together with `stickyShift_mul_lt` this pins it to within one ulp of `v`. -/
-theorem lt_stickyShift_mul_add (v k : ℕ) : v < stickyShift v k * 2 ^ k + 2 ^ k := by
+private theorem lt_stickyShift_mul_add (v k : ℕ) : v < stickyShift v k * 2 ^ k + 2 ^ k := by
   rw [stickyShift_eq]
   have hN : 0 < (2 : ℕ) ^ k := Nat.two_pow_pos k
   have hp : (2 : ℕ) ^ (k + 1) = 2 * 2 ^ k := by rw [pow_succ]; ring
@@ -794,7 +816,7 @@ theorem lt_stickyShift_mul_add (v k : ℕ) : v < stickyShift v k * 2 ^ k + 2 ^ k
 /-! ### The sticky fold on `UInt64` -/
 
 /-- The all-ones mask `(1 <<< k) - 1` denotes `2 ^ k - 1` for shift counts below the word size. -/
-theorem toNat_one_shiftLeft_sub_one {k : UInt64} (hk : k.toNat < 64) :
+private theorem toNat_one_shiftLeft_sub_one {k : UInt64} (hk : k.toNat < 64) :
     ((1 : UInt64) <<< k - 1).toNat = 2 ^ k.toNat - 1 := by
   have hlt : 2 ^ k.toNat < 2 ^ 64 := Nat.pow_lt_pow_right (by norm_num) hk
   have h1 : (1 : UInt64).toNat = 1 := by decide
@@ -806,13 +828,13 @@ theorem toNat_one_shiftLeft_sub_one {k : UInt64} (hk : k.toNat < 64) :
   omega
 
 /-- Masking with `(1 <<< k) - 1` keeps exactly the low `k` bits. -/
-theorem toNat_and_one_shiftLeft_sub_one (v k : UInt64) (hk : k.toNat < 64) :
+private theorem toNat_and_one_shiftLeft_sub_one (v k : UInt64) (hk : k.toNat < 64) :
     (v &&& ((1 : UInt64) <<< k - 1)).toNat = v.toNat % 2 ^ k.toNat := by
   rw [UInt64.toNat_and, toNat_one_shiftLeft_sub_one hk]
   exact Nat.and_two_pow_sub_one_eq_mod _ _
 
 /-- The masked low bits vanish exactly when the discarded part of `v` is zero. -/
-theorem and_one_shiftLeft_sub_one_eq_zero_iff (v k : UInt64) (hk : k.toNat < 64) :
+private theorem and_one_shiftLeft_sub_one_eq_zero_iff (v k : UInt64) (hk : k.toNat < 64) :
     v &&& ((1 : UInt64) <<< k - 1) = 0 ↔ v.toNat % 2 ^ k.toNat = 0 := by
   rw [← UInt64.toNat_inj, toNat_and_one_shiftLeft_sub_one v k hk]
   constructor
@@ -821,7 +843,7 @@ theorem and_one_shiftLeft_sub_one_eq_zero_iff (v k : UInt64) (hk : k.toNat < 64)
 
 /-- Core sticky-bit step on `UInt64`: adding the low-`k` all-ones mask to the masked low bits of
 `v` carries into bit `k` exactly when one of those discarded bits was set. -/
-theorem and_add_mask_shiftRight (v k : UInt64) (hk : k.toNat < 64) :
+private theorem and_add_mask_shiftRight (v k : UInt64) (hk : k.toNat < 64) :
     ((v &&& ((1 : UInt64) <<< k - 1)) + ((1 : UInt64) <<< k - 1)) >>> k
       = if v &&& ((1 : UInt64) <<< k - 1) = 0 then 0 else 1 := by
   have hM := toNat_one_shiftLeft_sub_one hk
@@ -846,13 +868,13 @@ theorem and_add_mask_shiftRight (v k : UInt64) (hk : k.toNat < 64) :
 /-- The sticky or-fold on `UInt64`: shifting `v ||| ((v &&& mask) + mask)` right by `k` yields
 `v >>> k` with its low bit additionally set exactly when one of the `k` discarded bits of `v`
 was set. This is the idiom used by `FPR.add`, `FPR.mul` and `FPR.scaled`. -/
-theorem or_fold_shiftRight (v k : UInt64) (hk : k.toNat < 64) :
+private theorem or_fold_shiftRight (v k : UInt64) (hk : k.toNat < 64) :
     (v ||| ((v &&& ((1 : UInt64) <<< k - 1)) + ((1 : UInt64) <<< k - 1))) >>> k
       = (v >>> k) ||| (if v &&& ((1 : UInt64) <<< k - 1) = 0 then 0 else 1) := by
   rw [UInt64.shiftRight_or, and_add_mask_shiftRight v k hk]
 
 /-- A shifted value with an explicit sticky bit or-ed in denotes `stickyShift`. -/
-theorem toNat_shiftRight_or_sticky (v k : UInt64) (hk : k.toNat < 64) :
+private theorem toNat_shiftRight_or_sticky (v k : UInt64) (hk : k.toNat < 64) :
     ((v >>> k) ||| (if v &&& ((1 : UInt64) <<< k - 1) = 0 then 0 else 1)).toNat
       = stickyShift v.toNat k.toNat := by
   rw [UInt64.toNat_or, UInt64.toNat_shiftRight, Nat.mod_eq_of_lt hk, stickyShift]
@@ -865,7 +887,7 @@ theorem toNat_shiftRight_or_sticky (v k : UInt64) (hk : k.toNat < 64) :
 /-- Semantics of the sticky or-fold: it computes exactly `stickyShift` of the underlying
 natural number, so the bounds in `stickyShift_mul_lt`, `lt_stickyShift_mul_add`,
 `stickyShift_mod_two` and `stickyShift_eq_zero_iff` apply to it. -/
-theorem toNat_or_fold_shiftRight (v k : UInt64) (hk : k.toNat < 64) :
+private theorem toNat_or_fold_shiftRight (v k : UInt64) (hk : k.toNat < 64) :
     ((v ||| ((v &&& ((1 : UInt64) <<< k - 1)) + ((1 : UInt64) <<< k - 1))) >>> k).toNat
       = stickyShift v.toNat k.toNat := by
   rw [or_fold_shiftRight v k hk, toNat_shiftRight_or_sticky v k hk]
@@ -874,7 +896,7 @@ theorem toNat_or_fold_shiftRight (v k : UInt64) (hk : k.toNat < 64) :
 what makes the subsequent `make_z` zero-detection faithful: a caller who reduces a working
 significand's collapse to a statement about the *pre-fold* value being `0` can transport it
 through here, then land on `toRealBits_make_z_of_zero` for the resulting denotation. -/
-theorem or_fold_shiftRight_eq_zero_iff (v k : UInt64) (hk : k.toNat < 64) :
+private theorem or_fold_shiftRight_eq_zero_iff (v k : UInt64) (hk : k.toNat < 64) :
     (v ||| ((v &&& ((1 : UInt64) <<< k - 1)) + ((1 : UInt64) <<< k - 1))) >>> k = 0 ↔ v = 0 := by
   have h0 : (0 : UInt64).toNat = 0 := rfl
   rw [← UInt64.toNat_inj, ← UInt64.toNat_inj (a := v), h0, toNat_or_fold_shiftRight v k hk]
@@ -883,7 +905,7 @@ theorem or_fold_shiftRight_eq_zero_iff (v k : UInt64) (hk : k.toNat < 64) :
 /-- The low bit of the or-folded value is the sticky bit: it is set exactly when `v` was not an
 exact multiple of `2 ^ (k + 1)`, i.e. exactly when a subsequent round-to-nearest step must
 break a tie away from even. -/
-theorem toNat_or_fold_shiftRight_mod_two (v k : UInt64) (hk : k.toNat < 64) :
+private theorem toNat_or_fold_shiftRight_mod_two (v k : UInt64) (hk : k.toNat < 64) :
     ((v ||| ((v &&& ((1 : UInt64) <<< k - 1)) + ((1 : UInt64) <<< k - 1))) >>> k).toNat % 2
       = if v.toNat % 2 ^ (k.toNat + 1) = 0 then 0 else 1 := by
   rw [toNat_or_fold_shiftRight v k hk, stickyShift_mod_two]
@@ -894,7 +916,7 @@ theorem toNat_or_fold_shiftRight_mod_two (v k : UInt64) (hk : k.toNat < 64) :
 `m = fpr_ulsh 1 n' - 1` and `n' = n &&& 63`. -/
 
 /-- The shift count `n &&& 63` used by `FPR.add` always stays below the word size. -/
-theorem toNat_toUInt64_and_63_lt (n : UInt32) : ((n &&& 63).toUInt64).toNat < 64 := by
+private theorem toNat_toUInt64_and_63_lt (n : UInt32) : ((n &&& 63).toUInt64).toNat < 64 := by
   rw [UInt32.toNat_toUInt64, UInt32.toNat_and]
   have hle : n.toNat &&& (63 : UInt32).toNat ≤ (63 : UInt32).toNat := Nat.and_le_right
   have h63 : (63 : UInt32).toNat = 63 := by decide
@@ -905,7 +927,7 @@ shifted value and records in its low bit whether any shifted-out bit of `yu` was
 
 This is the shape `fpr_ursh (yu ||| ((yu &&& m) + m)) (n &&& 63)` with
 `m = fpr_ulsh 1 (n &&& 63) - 1`, after unfolding the two inline shift wrappers. -/
-theorem or_fold_shiftRight_toUInt64_and_63 (yu : UInt64) (n : UInt32) :
+private theorem or_fold_shiftRight_toUInt64_and_63 (yu : UInt64) (n : UInt32) :
     (yu ||| ((yu &&& ((1 : UInt64) <<< (n &&& 63).toUInt64 - 1))
           + ((1 : UInt64) <<< (n &&& 63).toUInt64 - 1))) >>> (n &&& 63).toUInt64
       = (yu >>> (n &&& 63).toUInt64)
@@ -913,7 +935,7 @@ theorem or_fold_shiftRight_toUInt64_and_63 (yu : UInt64) (n : UInt32) :
   or_fold_shiftRight yu (n &&& 63).toUInt64 (toNat_toUInt64_and_63_lt n)
 
 /-- Semantics of the `FPR.add` alignment step. -/
-theorem toNat_or_fold_shiftRight_toUInt64_and_63 (yu : UInt64) (n : UInt32) :
+private theorem toNat_or_fold_shiftRight_toUInt64_and_63 (yu : UInt64) (n : UInt32) :
     ((yu ||| ((yu &&& ((1 : UInt64) <<< (n &&& 63).toUInt64 - 1))
           + ((1 : UInt64) <<< (n &&& 63).toUInt64 - 1))) >>> (n &&& 63).toUInt64).toNat
       = stickyShift yu.toNat (n &&& 63).toNat := by
@@ -924,7 +946,7 @@ theorem toNat_or_fold_shiftRight_toUInt64_and_63 (yu : UInt64) (n : UInt32) :
 
 /-- The final rounding fold of `FPR.add` (and of `FPR.scaled`), with the concrete mask
 `0x1FF = 2 ^ 9 - 1`. -/
-theorem or_fold_shiftRight_nine (v : UInt64) :
+private theorem or_fold_shiftRight_nine (v : UInt64) :
     (v ||| ((v &&& 0x1FF) + 0x1FF)) >>> 9
       = (v >>> 9) ||| (if v &&& 0x1FF = 0 then 0 else 1) := by
   have hmask : (1 : UInt64) <<< (9 : UInt64) - 1 = 0x1FF := by decide
@@ -932,7 +954,7 @@ theorem or_fold_shiftRight_nine (v : UInt64) :
   rwa [hmask] at h
 
 /-- Semantics of the nine-bit rounding fold. -/
-theorem toNat_or_fold_shiftRight_nine (v : UInt64) :
+private theorem toNat_or_fold_shiftRight_nine (v : UInt64) :
     ((v ||| ((v &&& 0x1FF) + 0x1FF)) >>> 9).toNat = stickyShift v.toNat 9 := by
   have hmask : (1 : UInt64) <<< (9 : UInt64) - 1 = 0x1FF := by decide
   have hk : (9 : UInt64).toNat = 9 := by decide
@@ -948,7 +970,7 @@ is the surrounding range invariant of those two kernels, not a bit-level fact: t
 genuinely fails for larger `es`. -/
 
 /-- Bitwise absorption: or-ing a submask of `v` back into `v` changes nothing. -/
-theorem or_and_self (v w : UInt64) : v ||| (v &&& w) = v := by
+private theorem or_and_self (v w : UInt64) : v ||| (v &&& w) = v := by
   rw [← UInt64.toNat_inj, UInt64.toNat_or, UInt64.toNat_and]
   apply Nat.eq_of_testBit_eq
   intro i
@@ -961,7 +983,7 @@ theorem or_zero (v : UInt64) : v ||| 0 = v := by
   exact Nat.or_zero _
 
 /-- Masking with `1` extracts the low bit, so the result is `0` or `1`. -/
-theorem and_one_eq_zero_or_one (v : UInt64) : v &&& 1 = 0 ∨ v &&& 1 = 1 := by
+private theorem and_one_eq_zero_or_one (v : UInt64) : v &&& 1 = 0 ∨ v &&& 1 = 1 := by
   have hmod : (v &&& 1).toNat = v.toNat % 2 := by
     have h1 : (1 : UInt64).toNat = 2 ^ 1 - 1 := by decide
     rw [UInt64.toNat_and, h1, Nat.and_two_pow_sub_one_eq_mod, pow_one]
@@ -976,7 +998,7 @@ theorem and_one_eq_zero_or_one (v : UInt64) : v &&& 1 = 0 ∨ v &&& 1 = 1 := by
 
 /-- Renormalising by `es ≤ 1` places and or-ing bit `0` back in is the sticky fold for a
 shift of `es` places. -/
-theorem shiftRight_or_and_one (v es : UInt64) (hes : es.toNat ≤ 1) :
+private theorem shiftRight_or_and_one (v es : UInt64) (hes : es.toNat ≤ 1) :
     (v >>> es) ||| (v &&& 1)
       = (v >>> es) ||| (if v &&& ((1 : UInt64) <<< es - 1) = 0 then 0 else 1) := by
   have hcase : es = 0 ∨ es = 1 := by
@@ -1000,7 +1022,7 @@ theorem shiftRight_or_and_one (v es : UInt64) (hes : es.toNat ≤ 1) :
     · rw [h, if_neg (by decide : ¬ (1 : UInt64) = 0)]
 
 /-- Semantics of the `FPR.mul` / `FPR.div` renormalisation step. -/
-theorem toNat_shiftRight_or_and_one (v es : UInt64) (hes : es.toNat ≤ 1) :
+private theorem toNat_shiftRight_or_and_one (v es : UInt64) (hes : es.toNat ≤ 1) :
     ((v >>> es) ||| (v &&& 1)).toNat = stickyShift v.toNat es.toNat := by
   rw [shiftRight_or_and_one v es hes]
   exact toNat_shiftRight_or_sticky v es (by omega)
@@ -1009,7 +1031,7 @@ theorem toNat_shiftRight_or_and_one (v es : UInt64) (hes : es.toNat ≤ 1) :
 
 /-- Adding the low-`k` all-ones mask to a value known to fit in `k` bits carries into bit `k`
 exactly when the value is nonzero. `UInt32` version. -/
-theorem uint32_add_mask_shiftRight_of_lt (v k : UInt32) (hk : k.toNat < 32)
+private theorem uint32_add_mask_shiftRight_of_lt (v k : UInt32) (hk : k.toNat < 32)
     (hv : v.toNat < 2 ^ k.toNat) :
     (v + ((1 : UInt32) <<< k - 1)) >>> k = if v = 0 then 0 else 1 := by
   have h1 : (1 : UInt32).toNat = 1 := by decide
@@ -1040,7 +1062,7 @@ theorem uint32_add_mask_shiftRight_of_lt (v k : UInt32) (hk : k.toNat < 32)
 
 /-- The 25-bit sticky bit `FPR.mul` folds into the product: the low `25`-bit limbs `z0` and
 `z1'` contribute a carry into bit `25` exactly when one of them is nonzero. -/
-theorem masked_or_add_shiftRight_25 (a b : UInt32) :
+private theorem masked_or_add_shiftRight_25 (a b : UInt32) :
     (((a &&& 0x01FFFFFF) ||| (b &&& 0x01FFFFFF)) + 0x01FFFFFF) >>> 25
       = if (a &&& 0x01FFFFFF) ||| (b &&& 0x01FFFFFF) = 0 then 0 else 1 := by
   have hmask : (1 : UInt32) <<< (25 : UInt32) - 1 = 0x01FFFFFF := by decide
@@ -1054,14 +1076,6 @@ theorem masked_or_add_shiftRight_25 (a b : UInt32) :
     exact Nat.or_lt_two_pow (hbound a) (hbound b)
   have h := uint32_add_mask_shiftRight_of_lt _ 25 (by decide) hv
   rwa [hmask] at h
-
-/-- `FPR.add` alignment step, in the exact shape of the kernel's `fpr_ursh` / `fpr_ulsh` call. -/
-private theorem fpr_ursh_or_fold (yu : UInt64) (n : UInt32) :
-    fpr_ursh (yu ||| ((yu &&& (fpr_ulsh 1 (n &&& 63) - 1)) + (fpr_ulsh 1 (n &&& 63) - 1)))
-        (n &&& 63)
-      = (yu >>> (n &&& 63).toUInt64)
-        ||| (if yu &&& ((1 : UInt64) <<< (n &&& 63).toUInt64 - 1) = 0 then 0 else 1) :=
-  or_fold_shiftRight_toUInt64_and_63 yu n
 
 /-- `FPR.add` alignment step, semantic form. -/
 private theorem toNat_fpr_ursh_or_fold (yu : UInt64) (n : UInt32) :
@@ -1475,24 +1489,24 @@ The three low bits of `m` are (kept LSB, round bit, sticky bit), and `0xC8 = 0b1
 /-- Round `n / 4` to the nearest natural number, breaking exact ties (`n % 4 = 2`) toward
 the even quotient. This is IEEE-754's default rounding direction specialized to a two-bit
 discard: `n % 4` is the pair (round bit, sticky bit) and `n / 4 % 2` is the kept LSB. -/
-def roundQuarterTiesEven (n : ℕ) : ℕ :=
+private def roundQuarterTiesEven (n : ℕ) : ℕ :=
   n / 4 + (if 2 < n % 4 ∨ (n % 4 = 2 ∧ n / 4 % 2 = 1) then 1 else 0)
 
 /-- `roundQuarterTiesEven n` is a nearest integer to `n / 4`: scaled back up by `4` it is
 within `2` of `n` from above. -/
-theorem four_mul_roundQuarterTiesEven_le (n : ℕ) :
+private theorem four_mul_roundQuarterTiesEven_le (n : ℕ) :
     4 * roundQuarterTiesEven n ≤ n + 2 := by
   unfold roundQuarterTiesEven; split_ifs <;> omega
 
 /-- `roundQuarterTiesEven n` is a nearest integer to `n / 4`: scaled back up by `4` it is
 within `2` of `n` from below. -/
-theorem le_four_mul_roundQuarterTiesEven (n : ℕ) :
+private theorem le_four_mul_roundQuarterTiesEven (n : ℕ) :
     n ≤ 4 * roundQuarterTiesEven n + 2 := by
   unfold roundQuarterTiesEven; split_ifs <;> omega
 
 /-- Ties (the two cases in which `roundQuarterTiesEven n` is at distance exactly `2/4` from
 `n / 4`) are resolved toward an even quotient. -/
-theorem roundQuarterTiesEven_even_of_tie (n : ℕ)
+private theorem roundQuarterTiesEven_even_of_tie (n : ℕ)
     (h : 4 * roundQuarterTiesEven n = n + 2 ∨ n = 4 * roundQuarterTiesEven n + 2) :
     roundQuarterTiesEven n % 2 = 0 := by
   revert h; unfold roundQuarterTiesEven; split_ifs <;> omega
@@ -1500,7 +1514,7 @@ theorem roundQuarterTiesEven_even_of_tie (n : ℕ)
 /-- The nearest-with-ties-to-even conditions pin the result uniquely, so any `q` satisfying
 them is `roundQuarterTiesEven n`. This is the characterization to use when identifying the
 table output with a rounding operator stated some other way. -/
-theorem eq_roundQuarterTiesEven (n q : ℕ) (h1 : n ≤ 4 * q + 2) (h2 : 4 * q ≤ n + 2)
+private theorem eq_roundQuarterTiesEven (n q : ℕ) (h1 : n ≤ 4 * q + 2) (h2 : 4 * q ≤ n + 2)
     (h3 : 4 * q = n + 2 ∨ n = 4 * q + 2 → q % 2 = 0) :
     q = roundQuarterTiesEven n := by
   by_cases ht : 4 * q = n + 2 ∨ n = 4 * q + 2
@@ -1511,29 +1525,29 @@ theorem eq_roundQuarterTiesEven (n q : ℕ) (h1 : n ≤ 4 * q + 2) (h2 : 4 * q �
     unfold roundQuarterTiesEven; split_ifs <;> omega
 
 /-- Rounding never moves the quotient down. -/
-theorem div_four_le_roundQuarterTiesEven (n : ℕ) : n / 4 ≤ roundQuarterTiesEven n := by
+private theorem div_four_le_roundQuarterTiesEven (n : ℕ) : n / 4 ≤ roundQuarterTiesEven n := by
   unfold roundQuarterTiesEven; split_ifs <;> omega
 
 /-- Rounding moves the quotient up by at most one. -/
-theorem roundQuarterTiesEven_le_div_four_succ (n : ℕ) :
+private theorem roundQuarterTiesEven_le_div_four_succ (n : ℕ) :
     roundQuarterTiesEven n ≤ n / 4 + 1 := by
   unfold roundQuarterTiesEven; split_ifs <;> omega
 
 /-- Rounding is exact when the two discarded bits are zero. -/
-theorem roundQuarterTiesEven_of_mod_four_eq_zero (n : ℕ) (h : n % 4 = 0) :
+private theorem roundQuarterTiesEven_of_mod_four_eq_zero (n : ℕ) (h : n % 4 = 0) :
     roundQuarterTiesEven n = n / 4 := by
   unfold roundQuarterTiesEven; split_ifs <;> omega
 
 /-- A normalized 55-bit working significand rounds to a 53-bit significand, possibly
 carrying out to the round power `2 ^ 53` (the case that bumps the exponent field). -/
-theorem roundQuarterTiesEven_mem_of_normalized (n : ℕ) (h1 : 2 ^ 54 ≤ n) (h2 : n < 2 ^ 55) :
+private theorem roundQuarterTiesEven_mem_of_normalized (n : ℕ) (h1 : 2 ^ 54 ≤ n) (h2 : n < 2 ^ 55) :
     2 ^ 52 ≤ roundQuarterTiesEven n ∧ roundQuarterTiesEven n ≤ 2 ^ 53 := by
   refine ⟨le_trans ?_ (div_four_le_roundQuarterTiesEven n),
     le_trans (roundQuarterTiesEven_le_div_four_succ n) ?_⟩ <;> omega
 
 /-- The real-number content of the two nearest-integer bounds: rounding `n / 4` moves it by
 at most half a unit. -/
-theorem abs_roundQuarterTiesEven_sub_div_four_le (n : ℕ) :
+private theorem abs_roundQuarterTiesEven_sub_div_four_le (n : ℕ) :
     |(roundQuarterTiesEven n : ℝ) - (n : ℝ) / 4| ≤ 1 / 2 := by
   have h1 := four_mul_roundQuarterTiesEven_le n
   have h2 := le_four_mul_roundQuarterTiesEven n
@@ -1546,7 +1560,7 @@ theorem abs_roundQuarterTiesEven_sub_div_four_le (n : ℕ) :
 
 /-- The `0xC8` rounding-table lookup used by `FPR.make` and `FPR.make_z`: the low three bits
 of the working significand `m` index the constant `0xC8 = 0b11001000`. -/
-def roundTableBit (m : UInt64) : UInt64 :=
+private def roundTableBit (m : UInt64) : UInt64 :=
   ((0xC8 : UInt64) >>> (m.toUInt32 &&& 7).toUInt64) &&& 1
 
 private theorem nat_and_seven (x : ℕ) : x &&& 7 = x % 8 := by
@@ -1554,7 +1568,8 @@ private theorem nat_and_seven (x : ℕ) : x &&& 7 = x % 8 := by
 
 /-- The table index `(m.toUInt32 &&& 7).toUInt64` is exactly the low three bits of `m`,
 the truncation to `UInt32` notwithstanding. -/
-theorem toNat_tableIndex (m : UInt64) : (m.toUInt32 &&& 7).toUInt64.toNat = m.toNat % 8 := by
+private theorem toNat_tableIndex (m : UInt64) :
+    (m.toUInt32 &&& 7).toUInt64.toNat = m.toNat % 8 := by
   rw [UInt32.toNat_toUInt64]
   simp only [UInt32.toNat_and, UInt64.toNat_toUInt32, UInt32.reduceToNat]
   rw [nat_and_seven]
@@ -1562,7 +1577,7 @@ theorem toNat_tableIndex (m : UInt64) : (m.toUInt32 &&& 7).toUInt64.toNat = m.to
 
 /-- The eight-entry rounding table, read off `0xC8 = 0b11001000`: the correction bit is `1`
 exactly on the low-three-bit patterns `3`, `6`, `7`. -/
-theorem toNat_roundTableBit_eq_ite_mod_eight (m : UInt64) :
+private theorem toNat_roundTableBit_eq_ite_mod_eight (m : UInt64) :
     (roundTableBit m).toNat =
       if m.toNat % 8 = 3 ∨ m.toNat % 8 = 6 ∨ m.toNat % 8 = 7 then 1 else 0 := by
   rw [roundTableBit, UInt64.toNat_and, UInt64.toNat_shiftRight, toNat_tableIndex,
@@ -1573,18 +1588,18 @@ theorem toNat_roundTableBit_eq_ite_mod_eight (m : UInt64) :
 
 /-- The rounding table restated in IEEE terms: the correction bit is `1` exactly when the
 discarded two bits `m % 4` exceed a half, or form an exact half whose kept LSB is odd. -/
-theorem toNat_roundTableBit (m : UInt64) :
+private theorem toNat_roundTableBit (m : UInt64) :
     (roundTableBit m).toNat =
       if 2 < m.toNat % 4 ∨ (m.toNat % 4 = 2 ∧ m.toNat / 4 % 2 = 1) then 1 else 0 := by
   rw [toNat_roundTableBit_eq_ite_mod_eight]
   split_ifs <;> omega
 
 /-- The correction bit is a bit. -/
-theorem toNat_roundTableBit_le_one (m : UInt64) : (roundTableBit m).toNat ≤ 1 := by
+private theorem toNat_roundTableBit_le_one (m : UInt64) : (roundTableBit m).toNat ≤ 1 := by
   rw [toNat_roundTableBit]; split_ifs <;> omega
 
 /-- The rounding table as a `UInt64`-level case split. -/
-theorem roundTableBit_eq_ite (m : UInt64) :
+private theorem roundTableBit_eq_ite (m : UInt64) :
     roundTableBit m =
       if m.toNat % 8 = 3 ∨ m.toNat % 8 = 6 ∨ m.toNat % 8 = 7 then 1 else 0 := by
   apply UInt64.toNat_inj.mp
@@ -1599,7 +1614,7 @@ private theorem toNat_shiftRight_two (m : UInt64) : (m >>> 2).toNat = m.toNat / 
 /-- The `0xC8` rounding table implements round-to-nearest, ties-to-even: discarding the
 low two bits of the working significand `m` and adding the table bit yields exactly the
 nearest integer to `m / 4`, with exact halves resolved toward an even result. -/
-theorem toNat_shiftRight_two_add_roundTableBit (m : UInt64) :
+private theorem toNat_shiftRight_two_add_roundTableBit (m : UInt64) :
     ((m >>> 2) + roundTableBit m).toNat = roundQuarterTiesEven m.toNat := by
   have hm : m.toNat < 2 ^ 64 := m.toNat_lt_size
   rw [UInt64.toNat_add, toNat_shiftRight_two, toNat_roundTableBit]
@@ -1608,20 +1623,21 @@ theorem toNat_shiftRight_two_add_roundTableBit (m : UInt64) :
 
 /-- The rounded significand of a `UInt64` never overflows into the exponent field's carry
 region: it is at most `2 ^ 62`. -/
-theorem roundQuarterTiesEven_toNat_le (m : UInt64) : roundQuarterTiesEven m.toNat ≤ 2 ^ 62 := by
+private theorem roundQuarterTiesEven_toNat_le (m : UInt64) :
+    roundQuarterTiesEven m.toNat ≤ 2 ^ 62 := by
   have hm : m.toNat < 2 ^ 64 := m.toNat_lt_size
   have := roundQuarterTiesEven_le_div_four_succ m.toNat
   omega
 
 /-- Injecting the rounded significand back into `UInt64` is faithful. -/
-theorem toNat_ofNat_roundQuarterTiesEven (m : UInt64) :
+private theorem toNat_ofNat_roundQuarterTiesEven (m : UInt64) :
     (UInt64.ofNat (roundQuarterTiesEven m.toNat)).toNat = roundQuarterTiesEven m.toNat := by
   have := roundQuarterTiesEven_toNat_le m
   rw [UInt64.toNat_ofNat']
   exact Nat.mod_eq_of_lt (by omega)
 
 /-- The `UInt64`-level form: `(m >>> 2) + cc` is the injection of the rounded quotient. -/
-theorem shiftRight_two_add_roundTableBit (m : UInt64) :
+private theorem shiftRight_two_add_roundTableBit (m : UInt64) :
     (m >>> 2) + roundTableBit m = UInt64.ofNat (roundQuarterTiesEven m.toNat) := by
   apply UInt64.toNat_inj.mp
   rw [toNat_shiftRight_two_add_roundTableBit, toNat_ofNat_roundQuarterTiesEven]
@@ -1672,7 +1688,8 @@ private theorem make_z_eq_roundQuarterTiesEven (s : UInt64) (e : Int32) (m : UIn
 /-- The exponent word `(e + 1076).toUInt32.toUInt64` computes the biased exponent `e + 1076` on
 the nose, provided no `Int32` wraparound can occur. The stated interval is the one under which
 `FPR.make`'s packed exponent field stays inside the finite range. -/
-theorem FPR.toNat_biasedExponentWord (e : Int32) (h1 : -1076 ≤ e.toInt) (h2 : e.toInt ≤ 969) :
+private theorem FPR.toNat_biasedExponentWord (e : Int32) (h1 : -1076 ≤ e.toInt)
+    (h2 : e.toInt ≤ 969) :
     (e + 1076).toUInt32.toUInt64.toNat = (e.toInt + 1076).toNat := by
   have h1076 : (1076 : Int32).toInt = 1076 := by decide
   have hadd : (e + 1076).toInt = e.toInt + 1076 := by
@@ -1928,17 +1945,6 @@ private theorem FPR.decode_make_z_of_carry (s : UInt64) (e : Int32) (m : UInt64)
   rw [FPR.make_z_eq_make s e m hm1 hm2]
   exact FPR.decode_make_of_carry s e m hs he1 he2 hm2 hc
 
-/-- Denotation of `FPR.make_z` on a normalized significand, uniformly across the rounding
-carry. -/
-private theorem toRealBits_make_z (s : UInt64) (e : Int32) (m : UInt64)
-    (hs : s.toNat ≤ 1) (he1 : -1076 ≤ e.toInt) (he2 : e.toInt ≤ 968)
-    (hm1 : 2 ^ 54 ≤ m.toNat) (hm2 : m.toNat < 2 ^ 55) :
-    toRealBits (make_z s e m) =
-      (if s.toNat = 1 then (-1 : ℝ) else 1) * (roundQuarterTiesEven m.toNat : ℝ) *
-        (2 : ℝ) ^ (e.toInt + 2) := by
-  rw [FPR.make_z_eq_make s e m hm1 hm2]
-  exact toRealBits_make s e m hs he1 he2 hm1 hm2
-
 /-- `FPR.make_z` denotes `± m * 2 ^ e` up to relative error `2 ^ (-53)` on a normalized
 significand. -/
 private theorem abs_toRealBits_make_z_sub_le (s : UInt64) (e : Int32) (m : UInt64)
@@ -2172,19 +2178,6 @@ private theorem addPipeline_yu' (x y : FPR) :
     (addPipeline x y).yu' =
       (addPipeline x y).yu_ &&& ((0 : UInt64) - (((addPipeline x y).n - 60) >>> 31).toUInt64) :=
   rfl
-
-private theorem addPipeline_n' (x y : FPR) : (addPipeline x y).n' = (addPipeline x y).n &&& 63 :=
-  rfl
-
-private theorem addPipeline_m (x y : FPR) :
-    (addPipeline x y).m = fpr_ulsh 1 (addPipeline x y).n' - 1 := rfl
-
-private theorem addPipeline_yu (x y : FPR) :
-    (addPipeline x y).yu =
-      fpr_ursh
-        ((addPipeline x y).yu'
-          ||| (((addPipeline x y).yu' &&& (addPipeline x y).m) + (addPipeline x y).m))
-        (addPipeline x y).n' := rfl
 
 private theorem addPipeline_dm (x y : FPR) :
     (addPipeline x y).dm =
@@ -2566,15 +2559,6 @@ private theorem toInt_sub_1078_toInt32_of_lt {ex : UInt32} (h : ex.toNat < 2 ^ 3
     show (1078 : UInt32).toNat = 1078 from by decide]
   apply Int.bmod_eq_of_le_mul_two <;> omega
 
-/-- For a normal operand's biased exponent field (`1 ≤ ex.toNat ≤ 2046`), the `ex'` step of
-`FPR.add`'s pipeline (`UInt32` subtraction by `1078`, reinterpreted as `Int32`) computes the plain
-integer difference `ex.toNat - 1078`: the wraparound pattern the `UInt32` subtraction produces
-when `ex.toNat < 1078` lands exactly on the two's-complement encoding of the intended negative
-value. -/
-private theorem toInt_sub_1078_toInt32 (ex : UInt32) (h1 : 1 ≤ ex.toNat) (h2 : ex.toNat ≤ 2046) :
-    (ex - 1078).toInt32.toInt = (ex.toNat : ℤ) - 1078 :=
-  toInt_sub_1078_toInt32_of_lt (by omega)
-
 /-- A `FPR.Bits.magKey` ordering forces an exponent ordering: a strictly larger exponent always
 dominates any mantissa difference below `2 ^ 52`. -/
 private theorem exponent_le_of_magKey_le {b1 b2 : FPR.Bits} (hm1 : b1.mantissa < 2 ^ 52)
@@ -2750,22 +2734,6 @@ private theorem addPipeline_yu_eq_zero (a b : FPR) (h60 : 60 ≤ (addPipeline a 
   rw [← UInt64.toNat_inj, h0]
   rfl
 
-/-- The exponent gap in decoded terms. -/
-private theorem addPipeline_n_toNat_eq_exponent_sub (a b : FPR) :
-    (addPipeline a b).n.toNat
-      = (FPR.decode (addPipeline a b).x').exponent
-        - (FPR.decode (addPipeline a b).y').exponent := by
-  rw [addPipeline_n_toNat, addPipeline_ex_eq_exponent, addPipeline_ey_eq_exponent]
-
-/-- The flush condition, with the unreachable wrapping window eliminated: `FPR.add` zeroes the
-smaller operand exactly when the exponent gap reaches `60`. -/
-private theorem addPipeline_yu'_eq_of_gap (a b : FPR) :
-    (addPipeline a b).yu'
-      = if 60 ≤ (addPipeline a b).n.toNat then 0 else (addPipeline a b).yu_ := by
-  by_cases hc : 60 ≤ (addPipeline a b).n.toNat
-  · rw [if_pos hc]; exact addPipeline_yu'_eq_zero a b hc
-  · rw [if_neg hc]; exact addPipeline_yu'_eq_yuRaw a b (by omega)
-
 /-- The two-sided integer ulp bracket relating the aligned significand to the exactly-scaled
 one. -/
 private theorem addPipeline_yu_nat_bracket (a b : FPR) :
@@ -2817,29 +2785,6 @@ private theorem addPipeline_yu_real_bracket_yuRaw (a b : FPR)
   have := addPipeline_yu_real_bracket a b
   rwa [hk, hv] at this
 
-/-- The ulp bracket, packaged against the decoded significand of the smaller operand: below the
-flush threshold, the aligned significand `yu` is within one ulp of `8 * S / 2 ^ n`. -/
-private theorem abs_addPipeline_yu_sub_significand_lt (a b : FPR)
-    (h : (addPipeline a b).n.toNat < 60) :
-    |((addPipeline a b).yu.toNat : ℝ)
-        - (8 * (FPR.decode (addPipeline a b).y').significand : ℕ)
-            / 2 ^ (addPipeline a b).n.toNat| < 1 := by
-  have hk : ((addPipeline a b).n &&& 63).toNat = (addPipeline a b).n.toNat :=
-    toNat_and_63_of_lt (by omega)
-  have hv : (addPipeline a b).yu'.toNat
-      = (8 * (FPR.decode (addPipeline a b).y').significand : ℕ) := by
-    rw [addPipeline_yu'_eq_yuRaw a b h, addPipeline_yuRaw_toNat]
-  have := abs_addPipeline_yu_sub_lt a b
-  rwa [hk, hv] at this
-
-/-- The alignment step loses no zero-ness: the aligned significand vanishes exactly when the
-(post-flush) input did. -/
-private theorem addPipeline_yu_eq_zero_iff (a b : FPR) :
-    (addPipeline a b).yu = 0 ↔ (addPipeline a b).yu' = 0 := by
-  rw [← UInt64.toNat_inj, ← UInt64.toNat_inj (a := (addPipeline a b).yu'),
-    show (0 : UInt64).toNat = 0 from rfl, addPipeline_yu_toNat]
-  exact stickyShift_eq_zero_iff _ _
-
 /-- The low bit of the aligned significand is the sticky bit: it is set exactly when the
 alignment discarded a nonzero bit. -/
 private theorem addPipeline_yu_toNat_mod_two (a b : FPR) :
@@ -2847,26 +2792,6 @@ private theorem addPipeline_yu_toNat_mod_two (a b : FPR) :
       = if (addPipeline a b).yu'.toNat % 2 ^ (((addPipeline a b).n &&& 63).toNat + 1) = 0
         then 0 else 1 := by
   rw [addPipeline_yu_toNat, stickyShift_mod_two]
-
-/-- The sticky bit is set exactly when alignment discarded something. -/
-private theorem addPipeline_yu_sticky_iff (a b : FPR) :
-    (addPipeline a b).yu.toNat % 2 = 1
-      ↔ (addPipeline a b).yu'.toNat % 2 ^ (((addPipeline a b).n &&& 63).toNat + 1) ≠ 0 := by
-  constructor
-  · intro h1 h0
-    rw [addPipeline_yu_toNat_mod_two, if_pos h0] at h1
-    exact absurd h1 (by decide)
-  · intro h0
-    rw [addPipeline_yu_toNat_mod_two, if_neg h0]
-
-/-- Closed form of the aligned significand: the exact right shift by `n' + 1`, doubled, plus the
-sticky bit. -/
-private theorem addPipeline_yu_toNat_eq (a b : FPR) :
-    (addPipeline a b).yu.toNat
-      = 2 * ((addPipeline a b).yu'.toNat / 2 ^ (((addPipeline a b).n &&& 63).toNat + 1))
-        + (if (addPipeline a b).yu'.toNat % 2 ^ (((addPipeline a b).n &&& 63).toNat + 1) = 0
-            then 0 else 1) := by
-  rw [addPipeline_yu_toNat, stickyShift_eq]
 
 /-! ### Step 4c: the sign combination
 
@@ -5240,15 +5165,6 @@ private theorem forIn_range_eq_iterate {α : Type} (n : ℕ) (init : α) (f : α
   rw [Std.Legacy.Range.forIn_eq_forIn_range']
   simpa using forIn_range'_eq_iterate f _ _ _ init
 
-/-- Step-indexed induction for an index-independent `for _ in [0:n]` loop. -/
-private theorem forIn_range_induction {α : Type} (n : ℕ) (init : α) (f : α → α)
-    (P : ℕ → α → Prop) (h0 : P 0 init) (hstep : ∀ k a, P k a → P (k + 1) (f a)) :
-    P n (forIn [0:n] init (fun _ b => pure (ForInStep.yield (f b))) : Id α) := by
-  rw [forIn_range_eq_iterate]
-  induction n with
-  | zero => exact h0
-  | succ k ih => rw [Function.iterate_succ_apply']; exact hstep k _ ih
-
 /-- One iteration of `FPR.div`'s restoring-division loop, over the state `(q, x)`. -/
 private def divStep (yu : UInt64) (s : UInt64 × UInt64) : UInt64 × UInt64 :=
   let q_ := s.1
@@ -5407,32 +5323,7 @@ private theorem sqrtPipeline_loop_induction (x : FPR)
   | zero => exact h0
   | succ k ih => rw [Function.iterate_succ_apply']; exact hstep k _ ih
 
-/-- The loop emits one quotient bit per iteration, so after `k` steps the quotient occupies at
-most `k + 1` bits. This is the first invariant carried through `divPipeline_loop_induction`, and
-bounds the quotient `FPR.div` hands to its renormalisation step. -/
-private theorem divPipeline_quotient_lt (x y : FPR) :
-    (divPipeline x y).loopRes.1.toNat < 2 ^ 56 := by
-  have h := divPipeline_loop_induction x y (fun k s => s.1.toNat < 2 ^ (k + 1)) (by norm_num) ?_
-  · exact h
-  · rintro k ⟨q, xw⟩ hk
-    simp only [divStep] at *
-    set b : UInt64 := (xw - ((y &&& M52) ||| ((1 : UInt64) <<< 52))) >>> 63 - 1 with hb
-    have hbit : (b &&& 1).toNat ≤ 1 := by
-      rw [UInt64.toNat_and, show (1 : UInt64).toNat = 2 ^ 1 - 1 from rfl,
-        Nat.and_two_pow_sub_one_eq_mod]
-      omega
-    have hor : (q ||| (b &&& 1)).toNat < 2 ^ (k + 1) := by
-      rw [UInt64.toNat_or]
-      exact Nat.or_lt_two_pow hk (by omega)
-    rw [toNat_shiftLeft_one]
-    calc (q ||| (b &&& 1)).toNat * 2 % 2 ^ 64
-        ≤ (q ||| (b &&& 1)).toNat * 2 := Nat.mod_le _ _
-      _ < 2 ^ (k + 1) * 2 := by omega
-      _ = 2 ^ (k + 1 + 1) := by ring
-
 /-! ### What one restoring-division step does -/
-
-private theorem allOnes_toNat : ((0 : UInt64) - 1).toNat = 2 ^ 64 - 1 := by decide
 
 /-- Generalised comparison mask: all-ones exactly when `c ≤ a`, zero otherwise. Same shape as
 `divStep_mask`, but with bounds tailored to the square-root loop's operands. -/
@@ -7200,7 +7091,7 @@ private theorem sqrt_eq_zero_of_exponent_eq_zero (a : FPR) (h : (FPR.decode a).e
 private theorem isZero_zero : FPR.IsZero (0 : FPR) := by
   unfold FPR.IsZero FPR.Bits.IsZero FPR.decode; exact ⟨rfl, rfl⟩
 
-/-- `FPR.mul` lands on a zero encoding when either operand is one. -/
+/-- `FPR.mul` lands on a zero encoding when either operand is a zero encoding. -/
 private theorem mul_isZero_of_isZero (a b : FPR) (h : FPR.IsZero a ∨ FPR.IsZero b) :
     FPR.IsZero (FPR.mul a b) := by
   have hexp : (FPR.decode a).exponent = 0 ∨ (FPR.decode b).exponent = 0 := by

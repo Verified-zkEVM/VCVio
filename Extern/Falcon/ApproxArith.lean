@@ -26,10 +26,14 @@ No finite floating-point format can satisfy such a bound *unconditionally*: over
 alone produces a result whose magnitude is unrelated to the exact one, so it cannot be
 within any bounded relative epsilon of it. Every operation is therefore stated on a
 `Valid` operand predicate and an `InRange` predicate on the exact real result, and each
-operation's `_valid` field closes `Valid` under that same restriction, so a chain of
-operations can carry `Valid`/`InRange` for every intermediate result through a compound
-expression (see `compound_add_mul_error`, `horner_step_error`, and the `butterfly_*`
-lemmas below).
+operation's `_valid` field closes `Valid` under that same restriction, so a compound
+expression can derive validity for its intermediate results rather than assuming it at each
+step (see `compound_add_mul_error`, `horner_step_error`, and the `butterfly_*` lemmas below).
+
+Only `Valid` propagates that way. `InRange` constrains the *exact* real result of a step, which
+is a fact about the numbers an algorithm actually feeds in, not something closure can supply —
+so every compound lemma below still takes an `InRange` premise per intermediate, and bounding
+those stays an algorithm-specific obligation.
 
 This factoring separates two concerns:
 1. **Algorithmic correctness** (generic over `FloatLike F`): "If the arithmetic were exact,
@@ -69,8 +73,10 @@ mathematical result of an operation to the magnitude window the format can round
 overflow or underflow. Neither restriction can be dropped: a finite format has no way to
 honor a relative-error bound once the exact result leaves its representable range. The
 `_valid` fields are what let the compound lemmas below chain several operations while
-re-deriving `Valid`/`InRange` for each intermediate result from the same starting
-hypotheses, rather than needing it assumed at every step.
+re-deriving `Valid` for each intermediate result, rather than needing it assumed at every
+step. They do not do the same for `InRange`: each compound lemma takes one `InRange` premise
+per exact intermediate, since no closure property can bound a quantity that depends on the
+caller's actual inputs.
 
 Carrying a domain that way costs something the unrestricted version did not have to think
 about: the domain has to be non-degenerate, or the laws hold for nothing. `Valid := fun _ =>
