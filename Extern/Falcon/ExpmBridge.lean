@@ -588,12 +588,6 @@ private theorem hornerMachine_sub_hornerExact_le (x : FPR)
     |((hornerMachine ((mtwop63 x) <<< 1) i).toNat : ℝ) - hornerExact (scaledArg x) i| ≤ 4 :=
   (hornerMachine_error rfl (scaledArg_le_694 x h0 hub) i hi).2
 
-/-- The loop's `UInt64` subtractions never wrap: every iterate stays below its own coefficient. -/
-private theorem hornerMachine_le_coeff (x : FPR) (h0 : 0 ≤ toReal x)
-    (hub : toReal x ≤ 694 / 1000) (i : ℕ) (hi : i ≤ 12) :
-    (hornerMachine ((mtwop63 x) <<< 1) i).toNat ≤ (facctCoeffs[i]!).toNat :=
-  (hornerMachine_error rfl (scaledArg_le_694 x h0 hub) i hi).1
-
 /-- **(b)** The whole pipeline, including the final scaling multiply: `expm_p63 x ccs` tracks
 `scaledArg ccs * hornerExact (scaledArg x) 12` to within `5`. -/
 private theorem expm_p63_sub_exact_le (x ccs : FPR)
