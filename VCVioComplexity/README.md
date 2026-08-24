@@ -15,17 +15,23 @@ The current package provides:
   to `TM.ComputesInTime`;
 - exact run cost, a bundled `PolynomialCode` certificate, and an adapter from complexitylib's
   `TM.ComputesInTime`;
+- an output-length theorem derived directly from each exact `TM.reachesIn` run, showing that every
+  emitted bit consumes at least one concrete transition;
 - inhabited PolyFun quantitative step classes for exact `Code` and polynomially certified
   `PolynomialCode`, without assuming machine-level categorical closure;
-- `PolynomialCode.toPolyRealizer`, which translates its stored Mathlib polynomial into PolyFun's
-  deterministic first-order syntax while requiring a separate proof of polynomial encoded-output
-  growth;
+- `PolynomialCode.toPolyRealizer`, for callers with a sharp encoded-output bound, and
+  `PolynomialCode.toPolyRealizerFromTime`, which honestly uses the concrete time polynomial as an
+  output-size bound;
 - a complete `PureCanary`: concrete exact machines for unit initialization, the resolved-left sum
   tag, and the unreachable update; a VCVio `PureCertificate`; a nonvacuous empty-oracle contract;
   and the backend-relative theorem `unitIdentity_isOraclePPTBy`;
 - an `OracleCanary` whose concrete initialization, readout, and enabled-update machines implement
   one fair-coin query, charge both Boolean answer branches and the dependent query/answer code,
-  and prove `oneCoin_isOraclePPTBy`; and
+  and prove both the free-monad theorem `oneCoin_isOraclePPTBy` and the public `OracleComp`
+  facade `oneCoin_isPPTBy`;
+- a `VCVioComplexityTest` aggregate containing public-facade checks, guarded kernel trust reports,
+  compiling upstream capability probes, an executable regression for the pair-codec mismatch,
+  and one fixed-answer second-order witness checked against two distinct response-size models;
 - explicit `PolynomialClosureGate`, `QuantitativeClosure`, `ExactQuantitativeClosure`, and
   `StructuralClosure` requirement structures for the machine combinators that do not yet compile
   at this toolchain, with conditional adapters to PolyFun's category, exact-category, product,
@@ -55,6 +61,12 @@ an extensional Lean composition or a synthetic cost counter. The specialized uni
 inhabit that universally quantified gate. Its adapter to PolyFun's optional category mixin does
 compile, making the gate an executable acceptance test rather than only design prose.
 
+The representation grammar's pairing codec is intentionally unchanged by this spike. It encodes
+the empty pair as `[true]`, whereas complexitylib's canonical pairing used by its split and emit
+machines encodes it as `[false, true]`. Reusing those machines therefore requires a proved total
+translation or a deliberate representation migration; definitional compatibility must not be
+assumed.
+
 See [PROVENANCE.md](PROVENANCE.md) for the exact upstream revision and compatibility result.
 See the [computational-complexity design](../docs/design/computational-complexity.md) for the trust
 boundary, landed API, literature assessment, and staged adequacy plan.
@@ -68,4 +80,14 @@ Build the package independently from the repository root:
 cd VCVioComplexity
 lake exe cache get
 lake build
+lake build VCVioComplexityTest
+./scripts/test.sh
 ```
+
+`./scripts/compatibility-preflight.sh` checks the pinned revision, builds the supported base API,
+and classifies both the upstream composition stack and `Complexitylib.Asymptotics`. By default,
+recorded compatibility blockers are reported without failing the spike; changed or unexpected
+source diagnostics fail. Pass `--require-upstream-stack` to fail while either upstream surface
+remains unavailable. This is a compatibility gate, not proof of VCVio closure: the representation
+translation and PolyFun closure witnesses remain separate obligations. The script never patches
+dependency sources.

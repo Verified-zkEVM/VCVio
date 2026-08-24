@@ -8,7 +8,7 @@ module
 
 public import PolyFun.Realizability.Quantitative.Polynomial
 public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
-public meta import Lean.Elab.Tactic.Basic
+public meta import Lean.Elab.Tactic.ElabTerm
 public meta import Lean.Meta.Tactic.Assumption
 public meta import Lean.Meta.Tactic.TryThis
 

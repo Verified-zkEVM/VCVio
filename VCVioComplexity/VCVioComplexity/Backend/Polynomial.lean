@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import PolyFun.Realizability.Quantitative.Polynomial
-public import VCVioComplexity.Backend.TuringMachine
+public import VCVioComplexity.Backend.OutputBounds
 
 /-!
 # PolyFun polynomial certificates for complexitylib machines
@@ -17,10 +17,9 @@ This file connects the optional complexitylib machine substrate to PolyFun's gen
 one concrete Turing machine is bounded by a Mathlib polynomial. `toPolyRealizer` translates that
 bound into PolyFun's inspectable first-order syntax.
 
-Output growth remains a separate argument. Polynomial running time does not, at this stage of the
-adapter, imply that the encoding on complexitylib's output tape has been charged by the machine
-trace. Requiring the size certificate explicitly prevents the adapter from silently manufacturing
-that missing adequacy fact.
+The exact-run output bound also supplies a canonical output-size certificate: a machine cannot
+write an output longer than its actual transition count. Callers may still provide a sharper
+output polynomial explicitly.
 -/
 
 @[expose] public section
@@ -48,11 +47,19 @@ theorem valueCost_le_workPolynomial (code : PolynomialCode input output function
   rw [workPolynomial, FirstOrderPolynomial.eval_ofNatPolynomial]
   exact code.certificate.bound_le_polynomial (encodedSize input value)
 
+/-- Encoded semantic output size is bounded by the same polynomial as exact machine work. -/
+theorem encodedSize_output_le_workPolynomial (code : PolynomialCode input output function)
+    (value : A) :
+    encodedSize output (function value) ≤
+      code.workPolynomial.eval (encodedSize input value) :=
+  (code.code.encodedSize_output_le_valueCost value).trans
+    (code.valueCost_le_workPolynomial value)
+
 /-- Turn one exact polynomial complexitylib machine into a PolyFun polynomial realizer.
 
-The caller must additionally bound encoded output length. This is intentionally independent of
-the machine's time certificate until the future tape-level adequacy theorem proves that writing an
-output of length `m` consumes at least `m` charged transitions. -/
+The caller supplies an independently chosen encoded-output polynomial. Use
+`toPolyRealizerFromTime` when the concrete running-time polynomial is an acceptable, potentially
+looser output-size bound. -/
 noncomputable def toPolyRealizer (code : PolynomialCode input output function)
     (outputSize : FirstOrderPolynomial)
     (outputSize_le : ∀ value, encodedSize output (function value) ≤
@@ -63,6 +70,14 @@ noncomputable def toPolyRealizer (code : PolynomialCode input output function)
   outputSize := outputSize
   work_le := code.valueCost_le_workPolynomial
   outputSize_le := outputSize_le
+
+/-- Turn an exact polynomial machine into a PolyFun realizer using its time bound for output size.
+
+This generic certificate may be looser than a representation-specific output bound, but it is
+derived from the same concrete `TM.reachesIn` runs as the work cost. -/
+noncomputable def toPolyRealizerFromTime (code : PolynomialCode input output function) :
+    polynomialQuantitativeStepClass.PolyRealizer input output function :=
+  code.toPolyRealizer code.workPolynomial code.encodedSize_output_le_workPolynomial
 
 end PolynomialCode
 

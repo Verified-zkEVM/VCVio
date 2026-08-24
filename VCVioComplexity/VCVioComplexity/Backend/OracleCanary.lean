@@ -94,6 +94,16 @@ theorem oneCoinMachine_head_some (answer : Bool) :
 def oneCoinProgram (_ : Unit) : FreeM coinSpec.toPFunctor Bool :=
   FreeM.liftBind () fun answer ↦ FreeM.pure answer
 
+/-- The one-query program presented through VCVio's `OracleComp` facade. -/
+def oneCoinOracleProgram (_ : Unit) : OracleComp coinSpec Bool :=
+  OracleComp.ofFreeM (oneCoinProgram ())
+
+@[simp]
+theorem oneCoinOracleProgram_toFreeM (input : Unit) :
+    (oneCoinOracleProgram input).toFreeM = oneCoinProgram input := by
+  cases input
+  rfl
+
 /-- Residual-program relation used to prove semantic implementation. -/
 inductive CoinResidual : Option Bool → FreeM coinSpec.toPFunctor Bool → Prop where
   | start : CoinResidual none (oneCoinProgram ())
@@ -810,5 +820,12 @@ theorem oneCoin_isOraclePPTBy :
     IsOraclePPTBy quantitativeStepClass coinBoundary
       (fairCoinContract quantitativeStepClass coinBoundary.interface) oneCoinProgram :=
   ⟨oneCoinStrictPPTWitness⟩
+
+/-- The concrete one-query witness exposed through the canonical fair-coin `IsPPTBy` facade. -/
+theorem oneCoin_isPPTBy :
+    OracleComp.Complexity.IsPPTBy quantitativeStepClass coinBoundary oneCoinOracleProgram := by
+  change IsOraclePPTBy quantitativeStepClass coinBoundary
+    (fairCoinContract quantitativeStepClass coinBoundary.interface) oneCoinProgram
+  exact oneCoin_isOraclePPTBy
 
 end VCVioComplexity.Backend.TuringMachine
