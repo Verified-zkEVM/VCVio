@@ -106,7 +106,7 @@ theorem centeredRepr_natAbs_neg (x : ZMod q) :
     (centeredRepr (-x)).natAbs = (centeredRepr x).natAbs := by
   by_cases hx : x = 0
   · simp [hx]
-  · haveI : NeZero x := ⟨hx⟩
+  · have : NeZero x := ⟨hx⟩
     simp only [centeredRepr, ZMod.val_neg_of_ne_zero]
     have hval := ZMod.val_lt x
     have hpos : 0 < x.val := Nat.pos_of_ne_zero ((ZMod.val_ne_zero x).mpr hx)
@@ -344,11 +344,8 @@ omit [NeZero q] in
 component coefficient functions. -/
 private theorem mul_get_eq_convCoeff (f g : (vectorNegacyclicRing (ZMod q) n).Poly) (i : Fin n) :
     (f * g).get i = negacyclicConvCoeff f.get g.get i := by
-  have h1 : (f * g) = (vectorNegacyclicRing (ZMod q) n).mul f g := rfl
-  rw [h1, vectorNegacyclicRing_mul]
-  have h2 : (negacyclicMulPure (vectorKernel (ZMod q) n) f g).get i
-      = (vectorBackend (ZMod q) n).coeff (negacyclicMulPure (vectorKernel (ZMod q) n) f g) i := rfl
-  rw [h2, negacyclicMulPure_coeff]; rfl
+  rw [vectorRing_mul_apply]
+  exact vectorKernel_mul_get f g i
 
 /-- **Negacyclic-convolution infinity-norm bound.** For coefficient-domain polynomials in
 `ℤ_q[X] / (X^n + 1)`, the centered `ℓ∞` norm of the product is bounded by the `ℓ₁` norm of the

@@ -100,7 +100,7 @@ omit [Fintype F] [DecidableEq F] in
 /-- Perfect completeness: an honest prover with a valid witness always produces
 an accepting transcript. Follows from `add_smul` and `mul_smul`. -/
 theorem sigma_complete (g : G) :
-    PerfectlyComplete (sigma F G g) := by
+    (sigma F G g).PerfectlyComplete := by
   intro pk sk h
   have h_eq : sk • g = pk := of_decide_eq_true h
   simp only [sigma, monad_norm]
@@ -140,7 +140,7 @@ omit [Fintype F] [DecidableEq F] in
 The proof swaps sampling order and uses uniformity of `F` to reindex via the bijection
 `r ↦ r + c * sk`. -/
 theorem sigma_hvzk (g : G) [Finite F] :
-    PerfectHVZK (sigma F G g) (simTranscript F G g) := by
+    (sigma F G g).PerfectHVZK (simTranscript F G g) := by
   let _ : Fintype F := Fintype.ofFinite F
   intro pk sk h_sk
   have h_eq : sk • g = pk := of_decide_eq_true h_sk
@@ -150,7 +150,7 @@ theorem sigma_hvzk (g : G) [Finite F] :
     let c ← ($ᵗ F)
     let r ← ($ᵗ F)
     pure (((r + c * sk) • g - c • pk, c, r + c * sk) : G × F × F)]
-  · simp only [SigmaProtocol.realTranscript, sigma]
+  · simp only [ChallengeVerifyProtocol.realTranscript, sigma]
     vcstep rw
     simp [h_eq, add_smul, mul_smul, add_sub_cancel_right]
   · show _ = Pr[= t | simTranscript F G g pk]
@@ -174,12 +174,12 @@ distribution of `(r • g, c, r + c * sk)` where `r, c ← $ᵗ F` are sampled *
 This is the form in which the commitment `r • g` and the challenge `c` are literally
 independent (by sampling order), making conditional uniformity trivial. -/
 private lemma realTranscript_eq_indep (g : G) (pk : G) (sk : F) :
-    SigmaProtocol.realTranscript (sigma F G g) pk sk =
+    (sigma F G g).realTranscript pk sk =
       (do
         let r ← $ᵗ F
         let c ← $ᵗ F
         pure ((r • g, c, r + c * sk) : G × F × F)) := by
-  simp only [SigmaProtocol.realTranscript, sigma, monad_norm]
+  simp only [ChallengeVerifyProtocol.realTranscript, sigma, monad_norm]
 
 omit [DecidableEq F] in
 /-- **Simulator commit-predictability for Schnorr.** With the standard bijection
@@ -198,10 +198,10 @@ on `G` when `z ← $ᵗ F`. Averaging over `c ← $ᵗ F` preserves uniformity, 
 on `G` gives probability `1/|G| = 1/|F|` for any specific output. -/
 theorem sigma_simCommitPredictability (g : G)
     (hg : Function.Bijective (· • g : F → G)) :
-    SigmaProtocol.simCommitPredictability (sigma F G g) (simTranscript F G g)
+    (sigma F G g).simCommitPredictability (simTranscript F G g)
       ((Fintype.card F : ℝ≥0∞)⁻¹) := by
   classical
-  letI : Fintype G := Fintype.ofBijective _ hg
+  let : Fintype G := Fintype.ofBijective _ hg
   intro pk c₀
   have hcard_FG : Fintype.card G = Fintype.card F := (Fintype.card_of_bijective hg).symm
   have hinv_eq : (Fintype.card F : ℝ≥0∞)⁻¹ = (Fintype.card G : ℝ≥0∞)⁻¹ := by rw [hcard_FG]
@@ -246,7 +246,7 @@ challenge is uniform on `F`. The proof reduces to the explicit independent produ
 closed form `realTranscript_eq_indep`; in that form the commit `r • g` and challenge
 `c` are literally independent (by sampling order), so the factoring is immediate. -/
 theorem sigma_simChalUniformGivenCommit (g : G) :
-    simChalUniformGivenCommit (sigma F G g) (simTranscript F G g) := by
+    (sigma F G g).simChalUniformGivenCommit (simTranscript F G g) := by
   classical
   intro pk sk hsk c₀ ch₀
   have hHVZK := sigma_hvzk F G g pk sk hsk

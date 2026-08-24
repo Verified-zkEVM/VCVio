@@ -88,7 +88,9 @@ public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Defs.Semantics
 public import VCVio.EvalDist.Defs.Support
+public import VCVio.EvalDist.Expectation
 public import VCVio.EvalDist.Fintype
+public import VCVio.EvalDist.IndepProduct
 public import VCVio.EvalDist.Inequalities
 public import VCVio.EvalDist.Instances.ErrorT
 public import VCVio.EvalDist.Instances.FinRatPMF
@@ -100,6 +102,7 @@ public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Map
 public import VCVio.EvalDist.Monad.Seq
 public import VCVio.EvalDist.Option
+public import VCVio.EvalDist.PFunctor
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.RenyiDivergence
 public import VCVio.EvalDist.TVDist
@@ -121,6 +124,7 @@ public import VCVio.OracleComp.Constructions.Fork
 public import VCVio.OracleComp.Constructions.GenerateSeed
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.WithoutReplacement
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.FinRatPMF
 public import VCVio.OracleComp.HasQuery.Basic

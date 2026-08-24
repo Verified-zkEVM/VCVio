@@ -255,6 +255,7 @@ lemma IND_CPA_queryImpl'_counted_counter_le_succ
     p.2.2 ≤ st.2 + 1 := by
   cases t with
   | inl tu =>
+      change unifSpec.Range tu × encAlg'.IND_CPA_CountedState at p
       simp only [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge,
         QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
         liftM, monadLift] at hp
@@ -329,6 +330,7 @@ private lemma IND_CPA_queryImpl'_counted_run_invariant_le
     z.2.2 + (if Sum.isRight t = true then budget - 1 else budget) ≤ q := by
   cases t with
   | inl tu =>
+      change unifSpec.Range tu × encAlg'.IND_CPA_CountedState at z
       simp only [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge,
         QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
         liftM, monadLift] at hz
@@ -605,6 +607,7 @@ lemma IND_CPA_hybridLR_counted_counter_le
     st.2 ≤ p.2.2 := by
   cases t with
   | inl tu =>
+    change unifSpec.Range tu × encAlg'.IND_CPA_CountedState at p
     simp only [IND_CPA_queryImpl_hybridLR_counted, IND_CPA_queryImplFromChallenge,
       QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
       liftM, monadLift] at hp

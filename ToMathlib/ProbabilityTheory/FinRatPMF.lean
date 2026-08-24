@@ -315,7 +315,10 @@ lemma sum_prob_eq_sum [DecidableEq α] (p : Raw α) :
         intro x _ hx
         exact prob_eq_zero_of_not_mem_support p hx)
     _ = (p.toList.map Prod.snd).sum := by
-      simpa [s, prob, probOfList] using list_sum_prob_eq p.toList
+      change (p.toList.map Prod.fst |>.toFinset).sum
+        (fun x => (p.toList.filter (fun a => a.1 = x) |>.map Prod.snd).sum) =
+          (p.toList.map Prod.snd).sum
+      exact list_sum_prob_eq p.toList
 
 lemma sum_prob_eq_one [DecidableEq α] (p : Raw α) : p.support.sum p.prob = 1 := by
   rw [sum_prob_eq_sum]
@@ -812,12 +815,12 @@ noncomputable def toPMFHom : Raw →ᵐ PMF where
   toFun _ p := @Raw.toPMF _ (Classical.decEq _) p
   toFun_pure' := by
     intro α x
-    letI := Classical.decEq α
+    let := Classical.decEq α
     exact Raw.toPMF_pure (α := α) x
   toFun_bind' := by
     intro α β x y
-    letI := Classical.decEq α
-    letI := Classical.decEq β
+    let := Classical.decEq α
+    let := Classical.decEq β
     exact Raw.toPMF_bind (α := α) (β := β) x y
 
 end Raw

@@ -498,6 +498,7 @@ lemma probEvent_coin (p : Bool → Prop) [DecidablePred p] :
   split_ifs <;> simp_all [ENNReal.inv_two_add_inv_two]
 
 @[simp, grind =]
-lemma probFailure_coin : Pr[⊥ | coin] = 0 := by grind
+lemma probFailure_coin : Pr[⊥ | coin] = 0 :=
+  probFailure_of_liftM_PMF coin
 
 end coinSpec

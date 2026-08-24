@@ -164,7 +164,7 @@ lemma evalDist_idealCacheStep_bind_uniformTable {D : Type} [DecidableEq D] [Fini
           pure (ψ (OracleComp.tableExtending r.2 g))] =
       𝒟[do let g ← $ᵗ (D → Digest); pure (ψ (OracleComp.tableExtending c g))] := by
   classical
-  haveI : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
+  have : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   unfold idealCacheStep
   rcases hc : c d with _ | u
   · dsimp only
@@ -669,13 +669,16 @@ lemma evalDist_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending
             (multiplePattern sessionsPerTag) transcript := by
         unfold unlinkReaderAccepts tagAccepts
         rw [hcells]
+        rw [decide_eq_decide]
         simp only [List.map_map, List.mem_map, Finset.mem_toList, Finset.mem_univ, true_and,
-          multiplePattern, decide_eq_decide, decide_eq_true_eq, Function.comp]
+          multiplePattern, Function.comp]
         constructor
         · rintro ⟨d, ⟨a, rfl⟩, hd⟩
-          exact ⟨a, ⟨⟨0, Nat.pos_of_ne_zero (NeZero.ne sessionsPerTag)⟩, hd⟩⟩
-        · rintro ⟨tag, _, hd⟩
-          exact ⟨_, ⟨tag, rfl⟩, hd⟩
+          refine ⟨a, decide_eq_true ?_⟩
+          exact ⟨⟨0, Nat.pos_of_ne_zero (NeZero.ne sessionsPerTag)⟩, hd⟩
+        · rintro ⟨tag, htag⟩
+          obtain ⟨_, hd⟩ := of_decide_eq_true htag
+          exact ⟨transcript.auth, ⟨tag, hd⟩, Eq.refl transcript.auth⟩
       beta_reduce
       rw [hAccept]
 
@@ -918,13 +921,15 @@ lemma evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
             (singlePattern sessionsPerTag) transcript := by
         unfold unlinkReaderAccepts tagAccepts
         rw [hcells]
+        rw [decide_eq_decide]
         simp only [List.map_map, List.mem_map, Finset.mem_toList, Finset.mem_univ, true_and,
-          singlePattern, decide_eq_decide, decide_eq_true_eq, Function.comp]
+          singlePattern, Function.comp]
         constructor
         · rintro ⟨d, ⟨slot, rfl⟩, hd⟩
-          exact ⟨slot.1, ⟨slot.2, hd⟩⟩
-        · rintro ⟨tag, sid, hd⟩
-          exact ⟨_, ⟨(tag, sid), rfl⟩, hd⟩
+          exact ⟨slot.1, decide_eq_true ⟨slot.2, hd⟩⟩
+        · rintro ⟨tag, htag⟩
+          obtain ⟨sid, hd⟩ := of_decide_eq_true htag
+          exact ⟨transcript.auth, ⟨(tag, sid), hd⟩, Eq.refl transcript.auth⟩
       beta_reduce
       rw [hAccept]
 

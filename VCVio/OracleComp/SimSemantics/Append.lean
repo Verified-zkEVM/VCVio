@@ -30,6 +30,12 @@ protected def add (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m
 instance : HAdd (QueryImpl spec₁ m) (QueryImpl spec₂ m) (QueryImpl (spec₁ + spec₂) m) where
   hAdd := QueryImpl.add
 
+/-- The `HAdd` notation for query implementations is their explicit `QueryImpl.add`
+operation. This named bridge lets downstream proofs cross the module boundary without
+requesting stronger reducibility for the instance. -/
+lemma add_eq_hAdd (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m) :
+    QueryImpl.add impl₁ impl₂ = impl₁ + impl₂ := rfl
+
 lemma add_apply (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
     (t : OracleSpec.Domain (spec₁ + spec₂)) : (impl₁ + impl₂) t =
       match t with | .inl t => impl₁ t | .inr t => impl₂ t := rfl
@@ -54,24 +60,64 @@ def addLift {ι₁ ι₂} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι�
 
 section simulateQ_add_liftComp
 
-variable {ι₁' : Type} {ι₂' : Type}
+variable {ι₁' ι₂'}
   {spec₁' : OracleSpec ι₁'} {spec₂' : OracleSpec ι₂'}
-  {α : Type} {m' : Type → Type v} [Monad m'] [LawfulMonad m']
+  {α : Type u} {m' : Type u → Type v} [Monad m'] [LawfulMonad m']
   (impl₁' : QueryImpl spec₁' m') (impl₂' : QueryImpl spec₂' m')
 
-private lemma simulateQ_add_liftM_query_left (t : spec₁'.Domain) :
+/-- Simulating a query-level lift from the left summand routes it to the left
+implementation. -/
+lemma simulateQ_add_liftM_query_left (t : spec₁'.Domain) :
     simulateQ (impl₁' + impl₂')
       (liftM (spec₁'.query t) : OracleComp (spec₁' + spec₂') _) =
     impl₁' t := by
   change simulateQ (impl₁' + impl₂') (liftM ((spec₁' + spec₂').query (Sum.inl t))) = _
-  simp
+  rw [simulateQ_spec_query, QueryImpl.add_apply_inl]
 
-private lemma simulateQ_add_liftM_query_right (t : spec₂'.Domain) :
+/-- Simulating a query-level lift from the right summand routes it to the right
+implementation. -/
+lemma simulateQ_add_liftM_query_right (t : spec₂'.Domain) :
     simulateQ (impl₁' + impl₂')
       (liftM (spec₂'.query t) : OracleComp (spec₁' + spec₂') _) =
     impl₂' t := by
   change simulateQ (impl₁' + impl₂') (liftM ((spec₁' + spec₂').query (Sum.inr t))) = _
-  simp
+  rw [simulateQ_spec_query, QueryImpl.add_apply_inr]
+
+/-- A query formed directly against the sum specification routes to its left handler. -/
+@[simp, grind =]
+lemma simulateQ_add_query_left (t : spec₁'.Domain) :
+    simulateQ (impl₁' + impl₂')
+        (liftM ((spec₁' + spec₂').query (Sum.inl t))) =
+      impl₁' t := by
+  rw [simulateQ_spec_query, QueryImpl.add_apply_inl]
+
+/-- A query formed directly against the sum specification routes to its right handler. -/
+@[simp, grind =]
+lemma simulateQ_add_query_right (t : spec₂'.Domain) :
+    simulateQ (impl₁' + impl₂')
+        (liftM ((spec₁' + spec₂').query (Sum.inr t))) =
+      impl₂' t := by
+  rw [simulateQ_spec_query, QueryImpl.add_apply_inr]
+
+/-- A query to the left component of a sum handler routes to that component before its
+continuation is simulated. -/
+lemma simulateQ_add_query_bind_left (t : spec₁'.Domain)
+    (k : (spec₁' + spec₂').Range (Sum.inl t) → OracleComp (spec₁' + spec₂') α) :
+    simulateQ (impl₁' + impl₂')
+        (liftM ((spec₁' + spec₂').query (Sum.inl t)) >>= k) =
+      impl₁' t >>= fun u => simulateQ (impl₁' + impl₂') (k u) := by
+  rw [simulateQ_bind, simulateQ_add_query_left]
+  congr 1
+
+/-- A query to the right component of a sum handler routes to that component before its
+continuation is simulated. -/
+lemma simulateQ_add_query_bind_right (t : spec₂'.Domain)
+    (k : (spec₁' + spec₂').Range (Sum.inr t) → OracleComp (spec₁' + spec₂') α) :
+    simulateQ (impl₁' + impl₂')
+        (liftM ((spec₁' + spec₂').query (Sum.inr t)) >>= k) =
+      impl₂' t >>= fun u => simulateQ (impl₁' + impl₂') (k u) := by
+  rw [simulateQ_bind, simulateQ_add_query_right]
+  congr 1
 
 /- Also `@[grind =]`: without it, bare `grind` on a routed `simulateQ (impl₁ + impl₂)` goal over a
 lifted computation saturates (times out) instead of failing fast; with it, the shape closes. -/
@@ -129,7 +175,7 @@ lemma simulateQ_liftComp_left_eq_of_apply
               (spec₁' + spec₂')) = impl₁ t := by
         rw [OracleComp.liftComp_query]
         change simulateQ impl (liftM ((spec₁' + spec₂').query (Sum.inl t))) = impl₁ t
-        simp [h]
+        rw [simulateQ_spec_query, h]
       rw [hq, simulateQ_spec_query]
       exact bind_congr ih
 
@@ -149,7 +195,7 @@ lemma simulateQ_liftComp_right_eq_of_apply
               (spec₁' + spec₂')) = impl₂ t := by
         rw [OracleComp.liftComp_query]
         change simulateQ impl (liftM ((spec₁' + spec₂').query (Sum.inr t))) = impl₂ t
-        simp [h]
+        rw [simulateQ_spec_query, h]
       rw [hq, simulateQ_spec_query]
       exact bind_congr ih
 
@@ -171,9 +217,9 @@ lemma simulateQ_toQueryImpl {ι : Type*} {spec : OracleSpec ι} {α : Type u}
 
 section simulateQ_liftM
 
-variable {ι₁' : Type} {ι₂' : Type}
+variable {ι₁' ι₂'}
   {spec₁' : OracleSpec ι₁'} {spec₂' : OracleSpec ι₂'}
-  {α : Type} {m' : Type → Type v} [Monad m'] [LawfulMonad m']
+  {α : Type u} {m' : Type u → Type v} [Monad m'] [LawfulMonad m']
   [MonadLiftT (OracleComp spec₁') (OracleComp spec₂')]
   [LawfulMonadLiftT (OracleComp spec₁') (OracleComp spec₂')]
 
@@ -208,57 +254,69 @@ the `simOracle2` layout): a single query lifted from one component — either at
 Each left-hand side spells the canonical `MonadLiftT` chain that typeclass resolution
 synthesizes for that lift (through the intermediate `spec + spec₂` etc.), which is what
 lets these fire by `simp` on goals produced by elaborated protocol definitions. All six
-are definitional modulo `simulateQ_spec_query`: the `show … from rfl` bridges re-express
-the chained lift as the canonical embedded query at the routed index. -/
+reduce through `simulateQ_spec_query` after the component lift is re-expressed as the
+canonical embedded query at its routed index. -/
 
-variable {ι' ι₁' ι₂' : Type} {spec : OracleSpec ι'} {spec₁ : OracleSpec ι₁'}
-  {spec₂ : OracleSpec ι₂'} {m' : Type → Type v} [Monad m'] [LawfulMonad m']
+variable {ι' ι₁' ι₂'} {spec : OracleSpec ι'} {spec₁ : OracleSpec ι₁'}
+  {spec₂ : OracleSpec ι₂'} {m' : Type u → Type v} [Monad m'] [LawfulMonad m']
   (implA : QueryImpl spec m') (implB : QueryImpl (spec₁ + spec₂) m')
 
 @[simp]
 lemma simulateQ_add_add_liftM_query_base (t : spec.Domain) :
     simulateQ (implA + implB)
       (liftM (spec.query t) : OracleComp (spec + (spec₁ + spec₂)) (spec.Range t)) =
-      implA t :=
-  (simulateQ_spec_query (implA + implB) (Sum.inl t)).trans rfl
+      implA t := by
+  change simulateQ (implA + implB)
+    (liftM ((spec + (spec₁ + spec₂)).query (Sum.inl t))) = _
+  rw [simulateQ_spec_query, QueryImpl.add_apply_inl]
 
 @[simp]
 lemma simulateQ_add_add_liftM_query_left (t : spec₁.Domain) :
     simulateQ (implA + implB)
       (liftM (spec₁.query t) : OracleComp (spec + (spec₁ + spec₂)) (spec₁.Range t)) =
-      implB (Sum.inl t) :=
-  (simulateQ_spec_query (implA + implB) (Sum.inr (Sum.inl t))).trans rfl
+      implB (Sum.inl t) := by
+  change simulateQ (implA + implB)
+    (liftM ((spec + (spec₁ + spec₂)).query (Sum.inr (Sum.inl t)))) = _
+  rw [simulateQ_spec_query, QueryImpl.add_apply_inr]
 
 @[simp]
 lemma simulateQ_add_add_liftM_query_right (t : spec₂.Domain) :
     simulateQ (implA + implB)
       (liftM (spec₂.query t) : OracleComp (spec + (spec₁ + spec₂)) (spec₂.Range t)) =
-      implB (Sum.inr t) :=
-  (simulateQ_spec_query (implA + implB) (Sum.inr (Sum.inr t))).trans rfl
+      implB (Sum.inr t) := by
+  change simulateQ (implA + implB)
+    (liftM ((spec + (spec₁ + spec₂)).query (Sum.inr (Sum.inr t)))) = _
+  rw [simulateQ_spec_query, QueryImpl.add_apply_inr]
 
 @[simp]
 lemma simulateQ_add_add_liftM_comp_base (t : spec.Domain) :
     simulateQ (implA + implB)
       (liftM (liftM (spec.query t) : OracleComp spec (spec.Range t)) :
         OracleComp (spec + (spec₁ + spec₂)) (spec.Range t)) =
-      implA t :=
-  (simulateQ_spec_query (implA + implB) (Sum.inl t)).trans rfl
+      implA t := by
+  change simulateQ (implA + implB)
+    (liftM ((spec + (spec₁ + spec₂)).query (Sum.inl t))) = _
+  rw [simulateQ_spec_query, QueryImpl.add_apply_inl]
 
 @[simp]
 lemma simulateQ_add_add_liftM_comp_left (t : spec₁.Domain) :
     simulateQ (implA + implB)
       (liftM (liftM (spec₁.query t) : OracleComp spec₁ (spec₁.Range t)) :
         OracleComp (spec + (spec₁ + spec₂)) (spec₁.Range t)) =
-      implB (Sum.inl t) :=
-  (simulateQ_spec_query (implA + implB) (Sum.inr (Sum.inl t))).trans rfl
+      implB (Sum.inl t) := by
+  change simulateQ (implA + implB)
+    (liftM ((spec + (spec₁ + spec₂)).query (Sum.inr (Sum.inl t)))) = _
+  rw [simulateQ_spec_query, QueryImpl.add_apply_inr]
 
 @[simp]
 lemma simulateQ_add_add_liftM_comp_right (t : spec₂.Domain) :
     simulateQ (implA + implB)
       (liftM (liftM (spec₂.query t) : OracleComp spec₂ (spec₂.Range t)) :
         OracleComp (spec + (spec₁ + spec₂)) (spec₂.Range t)) =
-      implB (Sum.inr t) :=
-  (simulateQ_spec_query (implA + implB) (Sum.inr (Sum.inr t))).trans rfl
+      implB (Sum.inr t) := by
+  change simulateQ (implA + implB)
+    (liftM ((spec + (spec₁ + spec₂)).query (Sum.inr (Sum.inr t)))) = _
+  rw [simulateQ_spec_query, QueryImpl.add_apply_inr]
 
 end simulateQ_add_add_liftM
 
@@ -269,8 +327,7 @@ implementation by `simp` alone, via the `simulateQ_add_add_liftM_*` routing lemm
 The shape `spec + (spec₁ + spec₂)` with an `addLift`ed pair is the `simOracle2`
 layout used by oracle-reduction verifiers downstream. -/
 
-variable {ι ι₁ ι₂ : Type} {spec : OracleSpec ι} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-  {m : Type → Type} [Monad m] [LawfulMonad m]
+variable {ι} {spec : OracleSpec ι} [Monad m] [LawfulMonad m]
 
 example (impl : QueryImpl spec m) (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
     (t : spec₁.Domain) :
@@ -286,8 +343,9 @@ example (impl : QueryImpl spec m) (impl₁ : QueryImpl spec₁ m) (impl₂ : Que
       impl₂ t := by
   simp
 
-example {m₀ n : Type → Type} [Monad m₀] [Monad n] [MonadLiftT m₀ m] [MonadLiftT n m]
-    (impl : QueryImpl spec m₀) (impl₁ : QueryImpl spec₁ n) (impl₂ : QueryImpl spec₂ n)
+example {src₀ src : Type u → Type*} [Monad src₀] [Monad src] [MonadLiftT src₀ m]
+    [MonadLiftT src m]
+    (impl : QueryImpl spec src₀) (impl₁ : QueryImpl spec₁ src) (impl₂ : QueryImpl spec₂ src)
     (t : spec₂.Domain) :
     simulateQ (impl.addLift (impl₁.add impl₂) : QueryImpl (spec + (spec₁ + spec₂)) m)
       (liftM (spec₂.query t) : OracleComp (spec + (spec₁ + spec₂)) (spec₂.Range t)) =
@@ -303,8 +361,9 @@ example (impl : QueryImpl spec m) (impl₁ : QueryImpl spec₁ m) (impl₂ : Que
       impl₂ t := by
   simp
 
-example {m₀ n : Type → Type} [Monad m₀] [Monad n] [MonadLiftT m₀ m] [MonadLiftT n m]
-    (impl : QueryImpl spec m₀) (impl₁ : QueryImpl spec₁ n) (impl₂ : QueryImpl spec₂ n)
+example {src₀ src : Type u → Type*} [Monad src₀] [Monad src] [MonadLiftT src₀ m]
+    [MonadLiftT src m]
+    (impl : QueryImpl spec src₀) (impl₁ : QueryImpl spec₁ src) (impl₂ : QueryImpl spec₂ src)
     (t : spec₁.Domain) :
     simulateQ (impl.addLift (impl₁.add impl₂) : QueryImpl (spec + (spec₁ + spec₂)) m)
       (liftM (liftM (spec₁.query t) : OracleComp spec₁ (spec₁.Range t)) :
@@ -314,16 +373,51 @@ example {m₀ n : Type → Type} [Monad m₀] [Monad n] [MonadLiftT m₀ m] [Mon
 
 end simulateQ_liftM_query_tests
 
-end QueryImpl
+section simulateQ_addLift_liftM
+
+/-! ### Routing through a two-way `addLift` whose components live in different monads
+
+`addLift` lifts each component handler into a shared target, so a computation lifted from one
+summand resolves to that component's simulation, re-lifted into the target. Stated with the two
+sources in *distinct* monads `source₁` / `source₂`: that is the shape oracle-reduction verifiers
+produce, where a base-spec handler and a message-oracle handler are combined into one target. -/
+
+variable {target : Type u → Type*} [Monad target] [LawfulMonad target]
+  {source₁ source₂ : Type u → Type*}
+
+/-- A computation lifted from the left summand routes to the left component of an `addLift`,
+leaving its simulation lifted into the target. -/
+lemma simulateQ_addLift_liftM_left [Monad source₁] [LawfulMonad source₁]
+    [MonadLiftT source₁ target] [LawfulMonadLiftT source₁ target] [MonadLiftT source₂ target]
+    (impl₁ : QueryImpl spec₁ source₁) (impl₂ : QueryImpl spec₂ source₂)
+    {α : Type u} (x : OracleComp spec₁ α) :
+    simulateQ (QueryImpl.addLift impl₁ impl₂ : QueryImpl (spec₁ + spec₂) target)
+        (liftM x : OracleComp (spec₁ + spec₂) α) =
+      (liftM (simulateQ impl₁ x) : target α) := by
+  rw [QueryImpl.addLift_def, simulateQ_add_liftM_left, simulateQ_liftTarget]
+
+/-- A computation lifted from the right summand routes to the right component of an `addLift`,
+leaving its simulation lifted into the target. -/
+lemma simulateQ_addLift_liftM_right [Monad source₂] [LawfulMonad source₂]
+    [MonadLiftT source₁ target] [MonadLiftT source₂ target] [LawfulMonadLiftT source₂ target]
+    (impl₁ : QueryImpl spec₁ source₁) (impl₂ : QueryImpl spec₂ source₂)
+    {α : Type u} (x : OracleComp spec₂ α) :
+    simulateQ (QueryImpl.addLift impl₁ impl₂ : QueryImpl (spec₁ + spec₂) target)
+        (liftM x : OracleComp (spec₁ + spec₂) α) =
+      (liftM (simulateQ impl₂ x) : target α) := by
+  rw [QueryImpl.addLift_def, simulateQ_add_liftM_right, simulateQ_liftTarget]
+
+end simulateQ_addLift_liftM
 
 section simulateQ_addLift_add_liftM
 
 open OracleSpec
 
-variable {ι ι₁ ι₂ : Type} {spec : OracleSpec ι} {spec₁ : OracleSpec ι₁}
-  {spec₂ : OracleSpec ι₂} {m : Type → Type} [Monad m] [LawfulMonad m]
-  {m₀ : Type → Type} [MonadLiftT m₀ m]
-  {n : Type → Type} [Monad n] [LawfulMonad n] [MonadLiftT n m] [LawfulMonadLiftT n m]
+variable {ι} {spec : OracleSpec ι}
+  {target : Type u → Type*} [Monad target] [LawfulMonad target]
+  {source₀ : Type u → Type*} [MonadLiftT source₀ target]
+  {source : Type u → Type*} [Monad source] [LawfulMonad source]
+  [MonadLiftT source target] [LawfulMonadLiftT source target]
 
 /-- Resolve a `simulateQ` over a three-way `addLift impl (impl₁ + impl₂)` applied to a
 computation `x : OracleComp spec₁ α` that has been double-`liftM`'d — first into the inner
@@ -336,14 +430,15 @@ past the target lift (`simulateQ_liftTarget`), then peels the inner sum
 (`simulateQ_add_liftComp_left`). Stated for the inner pair living in a possibly-different
 monad `n` lifted into the target `m`. -/
 lemma simulateQ_addLift_add_liftM_left
-    (impl : QueryImpl spec m₀) (impl₁ : QueryImpl spec₁ n) (impl₂ : QueryImpl spec₂ n)
-    {α : Type} (x : OracleComp spec₁ α) :
+    (impl : QueryImpl spec source₀) (impl₁ : QueryImpl spec₁ source)
+    (impl₂ : QueryImpl spec₂ source)
+    {α : Type u} (x : OracleComp spec₁ α) :
     simulateQ (QueryImpl.addLift impl (QueryImpl.add impl₁ impl₂)
-        : QueryImpl (spec + (spec₁ + spec₂)) m)
+        : QueryImpl (spec + (spec₁ + spec₂)) target)
       (liftM (liftM x : OracleComp (spec₁ + spec₂) α) :
         OracleComp (spec + (spec₁ + spec₂)) α)
-      = (liftM (simulateQ impl₁ x) : m α) := by
-  rw [show QueryImpl.add impl₁ impl₂ = impl₁ + impl₂ from rfl,
+      = (liftM (simulateQ impl₁ x) : target α) := by
+  rw [QueryImpl.add_eq_hAdd,
     ← OracleComp.liftComp_eq_liftM, ← OracleComp.liftComp_eq_liftM,
     QueryImpl.addLift_def, QueryImpl.simulateQ_add_liftComp_right,
     simulateQ_liftTarget, QueryImpl.simulateQ_add_liftComp_left]
@@ -355,14 +450,15 @@ the *right* inner implementation `impl₂`, leaving `liftM (simulateQ impl₂ x)
 
 The `right` companion of `simulateQ_addLift_add_liftM_left`. -/
 lemma simulateQ_addLift_add_liftM_right
-    (impl : QueryImpl spec m₀) (impl₁ : QueryImpl spec₁ n) (impl₂ : QueryImpl spec₂ n)
-    {α : Type} (x : OracleComp spec₂ α) :
+    (impl : QueryImpl spec source₀) (impl₁ : QueryImpl spec₁ source)
+    (impl₂ : QueryImpl spec₂ source)
+    {α : Type u} (x : OracleComp spec₂ α) :
     simulateQ (QueryImpl.addLift impl (QueryImpl.add impl₁ impl₂)
-        : QueryImpl (spec + (spec₁ + spec₂)) m)
+        : QueryImpl (spec + (spec₁ + spec₂)) target)
       (liftM (liftM x : OracleComp (spec₁ + spec₂) α) :
         OracleComp (spec + (spec₁ + spec₂)) α)
-      = (liftM (simulateQ impl₂ x) : m α) := by
-  rw [show QueryImpl.add impl₁ impl₂ = impl₁ + impl₂ from rfl,
+      = (liftM (simulateQ impl₂ x) : target α) := by
+  rw [QueryImpl.add_eq_hAdd,
     ← OracleComp.liftComp_eq_liftM, ← OracleComp.liftComp_eq_liftM,
     QueryImpl.addLift_def, QueryImpl.simulateQ_add_liftComp_right,
     simulateQ_liftTarget, QueryImpl.simulateQ_add_liftComp_right]
@@ -379,13 +475,12 @@ an `OptionT`-monadic verifier's `let _ ← liftM (queryHelper)` binds) agrees, a
 (`Option`) level, with `some`-mapping the simulation of `oa` through a per-query-bridged
 handler `impl₁`.
 
-The key step is that the `OptionT.run` of a lifted `OracleComp` is `some <$> (the OracleComp
-lift)` *definitionally* (`hrun` below is `rfl`), which collapses the `OptionT` lift chain to a
+The key step is the `OptionT.run_lift` law, which collapses the `OptionT` lift chain to a
 plain `OracleComp` lift; the chain-agnostic `QueryImpl.simulateQ_liftM_eq_of_query` then
 resolves it. -/
 lemma simulateQ_optionT_liftM_run_eq_of_query
-    {ι₁' ι₂' : Type} {spec₁' : OracleSpec ι₁'} {spec₂' : OracleSpec ι₂'}
-    {α : Type} {m' : Type → Type} [Monad m'] [LawfulMonad m']
+    {ι₁' ι₂'} {spec₁' : OracleSpec ι₁'} {spec₂' : OracleSpec ι₂'}
+    {α : Type u} {m' : Type u → Type*} [Monad m'] [LawfulMonad m']
     [MonadLiftT (OracleComp spec₁') (OracleComp spec₂')]
     [LawfulMonadLiftT (OracleComp spec₁') (OracleComp spec₂')]
     (impl : QueryImpl spec₂' m') (impl₁ : QueryImpl spec₁' m')
@@ -399,8 +494,11 @@ lemma simulateQ_optionT_liftM_run_eq_of_query
   have hrun : ((liftM oa : OptionT (OracleComp spec₂') α) : OracleComp spec₂' (Option α))
       = some <$> (liftM oa : OracleComp spec₂' α) := by
     change OptionT.run (OptionT.lift (liftM oa : OracleComp spec₂' α)) = _
-    rw [map_eq_bind_pure_comp]
-    rfl
+    rw [OptionT.run_lift]
+    exact (map_eq_bind_pure_comp (OracleComp spec₂') some
+      (liftM oa : OracleComp spec₂' α)).symm
   rw [hrun, simulateQ_map, QueryImpl.simulateQ_liftM_eq_of_query impl impl₁ h oa]
 
 end simulateQ_optionT_liftM_run
+
+end QueryImpl

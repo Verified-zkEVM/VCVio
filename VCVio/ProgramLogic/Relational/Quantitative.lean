@@ -137,11 +137,11 @@ lemma condOnMap_apply_of_mem_support {α β : Type*} (p : PMF α) (f : α → β
     {a : α} (ha : a ∈ p.support) :
     condOnMap p f (f a) a = p a * ((PMF.map f p) (f a))⁻¹ := by
   classical
-  letI : DecidableEq β := Classical.decEq β
+  let : DecidableEq β := Classical.decEq β
   have hb : ∃ x ∈ fiber f (f a), x ∈ p.support := ⟨a, rfl, ha⟩
   rw [condOnMap, dif_pos hb, PMF.filter_apply,
     Set.indicator_of_mem (show a ∈ fiber f (f a) from rfl)]
-  simp only [PMF.map_apply, Set.indicator_apply, fiber, Set.mem_setOf_eq, eq_comm]
+  simp only [PMF.map_apply, Set.indicator_apply, fiber, Set.mem_ofPred_eq, eq_comm]
 
 lemma map_bind_condOnMap {α β : Type*} (p : PMF α) (f : α → β) :
     (PMF.map f p).bind (condOnMap p f) = p := by
@@ -360,8 +360,8 @@ private lemma Finset_sum_iSup_le_iSup_sum {ι : Type*} {J : ι → Type*}
     [hne : ∀ i, Nonempty (J i)]
     (g : (i : ι) → J i → ℝ≥0∞) (s : Finset ι) :
     ∑ i ∈ s, ⨆ j, g i j ≤ ⨆ (f : ∀ i, J i), ∑ i ∈ s, g i (f i) := by
-  letI : DecidableEq ι := Classical.decEq ι
-  haveI : Nonempty (∀ i, J i) := ⟨fun i => (hne i).some⟩
+  let : DecidableEq ι := Classical.decEq ι
+  have : Nonempty (∀ i, J i) := ⟨fun i => (hne i).some⟩
   refine Finset.induction_on s (by simp) fun a s ha ih => ?_
   simp_rw [Finset.sum_insert ha]
   calc (⨆ j, g a j) + ∑ i ∈ s, ⨆ j, g i j
@@ -379,7 +379,7 @@ private lemma Finset_sum_iSup_le_iSup_sum {ι : Type*} {J : ι → Type*}
 private lemma ENNReal_tsum_iSup_le {ι : Type*} {J : ι → Type*}
     [∀ i, Nonempty (J i)] (g : (i : ι) → J i → ℝ≥0∞) :
     ∑' i, ⨆ j, g i j ≤ ⨆ (f : ∀ i, J i), ∑' i, g i (f i) := by
-  letI : DecidableEq ι := Classical.decEq ι
+  let : DecidableEq ι := Classical.decEq ι
   rw [ENNReal.tsum_eq_iSup_sum]
   refine iSup_le fun s => le_trans (Finset_sum_iSup_le_iSup_sum g s) ?_
   exact iSup_mono fun f => ENNReal.sum_le_tsum _
@@ -427,16 +427,16 @@ theorem relTriple'_iff_couplingPost
   constructor
   · intro h
     classical
-    letI : DecidableEq α := Classical.decEq α
-    letI : DecidableEq β := Classical.decEq β
+    let : DecidableEq α := Classical.decEq α
+    let : DecidableEq β := Classical.decEq β
     unfold RelTriple' at h
     by_cases hne : Nonempty (SPMF.Coupling (𝒟[oa]) (𝒟[ob]))
     · let A := {a // a ∈ finSupport oa}
       let B := {b // b ∈ finSupport ob}
-      letI : DecidableEq A := Classical.decEq A
-      letI : DecidableEq B := Classical.decEq B
-      letI : Fintype A := inferInstance
-      letI : Fintype B := inferInstance
+      let : DecidableEq A := Classical.decEq A
+      let : DecidableEq B := Classical.decEq B
+      let : Fintype A := inferInstance
+      let : Fintype B := inferInstance
       have hA_nonempty : (finSupport oa).Nonempty := finSupport_nonempty_of_liftM_PMF oa
       have hB_nonempty : (finSupport ob).Nonempty := finSupport_nonempty_of_liftM_PMF ob
       let a₀ : A := ⟨hA_nonempty.choose, hA_nonempty.choose_spec⟩
@@ -520,7 +520,7 @@ theorem relTriple'_iff_couplingPost
             rw [hpush_obj]; exact hsub_le_max cLift
       exact ⟨cMax, (probEvent_eq_one_iff (mx := cMax.1) (p := fun z : α × β => R z.1 z.2)).1
         (le_antisymm probEvent_le_one (le_trans h hupper)) |>.2⟩
-    · haveI : IsEmpty (SPMF.Coupling (𝒟[oa]) (𝒟[ob])) := not_nonempty_iff.mp hne
+    · have : IsEmpty (SPMF.Coupling (𝒟[oa]) (𝒟[ob])) := not_nonempty_iff.mp hne
       simp [eRelWP] at h
   · intro ⟨c, hc⟩
     unfold RelTriple' eRelWP
@@ -872,12 +872,14 @@ private lemma eRelWP_indicator_eqRel_le
     {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α} :
     eRelWP oa ob (RelPost.indicator (EqRel α)) ≤
       ∑' a, min (Pr[= a | 𝒟[oa]]) (Pr[= a | 𝒟[ob]]) := by
-  letI : DecidableEq α := Classical.decEq α
+  let : DecidableEq α := Classical.decEq α
   unfold eRelWP
   refine iSup_le fun c => ?_
   calc ∑' z, Pr[= z | c.1] * RelPost.indicator (EqRel α) z.1 z.2
       = ∑' z : α × α, if z.1 = z.2 then Pr[= z | c.1] else 0 := by
-        congr 1; ext ⟨a, b⟩; simp [RelPost.indicator, EqRel]
+        congr 1
+        ext ⟨a, b⟩
+        by_cases h : a = b <;> simp [RelPost.indicator, EqRel, h]
     _ = ∑' a, Pr[= (a, a) | c.1] := by
         rw [ENNReal.tsum_prod']
         congr 1; ext a
@@ -935,7 +937,7 @@ private lemma tsum_min_le_eRelWP
     {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α} :
     ∑' a, min (Pr[= a | 𝒟[oa]]) (Pr[= a | 𝒟[ob]]) ≤
       eRelWP oa ob (RelPost.indicator (EqRel α)) := by
-  letI : DecidableEq α := Classical.decEq α
+  let : DecidableEq α := Classical.decEq α
   set pa := 𝒟[oa]; set pb := 𝒟[ob]
   set P := fun a => Pr[= a | pa]; set Q := fun a => Pr[= a | pb]
   set rP := fun a => P a - min (P a) (Q a)

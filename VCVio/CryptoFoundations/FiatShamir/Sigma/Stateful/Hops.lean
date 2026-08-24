@@ -487,7 +487,7 @@ private def CmaRealSignGhost.public
   challenge := x.challenge
   response := x.ghostResponse
 
-private noncomputable def cmaSignKeySource
+private def cmaSignKeySource
     (hr : GenerableRelation Stmt Wit rel)
     (s : CmaData M Commit Chal Stmt Wit) :
     ProbComp (Stmt × Wit) :=
@@ -503,7 +503,7 @@ private def cmaSignKeyedData
   | some _ => s
   | none => (s.1, s.2.1, some (pk, sk))
 
-private noncomputable def cmaRealSignGhostDist
+private def cmaRealSignGhostDist
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (m : M)
@@ -524,7 +524,7 @@ private noncomputable def cmaRealSignGhostDist
         pk := pk, sk := sk, commit := c, privateState := prv,
         challenge := ch, ghostResponse := ghostResp, actualResponse := ghostResp }
 
-private noncomputable def cmaRealSignPublicDist
+private def cmaRealSignPublicDist
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (s : CmaData M Commit Chal Stmt Wit) :
@@ -532,7 +532,7 @@ private noncomputable def cmaRealSignPublicDist
   let (pk, sk) ← cmaSignKeySource M Commit Chal hr s
   cmaSignPublicOfTranscript pk sk <$> σ.realTranscript pk sk
 
-private noncomputable def cmaSimSignPublicDist
+private def cmaSimSignPublicDist
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (s : CmaData M Commit Chal Stmt Wit) :
@@ -658,7 +658,7 @@ private lemma cmaRealSignGhost_public_evalDist_eq_publicDist
       cmaRealSignGhostDist M Commit Chal σ hr m s] =
     𝒟[cmaRealSignPublicDist M Commit Chal σ hr s] := by
   rcases s with ⟨log, cache, keypair⟩
-  simp only [cmaRealSignGhostDist, cmaRealSignPublicDist, SigmaProtocol.realTranscript,
+  simp only [cmaRealSignGhostDist, cmaRealSignPublicDist, ChallengeVerifyProtocol.realTranscript,
     cmaSignPublicOfTranscript, evalDist_bind, evalDist_map, map_bind, bind_pure_comp,
     Functor.map_map]
   refine bind_congr fun key => ?_
@@ -720,8 +720,8 @@ private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
     Pr[ fun t : Commit × Chal × Resp => ∃ ch, cache (m, t.1) = some ch | simT pk]
       ≤ QueryCache.enncard cache * β := by
   classical
-  letI : DecidableEq M := Classical.decEq M
-  letI : DecidableEq Commit := Classical.decEq Commit
+  let : DecidableEq M := Classical.decEq M
+  let : DecidableEq Commit := Classical.decEq Commit
   let commitDist : ProbComp Commit := Prod.fst <$> simT pk
   let hit : Commit → Prop := fun c => ∃ ch, cache (m, c) = some ch
   let S : Finset Commit := (finSupport commitDist).filter hit

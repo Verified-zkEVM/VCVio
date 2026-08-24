@@ -86,13 +86,10 @@ variable {m : Type u → Type v}
     {n : Type u → Type w} [Monad n] [MonadLiftT m n]
     {ι : Type*} {spec : OracleSpec ι} {α β γ : Type u}
 
-/-- Given monads `m` and `n` with `MonadLiftT m n`, an implementation of `spec` in `m`,
-and a computation `nx` in `n` for each query input, construct a new implementation
-`QueryImpl.preInsert so nx` that calls `nx` on every query before the actual substitution `so`.
-Note that `nx` is expected to have some side-effects, it's actual result is discarded. -/
-def preInsert (so : QueryImpl spec m) (nx : spec.Domain → n α) :
+/-- Oracle-facing compatibility alias for `PFunctor.Handler.preInsert`. -/
+abbrev preInsert (so : QueryImpl spec m) (nx : spec.Domain → n α) :
     QueryImpl spec n :=
-  fun t => nx t *> liftM (so t)
+  PFunctor.Handler.preInsert (P := spec.toPFunctor) so nx
 
 @[simp, grind =]
 lemma preInsert_apply [LawfulMonad n] (so : QueryImpl spec m) (nx : spec.Domain → n α)
@@ -105,7 +102,9 @@ lemma simulateQ_preInsert_query [LawfulMonad n]
     (so : QueryImpl spec m) (nx : spec.Domain → n α)
     (t : spec.Domain) :
     simulateQ (so.preInsert nx) (query t) = (do let _ ← nx t; liftM (so t)) := by
-  simp
+  have h : simulateQ (so.preInsert nx) (query t) = so.preInsert nx t := by
+    simp
+  exact h.trans (preInsert_apply so nx t)
 
 /-- Induction principle for `proj (simulateQ (so.preInsert nx) oa)` parametric in a
 motive `OracleComp spec β → m β → Prop`. The recursion structure of
@@ -253,13 +252,11 @@ variable {m : Type u → Type v} [Monad m]
     {n : Type u → Type w} [Monad n] [MonadLiftT m n]
     {ι : Type*} {spec : OracleSpec ι}
 
-/-- Given monads `m` and `n` with `MonadLiftT m n`, an implementation of `spec` in `m`,
-and a computation `nx` in `n` for each query output, construct a new implementation
-`QueryImpl.postInsert so nx` that calls `nx` on on the result of each substitution.
-Note that `nx` is expected to have some side-effects, it's actual result is discarded. -/
-def postInsert (so : QueryImpl spec m) {α} (nx : (t : spec.Domain) → spec.Range t → n α) :
+/-- Oracle-facing compatibility alias for `PFunctor.Handler.postInsert`. -/
+abbrev postInsert (so : QueryImpl spec m) {α}
+    (nx : (t : spec.Domain) → spec.Range t → n α) :
     QueryImpl spec n :=
-  fun t => do let u ← liftM (so t); let _ ← nx t u; return u
+  PFunctor.Handler.postInsert (P := spec.toPFunctor) so nx
 
 variable {α β : Type u}
 
@@ -267,7 +264,8 @@ omit [Monad m] in
 @[simp, grind =]
 lemma postInsert_apply (so : QueryImpl spec m)
     (nx : (t : spec.Domain) → spec.Range t → n α) (t : spec.Domain) :
-    so.postInsert nx t = (do let u ← liftM (so t); let _ ← nx t u; return u) := rfl
+    so.postInsert nx t = (do let u ← liftM (so t); let _ ← nx t u; return u) := by
+  exact PFunctor.Handler.postInsert_apply (P := spec.toPFunctor) so nx t
 
 omit [Monad m] in
 /-- One-step characterisation of `simulateQ (postInsert so nx)` on a single query. -/

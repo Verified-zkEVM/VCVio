@@ -30,6 +30,10 @@ move cleanly between the syntax-level traversal view and the reachable-output vi
 
 open OracleSpec
 
+/- Lean 4.33 checks the `Idx`/dependent-pair conversion at implicit transparency when
+rewriting trace cons cells. -/
+attribute [local implicit_reducible] PFunctor.Idx
+
 universe u v
 
 open scoped OracleSpec.PrimitiveQuery

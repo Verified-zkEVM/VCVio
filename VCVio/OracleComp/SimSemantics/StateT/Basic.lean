@@ -27,7 +27,7 @@ namespace QueryImpl
 
 /-- Push an outer oracle interpretation through the base monad of a
 `StateT`-valued query implementation. -/
-noncomputable def mapStateTBase {ι₀ ι₁ : Type _}
+def mapStateTBase {ι₀ ι₁ : Type _}
     {spec₀ : OracleSpec ι₀} {spec₁ : OracleSpec ι₁}
     {m : Type u → Type v} [Monad m] {σ : Type u}
     (outer : QueryImpl spec₁ m)
@@ -58,6 +58,26 @@ theorem simulateQ_mapStateTBase_run' {ι₀ ι₁ : Type _}
     simulateQ outer ((simulateQ inner oa).run' s) =
       (simulateQ (outer.mapStateTBase inner) oa).run' s := by
   simp [simulateQ_mapStateTBase_run]
+
+/-- Interpreting the base oracle of a stateful query implementation preserves every
+state invariant already preserved by the inner implementation, provided the outer
+interpreter preserves support. -/
+theorem mapStateTBase_preserves_inv {ι₀ ι₁ ι₂ : Type u}
+    {spec₀ : OracleSpec ι₀} {spec₁ : OracleSpec ι₁}
+    {spec₂ : OracleSpec ι₂} [IsUniformSpec spec₂] {σ : Type u}
+    (outer : QueryImpl spec₁ (OracleComp spec₂))
+    (inner : QueryImpl spec₀ (StateT σ (OracleComp spec₁)))
+    (inv : σ → Prop)
+    (houter : ∀ {α : Type u} (oa : OracleComp spec₁ α),
+      support (simulateQ outer oa) = support oa)
+    (hinner : ∀ t s, inv s →
+      ∀ y ∈ support ((inner t).run s), inv y.2) :
+    ∀ t s, inv s →
+      ∀ y ∈ support ((outer.mapStateTBase inner t).run s), inv y.2 := by
+  intro t s hs y hy
+  change y ∈ support (simulateQ outer ((inner t).run s)) at hy
+  rw [houter] at hy
+  exact hinner t s hs y hy
 
 /-- Given implementations for oracles in `spec₁` and `spec₂` in terms of state monads for
 two different contexts `σ₁` and `σ₂`, implement the combined set `spec₁ + spec₂` in terms
@@ -143,6 +163,19 @@ namespace OracleComp
 
 variable {ι : Type*} {spec : OracleSpec ι} {m : Type u → Type v} [Monad m] [LawfulMonad m]
   {σ : Type u} (so : QueryImpl spec (StateT σ m))
+
+/-- Simulating a query followed by a continuation, under a stateful handler, runs the handler
+at that query and threads its output state into the simulation of the continuation.
+
+This is the `StateT`-run form of `simulateQ_query_bind`: it is the step lemma that drives an
+`OracleComp.inductionOn` over a computation simulated by a stateful oracle, which would
+otherwise be re-derived per handler at the call site. -/
+lemma run_simulateQ_query_bind {α : Type u} (t : spec.Domain)
+    (oa : spec.Range t → OracleComp spec α) (s : σ) :
+    (simulateQ so ((liftM (spec.query t) : OracleComp spec _) >>= oa)).run s =
+      (so t).run s >>= fun us => (simulateQ so (oa us.1)).run us.2 := by
+  simp [simulateQ_bind, simulateQ_query, StateT.run_bind, monad_norm,
+    OracleQuery.cont_query, OracleQuery.input_query]
 
 /-- If the state type is `Subsingleton`, then we can represent simulation in terms of `simulate'`,
 adding back any state at the end of the computation. -/
@@ -347,7 +380,7 @@ lemma OptionT.probEvent_eq_one_of_simulateQ_support
     (oa : OracleComp spec (Option α)) (s₀ : σ) (P : α → Prop)
     (h : ∀ x ∈ support oa, ∃ a, x = some a ∧ P a) :
     Pr[P | OptionT.mk ((simulateQ impl oa).run' s₀)] = 1 := by
-  letI := Classical.decPred P
+  let := Classical.decPred P
   rw [probEvent_eq_one_iff]
   constructor
   · rw [OptionT.probFailure_eq, OptionT.run_mk, probFailure_eq_zero, _root_.zero_add]
@@ -372,7 +405,7 @@ lemma OptionT.probEvent_eq_one_of_simulateQ_support_bind
     (oa : OracleComp spec (Option α)) (P : α → Prop)
     (h : ∀ x ∈ support oa, ∃ a, x = some a ∧ P a) :
     Pr[P | OptionT.mk (do let s ← init; (simulateQ impl oa).run' s)] = 1 := by
-  letI := Classical.decPred P
+  let := Classical.decPred P
   rw [probEvent_eq_one_iff]
   refine ⟨?_, ?_⟩
   · rw [OptionT.probFailure_eq, OptionT.run_mk, add_eq_zero]

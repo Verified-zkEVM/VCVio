@@ -65,6 +65,8 @@ private lemma probOutput_withProgramming_eq_withCachingTrackingPolicy_of_not_bad
     Pr[= (u, (cache', false)) | (so.withProgramming policy t).run (cache, false)] =
       Pr[= (u, (cache', false)) | (so.withCachingTrackingPolicy policy t).run (cache, false)] := by
   classical
+  let _ : DecidableEq (spec.Range t) := Classical.decEq _
+  let _ : DecidableEq spec.QueryCache := Classical.decEq _
   cases hcache : cache t with
   | some v =>
     simp [QueryImpl.withProgramming_apply, QueryImpl.withCachingTrackingPolicy_apply, hcache]
@@ -233,6 +235,8 @@ private lemma probOutput_withProgramming_eq_withCachingTrackingPolicy_of_not_bad
     Pr[= (u, (cache', false)) | (so.withProgramming policy t).run (cache, false)] =
       Pr[= (u, (cache', false)) | (so.withCachingTrackingPolicy policy t).run (cache, false)] := by
   classical
+  let _ : DecidableEq (spec.Range t) := Classical.decEq _
+  let _ : DecidableEq spec.QueryCache := Classical.decEq _
   cases hcache : cache t with
   | some v =>
     have hL : (so.withProgramming policy t).run (cache, false) =

@@ -82,6 +82,20 @@ lemma run'_lift' (x : m α) (s : σ) :
     (StateT.lift x : StateT σ m α).run' s = x := by
   simp [StateT.run'_eq, map_eq_bind_pure_comp, bind_assoc]
 
+/-- A lifted base computation can be sampled before running a stateful continuation from the
+unchanged initial state. -/
+@[simp]
+lemma run'_liftM_bind (x : m α) (f : α → StateT σ m β) (s : σ) :
+    ((liftM x : StateT σ m α) >>= f).run' s = x >>= fun a => (f a).run' s := by
+  rw [run'_bind', run_liftM]
+  simp
+
+/-- A lifted base-monad continuation can be moved outside a discarded-state run. -/
+@[simp]
+lemma run'_bind_liftM (x : StateT σ m α) (f : α → m β) (s : σ) :
+    (x >>= fun a => (liftM (f a) : StateT σ m β)).run' s = x.run' s >>= f := by
+  simp [StateT.run'_eq, bind_map_left]
+
 /-- If two `StateT` computations agree after mapping into a common result type, then they
 still agree after projecting away the final state with `run'` from any initial state. -/
 lemma map_run'_eq_of_map_eq {γ : Type u} {f : α → γ} {g : β → γ}

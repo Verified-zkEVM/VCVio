@@ -83,8 +83,8 @@ lemma probOutput_map_bijective_uniform_cross
     (f : α → β) (hf : Function.Bijective f) (y : β) :
     Pr[= y | f <$> ($ᵗ α)] = Pr[= y | ($ᵗ β)] := by
   classical
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofBijective f hf
+  let := Fintype.ofFinite α
+  let := Fintype.ofBijective f hf
   obtain ⟨x, rfl⟩ := hf.surjective y
   simp [probOutput_map_injective ($ᵗ α) hf.injective x, Fintype.card_of_bijective hf]
 
@@ -262,7 +262,9 @@ instance (α β : Type) [SampleableType α] [SampleableType β] : SampleableType
     SampleableType β where
   selectElem := e <$> ($ᵗ α)
   mem_support_selectElem x := by simp
-  probOutput_selectElem_eq x y := by grind
+  probOutput_selectElem_eq x y := by
+    rw [probOutput_map_equiv, probOutput_map_equiv]
+    exact probOutput_uniformSample_inj α (e.symm x) (e.symm y)
 
 /-- Any finitely enumerable type can be sampled uniformly using the underlying equivalence. -/
 instance FinEnum.SampleableType (α : Type)
@@ -329,23 +331,25 @@ instance (α : Type) (n : ℕ) [SampleableType α] : SampleableType (Vector α n
         probOutput_seq_map_eq_mul_of_injective2 _ _ _ hpush y.pop y.back,
         probOutput_uniformSample_inj, ih x.pop y.pop]
 
+/-- The array-backed `Vector α n` is equivalent to an `n`-indexed function. -/
+def arrayVectorEquivFin (α : Type u) (n : ℕ) : Vector α n ≃ (Fin n → α) where
+  toFun v i := v[i.1]
+  invFun := Vector.ofFn
+  left_inv v := by
+    change Vector.ofFn (fun i : Fin n => v[i.1]) = v
+    exact Vector.ofFn_getElem
+  right_inv f := funext fun i => by
+    simp
+
 /-- `Vector α n` is finite when `α` is finite, via the equivalence with `Fin n → α`. -/
 instance instFintypeVector (α : Type u) (n : ℕ) [Fintype α] : Fintype (Vector α n) :=
-  Fintype.ofEquiv (Fin n → α)
-    { toFun := Vector.ofFn
-      invFun := fun v i => v.get i
-      left_inv := fun f => funext fun i => by simp [Vector.get, Vector.ofFn]
-      right_inv := fun v => Vector.ext fun i hi => by simp [Vector.ofFn, Vector.get] }
+  Fintype.ofEquiv (Fin n → α) (arrayVectorEquivFin α n).symm
 
 /-- A function from `Fin n` to a `SampleableType` is also `SampleableType`. This is the base
 case used by the general `FinEnum`-indexed `instSampleableTypeFunc` below. -/
 instance instSampleableTypeFinFunc {n : ℕ} {α : Type} [SampleableType α] :
     SampleableType (Fin n → α) :=
-  SampleableType.ofEquiv
-    { toFun := fun v i => v.get i
-      invFun := Vector.ofFn
-      left_inv := fun v => Vector.ext fun i hi => by simp [Vector.ofFn, Vector.get]
-      right_inv := fun f => funext fun i => by simp [Vector.get, Vector.ofFn] }
+  SampleableType.ofEquiv (arrayVectorEquivFin α n)
 
 /-- A function `β → α` for `β` finitely enumerable and `α` sampleable is itself sampleable.
 This generalizes the `Fin n → α` instance above: the `FinEnum.fin` instance recovers it. -/
@@ -454,9 +458,9 @@ lemma evalDist_uniformSample_bind_update
     𝒟[do let u ← $ᵗ R; let g ← $ᵗ (D → R); pure (Function.update g t u)] =
       𝒟[$ᵗ (D → R)] := by
   classical
-  letI := Fintype.ofFinite D
-  letI := Fintype.ofFinite R
-  haveI : Nonempty (D → R) := ⟨fun _ => Classical.arbitrary R⟩
+  let := Fintype.ofFinite D
+  let := Fintype.ofFinite R
+  have : Nonempty (D → R) := ⟨fun _ => Classical.arbitrary R⟩
   refine evalDist_ext fun h => ?_
   rw [probOutput_uniformSample (D → R) h, probOutput_bind_eq_sum_fintype]
   -- For each fixed `u`, count the tables `g` whose `t`-update equals `h`.
@@ -501,9 +505,9 @@ lemma evalDist_map_fst_uniformSample_prod {α β : Type} [Finite α]
     [Finite β] [Nonempty β] [SampleableType α] [SampleableType β] [SampleableType (α × β)] :
     𝒟[Prod.fst <$> ($ᵗ (α × β))] = 𝒟[$ᵗ α] := by
   classical
-  letI := Fintype.ofFinite α
-  letI := Fintype.ofFinite β
-  haveI : DecidableEq α := Classical.decEq α
+  let := Fintype.ofFinite α
+  let := Fintype.ofFinite β
+  have : DecidableEq α := Classical.decEq α
   refine evalDist_ext fun x => ?_
   rw [probOutput_uniformSample α x, probOutput_map_eq_sum_fintype_ite]
   simp only [probOutput_uniformSample (α × β)]
@@ -534,10 +538,10 @@ lemma evalDist_uniformSample_map_comp_injective
     {e : A → B} (he : Function.Injective e) :
     𝒟[do let g ← $ᵗ (B → R); pure (g ∘ e)] = 𝒟[$ᵗ (A → R)] := by
   classical
-  letI := Fintype.ofFinite A
-  letI := Fintype.ofFinite B
-  letI := Fintype.ofFinite R
-  letI : Inhabited R := Classical.inhabited_of_nonempty inferInstance
+  let := Fintype.ofFinite A
+  let := Fintype.ofFinite B
+  let := Fintype.ofFinite R
+  let : Inhabited R := Classical.inhabited_of_nonempty inferInstance
   set C := {b : B // b ∉ Set.range e}
   -- A table `g : B → R` is determined by its restriction `g ∘ e` along `e` and its values off
   -- `range e`, splitting `B → R` as the product `(A → R) × (C → R)` via the reindexing of `B` by
@@ -675,10 +679,41 @@ open OracleSpec OracleComp
 
 variable {ι : Type*} {spec : OracleSpec ι}
 
+/-- Uniformly sampling a response has the same distribution as issuing the
+corresponding query to a uniform oracle specification. -/
+lemma evalDist_uniformSample_eq_query [∀ i, SampleableType (spec.Range i)]
+    [IsUniformSpec spec] (t : spec.Domain) :
+    𝒟[$ᵗ spec.Range t] =
+      𝒟[(spec.query t : OracleComp spec (spec.Range t))] := by
+  rw [evalDist_uniformSample, OracleComp.evalDist_query]
+
+/-- Uniformly sampling a response and issuing the corresponding uniform-oracle query
+assign the same probability to every output. -/
+lemma probOutput_uniformSample_eq_query [∀ i, SampleableType (spec.Range i)]
+    [IsUniformSpec spec] (t : spec.Domain) (u : spec.Range t) :
+    Pr[= u | $ᵗ spec.Range t] =
+      Pr[= u | (spec.query t : OracleComp spec (spec.Range t))] := by
+  rw [probOutput_def, probOutput_def, evalDist_uniformSample_eq_query]
+
+/-- Uniformly sampling a response and issuing the corresponding uniform-oracle query
+assign the same probability to every event. -/
+lemma probEvent_uniformSample_eq_query [∀ i, SampleableType (spec.Range i)]
+    [IsUniformSpec spec] (t : spec.Domain) (p : spec.Range t → Prop) :
+    Pr[p | $ᵗ spec.Range t] =
+      Pr[p | (spec.query t : OracleComp spec (spec.Range t))] := by
+  unfold probEvent
+  rw [evalDist_uniformSample_eq_query]
+
 /-- Given that the output type of all oracles has a `SampleableType` instance, replace all queries
 with uniformly random responses by calling the corresponding `uniformSample` at each query. -/
 def uniformSampleImpl [∀ i, SampleableType (spec.Range i)] :
     QueryImpl spec ProbComp := fun t => $ᵗ spec.Range t
+
+/-- A uniformly sampled implementation answers each query with the uniform sampler for
+that query's response type. -/
+@[simp]
+lemma uniformSampleImpl_apply [∀ i, SampleableType (spec.Range i)] (t : spec.Domain) :
+    uniformSampleImpl (spec := spec) t = $ᵗ spec.Range t := rfl
 
 namespace uniformSampleImpl
 
@@ -688,9 +723,9 @@ variable [∀ i, SampleableType (spec.Range i)]
 lemma evalDist_simulateQ [IsUniformSpec spec] {α : Type}
     (oa : OracleComp spec α) :
     𝒟[simulateQ uniformSampleImpl oa] = 𝒟[oa] := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => simp
-  | query_bind t mx h => simp [h, uniformSampleImpl]
+  apply OracleComp.evalDist_simulateQ_eq_evalDist
+  intro t
+  simp [uniformSampleImpl]
 
 @[simp]
 lemma probOutput_simulateQ [IsUniformSpec spec] {α : Type}
@@ -707,10 +742,8 @@ lemma probEvent_simulateQ [IsUniformSpec spec] {α : Type}
 @[simp]
 lemma support_simulateQ [IsUniformSpec spec] {α : Type}
     (oa : OracleComp spec α) :
-    support (simulateQ uniformSampleImpl oa) = support oa := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => simp
-  | query_bind t mx h => simp [h, uniformSampleImpl]
+    support (simulateQ uniformSampleImpl oa) = support oa :=
+  Set.ext fun x => mem_support_iff_of_evalDist_eq (evalDist_simulateQ oa) x
 
 @[simp]
 lemma finSupport_simulateQ [IsUniformSpec spec] {α : Type}

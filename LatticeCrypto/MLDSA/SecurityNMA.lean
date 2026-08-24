@@ -22,10 +22,11 @@ This file builds the reduction infrastructure for the ML-DSA EUF-NMA analysis:
    key-generator prefix out of the NMA runtime. The older full-ring `mldsaMLWE` definitions remain
    useful scaffolding, but do not identify `keygen0` with a literature MLWE distribution.
 3. **SelfTargetMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** Once `t` is uniform the key
-   carries no secret, so a forgery is a short vector satisfying the SelfTargetMSIS relation; the
-   extractor `extractorC` reads `(z, c̃)` out of the forged signature. This is fully proven: the
+   carries no secret, so a forgery is a short vector satisfying the *tailored* SelfTargetMSIS
+   relation of `mldsaSTMSIS` (see *Tailored vs. standard SelfTargetMSIS* below); the extractor
+   `extractorC` reads `(z, c̃)` out of the forged signature. This is fully proven: the
    shared random-oracle simulation lines up the NMA `verify` query with the extractor's RO read-back
-   (`stmsis_tail_le`), and an accepted forgery is a valid SelfTargetMSIS solution by commitment
+   (`stmsis_tail_le`), and an accepted forgery is a valid solution of that problem by commitment
    recoverability.
 
 The `H₁` reprogramming step of the paper folds into the random-oracle modeling and is not separated
@@ -51,6 +52,23 @@ the matrix is *defined* as `Â := ExpandA(ρ)` wherever it is used, so that
 This is the standard ROM modeling of Dilithium with `ExpandA` a random oracle, and it makes the
 distinguisher `B` total: it consumes `(ρ, t)` and forms `pk = (ρ, Power2Round(t).1)` directly with
 no embedding witness required.
+
+## Tailored vs. standard SelfTargetMSIS
+
+The problems `mldsaSTMSIS` and `mldsaSTMSISShort` are **tailored** SelfTargetMSIS problems: their
+validity predicate *is* the ML-DSA verifier relation, namely the norm gates `‖z‖∞ < γ₁ − β` and
+`weight(h) ≤ ω`, the hint-recovered equation
+`w' = UseHint(h, Â·z − SampleInBall(c̃)·(t₁·2^d))` over `R_q`, and the self-target binding
+`hashInput.2 = w'` (with the RO consistency of `c̃` supplied by the surrounding
+`SelfTargetMSIS.experiment`). What is proved here is the extraction into that tailored problem
+together with its algebraic characterization (`stmsisAlgebraicSolution`,
+`mldsaSTMSISShort_isValid_iff`, `mldsaSTMSISShort_isValid_expandA_iff`).
+
+This is deliberately *not* the standard SelfTargetMSIS normal form used in the literature, which
+states the linear relation as `[I_m | A] · y` with the challenge occupying the final coefficient
+block of the short preimage `y`. Reducing the tailored relation to that normal form — absorbing
+`UseHint` and the `2^d` shift into a single short vector — is follow-up work, and no declaration
+in this file claims it.
 -/
 
 @[expose] public section
@@ -321,7 +339,7 @@ variable {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
 inside `StateT QueryCache ProbComp`. Running an oracle computation through this implementation and
 projecting away the final cache turns it into a plain `ProbComp`, which is what the MLWE
 distinguisher must return. -/
-noncomputable def roImpl :
+def roImpl :
     QueryImpl (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
       (StateT ((M × Commitment p prims →ₒ CommitHashBytes p).QueryCache) ProbComp) :=
   unifFwdImpl (M × Commitment p prims →ₒ CommitHashBytes p) +
@@ -332,7 +350,7 @@ noncomputable def roImpl :
 empty cache and discarding the final cache state. This is exactly the `ProbComp` underlying
 `FiatShamirWithAbort.runtime.evalDist` (see `BundledSemantics.withStateOracle`), exposed so the
 MLWE distinguisher — which must inhabit `… → ProbComp Bool` — can run the NMA game internally. -/
-noncomputable def simulateToProbComp {α : Type}
+def simulateToProbComp {α : Type}
     (mx : OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) α) :
     ProbComp α :=
   StateT.run' (simulateQ (roImpl p prims (M := M)) mx) ∅
@@ -354,7 +372,7 @@ The matrix never appears as a free challenge: phrasing the MLWE instance over se
 ROM modeling of Dilithium with `ExpandA` a random oracle, and it makes the distinguisher `B` total
 (no `ExpandA`-surjectivity assumption). Relating an abstract matrix-based MLWE problem to this
 concrete seed-based one is a statement-level bridge obligation. -/
-noncomputable def mldsaMLWE (p : Params) (prims : Primitives p)
+def mldsaMLWE (p : Params) (prims : Primitives p)
     [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] :
     LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := do
@@ -478,7 +496,7 @@ noncomputable def distinguisherBShort
 
 /-- Lift a seed-based short-MLWE adversary to the uniform-matrix problem: run it on a
 freshly sampled seed and the challenged target vector, discarding the matrix. -/
-noncomputable def matrixLift
+def matrixLift
     (B : LearningWithErrors.Adversary (mldsaMLWEShort p prims)) :
     LearningWithErrors.Adversary (mldsaMatrixMLWE p) :=
   fun c => do
@@ -772,7 +790,7 @@ solution.
 
 The `sampleParams` draws the same seed-based key as `keygen1`/`mldsaMLWE`: it samples `ρ` through
 `ExpandSeed`, a uniform `t`, and publishes `(ExpandA(ρ), pk)` with `pk = ⟨ρ, Power2Round(t).1⟩`. -/
-noncomputable def mldsaSTMSIS (M : Type) :
+def mldsaSTMSIS (M : Type) :
     SelfTargetMSIS.Problem (TqMatrix p.k p.l) (Response p prims) (PublicKey p prims)
       (M × Commitment p prims) (CommitHashBytes p) where
   sampleParams := do
@@ -806,13 +824,16 @@ theorem mldsaSTMSIS_isValid_eq_true_iff (aHat : TqMatrix p.k p.l) (pk : PublicKe
 `C` runs the NMA forger `main` on the public key `pk` (the STMSIS target). The forger interacts with
 the random oracle `H : (M × Commitment) →ₒ CommitHashBytes`. On a forgery `(msg, some (w', (z, h)))`
 `C` outputs the STMSIS preimage `(msg, w')` together with the response `(z, h)`. An aborting forgery
-`(msg, none)` is mapped to a dummy preimage with a zeroed response, which the STMSIS RO-consistency
-check rejects. The matrix in `params.1` is ignored by `C` (it equals `ExpandA(params.2.ρ)`).
+`(msg, none)` is mapped to a dummy preimage with a zeroed response; the STMSIS experiment then reads
+back `H(msg, default)`, which the forger may well have queried. That costs nothing: the NMA tail is
+deterministically `false` on an abort, and the reduction's target is an upper bound on the NMA side,
+so extra successes on the STMSIS side only add slack in the favorable direction. The matrix in
+`params.1` is ignored by `C` (it equals `ExpandA(params.2.ρ)`).
 
 The STMSIS experiment then looks up `c̃ = H(msg, w')` in the oracle cache and checks
 `mldsaSTMSIS.isValid Â pk c̃ (z, h)`, which recomputes `w'` from `(pk, c̃, (z, h))` and runs the
 identification verifier — exactly what the NMA `verify` does after querying `H(msg, w')`. -/
-noncomputable def extractorC [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+def extractorC [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
@@ -827,7 +848,8 @@ noncomputable def extractorC [Inhabited (Commitment p prims)] [Inhabited (Respon
       let _c ← HasQuery.query (spec := (M × Commitment p prims →ₒ CommitHashBytes p)) (msg, w')
       return ((msg, w'), (z, h))
     | none =>
-      -- Aborting forgery: no valid preimage. Emit a dummy that fails RO consistency / `isValid`.
+      -- Aborting forgery: no valid preimage. Emit a dummy; the NMA tail is deterministically
+      -- `false` here, so any STMSIS-side success on the dummy only loosens the bound favorably.
       return ((msg, default), default)
 
 /-- **Per-key STMSIS read-back comparison.** For a fixed public key `pk`, the NMA forge-and-verify
@@ -966,6 +988,330 @@ theorem nmaAdvantage_keygen1_le_stmsis
   rintro ⟨pk, sk⟩ _
   rw [pure_bind]
   convert stmsis_tail_le p prims hr maxAttempts main pk using 2
+  rw [roImpl, unifFwdImpl]
+  refine bind_congr fun x => ?_
+  obtain ⟨⟨hashInput, response⟩, cache⟩ := x
+  dsimp only
+  cases cache hashInput <;> rfl
+
+/-! ### Tailored SelfTargetMSIS leg in the idealized short-key model
+
+The declarations below add the short-model counterpart of the SelfTargetMSIS extraction:
+the tailored problem `mldsaSTMSISShort` (self-target binding + the short-scheme verifier), its
+algebraic characterization lemmas, the extractor `extractorCShort`, and the NMA-to-STMSIS
+extraction bound `nmaAdvantage_keygenShort1_le_stmsis`. They reuse the shared extractor
+`extractorC` and the seed-based helpers from the enclosing section. -/
+
+/-- **The SelfTargetMSIS problem embedded by ML-DSA verification in the idealized short-key
+model.** The validity predicate recovers the
+commitment `w'` from `(pk, c̃, (z, h))` via `UseHint ∘ computeWApprox`, requires it to equal
+the commitment component of the hash preimage (the self-target binding), and runs the
+identification-scheme verifier (the short-scheme constant `identificationSchemeShort`),
+and the parameters are sampled from the idealized
+uniform-`t` key generator `keygenShort1`: the matrix seed `ρ`, the signing key `K`, and the
+short secrets are drawn independently, `t` is uniform, and the published pair is
+`(ExpandA(ρ), pk)` with `pk = ⟨ρ, Power2Round(t).1⟩`. This is the STMSIS instance matching the
+exact short-model key-swap hop (`nma_keyswap_hop_short`).
+
+Accepted solutions are characterized algebraically by `stmsisAlgebraicSolution` via the
+bridge `mldsaSTMSISShort_isValid_iff`: the verifier's norm gates `‖z‖∞ < γ₁ − β` and
+`weight(h) ≤ ω`, the hint-recovered matrix equation
+`w' = UseHint(h, Â·z − SampleInBall(c̃)·(t₁·2^d))` over `R_q`, and the self-target binding
+`hashInput.2 = w'` tying the recovered commitment to the pair hashed to produce `c̃`, whose
+RO consistency is enforced by the surrounding `SelfTargetMSIS.experiment`. At the matched
+parameters published by `sampleParams` acceptance is the norm gates plus the binding
+(`mldsaSTMSISShort_isValid_expandA_iff`). The relation is the tailored verifier relation, not
+the standard SelfTargetMSIS normal form `[I_m | A] · y` with the challenge in the final
+coefficient block of `y`; reducing the tailored relation to that normal form is follow-up
+work. -/
+noncomputable def mldsaSTMSISShort (M : Type) :
+    SelfTargetMSIS.Problem (TqMatrix p.k p.l) (Response p prims) (PublicKey p prims)
+      (M × Commitment p prims) (CommitHashBytes p) where
+  sampleParams := do
+    let (pk, _) ← keygenShort1 p prims
+    return (prims.expandA pk.rho, pk)
+  isValid := fun aHat pk hashInput cTilde (z, h) =>
+    -- Recover the commitment `w'` from `(pk, c̃, (z, h))`, bind it to the commitment component
+    -- of the hashed preimage, and run the identification verifier.
+    let w' := prims.useHintVec h (computeWApprox p prims aHat (prims.sampleInBall cTilde) z pk.t1)
+    decide (hashInput.2 = w') && (identificationSchemeShort p prims).verify pk w' cTilde (z, h)
+
+/-! ### Algebraic content of the tailored SelfTargetMSIS problem
+
+`mldsaSTMSISShort.isValid` is defined through the identification-scheme verifier plus the
+self-target binding. The declarations below re-express an accepted solution in explicit
+algebraic form — the norm gates, the hint-recovered matrix equation over `R_q`, and the
+binding of the recovered commitment to the hashed preimage. That algebraic form is the
+endpoint reached here: it is the tailored verifier relation, and reducing it to the standard
+SelfTargetMSIS normal form `[I_m | A] · y` (challenge in the final coefficient block of the
+short preimage `y`) is follow-up work. -/
+
+omit [DecidableEq prims.High] [DecidableEq (Commitment p prims)] [SampleableType (RqVec p.l)]
+  [SampleableType (RqVec p.k)] [SampleableType (CommitHashBytes p)] in
+/-- Under the transform laws, the verifier's recomputation `computeWApprox` is the plain
+coefficient-domain matrix expression `Â·z − c·(t₁·2^d)`: the transform round trip
+disappears, `*`/`•` are the transform-backed matrix-vector and scalar-vector products on
+`R_q`, and `t₁·2^d = power2RoundShiftVec t₁`. Only the transform-isomorphism laws are
+consumed (`unhatVec_sub`); both summands are definitionally the coefficient-domain
+products. -/
+theorem computeWApprox_eq_mul_sub_smul (h_transform : NTTRingLaws nttOps)
+    (aHat : TqMatrix p.k p.l) (c : ChallengePoly) (z : RqVec p.l)
+    (t1 : Vector prims.Power2High p.k) :
+    computeWApprox p prims aHat c z t1 =
+      aHat * z - c • prims.power2RoundShiftVec t1 := by
+  have := h_transform
+  simp only [computeWApprox]
+  exact nttOps.unhatVec_sub _ _
+
+omit [DecidableEq (Commitment p prims)] [SampleableType (RqVec p.k)]
+  [SampleableType (CommitHashBytes p)] in
+/-- **What the identification verifier's accept means algebraically.** With
+`c = SampleInBall(c̃)`, the verifier accepts `(w₁, c̃, (z, h))` exactly when the norm gates
+`‖z‖∞ < γ₁ − β` and `weight(h) ≤ ω` hold and the published commitment `w₁` satisfies the
+self-target matrix equation `UseHint(h, ExpandA(ρ)·z − c·(t₁·2^d)) = w₁` over `R_q`. In the
+Fiat-Shamir game `w₁` is the very commitment hashed to produce `c̃`, so an accepted NMA
+forgery carries the tailored algebraic verifier relation, which is exactly the relation the
+tailored problem `mldsaSTMSISShort` checks. Reducing that relation to the standard
+SelfTargetMSIS normal form `[I_m | A] · y`, with the challenge in the final coefficient block
+of the short preimage `y`, remains follow-up work.
+
+Only the transform-isomorphism laws `NTTRingLaws` are consumed (via
+`computeWApprox_eq_mul_sub_smul`), not the full `Primitives.Laws`. -/
+theorem identificationSchemeShort_verify_eq_true_iff (h_transform : NTTRingLaws nttOps)
+    (pk : PublicKey p prims) (w1 : Commitment p prims) (cTilde : CommitHashBytes p)
+    (z : RqVec p.l) (h : Vector prims.Hint p.k) :
+    (identificationSchemeShort p prims).verify pk w1 cTilde (z, h) = true ↔
+      polyVecNorm z < p.gamma1 - p.beta ∧
+      prims.hintWeight h ≤ p.omega ∧
+      prims.useHintVec h (prims.expandA pk.rho * z -
+        prims.sampleInBall cTilde • prims.power2RoundShiftVec pk.t1) = w1 := by
+  simp only [identificationSchemeShort, identificationScheme,
+    computeWApprox_eq_mul_sub_smul p prims h_transform, Bool.and_eq_true,
+    decide_eq_true_eq]
+  tauto
+
+/-- **The explicit algebraic SelfTargetMSIS relation extracted from `mldsaSTMSISShort`.**
+Writing `c = SampleInBall(c̃)` and `t₁·2^d = power2RoundShiftVec t₁`, a solution `(z, h)`
+for an instance matrix `Â` and target `pk = (ρ, t₁)` consists of:
+
+1. the verifier's **norm gates**, verbatim: `‖z‖∞ < γ₁ − β` and `weight(h) ≤ ω`;
+2. the **matrix equation**: a commitment `w'` recovered from the hint,
+   `w' = UseHint(h, Â·z − c·(t₁·2^d))` over `R_q` (the coefficient-domain reading of
+   `computeWApprox`, see `computeWApprox_eq_mul_sub_smul`), which the verifier's own
+   recomputation from the published seed reproduces:
+   `UseHint(h, ExpandA(ρ)·z − c·(t₁·2^d)) = w'`;
+3. the **self-target binding**: the commitment component of the hash preimage equals the
+   recovered commitment, `hashInput.2 = w'` — the solution is bound to the very pair hashed
+   to produce `c̃`.
+
+The **RO-consistency** of `c̃` is deliberately not part of the relation: it is enforced by
+the surrounding `SelfTargetMSIS.experiment` (cache read-back), not by `isValid`. The
+relation quantifies nothing `isValid` does not check — it is a re-expression of
+`mldsaSTMSISShort.isValid` (`mldsaSTMSISShort_isValid_iff`), not a strengthening; on the
+matched parameters `Â = ExpandA(ρ)` published by `sampleParams` the two sides of the
+recovered-commitment equation coincide and acceptance is the norm gates plus the binding
+(`mldsaSTMSISShort_isValid_expandA_iff`). -/
+def stmsisAlgebraicSolution (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims)
+    (hashInput : M × Commitment p prims) (cTilde : CommitHashBytes p) :
+    Response p prims → Prop
+  | (z, h) =>
+    polyVecNorm z < p.gamma1 - p.beta ∧
+    prims.hintWeight h ≤ p.omega ∧
+    ∃ w' : Commitment p prims,
+      w' = prims.useHintVec h
+        (aHat * z - prims.sampleInBall cTilde • prims.power2RoundShiftVec pk.t1) ∧
+      prims.useHintVec h (prims.expandA pk.rho * z -
+        prims.sampleInBall cTilde • prims.power2RoundShiftVec pk.t1) = w' ∧
+      hashInput.2 = w'
+
+omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
+/-- **The algebraic bridge for the tailored SelfTargetMSIS problem.** An accepted
+`mldsaSTMSISShort` solution is exactly an `stmsisAlgebraicSolution`: the verifier's norm
+gates, the hint-recovered matrix equation over `R_q` with the recovered commitment `w'`
+exhibited explicitly, and the self-target binding of `w'` to the commitment component of
+the hashed preimage. Only the transform-isomorphism laws `NTTRingLaws` are consumed (via
+`computeWApprox_eq_mul_sub_smul`), not the full `Primitives.Laws`. The characterization is
+of the tailored relation; the standard SelfTargetMSIS normal form `[I_m | A] · y` is not
+reached here. -/
+theorem mldsaSTMSISShort_isValid_iff (h_transform : NTTRingLaws nttOps)
+    (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims) (hashInput : M × Commitment p prims)
+    (cTilde : CommitHashBytes p) (z : RqVec p.l) (h : Vector prims.Hint p.k) :
+    (mldsaSTMSISShort p prims M).isValid aHat pk hashInput cTilde (z, h) = true ↔
+      stmsisAlgebraicSolution p prims aHat pk hashInput cTilde (z, h) := by
+  simp only [mldsaSTMSISShort, identificationSchemeShort, identificationScheme,
+    stmsisAlgebraicSolution, computeWApprox_eq_mul_sub_smul p prims h_transform,
+    Bool.and_eq_true, decide_eq_true_eq]
+  constructor
+  · rintro ⟨hbind, ⟨hz, hw⟩, hweight⟩
+    exact ⟨hz, hweight, _, rfl, hw, hbind⟩
+  · rintro ⟨hz, hweight, w', rfl, hw, hbind⟩
+    exact ⟨hbind, ⟨hz, hw⟩, hweight⟩
+
+omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
+/-- **Characterization at the matched parameters.** `mldsaSTMSISShort.sampleParams` always
+publishes the matrix as `Â = ExpandA(pk.ρ)`, and at such matched parameters the verifier's
+own recomputation from the published seed coincides with the recovered commitment, so
+acceptance is exactly the two norm gates plus the **self-target binding**: the commitment
+component of the hashed preimage must equal the commitment
+`UseHint(h, Â·z − SampleInBall(c̃)·(t₁·2^d))` recomputed from the response (stated through
+`computeWApprox`; see `computeWApprox_eq_mul_sub_smul` for the coefficient-domain reading).
+In particular the trivial response `z = 0` with a weight-`0` hint wins only when the
+adversary has hashed the exact commitment `UseHint(0, −SampleInBall(c̃)·(t₁·2^d))` — a value
+determined by the challenge `c̃` that the random oracle returns only *after* the preimage is
+fixed. No primitive laws are needed. -/
+theorem mldsaSTMSISShort_isValid_expandA_iff (pk : PublicKey p prims)
+    (hashInput : M × Commitment p prims) (cTilde : CommitHashBytes p)
+    (z : RqVec p.l) (h : Vector prims.Hint p.k) :
+    (mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk hashInput cTilde
+        (z, h) = true ↔
+      polyVecNorm z < p.gamma1 - p.beta ∧ prims.hintWeight h ≤ p.omega ∧
+      hashInput.2 = prims.useHintVec h (computeWApprox p prims (prims.expandA pk.rho)
+        (prims.sampleInBall cTilde) z pk.t1) := by
+  simp only [mldsaSTMSISShort, identificationSchemeShort, identificationScheme,
+    Bool.and_eq_true, decide_eq_true_eq]
+  tauto
+
+/-- **The SelfTargetMSIS extractor for the idealized short-key model.** It performs the same
+forger-to-preimage extraction as `extractorC` — run the NMA forger `main` on the target public
+key, force the `H(msg, w')` query, and output the STMSIS preimage `(msg, w')` with the response
+`(z, h)` — typed against the short-model problem `mldsaSTMSISShort`, whose parameters are sampled
+from `keygenShort1`. -/
+noncomputable def extractorCShort [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims))) :
+    SelfTargetMSIS.Adversary (mldsaSTMSISShort p prims M) :=
+  ⟨(extractorC p prims main).run⟩
+
+/-- **Per-key STMSIS read-back comparison, short model.** For a fixed public key `pk`, the
+short-model NMA forge-and-verify tail (run
+through `simulateToProbComp`) accepts no more often than the SelfTargetMSIS experiment tail of
+`extractorCShort` at the matching parameters `(ExpandA(ρ), pk)`. The argument never inspects
+the key relation: both tails simulate `main pk` against the same random oracle from the empty
+cache, an aborting forgery contributes weight `0`, and on `some (w', (z, h))` both branches
+issue the same `H(msg, w')` query, whose cached answer the STMSIS experiment reads back before
+`mldsaSTMSISShort.isValid` recovers the commitment, binds it to the preimage component `w'`,
+and runs the identical verifier. -/
+private theorem stmsis_tail_le_short
+    [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
+    (maxAttempts : ℕ)
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims)))
+    (pk : PublicKey p prims) :
+    Pr[= true | simulateToProbComp p prims (M := M) (do
+        let (msg, σ) ← main pk
+        (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify
+          pk msg σ)] ≤
+      Pr[= true | do
+        let ((hashInput, response), cache) ←
+          (simulateQ (roImpl p prims (M := M))
+            ((extractorCShort p prims main).run (prims.expandA pk.rho, pk))).run ∅
+        match cache hashInput with
+        | some hashOutput =>
+            pure ((mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk
+              hashInput hashOutput response)
+        | none => pure false] := by
+  classical
+  -- Decompose both tails over the shared simulation of `main pk` from the empty cache.
+  unfold simulateToProbComp extractorCShort extractorC
+  simp only [bind_pure_comp, simulateQ_bind, StateT.run_bind, StateT.run'_eq, map_bind,
+    bind_assoc]
+  -- Compare after the shared `main pk` simulation prefix.
+  refine probOutput_bind_mono fun a _ => ?_
+  -- `a = ((msg, σ), cache₀)`; split on whether the forgery aborts.
+  obtain ⟨⟨msg, σ⟩, cache0⟩ := a
+  cases σ with
+  | none =>
+    -- Aborting forgery: NMA `verify` is deterministically `false`, so the NMA tail has weight `0`.
+    simp only [FiatShamirWithAbort, simulateQ_pure, StateT.run_pure, map_pure,
+      probOutput_pure]
+    simp
+  | some wzh =>
+    obtain ⟨w', z, h⟩ := wzh
+    -- Non-aborting forgery `(w', (z, h))`. Both branches issue the same `H(msg, w')` query on
+    -- `cache0`; reduce the NMA `verify` and the extractor body to that single query.
+    simp only [FiatShamirWithAbort, simulateQ_map, StateT.run_map, bind_pure_comp]
+    -- Both sides are now `f <$> (simulateQ roImpl (query (msg, w'))).run cache0`; turn the maps
+    -- into binds over the shared random-oracle run and compare per random answer `(c, cache₁)`.
+    simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc]
+    refine probOutput_bind_mono fun cc hcc => ?_
+    simp only [pure_bind]
+    -- The query simulation caches its answer: `cc.2 (msg, w') = some cc.1`.
+    have hquery : simulateQ (roImpl p prims (M := M)) (query (msg, w') :
+          OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) _) =
+        (randomOracle : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p) _) (msg, w') :=
+      roSim.simulateQ_liftM_spec_query _ _
+    rw [hquery] at hcc
+    have hcache : cc.2 (msg, w') = some cc.1 := by
+      cases hc0 : cache0 (msg, w') with
+      | some u =>
+        rw [randomOracle, QueryImpl.withCaching_run_some _ hc0, support_pure,
+          Set.mem_singleton_iff] at hcc
+        subst hcc; exact hc0
+      | none =>
+        rw [randomOracle, QueryImpl.withCaching_run_none _ hc0, support_map] at hcc
+        obtain ⟨u, _, hu⟩ := hcc
+        subst hu
+        exact QueryCache.cacheQuery_self _ (msg, w') u
+    rw [hcache]
+    -- An accepted NMA forgery is a valid STMSIS solution: the middle conjunct of `verify`
+    -- says the recomputed commitment equals the forgery's `w'`, which is the commitment
+    -- component of the extractor's preimage `(msg, w')` — exactly the self-target binding
+    -- `isValid` demands.
+    rw [probOutput_pure, probOutput_pure]
+    by_cases hverify :
+        (identificationSchemeShort p prims).verify pk w' cc.1 (z, h) = true
+    · -- Accepted: `verify`'s middle conjunct identifies the recomputed commitment with `w'`,
+      -- so the binding conjunct holds at the preimage `(msg, w')` and `verify` re-accepts at
+      -- the recomputed commitment, giving `isValid = true`.
+      have hvalid :
+          (mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk (msg, w') cc.1
+            (z, h) = true := by
+        simp only [mldsaSTMSISShort, identificationSchemeShort, identificationScheme]
+          at hverify ⊢
+        revert hverify
+        grind
+      rw [if_pos hverify.symm, if_pos hvalid.symm]
+    · simp only [Bool.not_eq_true] at hverify
+      rw [hverify]
+      simp
+
+/-- **The SelfTargetMSIS extraction bound in the idealized short-key model.** The uniform-`t`
+short-model EUF-NMA advantage (key generator `keygenShort1`) is bounded by the SelfTargetMSIS
+advantage of the extractor against `mldsaSTMSISShort`.
+
+The argument is a shared-prefix read-back comparison: after the
+bundled-semantics rewrite (`nmaGameShort_eq_keygen_bind`) both sides bind over the same
+`keygenShort1` prefix — the short problem's `sampleParams` is definitionally `keygenShort1`
+followed by publishing `(ExpandA(ρ), pk)` — so monotonicity reduces to the per-key comparison
+`stmsis_tail_le_short`, which never inspects the key distribution and packages the cache
+read-back and commitment recoverability. -/
+theorem nmaAdvantage_keygenShort1_le_stmsis
+    [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
+    (maxAttempts : ℕ)
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims))) :
+    nmaAdvantageShort p prims hr maxAttempts (keygenShort1 p prims) main ≤
+      SelfTargetMSIS.advantage (extractorCShort p prims main) := by
+  classical
+  rw [nmaAdvantageShort, nmaGameShort_eq_keygen_bind, SelfTargetMSIS.advantage,
+    SelfTargetMSIS.experiment]
+  rw [probOutput_def, SPMF.evalDist_def]
+  -- The short STMSIS `sampleParams` is exactly `keygenShort1` followed by publishing
+  -- `(ExpandA(ρ), pk)`, so both `Pr[= true]`s bind over the same prefix; compare them per-key.
+  change Pr[= true | (keygenShort1 p prims) >>= _] ≤
+    Pr[= true | ((mldsaSTMSISShort p prims M).sampleParams) >>= _]
+  rw [show (mldsaSTMSISShort p prims M).sampleParams =
+      (keygenShort1 p prims) >>= fun pkSk => pure (prims.expandA pkSk.1.rho, pkSk.1) from rfl]
+  rw [bind_assoc]
+  refine probOutput_bind_mono ?_
+  rintro ⟨pk, sk⟩ _
+  rw [pure_bind]
+  convert stmsis_tail_le_short p prims hr maxAttempts main pk using 2
   rw [roImpl, unifFwdImpl]
   refine bind_congr fun x => ?_
   obtain ⟨⟨hashInput, response⟩, cache⟩ := x

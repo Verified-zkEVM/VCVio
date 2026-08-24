@@ -36,6 +36,7 @@ fresh on-demand uniform draw into the pre-sampled table.
 
 open OracleComp OracleSpec
 
+
 universe u v w
 
 namespace OracleComp
@@ -127,8 +128,8 @@ private lemma evalDist_simulateQ_randomOracle_run'_query_bind_eq_tableExtending 
             pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g))
               (liftM ((D →ₒ R).query t) >>= k))] := by
   classical
-  letI := Fintype.ofFinite R
-  haveI : Nonempty (D → R) := ⟨fun _ => Classical.arbitrary R⟩
+  let := Fintype.ofFinite R
+  have : Nonempty (D → R) := ⟨fun _ => Classical.arbitrary R⟩
   have hred :
       (simulateQ randomOracle (liftM ((D →ₒ R).query t) >>= k)).run' c
         = ((randomOracle (spec := (D →ₒ R)) t).run c) >>=

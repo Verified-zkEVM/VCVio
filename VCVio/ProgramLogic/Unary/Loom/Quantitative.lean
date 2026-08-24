@@ -100,7 +100,7 @@ lemma μ_bind_eq_tsum {α : Type}
 noncomputable instance instMAlgOrdered : MAlgOrdered (OracleComp spec) ℝ≥0∞ where
   μ := μ (spec := spec)
   μ_pure x := by
-    haveI : DecidableEq ℝ≥0∞ := Classical.decEq _
+    have : DecidableEq ℝ≥0∞ := Classical.decEq _
     simp [μ, probOutput_pure]
   μ_bind_mono f g hfg x := by
     simp_rw [μ_bind_eq_tsum]

@@ -258,7 +258,7 @@ theorem keyGenFromSeed_wApprox_eq {pk : PublicKey p prims} {sk : SecretKey p}
       computeWApprox p prims (prims.expandA pk.rho) c (y + c • sk.s1) pk.t1 =
       (prims.expandA pk.rho) * y - c • sk.s2 + c • sk.t0 := by
   intro c y
-  haveI := h_laws.transform
+  have := h_laws.transform
   let laws := h_laws.transform
   set aHat := prims.expandA pk.rho
   simp only [computeWApprox]

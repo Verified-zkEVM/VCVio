@@ -50,7 +50,7 @@ def oracleOutputs :
     (n : ℕ) → S → OracleComp (PRFScheme.PRFOracleSpec S (S × O)) (List.Vector O n)
   | 0, _ => pure .nil
   | n + 1, s => do
-      let (s', out) ← (PRFScheme.PRFOracleSpec S (S × O)).query (Sum.inr s)
+      let (s', out) ← PRFScheme.functionQuery s
       let rest ← oracleOutputs n s'
       pure (out ::ᵥ rest)
 
@@ -60,7 +60,7 @@ def oracleVisitedStates :
     (n : ℕ) → S → OracleComp (PRFScheme.PRFOracleSpec S (S × O)) (List.Vector S n)
   | 0, _ => pure .nil
   | n + 1, s => do
-      let (s', _) ← (PRFScheme.PRFOracleSpec S (S × O)).query (Sum.inr s)
+      let (s', _) ← PRFScheme.functionQuery s
       let rest ← oracleVisitedStates n s'
       pure (s ::ᵥ rest)
 
@@ -111,26 +111,12 @@ private lemma simulateQ_prfReal_oracleOutputs (k : K) (n : ℕ) (s : S) :
   induction n generalizing s with
   | zero => simp [oracleOutputs, streamOutputs]
   | succ n ih =>
-    simp only [oracleOutputs, streamOutputs, simulateQ_bind, simulateQ_query,
-      OracleQuery.cont_query, id_map, OracleQuery.input_query]
-    change prfRealQueryImpl prf k (Sum.inr s) >>= _ = _
-    simp only [prfRealQueryImpl, QueryImpl.add_apply_inr]
     cases h : prf.eval k s with
     | mk s' out =>
-        let so : QueryImpl (S →ₒ S × O) ProbComp := fun d => pure (prf.eval k d)
-        change simulateQ
-            ((HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) + so)
-            (do
-              let rest ← oracleOutputs n s'
-              pure (out ::ᵥ rest)) = _
-        have ih' :
-            simulateQ
-                ((HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) + so)
-                (oracleOutputs n s') =
-              pure (streamOutputs (prf.eval k) n s') := by
-          simpa [PRFScheme.prfRealQueryImpl, so] using ih (s := s')
-        rw [simulateQ_bind, ih']
-        simp [h, so]
+        simp only [oracleOutputs, streamOutputs, simulateQ_bind,
+          simulateQ_prfRealQueryImpl_functionQuery, h, pure_bind]
+        rw [ih]
+        simp
 
 omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [DecidableEq S]
   [Inhabited O] [Fintype O] [DecidableEq O] [SampleableType O] in
@@ -175,30 +161,9 @@ theorem prgRealExp_eq_prfRealExp
   simp only [monad_norm, Function.comp_def]
   rw [evalDist_bind, evalDist_bind, hkey]
 
-/-- Running a state-lifted computation that begins by lifting a stateless computation `oa`
-and then continues with `rest` is the same as sampling `oa` first and continuing each branch
-with the discarded-state run of `rest`. -/
-private lemma run'_liftM_bind {σ β γ : Type} (oa : ProbComp β)
-    (rest : β → StateT σ ProbComp γ) (s : σ) :
-    ((liftM oa : StateT σ ProbComp β) >>= rest).run' s = oa >>= fun x => (rest x).run' s := by
-  rw [StateT.run'_eq, StateT.run_bind, liftM_run_StateT, bind_assoc]
-  simp only [pure_bind, map_bind]
-  rfl
-
-/-- Running a state-lifted computation that ends by lifting a stateless continuation `f`
-discards the threaded state exactly as `run'` followed by `f`. -/
-private lemma run'_bind_liftM {σ β γ : Type} (N : StateT σ ProbComp β)
-    (f : β → ProbComp γ) (s : σ) :
-    (N >>= fun a => (liftM (f a) : StateT σ ProbComp γ)).run' s = N.run' s >>= f := by
-  rw [StateT.run'_eq, StateT.run_bind, StateT.run'_eq, map_bind, bind_map_left]
-  refine bind_congr fun p => ?_
-  rw [liftM_run_StateT, map_bind]
-  simp only [map_pure]
-  rw [bind_pure]
-
 /-- The output distribution that the ideal PRF reduction feeds to the PRG adversary:
 sample an initial seed, then read `n` output blocks off the lazy random oracle chain. -/
-noncomputable def idealOutputs (n : ℕ) : ProbComp (List.Vector O n) := do
+def idealOutputs (n : ℕ) : ProbComp (List.Vector O n) := do
   let seed ← $ᵗ S
   (simulateQ (prfIdealQueryImpl (D := S) (R := S × O)) (oracleOutputs n seed)).run' ∅
 
@@ -218,22 +183,29 @@ lemma prfIdealExp_prfReduction_eq (adv : PRGAdversary (List.Vector O n)) :
     PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv) =
       (idealOutputs (S := S) (O := O) n >>= adv) := by
   unfold PRFScheme.prfIdealExp prfReduction idealOutputs
-  rw [simulateQ_bind, simulateQ_prfIdealQueryImpl_liftComp, run'_liftM_bind, bind_assoc]
-  refine bind_congr fun seed => ?_
-  rw [simulateQ_bind]
-  simp only [simulateQ_prfIdealQueryImpl_liftComp]
-  rw [run'_bind_liftM]
+  rw [simulateQ_bind, simulateQ_prfIdealQueryImpl_liftComp, StateT.run'_liftM_bind]
+  calc
+    _ = (($ᵗ S) >>= fun seed =>
+        (simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
+          (oracleOutputs n seed)).run' ∅ >>= adv) := by
+      refine bind_congr fun seed => ?_
+      rw [simulateQ_bind]
+      simp only [simulateQ_prfIdealQueryImpl_liftComp]
+      rw [StateT.run'_bind_liftM]
+    _ = _ := (bind_assoc ($ᵗ S)
+      (fun seed => (simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
+        (oracleOutputs n seed)).run' ∅) adv).symm
 
 /-- The per-seed output distribution: run the lazy random oracle chain for `n` rounds from a
 fixed initial state `seed`, collecting the output blocks. Averaging over `seed ← $ᵗ S` gives
 `idealOutputs`. -/
-noncomputable def seedOutputs (n : ℕ) (seed : S) : ProbComp (List.Vector O n) :=
+def seedOutputs (n : ℕ) (seed : S) : ProbComp (List.Vector O n) :=
   (simulateQ (prfIdealQueryImpl (D := S) (R := S × O)) (oracleOutputs n seed)).run' ∅
 
 /-- The per-seed collision experiment: run the lazy random oracle chain for `n` rounds from a
 fixed initial state `seed`, and test whether any queried state repeats. Averaging over
 `seed ← $ᵗ S` gives `idealCollisionExp`. -/
-noncomputable def seedCollisionExp (n : ℕ) (seed : S) : ProbComp Bool := do
+def seedCollisionExp (n : ℕ) (seed : S) : ProbComp Bool := do
   let states ←
     (simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
       (oracleVisitedStates n seed)).run' ∅
@@ -257,7 +229,7 @@ random oracle chain for `N` rounds from state `s`, the bad event is that the cha
 state (`¬ Nodup`) or revisits a state already present in `c`. For `c = ∅` this reduces to
 `seedCollisionExp`. The generalized cache is the induction vehicle: each fresh step extends
 `c` by the just-visited state. -/
-noncomputable def genCollisionExp (N : ℕ) (s : S) (c : (S →ₒ S × O).QueryCache) :
+def genCollisionExp (N : ℕ) (s : S) (c : (S →ₒ S × O).QueryCache) :
     ProbComp Bool := do
   let states ←
     (simulateQ (prfIdealQueryImpl (D := S) (R := S × O)) (oracleVisitedStates N s)).run' c
@@ -276,12 +248,10 @@ private lemma simulateQ_oracleOutputs_succ_run' (N : ℕ) (s : S)
           (oracleOutputs N p.1.1)).run' p.2
         pure (p.1.2 ::ᵥ rest)) := by
   rw [oracleOutputs]
-  simp only [simulateQ_bind, simulateQ_prfIdealQueryImpl_inr, StateT.run'_eq, StateT.run_bind,
-    map_bind]
-  refine bind_congr fun a => ?_
+  simp only [simulateQ_bind, simulateQ_prfIdealQueryImpl_functionQuery, StateT.run'_bind']
+  refine bind_congr fun a : (S × O) × (S →ₒ S × O).QueryCache => ?_
   obtain ⟨⟨s', out⟩, c'⟩ := a
-  simp only [simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure, map_bind, map_pure,
-    bind_map_left]
+  simp [StateT.run'_eq]
 
 omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [Inhabited O]
   [Fintype O] [DecidableEq O] in
@@ -297,12 +267,10 @@ private lemma simulateQ_oracleVisitedStates_succ_run' (N : ℕ) (s : S)
           (oracleVisitedStates N p.1.1)).run' p.2
         pure (s ::ᵥ rest)) := by
   rw [oracleVisitedStates]
-  simp only [simulateQ_bind, simulateQ_prfIdealQueryImpl_inr, StateT.run'_eq, StateT.run_bind,
-    map_bind]
-  refine bind_congr fun a => ?_
+  simp only [simulateQ_bind, simulateQ_prfIdealQueryImpl_functionQuery, StateT.run'_bind']
+  refine bind_congr fun a : (S × O) × (S →ₒ S × O).QueryCache => ?_
   obtain ⟨⟨s', out⟩, c'⟩ := a
-  simp only [simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure, map_bind, map_pure,
-    bind_map_left]
+  simp [StateT.run'_eq]
 
 omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [Inhabited O]
   [Fintype O] [DecidableEq O] in
@@ -330,7 +298,7 @@ private lemma evalDist_uniformSample_vector_succ (N : ℕ) :
     𝒟[($ᵗ (List.Vector O (N + 1)))] =
       𝒟[(do let out ← $ᵗ O; let rest ← $ᵗ (List.Vector O N); pure (out ::ᵥ rest))] := by
   classical
-  haveI : Fintype O := Fintype.ofFinite O
+  have : Fintype O := Fintype.ofFinite O
   refine evalDist_ext fun v => ?_
   obtain ⟨out, rest, rfl⟩ : ∃ out rest, v = out ::ᵥ rest :=
     ⟨v.head, v.tail, (List.Vector.cons_head_tail v).symm⟩
@@ -449,7 +417,7 @@ lemma tvDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
     tvDist ((simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
           (oracleOutputs N s)).run' c) ($ᵗ (List.Vector O N)) ≤
       (Pr[= true | genCollisionExp N s c]).toReal := by
-  haveI : Fintype O := Fintype.ofFinite O
+  have : Fintype O := Fintype.ofFinite O
   induction N generalizing s c with
   | zero =>
     refine le_trans (le_of_eq ?_) ENNReal.toReal_nonneg
@@ -659,7 +627,7 @@ private lemma enncard_eq_sum_isCached (c : (S →ₒ S × O).QueryCache) :
   unfold QueryCache.enncard
   have himg : Sigma.fst '' c.toSet = {s : S | c.isCached s = true} := by
     ext s
-    simp only [Set.mem_image, Set.mem_setOf_eq]
+    simp only [Set.mem_image, Set.mem_ofPred_eq]
     constructor
     · rintro ⟨⟨t, u⟩, ht, rfl⟩
       rw [QueryCache.mem_toSet] at ht
@@ -678,7 +646,7 @@ private lemma enncard_eq_sum_isCached (c : (S →ₒ S × O).QueryCache) :
     rw [← himg, hinj.encard_image]
   rw [hencard, Set.encard_eq_coe_toFinset_card, Finset.sum_ite, Finset.sum_const, Finset.sum_const]
   simp only [mul_one, mul_zero, add_zero, nsmul_eq_mul]
-  rw [Set.toFinset_setOf]
+  rw [Set.toFinset_ofPred]
   norm_cast
 
 omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [Inhabited O]

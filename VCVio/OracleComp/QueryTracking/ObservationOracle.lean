@@ -212,9 +212,9 @@ lemma runObs_liftM_query_inl [LawfulMonad m] (base : QueryImpl spec m)
     runObs base encode ((liftM (OracleSpec.query t : OracleQuery spec _) :
         OracleComp (spec + ObsSpec Ev) _)) = (·, 1) <$> base t := by
   change (simulateQ ((eraseObsImpl base).withCost (obsCostFn encode))
-    (liftM (liftM (OracleSpec.query t : OracleQuery spec _) :
-      OracleQuery (spec + ObsSpec Ev) _))).run = _
-  simp [QueryImpl.withCost, eraseObsImpl, obsCostFn]
+    (liftM ((spec + ObsSpec Ev).query (Sum.inl t)))).run = _
+  rw [simulateQ_spec_query, QueryImpl.withCost_apply, eraseObsImpl_inl]
+  simp [obsCostFn]
 
 /-- `runObs` on a lifted base-spec computation: the trace is `1` (monoid identity). -/
 @[simp]
@@ -238,9 +238,9 @@ lemma runObs_observe [LawfulMonad m] (base : QueryImpl spec m) (encode : Ev → 
         OracleComp (spec + ObsSpec Ev) PUnit) =
       pure (PUnit.unit, encode e) := by
   change (simulateQ ((eraseObsImpl base).withCost (obsCostFn encode))
-    (liftM (liftM (OracleSpec.query e : OracleQuery (ObsSpec Ev) _) :
-      OracleQuery (spec + ObsSpec Ev) _))).run = _
-  simp [QueryImpl.withCost, eraseObsImpl, obsCostFn]
+    (liftM ((spec + ObsSpec Ev).query (Sum.inr e)))).run = _
+  rw [simulateQ_spec_query, QueryImpl.withCost_apply, eraseObsImpl_inr]
+  simp [obsCostFn]
 
 end runObs
 

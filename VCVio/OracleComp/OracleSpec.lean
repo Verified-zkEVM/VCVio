@@ -29,6 +29,20 @@ Defined as a map from each input to the type of the oracle's output. -/
 def OracleSpec (ι : Type u) : Type (max u (v + 1)) :=
   ι → Type v
 
+/- `OracleSpec` is a one-field wrapper around `ι → Type v`, and every layer above it —
+`toPFunctor`, `ofFn`, `unifSpec`, `OracleComp`, `ProbComp` — is `@[reducible]`. Tactics that
+normalize a goal by unfolding reducible declarations therefore dissolve an oracle computation
+all the way down to a bare `PFunctor` literal, and then have to re-synthesize the semantics
+instances (`IsProbabilitySpec`, `MonadLiftT _ PMF`, …) at that erased type. Those instances are
+indexed by `spec.toPFunctor`, so recovering `spec` from the literal needs `OracleSpec` itself to
+unfold, which instance transparency otherwise forbids — synthesis fails and the tactic reports
+that it cannot canonicalize the instance rather than simply not firing.
+
+Making the wrapper transparent at instance transparency closes that gap for every such tactic at
+once. It is not a reducibility loophole: the wrapper carries no content to hide, and the abstract
+API above it (`Domain`, `Range`, `query`, and the spec combinators) is unaffected. -/
+attribute [implicit_reducible] OracleSpec
+
 namespace OracleSpec
 
 variable {ι : Type u}
@@ -90,7 +104,8 @@ section add
 /-- `spec₁ + spec₂` specifies access to oracles in both `spec₁` and `spec₂`.
 The input is split as a sum type of the two original input sets.
 This corresponds exactly to addition of the corresponding `PFunctor`. -/
-instance {ι ι'} : HAdd (OracleSpec ι) (OracleSpec ι') (OracleSpec (ι ⊕ ι')) where
+@[implicit_reducible] instance {ι ι'} :
+    HAdd (OracleSpec ι) (OracleSpec ι') (OracleSpec (ι ⊕ ι')) where
   hAdd spec spec' := Sum.elim spec spec'
 
 lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :

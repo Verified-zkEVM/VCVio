@@ -253,7 +253,7 @@ query bounds) and `isTotalQueryBound_bind` (composition through dependent bind).
 private lemma extractabilityInner_totalBound [Finite C] {t : ℕ}
     (A : ExtractAdversary M S C AUX t) :
     IsTotalQueryBound (extractabilityInner A) (t + 1) := by
-  haveI : Fintype C := Fintype.ofFinite C
+  have : Fintype C := Fintype.ofFinite C
   -- extractabilityInner A =
   --   (simulateQ loggingOracle A.commit).run >>= fun ((cm, aux), tr) =>
   --     A.open_ aux >>= fun (m, s) =>
@@ -291,7 +291,7 @@ private lemma extractabilityInner_totalBound [Finite C] {t : ℕ}
 private lemma extractabilityInner_tagged_totalBound [Finite C] {t : ℕ}
     (A : ExtractAdversary M S C AUX t) :
     IsTotalQueryBound (extractabilityInner_tagged A) (t + 1) := by
-  haveI : Fintype C := Fintype.ofFinite C
+  have : Fintype C := Fintype.ofFinite C
   have h := extractabilityInner_totalBound A
   rw [extractabilityInner_eq_fst_tagged] at h
   rwa [show IsTotalQueryBound (Prod.fst <$> extractabilityInner_tagged A) (t + 1) ↔

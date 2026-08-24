@@ -73,7 +73,7 @@ The key property enabling this extractor is `UniqueResponses`: given the same
 `(statement, commitment, challenge)`, there is at most one valid response.
 So finding a second valid query at a different challenge gives a proper
 input pair for the Σ-protocol extractor. -/
-noncomputable def onlineExtract
+def onlineExtract
     (x : Stmt) (π : FischlinProof Commit Chal Resp ρ)
     (log : QueryLog (fischlinROSpec Stmt Commit Chal Resp ρ b M)) : ProbComp (Option Wit) :=
   let comList := List.ofFn fun i => (π i).1
@@ -243,7 +243,7 @@ output is either `none` or an invalid witness.
 
 The `prover` argument is the raw function rather than `KnowledgeSoundnessAdv`
 to keep type inference tractable. -/
-noncomputable def knowledgeSoundnessExp
+def knowledgeSoundnessExp
     (prover : Stmt → M →
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
         (FischlinProof Commit Chal Resp ρ))
@@ -266,7 +266,7 @@ noncomputable def knowledgeSoundnessExp
 
 /-- The verification step of `knowledgeSoundnessExp`, as a standalone computation
 (definitionally the same term). -/
-private noncomputable def ksVerify (x : Stmt) (msg : M) (π : FischlinProof Commit Chal Resp ρ)
+private def ksVerify (x : Stmt) (msg : M) (π : FischlinProof Commit Chal Resp ρ)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache) :
     ProbComp (Bool × (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache) :=
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
@@ -279,7 +279,7 @@ private noncomputable def ksVerify (x : Stmt) (msg : M) (π : FischlinProof Comm
 
 /-- The sampling phase of `knowledgeSoundnessExp` (prover run + verification), keeping the proof,
 the random-oracle log, and the verdict, but discarding the extractor. -/
-private noncomputable def ksSample
+private def ksSample
     (prover : Stmt → M →
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
         (FischlinProof Commit Chal Resp ρ))
@@ -369,20 +369,20 @@ private lemma knowledgeSoundnessExp_bad_le_misses
 
 /-- The lifted `unifSpec` forwarder on the logging stack, exactly as in
 `knowledgeSoundnessExp`. -/
-private noncomputable def idImplW {ι : Type} (hashSpec : OracleSpec ι) :
+private def idImplW {ι : Type} (hashSpec : OracleSpec ι) :
     QueryImpl unifSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
     (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp))
 
 /-- The logged random oracle, exactly as in `knowledgeSoundnessExp`. -/
-private noncomputable def loggedROW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
+private def loggedROW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
     [hashSpec.DecidableEq] [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl hashSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   (hashSpec.randomOracle).withLogging
 
 /-- The combined logging implementation, exactly the `idImpl + loggedRO` of
 `knowledgeSoundnessExp` and `ksSample`. -/
-private noncomputable def compositeW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
+private def compositeW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
     [hashSpec.DecidableEq] [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl (unifSpec + hashSpec)
       (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
@@ -497,6 +497,7 @@ private theorem mem_support_run_correspondence {ι : Type} {hashSpec : OracleSpe
               rw [loggedROW_run_run_none hc, support_map] at hp
               obtain ⟨v, hv, hpe⟩ := hp
               obtain ⟨⟨rfl, rfl⟩, rfl⟩ := hpe
+              change hashSpec.Range j at u
               refine ⟨le_trans (QueryCache.le_cacheQuery _ hc) hmono, ?_, ?_⟩
               · intro e he
                 simp only [Prod.map, id, List.cons_append, List.nil_append,
@@ -666,7 +667,7 @@ private lemma probOutput_mOfFn_uniformSample {α : Type} [SampleableType α] [Fi
     (n : ℕ) (w : Fin n → α) :
     Pr[= w | Fin.mOfFn n (fun _ => ($ᵗ α : ProbComp α))]
       = (Fintype.card α : ℝ≥0∞)⁻¹ ^ n := by
-  letI : DecidableEq α := Classical.decEq α
+  let : DecidableEq α := Classical.decEq α
   induction n with
   | zero =>
     have hw : w = Fin.elim0 := funext fun i => i.elim0
@@ -882,52 +883,6 @@ private lemma partialSmallSumCount_none :
   congr 1
   refine Finset.filter_congr fun v _ => ?_
   simp
-
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
-/-- Output probabilities of an independent product `Fin.mOfFn` multiply coordinatewise. -/
-private lemma probOutput_mOfFn {α : Type} [Finite α] (n : ℕ)
-    (g : Fin n → ProbComp α) (v : Fin n → α) :
-    Pr[= v | Fin.mOfFn n g] = ∏ i, Pr[= v i | g i] := by
-  letI : Fintype α := Fintype.ofFinite α
-  letI : DecidableEq α := Classical.decEq α
-  induction n with
-  | zero =>
-      have hv : v = Fin.elim0 := funext fun i => i.elim0
-      subst hv
-      simp [Fin.mOfFn, probOutput_pure]
-  | succ n ih =>
-      simp only [Fin.mOfFn]
-      rw [probOutput_bind_eq_sum_fintype]
-      have hinner : ∀ a : α,
-          Pr[= v | Fin.mOfFn n (fun i => g i.succ) >>= fun rest => pure (Fin.cons a rest)]
-            = if a = v 0 then Pr[= Fin.tail v | Fin.mOfFn n fun i => g i.succ] else 0 := by
-        intro a
-        rw [probOutput_bind_eq_sum_fintype]
-        have hiff : ∀ rest : Fin n → α,
-            (v = Fin.cons a rest) ↔ (a = v 0 ∧ rest = Fin.tail v) := by
-          intro rest
-          constructor
-          · intro hEq
-            refine ⟨by rw [hEq, Fin.cons_zero], funext fun k => ?_⟩
-            have := congrFun hEq k.succ
-            rw [Fin.cons_succ] at this
-            exact this.symm
-          · rintro ⟨rfl, rfl⟩
-            exact (Fin.cons_self_tail v).symm
-        by_cases ha : a = v 0
-        · rw [if_pos ha]
-          subst ha
-          simp only [probOutput_pure, hiff, true_and]
-          simp [mul_ite]
-        · rw [if_neg ha]
-          refine Finset.sum_eq_zero fun rest _ => ?_
-          rw [probOutput_pure, if_neg (fun hEq => ha ((hiff rest).mp hEq).1), mul_zero]
-      simp only [hinner, mul_ite, mul_zero]
-      rw [Finset.sum_ite_eq' Finset.univ (v 0)
-        (fun a => Pr[= a | g 0] * Pr[= Fin.tail v | Fin.mOfFn n fun i => g i.succ]),
-        if_pos (Finset.mem_univ _), ih, Fin.prod_univ_succ]
-      rfl
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
@@ -1210,7 +1165,7 @@ private lemma partialSmallSumCount_le_pow (g : Fin ρ → Option (Fin (2 ^ b))) 
     refine Finset.card_le_card_of_injOn
       (fun v j => v j.1) (fun v _ => Finset.mem_univ _) ?_
     intro v hv w hw hvw
-    simp only [Finset.coe_filter, Finset.mem_univ, true_and, Set.mem_setOf_eq] at hv hw
+    simp only [Finset.coe_filter, Finset.mem_univ, true_and, Set.mem_ofPred_eq] at hv hw
     funext j
     by_cases hj : g j = none
     · exact congrFun hvw ⟨j, Finset.mem_filter.mpr ⟨Finset.mem_univ j, hj⟩⟩
@@ -1431,7 +1386,7 @@ private lemma EP_bind_le_const {α β : Type} {mx : ProbComp α} {my : α → Pr
 
 /-- The lazy random-oracle simulation for a constant-range hash spec: forward `unifSpec`
 queries, lazily sample-and-cache hash queries. Abstract analogue of `fischlinImpl`. -/
-@[reducible] private noncomputable def roImpl (b' : ℕ) (T : Type) [DecidableEq T] :
+@[reducible] private def roImpl (b' : ℕ) (T : Type) [DecidableEq T] :
     QueryImpl (unifSpec + (T →ₒ Fin (2 ^ b')))
       (StateT (T →ₒ Fin (2 ^ b')).QueryCache ProbComp) :=
   unifFwdImpl (T →ₒ Fin (2 ^ b')) + randomOracle (spec := T →ₒ Fin (2 ^ b'))
@@ -2065,8 +2020,10 @@ private lemma loggedImpl_run_run_inr_none {ι : Type} {hashSpec : OracleSpec ι}
     QueryImpl.withCaching_run_none _ h]
   rw [show uniformSampleImpl (spec := hashSpec) j = ($ᵗ hashSpec.Range j) from rfl]
   rw [map_eq_bind_pure_comp, bind_assoc]
-  simp only [Function.comp_apply, pure_bind, map_eq_bind_pure_comp]
-  rfl
+  simp only [Function.comp_apply, pure_bind, StateT.run_pure]
+  exact (map_eq_bind_pure_comp ProbComp
+    (fun u : hashSpec.Range j => ((u, ([⟨j, u⟩] : QueryLog hashSpec)), c.cacheQuery j u))
+    ($ᵗ hashSpec.Range j)).symm
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
@@ -2121,7 +2078,8 @@ private theorem dropLog_run_eq {ι : Type} {hashSpec : OracleSpec ι} [Decidable
       cases t with
       | inl i =>
           rw [loggedImpl_run_run_inl, unloggedImpl_run_inl]
-          simp only [bind_map_left, Functor.map_map, Prod.map_fst, id_eq]
+          simp only [Functor.map_map, Prod.map_fst, id_eq]
+          erw [bind_map_left]
           exact bind_congr fun u => ih u cache
       | inr j =>
           cases hc : cache j with
@@ -2131,7 +2089,9 @@ private theorem dropLog_run_eq {ι : Type} {hashSpec : OracleSpec ι} [Decidable
               exact ih u cache
           | none =>
               rw [loggedImpl_run_run_inr_none hc, unloggedImpl_run_inr_none hc]
-              simp only [bind_map_left, Functor.map_map, Prod.map_fst, id_eq]
+              simp only [Functor.map_map, Prod.map_fst, id_eq]
+              erw [bind_map_left]
+              erw [bind_map_left]
               exact bind_congr fun u => ih u (cache.cacheQuery j u)
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
@@ -2488,7 +2448,7 @@ private lemma knowledgeSoundness_badEvent_le
     Pr[= true | knowledgeSoundnessExp σ hr ρ b S M adv.run x msg]
       ≤ (↑(Q + 1) : ℝ≥0∞) * ↑(smallSumCount ρ b S) / ((↑(2 ^ b) : ℝ≥0∞) ^ ρ) := by
   classical
-  letI : ∀ c, DecidablePred (ksDead σ ρ b M x msg c) := fun _ => Classical.decPred _
+  let : ∀ c, DecidablePred (ksDead σ ρ b M x msg c) := fun _ => Classical.decPred _
   -- Step 1: bound the bad event by the verifier-accepts-while-scan-misses event.
   refine le_trans (knowledgeSoundnessExp_bad_le_misses' σ hr ρ b S M hss adv.run x msg) ?_
   -- Step 2: factor the miss event through the logged prover run as an expected payoff.

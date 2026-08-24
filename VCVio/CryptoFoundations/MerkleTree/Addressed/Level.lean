@@ -49,7 +49,7 @@ theorem level_functional_completeness (th : TweakableHash PkSeed Tweak (Y × Y) 
     getPutativeRootLevel th pk tweakAt idx (ld.get idx)
       (generateProof (buildMerkleTreeLevel th pk tweakAt ld) idx)
     = (buildMerkleTreeLevel th pk tweakAt ld).getRootValue := by
-  letI : DecidableEq Y := Classical.decEq Y
+  let : DecidableEq Y := Classical.decEq Y
   exact addressed_functional_completeness idx ld (levelNodeHash th pk tweakAt)
 
 omit [DecidableEq Y] in
@@ -70,7 +70,7 @@ theorem level_oriented_binding (th : TweakableHash PkSeed Tweak (Y × Y) Y)
           ((childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a).1,
            (childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a).2)
         = th.eval pk (tweakAt a.subtreeDepth) (c.1, c.2) := by
-  letI : DecidableEq Y := Classical.decEq Y
+  let : DecidableEq Y := Classical.decEq Y
   exact addressed_oriented_binding (levelNodeHash th pk tweakAt) ld idx y proof₂ hroot hne
 
 end AddressedMerkleTree

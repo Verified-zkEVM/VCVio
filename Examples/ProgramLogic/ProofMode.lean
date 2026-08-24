@@ -36,7 +36,7 @@ section HandlerNormalization
 /-- `handler_step` consumes PolyFun's generic handler normal form. -/
 example {m : Type → Type} [Monad m] [LawfulMonad m]
     (h : PFunctor.Handler.Stateful m Nat (PFunctor.monomial Bool Nat))
-    (query : Bool) (state : Nat) :
+    (query : (PFunctor.monomial Bool Nat).A) (state : Nat) :
     h.run (PFunctor.FreeM.lift query) state = (h query).run state := by
   handler_step
 

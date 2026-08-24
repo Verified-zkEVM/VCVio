@@ -7,6 +7,7 @@ Authors: Oleksandr Vovkotrub
 module
 
 public import VCVio.CryptoFoundations.Fischlin.Defs
+public import VCVio.EvalDist.IndepProduct
 
 /-!
 # Fischlin Transform: Completeness
@@ -48,7 +49,7 @@ is `2^b - (k+1)` (truncating to `0` once `k+1 > 2^b`), out of `2^b` total. -/
 private lemma probEvent_val_gt_uniformSample (b k : ℕ) :
     Pr[fun (x : Fin (2 ^ b)) => k < x.val | ($ᵗ (Fin (2 ^ b)))]
       = (↑(2 ^ b - (k + 1)) : ℝ≥0∞) / ↑(2 ^ b) := by
-  haveI : NeZero (2 ^ b) := ⟨Nat.two_pow_pos b |>.ne'⟩
+  have : NeZero (2 ^ b) := ⟨Nat.two_pow_pos b |>.ne'⟩
   rw [probEvent_uniformSample]
   simp only [Fintype.card_fin]
   norm_cast
@@ -115,7 +116,7 @@ private lemma minUnifAux_probEvent_gt (b k t : ℕ) (best : Option (Fin (2 ^ b))
         by_cases hx : (x : ℕ) = 0
         · simp only [hx, if_true]
           rw [probEvent_pure_eq_indicator]
-          simp only [minGt, Set.indicator, Set.mem_setOf_eq, hx]
+          simp only [minGt, Set.indicator, Set.mem_ofPred_eq, hx]
           simp
         · simp only [hx, if_false]
           rw [ih]
@@ -228,7 +229,7 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
       rw [probEvent_pure_eq_indicator, probEvent_pure_eq_indicator]
       refine le_of_eq ?_
       by_cases h : minGt k (Option.map (fun t => t.2.2) best) <;>
-        simp [Set.indicator, Set.mem_setOf_eq, h]
+        simp [Set.indicator, Set.mem_ofPred_eq, h]
   | cons ω rest ih =>
       rw [fischlinUnifSearch]
       unfold minUnifAux
@@ -241,7 +242,7 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
       · simp only [hh, if_true]
         rw [probEvent_pure_eq_indicator, probEvent_pure_eq_indicator]
         refine le_of_eq ?_
-        simp [Set.indicator, Set.mem_setOf_eq, minGt]
+        simp [Set.indicator, Set.mem_ofPred_eq, minGt]
       · simp only [hh, if_false]
         refine le_trans (ih _) (le_of_eq ?_)
         congr 1
@@ -254,7 +255,7 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
 /-- The full simulation implementation (`unifFwdImpl + randomOracle`) interpreting the Fischlin
 random-oracle world into `StateT QueryCache ProbComp`. This is definitionally the implementation
 used by the bundled `withStateOracle` runtime. -/
-@[reducible] noncomputable def fischlinImpl :
+@[reducible] def fischlinImpl :
     QueryImpl (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
       (StateT (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache ProbComp) :=
   unifFwdImpl (fischlinROSpec Stmt Commit Chal Resp ρ b M)
@@ -292,7 +293,7 @@ Mirrors `keygen >>= sign >>= verify`, but the prover's per-repetition search use
 `fischlinUnifSearch` (fresh uniform draws) and the verifier reads the kept hash value
 directly from the search result instead of re-querying the random oracle. Returns the verdict
 `allVerified && (hashSum ≤ S)`. -/
-private noncomputable def modelGame : ProbComp Bool := do
+private def modelGame : ProbComp Bool := do
   let (pk, sk) ← hr.gen
   let commits : Fin ρ → Commit × PrvState ← Fin.mOfFn ρ fun _ => σ.commit pk sk
   let comVec : Fin ρ → Commit := fun i => (commits i).1
@@ -671,25 +672,6 @@ private lemma fischlinSearch_run_preserves_offrep (pk : Stmt) (sk : Wit) (sc : P
         · simp only [hx, if_false] at hmem
           exact ih _ _ hmem
 
-omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
-/-- Coordinatewise support membership for an independent product `Fin.mOfFn n g`: every value
-in its support has each component in the support of the corresponding factor. -/
-private lemma mem_support_mOfFn {α : Type} (n : ℕ) (g : Fin n → ProbComp α)
-    (v : Fin n → α) (hv : v ∈ support (Fin.mOfFn n g)) (i : Fin n) :
-    v i ∈ support (g i) := by
-  induction n with
-  | zero => exact i.elim0
-  | succ n ih =>
-      rw [Fin.mOfFn, mem_support_bind_iff] at hv
-      obtain ⟨a, ha, hv⟩ := hv
-      rw [mem_support_bind_iff] at hv
-      obtain ⟨rest, hrest, hv⟩ := hv
-      simp only [support_pure, Set.mem_singleton_iff] at hv
-      subst hv
-      refine Fin.cases ?_ (fun j => ?_) i
-      · simpa using ha
-      · rw [Fin.cons_succ]
-        exact ih (fun j => g j.succ) rest hrest j
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
@@ -1221,52 +1203,6 @@ private lemma fischlin_game_eq_model (msg : M) :
   change Pr[= true | StateT.run' (simulateQ (fischlinImpl ρ b M) _) ∅] = _
   rw [probOutput_def, probOutput_def, fischlin_game_run'_eq_modelGame σ hr ρ b S M msg]
 
-/-- Marginalizing a single coordinate `i` out of an independent product `Fin.mOfFn n g`:
-the probability that the `i`-th component satisfies `p` is at most the probability that the
-single computation `g i` satisfies `p`. The other coordinates integrate out to mass `≤ 1`,
-so the inequality may be strict when those computations can fail. -/
-private lemma probEvent_mOfFn_coord_le {α : Type} (n : ℕ) (g : Fin n → ProbComp α)
-    (i : Fin n) (p : α → Prop) :
-    Pr[fun v => p (v i) | Fin.mOfFn n g] ≤ Pr[fun x => p x | g i] := by
-  classical
-  induction n with
-  | zero => exact i.elim0
-  | succ n ih =>
-      rw [Fin.mOfFn]
-      refine Fin.cases ?_ (fun j => ?_) i
-      · -- coordinate `0`: the head `a ← g 0` determines `v 0`; the tail integrates to `≤ 1`.
-        rw [probEvent_bind_eq_tsum]
-        calc ∑' a, Pr[= a | g 0]
-                * Pr[fun v => p (v 0) | Fin.mOfFn n (fun j => g j.succ) >>=
-                    fun rest => (pure (Fin.cons a rest) : ProbComp (Fin (n+1) → α))]
-            ≤ ∑' a, Pr[= a | g 0] * (if p a then (1 : ℝ≥0∞) else 0) := by
-                refine ENNReal.tsum_le_tsum (fun a => mul_le_mul' le_rfl ?_)
-                refine probEvent_bind_le_of_forall_le (fun rest _ => ?_)
-                rw [probEvent_pure_eq_indicator]
-                by_cases hp : p a <;>
-                  simp [Set.indicator, Set.mem_setOf_eq, Fin.cons_zero, hp]
-          _ = Pr[fun x => p x | g 0] := by
-                rw [probEvent_eq_tsum_ite]
-                refine tsum_congr (fun a => ?_)
-                split <;> simp_all
-      · -- coordinate `j+1`: `v (j+1) = rest j`; peel the head and recurse on the tail.
-        rw [probEvent_bind_eq_tsum]
-        calc ∑' a, Pr[= a | g 0]
-                * Pr[fun v => p (v j.succ) | Fin.mOfFn n (fun j => g j.succ) >>=
-                    fun rest => (pure (Fin.cons a rest) : ProbComp (Fin (n+1) → α))]
-            ≤ ∑' a, Pr[= a | g 0] * Pr[fun x => p x | g j.succ] := by
-                refine ENNReal.tsum_le_tsum (fun a => mul_le_mul' le_rfl ?_)
-                refine le_trans (le_of_eq ?_) (ih (fun j => g j.succ) j)
-                rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
-                refine tsum_congr (fun rest => ?_)
-                rw [probEvent_pure_eq_indicator]
-                by_cases hp : p (rest j) <;>
-                  simp [Set.indicator, Set.mem_setOf_eq, Fin.cons_succ, hp]
-          _ ≤ Pr[fun x => p x | g j.succ] := by
-                rw [ENNReal.tsum_mul_right]
-                exact le_trans (mul_le_mul' tsum_probOutput_le_one le_rfl)
-                  (le_of_eq (one_mul _))
-
 /-- Support membership for the pure-probability search: any kept triple `(ω, resp, h)` has its
 challenge drawn from the search list `cs` (or from the seed `best`), and its response in the
 support of `σ.respond pk sk sc ω`. This lets perfect completeness apply to the chosen transcript. -/
@@ -1473,7 +1409,7 @@ private lemma model_reject_le (_hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (_msg 
           ≤ ((↑(2 ^ b - (S / ρ + 1)) : ℝ≥0∞) / ↑(2 ^ b)) ^ FinEnum.card Chal := by
       intro i
       -- Marginalize coordinate `i` of the independent product.
-      refine le_trans (probEvent_mOfFn_coord_le ρ _ i (fun o => S / ρ < minH (fun _ => o) i)) ?_
+      refine le_trans (probEvent_coord_mOfFn_le ρ _ i (fun o => S / ρ < minH (fun _ => o) i)) ?_
       -- Reading the projected hash dominates the search-result hash event.
       refine le_trans (probEvent_mono'' (q := fun o => minGt (S / ρ) (o.map (fun t => t.2.2)))
         (fun o ho => ?_)) ?_
