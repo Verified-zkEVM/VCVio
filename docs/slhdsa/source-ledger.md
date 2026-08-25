@@ -21,7 +21,10 @@ bundle), or against `SLHDSA_REFERENCE_ROOT` when set. `repo:` locators resolve a
 the paths below are unambiguous without baking this host's absolute path into the evidence format.
 The S01 gate compares every key/value of each controlling FIPS, server, compatibility, protocol,
 and SP IPD record; local file/git byte or revision verification is a separate mandatory check when
-the sibling bundle is present.
+the sibling bundle is present.  The repository's own revision identifies the accepted session base
+and must be an ancestor of `HEAD`; exact active Lean bytes are bound separately by the source-tree
+composite.  This avoids the impossible requirement that a committed manifest contain its own future
+commit identifier.
 
 | Class | Source | Revision/hash | Use |
 |---|---|---|---|
@@ -34,16 +37,16 @@ the sibling bundle is present.
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20171130/Supporting_Documentation/sphincs.pdf` | SHA-256 `8365127b5619356a4ca0a122b44b0458a7e5d447cb8997a07c2e70e43b085bde` | Round 1 history only |
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20190329/Supporting_Documentation/sphincs.pdf` | SHA-256 `58804cc62b4fbfac8e5f4e9df80639d719a7aaf13e706713ff605d168cbd2b23` | Round 2 history only |
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20201001/Supporting_Documentation/sphincs.pdf` | SHA-256 `540968e4d58cb582d5f85636beed7a10894622ed8b99a7a863f85996869743c6` | Round 3 history only |
-| primary/evidence | VCVio | git `f1853af40da1efa11a71c2d7011996eebdbf6938` | S00 code baseline; SLH-DSA source-tree composite SHA-256 `d6b782daf07d6cbd4a9a3542361ff22176db139d14e98911abe512a9546101b7` |
+| primary/evidence | VCVio | session base git `7b77e700b3d24a6ab94ed741a650954bbd90859a` | S03 predecessor; 26-file active SLH-DSA source-tree composite SHA-256 `9aea79dea425422704d2ca53182963903404424ca0b11820e45f6076c436def3` |
 | secondary | `sibling:reports/00-SYNTHESIS.md` … `07-literature-and-resources.md` | hashes recorded below | Orientation only; corrected findings cannot be cited as primary authority |
 | prompt | `sibling:prompt.md` | SHA-256 `2b40bca6253eeb3bcf84fa9178a66309509f446b07655e57342417319cd4d7cf` | Requirements; cryptographic claims require independent authority |
 
-The VCVio composite is specifically SHA-256 of the 22-line GNU `sha256sum` manifest produced, in
+The VCVio composite is specifically SHA-256 of the 26-line GNU `sha256sum` manifest produced, in
 C-locale glob order, by:
 
 ```text
 LC_ALL=C sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean \
-  HashSig/SLHDSA/Concrete/*.lean | sha256sum
+  HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum
 ```
 
 Each manifest line is lowercase file hash, two ASCII spaces, repository-relative path, and LF. This

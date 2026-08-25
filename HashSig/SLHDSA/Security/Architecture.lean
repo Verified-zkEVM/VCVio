@@ -238,32 +238,32 @@ def runTwoPhase {ι : Type} {spec : OracleSpec ι} {Public Answer : Type}
 
 def chosenTargets {p : Params} {prims : Primitives p} {role : TargetRole} :
     QueryLog (chosenTargetSpec prims role) →
-      List (TweakableTarget Adrs (TargetInput prims role))
-  | [] => []
-  | ⟨(address, input), _⟩ :: rest => ⟨address, input⟩ :: chosenTargets rest
+      List (TweakableTarget Adrs (TargetInput prims role)) :=
+  List.map fun entry => match entry with
+    | ⟨(address, input), _⟩ => ⟨address, input⟩
 
 def chosenTargetsC {p : Params} {prims : Primitives p} {role : TargetRole} :
     QueryLog (chosenTargetSpec prims role + collectionSpec prims) →
-      List (TweakableTarget Adrs (TargetInput prims role))
-  | [] => []
-  | ⟨.inl (address, input), _⟩ :: rest => ⟨address, input⟩ :: chosenTargetsC rest
-  | _ :: rest => chosenTargetsC rest
+      List (TweakableTarget Adrs (TargetInput prims role)) :=
+  List.filterMap fun entry => match entry with
+    | ⟨.inl (address, input), _⟩ => some ⟨address, input⟩
+    | _ => none
 
 def sampledTargets {p : Params} {prims : Primitives p} :
-    QueryLog (sampledTargetSpec prims + collectionSpec prims) → List (Adrs × prims.Y)
-  | [] => []
-  | ⟨.inl address, output⟩ :: rest => (address, output) :: sampledTargets rest
-  | _ :: rest => sampledTargets rest
+    QueryLog (sampledTargetSpec prims + collectionSpec prims) → List (Adrs × prims.Y) :=
+  List.filterMap fun entry => match entry with
+    | ⟨.inl address, output⟩ => some (address, output)
+    | _ => none
 
 def collectionTweaks {p : Params} {prims : Primitives p} {ι : Type}
     {leftSpec : OracleSpec ι} :
-    QueryLog (leftSpec + collectionSpec prims) → List Adrs
-  | [] => []
-  | ⟨.inr (.f address _), _⟩ :: rest => address :: collectionTweaks rest
-  | ⟨.inr (.h address _ _), _⟩ :: rest => address :: collectionTweaks rest
-  | ⟨.inr (.tlFors address _), _⟩ :: rest => address :: collectionTweaks rest
-  | ⟨.inr (.tlWots address _), _⟩ :: rest => address :: collectionTweaks rest
-  | _ :: rest => collectionTweaks rest
+    QueryLog (leftSpec + collectionSpec prims) → List Adrs :=
+  List.filterMap fun entry => match entry with
+    | ⟨.inr (.f address _), _⟩ => some address
+    | ⟨.inr (.h address _ _), _⟩ => some address
+    | ⟨.inr (.tlFors address _), _⟩ => some address
+    | ⟨.inr (.tlWots address _), _⟩ => some address
+    | _ => none
 
 def TargetTraceValid {p : Params} {Input : Type} (role : TargetRole)
     (targets : List (TweakableTarget Adrs Input)) : Prop :=
@@ -324,13 +324,12 @@ def itsrDefaultImpl {p : Params} (prims : Primitives p) [SampleableType prims.Y]
 
 def itsrOracleHistory {p : Params} {prims : Primitives p} (pk : PublicKey prims)
     (encode : MessageInput → List Byte) :
-    QueryLog (MessageInput →ₒ prims.Y) → List (ITSRRecord prims)
-  | [] => []
-  | ⟨request, randomizer⟩ :: rest =>
-      {
+    QueryLog (MessageInput →ₒ prims.Y) → List (ITSRRecord prims) :=
+  List.map fun entry => match entry with
+    | ⟨request, randomizer⟩ => {
         input := ⟨randomizer, request⟩
         digest := prims.Hmsg randomizer pk.pkSeed pk.pkRoot (encode request)
-      } :: itsrOracleHistory pk encode rest
+      }
 
 def itsrChallengeForgery {p : Params} {prims : Primitives p} (pk : PublicKey prims)
     (encode : MessageInput → List Byte) (input : ITSRInput prims) : ITSRRecord prims :=
@@ -339,38 +338,38 @@ def itsrChallengeForgery {p : Params} {prims : Primitives p} (pk : PublicKey pri
     digest := prims.Hmsg input.randomizer pk.pkSeed pk.pkRoot (encode input.request)
   }
 
-structure ReductionSystem {p : Params} (prims : Primitives p)
+structure ReductionSystem {p : Params} (prims : Primitives p) (scheme : SchemeInterface prims)
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] [SampleableType prims.Y]
     [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
     (conditions : ParameterConditions p) where
-  skgPrf : ClassicalAdversary prims →
+  skgPrf : ClassicalAdversary prims scheme →
     PRFScheme.PRFAdversary (prims.PkSeed × Adrs) prims.Y
-  mkgPrfMsg : ClassicalAdversary prims →
+  mkgPrfMsg : ClassicalAdversary prims scheme →
     PRFScheme.PRFAdversary (prims.Y × List Byte) prims.Y
-  hmsgItsr : ClassicalAdversary prims → PostHopITSRAdversary prims
-  forsFDspr : ClassicalAdversary prims →
+  hmsgItsr : ClassicalAdversary prims scheme → PostHopITSRAdversary prims
+  forsFDspr : ClassicalAdversary prims scheme →
     TwoPhaseAdversary (chosenTargetSpec prims .forsF) prims.PkSeed (ℕ × Bool)
-  forsFTcr : ClassicalAdversary prims →
+  forsFTcr : ClassicalAdversary prims scheme →
     TwoPhaseAdversary (chosenTargetSpec prims .forsF) prims.PkSeed (ℕ × prims.Y)
-  forsHTcrC : ClassicalAdversary prims →
+  forsHTcrC : ClassicalAdversary prims scheme →
     TwoPhaseAdversary (chosenTargetSpec prims .forsH + collectionSpec prims)
       prims.PkSeed (ℕ × (prims.Y × prims.Y))
-  forsTlTcrC : ClassicalAdversary prims →
+  forsTlTcrC : ClassicalAdversary prims scheme →
     TwoPhaseAdversary (chosenTargetSpec prims .forsTl + collectionSpec prims)
       prims.PkSeed (ℕ × Vector prims.Y p.k)
-  wotsFUdC : ClassicalAdversary prims →
+  wotsFUdC : ClassicalAdversary prims scheme →
     TwoPhaseAdversary (sampledTargetSpec prims + collectionSpec prims) prims.PkSeed Bool
-  wotsFTcrC : ClassicalAdversary prims →
+  wotsFTcrC : ClassicalAdversary prims scheme →
     TwoPhaseAdversary (chosenTargetSpec prims .wotsFTcr + collectionSpec prims)
       prims.PkSeed (ℕ × prims.Y)
-  wotsFPreC : ClassicalAdversary prims →
+  wotsFPreC : ClassicalAdversary prims scheme →
     TwoPhaseAdversary (sampledTargetSpec prims + collectionSpec prims)
       prims.PkSeed (ℕ × prims.Y)
-  wotsTlTcrC : ClassicalAdversary prims →
+  wotsTlTcrC : ClassicalAdversary prims scheme →
     TwoPhaseAdversary (chosenTargetSpec prims .wotsTl + collectionSpec prims)
       prims.PkSeed (ℕ × Vector prims.Y p.len)
-  xmssHTcrC : ClassicalAdversary prims →
+  xmssHTcrC : ClassicalAdversary prims scheme →
     TwoPhaseAdversary (chosenTargetSpec prims .xmssH + collectionSpec prims)
       prims.PkSeed (ℕ × (prims.Y × prims.Y))
 
@@ -503,11 +502,13 @@ noncomputable def itsrComponentProbability {p : Params} (prims : Primitives p)
 /-! ## Master term and theorem shape -/
 
 noncomputable def componentTerm {p : Params} (prims : Primitives p)
+    (scheme : SchemeInterface prims)
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] [SampleableType prims.Y]
     [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
     (conditions : ParameterConditions p) (encode : MessageInput → List Byte)
-    (system : ReductionSystem prims conditions) (adversary : ClassicalAdversary prims) :
+    (system : ReductionSystem prims scheme conditions)
+    (adversary : ClassicalAdversary prims scheme) :
     MasterTermRole → ℝ≥0∞
   | .skgPrf => probabilityDifference
       (boolEventProbability ((skgPrfScheme prims).prfRealExp (system.skgPrf adversary)))
@@ -540,23 +541,26 @@ structure ClassicalSecurityContext {p : Params} (prims : Primitives p)
     [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
     (_encode : MessageInput → List Byte) where
   conditions : ParameterConditions p
-  reductions : ReductionSystem prims conditions
+  scheme : SchemeInterface prims
+  reductions : ReductionSystem prims scheme conditions
 
 noncomputable def eufAdvantage {p : Params} (prims : Primitives p)
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] [SampleableType prims.Y]
     [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
-    (encode : MessageInput → List Byte) (adversary : ClassicalAdversary prims) : ℝ≥0∞ :=
-  Pr[fun sample => ForgerySuccess sample.1 encode sample.2 |
-    honestTranscriptDistribution prims encode adversary]
+    (scheme : SchemeInterface prims) (encode : MessageInput → List Byte)
+    (adversary : ClassicalAdversary prims scheme) : ℝ≥0∞ :=
+  Pr[fun sample => ForgerySuccess scheme sample.1 sample.2 |
+    honestTranscriptDistribution prims scheme encode adversary]
 
 noncomputable def repairedRHS {p : Params} {prims : Primitives p}
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] [SampleableType prims.Y]
     [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
     {encode : MessageInput → List Byte} (context : ClassicalSecurityContext prims encode)
-    (adversary : ClassicalAdversary prims) : ℝ≥0∞ :=
-  let term := componentTerm prims context.conditions encode context.reductions adversary
+    (adversary : ClassicalAdversary prims context.scheme) : ℝ≥0∞ :=
+  let term :=
+    componentTerm prims context.scheme context.conditions encode context.reductions adversary
   term .skgPrf
   + term .mkgPrfMsg
   + term .hmsgItsr
@@ -575,16 +579,16 @@ def RepairedMasterStatement {p : Params} {prims : Primitives p}
     [SampleableType prims.PkSeed] [SampleableType prims.Y]
     [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
     {encode : MessageInput → List Byte} (context : ClassicalSecurityContext prims encode) : Prop :=
-  ∀ (adversary : ClassicalAdversary prims) (qS qH : ℕ),
+  ∀ (adversary : ClassicalAdversary prims context.scheme) (qS qH : ℕ),
     AdversaryBounds adversary qS qH →
-      eufAdvantage prims encode adversary ≤ repairedRHS context adversary
+      eufAdvantage prims context.scheme encode adversary ≤ repairedRHS context adversary
 
 theorem repairedRHS_budget_independent {p : Params} {prims : Primitives p}
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] [SampleableType prims.Y]
     [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
     {encode : MessageInput → List Byte} (context : ClassicalSecurityContext prims encode)
-    (adversary : ClassicalAdversary prims) (_qS₁ _qH₁ _qS₂ _qH₂ : ℕ) :
+    (adversary : ClassicalAdversary prims context.scheme) (_qS₁ _qH₁ _qS₂ _qH₂ : ℕ) :
     repairedRHS context adversary = repairedRHS context adversary := rfl
 
 end SLHDSA.Security

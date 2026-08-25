@@ -11,8 +11,8 @@ Current records:
 - [S01 — authority and pinned conformance anchors](S01-authority-and-conformance.md): implementation
   reviews r0/r1/r2/r3/r4/r5/r6/r7/r8/r9/r10/r11/r12/r13/r14/r15 failed; independent r16 PASS accepted S01, making S02 eligible.
 - [S02 — theorem, oracle, and security architecture](S02-security-architecture.md): independent
-  r1/r2/r3 failed; independent r4 PASS with zero findings accepted S02 and made S03 eligible.
+  r1/r2/r3/r5 failed; r4 acceptance was invalidated by the complete r5 audit; repair awaits r6.
 - [S03 — data, widths, parameters, ADRS, and codecs](S03-data-widths-parameters-adrs-codecs.md):
-  bootstrap initialized from accepted S02; implementation and review have not started.
+  bootstrap retained from the former S02 boundary; blocked pending S02 r6.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

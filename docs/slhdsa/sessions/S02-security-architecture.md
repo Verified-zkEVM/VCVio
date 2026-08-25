@@ -1,6 +1,6 @@
 # S02 security architecture session
 
-Status: r1/r2/r3 failed; independent r4 PASS with zero findings; S02 accepted.
+Status: r1/r2/r3/r5 failed; r4 acceptance invalidated; repairs pending independent r6 review.
 
 Date: 2026-08-25
 Branch: `codex/sphincsplus-formalization`
@@ -13,7 +13,8 @@ the frozen harness, change rejected `HashSig/SLHDSA/Security.lean`, or touch con
 COV-005 and F-015/F-016/F-018 remain outside this session.
 
 The implementation is isolated in four new `SLHDSA.Security` modules plus generated umbrella
-imports. No commit, S02 push, or PR has been created.
+imports. The originally accepted implementation commit was `7b77e700`; r5 reopened it after the
+complete compiled-policy, provenance, traceability, and semantic audit.
 
 ## Authority extraction
 
@@ -101,7 +102,21 @@ R4 independently replayed all earlier counterexamples and primary-source compari
 PASS with zero blocking and zero nonblocking findings. Its immutable acceptance artifact is
 `reviews/S02-security-architecture-review-r4.md`. It records successful focused and full builds,
 source scans, event counterexamples, and the load-bearing axiom audit. This independent verdict,
-rather than the implementation narrative, accepts S02.
+rather than the implementation narrative, initially accepted S02. R5 later showed that r4 did not
+run the authoritative compiled policy or complete traceability/provenance gates, so that acceptance
+is no longer current.
+
+R5 returned FAIL with six blocking findings in the immutable artifact
+`reviews/S02-security-architecture-review-r5.md`:
+
+| finding | repair disposition pending r6 |
+| --- | --- |
+| R5-001 generated partial helpers | all eight source-recursive projections use total `List.map`, `filterMap`, or `foldr`; the seven-helper policy is unchanged |
+| R5-002 unreproducible acceptance revision | repository revision is an ancestor session base while exact active bytes are separately hashed |
+| R5-003 omitted S02 source provenance | the composite includes all four `Security/*.lean` modules and the ledger records the expanded recipe |
+| R5-004 absent traceability | matrices, declarations, findings, decisions, TCB, report, and indexes are synchronized |
+| R5-005 generic LHS hardwired to d=1 | `SchemeInterface` supplies signature/keygen/sign/verify/randomizer semantics to the experiment |
+| R5-006 stale transcript-derived target contract | plan, blueprint, specification, obligations, and module prose select standalone source-shaped games |
 
 ## Validation
 
@@ -117,8 +132,18 @@ term, RHS, and statement. Results were axiom-free or used only `propext`, `Class
 `Quot.sound`; no `sorryAx` occurred. `git diff --check`, the admission/runtime scan, removal scan for
 the impossible provider/post-hoc views, and repository scope audit all passed.
 
-The frozen S00/S01 harness has not been modified or rerun because S02 introduced no concrete
-descriptor/AST regression.
+R5 exposed one concrete manifest-semantic regression in the harness: exact-`HEAD` checking made a
+committed manifest self-referential and unreproducible. The narrow repair requires the recorded
+session base to be an ancestor of `HEAD`; exact active source bytes remain independently bound by
+the expanded composite. The frozen descriptor/AST subsystem is otherwise unchanged.
+
+The repaired pre-r6 gates report: all four focused modules and `lake build HashSig` PASS; the only
+build warning is the pre-existing legacy `Security.lean:150` admission; the static policy import
+observes 27 HashSig modules and 1,629 owned constants; the exact seven compiler helpers PASS; and
+the transitive axiom union is exactly `propext`, `Classical.choice`, `Quot.sound`, and the one
+allowlisted legacy `sorryAx`. `/tmp/S02R6Probe.lean` prints only the three standard axioms on every
+completed load-bearing root and no `sorryAx`. The docs/provenance gate verifies the 26-file source
+composite and passes.
 
 ## R4 review focus
 
@@ -141,4 +166,4 @@ descriptor/AST regression.
 - Refine honest signing internals when later construction proofs need their execution trace.
 - Prove component losslessness and the repaired master inequality.
 - Replace or retire the rejected legacy placeholder only in an authorized later session.
-- Begin successor work only from this independently accepted S02 boundary.
+- Begin successor work only after the repaired S02 tree receives independent r6 PASS.

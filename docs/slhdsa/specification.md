@@ -132,17 +132,20 @@ OID/output-length obligations remain separate specification checks.
 ## Security surfaces
 
 Security architecture precedes refactoring. It must expose the actual scheme public seed generated
-inside the EUF-CMA game, not a theorem parameter disconnected from the key. Target distributions
-are derived from honest transcripts and have strictly positive, formula-proved counts. Adversary
-predicates enforce signing/hash-query bounds; transcripts record oracle names, inputs, outputs,
-addresses, keys, message/context mode, and order. `Hmsg`/digest mapping gets an ITSR game; `T_l` and
-the full tweakable-hash family are not omitted. `yToBytes`/encoding coherence is a law when an
-abstract carrier is used.
+inside the EUF-CMA game, not a theorem parameter disconnected from the key. The attacked scheme and
+signature carrier are explicit interface parameters so the general architecture is not wired to the
+transitional `d = 1` implementation. Formula-proved positive values are caps for the source-shaped
+standalone component-game target oracles; actual traces may be shorter or empty, in which case a
+selected-target event fails. They are not asserted to be an exact family extracted from the outer
+EUF transcript. Adversary predicates enforce signing/hash-query bounds; transcripts record oracle
+names, inputs, outputs, addresses, keys, message/context mode, and order. `Hmsg`/digest mapping gets
+an ITSR game; `T_l` and the full tweakable-hash family are not omitted. `yToBytes`/encoding coherence
+is a law when an abstract carrier is used.
 
-The reference theorem shape and model remain a decision in S02. CCS 2019 Theorem 17's exact shape is
-recorded in the ledger; the newer tight EasyCrypt architecture must be compared declaration by
-declaration before selecting the master theorem. No invented `qS(qS+qH)/2^(8m)` loss is retained
-without a proved game hop.
+The S02 selection follows the repaired tight EasyCrypt twelve-term theorem in classical
+`OracleComp` semantics. CCS 2019 Theorem 17 remains historical comparison authority, and no QROM
+lifting or completed master proof is claimed. No invented `qS(qS+qH)/2^(8m)` loss is retained in
+the target architecture.
 
 ## Computability
 

@@ -61,9 +61,20 @@ checksum shift for \(\mathit{lgw}\ne4\). The exact twelve tuples, sizes, pure/pr
 SHAKE/SHA2 primitive grammars are checked in \texttt{matrices/fips205-profile.json}.
 
 \section{Security definitions and theorem architecture}
-Define EUF-CMA, tweakable-hash notions, PRFs, ITSR, transcripts, target distributions, query bounds,
-and public-seed coupling. Reproduce exact theorem coefficients and quantifier order. Separate finite
-concrete, asymptotic, classical, and QROM claims. Do not use an invented interleaving loss.
+S02 defines an explicitly classical architecture for EUF-CMA, PRF/PRFmsg, ITSR, TCR, DSPR,
+SPprob, PRE-C, and UD-C. The attacked scheme, signature carrier, randomizer projection, key
+distribution, signing, and verification are one explicit interface parameter, so the general
+statement does not invoke the transitional single-layer implementation. Generated key pairs carry
+public-seed/root coherence, and structural predicates bind qS/qH to the actual public adversary for
+every public key.
+
+The RHS follows the twelve source-ordered EasyCrypt terms and coefficients. Formula-derived
+positive values are caps on actual challenger-owned target logs in standalone two-phase component
+games, not exact families asserted to occur in the outer EUF transcript. Empty, duplicate,
+overflowing, invalid-index, or collection-overlapping traces make the relevant event false. This
+selection supersedes the earlier transcript-derived exact-family blueprint. The architecture does
+not prove the master inequality, asymptotic security, or a QROM lift, and it contains no invented
+interleaving loss.
 
 \section{Lean implementation and proof pipeline}
 Map modules and load-bearing declarations to construction and security obligations. Include
@@ -101,10 +112,12 @@ transitive-axiom allowlist \texttt{propext}, \texttt{Classical.choice}, and \tex
 \texttt{sorryAx} is confined to the one S00 security placeholder. Ordinary and IR persistent
 initializer, extern, and runtime-override extension entries are checked by contributing module as
 well as by target declaration. The audit programmatically meta-imports compiled HashSig with
-extension finalization disabled, exposing 680 declarations across 23 HashSig modules; these counts
-are reproducible inventory evidence, not permanent invariants. Controlled imports observe 647
-declarations at ordinary-exported visibility and 680 at both ordinary-private and meta-private
-visibility: the 33-declaration delta is caused by private visibility, not IR or meta loading. One
+extension finalization disabled. The S00 boundary exposed 680 declarations across 23 HashSig
+modules; after the repaired S02 modules it observes 1,629 owned constants across 27 modules. These
+counts are reproducible inventory evidence, not permanent invariants. The historical controlled
+S00 imports observed 647 declarations at ordinary-exported visibility and 680 at both
+ordinary-private and meta-private visibility: the 33-declaration delta was caused by private
+visibility, not IR or meta loading. One
 production mapper labels all ordinary and IR attribute surfaces. Its raw-state fixture extracts four actual current-module
 extension entries. A second compiled fixture hides a side-effecting regular initializer behind an
 external command; the production path requires rejection on both observed ordinary and IR surfaces
@@ -231,10 +244,15 @@ focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output
 \par}
 
 The SHA CLI cases are a subset of the path/CLI group and nominal success is excluded. Independent
-r16 passed with no blocking findings, so S01 is accepted and S02 is eligible. The reviewed
-descriptor/AST machinery is retained and frozen: future sessions center on Lean deliverables and
-do not ratchet that policy absent a concrete regression. Two nonblocking unused-variable
-observations require no code churn.
+r16 passed with no blocking findings, so S01 is accepted and S02 is eligible. S02 r1--r3 failed and r4 initially passed,
+but the complete r5 audit reopened S02: it found generated partial helpers, an impossible repository
+self-revision gate, incomplete source provenance, missing traceability, a general master LHS wired
+to the known d=1 scheme, and stale transcript-target contracts. Repair uses total list combinators,
+ancestor-session-base revision semantics plus an active-source composite, synchronized matrices and
+inventory, an explicit attacked-scheme interface, and source-shaped standalone component games.
+These dispositions remain pending independent r6 review. The reviewed S01 descriptor/AST machinery
+is otherwise retained and frozen; the manifest semantic correction responds to this concrete
+reproducibility regression rather than broadening that policy.
 
 \section{Coverage and traceability}
 Include construction-to-source-to-Lean-to-test coverage, proof obligations, assumptions, TCB, and

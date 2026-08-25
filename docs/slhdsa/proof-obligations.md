@@ -3,27 +3,30 @@
 Status is authoritative in `matrices/proof-obligations.csv`; this prose explains acceptance tests.
 No checkbox is discharged by a build alone.
 
-## Current Security.lean defects (all open)
+## Rejected legacy `Security.lean` and replacement architecture
 
-- [ ] Target counts are strictly positive and tied to parameter/transcript formulas. Current natural
-  arguments admit zero, making `Fin 0` target families and reductions potentially vacuous.
-- [ ] Every RHS primitive uses the `PK.seed` generated with the attacked public key. Current theorem
-  accepts a fixed free `pkSeed`, with no equality to `adv`'s EUF-CMA experiment key.
+- [x] The S02 replacement has formula-derived positive caps for all eight source-game target roles.
+  Actual traces may be shorter or empty; selecting a missing target makes the event false. The
+  rejected legacy theorem still admits zero caller-supplied counts.
+- [x] The S02 replacement fixes a coherent generated-key distribution inside an explicit attacked
+  `SchemeInterface`; primitive queries use that key's seed/root. The rejected legacy theorem still
+  accepts a disconnected free `pkSeed`.
 - [ ] Every additive loss is proved bounded/finite from a game hop. Current
   `slhdsaInterleavingLoss` accepts unbounded `qS/qH`; for large queries it can exceed one and make the
   inequality trivial. Its formula is an invented stand-in, not a proved ITSR loss.
-- [ ] `qS` and `qH` are predicates on actual adversary/oracle executions. Current values occur only
-  in the loss; no signing/hash oracle count is modeled.
-- [ ] `Hmsg` has an actual ITSR game and `T_l` has the required security surface. Current theorem has
-  neither an `Hmsg` adversary/advantage nor a `T_l` term.
+- [x] S02 defines `qS` and `qH` as pathwise predicates on the actual adversary program for every
+  public key. Internal signer instrumentation and runtime accounting remain for S12.
+- [x] S02 defines the post-hop `Hmsg` ITSR experiment and every required FORS/WOTS `T_l` role.
 - [ ] `yToBytes` is injective/coherent where abstract digit extraction is security-relevant. Current
   `Primitives` has a function but no law.
-- [ ] Challenge samplers are honest-transcript-derived. Current FORS/WOTS input samplers are arbitrary
-  caller-supplied `ProbComp`s and need not match scheme targets.
+- [x] S02 removes caller-supplied target samplers. Each quantitative component is a standalone
+  source-shaped challenger with its own target oracle and same-execution collection log where
+  required; D-009 records why these targets are not extracted from the outer EUF transcript.
 - [ ] A parameter-indexed asymptotic theorem exists. Current statement is one finite inequality with
   no security parameter, polynomial-time/query condition, or negligibility conclusion.
-- [ ] The selected statement matches a pinned primary proof. Current decomposition does not match
-  CCS 2019 Theorem 17 coefficients/notions and its only proof is the allowlisted `sorry`.
+- [x] The S02 proposition has the exact repaired EasyCrypt twelve-term order and coefficients in
+  classical semantics. Constructing reductions and proving it remain open; the rejected legacy
+  statement still has only the allowlisted `sorry`.
 
 ## Parameters, encodings, and ADRS
 

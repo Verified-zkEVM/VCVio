@@ -68,6 +68,24 @@ future independent session reviews add dispositions under the protocol rather th
 | F-060 | LOW | FIXED | Root's pre-review r15 audit found cleanup evidence dynamically invoked an active exception's overridable `add_note` and a cleanup exception's potentially hostile string conversion, which could mask the exact original | Root pre-review r15 hardening audit | Invoke `BaseException.add_note` explicitly, format cleanup evidence without dynamic exception display, and repeat hostile active/nominal cleanup families sixteen times with exact fd maps and two sentinels |
 | F-061 | LOW | FIXED | S01 r15 still formatted a cleanup exception class `__name__`; a hostile nonempty `str` subclass masked both the active original and nominal deterministic failure | S01 r15 finding S01-R15-001 | Derive cleanup evidence only from fixed strings and builtin integer counts, retain the first cleanup object only as nominal cause, and repeat hostile active/nominal type-name and base-note families 32 times with exact descriptor maps and two sentinels |
 | F-062 | LOW | FIXED | S01 r15's shallow AST gate accepted alias/import/getattr/discard/rebinding bypasses and runtime cleanup did not detect distinct live owners holding the same descriptor integer | S01 r15 finding S01-R15-002 | Preflight all owners, mark them unowned, close each unique integer once, reject nominal owner aliasing deterministically, and enforce an exact scoped AST inventory of descriptor references, owner retention, takes, cleanup consumers, and registered test aliases with 30 mutation regressions |
+| F-063 | CRITICAL | FIXED | S02 r1 derived ITSR history from explicit adversarial Hmsg calls rather than honest signing requests | S02-R1-001; r4 replay | Signing entries supply `(R,request)` and explicit public Hmsg entries are excluded |
+| F-064 | CRITICAL | FIXED | S02 r1 allowed arbitrary component scalars instead of the twelve named games | S02-R1-002; r4 source comparison | Compute every RHS term from a concrete source-shaped experiment |
+| F-065 | CRITICAL | FIXED | S02 r1 disconnected target counts and component targets | S02-R1-003; r4 trace probes | Validate actual challenger-owned oracle traces against formula caps |
+| F-066 | HIGH | FIXED | S02 r1 omitted the authoritative `lgw ∈ {2,4,8}` restriction | S02-R1-004; compiled `lgw_ne_one` | Require the exact approved disjunction in `ParameterConditions` |
+| F-067 | CRITICAL | FIXED | S02 r2's ITSR summand used the original transcript rather than the standalone post-hop experiment | S02-R2-001; r4 source comparison | Use a dedicated default-oracle ITSR game with program-owned setup |
+| F-068 | CRITICAL | FIXED | S02 r2's SPprob did not run the same DSPR program and selected index | S02-R2-002; r4 counterexample replay | Independently run the same two-phase program in both experiments |
+| F-069 | CRITICAL | FIXED | S02 r2's WOTS UD game exposed preimages and omitted the sourced validity event | S02-R2-003; r4 source comparison | Sample fresh hidden real inputs or ideal outputs and check the actual trace |
+| F-070 | HIGH | FIXED | S02 r2's provider certificate admitted role substitution and vacuous separation | S02-R2-004; r4 role-card probes | Use eight distinct target roles and same-execution target/collection logs |
+| F-071 | CRITICAL | FIXED | S02 r3's exact honest-target provider was uninhabitable for a valid no-query adversary | S02-R3-001; r4 zero-trace probe | Remove the impossible provider; empty component traces are ordinary and selected-target events fail |
+| F-072 | CRITICAL | FIXED | S02 r3 modeled TCR/DSPR/SPprob/PRE as post-hoc events rather than named oracle games | S02-R3-002; r4 source comparison | Use stateful two-phase target-oracle programs |
+| F-073 | CRITICAL | FIXED | S02 r3 used the wrong UD input distribution and an unrelated collection execution | S02-R3-003; r4 source comparison | Sample fresh hidden inputs and share one target/collection program log |
+| F-074 | CRITICAL | FIXED | S02 r3 injected a real full-SLH key into the post-SKG/post-MKG ITSR world | S02-R3-004; r4 source comparison | Put NPRF/hybrid setup in the reduction program and expose only public Hmsg parameters |
+| F-075 | CRITICAL | REMEDIATED-PENDING-REVIEW | S02 added eight compiler-generated partial helpers outside the exact policy allowlist | S02-R5-001; compiled policy audit | Rewrite projections with total library combinators and replay the compiled audit |
+| F-076 | CRITICAL | REMEDIATED-PENDING-REVIEW | S02 acceptance edits were not reviewed and the manifest demanded an impossible self-revision pin | S02-R5-002; docs gate | Treat the repository revision as an ancestor session base and review the complete repaired tree |
+| F-077 | HIGH | REMEDIATED-PENDING-REVIEW | The source-tree composite omitted all four S02 modules | S02-R5-003; manifest recipe | Include `Security/*.lean`, regenerate the composite, and update the ledger |
+| F-078 | HIGH | REMEDIATED-PENDING-REVIEW | S02 omitted mandatory matrix, inventory, findings, decisions, TCB, and report traceability | S02-R5-004; universal session contract | Synchronize every contract surface and deliberate matrix pin |
+| F-079 | CRITICAL | REMEDIATED-PENDING-REVIEW | The generic master LHS called the known `d = 1` transitional scheme | S02-R5-005; `Scheme.lean`/`Hypertree.lean` | Parameterize the experiment over an explicit scheme and signature interface |
+| F-080 | HIGH | REMEDIATED-PENDING-REVIEW | Standalone source-shaped component games contradicted stale transcript-derived-target contracts and prose | S02-R5-006; plan/blueprint/transcript | Record the standalone-game decision and synchronize all authoritative prose and obligations |
 
 Independent S00 re-review r9 accepted the repairs for F-021 through F-029. Their `FIXED` statuses
 administratively propagate that verdict; they are not an S01 self-review. Historical FAIL artifacts
@@ -108,7 +126,9 @@ they are not S01 self-review. S01 is accepted and S02 is eligible. The accepted 
 machinery is frozen and is not ratcheted in successor sessions absent a concrete regression.
 
 Independent S02 reviews r1, r2, and r3 failed and remain immutable. Independent r4 passed with zero
-findings and accepts the isolated security architecture. This does not globally close F-001 through
+findings, but the complete independent r5 audit invalidated that acceptance with F-075 through
+F-080. The implementation records those six as `REMEDIATED-PENDING-REVIEW`; no successor is eligible
+until r6 accepts the repairs. R4 did close the twelve earlier S02 findings F-063 through F-074, whose
+`FIXED` statuses preserve that reviewed disposition. None of this globally closes F-001 through
 F-009: the legacy theorem remains rejected, concrete reductions/composition remain future work, and
-the QROM/asymptotic boundaries remain open. It does accept the S02 interface as the predecessor for
-S03 data, widths, parameters, ADRS, and codec work.
+the QROM/asymptotic boundaries remain open.

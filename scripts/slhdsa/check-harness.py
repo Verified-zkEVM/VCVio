@@ -195,6 +195,9 @@ S01_FAILED_REVIEW_HASHES = {
         "347281880d2221e2e5e8386aa8898baee389e7d62cf50adb12031b8db0ae15f8",
     "reviews/S01-authority-and-conformance-review-r15.md":
         "f153f6bddad34a669ef40d8095c0512d4c07b4e29384cebb60bfa9764d788734",
+    # Later immutable FAIL artifacts are excluded from active-prose mutation policy by exact hash.
+    "reviews/S02-security-architecture-review-r5.md":
+        "0c1ea5b29c49d7fc6640509bb974aefd73c1cab6587e2052e34ba57e91b55bb6",
 }
 S01_ACCEPTED_REVIEW = {
     "path": "reviews/S01-authority-and-conformance-review-r16.md",
@@ -314,21 +317,21 @@ FIPS205_RANDOMNESS = (
 # session and retain the structured checks below. The pin set is exhaustive, not a permanent freeze.
 S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
-        (3426, "67d72412778e8aea16b9f6e75d5cbfa23649f883973c9729b34153052420d6bd"),
+        (3608, "f0c48bda1fb03b5c5da685ffd6da6ffa7a85e6eaa8449800401cff2f5ebddc6e"),
     "docs/slhdsa/matrices/coverage.csv":
-        (3624, "daba1fd54b3a15c73f84efdbe7554e48f38535dffaae88b8ced55891a30af795"),
+        (3922, "e8d9ada8ebe6ff13477fd31c3990baf679d9cbdf5d4df9472f57e6f56849739b"),
     "docs/slhdsa/matrices/decisions.csv":
-        (1390, "7af1441abe5ce43beda2a951eeb407eb69768401ebebcc1a90035588868ef94f"),
+        (1750, "11974817d6932a709c326f68a94bd8682b15ba4b2e261e940645c8724adc034b"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (12938, "83165d2d46c4adc710bd33da9a5eca74432da92c843641734643095daea9d00a"),
+        (28759, "ff88a1153e7b7f45f58bc5a64b8bcc233603cdf9f0fec151ba0e2ac1812b1e80"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (3368, "3a043967b04a1b153cce40d472170d6d754b6f531d4ee618825d52cd79901314"),
+        (3806, "79e9f925221e9038f9b90c5906389b5d85bd1fb7dd1bf8fbd7668faea3772075"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
-        (4655, "68261c6f1c19bd7e0b2dca2a9b18de37e15c8f2d0b2e8172da10aaeb722dac4c"),
+        (4710, "44657d7ded613a047660cdcb4e2b699d1b67f11c9ff7cf192655c50ed6baa8b5"),
 }
 
 # DECL-011--DECL-014 use typed dependency tokens. Earlier bootstrap rows retain their historical
@@ -5165,6 +5168,15 @@ def git_revision(path: Path) -> str:
     return result.stdout.strip()
 
 
+def git_revision_is_ancestor(path: Path, revision: str) -> bool:
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        return False
+    result = subprocess.run(
+        ["git", "-C", str(path), "merge-base", "--is-ancestor", revision, "HEAD"],
+        check=False, capture_output=True, text=True)
+    return result.returncode == 0
+
+
 def check_reference_manifest() -> None:
     data = read_json(DOCS / "reference-manifest.json")
     require(data.get("schema_version") == 1 and isinstance(data.get("entries"), list),
@@ -5196,8 +5208,14 @@ def check_reference_manifest() -> None:
                     f"reference-manifest.json: hash mismatch for {entry['id']}")
         elif entry["kind"] == "git":
             require(target.is_dir(), f"reference-manifest.json: missing git tree {entry['id']}")
-            require(git_revision(target) == entry.get("revision"),
-                    f"reference-manifest.json: revision mismatch for {entry['id']}")
+            if entry["root"] == "repo":
+                require(entry.get("revision_semantics") == "ancestor-session-base",
+                        f"reference-manifest.json: repo revision semantics for {entry['id']}")
+                require(git_revision_is_ancestor(target, entry.get("revision", "")),
+                        f"reference-manifest.json: session base is not an ancestor for {entry['id']}")
+            else:
+                require(git_revision(target) == entry.get("revision"),
+                        f"reference-manifest.json: revision mismatch for {entry['id']}")
         checked += 1
     if bundle_available:
         print(f"INFO: verified {checked} local reference-manifest entries under {reference_root}")

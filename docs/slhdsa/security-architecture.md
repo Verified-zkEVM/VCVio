@@ -1,6 +1,6 @@
 # S02 classical security architecture
 
-Status: independent r4 PASS with zero findings; S02 accepted.
+Status: r4 acceptance invalidated by independent r5 FAIL; repaired architecture pending r6 review.
 
 This document fixes the authoritative shape of the classical SLH-DSA reduction before any
 component proof is attempted. It is a design contract, not a claim that the reduction has been
@@ -87,9 +87,12 @@ for the quantitative standalone ITSR game.
 
 ## Key, transcript, and query coupling
 
-`generateKeyPair` samples SK.seed, SK.prf, and PK.seed, calls `slhKeygenInternal` once, and packages
-public/secret seed and root equality. Original EUF execution queries are indexed by that public key;
-`queryImpl` uses its seed/root. The public adversary language cannot express PRF or PRFmsg.
+`SchemeInterface` fixes the attacked signature carrier, randomizer projection, coherent key
+distribution, signing operation, and verification operation. This prevents the generic experiment
+from silently calling the repository's known single-layer construction for parameter records with
+`d > 1`. A generated pair packages public/secret seed and root equality. Original EUF execution
+queries are indexed by that public key; `queryImpl` uses its seed/root. The public adversary language
+cannot express PRF or PRFmsg.
 
 `honestTranscriptDistribution` owns original key generation and uses `QueryImpl.withLogging`. It is
 the LHS EUF probability space. Honest signing is currently one outer event; internal construction
@@ -133,6 +136,8 @@ The context has no target/transcript sampler, public seed, free target count, co
 or scalar loss field.
 
 - `RepairedMasterStatement` is a proposition-valued definition, not a theorem.
+- The context must supply a reviewed scheme-interface implementation; S02 does not claim the current
+  `d = 1` construction instantiates the general FIPS experiment.
 - Constructing the authoritative concrete reductions and proving the inequality remain future work.
 - Post-hop setup is a typed reduction boundary; proving the concrete NPRF setup correspondence is a
   later reduction obligation.

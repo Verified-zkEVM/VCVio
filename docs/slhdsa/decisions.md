@@ -13,6 +13,7 @@ and sequencing choices; it does not silently record maintainer approval.
 | D-006 | PROPOSED | Select exact master theorem/notions and classical/QROM semantics | Approver unassigned; declaration comparison required | S02 |
 | D-007 | BLOCKED | Select Ethereum deployment/refinement target | Approver unassigned; repository/commit/ABI absent | S19 |
 | D-008 | PROPOSED | C13: separate support, core merge, or deprecate | Approver unassigned; pinned sources/owner choice required | S18 |
+| D-009 | PROPOSED | Use standalone source-shaped target games; do not require their targets in the outer EUF transcript | Pending repaired S02 independent review; EasyCrypt game interfaces | S02 |
 
 Statuses are `proposed`, `accepted`, `rejected`, `blocked`, or `superseded`. `accepted` requires a
 named approver and evidence in the CSV. Supersession appends a new linked row; history is not erased.

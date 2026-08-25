@@ -1,11 +1,12 @@
 # S03 data, widths, parameters, ADRS, and codecs bootstrap
 
-Status: eligible; bootstrap initialized; implementation and independent review have not started.
+Status: bootstrap retained; temporarily blocked by S02 r5 pending repaired r6 review.
 
 Date: 2026-08-25
 Branch: `codex/sphincsplus-formalization`
-Accepted predecessor: S02 commit `7b77e700b3d24a6ab94ed741a650954bbd90859a`, independently
-accepted by `reviews/S02-security-architecture-review-r4.md` with zero findings.
+Former predecessor: S02 commit `7b77e700b3d24a6ab94ed741a650954bbd90859a`; r4 acceptance was
+invalidated by `reviews/S02-security-architecture-review-r5.md`. This record will name the repaired
+accepted predecessor after r6.
 
 ## Objective
 

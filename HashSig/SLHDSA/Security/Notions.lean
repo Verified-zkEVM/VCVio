@@ -145,9 +145,8 @@ def ITSRRecord.Coherent {p : Params} {prims : Primitives p} (pk : PublicKey prim
 
 /-- Union of all target sets disclosed by earlier honest `H_msg` evaluations. -/
 def itsrHistoryTargets {p : Params} {prims : Primitives p} :
-    List (ITSRRecord prims) → Finset (ITSRTarget p)
-  | [] => ∅
-  | record :: records => digestTargetSet p record.digest ∪ itsrHistoryTargets records
+    List (ITSRRecord prims) → Finset (ITSRTarget p) :=
+  List.foldr (fun record targets => digestTargetSet p record.digest ∪ targets) ∅
 
 /-- ITSR success: a fresh `(randomizer, request)` pair selects only FORS targets already
 interleaved among prior honest digest outputs. -/

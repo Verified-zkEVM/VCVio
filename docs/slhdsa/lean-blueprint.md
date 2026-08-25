@@ -45,10 +45,13 @@ constant. Define named query variants for signing, `PRF`, `PRF_msg`, `F`, `H`, `
 and use VCVio query instrumentation to obtain histories and costs.
 
 Each bound is a predicate on an adversary/execution, such as `SigningBound adv qS` and
-`HashQueryBound adv qH`, proved by enforcement or counting. Challenge constructors return a
-nonempty finite target family plus a proof that its cardinality equals the formula. Target sampling
-comes from honest key/sign transcripts; arbitrary caller-provided `ProbComp` samplers are not a
-load-bearing security interface.
+`HashQueryBound adv qH`, proved by enforcement or counting. Each quantitative component is a
+standalone source-shaped game whose `pick` phase queries challenger-owned target oracles. The
+formula-derived positive value is a cap on the actual target log, with distinctness and, for `-C`,
+same-execution collection disjointness checked by the event. A program may make zero target calls;
+then any selected-target event is false. These component targets are deliberately not manufactured
+from the outer EUF transcript, and no caller-provided probability or target sampler is a
+load-bearing interface.
 
 Define actual predicates for:
 
