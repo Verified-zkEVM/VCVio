@@ -42,7 +42,7 @@ measurability obligations while leaving the result space arbitrary.
 
 open MeasureTheory ProbabilityTheory
 
-universe u uA
+universe u v w uA
 
 namespace PFunctor
 
@@ -72,7 +72,7 @@ noncomputable def IsMeasureSpec.uniformOfFintypeInhabited (P : PFunctor.{uA, u})
 namespace FreeM
 
 variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.IsMeasureSpec]
-  {α β : Type u}
+  {α : Type v} {β : Type w}
 
 /-- The measure denoted by a polynomial free program: `pure` is a Dirac mass, and each
 operation is the Giry bind of its answer measure with the denotation of the continuation. -/
@@ -133,11 +133,11 @@ discharge the recursive measurability obligation inside the free program. -/
 theorem denote_bind [MeasurableSpace α] [MeasurableSpace β]
     (program : FreeM P α) (f : α → FreeM P β)
     (hf : Measurable fun x => denote (f x)) :
-    denote (program >>= f) = Measure.bind (denote program) fun x => denote (f x) := by
+    denote (FreeM.bind program f) = Measure.bind (denote program) fun x => denote (f x) := by
   induction program with
   | pure x => simpa using (Measure.dirac_bind hf x).symm
   | lift_bind a cont ih =>
-      change Measure.bind (IsMeasureSpec.toMeasure a) (fun b => denote (cont b >>= f))
+      change Measure.bind (IsMeasureSpec.toMeasure a) (fun b => denote (FreeM.bind (cont b) f))
           = Measure.bind (Measure.bind (IsMeasureSpec.toMeasure a) fun b => denote (cont b))
               fun x => denote (f x)
       rw [Measure.bind_bind (Measurable.of_discrete).aemeasurable hf.aemeasurable]
@@ -146,14 +146,14 @@ theorem denote_bind [MeasurableSpace α] [MeasurableSpace β]
 /-- `denote` preserves bind unconditionally when the program's result type is discrete. -/
 theorem denote_bind_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α]
     [MeasurableSpace β] (program : FreeM P α) (f : α → FreeM P β) :
-    denote (program >>= f) = Measure.bind (denote program) fun x => denote (f x) :=
+    denote (FreeM.bind program f) = Measure.bind (denote program) fun x => denote (f x) :=
   denote_bind program f Measurable.of_discrete
 
 /-- `denote` turns a measurable map of program outputs into the pushforward measure. -/
 theorem denote_map [MeasurableSpace α] [MeasurableSpace β]
     (program : FreeM P α) (f : α → β) (hf : Measurable f) :
-    denote (f <$> program) = (denote program).map f := by
-  rw [map_eq_bind_pure_comp, denote_bind program (pure ∘ f)]
+    denote (FreeM.map f program) = (denote program).map f := by
+  rw [← FreeM.bind_pure_comp f program, denote_bind program (pure ∘ f)]
   · simpa only [Function.comp_apply, denote_pure] using
       Measure.bind_dirac_eq_map (denote program) hf
   · change Measurable (Measure.dirac ∘ f)
@@ -162,20 +162,19 @@ theorem denote_map [MeasurableSpace α] [MeasurableSpace β]
 /-- `denote` preserves every output map from a discrete result type. -/
 theorem denote_map_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α]
     [MeasurableSpace β] (program : FreeM P α) (f : α → β) :
-    denote (f <$> program) = (denote program).map f :=
+    denote (FreeM.map f program) = (denote program).map f :=
   denote_map program f Measurable.of_discrete
 
 /-- Sequentially running two programs whose second execution does not depend on the first result
 denotes the product of their measures. -/
 theorem denote_bind_bind_prod_mk_eq_prod [MeasurableSpace α] [DiscreteMeasurableSpace α]
     [MeasurableSpace β] (left : FreeM P α) (right : FreeM P β) :
-    denote (do
-      let x ← left
-      let y ← right
-      pure (x, y)) = (denote left).prod (denote right) := by
+    denote (FreeM.bind left fun x =>
+      FreeM.bind right fun y => pure (x, y)) =
+        (denote left).prod (denote right) := by
   rw [denote_bind_of_discrete left, Measure.prod]
   exact Measure.bind_congr_right (Filter.Eventually.of_forall fun x => by
-    change denote (right >>= fun y => pure (x, y)) =
+    change denote (FreeM.bind right fun y => pure (x, y)) =
       Measure.map (Prod.mk x) (denote right)
     rw [denote_bind right (fun y => pure (x, y))]
     · simpa only [denote_pure] using
