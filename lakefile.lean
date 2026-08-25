@@ -2,6 +2,9 @@ import Lake
 open Lake DSL
 
 package VCVio where
+  -- S01's parser gate sets this only through a checked `-KbuildDir=...` invocation so the root
+  -- package is rebuilt in a new private output tree. Ordinary builds retain Lake's default.
+  buildDir := (get_config? buildDir).map System.FilePath.mk |>.getD Lake.defaultBuildDir
   -- Settings applied to both builds and interactive editing
   leanOptions := #[
     ⟨`pp.unicode.fun, true⟩, -- pretty-prints `fun a ↦ b`
@@ -371,3 +374,7 @@ lean_exe slhdsa_kat where
 /-- C13 known-answer test: pure-Lean keccak256 concrete verify vs the reference signer vector. -/
 lean_exe slhdsa_c13_kat where
   root := `HashSigTest.SLHDSA.C13KAT
+
+/-- Fail-closed parser gate for the pinned NIST SLH-DSA sample JSON. -/
+lean_exe slhdsa_acvp_parser where
+  root := `HashSigTest.SLHDSA.ACVP.ParserTests

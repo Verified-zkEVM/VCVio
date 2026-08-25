@@ -1,0 +1,9 @@
+id,status,decision,proposer,approver,evidence,session,notes
+D-001,proposed,FIPS205-12 is the normative implementation target,S00 implementer,unassigned,scope.md,S00,S01 accepted by independent r16; maintainer approval remains unassigned
+D-002,proposed,Keep LEGACY-SHA2-128-24 as the single current-code reduced subprofile,S00 implementer,unassigned,scope.md,S00,Distinct from SP800-230-IPD-6SET and does not confer draft six-set or FIPS Table-2 conformance
+D-003,proposed,Treat C13 as a separate profile pending disposition,S00 implementer,unassigned,scope.md,S00,Final disposition belongs to S18
+D-004,proposed,Freeze security and oracle architecture before construction refactors,S00 implementer,unassigned,lean-blueprint.md,S00,Requires maintainer approval
+D-005,proposed,Treat reports as secondary and primary sources as controlling,S00 implementer,unassigned,source-ledger.md,S00,Requires maintainer approval
+D-006,proposed,Select exact master theorem notions and classical or QROM semantics,S00 implementer,unassigned,proof-obligations.md,S02,Declaration-level comparison required
+D-007,blocked,Select Ethereum deployment and refinement target,S00 implementer,unassigned,findings.md:F-017,S19,Repository commit and ABI absent
+D-008,proposed,Choose separate support core merge or deprecation for C13,S00 implementer,unassigned,scope.md,S18,Pinned C13 sources and owner choice required

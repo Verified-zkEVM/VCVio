@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "profile_id": "SP800-230-IPD-6SET",
+  "excluded_legacy_current_code_profile_id": "LEGACY-SHA2-128-24",
+  "authority": "NIST SP 800-230 Initial Public Draft, Table 1",
+  "publication_status": "initial-public-draft",
+  "publication_date": "2026-04-13",
+  "source_sha256": "62d092f787a1f79260454bf332b642ff3b5b73dbcce2678a133a1406065e452e",
+  "source_size_bytes": 282069,
+  "signature_cap_per_key": 16777216,
+  "normative_fips205_profile": false,
+  "parameter_sets": [
+    {"name":"SLH-DSA-SHA2-128-24","family":"SHA2","n":16,"h":22,"d":1,"hp":22,"a":24,"k":6,"lgw":2,"m":21,"category":1,"public_key_bytes":32,"signature_bytes":3856},
+    {"name":"SLH-DSA-SHAKE-128-24","family":"SHAKE","n":16,"h":22,"d":1,"hp":22,"a":24,"k":6,"lgw":2,"m":21,"category":1,"public_key_bytes":32,"signature_bytes":3856},
+    {"name":"SLH-DSA-SHA2-192-24","family":"SHA2","n":24,"h":21,"d":1,"hp":21,"a":25,"k":9,"lgw":3,"m":32,"category":3,"public_key_bytes":48,"signature_bytes":7752},
+    {"name":"SLH-DSA-SHAKE-192-24","family":"SHAKE","n":24,"h":21,"d":1,"hp":21,"a":25,"k":9,"lgw":3,"m":32,"category":3,"public_key_bytes":48,"signature_bytes":7752},
+    {"name":"SLH-DSA-SHA2-256-24","family":"SHA2","n":32,"h":21,"d":1,"hp":21,"a":25,"k":12,"lgw":2,"m":41,"category":5,"public_key_bytes":64,"signature_bytes":14944},
+    {"name":"SLH-DSA-SHAKE-256-24","family":"SHAKE","n":32,"h":21,"d":1,"hp":21,"a":25,"k":12,"lgw":2,"m":41,"category":5,"public_key_bytes":64,"signature_bytes":14944}
+  ]
+}

@@ -1,0 +1,17 @@
+id,profile,category,obligation,source,lean_target,status,severity,session,evidence,review_status,notes
+PO-001,SPX-TW-ABS,security,Replace allowlisted security sorry with reviewed composition,CCS 2019 and selected tight proof,SLHDSA.slhdsa_euf_cma_security,open,critical,S16,#print axioms includes sorryAx,pending,Declaration starts Security.lean:150
+PO-002,SPX-TW-ABS,security,Require positive formula-derived target counts,Selected primary games,Security.Notions,open,critical,S02,Current target naturals admit zero,pending,No Fin 0 escape
+PO-003,SPX-TW-ABS,security,Couple reduction pkSeed to attacked public key,EUF-CMA experiment,Security.OracleSurface,open,critical,S02,Current pkSeed is free,pending,Quantifier order load-bearing
+PO-004,SPX-TW-ABS,security,Derive bounded ITSR loss and remove invented slack,CCS 2019 Definition 18,Security.ITSR,open,high,S11,Current loss may exceed one,pending,No unproved coefficient
+PO-005,SPX-TW-ABS,instrumentation,Model and enforce qS and qH predicates,VCVio QueryTracking,Security.QueryBounds,open,high,S12,Current q values do not constrain adversary,pending,Runtime traces too
+PO-006,SPX-TW-ABS,security,Model Hmsg ITSR and Tl security surfaces,Selected master proof,Security.Notions,open,critical,S11,Absent from current RHS,pending,Exact notions pending S02
+PO-007,SPX-TW-ABS,encoding,Prove yToBytes coherence required by security bridge,FIPS byte semantics,Primitives.Laws,open,high,S04,No current law,pending,Avoid unnecessary axioms
+PO-008,SPX-TW-ABS,security,Derive target distributions from honest transcript,Selected component proofs,Security.Transcript,open,critical,S12,Current samplers arbitrary,pending,Record support and cardinality
+PO-009,SPX-TW-ABS,asymptotics,State parameter family polynomial bounds and negligibility,VCVio asymptotics,Security.Asymptotics,open,high,S17,No current asymptotic theorem,pending,Separate finite all-set values
+PO-010,FIPS205-12,parameters,Implement and prove valid all-12 parameter table,FIPS 205 Table 2,SLHDSA.ParameterSet,open,high,S03,One reduced set only,pending,Legacy excluded from approval
+PO-011,FIPS205-12,encoding,Prove FIPS big-endian extraction and codec rejection,FIPS 205 Algorithms 2-4,SLHDSA.Encoding,open,high,S03,Round-three semantics incompatible,pending,Positive and negative fixtures
+PO-012,FIPS205-12,construction,Prove general d-layer hypertree correctness,FIPS 205 Algorithms 12-13,SLHDSA.htVerify_htSign,open,high,S08,Current d=1 only,pending,All approved sets
+PO-013,FIPS205-12,api,Prove external pure and pre-hash API correctness,FIPS 205 Section 10,SLHDSA.API,open,high,S09,Context OID domain separation absent,pending,Reject invalid context
+PO-014,LEGACY-SHA2-128-24,correctness,Maintain concrete perfect completeness,Current Lean specification,SLHDSA.Concrete.shaPrimitives_perfectlyComplete,provisional,medium,S09,Root expected without sorryAx,pending,Single current-code subprofile; not a security FIPS or six-set IPD claim
+PO-015,C13-ETH,correctness,Audit conditional grind correctness against pinned spec,C13 source TBD,SLHDSA.C13.slhVerifyInternal_slhSignInternal,blocked,high,S18,No pinned primary C13 source in ledger,pending,No security theorem
+PO-016,DEPLOY-TBD,refinement,Prove byte and ABI refinement to selected deployment,Deployment source TBD,Deployment.Refines,blocked,critical,S19,Target unresolved,pending,No deployment claim

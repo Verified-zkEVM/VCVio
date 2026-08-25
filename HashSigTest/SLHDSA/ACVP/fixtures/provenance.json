@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "recordedOn": "2026-08-24",
+  "normalVerification": {
+    "networkRequired": false,
+    "description": "The checker validates only committed bytes and metadata unless an optional checkout root is set."
+  },
+  "optionalCheckoutEnvironment": {
+    "SLHDSA_ACVP_SERVER_ROOT": "Full usnistgov/ACVP-Server checkout at the pinned commit.",
+    "SLHDSA_ACVP_PROTOCOL_ROOT": "Full usnistgov/ACVP protocol checkout at the pinned commit."
+  },
+  "sources": {
+    "acvpServer": {
+      "repository": "https://github.com/usnistgov/ACVP-Server",
+      "commit": "975de31eb83d87039ec88934fdc47d8c312b892d",
+      "release": "v1.1.0.43",
+      "compatibilityBoundary": {
+        "release": "v1.1.0.38",
+        "commit": "85f8742965b2691862079172982683757d8d91db",
+        "scope": "External-interface server-format compatibility boundary only."
+      },
+      "artifacts": [
+        {
+          "path": "gen-val/json-files/SLH-DSA-keyGen-FIPS205/registration.json",
+          "size": 438,
+          "sha256": "dfbf8116cb108209bc8fe539ec460dcda7036336ff460e4b0d9cf55c464fca08"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-keyGen-FIPS205/prompt.json",
+          "size": 32454,
+          "sha256": "bce170976f257ee3dfc8c54ea46722ccb553539847daa6d8048f0216cc28b51c"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-keyGen-FIPS205/internalProjection.json",
+          "size": 75294,
+          "sha256": "d7c53a1b6450087047b57aae83a5a51a0ac89ecdb23ebe071e83fbb69ae9d920"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-keyGen-FIPS205/expectedResults.json",
+          "size": 45192,
+          "sha256": "f35f74b6676d6b369c87e88c36698f28c14d5929d31e507d910288c69258afee"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-keyGen-FIPS205/validation.json",
+          "size": 6792,
+          "sha256": "df6726b334e4ab0ce0b48f716a423bd2b4366cea589d2878ff3023ba11494da9"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-sigGen-FIPS205/registration.json",
+          "size": 1776,
+          "sha256": "f7db21f297028ae806a07b482a7bad73e49c8df2bf0dec492786c1313ba9fa72"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-sigGen-FIPS205/prompt.json",
+          "size": 5512830,
+          "sha256": "afa673eacdf0aec53512a159159b7632684adfcd0d88f8640a7f6f5796aacdc8"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-sigGen-FIPS205/internalProjection.json",
+          "size": 38178342,
+          "sha256": "62b42e7c27fda5de8a94aba2943ae413b59b6ea08141f3bc035b1eceae235dba"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-sigGen-FIPS205/expectedResults.json",
+          "size": 32595492,
+          "sha256": "71e8e0f7e4b0cfd1747314299204d9d4d50968d200a4ae873921eaa7aabeaad1"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-sigGen-FIPS205/validation.json",
+          "size": 35520,
+          "sha256": "4b3e13ff387d2b491b94a60f78b09d7c0d568154061773cb6d8faf6b28b448fc"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/registration.json",
+          "size": 1730,
+          "sha256": "afe3475e0e0f2680daf0f6b908832e8f0649f2dc6909b5df6be78802f09e5dde"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/prompt.json",
+          "size": 30513796,
+          "sha256": "4e7beb1233e47baa0acdd36417c66c45811aa40a4e32ffdb1a35d93b13b289fb"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/internalProjection.json",
+          "size": 30731848,
+          "sha256": "a013fc2104f4ed4799d96d51141f65b965969b2cf10646626a021b6d456ce792"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/expectedResults.json",
+          "size": 39216,
+          "sha256": "259f5e2a0665de0adc0fefa45b5db3a2a6ed13c3c44d14bdaf64a80aee12c687"
+        },
+        {
+          "path": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/validation.json",
+          "size": 28680,
+          "sha256": "83335f44c1b91d90258da79e398eb7370e06b1eb2dd94279da01fffba64a54ee"
+        }
+      ]
+    },
+    "acvpProtocol": {
+      "repository": "https://github.com/usnistgov/ACVP",
+      "commit": "892fd14710f3a7edbea230d0aecc5511e0257f8e",
+      "document": "draft-livelsberger-acvp-slh-dsa-01",
+      "documentDate": "2024-06-25",
+      "rootArtifact": {
+        "path": "src/draft-livelsberger-acvp-slh-dsa.adoc",
+        "size": 2258,
+        "sha256": "d9c7088a6bb0531b2a5ab65104f467a7abe0e5ffc4d22f8ec1b7b90978d7d061"
+      },
+      "artifacts": [
+        {
+          "path": "src/slh-dsa/sections/03-supported.adoc",
+          "size": 287,
+          "sha256": "d92d036162464cda211b458ef214de0cfac49642cd6a51ba6df9cb5e0bdf6355"
+        },
+        {
+          "path": "src/slh-dsa/sections/04-testtypes.adoc",
+          "size": 4788,
+          "sha256": "4528cb13bd80da55cac571723c0aa7e4729f401b1c97b583d1c5e9099908c570"
+        },
+        {
+          "path": "src/slh-dsa/sections/05-capabilities.adoc",
+          "size": 800,
+          "sha256": "b9d0ca1b5c773a056d1837373ee212f9f155367dedbad7d83f32f090952dd605"
+        },
+        {
+          "path": "src/slh-dsa/sections/05-slh-dsa-keygen-capabilities.adoc",
+          "size": 1638,
+          "sha256": "09568244b74d1b6fe2250544526859be669b38222357b3bc24f891d880b1bc12"
+        },
+        {
+          "path": "src/slh-dsa/sections/05-slh-dsa-siggen-capabilities.adoc",
+          "size": 3690,
+          "sha256": "644b863cfb3fedca6db12f2deaa70074c1e4c9f710a9bf615227f9d44d2cffb7"
+        },
+        {
+          "path": "src/slh-dsa/sections/05-slh-dsa-sigver-capabilities.adoc",
+          "size": 3396,
+          "sha256": "24c235b4b3d7e4b3db79207f2416c33c9c942da40035976789ad534f4f89fafd"
+        },
+        {
+          "path": "src/slh-dsa/sections/06-slh-dsa-keygen-test-vectors.adoc",
+          "size": 2581,
+          "sha256": "8001e6b79a3b446bab0d42876c494031327e85f04646c21712c8fc34988fe966"
+        },
+        {
+          "path": "src/slh-dsa/sections/06-slh-dsa-siggen-test-vectors.adoc",
+          "size": 4692,
+          "sha256": "d07f8c3291d7787b118c8804294258549723342a57b1290fb923e49333c6ea15"
+        },
+        {
+          "path": "src/slh-dsa/sections/06-slh-dsa-sigver-test-vectors.adoc",
+          "size": 5095,
+          "sha256": "08740e1b04d5de7124b05a99f3b9ebdfbb93231ff3a126f4f5316755a0702bfd"
+        },
+        {
+          "path": "src/slh-dsa/sections/06-test-vectors.adoc",
+          "size": 1527,
+          "sha256": "acede1bd43f0c9230fe42c550660855c5d26121dbb1c755e5e16f63017d7cf4e"
+        },
+        {
+          "path": "src/slh-dsa/sections/07-responses.adoc",
+          "size": 1204,
+          "sha256": "f47fc9df4269faa50b0e7afabe13aabd487db0a648e2fc0fb086994122f5ee5a"
+        },
+        {
+          "path": "src/slh-dsa/sections/07-slh-dsa-keygen-responses.adoc",
+          "size": 1099,
+          "sha256": "e83fdda88d9691f8eff65c5827ac43fe666751e69f57f74c9dd39a246f228283"
+        },
+        {
+          "path": "src/slh-dsa/sections/07-slh-dsa-siggen-responses.adoc",
+          "size": 1035,
+          "sha256": "f858107c8fa775bb14f7824016de4e55d276c341a06b952a8b43b6ea438a643e"
+        },
+        {
+          "path": "src/slh-dsa/sections/07-slh-dsa-sigver-responses.adoc",
+          "size": 1046,
+          "sha256": "786247baefdb39a3c014b6542a9e93c4ddc3a9f49194e49615c4174089e1a52e"
+        },
+        {
+          "path": "src/slh-dsa/sections/98-references.adoc",
+          "size": 1092,
+          "sha256": "b127d1e0d713365b797b12fe167e693c1a113641fd56d2084ded37adf8cf8042"
+        }
+      ],
+      "composite": {
+        "algorithm": "sha256-of-sha256sum-manifest-v1",
+        "pathOrder": [
+          "src/draft-livelsberger-acvp-slh-dsa.adoc",
+          "src/slh-dsa/sections/*.adoc in LC_ALL=C order"
+        ],
+        "manifestLine": "<lowercase-file-sha256><two ASCII spaces><checkout-relative-path><LF>",
+        "sha256": "bc38ec528afcaa7f6a8155fd75a7612166203c789a540c0ac42e860a04c40a54"
+      }
+    },
+    "sp800230InitialPublicDraft": {
+      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-230.ipd.pdf",
+      "profileId": "SP800-230-IPD-6SET",
+      "publicationStatus": "initial-public-draft",
+      "publicationDate": "2026-04-13",
+      "size": 282069,
+      "sha256": "62d092f787a1f79260454bf332b642ff3b5b73dbcce2678a133a1406065e452e"
+    }
+  },
+  "sampleSuiteMeasurements": {
+    "source": "ACVP-Server sample prompt.json and expectedResults.json files at the pinned commit",
+    "keyGen": {
+      "groups": 12,
+      "tests": 120
+    },
+    "sigGen": {
+      "groups": 72,
+      "tests": 624
+    },
+    "sigVer": {
+      "groups": 36,
+      "tests": 504,
+      "positive": 72,
+      "negative": 432
+    }
+  },
+  "committedArtifacts": [
+    {
+      "path": "HashSigTest/SLHDSA/ACVP/fixtures/keygen-registration.json",
+      "kind": "exact-json-copy-final-lf-normalized",
+      "sourcePath": "gen-val/json-files/SLH-DSA-keyGen-FIPS205/registration.json",
+      "size": 439,
+      "sha256": "3c20a6681eff583389cf392975a61ba43e1e33a310378c2232dac872996e91a6",
+      "modification": {
+        "date": "2026-08-24",
+        "nature": "Added one final LF; JSON values and all other bytes are unchanged.",
+        "upstreamSize": 438,
+        "upstreamSha256": "dfbf8116cb108209bc8fe539ec460dcda7036336ff460e4b0d9cf55c464fca08"
+      }
+    },
+    {
+      "path": "HashSigTest/SLHDSA/ACVP/fixtures/siggen-registration.json",
+      "kind": "exact-json-copy-final-lf-normalized",
+      "sourcePath": "gen-val/json-files/SLH-DSA-sigGen-FIPS205/registration.json",
+      "size": 1777,
+      "sha256": "69b584f1a19adddf8e5381a7ba1e7a164b4b68efab7aa64f9a2dde86a97cf0f8",
+      "modification": {
+        "date": "2026-08-24",
+        "nature": "Added one final LF; JSON values and all other bytes are unchanged.",
+        "upstreamSize": 1776,
+        "upstreamSha256": "f7db21f297028ae806a07b482a7bad73e49c8df2bf0dec492786c1313ba9fa72"
+      }
+    },
+    {
+      "path": "HashSigTest/SLHDSA/ACVP/fixtures/sigver-registration.json",
+      "kind": "exact-json-copy-final-lf-normalized",
+      "sourcePath": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/registration.json",
+      "size": 1731,
+      "sha256": "275adf4d16f9c2adc648ecb3598d4f96062758e332469897705f68bc550892bc",
+      "modification": {
+        "date": "2026-08-24",
+        "nature": "Added one final LF; JSON values and all other bytes are unchanged.",
+        "upstreamSize": 1730,
+        "upstreamSha256": "afe3475e0e0f2680daf0f6b908832e8f0649f2dc6909b5df6be78802f09e5dde"
+      }
+    },
+    {
+      "path": "HashSigTest/SLHDSA/ACVP/fixtures/keygen-prompt.json",
+      "kind": "exact-json-copy-final-lf-normalized",
+      "sourcePath": "gen-val/json-files/SLH-DSA-keyGen-FIPS205/prompt.json",
+      "size": 32455,
+      "sha256": "0274937fbc03feb2eeca572c99f8db2407bf2412e301753a54e0d3cdea77b73a",
+      "modification": {
+        "date": "2026-08-24",
+        "nature": "Added one final LF; JSON values and all other bytes are unchanged.",
+        "upstreamSize": 32454,
+        "upstreamSha256": "bce170976f257ee3dfc8c54ea46722ccb553539847daa6d8048f0216cc28b51c"
+      }
+    },
+    {
+      "path": "HashSigTest/SLHDSA/ACVP/fixtures/keygen-expected.json",
+      "kind": "exact-json-copy-final-lf-normalized",
+      "sourcePath": "gen-val/json-files/SLH-DSA-keyGen-FIPS205/expectedResults.json",
+      "size": 45193,
+      "sha256": "81143b49c1bf125edf0c8cf357e53aaa4049c1de8482b20473e3fdf4067e0f01",
+      "modification": {
+        "date": "2026-08-24",
+        "nature": "Added one final LF; JSON values and all other bytes are unchanged.",
+        "upstreamSize": 45192,
+        "upstreamSha256": "f35f74b6676d6b369c87e88c36698f28c14d5929d31e507d910288c69258afee"
+      }
+    },
+    {
+      "path": "HashSigTest/SLHDSA/ACVP/fixtures/siggen-schema-slice.json",
+      "kind": "projection",
+      "sourcePath": "gen-val/json-files/SLH-DSA-sigGen-FIPS205/{prompt.json,expectedResults.json}",
+      "size": 146774,
+      "sha256": "3912e38aadd777c780cfab8d28dbc95c1f9a5f20970308a8daddacc377022699"
+    },
+    {
+      "path": "HashSigTest/SLHDSA/ACVP/fixtures/sigver-schema-slice.json",
+      "kind": "projection",
+      "sourcePath": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/{prompt.json,expectedResults.json}",
+      "size": 155072,
+      "sha256": "91126fa396b595d1940a50c91ede34eb3c3b4b22463dddaea5d875047214688f"
+    },
+    {
+      "path": "HashSigTest/SLHDSA/ACVP/fixtures/positive-prehash-coverage.json",
+      "kind": "derived-matrix",
+      "sourcePath": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/{prompt.json,expectedResults.json}",
+      "size": 18808,
+      "sha256": "c5b098163806dd27f028e57135df9ca6686024650d9b2392f2281d149e7db04c"
+    },
+    {
+      "path": "HashSigTest/SLHDSA/ACVP/fixtures/NOTICE-NIST.txt",
+      "kind": "notice",
+      "sourcePath": "README.md#license",
+      "size": 2704,
+      "sha256": "9f794a8f136aa701c1d4670a49beed6d3d0cf9cabf0389727ab732137da709a7"
+    }
+  ]
+}

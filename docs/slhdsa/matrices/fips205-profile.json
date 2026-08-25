@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "authority": "FIPS 205 final, Table 2, Sections 10 and 11",
+  "parameter_sets": [
+    {"name":"SLH-DSA-SHA2-128s","family":"SHA2","n":16,"h":63,"d":7,"hp":9,"a":12,"k":14,"lgw":4,"m":30,"category":1,"public_key_bytes":32,"secret_key_bytes":64,"signature_bytes":7856},
+    {"name":"SLH-DSA-SHAKE-128s","family":"SHAKE","n":16,"h":63,"d":7,"hp":9,"a":12,"k":14,"lgw":4,"m":30,"category":1,"public_key_bytes":32,"secret_key_bytes":64,"signature_bytes":7856},
+    {"name":"SLH-DSA-SHA2-128f","family":"SHA2","n":16,"h":66,"d":22,"hp":3,"a":6,"k":33,"lgw":4,"m":34,"category":1,"public_key_bytes":32,"secret_key_bytes":64,"signature_bytes":17088},
+    {"name":"SLH-DSA-SHAKE-128f","family":"SHAKE","n":16,"h":66,"d":22,"hp":3,"a":6,"k":33,"lgw":4,"m":34,"category":1,"public_key_bytes":32,"secret_key_bytes":64,"signature_bytes":17088},
+    {"name":"SLH-DSA-SHA2-192s","family":"SHA2","n":24,"h":63,"d":7,"hp":9,"a":14,"k":17,"lgw":4,"m":39,"category":3,"public_key_bytes":48,"secret_key_bytes":96,"signature_bytes":16224},
+    {"name":"SLH-DSA-SHAKE-192s","family":"SHAKE","n":24,"h":63,"d":7,"hp":9,"a":14,"k":17,"lgw":4,"m":39,"category":3,"public_key_bytes":48,"secret_key_bytes":96,"signature_bytes":16224},
+    {"name":"SLH-DSA-SHA2-192f","family":"SHA2","n":24,"h":66,"d":22,"hp":3,"a":8,"k":33,"lgw":4,"m":42,"category":3,"public_key_bytes":48,"secret_key_bytes":96,"signature_bytes":35664},
+    {"name":"SLH-DSA-SHAKE-192f","family":"SHAKE","n":24,"h":66,"d":22,"hp":3,"a":8,"k":33,"lgw":4,"m":42,"category":3,"public_key_bytes":48,"secret_key_bytes":96,"signature_bytes":35664},
+    {"name":"SLH-DSA-SHA2-256s","family":"SHA2","n":32,"h":64,"d":8,"hp":8,"a":14,"k":22,"lgw":4,"m":47,"category":5,"public_key_bytes":64,"secret_key_bytes":128,"signature_bytes":29792},
+    {"name":"SLH-DSA-SHAKE-256s","family":"SHAKE","n":32,"h":64,"d":8,"hp":8,"a":14,"k":22,"lgw":4,"m":47,"category":5,"public_key_bytes":64,"secret_key_bytes":128,"signature_bytes":29792},
+    {"name":"SLH-DSA-SHA2-256f","family":"SHA2","n":32,"h":68,"d":17,"hp":4,"a":9,"k":35,"lgw":4,"m":49,"category":5,"public_key_bytes":64,"secret_key_bytes":128,"signature_bytes":49856},
+    {"name":"SLH-DSA-SHAKE-256f","family":"SHAKE","n":32,"h":68,"d":17,"hp":4,"a":9,"k":35,"lgw":4,"m":49,"category":5,"public_key_bytes":64,"secret_key_bytes":128,"signature_bytes":49856}
+  ],
+  "external_api": {
+    "max_context_bytes": 255,
+    "pure_m_prime": "toByte(0,1) || toByte(|ctx|,1) || ctx || M",
+    "prehash_m_prime": "toByte(1,1) || toByte(|ctx|,1) || ctx || DER(OID(PH)) || PH(M)",
+    "prehashes_shown_by_fips": [
+      {"name":"SHA-256","oid":"2.16.840.1.101.3.4.2.1","der_oid_hex":"0609608648016503040201","output_bits":256,"output_bytes":32,"eligible_categories":[1]},
+      {"name":"SHA-512","oid":"2.16.840.1.101.3.4.2.3","der_oid_hex":"0609608648016503040203","output_bits":512,"output_bytes":64,"eligible_categories":[1,3,5]},
+      {"name":"SHAKE128","oid":"2.16.840.1.101.3.4.2.11","der_oid_hex":"060960864801650304020B","output_bits":256,"output_bytes":32,"eligible_categories":[1]},
+      {"name":"SHAKE256","oid":"2.16.840.1.101.3.4.2.12","der_oid_hex":"060960864801650304020C","output_bits":512,"output_bytes":64,"eligible_categories":[1,3,5]}
+    ],
+    "other_prehashes": "Permitted only when approved and providing at least 8n bits of classical collision and second-preimage strength; collision strength requires a digest of at least 2n bytes. The signature identifier must identify the pure/pre-hash mode and the pre-hash/XOF (including XOF output length).",
+    "randomness": "Hedged signing supplies an n-byte addrnd; deterministic signing omits addrnd and slh_sign_internal substitutes PK.seed as opt_rand."
+  },
+  "primitive_grammars": {
+    "SHAKE_all_n": {
+      "Hmsg":"SHAKE256(R || PK.seed || PK.root || M, 8m)",
+      "PRF":"SHAKE256(PK.seed || ADRS || SK.seed, 8n)",
+      "PRFmsg":"SHAKE256(SK.prf || opt_rand || M, 8n)",
+      "F":"SHAKE256(PK.seed || ADRS || M1, 8n)",
+      "H":"SHAKE256(PK.seed || ADRS || M2, 8n)",
+      "Tl":"SHAKE256(PK.seed || ADRS || Ml, 8n)"
+    },
+    "SHA2_n16": {
+      "Hmsg":"MGF1-SHA-256(R || PK.seed || SHA-256(R || PK.seed || PK.root || M), m)",
+      "PRF":"Trunc_n(SHA-256(PK.seed || toByte(0,64-n) || ADRS_c || SK.seed))",
+      "PRFmsg":"Trunc_n(HMAC-SHA-256(SK.prf, opt_rand || M))",
+      "F":"Trunc_n(SHA-256(PK.seed || toByte(0,64-n) || ADRS_c || M1))",
+      "H":"Trunc_n(SHA-256(PK.seed || toByte(0,64-n) || ADRS_c || M2))",
+      "Tl":"Trunc_n(SHA-256(PK.seed || toByte(0,64-n) || ADRS_c || Ml))"
+    },
+    "SHA2_n24_n32": {
+      "Hmsg":"MGF1-SHA-512(R || PK.seed || SHA-512(R || PK.seed || PK.root || M), m)",
+      "PRF":"Trunc_n(SHA-256(PK.seed || toByte(0,64-n) || ADRS_c || SK.seed))",
+      "PRFmsg":"Trunc_n(HMAC-SHA-512(SK.prf, opt_rand || M))",
+      "F":"Trunc_n(SHA-256(PK.seed || toByte(0,64-n) || ADRS_c || M1))",
+      "H":"Trunc_n(SHA-512(PK.seed || toByte(0,128-n) || ADRS_c || M2))",
+      "Tl":"Trunc_n(SHA-512(PK.seed || toByte(0,128-n) || ADRS_c || Ml))"
+    }
+  }
+}
