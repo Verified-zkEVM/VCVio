@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.ResumptionMeasure
+public import VCVio.EvalDist.Divergence.KLDivergence
 public import Mathlib.Probability.Distributions.Gaussian.Real
 public import ToMathlib.MeasureTheory.DiscreteInstances
 public import Examples.OneTimePad.Basic
@@ -209,5 +210,39 @@ example (sp : ℕ) (mgen : ProbComp (BitVec sp)) (σ : BitVec sp) :
       = (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
   rw [denote_probComp_apply_singleton]
   exact oneTimePad.probOutput_cipher_uniform sp mgen σ
+
+/-! ## Divergence
+
+The point of denoting into `Measure` is that Mathlib's probability library then applies to
+VCVio programs directly. Kullback-Leibler is the check: it does not exist anywhere in the
+`SPMF` layer, and here it arrives with its data-processing inequalities already proved. -/
+
+open InformationTheory
+
+/-- Post-processing two computations by the same continuation cannot increase their divergence.
+
+This is the game-hopping shape, and it is Mathlib's `klDiv_comp_right_le` — `Measure.bind` and
+kernel composition are the same operation, so no transport is involved. -/
+example {α β : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
+    (mx my : ProbComp α) (f : α → ProbComp β) :
+    klDiv (FreeM.denote (mx >>= f)) (FreeM.denote (my >>= f))
+      ≤ klDiv (FreeM.denote mx) (FreeM.denote my) :=
+  FreeM.klDiv_denote_bind_le mx my f
+
+/-- The same for post-processing by a function. -/
+example {α β : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
+    (g : α → β) (mx my : ProbComp α) :
+    klDiv (FreeM.denote (g <$> mx)) (FreeM.denote (g <$> my))
+      ≤ klDiv (FreeM.denote mx) (FreeM.denote my) :=
+  FreeM.klDiv_denote_map_le g mx my
+
+/-- Divergence between *continuous* denotations is expressible at all.
+
+`klDiv` here is applied to two measures on `ℝ` that no `PMF` can carry, so this statement has no
+counterpart in the `SPMF` layer — not a harder proof there, but not a well-formed statement. -/
+example : klDiv (FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit))
+    (FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit)) = 0 := by
+  rw [denote_gauss_lift]
+  exact klDiv_self _
 
 end VCVioTest.MeasureSemantics
