@@ -12,7 +12,9 @@ ToMathlib/Control/Monad/Commutative.lean	5
 ToMathlib/Data/ENNReal/AbsDiff.lean	1
 ToMathlib/Data/ENNReal/TsumDistrib.lean	1
 ToMathlib/General.lean	29
+ToMathlib/Probability/Divergence/RenyiDiscrete.lean	26
 ToMathlib/Probability/ProbabilityMassFunction/Measure.lean	17
+ToMathlib/Probability/ProbabilityMassFunction/RadonNikodym.lean	20
 ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean	76
 ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean	7
 ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean	75

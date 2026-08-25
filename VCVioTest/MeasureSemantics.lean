@@ -8,6 +8,7 @@ module
 public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.ExpectationMeasure
+public import ToMathlib.Probability.Divergence.RenyiDiscrete
 public import Mathlib.Probability.Distributions.Gaussian.Real
 public import ToMathlib.MeasureTheory.DiscreteInstances
 public import Examples.OneTimePad.Basic
@@ -267,5 +268,27 @@ open OracleComp.EvalDist in
 example (n : ℕ) (mx : ProbComp (BitVec n)) (g : ℕ → BitVec n → ℝ≥0∞) (hg : Monotone g) :
     expectedValue mx (fun x => ⨆ k, g k x) = ⨆ k, expectedValue mx (g k) :=
   expectedValue_iSup mx g hg
+
+/-! ## Renyi divergence, at both ends of the boundary
+
+The measure-level Renyi MGF is stated for arbitrary measures, so it covers laws no `PMF` can
+carry, and it agrees exactly with the countably supported formula where both are defined. The
+discrete development is therefore a corollary rather than a parallel copy. -/
+
+/-- Renyi between two continuous laws — no `PMF` counterpart exists. -/
+example (a : ℝ) : renyiMGF a (gaussianReal 0 1) (gaussianReal 0 1) = 1 := renyiMGF_self a _
+
+/-- The discrete data processing inequality, obtained from the measure-level one.
+
+This is the *same statement* as the hand-rolled `PMF.renyiMGF_map_le`, whose direct proof is a
+fibrewise Holder argument of roughly a hundred and twenty lines; here it follows from Mathlib's
+convexity scaffolding through the agreement theorem. -/
+example (n m : ℕ) (a : ℝ) (ha : 1 ≤ a) (f : BitVec n → BitVec m) (p q : PMF (BitVec n)) :
+    (f <$> p).renyiMGF a (f <$> q) ≤ p.renyiMGF a q :=
+  renyiMGF_map_le_of_pmf a ha f p q
+
+/-- ...and it is the existing discrete formula on a finite sample type. -/
+example (n : ℕ) (a : ℝ) (ha : 1 < a) (p q : PMF (BitVec n)) :
+    renyiMGF a p.toMeasure q.toMeasure = PMF.renyiMGF a p q := renyiMGF_toMeasure a ha p q
 
 end VCVioTest.MeasureSemantics
