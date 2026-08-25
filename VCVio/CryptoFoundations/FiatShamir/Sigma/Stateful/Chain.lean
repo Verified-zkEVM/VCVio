@@ -460,10 +460,9 @@ private def cmaSimLoggedLeftOrnament
     rcases s with ⟨signed, ⟨⟨log, cache, keypair⟩, bad⟩⟩
     simp only [cmaSimFixedKeyInv] at hs
     rcases t with ((n | mc) | m)
-    · simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
+    · simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
         QueryImpl.mapStateTBase, QueryImpl.Stateful.Frame.linkReshape,
-        QueryImpl.Stateful.linkWith] using
-          (simulateQ_id_add_uniform_query_inl (M × Commit →ₒ Chal) n).symm
+        QueryImpl.Stateful.linkWith]
     · cases hcache : cache mc with
       | some ch =>
           simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
