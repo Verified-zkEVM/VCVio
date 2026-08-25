@@ -49,13 +49,14 @@ until PASS. Review history is append-only; a re-review never overwrites the fail
   import/assignment/`getattr`/dynamic alias forms; it is not a claim about arbitrary Python
   reflection. Its EXIT cleanup restores the Lake build-dir
   override before temp deletion on ordinary shell exits and handled signals (not SIGKILL). The
-  sequential gate assumes no concurrent writer. Independent r16 accepted S01; S02 is eligible.
+  sequential gate assumes no concurrent writer. Independent r16 accepted S01; independent S02 r4
+  passed with zero findings; S02 is accepted and S03 is eligible.
   The descriptor/AST policy is frozen and is not extended in later sessions absent a concrete
   regression; successor work centers on Lean deliverables.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true
 
-### S02 — theorem, oracle, and security architecture (eligible)
+### S02 — theorem, oracle, and security architecture (accepted: independent r4 PASS)
 
 - Inputs: S01; CCS 2019 historical Theorem 17 statement/games; the HK22 repaired WOTS-TW proof;
   tight EasyCrypt declarations; VCVio query/transcript APIs.
@@ -69,7 +70,11 @@ focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output
 - Gates: counterexample tests for zero-target/unbounded-loss/arbitrary-sampler loopholes; `lake build
   HashSig`; `#print axioms` on notions; review `reviews/S02-security-architecture-review.md`.
 
-### S03 — data, widths, parameters, ADRS, and codecs
+Acceptance: r1/r2/r3 failed and remain immutable; independent r4 passed with zero blocking and zero
+nonblocking findings. The accepted architecture is isolated from the rejected legacy theorem and
+does not claim its composition proof.
+
+### S03 — data, widths, parameters, ADRS, and codecs (eligible; bootstrap initialized)
 
 - Inputs: S01 tables and FIPS Sections 3–5/11; accepted S02 interfaces.
 - Allowed: `Params`, `Address`, `Encoding`, new byte/codec modules and focused tests.

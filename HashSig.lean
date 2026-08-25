@@ -19,6 +19,10 @@ public import HashSig.SLHDSA.Params
 public import HashSig.SLHDSA.Primitives
 public import HashSig.SLHDSA.Scheme
 public import HashSig.SLHDSA.Security
+public import HashSig.SLHDSA.Security.Architecture
+public import HashSig.SLHDSA.Security.Notions
+public import HashSig.SLHDSA.Security.OracleSurface
+public import HashSig.SLHDSA.Security.Transcript
 public import HashSig.SLHDSA.Wots
 public import HashSig.SLHDSA.WotsChecksum
 public import HashSig.SLHDSA.Xmss

@@ -9,15 +9,20 @@ as standards conformance or as a security proof.
 
 Session S00 is **accepted by independent re-review r9** after eight preserved review failures and
 their evidence-backed dispositions. S01 reviews r0 through r15 are immutable **FAIL** artifacts.
-Independent r16 is **PASS**, so S01 is accepted and S02 is eligible to start. S01's pinned authority,
-provenance, and strict sample-schema parser anchors do not claim implementation conformance. R16
+Independent r16 is **PASS**, so S01 is accepted and S02 is eligible to start. S02
+security-architecture reviews r1 through r3 are immutable **FAIL** artifacts; independent r4 is
+**PASS with zero findings**, so S02 is accepted and S03 is eligible.
+S01's pinned authority, provenance, and strict sample-schema parser anchors do not claim
+implementation conformance. R16
 accepted the F-061/F-062 repairs: cleanup uses constant/count-only evidence, preflights
 descriptor aliases before closing each unique integer once, and gates an exact scoped AST ownership
 lifecycle. This machinery is now frozen: later sessions should center on Lean deliverables and must
 not ratchet or reopen the descriptor/AST policy without a concrete regression. The allowlisted `sorry` remains the body of
 `SLHDSA.slhdsa_euf_cma_security`, whose declaration begins at
 `HashSig/SLHDSA/Security.lean:150` (the token is currently at line 175). This is an open critical
-proof obligation, not an accepted axiom.
+proof obligation, not an accepted axiom. The accepted S02 modules define the reviewed replacement
+architecture and standalone component-game boundary; they do not prove or replace that legacy
+composition theorem.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true
 

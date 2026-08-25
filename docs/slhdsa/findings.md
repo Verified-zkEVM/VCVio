@@ -106,3 +106,9 @@ lifecycle policy as `REMEDIATED-PENDING-REVIEW` at handoff. Independent r16 then
 blocking findings. The `FIXED` statuses for F-030--F-062 administratively propagate that verdict;
 they are not S01 self-review. S01 is accepted and S02 is eligible. The accepted descriptor/AST
 machinery is frozen and is not ratcheted in successor sessions absent a concrete regression.
+
+Independent S02 reviews r1, r2, and r3 failed and remain immutable. Independent r4 passed with zero
+findings and accepts the isolated security architecture. This does not globally close F-001 through
+F-009: the legacy theorem remains rejected, concrete reductions/composition remain future work, and
+the QROM/asymptotic boundaries remain open. It does accept the S02 interface as the predecessor for
+S03 data, widths, parameters, ADRS, and codec work.

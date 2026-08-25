@@ -47,5 +47,12 @@ files use the `-rN` suffix.
   FAIL.
 - [S01 authority and pinned conformance re-review r16](S01-authority-and-conformance-review-r16.md):
   PASS; S01 accepted.
+- [S02 security architecture review r1](S02-security-architecture-review-r1.md): FAIL.
+- [S02 security architecture review r2](S02-security-architecture-review-r2.md): FAIL.
+- [S02 security architecture review r3](S02-security-architecture-review-r3.md): FAIL.
+- [S02 security architecture review r4](S02-security-architecture-review-r4.md): PASS with zero
+  blocking and zero nonblocking findings; S02 accepted.
+
+S03 is eligible and bootstrapped, but no implementation review has been requested.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true
