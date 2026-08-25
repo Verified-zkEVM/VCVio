@@ -8,7 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
 public import PolyFun.Realizability.Quantitative.Closure
-public import Mathlib.Probability.ProbabilityMassFunction.Constructions
+public import Mathlib.MeasureTheory.Measure.Dirac
 
 /-!
 # Computational-complexity soundness checks
@@ -54,13 +54,15 @@ theorem allowed_zero_probability_reply_is_charged
     (model : OracleResourceModel Q bd.interface labelOf)
     (R : QuantitativeRealization Q bd) (bound : input → ExecutionCost) (value : input)
     {position : p.A} {next : p.B position → R.machine.State}
+    [MeasurableSpace (p.B position)]
     (view_eq : R.machine.view (R.machine.init value) = Sum.inr ⟨position, next⟩)
     (direction : p.B position) (hallowed : model.allows position direction)
-    (distribution : PMF (p.B position)) (hzero : distribution direction = 0)
+    (distribution : MeasureTheory.Measure (p.B position))
+    (hzero : distribution {direction} = 0)
     (hruns : R.RunsWithinUnder model.allows bound) :
     ∃ trace : ExecutionTrace R (R.machine.init value) (next direction),
       trace.length = 1 ∧ R.executionCost value trace ≤ bound value ∧
-        distribution direction = 0 := by
+        distribution {direction} = 0 := by
   let trace : ExecutionTrace R (R.machine.init value) (next direction) :=
     .query view_eq direction (.nil _)
   have hconforms : trace.Conforms model.allows := by
@@ -73,14 +75,16 @@ theorem allowed_zero_probability_reply_resolves
     (model : OracleResourceModel Q bd.interface labelOf)
     (R : QuantitativeRealization Q bd) (bound : input → ExecutionCost) (value : input)
     {position : p.A} {next : p.B position → R.machine.State}
+    [MeasurableSpace (p.B position)]
     (view_eq : R.machine.view (R.machine.init value) = Sum.inr ⟨position, next⟩)
     (direction : p.B position) (hallowed : model.allows position direction)
-    (distribution : PMF (p.B position)) (hzero : distribution direction = 0)
+    (distribution : MeasureTheory.Measure (p.B position))
+    (hzero : distribution {direction} = 0)
     (hruns : R.RunsWithinUnder model.allows bound) :
     ∃ remaining,
       (bound value).queries = remaining + 1 ∧
         R.machine.ResolvesInUnder model.allows remaining (next direction) ∧
-          distribution direction = 0 := by
+          distribution {direction} = 0 := by
   have hresolves := hruns.resolvesIn value
   cases hbudget : (bound value).queries with
   | zero =>
@@ -153,10 +157,10 @@ theorem fair_coin_true_is_charged_under_zero_mass_semantics
       (fairCoinResourceModel CoinQ coinBoundary.interface).allows bound) :
     ∃ trace : ExecutionTrace R (R.machine.init value) (next true),
       trace.length = 1 ∧ R.executionCost value trace ≤ bound value ∧
-        (PMF.pure false : PMF Bool) true = 0 :=
+        (MeasureTheory.Measure.dirac false : MeasureTheory.Measure Bool) {true} = 0 :=
   allowed_zero_probability_reply_is_charged
     (fairCoinResourceModel CoinQ coinBoundary.interface) R bound value view_eq true (by simp)
-      (PMF.pure false) (by simp) hruns
+      (MeasureTheory.Measure.dirac false) (by simp) hruns
 
 end FairCoin
 
