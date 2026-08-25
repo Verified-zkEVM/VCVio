@@ -9,14 +9,15 @@ module
 public import VCVio.CryptoFoundations.Asymptotics.PathSemantics
 
 /-!
-# Typed-path probability bridge checks
+# Typed-path measure bridge checks
 
-Compile-time checks for the path distribution, its exact output marginal, and the derivation of
-expected query bounds from branchwise syntactic bounds.
+Compile-time checks for the canonical query-count measure, the optional full-path marginal, and
+the derivation of expected query bounds from branchwise syntactic bounds.
 -/
 
 public section
 
+open MeasureTheory
 open scoped ENNReal
 
 universe u v w x
@@ -24,19 +25,31 @@ universe u v w x
 open PFunctor
 open PFunctor.DynSystem.DynComputation
 
-#check FreeM.pathDistribution
-#check FreeM.map_output_pathDistribution
-#check FreeM.Path.trace_length_le_of_isTotalRollBound
+#check FreeM.pathMeasure
+#check FreeM.queryCountMeasure
+#check FreeM.map_length_pathMeasure
+#check FreeM.map_output_pathMeasure
+#check FreeM.queryCountMeasure_eq_dirac_of_length_eq
 #check FreeM.expectedQueryCount
+#check FreeM.expectedQueryCount_eq_of_length_eq
 #check FreeM.expectedQueryCount_le_of_isTotalRollBound
 #check OracleComp.Complexity.StrictPPTWitness.expectedQueryCount_le
 
 namespace PFunctor.FreeM
 
-variable {P : PFunctor.{u, u}} [P.IsProbabilitySpec]
+variable {P : PFunctor.{u, u}} [∀ position, MeasurableSpace (P.B position)]
+  [P.IsMeasureSpec] [∀ position, DiscreteMeasurableSpace (P.B position)]
 
-/-- A single syntactic oracle operation has expected path length at most one because every typed
-path contains exactly that one operation. -/
+/-- One syntactic operation has query-count measure concentrated at one. -/
+example (position : P.A) :
+    queryCountMeasure (FreeM.lift position : FreeM P (P.B position)) = Measure.dirac 1 := by
+  apply queryCountMeasure_eq_dirac_of_length_eq _ 1
+  rintro ⟨answer, tail⟩
+  rcases tail with ⟨⟩
+  rfl
+
+/-- A single syntactic operation has expected path length at most one because every typed path
+contains exactly that one operation. -/
 example (position : P.A) :
     expectedQueryCount (FreeM.lift position : FreeM P (P.B position)) ≤ (1 : ℝ≥0∞) := by
   simpa using expectedQueryCount_le_of_isTotalRollBound
@@ -51,14 +64,15 @@ namespace OracleComp.Complexity
 
 variable {p : PFunctor.{u, u}} {C : StepClass.{u, v}}
   [C.HasProd] [C.HasSum] [C.HasOption] [DecidableEq p.A]
-  [p.IsProbabilitySpec]
+  [∀ position, MeasurableSpace (p.B position)] [p.IsMeasureSpec]
+  [∀ position, DiscreteMeasurableSpace (p.B position)]
   {Q : QuantitativeStepClass.{u, v, w} C} {input output : Type u}
   {bd : Boundary C p input output} {label : Type x}
   {contract : OracleContract Q bd.interface label}
   {program : input → FreeM p output}
 
-/-- The probabilistic corollary consumes the existing strict witness and an explicit all-answers
-model; it cannot be constructed from a query-count assertion alone. -/
+/-- The measure corollary consumes the existing strict witness and an explicit all-answers model;
+it cannot be constructed from a query-count assertion alone. -/
 example (witness : StrictPPTWitness Q bd contract program) (model : contract.Model)
     (hAllows : ∀ position answer, model.resourceModel.allows position answer)
     (value : input) :
