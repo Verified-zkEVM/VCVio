@@ -164,6 +164,8 @@ structure RankedPPTCertificate {label : Type x}
   realization : QuantitativeRealization Q bd
   /-- Semantic agreement with the original free interaction syntax. -/
   implements : realization.machine.Implements program
+  /-- Returned payload size is polynomially recoverable from the charged tagged readout. -/
+  outputRecovery : Q.PolyOutputSizeRecovery bd
   /-- One second-order polynomial shared by every compatible resource model. -/
   polynomial : ResourcePolynomial (OracleModulus label)
   /-- Model-relative local ranked evidence for that same polynomial. -/
@@ -181,6 +183,7 @@ def strictPPTWitness (certificate : RankedPPTCertificate Q bd contract program) 
     StrictPPTWitness Q bd contract program where
   realization := certificate.realization
   implements := certificate.implements
+  outputRecovery := certificate.outputRecovery
   polynomial := certificate.polynomial
   runsWithin model := (certificate.resourcePotential model).runsWithinUnder
 

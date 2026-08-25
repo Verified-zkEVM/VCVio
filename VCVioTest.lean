@@ -5,6 +5,7 @@ public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexity
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.OracleClosure
+public import VCVioTest.CryptoFoundations.PathSemantics
 public import VCVioTest.CryptoFoundations.RankedRun
 public import VCVioTest.ForkMeasure
 public import VCVioTest.Forking.WithoutReplacement

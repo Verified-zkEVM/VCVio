@@ -108,6 +108,7 @@ def oneCoinTwoModelWitness : StrictPPTWitness quantitativeStepClass coinBoundary
     twoResponseModelContract oneCoinProgram where
   realization := oneCoinRealization
   implements := oneCoinMachine_implements
+  outputRecovery := coinOutputRecovery
   polynomial := responseSensitivePolynomial
   runsWithin model := by
     change oneCoinRealization.RunsWithinUnder model.1.allows fun value ↦

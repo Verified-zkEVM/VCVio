@@ -804,11 +804,20 @@ theorem oneCoinRealization_runsWithin :
 def oneCoinPolynomial : ResourcePolynomial (OracleModulus Unit) :=
   ResourcePolynomial.const oneCoinCost
 
+/-- The concrete sum encoding exposes every returned Boolean with only a one-bit tag overhead. -/
+def coinOutputRecovery : quantitativeStepClass.PolyOutputSizeRecovery coinBoundary where
+  polynomial := FirstOrderPolynomial.input
+  output_le answer := by
+    change encodedSize .bool answer ≤
+      encodedSize (.sum .bool .unit) (Sum.inl answer)
+    simp
+
 /-- Complete strict-PPT witness for the concrete one-query realization. -/
 def oneCoinStrictPPTWitness : StrictPPTWitness quantitativeStepClass coinBoundary
     (fairCoinContract quantitativeStepClass coinBoundary.interface) oneCoinProgram where
   realization := oneCoinRealization
   implements := oneCoinMachine_implements
+  outputRecovery := coinOutputRecovery
   polynomial := oneCoinPolynomial
   runsWithin model := by
     rw [show model.resourceModel =

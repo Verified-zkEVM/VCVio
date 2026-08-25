@@ -22,6 +22,7 @@ public import Examples.ElGamal.SSP
 public import Examples.EvalDistCompatible.Basic
 public import Examples.FrankingProtocol
 public import Examples.OneTimePad.Basic
+public import Examples.OneTimePad.ComputationalComplexity
 public import Examples.OneTimePad.HeapBasic
 public import Examples.OneTimePad.HeapPar
 public import Examples.OneTimePad.LeakageFree

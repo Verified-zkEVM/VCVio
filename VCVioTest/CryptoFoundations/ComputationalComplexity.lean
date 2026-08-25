@@ -34,6 +34,8 @@ open PFunctor.DynSystem.DynComputation
 #check OracleComp.Complexity.OracleContract
 #check OracleComp.Complexity.OracleContract.Model.modulus_monotone
 #check OracleComp.Complexity.StrictPPTWitness
+#check OracleComp.Complexity.StrictPPTWitness.outputSizePolynomial
+#check OracleComp.Complexity.StrictPPTWitness.returnedSize_le
 #check OracleComp.Complexity.StrictPPTWitness.isTotalRollBound
 #check OracleComp.Complexity.StrictPPTWitness.congrProgram
 #check OracleComp.Complexity.PureCertificate
@@ -45,7 +47,17 @@ open PFunctor.DynSystem.DynComputation
 #check OracleComp.Complexity.IsPPTBy
 #check OracleComp.Complexity.OracleProgram.IsOraclePPTBy
 #check OracleComp.Complexity.SecurityFamily.IsOraclePPTBy
+#check OracleComp.Complexity.SecurityFamily.IsOraclePPTByContract
+#check OracleComp.Complexity.SecurityFamily.ParameterizedLabel
 #check OracleComp.Complexity.SecurityFamily.IsCoinPPTByUnder
+#check OracleComp.Complexity.SecurityFamily.ResourceModel
+#check OracleComp.Complexity.SecurityFamily.ResourceModel.pack
+#check OracleComp.Complexity.SecurityFamily.ResourceModel.unpack
+#check OracleComp.Complexity.SecurityFamily.ResourceModel.equiv
+#check OracleComp.Complexity.SecurityFamily.ResourceContract
+#check OracleComp.Complexity.SecurityFamily.ResourceContract.pack
+#check OracleComp.Complexity.SecurityFamily.ResourceContract.Model.pack
+#check OracleComp.Complexity.SecurityFamily.ResourceContract.Model.unpack
 #check OracleComp.Complexity.fairCoinResourceModel
 #check OracleComp.Complexity.fairCoinContract
 #check OracleComp.Complexity.fairCoinModel
@@ -133,5 +145,50 @@ example (model : (fairCoinContract Q bd.interface).Model) :
   rfl
 
 end FairCoinContract
+
+section SecurityFamilyContract
+
+variable {index : ℕ → Type u} {spec : (n : ℕ) → OracleSpec.{u, u} (index n)}
+  {input output : ℕ → Type u} {C : StepClass.{u, v}}
+  [C.HasProd] [C.HasSum] [C.HasOption]
+  [DecidableEq (OracleComp.SecurityFamily.Spec spec).Domain]
+  {Q : QuantitativeStepClass.{u, v, w} C}
+  {bd : Boundary C (OracleComp.SecurityFamily.Spec spec).toPFunctor
+    (OracleComp.SecurityFamily.Input input) (OracleComp.SecurityFamily.Output output)}
+  {label : Type x}
+  {contract : SecurityFamily.ResourceContract Q bd.interface label}
+  {program : (n : ℕ) → input n → OracleComp (spec n) (output n)}
+
+/-- Family models make the parameter-specific response-size fact available without manually
+unpacking the aggregate sigma query. -/
+example (model : contract.Model) (n : ℕ) (position : (spec n).Domain)
+    (answer : (spec n).Range position)
+    (hanswer : model.resourceModel.allows n position answer) :
+    Q.size bd.idx ⟨⟨n, position⟩, answer⟩ ≤
+      model.resourceModel.responseSize (contract.labelOf n position)
+        (Q.size bd.pos ⟨n, position⟩) :=
+  model.resourceModel.responseSize_le n position answer hanswer
+
+/-- Packing and unpacking a compatible family model loses neither the policy nor its backend
+size certificate. -/
+example (model : contract.Model) :
+    SecurityFamily.ResourceContract.Model.unpack
+      (SecurityFamily.ResourceContract.Model.pack model) = model := by
+  exact SecurityFamily.ResourceContract.Model.unpack_pack model
+
+/-- Recovering and repacking a core model also preserves every dependent policy and modulus. -/
+example (model : contract.pack.Model) :
+    SecurityFamily.ResourceContract.Model.pack
+      (SecurityFamily.ResourceContract.Model.unpack model) = model := by
+  exact SecurityFamily.ResourceContract.Model.pack_unpack model
+
+/-- A family-contract proof still exposes one quantitative realization of the single packed
+program; the adapter cannot turn pointwise witnesses into uniform code. -/
+example (hPPT : SecurityFamily.IsOraclePPTByContract Q bd contract program) :
+    IsQuantitativelyRealizableBy Q bd fun value ↦
+      ((OracleComp.SecurityFamily.packProgram program) value).toFreeM :=
+  IsOraclePPTBy.isQuantitativelyRealizableBy hPPT
+
+end SecurityFamilyContract
 
 end OracleComp.Complexity

@@ -203,10 +203,18 @@ def falseTagPolyRealizer : quantitativeStepClass.PolyRealizer
   work_le value := by cases value; exact le_rfl
   outputSize_le value := by cases value; exact le_rfl
 
+/-- The returned unit payload cannot be hidden by its tagged readout representation. -/
+def unitOutputRecovery : quantitativeStepClass.PolyOutputSizeRecovery unitBoundary where
+  polynomial := FirstOrderPolynomial.const 0
+  output_le value := by
+    cases value
+    rfl
+
 /-- All concrete code required by VCVio's certified-pure constructor. -/
 def unitPureCertificate : PureCertificate quantitativeStepClass unitBoundary id where
   result := unitResultPolyRealizer
   head := falseTagPolyRealizer
+  outputRecovery := unitOutputRecovery
   update := emptyUpdateCode
 
 /-- A canonical singleton-model contract over the empty interface. -/

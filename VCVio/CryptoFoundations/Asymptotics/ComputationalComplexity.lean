@@ -330,6 +330,8 @@ structure StrictPPTWitness (Q : QuantitativeStepClass.{u, v, w} C)
   realization : QuantitativeRealization Q bd
   /-- The realization implements the given free interaction syntax. -/
   implements : realization.machine.Implements program
+  /-- Returned payload size is polynomially recoverable from the charged tagged readout size. -/
+  outputRecovery : Q.PolyOutputSizeRecovery bd
   /-- One response-length-relative polynomial bound, independent of the input and length model. -/
   polynomial : ResourcePolynomial (OracleModulus label)
   /-- Every contract-conforming finite answer prefix obeys the polynomial bound. -/
@@ -353,6 +355,8 @@ structure PureCertificate
   /-- Executable resolved-state readout, including its sum tag and encoded-size growth. -/
   head : Q.PolyRealizer bd.out bd.head
     (Sum.inl : output → output ⊕ p.A)
+  /-- Returned payload size is polynomially recoverable from the tagged readout. -/
+  outputRecovery : Q.PolyOutputSizeRecovery bd
   /-- Executable evidence for the pure machine's necessarily absent transition.
 
   This is requested directly instead of requiring the backend's whole option-closure suite. -/
@@ -382,6 +386,7 @@ def ofPolyRealizer (model : Q.PolynomialModel)
   exact
     { result := result
       head := model.structural.inl bd.out bd.pos
+      outputRecovery := model.structural.polyOutputSizeRecovery bd
       update :=
         (model.structural.optionNone (bd.stateIdx bd.out) bd.out).code.castFunction (by
           funext step
@@ -441,7 +446,7 @@ theorem runsWithin {label : Type x} (certificate : PureCertificate Q bd function
           ExecutionCost.ofWork, ExecutionCost.observe, ExecutionCost.work_add,
           ExecutionCost.queries_add, ExecutionCost.traffic_add,
           ExecutionCost.peakStateSize_add, ExecutionCost.peakHeadSize_add,
-          add_zero, max_zero, zero_max]
+          add_zero, Nat.max_zero, Nat.zero_max]
         refine ⟨?_, le_rfl, le_rfl, ?_, ?_⟩
         · exact Nat.add_le_add (certificate.result.work_le input) <|
             (certificate.head.work_le (function input)).trans <|
@@ -470,6 +475,7 @@ def strictPPTWitness {label : Type x} (certificate : PureCertificate Q bd functi
     StrictPPTWitness Q bd contract fun input ↦ FreeM.pure (function input) where
   realization := certificate.realization
   implements := certificate.implements
+  outputRecovery := certificate.outputRecovery
   polynomial := certificate.polynomial
   runsWithin model := certificate.runsWithin model.resourceModel.allows model.modulus
 
@@ -498,6 +504,40 @@ theorem PureCertificate.isOraclePPTBy {function : input → output} {label : Typ
 namespace StrictPPTWitness
 
 variable {contract : OracleContract Q bd.interface label} {program : input → FreeM p output}
+
+/-- A second-order polynomial bounding returned payload size through the charged peak readout. -/
+def outputSizePolynomial (witness : StrictPPTWitness Q bd contract program) :
+    _root_.Complexity.SecondOrderPolynomial (OracleModulus label) :=
+  (ResourcePolynomial.ofFirstOrder witness.outputRecovery.polynomial).comp
+    witness.polynomial.peakHeadSize
+
+@[simp]
+theorem eval_outputSizePolynomial (witness : StrictPPTWitness Q bd contract program)
+    (model : contract.Model) (value : input) :
+    witness.outputSizePolynomial.eval model.modulus (Q.size bd.input value) =
+      witness.outputRecovery.polynomial.eval
+        (witness.polynomial.eval model.modulus (Q.size bd.input value)).peakHeadSize := by
+  simp [outputSizePolynomial, ResourcePolynomial.eval]
+
+/-- Every return reached by a conforming concrete execution has polynomially bounded encoded
+payload size.
+
+The proof first recovers the payload from the final tagged readout and then uses the exact
+all-prefix resource bound. Thus a sum encoding cannot hide an exponentially larger result behind
+a short `peakHeadSize`. -/
+theorem returnedSize_le (witness : StrictPPTWitness Q bd contract program)
+    (model : contract.Model) (value : input) {finish : witness.realization.machine.State}
+    (trace : witness.realization.ExecutionTrace
+      (witness.realization.machine.init value) finish)
+    (htrace : trace.Conforms model.resourceModel.allows) (result : output)
+    (view_eq : witness.realization.machine.view finish = Sum.inl result) :
+    Q.size bd.out result ≤
+      witness.outputSizePolynomial.eval model.modulus (Q.size bd.input value) := by
+  have hreturned := witness.realization.returnedSize_le_peakHeadSize
+    witness.outputRecovery.toOutputSizeRecovery value trace result view_eq
+  have hcost := (witness.runsWithin model).cost_le value trace htrace
+  rw [witness.eval_outputSizePolynomial model value]
+  exact hreturned.trans (witness.outputRecovery.polynomial.eval_monotone hcost.2.2.2.2)
 
 /-- Transport a strict-PPT witness across extensional equality of whole program families.
 
@@ -659,6 +699,169 @@ def IsPPTBy {input output : Type} {C : StepClass}
     (program : input → OracleComp coinSpec output) : Prop :=
   OracleProgram.IsOraclePPTBy Q bd (fairCoinContract Q bd.interface) program
 
+/-! ## Security-family resource contracts -/
+
+namespace SecurityFamily
+
+/-- The raw dependent sum of parameter-indexed resource labels.
+
+This is only a carrier construction, not a way for one finite second-order-polynomial expression
+to select its current security parameter dynamically. A polynomial can mention only finitely many
+concrete inhabitants of this sum. Uniform families should therefore normally classify queries by
+a fixed global port-label type; use this carrier only when those finitely mentioned sigma labels
+have an independently justified meaning. -/
+abbrev ParameterizedLabel (label : ℕ → Type x) := (n : ℕ) × label n
+
+variable {index : ℕ → Type u} {spec : (n : ℕ) → OracleSpec.{u, u} (index n)}
+  {C : StepClass.{u, v}} {Q : QuantitativeStepClass.{u, v, w} C}
+  {interface : InterfaceBoundary C (OracleComp.SecurityFamily.Spec spec).toPFunctor}
+  {label : Type x}
+
+/-- Pack a member-wise query classification into the sigma interface used by
+`SecurityFamily.packProgram`. The result type is one global resource-label space, so one uniform
+second-order polynomial can refer to its symbols. -/
+def packedLabelOf (labelOf : ∀ n, (spec n).Domain → label) :
+    (OracleComp.SecurityFamily.Spec spec).Domain → label
+  | ⟨n, position⟩ => labelOf n position
+
+@[simp]
+theorem packedLabelOf_apply (labelOf : ∀ n, (spec n).Domain → label)
+    (n : ℕ) (position : (spec n).Domain) :
+    packedLabelOf labelOf ⟨n, position⟩ = labelOf n position :=
+  rfl
+
+/-- A resource model presented member-by-member before packing a security family.
+
+This is only an ergonomic view of `OracleResourceModel`: executable costs and encoded sizes still
+come from the explicit quantitative backend `Q` and the pinned packed interface boundary. No
+machine model, encoding, or complexity library is definitionally selected here. -/
+structure ResourceModel
+    (Q : QuantitativeStepClass.{u, v, w} C)
+    (interface : InterfaceBoundary C (OracleComp.SecurityFamily.Spec spec).toPFunctor)
+    (labelOf : ∀ n, (spec n).Domain → label) where
+  /-- Replies admitted for each parameter and typed query position. -/
+  allows : ∀ n (position : (spec n).Domain), (spec n).Range position → Prop
+  /-- Tagged-response size envelope for each global interface label. -/
+  responseSize : label → ℕ → ℕ
+  /-- Every response-size envelope is monotone in encoded query size. -/
+  responseSize_monotone : ∀ interface, Monotone (responseSize interface)
+  /-- Every admitted typed reply fits its packed tagged-response envelope. -/
+  responseSize_le : ∀ n (position : (spec n).Domain) (answer : (spec n).Range position),
+    allows n position answer →
+      Q.size interface.idx ⟨⟨n, position⟩, answer⟩ ≤
+        responseSize (labelOf n position) (Q.size interface.pos ⟨n, position⟩)
+
+namespace ResourceModel
+
+variable {labelOf : ∀ n, (spec n).Domain → label}
+
+/-- Pack a family resource model into the backend-neutral core contract layer. -/
+def pack (model : ResourceModel Q interface labelOf) :
+    OracleResourceModel Q interface (packedLabelOf labelOf) where
+  allows := fun ⟨n, position⟩ answer ↦ model.allows n position answer
+  responseSize := model.responseSize
+  responseSize_monotone := model.responseSize_monotone
+  responseSize_le := fun ⟨n, position⟩ answer hanswer ↦
+    model.responseSize_le n position answer hanswer
+
+/-- Present a packed resource model member-by-member. -/
+def unpack (model : OracleResourceModel Q interface (packedLabelOf labelOf)) :
+    ResourceModel Q interface labelOf where
+  allows := fun n position answer ↦ model.allows ⟨n, position⟩ answer
+  responseSize := model.responseSize
+  responseSize_monotone := model.responseSize_monotone
+  responseSize_le := fun n position answer hanswer ↦
+    model.responseSize_le ⟨n, position⟩ answer hanswer
+
+@[simp]
+theorem unpack_pack (model : ResourceModel Q interface labelOf) :
+    unpack model.pack = model := by
+  cases model
+  rfl
+
+@[simp]
+theorem pack_unpack (model : OracleResourceModel Q interface (packedLabelOf labelOf)) :
+    pack (unpack model) = model := by
+  cases model
+  rfl
+
+/-- Family and packed presentations of a resource model are equivalent data. -/
+def equiv : ResourceModel Q interface labelOf ≃
+    OracleResourceModel Q interface (packedLabelOf labelOf) where
+  toFun := pack
+  invFun := unpack
+  left_inv := unpack_pack
+  right_inv := pack_unpack
+
+end ResourceModel
+
+/-- A contract stated over the members of a security family.
+
+Packing this structure produces an ordinary `OracleContract`, so all strict-PPT definitions remain
+parametric in the quantitative backend and consume the same small core interface. -/
+structure ResourceContract
+    (Q : QuantitativeStepClass.{u, v, w} C)
+    (interface : InterfaceBoundary C (OracleComp.SecurityFamily.Spec spec).toPFunctor)
+    (label : Type x) where
+  /-- Interface label of each member's query positions. -/
+  labelOf : ∀ n, (spec n).Domain → label
+  /-- Resource environments admitted by this family contract. -/
+  admissible : ResourceModel Q interface labelOf → Prop
+  /-- The family contract admits at least one global finite resource envelope. -/
+  model_nonempty : ∃ model, admissible model
+
+namespace ResourceContract
+
+variable (contract : ResourceContract Q interface label)
+
+/-- Pack a family contract into the core oracle-contract layer. -/
+def pack : OracleContract Q interface label where
+  labelOf := packedLabelOf contract.labelOf
+  admissible model := contract.admissible (ResourceModel.unpack model)
+  model_nonempty := by
+    obtain ⟨model, hmodel⟩ := contract.model_nonempty
+    exact ⟨model.pack, by simpa using hmodel⟩
+
+/-- A resource environment compatible with a family contract. -/
+abbrev Model := { model : ResourceModel Q interface contract.labelOf //
+  contract.admissible model }
+
+namespace Model
+
+variable {contract : ResourceContract Q interface label}
+
+/-- Forget that a family resource environment satisfies its contract. -/
+abbrev resourceModel (model : contract.Model) :
+    ResourceModel Q interface contract.labelOf :=
+  model.1
+
+/-- Pack a compatible family model for use by the core strict-PPT witness. -/
+def pack (model : contract.Model) : contract.pack.Model :=
+  ⟨model.resourceModel.pack, by
+    change contract.admissible (ResourceModel.unpack model.resourceModel.pack)
+    rw [ResourceModel.unpack_pack]
+    exact model.2⟩
+
+/-- Recover the family presentation of a compatible packed model. -/
+def unpack (model : contract.pack.Model) : contract.Model :=
+  ⟨ResourceModel.unpack model.1, model.2⟩
+
+@[simp]
+theorem unpack_pack (model : contract.Model) : unpack model.pack = model := by
+  apply Subtype.ext
+  exact ResourceModel.unpack_pack model.resourceModel
+
+@[simp]
+theorem pack_unpack (model : contract.pack.Model) : pack (unpack model) = model := by
+  apply Subtype.ext
+  exact ResourceModel.pack_unpack model.1
+
+end Model
+
+end ResourceContract
+
+end SecurityFamily
+
 /-- Strict PPT for a security-indexed family means strict PPT of its one packed program.
 
 This requires one realization and one polynomial for every security parameter. It is strictly
@@ -674,6 +877,22 @@ def SecurityFamily.IsOraclePPTBy
     {label : Type x} (contract : OracleContract Q bd.interface label)
     (program : (n : ℕ) → input n → OracleComp (spec n) (output n)) : Prop :=
   OracleProgram.IsOraclePPTBy Q bd contract (SecurityFamily.packProgram program)
+
+/-- Uniform strict oracle PPT using a member-by-member family resource contract.
+
+This is an ergonomic adapter to `SecurityFamily.IsOraclePPTBy`; it does not change the trusted
+complexity predicate or select a concrete backend. -/
+def SecurityFamily.IsOraclePPTByContract
+    {index : ℕ → Type u} {spec : (n : ℕ) → OracleSpec.{u, u} (index n)}
+    {input output : ℕ → Type u} {C : StepClass.{u, v}}
+    [C.HasProd] [C.HasSum] [C.HasOption]
+    [DecidableEq (SecurityFamily.Spec spec).Domain]
+    (Q : QuantitativeStepClass.{u, v, w} C)
+    (bd : Boundary C (SecurityFamily.Spec spec).toPFunctor
+      (SecurityFamily.Input input) (SecurityFamily.Output output))
+    {label : Type x} (contract : SecurityFamily.ResourceContract Q bd.interface label)
+    (program : (n : ℕ) → input n → OracleComp (spec n) (output n)) : Prop :=
+  SecurityFamily.IsOraclePPTBy Q bd contract.pack program
 
 /-- An explicit synonym emphasizing strict pathwise bounds for a packed oracle family. -/
 abbrev SecurityFamily.IsStrictPPTBy := @SecurityFamily.IsOraclePPTBy

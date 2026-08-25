@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
 public import PolyFun.Realizability.Quantitative.Closure
+public import Mathlib.Probability.ProbabilityMassFunction.Constructions
 
 /-!
 # Computational-complexity soundness checks
