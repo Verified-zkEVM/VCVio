@@ -61,20 +61,20 @@ checksum shift for \(\mathit{lgw}\ne4\). The exact twelve tuples, sizes, pure/pr
 SHAKE/SHA2 primitive grammars are checked in \texttt{matrices/fips205-profile.json}.
 
 \section{Security definitions and theorem architecture}
-S02 defines an explicitly classical architecture for EUF-CMA, PRF/PRFmsg, ITSR, TCR, DSPR,
-SPprob, PRE-C, and UD-C. The attacked scheme, signature carrier, randomizer projection, key
-distribution, signing, and verification are one explicit interface parameter, so the general
-statement does not invoke the transitional single-layer implementation. Generated key pairs carry
-public-seed/root coherence, and structural predicates bind qS/qH to the actual public adversary for
-every public key.
+S02 defines an explicitly classical candidate architecture for EUF-CMA, PRF/PRFmsg, ITSR, TCR,
+DSPR, SPprob, PRE-C, and UD-C. The arbitrary signature-scheme interface removes the direct call to
+the transitional single-layer implementation, but supplies no law coupling its signature carrier,
+randomizer, key distribution, signing, and verification fields to one general construction.
+F-079/PO-003 therefore remain open for S08/S09. Generated key pairs carry public-seed/root
+coherence, and structural predicates bind qS/qH to the actual public adversary for every public key.
 
 The RHS follows the twelve source-ordered EasyCrypt terms and coefficients. Formula-derived
 positive values are caps on actual challenger-owned target logs in standalone two-phase component
-games, not exact families asserted to occur in the outer EUF transcript. Empty, duplicate,
+games under proposed D-009, not exact families asserted to occur in the outer EUF transcript. Empty, duplicate,
 overflowing, invalid-index, or collection-overlapping traces make the relevant event false. This
-selection supersedes the earlier transcript-derived exact-family blueprint. The architecture does
-not prove the master inequality, asymptotic security, or a QROM lift, and it contains no invented
-interleaving loss.
+selection is not an accepted supersession of the earlier transcript-derived exact-family blueprint:
+D-006/D-009 have no named approver and their obligations remain pending. The architecture does not
+prove the master inequality, asymptotic security, or a QROM lift, and it contains no invented loss.
 
 \section{Lean implementation and proof pipeline}
 Map modules and load-bearing declarations to construction and security obligations. Include
@@ -244,15 +244,16 @@ focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output
 \par}
 
 The SHA CLI cases are a subset of the path/CLI group and nominal success is excluded. Independent
-r16 passed with no blocking findings, so S01 is accepted and S02 is eligible. S02 r1--r3 failed and r4 initially passed,
-but the complete r5 audit reopened S02: it found generated partial helpers, an impossible repository
-self-revision gate, incomplete source provenance, missing traceability, a general master LHS wired
-to the known d=1 scheme, and stale transcript-target contracts. Repair uses total list combinators,
-ancestor-session-base revision semantics plus an active-source composite, synchronized matrices and
-inventory, an explicit attacked-scheme interface, and source-shaped standalone component games.
-These dispositions remain pending independent r6 review. The reviewed S01 descriptor/AST machinery
-is otherwise retained and frozen; the manifest semantic correction responds to this concrete
-reproducibility regression rather than broadening that policy.
+r16 passed with no blocking findings, so S01 is accepted and S02 is eligible. S02 r1--r3 failed and
+r4 initially passed, but the complete r5 audit reopened S02 with six blockers. R6 confirmed the
+formula/build work but failed on construction-coupling overclaim, unapproved decisions, inconsistent
+source-provenance commands/mutations, weak revision identity, and false inventory/scope data. The
+second repair classifies the interface as arbitrary and leaves F-079/PO-003 open; leaves D-006/D-009
+proposed and their obligations pending; uses an exact session-linked repair-base field; validates
+the exact four-glob command recipe plus a controlled Security-byte mutation; and corrects the
+inventory/session record. These dispositions remain pending independent r7 review. The reviewed S01
+descriptor/AST machinery is otherwise retained and frozen; the narrow provenance repair responds
+to concrete S02 regressions.
 
 \section{Coverage and traceability}
 Include construction-to-source-to-Lean-to-test coverage, proof obligations, assumptions, TCB, and

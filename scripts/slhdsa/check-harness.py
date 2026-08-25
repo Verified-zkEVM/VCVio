@@ -198,12 +198,58 @@ S01_FAILED_REVIEW_HASHES = {
     # Later immutable FAIL artifacts are excluded from active-prose mutation policy by exact hash.
     "reviews/S02-security-architecture-review-r5.md":
         "0c1ea5b29c49d7fc6640509bb974aefd73c1cab6587e2052e34ba57e91b55bb6",
+    "reviews/S02-security-architecture-review-r6.md":
+        "39328910948604a1920b6956d33885ebca0520eaff7af7b66088c3a30f1f219d",
 }
 S01_ACCEPTED_REVIEW = {
     "path": "reviews/S01-authority-and-conformance-review-r16.md",
     "sha256": "d044a7601c99101ba2d4ec8190a23142a5479da005aae249d75f36cceffcd465",
     "size_bytes": 20920,
     "line_count": 335,
+}
+
+S02_REPAIR_BASE_REVISION = "7b77e700b3d24a6ab94ed741a650954bbd90859a"
+S02_SOURCE_GLOBS = (
+    "HashSig/SLHDSA/*.lean",
+    "HashSig/SLHDSA/C13/*.lean",
+    "HashSig/SLHDSA/Concrete/*.lean",
+    "HashSig/SLHDSA/Security/*.lean",
+)
+S02_SOURCE_COMMAND = (
+    "sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean "
+    "HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum"
+)
+S02_SOURCE_DETERMINISTIC_COMMAND = f"LC_ALL=C {S02_SOURCE_COMMAND}"
+S02_DECLARATION_SPANS = {
+    "DECL-015": (35, 1, 39, 48),
+    "DECL-016": (63, 1, 68, 61),
+    "DECL-017": (229, 1, 233, 42),
+    "DECL-018": (132, 1, 142, 58),
+    "DECL-019": (120, 1, 142, 68),
+    "DECL-020": (381, 1, 382, 26),
+    "DECL-021": (384, 1, 395, 36),
+    "DECL-022": (397, 1, 412, 36),
+    "DECL-023": (414, 1, 426, 36),
+    "DECL-024": (428, 1, 440, 36),
+    "DECL-025": (442, 1, 457, 36),
+    "DECL-026": (459, 1, 473, 36),
+    "DECL-027": (475, 1, 489, 36),
+    "DECL-028": (491, 1, 502, 30),
+    "DECL-029": (506, 1, 538, 35),
+    "DECL-030": (549, 1, 556, 64),
+    "DECL-031": (558, 1, 577, 20),
+    "DECL-032": (579, 1, 586, 89),
+}
+S02_DECLARATION_DIRECT_DEPS = {
+    "DECL-022": ["SLHDSA.Security.chosenTargetsC", "SLHDSA.Security.collectionTweaks",
+                 "SLHDSA.Security.CollectionDisjoint"],
+    "DECL-024": ["SLHDSA.Security.chosenTargets", "SLHDSA.Security.SPprobSuccess"],
+    "DECL-025": ["SLHDSA.Security.sampledTargets", "SLHDSA.Security.PRESuccess",
+                 "SLHDSA.Security.CollectionDisjoint"],
+    "DECL-026": ["SLHDSA.Security.sampledTargetRealImpl",
+                 "SLHDSA.Security.SampledTraceValid", "SLHDSA.Security.CollectionDisjoint"],
+    "DECL-027": ["SLHDSA.Security.sampledTargetIdealImpl",
+                 "SLHDSA.Security.SampledTraceValid", "SLHDSA.Security.CollectionDisjoint"],
 }
 
 # This is the one authoritative current partition. The six historical SHA-256 CLI cases are a
@@ -317,21 +363,21 @@ FIPS205_RANDOMNESS = (
 # session and retain the structured checks below. The pin set is exhaustive, not a permanent freeze.
 S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
-        (3608, "f0c48bda1fb03b5c5da685ffd6da6ffa7a85e6eaa8449800401cff2f5ebddc6e"),
+        (3687, "6a4a1ac1bba6fa7648fb357720fb8279c1c99d922ddd5176184202a4187e9805"),
     "docs/slhdsa/matrices/coverage.csv":
-        (3922, "e8d9ada8ebe6ff13477fd31c3990baf679d9cbdf5d4df9472f57e6f56849739b"),
+        (3991, "4918615db68dc485efd4b073ac02e9ef56efa9c68283baf5296bedf29ae0a462"),
     "docs/slhdsa/matrices/decisions.csv":
-        (1750, "11974817d6932a709c326f68a94bd8682b15ba4b2e261e940645c8724adc034b"),
+        (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (28759, "ff88a1153e7b7f45f58bc5a64b8bcc233603cdf9f0fec151ba0e2ac1812b1e80"),
+        (29000, "756abcbd39409b90f13b4f4acc25e22ae9e37739971a19833bdacb8f59b8e319"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (3806, "79e9f925221e9038f9b90c5906389b5d85bd1fb7dd1bf8fbd7668faea3772075"),
+        (3942, "263ea1dd5f60c2a166fe3a230c73a70d994aade91dc784eba1ef937302f8e192"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
-        (4710, "44657d7ded613a047660cdcb4e2b699d1b67f11c9ff7cf192655c50ed6baa8b5"),
+        (4812, "307691a90e171fc44aee87319d0678d1a8929186d50406c14a2f811ab6287cc6"),
 }
 
 # DECL-011--DECL-014 use typed dependency tokens. Earlier bootstrap rows retain their historical
@@ -428,6 +474,8 @@ def check_required_files() -> None:
     require(not missing_s01, f"missing S01 files: {', '.join(missing_s01)}")
     require((ROOT / "scripts/slhdsa/PolicyAudit.lean").is_file(),
             "missing elaborated-environment audit scripts/slhdsa/PolicyAudit.lean")
+    require((ROOT / "scripts/slhdsa/S02InventoryProbe.lean").is_file(),
+            "missing elaborated S02 inventory probe scripts/slhdsa/S02InventoryProbe.lean")
     require((ROOT / "scripts/slhdsa/fixtures/SLHDSAPolicyIRMacro.lean").is_file(),
             "missing compiled-IR fixture macro")
     require((ROOT / "scripts/slhdsa/fixtures/HashSig/PolicyIRFixture.lean").is_file(),
@@ -505,6 +553,8 @@ def check_required_files() -> None:
     wrapper = (ROOT / "scripts/slhdsa/validate.sh").read_text(encoding="utf-8")
     require("lake env lean scripts/slhdsa/PolicyAudit.lean" in wrapper,
             "validate.sh does not run the authoritative elaborated audit")
+    require("lake env lean scripts/slhdsa/S02InventoryProbe.lean" in wrapper,
+            "validate.sh does not run the S02 declaration-inventory probe")
     for marker in ("python3 -B scripts/slhdsa/check-acvp-provenance.py",
                    "lake build HashSigTest", "--resolve-s01-parser-executable"):
         require(marker in wrapper, f"validate.sh: missing S01 gate {marker}")
@@ -4707,6 +4757,18 @@ def check_declarations() -> None:
                     f"declarations.jsonl:{line_no}: prohibited policy flag")
             bootstrap_count += row["inventory_status"] == "bootstrap-manual"
     require(count > 0, "declarations.jsonl: must have seed rows")
+    require(set(S02_DECLARATION_SPANS) <= set(rows),
+            "declarations.jsonl: S02 declaration rows are incomplete")
+    for declaration_id, expected in S02_DECLARATION_SPANS.items():
+        source = rows[declaration_id]["source"]
+        actual = (source["start_line"], source["start_column"],
+                  source["end_line"], source["end_column"])
+        require(actual == expected,
+                f"declarations.jsonl: exact full span mismatch for {declaration_id}")
+    for declaration_id, expected in S02_DECLARATION_DIRECT_DEPS.items():
+        require(rows[declaration_id]["direct_dependencies"] == expected,
+                f"declarations.jsonl: exact S02 dependency mismatch for {declaration_id}")
+    print("S02 declaration facts: PASS (18 exact full spans; 5 corrected dependency sets)")
     validate_s01_dependency_accounting(rows)
 
     expect_s01_mutation_rejected(
@@ -5177,6 +5239,55 @@ def git_revision_is_ancestor(path: Path, revision: str) -> bool:
     return result.returncode == 0
 
 
+def source_tree_composite_digest(composite: dict[str, Any], root: Path) -> str:
+    require(composite.get("id") == "vcvio-slh-dsa-lean-tree"
+            and composite.get("algorithm") == "sha256-of-sha256sum-manifest-v1"
+            and composite.get("working_directory") == "repository root"
+            and composite.get("manifest_line") ==
+                "<lowercase-file-sha256><two ASCII spaces><repository-relative-path><LF>",
+            "reference-manifest.json: composite schema")
+    require(tuple(composite.get("globs_in_order", ())) == S02_SOURCE_GLOBS,
+            "reference-manifest.json: exact source-tree glob recipe mismatch")
+    require(composite.get("original_command") == S02_SOURCE_COMMAND
+            and composite.get("deterministic_command") == S02_SOURCE_DETERMINISTIC_COMMAND,
+            "reference-manifest.json: source-tree command/glob recipe mismatch")
+    manifest = bytearray()
+    matched: list[str] = []
+    for pattern in S02_SOURCE_GLOBS:
+        paths = sorted(root.glob(pattern), key=lambda item: item.as_posix())
+        require(paths, f"reference-manifest.json: empty composite glob {pattern}")
+        for path in paths:
+            rel = path.relative_to(root).as_posix()
+            matched.append(rel)
+            manifest.extend(f"{sha256_file(path)}  {rel}\n".encode("ascii"))
+    require(len(matched) == len(set(matched)),
+            "reference-manifest.json: duplicate composite path")
+    return hashlib.sha256(manifest).hexdigest()
+
+
+def check_source_tree_mutation(composite: dict[str, Any]) -> None:
+    with tempfile.TemporaryDirectory(prefix="slhdsa-source-composite-") as temporary:
+        fixture = Path(temporary)
+        for pattern in S02_SOURCE_GLOBS:
+            for source in sorted(ROOT.glob(pattern), key=lambda item: item.as_posix()):
+                relative = source.relative_to(ROOT)
+                target = fixture / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+        mutated = fixture / "HashSig/SLHDSA/Security/Architecture.lean"
+        mutated.write_bytes(mutated.read_bytes() + b"\n-- controlled provenance mutation\n")
+        try:
+            require(source_tree_composite_digest(composite, fixture) == composite.get("sha256"),
+                    "reference-manifest.json: source-tree composite mismatch")
+        except CheckFailure as error:
+            require(str(error) == "reference-manifest.json: source-tree composite mismatch",
+                    "reference-manifest.json: Security-source mutation failed unexpectedly")
+        else:
+            raise CheckFailure(
+                "reference-manifest.json: Security-source mutation did not invalidate composite")
+    print("INFO: source-tree Security-byte mutation regression: PASS")
+
+
 def check_reference_manifest() -> None:
     data = read_json(DOCS / "reference-manifest.json")
     require(data.get("schema_version") == 1 and isinstance(data.get("entries"), list),
@@ -5209,10 +5320,20 @@ def check_reference_manifest() -> None:
         elif entry["kind"] == "git":
             require(target.is_dir(), f"reference-manifest.json: missing git tree {entry['id']}")
             if entry["root"] == "repo":
-                require(entry.get("revision_semantics") == "ancestor-session-base",
+                require(set(entry) == {"id", "kind", "root", "locator",
+                                       "repair_base_revision", "revision_semantics", "authority"}
+                        and entry.get("revision_semantics") == "exact-repair-base"
+                        and entry.get("repair_base_revision") == S02_REPAIR_BASE_REVISION
+                        and "revision" not in entry,
                         f"reference-manifest.json: repo revision semantics for {entry['id']}")
-                require(git_revision_is_ancestor(target, entry.get("revision", "")),
-                        f"reference-manifest.json: session base is not an ancestor for {entry['id']}")
+                require(git_revision_is_ancestor(target, S02_REPAIR_BASE_REVISION),
+                        f"reference-manifest.json: exact repair base is not an ancestor for "
+                        f"{entry['id']}")
+                session = (DOCS / "sessions/S02-security-architecture.md").read_text(
+                    encoding="utf-8")
+                require(session.count(
+                    f"Repair base commit: `{S02_REPAIR_BASE_REVISION}`.") == 1,
+                    "reference-manifest.json: active S02 session repair-base mismatch")
             else:
                 require(git_revision(target) == entry.get("revision"),
                         f"reference-manifest.json: revision mismatch for {entry['id']}")
@@ -5223,20 +5344,10 @@ def check_reference_manifest() -> None:
         print(f"INFO: sibling reference bundle absent at {reference_root}; metadata checked, "
               "set SLHDSA_REFERENCE_ROOT to reproduce external hashes")
     composite = data.get("source_tree_composite")
-    require(isinstance(composite, dict) and composite.get("algorithm") ==
-            "sha256-of-sha256sum-manifest-v1", "reference-manifest.json: composite schema")
-    manifest = bytearray()
-    matched: list[str] = []
-    for pattern in composite.get("globs_in_order", []):
-        paths = sorted(ROOT.glob(pattern), key=lambda item: item.as_posix())
-        require(paths, f"reference-manifest.json: empty composite glob {pattern}")
-        for path in paths:
-            rel = path.relative_to(ROOT).as_posix()
-            matched.append(rel)
-            manifest.extend(f"{sha256_file(path)}  {rel}\n".encode("ascii"))
-    require(len(matched) == len(set(matched)), "reference-manifest.json: duplicate composite path")
-    require(hashlib.sha256(manifest).hexdigest() == composite.get("sha256"),
+    require(isinstance(composite, dict), "reference-manifest.json: composite schema")
+    require(source_tree_composite_digest(composite, ROOT) == composite.get("sha256"),
             "reference-manifest.json: source-tree composite mismatch")
+    check_source_tree_mutation(composite)
 
 
 def validate_s01_authority_metadata(entries: dict[str, Any], profile: dict[str, Any]) -> None:
@@ -5623,6 +5734,9 @@ def validate_parser_focused_documentation(
             continue
         relative = path.relative_to(DOCS).as_posix()
         if relative in immutable:
+            continue
+        # Machine-readable source spans are not prose claims about historical parser totals.
+        if relative == "matrices/declarations.jsonl":
             continue
         try:
             source = replacements.get(relative, path.read_text(encoding="utf-8"))

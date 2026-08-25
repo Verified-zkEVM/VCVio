@@ -1,16 +1,20 @@
 # S02 security architecture session
 
-Status: r1/r2/r3/r5 failed; r4 acceptance invalidated; repairs pending independent r6 review.
+Status: r1/r2/r3/r5/r6 failed; r4 acceptance invalidated; second repair pending independent r7 review.
 
 Date: 2026-08-25
 Branch: `codex/sphincsplus-formalization`
 Accepted predecessor: S01 R16, PASS with zero blocking findings.
 
+Repair base commit: `7b77e700b3d24a6ab94ed741a650954bbd90859a`.
+
 ## Scope
 
-S02 began from accepted S00/S01 infrastructure. It did not reopen descriptor/AST machinery, edit
-the frozen harness, change rejected `HashSig/SLHDSA/Security.lean`, or touch construction files.
-COV-005 and F-015/F-016/F-018 remain outside this session.
+S02 began from accepted S00/S01 infrastructure. The initial implementation did not reopen the
+descriptor/AST machinery, change rejected `HashSig/SLHDSA/Security.lean`, or touch construction
+files. The r5/r6 repairs make narrow changes to the shared harness only for concrete S02
+provenance/revision and exact declaration-metadata regressions; the frozen S01 parser subsystem is
+otherwise unchanged. COV-005 and F-015/F-016/F-018 remain outside this session.
 
 The implementation is isolated in four new `SLHDSA.Security` modules plus generated umbrella
 imports. The originally accepted implementation commit was `7b77e700`; r5 reopened it after the
@@ -109,14 +113,25 @@ is no longer current.
 R5 returned FAIL with six blocking findings in the immutable artifact
 `reviews/S02-security-architecture-review-r5.md`:
 
-| finding | repair disposition pending r6 |
+| finding | repair disposition pending r7 |
 | --- | --- |
 | R5-001 generated partial helpers | all eight source-recursive projections use total `List.map`, `filterMap`, or `foldr`; the seven-helper policy is unchanged |
-| R5-002 unreproducible acceptance revision | repository revision is an ancestor session base while exact active bytes are separately hashed |
-| R5-003 omitted S02 source provenance | the composite includes all four `Security/*.lean` modules and the ledger records the expanded recipe |
+| R5-002 unreproducible acceptance revision | an exact `repair_base_revision` is cross-checked with this session and exact active bytes are separately hashed |
+| R5-003 omitted S02 source provenance | the composite includes all four `Security/*.lean` modules; exact command/glob correspondence and a Security-byte mutation regression are gated |
 | R5-004 absent traceability | matrices, declarations, findings, decisions, TCB, report, and indexes are synchronized |
-| R5-005 generic LHS hardwired to d=1 | `SchemeInterface` supplies signature/keygen/sign/verify/randomizer semantics to the experiment |
-| R5-006 stale transcript-derived target contract | plan, blueprint, specification, obligations, and module prose select standalone source-shaped games |
+| R5-005 generic LHS hardwired to d=1 | direct hardwiring is removed, but `SchemeInterface` is honestly classified as arbitrary and F-079/PO-003 remain open for construction refinement |
+| R5-006 stale transcript-derived target contract | standalone games are the D-009 candidate; D-009 remains proposed and no prose treats it as accepted supersession |
+
+R6 returned FAIL with five blocking findings in the immutable artifact
+`reviews/S02-security-architecture-review-r6.md`:
+
+| finding | repair disposition pending r7 |
+| --- | --- |
+| R6-001 uncoupled scheme bundle overstated | classify the bundle as an arbitrary signature-scheme experiment interface and leave F-079/PO-003 open for S08/S09 |
+| R6-002 unapproved decisions treated as operative | retain D-006/D-009 as proposed and make PO-006/PO-008 provisional rather than discharged |
+| R6-003 inconsistent source-composite commands/no mutation | require the exact four-glob commands and execute a controlled temporary Security-source byte mutation |
+| R6-004 arbitrary ancestor revision | require the exact repair-base identity, cross-check this session marker, and correct the source ledger |
+| R6-005 false inventory/scope facts | correct all dependency names, record full declaration spans, and accurately describe the harness edits |
 
 ## Validation
 
@@ -133,17 +148,29 @@ term, RHS, and statement. Results were axiom-free or used only `propext`, `Class
 the impossible provider/post-hoc views, and repository scope audit all passed.
 
 R5 exposed one concrete manifest-semantic regression in the harness: exact-`HEAD` checking made a
-committed manifest self-referential and unreproducible. The narrow repair requires the recorded
-session base to be an ancestor of `HEAD`; exact active source bytes remain independently bound by
-the expanded composite. The frozen descriptor/AST subsystem is otherwise unchanged.
+committed manifest self-referential and unreproducible. R6 showed that merely accepting any ancestor
+was too weak. The second repair requires the exact invalidated implementation commit above as the
+named repair input, cross-checks this session, verifies ancestry only as an additional consistency
+check, and binds active source bytes through the expanded composite. The frozen descriptor/AST
+subsystem is otherwise unchanged.
 
-The repaired pre-r6 gates report: all four focused modules and `lake build HashSig` PASS; the only
+The first repaired pre-r6 gates reported: all four focused modules and `lake build HashSig` PASS; the only
 build warning is the pre-existing legacy `Security.lean:150` admission; the static policy import
 observes 27 HashSig modules and 1,629 owned constants; the exact seven compiler helpers PASS; and
 the transitive axiom union is exactly `propext`, `Classical.choice`, `Quot.sound`, and the one
 allowlisted legacy `sorryAx`. `/tmp/S02R6Probe.lean` prints only the three standard axioms on every
 completed load-bearing root and no `sorryAx`. The docs/provenance gate verifies the 26-file source
-composite and passes.
+composite and passes. The second repair adds the exact command/glob check and controlled mutation
+regression; its complete pre-r7 evidence is recorded after the gates run.
+
+The complete second-repair pre-r7 run passes `lake build HashSig`, the focused
+`S02InventoryProbe.lean`, the authoritative `PolicyAudit.lean`, docs-only validation, and
+`./scripts/slhdsa/validate.sh`. The probe elaborates all eighteen S02 inventory roots plus
+`CollectionDisjoint`, `SPprobSuccess`, and `sampledTargetRealImpl`; the structured gate checks their
+full source spans. The policy audit again observes 27 modules, 1,629 owned constants, the exact seven
+generated helpers, and only the three standard axioms plus the one allowlisted legacy `sorryAx`.
+The full baseline runtime suite, both existing KATs, exact repair-base check, four-glob composite,
+and controlled Security-byte mutation all report PASS.
 
 ## R4 review focus
 
@@ -166,4 +193,4 @@ composite and passes.
 - Refine honest signing internals when later construction proofs need their execution trace.
 - Prove component losslessness and the repaired master inequality.
 - Replace or retire the rejected legacy placeholder only in an authorized later session.
-- Begin successor work only after the repaired S02 tree receives independent r6 PASS.
+- Begin successor work only after the second repaired S02 tree receives independent r7 PASS.

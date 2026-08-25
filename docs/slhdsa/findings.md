@@ -81,11 +81,16 @@ future independent session reviews add dispositions under the protocol rather th
 | F-073 | CRITICAL | FIXED | S02 r3 used the wrong UD input distribution and an unrelated collection execution | S02-R3-003; r4 source comparison | Sample fresh hidden inputs and share one target/collection program log |
 | F-074 | CRITICAL | FIXED | S02 r3 injected a real full-SLH key into the post-SKG/post-MKG ITSR world | S02-R3-004; r4 source comparison | Put NPRF/hybrid setup in the reduction program and expose only public Hmsg parameters |
 | F-075 | CRITICAL | REMEDIATED-PENDING-REVIEW | S02 added eight compiler-generated partial helpers outside the exact policy allowlist | S02-R5-001; compiled policy audit | Rewrite projections with total library combinators and replay the compiled audit |
-| F-076 | CRITICAL | REMEDIATED-PENDING-REVIEW | S02 acceptance edits were not reviewed and the manifest demanded an impossible self-revision pin | S02-R5-002; docs gate | Treat the repository revision as an ancestor session base and review the complete repaired tree |
-| F-077 | HIGH | REMEDIATED-PENDING-REVIEW | The source-tree composite omitted all four S02 modules | S02-R5-003; manifest recipe | Include `Security/*.lean`, regenerate the composite, and update the ledger |
-| F-078 | HIGH | REMEDIATED-PENDING-REVIEW | S02 omitted mandatory matrix, inventory, findings, decisions, TCB, and report traceability | S02-R5-004; universal session contract | Synchronize every contract surface and deliberate matrix pin |
-| F-079 | CRITICAL | REMEDIATED-PENDING-REVIEW | The generic master LHS called the known `d = 1` transitional scheme | S02-R5-005; `Scheme.lean`/`Hypertree.lean` | Parameterize the experiment over an explicit scheme and signature interface |
-| F-080 | HIGH | REMEDIATED-PENDING-REVIEW | Standalone source-shaped component games contradicted stale transcript-derived-target contracts and prose | S02-R5-006; plan/blueprint/transcript | Record the standalone-game decision and synchronize all authoritative prose and obligations |
+| F-076 | CRITICAL | REMEDIATED-PENDING-REVIEW | S02 acceptance edits were not reviewed and the manifest demanded an impossible self-revision pin | S02-R5-002; S02-R6-004 | Require the exact session-linked repair input plus active-source hash; review the complete repaired tree |
+| F-077 | HIGH | REMEDIATED-PENDING-REVIEW | The source-tree composite omitted all four S02 modules | S02-R5-003; S02-R6-003 | Include `Security/*.lean`; gate exact command/glob correspondence and a Security-byte mutation |
+| F-078 | HIGH | REMEDIATED-PENDING-REVIEW | S02 omitted mandatory matrix, inventory, findings, decisions, TCB, and report traceability | S02-R5-004; S02-R6-005 | Synchronize every contract surface and correct dependency/span/scope facts |
+| F-079 | CRITICAL | OPEN | The generic master LHS called the known `d = 1` transitional scheme, while its replacement has no general-construction coupling witness | S02-R5-005; S02-R6-001 | Retain the arbitrary experiment interface but construct and review an S08/S09 refinement witness coupling keygen/sign/verify/signature R/digest |
+| F-080 | HIGH | OPEN | Standalone source-shaped component games contradict the earlier transcript-derived-target contract and have no named decision approval | S02-R5-006; S02-R6-002 | Keep D-009 proposed and PO-008 provisional until named owner approval or rejection |
+| F-081 | CRITICAL | REMEDIATED-PENDING-REVIEW | S02 claimed a bare scheme function bundle established general-construction coupling | S02-R6-001 | Classify it as an arbitrary signature-scheme experiment boundary and leave F-079/PO-003 open |
+| F-082 | HIGH | REMEDIATED-PENDING-REVIEW | Authoritative prose and obligations treated proposed D-006/D-009 as accepted or superseding | S02-R6-002 | Retain proposed status and keep PO-006/PO-008 provisional without accepted-selection language |
+| F-083 | HIGH | REMEDIATED-PENDING-REVIEW | Source-composite commands omitted Security and no focused mutation proved its coverage | S02-R6-003 | Gate the exact four-glob commands and reject a controlled Security-source byte mutation |
+| F-084 | HIGH | REMEDIATED-PENDING-REVIEW | Repository revision validation accepted any ancestor and mislabeled the invalidated repair base | S02-R6-004 | Require the exact session-linked repair-base field and correct its ledger meaning |
+| F-085 | HIGH | REMEDIATED-PENDING-REVIEW | Declaration dependencies/spans and S02 harness-edit scope prose were false | S02-R6-005 | Correct exact dependencies/full spans and describe the narrow harness repair accurately |
 
 Independent S00 re-review r9 accepted the repairs for F-021 through F-029. Their `FIXED` statuses
 administratively propagate that verdict; they are not an S01 self-review. Historical FAIL artifacts
@@ -127,8 +132,10 @@ machinery is frozen and is not ratcheted in successor sessions absent a concrete
 
 Independent S02 reviews r1, r2, and r3 failed and remain immutable. Independent r4 passed with zero
 findings, but the complete independent r5 audit invalidated that acceptance with F-075 through
-F-080. The implementation records those six as `REMEDIATED-PENDING-REVIEW`; no successor is eligible
-until r6 accepts the repairs. R4 did close the twelve earlier S02 findings F-063 through F-074, whose
+F-080. Independent r6 then failed with F-081 through F-085. The second repair keeps underlying
+construction coupling F-079 and the unapproved target-contract choice F-080 open, while recording
+the five r6 defects and the other r5 repairs as `REMEDIATED-PENDING-REVIEW`. No successor is eligible
+until r7 accepts the repairs. R4 did close the twelve earlier S02 findings F-063 through F-074, whose
 `FIXED` statuses preserve that reviewed disposition. None of this globally closes F-001 through
 F-009: the legacy theorem remains rejected, concrete reductions/composition remain future work, and
 the QROM/asymptotic boundaries remain open.

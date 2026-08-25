@@ -1,10 +1,11 @@
 # S02 classical security architecture
 
-Status: r4 acceptance invalidated by independent r5 FAIL; repaired architecture pending r6 review.
+Status: r4 acceptance invalidated; independent r5/r6 FAIL; second repair pending r7 review.
 
-This document fixes the authoritative shape of the classical SLH-DSA reduction before any
-component proof is attempted. It is a design contract, not a claim that the reduction has been
-proved. Accepted S00/S01 infrastructure is unchanged, and the rejected placeholder in
+This document records the proposed shape of the classical SLH-DSA reduction before any component
+proof is attempted. D-006 and D-009 remain proposed with no named approver, so this is a candidate
+design rather than an accepted theorem/game selection. It is not a claim that the reduction has
+been proved. Accepted S00/S01 infrastructure is unchanged, and the rejected placeholder in
 `HashSig/SLHDSA/Security.lean` is not an authority for this design.
 
 ## Authority and repair boundary
@@ -20,7 +21,7 @@ unitary oracle, or classical-to-QROM lift. Lean therefore exposes only `OracleCo
 
 ## Exact master inequality
 
-The proposed RHS has exactly these twelve terms in source order:
+Under proposed D-006, the candidate RHS has exactly these twelve terms in source order:
 
 1. SKG PRF advantage.
 2. MKG PRFmsg advantage.
@@ -37,8 +38,9 @@ The proposed RHS has exactly these twelve terms in source order:
 
 `MasterTermRole` is a closed twelve-constructor type. SKG and MKG use VCVio `PRFScheme` real/ideal
 experiments. The ITSR term runs a post-SKG/post-MKG reduction against the default fresh-key oracle.
-The other nine target-bearing terms are standalone source-shaped oracle games, not events applied
-after an original-scheme transcript.
+Under proposed D-009, the other nine target-bearing terms are standalone source-shaped oracle
+games, not events applied after an original-scheme transcript. This implemented candidate does not
+supersede the earlier contract unless D-009 receives named approval.
 
 There is no birthday/interleaving term and no additive `qS`/`qH` term. The rejected expression
 `qS * (qS + qH) / 2^(8*m)` is not in the pinned theorem and is not probability-bounded for arbitrary
@@ -87,12 +89,14 @@ for the quantitative standalone ITSR game.
 
 ## Key, transcript, and query coupling
 
-`SchemeInterface` fixes the attacked signature carrier, randomizer projection, coherent key
-distribution, signing operation, and verification operation. This prevents the generic experiment
-from silently calling the repository's known single-layer construction for parameter records with
-`d > 1`. A generated pair packages public/secret seed and root equality. Original EUF execution
-queries are indexed by that public key; `queryImpl` uses its seed/root. The public adversary language
-cannot express PRF or PRFmsg.
+`SchemeInterface` is an arbitrary signature-scheme experiment boundary: it bundles a signature
+carrier, randomizer projection, coherent key distribution, signing operation, and verification
+operation, but supplies no law coupling those fields to each other or to the general SLH-DSA
+construction. It removes the previous syntactic call to the known single-layer implementation; it
+does not prove construction refinement. F-079 and PO-003 therefore remain open for S08/S09. A
+generated pair packages public/secret seed and root equality. Original EUF execution queries are
+indexed by that public key; `queryImpl` uses its seed/root. The public adversary language cannot
+express PRF or PRFmsg.
 
 `honestTranscriptDistribution` owns original key generation and uses `QueryImpl.withLogging`. It is
 the LHS EUF probability space. Honest signing is currently one outer event; internal construction
@@ -101,7 +105,8 @@ certificate is required from this opaque log, so a no-query adversary yields an 
 rather than an impossible security context.
 
 Freshness compares the complete request: mode, context, prehash identifier/output length, and
-message. The forgery randomizer is the signature's R field, and digest indices use the FIPS mapping.
+message. The forgery randomizer is the interface projection. Proving that projection is the exact
+signature `R` consumed by general signing, digest, and verification remains part of F-079/PO-003.
 
 `SigningBound` and `HashQueryBound` are `OracleComp.IsQueryBoundP` properties of the actual public
 adversary program for every public key. `qH` counts explicit adversarial F, H, both Tl arities, and
@@ -136,8 +141,9 @@ The context has no target/transcript sampler, public seed, free target count, co
 or scalar loss field.
 
 - `RepairedMasterStatement` is a proposition-valued definition, not a theorem.
-- The context must supply a reviewed scheme-interface implementation; S02 does not claim the current
-  `d = 1` construction instantiates the general FIPS experiment.
+- The context accepts any scheme-interface implementation; S02 neither reviews its construction
+  refinement nor claims the current `d = 1` construction instantiates the general FIPS experiment.
+- D-006 and D-009 remain proposed and unapproved. Their affected obligations remain pending.
 - Constructing the authoritative concrete reductions and proving the inequality remain future work.
 - Post-hop setup is a typed reduction boundary; proving the concrete NPRF setup correspondence is a
   later reduction obligation.

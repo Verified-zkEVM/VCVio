@@ -8,25 +8,27 @@ No checkbox is discharged by a build alone.
 - [x] The S02 replacement has formula-derived positive caps for all eight source-game target roles.
   Actual traces may be shorter or empty; selecting a missing target makes the event false. The
   rejected legacy theorem still admits zero caller-supplied counts.
-- [x] The S02 replacement fixes a coherent generated-key distribution inside an explicit attacked
-  `SchemeInterface`; primitive queries use that key's seed/root. The rejected legacy theorem still
-  accepts a disconnected free `pkSeed`.
+- [ ] S02 packages public/secret seed and root coherence for each generated key, and primitive
+  queries use that public key. Its arbitrary `SchemeInterface` has no refinement law coupling
+  keygen/sign/verify/randomizer to general SLH-DSA; F-079/PO-003 remain open for S08/S09.
 - [ ] Every additive loss is proved bounded/finite from a game hop. Current
   `slhdsaInterleavingLoss` accepts unbounded `qS/qH`; for large queries it can exceed one and make the
   inequality trivial. Its formula is an invented stand-in, not a proved ITSR loss.
 - [x] S02 defines `qS` and `qH` as pathwise predicates on the actual adversary program for every
   public key. Internal signer instrumentation and runtime accounting remain for S12.
-- [x] S02 defines the post-hop `Hmsg` ITSR experiment and every required FORS/WOTS `T_l` role.
+- [ ] S02 implements the proposed post-hop `Hmsg` ITSR experiment and every required FORS/WOTS
+  `T_l` role, but D-006 remains unapproved and PO-006 is provisional.
 - [ ] `yToBytes` is injective/coherent where abstract digit extraction is security-relevant. Current
   `Primitives` has a function but no law.
-- [x] S02 removes caller-supplied target samplers. Each quantitative component is a standalone
-  source-shaped challenger with its own target oracle and same-execution collection log where
-  required; D-009 records why these targets are not extracted from the outer EUF transcript.
+- [ ] S02's candidate removes caller-supplied target samplers. Under proposed D-009, each
+  quantitative component is a standalone source-shaped challenger with its own target oracle and
+  same-execution collection log where required. D-009 has no named approver, so PO-008 remains
+  provisional and the proposal does not supersede the earlier contract.
 - [ ] A parameter-indexed asymptotic theorem exists. Current statement is one finite inequality with
   no security parameter, polynomial-time/query condition, or negligibility conclusion.
-- [x] The S02 proposition has the exact repaired EasyCrypt twelve-term order and coefficients in
-  classical semantics. Constructing reductions and proving it remain open; the rejected legacy
-  statement still has only the allowlisted `sorry`.
+- [ ] The S02 proposition has the exact repaired EasyCrypt twelve-term order and coefficients in
+  classical semantics, but D-006 remains proposed. Constructing reductions and proving it remain
+  open; the rejected legacy statement still has only the allowlisted `sorry`.
 
 ## Parameters, encodings, and ADRS
 

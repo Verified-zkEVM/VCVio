@@ -18,7 +18,9 @@ chooses targets through the game oracle and retains private state between `pick`
 
 The statement has no birthday/interleaving slack and no additive `qS`/`qH` term.  Query budgets
 are structural hypotheses on the original EUF-CMA adversary program.  All experiments use VCVio's
-classical `OracleComp` semantics; no QROM theorem is exposed.
+classical `OracleComp` semantics; no QROM theorem is exposed.  Its LHS is parameterized by an
+arbitrary signature-scheme interface.  S02 supplies no claim that this interface refines the future
+general SLH-DSA construction.
 -/
 
 @[expose] public section

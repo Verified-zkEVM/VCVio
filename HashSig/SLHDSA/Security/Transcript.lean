@@ -11,8 +11,9 @@ public import HashSig.SLHDSA.Security.OracleSurface
 # Honest SLH-DSA Security Transcripts
 
 This module fixes the probability space used by the security architecture.  Keys, signatures, and
-verification come from an explicit `SchemeInterface`; the adversary is interpreted through the
-public-only query language, and the complete execution query log is produced by VCVio's
+verification come from an abstract `SchemeInterface`; S02 does not claim that its fields refine one
+general SLH-DSA construction.  The adversary is interpreted through the public-only query language,
+and the complete execution query log is produced by VCVio's
 `QueryImpl.withLogging`.  The quantitative component games have their own source-shaped target
 oracles and do not claim that their targets occur in this outer scheme log.
 
@@ -125,9 +126,9 @@ def TranscriptITSRBreak {p : Params} {prims : Primitives p} [DecidableEq prims.Y
 
 /-! ## The honest distribution -/
 
-/-- Run `adversary` in the exact classical experiment.  This distribution owns
-key generation and seed coupling; only external request encoding is left as an explicit future
-API boundary. -/
+/-- Run `adversary` in the abstract classical signature-scheme experiment.  This distribution owns
+one interface-supplied key-generation sample and its packaged public/secret seed coherence; general
+SLH-DSA construction refinement and external request encoding remain explicit future boundaries. -/
 def honestTranscriptDistribution {p : Params} (prims : Primitives p)
     (scheme : SchemeInterface prims) (encode : MessageInput → List Byte)
     (adversary : ClassicalAdversary prims scheme) :

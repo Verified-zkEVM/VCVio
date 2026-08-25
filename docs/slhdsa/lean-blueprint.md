@@ -1,8 +1,8 @@
 # Lean blueprint
 
-The module names below are targets, not claims about current files. S02 freezes the theorem/oracle
-surface before construction refactors so public-seed coupling and query instrumentation are not
-retrofit after APIs have hardened.
+The module names below are targets, not claims about current files. S02 records a proposed
+theorem/oracle surface before construction refactors. D-006/D-009 remain unapproved, and the bare
+scheme experiment interface does not freeze or establish general-construction refinement.
 
 ```text
 HashSig.SLHDSA.Bytes
@@ -46,12 +46,14 @@ and use VCVio query instrumentation to obtain histories and costs.
 
 Each bound is a predicate on an adversary/execution, such as `SigningBound adv qS` and
 `HashQueryBound adv qH`, proved by enforcement or counting. Each quantitative component is a
-standalone source-shaped game whose `pick` phase queries challenger-owned target oracles. The
+standalone source-shaped game whose `pick` phase queries challenger-owned target oracles under
+proposed D-009. The
 formula-derived positive value is a cap on the actual target log, with distinctness and, for `-C`,
 same-execution collection disjointness checked by the event. A program may make zero target calls;
 then any selected-target event is false. These component targets are deliberately not manufactured
 from the outer EUF transcript, and no caller-provided probability or target sampler is a
-load-bearing interface.
+load-bearing interface. This candidate does not supersede the earlier outer-transcript contract
+unless a named owner accepts D-009.
 
 Define actual predicates for:
 

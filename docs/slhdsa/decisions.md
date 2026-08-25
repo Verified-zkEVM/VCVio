@@ -10,10 +10,10 @@ and sequencing choices; it does not silently record maintainer approval.
 | D-003 | PROPOSED | Treat C13 as a separate profile pending disposition | Approver unassigned; `scope.md` | S00/S18 |
 | D-004 | PROPOSED | Freeze security/oracle architecture before construction refactors | Approver unassigned; `lean-blueprint.md` | S00/S02 |
 | D-005 | PROPOSED | Reports are secondary and primary sources control | Approver unassigned; `source-ledger.md` | S00 |
-| D-006 | PROPOSED | Select exact master theorem/notions and classical/QROM semantics | Approver unassigned; declaration comparison required | S02 |
+| D-006 | PROPOSED | Select exact master theorem/notions and classical/QROM semantics | Approver unassigned; PO-006 remains provisional | S02 |
 | D-007 | BLOCKED | Select Ethereum deployment/refinement target | Approver unassigned; repository/commit/ABI absent | S19 |
 | D-008 | PROPOSED | C13: separate support, core merge, or deprecate | Approver unassigned; pinned sources/owner choice required | S18 |
-| D-009 | PROPOSED | Use standalone source-shaped target games; do not require their targets in the outer EUF transcript | Pending repaired S02 independent review; EasyCrypt game interfaces | S02 |
+| D-009 | PROPOSED | Use standalone source-shaped target games; do not require their targets in the outer EUF transcript | Approver unassigned; PO-008 remains provisional; EasyCrypt game interfaces | S02 |
 
 Statuses are `proposed`, `accepted`, `rejected`, `blocked`, or `superseded`. `accepted` requires a
 named approver and evidence in the CSV. Supersession appends a new linked row; history is not erased.

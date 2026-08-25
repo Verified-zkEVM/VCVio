@@ -56,9 +56,10 @@ theorem secretKey_pkRoot {p : Params} {prims : Primitives p}
 
 end GeneratedKeyPair
 
-/-- The scheme boundary attacked by the S02 experiment.  In particular, the signature carrier and
-the key-generation/signing/verification algorithms are supplied together.  A later general
-hypertree implementation can instantiate this interface without changing the security games. -/
+/-- An abstract signature-scheme experiment boundary.  The fields share one carrier, but this bare
+bundle deliberately supplies no refinement or correctness law coupling key generation, signing,
+verification, and the randomizer projection to the general SLH-DSA construction.  That construction
+witness remains a later S08/S09 obligation. -/
 structure SchemeInterface {p : Params} (prims : Primitives p) where
   Signature : Type
   randomizer : Signature → prims.Y

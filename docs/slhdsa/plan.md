@@ -50,7 +50,8 @@ until PASS. Review history is append-only; a re-review never overwrites the fail
   reflection. Its EXIT cleanup restores the Lake build-dir
   override before temp deletion on ordinary shell exits and handled signals (not SIGKILL). The
   sequential gate assumes no concurrent writer. Independent r16 accepted S01. S02 r4 initially
-  passed, but the complete r5 audit reopened S02 with six blockers; S03 remains blocked pending r6.
+  passed, but the complete r5 audit reopened S02 and r6 found five residual blockers; S03 remains
+  blocked pending a successful r7 review.
   The descriptor/AST policy is frozen and is not extended in later sessions absent a concrete
   regression; successor work centers on Lean deliverables.
 
@@ -64,7 +65,8 @@ focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output
   Transcript,Architecture}.lean`; no component refactor or claimed reduction.
 - Deliverables: proposed repaired master theorem with exact quantifiers/coefficients and an explicit
   account of why the invalidated CCS WOTS proof is not reused; generated `PK.seed`
-  coupling; an explicit attacked-scheme/signature interface; strictly positive formula-derived caps
+  coupling; an abstract signature-scheme experiment interface, with general construction coupling
+  explicitly left to S08/S09; strictly positive formula-derived caps
   on standalone source-shaped component-game target traces;
   actual `qS/qH` predicates; ITSR/digest mapping; `F/H/T_l/Hmsg/PRF/PRFmsg` surfaces; explicit
   classical/QROM boundary. Remove the invented loss from the target architecture.
@@ -72,10 +74,12 @@ focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output
   HashSig`; `#print axioms` on notions; review `reviews/S02-security-architecture-review.md`.
 
 Review state: r1/r2/r3 failed and remain immutable; r4 passed but did not run the full compiled and
-traceability gates. Independent r5 therefore failed with six blockers. The repaired tree must
-receive independent r6 PASS before S02 is accepted again.
+traceability gates. Independent r5 failed with six blockers and r6 failed with five residual
+claim/provenance/traceability blockers. The second repaired tree must receive independent r7 PASS
+before S02 is accepted again. D-006/D-009 remain proposals and do not discharge their dependent
+obligations without named owner approval.
 
-### S03 — data, widths, parameters, ADRS, and codecs (blocked by S02 r5; bootstrap retained)
+### S03 — data, widths, parameters, ADRS, and codecs (blocked by S02 r6; bootstrap retained)
 
 - Inputs: S01 tables and FIPS Sections 3–5/11; accepted S02 interfaces.
 - Allowed: `Params`, `Address`, `Encoding`, new byte/codec modules and focused tests.

@@ -92,8 +92,8 @@
       "kind": "git",
       "root": "repo",
       "locator": ".",
-      "revision": "7b77e700b3d24a6ab94ed741a650954bbd90859a",
-      "revision_semantics": "ancestor-session-base",
+      "repair_base_revision": "7b77e700b3d24a6ab94ed741a650954bbd90859a",
+      "revision_semantics": "exact-repair-base",
       "authority": "primary-evidence"
     },
     {
@@ -257,8 +257,8 @@
       "HashSig/SLHDSA/Security/*.lean"
     ],
     "manifest_line": "<lowercase-file-sha256><two ASCII spaces><repository-relative-path><LF>",
-    "original_command": "sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean | sha256sum",
-    "deterministic_command": "LC_ALL=C sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean | sha256sum",
-    "sha256": "9aea79dea425422704d2ca53182963903404424ca0b11820e45f6076c436def3"
+    "original_command": "sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum",
+    "deterministic_command": "LC_ALL=C sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum",
+    "sha256": "09d340f611f600f9cd9a81e47ee2df06f9a9a3bbdd86fff439741cf09142625b"
   }
 }

@@ -21,10 +21,11 @@ bundle), or against `SLHDSA_REFERENCE_ROOT` when set. `repo:` locators resolve a
 the paths below are unambiguous without baking this host's absolute path into the evidence format.
 The S01 gate compares every key/value of each controlling FIPS, server, compatibility, protocol,
 and SP IPD record; local file/git byte or revision verification is a separate mandatory check when
-the sibling bundle is present.  The repository's own revision identifies the accepted session base
-and must be an ancestor of `HEAD`; exact active Lean bytes are bound separately by the source-tree
-composite.  This avoids the impossible requirement that a committed manifest contain its own future
-commit identifier.
+the sibling bundle is present. The repository record identifies the exact S02 repair input,
+cross-checked against the active S02 session, and separately verifies that this fixed commit is an
+ancestor of `HEAD`. Exact active Lean bytes are bound by the source-tree composite. This avoids a
+self-referential future-commit field without accepting an arbitrary older ancestor as the declared
+input.
 
 | Class | Source | Revision/hash | Use |
 |---|---|---|---|
@@ -37,7 +38,7 @@ commit identifier.
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20171130/Supporting_Documentation/sphincs.pdf` | SHA-256 `8365127b5619356a4ca0a122b44b0458a7e5d447cb8997a07c2e70e43b085bde` | Round 1 history only |
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20190329/Supporting_Documentation/sphincs.pdf` | SHA-256 `58804cc62b4fbfac8e5f4e9df80639d719a7aaf13e706713ff605d168cbd2b23` | Round 2 history only |
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20201001/Supporting_Documentation/sphincs.pdf` | SHA-256 `540968e4d58cb582d5f85636beed7a10894622ed8b99a7a863f85996869743c6` | Round 3 history only |
-| primary/evidence | VCVio | session base git `7b77e700b3d24a6ab94ed741a650954bbd90859a` | S03 predecessor; 26-file active SLH-DSA source-tree composite SHA-256 `9aea79dea425422704d2ca53182963903404424ca0b11820e45f6076c436def3` |
+| primary/evidence | VCVio | repair base git `7b77e700b3d24a6ab94ed741a650954bbd90859a` | Invalidated S02 implementation retained only as exact repair input, not an accepted S03 predecessor; active 26-file SLH-DSA source-tree composite pinned separately |
 | secondary | `sibling:reports/00-SYNTHESIS.md` … `07-literature-and-resources.md` | hashes recorded below | Orientation only; corrected findings cannot be cited as primary authority |
 | prompt | `sibling:prompt.md` | SHA-256 `2b40bca6253eeb3bcf84fa9178a66309509f446b07655e57342417319cd4d7cf` | Requirements; cryptographic claims require independent authority |
 
@@ -50,7 +51,9 @@ LC_ALL=C sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean \
 ```
 
 Each manifest line is lowercase file hash, two ASCII spaces, repository-relative path, and LF. This
-is a pinned recipe, not a path-independent Git tree object. The validator reproduces it directly.
+is a pinned recipe, not a path-independent Git tree object. The validator requires exact
+command/glob correspondence, reproduces it directly, and copies the tree to a temporary fixture to
+prove that one changed `Security/Architecture.lean` byte invalidates the recorded digest.
 
 S01 resolves S00's SP 800-230 pinning obligation to the April 2026 Initial Public Draft at DOI
 `10.6028/NIST.SP.800-230.ipd`. It is neither final nor part of FIPS 205, and its six limited-use sets

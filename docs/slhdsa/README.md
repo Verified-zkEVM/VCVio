@@ -11,8 +11,9 @@ Session S00 is **accepted by independent re-review r9** after eight preserved re
 their evidence-backed dispositions. S01 reviews r0 through r15 are immutable **FAIL** artifacts.
 Independent r16 is **PASS**, so S01 is accepted and S02 is eligible to start. S02
 security-architecture reviews r1 through r3 are immutable **FAIL** artifacts; r4 initially passed,
-but the complete independent r5 audit found six blockers and invalidated that acceptance. The
-repaired S02 tree is pending r6, and S03 remains blocked until r6 passes.
+but the complete independent r5 audit found six blockers and invalidated that acceptance. R6 found
+five residual blockers. The second repaired S02 tree is pending r7, and S03 remains blocked until
+r7 passes.
 S01's pinned authority, provenance, and strict sample-schema parser anchors do not claim
 implementation conformance. R16
 accepted the F-061/F-062 repairs: cleanup uses constant/count-only evidence, preflights
@@ -22,8 +23,8 @@ not ratchet or reopen the descriptor/AST policy without a concrete regression. T
 `SLHDSA.slhdsa_euf_cma_security`, whose declaration begins at
 `HashSig/SLHDSA/Security.lean:150` (the token is currently at line 175). This is an open critical
 proof obligation, not an accepted axiom. The repaired S02 modules define the proposed replacement
-architecture and standalone component-game boundary; they do not prove or replace that legacy
-composition theorem, and they are not accepted until r6.
+architecture and proposed standalone component-game boundary; they do not prove or replace that
+legacy composition theorem, and they are not accepted until r7.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true
 
