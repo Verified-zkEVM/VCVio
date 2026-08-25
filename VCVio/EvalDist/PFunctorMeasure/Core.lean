@@ -150,7 +150,7 @@ theorem denote_bind_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α
   denote_bind program f Measurable.of_discrete
 
 /-- `denote` turns a measurable map of program outputs into the pushforward measure. -/
-theorem denote_map [MeasurableSpace α] [MeasurableSpace β]
+theorem denote_map_of_measurable [MeasurableSpace α] [MeasurableSpace β]
     (program : FreeM P α) (f : α → β) (hf : Measurable f) :
     denote (FreeM.map f program) = (denote program).map f := by
   rw [← FreeM.bind_pure_comp f program, denote_bind program (pure ∘ f)]
@@ -163,7 +163,7 @@ theorem denote_map [MeasurableSpace α] [MeasurableSpace β]
 theorem denote_map_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α]
     [MeasurableSpace β] (program : FreeM P α) (f : α → β) :
     denote (FreeM.map f program) = (denote program).map f :=
-  denote_map program f Measurable.of_discrete
+  denote_map_of_measurable program f Measurable.of_discrete
 
 /-- Sequentially running two programs whose second execution does not depend on the first result
 denotes the product of their measures. -/
