@@ -35,6 +35,14 @@ theorem measurable_some [MeasurableSpace α] : Measurable (@some α) :=
 theorem measurable_none [MeasurableSpace α] : Measurable (fun _ : Unit => (none : Option α)) :=
   Measurable.of_le_map inf_le_right
 
+/-- The set of present optional values is measurable. -/
+theorem measurableSet_isSome [MeasurableSpace α] :
+    MeasurableSet {value : Option α | value.isSome} := by
+  change MeasurableSet (some ⁻¹' {value : Option α | value.isSome}) ∧
+    MeasurableSet ((fun _ : Unit => (none : Option α)) ⁻¹'
+      {value : Option α | value.isSome})
+  simp
+
 /-- A function out of `Option α` is measurable when its `none` and `some` branches are. -/
 theorem measurable_elim [MeasurableSpace α] [MeasurableSpace β] {f : Option α → β}
     (hNone : Measurable (fun _ : Unit => f none))
