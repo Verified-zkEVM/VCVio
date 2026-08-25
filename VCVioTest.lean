@@ -17,4 +17,5 @@ public import VCVioTest.QueryHom
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.SampleableType
 public import VCVioTest.Smoke
+public import VCVioTest.UniformOn
 public import VCVioTest.UniversePolymorphism
