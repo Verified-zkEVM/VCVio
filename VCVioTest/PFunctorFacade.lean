@@ -8,6 +8,7 @@ module
 public import VCVio.EvalDist.PFunctor
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.QueryTracking.Tracing
+import VCVio.OracleComp.QueryTracking.LoggingOracle
 
 /-!
 # PFunctor and OracleSpec Semantics Canaries
@@ -125,6 +126,17 @@ example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) (t : spec₂.Domai
 example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) (t : spec₃.Domain)
     (consume : spec₃.Range t → Nat) :
     consume (impl (.inr t)) = consume (impl (.inr t)) := by
+  rfl
+
+example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) :
+    QueryImpl spec₃ (StateT (List spec₃.Domain) Id) :=
+  QueryImpl.appendInputLog (fun t => impl (.inr t))
+
+example [IsProbabilitySpec ((spec₁ + spec₂) + spec₃)] (t : spec₂.Domain)
+    (program : OracleComp ((spec₁ + spec₂) + spec₃)
+      ((((spec₁ + spec₂) + spec₃).Range (.inl (.inr t))) × Bool)) :
+    Pr[fun z : spec₂.Range t × Bool => z.2 = true | program] =
+      Pr[fun z : spec₂.Range t × Bool => z.2 = true | program] := by
   rfl
 
 example [IsProbabilitySpec ((spec₁ + spec₂) + spec₃)] (t : spec₃.Domain)
