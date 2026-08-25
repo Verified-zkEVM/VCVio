@@ -26,7 +26,8 @@ SPHINCS+ / FIPS 205 analysis: the forgery advantage is bounded by the sum of
 
 The combinatorial core of the WOTS+ step (no chain-advancing forgery) is the proved
 `SLHDSA.WotsChecksum.wots_fullDigits_incomparable`; the Merkle tree-binding step routes through
-`VCVio.CryptoFoundations.MerkleTree.Inductive` extractability.
+the node-addressed engine `AddressedMerkleTree`, surfaced for XMSS as `xmssPkFromSig_binding` and
+generically as `PerfectMerkleTree.climb_binding`.
 
 ## What the statement commits to
 
@@ -144,7 +145,7 @@ genuine security claim, not a vacuous inequality.
 The proof composes (1) a CMA→NMA hop replacing the `PRF_msg` randomizer with a random oracle,
 (2) WOTS+ one-wayness using the proved incomparability lemma
 `WotsChecksum.wots_fullDigits_incomparable` to force a chain preimage (SM-PRE of `F`),
-(3) XMSS/hypertree binding via `MerkleTree.Inductive` extractability (SM-TCR of `H`), and
+(3) XMSS/hypertree binding via `xmssPkFromSig_binding` (SM-TCR of `H`), and
 (4) FORS few-time security (SM-PRE of `F` + Merkle extractability). It is deferred (`sorry`),
 mirroring the current state of `MLDSA.Security`. -/
 theorem slhdsa_euf_cma_security

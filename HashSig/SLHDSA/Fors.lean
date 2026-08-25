@@ -11,10 +11,11 @@ public import HashSig.SLHDSA.Xmss
 # FORS (FIPS 205 §8)
 
 The few-time forest signature: `k` Merkle trees of height `a`, with leaves `F(secret)` and the
-`k` roots compressed by `T_k`. Reuses the generic Merkle theory of `HashSig.SLHDSA.Xmss`
-(`SLHDSA.Merkle`). Provides `forsSkGen`/`forsLeaf`/`forsRoot` (Algorithms 14–15), `forsSign`
-(Algorithm 16), `forsPkFromSig` (Algorithm 17), and the correctness lemma
-`forsPkFromSig_forsSign`: recovery from an honest FORS signature reproduces the FORS public key.
+`k` roots compressed by `T_k`. Each tree is a `PerfectMerkleTree`
+(`VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed`) over global leaf indices. Provides
+`forsSkGen`/`forsLeaf`/`forsRoot` (Algorithms 14–15), `forsSign` (Algorithm 16), `forsPkFromSig`
+(Algorithm 17), and the correctness lemma `forsPkFromSig_forsSign`: recovery from an honest FORS
+signature reproduces the FORS public key.
 
 Because the FORS public key compresses the *whole-tree* roots (which are message-independent),
 `forsPkFromSig (forsSign md) md = forsPkGen` holds for every digest `md`.
@@ -75,7 +76,7 @@ def forsNodeHash (prims : Primitives p) (pk : prims.PkSeed) (adrs : Adrs)
 /-- The root of FORS tree `i` (the height-`a` node at index `i`; FIPS 205 Algorithm 15). -/
 def forsRoot (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs)
     (i : ℕ) : prims.Y :=
-  Merkle.merkleRoot (forsLeaf prims sk pk adrs) (forsNodeHash prims pk adrs) p.a i
+  PerfectMerkleTree.merkleRoot (forsLeaf prims sk pk adrs) (forsNodeHash prims pk adrs) p.a i
 
 /-- Address compressing the `k` FORS roots into the FORS public key (type `FORS_ROOTS`). -/
 def forsPkAdrs (adrs : Adrs) : Adrs :=
@@ -98,7 +99,7 @@ def forsSign (prims : Primitives p) (md : List Byte) (sk : prims.SkSeed) (pk : p
     (adrs : Adrs) : ForsSig p prims :=
   Vector.ofFn fun i : Fin p.k =>
     (forsSkGen prims sk pk adrs (i.val * 2 ^ p.a + forsIdx p md i.val),
-      Merkle.authPath (forsLeaf prims sk pk adrs) (forsNodeHash prims pk adrs) 0
+      PerfectMerkleTree.authPath (forsLeaf prims sk pk adrs) (forsNodeHash prims pk adrs)
         (i.val * 2 ^ p.a + forsIdx p md i.val) p.a)
 
 /-- FORS public-key recovery from a signature (FIPS 205 Algorithm 17): recompute each tree's
@@ -106,7 +107,7 @@ leaf and climb its auth path, then compress the `k` recovered roots with `T_k`. 
 def forsPkFromSig (prims : Primitives p) (sig : ForsSig p prims) (md : List Byte)
     (pk : prims.PkSeed) (adrs : Adrs) : prims.Y :=
   prims.Tl pk (forsPkAdrs adrs) ((List.finRange p.k).map fun i =>
-    Merkle.climb (forsNodeHash prims pk adrs) 0 (i.val * 2 ^ p.a + forsIdx p md i.val)
+    PerfectMerkleTree.climb (forsNodeHash prims pk adrs) (i.val * 2 ^ p.a + forsIdx p md i.val)
       (prims.F pk (forsNodeAdrs adrs 0 (i.val * 2 ^ p.a + forsIdx p md i.val)) (sig[i.val]).1)
       (sig[i.val]).2)
 
@@ -124,9 +125,9 @@ theorem forsPkFromSig_forsSign (prims : Primitives p) (md : List Byte) (sk : pri
   have ht : (i.val * 2 ^ p.a + forsIdx p md i.val) / 2 ^ p.a = i.val := by
     rw [Nat.add_comm, Nat.add_mul_div_right _ _ (by positivity : 0 < 2 ^ p.a),
       Nat.div_eq_of_lt (forsIdx_lt p md i.val), Nat.zero_add]
-  have key := Merkle.climb_authPath (forsLeaf prims sk pk adrs) (forsNodeHash prims pk adrs)
-    p.a 0 (i.val * 2 ^ p.a + forsIdx p md i.val)
-  rw [Nat.zero_add, ht] at key
+  have key := PerfectMerkleTree.climb_authPath (forsLeaf prims sk pk adrs)
+    (forsNodeHash prims pk adrs) (i.val * 2 ^ p.a + forsIdx p md i.val) p.a
+  rw [ht] at key
   exact key
 
 end SLHDSA
