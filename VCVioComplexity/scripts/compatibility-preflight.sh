@@ -24,6 +24,30 @@ dependency_root="$package_root/.lake/packages/complexitylib"
 expected_revision='b6738219a3a3c50967d6bd16cba9487887ca6b66'
 expected_toolchain='leanprover/lean4:v4.33.1'
 
+if command -v rg >/dev/null 2>&1; then
+  contains_fixed() {
+    rg -Fq -- "$1" "$2"
+  }
+  count_source_errors() {
+    local count
+    count="$(rg -c '^error: .+\.lean:[0-9]+:[0-9]+:' "$1" || true)"
+    printf '%s\n' "${count:-0}"
+  }
+  print_errors() {
+    rg '^error:' "$1" || true
+  }
+else
+  contains_fixed() {
+    grep -Fq -- "$1" "$2"
+  }
+  count_source_errors() {
+    grep -Ec '^error: .+\.lean:[0-9]+:[0-9]+:' "$1" || true
+  }
+  print_errors() {
+    grep -E '^error:' "$1" || true
+  }
+fi
+
 cd "$package_root"
 
 if [[ ! -d "$dependency_root/.git" ]]; then
@@ -81,7 +105,7 @@ else
   )
 
   for expected_failure in "${expected_composition_failures[@]}"; do
-    if ! rg -Fq "$expected_failure" "$composition_log"; then
+    if ! contains_fixed "$expected_failure" "$composition_log"; then
       printf 'composition preflight failed for an unexpected reason; missing diagnostic: %s\n' \
         "$expected_failure"
       tail -n 80 "$composition_log"
@@ -89,12 +113,11 @@ else
     fi
   done
 
-  composition_error_count="$(rg -c '^error: .+\.lean:[0-9]+:[0-9]+:' \
-    "$composition_log" || true)"
+  composition_error_count="$(count_source_errors "$composition_log")"
   if [[ "$composition_error_count" != "${#expected_composition_failures[@]}" ]]; then
     printf 'composition preflight found %s source errors; expected exactly %s\n' \
       "$composition_error_count" "${#expected_composition_failures[@]}"
-    rg '^error:' "$composition_log" || true
+    print_errors "$composition_log"
     exit 1
   fi
 
@@ -119,7 +142,7 @@ else
   )
 
   for expected_failure in "${expected_asymptotics_failures[@]}"; do
-    if ! rg -Fq "$expected_failure" "$asymptotics_log"; then
+    if ! contains_fixed "$expected_failure" "$asymptotics_log"; then
       printf 'asymptotics preflight failed for an unexpected reason; missing diagnostic: %s\n' \
         "$expected_failure"
       tail -n 80 "$asymptotics_log"
@@ -127,12 +150,11 @@ else
     fi
   done
 
-  asymptotics_error_count="$(rg -c '^error: .+\.lean:[0-9]+:[0-9]+:' \
-    "$asymptotics_log" || true)"
+  asymptotics_error_count="$(count_source_errors "$asymptotics_log")"
   if [[ "$asymptotics_error_count" != "${#expected_asymptotics_failures[@]}" ]]; then
     printf 'asymptotics preflight found %s source errors; expected exactly %s\n' \
       "$asymptotics_error_count" "${#expected_asymptotics_failures[@]}"
-    rg '^error:' "$asymptotics_log" || true
+    print_errors "$asymptotics_log"
     exit 1
   fi
 
