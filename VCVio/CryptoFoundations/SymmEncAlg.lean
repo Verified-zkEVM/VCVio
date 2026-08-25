@@ -12,7 +12,7 @@ public import VCVio.OracleComp.ProbComp
 /-!
 # Symmetric Encryption Schemes
 
-This file gives the PMF-facing correctness and perfect-secrecy predicates for
+This file gives the discrete-probability-facing correctness and perfect-secrecy predicates for
 `SymmEncAlg m M K C`.
 
 The struct follows the same pattern as `AsymmEncAlg`, `KEMScheme`, `MacAlg`, etc.: it is

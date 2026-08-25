@@ -82,6 +82,8 @@ public import VCVio.CryptoFoundations.SeededFork
 public import VCVio.CryptoFoundations.SigmaProtocol
 public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.SymmEncAlg
+public import VCVio.CryptoFoundations.SymmEncAlg.Defs
+public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.EvalDist.BitVec
 public import VCVio.EvalDist.Bool
@@ -114,6 +116,7 @@ public import VCVio.EvalDist.Option
 public import VCVio.EvalDist.PFunctor
 public import VCVio.EvalDist.PFunctorMeasure
 public import VCVio.EvalDist.PFunctorMeasure.Core
+public import VCVio.EvalDist.PFunctorPath
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.RenyiDivergence
 public import VCVio.EvalDist.ResumptionMeasure
