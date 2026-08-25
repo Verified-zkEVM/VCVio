@@ -22,8 +22,8 @@ ToMathlib/ProbabilityTheory/OptimalCoupling.lean	11
 ToMathlib/ProbabilityTheory/SPMF.lean	69
 VCVio/CryptoFoundations/FiatShamir/Sigma.lean	2
 VCVio/CryptoFoundations/FiatShamir/Sigma/Stateful/Hops.lean	1
-VCVio/CryptoFoundations/FiatShamir/WithAbort.lean	1
 VCVio/CryptoFoundations/FiatShamir/WithAbort/ExpectedCost.lean	4
+VCVio/CryptoFoundations/FiatShamir/WithAbort.lean	1
 VCVio/CryptoFoundations/Fischlin/CostAccounting.lean	1
 VCVio/CryptoFoundations/FujisakiOkamoto/TTransform.lean	6
 VCVio/CryptoFoundations/FujisakiOkamoto/UTransform.lean	12
@@ -39,6 +39,7 @@ VCVio/EvalDist/Defs/Instances.lean	14
 VCVio/EvalDist/Defs/NeverFails.lean	6
 VCVio/EvalDist/Defs/Semantics.lean	15
 VCVio/EvalDist/Defs/Support.lean	1
+VCVio/EvalDist/ExpectationMeasure.lean	4
 VCVio/EvalDist/Instances/ErrorT.lean	22
 VCVio/EvalDist/Instances/FinRatPMF.lean	19
 VCVio/EvalDist/Instances/OptionT.lean	1
