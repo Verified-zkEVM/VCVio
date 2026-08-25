@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVioComplexity.Backend.PureCanary
+public import VCVio.EvalDist.PFunctorPath
 
 /-!
 # End-to-end complexitylib canary for one oracle query
@@ -30,6 +31,8 @@ open PFunctor.DynSystem
 open PFunctor.DynSystem.DynComputation
 open OracleComp.Complexity
 open _root_.Complexity
+open MeasureTheory ProbabilityTheory
+open scoped ENNReal
 
 local instance : stepClass.HasProd := hasProd
 local instance : stepClass.HasSum := hasSum
@@ -103,6 +106,39 @@ theorem oneCoinOracleProgram_toFreeM (input : Unit) :
     (oneCoinOracleProgram input).toFreeM = oneCoinProgram input := by
   cases input
   rfl
+
+/-! ## Native measure semantics -/
+
+/-- The native fair-coin interpretation is selected explicitly for this canary. -/
+@[instance_reducible]
+noncomputable def oneCoinMeasureSpec : coinSpec.toPFunctor.IsMeasureSpec :=
+  IsMeasureSpec.uniformOfFintypeInhabited _
+
+attribute [local instance] oneCoinMeasureSpec
+
+/-- The one-query program directly denotes the uniform measure on Boolean answers. -/
+theorem oneCoinProgram_denote_eq_uniformOn (input : Unit) :
+    FreeM.denote (oneCoinProgram input) = (uniformOn Set.univ : Measure Bool) := by
+  cases input
+  change FreeM.denote (FreeM.lift (P := coinSpec.toPFunctor) ()) = _
+  rw [FreeM.denote_lift (P := coinSpec.toPFunctor)]
+  rfl
+
+/-- The query-count measure of the one-query program is concentrated at one. -/
+theorem oneCoinProgram_queryCountMeasure_eq_dirac (input : Unit) :
+    FreeM.queryCountMeasure (oneCoinProgram input) = Measure.dirac 1 := by
+  cases input
+  apply FreeM.queryCountMeasure_eq_dirac_of_length_eq (P := coinSpec.toPFunctor) _ 1
+  rintro ⟨answer, tail⟩
+  rcases tail with ⟨⟩
+  rfl
+
+/-- The expected query count of the one-query program is exactly one. -/
+theorem oneCoinProgram_expectedQueryCount_eq_one (input : Unit) :
+    FreeM.expectedQueryCount (oneCoinProgram input) = (1 : ℝ≥0∞) := by
+  unfold FreeM.expectedQueryCount
+  rw [oneCoinProgram_queryCountMeasure_eq_dirac]
+  simp
 
 /-- Residual-program relation used to prove semantic implementation. -/
 inductive CoinResidual : Option Bool → FreeM coinSpec.toPFunctor Bool → Prop where
