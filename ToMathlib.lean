@@ -39,6 +39,7 @@ public import ToMathlib.MeasureTheory.MeasurableSpace.Except
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
 public import ToMathlib.MeasureTheory.Measure.Monotone
 public import ToMathlib.MeasureTheory.Measure.Option
+public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.NegativeHypergeometric
 public import ToMathlib.Probability.ProbabilityMassFunction.Measure
