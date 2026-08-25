@@ -18,7 +18,7 @@ signature by advancing every hash chain forward — increasing any message digit
 checksum to decrease, and equal checksums together with pointwise `≤` force equality.
 
 This module is a standard-model statement over `List ℕ` / `ℕ`, independent of the oracle/hash
-layer; the WOTS+ one-wayness reduction (in `HashSig.SLHDSA.Security`) consumes
+layer; a WOTS+ one-wayness reduction consumes
 `wots_fullDigits_incomparable` as its purely combinatorial ingredient.
 
 See FIPS 205 §5 for the WOTS+ specification this validates.
