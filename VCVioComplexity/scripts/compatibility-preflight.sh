@@ -22,7 +22,7 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 package_root="$(cd -- "$script_dir/.." && pwd)"
 dependency_root="$package_root/.lake/packages/complexitylib"
 expected_revision='b6738219a3a3c50967d6bd16cba9487887ca6b66'
-expected_toolchain='leanprover/lean4:v4.33.0'
+expected_toolchain='leanprover/lean4:v4.33.1'
 
 cd "$package_root"
 
