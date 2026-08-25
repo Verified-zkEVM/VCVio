@@ -109,10 +109,30 @@ Additive, no simp-normal-form changes, safe to land during the current cycle.
    existing lemmas keep their statements. This is the only thing standing between VCVio expectations
    and Mathlib's convergence theory, and it gives `Measure.dropNone` a second consumer, which is
    independent support for keeping it.
-2. **Move `probEvent` off the deprecated outer measure.** At minimum add
-   `probEvent mx p = (evalDist mx).toMeasure …`; better, redefine it that way, since
-   `toMeasure_apply_eq_toOuterMeasure_apply` makes the change propositionally invisible to the 103
-   dependent lemmas.
+2. **Move `probEvent` off the deprecated outer measure — but not to `Measure`.** The obvious
+   move is wrong, and the reason is worth recording because it recurs.
+
+   `OuterMeasure α` is `structure OuterMeasure (α : Type*)`; `Measure α` is
+   `structure Measure (α : Type*) [MeasurableSpace α]`. `probEvent` is generic over an arbitrary
+   `α : Type u` with no measurable structure, so `toOuterMeasure` is not an accident — it is the
+   only one of the two that typechecks there. Attempting the `Measure` version fails in the
+   *statements* of the supporting lemmas, where `⊤` is not an instance and the `FunLike` coercion
+   cannot find one.
+
+   Upstream agrees: mathlib4#42821's replacement for `toOuterMeasure` is
+   *"a linear combination of Dirac masses via `OuterMeasure.sum` and `OuterMeasure.dirac`"* — still
+   an outer measure. So the correct target is
+
+   ```lean
+   OuterMeasure.sum fun x => p x • OuterMeasure.dirac x
+   ```
+
+   which is `rfl`-equal to `p.toOuterMeasure` and needs no `MeasurableSpace`. The three proof sites
+   inside `Defs/Basic.lean` move from `PMF.toOuterMeasure_apply` and
+   `toOuterMeasure_apply_singleton` to the corresponding `OuterMeasure.sum` lemmas. The measure
+   view of an event remains available where a measurable space genuinely exists — through
+   `FreeM.denote_apply_setOf` — which is the right division: `probEvent` is the generic surface,
+   `denote` is the Mathlib-facing one.
 3. **Close the `Pr` bridge set.** `probFailure` has no measure counterpart yet; the other two do.
    All three should be stateable as measure applications.
 4. **Name new measure-layer lemmas as Mathlib would.** `_apply`, `_apply_singleton`, `lintegral_`,
