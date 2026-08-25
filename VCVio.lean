@@ -108,6 +108,7 @@ public import VCVio.EvalDist.Monad.Seq
 public import VCVio.EvalDist.Option
 public import VCVio.EvalDist.PFunctor
 public import VCVio.EvalDist.PFunctorMeasure
+public import VCVio.EvalDist.PFunctorMeasure.Core
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.RenyiDivergence
 public import VCVio.EvalDist.ResumptionMeasure
