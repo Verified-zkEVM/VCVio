@@ -91,6 +91,7 @@ future independent session reviews add dispositions under the protocol rather th
 | F-083 | HIGH | REMEDIATED-PENDING-REVIEW | Source-composite commands omitted Security and no focused mutation proved its coverage | S02-R6-003 | Gate the exact four-glob commands and reject a controlled Security-source byte mutation |
 | F-084 | HIGH | REMEDIATED-PENDING-REVIEW | Repository revision validation accepted any ancestor and mislabeled the invalidated repair base | S02-R6-004 | Require the exact session-linked repair-base field and correct its ledger meaning |
 | F-085 | HIGH | REMEDIATED-PENDING-REVIEW | Declaration dependencies/spans and S02 harness-edit scope prose were false | S02-R6-005 | Correct exact dependencies/full spans and describe the narrow harness repair accurately |
+| F-086 | HIGH | REMEDIATED-PENDING-REVIEW | The retained S03 bootstrap named no current accepted predecessor and could route work to invalidated commit `7b77e700` | S02-R7-001 | State that no accepted predecessor exists until r8 PASS and bind S03 only to that exact accepted repair commit |
 
 Independent S00 re-review r9 accepted the repairs for F-021 through F-029. Their `FIXED` statuses
 administratively propagate that verdict; they are not an S01 self-review. Historical FAIL artifacts
@@ -134,8 +135,10 @@ Independent S02 reviews r1, r2, and r3 failed and remain immutable. Independent 
 findings, but the complete independent r5 audit invalidated that acceptance with F-075 through
 F-080. Independent r6 then failed with F-081 through F-085. The second repair keeps underlying
 construction coupling F-079 and the unapproved target-contract choice F-080 open, while recording
-the five r6 defects and the other r5 repairs as `REMEDIATED-PENDING-REVIEW`. No successor is eligible
-until r7 accepts the repairs. R4 did close the twelve earlier S02 findings F-063 through F-074, whose
+the five r6 defects and the other r5 repairs as `REMEDIATED-PENDING-REVIEW`. Independent r7
+confirmed those repairs and every technical gate but failed with F-086. The routing repair records
+F-086 as `REMEDIATED-PENDING-REVIEW`; no accepted S03 predecessor exists until r8 accepts the exact
+repair commit. R4 did close the twelve earlier S02 findings F-063 through F-074, whose
 `FIXED` statuses preserve that reviewed disposition. None of this globally closes F-001 through
 F-009: the legacy theorem remains rejected, concrete reductions/composition remain future work, and
 the QROM/asymptotic boundaries remain open.

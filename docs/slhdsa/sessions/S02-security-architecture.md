@@ -1,6 +1,6 @@
 # S02 security architecture session
 
-Status: r1/r2/r3/r5/r6 failed; r4 acceptance invalidated; second repair pending independent r7 review.
+Status: r1/r2/r3/r5/r6/r7 failed; r4 acceptance invalidated; routing repair pending independent r8 review.
 
 Date: 2026-08-25
 Branch: `codex/sphincsplus-formalization`
@@ -113,7 +113,7 @@ is no longer current.
 R5 returned FAIL with six blocking findings in the immutable artifact
 `reviews/S02-security-architecture-review-r5.md`:
 
-| finding | repair disposition pending r7 |
+| finding | repair disposition pending r8 |
 | --- | --- |
 | R5-001 generated partial helpers | all eight source-recursive projections use total `List.map`, `filterMap`, or `foldr`; the seven-helper policy is unchanged |
 | R5-002 unreproducible acceptance revision | an exact `repair_base_revision` is cross-checked with this session and exact active bytes are separately hashed |
@@ -125,13 +125,20 @@ R5 returned FAIL with six blocking findings in the immutable artifact
 R6 returned FAIL with five blocking findings in the immutable artifact
 `reviews/S02-security-architecture-review-r6.md`:
 
-| finding | repair disposition pending r7 |
+| finding | repair disposition pending r8 |
 | --- | --- |
 | R6-001 uncoupled scheme bundle overstated | classify the bundle as an arbitrary signature-scheme experiment interface and leave F-079/PO-003 open for S08/S09 |
 | R6-002 unapproved decisions treated as operative | retain D-006/D-009 as proposed and make PO-006/PO-008 provisional rather than discharged |
 | R6-003 inconsistent source-composite commands/no mutation | require the exact four-glob commands and execute a controlled temporary Security-source byte mutation |
 | R6-004 arbitrary ancestor revision | require the exact repair-base identity, cross-check this session marker, and correct the source ledger |
 | R6-005 false inventory/scope facts | correct all dependency names, record full declaration spans, and accurately describe the harness edits |
+
+R7 independently confirmed all five r6 repairs and every technical gate, then returned FAIL with
+one blocking finding in the immutable artifact `reviews/S02-security-architecture-review-r7.md`:
+
+| finding | repair disposition pending r8 |
+| --- | --- |
+| R7-001 stale S03 predecessor routing | state that no accepted predecessor exists, retain invalidated `7b77e700` only as evidence, and forbid S03 until the exact repaired commit receives r8 PASS |
 
 ## Validation
 
@@ -193,4 +200,4 @@ and controlled Security-byte mutation all report PASS.
 - Refine honest signing internals when later construction proofs need their execution trace.
 - Prove component losslessness and the repaired master inequality.
 - Replace or retire the rejected legacy placeholder only in an authorized later session.
-- Begin successor work only after the second repaired S02 tree receives independent r7 PASS.
+- Begin successor work only after this exact routing-repaired S02 tree receives independent r8 PASS.

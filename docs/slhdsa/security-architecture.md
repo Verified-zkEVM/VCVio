@@ -1,6 +1,6 @@
 # S02 classical security architecture
 
-Status: r4 acceptance invalidated; independent r5/r6 FAIL; second repair pending r7 review.
+Status: r4 acceptance invalidated; independent r5/r6/r7 FAIL; successor-routing repair pending r8 review.
 
 This document records the proposed shape of the classical SLH-DSA reduction before any component
 proof is attempted. D-006 and D-009 remain proposed with no named approver, so this is a candidate

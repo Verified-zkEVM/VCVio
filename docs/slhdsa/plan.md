@@ -50,8 +50,9 @@ until PASS. Review history is append-only; a re-review never overwrites the fail
   reflection. Its EXIT cleanup restores the Lake build-dir
   override before temp deletion on ordinary shell exits and handled signals (not SIGKILL). The
   sequential gate assumes no concurrent writer. Independent r16 accepted S01. S02 r4 initially
-  passed, but the complete r5 audit reopened S02 and r6 found five residual blockers; S03 remains
-  blocked pending a successful r7 review.
+  passed, but the complete r5 audit reopened S02 and r6 found five residual blockers. R7 confirmed
+  those repairs but found stale successor routing; S03 remains blocked pending a successful r8
+  review of the exact routing-repaired commit.
   The descriptor/AST policy is frozen and is not extended in later sessions absent a concrete
   regression; successor work centers on Lean deliverables.
 
@@ -75,11 +76,12 @@ focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output
 
 Review state: r1/r2/r3 failed and remain immutable; r4 passed but did not run the full compiled and
 traceability gates. Independent r5 failed with six blockers and r6 failed with five residual
-claim/provenance/traceability blockers. The second repaired tree must receive independent r7 PASS
-before S02 is accepted again. D-006/D-009 remain proposals and do not discharge their dependent
-obligations without named owner approval.
+claim/provenance/traceability blockers. R7 confirmed all five repairs but failed on the retained
+S03 record's stale predecessor routing. The exact routing-repaired tree must receive independent r8
+PASS before S02 is accepted again. D-006/D-009 remain proposals and do not discharge their
+dependent obligations without named owner approval.
 
-### S03 — data, widths, parameters, ADRS, and codecs (blocked by S02 r6; bootstrap retained)
+### S03 — data, widths, parameters, ADRS, and codecs (blocked pending S02 r8; bootstrap retained)
 
 - Inputs: S01 tables and FIPS Sections 3–5/11; accepted S02 interfaces.
 - Allowed: `Params`, `Address`, `Encoding`, new byte/codec modules and focused tests.

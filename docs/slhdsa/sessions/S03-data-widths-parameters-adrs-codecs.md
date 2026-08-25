@@ -1,19 +1,22 @@
 # S03 data, widths, parameters, ADRS, and codecs bootstrap
 
-Status: bootstrap retained; temporarily blocked by S02 r5 pending repaired r6 review.
+Status: bootstrap retained; blocked by S02 r7 pending repaired r8 review.
 
 Date: 2026-08-25
 Branch: `codex/sphincsplus-formalization`
-Former predecessor: S02 commit `7b77e700b3d24a6ab94ed741a650954bbd90859a`; r4 acceptance was
-invalidated by `reviews/S02-security-architecture-review-r5.md`. This record will name the repaired
-accepted predecessor after r6.
+No accepted predecessor currently exists. Historical S02 commit
+`7b77e700b3d24a6ab94ed741a650954bbd90859a` was invalidated by
+`reviews/S02-security-architecture-review-r5.md`; it is retained only as repair evidence and must
+never be used as an S03 predecessor or start target. This record will name the exact repaired S02
+commit only after independent r8 PASS.
 
 ## Objective
 
 Establish the width-safe data layer used by every later construction: the complete FIPS-approved
 parameter family, exact address operations and serialization, big-endian integer and digit
-extraction, and total encoders paired with rejecting decoders. S03 begins from accepted S00/S01
-infrastructure and the accepted S02 interfaces; neither is a new review target.
+extraction, and total encoders paired with rejecting decoders. Once eligible, S03 will begin from
+accepted S00/S01 infrastructure and the exact independently accepted S02 interfaces; neither will
+be a new review target.
 
 ## Authoritative inputs
 
@@ -21,7 +24,8 @@ infrastructure and the accepted S02 interfaces; neither is a new review target.
   twelve approved parameter sets in Table 2;
 - the pinned FIPS profile in `docs/slhdsa/matrices/fips205-profile.json`, the S01 coverage and proof
   obligation matrices, and the reference pins in `docs/slhdsa/reference-manifest.json`;
-- the accepted S02 types imported through `HashSig.lean`, with no claim that the rejected legacy
+- the S02 candidate types imported through `HashSig.lean`, usable as an accepted input only after
+  the repaired S02 commit receives independent r8 PASS, with no claim that the rejected legacy
   security theorem has been repaired; and
 - existing ACVP schema-format fixtures as test inputs only, under their documented S01 assurance
   boundary.
@@ -73,8 +77,10 @@ conformance. COV-005 remains owned by S10, and F-015/F-016/F-018 remain open.
 
 ## Handoff
 
-Begin implementation with a fresh orchestration agent at the accepted predecessor above. Preserve
-the S02 architecture boundary and treat later primitive, construction, conformance, and security
-proof work as successor sessions. The first implementation record should list every changed
-declaration and map its evidence to COV-001/COV-002 and PO-010/PO-011 without changing their status
-until the corresponding gates are satisfied.
+Do not begin implementation until a new exact S02 repair commit receives independent r8 PASS. Then
+bind this record and the implementation to that exact accepted commit, never to historical
+`7b77e700b3d24a6ab94ed741a650954bbd90859a`. Preserve the S02 architecture boundary and treat later
+primitive, construction, conformance, and security proof work as successor sessions. The first
+implementation record should list every changed declaration and map its evidence to
+COV-001/COV-002 and PO-010/PO-011 without changing their status until the corresponding gates are
+satisfied.

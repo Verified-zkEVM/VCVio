@@ -56,7 +56,10 @@ files use the `-rN` suffix.
   blocking findings; S02 reopened and S03 blocked pending repair and r6.
 - [S02 security architecture review r6](S02-security-architecture-review-r6.md): FAIL with five
   blocking findings; S03 remains blocked pending the second repair and r7.
+- [S02 security architecture review r7](S02-security-architecture-review-r7.md): FAIL with one
+  blocking successor-routing finding; all five r6 defects passed re-review.
 
-The S03 bootstrap is retained, but implementation is blocked until repaired S02 receives r7 PASS.
+The S03 bootstrap is retained without an accepted predecessor; implementation is blocked until the
+successor-routing repair receives independent S02 r8 PASS.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

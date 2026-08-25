@@ -200,6 +200,8 @@ S01_FAILED_REVIEW_HASHES = {
         "0c1ea5b29c49d7fc6640509bb974aefd73c1cab6587e2052e34ba57e91b55bb6",
     "reviews/S02-security-architecture-review-r6.md":
         "39328910948604a1920b6956d33885ebca0520eaff7af7b66088c3a30f1f219d",
+    "reviews/S02-security-architecture-review-r7.md":
+        "30753d77ffd190c63f0c90e132dfa800835eb712e06f7f026afcc5c48cf74c23",
 }
 S01_ACCEPTED_REVIEW = {
     "path": "reviews/S01-authority-and-conformance-review-r16.md",
@@ -377,7 +379,7 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
-        (4812, "307691a90e171fc44aee87319d0678d1a8929186d50406c14a2f811ab6287cc6"),
+        (4812, "b605aa4f1b8e357cd9aef77453abe78fc0a4ea48b870319f12ca70532dee3a22"),
 }
 
 # DECL-011--DECL-014 use typed dependency tokens. Earlier bootstrap rows retain their historical
