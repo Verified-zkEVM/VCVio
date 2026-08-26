@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
+public import ToMathlib.Probability.Divergence.RenyiDiscrete
 public import VCVio.EvalDist.Monad.Map
 
 /-!

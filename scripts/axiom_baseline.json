@@ -37,7 +37,6 @@
   "MLKEM.ind_cca_security",
   "MLKEM.kpke_delta_correct",
   "MLKEM.kpke_ind_cpa_security",
-  "PMF.etvDist_sq_le_of_renyiDiv",
   "SLHDSA.slhdsa_euf_cma_security",
   "TTransform.OW_PCVA_bound",
   "UTransform.IND_CCA_bound",

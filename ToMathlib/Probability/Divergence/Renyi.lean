@@ -8,6 +8,7 @@ module
 public import Mathlib.MeasureTheory.Measure.Decomposition.RadonNikodym
 public import Mathlib.InformationTheory.KullbackLeibler.DataProcessing
 public import Mathlib.Analysis.Convex.SpecificFunctions.Basic
+public import Mathlib.Probability.Kernel.Composition.RadonNikodym
 public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
 
 /-!
@@ -34,7 +35,7 @@ module is deliberately free of any dependence on that layer.
 
 @[expose] public section
 
-open MeasureTheory
+open MeasureTheory ProbabilityTheory
 open scoped ENNReal
 
 namespace InformationTheory
@@ -69,6 +70,101 @@ theorem renyiMGF_self (a : ℝ) (μ : Measure α) [IsProbabilityMeasure μ] :
     simp [hx]
   rw [h]
   simp
+
+/-! ### The Renyi divergence
+
+`renyiDiv` normalises the MGF so that it is one for equal measures and monotone in the order. The
+`a ≤ 1` guard matches the discrete definition, which uses it as a trivial bound. -/
+
+open scoped Classical in
+/-- The multiplicative Renyi divergence of order `a`. -/
+noncomputable def renyiDiv (a : ℝ) (μ ν : Measure α) : ℝ≥0∞ :=
+  if a ≤ 1 then 1 else (renyiMGF a μ ν) ^ ((a - 1)⁻¹ : ℝ)
+
+open scoped Classical in
+theorem renyiDiv_eq_rpow {a : ℝ} (ha : 1 < a) (μ ν : Measure α) :
+    renyiDiv a μ ν = (renyiMGF a μ ν) ^ ((a - 1)⁻¹ : ℝ) := if_neg (not_le.mpr ha)
+
+@[simp]
+theorem renyiDiv_self (a : ℝ) (μ : Measure α) [IsProbabilityMeasure μ] :
+    renyiDiv a μ μ = 1 := by
+  rw [renyiDiv]
+  split
+  · rfl
+  · simp
+
+/-! ### Log-convexity of the Renyi MGF
+
+`a ↦ renyiMGF a` is the moment generating function of the log-likelihood ratio under `ν`, so it is
+log-convex. Mathlib states exactly the inequality that expresses this — `lintegral_mul_norm_pow_le`,
+Hölder with two exponents summing to one — with no finiteness or positivity side conditions, so the
+three-point interpolation is a direct application.
+
+Interpolating at `1/2`, `1` and `a` converts a Renyi bound into a bound on the Hellinger affinity
+`renyiMGF (1/2)`, which is the quantity that controls total variation. -/
+
+/-- **Three-point interpolation for the Renyi MGF.**
+
+At `θ = (a-1)/(a-1/2)` the exponents collapse to `∫⁻ ∂μ/∂ν ∂ν = 1`, which is the log-convexity
+statement `M₁ ≤ M_{1/2}^θ · M_a^{1-θ}` with `M₁ = 1`. -/
+theorem one_le_renyiMGF_half_rpow_mul_renyiMGF_rpow {a : ℝ} (ha : 1 < a) (μ ν : Measure α)
+    [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] (hac : μ ≪ ν) :
+    1 ≤ renyiMGF (1/2) μ ν ^ ((a-1)/(a-1/2)) * renyiMGF a μ ν ^ (1 - (a-1)/(a-1/2)) := by
+  set θ : ℝ := (a-1)/(a-1/2) with hθdef
+  have hden : a - 1/2 ≠ 0 := by linarith
+  have hθ0 : 0 ≤ θ := div_nonneg (by linarith) (by linarith)
+  have hθ1 : θ ≤ 1 := by rw [hθdef, div_le_one (by linarith)]; linarith
+  have h2 : (2:ℝ)*a - 1 ≠ 0 := by linarith
+  have hexp : (1/2 : ℝ) * θ + a * (1 - θ) = 1 := by rw [hθdef]; field_simp; linarith
+  rw [renyiMGF_of_ac hac, renyiMGF_of_ac hac]
+  have key := ENNReal.lintegral_mul_norm_pow_le
+    (μ := ν) (f := fun x => μ.rnDeriv ν x ^ (1/2 : ℝ)) (g := fun x => μ.rnDeriv ν x ^ a)
+    (p := θ) (q := 1 - θ)
+    ((Measure.measurable_rnDeriv μ ν).pow_const _).aemeasurable
+    ((Measure.measurable_rnDeriv μ ν).pow_const _).aemeasurable
+    hθ0 (by linarith) (by linarith)
+  refine le_trans (le_of_eq ?_) key
+  rw [← measure_univ (μ := μ), ← Measure.lintegral_rnDeriv hac]
+  refine lintegral_congr fun x => ?_
+  rw [← ENNReal.rpow_mul, ← ENNReal.rpow_mul,
+    ← ENNReal.rpow_add_of_nonneg _ _ (by positivity) (by nlinarith), hexp, ENNReal.rpow_one]
+
+/-- The `ℝ≥0∞` half of the interpolation argument, with no measures involved: from a two-point
+Hölder bound, recover a lower bound on `x²` in terms of `y`. -/
+private theorem inv_rpow_le_rpow_two_of_one_le_mul {x y : ℝ≥0∞} {θ : ℝ} (hθ : 0 < θ)
+    (h : 1 ≤ x ^ θ * y ^ (1 - θ)) :
+    (y ^ ((1 - θ) * θ⁻¹ * 2))⁻¹ ≤ x ^ (2 : ℝ) := by
+  have hinv : (0:ℝ) ≤ θ⁻¹ := (inv_pos.mpr hθ).le
+  have h1 : (1:ℝ≥0∞) ≤ x * y ^ ((1 - θ) * θ⁻¹) := by
+    have h' := ENNReal.rpow_le_rpow h hinv
+    rwa [ENNReal.one_rpow, ENNReal.mul_rpow_of_nonneg _ _ hinv,
+      ← ENNReal.rpow_mul, ← ENNReal.rpow_mul, mul_inv_cancel₀ hθ.ne', ENNReal.rpow_one] at h'
+  have hx0 : x ≠ 0 := by rintro rfl; rw [zero_mul] at h1; exact absurd h1 (by simp)
+  have hz0 : y ^ ((1 - θ) * θ⁻¹) ≠ 0 := by
+    rintro hz; rw [hz, mul_zero] at h1; exact absurd h1 (by simp)
+  have h2 : (y ^ ((1 - θ) * θ⁻¹))⁻¹ ≤ x :=
+    (ENNReal.inv_le_iff_le_mul (fun _ => hz0) (fun _ => hx0)).mpr (by rwa [mul_comm])
+  have h3 := ENNReal.rpow_le_rpow h2 (by norm_num : (0:ℝ) ≤ 2)
+  rwa [ENNReal.inv_rpow, ← ENNReal.rpow_mul] at h3
+
+/-- **A Renyi bound controls the Hellinger affinity.**
+
+`renyiMGF (1/2)` is the Hellinger affinity (the Bhattacharyya coefficient in the discrete case),
+and this is the inequality `BC² ≥ R_a⁻¹` that converts a Renyi divergence bound into one on it.
+It is the interpolation above, rearranged. -/
+theorem renyiDiv_inv_le_renyiMGF_half_rpow_two {a : ℝ} (ha : 1 < a) (μ ν : Measure α)
+    [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] (hac : μ ≪ ν) :
+    (renyiDiv a μ ν)⁻¹ ≤ renyiMGF (1/2) μ ν ^ (2 : ℝ) := by
+  have h1 : a - 1 ≠ 0 := by linarith
+  have h2 : a - 1/2 ≠ 0 := by linarith
+  have h3 : a * 2 - 1 ≠ 0 := by linarith
+  have hθpos : 0 < (a-1)/(a-1/2) := div_pos (by linarith) (by linarith)
+  have harith : (1 - (a-1)/(a-1/2)) * ((a-1)/(a-1/2))⁻¹ * 2 = (a - 1)⁻¹ := by
+    field_simp
+    linarith
+  have := inv_rpow_le_rpow_two_of_one_le_mul hθpos
+    (one_le_renyiMGF_half_rpow_mul_renyiMGF_rpow ha μ ν hac)
+  rwa [harith, ← renyiDiv_eq_rpow ha] at this
 
 /-! ### Data processing
 
@@ -161,6 +257,51 @@ theorem renyiMGF_map_le (a : ℝ) (ha : 1 < a) (μ ν : Measure α)
     lintegral_rnDeriv_rpow_eq_ofReal a ha0 _ _ h_int]
   exact ENNReal.ofReal_le_ofReal
     (integral_toReal_rnDeriv_rpow_map_le a ha μ ν hg hac h_int)
+
+/-! ### Data processing for Markov kernels
+
+Post-processing by a kernel rather than a function. The route is Mathlib's own for
+`klDiv_comp_right_le`: a composition is the second marginal of a `compProd`, the first factor is
+unchanged by pairing with a common kernel, and the map inequality does the rest. -/
+
+/-- Pairing both measures with the same kernel leaves the Renyi MGF unchanged. -/
+theorem renyiMGF_compProd_left (a : ℝ) (μ ν : Measure α) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (κ : Kernel α β) [IsMarkovKernel κ] :
+    renyiMGF a (μ ⊗ₘ κ) (ν ⊗ₘ κ) = renyiMGF a μ ν := by
+  by_cases hac : μ ≪ ν
+  · have hac' : μ ⊗ₘ κ ≪ ν ⊗ₘ κ :=
+      Measure.AbsolutelyContinuous.compProd_of_compProd hac fun _ a => a
+    rw [renyiMGF_of_ac hac', renyiMGF_of_ac hac]
+    have h1 : ∫⁻ p, ((μ ⊗ₘ κ).rnDeriv (ν ⊗ₘ κ) p) ^ a ∂(ν ⊗ₘ κ)
+        = ∫⁻ p, (μ.rnDeriv ν p.1) ^ a ∂(ν ⊗ₘ κ) := by
+      refine lintegral_congr_ae ?_
+      filter_upwards [ProbabilityTheory.rnDeriv_measure_compProd_left μ ν κ] with p hp
+      rw [hp]
+    rw [h1]
+    have h2 : ∫⁻ x, (μ.rnDeriv ν x) ^ a ∂((ν ⊗ₘ κ).fst)
+        = ∫⁻ p, (μ.rnDeriv ν p.1) ^ a ∂(ν ⊗ₘ κ) := by
+      rw [Measure.fst]
+      exact lintegral_map (by fun_prop) measurable_fst
+    rw [Measure.fst_compProd] at h2
+    exact h2.symm
+  · rw [renyiMGF_of_not_ac hac, renyiMGF_of_not_ac]
+    intro hcon
+    exact hac (by
+      have := hcon.map (f := Prod.fst) measurable_fst
+      rwa [← Measure.fst, ← Measure.fst, Measure.fst_compProd, Measure.fst_compProd] at this)
+
+/-- **Data processing inequality for the Renyi MGF under a Markov kernel.**
+
+Since `κ ∘ₘ μ` is `Measure.bind μ κ`, this is the statement that post-processing a computation by
+a randomised procedure cannot increase the divergence. -/
+theorem renyiMGF_comp_right_le (a : ℝ) (ha : 1 < a) (μ ν : Measure α)
+    [IsFiniteMeasure μ] [IsFiniteMeasure ν] (κ : Kernel α β) [IsMarkovKernel κ] :
+    renyiMGF a (κ ∘ₘ μ) (κ ∘ₘ ν) ≤ renyiMGF a μ ν :=
+  calc renyiMGF a (κ ∘ₘ μ) (κ ∘ₘ ν)
+    _ ≤ renyiMGF a (μ ⊗ₘ κ) (ν ⊗ₘ κ) := by
+        rw [← Measure.snd_compProd μ κ, ← Measure.snd_compProd ν κ, Measure.snd, Measure.snd]
+        exact renyiMGF_map_le a ha _ _ measurable_snd
+    _ = renyiMGF a μ ν := renyiMGF_compProd_left a μ ν κ
 
 end DataProcessing
 

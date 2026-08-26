@@ -43,6 +43,7 @@ public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.Divergence.Renyi
 public import ToMathlib.Probability.Divergence.RenyiDiscrete
+public import ToMathlib.Probability.Divergence.TotalVariation
 public import ToMathlib.Probability.NegativeHypergeometric
 public import ToMathlib.Probability.ProbabilityMassFunction.Measure
 public import ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym

@@ -50,14 +50,22 @@ of the measures.
 This is the measure-level form of `PMF.toMeasure_bind_apply`, and together with
 `PMF.toMeasure_pure` it says that `PMF.toMeasure` is a monad morphism from `PMF` into the Giry
 monad. -/
-lemma toMeasure_bind [Countable α] [MeasurableSingletonClass α]
+lemma toMeasure_bind [DiscreteMeasurableSpace α]
     (p : PMF α) (f : α → PMF β) :
     (p.bind f).toMeasure = Measure.bind p.toMeasure fun a => (f a).toMeasure := by
   ext s hs
   rw [toMeasure_bind_apply _ _ _ hs,
-    Measure.bind_apply hs (Measurable.of_discrete).aemeasurable,
-    lintegral_countable']
+    Measure.bind_apply hs (Measurable.of_discrete).aemeasurable]
+  conv_rhs => rw [← PMF.restrict_toMeasure_support p]
+  rw [lintegral_countable _ p.support_countable]
+  have hind : (fun a => p a * (f a).toMeasure s)
+      = p.support.indicator (fun a => p a * (f a).toMeasure s) := by
+    funext a
+    by_cases ha : a ∈ p.support
+    · simp [ha]
+    · simp [ha, (PMF.apply_eq_zero_iff p a).mpr ha]
+  rw [hind, ← tsum_subtype]
   exact tsum_congr fun a => by
-    rw [p.toMeasure_apply_singleton a (MeasurableSet.of_discrete), mul_comm]
+    rw [p.toMeasure_apply_singleton a MeasurableSet.of_discrete, mul_comm]
 
 end PMF
