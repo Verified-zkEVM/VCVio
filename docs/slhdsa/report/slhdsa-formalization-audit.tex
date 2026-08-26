@@ -72,8 +72,10 @@ insufficient bits, and wrong lengths. Checked ADRS setters enforce 32/96-bit fie
 rejects unknown types and noncanonical padding, while structured serialization/parsing identity and
 checked-wire semantics are proved under the exact bounds. Exact-width transparent key and signature
 aliases reject short and long input for all twelve profiles. Initial independent S03 review failed
-with five blockers; these data-layer repairs remain pending fresh r1, not primitive, construction,
-external-API, or ACVP conformance claims. COV-005 and F-015/F-016/F-018 remain deferred/open.
+with five blockers. R1 confirmed all five substantive repairs but failed on one reversed-argument
+formula in the active S03 session record; that formula is corrected pending fresh r2. These remain
+data-layer claims, not primitive, construction, external-API, or ACVP conformance claims. COV-005
+and F-015/F-016/F-018 remain deferred/open.
 
 \section{Security definitions and theorem architecture}
 S02 defines an explicitly classical candidate architecture for EUF-CMA, PRF/PRFmsg, ITSR, TCR,
@@ -281,8 +283,11 @@ Independent S03 review of exact commit
 parameter lookup, absent semantic integer reconstruction, a carrier-only rather than structured
 ADRS roundtrip, six false axiom rows, and an opacity overclaim. The repair records F-087--F-091 as
 remediated pending review, adds the corresponding laws and runtime boundaries, and gates 26 exact
-load-bearing roots with a compiled axiom probe. S04 remains blocked until a fresh independent S03
-r1 accepts the complete exact repair tree.
+load-bearing roots with a compiled axiom probe. Independent r1 confirmed all five repairs at exact
+commit \texttt{dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e} but failed because the active
+session record wrote \texttt{toByte len x} instead of the compiled \texttt{toByte x len}. The
+formula and F-092 disposition are corrected. S04 remains blocked until a fresh independent S03 r2
+accepts the complete exact repair tree.
 
 \section{Coverage and traceability}
 Include construction-to-source-to-Lean-to-test coverage, proof obligations, assumptions, TCB, and

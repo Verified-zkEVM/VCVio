@@ -15,9 +15,10 @@ Current records:
   commit `a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`.
 - [S03 — data, widths, parameters, ADRS, and codecs](S03-data-widths-parameters-adrs-codecs.md):
   implemented from exact accepted S02; initial independent review of exact commit `963a3e7d...`
-  failed with five blockers. Repairs await complete validation and fresh independent r1; the exact
-  review tree must include the documentation-only S04 successor bootstrap.
+  failed with five blockers. R1 confirmed their repairs at `dab93b0a...` but failed on one active
+  formula; its correction awaits complete validation and fresh independent r2. The exact review tree
+  must include the documentation-only S04 successor bootstrap and both immutable FAIL artifacts.
 - [S04 — primitive interfaces and SHA2/SHAKE instantiations](S04-primitives-sha2-shake.md):
-  bootstrap only; no accepted predecessor or review artifact exists while repaired S03 awaits r1.
+  bootstrap only; no accepted predecessor or review artifact exists while repaired S03 awaits r2.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

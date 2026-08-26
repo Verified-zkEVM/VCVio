@@ -1,7 +1,7 @@
 # S03 data, widths, parameters, ADRS, and codecs session
 
-Status: initial independent review failed with five blockers; repairs implemented; repaired-tree
-validation and fresh independent r1 review pending.
+Status: initial review failed with five blockers; r1 confirmed all five repairs but failed with one
+documentation blocker; corrected tree validation and fresh independent r2 review pending.
 
 Date: 2026-08-26
 Branch: `codex/sphincsplus-formalization`
@@ -71,7 +71,7 @@ conformance. COV-005 remains owned by S10, and F-015/F-016/F-018 remain open.
   approved profile. `LegacyParameterSet` separately owns SHA2-128-24, and `legacy_not_approved`
   excludes it from FIPS approval.
 - `Encoding.lean` proves the radix-256 append law, `toInt` range, total
-  `toInt (toByte len x) = x % 256^len` reconstruction, its in-range corollary, and the checked
+  `toInt (toByte x len) = x % 256 ^ len` reconstruction, its in-range corollary, and the checked
   encoder connection. It exposes the exact pointwise MSB-first `toByte` and `base2b` rules and
   retains the two historical recursive helpers solely to preserve the reviewed exact-seven
   compiler-helper boundary. Checked conversion rejects overflow, zero digit width, insufficient
@@ -105,8 +105,8 @@ load-bearing-root/axiom probe.
   load-bearing proofs;
 - existing ACVP fixtures are used only within their pinned provenance and schema-format scope;
 - `git diff --check`, admission/source scans, and the frozen documentation harness pass; and
-- the initial `reviews/S03-data-codec-review.md` FAIL remains immutable, and a fresh reviewer authors
-  `reviews/S03-data-codec-review-r1.md` only after the repaired exact commit passes every gate.
+- the initial and r1 FAIL artifacts remain immutable, and a fresh reviewer authors
+  `reviews/S03-data-codec-review-r2.md` only after the corrected exact commit passes every gate.
 
 Focused evidence before the full handoff:
 
@@ -136,16 +136,20 @@ fixtures, generated umbrella check, and extern/interop isolation.
 
 The initial independent review of exact commit
 `963a3e7dd425b8a8c9bb9e2e91b73868f6918768` failed with S03-001 through S03-005; its immutable
-artifact is `reviews/S03-data-codec-review.md`. Commit the complete repaired tree only after every
-gate passes, then request a fresh independent reviewer to author
-`reviews/S03-data-codec-review-r1.md`; do not pre-create that artifact or verdict. Preserve the
-accepted S02 architecture boundary and treat primitive, construction, conformance, external-API,
-and security proof work as successor sessions. COV-001/COV-002 and PO-010/PO-011 are implemented or
-discharged pending independent S03 review, while COV-005 and F-015/F-016/F-018 do not move.
+artifact is `reviews/S03-data-codec-review.md`. Independent r1 reviewed exact repair commit
+`dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e`, confirmed all five substantive repairs, and failed
+with S03-R1-001 because this record reversed the displayed `toByte` arguments. Its immutable
+artifact is `reviews/S03-data-codec-review-r1.md`; the formula now matches the compiled theorem.
+Commit the complete corrected tree only after every gate passes, then request a fresh independent
+reviewer to author `reviews/S03-data-codec-review-r2.md`; do not pre-create that artifact or verdict.
+Preserve the accepted S02 architecture boundary and treat primitive, construction, conformance,
+external-API, and security proof work as successor sessions. COV-001/COV-002 and PO-010/PO-011 are
+implemented or discharged pending independent S03 review, while COV-005 and F-015/F-016/F-018 do
+not move.
 
 The original S03 implementation payload is exact commit
 `caefbda5e7ed7cd7a6efb80191307de7a39eea43`. The later documentation-only S04 bootstrap is part of
-the successor-routing state, and the current repairs follow the failed exact review tree. S03 r1
-must name and inspect the complete exact repaired descendant containing the payload, bootstrap,
-failed review, findings dispositions, and repairs. Accepting the payload or failed-review commit
-alone would leave required state outside the reviewed tree.
+the successor-routing state, and the current correction follows both failed review trees. S03 r2
+must name and inspect the complete exact corrected descendant containing the payload, bootstrap,
+both failed reviews, all findings dispositions, and every repair. Accepting the payload or either
+failed-review commit alone would leave required state outside the reviewed tree.

@@ -4,9 +4,10 @@ The module names below are targets, not claims about unimplemented successors. S
 candidate architecture is independently accepted, while D-006/D-009 remain unapproved and the bare
 scheme experiment interface does not freeze or establish general-construction refinement. S03 now
 implements the `Params`/`Address`/`Encoding`/`Codec` foundation; later construction arrows remain
-future work. Initial independent S03 review failed with five blockers; repairs remain pending fresh
-r1 acceptance. The S04 primitive bootstrap is documentation only and remains blocked; it does not
-make the SHA2/SHAKE target arrows current.
+future work. Initial independent S03 review failed with five blockers; r1 confirmed their repairs
+but failed on one reversed-argument formula in the active session record. That prose repair remains
+pending fresh r2 acceptance. The S04 primitive bootstrap is documentation only and remains blocked;
+it does not make the SHA2/SHAKE target arrows current.
 
 ```text
 HashSig.SLHDSA.Bytes

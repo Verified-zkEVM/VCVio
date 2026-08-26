@@ -97,6 +97,7 @@ future independent session reviews add dispositions under the protocol rather th
 | F-089 | HIGH | REMEDIATED-PENDING-REVIEW | S03 ADRS roundtrip started from a prevalidated byte carrier and did not reconstruct a structured address | S03-003 | Prove structured full-width serialization/parser identity under field bounds and canonical checked encode/decode semantics; test all layouts at maximum widths |
 | F-090 | HIGH | REMEDIATED-PENDING-REVIEW | Six S03 declaration rows falsely recorded an empty axiom footprint although their compiled roots use `propext` | S03-004 | Correct the rows and gate every S03 load-bearing root against an exact elaborated axiom inventory |
 | F-091 | MEDIUM | REMEDIATED-PENDING-REVIEW | Documentation described transparent exact-width codec aliases as opaque carriers | S03-005 | State the actual transparent-alias boundary consistently without claiming nominal separation |
+| F-092 | LOW | REMEDIATED-PENDING-REVIEW | The repaired S03 session reversed the value/length arguments in its displayed `toInt (toByte ...)` reconstruction law | S03-R1-001 | Record the compiled theorem exactly as `toInt (toByte x len) = x % 256 ^ len`, preserve and pin the r1 FAIL, and obtain fresh r2 review |
 
 Independent S00 re-review r9 accepted the repairs for F-021 through F-029. Their `FIXED` statuses
 administratively propagate that verdict; they are not an S01 self-review. Historical FAIL artifacts
@@ -153,5 +154,8 @@ Independent S03 review of exact commit `963a3e7dd425b8a8c9bb9e2e91b73868f6918768
 failed with F-087 through F-091. The repair makes parameter lookup family-aware, proves integer
 modulo/in-range reconstruction and checked conversion, proves structured ADRS reconstruction and
 checked-wire semantics, corrects and elaboration-gates the axiom ledger, and removes the opacity
-overclaim. All five findings remain `REMEDIATED-PENDING-REVIEW` until a fresh independent S03 r1
-verdict accepts the exact repair commit. S04 remains blocked.
+overclaim. Independent r1 confirmed all five substantive repairs at exact commit
+`dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e` but failed with F-092 because the session prose
+reversed `toByte`'s two natural-number arguments. The exact formula is corrected and the immutable
+r1 FAIL is pinned. F-087 through F-092 remain `REMEDIATED-PENDING-REVIEW` until a fresh independent
+S03 r2 verdict accepts the exact repair commit. S04 remains blocked.

@@ -72,6 +72,7 @@ REQUIRED_FILES = (
     "reviews/S01-authority-and-conformance-review-r15.md",
     "reviews/S01-authority-and-conformance-review-r16.md",
     "reviews/S03-data-codec-review.md",
+    "reviews/S03-data-codec-review-r1.md",
     "report/README.md",
     "report/slhdsa-formalization-audit.tex",
     "report/references.bib",
@@ -205,6 +206,8 @@ S01_FAILED_REVIEW_HASHES = {
         "30753d77ffd190c63f0c90e132dfa800835eb712e06f7f026afcc5c48cf74c23",
     "reviews/S03-data-codec-review.md":
         "8a21aa42caec8659ed4cafc8e56ddb1dfcc0ec0559f6bc9b678ad3e65a07586b",
+    "reviews/S03-data-codec-review-r1.md":
+        "0d728bf15cca3ebc2c9402b777b30a0c6de41b35f44eb2309c6b828812e4b6ba",
 }
 S01_ACCEPTED_REVIEW = {
     "path": "reviews/S01-authority-and-conformance-review-r16.md",

@@ -81,17 +81,18 @@ S03 record's stale predecessor routing. Independent r8 accepted the exact routin
 with zero findings. D-006/D-009 remain proposals and do not discharge their dependent obligations
 without named owner approval.
 
-### S03 — data, widths, parameters, ADRS, and codecs (initial review FAIL; repairs pending r1)
+### S03 — data, widths, parameters, ADRS, and codecs (r1 FAIL; prose repair pending r2)
 
 - Inputs: S01 tables and FIPS Sections 3–5/11; accepted S02 interfaces.
 - Allowed: `Params`, `Address`, `Encoding`, new byte/codec modules and focused tests.
 - Deliverables: valid parameter type, all 12 sets, width/range laws, exact ADRS operations,
   `base_2b` big-endian characterization, rejecting codecs.
 - Gates: `lake build HashSig`; all-set `#eval` sizes; codec/property tests; ACVP fixtures. Initial
-  exact-commit review failed with five blockers; after repair gates, fresh independent review r1 is
-  recorded in `reviews/S03-data-codec-review-r1.md`.
+  exact-commit review failed with five blockers. R1 confirmed all five repairs but failed on a
+  reversed-argument formula in the S03 record. After correction and complete gates, fresh
+  independent review r2 is recorded in `reviews/S03-data-codec-review-r2.md`.
 
-### S04 — primitive interfaces and SHA2/SHAKE instantiations (bootstrap only; blocked on S03 r1)
+### S04 — primitive interfaces and SHA2/SHAKE instantiations (bootstrap only; blocked on S03 r2)
 
 - Inputs: S03; FIPS Section 11; pinned hash standards/vectors.
 - Allowed: `Primitives`, `Concrete/Sha2`, `Concrete/Keccak` or new SHAKE/concrete modules.

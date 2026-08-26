@@ -16,7 +16,9 @@ five residual blockers. R7 confirmed all substantive repairs but found one stale
 record. Independent R8 passed with zero findings and accepted exact S02 commit
 `a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`. S03 is implemented from that exact boundary. Its
 initial independent review of exact commit `963a3e7dd425b8a8c9bb9e2e91b73868f6918768` failed with
-five blockers; repairs are implemented and await complete validation plus fresh independent r1.
+five blockers. R1 confirmed all five substantive repairs at exact commit
+`dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e` but failed on one reversed-argument formula in the
+active session record. That sentence is corrected and the complete tree awaits fresh independent r2.
 S04 has a documentation-only bootstrap, but has no accepted predecessor and remains blocked until
 an independent review accepts an exact S03 commit. No S04 implementation or verdict exists.
 S01's pinned authority, provenance, and strict sample-schema parser anchors do not claim
