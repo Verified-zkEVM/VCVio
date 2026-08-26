@@ -414,5 +414,6 @@ bash scripts/check-extern-isolation.sh
 bash scripts/check-interop-isolation.sh
 lake exe slhdsa_kat
 lake exe slhdsa_c13_kat
+lake exe slhdsa_data_codec_tests
 
 echo "SLH-DSA full baseline validation: PASS"

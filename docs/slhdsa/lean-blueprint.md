@@ -1,8 +1,10 @@
 # Lean blueprint
 
-The module names below are targets, not claims about current files. S02 records a proposed
-theorem/oracle surface before construction refactors. D-006/D-009 remain unapproved, and the bare
-scheme experiment interface does not freeze or establish general-construction refinement.
+The module names below are targets, not claims about unimplemented successors. S02's bounded
+candidate architecture is independently accepted, while D-006/D-009 remain unapproved and the bare
+scheme experiment interface does not freeze or establish general-construction refinement. S03 now
+implements the `Params`/`Address`/`Encoding`/`Codec` foundation; later construction arrows remain
+future work.
 
 ```text
 HashSig.SLHDSA.Bytes
@@ -26,9 +28,11 @@ HashSig.SLHDSA.Security.Notions
 
 ## Construction theorem ladder
 
-- `Params.Valid` and per-set witnesses; derived-width and size theorems.
-- `Address.Valid`, field noninterference, encode/decode, compressed-address correctness.
-- `base2b_length`, digit bounds, bit-order characterization, encode/decode laws.
+- `Params.Valid` and per-set witnesses; derived-width and size theorems. (S03 implemented.)
+- ADRS canonicality, field noninterference, rejecting decode/encode, and checked compression.
+  (S03 implemented at the wire boundary; construction invariants remain later work.)
+- `base2b_length`, digit bounds, MSB-first characterization, and checked fixed-width codecs.
+  (S03 implemented.)
 - Primitive interface coherence, especially `yToBytes`; concrete SHA2/SHAKE equivalence lemmas.
 - `chain_compose`; WOTS digit/checksum incomparability; `pkFromSig_sign`.
 - Merkle `climb_authPath`; XMSS and FORS recovery correctness with valid indices.

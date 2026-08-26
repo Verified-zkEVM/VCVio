@@ -60,6 +60,19 @@ method is incompatible with the submitted reference method. It also independentl
 checksum shift for \(\mathit{lgw}\ne4\). The exact twelve tuples, sizes, pure/pre-hash grammars and
 SHAKE/SHA2 primitive grammars are checked in \texttt{matrices/fips205-profile.json}.
 
+S03 implements the fixed-width foundation from exact accepted S02 commit
+\texttt{a80e4d336276cd86fb80be64e82d9d57e7dfc8b3}. A closed twelve-constructor
+\texttt{ParameterSet} records both hash families, exact primary parameters, digest partitions,
+categories, and key/signature widths; per-set proofs evaluate the derived widths and validity
+conditions. The historical SHA2-128-24 record is separately typed and executable approval rejects
+it. \texttt{toInt}, \texttt{toByte}, and \texttt{base2b} have explicit MSB-first laws and checked
+wrappers reject overflow, zero digit width, insufficient bits, and wrong lengths. Checked ADRS
+setters enforce 32/96-bit fields; the decoder rejects unknown types and noncanonical padding, and a
+canonical 32-byte wire has a proved decode/encode round trip. Opaque key and signature codecs reject
+short and long input for all twelve profiles. These are data-layer claims pending independent S03
+review, not primitive, construction, external-API, or ACVP conformance claims; COV-005 and
+F-015/F-016/F-018 remain deferred/open.
+
 \section{Security definitions and theorem architecture}
 S02 defines an explicitly classical candidate architecture for EUF-CMA, PRF/PRFmsg, ITSR, TCR,
 DSPR, SPprob, PRE-C, and UD-C. The arbitrary signature-scheme interface removes the direct call to
@@ -114,7 +127,9 @@ initializer, extern, and runtime-override extension entries are checked by contr
 well as by target declaration. The audit programmatically meta-imports compiled HashSig with
 extension finalization disabled. The S00 boundary exposed 680 declarations across 23 HashSig
 modules; after the repaired S02 modules it observes 1,629 owned constants across 27 modules. These
-counts are reproducible inventory evidence, not permanent invariants. The historical controlled
+counts are reproducible inventory evidence, not permanent invariants. The S03 candidate observes
+1,975 owned constants across 28 modules while retaining the exact seven-helper boundary and axiom
+union. The historical controlled
 S00 imports observed 647 declarations at ordinary-exported visibility and 680 at both
 ordinary-private and meta-private visibility: the 33-declaration delta was caused by private
 visibility, not IR or meta loading. One
@@ -253,8 +268,9 @@ proposed and their obligations pending; uses an exact session-linked repair-base
 the exact four-glob command recipe plus a controlled Security-byte mutation; and corrects the
 inventory/session record. R7 confirmed all five repairs and every technical gate but found that the
 retained S03 record could route implementation to an invalidated historical commit. The routing
-repair states that no S03 predecessor exists until the exact repaired tree receives independent r8
-PASS. These dispositions remain pending that review. The reviewed S01
+repair removed that ambiguity, and independent r8 passed with zero findings at exact commit
+\texttt{a80e4d336276cd86fb80be64e82d9d57e7dfc8b3}. D-006/D-009 remain proposed and
+F-079/F-080 remain open. The reviewed S01
 descriptor/AST machinery is otherwise retained and frozen; the narrow provenance repair responds
 to concrete S02 regressions.
 

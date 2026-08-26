@@ -375,6 +375,10 @@ lean_exe slhdsa_kat where
 lean_exe slhdsa_c13_kat where
   root := `HashSigTest.SLHDSA.C13KAT
 
+/-- S03 exact parameter, endian, ADRS, and rejecting-codec regression suite. -/
+lean_exe slhdsa_data_codec_tests where
+  root := `HashSigTest.SLHDSA.DataCodecTests
+
 /-- Fail-closed parser gate for the pinned NIST SLH-DSA sample JSON. -/
 lean_exe slhdsa_acvp_parser where
   root := `HashSigTest.SLHDSA.ACVP.ParserTests

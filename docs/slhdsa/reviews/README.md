@@ -58,8 +58,10 @@ files use the `-rN` suffix.
   blocking findings; S03 remains blocked pending the second repair and r7.
 - [S02 security architecture review r7](S02-security-architecture-review-r7.md): FAIL with one
   blocking successor-routing finding; all five r6 defects passed re-review.
+- [S02 security architecture review r8](S02-security-architecture-review-r8.md): PASS with zero
+  findings; exact commit `a80e4d336276cd86fb80be64e82d9d57e7dfc8b3` accepted and S03 eligible.
 
-The S03 bootstrap is retained without an accepted predecessor; implementation is blocked until the
-successor-routing repair receives independent S02 r8 PASS.
+S03 implementation is underway from that exact accepted predecessor. No S03 review artifact or
+verdict exists yet.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

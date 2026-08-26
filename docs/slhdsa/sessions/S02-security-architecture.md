@@ -1,6 +1,6 @@
 # S02 security architecture session
 
-Status: r1/r2/r3/r5/r6/r7 failed; r4 acceptance invalidated; routing repair pending independent r8 review.
+Status: accepted by independent r8 PASS at exact commit `a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`.
 
 Date: 2026-08-25
 Branch: `codex/sphincsplus-formalization`
@@ -113,7 +113,7 @@ is no longer current.
 R5 returned FAIL with six blocking findings in the immutable artifact
 `reviews/S02-security-architecture-review-r5.md`:
 
-| finding | repair disposition pending r8 |
+| finding | accepted r8 disposition |
 | --- | --- |
 | R5-001 generated partial helpers | all eight source-recursive projections use total `List.map`, `filterMap`, or `foldr`; the seven-helper policy is unchanged |
 | R5-002 unreproducible acceptance revision | an exact `repair_base_revision` is cross-checked with this session and exact active bytes are separately hashed |
@@ -125,7 +125,7 @@ R5 returned FAIL with six blocking findings in the immutable artifact
 R6 returned FAIL with five blocking findings in the immutable artifact
 `reviews/S02-security-architecture-review-r6.md`:
 
-| finding | repair disposition pending r8 |
+| finding | accepted r8 disposition |
 | --- | --- |
 | R6-001 uncoupled scheme bundle overstated | classify the bundle as an arbitrary signature-scheme experiment interface and leave F-079/PO-003 open for S08/S09 |
 | R6-002 unapproved decisions treated as operative | retain D-006/D-009 as proposed and make PO-006/PO-008 provisional rather than discharged |
@@ -136,9 +136,14 @@ R6 returned FAIL with five blocking findings in the immutable artifact
 R7 independently confirmed all five r6 repairs and every technical gate, then returned FAIL with
 one blocking finding in the immutable artifact `reviews/S02-security-architecture-review-r7.md`:
 
-| finding | repair disposition pending r8 |
+| finding | accepted r8 disposition |
 | --- | --- |
 | R7-001 stale S03 predecessor routing | state that no accepted predecessor exists, retain invalidated `7b77e700` only as evidence, and forbid S03 until the exact repaired commit receives r8 PASS |
+
+R8 returned PASS with zero blocking and zero nonblocking findings in
+`reviews/S02-security-architecture-review-r8.md`. It accepts only exact commit
+`a80e4d336276cd86fb80be64e82d9d57e7dfc8b3` and preserves D-006/D-009 as proposed,
+F-079/F-080 as open, and the theorem/conformance/QROM boundaries.
 
 ## Validation
 
@@ -200,4 +205,5 @@ and controlled Security-byte mutation all report PASS.
 - Refine honest signing internals when later construction proofs need their execution trace.
 - Prove component losslessness and the repaired master inequality.
 - Replace or retire the rejected legacy placeholder only in an authorized later session.
-- Begin successor work only after this exact routing-repaired S02 tree receives independent r8 PASS.
+- Successor work begins only from exact accepted S02 commit
+  `a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`.

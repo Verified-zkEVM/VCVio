@@ -11,10 +11,9 @@ public import VCVio.OracleComp.Constructions.SampleableType
 /-!
 # SLH-DSA Parameters
 
-Fixed constants and the named parameter sets for SLH-DSA (SPHINCS+, FIPS 205). The development
-stays generic over the variable parameters while exposing the named instantiation we target
-first, **SLH-DSA-SHA2-128-24** (the NIST SP 800-230 reduced parameter set:
-`n=16, h=22, d=1, h'=22, a=24, k=6, w=4`).
+Fixed constants and all twelve approved parameter sets for SLH-DSA (FIPS 205). The development
+stays generic over the variable parameters while keeping the historical
+**SLH-DSA-SHA2-128-24** SP 800-230 reduced set in a separate, explicitly non-FIPS namespace.
 
 The Winternitz and FORS lengths are derived from the primary parameters exactly as in FIPS 205
 §5 (Eqs 5.1–5.3) and §9 (the message-digest length `m`); see `Params.len1`, `Params.len2`,
@@ -97,24 +96,151 @@ def secretKeyBytes (p : Params) : ℕ := 4 * p.n
 
 end Params
 
-/-- The named SLH-DSA parameter sets supported here. Currently only the SHA-2 128-24 reduced
-set; SHAKE / 192 / 256 / C-series variants are future additions. -/
-inductive ParameterSet where
-  | SLHDSA_SHA2_128_24
+/-- The two FIPS 205 hash-function families. -/
+inductive HashFamily where
+  | sha2 | shake
 deriving Repr, DecidableEq
+
+/-- One authoritative FIPS 205 Table 2 row, including the independently checked wire sizes. -/
+structure ParameterProfile where
+  name : String
+  family : HashFamily
+  params : Params
+  category : ℕ
+  expectedM : ℕ
+  digestBytes : ℕ
+  treeIdxBytes : ℕ
+  leafIdxBytes : ℕ
+  publicKeyBytes : ℕ
+  secretKeyBytes : ℕ
+  signatureBytes : ℕ
+deriving Repr, DecidableEq
+
+/-- The complete closed family of FIPS 205 approved parameter-set identifiers. -/
+inductive ParameterSet where
+  | SLHDSA_SHA2_128s | SLHDSA_SHAKE_128s
+  | SLHDSA_SHA2_128f | SLHDSA_SHAKE_128f
+  | SLHDSA_SHA2_192s | SLHDSA_SHAKE_192s
+  | SLHDSA_SHA2_192f | SLHDSA_SHAKE_192f
+  | SLHDSA_SHA2_256s | SLHDSA_SHAKE_256s
+  | SLHDSA_SHA2_256f | SLHDSA_SHAKE_256f
+deriving Repr, DecidableEq, Fintype
 
 namespace ParameterSet
 
-/-- Interpret a named parameter set as the corresponding parameter record. -/
-def params : ParameterSet → Params
-  | .SLHDSA_SHA2_128_24 => { n := 16, h := 22, d := 1, hp := 22, a := 24, k := 6, lgw := 2 }
+/-- Interpret an approved name as its exact FIPS 205 Table 2 row. -/
+def profile : ParameterSet → ParameterProfile
+  | .SLHDSA_SHA2_128s =>
+      ⟨"SLH-DSA-SHA2-128s", .sha2, ⟨16, 63, 7, 9, 12, 14, 4⟩,
+        1, 30, 21, 7, 2, 32, 64, 7856⟩
+  | .SLHDSA_SHAKE_128s =>
+      ⟨"SLH-DSA-SHAKE-128s", .shake, ⟨16, 63, 7, 9, 12, 14, 4⟩,
+        1, 30, 21, 7, 2, 32, 64, 7856⟩
+  | .SLHDSA_SHA2_128f =>
+      ⟨"SLH-DSA-SHA2-128f", .sha2, ⟨16, 66, 22, 3, 6, 33, 4⟩,
+        1, 34, 25, 8, 1, 32, 64, 17088⟩
+  | .SLHDSA_SHAKE_128f =>
+      ⟨"SLH-DSA-SHAKE-128f", .shake, ⟨16, 66, 22, 3, 6, 33, 4⟩,
+        1, 34, 25, 8, 1, 32, 64, 17088⟩
+  | .SLHDSA_SHA2_192s =>
+      ⟨"SLH-DSA-SHA2-192s", .sha2, ⟨24, 63, 7, 9, 14, 17, 4⟩,
+        3, 39, 30, 7, 2, 48, 96, 16224⟩
+  | .SLHDSA_SHAKE_192s =>
+      ⟨"SLH-DSA-SHAKE-192s", .shake, ⟨24, 63, 7, 9, 14, 17, 4⟩,
+        3, 39, 30, 7, 2, 48, 96, 16224⟩
+  | .SLHDSA_SHA2_192f =>
+      ⟨"SLH-DSA-SHA2-192f", .sha2, ⟨24, 66, 22, 3, 8, 33, 4⟩,
+        3, 42, 33, 8, 1, 48, 96, 35664⟩
+  | .SLHDSA_SHAKE_192f =>
+      ⟨"SLH-DSA-SHAKE-192f", .shake, ⟨24, 66, 22, 3, 8, 33, 4⟩,
+        3, 42, 33, 8, 1, 48, 96, 35664⟩
+  | .SLHDSA_SHA2_256s =>
+      ⟨"SLH-DSA-SHA2-256s", .sha2, ⟨32, 64, 8, 8, 14, 22, 4⟩,
+        5, 47, 39, 7, 1, 64, 128, 29792⟩
+  | .SLHDSA_SHAKE_256s =>
+      ⟨"SLH-DSA-SHAKE-256s", .shake, ⟨32, 64, 8, 8, 14, 22, 4⟩,
+        5, 47, 39, 7, 1, 64, 128, 29792⟩
+  | .SLHDSA_SHA2_256f =>
+      ⟨"SLH-DSA-SHA2-256f", .sha2, ⟨32, 68, 17, 4, 9, 35, 4⟩,
+        5, 49, 40, 8, 1, 64, 128, 49856⟩
+  | .SLHDSA_SHAKE_256f =>
+      ⟨"SLH-DSA-SHAKE-256f", .shake, ⟨32, 68, 17, 4, 9, 35, 4⟩,
+        5, 49, 40, 8, 1, 64, 128, 49856⟩
+
+/-- Primary parameters of an approved set. -/
+def params (s : ParameterSet) : Params := s.profile.params
+
+/-- Canonical FIPS Table 2 order. -/
+def all : List ParameterSet :=
+  [.SLHDSA_SHA2_128s, .SLHDSA_SHAKE_128s,
+   .SLHDSA_SHA2_128f, .SLHDSA_SHAKE_128f,
+   .SLHDSA_SHA2_192s, .SLHDSA_SHAKE_192s,
+   .SLHDSA_SHA2_192f, .SLHDSA_SHAKE_192f,
+   .SLHDSA_SHA2_256s, .SLHDSA_SHAKE_256s,
+   .SLHDSA_SHA2_256f, .SLHDSA_SHAKE_256f]
+
+@[simp] theorem all_length : all.length = 12 := by decide
+
+theorem card : Fintype.card ParameterSet = 12 := by decide
+
+/-- The derived widths agree with every independently recorded FIPS Table 2 value. -/
+theorem profile_sizes (s : ParameterSet) :
+    s.params.m = s.profile.expectedM ∧
+    s.params.digestBytes = s.profile.digestBytes ∧
+    s.params.treeIdxBytes = s.profile.treeIdxBytes ∧
+    s.params.leafIdxBytes = s.profile.leafIdxBytes ∧
+    s.params.publicKeyBytes = s.profile.publicKeyBytes ∧
+    s.params.secretKeyBytes = s.profile.secretKeyBytes ∧
+    s.params.signatureBytes = s.profile.signatureBytes := by
+  cases s <;> decide
+
+/-- All approved rows have FIPS's `lgw=4` and exact WOTS chain-count widths. -/
+theorem wots_widths (s : ParameterSet) :
+    s.params.lgw = 4 ∧ s.params.len1 = 2 * s.params.n ∧
+    s.params.len2 = 3 ∧ s.params.len = 2 * s.params.n + 3 := by
+  cases s <;> decide
+
+/-- Reject a parameter record unless it is exactly one of the twelve approved rows. -/
+def ofParams (p : Params) : Option ParameterSet :=
+  all.find? (fun s => decide (s.params = p))
 
 end ParameterSet
 
-/-- The SLH-DSA-SHA2-128-24 parameter record (NIST SP 800-230 reduced set). -/
-def slhdsaSha2_128_24 : Params := ParameterSet.params .SLHDSA_SHA2_128_24
+/-- Historical non-FIPS parameter-set identifiers kept outside `ParameterSet`. -/
+inductive LegacyParameterSet where
+  | SLHDSA_SHA2_128_24
+deriving Repr, DecidableEq
 
-/-- Recognize the parameter sets supported by this development. -/
-def Params.isApproved (p : Params) : Prop := p = slhdsaSha2_128_24
+namespace LegacyParameterSet
+
+/-- Interpret the historical SP 800-230 IPD reduced set. -/
+def params : LegacyParameterSet → Params
+  | .SLHDSA_SHA2_128_24 => ⟨16, 22, 1, 22, 24, 6, 2⟩
+
+end LegacyParameterSet
+
+/-- The non-FIPS SLH-DSA-SHA2-128-24 parameter record. -/
+def slhdsaSha2_128_24 : Params := LegacyParameterSet.params .SLHDSA_SHA2_128_24
+
+namespace Params
+
+/-- Executable approval predicate: equality with one of the twelve FIPS Table 2 rows. -/
+def isApproved (p : Params) : Bool := ParameterSet.all.any (fun s => s.params == p)
+
+/-- The structural and approval facts required of a FIPS parameter row. -/
+def Valid (p : Params) : Prop :=
+  p.isApproved = true ∧ 0 < p.n ∧ 0 < p.h ∧ 0 < p.d ∧ 0 < p.hp ∧
+  0 < p.a ∧ 0 < p.k ∧ 0 < p.lgw ∧ p.h = p.hp * p.d
+
+end Params
+
+/-- Every named FIPS parameter set satisfies the approval and structural checks. -/
+theorem ParameterSet.valid (s : ParameterSet) : s.params.Valid := by
+  cases s <;>
+    simp [Params.Valid, Params.isApproved, ParameterSet.all, ParameterSet.params,
+      ParameterSet.profile]
+
+/-- The historical reduced profile is deliberately excluded from FIPS approval. -/
+theorem legacy_not_approved : slhdsaSha2_128_24.isApproved = false := by decide
 
 end SLHDSA

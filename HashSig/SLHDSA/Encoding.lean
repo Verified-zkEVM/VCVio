@@ -26,13 +26,68 @@ and by the message-digest split (`Scheme.splitDigest`).
 
 namespace SLHDSA
 
+/-- Failures exposed by checked fixed-width, digit, and ADRS wire decoders. -/
+inductive CodecError where
+  | invalidLength (expected actual : ℕ)
+  | zeroDigitWidth
+  | insufficientInput (requiredBits availableBits : ℕ)
+  | outOfRange (widthBytes value : ℕ)
+  | invalidAddressType (code : ℕ)
+  | noncanonicalAddress
+deriving Repr, DecidableEq
+
 /-- `toInt(X, |X|)`: interpret a byte list as a big-endian natural number (FIPS 205 Alg 2). -/
 def toInt (x : List Byte) : ℕ :=
   x.foldl (fun acc b => acc * 256 + b.toNat) 0
 
+/-- Appending one byte performs one big-endian radix-256 step. -/
+theorem toInt_append_byte (x : List Byte) (b : Byte) :
+    toInt (x ++ [b]) = toInt x * 256 + b.toNat := by
+  simp [toInt, List.foldl_append]
+
+/-- A byte string of length `n` denotes an integer strictly below `256^n`. -/
+theorem toInt_lt_pow (x : List Byte) : toInt x < 256 ^ x.length := by
+  induction x using List.reverseRecOn with
+  | nil => simp [toInt]
+  | append_singleton xs b ih =>
+    rw [toInt_append_byte]
+    simp only [List.length_append, List.length_singleton, Nat.pow_succ]
+    have hb : b.toNat < 256 := UInt8.toNat_lt b
+    omega
+
 /-- `toByte(x, len)`: big-endian `len`-byte serialization of `x` (FIPS 205 Alg 3). -/
 def toByte (x len : ℕ) : List Byte :=
   (List.range len).map (fun i => UInt8.ofNat (x / 256 ^ (len - 1 - i) % 256))
+
+@[simp] theorem toByte_length (x len : ℕ) : (toByte x len).length = len := by
+  simp [toByte]
+
+/-- Pointwise MSB-first characterization of Algorithm 3. -/
+theorem toByte_bigEndian (x len : ℕ) :
+    toByte x len =
+      (List.range len).map (fun i => UInt8.ofNat (x / 256 ^ (len - 1 - i) % 256)) := rfl
+
+/-- Checked Algorithm 3: reject values that do not fit instead of silently truncating them. -/
+def toByteChecked (x len : ℕ) : Except CodecError (Bytes len) :=
+  if x < 256 ^ len then
+    .ok ⟨(toByte x len).toArray, by simp⟩
+  else
+    .error (.outOfRange len x)
+
+/-- Decode a list only when its length is exactly the requested wire width. -/
+def decodeExact (n : ℕ) (raw : List Byte) : Except CodecError (Bytes n) :=
+  if h : raw.length = n then
+    .ok ⟨raw.toArray, by simpa using h⟩
+  else
+    .error (.invalidLength n raw.length)
+
+/-- Fixed-width vectors encode without adding or dropping bytes. -/
+def encodeExact {n : ℕ} (bytes : Bytes n) : List Byte := bytes.toList
+
+@[simp] theorem decodeExact_encode {n : ℕ} (bytes : Bytes n) :
+    decodeExact n (encodeExact bytes) = .ok bytes := by
+  simp only [decodeExact, encodeExact, Vector.length_toList, ↓reduceDIte]
+  congr 1
 
 /-- Consume bytes from the front of `inp` into the `(total, bits)` accumulator until at least
 `b` bits are buffered (the inner `while` of `base2b`). Returns the leftover input and the
@@ -51,38 +106,45 @@ def base2bGo (b : ℕ) : ℕ → List Byte → ℕ → ℕ → List ℕ
       let bits' := r.2.2 - b
       ((r.2.1 >>> bits') % 2 ^ b) :: base2bGo b out r.1 r.2.1 bits'
 
-/-- `base2b(X, b, outLen)`: the first `outLen` big-endian `b`-bit digits of the byte string `X`
-(FIPS 205 Algorithm 4). Requires `X` to have at least `⌈outLen·b / 8⌉` bytes; missing bits read
-as zero. -/
+/-- `base2b(X, b, outLen)`: the first `outLen` MSB-first `b`-bit digits (FIPS 205 Algorithm 4).
+Normative callers satisfy `outLen*b ≤ 8*|X|`; `base2bChecked` enforces that precondition at a wire
+boundary. The direct arithmetic form makes the big-endian extraction rule explicit. -/
 def base2b (x : List Byte) (b outLen : ℕ) : List ℕ :=
-  base2bGo b outLen x 0 0
+  (List.range outLen).map (fun i =>
+    toInt x / 2 ^ (8 * x.length - b * (i + 1)) % 2 ^ b)
+
+/-- Pointwise MSB-first characterization of Algorithm 4. -/
+theorem base2b_bigEndian (x : List Byte) (b outLen : ℕ) :
+    base2b x b outLen = (List.range outLen).map (fun i =>
+      toInt x / 2 ^ (8 * x.length - b * (i + 1)) % 2 ^ b) := rfl
 
 @[simp] theorem base2b_length (x : List Byte) (b outLen : ℕ) :
     (base2b x b outLen).length = outLen := by
-  unfold base2b
-  suffices h : ∀ (out : ℕ) (inp : List Byte) (total bits : ℕ),
-      (base2bGo b out inp total bits).length = out by
-    exact h outLen x 0 0
-  intro out
-  induction out with
-  | zero => intro inp total bits; rfl
-  | succ out ih => intro inp total bits; simp [base2bGo, ih]
+  simp [base2b]
 
 /-- Every digit produced by `base2b` is bounded by `2^b` (it is reduced mod `2^b`). -/
 theorem base2b_lt (x : List Byte) (b outLen : ℕ) :
     ∀ d ∈ base2b x b outLen, d < 2 ^ b := by
-  unfold base2b
-  suffices h : ∀ (out : ℕ) (inp : List Byte) (total bits : ℕ),
-      ∀ d ∈ base2bGo b out inp total bits, d < 2 ^ b by
-    exact h outLen x 0 0
-  intro out
-  induction out with
-  | zero => intro inp total bits d hd; simp [base2bGo] at hd
-  | succ out ih =>
-    intro inp total bits d hd
-    simp only [base2bGo, List.mem_cons] at hd
-    rcases hd with h | h
-    · subst h; exact Nat.mod_lt _ (by positivity)
-    · exact ih _ _ _ d h
+  intro d hd
+  rcases List.mem_map.mp hd with ⟨i, _, rfl⟩
+  exact Nat.mod_lt _ (by positivity)
+
+/-- Reject zero-width digits and insufficient input before invoking Algorithm 4. -/
+def base2bChecked (x : List Byte) (b outLen : ℕ) : Except CodecError (List ℕ) :=
+  if b = 0 then
+    .error .zeroDigitWidth
+  else if 8 * x.length < outLen * b then
+    .error (.insufficientInput (outLen * b) (8 * x.length))
+  else
+    .ok (base2b x b outLen)
+
+theorem base2bChecked_eq (x : List Byte) (b outLen : ℕ)
+    (hb : b ≠ 0) (hlen : outLen * b ≤ 8 * x.length) :
+    base2bChecked x b outLen = .ok (base2b x b outLen) := by
+  simp [base2bChecked, hb, Nat.not_lt.mpr hlen]
+
+theorem base2bChecked_zero (x : List Byte) (outLen : ℕ) :
+    base2bChecked x 0 outLen = .error .zeroDigitWidth := by
+  simp [base2bChecked]
 
 end SLHDSA

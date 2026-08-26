@@ -80,18 +80,18 @@ future independent session reviews add dispositions under the protocol rather th
 | F-072 | CRITICAL | FIXED | S02 r3 modeled TCR/DSPR/SPprob/PRE as post-hoc events rather than named oracle games | S02-R3-002; r4 source comparison | Use stateful two-phase target-oracle programs |
 | F-073 | CRITICAL | FIXED | S02 r3 used the wrong UD input distribution and an unrelated collection execution | S02-R3-003; r4 source comparison | Sample fresh hidden inputs and share one target/collection program log |
 | F-074 | CRITICAL | FIXED | S02 r3 injected a real full-SLH key into the post-SKG/post-MKG ITSR world | S02-R3-004; r4 source comparison | Put NPRF/hybrid setup in the reduction program and expose only public Hmsg parameters |
-| F-075 | CRITICAL | REMEDIATED-PENDING-REVIEW | S02 added eight compiler-generated partial helpers outside the exact policy allowlist | S02-R5-001; compiled policy audit | Rewrite projections with total library combinators and replay the compiled audit |
-| F-076 | CRITICAL | REMEDIATED-PENDING-REVIEW | S02 acceptance edits were not reviewed and the manifest demanded an impossible self-revision pin | S02-R5-002; S02-R6-004 | Require the exact session-linked repair input plus active-source hash; review the complete repaired tree |
-| F-077 | HIGH | REMEDIATED-PENDING-REVIEW | The source-tree composite omitted all four S02 modules | S02-R5-003; S02-R6-003 | Include `Security/*.lean`; gate exact command/glob correspondence and a Security-byte mutation |
-| F-078 | HIGH | REMEDIATED-PENDING-REVIEW | S02 omitted mandatory matrix, inventory, findings, decisions, TCB, and report traceability | S02-R5-004; S02-R6-005 | Synchronize every contract surface and correct dependency/span/scope facts |
+| F-075 | CRITICAL | FIXED | S02 added eight compiler-generated partial helpers outside the exact policy allowlist | S02-R5-001; independent r8 PASS | Rewrite projections with total library combinators and replay the compiled audit |
+| F-076 | CRITICAL | FIXED | S02 acceptance edits were not reviewed and the manifest demanded an impossible self-revision pin | S02-R5-002; S02-R6-004; independent r8 PASS | Require the exact session-linked repair input plus active-source hash; review the complete repaired tree |
+| F-077 | HIGH | FIXED | The source-tree composite omitted all four S02 modules | S02-R5-003; S02-R6-003; independent r8 PASS | Include `Security/*.lean`; gate exact command/glob correspondence and a Security-byte mutation |
+| F-078 | HIGH | FIXED | S02 omitted mandatory matrix, inventory, findings, decisions, TCB, and report traceability | S02-R5-004; S02-R6-005; independent r8 PASS | Synchronize every contract surface and correct dependency/span/scope facts |
 | F-079 | CRITICAL | OPEN | The generic master LHS called the known `d = 1` transitional scheme, while its replacement has no general-construction coupling witness | S02-R5-005; S02-R6-001 | Retain the arbitrary experiment interface but construct and review an S08/S09 refinement witness coupling keygen/sign/verify/signature R/digest |
 | F-080 | HIGH | OPEN | Standalone source-shaped component games contradict the earlier transcript-derived-target contract and have no named decision approval | S02-R5-006; S02-R6-002 | Keep D-009 proposed and PO-008 provisional until named owner approval or rejection |
-| F-081 | CRITICAL | REMEDIATED-PENDING-REVIEW | S02 claimed a bare scheme function bundle established general-construction coupling | S02-R6-001 | Classify it as an arbitrary signature-scheme experiment boundary and leave F-079/PO-003 open |
-| F-082 | HIGH | REMEDIATED-PENDING-REVIEW | Authoritative prose and obligations treated proposed D-006/D-009 as accepted or superseding | S02-R6-002 | Retain proposed status and keep PO-006/PO-008 provisional without accepted-selection language |
-| F-083 | HIGH | REMEDIATED-PENDING-REVIEW | Source-composite commands omitted Security and no focused mutation proved its coverage | S02-R6-003 | Gate the exact four-glob commands and reject a controlled Security-source byte mutation |
-| F-084 | HIGH | REMEDIATED-PENDING-REVIEW | Repository revision validation accepted any ancestor and mislabeled the invalidated repair base | S02-R6-004 | Require the exact session-linked repair-base field and correct its ledger meaning |
-| F-085 | HIGH | REMEDIATED-PENDING-REVIEW | Declaration dependencies/spans and S02 harness-edit scope prose were false | S02-R6-005 | Correct exact dependencies/full spans and describe the narrow harness repair accurately |
-| F-086 | HIGH | REMEDIATED-PENDING-REVIEW | The retained S03 bootstrap named no current accepted predecessor and could route work to invalidated commit `7b77e700` | S02-R7-001 | State that no accepted predecessor exists until r8 PASS and bind S03 only to that exact accepted repair commit |
+| F-081 | CRITICAL | FIXED | S02 claimed a bare scheme function bundle established general-construction coupling | S02-R6-001; independent r8 PASS | Classify it as an arbitrary signature-scheme experiment boundary and leave F-079/PO-003 open |
+| F-082 | HIGH | FIXED | Authoritative prose and obligations treated proposed D-006/D-009 as accepted or superseding | S02-R6-002; independent r8 PASS | Retain proposed status and keep PO-006/PO-008 provisional without accepted-selection language |
+| F-083 | HIGH | FIXED | Source-composite commands omitted Security and no focused mutation proved its coverage | S02-R6-003; independent r8 PASS | Gate the exact four-glob commands and reject a controlled Security-source byte mutation |
+| F-084 | HIGH | FIXED | Repository revision validation accepted any ancestor and mislabeled the invalidated repair base | S02-R6-004; independent r8 PASS | Require the exact session-linked repair-base field and correct its ledger meaning |
+| F-085 | HIGH | FIXED | Declaration dependencies/spans and S02 harness-edit scope prose were false | S02-R6-005; independent r8 PASS | Correct exact dependencies/full spans and describe the narrow harness repair accurately |
+| F-086 | HIGH | FIXED | The retained S03 bootstrap named no current accepted predecessor and could route work to invalidated commit `7b77e700` | S02-R7-001; independent r8 PASS | State that no accepted predecessor exists until r8 PASS and bind S03 only to that exact accepted repair commit |
 
 Independent S00 re-review r9 accepted the repairs for F-021 through F-029. Their `FIXED` statuses
 administratively propagate that verdict; they are not an S01 self-review. Historical FAIL artifacts
@@ -136,9 +136,10 @@ findings, but the complete independent r5 audit invalidated that acceptance with
 F-080. Independent r6 then failed with F-081 through F-085. The second repair keeps underlying
 construction coupling F-079 and the unapproved target-contract choice F-080 open, while recording
 the five r6 defects and the other r5 repairs as `REMEDIATED-PENDING-REVIEW`. Independent r7
-confirmed those repairs and every technical gate but failed with F-086. The routing repair records
-F-086 as `REMEDIATED-PENDING-REVIEW`; no accepted S03 predecessor exists until r8 accepts the exact
-repair commit. R4 did close the twelve earlier S02 findings F-063 through F-074, whose
+confirmed those repairs and every technical gate but failed with F-086. Independent r8 passed with
+zero findings and accepted exact commit `a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`; F-075 through
+F-078 and F-081 through F-086 are therefore `FIXED`. F-079/F-080 remain open. R4 did close the
+twelve earlier S02 findings F-063 through F-074, whose
 `FIXED` statuses preserve that reviewed disposition. None of this globally closes F-001 through
 F-009: the legacy theorem remains rejected, concrete reductions/composition remain future work, and
 the QROM/asymptotic boundaries remain open.

@@ -209,6 +209,12 @@ S01_ACCEPTED_REVIEW = {
     "size_bytes": 20920,
     "line_count": 335,
 }
+S02_ACCEPTED_REVIEW = {
+    "path": "reviews/S02-security-architecture-review-r8.md",
+    "sha256": "51853a43e48d8b06da530fe73a7ee9b318aa9ac27fdb33cccdc14d8041aa5e1b",
+    "size_bytes": 17943,
+    "line_count": 338,
+}
 
 S02_REPAIR_BASE_REVISION = "7b77e700b3d24a6ab94ed741a650954bbd90859a"
 S02_SOURCE_GLOBS = (
@@ -367,19 +373,19 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
         (3687, "6a4a1ac1bba6fa7648fb357720fb8279c1c99d922ddd5176184202a4187e9805"),
     "docs/slhdsa/matrices/coverage.csv":
-        (3991, "4918615db68dc485efd4b073ac02e9ef56efa9c68283baf5296bedf29ae0a462"),
+        (4202, "5ccbdb7ea9c95f5f4eef9ff057e7317cbf14722a47155cdc9dbc6b3339ab8fb8"),
     "docs/slhdsa/matrices/decisions.csv":
         (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (29000, "756abcbd39409b90f13b4f4acc25e22ae9e37739971a19833bdacb8f59b8e319"),
+        (43037, "1b860be30a5fbe0b543b7983fd382dca2a24e2bc09e67c5ac7403b9e0d1d0154"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (3942, "263ea1dd5f60c2a166fe3a230c73a70d994aade91dc784eba1ef937302f8e192"),
+        (4187, "f49558de8ef1185b95adb166677a74f6061ac39bf107daf6579a0580bf1ae1ff"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
-        (4812, "b605aa4f1b8e357cd9aef77453abe78fc0a4ea48b870319f12ca70532dee3a22"),
+        (4822, "badfb0730f68eb840774444a792a0079b8a8ee90b45b0c694b188fcc5737aee4"),
 }
 
 # DECL-011--DECL-014 use typed dependency tokens. Earlier bootstrap rows retain their historical
@@ -527,6 +533,15 @@ def check_required_files() -> None:
             and hashlib.sha256(accepted_s01_bytes).hexdigest() ==
                 S01_ACCEPTED_REVIEW["sha256"],
             "S01 accepted r16 review is not byte-identical")
+    accepted_s02_bytes = (DOCS / S02_ACCEPTED_REVIEW["path"]).read_bytes()
+    accepted_s02 = accepted_s02_bytes.decode("utf-8")
+    require(check_review_verdict(accepted_s02, "S02 accepted r8 review") == "PASS",
+            "S02 accepted r8 review must remain PASS")
+    require(len(accepted_s02_bytes) == S02_ACCEPTED_REVIEW["size_bytes"]
+            and len(accepted_s02_bytes.splitlines()) == S02_ACCEPTED_REVIEW["line_count"]
+            and hashlib.sha256(accepted_s02_bytes).hexdigest() ==
+                S02_ACCEPTED_REVIEW["sha256"],
+            "S02 accepted r8 review is not byte-identical")
     for state in ("PENDING", "PASS", "FAIL"):
         require(check_review_verdict(f"Verdict: **{state}**\n", "verdict self-test") == state,
                 f"verdict self-test failed for {state}")
@@ -2364,7 +2379,7 @@ ACVP_TRACE_MODULES = {
         Path("HashSigTest/SLHDSA/ACVP/StrictJson.lean"),
         "20f9aff3f5339e54d7fc5e148fadb0e37d8f4b4bd816938f0a81b4cf7b087089"),
 }
-LAKEFILE_R11_SHA256 = "ed17f54b243bed2ed6db5e4ab5f3a83e29ca5c3dcaeabd7f714eff01ce3e5f8f"
+LAKEFILE_R11_SHA256 = "632fd4fcd23d7380fd052773d1d6710d049d26263db48d3d7a48826c7ff22a5f"
 FRESH_BUILD_CHILD = "fresh-root-build"
 PARSER_EXPECTED_STDOUT = (
     b"SLH-DSA ACVP parser positive suite: PASS (16 cases)\n"
@@ -5461,7 +5476,8 @@ def decode_active_s01_files(files: dict[str, bytes]) -> dict[str, str]:
 
 
 def validate_deprecated_profile_id(files: dict[str, bytes]) -> None:
-    immutable = {f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
+    immutable = ({f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
+                 | {f"docs/slhdsa/{S02_ACCEPTED_REVIEW['path']}"})
     allowed_finding = (
         f"| F-031 | MEDIUM | FIXED | `{DEPRECATED_PROFILE_ID}` ambiguously "
         "named both a six-set draft authority profile and the single-set current implementation | "
@@ -5488,7 +5504,8 @@ def validate_deprecated_profile_id(files: dict[str, bytes]) -> None:
 
 
 def validate_current_profile_occurrences(files: dict[str, bytes]) -> None:
-    immutable = {f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
+    immutable = ({f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
+                 | {f"docs/slhdsa/{S02_ACCEPTED_REVIEW['path']}"})
     actual: dict[str, list[str]] = {}
     for relative, source in decode_active_s01_files(files).items():
         if relative in immutable:
@@ -5634,7 +5651,8 @@ def count_overlapping(source: str, needle: str) -> int:
 
 
 def validate_profile_id_reconstruction(files: dict[str, bytes]) -> None:
-    immutable = {f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
+    immutable = ({f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
+                 | {f"docs/slhdsa/{S02_ACCEPTED_REVIEW['path']}"})
     decoded = decode_active_s01_files(files)
     ids = (DEPRECATED_PROFILE_ID, SP800_PROFILE_ID, LEGACY_PROFILE_ID)
     canonical_ids = {profile_id: ascii_alphanumeric_stream(profile_id) for profile_id in ids}
@@ -5726,7 +5744,7 @@ def validate_parser_focused_documentation(
         parse_parser_focused_partition(lines[0])
 
     immutable = ({relative for relative in S01_FAILED_REVIEW_HASHES}
-                 | {S01_ACCEPTED_REVIEW["path"]})
+                 | {S01_ACCEPTED_REVIEW["path"], S02_ACCEPTED_REVIEW["path"]})
     stale = re.compile(r"\b(?:55|67|211|215|217|218|232)\b")
     stale_prior = re.compile(
         r"(?:total=230\b|\b230-case partition\b|\ball 230 (?:mechanically|focused)\b|"
@@ -5983,7 +6001,8 @@ def validate_s01_matrix_records(
 
 def validate_parser_assurance_claims(files: dict[str, bytes], coverage: dict[str, dict[str, str]]) -> None:
     active = decode_active_s01_files(files)
-    immutable = {f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
+    immutable = ({f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
+                 | {f"docs/slhdsa/{S02_ACCEPTED_REVIEW['path']}"})
     combined = "\n".join(source for relative, source in active.items() if relative not in immutable)
     old_phrase = "These tests are " + \
         "conformance evidence only; they make no construction or security claim."

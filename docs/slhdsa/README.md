@@ -13,8 +13,9 @@ Independent r16 is **PASS**, so S01 is accepted and S02 is eligible to start. S0
 security-architecture reviews r1 through r3 are immutable **FAIL** artifacts; r4 initially passed,
 but the complete independent r5 audit found six blockers and invalidated that acceptance. R6 found
 five residual blockers. R7 confirmed all substantive repairs but found one stale successor-routing
-record. That record is repaired, the resulting S02 tree is pending r8, and S03 remains blocked until
-r8 passes.
+record. Independent R8 passed with zero findings and accepted exact S02 commit
+`a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`. S03 is implemented from that exact boundary and is
+pending its own independent review; no S03 verdict has been pre-created.
 S01's pinned authority, provenance, and strict sample-schema parser anchors do not claim
 implementation conformance. R16
 accepted the F-061/F-062 repairs: cleanup uses constant/count-only evidence, preflights
@@ -25,7 +26,8 @@ not ratchet or reopen the descriptor/AST policy without a concrete regression. T
 `HashSig/SLHDSA/Security.lean:150` (the token is currently at line 175). This is an open critical
 proof obligation, not an accepted axiom. The repaired S02 modules define the proposed replacement
 architecture and proposed standalone component-game boundary; they do not prove or replace that
-legacy composition theorem, and they are not accepted until r8.
+legacy composition theorem. R8 accepted that accurately bounded candidate architecture, not the
+unproved theorem or proposed D-006/D-009 decisions.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true
 
