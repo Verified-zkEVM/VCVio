@@ -5,6 +5,7 @@ Authors: Nicolas Consigny
 -/
 
 module
+public import Mathlib.Data.Nat.Digits.Lemmas
 public import HashSig.SLHDSA.Params
 
 /-!
@@ -55,17 +56,60 @@ theorem toInt_lt_pow (x : List Byte) : toInt x < 256 ^ x.length := by
     have hb : b.toNat < 256 := UInt8.toNat_lt b
     omega
 
-/-- `toByte(x, len)`: big-endian `len`-byte serialization of `x` (FIPS 205 Alg 3). -/
+/-- Big-endian byte interpretation is little-endian `Nat.ofDigits` after reversing the bytes. -/
+theorem toInt_eq_ofDigits (x : List Byte) :
+    toInt x = Nat.ofDigits 256 (x.reverse.map UInt8.toNat) := by
+  induction x using List.reverseRecOn with
+  | nil => simp [toInt]
+  | append_singleton xs b ih =>
+      rw [toInt_append_byte, ih]
+      simp [Nat.ofDigits]
+      omega
+
+/-- `toByte(x, len)`: the low `len` base-256 digits, padded to exactly `len` bytes and reversed
+into big-endian order (FIPS 205 Alg 3). The explicit modulus captures the algorithm's total
+truncation behavior when `x` does not fit. -/
 def toByte (x len : ℕ) : List Byte :=
-  (List.range len).map (fun i => UInt8.ofNat (x / 256 ^ (len - 1 - i) % 256))
+  ((Nat.digitsAppend 256 len (x % 256 ^ len)).map UInt8.ofNat).reverse
 
 @[simp] theorem toByte_length (x len : ℕ) : (toByte x len).length = len := by
-  simp [toByte]
+  simp only [toByte, List.length_reverse, List.length_map]
+  apply Nat.length_digitsAppend (by decide)
+  exact Nat.mod_lt _ (by positivity)
 
-/-- Pointwise MSB-first characterization of Algorithm 3. -/
+/-- MSB-first characterization of Algorithm 3 as the reversal of its fixed-width little-endian
+base-256 digit list. -/
 theorem toByte_bigEndian (x len : ℕ) :
     toByte x len =
-      (List.range len).map (fun i => UInt8.ofNat (x / 256 ^ (len - 1 - i) % 256)) := rfl
+      ((Nat.digitsAppend 256 len (x % 256 ^ len)).map UInt8.ofNat).reverse := rfl
+
+/-- Algorithm 2 reconstructs the low `len` bytes emitted by Algorithm 3. -/
+theorem toInt_toByte_mod (x len : ℕ) : toInt (toByte x len) = x % 256 ^ len := by
+  rw [toInt_eq_ofDigits]
+  simp only [toByte, List.reverse_reverse, List.map_map]
+  have hdigit : ∀ d ∈ Nat.digitsAppend 256 len (x % 256 ^ len), d % 2 ^ 8 = d := by
+    intro d hd
+    rw [Nat.mod_eq_of_lt]
+    simpa using Nat.lt_of_mem_digitsAppend (by decide) len d hd
+  rw [show List.map (UInt8.toNat ∘ UInt8.ofNat)
+      (Nat.digitsAppend 256 len (x % 256 ^ len)) =
+      Nat.digitsAppend 256 len (x % 256 ^ len) by
+    calc
+      List.map (UInt8.toNat ∘ UInt8.ofNat)
+          (Nat.digitsAppend 256 len (x % 256 ^ len)) =
+          List.map id (Nat.digitsAppend 256 len (x % 256 ^ len)) := by
+        apply List.map_congr_left
+        intro d hd
+        simp only [Function.comp_apply, id_eq]
+        exact hdigit d hd
+      _ = Nat.digitsAppend 256 len (x % 256 ^ len) := List.map_id _]
+  exact (Nat.setInvOn_digitsAppend_ofDigits (by decide) len).2
+    (Nat.mod_lt _ (by positivity))
+
+/-- In the Algorithm 3 precondition range, Algorithm 2 is an exact left inverse. -/
+theorem toInt_toByte (x len : ℕ) (h : x < 256 ^ len) :
+    toInt (toByte x len) = x := by
+  rw [toInt_toByte_mod, Nat.mod_eq_of_lt h]
 
 /-- Checked Algorithm 3: reject values that do not fit instead of silently truncating them. -/
 def toByteChecked (x len : ℕ) : Except CodecError (Bytes len) :=
@@ -73,6 +117,14 @@ def toByteChecked (x len : ℕ) : Except CodecError (Bytes len) :=
     .ok ⟨(toByte x len).toArray, by simp⟩
   else
     .error (.outOfRange len x)
+
+/-- Successful checked serialization reconstructs the original in-range integer. -/
+theorem toByteChecked_toInt (x len : ℕ) (h : x < 256 ^ len) :
+    (toByteChecked x len).map (fun bytes => toInt bytes.toList) = .ok x := by
+  rw [show toByteChecked x len = .ok ⟨(toByte x len).toArray, by simp⟩ by
+    simp [toByteChecked, h]]
+  change Except.ok (toInt (Vector.toList ⟨(toByte x len).toArray, by simp⟩)) = Except.ok x
+  simpa using toInt_toByte x len h
 
 /-- Decode a list only when its length is exactly the requested wire width. -/
 def decodeExact (n : ℕ) (raw : List Byte) : Except CodecError (Bytes n) :=

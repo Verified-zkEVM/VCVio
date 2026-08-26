@@ -170,8 +170,9 @@ static importer, retrieves the production regular-initializer ordinary and IR ar
 exact expected rejections (so loss of either path fails), and checks that the sentinel remains absent
 before and after audit. The temporary
 `.olean`, `.ilean`, `.ir`, and C artifacts are confined to a `mktemp` directory removed on exit.
-The wrapper then runs the generated umbrella check, extern and interop isolation, the two inherited
-SLH-DSA KAT executables, and the S03 data/codec executable. The KAT PASS results are legacy runtime
+The wrapper then runs the exact 26-root S03 declaration/axiom probe, generated umbrella check,
+extern and interop isolation, the two inherited SLH-DSA KAT executables, and the S03 data/codec
+executable. The KAT PASS results are legacy runtime
 regression evidence only, and the S03 PASS result covers exact table rows, endian fixtures, ADRS,
 and rejecting fixed-width codecs without claiming primitive or ACVP conformance. A successful
 `lake build` is elaboration evidence; it does not demonstrate concrete hash/vector execution. The
@@ -213,7 +214,7 @@ union of their transitive axioms is gated exactly as
 `{propext, Classical.choice, Quot.sound, sorryAx}` at S00, with `sorryAx` confined declaration-wise to
 the one placeholder above. Additions and removals from this union fail.
 
-At the S03 candidate boundary the same audit observes 28 HashSig modules and 1,975 HashSig-owned
+At the repaired S03 candidate boundary the same audit observes 28 HashSig modules and 2,010 HashSig-owned
 constants. It still finds exactly the seven compiler helpers above and exactly the same transitive
 axiom union; these current counts are likewise inventory evidence rather than stable allowlist
 values.

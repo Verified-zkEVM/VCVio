@@ -92,6 +92,11 @@ future independent session reviews add dispositions under the protocol rather th
 | F-084 | HIGH | FIXED | Repository revision validation accepted any ancestor and mislabeled the invalidated repair base | S02-R6-004; independent r8 PASS | Require the exact session-linked repair-base field and correct its ledger meaning |
 | F-085 | HIGH | FIXED | Declaration dependencies/spans and S02 harness-edit scope prose were false | S02-R6-005; independent r8 PASS | Correct exact dependencies/full spans and describe the narrow harness repair accurately |
 | F-086 | HIGH | FIXED | The retained S03 bootstrap named no current accepted predecessor and could route work to invalidated commit `7b77e700` | S02-R7-001; independent r8 PASS | State that no accepted predecessor exists until r8 PASS and bind S03 only to that exact accepted repair commit |
+| F-087 | HIGH | REMEDIATED-PENDING-REVIEW | S03 parameter lookup discarded the hash family and mapped every SHAKE profile to its paired SHA2 profile | S03-001 | Include `HashFamily` in the lookup key, prove exact constructor recovery, and compare constructors in runtime tests |
+| F-088 | HIGH | REMEDIATED-PENDING-REVIEW | S03 exposed byte-encoding definitions and range bounds but no semantic `toInt (toByte ...)` reconstruction law | S03-002 | Prove total modulo reconstruction, its in-range corollary, and the checked-encoder connection; test zero, maximum, and overflow boundaries |
+| F-089 | HIGH | REMEDIATED-PENDING-REVIEW | S03 ADRS roundtrip started from a prevalidated byte carrier and did not reconstruct a structured address | S03-003 | Prove structured full-width serialization/parser identity under field bounds and canonical checked encode/decode semantics; test all layouts at maximum widths |
+| F-090 | HIGH | REMEDIATED-PENDING-REVIEW | Six S03 declaration rows falsely recorded an empty axiom footprint although their compiled roots use `propext` | S03-004 | Correct the rows and gate every S03 load-bearing root against an exact elaborated axiom inventory |
+| F-091 | MEDIUM | REMEDIATED-PENDING-REVIEW | Documentation described transparent exact-width codec aliases as opaque carriers | S03-005 | State the actual transparent-alias boundary consistently without claiming nominal separation |
 
 Independent S00 re-review r9 accepted the repairs for F-021 through F-029. Their `FIXED` statuses
 administratively propagate that verdict; they are not an S01 self-review. Historical FAIL artifacts
@@ -143,3 +148,10 @@ twelve earlier S02 findings F-063 through F-074, whose
 `FIXED` statuses preserve that reviewed disposition. None of this globally closes F-001 through
 F-009: the legacy theorem remains rejected, concrete reductions/composition remain future work, and
 the QROM/asymptotic boundaries remain open.
+
+Independent S03 review of exact commit `963a3e7dd425b8a8c9bb9e2e91b73868f6918768`
+failed with F-087 through F-091. The repair makes parameter lookup family-aware, proves integer
+modulo/in-range reconstruction and checked conversion, proves structured ADRS reconstruction and
+checked-wire semantics, corrects and elaboration-gates the axiom ledger, and removes the opacity
+overclaim. All five findings remain `REMEDIATED-PENDING-REVIEW` until a fresh independent S03 r1
+verdict accepts the exact repair commit. S04 remains blocked.

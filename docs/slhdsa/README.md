@@ -14,8 +14,9 @@ security-architecture reviews r1 through r3 are immutable **FAIL** artifacts; r4
 but the complete independent r5 audit found six blockers and invalidated that acceptance. R6 found
 five residual blockers. R7 confirmed all substantive repairs but found one stale successor-routing
 record. Independent R8 passed with zero findings and accepted exact S02 commit
-`a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`. S03 is implemented from that exact boundary and is
-pending its own independent review; no S03 verdict has been pre-created.
+`a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`. S03 is implemented from that exact boundary. Its
+initial independent review of exact commit `963a3e7dd425b8a8c9bb9e2e91b73868f6918768` failed with
+five blockers; repairs are implemented and await complete validation plus fresh independent r1.
 S04 has a documentation-only bootstrap, but has no accepted predecessor and remains blocked until
 an independent review accepts an exact S03 commit. No S04 implementation or verdict exists.
 S01's pinned authority, provenance, and strict sample-schema parser anchors do not claim

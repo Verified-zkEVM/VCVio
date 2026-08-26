@@ -70,13 +70,24 @@ def testParameters : IO Unit := do
   for s in ParameterSet.all do
     ensure s!"approved profile {s.profile.name}" s.params.isApproved
     ensure s!"approved parameter lookup {s.profile.name}"
-      (match ParameterSet.ofParams s.params with
-       | some found => found.params == s.params
+      (match ParameterSet.ofParams s.profile.family s.params with
+       | some found => found == s
        | none => false)
+  ensure "family-aware lookup selects SHAKE for the paired primary parameters"
+    (ParameterSet.ofParams .shake ParameterSet.SLHDSA_SHA2_128f.params ==
+      some .SLHDSA_SHAKE_128f)
+  ensure "parameter lookup rejects a malformed row"
+    (ParameterSet.ofParams .sha2 ⟨16, 63, 7, 8, 12, 14, 4⟩ == none)
 
 def testEndian : IO Unit := do
   ensure "toInt MSB-first fixture" (toInt [0x12, 0x34, 0x56] == 0x123456)
   ensure "toByte MSB-first fixture" (toByte 0x123456 3 == [0x12, 0x34, 0x56])
+  ensure "toByte zero-width total truncation" (toByte 0x123456 0 == [])
+  ensure "toByte one-byte total truncation" (toByte 0x123456 1 == [0x56])
+  ensure "toByte checked accepts maximum value"
+    (match toByteChecked 255 1 with
+     | .ok bytes => bytes.toList == [0xff] && toInt bytes.toList == 255
+     | .error _ => false)
   ensure "base2b nibbles" (base2b [0xab, 0xcd] 4 4 == [10, 11, 12, 13])
   ensure "base2b 12-bit digits" (base2b [0x12, 0x34, 0x56] 12 2 == [291, 1110])
   ensure "base2b crossing bytes"
@@ -156,6 +167,28 @@ def testAddress : IO Unit := do
   let wideTree := (Adrs.zero.setTreeAddress (256 ^ 8)).setTypeAndClear .wotsHash
   ensure "ADRSc rejects 64-bit tree overflow"
     (wideTree.compressSha2Checked == .error (.outOfRange 8 (256 ^ 8)))
+  let max32 := 256 ^ 4 - 1
+  let max96 := 256 ^ 12 - 1
+  let base (ty : AddrType) :=
+    ((Adrs.zero.setLayerAddress max32).setTreeAddress max96).setTypeAndClear ty
+  let canonical : List (AddrType × Adrs) :=
+    [(.wotsHash, (base .wotsHash).setKeyPairAddress max32 |>.setChainAddress max32
+        |>.setHashAddress max32),
+     (.wotsPk, (base .wotsPk).setKeyPairAddress max32),
+     (.tree, (base .tree).setTreeHeight max32 |>.setTreeIndex max32),
+     (.forsTree, (base .forsTree).setKeyPairAddress max32 |>.setTreeHeight max32
+        |>.setTreeIndex max32),
+     (.forsRoots, (base .forsRoots).setKeyPairAddress max32),
+     (.wotsPrf, (base .wotsPrf).setKeyPairAddress max32 |>.setChainAddress max32),
+     (.forsPrf, (base .forsPrf).setKeyPairAddress max32 |>.setTreeIndex max32)]
+  for (ty, address) in canonical do
+    let label := reprStr ty
+    ensure s!"canonical maximum-width layout {label}" address.isCanonical
+    ensure s!"checked maximum-width encoding {label}"
+      (address.encodeChecked == .ok address.toVector)
+    match Adrs.decode address.toBytes with
+    | .ok wire => ensure s!"semantic ADRS roundtrip {label}" (wire.value == address)
+    | .error _ => throw (IO.userError s!"S03 data/codec check failed: {label} rejected")
 
 def testFixedCodecs : IO Unit := do
   for s in ParameterSet.all do

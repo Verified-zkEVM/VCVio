@@ -83,6 +83,14 @@ deriving Repr, DecidableEq, Inhabited
 
 namespace Adrs
 
+/-- Two structured addresses are equal when all six encoded fields are equal. -/
+@[ext] theorem ext {a b : Adrs} (hlayer : a.layer = b.layer) (htree : a.tree = b.tree)
+    (htype : a.type = b.type) (hword1 : a.word1 = b.word1) (hword2 : a.word2 = b.word2)
+    (hword3 : a.word3 = b.word3) : a = b := by
+  cases a
+  cases b
+  simp_all
+
 /-- Executable check that a natural number fits in an unsigned big-endian field. -/
 def Fits (widthBytes value : ℕ) : Bool := decide (value < 256 ^ widthBytes)
 
@@ -217,15 +225,60 @@ def compressSha2 (a : Adrs) : List Byte :=
 @[simp] theorem compressSha2_length (a : Adrs) : a.compressSha2.length = 22 := by
   simp [compressSha2]
 
+/-- The full serialization packaged at its exact wire width. -/
+def toVector (a : Adrs) : Bytes 32 := ⟨a.toBytes.toArray, by simp⟩
+
 /-- Parse the six ADRS fields from an exact 32-byte carrier. -/
 def fromVector (bytes : Bytes 32) : Adrs :=
   let raw := bytes.toList
+  let afterLayer := raw.drop 4
+  let afterTree := afterLayer.drop 12
+  let afterType := afterTree.drop 4
+  let afterWord1 := afterType.drop 4
+  let afterWord2 := afterWord1.drop 4
   { layer := toInt (raw.take 4)
-    tree := toInt ((raw.drop 4).take 12)
-    type := toInt ((raw.drop 16).take 4)
-    word1 := toInt ((raw.drop 20).take 4)
-    word2 := toInt ((raw.drop 24).take 4)
-    word3 := toInt ((raw.drop 28).take 4) }
+    tree := toInt (afterLayer.take 12)
+    type := toInt (afterTree.take 4)
+    word1 := toInt (afterType.take 4)
+    word2 := toInt (afterWord1.take 4)
+    word3 := toInt (afterWord2.take 4) }
+
+/-- Parsing full serialization reconstructs every representable ADRS field. Canonicality is not
+needed for this arithmetic identity; only the six exact field-width conditions matter. -/
+theorem fromVector_toVector (a : Adrs)
+    (hlayer : Fits 4 a.layer = true) (htree : Fits 12 a.tree = true)
+    (htype : Fits 4 a.type = true) (hword1 : Fits 4 a.word1 = true)
+    (hword2 : Fits 4 a.word2 = true) (hword3 : Fits 4 a.word3 = true) :
+    fromVector a.toVector = a := by
+  have hlayer' : a.layer < 256 ^ 4 := by simpa [Fits] using hlayer
+  have htree' : a.tree < 256 ^ 12 := by simpa [Fits] using htree
+  have htype' : a.type < 256 ^ 4 := by simpa [Fits] using htype
+  have hword1' : a.word1 < 256 ^ 4 := by simpa [Fits] using hword1
+  have hword2' : a.word2 < 256 ^ 4 := by simpa [Fits] using hword2
+  have hword3' : a.word3 < 256 ^ 4 := by simpa [Fits] using hword3
+  have htakeWord3 : (toByte a.word3 4).take 4 = toByte a.word3 4 := by
+    simpa only [toByte_length] using (List.take_length (l := toByte a.word3 4))
+  apply Adrs.ext
+  · simpa [fromVector, toVector, toBytes, toBytesBE] using toInt_toByte a.layer 4 hlayer'
+  · simpa [fromVector, toVector, toBytes, toBytesBE] using toInt_toByte a.tree 12 htree'
+  · simpa [fromVector, toVector, toBytes, toBytesBE] using toInt_toByte a.type 4 htype'
+  · simpa [fromVector, toVector, toBytes, toBytesBE] using toInt_toByte a.word1 4 hword1'
+  · simpa [fromVector, toVector, toBytes, toBytesBE] using toInt_toByte a.word2 4 hword2'
+  · simpa [fromVector, toVector, toBytes, toBytesBE, htakeWord3] using
+      toInt_toByte a.word3 4 hword3'
+
+/-- Canonicality exposes all six exact field-width checks used by serialization. -/
+theorem fits_of_isCanonical (a : Adrs) (h : a.isCanonical = true) :
+    Fits 4 a.layer = true ∧ Fits 12 a.tree = true ∧ Fits 4 a.type = true ∧
+      Fits 4 a.word1 = true ∧ Fits 4 a.word2 = true ∧ Fits 4 a.word3 = true := by
+  simp only [isCanonical, Bool.and_eq_true] at h
+  aesop
+
+/-- Full serialization/parsing is identity for every canonical structured address. -/
+theorem fromVector_toVector_of_isCanonical (a : Adrs) (h : a.isCanonical = true) :
+    fromVector a.toVector = a := by
+  rcases fits_of_isCanonical a h with ⟨hlayer, htree, htype, hword1, hword2, hword3⟩
+  exact fromVector_toVector a hlayer htree htype hword1 hword2 hword3
 
 /-- A decoded ADRS wire carrier together with the canonicality fact checked at the boundary. -/
 structure Wire where
@@ -236,6 +289,9 @@ namespace Wire
 
 /-- Canonical ADRS wire encoding is exactly 32 bytes. -/
 def encode (wire : Wire) : List Byte := wire.bytes.toList
+
+/-- Parse the structured canonical address carried by a wire value. -/
+def value (wire : Wire) : Adrs := fromVector wire.bytes
 
 @[simp] theorem encode_length (wire : Wire) : wire.encode.length = 32 := by
   simp [encode]
@@ -263,9 +319,29 @@ def decode (raw : List Byte) : Except CodecError Wire :=
 /-- Checked full serialization rejects noncanonical in-memory values before truncation. -/
 def encodeChecked (a : Adrs) : Except CodecError (Bytes 32) :=
   if a.isCanonical then
-    .ok ⟨a.toBytes.toArray, by simp⟩
+    .ok a.toVector
   else
     .error .noncanonicalAddress
+
+/-- A canonical structured address determines a canonical wire value. -/
+def toWire (a : Adrs) (h : a.isCanonical = true) : Wire :=
+  ⟨a.toVector, by simpa [fromVector_toVector_of_isCanonical a h] using h⟩
+
+/-- Checked full encoding of a canonical structured address succeeds exactly. -/
+theorem encodeChecked_eq (a : Adrs) (h : a.isCanonical = true) :
+    encodeChecked a = .ok a.toVector := by
+  simp [encodeChecked, h]
+
+/-- Decoding a canonical structured address's full bytes recovers its canonical wire. -/
+theorem decode_toBytes (a : Adrs) (h : a.isCanonical = true) :
+    decode a.toBytes = .ok (toWire a h) := by
+  change decode (encodeExact a.toVector) = .ok (toWire a h)
+  simp [decode, toWire, h, fromVector_toVector_of_isCanonical]
+
+/-- The semantic value obtained from the decoded canonical wire is the original address. -/
+theorem toWire_value (a : Adrs) (h : a.isCanonical = true) :
+    (toWire a h).value = a := by
+  exact fromVector_toVector_of_isCanonical a h
 
 /-- SHA-2 compression additionally requires that layer and tree fit the narrower ADRSc fields. -/
 def compressSha2Checked (a : Adrs) : Except CodecError (Bytes 22) :=

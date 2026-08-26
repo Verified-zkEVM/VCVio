@@ -10,10 +10,10 @@ public import HashSig.SLHDSA.Encoding
 /-!
 # SLH-DSA Fixed-Width Wire Codecs
 
-Opaque fixed-width carriers for public keys, secret keys, and signatures. These codecs enforce the
-FIPS 205 Table 2 lengths for every approved parameter set; they intentionally make no semantic
-claim about the bytes until later construction sessions supply structured key and signature
-decoders.
+Transparent, exactly width-indexed carrier aliases for public keys, secret keys, and signatures.
+These codecs enforce the FIPS 205 Table 2 lengths for every approved parameter set; they
+intentionally make no semantic claim about the bytes until later construction sessions supply
+structured key and signature decoders.
 -/
 
 @[expose] public section

@@ -65,13 +65,15 @@ S03 implements the fixed-width foundation from exact accepted S02 commit
 \texttt{ParameterSet} records both hash families, exact primary parameters, digest partitions,
 categories, and key/signature widths; per-set proofs evaluate the derived widths and validity
 conditions. The historical SHA2-128-24 record is separately typed and executable approval rejects
-it. \texttt{toInt}, \texttt{toByte}, and \texttt{base2b} have explicit MSB-first laws and checked
-wrappers reject overflow, zero digit width, insufficient bits, and wrong lengths. Checked ADRS
-setters enforce 32/96-bit fields; the decoder rejects unknown types and noncanonical padding, and a
-canonical 32-byte wire has a proved decode/encode round trip. Opaque key and signature codecs reject
-short and long input for all twelve profiles. These are data-layer claims pending independent S03
-review, not primitive, construction, external-API, or ACVP conformance claims; COV-005 and
-F-015/F-016/F-018 remain deferred/open.
+it. Family-aware parameter lookup has an exact constructor inverse. \texttt{toInt},
+\texttt{toByte}, and \texttt{base2b} have explicit MSB-first laws; byte serialization has total
+modulo and in-range reconstruction theorems, and checked wrappers reject overflow, zero digit width,
+insufficient bits, and wrong lengths. Checked ADRS setters enforce 32/96-bit fields; the decoder
+rejects unknown types and noncanonical padding, while structured serialization/parsing identity and
+checked-wire semantics are proved under the exact bounds. Exact-width transparent key and signature
+aliases reject short and long input for all twelve profiles. Initial independent S03 review failed
+with five blockers; these data-layer repairs remain pending fresh r1, not primitive, construction,
+external-API, or ACVP conformance claims. COV-005 and F-015/F-016/F-018 remain deferred/open.
 
 \section{Security definitions and theorem architecture}
 S02 defines an explicitly classical candidate architecture for EUF-CMA, PRF/PRFmsg, ITSR, TCR,
@@ -127,8 +129,8 @@ initializer, extern, and runtime-override extension entries are checked by contr
 well as by target declaration. The audit programmatically meta-imports compiled HashSig with
 extension finalization disabled. The S00 boundary exposed 680 declarations across 23 HashSig
 modules; after the repaired S02 modules it observes 1,629 owned constants across 27 modules. These
-counts are reproducible inventory evidence, not permanent invariants. The S03 candidate observes
-1,975 owned constants across 28 modules while retaining the exact seven-helper boundary and axiom
+counts are reproducible inventory evidence, not permanent invariants. The repaired S03 candidate observes
+2,010 owned constants across 28 modules while retaining the exact seven-helper boundary and axiom
 union. The historical controlled
 S00 imports observed 647 declarations at ordinary-exported visibility and 680 at both
 ordinary-private and meta-private visibility: the 33-declaration delta was caused by private
@@ -273,6 +275,14 @@ repair removed that ambiguity, and independent r8 passed with zero findings at e
 F-079/F-080 remain open. The reviewed S01
 descriptor/AST machinery is otherwise retained and frozen; the narrow provenance repair responds
 to concrete S02 regressions.
+
+Independent S03 review of exact commit
+\texttt{963a3e7dd425b8a8c9bb9e2e91b73868f6918768} failed with five blockers: family-erasing
+parameter lookup, absent semantic integer reconstruction, a carrier-only rather than structured
+ADRS roundtrip, six false axiom rows, and an opacity overclaim. The repair records F-087--F-091 as
+remediated pending review, adds the corresponding laws and runtime boundaries, and gates 26 exact
+load-bearing roots with a compiled axiom probe. S04 remains blocked until a fresh independent S03
+r1 accepts the complete exact repair tree.
 
 \section{Coverage and traceability}
 Include construction-to-source-to-Lean-to-test coverage, proof obligations, assumptions, TCB, and

@@ -10,7 +10,8 @@ reduction, shifts, and big-endian `toInt`/`toByte` behavior require executable d
 
 S03 keeps generic `Params` for existing constructions but adds a closed twelve-constructor
 `ParameterSet`, exact `ParameterProfile` rows, executable approval/malformed-row rejection, and a
-proved `Params.Valid` witness for every approved name. The SHA2-128-24 reduced profile is now a
+family-aware lookup with a proved exact constructor inverse, plus a proved `Params.Valid` witness
+for every approved name. The SHA2-128-24 reduced profile is now a
 separate `LegacyParameterSet` and evaluates as not FIPS-approved. Later construction APIs must carry
 the approved name or its checked `Valid` witness rather than accept an arbitrary record silently.
 
@@ -36,11 +37,13 @@ exactly
 `SK.seed || SK.prf || PK.seed || PK.root` and `PK.seed || PK.root`; signatures are
 `R || SIG_FORS || SIG_HT`. Decoders must reject wrong lengths and malformed fields rather than
 silently pad/slice. Address fields, type tags, `setTypeAndClear`, the 32-byte encoding, and the
-SHA2 compressed address require round-trip/noninterference/range lemmas. S03 provides checked
-32-bit/96-bit address setters, type-and-clear field laws, exact 32/22-byte length theorems, canonical
-type/padding rejection, and a proof that decoding a canonical 32-byte wire and re-encoding it is
-identity. Opaque key and signature carriers reject every wrong length for all twelve profiles; their
-semantic parsing remains construction work, not a claim of conformance.
+SHA2 compressed address require round-trip/noninterference/range lemmas. S03 provides the total
+modulo and in-range reconstruction laws for big-endian `toByte`/`toInt`, checked 32-bit/96-bit
+address setters, type-and-clear field laws, exact 32/22-byte length theorems, canonical type/padding
+rejection, structured serialization/parser identity under exact field bounds, and checked-wire
+decode semantics. Exact-width transparent key and signature carrier aliases reject every wrong
+length for all twelve profiles; their semantic parsing remains construction work, not a claim of
+conformance.
 
 ## Exact primitive instantiation grammars
 

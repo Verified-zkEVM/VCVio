@@ -1,6 +1,7 @@
 # S03 data, widths, parameters, ADRS, and codecs session
 
-Status: implementation candidate; full frozen gates pass; independent review pending.
+Status: initial independent review failed with five blockers; repairs implemented; repaired-tree
+validation and fresh independent r1 review pending.
 
 Date: 2026-08-26
 Branch: `codex/sphincsplus-formalization`
@@ -66,29 +67,35 @@ conformance. COV-005 remains owned by S10, and F-015/F-016/F-018 remain open.
 - `ParameterSet` is a closed twelve-constructor FIPS family. `ParameterSet.profile` records the
   exact SHA2/SHAKE name, seven primary parameters, category, digest partitions, `m`, and public,
   secret, and signature widths. `profile_sizes`, `wots_widths`, and `ParameterSet.valid` evaluate by
-  cases for all twelve rows. `LegacyParameterSet` separately owns SHA2-128-24, and
-  `legacy_not_approved` excludes it from FIPS approval.
-- `Encoding.lean` proves the radix-256 append law and `toInt` range, exposes the exact pointwise
-  MSB-first `toByte` and `base2b` rules, and retains the two historical recursive helpers solely to
-  preserve the reviewed exact-seven compiler-helper boundary. Checked conversion rejects overflow,
-  zero digit width, insufficient input, and wrong fixed lengths; vector encode/decode roundtrip is
-  proved.
+  cases for all twelve rows. Family-aware `ofParams` has an exact constructor inverse for every
+  approved profile. `LegacyParameterSet` separately owns SHA2-128-24, and `legacy_not_approved`
+  excludes it from FIPS approval.
+- `Encoding.lean` proves the radix-256 append law, `toInt` range, total
+  `toInt (toByte len x) = x % 256^len` reconstruction, its in-range corollary, and the checked
+  encoder connection. It exposes the exact pointwise MSB-first `toByte` and `base2b` rules and
+  retains the two historical recursive helpers solely to preserve the reviewed exact-seven
+  compiler-helper boundary. Checked conversion rejects overflow, zero digit width, insufficient
+  input, and wrong fixed lengths; vector encode/decode roundtrip is proved.
 - `Address.lean` retains plain setters for construction code under algorithmic preconditions and
   adds checked 32-bit/96-bit setters for external values. It proves type-and-clear fields, exact
   32/22-byte lengths, parses exact 32-byte carriers, rejects unknown types and noncanonical
-  type-specific padding, and proves canonical wire decode/encode identity. SHA2 compression rejects
-  values that do not fit its narrower one-byte layer and eight-byte tree fields.
-- New `Codec.lean` gives opaque exact-width public-key, secret-key, and signature carriers for every
+  type-specific padding. It proves structured full-width serialization/parser identity under exact
+  field bounds, derives that identity from canonicality, and connects checked encoding, decoding,
+  wire bytes, and the structured value. SHA2 compression rejects values that do not fit its narrower
+  one-byte layer and eight-byte tree fields.
+- New `Codec.lean` gives transparent exact-width public-key, secret-key, and signature aliases for every
   approved profile. Each decoder rejects short and long inputs; each encoder/decoder roundtrip is
   proved. Semantic key/signature parsing remains later construction work.
-- `DataCodecTests.lean` compares all twelve exact rows and derived partitions/sizes, exercises
+- `DataCodecTests.lean` compares all twelve exact constructors and derived partitions/sizes,
+  rejects malformed lookup input, exercises
   endian cases that cross byte boundaries, checks range/length/digit rejection, checks ADRS
-  clear/serialization/compression/canonicality, and runs exact/short/long key and signature cases
-  for every profile.
+  clear/serialization/compression/canonicality and every type layout at maximum field widths, and
+  runs exact/short/long key and signature cases for every profile.
 
 No construction, primitive instantiation, ACVP execution, external API, or security module changed.
 COV-005 and F-015/F-016/F-018 remain explicitly deferred/open. The frozen descriptor/AST subsystem
-was not changed; `validate.sh` only invokes the new independent S03 runtime executable.
+was not changed; `validate.sh` invokes the independent S03 runtime executable and the exact
+load-bearing-root/axiom probe.
 
 ## Gates
 
@@ -98,13 +105,14 @@ was not changed; `validate.sh` only invokes the new independent S03 runtime exec
   load-bearing proofs;
 - existing ACVP fixtures are used only within their pinned provenance and schema-format scope;
 - `git diff --check`, admission/source scans, and the frozen documentation harness pass; and
-- a fresh reviewer authors `reviews/S03-data-codec-review.md`; this bootstrap does not create or
-  pre-fill that verdict.
+- the initial `reviews/S03-data-codec-review.md` FAIL remains immutable, and a fresh reviewer authors
+  `reviews/S03-data-codec-review-r1.md` only after the repaired exact commit passes every gate.
 
 Focused evidence before the full handoff:
 
 ```text
 lake build HashSig.SLHDSA.Address HashSig.SLHDSA.Codec
+lake env lean scripts/slhdsa/S03InventoryProbe.lean
 lake env lean scripts/slhdsa/PolicyAudit.lean
 lake exe slhdsa_data_codec_tests
 lake exe slhdsa_kat
@@ -114,7 +122,7 @@ bash scripts/check-extern-isolation.sh
 bash scripts/check-interop-isolation.sh
 ```
 
-All pass. The static audit observes 28 HashSig modules, 1,975 owned constants, exactly seven
+All pass. The static audit observes 28 HashSig modules, 2,010 owned constants, exactly seven
 reviewed compiler helpers, and the unchanged exact transitive-axiom union. The S03 executable
 reports 12 exact profiles plus endian, ADRS, and rejection coverage; both inherited KATs still
 accept the valid vector and reject the tampered input. These KATs remain legacy regression evidence
@@ -126,14 +134,18 @@ fixtures, generated umbrella check, and extern/interop isolation.
 
 ## Handoff
 
-Commit the exact S03 candidate and request a fresh reviewer to author
-`reviews/S03-data-codec-review.md`; do not pre-create that artifact or verdict. Preserve the
+The initial independent review of exact commit
+`963a3e7dd425b8a8c9bb9e2e91b73868f6918768` failed with S03-001 through S03-005; its immutable
+artifact is `reviews/S03-data-codec-review.md`. Commit the complete repaired tree only after every
+gate passes, then request a fresh independent reviewer to author
+`reviews/S03-data-codec-review-r1.md`; do not pre-create that artifact or verdict. Preserve the
 accepted S02 architecture boundary and treat primitive, construction, conformance, external-API,
 and security proof work as successor sessions. COV-001/COV-002 and PO-010/PO-011 are implemented or
 discharged pending independent S03 review, while COV-005 and F-015/F-016/F-018 do not move.
 
-The S03 implementation payload is exact commit
+The original S03 implementation payload is exact commit
 `caefbda5e7ed7cd7a6efb80191307de7a39eea43`. The later documentation-only S04 bootstrap is part of
-the successor-routing state, so independent S03 review must name and inspect the complete exact
-descendant containing both the payload and that bootstrap. Accepting the payload commit alone would
-leave the successor record outside the reviewed tree.
+the successor-routing state, and the current repairs follow the failed exact review tree. S03 r1
+must name and inspect the complete exact repaired descendant containing the payload, bootstrap,
+failed review, findings dispositions, and repairs. Accepting the payload or failed-review commit
+alone would leave required state outside the reviewed tree.

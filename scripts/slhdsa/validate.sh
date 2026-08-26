@@ -384,6 +384,7 @@ fi
 # success, failure, errexit, or handled signal path; SIGKILL cannot execute shell cleanup traps.
 restore_default_lake_configuration
 lake env lean scripts/slhdsa/S02InventoryProbe.lean
+lake env lean scripts/slhdsa/S03InventoryProbe.lean
 lake env lean scripts/slhdsa/PolicyAudit.lean
 
 fixture_root="$(mktemp -d)"

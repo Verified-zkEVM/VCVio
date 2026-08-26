@@ -71,6 +71,7 @@ REQUIRED_FILES = (
     "reviews/S01-authority-and-conformance-review-r14.md",
     "reviews/S01-authority-and-conformance-review-r15.md",
     "reviews/S01-authority-and-conformance-review-r16.md",
+    "reviews/S03-data-codec-review.md",
     "report/README.md",
     "report/slhdsa-formalization-audit.tex",
     "report/references.bib",
@@ -202,6 +203,8 @@ S01_FAILED_REVIEW_HASHES = {
         "39328910948604a1920b6956d33885ebca0520eaff7af7b66088c3a30f1f219d",
     "reviews/S02-security-architecture-review-r7.md":
         "30753d77ffd190c63f0c90e132dfa800835eb712e06f7f026afcc5c48cf74c23",
+    "reviews/S03-data-codec-review.md":
+        "8a21aa42caec8659ed4cafc8e56ddb1dfcc0ec0559f6bc9b678ad3e65a07586b",
 }
 S01_ACCEPTED_REVIEW = {
     "path": "reviews/S01-authority-and-conformance-review-r16.md",
@@ -257,7 +260,57 @@ S02_DECLARATION_DIRECT_DEPS = {
     "DECL-026": ["SLHDSA.Security.sampledTargetRealImpl",
                  "SLHDSA.Security.SampledTraceValid", "SLHDSA.Security.CollectionDisjoint"],
     "DECL-027": ["SLHDSA.Security.sampledTargetIdealImpl",
-                 "SLHDSA.Security.SampledTraceValid", "SLHDSA.Security.CollectionDisjoint"],
+                  "SLHDSA.Security.SampledTraceValid", "SLHDSA.Security.CollectionDisjoint"],
+}
+S03_DECLARATION_SPANS = {
+    "DECL-033": (132, 1, 168, 41),
+    "DECL-034": (187, 1, 195, 21),
+    "DECL-035": (198, 1, 201, 21),
+    "DECL-036": (244, 1, 247, 28),
+    "DECL-037": (50, 1, 57, 10),
+    "DECL-038": (139, 1, 142, 10),
+    "DECL-039": (169, 1, 171, 65),
+    "DECL-040": (185, 1, 191, 28),
+    "DECL-041": (188, 1, 198, 18),
+    "DECL-042": (302, 1, 312, 48),
+    "DECL-043": (314, 1, 317, 20),
+    "DECL-044": (33, 1, 35, 42),
+    "DECL-045": (38, 1, 40, 42),
+    "DECL-046": (43, 1, 45, 42),
+    "DECL-047": (54, 1, 56, 31),
+    "DECL-048": (58, 1, 60, 31),
+    "DECL-049": (62, 1, 64, 37),
+    "DECL-050": (209, 1, 211, 21),
+    "DECL-051": (87, 1, 107, 35),
+    "DECL-052": (122, 1, 127, 35),
+    "DECL-053": (248, 1, 268, 37),
+    "DECL-054": (336, 1, 339, 63),
+    "DECL-055": (342, 1, 344, 47),
+}
+S03_DECLARATION_AXIOMS = {
+    "DECL-033": [],
+    "DECL-034": ["propext"],
+    "DECL-035": ["propext"],
+    "DECL-036": ["propext", "Classical.choice", "Quot.sound"],
+    "DECL-037": ["propext", "Classical.choice", "Quot.sound"],
+    "DECL-038": ["propext"],
+    "DECL-039": ["propext"],
+    "DECL-040": ["propext"],
+    "DECL-041": ["propext"],
+    "DECL-042": ["propext"],
+    "DECL-043": ["propext"],
+    "DECL-044": ["propext"],
+    "DECL-045": ["propext"],
+    "DECL-046": ["propext"],
+    "DECL-047": ["propext"],
+    "DECL-048": ["propext"],
+    "DECL-049": ["propext"],
+    "DECL-050": [],
+    "DECL-051": ["propext", "Classical.choice", "Quot.sound"],
+    "DECL-052": ["propext", "Classical.choice", "Quot.sound"],
+    "DECL-053": ["propext", "Classical.choice", "Quot.sound"],
+    "DECL-054": ["propext", "Classical.choice", "Quot.sound"],
+    "DECL-055": ["propext", "Classical.choice", "Quot.sound"],
 }
 
 # This is the one authoritative current partition. The six historical SHA-256 CLI cases are a
@@ -377,7 +430,7 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/decisions.csv":
         (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (43037, "1b860be30a5fbe0b543b7983fd382dca2a24e2bc09e67c5ac7403b9e0d1d0154"),
+        (48499, "3c1d200444122c00407ae6e789db3064c97603d57f9b7248d85f90a03031b25d"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
@@ -484,6 +537,8 @@ def check_required_files() -> None:
             "missing elaborated-environment audit scripts/slhdsa/PolicyAudit.lean")
     require((ROOT / "scripts/slhdsa/S02InventoryProbe.lean").is_file(),
             "missing elaborated S02 inventory probe scripts/slhdsa/S02InventoryProbe.lean")
+    require((ROOT / "scripts/slhdsa/S03InventoryProbe.lean").is_file(),
+            "missing elaborated S03 inventory probe scripts/slhdsa/S03InventoryProbe.lean")
     require((ROOT / "scripts/slhdsa/fixtures/SLHDSAPolicyIRMacro.lean").is_file(),
             "missing compiled-IR fixture macro")
     require((ROOT / "scripts/slhdsa/fixtures/HashSig/PolicyIRFixture.lean").is_file(),
@@ -4786,6 +4841,18 @@ def check_declarations() -> None:
         require(rows[declaration_id]["direct_dependencies"] == expected,
                 f"declarations.jsonl: exact S02 dependency mismatch for {declaration_id}")
     print("S02 declaration facts: PASS (18 exact full spans; 5 corrected dependency sets)")
+    require(set(S03_DECLARATION_SPANS) == set(S03_DECLARATION_AXIOMS) <= set(rows),
+            "declarations.jsonl: S03 declaration rows are incomplete")
+    for declaration_id, expected in S03_DECLARATION_SPANS.items():
+        source = rows[declaration_id]["source"]
+        actual = (source["start_line"], source["start_column"],
+                  source["end_line"], source["end_column"])
+        require(actual == expected,
+                f"declarations.jsonl: exact full span mismatch for {declaration_id}")
+    for declaration_id, expected in S03_DECLARATION_AXIOMS.items():
+        require(rows[declaration_id]["transitive_axioms"] == expected,
+                f"declarations.jsonl: exact S03 axiom mismatch for {declaration_id}")
+    print("S03 declaration facts: PASS (23 exact full spans and axiom footprints)")
     validate_s01_dependency_accounting(rows)
 
     expect_s01_mutation_rejected(

@@ -200,9 +200,15 @@ theorem wots_widths (s : ParameterSet) :
     s.params.len2 = 3 ∧ s.params.len = 2 * s.params.n + 3 := by
   cases s <;> decide
 
-/-- Reject a parameter record unless it is exactly one of the twelve approved rows. -/
-def ofParams (p : Params) : Option ParameterSet :=
-  all.find? (fun s => decide (s.params = p))
+/-- Recover an approved name only when both its hash family and primary parameters match. The family
+argument is essential because each SHA2/SHAKE pair shares the same primary parameter record. -/
+def ofParams (family : HashFamily) (p : Params) : Option ParameterSet :=
+  all.find? (fun s => decide (s.profile.family = family ∧ s.params = p))
+
+/-- Family-aware lookup is an exact left inverse of every approved profile. -/
+@[simp] theorem ofParams_profile (s : ParameterSet) :
+    ofParams s.profile.family s.params = some s := by
+  cases s <;> decide
 
 end ParameterSet
 

@@ -1,15 +1,17 @@
 # S04 primitive interfaces and SHA2/SHAKE instantiations bootstrap
 
-Status: bootstrap initialized; implementation blocked pending independent S03 acceptance.
+Status: bootstrap initialized; implementation blocked after S03 FAIL pending repaired exact-commit
+acceptance.
 
 Date: 2026-08-26
 Branch: `codex/sphincsplus-formalization`
 Accepted predecessor: none. The S03 implementation payload is exact commit
-`caefbda5e7ed7cd7a6efb80191307de7a39eea43`; its full frozen gates pass, but this documentation-only
-bootstrap is a later descendant. A fresh independent S03 reviewer must review the complete exact
-tree containing both that payload and this successor record. The reviewer, rather than this
-self-referential bootstrap, records the exact reviewed commit. This bootstrap does not authorize
-source changes from a provisional candidate.
+`caefbda5e7ed7cd7a6efb80191307de7a39eea43`; independent review of the complete bootstrap descendant
+`963a3e7dd425b8a8c9bb9e2e91b73868f6918768` failed with five blockers. Repairs are implemented but
+remain unaccepted. A fresh independent S03 r1 reviewer must review the complete exact repaired tree
+containing the payload, this successor record, the failed review, and every disposition. The
+reviewer, rather than this self-referential bootstrap, records the exact accepted commit. This
+bootstrap does not authorize source changes from a provisional candidate.
 
 ## Objective
 
@@ -24,7 +26,8 @@ conformance, and security reductions remain successor work.
 Before any S04 Lean source changes:
 
 1. a fresh reviewer must accept an exact commit containing S03 implementation payload
-   `caefbda5e7ed7cd7a6efb80191307de7a39eea43`, this S04 bootstrap, and any later S03 repairs;
+   `caefbda5e7ed7cd7a6efb80191307de7a39eea43`, this S04 bootstrap, immutable failed review
+   `reviews/S03-data-codec-review.md`, and all five S03 repairs/dispositions;
 2. this record must replace `Accepted predecessor: none` with that exact accepted commit and review;
 3. the exact editions and bytes of the SHA-2, SHAKE, HMAC, and MGF authorities used by the
    implementation must be added to the source ledger/reference manifest; and
@@ -112,8 +115,8 @@ schema/provenance evidence rather than primitive or implementation-conformance v
 
 ## Handoff
 
-The next action is independent review of S03, not S04 implementation. If S03 fails, reopen S03,
-dispose every finding, rerun its complete gates, and leave S04 blocked until a later exact S03
-candidate passes review. After S03 acceptance, update this record with the exact accepted boundary,
+S03 has failed and is reopened. Dispose every finding, rerun its complete gates, and leave S04
+blocked until the repaired exact S03 candidate passes fresh independent review. After S03
+acceptance, update this record with the exact accepted boundary,
 complete the authority preflight, and only then begin S04 source work. Preserve the primitive-only
 scope and do not move COV-005 or F-015/F-016/F-018.
