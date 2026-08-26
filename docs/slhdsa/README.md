@@ -16,6 +16,8 @@ five residual blockers. R7 confirmed all substantive repairs but found one stale
 record. Independent R8 passed with zero findings and accepted exact S02 commit
 `a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`. S03 is implemented from that exact boundary and is
 pending its own independent review; no S03 verdict has been pre-created.
+S04 has a documentation-only bootstrap, but has no accepted predecessor and remains blocked until
+an independent review accepts an exact S03 commit. No S04 implementation or verdict exists.
 S01's pinned authority, provenance, and strict sample-schema parser anchors do not claim
 implementation conformance. R16
 accepted the F-061/F-062 repairs: cleanup uses constant/count-only evidence, preflights

@@ -120,9 +120,9 @@ reports 12 exact profiles plus endian, ADRS, and rejection coverage; both inheri
 accept the valid vector and reject the tampered input. These KATs remain legacy regression evidence
 and are not FIPS/ACVP conformance evidence.
 
-The complete `./scripts/slhdsa/validate.sh` wrapper also passes after these focused checks, including
-the full repository build, frozen documentation/provenance checks, compiled policy fixtures,
-generated umbrella check, and extern/interop isolation.
+The complete `./scripts/slhdsa/validate.sh` wrapper also passes after these focused checks,
+including the full repository build, frozen documentation/provenance checks, compiled policy
+fixtures, generated umbrella check, and extern/interop isolation.
 
 ## Handoff
 
@@ -131,3 +131,9 @@ Commit the exact S03 candidate and request a fresh reviewer to author
 accepted S02 architecture boundary and treat primitive, construction, conformance, external-API,
 and security proof work as successor sessions. COV-001/COV-002 and PO-010/PO-011 are implemented or
 discharged pending independent S03 review, while COV-005 and F-015/F-016/F-018 do not move.
+
+The S03 implementation payload is exact commit
+`caefbda5e7ed7cd7a6efb80191307de7a39eea43`. The later documentation-only S04 bootstrap is part of
+the successor-routing state, so independent S03 review must name and inspect the complete exact
+descendant containing both the payload and that bootstrap. Accepting the payload commit alone would
+leave the successor record outside the reviewed tree.

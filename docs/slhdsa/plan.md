@@ -90,7 +90,7 @@ without named owner approval.
 - Gates: `lake build HashSig`; all-set `#eval` sizes; codec/property tests; ACVP fixtures; review
   `reviews/S03-data-codec-review.md`.
 
-### S04 — primitive interfaces and SHA2/SHAKE instantiations
+### S04 — primitive interfaces and SHA2/SHAKE instantiations (bootstrap only; blocked on S03 review)
 
 - Inputs: S03; FIPS Section 11; pinned hash standards/vectors.
 - Allowed: `Primitives`, `Concrete/Sha2`, `Concrete/Keccak` or new SHAKE/concrete modules.
