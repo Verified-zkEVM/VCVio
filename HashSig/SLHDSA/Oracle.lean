@@ -88,6 +88,47 @@ def impl (prims : Primitives p) : QueryImpl (publicHashSpec prims) Id
   | .tl pkSeed adrs xs => prims.Tl pkSeed adrs xs
   | .hmsg r pkSeed pkRoot msg => prims.Hmsg r pkSeed pkRoot msg
 
+/-- Reinterpret the four public hash fields of `prims` through an arbitrary deterministic answer
+function, while leaving the secret PRFs and node encoding unchanged.  This is the functional
+bridge used to prove random-oracle correctness: every total answer function defines another
+perfectly valid pure SLH-DSA primitive bundle. -/
+@[reducible] def withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) :
+    Primitives p where
+  PkSeed := prims.PkSeed
+  SkSeed := prims.SkSeed
+  SkPrf := prims.SkPrf
+  Y := prims.Y
+  F pkSeed adrs x := answer (.f pkSeed adrs x)
+  H pkSeed adrs left right := answer (.h pkSeed adrs left right)
+  Tl pkSeed adrs xs := answer (.tl pkSeed adrs xs)
+  PRF := prims.PRF
+  PRFmsg := prims.PRFmsg
+  Hmsg r pkSeed pkRoot msg := answer (.hmsg r pkSeed pkRoot msg)
+  yToBytes := prims.yToBytes
+
+@[simp] theorem withPublicHash_f (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (pkSeed : prims.PkSeed) (adrs : Adrs)
+    (x : prims.Y) :
+    (withPublicHash prims answer).F pkSeed adrs x = answer (.f pkSeed adrs x) := rfl
+
+@[simp] theorem withPublicHash_h (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (pkSeed : prims.PkSeed) (adrs : Adrs)
+    (left right : prims.Y) :
+    (withPublicHash prims answer).H pkSeed adrs left right =
+      answer (.h pkSeed adrs left right) := rfl
+
+@[simp] theorem withPublicHash_tl (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (pkSeed : prims.PkSeed) (adrs : Adrs)
+    (xs : List prims.Y) :
+    (withPublicHash prims answer).Tl pkSeed adrs xs = answer (.tl pkSeed adrs xs) := rfl
+
+@[simp] theorem withPublicHash_hmsg (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (r : prims.Y) (pkSeed : prims.PkSeed)
+    (pkRoot : prims.Y) (msg : List Byte) :
+    (withPublicHash prims answer).Hmsg r pkSeed pkRoot msg =
+      answer (.hmsg r pkSeed pkRoot msg) := rfl
+
 @[simp] theorem simulateQ_f (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (x : prims.Y) :
     simulateQ (PublicHash.impl prims)
