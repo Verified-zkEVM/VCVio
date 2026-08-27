@@ -72,7 +72,7 @@ def signInternalM (prims : Primitives p) {m : Type → Type*} [Monad m]
   let index : LeafIndex p.hp := ⟨(splitDigest p digest).2, splitDigest_snd_lt p digest⟩
   let forsAddress := forsAdrsOf index.val
   let forsSig ← ForsOracle.signM prims md sk.skSeed sk.pkSeed forsAddress
-  let forsPk ← ForsOracle.pkGenM prims sk.skSeed sk.pkSeed forsAddress
+  let forsPk ← ForsOracle.pkFromSigM prims forsSig md sk.pkSeed forsAddress
   let xmssSig ←
     XmssOracle.signM prims forsPk sk.skSeed sk.pkSeed (htAdrs Adrs.zero 0) index
   pure (r, forsSig, xmssSig)
