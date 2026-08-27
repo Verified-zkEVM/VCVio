@@ -63,6 +63,12 @@ def thashPrefix (pkSeed : Bytes 16) (adrs : Adrs) : ByteArray :=
 def shaAdrsKey (adrs : Adrs) : Bytes 22 :=
   ⟨adrs.compressSha2.toArray, by simp [Adrs.compressSha2, Adrs.toBytesBE]⟩
 
+/-- The fixed-width SHA-2 public-hash key is exactly the FIPS 205 compressed address `ADRSc`. -/
+@[simp]
+theorem shaAdrsKey_toList (adrs : Adrs) :
+    (shaAdrsKey adrs).toList = adrs.compressSha2 := by
+  simp [shaAdrsKey]
+
 /-- The shared SHA-2 thash prefix from an already-canonicalized `ADRSc`. -/
 def thashPrefixEncoded (pkSeed : Bytes 16) (encodedAdrs : Bytes 22) : ByteArray :=
   b16ToBA pkSeed ++ zeros48 ++ ByteArray.mk encodedAdrs.toArray

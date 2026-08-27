@@ -119,11 +119,24 @@ example : shaPrimitives.AdrsKey = Bytes 22 := rfl
 
 example (adrs : Adrs) : shaPrimitives.adrsToKey adrs = shaAdrsKey adrs := rfl
 
-example : Adrs.zero.compressSha2 = (Adrs.zero.setLayerAddress 256).compressSha2 := by
-  decide
+example (adrs : Adrs) : (shaPrimitives.adrsToKey adrs).toList = adrs.compressSha2 := by
+  change (shaAdrsKey adrs).toList = adrs.compressSha2
+  exact shaAdrsKey_toList adrs
 
-example : Adrs.zero.compressSha2 = (Adrs.zero.setTreeAddress (2 ^ 64)).compressSha2 := by
-  decide
+example : shaPrimitives.adrsToKey Adrs.zero =
+    shaPrimitives.adrsToKey (Adrs.zero.setLayerAddress 256) := by
+  change shaAdrsKey Adrs.zero = shaAdrsKey (Adrs.zero.setLayerAddress 256)
+  apply Vector.toArray_inj.mp
+  simpa [shaAdrsKey] using
+    (show Adrs.zero.compressSha2 = (Adrs.zero.setLayerAddress 256).compressSha2 by decide)
+
+example : shaPrimitives.adrsToKey Adrs.zero =
+    shaPrimitives.adrsToKey (Adrs.zero.setTreeAddress (2 ^ 64)) := by
+  change shaAdrsKey Adrs.zero = shaAdrsKey (Adrs.zero.setTreeAddress (2 ^ 64))
+  apply Vector.toArray_inj.mp
+  simpa [shaAdrsKey] using
+    (show Adrs.zero.compressSha2 =
+      (Adrs.zero.setTreeAddress (2 ^ 64)).compressSha2 by decide)
 
 example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setLayerAddress 1).compressSha2 := by
   decide
