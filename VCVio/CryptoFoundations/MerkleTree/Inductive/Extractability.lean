@@ -7,7 +7,7 @@ Authors: Quang Dao, Bolton Bailey
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
-public import VCVio.OracleComp.QueryTracking.Collision
+public import VCVio.OracleComp.QueryTracking.Unpredictability
 public import ToMathlib.Data.IndexedBinaryTree.Lemmas
 
 /-!
@@ -123,6 +123,26 @@ or the parent is already `none`) both children are `none`. Implemented as
 def extractor (s : Skeleton) (cache : (spec α).QueryLog) (root : α) : FullData (Option α) s :=
   optionPopulateDown s (extractorChildren cache) root
 
+/-- Values fixed by the commit transcript that can occur as non-dummy labels in the
+extracted tree: the claimed root and both inputs of every commit-phase hash query.
+Duplicates are retained so that the size bound is definitionally tied to the query log. -/
+private def commitTargets (root : α) (log : (spec α).QueryLog) : List α :=
+  root :: log.flatMap fun entry => [entry.1.1, entry.1.2]
+
+omit [DecidableEq α] in
+@[simp]
+private lemma commitTargets_length (root : α) (log : (spec α).QueryLog) :
+    (commitTargets root log).length = 2 * log.length + 1 := by
+  simp [commitTargets, Nat.mul_comm]
+
+omit [DecidableEq α] in
+private lemma commitTargets_mono_root {root root' : α} {log : (spec α).QueryLog}
+    (hroot' : root' ∈ log.flatMap fun entry => [entry.1.1, entry.1.2]) :
+    ∀ {target : α}, target ∈ commitTargets root' log → target ∈ commitTargets root log := by
+  intro target htarget
+  simp only [commitTargets, List.mem_cons] at htarget ⊢
+  exact htarget.elim (fun h => Or.inr (h ▸ hroot')) Or.inr
+
 /--
 The oracle syntax underlying the extractability experiment. It runs the committing
 adversary, snapshots that phase's query log for the extractor, runs the opening adversary,
@@ -140,6 +160,25 @@ def extractabilityInner {s : Skeleton} (𝒜 : Adversary α s) :
     let extractedProof := generateProof extractedTree idx
     let verified ← verifyProof idx leaf root proof
     return (root, aux, ⟨idx, leaf, proof, extractedTree, extractedProof, verified⟩)
+
+/-- The opening-and-verification suffix after fixing a logged commit outcome. This is the
+actual cached continuation used in the ROM proof; it does not resample or reset the oracle. -/
+private def extractabilityRest {s : Skeleton} (𝒜 : Adversary α s)
+    (root : α) (aux : 𝒜.AuxState) (queryLog : (spec α).QueryLog) :
+    OracleComp (spec α) (α × 𝒜.AuxState ×
+        ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
+         FullData (Option α) s × List.Vector (Option α) idx.depth × Bool)) :=
+  do
+    let extractedTree := extractor s queryLog root
+    let ⟨idx, leaf, proof⟩ ← 𝒜.opening aux
+    let extractedProof := generateProof extractedTree idx
+    let verified ← verifyProof idx leaf root proof
+    return (root, aux, ⟨idx, leaf, proof, extractedTree, extractedProof, verified⟩)
+
+private lemma extractabilityInner_eq_commit_bind_rest {s : Skeleton} (𝒜 : Adversary α s) :
+    extractabilityInner 𝒜 =
+      𝒜.commit.withQueryLog >>= fun x => extractabilityRest 𝒜 x.1.1 x.1.2 x.2 := by
+  simp [extractabilityInner, extractabilityRest]
 
 /--
 The extraction-failure event on an `extractabilityInner` transcript: verification passes
@@ -351,6 +390,263 @@ def ChainInLog {s : Skeleton} (log : (spec α).QueryLog) (leaf root : α) :
       ∃ ancestor : α,
         (⟨(proof.head, ancestor), root⟩ : (_i : (α × α)) × α) ∈ log ∧
         ChainInLog log leaf ancestor idxRight proof.tail
+
+/-- A hash chain interpreted in a shared random-oracle cache. Unlike `ChainInLog`,
+this predicate records only the final function graph and therefore identifies cache hits
+and cache misses with the same response. -/
+private def ChainInCache {s : Skeleton} (cache : (spec α).QueryCache) (leaf root : α) :
+    (idx : SkeletonLeafIndex s) → List.Vector α idx.depth → Prop
+  | .ofLeaf, _ => leaf = root
+  | .ofLeft idxLeft, proof =>
+      ∃ ancestor : α,
+        cache (ancestor, proof.head) = some root ∧
+        ChainInCache cache leaf ancestor idxLeft proof.tail
+  | .ofRight idxRight, proof =>
+      ∃ ancestor : α,
+        cache (proof.head, ancestor) = some root ∧
+        ChainInCache cache leaf ancestor idxRight proof.tail
+
+/-- The later phase added a previously uncached query whose answer is `target`. -/
+private def CacheAddsValue (cache₀ cache₁ : (spec α).QueryCache) (target : α) : Prop :=
+  ∃ input : α × α, cache₁ input = some target ∧ cache₀ input = none
+
+private lemma chainInCache_mono {s : Skeleton} (idx : SkeletonLeafIndex s)
+    {cache₁ cache₂ : (spec α).QueryCache} {root leaf : α}
+    {proof : List.Vector α idx.depth}
+    (hle : cache₁ ≤ cache₂) (hchain : ChainInCache cache₁ leaf root idx proof) :
+    ChainInCache cache₂ leaf root idx proof := by
+  induction idx generalizing root with
+  | ofLeaf => exact hchain
+  | @ofLeft sl sr idxLeft ih | @ofRight sl sr idxRight ih =>
+    obtain ⟨ancestor, hentry, hrec⟩ := hchain
+    exact ⟨ancestor, hle hentry, ih hrec⟩
+
+private lemma chainInCache_of_mem_support_getPutativeRoot
+    [DecidableEq α]
+    {s : Skeleton} (idx : SkeletonLeafIndex s)
+    (leaf : α) (proof : List.Vector α idx.depth) (root : α)
+    (cache₀ cache₁ : (spec α).QueryCache)
+    (hmem : (root, cache₁) ∈ support
+      ((simulateQ (spec α).cachingOracle
+        (getPutativeRoot (m := OracleComp (spec α)) idx leaf proof)).run cache₀)) :
+    ChainInCache cache₁ leaf root idx proof := by
+  induction idx generalizing root cache₀ cache₁ with
+  | ofLeaf =>
+    simp only [getPutativeRoot, simulateQ_pure, StateT.run_pure,
+      mem_support_pure_iff, Prod.mk.injEq] at hmem
+    exact hmem.1.symm
+  | @ofLeft sl sr idxLeft ih =>
+    rw [show getPutativeRoot (m := OracleComp (spec α)) (.ofLeft idxLeft) leaf proof =
+      getPutativeRoot idxLeft leaf proof.tail >>= fun ancestor =>
+        singleHash ancestor proof.head from rfl,
+      simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hmem
+    obtain ⟨⟨ancestor, cacheMid⟩, hrec, hhash⟩ := hmem
+    have hentry : cache₁ (ancestor, proof.head) = some root := by
+      exact cachingOracle_query_caches (ancestor, proof.head) cacheMid root cache₁ (by
+        simpa only [singleHash, HasQuery.instOfMonadLift_query,
+          cachingOracle.simulateQ_query] using hhash)
+    have hmono : cacheMid ≤ cache₁ :=
+      simulateQ_cachingOracle_cache_le (singleHash ancestor proof.head) cacheMid _ hhash
+    exact ⟨ancestor, hentry, chainInCache_mono idxLeft hmono
+      (ih proof.tail ancestor cache₀ cacheMid hrec)⟩
+  | @ofRight sl sr idxRight ih =>
+    rw [show getPutativeRoot (m := OracleComp (spec α)) (.ofRight idxRight) leaf proof =
+      getPutativeRoot idxRight leaf proof.tail >>= fun ancestor =>
+        singleHash proof.head ancestor from rfl,
+      simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hmem
+    obtain ⟨⟨ancestor, cacheMid⟩, hrec, hhash⟩ := hmem
+    have hentry : cache₁ (proof.head, ancestor) = some root := by
+      exact cachingOracle_query_caches (proof.head, ancestor) cacheMid root cache₁ (by
+        simpa only [singleHash, HasQuery.instOfMonadLift_query,
+          cachingOracle.simulateQ_query] using hhash)
+    have hmono : cacheMid ≤ cache₁ :=
+      simulateQ_cachingOracle_cache_le (singleHash proof.head ancestor) cacheMid _ hhash
+    exact ⟨ancestor, hentry, chainInCache_mono idxRight hmono
+      (ih proof.tail ancestor cache₀ cacheMid hrec)⟩
+
+private lemma chainInCache_of_mem_support_verifyProof
+    [DecidableEq α]
+    {s : Skeleton} (idx : SkeletonLeafIndex s)
+    (leaf root : α) (proof : List.Vector α idx.depth)
+    (cache₀ cache₁ : (spec α).QueryCache)
+    (hmem : (true, cache₁) ∈ support
+      ((simulateQ (spec α).cachingOracle
+        (verifyProof (m := OracleComp (spec α)) idx leaf root proof)).run cache₀)) :
+    ChainInCache cache₁ leaf root idx proof := by
+  unfold verifyProof at hmem
+  rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hmem
+  obtain ⟨⟨putativeRoot, cacheMid⟩, hroot, hfinal⟩ := hmem
+  simp only [simulateQ_pure, StateT.run_pure, mem_support_pure_iff,
+    Prod.mk.injEq] at hfinal
+  obtain ⟨hroot_eq, rfl⟩ := hfinal
+  have hputative : putativeRoot = root := by
+    simpa only [beq_iff_eq] using hroot_eq.symm
+  subst root
+  exact chainInCache_of_mem_support_getPutativeRoot
+    idx leaf proof putativeRoot cache₀ cache₁ hroot
+
+private lemma fresh_commitTarget_of_extractor_disagreement
+    [DecidableEq α]
+    {s : Skeleton} (idx : SkeletonLeafIndex s)
+    (log : (spec α).QueryLog) (cacheCommit cacheFinal : (spec α).QueryCache)
+    (root leaf : α) (proof : List.Vector α idx.depth)
+    (hlogCache : ∀ entry ∈ log, cacheCommit entry.1 = some entry.2)
+    (hcacheLog : ∀ input value, cacheCommit input = some value →
+      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value)
+    (hno : ¬ CacheHasCollision cacheCommit)
+    (hmono : cacheCommit ≤ cacheFinal)
+    (hchain : ChainInCache cacheFinal leaf root idx proof)
+    (hdisagree :
+      some leaf ≠ (extractor s log root).get idx.toNodeIndex ∨
+      proof.toList.map some ≠ (generateProof (extractor s log root) idx).toList) :
+    ∃ target ∈ commitTargets root log,
+      CacheAddsValue cacheCommit cacheFinal target := by
+  induction idx generalizing root with
+  | ofLeaf =>
+    simp only [ChainInCache] at hchain
+    subst root
+    have hleaf :
+        some leaf ≠ (extractor .leaf log leaf).get SkeletonLeafIndex.ofLeaf.toNodeIndex :=
+      hdisagree.resolve_right (by simp [generateProof])
+    exact (hleaf rfl).elim
+  | @ofLeft sl sr idxLeft ih =>
+    obtain ⟨ancestor, hquery, hchainTail⟩ := hchain
+    cases hfind : log.find? (fun ⟨_, response⟩ => response == root) with
+    | none =>
+        have hfresh : cacheCommit (ancestor, proof.head) = none := by
+          by_contra hne
+          obtain ⟨value, hvalue⟩ := Option.ne_none_iff_exists'.mp hne
+          have hvalueFinal := hmono hvalue
+          rw [hquery] at hvalueFinal
+          obtain rfl := Option.some.inj hvalueFinal
+          obtain ⟨entry, hentry, _, hresponse⟩ :=
+            hcacheLog (ancestor, proof.head) root hvalue
+          have hsome :
+              (log.find? (fun ⟨_, response⟩ => response == root)).isSome = true := by
+            rw [List.find?_isSome]
+            exact ⟨entry, hentry, by simp [hresponse]⟩
+          simp [hfind] at hsome
+        exact ⟨root, by simp [commitTargets], ⟨(ancestor, proof.head), hquery, hfresh⟩⟩
+    | some entry =>
+        obtain ⟨⟨left, right⟩, response⟩ := entry
+        have hresponse : response = root := by
+          have := List.find?_some hfind
+          simpa only [beq_iff_eq] using this
+        subst response
+        have hentry : (⟨(left, right), root⟩ : (_ : α × α) × α) ∈ log :=
+          List.mem_of_find?_eq_some hfind
+        have hcached : cacheCommit (left, right) = some root := hlogCache _ hentry
+        cases hqueryCommit : cacheCommit (ancestor, proof.head) with
+        | none =>
+            exact ⟨root, by simp [commitTargets],
+              ⟨(ancestor, proof.head), hquery, hqueryCommit⟩⟩
+        | some value =>
+            have hvalueFinal := hmono hqueryCommit
+            rw [hquery] at hvalueFinal
+            obtain rfl := Option.some.inj hvalueFinal
+            have hinputs : (left, right) = (ancestor, proof.head) :=
+              cache_lookup_eq_of_noCollision hno hcached
+                ⟨root, hqueryCommit, HEq.rfl⟩
+            have hleft : left = ancestor := congrArg Prod.fst hinputs
+            have hright : right = proof.head := congrArg Prod.snd hinputs
+            subst left
+            subst right
+            have hchildDisagree :
+                some leaf ≠ (extractor sl log ancestor).get idxLeft.toNodeIndex ∨
+                proof.tail.toList.map some ≠
+                  (generateProof (extractor sl log ancestor) idxLeft).toList := by
+              rw [extractor_internal_eq_of_find?_eq sl sr log root ancestor proof.head hfind]
+                at hdisagree
+              rcases hdisagree with hleaf | hproof
+              · exact Or.inl (by
+                  simpa [SkeletonLeafIndex.toNodeIndex, FullData.get] using hleaf)
+              · refine Or.inr fun htail => hproof ?_
+                have hsibling : (extractor sr log proof.head).getRootValue = some proof.head :=
+                  optionPopulateDown_getRootValue _ _
+                have hproofList : proof.toList = proof.head :: proof.tail.toList := by
+                  rw [← proof.cons_head_tail]
+                  rfl
+                rw [hproofList, List.map_cons]
+                change some proof.head :: proof.tail.toList.map some =
+                  (extractor sr log proof.head).getRootValue ::
+                    (generateProof (extractor sl log ancestor) idxLeft).toList
+                rw [hsibling, htail]
+            obtain ⟨target, htarget, hfresh⟩ :=
+              ih ancestor proof.tail hchainTail hchildDisagree
+            have hancestor : ancestor ∈
+                log.flatMap fun entry => [entry.1.1, entry.1.2] := by
+              simp only [List.mem_flatMap]
+              exact ⟨⟨(ancestor, proof.head), root⟩, hentry, by simp⟩
+            exact ⟨target, commitTargets_mono_root hancestor htarget, hfresh⟩
+  | @ofRight sl sr idxRight ih =>
+    obtain ⟨ancestor, hquery, hchainTail⟩ := hchain
+    cases hfind : log.find? (fun ⟨_, response⟩ => response == root) with
+    | none =>
+        have hfresh : cacheCommit (proof.head, ancestor) = none := by
+          by_contra hne
+          obtain ⟨value, hvalue⟩ := Option.ne_none_iff_exists'.mp hne
+          have hvalueFinal := hmono hvalue
+          rw [hquery] at hvalueFinal
+          obtain rfl := Option.some.inj hvalueFinal
+          obtain ⟨entry, hentry, _, hresponse⟩ :=
+            hcacheLog (proof.head, ancestor) root hvalue
+          have hsome :
+              (log.find? (fun ⟨_, response⟩ => response == root)).isSome = true := by
+            rw [List.find?_isSome]
+            exact ⟨entry, hentry, by simp [hresponse]⟩
+          simp [hfind] at hsome
+        exact ⟨root, by simp [commitTargets], ⟨(proof.head, ancestor), hquery, hfresh⟩⟩
+    | some entry =>
+        obtain ⟨⟨left, right⟩, response⟩ := entry
+        have hresponse : response = root := by
+          have := List.find?_some hfind
+          simpa only [beq_iff_eq] using this
+        subst response
+        have hentry : (⟨(left, right), root⟩ : (_ : α × α) × α) ∈ log :=
+          List.mem_of_find?_eq_some hfind
+        have hcached : cacheCommit (left, right) = some root := hlogCache _ hentry
+        cases hqueryCommit : cacheCommit (proof.head, ancestor) with
+        | none =>
+            exact ⟨root, by simp [commitTargets],
+              ⟨(proof.head, ancestor), hquery, hqueryCommit⟩⟩
+        | some value =>
+            have hvalueFinal := hmono hqueryCommit
+            rw [hquery] at hvalueFinal
+            obtain rfl := Option.some.inj hvalueFinal
+            have hinputs : (left, right) = (proof.head, ancestor) :=
+              cache_lookup_eq_of_noCollision hno hcached
+                ⟨root, hqueryCommit, HEq.rfl⟩
+            have hleft : left = proof.head := congrArg Prod.fst hinputs
+            have hright : right = ancestor := congrArg Prod.snd hinputs
+            subst left
+            subst right
+            have hchildDisagree :
+                some leaf ≠ (extractor sr log ancestor).get idxRight.toNodeIndex ∨
+                proof.tail.toList.map some ≠
+                  (generateProof (extractor sr log ancestor) idxRight).toList := by
+              rw [extractor_internal_eq_of_find?_eq sl sr log root proof.head ancestor hfind]
+                at hdisagree
+              rcases hdisagree with hleaf | hproof
+              · exact Or.inl (by
+                  simpa [SkeletonLeafIndex.toNodeIndex, FullData.get] using hleaf)
+              · refine Or.inr fun htail => hproof ?_
+                have hsibling : (extractor sl log proof.head).getRootValue = some proof.head :=
+                  optionPopulateDown_getRootValue _ _
+                have hproofList : proof.toList = proof.head :: proof.tail.toList := by
+                  rw [← proof.cons_head_tail]
+                  rfl
+                rw [hproofList, List.map_cons]
+                change some proof.head :: proof.tail.toList.map some =
+                  (extractor sl log proof.head).getRootValue ::
+                    (generateProof (extractor sr log ancestor) idxRight).toList
+                rw [hsibling, htail]
+            obtain ⟨target, htarget, hfresh⟩ :=
+              ih ancestor proof.tail hchainTail hchildDisagree
+            have hancestor : ancestor ∈
+                log.flatMap fun entry => [entry.1.1, entry.1.2] := by
+              simp only [List.mem_flatMap]
+              exact ⟨⟨(proof.head, ancestor), root⟩, hentry, by simp⟩
+            exact ⟨target, commitTargets_mono_root hancestor htarget, hfresh⟩
 
 private lemma chainInLog_mono {s : Skeleton} (idx : SkeletonLeafIndex s)
     {log1 log2 : (spec α).QueryLog} {root leaf : α}
