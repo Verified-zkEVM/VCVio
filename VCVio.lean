@@ -64,6 +64,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.Perfect
 public import VCVio.CryptoFoundations.MerkleTree.Vector.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Vector.Defs
 public import VCVio.CryptoFoundations.PRF
