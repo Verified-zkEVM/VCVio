@@ -18,8 +18,10 @@ its typed indices and the heap-style `ℕ` addressing used by XMSS / FIPS 205: a
   of `i` (bit `z - 1` chooses the child of the root).
 * `SkeletonLeafIndex.natIndex t idx` — the horizontal index of a leaf of the height-`z` subtree
   whose root has horizontal index `t`; `natIndex_ofNat` shows it inverts `ofNat`.
-* `SkeletonInternalIndex.natAddr t a` — the `(height, horizontal index)` address of an internal
-  node of that subtree.
+* `NatAddr` — a `(height, horizontal index)` node address.
+* `SkeletonInternalIndex.natAddr t a` — the `NatAddr` of an internal node of that subtree;
+  `natAddr_index_of_isAncestorOf` shows that an ancestor of a leaf at horizontal index `i`
+  sits at height `h` and horizontal index `i / 2 ^ h`.
 -/
 
 @[expose] public section
@@ -56,11 +58,22 @@ def SkeletonLeafIndex.natIndex : {z : ℕ} → ℕ → SkeletonLeafIndex (Skelet
   | _ + 1, t, .ofLeft i => natIndex (2 * t) i
   | _ + 1, t, .ofRight i => natIndex (2 * t + 1) i
 
+/-- The heap-style address of a node of a perfect binary tree: its height above the leaves and
+its horizontal index within that level. The children of `⟨h + 1, t⟩` are `⟨h, 2t⟩` and
+`⟨h, 2t + 1⟩`. -/
+@[ext]
+structure NatAddr where
+  /-- Height above the leaf level. -/
+  height : ℕ
+  /-- Horizontal index within the level, counted from the left. -/
+  index : ℕ
+  deriving DecidableEq, Repr
+
 /-- The `(height, horizontal index)` address of an internal node of the perfect height-`z`
-subtree whose root has horizontal index `t`. The root itself has address `(z, t)`. -/
+subtree whose root has horizontal index `t`. The root itself has address `⟨z, t⟩`. -/
 def SkeletonInternalIndex.natAddr :
-    {z : ℕ} → ℕ → SkeletonInternalIndex (Skeleton.perfect z) → ℕ × ℕ
-  | z + 1, t, .ofInternal => (z + 1, t)
+    {z : ℕ} → ℕ → SkeletonInternalIndex (Skeleton.perfect z) → NatAddr
+  | z + 1, t, .ofInternal => ⟨z + 1, t⟩
   | _ + 1, t, .ofLeft a => natAddr (2 * t) a
   | _ + 1, t, .ofRight a => natAddr (2 * t + 1) a
 
@@ -94,10 +107,10 @@ theorem SkeletonLeafIndex.natIndex_ofNat (z i : ℕ) :
       have : 2 * (i / 2 ^ (z + 1)) + 1 = i / 2 ^ z := by omega
       simp only [SkeletonLeafIndex.natIndex, this, ih]
 
-/-- The height component of an internal address lies in `(0, z]`. -/
-theorem SkeletonInternalIndex.natAddr_fst_mem {z : ℕ} (t : ℕ)
+/-- The height component of an internal address is positive and at most the tree height. -/
+theorem SkeletonInternalIndex.natAddr_height_pos_le {z : ℕ} (t : ℕ)
     (a : SkeletonInternalIndex (Skeleton.perfect z)) :
-    0 < (a.natAddr t).1 ∧ (a.natAddr t).1 ≤ z := by
+    0 < (a.natAddr t).height ∧ (a.natAddr t).height ≤ z := by
   induction z generalizing t with
   | zero => nomatch a
   | succ z ih =>
@@ -105,5 +118,44 @@ theorem SkeletonInternalIndex.natAddr_fst_mem {z : ℕ} (t : ℕ)
     | ofInternal => simp [SkeletonInternalIndex.natAddr]
     | ofLeft a => simp only [SkeletonInternalIndex.natAddr]; have := ih (2 * t) a; omega
     | ofRight a => simp only [SkeletonInternalIndex.natAddr]; have := ih (2 * t + 1) a; omega
+
+/-- Every leaf of the height-`z` subtree rooted at horizontal index `t` has horizontal index
+`t` once its low `z` bits are discarded. -/
+theorem SkeletonLeafIndex.natIndex_div_pow {z : ℕ} (t : ℕ)
+    (l : SkeletonLeafIndex (Skeleton.perfect z)) :
+    l.natIndex t / 2 ^ z = t := by
+  induction z generalizing t with
+  | zero => cases l; simp [SkeletonLeafIndex.natIndex]
+  | succ z ih =>
+    cases l with
+    | ofLeft l =>
+      simp only [SkeletonLeafIndex.natIndex]
+      rw [Nat.pow_succ, ← Nat.div_div_eq_div_mul, ih]; omega
+    | ofRight l =>
+      simp only [SkeletonLeafIndex.natIndex]
+      rw [Nat.pow_succ, ← Nat.div_div_eq_div_mul, ih]; omega
+
+/-- The horizontal index of an internal node lying on the root path of a leaf is the leaf's
+horizontal index shifted down by the node's height: ancestors are determined by `(leaf, height)`
+in the heap layout. -/
+theorem SkeletonInternalIndex.natAddr_index_of_isAncestorOf {z : ℕ} (t : ℕ)
+    {a : SkeletonInternalIndex (Skeleton.perfect z)} {l : SkeletonLeafIndex (Skeleton.perfect z)}
+    (h : a.IsAncestorOf l) :
+    (a.natAddr t).index = l.natIndex t / 2 ^ (a.natAddr t).height := by
+  induction z generalizing t with
+  | zero => nomatch a
+  | succ z ih =>
+    cases a with
+    | ofInternal =>
+      simp only [SkeletonInternalIndex.natAddr]
+      exact (SkeletonLeafIndex.natIndex_div_pow t l).symm
+    | ofLeft a =>
+      cases l with
+      | ofLeft l => exact ih (2 * t) h
+      | ofRight l => exact absurd h (by simp)
+    | ofRight a =>
+      cases l with
+      | ofRight l => exact ih (2 * t + 1) h
+      | ofLeft l => exact absurd h (by simp)
 
 end BinaryTree

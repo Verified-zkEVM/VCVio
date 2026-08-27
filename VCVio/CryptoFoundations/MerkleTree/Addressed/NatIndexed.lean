@@ -30,11 +30,18 @@ and whose internal node at `(h, i)` is `nodeHash h i (left child) (right child)`
 * `climb nodeHash idx node auth` — root recovery from a leaf value and an authentication path
   (Algorithms 11 / 17); the engine's `getPutativeRootAddressedWithHash`.
 * `climb_authPath` — completeness, from `addressed_functional_completeness`.
-* `climb_binding` — oriented binding, from `addressed_oriented_binding`: an adversarial opening
-  that verifies against the honest root with a different leaf value yields, at some internal
-  address `(h, i)`, a collision of `nodeHash h i` whose first endpoint is the honestly computed
-  child pair at that address. This is the shape consumed by a multi-target target-collision
-  reduction on the node hash.
+* `findCollision leaf nodeHash idx y auth` — the ℕ-addressed collision extractor: the engine's
+  `findCollisionAddressed` run against the honest opening of leaf `idx`, returning the height
+  `h` of the collision node together with the honest and adversarial child pairs. The node's
+  horizontal index is not returned because it is determined: every address the kernel can
+  return is an ancestor of leaf `idx`, hence sits at horizontal index `idx / 2 ^ h`
+  (`findCollision_sound`, `findCollision_oriented`).
+* `climb_binding` — oriented binding, from `findCollision_oriented`: an adversarial opening
+  that verifies against the honest root with a different leaf value yields, at some height
+  `0 < h ≤ z`, a collision of `nodeHash h (idx / 2 ^ h)` whose first endpoint is the honestly
+  computed child pair at that address. Since the target is determined by `(idx, h)`, a
+  multi-target target-collision reduction on the node hash has at most `z` candidate targets
+  per opened leaf.
 -/
 
 @[expose] public section
@@ -53,7 +60,7 @@ def leafData (leaf : ℕ → Y) (z t : ℕ) : LeafData Y (Skeleton.perfect z) :=
 `(height, horizontal index)`-indexed hash by reading each internal node's address. -/
 def nodeHashAt (nodeHash : ℕ → ℕ → Y → Y → Y) (z t : ℕ) :
     SkeletonInternalIndex (Skeleton.perfect z) → Y → Y → Y :=
-  fun a => nodeHash (a.natAddr t).1 (a.natAddr t).2
+  fun a => nodeHash (a.natAddr t).height (a.natAddr t).index
 
 /-- The fully populated perfect subtree at `(height z, horizontal index t)`. -/
 def tree (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (z t : ℕ) :
@@ -68,7 +75,12 @@ def merkleRoot (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (z 
 theorem tree_zero (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (t : ℕ) :
     tree leaf nodeHash 0 t = .leaf (leaf t) := rfl
 
-/-- The subtree at `(z + 1, t)` hashes the subtrees at `(z, 2t)` and `(z, 2t + 1)`. -/
+/-- The subtree at `(z + 1, t)` hashes the subtrees at `(z, 2t)` and `(z, 2t + 1)`.
+
+This (like `tree_zero`) is `rfl` because `Skeleton.perfect` is `implicit_reducible`,
+`LeafData.ofFun` / `populateUpAddressed` unfold structurally on `.internal`, and the `.ofLeft` /
+`.ofRight` cases of `SkeletonLeafIndex.natIndex` and `SkeletonInternalIndex.natAddr` recurse with
+exactly `2 * t` / `2 * t + 1`. A change to any of those reduction behaviours will surface here. -/
 theorem tree_succ (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (z t : ℕ) :
     tree leaf nodeHash (z + 1) t
       = .internal (nodeHash (z + 1) t (merkleRoot leaf nodeHash z (2 * t))
@@ -136,8 +148,8 @@ roots at that `(height, index)` address. -/
 theorem childPairAt_tree (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) {z : ℕ} (t : ℕ)
     (a : SkeletonInternalIndex (Skeleton.perfect z)) :
     childPairAt (tree leaf nodeHash z t) a
-      = (merkleRoot leaf nodeHash ((a.natAddr t).1 - 1) (2 * (a.natAddr t).2),
-          merkleRoot leaf nodeHash ((a.natAddr t).1 - 1) (2 * (a.natAddr t).2 + 1)) := by
+      = (merkleRoot leaf nodeHash ((a.natAddr t).height - 1) (2 * (a.natAddr t).index),
+          merkleRoot leaf nodeHash ((a.natAddr t).height - 1) (2 * (a.natAddr t).index + 1)) := by
   induction z generalizing t with
   | zero => nomatch a
   | succ z ih =>
@@ -148,29 +160,114 @@ theorem childPairAt_tree (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y 
     | ofLeft a => rw [tree_succ]; simpa [SkeletonInternalIndex.natAddr] using ih (2 * t) a
     | ofRight a => rw [tree_succ]; simpa [SkeletonInternalIndex.natAddr] using ih (2 * t + 1) a
 
+/-- The horizontal index of an ancestor of the leaf `ofNat z idx`, in the subtree rooted at
+`idx / 2 ^ z`, is `idx` shifted down by the ancestor's height. -/
+theorem natAddr_index_of_isAncestorOf_ofNat {z idx : ℕ}
+    {a : SkeletonInternalIndex (Skeleton.perfect z)}
+    (h : a.IsAncestorOf (SkeletonLeafIndex.ofNat z idx)) :
+    (a.natAddr (idx / 2 ^ z)).index = idx / 2 ^ (a.natAddr (idx / 2 ^ z)).height := by
+  rw [a.natAddr_index_of_isAncestorOf (idx / 2 ^ z) h, SkeletonLeafIndex.natIndex_ofNat]
+
+/-- The honestly computed child pair of the internal node at `(h, i)`. -/
+def honestChildren (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (h i : ℕ) : Y × Y :=
+  (merkleRoot leaf nodeHash (h - 1) (2 * i), merkleRoot leaf nodeHash (h - 1) (2 * i + 1))
+
+/-- Collision extraction, as data. Run the engine's `findCollisionAddressed` kernel against the
+honest opening of leaf `idx` (honest leaf value and honest authentication path over
+`auth.length` levels) and the adversarial opening `(y, auth)`. On success returns the height `h`
+of the collision node, the honest child pair there, and the adversarial child pair; the node's
+horizontal index is `idx / 2 ^ h` (`findCollision_sound`). -/
+def findCollision [DecidableEq Y] (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (idx : ℕ)
+    (y : Y) (auth : List Y) : Option (ℕ × (Y × Y) × (Y × Y)) :=
+  (findCollisionAddressed (nodeHashAt nodeHash auth.length (idx / 2 ^ auth.length))
+    (SkeletonLeafIndex.ofNat auth.length idx)
+    (generateProof (tree leaf nodeHash auth.length (idx / 2 ^ auth.length))
+      (SkeletonLeafIndex.ofNat auth.length idx))
+    ⟨auth.reverse, by simp⟩ (leaf idx) y).map
+    fun w => ((w.1.natAddr (idx / 2 ^ auth.length)).height, (w.2.1, w.2.2.1),
+      (w.2.2.2.1, w.2.2.2.2))
+
+/-- `findCollision` on a path of known length `z`, unfolded to the engine kernel. -/
+theorem findCollision_eq [DecidableEq Y] (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y)
+    (idx : ℕ) (y : Y) (auth : List Y) {z : ℕ} (hlen : auth.length = z) :
+    findCollision leaf nodeHash idx y auth
+      = (findCollisionAddressed (nodeHashAt nodeHash z (idx / 2 ^ z))
+          (SkeletonLeafIndex.ofNat z idx)
+          (generateProof (tree leaf nodeHash z (idx / 2 ^ z)) (SkeletonLeafIndex.ofNat z idx))
+          ⟨auth.reverse, by simp [hlen]⟩ (leaf idx) y).map
+          fun w => ((w.1.natAddr (idx / 2 ^ z)).height, (w.2.1, w.2.2.1),
+            (w.2.2.2.1, w.2.2.2.2)) := by
+  subst hlen; rfl
+
+/-- **Soundness of `findCollision`.** Anything it returns is a collision of `nodeHash` at the
+address `(h, idx / 2 ^ h)` of an internal node on the root path of leaf `idx`. -/
+theorem findCollision_sound [DecidableEq Y] (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y)
+    (z idx : ℕ) (y : Y) (auth : List Y) (hlen : auth.length = z)
+    (h : ℕ) (c₁ c₂ : Y × Y) (hw : findCollision leaf nodeHash idx y auth = some (h, c₁, c₂)) :
+    0 < h ∧ h ≤ z ∧ c₁ ≠ c₂ ∧
+      nodeHash h (idx / 2 ^ h) c₁.1 c₁.2 = nodeHash h (idx / 2 ^ h) c₂.1 c₂.2 := by
+  rw [findCollision_eq leaf nodeHash idx y auth hlen, Option.map_eq_some_iff] at hw
+  obtain ⟨w, hw, hmap⟩ := hw
+  simp only [Prod.mk.injEq] at hmap
+  obtain ⟨rfl, rfl, rfl⟩ := hmap
+  have hcol := findCollisionAddressed_sound _ _ _ _ _ _ w hw
+  have hanc := findCollisionAddressed_isAncestorOf _ _ _ _ _ _ w hw
+  have hidx := natAddr_index_of_isAncestorOf_ofNat hanc
+  obtain ⟨hpos, hle⟩ := w.1.natAddr_height_pos_le (idx / 2 ^ z)
+  refine ⟨hpos, hle, ?_, ?_⟩
+  · simpa [AddressedCollision, Prod.ext_iff] using hcol.1
+  · have := hcol.2
+    simp only [nodeHashAt, hidx] at this
+    exact this
+
+/-- **Oriented extraction.** Against an adversarial opening that verifies to the honest root
+with a leaf value `y ≠ leaf idx`, `findCollision` succeeds and its first pair is the honest
+child pair at the returned address `(h, idx / 2 ^ h)`. -/
+theorem findCollision_oriented [DecidableEq Y] (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y)
+    (z idx : ℕ) (y : Y) (auth : List Y) (hlen : auth.length = z)
+    (hroot : climb nodeHash idx y auth = merkleRoot leaf nodeHash z (idx / 2 ^ z))
+    (hne : leaf idx ≠ y) :
+    ∃ (h : ℕ) (c : Y × Y),
+      findCollision leaf nodeHash idx y auth
+        = some (h, honestChildren leaf nodeHash h (idx / 2 ^ h), c) := by
+  rw [climb_eq nodeHash idx y auth hlen] at hroot
+  have hne' : (leafData leaf z (idx / 2 ^ z)).get (SkeletonLeafIndex.ofNat z idx) ≠ y := by
+    rwa [leafData_get_ofNat]
+  obtain ⟨a, c, hwalk⟩ := findCollisionAddressed_oriented (nodeHashAt nodeHash z (idx / 2 ^ z))
+    (leafData leaf z (idx / 2 ^ z)) (SkeletonLeafIndex.ofNat z idx) y _ hroot hne'
+  rw [leafData_get_ofNat] at hwalk
+  have hanc := findCollisionAddressed_isAncestorOf _ _ _ _ _ _ _ hwalk
+  have hidx := natAddr_index_of_isAncestorOf_ofNat hanc
+  refine ⟨(a.natAddr (idx / 2 ^ z)).height, c, ?_⟩
+  rw [findCollision_eq leaf nodeHash idx y auth hlen]
+  rw [show tree leaf nodeHash z (idx / 2 ^ z)
+      = buildMerkleTreeAddressedWithHash (leafData leaf z (idx / 2 ^ z))
+          (nodeHashAt nodeHash z (idx / 2 ^ z)) from rfl, hwalk, Option.map_some]
+  have key := childPairAt_tree leaf nodeHash (idx / 2 ^ z) a
+  unfold tree at key
+  rw [key, ← hidx]
+  rfl
+
 /-- **Oriented Merkle binding.** An authentication path of length `z` that climbs from a leaf
-value `y ≠ leaf idx` to the honest height-`z` root exhibits, at some internal address `(h, i)`
-with `0 < h ≤ z`, a collision of `nodeHash h i` whose first endpoint is the honestly computed
-child pair at `(h, i)` — a target fixed by the honest tree, before the adversarial opening. -/
+value `y ≠ leaf idx` to the honest height-`z` root exhibits, at the internal node of height
+`0 < h ≤ z` on the root path of leaf `idx` — address `(h, idx / 2 ^ h)` — a collision of
+`nodeHash h (idx / 2 ^ h)` whose first endpoint is the honestly computed child pair there: a
+target fixed by the honest tree, before the adversarial opening, and determined by `(idx, h)`.
+Propositional form of `findCollision_oriented`. -/
 theorem climb_binding (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (z idx : ℕ) (y : Y)
     (auth : List Y) (hlen : auth.length = z)
     (hroot : climb nodeHash idx y auth = merkleRoot leaf nodeHash z (idx / 2 ^ z))
     (hne : leaf idx ≠ y) :
-    ∃ (h i : ℕ) (c : Y × Y), 0 < h ∧ h ≤ z ∧
-      (merkleRoot leaf nodeHash (h - 1) (2 * i), merkleRoot leaf nodeHash (h - 1) (2 * i + 1))
+    ∃ (h : ℕ) (c : Y × Y), 0 < h ∧ h ≤ z ∧
+      (merkleRoot leaf nodeHash (h - 1) (2 * (idx / 2 ^ h)),
+          merkleRoot leaf nodeHash (h - 1) (2 * (idx / 2 ^ h) + 1))
         ≠ c ∧
-      nodeHash h i (merkleRoot leaf nodeHash (h - 1) (2 * i))
-          (merkleRoot leaf nodeHash (h - 1) (2 * i + 1))
-        = nodeHash h i c.1 c.2 := by
-  rw [climb_eq nodeHash idx y auth hlen] at hroot
-  have hne' : (leafData leaf z (idx / 2 ^ z)).get (SkeletonLeafIndex.ofNat z idx) ≠ y := by
-    rwa [leafData_get_ofNat]
-  obtain ⟨a, c, hc, hcol⟩ := addressed_oriented_binding (nodeHashAt nodeHash z (idx / 2 ^ z))
-    (leafData leaf z (idx / 2 ^ z)) (SkeletonLeafIndex.ofNat z idx) y _ hroot hne'
-  obtain ⟨hpos, hle⟩ := a.natAddr_fst_mem (idx / 2 ^ z)
-  have key := childPairAt_tree leaf nodeHash (idx / 2 ^ z) a
-  unfold tree at key
-  rw [key] at hc hcol
-  exact ⟨(a.natAddr (idx / 2 ^ z)).1, (a.natAddr (idx / 2 ^ z)).2, c, hpos, hle, hc, hcol⟩
+      nodeHash h (idx / 2 ^ h) (merkleRoot leaf nodeHash (h - 1) (2 * (idx / 2 ^ h)))
+          (merkleRoot leaf nodeHash (h - 1) (2 * (idx / 2 ^ h) + 1))
+        = nodeHash h (idx / 2 ^ h) c.1 c.2 := by
+  let : DecidableEq Y := Classical.decEq Y
+  obtain ⟨h, c, hw⟩ := findCollision_oriented leaf nodeHash z idx y auth hlen hroot hne
+  obtain ⟨hpos, hle, hne, hcol⟩ := findCollision_sound leaf nodeHash z idx y auth hlen h _ c hw
+  exact ⟨h, c, hpos, hle, hne, hcol⟩
 
 end PerfectMerkleTree

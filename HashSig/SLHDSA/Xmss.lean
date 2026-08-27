@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Nicolas Consigny
+Authors: Nicolas Consigny, Bolton Bailey
 -/
 
 module
@@ -21,9 +21,10 @@ available here:
 * `xmssPkFromSig_xmssSign` — XMSS correctness, from `PerfectMerkleTree.climb_authPath` together
   with WOTS+ correctness (`wotsPkFromSig_wotsSign`);
 * `xmssPkFromSig_binding` — an XMSS signature whose recovered leaf differs from the honest WOTS+
-  public key but which still recovers the honest root exhibits a collision of `H` at some `TREE`
-  address, against the honestly precommitted child pair. This is the hook for the multi-target
-  target-collision term of `slhdsa_euf_cma_security`.
+  public key but which still recovers the honest root exhibits a collision of `H` at the `TREE`
+  address `(h, idx / 2 ^ h)` of an ancestor of leaf `idx`, against the honestly precommitted
+  child pair. The target is determined by the forgery's `(idx, h)`, so this is the hook for the
+  multi-target target-collision term of `slhdsa_euf_cma_security`.
 
 ## References
 
@@ -101,21 +102,24 @@ theorem xmssPkFromSig_xmssSign (prims : Primitives p) (msg : prims.Y) (sk : prim
 
 /-- **XMSS binding.** A signature at leaf `idx < 2^{h'}` with a well-formed authentication path
 whose recovered WOTS+ public key differs from the honest leaf, yet which recovers the honest XMSS
-root, exhibits a collision of `H` at the `TREE` address of some internal node `(h, i)`: the
-honestly computed child pair at that node and a distinct pair hash to the same value. The first
-endpoint is fixed by the honest tree (a valid target for a target-collision reduction). -/
+root, exhibits a collision of `H` at the `TREE` address of the ancestor of leaf `idx` at some
+height `0 < h ≤ h'` — node `(h, idx / 2 ^ h)`: the honestly computed child pair at that node and
+a distinct pair hash to the same value. The first endpoint is fixed by the honest tree and
+determined by `(idx, h)` (a valid target for a multi-target target-collision reduction). -/
 theorem xmssPkFromSig_binding (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) (idx : ℕ) (hidx : idx < 2 ^ p.hp)
     (sig : XmssSig p prims) (hlen : sig.2.length = p.hp)
     (hroot : xmssPkFromSig prims idx sig msg pk adrs = xmssRoot prims sk pk adrs)
     (hne : xmssLeaf prims sk pk adrs idx
       ≠ wotsPkFromSig prims sig.1 msg pk (wotsLeafAdrs adrs idx)) :
-    ∃ (h i : ℕ) (c : prims.Y × prims.Y), 0 < h ∧ h ≤ p.hp ∧
-      (xmssNode prims sk pk adrs (h - 1) (2 * i), xmssNode prims sk pk adrs (h - 1) (2 * i + 1))
+    ∃ (h : ℕ) (c : prims.Y × prims.Y), 0 < h ∧ h ≤ p.hp ∧
+      (xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h)),
+          xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h) + 1))
         ≠ c ∧
-      prims.H pk (xmssNodeAdrs adrs h i) (xmssNode prims sk pk adrs (h - 1) (2 * i))
-          (xmssNode prims sk pk adrs (h - 1) (2 * i + 1))
-        = prims.H pk (xmssNodeAdrs adrs h i) c.1 c.2 := by
+      prims.H pk (xmssNodeAdrs adrs h (idx / 2 ^ h))
+          (xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h)))
+          (xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h) + 1))
+        = prims.H pk (xmssNodeAdrs adrs h (idx / 2 ^ h)) c.1 c.2 := by
   have hroot' : PerfectMerkleTree.climb (xmssNodeHash prims pk adrs) idx
       (wotsPkFromSig prims sig.1 msg pk (wotsLeafAdrs adrs idx)) sig.2
       = PerfectMerkleTree.merkleRoot (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs)
