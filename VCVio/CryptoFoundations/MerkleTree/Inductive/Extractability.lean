@@ -7,7 +7,7 @@ Authors: Quang Dao, Bolton Bailey
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
-public import VCVio.OracleComp.QueryTracking.Birthday
+public import VCVio.OracleComp.QueryTracking.Collision
 public import ToMathlib.Data.IndexedBinaryTree.Lemmas
 
 /-!
@@ -36,15 +36,13 @@ under namespace `InductiveMerkleTree`:
 * `ChainInLog`: structural predicate witnessing that a query log contains the hash chain
   from `root` down to `leaf` along the path determined by `idx`.
 
-## Main results
+## Current proof boundary
 
-* `independentQuery_consistency`: a consistency bound for the non-random-function
-  semantics in which every hash query receives a fresh independent answer. This auxiliary
-  theorem is not a Merkle-tree extractability theorem in the random-oracle model.
-This is because we have simplified the proof at the expense of tightness
-(tighter, that is, in the qb >> size case)
-by analyzing collisions for the full game at once.
-A future improvement might be to re-structure the proof to recover the tighter bound.
+This file proves the deterministic extraction and collision lemmas and a total-query bound
+for the shared-cache experiment. It deliberately does not state a probabilistic extractability
+bound yet. Such a theorem must separately bound fresh post-commit oracle answers that hit one
+of the non-dummy labels in the commit-time partial tree; treating the verifier's last hash as
+an independent fresh query is invalid under shared random-function semantics.
 
 ## TODO
 
@@ -151,16 +149,18 @@ def extractabilityInner {s : Skeleton} (𝒜 : Adversary α s) :
 
 /--
 The extraction-failure event on an `extractabilityInner` transcript: verification passes
-but the extracted leaf or authentication proof does not match the adversary's opening.
+but the extracted leaf or authentication proof does not match the adversary's opening. This
+is the single-leaf specialization of Merkle extractability, and compares the full authentication
+path at that leaf.
 -/
 def AdversaryWinsExtractabilityInner {s : Skeleton} {AuxState : Type} :
     α × AuxState ×
       ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
        FullData (Option α) s × List.Vector (Option α) idx.depth × Bool) → Prop
   | (_, _, ⟨idx, leaf, proof, extractedTree, extractedProof, verified⟩) =>
-    verified ∧
-    (not (leaf = extractedTree.get idx.toNodeIndex)
-    ∨ not (proof.toList.map Option.some = extractedProof.toList))
+    verified = true ∧
+      (some leaf ≠ extractedTree.get idx.toNodeIndex ∨
+        proof.toList.map some ≠ extractedProof.toList)
 
 /-- The Merkle-tree extractability experiment in the random-oracle model. All queries made
 by the committing adversary, opening adversary, and verifier are interpreted through one
@@ -169,7 +169,7 @@ def extractabilityGame {s : Skeleton} (𝒜 : Adversary α s) :
     OracleComp (spec α) (α × 𝒜.AuxState ×
         ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
          FullData (Option α) s × List.Vector (Option α) idx.depth × Bool)) :=
-  Prod.fst <$> (simulateQ (spec α).cachingOracle (extractabilityInner 𝒜)).run ∅
+  (spec α).withCacheOverlay ∅ (extractabilityInner 𝒜)
 
 /-- The extraction-failure event for `extractabilityGame`. -/
 def AdversaryWinsExtractabilityGame {s : Skeleton} {AuxState : Type} :
@@ -568,168 +568,5 @@ private theorem extractabilityInner_not_logHasCollision_match
       (chainInLog_mono idx h_sub_v
         (chainInLog_of_mem_support_verifyProof idx leaf root proof log_v h_vp)))
       h_not_logHasCollision
-
-/--
-The probability that a single hash evaluates to a specific root value
-(without any prior queries)
-is the reciprocal of the range size.
--/
-private lemma probOutput_singleHash_eq_inv_card
-    [Fintype α] [Inhabited α]
-    (a b root : α) :
-    Pr[= root | (singleHash (m := OracleComp (spec α)) a b :
-                  OracleComp (spec α) α)] =
-      (Fintype.card α : ENNReal)⁻¹ := by
-  rw [show (singleHash (m := OracleComp (spec α)) a b : OracleComp (spec α) α) =
-        (liftM ((spec α).query (a, b)) : OracleComp (spec α) α) by simp [singleHash],
-    probOutput_query (spec := spec α) (a, b) root]
-
-/--
-The probability that `getPutativeRoot` evaluates to a specific root value at a positive-depth index
-(without any prior queries) is the reciprocal of the range size.
--/
-private lemma probOutput_getPutativeRoot_eq_inv_card_of_pos_depth
-    [Fintype α] [Inhabited α]
-    {s : Skeleton} {idx : SkeletonLeafIndex s} (h_pos : 0 < idx.depth)
-    (leaf : α) (proof : List.Vector α idx.depth) (root : α) :
-    Pr[= root | (getPutativeRoot (m := OracleComp (spec α)) idx leaf proof :
-                  OracleComp (spec α) α)] =
-      (Fintype.card α : ENNReal)⁻¹ := by
-  cases idx with
-  | ofLeaf => exact absurd h_pos (Nat.lt_irrefl _)
-  | @ofLeft sl sr idxLeft =>
-    rw [show getPutativeRoot (m := OracleComp (spec α)) (.ofLeft idxLeft) leaf proof =
-        getPutativeRoot idxLeft leaf proof.tail >>= (singleHash · proof.head) from rfl,
-      probOutput_bind_eq_tsum]
-    simp_rw [fun a => probOutput_singleHash_eq_inv_card a proof.head root,
-      ENNReal.tsum_mul_right, tsum_probOutput_of_liftM_PMF, one_mul]
-  | @ofRight sl sr idxRight =>
-    rw [show getPutativeRoot (m := OracleComp (spec α)) (.ofRight idxRight) leaf proof =
-        getPutativeRoot idxRight leaf proof.tail >>= (singleHash proof.head ·) from rfl,
-      probOutput_bind_eq_tsum]
-    simp_rw [fun a => probOutput_singleHash_eq_inv_card proof.head a root,
-      ENNReal.tsum_mul_right, tsum_probOutput_of_liftM_PMF, one_mul]
-
-/--
-The probability that `verifyProof` evaluates to `true` at a positive-depth index
-(without any prior queries) is the reciprocal of the range size.
--/
-private lemma probEvent_verifyProof_eq_true_eq_inv_card_of_pos_depth
-    [DecidableEq α] [Fintype α] [Inhabited α]
-    {s : Skeleton} {idx : SkeletonLeafIndex s} (h_pos : 0 < idx.depth)
-    (leaf root : α) (proof : List.Vector α idx.depth) :
-    Pr[(· = true) | (verifyProof (m := OracleComp (spec α)) idx leaf root proof :
-                      OracleComp (spec α) Bool)] =
-      (Fintype.card α : ENNReal)⁻¹ := by
-  rw [show (verifyProof (m := OracleComp (spec α)) idx leaf root proof :
-              OracleComp (spec α) Bool) =
-        getPutativeRoot idx leaf proof >>= (pure ∘ (· == root)) from rfl,
-    probEvent_bind_pure_comp]
-  simp only [Function.comp_def, beq_iff_eq, probEvent_eq_eq_probOutput]
-  exact probOutput_getPutativeRoot_eq_inv_card_of_pos_depth h_pos leaf proof root
-
-private lemma probEvent_verifyProof_extractor_none_le_inv_card
-    [DecidableEq α] [Fintype α] [Inhabited α]
-    {s : Skeleton} (idx : SkeletonLeafIndex s) (leaf root : α)
-    (proof : List.Vector α idx.depth) (log_c : (spec α).QueryLog) :
-    Pr[fun verified : Bool => verified = true ∧
-         (extractor s log_c root).get idx.toNodeIndex = none |
-       (verifyProof (m := OracleComp (spec α)) idx leaf root proof :
-         OracleComp (spec α) Bool)] ≤
-      (Fintype.card α : ENNReal)⁻¹ := by
-  by_cases h_get : (extractor s log_c root).get idx.toNodeIndex = none
-  · have h_pos : 0 < idx.depth := by
-      cases idx <;> first | exact Nat.succ_pos _ | exact absurd h_get (Option.some_ne_none _)
-    exact (probEvent_mono'' (q := fun b : Bool => b = true) fun _ h => h.1).trans
-      (probEvent_verifyProof_eq_true_eq_inv_card_of_pos_depth h_pos leaf root proof).le
-  · exact (probEvent_eq_zero fun _ _ h => h_get h.2).le.trans zero_le
-
-private theorem extractabilityInner_verified_extractor_none_le_inv_card
-    [DecidableEq α] [Fintype α] [Inhabited α]
-    {s : Skeleton} (𝒜 : Adversary α s) :
-    Pr[(fun x : (α × 𝒜.AuxState ×
-        ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
-         FullData (Option α) s × List.Vector (Option α) idx.depth × Bool)) ×
-      (spec α).QueryLog =>
-        let ⟨⟨_, _, idx, _, _, extractedTree, _, verified⟩, _⟩ := x
-        verified = true ∧ extractedTree.get idx.toNodeIndex = none) |
-      (extractabilityInner 𝒜).withQueryLog] ≤
-        (1 : ENNReal) / (Fintype.card α : ENNReal) := by
-  rw [one_div]
-  change Pr[((fun vals : α × 𝒜.AuxState ×
-            ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
-             FullData (Option α) s × List.Vector (Option α) idx.depth × Bool) =>
-            let ⟨_, _, idx, _, _, extractedTree, _, verified⟩ := vals
-            verified = true ∧ extractedTree.get idx.toNodeIndex = none) ∘ Prod.fst) |
-        (extractabilityInner 𝒜).withQueryLog] ≤ _
-  rw [probEvent_withQueryLog]
-  unfold extractabilityInner
-  refine probEvent_bind_le_of_forall_le fun ⟨⟨root, aux⟩, log_c⟩ _ => ?_
-  refine probEvent_bind_le_of_forall_le fun ⟨idx, leaf, proof⟩ _ => ?_
-  dsimp only
-  rw [show (fun verified : Bool => pure (root, aux, _) :
-        Bool → OracleComp (spec α) _) = pure ∘ _ from rfl, probEvent_bind_pure_comp]
-  exact probEvent_verifyProof_extractor_none_le_inv_card idx leaf root proof log_c
-
-private theorem extractabilityInner_not_logHasCollision_wins_le_inv_card
-    [DecidableEq α] [Fintype α] [Inhabited α]
-    {s : Skeleton} (𝒜 : Adversary α s) :
-    Pr[fun (vals, log) =>
-        ¬ LogHasCollision log ∧ AdversaryWinsExtractabilityInner vals |
-      (extractabilityInner 𝒜).withQueryLog] ≤
-        (1 : ENNReal) / (Fintype.card α : ENNReal) := by
-  refine le_trans (probEvent_mono ?_)
-    (extractabilityInner_verified_extractor_none_le_inv_card 𝒜)
-  rintro ⟨vals, log⟩ hsupport ⟨h_not_logHasCollision, h_adv_wins⟩
-  obtain ⟨root, aux, idx, leaf, proof, extractedTree, extractedProof, verified⟩ := vals
-  obtain ⟨rfl, h_disagree⟩ := h_adv_wins
-  refine ⟨rfl, ?_⟩
-  by_contra h_ne_none
-  obtain ⟨h_eq_leaf, h_map⟩ := extractabilityInner_not_logHasCollision_match 𝒜
-    h_not_logHasCollision h_ne_none hsupport
-  simp [h_map, h_eq_leaf] at h_disagree
-
-/-- A consistency bound for the independent-response interpretation of
-`extractabilityInner`, where every hash query samples a fresh answer even when the input was
-queried before. This statement is useful only as an auxiliary fact about that semantics: it
-does not model one shared random function and therefore is not the Merkle-tree extractability
-theorem from the SNARGs book. -/
-theorem independentQuery_consistency [DecidableEq α] [Fintype α] [Inhabited α]
-    {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
-    (h_IsQueryBound_qb : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[AdversaryWinsExtractabilityInner |
-        extractabilityInner 𝒜] ≤
-        ((qb + s.depth) ^ 2 : ENNReal) / (2 * Fintype.card α)
-        + 1 / (Fintype.card α) := by
-  calc
-    _ = Pr[AdversaryWinsExtractabilityInner ∘ Prod.fst |
-          (extractabilityInner 𝒜).withQueryLog] :=
-      (probEvent_withQueryLog _ _).symm
-    _ ≤ Pr[fun (vals, log) =>
-            LogHasCollision log ∨
-            (¬ LogHasCollision log ∧ AdversaryWinsExtractabilityInner vals) |
-          (extractabilityInner 𝒜).withQueryLog] :=
-      probEvent_mono'' fun ⟨_, _⟩ => by tauto
-    _ ≤ Pr[fun (vals, log) => LogHasCollision log |
-            (extractabilityInner 𝒜).withQueryLog] +
-        Pr[fun (vals, log) =>
-            ¬ LogHasCollision log ∧ AdversaryWinsExtractabilityInner vals |
-          (extractabilityInner 𝒜).withQueryLog] :=
-      probEvent_or_le ..
-    _ ≤ ((qb + s.depth) ^ 2 : ENNReal) / (2 * Fintype.card α) +
-        Pr[fun (vals, log) =>
-            ¬ LogHasCollision log ∧ AdversaryWinsExtractabilityInner vals |
-          (extractabilityInner 𝒜).withQueryLog] := by
-      gcongr
-      convert OracleComp.probEvent_logCollision_le_birthday_total (spec := spec α)
-        (extractabilityInner 𝒜) (qb + s.depth)
-        (extractabilityInner_isTotalQueryBound 𝒜 qb h_IsQueryBound_qb)
-        (fun _ => le_rfl) using 2
-      · rfl
-      all_goals norm_cast
-    _ ≤ ((qb + s.depth) ^ 2 : ENNReal) / (2 * Fintype.card α) +
-        1 / (Fintype.card α) := by
-      have h' := extractabilityInner_not_logHasCollision_wins_le_inv_card 𝒜
-      gcongr; norm_cast
 
 end InductiveMerkleTree
