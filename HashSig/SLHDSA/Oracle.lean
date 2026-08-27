@@ -86,7 +86,7 @@ def impl (prims : Primitives p) : QueryImpl (publicHashSpec prims) Id
   | .thash pkSeed encodedAdrs xs => prims.Thash pkSeed encodedAdrs xs
   | .hmsg r pkSeed pkRoot msg => prims.Hmsg r pkSeed pkRoot msg
 
-/-- Reinterpret the four public hash fields of `prims` through an arbitrary deterministic answer
+/-- Reinterpret the four public hash operations of `prims` through an arbitrary deterministic answer
 function, while leaving the secret PRFs and node encoding unchanged.  This is the functional
 bridge used to prove random-oracle correctness: every total answer function defines another
 perfectly valid pure SLH-DSA primitive bundle. -/
