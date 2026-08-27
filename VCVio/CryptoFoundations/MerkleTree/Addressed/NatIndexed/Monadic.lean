@@ -38,6 +38,21 @@ def treeM {m : Type v → Type*} [Monad m] (leaf : ℕ → m Y)
     (fun i => leaf (i.natIndex t))
     (fun a => nodeHash (a.natAddr t).height (a.natAddr t).index)
 
+@[simp]
+theorem treeM_zero {m : Type v → Type*} [Monad m]
+    (leaf : ℕ → m Y) (nodeHash : ℕ → ℕ → Y → Y → m Y) (t : ℕ) :
+    treeM leaf nodeHash 0 t = FullData.leaf <$> leaf t := rfl
+
+/-- Effectful full-tree construction follows the same left/right/parent schedule as the direct
+root recursion. -/
+theorem treeM_succ {m : Type v → Type*} [Monad m]
+    (leaf : ℕ → m Y) (nodeHash : ℕ → ℕ → Y → Y → m Y) (z t : ℕ) :
+    treeM leaf nodeHash (z + 1) t = do
+      let left ← treeM leaf nodeHash z (2 * t)
+      let right ← treeM leaf nodeHash z (2 * t + 1)
+      let root ← nodeHash (z + 1) t left.getRootValue right.getRootValue
+      return .internal root left right := rfl
+
 /-- Effectfully compute the root of the perfect subtree at `(height z, index t)` without
 materializing it.  Evaluation is depth-first and left-to-right. -/
 def merkleRootM {m : Type v → Type*} [Monad m] (leaf : ℕ → m Y)
@@ -47,46 +62,6 @@ def merkleRootM {m : Type v → Type*} [Monad m] (leaf : ℕ → m Y)
       let left ← merkleRootM leaf nodeHash z (2 * t)
       let right ← merkleRootM leaf nodeHash z (2 * t + 1)
       nodeHash (z + 1) t left right
-
-/-- Flip the least-significant bit of a heap-style node index. -/
-def sibling (i : ℕ) : ℕ := if i % 2 = 0 then i + 1 else i - 1
-
-/-- Extending an authentication path by one level appends the root of the sibling subtree at
-that level. -/
-theorem authPath_succ (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (idx z : ℕ) :
-    authPath leaf nodeHash idx (z + 1) =
-      authPath leaf nodeHash idx z ++
-        [merkleRoot leaf nodeHash z (sibling (idx / 2 ^ z))] := by
-  unfold authPath sibling
-  simp only [SkeletonLeafIndex.ofNat]
-  rw [tree_succ]
-  by_cases h : idx / 2 ^ z % 2 = 0
-  · rw [if_pos h]
-    have hdm := Nat.div_add_mod (idx / 2 ^ z) 2
-    have hdiv : idx / 2 ^ (z + 1) = idx / 2 ^ z / 2 := by
-      rw [Nat.pow_succ, Nat.div_div_eq_div_mul]
-    have heven : 2 * (idx / 2 ^ (z + 1)) = idx / 2 ^ z := by omega
-    simp only [generateProof, List.Vector.toList_cons, List.reverse_cons,
-      FullData.leftSubtree, FullData.rightSubtree, FullData.getRootValue]
-    rw [heven]
-    rw [if_pos h]
-    rfl
-  · rw [if_neg h]
-    have hdm := Nat.div_add_mod (idx / 2 ^ z) 2
-    have hmod : idx / 2 ^ z % 2 = 1 := by omega
-    have hdiv : idx / 2 ^ (z + 1) = idx / 2 ^ z / 2 := by
-      rw [Nat.pow_succ, Nat.div_div_eq_div_mul]
-    have hodd : 2 * (idx / 2 ^ (z + 1)) + 1 = idx / 2 ^ z := by
-      rw [hdiv]
-      omega
-    have hleft : 2 * (idx / 2 ^ (z + 1)) = idx / 2 ^ z - 1 := by omega
-    simp only [generateProof, List.Vector.toList_cons, List.reverse_cons,
-      FullData.leftSubtree, FullData.rightSubtree, FullData.getRootValue]
-    rw [hodd]
-    rw [if_neg h]
-    unfold merkleRoot
-    unfold FullData.getRootValue
-    rw [hleft]
 
 /-- Effectfully compute the authentication path of global leaf `idx` over `z` levels.  Only the
 sibling subtrees are evaluated: the queried leaf and nodes on its direct path are not recomputed.
@@ -106,6 +81,83 @@ def climbM {m : Type v → Type*} [Monad m] (nodeHash : ℕ → ℕ → Y → Y 
     (fun a => nodeHash (a.natAddr (idx / 2 ^ auth.length)).height
       (a.natAddr (idx / 2 ^ auth.length)).index)
     (SkeletonLeafIndex.ofNat auth.length idx) node ⟨auth.reverse, by simp⟩
+
+section Naturality
+
+universe w x
+
+variable {m : Type v → Type w} {n : Type v → Type x}
+  [Monad m] [Monad n]
+
+/-- Perfect-tree construction commutes with any monad morphism mapping its callbacks
+pointwise. -/
+theorem treeM_natural (F : m →ᵐ n)
+    [LawfulMonad m] [LawfulMonad n]
+    (leafₘ : ℕ → m Y) (hashₘ : ℕ → ℕ → Y → Y → m Y)
+    (leafₙ : ℕ → n Y) (hashₙ : ℕ → ℕ → Y → Y → n Y)
+    (hleaf : ∀ i, F (leafₘ i) = leafₙ i)
+    (hhash : ∀ h i l r, F (hashₘ h i l r) = hashₙ h i l r)
+    (z t : ℕ) :
+    F (treeM leafₘ hashₘ z t) = treeM leafₙ hashₙ z t := by
+  unfold treeM
+  apply buildMerkleTreeAddressedM_natural
+  · intro i
+    exact hleaf _
+  · intro a l r
+    exact hhash _ _ l r
+
+/-- Direct root computation commutes with any monad morphism mapping its callbacks
+pointwise. -/
+theorem merkleRootM_natural (F : m →ᵐ n)
+    (leafₘ : ℕ → m Y) (hashₘ : ℕ → ℕ → Y → Y → m Y)
+    (leafₙ : ℕ → n Y) (hashₙ : ℕ → ℕ → Y → Y → n Y)
+    (hleaf : ∀ i, F (leafₘ i) = leafₙ i)
+    (hhash : ∀ h i l r, F (hashₘ h i l r) = hashₙ h i l r)
+    (z t : ℕ) :
+    F (merkleRootM leafₘ hashₘ z t) = merkleRootM leafₙ hashₙ z t := by
+  induction z generalizing t with
+  | zero => simpa [merkleRootM] using hleaf t
+  | succ z ih =>
+      simp [merkleRootM, F.mmap_bind, ih, hhash]
+
+/-- Streaming authentication-path construction commutes with any monad morphism mapping its
+callbacks pointwise. -/
+theorem authPathM_natural (F : m →ᵐ n)
+    (leafₘ : ℕ → m Y) (hashₘ : ℕ → ℕ → Y → Y → m Y)
+    (leafₙ : ℕ → n Y) (hashₙ : ℕ → ℕ → Y → Y → n Y)
+    (hleaf : ∀ i, F (leafₘ i) = leafₙ i)
+    (hhash : ∀ h i l r, F (hashₘ h i l r) = hashₙ h i l r)
+    (idx z : ℕ) :
+    F (authPathM leafₘ hashₘ idx z) = authPathM leafₙ hashₙ idx z := by
+  induction z with
+  | zero => simp [authPathM]
+  | succ z ih =>
+      simp [authPathM, F.mmap_bind, ih,
+        merkleRootM_natural F leafₘ hashₘ leafₙ hashₙ hleaf hhash]
+
+/-- Root recovery commutes with any monad morphism mapping node hashing pointwise. -/
+theorem climbM_natural (F : m →ᵐ n)
+    (hashₘ : ℕ → ℕ → Y → Y → m Y) (hashₙ : ℕ → ℕ → Y → Y → n Y)
+    (hhash : ∀ h i l r, F (hashₘ h i l r) = hashₙ h i l r)
+    (idx : ℕ) (node : Y) (auth : List Y) :
+    F (climbM hashₘ idx node auth) = climbM hashₙ idx node auth := by
+  unfold climbM
+  apply getPutativeRootAddressedM_natural
+  intro a l r
+  exact hhash _ _ l r
+
+/-- The direct root program has exactly the effects and order of building the full tree and
+projecting its root.  This theorem deliberately orients away from materialising the full tree. -/
+theorem merkleRootM_eq_map_treeM {m : Type v → Type w} [Monad m] [LawfulMonad m]
+    (leaf : ℕ → m Y) (nodeHash : ℕ → ℕ → Y → Y → m Y) (z t : ℕ) :
+    merkleRootM leaf nodeHash z t =
+      FullData.getRootValue <$> treeM leaf nodeHash z t := by
+  induction z generalizing t with
+  | zero => simp [merkleRootM]
+  | succ z ih =>
+      simp [merkleRootM, treeM_succ, ih]
+
+end Naturality
 
 section DeterministicInterpretation
 

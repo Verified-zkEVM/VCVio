@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import PolyFun.Control.Monad.Hom
 public import ToMathlib.Data.IndexedBinaryTree.Equiv
 
 /-!
@@ -64,6 +65,48 @@ def getPutativeRootAddressedM {m : Type v → Type*} [Monad m] :
       let child ← getPutativeRootAddressedM
         (fun a => nodeHash (.ofRight a)) idx leafValue proof.tail
       nodeHash .ofInternal proof.head child
+
+section Naturality
+
+universe w x
+
+variable {m : Type v → Type w} {n : Type v → Type x}
+  [Monad m] [Monad n]
+
+/-- Addressed-tree construction is natural in any monad morphism that maps the leaf and node
+callbacks pointwise.  This preserves the entire effect trace, not only the final root value. -/
+theorem buildMerkleTreeAddressedM_natural (F : m →ᵐ n) {s : Skeleton}
+    [LawfulMonad m] [LawfulMonad n]
+    (leafₘ : SkeletonLeafIndex s → m Y)
+    (hashₘ : SkeletonInternalIndex s → Y → Y → m Y)
+    (leafₙ : SkeletonLeafIndex s → n Y)
+    (hashₙ : SkeletonInternalIndex s → Y → Y → n Y)
+    (hleaf : ∀ i, F (leafₘ i) = leafₙ i)
+    (hhash : ∀ a l r, F (hashₘ a l r) = hashₙ a l r) :
+    F (buildMerkleTreeAddressedM leafₘ hashₘ) =
+      buildMerkleTreeAddressedM leafₙ hashₙ := by
+  induction s with
+  | leaf => simp [buildMerkleTreeAddressedM, hleaf]
+  | internal sl sr ihl ihr =>
+      simp [buildMerkleTreeAddressedM, F.mmap_bind, ihl, ihr, hleaf, hhash]
+
+/-- Putative-root reconstruction is natural in any monad morphism that maps node hashing
+pointwise. -/
+theorem getPutativeRootAddressedM_natural (F : m →ᵐ n) {s : Skeleton}
+    (hashₘ : SkeletonInternalIndex s → Y → Y → m Y)
+    (hashₙ : SkeletonInternalIndex s → Y → Y → n Y)
+    (hhash : ∀ a l r, F (hashₘ a l r) = hashₙ a l r)
+    (idx : SkeletonLeafIndex s) (leafValue : Y) (proof : List.Vector Y idx.depth) :
+    F (getPutativeRootAddressedM hashₘ idx leafValue proof) =
+      getPutativeRootAddressedM hashₙ idx leafValue proof := by
+  induction idx with
+  | ofLeaf => simp [getPutativeRootAddressedM]
+  | ofLeft idx ih =>
+      simp [getPutativeRootAddressedM, F.mmap_bind, ih, hhash]
+  | ofRight idx ih =>
+      simp [getPutativeRootAddressedM, F.mmap_bind, ih, hhash]
+
+end Naturality
 
 section DeterministicInterpretation
 
