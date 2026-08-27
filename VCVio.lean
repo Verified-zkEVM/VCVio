@@ -54,6 +54,7 @@ public import VCVio.CryptoFoundations.MacAlg
 public import VCVio.CryptoFoundations.MacFromPRF
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Level
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle

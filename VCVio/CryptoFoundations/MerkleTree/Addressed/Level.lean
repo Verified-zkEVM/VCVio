@@ -57,14 +57,14 @@ omit [DecidableEq Y] in
 binding at `levelNodeHash`: an adversarial opening verifying against an honestly
 built root with a different leaf yields two distinct pairs with equal digest under
 the tweak of the collision's level, the first pair being the honestly-precommitted
-one at the tagged address. -/
+one at the tagged address, an ancestor of the opened leaf. -/
 theorem level_oriented_binding (th : TweakableHash PkSeed Tweak (Y × Y) Y)
     (pk : PkSeed) (tweakAt : ℕ → Tweak) {s : Skeleton} (ld : LeafData Y s)
     (idx : SkeletonLeafIndex s) (y : Y) (proof₂ : List.Vector Y idx.depth)
     (hroot : getPutativeRootLevel th pk tweakAt idx y proof₂
       = (buildMerkleTreeLevel th pk tweakAt ld).getRootValue)
     (hne : ld.get idx ≠ y) :
-    ∃ (a : SkeletonInternalIndex s) (c : Y × Y),
+    ∃ (a : SkeletonInternalIndex s) (c : Y × Y), a.IsAncestorOf idx ∧
       (childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a) ≠ c ∧
       th.eval pk (tweakAt a.subtreeDepth)
           ((childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a).1,

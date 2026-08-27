@@ -111,26 +111,6 @@ structure RelativeMonad where
   -- left_unit : (λ_ _).inv ≫ J.map (𝟭 _ ⊗ η) ≫ μ = η
   -- right_unit : (ρ_ _).inv ≫ J.map (η ⊗ 𝟭 _) ≫ μ = η
 
-namespace RelativeMonad
-
-@[simps]
-def inducedFunctor (M : RelativeMonad C D J) : EnrichedFunctor (Bundled c) C D where
-  obj A := M.T A
-  map f := sorry
-
--- def prod
-
--- def ofNatIso
-
--- def precompose
-
--- def postcompose
-
--- def lift (F : EnrichedFunctor C D) (φ : J₂ ≅ (J₁ ⋙ F))
---     (M : RelativeMonad C D₂ J₂) : RelativeMonad C D₁ J₁ where
-
-end RelativeMonad
-
 -- (lax) morphism between relative monads in enriched categories
 structure RelativeMonadHom (M N : RelativeMonad C D J) where
   -- f : M.inducedFunctor J ⟶ N.inducedFunctor J
