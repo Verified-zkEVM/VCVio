@@ -7,8 +7,9 @@ Authors: Quang Dao, Bolton Bailey
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
-public import VCVio.OracleComp.QueryTracking.Unpredictability
+public import VCVio.OracleComp.QueryTracking.Collision
 public import ToMathlib.Data.IndexedBinaryTree.Lemmas
+import VCVio.OracleComp.QueryTracking.Unpredictability
 
 /-!
 # Inductive Merkle Tree Extractability
