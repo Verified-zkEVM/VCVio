@@ -41,17 +41,17 @@ variable {p : Params}
 
 /-- A query to the public SLH-DSA hash collection.  The carrier types are explicit
 parameters so the generated decidable-equality instance uses the caller's concrete instances. -/
-inductive PublicHashQuery (PkSeed Y : Type) where
+inductive PublicHashQuery (PkSeed AdrsKey Y : Type) where
   /-- `T_l(PK.seed, encodedADRS, xs)`.  `F` and `H` use lists of length one and two. -/
-  | thash (pkSeed : PkSeed) (encodedAdrs : List Byte) (xs : List Y)
+  | thash (pkSeed : PkSeed) (adrsKey : AdrsKey) (xs : List Y)
   /-- `H_msg(R, PK.seed, PK.root, M)`. -/
   | hmsg (r : Y) (pkSeed : PkSeed) (pkRoot : Y) (msg : List Byte)
 deriving DecidableEq
 
-/-- The dependent public-hash specification.  Reducibility is intentional: consumers must be able
-to see that the first three constructors return nodes while `H_msg` returns a digest. -/
+/-- The dependent public-hash specification.  Reducibility is intentional: consumers must see
+that `thash` returns a node while `H_msg` returns a digest. -/
 @[reducible] def publicHashSpec (prims : Primitives p) :
-    OracleSpec (PublicHashQuery prims.PkSeed prims.Y)
+    OracleSpec (PublicHashQuery prims.PkSeed prims.AdrsKey prims.Y)
   | .thash _ _ _ => prims.Y
   | .hmsg _ _ _ _ => Bytes p.m
 
@@ -61,19 +61,19 @@ namespace PublicHash
 def f (prims : Primitives p) {m : Type → Type*} [HasQuery (publicHashSpec prims) m]
     (pkSeed : prims.PkSeed) (adrs : Adrs) (x : prims.Y) : m prims.Y :=
   query (spec := publicHashSpec prims)
-    (PublicHashQuery.thash pkSeed (prims.adrsToBytes adrs) [x])
+    (PublicHashQuery.thash pkSeed (prims.adrsToKey adrs) [x])
 
 /-- Issue an explicit ordered binary-node `H` query. -/
 def h (prims : Primitives p) {m : Type → Type*} [HasQuery (publicHashSpec prims) m]
     (pkSeed : prims.PkSeed) (adrs : Adrs) (left right : prims.Y) : m prims.Y :=
   query (spec := publicHashSpec prims)
-    (PublicHashQuery.thash pkSeed (prims.adrsToBytes adrs) [left, right])
+    (PublicHashQuery.thash pkSeed (prims.adrsToKey adrs) [left, right])
 
 /-- Issue an explicit variable-arity `T_l` query. -/
 def tl (prims : Primitives p) {m : Type → Type*} [HasQuery (publicHashSpec prims) m]
     (pkSeed : prims.PkSeed) (adrs : Adrs) (xs : List prims.Y) : m prims.Y :=
   query (spec := publicHashSpec prims)
-    (PublicHashQuery.thash pkSeed (prims.adrsToBytes adrs) xs)
+    (PublicHashQuery.thash pkSeed (prims.adrsToKey adrs) xs)
 
 /-- Issue an explicit `H_msg` query. -/
 def hmsg (prims : Primitives p) {m : Type → Type*} [HasQuery (publicHashSpec prims) m]
@@ -97,7 +97,8 @@ perfectly valid pure SLH-DSA primitive bundle. -/
   SkSeed := prims.SkSeed
   SkPrf := prims.SkPrf
   Y := prims.Y
-  adrsToBytes := prims.adrsToBytes
+  AdrsKey := prims.AdrsKey
+  adrsToKey := prims.adrsToKey
   Thash pkSeed encodedAdrs xs := answer (.thash pkSeed encodedAdrs xs)
   PRF := prims.PRF
   PRFmsg := prims.PRFmsg
@@ -108,19 +109,19 @@ perfectly valid pure SLH-DSA primitive bundle. -/
     (answer : QueryImpl (publicHashSpec prims) Id) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (x : prims.Y) :
     (withPublicHash prims answer).F pkSeed adrs x =
-      answer (.thash pkSeed (prims.adrsToBytes adrs) [x]) := rfl
+      answer (.thash pkSeed (prims.adrsToKey adrs) [x]) := rfl
 
 @[simp] theorem withPublicHash_h (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (left right : prims.Y) :
     (withPublicHash prims answer).H pkSeed adrs left right =
-      answer (.thash pkSeed (prims.adrsToBytes adrs) [left, right]) := rfl
+      answer (.thash pkSeed (prims.adrsToKey adrs) [left, right]) := rfl
 
 @[simp] theorem withPublicHash_tl (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (xs : List prims.Y) :
     (withPublicHash prims answer).Tl pkSeed adrs xs =
-      answer (.thash pkSeed (prims.adrsToBytes adrs) xs) := rfl
+      answer (.thash pkSeed (prims.adrsToKey adrs) xs) := rfl
 
 @[simp] theorem withPublicHash_hmsg (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (r : prims.Y) (pkSeed : prims.PkSeed)
@@ -162,10 +163,10 @@ abbrev Cache (prims : Primitives p) := (publicHashSpec prims).QueryCache
 
 /-- Lazy random-oracle interpretation of the tagged public hash syntax. -/
 @[reducible] def randomOracle (prims : Primitives p)
-    [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
+    [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
     [SampleableType prims.Y] [SampleableType (Bytes p.m)] :
     QueryImpl (publicHashSpec prims) (StateT (PublicHash.Cache prims) ProbComp) := by
-  letI : ∀ t : PublicHashQuery prims.PkSeed prims.Y,
+  letI : ∀ t : PublicHashQuery prims.PkSeed prims.AdrsKey prims.Y,
       SampleableType ((publicHashSpec prims).Range t) := fun t => by
     cases t <;> exact inferInstance
   exact (publicHashSpec prims).randomOracle
@@ -176,7 +177,8 @@ once, and then thread the resulting cache through key generation, the adversary,
 verification. -/
 @[instance_reducible]
 def randomOracleHasQuery (prims : Primitives p) [DecidableEq prims.PkSeed]
-    [DecidableEq prims.Y] [SampleableType prims.Y] [SampleableType (Bytes p.m)] :
+    [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
+    [SampleableType prims.Y] [SampleableType (Bytes p.m)] :
     HasQuery (publicHashSpec prims) (StateT (PublicHash.Cache prims) ProbComp) where
   query := PublicHash.randomOracle prims
 

@@ -59,13 +59,14 @@ structure Primitives (p : Params) where
   SkPrf : Type
   /-- Node / hash-output type (`n`-byte values: seeds, chain values, tree nodes, roots). -/
   Y : Type
-  /-- Canonical address bytes used by this instantiation.  SHA-2 uses the 22-byte `ADRSc`;
-  SHAKE uses the full 32-byte address.  Oracle keys use these bytes, so serialization aliases are
-  aliases in the ideal model as well. -/
-  adrsToBytes : Adrs → List Byte
+  /-- Fixed-width canonical address key used by this instantiation. -/
+  AdrsKey : Type
+  /-- Canonicalize a structural address into the exact fixed-width key hashed by the
+  instantiation.  SHA-2 uses `Bytes 22`; SHAKE uses `Bytes 32`. -/
+  adrsToKey : Adrs → AdrsKey
   /-- The single variable-arity tweakable-hash collection underlying `F`, `H = T₂`, and `T_ℓ`.
   The ordered list length and contents are part of its input. -/
-  Thash : PkSeed → List Byte → List Y → Y
+  Thash : PkSeed → AdrsKey → List Y → Y
   /-- `PRF(PK.seed, SK.seed, ADRS)`: derive a WOTS+/FORS secret value. -/
   PRF : PkSeed → SkSeed → Adrs → Y
   /-- `PRF_msg(SK.prf, opt_rand, M)`: derive the message randomizer `R`. -/
@@ -83,17 +84,17 @@ variable {p : Params}
 /-- `F(PK.seed, ADRS, M₁) = T₁(PK.seed, ADRS, [M₁])`. -/
 @[reducible] def F (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (x : prims.Y) : prims.Y :=
-  prims.Thash pkSeed (prims.adrsToBytes adrs) [x]
+  prims.Thash pkSeed (prims.adrsToKey adrs) [x]
 
 /-- `H(PK.seed, ADRS, Mₗ ‖ Mᵣ) = T₂(PK.seed, ADRS, [Mₗ, Mᵣ])`. -/
 @[reducible] def H (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (left right : prims.Y) : prims.Y :=
-  prims.Thash pkSeed (prims.adrsToBytes adrs) [left, right]
+  prims.Thash pkSeed (prims.adrsToKey adrs) [left, right]
 
 /-- `T_ℓ(PK.seed, ADRS, M)` for an ordered variable-length node list. -/
 @[reducible] def Tl (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (xs : List prims.Y) : prims.Y :=
-  prims.Thash pkSeed (prims.adrsToBytes adrs) xs
+  prims.Thash pkSeed (prims.adrsToKey adrs) xs
 
 end Primitives
 

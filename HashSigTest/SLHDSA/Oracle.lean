@@ -21,23 +21,23 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.PublicHashTest
 
-abbrev Q := PublicHashQuery Nat Nat
+abbrev Q := PublicHashQuery Nat Nat Nat
 
 example :
-    (PublicHashQuery.thash 0 [] [7] : Q) ≠ PublicHashQuery.thash 1 [] [7] := by
+    (PublicHashQuery.thash 0 0 [7] : Q) ≠ PublicHashQuery.thash 1 0 [7] := by
   decide
 
 example :
-    (PublicHashQuery.thash 0 [] [3, 5] : Q) ≠
-      PublicHashQuery.thash 0 [] [5, 3] := by
+    (PublicHashQuery.thash 0 0 [3, 5] : Q) ≠
+      PublicHashQuery.thash 0 0 [5, 3] := by
   decide
 
 example :
-    (PublicHashQuery.thash 0 [] [3] : Q) ≠ PublicHashQuery.thash 0 [] [3, 0] := by
+    (PublicHashQuery.thash 0 0 [3] : Q) ≠ PublicHashQuery.thash 0 0 [3, 0] := by
   decide
 
 example :
-    (PublicHashQuery.thash 0 [] [7] : Q) ≠ PublicHashQuery.hmsg 7 0 9 [] := by
+    (PublicHashQuery.thash 0 0 [7] : Q) ≠ PublicHashQuery.hmsg 7 0 9 [] := by
   decide
 
 example :
@@ -72,7 +72,7 @@ example (pkSeed : prims.PkSeed) (adrs : Adrs) (left right : prims.Y) :
 
 /-- Addresses that serialize identically issue exactly the same oracle query. -/
 example (pkSeed : prims.PkSeed) (a b : Adrs) (x : prims.Y)
-    (h : prims.adrsToBytes a = prims.adrsToBytes b) :
+    (h : prims.adrsToKey a = prims.adrsToKey b) :
     (PublicHash.f prims pkSeed a x : OracleComp (publicHashSpec prims) prims.Y) =
       PublicHash.f prims pkSeed b x := by
   unfold PublicHash.f
@@ -86,16 +86,16 @@ example (pkSeed : prims.PkSeed) (adrs : Adrs) (left right : prims.Y) :
       prims.H pkSeed adrs left right := by
   simp
 
-variable [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
+variable [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
   [SampleableType prims.Y] [SampleableType (Bytes p.m)]
 
 local instance publicHashRangeSampleable :
-    ∀ q : PublicHashQuery prims.PkSeed prims.Y,
+    ∀ q : PublicHashQuery prims.PkSeed prims.AdrsKey prims.Y,
       SampleableType ((publicHashSpec prims).Range q) := fun q => by
   cases q <;> infer_instance
 
 /-- A populated cell is a cache hit: it returns the stored value without changing state. -/
-example (q : PublicHashQuery prims.PkSeed prims.Y)
+example (q : PublicHashQuery prims.PkSeed prims.AdrsKey prims.Y)
     (u : (publicHashSpec prims).Range q) :
     (PublicHash.randomOracle prims q).run
         ((∅ : PublicHash.Cache prims).cacheQuery q u) =
@@ -103,7 +103,7 @@ example (q : PublicHashQuery prims.PkSeed prims.Y)
   rw [randomOracle.run_eq, QueryCache.cacheQuery_self]
 
 /-- An empty cell is a cache miss: it samples once and stores the sampled value. -/
-example (q : PublicHashQuery prims.PkSeed prims.Y) :
+example (q : PublicHashQuery prims.PkSeed prims.AdrsKey prims.Y) :
     (PublicHash.randomOracle prims q).run (∅ : PublicHash.Cache prims) =
       ($ᵗ (publicHashSpec prims).Range q) >>= fun u =>
         pure (u, (∅ : PublicHash.Cache prims).cacheQuery q u) := by
@@ -115,36 +115,32 @@ end Generic
 
 open Concrete
 
-example : shaPrimitives.adrsToBytes Adrs.zero =
-    shaPrimitives.adrsToBytes (Adrs.zero.setLayerAddress 256) := by
+example : shaPrimitives.AdrsKey = Bytes 22 := rfl
+
+example (adrs : Adrs) : shaPrimitives.adrsToKey adrs = shaAdrsKey adrs := rfl
+
+example : Adrs.zero.compressSha2 = (Adrs.zero.setLayerAddress 256).compressSha2 := by
   decide
 
-example : shaPrimitives.adrsToBytes Adrs.zero =
-    shaPrimitives.adrsToBytes (Adrs.zero.setTreeAddress (2 ^ 64)) := by
+example : Adrs.zero.compressSha2 = (Adrs.zero.setTreeAddress (2 ^ 64)).compressSha2 := by
   decide
 
-example : shaPrimitives.adrsToBytes Adrs.zero ≠
-    shaPrimitives.adrsToBytes (Adrs.zero.setLayerAddress 1) := by
+example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setLayerAddress 1).compressSha2 := by
   decide
 
-example : shaPrimitives.adrsToBytes Adrs.zero ≠
-    shaPrimitives.adrsToBytes (Adrs.zero.setTreeAddress 1) := by
+example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setTreeAddress 1).compressSha2 := by
   decide
 
-example : shaPrimitives.adrsToBytes Adrs.zero ≠
-    shaPrimitives.adrsToBytes (Adrs.zero.setTypeAndClear .wotsPk) := by
+example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setTypeAndClear .wotsPk).compressSha2 := by
   decide
 
-example : shaPrimitives.adrsToBytes Adrs.zero ≠
-    shaPrimitives.adrsToBytes (Adrs.zero.setKeyPairAddress 1) := by
+example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setKeyPairAddress 1).compressSha2 := by
   decide
 
-example : shaPrimitives.adrsToBytes Adrs.zero ≠
-    shaPrimitives.adrsToBytes (Adrs.zero.setChainAddress 1) := by
+example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setChainAddress 1).compressSha2 := by
   decide
 
-example : shaPrimitives.adrsToBytes Adrs.zero ≠
-    shaPrimitives.adrsToBytes (Adrs.zero.setHashAddress 1) := by
+example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setHashAddress 1).compressSha2 := by
   decide
 
 end SLHDSA.PublicHashTest

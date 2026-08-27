@@ -59,8 +59,12 @@ def zeros48 : ByteArray := ByteArray.mk (Array.replicate 48 0)
 def thashPrefix (pkSeed : Bytes 16) (adrs : Adrs) : ByteArray :=
   b16ToBA pkSeed ++ zeros48 ++ ByteArray.mk adrs.compressSha2.toArray
 
+/-- The fixed-width 22-byte SHA-2 address key. -/
+def shaAdrsKey (adrs : Adrs) : Bytes 22 :=
+  ⟨adrs.compressSha2.toArray, by simp [Adrs.compressSha2, Adrs.toBytesBE]⟩
+
 /-- The shared SHA-2 thash prefix from an already-canonicalized `ADRSc`. -/
-def thashPrefixEncoded (pkSeed : Bytes 16) (encodedAdrs : List Byte) : ByteArray :=
+def thashPrefixEncoded (pkSeed : Bytes 16) (encodedAdrs : Bytes 22) : ByteArray :=
   b16ToBA pkSeed ++ zeros48 ++ ByteArray.mk encodedAdrs.toArray
 
 /-- Concatenate a list of 16-byte nodes. -/
@@ -70,20 +74,20 @@ def concatNodes (ys : List (Bytes 16)) : ByteArray :=
 /-! ### The SHA-2 tweakable hash family (FIPS 205 §11.2.1) -/
 
 /-- The common variable-arity SHA-2 tweakable hash underlying `F`, `H = T₂`, and `T_ℓ`. -/
-def shaThash (pkSeed : Bytes 16) (encodedAdrs : List Byte) (ys : List (Bytes 16)) : Bytes 16 :=
+def shaThash (pkSeed : Bytes 16) (encodedAdrs : Bytes 22) (ys : List (Bytes 16)) : Bytes 16 :=
   baToBytes (sha256 (thashPrefixEncoded pkSeed encodedAdrs ++ concatNodes ys)) 16
 
 /-- `F(PK.seed, ADRS, M₁) = Trunc₁₆(SHA-256(PK.seed ‖ 0^48 ‖ ADRSc ‖ M₁))`. -/
 def shaF (pkSeed : Bytes 16) (adrs : Adrs) (y : Bytes 16) : Bytes 16 :=
-  shaThash pkSeed adrs.compressSha2 [y]
+  shaThash pkSeed (shaAdrsKey adrs) [y]
 
 /-- `H(PK.seed, ADRS, M_l ‖ M_r) = Trunc₁₆(SHA-256(PK.seed ‖ 0^48 ‖ ADRSc ‖ M_l ‖ M_r))`. -/
 def shaH (pkSeed : Bytes 16) (adrs : Adrs) (l r : Bytes 16) : Bytes 16 :=
-  shaThash pkSeed adrs.compressSha2 [l, r]
+  shaThash pkSeed (shaAdrsKey adrs) [l, r]
 
 /-- `T_ℓ(PK.seed, ADRS, M) = Trunc₁₆(SHA-256(PK.seed ‖ 0^48 ‖ ADRSc ‖ M))`. -/
 def shaTl (pkSeed : Bytes 16) (adrs : Adrs) (ys : List (Bytes 16)) : Bytes 16 :=
-  shaThash pkSeed adrs.compressSha2 ys
+  shaThash pkSeed (shaAdrsKey adrs) ys
 
 /-- `PRF(PK.seed, SK.seed, ADRS) = Trunc₁₆(SHA-256(PK.seed ‖ 0^48 ‖ ADRSc ‖ SK.seed))`. -/
 def shaPRF (pkSeed : Bytes 16) (skSeed : Bytes 16) (adrs : Adrs) : Bytes 16 :=
@@ -106,7 +110,8 @@ def shaPrimitives : Primitives slhdsaSha2_128_24 where
   SkSeed := Bytes 16
   SkPrf := Bytes 16
   Y := Bytes 16
-  adrsToBytes := Adrs.compressSha2
+  AdrsKey := Bytes 22
+  adrsToKey := shaAdrsKey
   Thash := shaThash
   PRF := shaPRF
   PRFmsg := shaPRFmsg
