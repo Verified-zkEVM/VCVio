@@ -48,17 +48,34 @@ height. -/
 example : AuthenticationPath ℕ 2 :=
   rootAuthenticationPath orderedLeaf orderedNode (2 : LeafIndex 2)
 
-def tracedLeaf (index : ℕ) : StateM (List Address) ℕ :=
+/-- Trace events distinguish effectful leaf production from internal-node hashing. -/
+inductive TraceEvent where
+  | leaf (index : ℕ)
+  | node (address : Address)
+deriving DecidableEq, Repr
+
+def tracedLeaf (index : ℕ) : StateM (List TraceEvent) ℕ := do
+  modify (· ++ [.leaf index])
   pure (orderedLeaf index)
 
-def tracedNode (address : Address) (left right : ℕ) : StateM (List Address) ℕ := do
-  modify (· ++ [address])
+def tracedNode (address : Address) (left right : ℕ) : StateM (List TraceEvent) ℕ := do
+  modify (· ++ [.node address])
   pure (orderedNode address left right)
 
-/-- The effectful engine invokes internal-node callbacks in left-subtree, right-subtree, root
-order, and supplies the corresponding addresses. -/
+/-- The effectful engine evaluates leaves and internal nodes in depth-first, left-to-right order,
+and supplies the corresponding node addresses. -/
 example :
     (treeHashM tracedLeaf tracedNode 2 0).run [] =
-      (13254, [⟨1, 0⟩, ⟨1, 1⟩, ⟨2, 0⟩]) := rfl
+      (13254, [.leaf 0, .leaf 1, .node ⟨1, 0⟩, .leaf 2, .leaf 3,
+        .node ⟨1, 1⟩, .node ⟨2, 0⟩]) := rfl
+
+/-- The height-zero boundary evaluates exactly one leaf and no internal node. -/
+example :
+    (rootM tracedLeaf tracedNode 0).run [] = (1, [.leaf 0]) := rfl
+
+/-- A height-zero root has exactly one valid leaf index and an empty authentication path. -/
+example :
+    rootAuthenticationPath orderedLeaf orderedNode (0 : LeafIndex 0) =
+      (List.Vector.nil : AuthenticationPath ℕ 0) := rfl
 
 end PerfectMerkleTreeTest

@@ -191,6 +191,20 @@ theorem climbM_id (nodeHash : Address → Y → Y → Y) (base index depth : ℕ
         simp [climbM, climb, h, Id.run_bind, ih] <;> rfl
 
 @[simp]
+theorem rootAuthenticationPathM_id (leaf : ℕ → Y) (nodeHash : Address → Y → Y → Y)
+    {height : ℕ} (index : LeafIndex height) :
+    Id.run (rootAuthenticationPathM (m := Id) leaf nodeHash index) =
+      rootAuthenticationPath leaf nodeHash index := by
+  simp [rootAuthenticationPathM, rootAuthenticationPath]
+
+@[simp]
+theorem reconstructRootM_id (nodeHash : Address → Y → Y → Y) {height : ℕ}
+    (index : LeafIndex height) (leafValue : Y) (path : AuthenticationPath Y height) :
+    Id.run (reconstructRootM (m := Id) nodeHash index leafValue path) =
+      reconstructRoot nodeHash index leafValue path := by
+  simp [reconstructRootM, reconstructRoot]
+
+@[simp]
 theorem treeHash_zero (leaf : ℕ → Y) (nodeHash : Address → Y → Y → Y) (index : ℕ) :
     treeHash leaf nodeHash 0 index = leaf index := rfl
 
