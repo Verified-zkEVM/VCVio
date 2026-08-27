@@ -284,6 +284,71 @@ theorem probEvent_cache_has_value_le {α : Type}
     (oa := oa) (n := n) hbound hrange v₀ cache₀
     fun t₀ _ v₁ _ hcache₁ _ hheq₁ _ => (hno_v₀ t₀ v₁ hcache₁ hheq₁).elim
 
+/-- **Finite-target cache-hit bound**: suppose every value in `targets` has at most one
+preimage in the initial cache. If `oa` makes at most `n` queries, then the probability that its
+cached execution creates a fresh entry whose value belongs to `targets` is at most
+`|targets| * n / |Range default|`.
+
+`targets.card` counts distinct output values, not positions or labels carrying those values.
+A consumer that starts from a positional collection can deduplicate its values into a `Finset`
+and then weaken the result using the corresponding cardinality bound. -/
+theorem probEvent_cache_hits_targets_le_of_unique_preimage {α : Type}
+    [Inhabited ι]
+    (oa : OracleComp spec α)
+    (n : ℕ) (hbound : IsTotalQueryBound oa n)
+    (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t))
+    (targets : Finset (spec.Range default))
+    (cache₀ : QueryCache spec)
+    (hunique : ∀ v₀ ∈ targets,
+      ∀ t₀ t₁ : spec.Domain,
+        ∀ v₁ : spec.Range t₀, ∀ v₂ : spec.Range t₁,
+          cache₀ t₀ = some v₁ →
+          cache₀ t₁ = some v₂ →
+          HEq v₁ v₀ →
+          HEq v₂ v₀ →
+          t₀ = t₁) :
+    Pr[fun z => ∃ v₀ ∈ targets, ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+        z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀ |
+      (simulateQ cachingOracle oa).run cache₀] ≤
+      ((targets.card * n : ℕ) : ℝ≥0∞) *
+        (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ := by
+  calc
+    Pr[fun z => ∃ v₀ ∈ targets, ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+          z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀ |
+        (simulateQ cachingOracle oa).run cache₀]
+      ≤ ∑ v₀ ∈ targets,
+          Pr[fun z => ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+              z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀ |
+            (simulateQ cachingOracle oa).run cache₀] :=
+        probEvent_exists_finset_le_sum targets _ _
+    _ ≤ ∑ _v₀ ∈ targets,
+          (n : ℝ≥0∞) * (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ := by
+        refine Finset.sum_le_sum fun v₀ hv₀ => ?_
+        exact probEvent_cache_has_value_le_of_unique_preimage
+          oa n hbound hrange v₀ cache₀ (hunique v₀ hv₀)
+    _ = ((targets.card * n : ℕ) : ℝ≥0∞) *
+          (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ := by
+        simp [Nat.cast_mul, mul_assoc]
+
+/-- Finite-target cache-hit bound specialized to a collision-free initial cache. Collision
+freeness ensures that each distinct target value has at most one initial preimage. -/
+theorem probEvent_cache_hits_targets_le_of_noCollision {α : Type}
+    [Inhabited ι]
+    (oa : OracleComp spec α)
+    (n : ℕ) (hbound : IsTotalQueryBound oa n)
+    (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t))
+    (targets : Finset (spec.Range default))
+    (cache₀ : QueryCache spec)
+    (hno : ¬ CacheHasCollision cache₀) :
+    Pr[fun z => ∃ v₀ ∈ targets, ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+        z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀ |
+      (simulateQ cachingOracle oa).run cache₀] ≤
+      ((targets.card * n : ℕ) : ℝ≥0∞) *
+        (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ :=
+  probEvent_cache_hits_targets_le_of_unique_preimage oa n hbound hrange targets cache₀
+    fun _ _ t₀ t₁ v₁ v₂ hcache₀ hcache₁ hheq₀ hheq₁ => not_not.1 fun hne =>
+      hno ⟨t₀, t₁, v₁, v₂, hne, hcache₀, hcache₁, hheq₀.trans hheq₁.symm⟩
+
 end Unpredictability
 
 /-! ## Collision-Based Win Bound -/
