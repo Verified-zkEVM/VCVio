@@ -4,6 +4,11 @@ For the cross-project survey of SPMF, Mathlib measures and kernels, PolyFun
 coalgebraic limits, ArkLib, Bluebell/Iris, and possible long-term migration paths, see
 [`Probability Semantics for Computations: Landscape and Design Options`](../reading/probability-semantics-landscape.md).
 [`docs/reading/`](../reading/README.md) indexes that and the rest of the design record.
+The accepted design for new work is
+[`Denotational Probability Semantics`](../reading/denotational-probability-semantics.md): use
+Mathlib measures for closed denotations, kernels for environment/state-indexed computations,
+effect-preserving outcome types for transformers, and keep `Pr[...]` as the discrete compatibility
+surface. [`docs/reading/`](../reading/README.md) indexes the full design record.
 
 ## Core Definitions
 

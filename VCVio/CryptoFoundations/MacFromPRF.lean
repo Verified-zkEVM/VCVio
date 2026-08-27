@@ -147,9 +147,8 @@ private theorem simulateQ_prfReal_macToPRFQueryImpl_run
       rw [simulateQ_prfRealQueryImpl_liftComp]
   | inr d =>
       ext
-      simpa [QueryImpl.writerTMapBase, macToPRFQueryImpl, ufCmaImpl, prfFuncQuery,
-        toMacAlg, MacAlg.taggingOracle, map_eq_bind_pure_comp] using
-        simulateQ_prfRealQueryImpl_inr prf k d
+      simp [QueryImpl.writerTMapBase, macToPRFQueryImpl, ufCmaImpl, prfFuncQuery,
+        toMacAlg, MacAlg.taggingOracle, map_eq_bind_pure_comp]
 
 /-- The prfRealExp with the reduction equals the UF-CMA body as a `ProbComp` computation. -/
 private theorem prfRealExp_macToPRFReduction_eq_body (prf : PRFScheme K D R)

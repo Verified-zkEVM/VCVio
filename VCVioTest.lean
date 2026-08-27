@@ -4,10 +4,12 @@ public import VCVioTest.Computability
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.GrindFailFast
 public import VCVioTest.LongChainPrograms
+public import VCVioTest.MeasureSemantics
 public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MonadProbability
 public import VCVioTest.PFunctorFacade
 public import VCVioTest.ProbabilityTactics
+public import VCVioTest.QueryHom
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.SampleableType
 public import VCVioTest.Smoke
