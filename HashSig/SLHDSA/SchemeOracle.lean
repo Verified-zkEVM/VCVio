@@ -62,7 +62,12 @@ def keygenInternalM (prims : Primitives p) {m : Type → Type*} [Monad m]
   let pkRoot ← XmssOracle.rootM prims skSeed pkSeed (htAdrs Adrs.zero 0)
   pure (⟨pkSeed, pkRoot⟩, ⟨skSeed, skPrf, pkSeed, pkRoot⟩)
 
-/-- Internal signing for the supported `d = 1` parameter set. -/
+/-- Internal signing for the supported `d = 1` parameter set.
+
+The general hypertree algorithm recovers each intermediate XMSS root to feed the next layer.  At
+`d = 1` there is no next layer, so this slice omits that output-dead recovery query.  Consequently
+it is output-equivalent to the FIPS algorithm but intentionally does not claim literal query-trace
+equality with a mechanically specialized `d = 1` pseudocode transcription. -/
 def signInternalM (prims : Primitives p) {m : Type → Type*} [Monad m]
     [Params.IsSingleLayer p] [HasQuery (publicHashSpec prims) m]
     (msg : List Byte) (sk : SecretKey prims)
@@ -91,6 +96,66 @@ def verifyInternalM (prims : Primitives p) {m : Type → Type*} [Monad m]
   let root ← XmssOracle.pkFromSigM prims index sig.2.2 forsPk pk.pkSeed (htAdrs Adrs.zero 0)
   pure (decide (root = pk.pkRoot))
 
+/-- Honest key generation, signing, and verification are functionally complete after fixing any
+deterministic public-hash answer function.  The same answer function interprets the whole program,
+so repeated queries—in particular the signing and verification `H_msg` calls—receive the same
+answer.  This is deliberately stronger than canonical-function parity but does not identify the
+trace of an arbitrary effectful handler. -/
+theorem simulateQ_honest_roundTrip_withPublicHash (prims : Primitives p)
+    [Params.IsSingleLayer p] [DecidableEq prims.Y]
+    (answer : QueryImpl (publicHashSpec prims) Id) (msg : List Byte)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed)
+    (addrnd : prims.Y) :
+    simulateQ answer (do
+      let (pk, sk) ← (keygenInternalM prims skSeed skPrf pkSeed :
+        OracleComp (publicHashSpec prims) (PublicKey prims × SecretKey prims))
+      let sig ← signInternalM prims msg sk addrnd
+      verifyInternalM prims msg sig pk) = true := by
+  let functionalPrims := PublicHash.withPublicHash prims answer
+  let root := XmssOracle.root functionalPrims skSeed pkSeed (htAdrs Adrs.zero 0)
+  let r := prims.PRFmsg skPrf addrnd msg
+  let digest := answer (.hmsg r pkSeed root msg)
+  let md := (splitDigest p digest).1
+  let index : LeafIndex p.hp :=
+    ⟨(splitDigest p digest).2, splitDigest_snd_lt p digest⟩
+  let forsAddress := forsAdrsOf index.val
+  simp only [keygenInternalM, signInternalM, verifyInternalM,
+    simulateQ_bind, simulateQ_pure,
+    XmssOracle.simulateQ_rootM_withPublicHash,
+    ForsOracle.simulateQ_signM_withPublicHash,
+    ForsOracle.simulateQ_pkFromSigM_withPublicHash,
+    XmssOracle.simulateQ_signM_withPublicHash,
+    XmssOracle.simulateQ_pkFromSigM_withPublicHash,
+    PublicHash.hmsg, simulateQ_HasQuery_query]
+  change decide (
+    XmssOracle.pkFromSig functionalPrims index
+      (XmssOracle.sign functionalPrims
+        (ForsOracle.pkFromSig functionalPrims
+          (ForsOracle.sign functionalPrims md skSeed pkSeed forsAddress)
+          md pkSeed forsAddress)
+        skSeed pkSeed (htAdrs Adrs.zero 0) index)
+      (ForsOracle.pkFromSig functionalPrims
+        (ForsOracle.sign functionalPrims md skSeed pkSeed forsAddress)
+        md pkSeed forsAddress)
+      pkSeed (htAdrs Adrs.zero 0) = root) = true
+  rw [ForsOracle.pkFromSig_sign, XmssOracle.pkFromSig_sign]
+  apply decide_eq_true
+  exact (XmssOracle.root_eq_xmssRoot functionalPrims skSeed pkSeed
+    (htAdrs Adrs.zero 0)).symm
+
+/-- Canonical deterministic-handler corollary of honest scheme execution. -/
+theorem simulateQ_honest_roundTrip (prims : Primitives p)
+    [Params.IsSingleLayer p] [DecidableEq prims.Y] (msg : List Byte)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed)
+    (addrnd : prims.Y) :
+    simulateQ (PublicHash.impl prims) (do
+      let (pk, sk) ← (keygenInternalM prims skSeed skPrf pkSeed :
+        OracleComp (publicHashSpec prims) (PublicKey prims × SecretKey prims))
+      let sig ← signInternalM prims msg sk addrnd
+      verifyInternalM prims msg sig pk) = true :=
+  simulateQ_honest_roundTrip_withPublicHash prims (PublicHash.impl prims) msg
+    skSeed skPrf pkSeed addrnd
+
 /-- External key generation with lifted public randomness and explicit public-hash queries. -/
 def keygenM (prims : Primitives p) {m : Type → Type*} [Monad m] [MonadLiftT ProbComp m]
     [Params.IsSingleLayer p] [HasQuery (publicHashSpec prims) m]
@@ -102,13 +167,22 @@ def keygenM (prims : Primitives p) {m : Type → Type*} [Monad m] [MonadLiftT Pr
   let pkSeed ← liftM ($ᵗ prims.PkSeed)
   keygenInternalM prims skSeed skPrf pkSeed
 
-/-- External hedged signing with lifted public randomness. -/
+/-- External empty-context hedged signing with lifted public randomness.  The raw caller message
+is encoded as FIPS 205's `M' = 0x00 || 0x00 || M` before entering Algorithm 19. -/
 def signM (prims : Primitives p) {m : Type → Type*} [Monad m] [MonadLiftT ProbComp m]
     [Params.IsSingleLayer p] [HasQuery (publicHashSpec prims) m]
     [SampleableType prims.Y] (sk : SecretKey prims)
     (msg : List Byte) : m (Signature p prims) := do
   let addrnd ← liftM ($ᵗ prims.Y)
-  signInternalM prims msg sk addrnd
+  signInternalM prims (emptyContextMessage msg) sk addrnd
+
+/-- External empty-context verification.  It applies the same FIPS 205 message-domain encoding as
+`signM` before entering the internal verification algorithm. -/
+def verifyM (prims : Primitives p) {m : Type → Type*} [Monad m]
+    [Params.IsSingleLayer p] [HasQuery (publicHashSpec prims) m]
+    [DecidableEq prims.Y] (pk : PublicKey prims) (msg : List Byte)
+    (sig : Signature p prims) : m Bool :=
+  verifyInternalM prims (emptyContextMessage msg) sig pk
 
 /-- The explicit-oracle, single-layer SLH-DSA signature algorithm. -/
 def alg (prims : Primitives p) {m : Type → Type*} [Monad m] [MonadLiftT ProbComp m]
@@ -119,7 +193,7 @@ def alg (prims : Primitives p) {m : Type → Type*} [Monad m] [MonadLiftT ProbCo
     SignatureAlg m (List Byte) (PublicKey prims) (SecretKey prims) (Signature p prims) where
   keygen := keygenM prims
   sign _ sk msg := signM prims sk msg
-  verify pk msg sig := verifyInternalM prims msg sig pk
+  verify pk msg sig := verifyM prims pk msg sig
 
 /-- The scheme in free public-randomness-plus-public-hash syntax.  This is the surface expected by
 the generic `SignatureAlg` security games: the adversary sees the same public-hash queries, while a
