@@ -31,6 +31,23 @@ universe u v
 
 variable {ι : Type u} {spec : OracleSpec.{u, v} ι} {Y : Type v}
 
+/-- A deterministic handler commutes with `Vector.mapM` over oracle computations. -/
+@[simp]
+theorem simulateQ_vector_mapM {α β : Type v} {n : ℕ} (impl : QueryImpl spec Id)
+    (f : α → OracleComp spec β) (xs : Vector α n) :
+    simulateQ impl (xs.mapM f) = xs.map (fun x => simulateQ impl (f x)) := by
+  apply Vector.toArray_inj.mp
+  have hmap : (simulateQ impl (xs.mapM f)).toArray =
+      simulateQ impl (Vector.toArray <$> xs.mapM f) := by
+    rw [simulateQ_map]
+    rfl
+  rw [hmap, Vector.toArray_mapM, Array.mapM_eq_mapM_toList,
+    simulateQ_map, simulateQ_list_mapM]
+  change Id.run (List.toArray <$> xs.toArray.toList.mapM
+    (fun a => pure (simulateQ impl (f a)))) = xs.toArray.map (fun a => simulateQ impl (f a))
+  simp only [List.mapM_pure, map_pure, Id.run_pure]
+  rw [← List.map_toArray]
+
 /-- A deterministic handler commutes with subtree-root production. -/
 @[simp]
 theorem simulateQ_treeHashM (impl : QueryImpl spec Id)
