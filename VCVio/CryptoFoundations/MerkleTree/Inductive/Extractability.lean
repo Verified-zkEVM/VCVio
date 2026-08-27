@@ -896,8 +896,9 @@ single shared lazy random function is at most
 
 The constants are deliberately coarse. The commit phase uses at most `qb` queries; after a
 reachable commit outcome, the opening phase is conservatively re-bounded by `qb` rather than
-conditioning on its realized residual budget; verification uses exactly `depth` hashes; and the
-commit transcript contributes at most `2qb+1` candidate labels. -/
+conditioning on its realized residual budget; verification uses exactly `idx.depth` hashes for
+the selected leaf, hence at most `s.depth`; and the commit transcript contributes at most
+`2qb+1` candidate labels. -/
 theorem extractability_rom_bound
     [DecidableEq α] [Fintype α] [Inhabited α] [IsUniformSpec (spec α)]
     {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)

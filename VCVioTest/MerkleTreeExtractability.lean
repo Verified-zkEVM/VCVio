@@ -237,6 +237,18 @@ abbrev freshHitAdversary : InductiveMerkleTree.Adversary Bool depthOneSkeleton w
   commit := pure (false, ())
   opening _ := pure ⟨leftIndex, false, leftProof⟩
 
+private lemma freshHitAdversary_totalBound :
+    freshHitAdversary.IsTwoPhaseTotalQueryBound 0 := by
+  trivial
+
+/-- The public theorem sees the non-degenerate verifier fresh-hit branch and gives its exact
+coarse bound `1 / |Bool| = 1/2` when the adversary phases themselves make no queries. -/
+example :
+    Pr[InductiveMerkleTree.AdversaryWinsExtractabilityGame |
+      InductiveMerkleTree.extractabilityGame freshHitAdversary] ≤ (2 : ENNReal)⁻¹ := by
+  simpa [depthOneSkeleton] using InductiveMerkleTree.extractability_rom_bound
+    freshHitAdversary 0 freshHitAdversary_totalBound
+
 def freshHitExtractedTree : BinaryTree.FullData (Option Bool) depthOneSkeleton :=
   .internal (some false) (.leaf none) (.leaf none)
 
@@ -273,6 +285,65 @@ example : InductiveMerkleTree.AdversaryWinsExtractabilityGame freshHitTranscript
   simp [freshHitTranscript, InductiveMerkleTree.AdversaryWinsExtractabilityGame,
     InductiveMerkleTree.AdversaryWinsExtractabilityInner, freshHitExtractedTree,
     freshHitExtractedProof, depthOneSkeleton, leftIndex]
+
+def wrongRightProof : List.Vector Bool rightIndex.depth :=
+  ⟨[true], rfl⟩
+
+@[simp] private lemma wrongRightProof_head : wrongRightProof.head = true := rfl
+
+/-- The extracted right leaf agrees with the opening, but the adversary supplies the wrong left
+sibling. A fresh verifier query can still accept, exercising proof-only disagreement on the
+orientation opposite to `freshHitAdversary`. -/
+abbrev proofOnlyAdversary : InductiveMerkleTree.Adversary Bool depthOneSkeleton where
+  AuxState := Unit
+  commit := depthOneAdversary.commit
+  opening _ := pure ⟨rightIndex, true, wrongRightProof⟩
+
+private lemma proofOnlyGame_eq :
+    InductiveMerkleTree.extractabilityGame proofOnlyAdversary =
+      (((InductiveMerkleTree.spec Bool).query (false, true) :
+          OracleComp (InductiveMerkleTree.spec Bool) Bool) >>= fun root =>
+        ((InductiveMerkleTree.spec Bool).query (true, true) :
+          OracleComp (InductiveMerkleTree.spec Bool) Bool) >>= fun answer =>
+        pure (root, (), ⟨rightIndex, true, wrongRightProof,
+          expectedTree root, expectedRightProof, answer == root⟩)) := by
+  rw [show InductiveMerkleTree.extractabilityGame proofOnlyAdversary =
+      (InductiveMerkleTree.spec Bool).withCacheOverlay ∅
+        (InductiveMerkleTree.extractabilityInner proofOnlyAdversary) from rfl]
+  rw [show InductiveMerkleTree.extractabilityInner proofOnlyAdversary =
+      proofOnlyAdversary.commit.withQueryLog >>= fun ((root, aux), queryLog) => do
+        let extractedTree := InductiveMerkleTree.extractor depthOneSkeleton queryLog root
+        let ⟨idx, leaf, proof⟩ ← proofOnlyAdversary.opening aux
+        let extractedProof := InductiveMerkleTree.generateProof extractedTree idx
+        let verified ← InductiveMerkleTree.verifyProof idx leaf root proof
+        return (root, aux,
+          ⟨idx, leaf, proof, extractedTree, extractedProof, verified⟩) from rfl]
+  rw [withCacheOverlay_bind, depthOneCommit_cached_eq]
+  simp only [bind_assoc, pure_bind]
+  refine bind_congr (m := OracleComp (InductiveMerkleTree.spec Bool)) fun root => ?_
+  cases root <;>
+    simp [OracleSpec.withCacheOverlay,
+      InductiveMerkleTree.extractor, InductiveMerkleTree.extractorChildren,
+      depthOneSkeleton, rightIndex, expectedTree, expectedRightProof,
+      wrongRightProof_head, QueryCache.cacheQuery_of_ne]
+
+def proofOnlyTranscript : Bool × Unit ×
+    ((idx : BinaryTree.SkeletonLeafIndex depthOneSkeleton) × Bool ×
+      List.Vector Bool idx.depth × BinaryTree.FullData (Option Bool) depthOneSkeleton ×
+      List.Vector (Option Bool) idx.depth × Bool) :=
+  (false, (), ⟨rightIndex, true, wrongRightProof,
+    expectedTree false, expectedRightProof, true⟩)
+
+example : proofOnlyTranscript ∈
+    support (InductiveMerkleTree.extractabilityGame proofOnlyAdversary) := by
+  rw [proofOnlyGame_eq]
+  simp [proofOnlyTranscript]
+
+/-- This winner is proof-only: its extracted leaf is `some true`, while only the path differs. -/
+example : InductiveMerkleTree.AdversaryWinsExtractabilityGame proofOnlyTranscript := by
+  simp [proofOnlyTranscript, InductiveMerkleTree.AdversaryWinsExtractabilityGame,
+    InductiveMerkleTree.AdversaryWinsExtractabilityInner, expectedTree,
+    expectedRightProof, wrongRightProof, depthOneSkeleton, rightIndex]
 
 def twoDistinctQueries : OracleComp (InductiveMerkleTree.spec Bool) Unit := do
   let _ ← ((InductiveMerkleTree.spec Bool).query (false, false) :
