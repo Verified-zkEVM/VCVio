@@ -10,6 +10,22 @@ def OracleSpec (ι : Type u) : Type _ := ι → Type v
 
 Concretely, `spec t` is the response type at query index `t : ι`. `OracleSpec ι` is the `B`-component of a polynomial functor with position type `A := ι`; `spec.toPFunctor` packages the two together, and `OracleSpec.ofPFunctor` is its inverse (both `rfl`-invertible). This is the connection that makes `OracleComp` a free monad: see [`OracleComp`](#oraclecomp) below.
 
+`OracleSpec` remains a parameterized family rather than becoming a structure
+alias for `PFunctor`: function application and the `Domain` / `Range` façade
+give dependent oracle code useful expected types, while `toPFunctor` exposes
+the generic algebra without a data conversion. In particular, `spec₁ + spec₂`
+is definitionally the direction family of
+`PFunctor.sum spec₁.toPFunctor spec₂.toPFunctor`. The PFunctor coproduct uses
+the primitive dependent `Sum.rec`, and the OracleSpec `HAdd` instance is
+left at its ordinary `instance_reducible` status. Ranges of nested `.inl` /
+`.inr` queries therefore normalize during instance and implicit checking
+without forcing the same unfolding during ordinary tactic matching.
+
+When a handler only needs one side of a combined specification, prefer
+`QueryImpl.restrictLeft` or `QueryImpl.restrictRight` to an annotated lambda.
+The combinators preserve the component handler type explicitly and come with
+application lemmas.
+
 | Constructor | Notation | Example |
 |-------------|----------|---------|
 | Singleton spec | `A →ₒ B` | `Bool →ₒ Fin 6` |
