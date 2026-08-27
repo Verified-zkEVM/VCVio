@@ -51,7 +51,7 @@ theorem renyiMGF_toMeasure_of_ac {a : ℝ} (ha0 : 0 < a) (p q : PMF α)
     have hcongr : ∫⁻ x, (p.toMeasure.rnDeriv q.toMeasure x) ^ a ∂q.toMeasure
         = ∫⁻ x, (p x / q x) ^ a ∂q.toMeasure := by
       refine lintegral_congr_ae ?_
-      filter_upwards [PMF.rnDeriv_toMeasure p q hac] with x hx
+      filter_upwards [PMF.rnDeriv_toMeasure_of_ac p q hac] with x hx
       rw [hx]
     rw [hcongr]
     conv_lhs => rw [← PMF.restrict_toMeasure_support q]
@@ -90,6 +90,11 @@ theorem renyiMGF_toMeasure (a : ℝ) (ha : 1 < a) (p q : PMF α) :
     exact ENNReal.mul_top (by
       simp only [ne_eq, ENNReal.rpow_eq_zero_iff, hp, false_and, false_or, not_and, not_lt]
       exact fun _ => ha0.le)
+
+/-- The measure-level multiplicative Rényi divergence agrees with the `PMF` definition. -/
+theorem renyiDiv_toMeasure (a : ℝ) (ha : 1 < a) (p q : PMF α) :
+    renyiDiv a p.toMeasure q.toMeasure = PMF.renyiDiv a p q := by
+  rw [renyiDiv_eq_rpow ha, PMF.renyiDiv_eq_rpow ha, renyiMGF_toMeasure a ha]
 
 /-! ### The discrete theory as a corollary
 
@@ -138,9 +143,14 @@ theorem renyiMGF_map_le (a : ℝ) (ha : 1 ≤ a) (f : α' → β) (p q : PMF α'
 `R_a(f∗p ‖ f∗q) ≤ R_a(p ‖ q)`. -/
 theorem renyiDiv_map_le (a : ℝ) (ha : 1 < a) (f : α' → β) (p q : PMF α') :
     (f <$> p).renyiDiv a (f <$> q) ≤ p.renyiDiv a q := by
-  simp only [renyiDiv_eq_rpow ha]
-  exact ENNReal.rpow_le_rpow (renyiMGF_map_le a ha.le f p q)
-    (inv_nonneg.mpr (sub_nonneg.mpr ha.le))
+  let _ : MeasurableSpace α' := ⊤
+  let _ : MeasurableSpace β := ⊤
+  have hf : Measurable f := Measurable.of_discrete
+  change PMF.renyiDiv a (PMF.map f p) (PMF.map f q) ≤ PMF.renyiDiv a p q
+  rw [← InformationTheory.renyiDiv_toMeasure a ha,
+    ← InformationTheory.renyiDiv_toMeasure a ha,
+    ← PMF.toMeasure_map f p hf, ← PMF.toMeasure_map f q hf]
+  exact InformationTheory.renyiDiv_map_le a ha _ _ hf
 
 /-- Data processing inequality for the Rényi MGF under Markov kernels (post-processing). -/
 theorem renyiMGF_bind_right_le (a : ℝ) (ha : 1 ≤ a) (f : α' → PMF β) (p q : PMF α') :
@@ -160,9 +170,14 @@ theorem renyiMGF_bind_right_le (a : ℝ) (ha : 1 ≤ a) (f : α' → PMF β) (p 
 /-- Data processing inequality for the multiplicative Rényi divergence under Markov kernels. -/
 theorem renyiDiv_bind_right_le (a : ℝ) (ha : 1 < a) (f : α' → PMF β) (p q : PMF α') :
     (p.bind f).renyiDiv a (q.bind f) ≤ p.renyiDiv a q := by
-  simp only [renyiDiv_eq_rpow ha]
-  exact ENNReal.rpow_le_rpow (renyiMGF_bind_right_le a ha.le f p q)
-    (inv_nonneg.mpr (sub_nonneg.mpr ha.le))
+  let _ : MeasurableSpace α' := ⊤
+  let _ : MeasurableSpace β := ⊤
+  let κ : ProbabilityTheory.Kernel α' β := ⟨fun x => (f x).toMeasure, Measurable.of_discrete⟩
+  have _ : ProbabilityTheory.IsMarkovKernel κ :=
+    ⟨fun x => PMF.toMeasure.isProbabilityMeasure (f x)⟩
+  rw [← InformationTheory.renyiDiv_toMeasure a ha,
+    ← InformationTheory.renyiDiv_toMeasure a ha, PMF.toMeasure_bind, PMF.toMeasure_bind]
+  exact InformationTheory.renyiDiv_comp_right_le a ha _ _ κ
 
 /-! ### Total variation against the Renyi divergence
 

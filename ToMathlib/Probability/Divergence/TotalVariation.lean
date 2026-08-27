@@ -22,7 +22,7 @@ Writing `m = ∫ min f g` and `M = ∫ max f g`, the two pointwise identities `m
 `|f - g| + 2·min f g = f + g` give `m + M = 2` and `TV + m = 1`, hence `M = 1 + TV`. Since
 `min · max = f · g`, Cauchy-Schwarz — Hölder at exponents `1/2` and `1/2`, so the *same*
 `ENNReal.lintegral_mul_norm_pow_le` that powers the log-convexity step — bounds
-`BC ≤ m^{1/2} M^{1/2}`, whence `BC² ≤ m·M` and `BC² + TV² = 1`.
+`BC ≤ m^{1/2} M^{1/2}`, whence `BC² ≤ m·M` and `BC² + TV² ≤ 1`.
 
 Stating it for a pair of densities rather than a pair of measures keeps it free of
 Radon-Nikodym bookkeeping, and lets the discrete corollary instantiate at a counting measure while

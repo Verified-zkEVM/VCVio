@@ -25,15 +25,9 @@ acquires the same equality.
 
 ## Hypotheses
 
-`[Countable α]` and `[MeasurableSingletonClass α]` are what `lintegral_countable'` asks for in
-turning the Giry bind's integral back into the `tsum` that `toMeasure_bind_apply` produces.
-Together they also supply `DiscreteMeasurableSpace α` (via
-`MeasurableSingletonClass.toDiscreteMeasurableSpace`), which is what discharges the
-measurability side condition on the continuation.
-
-Countability should ultimately be removable, since `PMF.support` is countable regardless of
-`α`; doing so means restricting the integral to the support first, and is left for whenever
-the general statement is actually needed.
+Only `[DiscreteMeasurableSpace α]` is required. The proof restricts the source measure to the
+countable support of `p`, then applies `lintegral_countable`; no countability assumption on the
+ambient carrier is needed.
 -/
 
 @[expose] public section

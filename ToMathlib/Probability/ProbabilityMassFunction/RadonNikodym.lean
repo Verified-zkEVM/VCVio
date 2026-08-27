@@ -19,22 +19,22 @@ pointwise masses. `PMF.rnDeriv_toMeasure` is the equation between the two: the d
 It is what lets a measure-level divergence result be read back as the `tsum` formula an existing
 `PMF` proof is stated in, and conversely.
 
-## Countability is not required
+## Two useful forms
 
-A `PMF` has countable support whatever its carrier, so nothing here needs `[Countable α]` — only a
-measurable structure in which the relevant sets are measurable. That matters: the `SPMF` layer
-instantiates these results at `Option α'` for a completely arbitrary `α'`, where no countability
-instance is available, so a countable-carrier version would not reach the callers that need it.
+The unrestricted bridge is stated on a countable carrier with measurable singletons. This is the
+legacy API and applies, for example, to ordinary Borel spaces when the carrier is countable.
 
-The route is `withDensity` rather than counting measure for the same reason. Counting measure is
-`SigmaFinite` only on a countable carrier, whereas `q.toMeasure` is a probability measure and so is
-σ-finite always.
+For callers such as `SPMF` that work over an arbitrary carrier, the `_of_ac` form removes the
+carrier-countability assumption by restricting the integral to the countable support of `q`. It
+uses `q.toMeasure` itself as the dominating measure and therefore carries an explicit absolute-
+continuity hypothesis.
 
 ## The absolute-continuity hypothesis
 
-`rnDeriv_toMeasure` asks for `p.toMeasure ≪ q.toMeasure`. Where `q` vanishes the ratio is not
-determined by the derivative, and absolute continuity is what rules those points out — the same
-reason a divergence defined by an integral against `q` must carry the guard to see them at all.
+The unrestricted theorem is an almost-everywhere equality and does not need absolute continuity:
+points where `q` vanishes are already invisible to `=ᵐ[q.toMeasure]`. The arbitrary-carrier
+`rnDeriv_toMeasure_of_ac` uses absolute continuity only because its supporting `withDensity`
+factorization does.
 -/
 
 @[expose] public section
@@ -43,7 +43,41 @@ open MeasureTheory
 
 namespace PMF
 
-variable {α : Type*} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+variable {α : Type*} [MeasurableSpace α] [MeasurableSingletonClass α]
+
+/-- A `PMF`'s measure is counting measure with the mass function as density. -/
+theorem toMeasure_eq_withDensity_count (p : PMF α) :
+    p.toMeasure = Measure.count.withDensity p := by
+  ext s hs
+  rw [PMF.toMeasure_apply_eq_tsum, withDensity_apply _ hs, ← lintegral_indicator hs,
+    lintegral_count]
+
+omit [MeasurableSingletonClass α] in
+/-- Every `PMF` measure is dominated by counting measure. -/
+theorem absolutelyContinuous_count (p : PMF α) : p.toMeasure ≪ Measure.count :=
+  Measure.AbsolutelyContinuous.mk fun s _ h => by
+    simp [Measure.count_eq_zero_iff.mp h]
+
+section Countable
+
+variable [Countable α]
+
+/-- The density of a `PMF` measure against counting measure is its mass function. -/
+theorem rnDeriv_toMeasure_count (p : PMF α) :
+    p.toMeasure.rnDeriv Measure.count =ᵐ[Measure.count] p := by
+  rw [toMeasure_eq_withDensity_count]
+  exact Measure.rnDeriv_withDensity _ (measurable_of_countable _)
+
+/-- **The pointwise Radon--Nikodym derivative of one `PMF` against another.** -/
+theorem rnDeriv_toMeasure (p q : PMF α) :
+    p.toMeasure.rnDeriv q.toMeasure =ᵐ[q.toMeasure] fun x => p x / q x := by
+  filter_upwards [Measure.rnDeriv_eq_div (absolutelyContinuous_count p)
+      (absolutelyContinuous_count q),
+    absolutelyContinuous_count q (rnDeriv_toMeasure_count p),
+    absolutelyContinuous_count q (rnDeriv_toMeasure_count q)] with x h1 h2 h3
+  rw [h1, h2, h3]
+
+end Countable
 
 /-- Absolute continuity of `PMF` measures is inclusion of supports. -/
 theorem absolutelyContinuous_toMeasure_iff (p q : PMF α) :
@@ -51,20 +85,24 @@ theorem absolutelyContinuous_toMeasure_iff (p q : PMF α) :
   constructor
   · intro h x hx
     have hq : q.toMeasure {x} = 0 := by
-      rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete]; exact hx
+      rw [PMF.toMeasure_apply_singleton _ _ (MeasurableSet.singleton x)]; exact hx
     have := h hq
-    rwa [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete] at this
+    rwa [PMF.toMeasure_apply_singleton _ _ (MeasurableSet.singleton x)] at this
   · intro h
     refine Measure.AbsolutelyContinuous.mk fun s hs hzero => ?_
     rw [PMF.toMeasure_apply_eq_zero_iff _ hs] at hzero ⊢
     exact Set.disjoint_left.mpr fun x hxp hxs =>
       Set.disjoint_left.mp hzero (fun hq => hxp (h x hq)) hxs
 
+section Discrete
+
+variable [DiscreteMeasurableSpace α]
+
 /-- Under absolute continuity, `p` is `q` carrying the pointwise ratio as a density.
 
 Only the countable set `q.support` carries any mass, which is what lets this avoid a countability
 hypothesis on `α`. -/
-theorem toMeasure_eq_withDensity (p q : PMF α) (hpq : p.toMeasure ≪ q.toMeasure) :
+theorem toMeasure_eq_withDensity_of_ac (p q : PMF α) (hpq : p.toMeasure ≪ q.toMeasure) :
     q.toMeasure.withDensity (fun x => p x / q x) = p.toMeasure := by
   have hsupp : ∀ x, q x = 0 → p x = 0 := (absolutelyContinuous_toMeasure_iff p q).mp hpq
   ext s _
@@ -86,9 +124,11 @@ theorem toMeasure_eq_withDensity (p q : PMF α) (hpq : p.toMeasure ≪ q.toMeasu
 /-- **The pointwise Radon-Nikodym derivative of one `PMF` against another.**
 
 This is the bridge between a measure-level divergence and its `tsum` formula. -/
-theorem rnDeriv_toMeasure (p q : PMF α) (hpq : p.toMeasure ≪ q.toMeasure) :
+theorem rnDeriv_toMeasure_of_ac (p q : PMF α) (hpq : p.toMeasure ≪ q.toMeasure) :
     p.toMeasure.rnDeriv q.toMeasure =ᵐ[q.toMeasure] fun x => p x / q x := by
-  conv_lhs => rw [← toMeasure_eq_withDensity p q hpq]
+  conv_lhs => rw [← toMeasure_eq_withDensity_of_ac p q hpq]
   exact Measure.rnDeriv_withDensity _ Measurable.of_discrete
+
+end Discrete
 
 end PMF

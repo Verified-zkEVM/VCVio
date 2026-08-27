@@ -258,6 +258,14 @@ theorem renyiMGF_map_le (a : ℝ) (ha : 1 < a) (μ ν : Measure α)
   exact ENNReal.ofReal_le_ofReal
     (integral_toReal_rnDeriv_rpow_map_le a ha μ ν hg hac h_int)
 
+/-- Data processing inequality for multiplicative Rényi divergence under a measurable map. -/
+theorem renyiDiv_map_le (a : ℝ) (ha : 1 < a) (μ ν : Measure α)
+    [IsFiniteMeasure μ] [IsFiniteMeasure ν] {g : α → β} (hg : Measurable g) :
+    renyiDiv a (μ.map g) (ν.map g) ≤ renyiDiv a μ ν := by
+  simp only [renyiDiv_eq_rpow ha]
+  exact ENNReal.rpow_le_rpow (renyiMGF_map_le a ha μ ν hg)
+    (inv_nonneg.mpr (sub_nonneg.mpr ha.le))
+
 /-! ### Data processing for Markov kernels
 
 Post-processing by a kernel rather than a function. The route is Mathlib's own for
@@ -290,6 +298,12 @@ theorem renyiMGF_compProd_left (a : ℝ) (μ ν : Measure α) [IsFiniteMeasure �
       have := hcon.map (f := Prod.fst) measurable_fst
       rwa [← Measure.fst, ← Measure.fst, Measure.fst_compProd, Measure.fst_compProd] at this)
 
+/-- Pairing both measures with the same Markov kernel preserves multiplicative Rényi divergence. -/
+theorem renyiDiv_compProd_left (a : ℝ) (ha : 1 < a) (μ ν : Measure α)
+    [IsFiniteMeasure μ] [IsFiniteMeasure ν] (κ : Kernel α β) [IsMarkovKernel κ] :
+    renyiDiv a (μ ⊗ₘ κ) (ν ⊗ₘ κ) = renyiDiv a μ ν := by
+  simp only [renyiDiv_eq_rpow ha, renyiMGF_compProd_left a μ ν κ]
+
 /-- **Data processing inequality for the Renyi MGF under a Markov kernel.**
 
 Since `κ ∘ₘ μ` is `Measure.bind μ κ`, this is the statement that post-processing a computation by
@@ -302,6 +316,14 @@ theorem renyiMGF_comp_right_le (a : ℝ) (ha : 1 < a) (μ ν : Measure α)
         rw [← Measure.snd_compProd μ κ, ← Measure.snd_compProd ν κ, Measure.snd, Measure.snd]
         exact renyiMGF_map_le a ha _ _ measurable_snd
     _ = renyiMGF a μ ν := renyiMGF_compProd_left a μ ν κ
+
+/-- Data processing inequality for multiplicative Rényi divergence under a Markov kernel. -/
+theorem renyiDiv_comp_right_le (a : ℝ) (ha : 1 < a) (μ ν : Measure α)
+    [IsFiniteMeasure μ] [IsFiniteMeasure ν] (κ : Kernel α β) [IsMarkovKernel κ] :
+    renyiDiv a (κ ∘ₘ μ) (κ ∘ₘ ν) ≤ renyiDiv a μ ν := by
+  simp only [renyiDiv_eq_rpow ha]
+  exact ENNReal.rpow_le_rpow (renyiMGF_comp_right_le a ha μ ν κ)
+    (inv_nonneg.mpr (sub_nonneg.mpr ha.le))
 
 end DataProcessing
 
