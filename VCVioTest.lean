@@ -8,6 +8,7 @@ public import VCVioTest.MeasureSemantics
 public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MonadProbability
 public import VCVioTest.PFunctorFacade
+public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.QueryHom
 public import VCVioTest.RoundByRound.OneRound
