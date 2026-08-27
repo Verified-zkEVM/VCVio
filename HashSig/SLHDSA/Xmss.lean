@@ -6,16 +6,17 @@ Authors: Nicolas Consigny, Bolton Bailey
 
 module
 public import HashSig.SLHDSA.Wots
-public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
 
 /-!
 # XMSS (FIPS 205 §6)
 
 XMSS (`xmssNode`, `xmssSign`, `xmssPkFromSig`; Algorithms 9–11) is the node-addressed perfect
-Merkle tree `PerfectMerkleTree` (`VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed`)
-with WOTS+ public keys as leaves and `H` under the `TREE` address of each node as the node hash.
-That layer is itself the generic `AddressedMerkleTree` engine specialised to heap-style
-`(height, index)` addressing, so both its completeness and its oriented binding theorem are
+Merkle tree `PerfectMerkleTree` with WOTS+ public keys as leaves and `H` under the `TREE` address
+of each node as the node hash. Its effectful algorithms have callback-parametric owner
+implementations, specialized below to explicit public-hash queries.
+The Merkle layer is itself the generic `AddressedMerkleTree` engine specialised to heap-style
+`(height, index)` addressing, so its completeness, naturality, and oriented binding theorems are
 available here:
 
 * `xmssPkFromSig_xmssSign` — XMSS correctness, from `PerfectMerkleTree.climb_authPath` together
@@ -44,14 +45,75 @@ variable {p : Params}
 def wotsLeafAdrs (adrs : Adrs) (t : ℕ) : Adrs :=
   (adrs.setTypeAndClear .wotsHash).setKeyPairAddress t
 
+/-- The `TREE`-type address of the XMSS node at tree position `(height z, index t)`. -/
+def xmssNodeAdrs (adrs : Adrs) (z t : ℕ) : Adrs :=
+  ((adrs.setTypeAndClear .tree).setTreeHeight z).setTreeIndex t
+
+/-- An XMSS signature: a WOTS+ signature of the leaf message paired with the authentication
+path (`h'` sibling nodes). -/
+abbrev XmssSig (p : Params) (prims : Primitives p) := WotsSig p prims × List prims.Y
+
+/-! ### Callback-parametric owner implementations -/
+
+/-- Callback-parametric XMSS leaf computation: generate the WOTS+ public key at leaf `t`. -/
+def xmssLeafWith (prims : Primitives p) {m : Type → Type*} [Monad m]
+    (hash : Adrs → prims.Y → m prims.Y)
+    (compress : Adrs → List prims.Y → m prims.Y)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (t : ℕ) : m prims.Y :=
+  wotsPkGenWith prims hash compress sk pk (wotsLeafAdrs adrs t)
+
+/-- Apply the callback for the XMSS internal node at `(height z, index t)`. -/
+def xmssNodeHashWith {Y : Type} {m : Type → Type*}
+    (nodeHash : Adrs → Y → Y → m Y) (adrs : Adrs)
+    (z t : ℕ) (l r : Y) : m Y :=
+  nodeHash (xmssNodeAdrs adrs z t) l r
+
+/-- Callback-parametric owner implementation of the subtree root at `(height z, index t)`. -/
+def xmssNodeWith (prims : Primitives p) {m : Type → Type*} [Monad m]
+    (hash : Adrs → prims.Y → m prims.Y)
+    (compress : Adrs → List prims.Y → m prims.Y)
+    (nodeHash : Adrs → prims.Y → prims.Y → m prims.Y)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) : m prims.Y :=
+  PerfectMerkleTree.merkleRootM (xmssLeafWith prims hash compress sk pk adrs)
+    (xmssNodeHashWith nodeHash adrs) z t
+
+/-- Callback-parametric owner implementation of the XMSS tree root. -/
+def xmssRootWith (prims : Primitives p) {m : Type → Type*} [Monad m]
+    (hash : Adrs → prims.Y → m prims.Y)
+    (compress : Adrs → List prims.Y → m prims.Y)
+    (nodeHash : Adrs → prims.Y → prims.Y → m prims.Y)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) : m prims.Y :=
+  xmssNodeWith prims hash compress nodeHash sk pk adrs p.hp 0
+
+/-- Callback-parametric owner implementation of XMSS signing. The WOTS+ signature is computed
+before the sibling-only authentication path, fixing the effect order of the returned pair. -/
+def xmssSignWith (prims : Primitives p) {m : Type → Type*} [Monad m]
+    (hash : Adrs → prims.Y → m prims.Y)
+    (compress : Adrs → List prims.Y → m prims.Y)
+    (nodeHash : Adrs → prims.Y → prims.Y → m prims.Y)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idx : ℕ) : m (XmssSig p prims) := do
+  let sig ← wotsSignWith prims hash msg sk pk (wotsLeafAdrs adrs idx)
+  let path ← PerfectMerkleTree.authPathM (xmssLeafWith prims hash compress sk pk adrs)
+    (xmssNodeHashWith nodeHash adrs) idx p.hp
+  return (sig, path)
+
+/-- Callback-parametric owner implementation of XMSS root recovery. The WOTS+ public key is
+recovered before the authentication path is climbed. -/
+def xmssPkFromSigWith (prims : Primitives p) {m : Type → Type*} [Monad m]
+    (hash : Adrs → prims.Y → m prims.Y)
+    (compress : Adrs → List prims.Y → m prims.Y)
+    (nodeHash : Adrs → prims.Y → prims.Y → m prims.Y)
+    (idx : ℕ) (sig : XmssSig p prims) (msg : prims.Y) (adrs : Adrs) : m prims.Y := do
+  let leaf ← wotsPkFromSigWith prims hash compress sig.1 msg (wotsLeafAdrs adrs idx)
+  PerfectMerkleTree.climbM (xmssNodeHashWith nodeHash adrs) idx leaf sig.2
+
+/-! ### Pure and explicit-public-hash interpretations -/
+
 /-- The XMSS leaf value at index `t`: the WOTS+ public key of keypair `t`. -/
 def xmssLeaf (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs)
     (t : ℕ) : prims.Y :=
   wotsPkGen prims sk pk (wotsLeafAdrs adrs t)
-
-/-- The `TREE`-type address of the XMSS node at tree position `(height z, index t)`. -/
-def xmssNodeAdrs (adrs : Adrs) (z t : ℕ) : Adrs :=
-  ((adrs.setTypeAndClear .tree).setTreeHeight z).setTreeIndex t
 
 /-- The XMSS internal-node hash at tree position `(height z, index t)` (type `TREE`). -/
 def xmssNodeHash (prims : Primitives p) (pk : prims.PkSeed) (adrs : Adrs)
@@ -68,10 +130,6 @@ def xmssRoot (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed) (adr
     prims.Y :=
   xmssNode prims sk pk adrs p.hp 0
 
-/-- An XMSS signature: a WOTS+ signature of the leaf message paired with the authentication
-path (`h'` sibling nodes). -/
-abbrev XmssSig (p : Params) (prims : Primitives p) := WotsSig p prims × List prims.Y
-
 /-- XMSS signing (FIPS 205 Algorithm 10): WOTS+-sign at leaf `idx` and emit the auth path. -/
 def xmssSign (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) (idx : ℕ) : XmssSig p prims :=
@@ -84,6 +142,48 @@ def xmssPkFromSig (prims : Primitives p) (idx : ℕ) (sig : XmssSig p prims) (ms
     (pk : prims.PkSeed) (adrs : Adrs) : prims.Y :=
   PerfectMerkleTree.climb (xmssNodeHash prims pk adrs) idx
     (wotsPkFromSig prims sig.1 msg pk (wotsLeafAdrs adrs idx)) sig.2
+
+/-- Explicit-public-hash XMSS leaf computation. -/
+def xmssLeafM (prims : Primitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec prims) m]
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (t : ℕ) : m prims.Y :=
+  xmssLeafWith prims (PublicHash.f prims pk) (PublicHash.tl prims pk) sk pk adrs t
+
+/-- Explicit-public-hash XMSS internal-node computation. -/
+def xmssNodeHashM (prims : Primitives p) {m : Type → Type*}
+    [HasQuery (publicHashSpec prims) m] (pk : prims.PkSeed) (adrs : Adrs)
+    (z t : ℕ) (l r : prims.Y) : m prims.Y :=
+  xmssNodeHashWith (PublicHash.h prims pk) adrs z t l r
+
+/-- Explicit-public-hash XMSS subtree-root computation. -/
+def xmssNodeM (prims : Primitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec prims) m]
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) : m prims.Y :=
+  xmssNodeWith prims (PublicHash.f prims pk) (PublicHash.tl prims pk)
+    (PublicHash.h prims pk) sk pk adrs z t
+
+/-- Explicit-public-hash XMSS tree-root computation. -/
+def xmssRootM (prims : Primitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec prims) m]
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) : m prims.Y :=
+  xmssRootWith prims (PublicHash.f prims pk) (PublicHash.tl prims pk)
+    (PublicHash.h prims pk) sk pk adrs
+
+/-- Explicit-public-hash XMSS signing. -/
+def xmssSignM (prims : Primitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec prims) m]
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idx : ℕ) : m (XmssSig p prims) :=
+  xmssSignWith prims (PublicHash.f prims pk) (PublicHash.tl prims pk)
+    (PublicHash.h prims pk) msg sk pk adrs idx
+
+/-- Explicit-public-hash XMSS root recovery. -/
+def xmssPkFromSigM (prims : Primitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec prims) m]
+    (idx : ℕ) (sig : XmssSig p prims) (msg : prims.Y)
+    (pk : prims.PkSeed) (adrs : Adrs) : m prims.Y :=
+  xmssPkFromSigWith prims (PublicHash.f prims pk) (PublicHash.tl prims pk)
+    (PublicHash.h prims pk) idx sig msg adrs
 
 /-- **XMSS correctness** (FIPS 205, Algorithms 9–11): root recovery from an honest signature at
 leaf `idx < 2^{h'}` reproduces the XMSS tree root. Composes WOTS+ correctness with the Merkle
