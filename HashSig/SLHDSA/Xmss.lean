@@ -388,6 +388,167 @@ theorem xmssPkFromSigM_natural (prims : Primitives p)
   · exact queryHom_tl prims F pk
   · exact queryHom_h prims F pk
 
+/-! ### Deterministic interpretations -/
+
+/-- A fixed deterministic answer table turns explicit XMSS leaf generation into pure WOTS+
+key generation for the induced primitive bundle. -/
+@[simp]
+theorem simulateQ_xmssLeafM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (t : ℕ) :
+    simulateQ answer
+        (xmssLeafM prims sk pk adrs t : OracleComp (publicHashSpec prims) prims.Y) =
+      xmssLeaf (PublicHash.withPublicHash prims answer) sk pk adrs t :=
+  simulateQ_wotsPkGenM_withPublicHash prims answer sk pk (wotsLeafAdrs adrs t)
+
+/-- Canonical deterministic-handler parity for XMSS leaves. -/
+@[simp]
+theorem simulateQ_xmssLeafM (prims : Primitives p)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (t : ℕ) :
+    simulateQ (PublicHash.impl prims)
+        (xmssLeafM prims sk pk adrs t : OracleComp (publicHashSpec prims) prims.Y) =
+      xmssLeaf prims sk pk adrs t := by
+  convert simulateQ_xmssLeafM_withPublicHash prims (PublicHash.impl prims) sk pk adrs t using 1
+  all_goals rfl
+
+/-- A fixed deterministic answer table turns an explicit XMSS internal-node query into the pure
+node hash for the induced primitive bundle. -/
+@[simp]
+theorem simulateQ_xmssNodeHashM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (pk : prims.PkSeed) (adrs : Adrs)
+    (z t : ℕ) (l r : prims.Y) :
+    simulateQ answer
+        (xmssNodeHashM prims pk adrs z t l r :
+          OracleComp (publicHashSpec prims) prims.Y) =
+      xmssNodeHash (PublicHash.withPublicHash prims answer) pk adrs z t l r := by
+  simp [xmssNodeHashM, xmssNodeHashWith, xmssNodeHash, PublicHash.h]
+
+/-- Canonical deterministic-handler parity for XMSS internal nodes. -/
+@[simp]
+theorem simulateQ_xmssNodeHashM (prims : Primitives p) (pk : prims.PkSeed)
+    (adrs : Adrs) (z t : ℕ) (l r : prims.Y) :
+    simulateQ (PublicHash.impl prims)
+        (xmssNodeHashM prims pk adrs z t l r :
+          OracleComp (publicHashSpec prims) prims.Y) =
+      xmssNodeHash prims pk adrs z t l r := by
+  convert simulateQ_xmssNodeHashM_withPublicHash prims (PublicHash.impl prims)
+    pk adrs z t l r using 1
+  all_goals rfl
+
+/-- A fixed deterministic answer table turns explicit XMSS subtree computation into the pure
+subtree algorithm for the induced primitive bundle. -/
+@[simp]
+theorem simulateQ_xmssNodeM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) :
+    simulateQ answer
+        (xmssNodeM prims sk pk adrs z t : OracleComp (publicHashSpec prims) prims.Y) =
+      xmssNode (PublicHash.withPublicHash prims answer) sk pk adrs z t := by
+  simp only [xmssNodeM, xmssNodeWith, PerfectMerkleTree.simulateQ_merkleRootM]
+  unfold xmssNode
+  congr 1
+  · funext i
+    exact simulateQ_xmssLeafM_withPublicHash prims answer sk pk adrs i
+
+/-- Canonical deterministic-handler parity for XMSS subtree computation. -/
+@[simp]
+theorem simulateQ_xmssNodeM (prims : Primitives p)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) :
+    simulateQ (PublicHash.impl prims)
+        (xmssNodeM prims sk pk adrs z t : OracleComp (publicHashSpec prims) prims.Y) =
+      xmssNode prims sk pk adrs z t := by
+  convert simulateQ_xmssNodeM_withPublicHash prims (PublicHash.impl prims)
+    sk pk adrs z t using 1
+  all_goals rfl
+
+/-- A fixed deterministic answer table turns explicit XMSS root computation into the pure root
+for the induced primitive bundle. -/
+@[simp]
+theorem simulateQ_xmssRootM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ answer
+        (xmssRootM prims sk pk adrs : OracleComp (publicHashSpec prims) prims.Y) =
+      xmssRoot (PublicHash.withPublicHash prims answer) sk pk adrs := by
+  exact simulateQ_xmssNodeM_withPublicHash prims answer sk pk adrs p.hp 0
+
+/-- Canonical deterministic-handler parity for XMSS roots. -/
+@[simp]
+theorem simulateQ_xmssRootM (prims : Primitives p)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ (PublicHash.impl prims)
+        (xmssRootM prims sk pk adrs : OracleComp (publicHashSpec prims) prims.Y) =
+      xmssRoot prims sk pk adrs := by
+  convert simulateQ_xmssRootM_withPublicHash prims (PublicHash.impl prims) sk pk adrs using 1
+  all_goals rfl
+
+/-- A fixed deterministic answer table turns explicit XMSS signing into pure signing for the
+induced primitive bundle. The same answer table interprets the WOTS+ signature and auth path. -/
+@[simp]
+theorem simulateQ_xmssSignM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idx : ℕ) :
+    simulateQ answer
+        (xmssSignM prims msg sk pk adrs idx :
+          OracleComp (publicHashSpec prims) (XmssSig p prims)) =
+      xmssSign (PublicHash.withPublicHash prims answer) msg sk pk adrs idx := by
+  change simulateQ answer (do
+      let sig ← wotsSignM prims msg sk pk (wotsLeafAdrs adrs idx)
+      let path ← PerfectMerkleTree.authPathM (xmssLeafM prims sk pk adrs)
+        (xmssNodeHashM prims pk adrs) idx p.hp
+      return (sig, path)) = _
+  simp only [simulateQ_bind, simulateQ_pure]
+  rw [simulateQ_wotsSignM_withPublicHash]
+  rw [PerfectMerkleTree.simulateQ_authPathM]
+  simp [xmssSign]
+  rfl
+
+/-- Canonical deterministic-handler parity for XMSS signing. -/
+@[simp]
+theorem simulateQ_xmssSignM (prims : Primitives p)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idx : ℕ) :
+    simulateQ (PublicHash.impl prims)
+        (xmssSignM prims msg sk pk adrs idx :
+          OracleComp (publicHashSpec prims) (XmssSig p prims)) =
+      xmssSign prims msg sk pk adrs idx := by
+  convert simulateQ_xmssSignM_withPublicHash prims (PublicHash.impl prims)
+    msg sk pk adrs idx using 1
+  all_goals rfl
+
+/-- A fixed deterministic answer table turns explicit XMSS root recovery into pure recovery for
+the induced primitive bundle. -/
+@[simp]
+theorem simulateQ_xmssPkFromSigM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id)
+    (idx : ℕ) (sig : XmssSig p prims) (msg : prims.Y)
+    (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ answer
+        (xmssPkFromSigM prims idx sig msg pk adrs :
+          OracleComp (publicHashSpec prims) prims.Y) =
+      xmssPkFromSig (PublicHash.withPublicHash prims answer) idx sig msg pk adrs := by
+  change simulateQ answer (do
+      let leaf ← wotsPkFromSigM prims sig.1 msg pk (wotsLeafAdrs adrs idx)
+      PerfectMerkleTree.climbM (xmssNodeHashM prims pk adrs) idx leaf sig.2) = _
+  simp only [simulateQ_bind]
+  rw [simulateQ_wotsPkFromSigM_withPublicHash]
+  simp [xmssPkFromSig]
+  rfl
+
+/-- Canonical deterministic-handler parity for XMSS root recovery. -/
+@[simp]
+theorem simulateQ_xmssPkFromSigM (prims : Primitives p)
+    (idx : ℕ) (sig : XmssSig p prims) (msg : prims.Y)
+    (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ (PublicHash.impl prims)
+        (xmssPkFromSigM prims idx sig msg pk adrs :
+          OracleComp (publicHashSpec prims) prims.Y) =
+      xmssPkFromSig prims idx sig msg pk adrs := by
+  convert simulateQ_xmssPkFromSigM_withPublicHash prims (PublicHash.impl prims)
+    idx sig msg pk adrs using 1
+  all_goals rfl
+
 /-- **XMSS correctness** (FIPS 205, Algorithms 9–11): root recovery from an honest signature at
 leaf `idx < 2^{h'}` reproduces the XMSS tree root. Composes WOTS+ correctness with the Merkle
 auth-path consistency lemma. -/
@@ -402,6 +563,21 @@ theorem xmssPkFromSig_xmssSign (prims : Primitives p) (msg : prims.Y) (sk : prim
     (xmssNodeHash prims pk adrs) idx p.hp
   rw [Nat.div_eq_of_lt hidx] at key
   exact key
+
+/-- Functional XMSS completeness for one fixed public-hash answer table shared by signing,
+recovery, and root computation. This does not reset the random oracle between phases. -/
+theorem simulateQ_xmssPkFromSigM_xmssSignM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idx : ℕ) (hidx : idx < 2 ^ p.hp) :
+    simulateQ answer (do
+      let sig ← xmssSignM prims msg sk pk adrs idx
+      xmssPkFromSigM prims idx sig msg pk adrs) =
+    simulateQ answer (xmssRootM prims sk pk adrs) := by
+  simp only [simulateQ_bind, simulateQ_xmssSignM_withPublicHash,
+    simulateQ_xmssPkFromSigM_withPublicHash, simulateQ_xmssRootM_withPublicHash]
+  exact xmssPkFromSig_xmssSign (PublicHash.withPublicHash prims answer)
+    msg sk pk adrs idx hidx
 
 /-- **XMSS binding.** A signature at leaf `idx < 2^{h'}` with a well-formed authentication path
 whose recovered WOTS+ public key differs from the honest leaf, yet which recovers the honest XMSS
