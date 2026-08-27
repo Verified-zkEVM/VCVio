@@ -124,17 +124,51 @@ New code follows these rules:
 1. Use `Measure`, `ProbabilityMeasure`, and `Kernel` names from Mathlib in semantic statements.
 2. Use `Measure.sum` and `Measure.dirac` for new discrete distributions unless an executable
    representation is the actual subject.
-3. Keep `PMF` in compatibility adapters and existing discrete proofs while they migrate; do not
-   build new foundational APIs around it.
+3. Keep `PMF`/`SPMF` in compatibility adapters and existing discrete proofs while they migrate;
+   do not build new foundational APIs around it, and prefer to leave a file's coupling lower than
+   you found it. This is a floor and a direction: the surface is retiring, not merely frozen.
 4. Keep `FinRatPMF.Raw` for computation and prove that its denotation agrees with a measure.
 5. Put missing general measurable-space instances and Mathlib-facing lemmas in `ToMathlib`.
 6. Do not open Mathlib, Lean, or cslib contributions during this design migration. A
    probability-free improvement that belongs intrinsically to PolyFun may be proposed there, but
    VCVio-specific probability policy stays in VCVio.
 
-[`scripts/check-pmf-boundary.sh`](../../scripts/check-pmf-boundary.sh) enforces a per-file ceiling
-on direct bare-`PMF` coupling. Existing files may shrink their dependency; a new file starts with a
-zero allowance. Updating the baseline is an explicit review action, not a routine response to CI.
+## The retirement budget
+
+Upstream is retiring `PMF`, and this is visible in the pinned tree rather than only in a proposal:
+`Mathlib/Probability/ProbabilityMassFunction/` already deprecates `PMF.bernoulli` and
+`PMF.binomial` in favour of `ProbabilityTheory.bernoulliMeasure` and `ProbabilityTheory.binomial`.
+The core, `toOuterMeasure`, and `toMeasure` are not yet marked, but the family is being dismantled
+construction by construction. The direction is settled; only pacing is open.
+
+[`scripts/check-pmf-boundary.sh`](../../scripts/check-pmf-boundary.sh) is therefore a retirement
+mechanism, not a freeze. It has two modes:
+
+- **ceiling** (every build, blocking): no file may exceed its recorded count. A file absent from
+  the baseline has an allowance of zero, so new coupling cannot appear without an explicit,
+  reviewable baseline change.
+- **report** (pull requests, advisory): prints the aggregate and largest per-file deltas against
+  the base ref, so every change surfaces its effect on the retiring surface.
+- **ratchet** (opt-in, not in CI): every touched file that still carries coupling must decrease,
+  unless [`scripts/pmf_boundary_holds.tsv`](../../scripts/pmf_boundary_holds.tsv) records a reason.
+  This is the tool for a deliberate reduction pass.
+
+The middle mode is advisory rather than blocking on purpose. Enforcing decrease-on-touch was tried
+against the open stack first, and it would have failed every ready pull request: #542 only touches
+`OracleComp/OracleSpec.lean` because that file carries one incidental `PMF` mention, and #540
+restructures the Rényi files, moving 27 occurrences out of one and 29 into another while closing a
+`sorry`. A gate that turns unrelated work into a boundary failure gets neutralised by holds, and
+the holds then rot. The ceiling is the hard invariant; the report is what keeps the trend visible.
+
+`SPMF` counts toward both, because `SPMF := OptionT PMF` makes every use a transitive `PMF`
+dependency. Counting only bare `PMF` measured 935 occurrences across 78 files; counting both
+measures 2146 across 120 — so 42 files carried coupling that the guard could not see at all.
+Compound names such as `FinRatPMF` still do not count.
+
+Updating the baseline, or adding a hold, is an explicit review action and not a routine response to
+CI. A hold should name what would let it be removed.
+[`scripts/test-pmf-boundary.sh`](../../scripts/test-pmf-boundary.sh) fixtures both modes, including
+the `SPMF`-versus-`PMF` overlap that would otherwise double-count.
 
 ## Local Mathlib-facing utilities
 
