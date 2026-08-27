@@ -20,9 +20,7 @@ abstract `High`/`Hint` types:
 
 | field | FIPS 205 | role |
 |---|---|---|
-| `F`      | `F(PK.seed, ADRS, M₁)`            | chain step / FORS leaf hash |
-| `H`      | `H(PK.seed, ADRS, M₂)` (`= T₂`)  | binary Merkle / FORS-tree node |
-| `Tl`     | `T_ℓ(PK.seed, ADRS, Mₗ)`         | WOTS-pk and FORS-roots compression |
+| `Thash`  | `T_ℓ(PK.seed, ADRS, Mₗ)`         | shared tweakable-hash collection |
 | `PRF`    | `PRF(PK.seed, SK.seed, ADRS)`    | WOTS+/FORS secret values |
 | `PRFmsg` | `PRF_msg(SK.prf, opt_rand, M)`   | message randomizer `R` |
 | `Hmsg`   | `H_msg(R, PK.seed, PK.root, M)`  | message digest (`m` bytes) |
@@ -50,7 +48,8 @@ VCVio interfaces.
 namespace SLHDSA
 
 /-- The SLH-DSA tweakable-hash / PRF bundle (FIPS 205 §4.1), abstract in the seed, secret, and
-node carrier types. Each function takes the public seed and a 32-byte address tweak (`Adrs`). -/
+node carrier types.  `F`, `H = T₂`, and `T_ℓ` are not independent fields: they are arity-specific
+views of one `Thash` collection, keyed by the exact address encoding used by the instantiation. -/
 structure Primitives (p : Params) where
   /-- Public seed type (`PK.seed`). -/
   PkSeed : Type
@@ -60,13 +59,13 @@ structure Primitives (p : Params) where
   SkPrf : Type
   /-- Node / hash-output type (`n`-byte values: seeds, chain values, tree nodes, roots). -/
   Y : Type
-  /-- `F(PK.seed, ADRS, M₁)`: one-block tweakable hash (WOTS+ chain step, FORS leaf). -/
-  F : PkSeed → Adrs → Y → Y
-  /-- `H(PK.seed, ADRS, Mₗ ‖ Mᵣ)`: two-block tweakable hash (`= T₂`, Merkle/FORS node). -/
-  H : PkSeed → Adrs → Y → Y → Y
-  /-- `T_ℓ(PK.seed, ADRS, M)`: compress a list of nodes
-  (WOTS-pk over `len` chain ends, FORS roots over `k` trees). -/
-  Tl : PkSeed → Adrs → List Y → Y
+  /-- Canonical address bytes used by this instantiation.  SHA-2 uses the 22-byte `ADRSc`;
+  SHAKE uses the full 32-byte address.  Oracle keys use these bytes, so serialization aliases are
+  aliases in the ideal model as well. -/
+  adrsToBytes : Adrs → List Byte
+  /-- The single variable-arity tweakable-hash collection underlying `F`, `H = T₂`, and `T_ℓ`.
+  The ordered list length and contents are part of its input. -/
+  Thash : PkSeed → List Byte → List Y → Y
   /-- `PRF(PK.seed, SK.seed, ADRS)`: derive a WOTS+/FORS secret value. -/
   PRF : PkSeed → SkSeed → Adrs → Y
   /-- `PRF_msg(SK.prf, opt_rand, M)`: derive the message randomizer `R`. -/
@@ -76,5 +75,26 @@ structure Primitives (p : Params) where
   /-- Expose the `n`-byte encoding of a node, so WOTS+/FORS can extract base-`w`/`a` digits
   from a node via `base2b` (the only byte-level bridge needed by the abstract layer). -/
   yToBytes : Y → Bytes p.n
+
+namespace Primitives
+
+variable {p : Params}
+
+/-- `F(PK.seed, ADRS, M₁) = T₁(PK.seed, ADRS, [M₁])`. -/
+@[reducible] def F (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
+    (x : prims.Y) : prims.Y :=
+  prims.Thash pkSeed (prims.adrsToBytes adrs) [x]
+
+/-- `H(PK.seed, ADRS, Mₗ ‖ Mᵣ) = T₂(PK.seed, ADRS, [Mₗ, Mᵣ])`. -/
+@[reducible] def H (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
+    (left right : prims.Y) : prims.Y :=
+  prims.Thash pkSeed (prims.adrsToBytes adrs) [left, right]
+
+/-- `T_ℓ(PK.seed, ADRS, M)` for an ordered variable-length node list. -/
+@[reducible] def Tl (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
+    (xs : List prims.Y) : prims.Y :=
+  prims.Thash pkSeed (prims.adrsToBytes adrs) xs
+
+end Primitives
 
 end SLHDSA

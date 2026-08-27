@@ -11,10 +11,10 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 /-!
 # Explicit public-hash oracle for SLH-DSA
 
-This module gives the four public SLH-DSA hash operations an explicit oracle syntax.  The query
-identity retains the function family, public seed, complete address, ordered input, and (for
-`T_l`) the full input list.  Consequently a lazy random-oracle handler cannot accidentally
-identify nodes at different addresses or calls to different hash families.
+This module gives the public SLH-DSA hash operations an explicit oracle syntax.  `F`, `H = T₂`,
+and `T_l` are arity-specific wrappers around one tweakable-hash collection query.  Its identity
+retains the public seed, the instantiation's canonical encoded address, and the full ordered input
+list.  Thus the ideal model has exactly the aliases of the concrete address serialization.
 
 `PublicHash.impl` interprets the syntax with the deterministic functions in `Primitives`.
 `PublicHash.randomOracle` instead samples each previously unseen tagged query once and caches the
@@ -22,10 +22,9 @@ answer.  Both handlers interpret the same canonical `OracleComp` programs.
 
 The keyed operations `PRF` and `PRF_msg` are intentionally not part of this public interface:
 security games may expose this oracle to an adversary without exposing secret-key operations.
-
-The ideal-oracle domain stores the complete structural `Adrs`.  The concrete SHA-2 instantiation
-compresses addresses to `ADRSc`; relating that encoding to this ideal model requires a separate
-reachability/injectivity argument and is not claimed here.
+This is a modular tweakable-hash/PRF model, not a claim that every named operation is an
+independent domain of one raw SHA/XOF random oracle.  A proof connecting the model to a concrete
+hash instantiation must discharge the corresponding PRF and public-collection assumptions.
 
 ## References
 
@@ -40,15 +39,11 @@ namespace SLHDSA
 
 variable {p : Params}
 
-/-- A tagged query to one of the public SLH-DSA hash functions.  The carrier types are explicit
+/-- A query to the public SLH-DSA hash collection.  The carrier types are explicit
 parameters so the generated decidable-equality instance uses the caller's concrete instances. -/
 inductive PublicHashQuery (PkSeed Y : Type) where
-  /-- `F(PK.seed, ADRS, x)`. -/
-  | f (pkSeed : PkSeed) (adrs : Adrs) (x : Y)
-  /-- `H(PK.seed, ADRS, left, right)`.  The child order is part of the query. -/
-  | h (pkSeed : PkSeed) (adrs : Adrs) (left right : Y)
-  /-- `T_l(PK.seed, ADRS, xs)`.  Length and order are part of the query. -/
-  | tl (pkSeed : PkSeed) (adrs : Adrs) (xs : List Y)
+  /-- `T_l(PK.seed, encodedADRS, xs)`.  `F` and `H` use lists of length one and two. -/
+  | thash (pkSeed : PkSeed) (encodedAdrs : List Byte) (xs : List Y)
   /-- `H_msg(R, PK.seed, PK.root, M)`. -/
   | hmsg (r : Y) (pkSeed : PkSeed) (pkRoot : Y) (msg : List Byte)
 deriving DecidableEq
@@ -57,9 +52,7 @@ deriving DecidableEq
 to see that the first three constructors return nodes while `H_msg` returns a digest. -/
 @[reducible] def publicHashSpec (prims : Primitives p) :
     OracleSpec (PublicHashQuery prims.PkSeed prims.Y)
-  | .f _ _ _ => prims.Y
-  | .h _ _ _ _ => prims.Y
-  | .tl _ _ _ => prims.Y
+  | .thash _ _ _ => prims.Y
   | .hmsg _ _ _ _ => Bytes p.m
 
 namespace PublicHash
@@ -67,17 +60,20 @@ namespace PublicHash
 /-- Issue an explicit `F` query. -/
 def f (prims : Primitives p) {m : Type → Type*} [HasQuery (publicHashSpec prims) m]
     (pkSeed : prims.PkSeed) (adrs : Adrs) (x : prims.Y) : m prims.Y :=
-  query (spec := publicHashSpec prims) (PublicHashQuery.f pkSeed adrs x)
+  query (spec := publicHashSpec prims)
+    (PublicHashQuery.thash pkSeed (prims.adrsToBytes adrs) [x])
 
 /-- Issue an explicit ordered binary-node `H` query. -/
 def h (prims : Primitives p) {m : Type → Type*} [HasQuery (publicHashSpec prims) m]
     (pkSeed : prims.PkSeed) (adrs : Adrs) (left right : prims.Y) : m prims.Y :=
-  query (spec := publicHashSpec prims) (PublicHashQuery.h pkSeed adrs left right)
+  query (spec := publicHashSpec prims)
+    (PublicHashQuery.thash pkSeed (prims.adrsToBytes adrs) [left, right])
 
 /-- Issue an explicit variable-arity `T_l` query. -/
 def tl (prims : Primitives p) {m : Type → Type*} [HasQuery (publicHashSpec prims) m]
     (pkSeed : prims.PkSeed) (adrs : Adrs) (xs : List prims.Y) : m prims.Y :=
-  query (spec := publicHashSpec prims) (PublicHashQuery.tl pkSeed adrs xs)
+  query (spec := publicHashSpec prims)
+    (PublicHashQuery.thash pkSeed (prims.adrsToBytes adrs) xs)
 
 /-- Issue an explicit `H_msg` query. -/
 def hmsg (prims : Primitives p) {m : Type → Type*} [HasQuery (publicHashSpec prims) m]
@@ -87,9 +83,7 @@ def hmsg (prims : Primitives p) {m : Type → Type*} [HasQuery (publicHashSpec p
 
 /-- Deterministically interpret the public-hash syntax using the functions in `Primitives`. -/
 def impl (prims : Primitives p) : QueryImpl (publicHashSpec prims) Id
-  | .f pkSeed adrs x => prims.F pkSeed adrs x
-  | .h pkSeed adrs left right => prims.H pkSeed adrs left right
-  | .tl pkSeed adrs xs => prims.Tl pkSeed adrs xs
+  | .thash pkSeed encodedAdrs xs => prims.Thash pkSeed encodedAdrs xs
   | .hmsg r pkSeed pkRoot msg => prims.Hmsg r pkSeed pkRoot msg
 
 /-- Reinterpret the four public hash fields of `prims` through an arbitrary deterministic answer
@@ -103,9 +97,8 @@ perfectly valid pure SLH-DSA primitive bundle. -/
   SkSeed := prims.SkSeed
   SkPrf := prims.SkPrf
   Y := prims.Y
-  F pkSeed adrs x := answer (.f pkSeed adrs x)
-  H pkSeed adrs left right := answer (.h pkSeed adrs left right)
-  Tl pkSeed adrs xs := answer (.tl pkSeed adrs xs)
+  adrsToBytes := prims.adrsToBytes
+  Thash pkSeed encodedAdrs xs := answer (.thash pkSeed encodedAdrs xs)
   PRF := prims.PRF
   PRFmsg := prims.PRFmsg
   Hmsg r pkSeed pkRoot msg := answer (.hmsg r pkSeed pkRoot msg)
@@ -114,18 +107,20 @@ perfectly valid pure SLH-DSA primitive bundle. -/
 @[simp] theorem withPublicHash_f (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (x : prims.Y) :
-    (withPublicHash prims answer).F pkSeed adrs x = answer (.f pkSeed adrs x) := rfl
+    (withPublicHash prims answer).F pkSeed adrs x =
+      answer (.thash pkSeed (prims.adrsToBytes adrs) [x]) := rfl
 
 @[simp] theorem withPublicHash_h (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (left right : prims.Y) :
     (withPublicHash prims answer).H pkSeed adrs left right =
-      answer (.h pkSeed adrs left right) := rfl
+      answer (.thash pkSeed (prims.adrsToBytes adrs) [left, right]) := rfl
 
 @[simp] theorem withPublicHash_tl (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (xs : List prims.Y) :
-    (withPublicHash prims answer).Tl pkSeed adrs xs = answer (.tl pkSeed adrs xs) := rfl
+    (withPublicHash prims answer).Tl pkSeed adrs xs =
+      answer (.thash pkSeed (prims.adrsToBytes adrs) xs) := rfl
 
 @[simp] theorem withPublicHash_hmsg (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (r : prims.Y) (pkSeed : prims.PkSeed)
