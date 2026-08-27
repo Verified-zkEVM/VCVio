@@ -12,8 +12,9 @@ public import HashSig.SLHDSA.Xmss
 # Oracle-parametric XMSS canaries
 
 These producer-side examples pin XMSS address formation, left-to-right subtree evaluation,
-WOTS-before-authentication-path signing, recovery-before-climb verification, and deterministic
-handler parity. They exercise the canonical owner implementation in `Xmss.lean` directly.
+FIPS authentication-path-before-WOTS signing, recovery-before-climb verification, naturality,
+deterministic interpretation, and structural query bounds. They exercise the canonical owner
+implementation in `Xmss.lean` directly.
 -/
 
 public section
@@ -58,15 +59,15 @@ example (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) (left right : prims.Y) :
     query (spec := publicHashSpec prims)
       (.thash pk (prims.adrsToKey (xmssNodeAdrs adrs z t)) [left, right]) := rfl
 
-/-- Signing computes the WOTS+ signature before evaluating the sibling-only authentication
-path. -/
+/-- FIPS 205 Algorithm 10 computes the sibling-only authentication path before the WOTS+
+signature. -/
 example (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) (idx : ℕ) :
     (xmssSignM prims msg sk pk adrs idx :
       OracleComp (publicHashSpec prims) (XmssSig p prims)) = (do
-      let sig ← wotsSignM prims msg sk pk (wotsLeafAdrs adrs idx)
       let path ← PerfectMerkleTree.authPathM (xmssLeafM prims sk pk adrs)
         (xmssNodeHashM prims pk adrs) idx p.hp
+      let sig ← wotsSignM prims msg sk pk (wotsLeafAdrs adrs idx)
       return (sig, path)) := rfl
 
 /-- Recovery computes the WOTS+ leaf before climbing the leaf-first authentication path. -/
@@ -82,5 +83,52 @@ example (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) :
         (xmssNodeM prims sk pk adrs z t : OracleComp (publicHashSpec prims) prims.Y) =
       xmssNode prims sk pk adrs z t := by
   exact simulateQ_xmssNodeM prims sk pk adrs z t
+
+/-- Every deterministic total answer table interprets the same XMSS signing owner program. -/
+example (answer : QueryImpl (publicHashSpec prims) Id)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idx : ℕ) :
+    simulateQ answer
+        (xmssSignM prims msg sk pk adrs idx :
+          OracleComp (publicHashSpec prims) (XmssSig p prims)) =
+      xmssSign (PublicHash.withPublicHash prims answer) msg sk pk adrs idx :=
+  simulateQ_xmssSignM_withPublicHash prims answer msg sk pk adrs idx
+
+/-- The explicit leaf program is natural under the canonical query interpreter. -/
+example {m : Type → Type*} [Monad m] [LawfulMonad m]
+    [HasQuery (publicHashSpec prims) m]
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (t : ℕ) :
+    (HasQuery.QueryHom.ofSimulateQ (spec := publicHashSpec prims) (m := m)).toMonadHom
+        (xmssLeafM prims sk pk adrs t :
+          OracleComp (publicHashSpec prims) prims.Y) =
+      (xmssLeafM prims sk pk adrs t : m prims.Y) := by
+  exact xmssLeafM_natural prims _ sk pk adrs t
+
+/-- One addressed node-hash query is natural under the canonical query interpreter. -/
+example {m : Type → Type*} [Monad m] [LawfulMonad m]
+    [HasQuery (publicHashSpec prims) m]
+    (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) (left right : prims.Y) :
+    (HasQuery.QueryHom.ofSimulateQ (spec := publicHashSpec prims) (m := m)).toMonadHom
+        (xmssNodeHashM prims pk adrs z t left right :
+          OracleComp (publicHashSpec prims) prims.Y) =
+      (xmssNodeHashM prims pk adrs z t left right : m prims.Y) := by
+  exact xmssNodeHashM_natural prims _ pk adrs z t left right
+
+example (idx : ℕ) (sig : XmssSig p prims) (msg : prims.Y)
+    (pk : prims.PkSeed) (adrs : Adrs) :
+    IsTotalQueryBound
+      (xmssPkFromSigM prims idx sig msg pk adrs :
+        OracleComp (publicHashSpec prims) prims.Y)
+      ((∑ i : Fin p.len, (p.w - 1 - chainSteps prims msg i.val)) + 1 + sig.2.length) :=
+  xmssPkFromSigM_isTotalQueryBound prims idx sig msg pk adrs
+
+example (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idx : ℕ) :
+    IsTotalQueryBound ((do
+      let sig ← xmssSignM prims msg sk pk adrs idx
+      xmssPkFromSigM prims idx sig msg pk adrs) :
+        OracleComp (publicHashSpec prims) prims.Y)
+      ((p.len * (p.w - 1) + 1) + xmssAuthPathQueryBound p p.hp + p.hp) :=
+  xmssSignM_then_xmssPkFromSigM_isTotalQueryBound prims msg sk pk adrs idx
 
 end SLHDSA.XmssTest
