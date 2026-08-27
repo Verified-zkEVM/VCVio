@@ -193,6 +193,120 @@ theorem simulateQ_pkFromSigM_structural (prims : Primitives p)
   simp [pkFromSigM, PerfectMerkleTree.simulateQ_reconstructRootM]
   rfl
 
+/-! ## Functional completeness -/
+
+/-- Under any fixed deterministic public-hash answer function, the oracle leaf computation is
+the legacy WOTS+ leaf for the induced functional primitive bundle. -/
+@[simp]
+theorem simulateQ_leafM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (index : ℕ) :
+    simulateQ answer
+        (leafM prims sk pk adrs index : OracleComp (publicHashSpec prims) prims.Y) =
+      xmssLeaf (PublicHash.withPublicHash prims answer) sk pk adrs index := by
+  exact WotsOracle.simulateQ_wotsPkGenM_withPublicHash prims answer sk pk
+    (wotsLeafAdrs adrs index)
+
+/-- XMSS root generation is functionally complete for every deterministic public-hash answer
+function, expressed through the typed perfect-tree semantics. -/
+theorem simulateQ_rootM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) :
+    simulateQ answer
+        (rootM prims sk pk adrs : OracleComp (publicHashSpec prims) prims.Y) =
+      root (PublicHash.withPublicHash prims answer) sk pk adrs := by
+  rw [simulateQ_rootM_structural]
+  simp only [root, simulateQ_leafM_withPublicHash]
+
+/-- XMSS signing is functionally complete for every deterministic public-hash answer function. -/
+theorem simulateQ_signM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (msg : prims.Y) (sk : prims.SkSeed)
+    (pk : prims.PkSeed) (adrs : Adrs) (index : LeafIndex p.hp) :
+    simulateQ answer
+        (signM prims msg sk pk adrs index :
+          OracleComp (publicHashSpec prims) (Signature p prims)) =
+      sign (PublicHash.withPublicHash prims answer) msg sk pk adrs index := by
+  rw [simulateQ_signM_structural,
+    WotsOracle.simulateQ_wotsSignM_withPublicHash]
+  simp only [sign, simulateQ_leafM_withPublicHash]
+
+/-- XMSS root recovery is functionally complete for every deterministic public-hash answer
+function. -/
+theorem simulateQ_pkFromSigM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (index : LeafIndex p.hp)
+    (sig : Signature p prims) (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ answer
+        (pkFromSigM prims index sig msg pk adrs :
+          OracleComp (publicHashSpec prims) prims.Y) =
+      pkFromSig (PublicHash.withPublicHash prims answer) index sig msg pk adrs := by
+  rw [simulateQ_pkFromSigM_structural,
+    WotsOracle.simulateQ_wotsPkFromSigM_withPublicHash]
+  rfl
+
+/-- Honest XMSS signing and recovery remain complete after fixing any deterministic public-hash
+answer function. -/
+theorem simulateQ_pkFromSigM_signM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (msg : prims.Y) (sk : prims.SkSeed)
+    (pk : prims.PkSeed) (adrs : Adrs) (index : LeafIndex p.hp) :
+    simulateQ answer (do
+      let sig ← (signM prims msg sk pk adrs index :
+        OracleComp (publicHashSpec prims) (Signature p prims))
+      pkFromSigM prims index sig msg pk adrs) =
+      xmssRoot (PublicHash.withPublicHash prims answer) sk pk adrs := by
+  simp only [simulateQ_bind]
+  change simulateQ answer
+    (pkFromSigM prims index
+      (simulateQ answer
+        (signM prims msg sk pk adrs index :
+          OracleComp (publicHashSpec prims) (Signature p prims)))
+      msg pk adrs) = _
+  rw [simulateQ_signM_withPublicHash, simulateQ_pkFromSigM_withPublicHash]
+  exact pkFromSig_sign (PublicHash.withPublicHash prims answer) msg sk pk adrs index
+
+/-- Canonical deterministic-handler parity for XMSS roots. -/
+@[simp]
+theorem simulateQ_rootM (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) :
+    simulateQ (PublicHash.impl prims)
+        (rootM prims sk pk adrs : OracleComp (publicHashSpec prims) prims.Y) =
+      root prims sk pk adrs := by
+  convert simulateQ_rootM_withPublicHash prims (PublicHash.impl prims) sk pk adrs using 1
+  all_goals rfl
+
+/-- Canonical deterministic-handler parity for XMSS signing. -/
+@[simp]
+theorem simulateQ_signM (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed)
+    (pk : prims.PkSeed) (adrs : Adrs) (index : LeafIndex p.hp) :
+    simulateQ (PublicHash.impl prims)
+        (signM prims msg sk pk adrs index :
+          OracleComp (publicHashSpec prims) (Signature p prims)) =
+      sign prims msg sk pk adrs index := by
+  convert simulateQ_signM_withPublicHash prims (PublicHash.impl prims) msg sk pk adrs index using 1
+  all_goals rfl
+
+/-- Canonical deterministic-handler parity for XMSS root recovery. -/
+@[simp]
+theorem simulateQ_pkFromSigM (prims : Primitives p) (index : LeafIndex p.hp)
+    (sig : Signature p prims) (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ (PublicHash.impl prims)
+        (pkFromSigM prims index sig msg pk adrs :
+          OracleComp (publicHashSpec prims) prims.Y) =
+      pkFromSig prims index sig msg pk adrs := by
+  convert simulateQ_pkFromSigM_withPublicHash prims (PublicHash.impl prims) index sig msg pk adrs
+    using 1
+  all_goals rfl
+
+/-- Canonical honest signing/recovery equality for XMSS. -/
+theorem simulateQ_pkFromSigM_signM (prims : Primitives p) (msg : prims.Y)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (index : LeafIndex p.hp) :
+    simulateQ (PublicHash.impl prims) (do
+      let sig ← (signM prims msg sk pk adrs index :
+        OracleComp (publicHashSpec prims) (Signature p prims))
+      pkFromSigM prims index sig msg pk adrs) = xmssRoot prims sk pk adrs := by
+  convert simulateQ_pkFromSigM_signM_withPublicHash prims (PublicHash.impl prims) msg sk pk adrs
+    index using 1
+  all_goals rfl
+
 /-- Deterministic interpretation of one explicit XMSS node query is the original node hash. -/
 @[simp]
 theorem simulateQ_nodeHashM (prims : Primitives p) (pk : prims.PkSeed) (adrs : Adrs)

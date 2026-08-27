@@ -165,7 +165,7 @@ theorem pkFromSig_sign (prims : Primitives p) (md : List Byte) (sk : prims.SkSee
 /-! ## Deterministic-handler structure -/
 
 @[simp]
-theorem simulateQ_leafM_with (prims : Primitives p)
+theorem simulateQ_leafM_withPublicHash (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) (index : ℕ) :
     simulateQ answer
@@ -174,7 +174,7 @@ theorem simulateQ_leafM_with (prims : Primitives p)
   simp [leafM, forsLeaf, forsSkGen, PublicHash.f, PublicHash.withPublicHash]
 
 @[simp]
-theorem simulateQ_nodeHashM_with (prims : Primitives p)
+theorem simulateQ_nodeHashM_withPublicHash (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (pk : prims.PkSeed) (adrs : Adrs)
     (address : Address) (left right : prims.Y) :
     simulateQ answer
@@ -186,7 +186,7 @@ theorem simulateQ_nodeHashM_with (prims : Primitives p)
 
 /-- One FORS root interpreted by any fixed answer function is the legacy root for the
 reinterpreted primitive bundle. -/
-theorem simulateQ_rootM_with (prims : Primitives p)
+theorem simulateQ_rootM_withPublicHash (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) (tree : Fin p.k) :
     simulateQ answer
@@ -194,7 +194,7 @@ theorem simulateQ_rootM_with (prims : Primitives p)
       forsRoot (PublicHash.withPublicHash prims answer) sk pk adrs tree.val := by
   unfold rootM forsRoot
   rw [PerfectMerkleTree.simulateQ_treeHashM]
-  simp_rw [simulateQ_leafM_with, simulateQ_nodeHashM_with]
+  simp_rw [simulateQ_leafM_withPublicHash, simulateQ_nodeHashM_withPublicHash]
   exact Merkle.treeHash_eq_merkleRoot
     (forsLeaf (PublicHash.withPublicHash prims answer) sk pk adrs)
     (forsNodeHash (PublicHash.withPublicHash prims answer) pk adrs) p.a tree.val
@@ -206,7 +206,7 @@ private theorem indices_map_toList {n : ℕ} {α : Type} (f : Fin n → α) :
 
 /-- FORS public-key generation interpreted by any fixed answer function is legacy public-key
 generation for the reinterpreted primitive bundle. -/
-theorem simulateQ_pkGenM_with (prims : Primitives p)
+theorem simulateQ_pkGenM_withPublicHash (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) :
     simulateQ answer
@@ -214,7 +214,7 @@ theorem simulateQ_pkGenM_with (prims : Primitives p)
       forsPkGen (PublicHash.withPublicHash prims answer) sk pk adrs := by
   unfold pkGenM forsPkGen
   simp only [simulateQ_bind, PerfectMerkleTree.simulateQ_vector_mapM]
-  simp_rw [simulateQ_rootM_with]
+  simp_rw [simulateQ_rootM_withPublicHash]
   change answer (.tl pk (forsPkAdrs adrs)
       (((WotsOracle.indices p.k).map fun tree =>
         forsRoot (PublicHash.withPublicHash prims answer) sk pk adrs tree.val).toList)) =
@@ -227,20 +227,20 @@ theorem simulateQ_pkGenM_with (prims : Primitives p)
 
 /-- FORS signing interpreted by any fixed answer function is deterministic typed signing for the
 reinterpreted primitive bundle. -/
-theorem simulateQ_signM_with (prims : Primitives p)
+theorem simulateQ_signM_withPublicHash (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (md : List Byte) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) :
     simulateQ answer
         (signM prims md sk pk adrs : OracleComp (publicHashSpec prims) (Signature p prims)) =
       sign (PublicHash.withPublicHash prims answer) md sk pk adrs := by
   simp [signM, sign, PerfectMerkleTree.simulateQ_vector_mapM,
-    PerfectMerkleTree.simulateQ_authenticationPathM, simulateQ_leafM_with,
-    simulateQ_nodeHashM_with, WotsOracle.indices, PublicHash.withPublicHash]
+    PerfectMerkleTree.simulateQ_authenticationPathM, simulateQ_leafM_withPublicHash,
+    simulateQ_nodeHashM_withPublicHash, WotsOracle.indices, PublicHash.withPublicHash]
   rfl
 
 /-- FORS recovery interpreted by any fixed answer function is deterministic typed recovery for
 the reinterpreted primitive bundle. -/
-theorem simulateQ_pkFromSigM_with (prims : Primitives p)
+theorem simulateQ_pkFromSigM_withPublicHash (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (sig : Signature p prims) (md : List Byte)
     (pk : prims.PkSeed) (adrs : Adrs) :
     simulateQ answer
@@ -256,7 +256,7 @@ theorem simulateQ_pkFromSigM_with (prims : Primitives p)
         forsNodeHash (PublicHash.withPublicHash prims answer) pk adrs
           address.height address.index) 0 index p.a
         (answer (.f pk (forsNodeAdrs adrs 0 index) (sig[tree.val]).1)) (sig[tree.val]).2 := by
-    simp [PerfectMerkleTree.simulateQ_climbM, simulateQ_nodeHashM_with, PublicHash.f]
+    simp [PerfectMerkleTree.simulateQ_climbM, simulateQ_nodeHashM_withPublicHash, PublicHash.f]
     rfl
   unfold pkFromSigM pkFromSig
   rw [simulateQ_bind, PerfectMerkleTree.simulateQ_vector_mapM]
@@ -287,7 +287,7 @@ theorem simulateQ_pkFromSigM_with (prims : Primitives p)
 
 /-- Honest FORS signing and recovery are functionally complete after fixing any deterministic
 public-hash answer function. -/
-theorem simulateQ_pkFromSigM_signM_with (prims : Primitives p)
+theorem simulateQ_pkFromSigM_signM_withPublicHash (prims : Primitives p)
     (answer : QueryImpl (publicHashSpec prims) Id) (md : List Byte) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) :
     simulateQ answer (do
@@ -301,8 +301,59 @@ theorem simulateQ_pkFromSigM_signM_with (prims : Primitives p)
       (simulateQ answer
         (signM prims md sk pk adrs : OracleComp (publicHashSpec prims) (Signature p prims)))
       md pk adrs) = _
-  rw [simulateQ_signM_with, simulateQ_pkFromSigM_with]
+  rw [simulateQ_signM_withPublicHash, simulateQ_pkFromSigM_withPublicHash]
   exact pkFromSig_sign (PublicHash.withPublicHash prims answer) md sk pk adrs
+
+/-- Canonical deterministic-handler parity for one FORS root. -/
+@[simp]
+theorem simulateQ_rootM (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (tree : Fin p.k) :
+    simulateQ (PublicHash.impl prims)
+        (rootM prims sk pk adrs tree : OracleComp (publicHashSpec prims) prims.Y) =
+      forsRoot prims sk pk adrs tree.val := by
+  convert simulateQ_rootM_withPublicHash prims (PublicHash.impl prims) sk pk adrs tree using 1
+  all_goals rfl
+
+/-- Canonical deterministic-handler parity for FORS public-key generation. -/
+@[simp]
+theorem simulateQ_pkGenM (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) :
+    simulateQ (PublicHash.impl prims)
+        (pkGenM prims sk pk adrs : OracleComp (publicHashSpec prims) prims.Y) =
+      forsPkGen prims sk pk adrs := by
+  convert simulateQ_pkGenM_withPublicHash prims (PublicHash.impl prims) sk pk adrs using 1
+  all_goals rfl
+
+/-- Canonical deterministic-handler parity for FORS signing. -/
+@[simp]
+theorem simulateQ_signM (prims : Primitives p) (md : List Byte) (sk : prims.SkSeed)
+    (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ (PublicHash.impl prims)
+        (signM prims md sk pk adrs : OracleComp (publicHashSpec prims) (Signature p prims)) =
+      sign prims md sk pk adrs := by
+  convert simulateQ_signM_withPublicHash prims (PublicHash.impl prims) md sk pk adrs using 1
+  all_goals rfl
+
+/-- Canonical deterministic-handler parity for FORS public-key recovery. -/
+@[simp]
+theorem simulateQ_pkFromSigM (prims : Primitives p) (sig : Signature p prims)
+    (md : List Byte) (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ (PublicHash.impl prims)
+        (pkFromSigM prims sig md pk adrs : OracleComp (publicHashSpec prims) prims.Y) =
+      pkFromSig prims sig md pk adrs := by
+  convert simulateQ_pkFromSigM_withPublicHash prims (PublicHash.impl prims) sig md pk adrs using 1
+  all_goals rfl
+
+/-- Canonical honest signing/recovery equality for FORS. -/
+theorem simulateQ_pkFromSigM_signM (prims : Primitives p) (md : List Byte)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ (PublicHash.impl prims) (do
+      let sig ← (signM prims md sk pk adrs :
+        OracleComp (publicHashSpec prims) (Signature p prims))
+      pkFromSigM prims sig md pk adrs) = forsPkGen prims sk pk adrs := by
+  convert simulateQ_pkFromSigM_signM_withPublicHash prims (PublicHash.impl prims) md sk pk adrs
+    using 1
+  all_goals rfl
 
 @[simp]
 theorem simulateQ_leafM (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed)
