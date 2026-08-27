@@ -264,38 +264,4 @@ def OW_PCVA_Adversary.MakesAtMostQueries
     (adversary pk cStar).IsQueryBoundP (· matches .inr (.inl _)) qP ∧
     (adversary pk cStar).IsQueryBoundP (· matches .inr (.inr _)) qV
 
-/-- The T-transform OW-PCVA security statement.
-
-**WARNING: this is a placeholder statement, not the final theorem.** The current shape is
-unsound as written: `correctnessBound`, `gamma`, and `epsMsg` are unconstrained `ℝ`
-parameters, so the right-hand side can be driven arbitrarily negative while the left-hand
-side is a probability and hence nonnegative. In the final HHK-style statement these slack
-terms must be constrained (typically `correctnessBound` is the underlying PKE's
-`δ`-correctness error, `gamma` is the `γ`-spreadness bound on ciphertexts, and `epsMsg` is
-the message-distribution collision/min-entropy term, all of which are provably nonnegative
-quantities derived from `pke`).
-
-The proof is intentionally deferred. The oracle surface and query-budget parameters
-(`qH`, `qP`, `qV`) now match the HHK OW-PCVA game, but the bound itself still needs to be
-tightened before this can be a meaningful security claim. -/
-theorem OW_PCVA_bound
-    {M PK SK R C : Type}
-    [DecidableEq M] [DecidableEq C] [SampleableType M] [SampleableType R]
-    (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
-    (adversary : OW_PCVA_Adversary
-      (TTransform (m := OracleComp (TTransform.oracleSpec M R)) pke))
-    (correctnessBound gamma epsMsg : ℝ)
-    (qH qP qV : ℕ) :
-    adversary.MakesAtMostQueries qH qP qV →
-    ∃ cpaAdv₁ cpaAdv₂ : (pke.toAsymmEncAlg ProbCompRuntime.probComp).IND_CPA_adversary,
-      (OW_PCVA_Advantage
-        (encAlg := TTransform (m := OracleComp (TTransform.oracleSpec M R)) pke)
-        (runtime (M := M) (R := R)) adversary).toReal ≤
-        2 * ((pke.toAsymmEncAlg ProbCompRuntime.probComp).IND_CPA_advantage cpaAdv₁).toReal +
-        2 * ((pke.toAsymmEncAlg ProbCompRuntime.probComp).IND_CPA_advantage cpaAdv₂).toReal +
-        correctnessBound +
-        (qV : ℝ) * gamma +
-        2 * ((qH + qP + 1 : ℕ) : ℝ) * epsMsg := by
-  sorry
-
 end TTransform
