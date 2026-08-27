@@ -33,10 +33,11 @@ Unlike `MLDSA.Primitives`, this bundle carries **no algebraic `Laws`**: SLH-DSA 
 (`verify ∘ sign = accept`) is a *deterministic hash-tree consistency identity* that holds for
 **any** choice of the opaque hash fields — it reduces to the fact that `wotsPkFromSig`/
 `computeRoot` re-fold the *same* `F`/`H`/`Tl` at the *same* addresses the honest signer used,
-provable by structural induction with no hash hypotheses. The cryptographic assumptions
-(pseudorandomness of `PRF`/`PRFmsg`; multi-target preimage/target-collision resistance of
-`F`/`H`/`Tl`) are needed only for *unforgeability* and are stated in `HashSig.SLHDSA.Security`
-against the generic `VCVio.CryptoFoundations` tweakable-hash / multi-target surfaces.
+provable by structural induction with no hash hypotheses. The cryptographic assumptions needed
+for unforgeability concern pseudorandomness of `PRF`/`PRFmsg`, multi-target collision and
+decisional second-preimage resistance of the tweakable hashes, and interleaved target subset
+resilience of `Hmsg`. `HashSig.SLHDSA.Security` packages the primitive families into generic
+VCVio interfaces.
 
 ## References
 
