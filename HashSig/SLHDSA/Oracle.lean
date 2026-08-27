@@ -162,7 +162,8 @@ perfectly valid pure SLH-DSA primitive bundle. -/
 abbrev Cache (prims : Primitives p) := (publicHashSpec prims).QueryCache
 
 /-- Lazy random-oracle interpretation of the tagged public hash syntax. -/
-def randomOracle (prims : Primitives p) [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
+@[reducible] def randomOracle (prims : Primitives p)
+    [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
     [SampleableType prims.Y] [SampleableType (Bytes p.m)] :
     QueryImpl (publicHashSpec prims) (StateT (PublicHash.Cache prims) ProbComp) := by
   letI : ∀ t : PublicHashQuery prims.PkSeed prims.Y,

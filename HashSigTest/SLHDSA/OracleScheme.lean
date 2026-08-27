@@ -100,4 +100,17 @@ noncomputable def runRoundTripRandomOracle :
     ProbComp (Bool × PublicHash.Cache toyPrimitives) :=
   roundTripRandomOracle.run ∅
 
+/-- A preloaded public-hash answer is returned without sampling or changing the shared cache. -/
+def cachedF : PublicHash.Cache toyPrimitives :=
+  OracleSpec.QueryCache.cacheQuery ∅
+    (.f (false : toyPrimitives.PkSeed) Adrs.zero (false : toyPrimitives.Y))
+    (true : toyPrimitives.Y)
+
+example :
+    (PublicHash.randomOracle toyPrimitives
+      (.f (false : toyPrimitives.PkSeed) Adrs.zero (false : toyPrimitives.Y))).run cachedF =
+      pure ((true : toyPrimitives.Y), cachedF) := by
+  apply QueryImpl.withCaching_run_some
+  exact OracleSpec.QueryCache.cacheQuery_self _ _ _
+
 end SLHDSA.OracleSchemeTest
