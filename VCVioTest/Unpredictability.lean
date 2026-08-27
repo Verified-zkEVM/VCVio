@@ -13,6 +13,7 @@ public import VCVio.OracleComp.QueryTracking.Unpredictability
 
 These examples pin the finite-target random-oracle bound, including its use of the number of
 distinct target values rather than the number of positions from which those values were collected.
+They also exercise the bound in a strictly nonzero universe.
 -/
 
 @[expose] public section
@@ -20,6 +21,48 @@ distinct target values rather than the number of positions from which those valu
 open OracleComp OracleSpec ENNReal
 
 namespace VCVioTest.Unpredictability
+
+universe u
+
+section UniversePolymorphism
+
+variable {ι : Type (u + 1)} [DecidableEq ι] [Inhabited ι]
+  {spec : OracleSpec.{u + 1, u + 1} ι} [spec.DecidableEq] [IsUniformSpec spec]
+
+/-- The finite-target bound applies to a genuine fresh query when the oracle's indices,
+responses, and computation result live in an arbitrary nonzero universe. The singleton target
+is reachable by the query at `default`, so this is not merely an elaboration-only `#check`. -/
+example (v₀ : spec.Range default)
+    (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t)) :
+    0 < Pr[fun z => ∃ target ∈ ({v₀} : Finset (spec.Range default)),
+          ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+            z.2 t₀ = some v ∧ (∅ : QueryCache spec) t₀ = none ∧ HEq v target |
+        (simulateQ cachingOracle
+          (liftM (spec.query default) : OracleComp spec (spec.Range default))).run ∅] ∧
+      Pr[fun z => ∃ target ∈ ({v₀} : Finset (spec.Range default)),
+          ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+            z.2 t₀ = some v ∧ (∅ : QueryCache spec) t₀ = none ∧ HEq v target |
+        (simulateQ cachingOracle
+          (liftM (spec.query default) : OracleComp spec (spec.Range default))).run ∅] ≤
+        ((({v₀} : Finset (spec.Range default)).card * 1 : ℕ) : ℝ≥0∞) *
+          (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ := by
+  constructor
+  · rw [probEvent_pos_iff]
+    refine ⟨(v₀, (∅ : QueryCache spec).cacheQuery default v₀), ?_, ?_⟩
+    · simp only [simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, id_map]
+      rw [cachingOracle.run_none (by simp), support_map]
+      exact ⟨v₀, by simp, rfl⟩
+    · exact ⟨v₀, by simp, default, v₀, by simp, by simp, HEq.rfl⟩
+  · apply probEvent_cache_hits_targets_le_of_noCollision
+    · rw [← bind_pure
+          (liftM (spec.query default) : OracleComp spec (spec.Range default)),
+        isTotalQueryBound_query_bind_iff]
+      exact ⟨Nat.one_pos, fun _ ↦ trivial⟩
+    · exact hrange
+    · rintro ⟨t₀, t₁, w₀, w₁, _, hcache, _, _⟩
+      simp at hcache
+
+end UniversePolymorphism
 
 abbrev TestSpec : OracleSpec Bool := Bool →ₒ Fin 4
 

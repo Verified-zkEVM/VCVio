@@ -339,7 +339,7 @@ end loggingOracle
 namespace OracleComp
 
 lemma run_simulateQ_loggingOracle_query_bind
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} {α : Type}
+    {ι : Type u} {spec : OracleSpec.{u, u} ι} {α : Type u}
     (t : spec.Domain) (mx : spec.Range t → OracleComp spec α) :
     (simulateQ loggingOracle (liftM (query t) >>= mx)).run =
       (query t : OracleComp spec _) >>= fun u =>
