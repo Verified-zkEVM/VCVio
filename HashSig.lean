@@ -14,13 +14,16 @@ public import HashSig.SLHDSA.Concrete.Keccak
 public import HashSig.SLHDSA.Concrete.Sha2
 public import HashSig.SLHDSA.Encoding
 public import HashSig.SLHDSA.Fors
+public import HashSig.SLHDSA.ForsOracle
 public import HashSig.SLHDSA.Hypertree
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.Params
 public import HashSig.SLHDSA.Primitives
 public import HashSig.SLHDSA.Scheme
+public import HashSig.SLHDSA.SchemeOracle
 public import HashSig.SLHDSA.Security
 public import HashSig.SLHDSA.Wots
 public import HashSig.SLHDSA.WotsChecksum
 public import HashSig.SLHDSA.WotsOracle
 public import HashSig.SLHDSA.Xmss
+public import HashSig.SLHDSA.XmssOracle
