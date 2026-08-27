@@ -142,13 +142,15 @@ The core, `toOuterMeasure`, and `toMeasure` are not yet marked, but the family i
 construction by construction. The direction is settled; only pacing is open.
 
 [`scripts/check-pmf-boundary.sh`](../../scripts/check-pmf-boundary.sh) is therefore a retirement
-mechanism, not a freeze. It has two modes:
+mechanism, not a freeze. It counts explicit standalone `PMF`/`SPMF` identifiers in Lean source,
+excluding comments and string literals. That count is a reviewable syntactic proxy for migration
+work, not a semantic dependency analysis. It has three modes:
 
 - **ceiling** (every build, blocking): no file may exceed its recorded count. A file absent from
   the baseline has an allowance of zero, so new coupling cannot appear without an explicit,
   reviewable baseline change.
-- **report** (pull requests, advisory): prints the aggregate and largest per-file deltas against
-  the base ref, so every change surfaces its effect on the retiring surface.
+- **report** (pull requests, advisory): scans the base ref and prints the aggregate and largest
+  per-file source-count deltas, so every change surfaces its effect on the retiring surface.
 - **ratchet** (opt-in, not in CI): every touched file that still carries coupling must decrease,
   unless [`scripts/pmf_boundary_holds.tsv`](../../scripts/pmf_boundary_holds.tsv) records a reason.
   This is the tool for a deliberate reduction pass.

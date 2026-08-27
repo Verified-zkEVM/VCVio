@@ -2,12 +2,13 @@
 # scripts/check-pmf-boundary.sh
 #
 # Keep finite-distribution coupling from growing while VCVio moves its denotational boundary to
-# Mathlib measures. The baseline is a per-file lexical ceiling for standalone `PMF` and `SPMF`
-# occurrences; compound names such as `FinRatPMF` do not count. A file absent from the baseline
-# has a ceiling of zero.
+# Mathlib measures. The baseline is a per-file syntactic ceiling for standalone `PMF` and `SPMF`
+# identifiers in Lean source, excluding comments and string literals; compound names such as
+# `FinRatPMF` do not count. A file absent from the baseline has a ceiling of zero. This is a
+# migration proxy for explicit source coupling, not a semantic dependency analysis.
 #
-# `SPMF` counts because `SPMF := OptionT PMF`, so every use is a transitive PMF dependency.
-# Counting only bare `PMF` measured well under half of the real exposure.
+# `SPMF` counts because `SPMF := OptionT PMF`, so every explicit use is a transitive PMF
+# dependency. Counting only bare `PMF` missed much of the explicit migration surface.
 #
 # Upstream is retiring `PMF`: the pinned Mathlib already deprecates `PMF.bernoulli` and
 # `PMF.binomial` in favour of measure-valued replacements in `ProbabilityTheory`. This guard exists
@@ -46,47 +47,67 @@ if [[ -n "${PMF_BOUNDARY_LIBS:-}" ]]; then
 else
   LIBS=(VCVio ToMathlib LatticeCrypto HashSig Examples VCVioWidgets)
 fi
-PATTERN='(?<![[:alpha:]])(?:SPMF|PMF)(?![[:alpha:]])'
 CURRENT="$(mktemp "${TMPDIR:-/tmp}/vcvio-pmf-boundary.XXXXXX")"
 trap 'rm -f "$CURRENT"' EXIT
 
-if command -v rg >/dev/null 2>&1; then
-  rg --pcre2 --count-matches --glob '*.lean' "$PATTERN" "${LIBS[@]}" \
-    | sort | sed $'s/:/\t/' > "$CURRENT"
-else
-  # GitHub's lean-action image does not guarantee ripgrep. Keep a dependency-free fallback whose
-  # token boundary agrees with the PCRE expression above: only alphabetic neighbours suppress a
-  # match, so `_PMF`, `PMF.` and similar standalone uses still count. `SPMF` is scanned before
-  # `PMF` and the alphabetic lookbehind stops the `PMF` inside it from counting twice.
-  while IFS= read -r -d '' file; do
-    count="$(awk '
-      {
-        original = $0
-        tokens[1] = "SPMF"
-        tokens[2] = "PMF"
-        for (tokenIndex = 1; tokenIndex <= 2; tokenIndex++) {
-          token = tokens[tokenIndex]
-          offset = 0
-          rest = original
-          while ((position = index(rest, token)) != 0) {
-            absolute = offset + position
-            before = absolute == 1 ? "" : substr(original, absolute - 1, 1)
-            after = substr(original, absolute + length(token), 1)
-            if (before !~ /[[:alpha:]]/ && after !~ /[[:alpha:]]/) {
-              total++
+count_tree() {
+  local tree_root="$1"
+  local output="$2"
+  (
+    cd "$tree_root"
+    # A small Lean-aware lexical pass keeps comments and documentation from consuming the budget.
+    # It also gives every platform the same behavior and naturally accepts a tree with no matches.
+    while IFS= read -r -d '' file; do
+      count="$(LC_ALL=C awk '
+        function isAlpha(c) { return c ~ /[[:alpha:]]/ }
+        {
+          line = $0
+          i = 1
+          while (i <= length(line)) {
+            if (blockDepth > 0) {
+              if (substr(line, i, 2) == "/-") { blockDepth++; i += 2; continue }
+              if (substr(line, i, 2) == "-/") { blockDepth--; i += 2; continue }
+              i++
+              continue
             }
-            offset = absolute + length(token) - 1
-            rest = substr(original, offset + 1)
+
+            ch = substr(line, i, 1)
+            if (inString) {
+              if (escaped) { escaped = 0; i++; continue }
+              if (ch == "\\") { escaped = 1; i++; continue }
+              if (ch == "\"") inString = 0
+              i++
+              continue
+            }
+
+            if (substr(line, i, 2) == "--") break
+            if (substr(line, i, 2) == "/-") { blockDepth = 1; i += 2; continue }
+            if (ch == "\"") { inString = 1; i++; continue }
+
+            token = ""
+            if (substr(line, i, 4) == "SPMF") token = "SPMF"
+            else if (substr(line, i, 3) == "PMF") token = "PMF"
+            if (token != "") {
+              before = (i == 1) ? "" : substr(line, i - 1, 1)
+              after = substr(line, i + length(token), 1)
+              if (!isAlpha(before) && !isAlpha(after)) total++
+              i += length(token)
+              continue
+            }
+            i++
           }
+          escaped = 0
         }
-      }
-      END { print total + 0 }
-    ' "$file")"
-    if (( count > 0 )); then
-      printf '%s\t%s\n' "$file" "$count"
-    fi
-  done < <(find "${LIBS[@]}" -type f -name '*.lean' -print0) | sort > "$CURRENT"
-fi
+        END { print total + 0 }
+      ' "$file")"
+      if (( count > 0 )); then
+        printf '%s\t%s\n' "$file" "$count"
+      fi
+    done < <(find "${LIBS[@]}" -type f -name '*.lean' -print0)
+  ) | sort > "$output"
+}
+
+count_tree "$REPO_ROOT" "$CURRENT"
 
 if [[ "${1:-}" == "--update-baseline" ]]; then
   cp "$CURRENT" "$BASELINE"
@@ -116,17 +137,25 @@ if [[ ! -f "$BASELINE" ]]; then
 fi
 
 CHANGED="$(mktemp "${TMPDIR:-/tmp}/vcvio-pmf-changed.XXXXXX")"
-trap 'rm -f "$CURRENT" "$CHANGED"' EXIT
-
 BASE_COUNTS="$(mktemp "${TMPDIR:-/tmp}/vcvio-pmf-basecounts.XXXXXX")"
-trap 'rm -f "$CURRENT" "$CHANGED" "$BASE_COUNTS"' EXIT
+BASE_TREE=""
+cleanup() {
+  rm -f "$CURRENT" "$CHANGED" "$BASE_COUNTS"
+  if [[ -n "$BASE_TREE" && -d "$BASE_TREE" ]]; then
+    rm -rf -- "$BASE_TREE"
+  fi
+}
+trap cleanup EXIT
 
 if [[ "$MODE" != "ceiling" ]]; then
   if git rev-parse --verify --quiet "$COMPARE_BASE" >/dev/null; then
     git diff --name-only "$COMPARE_BASE"...HEAD -- "${LIBS[@]}" > "$CHANGED"
-    # The base ref's own recorded counts, so the report compares against what was actually
-    # committed there rather than against the working baseline.
-    git show "$COMPARE_BASE:$BASELINE" > "$BASE_COUNTS" 2>/dev/null || : > "$BASE_COUNTS"
+    BASE_TREE="$(mktemp -d "${TMPDIR:-/tmp}/vcvio-pmf-base-tree.XXXXXX")"
+    if ! git archive "$COMPARE_BASE" -- "${LIBS[@]}" | tar -x -C "$BASE_TREE"; then
+      echo "PMF/SPMF boundary: could not materialize base ref '$COMPARE_BASE'." >&2
+      exit 2
+    fi
+    count_tree "$BASE_TREE" "$BASE_COUNTS"
   else
     echo "PMF/SPMF boundary: base ref '$COMPARE_BASE' not found; ceiling only." >&2
     MODE="ceiling"
@@ -170,8 +199,8 @@ END {
   if (mode == "ceiling") { print "PMF/SPMF boundary: OK."; exit 0 }
 
   if (mode == "report") {
-    # Advisory only. Reports what this change did to the retiring surface, against the counts
-    # recorded on the base ref, so the trend is visible on every pull request without turning
+    # Advisory only. Reports what this change did to the retiring surface, against the actual
+    # source counts on the base ref, so the trend is visible on every pull request without turning
     # unrelated work into a boundary failure.
     nowTotal = 0; for (f in cur) nowTotal += cur[f]
     wasTotal = 0; for (f in were) wasTotal += were[f]
@@ -225,12 +254,12 @@ END {
   stalled = 0
   for (f in changed) {
     if (f !~ /\.lean$/) continue
-    if (!(f in base) || base[f] == 0) continue
     c = (f in cur) ? cur[f] : 0
-    if (c < base[f]) continue
+    w = (f in were) ? were[f] : 0
+    if (c == 0 || c < w) continue
     if (f in hold) { print "PMF/SPMF boundary: hold on " f " (" c ") -- " hold[f]; continue }
     err("ERROR: " f " is touched by this change and still has " c " standalone PMF/SPMF")
-    err("       occurrence(s) (baseline " base[f] ").")
+    err("       occurrence(s) (actual base count " w ").")
     stalled++
   }
   if (stalled > 0) {
