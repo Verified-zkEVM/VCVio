@@ -37,6 +37,8 @@ available here:
 
 namespace SLHDSA
 
+open OracleComp
+
 variable {p : Params}
 
 /-! ### XMSS over WOTS+ leaves (FIPS 205 §6) -/
@@ -387,6 +389,107 @@ theorem xmssPkFromSigM_natural (prims : Primitives p)
   · exact queryHom_f prims F pk
   · exact queryHom_tl prims F pk
   · exact queryHom_h prims F pk
+
+/-! ### Structural query bounds -/
+
+/-- Public-hash budget for one XMSS subtree root. A leaf costs one complete WOTS+ public-key
+generation; a parent evaluates two children and one ordered binary hash. -/
+def xmssNodeQueryBound (p : Params) : ℕ → ℕ
+  | 0 => p.len * (p.w - 1) + 1
+  | z + 1 => xmssNodeQueryBound p z + xmssNodeQueryBound p z + 1
+
+/-- Public-hash budget for a sibling-only authentication path. At each level, the existing path
+is followed by exactly one sibling subtree. -/
+def xmssAuthPathQueryBound (p : Params) : ℕ → ℕ
+  | 0 => 0
+  | z + 1 => xmssAuthPathQueryBound p z + xmssNodeQueryBound p z
+
+private theorem xmssNodeHashM_isTotalQueryBound_one (prims : Primitives p)
+    (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) (l r : prims.Y) :
+    IsTotalQueryBound
+      (xmssNodeHashM prims pk adrs z t l r :
+        OracleComp (publicHashSpec prims) prims.Y) 1 := by
+  simp [xmssNodeHashM, xmssNodeHashWith, PublicHash.h, IsTotalQueryBound]
+
+/-- An XMSS subtree root stays within its structural leaf-and-parent query budget. -/
+theorem xmssNodeM_isTotalQueryBound (prims : Primitives p)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) :
+    IsTotalQueryBound
+      (xmssNodeM prims sk pk adrs z t : OracleComp (publicHashSpec prims) prims.Y)
+      (xmssNodeQueryBound p z) := by
+  induction z generalizing t with
+  | zero =>
+      simpa [xmssNodeQueryBound, xmssNodeM, xmssNodeWith,
+        PerfectMerkleTree.merkleRootM, xmssLeafM, xmssLeafWith, wotsPkGenM] using
+        wotsPkGenM_isTotalQueryBound prims sk pk (wotsLeafAdrs adrs t)
+  | succ z ih =>
+      change IsTotalQueryBound (do
+        let left ← xmssNodeM prims sk pk adrs z (2 * t)
+        let right ← xmssNodeM prims sk pk adrs z (2 * t + 1)
+        xmssNodeHashM prims pk adrs (z + 1) t left right)
+        (xmssNodeQueryBound p z + xmssNodeQueryBound p z + 1)
+      have hbound := isTotalQueryBound_bind (ih (2 * t)) fun left =>
+        isTotalQueryBound_bind (ih (2 * t + 1)) fun right =>
+          xmssNodeHashM_isTotalQueryBound_one prims pk adrs (z + 1) t left right
+      simpa [Nat.add_assoc] using hbound
+
+/-- XMSS root generation has the subtree budget at the parameter-set height. -/
+theorem xmssRootM_isTotalQueryBound (prims : Primitives p)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
+    IsTotalQueryBound
+      (xmssRootM prims sk pk adrs : OracleComp (publicHashSpec prims) prims.Y)
+      (xmssNodeQueryBound p p.hp) :=
+  xmssNodeM_isTotalQueryBound prims sk pk adrs p.hp 0
+
+/-- The sibling-only authentication-path program stays within the sum of one sibling subtree
+at every level. -/
+theorem xmssAuthPathM_isTotalQueryBound (prims : Primitives p)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (idx z : ℕ) :
+    IsTotalQueryBound
+      (PerfectMerkleTree.authPathM (xmssLeafM prims sk pk adrs)
+        (xmssNodeHashM prims pk adrs) idx z :
+          OracleComp (publicHashSpec prims) (List prims.Y))
+      (xmssAuthPathQueryBound p z) := by
+  induction z with
+  | zero => trivial
+  | succ z ih =>
+      change IsTotalQueryBound (do
+        let path ← PerfectMerkleTree.authPathM (xmssLeafM prims sk pk adrs)
+          (xmssNodeHashM prims pk adrs) idx z
+        let siblingRoot ← xmssNodeM prims sk pk adrs z
+          (PerfectMerkleTree.sibling (idx / 2 ^ z))
+        return path ++ [siblingRoot])
+        (xmssAuthPathQueryBound p z + xmssNodeQueryBound p z)
+      exact isTotalQueryBound_bind ih fun path =>
+        isTotalQueryBound_bind
+          (xmssNodeM_isTotalQueryBound prims sk pk adrs z
+            (PerfectMerkleTree.sibling (idx / 2 ^ z)))
+          fun siblingRoot =>
+            show IsTotalQueryBound
+              (pure (path ++ [siblingRoot]) :
+                OracleComp (publicHashSpec prims) (List prims.Y)) 0 from trivial
+
+/-- XMSS signing composes the message-selected WOTS+ chain budget with the sibling-subtree
+authentication-path budget. -/
+theorem xmssSignM_isTotalQueryBound (prims : Primitives p)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idx : ℕ) :
+    IsTotalQueryBound
+      (xmssSignM prims msg sk pk adrs idx :
+        OracleComp (publicHashSpec prims) (XmssSig p prims))
+      ((∑ i : Fin p.len, chainSteps prims msg i.val) +
+        xmssAuthPathQueryBound p p.hp) := by
+  change IsTotalQueryBound (do
+    let sig ← wotsSignM prims msg sk pk (wotsLeafAdrs adrs idx)
+    let path ← PerfectMerkleTree.authPathM (xmssLeafM prims sk pk adrs)
+      (xmssNodeHashM prims pk adrs) idx p.hp
+    return (sig, path)) _
+  exact isTotalQueryBound_bind
+    (wotsSignM_isTotalQueryBound prims msg sk pk (wotsLeafAdrs adrs idx)) fun sig =>
+      isTotalQueryBound_bind
+        (xmssAuthPathM_isTotalQueryBound prims sk pk adrs idx p.hp) fun path =>
+          show IsTotalQueryBound
+            (pure (sig, path) : OracleComp (publicHashSpec prims) (XmssSig p prims)) 0 from trivial
 
 /-! ### Deterministic interpretations -/
 
