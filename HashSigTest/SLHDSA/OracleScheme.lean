@@ -73,6 +73,41 @@ def roundTrip : OracleComp (publicHashSpec toyPrimitives) Bool := do
 /-- Kernel-visible type canary for the complete explicit-oracle program. -/
 example : OracleComp (publicHashSpec toyPrimitives) Bool := roundTrip
 
+/-- Honest end-to-end execution succeeds under the canonical deterministic hash handler. -/
+example : simulateQ (PublicHash.impl toyPrimitives) roundTrip = true := by
+  simpa [roundTrip] using
+    OracleScheme.simulateQ_honest_roundTrip toyPrimitives [0] false false false false
+
+/-- The public empty-context API domain-separates raw messages before internal hashing. -/
+example : emptyContextMessage [1, 2] = [0, 0, 1, 2] := rfl
+
+example (pk : PublicKey toyPrimitives)
+    (sig : OracleScheme.Signature toyParams toyPrimitives) :
+    (OracleScheme.verifyM toyPrimitives pk [1, 2] sig :
+      OracleComp (publicHashSpec toyPrimitives) Bool) =
+      OracleScheme.verifyInternalM toyPrimitives [0, 0, 1, 2] sig pk := rfl
+
+/-! FIPS 205 Algorithm 10 computes the authentication path before the WOTS signature, although the
+serialized result stores WOTS first.  This stateful canary distinguishes those effect families and
+therefore catches an order reversal that deterministic `simulateQ … Id` parity would erase. -/
+
+inductive XmssSignEvent where
+  | authenticationPath
+  | wotsSignature
+deriving DecidableEq, Repr
+
+def tracedAuthenticationPath : StateM (List XmssSignEvent) ℕ := do
+  modify (· ++ [.authenticationPath])
+  pure 7
+
+def tracedWotsSignature : StateM (List XmssSignEvent) Bool := do
+  modify (· ++ [.wotsSignature])
+  pure true
+
+example :
+    (XmssOracle.authenticationThenSignM tracedAuthenticationPath tracedWotsSignature).run [] =
+      ((true, 7), [.authenticationPath, .wotsSignature]) := rfl
+
 /-- The security-game surface combines public sampling and the explicit public-hash family. -/
 noncomputable example :
     SignatureAlg (OracleComp (unifSpec + publicHashSpec toyPrimitives)) (List Byte)

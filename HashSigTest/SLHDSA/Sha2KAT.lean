@@ -15,7 +15,8 @@ A deterministic reference vector produced by the SPHINCs- C reference
 `seed = 0^48`, `message = 0x00`, `opt_rand = 0^16`. The hex is
 `pk_seed(16) ‖ pk_root(16) ‖ sig(3856)`.
 
-`main` decodes it and checks that the pure-Lean concrete `verifyBytes`
+This vector predates the FIPS 205 external context wrapper, so `main` checks the pure-Lean
+internal-message entry point `verifyInternalBytes`
 (`HashSig.SLHDSA.Concrete.Instance`) accepts the valid signature and rejects a tampered message
 — byte-exact agreement with the C reference, validating the whole verify path (SHA-256 / MGF1 /
 HMAC, `H_msg`, leaf-index split, `F`/`H`/`T_ℓ`, the 22-byte `ADRSc` layout, FORS / WOTS+ / XMSS
@@ -135,8 +136,8 @@ def runKat : IO Unit := do
   let pkSeed := baSliceToB16 ba 0
   let pkRoot := baSliceToB16 ba 16
   let sigBA := ba.extract 32 (32 + 3856)
-  let accepts := verifyBytes pkSeed pkRoot [0x00] sigBA
-  let rejects := verifyBytes pkSeed pkRoot [0x01] sigBA
+  let accepts := verifyInternalBytes pkSeed pkRoot [0x00] sigBA
+  let rejects := verifyInternalBytes pkSeed pkRoot [0x01] sigBA
   if accepts && !rejects then
     IO.println "SLH-DSA-SHA2-128-24 KAT: PASS (valid signature accepted, tampered rejected)"
   else

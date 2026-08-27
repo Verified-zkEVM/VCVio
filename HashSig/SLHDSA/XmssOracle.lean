@@ -53,14 +53,34 @@ def rootM (prims : Primitives p) {m : Type → Type*} [Monad m]
     m prims.Y :=
   PerfectMerkleTree.rootM (leafM prims sk pk adrs) (nodeHashM prims pk adrs) p.hp
 
+/-- Sequence authentication-path generation before WOTS+ signing and return the signature in its
+FIPS field order.  The argument order and bind order deliberately differ: FIPS 205 Algorithm 10
+computes `AUTH` first, then `SIG_WOTS`, while the result stores `SIG_WOTS || AUTH`.  Naming this
+small combinator makes the effect order independently testable. -/
+def authenticationThenSignM {m : Type → Type*} [Monad m] {Wots Path : Type}
+    (authenticationPath : m Path) (wotsSignature : m Wots) : m (Wots × Path) := do
+  let path ← authenticationPath
+  let wots ← wotsSignature
+  pure (wots, path)
+
 /-- XMSS signing with explicit public-hash calls and a statically sized authentication path. -/
 def signM (prims : Primitives p) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec prims) m] (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
-    (adrs : Adrs) (index : LeafIndex p.hp) : m (Signature p prims) := do
-  let wots ← WotsOracle.wotsSignM prims msg sk pk (wotsLeafAdrs adrs index.val)
-  let authenticationPath ←
-    rootAuthenticationPathM (leafM prims sk pk adrs) (nodeHashM prims pk adrs) index
-  pure (wots, authenticationPath)
+    (adrs : Adrs) (index : LeafIndex p.hp) : m (Signature p prims) :=
+  authenticationThenSignM
+    (rootAuthenticationPathM (leafM prims sk pk adrs) (nodeHashM prims pk adrs) index)
+    (WotsOracle.wotsSignM prims msg sk pk (wotsLeafAdrs adrs index.val))
+
+/-- Definitional guard exposing the exact effect schedule of XMSS signing. -/
+theorem signM_eq_authenticationThenSignM (prims : Primitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec prims) m] (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (index : LeafIndex p.hp) :
+    signM prims msg sk pk adrs index =
+      authenticationThenSignM
+        (rootAuthenticationPathM (leafM prims sk pk adrs) (nodeHashM prims pk adrs) index :
+          m (AuthenticationPath prims.Y p.hp))
+        (WotsOracle.wotsSignM prims msg sk pk (wotsLeafAdrs adrs index.val) :
+          m (WotsSig p prims)) := rfl
 
 /-- Recover the putative XMSS root from a typed signature. -/
 def pkFromSigM (prims : Primitives p) {m : Type → Type*} [Monad m]
@@ -174,7 +194,8 @@ theorem simulateQ_signM_structural (prims : Primitives p)
             (leafM prims sk pk adrs i : OracleComp (publicHashSpec prims) prims.Y))
           (fun address => xmssNodeHash (PublicHash.withPublicHash prims answer) pk adrs
             address.height address.index) index) := by
-  simp [signM, PerfectMerkleTree.simulateQ_rootAuthenticationPathM]
+  simp [signM, authenticationThenSignM,
+    PerfectMerkleTree.simulateQ_rootAuthenticationPathM]
   rfl
 
 /-- Structural recovery parity for any fixed deterministic public-hash answer function. -/
