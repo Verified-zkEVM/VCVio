@@ -193,8 +193,8 @@ game between its `ProbComp` presentation (where probability reasoning happens) a
 
 Structurally it is the naturality of `simulateQ` along the monad morphism
 `𝒟 : ProbComp →ᵐ SPMF`, transported through `StateT σ` — i.e. `𝒟 ∘ simulateQ impl =
-simulateQ (𝒟 ∘ impl)`. That is exactly `PFunctor.FreeM.run_liftM_mapHom` at
-`φ := MonadHom.ofLift ProbComp SPMF`: `simulateQ` is the universal fold
+simulateQ (𝒟 ∘ impl)`. That is exactly `PFunctor.FreeM.run_liftM_mapHom` at the bundled
+evaluation-distribution morphism: `simulateQ` is the universal fold
 (`simulateQ_def`), `ofStateQueryImpl` post-composes each query with `𝒟` pointwise in the
 state, and `StateT.mapHom` is that post-composition as a morphism, so the whole statement
 is one instance of the generic law rather than an induction over `OracleComp`. -/
@@ -265,8 +265,7 @@ responder answers the exposed query (jointly drawing its successor state), and t
 adversary advances along the answer. This is the upstream stateful-handler step
 `PFunctor.DynSystem.stepWith` at `m := SPMF`: the wiring itself is deterministic
 interface data; only the states advance stochastically. -/
-noncomputable def stepAgainst (A : OracleStrategy S spec) (R : ProbResponder spec) :
-    R.State × S → SPMF (R.State × S) :=
+noncomputable def stepAgainst (A : OracleStrategy S spec) (R : ProbResponder spec) :=
   PFunctor.DynSystem.stepWith R.toQueryImpl A
 
 @[simp] theorem stepAgainst_apply (A : OracleStrategy S spec) (R : ProbResponder spec)
