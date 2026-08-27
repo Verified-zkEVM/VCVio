@@ -185,6 +185,209 @@ def xmssPkFromSigM (prims : Primitives p) {m : Type → Type*} [Monad m]
   xmssPkFromSigWith prims (PublicHash.f prims pk) (PublicHash.tl prims pk)
     (PublicHash.h prims pk) idx sig msg adrs
 
+/-! ### Naturality -/
+
+/-- A monad morphism commutes with XMSS leaf generation when it commutes with both WOTS+
+callbacks. -/
+theorem xmssLeafWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n) (prims : Primitives p)
+    (hashm : Adrs → prims.Y → m prims.Y) (hashn : Adrs → prims.Y → n prims.Y)
+    (compressm : Adrs → List prims.Y → m prims.Y)
+    (compressn : Adrs → List prims.Y → n prims.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (t : ℕ) :
+    F (xmssLeafWith prims hashm compressm sk pk adrs t) =
+      xmssLeafWith prims hashn compressn sk pk adrs t :=
+  wotsPkGenWith_natural F prims hashm hashn compressm compressn
+    hhash hcompress sk pk (wotsLeafAdrs adrs t)
+
+/-- A monad morphism commutes with addressed XMSS node hashing when it commutes with the node
+callback. -/
+theorem xmssNodeHashWith_natural {Y : Type} {m n : Type → Type*} [Monad m] [Monad n]
+    (F : m →ᵐ n) (hashm : Adrs → Y → Y → m Y) (hashn : Adrs → Y → Y → n Y)
+    (hhash : ∀ a l r, F (hashm a l r) = hashn a l r)
+    (adrs : Adrs) (z t : ℕ) (l r : Y) :
+    F (xmssNodeHashWith hashm adrs z t l r) = xmssNodeHashWith hashn adrs z t l r :=
+  hhash _ l r
+
+/-- A monad morphism commutes with XMSS subtree-root computation when it commutes with every
+public-hash callback. -/
+theorem xmssNodeWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n) (prims : Primitives p)
+    (hashm : Adrs → prims.Y → m prims.Y) (hashn : Adrs → prims.Y → n prims.Y)
+    (compressm : Adrs → List prims.Y → m prims.Y)
+    (compressn : Adrs → List prims.Y → n prims.Y)
+    (nodeHashm : Adrs → prims.Y → prims.Y → m prims.Y)
+    (nodeHashn : Adrs → prims.Y → prims.Y → n prims.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) :
+    F (xmssNodeWith prims hashm compressm nodeHashm sk pk adrs z t) =
+      xmssNodeWith prims hashn compressn nodeHashn sk pk adrs z t := by
+  apply PerfectMerkleTree.merkleRootM_natural F
+  · intro i
+    exact xmssLeafWith_natural F prims hashm hashn compressm compressn
+      hhash hcompress sk pk adrs i
+  · intro h i l r
+    exact xmssNodeHashWith_natural F nodeHashm nodeHashn hnode adrs h i l r
+
+/-- A monad morphism commutes with XMSS root computation under pointwise callback maps. -/
+theorem xmssRootWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n) (prims : Primitives p)
+    (hashm : Adrs → prims.Y → m prims.Y) (hashn : Adrs → prims.Y → n prims.Y)
+    (compressm : Adrs → List prims.Y → m prims.Y)
+    (compressn : Adrs → List prims.Y → n prims.Y)
+    (nodeHashm : Adrs → prims.Y → prims.Y → m prims.Y)
+    (nodeHashn : Adrs → prims.Y → prims.Y → n prims.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
+    F (xmssRootWith prims hashm compressm nodeHashm sk pk adrs) =
+      xmssRootWith prims hashn compressn nodeHashn sk pk adrs :=
+  xmssNodeWith_natural F prims hashm hashn compressm compressn nodeHashm nodeHashn
+    hhash hcompress hnode sk pk adrs p.hp 0
+
+/-- A monad morphism commutes with XMSS signing under pointwise callback maps. -/
+theorem xmssSignWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n) (prims : Primitives p)
+    (hashm : Adrs → prims.Y → m prims.Y) (hashn : Adrs → prims.Y → n prims.Y)
+    (compressm : Adrs → List prims.Y → m prims.Y)
+    (compressn : Adrs → List prims.Y → n prims.Y)
+    (nodeHashm : Adrs → prims.Y → prims.Y → m prims.Y)
+    (nodeHashn : Adrs → prims.Y → prims.Y → n prims.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idx : ℕ) :
+    F (xmssSignWith prims hashm compressm nodeHashm msg sk pk adrs idx) =
+      xmssSignWith prims hashn compressn nodeHashn msg sk pk adrs idx := by
+  simp only [xmssSignWith, F.mmap_bind]
+  simp_rw [wotsSignWith_natural F prims hashm hashn hhash]
+  simp_rw [PerfectMerkleTree.authPathM_natural F
+    (xmssLeafWith prims hashm compressm sk pk adrs)
+    (xmssNodeHashWith nodeHashm adrs)
+    (xmssLeafWith prims hashn compressn sk pk adrs)
+    (xmssNodeHashWith nodeHashn adrs)
+    (fun i => xmssLeafWith_natural F prims hashm hashn compressm compressn
+      hhash hcompress sk pk adrs i)
+    (fun h i l r => xmssNodeHashWith_natural F nodeHashm nodeHashn hnode adrs h i l r)]
+  simp [F.mmap_pure]
+
+/-- A monad morphism commutes with XMSS recovery under pointwise callback maps. -/
+theorem xmssPkFromSigWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n) (prims : Primitives p)
+    (hashm : Adrs → prims.Y → m prims.Y) (hashn : Adrs → prims.Y → n prims.Y)
+    (compressm : Adrs → List prims.Y → m prims.Y)
+    (compressn : Adrs → List prims.Y → n prims.Y)
+    (nodeHashm : Adrs → prims.Y → prims.Y → m prims.Y)
+    (nodeHashn : Adrs → prims.Y → prims.Y → n prims.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (idx : ℕ) (sig : XmssSig p prims) (msg : prims.Y) (adrs : Adrs) :
+    F (xmssPkFromSigWith prims hashm compressm nodeHashm idx sig msg adrs) =
+      xmssPkFromSigWith prims hashn compressn nodeHashn idx sig msg adrs := by
+  simp only [xmssPkFromSigWith, F.mmap_bind]
+  simp_rw [wotsPkFromSigWith_natural F prims hashm hashn compressm compressn hhash hcompress]
+  simp_rw [PerfectMerkleTree.climbM_natural F _ _
+    (fun h i l r => xmssNodeHashWith_natural F nodeHashm nodeHashn hnode adrs h i l r)]
+
+private theorem queryHom_publicHash (prims : Primitives p) {m n : Type → Type*}
+    [Monad m] [Monad n] [HasQuery (publicHashSpec prims) m]
+    [HasQuery (publicHashSpec prims) n]
+    (F : HasQuery.QueryHom (publicHashSpec prims) m n)
+    (q : PublicHashQuery prims.PkSeed prims.AdrsKey prims.Y) :
+    F.toMonadHom (query (spec := publicHashSpec prims) q) =
+      query (spec := publicHashSpec prims) q :=
+  HasQuery.map_query F q
+
+private theorem queryHom_f (prims : Primitives p) {m n : Type → Type*}
+    [Monad m] [Monad n] [HasQuery (publicHashSpec prims) m]
+    [HasQuery (publicHashSpec prims) n]
+    (F : HasQuery.QueryHom (publicHashSpec prims) m n) (pk : prims.PkSeed) :
+    ∀ a y, F.toMonadHom (PublicHash.f prims pk a y) = PublicHash.f prims pk a y := by
+  intro a y
+  unfold PublicHash.f
+  exact queryHom_publicHash prims F (.thash pk (prims.adrsToKey a) [y])
+
+private theorem queryHom_tl (prims : Primitives p) {m n : Type → Type*}
+    [Monad m] [Monad n] [HasQuery (publicHashSpec prims) m]
+    [HasQuery (publicHashSpec prims) n]
+    (F : HasQuery.QueryHom (publicHashSpec prims) m n) (pk : prims.PkSeed) :
+    ∀ a ys, F.toMonadHom (PublicHash.tl prims pk a ys) = PublicHash.tl prims pk a ys := by
+  intro a ys
+  unfold PublicHash.tl
+  exact queryHom_publicHash prims F (.thash pk (prims.adrsToKey a) ys)
+
+private theorem queryHom_h (prims : Primitives p) {m n : Type → Type*}
+    [Monad m] [Monad n] [HasQuery (publicHashSpec prims) m]
+    [HasQuery (publicHashSpec prims) n]
+    (F : HasQuery.QueryHom (publicHashSpec prims) m n) (pk : prims.PkSeed) :
+    ∀ a l r, F.toMonadHom (PublicHash.h prims pk a l r) = PublicHash.h prims pk a l r := by
+  intro a l r
+  unfold PublicHash.h
+  exact queryHom_publicHash prims F (.thash pk (prims.adrsToKey a) [l, r])
+
+/-- Query-preserving monad morphisms commute with explicit XMSS subtree-root computation. -/
+theorem xmssNodeM_natural (prims : Primitives p)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec prims) m]
+    [HasQuery (publicHashSpec prims) n]
+    (F : HasQuery.QueryHom (publicHashSpec prims) m n)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (z t : ℕ) :
+    F.toMonadHom (xmssNodeM prims sk pk adrs z t) = xmssNodeM prims sk pk adrs z t := by
+  apply xmssNodeWith_natural F.toMonadHom prims
+  · exact queryHom_f prims F pk
+  · exact queryHom_tl prims F pk
+  · exact queryHom_h prims F pk
+
+/-- Query-preserving monad morphisms commute with explicit XMSS root computation. -/
+theorem xmssRootM_natural (prims : Primitives p)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec prims) m]
+    [HasQuery (publicHashSpec prims) n]
+    (F : HasQuery.QueryHom (publicHashSpec prims) m n)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
+    F.toMonadHom (xmssRootM prims sk pk adrs) = xmssRootM prims sk pk adrs := by
+  apply xmssRootWith_natural F.toMonadHom prims
+  · exact queryHom_f prims F pk
+  · exact queryHom_tl prims F pk
+  · exact queryHom_h prims F pk
+
+/-- Query-preserving monad morphisms commute with explicit XMSS signing. -/
+theorem xmssSignM_natural (prims : Primitives p)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec prims) m]
+    [HasQuery (publicHashSpec prims) n]
+    (F : HasQuery.QueryHom (publicHashSpec prims) m n)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idx : ℕ) :
+    F.toMonadHom (xmssSignM prims msg sk pk adrs idx) =
+      xmssSignM prims msg sk pk adrs idx := by
+  apply xmssSignWith_natural F.toMonadHom prims
+  · exact queryHom_f prims F pk
+  · exact queryHom_tl prims F pk
+  · exact queryHom_h prims F pk
+
+/-- Query-preserving monad morphisms commute with explicit XMSS root recovery. -/
+theorem xmssPkFromSigM_natural (prims : Primitives p)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec prims) m]
+    [HasQuery (publicHashSpec prims) n]
+    (F : HasQuery.QueryHom (publicHashSpec prims) m n)
+    (idx : ℕ) (sig : XmssSig p prims) (msg : prims.Y)
+    (pk : prims.PkSeed) (adrs : Adrs) :
+    F.toMonadHom (xmssPkFromSigM prims idx sig msg pk adrs) =
+      xmssPkFromSigM prims idx sig msg pk adrs := by
+  apply xmssPkFromSigWith_natural F.toMonadHom prims
+  · exact queryHom_f prims F pk
+  · exact queryHom_tl prims F pk
+  · exact queryHom_h prims F pk
+
 /-- **XMSS correctness** (FIPS 205, Algorithms 9–11): root recovery from an honest signature at
 leaf `idx < 2^{h'}` reproduces the XMSS tree root. Composes WOTS+ correctness with the Merkle
 auth-path consistency lemma. -/
