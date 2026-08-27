@@ -153,6 +153,27 @@ noncomputable def runtime (prims : Primitives p) [DecidableEq prims.PkSeed]
     [SampleableType prims.Y] [SampleableType (Bytes p.m)] :
     runtime prims = runtimeWithCache prims ∅ := rfl
 
+/-- The cache-parametric random-oracle runtime commutes with mapping visible outputs. -/
+theorem runtimeWithCache_evalDist_map (prims : Primitives p)
+    [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
+    [SampleableType prims.Y] [SampleableType (Bytes p.m)]
+    (cache : PublicHash.Cache prims) {α β : Type} (f : α → β)
+    (mx : OracleComp (unifSpec + publicHashSpec prims) α) :
+    (runtimeWithCache prims cache).evalDist (f <$> mx) =
+      f <$> (runtimeWithCache prims cache).evalDist mx :=
+  SPMFSemantics.withStateOracle_evalDist_map ..
+
+/-- Bind-to-pure form used by the generic EUF-CMA freshness-drop game hop. -/
+theorem runtimeWithCache_evalDist_bind_pure (prims : Primitives p)
+    [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
+    [SampleableType prims.Y] [SampleableType (Bytes p.m)]
+    (cache : PublicHash.Cache prims) {α β : Type}
+    (mx : OracleComp (unifSpec + publicHashSpec prims) α) (f : α → β) :
+    (runtimeWithCache prims cache).evalDist (mx >>= fun x => pure (f x)) =
+      f <$> (runtimeWithCache prims cache).evalDist mx := by
+  rw [show (mx >>= fun x => pure (f x)) = f <$> mx from (map_eq_bind_pure_comp _ f mx).symm,
+    runtimeWithCache_evalDist_map]
+
 /-- The single-layer algorithm with the lazy random oracle installed as its explicit query
 capability.  The resulting state transformer still exposes the cache: the surrounding security
 experiment, not any scheme phase, chooses the initial cache and runs the entire game once. -/
