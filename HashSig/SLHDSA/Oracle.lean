@@ -23,6 +23,10 @@ answer.  Both handlers interpret the same canonical `OracleComp` programs.
 The keyed operations `PRF` and `PRF_msg` are intentionally not part of this public interface:
 security games may expose this oracle to an adversary without exposing secret-key operations.
 
+The ideal-oracle domain stores the complete structural `Adrs`.  The concrete SHA-2 instantiation
+compresses addresses to `ADRSc`; relating that encoding to this ideal model requires a separate
+reachability/injectivity argument and is not claimed here.
+
 ## References
 
 - NIST FIPS 205, Section 4.1 (`F`, `H`, `T_l`, and `H_msg`)
