@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
+public import VCVio.OracleComp.HasQuery.Morphism
 
 /-!
 # Effectful addressed-Merkle canaries
@@ -82,6 +83,17 @@ example : Id.run ((climbM nodeM 2 3 [4, 1012]).run []) =
     (13254, [.node 1 1 3 4, .node 2 0 1012 1134]) := by
   decide
 
+/-- Authentication-path construction retains global addresses in a nonzero height-two subtree. -/
+example : Id.run ((authPathM leafM nodeM 6 2).run []) =
+    ([8, 1256],
+      [.leaf 7, .leaf 4, .leaf 5, .node 1 2 5 6]) := by
+  decide
+
+/-- Root recovery retains global addresses in a nonzero height-two subtree. -/
+example : Id.run ((climbM nodeM 6 7 [8, 1256]).run []) =
+    (16038, [.node 1 3 7 8, .node 2 1 1256 1378]) := by
+  decide
+
 /-- Height zero performs exactly one leaf effect and no node hashes. -/
 example : Id.run ((merkleRootM leafM nodeM 0 7).run []) = (8, [.leaf 7]) := by
   decide
@@ -92,5 +104,35 @@ example : Id.run ((authPathM leafM nodeM 7 0).run []) = ([], []) := by
 
 example : Id.run ((climbM nodeM 7 8 []).run []) = (8, []) := by
   decide
+
+/-! ## Query-homomorphism canary -/
+
+inductive Query where
+  | leaf
+  | node
+
+def querySpec : OracleSpec Query := fun _ => ℕ
+
+/-- The generic monad-homomorphism law specializes directly to the free-oracle fold and uses
+`QueryHom.map_query` to preserve each explicit leaf and node query. -/
+example {m : Type → Type*} [Monad m] [LawfulMonad m] [HasQuery querySpec m] (z t : ℕ) :
+    let F := HasQuery.QueryHom.ofSimulateQ (spec := querySpec) (m := m)
+    F.toMonadHom
+        (merkleRootM
+          (fun _ => HasQuery.query (spec := querySpec)
+            (m := OracleComp querySpec) Query.leaf)
+          (fun _ _ _ _ => HasQuery.query (spec := querySpec)
+            (m := OracleComp querySpec) Query.node) z t) =
+      merkleRootM
+        (fun _ => HasQuery.query (spec := querySpec) (m := m) Query.leaf)
+        (fun _ _ _ _ => HasQuery.query (spec := querySpec) (m := m) Query.node) z t := by
+  dsimp only
+  apply merkleRootM_natural
+  · intro i
+    exact HasQuery.map_query
+      (HasQuery.QueryHom.ofSimulateQ (spec := querySpec) (m := m)) Query.leaf
+  · intro h i l r
+    exact HasQuery.map_query
+      (HasQuery.QueryHom.ofSimulateQ (spec := querySpec) (m := m)) Query.node
 
 end VCVioTest.MerkleTreeMonadicCanary

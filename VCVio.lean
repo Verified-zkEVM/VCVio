@@ -58,6 +58,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.Level
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
