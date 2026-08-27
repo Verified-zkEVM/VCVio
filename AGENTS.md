@@ -225,7 +225,7 @@ tests and is deliberately excluded from every aggregate.
 
 After adding new `.lean` files: `./scripts/update-lib.sh`
 
-Lean toolchain and Mathlib must stay in sync (both currently `v4.33.0`). Keep files
+Lean toolchain and Mathlib must stay in sync (both currently `v4.33.1`). Keep files
 reasonably sized, but there is no hard line-count limit (the file-length linter is off).
 
 ## Further Reading

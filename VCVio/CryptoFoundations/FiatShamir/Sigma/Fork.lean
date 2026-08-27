@@ -176,16 +176,14 @@ lemma getQueryValue?_wrappedUniformEntry [DecidableEq Chal]
 lemma getQueryValue?_wrappedChallengeEntry_zero [DecidableEq Chal]
     (v : Chal) (log : QueryLog (wrappedSpec Chal)) :
     QueryLog.getQueryValue? (wrappedChallengeEntry Chal v :: log) (Sum.inr ()) 0 = some v := by
-  simpa [wrappedChallengeEntry] using
-    QueryLog.getQueryValue?_cons_self_zero (spec := wrappedSpec Chal) (Sum.inr ()) v log
+  simp [wrappedChallengeEntry]
 
 @[simp]
 lemma getQueryValue?_wrappedChallengeEntry_succ [DecidableEq Chal]
     (v : Chal) (log : QueryLog (wrappedSpec Chal)) (k : ℕ) :
     QueryLog.getQueryValue? (wrappedChallengeEntry Chal v :: log) (Sum.inr ()) (k + 1) =
       QueryLog.getQueryValue? log (Sum.inr ()) k := by
-  simpa [wrappedChallengeEntry] using
-    QueryLog.getQueryValue?_cons_self_succ (spec := wrappedSpec Chal) (Sum.inr ()) v log k
+  simp [wrappedChallengeEntry]
 
 /-- Forwards a uniform-spec query through to the wrapped spec's `Sum.inl` summand without
 touching the simulator state. -/

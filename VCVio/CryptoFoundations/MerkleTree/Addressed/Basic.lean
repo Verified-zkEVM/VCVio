@@ -205,6 +205,39 @@ theorem findCollisionAddressed_sound {s : Skeleton}
         exact ⟨hneq, heq⟩
       · simp at hw
 
+/-- **Locality of the kernel**: the collision address returned by `findCollisionAddressed` is
+an ancestor of the opened leaf — the walk only ever descends along `idx`'s own path. -/
+theorem findCollisionAddressed_isAncestorOf {s : Skeleton}
+    (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
+    (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
+    (w : SkeletonInternalIndex s × α × α × α × α)
+    (hw : findCollisionAddressed nodeHash idx proof₁ proof₂ x y = some w) :
+    w.1.IsAncestorOf idx := by
+  induction idx with
+  | ofLeaf => simp [findCollisionAddressed] at hw
+  | ofLeft idxLeft ih =>
+    rw [findCollisionAddressed] at hw
+    split at hw
+    · simp only [Option.map_eq_some_iff] at hw
+      obtain ⟨w', hw', rfl⟩ := hw
+      exact ih (fun a => nodeHash (.ofLeft a)) proof₁.tail proof₂.tail w' hw'
+    · split at hw
+      · simp only [Option.some.injEq] at hw
+        subst hw
+        trivial
+      · simp at hw
+  | ofRight idxRight ih =>
+    rw [findCollisionAddressed] at hw
+    split at hw
+    · simp only [Option.map_eq_some_iff] at hw
+      obtain ⟨w', hw', rfl⟩ := hw
+      exact ih (fun a => nodeHash (.ofRight a)) proof₁.tail proof₂.tail w' hw'
+    · split at hw
+      · simp only [Option.some.injEq] at hw
+        subst hw
+        trivial
+      · simp at hw
+
 /-- If two openings at the same index recompute the same root but the branches differ
 somewhere (in leaf value or path), `findCollisionAddressed` finds a collision: the
 walk only returns `none` when the two branches agree at every compared level, which
@@ -405,15 +438,16 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
 omit [DecidableEq α] in
 /-- **Oriented binding, user-facing**: an adversarial opening that verifies against an
 honestly built root with a different leaf value yields a collision whose first
-endpoint is the honestly-precommitted child pair at the tagged address — the
-directional configuration a target-collision reduction consumes. -/
+endpoint is the honestly-precommitted child pair at the tagged address, which lies on the
+opened leaf's own root path — the directional configuration a target-collision reduction
+consumes. -/
 theorem addressed_oriented_binding {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → α → α → α) (ld : LeafData α s)
     (idx : SkeletonLeafIndex s) (y : α) (proof₂ : List.Vector α idx.depth)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx y proof₂
       = (buildMerkleTreeAddressedWithHash ld nodeHash).getRootValue)
     (hne : ld.get idx ≠ y) :
-    ∃ (a : SkeletonInternalIndex s) (c : α × α),
+    ∃ (a : SkeletonInternalIndex s) (c : α × α), a.IsAncestorOf idx ∧
       (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a) ≠ c ∧
       nodeHash a (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).1
           (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).2
@@ -422,7 +456,8 @@ theorem addressed_oriented_binding {s : Skeleton}
   obtain ⟨a, c, hwalk⟩ :=
     findCollisionAddressed_oriented nodeHash ld idx y proof₂ hroot hne
   have hcol := findCollisionAddressed_sound nodeHash idx _ proof₂ (ld.get idx) y _ hwalk
-  exact ⟨a, c, by simpa [AddressedCollision, Prod.ext_iff] using hcol.1,
+  have hanc := findCollisionAddressed_isAncestorOf nodeHash idx _ proof₂ (ld.get idx) y _ hwalk
+  exact ⟨a, c, hanc, by simpa [AddressedCollision, Prod.ext_iff] using hcol.1,
     by simpa [AddressedCollision] using hcol.2⟩
 
 /-! ## Instances: three hash disciplines, one engine
