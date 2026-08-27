@@ -18,13 +18,15 @@ It imports `ProbComp` and monad homomorphisms, so files that only need the
 basic query capability should import `VCVio.OracleComp.HasQuery.Basic`
 instead.
 
-Use this module for proofs that a monad morphism preserves oracle queries, or
-that it commutes with the canonical lift of public randomness.
+Use this module for proofs that a monad morphism preserves oracle queries, for composing such
+morphisms through `QueryHom.id` and `QueryHom.comp`, or for interpreting free oracle syntax through
+the ambient query capability with `QueryHom.ofSimulateQ`. The separate `PreservesProbCompLift`
+predicate records commutation with the canonical lift of public randomness.
 -/
 
 @[expose] public section
 
-universe u v w x
+universe u v w x y z
 
 namespace HasQuery
 
@@ -56,5 +58,64 @@ lemma map_query (F : QueryHom spec m n) (t : spec.Domain) :
     F.toMonadHom (HasQuery.query (spec := spec) (m := m) t) =
       HasQuery.query (spec := spec) (m := n) t :=
   F.map_query' t
+
+namespace QueryHom
+
+variable {o : Type v → Type y} [Monad o] [HasQuery spec o]
+
+/-- The identity monad morphism, bundled with its preservation of oracle queries. -/
+def id (spec : OracleSpec.{u, v} ι) (m : Type v → Type w) [Monad m] [HasQuery spec m] :
+    QueryHom spec m m where
+  toMonadHom := MonadHom.id m
+  map_query' _ := rfl
+
+@[simp]
+lemma id_toMonadHom : (id spec m).toMonadHom = MonadHom.id m := rfl
+
+@[simp, grind =]
+lemma id_apply {α : Type v} (mx : m α) : (id spec m).toMonadHom mx = mx := rfl
+
+/-- Compose query-preserving monad morphisms, applying `F` first and then `G`. -/
+protected def comp (G : QueryHom spec n o) (F : QueryHom spec m n) : QueryHom spec m o where
+  toMonadHom := G.toMonadHom.comp F.toMonadHom
+  map_query' t := by simp
+
+@[simp]
+lemma comp_toMonadHom (G : QueryHom spec n o) (F : QueryHom spec m n) :
+    (G.comp F).toMonadHom = G.toMonadHom.comp F.toMonadHom := rfl
+
+@[simp, grind =]
+lemma comp_apply {α : Type v} (G : QueryHom spec n o) (F : QueryHom spec m n) (mx : m α) :
+    (G.comp F).toMonadHom mx = G.toMonadHom (F.toMonadHom mx) := rfl
+
+@[simp, grind =]
+lemma comp_id (F : QueryHom spec m n) : F.comp (id spec m) = F := by
+  rfl
+
+@[simp, grind =]
+lemma id_comp (F : QueryHom spec m n) : (id spec n).comp F = F := by
+  rfl
+
+@[grind =]
+lemma comp_assoc {p : Type v → Type z} [Monad p] [HasQuery spec p]
+    (H : QueryHom spec o p) (G : QueryHom spec n o) (F : QueryHom spec m n) :
+    (H.comp G).comp F = H.comp (G.comp F) := by
+  rfl
+
+/-- Interpret free oracle syntax through the query capability already installed in `m`.
+
+This is the query-preserving monad morphism induced by the free-monad fold. It does not assert a
+parametricity theorem for arbitrary direct-style programs: its source is specifically
+`OracleComp spec`, and its handler is definitionally the ambient `HasQuery` operation. -/
+def ofSimulateQ [LawfulMonad m] : QueryHom spec (OracleComp spec) m where
+  toMonadHom := simulateQ' (HasQuery.toQueryImpl (spec := spec) (m := m))
+  map_query' t := by simp
+
+@[simp]
+lemma ofSimulateQ_apply [LawfulMonad m] {α : Type v} (oa : OracleComp spec α) :
+    (ofSimulateQ (spec := spec) (m := m)).toMonadHom oa =
+      simulateQ (HasQuery.toQueryImpl (spec := spec) (m := m)) oa := rfl
+
+end QueryHom
 
 end HasQuery
