@@ -53,6 +53,27 @@ def PreservesProbCompLift
     (F : m →ᵐ n) : Prop :=
   ∀ {α : Type} (oa : ProbComp α), F (liftM oa : m α) = (liftM oa : n α)
 
+namespace PreservesProbCompLift
+
+/-- The identity monad morphism preserves the distinguished public-randomness lift. -/
+theorem id {m : Type → Type w} [Monad m] [MonadLiftT ProbComp m] :
+    PreservesProbCompLift (MonadHom.id m) := by
+  intro α oa
+  rfl
+
+/-- Preservation of public randomness is closed under monad-morphism composition. -/
+theorem comp {m : Type → Type w} [Monad m] [MonadLiftT ProbComp m]
+    {n : Type → Type x} [Monad n] [MonadLiftT ProbComp n]
+    {o : Type → Type y} [Monad o] [MonadLiftT ProbComp o]
+    (F : m →ᵐ n) (G : n →ᵐ o)
+    (hF : PreservesProbCompLift F) (hG : PreservesProbCompLift G) :
+    PreservesProbCompLift (G.comp F) := by
+  intro α oa
+  change G (F (liftM oa : m α)) = (liftM oa : o α)
+  rw [hF oa, hG oa]
+
+end PreservesProbCompLift
+
 @[simp]
 lemma map_query (F : QueryHom spec m n) (t : spec.Domain) :
     F.toMonadHom (HasQuery.query (spec := spec) (m := m) t) =
