@@ -129,6 +129,16 @@ def randomOracle (prims : Primitives p) [DecidableEq prims.PkSeed] [DecidableEq 
     cases t <;> exact inferInstance
   exact (publicHashSpec prims).randomOracle
 
+/-- Install the lazy random oracle as the query capability of a state transformer.  This is a
+named value rather than a global instance: a security experiment must opt into this semantics
+once, and then thread the resulting cache through key generation, the adversary, signing, and
+verification. -/
+@[instance_reducible]
+def randomOracleHasQuery (prims : Primitives p) [DecidableEq prims.PkSeed]
+    [DecidableEq prims.Y] [SampleableType prims.Y] [SampleableType (Bytes p.m)] :
+    HasQuery (publicHashSpec prims) (StateT (PublicHash.Cache prims) ProbComp) where
+  query := PublicHash.randomOracle prims
+
 end PublicHash
 
 end SLHDSA
