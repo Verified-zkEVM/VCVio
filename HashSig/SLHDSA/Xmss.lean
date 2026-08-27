@@ -14,7 +14,9 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
 XMSS (`xmssNode`, `xmssSign`, `xmssPkFromSig`; Algorithms 9–11) is the node-addressed perfect
 Merkle tree `PerfectMerkleTree` with WOTS+ public keys as leaves and `H` under the `TREE` address
 of each node as the node hash. Its effectful algorithms have callback-parametric owner
-implementations, specialized below to explicit public-hash queries.
+implementations, specialized below to explicit public-hash queries. The `simulateQ_*` parity
+theorems identify their canonical deterministic interpretation with the legacy pure API and,
+more generally, identify any fixed answer table with the pure scheme induced by `withPublicHash`.
 The Merkle layer is itself the generic `AddressedMerkleTree` engine specialised to heap-style
 `(height, index)` addressing, so its completeness, naturality, and oriented binding theorems are
 available here:
