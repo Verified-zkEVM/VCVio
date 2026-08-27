@@ -16,6 +16,7 @@ public import HashSig.SLHDSA.Encoding
 public import HashSig.SLHDSA.Fors
 public import HashSig.SLHDSA.ForsOracle
 public import HashSig.SLHDSA.Hypertree
+public import HashSig.SLHDSA.MerkleParity
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.Params
 public import HashSig.SLHDSA.Primitives
