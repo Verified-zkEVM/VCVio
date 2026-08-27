@@ -226,7 +226,8 @@ example :
     Pr[InductiveMerkleTree.AdversaryWinsExtractabilityGame |
       InductiveMerkleTree.extractabilityGame depthZeroAdversary] = 0 := by
   apply le_antisymm
-  · simpa using InductiveMerkleTree.extractability_rom_bound
+  · simpa [InductiveMerkleTree.extractabilityROMErrorNumerator] using
+      InductiveMerkleTree.extractability_rom_bound
       depthZeroAdversary 0 depthZeroAdversary_totalBound
   · exact zero_le
 
@@ -241,12 +242,13 @@ private lemma freshHitAdversary_totalBound :
     freshHitAdversary.IsTwoPhaseTotalQueryBound 0 := by
   trivial
 
-/-- The public theorem sees the non-degenerate verifier fresh-hit branch and gives its exact
-coarse bound `1 / |Bool| = 1/2` when the adversary phases themselves make no queries. -/
+/-- The public finite-maximum theorem sees the `c = 0` stopping branch and its one reachable
+target, recovering the exact `1 / |Bool| = 1/2` bound for this game. -/
 example :
     Pr[InductiveMerkleTree.AdversaryWinsExtractabilityGame |
       InductiveMerkleTree.extractabilityGame freshHitAdversary] ≤ (2 : ENNReal)⁻¹ := by
-  simpa [depthOneSkeleton] using InductiveMerkleTree.extractability_rom_bound
+  simpa [InductiveMerkleTree.extractabilityROMErrorNumerator, depthOneSkeleton] using
+    InductiveMerkleTree.extractability_rom_bound
     freshHitAdversary 0 freshHitAdversary_totalBound
 
 def freshHitExtractedTree : BinaryTree.FullData (Option Bool) depthOneSkeleton :=

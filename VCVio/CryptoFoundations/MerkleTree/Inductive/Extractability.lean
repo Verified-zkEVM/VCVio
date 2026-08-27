@@ -9,6 +9,7 @@ module
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
 public import VCVio.OracleComp.QueryTracking.Collision
 public import ToMathlib.Data.IndexedBinaryTree.Lemmas
+import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
 import VCVio.OracleComp.QueryTracking.Unpredictability
 
 /-!
@@ -34,18 +35,75 @@ under namespace `InductiveMerkleTree`:
   and verifier, before choosing random-oracle semantics.
 * `extractabilityGame`: the random-oracle experiment obtained by interpreting
   `extractabilityInner` through one shared `cachingOracle` from the empty cache.
-* `extractability_rom_bound`: an unconditional collision-plus-fresh-hit bound for the
-  shared-cache experiment.
+* `extractabilityROMErrorNumerator`: the unrelaxed finite maximum over the possible number
+  of fresh commit inputs.
+* `extractability_rom_bound`: the corresponding unconditional stopping-time ROM bound.
+* `extractability_rom_bound_coarse`: the two-endpoint relaxation
+  `(max(Tq, choose(q,2)) + T·depth)/|α|`, where `T = 2·leafCount - 1`.
+* `extractability_rom_bound_birthday_dominates` and
+  `extractability_rom_bound_quadratic`: source-shaped corollaries once the birthday term
+  dominates the stopping branch.
 * `ChainInLog`: structural predicate witnessing that a query log contains the hash chain
   from `root` down to `leaf` along the path determined by `idx`.
 
 ## Current proof boundary
 
 This file proves deterministic extraction and collision lemmas, total-query bounds, and a
-probabilistic extractability theorem for the shared-cache experiment. The ROM proof separates
-commit-cache collisions from fresh post-commit answers that hit a finite set of labels fixed by
-the commit transcript. It applies the suffix bound pointwise to each reachable commit outcome;
-it never conditions uniformity on an adaptively chosen trace length.
+probabilistic extractability theorem for the shared-cache experiment. The ROM proof maintains
+one combined cache/log state and inducts directly on the still-running commit computation.
+For `m` remaining total adversary queries, `k` populated cache keys, and `c` future fresh
+commit inputs, its per-branch energy is
+
+`c·k + choose(c,2) + min(T, 2(k+c)+1)·(m-c+depth)`.
+
+The potential is the finite supremum over `0 ≤ c ≤ m`. A cache miss pays the `k` collision
+hazard and increments both `k` and `c`; a hit only consumes remaining budget. When commit
+execution stops, the `c=0` branch pays the opening/verifier fresh-target hazard. Thus the proof
+tracks fresh inputs directly and does not condition a birthday bound on an adaptively chosen
+commit-trace length.
+
+## Comparison with Chiesa–Yogev, Version 1.2
+
+Lemma 18.5.1 of the official Version 1.2 source considers a perfect tree with `L` leaves,
+`d = log₂ L`, a range of size `N`, and `q` total adversary queries across commit and opening;
+checker queries are excluded from `q`. Its displayed bound is
+
+`choose(q,2)/N + 2L(d+1)/N`,
+
+with a further `q²/(2N)` simplification under `q ≥ 4L(d+1)`. The source proof first fixes
+realized phase counts `q₁,q₂`, then bounds collision and fresh-hit events, obtaining the
+intermediate maximum
+
+`max(2L(q+d+1), choose(q,2)+2L(d+1))/N`.
+
+The proof discards the first branch using `q ≥ 4L+1`. Version 1.1 stated this hypothesis;
+Version 1.2's displayed lemma appears to omit it while retaining that proof step. More
+fundamentally, applying the fixed-`q₁` birthday estimate after conditioning on an adaptively
+chosen stopping time is not valid without an additional argument. The stopping-time induction
+here supplies that argument. Its unrelaxed numerator has the same numerical form as the
+source's pre-relaxation expression after aligning the raw-leaf model, but tracks fresh commit
+inputs rather than treating a conditioned realized phase length as fixed. The machine-checked
+coarse corollary keeps the necessary two-endpoint maximum unconditionally.
+
+Every full binary `Skeleton` in this formalization has `T = 2L-1` nodes. Specializing to a
+perfect skeleton, without a query hypothesis the finite maximum is not uniformly bounded by
+Version 1.2's displayed single birthday endpoint; that is precisely the hypothesis omitted
+from the v1.2 statement but retained in its proof. Under `q ≥ 2T+1 = 4L-1`, our coarse bound
+becomes
+
+`choose(q,2)/|α| + T·d/|α|`,
+
+which is no weaker numerically than the source expression after aligning the models. The
+constant difference is explained by the games: this file treats leaves as raw labels and the
+verifier makes `d` internal-node hash calls, whereas the source hashes salted leaves and counts
+`d+1` checker calls. Our quadratic corollary additionally assumes `2T·d ≤ q`; for a perfect
+tree its two hypotheses are `q ≥ 4L-1` and `q ≥ (4L-2)d`. The source's single condition
+`q ≥ 4L(d+1)` implies both, so the Lean corollary is no weaker in the aligned model.
+
+This file also supports arbitrary full binary skeletons but formalizes a single-leaf opening
+and deterministic `OracleComp` adversaries; the source permits randomized adversaries, subset
+openings, and additionally states total-extractor and runtime guarantees. Those are model-scope
+differences, not consequences of the probability proof established here.
 
 ## TODO
 
@@ -58,7 +116,11 @@ it never conditions uniformity on an adaptively chosen trace length.
 
 ## References
 
-* [Building Cryptographic Proofs from Hash Functions by Chiesa and Yogev](https://snargsbook.org/), Lemma 18.5.1.
+* [Chiesa–Yogev, *Building Cryptographic Proofs from Hash Functions*, Version 1.2,
+  Lemma 18.5.1](https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/305fa3d9d19ee6dba135de64b3156d1760df8426/snargs-book.tex#L13186-L13211)
+  and its [proof](https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/305fa3d9d19ee6dba135de64b3156d1760df8426/snargs-book.tex#L13264-L13455).
+* [Version 1.1 statement carrying the `q ≥ 4L+1`
+  hypothesis](https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/92deb71d65d4c75a34c98d2280d513c959b0ea35/snargs-book.tex#L11763-L11787).
 
 -/
 
@@ -126,25 +188,119 @@ or the parent is already `none`) both children are `none`. Implemented as
 def extractor (s : Skeleton) (cache : (spec α).QueryLog) (root : α) : FullData (Option α) s :=
   optionPopulateDown s (extractorChildren cache) root
 
-/-- Values fixed by the commit transcript that can occur as non-dummy labels in the
-extracted tree: the claimed root and both inputs of every commit-phase hash query.
-Duplicates are retained so that the size bound is definitionally tied to the query log. -/
-private def commitTargets (root : α) (log : (spec α).QueryLog) : List α :=
-  root :: log.flatMap fun entry => [entry.1.1, entry.1.2]
+/-- The labels of the non-dummy nodes that the extractor actually reconstructs. Unlike
+the full query log, this list follows only response links reachable from the claimed root. -/
+private def extractedTargets : (s : Skeleton) → (spec α).QueryLog → α → List α
+  | .leaf, _, root => [root]
+  | .internal sl sr, log, root =>
+      root :: match extractorChildren log root with
+        | none => []
+        | some (left, right) =>
+            extractedTargets sl log left ++ extractedTargets sr log right
 
-omit [DecidableEq α] in
-@[simp]
-private lemma commitTargets_length (root : α) (log : (spec α).QueryLog) :
-    (commitTargets root log).length = 2 * log.length + 1 := by
-  simp [commitTargets, Nat.mul_comm]
+/-- A full binary skeleton with `L` leaves has `2L - 1` nodes, so the extractor can
+reconstruct at most that many non-dummy labels, independently of the query-log length. -/
+private lemma extractedTargets_length_le (s : Skeleton)
+    (log : (spec α).QueryLog) (root : α) :
+    (extractedTargets s log root).length ≤ 2 * s.leafCount - 1 := by
+  induction s generalizing root with
+  | leaf => simp [extractedTargets]
+  | internal sl sr ihl ihr =>
+      simp only [extractedTargets, List.length_cons]
+      cases hchildren : extractorChildren log root with
+      | none =>
+          simp only [List.length_nil]
+          have hl := Skeleton.leafCount_pos sl
+          have hr := Skeleton.leafCount_pos sr
+          simp only [Skeleton.leafCount_internal]
+          omega
+      | some children =>
+          obtain ⟨left, right⟩ := children
+          simp only [List.length_append]
+          have hl := ihl left
+          have hr := ihr right
+          have hsl := Skeleton.leafCount_pos sl
+          have hsr := Skeleton.leafCount_pos sr
+          simp only [Skeleton.leafCount_internal]
+          omega
 
-omit [DecidableEq α] in
-private lemma commitTargets_mono_root {root root' : α} {log : (spec α).QueryLog}
-    (hroot' : root' ∈ log.flatMap fun entry => [entry.1.1, entry.1.2]) :
-    ∀ {target : α}, target ∈ commitTargets root' log → target ∈ commitTargets root log := by
-  intro target htarget
-  simp only [commitTargets, List.mem_cons] at htarget ⊢
-  exact htarget.elim (fun h => Or.inr (h ▸ hroot')) Or.inr
+/-- Every extracted label is either the claimed root or one component of a logged hash
+input. The statement tracks reachability, while forgetting the particular ancestor chain. -/
+private lemma mem_extractedTargets_root_or_log_input (s : Skeleton)
+    (log : (spec α).QueryLog) (root : α) {target : α}
+    (htarget : target ∈ extractedTargets s log root) :
+    target = root ∨ ∃ entry ∈ log, target = entry.1.1 ∨ target = entry.1.2 := by
+  induction s generalizing root with
+  | leaf =>
+      simp only [extractedTargets, List.mem_singleton] at htarget
+      exact Or.inl htarget
+  | internal sl sr ihl ihr =>
+      simp only [extractedTargets, List.mem_cons] at htarget
+      rcases htarget with hroot | htarget
+      · exact Or.inl hroot
+      · cases hchildren : extractorChildren log root with
+        | none => simp [hchildren] at htarget
+        | some children =>
+            obtain ⟨left, right⟩ := children
+            simp only [hchildren, List.mem_append] at htarget
+            unfold extractorChildren at hchildren
+            cases hfind : log.find? (fun ⟨_, response⟩ => response == root) with
+            | none => simp [hfind] at hchildren
+            | some entry =>
+                obtain ⟨⟨left', right'⟩, response⟩ := entry
+                simp only [hfind, Option.some.injEq, Prod.mk.injEq] at hchildren
+                obtain ⟨hleft, hright⟩ := hchildren
+                subst left'
+                subst right'
+                have hentry : (⟨(left, right), response⟩ : (_ : α × α) × α) ∈ log :=
+                  List.mem_of_find?_eq_some hfind
+                rcases htarget with htarget | htarget
+                · rcases ihl left htarget with hroot | hdeeper
+                  · exact Or.inr ⟨⟨(left, right), response⟩, hentry, Or.inl hroot⟩
+                  · exact Or.inr hdeeper
+                · rcases ihr right htarget with hroot | hdeeper
+                  · exact Or.inr ⟨⟨(left, right), response⟩, hentry, Or.inr hroot⟩
+                  · exact Or.inr hdeeper
+
+/-- If all logged inputs are populated in a finite key set, the distinct extracted labels
+fit in the root plus the two coordinate images of that key set. -/
+private lemma extractedTargets_toFinset_card_le_cacheKeys
+    (s : Skeleton) (log : (spec α).QueryLog) (root : α)
+    {cache : (spec α).QueryCache} (keys : Finset (α × α))
+    (hlogCache : ∀ entry ∈ log, cache entry.1 = some entry.2)
+    (hkeys : ∀ input, cache input ≠ none → input ∈ keys) :
+    (extractedTargets s log root).toFinset.card ≤ 2 * keys.card + 1 := by
+  let candidates : Finset α :=
+    insert root (keys.image Prod.fst ∪ keys.image Prod.snd)
+  have hsubset : (extractedTargets s log root).toFinset ⊆ candidates := by
+    intro target htarget
+    have htarget' : target ∈ extractedTargets s log root := by simpa using htarget
+    rcases mem_extractedTargets_root_or_log_input s log root htarget' with rfl | hinput
+    · exact Finset.mem_insert_self _ _
+    · obtain ⟨entry, hentry, hside⟩ := hinput
+      have hkey : entry.1 ∈ keys := hkeys entry.1 (by
+        rw [hlogCache entry hentry]
+        exact Option.some_ne_none _)
+      rcases hside with hleft | hright
+      · subst target
+        exact Finset.mem_insert_of_mem (Finset.mem_union_left _ (Finset.mem_image.mpr
+          ⟨entry.1, hkey, rfl⟩))
+      · subst target
+        exact Finset.mem_insert_of_mem (Finset.mem_union_right _ (Finset.mem_image.mpr
+          ⟨entry.1, hkey, rfl⟩))
+  calc
+    (extractedTargets s log root).toFinset.card ≤ candidates.card :=
+      Finset.card_le_card hsubset
+    _ ≤ (keys.image Prod.fst ∪ keys.image Prod.snd).card + 1 := by
+      simpa only [candidates, Nat.add_comm] using
+        Finset.card_insert_le root (keys.image Prod.fst ∪ keys.image Prod.snd)
+    _ ≤ (keys.image Prod.fst).card + (keys.image Prod.snd).card + 1 := by
+      gcongr
+      exact Finset.card_union_le _ _
+    _ ≤ 2 * keys.card + 1 := by
+      have hfst := Finset.card_image_le (s := keys) (f := Prod.fst)
+      have hsnd := Finset.card_image_le (s := keys) (f := Prod.snd)
+      omega
 
 /--
 The oracle syntax underlying the extractability experiment. It runs the committing
@@ -177,6 +333,103 @@ private def extractabilityRest {s : Skeleton} (𝒜 : Adversary α s)
     let extractedProof := generateProof extractedTree idx
     let verified ← verifyProof idx leaf root proof
     return (root, aux, ⟨idx, leaf, proof, extractedTree, extractedProof, verified⟩)
+
+/-- Execute a still-running commit computation with a combined cache/log state, then run the
+opening-and-verification suffix from the resulting state. This is the induction object for the
+stopping-time proof: its query budget decreases structurally, without conditioning on a
+realized commit length. -/
+private def extractabilityRunFrom {s : Skeleton} (𝒜 : Adversary α s)
+    (commit : OracleComp (spec α) (α × 𝒜.AuxState))
+    (cache : (spec α).QueryCache) (log : (spec α).QueryLog) :=
+  (simulateQ (spec α).cachingLoggingOracle commit).run (cache, log) >>= fun z =>
+    (simulateQ (spec α).cachingOracle
+      (extractabilityRest 𝒜 z.1.1 z.1.2 z.2.2)).run z.2.1
+
+/-- Exact stopping-time contribution after `commitMisses` further fresh commit inputs:
+collision hazard against the `cached` previous keys, birthday collisions among the new cache
+entries, and the remaining opening/verifier fresh-target hazard. Cache hits consume the
+remaining total-query budget without increasing `commitMisses`. -/
+private def extractabilityEnergy (treeTargetCount depth remaining cached commitMisses : ℕ) : ℕ :=
+  commitMisses * cached + commitMisses.choose 2 +
+    min treeTargetCount (2 * (cached + commitMisses) + 1) *
+      (remaining - commitMisses + depth)
+
+/-- Finite maximum over every possible number of further fresh commit inputs/cache misses. -/
+private def extractabilityExactPotential
+  (treeTargetCount depth remaining cached : ℕ) : ℕ :=
+  (Finset.range (remaining + 1)).sup fun commitMisses =>
+    extractabilityEnergy treeTargetCount depth remaining cached commitMisses
+
+private lemma extractabilityEnergy_zero
+    (treeTargetCount depth remaining cached : ℕ) :
+    extractabilityEnergy treeTargetCount depth remaining cached 0 =
+      min treeTargetCount (2 * cached + 1) * (remaining + depth) := by
+  simp [extractabilityEnergy]
+
+private lemma extractabilityEnergy_hit_le
+    (treeTargetCount depth remaining cached commitMisses : ℕ) :
+    extractabilityEnergy treeTargetCount depth (remaining - 1) cached commitMisses ≤
+      extractabilityEnergy treeTargetCount depth remaining cached commitMisses := by
+  unfold extractabilityEnergy
+  gcongr
+  omega
+
+private lemma extractabilityEnergy_miss_eq
+    (treeTargetCount depth remaining cached commitMisses : ℕ)
+    (hcommit : commitMisses < remaining) :
+    cached + extractabilityEnergy treeTargetCount depth (remaining - 1) (cached + 1)
+        commitMisses =
+      extractabilityEnergy treeTargetCount depth remaining cached (commitMisses + 1) := by
+  have hcap :
+      min treeTargetCount (2 * (cached + 1 + commitMisses) + 1) =
+        min treeTargetCount (2 * (cached + (commitMisses + 1)) + 1) := by
+    congr 2
+    omega
+  have hremaining' : remaining - 1 - commitMisses = remaining - (commitMisses + 1) := by
+    omega
+  have hchoose : (commitMisses + 1).choose 2 =
+      commitMisses + commitMisses.choose 2 := by
+    rw [show commitMisses + 1 = commitMisses.succ by omega, Nat.choose_succ_succ]
+    simp
+  unfold extractabilityEnergy
+  rw [hcap, hremaining', hchoose]
+  simp only [Nat.mul_succ, Nat.succ_mul]
+  omega
+
+private lemma extractabilityExactPotential_terminal_le
+    (treeTargetCount depth remaining cached : ℕ) :
+    min treeTargetCount (2 * cached + 1) * (remaining + depth) ≤
+      extractabilityExactPotential treeTargetCount depth remaining cached := by
+  rw [← extractabilityEnergy_zero]
+  exact Finset.le_sup (by simp)
+
+private lemma extractabilityExactPotential_hit_le
+    (treeTargetCount depth remaining cached : ℕ) :
+    extractabilityExactPotential treeTargetCount depth (remaining - 1) cached ≤
+      extractabilityExactPotential treeTargetCount depth remaining cached := by
+  unfold extractabilityExactPotential
+  apply Finset.sup_le
+  intro commitMisses hcommit
+  apply (extractabilityEnergy_hit_le treeTargetCount depth remaining cached commitMisses).trans
+  apply Finset.le_sup
+  simp only [Finset.mem_range] at hcommit ⊢
+  omega
+
+private lemma extractabilityExactPotential_miss_le
+    (treeTargetCount depth remaining cached : ℕ) (hremaining : 0 < remaining) :
+    cached + extractabilityExactPotential treeTargetCount depth (remaining - 1) (cached + 1) ≤
+      extractabilityExactPotential treeTargetCount depth remaining cached := by
+  unfold extractabilityExactPotential
+  rw [Finset.add_sup (by simp)]
+  apply Finset.sup_le
+  intro commitMisses hcommit
+  rw [extractabilityEnergy_miss_eq treeTargetCount depth remaining cached commitMisses
+    (by
+      simp only [Finset.mem_range] at hcommit
+      omega)]
+  apply Finset.le_sup
+  simp only [Finset.mem_range] at hcommit ⊢
+  omega
 
 private lemma extractabilityInner_eq_commit_bind_rest {s : Skeleton} (𝒜 : Adversary α s) :
     extractabilityInner 𝒜 =
@@ -488,7 +741,7 @@ private lemma chainInCache_of_mem_support_verifyProof
   exact chainInCache_of_mem_support_getPutativeRoot
     idx leaf proof putativeRoot cache₀ cache₁ hroot
 
-private lemma fresh_commitTarget_of_extractor_disagreement
+private lemma fresh_extractedTarget_of_extractor_disagreement
     [DecidableEq α]
     {s : Skeleton} (idx : SkeletonLeafIndex s)
     (log : (spec α).QueryLog) (cacheCommit cacheFinal : (spec α).QueryCache)
@@ -502,7 +755,7 @@ private lemma fresh_commitTarget_of_extractor_disagreement
     (hdisagree :
       some leaf ≠ (extractor s log root).get idx.toNodeIndex ∨
       proof.toList.map some ≠ (generateProof (extractor s log root) idx).toList) :
-    ∃ target ∈ commitTargets root log,
+    ∃ target ∈ extractedTargets s log root,
       CacheAddsValue cacheCommit cacheFinal target := by
   induction idx generalizing root with
   | ofLeaf =>
@@ -529,7 +782,7 @@ private lemma fresh_commitTarget_of_extractor_disagreement
             rw [List.find?_isSome]
             exact ⟨entry, hentry, by simp [hresponse]⟩
           simp [hfind] at hsome
-        exact ⟨root, by simp [commitTargets], ⟨(ancestor, proof.head), hquery, hfresh⟩⟩
+        exact ⟨root, by simp [extractedTargets], ⟨(ancestor, proof.head), hquery, hfresh⟩⟩
     | some entry =>
         obtain ⟨⟨left, right⟩, response⟩ := entry
         have hresponse : response = root := by
@@ -541,7 +794,7 @@ private lemma fresh_commitTarget_of_extractor_disagreement
         have hcached : cacheCommit (left, right) = some root := hlogCache _ hentry
         cases hqueryCommit : cacheCommit (ancestor, proof.head) with
         | none =>
-            exact ⟨root, by simp [commitTargets],
+            exact ⟨root, by simp [extractedTargets],
               ⟨(ancestor, proof.head), hquery, hqueryCommit⟩⟩
         | some value =>
             have hvalueFinal := hmono hqueryCommit
@@ -576,11 +829,8 @@ private lemma fresh_commitTarget_of_extractor_disagreement
                 rw [hsibling, htail]
             obtain ⟨target, htarget, hfresh⟩ :=
               ih ancestor proof.tail hchainTail hchildDisagree
-            have hancestor : ancestor ∈
-                log.flatMap fun entry => [entry.1.1, entry.1.2] := by
-              simp only [List.mem_flatMap]
-              exact ⟨⟨(ancestor, proof.head), root⟩, hentry, by simp⟩
-            exact ⟨target, commitTargets_mono_root hancestor htarget, hfresh⟩
+            exact ⟨target, by
+              simp [extractedTargets, extractorChildren, hfind, htarget], hfresh⟩
   | @ofRight sl sr idxRight ih =>
     obtain ⟨ancestor, hquery, hchainTail⟩ := hchain
     cases hfind : log.find? (fun ⟨_, response⟩ => response == root) with
@@ -598,7 +848,7 @@ private lemma fresh_commitTarget_of_extractor_disagreement
             rw [List.find?_isSome]
             exact ⟨entry, hentry, by simp [hresponse]⟩
           simp [hfind] at hsome
-        exact ⟨root, by simp [commitTargets], ⟨(proof.head, ancestor), hquery, hfresh⟩⟩
+        exact ⟨root, by simp [extractedTargets], ⟨(proof.head, ancestor), hquery, hfresh⟩⟩
     | some entry =>
         obtain ⟨⟨left, right⟩, response⟩ := entry
         have hresponse : response = root := by
@@ -610,7 +860,7 @@ private lemma fresh_commitTarget_of_extractor_disagreement
         have hcached : cacheCommit (left, right) = some root := hlogCache _ hentry
         cases hqueryCommit : cacheCommit (proof.head, ancestor) with
         | none =>
-            exact ⟨root, by simp [commitTargets],
+            exact ⟨root, by simp [extractedTargets],
               ⟨(proof.head, ancestor), hquery, hqueryCommit⟩⟩
         | some value =>
             have hvalueFinal := hmono hqueryCommit
@@ -645,27 +895,25 @@ private lemma fresh_commitTarget_of_extractor_disagreement
                 rw [hsibling, htail]
             obtain ⟨target, htarget, hfresh⟩ :=
               ih ancestor proof.tail hchainTail hchildDisagree
-            have hancestor : ancestor ∈
-                log.flatMap fun entry => [entry.1.1, entry.1.2] := by
-              simp only [List.mem_flatMap]
-              exact ⟨⟨(proof.head, ancestor), root⟩, hentry, by simp⟩
-            exact ⟨target, commitTargets_mono_root hancestor htarget, hfresh⟩
+            exact ⟨target, by
+              simp [extractedTargets, extractorChildren, hfind, htarget], hfresh⟩
 
 /-- Pointwise deterministic reduction for the cached suffix: once the commit cache is
 collision-free, a winning opening must add a fresh cache entry whose answer is one of the
 labels fixed by the logged commit. -/
-private lemma extractability_rest_win_implies_fresh_target
+private lemma extractability_rest_win_implies_fresh_target_of_invariants
     [DecidableEq α]
     {s : Skeleton} (𝒜 : Adversary α s)
     {root : α} {aux : 𝒜.AuxState} {log : (spec α).QueryLog}
     {cacheCommit : (spec α).QueryCache}
-    (hx : (((root, aux), log), cacheCommit) ∈ support
-      ((simulateQ (spec α).cachingOracle 𝒜.commit.withQueryLog).run ∅))
+    (hlogCache : ∀ entry ∈ log, cacheCommit entry.1 = some entry.2)
+    (hcacheLog : ∀ input value, cacheCommit input = some value →
+      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value)
     (hno : ¬ CacheHasCollision cacheCommit) :
     ∀ z ∈ support ((simulateQ (spec α).cachingOracle
         (extractabilityRest 𝒜 root aux log)).run cacheCommit),
       AdversaryWinsExtractabilityGame z.1 →
-      ∃ target ∈ commitTargets root log,
+      ∃ target ∈ extractedTargets s log root,
         CacheAddsValue cacheCommit z.2 target := by
   intro z hz hwin
   have hmono : cacheCommit ≤ z.2 :=
@@ -687,110 +935,40 @@ private lemma extractability_rest_win_implies_fresh_target
   subst verified
   have hchain : ChainInCache cacheFinal leaf root idx proof :=
     chainInCache_of_mem_support_verifyProof idx leaf root proof cacheOpen cacheFinal hverify
-  have hlogCache : ∀ entry ∈ log, cacheCommit entry.1 = some entry.2 :=
-    (OracleComp.log_entry_in_cache_and_mono 𝒜.commit ∅
-      (((root, aux), log), cacheCommit) hx).1
-  have hcacheLog : ∀ input value, cacheCommit input = some value →
-      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value := by
-    intro input value hcache
-    rcases OracleComp.cache_entry_in_log_or_initial 𝒜.commit ∅
-        (((root, aux), log), cacheCommit) hx input value hcache with
-      hinitial | ⟨entry, hentry, hinput, hvalue⟩
-    · simp at hinitial
-    · exact ⟨entry, hentry, hinput, eq_of_heq hvalue⟩
   rw [hcacheFinal] at hmono
   rw [hcacheFinal]
-  exact fresh_commitTarget_of_extractor_disagreement idx log cacheCommit cacheFinal
+  exact fresh_extractedTarget_of_extractor_disagreement idx log cacheCommit cacheFinal
     root leaf proof hlogCache hcacheLog hno hmono hchain hdisagree
 
-/-- A reachable commit outcome leaves the opening phase structurally bounded by the original
-two-phase budget. The proof uses a counting-oracle witness only to transfer reachability; it
-does not condition the random-oracle distribution on the realized count. -/
-private lemma opening_isTotalQueryBound_of_cached_commit
-    [DecidableEq α] [Finite α] [IsUniformSpec (spec α)]
-    {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
-    (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
-    {root : α} {aux : 𝒜.AuxState} {log : (spec α).QueryLog}
-    {cacheCommit : (spec α).QueryCache}
-    (hx : (((root, aux), log), cacheCommit) ∈ support
-      ((simulateQ (spec α).cachingOracle 𝒜.commit.withQueryLog).run ∅)) :
-    IsTotalQueryBound (𝒜.opening aux) qb := by
-  let _ := Fintype.ofFinite α
-  have hlogged : ((root, aux), log) ∈ support 𝒜.commit.withQueryLog := by
-    apply support_simulateQ_run'_subset (spec α).cachingOracle 𝒜.commit.withQueryLog ∅
-    rw [StateT.run'_eq, support_map]
-    exact ⟨(((root, aux), log), cacheCommit), hx, rfl⟩
-  have hraw : (root, aux) ∈ support 𝒜.commit := by
-    rw [← loggingOracle.support_fst_map_run_simulateQ 𝒜.commit, support_map]
-    exact ⟨((root, aux), log), hlogged, rfl⟩
-  have hcounted : ∃ qc : QueryCount (α × α),
-      ((root, aux), qc) ∈ support (countingOracle.simulate 𝒜.commit 0) := by
-    rw [← countingOracle.support_fst_map_run_simulateQ 𝒜.commit, support_map] at hraw
-    obtain ⟨⟨⟨root', aux'⟩, qc⟩, hqc, hout⟩ := hraw
-    simp only at hout
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hout
-    exact ⟨qc, by simpa [countingOracle.simulate] using hqc⟩
-  obtain ⟨qc, hqc⟩ := hcounted
-  have hres : IsTotalQueryBound
-      (𝒜.opening aux >>= fun _ => pure ()) (qb - ∑ i, qc i) :=
-    IsTotalQueryBound.residual_of_mem_support_counting
-      (oa := 𝒜.commit)
-      (ob := fun x => 𝒜.opening x.2 >>= fun _ => pure ())
-      (n := qb) h hqc
-  exact hres.of_bind_left.mono (Nat.sub_le _ _)
-
-private lemma extractabilityRest_isTotalQueryBound
-    [DecidableEq α] [Finite α] [IsUniformSpec (spec α)]
-    {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
-    (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
-    {root : α} {aux : 𝒜.AuxState} {log : (spec α).QueryLog}
-    {cacheCommit : (spec α).QueryCache}
-    (hx : (((root, aux), log), cacheCommit) ∈ support
-      ((simulateQ (spec α).cachingOracle 𝒜.commit.withQueryLog).run ∅)) :
-    IsTotalQueryBound (extractabilityRest 𝒜 root aux log) (qb + s.depth) := by
-  unfold extractabilityRest
-  exact isTotalQueryBound_bind (n₁ := qb) (n₂ := s.depth)
-    (opening_isTotalQueryBound_of_cached_commit 𝒜 qb h hx)
-    fun ⟨idx, leaf, proof⟩ =>
-      isTotalQueryBound_bind (n₁ := s.depth) (n₂ := 0)
-        (verifyProof_isTotalQueryBound_skeleton_depth idx leaf root proof)
-        fun _ => trivial
-
-/-- Unconditional pointwise bound for the actual cached suffix after a collision-free commit.
-The factors are intentionally coarse: at most `2 * qb + 1` distinct commit labels and at most
-`qb + depth` suffix queries. The first `qb` in the suffix budget forgets the queries already
-spent by the commit; this avoids any conditioning on adaptive phase lengths. -/
-private lemma extractability_rest_noCollision_le
+/-- Pointwise suffix bound in terms of the actual extracted-tree size and the residual
+opening budget. Its hypotheses are precisely the log/cache invariants maintained by the
+combined caching-and-logging interpreter used in the stopping-time proof below. -/
+private lemma extractability_rest_noCollision_le_of_opening_bound
     [DecidableEq α] [Finite α] [Inhabited α] [IsUniformSpec (spec α)]
-    {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
-    (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
+    {s : Skeleton} (𝒜 : Adversary α s) (openingBound targetBound : ℕ)
     {root : α} {aux : 𝒜.AuxState} {log : (spec α).QueryLog}
     {cacheCommit : (spec α).QueryCache}
-    (hx : (((root, aux), log), cacheCommit) ∈ support
-      ((simulateQ (spec α).cachingOracle 𝒜.commit.withQueryLog).run ∅))
+    (hopening : IsTotalQueryBound (𝒜.opening aux) openingBound)
+    (hlogCache : ∀ entry ∈ log, cacheCommit entry.1 = some entry.2)
+    (hcacheLog : ∀ input value, cacheCommit input = some value →
+      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value)
+    (htargets : (extractedTargets s log root).toFinset.card ≤ targetBound)
     (hno : ¬ CacheHasCollision cacheCommit) :
     Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
       (simulateQ (spec α).cachingOracle
         (extractabilityRest 𝒜 root aux log)).run cacheCommit] ≤
-      ((2 : ENNReal) * qb + 1) * ((qb : ENNReal) + s.depth) *
+      ((targetBound * (openingBound + s.depth) : ℕ) : ENNReal) *
         (@Fintype.card ((spec α).Range default)
           (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)⁻¹ := by
-  let targets := (commitTargets root log).toFinset
+  let targets := (extractedTargets s log root).toFinset
   have hrest : IsTotalQueryBound
-      (extractabilityRest 𝒜 root aux log) (qb + s.depth) :=
-    extractabilityRest_isTotalQueryBound 𝒜 qb h hx
-  have hlogged : ((root, aux), log) ∈ support 𝒜.commit.withQueryLog := by
-    apply support_simulateQ_run'_subset (spec α).cachingOracle 𝒜.commit.withQueryLog ∅
-    rw [StateT.run'_eq, support_map]
-    exact ⟨(((root, aux), log), cacheCommit), hx, rfl⟩
-  have hlogLength : log.length ≤ qb :=
-    OracleComp.log_length_le_of_mem_support_run_simulateQ h.of_bind_left hlogged
-  have htargets : targets.card ≤ 2 * qb + 1 := by
-    calc
-      targets.card ≤ (commitTargets root log).length := by
-        simpa [targets] using List.toFinset_card_le (commitTargets root log)
-      _ = 2 * log.length + 1 := commitTargets_length root log
-      _ ≤ 2 * qb + 1 := by omega
+      (extractabilityRest 𝒜 root aux log) (openingBound + s.depth) := by
+    unfold extractabilityRest
+    exact isTotalQueryBound_bind (n₁ := openingBound) (n₂ := s.depth)
+      hopening fun ⟨idx, leaf, proof⟩ =>
+        isTotalQueryBound_bind (n₁ := s.depth) (n₂ := 0)
+          (verifyProof_isTotalQueryBound_skeleton_depth idx leaf root proof)
+          fun _ => trivial
   calc
     Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
         (simulateQ (spec α).cachingOracle
@@ -802,14 +980,15 @@ private lemma extractability_rest_noCollision_le
         apply probEvent_mono
         intro z hz hwin
         obtain ⟨target, htarget, input, hfinal, hinitial⟩ :=
-          extractability_rest_win_implies_fresh_target 𝒜 hx hno z hz hwin
+          extractability_rest_win_implies_fresh_target_of_invariants
+            𝒜 hlogCache hcacheLog hno z hz hwin
         exact ⟨target, by simpa [targets] using htarget,
           input, target, hfinal, hinitial, HEq.rfl⟩
-    _ ≤ ((targets.card * (qb + s.depth) : ℕ) : ENNReal) *
+    _ ≤ ((targets.card * (openingBound + s.depth) : ℕ) : ENNReal) *
           (@Fintype.card ((spec α).Range default)
             (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)⁻¹ := by
         exact OracleComp.probEvent_cache_hits_targets_le_of_noCollision
-          (extractabilityRest 𝒜 root aux log) (qb + s.depth) hrest
+          (extractabilityRest 𝒜 root aux log) (openingBound + s.depth) hrest
           (fun input => by
             apply Nat.le_of_eq
             exact @Fintype.card_congr
@@ -817,103 +996,420 @@ private lemma extractability_rest_noCollision_le
               (OracleSpec.instFintypeRangeOfFintype default)
               (OracleSpec.instFintypeRangeOfFintype input) (Equiv.refl α))
           targets cacheCommit hno
-    _ ≤ ((2 : ENNReal) * qb + 1) * ((qb : ENNReal) + s.depth) *
+    _ ≤ ((targetBound * (openingBound + s.depth) : ℕ) : ENNReal) *
           (@Fintype.card ((spec α).Range default)
             (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)⁻¹ := by
-        push_cast
         gcongr
-        exact_mod_cast htargets
 
-/-- Internal shared-ROM decomposition. The birthday term covers collisions in the commit
-cache; the second term covers a fresh answer in the cached opening-and-verification suffix
-hitting one of the commit-time extracted labels. Both bounds are unconditional. -/
-private lemma extractability_win_le_rom_bound
+/-- Stopping-time induction for the shared ROM experiment. The induction follows the syntax
+of the still-running commit computation. A cache hit consumes one unit of the remaining
+combined adversary budget; a miss additionally pays for the at most `cached` responses that
+would create a collision. When the commit stops, the suffix theorem pays for at most
+`targetCount * (remaining + depth)` fresh-target opportunities. -/
+private lemma extractabilityRunFrom_le_potential
+    [DecidableEq α] [Finite α] [Inhabited α] [IsUniformSpec (spec α)]
+    {s : Skeleton} (𝒜 : Adversary α s)
+    (commit : OracleComp (spec α) (α × 𝒜.AuxState))
+    (remaining cached : ℕ)
+    (hbound : IsTotalQueryBound
+      (commit >>= fun x => 𝒜.opening x.2 >>= fun _ => pure ()) remaining)
+    (cache : (spec α).QueryCache) (log : (spec α).QueryLog)
+    (hno : ¬ CacheHasCollision cache)
+    (hcacheBound : ∃ keys : Finset (α × α), keys.card ≤ cached ∧
+      ∀ input, cache input ≠ none → input ∈ keys)
+    (hlogCache : ∀ entry ∈ log, cache entry.1 = some entry.2)
+    (hcacheLog : ∀ input value, cache input = some value →
+      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value) :
+    Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
+      extractabilityRunFrom 𝒜 commit cache log] ≤
+      (extractabilityExactPotential (2 * s.leafCount - 1) s.depth remaining cached : ENNReal) *
+        (@Fintype.card ((spec α).Range default)
+          (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)⁻¹ := by
+  let treeTargetCount := 2 * s.leafCount - 1
+  let C := (@Fintype.card ((spec α).Range default)
+    (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)
+  induction commit using OracleComp.inductionOn generalizing remaining cached cache log with
+  | pure x =>
+      let targetCount := min treeTargetCount (2 * cached + 1)
+      have hopening : IsTotalQueryBound (𝒜.opening x.2) remaining := by
+        have hmapped : IsTotalQueryBound ((fun _ => ()) <$> 𝒜.opening x.2) remaining := by
+          simpa using hbound
+        exact (isQueryBound_map_iff (𝒜.opening x.2) (fun _ => ()) remaining _ _).mp
+          hmapped
+      have htargets : (extractedTargets s log x.1).toFinset.card ≤ targetCount := by
+        obtain ⟨keys, hkeysCard, hkeysMem⟩ := hcacheBound
+        have htree : (extractedTargets s log x.1).toFinset.card ≤ treeTargetCount := by
+          calc
+            (extractedTargets s log x.1).toFinset.card ≤
+                (extractedTargets s log x.1).length := List.toFinset_card_le _
+            _ ≤ treeTargetCount := extractedTargets_length_le s log x.1
+        have hcache : (extractedTargets s log x.1).toFinset.card ≤ 2 * cached + 1 :=
+          (extractedTargets_toFinset_card_le_cacheKeys s log x.1 keys hlogCache hkeysMem).trans
+            (by omega)
+        exact le_min htree hcache
+      have hsuffix := extractability_rest_noCollision_le_of_opening_bound
+        𝒜 remaining targetCount (root := x.1) (aux := x.2)
+        hopening hlogCache hcacheLog htargets hno
+      simp only [extractabilityRunFrom, simulateQ_pure, StateT.run_pure, pure_bind]
+      refine hsuffix.trans ?_
+      change ((targetCount * (remaining + s.depth) : ℕ) : ENNReal) * C⁻¹ ≤
+        (extractabilityExactPotential treeTargetCount s.depth remaining cached : ENNReal) * C⁻¹
+      gcongr
+      exact extractabilityExactPotential_terminal_le
+        treeTargetCount s.depth remaining cached
+  | query_bind t next ih =>
+      have hqueryBound : IsTotalQueryBound
+          ((liftM ((spec α).query t) : OracleComp (spec α) _) >>= fun u =>
+            next u >>= fun x => 𝒜.opening x.2 >>= fun _ => pure ()) remaining := by
+        simpa only [bind_assoc] using hbound
+      rw [isTotalQueryBound_query_bind_iff] at hqueryBound
+      obtain ⟨hremaining, hnext⟩ := hqueryBound
+      by_cases hhit : ∃ value, cache t = some value
+      · obtain ⟨value, hvalue⟩ := hhit
+        have hrun : extractabilityRunFrom 𝒜
+            ((liftM ((spec α).query t) : OracleComp (spec α) _) >>= next) cache log =
+            extractabilityRunFrom 𝒜 (next value) cache
+              (log ++ [⟨t, value⟩]) := by
+          simp only [extractabilityRunFrom, OracleComp.run_simulateQ_query_bind,
+            cachingLoggingOracle.run_some hvalue, pure_bind]
+        rw [hrun]
+        have hlogCache' : ∀ entry ∈ log ++ [⟨t, value⟩],
+            cache entry.1 = some entry.2 := by
+          intro entry hentry
+          rw [List.mem_append] at hentry
+          rcases hentry with hentry | hentry
+          · exact hlogCache entry hentry
+          · rw [List.mem_singleton] at hentry
+            subst entry
+            exact hvalue
+        have hcacheLog' : ∀ input output, cache input = some output →
+            ∃ entry ∈ log ++ [⟨t, value⟩], entry.1 = input ∧ entry.2 = output := by
+          intro input output hcached
+          obtain ⟨entry, hentry, hi, ho⟩ := hcacheLog input output hcached
+          exact ⟨entry, List.mem_append_left _ hentry, hi, ho⟩
+        have hrec := ih value (remaining := remaining - 1) (cached := cached)
+          (hnext value) (cache := cache) (log := log ++ [⟨t, value⟩])
+          hno hcacheBound hlogCache' hcacheLog'
+        refine hrec.trans ?_
+        apply mul_le_mul_of_nonneg_right
+        · exact_mod_cast extractabilityExactPotential_hit_le
+            treeTargetCount s.depth remaining cached
+        · exact zero_le
+      · push Not at hhit
+        have hnone : cache t = none := Option.eq_none_iff_forall_ne_some.mpr hhit
+        have hrun : extractabilityRunFrom 𝒜
+            ((liftM ((spec α).query t) : OracleComp (spec α) _) >>= next) cache log =
+            (liftM ((spec α).query t) : OracleComp (spec α) _) >>= fun value =>
+              extractabilityRunFrom 𝒜 (next value) (cache.cacheQuery t value)
+                (log ++ [⟨t, value⟩]) := by
+          simp only [extractabilityRunFrom, OracleComp.run_simulateQ_query_bind,
+            cachingLoggingOracle.run_none hnone]
+          rfl
+        rw [hrun]
+        have hcollision : Pr[fun value => CacheHasCollision (cache.cacheQuery t value) |
+            (liftM ((spec α).query t) : OracleComp (spec α) _)] ≤
+              (cached : ENNReal) * C⁻¹ := by
+          classical
+          obtain ⟨keys, hkeysCard, hkeysMem⟩ := hcacheBound
+          rw [probEvent_query]
+          have hbad := (OracleComp.card_responses_creating_cacheCollision_le
+            (t := t) hno hkeysMem).trans hkeysCard
+          have hcard : @Fintype.card ((spec α).Range t)
+              (OracleSpec.instFintypeRangeOfFintype t) =
+              @Fintype.card ((spec α).Range default)
+                (OracleSpec.instFintypeRangeOfFintype default) :=
+            @Fintype.card_congr ((spec α).Range t) ((spec α).Range default)
+              (OracleSpec.instFintypeRangeOfFintype t)
+              (OracleSpec.instFintypeRangeOfFintype default) (Equiv.refl α)
+          calc
+            ((Finset.univ.filter
+                (fun value => CacheHasCollision (cache.cacheQuery t value))).card : ENNReal) /
+                @Fintype.card ((spec α).Range t)
+                  (OracleSpec.instFintypeRangeOfFintype t)
+              ≤ (cached : ENNReal) / @Fintype.card ((spec α).Range t)
+                  (OracleSpec.instFintypeRangeOfFintype t) :=
+                ENNReal.div_le_div_right (by exact_mod_cast hbad) _
+            _ = (cached : ENNReal) * C⁻¹ := by
+              rw [hcard, ENNReal.div_eq_inv_mul, mul_comm]
+        have hcontinuation : ∀ value ∈ support
+            (liftM ((spec α).query t) : OracleComp (spec α) _),
+            ¬ CacheHasCollision (cache.cacheQuery t value) →
+            Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
+              extractabilityRunFrom 𝒜 (next value) (cache.cacheQuery t value)
+                (log ++ [⟨t, value⟩])] ≤
+              (extractabilityExactPotential treeTargetCount s.depth
+                (remaining - 1) (cached + 1) : ENNReal) * C⁻¹ := by
+          intro value _ hno'
+          have hcacheBound' : ∃ keys : Finset (α × α), keys.card ≤ cached + 1 ∧
+              ∀ input, (cache.cacheQuery t value) input ≠ none → input ∈ keys := by
+            obtain ⟨keys, hkeysCard, hkeysMem⟩ := hcacheBound
+            refine ⟨insert t keys, (Finset.card_insert_le t keys).trans (by omega), ?_⟩
+            intro input hinput
+            by_cases hi : input = t
+            · exact hi ▸ Finset.mem_insert_self _ _
+            · rw [QueryCache.cacheQuery_of_ne cache value hi] at hinput
+              exact Finset.mem_insert_of_mem (hkeysMem input hinput)
+          have hlogCache' : ∀ entry ∈ log ++ [⟨t, value⟩],
+              (cache.cacheQuery t value) entry.1 = some entry.2 := by
+            rintro ⟨input, output⟩ hentry
+            rw [List.mem_append] at hentry
+            rcases hentry with hentry | hentry
+            · by_cases hi : input = t
+              · subst input
+                have := hlogCache ⟨t, output⟩ hentry
+                simp [hnone] at this
+              · rw [QueryCache.cacheQuery_of_ne cache value hi]
+                exact hlogCache ⟨input, output⟩ hentry
+            · rw [List.mem_singleton] at hentry
+              have hinput : input = t := congrArg Sigma.fst hentry
+              subst input
+              have houtput : output = value := eq_of_heq (Sigma.mk.inj_iff.mp hentry).2
+              subst output
+              exact QueryCache.cacheQuery_self cache t value
+          have hcacheLog' : ∀ input output,
+              (cache.cacheQuery t value) input = some output →
+              ∃ entry ∈ log ++ [⟨t, value⟩], entry.1 = input ∧ entry.2 = output := by
+            intro input output hcached
+            by_cases hi : input = t
+            · subst input
+              rw [QueryCache.cacheQuery_self] at hcached
+              obtain rfl := Option.some.inj hcached
+              exact ⟨⟨t, value⟩, by simp, rfl, rfl⟩
+            · rw [QueryCache.cacheQuery_of_ne cache value hi] at hcached
+              obtain ⟨entry, hentry, heqInput, heqOutput⟩ :=
+                hcacheLog input output hcached
+              exact ⟨entry, List.mem_append_left _ hentry, heqInput, heqOutput⟩
+          have hrec := ih value (remaining := remaining - 1) (cached := cached + 1)
+            (hnext value) (cache := cache.cacheQuery t value)
+            (log := log ++ [⟨t, value⟩]) hno' hcacheBound' hlogCache' hcacheLog'
+          exact hrec
+        have hcombined := probEvent_bind_le_add
+          (mx := (liftM ((spec α).query t) : OracleComp (spec α) _))
+          (my := fun value => extractabilityRunFrom 𝒜 (next value)
+            (cache.cacheQuery t value) (log ++ [⟨t, value⟩]))
+          (p := fun value => ¬ CacheHasCollision (cache.cacheQuery t value))
+          (q := fun z => ¬ AdversaryWinsExtractabilityGame z.1)
+          (ε₁ := (cached : ENNReal) * C⁻¹)
+          (ε₂ := (extractabilityExactPotential treeTargetCount s.depth
+            (remaining - 1) (cached + 1) : ENNReal) * C⁻¹)
+          (by simpa [not_not] using hcollision)
+          (by simpa [not_not] using hcontinuation)
+        simp only [not_not] at hcombined
+        refine hcombined.trans ?_
+        rw [← add_mul]
+        apply mul_le_mul_of_nonneg_right
+        · exact_mod_cast extractabilityExactPotential_miss_le
+            treeTargetCount s.depth remaining cached hremaining
+        · exact zero_le
+
+/-- Initialize the stopping-time induction at the empty cache and empty log, then transport
+the combined caching/logging semantics back to `extractabilityGame`. -/
+private lemma extractability_win_le_stopping_bound
     [DecidableEq α] [Finite α] [Inhabited α] [IsUniformSpec (spec α)]
     {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
     Pr[AdversaryWinsExtractabilityGame | extractabilityGame 𝒜] ≤
-      ((qb * (qb - 1) : ℕ) : ENNReal) /
-        (2 * @Fintype.card ((spec α).Range default)
-          (OracleSpec.instFintypeRangeOfFintype default)) +
-      ((2 : ENNReal) * qb + 1) * ((qb : ENNReal) + s.depth) *
+      (extractabilityExactPotential (2 * s.leafCount - 1) s.depth qb 0 : ENNReal) *
         (@Fintype.card ((spec α).Range default)
           (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)⁻¹ := by
-  let commitPart := 𝒜.commit.withQueryLog
-  let restPart := fun (x : (α × 𝒜.AuxState) × (spec α).QueryLog) =>
-    extractabilityRest 𝒜 x.1.1 x.1.2 x.2
-  have hcommit : IsTotalQueryBound commitPart qb :=
-    (OracleComp.isTotalQueryBound_run_simulateQ_loggingOracle_iff 𝒜.commit qb).mpr
-      h.of_bind_left
-  have hrange : ∀ input,
-      Fintype.card ((spec α).Range default) ≤ Fintype.card ((spec α).Range input) := by
-    intro input
-    apply Nat.le_of_eq
-    exact @Fintype.card_congr
-      ((spec α).Range default) ((spec α).Range input)
-      (OracleSpec.instFintypeRangeOfFintype default)
-      (OracleSpec.instFintypeRangeOfFintype input) (Equiv.refl α)
-  have hmain :
-      Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
-        (simulateQ (spec α).cachingOracle commitPart).run ∅ >>= fun x =>
-          (simulateQ (spec α).cachingOracle (restPart x.1)).run x.2] ≤
-        ((qb * (qb - 1) : ℕ) : ENNReal) /
-          (2 * @Fintype.card ((spec α).Range default)
-            (OracleSpec.instFintypeRangeOfFintype default)) +
-        ((2 : ENNReal) * qb + 1) * ((qb : ENNReal) + s.depth) *
-          (@Fintype.card ((spec α).Range default)
-            (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)⁻¹ := by
-    simpa [not_not] using
-      (probEvent_bind_le_add
-        (mx := (simulateQ (spec α).cachingOracle commitPart).run ∅)
-        (my := fun x =>
-          (simulateQ (spec α).cachingOracle (restPart x.1)).run x.2)
-        (p := fun x => ¬ CacheHasCollision x.2)
-        (q := fun z => ¬ AdversaryWinsExtractabilityGame z.1)
-        (ε₁ := ((qb * (qb - 1) : ℕ) : ENNReal) /
-          (2 * @Fintype.card ((spec α).Range default)
-            (OracleSpec.instFintypeRangeOfFintype default)))
-        (ε₂ := ((2 : ENNReal) * qb + 1) * ((qb : ENNReal) + s.depth) *
-          (@Fintype.card ((spec α).Range default)
-            (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)⁻¹)
-        (by
-          simpa using OracleComp.probEvent_cacheCollision_le_birthday_total_tight
-            commitPart qb hcommit hrange)
-        (by
-          rintro ⟨⟨⟨root, aux⟩, log⟩, cacheCommit⟩ hx hno
-          simpa [restPart, commitPart] using
-            extractability_rest_noCollision_le 𝒜 qb h hx hno))
+  have hmain : Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
+      extractabilityRunFrom 𝒜 𝒜.commit ∅ []] ≤
+      (extractabilityExactPotential (2 * s.leafCount - 1) s.depth qb 0 : ENNReal) *
+        (@Fintype.card ((spec α).Range default)
+          (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)⁻¹ := by
+    apply extractabilityRunFrom_le_potential 𝒜 𝒜.commit qb 0 h ∅ []
+    · intro hcollision
+      obtain ⟨_, _, _, _, _, hcached, _, _⟩ := hcollision
+      simp at hcached
+    · exact ⟨∅, by simp, fun input hinput => absurd (by simp : (∅ :
+        (spec α).QueryCache) input = none) hinput⟩
+    · simp
+    · simp
+  rw [extractabilityRunFrom,
+    cachingLoggingOracle.run_simulateQ_eq_map_run_simulateQ_withQueryLog] at hmain
+  simp only [List.nil_append] at hmain
   rw [extractabilityGame, OracleSpec.withCacheOverlay, StateT.run'_eq,
     extractabilityInner_eq_commit_bind_rest, simulateQ_bind, StateT.run_bind,
     probEvent_map]
-  simpa [commitPart, restPart, Function.comp_def] using hmain
+  simpa [Function.comp_def] using hmain
 
-/-- **Cache-aware random-oracle extractability bound for inductive Merkle trees.**
+/-- Unrelaxed stopping-time error numerator for Merkle extractability in the shared ROM.
+The finite maximum ranges over the number `commitMisses` of fresh, distinct commit inputs.
+Repeated commit queries consume the total budget but do not increase `commitMisses` or the
+cache size. -/
+def extractabilityROMErrorNumerator (s : Skeleton) (qb : ℕ) : ℕ :=
+  (Finset.range (qb + 1)).sup fun commitMisses =>
+    commitMisses.choose 2 +
+      min (2 * s.leafCount - 1) (2 * commitMisses + 1) *
+        (qb - commitMisses + s.depth)
+
+/-- **Unrelaxed finite-maximum ROM extractability bound for inductive Merkle trees.**
 
 For a two-phase adversary with structural total query bound `qb`, extraction failure in the
-single shared lazy random function is at most
-
-`qb(qb-1)/(2|α|) + (2qb+1)(qb+depth)/|α|`.
-
-The constants are deliberately coarse. The commit phase uses at most `qb` queries; after a
-reachable commit outcome, the opening phase is conservatively re-bounded by `qb` rather than
-conditioning on its realized residual budget; verification uses exactly `idx.depth` hashes for
-the selected leaf, hence at most `s.depth`; and the commit transcript contributes at most
-`2qb+1` candidate labels. -/
+single shared lazy random function is at most `extractabilityROMErrorNumerator s qb / |α|`.
+The finite maximum tracks fresh commit inputs rather than conditioning on a realized phase
+length. The proof is therefore valid when the adversary adaptively decides when to stop its
+commit phase and when it repeats cached queries. -/
 theorem extractability_rom_bound
     [DecidableEq α] [Fintype α] [Inhabited α] [IsUniformSpec (spec α)]
     {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
     Pr[AdversaryWinsExtractabilityGame | extractabilityGame 𝒜] ≤
-      ((qb * (qb - 1) : ℕ) : ENNReal) / (2 * Fintype.card α) +
-      ((2 : ENNReal) * qb + 1) * ((qb : ENNReal) + s.depth) *
+      (extractabilityROMErrorNumerator s qb : ENNReal) *
         (Fintype.card α : ENNReal)⁻¹ := by
-  have hbound := extractability_win_le_rom_bound 𝒜 qb h
+  have hbound := extractability_win_le_stopping_bound 𝒜 qb h
   have hcard :
       @Fintype.card ((spec α).Range default)
           (OracleSpec.instFintypeRangeOfFintype default) = Fintype.card α :=
     @Fintype.card_congr ((spec α).Range default) α
       (OracleSpec.instFintypeRangeOfFintype default) inferInstance (Equiv.refl α)
-  simpa only [hcard] using hbound
+  simpa only [extractabilityExactPotential, extractabilityEnergy,
+    extractabilityROMErrorNumerator, Nat.mul_zero, Nat.zero_add, hcard] using hbound
+
+private lemma target_mul_sub_add_choose_le_choose
+    (targetCount qb commitMisses : ℕ)
+    (hqb : 2 * targetCount + 1 ≤ qb) (hmisses : commitMisses ≤ qb) :
+    targetCount * (qb - commitMisses) + commitMisses.choose 2 ≤ qb.choose 2 := by
+  rw [Nat.choose_two_right qb, Nat.le_div_iff_mul_le (by omega : 0 < 2)]
+  have hchoose : 2 * commitMisses.choose 2 ≤ commitMisses * (commitMisses - 1) := by
+    rw [Nat.choose_two_right]
+    simpa [mul_comm] using
+      Nat.div_mul_le_self (commitMisses * (commitMisses - 1)) 2
+  have hqbPred : qb - 1 + 1 = qb := by omega
+  have hqbMisses : qb - commitMisses + commitMisses = qb := by omega
+  by_cases hzero : commitMisses = 0
+  · subst commitMisses
+    norm_num
+    nlinarith
+  have hmissesPred : commitMisses - 1 + 1 = commitMisses := by omega
+  have hpoly : 2 * targetCount * (qb - commitMisses) +
+      commitMisses * (commitMisses - 1) ≤ qb * (qb - 1) := by
+    nlinarith
+  nlinarith
+
+private lemma choose_le_target_mul
+    (targetCount commitMisses : ℕ) (hmisses : commitMisses ≤ 2 * targetCount + 1) :
+    commitMisses.choose 2 ≤ targetCount * commitMisses := by
+  rw [Nat.choose_two_right]
+  apply Nat.div_le_of_le_mul
+  have hpred : commitMisses - 1 ≤ 2 * targetCount := by omega
+  have hmul := Nat.mul_le_mul_left commitMisses hpred
+  nlinarith
+
+private lemma extractabilityROMErrorNumerator_le_coarse (s : Skeleton) (qb : ℕ) :
+    extractabilityROMErrorNumerator s qb ≤
+      max ((2 * s.leafCount - 1) * qb) (qb.choose 2) +
+        (2 * s.leafCount - 1) * s.depth := by
+  let targetCount := 2 * s.leafCount - 1
+  unfold extractabilityROMErrorNumerator
+  apply Finset.sup_le
+  intro commitMisses hcommitMisses
+  have hmisses : commitMisses ≤ qb := by
+    simp only [Finset.mem_range] at hcommitMisses
+    omega
+  by_cases hlarge : 2 * targetCount + 1 ≤ qb
+  · have hcap : min targetCount (2 * commitMisses + 1) ≤ targetCount := min_le_left _ _
+    calc
+      commitMisses.choose 2 + min targetCount (2 * commitMisses + 1) *
+            (qb - commitMisses + s.depth)
+        ≤ commitMisses.choose 2 + targetCount * (qb - commitMisses + s.depth) := by
+          gcongr
+      _ = (targetCount * (qb - commitMisses) + commitMisses.choose 2) +
+            targetCount * s.depth := by ring
+      _ ≤ qb.choose 2 + targetCount * s.depth :=
+        Nat.add_le_add_right
+          (target_mul_sub_add_choose_le_choose targetCount qb commitMisses hlarge hmisses) _
+      _ ≤ max (targetCount * qb) (qb.choose 2) + targetCount * s.depth :=
+        Nat.add_le_add_right (le_max_right _ _) _
+  · have hcap : min targetCount (2 * commitMisses + 1) ≤ targetCount := min_le_left _ _
+    have hchoose : commitMisses.choose 2 ≤ targetCount * commitMisses :=
+      choose_le_target_mul targetCount commitMisses (by omega)
+    calc
+      commitMisses.choose 2 + min targetCount (2 * commitMisses + 1) *
+            (qb - commitMisses + s.depth)
+        ≤ targetCount * commitMisses + targetCount * (qb - commitMisses + s.depth) :=
+          Nat.add_le_add hchoose (by gcongr)
+      _ = targetCount * (qb + s.depth) := by
+        rw [Nat.mul_add, Nat.mul_add, ← Nat.add_assoc, ← Nat.mul_add]
+        congr 2
+        omega
+      _ = targetCount * qb + targetCount * s.depth := by rw [Nat.mul_add]
+      _ ≤ max (targetCount * qb) (qb.choose 2) + targetCount * s.depth :=
+        Nat.add_le_add_right (le_max_left _ _) _
+
+/-- Unconditional two-endpoint relaxation of the unrelaxed finite maximum. This is the direct
+counterpart of the maximum appearing before the final case split in the source proof. -/
+theorem extractability_rom_bound_coarse
+    [DecidableEq α] [Fintype α] [Inhabited α] [IsUniformSpec (spec α)]
+    {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
+    (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
+    Pr[AdversaryWinsExtractabilityGame | extractabilityGame 𝒜] ≤
+      ((max ((2 * s.leafCount - 1) * qb) (qb.choose 2) +
+        (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
+        (Fintype.card α : ENNReal)⁻¹ := by
+  refine (extractability_rom_bound 𝒜 qb h).trans ?_
+  gcongr
+  exact_mod_cast extractabilityROMErrorNumerator_le_coarse s qb
+
+/-- Once `qb ≥ 2T + 1`, the birthday endpoint dominates the other coarse endpoint. -/
+theorem extractability_rom_bound_birthday_dominates
+    [DecidableEq α] [Fintype α] [Inhabited α] [IsUniformSpec (spec α)]
+    {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
+    (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
+    (hqb : 2 * (2 * s.leafCount - 1) + 1 ≤ qb) :
+    Pr[AdversaryWinsExtractabilityGame | extractabilityGame 𝒜] ≤
+      ((qb.choose 2 + (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
+        (Fintype.card α : ENNReal)⁻¹ := by
+  let targetCount := 2 * s.leafCount - 1
+  have htwice : 2 * targetCount ≤ qb - 1 := by omega
+  have hmul : qb * (2 * targetCount) ≤ qb * (qb - 1) :=
+    Nat.mul_le_mul_left qb htwice
+  have hdominates : targetCount * qb ≤ qb.choose 2 := by
+    rw [Nat.choose_two_right, Nat.le_div_iff_mul_le (by omega : 0 < 2)]
+    simpa only [mul_assoc, mul_comm, mul_left_comm] using hmul
+  simpa only [targetCount, max_eq_right hdominates] using
+    extractability_rom_bound_coarse 𝒜 qb h
+
+/-- Textbook-shaped quadratic corollary. Besides birthday dominance, it suffices that
+`2·T·depth ≤ qb`; these two explicit conditions are weaker than the convenient single
+condition used in the Chiesa–Yogev presentation. -/
+theorem extractability_rom_bound_quadratic
+    [DecidableEq α] [Fintype α] [Inhabited α] [IsUniformSpec (spec α)]
+    {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
+    (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
+    (hdominance : 2 * (2 * s.leafCount - 1) + 1 ≤ qb)
+    (hdepth : 2 * (2 * s.leafCount - 1) * s.depth ≤ qb) :
+    Pr[AdversaryWinsExtractabilityGame | extractabilityGame 𝒜] ≤
+      (qb : ENNReal) ^ 2 / (2 * Fintype.card α) := by
+  let targetCount := 2 * s.leafCount - 1
+  let numerator := qb.choose 2 + targetCount * s.depth
+  have hchoose : 2 * qb.choose 2 ≤ qb * (qb - 1) := by
+    rw [Nat.choose_two_right]
+    simpa only [mul_comm] using Nat.div_mul_le_self (qb * (qb - 1)) 2
+  have hqbpos : 0 < qb := by omega
+  have hnat : 2 * numerator ≤ qb ^ 2 := by
+    calc
+      2 * numerator = 2 * qb.choose 2 + 2 * targetCount * s.depth := by
+        simp only [numerator]
+        ring
+      _ ≤ qb * (qb - 1) + qb := Nat.add_le_add hchoose (by
+        simpa only [targetCount] using hdepth)
+      _ = qb * ((qb - 1) + 1) := by ring
+      _ = qb ^ 2 := by rw [Nat.sub_add_cancel (Nat.one_le_iff_ne_zero.mpr hqbpos.ne')]; ring
+  have hbase := extractability_rom_bound_birthday_dominates 𝒜 qb h hdominance
+  refine hbase.trans ?_
+  change (numerator : ENNReal) * (Fintype.card α : ENNReal)⁻¹ ≤
+    (qb : ENNReal) ^ 2 / (2 * Fintype.card α)
+  calc
+    (numerator : ENNReal) * (Fintype.card α : ENNReal)⁻¹ =
+        (numerator : ENNReal) / Fintype.card α := by
+      rw [ENNReal.div_eq_inv_mul, mul_comm]
+    _ = ((2 : ENNReal) * numerator) / (2 * Fintype.card α) := by
+      symm
+      exact ENNReal.mul_div_mul_left _ _ (by norm_num) (by norm_num)
+    _ ≤ (qb : ENNReal) ^ 2 / (2 * Fintype.card α) := by
+      apply ENNReal.div_le_div_right
+      exact_mod_cast hnat
 
 private lemma chainInLog_mono {s : Skeleton} (idx : SkeletonLeafIndex s)
     {log1 log2 : (spec α).QueryLog} {root leaf : α}
