@@ -53,6 +53,12 @@ instance : DecidableEq toyPrimitives.Y := inferInstanceAs (DecidableEq Bool)
 instance : DecidableEq toyPrimitives.PkSeed := inferInstanceAs (DecidableEq Bool)
 noncomputable instance : SampleableType toyPrimitives.Y :=
   SampleableType.ofFintype Bool
+noncomputable instance : SampleableType toyPrimitives.SkSeed :=
+  SampleableType.ofFintype Bool
+noncomputable instance : SampleableType toyPrimitives.SkPrf :=
+  SampleableType.ofFintype Bool
+noncomputable instance : SampleableType toyPrimitives.PkSeed :=
+  SampleableType.ofFintype Bool
 
 instance : Params.IsSingleLayer toyParams where
   d_eq_one := rfl
@@ -66,6 +72,18 @@ def roundTrip : OracleComp (publicHashSpec toyPrimitives) Bool := do
 
 /-- Kernel-visible type canary for the complete explicit-oracle program. -/
 example : OracleComp (publicHashSpec toyPrimitives) Bool := roundTrip
+
+/-- The security-game surface combines public sampling and the explicit public-hash family. -/
+noncomputable example :
+    SignatureAlg (OracleComp (unifSpec + publicHashSpec toyPrimitives)) (List Byte)
+      (PublicKey toyPrimitives) (SecretKey toyPrimitives)
+      (OracleScheme.Signature toyParams toyPrimitives) :=
+  OracleScheme.oracleAlg toyPrimitives
+
+/-- Its standard semantics installs one lazy random-oracle cache around the whole game. -/
+noncomputable example :
+    ProbCompRuntime (OracleComp (unifSpec + publicHashSpec toyPrimitives)) :=
+  OracleScheme.runtime toyPrimitives
 
 /-- The same vertical slice under the concrete lazy-random-oracle capability.  Its type exposes
 the one cache that the enclosing experiment must initialize and thread through the whole run. -/

@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import HashSig.SLHDSA.ForsOracle
 public import HashSig.SLHDSA.Scheme
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 
 /-!
 # Explicit-oracle SLH-DSA vertical slice
@@ -119,6 +120,38 @@ def alg (prims : Primitives p) {m : Type → Type*} [Monad m] [MonadLiftT ProbCo
   keygen := keygenM prims
   sign _ sk msg := signM prims sk msg
   verify pk msg sig := verifyInternalM prims msg sig pk
+
+/-- The scheme in free public-randomness-plus-public-hash syntax.  This is the surface expected by
+the generic `SignatureAlg` security games: the adversary sees the same public-hash queries, while a
+runtime decides whether to interpret them as a lazy random oracle, a programmed oracle, or a
+deterministic function. -/
+def oracleAlg (prims : Primitives p) [Params.IsSingleLayer p]
+    [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
+    [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.Y] :
+    SignatureAlg (OracleComp (unifSpec + publicHashSpec prims)) (List Byte)
+      (PublicKey prims) (SecretKey prims) (Signature p prims) :=
+  alg prims
+
+/-- Runtime for the free scheme under a lazy random oracle with a caller-supplied initial cache.
+Keeping the cache parameter explicit is the hook used by programmed-oracle reductions. -/
+noncomputable def runtimeWithCache (prims : Primitives p) [DecidableEq prims.PkSeed]
+    [DecidableEq prims.Y] [SampleableType prims.Y] [SampleableType (Bytes p.m)]
+    (cache : PublicHash.Cache prims) :
+    ProbCompRuntime (OracleComp (unifSpec + publicHashSpec prims)) where
+  toSPMFSemantics := SPMFSemantics.withStateOracle (PublicHash.randomOracle prims) cache
+  toProbCompLift := ProbCompLift.ofMonadLift _
+
+/-- Standard lazy-random-oracle runtime, initialized once with an empty cache around the complete
+security experiment. -/
+noncomputable def runtime (prims : Primitives p) [DecidableEq prims.PkSeed]
+    [DecidableEq prims.Y] [SampleableType prims.Y] [SampleableType (Bytes p.m)] :
+    ProbCompRuntime (OracleComp (unifSpec + publicHashSpec prims)) :=
+  runtimeWithCache prims ∅
+
+@[simp] theorem runtime_eq_runtimeWithCache_empty (prims : Primitives p)
+    [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
+    [SampleableType prims.Y] [SampleableType (Bytes p.m)] :
+    runtime prims = runtimeWithCache prims ∅ := rfl
 
 /-- The single-layer algorithm with the lazy random oracle installed as its explicit query
 capability.  The resulting state transformer still exposes the cache: the surrounding security
