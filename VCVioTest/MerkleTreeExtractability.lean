@@ -60,6 +60,14 @@ def leftProof : List.Vector Bool leftIndex.depth :=
 
 @[simp] private lemma leftProof_head : leftProof.head = true := rfl
 
+def rightIndex : BinaryTree.SkeletonLeafIndex depthOneSkeleton :=
+  .ofRight .ofLeaf
+
+def rightProof : List.Vector Bool rightIndex.depth :=
+  ⟨[false], rfl⟩
+
+@[simp] private lemma rightProof_head : rightProof.head = false := rfl
+
 abbrev depthOneAdversary : InductiveMerkleTree.Adversary Bool depthOneSkeleton where
   AuxState := Unit
   commit := do
@@ -67,9 +75,12 @@ abbrev depthOneAdversary : InductiveMerkleTree.Adversary Bool depthOneSkeleton w
       OracleComp (InductiveMerkleTree.spec Bool) Bool)
     return (root, ())
   opening _ := do
-    let _ ← ((InductiveMerkleTree.spec Bool).query (false, true) :
+    let answer ← ((InductiveMerkleTree.spec Bool).query (false, true) :
       OracleComp (InductiveMerkleTree.spec Bool) Bool)
-    return ⟨leftIndex, false, leftProof⟩
+    if answer then
+      return ⟨rightIndex, true, rightProof⟩
+    else
+      return ⟨leftIndex, false, leftProof⟩
 
 private lemma depthOneCommit_withQueryLog_eq :
     depthOneAdversary.commit.withQueryLog =
@@ -124,15 +135,22 @@ def expectedTree (root : Bool) :
     BinaryTree.FullData (Option Bool) depthOneSkeleton :=
   .internal (some root) (.leaf (some false)) (.leaf (some true))
 
-def expectedProof : List.Vector (Option Bool) leftIndex.depth :=
+def expectedLeftProof : List.Vector (Option Bool) leftIndex.depth :=
   some true ::ᵥ List.Vector.nil
+
+def expectedRightProof : List.Vector (Option Bool) rightIndex.depth :=
+  some false ::ᵥ List.Vector.nil
 
 private lemma depthOneGame_eq :
     InductiveMerkleTree.extractabilityGame depthOneAdversary =
       (((InductiveMerkleTree.spec Bool).query (false, true) :
           OracleComp (InductiveMerkleTree.spec Bool) Bool) >>= fun root =>
-        pure (root, (), ⟨leftIndex, false, leftProof,
-          expectedTree root, expectedProof, true⟩)) := by
+        if root then
+          pure (root, (), ⟨rightIndex, true, rightProof,
+            expectedTree root, expectedRightProof, true⟩)
+        else
+          pure (root, (), ⟨leftIndex, false, leftProof,
+            expectedTree root, expectedLeftProof, true⟩)) := by
   rw [show InductiveMerkleTree.extractabilityGame depthOneAdversary =
       (InductiveMerkleTree.spec Bool).withCacheOverlay ∅
         (InductiveMerkleTree.extractabilityInner depthOneAdversary) from rfl]
@@ -145,9 +163,27 @@ private lemma depthOneGame_eq :
         return (root, aux,
           ⟨idx, leaf, proof, extractedTree, extractedProof, verified⟩) from rfl]
   rw [withCacheOverlay_bind, depthOneCommit_cached_eq]
-  simp [OracleSpec.withCacheOverlay, depthOneAdversary,
-    InductiveMerkleTree.extractor, InductiveMerkleTree.extractorChildren,
-    depthOneSkeleton, leftIndex, leftProof_head, expectedTree, expectedProof]
+  simp only [bind_assoc, pure_bind]
+  refine bind_congr (m := OracleComp (InductiveMerkleTree.spec Bool)) fun root => ?_
+  cases root <;>
+    simp [OracleSpec.withCacheOverlay,
+      InductiveMerkleTree.extractor, InductiveMerkleTree.extractorChildren,
+      depthOneSkeleton, leftIndex, rightIndex, expectedTree,
+      expectedLeftProof, expectedRightProof]
+
+/-- If the shared answer is `false`, the adversary opens the left branch. -/
+example : (false, (), ⟨leftIndex, false, leftProof,
+    expectedTree false, expectedLeftProof, true⟩) ∈
+    support (InductiveMerkleTree.extractabilityGame depthOneAdversary) := by
+  rw [depthOneGame_eq]
+  simp
+
+/-- If the shared answer is `true`, the adversary opens the right branch. -/
+example : (true, (), ⟨rightIndex, true, rightProof,
+    expectedTree true, expectedRightProof, true⟩) ∈
+    support (InductiveMerkleTree.extractabilityGame depthOneAdversary) := by
+  rw [depthOneGame_eq]
+  simp
 
 /-- Commit, opening, and verification all query `(false, true)`. The shared oracle returns
 one answer throughout, so the commit-prefix extractor recovers the opened leaf and full path. -/
@@ -161,11 +197,12 @@ example (transcript : Bool × Unit ×
   rw [depthOneGame_eq] at htranscript
   rw [mem_support_bind_iff] at htranscript
   obtain ⟨root, _, htranscript⟩ := htranscript
-  rw [mem_support_pure_iff] at htranscript
-  subst transcript
-  simp [InductiveMerkleTree.AdversaryWinsExtractabilityGame,
+  cases root <;> simp at htranscript
+  all_goals subst transcript
+  all_goals simp [InductiveMerkleTree.AdversaryWinsExtractabilityGame,
     InductiveMerkleTree.AdversaryWinsExtractabilityInner,
-    expectedTree, expectedProof, depthOneSkeleton, leftIndex, leftProof]
-  rfl
+    expectedTree, expectedLeftProof, expectedRightProof, depthOneSkeleton,
+    leftIndex, rightIndex, leftProof, rightProof]
+  all_goals rfl
 
 end VCVioTest.MerkleTreeExtractability

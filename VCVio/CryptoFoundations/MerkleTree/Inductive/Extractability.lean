@@ -47,7 +47,7 @@ an independent fresh query is invalid under shared random-function semantics.
 ## TODO
 
 - The lemmas here all specialize to `(m := OracleComp (spec α))` because the proofs rely
-  on `OracleComp`-specific machinery — `withQueryLog`, `support`, `probEvent`, and the
+  on `OracleComp`-specific machinery — `withQueryLog`, `simulateQ` support lemmas, and the
   `ChainInLog log` predicate over a concrete `QueryLog`. Generalizing them to an arbitrary
   monad `m` (so they apply to e.g. `SimulateQ` without re-proving) would first require a
   generic "computation-with-query-log" interface at the framework level,
@@ -66,12 +66,6 @@ namespace InductiveMerkleTree
 open List OracleSpec OracleComp BinaryTree
 
 variable {α : Type}
-
-/-- Local `IsUniformSpec` opt-in for `spec α`: the single Merkle hash oracle samples
-uniformly from `α` whenever `α` is finite and inhabited. Kept `local` so that downstream
-files outside this module do not silently pick up uniform semantics for `spec α`. -/
-noncomputable local instance instIsUniformSpec [Fintype α] [Inhabited α] :
-    IsUniformSpec (spec α) := IsUniformSpec.ofFintypeInhabited _
 
 /-! ## Adversary -/
 
