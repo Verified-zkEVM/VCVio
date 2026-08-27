@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The PMF/SPMF boundary ratchet diffs against the pull-request base.
+          fetch-depth: 0
 
       - name: Set up Lean environment
         uses: leanprover/lean-action@v1
@@ -32,8 +35,14 @@ jobs:
           bash scripts/test-polyfun-boundary.sh
           bash scripts/check-polyfun-boundary.sh
 
-      - name: Check PMF dependency boundary
-        run: bash scripts/check-pmf-boundary.sh
+      - name: Check PMF/SPMF dependency boundary
+        run: |
+          bash scripts/test-pmf-boundary.sh
+          bash scripts/check-pmf-boundary.sh
+
+      - name: Report PMF/SPMF boundary trend
+        if: github.event_name == 'pull_request'
+        run: bash scripts/check-pmf-boundary.sh --report "origin/${{ github.base_ref }}"
 
       - name: Check for all imports in ToMathlib
         run: lake exe mk_all --lib ToMathlib --module --check
