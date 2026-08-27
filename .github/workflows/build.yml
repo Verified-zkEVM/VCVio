@@ -237,15 +237,13 @@ jobs:
         run: ./scripts/test-axiomsweep.sh
       - name: Axiom sweep
         run: lake exe axiomsweep --check
-      # Build the whole canary library rather than a hand-maintained list of
-      # `lake env lean` invocations. Every module reachable from `VCVioTest.lean` is
-      # elaborated, so a canary added in a future PR is covered the moment
-      # `./scripts/update-lib.sh` registers it. `mk_all --lib VCVioTest --module --check`
-      # above only checks that the umbrella's import list is textually complete; it does
-      # not elaborate anything. Kept out of the timed build commands on purpose: the
-      # timing report compares exactly the seven non-test libraries.
-      - name: Build the canary library
-        run: lake build VCVioTest
+      # Build both canary libraries rather than a hand-maintained list of `lake env lean`
+      # invocations. `VCVioTest` is registered through its generated umbrella; `HashSigTest`
+      # deliberately uses a submodule glob because its two KAT modules both define root-level
+      # executable entry points and cannot share an umbrella. Kept out of the timed build commands
+      # on purpose: the timing report compares exactly the seven non-test libraries.
+      - name: Build the canary libraries
+        run: lake build VCVioTest HashSigTest
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
         run: lake exe slhdsa_kat
       - name: Run SLH-DSA-C13 differential KAT
