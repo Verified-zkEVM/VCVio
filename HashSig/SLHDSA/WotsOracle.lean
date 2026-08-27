@@ -17,8 +17,9 @@ evaluation is issued through `PublicHash`.  The functions are monad-parametric a
 not choose or reset an oracle cache; a caller that wants random-oracle semantics must run the
 whole surrounding computation with one `PublicHash.randomOracle` state.
 
-`simulateQ_chainM` is the first executable bridge: the canonical oracle syntax interpreted by the
-deterministic handler is exactly the existing pure hash chain.
+The `simulateQ_*_withPublicHash` lemmas interpret the entire layer through an arbitrary fixed
+answer function and recover the legacy pure WOTS+ construction for the induced primitive bundle.
+Canonical `PublicHash.impl` corollaries recover the original executable specification.
 -/
 
 @[expose] public section
@@ -262,6 +263,18 @@ theorem simulateQ_wotsPkFromSigM (prims : Primitives p) (sig : WotsSig p prims)
   convert
     simulateQ_wotsPkFromSigM_withPublicHash prims (PublicHash.impl prims) sig msg pk adrs using 1
   all_goals rfl
+
+/-- Functional WOTS+ completeness for every fixed deterministic public-hash answer function. -/
+theorem simulateQ_wotsPkFromSigM_wotsSignM_withPublicHash (prims : Primitives p)
+    (answer : QueryImpl (publicHashSpec prims) Id) (msg : prims.Y) (sk : prims.SkSeed)
+    (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ answer (do
+      let sig ← wotsSignM prims msg sk pk adrs
+      wotsPkFromSigM prims sig msg pk adrs) =
+    simulateQ answer (wotsPkGenM prims sk pk adrs) := by
+  simp only [simulateQ_bind, simulateQ_wotsSignM_withPublicHash,
+    simulateQ_wotsPkFromSigM_withPublicHash, simulateQ_wotsPkGenM_withPublicHash]
+  exact wotsPkFromSig_wotsSign (PublicHash.withPublicHash prims answer) msg sk pk adrs
 
 end WotsOracle
 
