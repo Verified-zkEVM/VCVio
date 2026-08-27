@@ -141,10 +141,19 @@ def decodeSignature (ba : ByteArray) : Signature shaPrimitives :=
     (List.range 22).map fun j => baSliceToB16 ba (2416 + 1088 + j * 16)
   (R, fors, (wots, xmssAuth))
 
-/-- Concrete verification of a decoded reference signature against `(pkSeed, pkRoot, message)`. -/
+/-- Concrete FIPS 205 external verification of a decoded signature against
+`(pkSeed, pkRoot, message)`. The empty-context domain prefix is added by `slhVerify`. -/
 def verifyBytes (pkSeed pkRoot : Bytes 16) (msg : List Byte) (sigBytes : ByteArray) : Bool :=
   letI : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
   slhVerify shaPrimitives ⟨pkSeed, pkRoot⟩ msg (decodeSignature sigBytes)
+
+/-- Verification against the internal `M'` interface. This entry point supports reference vectors
+whose message is already the exact input consumed by `H_msg`, without applying the external
+context encoding a second time. -/
+def verifyInternalBytes (pkSeed pkRoot : Bytes 16) (msg : List Byte)
+    (sigBytes : ByteArray) : Bool :=
+  letI : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
+  slhVerifyInternal shaPrimitives msg (decodeSignature sigBytes) ⟨pkSeed, pkRoot⟩
 
 /-! ### Completeness transfers to the concrete bundle
 
