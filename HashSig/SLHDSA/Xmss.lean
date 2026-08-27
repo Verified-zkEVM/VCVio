@@ -23,8 +23,8 @@ available here:
 * `xmssPkFromSig_binding` — an XMSS signature whose recovered leaf differs from the honest WOTS+
   public key but which still recovers the honest root exhibits a collision of `H` at the `TREE`
   address `(h, idx / 2 ^ h)` of an ancestor of leaf `idx`, against the honestly precommitted
-  child pair. The target is determined by the forgery's `(idx, h)`, so this is the hook for the
-  multi-target target-collision term of `slhdsa_euf_cma_security`.
+  child pair. This deterministic statement is the Merkle-layer hook needed by a future
+  seed-aware multi-target target-collision reduction; it is not itself such a reduction.
 
 ## References
 
