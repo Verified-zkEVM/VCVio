@@ -35,12 +35,6 @@ open SLHDSA SLHDSA.Concrete
 length byte required by FIPS 205 Algorithms 22 and 24. -/
 example : emptyContextMessage [1, 2] = [0, 0, 1, 2] := rfl
 
-/-- The external signing wrapper passes the encoded message to the internal algorithm. -/
-example (sk : SecretKeyCore shaPrimitives.core) (msg : List Byte) :
-    slhSign shaPrimitives sk msg = (do
-      let addrnd ← $ᵗ shaPrimitives.Y
-      pure (slhSignInternal shaPrimitives (emptyContextMessage msg) sk addrnd)) := rfl
-
 /-- Concrete external verification is exactly internal verification after empty-context encoding. -/
 example (pkSeed pkRoot : Bytes 16) (msg : List Byte) (sigBytes : ByteArray) :
     verifyBytes pkSeed pkRoot msg sigBytes =

@@ -5,7 +5,7 @@ Authors: Nicolas Consigny
 -/
 
 module
-public import HashSig.SLHDSA.Scheme
+public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.Concrete.Sha2
 
 /-!
@@ -142,10 +142,11 @@ def decodeSignature (ba : ByteArray) : SignatureCore slhdsaSha2_128_24 shaPrimit
   (R, fors, (wots, xmssAuth))
 
 /-- Concrete FIPS 205 external verification of a decoded signature against
-`(pkSeed, pkRoot, message)`. The empty-context domain prefix is added by `slhVerify`. -/
+`(pkSeed, pkRoot, message)`. -/
 def verifyBytes (pkSeed pkRoot : Bytes 16) (msg : List Byte) (sigBytes : ByteArray) : Bool :=
   letI : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
-  slhVerify shaPrimitives ⟨pkSeed, pkRoot⟩ msg (decodeSignature sigBytes)
+  slhVerifyInternal shaPrimitives (emptyContextMessage msg)
+    (decodeSignature sigBytes) ⟨pkSeed, pkRoot⟩
 
 /-- Verification against the internal `M'` interface. This entry point supports reference vectors
 whose message is already the exact input consumed by `H_msg`, without applying the external
@@ -158,8 +159,7 @@ def verifyInternalBytes (pkSeed pkRoot : Bytes 16) (msg : List Byte)
 /-! ### Completeness transfers to the concrete bundle
 
 The carrier instances are supplied explicitly: the structure projections `shaPrimitives.SkSeed`
-… are definitionally `Bytes 16`, but instance synthesis does not unfold them, so the abstract
-`slhdsaAlg_perfectlyComplete` cannot be specialized to `shaPrimitives` by `inferInstance` alone. -/
+… are definitionally `Bytes 16`, but instance synthesis does not unfold them automatically. -/
 
 instance : SampleableType shaPrimitives.SkSeed := inferInstanceAs (SampleableType (Bytes 16))
 instance : SampleableType shaPrimitives.SkPrf := inferInstanceAs (SampleableType (Bytes 16))
@@ -167,13 +167,11 @@ instance : SampleableType shaPrimitives.PkSeed := inferInstanceAs (SampleableTyp
 instance : SampleableType shaPrimitives.Y := inferInstanceAs (SampleableType (Bytes 16))
 instance : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
 
-/-- **Perfect completeness at the concrete SHA2-128-24 bundle.** The abstract
-`slhdsaAlg_perfectlyComplete` (proved for any `Primitives`) specialized to `shaPrimitives` — the
-exact bundle `verifyBytes` executes. This is the in-tree object asserting that the proved
-`Pr[verify (sign m)] = 1` property holds for the concrete code path the KAT exercises, closing the
-gap between the abstract theorem and the executable instance. -/
+/-- **Perfect completeness at the concrete SHA2-128-24 bundle.** This specializes the
+definitional concrete-function interpretation of the canonical oracle-parametric scheme to the
+exact primitive bundle exercised by `verifyBytes`. -/
 theorem shaPrimitives_perfectlyComplete :
-    (slhdsaAlg shaPrimitives).PerfectlyComplete ProbCompRuntime.probComp :=
-  slhdsaAlg_perfectlyComplete shaPrimitives
+    (slhdsaConcreteAlg shaPrimitives).PerfectlyComplete ProbCompRuntime.probComp :=
+  slhdsaConcreteAlg_perfectlyComplete shaPrimitives
 
 end SLHDSA.Concrete

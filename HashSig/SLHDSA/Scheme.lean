@@ -6,7 +6,6 @@ Authors: Nicolas Consigny
 
 module
 public import HashSig.SLHDSA.Hypertree
-public import VCVio.CryptoFoundations.SignatureAlg
 
 /-!
 # SLH-DSA Scheme (FIPS 205 §9–10)
@@ -20,18 +19,18 @@ an explicit `HasQuery` operation:
 - `slhKeygenInternal` / `slhSignInternal` / `slhVerifyInternal`, the deterministic
   `PublicHash.impl` interpretations of those programs,
 - `splitDigest`, the message-digest split into `(md, idxLeaf)` (§9; for `d = 1` the tree index
-  is always `0`, so it is omitted),
-- the external probabilistic wrappers `slhKeygen` / `slhSign` / `slhVerify` (Algorithms 21–24,
-  empty context), and the generic `SignatureAlg` instantiation `slhdsaAlg` in `ProbComp`.
+  is always `0`, so it is omitted), and
+- `emptyContextMessage`, the FIPS 205 external-message encoding used by the canonical external
+  scheme in `HashSig.SLHDSA.RandomOracle`.
 
 Signing follows FIPS 205 Algorithm 19 literally: after `H_msg`, it creates the FORS signature,
 recovers the FORS public key from that signature, and signs the recovered value with the
 hypertree. It does not independently regenerate the FORS public key.
 
-The headline result `slhdsaAlg_perfectlyComplete` proves **perfect completeness with no `sorry`**:
-every honestly generated signature verifies. The deterministic kernel is also exposed for every
-fixed total public-hash answer function. This is not a cached-random-oracle theorem; a security
-experiment must choose and thread that semantics separately.
+The deterministic correctness result `slhVerifyInternal_slhSignInternal` proves that every
+honestly generated signature verifies for every fixed total public-hash answer function. This is
+not a cached-random-oracle theorem; a probabilistic experiment must choose and thread that
+semantics separately.
 
 ## References
 
@@ -212,6 +211,14 @@ theorem slhVerifyInternalM_natural (core : CorePrimitives p)
 def slhKeygenInternalQueryBound (p : Params) : ℕ :=
   xmssNodeQueryBound p p.hp
 
+/-- Structural public-hash budget for the complete internal signing schedule: one `H_msg`, FORS
+signing and recovery from that signature, then hypertree signing.  The WOTS+ term is made uniform
+by allowing every chain its full `w - 1` steps. -/
+def slhSignInternalQueryBound (p : Params) : ℕ :=
+  1 + ((p.k * ((2 ^ p.a - 1) + (2 ^ p.a - p.a - 1)) +
+      (p.k * (p.a + 1) + 1)) +
+    (p.len * (p.w - 1) + xmssAuthPathQueryBound p p.hp))
+
 /-- Structural public-hash budget for verification of the supplied signature. The FORS term
 tracks the actual authentication-path lengths. The hypertree term uses the maximum WOTS+ chain
 budget plus the supplied XMSS authentication-path length. -/
@@ -240,6 +247,52 @@ theorem slhKeygenInternalM_isTotalQueryBound (core : CorePrimitives p)
         (pure (PublicKeyCore.mk pkSeed pkRoot,
           SecretKeyCore.mk skSeed skPrf pkSeed pkRoot) :
           OracleComp (publicHashSpec core) _) 0 from trivial)
+
+private theorem htSignM_isTotalQueryBound_coarse (core : CorePrimitives p)
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
+    (adrs : Adrs) (idxTree idxLeaf : ℕ) :
+    IsTotalQueryBound
+      (htSignM core msg sk pk adrs idxTree idxLeaf :
+        OracleComp (publicHashSpec core) (HtSigCore p core))
+      (p.len * (p.w - 1) + xmssAuthPathQueryBound p p.hp) := by
+  apply (htSignM_isTotalQueryBound core msg sk pk adrs idxTree idxLeaf).mono
+  have hsum :
+      (∑ i : Fin p.len, chainStepsCore core msg i.val) ≤ p.len * (p.w - 1) := by
+    calc
+      (∑ i : Fin p.len, chainStepsCore core msg i.val) ≤
+          ∑ _ : Fin p.len, (p.w - 1) := by
+            apply Finset.sum_le_sum
+            intro i hi
+            exact chainStepsCore_le core msg i.val
+      _ = p.len * (p.w - 1) := by simp
+  omega
+
+/-- Internal signing follows and bounds the whole FIPS 205 Algorithm 19 public-hash schedule:
+one `H_msg` query, sibling-only FORS signing, FORS recovery from the generated signature, and
+hypertree signing.  The theorem counts calls in the free oracle program.  It is an upper bound,
+not a count of distinct lazy-random-oracle cache misses or fresh samples. -/
+theorem slhSignInternalM_isTotalQueryBound (core : CorePrimitives p)
+    (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
+    IsTotalQueryBound
+      (slhSignInternalM core msg sk addrnd :
+        OracleComp (publicHashSpec core) (SignatureCore p core))
+      (slhSignInternalQueryBound p) := by
+  let R := core.PRFmsg sk.skPrf addrnd msg
+  have hbound := isTotalQueryBound_bind
+    (publicHash_hmsg_isTotalQueryBound_one core R sk.pkSeed sk.pkRoot msg) fun digest =>
+      let idxLeaf := (splitDigest p digest).2
+      let md := (splitDigest p digest).1
+      let fAdrs := forsAdrsOf idxLeaf
+      isTotalQueryBound_bind
+        (forsSignM_then_forsPkFromSigM_isTotalQueryBound
+          core md sk.skSeed sk.pkSeed fAdrs) fun sigAndPk =>
+            isTotalQueryBound_bind
+              (htSignM_isTotalQueryBound_coarse core sigAndPk.2 sk.skSeed sk.pkSeed
+                Adrs.zero 0 idxLeaf) fun htSig =>
+                  show IsTotalQueryBound
+                    (pure (R, sigAndPk.1, htSig) :
+                      OracleComp (publicHashSpec core) (SignatureCore p core)) 0 from trivial
+  simpa [slhSignInternalM, slhSignInternalQueryBound, R, bind_assoc] using hbound
 
 private theorem htVerifyM_isTotalQueryBound_coarse (core : CorePrimitives p)
     [DecidableEq core.Y] (msg : core.Y) (sig : HtSigCore p core)
@@ -371,86 +424,12 @@ theorem slhVerifyInternal_slhSignInternal (prims : Primitives p) [DecidableEq pr
   simpa only [simulateQ_bind, simulateQ_slhKeygenInternalM,
     simulateQ_slhSignInternalM, simulateQ_slhVerifyInternalM] using h
 
-/-! ### External algorithms and the `SignatureAlg` instance (FIPS 205 §10) -/
-
-variable (prims : Primitives p)
+/-! ### External-message encoding (FIPS 205 §10) -/
 
 /-- FIPS 205 external-message encoding for the empty-context API:
 `M' = 0x00 || 0x00 || M`. Internal algorithms consume `M'`; callers of the generic
 signature API supply the raw message `M`. -/
 def emptyContextMessage (msg : List Byte) : List Byte :=
   0x00 :: 0x00 :: msg
-
-/-- SLH-DSA key generation (FIPS 205 Algorithm 21): sample the three seeds. -/
-def slhKeygen [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
-    [SampleableType prims.PkSeed] :
-    ProbComp (PublicKeyCore prims.core × SecretKeyCore prims.core) := do
-  let skSeed ← $ᵗ prims.SkSeed
-  let skPrf ← $ᵗ prims.SkPrf
-  let pkSeed ← $ᵗ prims.PkSeed
-  return slhKeygenInternal prims skSeed skPrf pkSeed
-
-/-- SLH-DSA signing (FIPS 205 Algorithm 22, empty context, hedged): sample `addrnd`. -/
-def slhSign [SampleableType prims.Y] (sk : SecretKeyCore prims.core) (msg : List Byte) :
-    ProbComp (SignatureCore p prims.core) := do
-  let addrnd ← $ᵗ prims.Y
-  return slhSignInternal prims (emptyContextMessage msg) sk addrnd
-
-/-- SLH-DSA verification (FIPS 205 Algorithm 24, empty context). -/
-def slhVerify [DecidableEq prims.Y] (pk : PublicKeyCore prims.core) (msg : List Byte)
-    (sig : SignatureCore p prims.core) : Bool :=
-  slhVerifyInternal prims (emptyContextMessage msg) sig pk
-
-/-- SLH-DSA as a generic `SignatureAlg` in the `ProbComp` monad. -/
-def slhdsaAlg [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
-    [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.Y] :
-    SignatureAlg ProbComp (List Byte) (PublicKeyCore prims.core) (SecretKeyCore prims.core)
-      (SignatureCore p prims.core) where
-  keygen := slhKeygen prims
-  sign _pk sk msg := slhSign prims sk msg
-  verify pk msg σ := pure (slhVerify prims pk msg σ)
-
-/-- **Perfect completeness of SLH-DSA** (FIPS 205 §9 correctness): every honestly generated
-signature verifies, with probability one. Proved with no `sorry` from the deterministic core
-`slhVerifyInternal_slhSignInternal`. -/
-theorem slhdsaAlg_perfectlyComplete [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
-    [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.Y] :
-    (slhdsaAlg prims).PerfectlyComplete ProbCompRuntime.probComp := by
-  intro msg
-  set mx : ProbComp Bool := do
-    let (pk, sk) ← (slhdsaAlg prims).keygen
-    let sig ← (slhdsaAlg prims).sign pk sk msg
-    (slhdsaAlg prims).verify pk msg sig with hmx
-  have huniq : ∀ y ∈ support mx, y = true := by
-    intro y hy
-    rw [hmx] at hy
-    simp only [slhdsaAlg] at hy
-    rw [mem_support_bind_iff] at hy
-    obtain ⟨⟨pk, sk⟩, hpksk, hy⟩ := hy
-    rw [mem_support_bind_iff] at hy
-    obtain ⟨sig, hsig, hy⟩ := hy
-    simp only [support_pure, Set.mem_singleton_iff] at hy
-    subst hy
-    simp only [slhKeygen] at hpksk
-    rw [mem_support_bind_iff] at hpksk
-    obtain ⟨skSeed, -, hpksk⟩ := hpksk
-    rw [mem_support_bind_iff] at hpksk
-    obtain ⟨skPrf, -, hpksk⟩ := hpksk
-    rw [mem_support_bind_iff] at hpksk
-    obtain ⟨pkSeed, -, hpksk⟩ := hpksk
-    simp only [support_pure, Set.mem_singleton_iff] at hpksk
-    simp only [slhSign] at hsig
-    rw [mem_support_bind_iff] at hsig
-    obtain ⟨addrnd, -, hsig⟩ := hsig
-    simp only [support_pure, Set.mem_singleton_iff] at hsig
-    subst hsig
-    have hpk : pk = (slhKeygenInternal prims skSeed skPrf pkSeed).1 := congrArg Prod.fst hpksk
-    have hsk : sk = (slhKeygenInternal prims skSeed skPrf pkSeed).2 := congrArg Prod.snd hpksk
-    subst hpk; subst hsk
-    exact slhVerifyInternal_slhSignInternal prims (emptyContextMessage msg)
-      skSeed skPrf pkSeed addrnd
-  change Pr[= true | mx] = 1
-  exact probOutput_eq_one_of_support_subset_singleton
-    (NeverFail.probFailure_eq_zero (mx := mx)) huniq
 
 end SLHDSA

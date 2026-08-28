@@ -454,6 +454,37 @@ private theorem isTotalQueryBound_ofFnM {ι α : Type} {spec : OracleSpec ι} {k
       simpa using isTotalQueryBound_bind (n₂ := 0) (h (Fin.last k))
         (fun a => show IsTotalQueryBound (pure (xs.push a) : OracleComp spec _) 0 from trivial)
 
+/-- Compose `Vector.ofFnM` with a continuation whose bound depends on an invariant satisfied by
+every generated entry.  The entry hypothesis is deliberately a refined bind rule rather than a
+plain query bound: it lets structured producers such as `authPathM` carry their path-length fact
+into the final continuation without claiming that arbitrary oracle outputs satisfy it. -/
+private theorem isTotalQueryBound_ofFnM_bind_of_forall
+    {ι α β : Type} {spec : OracleSpec ι} {k : ℕ}
+    (g : Fin k → OracleComp spec α) (P : α → Prop) (budget : Fin k → ℕ)
+    (hentry : ∀ i (rest : α → OracleComp spec β) (restBudget : ℕ),
+      (∀ x, P x → IsTotalQueryBound (rest x) restBudget) →
+      IsTotalQueryBound (g i >>= rest) (budget i + restBudget))
+    (rest : Vector α k → OracleComp spec β) (restBudget : ℕ)
+    (hrest : ∀ xs, (∀ i : Fin k, P xs[i.val]) → IsTotalQueryBound (rest xs) restBudget) :
+    IsTotalQueryBound (Vector.ofFnM g >>= rest) ((∑ i, budget i) + restBudget) := by
+  induction k generalizing restBudget with
+  | zero =>
+      rw [Vector.ofFnM_zero]
+      simpa using hrest #v[] (fun i => Fin.elim0 i)
+  | succ k ih =>
+      rw [Vector.ofFnM_succ, bind_assoc, Fin.sum_univ_castSucc]
+      have hprefix := ih
+        (g := fun i => g i.castSucc) (budget := fun i => budget i.castSucc)
+        (rest := fun xs => g (Fin.last k) >>= fun x => rest (xs.push x))
+        (restBudget := budget (Fin.last k) + restBudget)
+        (fun i rest' restBudget' h => hentry i.castSucc rest' restBudget' h)
+        (fun xs hxs => hentry (Fin.last k) (fun x => rest (xs.push x)) restBudget
+          (fun x hx => hrest (xs.push x) (fun i => by
+            refine Fin.lastCases ?_ (fun j => ?_) i
+            · simpa using hx
+            · simpa using hxs j)))
+      simpa [Nat.add_assoc] using hprefix
+
 private theorem publicHash_f_isTotalQueryBound_one (core : CorePrimitives p)
     (pk : core.PkSeed) (adrs : Adrs) (x : core.Y) :
     IsTotalQueryBound
@@ -601,6 +632,61 @@ theorem forsPkFromSigM_isTotalQueryBound_fips (core : CorePrimitives p)
         omega
       _ = p.k * (p.a + 1) := by simp
   simpa [hsum] using h
+
+/-- Honest FORS signing followed by recovery stays within the full signing-and-recovery
+schedule.  Signing computes only sibling subtrees; every generated authentication path has
+exactly `a` entries, so recovery then performs one `F` and `a` `H` calls per tree followed by
+one final `T_k` call.
+
+This is a structural bound on calls in the free public-hash program.  Under a lazy cached random
+oracle, repeated calls may hit the cache, so the theorem does not assert this many distinct cache
+misses or fresh samples. -/
+theorem forsSignM_then_forsPkFromSigM_isTotalQueryBound (core : CorePrimitives p)
+    (md : List Byte) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
+    IsTotalQueryBound ((do
+      let sig ← forsSignM core md sk pk adrs
+      let forsPk ← forsPkFromSigM core sig md pk adrs
+      return (sig, forsPk)) :
+        OracleComp (publicHashSpec core) (ForsSigCore p core × core.Y))
+      (p.k * ((2 ^ p.a - 1) + (2 ^ p.a - p.a - 1)) +
+        (p.k * (p.a + 1) + 1)) := by
+  let entryBudget := (2 ^ p.a - 1) + (2 ^ p.a - p.a - 1)
+  let recoveryBudget := p.k * (p.a + 1) + 1
+  let entries : Fin p.k → OracleComp (publicHashSpec core) (core.Y × List core.Y) :=
+    fun i => do
+      let idx := i.val * 2 ^ p.a + forsIdx p md i.val
+      let path ← PerfectMerkleTree.authPathM
+        (forsLeafWith core (PublicHash.f core pk) sk pk adrs)
+        (forsNodeHashWith (PublicHash.h core pk) adrs) idx p.a
+      return (forsSkGenCore core sk pk adrs idx, path)
+  have hentries : ∀ i (rest : core.Y × List core.Y →
+      OracleComp (publicHashSpec core) (ForsSigCore p core × core.Y)) (restBudget : ℕ),
+      (∀ x, x.2.length = p.a → IsTotalQueryBound (rest x) restBudget) →
+      IsTotalQueryBound (entries i >>= rest) (entryBudget + restBudget) := by
+    intro i rest restBudget hrest
+    simp only [entries, bind_assoc, pure_bind]
+    simpa [entryBudget] using
+      (PerfectMerkleTree.isTotalQueryBound_authPathM_bind
+        (forsLeafWith core (PublicHash.f core pk) sk pk adrs)
+        (forsNodeHashWith (PublicHash.h core pk) adrs) 1 1
+        (i.val * 2 ^ p.a + forsIdx p md i.val) p.a restBudget
+        (fun t => publicHash_f_isTotalQueryBound_one core pk _ _)
+        (fun z t l r => publicHash_h_isTotalQueryBound_one core pk _ l r)
+        (fun path => rest (forsSkGenCore core sk pk adrs
+          (i.val * 2 ^ p.a + forsIdx p md i.val), path))
+        (fun path hlength => hrest _ hlength))
+  have hbound := isTotalQueryBound_ofFnM_bind_of_forall entries
+    (fun x => x.2.length = p.a) (fun _ => entryBudget) hentries
+    (fun sig => do
+      let forsPk ← forsPkFromSigM core sig md pk adrs
+      return (sig, forsPk)) recoveryBudget
+    (fun sig hlength => by
+      simpa using isTotalQueryBound_bind (n₂ := 0)
+        (forsPkFromSigM_isTotalQueryBound_fips core sig md pk adrs hlength)
+        (fun forsPk => show IsTotalQueryBound
+          (pure (sig, forsPk) :
+            OracleComp (publicHashSpec core) (ForsSigCore p core × core.Y)) 0 from trivial))
+  simpa [forsSignM, forsSignWith, entries, entryBudget, recoveryBudget] using hbound
 
 /-! ### Pure API equations -/
 
