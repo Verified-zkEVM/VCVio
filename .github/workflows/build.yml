@@ -289,6 +289,8 @@ jobs:
       # timing report compares exactly the seven non-test libraries.
       - name: Build the canary library
         run: lake build VCVioTest
+      - name: Build HashSig oracle canaries
+        run: lake build HashSigTest
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
         run: lake exe slhdsa_kat
       - name: Run SLH-DSA-C13 differential KAT

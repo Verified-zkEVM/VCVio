@@ -17,6 +17,7 @@ public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasureSemantics
 public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MerkleTreeExtractability
+public import VCVioTest.MerkleTreeMonadic
 public import VCVioTest.MonadProbability
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.PFunctorFacade
