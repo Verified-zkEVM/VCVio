@@ -130,6 +130,12 @@ theorem slhVerifyInternal_slhSignInternal (prims : Primitives p) [DecidableEq pr
 
 variable (prims : Primitives p)
 
+/-- FIPS 205 external-message encoding for the empty-context API:
+`M' = 0x00 || 0x00 || M`. Internal algorithms consume `M'`; callers of the generic
+signature API supply the raw message `M`. -/
+def emptyContextMessage (msg : List Byte) : List Byte :=
+  0x00 :: 0x00 :: msg
+
 /-- SLH-DSA key generation (FIPS 205 Algorithm 21): sample the three seeds. -/
 def slhKeygen [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] : ProbComp (PublicKey prims × SecretKey prims) := do
@@ -142,12 +148,12 @@ def slhKeygen [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
 def slhSign [SampleableType prims.Y] (sk : SecretKey prims) (msg : List Byte) :
     ProbComp (Signature prims) := do
   let addrnd ← $ᵗ prims.Y
-  return slhSignInternal prims msg sk addrnd
+  return slhSignInternal prims (emptyContextMessage msg) sk addrnd
 
 /-- SLH-DSA verification (FIPS 205 Algorithm 24, empty context). -/
 def slhVerify [DecidableEq prims.Y] (pk : PublicKey prims) (msg : List Byte)
     (sig : Signature prims) : Bool :=
-  slhVerifyInternal prims msg sig pk
+  slhVerifyInternal prims (emptyContextMessage msg) sig pk
 
 /-- SLH-DSA as a generic `SignatureAlg` in the `ProbComp` monad. -/
 def slhdsaAlg [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
@@ -194,7 +200,8 @@ theorem slhdsaAlg_perfectlyComplete [SampleableType prims.SkSeed] [SampleableTyp
     have hpk : pk = (slhKeygenInternal prims skSeed skPrf pkSeed).1 := congrArg Prod.fst hpksk
     have hsk : sk = (slhKeygenInternal prims skSeed skPrf pkSeed).2 := congrArg Prod.snd hpksk
     subst hpk; subst hsk
-    exact slhVerifyInternal_slhSignInternal prims msg skSeed skPrf pkSeed addrnd
+    exact slhVerifyInternal_slhSignInternal prims (emptyContextMessage msg)
+      skSeed skPrf pkSeed addrnd
   change Pr[= true | mx] = 1
   exact probOutput_eq_one_of_support_subset_singleton
     (NeverFail.probFailure_eq_zero (mx := mx)) huniq
