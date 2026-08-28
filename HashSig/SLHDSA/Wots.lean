@@ -613,7 +613,7 @@ theorem wotsSign_eq_ofFn (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSe
   rfl
 
 @[simp]
-theorem wotsPkFromSigTops_eq_ofFn (prims : Primitives p) (sig : WotsSig p prims)
+theorem wotsPkFromSigTops_eq_ofFn (prims : Primitives p) (sig : WotsSig p prims.core)
     (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) :
     wotsPkFromSigTops prims sig msg pk adrs = Vector.ofFn fun i : Fin p.len =>
       chain prims pk (wotsChainAdrs adrs i.val) sig[i.val] (chainSteps prims.core msg i.val)
@@ -632,7 +632,7 @@ theorem wotsPkGen_eq_tl (prims : Primitives p) (sk : prims.SkSeed)
   rfl
 
 @[simp]
-theorem wotsPkFromSig_eq_tl (prims : Primitives p) (sig : WotsSig p prims)
+theorem wotsPkFromSig_eq_tl (prims : Primitives p) (sig : WotsSig p prims.core)
     (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) :
     wotsPkFromSig prims sig msg pk adrs =
       prims.Tl pk (wotsPkAdrs adrs) (wotsPkFromSigTops prims sig msg pk adrs).toList := by
