@@ -8,6 +8,9 @@ on:
       - "VCVio/**/*.lean"
       - "Extern/**/*.lean"
       - "LatticeCrypto/**/*.lean"
+      - "HashSig.lean"
+      - "HashSig/**/*.lean"
+      - "HashSigTest/**/*.lean"
       - "Examples/**/*.lean"
       - "VCVioWidgets/**/*.lean"
       - "Interop.lean"
@@ -22,6 +25,9 @@ on:
       - "VCVio/**/*.lean"
       - "Extern/**/*.lean"
       - "LatticeCrypto/**/*.lean"
+      - "HashSig.lean"
+      - "HashSig/**/*.lean"
+      - "HashSigTest/**/*.lean"
       - "Examples/**/*.lean"
       - "VCVioWidgets/**/*.lean"
       - "Interop.lean"
@@ -78,4 +84,4 @@ jobs:
       # project deliberately defines no `lint-style` exe, so it does not link the
       # FFI backends). Pass the libraries explicitly for full coverage.
       - name: Run text-based style linters
-        run: lake exe lint-style ToMathlib VCVio Extern LatticeCrypto Examples VCVioWidgets Interop
+        run: lake exe lint-style ToMathlib VCVio Extern LatticeCrypto HashSig Examples VCVioWidgets Interop HashSigTest.SLHDSA.Oracle HashSigTest.SLHDSA.Sha2KAT HashSigTest.SLHDSA.C13KAT
