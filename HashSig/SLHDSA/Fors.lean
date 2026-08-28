@@ -17,7 +17,7 @@ The few-time forest signature: `k` Merkle trees of height `a`, with leaves `F(se
 issue every public hash through `HasQuery`; the pure API is their literal deterministic
 `simulateQ` interpretation. Each tree is a `PerfectMerkleTree`
 (`VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed`) over global leaf indices. Provides
-`forsSkGen`/`forsLeaf`/`forsRoot` (Algorithms 14–15), `forsSign` (Algorithm 16), `forsPkFromSig`
+`forsSkGenCore`/`forsLeaf`/`forsRoot` (Algorithms 14–15), `forsSign` (Algorithm 16), `forsPkFromSig`
 (Algorithm 17), and the correctness lemma `forsPkFromSig_forsSign`: recovery from an honest FORS
 signature reproduces the FORS public key.
 
@@ -65,11 +65,6 @@ def forsSkGenCore (core : CorePrimitives p) (sk : core.SkSeed) (pk : core.PkSeed
     (adrs : Adrs) (t : ℕ) : core.Y :=
   core.PRF pk sk (forsSkAdrs adrs t)
 
-/-- Source-compatible pure wrapper for `forsSkGenCore`. -/
-def forsSkGen (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs)
-    (t : ℕ) : prims.Y :=
-  forsSkGenCore prims.core sk pk adrs t
-
 /-- Address for the FORS-tree node at `(height z, global index t)` (type `FORS_TREE`). -/
 def forsNodeAdrs (adrs : Adrs) (z t : ℕ) : Adrs :=
   let base := (adrs.setTypeAndClear .forsTree).setKeyPairAddress adrs.getKeyPairAddress
@@ -102,9 +97,6 @@ def forsPkAdrs (adrs : Adrs) : Adrs :=
 /-- A FORS signature over an implementation-independent context. -/
 abbrev ForsSigCore (p : Params) (core : CorePrimitives p) :=
   Vector (core.Y × List core.Y) p.k
-
-/-- Source-compatible pure FORS signature type. -/
-abbrev ForsSig (p : Params) (prims : Primitives p) := ForsSigCore p prims.core
 
 /-- Low-level callback-parametric FORS public-key generation. Roots are computed in increasing
 tree order and compressed only after every root is available. -/
@@ -213,13 +205,13 @@ def forsPkGen (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed) (ad
 
 /-- Pure FORS signing, defined as the deterministic interpretation of `forsSignM`. -/
 def forsSign (prims : Primitives p) (md : List Byte) (sk : prims.SkSeed) (pk : prims.PkSeed)
-    (adrs : Adrs) : ForsSig p prims :=
+    (adrs : Adrs) : ForsSigCore p prims.core :=
   simulateQ (PublicHash.impl prims)
     (forsSignM prims.core md sk pk adrs :
       OracleComp (publicHashSpec prims.core) (ForsSigCore p prims.core))
 
 /-- Pure FORS public-key recovery, defined as the interpretation of `forsPkFromSigM`. -/
-def forsPkFromSig (prims : Primitives p) (sig : ForsSig p prims) (md : List Byte)
+def forsPkFromSig (prims : Primitives p) (sig : ForsSigCore p prims.core) (md : List Byte)
     (pk : prims.PkSeed) (adrs : Adrs) : prims.Y :=
   simulateQ (PublicHash.impl prims)
     (forsPkFromSigM prims.core sig md pk adrs :
@@ -624,7 +616,7 @@ private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
 @[simp] theorem forsLeaf_eq_f (prims : Primitives p) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) (t : ℕ) :
     forsLeaf prims sk pk adrs t =
-      prims.F pk (forsNodeAdrs adrs 0 t) (forsSkGen prims sk pk adrs t) := by
+      prims.F pk (forsNodeAdrs adrs 0 t) (forsSkGenCore prims.core sk pk adrs t) := by
   simp [forsLeaf, forsLeafM, forsLeafWith, PublicHash.f]
   rfl
 
@@ -655,7 +647,7 @@ private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
     (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
     forsSign prims md sk pk adrs = Vector.ofFn fun i : Fin p.k =>
       let idx := i.val * 2 ^ p.a + forsIdx p md i.val
-      (forsSkGen prims sk pk adrs idx,
+      (forsSkGenCore prims.core sk pk adrs idx,
         PerfectMerkleTree.authPath (forsLeaf prims sk pk adrs)
           (forsNodeHash prims pk adrs) idx p.a) := by
   unfold forsSign forsSignM forsSignWith
@@ -673,7 +665,7 @@ private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
     ((forsSign prims md sk pk adrs)[i.val]).2.length = p.a := by
   simp [forsSign_eq_ofFn, PerfectMerkleTree.authPath_length]
 
-@[simp] theorem forsPkFromSig_eq_tl (prims : Primitives p) (sig : ForsSig p prims)
+@[simp] theorem forsPkFromSig_eq_tl (prims : Primitives p) (sig : ForsSigCore p prims.core)
     (md : List Byte) (pk : prims.PkSeed) (adrs : Adrs) :
     forsPkFromSig prims sig md pk adrs = prims.Tl pk (forsPkAdrs adrs)
       (Vector.ofFn (fun i : Fin p.k =>
@@ -776,7 +768,8 @@ private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
       forsPkFromSig (PublicHash.withPublicHash core answer) sig md pk adrs := by
   simp [forsPkFromSig, PublicHash.impl_withPublicHash]
 
-@[simp] theorem simulateQ_forsPkFromSigM (prims : Primitives p) (sig : ForsSig p prims)
+@[simp] theorem simulateQ_forsPkFromSigM (prims : Primitives p)
+    (sig : ForsSigCore p prims.core)
     (md : List Byte) (pk : prims.PkSeed) (adrs : Adrs) :
     simulateQ (PublicHash.impl prims)
         (forsPkFromSigM prims.core sig md pk adrs :
