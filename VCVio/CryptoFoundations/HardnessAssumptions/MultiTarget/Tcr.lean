@@ -45,8 +45,8 @@ than a function; it is not a parameter of the game and must not be conflated wit
 
 - Hülsing and Kudinov, *Recovering the Tight Security Proof of SPHINCS+*,
   [ePrint 2022/346](https://eprint.iacr.org/2022/346), Def. 2 and Def. 7.
-- Bernstein, Dobraunig, Hülsing, Mendel and Schaffner,
-  [ePrint 2024/910](https://eprint.iacr.org/2024/910), Fig. 5 and Fig. 6.
+- Barbosa, Dupressoir, Hülsing, Meijers and Strub, *A Tight Security Proof for SPHINCS+, Formally
+  Verified*, [ePrint 2024/910](https://eprint.iacr.org/2024/910), Fig. 5 and Fig. 6.
 - Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for Post-Quantum Ethereum*,
   [ePrint 2025/055](https://eprint.iacr.org/2025/055), §3.1 Def. 3.
 -/

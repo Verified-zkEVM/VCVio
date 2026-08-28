@@ -53,8 +53,9 @@ reduction can forget to discharge.
 
 - Hülsing and Kudinov, *Recovering the Tight Security Proof of SPHINCS+*,
   [ePrint 2022/346](https://eprint.iacr.org/2022/346), Def. 7 and Thm. 3.
-- Bernstein, Dobraunig, Hülsing, Mendel and Schaffner,
-  [ePrint 2024/910](https://eprint.iacr.org/2024/910), Fig. 5, Fig. 7 and the `VQS_t` description.
+- Barbosa, Dupressoir, Hülsing, Meijers and Strub, *A Tight Security Proof for SPHINCS+, Formally
+  Verified*, [ePrint 2024/910](https://eprint.iacr.org/2024/910), Fig. 5, Fig. 7 and the `VQS_t`
+  description.
 -/
 
 @[expose] public section
