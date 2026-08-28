@@ -33,6 +33,7 @@ public import VCVio.CryptoFoundations.Fischlin.Completeness
 public import VCVio.CryptoFoundations.Fischlin.CostAccounting
 public import VCVio.CryptoFoundations.Fischlin.Defs
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness
+public import VCVio.CryptoFoundations.ForkMeasure
 public import VCVio.CryptoFoundations.FujisakiOkamoto
 public import VCVio.CryptoFoundations.FujisakiOkamoto.Composed
 public import VCVio.CryptoFoundations.FujisakiOkamoto.Defs
