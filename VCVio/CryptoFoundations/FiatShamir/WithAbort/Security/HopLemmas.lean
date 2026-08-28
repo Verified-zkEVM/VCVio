@@ -75,7 +75,7 @@ lemma probOutput_unforgeableExp_eq_hybridExpAtKey_real :
   -- `base` matches the runtime's `withStateOracle` interpreter: both lift `unifSpec` by
   -- `liftTarget` (`unifFwdImpl` is exactly that) and use the caching `randomOracle`.
   have hrt : ∀ {α : Type} (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α),
-      (runtime M).evalDist oa = 𝒟[(simulateQ base oa).run' ∅] := fun {α} oa => by
+      (runtime M).evalSPMF oa = 𝒮[(simulateQ base oa).run' ∅] := fun {α} oa => by
     rw [hbase]
     rfl
   unfold SignatureAlg.unforgeableExp
@@ -125,7 +125,7 @@ lemma probOutput_unforgeableExp_eq_hybridExpAtKey_real :
     funext t
     rcases t with bq | sq
     · ext s
-      simp [QueryImpl.writerTMapBase, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
+      simp [QueryImpl.writerTMapBase, QueryImpl.add_apply_inl,
         HasQuery.toQueryImpl_apply, base, unifFwdImpl]
     · ext s
       simp [QueryImpl.writerTMapBase, QueryImpl.add_apply_inr, SignatureAlg.signingOracle,
@@ -134,7 +134,7 @@ lemma probOutput_unforgeableExp_eq_hybridExpAtKey_real :
   -- Provide the cache base as a `HasQuery` instance so the WriterT-log → input-list replay
   -- lemma `QueryImpl.map_run_withLogging_inputs_eq_run_appendInputLog` matches
   -- `base.liftTarget _` (it equals `(HasQuery.toQueryImpl).liftTarget _` for this instance).
-  letI hq : HasQuery (unifSpec + (M × Commit →ₒ Chal))
+  let hq : HasQuery (unifSpec + (M × Commit →ₒ Chal))
       (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) := base.toHasQuery
   -- Replay the WriterT log into a `StateT (List M)` input log, flatten the nested
   -- `StateT (List M) (StateT cache ProbComp)` to `StateT (List M × cache) ProbComp`, and

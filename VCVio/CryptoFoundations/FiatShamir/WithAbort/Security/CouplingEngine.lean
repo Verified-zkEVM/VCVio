@@ -374,7 +374,7 @@ read-answer agreement (`ghostBlindImpl`'s hit branch is `roStep`, the same `map`
 miss and as the lazy handler). Lifting the output-irrelevance through the `simulateQ` fold, so that
 the per-rejected-attempt draws commute to the front independently of the intervening adversary
 computation, is carried out on the σ-free route by
-`evalDist_deferredDrawRead_eq_drawList_tapeDrawRead` in `Security/TapeFactorization.lean`.
+`evalSPMF_deferredDrawRead_eq_drawList_tapeDrawRead` in `Security/TapeFactorization.lean`.
 
 This factorization route is sound precisely because `ghostBlindImpl` reads never feed the ghost
 value into the run, so the draws are genuinely deferrable. -/
@@ -472,36 +472,36 @@ genuine fold-lift content of the ghost-read bound is to front-load every interle
 draw into one independent block, so the drawn *values* factor away from the value-free adversarial
 read points. The body-level half of that program — recasting one signing body's inline draws as
 consumption from a *pre-drawn* tape — is proved here as a distributional equality
-`evalDist_ghostSignDrawBody_eq_drawList_tapeSignBody`:
+`evalSPMF_ghostSignDrawBody_eq_drawList_tapeSignBody`:
 
-`𝒟[(ghostSignDrawBody … n).run re] = 𝒟[drawList (ids.commit pk sk) n >>= tapeSignBody … tape]`.
+`𝒮[(ghostSignDrawBody … n).run re] = 𝒮[drawList (ids.commit pk sk) n >>= tapeSignBody … tape]`.
 
 Pre-drawing the `n`-block of full `(Commit × PrvState)` commitment draws and consuming them
 head-first (`tapeSignBody`) is distributionally identical to drawing them inline: the control flow
 (accept/reject, via the inline `uniformSample`/`respond`) reads the *same* tape values, and the
 unused suffix on an early accept is discarded. The proof is a structural induction on `n` that, at
 each attempt, commutes the recursive front block `drawList n` past the inline
-`uniformSample`/`respond` draws (`evalDist_bind_comm_probComp`, the i.i.d. resampling step) and
+`uniformSample`/`respond` draws (`evalSPMF_bind_comm_probComp`, the i.i.d. resampling step) and
 matches the reject-branch recursion to the inductive hypothesis.
 
 This is the local, per-body `bind`-commutation. Its lift across the *opaque adversary*
 `simulateQ (oa)` fold — the interleaved per-query draw blocks all commuting to the front, past the
-adaptive read points — is `evalDist_deferredDrawRead_eq_drawList_tapeDrawRead` in
+adaptive read points — is `evalSPMF_deferredDrawRead_eq_drawList_tapeDrawRead` in
 `Security/TapeFactorization.lean`. -/
 
 /-- **i.i.d. bind-commutation at the distribution level for `ProbComp`.** Two independent draws
 `oa`, `ob` feeding a common continuation `k` may be drawn in either order without changing the
 output distribution. The `OracleComp` monad is *not* commutative as a free monad (its `bind` is
-syntactic), but its `evalDist` image into `SPMF` is: the two iterated sums over the independent
+syntactic), but its `evalSPMF` image into `SPMF` is: the two iterated sums over the independent
 draws exchange by `ENNReal.tsum_comm`. This is the local resampling step that front-loads an
 output-irrelevant draw past its continuation. -/
-theorem evalDist_bind_comm_probComp {α β γ : Type} (oa : ProbComp α) (ob : ProbComp β)
+theorem evalSPMF_bind_comm_probComp {α β γ : Type} (oa : ProbComp α) (ob : ProbComp β)
     (k : α → β → ProbComp γ) :
-    𝒟[oa >>= fun a => ob >>= fun b => k a b] = 𝒟[ob >>= fun b => oa >>= fun a => k a b] := by
+    𝒮[oa >>= fun a => ob >>= fun b => k a b] = 𝒮[ob >>= fun b => oa >>= fun a => k a b] := by
   refine SPMF.ext fun x => ?_
-  rw [show 𝒟[oa >>= fun a => ob >>= fun b => k a b] x
+  rw [show 𝒮[oa >>= fun a => ob >>= fun b => k a b] x
         = Pr[= x | oa >>= fun a => ob >>= fun b => k a b] from (probOutput_def _ _).symm,
-    show 𝒟[ob >>= fun b => oa >>= fun a => k a b] x
+    show 𝒮[ob >>= fun b => oa >>= fun a => k a b] x
         = Pr[= x | ob >>= fun b => oa >>= fun a => k a b] from (probOutput_def _ _).symm]
   rw [probOutput_bind_eq_tsum]
   rw [show (∑' a : α, Pr[= a | oa] * Pr[= x | ob >>= fun b => k a b])
@@ -517,18 +517,18 @@ theorem evalDist_bind_comm_probComp {α β γ : Type} (oa : ProbComp α) (ob : P
 /-- **Dropping a never-failing prefix at the distribution level.** A leading draw `od` whose
 continuation ignores its value contributes only its total mass; when `od` never fails (mass `1`,
 e.g. a `drawList` front block) it can be discarded from the output distribution. -/
-theorem evalDist_bind_const_neverFails {α γ : Type} (od : ProbComp α) (hmass : Pr[⊥ | od] = 0)
-    (k : ProbComp γ) : 𝒟[od >>= fun _ => k] = 𝒟[k] := by
+theorem evalSPMF_bind_const_neverFails {α γ : Type} (od : ProbComp α) (hmass : Pr[⊥ | od] = 0)
+    (k : ProbComp γ) : 𝒮[od >>= fun _ => k] = 𝒮[k] := by
   refine SPMF.ext fun x => ?_
-  rw [show 𝒟[od >>= fun _ => k] x = Pr[= x | od >>= fun _ => k] from (probOutput_def _ _).symm,
-    show 𝒟[k] x = Pr[= x | k] from (probOutput_def _ _).symm]
+  rw [show 𝒮[od >>= fun _ => k] x = Pr[= x | od >>= fun _ => k] from (probOutput_def _ _).symm,
+    show 𝒮[k] x = Pr[= x | k] from (probOutput_def _ _).symm]
   rw [probOutput_bind_const, hmass]; simp
 
 /-- **Distribution-level congruence under a leading bind.** If two continuations agree as
 distributions pointwise then the bound computations agree as distributions. -/
-theorem evalDist_bind_congr_left {α β : Type} (oa : ProbComp α) (f g : α → ProbComp β)
-    (h : ∀ a, 𝒟[f a] = 𝒟[g a]) : 𝒟[oa >>= f] = 𝒟[oa >>= g] := by
-  rw [evalDist_bind, evalDist_bind]; exact congrArg _ (funext h)
+theorem evalSPMF_bind_congr_left {α β : Type} (oa : ProbComp α) (f g : α → ProbComp β)
+    (h : ∀ a, 𝒮[f a] = 𝒮[g a]) : 𝒮[oa >>= f] = 𝒮[oa >>= g] := by
+  rw [evalSPMF_bind, evalSPMF_bind]; exact congrArg _ (funext h)
 
 /-- **Tape-consuming signing body.** Identical to `ghostSignDrawBody` except that each attempt's
 commitment draw `(Commit × PrvState)` is *consumed* from a pre-drawn tape (head-first) instead of
@@ -577,65 +577,65 @@ omit [SampleableType Stmt] in
 commitments inline (`ghostSignDrawBody`) is distributionally identical to pre-drawing the `n`-block
 of full commitment draws into a tape and consuming it head-first (`tapeSignBody`):
 
-`𝒟[(ghostSignDrawBody … n).run re] = 𝒟[drawList (ids.commit pk sk) n >>= tapeSignBody … tape]`.
+`𝒮[(ghostSignDrawBody … n).run re] = 𝒮[drawList (ids.commit pk sk) n >>= tapeSignBody … tape]`.
 
 The proof inducts on `n`: at each attempt, the recursive front block `drawList n` is commuted past
 the inline `uniformSample`/`respond` draws (the i.i.d. resampling step
-`evalDist_bind_comm_probComp`), the accepting branch discards the unused suffix
-(`evalDist_bind_const_neverFails`, `drawList` never
+`evalSPMF_bind_comm_probComp`), the accepting branch discards the unused suffix
+(`evalSPMF_bind_const_neverFails`, `drawList` never
 fails), and the rejecting branch matches the inductive hypothesis. This is the per-body half of the
 tape factorization; its lift across the opaque adversary fold is
-`evalDist_deferredDrawRead_eq_drawList_tapeDrawRead`. -/
-theorem evalDist_ghostSignDrawBody_eq_drawList_tapeSignBody (pk : Stmt) (sk : Wit) (msg : M)
+`evalSPMF_deferredDrawRead_eq_drawList_tapeDrawRead`. -/
+theorem evalSPMF_ghostSignDrawBody_eq_drawList_tapeSignBody (pk : Stmt) (sk : Wit) (msg : M)
     (n : ℕ) (re : (M × Commit →ₒ Chal).QueryCache) :
-    𝒟[(ghostSignDrawBody ids M pk sk msg n).run re] =
-      𝒟[OracleComp.drawList (ids.commit pk sk) n >>= fun tape =>
+    𝒮[(ghostSignDrawBody ids M pk sk msg n).run re] =
+      𝒮[OracleComp.drawList (ids.commit pk sk) n >>= fun tape =>
           (tapeSignBody ids M pk sk msg tape).run re] := by
   induction n generalizing re with
   | zero => simp [ghostSignDrawBody, tapeSignBody, OracleComp.drawList]
   | succ n ih =>
       rw [run_ghostSignDrawBody_succ, OracleComp.drawList]
       simp only [bind_assoc, pure_bind]
-      rw [evalDist_bind, evalDist_bind]
-      refine congrArg (𝒟[ids.commit pk sk] >>= ·) (funext fun ws => ?_)
+      rw [evalSPMF_bind, evalSPMF_bind]
+      refine congrArg (𝒮[ids.commit pk sk] >>= ·) (funext fun ws => ?_)
       obtain ⟨w, st⟩ := ws
       simp only [run_tapeSignBody_cons]
       set dl := OracleComp.drawList (ids.commit pk sk) n with hdl
       have hdlmass : Pr[⊥ | dl] = 0 := by rw [hdl]; exact OracleComp.probFailure_drawList _ _
-      rw [show (𝒟[dl >>= fun rest => uniformSample Chal >>= fun ch =>
+      rw [show (𝒮[dl >>= fun rest => uniformSample Chal >>= fun ch =>
             ids.respond pk sk st ch >>= fun oz =>
               (match oz with
               | some z => pure ((some (w, z), []), re.cacheQuery (msg, w) ch)
               | none => (fun rws => ((rws.1.1, w :: rws.1.2), rws.2)) <$>
                   (tapeSignBody ids M pk sk msg rest).run re : ProbComp _)])
-          = 𝒟[uniformSample Chal >>= fun ch => dl >>= fun rest =>
+          = 𝒮[uniformSample Chal >>= fun ch => dl >>= fun rest =>
               ids.respond pk sk st ch >>= fun oz =>
                 (match oz with
                 | some z => pure ((some (w, z), []), re.cacheQuery (msg, w) ch)
                 | none => (fun rws => ((rws.1.1, w :: rws.1.2), rws.2)) <$>
                     (tapeSignBody ids M pk sk msg rest).run re : ProbComp _)] from
-        evalDist_bind_comm_probComp dl (uniformSample Chal) _]
-      refine evalDist_bind_congr_left (uniformSample Chal) _ _ (fun ch => ?_)
-      rw [show (𝒟[dl >>= fun rest => ids.respond pk sk st ch >>= fun oz =>
+        evalSPMF_bind_comm_probComp dl (uniformSample Chal) _]
+      refine evalSPMF_bind_congr_left (uniformSample Chal) _ _ (fun ch => ?_)
+      rw [show (𝒮[dl >>= fun rest => ids.respond pk sk st ch >>= fun oz =>
             (match oz with
             | some z => pure ((some (w, z), []), re.cacheQuery (msg, w) ch)
             | none => (fun rws => ((rws.1.1, w :: rws.1.2), rws.2)) <$>
                 (tapeSignBody ids M pk sk msg rest).run re : ProbComp _)])
-          = 𝒟[ids.respond pk sk st ch >>= fun oz => dl >>= fun rest =>
+          = 𝒮[ids.respond pk sk st ch >>= fun oz => dl >>= fun rest =>
               (match oz with
               | some z => pure ((some (w, z), []), re.cacheQuery (msg, w) ch)
               | none => (fun rws => ((rws.1.1, w :: rws.1.2), rws.2)) <$>
                   (tapeSignBody ids M pk sk msg rest).run re : ProbComp _)] from
-        evalDist_bind_comm_probComp dl (ids.respond pk sk st ch) _]
-      refine evalDist_bind_congr_left (ids.respond pk sk st ch) _ _ (fun oz => ?_)
+        evalSPMF_bind_comm_probComp dl (ids.respond pk sk st ch) _]
+      refine evalSPMF_bind_congr_left (ids.respond pk sk st ch) _ _ (fun oz => ?_)
       cases oz with
-      | some z => rw [evalDist_bind_const_neverFails dl hdlmass]
+      | some z => rw [evalSPMF_bind_const_neverFails dl hdlmass]
       | none =>
-          change 𝒟[(fun rws => ((rws.1.1, w :: rws.1.2), rws.2)) <$>
+          change 𝒮[(fun rws => ((rws.1.1, w :: rws.1.2), rws.2)) <$>
             (ghostSignDrawBody ids M pk sk msg n).run re] = _
-          rw [evalDist_map_eq_of_evalDist_eq (ih re)]
+          rw [evalSPMF_map_eq_of_evalSPMF_eq (ih re)]
           rw [map_eq_bind_pure_comp, bind_assoc]
-          refine evalDist_bind_congr_left dl _ _ (fun rest => ?_)
+          refine evalSPMF_bind_congr_left dl _ _ (fun rest => ?_)
           rw [map_eq_bind_pure_comp]
 
 omit [SampleableType Stmt] in
@@ -905,7 +905,7 @@ dominated by the recursive fresh list (induction). The read strategy `σ` is *fi
 are determined by the all-miss reply history; the drawn values never feed them — value-freeness),
 which is what lets a single `σ` dominate both sides. The corresponding fold-level statement —
 front-loading every signing query's interleaved draws into one aggregate `drawList` block — is
-`evalDist_deferredDrawRead_eq_drawList_tapeDrawRead`, which the headline uses on the σ-free
+`evalSPMF_deferredDrawRead_eq_drawList_tapeDrawRead`, which the headline uses on the σ-free
 first-moment route. This lemma is the single-body over-count in σ-indexed form; it is not on the
 live headline path (which charges the expected coincidence count directly). -/
 lemma ghostSignDrawBody_readManyList_le_drawList (pk : Stmt) (sk : Wit) (msg : M)

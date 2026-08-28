@@ -128,7 +128,7 @@ lemma probEvent_lazyGhostHybridImpl_charged_step (pk : Stmt) (sk : Wit) {ε : �
     change ((gh.toSet.encard.toNat : ℕ) : ℝ≥0∞) ≤ (gh.toSet.encard : ℝ≥0∞)
     calc ((gh.toSet.encard.toNat : ℕ) : ℝ≥0∞)
         = ((gh.toSet.encard.toNat : ℕ∞) : ℝ≥0∞) := by push_cast; rfl
-      _ ≤ (gh.toSet.encard : ℝ≥0∞) := ENat.toENNReal_mono (ENat.coe_toNat_le_self _)
+      _ ≤ (gh.toSet.encard : ℝ≥0∞) := ENat.toENNReal_mono (ENat.natCast_toNat_le_self _)
   -- The run, with its bad bit reduced (`false || b = b`): a fire draw whose Boolean result
   -- becomes the output bad bit, composed with the real-layer caching read `ro`.
   have h_run : (lazyGhostHybridImpl ids M maxAttempts pk sk (.inl (.inr mc))).run

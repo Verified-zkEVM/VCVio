@@ -80,7 +80,7 @@ lemma managedRoNmaExp_simulatedNmaAdv_eq_eufNmaExp :
       SignatureAlg.eufNmaExp (runtime M)
         (simulatedEufNmaAdv ids hr M maxAttempts sim adv) := by
   unfold SignatureAlg.managedRoNmaExp SignatureAlg.eufNmaExp
-  refine congrArg (runtime M).evalDist ?_
+  refine congrArg (runtime M).evalSPMF ?_
   refine bind_congr fun pksk => ?_
   -- Reduce the eufNma side `Prod.fst <$> _` to a bind, so both sides bind over
   -- `simulatedNmaAdv.main`, then compare the verification wrappers pointwise.
@@ -272,8 +272,8 @@ lemma simulatedNmaAdv_nmaHashQueryBound
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     ∀ pk, FiatShamir.nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := (simulatedNmaAdv ids hr M maxAttempts sim adv).main pk) qH := by
-  haveI : Fintype Chal := Fintype.ofFinite Chal
-  letI : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
+  have : Fintype Chal := Fintype.ofFinite Chal
+  let : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
     IsUniformSpec.ofFintypeInhabited _
   intro pk
   let spec := unifSpec + (M × Commit →ₒ Chal)

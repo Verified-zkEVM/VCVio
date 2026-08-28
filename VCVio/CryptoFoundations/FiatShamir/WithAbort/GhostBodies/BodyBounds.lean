@@ -231,7 +231,7 @@ lemma probEvent_commit_hit_le (pk : Stmt) (sk : Wit) {ε : ℝ}
     Pr[fun ws : Commit × PrvState => c (msg, ws.1) ≠ none | ids.commit pk sk]
       ≤ QueryCache.enncard c * ENNReal.ofReal ε := by
   classical
-  haveI : DecidableEq Commit := Classical.decEq Commit
+  have : DecidableEq Commit := Classical.decEq Commit
   let commitDist : ProbComp Commit := Prod.fst <$> ids.commit pk sk
   let hit : Commit → Prop := fun w => c (msg, w) ≠ none
   let S : Finset Commit := (finSupport commitDist).filter hit
@@ -707,7 +707,6 @@ lemma tsum_ghostHybridImpl_read_hit_eq
       (pure (v, (p.1, true)) :
         ProbComp (Chal × GhostState M Commit Chal)) := by
     simp only [ghostHybridImpl, StateT.run_mk, hgh, if_pos trivial]
-    rfl
   rw [hrun]
   refine (tsum_probOutput_pure_mul (β := Chal × GhostState M Commit Chal) (v, (p.1, true))
     fun z => Pr[fun w : (M × Option (Commit × Resp)) × GhostState M Commit Chal => w.2.2 = true |
