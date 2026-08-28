@@ -136,42 +136,70 @@ def wotsPkAdrs (adrs : Adrs) : Adrs :=
 
 /-! ### Message-to-digit derivation (FIPS 205 §5.2–5.4) -/
 
-/-- The `len1` base-`w` message digits of the node being signed. -/
-def wotsMsgDigits (core : CorePrimitives p) (msg : core.Y) : List ℕ :=
+/-- The `len1` base-`w` message digits of the node being signed, computed from the
+implementation-independent context. -/
+def wotsMsgDigitsCore (core : CorePrimitives p) (msg : core.Y) : List ℕ :=
   base2b (core.yToBytes msg).toList p.lgw p.len1
 
 /-- The full step-count list: message digits followed by the base-`w` checksum digits; length
-`len`. -/
-def chainLengths (core : CorePrimitives p) (msg : core.Y) : List ℕ :=
-  wotsFullDigits (wotsMsgDigits core msg) p.w p.len1 p.len2
+`len`, computed from the implementation-independent context. -/
+def chainLengthsCore (core : CorePrimitives p) (msg : core.Y) : List ℕ :=
+  wotsFullDigits (wotsMsgDigitsCore core msg) p.w p.len1 p.len2
 
-/-- Every entry of `chainLengths` is a genuine base-`w` digit (`< w`). -/
-theorem chainLengths_mem_lt (core : CorePrimitives p) (msg : core.Y) :
-    ∀ d ∈ chainLengths core msg, d < p.w := by
+/-- Every entry of `chainLengthsCore` is a genuine base-`w` digit (`< w`). -/
+theorem chainLengthsCore_mem_lt (core : CorePrimitives p) (msg : core.Y) :
+    ∀ d ∈ chainLengthsCore core msg, d < p.w := by
   intro d hd
-  unfold chainLengths wotsFullDigits at hd
+  unfold chainLengthsCore wotsFullDigits at hd
   rcases List.mem_append.mp hd with h | h
   · have hb := base2b_lt (core.yToBytes msg).toList p.lgw p.len1 d h
     rwa [Params.w]
   · exact digitsOfBaseW_lt _ p.w p.len2 (Params.w_pos p) d h
 
-/-- The step count of chain `i`: the `i`-th entry of `chainLengths` (`0` past the end). -/
-def chainSteps (core : CorePrimitives p) (msg : core.Y) (i : ℕ) : ℕ :=
-  (chainLengths core msg).getD i 0
+/-- The step count of chain `i`: the `i`-th entry of `chainLengthsCore` (`0` past the end). -/
+def chainStepsCore (core : CorePrimitives p) (msg : core.Y) (i : ℕ) : ℕ :=
+  (chainLengthsCore core msg).getD i 0
 
-theorem chainSteps_lt (core : CorePrimitives p) (msg : core.Y) (i : ℕ) :
-    chainSteps core msg i < p.w := by
-  unfold chainSteps
+theorem chainStepsCore_lt (core : CorePrimitives p) (msg : core.Y) (i : ℕ) :
+    chainStepsCore core msg i < p.w := by
+  unfold chainStepsCore
   rw [List.getD_eq_getElem?_getD]
-  rcases lt_or_ge i (chainLengths core msg).length with h | h
+  rcases lt_or_ge i (chainLengthsCore core msg).length with h | h
   · rw [List.getElem?_eq_getElem h]
-    simpa using chainLengths_mem_lt core msg _ (List.getElem_mem h)
+    simpa using chainLengthsCore_mem_lt core msg _ (List.getElem_mem h)
   · rw [List.getElem?_eq_none h]
     simpa using Params.w_pos p
 
-theorem chainSteps_le (core : CorePrimitives p) (msg : core.Y) (i : ℕ) :
-    chainSteps core msg i ≤ p.w - 1 :=
-  Nat.le_sub_one_of_lt (chainSteps_lt core msg i)
+theorem chainStepsCore_le (core : CorePrimitives p) (msg : core.Y) (i : ℕ) :
+    chainStepsCore core msg i ≤ p.w - 1 :=
+  Nat.le_sub_one_of_lt (chainStepsCore_lt core msg i)
+
+/-! The original pure helper API remains source-compatible.  Canonical oracle programs use the
+`*Core` declarations above so their dependence on `CorePrimitives` is explicit. -/
+
+/-- Pure compatibility wrapper for `wotsMsgDigitsCore`. -/
+def wotsMsgDigits (prims : Primitives p) (msg : prims.Y) : List ℕ :=
+  wotsMsgDigitsCore prims.core msg
+
+/-- Pure compatibility wrapper for `chainLengthsCore`. -/
+def chainLengths (prims : Primitives p) (msg : prims.Y) : List ℕ :=
+  chainLengthsCore prims.core msg
+
+theorem chainLengths_mem_lt (prims : Primitives p) (msg : prims.Y) :
+    ∀ d ∈ chainLengths prims msg, d < p.w :=
+  chainLengthsCore_mem_lt prims.core msg
+
+/-- Pure compatibility wrapper for `chainStepsCore`. -/
+def chainSteps (prims : Primitives p) (msg : prims.Y) (i : ℕ) : ℕ :=
+  chainStepsCore prims.core msg i
+
+theorem chainSteps_lt (prims : Primitives p) (msg : prims.Y) (i : ℕ) :
+    chainSteps prims msg i < p.w :=
+  chainStepsCore_lt prims.core msg i
+
+theorem chainSteps_le (prims : Primitives p) (msg : prims.Y) (i : ℕ) :
+    chainSteps prims msg i ≤ p.w - 1 :=
+  chainStepsCore_le prims.core msg i
 
 /-! ### Public-key generation, signing, and recovery -/
 
@@ -227,7 +255,7 @@ def wotsSignWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (adrs : Adrs) : m (WotsSig p core) :=
   Vector.ofFnM fun i =>
     chainWith hash (wotsChainAdrs adrs i.val)
-      (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainSteps core msg i.val)
+      (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainStepsCore core msg i.val)
 
 /-- Canonical explicit-public-hash WOTS+ signing program (FIPS 205 Algorithm 7). -/
 def wotsSignM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -248,8 +276,8 @@ def wotsPkFromSigTopsWith (core : CorePrimitives p) {m : Type → Type*} [Monad 
     (hash : Adrs → core.Y → m core.Y)
     (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) : m (Vector core.Y p.len) :=
   Vector.ofFnM fun i =>
-    chainWith hash (wotsChainAdrs adrs i.val) sig[i.val] (chainSteps core msg i.val)
-      (p.w - 1 - chainSteps core msg i.val)
+    chainWith hash (wotsChainAdrs adrs i.val) sig[i.val] (chainStepsCore core msg i.val)
+      (p.w - 1 - chainStepsCore core msg i.val)
 
 /-- Low-level callback-parametric implementation of WOTS+ public-key recovery. -/
 def wotsPkFromSigWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -532,10 +560,10 @@ theorem wotsSignM_isTotalQueryBound (core : CorePrimitives p) (msg : core.Y)
     IsTotalQueryBound
       (wotsSignM core msg sk pk adrs :
         OracleComp (publicHashSpec core) (WotsSig p core))
-      (∑ i : Fin p.len, chainSteps core msg i.val) := by
+      (∑ i : Fin p.len, chainStepsCore core msg i.val) := by
   exact isTotalQueryBound_ofFnM _ _ fun i =>
     chainM_isTotalQueryBound core pk (wotsChainAdrs adrs i.val)
-      (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainSteps core msg i.val)
+      (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainStepsCore core msg i.val)
 
 /-- WOTS+ recovery-chain generation is bounded by the complementary number of chain queries. -/
 theorem wotsPkFromSigTopsM_isTotalQueryBound (core : CorePrimitives p)
@@ -543,17 +571,17 @@ theorem wotsPkFromSigTopsM_isTotalQueryBound (core : CorePrimitives p)
     IsTotalQueryBound
       (wotsPkFromSigTopsM core sig msg pk adrs :
         OracleComp (publicHashSpec core) (Vector core.Y p.len))
-      (∑ i : Fin p.len, (p.w - 1 - chainSteps core msg i.val)) := by
+      (∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) := by
   exact isTotalQueryBound_ofFnM _ _ fun i =>
     chainM_isTotalQueryBound core pk (wotsChainAdrs adrs i.val) sig[i.val]
-      (chainSteps core msg i.val) (p.w - 1 - chainSteps core msg i.val)
+      (chainStepsCore core msg i.val) (p.w - 1 - chainStepsCore core msg i.val)
 
 /-- WOTS+ public-key recovery adds one `T_l` query after completing the chains. -/
 theorem wotsPkFromSigM_isTotalQueryBound (core : CorePrimitives p)
     (sig : WotsSig p core) (msg : core.Y) (pk : core.PkSeed) (adrs : Adrs) :
     IsTotalQueryBound
       (wotsPkFromSigM core sig msg pk adrs : OracleComp (publicHashSpec core) core.Y)
-      ((∑ i : Fin p.len, (p.w - 1 - chainSteps core msg i.val)) + 1) := by
+      ((∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) + 1) := by
   exact isTotalQueryBound_bind
     (wotsPkFromSigTopsM_isTotalQueryBound core sig msg pk adrs)
     fun tops => publicHash_tl_isTotalQueryBound_one core pk (wotsPkAdrs adrs) tops.toList
@@ -571,11 +599,11 @@ theorem wotsSignM_then_wotsPkFromSigM_isTotalQueryBound (core : CorePrimitives p
     (wotsSignM_isTotalQueryBound core msg sk pk adrs)
     (fun sig => wotsPkFromSigM_isTotalQueryBound core sig msg pk adrs)
   have hsum :
-      (∑ i : Fin p.len, chainSteps core msg i.val) +
-          (∑ i : Fin p.len, (p.w - 1 - chainSteps core msg i.val)) =
+      (∑ i : Fin p.len, chainStepsCore core msg i.val) +
+          (∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) =
         p.len * (p.w - 1) := by
     rw [← Finset.sum_add_distrib]
-    simp_rw [Nat.add_sub_of_le (chainSteps_le core msg _)]
+    simp_rw [Nat.add_sub_of_le (chainStepsCore_le core msg _)]
     simp
   simpa [← Nat.add_assoc, hsum] using hbound
 
@@ -607,7 +635,7 @@ theorem wotsSign_eq_ofFn (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSe
     wotsSign prims msg sk pk adrs = Vector.ofFn fun i : Fin p.len =>
       chain prims pk (wotsChainAdrs adrs i.val)
         (prims.PRF pk sk (wotsSkAdrs adrs i.val)) 0
-          (chainSteps prims.core msg i.val) := by
+          (chainSteps prims msg i.val) := by
   unfold wotsSign wotsSignM wotsSignWith
   rw [simulateQ_ofFnM]
   rfl
@@ -616,8 +644,8 @@ theorem wotsSign_eq_ofFn (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSe
 theorem wotsPkFromSigTops_eq_ofFn (prims : Primitives p) (sig : WotsSig p prims.core)
     (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) :
     wotsPkFromSigTops prims sig msg pk adrs = Vector.ofFn fun i : Fin p.len =>
-      chain prims pk (wotsChainAdrs adrs i.val) sig[i.val] (chainSteps prims.core msg i.val)
-        (p.w - 1 - chainSteps prims.core msg i.val) := by
+      chain prims pk (wotsChainAdrs adrs i.val) sig[i.val] (chainSteps prims msg i.val)
+        (p.w - 1 - chainSteps prims msg i.val) := by
   unfold wotsPkFromSigTops wotsPkFromSigTopsM wotsPkFromSigTopsWith
   rw [simulateQ_ofFnM]
   rfl
@@ -663,7 +691,7 @@ for the induced primitive bundle. -/
 /-- Replacing public hashes leaves WOTS+ message-digit derivation unchanged. -/
 @[simp] theorem chainSteps_withPublicHash (core : CorePrimitives p)
     (answer : QueryImpl (publicHashSpec core) Id) (msg : core.Y) (i : ℕ) :
-    chainSteps (PublicHash.withPublicHash core answer).core msg i = chainSteps core msg i := rfl
+    chainSteps (PublicHash.withPublicHash core answer) msg i = chainStepsCore core msg i := rfl
 
 @[simp] theorem simulateQ_wotsPkGenTopsM_withPublicHash (core : CorePrimitives p)
     (answer : QueryImpl (publicHashSpec core) Id) (sk : core.SkSeed) (pk : core.PkSeed)
@@ -755,10 +783,10 @@ theorem wotsPkFromSigTops_wotsSign (prims : Primitives p) (msg : prims.Y) (sk : 
   simp only [wotsPkFromSigTops_eq_ofFn, wotsPkGenTops_eq_ofFn, wotsSign_eq_ofFn,
     Vector.getElem_ofFn]
   have hc := chain_compose prims pk (wotsChainAdrs adrs i)
-    (prims.PRF pk sk (wotsSkAdrs adrs i)) 0 (chainSteps prims.core msg i)
-    (p.w - 1 - chainSteps prims.core msg i)
+    (prims.PRF pk sk (wotsSkAdrs adrs i)) 0 (chainSteps prims msg i)
+    (p.w - 1 - chainSteps prims msg i)
   rw [Nat.zero_add] at hc
-  rw [hc, Nat.add_sub_cancel' (chainSteps_le prims.core msg i)]
+  rw [hc, Nat.add_sub_cancel' (chainSteps_le prims msg i)]
 
 /-- **WOTS+ correctness** (FIPS 205, Algorithms 6–8): recovering the public key from an honest
 signature reproduces `wotsPkGen`. -/

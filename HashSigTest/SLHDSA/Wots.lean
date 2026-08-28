@@ -13,7 +13,7 @@ public import HashSig.SLHDSA.Wots
 
 These producer-side examples pin the number, order, and addresses of public-hash queries in WOTS+
 chains and top-level operations. They also exercise naturality, deterministic interpretation, and
-the structural query-bound API of the canonical owner implementation in `Wots.lean`.
+the structural query-bound API of the canonical programs in `Wots.lean`.
 -/
 
 public section
@@ -53,14 +53,15 @@ example (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
     wotsSignM prims.core msg sk pk adrs =
       (Vector.ofFnM fun i : Fin p.len =>
         chainM prims.core pk (wotsChainAdrs adrs i.val)
-          (prims.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainSteps prims.core msg i.val) :
+          (prims.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainStepsCore prims.core msg i.val) :
         OracleComp (publicHashSpec prims.core) (WotsSig p prims.core)) := rfl
 
 example (sig : WotsSig p prims.core) (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) :
     wotsPkFromSigM prims.core sig msg pk adrs = (do
       let tops ← Vector.ofFnM fun i : Fin p.len =>
         chainM prims.core pk (wotsChainAdrs adrs i.val) sig[i.val]
-          (chainSteps prims.core msg i.val) (p.w - 1 - chainSteps prims.core msg i.val)
+          (chainStepsCore prims.core msg i.val)
+          (p.w - 1 - chainStepsCore prims.core msg i.val)
       PublicHash.tl prims.core pk (wotsPkAdrs adrs) tops.toList :
       OracleComp (publicHashSpec prims.core) prims.Y) := rfl
 
@@ -90,7 +91,7 @@ example (sig : WotsSig p prims.core) (msg : prims.Y) (pk : prims.PkSeed) (adrs :
     IsTotalQueryBound
       (wotsPkFromSigM prims.core sig msg pk adrs :
         OracleComp (publicHashSpec prims.core) prims.Y)
-      ((∑ i : Fin p.len, (p.w - 1 - chainSteps prims.core msg i.val)) + 1) :=
+      ((∑ i : Fin p.len, (p.w - 1 - chainStepsCore prims.core msg i.val)) + 1) :=
   wotsPkFromSigM_isTotalQueryBound prims.core sig msg pk adrs
 
 example (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
@@ -100,5 +101,18 @@ example (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
         OracleComp (publicHashSpec prims.core) prims.Y)
       (p.len * (p.w - 1) + 1) :=
   wotsSignM_then_wotsPkFromSigM_isTotalQueryBound prims.core msg sk pk adrs
+
+/-- The pre-oracle pure helper call surface remains source-compatible. -/
+example (msg : prims.Y) (i : ℕ) : chainSteps prims msg i < p.w :=
+  chainSteps_lt prims msg i
+
+/-- A fixed answer table gives extensional WOTS+ completeness through the canonical programs. -/
+example (answer : QueryImpl (publicHashSpec prims.core) Id)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
+    simulateQ answer (do
+      let sig ← wotsSignM prims.core msg sk pk adrs
+      wotsPkFromSigM prims.core sig msg pk adrs) =
+    simulateQ answer (wotsPkGenM prims.core sk pk adrs) :=
+  simulateQ_wotsPkFromSigM_wotsSignM_withPublicHash prims.core answer msg sk pk adrs
 
 end SLHDSA.WotsTest
