@@ -35,6 +35,55 @@ round-tripping through the finite backend.
 | `support mx` | `Set α` | — | `EvalDist/Defs/Support.lean` |
 | `finSupport mx` | `Finset α` | — | `EvalDist/Defs/Support.lean` |
 
+### Kernel-valued interfaces
+
+Use a `Measure α` for a closed computation and a `Kernel ρ α` when `ρ` is a semantic input:
+an environment, initial state, public parameter, or previous protocol state. Do not encode the
+input by immediately fixing it and returning a bare measure; doing so discards the measurability
+needed for composition and data-processing theorems.
+
+| Definition | Purpose | Defined in |
+|-----------|---------|------------|
+| `IsSubprobabilityKernel κ` | Every value of `κ` has total mass at most one | `ToMathlib/Probability/Kernel/Subprobability.lean` |
+| `evalDistKernel f hf` | Measurable computation family `ρ → m α` as a kernel | `EvalDist/Kernel.lean` |
+| `evalDistKernelOfDiscrete f` | Discrete-input specialization | `EvalDist/Kernel.lean` |
+| `ReaderT.evalDistKernel` | Reader environment as kernel input | `EvalDist/Kernel.lean` |
+| `StateT.evalDistKernel` | Initial state to result/final-state kernel | `EvalDist/Kernel.lean` |
+| `ProbResponder.answerKernel` | Stateful interactive answer transition | `OracleComp/Coinductive/Responder.lean` |
+
+`IsSubprobabilityKernel` is closed under `Kernel.const`, `restrict`, `map`, `comap`, `comp`,
+`prod`, and powers. It implies `IsFiniteKernel`, so Mathlib's s-finite composition API is
+available without restating a finiteness bound. A lossless family should additionally expose an
+`IsMarkovKernel` instance or theorem.
+
+`ProbabilitySemantics` is the total/lossless semantics bundle used by transformer adapters.
+`MeasureSemantics` is a deprecated compatibility alias. The lower-level `MeasureSemanticsVia`
+continues to describe potentially lossy surface semantics.
+
+For `ProbResponder`, the kernel is authoritative. `ProbResponder.IsExecutable` optionally carries
+a coherent SPMF realization for machine execution; the deprecated `ProbResponder.answer` is just
+that bridge. This separate capability is important: abstract cryptographic caches need not be
+countable, while a kernel-native responder need not have any executable SPMF realization.
+
+#### Adoption audit
+
+| Area | Decision | Rationale / next integration point |
+|------|----------|------------------------------------|
+| Closed `evalDist`, advantages, couplings | Keep `Measure` | There is no semantic input to bundle. |
+| `ReaderT` and `StateT` observations | Use `Kernel` now | Environment/state is exactly the kernel input; use the adapters above. |
+| Stateful responders and wired rounds | Use `Kernel` now | `answerKernel`, `stepAgainstKernel`, and kernel powers model transitions compositionally. |
+| Executable `QueryImpl`, `simulateQ`, machine runs | Keep monadic/SPMF syntax | These are programs and evaluators; cross to kernels at observation boundaries. |
+| KL/data-processing continuations | Use `Kernel` now | `KLDivergence.denoteKernel` is implemented through `evalDistKernelOfDiscrete`. |
+| Query tracing, caches, costs, enforcement | Migrate observations, not handlers | Add kernel views of their `StateT` runs when a theorem composes distributions across states. |
+| Crypto functions parameterized by keys/messages/security parameter | Add kernels when composed probabilistically | A plain function remains clearer until measurability or data processing is actually used. |
+| UC/open-process runtime | Defer to an observation boundary | Structural process syntax has no canonical measurable space; bundle a kernel only for a chosen execution/observation model. |
+| Program-logic predicates and tactics | Keep computation syntax | Their job is to reason before denotation. Add kernel bridge lemmas, not kernel-valued syntax. |
+
+When introducing a new kernel, require the real measurable-space assumptions or bundle them with
+the semantic object. Do not install global `MeasurableSpace := ⊤` instances merely to discharge a
+proof. For an intentionally discrete local model, `evalDistKernelOfDiscrete` or a locally bundled
+measurable space is the explicit escape hatch.
+
 ### Measure-native interfaces
 
 | Definition | Purpose | Defined in |

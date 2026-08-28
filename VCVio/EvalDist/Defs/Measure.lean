@@ -7,6 +7,7 @@ module
 
 public import VCVio.EvalDist.Defs.Support
 public import ToMathlib.MeasureTheory.Measure.Option
+public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.Probability.ProbabilityMassFunction.Measure
 
 /-!
@@ -69,6 +70,11 @@ theorem evalDist_apply_univ_le_one {m : Type u → Type v} [EvalDistSemantics m]
     {α : Type u} [MeasurableSpace α] (mx : m α) : 𝒟[mx] Set.univ ≤ 1 :=
   EvalDistSemantics.apply_univ_le_one mx
 
+/-- Every computation denotation is a subprobability measure. -/
+instance evalDist.instIsSubprobabilityMeasure {m : Type u → Type v} [EvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (mx : m α) : IsSubprobabilityMeasure 𝒟[mx] :=
+  ⟨evalDist_apply_univ_le_one mx⟩
+
 /-- A measure-valued semantics respects `pure` and measurable `bind` in the Giry monad. -/
 class LawfulEvalDistSemantics (m : Type u → Type v) [Monad m]
     [EvalDistSemantics m] : Prop where
@@ -128,6 +134,10 @@ theorem toMeasure_apply_univ_le_one (p : SPMF α) : p.toMeasure Set.univ ≤ 1 :
   exact (Measure.dropNone_apply_univ_le p.toPMF.toMeasure).trans_eq hTotal
 
 @[simp]
+theorem toMeasure_pure (x : α) : (pure x : SPMF α).toMeasure = Measure.dirac x := by
+  rw [toMeasure, SPMF.toPMF_pure, PMF.toMeasure_pure, Measure.dropNone_dirac_some]
+
+@[simp]
 theorem toMeasure_apply_singleton [MeasurableSingletonClass α] (p : SPMF α) (x : α) :
     p.toMeasure {x} = p x := by
   rw [toMeasure, Measure.dropNone_apply_singleton,
@@ -135,7 +145,7 @@ theorem toMeasure_apply_singleton [MeasurableSingletonClass α] (p : SPMF α) (x
   rfl
 
 /-- On a discrete output space, applying the successful-output measure to a set agrees with the
-corresponding event in the option-valued `PMF` backend. -/
+corresponding event in the option-valued probability-mass-function backend. -/
 theorem toMeasure_apply [DiscreteMeasurableSpace α] (p : SPMF α) (s : Set α) :
     p.toMeasure s = p.toPMF.toOuterMeasure (some '' s) := by
   rw [toMeasure, Measure.dropNone,
@@ -164,6 +174,45 @@ theorem toMeasure_injective [MeasurableSingletonClass α] :
   apply SPMF.ext
   intro x
   rw [← toMeasure_apply_singleton p x, ← toMeasure_apply_singleton q x, hpq]
+
+/-- The successful-output measure commutes with measurable maps. -/
+theorem toMeasure_map {β : Type u} [MeasurableSpace β]
+    (p : SPMF α) (f : α → β) (hf : Measurable f) :
+    (f <$> p).toMeasure = p.toMeasure.map f := by
+  have hOptionMap : Measurable (Option.map f) :=
+    Option.measurable_elim measurable_const (Option.measurable_some.comp hf)
+  ext s hs
+  rw [toMeasure, SPMF.toPMF_map]
+  change (p.toPMF.map (Option.map f)).toMeasure.dropNone s = _
+  rw [← p.toPMF.toMeasure_map (Option.map f) hOptionMap, toMeasure,
+    Measure.map_apply hf hs]
+  simp only [Measure.dropNone]
+  rw [
+    Measure.bind_apply hs Measure.measurable_dropNoneKernel.aemeasurable,
+    Measure.bind_apply (hf hs) Measure.measurable_dropNoneKernel.aemeasurable]
+  · rw [MeasureTheory.lintegral_map]
+    · apply lintegral_congr
+      intro value
+      cases value with
+      | none => simp
+      | some x =>
+          by_cases hx : f x ∈ s <;>
+            simp [Option.map, hs, hf hs, hx]
+    · exact (Measure.measurable_coe hs).comp Measure.measurable_dropNoneKernel
+    · exact hOptionMap
+
+/-- On countable discrete spaces, successful-output measures commute with `SPMF` bind. -/
+theorem toMeasure_bind {β : Type u} [Countable α] [DiscreteMeasurableSpace α]
+    [MeasurableSpace β] [Countable β] [DiscreteMeasurableSpace β]
+    (p : SPMF α) (f : α → SPMF β) :
+    (p >>= f).toMeasure = Measure.bind p.toMeasure fun x => (f x).toMeasure := by
+  apply Measure.ext_of_singleton
+  intro y
+  rw [toMeasure_apply_singleton, bind_apply_eq_tsum,
+    Measure.bind_apply MeasurableSet.of_discrete Measurable.of_discrete.aemeasurable,
+    MeasureTheory.lintegral_countable']
+  simp only [toMeasure_apply_singleton]
+  exact tsum_congr fun x => mul_comm _ _
 
 end SPMF
 

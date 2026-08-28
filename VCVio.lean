@@ -97,6 +97,7 @@ public import VCVio.EvalDist.Instances.ErrorT
 public import VCVio.EvalDist.Instances.FinRatPMF
 public import VCVio.EvalDist.Instances.OptionT
 public import VCVio.EvalDist.Instances.ReaderT
+public import VCVio.EvalDist.Kernel
 public import VCVio.EvalDist.List
 public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.MeasureTVDist

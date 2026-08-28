@@ -176,8 +176,8 @@ example (p q : SPMF.{0} PUnit.{1}) :
 /-! ## Transformer stacks retain their effects -/
 
 /-- The reusable total semantics for the discrete coin interface. -/
-noncomputable def coinMeasureSemantics : MeasureSemantics (FreeM coinSpec) :=
-  MeasureSemantics.freeM
+noncomputable def coinMeasureSemantics : ProbabilitySemantics (FreeM coinSpec) :=
+  ProbabilitySemantics.freeM
 
 /-- `OptionT` keeps `none` as an observable outcome until a proof explicitly discards it. -/
 example (computation : OptionT (FreeM coinSpec) Bool) :

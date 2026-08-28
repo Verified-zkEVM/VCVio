@@ -7,14 +7,14 @@ module
 
 public import ToMathlib.MeasureTheory.MeasurableSpace.Except
 public import ToMathlib.MeasureTheory.Measure.Option
+public import VCVio.EvalDist.Kernel
 public import VCVio.EvalDist.PFunctorMeasure
 public import Mathlib.Control.Monad.Writer
-public import Mathlib.Probability.Kernel.Basic
 
 /-!
 # Measure semantics for monads and transformer stacks
 
-`MeasureSemantics m` is the small lossless denotational interface used at VCVio's boundary with
+`ProbabilitySemantics m` is the small lossless denotational interface used at VCVio's boundary with
 Mathlib. It interprets `m α` as an ordinary `Measure α` and records that the measure has total mass
 one. It intentionally does not pretend that `Measure` is a universe-polymorphic Lean monad:
 measurable spaces and measurable continuations remain visible where Mathlib requires them.
@@ -41,25 +41,24 @@ universe u v uA
 
 The output's `MeasurableSpace` is an explicit typeclass argument because it is semantic data, not
 structure carried by the Lean type itself. -/
-structure MeasureSemantics (m : Type u → Type v) where
-  /-- Interpret a computation as a Mathlib measure. -/
-  denote : {α : Type u} → [MeasurableSpace α] → m α → Measure α
+structure ProbabilitySemantics (m : Type u → Type v) extends EvalDistSemantics m where
   /-- The denotation of a total computation has mass one. -/
   isProbabilityMeasure : ∀ {α : Type u} [MeasurableSpace α] (computation : m α),
     IsProbabilityMeasure (denote computation)
 
-namespace MeasureSemantics
+namespace ProbabilitySemantics
 
 variable {m : Type u → Type v} {α ε ω ρ σ : Type u}
 
 /-- The discrete `FreeM` measure denotation packaged as a reusable semantics. -/
 noncomputable def freeM {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)]
     [P.IsMeasureSpec] [∀ a, DiscreteMeasurableSpace (P.B a)] :
-    MeasureSemantics (PFunctor.FreeM P) where
+    ProbabilitySemantics (PFunctor.FreeM P) where
   denote := PFunctor.FreeM.denote
+  apply_univ_le_one := PFunctor.FreeM.denote_apply_univ_le_one
   isProbabilityMeasure := PFunctor.FreeM.isProbabilityMeasure_denote
 
-variable (semantics : MeasureSemantics m)
+variable (semantics : ProbabilitySemantics m)
 
 /-! ## Effect-preserving transformer denotations -/
 
@@ -144,5 +143,20 @@ instance isMarkovKernel_stateTKernel [MeasurableSpace σ] [MeasurableSpace α]
     IsMarkovKernel (semantics.stateTKernel computation hMeasurable) where
   isProbabilityMeasure state :=
     semantics.isProbabilityMeasure (computation state)
+
+end ProbabilitySemantics
+
+/-- Deprecated name for the total refinement of `EvalDistSemantics`. -/
+@[deprecated ProbabilitySemantics (since := "2026-08-26")]
+abbrev MeasureSemantics := ProbabilitySemantics
+
+namespace MeasureSemantics
+
+/-- Deprecated constructor for the total free-monad semantics. -/
+@[deprecated ProbabilitySemantics.freeM (since := "2026-08-26")]
+noncomputable abbrev freeM {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)]
+    [P.IsMeasureSpec] [∀ a, DiscreteMeasurableSpace (P.B a)] :
+    MeasureSemantics (PFunctor.FreeM P) :=
+  ProbabilitySemantics.freeM
 
 end MeasureSemantics

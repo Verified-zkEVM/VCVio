@@ -7,18 +7,19 @@ Authors: Devon Tuma
 module
 public import VCVio.OracleComp.Coinductive.DynSystem
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.EvalDist.Kernel
 public import PolyFun.PFunctor.Dynamical.Game
 
 /-!
 # Probabilistic Wiring: Adversary Strategies Against Stateful Responders
 
 `ProbResponder spec` is the challenger side of an interactive game presented as a
-coalgebra: a state set together with, for each query, a *joint* subdistribution over
-the answer and the next state — a Mealy machine in the Kleisli category of `SPMF`.
-Unbundled, it is exactly a stateful handler `QueryImpl spec (StateT State SPMF)`
-(`ProbResponder.toQueryImpl` / `ofQueryImpl` are definitional inverses): the bundled
-probabilistic sibling of PolyFun's deterministic Kleisli–Mealy bridge
-`PFunctor.Responder.equivStateHandler`.
+coalgebra: a measurable state space together with, for each query, a *joint*
+subprobability kernel over the answer and the next state. It is a Mealy machine in the
+Kleisli category of subprobability kernels. An optional coherent executable
+presentation as a stateful handler `QueryImpl spec (StateT State SPMF)` remains
+available through `ProbResponder.IsExecutable`, `ProbResponder.answer`, and
+`ProbResponder.toQueryImpl`.
 
 Wiring a responder against an adversary `OracleStrategy` is not a hand-rolled
 construction: `stepAgainst` / `iterateAgainst` are PolyFun's generic eval-wired runs
@@ -75,46 +76,111 @@ variable {ι : Type u} {spec : OracleSpec.{u, u} ι} {S : Type u}
 /-! ## Probabilistic stateful responders -/
 
 /-- A probabilistic stateful responder: the challenger side of an interactive game, as
-a Mealy coalgebra in the Kleisli category of `SPMF`. From a state, each query yields a
-joint subdistribution over the answer and the successor state. The joint draw matters:
+a Mealy coalgebra in the Kleisli category of subprobability kernels. From a state, each
+query yields a joint subprobability measure over the answer and the successor state.
+The joint draw matters:
 a lazy random oracle's stored cache entry must be the very answer it returned, which no
 answer-then-state factorization expresses. -/
 structure ProbResponder {ι : Type u} (spec : OracleSpec.{u, u} ι) where
   /-- The responder's internal state (the challenger's memory). -/
   State : Type u
+  /-- The measurable structure on the responder's private state. -/
+  instMeasurableSpaceState : MeasurableSpace State
+  /-- The measurable structure on the answer to each query. -/
+  instMeasurableSpaceRange : (t : spec.Domain) → MeasurableSpace (spec.Range t)
   /-- Answer a query from a state, jointly drawing the successor state. -/
-  answer : State → (t : spec.Domain) → SPMF (spec.Range t × State)
+  answerKernel : (t : spec.Domain) →
+    letI := instMeasurableSpaceState
+    letI := instMeasurableSpaceRange t
+    ProbabilityTheory.Kernel State (spec.Range t × State)
+  /-- Each query kernel is subprobabilistic. -/
+  answerKernel_isSubprobability : ∀ t,
+    letI := instMeasurableSpaceState
+    letI := instMeasurableSpaceRange t
+    ProbabilityTheory.IsSubprobabilityKernel (answerKernel t)
+
+attribute [instance] ProbResponder.instMeasurableSpaceState
 
 namespace ProbResponder
+
+open MeasureTheory ProbabilityTheory
+
+/-- The subprobability invariant stored by a responder, exposed as an instance. -/
+instance answerKernel.instIsSubprobabilityKernel (R : ProbResponder spec)
+    (t : spec.Domain) :
+    letI := R.instMeasurableSpaceRange t
+    IsSubprobabilityKernel (R.answerKernel t) :=
+  R.answerKernel_isSubprobability t
+
+/-- A coherent executable realization of a kernel responder. This separate typeclass
+lets kernel-native responders remain genuinely measure-theoretic, while responders
+built from VCVio's SPMF/ProbComp execution layer retain their original executable
+program without imposing countability on abstract state or answer types. -/
+class IsExecutable (R : ProbResponder spec) where
+  /-- The executable answer-and-successor-state subdistribution. -/
+  answerSPMF : R.State → (t : spec.Domain) → SPMF (spec.Range t × R.State)
+  /-- The executable realization denotes exactly the stored answer kernel. -/
+  answerKernel_eq_toMeasure : ∀ s t,
+    letI := R.instMeasurableSpaceRange t
+    R.answerKernel t s = (answerSPMF s t).toMeasure
+
+/-- Read a kernel responder through its coherent executable `SPMF` realization.
+Kernel-valued consumers should use `answerKernel` directly. -/
+@[deprecated "Use `answerKernel` for kernel semantics; this is the executable SPMF bridge."
+  (since := "2026-08-26")]
+noncomputable def answer (R : ProbResponder spec) [R.IsExecutable]
+    (s : R.State) (t : spec.Domain) : SPMF (spec.Range t × R.State) :=
+  IsExecutable.answerSPMF s t
+
+/-- Build a kernel responder from an executable SPMF-valued stateful handler. The
+constructor equips the state and answers with local discrete measurable structures;
+it does not install blanket measurable-space instances on the underlying types. -/
+@[reducible] noncomputable def ofSPMF {σ : Type u}
+    (impl : QueryImpl spec (StateT σ SPMF)) : ProbResponder spec where
+  State := σ
+  instMeasurableSpaceState := ⊤
+  instMeasurableSpaceRange := fun _ => ⊤
+  answerKernel t := by
+    letI : MeasurableSpace σ := ⊤
+    letI : MeasurableSpace (spec.Range t) := ⊤
+    exact evalDistKernelOfDiscrete (fun s => impl t s)
+  answerKernel_isSubprobability t := by infer_instance
+
+instance ofSPMF.instIsExecutable {σ : Type u}
+    (impl : QueryImpl spec (StateT σ SPMF)) : (ofSPMF impl).IsExecutable where
+  answerSPMF s t := impl t s
+  answerKernel_eq_toMeasure _ _ := rfl
 
 /-- A responder as a stateful query implementation in `StateT State SPMF`: the
 bundled-to-unbundled direction of the Kleisli–Mealy identification, of which
 `PFunctor.Responder.equivStateHandler` is the deterministic (`Id`) sibling. -/
-def toQueryImpl (R : ProbResponder spec) : QueryImpl spec (StateT R.State SPMF) :=
-  fun t s => R.answer s t
+noncomputable def toQueryImpl (R : ProbResponder spec) [R.IsExecutable] :
+    QueryImpl spec (StateT R.State SPMF) :=
+  fun t s => IsExecutable.answerSPMF (R := R) s t
 
-/-- A stateful query implementation as a responder; inverse to `toQueryImpl`. -/
-@[reducible] def ofQueryImpl {σ : Type u} (impl : QueryImpl spec (StateT σ SPMF)) :
-    ProbResponder spec where
-  State := σ
-  answer s t := impl t s
+/-- Compatibility spelling for building a responder from a stateful query implementation. -/
+@[reducible]
+noncomputable def ofQueryImpl {σ : Type u}
+    (impl : QueryImpl spec (StateT σ SPMF)) : ProbResponder spec :=
+  ofSPMF impl
+
+@[simp] lemma toQueryImpl_ofSPMF {σ : Type u}
+    (impl : QueryImpl spec (StateT σ SPMF)) : (ofSPMF impl).toQueryImpl = impl := rfl
 
 @[simp] lemma toQueryImpl_ofQueryImpl {σ : Type u}
-    (impl : QueryImpl spec (StateT σ SPMF)) : (ofQueryImpl impl).toQueryImpl = impl :=
-  rfl
+    (impl : QueryImpl spec (StateT σ SPMF)) : (ofQueryImpl impl).toQueryImpl = impl := rfl
 
-@[simp] lemma ofQueryImpl_toQueryImpl (R : ProbResponder spec) :
-    ofQueryImpl R.toQueryImpl = R :=
-  rfl
+@[simp] theorem answerSPMF_ofSPMF {σ : Type u}
+    (impl : QueryImpl spec (StateT σ SPMF)) (s : σ) (t : spec.Domain) :
+    IsExecutable.answerSPMF (R := ofSPMF impl) s t = impl t s := rfl
 
 /-- A family of memoryless randomized oracles indexed by a fixed setup value, as a
 responder whose state is the setup and never changes: the per-run-sampled oracle of a
 one-shot security game (sample the setup, then answer memorylessly) is exactly this
 constant-state case. -/
 @[reducible] noncomputable def ofHandlerFamily {Γ : Type u} (h : Γ → ProbHandler spec) :
-    ProbResponder spec where
-  State := Γ
-  answer γ t := (fun r => (r, γ)) <$> h γ t
+    ProbResponder spec :=
+  ofSPMF fun t γ => (fun r => (r, γ)) <$> h γ t
 
 /-- A memoryless randomized oracle as a (trivially) stateful responder. -/
 @[reducible] noncomputable def ofHandler (H : ProbHandler spec) : ProbResponder spec :=
@@ -125,9 +191,8 @@ the internal hom `spec.toPFunctor ⊸ X` — as a Dirac probabilistic responder:
 and successor state it commits to, with probability one. Wiring against it recovers the
 upstream closed game (`OracleStrategy.stepAgainst_ofDet`). -/
 @[reducible] noncomputable def ofDet {σ : Type u} (C : PFunctor.Responder σ spec.toPFunctor) :
-    ProbResponder spec where
-  State := σ
-  answer s t := pure (C.answer s t, C.next s t)
+    ProbResponder spec :=
+  ofSPMF fun t s => pure (C.answer s t, C.next s t)
 
 /-- Pull a responder back along an interface lens: translate each query forward through
 the lens, ask the target responder, and pull its answer back through the lens, keeping
@@ -141,18 +206,74 @@ reducible transparency is what lets `rw`/`simp` traverse such goals. -/
     (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec') :
     ProbResponder spec where
   State := R.State
-  answer s t := (fun q => (w.toFunB t q.1, q.2)) <$> R.answer s (w.toFunA t)
+  instMeasurableSpaceState := R.instMeasurableSpaceState
+  instMeasurableSpaceRange := fun t =>
+    MeasurableSpace.map (w.toFunB t) (R.instMeasurableSpaceRange (w.toFunA t))
+  answerKernel t := by
+    letI := R.instMeasurableSpaceRange (w.toFunA t)
+    letI : MeasurableSpace (spec.Range t) :=
+      MeasurableSpace.map (w.toFunB t) (R.instMeasurableSpaceRange (w.toFunA t))
+    exact (R.answerKernel (w.toFunA t)).map fun q => (w.toFunB t q.1, q.2)
+  answerKernel_isSubprobability t := by infer_instance
 
-/-- The pulled-back responder's handler translates each query forward and maps the
-target responder's answer back through the lens: `toQueryImpl` of `pullback w R` is the
-answer-post-composition of `R.toQueryImpl` along `w`. The handler-level form of the
-interface-wrapping adjunction. -/
-@[simp] theorem toQueryImpl_pullback {ι' : Type u} {spec' : OracleSpec.{u, u} ι'}
+/-- The answer/state map used by kernel pullback is measurable for the transported
+answer measurable space. -/
+theorem measurable_pullback_answerMap {ι' : Type u}
+    {spec' : OracleSpec.{u, u} ι'}
     (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
+    (t : spec.Domain) :
+    letI := R.instMeasurableSpaceRange (w.toFunA t)
+    letI := (pullback w R).instMeasurableSpaceRange t
+    Measurable fun q : spec'.Range (w.toFunA t) × R.State =>
+      (w.toFunB t q.1, q.2) := by
+  let _ := R.instMeasurableSpaceRange (w.toFunA t)
+  let _ := (pullback w R).instMeasurableSpaceRange t
+  have hw : Measurable (w.toFunB t) := by
+    rw [measurable_iff_comap_le]
+    exact MeasurableSpace.comap_map_le
+  exact (hw.comp measurable_fst).prodMk measurable_snd
+
+/-- Executability is preserved by semantic responder pullback. The executable handler
+maps the same answer/state pair as the kernel, and `SPMF.toMeasure_map` proves that the
+two readings still agree. -/
+noncomputable instance pullback.instIsExecutable {ι' : Type u}
+    {spec' : OracleSpec.{u, u} ι'}
+    (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
+    [R.IsExecutable] : (pullback w R).IsExecutable where
+  answerSPMF s t :=
+    (fun q => (w.toFunB t q.1, q.2)) <$>
+      IsExecutable.answerSPMF (R := R) s (w.toFunA t)
+  answerKernel_eq_toMeasure s t := by
+    let _ := R.instMeasurableSpaceRange (w.toFunA t)
+    let _ := (pullback w R).instMeasurableSpaceRange t
+    simp only [pullback]
+    rw [Kernel.map_apply _ (measurable_pullback_answerMap w R t) s]
+    rw [IsExecutable.answerKernel_eq_toMeasure]
+    exact (SPMF.toMeasure_map _ _ (measurable_pullback_answerMap w R t)).symm
+
+/-- Compatibility alias for the former executable-only pullback constructor. -/
+@[deprecated pullback (since := "2026-08-27"), reducible]
+noncomputable def pullbackSPMF {ι' : Type u}
+    {spec' : OracleSpec.{u, u} ι'}
+    (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
+    [R.IsExecutable] :
+    ProbResponder spec :=
+  pullback w R
+
+/-- The executable pulled-back responder's handler translates each query forward and
+maps the target responder's answer back through the lens. -/
+@[simp] theorem toQueryImpl_pullback {ι' : Type u}
+    {spec' : OracleSpec.{u, u} ι'}
+    (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
+    [R.IsExecutable]
     (t : spec.toPFunctor.A) :
     (pullback w R).toQueryImpl t =
       (fun a => w.toFunB t a) <$> R.toQueryImpl (w.toFunA t) := by
   funext s
+  change (fun q => (w.toFunB t q.1, q.2)) <$>
+      IsExecutable.answerSPMF (R := R) s (w.toFunA t) =
+    ((fun a => w.toFunB t a) <$> R.toQueryImpl (w.toFunA t)).run s
+  rw [StateT.run_map]
   rfl
 
 /-- **`FreeM.liftM` naturality for responder pullback**: interpreting a lens-translated
@@ -161,6 +282,7 @@ pulled-back responder. The handler-level content of the interface-wrapping adjun
 machine-free, so run-level wrapping laws follow from it by pure congruence. -/
 theorem liftM_mapLens_pullback {ι' : Type u} {spec' : OracleSpec.{u, u} ι'}
     (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
+    [R.IsExecutable]
     {γ : Type u} : ∀ oa : OracleComp spec γ,
     PFunctor.FreeM.liftM R.toQueryImpl (PFunctor.FreeM.mapLens w oa) =
       PFunctor.FreeM.liftM (pullback w R).toQueryImpl oa
@@ -179,9 +301,8 @@ its evaluation distribution, pointwise in the state. This is the bridge along wh
 existing stateful challengers (the lazy random oracle, cached LR encryption oracles)
 become responders. -/
 @[reducible] noncomputable def ofStateQueryImpl {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
-    {σ : Type} (impl : QueryImpl spec₀ (StateT σ ProbComp)) : ProbResponder spec₀ where
-  State := σ
-  answer s t := 𝒮[(impl t).run s]
+    {σ : Type} (impl : QueryImpl spec₀ (StateT σ ProbComp)) : ProbResponder spec₀ :=
+  ofSPMF fun t s => 𝒮[(impl t).run s]
 
 /-- **The stateful-responder probability bridge**: running an adversary against the
 responder built from a `StateT σ ProbComp` handler (`ofStateQueryImpl impl`) is exactly
@@ -195,7 +316,7 @@ Structurally it is the naturality of `simulateQ` along the monad morphism
 `𝒮 : ProbComp →ᵐ SPMF`, transported through `StateT σ` — i.e. `𝒮 ∘ simulateQ impl =
 simulateQ (𝒮 ∘ impl)`. That is exactly `PFunctor.FreeM.run_liftM_mapHom` at the bundled
 evaluation-distribution morphism: `simulateQ` is the universal fold
-(`simulateQ_def`), `ofStateQueryImpl` post-composes each query with `𝒟` pointwise in the
+(`simulateQ_def`), `ofStateQueryImpl` post-composes each query with `𝒮` pointwise in the
 state, and `StateT.mapHom` is that post-composition as a morphism, so the whole statement
 is one instance of the generic law rather than an induction over `OracleComp`. -/
 theorem run_simulateQ_toQueryImpl_ofStateQueryImpl {ι₀ : Type}
@@ -204,7 +325,7 @@ theorem run_simulateQ_toQueryImpl_ofStateQueryImpl {ι₀ : Type}
     (simulateQ (ofStateQueryImpl impl).toQueryImpl oa).run s =
       𝒮[(simulateQ impl oa).run s] := by
   -- `exact` rather than a term-mode `:=`: matching the generic law needs the unfoldings of
-  -- `simulateQ`, `toQueryImpl`, `ofStateQueryImpl`, `StateT.mapHom`, and `𝒟`, which are
+  -- `simulateQ`, `toQueryImpl`, `ofStateQueryImpl`, `StateT.mapHom`, and `𝒮`, which are
   -- definitional but not syntactic.
   exact PFunctor.FreeM.run_liftM_mapHom (MonadHom.ofLift ProbComp SPMF) impl oa s
 
@@ -239,6 +360,8 @@ noncomputable def randomOracleResponder {ι₀ : Type} [DecidableEq ι₀]
 
 namespace OracleStrategy
 
+open MeasureTheory ProbabilityTheory
+
 /-! ## Wired runs
 
 `stepAgainst` / `iterateAgainst` are the upstream eval-wired runs
@@ -260,45 +383,173 @@ example (H : ProbHandler spec) (A : OracleStrategy S spec) (n : ℕ) (s : S) :
   | zero => rfl
   | succ n ih => exact congrArg (kleisliStep H A s >>= ·) (funext ih)
 
+/-! ## Kernel-valued wired runs -/
+
+/-- The one-round output measure obtained by wiring a strategy to a responder at a
+particular joint state. The measurability of the answer-to-next-state map is explicit;
+`stepAgainstKernel` additionally asks that this family of measures be measurable in
+the joint input state. -/
+noncomputable def stepAgainstMeasure [MeasurableSpace S]
+    (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (_hUpdate : ∀ p : R.State × S,
+      letI := R.instMeasurableSpaceRange (A.expose p.2)
+      Measurable fun q : spec.Range (A.expose p.2) × R.State =>
+        (q.2, A.update p.2 q.1))
+    (p : R.State × S) : Measure (R.State × S) := by
+  let _ := R.instMeasurableSpaceRange (A.expose p.2)
+  exact (R.answerKernel (A.expose p.2) p.1).map
+    (fun q => (q.2, A.update p.2 q.1))
+
+/-- One wired round as a subprobability kernel on the responder/strategy product
+state. The two hypotheses are precisely the local deterministic-update measurability
+and the joint-state measurability needed to promote the pointwise construction to a
+kernel. -/
+noncomputable def stepAgainstKernel [MeasurableSpace S]
+    (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (hUpdate : ∀ p : R.State × S,
+      letI := R.instMeasurableSpaceRange (A.expose p.2)
+      Measurable fun q : spec.Range (A.expose p.2) × R.State =>
+        (q.2, A.update p.2 q.1))
+    (hFamily : Measurable (stepAgainstMeasure A R hUpdate)) :
+    Kernel (R.State × S) (R.State × S) :=
+  ⟨stepAgainstMeasure A R hUpdate, hFamily⟩
+
+@[simp] theorem stepAgainstKernel_apply [MeasurableSpace S]
+    (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (hUpdate : ∀ p : R.State × S,
+      letI := R.instMeasurableSpaceRange (A.expose p.2)
+      Measurable fun q : spec.Range (A.expose p.2) × R.State =>
+        (q.2, A.update p.2 q.1))
+    (hFamily : Measurable (stepAgainstMeasure A R hUpdate))
+    (p : R.State × S) :
+    stepAgainstKernel A R hUpdate hFamily p = stepAgainstMeasure A R hUpdate p := rfl
+
+instance stepAgainstKernel.instIsSubprobabilityKernel [MeasurableSpace S]
+    (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (hUpdate : ∀ p : R.State × S,
+      letI := R.instMeasurableSpaceRange (A.expose p.2)
+      Measurable fun q : spec.Range (A.expose p.2) × R.State =>
+        (q.2, A.update p.2 q.1))
+    (hFamily : Measurable (stepAgainstMeasure A R hUpdate)) :
+    IsSubprobabilityKernel (stepAgainstKernel A R hUpdate hFamily) := ⟨fun p => by
+  let _ := R.instMeasurableSpaceRange (A.expose p.2)
+  rw [stepAgainstKernel_apply, stepAgainstMeasure, Measure.map_apply (hUpdate p)
+    MeasurableSet.univ, Set.preimage_univ]
+  exact (R.answerKernel (A.expose p.2)).measure_univ_le p.1⟩
+
+/-- The `n`-round kernel generated by `stepAgainstKernel`. Kernel powers provide the
+canonical iteration/composition operation and inherit the subprobability invariant. -/
+noncomputable def iterateAgainstKernel [MeasurableSpace S]
+    (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (hUpdate : ∀ p : R.State × S,
+      letI := R.instMeasurableSpaceRange (A.expose p.2)
+      Measurable fun q : spec.Range (A.expose p.2) × R.State =>
+        (q.2, A.update p.2 q.1))
+    (hFamily : Measurable (stepAgainstMeasure A R hUpdate)) (n : ℕ) :
+    Kernel (R.State × S) (R.State × S) :=
+  stepAgainstKernel A R hUpdate hFamily ^ n
+
+instance iterateAgainstKernel.instIsSubprobabilityKernel [MeasurableSpace S]
+    (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (hUpdate : ∀ p : R.State × S,
+      letI := R.instMeasurableSpaceRange (A.expose p.2)
+      Measurable fun q : spec.Range (A.expose p.2) × R.State =>
+        (q.2, A.update p.2 q.1))
+    (hFamily : Measurable (stepAgainstMeasure A R hUpdate)) (n : ℕ) :
+    IsSubprobabilityKernel (iterateAgainstKernel A R hUpdate hFamily n) := by
+  unfold iterateAgainstKernel
+  infer_instance
+
 /-- One wired round of an adversary strategy against a stateful responder: the
 responder answers the exposed query (jointly drawing its successor state), and the
 adversary advances along the answer. This is the upstream stateful-handler step
 `PFunctor.DynSystem.stepWith` at `m := SPMF`: the wiring itself is deterministic
 interface data; only the states advance stochastically. -/
-noncomputable def stepAgainst (A : OracleStrategy S spec) (R : ProbResponder spec) :=
+noncomputable def stepAgainst (A : OracleStrategy S spec) (R : ProbResponder spec)
+    [R.IsExecutable] :
+    R.State × S → SPMF (R.State × S) :=
   PFunctor.DynSystem.stepWith R.toQueryImpl A
 
 @[simp] theorem stepAgainst_apply (A : OracleStrategy S spec) (R : ProbResponder spec)
+    [R.IsExecutable]
     (p : R.State × S) :
     stepAgainst A R p =
-      (fun q => (q.2, A.update p.2 q.1)) <$> R.answer p.1 (A.expose p.2) := rfl
+      (fun q => (q.2, A.update p.2 q.1)) <$>
+        ProbResponder.IsExecutable.answerSPMF (R := R) p.1 (A.expose p.2) := rfl
 
 /-- The `n`-round wired run: the Markov chain on the product state space generated by
 `stepAgainst` — the upstream `PFunctor.DynSystem.iterWith` at `m := SPMF`. -/
-noncomputable def iterateAgainst (A : OracleStrategy S spec) (R : ProbResponder spec) :
+noncomputable def iterateAgainst (A : OracleStrategy S spec) (R : ProbResponder spec)
+    [R.IsExecutable] :
     ℕ → R.State × S → SPMF (R.State × S) :=
   PFunctor.DynSystem.iterWith R.toQueryImpl A
 
 @[simp] theorem iterateAgainst_zero (A : OracleStrategy S spec) (R : ProbResponder spec)
+    [R.IsExecutable]
     (p : R.State × S) : iterateAgainst A R 0 p = pure p := rfl
 
-theorem iterateAgainst_succ (A : OracleStrategy S spec) (R : ProbResponder spec) (n : ℕ)
+theorem iterateAgainst_succ (A : OracleStrategy S spec) (R : ProbResponder spec)
+    [R.IsExecutable] (n : ℕ)
     (p : R.State × S) :
     iterateAgainst A R (n + 1) p = stepAgainst A R p >>= iterateAgainst A R n := rfl
+
+/-- The executable one-round run denotes exactly the kernel one-round semantics. -/
+theorem stepAgainstKernel_eq_toMeasure [MeasurableSpace S]
+    (A : OracleStrategy S spec) (R : ProbResponder spec) [R.IsExecutable]
+    (hUpdate : ∀ p : R.State × S,
+      letI := R.instMeasurableSpaceRange (A.expose p.2)
+      Measurable fun q : spec.Range (A.expose p.2) × R.State =>
+        (q.2, A.update p.2 q.1))
+    (hFamily : Measurable (stepAgainstMeasure A R hUpdate))
+    (p : R.State × S) :
+    stepAgainstKernel A R hUpdate hFamily p = (stepAgainst A R p).toMeasure := by
+  let _ := R.instMeasurableSpaceRange (A.expose p.2)
+  rw [stepAgainstKernel_apply, stepAgainstMeasure, stepAgainst_apply,
+    ProbResponder.IsExecutable.answerKernel_eq_toMeasure]
+  exact (SPMF.toMeasure_map _ _ (hUpdate p)).symm
+
+/-- On countable discrete state spaces, the executable `n`-round run denotes exactly
+the corresponding power of the one-round kernel. -/
+theorem iterateAgainstKernel_eq_toMeasure [MeasurableSpace S]
+    (A : OracleStrategy S spec) (R : ProbResponder spec) [R.IsExecutable]
+    [Countable R.State] [DiscreteMeasurableSpace R.State]
+    [Countable S] [DiscreteMeasurableSpace S]
+    (hUpdate : ∀ p : R.State × S,
+      letI := R.instMeasurableSpaceRange (A.expose p.2)
+      Measurable fun q : spec.Range (A.expose p.2) × R.State =>
+        (q.2, A.update p.2 q.1))
+    (hFamily : Measurable (stepAgainstMeasure A R hUpdate))
+    (n : ℕ) (p : R.State × S) :
+    iterateAgainstKernel A R hUpdate hFamily n p =
+      (iterateAgainst A R n p).toMeasure := by
+  induction n generalizing p with
+  | zero =>
+      rw [iterateAgainstKernel, pow_zero]
+      change Measure.dirac p = (iterateAgainst A R 0 p).toMeasure
+      rw [iterateAgainst_zero]
+      rw [SPMF.toMeasure_pure]
+  | succ n ih =>
+      rw [iterateAgainstKernel, Kernel.pow_add _ n 1, pow_one, Kernel.comp_apply,
+        stepAgainstKernel_eq_toMeasure A R hUpdate hFamily,
+        iterateAgainst_succ, SPMF.toMeasure_bind]
+      apply Measure.bind_congr_right
+      exact Filter.Eventually.of_forall ih
 
 /-- The joint subdistribution over the length-`n` wired transcript and the final
 product state (responder state first, matching `stepAgainst`). `QueryLog` is VCVio
 vocabulary, so the transcript-recording run lives here rather than upstream. -/
-noncomputable def transcriptAgainst (A : OracleStrategy S spec) (R : ProbResponder spec) :
+noncomputable def transcriptAgainst (A : OracleStrategy S spec) (R : ProbResponder spec)
+    [R.IsExecutable] :
     R.State × S → ℕ → SPMF (QueryLog spec × (R.State × S))
   | p, 0 => pure ([], p)
   | p, n + 1 => do
-      let q ← R.answer p.1 (A.expose p.2)
+      let q ← ProbResponder.IsExecutable.answerSPMF (R := R) p.1 (A.expose p.2)
       let rest ← transcriptAgainst A R (q.2, A.update p.2 q.1) n
       pure (⟨A.expose p.2, q.1⟩ :: rest.1, rest.2)
 
 /-- The subdistribution over length-`n` wired transcripts. -/
 noncomputable def transcriptDistAgainst (A : OracleStrategy S spec) (R : ProbResponder spec)
+    [R.IsExecutable]
     (p : R.State × S) (n : ℕ) : SPMF (QueryLog spec) :=
   Prod.fst <$> transcriptAgainst A R p n
 
@@ -314,7 +565,7 @@ game `PFunctor.DynSystem.closedGame`. -/
     (C : PFunctor.Responder σ spec.toPFunctor) (p : σ × S) :
     stepAgainst A (.ofDet C) p = pure ((PFunctor.DynSystem.closedGame C A).step p) := by
   obtain ⟨r, s⟩ := p
-  simp [ProbResponder.ofDet]
+  simp [ProbResponder.ofDet, ProbResponder.answerSPMF_ofSPMF]
 
 /-! ## Memoryless recovery
 
@@ -328,7 +579,8 @@ a `StateT.lift`; the same induction applies). -/
     (A : OracleStrategy S spec) (p : Γ × S) :
     stepAgainst A (ProbResponder.ofHandlerFamily h) p =
       (fun s' => (p.1, s')) <$> kleisliStep (h p.1) A p.2 := by
-  simp only [stepAgainst_apply, ProbResponder.ofHandlerFamily, kleisliStep, Functor.map_map]
+  rw [stepAgainst_apply, ProbResponder.answerSPMF_ofSPMF]
+  simp only [ProbResponder.ofHandlerFamily, kleisliStep, Functor.map_map]
 
 @[simp] theorem iterateAgainst_ofHandlerFamily {Γ : Type u} (h : Γ → ProbHandler spec)
     (A : OracleStrategy S spec) (n : ℕ) (p : Γ × S) :

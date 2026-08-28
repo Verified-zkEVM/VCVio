@@ -151,12 +151,14 @@ omit [DecidableEq M] in
     (mm : M × M) : encAlg.IND_CPA_swapLens.toFunA (.inr mm) = .inr (mm.2, mm.1) := rfl
 
 omit [DecidableEq M] in
-/-- Wrapping an IND-CPA machine with message swapping is exactly responder pullback along the
-same PolyFun lens: a one-line specialization of the generic wrap/pullback adjunction
+/-- Wrapping an IND-CPA machine with message swapping is exactly executable responder
+pullback along the same PolyFun lens: a one-line specialization of the generic
+wrap/pullback adjunction
 `OracleMachine.runAgainst_wrap`, with no protocol-specific run induction. -/
 theorem runAgainst_IND_CPA_swap (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (machine : OracleMachine encAlg.IND_CPA_oracleSpec PK Bool)
-    (R : ProbResponder encAlg.IND_CPA_oracleSpec) (k : ℕ) (r : R.State)
+    (R : ProbResponder encAlg.IND_CPA_oracleSpec) [R.IsExecutable]
+    (k : ℕ) (r : R.State)
     (s : machine.State) :
     OracleMachine.runAgainst (machine.wrap encAlg.IND_CPA_swapLens) R k (r, s) =
       machine.runAgainst (R.pullback encAlg.IND_CPA_swapLens) k (r, s) :=
