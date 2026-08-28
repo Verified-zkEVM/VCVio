@@ -89,42 +89,14 @@ def impl (prims : Primitives p) : QueryImpl (publicHashSpec prims.core) Id
   | .hmsg r pkSeed pkRoot msg => prims.Hmsg r pkSeed pkRoot msg
 
 /-- Extend an implementation-independent context with an arbitrary deterministic public-hash
-handler. This compatibility bridge produces a pure `Primitives` bundle for existing functional
-APIs; oracle-parametric developments should use the `PublicHash` programs directly. -/
+handler. This packages a fixed answer table as a `Primitives` bundle for deterministic
+interpretation proofs; oracle-parametric developments use the `PublicHash` programs directly. -/
 @[reducible] def withPublicHash (core : CorePrimitives p)
     (answer : QueryImpl (publicHashSpec core) Id) :
     Primitives p where
   toCorePrimitives := core
   Thash pkSeed encodedAdrs xs := answer (.thash pkSeed encodedAdrs xs)
   Hmsg r pkSeed pkRoot msg := answer (.hmsg r pkSeed pkRoot msg)
-
-@[simp] theorem withPublicHash_core (core : CorePrimitives p)
-    (answer : QueryImpl (publicHashSpec core) Id) :
-    (withPublicHash core answer).core = core := rfl
-
-@[simp] theorem withPublicHash_f (core : CorePrimitives p)
-    (answer : QueryImpl (publicHashSpec core) Id) (pkSeed : core.PkSeed) (adrs : Adrs)
-    (x : core.Y) :
-    (withPublicHash core answer).F pkSeed adrs x =
-      answer (.thash pkSeed (core.adrsToKey adrs) [x]) := rfl
-
-@[simp] theorem withPublicHash_h (core : CorePrimitives p)
-    (answer : QueryImpl (publicHashSpec core) Id) (pkSeed : core.PkSeed) (adrs : Adrs)
-    (left right : core.Y) :
-    (withPublicHash core answer).H pkSeed adrs left right =
-      answer (.thash pkSeed (core.adrsToKey adrs) [left, right]) := rfl
-
-@[simp] theorem withPublicHash_tl (core : CorePrimitives p)
-    (answer : QueryImpl (publicHashSpec core) Id) (pkSeed : core.PkSeed) (adrs : Adrs)
-    (xs : List core.Y) :
-    (withPublicHash core answer).Tl pkSeed adrs xs =
-      answer (.thash pkSeed (core.adrsToKey adrs) xs) := rfl
-
-@[simp] theorem withPublicHash_hmsg (core : CorePrimitives p)
-    (answer : QueryImpl (publicHashSpec core) Id) (r : core.Y) (pkSeed : core.PkSeed)
-    (pkRoot : core.Y) (msg : List Byte) :
-    (withPublicHash core answer).Hmsg r pkSeed pkRoot msg =
-      answer (.hmsg r pkSeed pkRoot msg) := rfl
 
 /-- Packaging an answer function and then taking its deterministic interpreter recovers the
 same public-hash handler. -/
@@ -133,12 +105,6 @@ same public-hash handler. -/
     impl (withPublicHash core answer) = answer := by
   funext q
   cases q <;> rfl
-
-/-- Forgetting and then reinstalling a deterministic bundle's public hash is lossless. -/
-@[simp] theorem withPublicHash_impl (prims : Primitives p) :
-    withPublicHash prims.core (impl prims) = prims := by
-  cases prims
-  rfl
 
 @[simp] theorem simulateQ_f (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (x : prims.Y) :
@@ -184,17 +150,6 @@ abbrev Cache (core : CorePrimitives p) := (publicHashSpec core).QueryCache
       SampleableType ((publicHashSpec core).Range t) := fun t => by
     cases t <;> exact inferInstance
   exact (publicHashSpec core).randomOracle
-
-/-- Install the lazy random oracle as the query capability of a state transformer.  This is a
-named value rather than a global instance: a security experiment must opt into this semantics
-once, and then thread the resulting cache through key generation, the adversary, signing, and
-verification. -/
-@[instance_reducible]
-def randomOracleHasQuery (core : CorePrimitives p) [DecidableEq core.PkSeed]
-    [DecidableEq core.AdrsKey] [DecidableEq core.Y]
-    [SampleableType core.Y] [SampleableType (Bytes p.m)] :
-    HasQuery (publicHashSpec core) (StateT (PublicHash.Cache core) ProbComp) where
-  query := PublicHash.randomOracle core
 
 end PublicHash
 
