@@ -170,7 +170,7 @@ private lemma depthOneGame_eq :
   refine bind_congr (m := OracleComp (InductiveMerkleTree.spec Bool)) fun root => ?_
   cases root <;>
     simp [OracleSpec.withCacheOverlay,
-      InductiveMerkleTree.extractor, InductiveMerkleTree.extractorChildren,
+      InductiveMerkleTree.Extractor.tree, InductiveMerkleTree.Extractor.children,
       depthOneSkeleton, leftIndex, rightIndex, expectedTree,
       expectedLeftProof, expectedRightProof]
 
@@ -266,7 +266,7 @@ private lemma freshHitGame_eq :
   simp [InductiveMerkleTree.extractabilityGame,
     InductiveMerkleTree.extractabilityInner, OracleSpec.withCacheOverlay,
     freshHitAdversary, freshHitExtractedTree, freshHitExtractedProof,
-    InductiveMerkleTree.extractor, InductiveMerkleTree.extractorChildren,
+    InductiveMerkleTree.Extractor.tree, InductiveMerkleTree.Extractor.children,
     InductiveMerkleTree.verifyProof, InductiveMerkleTree.getPutativeRoot,
     InductiveMerkleTree.singleHash, depthOneSkeleton, leftIndex, leftProof_head]
 
@@ -325,7 +325,7 @@ private lemma proofOnlyGame_eq :
   refine bind_congr (m := OracleComp (InductiveMerkleTree.spec Bool)) fun root => ?_
   cases root <;>
     simp [OracleSpec.withCacheOverlay,
-      InductiveMerkleTree.extractor, InductiveMerkleTree.extractorChildren,
+      InductiveMerkleTree.Extractor.tree, InductiveMerkleTree.Extractor.children,
       depthOneSkeleton, rightIndex, expectedTree, expectedRightProof,
       wrongRightProof_head, QueryCache.cacheQuery_of_ne]
 

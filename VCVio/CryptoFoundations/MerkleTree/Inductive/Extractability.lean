@@ -6,6 +6,7 @@ Authors: Quang Dao, Bolton Bailey
 
 module
 
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
 public import VCVio.OracleComp.QueryTracking.Collision
 public import ToMathlib.Data.IndexedBinaryTree.Lemmas
@@ -28,9 +29,8 @@ under namespace `InductiveMerkleTree`:
 * `Adversary`: a two-phase Merkle tree adversary, bundling an auxiliary state type, a
   committing phase producing a claimed root and state, and an opening phase producing a
   (leaf index, leaf value, authentication path) triple from that state.
-* `extractor`: builds a `FullData (Option α) s` from a query log, root, and skeleton by
-  walking down from the root and pulling each node's children from the unique log entry
-  whose response matches.
+* `Extractor.tree`: the pure extraction algorithm, defined separately in `Extractor.lean`,
+  which builds a `FullData (Option α) s` by following response links in the commit log.
 * `extractabilityInner`: the oracle syntax running an `Adversary` against the extractor
   and verifier, before choosing random-oracle semantics.
 * `extractabilityGame`: the random-oracle experiment obtained by interpreting
@@ -167,100 +167,25 @@ section ExtractabilityGame
 
 variable [DecidableEq α]
 
-/--
-The child-decomposition function used by the Merkle-tree `extractor`. Given a `cache`
-and a node value `a`, look up the first query in `cache` whose response is `a` and return
-its input pair; if no such entry exists, return `none`.
--/
-def extractorChildren (cache : (spec α).QueryLog) (a : α) : Option (α × α) :=
-  match cache.find? (fun ⟨_, r⟩ => r == a) with
-  | none => none
-  | some ⟨(x, y), _⟩ => some (x, y)
-
-/--
-The extraction algorithm for Merkle trees: from a query log `cache`, a `root`, and a
-skeleton `s`, build a partial tree of type `FullData (Option α) s` by walking down from
-`root`. A node with value `some a` looks up the unique log entry whose response is `a`
-and uses its input pair as the children's values; in every other case (no matching entry,
-or the parent is already `none`) both children are `none`. Implemented as
-`optionPopulateDown` driven by `extractorChildren`.
--/
-def extractor (s : Skeleton) (cache : (spec α).QueryLog) (root : α) : FullData (Option α) s :=
-  optionPopulateDown s (extractorChildren cache) root
-
 /-- The labels of the non-dummy nodes that the extractor actually reconstructs. Unlike
 the full query log, this list follows only response links reachable from the claimed root. -/
-private def extractedTargets : (s : Skeleton) → (spec α).QueryLog → α → List α
-  | .leaf, _, root => [root]
-  | .internal sl sr, log, root =>
-      root :: match extractorChildren log root with
-        | none => []
-        | some (left, right) =>
-            extractedTargets sl log left ++ extractedTargets sr log right
+private abbrev extractedTargets (s : Skeleton) (log : (spec α).QueryLog) (root : α) : List α :=
+  Extractor.targets s log root
 
 /-- A full binary skeleton with `L` leaves has `2L - 1` nodes, so the extractor can
 reconstruct at most that many non-dummy labels, independently of the query-log length. -/
 private lemma extractedTargets_length_le (s : Skeleton)
     (log : (spec α).QueryLog) (root : α) :
-    (extractedTargets s log root).length ≤ 2 * s.leafCount - 1 := by
-  induction s generalizing root with
-  | leaf => simp [extractedTargets]
-  | internal sl sr ihl ihr =>
-      simp only [extractedTargets, List.length_cons]
-      cases hchildren : extractorChildren log root with
-      | none =>
-          simp only [List.length_nil]
-          have hl := Skeleton.leafCount_pos sl
-          have hr := Skeleton.leafCount_pos sr
-          simp only [Skeleton.leafCount_internal]
-          omega
-      | some children =>
-          obtain ⟨left, right⟩ := children
-          simp only [List.length_append]
-          have hl := ihl left
-          have hr := ihr right
-          have hsl := Skeleton.leafCount_pos sl
-          have hsr := Skeleton.leafCount_pos sr
-          simp only [Skeleton.leafCount_internal]
-          omega
+    (extractedTargets s log root).length ≤ 2 * s.leafCount - 1 :=
+  Extractor.targets_length_le s log root
 
 /-- Every extracted label is either the claimed root or one component of a logged hash
 input. The statement tracks reachability, while forgetting the particular ancestor chain. -/
 private lemma mem_extractedTargets_root_or_log_input (s : Skeleton)
     (log : (spec α).QueryLog) (root : α) {target : α}
     (htarget : target ∈ extractedTargets s log root) :
-    target = root ∨ ∃ entry ∈ log, target = entry.1.1 ∨ target = entry.1.2 := by
-  induction s generalizing root with
-  | leaf =>
-      simp only [extractedTargets, List.mem_singleton] at htarget
-      exact Or.inl htarget
-  | internal sl sr ihl ihr =>
-      simp only [extractedTargets, List.mem_cons] at htarget
-      rcases htarget with hroot | htarget
-      · exact Or.inl hroot
-      · cases hchildren : extractorChildren log root with
-        | none => simp [hchildren] at htarget
-        | some children =>
-            obtain ⟨left, right⟩ := children
-            simp only [hchildren, List.mem_append] at htarget
-            unfold extractorChildren at hchildren
-            cases hfind : log.find? (fun ⟨_, response⟩ => response == root) with
-            | none => simp [hfind] at hchildren
-            | some entry =>
-                obtain ⟨⟨left', right'⟩, response⟩ := entry
-                simp only [hfind, Option.some.injEq, Prod.mk.injEq] at hchildren
-                obtain ⟨hleft, hright⟩ := hchildren
-                subst left'
-                subst right'
-                have hentry : (⟨(left, right), response⟩ : (_ : α × α) × α) ∈ log :=
-                  List.mem_of_find?_eq_some hfind
-                rcases htarget with htarget | htarget
-                · rcases ihl left htarget with hroot | hdeeper
-                  · exact Or.inr ⟨⟨(left, right), response⟩, hentry, Or.inl hroot⟩
-                  · exact Or.inr hdeeper
-                · rcases ihr right htarget with hroot | hdeeper
-                  · exact Or.inr ⟨⟨(left, right), response⟩, hentry, Or.inr hroot⟩
-                  · exact Or.inr hdeeper
+    target = root ∨ ∃ entry ∈ log, target = entry.1.1 ∨ target = entry.1.2 :=
+  Extractor.mem_targets_root_or_log_input s log root htarget
 
 /-- If all logged inputs are populated in a finite key set, the distinct extracted labels
 fit in the root plus the two coordinate images of that key set. -/
@@ -314,11 +239,11 @@ def extractabilityInner {s : Skeleton} (𝒜 : Adversary α s) :
          FullData (Option α) s × List.Vector (Option α) idx.depth × Bool)) :=
   do
     let ((root, aux), queryLog) ← 𝒜.commit.withQueryLog
-    let extractedTree := extractor s queryLog root
+    let extractedTree := Extractor.tree s queryLog root
     let ⟨idx, leaf, proof⟩ ← 𝒜.opening aux
-    let extractedProof := generateProof extractedTree idx
+    let extractedOpening := Extractor.opening extractedTree idx
     let verified ← verifyProof idx leaf root proof
-    return (root, aux, ⟨idx, leaf, proof, extractedTree, extractedProof, verified⟩)
+    return (root, aux, ⟨idx, leaf, proof, extractedTree, extractedOpening.proof, verified⟩)
 
 /-- The opening-and-verification suffix after fixing a logged commit outcome. This is the
 actual cached continuation used in the ROM proof; it does not resample or reset the oracle. -/
@@ -328,11 +253,11 @@ private def extractabilityRest {s : Skeleton} (𝒜 : Adversary α s)
         ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
          FullData (Option α) s × List.Vector (Option α) idx.depth × Bool)) :=
   do
-    let extractedTree := extractor s queryLog root
+    let extractedTree := Extractor.tree s queryLog root
     let ⟨idx, leaf, proof⟩ ← 𝒜.opening aux
-    let extractedProof := generateProof extractedTree idx
+    let extractedOpening := Extractor.opening extractedTree idx
     let verified ← verifyProof idx leaf root proof
-    return (root, aux, ⟨idx, leaf, proof, extractedTree, extractedProof, verified⟩)
+    return (root, aux, ⟨idx, leaf, proof, extractedTree, extractedOpening.proof, verified⟩)
 
 /-- Execute a still-running commit computation with a combined cache/log state, then run the
 opening-and-verification suffix from the resulting state. This is the induction object for the
@@ -474,9 +399,8 @@ private lemma extractor_internal_eq_of_find?_eq
     (sl sr : Skeleton) (log : (spec α).QueryLog) (root x y : α)
     (h_find : log.find? (fun ⟨_, r⟩ => r == root) = some ⟨(x, y), root⟩) :
     extractor (Skeleton.internal sl sr) log root =
-      FullData.internal (some root) (extractor sl log x) (extractor sr log y) := by
-  simp only [extractor, optionPopulateDown_internal, extractorChildren, h_find]
-  rfl
+      FullData.internal (some root) (extractor sl log x) (extractor sr log y) :=
+  Extractor.tree_internal_eq_of_find?_eq sl sr log root x y h_find
 
 /--
 Unfold `extractabilityInner` into a nested `bind` whose outer prefix logs the committing
@@ -496,7 +420,7 @@ private lemma extractabilityInner_eq_bind_verifyProof
                  extractor s queryLog root,
                  generateProof (extractor s queryLog root) idx,
                  verified⟩) := by
-  simp only [extractabilityInner, bind_assoc, pure_bind]
+  simp only [extractabilityInner, Extractor.opening_proof, bind_assoc, pure_bind]
 
 omit [DecidableEq α] in
 /--
@@ -550,8 +474,8 @@ theorem extractabilityGame_isTotalQueryBound [IsUniformSpec (spec α)]
 
 private lemma extractorChildren_eq_none_of_find?_eq_none
     {log_c : (spec α).QueryLog} {a : α} (hf : log_c.find? (fun ⟨_, r⟩ => r == a) = none) :
-    extractorChildren log_c a = none := by
-  simp only [extractorChildren, hf]
+    extractorChildren log_c a = none :=
+  Extractor.children_eq_none_of_find?_eq_none log_c a hf
 
 /--
 If a particular transcript is in the support of the extractability game with the query log,
@@ -609,9 +533,12 @@ private lemma extractor_internal_get_eq_none_of_find?_eq_none
     (hf : log.find? (fun ⟨_, r⟩ => r == root) = none) :
     (extractor (Skeleton.internal sl sr) log root).get
         (idx.elim SkeletonNodeIndex.ofLeft SkeletonNodeIndex.ofRight) = none := by
-  simp only [extractor, optionPopulateDown_internal, extractorChildren_eq_none_of_find?_eq_none hf]
+  change (Extractor.tree (Skeleton.internal sl sr) log root).get
+    (idx.elim SkeletonNodeIndex.ofLeft SkeletonNodeIndex.ofRight) = none
+  rw [Extractor.tree_internal_of_children_eq_none sl sr log root
+    (Extractor.children_eq_none_of_find?_eq_none log root hf)]
   cases idx <;>
-    exact populateDown_none_get_eq_none (Option.bindPair (extractorChildren log)) rfl _
+    exact populateDown_none_get_eq_none (Option.bindPair (Extractor.children log)) rfl _
 
 end ExtractabilityGame
 
@@ -830,7 +757,8 @@ private lemma fresh_extractedTarget_of_extractor_disagreement
             obtain ⟨target, htarget, hfresh⟩ :=
               ih ancestor proof.tail hchainTail hchildDisagree
             exact ⟨target, by
-              simp [extractedTargets, extractorChildren, hfind, htarget], hfresh⟩
+              simp [extractedTargets, Extractor.targets, Extractor.children, hfind, htarget],
+                hfresh⟩
   | @ofRight sl sr idxRight ih =>
     obtain ⟨ancestor, hquery, hchainTail⟩ := hchain
     cases hfind : log.find? (fun ⟨_, response⟩ => response == root) with
@@ -896,7 +824,8 @@ private lemma fresh_extractedTarget_of_extractor_disagreement
             obtain ⟨target, htarget, hfresh⟩ :=
               ih ancestor proof.tail hchainTail hchildDisagree
             exact ⟨target, by
-              simp [extractedTargets, extractorChildren, hfind, htarget], hfresh⟩
+              simp [extractedTargets, Extractor.targets, Extractor.children, hfind, htarget],
+                hfresh⟩
 
 /-- Pointwise deterministic reduction for the cached suffix: once the commit cache is
 collision-free, a winning opening must add a fresh cache entry whose answer is one of the
