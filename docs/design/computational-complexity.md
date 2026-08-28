@@ -1,10 +1,10 @@
 # Honest computational complexity for VCVio
 
 Status: implemented and tested backend-relative foundation plus staged adequacy design,
-audited 2026-08-24. The completed usability spike concludes that the foundation is sound and
+audited 2026-08-28. The completed usability spike concludes that the foundation is sound and
 replaceable but not yet broadly usable because bounded iteration, quantitative handler
-substitution, and concrete-backend adequacy are missing. The candidate bounded-sequencing and
-output-recovery additions have passed focused checks; the broad branch gates remain pending.
+substitution, and concrete-backend adequacy are missing. Bounded sequencing and output recovery
+now live in PolyFun's generic resource layer and pass the VCVio root validation gates.
 This document fixes the intended meanings, trust boundary, layer ownership, and acceptance
 criteria. It distinguishes declarations that exist in the current branches from reserved names
 and later adequacy work.
@@ -35,25 +35,28 @@ claim that a pull request has been opened or merged.
   first-order polynomial form. This prevents a tagged encoding from hiding a superpolynomially
   larger returned payload. `RankedRunCertificate` derives nonvacuous termination from a decreasing
   rank. Exact dependent phase decomposition,
-  `SeqCompHandoffBound`, and `SeqCompCostCertificate` support the genuine bounded theorem
-  `QuantitativeRealization.RunsWithinUnder.seqComp`: component bounds compose once reachable
+  `PolynomialSeqCompHandoffBound`, and `PolynomialSeqCompCostCertificate` support genuine
+  polynomially bounded sequencing: component bounds compose once reachable
   handoffs have one envelope and the concrete assembled machine's structural overhead has been
   proved. Exact phase-source lengths account for every visible query, so termination does not
   depend on query units placed in the backend-overhead certificate.
   Bidirectional trace transports support bounded input precomposition, while bounded result
   mapping uses an explicit `MapResultCostCertificate`.
-- VCVio has `SecurityFamily.packProgram`, response-conforming
-  `OracleResourceModel`s, nonempty `OracleContract`s, `StrictPPTWitness`,
-  `IsOraclePPTBy`, and the fair-coin specialization `IsPPTBy`. `PureCertificate`
-  derives a complete strict witness from explicit polynomial code for an immediately returning
-  function. `ResourcePotentialCertificate` derives pathwise bounds from actual local code costs,
-  and `RankedPPTCertificate` packages those bounds into strict PPT. `HandlerCertificate` packages
+- PolyFun also owns the generic polynomial resource layer: `ExecutionCostPolynomial`,
+  `ResponseResourceModel`, `ResponseResourceContract`, `PolynomialRunBound`,
+  `PolynomialProgramWitness`, `PureResourceCertificate`, `RankedResource.PotentialCertificate`,
+  `RankedResourceCertificate`, and the polynomial sequencing certificates.
+- VCVio has `SecurityFamily.packProgram` and thin crypto-facing aliases
+  `ResourcePolynomial`, `OracleResourceModel`, `OracleContract`, `StrictPPTWitness`,
+  `PureCertificate`, `ResourcePotentialCertificate`, and `RankedPPTCertificate`. VCVio retains the
+  policy predicates `IsOraclePPTBy` and its fair-coin specialization `IsPPTBy`.
+  `HandlerCertificate` packages
   one uniform strict-PPT dispatcher plus whole-tree answer conformance, and semantic handler
   closing preserves leaf conformance. Every such name retains an explicit quantitative backend
   and pinned `Boundary`. Every strict witness also carries a boundary-local polynomial
-  output-recovery certificate. `BindCertificate` derives the handoff envelope and composed
-  resource polynomial from the component witnesses, leaving only a concrete
-  `SeqCompCostCertificate` and a polynomial bound on its overhead.
+  output-recovery certificate. `BindCertificate` packages PolyFun's generic reachable-handoff and
+  exact structural-cost certificates and exposes their composed run bound through the VCVio
+  strict-PPT facade.
 - The ElGamal canary exposes the one-time DDH reduction as fully syntactic open
   oracle code, proves its exact three-query structure, and proves that semantic
   closing recovers the established reduction. The conservative
@@ -180,27 +183,28 @@ adjusted to satisfy the module system, but their meanings may not drift.
 | Name | Availability | Meaning |
 | --- | --- | --- |
 | `PolyRealizer` | Landed in PolyFun | Executable backend code with first-order polynomial certificates for both work and encoded output growth. |
-| `OutputSizeRecovery` | Candidate in PolyFun; focused checks green | A boundary-local monotone law recovering returned-payload size from the charged tagged readout size. |
-| `PolyOutputSizeRecovery` | Candidate in PolyFun; focused checks green | The first-order polynomial form of `OutputSizeRecovery`, usable with the trace's charged `peakHeadSize`. |
+| `OutputSizeRecovery` | Landed in PolyFun | A boundary-local monotone law recovering returned-payload size from the charged tagged readout size. |
+| `PolyOutputSizeRecovery` | Landed in PolyFun | The first-order polynomial form of `OutputSizeRecovery`, usable with the trace's charged `peakHeadSize`. |
 | `ExecutionTrace` | Landed in PolyFun | A finite typed query-answer prefix of one realization. Its exact fold charges local work, total traffic, query count, and peak state/readout sizes. |
 | `ExecutionTrace.Conforms` | Landed in PolyFun | Every answer in a typed trace satisfies one explicit dependent allowed-answer relation. |
 | `ResourceTrace` | Reserved | A richer event decoration adding explicit randomness, final-output, and other resource events to `ExecutionTrace`. |
 | `RunsWithinUnder` | Landed in PolyFun | A componentwise bound on every conforming finite `ExecutionTrace`, relation-restricted resolution, and an allowed answer at every conformingly reachable pending query. It is exact and backend-relative, not asymptotic. |
 | `RunsWithin` | Landed in PolyFun | The specialization of `RunsWithinUnder` allowing every typed answer. |
-| `SeqCompHandoffBound` | Candidate in PolyFun; focused checks green | An input-indexed envelope for the second-phase bound at every value actually returned by a conforming first-phase trace. |
-| `SeqCompCostCertificate` | Candidate in PolyFun; focused checks green | An exact comparison between the concrete composed realization's cost and its phase-decomposed source cost plus explicit structural overhead. A positive-cost two-query canary instantiates it with zero overhead. |
-| `RunsWithinUnder.seqComp` | Candidate in PolyFun; focused checks green | Derives cost, progress, and resolution for bounded dependent sequential composition from two component bounds, a handoff envelope, and a concrete cost certificate. Exact phase-source length makes the resolution argument independent of certificate overhead. |
+| `PolynomialSeqCompHandoffBound` | Landed in PolyFun | An input-indexed polynomial envelope for the second-phase bound at every value actually returned by a conforming first-phase trace. |
+| `PolynomialSeqCompCostCertificate` | Landed in PolyFun | An exact comparison between the concrete composed realization's cost and its phase-decomposed source cost plus explicit polynomial structural overhead. |
+| `PolynomialRunBound.seqComp` | Landed in PolyFun | Derives cost, progress, and resolution for bounded dependent sequential composition from two component bounds, a handoff envelope, and a concrete cost certificate. Exact phase-source length makes the resolution argument independent of certificate overhead. |
 | `RankedRunCertificate` | Landed in PolyFun | A natural rank decreasing on every admitted answer, plus explicit query progress; it proves termination but does not invent backend costs. |
 | `MapResultCostCertificate` | Landed in PolyFun | A pathwise comparison between exact mapped-result and source trace costs, used for sound bounded result mapping. |
 | `SecondOrderPolynomial` | Landed in PolyFun | A monotone polynomial expression over base input size and named length functions. |
-| `OracleResourceModel` | Landed in VCVio | A dependent allowed-answer relation and per-interface monotone reply-size functions, with a proof that every allowed typed reply fits its encoded-size envelope. Handler costs are intentionally outside the open contract. |
-| `OracleContract` | Landed in VCVio | A pinned query-to-interface classification, an admissibility predicate on resource models, and evidence that the compatible model space is nonempty. |
-| `IsOraclePPTBy B` | Landed in VCVio | One realization by backend `B` and one second-order resource polynomial bounding every path conforming to every compatible resource model. |
+| `ResponseResourceModel` / `OracleResourceModel` | Landed in PolyFun / VCVio alias | A dependent allowed-answer relation and per-interface monotone reply-size functions, with a proof that every allowed typed reply fits its encoded-size envelope. Handler costs are intentionally outside the open contract. |
+| `ResponseResourceContract` / `OracleContract` | Landed in PolyFun / VCVio alias | A pinned query-to-interface classification, an admissibility predicate on resource models, and evidence that the compatible model space is nonempty. |
+| `PolynomialProgramWitness` / `StrictPPTWitness` | Landed in PolyFun / VCVio alias | One realization by backend `B` and one second-order resource polynomial bounding every path conforming to every compatible resource model. |
+| `IsOraclePPTBy B` | Landed in VCVio | Propositional existence of the crypto-facing strict witness above. |
 | `IsPPTBy B` | Landed in VCVio | `IsOraclePPTBy B` specialized to the explicit fair-coin interface. |
-| `PureCertificate` | Landed in VCVio | Explicit polynomial result and resolved-readout code, plus executable unreachable-transition code, sufficient to derive `IsOraclePPTBy` for `pure`. |
-| `ResourcePotentialCertificate` | Landed in VCVio | Local resource potentials over actual realization costs, paired with PolyFun rank/progress evidence, sufficient for `RunsWithinUnder`. |
-| `RankedPPTCertificate` | Landed in VCVio | One realization, implementation proof, resource polynomial, and model-relative ranked potentials, sufficient for `IsOraclePPTBy`. |
-| `BindCertificate` | Candidate in VCVio; focused checks green | Derives a strict-PPT bind from component witnesses, output-size recovery, an exact `SeqCompCostCertificate`, and a polynomial bound on structural overhead. |
+| `PureResourceCertificate` / `PureCertificate` | Landed in PolyFun / VCVio alias | Explicit polynomial result and resolved-readout code, plus executable unreachable-transition code, sufficient to derive the generic witness and VCVio's `IsOraclePPTBy` for `pure`. |
+| `RankedResource.PotentialCertificate` / `ResourcePotentialCertificate` | Landed in PolyFun / VCVio alias | Local resource potentials over actual realization costs, paired with rank/progress evidence, sufficient for `RunsWithinUnder`. |
+| `RankedResourceCertificate` / `RankedPPTCertificate` | Landed in PolyFun / VCVio alias | One realization, implementation proof, resource polynomial, and model-relative ranked potentials, sufficient for the generic witness and VCVio's `IsOraclePPTBy`. |
+| `BindCertificate` | Landed VCVio facade | Packages PolyFun's generic polynomial handoff and structural-cost certificates and derives a VCVio strict-PPT bind. |
 | `HandlerCertificate` | Landed seam in VCVio | One uniform strict-PPT packed handler dispatcher, an explicit map from each inner model to the outer model it implements, and answer conformance for that selected pair. Semantic leaf conformance composes; machine and resource substitution remain staged. |
 | `ppt` | Landed conservative tooling | Exact local-assumption or registered-primitive lookup for goals headed by `PolyRealizer` or `IsOraclePPTBy`; it performs no recursive synthesis or generic proof search. |
 | `VCVioComplexity.IsPPT` | Reserved, not exported | The eventual strict uniform PPT predicate after the complexitylib adequacy theorem. |
@@ -308,14 +312,15 @@ sequential composition, as well as interface transport along a
 one realization over all intermediate values, so pointwise continuation
 witnesses cannot introduce nonuniform advice.
 
-The candidate bounded-sequencing layer decomposes every dependent composite prefix into its
+The landed bounded-sequencing layer decomposes every dependent composite prefix into its
 exact left, handoff, and right source phases. The decomposition generically preserves answer
-conformance. `SeqCompHandoffBound` bounds the second phase only at values actually returned by a
-conforming first phase, while `SeqCompCostCertificate` compares the concrete composed
-realization's `ExecutionCost` with that exact source cost plus explicit structural overhead.
-`QuantitativeRealization.RunsWithinUnder.seqComp` then derives the composite cost bound, progress,
-and resolution. Thus bounded sequencing is present without pretending that PolyFun can infer a
-backend's structural wiring cost.
+conformance. `PolynomialSeqCompHandoffBound` bounds the second phase only at values actually
+returned by a conforming first phase, while `PolynomialSeqCompCostCertificate` compares the
+concrete composed realization's `ExecutionCost` with that exact source cost plus explicit
+structural overhead.
+`PolynomialRunBound.seqComp` then derives the composite cost bound, progress, and resolution.
+Thus bounded sequencing is present without pretending that PolyFun can infer a backend's
+structural wiring cost.
 
 A separately packaged reachable-state invariant, explicit decoder cost,
 structural resource transformers, and a distinct final-output event remain
@@ -399,20 +404,19 @@ Executable structural mixins and unbounded constructors are landed for:
 - products, sums, options, and distributivity; and
 - interface transport along a quantitatively admissible lens.
 
-For the immediately returning case, `PureCertificate` is also a landed bounded
+For the immediately returning case, PolyFun's `PureResourceCertificate`, exposed in VCVio as
+`PureCertificate`, is also a landed bounded
 constructor. It requires a `PolyRealizer` for the result function, a
 `PolyRealizer` for the resolved `Sum.inl` readout (so tag cost and growth are
 charged), and executable code for the unreachable partial transition. From
 these it derives `RunsWithinUnder`, `StrictPPTWitness`, and `IsOraclePPTBy` under
 any pinned contract.
 
-For sequential composition, the candidate PolyFun theorem derives
-`RunsWithinUnder` from the two component bounds, a reachable-handoff envelope, and an exact
-cost certificate for the assembled realization. VCVio's candidate `BindCertificate` derives the
-handoff envelope from the first witness's returned-size polynomial and monotonicity of the second
-witness's resource polynomial. It also constructs the composed second-order polynomial and strict
-witness. The remaining client obligation is genuinely backend-specific: prove the exact
-composite-to-phase cost comparison and bound its structural overhead polynomially.
+For sequential composition, PolyFun derives a `PolynomialRunBound` from the two component bounds,
+a reachable-handoff envelope, and an exact cost certificate for the assembled realization.
+VCVio's `BindCertificate` is intentionally only a facade over those generic obligations. The
+remaining client obligations are genuinely backend-specific: establish the reachable handoff
+bound and prove the exact composite-to-phase cost comparison with polynomial structural overhead.
 
 The following cost-preserving constructors and polynomial corollaries remain
 staged:
@@ -764,16 +768,17 @@ gate.
    typed resource traces, relation-restricted resolution/progress, ranked termination,
    bidirectional trace transport, bounded precomposition and result mapping, executable
    structural mixins, unbounded machine/program closure, exact dependent `seqComp` phase
-   decomposition, and certified bounded `RunsWithinUnder.seqComp` are present. The latter requires
+   decomposition, and certified polynomial `PolynomialRunBound.seqComp` are present. The latter requires
    a reachable-handoff envelope and a cost comparison for the actual assembled machine. Richer
    events and reachable-state packages remain staged.
 3. **Core and first proof-bearing constructors landed — backend-neutral VCVio
    bridge.** Packed security families, response-conforming oracle contracts,
    `IsOraclePPTBy`, fair-coin specialization, the conditional total-query
-   corollary, `PureCertificate`, `ResourcePotentialCertificate`, `RankedPPTCertificate`, and the
-   `HandlerCertificate` seam are present. Candidate `BindCertificate` data derives the handoff
-   bound, composed resource polynomial, `RunsWithinUnder`, and strict-PPT witness from the PolyFun
-   sequencing theorem. Semantic handler closing preserves leaf conformance.
+   corollary, crypto-facing aliases for PolyFun's pure and ranked certificates, and the
+   `HandlerCertificate` seam are present. `BindCertificate` packages PolyFun's handoff and cost
+   obligations and exposes the generic composed run bound and witness through VCVio. Semantic
+   handler closing uses PolyFun's generic weakest-precondition theorem and preserves leaf
+   conformance.
    General trace projections, probability erasure, efficient samplers,
    caller/handler resource substitution, and the exact-resource instantiation
    of `ReductionWithCost` remain staged.
@@ -819,10 +824,10 @@ charging and resolving allowed zero-probability branches, failure on a reachable
 empty response, exact structural query accounting, ranked two/adaptive/parity control flow,
 `HandlerCertificate` API shape and semantic closing, ElGamal semantic closing, exact complexitylib
 pure and one-coin canaries, exact-run output growth, pair-codec incompatibility, and multiple
-second-order environments for a fixed-size response. Focused candidate checks now also cover
-polynomial returned-output recovery and bounded dependent `seqComp`; the broad validation gates
-remain pending. The fixtures do not yet cover quantitative handler substitution, a usable bounded
-loop, or a genuinely variable-size oracle reply. The other bullets remain acceptance targets.
+second-order environments for a fixed-size response. Root validation also covers polynomial
+returned-output recovery and bounded dependent `seqComp`. The fixtures do not yet cover
+quantitative handler substitution, a usable bounded loop, or a genuinely variable-size oracle
+reply. The other bullets remain acceptance targets.
 
 ### Anti-cheating tests
 

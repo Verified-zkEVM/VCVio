@@ -142,9 +142,11 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - DLog / CDH / DDH via HHS: `VCVio/CryptoFoundations/HardnessAssumptions/DiffieHellman.lean`
 - Cost model / polynomial time: `VCVio/OracleComp/QueryTracking/CostModel.lean`
 - Query cost / weighted expected cost: `VCVio/OracleComp/QueryTracking/QueryCost.lean`, `VCVio/OracleComp/QueryTracking/WriterCost.lean`
-- Quantitative realizability and syntactic resource traces:
-  `PolyFun/Realizability/Quantitative.lean`
-- Strict backend-relative oracle PPT:
+- Quantitative realizability, syntactic resource traces, and generic polynomial resource
+  certificates:
+  `PolyFun/Realizability/Quantitative.lean`,
+  `PolyFun/Realizability/Quantitative/Resource.lean`
+- Strict backend-relative oracle PPT crypto facade:
   `VCVio/CryptoFoundations/Asymptotics/ComputationalComplexity.lean`
 - Proof-bearing oracle-handler closure seam:
   `VCVio/CryptoFoundations/Asymptotics/OracleClosure.lean`

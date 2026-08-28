@@ -1,6 +1,6 @@
 # Computational-complexity feasibility record
 
-Status: reviewer checkpoint, 2026-08-25. This record evaluates whether the current
+Status: reviewer checkpoint, updated 2026-08-28. This record evaluates whether the current
 interaction-first design is mathematically sound and whether it is ready for ordinary
 cryptographic use. The answer is deliberately split:
 
@@ -12,9 +12,9 @@ cryptographic use. The answer is deliberately split:
   substitution, an actual variable-width OTP witness, and concrete-backend adequacy are proved.
 
 No declaration is counted as machine-checked merely because it is present in an uncommitted
-working tree. The candidate output-recovery and bounded-`seqComp` APIs have passed focused PolyFun
-and VCVio checks, but the broad validation gates below remain pending. This record does not claim
-a concrete variable-width OTP PPT witness.
+working tree. Output recovery and bounded `seqComp` now live in PolyFun's generic resource layer;
+the VCVio integration passes the root library, examples, and retained test build. This record does
+not claim a concrete variable-width OTP PPT witness.
 
 ## Evidence classes
 
@@ -186,34 +186,31 @@ uniform proof boundary. They do **not** inhabit it. In particular, the slice doe
 measure to a coin response does not provide an efficient sampler implementation. Likewise, an
 exact query theorem is not an execution-time theorem.
 
-## Candidate integration delta
+## Integration delta
 
-Subject to validation, the current integration worktree adds the following reviewer-visible
-pieces.
+The current integration worktree adds the following reviewer-visible pieces.
 
-- PolyFun has candidate returned-output-size recovery, a branchwise resolution lemma from bounded
+- PolyFun has returned-output-size recovery, a branchwise resolution lemma from bounded
   conforming prefixes plus progress, and exact dependent source data that decomposes a `seqComp`
   execution prefix into left, handoff, and right phases. The source has exactly the composite
-  prefix's visible-query length. `SeqCompHandoffBound` constrains the second-phase bound at every
-  conformingly reachable return, and `SeqCompCostCertificate` compares the actual composed
-  realization's cost with the exact phase-source cost plus explicit overhead.
-  `QuantitativeRealization.RunsWithinUnder.seqComp` uses these data and the two component bounds to
-  derive the composite cost bound, progress, and resolution; its termination proof does not rely
-  on overhead query units.
-- VCVio has candidate member-by-member security-family resource contracts with lossless packing
+  prefix's visible-query length. `PolynomialSeqCompHandoffBound` constrains the second-phase bound
+  at every conformingly reachable return, and `PolynomialSeqCompCostCertificate` compares the
+  actual composed realization's cost with the exact phase-source cost plus explicit overhead.
+  `PolynomialRunBound.seqComp` uses these data and the two component bounds to derive the composite
+  cost bound, progress, and resolution; its termination proof does not rely on overhead query
+  units.
+- VCVio has member-by-member security-family resource contracts with lossless packing
   through one global label/modulus space. The raw dependent sigma-label carrier is not dynamic
   access to the current parameter from a finite polynomial. VCVio also has polynomial
-  returned-size bounds on every strict witness and a `BindCertificate` that derives a reachable
-  handoff envelope from the first witness's output-size polynomial. It composes the second
-  resource polynomial at that bound and invokes PolyFun's bounded-sequencing theorem, requiring
-  only the exact structural cost comparison and a polynomial overhead bound. A propositional
+  returned-size bounds on every strict witness and a `BindCertificate` that packages PolyFun's
+  generic reachable-handoff and exact structural-cost obligations. A propositional
   bridge constructs a `HandlerCertificate` from packed-handler PPT, an explicit inner-to-outer
   model map, and result conformance for each selected model pair.
 - A genuinely dependent handler canary uses different response types (`Bool` and `Fin 3`) and
   proves semantic conformance survives typed substitution.
 - A separate constant-positive PolyFun backend drives two Boolean queries across a real handoff.
   The first reply changes the second phase's state and final output, the concrete trace has exact
-  cost `⟨6, 2, 4, 1, 1⟩`, and the universal `SeqCompCostCertificate` has zero overhead. The
+  cost `⟨6, 2, 4, 1, 1⟩`, and the universal `PolynomialSeqCompCostCertificate` has zero overhead. The
   composition theorem derives `⟨8, 2, 4, 1, 1⟩` solely from the two independent phase bounds.
 - The measure-native typed-path bridge provides `pathMeasure`, the canonical
   `queryCountMeasure`, their length and output marginal equalities, and exact or bounded
@@ -227,9 +224,10 @@ pieces.
 The sequencing result is a genuine derivation, not a restatement of the desired composite bound.
 PolyFun reconstructs the bound, progress, and resolution from exact phase decomposition. It does
 not manufacture the one backend-specific fact that cannot be generic: the cost of the structural
-realizers used by the assembled machine. `SeqCompCostCertificate.cost_le` states that fact against
-the concrete composite `ExecutionCost`, and VCVio requires its overhead to be polynomial. This is
-generic proof-bearing bounded sequencing, not a claim that every backend gets cost-free closure.
+realizers used by the assembled machine. `PolynomialSeqCompCostCertificate.certificate` states
+that fact against the concrete composite `ExecutionCost`, and its `overhead_le` field requires the
+structural allowance to be polynomial. This is generic proof-bearing bounded sequencing, not a
+claim that every backend gets cost-free closure.
 
 ## Reviewer acceptance matrix
 
@@ -237,23 +235,23 @@ generic proof-bearing bounded sequencing, not a claim that every backend gets co
 | --- | --- | --- | --- |
 | Local runtime cannot hide in Lean functions | Executable realizers, exact costs, and `Implements` in the validated baseline | Preserve negative fixtures and trust gates | Accept foundation |
 | Oracle answers are honestly charged | Contracts, response-size moduli, conforming traces, progress | Preserve zero-probability and empty-response tests | Accept foundation |
-| Security families are uniform | One packed program is required by the validated predicate | Validate candidate family-contract packing tests | Accept after gates |
-| Returned size follows from charged observations | Candidate `PolyOutputSizeRecovery`, strict-witness field, and derived returned-size polynomial; focused checks are green | Broad PolyFun/root builds, tests, and axiom sweeps | Candidate after broad gates |
+| Security families are uniform | One packed program is required by the validated predicate; a nonconstant packing canary is green | Preserve the packing canary | Accept foundation |
+| Returned size follows from charged observations | PolyFun `PolyOutputSizeRecovery`, strict-witness field, and derived returned-size polynomial; root build is green | Preserve root and trust gates | Accept foundation |
 | Probability reuses typed syntax | Candidate `pathMeasure`/`queryCountMeasure`, measure marginals, and expected-query theorems | Root build, focused tests, and axiom sweep | Candidate |
 | Finite uniform laws are measure-native | Candidate product and bijective-pushforward equalities for `uniformOn univ` | Build `UniformOn` source and focused tests | Candidate |
 | Symmetric-encryption security has a kernel form | Candidate generic correctness/ciphertext kernels and row-equivalence lemmas | Build source and OTP example | Candidate API |
 | Fair-bit OTP semantics are measure-native | Candidate full uniform, correctness, secrecy, and exact query-count measure equalities | Build through the `Examples` umbrella | Candidate |
 | Variable-width fair-bit OTP is uniform PPT | Only the packed proposition is named | One packed realizer, one polynomial, and all-path bound | Not proved |
-| Certified bounded sequencing derives the assembled bound | Candidate `RunsWithinUnder.seqComp` and VCVio `BindCertificate`; focused checks are green | Broad PolyFun/root builds, tests, and axiom sweeps | Candidate after broad gates |
-| Dependent handlers preserve answer policy | Candidate `Bool`/`Fin 3` semantic canary | Build focused handler tests | Candidate semantic result |
+| Certified bounded sequencing derives the assembled bound | PolyFun `PolynomialRunBound.seqComp` and VCVio `BindCertificate`; root build is green | Preserve root and trust gates | Accept foundation |
+| Dependent handlers preserve answer policy | Green `Bool`/`Fin 3` semantic canary | Preserve focused handler test | Accept semantic result |
 | Handler substitution preserves PPT | Baseline semantic leaf closure plus candidate certificate ergonomics | Typed substitution machine, trace splice, termination, and resource-polynomial substitution | Not proved |
 | A bounded loop is usable by applications | Ranked fixed-loop control canaries in the baseline | Executable uniform fold/loop constructor with exact and polynomial bounds | Not proved |
 | complexitylib realizes finite examples | Optional exact pure and one-coin machines behind an isolated adapter | Keep optional package tests and trust report green | Accept replaceable leaf evidence |
 | complexitylib is an adequate general backend | No general closure-gate inhabitant or compiler | `OracleTM` compilation/simulation, transcript preservation, and polynomial overhead | Not proved |
 | Unqualified conventional `IsPPT` is justified | Backend-relative `...By` predicates only | Concrete adequacy plus uniformity and representation theorems | Defer |
 
-Certified sequencing has crossed its focused implementation gate but still awaits broad branch
-validation. The decisive open usability rows are bounded iteration and handler substitution;
+Certified sequencing has crossed its root integration gate. The decisive open usability rows are
+bounded iteration and handler substitution;
 until they pass, reviewers should expect loop- or handler-heavy clients to construct or analyze
 composite machines directly.
 
@@ -281,8 +279,9 @@ lake env lean VCVioTest/UniformOn.lean
 lake env lean VCVio/EvalDist/PFunctorPath.lean
 lake env lean VCVio/CryptoFoundations/SymmEncAlg/Measure.lean
 lake env lean Examples/OneTimePad/ComputationalComplexity.lean
-lake env lean VCVioTest/CryptoFoundations/PathSemantics.lean
+lake env lean VCVioTest/CryptoFoundations/MeasureSemantics.lean
 lake env lean VCVioTest/CryptoFoundations/OracleClosure.lean
+lake env lean VCVioTest/OracleComp/SecurityFamily.lean
 lake exe mk_all --lib VCVio --module --check
 lake exe mk_all --lib Examples --module --check
 lake exe mk_all --lib VCVioTest --module --check
@@ -290,7 +289,6 @@ lake exe mk_all --lib VCVioTest --module --check
 lake exe axiomsweep --check
 bash scripts/check-extern-isolation.sh
 bash scripts/check-interop-isolation.sh
-bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 ```
 

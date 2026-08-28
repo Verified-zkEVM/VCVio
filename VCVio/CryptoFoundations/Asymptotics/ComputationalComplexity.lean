@@ -7,9 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.Coinductive.SecurityFamily
-public import PolyFun.Complexity.SecondOrderPolynomial
-public import PolyFun.Realizability.Quantitative
-public import PolyFun.Realizability.Quantitative.Polynomial
+public import PolyFun.Realizability.Quantitative.Resource
 
 /-!
 # Strict polynomial time for syntactic oracle computations
@@ -37,308 +35,89 @@ probabilistic notion and is not smuggled into this pathwise definition.
 
 universe u v w x y
 
-namespace PFunctor.DynSystem.DynComputation
-
-/-! ## Interface-only boundaries
-
-PolyFun's merged quantitative API deliberately keeps the executable `Boundary` small.  VCVio's
-open-oracle contracts additionally need to share the query encodings across programs with
-different input and output types, so that interface-only projection lives here at the consumer
-layer rather than in PolyFun. -/
-
-/-- The query-position and tagged-answer representations shared by an open oracle interface. -/
-structure InterfaceBoundary (C : StepClass.{u, v}) (p : PFunctor.{u, u}) : Type v where
-  pos : C.Str p.A
-  idx : C.Str p.Idx
-
-namespace Boundary
-
-variable {p : PFunctor.{u, u}} {C : StepClass.{u, v}} {input output : Type u}
-
-/-- Forget a program boundary's input and output representations. -/
-def interface (bd : Boundary C p input output) : InterfaceBoundary C p :=
-  ⟨bd.pos, bd.idx⟩
-
-@[simp] theorem interface_pos (bd : Boundary C p input output) : bd.interface.pos = bd.pos := rfl
-@[simp] theorem interface_idx (bd : Boundary C p input output) : bd.interface.idx = bd.idx := rfl
-
-end Boundary
-end PFunctor.DynSystem.DynComputation
-
 namespace OracleComp.Complexity
 
 open PFunctor
 open PFunctor.DynSystem.DynComputation
 
-/-! ## Open resource polynomials -/
+/-! ## Generic quantitative-resource facade -/
 
-/-- A second-order polynomial upper bound for every tracked execution resource. -/
-structure ResourcePolynomial (label : Type x) where
-  /-- Backend-relative local work. -/
-  work : _root_.Complexity.SecondOrderPolynomial label
-  /-- Number of visible oracle queries. -/
-  queries : _root_.Complexity.SecondOrderPolynomial label
-  /-- Total encoded query-answer traffic. -/
-  traffic : _root_.Complexity.SecondOrderPolynomial label
-  /-- Peak encoded hidden-state size. -/
-  peakStateSize : _root_.Complexity.SecondOrderPolynomial label
-  /-- Peak encoded one-step readout size. -/
-  peakHeadSize : _root_.Complexity.SecondOrderPolynomial label
-  deriving DecidableEq, Repr
+/-- VCVio's crypto-facing name for PolyFun's generic execution-cost polynomial. -/
+abbrev ResourcePolynomial (label : Type x) := PFunctor.ExecutionCostPolynomial label
 
 namespace ResourcePolynomial
 
-variable {label : Type x}
-
-/-- Regard an ordinary first-order polynomial as a second-order polynomial which does not inspect
-its oracle-length environment. -/
-def ofFirstOrder (bound : _root_.Complexity.FirstOrderPolynomial) :
-    _root_.Complexity.SecondOrderPolynomial label :=
-  bound.reindex PEmpty.elim
-
-@[simp]
-theorem eval_ofFirstOrder (bound : _root_.Complexity.FirstOrderPolynomial)
-    (length : label → ℕ → ℕ) (inputSize : ℕ) :
-    (ofFirstOrder bound : _root_.Complexity.SecondOrderPolynomial label).eval length inputSize =
-      bound.eval inputSize := by
-  unfold ofFirstOrder
-  rw [_root_.Complexity.SecondOrderPolynomial.eval_reindex]
-  change _ = _root_.Complexity.SecondOrderPolynomial.eval PEmpty.elim inputSize bound
-  congr 1
-  funext interface
-  exact interface.elim
-
-/-- Evaluate every resource component at an input size and oracle length environment. -/
-def eval (bound : ResourcePolynomial label) (length : label → ℕ → ℕ)
-    (inputSize : ℕ) : ExecutionCost where
-  work := bound.work.eval length inputSize
-  queries := bound.queries.eval length inputSize
-  traffic := bound.traffic.eval length inputSize
-  peakStateSize := bound.peakStateSize.eval length inputSize
-  peakHeadSize := bound.peakHeadSize.eval length inputSize
-
-/-- A constant resource bound. -/
-def const (cost : ExecutionCost) : ResourcePolynomial label where
-  work := .const cost.work
-  queries := .const cost.queries
-  traffic := .const cost.traffic
-  peakStateSize := .const cost.peakStateSize
-  peakHeadSize := .const cost.peakHeadSize
-
-/-- A conservative sequential sum of two resource bounds.
-
-The three additive components add exactly. Peak components also use polynomial addition, which
-upper-bounds the `max` used by `ExecutionCost`. -/
-def add (left right : ResourcePolynomial label) : ResourcePolynomial label where
-  work := .add left.work right.work
-  queries := .add left.queries right.queries
-  traffic := .add left.traffic right.traffic
-  peakStateSize := .add left.peakStateSize right.peakStateSize
-  peakHeadSize := .add left.peakHeadSize right.peakHeadSize
-
-instance : Add (ResourcePolynomial label) := ⟨add⟩
-
-/-- Replace the base input-size variable in every resource component. -/
-def comp (bound : ResourcePolynomial label)
-    (inputBound : _root_.Complexity.SecondOrderPolynomial label) :
-    ResourcePolynomial label where
-  work := bound.work.comp inputBound
-  queries := bound.queries.comp inputBound
-  traffic := bound.traffic.comp inputBound
-  peakStateSize := bound.peakStateSize.comp inputBound
-  peakHeadSize := bound.peakHeadSize.comp inputBound
-
-/-- Relabel every oracle-resource symbol in a resource bound. -/
-def reindex {target : Type y} (bound : ResourcePolynomial label) (map : label → target) :
-    ResourcePolynomial target where
-  work := bound.work.reindex map
-  queries := bound.queries.reindex map
-  traffic := bound.traffic.reindex map
-  peakStateSize := bound.peakStateSize.reindex map
-  peakHeadSize := bound.peakHeadSize.reindex map
-
-/-- Substitute a second-order resource transformer for every oracle-resource symbol. -/
-def subst {target : Type y} (bound : ResourcePolynomial label)
-    (replacement : label → _root_.Complexity.SecondOrderPolynomial target) :
-    ResourcePolynomial target where
-  work := bound.work.subst replacement
-  queries := bound.queries.subst replacement
-  traffic := bound.traffic.subst replacement
-  peakStateSize := bound.peakStateSize.subst replacement
-  peakHeadSize := bound.peakHeadSize.subst replacement
-
-@[simp]
-theorem eval_const (cost : ExecutionCost) (length : label → ℕ → ℕ) (inputSize : ℕ) :
-    (const cost : ResourcePolynomial label).eval length inputSize = cost :=
-  rfl
-
-@[simp]
-theorem eval_comp (bound : ResourcePolynomial label)
-    (inputBound : _root_.Complexity.SecondOrderPolynomial label)
-    (length : label → ℕ → ℕ) (inputSize : ℕ) :
-    (bound.comp inputBound).eval length inputSize =
-      bound.eval length (inputBound.eval length inputSize) := by
-  ext <;> simp [eval, comp]
-
-@[simp]
-theorem eval_reindex {target : Type y} (bound : ResourcePolynomial label)
-    (map : label → target) (length : target → ℕ → ℕ) (inputSize : ℕ) :
-    (bound.reindex map).eval length inputSize =
-      bound.eval (fun symbol ↦ length (map symbol)) inputSize := by
-  ext <;> simp [eval, reindex]
-
-@[simp]
-theorem eval_subst {target : Type y} (bound : ResourcePolynomial label)
-    (replacement : label → _root_.Complexity.SecondOrderPolynomial target)
-    (length : target → ℕ → ℕ) (inputSize : ℕ) :
-    (bound.subst replacement).eval length inputSize =
-      bound.eval (fun symbol size ↦ (replacement symbol).eval length size) inputSize := by
-  ext <;> simp [eval, subst]
-
-/-- Sequentially accumulated costs fit the conservative polynomial sum. -/
-theorem add_eval_le_eval_add (left right : ResourcePolynomial label)
-    (length : label → ℕ → ℕ) (inputSize : ℕ) :
-    left.eval length inputSize + right.eval length inputSize ≤
-      (left + right).eval length inputSize := by
-  rw [ExecutionCost.le_iff]
-  exact ⟨le_rfl, le_rfl, le_rfl, max_le (Nat.le_add_right _ _) (Nat.le_add_left _ _),
-    max_le (Nat.le_add_right _ _) (Nat.le_add_left _ _)⟩
-
-/-- Resource-bound evaluation is monotone in encoded input size. -/
-theorem eval_mono_input (bound : ResourcePolynomial label) {length : label → ℕ → ℕ}
-    (hLength : _root_.Complexity.SecondOrderPolynomial.MonotoneLengths length)
-    {smaller larger : ℕ} (hle : smaller ≤ larger) :
-    bound.eval length smaller ≤ bound.eval length larger := by
-  rw [ExecutionCost.le_iff]
-  exact ⟨bound.work.eval_monotone hLength hle, bound.queries.eval_monotone hLength hle,
-    bound.traffic.eval_monotone hLength hle,
-    bound.peakStateSize.eval_monotone hLength hle,
-    bound.peakHeadSize.eval_monotone hLength hle⟩
-
-/-- Resource-bound evaluation is monotone under enlargement of oracle length functions. -/
-theorem eval_mono_lengths (bound : ResourcePolynomial label)
-    {smaller larger : label → ℕ → ℕ}
-    (hLarger : _root_.Complexity.SecondOrderPolynomial.MonotoneLengths larger)
-    (hle : ∀ interface size, smaller interface size ≤ larger interface size)
-    (inputSize : ℕ) :
-    bound.eval smaller inputSize ≤ bound.eval larger inputSize := by
-  rw [ExecutionCost.le_iff]
-  exact ⟨bound.work.eval_mono_lengths hLarger hle inputSize,
-    bound.queries.eval_mono_lengths hLarger hle inputSize,
-    bound.traffic.eval_mono_lengths hLarger hle inputSize,
-    bound.peakStateSize.eval_mono_lengths hLarger hle inputSize,
-    bound.peakHeadSize.eval_mono_lengths hLarger hle inputSize⟩
+abbrev ofFirstOrder := @PFunctor.ExecutionCostPolynomial.ofFirstOrder
+abbrev eval {label : Type x} (bound : ResourcePolynomial label)
+    (length : label → ℕ → ℕ) (inputSize : ℕ) :=
+  PFunctor.ExecutionCostPolynomial.eval bound length inputSize
+abbrev const := @PFunctor.ExecutionCostPolynomial.const
+abbrev add {label : Type x} (left right : ResourcePolynomial label) :=
+  PFunctor.ExecutionCostPolynomial.add left right
+abbrev comp {label : Type x} (bound : ResourcePolynomial label)
+    (inputBound : _root_.Complexity.SecondOrderPolynomial label) :=
+  PFunctor.ExecutionCostPolynomial.comp bound inputBound
+abbrev reindex {label : Type x} {target : Type y} (bound : ResourcePolynomial label)
+    (map : label → target) :=
+  PFunctor.ExecutionCostPolynomial.reindex bound map
+abbrev subst {label : Type x} {target : Type y} (bound : ResourcePolynomial label)
+    (replacement : label → _root_.Complexity.SecondOrderPolynomial target) :=
+  PFunctor.ExecutionCostPolynomial.subst bound replacement
+abbrev eval_ofFirstOrder := @PFunctor.ExecutionCostPolynomial.eval_ofFirstOrder
+abbrev eval_const := @PFunctor.ExecutionCostPolynomial.eval_const
+abbrev eval_comp := @PFunctor.ExecutionCostPolynomial.eval_comp
+abbrev eval_reindex := @PFunctor.ExecutionCostPolynomial.eval_reindex
+abbrev eval_subst := @PFunctor.ExecutionCostPolynomial.eval_subst
+abbrev add_eval_le_eval_add := @PFunctor.ExecutionCostPolynomial.add_eval_le_eval_add
+abbrev eval_mono_input := @PFunctor.ExecutionCostPolynomial.eval_mono_input
+abbrev eval_mono_lengths := @PFunctor.ExecutionCostPolynomial.eval_mono_lengths
 
 end ResourcePolynomial
 
-/-! ## Oracle resource contracts -/
+/-- VCVio's oracle-facing name for PolyFun's response-size modulus symbols. -/
+abbrev OracleModulus (label : Type x) :=
+  PFunctor.DynSystem.DynComputation.ResponseModulus label
 
-variable {p : PFunctor.{u, u}} {C : StepClass.{u, v}}
-  [C.HasProd] [C.HasSum] [C.HasOption] [DecidableEq p.A]
-  {Q : QuantitativeStepClass.{u, v, w} C} {input output : Type u}
-  {bd : Boundary C p input output} {interface : InterfaceBoundary C p} {label : Type x}
+/-- VCVio's oracle-facing view of PolyFun's admitted-response resource model. -/
+abbrev OracleResourceModel {p : PFunctor.{u, u}} {C : StepClass.{u, v}}
+    {label : Type x} (Q : QuantitativeStepClass.{u, v, w} C)
+    (interface : InterfaceBoundary C p) (labelOf : p.A → label) :=
+  PFunctor.DynSystem.DynComputation.ResponseResourceModel Q interface labelOf
 
-/-- The response-length function variable exposed for each open oracle interface.
-
-Handler work and state growth are deliberately absent. They are not charged by an open caller's
-trace and may enter a closed bound only through a future resource-substitution theorem that proves
-how a concrete handler is executed. -/
-inductive OracleModulus (label : Type x) where
-  /-- Encoded tagged-response length as a function of encoded query length. -/
-  | responseSize (interface : label)
-  deriving DecidableEq, Repr
-
-/-- One admissible family of open-oracle response relations and length moduli.
-
-`allows` is load-bearing. An open oracle over an unbounded response carrier, such as an adversary
-state, generally promises a size bound only for the answers it may return. Quantifying over every
-inhabitant would make such a promise impossible; quantifying over no answers would make a runtime
-claim vacuous. `RunsWithinUnder` therefore combines this relation with reachable progress.
-
-`responseSize_le` bounds the encoded tagged answer `p.Idx`, not merely its payload, whenever that
-answer is allowed. This matches the bytes actually charged by `ExecutionTrace` and makes any
-pairing/tagging overhead visible.
-
-Handler work and state are deliberately absent. A later interface-closing theorem must consume a
-separate certificate that packages a concrete handler execution with proved resource bounds;
-unverified numeric claims do not belong in the open caller contract. -/
-structure OracleResourceModel (Q : QuantitativeStepClass.{u, v, w} C)
-    (interface : InterfaceBoundary C p) (labelOf : p.A → label) where
-  /-- The replies admitted at each typed query position. -/
-  allows : ∀ position : p.A, p.B position → Prop
-  /-- Encoded response length for each interface. -/
-  responseSize : label → ℕ → ℕ
-  /-- Response-size moduli are monotone. -/
-  responseSize_monotone : ∀ interface, Monotone (responseSize interface)
-  /-- Every allowed answer fits its interface's response-size envelope. -/
-  responseSize_le : ∀ (position : p.A) (answer : p.B position), allows position answer →
-    Q.size interface.idx ⟨position, answer⟩ ≤
-      responseSize (labelOf position) (Q.size interface.pos position)
+/-- VCVio's oracle-facing view of PolyFun's nonempty response-resource contract. -/
+abbrev OracleContract {p : PFunctor.{u, u}} {C : StepClass.{u, v}}
+    (Q : QuantitativeStepClass.{u, v, w} C) (interface : InterfaceBoundary C p)
+    (label : Type x) :=
+  PFunctor.DynSystem.DynComputation.ResponseResourceContract Q interface label
 
 namespace OracleResourceModel
 
-variable {labelOf : p.A → label} (model : OracleResourceModel Q interface labelOf)
-
-/-- Expose response-length moduli to the second-order bound on an open caller. -/
-def modulus : OracleModulus label → ℕ → ℕ
-  | .responseSize interface => model.responseSize interface
-
-omit [C.HasProd] [C.HasSum] [C.HasOption] [DecidableEq p.A] in
-/-- Every response-length modulus exposed to the open bound is monotone. -/
-theorem modulus_monotone :
-    _root_.Complexity.SecondOrderPolynomial.MonotoneLengths model.modulus := by
-  intro symbol
-  cases symbol with
-  | responseSize interface => exact model.responseSize_monotone interface
+abbrev modulus := @PFunctor.DynSystem.DynComputation.ResponseResourceModel.modulus
+abbrev modulus_monotone :=
+  @PFunctor.DynSystem.DynComputation.ResponseResourceModel.modulus_monotone
 
 end OracleResourceModel
 
-/-- A pinned classification of query positions into oracle interfaces and a nonempty collection of
-admissible resource models.
-
-The admissibility predicate is part of the contract: it is what fixes or constrains response-size
-moduli. The nonemptiness field prevents universal quantification over compatible models from
-proving a complexity statement vacuously when one query admits unbounded encoded answers of the
-same size.
-
-Admissibility and nonemptiness are explicit relative assumptions. They do not prove that an
-envelope is tight or that the oracle is efficiently implementable. A closed, non-relative
-complexity predicate must therefore pin an independently justified canonical contract. -/
-structure OracleContract (Q : QuantitativeStepClass.{u, v, w} C)
-    (interface : InterfaceBoundary C p) (label : Type x) where
-  /-- Interface label of each syntactic query position. -/
-  labelOf : p.A → label
-  /-- Resource environments admitted by this contract. -/
-  admissible : OracleResourceModel Q interface labelOf → Prop
-  /-- The contract admits at least one global finite resource envelope. -/
-  model_nonempty : ∃ model, admissible model
-
 namespace OracleContract
 
-variable (contract : OracleContract Q interface label)
-
-/-- The type of resource environments compatible with a contract. -/
-abbrev Model := { model : OracleResourceModel Q interface contract.labelOf //
-  contract.admissible model }
+abbrev Model {p : PFunctor.{u, u}} {C : StepClass.{u, v}}
+    {Q : QuantitativeStepClass.{u, v, w} C} {interface : InterfaceBoundary C p}
+    {label : Type x} (contract : OracleContract Q interface label) :=
+  PFunctor.DynSystem.DynComputation.ResponseResourceContract.Model contract
 
 namespace Model
 
-variable {contract : OracleContract Q interface label}
+variable {p : PFunctor.{u, u}} {C : StepClass.{u, v}}
+  {Q : QuantitativeStepClass.{u, v, w} C} {interface : InterfaceBoundary C p}
+  {label : Type x} {contract : OracleContract Q interface label}
 
-/-- Forget that a resource environment satisfies its contract. -/
-abbrev resourceModel (model : contract.Model) :
-    OracleResourceModel Q interface contract.labelOf :=
-  model.1
-
-/-- The second-order length environment supplied by a compatible resource model. -/
-abbrev modulus (model : contract.Model) : OracleModulus label → ℕ → ℕ :=
-  model.resourceModel.modulus
-
-omit [C.HasProd] [C.HasSum] [C.HasOption] [DecidableEq p.A] in
-/-- Every compatible resource model supplies monotone second-order length functions. -/
+abbrev resourceModel (model : contract.Model) :=
+  PFunctor.DynSystem.DynComputation.ResponseResourceContract.Model.resourceModel model
+abbrev modulus (model : contract.Model) :=
+  PFunctor.DynSystem.DynComputation.ResponseResourceContract.Model.modulus model
 theorem modulus_monotone (model : contract.Model) :
     _root_.Complexity.SecondOrderPolynomial.MonotoneLengths model.modulus :=
-  model.resourceModel.modulus_monotone
+  PFunctor.DynSystem.DynComputation.ResponseResourceContract.Model.modulus_monotone model
 
 end Model
 
@@ -346,174 +125,49 @@ end OracleContract
 
 /-! ## Backend-relative strict PPT -/
 
-/-- Inspectable evidence that an oracle program is strict polynomial-time relative to one
-quantitative backend and pinned boundary.
+variable {p : PFunctor.{u, u}} {C : StepClass.{u, v}}
+  [C.HasProd] [C.HasSum] [C.HasOption] [DecidableEq p.A]
+  {Q : QuantitativeStepClass.{u, v, w} C} {input output : Type u}
+  {bd : Boundary C p input output} {label : Type x}
 
-One realization must work for all inputs and one second-order polynomial must bound every finite
-typed interaction prefix under every compatible oracle-length model. -/
-structure StrictPPTWitness (Q : QuantitativeStepClass.{u, v, w} C)
-    (bd : Boundary C p input output) (contract : OracleContract Q bd.interface label)
-    (program : input → FreeM p output) where
-  /-- The single executable realization for the entire input family. -/
-  realization : QuantitativeRealization Q bd
-  /-- The realization implements the given free interaction syntax. -/
-  implements : realization.machine.Implements program
-  /-- Returned payload size is polynomially recoverable from the charged tagged readout size. -/
-  outputRecovery : Q.PolyOutputSizeRecovery bd
-  /-- One response-length-relative polynomial bound, independent of the input and length model. -/
-  polynomial : ResourcePolynomial (OracleModulus label)
-  /-- Every contract-conforming finite answer prefix obeys the polynomial bound. -/
-  runsWithin : ∀ model : contract.Model,
-    realization.RunsWithinUnder model.resourceModel.allows fun value ↦
-      polynomial.eval model.modulus (Q.size bd.input value)
-
-/-! ## Certified immediately returning programs -/
-
-/-- The executable code needed by an immediately returning program.
-
-The result function is explicit, so an arbitrary host-language function cannot enter this
-constructor without a backend realizer. The readout certificate is polynomially bounded because
-its encoded sum tag and work are part of every execution. The transition realizer is required for
-type-correct executability but needs no bound because a pure machine never invokes it. -/
-structure PureCertificate
+/-- VCVio's strict-PPT witness is PolyFun's generic polynomial program witness, interpreted as a
+cryptographic open-oracle certificate. -/
+abbrev StrictPPTWitness
     (Q : QuantitativeStepClass.{u, v, w} C) (bd : Boundary C p input output)
-    (function : input → output) where
-  /-- Executable result computation with polynomial work and output growth. -/
-  result : Q.PolyRealizer bd.input bd.out function
-  /-- Executable resolved-state readout, including its sum tag and encoded-size growth. -/
-  head : Q.PolyRealizer bd.out bd.head
-    (Sum.inl : output → output ⊕ p.A)
-  /-- Returned payload size is polynomially recoverable from the tagged readout. -/
-  outputRecovery : Q.PolyOutputSizeRecovery bd
-  /-- Executable evidence for the pure machine's necessarily absent transition.
+    (contract : OracleContract Q bd.interface label) (program : input → FreeM p output) :=
+  PFunctor.DynSystem.DynComputation.PolynomialProgramWitness Q bd contract program
 
-  This is requested directly instead of requiring the backend's whole option-closure suite. -/
-  update : Q.Realizer (bd.stateIdx bd.out) (StepClass.HasOption.option bd.out)
-    (PFunctor.DynSystem.DynComputation.ofFn (p := p) function).update?
+/-- VCVio's certified-pure facade over PolyFun's generic pure resource certificate. -/
+abbrev PureCertificate
+    (Q : QuantitativeStepClass.{u, v, w} C) (bd : Boundary C p input output)
+    (function : input → output) :=
+  PFunctor.DynSystem.DynComputation.PureResourceCertificate Q bd function
 
 namespace PureCertificate
 
+abbrev ofPolyRealizer :=
+  @PFunctor.DynSystem.DynComputation.PureResourceCertificate.ofPolyRealizer
+abbrev realization :=
+  @PFunctor.DynSystem.DynComputation.PureResourceCertificate.realization
+abbrev polynomial :=
+  @PFunctor.DynSystem.DynComputation.PureResourceCertificate.polynomial
+abbrev implements :=
+  @PFunctor.DynSystem.DynComputation.PureResourceCertificate.implements
+abbrev runsWithin :=
+  @PFunctor.DynSystem.DynComputation.PureResourceCertificate.runsWithin
+
 variable {function : input → output}
 
-/-- Build a certified pure program from one polynomial result realizer and an explicit polynomial
-model.
-
-The model supplies the resolved left-sum readout and the necessarily absent transition. Its
-structural choices are installed locally and remain visible in the result type, so this constructor
-cannot silently mix a boundary assembled with different product, sum, or option representations. -/
-def ofPolyRealizer (model : Q.PolynomialModel)
-    (result : Q.PolyRealizer bd.input bd.out function) :
-    letI := model.kernel.cProd
-    letI := model.kernel.cSum
-    letI := model.kernel.cOption
-    PureCertificate Q bd function := by
-  letI := model.category
-  letI := model.kernel.cProd
-  letI := model.kernel.cSum
-  letI := model.kernel.cOption
-  exact
-    { result := result
-      head := model.structural.inl bd.out bd.pos
-      outputRecovery := model.structural.polyOutputSizeRecovery bd
-      update :=
-        (model.structural.optionNone (bd.stateIdx bd.out) bd.out).code.castFunction (by
-          funext step
-          exact (PFunctor.DynSystem.DynComputation.update?_of_view_return
-            (PFunctor.DynSystem.DynComputation.ofFn (p := p) function)
-            (PFunctor.DynSystem.DynComputation.view_ofFn function step.1) step.2).symm) }
-
-/-- Quantitative realization assembled from the two certified pure-program primitives. -/
-def realization (certificate : PureCertificate Q bd function) :
-    QuantitativeRealization Q bd where
-  machine := PFunctor.DynSystem.DynComputation.ofFn (p := p) function
-  state := bd.out
-  initCode := certificate.result.code
-  headCode := certificate.head.code
-  updateCode := certificate.update
-
-/-- The first-order work and size certificates lifted into the five-component resource bound. -/
-def polynomial {label : Type x} (certificate : PureCertificate Q bd function) :
-    ResourcePolynomial (OracleModulus label) where
-  work := ResourcePolynomial.ofFirstOrder <|
-    _root_.Complexity.FirstOrderPolynomial.add certificate.result.work <|
-      _root_.Complexity.FirstOrderPolynomial.comp certificate.head.work
-        certificate.result.outputSize
-  queries := .const 0
-  traffic := .const 0
-  peakStateSize := ResourcePolynomial.ofFirstOrder certificate.result.outputSize
-  peakHeadSize := ResourcePolynomial.ofFirstOrder <|
-    _root_.Complexity.FirstOrderPolynomial.comp certificate.head.outputSize
-      certificate.result.outputSize
-
-/-- The assembled pure realization implements the expected `FreeM.pure` program. -/
-theorem implements (certificate : PureCertificate Q bd function) :
-    certificate.realization.machine.Implements fun input ↦ FreeM.pure (function input) := by
-  change (PFunctor.DynSystem.DynComputation.ofFn (p := p) function).Implements _
-  intro input
-  rw [denote_ofFn]
-  simp
-
-/-- Every finite prefix of the pure realization satisfies its derived polynomial bound. -/
-theorem runsWithin {label : Type x} (certificate : PureCertificate Q bd function)
-    (allows : ∀ position, p.B position → Prop)
-    (length : OracleModulus label → ℕ → ℕ) :
-    certificate.realization.RunsWithinUnder allows fun input ↦
-      (certificate.polynomial (label := label)).eval length
-        (Q.size bd.input input) := by
-  refine ⟨?_, ?_, ?_⟩
-  · intro input finish trace _
-    cases trace with
-    | nil state =>
-        rw [ExecutionCost.le_iff]
-        simp only [QuantitativeRealization.executionCost,
-          QuantitativeRealization.ExecutionTrace.cost,
-          PureCertificate.realization, PureCertificate.polynomial,
-          ResourcePolynomial.eval, ResourcePolynomial.eval_ofFirstOrder,
-          _root_.Complexity.FirstOrderPolynomial.eval_add,
-          _root_.Complexity.FirstOrderPolynomial.eval_comp,
-          ExecutionCost.ofWork, ExecutionCost.observe, ExecutionCost.work_add,
-          ExecutionCost.queries_add, ExecutionCost.traffic_add,
-          ExecutionCost.peakStateSize_add, ExecutionCost.peakHeadSize_add,
-          add_zero, Nat.max_zero, Nat.zero_max]
-        refine ⟨?_, le_rfl, le_rfl, ?_, ?_⟩
-        · exact Nat.add_le_add (certificate.result.work_le input) <|
-            (certificate.head.work_le (function input)).trans <|
-              certificate.head.work.eval_monotone (certificate.result.outputSize_le input)
-        · exact certificate.result.outputSize_le input
-        · exact (certificate.head.outputSize_le (function input)).trans <|
-            certificate.head.outputSize.eval_monotone
-              (certificate.result.outputSize_le input)
-    | query view_eq direction tail =>
-        change Sum.inl _ = Sum.inr _ at view_eq
-        exact nomatch view_eq
-  · intro input
-    exact resolvesInUnder_return _ _ 0 _ _ (view_ofFn function (function input))
-  · intro input state trace _ position next view_eq
-    change Sum.inl state =
-      Sum.inr (⟨position, next⟩ : p.Obj certificate.realization.machine.State) at view_eq
-    exact nomatch view_eq
-
-/-- Build the complete strict-PPT witness for an immediately returning program under any contract.
-
-The contract is irrelevant to the numeric bound because the program makes no queries, but it
-remains fixed in the resulting type so this constructor composes with open programs without
-changing their interface policy. -/
-def strictPPTWitness {label : Type x} (certificate : PureCertificate Q bd function)
+/-- Build the complete strict-PPT witness for an immediately returning program. -/
+def strictPPTWitness (certificate : PureCertificate Q bd function)
     (contract : OracleContract Q bd.interface label) :
-    StrictPPTWitness Q bd contract fun input ↦ FreeM.pure (function input) where
-  realization := certificate.realization
-  implements := certificate.implements
-  outputRecovery := certificate.outputRecovery
-  polynomial := certificate.polynomial
-  runsWithin model := certificate.runsWithin model.resourceModel.allows model.modulus
+    StrictPPTWitness Q bd contract fun value ↦ FreeM.pure (function value) :=
+  PFunctor.DynSystem.DynComputation.PureResourceCertificate.programWitness
+    certificate contract
 
 end PureCertificate
 
-/-- Strict, worst-case oracle PPT relative to an explicit quantitative backend.
-
-The `By` suffix is intentional: using this proposition as conventional machine-model PPT requires
-an adequacy theorem for `Q`. It is also relative to the supplied `OracleContract`; a closed alias
-must pin an honest canonical contract rather than quantify over or accept an arbitrary one. -/
+/-- Strict, worst-case oracle PPT relative to an explicit quantitative backend. -/
 def IsOraclePPTBy (Q : QuantitativeStepClass.{u, v, w} C)
     (bd : Boundary C p input output) (contract : OracleContract Q bd.interface label)
     (program : input → FreeM p output) : Prop :=
@@ -523,88 +177,57 @@ def IsOraclePPTBy (Q : QuantitativeStepClass.{u, v, w} C)
 abbrev IsStrictPPTBy := @IsOraclePPTBy
 
 /-- An immediately returning function with explicit polynomial code is strict oracle PPT. -/
-theorem PureCertificate.isOraclePPTBy {function : input → output} {label : Type x}
+theorem PureCertificate.isOraclePPTBy {function : input → output}
     (certificate : PureCertificate Q bd function)
     (contract : OracleContract Q bd.interface label) :
-    IsOraclePPTBy Q bd contract fun input ↦ FreeM.pure (function input) :=
+    IsOraclePPTBy Q bd contract fun value ↦ FreeM.pure (function value) :=
   ⟨certificate.strictPPTWitness contract⟩
 
 namespace StrictPPTWitness
 
 variable {contract : OracleContract Q bd.interface label} {program : input → FreeM p output}
 
-/-- A second-order polynomial bounding returned payload size through the charged peak readout. -/
-def outputSizePolynomial (witness : StrictPPTWitness Q bd contract program) :
-    _root_.Complexity.SecondOrderPolynomial (OracleModulus label) :=
-  (ResourcePolynomial.ofFirstOrder witness.outputRecovery.polynomial).comp
-    witness.polynomial.peakHeadSize
+/-- Preserve VCVio's direct polynomial projection over PolyFun's factored run certificate. -/
+abbrev polynomial (witness : StrictPPTWitness Q bd contract program) :=
+  witness.runBound.polynomial
 
-@[simp]
-theorem eval_outputSizePolynomial (witness : StrictPPTWitness Q bd contract program)
-    (model : contract.Model) (value : input) :
-    witness.outputSizePolynomial.eval model.modulus (Q.size bd.input value) =
-      witness.outputRecovery.polynomial.eval
-        (witness.polynomial.eval model.modulus (Q.size bd.input value)).peakHeadSize := by
-  simp [outputSizePolynomial, ResourcePolynomial.eval]
+/-- Preserve VCVio's model-specialized pathwise bound accessor. -/
+theorem runsWithin (witness : StrictPPTWitness Q bd contract program)
+    (model : contract.Model) :
+    witness.realization.RunsWithinUnder model.resourceModel.allows fun value ↦
+      witness.polynomial.eval model.modulus (Q.size bd.input value) :=
+  witness.runBound.runsWithin model
 
-/-- Every return reached by a conforming concrete execution has polynomially bounded encoded
-payload size.
-
-The proof first recovers the payload from the final tagged readout and then uses the exact
-all-prefix resource bound. Thus a sum encoding cannot hide an exponentially larger result behind
-a short `peakHeadSize`. -/
-theorem returnedSize_le (witness : StrictPPTWitness Q bd contract program)
-    (model : contract.Model) (value : input) {finish : witness.realization.machine.State}
-    (trace : witness.realization.ExecutionTrace
-      (witness.realization.machine.init value) finish)
-    (htrace : trace.Conforms model.resourceModel.allows) (result : output)
-    (view_eq : witness.realization.machine.view finish = Sum.inl result) :
-    Q.size bd.out result ≤
-      witness.outputSizePolynomial.eval model.modulus (Q.size bd.input value) := by
-  have hreturned := witness.realization.returnedSize_le_peakHeadSize
-    witness.outputRecovery.toOutputSizeRecovery value trace result view_eq
-  have hcost := (witness.runsWithin model).cost_le value trace htrace
-  rw [witness.eval_outputSizePolynomial model value]
-  exact hreturned.trans (witness.outputRecovery.polynomial.eval_monotone hcost.2.2.2.2)
-
-/-- Transport a strict-PPT witness across extensional equality of whole program families.
-
-The realization, operational costs, and resource polynomial are unchanged. Only the semantic
-program index is transported, so this constructor cannot manufacture executable evidence. -/
+abbrev outputSizePolynomial :=
+  @PFunctor.DynSystem.DynComputation.PolynomialProgramWitness.outputSizePolynomial
+abbrev eval_outputSizePolynomial :=
+  @PFunctor.DynSystem.DynComputation.PolynomialProgramWitness.eval_outputSizePolynomial
+abbrev returnedSize_le :=
+  @PFunctor.DynSystem.DynComputation.PolynomialProgramWitness.returnedSize_le
 def congrProgram {program' : input → FreeM p output}
     (witness : StrictPPTWitness Q bd contract program) (hprogram : program = program') :
     StrictPPTWitness Q bd contract program' :=
-  hprogram ▸ witness
+  PFunctor.DynSystem.DynComputation.PolynomialProgramWitness.congrProgram witness hprogram
 
-/-- A strict PPT witness retains quantitative realizability when bounds are forgotten. -/
 theorem isQuantitativelyRealizableBy (witness : StrictPPTWitness Q bd contract program) :
     IsQuantitativelyRealizableBy Q bd program :=
-  ⟨witness.realization, witness.implements⟩
+  PFunctor.DynSystem.DynComputation.PolynomialProgramWitness.isQuantitativelyRealizableBy witness
 
-/-- Specialize a strict PPT witness to one concrete oracle-length environment. -/
 theorem isQuantitativelyRealizableWithinUnder
     (witness : StrictPPTWitness Q bd contract program) (model : contract.Model) :
     IsQuantitativelyRealizableWithinUnder Q bd model.resourceModel.allows program
       (fun value ↦ witness.polynomial.eval model.modulus (Q.size bd.input value)) :=
   ⟨witness.realization, witness.implements, witness.runsWithin model⟩
 
-/-- When a model admits every typed reply, its query component bounds the full free syntax. -/
 theorem isTotalRollBound (witness : StrictPPTWitness Q bd contract program)
     (model : contract.Model)
     (hAllows : ∀ position answer, model.resourceModel.allows position answer)
     (value : input) :
     (program value).IsTotalRollBound
       (witness.polynomial.eval model.modulus (Q.size bd.input value)).queries := by
-  have hAllowsEq : model.resourceModel.allows = fun _ _ ↦ True := by
-    funext position answer
-    apply propext
-    exact ⟨fun _ ↦ trivial, fun _ ↦ hAllows position answer⟩
-  have hRuns : witness.realization.RunsWithin fun input ↦
-      witness.polynomial.eval model.modulus (Q.size bd.input input) := by
-    change witness.realization.RunsWithinUnder (fun _ _ ↦ True) _
-    rw [← hAllowsEq]
-    exact witness.runsWithin model
-  exact hRuns.isTotalRollBound witness.implements value
+  simpa only [PolynomialRunBound.bound_apply] using
+    PFunctor.DynSystem.DynComputation.PolynomialProgramWitness.isTotalRollBound
+      witness model hAllows value
 
 end StrictPPTWitness
 
@@ -612,7 +235,7 @@ namespace IsOraclePPTBy
 
 variable {contract : OracleContract Q bd.interface label} {program : input → FreeM p output}
 
-/-- Strict oracle PPT is invariant under extensional equality of whole program families. -/
+/-- Strict oracle PPT is invariant under equality of whole program families. -/
 theorem congrProgram {program' : input → FreeM p output}
     (h : IsOraclePPTBy Q bd contract program) (hprogram : program = program') :
     IsOraclePPTBy Q bd contract program' := by
@@ -625,13 +248,12 @@ theorem isQuantitativelyRealizableBy (h : IsOraclePPTBy Q bd contract program) :
   obtain ⟨witness⟩ := h
   exact witness.isQuantitativelyRealizableBy
 
-/-- Strict PPT erases all the way to qualitative realizability. -/
+/-- Strict PPT erases to qualitative realizability. -/
 theorem isRealizableBy (h : IsOraclePPTBy Q bd contract program) :
     IsRealizableBy C bd program :=
   h.isQuantitativelyRealizableBy.isRealizableBy
 
 end IsOraclePPTBy
-
 /-! ## OracleComp and uniform-family facades -/
 
 /-- Strict oracle PPT for a VCVio `OracleComp` program, via its definitional `FreeM` syntax. -/

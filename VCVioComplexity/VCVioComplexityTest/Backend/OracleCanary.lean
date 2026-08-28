@@ -854,11 +854,12 @@ def oneCoinStrictPPTWitness : StrictPPTWitness quantitativeStepClass coinBoundar
   realization := oneCoinRealization
   implements := oneCoinMachine_implements
   outputRecovery := coinOutputRecovery
-  polynomial := oneCoinPolynomial
-  runsWithin model := by
-    rw [show model.resourceModel =
-      fairCoinResourceModel quantitativeStepClass coinBoundary.interface from model.2]
-    simpa [oneCoinPolynomial] using oneCoinRealization_runsWithin
+  runBound :=
+    { polynomial := oneCoinPolynomial
+      runsWithin model := by
+        rw [show model.resourceModel =
+          fairCoinResourceModel quantitativeStepClass coinBoundary.interface from model.2]
+        simpa [oneCoinPolynomial] using oneCoinRealization_runsWithin }
 
 /-- End-to-end strict, backend-relative PPT theorem for a genuine binary oracle query. -/
 theorem oneCoin_isOraclePPTBy :

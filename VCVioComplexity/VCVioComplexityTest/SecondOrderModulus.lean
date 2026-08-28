@@ -88,12 +88,12 @@ def responseSensitivePolynomial : ResourcePolynomial (OracleModulus Unit) :=
 /-- The second-order work bound observes the tight response modulus. -/
 example :
     (responseSensitivePolynomial.eval tightContractModel.modulus 0).work = 12 :=
-  rfl
+  by simp [responseSensitivePolynomial, tightContractModel, tightResponseModel, oneCoinCost]
 
 /-- The same syntax evaluates differently under the admissible slack modulus. -/
 example :
     (responseSensitivePolynomial.eval slackContractModel.modulus 0).work = 13 :=
-  rfl
+  by simp [responseSensitivePolynomial, slackContractModel, slackResponseModel, oneCoinCost]
 
 private theorem oneCoin_runsWithin_tight :
     oneCoinRealization.RunsWithinUnder tightResponseModel.allows (fun _ ↦ oneCoinCost) := by
@@ -109,24 +109,23 @@ def oneCoinTwoModelWitness : StrictPPTWitness quantitativeStepClass coinBoundary
   realization := oneCoinRealization
   implements := oneCoinMachine_implements
   outputRecovery := coinOutputRecovery
-  polynomial := responseSensitivePolynomial
-  runsWithin model := by
-    change oneCoinRealization.RunsWithinUnder model.1.allows fun value ↦
-      responseSensitivePolynomial.eval model.1.modulus
-        (quantitativeStepClass.size coinBoundary.input value)
-    rcases model.2 with tight_eq | slack_eq
-    · rw [tight_eq]
-      exact oneCoin_runsWithin_tight.mono fun input ↦ by
-        cases input
-        rw [ExecutionCost.le_iff]
-        change 10 ≤ 12 ∧ 1 ≤ 3 ∧ 2 ≤ 4 ∧ 2 ≤ 4 ∧ 2 ≤ 4
-        decide
-    · rw [slack_eq]
-      exact oneCoin_runsWithin_slack.mono fun input ↦ by
-        cases input
-        rw [ExecutionCost.le_iff]
-        change 10 ≤ 13 ∧ 1 ≤ 4 ∧ 2 ≤ 5 ∧ 2 ≤ 5 ∧ 2 ≤ 5
-        decide
+  runBound :=
+    { polynomial := responseSensitivePolynomial
+      runsWithin model := by
+        change oneCoinRealization.RunsWithinUnder model.1.allows fun value ↦
+          responseSensitivePolynomial.eval model.1.modulus
+            (quantitativeStepClass.size coinBoundary.input value)
+        rcases model.2 with tight_eq | slack_eq
+        · rw [tight_eq]
+          exact oneCoin_runsWithin_tight.mono fun input ↦ by
+            cases input
+            rw [ExecutionCost.le_iff]
+            simp [responseSensitivePolynomial, tightResponseModel, oneCoinCost]
+        · rw [slack_eq]
+          exact oneCoin_runsWithin_slack.mono fun input ↦ by
+            cases input
+            rw [ExecutionCost.le_iff]
+            simp [responseSensitivePolynomial, slackResponseModel, oneCoinCost] }
 
 /-- Backend-relative strict PPT under a contract with two response-size environments. -/
 theorem oneCoin_isOraclePPTBy_twoResponseModels :

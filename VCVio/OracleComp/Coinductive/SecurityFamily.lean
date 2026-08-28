@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.OracleComp
-public import PolyFun.PFunctor.Lens.Cartesian
+public import PolyFun.PFunctor.Free.Sigma
 
 /-!
 # Security-parameter families as one syntactic interaction
@@ -21,10 +21,11 @@ The packed computation receives the security parameter as ordinary input, tags e
 that parameter, and tags its result with the same parameter. A quantitative realization of the
 packed program is therefore one implementation of the whole family.
 
-The construction is entirely syntactic. It uses `PFunctor.Lens.sigmaInj` to transport each member
-into the aggregate interface, so it preserves the original query tree and all typed answer paths.
-This file deliberately does not select an encoding of `Nat`; a concrete complexity backend must
-pin one explicitly (normally unary for a cryptographic security parameter).
+The construction is entirely syntactic. It specializes PolyFun's generic `FreeM.sigmaInj` and
+`FreeM.packFamily` operations to `Nat`-indexed `OracleComp` families, preserving the original
+query tree and all typed answer paths. This file deliberately does not select an encoding of
+`Nat`; a concrete complexity backend must pin one explicitly (normally unary for a cryptographic
+security parameter).
 -/
 
 @[expose] public section
@@ -50,18 +51,19 @@ variable {ι : Nat → Type u} {spec : (n : Nat) → OracleSpec.{u, v} (ι n)}
 /-- Lift one member of an oracle family into the aggregate, parameter-tagged interface. -/
 def packComp (n : Nat) (oa : OracleComp (spec n) (β n)) :
     OracleComp (Spec spec) (Output β) :=
-  OracleComp.ofFreeM <|
-    PFunctor.FreeM.map (Sigma.mk n) <|
-      oa.toFreeM.mapLens
-        (PFunctor.Lens.sigmaInj (F := fun n ↦ (spec n).toPFunctor) n)
+  OracleComp.ofFreeM <| (OracleSpec.toPFunctor_sigma spec).symm ▸
+    PFunctor.FreeM.sigmaInj (P := fun n ↦ (spec n).toPFunctor) (X := β) n oa.toFreeM
 
 /-- Package a security-indexed program family as one program over the aggregate interface.
 
 Uniform complexity is stated about a single realization of this function. Pointwise realizations
 of `program n` do not by themselves give a realization of `packProgram program`. -/
 def packProgram (program : (n : Nat) → α n → OracleComp (spec n) (β n)) :
-    Input α → OracleComp (Spec spec) (Output β)
-  | ⟨n, input⟩ => packComp n (program n input)
+    Input α → OracleComp (Spec spec) (Output β) :=
+  fun input ↦ OracleComp.ofFreeM <|
+    (OracleSpec.toPFunctor_sigma spec).symm ▸
+      PFunctor.FreeM.packFamily (P := fun n ↦ (spec n).toPFunctor)
+        (fun n value ↦ (program n value).toFreeM) input
 
 @[simp]
 theorem packProgram_apply (program : (n : Nat) → α n → OracleComp (spec n) (β n))

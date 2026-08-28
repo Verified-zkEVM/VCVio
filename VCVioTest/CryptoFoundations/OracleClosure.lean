@@ -74,14 +74,17 @@ theorem dependentHandler_returnsAllowed (position : dependentSpec.Domain) :
 
 /-- The adaptive outer program returns only zero or one on every admitted typed-answer path. -/
 theorem dependentProgram_returnsSmall :
-    dependentProgram.LeavesSatisfyUnder dependentAllows (fun result ↦ result ≤ 1) := by
+  dependentProgram.LeavesSatisfyUnder dependentAllows (fun result ↦ result ≤ 1) := by
   unfold dependentProgram
-  rw [FreeM.leavesSatisfyUnder_liftBind]
+  change ∀ answer : Bool, dependentAllows DependentQuery.bit answer →
+    (if answer then FreeM.liftBind (P := dependentSpec.toPFunctor) DependentQuery.trit
+        (fun digit ↦ FreeM.pure digit.val)
+      else FreeM.pure 0).LeavesSatisfyUnder dependentAllows (fun result ↦ result ≤ 1)
   intro answer _
   cases answer with
   | false => simp
   | true =>
-      simp only [if_true, FreeM.leavesSatisfyUnder_liftBind]
+      simp only [if_true]
       intro digit hdigit
       simpa [dependentAllows] using hdigit
 

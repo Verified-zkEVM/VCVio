@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
-public import PolyFun.Realizability.Quantitative.BoundedClosure
+public import PolyFun.PFunctor.Free.WP
 
 /-!
 # Proof-bearing oracle handlers
@@ -27,83 +27,6 @@ claimed cost function cannot justify that quantitative step.
 @[expose] public section
 
 universe u v w x y
-
-namespace PFunctor.FreeM
-
-variable {p : PFunctor.{u, u}} {α β : Type u}
-
-/-- Every returned leaf reached using allowed answers satisfies `accept`.
-
-Non-vacuity is intentionally not part of this predicate. It is supplied by
-`QuantitativeRealization.RunsWithinUnder`, which requires progress at every conformingly reachable
-query. Keeping the two obligations separate makes result conformance reusable independently of a
-particular cost witness. -/
-def LeavesSatisfyUnder (allows : ∀ position, p.B position → Prop) (accept : α → Prop) :
-    FreeM p α → Prop
-  | .pure result => accept result
-  | .liftBind position next =>
-      ∀ direction, allows position direction →
-        (next direction).LeavesSatisfyUnder allows accept
-
-@[simp]
-theorem leavesSatisfyUnder_pure (allows : ∀ position, p.B position → Prop)
-    (accept : α → Prop) (result : α) :
-    (pure result : FreeM p α).LeavesSatisfyUnder allows accept ↔ accept result :=
-  Iff.rfl
-
-@[simp]
-theorem leavesSatisfyUnder_liftBind (allows : ∀ position, p.B position → Prop)
-    (accept : α → Prop) (position : p.A) (next : p.B position → FreeM p α) :
-    (FreeM.liftBind position next).LeavesSatisfyUnder allows accept ↔
-      ∀ direction, allows position direction →
-        (next direction).LeavesSatisfyUnder allows accept :=
-  Iff.rfl
-
-/-- Weakening the required leaf predicate preserves whole-tree conformance. -/
-theorem LeavesSatisfyUnder.mono {allows : ∀ position, p.B position → Prop}
-    {accept accept' : α → Prop} (haccept : ∀ result, accept result → accept' result)
-    {program : FreeM p α} (h : program.LeavesSatisfyUnder allows accept) :
-    program.LeavesSatisfyUnder allows accept' := by
-  induction program with
-  | pure result => exact haccept result h
-  | lift_bind position next ih =>
-      exact fun direction hdirection ↦ ih direction (h direction hdirection)
-
-/-- Mapping a function changes only the predicate imposed on returned leaves. -/
-theorem leavesSatisfyUnder_map_iff (allows : ∀ position, p.B position → Prop)
-    (accept : β → Prop) (function : α → β) (program : FreeM p α) :
-    (function <$> program).LeavesSatisfyUnder allows accept ↔
-      program.LeavesSatisfyUnder allows (accept ∘ function) := by
-  induction program with
-  | pure result => rfl
-  | lift_bind position next ih =>
-      change
-        (∀ direction, allows position direction →
-          (function <$> next direction).LeavesSatisfyUnder allows accept) ↔
-        ∀ direction, allows position direction →
-          (next direction).LeavesSatisfyUnder allows (accept ∘ function)
-      exact forall_congr' fun direction ↦
-        imp_congr_right fun _ ↦ ih direction
-
-/-- Whole-tree result conformance composes through monadic sequencing. -/
-theorem leavesSatisfyUnder_bind_iff (allows : ∀ position, p.B position → Prop)
-    (accept : β → Prop) (program : FreeM p α) (next : α → FreeM p β) :
-    (FreeM.bind program next).LeavesSatisfyUnder allows accept ↔
-      program.LeavesSatisfyUnder allows
-        (fun result ↦ (next result).LeavesSatisfyUnder allows accept) := by
-  induction program with
-  | pure result => rfl
-  | lift_bind position continuation ih =>
-      change
-        (∀ direction, allows position direction →
-          (FreeM.bind (continuation direction) next).LeavesSatisfyUnder allows accept) ↔
-        ∀ direction, allows position direction →
-          (continuation direction).LeavesSatisfyUnder allows
-            (fun result ↦ (next result).LeavesSatisfyUnder allows accept)
-      exact forall_congr' fun direction ↦
-        imp_congr_right fun _ ↦ ih direction
-
-end PFunctor.FreeM
 
 namespace OracleComp.Complexity
 
@@ -125,91 +48,48 @@ variable [DecidableEq p.A] [Q.HasCategory] [Q.HasSum] [Q.HasOption] [Q.HasProd]
   {contract : OracleContract Q bd.interface label}
   {program : input → FreeM p middle} {next : middle → FreeM p output}
 
-/-- The backend-specific resource obligation left after composing two strict-PPT realizers.
+/-- The generic resource obligations needed to compose two strict-PPT witnesses.
 
-PolyFun derives phase-local bounds, handoff progress, and resolution generically. This certificate
-therefore contains only the exact comparison for the structural code assembled by `seqComp` and a
-uniform polynomial bound on that comparison's overhead. It cannot attach an unverified meter to
-the bind: `SeqCompCostCertificate.cost_le` refers to the concrete composed realization's actual
-`ExecutionCost`. -/
+Both fields are PolyFun certificates: `handoff` bounds every conformingly reachable second phase,
+while `cost` bounds the concrete structural overhead of the assembled `seqComp` realization. -/
 structure BindCertificate
     (first : StrictPPTWitness Q bd contract program)
     (second : StrictPPTWitness Q (bd.mid outRep) contract next) where
-  /-- One polynomial allowance for structural wiring and phase-switching overhead. -/
-  overheadPolynomial : ResourcePolynomial (OracleModulus label)
-  /-- Exact composite-to-phase cost comparison for every compatible answer model. -/
-  costCertificate : ∀ model : contract.Model,
-    SeqCompCostCertificate first.realization second.realization
-      model.resourceModel.allows
-  /-- The exact structural overhead is uniformly polynomial in the original input size. -/
-  overhead_le : ∀ (model : contract.Model) (value : input),
-    (costCertificate model).overhead value ≤
-      overheadPolynomial.eval model.modulus (Q.size bd.input value)
+  handoff : PolynomialSeqCompHandoffBound first.realization second.realization contract
+    second.runBound
+  cost : PolynomialSeqCompCostCertificate first.realization second.realization contract
 
 namespace BindCertificate
 
 variable {first : StrictPPTWitness Q bd contract program}
   {second : StrictPPTWitness Q (bd.mid outRep) contract next}
 
-/-- Uniform second-phase envelope obtained from the first witness's polynomial output recovery.
-
-Only values actually returned by a conforming first-phase trace are compared. The second
-witness's resource polynomial is monotone in encoded input size, so the recovered intermediate
-size supplies the required handoff envelope. -/
-def handoffBound (first : StrictPPTWitness Q bd contract program)
-    (second : StrictPPTWitness Q (bd.mid outRep) contract next)
-    (model : contract.Model) :
-    SeqCompHandoffBound first.realization model.resourceModel.allows fun value ↦
-      second.polynomial.eval model.modulus (Q.size (bd.mid outRep).input value) where
-  bound value := second.polynomial.eval model.modulus
-    (first.outputSizePolynomial.eval model.modulus (Q.size bd.input value))
-  returned_le value _finish trace htrace result view_eq :=
-    second.polynomial.eval_mono_input model.modulus_monotone
-      (first.returnedSize_le model value trace htrace result view_eq)
+/-- The generic composed run bound. -/
+def runBound (certificate : BindCertificate first second) :
+    PolynomialRunBound (first.realization.seqComp second.realization) contract :=
+  first.runBound.seqComp second.runBound certificate.handoff certificate.cost
 
 /-- Canonical resource polynomial for a certified bind.
 
 The second phase is composed with the first phase's returned-size polynomial; the remaining
 backend structural overhead is added conservatively. -/
-def polynomial (certificate : BindCertificate first second) :
-    ResourcePolynomial (OracleModulus label) :=
-  (first.polynomial + second.polynomial.comp first.outputSizePolynomial) +
-    certificate.overheadPolynomial
+abbrev polynomial (certificate : BindCertificate first second) :=
+  certificate.runBound.polynomial
 
 /-- PolyFun's bounded sequential-composition theorem derives the complete exact bound. -/
 theorem runsWithin (certificate : BindCertificate first second)
     (model : contract.Model) :
     (first.realization.seqComp second.realization).RunsWithinUnder
       model.resourceModel.allows fun value ↦
-        certificate.polynomial.eval model.modulus (Q.size bd.input value) := by
-  let secondComposed := second.polynomial.comp first.outputSizePolynomial
-  have hphases := ResourcePolynomial.add_eval_le_eval_add first.polynomial
-    secondComposed model.modulus
-  have htotal := ResourcePolynomial.add_eval_le_eval_add
-    (first.polynomial + secondComposed) certificate.overheadPolynomial model.modulus
-  apply ((first.runsWithin model).seqComp (second.runsWithin model)
-    (handoffBound first second model) (certificate.costCertificate model)).mono
-  intro value
-  have hoverhead := certificate.overhead_le model value
-  have hcomponents := ExecutionCost.add_le_add
-    (hphases (Q.size bd.input value)) hoverhead
-  simpa only [handoffBound, polynomial, secondComposed,
-    ResourcePolynomial.eval_comp] using
-      hcomponents.trans (htotal (Q.size bd.input value))
+        certificate.polynomial.eval model.modulus (Q.size bd.input value) :=
+  certificate.runBound.runsWithin model
 
 /-- Assemble the complete strict-PPT witness for monadic sequencing. -/
 def strictPPTWitness (certificate : BindCertificate first second) :
     StrictPPTWitness Q (bd.withOut outRep) contract fun value ↦
-      FreeM.bind (program value) next where
-  realization := first.realization.seqComp second.realization
-  implements := by
-    change (first.realization.machine.seqComp second.realization.machine).Implements _
-    exact first.implements.seqComp second.implements
-  outputRecovery :=
-    { polynomial := second.outputRecovery.polynomial
-      output_le := second.outputRecovery.output_le }
-  polynomial := certificate.polynomial
-  runsWithin := certificate.runsWithin
+      FreeM.bind (program value) next :=
+  PFunctor.DynSystem.DynComputation.PolynomialProgramWitness.bind first second
+    certificate.handoff certificate.cost
 
 /-- A certified exact-resource bind establishes backend-relative strict oracle PPT. -/
 theorem isOraclePPTBy (certificate : BindCertificate first second) :
@@ -290,20 +170,9 @@ theorem leavesSatisfyUnder_closeHandler
       (handler position).LeavesSatisfyUnder innerAllows (outerAllows position))
     (program : FreeM p α)
     (hprogram : program.LeavesSatisfyUnder outerAllows accept) :
-    (closeHandler handler program).LeavesSatisfyUnder innerAllows accept := by
-  induction program with
-  | pure result => exact hprogram
-  | lift_bind position next ih =>
-      change
-        (handler position >>= fun direction ↦
-          closeHandler handler (next direction)).LeavesSatisfyUnder innerAllows accept
-      change
-        (FreeM.bind (handler position)
-          (fun direction ↦ closeHandler handler (next direction))).LeavesSatisfyUnder
-          innerAllows accept
-      rw [PFunctor.FreeM.leavesSatisfyUnder_bind_iff]
-      exact (hhandler position).mono fun direction hdirection ↦
-        ih direction (hprogram direction hdirection)
+    (closeHandler handler program).LeavesSatisfyUnder innerAllows accept :=
+  PFunctor.FreeM.leavesSatisfyUnder_liftM handler outerAllows innerAllows accept
+    hhandler program hprogram
 
 /-- Result conformance of a dependent handler is equivalent to conformance of its packed form. -/
 theorem leavesSatisfyUnder_packHandler_iff
