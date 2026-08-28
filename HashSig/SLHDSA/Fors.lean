@@ -98,6 +98,10 @@ def forsPkAdrs (adrs : Adrs) : Adrs :=
 abbrev ForsSigCore (p : Params) (core : CorePrimitives p) :=
   Vector (core.Y × List core.Y) p.k
 
+/-- Pure FORS signature type retained until the Scheme consumer migrates in the downstream
+scheme-integration PR. -/
+abbrev ForsSig (p : Params) (prims : Primitives p) := ForsSigCore p prims.core
+
 /-- Low-level callback-parametric FORS public-key generation. Roots are computed in increasing
 tree order and compressed only after every root is available. -/
 def forsPkGenWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
