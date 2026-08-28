@@ -11,9 +11,9 @@ public import HashSig.SLHDSA.Scheme
 /-!
 # Oracle-parametric SLH-DSA scheme canaries
 
-These examples cover source compatibility of the legacy key constructors and the two observable
-internal FIPS 205 schedules.  Signing performs `H_msg`, FORS signing, recovery from that exact
-signature, and hypertree signing in order; it never regenerates the FORS public key.
+These examples cover the two observable internal FIPS 205 schedules. Signing performs `H_msg`,
+FORS signing, recovery from that exact signature, and hypertree signing in order; it never
+regenerates the FORS public key.
 -/
 
 public section
@@ -23,15 +23,6 @@ namespace SLHDSA.SchemeTest
 open OracleComp
 
 variable {p : Params} (core : CorePrimitives p)
-
-/-! The legacy generated constructor and projection names remain available downstream. -/
-
-example (prims : Primitives p) (pkSeed : prims.PkSeed) (pkRoot : prims.Y) :
-    PublicKey.pkSeed (PublicKey.mk pkSeed pkRoot : PublicKey prims) = pkSeed := rfl
-
-example (prims : Primitives p) (skSeed : prims.SkSeed) (skPrf : prims.SkPrf)
-    (pkSeed : prims.PkSeed) (pkRoot : prims.Y) :
-    SecretKey.skSeed (SecretKey.mk skSeed skPrf pkSeed pkRoot : SecretKey prims) = skSeed := rfl
 
 /-- FIPS 205 Algorithm 19 recovers the FORS public key from the generated signature before
 hypertree signing. Replacing that recovery with `forsPkGenM` makes this canary fail. -/

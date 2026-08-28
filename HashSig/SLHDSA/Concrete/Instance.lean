@@ -128,7 +128,7 @@ def shaPrimitives : Primitives slhdsaSha2_128_24 where
 
 /-- Decode the 3856-byte signature `R ‖ SIG_FORS ‖ SIG_HT` (FORS: `k` trees of
 `sk(16) ‖ auth(a×16)`; HT: WOTS `len×16` then XMSS auth `h'×16`). -/
-def decodeSignature (ba : ByteArray) : Signature shaPrimitives :=
+def decodeSignature (ba : ByteArray) : SignatureCore slhdsaSha2_128_24 shaPrimitives.core :=
   let R : Bytes 16 := baSliceToB16 ba 0
   let fors : Vector (Bytes 16 × List (Bytes 16)) 6 :=
     Vector.ofFn fun i : Fin 6 =>

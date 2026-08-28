@@ -45,8 +45,6 @@ open OracleComp OracleSpec
 
 namespace SLHDSA
 
-universe u
-
 variable {p : Params}
 
 /-- The SLH-DSA public key over an implementation-independent context: public seed and
@@ -56,36 +54,6 @@ structure PublicKeyCore (core : CorePrimitives p) where
   pkSeed : core.PkSeed
   /-- Hypertree root `PK.root`. -/
   pkRoot : core.Y
-
-/-- Source-compatible pure public-key type. -/
-abbrev PublicKey (prims : Primitives p) := PublicKeyCore prims.core
-
-namespace PublicKey
-
-/-! Compatibility aliases for the generated API of the former `PublicKey` structure. -/
-
-abbrev mk := @PublicKeyCore.mk
-abbrev pkSeed := @PublicKeyCore.pkSeed
-abbrev pkRoot := @PublicKeyCore.pkRoot
-protected def rec {prims : Primitives p} {motive : PublicKey prims → Sort u}
-    (mk : (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
-      motive (PublicKey.mk pkSeed pkRoot)) (t : PublicKey prims) : motive t :=
-  match t with
-  | ⟨pkSeed, pkRoot⟩ => mk pkSeed pkRoot
-
-protected def recOn {prims : Primitives p} {motive : PublicKey prims → Sort u}
-    (t : PublicKey prims) (mk : (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
-      motive (PublicKey.mk pkSeed pkRoot)) : motive t :=
-  match t with
-  | ⟨pkSeed, pkRoot⟩ => mk pkSeed pkRoot
-
-protected def casesOn {prims : Primitives p} {motive : PublicKey prims → Sort u}
-    (t : PublicKey prims) (mk : (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
-      motive (PublicKey.mk pkSeed pkRoot)) : motive t :=
-  match t with
-  | ⟨pkSeed, pkRoot⟩ => mk pkSeed pkRoot
-
-end PublicKey
 
 /-- The SLH-DSA secret key over an implementation-independent context. It carries the public
 material required by signing. -/
@@ -99,51 +67,10 @@ structure SecretKeyCore (core : CorePrimitives p) where
   /-- Hypertree root `PK.root`. -/
   pkRoot : core.Y
 
-/-- Source-compatible pure secret-key type. -/
-abbrev SecretKey (prims : Primitives p) := SecretKeyCore prims.core
-
-namespace SecretKey
-
-/-! Compatibility aliases for the generated API of the former `SecretKey` structure. -/
-
-abbrev mk := @SecretKeyCore.mk
-abbrev skSeed := @SecretKeyCore.skSeed
-abbrev skPrf := @SecretKeyCore.skPrf
-abbrev pkSeed := @SecretKeyCore.pkSeed
-abbrev pkRoot := @SecretKeyCore.pkRoot
-protected def rec {prims : Primitives p} {motive : SecretKey prims → Sort u}
-    (mk : (skSeed : prims.SkSeed) → (skPrf : prims.SkPrf) →
-      (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
-      motive (SecretKey.mk skSeed skPrf pkSeed pkRoot))
-    (t : SecretKey prims) : motive t :=
-  match t with
-  | ⟨skSeed, skPrf, pkSeed, pkRoot⟩ => mk skSeed skPrf pkSeed pkRoot
-
-protected def recOn {prims : Primitives p} {motive : SecretKey prims → Sort u}
-    (t : SecretKey prims)
-    (mk : (skSeed : prims.SkSeed) → (skPrf : prims.SkPrf) →
-      (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
-      motive (SecretKey.mk skSeed skPrf pkSeed pkRoot)) : motive t :=
-  match t with
-  | ⟨skSeed, skPrf, pkSeed, pkRoot⟩ => mk skSeed skPrf pkSeed pkRoot
-
-protected def casesOn {prims : Primitives p} {motive : SecretKey prims → Sort u}
-    (t : SecretKey prims)
-    (mk : (skSeed : prims.SkSeed) → (skPrf : prims.SkPrf) →
-      (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
-      motive (SecretKey.mk skSeed skPrf pkSeed pkRoot)) : motive t :=
-  match t with
-  | ⟨skSeed, skPrf, pkSeed, pkRoot⟩ => mk skSeed skPrf pkSeed pkRoot
-
-end SecretKey
-
 /-- An SLH-DSA signature: randomizer `R`, FORS signature, and hypertree signature
 (`R ‖ SIG_FORS ‖ SIG_HT`). -/
 abbrev SignatureCore (p : Params) (core : CorePrimitives p) :=
   core.Y × ForsSigCore p core × HtSigCore p core
-
-/-- Source-compatible pure signature type. -/
-abbrev Signature (prims : Primitives p) := SignatureCore p prims.core
 
 /-! ### Message-digest split (FIPS 205 §9) -/
 
@@ -209,22 +136,23 @@ def slhVerifyInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
 /-- Pure internal key generation is the deterministic interpretation of
 `slhKeygenInternalM`. -/
 def slhKeygenInternal (prims : Primitives p) (skSeed : prims.SkSeed) (skPrf : prims.SkPrf)
-    (pkSeed : prims.PkSeed) : PublicKey prims × SecretKey prims :=
+    (pkSeed : prims.PkSeed) : PublicKeyCore prims.core × SecretKeyCore prims.core :=
   simulateQ (PublicHash.impl prims)
     (slhKeygenInternalM prims.core skSeed skPrf pkSeed :
-      OracleComp (publicHashSpec prims.core) (PublicKey prims × SecretKey prims))
+      OracleComp (publicHashSpec prims.core)
+        (PublicKeyCore prims.core × SecretKeyCore prims.core))
 
 /-- Pure internal signing is the deterministic interpretation of `slhSignInternalM`. -/
-def slhSignInternal (prims : Primitives p) (msg : List Byte) (sk : SecretKey prims)
-    (addrnd : prims.Y) : Signature prims :=
+def slhSignInternal (prims : Primitives p) (msg : List Byte) (sk : SecretKeyCore prims.core)
+    (addrnd : prims.Y) : SignatureCore p prims.core :=
   simulateQ (PublicHash.impl prims)
     (slhSignInternalM prims.core msg sk addrnd :
-      OracleComp (publicHashSpec prims.core) (Signature prims))
+      OracleComp (publicHashSpec prims.core) (SignatureCore p prims.core))
 
 /-- Pure internal verification is the deterministic interpretation of
 `slhVerifyInternalM`. -/
 def slhVerifyInternal (prims : Primitives p) [DecidableEq prims.Y] (msg : List Byte)
-    (sig : Signature prims) (pk : PublicKey prims) : Bool :=
+    (sig : SignatureCore p prims.core) (pk : PublicKeyCore prims.core) : Bool :=
   simulateQ (PublicHash.impl prims)
     (slhVerifyInternalM prims.core msg sig pk : OracleComp (publicHashSpec prims.core) Bool)
 
@@ -367,7 +295,8 @@ theorem simulateQ_slhKeygenInternalM (prims : Primitives p)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
     simulateQ (PublicHash.impl prims)
         (slhKeygenInternalM prims.core skSeed skPrf pkSeed :
-          OracleComp (publicHashSpec prims.core) (PublicKey prims × SecretKey prims)) =
+          OracleComp (publicHashSpec prims.core)
+            (PublicKeyCore prims.core × SecretKeyCore prims.core)) =
       slhKeygenInternal prims skSeed skPrf pkSeed := rfl
 
 @[simp]
@@ -382,10 +311,10 @@ theorem simulateQ_slhSignInternalM_withPublicHash (core : CorePrimitives p)
 
 @[simp]
 theorem simulateQ_slhSignInternalM (prims : Primitives p)
-    (msg : List Byte) (sk : SecretKey prims) (addrnd : prims.Y) :
+    (msg : List Byte) (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
     simulateQ (PublicHash.impl prims)
         (slhSignInternalM prims.core msg sk addrnd :
-          OracleComp (publicHashSpec prims.core) (Signature prims)) =
+          OracleComp (publicHashSpec prims.core) (SignatureCore p prims.core)) =
       slhSignInternal prims msg sk addrnd := rfl
 
 @[simp]
@@ -399,7 +328,7 @@ theorem simulateQ_slhVerifyInternalM_withPublicHash (core : CorePrimitives p)
 
 @[simp]
 theorem simulateQ_slhVerifyInternalM (prims : Primitives p) [DecidableEq prims.Y]
-    (msg : List Byte) (sig : Signature prims) (pk : PublicKey prims) :
+    (msg : List Byte) (sig : SignatureCore p prims.core) (pk : PublicKeyCore prims.core) :
     simulateQ (PublicHash.impl prims)
         (slhVerifyInternalM prims.core msg sig pk :
           OracleComp (publicHashSpec prims.core) Bool) =
@@ -454,27 +383,29 @@ def emptyContextMessage (msg : List Byte) : List Byte :=
 
 /-- SLH-DSA key generation (FIPS 205 Algorithm 21): sample the three seeds. -/
 def slhKeygen [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
-    [SampleableType prims.PkSeed] : ProbComp (PublicKey prims × SecretKey prims) := do
+    [SampleableType prims.PkSeed] :
+    ProbComp (PublicKeyCore prims.core × SecretKeyCore prims.core) := do
   let skSeed ← $ᵗ prims.SkSeed
   let skPrf ← $ᵗ prims.SkPrf
   let pkSeed ← $ᵗ prims.PkSeed
   return slhKeygenInternal prims skSeed skPrf pkSeed
 
 /-- SLH-DSA signing (FIPS 205 Algorithm 22, empty context, hedged): sample `addrnd`. -/
-def slhSign [SampleableType prims.Y] (sk : SecretKey prims) (msg : List Byte) :
-    ProbComp (Signature prims) := do
+def slhSign [SampleableType prims.Y] (sk : SecretKeyCore prims.core) (msg : List Byte) :
+    ProbComp (SignatureCore p prims.core) := do
   let addrnd ← $ᵗ prims.Y
   return slhSignInternal prims (emptyContextMessage msg) sk addrnd
 
 /-- SLH-DSA verification (FIPS 205 Algorithm 24, empty context). -/
-def slhVerify [DecidableEq prims.Y] (pk : PublicKey prims) (msg : List Byte)
-    (sig : Signature prims) : Bool :=
+def slhVerify [DecidableEq prims.Y] (pk : PublicKeyCore prims.core) (msg : List Byte)
+    (sig : SignatureCore p prims.core) : Bool :=
   slhVerifyInternal prims (emptyContextMessage msg) sig pk
 
 /-- SLH-DSA as a generic `SignatureAlg` in the `ProbComp` monad. -/
 def slhdsaAlg [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.Y] :
-    SignatureAlg ProbComp (List Byte) (PublicKey prims) (SecretKey prims) (Signature prims) where
+    SignatureAlg ProbComp (List Byte) (PublicKeyCore prims.core) (SecretKeyCore prims.core)
+      (SignatureCore p prims.core) where
   keygen := slhKeygen prims
   sign _pk sk msg := slhSign prims sk msg
   verify pk msg σ := pure (slhVerify prims pk msg σ)
