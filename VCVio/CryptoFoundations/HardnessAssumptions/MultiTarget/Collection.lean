@@ -6,7 +6,6 @@ Authors: Matthias Meijers
 
 module
 public import VCVio.CryptoFoundations.TweakableHash
-public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
 # The collection oracle shared by the multi-target games

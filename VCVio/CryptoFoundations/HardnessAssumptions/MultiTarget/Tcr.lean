@@ -6,6 +6,7 @@ Authors: Nicolas Consigny, Matthias Meijers
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget.Collection
+public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
 # Single-function multi-target target-collision resistance for distinct tweaks (SM-TCR)
