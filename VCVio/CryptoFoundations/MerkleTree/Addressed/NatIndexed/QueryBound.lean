@@ -140,6 +140,52 @@ theorem isTotalQueryBound_authPathM
       rw [← auth_query_budget_succ]
       omega
 
+/-- Compose an authentication-path traversal with a continuation whose bound applies to every
+well-formed result.  The path-length premise retains the structural fact that `authPathM` returns
+exactly one sibling per level; ordinary `isTotalQueryBound_bind` cannot express this refinement
+because it quantifies over every list supplied to the continuation. -/
+theorem isTotalQueryBound_authPathM_bind
+    (leaf : ℕ → OracleComp spec Y)
+    (nodeHash : ℕ → ℕ → Y → Y → OracleComp spec Y)
+    (leafBudget nodeBudget idx z continuationBudget : ℕ)
+    (hleaf : ∀ i, IsTotalQueryBound (leaf i) leafBudget)
+    (hnode : ∀ h i l r, IsTotalQueryBound (nodeHash h i l r) nodeBudget)
+    {beta : Type u} (k : List Y → OracleComp spec beta)
+    (hk : ∀ path, path.length = z → IsTotalQueryBound (k path) continuationBudget) :
+    IsTotalQueryBound (authPathM leaf nodeHash idx z >>= k)
+      (((2 ^ z - 1) * leafBudget + (2 ^ z - z - 1) * nodeBudget) +
+        continuationBudget) := by
+  induction z generalizing k continuationBudget with
+  | zero =>
+      simpa [authPathM] using hk [] rfl
+  | succ z ih =>
+      rw [authPathM]
+      simp only [bind_assoc]
+      let siblingBudget :=
+        2 ^ z * leafBudget + (2 ^ z - 1) * nodeBudget
+      have hrest : ∀ path, path.length = z →
+          IsTotalQueryBound (do
+            let siblingRoot ← merkleRootM leaf nodeHash z (sibling (idx / 2 ^ z))
+            k (path ++ [siblingRoot])) (siblingBudget + continuationBudget) := by
+        intro path hlength
+        exact isTotalQueryBound_bind
+          (isTotalQueryBound_merkleRootM leaf nodeHash leafBudget nodeBudget z
+            (sibling (idx / 2 ^ z)) hleaf hnode)
+          fun siblingRoot => hk (path ++ [siblingRoot]) (by simp [hlength])
+      have hbound := ih (siblingBudget + continuationBudget)
+        (fun path => do
+          let siblingRoot ← merkleRootM leaf nodeHash z (sibling (idx / 2 ^ z))
+          k (path ++ [siblingRoot])) hrest
+      have hbudget :
+          (((2 ^ z - 1) * leafBudget + (2 ^ z - z - 1) * nodeBudget) +
+              siblingBudget) + continuationBudget =
+            ((2 ^ (z + 1) - 1) * leafBudget +
+              (2 ^ (z + 1) - (z + 1) - 1) * nodeBudget) +
+                continuationBudget := by
+        rw [auth_query_budget_succ]
+      rw [← hbudget]
+      simpa [Nat.add_assoc] using hbound
+
 private theorem isTotalQueryBound_getPutativeRootAddressedM
     {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → Y → Y → OracleComp spec Y)
