@@ -119,10 +119,31 @@ program without imposing countability on abstract state or answer types. -/
 class IsExecutable (R : ProbResponder spec) where
   /-- The executable answer-and-successor-state subdistribution. -/
   answerSPMF : R.State → (t : spec.Domain) → SPMF (spec.Range t × R.State)
+  /-- Executable states must be point-separating in the responder's measurable structure. -/
+  instMeasurableSingletonClassState :
+    letI := R.instMeasurableSpaceState
+    MeasurableSingletonClass R.State
+  /-- Executable answers must be point-separating in the responder's measurable structure. -/
+  instMeasurableSingletonClassRange : ∀ t,
+    letI := R.instMeasurableSpaceRange t
+    MeasurableSingletonClass (spec.Range t)
   /-- The executable realization denotes exactly the stored answer kernel. -/
   answerKernel_eq_toMeasure : ∀ s t,
     letI := R.instMeasurableSpaceRange t
     R.answerKernel t s = (answerSPMF s t).toMeasure
+
+/-- The authoritative kernel uniquely determines an executable realization. Point-separating
+measurable spaces are essential here: equality as measures can otherwise forget distinctions
+between individual executable outcomes. -/
+theorem IsExecutable.answerSPMF_unique (R : ProbResponder spec)
+    (E₁ E₂ : R.IsExecutable) (s : R.State) (t : spec.Domain) :
+    E₁.answerSPMF s t = E₂.answerSPMF s t := by
+  let _ := R.instMeasurableSpaceRange t
+  let _ : MeasurableSingletonClass R.State := E₁.instMeasurableSingletonClassState
+  let _ : MeasurableSingletonClass (spec.Range t) :=
+    E₁.instMeasurableSingletonClassRange t
+  apply SPMF.toMeasure_injective
+  rw [← E₁.answerKernel_eq_toMeasure s t, ← E₂.answerKernel_eq_toMeasure s t]
 
 /-- Read a kernel responder through its coherent executable `SPMF` realization.
 Kernel-valued consumers should use `answerKernel` directly. -/
@@ -149,6 +170,8 @@ it does not install blanket measurable-space instances on the underlying types. 
 instance ofSPMF.instIsExecutable {σ : Type u}
     (impl : QueryImpl spec (StateT σ SPMF)) : (ofSPMF impl).IsExecutable where
   answerSPMF s t := impl t s
+  instMeasurableSingletonClassState := inferInstance
+  instMeasurableSingletonClassRange _ := inferInstance
   answerKernel_eq_toMeasure _ _ := rfl
 
 /-- A responder as a stateful query implementation in `StateT State SPMF`: the
@@ -239,10 +262,15 @@ two readings still agree. -/
 noncomputable instance pullback.instIsExecutable {ι' : Type u}
     {spec' : OracleSpec.{u, u} ι'}
     (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
-    [R.IsExecutable] : (pullback w R).IsExecutable where
+    [R.IsExecutable]
+    [∀ t, letI := (pullback w R).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)] : (pullback w R).IsExecutable where
   answerSPMF s t :=
     (fun q => (w.toFunB t q.1, q.2)) <$>
       IsExecutable.answerSPMF (R := R) s (w.toFunA t)
+  instMeasurableSingletonClassState :=
+    IsExecutable.instMeasurableSingletonClassState (R := R)
+  instMeasurableSingletonClassRange _ := inferInstance
   answerKernel_eq_toMeasure s t := by
     let _ := R.instMeasurableSpaceRange (w.toFunA t)
     let _ := (pullback w R).instMeasurableSpaceRange t
@@ -266,6 +294,8 @@ maps the target responder's answer back through the lens. -/
     {spec' : OracleSpec.{u, u} ι'}
     (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
     [R.IsExecutable]
+    [∀ t, letI := (pullback w R).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)]
     (t : spec.toPFunctor.A) :
     (pullback w R).toQueryImpl t =
       (fun a => w.toFunB t a) <$> R.toQueryImpl (w.toFunA t) := by
@@ -283,6 +313,8 @@ machine-free, so run-level wrapping laws follow from it by pure congruence. -/
 theorem liftM_mapLens_pullback {ι' : Type u} {spec' : OracleSpec.{u, u} ι'}
     (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
     [R.IsExecutable]
+    [∀ t, letI := (pullback w R).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)]
     {γ : Type u} : ∀ oa : OracleComp spec γ,
     PFunctor.FreeM.liftM R.toQueryImpl (PFunctor.FreeM.mapLens w oa) =
       PFunctor.FreeM.liftM (pullback w R).toQueryImpl oa

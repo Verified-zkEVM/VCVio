@@ -74,7 +74,7 @@ VCVio/EvalDist/TVDist.lean	139
 VCVio/Interaction/UC/Runtime.lean	3
 VCVio/OracleComp/Coercions/SubSpec.lean	3
 VCVio/OracleComp/Coinductive/DynSystem.lean	9
-VCVio/OracleComp/Coinductive/Responder.lean	18
+VCVio/OracleComp/Coinductive/Responder.lean	19
 VCVio/OracleComp/Coinductive/WiredRun.lean	1
 VCVio/OracleComp/Constructions/GenerateSeed.lean	2
 VCVio/OracleComp/Constructions/SampleableType.lean	1

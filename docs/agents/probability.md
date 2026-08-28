@@ -62,8 +62,12 @@ continues to describe potentially lossy surface semantics.
 
 For `ProbResponder`, the kernel is authoritative. `ProbResponder.IsExecutable` optionally carries
 a coherent SPMF realization for machine execution; the deprecated `ProbResponder.answer` is just
-that bridge. This separate capability is important: abstract cryptographic caches need not be
-countable, while a kernel-native responder need not have any executable SPMF realization.
+that bridge. Executable state and answer spaces must have measurable singletons, so equality with
+the authoritative kernel determines every executable point mass and therefore the entire SPMF.
+Pullback along an interface lens preserves executability only when the transported answer space
+also has measurable singletons. This separate capability is important: abstract cryptographic
+caches need not be countable, while a kernel-native responder need not have any executable SPMF
+realization.
 
 #### Adoption audit
 

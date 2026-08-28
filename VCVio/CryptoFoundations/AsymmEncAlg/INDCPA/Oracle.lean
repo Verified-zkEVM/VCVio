@@ -150,6 +150,35 @@ omit [DecidableEq M] in
 @[simp] theorem IND_CPA_swapLens_query_right (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (mm : M × M) : encAlg.IND_CPA_swapLens.toFunA (.inr mm) = .inr (mm.2, mm.1) := rfl
 
+/-- Message swapping leaves response values unchanged, so pullback preserves the
+point-separating answer spaces required for executable responder coherence. -/
+instance IND_CPA_swapLens_pullback.instMeasurableSingletonClassRange
+    (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (R : ProbResponder encAlg.IND_CPA_oracleSpec) [R.IsExecutable] : ∀ t,
+    letI := (R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange t
+    MeasurableSingletonClass (encAlg.IND_CPA_oracleSpec.Range t)
+  | .inl t => by
+      let hSingleton : @MeasurableSingletonClass (unifSpec.Range t)
+          (R.instMeasurableSpaceRange (.inl t)) :=
+        ProbResponder.IsExecutable.instMeasurableSingletonClassRange (R := R) (.inl t)
+      exact @MeasurableSingletonClass.mk _
+        ((R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange (.inl t))
+        (fun x => by
+          change @MeasurableSet (unifSpec.Range t) (R.instMeasurableSpaceRange (.inl t))
+            (id ⁻¹' {x})
+          simpa only [Set.preimage_id] using hSingleton.measurableSet_singleton x)
+  | .inr mm => by
+      let hSingleton : @MeasurableSingletonClass C
+          (R.instMeasurableSpaceRange (.inr (mm.2, mm.1))) :=
+        ProbResponder.IsExecutable.instMeasurableSingletonClassRange
+          (R := R) (.inr (mm.2, mm.1))
+      exact @MeasurableSingletonClass.mk _
+        ((R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange (.inr mm))
+        (fun x => by
+          change @MeasurableSet C (R.instMeasurableSpaceRange (.inr (mm.2, mm.1)))
+            (id ⁻¹' {x})
+          simpa only [Set.preimage_id] using hSingleton.measurableSet_singleton x)
+
 omit [DecidableEq M] in
 /-- Wrapping an IND-CPA machine with message swapping is exactly executable responder
 pullback along the same PolyFun lens: a one-line specialization of the generic

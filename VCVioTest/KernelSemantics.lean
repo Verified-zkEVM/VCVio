@@ -76,6 +76,11 @@ noncomputable example : togglingResponder.IsExecutable := by
   unfold togglingResponder
   infer_instance
 
+/-- Any two executable witnesses for one responder have the same observable program. -/
+example (E₁ E₂ : togglingResponder.IsExecutable) (state : Bool) :
+    E₁.answerSPMF state PUnit.unit = E₂.answerSPMF state PUnit.unit :=
+  ProbResponder.IsExecutable.answerSPMF_unique togglingResponder E₁ E₂ state PUnit.unit
+
 example : IsSubprobabilityKernel
     (togglingResponder.answerKernel PUnit.unit) := by
   unfold togglingResponder

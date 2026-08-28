@@ -154,6 +154,8 @@ unrolled query tree, and `ProbResponder.liftM_mapLens_pullback` re-reads the
 translation through the pulled-back handler. -/
 theorem runWith_wrap (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
     (M : OracleMachine spec α β) (R : ProbResponder spec') [R.IsExecutable]
+    [∀ t, letI := (R.pullback w).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)]
     (k : ℕ) (s : M.State) :
     (M.wrap w).runWith R.toQueryImpl k s =
       M.runWith (R.pullback w).toQueryImpl k s := by
@@ -166,6 +168,8 @@ theorem runWith_wrap (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
 level. -/
 theorem runAgainst_wrap (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
     (M : OracleMachine spec α β) (R : ProbResponder spec') [R.IsExecutable]
+    [∀ t, letI := (R.pullback w).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)]
     (k : ℕ) (r : R.State)
     (s : M.State) :
     runAgainst (M.wrap w) R k (r, s) = M.runAgainst (R.pullback w) k (r, s) := by
