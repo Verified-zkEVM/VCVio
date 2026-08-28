@@ -37,7 +37,7 @@ side condition a reduction can forget to discharge.
 
 @[expose] public section
 
-namespace MultiTarget
+namespace TweakableHash
 
 open OracleComp OracleSpec
 
@@ -124,4 +124,4 @@ theorem collectionOracle_run_of_repeated_tweak (q : ((i : ι) × Tweak × coll.M
   have hany : (chal.any fun e => decide (e.1 = q.2.1)) = false := by simpa using hnew
   simp [collectionOracle, hany]
 
-end MultiTarget
+end TweakableHash

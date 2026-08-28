@@ -15,10 +15,11 @@ A tweakable hash family `Th : PkSeed → Tweak → M → Y` generalizes `KeyedHa
 splitting the key into a *sampled* public seed and a *caller-supplied* abstract tweak. It is the
 abstraction that the SLH-DSA / SPHINCS+ functions `F`, `H`, and `T_ℓ` instantiate (with the
 tweak being the 32-byte address `ADRS`), and against which their multi-target security notions
-(`VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget`) are stated.
+(`TweakableHash.SM_DT_TCR_Advantage`, `TweakableHash.SM_DT_PRE_Advantage`) are stated.
 
-This file provides the data abstraction only; the security games live in `MultiTarget`. They take a
-`TweakableHash` whole rather than a partially-applied function, because `seedGen` is what samples
+This file provides the data abstraction only; the security games live under
+`HardnessAssumptions/TweakableHash/`. They take a `TweakableHash` whole rather than a
+partially-applied function, because `seedGen` is what samples
 the public parameter that the game must withhold from the adversary during target selection. A game
 stated over a bare `Tweak → M → Y` has no parameter to withhold, which is what separates
 single-function multi-target security from plain collision resistance.
@@ -32,9 +33,9 @@ existing `KeyedHashFamily` surface.
 `TweakableHashCollection` is a family of tweakable hashes sharing one public seed and one tweak
 space, differing only in their message types — SLH-DSA's `F`, `H` and `T_ℓ` under one `PK.seed` and
 one `ADRS` space. It carries no `seedGen` of its own: a game samples one seed, from the attacked
-member's `TweakableHash.seedGen`, and hands it to every member. The security notions of
-`MultiTarget` are all stated in the collection form, with the stand-alone notion recovered at an
-empty index type.
+member's `TweakableHash.seedGen`, and hands it to every member. The security notions under
+`HardnessAssumptions/TweakableHash/` are all stated in the collection form, with the stand-alone
+notion recovered at an empty index type.
 -/
 
 @[expose] public section
