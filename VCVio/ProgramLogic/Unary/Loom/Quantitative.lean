@@ -100,7 +100,7 @@ lemma μ_bind_eq_tsum {α : Type}
 noncomputable instance instMAlgOrdered : MAlgOrdered (OracleComp spec) ℝ≥0∞ where
   μ := μ (spec := spec)
   μ_pure x := by
-    haveI : DecidableEq ℝ≥0∞ := Classical.decEq _
+    have : DecidableEq ℝ≥0∞ := Classical.decEq _
     simp [μ, probOutput_pure]
   μ_bind_mono f g hfg x := by
     simp_rw [μ_bind_eq_tsum]
@@ -167,7 +167,7 @@ variable {α β : Type}
 /-- Quantitative `Std.Do'.WP` interpretation of `OracleComp spec` valued in `ℝ≥0∞`.
 
 The `wpTrans` is the existing `MAlgOrdered.wp` (i.e. expectation of
-`post` under `evalDist`); the `EPost.nil` argument is ignored since
+`post` under `evalSPMF`); the `EPost.nil` argument is ignored since
 `OracleComp` has no first-class exception slot. The three `WP` axioms
 reduce to the existing `MAlgOrdered.{wp_pure, wp_bind, wp_mono}`
 equalities. -/

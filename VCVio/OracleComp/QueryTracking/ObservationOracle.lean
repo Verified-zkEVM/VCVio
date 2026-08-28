@@ -173,9 +173,9 @@ These lemmas connect the result-marginal distribution of `runObs` to the distrib
 of `eraseObs`, enabling direct probability-level reasoning about traces without needing
 to manually simplify the traced computation into its concrete form. -/
 
-lemma evalDist_fst_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+lemma evalSPMF_fst_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (base : QueryImpl spec m) (encode : Ev → ω) (oa : OracleComp (spec + ObsSpec Ev) α) :
-    𝒟[(fun z : α × ω => z.1) <$> runObs base encode oa] = 𝒟[eraseObs base oa] := by
+    𝒮[(fun z : α × ω => z.1) <$> runObs base encode oa] = 𝒮[eraseObs base oa] := by
   rw [fst_map_runObs]
 
 lemma probOutput_fst_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
@@ -212,9 +212,9 @@ lemma runObs_liftM_query_inl [LawfulMonad m] (base : QueryImpl spec m)
     runObs base encode ((liftM (OracleSpec.query t : OracleQuery spec _) :
         OracleComp (spec + ObsSpec Ev) _)) = (·, 1) <$> base t := by
   change (simulateQ ((eraseObsImpl base).withCost (obsCostFn encode))
-    (liftM (liftM (OracleSpec.query t : OracleQuery spec _) :
-      OracleQuery (spec + ObsSpec Ev) _))).run = _
-  simp [QueryImpl.withCost, eraseObsImpl, obsCostFn]
+    (liftM ((spec + ObsSpec Ev).query (Sum.inl t)))).run = _
+  rw [simulateQ_spec_query, QueryImpl.withCost_apply, eraseObsImpl_inl]
+  simp [obsCostFn]
 
 /-- `runObs` on a lifted base-spec computation: the trace is `1` (monoid identity). -/
 @[simp]
@@ -238,9 +238,9 @@ lemma runObs_observe [LawfulMonad m] (base : QueryImpl spec m) (encode : Ev → 
         OracleComp (spec + ObsSpec Ev) PUnit) =
       pure (PUnit.unit, encode e) := by
   change (simulateQ ((eraseObsImpl base).withCost (obsCostFn encode))
-    (liftM (liftM (OracleSpec.query e : OracleQuery (ObsSpec Ev) _) :
-      OracleQuery (spec + ObsSpec Ev) _))).run = _
-  simp [QueryImpl.withCost, eraseObsImpl, obsCostFn]
+    (liftM ((spec + ObsSpec Ev).query (Sum.inr e)))).run = _
+  rw [simulateQ_spec_query, QueryImpl.withCost_apply, eraseObsImpl_inr]
+  simp [obsCostFn]
 
 end runObs
 

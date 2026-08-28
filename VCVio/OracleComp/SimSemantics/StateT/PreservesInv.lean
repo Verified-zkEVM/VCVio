@@ -154,7 +154,7 @@ initial state, as long as the initial state satisfies `Inv`.
 This is distributional equality of `run'` (which discards the final state). -/
 def OutputIndependent {σ α : Type} (mx : StateT σ ProbComp α) (Inv : σ → Prop) : Prop :=
   ∀ σ0 σ1, Inv σ0 → Inv σ1 →
-    𝒟[mx.run' σ0] = 𝒟[mx.run' σ1]
+    𝒮[mx.run' σ0] = 𝒮[mx.run' σ1]
 
 @[simp] lemma statePreserving_pure {σ α : Type} (a : α) :
     StatePreserving (pure a : StateT σ ProbComp α) := by
@@ -199,10 +199,10 @@ lemma outputIndependent_after_preservesInv {σ α β : Type}
     (hmyInv : PreservesInv my Inv)
     (hmyNoFail : NeverFailsUnder my Inv) :
     ∀ σ0, Inv σ0 →
-      𝒟[(my.run σ0) >>= fun us => mx.run' us.2] = 𝒟[mx.run' σ0] := by
+      𝒮[(my.run σ0) >>= fun us => mx.run' us.2] = 𝒮[mx.run' σ0] := by
   intro σ0 hσ0
   refine SPMF.ext fun a => ?_
-  change Pr[= a | (my.run σ0) >>= fun us => mx.run' us.2] = Pr[= a | mx.run' σ0]
+  rw [← probOutput_def, ← probOutput_def]
   rw [probOutput_bind_eq_tsum]
   have hbind_eq :
       (∑' us : β × σ, Pr[= us | my.run σ0] * Pr[= a | mx.run' us.2]) =

@@ -11,7 +11,7 @@ public import VCVio.EvalDist.Monad.Map
 /-!
 # Probability Distributions on `Option` return types
 
-Lemmas about `evalDist` and the associated probabilities for computations
+Lemmas about `evalSPMF` and the associated probabilities for computations
 returning an `Option`.
 -/
 

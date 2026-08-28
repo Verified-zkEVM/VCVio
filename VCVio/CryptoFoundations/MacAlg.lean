@@ -51,7 +51,7 @@ variable {m : Type → Type v} [Monad m] {M K T : Type}
 
 /-- Perfect completeness for a MAC: honestly generated tags always verify. -/
 def PerfectlyComplete (macAlg : MacAlg m M K T) (runtime : ProbCompRuntime m) : Prop :=
-  ∀ msg : M, Pr[= true | runtime.evalDist do
+  ∀ msg : M, Pr[= true | runtime.evalSPMF do
     let k ← macAlg.keygen
     let τ ← macAlg.tag k msg
     macAlg.verify k msg τ] = 1
@@ -73,7 +73,7 @@ message under the challenge key. -/
 def UF_CMA_Exp {macAlg : MacAlg (OracleComp spec) M K T}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : macAlg.UF_CMA_Adversary) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let k ← macAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ T))
         (WriterT (QueryLog (M →ₒ T)) (OracleComp spec)) :=

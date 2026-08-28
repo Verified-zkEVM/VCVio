@@ -110,13 +110,14 @@ instance instPartialOrder : Lean.Order.PartialOrder Prob where
   rel_antisymm h₁ h₂ := ext (le_antisymm h₁ h₂)
 
 /-- Underlying `ℝ≥0∞` set for a `Prob`-valued predicate. -/
-def valImage (c : Prob → Prop) : Set ℝ≥0∞ :=
+private def valImage (c : Prob → Prop) : Set ℝ≥0∞ :=
   {x : ℝ≥0∞ | ∃ p : Prob, c p ∧ p.val = x}
 
 /-- Supremum on `Prob` of a predicate-encoded subset.
 
 The supremum on `ℝ≥0∞` of any subset of `[0,1]` is itself in `[0,1]`,
 since `sSup` is monotone and bounded above by `1`. -/
+@[no_expose]
 noncomputable def probSup (c : Prob → Prop) : Prob :=
   ⟨sSup (valImage c),
     sSup_le (by rintro x ⟨p, _, rfl⟩; exact p.val_le_one)⟩

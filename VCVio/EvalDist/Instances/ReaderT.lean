@@ -72,7 +72,7 @@ noncomputable def toPMF (ρ0 : ρ) [MonadLiftT m PMF] [LawfulMonadLiftT m PMF] :
     ReaderT ρ m →ᵐ PMF :=
   MonadHom.ofLift m PMF ∘ₘ evalAt ρ0
 
-section evalDist_lemmas
+section evalSPMF_lemmas
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (ρ0 : ρ)
 
@@ -85,7 +85,7 @@ variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (ρ0 : ρ)
     toSPMF ρ0 (mx >>= f) = toSPMF ρ0 mx >>= fun x => toSPMF ρ0 (f x) :=
   (toSPMF ρ0).toFun_bind' mx f
 
-end evalDist_lemmas
+end evalSPMF_lemmas
 
 section evalPMF_lemmas
 

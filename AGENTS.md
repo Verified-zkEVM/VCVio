@@ -43,7 +43,7 @@ opaque `public section` when callers do not need to unfold their definitions.
 
 ## What This Project Is
 
-VCVio is a framework for formal cryptographic proofs built around `OracleComp spec α`, the free monad on the polynomial functor induced by an oracle signature `OracleSpec ι := ι → Type`. Its universal fold `simulateQ impl : OracleComp spec α → r α` is the unique monad morphism extending any `impl : QueryImpl spec r` to the free monad. For `OracleComp`, `support` is definitionally `simulateQ` into `SetM` with queries interpreted by `Set.univ`; `evalDist` / `probOutput` / `Pr[…]` are definitionally `simulateQ` into `PMF` using the per-query distributions supplied by `[IsProbabilitySpec spec]`. Uniform cardinality lemmas and the `support`/probability bridge use `[IsUniformSpec spec]`, which bundles `[spec.Fintype]`, `[spec.Inhabited]`, and uniform sampling. `ProbComp α := OracleComp unifSpec α` specializes to computations whose only oracle is uniform selection.
+VCVio is a framework for formal cryptographic proofs built around `OracleComp spec α`, the free monad on the polynomial functor induced by an oracle signature `OracleSpec ι := ι → Type`. Its universal fold `simulateQ impl : OracleComp spec α → r α` is the unique monad morphism extending any `impl : QueryImpl spec r` to the free monad. For `OracleComp`, `support` is definitionally `simulateQ` into `SetM` with queries interpreted by `Set.univ`; the primary `evalDist` / `𝒟[…]` semantics is a successful-output Mathlib `Measure`, while `evalSPMF` / `𝒮[…]`, `probOutput`, and `Pr[…]` form the discrete compatibility surface backed by `simulateQ` into `PMF` using `[IsProbabilitySpec spec]`. Uniform cardinality lemmas and the `support`/probability bridge use `[IsUniformSpec spec]`, which bundles `[spec.Fintype]`, `[spec.Inhabited]`, and uniform sampling. `ProbComp α := OracleComp unifSpec α` specializes to computations whose only oracle is uniform selection.
 
 The repo also includes a first-class lattice cryptography library under `LatticeCrypto/`, built on top of the `VCVio` framework. That layer contains generic lattice algebra plus ML-DSA, ML-KEM, and Falcon specifications, security statements, concrete implementations, and tests; the native FFI bridges live in the separate `Extern/` library.
 
@@ -108,15 +108,17 @@ or `VCVioTest/`. This contract is enforced by
 
 ## Critical Gotchas
 
-1. **Probability assumptions are explicit.** `support` on `OracleComp spec` works for arbitrary specs. `evalDist` / `Pr[...]` need `[IsProbabilitySpec spec]`; uniform/cardinality lemmas and `support ↔ Pr[= _] ≠ 0` need `[IsUniformSpec spec]`. Use `IsUniformSpec.ofFintypeInhabited` when you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics.
+1. **Probability assumptions are explicit.** `support` on `OracleComp spec` works for arbitrary specs. `evalSPMF` / `Pr[...]` need `[IsProbabilitySpec spec]`; `evalDist` / `𝒟[…]` additionally need an ambient `MeasurableSpace` on the result. Uniform/cardinality lemmas and `support ↔ Pr[= _] ≠ 0` need `[IsUniformSpec spec]`. Use `IsUniformSpec.ofFintypeInhabited` when you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics.
 2. **`autoImplicit = false` is set globally in `lakefile.lean`**. Do not add `set_option autoImplicit false` in individual files. Every variable must be explicitly declared.
-3. **`evalDist` IS `simulateQ`** with `IsProbabilitySpec.toPMF`; under `[IsUniformSpec spec]` this is uniform. This is definitional (`rfl`).
+3. **`evalSPMF` IS `simulateQ`** with `IsProbabilitySpec.toPMF`; under `[IsUniformSpec spec]` this is uniform. This is definitional (`rfl`). `evalDist` is its successful-output measure façade on the discrete compatibility path and agrees with the direct `FreeM.denote` measure fold when both specifications are present.
 4. **`++ₒ` is dead** — use `+` for combining oracle specs.
 5. **Commented-out code is legacy** — follow only uncommented code. Use `Examples/OneTimePad/Basic.lean` as canonical reference.
 6. **Preserve partial proofs** with `stop` instead of deleting large proof blocks.
 7. **Do not disable linters to silence errors**. Do not use `set_option linter.* false`, `set_option weak.linter.* false`, or add repo-level `leanOptions` that turn lints off to dodge a fixable issue. Fix the root cause instead. (The one deliberate, documented exception is `weak.linter.unicodeLinter, false` in `lakefile.lean`, off so FIPS-204 math notation and diacritics in cited author names are allowed.)
 8. **Interop TCB isolation is mandatory**. Core VCVio (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `Examples/`, `LatticeCryptoTest/`, `Extern/`, `VCVioWidgets/`, `VCVioTest/`) must never `import Interop.…`, `import Hax.…`, or `import Aeneas.…`. CI fails the PR if it does. See `docs/agents/interop.md`.
 9. **Extern link-safety isolation is mandatory**. Proof libraries (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) must never `import Extern.…`: the native backends behind it are built as empty stubs whenever the `third_party/` submodules are absent — always the case for Lake dependency checkouts — so importing `Extern` would break downstream executable links. Test libraries may import it. Enforced by `scripts/check-extern-isolation.sh` in CI.
+
+10. **`PMF`/`SPMF` is a retiring surface, not a coequal representation.** Upstream is dismantling `PMF` construction by construction — the pinned Mathlib already deprecates `PMF.bernoulli` and `PMF.binomial` for measure-valued replacements. New semantic code uses `Measure`/`Kernel`; a change that touches a file still carrying explicit `PMF`/`SPMF` identifiers should leave that source count lower than it found it. `scripts/check-pmf-boundary.sh` enforces a per-file ceiling on every build (a file absent from the baseline has an allowance of zero) and reports the actual source-count trend against the base ref on every pull request; comments and string literals do not count. This is a syntactic migration proxy, not semantic dependency analysis. `SPMF` counts because `SPMF := OptionT PMF`. `--ratchet` is the opt-in mode for a deliberate reduction pass, with holds recorded in `scripts/pmf_boundary_holds.tsv`. See `docs/reading/denotational-probability-semantics.md`.
 
 For the full list, see `docs/agents/gotchas.md`.
 
@@ -143,6 +145,9 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
 - Seeded (Bellare-Neven) forking lemma: `VCVio/CryptoFoundations/SeededFork.lean`
 - Replay-based forking lemma: `VCVio/CryptoFoundations/ReplayFork.lean`
+- Independent products of computations: `VCVio/EvalDist/IndepProduct.lean`
+- Drawing without replacement and its expected draw count: `VCVio/OracleComp/Constructions/WithoutReplacement.lean`, `ToMathlib/Probability/NegativeHypergeometric.lean`
+- Expected values of `ℝ≥0∞`-valued functionals: `VCVio/EvalDist/Expectation.lean`
 - Fischlin transform: `VCVio/CryptoFoundations/Fischlin.lean`
 - Interaction spec and transcript: `PolyFun/Interaction/Basic/Spec.lean`
 - Two-party roles and strategies: `PolyFun/Interaction/TwoParty/Strategy.lean`
@@ -201,9 +206,26 @@ The timing report parses per-file build times only for that same set.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
+After the build, CI runs `./scripts/test-axiomsweep.sh` and then
+`lake exe axiomsweep --check`: kernel-level axiom/`sorry` accounting for every
+declaration in the non-test libraries, gated against the committed baseline
+`scripts/axiom_baseline.json`. It fails on *new* `sorryAx` or non-standard-axiom
+taint; after intentionally adding or closing a `sorry`, run
+`lake exe axiomsweep --update-baseline` and commit the diff. `Interop` (the
+declared TCB) is excluded — its boundary is enforced by the import-isolation
+gate instead.
+
+The baseline is an allowlist for `sorryAx` debt only. Native trust
+(`native_decide`, which mints per-declaration `._native.` axioms) is held to a
+zero-debt rule: anything outside the explicit `grandfatheredNativeTrust` list in
+`scripts/AxiomSweep.lean` fails `--check` and cannot be greened by editing the
+baseline, since accepting it would widen the trusted computing base. The
+`VCVioAxiomSweepTestFixtures` library carries synthetic taint for the tool's own
+tests and is deliberately excluded from every aggregate.
+
 After adding new `.lean` files: `./scripts/update-lib.sh`
 
-Lean toolchain and Mathlib must stay in sync (both currently `v4.32.2`). Keep files
+Lean toolchain and Mathlib must stay in sync (both currently `v4.33.1`). Keep files
 reasonably sized, but there is no hard line-count limit (the file-length linter is off).
 
 ## Further Reading
@@ -222,3 +244,4 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)
 - **Proof workflows (game-hopping, reductions)**: [`docs/agents/proof-workflows.md`](docs/agents/proof-workflows.md)
 - **Gotchas and troubleshooting**: [`docs/agents/gotchas.md`](docs/agents/gotchas.md)
+- **Module visibility and the PolyFun façade**: [`docs/agents/module-system.md`](docs/agents/module-system.md)

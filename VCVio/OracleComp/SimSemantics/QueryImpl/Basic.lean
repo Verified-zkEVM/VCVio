@@ -8,7 +8,7 @@ module
 public import Mathlib.Algebra.MvPolynomial.Eval
 public import Mathlib.Algebra.Polynomial.Eval.Defs
 public import VCVio.OracleComp.OracleComp
-public import PolyFun.PFunctor.Handler
+public import PolyFun.PFunctor.Handler.Instrumentation
 
 /-!
 # Implementing Oracle Queries in Other Monads
@@ -51,6 +51,26 @@ instance [spec.Inhabited] [Pure m] : Inhabited (QueryImpl spec m) where
 @[ext] lemma ext {so so' : QueryImpl spec m}
     (h : ∀ x : spec.Domain, so x = so' x) : so = so' := funext h
 
+/-- Restrict an implementation of a sum specification to its left component. -/
+def restrictLeft {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    (impl : QueryImpl (spec₁ + spec₂) m) : QueryImpl spec₁ m :=
+  fun t ↦ impl (Sum.inl t)
+
+/-- Restrict an implementation of a sum specification to its right component. -/
+def restrictRight {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    (impl : QueryImpl (spec₁ + spec₂) m) : QueryImpl spec₂ m :=
+  fun t ↦ impl (Sum.inr t)
+
+/-- Applying a left restriction is the original implementation on a left input. -/
+lemma restrictLeft_apply {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    (impl : QueryImpl (spec₁ + spec₂) m) (t : spec₁.Domain) :
+    impl.restrictLeft t = impl (Sum.inl t) := rfl
+
+/-- Applying a right restriction is the original implementation on a right input. -/
+lemma restrictRight_apply {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    (impl : QueryImpl (spec₁ + spec₂) m) (t : spec₂.Domain) :
+    impl.restrictRight t = impl (Sum.inr t) := rfl
+
 /-- View a concrete query implementation as query capability in the same monad. This is useful
 when instantiating a generic `HasQuery` construction directly inside an analysis monad such as
 `StateT σ ProbComp` or `WriterT ω (OracleComp spec)`. -/
@@ -79,17 +99,19 @@ for queries that arise from `SubSpec`-lift normalization (which produces
 
 section liftTarget
 
-/-- Gadget for auto-adding a lift to the end of a query implementation. -/
-def liftTarget (n : Type u → Type*) [MonadLiftT m n]
+/-- Compatibility alias for the generic polynomial-handler target lift. -/
+abbrev liftTarget (n : Type u → Type*) [MonadLiftT m n]
     (impl : QueryImpl spec m) : QueryImpl spec n :=
-  fun t : spec.Domain => liftM (impl t)
+  PFunctor.Handler.liftTarget (P := spec.toPFunctor) n impl
 
 @[simp] lemma liftTarget_apply (n : Type u → Type*) [MonadLiftT m n]
-    (impl : QueryImpl spec m) (t : spec.Domain) : impl.liftTarget n t = liftM (impl t) := rfl
+    (impl : QueryImpl spec m) (t : spec.Domain) : impl.liftTarget n t = liftM (impl t) := by
+  exact PFunctor.Handler.liftTarget_apply (P := spec.toPFunctor) n impl t
 
 /-- Lifting an implementation to the original monad has no effect. -/
 @[simp] lemma liftTarget_self (impl : QueryImpl spec m) :
-    impl.liftTarget m = impl := rfl
+    impl.liftTarget m = impl :=
+  PFunctor.Handler.liftTarget_self (P := spec.toPFunctor) impl
 
 @[simp] lemma mapQuery_liftTarget {α} (n : Type u → Type w)
     [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n] [MonadLiftT m n]
@@ -117,10 +139,14 @@ protected def id' {ι} (spec : OracleSpec ι) :
     QueryImpl spec (OracleComp spec) := QueryImpl.liftTarget _ (QueryImpl.id spec)
 
 @[simp] lemma id'_apply {spec : OracleSpec ι} (t : spec.Domain) :
-    QueryImpl.id' spec t = liftM (query t) := rfl
+    QueryImpl.id' spec t = liftM (query t) := by
+  simp [QueryImpl.id']
 
 @[simp] lemma mapQuery_id' {α} {spec : OracleSpec ι} (q : OracleQuery spec α) :
-    (QueryImpl.id' spec).mapQuery q = q := rfl
+    (QueryImpl.id' spec).mapQuery q = q := by
+  simp only [mapQuery, id'_apply]
+  rw [← OracleComp.liftM_map]
+  exact congrArg OracleComp.lift (mapQuery_id q)
 
 end id
 
@@ -141,7 +167,9 @@ def ofLift (spec : OracleSpec ι) (m : Type u → Type v)
 
 @[simp] lemma ofLift_eq_id : ofLift spec (OracleQuery spec) = QueryImpl.id spec := rfl
 
-@[simp] lemma ofLift_eq_id' : ofLift spec (OracleComp spec) = QueryImpl.id' spec := rfl
+@[simp] lemma ofLift_eq_id' : ofLift spec (OracleComp spec) = QueryImpl.id' spec := by
+  funext t
+  simp
 
 end ofLift
 
@@ -215,6 +243,8 @@ Not `@[simp]`: in `unifFwdImpl`-style definitions where `toQueryImpl.liftTarget`
 inside a `simp [unifFwdImpl]` call, the rewrite `toQueryImpl → id' = liftTarget _ (id _)`
 nests `liftTarget`s and triggers unbounded depth. Use via explicit `rw` instead. -/
 lemma toQueryImpl_eq_id' :
-    (toQueryImpl : QueryImpl spec (OracleComp spec)) = QueryImpl.id' spec := rfl
+    (toQueryImpl : QueryImpl spec (OracleComp spec)) = QueryImpl.id' spec := by
+  funext t
+  simp
 
 end HasQuery

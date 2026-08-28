@@ -103,15 +103,14 @@ def monadOfId (M : RelativeMonad C _ (𝟭 _)) : Monad C where
                 exact M.assoc (f := M.μ (f ≫ M.η) ≫ M.η) (g := 𝟙 (M.T Y))
         _ = M.μ (M.μ (f ≫ M.η)) := by
               congr 1
-              simpa [Category.assoc] using
-                congrArg (fun k => M.μ (f ≫ M.η) ≫ k) (M.right_unit (f := 𝟙 (M.T Y)))
+              simp [Category.assoc]
         _ = M.μ (𝟙 (M.T X) ≫ M.μ (f ≫ M.η)) := by simp
         _ = M.μ (𝟙 (M.T X)) ≫ M.μ (f ≫ M.η) := by
               exact M.assoc (f := 𝟙 (M.T X)) (g := f ≫ M.η))
   left_unit X := by
     exact M.right_unit (f := 𝟙 (M.T X))
   right_unit X := by
-    simp only [Functor.id_obj, inducedFunctor_map, Functor.id_map]
+    simp only [Functor.id_obj]
     calc
       M.μ (M.η ≫ M.η) ≫ M.μ (𝟙 (M.T X))
           = M.μ ((M.η ≫ M.η) ≫ M.μ (𝟙 (M.T X))) := by
@@ -119,12 +118,9 @@ def monadOfId (M : RelativeMonad C _ (𝟭 _)) : Monad C where
               exact M.assoc (f := M.η ≫ M.η) (g := 𝟙 (M.T X))
       _ = M.μ M.η := by
             congr 1
-            simpa [Category.assoc] using
-              congrArg (fun k => M.η ≫ k) (M.right_unit (f := 𝟙 (M.T X)))
+            simp [Category.assoc]
       _ = 𝟙 (M.T X) := by simp
   assoc X := by
-    simp only [inducedFunctor_map, Functor.id_obj,
-      Functor.id_map]
     calc
       M.μ (M.μ (𝟙 (M.T X)) ≫ M.η) ≫ M.μ (𝟙 (M.T X))
           = M.μ ((M.μ (𝟙 (M.T X)) ≫ M.η) ≫ M.μ (𝟙 (M.T X))) := by
@@ -132,8 +128,7 @@ def monadOfId (M : RelativeMonad C _ (𝟭 _)) : Monad C where
               exact M.assoc (f := M.μ (𝟙 (M.T X)) ≫ M.η) (g := 𝟙 (M.T X))
       _ = M.μ (M.μ (𝟙 (M.T X))) := by
             congr 1
-            simpa [Category.assoc] using
-              congrArg (fun k => M.μ (𝟙 (M.T X)) ≫ k) (M.right_unit (f := 𝟙 (M.T X)))
+            simp [Category.assoc]
       _ = M.μ (𝟙 (M.T (M.T X)) ≫ M.μ (𝟙 (M.T X))) := by simp
       _ = M.μ (𝟙 (M.T (M.T X))) ≫ M.μ (𝟙 (M.T X)) := by
             exact M.assoc (f := 𝟙 (M.T (M.T X))) (g := 𝟙 (M.T X))

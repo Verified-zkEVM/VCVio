@@ -77,9 +77,11 @@ abbrev OW_CPA_Adversary := PK → C → OracleComp pke.OW_CPA_oracleSpec M
 
 /-- Implementation of the OW-CPA encryption oracle. -/
 def OW_CPA_queryImpl (pk : PK) : QueryImpl pke.OW_CPA_oracleSpec ProbComp :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) + fun msg => do
-    let r ← ($ᵗ R)
-    pure (pke.encrypt pk msg r)
+  QueryImpl.add
+    (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp))
+    (fun msg => do
+      let r ← ($ᵗ R)
+      pure (pke.encrypt pk msg r))
 
 /-- Main one-way under chosen-plaintext attack (OW-CPA) experiment.
 
@@ -144,7 +146,7 @@ def OW_PCVA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : OW_PCVA_Adversary encAlg) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, sk) ← encAlg.keygen
     let msg ← runtime.liftProbComp ($ᵗ M)
     let cStar ← encAlg.encrypt pk msg

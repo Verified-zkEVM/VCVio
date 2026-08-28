@@ -84,34 +84,34 @@ theorem cma_to_nma_advantage_bound
         (Stateful.statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
           (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv))⟩
 
-section evalDistBridge
+section evalSPMFBridge
 
 variable [SampleableType Chal]
 
 /-- The `ofLift + uniformSampleImpl` simulation on `unifSpec + (Unit →ₒ Chal)` preserves
-`evalDist`. Both oracle components sample uniformly from their range. -/
-private lemma evalDist_simulateQ_unifChalImpl {α : Type}
+`evalSPMF`. Both oracle components sample uniformly from their range. -/
+private lemma evalSPMF_simulateQ_unifChalImpl {α : Type}
     (oa : OracleComp (unifSpec + (Unit →ₒ Chal)) α) :
-    evalDist (simulateQ (QueryImpl.ofLift unifSpec ProbComp +
-      (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa) = evalDist oa := by
-  apply OracleComp.evalDist_simulateQ_eq_evalDist
+    evalSPMF (simulateQ (QueryImpl.ofLift unifSpec ProbComp +
+      (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa) = evalSPMF oa := by
+  apply OracleComp.evalSPMF_simulateQ_eq_evalSPMF
   rintro (n | u)
   · simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply]
-    rw [evalDist_query (spec := unifSpec + (Unit →ₒ Chal))]
-    exact evalDist_query (spec := unifSpec) n
+    rw [evalSPMF_query (spec := unifSpec + (Unit →ₒ Chal))]
+    exact evalSPMF_query (spec := unifSpec) n
   · simp only [QueryImpl.add_apply_inr, uniformSampleImpl]
-    exact show (evalDist ($ᵗ ((ofFn fun _ : Unit => Chal).Range u)) :
+    exact show (evalSPMF ($ᵗ ((ofFn fun _ : Unit => Chal).Range u)) :
         SPMF ((ofFn fun _ : Unit => Chal).Range u)) = _ by
-      rw [evalDist_uniformSample, evalDist_query]; rfl
+      rw [evalSPMF_uniformSample, evalSPMF_query]; rfl
 
 /-- Corollary: `probEvent` is preserved by the `ofLift + uniformSampleImpl` simulation. -/
 private lemma probEvent_simulateQ_unifChalImpl {α : Type}
     (oa : OracleComp (unifSpec + (Unit →ₒ Chal)) α) (p : α → Prop) :
     Pr[ p | simulateQ (QueryImpl.ofLift unifSpec ProbComp +
       (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa] = Pr[ p | oa] :=
-  probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_simulateQ_unifChalImpl oa)
+  probEvent_congr' (fun _ _ => Iff.rfl) (evalSPMF_simulateQ_unifChalImpl oa)
 
-end evalDistBridge
+end evalSPMFBridge
 
 section nmaToExtraction
 
@@ -143,7 +143,7 @@ variable [SampleableType Wit] [SampleableType Chal]
 /-- The branch the NMA extractor takes on a forking-lemma result: from two traces sharing a
 commitment whose distinct cached challenges accept, run `σ.extract`; otherwise resample. This is
 the post-`contextFork` continuation of `nmaForkExtract`. -/
-private noncomputable def nmaForkExtractBranch :
+private def nmaForkExtractBranch :
     Option (Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) ×
       Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) →
       OracleComp (unifSpec + (Unit →ₒ Chal)) Wit
@@ -163,7 +163,7 @@ private noncomputable def nmaForkExtractBranch :
 
 /-- Witness-extraction computation used by the NMA reduction: replay the forking lemma, then
 take the `nmaForkExtractBranch` continuation on the resulting trace pair. -/
-private noncomputable def nmaForkExtract
+private def nmaForkExtract
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (pk : Stmt) :
@@ -174,7 +174,7 @@ private noncomputable def nmaForkExtract
 
 /-- NMA reduction for `nma_to_hard_relation_bound`: simulate the challenge oracle of
 `nmaForkExtract` down to `ProbComp`. -/
-private noncomputable def nmaReduction
+private def nmaReduction
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) : Stmt → ProbComp Wit := fun pk =>

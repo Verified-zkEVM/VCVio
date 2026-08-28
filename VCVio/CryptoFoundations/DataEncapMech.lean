@@ -46,7 +46,7 @@ def CorrectExp (k : K) (msg : M) : m Bool :=
 /-- Perfect correctness for a DEM: every externally supplied key decrypts honest ciphertexts
 correctly with probability `1`. -/
 def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
-  ∀ k : K, ∀ msg : M, Pr[= true | runtime.evalDist (dem.CorrectExp k msg)] = 1
+  ∀ k : K, ∀ msg : M, Pr[= true | runtime.evalSPMF (dem.CorrectExp k msg)] = 1
 
 end Correct
 
@@ -66,7 +66,7 @@ structure IND_CPA_Adversary (_dem : DEMScheme (OracleComp spec) K M C) where
 def IND_CPA_Exp {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : dem.IND_CPA_Adversary) (b : Bool) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let k ← runtime.liftProbComp ($ᵗ K)
     let (m₀, m₁, st) ← adversary.chooseMessages
     let c ← dem.encrypt k (if b then m₁ else m₀)
@@ -76,7 +76,7 @@ def IND_CPA_Exp {dem : DEMScheme (OracleComp spec) K M C}
 def IND_CPA_Game {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : dem.IND_CPA_Adversary) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let b ← runtime.liftProbComp ($ᵗ Bool)
     let k ← runtime.liftProbComp ($ᵗ K)
     let (m₀, m₁, st) ← adversary.chooseMessages

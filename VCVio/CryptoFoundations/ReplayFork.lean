@@ -61,8 +61,9 @@ open OracleSpec OracleComp ENNReal Function Finset
 open scoped OracleSpec.PrimitiveQuery
 open scoped PFunctor
 
-set_option allowUnsafeReducibility true in
-attribute [local reducible] PFunctor.Idx
+/- Replay logs and intrinsic paths meet through their list and dependent-pair
+presentations; these two reducers are needed only while matching that seam. -/
+attribute [local implicit_reducible] FreeMonoid PFunctor.Idx
 
 namespace OracleComp
 
@@ -427,7 +428,7 @@ def contextForkViewCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : 
 /-- Per-path continuation of `contextForkCollision`. Locate occurrence `s` on `path`; if it is
 present, resample the focused answer and report `some s` exactly when the fresh answer collides
 with the first completion's answer and the path already selected `s`. -/
-noncomputable def contextForkCollisionCont (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+def contextForkCollisionCont (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) (path : PFunctor.FreeM.Path main) :
     OracleComp spec (Option (Fin (qb i + 1))) :=
   match PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor) i main path s with
@@ -439,7 +440,7 @@ noncomputable def contextForkCollisionCont (main : OracleComp spec α) (qb : ι 
 
 /-- Equal focused answers form the sole collision branch removed by
 `guardedContextFork`. -/
-noncomputable def contextForkCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+def contextForkCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :
     OracleComp spec (Option (Fin (qb i + 1))) :=
   PFunctor.FreeM.withPath main >>= contextForkCollisionCont main qb i cf s
@@ -533,7 +534,10 @@ theorem probOutput_contextForkPair_le_guarded_add_collision [IsUniformSpec spec]
     unfold guardedContextFork PFunctor.FreeM.Cursor.filterMapLocateAndForkAt
     rw [probEvent_ofFreeM_map]
     unfold source contextForkView guardGood
-    rfl
+    apply congrArg (probEvent (PFunctor.FreeM.Cursor.locateAndForkAt
+      (P := spec.toPFunctor) i main s))
+    funext view?
+    rw [Function.comp_apply]
   have hcollision : Pr[collisionGood | source] =
       Pr[= (some s : Option (Fin (qb i + 1))) |
         contextForkViewCollision main qb i cf s] := by
@@ -541,7 +545,9 @@ theorem probOutput_contextForkPair_le_guarded_add_collision [IsUniformSpec spec]
     change Pr[collisionGood | source] =
       Pr[fun x => x = some s | collideForkView main qb i cf s <$> source]
     rw [probEvent_map]
-    rfl
+    apply congrArg (probEvent source)
+    funext view?
+    rw [Function.comp_apply]
   rw [hpair]
   calc
     Pr[pairGood | source] ≤ Pr[fun view? => guardGood view? ∨ collisionGood view? |
@@ -604,7 +610,9 @@ theorem probOutput_contextForkCollision_le_main_div [IsUniformSpec spec]
       congr 1
       rw [← probEvent_eq_eq_probOutput]
       conv_rhs => rw [← hpaths, probEvent_map, probEvent_map]
-      rfl
+      apply congrArg (probEvent paths)
+      funext path
+      rw [Function.comp_apply, Function.comp_apply]
 
 /-- Requiring the colliding second completion to finish successfully can only
 decrease the path-first equal-answer collision probability. -/
@@ -641,7 +649,7 @@ theorem probOutput_contextForkViewCollision_le_collision [IsUniformSpec spec]
         else pure none
   have hsource : contextForkViewCollision main qb i cf s =
       paths >>= viewCollision := by
-    letI : spec.toPFunctor.DecidableEq :=
+    let : spec.toPFunctor.DecidableEq :=
       (inferInstance : spec.DecidableEq).toDecidableEq
     unfold contextForkViewCollision contextForkView
     rw [PFunctor.FreeM.Cursor.map_locateAndForkAt]
@@ -695,9 +703,7 @@ theorem probOutput_contextForkViewCollision_le_collision [IsUniformSpec spec]
       ENNReal.tsum_le_tsum fun path => mul_le_mul' le_rfl (hinner path)
     _ = Pr[= (some s : Option (Fin (qb i + 1))) |
           contextForkCollision main qb i cf s] := by
-        simp only [contextForkCollision, paths, answerCollision]
-        rw [probOutput_bind_eq_tsum]
-        rfl
+        exact (probOutput_bind_eq_tsum paths answerCollision (some s)).symm
 
 /-- The successful equal-answer branch of the intrinsic context experiment is
 bounded by one uniform-answer collision against the original success event. -/
@@ -753,7 +759,7 @@ theorem probEvent_guardedContextFork_eq_contextFork_component
       Pr[fun result : Option (α × α) =>
           result.map (cf ∘ Prod.fst) = some (some s) |
         contextFork main qb i cf] := by
-  letI : spec.toPFunctor.DecidableEq :=
+  let : spec.toPFunctor.DecidableEq :=
     (inferInstance : spec.DecidableEq).toDecidableEq
   rw [contextFork_eq_contextForkByClassify]
   unfold guardedContextFork contextForkByClassify

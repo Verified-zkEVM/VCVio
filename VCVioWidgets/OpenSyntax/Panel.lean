@@ -408,19 +408,11 @@ private def renderAll (snap : Snapshots.Snapshot) (modName : Name) : RequestM Ht
     </div>
   </details>
 
-private partial def latestReadySnap?
-    (snaps : IO.AsyncList IO.Error Snapshots.Snapshot)
-    (last? : Option Snapshots.Snapshot := none) : BaseIO (Option Snapshots.Snapshot) := do
-  match snaps with
-  | .nil => pure last?
-  | .cons snap rest => latestReadySnap? rest (some snap)
-  | .delayed task =>
-      if ← IO.hasFinished task.task then
-        match task.task.get with
-        | .ok rest => latestReadySnap? rest last?
-        | .error _ => pure last?
-      else
-        pure last?
+private def latestReadySnap?
+    (snaps : Lean.AsyncList IO.Error Snapshots.Snapshot) :
+    BaseIO (Option Snapshots.Snapshot) := do
+  let ⟨ready, _, _⟩ ← snaps.getFinishedPrefix
+  return ready.getLast?
 
 @[server_rpc_method]
 def rpc (_props : PanelWidgetProps) : RequestM (RequestTask Html) := do

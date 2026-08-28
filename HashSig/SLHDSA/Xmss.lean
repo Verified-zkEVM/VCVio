@@ -1,24 +1,30 @@
 /-
 Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Nicolas Consigny
+Authors: Nicolas Consigny, Bolton Bailey
 -/
 
 module
 public import HashSig.SLHDSA.Wots
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed
 
 /-!
-# Merkle trees and XMSS (FIPS 205 §6)
+# XMSS (FIPS 205 §6)
 
-A small generic binary-Merkle-tree theory (`SLHDSA.Merkle`) parameterized by a leaf-value
-function and a position-indexed node hash, with the auth-path consistency lemma
-`Merkle.climb_authPath`: climbing from an honest leaf along the honest authentication path
-reconstructs the subtree root. This is the deterministic Merkle core reused by both XMSS
-(here) and FORS (`HashSig.SLHDSA.Fors`).
+XMSS (`xmssNode`, `xmssSign`, `xmssPkFromSig`; Algorithms 9–11) is the node-addressed perfect
+Merkle tree `PerfectMerkleTree` (`VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed`)
+with WOTS+ public keys as leaves and `H` under the `TREE` address of each node as the node hash.
+That layer is itself the generic `AddressedMerkleTree` engine specialised to heap-style
+`(height, index)` addressing, so both its completeness and its oriented binding theorem are
+available here:
 
-On top of it, XMSS (`xmssNode`, `xmssSign`, `xmssPkFromSig`; Algorithms 9–11) instantiates the
-leaves with WOTS+ public keys, and `xmssPkFromSig_xmssSign` derives XMSS correctness from
-`Merkle.climb_authPath` together with WOTS+ correctness (`wotsPkFromSig_wotsSign`).
+* `xmssPkFromSig_xmssSign` — XMSS correctness, from `PerfectMerkleTree.climb_authPath` together
+  with WOTS+ correctness (`wotsPkFromSig_wotsSign`);
+* `xmssPkFromSig_binding` — an XMSS signature whose recovered leaf differs from the honest WOTS+
+  public key but which still recovers the honest root exhibits a collision of `H` at the `TREE`
+  address `(h, idx / 2 ^ h)` of an ancestor of leaf `idx`, against the honestly precommitted
+  child pair. This deterministic statement is the Merkle-layer hook needed by a future
+  seed-aware multi-target target-collision reduction; it is not itself such a reduction.
 
 ## References
 
@@ -27,88 +33,6 @@ leaves with WOTS+ public keys, and `xmssPkFromSig_xmssSign` derives XMSS correct
 
 @[expose] public section
 
-
-namespace SLHDSA.Merkle
-
-variable {Y : Type}
-
-/-- The root of a perfect binary subtree of height `z` rooted at index `t`, over a leaf-value
-function `leaf` and a position-indexed node hash `nodeHash height index left right`. -/
-def merkleRoot (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) : ℕ → ℕ → Y
-  | 0, t => leaf t
-  | z + 1, t =>
-      nodeHash (z + 1) t (merkleRoot leaf nodeHash z (2 * t))
-        (merkleRoot leaf nodeHash z (2 * t + 1))
-
-/-- The index of the sibling of node `i` (flip the last bit, written without `xor`). -/
-def sibling (i : ℕ) : ℕ := if i % 2 = 0 then i + 1 else i - 1
-
-/-- The authentication path for leaf `idx` over `z` levels, starting at height `base`:
-the level-`j` entry is the subtree root of the sibling on the path. -/
-def authPath (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (base idx z : ℕ) : List Y :=
-  (List.range z).map (fun j => merkleRoot leaf nodeHash (base + j) (sibling (idx / 2 ^ j)))
-
-/-- Climb an authentication path: starting from `node` at position `(base, idx)`, fold each
-sibling in (left/right by the parity of the running index) to reconstruct an ancestor. -/
-def climb (nodeHash : ℕ → ℕ → Y → Y → Y) (base idx : ℕ) (node : Y) : List Y → Y
-  | [] => node
-  | a :: auth =>
-      climb nodeHash (base + 1) (idx / 2)
-        (if idx % 2 = 0 then nodeHash (base + 1) (idx / 2) node a
-         else nodeHash (base + 1) (idx / 2) a node) auth
-
-/-- Folding the honest leaf's sibling in reproduces the parent subtree root. -/
-private theorem combined_eq (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (base idx : ℕ) :
-    (if idx % 2 = 0
-      then nodeHash (base + 1) (idx / 2) (merkleRoot leaf nodeHash base idx)
-            (merkleRoot leaf nodeHash base (sibling idx))
-      else nodeHash (base + 1) (idx / 2) (merkleRoot leaf nodeHash base (sibling idx))
-            (merkleRoot leaf nodeHash base idx))
-      = merkleRoot leaf nodeHash (base + 1) (idx / 2) := by
-  have hdm := Nat.div_add_mod idx 2
-  change _ = nodeHash (base + 1) (idx / 2) (merkleRoot leaf nodeHash base (2 * (idx / 2)))
-            (merkleRoot leaf nodeHash base (2 * (idx / 2) + 1))
-  by_cases h : idx % 2 = 0
-  · rw [if_pos h, sibling, if_pos h]
-    have h1 : 2 * (idx / 2) = idx := by omega
-    rw [h1]
-  · rw [if_neg h, sibling, if_neg h]
-    have h2 : 2 * (idx / 2) = idx - 1 := by omega
-    have h3 : 2 * (idx / 2) + 1 = idx := by omega
-    rw [h3, h2]
-
-/-- **Merkle auth-path consistency.** Climbing the honest authentication path of leaf `idx`
-from its honest subtree root reconstructs the height-`(base+z)` ancestor root. -/
-theorem climb_authPath (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) :
-    ∀ (z base idx : ℕ),
-      climb nodeHash base idx (merkleRoot leaf nodeHash base idx)
-          (authPath leaf nodeHash base idx z)
-        = merkleRoot leaf nodeHash (base + z) (idx / 2 ^ z) := by
-  intro z
-  induction z with
-  | zero =>
-    intro base idx
-    simp only [authPath, List.range_zero, List.map_nil, climb, Nat.add_zero, pow_zero,
-      Nat.div_one]
-  | succ z ih =>
-    intro base idx
-    have hauth : authPath leaf nodeHash base idx (z + 1)
-        = merkleRoot leaf nodeHash base (sibling idx)
-          :: authPath leaf nodeHash (base + 1) (idx / 2) z := by
-      simp only [authPath, List.range_succ_eq_map, List.map_cons, List.map_map, pow_zero,
-        Nat.div_one, Nat.add_zero]
-      refine congrArg _ (List.map_congr_left fun j _ => ?_)
-      simp only [Function.comp_apply]
-      have hb : base + (j + 1) = base + 1 + j := by omega
-      have hd : idx / 2 ^ (j + 1) = idx / 2 / 2 ^ j := by
-        rw [Nat.div_div_eq_div_mul, pow_succ, Nat.mul_comm]
-      rw [hb, hd]
-    rw [hauth, climb, combined_eq, ih (base + 1) (idx / 2)]
-    congr 1
-    · omega
-    · rw [Nat.div_div_eq_div_mul, pow_succ, Nat.mul_comm]
-
-end SLHDSA.Merkle
 
 namespace SLHDSA
 
@@ -125,15 +49,19 @@ def xmssLeaf (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed) (adr
     (t : ℕ) : prims.Y :=
   wotsPkGen prims sk pk (wotsLeafAdrs adrs t)
 
+/-- The `TREE`-type address of the XMSS node at tree position `(height z, index t)`. -/
+def xmssNodeAdrs (adrs : Adrs) (z t : ℕ) : Adrs :=
+  ((adrs.setTypeAndClear .tree).setTreeHeight z).setTreeIndex t
+
 /-- The XMSS internal-node hash at tree position `(height z, index t)` (type `TREE`). -/
 def xmssNodeHash (prims : Primitives p) (pk : prims.PkSeed) (adrs : Adrs)
     (z t : ℕ) (l r : prims.Y) : prims.Y :=
-  prims.H pk (((adrs.setTypeAndClear .tree).setTreeHeight z).setTreeIndex t) l r
+  prims.H pk (xmssNodeAdrs adrs z t) l r
 
 /-- The XMSS subtree root at `(height z, index t)` (FIPS 205 Algorithm 9). -/
 def xmssNode (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs)
     (z t : ℕ) : prims.Y :=
-  Merkle.merkleRoot (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs) z t
+  PerfectMerkleTree.merkleRoot (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs) z t
 
 /-- The XMSS tree root (height `h'`, index `0`) — the value committed by key generation. -/
 def xmssRoot (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
@@ -148,13 +76,13 @@ abbrev XmssSig (p : Params) (prims : Primitives p) := WotsSig p prims × List pr
 def xmssSign (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) (idx : ℕ) : XmssSig p prims :=
   (wotsSign prims msg sk pk (wotsLeafAdrs adrs idx),
-    Merkle.authPath (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs) 0 idx p.hp)
+    PerfectMerkleTree.authPath (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs) idx p.hp)
 
 /-- XMSS root recovery from a signature (FIPS 205 Algorithm 11): recover the WOTS+ public key
 (the leaf) then climb the auth path. -/
 def xmssPkFromSig (prims : Primitives p) (idx : ℕ) (sig : XmssSig p prims) (msg : prims.Y)
     (pk : prims.PkSeed) (adrs : Adrs) : prims.Y :=
-  Merkle.climb (xmssNodeHash prims pk adrs) 0 idx
+  PerfectMerkleTree.climb (xmssNodeHash prims pk adrs) idx
     (wotsPkFromSig prims sig.1 msg pk (wotsLeafAdrs adrs idx)) sig.2
 
 /-- **XMSS correctness** (FIPS 205, Algorithms 9–11): root recovery from an honest signature at
@@ -167,9 +95,37 @@ theorem xmssPkFromSig_xmssSign (prims : Primitives p) (msg : prims.Y) (sk : prim
   unfold xmssPkFromSig xmssSign xmssRoot xmssNode
   dsimp only
   rw [wotsPkFromSig_wotsSign]
-  have key := Merkle.climb_authPath (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs)
-    p.hp 0 idx
-  rw [Nat.zero_add, Nat.div_eq_of_lt hidx] at key
+  have key := PerfectMerkleTree.climb_authPath (xmssLeaf prims sk pk adrs)
+    (xmssNodeHash prims pk adrs) idx p.hp
+  rw [Nat.div_eq_of_lt hidx] at key
   exact key
+
+/-- **XMSS binding.** A signature at leaf `idx < 2^{h'}` with a well-formed authentication path
+whose recovered WOTS+ public key differs from the honest leaf, yet which recovers the honest XMSS
+root, exhibits a collision of `H` at the `TREE` address of the ancestor of leaf `idx` at some
+height `0 < h ≤ h'` — node `(h, idx / 2 ^ h)`: the honestly computed child pair at that node and
+a distinct pair hash to the same value. The first endpoint is fixed by the honest tree and
+determined by `(idx, h)` (a valid target for a multi-target target-collision reduction). -/
+theorem xmssPkFromSig_binding (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed)
+    (pk : prims.PkSeed) (adrs : Adrs) (idx : ℕ) (hidx : idx < 2 ^ p.hp)
+    (sig : XmssSig p prims) (hlen : sig.2.length = p.hp)
+    (hroot : xmssPkFromSig prims idx sig msg pk adrs = xmssRoot prims sk pk adrs)
+    (hne : xmssLeaf prims sk pk adrs idx
+      ≠ wotsPkFromSig prims sig.1 msg pk (wotsLeafAdrs adrs idx)) :
+    ∃ (h : ℕ) (c : prims.Y × prims.Y), 0 < h ∧ h ≤ p.hp ∧
+      (xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h)),
+          xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h) + 1))
+        ≠ c ∧
+      prims.H pk (xmssNodeAdrs adrs h (idx / 2 ^ h))
+          (xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h)))
+          (xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h) + 1))
+        = prims.H pk (xmssNodeAdrs adrs h (idx / 2 ^ h)) c.1 c.2 := by
+  have hroot' : PerfectMerkleTree.climb (xmssNodeHash prims pk adrs) idx
+      (wotsPkFromSig prims sig.1 msg pk (wotsLeafAdrs adrs idx)) sig.2
+      = PerfectMerkleTree.merkleRoot (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs)
+          p.hp (idx / 2 ^ p.hp) := by
+    rw [Nat.div_eq_of_lt hidx]; exact hroot
+  exact PerfectMerkleTree.climb_binding (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs)
+    p.hp idx _ sig.2 hlen hroot' hne
 
 end SLHDSA

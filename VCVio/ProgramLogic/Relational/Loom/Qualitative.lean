@@ -25,7 +25,7 @@ Prop EPost.nil EPost.nil` instance, derived from the existing
 
 This is the support-based / coupling-existence carrier:
 `CouplingPost oa ob R` holds iff there exists an SPMF coupling of
-`evalDist oa` and `evalDist ob` whose support is contained in `R`.
+`evalSPMF oa` and `evalSPMF ob` whose support is contained in `R`.
 
 ## Layout and discipline
 

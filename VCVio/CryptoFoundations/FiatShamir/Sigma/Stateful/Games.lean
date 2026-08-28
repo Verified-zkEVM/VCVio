@@ -40,7 +40,7 @@ variable {Resp PrvState : Type}
 /-- Public part of the no-message-attack game.
 
 State: random-oracle cache, lazily sampled keypair, and bad flag. -/
-@[fs_simp] noncomputable def nmaPublic
+@[fs_simp] def nmaPublic
     (hr : GenerableRelation Stmt Wit rel) :
     QueryImpl.Stateful unifSpec (cmaPublicSpec M Commit Chal Stmt)
       (NmaState M Commit Chal Stmt Wit)
@@ -62,7 +62,7 @@ State: random-oracle cache, lazily sampled keypair, and bad flag. -/
           pure (pk, (s.1, some (pk, sk), s.2.2))
 
 /-- Programmable random-oracle part of the no-message-attack game. -/
-@[fs_simp] noncomputable def nmaProgram :
+@[fs_simp] def nmaProgram :
     QueryImpl.Stateful unifSpec (progSpec M Commit Chal)
       (NmaState M Commit Chal Stmt Wit)
   | mch => StateT.mk fun s =>
@@ -74,7 +74,7 @@ State: random-oracle cache, lazily sampled keypair, and bad flag. -/
       | none => pure ((), (cache.cacheQuery mc ch, s.2.1, s.2.2))
 
 /-- The no-message-attack game as a direct stateful handler. -/
-@[fs_simp] noncomputable def nma
+@[fs_simp] def nma
     (hr : GenerableRelation Stmt Wit rel) :
     QueryImpl.Stateful unifSpec (nmaSpec M Commit Chal Stmt)
       (NmaState M Commit Chal Stmt Wit)
@@ -90,7 +90,7 @@ State: random-oracle cache, lazily sampled keypair, and bad flag. -/
 This component has no private state. Its imports are intentionally the same
 ambient `nmaSpec` used by the signing simulator, so adversarial RO queries and
 programming queries interact through one inner random-oracle cache. -/
-@[fs_simp] noncomputable def cmaPublicForward :
+@[fs_simp] def cmaPublicForward :
     QueryImpl.Stateful (nmaSpec M Commit Chal Stmt) (cmaPublicSpec M Commit Chal Stmt) PUnit
   | .unif n => StateT.mk fun u => do
       let r ← (((nmaSpec M Commit Chal Stmt).query (.unif n)) :
@@ -109,7 +109,7 @@ programming queries interact through one inner random-oracle cache. -/
 
 State: signed-message log. Signing queries sample the HVZK simulator and
 program the random oracle through the shared NMA interface. -/
-@[fs_simp] noncomputable def cmaSignSim
+@[fs_simp] def cmaSignSim
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
     QueryImpl.Stateful (nmaSpec M Commit Chal Stmt) (signSpec M Commit Resp)
       (OuterState M)
@@ -126,7 +126,7 @@ program the random oracle through the shared NMA interface. -/
 Public queries are forwarded to the NMA interface; signing queries are handled
 by the simulator component that owns the signed-message log. Both paths share
 the same `nmaSpec` imports on purpose. -/
-@[fs_simp] noncomputable def cmaToNma
+@[fs_simp] def cmaToNma
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
     QueryImpl.Stateful (nmaSpec M Commit Chal Stmt) (cmaSpec M Commit Chal Resp Stmt)
       (OuterState M)
@@ -147,7 +147,7 @@ the same `nmaSpec` imports on purpose. -/
 /-! ## `cmaSim`: simulated CMA game -/
 
 /-- The simulated CMA game, linked through the direct CMA frame. -/
-@[fs_simp] noncomputable abbrev cmaSim
+@[fs_simp] abbrev cmaSim
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
     QueryImpl.Stateful unifSpec (cmaSpec M Commit Chal Resp Stmt)
@@ -161,14 +161,14 @@ the same `nmaSpec` imports on purpose. -/
 
 This handler is shared by the fixed-key public post-keygen experiment and the
 direct named CMA game. -/
-@[reducible, fs_simp] noncomputable def fsBaseImpl :
+@[reducible, fs_simp] def fsBaseImpl :
     QueryImpl (unifSpec + roSpec M Commit Chal)
       (StateT (RoCache M Commit Chal) ProbComp) :=
   unifFwdImpl (roSpec M Commit Chal) +
     (randomOracle : QueryImpl (roSpec M Commit Chal) _)
 
 /-- Fixed-key real Fiat-Shamir signing over the shared random-oracle cache. -/
-@[reducible, fs_simp] noncomputable def cmaRealFixedSign
+@[reducible, fs_simp] def cmaRealFixedSign
     (sigma : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (pk : Stmt) (sk : Wit) :
@@ -181,7 +181,7 @@ direct named CMA game. -/
     pk sk
 
 /-- Source-query part of the real CMA game over the full direct CMA state. -/
-@[fs_simp] noncomputable def cmaRealSourceFull
+@[fs_simp] def cmaRealSourceFull
     (sigma : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) :
     QueryImpl.Stateful unifSpec (cmaSourceSpec M Commit Chal Resp)
@@ -229,7 +229,7 @@ direct named CMA game. -/
 
 /-- Source-query part of the real CMA game over the concrete sum interface used
 by `SignatureAlg.unforgeableAdv`. -/
-@[fs_simp] noncomputable def cmaRealSourceFullSum
+@[fs_simp] def cmaRealSourceFullSum
     (sigma : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) :
     QueryImpl.Stateful unifSpec
@@ -243,7 +243,7 @@ by `SignatureAlg.unforgeableAdv`. -/
 
 On signing queries, this runs the real Sigma protocol and appends the message
 to the signed log. The bad flag is preserved and never set by real signing. -/
-@[fs_simp] noncomputable def cmaReal
+@[fs_simp] def cmaReal
     (sigma : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) :
     QueryImpl.Stateful unifSpec (cmaSpec M Commit Chal Resp Stmt)

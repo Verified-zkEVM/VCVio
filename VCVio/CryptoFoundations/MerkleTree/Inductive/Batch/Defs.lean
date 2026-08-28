@@ -117,8 +117,12 @@ inductive BatchProof (α : Type u) : {s : Skeleton} → LeafData Bool s → Type
       BatchProof α (.internal l r)
 
 /-- The tuple of claimed values for the leaves selected by `sel`: one `α` per selected
-leaf, `PUnit` at unselected leaves, products at internal nodes. -/
-@[simp, grind]
+leaf, `PUnit` at unselected leaves, products at internal nodes.
+
+The reducer is available at implicit transparency because dependent recursion
+on a batch proof must identify this type with the product of the recursively
+selected child values. -/
+@[simp, grind, implicit_reducible]
 def SelectedValues (α : Type u) : {s : Skeleton} → LeafData Bool s → Type u
   | _, .leaf true => α
   | _, .leaf false => PUnit
