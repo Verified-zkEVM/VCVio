@@ -235,16 +235,16 @@ lemma probOutput_generateSeed' [spec.Fintype] [DecidableEq (QuerySeed spec)]
   exact probOutput_eq_inv_finSupport_card_of_liftM_PMF fun s hs =>
     probOutput_generateSeed spec qc js s hs
 
-lemma evalDist_generateSeed_eq_of_countEq [IsUniformSpec spec]
+lemma evalSPMF_generateSeed_eq_of_countEq [IsUniformSpec spec]
     (qc' : ι → ℕ) (js' : List ι)
     (hcount : ∀ i, qc i * js.count i = qc' i * js'.count i) :
-    𝒟[generateSeed spec qc js] = 𝒟[generateSeed spec qc' js'] := by
+    𝒮[generateSeed spec qc js] = 𝒮[generateSeed spec qc' js'] := by
   classical
   let _ : DecidableEq (QuerySeed spec) := Classical.decEq _
   have hsupp : support (generateSeed spec qc js) = support (generateSeed spec qc' js') := by
     simp only [support_generateSeed, hcount]
   ext seed
-  change Pr[= seed | generateSeed spec qc js] = Pr[= seed | generateSeed spec qc' js']
+  rw [← probOutput_def, ← probOutput_def]
   by_cases hmem : seed ∈ support (generateSeed spec qc js)
   · have hfin : finSupport (generateSeed spec qc js) = finSupport (generateSeed spec qc' js') :=
       finSupport_eq_of_support_eq_coe (by rw [hsupp, coe_finSupport])
@@ -313,7 +313,7 @@ lemma probOutput_generateSeed_prependValues [IsUniformSpec spec]
     have hmem_canon : s'.prependValues [u] ∈ support (generateSeed spec N js.dedup) := by
       rw [support_generateSeed, Set.mem_ofPred_eq] at hmem ⊢
       exact fun i => (hmem i).trans (hcount i)
-    rw [probOutput_congr rfl (evalDist_generateSeed_eq_of_countEq spec qc js N js.dedup hcount),
+    rw [probOutput_congr rfl (evalSPMF_generateSeed_eq_of_countEq spec qc js N js.dedup hcount),
       probOutput_generateSeed spec N js.dedup _ hmem_canon,
       probOutput_generateSeed spec qc_red js.dedup _ hmem_red]
     refine inv_natCast_list_prod_map_eq_inv_mul js.dedup

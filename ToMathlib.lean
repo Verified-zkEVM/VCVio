@@ -38,12 +38,16 @@ public import ToMathlib.General
 public import ToMathlib.MeasureTheory.DiscreteInstances
 public import ToMathlib.MeasureTheory.MeasurableSpace.Except
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
+public import ToMathlib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.Monotone
 public import ToMathlib.MeasureTheory.Measure.Option
 public import ToMathlib.MeasureTheory.Measure.Subprobability
+public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.Divergence.Renyi
 public import ToMathlib.Probability.Divergence.RenyiDiscrete
+public import ToMathlib.Probability.Divergence.TotalVariation
+public import ToMathlib.Probability.Kernel.Subprobability
 public import ToMathlib.Probability.NegativeHypergeometric
 public import ToMathlib.Probability.ProbabilityMassFunction.Measure
 public import ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym

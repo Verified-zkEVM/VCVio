@@ -4,7 +4,9 @@ VCVio is a Lean library for machine-checked proofs about cryptographic games, pr
 protocols, and implementations. The core framework provides:
 
 * A monadic syntax for representing computations with oracle access (`OracleComp`), with probabilistic computations (`ProbComp`) as a special case of having uniform selection oracles.
-* A denotational semantics (`evalDist`) for assigning probability distributions to probabilistic computations, and tools for reasoning about the probabilities of particular outputs or events (`probOutput`/`probEvent`/`probFailure`).
+* A measure-valued denotational semantics (`evalDist` / `𝒟[…]`) for probabilistic computations,
+  with an explicit finite adapter (`evalSPMF` / `𝒮[…]`) and scalar tools for output, event, and
+  failure probabilities (`probOutput`/`probEvent`/`probFailure`).
 * An operational semantics (`simulateQ`) for implementing/simulating the behavior of a computation's oracles, including implementations of random oracles, query logging, reductions, etc.
 * A program logic with relational (pRHL-style) and unary (Hoare-style) proof modes, with interactive tactics for stepping through game-based proofs.
 
@@ -121,8 +123,10 @@ This provides a mechanism to implement oracle behaviors, but can also be used to
 Semantics for probability calculations come from using `simulateQ` to interpret the computation in another monad.
 `support` can be used to embed in the `Set` monad to get the possible outputs of a computation.
 
-`evalDist` embeds a computation into the `SPMF` monad (`OptionT PMF`) by using uniform distributions for each oracle's range.
-For `ProbComp` (i.e. `OracleComp unifSpec`), `evalDist` is definitionally equal to `simulateQ` with uniform implementations.
+`evalDist` exposes the successful-output law as a Mathlib `Measure`; missing mass represents
+failure or nontermination. `evalSPMF` is the explicit `OptionT PMF` compatibility and executable
+backend. For `ProbComp` (i.e. `OracleComp unifSpec`), `evalSPMF` is definitionally equal to
+`simulateQ` with uniform implementations.
 We introduce notation:
 
 * `Pr[= x | comp]` - probability of output `x`

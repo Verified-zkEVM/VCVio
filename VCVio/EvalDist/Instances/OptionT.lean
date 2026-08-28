@@ -13,7 +13,7 @@ public import VCVio.EvalDist.Option
 # Probability Distributions on Potentially Failing Computations
 
 This file lifts `MonadLiftT _ SetM` and `MonadLiftT _ SPMF` semantics through the
-`OptionT` monad transformer, providing `support`, `finSupport`, and `evalDist`-based
+`OptionT` monad transformer, providing `support`, `finSupport`, and `evalSPMF`-based
 probability lemmas for `OptionT m α` in terms of the underlying `m (Option α)`.
 -/
 
@@ -171,13 +171,13 @@ instance instEvalDistCompatible (m : Type u → Type v) [Monad m]
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
-lemma evalDist_eq (mx : OptionT m α) :
-    𝒟[mx] = OptionT.mapM' (MonadHom.ofLift m SPMF) mx := rfl
+lemma evalSPMF_eq (mx : OptionT m α) :
+    𝒮[mx] = OptionT.mapM' (MonadHom.ofLift m SPMF) mx := rfl
 
 @[grind =]
 lemma probOutput_eq (mx : OptionT m α) (x : α) :
     Pr[= x | mx] = Pr[= some x | mx.run] := by
-  simp only [probOutput_def, evalDist_eq, OptionT.mapM', SPMF.bind_apply_eq_tsum]
+  simp only [probOutput_def, evalSPMF_eq, OptionT.mapM', SPMF.bind_apply_eq_tsum]
   refine (tsum_eq_single (some x) fun y hy => ?_).trans (by simp)
   cases y with
   | none => simp
@@ -192,9 +192,9 @@ lemma probEvent_eq (mx : OptionT m α) (p : α → Prop) [DecidablePred p] :
 @[grind =]
 lemma probFailure_eq (mx : OptionT m α) :
     Pr[⊥ | mx] = Pr[⊥ | mx.run] + Pr[= none | mx.run] := by
-  simp [probFailure_def, probOutput_def, evalDist_eq, OptionT.mapM', SPMF.toPMF_bind,
+  simp [probFailure_def, probOutput_def, evalSPMF_eq, OptionT.mapM', SPMF.toPMF_bind,
     Option.elimM, PMF.bind_apply, tsum_option, SPMF.toPMF_failure, SPMF.toPMF_pure,
-    SPMF.apply_eq_toPMF_some, evalDist_def]
+    SPMF.apply_eq_toPMF_some, evalSPMF_def]
 
 @[simp, grind =]
 lemma probOutput_liftM [LawfulMonad m] (mx : m α) (x : α) :

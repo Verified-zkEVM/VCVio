@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
+public import VCVio.EvalDist.Kernel
 public import VCVio.EvalDist.PFunctorMeasure
 public import Mathlib.InformationTheory.KullbackLeibler.DataProcessing
 
@@ -57,7 +58,7 @@ variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.IsMeasureSpe
 Measurability is `Measurable.of_discrete`: the *domain* is discrete, so no constraint is placed
 on the output type, which may be continuous. -/
 noncomputable def denoteKernel (f : α → FreeM P β) : Kernel α β :=
-  ⟨fun x => denote (f x), Measurable.of_discrete⟩
+  evalDistKernelOfDiscrete f
 
 omit [∀ a, DiscreteMeasurableSpace (P.B a)] in
 @[simp]

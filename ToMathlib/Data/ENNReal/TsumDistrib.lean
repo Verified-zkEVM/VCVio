@@ -16,7 +16,7 @@ weights `w` sum to one (the standard PMF normalisation), any constant added
 *inside* the weighted sum can be pulled *outside*.
 
 These are the building blocks for weighted game-hopping identities of the form
-`∑' pksk, evalDist gen pksk * (Pr[good | …] + slack)` that show up in the
+`∑' pksk, evalSPMF gen pksk * (Pr[good | …] + slack)` that show up in the
 integrated Fiat-Shamir EUF-CMA reductions.
 
 ## Main results

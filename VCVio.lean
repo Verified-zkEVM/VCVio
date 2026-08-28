@@ -33,6 +33,7 @@ public import VCVio.CryptoFoundations.Fischlin.Completeness
 public import VCVio.CryptoFoundations.Fischlin.CostAccounting
 public import VCVio.CryptoFoundations.Fischlin.Defs
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness
+public import VCVio.CryptoFoundations.ForkMeasure
 public import VCVio.CryptoFoundations.FujisakiOkamoto
 public import VCVio.CryptoFoundations.FujisakiOkamoto.Composed
 public import VCVio.CryptoFoundations.FujisakiOkamoto.Defs
@@ -82,6 +83,7 @@ public import VCVio.EvalDist.Bool
 public import VCVio.EvalDist.Defs.AlternativeMonad
 public import VCVio.EvalDist.Defs.Basic
 public import VCVio.EvalDist.Defs.Instances
+public import VCVio.EvalDist.Defs.Measure
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Defs.Semantics
 public import VCVio.EvalDist.Defs.Support
@@ -95,8 +97,10 @@ public import VCVio.EvalDist.Instances.ErrorT
 public import VCVio.EvalDist.Instances.FinRatPMF
 public import VCVio.EvalDist.Instances.OptionT
 public import VCVio.EvalDist.Instances.ReaderT
+public import VCVio.EvalDist.Kernel
 public import VCVio.EvalDist.List
 public import VCVio.EvalDist.MeasureSemantics
+public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Map
@@ -192,6 +196,7 @@ public import VCVio.ProgramLogic.Relational.Loom.Coherence
 public import VCVio.ProgramLogic.Relational.Loom.Probabilistic
 public import VCVio.ProgramLogic.Relational.Loom.Qualitative
 public import VCVio.ProgramLogic.Relational.Loom.Quantitative
+public import VCVio.ProgramLogic.Relational.Measure
 public import VCVio.ProgramLogic.Relational.ProgrammingOracle
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs

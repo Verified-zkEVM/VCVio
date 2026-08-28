@@ -8,6 +8,8 @@ module
 public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.ExpectationMeasure
+public import VCVio.EvalDist.MeasureTVDist
+public import VCVio.ProgramLogic.Relational.Measure
 public import ToMathlib.Probability.Divergence.RenyiDiscrete
 public import Mathlib.Probability.Distributions.Gaussian.Real
 public import ToMathlib.MeasureTheory.DiscreteInstances
@@ -58,6 +60,10 @@ theorem denote_gauss_lift :
       (fun b => FreeM.denote (P := gaussSpec) (Pure.pure b)) = _
   simp
 
+/-- Primary notation selects the direct measure fold when no discrete backend exists. -/
+example : 𝒟[(FreeM.lift PUnit.unit : FreeM gaussSpec ℝ)] = gaussianReal 0 1 :=
+  denote_gauss_lift
+
 /-- The denoted measure really is a Gaussian law: its mass on a half-line is the Gaussian's,
 so Mathlib's distribution API applies to the denotation directly rather than through a
 translation layer. -/
@@ -84,6 +90,21 @@ theorem isProbabilityMeasure_denote_shiftedGaussian :
     fun_prop
   · exact Filter.Eventually.of_forall fun _ => ⟨by simp⟩
 
+/-! ## Measure-native distance and relational semantics -/
+
+/-- Total variation is available directly on a continuous computation. -/
+example : measureTVDist shiftedGaussian shiftedGaussian = 0 :=
+  measureTVDist_self shiftedGaussian
+
+/-- The diagonal construction couples a Gaussian measure with itself. -/
+example : Measure.IsCoupling (Measure.Coupling.refl (gaussianReal 0 1)).joint
+    (gaussianReal 0 1) (gaussianReal 0 1) :=
+  (Measure.Coupling.refl (gaussianReal 0 1)).property
+
+/-- Relational reasoning applies directly to a continuous denotation. -/
+example : MeasureProgramLogic.RelWP shiftedGaussian shiftedGaussian (· = ·) :=
+  MeasureProgramLogic.relWP_refl shiftedGaussian
+
 /-! ## Agreement with the `PMF` denotation on a discrete interface -/
 
 /-- An interface with a single operation, answered by a coin flip. -/
@@ -95,6 +116,14 @@ noncomputable instance : coinSpec.IsProbabilitySpec where
 noncomputable instance : coinSpec.IsMeasureSpec where
   toMeasure _ := (PMF.uniformOfFintype Bool).toMeasure
   isProbabilityMeasure _ := PMF.toMeasure.isProbabilityMeasure _
+
+/-- A nonzero, branch-sensitive lower bound rules out a vacuous quantitative semantics. -/
+example : (1 : ℝ≥0∞) ≤
+    MeasureProgramLogic.eRelWP (pure true : FreeM coinSpec Bool)
+      (pure false : FreeM coinSpec Bool)
+      (fun a b => if a && !b then 1 else 0) := by
+  apply MeasureProgramLogic.le_eRelWP_pure_pure
+  fun_prop
 
 /-- On a discrete interface the two denotations agree, so a `Pr[…]` result proved against the
 `PMF` semantics can be read off the measure semantics. -/
@@ -109,11 +138,46 @@ theorem denote_event_coin {α : Type} [MeasurableSpace α] [DiscreteMeasurableSp
     FreeM.denote program {x | event x} = Pr[event | program] :=
   FreeM.denote_apply_setOf (fun _ => rfl) program event MeasurableSet.of_discrete
 
+/-- The reverse discrete adapter preserves both successful branches and missing mass. -/
+example (p : SPMF Bool) :
+    p.toMeasure.toSPMF (SPMF.toMeasure_apply_univ_le_one p) = p := by
+  exact SPMF.toMeasure_toSPMF p
+
+/-! ## Primary notation and the discrete compatibility surface -/
+
+/-- The primary `𝒟[…]` notation is a subprobability measure. -/
+example (program : FreeM coinSpec Bool) : 𝒟[program] Set.univ ≤ 1 :=
+  evalDist_apply_univ_le_one program
+
+/-- On a discrete `FreeM` program, primary notation agrees with the direct measure fold. -/
+example (program : FreeM coinSpec Bool) : 𝒟[program] = FreeM.denote program :=
+  FreeM.evalDist_eq_denote program
+
+/-- Point notation is an explicit adapter to singleton mass in the primary measure. -/
+example (program : FreeM coinSpec Bool) (x : Bool) :
+    Pr[= x | program] = 𝒟[program] {x} :=
+  (FreeM.evalDist_apply_singleton (fun _ => rfl) program x).symm
+
+/-- Predicate notation is likewise an adapter to a measurable event. -/
+example (program : FreeM coinSpec Bool) (event : Bool → Prop) :
+    Pr[event | program] = 𝒟[program] {x | event x} :=
+  (FreeM.evalDist_apply_setOf (fun _ => rfl) program event MeasurableSet.of_discrete).symm
+
+/-- Crossing the compatibility boundary preserves perfect indistinguishability exactly. -/
+example (p q : SPMF Bool) :
+    Measure.tvDist p.toMeasure q.toMeasure = 0 ↔ SPMF.tvDist p q = 0 :=
+  SPMF.toMeasure_tvDist_eq_zero_iff p q
+
+/-- On the one-point observation space, the two TV distances agree numerically as well. -/
+example (p q : SPMF.{0} PUnit.{1}) :
+    Measure.tvDist p.toMeasure q.toMeasure = SPMF.tvDist p q :=
+  SPMF.toMeasure_tvDist_punit p q
+
 /-! ## Transformer stacks retain their effects -/
 
 /-- The reusable total semantics for the discrete coin interface. -/
-noncomputable def coinMeasureSemantics : MeasureSemantics (FreeM coinSpec) :=
-  MeasureSemantics.freeM
+noncomputable def coinMeasureSemantics : ProbabilitySemantics (FreeM coinSpec) :=
+  ProbabilitySemantics.freeM
 
 /-- `OptionT` keeps `none` as an observable outcome until a proof explicitly discards it. -/
 example (computation : OptionT (FreeM coinSpec) Bool) :
@@ -278,14 +342,26 @@ discrete development is therefore a corollary rather than a parallel copy. -/
 /-- Renyi between two continuous laws — no `PMF` counterpart exists. -/
 example (a : ℝ) : renyiMGF a (gaussianReal 0 1) (gaussianReal 0 1) = 1 := renyiMGF_self a _
 
-/-- The discrete data processing inequality, obtained from the measure-level one.
+/-- `PMF.renyiMGF_map_le` is now the measure-level result, and it still carries no instances.
 
-This is the *same statement* as the hand-rolled `PMF.renyiMGF_map_le`, whose direct proof is a
-fibrewise Holder argument of roughly a hundred and twenty lines; here it follows from Mathlib's
-convexity scaffolding through the agreement theorem. -/
-example (n m : ℕ) (a : ℝ) (ha : 1 ≤ a) (f : BitVec n → BitVec m) (p q : PMF (BitVec n)) :
+The carrier here is `ℝ`, which is uncountable and has no discrete measurable structure. That is
+the point of the corollary being stated without a `Countable` hypothesis: a `PMF` has countable
+support whatever its carrier, so the bridge must not demand countability of the carrier itself —
+otherwise it could not reach `SPMF.renyiDiv_map_le`, which instantiates at `Option α'` for an
+arbitrary `α'`. -/
+example (a : ℝ) (ha : 1 ≤ a) (f : ℝ → ℝ) (p q : PMF ℝ) :
     (f <$> p).renyiMGF a (f <$> q) ≤ p.renyiMGF a q :=
-  renyiMGF_map_le_of_pmf a ha f p q
+  PMF.renyiMGF_map_le a ha f p q
+
+/-- **The Rényi → total-variation bound**, which was `sorry` until the measure-level theory
+supplied both of its halves.
+
+`#396` calls this "the headline Rényi → eTV-distance bound". Its two ingredients — Cauchy-Schwarz
+against the Hellinger affinity, and log-convexity of the Rényi MGF — both reduce to the same
+Mathlib inequality, `ENNReal.lintegral_mul_norm_pow_le`. -/
+example (n : ℕ) (a : ℝ) (ha : 1 < a) (p q : PMF (BitVec n)) :
+    p.etvDist q ^ (2 : ℝ) ≤ 1 - (p.renyiDiv a q)⁻¹ :=
+  PMF.etvDist_sq_le_of_renyiDiv a ha p q
 
 /-- ...and it is the existing discrete formula on a finite sample type. -/
 example (n : ℕ) (a : ℝ) (ha : 1 < a) (p q : PMF (BitVec n)) :

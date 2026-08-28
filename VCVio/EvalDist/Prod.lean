@@ -11,7 +11,7 @@ public import ToMathlib.Data.ENNReal.SumSquares
 /-!
 # Evaluation Distributions of Computations with `Prod`
 
-Lemmas about `evalDist` and `support` involving `Prod`, ported to generic `[MonadLiftT m SPMF]`.
+Lemmas about `evalSPMF` and `support` involving `Prod`, ported to generic `[MonadLiftT m SPMF]`.
 -/
 
 @[expose] public section
