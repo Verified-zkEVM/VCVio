@@ -20,6 +20,10 @@ No oracle handler or cache is selected here.  The caller must interpret the whol
 program with one handler.  In particular, random-oracle consumers must install one shared lazy
 oracle across construction, signing, the adversary, and verification. The `Id` interpretation
 laws connect these effectful traversals to the established pure API.
+
+The natural-number adapter specializes the addressed engine used by XMSS/FORS.  It does not
+replace the older unaddressed inductive or vector Merkle APIs, and no claim is made here that their
+extractability or batch-opening proofs have been migrated to this representation.
 -/
 
 @[expose] public section

@@ -21,6 +21,14 @@ subtree, build the right subtree, then hash their roots.
 
 The deterministic-handler and `Id` theorems below show that these programs are interpretations
 of the existing pure engine, not a second Merkle-tree semantics.
+
+This module is deliberately a companion to the pre-existing unaddressed
+`InductiveMerkleTree.buildMerkleTree` / `getPutativeRoot` API, not its replacement.  The
+addressed engine is required by XMSS and FORS because the hash query includes the node address.
+Re-expressing the unaddressed entry points as constant-address specializations would also require
+migrating their extractability, batch-opening, uniqueness, and query-bound consumers.  That
+definitional migration is outside this layer; `Addressed.Basic` records the existing
+propositional constant-address bridges and the precise deferred boundary.
 -/
 
 @[expose] public section
