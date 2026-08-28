@@ -212,6 +212,14 @@ theorem slhVerifyInternalM_natural (core : CorePrimitives p)
 def slhKeygenInternalQueryBound (p : Params) : ℕ :=
   xmssNodeQueryBound p p.hp
 
+/-- Structural public-hash budget for the complete internal signing schedule: one `H_msg`, FORS
+signing and recovery from that signature, then hypertree signing.  The WOTS+ term is made uniform
+by allowing every chain its full `w - 1` steps. -/
+def slhSignInternalQueryBound (p : Params) : ℕ :=
+  1 + ((p.k * ((2 ^ p.a - 1) + (2 ^ p.a - p.a - 1)) +
+      (p.k * (p.a + 1) + 1)) +
+    (p.len * (p.w - 1) + xmssAuthPathQueryBound p p.hp))
+
 /-- Structural public-hash budget for verification of the supplied signature. The FORS term
 tracks the actual authentication-path lengths. The hypertree term uses the maximum WOTS+ chain
 budget plus the supplied XMSS authentication-path length. -/
@@ -240,6 +248,52 @@ theorem slhKeygenInternalM_isTotalQueryBound (core : CorePrimitives p)
         (pure (PublicKeyCore.mk pkSeed pkRoot,
           SecretKeyCore.mk skSeed skPrf pkSeed pkRoot) :
           OracleComp (publicHashSpec core) _) 0 from trivial)
+
+private theorem htSignM_isTotalQueryBound_coarse (core : CorePrimitives p)
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
+    (adrs : Adrs) (idxTree idxLeaf : ℕ) :
+    IsTotalQueryBound
+      (htSignM core msg sk pk adrs idxTree idxLeaf :
+        OracleComp (publicHashSpec core) (HtSigCore p core))
+      (p.len * (p.w - 1) + xmssAuthPathQueryBound p p.hp) := by
+  apply (htSignM_isTotalQueryBound core msg sk pk adrs idxTree idxLeaf).mono
+  have hsum :
+      (∑ i : Fin p.len, chainStepsCore core msg i.val) ≤ p.len * (p.w - 1) := by
+    calc
+      (∑ i : Fin p.len, chainStepsCore core msg i.val) ≤
+          ∑ _ : Fin p.len, (p.w - 1) := by
+            apply Finset.sum_le_sum
+            intro i hi
+            exact chainStepsCore_le core msg i.val
+      _ = p.len * (p.w - 1) := by simp
+  omega
+
+/-- Internal signing follows and bounds the whole FIPS 205 Algorithm 19 public-hash schedule:
+one `H_msg` query, sibling-only FORS signing, FORS recovery from the generated signature, and
+hypertree signing.  The theorem counts calls in the free oracle program.  It is an upper bound,
+not a count of distinct lazy-random-oracle cache misses or fresh samples. -/
+theorem slhSignInternalM_isTotalQueryBound (core : CorePrimitives p)
+    (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
+    IsTotalQueryBound
+      (slhSignInternalM core msg sk addrnd :
+        OracleComp (publicHashSpec core) (SignatureCore p core))
+      (slhSignInternalQueryBound p) := by
+  let R := core.PRFmsg sk.skPrf addrnd msg
+  have hbound := isTotalQueryBound_bind
+    (publicHash_hmsg_isTotalQueryBound_one core R sk.pkSeed sk.pkRoot msg) fun digest =>
+      let idxLeaf := (splitDigest p digest).2
+      let md := (splitDigest p digest).1
+      let fAdrs := forsAdrsOf idxLeaf
+      isTotalQueryBound_bind
+        (forsSignM_then_forsPkFromSigM_isTotalQueryBound
+          core md sk.skSeed sk.pkSeed fAdrs) fun sigAndPk =>
+            isTotalQueryBound_bind
+              (htSignM_isTotalQueryBound_coarse core sigAndPk.2 sk.skSeed sk.pkSeed
+                Adrs.zero 0 idxLeaf) fun htSig =>
+                  show IsTotalQueryBound
+                    (pure (R, sigAndPk.1, htSig) :
+                      OracleComp (publicHashSpec core) (SignatureCore p core)) 0 from trivial
+  simpa [slhSignInternalM, slhSignInternalQueryBound, R, bind_assoc] using hbound
 
 private theorem htVerifyM_isTotalQueryBound_coarse (core : CorePrimitives p)
     [DecidableEq core.Y] (msg : core.Y) (sig : HtSigCore p core)
