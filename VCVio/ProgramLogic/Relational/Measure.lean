@@ -70,6 +70,32 @@ theorem eRelWP_mono {m₁ : Type u → Type w} {m₂ : Type v → Type w}
   refine iSup_mono fun c => ?_
   exact lintegral_mono fun z => hgh z.1 z.2
 
+/-- A concrete measure coupling provides a falsifiable lower bound on the quantitative WP. -/
+theorem le_eRelWP_of_isCoupling {m₁ : Type u → Type w} {m₂ : Type v → Type w}
+    [EvalDistSemantics m₁] [EvalDistSemantics m₂]
+    (mx : m₁ α) (my : m₂ β) (g : α → β → ℝ≥0∞)
+    (c : Measure.Coupling 𝒟[mx] 𝒟[my]) :
+    (∫⁻ z, g z.1 z.2 ∂c.1) ≤ eRelWP mx my g :=
+  le_iSup (fun c' : Measure.Coupling 𝒟[mx] 𝒟[my] ↦
+    ∫⁻ z, g z.1 z.2 ∂c'.1) c
+
+/-- The Dirac coupling gives the expected lower bound for two pure computations. -/
+theorem le_eRelWP_pure_pure
+    {m₁ : Type u → Type w} {m₂ : Type v → Type w}
+    [Monad m₁] [Monad m₂] [EvalDistSemantics m₁] [EvalDistSemantics m₂]
+    [LawfulEvalDistSemantics m₁] [LawfulEvalDistSemantics m₂]
+    (a : α) (b : β) (g : α → β → ℝ≥0∞)
+    (hg : Measurable fun z : α × β => g z.1 z.2) :
+    g a b ≤ eRelWP (pure a : m₁ α) (pure b : m₂ β) g := by
+  rw [eRelWP, evalDist_pure, evalDist_pure]
+  have h := le_iSup
+    (fun c : Measure.Coupling (Measure.dirac a) (Measure.dirac b) ↦
+      ∫⁻ z, g z.1 z.2 ∂c.1)
+    (Measure.Coupling.dirac a b)
+  change (∫⁻ z, g z.1 z.2 ∂Measure.dirac (a, b)) ≤ _ at h
+  rw [lintegral_dirac' (a, b) hg] at h
+  exact h
+
 /-- Pure computations satisfy every relation true of their returned pair. -/
 theorem relWP_pure_pure
     {m₁ : Type u → Type w} {m₂ : Type v → Type w}

@@ -128,10 +128,10 @@ theorem toMeasure_apply_univ_le_one (p : SPMF α) : p.toMeasure Set.univ ≤ 1 :
   exact (Measure.dropNone_apply_univ_le p.toPMF.toMeasure).trans_eq hTotal
 
 @[simp]
-theorem toMeasure_apply_singleton [DiscreteMeasurableSpace α] (p : SPMF α) (x : α) :
+theorem toMeasure_apply_singleton [MeasurableSingletonClass α] (p : SPMF α) (x : α) :
     p.toMeasure {x} = p x := by
   rw [toMeasure, Measure.dropNone_apply_singleton,
-    PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete]
+    PMF.toMeasure_apply_singleton _ _ (measurableSet_singleton (some x))]
   rfl
 
 /-- On a discrete output space, applying the successful-output measure to a set agrees with the
@@ -158,7 +158,7 @@ theorem toMeasure_apply_univ [DiscreteMeasurableSpace α] (p : SPMF α) :
 
 Failure mass is determined by the successful masses, so dropping the explicit `none` outcome does
 not lose information. -/
-theorem toMeasure_injective [DiscreteMeasurableSpace α] :
+theorem toMeasure_injective [MeasurableSingletonClass α] :
     Function.Injective (SPMF.toMeasure : SPMF α → Measure α) := by
   intro p q hpq
   apply SPMF.ext
@@ -203,5 +203,23 @@ theorem toSPMF_apply_none [Countable α] [DiscreteMeasurableSpace α]
   let _ : IsProbabilityMeasure μ.withFailure := μ.withFailure_isProbabilityMeasure hμ
   change μ.withFailure.toPMF none = 1 - μ Set.univ
   rw [Measure.toPMF_apply, Measure.withFailure_apply_none]
+
+/-- Converting a discrete subprobability measure to `SPMF` and back preserves the measure. -/
+@[simp]
+theorem toSPMF_toMeasure [Countable α] [DiscreteMeasurableSpace α]
+    (μ : Measure α) (hμ : μ Set.univ ≤ 1) :
+    (μ.toSPMF hμ).toMeasure = μ := by
+  apply Measure.ext_of_singleton
+  intro x
+  simp
+
+/-- Converting an `SPMF` to its successful-output measure and back preserves the `SPMF`. -/
+@[simp]
+theorem _root_.SPMF.toMeasure_toSPMF [Countable α] [DiscreteMeasurableSpace α]
+    (p : SPMF α) :
+    p.toMeasure.toSPMF (SPMF.toMeasure_apply_univ_le_one p) = p := by
+  apply SPMF.ext
+  intro x
+  simp
 
 end MeasureTheory.Measure

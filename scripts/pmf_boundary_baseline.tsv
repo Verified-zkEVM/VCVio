@@ -46,7 +46,7 @@ VCVio/EvalDist/Bool.lean	4
 VCVio/EvalDist/Defs/AlternativeMonad.lean	6
 VCVio/EvalDist/Defs/Basic.lean	138
 VCVio/EvalDist/Defs/Instances.lean	29
-VCVio/EvalDist/Defs/Measure.lean	22
+VCVio/EvalDist/Defs/Measure.lean	26
 VCVio/EvalDist/Defs/NeverFails.lean	13
 VCVio/EvalDist/Defs/Semantics.lean	12
 VCVio/EvalDist/Defs/Support.lean	1

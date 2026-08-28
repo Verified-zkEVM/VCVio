@@ -117,6 +117,14 @@ noncomputable instance : coinSpec.IsMeasureSpec where
   toMeasure _ := (PMF.uniformOfFintype Bool).toMeasure
   isProbabilityMeasure _ := PMF.toMeasure.isProbabilityMeasure _
 
+/-- A nonzero, branch-sensitive lower bound rules out a vacuous quantitative semantics. -/
+example : (1 : ℝ≥0∞) ≤
+    MeasureProgramLogic.eRelWP (pure true : FreeM coinSpec Bool)
+      (pure false : FreeM coinSpec Bool)
+      (fun a b => if a && !b then 1 else 0) := by
+  apply MeasureProgramLogic.le_eRelWP_pure_pure
+  fun_prop
+
 /-- On a discrete interface the two denotations agree, so a `Pr[…]` result proved against the
 `PMF` semantics can be read off the measure semantics. -/
 theorem denote_eq_toMeasure_coin {α : Type} [MeasurableSpace α]
@@ -129,6 +137,11 @@ theorem denote_event_coin {α : Type} [MeasurableSpace α] [DiscreteMeasurableSp
     (program : FreeM coinSpec α) (event : α → Prop) :
     FreeM.denote program {x | event x} = Pr[event | program] :=
   FreeM.denote_apply_setOf (fun _ => rfl) program event MeasurableSet.of_discrete
+
+/-- The reverse discrete adapter preserves both successful branches and missing mass. -/
+example (p : SPMF Bool) :
+    p.toMeasure.toSPMF (SPMF.toMeasure_apply_univ_le_one p) = p := by
+  exact SPMF.toMeasure_toSPMF p
 
 /-! ## Primary notation and the discrete compatibility surface -/
 

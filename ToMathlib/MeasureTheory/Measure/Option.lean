@@ -58,15 +58,16 @@ theorem dropNone_dirac_some (x : α) :
 /-- The success mass at `x` is the original mass at `some x`.
 
 This is the computation rule that carries a pointwise mass statement across `dropNone`. -/
-theorem dropNone_apply_singleton [DiscreteMeasurableSpace α] (μ : Measure (Option α)) (x : α) :
+theorem dropNone_apply_singleton [MeasurableSingletonClass α]
+    (μ : Measure (Option α)) (x : α) :
     dropNone μ {x} = μ {some x} := by
-  rw [dropNone, Measure.bind_apply MeasurableSet.of_discrete
+  rw [dropNone, Measure.bind_apply (measurableSet_singleton x)
     measurable_dropNoneKernel.aemeasurable]
   refine Eq.trans (lintegral_congr (g := Set.indicator {some x} 1) ?_) ?_
   · rintro (_ | y)
     · simp
     · by_cases hy : y = x <;> simp [hy]
-  · exact lintegral_indicator_one MeasurableSet.of_discrete
+  · exact lintegral_indicator_one (measurableSet_singleton (some x))
 
 /-- Discarding `none` cannot increase the total mass. -/
 theorem dropNone_apply_univ_le (μ : Measure (Option α)) :
