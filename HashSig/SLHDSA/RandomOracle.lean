@@ -13,7 +13,8 @@ public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 /-!
 # SLH-DSA in the public-hash random-oracle model
 
-This file lifts the canonical internal SLH-DSA programs into one external signature algorithm.
+This file lifts the canonical internal SLH-DSA programs for the repository's current `d = 1`
+formalization into one external signature algorithm.
 Fresh seeds and the signing randomizer are lifted from `ProbComp`; `H_msg` and every tweakable
 hash remain explicit `HasQuery (publicHashSpec core)` calls. The canonical random-oracle
 specialization uses one lazy cache for the complete experiment. Consequently key generation,
@@ -61,8 +62,10 @@ def slhVerifyM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (pk : PublicKeyCore core) (msg : List Byte) (sig : SignatureCore p core) : m Bool :=
   slhVerifyInternalM core (emptyContextMessage msg) sig pk
 
-/-- The single canonical oracle-parametric SLH-DSA signature scheme. Its algorithms are generic
-over the public-randomness lift and the public-hash query capability. -/
+/-- The single canonical oracle-parametric signature scheme for the current `d = 1` SLH-DSA
+formalization. Its algorithms are generic over the public-randomness lift and the public-hash
+query capability. The unrestricted `Params` carrier does not yet encode `d = 1` as a type-level
+invariant. -/
 def slhdsaAlgM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.SkSeed] [SampleableType core.SkPrf]

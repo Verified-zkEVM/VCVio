@@ -55,4 +55,18 @@ example [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y
       (PublicHash.runtime core) :=
   slhdsaAlgM_perfectlyComplete core
 
+/-- The shared-cache observation law is directly usable by the generic adaptive EUF-CMA API for
+an arbitrary adversary. In particular, the game wraps adversarial public-hash queries, adaptive
+signing-oracle calls, and final verification in the same runtime invocation. -/
+example [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y]
+    [SampleableType core.SkSeed] [SampleableType core.SkPrf]
+    [SampleableType core.PkSeed] [SampleableType core.Y]
+    [SampleableType (Bytes p.m)]
+    (adv : SignatureAlg.unforgeableAdv
+      (slhdsaAlgM (m := OracleComp (unifSpec + publicHashSpec core)) core)) :
+    adv.advantage (PublicHash.runtime core) ≤
+      Pr[= true | SignatureAlg.unforgeableExpNoFresh (PublicHash.runtime core) adv] :=
+  adv.advantage_le_unforgeableExpNoFresh (PublicHash.runtime core)
+    (fun f mx => PublicHash.runtime_evalSPMF_bind_pure core mx f)
+
 end SLHDSA.RandomOracleTest
