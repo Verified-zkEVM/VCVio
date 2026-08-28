@@ -45,6 +45,9 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget
+public import VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget.Collection
+public import VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget.Pre
+public import VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget.Tcr
 public import VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning
 public import VCVio.CryptoFoundations.HardnessAssumptions.OneWay
 public import VCVio.CryptoFoundations.HashCommitment
