@@ -24,6 +24,15 @@ open OracleComp
 
 variable {p : Params} (core : CorePrimitives p)
 
+/-! The legacy generated constructor and projection names remain available downstream. -/
+
+example (prims : Primitives p) (pkSeed : prims.PkSeed) (pkRoot : prims.Y) :
+    PublicKey.pkSeed (PublicKey.mk pkSeed pkRoot : PublicKey prims) = pkSeed := rfl
+
+example (prims : Primitives p) (skSeed : prims.SkSeed) (skPrf : prims.SkPrf)
+    (pkSeed : prims.PkSeed) (pkRoot : prims.Y) :
+    SecretKey.skSeed (SecretKey.mk skSeed skPrf pkSeed pkRoot : SecretKey prims) = skSeed := rfl
+
 /-- FIPS 205 Algorithm 19 recovers the FORS public key from the generated signature before
 hypertree signing. Replacing that recovery with `forsPkGenM` makes this canary fail. -/
 example (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :

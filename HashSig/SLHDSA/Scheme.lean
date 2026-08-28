@@ -45,6 +45,8 @@ open OracleComp OracleSpec
 
 namespace SLHDSA
 
+universe u
+
 variable {p : Params}
 
 /-- The SLH-DSA public key over an implementation-independent context: public seed and
@@ -57,6 +59,33 @@ structure PublicKeyCore (core : CorePrimitives p) where
 
 /-- Source-compatible pure public-key type. -/
 abbrev PublicKey (prims : Primitives p) := PublicKeyCore prims.core
+
+namespace PublicKey
+
+/-! Compatibility aliases for the generated API of the former `PublicKey` structure. -/
+
+abbrev mk := @PublicKeyCore.mk
+abbrev pkSeed := @PublicKeyCore.pkSeed
+abbrev pkRoot := @PublicKeyCore.pkRoot
+protected def rec {prims : Primitives p} {motive : PublicKey prims → Sort u}
+    (mk : (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
+      motive (PublicKey.mk pkSeed pkRoot)) (t : PublicKey prims) : motive t :=
+  match t with
+  | ⟨pkSeed, pkRoot⟩ => mk pkSeed pkRoot
+
+protected def recOn {prims : Primitives p} {motive : PublicKey prims → Sort u}
+    (t : PublicKey prims) (mk : (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
+      motive (PublicKey.mk pkSeed pkRoot)) : motive t :=
+  match t with
+  | ⟨pkSeed, pkRoot⟩ => mk pkSeed pkRoot
+
+protected def casesOn {prims : Primitives p} {motive : PublicKey prims → Sort u}
+    (t : PublicKey prims) (mk : (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
+      motive (PublicKey.mk pkSeed pkRoot)) : motive t :=
+  match t with
+  | ⟨pkSeed, pkRoot⟩ => mk pkSeed pkRoot
+
+end PublicKey
 
 /-- The SLH-DSA secret key over an implementation-independent context. It carries the public
 material required by signing. -/
@@ -72,6 +101,41 @@ structure SecretKeyCore (core : CorePrimitives p) where
 
 /-- Source-compatible pure secret-key type. -/
 abbrev SecretKey (prims : Primitives p) := SecretKeyCore prims.core
+
+namespace SecretKey
+
+/-! Compatibility aliases for the generated API of the former `SecretKey` structure. -/
+
+abbrev mk := @SecretKeyCore.mk
+abbrev skSeed := @SecretKeyCore.skSeed
+abbrev skPrf := @SecretKeyCore.skPrf
+abbrev pkSeed := @SecretKeyCore.pkSeed
+abbrev pkRoot := @SecretKeyCore.pkRoot
+protected def rec {prims : Primitives p} {motive : SecretKey prims → Sort u}
+    (mk : (skSeed : prims.SkSeed) → (skPrf : prims.SkPrf) →
+      (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
+      motive (SecretKey.mk skSeed skPrf pkSeed pkRoot))
+    (t : SecretKey prims) : motive t :=
+  match t with
+  | ⟨skSeed, skPrf, pkSeed, pkRoot⟩ => mk skSeed skPrf pkSeed pkRoot
+
+protected def recOn {prims : Primitives p} {motive : SecretKey prims → Sort u}
+    (t : SecretKey prims)
+    (mk : (skSeed : prims.SkSeed) → (skPrf : prims.SkPrf) →
+      (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
+      motive (SecretKey.mk skSeed skPrf pkSeed pkRoot)) : motive t :=
+  match t with
+  | ⟨skSeed, skPrf, pkSeed, pkRoot⟩ => mk skSeed skPrf pkSeed pkRoot
+
+protected def casesOn {prims : Primitives p} {motive : SecretKey prims → Sort u}
+    (t : SecretKey prims)
+    (mk : (skSeed : prims.SkSeed) → (skPrf : prims.SkPrf) →
+      (pkSeed : prims.PkSeed) → (pkRoot : prims.Y) →
+      motive (SecretKey.mk skSeed skPrf pkSeed pkRoot)) : motive t :=
+  match t with
+  | ⟨skSeed, skPrf, pkSeed, pkRoot⟩ => mk skSeed skPrf pkSeed pkRoot
+
+end SecretKey
 
 /-- An SLH-DSA signature: randomizer `R`, FORS signature, and hypertree signature
 (`R ‖ SIG_FORS ‖ SIG_HT`). -/
