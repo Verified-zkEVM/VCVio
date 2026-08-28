@@ -29,3 +29,4 @@ public import VCVioTest.SampleableType
 public import VCVioTest.Smoke
 public import VCVioTest.UniformOn
 public import VCVioTest.UniversePolymorphism
+public import VCVioTest.Unpredictability
