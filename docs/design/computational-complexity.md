@@ -779,6 +779,9 @@ gate.
    obligations and exposes the generic composed run bound and witness through VCVio. Semantic
    handler closing uses PolyFun's generic weakest-precondition theorem and preserves leaf
    conformance.
+   These predicates and constructors currently classify returning, finite `FreeM` programs
+   (including VCVio's `OracleComp` facade). They do not yet provide a complexity theorem for
+   `ITree`, coinductive executions, `ProbResponder`, or the reactive/UC setting.
    General trace projections, probability erasure, efficient samplers,
    caller/handler resource substitution, and the exact-resource instantiation
    of `ReductionWithCost` remain staged.

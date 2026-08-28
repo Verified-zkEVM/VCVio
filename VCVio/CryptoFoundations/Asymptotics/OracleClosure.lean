@@ -71,8 +71,9 @@ def runBound (certificate : BindCertificate first second) :
 
 /-- Canonical resource polynomial for a certified bind.
 
-The second phase is composed with the first phase's returned-size polynomial; the remaining
-backend structural overhead is added conservatively. -/
+The composed bound is the sum of the first-phase bound, the supplied handoff envelope for the
+reachable second-phase initial states, and the supplied comparison bound for the assembled
+machine's actual costs. -/
 abbrev polynomial (certificate : BindCertificate first second) :=
   certificate.runBound.polynomial
 

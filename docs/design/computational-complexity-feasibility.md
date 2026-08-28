@@ -27,12 +27,13 @@ The assessment uses four evidence classes.
 | Optional backend evidence | A concrete result in `VCVioComplexity`; it does not strengthen the generic definition by fiat. |
 | Open obligation | A theorem, executable construction, or adequacy result that is not currently available. |
 
-The immutable validated comparison points are VCVio
+The historical validated comparison points are VCVio
 `f64bca16c1efe6e558f07683eecae0baa5b18b99`, PolyFun
 `73a924e3160c3930da96f8fa8f3c7298c1b06520`, and complexitylib
-`b6738219a3a3c50967d6bd16cba9487887ca6b66`. The current integration branches are
-`dtumad/complexity-composition` and `dtumad/quantitative-bounded-composition`; their candidate
-delta must be reviewed and validated independently of the recorded baseline.
+`b6738219a3a3c50967d6bd16cba9487887ca6b66`. The former
+`dtumad/complexity-composition` and `dtumad/quantitative-bounded-composition` integration branches
+are historical provenance for this design; the reviewed implementation now uses the pinned
+PolyFun resource and finite-`FreeM` contract layers recorded by the repository manifests.
 
 ## Why the foundation is non-cheating
 
