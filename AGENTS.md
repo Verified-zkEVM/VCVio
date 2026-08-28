@@ -43,7 +43,7 @@ opaque `public section` when callers do not need to unfold their definitions.
 
 ## What This Project Is
 
-VCVio is a framework for formal cryptographic proofs built around `OracleComp spec α`, the free monad on the polynomial functor induced by an oracle signature `OracleSpec ι := ι → Type`. Its universal fold `simulateQ impl : OracleComp spec α → r α` is the unique monad morphism extending any `impl : QueryImpl spec r` to the free monad. For `OracleComp`, `support` is definitionally `simulateQ` into `SetM` with queries interpreted by `Set.univ`; `evalDist` / `probOutput` / `Pr[…]` are definitionally `simulateQ` into `PMF` using the per-query distributions supplied by `[IsProbabilitySpec spec]`. Uniform cardinality lemmas and the `support`/probability bridge use `[IsUniformSpec spec]`, which bundles `[spec.Fintype]`, `[spec.Inhabited]`, and uniform sampling. `ProbComp α := OracleComp unifSpec α` specializes to computations whose only oracle is uniform selection.
+VCVio is a framework for formal cryptographic proofs built around `OracleComp spec α`, the free monad on the polynomial functor induced by an oracle signature `OracleSpec ι := ι → Type`. Its universal fold `simulateQ impl : OracleComp spec α → r α` is the unique monad morphism extending any `impl : QueryImpl spec r` to the free monad. For `OracleComp`, `support` is definitionally `simulateQ` into `SetM` with queries interpreted by `Set.univ`; the primary `evalDist` / `𝒟[…]` semantics is a successful-output Mathlib `Measure`, while `evalSPMF` / `𝒮[…]`, `probOutput`, and `Pr[…]` form the discrete compatibility surface backed by `simulateQ` into `PMF` using `[IsProbabilitySpec spec]`. Uniform cardinality lemmas and the `support`/probability bridge use `[IsUniformSpec spec]`, which bundles `[spec.Fintype]`, `[spec.Inhabited]`, and uniform sampling. `ProbComp α := OracleComp unifSpec α` specializes to computations whose only oracle is uniform selection.
 
 The repo also includes a first-class lattice cryptography library under `LatticeCrypto/`, built on top of the `VCVio` framework. That layer contains generic lattice algebra plus ML-DSA, ML-KEM, and Falcon specifications, security statements, concrete implementations, and tests; the native FFI bridges live in the separate `Extern/` library.
 
@@ -108,9 +108,9 @@ or `VCVioTest/`. This contract is enforced by
 
 ## Critical Gotchas
 
-1. **Probability assumptions are explicit.** `support` on `OracleComp spec` works for arbitrary specs. `evalDist` / `Pr[...]` need `[IsProbabilitySpec spec]`; uniform/cardinality lemmas and `support ↔ Pr[= _] ≠ 0` need `[IsUniformSpec spec]`. Use `IsUniformSpec.ofFintypeInhabited` when you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics.
+1. **Probability assumptions are explicit.** `support` on `OracleComp spec` works for arbitrary specs. `evalSPMF` / `Pr[...]` need `[IsProbabilitySpec spec]`; `evalDist` / `𝒟[…]` additionally need an ambient `MeasurableSpace` on the result. Uniform/cardinality lemmas and `support ↔ Pr[= _] ≠ 0` need `[IsUniformSpec spec]`. Use `IsUniformSpec.ofFintypeInhabited` when you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics.
 2. **`autoImplicit = false` is set globally in `lakefile.lean`**. Do not add `set_option autoImplicit false` in individual files. Every variable must be explicitly declared.
-3. **`evalDist` IS `simulateQ`** with `IsProbabilitySpec.toPMF`; under `[IsUniformSpec spec]` this is uniform. This is definitional (`rfl`).
+3. **`evalSPMF` IS `simulateQ`** with `IsProbabilitySpec.toPMF`; under `[IsUniformSpec spec]` this is uniform. This is definitional (`rfl`). `evalDist` is its successful-output measure façade on the discrete compatibility path and agrees with the direct `FreeM.denote` measure fold when both specifications are present.
 4. **`++ₒ` is dead** — use `+` for combining oracle specs.
 5. **Commented-out code is legacy** — follow only uncommented code. Use `Examples/OneTimePad/Basic.lean` as canonical reference.
 6. **Preserve partial proofs** with `stop` instead of deleting large proof blocks.

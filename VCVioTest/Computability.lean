@@ -18,7 +18,7 @@ through `PMF`, `Classical.decEq`, or `Fintype.ofFinite`), this file fails to com
 
 The dividing line this file locks is: *programs* (`OracleComp` values, `QueryImpl` handlers,
 `StateT`/`WriterT` simulators, `ProbComp` runs) are computable, while *semantics*
-(`evalDist`, `Pr[⋯]`, `SPMF`, expected costs) remain noncomputable. Executability lets
+(`evalSPMF`, `Pr[⋯]`, `SPMF`, expected costs) remain noncomputable. Executability lets
 library users smoke-test security reductions by actually running them via
 `OracleComp.runIO`, turning "efficient by inspection" into inspection plus execution.
 

@@ -8,6 +8,8 @@ module
 public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.ExpectationMeasure
+public import VCVio.EvalDist.MeasureTVDist
+public import VCVio.ProgramLogic.Relational.Measure
 public import ToMathlib.Probability.Divergence.RenyiDiscrete
 public import Mathlib.Probability.Distributions.Gaussian.Real
 public import ToMathlib.MeasureTheory.DiscreteInstances
@@ -58,6 +60,10 @@ theorem denote_gauss_lift :
       (fun b => FreeM.denote (P := gaussSpec) (Pure.pure b)) = _
   simp
 
+/-- Primary notation selects the direct measure fold when no discrete backend exists. -/
+example : 𝒟[(FreeM.lift PUnit.unit : FreeM gaussSpec ℝ)] = gaussianReal 0 1 :=
+  denote_gauss_lift
+
 /-- The denoted measure really is a Gaussian law: its mass on a half-line is the Gaussian's,
 so Mathlib's distribution API applies to the denotation directly rather than through a
 translation layer. -/
@@ -84,6 +90,21 @@ theorem isProbabilityMeasure_denote_shiftedGaussian :
     fun_prop
   · exact Filter.Eventually.of_forall fun _ => ⟨by simp⟩
 
+/-! ## Measure-native distance and relational semantics -/
+
+/-- Total variation is available directly on a continuous computation. -/
+example : measureTVDist shiftedGaussian shiftedGaussian = 0 :=
+  measureTVDist_self shiftedGaussian
+
+/-- The diagonal construction couples a Gaussian measure with itself. -/
+example : Measure.IsCoupling (Measure.Coupling.refl (gaussianReal 0 1)).joint
+    (gaussianReal 0 1) (gaussianReal 0 1) :=
+  (Measure.Coupling.refl (gaussianReal 0 1)).property
+
+/-- Relational reasoning applies directly to a continuous denotation. -/
+example : MeasureProgramLogic.RelWP shiftedGaussian shiftedGaussian (· = ·) :=
+  MeasureProgramLogic.relWP_refl shiftedGaussian
+
 /-! ## Agreement with the `PMF` denotation on a discrete interface -/
 
 /-- An interface with a single operation, answered by a coin flip. -/
@@ -95,6 +116,14 @@ noncomputable instance : coinSpec.IsProbabilitySpec where
 noncomputable instance : coinSpec.IsMeasureSpec where
   toMeasure _ := (PMF.uniformOfFintype Bool).toMeasure
   isProbabilityMeasure _ := PMF.toMeasure.isProbabilityMeasure _
+
+/-- A nonzero, branch-sensitive lower bound rules out a vacuous quantitative semantics. -/
+example : (1 : ℝ≥0∞) ≤
+    MeasureProgramLogic.eRelWP (pure true : FreeM coinSpec Bool)
+      (pure false : FreeM coinSpec Bool)
+      (fun a b => if a && !b then 1 else 0) := by
+  apply MeasureProgramLogic.le_eRelWP_pure_pure
+  fun_prop
 
 /-- On a discrete interface the two denotations agree, so a `Pr[…]` result proved against the
 `PMF` semantics can be read off the measure semantics. -/
@@ -108,6 +137,41 @@ theorem denote_event_coin {α : Type} [MeasurableSpace α] [DiscreteMeasurableSp
     (program : FreeM coinSpec α) (event : α → Prop) :
     FreeM.denote program {x | event x} = Pr[event | program] :=
   FreeM.denote_apply_setOf (fun _ => rfl) program event MeasurableSet.of_discrete
+
+/-- The reverse discrete adapter preserves both successful branches and missing mass. -/
+example (p : SPMF Bool) :
+    p.toMeasure.toSPMF (SPMF.toMeasure_apply_univ_le_one p) = p := by
+  exact SPMF.toMeasure_toSPMF p
+
+/-! ## Primary notation and the discrete compatibility surface -/
+
+/-- The primary `𝒟[…]` notation is a subprobability measure. -/
+example (program : FreeM coinSpec Bool) : 𝒟[program] Set.univ ≤ 1 :=
+  evalDist_apply_univ_le_one program
+
+/-- On a discrete `FreeM` program, primary notation agrees with the direct measure fold. -/
+example (program : FreeM coinSpec Bool) : 𝒟[program] = FreeM.denote program :=
+  FreeM.evalDist_eq_denote program
+
+/-- Point notation is an explicit adapter to singleton mass in the primary measure. -/
+example (program : FreeM coinSpec Bool) (x : Bool) :
+    Pr[= x | program] = 𝒟[program] {x} :=
+  (FreeM.evalDist_apply_singleton (fun _ => rfl) program x).symm
+
+/-- Predicate notation is likewise an adapter to a measurable event. -/
+example (program : FreeM coinSpec Bool) (event : Bool → Prop) :
+    Pr[event | program] = 𝒟[program] {x | event x} :=
+  (FreeM.evalDist_apply_setOf (fun _ => rfl) program event MeasurableSet.of_discrete).symm
+
+/-- Crossing the compatibility boundary preserves perfect indistinguishability exactly. -/
+example (p q : SPMF Bool) :
+    Measure.tvDist p.toMeasure q.toMeasure = 0 ↔ SPMF.tvDist p q = 0 :=
+  SPMF.toMeasure_tvDist_eq_zero_iff p q
+
+/-- On the one-point observation space, the two TV distances agree numerically as well. -/
+example (p q : SPMF.{0} PUnit.{1}) :
+    Measure.tvDist p.toMeasure q.toMeasure = SPMF.tvDist p q :=
+  SPMF.toMeasure_tvDist_punit p q
 
 /-! ## Transformer stacks retain their effects -/
 

@@ -180,7 +180,7 @@ simulated one. -/
 def PerfectHVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) : Prop :=
   ∀ x w, rel x w = true →
-    𝒟[σ.realTranscript x w] = 𝒟[simTranscript x]
+    𝒮[σ.realTranscript x w] = 𝒮[simTranscript x]
 
 /-- The perfect HVZK property is equivalent to the approximate HVZK property with `ζ_zk = 0`. -/
 @[grind =]

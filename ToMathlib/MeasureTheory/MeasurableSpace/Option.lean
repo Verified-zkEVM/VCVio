@@ -35,6 +35,24 @@ theorem measurable_some [MeasurableSpace α] : Measurable (@some α) :=
 theorem measurable_none [MeasurableSpace α] : Measurable (fun _ : Unit => (none : Option α)) :=
   Measurable.of_le_map inf_le_right
 
+/-- Optional values have measurable singletons whenever the underlying values do. -/
+instance instMeasurableSingletonClass [MeasurableSpace α] [MeasurableSingletonClass α] :
+    MeasurableSingletonClass (Option α) where
+  measurableSet_singleton value := by
+    change MeasurableSet (some ⁻¹' {value}) ∧
+      MeasurableSet ((fun _ : Unit => (none : Option α)) ⁻¹' {value})
+    constructor
+    · cases value with
+      | none =>
+          convert MeasurableSet.empty
+          ext x
+          simp
+      | some x =>
+          convert measurableSet_singleton x using 1
+          ext y
+          simp
+    · exact MeasurableSet.of_discrete
+
 /-- The set of present optional values is measurable. -/
 theorem measurableSet_isSome [MeasurableSpace α] :
     MeasurableSet {value : Option α | value.isSome} := by

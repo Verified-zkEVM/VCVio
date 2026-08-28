@@ -173,9 +173,9 @@ These lemmas connect the result-marginal distribution of `runObs` to the distrib
 of `eraseObs`, enabling direct probability-level reasoning about traces without needing
 to manually simplify the traced computation into its concrete form. -/
 
-lemma evalDist_fst_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+lemma evalSPMF_fst_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (base : QueryImpl spec m) (encode : Ev → ω) (oa : OracleComp (spec + ObsSpec Ev) α) :
-    𝒟[(fun z : α × ω => z.1) <$> runObs base encode oa] = 𝒟[eraseObs base oa] := by
+    𝒮[(fun z : α × ω => z.1) <$> runObs base encode oa] = 𝒮[eraseObs base oa] := by
   rw [fst_map_runObs]
 
 lemma probOutput_fst_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]

@@ -12,14 +12,13 @@ public import ToMathlib.Probability.ProbabilityMassFunction.Measure
 /-!
 # `expectedValue` as a Lebesgue integral
 
-`VCVio.EvalDist.Expectation` defines `expectedValue mx g` as `∑' x, Pr[= x | mx] * g x`. That
-spelling is convenient for finite cryptographic goals, but it is unreachable from Mathlib's
-convergence theory, which is stated for `∫⁻`.
+`VCVio.EvalDist.Expectation` defines `expectedValue mx g` as `∑' x, Pr[= x | mx] * g x`. This
+module identifies that discrete spelling with the `lintegral` against the primary evaluation
+measure `𝒟[mx]`.
 
-`expectedValue_eq_lintegral` identifies the two. The measure it integrates against is the
-denotation of `mx` read through the existing `SPMF` semantics — `evalDist` into `PMF (Option α)`,
-`PMF.toMeasure`, then `Measure.dropNone` to discard the failure mass. Nothing about
-`expectedValue` changes; the theorem is an equation, so every existing `∑'`-shaped proof stands.
+`expectedValue_eq_lintegral` is an equation, so every existing `∑'`-shaped proof remains usable.
+The conversion to `SPMF` is confined to proving the discrete singleton bridge; the statement and
+the notation expose only `Measure`.
 
 ## What it buys
 
@@ -49,18 +48,15 @@ variable {α : Type u} {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
 
 /-- The measure denoted by `mx`, as a Mathlib `Measure` on the result type.
 
-Failure is missing mass: `evalDist` lands in `PMF (Option α)`, and `Measure.dropNone` discards
-the `none` part rather than recording it as an outcome. -/
+Failure is missing mass rather than an ordinary output. -/
 noncomputable def toMeasure (mx : m α) : Measure α :=
-  ((evalDist mx).toPMF.toMeasure).dropNone
+  (evalSPMF mx).toMeasure
 
 omit [Monad m] [Countable α] in
 @[simp]
 theorem toMeasure_apply_singleton (mx : m α) (x : α) :
     toMeasure mx {x} = Pr[= x | mx] := by
-  rw [toMeasure, Measure.dropNone_apply_singleton,
-    PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete]
-  rfl
+  exact (probOutput_eq_evalSPMF_toMeasure mx x).symm
 
 omit [Monad m] in
 /-- The expected value is a Lebesgue integral against the denoted measure. -/

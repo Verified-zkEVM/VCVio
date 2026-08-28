@@ -39,12 +39,12 @@ noncomputable instance : triPFunctor.IsUniformSpec :=
 def directSample : PFunctor.FreeM triPFunctor (Fin 3) :=
   PFunctor.FreeM.lift ()
 
-example : 𝒟[directSample] =
+example : 𝒮[directSample] =
     (PFunctor.IsProbabilitySpec.toPMF (P := triPFunctor) () : SPMF (Fin 3)) := by
   simpa only [directSample] using
-    (PFunctor.FreeM.evalDist_lift (P := triPFunctor) ())
+    (PFunctor.FreeM.evalSPMF_lift (P := triPFunctor) ())
 
-example := PFunctor.FreeM.evalDist_lift_eq_uniform (P := triPFunctor) ()
+example := PFunctor.FreeM.evalSPMF_lift_eq_uniform (P := triPFunctor) ()
 
 example : support directSample = Set.univ := by
   simpa only [directSample] using
@@ -102,12 +102,12 @@ noncomputable example : PFunctor.IsUniformSpec boolOracleSpec.toPFunctor :=
   OracleSpec.IsUniformSpec.toPFunctor
 
 example (program : OracleComp boolOracleSpec Bool) :
-    𝒟[program] = program.liftM PFunctor.IsProbabilitySpec.toPMF :=
-  PFunctor.FreeM.evalDist_eq_liftM program
+    𝒮[program] = program.liftM PFunctor.IsProbabilitySpec.toPMF :=
+  PFunctor.FreeM.evalSPMF_eq_liftM program
 
 example (program : OracleComp boolOracleSpec Bool) :
-    𝒟[program] = simulateQ OracleSpec.IsProbabilitySpec.toPMF program :=
-  OracleComp.evalDist_eq_simulateQ program
+    𝒮[program] = simulateQ OracleSpec.IsProbabilitySpec.toPMF program :=
+  OracleComp.evalSPMF_eq_simulateQ program
 
 /-! ## Nested coproduct transparency -/
 

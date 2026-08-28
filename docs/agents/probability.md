@@ -9,16 +9,41 @@ Mathlib measures for closed denotations, kernels for environment/state-indexed c
 effect-preserving outcome types for transformers, and keep `Pr[...]` as the discrete compatibility
 surface. [`docs/reading/`](../reading/README.md) indexes the full design record.
 
+The primary notation is now measure-valued: `𝒟[mx] : Measure α`. The former finite distribution
+API is explicit as `evalSPMF mx` / `𝒮[mx]`. `Pr[...]` remains the discrete compatibility façade;
+theorems `probOutput_eq_evalSPMF_toMeasure`, `probEvent_eq_evalSPMF_toMeasure`, and
+`probFailure_eq_evalSPMF_toMeasure` state its meaning through the explicit compatibility measure.
+Direct `FreeM` measure semantics has corresponding `FreeM.evalDist_apply_singleton` and
+`FreeM.evalDist_apply_setOf` coherence lemmas. This split is intentional. An unconditional
+`Eq.rec` law for `Pr[...]` only needs equality of result types in the discrete façade, whereas a
+measure denotation also depends on the selected `MeasurableSpace`; type equality does not identify
+those structures. We therefore do not install a blanket finite-type measurable-space instance.
+
+`evalDist_eq_evalSPMF_toMeasure` is the sole deprecated whole-denotation bridge. It applies to the
+canonical compatibility adapter; measure-native semantics should remain on `𝒟[…]` instead of
+round-tripping through the finite backend.
+
 ## Core Definitions
 
 | Definition | Type | Notation | Defined in |
 |-----------|------|----------|------------|
-| `evalDist mx` | `SPMF α` | — | `EvalDist/Defs/Basic.lean` |
+| `evalDist mx` | `Measure α` | `𝒟[mx]` | `EvalDist/Defs/Measure.lean` |
+| `evalSPMF mx` | `SPMF α` | `𝒮[mx]` | `EvalDist/Defs/Basic.lean` |
 | `probOutput mx x` | `ℝ≥0∞` | `Pr[= x \| mx]` | `EvalDist/Defs/Basic.lean` |
 | `probEvent mx p` | `ℝ≥0∞` | `Pr[p \| mx]` | `EvalDist/Defs/Basic.lean` |
 | `probFailure mx` | `ℝ≥0∞` | `Pr[⊥ \| mx]` | `EvalDist/Defs/Basic.lean` |
 | `support mx` | `Set α` | — | `EvalDist/Defs/Support.lean` |
 | `finSupport mx` | `Finset α` | — | `EvalDist/Defs/Support.lean` |
+
+### Measure-native interfaces
+
+| Definition | Purpose | Defined in |
+|-----------|---------|------------|
+| `Measure.etvDist` / `Measure.tvDist` | Total variation on arbitrary subprobability measures | `ToMathlib/MeasureTheory/Measure/TotalVariation.lean` |
+| `measureETVDist` / `measureTVDist` | Total variation directly on `𝒟[…]` | `EvalDist/MeasureTVDist.lean` |
+| `Measure.Coupling` | Joint measure with prescribed marginals | `ToMathlib/MeasureTheory/Measure/Coupling.lean` |
+| `MeasureProgramLogic.RelWP` | Almost-everywhere relational postcondition under a measure coupling | `ProgramLogic/Relational/Measure.lean` |
+| `MeasureProgramLogic.eRelWP` | Best coupled `lintegral` post-expectation | `ProgramLogic/Relational/Measure.lean` |
 
 ## ProbComp and Sampling
 
@@ -49,7 +74,8 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
 
 | Lemma | Statement |
 |-------|-----------|
-| `evalDist_pure` | `evalDist (pure x : m α) = pure x` |
+| `evalDist_pure` | `𝒟[(pure x : m α)] = Measure.dirac x` |
+| `evalSPMF_pure` | `evalSPMF (pure x : m α) = pure x` |
 | `probOutput_pure` | `Pr[= x \| pure y] = if x = y then 1 else 0` |
 | `probOutput_pure_self` | `Pr[= x \| pure x] = 1` |
 | `probEvent_pure` | `Pr[p \| pure x] = if p x then 1 else 0` |
@@ -60,7 +86,9 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
 
 | Lemma | Statement |
 |-------|-----------|
-| `evalDist_bind` | `evalDist (mx >>= my) = evalDist mx >>= fun x => evalDist (my x)` |
+| `evalDist_bind` | measure bind, with measurable continuation |
+| `evalDist_bind_of_discrete` | measure bind on a discrete source space |
+| `evalSPMF_bind` | `evalSPMF (mx >>= my) = evalSPMF mx >>= fun x => evalSPMF (my x)` |
 | `probOutput_bind_eq_tsum` | `Pr[= y \| mx >>= my] = ∑' x, Pr[= x \| mx] * Pr[= y \| my x]` |
 | `probEvent_bind_eq_tsum` | `Pr[q \| mx >>= my] = ∑' x, Pr[= x \| mx] * Pr[q \| my x]` |
 | `probFailure_bind_eq_add_tsum` | `Pr[⊥ \| mx >>= my] = Pr[⊥ \| mx] + ∑' x, Pr[= x \| mx] * Pr[⊥ \| my x]` |
@@ -78,7 +106,7 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
 
 | Lemma | Statement |
 |-------|-----------|
-| `evalDist_map` | `evalDist (f <$> mx) = f <$> evalDist mx` |
+| `evalSPMF_map` | `evalSPMF (f <$> mx) = f <$> evalSPMF mx` |
 | `probEvent_map` | `Pr[q \| f <$> mx] = Pr[q ∘ f \| mx]` |
 | `probFailure_map` | `Pr[⊥ \| f <$> mx] = Pr[⊥ \| mx]` |
 | `support_map` | `support (f <$> mx) = f '' support mx` |
@@ -123,7 +151,8 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
    → `probOutput_bind_const` / `probEvent_bind_const`
 
 7. **Two computations have same distribution?**
-   → Show `evalDist oa = evalDist ob`, or use `relTriple_eqRel_of_evalDist_eq`
+   → For legacy coupling lemmas, show `evalSPMF oa = evalSPMF ob`, or use
+     `relTriple_eqRel_of_evalSPMF_eq`. For Mathlib probability results, compare `𝒟[oa]` and `𝒟[ob]`.
 
 ## `grind` vs `simp` on Probability Goals
 
@@ -206,7 +235,7 @@ re-tagged here. They are confluent rewrites, so
 `grind` collapses a computation's structure (`mx >>= pure = mx`, `pure a >>= f = f a`, …) *before*
 falling into `probOutput`/`tsum` expansion — turning what would otherwise be a `grind` *explosion* on
 a `bind`/`pure`-shaped probability/support/distribution equality into a quick solve
-(`Pr[= x | mx >>= pure] = Pr[= x | mx]`, `𝒟[do let x ← mx; pure x] = 𝒟[mx]`,
+(`Pr[= x | mx >>= pure] = Pr[= x | mx]`, `𝒮[do let x ← mx; pure x] = 𝒮[mx]`,
 `support (do let b ← $ᵗ Bool; pure b) = Set.univ` all close by bare `grind`). `bind_pure_comp` /
 `map_eq_bind` are omitted (function argument under a binder, unindexable). A *non-trivial*
 `<$>` / `if` / `<*>` does not normalise to a `pure`, so those structured equalities stay
@@ -266,7 +295,7 @@ closes, which is the easiest way to make a fragile call site independent of the 
 
 ## Common Mistakes
 
-1. **Missing probability spec classes**: on `OracleComp spec`, `evalDist`/`probOutput`/`Pr[...]` require `[IsProbabilitySpec spec]`. Uniform/cardinality lemmas and support-probability lemmas require `[IsUniformSpec spec]`, not just `[spec.Fintype] [spec.Inhabited]`. Use `IsUniformSpec.ofFintypeInhabited spec` when a concrete finite inhabited spec should use uniform sampling.
+1. **Missing probability spec classes**: on `OracleComp spec`, `evalSPMF`/`probOutput`/`Pr[...]` require `[IsProbabilitySpec spec]`. Uniform/cardinality lemmas and support-probability lemmas require `[IsUniformSpec spec]`, not just `[spec.Fintype] [spec.Inhabited]`. Use `IsUniformSpec.ofFintypeInhabited spec` when a concrete finite inhabited spec should use uniform sampling. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output.
 
 2. **Carrying duplicate probability instances**: do not add a separate `[IsProbabilitySpec spec]` when `[IsUniformSpec spec]` is already in scope. `IsUniformSpec` extends `IsProbabilitySpec`; a second instance can make instance search ambiguous and may not describe the same distributions.
 
@@ -274,4 +303,4 @@ closes, which is the easiest way to make a fragile call site independent of the 
 
 4. **Forgetting `probOutput_eq_zero_of_not_mem_support`**: useful when restricting sums.
 
-5. **`evalDist` on bare `query t`**: works directly when the expected type pins `query t` to a monadic form, since `query` resolves to `HasQuery.query`. Write `evalDist (query t : OracleComp spec _)` (or hand the result to a context that provides the same ascription). If you need the primitive `OracleQuery spec _` (e.g. for `OracleQuery.cont`), use `spec.query t` instead.
+5. **`evalSPMF` on bare `query t`**: works directly when the expected type pins `query t` to a monadic form, since `query` resolves to `HasQuery.query`. Write `evalSPMF (query t : OracleComp spec _)` (or hand the result to a context that provides the same ascription). If you need the primitive `OracleQuery spec _` (e.g. for `OracleQuery.cont`), use `spec.query t` instead.

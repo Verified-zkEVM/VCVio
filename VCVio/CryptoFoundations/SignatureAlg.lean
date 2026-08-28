@@ -106,7 +106,7 @@ signing failures (e.g., abort in schemes like Fiat-Shamir with aborts).
 `Complete sigAlg runtime 0` is equivalent to `PerfectlyComplete sigAlg runtime`. -/
 def Complete (sigAlg : SignatureAlg m M PK SK S)
     (runtime : ProbCompRuntime m) (δ : ℝ≥0∞) : Prop :=
-  ∀ msg : M, (1 : ℝ≥0∞) - δ ≤ Pr[= true | runtime.evalDist do
+  ∀ msg : M, (1 : ℝ≥0∞) - δ ≤ Pr[= true | runtime.evalSPMF do
     let (pk, sk) ← sigAlg.keygen
     let sig ← sigAlg.sign pk sk msg
     sigAlg.verify pk msg sig]
@@ -115,7 +115,7 @@ def Complete (sigAlg : SignatureAlg m M PK SK S)
 This is the special case of `Complete` with zero error. -/
 def PerfectlyComplete (sigAlg : SignatureAlg m M PK SK S)
     (runtime : ProbCompRuntime m) : Prop :=
-  ∀ msg : M, Pr[= true | runtime.evalDist do
+  ∀ msg : M, Pr[= true | runtime.evalSPMF do
     let (pk, sk) ← sigAlg.keygen
     let sig ← sigAlg.sign pk sk msg
     sigAlg.verify pk msg sig] = 1
@@ -171,7 +171,7 @@ noncomputable def unforgeableExp {sigAlg : SignatureAlg (OracleComp spec) M PK S
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) : SPMF Bool :=
   letI : DecidableEq M := Classical.decEq M
   letI : DecidableEq S := Classical.decEq S
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
@@ -201,7 +201,7 @@ noncomputable def unforgeableExpNoFresh {sigAlg : SignatureAlg (OracleComp spec)
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) : SPMF Bool :=
   letI : DecidableEq M := Classical.decEq M
   letI : DecidableEq S := Classical.decEq S
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
@@ -217,16 +217,16 @@ omit [DecidableEq M] [DecidableEq S] in
 /-- **Phase B (freshness-drop) bound.** The CMA advantage is bounded above by the success
 probability of the same experiment with the freshness check dropped.
 
-Both `unforgeableExp` and `unforgeableExpNoFresh` factor as `runtime.evalDist (joint >>= ...)`
+Both `unforgeableExp` and `unforgeableExpNoFresh` factor as `runtime.evalSPMF (joint >>= ...)`
 sharing the same prefix `joint`. The hypothesis `h_pull` packages the runtime-specific
-factoring step that pulls a pure-returning bind out of `runtime.evalDist`, and is satisfied
-by `withStateOracle`-style runtimes via `SPMFSemantics.withStateOracle_evalDist_bind_pure`
-(see e.g. `FiatShamir.runtime_evalDist_bind_pure`). -/
+factoring step that pulls a pure-returning bind out of `runtime.evalSPMF`, and is satisfied
+by `withStateOracle`-style runtimes via `SPMFSemantics.withStateOracle_evalSPMF_bind_pure`
+(see e.g. `FiatShamir.runtime_evalSPMF_bind_pure`). -/
 lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
     (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
-      runtime.evalDist (mx >>= fun x => pure (f x)) = f <$> runtime.evalDist mx)
+      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
     (adv : unforgeableAdv sigAlg) :
     adv.advantage runtime ≤ Pr[= true | unforgeableExpNoFresh runtime adv] := by
   let : DecidableEq M := Classical.decEq M
@@ -244,7 +244,7 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
     let ((msg, σ), log) ← sim_adv.run
     let verified ← sigAlg.verify pk msg σ
     pure (msg, log, verified) with hjoint_def
-  have hExp : (runtime.evalDist do
+  have hExp : (runtime.evalSPMF do
         let (pk, sk) ← sigAlg.keygen
         let impl : QueryImpl (spec + (M →ₒ S))
             (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
@@ -257,11 +257,11 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
         let verified ← sigAlg.verify pk msg σ
         pure (!log.wasQueried msg && verified)) =
       (fun t : M × QueryLog (M →ₒ S) × Bool => !t.2.1.wasQueried t.1 && t.2.2) <$>
-        runtime.evalDist joint := by
+        runtime.evalSPMF joint := by
     rw [← h_pull]
     congr 1
     simp only [hjoint_def, monad_norm]
-  have hNoFresh : (runtime.evalDist do
+  have hNoFresh : (runtime.evalSPMF do
         let (pk, sk) ← sigAlg.keygen
         let impl : QueryImpl (spec + (M →ₒ S))
             (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
@@ -272,7 +272,7 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
           simulateQ impl (adv.main pk)
         let ((msg, σ), _) ← sim_adv.run
         sigAlg.verify pk msg σ) =
-      (fun t : M × QueryLog (M →ₒ S) × Bool => t.2.2) <$> runtime.evalDist joint := by
+      (fun t : M × QueryLog (M →ₒ S) × Bool => t.2.2) <$> runtime.evalSPMF joint := by
     rw [← h_pull]
     congr 1
     simp only [hjoint_def, monad_norm]
@@ -299,7 +299,7 @@ structure eufNmaAdv (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
 (with no signing oracle), and check whether the adversary produced a valid forgery. -/
 def eufNmaExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : eufNmaAdv sigAlg) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, _) ← sigAlg.keygen
     let (msg, σ) ← adv.main pk
     sigAlg.verify pk msg σ
@@ -332,7 +332,7 @@ and a `QueryCache`, then verify the forgery through `withCacheOverlay` so that p
 entries take priority over the real oracle. -/
 def managedRoNmaExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : managedRoNmaAdv sigAlg) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, _) ← sigAlg.keygen
     let ((msg, σ), cache) ← adv.main pk
     withCacheOverlay cache (sigAlg.verify pk msg σ)

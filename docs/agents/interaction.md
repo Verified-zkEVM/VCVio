@@ -21,7 +21,7 @@ VCVio retains the computational and runtime interpretation of PolyFun's generic 
 
 | File | Purpose |
 |------|---------|
-| `VCVio/Interaction/UC/Computational.lean` | Computational observation layer for UC-style emulation using `SPMF` and total variation distance. |
+| `VCVio/Interaction/UC/Computational.lean` | Computational observation layer for UC-style emulation using subprobability measures and total variation distance. |
 | `VCVio/Interaction/UC/Runtime.lean` | Synchronous runtime semantics for closed open processes, including `processSemantics`, `processSemanticsProbComp`, and `processSemanticsOracle`. |
 | `VCVio/Interaction/UC/AsyncRuntime.lean` | Asynchronous runtime semantics with process ticks and environment events. |
 | `VCVio/Interaction/UC/AsyncSecurity.lean` | Fair-PPT security wrappers for asynchronous env-open executions. |
@@ -43,7 +43,7 @@ Use the synchronous entry points in `VCVio/Interaction/UC/Runtime.lean`:
 import VCVio.Interaction.UC.Runtime
 ```
 
-- `processSemantics` runs in an arbitrary surface monad `m` with a bundled `SPMFSemantics m`.
+- `processSemantics` runs in an arbitrary surface monad `m` with bundled `MeasureSemanticsVia m`.
 - `processSemanticsProbComp` specializes to coin-flip-only `ProbComp` protocols.
 - `processSemanticsOracle` specializes to `OracleComp superSpec`, interpreting shared oracle access through `simulateQ'`.
 
@@ -67,8 +67,9 @@ import VCVio.Interaction.UC.Computational
 
 Important definitions:
 
-- `Semantics T` bundles a result type, a surface monad, its `SPMFSemantics`, and a closed-system runner.
-- `Semantics.evalDist` evaluates a closed system to an `SPMF sem.Result`.
+- `Semantics T` bundles a result type and measurable space, a surface monad, its
+  `MeasureSemanticsVia`, and a closed-system runner.
+- `Semantics.evalDist` evaluates a closed system to a `Measure sem.Result`.
 - `Semantics.distAdvantage` computes total variation distance between two closed systems.
 - `ObservedCompEmulates sem ε real ideal` states fixed-advantage computational emulation.
 - `AsympObservedCompEmulates` packages the negligible asymptotic variant.

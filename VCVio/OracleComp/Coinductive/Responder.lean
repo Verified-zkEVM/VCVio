@@ -181,19 +181,19 @@ become responders. -/
 @[reducible] noncomputable def ofStateQueryImpl {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
     {σ : Type} (impl : QueryImpl spec₀ (StateT σ ProbComp)) : ProbResponder spec₀ where
   State := σ
-  answer s t := 𝒟[(impl t).run s]
+  answer s t := 𝒮[(impl t).run s]
 
 /-- **The stateful-responder probability bridge**: running an adversary against the
 responder built from a `StateT σ ProbComp` handler (`ofStateQueryImpl impl`) is exactly
 the evaluation distribution of running it against `impl` itself — the responder's `SPMF`
-program-run is `𝒟` of the `ProbComp` program-run, *jointly* in the returned value and the
+program-run is `𝒮` of the `ProbComp` program-run, *jointly* in the returned value and the
 final state. This is the reusable bridge every stateful-responder consumer needs to move a
 game between its `ProbComp` presentation (where probability reasoning happens) and its
 `ProbResponder` presentation (the dynamical-systems wiring data).
 
 Structurally it is the naturality of `simulateQ` along the monad morphism
-`𝒟 : ProbComp →ᵐ SPMF`, transported through `StateT σ` — i.e. `𝒟 ∘ simulateQ impl =
-simulateQ (𝒟 ∘ impl)`. That is exactly `PFunctor.FreeM.run_liftM_mapHom` at the bundled
+`𝒮 : ProbComp →ᵐ SPMF`, transported through `StateT σ` — i.e. `𝒮 ∘ simulateQ impl =
+simulateQ (𝒮 ∘ impl)`. That is exactly `PFunctor.FreeM.run_liftM_mapHom` at the bundled
 evaluation-distribution morphism: `simulateQ` is the universal fold
 (`simulateQ_def`), `ofStateQueryImpl` post-composes each query with `𝒟` pointwise in the
 state, and `StateT.mapHom` is that post-composition as a morphism, so the whole statement
@@ -202,7 +202,7 @@ theorem run_simulateQ_toQueryImpl_ofStateQueryImpl {ι₀ : Type}
     {spec₀ : OracleSpec.{0, 0} ι₀} {σ α : Type}
     (impl : QueryImpl spec₀ (StateT σ ProbComp)) (oa : OracleComp spec₀ α) (s : σ) :
     (simulateQ (ofStateQueryImpl impl).toQueryImpl oa).run s =
-      𝒟[(simulateQ impl oa).run s] := by
+      𝒮[(simulateQ impl oa).run s] := by
   -- `exact` rather than a term-mode `:=`: matching the generic law needs the unfoldings of
   -- `simulateQ`, `toQueryImpl`, `ofStateQueryImpl`, `StateT.mapHom`, and `𝒟`, which are
   -- definitional but not syntactic.
@@ -223,7 +223,7 @@ theorem run_map_simulateQ_toQueryImpl_ofStateQueryImpl {ι₀ : Type}
     {spec₀ : OracleSpec.{0, 0} ι₀} {σ α γ : Type}
     (impl : QueryImpl spec₀ (StateT σ ProbComp)) (f : α → γ) (oa : OracleComp spec₀ α) (s : σ) :
     (f <$> simulateQ (ofStateQueryImpl impl).toQueryImpl oa).run s =
-      (fun p => (f p.1, p.2)) <$> 𝒟[(simulateQ impl oa).run s] := by
+      (fun p => (f p.1, p.2)) <$> 𝒮[(simulateQ impl oa).run s] := by
   rw [StateT.run_map, run_simulateQ_toQueryImpl_ofStateQueryImpl]
 
 end ProbResponder

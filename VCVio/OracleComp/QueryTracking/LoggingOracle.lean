@@ -323,9 +323,9 @@ lemma probOutput_fst_map_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
   rw [fst_map_run_simulateQ]
 
 @[simp]
-lemma evalDist_fst_map_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
+lemma evalSPMF_fst_map_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
     [IsUniformSpec spec] (oa : OracleComp spec α) :
-    𝒟[Prod.fst <$> (simulateQ spec.loggingOracle oa).run] = 𝒟[oa] := by
+    𝒮[Prod.fst <$> (simulateQ spec.loggingOracle oa).run] = 𝒮[oa] := by
   rw [fst_map_run_simulateQ]
 
 @[simp]

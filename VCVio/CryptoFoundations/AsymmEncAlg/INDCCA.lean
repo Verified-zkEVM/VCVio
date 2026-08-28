@@ -73,7 +73,7 @@ on the challenge ciphertext. -/
 def IND_CCA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : encAlg.IND_CCA_Adversary) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, sk) ← encAlg.keygen
     let (m₀, m₁, st) ← simulateQ (encAlg.IND_CCA_preChallengeImpl sk)
       (adversary.chooseMessages pk)

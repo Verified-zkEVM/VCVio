@@ -58,15 +58,16 @@ theorem dropNone_dirac_some (x : α) :
 /-- The success mass at `x` is the original mass at `some x`.
 
 This is the computation rule that carries a pointwise mass statement across `dropNone`. -/
-theorem dropNone_apply_singleton [DiscreteMeasurableSpace α] (μ : Measure (Option α)) (x : α) :
+theorem dropNone_apply_singleton [MeasurableSingletonClass α]
+    (μ : Measure (Option α)) (x : α) :
     dropNone μ {x} = μ {some x} := by
-  rw [dropNone, Measure.bind_apply MeasurableSet.of_discrete
+  rw [dropNone, Measure.bind_apply (measurableSet_singleton x)
     measurable_dropNoneKernel.aemeasurable]
   refine Eq.trans (lintegral_congr (g := Set.indicator {some x} 1) ?_) ?_
   · rintro (_ | y)
     · simp
     · by_cases hy : y = x <;> simp [hy]
-  · exact lintegral_indicator_one MeasurableSet.of_discrete
+  · exact lintegral_indicator_one (measurableSet_singleton (some x))
 
 /-- Discarding `none` cannot increase the total mass. -/
 theorem dropNone_apply_univ_le (μ : Measure (Option α)) :
@@ -76,5 +77,52 @@ theorem dropNone_apply_univ_le (μ : Measure (Option α)) :
   apply lintegral_mono
   intro value
   cases value <;> simp
+
+/-! ## Completing a subprobability measure with an explicit failure outcome -/
+
+/-- Turn a subprobability measure into a measure on `Option α` by mapping successful outcomes
+through `some` and assigning all missing mass to `none`.
+
+The definition is meaningful for every measure. The expected probability-measure law requires
+the explicit subprobability hypothesis `μ univ ≤ 1`; keeping that hypothesis visible avoids a
+blanket bundled subprobability type at the primary semantics boundary. -/
+noncomputable def withFailure (μ : Measure α) : Measure (Option α) :=
+  Measure.map some μ + (1 - μ Set.univ) • Measure.dirac none
+
+/-- Completing a subprobability measure assigns total mass one. -/
+@[simp]
+theorem withFailure_apply_univ (μ : Measure α) (hμ : μ Set.univ ≤ 1) :
+    withFailure μ Set.univ = 1 := by
+  rw [withFailure, Measure.add_apply, Measure.map_apply Option.measurable_some MeasurableSet.univ,
+    Measure.smul_apply, Measure.dirac_apply' none MeasurableSet.univ]
+  simp only [Set.preimage_univ, Set.indicator_of_mem (Set.mem_univ none), Pi.one_apply,
+    smul_eq_mul, mul_one]
+  simpa [add_comm] using tsub_add_cancel_of_le hμ
+
+/-- The failure completion of a subprobability measure is a probability measure. -/
+theorem withFailure_isProbabilityMeasure (μ : Measure α) (hμ : μ Set.univ ≤ 1) :
+    IsProbabilityMeasure (withFailure μ) := by
+  rw [isProbabilityMeasure_iff]
+  exact withFailure_apply_univ μ hμ
+
+/-- The mass of the explicit failure outcome is exactly the missing mass. -/
+theorem withFailure_apply_none [DiscreteMeasurableSpace α] (μ : Measure α) :
+    withFailure μ {none} = 1 - μ Set.univ := by
+  rw [withFailure, Measure.add_apply,
+    Measure.map_apply Option.measurable_some (measurableSet_singleton none),
+    Measure.smul_apply, Measure.dirac_apply' none (measurableSet_singleton none)]
+  rw [show some ⁻¹' ({none} : Set (Option α)) = ∅ by ext y; simp]
+  rw [Set.indicator_of_mem (Set.mem_singleton none)]
+  simp only [measure_empty, Pi.one_apply, smul_eq_mul, zero_add, mul_one]
+
+/-- Failure completion preserves the mass of every successful singleton. -/
+theorem withFailure_apply_some [DiscreteMeasurableSpace α] (μ : Measure α) (x : α) :
+    withFailure μ {some x} = μ {x} := by
+  rw [withFailure, Measure.add_apply,
+    Measure.map_apply Option.measurable_some (measurableSet_singleton (some x)),
+    Measure.smul_apply, Measure.dirac_apply' none (measurableSet_singleton (some x))]
+  rw [show some ⁻¹' ({some x} : Set (Option α)) = {x} by ext y; simp]
+  rw [Set.indicator_of_notMem (by simp)]
+  simp only [smul_zero, add_zero]
 
 end MeasureTheory.Measure
