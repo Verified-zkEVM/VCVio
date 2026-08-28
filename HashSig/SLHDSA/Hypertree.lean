@@ -40,9 +40,6 @@ variable {p : Params}
 /-- A hypertree signature for `d = 1`: one XMSS signature of the FORS public key. -/
 abbrev HtSigCore (p : Params) (core : CorePrimitives p) := XmssSig p core
 
-/-- Source-compatible pure hypertree signature type. -/
-abbrev HtSig (p : Params) (prims : Primitives p) := HtSigCore p prims.core
-
 /-- Address of the single hypertree layer (layer `0`, tree `idxTree`). -/
 def htAdrs (adrs : Adrs) (idxTree : ℕ) : Adrs :=
   (adrs.setLayerAddress 0).setTreeAddress idxTree
@@ -210,7 +207,7 @@ theorem htVerifyM_isTotalQueryBound (core : CorePrimitives p) [DecidableEq core.
 
 /-- Pure hypertree signing is the deterministic interpretation of `htSignM`. -/
 def htSign (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
-    (adrs : Adrs) (idxTree idxLeaf : ℕ) : HtSig p prims :=
+    (adrs : Adrs) (idxTree idxLeaf : ℕ) : HtSigCore p prims.core :=
   simulateQ (PublicHash.impl prims)
     (htSignM prims.core msg sk pk adrs idxTree idxLeaf :
       OracleComp (publicHashSpec prims.core) (HtSigCore p prims.core))
@@ -223,7 +220,7 @@ def htRoot (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs 
       OracleComp (publicHashSpec prims.core) prims.Y)
 
 /-- Pure recovery is the deterministic interpretation of `htPkFromSigM`. -/
-def htPkFromSig (prims : Primitives p) (msg : prims.Y) (sig : HtSig p prims)
+def htPkFromSig (prims : Primitives p) (msg : prims.Y) (sig : HtSigCore p prims.core)
     (pk : prims.PkSeed) (adrs : Adrs) (idxTree idxLeaf : ℕ) : prims.Y :=
   simulateQ (PublicHash.impl prims)
     (htPkFromSigM prims.core msg sig pk adrs idxTree idxLeaf :
@@ -231,7 +228,7 @@ def htPkFromSig (prims : Primitives p) (msg : prims.Y) (sig : HtSig p prims)
 
 /-- Pure verification is the deterministic interpretation of `htVerifyM`. -/
 def htVerify (prims : Primitives p) [DecidableEq prims.Y] (msg : prims.Y)
-    (sig : HtSig p prims) (pk : prims.PkSeed) (adrs : Adrs)
+    (sig : HtSigCore p prims.core) (pk : prims.PkSeed) (adrs : Adrs)
     (idxTree idxLeaf : ℕ) (pkRoot : prims.Y) : Bool :=
   simulateQ (PublicHash.impl prims)
     (htVerifyM prims.core msg sig pk adrs idxTree idxLeaf pkRoot :
@@ -254,7 +251,7 @@ theorem htRoot_eq_xmssRoot (prims : Primitives p) (sk : prims.SkSeed)
 
 @[simp]
 theorem htPkFromSig_eq_xmssPkFromSig (prims : Primitives p) (msg : prims.Y)
-    (sig : HtSig p prims) (pk : prims.PkSeed) (adrs : Adrs)
+    (sig : HtSigCore p prims.core) (pk : prims.PkSeed) (adrs : Adrs)
     (idxTree idxLeaf : ℕ) :
     htPkFromSig prims msg sig pk adrs idxTree idxLeaf =
       xmssPkFromSig prims idxLeaf sig msg pk (htAdrs adrs idxTree) := by
@@ -262,7 +259,7 @@ theorem htPkFromSig_eq_xmssPkFromSig (prims : Primitives p) (msg : prims.Y)
 
 @[simp]
 theorem htVerify_eq_decide (prims : Primitives p) [DecidableEq prims.Y]
-    (msg : prims.Y) (sig : HtSig p prims) (pk : prims.PkSeed) (adrs : Adrs)
+    (msg : prims.Y) (sig : HtSigCore p prims.core) (pk : prims.PkSeed) (adrs : Adrs)
     (idxTree idxLeaf : ℕ) (pkRoot : prims.Y) :
     htVerify prims msg sig pk adrs idxTree idxLeaf pkRoot =
       decide (xmssPkFromSig prims idxLeaf sig msg pk (htAdrs adrs idxTree) = pkRoot) := by
