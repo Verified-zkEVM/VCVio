@@ -48,8 +48,8 @@ variable {ι PkSeed Tweak Y : Type}
 /-- The collection oracle's signature: a query names a member `i`, a tweak, and a message of *that
 member's* type, and the response is `Option Y`, with `none` the rejection of a tweak reserved by the
 challenge oracle. -/
-abbrev collectionSpec (coll : TweakableHashCollection ι PkSeed Tweak Y) :
-    OracleSpec ((i : ι) × Tweak × coll.Msg i) :=
+abbrev collectionSpec (thColl : TweakableHashCollection ι PkSeed Tweak Y) :
+    OracleSpec ((i : ι) × Tweak × thColl.Msg i) :=
   _ →ₒ Option Y
 
 /-- The collection oracle at a public seed, over the two-part game state
@@ -62,15 +62,15 @@ and the tweak is appended to the collection tweak list. Repeated collection twea
 The challenge history's element type is `Tweak × X`, which covers both the `Tweak × M` of SM-TCR and
 the `Tweak × M'` of SM-PRE; only the tweak component is read here. -/
 def collectionOracle [DecidableEq Tweak] {X : Type}
-    (coll : TweakableHashCollection ι PkSeed Tweak Y) (pk : PkSeed) :
-    QueryImpl (collectionSpec coll) (StateT (List (Tweak × X) × List Tweak) ProbComp) :=
+    (thColl : TweakableHashCollection ι PkSeed Tweak Y) (pk : PkSeed) :
+    QueryImpl (collectionSpec thColl) (StateT (List (Tweak × X) × List Tweak) ProbComp) :=
   fun q => do
-    let (chal, colls) ← get
-    if chal.any fun e => e.1 = q.2.1 then
+    let (qsChal, twsColl) ← get
+    if qsChal.any fun e => e.1 = q.2.1 then
       return none
     else
-      set (chal, colls ++ [q.2.1])
-      return some (coll.eval q.1 pk q.2.1 q.2.2)
+      set (qsChal, twsColl ++ [q.2.1])
+      return some (thColl.eval q.1 pk q.2.1 q.2.2)
 
 /-- At the empty collection (`ι := Empty`) the oracle's query type is uninhabited, so a game
 instantiated there cannot issue a collection query at all. This is what makes the stand-alone notion
@@ -85,25 +85,26 @@ A kernel-debt gate cannot see a game that disagrees with the paper, so each bran
 `collectionOracle` is fixed by an equation lemma, and the accepting behaviour on a repeated
 collection tweak gets one of its own. -/
 
-variable [DecidableEq Tweak] {X : Type} {coll : TweakableHashCollection ι PkSeed Tweak Y}
-  {pk : PkSeed} {chal : List (Tweak × X)} {colls : List Tweak}
+variable [DecidableEq Tweak] {X : Type} {thColl : TweakableHashCollection ι PkSeed Tweak Y}
+  {pk : PkSeed} {qsChal : List (Tweak × X)} {twsColl : List Tweak}
 
 /-- A collection query whose tweak is absent from the challenge history is answered with that
 member's hash, and its tweak is appended to the end of the collection tweak list. -/
-theorem collectionOracle_run_of_fresh (q : ((i : ι) × Tweak × coll.Msg i))
-    (hnew : ∀ e ∈ chal, e.1 ≠ q.2.1) :
-    (collectionOracle (X := X) coll pk q).run (chal, colls) =
-      pure (some (coll.eval q.1 pk q.2.1 q.2.2), (chal, colls ++ [q.2.1])) := by
-  have hany : (chal.any fun e => decide (e.1 = q.2.1)) = false := by simpa using hnew
+theorem collectionOracle_run_of_fresh (q : ((i : ι) × Tweak × thColl.Msg i))
+    (hnew : ∀ e ∈ qsChal, e.1 ≠ q.2.1) :
+    (collectionOracle (X := X) thColl pk q).run (qsChal, twsColl) =
+      pure (some (thColl.eval q.1 pk q.2.1 q.2.2), (qsChal, twsColl ++ [q.2.1])) := by
+  have hany : (qsChal.any fun e => decide (e.1 = q.2.1)) = false := by simpa using hnew
   simp [collectionOracle, hany]
 
 /-- A collection query at a tweak the challenge oracle has already issued is rejected, and the state
 is unchanged. This is one half of the disjointness of the two tweak sets; the other half is each
 game's challenge oracle rejecting a tweak already in the collection list. -/
-theorem collectionOracle_run_of_challenge_clash (q : ((i : ι) × Tweak × coll.Msg i)) (x : X)
-    (hmem : (q.2.1, x) ∈ chal) :
-    (collectionOracle (X := X) coll pk q).run (chal, colls) = pure (none, (chal, colls)) := by
-  have hany : (chal.any fun e => decide (e.1 = q.2.1)) = true :=
+theorem collectionOracle_run_of_challenge_clash (q : ((i : ι) × Tweak × thColl.Msg i)) (x : X)
+    (hmem : (q.2.1, x) ∈ qsChal) :
+    (collectionOracle (X := X) thColl pk q).run (qsChal, twsColl) =
+      pure (none, (qsChal, twsColl)) := by
+  have hany : (qsChal.any fun e => decide (e.1 = q.2.1)) = true :=
     List.any_eq_true.mpr ⟨(q.2.1, x), hmem, by simp⟩
   simp [collectionOracle, hany]
 
@@ -116,12 +117,12 @@ Stated over two consecutive queries rather than one, because the single-query st
 corollary of `collectionOracle_run_of_fresh` and so would still hold if the oracle grew a
 self-distinctness check. This form fails outright if it does, and it fixes the append order at the
 same time. -/
-theorem collectionOracle_run_of_repeated_tweak (q : ((i : ι) × Tweak × coll.Msg i))
-    (hnew : ∀ e ∈ chal, e.1 ≠ q.2.1) :
-    ((collectionOracle (X := X) coll pk q).run (chal, colls) >>= fun r =>
-        (collectionOracle (X := X) coll pk q).run r.2) =
-      pure (some (coll.eval q.1 pk q.2.1 q.2.2), (chal, colls ++ [q.2.1, q.2.1])) := by
-  have hany : (chal.any fun e => decide (e.1 = q.2.1)) = false := by simpa using hnew
+theorem collectionOracle_run_of_repeated_tweak (q : ((i : ι) × Tweak × thColl.Msg i))
+    (hnew : ∀ e ∈ qsChal, e.1 ≠ q.2.1) :
+    ((collectionOracle (X := X) thColl pk q).run (qsChal, twsColl) >>= fun r =>
+        (collectionOracle (X := X) thColl pk q).run r.2) =
+      pure (some (thColl.eval q.1 pk q.2.1 q.2.2), (qsChal, twsColl ++ [q.2.1, q.2.1])) := by
+  have hany : (qsChal.any fun e => decide (e.1 = q.2.1)) = false := by simpa using hnew
   simp [collectionOracle, hany]
 
 end TweakableHash
