@@ -25,10 +25,14 @@ The adversary rather than the challenger choosing the tweaks is what makes the g
 reduction, which has to place its challenges at the specific addresses where the scheme it simulates
 will use them.
 
-`M'` is carried as its own type together with `emb : M' → M`, so the requirement that the
-adversary's output lie in the subspace holds by typing rather than by a runtime check. A
-subspace carved out of `M` by a predicate is the case `M' := Subtype p`, `emb := Subtype.val`;
-the whole message space is `M' := M`, `emb := id`.
+`M'` is carried as its own type together with an injective `emb : M' → M`, so the requirement that
+the adversary's output lie in the subspace holds by typing rather than by a runtime check. A
+subspace carved out of `M` by a predicate is the case `M' := Subtype p`, `emb := Subtype.val`
+(`Subtype.val_injective`); the unrestricted notion is `M' := M`, `emb := id`
+(`Function.injective_id`).
+
+A strict subspace is needed when the challenge must be distributed as the value a reduction replaces
+— a digest, for a hash chain. SM-TCR carries no subspace: there nothing is drawn.
 
 `numTargets` bounds the accepted challenge queries and is the only query bound the game carries. See
 `MultiTarget.collectionOracle` for why the tweak restrictions are enforced in the oracles rather
@@ -68,6 +72,10 @@ structure PreProblem (ι PkSeed Tweak M M' Y : Type) where
   th : TweakableHash PkSeed Tweak M Y
   /-- The map into `M` of the subspace the challenge oracle samples from. -/
   emb : M' → M
+  /-- `emb` identifies `M'` with a subset of `M`. This is what makes the oracle's uniform draw on
+  `M'` a uniform draw on a subset of `M`: under a non-injective `emb` the law of `emb x` is the
+  pushforward of the uniform distribution, which is not uniform on the image. -/
+  emb_injective : Function.Injective emb
   /-- The rest of the collection, evaluable by the adversary at the game's seed. -/
   coll : TweakableHashCollection ι PkSeed Tweak Y
   /-- The cap on accepted challenge-oracle queries. -/
@@ -76,10 +84,11 @@ structure PreProblem (ι PkSeed Tweak M M' Y : Type) where
 /-- The stand-alone SM-PRE problem, at the empty collection: the collection oracle's query type is
 uninhabited, so the adversary has only the challenge oracle. -/
 def PreProblem.standalone (th : TweakableHash PkSeed Tweak M Y) (emb : M' → M)
-    (numTargets : ℕ) :
+    (emb_injective : Function.Injective emb) (numTargets : ℕ) :
     PreProblem Empty PkSeed Tweak M M' Y where
   th := th
   emb := emb
+  emb_injective := emb_injective
   coll := .empty PkSeed Tweak Y
   numTargets := numTargets
 
@@ -220,6 +229,7 @@ for both target queries. Reducible for the reason given on `coll`. -/
 abbrev problem : PreProblem Unit Unit Bool Bool Bool Bool where
   th := hash
   emb := id
+  emb_injective := Function.injective_id
   coll := coll
   numTargets := 2
 
