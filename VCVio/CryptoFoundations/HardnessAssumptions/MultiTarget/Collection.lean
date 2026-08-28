@@ -8,53 +8,31 @@ module
 public import VCVio.CryptoFoundations.TweakableHash
 
 /-!
-# The collection oracle shared by the multi-target games
+# The collection oracle for the single-function, distinct-tweak, multi-target games
 
-SLH-DSA does not attack a lone tweakable hash. `F`, `H` and `T_ℓ` share one public seed and one
-address space, and a reduction that attacks one of them must still be able to *evaluate* the others
-in order to simulate the parts of the structure it is not attacking. Once the public seed is
-withheld during target selection — which is the whole point of a single-function multi-target notion
-— the reduction cannot do that on its own. It needs an oracle.
+A reduction attacking one member of a tweakable-hash family must still evaluate the others to
+simulate the rest of the structure — SLH-DSA's `F`, `H` and `T_ℓ` share one public seed and one
+address space — and cannot do so once the seed is withheld from it. This oracle is that access.
 
-Both analyses state their tweakable-hash assumptions in this collection form rather than
-stand-alone: HK22 Def. 7 writes `SM-TCR(Th_m ∈ Th_λ)`, and BDHMS24 gives the `-C` variants, with the
-collection appearing as outlined code inside the game (Fig. 5) and the oracle itself in Fig. 7.
-Every tweakable-hash term of HK22 Thm. 3 carries `∈ Th`.
+The collection is a parameter of each problem rather than a second game beside it. The stand-alone
+notion is the instance at the empty collection (`TweakableHashCollection.empty`), where the query
+type is uninhabited — pinned by `isEmpty_domain_collectionSpec_empty`; the games' `standalone`
+constructors package that instantiation.
 
-## Collection as a parameter, not a parallel game family
-
-Following BDHMS24 Fig. 5, the collection is a parameter of each problem rather than a second `-C`
-game beside each stand-alone one. The stand-alone notion is the instance at `ι := Empty`, where
-`collectionSpec` is indexed by an uninhabited type and therefore cannot be queried at all. That
-gives one definition per notion instead of two; `TweakableHashCollection.empty` and the
-`standalone` constructors of the individual games package the instantiation.
-
-## Distinct tweaks across the two oracles
-
-BDHMS24's `VQS_t` requires the target tweaks to be distinct from each other *and* from every tweak
-submitted to the collection oracle. Disjointness is enforced here from both sides: the collection
-oracle rejects a tweak that already occurs in the challenge history, and each game's challenge
-oracle rejects a tweak that already occurs in the collection tweak list.
-
-`VQS_t` does **not** require collection tweaks to be distinct *among themselves*, and neither does
-this oracle — repeated collection queries at one tweak are answered, and each appends. Over-
-restricting here would rule out reductions that legitimately evaluate one address twice, so it is
-pinned by `collectionOracle_run_of_repeated_tweak` below.
-
-HK22 `DIST` and BDHMS `VQS_t` both express distinctness as a predicate checked at the end of the
-game, where this oracle rejects the offending query as it arrives. The two admit the same winning
-adversaries: an adversary whose transcript violates distinctness loses under the end-of-game check,
-and under rejection it instead receives `⊥` for the offending query and is free to continue, having
-gained nothing. Rejecting makes the restriction unviolatable rather than a side condition a
-reduction can forget to discharge.
+The target tweaks must be distinct from each other and from every tweak submitted to the collection
+oracle. The original proofs enforce that in the winning condition; here the oracles enforce it, this
+one rejecting a tweak already in the challenge history, and each game's challenge oracle rejecting a
+tweak already in its own history or in the collection list. The two admit the same winning
+adversaries: a violating transcript loses on the winning condition, and a rejected query yields `⊥`
+and no information. Enforcing it in the oracles makes the restriction unviolatable rather than a
+side condition a reduction can forget to discharge.
 
 ## References
 
 - Hülsing and Kudinov, *Recovering the Tight Security Proof of SPHINCS+*,
   [ePrint 2022/346](https://eprint.iacr.org/2022/346), Def. 7 and Thm. 3.
 - Barbosa, Dupressoir, Hülsing, Meijers and Strub, *A Tight Security Proof for SPHINCS+, Formally
-  Verified*, [ePrint 2024/910](https://eprint.iacr.org/2024/910), Fig. 5, Fig. 7 and the `VQS_t`
-  description.
+  Verified*, [ePrint 2024/910](https://eprint.iacr.org/2024/910), Fig. 5 and Fig. 7.
 -/
 
 @[expose] public section
@@ -68,8 +46,8 @@ variable {ι PkSeed Tweak Y : Type}
 /-! ## The oracle -/
 
 /-- The collection oracle's signature: a query names a member `i`, a tweak, and a message of *that
-member's* message type, and the response is `Option Y`, with `none` the rejection of a tweak
-reserved by the challenge oracle. -/
+member's* type, and the response is `Option Y`, with `none` the rejection of a tweak reserved by the
+challenge oracle. -/
 abbrev collectionSpec (coll : TweakableHashCollection ι PkSeed Tweak Y) :
     OracleSpec ((i : ι) × Tweak × coll.Msg i) :=
   _ →ₒ Option Y
@@ -94,18 +72,18 @@ def collectionOracle [DecidableEq Tweak] {X : Type}
       set (chal, colls ++ [q.2.1])
       return some (coll.eval q.1 pk q.2.1 q.2.2)
 
-/-- At the empty collection the oracle's query type is uninhabited, so a game instantiated there
-cannot issue a collection query at all. This is what makes "collection as a parameter" recover the
-stand-alone notion rather than merely approximate it, so it is pinned rather than asserted. -/
+/-- At the empty collection (`ι := Empty`) the oracle's query type is uninhabited, so a game
+instantiated there cannot issue a collection query at all. This is what makes the stand-alone notion
+recovered rather than merely approximated, so it is pinned rather than asserted. -/
 theorem isEmpty_domain_collectionSpec_empty :
     IsEmpty (collectionSpec (TweakableHashCollection.empty PkSeed Tweak Y)).Domain :=
   ⟨fun q => q.1.elim⟩
 
-/-! ## Pinning the collection oracle's conventions
+/-! ## Pinning the conventions
 
 A kernel-debt gate cannot see a game that disagrees with the paper, so each branch of
 `collectionOracle` is fixed by an equation lemma, and the accepting behaviour on a repeated
-collection tweak — the easiest convention to over-restrict — gets a lemma of its own. -/
+collection tweak gets one of its own. -/
 
 variable [DecidableEq Tweak] {X : Type} {coll : TweakableHashCollection ι PkSeed Tweak Y}
   {pk : PkSeed} {chal : List (Tweak × X)} {colls : List Tweak}
@@ -130,9 +108,9 @@ theorem collectionOracle_run_of_challenge_clash (q : ((i : ι) × Tweak × coll.
   simp [collectionOracle, hany]
 
 /-- Repeating a collection tweak is **accepted**: querying the same tweak twice in a row is answered
-both times, and both occurrences are appended. `VQS_t` requires the collection tweaks to be disjoint
-from the target tweaks, not distinct among themselves, and a reduction may legitimately evaluate one
-address more than once.
+both times, and both occurrences are appended. Only disjointness from the target tweaks is required,
+not distinctness among the collection tweaks themselves, and a reduction may legitimately evaluate
+one address more than once.
 
 Stated over two consecutive queries rather than one, because the single-query statement is a
 corollary of `collectionOracle_run_of_fresh` and so would still hold if the oracle grew a

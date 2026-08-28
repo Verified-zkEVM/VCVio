@@ -10,37 +10,29 @@ public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
-# Single-function multi-target preimage resistance for distinct tweaks (SM-PRE)
+# Single-function, distinct-tweak, multi-target preimage resistance (SM-DT-PRE)
 
 The two-phase shape is that of SM-TCR — the public seed is sampled by the experiment, withheld while
 the adversary selects targets, then revealed with the challenge oracle removed — but the challenge
-oracle differs: the adversary supplies only a *tweak*, and the oracle draws the message itself from
-the subspace `M′`. Winning means producing *any* preimage of a recorded image; unlike SM-TCR there
+oracle differs: the adversary supplies only a tweak, and the oracle draws the message itself from
+the subspace `M'`. Winning means producing *any* preimage of a recorded image; unlike SM-TCR there
 is no requirement that it differ from the recorded message.
 
-That the adversary chooses the tweaks is essential, not cosmetic. A reduction has to place its
-challenges at the specific addresses where the scheme it is simulating will use them; a game in
-which the challenger picks the tweaks cannot be used that way.
+Written `SM-PRE` from here on, including in the declaration names; the distinct-tweak restriction is
+part of the notion and is not dropped along with the letters.
 
-## The subspace `M′`
+The adversary rather than the challenger choosing the tweaks is what makes the game usable in a
+reduction, which has to place its challenges at the specific addresses where the scheme it simulates
+will use them.
 
-`M′` is carried as its own type `M'` together with `emb : M' → M`, so the papers' `x ←$ M′` is
-`$ᵗ M'` and the requirement that the adversary's output lie in `M′` holds by typing rather than by a
-runtime check. A subspace carved out of an existing `M` by a predicate is the case
-`M' := Subtype p`, `emb := Subtype.val`; the common special case `|M′| = |M|` is `M' := M`,
-`emb := id`.
+`M'` is carried as its own type together with `emb : M' → M`, so the requirement that the
+adversary's output lie in the subspace holds by typing rather than by a runtime check. A
+subspace carved out of `M` by a predicate is the case `M' := Subtype p`, `emb := Subtype.val`;
+the whole message space is `M' := M`, `emb := id`.
 
-## Distinct tweaks, and the two query counts
-
-The challenge oracle answers `none` — the papers' `⊥` — once `numTargets` queries have been
-answered, whenever the queried tweak already appears in the challenge history, and whenever it
-appears in the collection oracle's tweak list. Every bound assumes all three restrictions. See
-`MultiTarget.collectionOracle` for why rejecting is used in place of an end-of-game predicate.
-
-`numTargets` is the papers' `p`, the number of classical queries to the challenge oracle, and it is
-the only query bound this game carries. The `q` appearing in concrete bounds counts queries to the
-hash function itself, a quantity of the random-oracle analysis in which `Th` is an oracle rather
-than a function; it is not a parameter of the game and must not be conflated with `p`.
+`numTargets` bounds the accepted challenge queries and is the only query bound the game carries. See
+`MultiTarget.collectionOracle` for why the tweak restrictions are enforced in the oracles rather
+than in the winning condition.
 
 ## References
 
@@ -65,34 +57,34 @@ variable {ι PkSeed Tweak M M' Y : Type}
 /-! ## The game -/
 
 /-- The challenge oracle's signature: a query is a tweak alone — the oracle picks the message — and
-the response is `Option Y`, with `none` the papers' `⊥` for a rejected query. -/
+the response is `Option Y`, with `none` marking a rejected query. -/
 abbrev preChallengeSpec (Tweak Y : Type) : OracleSpec Tweak := Tweak →ₒ Option Y
 
-/-- An SM-PRE problem: the tweakable hash under attack, the subspace `M′` of its message space that
-the challenge oracle samples from, the collection its other members form, and the bound `p` on the
+/-- An SM-PRE problem: the tweakable hash under attack, the subspace `M'` of its message space that
+the challenge oracle samples from, the collection its other members form, and the bound on the
 number of targets. -/
 structure PreProblem (ι PkSeed Tweak M M' Y : Type) where
   /-- The tweakable hash whose preimage resistance is in question. -/
   th : TweakableHash PkSeed Tweak M Y
-  /-- The inclusion `M′ ⊆ M` of the subspace the challenge oracle samples from. -/
+  /-- The map into `M` of the subspace the challenge oracle samples from. -/
   emb : M' → M
   /-- The rest of the collection, evaluable by the adversary at the game's seed. -/
   coll : TweakableHashCollection ι PkSeed Tweak Y
-  /-- The papers' `p`: the cap on classical queries to the challenge oracle. -/
+  /-- The cap on accepted challenge-oracle queries. -/
   numTargets : ℕ
 
 /-- The stand-alone SM-PRE problem, at the empty collection: the collection oracle's query type is
 uninhabited, so the adversary has only the challenge oracle. -/
-def PreProblem.standalone (th : TweakableHash PkSeed Tweak M Y) (emb : M' → M) (numTargets : ℕ) :
+def PreProblem.standalone (th : TweakableHash PkSeed Tweak M Y) (emb : M' → M)
+    (numTargets : ℕ) :
     PreProblem Empty PkSeed Tweak M M' Y where
   th := th
   emb := emb
   coll := .empty PkSeed Tweak Y
   numTargets := numTargets
 
-/-- The state threaded through both oracles of the SM-PRE game: the challenge history `Q` of
-accepted `(tweak, sampled message)` targets, and the list of tweaks spent on the collection
-oracle. -/
+/-- The state threaded through both oracles of the SM-PRE game: the challenge history of accepted
+`(tweak, sampled message)` targets, and the list of tweaks spent on the collection oracle. -/
 abbrev PreState (Tweak M' : Type) : Type := List (Tweak × M') × List Tweak
 
 /-- An SM-PRE adversary. `choose` selects tweaks through the challenge oracle, and may evaluate the
@@ -104,15 +96,17 @@ structure PreAdversary (prob : PreProblem ι PkSeed Tweak M M' Y) where
   /-- Select tweaks through the challenge oracle, with collection access. The public seed is not an
   input. -/
   choose : OracleComp (preChallengeSpec Tweak Y + collectionSpec prob.coll) State
-  /-- Given the revealed public seed, name a target index and a preimage in `M′`. -/
+  /-- Given the revealed public seed, name a target index and a preimage in `M'`. -/
   invert : State → PkSeed → ProbComp (ℕ × M')
 
-/-- The challenge oracle at a public seed: it draws `x` uniformly from `M′`, answers `Th(P, T, x)`
-and records `(T, x)` in the challenge history `Q`. A query is rejected with `none` when the target
-cap is reached, when its tweak already occurs in the challenge history, or when its tweak has been
-spent on the collection oracle; a rejected query leaves the state untouched and draws nothing.
+/-- The challenge oracle at a public seed: it draws a message uniformly from `M'`, answers with the
+hash of that message under the queried tweak, and records the pair in the challenge history. A query
+is rejected with `none` when the target cap is reached, when its tweak already occurs in the
+challenge history, or when its tweak has been spent on the collection oracle; a rejected query
+leaves the state untouched and draws nothing.
 
-Accepted queries are appended, so the history is in issue order and `Q[j]` is the `j`-th target. -/
+Accepted queries are appended, so the history is in issue order and its `j`-th entry is the `j`-th
+target. -/
 noncomputable def preChallengeOracle [DecidableEq Tweak] [SampleableType M']
     (prob : PreProblem ι PkSeed Tweak M M' Y) (pk : PkSeed) :
     QueryImpl (preChallengeSpec Tweak Y) (StateT (PreState Tweak M') ProbComp) :=
@@ -135,10 +129,11 @@ noncomputable def preOracles [DecidableEq Tweak] [SampleableType M']
 
 /-- The SM-PRE experiment. The public seed is sampled, the first phase runs against both oracles
 without it, the second phase runs with it and without them, and the adversary wins by naming a
-recorded target `j` and any message of `M′` whose image under the `j`-th recorded tweak agrees with
+recorded target `j` and any message of `M'` whose image under the `j`-th recorded tweak agrees with
 that of the `j`-th recorded message. An index outside the challenge history loses. -/
 noncomputable def preExperiment [DecidableEq Tweak] [DecidableEq Y] [SampleableType M']
-    {prob : PreProblem ι PkSeed Tweak M M' Y} (adv : PreAdversary prob) : ProbComp Bool := do
+    {prob : PreProblem ι PkSeed Tweak M M' Y} (adv : PreAdversary prob) :
+    ProbComp Bool := do
   let pk ← prob.th.seedGen
   let (st, chal, _) ← (simulateQ (preOracles prob pk) adv.choose).run ([], [])
   let (j, m) ← adv.invert st pk
@@ -155,13 +150,13 @@ noncomputable def preAdvantage [DecidableEq Tweak] [DecidableEq Y] [SampleableTy
 /-! ## Pinning the challenge oracle's conventions
 
 A kernel-debt gate cannot see a game that disagrees with the paper. The lemmas below fix the four
-branches of `preChallengeOracle` and the order of the history, so that a change of convention breaks
-a proof rather than passing silently. -/
+branches of `preChallengeOracle` and the order of the history, so that a change of convention
+breaks a proof rather than passing silently. -/
 
 variable [DecidableEq Tweak] [SampleableType M'] {prob : PreProblem ι PkSeed Tweak M M' Y}
   {pk : PkSeed} {t : Tweak} {chal : List (Tweak × M')} {colls : List Tweak}
 
-/-- A query with a tweak fresh to both histories, below the target cap, draws its message from `M′`,
+/-- A query with a tweak fresh to both histories, below the target cap, draws its message from `M'`,
 answers with the hash of that message and appends it to the end of the challenge history. -/
 theorem preChallengeOracle_run_of_fresh (hlen : chal.length < prob.numTargets)
     (hnew : ∀ e ∈ chal, e.1 ≠ t) (hcoll : t ∉ colls) :
@@ -176,30 +171,33 @@ theorem preChallengeOracle_run_of_fresh (hlen : chal.length < prob.numTargets)
 /-- A query reusing a tweak already in the challenge history is rejected, and the state is
 unchanged. -/
 theorem preChallengeOracle_run_of_reused (x : M') (hmem : (t, x) ∈ chal) :
-    (preChallengeOracle prob pk t).run (chal, colls) = pure (none, (chal, colls)) := by
+    (preChallengeOracle prob pk t).run (chal, colls) =
+      pure (none, (chal, colls)) := by
   have hany : (chal.any fun e => decide (e.1 = t)) = true :=
     List.any_eq_true.mpr ⟨(t, x), hmem, by simp⟩
   simp [preChallengeOracle, hany]
 
 /-- A query at the target cap is rejected, and the state is unchanged. -/
 theorem preChallengeOracle_run_of_full (hlen : prob.numTargets ≤ chal.length) :
-    (preChallengeOracle prob pk t).run (chal, colls) = pure (none, (chal, colls)) := by
+    (preChallengeOracle prob pk t).run (chal, colls) =
+      pure (none, (chal, colls)) := by
   simp [preChallengeOracle, hlen]
 
 /-- A query at a tweak already spent on the collection oracle is rejected, and the state is
 unchanged. This is the half of the two tweak sets' disjointness that the challenge oracle enforces;
 `collectionOracle_run_of_challenge_clash` is the other. -/
 theorem preChallengeOracle_run_of_collection_clash (hmem : t ∈ colls) :
-    (preChallengeOracle prob pk t).run (chal, colls) = pure (none, (chal, colls)) := by
+    (preChallengeOracle prob pk t).run (chal, colls) =
+      pure (none, (chal, colls)) := by
   have hcany : (colls.any fun s => decide (s = t)) = true :=
     List.any_eq_true.mpr ⟨t, hmem, by simp⟩
   simp [preChallengeOracle, hcany]
 
 /-! ## An end-to-end order check
 
-`Q[j]` must be the `j`-th accepted challenge query, and the two oracles must share one state. Both
-conventions are invisible at a single query and mis-attribute every index at two, so they are pinned
-on a concrete probe interleaving the two oracles. -/
+The challenge history's `j`-th entry must be the `j`-th accepted challenge query, and the two
+oracles must share one state. Both conventions are invisible at a single query and mis-attribute
+every index at two, so they are pinned on a concrete probe interleaving the two oracles. -/
 
 namespace PreProbe
 
@@ -234,9 +232,9 @@ def queries : OracleComp (preChallengeSpec Bool Bool + collectionSpec coll) Unit
   return ()
 
 /-- Whatever messages the oracle draws, the tweaks in the challenge history appear in issue order,
-so `Q[0]` belongs to the first target and `Q[1]` to the second, and the interleaved collection query
-at an already-issued target tweak is rejected, leaving the collection list empty. Appending is what
-makes the order hold; consing would reverse it. -/
+so its first entry belongs to the first target and its second to the second, and the collection
+query at an already-issued target tweak is rejected, leaving the collection list empty. Appending is
+what makes the order hold; consing would reverse it. -/
 theorem history_in_issue_order :
     ∀ p ∈ support ((simulateQ (preOracles problem ()) queries).run ([], [])),
       p.2.1.map Prod.fst = [false, true] ∧ p.2.2 = [] := by
