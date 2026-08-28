@@ -40,10 +40,6 @@ variable {p : Params}
 /-- A hypertree signature for `d = 1`: one XMSS signature of the FORS public key. -/
 abbrev HtSigCore (p : Params) (core : CorePrimitives p) := XmssSig p core
 
-/-- Pure hypertree signature type retained until the Scheme consumer migrates in the downstream
-scheme-integration PR. -/
-abbrev HtSig (p : Params) (prims : Primitives p) := HtSigCore p prims.core
-
 /-- Address of the single hypertree layer (layer `0`, tree `idxTree`). -/
 def htAdrs (adrs : Adrs) (idxTree : ℕ) : Adrs :=
   (adrs.setLayerAddress 0).setTreeAddress idxTree
