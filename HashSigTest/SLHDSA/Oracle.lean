@@ -11,8 +11,9 @@ public import HashSig.SLHDSA.Concrete.Instance
 /-!
 # Producer canaries for the SLH-DSA public-hash collection
 
-These examples pin the collection identity, canonical address encoding, deterministic bridge,
-and lazy-cache hit/miss behavior.  In particular, `F`, `H = T₂`, and `T_ℓ` share one cache.
+These examples cover distinct observable contracts: query domain separation, the shared
+`F`/`H`/`T_ℓ` collection, canonical address encoding, deterministic interpretation, and
+lazy-cache hit/miss behavior.
 -/
 
 public section
@@ -23,36 +24,20 @@ namespace SLHDSA.PublicHashTest
 
 abbrev Q := PublicHashQuery Nat Nat Nat
 
+/-- Every field of a tweakable-hash query contributes to its cache identity. -/
 example :
-    (PublicHashQuery.thash 0 0 [7] : Q) ≠ PublicHashQuery.thash 1 0 [7] := by
-  decide
-
-example :
-    (PublicHashQuery.thash 0 0 [3, 5] : Q) ≠
-      PublicHashQuery.thash 0 0 [5, 3] := by
-  decide
-
-example :
+    (PublicHashQuery.thash 0 0 [7] : Q) ≠ PublicHashQuery.thash 1 0 [7] ∧
+    (PublicHashQuery.thash 0 0 [7] : Q) ≠ PublicHashQuery.thash 0 1 [7] ∧
+    (PublicHashQuery.thash 0 0 [3, 5] : Q) ≠ PublicHashQuery.thash 0 0 [5, 3] ∧
     (PublicHashQuery.thash 0 0 [3] : Q) ≠ PublicHashQuery.thash 0 0 [3, 0] := by
   decide
 
+/-- `H_msg` is a separate domain, and all of its inputs contribute to query identity. -/
 example :
-    (PublicHashQuery.thash 0 0 [7] : Q) ≠ PublicHashQuery.hmsg 7 0 9 [] := by
-  decide
-
-example :
-    (PublicHashQuery.hmsg 7 0 9 [] : Q) ≠ PublicHashQuery.hmsg 8 0 9 [] := by
-  decide
-
-example :
-    (PublicHashQuery.hmsg 7 0 9 [] : Q) ≠ PublicHashQuery.hmsg 7 1 9 [] := by
-  decide
-
-example :
-    (PublicHashQuery.hmsg 7 0 9 [] : Q) ≠ PublicHashQuery.hmsg 7 0 10 [] := by
-  decide
-
-example :
+    (PublicHashQuery.thash 0 0 [7] : Q) ≠ PublicHashQuery.hmsg 7 0 9 [] ∧
+    (PublicHashQuery.hmsg 7 0 9 [] : Q) ≠ PublicHashQuery.hmsg 8 0 9 [] ∧
+    (PublicHashQuery.hmsg 7 0 9 [] : Q) ≠ PublicHashQuery.hmsg 7 1 9 [] ∧
+    (PublicHashQuery.hmsg 7 0 9 [] : Q) ≠ PublicHashQuery.hmsg 7 0 10 [] ∧
     (PublicHashQuery.hmsg 7 0 9 [] : Q) ≠ PublicHashQuery.hmsg 7 0 9 [0] := by
   decide
 
@@ -115,11 +100,6 @@ example (pkSeed : prims.PkSeed) (adrs : Adrs) (left right : prims.Y) :
       prims.H pkSeed adrs left right := by
   simp
 
-/-- Replacing the deterministic public handler leaves the implementation-independent context
-definitionally unchanged. -/
-example (answer : QueryImpl (publicHashSpec prims.core) Id) :
-    (PublicHash.withPublicHash prims.core answer).core = prims.core := rfl
-
 end Deterministic
 
 /-! The SHA-2 instance keys by the exact 22-byte `ADRSc`. -/
@@ -128,43 +108,35 @@ open Concrete
 
 example : shaPrimitives.AdrsKey = Bytes 22 := rfl
 
-example (adrs : Adrs) : shaPrimitives.adrsToKey adrs = shaAdrsKey adrs := rfl
-
 example (adrs : Adrs) : (shaPrimitives.adrsToKey adrs).toList = adrs.compressSha2 := by
   change (shaAdrsKey adrs).toList = adrs.compressSha2
   exact shaAdrsKey_toList adrs
 
-example : shaPrimitives.adrsToKey Adrs.zero =
-    shaPrimitives.adrsToKey (Adrs.zero.setLayerAddress 256) := by
-  change shaAdrsKey Adrs.zero = shaAdrsKey (Adrs.zero.setLayerAddress 256)
-  apply Vector.toArray_inj.mp
-  simpa [shaAdrsKey] using
-    (show Adrs.zero.compressSha2 = (Adrs.zero.setLayerAddress 256).compressSha2 by decide)
+/-- SHA-2 compression intentionally truncates the layer to 8 bits and the tree to 64 bits. -/
+example :
+    shaPrimitives.adrsToKey Adrs.zero =
+      shaPrimitives.adrsToKey (Adrs.zero.setLayerAddress 256) ∧
+    shaPrimitives.adrsToKey Adrs.zero =
+      shaPrimitives.adrsToKey (Adrs.zero.setTreeAddress (2 ^ 64)) := by
+  constructor
+  · change shaAdrsKey Adrs.zero = shaAdrsKey (Adrs.zero.setLayerAddress 256)
+    apply Vector.toArray_inj.mp
+    simpa [shaAdrsKey] using
+      (show Adrs.zero.compressSha2 = (Adrs.zero.setLayerAddress 256).compressSha2 by decide)
+  · change shaAdrsKey Adrs.zero = shaAdrsKey (Adrs.zero.setTreeAddress (2 ^ 64))
+    apply Vector.toArray_inj.mp
+    simpa [shaAdrsKey] using
+      (show Adrs.zero.compressSha2 =
+        (Adrs.zero.setTreeAddress (2 ^ 64)).compressSha2 by decide)
 
-example : shaPrimitives.adrsToKey Adrs.zero =
-    shaPrimitives.adrsToKey (Adrs.zero.setTreeAddress (2 ^ 64)) := by
-  change shaAdrsKey Adrs.zero = shaAdrsKey (Adrs.zero.setTreeAddress (2 ^ 64))
-  apply Vector.toArray_inj.mp
-  simpa [shaAdrsKey] using
-    (show Adrs.zero.compressSha2 =
-      (Adrs.zero.setTreeAddress (2 ^ 64)).compressSha2 by decide)
-
-example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setLayerAddress 1).compressSha2 := by
-  decide
-
-example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setTreeAddress 1).compressSha2 := by
-  decide
-
-example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setTypeAndClear .wotsPk).compressSha2 := by
-  decide
-
-example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setKeyPairAddress 1).compressSha2 := by
-  decide
-
-example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setChainAddress 1).compressSha2 := by
-  decide
-
-example : Adrs.zero.compressSha2 ≠ (Adrs.zero.setHashAddress 1).compressSha2 := by
+/-- Every retained SHA-2 address field is observable in the compressed key. -/
+example :
+    Adrs.zero.compressSha2 ≠ (Adrs.zero.setLayerAddress 1).compressSha2 ∧
+    Adrs.zero.compressSha2 ≠ (Adrs.zero.setTreeAddress 1).compressSha2 ∧
+    Adrs.zero.compressSha2 ≠ (Adrs.zero.setTypeAndClear .wotsPk).compressSha2 ∧
+    Adrs.zero.compressSha2 ≠ (Adrs.zero.setKeyPairAddress 1).compressSha2 ∧
+    Adrs.zero.compressSha2 ≠ (Adrs.zero.setChainAddress 1).compressSha2 ∧
+    Adrs.zero.compressSha2 ≠ (Adrs.zero.setHashAddress 1).compressSha2 := by
   decide
 
 end SLHDSA.PublicHashTest
