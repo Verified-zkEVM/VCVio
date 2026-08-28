@@ -48,7 +48,7 @@ theorem buildLayer_neverFails [DecidableEq α]
     (leaves : List.Vector α (2 ^ (n + 1))) : NeverFail
       ((simulateQ (spec α).randomOracle
         (buildLayer α n leaves)).run preexisting_cache) := by
-  grind only [buildLayer, = neverFail_iff, = probFailure_of_liftM_PMF]
+  exact neverFail_simulateQ_randomOracle_run _ _
 
 /--
 Building a Merkle tree never results in failure
@@ -61,7 +61,7 @@ theorem buildMerkleTree_neverFails [DecidableEq α]
     NeverFail
       ((simulateQ (spec α).randomOracle
         (buildMerkleTree α n leaves)).run preexisting_cache) := by
-  grind only [= neverFail_iff, = probFailure_of_liftM_PMF]
+  exact neverFail_simulateQ_randomOracle_run _ _
 
 private lemma buildLayer_with_hash_get_aux {n : ℕ} (leaves : List.Vector α (2 ^ (n + 1)))
     (i : Fin (2 ^ (n + 1))) (hashFn : α × α → α)
@@ -84,18 +84,19 @@ theorem functional_completeness {n : ℕ} (leaves : List.Vector α (2 ^ n)) (i :
     simp [Fin.eq_zero i, buildMerkleTree_with_hash, getPutativeRoot_with_hash, getRoot]
   | succ n ih =>
     let lastLayer := buildLayer_with_hash (α := α) n leaves hashFn
+    rw [buildMerkleTree_with_hash, getRoot_cons]
     by_cases hsign : i.val % 2 = 0
     · have hnew := buildLayer_with_hash_get_aux α leaves i hashFn i (siblingIndex i)
         (by omega) (by grind [siblingIndex])
-      simp [buildMerkleTree_with_hash, generateProof,
-        getPutativeRoot_with_hash, getRoot, hsign, hnew]
-      simpa [getRoot, Cache.cons, lastLayer] using
+      simp [generateProof,
+        getPutativeRoot_with_hash, hsign, hnew]
+      simpa [lastLayer] using
         ih (leaves := lastLayer) (i := ⟨i.val / 2, by grind only⟩)
     · have hnew := buildLayer_with_hash_get_aux α leaves i hashFn (siblingIndex i) i
         (by grind [siblingIndex]) (by omega)
-      simp [buildMerkleTree_with_hash, generateProof,
-        getPutativeRoot_with_hash, getRoot, hsign, hnew]
-      simpa [getRoot, Cache.cons, lastLayer] using
+      simp [generateProof,
+        getPutativeRoot_with_hash, hsign, hnew]
+      simpa [lastLayer] using
         ih (leaves := lastLayer) (i := ⟨i.val / 2, by grind only⟩)
 
 /-- Completeness theorem for Merkle trees: for any full binary tree with `2 ^ n` leaves, and for

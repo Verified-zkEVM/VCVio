@@ -56,8 +56,8 @@ example (x : α) : Pr[⊥ | (pure x : m α)] = 0 := by grind
 example (x : α) : support (pure x : m α) = {x} := by simp
 example (x : α) : support (pure x : m α) = {x} := by grind
 
-example (x : α) : 𝒟[(pure x : m α)] = pure x := by simp
-example (x : α) : 𝒟[(pure x : m α)] = pure x := by grind
+example (x : α) : 𝒮[(pure x : m α)] = pure x := by simp
+example (x : α) : 𝒮[(pure x : m α)] = pure x := by grind
 
 /-! ## `bind`
 
@@ -69,8 +69,8 @@ example (mx : m α) (my : α → m β) :
 example (mx : m α) (my : α → m β) :
     support (mx >>= my) = ⋃ x ∈ support mx, support (my x) := by grind
 
-example (mx : m α) (my : α → m β) : 𝒟[mx >>= my] = 𝒟[mx] >>= fun x => 𝒟[my x] := by simp
-example (mx : m α) (my : α → m β) : 𝒟[mx >>= my] = 𝒟[mx] >>= fun x => 𝒟[my x] := by grind
+example (mx : m α) (my : α → m β) : 𝒮[mx >>= my] = 𝒮[mx] >>= fun x => 𝒮[my x] := by simp
+example (mx : m α) (my : α → m β) : 𝒮[mx >>= my] = 𝒮[mx] >>= fun x => 𝒮[my x] := by grind
 
 -- target(simp): the `tsum` bind expansions are `@[grind =]` only.
 example (mx : m α) (my : α → m β) (y : β) :
@@ -107,8 +107,8 @@ example (f : α → β) (mx : m α) (q : β → Prop) : Pr[ q | f <$> mx] = Pr[ 
 example (f : α → β) (mx : m α) : support (f <$> mx) = f '' support mx := by simp
 example (f : α → β) (mx : m α) : support (f <$> mx) = f '' support mx := by grind
 
-example (f : α → β) (mx : m α) : 𝒟[f <$> mx] = f <$> 𝒟[mx] := by simp
-example (f : α → β) (mx : m α) : 𝒟[f <$> mx] = f <$> 𝒟[mx] := by grind
+example (f : α → β) (mx : m α) : 𝒮[f <$> mx] = f <$> 𝒮[mx] := by simp
+example (f : α → β) (mx : m α) : 𝒮[f <$> mx] = f <$> 𝒮[mx] := by grind
 
 -- target(simp): `probOutput_map` is `@[grind =]` only (`simp` keeps its injective/equiv map forms).
 example (f : α → β) (mx : m α) (y : β) :
@@ -135,8 +135,8 @@ example (mx my : m α) :
 example (mx my : m α) :
     Pr[⊥ | mx *> my] = Pr[⊥ | mx] + Pr[⊥ | my] - Pr[⊥ | mx] * Pr[⊥ | my] := by simp
 
-example (mx my : m α) : 𝒟[mx *> my] = 𝒟[mx] *> 𝒟[my] := by simp
-example (mx my : m α) : 𝒟[mx <* my] = 𝒟[mx] <* 𝒟[my] := by simp
+example (mx my : m α) : 𝒮[mx *> my] = 𝒮[mx] *> 𝒮[my] := by simp
+example (mx my : m α) : 𝒮[mx <* my] = 𝒮[mx] <* 𝒮[my] := by simp
 
 /-! ## `seq` (`<*>`)
 
@@ -148,7 +148,7 @@ example (mf : m (α → β)) (mx : m α) :
 example (mf : m (α → β)) (mx : m α) :
     Pr[⊥ | mf <*> mx] = Pr[⊥ | mf] + Pr[⊥ | mx] - Pr[⊥ | mf] * Pr[⊥ | mx] := by grind
 
-example (mf : m (α → β)) (mx : m α) : 𝒟[mf <*> mx] = 𝒟[mf] <*> 𝒟[mx] := by simp
+example (mf : m (α → β)) (mx : m α) : 𝒮[mf <*> mx] = 𝒮[mf] <*> 𝒮[mx] := by simp
 
 -- the applicative product factors under both: `simp` by the `@[simp high]` rule, `grind` by the
 -- same lemma as a `@[grind norm]` rule (the `Seq.seq` thunk is unindexable for E-matching, but
@@ -211,7 +211,7 @@ These common monad operations have no probability lemmas yet; each is a future A
 
 * `support_orElse` — `support (oa <|> oa') = support oa ∪ {x | Pr[⊥ | oa] ≠ 0 ∧ x ∈ support oa'}`;
   follows from `probOutput_orElse` via the support↔probability bridge.
-* `finSupport_guard` / `probEvent_guard` / `evalDist_guard` — blocked on the
+* `finSupport_guard` / `probEvent_guard` / `evalSPMF_guard` — blocked on the
   `LawfulFailure (OptionT (OracleComp spec))` universe quirk (see `OracleComp/EvalDist.lean`).
 * `forM` / `sequence` / `traverse` / `List.foldlM` — no generic probability lemmas (only `mapM` is
   covered, via `probFailure_list_mapM` / `probOutput_list_mapM`).

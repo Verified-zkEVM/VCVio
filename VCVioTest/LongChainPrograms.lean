@@ -116,21 +116,21 @@ variable {α : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
   [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
   [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
 
-example (mx : m α) : 𝒟[do let a ← mx; pure a] = 𝒟[mx] := by simp
-example (mx : m α) : 𝒟[do let a ← mx; pure a] = 𝒟[mx] := by grind
+example (mx : m α) : 𝒮[do let a ← mx; pure a] = 𝒮[mx] := by simp
+example (mx : m α) : 𝒮[do let a ← mx; pure a] = 𝒮[mx] := by grind
 
 -- target(grind): a deeper opaque-`m` tower normalises by `simp`; `grind`'s collapse is unstable.
 example (mx : m α) :
-    𝒟[do let a ← mx; let b ← pure a; let c ← pure b; pure c] = 𝒟[mx] := by simp
+    𝒮[do let a ← mx; let b ← pure a; let c ← pure b; pure c] = 𝒮[mx] := by simp
 
 end abstractHead
 
-example (mx : ProbComp Bool) : 𝒟[do let a ← mx; pure a] = 𝒟[mx] := by simp
-example (mx : ProbComp Bool) : 𝒟[do let a ← mx; pure a] = 𝒟[mx] := by grind
+example (mx : ProbComp Bool) : 𝒮[do let a ← mx; pure a] = 𝒮[mx] := by simp
+example (mx : ProbComp Bool) : 𝒮[do let a ← mx; pure a] = 𝒮[mx] := by grind
 
 -- target(grind): with the concrete `$ᵗ Bool` head, the ten-deep `coinPadded` collapses by `simp`;
 -- `grind` descends into the `PMF` representation and does not close these.
-example : 𝒟[coinPadded] = 𝒟[($ᵗ Bool)] := by simp [coinPadded]
+example : 𝒮[coinPadded] = 𝒮[($ᵗ Bool)] := by simp [coinPadded]
 example : Pr[= true | coinPadded] = Pr[= true | $ᵗ Bool] := by simp [coinPadded]
 example : support coinPadded = support ($ᵗ Bool) := by simp [coinPadded]
 

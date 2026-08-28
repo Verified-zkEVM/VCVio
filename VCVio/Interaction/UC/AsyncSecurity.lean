@@ -6,8 +6,6 @@ Authors: Quang Dao
 
 module
 
-import all PolyFun.Interaction.Concurrent.Fairness
-
 public import PolyFun.Interaction.Concurrent.Fairness
 public import VCVio.Interaction.UC.AsyncRuntime
 public import VCVio.Interaction.UC.Computational
@@ -294,7 +292,10 @@ theorem weakFairOn_of_strongFairOn
     (run : AsyncRun ticketed.process.toProcess ticketed.envAction)
     (ticket : ticketed.Ticket) :
     StrongFairOn ticketed run ticket → WeakFairOn ticketed run ticket :=
-  fun hSF ⟨N, hN⟩ => hSF fun N' => ⟨max N N', le_max_right _ _, hN _ (le_max_left _ _)⟩
+  fun hSF hEA => by
+    obtain ⟨N, hN⟩ := Concurrent.ProcessOver.Run.eventuallyAlways_iff.mp hEA
+    exact hSF <| Concurrent.ProcessOver.Run.infinitelyOften_iff.mpr fun N' =>
+      ⟨max N N', le_max_right _ _, hN _ (le_max_left _ _)⟩
 
 /-- Strong fairness implies weak fairness for the whole run. -/
 theorem weakFair_of_strongFair

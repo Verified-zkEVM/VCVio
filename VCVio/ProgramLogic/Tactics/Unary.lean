@@ -318,30 +318,17 @@ Variants:
   then continues with exhaustive decomposition on all resulting goals.
 - `vcgen inv I` applies an explicit loop invariant `I` to the first `replicate`/`foldlM`/`mapM`
   goal, then continues with exhaustive decomposition. -/
-syntax "vcgen" ("using" term)? : tactic
-syntax "vcgen" &"inv" term : tactic
-syntax "vcgen?" : tactic
+syntax (name := vcgenBasic) "vcgen" : tactic
+syntax (name := vcgenUsing) "vcgen" "using" term : tactic
+syntax (name := vcgenInv) "vcgen" &"inv" term : tactic
+syntax (name := vcgenSuggestion) "vcgen?" : tactic
 
-elab_rules : tactic
+elab_rules (kind := vcgenBasic) : tactic
   | `(tactic| vcgen) => withVCGenRunTiming "vcgen" do
       discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
       withVCGenFinishTiming runVCGenFinish
-  | `(tactic| vcgen using $cut) => withVCGenRunTiming "vcgen" do
-      discard <| TacticInternals.Unary.tryLowerProbGoal
-      if ← TacticInternals.Unary.runHoareStepRuleUsing cut then
-        discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
-        withVCGenFinishTiming runVCGenFinish
-      else
-        TacticInternals.Unary.throwVCGenStepError
-  | `(tactic| vcgen inv $inv) => withVCGenRunTiming "vcgen" do
-      discard <| TacticInternals.Unary.tryLowerProbGoal
-      if ← TacticInternals.Unary.runLoopInvExplicit inv then
-        discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
-        withVCGenFinishTiming runVCGenFinish
-      else
-        throwError
-          "vcgen inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
-          or `List.mapM`."
+
+elab_rules (kind := vcgenSuggestion) : tactic
   | `(tactic| vcgen?) => withVCGenRunTiming "vcgen?" do
       let batches ← runBoundedPassesCollect "vcgen?" TacticInternals.Unary.runVCGenPassPlanned
       let needsFinish := !(← getGoals).isEmpty
@@ -376,6 +363,26 @@ elab_rules : tactic
       if lines.isEmpty then
         lines := ["vcgen"]
       addTryThisTextSuggestion (← getRef) <| String.intercalate "\n" lines
+
+elab_rules (kind := vcgenUsing) : tactic
+  | `(tactic| vcgen using $cut) => withVCGenRunTiming "vcgen" do
+      discard <| TacticInternals.Unary.tryLowerProbGoal
+      if ← TacticInternals.Unary.runHoareStepRuleUsing cut then
+        discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
+        withVCGenFinishTiming runVCGenFinish
+      else
+        TacticInternals.Unary.throwVCGenStepError
+
+elab_rules (kind := vcgenInv) : tactic
+  | `(tactic| vcgen inv $inv) => withVCGenRunTiming "vcgen" do
+      discard <| TacticInternals.Unary.tryLowerProbGoal
+      if ← TacticInternals.Unary.runLoopInvExplicit inv then
+        discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
+        withVCGenFinishTiming runVCGenFinish
+      else
+        throwError
+          "vcgen inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
+          or `List.mapM`."
 
 /-- `exp_norm` normalizes expectation / indicator arithmetic in the current goal.
 

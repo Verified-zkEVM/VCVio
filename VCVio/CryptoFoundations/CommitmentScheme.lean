@@ -58,8 +58,8 @@ public parameter, the commitment (first component) has the same distribution
 regardless of the committed message. -/
 def PerfectlyHiding (cs : CommitmentScheme PP M C D) : Prop :=
   ∀ pp, pp ∈ support cs.setup →
-    ∀ m₁ m₂, 𝒟[Prod.fst <$> cs.commit pp m₁] =
-      𝒟[Prod.fst <$> cs.commit pp m₂]
+    ∀ m₁ m₂, 𝒮[Prod.fst <$> cs.commit pp m₁] =
+      𝒮[Prod.fst <$> cs.commit pp m₂]
 
 /-! ### Computational hiding -/
 
@@ -124,7 +124,7 @@ the scheme's normal setup. Required for reductions that swap in the
 trapdoor setup without the adversary noticing. -/
 def TrapdoorExtractor.SetupConsistent {TD : Type} (extractor : TrapdoorExtractor PP TD C M)
     (cs : CommitmentScheme PP M C D) : Prop :=
-  𝒟[Prod.fst <$> extractor.setupExtract] = 𝒟[cs.setup]
+  𝒮[Prod.fst <$> extractor.setupExtract] = 𝒮[cs.setup]
 
 /-- Extraction experiment: generate parameters with trapdoor, honestly commit
 to message `m`, then check whether the extractor recovers `m` from the commitment.

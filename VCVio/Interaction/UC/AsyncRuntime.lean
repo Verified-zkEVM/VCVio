@@ -18,7 +18,7 @@ schedulers; the alphabet of env events is supplied by an
 `EnvAction m Event State` (see `EnvAction.lean`).
 
 The shape of every definition mirrors the synchronous `processSemantics`
-in `Runtime.lean`: the bundled `SPMFSemantics m` is threaded uniformly,
+in `Runtime.lean`: the bundled `MeasureSemanticsVia m` is threaded uniformly,
 so the same constructor serves coin-flip-only protocols, shared-oracle
 protocols, and observation-style semantics that introduce failure mass.
 The synchronous runtime is the special case in which the env scheduler
@@ -273,6 +273,24 @@ theorem runStepsAsync_empty_trivial_eq
       rw [runStepsAsync, ProcessOver.runSteps]
       simp only [Interaction.UC.trivialEnvScheduler_apply, monad_norm, ih, List.replicate_succ]
 
+/-- `OpenProcess`-level form of `runStepsAsync_empty_trivial_eq`, retaining the bundled
+step sampler in the statement. -/
+theorem runStepsAsync_empty_trivial_openProcess_eq
+    {m : Type → Type} [Monad m] [LawfulMonad m]
+    {Party : Type u} (process : OpenProcess m Party PortBoundary.empty)
+    (fuel : ℕ) (s : process.Proc) :
+    runStepsAsync process.toProcess (Interaction.UC.EnvAction.empty Unit)
+        (fun st => process.stepSampler st.proc)
+        (Interaction.UC.trivialEnvScheduler (m := m) Unit Empty)
+        fuel
+        (⟨s, ()⟩ : Interaction.UC.AsyncRuntimeState process.Proc Unit) =
+      (do
+        let s' ← ProcessOver.runSteps process.toProcess process.stepSampler fuel s
+        pure
+          ((⟨s', ()⟩ : Interaction.UC.AsyncRuntimeState process.Proc Unit),
+            List.replicate fuel Interaction.UC.RuntimeEvent.processTick)) := by
+  exact runStepsAsync_empty_trivial_eq process.toProcess process.stepSampler fuel s
+
 end Concurrent
 
 namespace UC
@@ -289,10 +307,10 @@ Construct an async `Semantics` for the open-process theory.
 Threads an env-action channel and an env scheduler. The per-step
 process sampler is obtained directly from the closed process's
 `stepSampler` (keyed by the underlying process state, ignoring any
-async env state). The bundled `SPMFSemantics m` plays the same role as
+async env state). The bundled `MeasureSemanticsVia m` plays the same role as
 in `processSemantics` and supports the same instantiations:
 coin-flip-only protocols via `processSemanticsAsyncProbComp`,
-shared-oracle protocols via an `OracleComp`-monad `SPMFSemantics` built
+shared-oracle protocols via an `OracleComp`-monad measure semantics built
 with `simulateQ'`, and observation-style semantics over
 `OptionT ProbComp`.
 
@@ -303,9 +321,9 @@ process `p : Closed Party`, matching the shape of the synchronous
 noncomputable def processSemanticsAsync
     (Party : Type u)
     {m : Type → Type} [Monad m]
-    {Result : Type}
+    {Result : Type} [MeasurableSpace Result]
     (schedulerSampler : m (ULift Bool))
-    (sem : SPMFSemantics.{0, 0, 0} m)
+    (sem : MeasureSemanticsVia.{0, 0, 0} m)
     {Event : Type} {State : Type}
     (envAction : EnvAction m Event State)
     (initEnvState : State)
@@ -317,6 +335,7 @@ noncomputable def processSemanticsAsync
       p.Proc → State → RuntimeTrace Event → m Result) :
     Semantics (openTheory.{u, 0, 0, 0} Party m schedulerSampler) where
   Result := Result
+  instMeasurableSpace := inferInstance
   m := m
   instMonad := inferInstance
   sem := sem
@@ -330,12 +349,12 @@ noncomputable def processSemanticsAsync
 
 /--
 Coin-flip-only specialization of `processSemanticsAsync` (`m = ProbComp`,
-`sem := SPMFSemantics.ofMonadLift ProbComp`). Companion of
+with its canonical measure semantics). Companion of
 `processSemanticsProbComp`.
 -/
 noncomputable def processSemanticsAsyncProbComp
     (Party : Type u)
-    {Result : Type}
+    {Result : Type} [MeasurableSpace Result]
     (schedulerSampler : ProbComp (ULift Bool))
     {Event : Type} {State : Type}
     (envAction : EnvAction ProbComp Event State)
@@ -348,7 +367,7 @@ noncomputable def processSemanticsAsyncProbComp
       p.Proc → State → RuntimeTrace Event → ProbComp Result) :
     Semantics (openTheory.{u, 0, 0, 0} Party ProbComp schedulerSampler) :=
   processSemanticsAsync Party schedulerSampler
-    (SPMFSemantics.ofMonadLift ProbComp)
+    (MeasureSemanticsVia.ofEvalDistSemantics ProbComp)
     envAction initEnvState
     init envScheduler fuel observe
 
@@ -370,9 +389,9 @@ trace and the unit env state.
 theorem processSemantics_eq_processSemanticsAsync_trivial
     (Party : Type u)
     {m : Type → Type} [Monad m] [LawfulMonad m]
-    {Result : Type}
+    {Result : Type} [MeasurableSpace Result]
     (schedulerSampler : m (ULift Bool))
-    (sem : SPMFSemantics.{0, 0, 0} m)
+    (sem : MeasureSemanticsVia.{0, 0, 0} m)
     (init : ∀ p : AsyncClosed Party m schedulerSampler, p.Proc)
     (fuel : ℕ)
     (observe : ∀ p : AsyncClosed Party m schedulerSampler, p.Proc → m Result) :
@@ -387,8 +406,9 @@ theorem processSemantics_eq_processSemanticsAsync_trivial
   unfold processSemantics processSemanticsAsync
   congr 1
   funext process
+  change OpenProcess m Party PortBoundary.empty at process
   simp only [monad_norm]
-  rw [Concurrent.runStepsAsync_empty_trivial_eq]
+  rw [Concurrent.runStepsAsync_empty_trivial_openProcess_eq]
   simp only [monad_norm]
 
 /--
@@ -404,7 +424,7 @@ abstract, leaving only the protocol-specific data (`init`, `sampler`, `fuel`,
 -/
 theorem processSemanticsProbComp_eq_processSemanticsAsyncProbComp_trivial
     (Party : Type u)
-    {Result : Type}
+    {Result : Type} [MeasurableSpace Result]
     (schedulerSampler : ProbComp (ULift Bool))
     (init : ∀ p : AsyncClosed Party ProbComp schedulerSampler, p.Proc)
     (fuel : ℕ)

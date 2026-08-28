@@ -50,6 +50,26 @@ lemma withAddCost_apply {ω : Type} [AddMonoid ω]
       (do AddWriterT.addTell (M := m) (costFn t); liftM (impl t)) := by
   simp [withAddCost, AddWriterT.addTell, QueryImpl.withCost]
 
+/-- Cost instrumentation on a left-summand query, with the component response type exposed. -/
+@[simp]
+lemma withAddCost_apply_inl {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    {ω : Type} [AddMonoid ω] (impl : QueryImpl (spec₁ + spec₂) m)
+    (costFn : (spec₁ + spec₂).Domain → ω) (t : spec₁.Domain) :
+    impl.withAddCost costFn (Sum.inl t) = (do
+      AddWriterT.addTell (costFn (Sum.inl t))
+      liftM (impl.restrictLeft t)) := by
+  rw [withAddCost_apply, restrictLeft_apply]
+
+/-- Cost instrumentation on a right-summand query, with the component response type exposed. -/
+@[simp]
+lemma withAddCost_apply_inr {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    {ω : Type} [AddMonoid ω] (impl : QueryImpl (spec₁ + spec₂) m)
+    (costFn : (spec₁ + spec₂).Domain → ω) (t : spec₂.Domain) :
+    impl.withAddCost costFn (Sum.inr t) = (do
+      AddWriterT.addTell (costFn (Sum.inr t))
+      liftM (impl.restrictRight t)) := by
+  rw [withAddCost_apply, restrictRight_apply]
+
 /-- Instrument an implementation with unit additive cost for every query. -/
 def withUnitCost (impl : QueryImpl spec m) :
     QueryImpl spec (AddWriterT ℕ m) :=
@@ -320,7 +340,7 @@ lemma expectedCost_eq_tsum_outputs_of_costsAs
     (h : oa.CostsAs f) :
     expectedCost oa val = ∑' a : α, Pr[= a | oa.outputs] * val (f a) := by
   classical
-  letI : DecidableEq ω := Classical.decEq ω
+  let : DecidableEq ω := Classical.decEq ω
   unfold expectedCost
   rw [h]
   simp_rw [probOutput_map_eq_tsum, ← ENNReal.tsum_mul_right, mul_assoc]

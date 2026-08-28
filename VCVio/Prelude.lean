@@ -17,7 +17,7 @@ Shared project-wide declarations and simp attributes imported throughout `VCVio`
 
 declare_aesop_rule_sets [UnfoldEvalDist]
 
-/-- Simp set for game-hopping proofs: evalDist, probOutput, simulateQ, wp, relTriple rules. -/
+/-- Simp set for game-hopping proofs: evalSPMF, probOutput, simulateQ, wp, relTriple rules. -/
 register_simp_attr game_rule
 
 /-- VCVio-specific extension of PolyFun's `handler_nf` normalization set. -/

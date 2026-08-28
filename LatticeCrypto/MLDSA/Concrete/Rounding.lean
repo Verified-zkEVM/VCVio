@@ -401,7 +401,7 @@ private theorem highBitsCoeff_eq_of_repr {alpha m : ℕ} (ctx : BalancedDecomp a
         by_contra h; exact hnltq.not_ge
           (Nat.le_of_dvd (Int.natAbs_pos.mpr hr0neg.ne) ((ZMod.natCast_eq_zero_iff n modulus).mp h))
       have hval : r.val = modulus - n := by
-        haveI : NeZero ((n : ℕ) : Coeff) := ⟨hneq⟩
+        have : NeZero ((n : ℕ) : Coeff) := ⟨hneq⟩
         simp [hrn, ZMod.val_neg_of_ne_zero n, ZMod.val_natCast_of_lt hnltq]
       by_cases hn1 : n = 1
       · refine ⟨m, 0, ?_, ctx.hα, ?_⟩
@@ -704,8 +704,9 @@ theorem concreteRounding_useHint_bound_of_isApproved (p : Params)
     (hp : p.isApproved) (r : Rq) (h : Hint) :
     cInfNorm (r - highBitsShift p (useHint p h r)) ≤ 2 * p.gamma2 + 1 := by
   refine cInfNorm_le_iff.mpr fun j => ?_
-  simp only [Rq.get_sub, highBitsShift, Nat.cast_mul, Nat.cast_ofNat, useHint, Vector.map_ofFn,
-      Vector.get_ofFn, Function.comp_apply]
+  rw [Rq.get_sub]
+  simp only [highBitsShift, Nat.cast_mul, Nat.cast_ofNat, useHint, Vector.map_ofFn,
+    Vector.get_ofFn, Function.comp_apply]
   simpa using useHintCoeff_shift_sub_le
     (BalancedDecomp.ofApproved hp) (h.get j) (r.get j)
 
@@ -723,7 +724,7 @@ theorem concreteRounding_hide_low_of_isApproved (p : Params)
     have hcoeff : (lowBitsCoeff (r.get j) (p.gamma2)).natAbs ≤ cInfNorm (lowBits p r) := by
       have := coeff_le_cInfNorm (lowBits p r) j
       rwa [lowBits_get, centeredRepr_intCast_lowBitsCoeff (gamma2 := p.gamma2) (r := r.get j)
-        (hγ := by haveI := ctx.hα; omega)
+        (hγ := by have := ctx.hα; omega)
         (hq := ctx.hq)] at this
     exact hcoeff.trans_lt (Nat.lt_sub_of_add_lt hlow)
   set alpha : ℕ := 2 * p.gamma2
@@ -741,7 +742,7 @@ theorem concreteRoundingLaws_of_isApproved (p : Params) (hp : p.isApproved) :
   high_low_decomp := concreteRounding_high_low_decomp p
   lowBits_bound r := by
     let ctx := BalancedDecomp.ofApproved hp
-    have hγ : 0 <  p.gamma2 := by haveI := ctx.hα; omega
+    have hγ : 0 <  p.gamma2 := by have := ctx.hα; omega
     simpa [concreteRoundingOps] using concreteRounding_lowBits_bound p hγ ctx.hq r
   hide_low r s b hs hlow :=
     concreteRounding_hide_low_of_isApproved p hp r s b hs (by

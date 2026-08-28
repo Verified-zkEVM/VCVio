@@ -38,7 +38,7 @@ variable {TagId Nonce Digest : Type}
 /-- Query the PRF oracle on `(tag, nonce)` to obtain its digest. -/
 def authPRFQuery (tag : TagId) (nonce : Nonce) :
     OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Digest :=
-  (unifSpec + ((TagId × Nonce) →ₒ Digest)).query (Sum.inr (tag, nonce))
+  PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) (tag, nonce)
 
 /-- Tag-oracle implementation that samples a nonce uniformly and queries the PRF oracle for
 the authenticator. Models `authTagQueryImpl` with the hash replaced by a PRF oracle call. -/
@@ -155,19 +155,15 @@ private lemma simulateQ_prfReal_authToPRFReaderImpl_run
     simulateQ (PRFScheme.prfRealQueryImpl prfs.multiplePRFScheme k)
         ((authToPRFReaderImpl (TagId := TagId) transcript).run s) =
       (authReaderQueryImpl (fun tag nonce => prfs.evalMultiple k tag nonce) transcript).run s := by
-  let so : QueryImpl ((TagId × Nonce) →ₒ Digest) ProbComp :=
-    fun d => pure (prfs.multiplePRFScheme.eval k d)
   let impl : QueryImpl (unifSpec + ((TagId × Nonce) →ₒ Digest)) ProbComp :=
-    HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) + so
+    PRFScheme.prfRealQueryImpl prfs.multiplePRFScheme k
   have hquery : ∀ (d : TagId × Nonce),
       simulateQ impl
-        (liftM ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query (Sum.inr d)) :
-          OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) _) =
+        (PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) d) =
       (pure (prfs.evalMultiple k d.1 d.2) : ProbComp Digest) := by
     intro d
-    rw [simulateQ_spec_query]
-    change impl (Sum.inr d) = _
-    simp [impl, so, QueryImpl.add_apply_inr, TagReaderPRFs.multiplePRFScheme]
+    exact PRFScheme.simulateQ_prfRealQueryImpl_functionQuery
+      prfs.multiplePRFScheme k d
   have hquery_pair : ∀ (tag : TagId),
       simulateQ impl
         (Prod.mk tag <$> authPRFQuery (TagId := TagId) tag transcript.nonce :
@@ -443,26 +439,19 @@ private lemma simulateQ_prfIdeal_authToPRFTagImpl_run
       (authIdealTagQueryImpl (TagId := TagId) tag).run (authRFBundle (s, c)) := by
   let impl : QueryImpl (unifSpec + ((TagId × Nonce) →ₒ Digest))
       (StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp) :=
-    (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-      (StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp) +
-      ((TagId × Nonce) →ₒ Digest).randomOracle
-  have hImplEq : impl = PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest) := rfl
+    PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest)
   have hleft : ∀ {α : Type} (oa : ProbComp α),
       simulateQ impl (liftComp oa (unifSpec + ((TagId × Nonce) →ₒ Digest))) =
         (liftM oa : StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp α) := by
     intro α oa
-    simp [impl, QueryImpl.simulateQ_add_liftM_left, QueryImpl.simulateQ_toQueryImpl]
+    exact PRFScheme.simulateQ_prfIdealQueryImpl_liftComp oa
   have hquery : ∀ (d : TagId × Nonce),
       simulateQ impl
-        (liftM ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query (Sum.inr d)) :
-          OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Digest) =
+        (PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) d) =
       (((TagId × Nonce) →ₒ Digest).randomOracle d :
         StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp Digest) := by
     intro d
-    simp only [simulateQ_query]
-    change id <$> impl (Sum.inr d) = _
-    rw [id_map]
-    rfl
+    exact PRFScheme.simulateQ_prfIdealQueryImpl_functionQuery d
   -- Per-step equality, packaged so the simulator only ever sees explicit `simulateQ_*` shapes.
   have hstep : ∀ (st : AuthState TagId Nonce Digest),
       simulateQ impl ((authToPRFTagImpl (TagId := TagId) tag).run st) =
@@ -478,8 +467,8 @@ private lemma simulateQ_prfIdeal_authToPRFTagImpl_run
     have hbody :
         ((authToPRFTagImpl (TagId := TagId) tag).run st) =
           ((liftComp ($ᵗ Nonce) (unifSpec + ((TagId × Nonce) →ₒ Digest))) >>= fun nonce =>
-            (liftM ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query (Sum.inr (tag, nonce))) :
-                OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Digest) >>= fun auth =>
+            PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest)
+              (tag, nonce) >>= fun auth =>
               pure (TagTranscript.mk nonce auth,
                 AuthState.mk
                   (insert (tag, TagTranscript.mk nonce auth) st.honestOutputs)
@@ -507,7 +496,6 @@ private lemma simulateQ_prfIdeal_authToPRFTagImpl_run
                 AuthState.mk
                   (insert (tag, TagTranscript.mk nonce auth) s.honestOutputs)
                   s.readerForged)).run c) := by
-    rw [← hImplEq]
     exact congrArg _ (congrArg (StateT.run · c) (hstep s))
   rw [hgoal]
   unfold authIdealTagQueryImpl
@@ -545,28 +533,20 @@ private lemma simulateQ_prfIdeal_authToPRFReader_mapM
             pure (tag, d))).run (authRFBundle (st, c))) := by
   let impl : QueryImpl (unifSpec + ((TagId × Nonce) →ₒ Digest))
       (StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp) :=
-    (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-      (StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp) +
-      ((TagId × Nonce) →ₒ Digest).randomOracle
-  have hImplEq : impl = PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest) := rfl
+    PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest)
   have hquery : ∀ (d : TagId × Nonce),
       simulateQ impl
-        (liftM ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query (Sum.inr d)) :
-          OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Digest) =
+        (PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) d) =
       (((TagId × Nonce) →ₒ Digest).randomOracle d :
         StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp Digest) := by
     intro d
-    simp only [simulateQ_query]
-    change id <$> impl (Sum.inr d) = _
-    rw [id_map]
-    rfl
+    exact PRFScheme.simulateQ_prfIdealQueryImpl_functionQuery d
   -- Per-tag step: simulating `Prod.mk tag <$> authPRFQuery tag nonce` is the cached random oracle.
   have hstep : ∀ (tag : TagId),
       simulateQ impl (Prod.mk tag <$> authPRFQuery (TagId := TagId) tag nonce) =
         (Prod.mk tag <$> ((TagId × Nonce) →ₒ Digest).randomOracle (tag, nonce) :
           StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp (TagId × Digest)) := by
     intro tag
-    unfold authPRFQuery
     rw [simulateQ_map]
     congr 1
     exact hquery (tag, nonce)
@@ -614,10 +594,9 @@ private lemma simulateQ_prfIdeal_authToPRFReader_mapM
       (fun p => (p.1, authRFBundle (st, p.2))) <$>
         ((tags.mapM (fun tag => Prod.mk tag <$>
           ((TagId × Nonce) →ₒ Digest).randomOracle (tag, nonce))).run c) := by
-    rw [← hImplEq]
     exact congrArg _ (congrArg (StateT.run · c) (hmapM tags))
   rw [hgoal]
-  clear hgoal hmapM hstep hquery hImplEq
+  clear hgoal hmapM hstep hquery
   -- Induct on the tag list: each `randomOracle` step matches an `authRFLookup` step.
   induction tags generalizing c with
   | nil =>
@@ -668,10 +647,7 @@ private lemma simulateQ_prfIdeal_authToPRFReaderImpl_run
     transcript.nonce (Finset.univ : Finset TagId).toList s c
   let impl : QueryImpl (unifSpec + ((TagId × Nonce) →ₒ Digest))
       (StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp) :=
-    (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-      (StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp) +
-      ((TagId × Nonce) →ₒ Digest).randomOracle
-  have hImplEq : impl = PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest) := rfl
+    PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest)
   -- The reduction's reader oracle is a `Functor.map` of the per-tag `mapM` (no nested binds).
   have hbody :
       ((authToPRFReaderImpl (TagId := TagId) transcript).run s) =
@@ -717,7 +693,6 @@ private lemma simulateQ_prfIdeal_authToPRFReaderImpl_run
               (m := OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))
               (fun tag => Prod.mk tag <$> authPRFQuery (TagId := TagId)
                 tag transcript.nonce))).run c) := by
-    rw [← hImplEq]
     exact congrArg _ (congrArg (StateT.run · c) hsimQ)
   rw [hgoal]
   simp only [StateT.run_map, Functor.map_map]

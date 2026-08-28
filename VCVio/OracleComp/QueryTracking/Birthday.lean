@@ -31,7 +31,7 @@ variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι}
 /-! ## Per-Pair Collision Bound (Textbook Step 3)
 
 For each pair (i,j) of positions in the log with distinct inputs,
-Pr[outputs equal] ≤ 1/|C|. This is because in the evalDist model,
+Pr[outputs equal] ≤ 1/|C|. This is because in the evalSPMF model,
 each query returns an independent uniform sample. -/
 
 omit [DecidableEq ι] [spec.DecidableEq] in

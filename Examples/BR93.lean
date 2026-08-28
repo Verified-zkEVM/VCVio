@@ -74,7 +74,7 @@ theorem correct (hcorrect : tdp.Correct) :
     let c ← (do let r ← $ᵗ Rand; pure (tdp.forward x.1 r, hash r + msg))
     let msg' ← pure (some (c.2 - hash (tdp.inverse x.2 c.1)))
     pure (decide (msg' = some msg))
-  change Pr[= true | ProbCompRuntime.probComp.evalDist mx] = 1
+  change Pr[= true | ProbCompRuntime.probComp.evalSPMF mx] = 1
   simp only [mx]
   have huniq : ∀ y ∈ support mx, y = true := by
     intro y hy
@@ -209,25 +209,14 @@ private lemma forall_inl_of_mem_support_liftLog {β : Type} (p : ProbComp β)
     rw [List.mem_append] at he
     rcases he with he | he
     · -- the single lifted query logs a left-oracle entry
-      have hlog : pp.1.2 = [⟨Sum.inl t, pp.1.1⟩] := by
-        rw [liftComp_query] at hpp
-        simp only [OracleQuery.input_query, OracleQuery.cont_query, Functor.map_id, id_eq] at hpp
-        rw [show (liftM (OracleSpec.query t) :
-            OracleComp (RO_Spec Rand M) (unifSpec.Range t)) =
-            liftM (OracleSpec.query (Sum.inl t) :
-              OracleQuery (RO_Spec Rand M) (unifSpec.Range t)) from rfl] at hpp
-        simp only [simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
-          Functor.map_id, id_eq, roQueryImpl, QueryImpl.withLogging_apply, add_apply_inl,
-          WriterT.run_bind', WriterT.run_monadLift', StateT.run_bind, bind_pure_comp,
-          support_bind, Set.mem_iUnion] at hpp
-        obtain ⟨i, hi, rfl⟩ := hpp
-        rw [StateT.run_map, support_map] at hi
-        obtain ⟨j, _, rfl⟩ := hi
-        rfl
-      rw [hlog] at he
-      simp only [List.mem_singleton] at he
-      subst he
-      exact ⟨t, rfl⟩
+      rw [liftComp_query] at hpp
+      simp only [OracleQuery.input_query, OracleQuery.cont_query, Functor.map_id, id_eq] at hpp
+      have hinput :=
+        QueryImpl.fst_eq_input_of_mem_support_run_simulateQ_withLogging_liftM_stateT
+          (so := roQueryImpl (Rand := Rand) (M := M))
+          (q := (liftM (unifSpec.query t) : OracleQuery (RO_Spec Rand M) _))
+          (s := s) hpp he
+      exact ⟨t, by simpa [OracleQuery.liftM_add_left_def] using hinput⟩
     · exact ih pp.1.1 pp.2 qq hqq e he
 
 omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand]
@@ -259,9 +248,9 @@ private lemma bind_logged_lift_of_log_unused {β : Type} (p : ProbComp β)
 omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand] [Inhabited Rand]
   [Inhabited M] in
 /-- Right-translating a uniform challenge mask by a constant preserves the output distribution. -/
-private lemma evalDist_bind_add_right_uniform {γ : Type} (m : M) (f : M → ProbComp γ) :
-    𝒟[(do let h ← $ᵗ M; f (h + m))] = 𝒟[(do let h ← $ᵗ M; f h)] := by
-  refine evalDist_ext fun z => ?_
+private lemma evalSPMF_bind_add_right_uniform {γ : Type} (m : M) (f : M → ProbComp γ) :
+    𝒮[(do let h ← $ᵗ M; f (h + m))] = 𝒮[(do let h ← $ᵗ M; f h)] := by
+  refine evalSPMF_ext fun z => ?_
   exact probOutput_bind_add_right_uniform (α := M) m f z
 
 /-- Real one-time CPA game in the random-oracle model. -/
@@ -372,7 +361,7 @@ omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] [Inhabited Rand] i
 /-- Uniform masking step: once the challenge hash output is replaced by a fresh uniform mask,
 adding either challenge message yields the same ciphertext distribution. -/
 theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
-    𝒟[game1 tdp adv] = 𝒟[game2 tdp adv] := by
+    𝒮[game1 tdp adv] = 𝒮[game2 tdp adv] := by
   rw [game1, game2]
   -- Push the random-oracle simulation through both games: lifted samples become plain
   -- `ProbComp` binds, the adversary's `choose`/`guess` thread the cache, and the trailing
@@ -380,11 +369,11 @@ theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
   simp only [run'_simulateQ_bind, run_liftM, simulateQ_pure, bind_assoc, pure_bind]
   simp only [StateT.run'_eq, StateT.run_pure, map_eq_bind_pure_comp, Function.comp,
     bind_assoc, pure_bind]
-  refine evalDist_bind_congr' _ fun b => ?_
-  refine evalDist_bind_congr' _ fun ks => ?_
-  refine evalDist_bind_congr' _ fun mmst => ?_
-  refine evalDist_bind_congr' _ fun r => ?_
-  exact evalDist_bind_add_right_uniform (if b = true then mmst.1.1 else mmst.1.2.1)
+  refine evalSPMF_bind_congr' _ fun b => ?_
+  refine evalSPMF_bind_congr' _ fun ks => ?_
+  refine evalSPMF_bind_congr' _ fun mmst => ?_
+  refine evalSPMF_bind_congr' _ fun r => ?_
+  exact evalSPMF_bind_add_right_uniform (if b = true then mmst.1.1 else mmst.1.2.1)
     (fun x => (simulateQ roQueryImpl (adv.guess mmst.1.2.2 (tdp.forward ks.1 r, x))).run mmst.2 >>=
       fun p => pure (b == p.1))
 
@@ -422,8 +411,8 @@ private lemma find?_append_left_false {α : Type} (xs ys : List α) (pred : α �
   rw [List.find?_append,
     List.find?_eq_none.2 fun x hx => by rw [h x hx]; exact Bool.false_ne_true, Option.none_or]
 
-omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand] [Inhabited M]
-  [SampleableType M] [AddCommGroup M] in
+omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand] [Inhabited Rand]
+  [Inhabited M] [SampleableType M] [AddCommGroup M] in
 /-- If the transcript contains a right-oracle query at `r`, then searching it for a query whose
 forward image matches `tdp.forward pk r` succeeds with a right-oracle entry whose preimage has the
 matching forward image. This is the pointwise heart of the bad-event reduction: a bad transcript

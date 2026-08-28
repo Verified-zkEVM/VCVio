@@ -10,6 +10,22 @@ def OracleSpec (ι : Type u) : Type _ := ι → Type v
 
 Concretely, `spec t` is the response type at query index `t : ι`. `OracleSpec ι` is the `B`-component of a polynomial functor with position type `A := ι`; `spec.toPFunctor` packages the two together, and `OracleSpec.ofPFunctor` is its inverse (both `rfl`-invertible). This is the connection that makes `OracleComp` a free monad: see [`OracleComp`](#oraclecomp) below.
 
+`OracleSpec` remains a parameterized family rather than becoming a structure
+alias for `PFunctor`: function application and the `Domain` / `Range` façade
+give dependent oracle code useful expected types, while `toPFunctor` exposes
+the generic algebra without a data conversion. In particular, `spec₁ + spec₂`
+is definitionally the direction family of
+`PFunctor.sum spec₁.toPFunctor spec₂.toPFunctor`. The PFunctor coproduct uses
+the primitive dependent `Sum.rec`, and the OracleSpec `HAdd` instance is
+left at its ordinary `instance_reducible` status. Ranges of nested `.inl` /
+`.inr` queries therefore normalize during instance and implicit checking
+without forcing the same unfolding during ordinary tactic matching.
+
+When a handler only needs one side of a combined specification, prefer
+`QueryImpl.restrictLeft` or `QueryImpl.restrictRight` to an annotated lambda.
+The combinators preserve the component handler type explicitly and come with
+application lemmas.
+
 | Constructor | Notation | Example |
 |-------------|----------|---------|
 | Singleton spec | `A →ₒ B` | `Bool →ₒ Fin 6` |
@@ -21,7 +37,7 @@ Required typeclass instances for probability reasoning:
 - `[spec.Fintype]` — all response types are `Fintype`
 - `[spec.Inhabited]` — all response types are `Inhabited`
 
-Without both, `evalDist`, `probOutput`, and `Pr[...]` will fail with confusing typeclass errors.
+Without both, `evalSPMF`, `probOutput`, and `Pr[...]` will fail with confusing typeclass errors.
 
 ## OracleComp
 
@@ -53,7 +69,7 @@ def OracleComp {ι : Type u} (spec : OracleSpec.{u,v} ι) : Type w → Type _ :=
 
 ### `query` resolution: `HasQuery.query` (monadic) vs `spec.query` (primitive)
 
-The bare identifier `query` is the `export`ed `HasQuery.query`, so `query t : OracleComp spec _` (or any `m` with `HasQuery spec m`) returns the result in the ambient monad and supports `evalDist (query t : OracleComp spec _)` directly. Use `spec.query t` (or `OracleSpec.query t`) when you need the primitive single-query syntax `OracleQuery spec _` for `liftM`, `OracleQuery.cont`, structural induction, etc. The `OracleSpec.query` definition is `protected`; the dot-notation form `spec.query t` works regardless.
+The bare identifier `query` is the `export`ed `HasQuery.query`, so `query t : OracleComp spec _` (or any `m` with `HasQuery spec m`) returns the result in the ambient monad and supports `evalSPMF (query t : OracleComp spec _)` directly. Use `spec.query t` (or `OracleSpec.query t`) when you need the primitive single-query syntax `OracleQuery spec _` for `liftM`, `OracleQuery.cont`, structural induction, etc. The `OracleSpec.query` definition is `protected`; the dot-notation form `spec.query t` works regardless.
 
 ### Elimination pattern
 
@@ -111,7 +127,7 @@ The bridge lemma `LawfulSubSpec.toLens_isCartesian` is the one-line statement th
 
 A *cartesian* lens is a fiberwise isomorphism over an arbitrary forward map on positions. This is **strictly weaker** than `PFunctor.Lens.Equiv` (an isomorphism in the lens category), which would *also* require `onQuery` to be a bijection. We intentionally only require fiberwise bijectivity because the basic `SubSpec` instances embed a small spec into a larger one (e.g. `spec₁ ⊂ₒ (spec₁ + spec₂)` with `onQuery = Sum.inl`); these embeddings are essential and would be ruled out by `Equiv`.
 
-Cartesianness is the precise condition needed to push uniform distributions through the lift: `LawfulSubSpec.evalDist_liftM_query` shows that pulling the uniform distribution on `superSpec.Range (onQuery t)` back through `onResponse t` recovers the uniform distribution on `spec.Range t`.
+Cartesianness is the precise condition needed to push uniform distributions through the lift: `LawfulSubSpec.evalSPMF_liftM_query` shows that pulling the uniform distribution on `superSpec.Range (onQuery t)` back through `onResponse t` recovers the uniform distribution on `spec.Range t`.
 
 ### When you need SubSpec
 
@@ -128,7 +144,7 @@ When lifting `OracleComp spec α` to `OracleComp superSpec α` (e.g., a sub-comp
 
 | Lemma | Signature |
 |-------|-----------|
-| `evalDist_liftComp` | `evalDist (liftComp mx superSpec) = evalDist mx` |
+| `evalSPMF_liftComp` | `evalSPMF (liftComp mx superSpec) = evalSPMF mx` |
 | `probOutput_liftComp` | `Pr[= x \| liftComp mx superSpec] = Pr[= x \| mx]` |
 | `probEvent_liftComp` | `Pr[p \| liftComp mx superSpec] = Pr[p \| mx]` |
 
@@ -173,7 +189,7 @@ def simulateQ [Monad r] (impl : QueryImpl spec r) (mx : OracleComp spec α) : r 
 **Handler vs denotation.** The target monad `r` determines how `simulateQ impl` reads:
 
 - `r` effectful (`StateT`, `WriterT`, `OptionT`, another `OracleComp`, `IO`, …) — `simulateQ impl` is an **effect handler**: caching, logging, query counting, lazy sampling, simulating a hash oracle, embedding one game in a richer oracle context.
-- `r` semantic (`PMF`, `SPMF`, `Set`, `Finset`) — `simulateQ impl` is a **denotation**. `evalDist` and `support` are both `simulateQ` into a semantic monad (see [evalDist IS simulateQ](#evaldist-is-simulateq) below).
+- `r` semantic (`PMF`, `SPMF`, `Set`, `Finset`) — `simulateQ impl` is a **denotation**. `evalSPMF` and `support` are both `simulateQ` into a semantic monad (see [evalSPMF IS simulateQ](#evaldist-is-simulateq) below).
 
 So "operational vs denotational" is not a primitive split; both are `simulateQ` parameterized by the target monad.
 
@@ -215,7 +231,7 @@ def postInsert (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t 
 | Sees the response? | No | Yes (the response is passed to `nx`) |
 | If the handler fails | Side effect still happens | Side effect skipped |
 
-Both come with a complete generic theory: induction principles (`simulateQ_preInsert.induct` / `simulateQ_postInsert.induct`), projection / strip lemmas (`proj_simulateQ_preInsert`, `proj_simulateQ_postInsert`), and bridge lemmas for `probFailure`, `NeverFail`, `evalDist`, `probOutput`, `support`, `finSupport`, plus `IsTotalQueryBound` / `IsQueryBoundP` transfer in `QueryBound.lean`. Defining a wrapper via `preInsert` / `postInsert` makes all of this theory available immediately and avoids re-proving instance-specific lemmas.
+Both come with a complete generic theory: induction principles (`simulateQ_preInsert.induct` / `simulateQ_postInsert.induct`), projection / strip lemmas (`proj_simulateQ_preInsert`, `proj_simulateQ_postInsert`), and bridge lemmas for `probFailure`, `NeverFail`, `evalSPMF`, `probOutput`, `support`, `finSupport`, plus `IsTotalQueryBound` / `IsQueryBoundP` transfer in `QueryBound.lean`. Defining a wrapper via `preInsert` / `postInsert` makes all of this theory available immediately and avoids re-proving instance-specific lemmas.
 
 #### Already in the repo (use these directly when applicable)
 
@@ -242,11 +258,11 @@ The combinators assume the underlying handler **always runs**. They are not the 
 
 These are genuinely custom and stay as hand-written `QueryImpl` definitions. If you find yourself reaching for `preInsert` / `postInsert` and discovering that you need to inspect external state to decide *whether* to query, you are in this category — write the impl directly.
 
-### evalDist IS simulateQ
+### `evalSPMF` is `simulateQ`; `evalDist` is the measure façade
 
 For `OracleComp`, `support` is always available and is *definitionally* `simulateQ` into `SetM`, with each query interpreted by `Set.univ`.
 
-`evalDist : OracleComp spec α → SPMF α` is available under `[IsProbabilitySpec spec]` and is *definitionally* (`rfl`) `simulateQ` into `PMF`, then lifted to `SPMF`, with each query interpreted by `IsProbabilitySpec.toPMF`:
+`evalSPMF : OracleComp spec α → SPMF α` is available under `[IsProbabilitySpec spec]` and is *definitionally* (`rfl`) `simulateQ` into `PMF`, then lifted to `SPMF`, with each query interpreted by `IsProbabilitySpec.toPMF`:
 
 ```lean
 noncomputable instance instMonadLiftTPMF [IsProbabilitySpec spec] :
@@ -254,16 +270,21 @@ noncomputable instance instMonadLiftTPMF [IsProbabilitySpec spec] :
   monadLift mx := simulateQ IsProbabilitySpec.toPMF mx
 ```
 
-Uniform response semantics are supplied by `[IsUniformSpec spec]`, which bundles `[spec.Fintype]`, `[spec.Inhabited]`, `[IsProbabilitySpec spec]`, and a proof that `toPMF` is `PMF.uniformOfFintype`. The bridge from `support` to `SPMF.support 𝒟[...]` is `EvalDistCompatible (OracleComp spec)` and also requires `[IsUniformSpec spec]`.
+The primary `evalDist` / `𝒟[…]` façade is the successful-output Mathlib measure. Whenever an
+`IsMeasureSpec` is installed, `FreeM.evalDist_eq_denote` identifies it definitionally with the
+direct recursive measure fold. `Pr[...]` stays a scalar adapter; use `probOutput_eq_evalDist`,
+`probEvent_eq_evalDist`, and `probFailure_eq_evalDist` to cross that boundary.
 
-Distinct from the `PMF`-target `evalDist`, there is also a *syntactic* uniform-sampling handler that rewrites queries into `ProbComp` (i.e. target `OracleComp unifSpec`, not `PMF`):
+Uniform response semantics are supplied by `[IsUniformSpec spec]`, which bundles `[spec.Fintype]`, `[spec.Inhabited]`, `[IsProbabilitySpec spec]`, and a proof that `toPMF` is `PMF.uniformOfFintype`. The bridge from `support` to `SPMF.support 𝒮[...]` is `EvalDistCompatible (OracleComp spec)` and also requires `[IsUniformSpec spec]`.
+
+Distinct from the `PMF`-target `evalSPMF`, there is also a *syntactic* uniform-sampling handler that rewrites queries into `ProbComp` (i.e. target `OracleComp unifSpec`, not `PMF`):
 
 ```lean
 def uniformSampleImpl [∀ i, SampleableType (spec.Range i)] :
     QueryImpl spec ProbComp := fun t => $ᵗ spec.Range t
 ```
 
-Preservation of `evalDist` through `uniformSampleImpl` is a **lemma**, not definitional: `uniformSampleImpl.evalDist_simulateQ : evalDist (simulateQ uniformSampleImpl oa) = evalDist oa` (`VCVio/OracleComp/Constructions/SampleableType.lean:517-523`). Companion lemmas `probOutput_simulateQ`, `probEvent_simulateQ`, `support_simulateQ`, `finSupport_simulateQ` live in the same namespace and are what you reach for when you want to stay inside `ProbComp` rather than drop to `PMF`.
+Preservation of `evalSPMF` through `uniformSampleImpl` is a **lemma**, not definitional: `uniformSampleImpl.evalSPMF_simulateQ : evalSPMF (simulateQ uniformSampleImpl oa) = evalSPMF oa` (`VCVio/OracleComp/Constructions/SampleableType.lean:517-523`). Companion lemmas `probOutput_simulateQ`, `probEvent_simulateQ`, `support_simulateQ`, `finSupport_simulateQ` live in the same namespace and are what you reach for when you want to stay inside `ProbComp` rather than drop to `PMF`.
 
 ## Enforcement Oracle
 

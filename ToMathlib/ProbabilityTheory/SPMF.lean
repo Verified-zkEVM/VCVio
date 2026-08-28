@@ -73,13 +73,21 @@ namespace SPMF
 @[simp] lemma mk_toPMF (p : SPMF α) : SPMF.mk p.toPMF = p := rfl
 
 /-- Expose the induced monad instance on `SPMF`. -/
-noncomputable instance : AlternativeMonad SPMF := OptionT.instAlternativeMonadOfMonad PMF
-noncomputable instance : LawfulAlternative SPMF := OptionT.instLawfulAlternativeOfLawfulMonad PMF
+noncomputable instance : AlternativeMonad SPMF where
+  toMonad := OptionT.instMonad
+  failure := OptionT.fail
+  orElse := OptionT.orElse
 noncomputable instance : LawfulMonad SPMF := OptionT.instLawfulMonad
+noncomputable instance : LawfulAlternative SPMF := OptionT.instLawfulAlternativeOfLawfulMonad PMF
 
 /-- Expose the lifting operations from `PMF` to `SPMF` given by `OptionT.lift`. -/
 noncomputable instance : MonadLift PMF SPMF where monadLift := OptionT.lift
 instance : LawfulMonadLift PMF SPMF := OptionT.instLawfulMonadLift
+
+/-- `OptionT.lift` and the public `MonadLift` operation agree at the `SPMF` boundary. -/
+@[simp]
+lemma optionTLift_eq_liftM (p : PMF α) :
+    (OptionT.lift p : SPMF α) = liftM p := rfl
 
 /-- Apply an `SPMF α` to an element of `α`. -/
 instance : FunLike (SPMF α) α ENNReal where
@@ -133,11 +141,19 @@ end zero
 @[simp, grind =]
 lemma toPMF_bind (p : SPMF α) (q : α → SPMF β) :
     (p >>= q).toPMF = Option.elimM p.toPMF (PMF.pure none) (fun x => (q x).toPMF) := by
-  simp only [SPMF, ← run_eq_toPMF, OptionT.run_bind, PMF.monad_pure_eq_pure]
+  simp only [SPMF.toPMF, Bind.bind, OptionT.bind, OptionT.run, OptionT.mk, Option.elimM]
+  apply PMF.bind_congr
+  intro x _
+  cases x with
+  | none => simp [Option.elim, PMF.monad_pure_eq_pure]
+  | some _ => exact Eq.refl _
 
 @[simp, grind =]
 lemma toPMF_map (p : SPMF α) (f : α → β) : (f <$> p).toPMF = Option.map f <$> p.toPMF := by
-  simp [SPMF, ← run_eq_toPMF]
+  simp only [SPMF.toPMF, Functor.map, OptionT.bind, OptionT.run, OptionT.mk]
+  apply PMF.bind_congr
+  intro x _
+  cases x <;> simp [OptionT.pure, OptionT.mk, PMF.monad_pure_eq_pure]
 
 @[simp, grind =]
 lemma mk_pure_some (x : α) : SPMF.mk (PMF.pure (some x)) = pure x := rfl

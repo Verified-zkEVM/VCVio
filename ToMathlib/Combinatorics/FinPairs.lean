@@ -48,19 +48,22 @@ theorem card_filter_fst_lt_snd_eq_sum_range (m : ℕ) :
           (univ.filter (fun p : Fin k × Fin k => p.1 < p.2)).map emb ∪ univ.map newEmb := by
       ext ⟨i, j⟩
       simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_union,
-        Finset.mem_map, emb, newEmb, Function.Embedding.coeFn_mk]
+        Finset.mem_map, emb, newEmb]
       constructor
       · intro hij
         by_cases hj : j = Fin.last k
         · subst hj; right
-          exact ⟨i.castPred (Fin.ne_last_of_lt hij), by ext <;> simp [Fin.castSucc_castPred]⟩
+          refine ⟨i.castPred (Fin.ne_last_of_lt hij), ?_⟩
+          change ((i.castPred _).castSucc, Fin.last k) = (i, Fin.last k)
+          rw [Fin.castSucc_castPred]
         · left
           have hj' : j ≠ Fin.last k := hj
           have hi' : i ≠ Fin.last k :=
             Fin.ne_last_of_lt (lt_trans hij (lt_of_le_of_ne (Fin.le_last j) hj'))
           refine ⟨(i.castPred hi', j.castPred hj'), ?_, ?_⟩
           · exact Fin.castPred_lt_castPred hij hj'
-          · ext <;> simp [Fin.castSucc_castPred]
+          · change ((i.castPred hi').castSucc, (j.castPred hj').castSucc) = (i, j)
+            rw [Fin.castSucc_castPred i hi', Fin.castSucc_castPred j hj']
       · rintro (⟨⟨a, b⟩, hab, heq⟩ | ⟨a, heq⟩)
         · have h1 := congr_arg Prod.fst heq
           have h2 := congr_arg Prod.snd heq
@@ -76,8 +79,7 @@ theorem card_filter_fst_lt_snd_eq_sum_range (m : ℕ) :
         ((univ.filter (fun p : Fin k × Fin k => p.1 < p.2)).map emb) (univ.map newEmb) := by
       rw [Finset.disjoint_left]
       intro ⟨x, y⟩ hmem1 hmem2
-      simp only [Finset.mem_map, Finset.mem_univ, true_and, newEmb,
-        Function.Embedding.coeFn_mk] at hmem1 hmem2
+      simp only [Finset.mem_map, Finset.mem_univ, true_and, newEmb] at hmem1 hmem2
       obtain ⟨⟨a, b⟩, _, heq1⟩ := hmem1
       obtain ⟨c, heq2⟩ := hmem2
       have h1 := congr_arg Prod.snd heq1

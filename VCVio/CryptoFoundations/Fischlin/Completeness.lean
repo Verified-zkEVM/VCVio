@@ -7,6 +7,7 @@ Authors: Oleksandr Vovkotrub
 module
 
 public import VCVio.CryptoFoundations.Fischlin.Defs
+public import VCVio.EvalDist.IndepProduct
 
 /-!
 # Fischlin Transform: Completeness
@@ -48,7 +49,7 @@ is `2^b - (k+1)` (truncating to `0` once `k+1 > 2^b`), out of `2^b` total. -/
 private lemma probEvent_val_gt_uniformSample (b k : ℕ) :
     Pr[fun (x : Fin (2 ^ b)) => k < x.val | ($ᵗ (Fin (2 ^ b)))]
       = (↑(2 ^ b - (k + 1)) : ℝ≥0∞) / ↑(2 ^ b) := by
-  haveI : NeZero (2 ^ b) := ⟨Nat.two_pow_pos b |>.ne'⟩
+  have : NeZero (2 ^ b) := ⟨Nat.two_pow_pos b |>.ne'⟩
   rw [probEvent_uniformSample]
   simp only [Fintype.card_fin]
   norm_cast
@@ -115,7 +116,7 @@ private lemma minUnifAux_probEvent_gt (b k t : ℕ) (best : Option (Fin (2 ^ b))
         by_cases hx : (x : ℕ) = 0
         · simp only [hx, if_true]
           rw [probEvent_pure_eq_indicator]
-          simp only [minGt, Set.indicator, Set.mem_setOf_eq, hx]
+          simp only [minGt, Set.indicator, Set.mem_ofPred_eq, hx]
           simp
         · simp only [hx, if_false]
           rw [ih]
@@ -228,7 +229,7 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
       rw [probEvent_pure_eq_indicator, probEvent_pure_eq_indicator]
       refine le_of_eq ?_
       by_cases h : minGt k (Option.map (fun t => t.2.2) best) <;>
-        simp [Set.indicator, Set.mem_setOf_eq, h]
+        simp [Set.indicator, Set.mem_ofPred_eq, h]
   | cons ω rest ih =>
       rw [fischlinUnifSearch]
       unfold minUnifAux
@@ -241,7 +242,7 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
       · simp only [hh, if_true]
         rw [probEvent_pure_eq_indicator, probEvent_pure_eq_indicator]
         refine le_of_eq ?_
-        simp [Set.indicator, Set.mem_setOf_eq, minGt]
+        simp [Set.indicator, Set.mem_ofPred_eq, minGt]
       · simp only [hh, if_false]
         refine le_trans (ih _) (le_of_eq ?_)
         congr 1
@@ -254,7 +255,7 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
 /-- The full simulation implementation (`unifFwdImpl + randomOracle`) interpreting the Fischlin
 random-oracle world into `StateT QueryCache ProbComp`. This is definitionally the implementation
 used by the bundled `withStateOracle` runtime. -/
-@[reducible] noncomputable def fischlinImpl :
+@[reducible] def fischlinImpl :
     QueryImpl (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
       (StateT (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache ProbComp) :=
   unifFwdImpl (fischlinROSpec Stmt Commit Chal Resp ρ b M)
@@ -263,28 +264,28 @@ used by the bundled `withStateOracle` runtime. -/
 omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
 /-- The Fischlin runtime denotes a surface computation by simulating it with `fischlinImpl`
 starting from the empty cache and discarding the final cache. -/
-private lemma runtime_evalDist_eq
+private lemma runtime_evalSPMF_eq
     {α : Type} (mx : OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M) α) :
-    (runtime ρ b M).evalDist mx = 𝒟[(simulateQ (fischlinImpl ρ b M) mx).run' ∅] := by
-  unfold runtime ProbCompRuntime.evalDist SPMFSemantics.evalDist SemanticsVia.denote
+    (runtime ρ b M).evalSPMF mx = 𝒮[(simulateQ (fischlinImpl ρ b M) mx).run' ∅] := by
+  unfold runtime ProbCompRuntime.evalSPMF SPMFSemantics.evalSPMF SemanticsVia.denote
   simp only [SPMFSemantics.withStateOracle]
   rfl
 
 omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
 /-- The Fischlin runtime commutes with binding a lifted `ProbComp` prefix. -/
-private lemma runtime_evalDist_bind_liftComp
+private lemma runtime_evalSPMF_bind_liftComp
     {α β : Type} (oa : ProbComp α)
     (rest : α → OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M) β) :
-    (runtime ρ b M).evalDist (liftM oa >>= rest) =
-      𝒟[oa] >>= fun x => (runtime ρ b M).evalDist (rest x) := by
+    (runtime ρ b M).evalSPMF (liftM oa >>= rest) =
+      𝒮[oa] >>= fun x => (runtime ρ b M).evalSPMF (rest x) := by
   classical
-  rw [runtime_evalDist_eq]
-  simp_rw [runtime_evalDist_eq]
+  rw [runtime_evalSPMF_eq]
+  simp_rw [runtime_evalSPMF_eq]
   rw [simulateQ_bind,
     roSim.run'_liftM_bind
       (ro := randomOracle (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M)) (oa := oa)
       (rest := fun x => simulateQ (fischlinImpl ρ b M) (rest x)) (s := ∅)]
-  rw [evalDist_bind]
+  rw [evalSPMF_bind]
 
 /-- The pure-probability model game `G` for Fischlin completeness.
 
@@ -292,7 +293,7 @@ Mirrors `keygen >>= sign >>= verify`, but the prover's per-repetition search use
 `fischlinUnifSearch` (fresh uniform draws) and the verifier reads the kept hash value
 directly from the search result instead of re-querying the random oracle. Returns the verdict
 `allVerified && (hashSum ≤ S)`. -/
-private noncomputable def modelGame : ProbComp Bool := do
+private def modelGame : ProbComp Bool := do
   let (pk, sk) ← hr.gen
   let commits : Fin ρ → Commit × PrvState ← Fin.mOfFn ρ fun _ => σ.commit pk sk
   let comVec : Fin ρ → Commit := fun i => (commits i).1
@@ -338,9 +339,9 @@ private lemma fischlinSearch_run'_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
     (best : Option (Chal × Resp × Fin (2 ^ b)))
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (hfresh : searchFresh ρ b M pk msg comList i cs cache) :
-    𝒟[(simulateQ (fischlinImpl ρ b M)
+    𝒮[(simulateQ (fischlinImpl ρ b M)
         (fischlinSearchAux σ pk sk sc msg comList i cs best)).run' cache]
-      = 𝒟[(fun r => r.map fun (ω, resp, _) => (ω, resp)) <$>
+      = 𝒮[(fun r => r.map fun (ω, resp, _) => (ω, resp)) <$>
           fischlinUnifSearch σ pk sk sc cs best] := by
   induction cs generalizing best cache with
   | nil =>
@@ -351,8 +352,8 @@ private lemma fischlinSearch_run'_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
         roSim.run'_liftM_bind
           (ro := randomOracle (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M)),
         map_bind]
-      rw [evalDist_bind, evalDist_bind]
-      refine congrArg (𝒟[σ.respond pk sk sc ω] >>= ·) (funext fun resp => ?_)
+      rw [evalSPMF_bind, evalSPMF_bind]
+      refine congrArg (𝒮[σ.respond pk sk sc ω] >>= ·) (funext fun resp => ?_)
       rw [simulateQ_bind, roSim.simulateQ_HasQuery_query]
       -- Cache miss at the fresh record `⟨pk,msg,comList,i,ω,resp⟩`.
       have hmiss :
@@ -389,8 +390,8 @@ private lemma fischlinSearch_run'_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
           QueryImpl.withCaching_run_none (so := uniformSampleImpl) hc]
         simp only [uniformSampleImpl, map_bind, bind_map_left, StateT.run']
         rfl
-      erw [hmiss, map_bind, evalDist_bind, evalDist_bind]
-      refine congrArg (𝒟[$ᵗ Fin (2 ^ b)] >>= ·) (funext fun x => ?_)
+      erw [hmiss, map_bind, evalSPMF_bind, evalSPMF_bind]
+      refine congrArg (𝒮[$ᵗ Fin (2 ^ b)] >>= ·) (funext fun x => ?_)
       by_cases hx : x.val = 0
       · simp only [hx, if_true, simulateQ_pure, StateT.run', map_pure, Option.map_some]
         rfl
@@ -466,10 +467,10 @@ private lemma fischlinSearch_run_cache_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
     (hbest : ∀ ω resp h, best = some (ω, resp, h) →
       cache (⟨pk, msg, comList, i, ω, resp⟩ : FischlinROInput Stmt Commit Chal Resp ρ M)
         = some h) :
-    𝒟[(fun p => (p.1, p.2 (searchRecord ρ M pk msg comList i p.1))) <$>
+    𝒮[(fun p => (p.1, p.2 (searchRecord ρ M pk msg comList i p.1))) <$>
         (simulateQ (fischlinImpl ρ b M)
           (fischlinSearchAux σ pk sk sc msg comList i cs best)).run cache]
-      = 𝒟[(fun r => (r.map (fun (ω, resp, _) => (ω, resp)),
+      = 𝒮[(fun r => (r.map (fun (ω, resp, _) => (ω, resp)),
             r.map (fun (_, _, h) => h))) <$>
           fischlinUnifSearch σ pk sk sc cs best] := by
   induction cs generalizing best cache with
@@ -482,8 +483,8 @@ private lemma fischlinSearch_run_cache_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
         roSim.run_liftM
           (ro := randomOracle (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M)),
         bind_map_left, map_bind, map_bind]
-      rw [evalDist_bind, evalDist_bind]
-      refine congrArg (𝒟[σ.respond pk sk sc ω] >>= ·) (funext fun resp => ?_)
+      rw [evalSPMF_bind, evalSPMF_bind]
+      refine congrArg (𝒮[σ.respond pk sk sc ω] >>= ·) (funext fun resp => ?_)
       rw [simulateQ_bind, roSim.simulateQ_HasQuery_query, StateT.run_bind]
       -- Cache miss at the fresh record `⟨pk,msg,comList,i,ω,resp⟩`.
       have hc : cache (⟨pk, msg, comList, i, ω, resp⟩ :
@@ -491,8 +492,8 @@ private lemma fischlinSearch_run_cache_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
         hfresh ω (by simp) resp
       rw [QueryImpl.withCaching_run_none (so := uniformSampleImpl) hc]
       simp only [uniformSampleImpl, map_bind, bind_map_left]
-      rw [evalDist_bind, evalDist_bind]
-      refine congrArg (𝒟[$ᵗ Fin (2 ^ b)] >>= ·) (funext fun x => ?_)
+      rw [evalSPMF_bind, evalSPMF_bind]
+      refine congrArg (𝒮[$ᵗ Fin (2 ^ b)] >>= ·) (funext fun x => ?_)
       by_cases hx : x.val = 0
       · simp only [hx, if_true, simulateQ_pure, StateT.run_pure, map_pure, map_pure,
           Option.map_some, searchRecord, QueryCache.cacheQuery_self]
@@ -671,25 +672,6 @@ private lemma fischlinSearch_run_preserves_offrep (pk : Stmt) (sk : Wit) (sc : P
         · simp only [hx, if_false] at hmem
           exact ih _ _ hmem
 
-omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
-/-- Coordinatewise support membership for an independent product `Fin.mOfFn n g`: every value
-in its support has each component in the support of the corresponding factor. -/
-private lemma mem_support_mOfFn {α : Type} (n : ℕ) (g : Fin n → ProbComp α)
-    (v : Fin n → α) (hv : v ∈ support (Fin.mOfFn n g)) (i : Fin n) :
-    v i ∈ support (g i) := by
-  induction n with
-  | zero => exact i.elim0
-  | succ n ih =>
-      rw [Fin.mOfFn, mem_support_bind_iff] at hv
-      obtain ⟨a, ha, hv⟩ := hv
-      rw [mem_support_bind_iff] at hv
-      obtain ⟨rest, hrest, hv⟩ := hv
-      simp only [support_pure, Set.mem_singleton_iff] at hv
-      subst hv
-      refine Fin.cases ?_ (fun j => ?_) i
-      · simpa using ha
-      · rw [Fin.cons_succ]
-        exact ih (fun j => g j.succ) rest hrest j
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
@@ -771,10 +753,10 @@ omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Res
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Distributional bind congruence: continuations with equal output distributions on the support of
 `mx` yield bound computations with equal output distributions. -/
-private lemma evalDist_bind_congr_dist {α β : Type} (mx : ProbComp α)
-    {f g : α → ProbComp β} (h : ∀ x ∈ support mx, 𝒟[f x] = 𝒟[g x]) :
-    𝒟[mx >>= f] = 𝒟[mx >>= g] := by
-  refine evalDist_ext fun y => ?_
+private lemma evalSPMF_bind_congr_dist {α β : Type} (mx : ProbComp α)
+    {f g : α → ProbComp β} (h : ∀ x ∈ support mx, 𝒮[f x] = 𝒮[g x]) :
+    𝒮[mx >>= f] = 𝒮[mx >>= g] := by
+  refine evalSPMF_ext fun y => ?_
   exact probOutput_bind_congr fun x hx => by rw [probOutput_def, probOutput_def, h x hx]
 
 omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
@@ -806,7 +788,7 @@ private lemma searchVec_run_cache_eq_aux (n : ℕ) (e : Fin n → Fin ρ) (he : 
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (hfresh : ∀ j ω resp, cache (⟨pk, msg, comList, e j, ω, resp⟩ :
       FischlinROInput Stmt Commit Chal Resp ρ M) = none) :
-    𝒟[(fun p : (Fin n → Commit × Chal × Resp) ×
+    𝒮[(fun p : (Fin n → Commit × Chal × Resp) ×
             (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache =>
           (p.1, fun j => p.2 (⟨pk, msg, comList, e j, (p.1 j).2.1, (p.1 j).2.2⟩ :
             FischlinROInput Stmt Commit Chal Resp ρ M))) <$>
@@ -815,7 +797,7 @@ private lemma searchVec_run_cache_eq_aux (n : ℕ) (e : Fin n → Fin ρ) (he : 
             fischlinSearchAux σ pk sk (sc j) msg comList (e j) (FinEnum.toList Chal)
                 (none : Option (Chal × Resp × Fin (2 ^ b))) >>= fun result =>
               pure (toSig j result))).run cache]
-      = 𝒟[(fun bests : Fin n → Option (Chal × Resp × Fin (2 ^ b)) =>
+      = 𝒮[(fun bests : Fin n → Option (Chal × Resp × Fin (2 ^ b)) =>
             (fun j => toSig j ((bests j).map fun t => (t.1, t.2.1)),
             fun j => (bests j).map (fun t => t.2.2))) <$>
           Fin.mOfFn n fun j =>
@@ -853,8 +835,8 @@ private lemma searchVec_run_cache_eq_aux (n : ℕ) (e : Fin n → Fin ρ) (he : 
           (Fin.cons (toSig 0 q.1) (fun k => toSig k.succ ((tb k).map fun t => (t.1, t.2.1))),
             Fin.cons q.2 (fun k => (tb k).map fun t => t.2.2)) with hG
       -- Step 1: reduce the tail under each head outcome to `G` evaluated at the head's read.
-      refine Eq.trans (evalDist_bind_congr_dist _ (fun a ha => ?_))
-        (b := 𝒟[(simulateQ (fischlinImpl ρ b M)
+      refine Eq.trans (evalSPMF_bind_congr_dist _ (fun a ha => ?_))
+        (b := 𝒮[(simulateQ (fischlinImpl ρ b M)
             (fischlinSearchAux σ pk sk (sc 0) msg comList (e 0)
               (FinEnum.toList Chal) none)).run cache
           >>= fun a => G (a.1, a.2 (searchRecord ρ M pk msg comList (e 0) a.1))]) ?head
@@ -870,8 +852,8 @@ private lemma searchVec_run_cache_eq_aux (n : ℕ) (e : Fin n → Fin ρ) (he : 
             (fun h => Fin.succ_ne_zero k (he (by simpa using h.symm)).symm)]
           exact hfresh k.succ ω resp
         rw [hG]
-        refine Eq.trans (evalDist_bind_congr_dist _ (fun a_1 ha_1 => ?_))
-          (b := 𝒟[(simulateQ (fischlinImpl ρ b M)
+        refine Eq.trans (evalSPMF_bind_congr_dist _ (fun a_1 ha_1 => ?_))
+          (b := 𝒮[(simulateQ (fischlinImpl ρ b M)
                 (Fin.mOfFn n fun i =>
                   fischlinSearchAux σ pk sk (sc i.succ) msg comList (e i.succ)
                       (FinEnum.toList Chal) none >>= fun result =>
@@ -882,7 +864,7 @@ private lemma searchVec_run_cache_eq_aux (n : ℕ) (e : Fin n → Fin ρ) (he : 
                     (fun k => a_1.2 (⟨pk, msg, comList, e k.succ, (a_1.1 k).2.1, (a_1.1 k).2.2⟩ :
                       FischlinROInput Stmt Commit Chal Resp ρ M)))]) ?tailmap
         · -- The per-`a_1` `pure` equality: split the read-vector and discharge the head read.
-          refine congrArg evalDist (congrArg pure (Prod.ext rfl (funext fun j => ?_)))
+          refine congrArg evalSPMF (congrArg pure (Prod.ext rfl (funext fun j => ?_)))
           refine Fin.cases ?_ (fun k => ?_) j
           · exact (@Fin.cons_zero n (fun _ => Commit × Chal × Resp) (toSig 0 a.1) a_1.1) ▸
               hrec a.1 ▸
@@ -899,7 +881,7 @@ private lemma searchVec_run_cache_eq_aux (n : ℕ) (e : Fin n → Fin ρ) (he : 
             (fun i => sc i.succ) (fun i => toSig i.succ)
             (fun j o => htoSig j.succ o) a.2 ha2fresh
           -- The shared outer reconstruction map: prepend the head transcript and read.
-          have key := evalDist_map_eq_of_evalDist_eq hih
+          have key := evalSPMF_map_eq_of_evalSPMF_eq hih
             (fun p : (Fin n → Commit × Chal × Resp) × (Fin n → Option (Fin (2 ^ b))) =>
               ((Fin.cons (toSig 0 a.1) p.1 : Fin (n + 1) → Commit × Chal × Resp),
                 (Fin.cons (a.2 (searchRecord ρ M pk msg comList (e 0) a.1)) p.2 :
@@ -915,13 +897,13 @@ private lemma searchVec_run_cache_eq_aux (n : ℕ) (e : Fin n → Fin ρ) (he : 
               (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache =>
             (a.1, a.2 (searchRecord ρ M pk msg comList (e 0) a.1)))
           (g := G)]
-        rw [evalDist_bind, evalDist_bind,
+        rw [evalSPMF_bind, evalSPMF_bind,
           fischlinSearch_run_cache_eq σ ρ b M pk sk (sc 0) msg comList (e 0)
             (FinEnum.toList Chal) FinEnum.nodup_toList none cache
             (fun ω _ resp => hfresh 0 ω resp) (fun _ => hfresh 0 default default)
             (fun ω resp h hb => absurd hb (by simp))]
-        rw [← evalDist_bind, ← evalDist_bind, bind_map_left]
-        refine congrArg evalDist (bind_congr (fun best0 => bind_congr (fun tb => ?_)))
+        rw [← evalSPMF_bind, ← evalSPMF_bind, bind_map_left]
+        refine congrArg evalSPMF (bind_congr (fun best0 => bind_congr (fun tb => ?_)))
         congr 1
         refine Prod.ext (funext fun j => ?_) (funext fun j => ?_)
         · refine Fin.cases ?_ (fun k => ?_) j <;> simp [Fin.cons_zero, Fin.cons_succ]
@@ -946,7 +928,7 @@ private lemma searchVec_run_cache_eq (pk : Stmt) (sk : Wit) (msg : M)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (hfresh : ∀ i ω resp, cache (⟨pk, msg, comList, i, ω, resp⟩ :
       FischlinROInput Stmt Commit Chal Resp ρ M) = none) :
-    𝒟[(fun p : (Fin ρ → Commit × Chal × Resp) ×
+    𝒮[(fun p : (Fin ρ → Commit × Chal × Resp) ×
             (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache =>
           (p.1, fun i => p.2 (⟨pk, msg, comList, i, (p.1 i).2.1, (p.1 i).2.2⟩ :
             FischlinROInput Stmt Commit Chal Resp ρ M))) <$>
@@ -955,7 +937,7 @@ private lemma searchVec_run_cache_eq (pk : Stmt) (sk : Wit) (msg : M)
             fischlinSearchAux σ pk sk (commits i).2 msg comList i (FinEnum.toList Chal)
                 (none : Option (Chal × Resp × Fin (2 ^ b))) >>= fun result =>
               pure (toSig i result))).run cache]
-      = 𝒟[(fun bests : Fin ρ → Option (Chal × Resp × Fin (2 ^ b)) =>
+      = 𝒮[(fun bests : Fin ρ → Option (Chal × Resp × Fin (2 ^ b)) =>
             (fun i => toSig i ((bests i).map fun t => (t.1, t.2.1)),
             fun i => (bests i).map (fun t => t.2.2))) <$>
           Fin.mOfFn ρ fun i =>
@@ -1002,7 +984,7 @@ cache stores every chosen record. Each verifier re-query is then a cache hit ret
 per-repetition bridge with off-repetition preservation. -/
 private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
     (commits : Fin ρ → Commit × PrvState) :
-    𝒟[(simulateQ (fischlinImpl ρ b M)
+    𝒮[(simulateQ (fischlinImpl ρ b M)
         (do
           let comVec : Fin ρ → Commit := fun i => (commits i).1
           let comList := List.ofFn comVec
@@ -1015,7 +997,7 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
             | none => pure (comVec i, default, default)
           (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
             σ hr ρ b S M).verify pk msg sig)).run' ∅]
-      = 𝒟[do
+      = 𝒮[do
           let comVec : Fin ρ → Commit := fun i => (commits i).1
           let bests : Fin ρ → Option (Chal × Resp × Fin (2 ^ b)) ←
             Fin.mOfFn ρ fun i =>
@@ -1073,7 +1055,7 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
         ∀ i, p.2 (⟨pk, msg, List.ofFn comVec, i, (p.1 i).2.1, (p.1 i).2.2⟩ :
           FischlinROInput Stmt Commit Chal Resp ρ M) = (bests i).map fun t => t.2.2 := by
     intro p hp
-    have hmem := (mem_support_iff_of_evalDist_eq hcouple
+    have hmem := (mem_support_iff_of_evalSPMF_eq hcouple
       ((fun p => (p.1, fun i => p.2 (⟨pk, msg, List.ofFn comVec, i, (p.1 i).2.1, (p.1 i).2.2⟩ :
         FischlinROInput Stmt Commit Chal Resp ρ M))) p)).mp
       (by rw [support_map]; exact Set.mem_image_of_mem _ hp)
@@ -1087,8 +1069,8 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
     fun q => ((List.finRange ρ).all fun i => σ.verify pk (q.1 i).1 (q.1 i).2.1 (q.1 i).2.2) &&
       decide ((List.finRange ρ).foldl (fun acc i => acc + ((q.2 i).getD 0).val) 0 ≤ S) with hV
   -- Step 1: collapse the verifier to the deterministic verdict `V` read off the threaded cache.
-  refine Eq.trans (evalDist_bind_congr_dist _ (fun p hp => ?step1))
-    (b := 𝒟[(simulateQ (fischlinImpl ρ b M)
+  refine Eq.trans (evalSPMF_bind_congr_dist _ (fun p hp => ?step1))
+    (b := 𝒮[(simulateQ (fischlinImpl ρ b M)
           (Fin.mOfFn ρ fun i => fischlinSearchAux σ pk sk (commits i).2 msg (List.ofFn comVec) i
             (FinEnum.toList Chal) (none : Option (Chal × Resp × Fin (2 ^ b))) >>= fun result =>
               pure (toSig i result))).run ∅
@@ -1101,8 +1083,8 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
             (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache =>
           (p.1, fun i => p.2 (⟨pk, msg, List.ofFn comVec, i, (p.1 i).2.1, (p.1 i).2.2⟩ :
             FischlinROInput Stmt Commit Chal Resp ρ M))),
-      evalDist_map_eq_of_evalDist_eq hcouple V, map_eq_bind_pure_comp, bind_map_left]
-    refine congrArg evalDist (bind_congr fun bests => ?_)
+      evalSPMF_map_eq_of_evalSPMF_eq hcouple V, map_eq_bind_pure_comp, bind_map_left]
+    refine congrArg evalSPMF (bind_congr fun bests => ?_)
     simp only [Function.comp]
     refine congrArg pure ?_
     rw [hV]
@@ -1143,10 +1125,10 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
       rw [hcom, hreads i, hhashDef]
       rw [Option.eq_some_iff_get_eq.mpr ⟨hbest_some i, rfl⟩]
       rfl
-    change 𝒟[(simulateQ (fischlinImpl ρ b M)
+    change 𝒮[(simulateQ (fischlinImpl ρ b M)
         ((Fischlin σ hr ρ b S M).verify pk msg p.1)).run' p.2] = _
     rw [verify_run'_of_hits σ hr ρ b S M pk msg p.1 p.2 hash hhit]
-    refine congrArg (𝒟[pure ·]) ?_
+    refine congrArg (𝒮[pure ·]) ?_
     rw [hV]
     refine congr_arg₂ (· && ·) rfl ?_
     refine congrArg (fun n => decide (n ≤ S))
@@ -1161,7 +1143,7 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
 
 omit [SampleableType Chal] in
 /-- **Residual: full-game distribution surgery.** After collapsing the random-oracle runtime to a
-`StateT`-simulation on the empty cache (`runtime_evalDist_eq`), the entire Fischlin game
+`StateT`-simulation on the empty cache (`runtime_evalSPMF_eq`), the entire Fischlin game
 `keygen >>= sign >>= verify`, observed as a `ProbComp Bool` via `StateT.run'`, has the same
 distribution as `modelGame`.
 
@@ -1174,7 +1156,7 @@ verifier re-query returns the recorded value, matching `modelGame`'s direct read
 `(bests i).2.2`).
 These two cache-coupling steps require a cache-carrying refinement of `fischlinSearch_run'_eq`. -/
 private lemma fischlin_game_run'_eq_modelGame (msg : M) :
-    𝒟[StateT.run' (simulateQ (fischlinImpl ρ b M)
+    𝒮[StateT.run' (simulateQ (fischlinImpl ρ b M)
         (do
           let (pk, sk) ←
             (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
@@ -1184,16 +1166,16 @@ private lemma fischlin_game_run'_eq_modelGame (msg : M) :
               σ hr ρ b S M).sign pk sk msg
           (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
             σ hr ρ b S M).verify pk msg sig)) ∅]
-      = 𝒟[modelGame σ hr ρ b S] := by
+      = 𝒮[modelGame σ hr ρ b S] := by
   simp only [Fischlin, fischlinImpl, bind_assoc]
   rw [simulateQ_bind, roSim.run'_liftM_bind
     (ro := randomOracle (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M))]
-  rw [modelGame, evalDist_bind, evalDist_bind]
+  rw [modelGame, evalSPMF_bind, evalSPMF_bind]
   refine bind_congr (fun pksk => ?_)
   obtain ⟨pk, sk⟩ := pksk
   simp only []
-  rw [simulateQ_bind, StateT.run'_bind', run_mOfFn_liftM, bind_map_left, evalDist_bind,
-    evalDist_bind]
+  rw [simulateQ_bind, StateT.run'_bind', run_mOfFn_liftM, bind_map_left, evalSPMF_bind,
+    evalSPMF_bind]
   refine bind_congr (fun commits => ?_)
   exact sign_verify_run_eq σ hr ρ b S M pk sk msg commits
 
@@ -1207,7 +1189,7 @@ field separates repetitions), so each is a cache miss whose answer is a fresh un
 matching `fischlinUnifSearch`. The chosen transcript's hash was cached during `sign`, so the
 verifier's re-query is a cache hit returning that same value, matching the model's direct read. -/
 private lemma fischlin_game_eq_model (msg : M) :
-    Pr[= true | (runtime ρ b M).evalDist do
+    Pr[= true | (runtime ρ b M).evalSPMF do
       let (pk, sk) ←
         (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).keygen
@@ -1217,55 +1199,9 @@ private lemma fischlin_game_eq_model (msg : M) :
       (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
         σ hr ρ b S M).verify pk msg sig]
       = Pr[= true | modelGame σ hr ρ b S] := by
-  rw [runtime_evalDist_eq]
-  change Pr[= true | StateT.run' (simulateQ (fischlinImpl ρ b M) _) ∅] = _
-  rw [probOutput_def, probOutput_def, fischlin_game_run'_eq_modelGame σ hr ρ b S M msg]
-
-/-- Marginalizing a single coordinate `i` out of an independent product `Fin.mOfFn n g`:
-the probability that the `i`-th component satisfies `p` is at most the probability that the
-single computation `g i` satisfies `p`. The other coordinates integrate out to mass `≤ 1`,
-so the inequality may be strict when those computations can fail. -/
-private lemma probEvent_mOfFn_coord_le {α : Type} (n : ℕ) (g : Fin n → ProbComp α)
-    (i : Fin n) (p : α → Prop) :
-    Pr[fun v => p (v i) | Fin.mOfFn n g] ≤ Pr[fun x => p x | g i] := by
-  classical
-  induction n with
-  | zero => exact i.elim0
-  | succ n ih =>
-      rw [Fin.mOfFn]
-      refine Fin.cases ?_ (fun j => ?_) i
-      · -- coordinate `0`: the head `a ← g 0` determines `v 0`; the tail integrates to `≤ 1`.
-        rw [probEvent_bind_eq_tsum]
-        calc ∑' a, Pr[= a | g 0]
-                * Pr[fun v => p (v 0) | Fin.mOfFn n (fun j => g j.succ) >>=
-                    fun rest => (pure (Fin.cons a rest) : ProbComp (Fin (n+1) → α))]
-            ≤ ∑' a, Pr[= a | g 0] * (if p a then (1 : ℝ≥0∞) else 0) := by
-                refine ENNReal.tsum_le_tsum (fun a => mul_le_mul' le_rfl ?_)
-                refine probEvent_bind_le_of_forall_le (fun rest _ => ?_)
-                rw [probEvent_pure_eq_indicator]
-                by_cases hp : p a <;>
-                  simp [Set.indicator, Set.mem_setOf_eq, Fin.cons_zero, hp]
-          _ = Pr[fun x => p x | g 0] := by
-                rw [probEvent_eq_tsum_ite]
-                refine tsum_congr (fun a => ?_)
-                split <;> simp_all
-      · -- coordinate `j+1`: `v (j+1) = rest j`; peel the head and recurse on the tail.
-        rw [probEvent_bind_eq_tsum]
-        calc ∑' a, Pr[= a | g 0]
-                * Pr[fun v => p (v j.succ) | Fin.mOfFn n (fun j => g j.succ) >>=
-                    fun rest => (pure (Fin.cons a rest) : ProbComp (Fin (n+1) → α))]
-            ≤ ∑' a, Pr[= a | g 0] * Pr[fun x => p x | g j.succ] := by
-                refine ENNReal.tsum_le_tsum (fun a => mul_le_mul' le_rfl ?_)
-                refine le_trans (le_of_eq ?_) (ih (fun j => g j.succ) j)
-                rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
-                refine tsum_congr (fun rest => ?_)
-                rw [probEvent_pure_eq_indicator]
-                by_cases hp : p (rest j) <;>
-                  simp [Set.indicator, Set.mem_setOf_eq, Fin.cons_succ, hp]
-          _ ≤ Pr[fun x => p x | g j.succ] := by
-                rw [ENNReal.tsum_mul_right]
-                exact le_trans (mul_le_mul' tsum_probOutput_le_one le_rfl)
-                  (le_of_eq (one_mul _))
+  rw [runtime_evalSPMF_eq]
+  rw [probOutput_evalSPMF, probOutput_def, probOutput_def,
+    fischlin_game_run'_eq_modelGame σ hr ρ b S M msg]
 
 /-- Support membership for the pure-probability search: any kept triple `(ω, resp, h)` has its
 challenge drawn from the search list `cs` (or from the seed `best`), and its response in the
@@ -1473,7 +1409,7 @@ private lemma model_reject_le (_hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (_msg 
           ≤ ((↑(2 ^ b - (S / ρ + 1)) : ℝ≥0∞) / ↑(2 ^ b)) ^ FinEnum.card Chal := by
       intro i
       -- Marginalize coordinate `i` of the independent product.
-      refine le_trans (probEvent_mOfFn_coord_le ρ _ i (fun o => S / ρ < minH (fun _ => o) i)) ?_
+      refine le_trans (probEvent_coord_mOfFn_le ρ _ i (fun o => S / ρ < minH (fun _ => o) i)) ?_
       -- Reading the projected hash dominates the search-result hash event.
       refine le_trans (probEvent_mono'' (q := fun o => minGt (S / ρ) (o.map (fun t => t.2.2)))
         (fun o ho => ?_)) ?_
@@ -1496,7 +1432,7 @@ Unlike the Fiat-Shamir transform (which is perfectly complete), the Fischlin tra
 has a non-zero completeness error because the prover's proof-of-work search may fail
 to find hash values whose sum is at most `S`. -/
 theorem almostComplete (hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (msg : M) :
-    Pr[= true | (runtime ρ b M).evalDist do
+    Pr[= true | (runtime ρ b M).evalSPMF do
       let (pk, sk) ←
         (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).keygen

@@ -87,6 +87,7 @@ inductive SkeletonInternalIndex : Skeleton → Type
       SkeletonInternalIndex (Skeleton.internal left right)
   | ofRight {left right : Skeleton} (idxRight : SkeletonInternalIndex right) :
       SkeletonInternalIndex (Skeleton.internal left right)
+  deriving DecidableEq
 
 /-- Type of indices of any node of a skeleton -/
 inductive SkeletonNodeIndex : Skeleton → Type
@@ -571,7 +572,12 @@ end root
 
 section depth
 
-/-- Depth of a SkeletonLeafIndex -/
+/-- Depth of a `SkeletonLeafIndex`.
+
+The reducer is available at implicit transparency because this value indexes
+proof vectors; dependent recursion on an index must identify the tail vector's
+length with the recursive index depth during elaboration. -/
+@[implicit_reducible]
 def SkeletonLeafIndex.depth {s : Skeleton} : SkeletonLeafIndex s → Nat
   | SkeletonLeafIndex.ofLeaf => 0
   | SkeletonLeafIndex.ofLeft idxLeft => idxLeft.depth + 1
@@ -582,6 +588,14 @@ def SkeletonInternalIndex.depth {s : Skeleton} : SkeletonInternalIndex s → Nat
   | SkeletonInternalIndex.ofInternal => 0
   | SkeletonInternalIndex.ofLeft idxLeft => idxLeft.depth + 1
   | SkeletonInternalIndex.ofRight idxRight => idxRight.depth + 1
+
+/-- The height of the subtree rooted at an internal-node index. -/
+@[simp]
+def SkeletonInternalIndex.subtreeDepth :
+    {s : Skeleton} → SkeletonInternalIndex s → Nat
+  | .internal left right, .ofInternal => (Skeleton.internal left right).depth
+  | _, .ofLeft idxLeft => idxLeft.subtreeDepth
+  | _, .ofRight idxRight => idxRight.subtreeDepth
 
 /-- Depth of a SkeletonNodeIndex -/
 def SkeletonNodeIndex.depth {s : Skeleton} : SkeletonNodeIndex s → Nat
@@ -676,6 +690,46 @@ def SkeletonNodeIndex.path {s : Skeleton} (idx : SkeletonNodeIndex s) :
     SkeletonNodeIndex.ofInternal :: idxLeft.path.map SkeletonNodeIndex.ofLeft
   | SkeletonNodeIndex.ofRight idxRight =>
     SkeletonNodeIndex.ofInternal :: idxRight.path.map SkeletonNodeIndex.ofRight
+
+/-- `a.IsAncestorOf l` holds when the internal node `a` lies on the root-to-leaf path of the
+leaf `l`: the root is an ancestor of every leaf, and a node inside the left (right) subtree is
+an ancestor of `l` exactly when `l` also lies in that subtree and the node is an ancestor of `l`
+there. -/
+def SkeletonInternalIndex.IsAncestorOf :
+    {s : Skeleton} → SkeletonInternalIndex s → SkeletonLeafIndex s → Prop
+  | _, .ofInternal, _ => True
+  | _, .ofLeft a, .ofLeft l => a.IsAncestorOf l
+  | _, .ofRight a, .ofRight l => a.IsAncestorOf l
+  | _, .ofLeft _, .ofRight _ => False
+  | _, .ofRight _, .ofLeft _ => False
+
+@[simp]
+theorem SkeletonInternalIndex.isAncestorOf_ofInternal {left right : Skeleton}
+    (l : SkeletonLeafIndex (Skeleton.internal left right)) :
+    SkeletonInternalIndex.ofInternal.IsAncestorOf l := by
+  cases l <;> trivial
+
+@[simp]
+theorem SkeletonInternalIndex.isAncestorOf_ofLeft_ofLeft {left right : Skeleton}
+    (a : SkeletonInternalIndex left) (l : SkeletonLeafIndex left) :
+    (SkeletonInternalIndex.ofLeft (right := right) a).IsAncestorOf (.ofLeft l)
+      ↔ a.IsAncestorOf l := Iff.rfl
+
+@[simp]
+theorem SkeletonInternalIndex.isAncestorOf_ofRight_ofRight {left right : Skeleton}
+    (a : SkeletonInternalIndex right) (l : SkeletonLeafIndex right) :
+    (SkeletonInternalIndex.ofRight (left := left) a).IsAncestorOf (.ofRight l)
+      ↔ a.IsAncestorOf l := Iff.rfl
+
+@[simp]
+theorem SkeletonInternalIndex.not_isAncestorOf_ofLeft_ofRight {left right : Skeleton}
+    (a : SkeletonInternalIndex left) (l : SkeletonLeafIndex right) :
+    ¬ (SkeletonInternalIndex.ofLeft a).IsAncestorOf (.ofRight l) := id
+
+@[simp]
+theorem SkeletonInternalIndex.not_isAncestorOf_ofRight_ofLeft {left right : Skeleton}
+    (a : SkeletonInternalIndex right) (l : SkeletonLeafIndex left) :
+    ¬ (SkeletonInternalIndex.ofRight a).IsAncestorOf (.ofLeft l) := id
 
 /-- Find the siblings of a node and its ancestors, starting with the child of the root -/
 def FullData.copath {α} {s} (cache_tree : FullData α s) :

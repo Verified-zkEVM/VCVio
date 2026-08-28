@@ -216,7 +216,7 @@ theorem wp_eq_tsum (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
   change μ (oa >>= fun a => pure (post a)) = _
   rw [μ_bind_eq_tsum]
   refine tsum_congr fun x => congrArg (Pr[= x | oa] * ·) ?_
-  haveI : DecidableEq ℝ≥0∞ := Classical.decEq _
+  have : DecidableEq ℝ≥0∞ := Classical.decEq _
   simp [μ, probOutput_pure]
 
 @[simp] theorem wp_const (oa : OracleComp spec α) (c : ℝ≥0∞) :
@@ -493,34 +493,32 @@ theorem triple_list_mapM {I : ℝ≥0∞}
     Triple pre (l.mapM f) post :=
   triple_conseq hpre hpost (triple_list_mapM_inv hstep)
 
-/-! ## Congruence under `evalDist` equality -/
+/-! ## Congruence under `evalSPMF` equality -/
 
-lemma probOutput_congr_evalDist {oa ob : OracleComp spec α}
-    (h : 𝒟[oa] = 𝒟[ob]) (x : α) :
+lemma probOutput_congr_evalSPMF {oa ob : OracleComp spec α}
+    (h : 𝒮[oa] = 𝒮[ob]) (x : α) :
     Pr[= x | oa] = Pr[= x | ob] := by
-  change 𝒟[oa] x = 𝒟[ob] x
-  rw [h]
+  rw [probOutput_def, probOutput_def, h]
 
-lemma μ_congr_evalDist {oa ob : OracleComp spec ℝ≥0∞}
-    (h : 𝒟[oa] = 𝒟[ob]) :
+lemma μ_congr_evalSPMF {oa ob : OracleComp spec ℝ≥0∞}
+    (h : 𝒮[oa] = 𝒮[ob]) :
     μ oa = μ ob := by
   unfold μ
-  exact tsum_congr fun x => by rw [probOutput_congr_evalDist h]
+  exact tsum_congr fun x => by rw [probOutput_congr_evalSPMF h]
 
-lemma wp_congr_evalDist {oa ob : OracleComp spec α}
-    (h : 𝒟[oa] = 𝒟[ob]) (post : α → ℝ≥0∞) :
+lemma wp_congr_evalSPMF {oa ob : OracleComp spec α}
+    (h : 𝒮[oa] = 𝒮[ob]) (post : α → ℝ≥0∞) :
     wp oa post = wp ob post := by
   change μ (oa >>= fun a => pure (post a)) = μ (ob >>= fun a => pure (post a))
-  exact μ_congr_evalDist (by simp [h])
+  exact μ_congr_evalSPMF (by simp [h])
 
-lemma μ_cross_congr_evalDist {ι' : Type*} {spec' : OracleSpec ι'}
+lemma μ_cross_congr_evalSPMF {ι' : Type*} {spec' : OracleSpec ι'}
     [IsUniformSpec spec']
     {oa : OracleComp spec' ℝ≥0∞} {ob : OracleComp spec ℝ≥0∞}
-    (h : 𝒟[oa] = 𝒟[ob]) :
+    (h : 𝒮[oa] = 𝒮[ob]) :
     @μ _ spec' _ oa = μ ob := by
   simp only [μ]
   exact tsum_congr fun x => by
-    change 𝒟[oa] x * x = 𝒟[ob] x * x
-    rw [h]
+    rw [probOutput_def, probOutput_def, h]
 
 end OracleComp.ProgramLogic

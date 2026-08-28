@@ -33,7 +33,7 @@ namespace LatticeCrypto
 namespace Smoke
 
 /-- Function-backed alternative `PolyBackend` using `Fin n → Coeff` as carrier. -/
-def piBackend (Coeff : Type*) (n : Nat) : PolyBackend Coeff where
+abbrev piBackend (Coeff : Type*) (n : Nat) : PolyBackend Coeff where
   Poly := Fin n → Coeff
   degree := n
   coeff := fun p i => p i
@@ -52,7 +52,7 @@ def piKernel (Coeff : Type*) [Zero Coeff] (n : Nat) :
   ofArray := fun a i => a.getD i.val 0
   toArray_size := by
     intro p
-    simp [piBackend]
+    exact Array.size_ofFn
   coeff_ofArray := by
     intro a h i
     have hi : i.val < a.size := Nat.lt_of_lt_of_eq i.isLt h.symm
@@ -60,10 +60,11 @@ def piKernel (Coeff : Type*) [Zero Coeff] (n : Nat) :
   ofArray_toArray := by
     intro p
     funext i
-    simp
+    rw [Array.getD_eq_getD_getElem?, Array.getElem?_ofFn]
+    rw [dif_pos i.isLt, Option.getD_some]
 
 /-- Bundled negacyclic ring over the function-backed backend. -/
-def piRing (Coeff : Type*) [CommRing Coeff] (n : Nat) :
+abbrev piRing (Coeff : Type*) [CommRing Coeff] (n : Nat) :
     NegacyclicRing Coeff where
   backend := piBackend Coeff n
   kernel := piKernel Coeff n
@@ -86,34 +87,33 @@ noncomputable def piSemantics (Coeff : Type*) [CommRing Coeff] {n : Nat} (hn : 0
   zero_sound := by
     unfold NegacyclicQuotient.ofBackend NegacyclicQuotient.ofPolynomial PolyBackend.toPolynomial
     simp [piBackend, piRing, Finset.sum_const_zero, map_zero]
-    rfl
   one_sound := by
     simp only [NegacyclicQuotient.ofBackend, NegacyclicQuotient.ofPolynomial,
                PolyBackend.toPolynomial]
-    have hcoeff : ∀ i : Fin n, (piBackend Coeff n).coeff (piRing Coeff n).one i =
-        if i.val = 0 then 1 else 0 := fun i => by simp [piBackend, piRing]
-    simp only [hcoeff, map_sum]
+    simp only [map_sum]
     rw [Finset.sum_eq_single_of_mem ⟨0, hn⟩ (Finset.mem_univ _)]
-    · simp only [Polynomial.monomial_zero_left]
-      exact map_one _
+    · simp [Polynomial.monomial_zero_left, map_one]
     · intro ⟨j, _⟩ _ hne
       simp only [Fin.mk.injEq, ne_eq] at hne
       simp [hne, map_zero]
-  add_sound := by
-    intro f g
-    unfold NegacyclicQuotient.ofBackend NegacyclicQuotient.ofPolynomial PolyBackend.toPolynomial
-    simp only [piBackend, piRing, Finset.sum_add_distrib, map_add]
-    rfl
-  sub_sound := by
-    intro f g
-    unfold NegacyclicQuotient.ofBackend NegacyclicQuotient.ofPolynomial PolyBackend.toPolynomial
-    simp only [piBackend, piRing, Finset.sum_sub_distrib, map_sub]
-    rfl
-  neg_sound := by
-    intro f
-    unfold NegacyclicQuotient.ofBackend NegacyclicQuotient.ofPolynomial PolyBackend.toPolynomial
-    simp only [piBackend, piRing, Finset.sum_neg_distrib, map_neg]
-    rfl
+  add_sound f g := by
+    have hpoly : (piBackend Coeff n).toPolynomial ((piRing Coeff n).add f g) =
+        (piBackend Coeff n).toPolynomial f + (piBackend Coeff n).toPolynomial g := by
+      simp [PolyBackend.toPolynomial, piBackend, Finset.sum_add_distrib]
+    simp only [NegacyclicQuotient.ofBackend, NegacyclicQuotient.ofPolynomial, hpoly]
+    exact map_add (Ideal.Quotient.mk _) _ _
+  sub_sound f g := by
+    have hpoly : (piBackend Coeff n).toPolynomial ((piRing Coeff n).sub f g) =
+        (piBackend Coeff n).toPolynomial f - (piBackend Coeff n).toPolynomial g := by
+      simp [PolyBackend.toPolynomial, piBackend, Finset.sum_sub_distrib]
+    simp only [NegacyclicQuotient.ofBackend, NegacyclicQuotient.ofPolynomial, hpoly]
+    exact map_sub (Ideal.Quotient.mk _) _ _
+  neg_sound f := by
+    have hpoly : (piBackend Coeff n).toPolynomial ((piRing Coeff n).neg f) =
+        -(piBackend Coeff n).toPolynomial f := by
+      simp [PolyBackend.toPolynomial, piBackend, Finset.sum_neg_distrib]
+    simp only [NegacyclicQuotient.ofBackend, NegacyclicQuotient.ofPolynomial, hpoly]
+    exact map_neg (Ideal.Quotient.mk _) _
   mul_sound := by
     intro f g
     exact negacyclicMulPure_sound (piBackend Coeff n) (piKernel Coeff n) f g
@@ -128,7 +128,7 @@ noncomputable def piQuotientRoundtrip {n : Nat} (hn : 0 < n) (f : (piRing (ZMod 
     NegacyclicRingSemantics.Quotient (piSemantics (ZMod 17) hn) :=
   (piSemantics (ZMod 17) hn).quotientOf f
 
-def piNegacyclicRoundtrip (n : Nat) (f g : (piRing (ZMod 17) n).Poly) :
+noncomputable def piNegacyclicRoundtrip (n : Nat) (f g : (piRing (ZMod 17) n).Poly) :
     (piRing (ZMod 17) n).Poly :=
   (piRing (ZMod 17) n).mul f g
 

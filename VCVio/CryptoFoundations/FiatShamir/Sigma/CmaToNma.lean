@@ -35,6 +35,10 @@ universe u v
 
 open OracleComp OracleSpec
 
+/- Handler sums expose their dependent response family as `PFunctor.Obj` while
+the simulator normalizes routed query branches. -/
+attribute [local implicit_reducible] PFunctor.Obj
+
 namespace FiatShamir
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type}
@@ -55,7 +59,7 @@ abbrev cmaOracleSpec (M Commit Chal Resp : Type) :
     OracleSpec ((ℕ ⊕ (M × Commit)) ⊕ M) :=
   fsRoSpec M Commit Chal + (M →ₒ (Commit × Resp))
 
-noncomputable def simulatedNmaFwd
+def simulatedNmaFwd
     [DecidableEq M] [DecidableEq Commit] :
     QueryImpl (fsRoSpec M Commit Chal)
       (StateT (fsRoSpec M Commit Chal).QueryCache
@@ -63,14 +67,14 @@ noncomputable def simulatedNmaFwd
   (HasQuery.toQueryImpl (spec := fsRoSpec M Commit Chal)
     (m := OracleComp (fsRoSpec M Commit Chal))).liftTarget _
 
-noncomputable def simulatedNmaUnifSim
+def simulatedNmaUnifSim
     [DecidableEq M] [DecidableEq Commit] :
     QueryImpl unifSpec
       (StateT (fsRoSpec M Commit Chal).QueryCache
         (OracleComp (fsRoSpec M Commit Chal))) :=
   fun n => simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inl n)
 
-noncomputable def simulatedNmaRoSim
+def simulatedNmaRoSim
     [DecidableEq M] [DecidableEq Commit] :
     QueryImpl (M × Commit →ₒ Chal)
       (StateT (fsRoSpec M Commit Chal).QueryCache
@@ -82,7 +86,7 @@ noncomputable def simulatedNmaRoSim
       let v ← simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inr mc)
       modifyGet fun cache => (v, cache.cacheQuery (.inr mc) v)
 
-noncomputable def simulatedNmaBaseSim
+def simulatedNmaBaseSim
     [DecidableEq M] [DecidableEq Commit] :
     QueryImpl (fsRoSpec M Commit Chal)
       (StateT (fsRoSpec M Commit Chal).QueryCache
@@ -90,7 +94,7 @@ noncomputable def simulatedNmaBaseSim
   simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal) +
     simulatedNmaRoSim (M := M) (Commit := Commit) (Chal := Chal)
 
-noncomputable def simulatedNmaSigSim
+def simulatedNmaSigSim
     [DecidableEq M] [DecidableEq Commit]
     [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
@@ -105,7 +109,7 @@ noncomputable def simulatedNmaSigSim
     | some _ => ((c, s), cache)
     | none => ((c, s), cache.cacheQuery (.inr (msg, c)) ω)
 
-noncomputable def simulatedNmaImpl
+def simulatedNmaImpl
     [DecidableEq M] [DecidableEq Commit]
     [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
@@ -126,7 +130,7 @@ queries by sampling from `simTranscript` and programming the cache,
 and returns the final cache together with the forgery.
 
 This is the concrete-interface reduction entering the replay-forking lemma. -/
-noncomputable def simulatedNmaAdv
+def simulatedNmaAdv
     [DecidableEq M] [DecidableEq Commit]
     [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
@@ -171,9 +175,18 @@ private theorem simulatedNmaRoSim_run_hashQueryBound
     nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := (simulatedNmaRoSim (M := M) (Commit := Commit) (Chal := Chal) mc).run s) 1 := by
   cases hs : s (.inr mc) with
-  | some v => simp [simulatedNmaRoSim, hs, nmaHashQueryBound]
+  | some v =>
+      change Chal at v
+      simp only [simulatedNmaRoSim, StateT.run_bind, StateT.run_get, pure_bind, hs]
+      rw [StateT.run_pure]
+      trivial
   | none =>
-      simpa [simulatedNmaRoSim, hs, nmaHashQueryBound, isQueryBoundP_map_iff] using
+      simp only [simulatedNmaRoSim, StateT.run_bind, StateT.run_get, pure_bind, hs]
+      change nmaHashQueryBound (M := M)
+        ((simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inr mc)).run s >>=
+          fun p : Chal × (fsRoSpec M Commit Chal).QueryCache =>
+            pure (p.1, p.2.cacheQuery (.inr mc) p.1)) 1
+      simpa [nmaHashQueryBound, isQueryBoundP_map_iff] using
         simulatedNmaFwd_run_hashQueryBound (M := M) (.inr mc) s
 
 omit [Fintype Chal] [Finite Commit] [Finite Resp] [Inhabited Resp] [Inhabited Commit] in
