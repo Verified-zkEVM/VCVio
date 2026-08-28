@@ -494,17 +494,16 @@ theorem xmssPkFromSigM_natural (core : CorePrimitives p)
 
 /-! ### Structural query bounds -/
 
-/-- Public-hash budget for one XMSS subtree root. A leaf costs one complete WOTS+ public-key
-generation; a parent evaluates two children and one ordered binary hash. -/
-def xmssNodeQueryBound (p : Params) : ℕ → ℕ
-  | 0 => p.len * (p.w - 1) + 1
-  | z + 1 => xmssNodeQueryBound p z + xmssNodeQueryBound p z + 1
+/-- Closed-form public-hash budget for one height-`z` XMSS subtree: `2 ^ z` WOTS+ leaves at
+`p.len * (p.w - 1) + 1` queries each and `2 ^ z - 1` internal nodes at one query each. -/
+def xmssNodeQueryBound (p : Params) (z : ℕ) : ℕ :=
+  2 ^ z * (p.len * (p.w - 1) + 1) + (2 ^ z - 1) * 1
 
-/-- Public-hash budget for a sibling-only authentication path. At each level, the existing path
-is followed by exactly one sibling subtree. -/
-def xmssAuthPathQueryBound (p : Params) : ℕ → ℕ
-  | 0 => 0
-  | z + 1 => xmssAuthPathQueryBound p z + xmssNodeQueryBound p z
+/-- Closed-form public-hash budget for a sibling-only height-`z` authentication path, specialized
+from the generic Merkle bound with WOTS+ leaf budget `p.len * (p.w - 1) + 1` and internal-node
+budget `1`. -/
+def xmssAuthPathQueryBound (p : Params) (z : ℕ) : ℕ :=
+  (2 ^ z - 1) * (p.len * (p.w - 1) + 1) + (2 ^ z - z - 1) * 1
 
 private theorem xmssNodeHashM_isTotalQueryBound_one (core : CorePrimitives p)
     (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) (l r : core.Y) :
@@ -519,21 +518,17 @@ theorem xmssNodeM_isTotalQueryBound (core : CorePrimitives p)
     IsTotalQueryBound
       (xmssNodeM core sk pk adrs z t : OracleComp (publicHashSpec core) core.Y)
       (xmssNodeQueryBound p z) := by
-  induction z generalizing t with
-  | zero =>
-      simpa [xmssNodeQueryBound, xmssNodeM, xmssNodeWith,
-        PerfectMerkleTree.merkleRootM, xmssLeafM, xmssLeafWith, wotsPkGenM] using
-        wotsPkGenM_isTotalQueryBound core sk pk (wotsLeafAdrs adrs t)
-  | succ z ih =>
-      change IsTotalQueryBound (do
-        let left ← xmssNodeM core sk pk adrs z (2 * t)
-        let right ← xmssNodeM core sk pk adrs z (2 * t + 1)
-        xmssNodeHashM core pk adrs (z + 1) t left right)
-        (xmssNodeQueryBound p z + xmssNodeQueryBound p z + 1)
-      have hbound := isTotalQueryBound_bind (ih (2 * t)) fun left =>
-        isTotalQueryBound_bind (ih (2 * t + 1)) fun right =>
-          xmssNodeHashM_isTotalQueryBound_one core pk adrs (z + 1) t left right
-      simpa [Nat.add_assoc] using hbound
+  change IsTotalQueryBound
+    (PerfectMerkleTree.merkleRootM (xmssLeafM core sk pk adrs)
+      (xmssNodeHashM core pk adrs) z t) _
+  simpa [xmssNodeQueryBound] using
+    (PerfectMerkleTree.isTotalQueryBound_merkleRootM
+      (xmssLeafM core sk pk adrs) (xmssNodeHashM core pk adrs)
+      (p.len * (p.w - 1) + 1) 1 z t
+      (fun i => by
+        simpa [xmssLeafM, xmssLeafWith, wotsPkGenM] using
+          wotsPkGenM_isTotalQueryBound core sk pk (wotsLeafAdrs adrs i))
+      (fun h i l r => xmssNodeHashM_isTotalQueryBound_one core pk adrs h i l r))
 
 /-- XMSS root generation has the subtree budget at the parameter-set height. -/
 theorem xmssRootM_isTotalQueryBound (core : CorePrimitives p)
@@ -552,24 +547,14 @@ theorem xmssAuthPathM_isTotalQueryBound (core : CorePrimitives p)
         (xmssNodeHashM core pk adrs) idx z :
           OracleComp (publicHashSpec core) (List core.Y))
       (xmssAuthPathQueryBound p z) := by
-  induction z with
-  | zero => trivial
-  | succ z ih =>
-      change IsTotalQueryBound (do
-        let path ← PerfectMerkleTree.authPathM (xmssLeafM core sk pk adrs)
-          (xmssNodeHashM core pk adrs) idx z
-        let siblingRoot ← xmssNodeM core sk pk adrs z
-          (PerfectMerkleTree.sibling (idx / 2 ^ z))
-        return path ++ [siblingRoot])
-        (xmssAuthPathQueryBound p z + xmssNodeQueryBound p z)
-      exact isTotalQueryBound_bind ih fun path =>
-        isTotalQueryBound_bind
-          (xmssNodeM_isTotalQueryBound core sk pk adrs z
-            (PerfectMerkleTree.sibling (idx / 2 ^ z)))
-          fun siblingRoot =>
-            show IsTotalQueryBound
-              (pure (path ++ [siblingRoot]) :
-                OracleComp (publicHashSpec core) (List core.Y)) 0 from trivial
+  simpa [xmssAuthPathQueryBound] using
+    (PerfectMerkleTree.isTotalQueryBound_authPathM
+      (xmssLeafM core sk pk adrs) (xmssNodeHashM core pk adrs)
+      (p.len * (p.w - 1) + 1) 1 idx z
+      (fun i => by
+        simpa [xmssLeafM, xmssLeafWith, wotsPkGenM] using
+          wotsPkGenM_isTotalQueryBound core sk pk (wotsLeafAdrs adrs i))
+      (fun h i l r => xmssNodeHashM_isTotalQueryBound_one core pk adrs h i l r))
 
 /-- Climbing an XMSS authentication path makes at most one public node-hash query per entry. -/
 theorem xmssClimbM_isTotalQueryBound (core : CorePrimitives p)
@@ -598,45 +583,6 @@ theorem xmssPkFromSigM_isTotalQueryBound (core : CorePrimitives p)
   exact isTotalQueryBound_bind
     (wotsPkFromSigM_isTotalQueryBound core sig.1 msg pk (wotsLeafAdrs adrs idx)) fun leaf =>
       xmssClimbM_isTotalQueryBound core pk adrs idx leaf sig.2
-
-private theorem xmssAuthPathM_bind_isTotalQueryBound (core : CorePrimitives p)
-    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (idx z q : ℕ)
-    {beta : Type}
-    (k : List core.Y → OracleComp (publicHashSpec core) beta)
-    (hk : ∀ path, path.length = z → IsTotalQueryBound (k path) q) :
-    IsTotalQueryBound
-      (PerfectMerkleTree.authPathM (xmssLeafM core sk pk adrs)
-        (xmssNodeHashM core pk adrs) idx z >>= k)
-      (xmssAuthPathQueryBound p z + q) := by
-  induction z generalizing k q with
-  | zero =>
-      simpa [PerfectMerkleTree.authPathM, xmssAuthPathQueryBound] using hk [] rfl
-  | succ z ih =>
-      rw [PerfectMerkleTree.authPathM]
-      simp only [bind_assoc, pure_bind, xmssAuthPathQueryBound]
-      change IsTotalQueryBound (do
-        let path ← PerfectMerkleTree.authPathM (xmssLeafM core sk pk adrs)
-          (xmssNodeHashM core pk adrs) idx z
-        let siblingRoot ← xmssNodeM core sk pk adrs z
-          (PerfectMerkleTree.sibling (idx / 2 ^ z))
-        k (path ++ [siblingRoot]))
-        (xmssAuthPathQueryBound p z + xmssNodeQueryBound p z + q)
-      have hrest : ∀ path, path.length = z →
-          IsTotalQueryBound (do
-            let siblingRoot ← xmssNodeM core sk pk adrs z
-              (PerfectMerkleTree.sibling (idx / 2 ^ z))
-            k (path ++ [siblingRoot])) (xmssNodeQueryBound p z + q) := by
-        intro path hlen
-        exact isTotalQueryBound_bind
-          (xmssNodeM_isTotalQueryBound core sk pk adrs z
-            (PerfectMerkleTree.sibling (idx / 2 ^ z))) fun siblingRoot =>
-              hk (path ++ [siblingRoot]) (by simp [hlen])
-      simpa [Nat.add_assoc] using
-        (ih (xmssNodeQueryBound p z + q)
-          (fun path => do
-            let siblingRoot ← xmssNodeM core sk pk adrs z
-              (PerfectMerkleTree.sibling (idx / 2 ^ z))
-            k (path ++ [siblingRoot])) hrest)
 
 /-- XMSS signing composes the message-selected WOTS+ chain budget with the sibling-subtree
 authentication-path budget. -/
@@ -696,15 +642,21 @@ theorem xmssSignM_then_xmssPkFromSigM_isTotalQueryBound (core : CorePrimitives p
       simp_rw [Nat.add_sub_of_le (chainStepsCore_le core msg _)]
       simp
     simpa [hlen, ← Nat.add_assoc, hsum] using hbound
-  have hbound := xmssAuthPathM_bind_isTotalQueryBound core sk pk adrs idx p.hp
+  have hbound := PerfectMerkleTree.isTotalQueryBound_authPathM_bind
+    (xmssLeafM core sk pk adrs) (xmssNodeHashM core pk adrs)
+    (p.len * (p.w - 1) + 1) 1 idx p.hp
     ((p.len * (p.w - 1) + 1) + p.hp)
+    (fun i => by
+      simpa [xmssLeafM, xmssLeafWith, wotsPkGenM] using
+        wotsPkGenM_isTotalQueryBound core sk pk (wotsLeafAdrs adrs i))
+    (fun h i l r => xmssNodeHashM_isTotalQueryBound_one core pk adrs h i l r)
     (fun path => do
       let sig ← wotsSignM core msg sk pk (wotsLeafAdrs adrs idx)
       let leaf ← wotsPkFromSigM core sig msg pk (wotsLeafAdrs adrs idx)
       PerfectMerkleTree.climbM (xmssNodeHashM core pk adrs) idx leaf path) hbody
   unfold xmssLeafM xmssNodeHashM at hbound
-  simpa only [wotsSignM, wotsPkFromSigM, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-    using hbound
+  simpa only [xmssAuthPathQueryBound, Nat.mul_one, wotsSignM, wotsPkFromSigM,
+    Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hbound
 
 /-! ### Deterministic interpretations -/
 

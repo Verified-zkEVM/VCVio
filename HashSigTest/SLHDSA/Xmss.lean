@@ -26,11 +26,10 @@ open OracleComp
 variable {p : Params} (core : CorePrimitives p)
 
 example : xmssNodeQueryBound p 1 =
-    (p.len * (p.w - 1) + 1) + (p.len * (p.w - 1) + 1) + 1 := rfl
+    2 ^ 1 * (p.len * (p.w - 1) + 1) + (2 ^ 1 - 1) * 1 := rfl
 
 example : xmssAuthPathQueryBound p 2 =
-    xmssNodeQueryBound p 0 + xmssNodeQueryBound p 1 := by
-  simp [xmssAuthPathQueryBound]
+    (2 ^ 2 - 1) * (p.len * (p.w - 1) + 1) + (2 ^ 2 - 2 - 1) * 1 := rfl
 
 example : wotsLeafAdrs ((Adrs.zero.setLayerAddress 7).setTreeAddress 9) 3 =
     { layer := 7, tree := 9, type := 0, word1 := 3, word2 := 0, word3 := 0 } := rfl
@@ -104,6 +103,18 @@ example (answer : QueryImpl (publicHashSpec core) Id)
           OracleComp (publicHashSpec core) (XmssSig p core)) =
       xmssSign (PublicHash.withPublicHash core answer) msg sk pk adrs idx :=
   simulateQ_xmssSignM_withPublicHash core answer msg sk pk adrs idx
+
+/-- One fixed total public-hash table gives end-to-end XMSS completeness through the canonical
+signing, recovery, and root programs. -/
+example (answer : QueryImpl (publicHashSpec core) Id)
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
+    (adrs : Adrs) (idx : ℕ) (hidx : idx < 2 ^ p.hp) :
+    simulateQ answer (do
+      let sig ← xmssSignM core msg sk pk adrs idx
+      xmssPkFromSigM core idx sig msg pk adrs) =
+    simulateQ answer (xmssRootM core sk pk adrs) :=
+  simulateQ_xmssPkFromSigM_xmssSignM_withPublicHash core answer
+    msg sk pk adrs idx hidx
 
 /-- The explicit leaf program is natural under the canonical query interpreter. -/
 example {m : Type → Type*} [Monad m] [LawfulMonad m]
