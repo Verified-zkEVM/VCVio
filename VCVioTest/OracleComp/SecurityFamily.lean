@@ -9,41 +9,54 @@ module
 public import VCVio.OracleComp.Coinductive.SecurityFamily
 
 /-!
-# Security-family packing checks
+# Dependent security-family packing checks
 
-Compile-time checks that packing retains the security parameter in inputs, outputs, queries, and
-typed continuations, so one aggregate program can be given one uniform realization.
+The family below varies its input, output, and oracle-answer types with the security parameter.
+The equations ensure packing retains the parameter and both branch-dependent payloads rather than
+collapsing the family to a pointwise collection.
 -/
 
 @[expose] public section
 
-#check OracleComp.SecurityFamily.Input
-#check OracleComp.SecurityFamily.Output
-#check OracleComp.SecurityFamily.Spec
-#check OracleComp.SecurityFamily.packComp
-#check OracleComp.SecurityFamily.packProgram
-
 namespace OracleComp.SecurityFamily
 
-def bitSpec (_n : Nat) : OracleSpec Unit :=
-  fun _ ↦ Bool
+/-- A genuinely nonconstant oracle family: at parameter `n`, a query returns `Fin (n + 1)`. -/
+def indexedSpec (n : Nat) : OracleSpec Unit :=
+  fun _ ↦ Fin (n + 1)
 
-def bitProgram (n : Nat) (input : Bool) : OracleComp (bitSpec n) Bool := do
-  let coin ← (bitSpec n).query ()
-  pure (xor input coin)
+/-- The input type varies with the security parameter. -/
+abbrev IndexedInput (n : Nat) := Fin (n + 1)
 
-example (n : Nat) (input : Bool) :
-    packProgram bitProgram ⟨n, input⟩ =
-      OracleComp.queryBind (spec := Spec bitSpec) ⟨n, ()⟩
-        (fun coin ↦ pure ⟨n, xor input coin⟩) :=
+/-- The output records both the dependent input and the dependent oracle answer. -/
+abbrev IndexedOutput (n : Nat) := IndexedInput n × Fin (n + 1)
+
+/-- One program family whose continuation uses both dependent values. -/
+def indexedProgram (n : Nat) (input : IndexedInput n) :
+    OracleComp (indexedSpec n) (IndexedOutput n) := do
+  let answer ← (indexedSpec n).query ()
+  pure (input, answer)
+
+/-- Packing preserves the parameter in the query and returned sigma value. -/
+example (n : Nat) (input : IndexedInput n) :
+    packProgram indexedProgram ⟨n, input⟩ =
+      OracleComp.queryBind (spec := Spec indexedSpec) ⟨n, ()⟩
+        (fun answer ↦ pure ⟨n, (input, answer)⟩) :=
   rfl
 
-example (n : Nat) (value : Bool) :
-    packComp (spec := bitSpec) (β := fun _ ↦ Bool) n (pure value) = pure ⟨n, value⟩ := by
+/-- Packing a pure dependent result retains its index. -/
+example (n : Nat) (value : IndexedOutput n) :
+    packComp (spec := indexedSpec) (β := IndexedOutput) n (pure value) = pure ⟨n, value⟩ := by
   simp
 
+/-- Distinct parameters remain distinct in the packed input type. -/
 example :
-    (⟨0, PUnit.unit⟩ : (Spec bitSpec).Domain) ≠ ⟨1, PUnit.unit⟩ := by
+    (⟨0, (0 : IndexedInput 0)⟩ : Input IndexedInput) ≠
+      ⟨1, (0 : IndexedInput 1)⟩ := by
+  simp
+
+/-- Distinct parameters also remain distinct in the aggregate query domain. -/
+example :
+    (⟨0, PUnit.unit⟩ : (Spec indexedSpec).Domain) ≠ ⟨1, PUnit.unit⟩ := by
   simp
 
 end OracleComp.SecurityFamily

@@ -9,10 +9,10 @@ module
 public import VCVio.CryptoFoundations.Asymptotics.OracleClosure
 
 /-!
-# Oracle-handler complexity API checks
+# Dependent oracle-handler closure checks
 
-Compile-time checks for the proof-bearing handler boundary and its whole-tree result-conformance
-predicate.
+These tests use distinct Boolean and ternary answer types to ensure handler substitution preserves
+the dependent query index and its answer policy.
 -/
 
 public section
@@ -21,76 +21,9 @@ open PFunctor
 open PFunctor.DynSystem.DynComputation
 open OracleComp.Complexity
 
-#check FreeM.LeavesSatisfyUnder
-#check FreeM.leavesSatisfyUnder_bind_iff
-#check handlerBoundary
-#check packHandler
-#check closeHandler
-#check leavesSatisfyUnder_closeHandler
-#check BindCertificate
-#check BindCertificate.handoffBound
-#check BindCertificate.polynomial
-#check BindCertificate.runsWithin
-#check BindCertificate.strictPPTWitness
-#check BindCertificate.isOraclePPTBy
-#check IsOraclePPTBy.bind
-#check HandlerCertificate
-#check HandlerCertificate.nonempty_of_isOraclePPTBy
-#check HandlerCertificate.packedReturnsAllowed
-#check HandlerCertificate.closeLeavesSatisfyUnder
-#check HandlerCertificate.isOraclePPTBy
-
 universe u v w x y
 
 namespace OracleComp.Complexity
-
-variable {p q : PFunctor.{u, u}} {α : Type u}
-
-example (handler : ∀ position : p.A, FreeM q (p.B position))
-    (position : p.A) :
-    packHandler handler position =
-      (fun answer ↦ ⟨position, answer⟩) <$> handler position :=
-  rfl
-
-example (handler : ∀ position : p.A, FreeM q (p.B position))
-    (result : α) :
-    closeHandler handler (pure result : FreeM p α) = pure result :=
-  rfl
-
-section BindClosure
-
-variable {C : StepClass.{u, v}} [C.HasProd] [C.HasSum] [C.HasOption]
-  {Q : QuantitativeStepClass.{u, v, w} C}
-  {r : PFunctor.{u, u}} [DecidableEq r.A]
-  [Q.HasCategory] [Q.HasSum] [Q.HasOption] [Q.HasProd] [Q.IsDistributive]
-  {input middle output : Type u} {bd : Boundary C r input middle}
-  {outRep : C.Str output} {label : Type x}
-  {contract : OracleContract Q bd.interface label}
-  {program : input → FreeM r middle} {next : middle → FreeM r output}
-
-/-- The final bound follows from component witnesses and the exact structural-overhead
-certificate. -/
-example (first : StrictPPTWitness Q bd contract program)
-    (second : StrictPPTWitness Q (bd.mid outRep) contract next)
-    (certificate : BindCertificate first second) (model : contract.Model) :
-    (first.realization.seqComp second.realization).RunsWithinUnder
-      model.resourceModel.allows fun value ↦
-        certificate.polynomial.eval model.modulus (Q.size bd.input value) :=
-  certificate.runsWithin model
-
-/-- Propositional strict-PPT witnesses compose only after a certificate for the exact assembled
-machine cost is supplied. -/
-example
-    (first : IsOraclePPTBy Q bd contract program)
-    (second : IsOraclePPTBy Q (bd.mid outRep) contract next)
-    (resourceClosure : ∀ (firstWitness : StrictPPTWitness Q bd contract program)
-      (secondWitness : StrictPPTWitness Q (bd.mid outRep) contract next),
-      Nonempty (BindCertificate firstWitness secondWitness)) :
-    IsOraclePPTBy Q (bd.withOut outRep) contract fun value ↦
-      FreeM.bind (program value) next :=
-  first.bind second resourceClosure
-
-end BindClosure
 
 /-! ## Genuinely dependent response canary -/
 

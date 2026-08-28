@@ -115,13 +115,6 @@ theorem reachable_empty_response_not_runsWithinUnder
 
 /-! ## Executable evidence is explicit -/
 
-#check QuantitativeStepClass.Realizer
-#check QuantitativeRealization.initCode
-#check QuantitativeRealization.headCode
-#check QuantitativeRealization.updateCode
-#check QuantitativeRealization.ofFn
-#check isQuantitativelyRealizableBy_ofFn
-
 /-- Even an immediately returning pure function enters the quantitative layer through explicit
 backend code for that function. -/
 theorem pure_function_of_explicit_realizer

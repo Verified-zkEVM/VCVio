@@ -6,7 +6,8 @@ Authors: Devon Tuma
 
 module
 
-public import VCVioComplexityTest.Canaries
+public import VCVioComplexityTest.Backend.OracleCanary
+public import VCVioComplexityTest.Backend.PureCanary
 public import VCVioComplexityTest.Compatibility
 public import VCVioComplexityTest.SecondOrderModulus
 public import VCVioComplexityTest.Trust
