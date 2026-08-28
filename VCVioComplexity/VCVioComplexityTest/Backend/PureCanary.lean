@@ -10,7 +10,7 @@ public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
 public import VCVioComplexity.Backend.Polynomial
 
 /-!
-# End-to-end complexitylib canary for certified pure programs
+# Test fixture: certified pure complexitylib program
 
 This module instantiates VCVio's `PureCertificate` with actual complexitylib machines. The
 program is intentionally tiny: identity on `PUnit`, over an interface with no query positions.

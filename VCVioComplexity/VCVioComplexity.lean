@@ -10,10 +10,8 @@ public import Complexitylib.Classes.P.Cobham.Defs
 public import Complexitylib.Models.TuringMachine
 public import VCVio.OracleComp.OracleComp
 public import VCVioComplexity.Asymptotics.PolyBound
-public import VCVioComplexity.Backend.OracleCanary
 public import VCVioComplexity.Backend.OutputBounds
 public import VCVioComplexity.Backend.Polynomial
-public import VCVioComplexity.Backend.PureCanary
 public import VCVioComplexity.Backend.TuringMachine
 
 /-!

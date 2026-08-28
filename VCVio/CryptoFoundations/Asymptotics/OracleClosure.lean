@@ -18,9 +18,10 @@ handler program must implement all query positions, satisfy its own strict resou
 prove that every result reached along a conforming inner interaction path is admitted by the outer
 contract.
 
-This module packages that non-circular proof boundary. The generic trace simulation and polynomial
-substitution theorem can consume `HandlerCertificate`; a bare `QueryImpl` or claimed cost function
-cannot be used in its place.
+This module packages that non-circular proof boundary. `HandlerCertificate` currently proves the
+semantic leaf-conformance needed for typed handler substitution. A future trace simulation and
+resource-polynomial substitution theorem will consume the same certificate; a bare `QueryImpl` or
+claimed cost function cannot justify that quantitative step.
 -/
 
 @[expose] public section

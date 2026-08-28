@@ -32,10 +32,9 @@ The current package provides:
 - a `VCVioComplexityTest` aggregate containing public-facade checks, guarded kernel trust reports,
   compiling upstream capability probes, an executable regression for the pair-codec mismatch,
   and one fixed-answer second-order witness checked against two distinct response-size models;
-- explicit `PolynomialClosureGate`, `QuantitativeClosure`, `ExactQuantitativeClosure`, and
-  `StructuralClosure` requirement structures for the machine combinators that do not yet compile
-  at this toolchain, with conditional adapters to PolyFun's category, exact-category, product,
-  sum, option, and distributivity mixins.
+- PolyFun's category, exact-category, product, sum, option, and distributivity mixins as the single
+  interface for machine combinators that do not yet compile at this toolchain; the adapter does
+  not duplicate those requirements in VCVio-specific wrapper structures.
 
 The qualitative carrier deliberately admits every semantic function: all computational evidence
 lives in the Type-valued realizers of the two quantitative step classes. Thus the carrier alone
@@ -54,12 +53,11 @@ remain backend-relative; importing this package does not turn them into conventi
 machine-model PPT. The unqualified name is reserved until result, complete oracle transcript,
 randomness, and polynomial cost preservation are all proved.
 
-`PolynomialClosureGate` states the exact identity and sequential-composition obligations for the
-direct base-TM route. The general gate is intentionally uninhabited: the pinned complexitylib
-composition stack does not compile at VCVio's toolchain, and this package does not replace it with
-an extensional Lean composition or a synthetic cost counter. The specialized unit machines do not
-inhabit that universally quantified gate. Its adapter to PolyFun's optional category mixin does
-compile, making the gate an executable acceptance test rather than only design prose.
+General categorical closure is intentionally uninhabited: the pinned complexitylib composition
+stack does not compile at VCVio's toolchain, and this package does not replace it with an
+extensional Lean composition or a synthetic cost counter. Any future implementation must provide
+PolyFun's `QuantitativeStepClass.HasCategory` mixin directly; the specialized unit machines do not
+establish that universally quantified interface.
 
 The representation grammar's pairing codec is intentionally unchanged by this spike. It encodes
 the empty pair as `[true]`, whereas complexitylib's canonical pairing used by its split and emit
@@ -77,6 +75,7 @@ PR or issue is opened in complexitylib, CSLib, or Mathlib as part of this work.
 Build the package independently from the repository root:
 
 ```bash
+lake update PolyFun
 cd VCVioComplexity
 lake exe cache get
 lake build

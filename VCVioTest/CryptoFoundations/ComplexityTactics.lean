@@ -78,24 +78,32 @@ example : backend.PolyRealizer unitRepresentation unitRepresentation id := by
 example : backend.PolyRealizer unitRepresentation unitRepresentation id := by
   ppt?
 
-/- The attribute rejects an unsupported theorem conclusion. -/
-#guard_msgs (drop error) in
+/--
+error: @[ppt_primitive] expects a declaration ending in exactly one of:
+-/
+#guard_msgs (error, substring := true) in
 @[ppt_primitive]
 theorem rejectedTruthPrimitive : True :=
   trivial
 
-/- `ppt` does not run on unrelated proposition shapes. -/
-#guard_msgs (drop error) in
+/--
+error: ppt supports goals headed exactly by `PolyRealizer` or `IsOraclePPTBy`
+-/
+#guard_msgs (error, substring := true) in
 example : True := by
   ppt
 
-/- Exact-head lookup does not synthesize an unregistered realizer. -/
-#guard_msgs (drop error) in
+/--
+error: ppt found no exact local assumption
+-/
+#guard_msgs (error, substring := true) in
 example : backend.PolyRealizer boolRepresentation boolRepresentation Bool.not := by
   ppt
 
-/- `ppt using` rejects a supplied primitive for a different exact target. -/
-#guard_msgs (drop error) in
+/--
+error: ppt using failed to close the goal exactly
+-/
+#guard_msgs (error, substring := true) in
 example : backend.PolyRealizer unitRepresentation unitRepresentation id := by
   ppt using boolIdentityPrimitive
 
@@ -111,8 +119,10 @@ variable {p : PFunctor.{u, u}} {C : StepClass.{u, v}}
   {bd : Boundary C p input output} {label : Type x}
   {contract : OracleContract Q bd.interface label} {program : input → FreeM p output}
 
-/- An `IsOraclePPTBy` definition is not accepted in place of a theorem declaration. -/
-#guard_msgs (drop error) in
+/--
+error: @[ppt_primitive] rejects
+-/
+#guard_msgs (error, substring := true) in
 @[ppt_primitive]
 def rejectedOraclePPTDefinition (hypothesis : IsOraclePPTBy Q bd contract program) :
     IsOraclePPTBy Q bd contract program :=

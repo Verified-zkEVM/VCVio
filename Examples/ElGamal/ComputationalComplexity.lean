@@ -25,9 +25,9 @@ bounds: if `State` is empty, the first query has no typed response and the later
 structurally unreachable.
 
 Closing the two ports with a concrete adversary and the fair-coin handler definitionally recovers
-`IND_CPA_OneTime_DDHReduction`. `OneTimeDDHReductionPrimitiveCodes` records the three
-nonstructural backend realizers needed by a future generic `IsOraclePPTBy` construction; the
-structural product, sum, and option code remains the responsibility of the PolyFun backend.
+`IND_CPA_OneTime_DDHReduction`. A future quantitative construction must provide its local group
+and Boolean operations through the selected backend together with the backend's structural
+product, sum, and option code; this file does not export a disconnected bundle of unused fields.
 -/
 
 @[expose] public section
@@ -52,29 +52,6 @@ def oneTimeDDHOracleCapability {G State : Type} :
   | .inl (.chooseMessages _) => .chooseMessages
   | .inl (.distinguish _ _) => .distinguish
   | .inr _ => .coin
-
-section PrimitiveCodes
-
-variable {G : Type} [Add G]
-
-/-- Costed backend code for the nonstructural local operations of the one-time DDH reduction.
-
-Pairing, projections, sum tags, and optional transitions are supplied by the backend's structural
-mixins. This interface isolates the remaining semantic operations: group addition, Boolean
-selection of a message, and equality of the challenge and guess bits. -/
-structure OneTimeDDHReductionPrimitiveCodes
-    {C : PFunctor.StepClass} [P : C.HasProd]
-    (Q : PFunctor.QuantitativeStepClass C) (group : C.Str G) (boolean : C.Str Bool) where
-  /-- Code for the group addition used to mask the selected message. -/
-  addCode : Q.Realizer (P.prod group group) group (fun input ↦ input.1 + input.2)
-  /-- Code for selecting the challenge message from the sampled bit. -/
-  selectCode : Q.Realizer (P.prod boolean (P.prod group group)) group
-    (fun input ↦ if input.1 then input.2.1 else input.2.2)
-  /-- Code for comparing the sampled challenge bit with the adversary's guess. -/
-  bitEqCode : Q.Realizer (P.prod boolean boolean) boolean
-    (fun input ↦ input.1 == input.2)
-
-end PrimitiveCodes
 
 /-! ## Fully syntactic open reduction -/
 
@@ -107,12 +84,11 @@ The adversary procedures occupy the left summand of the oracle specification and
 coin occupies the right summand. No query has been interpreted by a handler. -/
 def IND_CPA_OneTime_DDHReduction_openOracle
     {State : Type} (_gen A B T : G) :
-    OracleComp (oneTimeINDCPASpec G G State (G × G) + coinSpec) Bool := do
-  let (m₁, m₂, st) ← oneTimeINDCPAChooseMessagesOracle (State := State) A
-  let bit ← oneTimeDDHCoinOracle (G := G) (State := State)
-  let c : G × G := (B, T + if bit then m₁ else m₂)
-  let bit' ← oneTimeINDCPADistinguishOracle st c
-  pure (bit == bit')
+    OracleComp (oneTimeINDCPASpec G G State (G × G) + coinSpec) Bool :=
+  oneTimeDDHReductionBody
+    (oneTimeINDCPAChooseMessagesOracle (State := State) A)
+    (oneTimeDDHCoinOracle (G := G) (State := State))
+    oneTimeINDCPADistinguishOracle B T
 
 /-! ## Exact structural query accounting -/
 

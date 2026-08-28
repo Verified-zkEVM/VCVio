@@ -31,13 +31,20 @@ show_panel_widgets [local VCVioWidgets.GameHop.GameHopPanel]
 
 open Mathlib OracleSpec OracleComp ENNReal BigOperators
 
-/-- The one-time pad symmetric encryption algorithm, using `BitVec`s as keys and messages.
-Encryption and decryption both just apply `BitVec.xor` with the key. -/
-def oneTimePad (sp : ℕ) :
-    SymmEncAlg ProbComp (BitVec sp) (BitVec sp) (BitVec sp) where
-  keygen := $ᵗ BitVec sp
+/-- The one-time-pad scheme body, parameterized only by its key sampler.
+
+Keeping encryption and decryption here gives the discrete and measure-native examples one shared
+scheme implementation. -/
+abbrev oneTimePadOfKeygen {m : Type → Type} [Monad m] (sp : ℕ) (keygen : m (BitVec sp)) :
+    SymmEncAlg m (BitVec sp) (BitVec sp) (BitVec sp) where
+  keygen := keygen
   encrypt k m := return k ^^^ m
   decrypt k σ := return some (k ^^^ σ)
+
+/-- The ordinary probabilistic one-time pad with the standard uniform `BitVec` sampler. -/
+def oneTimePad (sp : ℕ) :
+    SymmEncAlg ProbComp (BitVec sp) (BitVec sp) (BitVec sp) :=
+  oneTimePadOfKeygen sp ($ᵗ BitVec sp)
 
 namespace oneTimePad
 

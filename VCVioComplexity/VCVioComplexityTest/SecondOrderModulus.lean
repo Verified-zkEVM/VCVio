@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVioComplexity.Backend.OracleCanary
+public import VCVioComplexityTest.Backend.OracleCanary
 
 /-!
 # Second-order modulus acceptance canary

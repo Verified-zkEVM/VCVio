@@ -6,11 +6,11 @@ Authors: Devon Tuma
 
 module
 
-public import VCVioComplexity.Backend.PureCanary
+public import VCVioComplexityTest.Backend.PureCanary
 public import VCVio.EvalDist.PFunctorPath
 
 /-!
-# End-to-end complexitylib canary for one oracle query
+# Test fixture: one-query complexitylib program
 
 This module certifies a program which makes exactly one fair-coin query and returns its reply.
 Unlike the pure canary, both Boolean replies are admitted and charged, the enabled update map has

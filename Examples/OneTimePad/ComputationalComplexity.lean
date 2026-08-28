@@ -9,6 +9,7 @@ module
 public import ToMathlib.MeasureTheory.DiscreteInstances
 public import ToMathlib.Probability.UniformOn
 public import ToMathlib.General
+public import Examples.OneTimePad.Basic
 public import VCVio.CryptoFoundations.Asymptotics.PathSemantics
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import Mathlib.Data.LawfulXor.Equiv
@@ -264,14 +265,12 @@ theorem denote_coinBitVec_eq_uniform (n : ℕ) :
 
 /-- The one-time pad whose key sampler uses one explicit coin query per key bit. -/
 def coinOneTimePad (sp : ℕ) :
-    SymmEncAlg (OracleComp coinSpec) (BitVec sp) (BitVec sp) (BitVec sp) where
-  keygen := coinBitVec sp
-  encrypt key message := pure (key ^^^ message)
-  decrypt key ciphertext := pure (some (key ^^^ ciphertext))
+    SymmEncAlg (OracleComp coinSpec) (BitVec sp) (BitVec sp) (BitVec sp) :=
+  oneTimePadOfKeygen sp (coinBitVec sp)
 
 /-- Encryption followed by decryption has the Dirac law at the original message. -/
 theorem coinOneTimePad_measureComplete (sp : ℕ) :
-    (coinOneTimePad sp).measureComplete MeasureSemantics.freeM := by
+    (coinOneTimePad sp).measureComplete ProbabilitySemantics.freeM := by
   intro message
   have hprogram : (coinOneTimePad sp).CompleteExp message =
       PFunctor.FreeM.map (fun _ : BitVec sp ↦ some message) (coinBitVec sp).toFreeM := by
@@ -305,8 +304,8 @@ theorem denote_coinOneTimePad_cipherGivenMsg_eq_uniform
 
 /-- The explicit-coin one-time pad is perfectly secret in measure semantics. -/
 theorem coinOneTimePad_measurePerfectSecrecyAt (sp : ℕ) :
-    (coinOneTimePad sp).measurePerfectSecrecyAt MeasureSemantics.freeM :=
-  (coinOneTimePad sp).measurePerfectSecrecyAt_of_constant MeasureSemantics.freeM
+    (coinOneTimePad sp).measurePerfectSecrecyAt ProbabilitySemantics.freeM :=
+  (coinOneTimePad sp).measurePerfectSecrecyAt_of_constant ProbabilitySemantics.freeM
     (uniformOn (Set.univ : Set (BitVec sp)))
     (denote_coinOneTimePad_cipherGivenMsg_eq_uniform sp)
 

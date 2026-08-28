@@ -84,8 +84,8 @@ lake build \
   Complexitylib.Models.TuringMachine.SpaceTime.Defs \
   VCVioComplexity.Backend.OutputBounds \
   VCVioComplexity.Backend.Polynomial \
-  VCVioComplexity.Backend.PureCanary \
-  VCVioComplexity.Backend.OracleCanary
+  VCVioComplexityTest.Backend.PureCanary \
+  VCVioComplexityTest.Backend.OracleCanary
 
 composition_log="$(mktemp)"
 asymptotics_log="$(mktemp)"

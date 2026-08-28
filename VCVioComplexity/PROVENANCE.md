@@ -76,13 +76,12 @@ actual transitions. This supplies `PolynomialCode.toPolyRealizerFromTime` withou
 patching the blocked upstream `TuringMachine.Internal` module. The new file preserves upstream
 attribution; no declaration is copied into the `Complexity` namespace.
 
-`PolynomialClosureGate` records the direct identity/composition acceptance test. It has no
-exported inhabitant. Passing it requires total exact machines on all words, represented semantic
-correctness, a polynomial run certificate, and a proved inequality for connection overhead. The
-currently failing upstream modules prevent reusing `copyInputToOutputTM` and `compositionTM` at
-Lean 4.33; no closure witness is inferred from their source definitions alone. The gate's adapter
-to `polynomialQuantitativeStepClass.HasCategory` compiles, so supplying a gate is exactly what
-enables PolyFun's categorical constructors for polynomial code.
+The direct identity/composition acceptance test is PolyFun's
+`polynomialQuantitativeStepClass.HasCategory` mixin itself. It has no exported inhabitant. Filling
+it requires total exact machines on all words, represented semantic correctness, polynomial run
+certificates, and a proved inequality for connection overhead. The currently failing upstream
+modules prevent reusing `copyInputToOutputTM` and `compositionTM` at Lean 4.33; no closure witness
+is inferred from their source definitions alone.
 
 The closed adapter codec and complexitylib's canonical pairing are not definitionally compatible:
 `WordCodec.pair [] [] = [true]`, while `Complexity.pair [] [] = [false, true]`. The
@@ -96,10 +95,9 @@ modulus and therefore evaluates to different bounds for the two models. This is 
 for second-order quantification, not evidence that the fixed two-bit coin answer intrinsically
 needs a growing response modulus.
 
-The more general `QuantitativeClosure` similarly enables categorical composition of arbitrary
-exact `Code` values with a sound cost inequality. `ExactQuantitativeClosure` is a separate,
-strictly stronger refinement for backends that can prove an exact cost equation. This distinction
-matches PolyFun's core-versus-mixin interface and avoids making exact additive accounting a
+For arbitrary exact `Code` values, the corresponding interface is
+`quantitativeStepClass.HasCategory`; PolyFun's `HasExactCategory` remains the separate, strictly
+stronger refinement for exact cost equations. This avoids making exact additive accounting a
 prerequisite for sound polynomial closure.
 
 All compatibility work remains local to VCVio and PolyFun for this phase. No PR or issue is opened

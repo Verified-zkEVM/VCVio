@@ -22,10 +22,10 @@ its total function on words, and an exact terminating run on every word. Its sem
 field relates that total word function to the represented Lean function only on valid encodings.
 
 The exact run length is the local work measure intended for PolyFun quantitative realizations.
-`quantitativeStepClass` is already inhabited by individual exact codes. `QuantitativeClosure` and
-`ExactQuantitativeClosure` isolate the optional identity and composition facts needed by PolyFun's
-categorical combinators. No such closure package is claimed here: the pinned complexitylib
-revision's composition and Hoare modules do not compile with VCVio's Lean toolchain.
+`quantitativeStepClass` is already inhabited by individual exact codes. General identity and
+composition remain obligations of PolyFun's optional category and exact-category mixins. No such
+closure instance is claimed here: the pinned complexitylib revision's composition and Hoare
+modules do not compile with VCVio's Lean toolchain.
 
 This file therefore establishes a concrete deterministic step-function backend, not an oracle-TM
 adequacy theorem and not an unqualified notion of probabilistic polynomial time.
@@ -660,37 +660,6 @@ noncomputable def unitIdentityPolynomial : PolynomialCode .unit .unit id :=
 
 end Primitive
 
-/-! ## Direct closure gate -/
-
-/-- Exact polynomial machine constructors required before the base-TM route may claim usable
-categorical closure.
-
-This gate deliberately has no inhabitant in the package today. In particular, polynomial
-composition must return one concrete total complexitylib machine and prove a bound on its actual
-`TM.reachesIn` run; an extensional Lean composition or an asserted numeric meter cannot fill these
-fields. -/
-structure PolynomialClosureGate where
-  /-- A polynomial exact identity machine for every trusted representation. -/
-  identity : ∀ {A : Type} (rep : Representation A), PolynomialCode rep rep id
-  /-- Polynomial exact sequential composition. -/
-  compose : ∀ {A B D : Type} {input : Representation A} {middle : Representation B}
-    {output : Representation D} {function : A → B} {next : B → D},
-    PolynomialCode input middle function → PolynomialCode middle output next →
-      PolynomialCode input output (next ∘ function)
-  /-- Explicit connection work for the exact composed code. -/
-  composeOverhead : ∀ {A B D : Type} {input : Representation A}
-    {middle : Representation B} {output : Representation D} {function : A → B}
-    {next : B → D}, PolynomialCode input middle function →
-      PolynomialCode middle output next → A → ℕ
-  /-- The exact composed run is bounded by the component runs and connection work. -/
-  valueCost_compose_le : ∀ {A B D : Type} {input : Representation A}
-    {middle : Representation B} {output : Representation D} {function : A → B}
-    {next : B → D} (first : PolynomialCode input middle function)
-    (second : PolynomialCode middle output next) (value : A),
-    (compose first second).valueCost value ≤
-      first.valueCost value + second.valueCost (function value) +
-        composeOverhead first second value
-
 /-! ## Inhabited exact-code model -/
 
 /-- A qualitative carrier for the trusted representation grammar.
@@ -763,8 +732,9 @@ theorem quantitativeStepClass_cost {A B : Type} {input : Representation A}
 
 /-- The inhabited sub-backend whose individual realizers additionally carry polynomial bounds.
 
-This still does not assume categorical closure: a single `PolynomialCode` is useful immediately,
-while `PolynomialClosureGate` below states exactly what is required to compose such evidence. -/
+This still does not assume categorical closure: a single `PolynomialCode` is useful immediately.
+General identity and composition evidence is expressed directly by PolyFun's
+`QuantitativeStepClass.HasCategory` mixin. -/
 def polynomialQuantitativeStepClass : PFunctor.QuantitativeStepClass stepClass where
   Realizer input output function := PolynomialCode input output function
   size := encodedSize
@@ -797,188 +767,11 @@ theorem unitIdentityRealizer_cost (value : PUnit) :
 
 end Primitive
 
-namespace PolynomialClosureGate
+/-! ## Optional closure seam
 
-/-- A gate inhabitant installs exactly the optional category mixin for polynomial exact code.
-
-This adapter is also the compile-time acceptance test for the direct base-TM route: any future
-identity/composition implementation must fill `PolynomialClosureGate` before PolyFun's generic
-categorical machinery becomes available for `polynomialQuantitativeStepClass`. -/
-@[instance_reducible]
-def hasCategory (gate : PolynomialClosureGate) :
-    polynomialQuantitativeStepClass.HasCategory where
-  identity := gate.identity
-  compose := gate.compose
-  composeOverhead := gate.composeOverhead
-  cost_compose_le := gate.valueCost_compose_le
-
-end PolynomialClosureGate
-
-/-! ## Optional categorical closure seam -/
-
-/-- The machine facts required to instantiate PolyFun's optional quantitative category interface.
-
-The fields are intentionally data and proved bounds, not axioms hidden behind instances. Once a
-complexitylib identity machine and sequential-composition theorem compile at VCVio's toolchain,
-they can populate this structure. Until then, downstream code can consume individual `Code`
-certificates without pretending that arbitrary certified machines compose for free. -/
-structure QuantitativeClosure where
-  /-- A certified identity machine for every pinned representation. -/
-  identity : ∀ {A : Type} (rep : Representation A), Code rep rep id
-  /-- Sequential composition of two certified machines. -/
-  compose : ∀ {A B D : Type} {input : Representation A} {middle : Representation B}
-    {output : Representation D} {function : A → B} {next : B → D},
-    Code input middle function → Code middle output next → Code input output (next ∘ function)
-  /-- Explicit machine-connection work on represented inputs. -/
-  composeOverhead : ∀ {A B D : Type} {input : Representation A}
-    {middle : Representation B} {output : Representation D} {function : A → B}
-    {next : B → D}, Code input middle function → Code middle output next → A → ℕ
-  /-- Sound cost bound for the exact run selected by the composed code. -/
-  valueCost_compose_le : ∀ {A B D : Type} {input : Representation A}
-    {middle : Representation B} {output : Representation D} {function : A → B}
-    {next : B → D} (first : Code input middle function)
-    (second : Code middle output next) (value : A),
-    Code.valueCost (compose first second) value ≤
-      Code.valueCost first value + Code.valueCost second (function value) +
-        composeOverhead first second value
-
-namespace QuantitativeClosure
-
-/-- Install proved identity and composition machines as PolyFun's optional category mixin. -/
-@[instance_reducible]
-def hasCategory (closure : QuantitativeClosure) : quantitativeStepClass.HasCategory where
-  identity := closure.identity
-  compose := closure.compose
-  composeOverhead := closure.composeOverhead
-  cost_compose_le := closure.valueCost_compose_le
-
-end QuantitativeClosure
-
-/-- Optional exact-cost refinement of `QuantitativeClosure`.
-
-Most machine adequacy arguments need only the upper bound in `QuantitativeClosure`. This stronger
-bundle is separate so a backend is not forced to choose connection accounting that makes every
-composition equation definitionally exact. -/
-structure ExactQuantitativeClosure extends QuantitativeClosure where
-  /-- Exact composed-run accounting for the chosen connection overhead. -/
-  valueCost_compose_eq : ∀ {A B D : Type} {input : Representation A}
-    {middle : Representation B} {output : Representation D} {function : A → B}
-    {next : B → D} (first : Code input middle function)
-    (second : Code middle output next) (value : A),
-    Code.valueCost (compose first second) value =
-      Code.valueCost first value + Code.valueCost second (function value) +
-        composeOverhead first second value
-
-namespace ExactQuantitativeClosure
-
-/-- Install exact composed-run accounting as PolyFun's optional exact-category refinement. -/
-theorem hasExactCategory (closure : ExactQuantitativeClosure) :
-    @PFunctor.QuantitativeStepClass.HasExactCategory _ quantitativeStepClass
-      closure.toQuantitativeClosure.hasCategory := by
-  let _ := closure.toQuantitativeClosure.hasCategory
-  exact ⟨closure.valueCost_compose_eq⟩
-
-end ExactQuantitativeClosure
-
-/-! ## Structural realization seam -/
-
-/-- Concrete machine constructors needed by PolyFun's product, sum, option, and distributive
-realization closure.
-
-This extends `QuantitativeClosure`: every field is an exact `Code` carrying one total
-complexitylib machine run on every word. The structure is deliberately not inhabited until those
-machine combinators compile and their run theorems are available. -/
-structure StructuralClosure extends QuantitativeClosure where
-  /-- First projection from the structural product encoding. -/
-  fst : ∀ {A B : Type} (left : Representation A) (right : Representation B),
-    Code (.prod left right) left Prod.fst
-  /-- Second projection from the structural product encoding. -/
-  snd : ∀ {A B : Type} (left : Representation A) (right : Representation B),
-    Code (.prod left right) right Prod.snd
-  /-- Pair two realized functions on a common input. -/
-  pair : ∀ {A B D : Type} {input : Representation A}
-    {left : Representation B} {right : Representation D} {f : A → B} {g : A → D},
-    Code input left f → Code input right g → Code input (.prod left right) fun value ↦
-      (f value, g value)
-  /-- Left injection into the structural sum encoding. -/
-  inl : ∀ {A B : Type} (left : Representation A) (right : Representation B),
-    Code left (.sum left right) Sum.inl
-  /-- Right injection into the structural sum encoding. -/
-  inr : ∀ {A B : Type} (left : Representation A) (right : Representation B),
-    Code right (.sum left right) Sum.inr
-  /-- Case analysis over the structural sum encoding. -/
-  elim : ∀ {A B D : Type} {left : Representation A} {right : Representation B}
-    {output : Representation D} {f : A → D} {g : B → D},
-    Code left output f → Code right output g → Code (.sum left right) output (Sum.elim f g)
-  /-- Map realized code through the structural optional-value encoding. -/
-  optionMap : ∀ {A B : Type} {input : Representation A} {output : Representation B}
-    {f : A → B}, Code input output f →
-      Code (.option input) (.option output) (Option.map f)
-  /-- Constant absent optional value. -/
-  none : ∀ {A B : Type} (input : Representation A) (output : Representation B),
-    Code input (.option output) fun _ ↦ none
-  /-- Contextual bind of an optional represented value. -/
-  optionBindContext : ∀ {A B E : Type} {input : Representation A}
-    {output : Representation B} {context : Representation E}
-    {k : A × E → Option B}, Code (.prod input context) (.option output) k →
-      Code (.prod (.option input) context) (.option output) fun value ↦
-        value.1.bind fun item ↦ k (item, value.2)
-  /-- Move a sum tag out of a paired context. -/
-  distribute : ∀ {A B E : Type} (left : Representation A) (right : Representation B)
-    (context : Representation E),
-    Code (.prod (.sum left right) context) (.sum (.prod left context) (.prod right context))
-      fun value ↦ match value.1 with
-        | .inl item => .inl (item, value.2)
-        | .inr item => .inr (item, value.2)
-
-namespace StructuralClosure
-
-/-- Executable product closure for the exact-machine quantitative step class. -/
-@[instance_reducible]
-def quantitativeHasProd (closure : StructuralClosure) :
-    @PFunctor.QuantitativeStepClass.HasProd stepClass quantitativeStepClass hasProd := by
-  letI := hasProd
-  exact
-    { fst := closure.fst
-      snd := closure.snd
-      pair := closure.pair }
-
-/-- Executable sum closure for the exact-machine quantitative step class. -/
-@[instance_reducible]
-def quantitativeHasSum (closure : StructuralClosure) :
-    @PFunctor.QuantitativeStepClass.HasSum stepClass quantitativeStepClass hasSum := by
-  letI := hasSum
-  exact
-    { inl := closure.inl
-      inr := closure.inr
-      elim := closure.elim }
-
-/-- Executable optional-value closure for the exact-machine quantitative step class. -/
-@[instance_reducible]
-def quantitativeHasOption (closure : StructuralClosure) :
-    @PFunctor.QuantitativeStepClass.HasOption stepClass quantitativeStepClass hasProd
-      hasOption := by
-  letI := hasProd
-  letI := hasOption
-  exact
-    { map := closure.optionMap
-      none := closure.none
-      bindContext := closure.optionBindContext }
-
-/-- Executable distributivity for the exact-machine quantitative step class. -/
-@[instance_reducible]
-def quantitativeIsDistributive (closure : StructuralClosure) :
-    @PFunctor.QuantitativeStepClass.IsDistributive stepClass quantitativeStepClass
-      hasProd hasSum := by
-  letI := hasProd
-  letI := hasSum
-  exact
-    { distribute := fun left right context ↦
-        (closure.distribute left right context).castFunction (by
-          funext input
-          obtain ⟨side, retained⟩ := input
-          cases side <;> rfl) }
-
-end StructuralClosure
+General machine-level closure is intentionally absent.  A future implementation must inhabit
+PolyFun's `QuantitativeStepClass.HasCategory`, `HasExactCategory`, `HasProd`, `HasSum`,
+`HasOption`, and `IsDistributive` mixins directly for the step class above.  Keeping one set of
+interfaces prevents the adapter from drifting away from the generic composition API. -/
 
 end VCVioComplexity.Backend.TuringMachine

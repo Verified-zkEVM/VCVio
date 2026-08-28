@@ -550,11 +550,11 @@ The preflight found two separate incompatibilities. The upstream asymptotics
 module fails, so the package contains one attributed adaptation,
 `VCVioComplexity.Asymptotics.PolyBound`, omitting only the `BigO` bridge. The
 higher Turing-machine combinator stack also fails, so the package exposes
-`PolynomialClosureGate`, `QuantitativeClosure`, `ExactQuantitativeClosure`, and
-`StructuralClosure` as explicit requirements but has no exported inhabitants
-for those general machine-level gates. Conditional adapters into PolyFun's
-optional category and structural mixins do compile. Direct and adapted
-implementations of the same declaration are not maintained simultaneously;
+PolyFun's category, exact-category, product, sum, option, and distributivity mixins as explicit
+requirements but has no exported inhabitants
+for those general machine-level gates. Future machine combinators must inhabit those PolyFun
+interfaces directly; VCVio does not maintain parallel wrapper contracts or conditional adapters.
+Direct and adapted implementations of the same declaration are not maintained simultaneously;
 `PROVENANCE.md` records the exact source and removal condition. Any future
 snapshot must remain minimal, use a distinct VCVio namespace, preserve upstream
 attribution and the

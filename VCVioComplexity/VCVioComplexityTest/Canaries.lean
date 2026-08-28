@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVioComplexity
+public import VCVioComplexityTest.Backend.OracleCanary
 
 /-!
 # Aggregate backend canaries
@@ -52,9 +53,5 @@ example {workTapes : ℕ} {machine : _root_.Complexity.TM workTapes}
 noncomputable example :
     polynomialQuantitativeStepClass.PolyRealizer .unit .unit id :=
   Primitive.unitIdentityPolynomial.toPolyRealizerFromTime
-
-/-- Category installation remains conditional on concrete machine-level closure evidence. -/
-example (gate : PolynomialClosureGate) : polynomialQuantitativeStepClass.HasCategory :=
-  gate.hasCategory
 
 end VCVioComplexityTest.Canaries

@@ -1,12 +1,14 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import VCVioTest.Computability
+public import VCVioTest.CryptoFoundations.CertificateProducers
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexity
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.OracleClosure
 public import VCVioTest.CryptoFoundations.PathSemantics
 public import VCVioTest.CryptoFoundations.RankedRun
+public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.ForkMeasure
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.GrindFailFast

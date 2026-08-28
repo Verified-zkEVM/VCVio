@@ -37,6 +37,34 @@ probabilistic notion and is not smuggled into this pathwise definition.
 
 universe u v w x y
 
+namespace PFunctor.DynSystem.DynComputation
+
+/-! ## Interface-only boundaries
+
+PolyFun's merged quantitative API deliberately keeps the executable `Boundary` small.  VCVio's
+open-oracle contracts additionally need to share the query encodings across programs with
+different input and output types, so that interface-only projection lives here at the consumer
+layer rather than in PolyFun. -/
+
+/-- The query-position and tagged-answer representations shared by an open oracle interface. -/
+structure InterfaceBoundary (C : StepClass.{u, v}) (p : PFunctor.{u, u}) : Type v where
+  pos : C.Str p.A
+  idx : C.Str p.Idx
+
+namespace Boundary
+
+variable {p : PFunctor.{u, u}} {C : StepClass.{u, v}} {input output : Type u}
+
+/-- Forget a program boundary's input and output representations. -/
+def interface (bd : Boundary C p input output) : InterfaceBoundary C p :=
+  ⟨bd.pos, bd.idx⟩
+
+@[simp] theorem interface_pos (bd : Boundary C p input output) : bd.interface.pos = bd.pos := rfl
+@[simp] theorem interface_idx (bd : Boundary C p input output) : bd.interface.idx = bd.idx := rfl
+
+end Boundary
+end PFunctor.DynSystem.DynComputation
+
 namespace OracleComp.Complexity
 
 open PFunctor
@@ -864,8 +892,8 @@ end SecurityFamily
 
 /-- Strict PPT for a security-indexed family means strict PPT of its one packed program.
 
-This requires one realization and one polynomial for every security parameter. It is strictly
-stronger than choosing unrelated witnesses pointwise. -/
+This requires one shared realization and one shared polynomial across all security parameters. It
+is strictly stronger than choosing unrelated witnesses pointwise. -/
 def SecurityFamily.IsOraclePPTBy
     {index : ℕ → Type u} {spec : (n : ℕ) → OracleSpec.{u, u} (index n)}
     {input output : ℕ → Type u} {C : StepClass.{u, v}}
