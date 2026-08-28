@@ -30,7 +30,6 @@
   "GPVHashAndSign.programmedPreimageReduction",
   "GPVHashAndSign.reduction",
   "MLDSA.euf_cma_security",
-  "PMF.etvDist_sq_le_of_renyiDiv",
   "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.liftIntermediateLevels",
   "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.poly_big_to_small",
   "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.vect_FFT",

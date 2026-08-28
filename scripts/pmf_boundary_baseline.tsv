@@ -10,10 +10,10 @@ LatticeCrypto/DiscreteGaussian.lean	1
 LatticeCrypto/MLDSA/Security.lean	1
 LatticeCrypto/MLDSA/SecurityNMA.lean	4
 ToMathlib/General.lean	28
-ToMathlib/Probability/Divergence/RenyiDiscrete.lean	19
-ToMathlib/Probability/ProbabilityMassFunction/Measure.lean	4
-ToMathlib/Probability/ProbabilityMassFunction/RadonNikodym.lean	11
-ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean	73
+ToMathlib/Probability/Divergence/RenyiDiscrete.lean	56
+ToMathlib/Probability/ProbabilityMassFunction/Measure.lean	6
+ToMathlib/Probability/ProbabilityMassFunction/RadonNikodym.lean	19
+ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean	46
 ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean	4
 ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean	59
 ToMathlib/ProbabilityTheory/Coupling.lean	119

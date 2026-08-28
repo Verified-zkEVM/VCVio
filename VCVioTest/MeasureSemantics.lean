@@ -278,14 +278,26 @@ discrete development is therefore a corollary rather than a parallel copy. -/
 /-- Renyi between two continuous laws — no `PMF` counterpart exists. -/
 example (a : ℝ) : renyiMGF a (gaussianReal 0 1) (gaussianReal 0 1) = 1 := renyiMGF_self a _
 
-/-- The discrete data processing inequality, obtained from the measure-level one.
+/-- `PMF.renyiMGF_map_le` is now the measure-level result, and it still carries no instances.
 
-This is the *same statement* as the hand-rolled `PMF.renyiMGF_map_le`, whose direct proof is a
-fibrewise Holder argument of roughly a hundred and twenty lines; here it follows from Mathlib's
-convexity scaffolding through the agreement theorem. -/
-example (n m : ℕ) (a : ℝ) (ha : 1 ≤ a) (f : BitVec n → BitVec m) (p q : PMF (BitVec n)) :
+The carrier here is `ℝ`, which is uncountable and has no discrete measurable structure. That is
+the point of the corollary being stated without a `Countable` hypothesis: a `PMF` has countable
+support whatever its carrier, so the bridge must not demand countability of the carrier itself —
+otherwise it could not reach `SPMF.renyiDiv_map_le`, which instantiates at `Option α'` for an
+arbitrary `α'`. -/
+example (a : ℝ) (ha : 1 ≤ a) (f : ℝ → ℝ) (p q : PMF ℝ) :
     (f <$> p).renyiMGF a (f <$> q) ≤ p.renyiMGF a q :=
-  renyiMGF_map_le_of_pmf a ha f p q
+  PMF.renyiMGF_map_le a ha f p q
+
+/-- **The Rényi → total-variation bound**, which was `sorry` until the measure-level theory
+supplied both of its halves.
+
+`#396` calls this "the headline Rényi → eTV-distance bound". Its two ingredients — Cauchy-Schwarz
+against the Hellinger affinity, and log-convexity of the Rényi MGF — both reduce to the same
+Mathlib inequality, `ENNReal.lintegral_mul_norm_pow_le`. -/
+example (n : ℕ) (a : ℝ) (ha : 1 < a) (p q : PMF (BitVec n)) :
+    p.etvDist q ^ (2 : ℝ) ≤ 1 - (p.renyiDiv a q)⁻¹ :=
+  PMF.etvDist_sq_le_of_renyiDiv a ha p q
 
 /-- ...and it is the existing discrete formula on a finite sample type. -/
 example (n : ℕ) (a : ℝ) (ha : 1 < a) (p q : PMF (BitVec n)) :
