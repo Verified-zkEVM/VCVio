@@ -19,8 +19,8 @@ nodes may perform effects, so a random-oracle instantiation can issue explicit h
 retaining the existing typed-address discipline.  The traversal order is fixed: build the left
 subtree, build the right subtree, then hash their roots.
 
-The deterministic-handler theorems below show that these programs are interpretations of the
-existing pure engine, not a second Merkle-tree semantics.
+The deterministic-handler and `Id` theorems below show that these programs are interpretations
+of the existing pure engine, not a second Merkle-tree semantics.
 -/
 
 @[expose] public section
@@ -107,6 +107,29 @@ theorem getPutativeRootAddressedM_natural (F : m →ᵐ n) {s : Skeleton}
       simp [getPutativeRootAddressedM, F.mmap_bind, ih, hhash]
 
 end Naturality
+
+section PureInterpretation
+
+/-- Running effectful addressed root reconstruction in `Id` recovers the canonical pure
+addressed reconstruction with the callbacks interpreted pointwise. -/
+@[simp]
+theorem idRun_getPutativeRootAddressedM :
+    {s : Skeleton} →
+      (nodeHash : SkeletonInternalIndex s → Y → Y → Id Y) →
+      (idx : SkeletonLeafIndex s) → (leafValue : Y) →
+      (proof : List.Vector Y idx.depth) →
+      Id.run (getPutativeRootAddressedM nodeHash idx leafValue proof) =
+        getPutativeRootAddressedWithHash
+          (fun a l r => Id.run (nodeHash a l r)) idx leafValue proof
+  | _, _, .ofLeaf, _, _ => rfl
+  | _, nodeHash, .ofLeft idx, leafValue, proof => by
+      simp [getPutativeRootAddressedM, getPutativeRootAddressedWithHash,
+        idRun_getPutativeRootAddressedM]
+  | _, nodeHash, .ofRight idx, leafValue, proof => by
+      simp [getPutativeRootAddressedM, getPutativeRootAddressedWithHash,
+        idRun_getPutativeRootAddressedM]
+
+end PureInterpretation
 
 section DeterministicInterpretation
 

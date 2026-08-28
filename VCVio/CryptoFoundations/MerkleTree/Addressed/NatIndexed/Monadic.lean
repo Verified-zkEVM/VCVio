@@ -18,7 +18,8 @@ needed by SLH-DSA to represent public hashing as explicit oracle calls.
 
 No oracle handler or cache is selected here.  The caller must interpret the whole surrounding
 program with one handler.  In particular, random-oracle consumers must install one shared lazy
-oracle across construction, signing, the adversary, and verification.
+oracle across construction, signing, the adversary, and verification. The `Id` interpretation
+laws connect these effectful traversals to the established pure API.
 -/
 
 @[expose] public section
@@ -158,6 +159,49 @@ theorem merkleRootM_eq_map_treeM {m : Type v → Type w} [Monad m] [LawfulMonad 
       simp [merkleRootM, treeM_succ, ih]
 
 end Naturality
+
+section PureInterpretation
+
+/-- Running direct perfect-subtree root computation in `Id` recovers the canonical pure root. -/
+@[simp]
+theorem idRun_merkleRootM (leaf : ℕ → Id Y)
+    (nodeHash : ℕ → ℕ → Y → Y → Id Y) (z t : ℕ) :
+    Id.run (merkleRootM leaf nodeHash z t) =
+      merkleRoot (fun i => Id.run (leaf i))
+        (fun h i l r => Id.run (nodeHash h i l r)) z t := by
+  induction z generalizing t with
+  | zero => rfl
+  | succ z ih => simp [merkleRootM, merkleRoot_succ, ih]
+
+/-- Running sibling-only authentication-path construction in `Id` recovers the canonical pure
+authentication path. -/
+@[simp]
+theorem idRun_authPathM (leaf : ℕ → Id Y)
+    (nodeHash : ℕ → ℕ → Y → Y → Id Y) (idx z : ℕ) :
+    Id.run (authPathM leaf nodeHash idx z) =
+      authPath (fun i => Id.run (leaf i))
+        (fun h i l r => Id.run (nodeHash h i l r)) idx z := by
+  induction z with
+  | zero => rfl
+  | succ z ih =>
+      simp [authPathM, authPath_succ, ih, idRun_merkleRootM]
+
+/-- Running root recovery in `Id` recovers the canonical pure climb. -/
+@[simp]
+theorem idRun_climbM (nodeHash : ℕ → ℕ → Y → Y → Id Y)
+    (idx : ℕ) (node : Y) (auth : List Y) :
+    Id.run (climbM nodeHash idx node auth) =
+      climb (fun h i l r => Id.run (nodeHash h i l r)) idx node auth := by
+  unfold climbM climb nodeHashAt
+  simpa only using
+    (AddressedMerkleTree.idRun_getPutativeRootAddressedM
+      (fun a => nodeHash (a.natAddr (idx / 2 ^ auth.length)).height
+        (a.natAddr (idx / 2 ^ auth.length)).index)
+      (SkeletonLeafIndex.ofNat auth.length idx) node
+      (⟨auth.reverse, by simp⟩ :
+        List.Vector Y (SkeletonLeafIndex.ofNat auth.length idx).depth))
+
+end PureInterpretation
 
 section DeterministicInterpretation
 
