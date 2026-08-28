@@ -7,6 +7,7 @@ Authors: Nicolas Consigny, Bolton Bailey
 module
 public import HashSig.SLHDSA.Wots
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
+import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
 
 /-!
 # XMSS (FIPS 205 §6)
@@ -585,9 +586,10 @@ theorem xmssClimbM_isTotalQueryBound (prims : Primitives p)
     IsTotalQueryBound
       (PerfectMerkleTree.climbM (xmssNodeHashM prims pk adrs) idx node auth :
         OracleComp (publicHashSpec prims) prims.Y)
-      auth.length :=
-  PerfectMerkleTree.climbM_isTotalQueryBound _
-    (fun h i l r => xmssNodeHashM_isTotalQueryBound_one prims pk adrs h i l r) idx node auth
+      auth.length := by
+  simpa using
+    PerfectMerkleTree.isTotalQueryBound_climbM (xmssNodeHashM prims pk adrs) 1 idx node auth
+      (fun h i l r => xmssNodeHashM_isTotalQueryBound_one prims pk adrs h i l r)
 
 /-- XMSS recovery is bounded by the complementary WOTS+ chains, one `T_l` compression, and one
 node hash per supplied authentication-path entry. -/
