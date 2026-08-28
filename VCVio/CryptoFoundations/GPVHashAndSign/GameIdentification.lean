@@ -218,7 +218,7 @@ lemma map_simulateQ_gpvOuter_writerLog_eq_gpvRealImplFresh (pk : PK) (sk : SK) {
   classical
   -- The fused base `gpvOuter.liftTarget (WriterT …)` is `(HasQuery.toQueryImpl).liftTarget` for the
   -- `HasQuery` instance `gpvOuter.toHasQuery`; provide it so the replay lemma's `baseW` matches.
-  letI hq : HasQuery (unifSpec + (Salt × M →ₒ Range))
+  let hq : HasQuery (unifSpec + (Salt × M →ₒ Range))
       (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) := (gpvOuter M Salt).toHasQuery
   -- (1) Fuse the inner WriterT pass with the outer cache simulation `gpvOuter` via
   -- `writerTMapBase`, and rewrite the fused handler as `baseW' + withLogging signBody`.
@@ -312,7 +312,7 @@ noncomputable def realGameVerifyFresh
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (pk : PK) (sk : SK) : SPMF Bool :=
-  𝒟[(fun z : ((M × (Salt × Domain)) × Bool) ×
+  𝒮[(fun z : ((M × (Salt × Domain)) × Bool) ×
         (((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) =>
         decide (z.1.1.1 ∉ z.2.1.2) && z.1.2) <$>
       (simulateQ (gpvRealImplFlagFresh psf hr M Salt pk sk)
@@ -328,7 +328,7 @@ noncomputable def progGameVerifyFresh
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) (pk : PK) : SPMF Bool :=
-  𝒟[(fun z : ((M × (Salt × Domain)) × Bool) ×
+  𝒮[(fun z : ((M × (Salt × Domain)) × Bool) ×
         (((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) =>
         decide (z.1.1.1 ∉ z.2.1.2) && z.1.2) <$>
       (simulateQ (progGameRunImplNoRecFlagFresh psf M Salt domainSample pk)
@@ -381,8 +381,8 @@ theorem gpv_realGameVerifyFresh_le_progGameVerifyFresh_add_collisionBound
       (S' := Salt × Domain) (α := M × (Salt × Domain))
       (oa := adv.main pk) (qSign := qSign) (qHash := qHash))
     (hNF : ∀ c, NeverFail (psf.trapdoorSample pk sk c))
-    (hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))]) :
     Pr[= true | realGameVerifyFresh psf hr M Salt adv pk sk]
       ≤ Pr[= true | progGameVerifyFresh psf hr M Salt adv domainSample pk]
@@ -458,7 +458,7 @@ theorem simulateQ_ofLift_liftTarget_run {σ : Type} {α : Type} (oa : ProbComp �
 game-identification (N)(a)).** A surface computation that begins by lifting a public-randomness
 `ProbComp` prefix `oa` (e.g. the GPV key generation `liftM hr.gen`) into the oracle world and then
 continues with `rest` factors, under the bundled `withStateOracle hashImpl ∅` `SPMF` semantics, as
-the `SPMF`-average over `𝒟[oa]` of the semantics of the continuation.
+the `SPMF`-average over `𝒮[oa]` of the semantics of the continuation.
 
 The public-randomness prefix touches neither the random-oracle cache nor the hidden state: it is
 simulated by the lifted identity implementation (`QueryImpl.simulateQ_add_liftComp_left` drops the
@@ -467,15 +467,15 @@ simulated by the lifted identity implementation (`QueryImpl.simulateQ_add_liftCo
 peel of the game-identification (N)(a) — the analogue of the FiatShamir
 `roSim.run'_liftM_bind`-style averaging step that opens
 `probOutput_unforgeableExp_eq_hybridExpAtKey_real`. -/
-theorem withStateOracle_evalDist_liftM_bind {ι : Type} {hashSpec : OracleSpec ι}
+theorem withStateOracle_evalSPMF_liftM_bind {ι : Type} {hashSpec : OracleSpec ι}
     (hashImpl : QueryImpl hashSpec (StateT hashSpec.QueryCache ProbComp))
     {α β : Type} (oa : ProbComp α)
     (rest : α → OracleComp (unifSpec + hashSpec) β) :
-    (SPMFSemantics.withStateOracle hashImpl ∅).evalDist (liftM oa >>= rest)
-      = (𝒟[oa] : SPMF α) >>= fun x =>
-          (SPMFSemantics.withStateOracle hashImpl ∅).evalDist (rest x) := by
+    (SPMFSemantics.withStateOracle hashImpl ∅).evalSPMF (liftM oa >>= rest)
+      = (𝒮[oa] : SPMF α) >>= fun x =>
+          (SPMFSemantics.withStateOracle hashImpl ∅).evalSPMF (rest x) := by
   classical
-  unfold SPMFSemantics.evalDist SPMFSemantics.withStateOracle
+  unfold SPMFSemantics.evalSPMF SPMFSemantics.withStateOracle
   simp only [SemanticsVia.denote]
   rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind]
   rw [show simulateQ ((QueryImpl.ofLift unifSpec ProbComp).liftTarget
@@ -520,8 +520,8 @@ theorem gpv_tvDist_real_programmed_le_collisionBound
       (S' := Salt × Domain) (α := M × (Salt × Domain))
       (oa := adv.main pk) (qSign := qSign) (qHash := qHash))
     (hNF : ∀ c, NeverFail (psf.trapdoorSample pk sk c))
-    (hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))]) :
     SPMF.tvDist (realGameRun psf hr M Salt adv pk sk)
         (progGameRun psf hr M Salt adv domainSample pk)
@@ -543,7 +543,7 @@ The GPV `runtime` interprets the surface program over the *sum* spec
 state-threading bridge in `ProgramLogic/Relational/ProgrammingOracle.lean`
 (`tvDist_simulateQ_randomOracle_withProgramming_le_probEvent_bad`) is instead stated for the bare
 single-spec lazy random oracle `simulateQ randomOracle`. The lemma
-`runtime_evalDist_liftComp` is the missing reduction connecting the two: on a sub-computation that
+`runtime_evalSPMF_liftComp` is the missing reduction connecting the two: on a sub-computation that
 only touches the random oracle (a hash-only `OracleComp (Salt × M →ₒ Range)` lifted into the sum),
 the runtime's bundled `SPMF` semantics collapse to the bare `randomOracle` run from the empty
 cache. -/
@@ -557,16 +557,16 @@ This is the reduction from the runtime's sum-spec `simulateQ'` interpreter down 
 `simulateQ randomOracle` form expected by the random-oracle state-threading bridge. It is
 proved by unfolding `withStateOracle` and applying `QueryImpl.simulateQ_add_liftComp_right`, which
 discards the (lifted-identity) uniform-sampling handler on a computation that never queries it. -/
-theorem runtime_evalDist_liftComp {α : Type} (ob : OracleComp (Salt × M →ₒ Range) α) :
-    (runtime M Salt).evalDist (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range)))
+theorem runtime_evalSPMF_liftComp {α : Type} (ob : OracleComp (Salt × M →ₒ Range) α) :
+    (runtime M Salt).evalSPMF (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range)))
       = (liftM (StateT.run'
           (simulateQ (randomOracle :
             QueryImpl (Salt × M →ₒ Range) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ob)
           ∅) : SPMF α) := by
   classical
-  unfold ProbCompRuntime.evalDist runtime
-  change (SPMFSemantics.withStateOracle _ ∅).evalDist _ = _
-  unfold SPMFSemantics.evalDist SPMFSemantics.withStateOracle
+  unfold ProbCompRuntime.evalSPMF runtime
+  change (SPMFSemantics.withStateOracle _ ∅).evalSPMF _ = _
+  unfold SPMFSemantics.evalSPMF SPMFSemantics.withStateOracle
   simp only [SemanticsVia.denote]
   rw [QueryImpl.simulateQ_add_liftComp_right]
 
@@ -592,7 +592,7 @@ bounded by the probability that the programming bad flag fires during the progra
 
 This is the exact, statistical-distance form of the sign-then-hash hop: it is one TV bound, **not**
 an exact equality (stating it as equality would be false, since a fresh salt can collide with a
-cached entry). It combines the pre-bridge `runtime_evalDist_liftComp` with
+cached entry). It combines the pre-bridge `runtime_evalSPMF_liftComp` with
 `tvDist_simulateQ_randomOracle_withProgramming_le_probEvent_bad`. The downstream task is to bound
 the right-hand bad-event probability by `collisionBound Salt qSign qHash` using regularity `hreg`
 (to align the programmed value `psf.eval pk s` with the real uniform answer) and the salt-collision
@@ -604,16 +604,16 @@ theorem tvDist_runtime_real_programmed_le_bad [Finite Range] [Inhabited Range] {
     (policy : OracleSpec.ProgrammingPolicy (Salt × M →ₒ Range))
     (ob : OracleComp (Salt × M →ₒ Range) α) :
     SPMF.tvDist
-        ((runtime M Salt).evalDist (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
+        ((runtime M Salt).evalSPMF (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
         (liftM (StateT.run'
           (simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) ob) (∅, false))
           : SPMF α)
       ≤ Pr[fun z : α × (Salt × M →ₒ Range).QueryCache × Bool => z.2.2 = true |
           (simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) ob).run
             (∅, false)].toReal := by
-  haveI : Fintype Range := Fintype.ofFinite Range
-  haveI : IsUniformSpec (Salt × M →ₒ Range) := IsUniformSpec.ofFintypeInhabited _
-  rw [runtime_evalDist_liftComp]
+  have : Fintype Range := Fintype.ofFinite Range
+  have : IsUniformSpec (Salt × M →ₒ Range) := IsUniformSpec.ofFintypeInhabited _
+  rw [runtime_evalSPMF_liftComp]
   exact tvDist_simulateQ_randomOracle_withProgramming_le_probEvent_bad
     (spec := (Salt × M →ₒ Range)) policy ob ∅
 
@@ -671,13 +671,13 @@ theorem tvDist_runtime_real_programmed_le_collisionBound_saltInclusive
     (ob : OracleComp (Salt × M →ₒ Range) α)
     (c : ℕ → Finset Salt) (hcache : ∀ j, (c j).card ≤ j + qHash)
     (hcouple : (SPMF.tvDist
-        ((runtime M Salt).evalDist (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
+        ((runtime M Salt).evalSPMF (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
         (liftM (StateT.run'
           (simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) ob) (∅, false))
           : SPMF α) : ℝ)
         ≤ (Pr[ (· = true) | saltSeq (Salt := Salt) c qSign]).toReal) :
     SPMF.tvDist
-        ((runtime M Salt).evalDist (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
+        ((runtime M Salt).evalSPMF (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
         (liftM (StateT.run'
           (simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) ob) (∅, false))
           : SPMF α)

@@ -225,7 +225,7 @@ lemma gpvRealImplFlagFresh_run_liftM_query (pk : PK) (sk : SK) (mc : Salt × M)
         (liftM (((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))).query
           (Sum.inl (Sum.inr mc))) : OracleComp _ Range)).run s
       = (gpvRealImplFlagFresh psf hr M Salt pk sk (.inl (.inr mc))).run s := by
-  erw [simulateQ_spec_query]; rfl
+  erw [simulateQ_spec_query]
 
 omit [Fintype Salt] in
 /-- **The appended forgery query is absorbed by the verification read.** The real freshness
@@ -252,7 +252,7 @@ theorem realGameVerifyFresh_appendForgeQuery (pk : PK) (sk : SK)
     obtain ⟨⟨msg, r, sig⟩, s₁⟩ := x
     simp only [gpvVerifyRead, simulateQ_bind, simulateQ_spec_query, simulateQ_pure,
       StateT.run_bind, StateT.run_pure, map_eq_bind_pure_comp, bind_assoc, pure_bind,
-      Function.comp_def, gpvRealImplFlagFresh_run_liftM_query]
+      Function.comp_def]
     exact gpvRealImplFlagFresh_run_read_bind_run_read psf hr M Salt pk sk (r, msg) s₁ _
   unfold realGameVerifyFresh
   rw [hrun]
@@ -269,7 +269,7 @@ lemma advantage_eq_keygen_average_realGameVerifyFresh
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt)) :
     adv.advantage (runtime M Salt)
-      = Pr[= true | (𝒟[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
+      = Pr[= true | (𝒮[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
           realGameVerifyFresh psf hr M Salt adv pksk.1 pksk.2] := by
   classical
   rw [SignatureAlg.unforgeableAdv.advantage,
@@ -277,7 +277,7 @@ lemma advantage_eq_keygen_average_realGameVerifyFresh
   rw [show (fun pksk : PK × SK =>
         (SPMFSemantics.withStateOracle
           (randomOracle : QueryImpl (Salt × M →ₒ Range)
-            (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalDist
+            (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalSPMF
           (letI : DecidableEq M := Classical.decEq M
            letI : DecidableEq (Salt × Domain) := Classical.decEq (Salt × Domain)
            do
@@ -328,8 +328,8 @@ theorem euf_cma_split_bound_of_queryBound [DecidableEq Domain]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
     (hreg : ∃ domainSample : PK → ProbComp Domain, ∀ (pk : PK) (sk : SK),
       (pk, sk) ∈ support hr.gen →
-      𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+      𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (qSign qHash : ℕ)
     (adv : SignatureAlg.unforgeableAdv
@@ -375,8 +375,8 @@ theorem euf_cma_collision_bound_of_queryBound [DecidableEq Domain]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
     (hreg : ∃ domainSample : PK → ProbComp Domain, ∀ (pk : PK) (sk : SK),
       (pk, sk) ∈ support hr.gen →
-      𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+      𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (qSign qHash : ℕ)
     (adv : SignatureAlg.unforgeableAdv

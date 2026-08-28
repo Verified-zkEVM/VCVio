@@ -142,7 +142,7 @@ theorem probOutput_realGameVerifyFresh_le_trapdoorSwap_add
   -- The psf-side game simulates the common computation `oa`: the verification read is
   -- invariant under the swap.
   have hgame : realGameVerifyFresh psf hr M Salt adv pk sk =
-      𝒟[(fun z : ((M × (Salt × Domain)) × Bool) ×
+      𝒮[(fun z : ((M × (Salt × Domain)) × Bool) ×
             (((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) =>
           decide (z.1.1.1 ∉ z.2.1.2) && z.1.2) <$>
         (simulateQ (gpvRealImplFlagFresh psf hr M Salt pk sk) oa).run
@@ -215,8 +215,8 @@ theorem advantage_le_advantage_add_of_trapdoorSample_tvDist
   classical
   rw [advantage_eq_keygen_average_realGameVerifyFresh psf hr M Salt adv,
     advantage_eq_keygen_average_realGameVerifyFresh psf' hr M Salt ⟨adv.main⟩,
-    probOutput_bind_eq_tsum (𝒟[hr.gen] : SPMF (PK × SK)),
-    probOutput_bind_eq_tsum (𝒟[hr.gen] : SPMF (PK × SK))]
+    probOutput_bind_eq_tsum (𝒮[hr.gen] : SPMF (PK × SK)),
+    probOutput_bind_eq_tsum (𝒮[hr.gen] : SPMF (PK × SK))]
   have hper : ∀ x : PK × SK, x ∈ support hr.gen →
       Pr[= true | realGameVerifyFresh psf hr M Salt adv x.1 x.2] ≤
         Pr[= true | realGameVerifyFresh psf' hr M Salt ⟨adv.main⟩ x.1 x.2]
@@ -224,26 +224,26 @@ theorem advantage_le_advantage_add_of_trapdoorSample_tvDist
     probOutput_realGameVerifyFresh_le_trapdoorSwap_add psf psf' hr M Salt hEval hShort adv
       x.1 x.2 hε (hStep x.1 x.2 hx) (hQ x.1)
   calc ∑' x : PK × SK,
-        Pr[= x | 𝒟[hr.gen]] * Pr[= true | realGameVerifyFresh psf hr M Salt adv x.1 x.2]
-      ≤ ∑' x : PK × SK, (Pr[= x | 𝒟[hr.gen]]
+        Pr[= x | 𝒮[hr.gen]] * Pr[= true | realGameVerifyFresh psf hr M Salt adv x.1 x.2]
+      ≤ ∑' x : PK × SK, (Pr[= x | 𝒮[hr.gen]]
             * Pr[= true | realGameVerifyFresh psf' hr M Salt ⟨adv.main⟩ x.1 x.2]
-          + Pr[= x | 𝒟[hr.gen]] * ENNReal.ofReal (qSign * ε)) :=
+          + Pr[= x | 𝒮[hr.gen]] * ENNReal.ofReal (qSign * ε)) :=
         ENNReal.tsum_le_tsum fun x => by
           by_cases hx : x ∈ support hr.gen
           · rw [← mul_add]; gcongr; exact hper x hx
-          · have hzero : Pr[= x | (𝒟[hr.gen] : SPMF (PK × SK))] = 0 :=
+          · have hzero : Pr[= x | (𝒮[hr.gen] : SPMF (PK × SK))] = 0 :=
               probOutput_eq_zero_of_not_mem_support (mx := hr.gen) hx
             simp [hzero]
-    _ = ∑' x : PK × SK, (Pr[= x | 𝒟[hr.gen]]
+    _ = ∑' x : PK × SK, (Pr[= x | 𝒮[hr.gen]]
             * Pr[= true | realGameVerifyFresh psf' hr M Salt ⟨adv.main⟩ x.1 x.2])
-          + (∑' x : PK × SK, Pr[= x | 𝒟[hr.gen]]) * ENNReal.ofReal (qSign * ε) := by
+          + (∑' x : PK × SK, Pr[= x | 𝒮[hr.gen]]) * ENNReal.ofReal (qSign * ε) := by
         rw [ENNReal.tsum_add, ENNReal.tsum_mul_right]
-    _ ≤ ∑' x : PK × SK, (Pr[= x | 𝒟[hr.gen]]
+    _ ≤ ∑' x : PK × SK, (Pr[= x | 𝒮[hr.gen]]
             * Pr[= true | realGameVerifyFresh psf' hr M Salt ⟨adv.main⟩ x.1 x.2])
           + 1 * ENNReal.ofReal (qSign * ε) := by
         gcongr
         exact tsum_probOutput_le_one
-    _ = ∑' x : PK × SK, (Pr[= x | 𝒟[hr.gen]]
+    _ = ∑' x : PK × SK, (Pr[= x | 𝒮[hr.gen]]
             * Pr[= true | realGameVerifyFresh psf' hr M Salt ⟨adv.main⟩ x.1 x.2])
           + ENNReal.ofReal (qSign * ε) := by rw [one_mul]
 

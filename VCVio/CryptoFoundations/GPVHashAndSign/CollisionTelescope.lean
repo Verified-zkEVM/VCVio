@@ -463,7 +463,7 @@ averaged over the fresh salt draw. It specializes `tvDist_bind_left_event_le` at
 `signRunF_tvDist_le_flag` accumulates. -/
 theorem tvDist_signStep_real_programmed_le_collision [Nonempty Salt] {β : Type}
     (cache : Finset Salt) (freal fprog : Salt → ProbComp β)
-    (h_eq : ∀ r, r ∉ cache → 𝒟[freal r] = 𝒟[fprog r]) :
+    (h_eq : ∀ r, r ∉ cache → 𝒮[freal r] = 𝒮[fprog r]) :
     tvDist
         (do let r ← ($ᵗ Salt : ProbComp Salt); freal r)
         (do let r ← ($ᵗ Salt : ProbComp Salt); fprog r)
@@ -491,7 +491,7 @@ omit [Fintype Salt] in
 never fails, the whole `qSign`-step `signRunF` recursion never fails: the leading uniform salt draw
 is total, the step is total by hypothesis, and the tail never fails by induction. Consequently its
 output distribution has total mass one, so it can be discarded as a value-irrelevant never-failing
-prefix (`evalDist_bind_const_neverFails`) — the tape-suffix-discard step of a fold factorization. -/
+prefix (`evalSPMF_bind_const_neverFails`) — the tape-suffix-discard step of a fold factorization. -/
 theorem signRunF_neverFail {St : Type} [Nonempty Salt]
     (step : ℕ → St → Salt → ProbComp St) (c : ℕ → Finset Salt)
     [hstep : ∀ n s r, NeverFail (step n s r)] :
@@ -509,18 +509,18 @@ omit [Fintype Salt] in
 `signRunF` recursion never fails (`signRunF_neverFail`), so binding a *value-irrelevant*
 continuation `k` after it contributes only `signRunF`'s total mass one: the salt-draw prefix is
 discarded from the output distribution. This is the GPV `signRunF` instance of the generic
-never-failing-prefix discard `evalDist_bind_const_neverFails`; it is the move that drops the
+never-failing-prefix discard `evalSPMF_bind_const_neverFails`; it is the move that drops the
 over-provisioned front salt tape once the genuine content has been spliced out, the analogue of the
 `drawList` suffix discard in the worked Fiat–Shamir factorization. -/
-theorem evalDist_signRunF_bind_const {St γ : Type} [Nonempty Salt]
+theorem evalSPMF_signRunF_bind_const {St γ : Type} [Nonempty Salt]
     (step : ℕ → St → Salt → ProbComp St) (c : ℕ → Finset Salt)
     [∀ n s r, NeverFail (step n s r)] (n : ℕ) (sb : St × Bool) (k : ProbComp γ) :
-    𝒟[signRunF (Salt := Salt) step c n sb >>= fun _ => k] = 𝒟[k] := by
-  haveI := signRunF_neverFail (Salt := Salt) step c n sb
+    𝒮[signRunF (Salt := Salt) step c n sb >>= fun _ => k] = 𝒮[k] := by
+  have := signRunF_neverFail (Salt := Salt) step c n sb
   refine SPMF.ext fun x => ?_
   set sr := signRunF (Salt := Salt) step c n sb with hsr
-  rw [show 𝒟[sr >>= fun _ => k] x = Pr[= x | sr >>= fun _ => k] from (probOutput_def _ _).symm,
-    show 𝒟[k] x = Pr[= x | k] from (probOutput_def _ _).symm,
+  rw [show 𝒮[sr >>= fun _ => k] x = Pr[= x | sr >>= fun _ => k] from (probOutput_def _ _).symm,
+    show 𝒮[k] x = Pr[= x | k] from (probOutput_def _ _).symm,
     probOutput_bind_const, probFailure_eq_zero]
   simp
 
@@ -575,13 +575,13 @@ state-dependent per-step costs. -/
 theorem signRunF_tvDist_le_saltSeq_aux {St : Type} [Finite Salt]
     (stepReal stepProg : ℕ → St → Salt → ProbComp St)
     (c : ℕ → Finset Salt) [∀ n st r, NeverFail (stepReal n st r)]
-    (h_step : ∀ n st r, r ∉ c n → 𝒟[stepReal n st r] = 𝒟[stepProg n st r])
+    (h_step : ∀ n st r, r ∉ c n → 𝒮[stepReal n st r] = 𝒮[stepProg n st r])
     (n : ℕ) (st : St) (b : Bool) :
     tvDist (signRunF (Salt := Salt) stepReal c n (st, b))
         (signRunF (Salt := Salt) stepProg c n (st, b))
       ≤ (Pr[(· = true) | saltSeq (Salt := Salt) c n]).toReal := by
   classical
-  haveI : Fintype Salt := Fintype.ofFinite Salt
+  have : Fintype Salt := Fintype.ofFinite Salt
   induction n generalizing st b with
   | zero =>
       simp only [signRunF]
@@ -626,7 +626,7 @@ theorem signRunF_tvDist_le_saltSeq_aux {St : Type} [Finite Salt]
               (stepProg n st r >>= fun st' =>
                 signRunF (Salt := Salt) stepProg c n (st', b || decide (r ∈ c n)))
               = 0 := by
-            rw [tvDist_eq_zero_iff, evalDist_bind, evalDist_bind, h_step n st r hr]
+            rw [tvDist_eq_zero_iff, evalSPMF_bind, evalSPMF_bind, h_step n st r hr]
           rw [hhead, add_zero]
           exact htail
       -- Normalize the product projections `(st, b).1`, `(st, b).2` to `st`, `b`.
@@ -710,7 +710,7 @@ hypothesis `hcouple`, once the GPV reduction handlers and per-step caches `c j` 
 theorem signRunF_tvDist_le_saltSeq {St : Type} [Finite Salt]
     (stepReal stepProg : ℕ → St → Salt → ProbComp St)
     (c : ℕ → Finset Salt) [∀ n st r, NeverFail (stepReal n st r)]
-    (h_step : ∀ n st r, r ∉ c n → 𝒟[stepReal n st r] = 𝒟[stepProg n st r])
+    (h_step : ∀ n st r, r ∉ c n → 𝒮[stepReal n st r] = 𝒮[stepProg n st r])
     (n : ℕ) (st : St) :
     tvDist (signRunF (Salt := Salt) stepReal c n (st, false))
         (signRunF (Salt := Salt) stepProg c n (st, false))
@@ -749,7 +749,7 @@ below). -/
 theorem signRunF_tvDist_le_collisionBound {St : Type} [Finite Salt] [Nonempty Salt]
     (stepReal stepProg : ℕ → St → Salt → ProbComp St)
     (c : ℕ → Finset Salt) [∀ n st r, NeverFail (stepReal n st r)]
-    (h_step : ∀ n st r, r ∉ c n → 𝒟[stepReal n st r] = 𝒟[stepProg n st r])
+    (h_step : ∀ n st r, r ∉ c n → 𝒮[stepReal n st r] = 𝒮[stepProg n st r])
     (qSign qHash : ℕ) (hcache : ∀ j, (c j).card ≤ j + qHash) (st : St) :
     tvDist (signRunF (Salt := Salt) stepReal c qSign (st, false))
         (signRunF (Salt := Salt) stepProg c qSign (st, false))

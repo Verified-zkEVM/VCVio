@@ -52,8 +52,8 @@ theorem gpv_realGameVerify_le_progGameVerify_add_collisionBound
       (S' := Salt × Domain) (α := M × (Salt × Domain))
       (oa := adv.main pk) (qSign := qSign) (qHash := qHash))
     (hNF : ∀ c, NeverFail (psf.trapdoorSample pk sk c))
-    (hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (k : M × (Salt × Domain) → SPMF Bool) :
     Pr[= true | realGameRun psf hr M Salt adv pk sk >>= k]
@@ -97,9 +97,9 @@ verify-extended WriterT signing-log experiment under the bundled `withStateOracl
 semantics.
 
 The GPV `keygen` is `liftM hr.gen`, a public-randomness prefix that touches neither the
-random-oracle cache nor the hidden state; the keygen-peel `withStateOracle_evalDist_liftM_bind`
+random-oracle cache nor the hidden state; the keygen-peel `withStateOracle_evalSPMF_liftM_bind`
 commutes its draw straight out of the bundled `withStateOracle` semantics as an `SPMF`-average over
-`𝒟[hr.gen]`. This is the GPV-runtime analogue of the FiatShamir `roSim.run'_liftM_bind`-style
+`𝒮[hr.gen]`. This is the GPV-runtime analogue of the FiatShamir `roSim.run'_liftM_bind`-style
 averaging step that
 opens `probOutput_unforgeableExp_eq_hybridExpAtKey_real`; it isolates the keygen average so the
 remaining game-identification work is a per-key WriterT-log → signed-set reconstruction. -/
@@ -107,10 +107,10 @@ theorem probOutput_unforgeableExp_eq_keygen_average
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt)) :
     Pr[= true | SignatureAlg.unforgeableExp (runtime M Salt) adv]
-      = Pr[= true | (𝒟[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
+      = Pr[= true | (𝒮[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
           (SPMFSemantics.withStateOracle
             (randomOracle : QueryImpl (Salt × M →ₒ Range)
-              (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalDist
+              (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalSPMF
             (letI : DecidableEq M := Classical.decEq M
              letI : DecidableEq (Salt × Domain) := Classical.decEq (Salt × Domain)
              do
@@ -136,12 +136,12 @@ theorem probOutput_unforgeableExp_eq_keygen_average
   rw [GPVHashAndSign.runtime]
   change (SPMFSemantics.withStateOracle
       (randomOracle : QueryImpl (Salt × M →ₒ Range)
-        (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalDist (liftM hr.gen >>= _)
-    = (𝒟[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
+        (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalSPMF (liftM hr.gen >>= _)
+    = (𝒮[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
         (SPMFSemantics.withStateOracle
           (randomOracle : QueryImpl (Salt × M →ₒ Range)
-            (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalDist _
-  rw [withStateOracle_evalDist_liftM_bind]
+            (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalSPMF _
+  rw [withStateOracle_evalSPMF_liftM_bind]
   refine bind_congr fun pksk => ?_
   obtain ⟨pk, sk⟩ := pksk
   rfl
@@ -216,7 +216,7 @@ lemma signedSet_eq_wasQueried
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt)) :
     (SPMFSemantics.withStateOracle
       (randomOracle : QueryImpl (Salt × M →ₒ Range)
-        (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalDist
+        (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalSPMF
       (letI : DecidableEq M := Classical.decEq M
        letI : DecidableEq (Salt × Domain) := Classical.decEq (Salt × Domain)
        do
@@ -268,7 +268,7 @@ lemma signedSet_eq_wasQueried
     simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
     refine bind_congr fun x => bind_congr fun v => congrArg pure ?_
     congr!
-  rw [heq, withStateOracle_evalDist_eq, simulateQ_map, StateT.run'_eq, StateT.run_map]
+  rw [heq, withStateOracle_evalSPMF_eq, simulateQ_map, StateT.run'_eq, StateT.run_map]
   simp only [Functor.map_map]
   simp only [not_wasQueried_eq_decide_not_mem_toFinset]
   -- Factor the freshness mask through the kernel's `(output, cache, signedSet)` reshaping, then
@@ -329,8 +329,8 @@ theorem gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain)
     (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
-      𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+      𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (hNF : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
       ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
@@ -338,7 +338,7 @@ theorem gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound
       (S' := Salt × Domain) (α := M × (Salt × Domain))
       (oa := adv.main pk) (qSign := qSign) (qHash := qHash)) :
     adv.advantage (runtime M Salt) ≤
-      Pr[= true | (𝒟[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
+      Pr[= true | (𝒮[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
         progGameVerifyFresh psf hr M Salt adv domainSample pksk.1]
         + collisionBound Salt qSign qHash := by
   classical
@@ -347,7 +347,7 @@ theorem gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound
   rw [show (fun pksk : PK × SK =>
         (SPMFSemantics.withStateOracle
           (randomOracle : QueryImpl (Salt × M →ₒ Range)
-            (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalDist
+            (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ∅).evalSPMF
           (letI : DecidableEq M := Classical.decEq M
            letI : DecidableEq (Salt × Domain) := Classical.decEq (Salt × Domain)
            do
@@ -366,11 +366,11 @@ theorem gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound
             return !log.wasQueried msg && verified))
       = (fun pksk : PK × SK => realGameVerifyFresh psf hr M Salt adv pksk.1 pksk.2) from
     funext fun pksk => signedSet_eq_wasQueried psf hr M Salt pksk.1 pksk.2 adv]
-  rw [probOutput_bind_eq_tsum (𝒟[hr.gen] : SPMF (PK × SK)), probOutput_bind_eq_tsum
-    (𝒟[hr.gen] : SPMF (PK × SK))]
+  rw [probOutput_bind_eq_tsum (𝒮[hr.gen] : SPMF (PK × SK)), probOutput_bind_eq_tsum
+    (𝒮[hr.gen] : SPMF (PK × SK))]
   -- Average the per-key coupling hop over `(pk, sk) ← hr.gen`: weight each per-key bound by its
-  -- keygen mass `Pr[= x | 𝒟[hr.gen]]`, pull the constant `collisionBound` out using
-  -- `∑' x, Pr[= x | 𝒟[hr.gen]] ≤ 1`.
+  -- keygen mass `Pr[= x | 𝒮[hr.gen]]`, pull the constant `collisionBound` out using
+  -- `∑' x, Pr[= x | 𝒮[hr.gen]] ≤ 1`.
   have hper : ∀ x ∈ support hr.gen,
       Pr[= true | realGameVerifyFresh psf hr M Salt adv x.1 x.2] ≤
         Pr[= true | progGameVerifyFresh psf hr M Salt adv domainSample x.1]
@@ -379,26 +379,26 @@ theorem gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound
       x.1 x.2 adv domainSample qSign qHash (hQ x.1)
       (fun c => hNF x.1 x.2 hx c) (hreg x.1 x.2 hx)
   calc ∑' x : PK × SK,
-        Pr[= x | 𝒟[hr.gen]] * Pr[= true | realGameVerifyFresh psf hr M Salt adv x.1 x.2]
-      ≤ ∑' x : PK × SK, (Pr[= x | 𝒟[hr.gen]]
+        Pr[= x | 𝒮[hr.gen]] * Pr[= true | realGameVerifyFresh psf hr M Salt adv x.1 x.2]
+      ≤ ∑' x : PK × SK, (Pr[= x | 𝒮[hr.gen]]
             * Pr[= true | progGameVerifyFresh psf hr M Salt adv domainSample x.1]
-          + Pr[= x | 𝒟[hr.gen]] * collisionBound Salt qSign qHash) :=
+          + Pr[= x | 𝒮[hr.gen]] * collisionBound Salt qSign qHash) :=
         ENNReal.tsum_le_tsum fun x => by
           by_cases hx : x ∈ support hr.gen
           · rw [← mul_add]; gcongr; exact hper x hx
-          · have hzero : Pr[= x | (𝒟[hr.gen] : SPMF (PK × SK))] = 0 :=
+          · have hzero : Pr[= x | (𝒮[hr.gen] : SPMF (PK × SK))] = 0 :=
               probOutput_eq_zero_of_not_mem_support (mx := hr.gen) hx
             simp [hzero]
-    _ = ∑' x : PK × SK, (Pr[= x | 𝒟[hr.gen]]
+    _ = ∑' x : PK × SK, (Pr[= x | 𝒮[hr.gen]]
             * Pr[= true | progGameVerifyFresh psf hr M Salt adv domainSample x.1])
-          + (∑' x : PK × SK, Pr[= x | 𝒟[hr.gen]]) * collisionBound Salt qSign qHash := by
+          + (∑' x : PK × SK, Pr[= x | 𝒮[hr.gen]]) * collisionBound Salt qSign qHash := by
         rw [ENNReal.tsum_add, ENNReal.tsum_mul_right]
-    _ ≤ ∑' x : PK × SK, (Pr[= x | 𝒟[hr.gen]]
+    _ ≤ ∑' x : PK × SK, (Pr[= x | 𝒮[hr.gen]]
             * Pr[= true | progGameVerifyFresh psf hr M Salt adv domainSample x.1])
           + 1 * collisionBound Salt qSign qHash := by
         gcongr
         exact tsum_probOutput_le_one
-    _ = ∑' x : PK × SK, (Pr[= x | 𝒟[hr.gen]]
+    _ = ∑' x : PK × SK, (Pr[= x | 𝒮[hr.gen]]
             * Pr[= true | progGameVerifyFresh psf hr M Salt adv domainSample x.1])
           + collisionBound Salt qSign qHash := by rw [one_mul]
 
@@ -456,8 +456,8 @@ preimage recorded at each programmed random-oracle entry by the collision reduct
 lemma isShort_of_mem_support_domainSample
     (domainSample : PK → ProbComp Domain) (pk : PK) (sk : SK)
     (hcorrect : psf.CorrectAt pk sk)
-    (hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (s : Domain) (hs : s ∈ support (domainSample pk)) :
     psf.isShort s = true := by
@@ -470,7 +470,7 @@ lemma isShort_of_mem_support_domainSample
   have hmemR : (psf.eval pk s, s) ∈
       support (do let c ← ($ᵗ Range); let s' ← psf.trapdoorSample pk sk c; pure (c, s') :
         ProbComp (Range × Domain)) := by
-    rw [← mem_support_evalDist_iff, ← hreg, mem_support_evalDist_iff]
+    rw [← mem_support_evalSPMF_iff, ← hreg, mem_support_evalSPMF_iff]
     exact hmemL
   simp only [support_bind, support_pure, Set.mem_iUnion, Set.mem_singleton_iff,
     Prod.mk.injEq] at hmemR
@@ -631,8 +631,8 @@ the forged point exhibits a hidden preimage `sHidden` with `psf.eval pk sHidden 
 lemma distinct_implies_collision_pointwise [DecidableEq Domain]
     (domainSample : PK → ProbComp Domain) (pk : PK) (sk : SK)
     (hcorrect : psf.CorrectAt pk sk)
-    (hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -827,8 +827,8 @@ turns into the table collision. -/
 lemma gpv_perKey_distinct_le_collision [DecidableEq Domain]
     (domainSample : PK → ProbComp Domain) (pk : PK) (sk : SK)
     (hcorrect : psf.CorrectAt pk sk)
-    (hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -1179,7 +1179,7 @@ open Classical in
 omit [Fintype Salt] in
 /-- **SL-A: the 3-term averaging reduction skeleton.** Reduces the Step-2 keygen-averaged
 programmed-game bound to a single per-key `(pk, sk)` bound by expanding all three advantage terms
-over the common keygen mass `𝒟[hr.gen]`.  Given a per-key hypothesis `h` bounding the programmed
+over the common keygen mass `𝒮[hr.gen]`.  Given a per-key hypothesis `h` bounding the programmed
 freshness game at `pk` by the reduction's collision event at `pk` plus the multi-target factor
 `qSign + qHash` times the exact-match event at `(pk, sk)`, averaging `h` over `(pk, sk) ← hr.gen`
 re-folds the right-hand averages into `collisionFindingAdvantage (reduction …)` (via SL-C, whose
@@ -1203,7 +1203,7 @@ theorem gpv_progGameVerifyFreshAvg_le_of_perKey [DecidableEq Domain]
               let x' ← programmedPreimageReduction psf hr M Salt adv domainSample qSign qHash
                 pksk.1 y
               pure (decide (x' = x)) : ProbComp Bool)]) :
-    Pr[= true | (𝒟[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
+    Pr[= true | (𝒮[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
         progGameVerifyFresh psf hr M Salt adv domainSample pksk.1]
       ≤ collisionFindingAdvantage (psf := psf) (hr := hr)
           (reduction psf hr M Salt adv domainSample)
@@ -1214,7 +1214,7 @@ theorem gpv_progGameVerifyFreshAvg_le_of_perKey [DecidableEq Domain]
   rw [collisionFindingAdvantage_reduction_eq psf hr M Salt adv domainSample,
     programmedPreimageAdvantage_reduction_eq psf hr M Salt adv domainSample qSign qHash,
     bind_map_left]
-  rw [probOutput_bind_eq_tsum (𝒟[hr.gen] : SPMF (PK × SK)),
+  rw [probOutput_bind_eq_tsum (𝒮[hr.gen] : SPMF (PK × SK)),
     probOutput_bind_eq_tsum hr.gen, probOutput_bind_eq_tsum hr.gen]
   rw [← ENNReal.tsum_mul_left, ← ENNReal.tsum_add]
   refine ENNReal.tsum_le_tsum fun x => ?_
@@ -1222,7 +1222,7 @@ theorem gpv_progGameVerifyFreshAvg_le_of_perKey [DecidableEq Domain]
   · rw [mul_left_comm (↑(qSign + qHash) : ENNReal), ← mul_add]
     exact mul_le_mul' le_rfl (h x hx)
   · have hzero : Pr[= x | hr.gen] = 0 := probOutput_eq_zero_of_not_mem_support hx
-    have hzero' : Pr[= x | (𝒟[hr.gen] : SPMF (PK × SK))] = 0 :=
+    have hzero' : Pr[= x | (𝒮[hr.gen] : SPMF (PK × SK))] = 0 :=
       probOutput_eq_zero_of_not_mem_support (mx := hr.gen) hx
     simp [hzero, hzero']
 

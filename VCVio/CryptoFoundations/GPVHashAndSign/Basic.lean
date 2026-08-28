@@ -88,8 +88,8 @@ def Regularity [SampleableType Range]
     (psf : PreimageSampleableFunction PK SK Domain Range) : Prop :=
   ∃ domainSample : PK → ProbComp Domain,
     ∀ (pk : PK) (sk : SK),
-      𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+      𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))]
 
 end PreimageSampleableFunction

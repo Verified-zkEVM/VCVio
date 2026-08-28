@@ -380,14 +380,14 @@ omit [DecidableEq Range] [Fintype Salt] in
 /-- **Post-winner coincidence (signed-set-augmented).** Once the running counter has passed the
 winner slot (`j < s.1.1.2`), `embedTrapIdxSigImpl … j y` and `embedTrapFreshIdxSigImpl` produce
 identical output distributions over any `oa`.  Signed-set mirror of
-`evalDist_run_embedTrapIdxImpl_eq_embedTrapFreshIdx_of_lt`. -/
-lemma evalDist_run_embedTrapIdxSigImpl_eq_embedTrapFreshIdxSig_of_lt (pk : PK) (sk : SK) (j : ℕ)
+`evalSPMF_run_embedTrapIdxImpl_eq_embedTrapFreshIdx_of_lt`. -/
+lemma evalSPMF_run_embedTrapIdxSigImpl_eq_embedTrapFreshIdxSig_of_lt (pk : PK) (sk : SK) (j : ℕ)
     (y : Range)
     {β : Type} (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β) :
     ∀ (s : (((Salt × M →ₒ Range).QueryCache × ℕ) × ((Salt × M) → Option ℕ)) × Finset M),
       j < s.1.1.2 →
-      𝒟[(simulateQ (embedTrapIdxSigImpl psf M Salt pk sk j y) oa).run s] =
-        𝒟[(simulateQ (embedTrapFreshIdxSigImpl psf M Salt pk sk) oa).run s] := by
+      𝒮[(simulateQ (embedTrapIdxSigImpl psf M Salt pk sk j y) oa).run s] =
+        𝒮[(simulateQ (embedTrapFreshIdxSigImpl psf M Salt pk sk) oa).run s] := by
   induction oa using OracleComp.inductionOn with
   | pure a => intro s _; rfl
   | query_bind t ob ih =>
@@ -399,7 +399,7 @@ lemma evalDist_run_embedTrapIdxSigImpl_eq_embedTrapFreshIdxSig_of_lt (pk : PK) (
         embedTrapIdxSigImpl_run_step_eq_embedTrapFreshIdxSig psf M Salt pk sk j y t s
           (fun q _ _ => by omega)
       rw [hstep]
-      refine evalDist_bind_congr (fun p hp => ?_)
+      refine evalSPMF_bind_congr (fun p hp => ?_)
       have hcount : s.1.1.2 ≤ p.2.1.1.2 :=
         embedTrapIdxSigImpl_run_step_count_le psf M Salt pk sk j y t s p (by rw [hstep]; exact hp)
       exact ih p.1 p.2 (by omega)
@@ -408,23 +408,23 @@ omit [DecidableEq Range] [Fintype Salt] in
 /-- **The signed-set-augmented GPV Step-2 front-loading lift.** Averaging the signed-set-augmented
 trap-sibling embed run over an external target draw `y ← $ᵗ Range` equals the signed-set-augmented
 inline-fresh run `embedTrapFreshIdxSigImpl`.  Signed-set mirror of
-`evalDist_frontDraw_embedTrapIdxImpl_eq_embedTrapFreshIdx`: off-winner steps commute the front `y`
+`evalSPMF_frontDraw_embedTrapIdxImpl_eq_embedTrapFreshIdx`: off-winner steps commute the front `y`
 past `y`-independent steps; at the count-`j` winner miss the front `y` is the immediately consumed
 draw, so the front `y` *is* the inline-fresh winner draw, and post-winner the two runs coincide
-(`evalDist_run_embedTrapIdxSigImpl_eq_embedTrapFreshIdxSig_of_lt`).  The signed set is updated
+(`evalSPMF_run_embedTrapIdxSigImpl_eq_embedTrapFreshIdxSig_of_lt`).  The signed set is updated
 identically on both sides (signing ignores `y`) and is never read, so it rides along passively. -/
-lemma evalDist_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl [Inhabited Range]
+lemma evalSPMF_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl [Inhabited Range]
     (pk : PK) (sk : SK) (j : ℕ)
     {β : Type} (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β) :
     ∀ (s : (((Salt × M →ₒ Range).QueryCache × ℕ) × ((Salt × M) → Option ℕ)) × Finset M),
-      𝒟[(($ᵗ Range : ProbComp Range) >>= fun y =>
+      𝒮[(($ᵗ Range : ProbComp Range) >>= fun y =>
           (simulateQ (embedTrapIdxSigImpl psf M Salt pk sk j y) oa).run s)] =
-        𝒟[(simulateQ (embedTrapFreshIdxSigImpl psf M Salt pk sk) oa).run s] := by
+        𝒮[(simulateQ (embedTrapFreshIdxSigImpl psf M Salt pk sk) oa).run s] := by
   induction oa using OracleComp.inductionOn with
   | pure a =>
       intro s
       simp only [simulateQ_pure, StateT.run_pure]
-      rw [OracleComp.DeferredSampling.evalDist_bind_const_neverFails _
+      rw [OracleComp.DeferredSampling.evalSPMF_bind_const_neverFails _
         (probFailure_uniformSample Range)]
   | query_bind t ob ih =>
       intro s
@@ -452,10 +452,10 @@ lemma evalDist_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl [Inhabited
                       fun t' => if t' = q then some s.1.1.2 else s.1.2 t'), s.2)) from by
           rw [embedTrapFreshIdxSigImpl_run_inl_inr, hmiss]
           simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_apply]]
-        refine evalDist_bind_congr' _ (fun y => ?_)
-        rw [OracleComp.DeferredSampling.evalDist_bind_const_neverFails _
+        refine evalSPMF_bind_congr' _ (fun y => ?_)
+        rw [OracleComp.DeferredSampling.evalSPMF_bind_const_neverFails _
           (probFailure_uniformSample Range)]
-        exact evalDist_run_embedTrapIdxSigImpl_eq_embedTrapFreshIdxSig_of_lt psf M Salt pk sk j y
+        exact evalSPMF_run_embedTrapIdxSigImpl_eq_embedTrapFreshIdxSig_of_lt psf M Salt pk sk j y
           (ob y)
           (((s.1.1.1.cacheQuery q y, s.1.1.2 + 1),
             fun t' => if t' = q then some s.1.1.2 else s.1.2 t'), s.2)
@@ -471,10 +471,10 @@ lemma evalDist_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl [Inhabited
                 (simulateQ (embedTrapIdxSigImpl psf M Salt pk sk j y) (ob p.1)).run p.2) from by
           funext y
           rw [embedTrapIdxSigImpl_run_step_eq_embedTrapFreshIdxSig psf M Salt pk sk j y t s hoff]]
-        rw [OracleComp.DeferredSampling.evalDist_bind_comm ($ᵗ Range : ProbComp Range)
+        rw [OracleComp.DeferredSampling.evalSPMF_bind_comm ($ᵗ Range : ProbComp Range)
           ((embedTrapFreshIdxSigImpl psf M Salt pk sk t).run s)
           (fun y p => (simulateQ (embedTrapIdxSigImpl psf M Salt pk sk j y) (ob p.1)).run p.2)]
-        refine evalDist_bind_congr' _ (fun p => ?_)
+        refine evalSPMF_bind_congr' _ (fun p => ?_)
         exact ih p.1 p.2
 
 omit [DecidableEq Range] [Fintype Salt] in
@@ -482,7 +482,7 @@ omit [DecidableEq Range] [Fintype Salt] in
 functional `F`, the inline-fresh run's expectation equals the front-target-averaged trap-sibling
 run's expectation: `∑' w, Pr[= w | freshSig run] · F w = ∑' y, Pr[= y] · ∑' w, Pr[= w |
 embedTrapIdxSig … j y run] · F w`.  Immediate from
-`evalDist_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl` (the two `evalDist`s agree, so
+`evalSPMF_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl` (the two `evalSPMF`s agree, so
 their expectations of `F` agree) and the Tonelli rearrangement `tsum_probOutput_bind_mul`. -/
 lemma tsum_probOutput_embedTrapFreshIdxSig_mul_eq_frontDraw [Inhabited Range]
     (pk : PK) (sk : SK) (j : ℕ)
@@ -493,7 +493,7 @@ lemma tsum_probOutput_embedTrapFreshIdxSig_mul_eq_frontDraw [Inhabited Range]
     (∑' w, Pr[= w | (simulateQ (embedTrapFreshIdxSigImpl psf M Salt pk sk) oa).run s] * F w) =
       ∑' y : Range, Pr[= y | ($ᵗ Range : ProbComp Range)] *
         ∑' w, Pr[= w | (simulateQ (embedTrapIdxSigImpl psf M Salt pk sk j y) oa).run s] * F w := by
-  have hlift := evalDist_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl psf M Salt pk sk j
+  have hlift := evalSPMF_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl psf M Salt pk sk j
     oa s
   have hF : ∀ w, Pr[= w | (simulateQ (embedTrapFreshIdxSigImpl psf M Salt pk sk) oa).run s] =
       Pr[= w | (($ᵗ Range : ProbComp Range) >>= fun y =>

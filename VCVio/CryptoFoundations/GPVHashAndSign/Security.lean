@@ -41,37 +41,37 @@ recovers the fresh-sig run's `(((cache × counter) × idx) × signedSet)` state 
 run's per-programming-event trapdoor draw `x ← trapdoorSample pk sk v` is never read by either run,
 so under `NeverFail` it contributes only its (unit) mass. -/
 
-/-- **`evalDist`-level state-projection transport (differing state types).** If every oracle step of
+/-- **`evalSPMF`-level state-projection transport (differing state types).** If every oracle step of
 `impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec'))` becomes the corresponding `impl₂` step after
 mapping the state with `proj : σ₁ → σ₂` *at the distribution level*, then the full simulated runs
-agree under the same projection at the distribution level.  This is the `evalDist`-level relaxation
+agree under the same projection at the distribution level.  This is the `evalSPMF`-level relaxation
 of `OracleComp.map_run_simulateQ_eq_of_query_map_eq`: the per-query hypothesis may discard a
 never-failing answer-irrelevant draw (e.g. a write-only trapdoor sample) that breaks the *monadic*
 equality but preserves the distribution. -/
-theorem evalDist_map_run_simulateQ_eq_of_query_evalDist_map_eq
+theorem evalSPMF_map_run_simulateQ_eq_of_query_evalSPMF_map_eq
     {ι : Type} {spec : OracleSpec ι}
     {σ₁ σ₂ : Type} {α : Type}
     (impl₁ : QueryImpl spec (StateT σ₁ ProbComp))
     (impl₂ : QueryImpl spec (StateT σ₂ ProbComp))
     (proj : σ₁ → σ₂)
     (hproj : ∀ t s,
-      𝒟[Prod.map id proj <$> (impl₁ t).run s] = 𝒟[(impl₂ t).run (proj s)])
+      𝒮[Prod.map id proj <$> (impl₁ t).run s] = 𝒮[(impl₂ t).run (proj s)])
     (oa : OracleComp spec α) (s : σ₁) :
-    𝒟[Prod.map id proj <$> (simulateQ impl₁ oa).run s] =
-      𝒟[(simulateQ impl₂ oa).run (proj s)] := by
+    𝒮[Prod.map id proj <$> (simulateQ impl₁ oa).run s] =
+      𝒮[(simulateQ impl₂ oa).run (proj s)] := by
   induction oa using OracleComp.inductionOn generalizing s with
   | pure x => simp
   | query_bind t oa ih =>
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
         OracleQuery.cont_query, id_map, StateT.run_bind, map_bind]
-      rw [evalDist_bind_congr' ((impl₁ t).run s)
+      rw [evalSPMF_bind_congr' ((impl₁ t).run s)
         (ob₂ := fun x => (simulateQ impl₂ (oa x.1)).run (proj x.2))
         (fun x => ih x.1 x.2)]
       rw [show ((impl₁ t).run s >>= fun x => (simulateQ impl₂ (oa x.1)).run (proj x.2))
             = ((Prod.map id proj <$> (impl₁ t).run s) >>= fun x =>
                 (simulateQ impl₂ (oa x.1)).run x.2) from by
         rw [bind_map_left]; rfl]
-      rw [evalDist_bind, hproj t s, ← evalDist_bind]
+      rw [evalSPMF_bind, hproj t s, ← evalSPMF_bind]
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Per-query trap-count → fresh-sig distribution projection.** Dropping the freshness Bool flag
@@ -86,13 +86,13 @@ lemma progGameRunImplCombinedTrapCount_freshSig_proj (pk : PK) (sk : SK)
     (t : ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))).Domain)
     (s : ((((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) × ((Salt × M) → Option Domain)) ×
       (((Salt × M) → Option ℕ) × ℕ)) :
-    𝒟[Prod.map id
+    𝒮[Prod.map id
         (fun s : ((((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) ×
               ((Salt × M) → Option Domain)) × (((Salt × M) → Option ℕ) × ℕ) =>
           ((((s.1.1.1.1, s.2.2), s.2.1), s.1.1.1.2) :
             (((Salt × M →ₒ Range).QueryCache × ℕ) × ((Salt × M) → Option ℕ)) × Finset M)) <$>
         (progGameRunImplCombinedTrapCount psf M Salt pk sk t).run s] =
-      𝒟[(embedTrapFreshIdxSigImpl psf M Salt pk sk t).run
+      𝒮[(embedTrapFreshIdxSigImpl psf M Salt pk sk t).run
         ((((s.1.1.1.1, s.2.2), s.2.1), s.1.1.1.2))] := by
   cases t with
   | inl q =>
@@ -108,8 +108,8 @@ lemma progGameRunImplCombinedTrapCount_freshSig_proj (pk : PK) (sk : SK)
               -- projection drops), so the projected output is `x`-independent and `x` drops out.
               simp only [map_bind, map_pure, Prod.map, id_eq]
               rw [map_eq_bind_pure_comp]
-              refine evalDist_bind_congr' _ (fun v => ?_)
-              rw [OracleComp.DeferredSampling.evalDist_bind_const_neverFails
+              refine evalSPMF_bind_congr' _ (fun v => ?_)
+              rw [OracleComp.DeferredSampling.evalSPMF_bind_const_neverFails
                 (psf.trapdoorSample pk sk v) (hNF v).probFailure_eq_zero _]
               rfl
           | some v => simp [Prod.map]
@@ -123,7 +123,7 @@ lemma progGameRunImplCombinedTrapCount_freshSig_proj (pk : PK) (sk : SK)
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Run-level trap-count → fresh-sig distribution projection.** Transports the per-query step
 `progGameRunImplCombinedTrapCount_freshSig_proj` through the whole adaptive fold via
-`evalDist_map_run_simulateQ_eq_of_query_evalDist_map_eq`: dropping the freshness Bool flag and the
+`evalSPMF_map_run_simulateQ_eq_of_query_evalSPMF_map_eq`: dropping the freshness Bool flag and the
 write-only trapdoor table from the full simulated trap-count run, and reshaping to the fresh-sig
 state layout, recovers the `embedTrapFreshIdxSigImpl` run distribution. -/
 lemma map_run_progGameRunImplCombinedTrapCount_freshSig_proj (pk : PK) (sk : SK)
@@ -131,15 +131,15 @@ lemma map_run_progGameRunImplCombinedTrapCount_freshSig_proj (pk : PK) (sk : SK)
     {β : Type} (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
     (s : ((((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) × ((Salt × M) → Option Domain)) ×
       (((Salt × M) → Option ℕ) × ℕ)) :
-    𝒟[Prod.map id
+    𝒮[Prod.map id
         (fun s : ((((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) ×
               ((Salt × M) → Option Domain)) × (((Salt × M) → Option ℕ) × ℕ) =>
           ((((s.1.1.1.1, s.2.2), s.2.1), s.1.1.1.2) :
             (((Salt × M →ₒ Range).QueryCache × ℕ) × ((Salt × M) → Option ℕ)) × Finset M)) <$>
         (simulateQ (progGameRunImplCombinedTrapCount psf M Salt pk sk) oa).run s] =
-      𝒟[(simulateQ (embedTrapFreshIdxSigImpl psf M Salt pk sk) oa).run
+      𝒮[(simulateQ (embedTrapFreshIdxSigImpl psf M Salt pk sk) oa).run
         ((((s.1.1.1.1, s.2.2), s.2.1), s.1.1.1.2))] := by
-  exact evalDist_map_run_simulateQ_eq_of_query_evalDist_map_eq
+  exact evalSPMF_map_run_simulateQ_eq_of_query_evalSPMF_map_eq
     (progGameRunImplCombinedTrapCount psf M Salt pk sk)
     (embedTrapFreshIdxSigImpl psf M Salt pk sk)
     (fun s => ((((s.1.1.1.1, s.2.2), s.2.1), s.1.1.1.2)))
@@ -156,7 +156,7 @@ is a lower bound for the winner-slot-restricted per-target embedding win
 (`reservoir_embed_winnerIdx_le`'s left side, i.e. the right side of the floor-free coupling).  The
 front target average `∑' y, Pr[= y] · embedTrapIdxImpl … j y` is lifted to the signed-set-augmented
 index run (`map_run_embedTrapIdxSigImpl_proj`, signed set passive) and then to the inline-fresh run
-(`evalDist_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl`).  On the inline-fresh run the
+(`evalSPMF_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl`).  On the inline-fresh run the
 freshness recovery (`embedTrapIdxSigImpl_fresh_idx_cache_eq`) makes the diagonal
 `cache(forged) = some y` automatic on the freshness-confined winner slot, so the front `y` is
 recovered as the cached image and the embed win event's literal `cache(forged) = some y` is matched;
@@ -836,7 +836,7 @@ lemma trap_freshSig_le_winnerSlot_deferred [Inhabited Range]
   -- commutes past every subsequent step because the continuation never reads `table(forged)` or the
   -- frozen `cache(forged)`), matching it to a post-run draw of `trapdoorSample (cache forged)`.
   -- The projection `map_run_progGameRunImplCombinedTrapCount_freshSig_proj` *drops* every table
-  -- draw via `evalDist_bind_const_neverFails`; the defer-to-end induction over the trap run that
+  -- draw via `evalSPMF_bind_const_neverFails`; the defer-to-end induction over the trap run that
   -- keeps the deferred draw is `progGameRunImplCombinedTrapCount_table_defer`.  Below the FRESH
   -- conjunct `w.1.1 ∉ w.2.1.1.1.2` is carried throughout.
   rw [probEvent_eq_tsum_ite]
@@ -972,7 +972,7 @@ reservoir factor.  This is the genuine deferred-sampling content of GPV Step-2: 
 `j` the trap run's inline uniform winner draw `v⋆ ← $ᵗ Range` (drawn *inside* the `simulateQ` fold
 at the adaptively-determined `j`-th programming step) must be pushed to the front and re-expressed
 as the embedded target `y ← $ᵗ Range` (drawn *outside* the fold), mirroring
-`evalDist_gpvRealImpl_eq_drawList_gpvRealImplTape`; the embedded slot is then `j` and the win event
+`evalSPMF_gpvRealImpl_eq_drawList_gpvRealImplTape`; the embedded slot is then `j` and the win event
 couples to the trap run's write-only `table(forged) = trapdoorSample (cache(forged))`.
 
 The budget-scaled form `reservoir_embed_commute_winner` follows from this by the reservoir floor
@@ -982,8 +982,8 @@ lemma reservoir_embed_commute_winner_floorFree [DecidableEq Domain] [Inhabited R
     (domainSample : PK → ProbComp Domain) (pk : PK) (sk : SK) (qSign qHash : ℕ)
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
-    (_hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (_hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (hNF : ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
     (_hForge : ForgesQueriedPoint psf hr M Salt adv domainSample)
@@ -1037,13 +1037,13 @@ lemma reservoir_embed_commute_winner_floorFree [DecidableEq Domain] [Inhabited R
   -- The adaptive PMF×PMF run coupling — pushing the trap run's inline winner draw
   -- `v⋆ ← $ᵗ Range` to the front and re-expressing it as the embedded target `y ← $ᵗ Range` across
   -- the whole adaptive fold — is
-  -- `evalDist_frontDraw_embedTrapImpl_eq_embedTrapFresh`: averaging the trap-sibling embed run over
+  -- `evalSPMF_frontDraw_embedTrapImpl_eq_embedTrapFresh`: averaging the trap-sibling embed run over
   -- the external target draw equals the inline-fresh run `embedTrapFreshImpl` (an all-fresh-uniform
   -- lazy random oracle with counter).  Its winner step substitutes the front `y` for the inline
   -- fresh winner draw and uses post-winner coincidence
-  -- (`evalDist_run_embedTrapImpl_eq_embedTrapFresh_of_lt`); its off-winner steps commute the front
+  -- (`evalSPMF_run_embedTrapImpl_eq_embedTrapFresh_of_lt`); its off-winner steps commute the front
   -- draw past `y`-independent steps (`embedTrapImpl_run_step_eq_embedTrapFresh`,
-  -- `OracleComp.DeferredSampling.evalDist_bind_comm`).
+  -- `OracleComp.DeferredSampling.evalSPMF_bind_comm`).
   --
   -- **The win-event same-randomness coupling.**
   --
@@ -1060,13 +1060,13 @@ lemma reservoir_embed_commute_winner_floorFree [DecidableEq Domain] [Inhabited R
   -- `table(forged) = trapdoorSample pk sk v` with `idx(forged) = some j`).  Matching the trap event
   -- `table(forged) = trapdoorSample (cache(forged))` to the embed event `output = trapdoorSample
   -- (cache(forged))` is the final N4-style same-randomness coupling
-  -- (`evalDist_simulateQ_run_congr` after projecting to the common
+  -- (`evalSPMF_simulateQ_run_congr` after projecting to the common
   -- `embedTrapFreshImpl` cache/counter state) and the trapdoor draw `x`.
   --
   -- **Commute the trapdoor draw `x` past the embed run.**  The trapdoor
   -- preimage `x ← trapdoorSample pk sk y` is drawn from an *independent* `ProbComp` (it does not
   -- feed the embed run `simulateQ (embedTrapImpl … j y)`, which consumes only `y`), so the two
-  -- binds exchange at the distribution level (`OracleComp.DeferredSampling.evalDist_bind_comm`).
+  -- binds exchange at the distribution level (`OracleComp.DeferredSampling.evalSPMF_bind_comm`).
   -- Running the embed first and drawing `x` afterwards leaves the win event — and hence the output
   -- probability `Pr[= true | …]` — unchanged.  This re-expresses the right-hand game in the
   -- *run-first* form, in which the embed run output `r` is already available when the trapdoor draw
@@ -1087,8 +1087,8 @@ lemma reservoir_embed_commute_winner_floorFree [DecidableEq Domain] [Inhabited R
         pure (decide (r.1.2.2 = x) &&
           decide (r.2.1 (r.1.2.1, r.1.1) = some y)) : ProbComp Bool)] from by
     refine probOutput_congr rfl ?_
-    refine evalDist_bind_congr' _ (fun y => ?_)
-    exact OracleComp.DeferredSampling.evalDist_bind_comm (psf.trapdoorSample pk sk y)
+    refine evalSPMF_bind_congr' _ (fun y => ?_)
+    exact OracleComp.DeferredSampling.evalSPMF_bind_comm (psf.trapdoorSample pk sk y)
       ((simulateQ (embedTrapImpl psf M Salt pk sk j y) (adv.main pk)).run (∅, 0))
       (fun x r => pure (decide (r.1.2.2 = x) &&
         decide (r.2.1 (r.1.2.1, r.1.1) = some y)))]
@@ -1115,17 +1115,17 @@ lemma reservoir_embed_commute_winner_floorFree [DecidableEq Domain] [Inhabited R
         let x ← psf.trapdoorSample pk sk ((r.2.1 (r.1.2.1, r.1.1)).getD y)
         pure (decide (r.1.2.2 = x) &&
           decide (r.2.1 (r.1.2.1, r.1.1) = some y)) : ProbComp Bool)] from by
-    refine probOutput_congr rfl (evalDist_bind_congr' _ (fun y => ?_))
-    refine evalDist_bind_congr' _ (fun r => ?_)
+    refine probOutput_congr rfl (evalSPMF_bind_congr' _ (fun y => ?_))
+    refine evalSPMF_bind_congr' _ (fun r => ?_)
     rcases hc : r.2.1 (r.1.2.1, r.1.1) with _ | yv
     · simp only [Option.getD_none]
     · simp only [Option.getD_some]
       by_cases hy : yv = y
       · rw [hy]
       · simp only [Option.some.injEq, hy, decide_false, Bool.and_false]
-        rw [OracleComp.DeferredSampling.evalDist_bind_const_neverFails _
+        rw [OracleComp.DeferredSampling.evalSPMF_bind_const_neverFails _
             ((hNF y).probFailure_eq_zero),
-          OracleComp.DeferredSampling.evalDist_bind_const_neverFails _
+          OracleComp.DeferredSampling.evalSPMF_bind_const_neverFails _
             ((hNF yv).probFailure_eq_zero)]]
   -- **Index-augment the embed run and restrict the win to the winner slot.**
   -- The win predicate `decide (r.1.2.2 = x) && decide (r.2.1 (forged) = some y)` reads only the
@@ -1169,7 +1169,7 @@ lemma reservoir_embed_commute_winner_floorFree [DecidableEq Domain] [Inhabited R
   -- at counter `j` (since `idx(forged) = some j`), where the embed caches exactly `y` — so on that
   -- slot the diagonal `cache(forged) = some y` is recovered from the run state, eliminating the
   -- free `y` from the embed win literal.  The marginal lift
-  -- `evalDist_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl` then fires; the trap-count
+  -- `evalSPMF_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl` then fires; the trap-count
   -- run is matched to `embedTrapFreshIdxSigImpl` by the freshness recovery
   -- `embedTrapIdxSigImpl_fresh_idx_cache_eq` and the write-only-table support invariant
   -- `progGameRunImplCombinedTrapCount_table_support`.  The omitted embed-side signing-slot mass on
@@ -1177,8 +1177,8 @@ lemma reservoir_embed_commute_winner_floorFree [DecidableEq Domain] [Inhabited R
   --
   -- **The run-marginal half.** The cache/counter/idx/signedSet marginals of
   -- the trap-count run and the inline-fresh signed-set embed run coincide *as distributions*, via
-  -- the generic `evalDist`-level state-projection transport
-  -- `evalDist_map_run_simulateQ_eq_of_query_evalDist_map_eq` (which tolerates the never-failing
+  -- the generic `evalSPMF`-level state-projection transport
+  -- `evalSPMF_map_run_simulateQ_eq_of_query_evalSPMF_map_eq` (which tolerates the never-failing
   -- answer-irrelevant trapdoor draw at each RO miss) instantiated as
   -- `map_run_progGameRunImplCombinedTrapCount_freshSig_proj`.  This discharges the *run-marginal*
   -- half of the coupling: it identifies the trap-count cache/idx/signedSet law with the
@@ -1239,8 +1239,8 @@ lemma reservoir_embed_commute_winner [DecidableEq Domain] [Inhabited Range]
     (domainSample : PK → ProbComp Domain) (pk : PK) (sk : SK) (qSign qHash : ℕ)
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
-    (hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (hNF : ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
     (hForge : ForgesQueriedPoint psf hr M Salt adv domainSample)
@@ -1337,7 +1337,7 @@ the budget `N ≤ qSign + qHash` of `embedAtIndexImpl_run_count_le_budget` /
 `combined_run_table_card_le`) be carried at the index-tagged level, while the per-winner-slot
 front-loading joint coupling — pushing the trap run's inline winner draw `v⋆ ← $ᵗ Range` to the
 front and re-expressing it as the embedded target `y ← $ᵗ Range` (mirroring
-`evalDist_gpvRealImpl_eq_drawList_gpvRealImplTape`), together with the realized-entry index
+`evalSPMF_gpvRealImpl_eq_drawList_gpvRealImplTape`), together with the realized-entry index
 partition of the trap mass — is supplied by `reservoir_embed_commute_winner`.
 
 The bound holds for the same reason as M3: after the write-only-table deferral both runs maintain an
@@ -1351,8 +1351,8 @@ lemma reservoir_embed_commute_residual [DecidableEq Domain] [Inhabited Range]
     (domainSample : PK → ProbComp Domain) (pk : PK) (sk : SK) (qSign qHash : ℕ)
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
-    (hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (hNF : ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
     (hForge : ForgesQueriedPoint psf hr M Salt adv domainSample)
@@ -1482,7 +1482,7 @@ This is the joint coupling of the GPV Step-2 exact-match close, stated as the
 *bound* needed by `gpv_perKey_exactMatch_le_reservoir`.  The left-hand side is the exact-match
 winning mass of the trapdoor-recording combined run `progGameRunImplCombinedTrap` — the run obtained
 from the combined sign-then-hash game after the write-only-table deferral (Lemma A,
-`evalDist_run_progGameRunImplCombinedTrap_eq`).  The right-hand side is the multi-target factor
+`evalSPMF_run_progGameRunImplCombinedTrap_eq`).  The right-hand side is the multi-target factor
 `qSign + qHash` times the full programmed-preimage reduction win, averaged over the reservoir winner
 slot `wOpt ← reservoirWinnerIndex (qSign + qHash)` and the uniform target `y ← $ᵗ Range`: for each
 slot/target the reduction runs the adversary under the all-uniform-cache trap-sibling embedding
@@ -1510,8 +1510,8 @@ lemma reservoir_embed_commute [DecidableEq Domain] [Inhabited Range]
     (domainSample : PK → ProbComp Domain) (pk : PK) (sk : SK) (qSign qHash : ℕ)
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
-    (hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (hNF : ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
     (hForge : ForgesQueriedPoint psf hr M Salt adv domainSample)
@@ -1578,8 +1578,8 @@ lemma gpv_perKey_exactMatch_le_reservoir [DecidableEq Domain] [Inhabited Range]
     (domainSample : PK → ProbComp Domain) (pk : PK) (sk : SK) (qSign qHash : ℕ)
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
-    (hreg : 𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+    (hreg : 𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (hNF : ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
     (hForge : ForgesQueriedPoint psf hr M Salt adv domainSample)
@@ -1629,11 +1629,11 @@ lemma gpv_perKey_exactMatch_le_reservoir [DecidableEq Domain] [Inhabited Range]
     intro y
     refine probOutput_congr rfl ?_
     simp only [programmedPreimageReduction_eq_run, bind_assoc, pure_bind]
-    refine evalDist_bind_congr fun x _ => ?_
-    refine evalDist_bind_congr fun wOpt _ => ?_
+    refine evalSPMF_bind_congr fun x _ => ?_
+    refine evalSPMF_bind_congr fun wOpt _ => ?_
     -- The remaining `run >>= pure ∘ decide` factor is equidistributed under N4.
-    rw [evalDist_bind, evalDist_bind,
-      evalDist_run_embedAtIndexImpl_eq_embedTrap psf M Salt domainSample pk sk
+    rw [evalSPMF_bind, evalSPMF_bind,
+      evalSPMF_run_embedAtIndexImpl_eq_embedTrap psf M Salt domainSample pk sk
         (wOpt.getD (qSign + qHash)) y hreg hNF (adv.main pk)
         ((∅ : (Salt × M →ₒ Range).QueryCache), (0 : ℕ))]
   -- **N4 applied.**  Replace every per-target embed run by its all-uniform-cache trap
@@ -1644,7 +1644,7 @@ lemma gpv_perKey_exactMatch_le_reservoir [DecidableEq Domain] [Inhabited Range]
   -- off the eval-caching combined run `progGameRunImplCombined` onto its trapdoor-recording sibling
   -- `progGameRunImplCombinedTrap`, an exact equidistribution under `hreg` with the event unchanged.
   rw [probEvent_congr' (fun _ _ => Iff.rfl)
-    (evalDist_run_progGameRunImplCombinedTrap_eq psf M Salt domainSample pk sk hreg (adv.main pk)
+    (evalSPMF_run_progGameRunImplCombinedTrap_eq psf M Salt domainSample pk sk hreg (adv.main pk)
       ((((∅ : (Salt × M →ₒ Range).QueryCache), (∅ : Finset M)), false), fun _ => none))]
   -- **M4 (assembly).**  Pull the reservoir winner draw `wOpt` to the front of each per-target win,
   -- swap the target/reservoir averages, fold in the multi-target factor, and discharge the result
@@ -1731,8 +1731,8 @@ theorem gpv_progGameVerifyFreshAvg_le_collisionAdv_add_preimageAdv [DecidableEq 
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain)
     (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
-      𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+      𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (hNF : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
       ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
@@ -1740,7 +1740,7 @@ theorem gpv_progGameVerifyFreshAvg_le_collisionAdv_add_preimageAdv [DecidableEq 
     (hQ : ∀ pk, signHashQueryBound
       (S' := Salt × Domain) (α := M × (Salt × Domain))
       (oa := adv.main pk) (qSign := qSign) (qHash := qHash)) :
-    Pr[= true | (𝒟[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
+    Pr[= true | (𝒮[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
         progGameVerifyFresh psf hr M Salt adv domainSample pksk.1]
       ≤ collisionFindingAdvantage (psf := psf) (hr := hr)
           (reduction psf hr M Salt adv domainSample) +
@@ -1803,8 +1803,8 @@ theorem forgery_yields_collision_or_exact_match [DecidableEq Domain]
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain)
     (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
-      𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+      𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (hNF : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
       ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
@@ -1844,8 +1844,8 @@ theorem forgery_yields_collision [DecidableEq Domain]
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain)
     (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
-      𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+      𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (hNF : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
       ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
@@ -1892,8 +1892,8 @@ theorem euf_cma_collision_bound [DecidableEq Domain]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
     (hreg : ∃ domainSample : PK → ProbComp Domain, ∀ (pk : PK) (sk : SK),
       (pk, sk) ∈ support hr.gen →
-      𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+      𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (qSign qHash : ℕ)
     (adv : SignatureAlg.unforgeableAdv
@@ -1934,8 +1934,8 @@ theorem euf_cma_split_bound [DecidableEq Domain]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
     (hreg : ∃ domainSample : PK → ProbComp Domain, ∀ (pk : PK) (sk : SK),
       (pk, sk) ∈ support hr.gen →
-      𝒟[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
-      𝒟[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
+      𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
+      𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (qSign qHash : ℕ)
     (adv : SignatureAlg.unforgeableAdv
