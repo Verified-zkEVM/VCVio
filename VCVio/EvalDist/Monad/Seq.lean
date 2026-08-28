@@ -10,7 +10,7 @@ public import VCVio.EvalDist.Monad.Map
 /-!
 # Evaluation Distributions of Computations with `seq`
 
-File for lemmas about `evalDist` and `support` involving the monadic `seq`, `seqLeft`,
+File for lemmas about `evalSPMF` and `support` involving the monadic `seq`, `seqLeft`,
 and `seqRight` operations.
 
 TODO: many lemmas should probably have mirrored versions for `bind_map`.
@@ -53,8 +53,8 @@ section spmf
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
 @[simp]
-lemma evalDist_seq (mf : m (α → β)) (mx : m α) :
-    𝒟[mf <*> mx] = 𝒟[mf] <*> 𝒟[mx] := by simp [monad_norm]
+lemma evalSPMF_seq (mf : m (α → β)) (mx : m α) :
+    𝒮[mf <*> mx] = 𝒮[mf] <*> 𝒮[mx] := by simp [monad_norm]
 
 lemma probOutput_seq_eq_tsum (mf : m (α → β)) (mx : m α) (y : β) :
     Pr[= y | mf <*> mx] =
@@ -112,8 +112,8 @@ variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
 omit [MonadLiftT m SetM] [EvalDistCompatible m] in
 @[simp]
-lemma evalDist_seqLeft (mx : m α) (my : m β) :
-    𝒟[mx <* my] = 𝒟[mx] <* 𝒟[my] := by
+lemma evalSPMF_seqLeft (mx : m α) (my : m β) :
+    𝒮[mx <* my] = 𝒮[mx] <* 𝒮[my] := by
   simp [seqLeft_eq]
 
 @[simp, grind =_]
@@ -165,8 +165,8 @@ variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
 omit [MonadLiftT m SetM] [EvalDistCompatible m] in
 @[simp]
-lemma evalDist_seqRight (mx : m α) (my : m β) :
-    𝒟[mx *> my] = 𝒟[mx] *> 𝒟[my] := by
+lemma evalSPMF_seqRight (mx : m α) (my : m β) :
+    𝒮[mx *> my] = 𝒮[mx] *> 𝒮[my] := by
   simp [seqRight_eq]
 
 @[simp, grind =_]
@@ -213,9 +213,9 @@ section spmf
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
-lemma evalDist_seq_map :
-    𝒟[f <$> mx <*> my] = f <$> 𝒟[mx] <*> 𝒟[my] := by
-  rw [evalDist_seq, evalDist_map]
+lemma evalSPMF_seq_map :
+    𝒮[f <$> mx <*> my] = f <$> 𝒮[mx] <*> 𝒮[my] := by
+  rw [evalSPMF_seq, evalSPMF_map]
 
 lemma probOutput_seq_map_eq_tsum (z : γ) :
     Pr[= z | f <$> mx <*> my] = ∑' (x : α) (y : β),
@@ -250,9 +250,9 @@ lemma probOutput_seq_map_swap (z : γ) :
   rw [ENNReal.tsum_comm]
   exact tsum_congr fun x' => tsum_congr fun y' => by ring
 
-lemma evalDist_seq_map_swap :
-    𝒟[Function.swap f <$> my <*> mx] = 𝒟[f <$> mx <*> my] :=
-  evalDist_ext (probOutput_seq_map_swap mx my f)
+lemma evalSPMF_seq_map_swap :
+    𝒮[Function.swap f <$> my <*> mx] = 𝒮[f <$> mx <*> my] :=
+  evalSPMF_ext (probOutput_seq_map_swap mx my f)
 
 lemma probEvent_seq_map_swap (p : γ → Prop) :
     Pr[ p | Function.swap f <$> my <*> mx] = Pr[ p | f <$> mx <*> my] := by

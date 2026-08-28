@@ -86,8 +86,8 @@ instance instLawfulMonadLiftTSetM : LawfulMonadLiftT (FreeM P) SetM where
 
 /-- The distribution semantics of a polynomial free program is its universal
 fold into `PMF`. -/
-theorem evalDist_eq_liftM [P.IsProbabilitySpec] (program : FreeM P α) :
-    𝒟[program] = program.liftM IsProbabilitySpec.toPMF := rfl
+theorem evalSPMF_eq_liftM [P.IsProbabilitySpec] (program : FreeM P α) :
+    𝒮[program] = program.liftM IsProbabilitySpec.toPMF := rfl
 
 /-- The support semantics of a polynomial free program is its universal fold
 with every operation direction available. -/
@@ -96,18 +96,18 @@ theorem support_eq_liftM (program : FreeM P α) :
 
 /-- A single operation evaluates to its configured direction distribution. -/
 @[simp]
-theorem evalDist_lift [P.IsProbabilitySpec] (operation : P.A) :
-    𝒟[(FreeM.lift operation : FreeM P (P.B operation))] =
+theorem evalSPMF_lift [P.IsProbabilitySpec] (operation : P.A) :
+    𝒮[(FreeM.lift operation : FreeM P (P.B operation))] =
       (IsProbabilitySpec.toPMF operation : SPMF (P.B operation)) := by
-  rw [evalDist_eq_liftM, FreeM.liftM_lift]
+  rw [evalSPMF_eq_liftM, FreeM.liftM_lift]
 
 /-- A single operation on a uniform polynomial interface evaluates to the
 canonical uniform distribution on its directions. -/
 @[simp]
-theorem evalDist_lift_eq_uniform [h : P.IsUniformSpec] (operation : P.A) :
-    𝒟[(FreeM.lift operation : FreeM P (P.B operation))] =
+theorem evalSPMF_lift_eq_uniform [h : P.IsUniformSpec] (operation : P.A) :
+    𝒮[(FreeM.lift operation : FreeM P (P.B operation))] =
       (PMF.uniformOfFintype (P.B operation) : SPMF (P.B operation)) := by
-  rw [evalDist_lift]
+  rw [evalSPMF_lift]
   exact congrArg (fun distribution : PMF (P.B operation) =>
     (distribution : SPMF (P.B operation))) (h.toPMF_eq_uniform operation)
 
@@ -141,7 +141,7 @@ applicable to the same goal. -/
 instance (priority := 100) instEvalDistCompatible [uniform : P.IsUniformSpec] :
     EvalDistCompatible (FreeM P) where
   support_eq_SPMF_support program := by
-    change support program = SPMF.support 𝒟[program]
+    change support program = SPMF.support 𝒮[program]
     induction program with
     | pure result => simp
     | lift_bind operation next ih =>

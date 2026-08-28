@@ -201,8 +201,8 @@ lemma ProbComp.boolBiasAdvantage_bind_uniformBool_eq_boolDistAdvantage
     let b ← ($ᵗ Bool)
     let z ← if b then left else right
     pure (b == z)
-  have hbranch : 𝒟[game] = 𝒟[branchGame] := by
-    apply evalDist_ext
+  have hbranch : 𝒮[game] = 𝒮[branchGame] := by
+    apply evalSPMF_ext
     intro x
     calc
       Pr[= x | game] =
@@ -223,7 +223,7 @@ lemma ProbComp.boolBiasAdvantage_bind_uniformBool_eq_boolDistAdvantage
             cases b <;> simp [left, right]
   rw [show game.boolBiasAdvantage = branchGame.boolBiasAdvantage by
     unfold ProbComp.boolBiasAdvantage
-    rw [evalDist_ext_iff.mp hbranch true, evalDist_ext_iff.mp hbranch false]]
+    rw [evalSPMF_ext_iff.mp hbranch true, evalSPMF_ext_iff.mp hbranch false]]
   simpa [branchGame, left, right] using
     ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch left right
 
@@ -299,7 +299,7 @@ lemma ProbComp.distAdvantage_le_sum_range {n : ℕ} (games : ℕ → ProbComp Un
 lemma ProbComp.distAdvantage_eq_tvDist (p q : ProbComp Unit) :
     p.distAdvantage q = tvDist p q := by
   simp only [distAdvantage, tvDist, SPMF.tvDist, PMF.tvDist_option_punit]
-  rfl
+  simp only [probOutput_def, SPMF.apply_eq_toPMF_some]
 
 /-- A security adversary bundling a computation with a bound on the number of queries it makes,
 where the bound must be shown to satisfy `IsQueryBound`.
@@ -339,19 +339,20 @@ section advantage
 
 /-- Advantage of a failure-based security experiment: one minus its failure probability. -/
 noncomputable def advantage (exp : SecExp m) : ℝ≥0∞ :=
-  1 - Pr[⊥ | exp.toSPMFSemantics.evalDist exp.main]
+  1 - Pr[⊥ | exp.toSPMFSemantics.evalSPMF exp.main]
 
 /-- A failure-based experiment has zero advantage exactly when it fails with probability `1`. -/
 @[simp]
 lemma advantage_eq_zero_iff (exp : SecExp m) :
-    exp.advantage = 0 ↔ Pr[⊥ | exp.toSPMFSemantics.evalDist exp.main] = 1 := by
+    exp.advantage = 0 ↔ Pr[⊥ | exp.toSPMFSemantics.evalSPMF exp.main] = 1 := by
   rw [advantage, tsub_eq_zero_iff_le]
-  exact (exp.toSPMFSemantics.probFailure_le_one _).ge_iff_eq
+  simpa only [SPMFSemantics.probFailure, probFailure_def, evalSPMF_def, monadLift_self] using
+    (exp.toSPMFSemantics.probFailure_le_one exp.main).ge_iff_eq
 
 /-- A failure-based experiment has advantage `1` exactly when it never fails. -/
 @[simp]
 lemma advantage_eq_one_iff (exp : SecExp m) :
-    exp.advantage = 1 ↔ Pr[⊥ | exp.toSPMFSemantics.evalDist exp.main] = 0 := by
+    exp.advantage = 1 ↔ Pr[⊥ | exp.toSPMFSemantics.evalSPMF exp.main] = 0 := by
   grind [advantage, probEvent_eq_one_iff]
 
 end advantage

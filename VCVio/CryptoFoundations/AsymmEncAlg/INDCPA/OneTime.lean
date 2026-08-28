@@ -42,7 +42,7 @@ variable {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
 sample keys, let the adversary choose challenge messages, encrypt one branch, and return whether
 the adversary guessed the hidden bit. -/
 def IND_CPA_OneTime_Game (runtime : ProbCompRuntime (OracleComp spec)) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let b : Bool ← runtime.liftProbComp ($ᵗ Bool)
     let (pk, _) ← encAlg.keygen
     let (m₁, m₂, state) ← adv.chooseMessages pk

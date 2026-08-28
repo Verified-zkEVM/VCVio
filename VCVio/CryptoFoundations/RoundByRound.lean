@@ -87,8 +87,8 @@ theorem experiment_advantage (games : GameFamily Round Context)
   classical
   calc (games.experiment round context).advantage
       = 1 - Pr[⊥ | (games.experiment round context).main] := by
-        simp only [SecExp.advantage]
-        exact congrArg (1 - ·) (SPMFSemantics.ofMonadLift_probFailure _)
+        simp only [SecExp.advantage, experiment, SPMFSemantics.ofMonadLift_evalSPMF,
+          probFailure_evalSPMF]
     _ = Pr[= () | (games.experiment round context).main] :=
         probOutput_punit_eq_sub_probFailure.symm
     _ = Pr[games.event round context | games.sample round context] :=

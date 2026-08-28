@@ -738,11 +738,11 @@ private lemma run'_mOfFn_query_mixed {β : Type} (n : ℕ)
     (f : Fin n → Fin (2 ^ b) → β)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (hcache : ∀ i, cache (records i) = hits i) :
-    𝒟[(simulateQ (fischlinImpl ρ b M)
+    𝒮[(simulateQ (fischlinImpl ρ b M)
         (Fin.mOfFn n fun i => do
           let h ← HasQuery.query (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M) (records i)
           pure (f i h))).run' cache]
-      = 𝒟[(fun u => fun i => f i (u i)) <$>
+      = 𝒮[(fun u => fun i => f i (u i)) <$>
           Fin.mOfFn n fun i =>
             match hits i with
             | some h => (pure h : ProbComp (Fin (2 ^ b)))
@@ -750,19 +750,19 @@ private lemma run'_mOfFn_query_mixed {β : Type} (n : ℕ)
   induction n generalizing cache with
   | zero =>
       simp only [Fin.mOfFn, simulateQ_pure, StateT.run'_pure', map_pure]
-      exact congrArg (fun z => 𝒟[(pure z : ProbComp (Fin 0 → β))]) (funext fun i => i.elim0)
+      exact congrArg (fun z => 𝒮[(pure z : ProbComp (Fin 0 → β))]) (funext fun i => i.elim0)
   | succ n ih =>
       -- Tail step, shared by both branches: with head answer `x` and any cache `c` storing
       -- `hits ∘ Fin.succ` at the tail records, the tail simulation matches the model tail.
       have hstep : ∀ (x : Fin (2 ^ b))
           (c : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache),
           (∀ j : Fin n, c (records j.succ) = hits j.succ) →
-          𝒟[(simulateQ (fischlinImpl ρ b M)
+          𝒮[(simulateQ (fischlinImpl ρ b M)
               (Fin.mOfFn n (fun j => do
                 let h ← HasQuery.query (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M)
                   (records j.succ)
                 pure (f j.succ h)) >>= fun rest => pure (Fin.cons (f 0 x) rest))).run' c]
-            = 𝒟[(fun u : Fin n → Fin (2 ^ b) => fun i : Fin (n + 1) =>
+            = 𝒮[(fun u : Fin n → Fin (2 ^ b) => fun i : Fin (n + 1) =>
                   f i ((Fin.cons x u : Fin (n + 1) → Fin (2 ^ b)) i)) <$>
                 Fin.mOfFn n fun j =>
                   match hits j.succ with
@@ -770,13 +770,13 @@ private lemma run'_mOfFn_query_mixed {β : Type} (n : ℕ)
                   | none => $ᵗ Fin (2 ^ b)] := by
         intro x c hc
         rw [bind_pure_comp, simulateQ_map, StateT.run'_map']
-        refine (evalDist_map_eq_of_evalDist_eq
+        refine (evalSPMF_map_eq_of_evalSPMF_eq
           (ih (fun j => records j.succ)
             (fun j₁ j₂ hj => Fin.succ_injective n (hinj hj))
             (fun j => hits j.succ) (fun j => f j.succ) c hc)
           (Fin.cons (α := fun _ => β) (f 0 x))).trans ?_
         rw [Functor.map_map]
-        refine congrArg evalDist (congrArg (· <$> _) ?_)
+        refine congrArg evalSPMF (congrArg (· <$> _) ?_)
         funext u i
         refine Fin.cases ?_ (fun k => ?_) i
         · simp [Fin.cons_zero]
@@ -806,8 +806,8 @@ private lemma run'_mOfFn_query_mixed {β : Type} (n : ℕ)
           simp only [uniformSampleImpl, bind_map_left, pure_bind, simulateQ_pure,
             StateT.run_pure, bind_assoc]
           simp only [hh, map_bind]
-          rw [evalDist_bind, evalDist_bind]
-          refine congrArg (𝒟[$ᵗ Fin (2 ^ b)] >>= ·) (funext fun x => ?_)
+          rw [evalSPMF_bind, evalSPMF_bind]
+          refine congrArg (𝒮[$ᵗ Fin (2 ^ b)] >>= ·) (funext fun x => ?_)
           rw [hstep x (cache.cacheQuery (records 0) x) (hcache' x)]
           simp only [map_pure, bind_pure_comp]
 
@@ -821,16 +821,16 @@ private lemma run'_mOfFn_query_mixed_bind {β γ : Type} (n : ℕ)
     (f : Fin n → Fin (2 ^ b) → β) (V : (Fin n → β) → γ)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (hcache : ∀ i, cache (records i) = hits i) :
-    𝒟[(simulateQ (fischlinImpl ρ b M)
+    𝒮[(simulateQ (fischlinImpl ρ b M)
         ((Fin.mOfFn n fun i => do
           let h ← HasQuery.query (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M) (records i)
           pure (f i h)) >>= fun results => pure (V results))).run' cache]
-      = 𝒟[(Fin.mOfFn n fun i =>
+      = 𝒮[(Fin.mOfFn n fun i =>
             match hits i with
             | some h => (pure h : ProbComp (Fin (2 ^ b)))
             | none => $ᵗ Fin (2 ^ b)) >>= fun u => pure (V fun i => f i (u i))] := by
   rw [bind_pure_comp V, simulateQ_map, StateT.run'_map']
-  refine (evalDist_map_eq_of_evalDist_eq
+  refine (evalSPMF_map_eq_of_evalSPMF_eq
     (run'_mOfFn_query_mixed ρ b M n records hinj hits f cache hcache) V).trans ?_
   rw [Functor.map_map, bind_pure_comp]
 
@@ -845,10 +845,10 @@ private lemma verify_run'_mixed (pk : Stmt) (msg : M)
     (hits : Fin ρ → Option (Fin (2 ^ b)))
     (hcache : ∀ i, cache (⟨pk, msg, List.ofFn (fun j => (sig j).1), i, (sig i).2.1, (sig i).2.2⟩ :
       FischlinROInput Stmt Commit Chal Resp ρ M) = hits i) :
-    𝒟[(simulateQ (fischlinImpl ρ b M)
+    𝒮[(simulateQ (fischlinImpl ρ b M)
         ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).verify pk msg sig)).run' cache]
-      = 𝒟[(Fin.mOfFn ρ fun i =>
+      = 𝒮[(Fin.mOfFn ρ fun i =>
             match hits i with
             | some h => (pure h : ProbComp (Fin (2 ^ b)))
             | none => $ᵗ Fin (2 ^ b)) >>= fun u =>

@@ -10,7 +10,7 @@ public import VCVio.EvalDist.Monad.Basic
 /-!
 # Evaluation Distributions of Computations with `map`
 
-File for lemmas about `evalDist` and `support` involving the monadic `map`.
+File for lemmas about `evalSPMF` and `support` involving the monadic `map`.
 
 Note: we focus on lemmas that don't hold naively when reducing `<$>` to `>>=` using monad laws,
 since `map_eq_bind_pure_comp` can be applied to use `bind` lemmas fairly easily.
@@ -41,23 +41,23 @@ lemma finSupport_map [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [HasEvalFinse
   grind [map_eq_bind_pure_comp]
 
 @[simp, grind =]
-lemma evalDist_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
+lemma evalSPMF_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
     (mx : m α) (f : α → β) :
-    𝒟[f <$> mx] = f <$> (𝒟[mx]) := by simp [monad_norm]
+    𝒮[f <$> mx] = f <$> (𝒮[mx]) := by simp [monad_norm]
 
-lemma evalDist_map_eq_of_evalDist_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
-    {mx my : m α} (h : 𝒟[mx] = 𝒟[my]) (f : α → β) :
-    𝒟[f <$> mx] = 𝒟[f <$> my] := by
-  simpa [evalDist_map] using congrArg (fun p => f <$> p) h
+lemma evalSPMF_map_eq_of_evalSPMF_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
+    {mx my : m α} (h : 𝒮[mx] = 𝒮[my]) (f : α → β) :
+    𝒮[f <$> mx] = 𝒮[f <$> my] := by
+  simpa [evalSPMF_map] using congrArg (fun p => f <$> p) h
 
-lemma probOutput_map_eq_of_evalDist_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
-    {mx my : m α} (h : 𝒟[mx] = 𝒟[my]) (f : α → β) (y : β) :
+lemma probOutput_map_eq_of_evalSPMF_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
+    {mx my : m α} (h : 𝒮[mx] = 𝒮[my]) (f : α → β) (y : β) :
     Pr[= y | f <$> mx] = Pr[= y | f <$> my] :=
-  evalDist_ext_iff.mp (evalDist_map_eq_of_evalDist_eq h f) y
+  evalSPMF_ext_iff.mp (evalSPMF_map_eq_of_evalSPMF_eq h f) y
 
 @[simp]
-lemma evalDist_comp_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m] (mx : m α) :
-    evalDist ∘ (fun f => f <$> mx) = fun f : (α → β) => f <$> 𝒟[mx] := by aesop
+lemma evalSPMF_comp_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m] (mx : m α) :
+    evalSPMF ∘ (fun f => f <$> mx) = fun f : (α → β) => f <$> 𝒮[mx] := by aesop
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (mx : m α) (f : α → β)
 

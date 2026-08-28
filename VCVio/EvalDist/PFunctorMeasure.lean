@@ -110,6 +110,35 @@ theorem isProbabilityMeasure_denote_liftBind [MeasurableSpace α] (a : P.A)
     IsProbabilityMeasure (denote (FreeM.liftBind a cont)) :=
   MeasureTheory.isProbabilityMeasure_bind hMeasurable hProbability
 
+/-- Every free program denotes a subprobability measure, even before a measurability invariant is
+available for its continuations. `Measure.bind_apply_le` gives exactly the one-sided bound needed
+here; measurability is only needed to strengthen this to a probability-measure equality. -/
+theorem denote_apply_univ_le_one [MeasurableSpace α] (program : FreeM P α) :
+    denote program Set.univ ≤ 1 := by
+  induction program with
+  | pure _ => simp
+  | lift_bind a cont ih =>
+      refine (Measure.bind_apply_le _ MeasurableSet.univ).trans ?_
+      calc
+        (∫⁻ b, denote (cont b) Set.univ ∂IsMeasureSpec.toMeasure a) ≤
+            ∫⁻ _b, 1 ∂IsMeasureSpec.toMeasure a := lintegral_mono ih
+        _ = 1 := by simp
+
+/-- The direct free-monad fold supplies the primary measure semantics whenever an
+`IsMeasureSpec` is available. Its priority is above the generic finite-distribution adapter, so
+installing a measure specification makes `𝒟[…]` unfold to `denote`; computations that only have
+the legacy probability specification continue to use the adapter. -/
+noncomputable instance (priority := 20) instEvalDistSemanticsFreeM :
+    EvalDistSemantics (FreeM P) where
+  denote := denote
+  apply_univ_le_one := denote_apply_univ_le_one
+
+/-- With a measure specification in scope, primary notation is definitionally the direct
+free-monad measure fold. -/
+@[simp]
+theorem evalDist_eq_denote [MeasurableSpace α] (program : FreeM P α) :
+    𝒟[program] = denote program := rfl
+
 /-! ### The monad-morphism laws
 
 `denote` sends `pure` to `dirac` definitionally. For `bind` it must know that the continuation
@@ -152,6 +181,13 @@ theorem denote_bind_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α
     [MeasurableSpace β] (program : FreeM P α) (f : α → FreeM P β) :
     denote (program >>= f) = Measure.bind (denote program) fun x => denote (f x) :=
   denote_bind program f Measurable.of_discrete
+
+/-- Over a discrete-answer interface, the direct measure semantics satisfies the Giry monad
+laws. -/
+noncomputable instance (priority := 20) instLawfulEvalDistSemanticsFreeM :
+    LawfulEvalDistSemantics (FreeM P) where
+  denote_pure := denote_pure
+  denote_bind := denote_bind
 
 /-! ### Agreement with the `PMF` denotation
 
@@ -196,7 +232,17 @@ theorem denote_apply_singleton [P.IsProbabilitySpec] [∀ a, Countable (P.B a)]
     denote program {x} = Pr[= x | program] := by
   rw [denote_eq_toMeasure h program,
     PMF.toMeasure_apply_singleton _ x (measurableSet_singleton x)]
+  rw [probOutput_def]
   exact (SPMF.liftM_apply _ x).symm
+
+/-- The primary measure notation assigns the existing point probability to a singleton whenever
+the measure and probability query specifications agree. -/
+theorem evalDist_apply_singleton [P.IsProbabilitySpec] [∀ a, Countable (P.B a)]
+    [MeasurableSpace α] [MeasurableSingletonClass α]
+    (h : ∀ a : P.A, IsMeasureSpec.toMeasure a = (IsProbabilitySpec.toPMF a).toMeasure)
+    (program : FreeM P α) (x : α) :
+    𝒟[program] {x} = Pr[= x | program] :=
+  denote_apply_singleton h program x
 
 /-- The measure denotation of a measurable predicate is the existing `Pr[...]` value.
 
@@ -214,10 +260,18 @@ theorem denote_apply_setOf [P.IsProbabilitySpec] [∀ a, Countable (P.B a)]
   intro x
   by_cases hx : p x
   · simp only [Set.indicator, Set.mem_ofPred_eq, hx, ↓reduceIte]
-    change (program.liftM IsProbabilitySpec.toPMF) x =
-      (liftM (program.liftM IsProbabilitySpec.toPMF) : SPMF α) x
+    rw [probOutput_def]
     exact (SPMF.liftM_apply _ x).symm
   · simp [Set.indicator, hx]
+
+/-- The primary measure notation assigns the existing predicate probability to any measurable
+event whenever the measure and probability query specifications agree. -/
+theorem evalDist_apply_setOf [P.IsProbabilitySpec] [∀ a, Countable (P.B a)]
+    [MeasurableSpace α]
+    (h : ∀ a : P.A, IsMeasureSpec.toMeasure a = (IsProbabilitySpec.toPMF a).toMeasure)
+    (program : FreeM P α) (p : α → Prop) (hp : MeasurableSet {x | p x}) :
+    𝒟[program] {x | p x} = Pr[p | program] :=
+  denote_apply_setOf h program p hp
 
 end FreeM
 end PFunctor

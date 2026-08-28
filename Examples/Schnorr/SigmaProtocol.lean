@@ -144,7 +144,7 @@ theorem sigma_hvzk (g : G) [Finite F] :
   let _ : Fintype F := Fintype.ofFinite F
   intro pk sk h_sk
   have h_eq : sk • g = pk := of_decide_eq_true h_sk
-  apply evalDist_ext
+  apply evalSPMF_ext
   intro t
   trans Pr[= t | do
     let c ← ($ᵗ F)
@@ -208,8 +208,8 @@ theorem sigma_simCommitPredictability (g : G)
   have hbij_c : ∀ c : F, Function.Bijective (fun z : F => z • g - c • pk) := fun c =>
     (Equiv.subRight (c • pk)).bijective.comp hg
   have h_commit_uniform :
-      𝒟[Prod.fst <$> simTranscript F G g pk] = 𝒟[$ᵗ G] := by
-    apply evalDist_ext
+      𝒮[Prod.fst <$> simTranscript F G g pk] = 𝒮[$ᵗ G] := by
+    apply evalSPMF_ext
     intro x
     have h_rewrite : (Prod.fst <$> simTranscript F G g pk) =
         (do let c ← ($ᵗ F); let z ← ($ᵗ F); pure (z • g - c • pk) : ProbComp G) := by
@@ -255,7 +255,7 @@ theorem sigma_simChalUniformGivenCommit (g : G) :
     let r ← $ᵗ F
     let c ← $ᵗ F
     pure (r • g, c, r + c * sk) with hind_def
-  have hSimEqIndep : 𝒟[simTranscript F G g pk] = 𝒟[ind] := by
+  have hSimEqIndep : 𝒮[simTranscript F G g pk] = 𝒮[ind] := by
     rw [← hHVZK, hReal]
   rw [probEvent_congr' (fun _ _ => Iff.rfl) hSimEqIndep,
       probEvent_congr' (fun _ _ => Iff.rfl) hSimEqIndep]

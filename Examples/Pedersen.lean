@@ -102,9 +102,9 @@ theorem perfectlyHiding [Finite F] (hg : Function.Bijective (· • g : F → G)
   let _ : Fintype F := Fintype.ofFinite F
   intro pp _hpp m₁ m₂
   rw [commit_fst_eq_map, commit_fst_eq_map]
-  have h₁ := evalDist_map_bijective_uniform_cross (α := F) (β := G)
+  have h₁ := evalSPMF_map_bijective_uniform_cross (α := F) (β := G)
     (fun d => d • g + m₁ • pp) (commit_fst_bijective hg pp m₁)
-  have h₂ := evalDist_map_bijective_uniform_cross (α := F) (β := G)
+  have h₂ := evalSPMF_map_bijective_uniform_cross (α := F) (β := G)
     (fun d => d • g + m₂ • pp) (commit_fst_bijective hg pp m₂)
   exact h₁.trans h₂.symm
 

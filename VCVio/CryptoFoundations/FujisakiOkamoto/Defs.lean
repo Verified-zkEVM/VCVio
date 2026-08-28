@@ -146,7 +146,7 @@ def OW_PCVA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : OW_PCVA_Adversary encAlg) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, sk) ← encAlg.keygen
     let msg ← runtime.liftProbComp ($ᵗ M)
     let cStar ← encAlg.encrypt pk msg

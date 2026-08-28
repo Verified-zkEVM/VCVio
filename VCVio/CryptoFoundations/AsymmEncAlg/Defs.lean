@@ -90,7 +90,7 @@ def CorrectExp (msg : M) : m Bool := do
 /-- An asymmetric encryption scheme is perfectly correct under the given runtime when decrypting a
 fresh encryption of any message succeeds with probability `1`. -/
 def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
-  ∀ (msg : M), Pr[= true | runtime.evalDist (encAlg.CorrectExp msg)] = 1
+  ∀ (msg : M), Pr[= true | runtime.evalSPMF (encAlg.CorrectExp msg)] = 1
 
 end Correct
 

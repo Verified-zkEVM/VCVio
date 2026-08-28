@@ -1432,19 +1432,19 @@ private lemma simulatedNmaUnifSim_forkWrapped_run
       exact bind_congr (m := ProbComp) fun u ↦ ih u advCache liveSt
 
 omit [Finite Chal] in
-private lemma evalDist_simulateQ_forkWrappedUniformImpl [Fintype Chal]
+private lemma evalSPMF_simulateQ_forkWrappedUniformImpl [Fintype Chal]
     {α : Type} (oa : OracleComp (Fork.wrappedSpec Chal) α) :
-    𝒟[simulateQ (forkWrappedUniformImpl (Chal := Chal)) oa] =
-      𝒟[oa] := by
-  apply OracleComp.evalDist_simulateQ_eq_evalDist
+    𝒮[simulateQ (forkWrappedUniformImpl (Chal := Chal)) oa] =
+      𝒮[oa] := by
+  apply OracleComp.evalSPMF_simulateQ_eq_evalSPMF
   rintro (n | u)
   · simp only [forkWrappedUniformImpl, QueryImpl.add_apply_inl,
       QueryImpl.ofLift_eq_id', QueryImpl.id'_apply]
-    rw [OracleComp.evalDist_query (spec := Fork.wrappedSpec Chal)]
-    exact OracleComp.evalDist_query (spec := unifSpec) n
+    rw [OracleComp.evalSPMF_query (spec := Fork.wrappedSpec Chal)]
+    exact OracleComp.evalSPMF_query (spec := unifSpec) n
   · simp only [forkWrappedUniformImpl, QueryImpl.add_apply_inr,
       uniformSampleImpl_apply]
-    exact evalDist_uniformSample_eq_query
+    exact evalSPMF_uniformSample_eq_query
       (spec := Fork.wrappedSpec Chal) (Sum.inr u)
 
 omit [Finite Chal] in
@@ -1452,8 +1452,8 @@ private lemma support_simulateQ_forkWrappedUniformImpl [Fintype Chal]
     {α : Type} (oa : OracleComp (Fork.wrappedSpec Chal) α) :
     support (simulateQ (forkWrappedUniformImpl (Chal := Chal)) oa) =
       support oa :=
-  Set.ext fun x => mem_support_iff_of_evalDist_eq
-    (evalDist_simulateQ_forkWrappedUniformImpl oa) x
+  Set.ext fun x => mem_support_iff_of_evalSPMF_eq
+    (evalSPMF_simulateQ_forkWrappedUniformImpl oa) x
 
 omit [SampleableType Stmt] [SampleableType Wit] [SampleableType Chal] [Finite Chal]
   [Inhabited Chal] in
@@ -1551,7 +1551,8 @@ private lemma probOutput_simulateQ_forkWrappedUniformImpl [Fintype Chal]
     {α : Type} (oa : OracleComp (Fork.wrappedSpec Chal) α) (x : α) :
     Pr[= x | simulateQ (forkWrappedUniformImpl (Chal := Chal)) oa] =
       Pr[= x | oa] :=
-  congrFun (congrArg DFunLike.coe (evalDist_simulateQ_forkWrappedUniformImpl oa)) x
+  by simpa only [probOutput_def] using
+    congrFun (congrArg DFunLike.coe (evalSPMF_simulateQ_forkWrappedUniformImpl oa)) x
 
 private noncomputable def forkH5Body
     (adv : SignatureAlg.unforgeableAdv

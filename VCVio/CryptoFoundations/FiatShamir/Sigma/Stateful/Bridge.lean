@@ -177,17 +177,17 @@ def postVerifyComp (pk : Stmt) (x : M × (Commit × Resp)) :
 
 /-- The Fiat-Shamir runtime-with-cache semantics is the explicit cache-state
 implementation `fsBaseImpl`, observed from the chosen initial cache. -/
-lemma runtimeWithCache_evalDist_eq_fsBaseImpl
+lemma runtimeWithCache_evalSPMF_eq_fsBaseImpl
     (cache : (M × Commit →ₒ Chal).QueryCache)
     {α : Type}
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) :
-    (_root_.FiatShamir.runtimeWithCache M cache).evalDist oa =
-      𝒟[(simulateQ
+    (_root_.FiatShamir.runtimeWithCache M cache).evalSPMF oa =
+      𝒮[(simulateQ
         (fsBaseImpl (M := M) (Commit := Commit) (Chal := Chal)) oa).run'
         cache] := by
-  unfold _root_.FiatShamir.runtimeWithCache ProbCompRuntime.evalDist
-    SPMFSemantics.evalDist SemanticsVia.denote fsBaseImpl
-    SPMFSemantics.withStateOracle unifFwdImpl simulateQ' evalDist
+  unfold _root_.FiatShamir.runtimeWithCache ProbCompRuntime.evalSPMF
+    SPMFSemantics.evalSPMF SemanticsVia.denote fsBaseImpl
+    SPMFSemantics.withStateOracle unifFwdImpl simulateQ' evalSPMF
   have hbase :
       (QueryImpl.ofLift unifSpec ProbComp).liftTarget
           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)
