@@ -13,13 +13,15 @@ public import VCVio.OracleComp.Constructions.SampleableType
 
 A tweakable hash family `Th : PkSeed → Tweak → M → Y` generalizes `KeyedHashFamily` by
 splitting the key into a *sampled* public seed and a *caller-supplied* abstract tweak. It is the
-abstraction that the SLH-DSA / SPHINCS+ functions `F`, `H`, and `T_ℓ` instantiate (with the
-tweak being the 32-byte address `ADRS`), and against which their multi-target security notions
+abstraction that the SLH-DSA / SPHINCS+ functions `F`, `H`, and `T_ℓ` instantiate (with the tweak
+being the canonical encoded `ADRS` key), and against which their multi-target security notions
 (`VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget`) are stated.
 
-This file provides the data abstraction only; the security games live in `MultiTarget` and are
-deliberately stated over plain functions `X → Y` / `Tweak → M → Y`, so a partially-applied
-tweakable hash can be fed in without a circular dependency.
+This file provides the data abstractions only; the security games live in `MultiTarget`.
+`TweakableHashCollection` packages members with a common public-seed, tweak, and digest space,
+but possibly different message spaces.  This is the structure needed for hash-based signatures:
+challenge queries to one member may depend on evaluations of other members under the same hidden
+public seed.
 
 With `Tweak := Unit` this is definitionally a keyed hash family
 (`seedGen : ProbComp PkSeed`, `eval : PkSeed → M → Y`), so nothing is lost relative to the
@@ -38,6 +40,17 @@ structure TweakableHash (PkSeed Tweak M Y : Type) where
   /-- Evaluate the tweakable hash at a public seed, tweak, and message. -/
   eval : PkSeed → Tweak → M → Y
 
+/-- A collection of tweakable hash functions sharing one public seed, tweak space, and digest
+space.  The message type may depend on the collection member.  For the SLH-DSA public hash
+collection, the index records the input arity and `Message i` is the type of exactly `i` nodes. -/
+structure TweakableHashCollection (PkSeed Tweak Y : Type) where
+  /-- Names of the functions in the collection. -/
+  Index : Type
+  /-- Message space of each collection member. -/
+  Message : Index → Type
+  /-- Evaluate a member of the collection. -/
+  eval : (i : Index) → PkSeed → Tweak → Message i → Y
+
 namespace TweakableHash
 
 variable {PkSeed Tweak Y : Type}
@@ -49,3 +62,22 @@ def nodeHash (th : TweakableHash PkSeed Tweak (Y × Y) Y) (pk : PkSeed) (t : Twe
   th.eval pk t (l, r)
 
 end TweakableHash
+
+namespace TweakableHashCollection
+
+variable {PkSeed Tweak Y : Type}
+
+/-- A typed query to any member of a tweakable-hash collection. -/
+structure Query (collection : TweakableHashCollection PkSeed Tweak Y) where
+  /-- The queried collection member. -/
+  index : collection.Index
+  /-- The public tweak. -/
+  tweak : Tweak
+  /-- A message in the selected member's message space. -/
+  message : collection.Message index
+
+/-- Explicit oracle interface for evaluating an entire tweakable-hash collection. -/
+@[reducible] def oracleSpec (collection : TweakableHashCollection PkSeed Tweak Y) :
+    OracleSpec (Query collection) := fun _ => Y
+
+end TweakableHashCollection
