@@ -45,7 +45,7 @@ HOLDS="${PMF_BOUNDARY_HOLDS:-scripts/pmf_boundary_holds.tsv}"
 if [[ -n "${PMF_BOUNDARY_LIBS:-}" ]]; then
   read -r -a LIBS <<< "$PMF_BOUNDARY_LIBS"
 else
-  LIBS=(VCVio ToMathlib LatticeCrypto HashSig Examples VCVioWidgets)
+  LIBS=(VCVio VCVioCslib ToMathlib LatticeCrypto HashSig Examples VCVioWidgets)
 fi
 CURRENT="$(mktemp "${TMPDIR:-/tmp}/vcvio-pmf-boundary.XXXXXX")"
 trap 'rm -f "$CURRENT"' EXIT

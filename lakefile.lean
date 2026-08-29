@@ -62,12 +62,16 @@ idempotent.
 -/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "c0c923693fc827a41d17116579a0c16ed4873b19"
+  "7c5d5f4b45c3c1fbe93c8022aec44f41d61e5dd4"
 
 require "leanprover-community" / "mathlib" @ git "v4.33.1"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
+
+/-- Optional cslib-backed non-uniform complexity adapters. Kept outside the
+default `VCVio` umbrella so core VCVio remains backend-neutral. -/
+lean_lib VCVioCslib
 
 /-- Native FFI surface: `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA,
 Falcon) and every module whose transitive imports reach them. Isolated here so
