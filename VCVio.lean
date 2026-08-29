@@ -161,6 +161,7 @@ public import VCVio.OracleComp.OracleSpec
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.QueryTracking
+public import VCVio.OracleComp.QueryTracking.AdaptivePrefix
 public import VCVio.OracleComp.QueryTracking.Birthday
 public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
 public import VCVio.OracleComp.QueryTracking.CachingOracle
