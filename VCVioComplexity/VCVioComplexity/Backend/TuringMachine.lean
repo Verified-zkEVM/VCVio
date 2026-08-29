@@ -699,6 +699,7 @@ def hasOption : @PFunctor.StepClass.HasOption stepClass hasProd := by
     { option := Representation.option
       omap_mem := fun _ ↦ trivial
       none_mem := fun _ _ ↦ trivial
+      some_mem := fun _ ↦ trivial
       obindCtx_mem := fun _ ↦ trivial }
 
 /-- Qualitative distributivity of the trusted structural representations. -/

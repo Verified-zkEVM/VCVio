@@ -152,12 +152,12 @@ namespace SecurityGame
 
 open OracleComp.Complexity
 
-variable {index input output : ℕ → Type} [∀ n, DecidableEq (index n)]
+variable {index input output : ℕ → Type u} [∀ n, DecidableEq (index n)]
 
 /-- Security against non-uniform cslib-backed P/poly oracle adversaries at a
 pinned canonical boundary. -/
 abbrev secureAgainstNonuniformPPT
-    {spec : (n : ℕ) → OracleSpec (index n)}
+    {spec : (n : ℕ) → OracleSpec.{u, u} (index n)}
     (boundary : NonuniformBoundary spec input output)
     (game : SecurityGame ((n : ℕ) → input n → OracleComp (spec n) (output n))) : Prop :=
   game.secureAgainst (IsNonuniformPPTBy boundary)
@@ -165,7 +165,7 @@ abbrev secureAgainstNonuniformPPT
 /-- A negligible per-query loss remains negligible against every certified
 non-uniform adversary because its total query count is polynomially bounded. -/
 theorem secureAgainstNonuniformPPT_of_advantage_le_mul_totalQueries
-    {spec : (n : ℕ) → OracleSpec (index n)}
+    {spec : (n : ℕ) → OracleSpec.{u, u} (index n)}
     (boundary : NonuniformBoundary spec input output)
     (game : SecurityGame ((n : ℕ) → input n → OracleComp (spec n) (output n)))
     {error : ℕ → ℝ≥0∞} (errorNegligible : negligible error)
