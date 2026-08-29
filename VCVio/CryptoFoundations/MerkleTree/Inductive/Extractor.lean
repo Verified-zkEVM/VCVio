@@ -76,13 +76,8 @@ def opening {s : Skeleton} (tree : FullData (Option α) s)
   proof := generateProof tree idx
 
 /-- The non-dummy labels reached by extraction from `root`. -/
-def targets : (s : Skeleton) → (spec α).QueryLog → α → List α
-  | .leaf, _, root => [root]
-  | .internal left right, log, root =>
-      root :: match children log root with
-        | none => []
-        | some (leftRoot, rightRoot) =>
-            targets left log leftRoot ++ targets right log rightRoot
+def targets (s : Skeleton) (log : (spec α).QueryLog) (root : α) : List α :=
+  MerkleTreeExtractor.targets queryView s (fun _ => ()) log root
 
 @[simp]
 theorem tree_leaf (log : (spec α).QueryLog) (root : α) :
@@ -137,20 +132,26 @@ theorem targets_leaf (log : (spec α).QueryLog) (root : α) :
 
 @[simp]
 theorem root_mem_targets (s : Skeleton) (log : (spec α).QueryLog) (root : α) :
-    root ∈ targets s log root := by
-  cases s <;> simp [targets]
+    root ∈ targets s log root :=
+  MerkleTreeExtractor.root_mem_targets queryView s (fun _ => ()) log root
 
 theorem targets_internal_of_children_eq_none (left right : Skeleton)
     (log : (spec α).QueryLog) (root : α) (hchildren : children log root = none) :
     targets (.internal left right) log root = [root] := by
-  simp [targets, hchildren]
+  change MerkleTreeExtractor.children queryView log () root = none at hchildren
+  simpa [targets] using
+    (MerkleTreeExtractor.targets_internal_of_children_eq_none queryView left right
+      (fun _ => ()) log root hchildren)
 
 theorem targets_internal_of_children_eq_some (left right : Skeleton)
     (log : (spec α).QueryLog) (root x y : α)
     (hchildren : children log root = some (x, y)) :
     targets (.internal left right) log root =
       root :: (targets left log x ++ targets right log y) := by
-  simp [targets, hchildren]
+  change MerkleTreeExtractor.children queryView log () root = some (x, y) at hchildren
+  simpa [targets] using
+    (MerkleTreeExtractor.targets_internal_of_children_eq_some queryView left right
+      (fun _ => ()) log root x y hchildren)
 
 omit [DecidableEq α] in
 @[simp]
@@ -176,73 +177,15 @@ theorem tree_internal_eq_of_find?_eq (left right : Skeleton)
 
 /-- A full binary skeleton with `L` leaves exposes at most `2L - 1` extractor targets. -/
 theorem targets_length_le (s : Skeleton) (log : (spec α).QueryLog) (root : α) :
-    (targets s log root).length ≤ 2 * s.leafCount - 1 := by
-  induction s generalizing root with
-  | leaf => simp [targets]
-  | internal left right ihLeft ihRight =>
-      simp only [targets, List.length_cons]
-      cases hchildren : children log root with
-      | none =>
-          simp only [List.length_nil]
-          have hl := Skeleton.leafCount_pos left
-          have hr := Skeleton.leafCount_pos right
-          simp only [Skeleton.leafCount_internal]
-          omega
-      | some children =>
-          obtain ⟨leftRoot, rightRoot⟩ := children
-          simp only [List.length_append]
-          have hl := ihLeft leftRoot
-          have hr := ihRight rightRoot
-          have hsl := Skeleton.leafCount_pos left
-          have hsr := Skeleton.leafCount_pos right
-          simp only [Skeleton.leafCount_internal]
-          omega
+    (targets s log root).length ≤ 2 * s.leafCount - 1 :=
+  MerkleTreeExtractor.targets_length_le queryView s (fun _ => ()) log root
 
 /-- Every extractor target is the claimed root or one component of a logged hash input. -/
 theorem mem_targets_root_or_log_input (s : Skeleton) (log : (spec α).QueryLog)
     (root : α) {target : α} (htarget : target ∈ targets s log root) :
     target = root ∨ ∃ entry ∈ log, target = entry.1.1 ∨ target = entry.1.2 := by
-  induction s generalizing root with
-  | leaf =>
-      simp only [targets, List.mem_singleton] at htarget
-      exact Or.inl htarget
-  | internal left right ihLeft ihRight =>
-      simp only [targets, List.mem_cons] at htarget
-      rcases htarget with hroot | htarget
-      · exact Or.inl hroot
-      · cases hchildren : children log root with
-        | none => simp [hchildren] at htarget
-        | some children =>
-            obtain ⟨leftRoot, rightRoot⟩ := children
-            simp only [hchildren, List.mem_append] at htarget
-            simp only [children, MerkleTreeExtractor.children, queryView]
-              at hchildren
-            simp only [beq_self_eq_true, Bool.true_and, id_eq] at hchildren
-            have hpred :
-                (fun entry : (_query : α × α) × α => entry.2 == root) =
-                  (fun ⟨_, response⟩ => response == root) := by
-              funext entry
-              cases entry
-              rfl
-            rw [hpred] at hchildren
-            cases hfind : log.find? (fun ⟨_, response⟩ => response == root) with
-            | none => simp [hfind] at hchildren
-            | some entry =>
-                obtain ⟨⟨leftRoot', rightRoot'⟩, response⟩ := entry
-                simp only [hfind, Option.some.injEq, Prod.mk.injEq] at hchildren
-                obtain ⟨hleft, hright⟩ := hchildren
-                subst leftRoot'
-                subst rightRoot'
-                have hentry :
-                    (⟨(leftRoot, rightRoot), response⟩ : (_ : α × α) × α) ∈ log :=
-                  List.mem_of_find?_eq_some hfind
-                rcases htarget with htarget | htarget
-                · rcases ihLeft leftRoot htarget with hroot | hdeeper
-                  · exact Or.inr ⟨⟨(leftRoot, rightRoot), response⟩, hentry, Or.inl hroot⟩
-                  · exact Or.inr hdeeper
-                · rcases ihRight rightRoot htarget with hroot | hdeeper
-                  · exact Or.inr ⟨⟨(leftRoot, rightRoot), response⟩, hentry, Or.inr hroot⟩
-                  · exact Or.inr hdeeper
+  simpa [queryView] using
+    (MerkleTreeExtractor.mem_targets_root_or_log_input queryView s (fun _ => ()) log root htarget)
 
 end Extractor
 

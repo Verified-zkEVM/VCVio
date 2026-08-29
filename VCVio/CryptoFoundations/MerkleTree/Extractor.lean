@@ -75,6 +75,17 @@ def tree (view : QueryView Query Address Y) (s : Skeleton)
     FullData (Option Y) s :=
   treeAt view s addressKey log root
 
+/-- Enumerate the non-dummy labels reached by the extraction recurrence. -/
+def targets (view : QueryView Query Address Y) : (subtree : Skeleton) →
+    (SkeletonInternalIndex subtree → Address) → QueryLog Query Y → Y → List Y
+  | .leaf, _, _, root => [root]
+  | .internal left right, addressKey, log, root =>
+      root :: match children view log (addressKey .ofInternal) root with
+        | none => []
+        | some (leftRoot, rightRoot) =>
+            targets view left (fun address => addressKey (.ofLeft address)) log leftRoot ++
+              targets view right (fun address => addressKey (.ofRight address)) log rightRoot
+
 /-- The leaf and authentication path exposed by an extracted partial tree at `idx`. -/
 structure Opening (Y : Type w) {s : Skeleton} (idx : SkeletonLeafIndex s) where
   /-- Extracted leaf, or `none` when the transcript does not reach it. -/
@@ -121,6 +132,129 @@ theorem treeAt_getRootValue (view : QueryView Query Address Y) (subtree : Skelet
     (treeAt view subtree addressKey log root).getRootValue = some root := by
   cases subtree <;> simp [treeAt]
   split <;> simp
+
+@[simp]
+theorem targets_leaf (view : QueryView Query Address Y)
+    (addressKey : SkeletonInternalIndex .leaf → Address)
+    (log : QueryLog Query Y) (root : Y) :
+    targets view .leaf addressKey log root = [root] := rfl
+
+@[simp]
+theorem root_mem_targets (view : QueryView Query Address Y) (s : Skeleton)
+    (addressKey : SkeletonInternalIndex s → Address)
+    (log : QueryLog Query Y) (root : Y) :
+    root ∈ targets view s addressKey log root := by
+  cases s <;> simp [targets]
+
+theorem targets_internal_of_children_eq_none (view : QueryView Query Address Y)
+    (left right : Skeleton) (addressKey : SkeletonInternalIndex (.internal left right) → Address)
+    (log : QueryLog Query Y) (root : Y)
+    (hchildren : children view log (addressKey .ofInternal) root = none) :
+    targets view (.internal left right) addressKey log root = [root] := by
+  simp [targets, hchildren]
+
+theorem targets_internal_of_children_eq_some (view : QueryView Query Address Y)
+    (left right : Skeleton) (addressKey : SkeletonInternalIndex (.internal left right) → Address)
+    (log : QueryLog Query Y) (root leftRoot rightRoot : Y)
+    (hchildren : children view log (addressKey .ofInternal) root = some (leftRoot, rightRoot)) :
+    targets view (.internal left right) addressKey log root =
+      root ::
+        (targets view left (fun address => addressKey (.ofLeft address)) log leftRoot ++
+          targets view right (fun address => addressKey (.ofRight address)) log rightRoot) := by
+  simp [targets, hchildren]
+
+/-- A full binary skeleton with `L` leaves exposes at most `2L - 1` extractor targets. -/
+private theorem targets_length_le_aux (view : QueryView Query Address Y) (subtree : Skeleton)
+    (addressKey : SkeletonInternalIndex subtree → Address)
+    (log : QueryLog Query Y) (root : Y) :
+    (targets view subtree addressKey log root).length ≤ 2 * subtree.leafCount - 1 := by
+  induction subtree generalizing root with
+  | leaf => simp [targets]
+  | internal left right ihLeft ihRight =>
+      simp only [targets, List.length_cons]
+      cases hchildren : children view log (addressKey .ofInternal) root with
+      | none =>
+          simp only [List.length_nil]
+          have hl := Skeleton.leafCount_pos left
+          have hr := Skeleton.leafCount_pos right
+          simp only [Skeleton.leafCount_internal]
+          omega
+      | some pair =>
+          obtain ⟨leftRoot, rightRoot⟩ := pair
+          simp only [List.length_append]
+          have hl := ihLeft (fun address => addressKey (.ofLeft address)) leftRoot
+          have hr := ihRight (fun address => addressKey (.ofRight address)) rightRoot
+          have hsl := Skeleton.leafCount_pos left
+          have hsr := Skeleton.leafCount_pos right
+          simp only [Skeleton.leafCount_internal]
+          omega
+
+/-- The public target-list cardinality bound. -/
+theorem targets_length_le (view : QueryView Query Address Y) (s : Skeleton)
+    (addressKey : SkeletonInternalIndex s → Address)
+    (log : QueryLog Query Y) (root : Y) :
+    (targets view s addressKey log root).length ≤ 2 * s.leafCount - 1 :=
+  targets_length_le_aux view s addressKey log root
+
+/-- A successful child lookup is witnessed by the complete query/response entry selected from
+the log. -/
+private theorem exists_mem_of_children_eq_some (view : QueryView Query Address Y)
+    (log : QueryLog Query Y) (address : Address) (root leftRoot rightRoot : Y)
+    (hchildren : children view log address root = some (leftRoot, rightRoot)) :
+    ∃ entry ∈ log,
+      view.address entry.1 = address ∧ entry.2 = root ∧
+        view.input entry.1 = (leftRoot, rightRoot) := by
+  unfold children at hchildren
+  cases hfind : log.find? (fun entry => view.address entry.1 == address && entry.2 == root) with
+  | none => simp [hfind] at hchildren
+  | some entry =>
+      have hpred := List.find?_some hfind
+      have hmem := List.mem_of_find?_eq_some hfind
+      simp only [hfind, Option.some.injEq] at hchildren
+      simp only [Bool.and_eq_true, beq_iff_eq] at hpred
+      exact ⟨entry, hmem, hpred.1, hpred.2, hchildren⟩
+
+/-- Every extractor target is the claimed root or one component of a complete logged query. -/
+private theorem mem_targets_root_or_log_input_aux (view : QueryView Query Address Y)
+    (subtree : Skeleton) (addressKey : SkeletonInternalIndex subtree → Address)
+    (log : QueryLog Query Y) (root : Y) {target : Y}
+    (htarget : target ∈ targets view subtree addressKey log root) :
+    target = root ∨
+      ∃ entry ∈ log, target = (view.input entry.1).1 ∨ target = (view.input entry.1).2 := by
+  induction subtree generalizing root with
+  | leaf =>
+      simp only [targets, List.mem_singleton] at htarget
+      exact Or.inl htarget
+  | internal left right ihLeft ihRight =>
+      simp only [targets, List.mem_cons] at htarget
+      rcases htarget with hroot | htarget
+      · exact Or.inl hroot
+      · cases hchildren : children view log (addressKey .ofInternal) root with
+        | none => simp [hchildren] at htarget
+        | some pair =>
+            obtain ⟨leftRoot, rightRoot⟩ := pair
+            simp only [hchildren, List.mem_append] at htarget
+            obtain ⟨entry, hentry, _, _, hinput⟩ :=
+              exists_mem_of_children_eq_some view log (addressKey .ofInternal) root
+                leftRoot rightRoot hchildren
+            rcases htarget with htarget | htarget
+            · rcases ihLeft (fun address => addressKey (.ofLeft address)) leftRoot htarget with
+                hroot | hdeeper
+              · exact Or.inr ⟨entry, hentry, Or.inl (by rw [hroot, hinput])⟩
+              · exact Or.inr hdeeper
+            · rcases ihRight (fun address => addressKey (.ofRight address)) rightRoot htarget with
+                hroot | hdeeper
+              · exact Or.inr ⟨entry, hentry, Or.inr (by rw [hroot, hinput])⟩
+              · exact Or.inr hdeeper
+
+/-- Public support characterization for targets reached by extraction. -/
+theorem mem_targets_root_or_log_input (view : QueryView Query Address Y)
+    (s : Skeleton) (addressKey : SkeletonInternalIndex s → Address)
+    (log : QueryLog Query Y) (root : Y) {target : Y}
+    (htarget : target ∈ targets view s addressKey log root) :
+    target = root ∨
+      ∃ entry ∈ log, target = (view.input entry.1).1 ∨ target = (view.input entry.1).2 :=
+  mem_targets_root_or_log_input_aux view s addressKey log root htarget
 
 /-- A collision-free matching log entry determines the extractor lookup. -/
 theorem children_eq_some_of_mem_of_responseInjectiveOn

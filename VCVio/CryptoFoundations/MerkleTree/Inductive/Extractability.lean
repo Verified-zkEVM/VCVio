@@ -687,7 +687,10 @@ private lemma fresh_extractedTarget_of_extractor_disagreement
               unfold Extractor.children MerkleTreeExtractor.children Extractor.queryView
               simp [hfind]
             exact ⟨target, by
-              simp [extractedTargets, Extractor.targets, hchildren, htarget],
+              change target ∈ Extractor.targets (.internal sl sr) log root
+              rw [Extractor.targets_internal_of_children_eq_some sl sr log root
+                ancestor proof.head hchildren]
+              simp [htarget],
                 hfresh⟩
   | @ofRight sl sr idxRight ih =>
     obtain ⟨ancestor, hquery, hchainTail⟩ := hchain
@@ -757,7 +760,10 @@ private lemma fresh_extractedTarget_of_extractor_disagreement
               unfold Extractor.children MerkleTreeExtractor.children Extractor.queryView
               simp [hfind]
             exact ⟨target, by
-              simp [extractedTargets, Extractor.targets, hchildren, htarget],
+              change target ∈ Extractor.targets (.internal sl sr) log root
+              rw [Extractor.targets_internal_of_children_eq_some sl sr log root
+                proof.head ancestor hchildren]
+              simp [htarget],
                 hfresh⟩
 
 /-- Pointwise deterministic reduction for the cached suffix: once the commit cache is
