@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import Batteries.Control.OptionT
+
+module
+public import VCVio.OracleComp.EvalDist
+public import Batteries.Control.OptionT
 
 /-!
 # Computations with Uniform Selection Oracles
@@ -29,6 +31,8 @@ useful lemmas out of the box, in particular when using subtypes.
 
 TODO: Some lemmas here don't exist at the `PMF`/`SPMF` levels.
 -/
+
+@[expose] public section
 
 
 open OracleComp BigOperators ENNReal
@@ -494,6 +498,7 @@ lemma probEvent_coin (p : Bool → Prop) [DecidablePred p] :
   split_ifs <;> simp_all [ENNReal.inv_two_add_inv_two]
 
 @[simp, grind =]
-lemma probFailure_coin : Pr[⊥ | coin] = 0 := by grind
+lemma probFailure_coin : Pr[⊥ | coin] = 0 :=
+  probFailure_of_liftM_PMF coin
 
 end coinSpec

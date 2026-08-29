@@ -3,13 +3,15 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.FiatShamir.QueryBounds
-import VCVio.CryptoFoundations.FiatShamir.Sigma
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Games
-import VCVio.CryptoFoundations.SignatureAlg
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.QueryTracking.SubSpec
+
+module
+public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
+public import VCVio.CryptoFoundations.FiatShamir.Sigma
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Games
+public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.SubSpec
 
 /-!
 # Bridge helpers for the stateful Fiat-Shamir CMA games
@@ -18,6 +20,8 @@ This file contains the adversary wrappers and query-bound bookkeeping that
 connect the public `SignatureAlg.unforgeableAdv` interface to the direct
 `QueryImpl.Stateful` CMA games.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -54,7 +58,7 @@ abbrev SourceCmaComp (α : Type) :=
 /-! ## Adversary wrappers -/
 
 /-- Candidate-producing part of the CMA adversary after the public key is fixed. -/
-@[reducible, fs_simp] noncomputable def postKeygenCandidateAdv
+@[reducible, fs_simp] def postKeygenCandidateAdv
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
     (pk : Stmt) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt)
@@ -64,7 +68,7 @@ abbrev SourceCmaComp (α : Type) :=
       (M × (Commit × Resp)))
 
 /-- Candidate-producing adversary with the public key fetched from the game. -/
-@[reducible, fs_simp] noncomputable def candidateAdv
+@[reducible, fs_simp] def candidateAdv
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt)
       (Stmt × (M × (Commit × Resp))) := do
@@ -75,7 +79,7 @@ abbrev SourceCmaComp (α : Type) :=
   pure (pk, out)
 
 /-- Lift a CMA-style Fiat-Shamir adversary into the named CMA game interface. -/
-@[reducible, fs_simp] noncomputable def signedAdv
+@[reducible, fs_simp] def signedAdv
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt)
       ((M × (Commit × Resp)) × Bool) := do
@@ -91,7 +95,7 @@ abbrev SourceCmaComp (α : Type) :=
   pure ((msg, sig), verified)
 
 /-- Log signing queries while forwarding every query to the surrounding CMA interface. -/
-@[reducible, fs_simp] noncomputable def cmaSignLogImpl :
+@[reducible, fs_simp] def cmaSignLogImpl :
     QueryImpl (cmaSpec M Commit Chal Resp Stmt)
       (StateT (List M) (OracleComp (cmaSpec M Commit Chal Resp Stmt)))
   | .unif n => do
@@ -114,7 +118,7 @@ abbrev SourceCmaComp (α : Type) :=
       pure pk
 
 /-- Log signing queries while producing the final candidate, before verification. -/
-@[reducible, fs_simp] noncomputable def signedCandidateAdv
+@[reducible, fs_simp] def signedCandidateAdv
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt)
       ((Stmt × (M × (Commit × Resp))) × List M) := do
@@ -122,7 +126,7 @@ abbrev SourceCmaComp (α : Type) :=
     (Resp := Resp) (Stmt := Stmt)) (candidateAdv σ hr M adv)).run []
 
 /-- Freshness and verification check attached after candidate production. -/
-@[reducible, fs_simp] noncomputable def verifyFreshComp
+@[reducible, fs_simp] def verifyFreshComp
     (p : (Stmt × (M × (Commit × Resp))) × List M) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt) Bool := do
   let pk := p.1.1
@@ -135,7 +139,7 @@ abbrev SourceCmaComp (α : Type) :=
   pure (!decide (out.1 ∈ signed) && verified)
 
 /-- Freshness-preserving Boolean adversary for the direct stateful CMA chain. -/
-@[reducible, fs_simp] noncomputable def signedFreshAdv
+@[reducible, fs_simp] def signedFreshAdv
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt) Bool :=
   signedCandidateAdv σ hr M adv >>= verifyFreshComp (σ := σ) (hr := hr)
@@ -145,7 +149,7 @@ abbrev SourceCmaComp (α : Type) :=
 
 /-- The public post-keygen adversary/verification computation before it is
 interpreted by the explicit random-oracle cache runtime. -/
-@[fs_simp] noncomputable def postKeygenAdvBase (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+@[fs_simp] def postKeygenAdvBase (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
     (pk : Stmt) : SourceCmaComp (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
       ((M × (Commit × Resp)) × Bool) := do
   let (msg, sig) ← adv.main pk
@@ -155,7 +159,7 @@ interpreted by the explicit random-oracle cache runtime. -/
   pure ((msg, sig), verified)
 
 /-- Verification suffix attached after the fixed-key adversary produces a candidate. -/
-noncomputable def postVerifyComp (pk : Stmt) (x : M × (Commit × Resp)) :
+def postVerifyComp (pk : Stmt) (x : M × (Commit × Resp)) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt) ((M × (Commit × Resp)) × Bool) := do
   let verified ← (liftM
     ((SourceSigAlg (σ := σ) (hr := hr) (M := M)).verify
@@ -164,7 +168,7 @@ noncomputable def postVerifyComp (pk : Stmt) (x : M × (Commit × Resp)) :
   pure (x, verified)
 
 /-- Fixed-key adversary and verification computation over the named CMA interface. -/
-@[fs_simp] noncomputable def postKeygenAdv (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+@[fs_simp] def postKeygenAdv (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
     (pk : Stmt) : OracleComp (cmaSpec M Commit Chal Resp Stmt) ((M × (Commit × Resp)) × Bool) :=
   (postKeygenCandidateAdv (σ := σ) (hr := hr) (M := M)
     (Commit := Commit) (Chal := Chal) (Resp := Resp) adv pk) >>=
@@ -173,23 +177,23 @@ noncomputable def postVerifyComp (pk : Stmt) (x : M × (Commit × Resp)) :
 
 /-- The Fiat-Shamir runtime-with-cache semantics is the explicit cache-state
 implementation `fsBaseImpl`, observed from the chosen initial cache. -/
-lemma runtimeWithCache_evalDist_eq_fsBaseImpl
+lemma runtimeWithCache_evalSPMF_eq_fsBaseImpl
     (cache : (M × Commit →ₒ Chal).QueryCache)
     {α : Type}
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) :
-    (_root_.FiatShamir.runtimeWithCache M cache).evalDist oa =
-      𝒟[(simulateQ
+    (_root_.FiatShamir.runtimeWithCache M cache).evalSPMF oa =
+      𝒮[(simulateQ
         (fsBaseImpl (M := M) (Commit := Commit) (Chal := Chal)) oa).run'
         cache] := by
-  unfold _root_.FiatShamir.runtimeWithCache ProbCompRuntime.evalDist
-    SPMFSemantics.evalDist SemanticsVia.denote fsBaseImpl
-    SPMFSemantics.withStateOracle unifFwdImpl simulateQ' evalDist
+  unfold _root_.FiatShamir.runtimeWithCache ProbCompRuntime.evalSPMF
+    SPMFSemantics.evalSPMF SemanticsVia.denote fsBaseImpl
+    SPMFSemantics.withStateOracle unifFwdImpl simulateQ' evalSPMF
   have hbase :
       (QueryImpl.ofLift unifSpec ProbComp).liftTarget
           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)
         = (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) := by
-    simp [QueryImpl.liftTarget_apply, HasQuery.toQueryImpl, funext_iff]
+    simp [HasQuery.toQueryImpl, funext_iff]
   rw [hbase]
   grind
 
@@ -200,7 +204,7 @@ lemma runtimeWithCache_evalDist_eq_fsBaseImpl
 The keypair is installed before the adversary runs, and the final freshness
 check reads the signed-message log from the resulting `CmaState`. This is the
 canonical normal form used by the stateful CMA chain. -/
-@[fs_simp] noncomputable def postKeygenFreshProb (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+@[fs_simp] def postKeygenFreshProb (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
     (pk : Stmt) (sk : Wit) : ProbComp Bool :=
   (simulateQ (cmaRealSourceFullSum M Commit Chal σ hr)
       (postKeygenAdvBase (σ := σ) (hr := hr) (M := M)
@@ -217,7 +221,7 @@ canonical normal form used by the stateful CMA chain. -/
 /-- Run the direct stateful `cmaReal` game against `signedAdv` and pack the
 forgery, verification bit, and signed-message log into one probability
 computation. -/
-@[fs_simp] noncomputable def cmaRealRun (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
+@[fs_simp] def cmaRealRun (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
     ProbComp ((M × (Commit × Resp)) × Bool × List M) := do
   let p ← (cmaReal M Commit Chal σ hr).runState
     (cmaInit M Commit Chal Stmt Wit) (signedAdv σ hr M adv)

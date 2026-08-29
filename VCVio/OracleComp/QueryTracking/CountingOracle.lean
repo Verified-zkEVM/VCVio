@@ -3,9 +3,11 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.QueryTracking.Structures
-import VCVio.OracleComp.QueryTracking.Tracing
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.QueryTracking.Tracing
 
 /-!
 # Counting Queries Made by a Computation
@@ -22,6 +24,8 @@ specialisations of `QueryImpl.withTraceBefore` (see `Tracing.lean`): the cost is
 *before* the underlying handler runs, so failed queries still incur their cost. The counting
 case picks `QueryCount.single` as the trace function.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 
@@ -70,7 +74,8 @@ lemma withCost_eq_withTraceBefore (so : QueryImpl spec m) (costFn : spec.Domain 
 @[simp, grind =]
 lemma withCost_apply (so : QueryImpl spec m) (costFn : spec.Domain → ω)
     (t : spec.Domain) :
-    so.withCost costFn t = (do tell (costFn t); so t) := rfl
+    so.withCost costFn t = (do tell (costFn t); so t) := by
+  exact withTraceBefore_apply so costFn t
 
 lemma fst_map_run_withCost [LawfulMonad m]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
@@ -106,11 +111,11 @@ These lemmas connect the result-marginal distribution of a `withCost`-instrument
 computation to the distribution of the uninstrumented computation, enabling direct
 probability-level reasoning about traced computations. -/
 
-lemma evalDist_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+lemma evalSPMF_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
-    𝒟[Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] =
-      𝒟[simulateQ so mx] :=
-  evalDist_fst_run_withTraceBefore so costFn mx
+    𝒮[Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] =
+      𝒮[simulateQ so mx] :=
+  evalSPMF_fst_run_withTraceBefore so costFn mx
 
 lemma probOutput_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) (x : α) :
@@ -135,7 +140,8 @@ def withCounting [DecidableEq ι] (so : QueryImpl spec m) :
 
 @[simp, grind =]
 lemma withCounting_apply [DecidableEq ι] (so : QueryImpl spec m) (t : spec.Domain) :
-    so.withCounting t = (do tell (QueryCount.single t); so t) := rfl
+    so.withCounting t = (do tell (QueryCount.single t); so t) := by
+  exact withCost_apply so (QueryCount.single ·) t
 
 lemma withCounting_eq_withCost [DecidableEq ι] (so : QueryImpl spec m) :
     so.withCounting = so.withCost (QueryCount.single ·) := rfl
@@ -159,6 +165,21 @@ def OracleSpec.countingOracle [DecidableEq ι] :
     QueryImpl spec (WriterT (QueryCount ι) (OracleComp spec)) :=
   (QueryImpl.ofLift spec (OracleComp spec)).withCounting
 
+/-- Pointwise behavior of the generic cost oracle. -/
+@[simp]
+lemma costOracle_apply {ω : Type u} [Monoid ω] (costFn : spec.Domain → ω)
+    (t : spec.Domain) :
+    costOracle costFn t =
+      (do tell (costFn t); liftM (liftM (spec.query t) : OracleComp spec _)) := by
+  rw [costOracle, QueryImpl.withCost_apply, QueryImpl.ofLift_apply]
+
+/-- Pointwise behavior of the per-index counting oracle. -/
+@[simp]
+lemma OracleSpec.countingOracle_apply [DecidableEq ι] (t : spec.Domain) :
+    spec.countingOracle t =
+      (do tell (QueryCount.single t); liftM (liftM (spec.query t) : OracleComp spec _)) := by
+  rw [OracleSpec.countingOracle, QueryImpl.withCounting_apply, QueryImpl.ofLift_apply]
+
 lemma countingOracle_eq_costOracle [DecidableEq ι] :
     spec.countingOracle = costOracle (QueryCount.single ·) := rfl
 
@@ -172,9 +193,9 @@ lemma fst_map_run_simulateQ (costFn : spec.Domain → ω) (oa : OracleComp spec 
   rw [costOracle, QueryImpl.fst_map_run_withCost, simulateQ_ofLift_eq_self]
 
 @[simp]
-lemma evalDist_fst_run_simulateQ [IsUniformSpec spec]
+lemma evalSPMF_fst_run_simulateQ [IsUniformSpec spec]
     (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
-    𝒟[Prod.fst <$> (simulateQ (costOracle costFn) oa).run] = 𝒟[oa] := by
+    𝒮[Prod.fst <$> (simulateQ (costOracle costFn) oa).run] = 𝒮[oa] := by
   rw [fst_map_run_simulateQ]
 
 @[simp]
@@ -239,9 +260,9 @@ lemma probOutput_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 
   rw [fst_map_run_simulateQ]
 
 @[simp]
-lemma evalDist_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀} [DecidableEq ι₀]
+lemma evalSPMF_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀} [DecidableEq ι₀]
     [IsUniformSpec spec₀] {α : Type} (oa : OracleComp spec₀ α) :
-    𝒟[Prod.fst <$> (simulateQ (spec₀.countingOracle) oa).run] = 𝒟[oa] := by
+    𝒮[Prod.fst <$> (simulateQ (spec₀.countingOracle) oa).run] = 𝒮[oa] := by
   rw [fst_map_run_simulateQ]
 
 @[simp]

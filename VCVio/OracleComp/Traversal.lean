@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import PolyFun.PFunctor.Free.Cursor
+
+module
+public import VCVio.OracleComp.EvalDist
+public import PolyFun.PFunctor.Free.Cursor
 
 /-!
 # Traversing Possible Paths of a Computation
@@ -24,7 +26,13 @@ It also connects those structural predicates to the denotational set `supportWhe
 move cleanly between the syntax-level traversal view and the reachable-output view.
 -/
 
+@[expose] public section
+
 open OracleSpec
+
+/- Lean 4.33 checks the `Idx`/dependent-pair conversion at implicit transparency when
+rewriting trace cons cells. -/
+attribute [local implicit_reducible] PFunctor.Idx
 
 universe u v
 

@@ -18,8 +18,8 @@ structure RevealLocationProps where
 @[widget_module]
 def RevealLocation : ProofWidgets.Component RevealLocationProps where
   javascript := "
-import * as React from 'react';
-import { EditorContext } from '@leanprover/infoview';
+public import * as React from 'react';
+public import { EditorContext } from '@leanprover/infoview';
 
 export default function(props) {
   const ec = React.useContext(EditorContext);

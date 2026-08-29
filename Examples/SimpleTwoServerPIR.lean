@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.ProgramLogic.Tactics.Relational
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.ProgramLogic.Tactics.Relational
 
 /-!
 # Information-Theoretic Private Information Retrieval (PIR)
@@ -36,6 +38,8 @@ regardless of `i₀`. So the distribution of `s` alone reveals nothing about `i�
 
 Port of EasyCrypt's `PIR.ec`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -202,8 +206,8 @@ probability 1/2 regardless of whether `j = i₀` or not:
 This is one half of the information-theoretic privacy guarantee; the second
 server view is handled by `pir_private_snd`. -/
 theorem pir_private (i₁ i₂ : Fin N) :
-    𝒟[Prod.fst <$> pirQuery i₁] =
-    𝒟[Prod.fst <$> pirQuery i₂] := by
+    𝒮[Prod.fst <$> pirQuery i₁] =
+    𝒮[Prod.fst <$> pirQuery i₂] := by
   simp only [pirQuery]
   by_equiv
   rvcstep -- handle map
@@ -230,8 +234,8 @@ The proof uses a coupling argument with four cases depending on whether `j` equa
 both, or neither. When `j` equals exactly one of them, the coupling negates the coin (`b ↦ !b`),
 exploiting the symmetry of the uniform distribution on `Bool`. -/
 theorem pir_private_snd (i₁ i₂ : Fin N) :
-    𝒟[Prod.snd <$> pirQuery i₁] =
-    𝒟[Prod.snd <$> pirQuery i₂] := by
+    𝒮[Prod.snd <$> pirQuery i₁] =
+    𝒮[Prod.snd <$> pirQuery i₂] := by
   simp only [pirQuery]
   by_equiv
   rvcstep -- handle map

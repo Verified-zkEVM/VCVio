@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.PRFReductions.Reductions
-import Examples.PRFTagReader.PRFReductions.IdealHandlers
-import Examples.PRFTagReader.PRFReductions.Structural
+module
+
+public import Examples.PRFTagReader.PRFReductions.Reductions
+public import Examples.PRFTagReader.PRFReductions.IdealHandlers
+public import Examples.PRFTagReader.PRFReductions.Structural
 
 /-!
 # PRF Tag/Reader Protocol — PRF Reductions and Composed Ideal Handlers
@@ -24,3 +26,5 @@ This file is a thin umbrella re-exporting the three sub-modules
 [`PRFReductions.Reductions`], [`PRFReductions.IdealHandlers`], and
 [`PRFReductions.Structural`].
 -/
+
+@[expose] public section

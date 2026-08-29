@@ -4,16 +4,20 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Common
-import VCVio.ProgramLogic.Relational.Basic
-import VCVio.ProgramLogic.Tactics.Relational.Internals
-import Loom.Triple.SpecLemmas
+module
+
+public meta import VCVio.ProgramLogic.Tactics.Common
+public import VCVio.ProgramLogic.Relational.Basic
+public meta import VCVio.ProgramLogic.Tactics.Relational.Internals
+public import Loom.Triple.SpecLemmas
 
 /-!
 # Unary VCGen Internals
 
 Implementation details for the unary VCGen planner and close passes.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 

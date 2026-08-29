@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.Interaction.UC.Emulates
-import VCVio.CryptoFoundations.Asymptotics.Negligible
-import VCVio.CryptoFoundations.Asymptotics.Security
-import VCVio.EvalDist.Defs.Semantics
-import VCVio.EvalDist.TVDist
+
+module
+public import PolyFun.Interaction.UC.Emulates
+public import VCVio.CryptoFoundations.Asymptotics.Negligible
+public import VCVio.CryptoFoundations.Asymptotics.Security
+public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.MeasureTVDist
 
 /-!
 # Computational observation layer for UC security
@@ -29,34 +31,32 @@ A `Semantics T` bundles:
 
 1. an ambient surface monad `m : Type → Type` in which closed systems
    are observed;
-2. a `SPMFSemantics m` factoring computations in `m` through an internal
-   semantic monad into an externally visible `SPMF`;
+2. a `MeasureSemanticsVia m` factoring computations in `m` through an internal
+   semantic monad into an externally visible measure;
 3. a result type observed at the closed-system boundary;
 4. a `run : T.Closed → m Result` that extracts the probabilistic game
    associated to each closed system.
 
-The observation target is `SPMF Result`, so the resulting denotation
-carries both the visible output distribution and genuine failure mass.
-Distinguishing advantage is the total variation distance between the
-two resulting `SPMF Result` distributions.
+The observation target is `Measure Result`, with failure represented by missing mass.
+Distinguishing advantage is the measure-theoretic total variation distance between the
+two resulting denotations.
 This lets the same framework express:
 
-* coin-flip-only protocols with `m = ProbComp` and
-  `SPMFSemantics.ofMonadLift ProbComp`;
+* coin-flip-only protocols with `m = ProbComp` and its canonical measure semantics;
 * protocols with shared oracles where `m = OracleComp superSpec` and
   the internal semantic monad is `StateT σ ProbComp` via `simulateQ`;
 * observation-style semantics that deliberately introduce failure, for
   example by querying with `OptionT ProbComp` and `guard`-ing on a
   predicate over sampled values. This is how OTP-style privacy gets a
-  `ObservedCompEmulates 0` statement against an `SPMF Unit` that carries a
-  real failure mass.
+  `ObservedCompEmulates 0` statement against a subprobability measure that carries
+  real missing mass.
 
 ## Main definitions
 
 * `Semantics T` bundles a result type, a surface monad, its
   sub-probabilistic semantics, and a `run` function extracting a game
   from each closed system.
-* `Semantics.evalDist` is the `SPMF Result` denotation of a closed system.
+* `Semantics.evalDist` is the `Measure Result` denotation of a closed system.
 * `Semantics.distAdvantage` is the total variation distance between two
   such denotations.
 * `Execution T` is a closed-system execution experiment consumed by
@@ -87,6 +87,8 @@ This lets the same framework express:
   equivalent to security of the UC distinguishing game.
 -/
 
+@[expose] public section
+
 universe u
 
 open OracleComp ENNReal
@@ -101,63 +103,68 @@ variable {T : OpenTheory.{u}}
 systems in the open-composition theory `T`:
 
 * `m` is the surface monad in which the observation is written;
-* `sem` is a `SPMFSemantics m` giving `m` its sub-probabilistic
+* `sem` is a `MeasureSemanticsVia m` giving `m` its sub-probabilistic
   meaning;
 * `Result` is the externally visible output type;
 * `run` extracts an `m Result` game from each closed system.
 
-The visible denotation of a closed system is therefore a
-`SPMF Result`, where the `none` branch records failure mass (for
-example, a `guard` that rejected the sampled value). Distinguishing
-advantage is total variation on those `SPMF Result` distributions.
+The visible denotation of a closed system is therefore a `Measure Result`; missing mass records
+failure (for example, a `guard` that rejected the sampled value). Distinguishing advantage is
+measure-theoretic total variation on those subprobability measures.
 -/
 structure Semantics (T : OpenTheory.{u}) where
   /-- Externally visible output type of the closed-system observation. -/
   Result : Type
+  /-- Measurable structure on visible observations. -/
+  instMeasurableSpace : MeasurableSpace Result
   /-- Surface monad in which closed systems are observed. -/
   m : Type → Type
   /-- Monad structure on the surface monad. -/
   instMonad : Monad m
-  /-- Bundled sub-probabilistic semantics for the surface monad. The
+  /-- Bundled measure-valued semantics for the surface monad. The
   internal semantic monad is kept in `Type → Type` so that every
   protocol (`ProbComp`, `OracleComp superSpec`, `OptionT ProbComp`,
   `StateT σ ProbComp`) fits uniformly. -/
-  sem : SPMFSemantics.{0, 0, 0} m
+  sem : MeasureSemanticsVia.{0, 0, 0} m
   /-- The probabilistic game extracted from a closed system. -/
   run : T.Closed → m Result
 
-attribute [instance] Semantics.instMonad
+attribute [instance] Semantics.instMonad Semantics.instMeasurableSpace
 
 namespace Semantics
 
 variable {S : Semantics T}
 
-/-- The external `SPMF` denotation of a closed system under `S`. -/
-noncomputable def evalDist (S : Semantics T) (p : T.Closed) : SPMF S.Result :=
+/-- The external measure denotation of a closed system under `S`. -/
+noncomputable def evalDist (S : Semantics T) (p : T.Closed) : MeasureTheory.Measure S.Result :=
   S.sem.evalDist (S.run p)
 
 /-- Distinguishing advantage between two closed systems under `S`,
-defined as the total variation distance of their visible `SPMF`
-denotations. -/
+defined as the total variation distance of their visible measure denotations. -/
 noncomputable def distAdvantage (S : Semantics T) (p q : T.Closed) : ℝ :=
-  SPMF.tvDist (S.evalDist p) (S.evalDist q)
+  MeasureTheory.Measure.tvDist (S.evalDist p) (S.evalDist q)
 
 @[simp]
 lemma distAdvantage_self (S : Semantics T) (p : T.Closed) :
-    S.distAdvantage p p = 0 := SPMF.tvDist_self _
+    S.distAdvantage p p = 0 := MeasureTheory.Measure.tvDist_self _
 
 lemma distAdvantage_comm (S : Semantics T) (p q : T.Closed) :
-    S.distAdvantage p q = S.distAdvantage q p := SPMF.tvDist_comm _ _
+    S.distAdvantage p q = S.distAdvantage q p := MeasureTheory.Measure.tvDist_comm _ _
 
 lemma distAdvantage_nonneg (S : Semantics T) (p q : T.Closed) :
-    0 ≤ S.distAdvantage p q := SPMF.tvDist_nonneg _ _
+    0 ≤ S.distAdvantage p q := MeasureTheory.Measure.tvDist_nonneg _ _
 
 lemma distAdvantage_triangle (S : Semantics T) (p q r : T.Closed) :
     S.distAdvantage p r ≤ S.distAdvantage p q + S.distAdvantage q r :=
-  SPMF.tvDist_triangle _ _ _
+  MeasureTheory.Measure.tvDist_triangle _ _ _
+    (S.sem.evalDist_apply_univ_le_one (S.run p))
+    (S.sem.evalDist_apply_univ_le_one (S.run q))
+    (S.sem.evalDist_apply_univ_le_one (S.run r))
 
 lemma distAdvantage_le_one (S : Semantics T) (p q : T.Closed) :
-    S.distAdvantage p q ≤ 1 := SPMF.tvDist_le_one _ _
+    S.distAdvantage p q ≤ 1 := MeasureTheory.Measure.tvDist_le_one _ _
+      (S.sem.evalDist_apply_univ_le_one (S.run p))
+      (S.sem.evalDist_apply_univ_le_one (S.run q))
 
 end Semantics
 
@@ -174,8 +181,14 @@ type so that the chosen execution experiment is explicit.
 structure Execution (T : OpenTheory.{u}) where
   /-- Externally visible output type of the closed UC experiment. -/
   Result : Type
+  /-- Measurable structure on execution results. -/
+  instMeasurableSpace : MeasurableSpace Result
   /-- Distributional interpretation of a closed system. -/
-  eval : T.Closed → SPMF Result
+  eval : T.Closed → MeasureTheory.Measure Result
+  /-- Every execution denotation is a subprobability measure. -/
+  eval_apply_univ_le_one : ∀ p, eval p Set.univ ≤ 1
+
+attribute [instance] Execution.instMeasurableSpace
 
 namespace Execution
 
@@ -184,15 +197,17 @@ variable {exec : Execution T}
 /-- The observation-relative execution induced by a bundled `Semantics`. -/
 noncomputable def ofSemantics (sem : Semantics T) : Execution T where
   Result := sem.Result
+  instMeasurableSpace := sem.instMeasurableSpace
   eval := sem.evalDist
+  eval_apply_univ_le_one := fun p => sem.sem.evalDist_apply_univ_le_one (sem.run p)
 
 /-- Distinguishing advantage between closed executions. -/
 noncomputable def distAdvantage (exec : Execution T) (p q : T.Closed) : ℝ :=
-  SPMF.tvDist (exec.eval p) (exec.eval q)
+  MeasureTheory.Measure.tvDist (exec.eval p) (exec.eval q)
 
 @[simp]
 theorem distAdvantage_self (exec : Execution T) (p : T.Closed) :
-    exec.distAdvantage p p = 0 := SPMF.tvDist_self _
+    exec.distAdvantage p p = 0 := MeasureTheory.Measure.tvDist_self _
 
 theorem distAdvantage_ofSemantics (sem : Semantics T) (p q : T.Closed) :
     (ofSemantics sem).distAdvantage p q = sem.distAdvantage p q := rfl

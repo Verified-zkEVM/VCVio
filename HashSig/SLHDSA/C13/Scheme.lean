@@ -3,8 +3,10 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.C13.ForsC
-import HashSig.SLHDSA.C13.Hypertree
+
+module
+public import HashSig.SLHDSA.C13.ForsC
+public import HashSig.SLHDSA.C13.Hypertree
 
 /-!
 # C13 scheme (composition)
@@ -26,6 +28,8 @@ verification, and the keccak/32-byte-`ADRS` concrete instantiation + KAT are the
 
 - the SPHINCs- repo verifier `src/SPHINCs-C13Asm.sol`; ePrint 2025/2203
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.C13

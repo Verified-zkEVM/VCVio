@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.MLDSA.Signature
-import Extern.MLDSA.Instance
-import Extern.MLDSA.FFI
+
+module
+public import LatticeCrypto.MLDSA.Signature
+public import Extern.MLDSA.Instance
+public import Extern.MLDSA.FFI
 
 /-!
 # ML-DSA Test Helpers
@@ -13,6 +15,8 @@ import Extern.MLDSA.FFI
 Shared test infrastructure: pass/fail counter, hex formatting, and FIPS 204 serialization
 helpers used by the ML-DSA test suite.
 -/
+
+@[expose] public section
 
 
 open MLDSA MLDSA.Concrete

@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.Constructions.SampleableType
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.ProbComp
+
+module
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ProbComp
 
 /-!
 # Commitment Schemes
@@ -26,6 +28,8 @@ properties: correctness, hiding, and binding.
 - `TrapdoorExtractor PP TD C M` — trapdoor-based message extraction algorithm.
 - `CommitmentScheme.extractExp` — extraction experiment (game-based, allows error).
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -54,8 +58,8 @@ public parameter, the commitment (first component) has the same distribution
 regardless of the committed message. -/
 def PerfectlyHiding (cs : CommitmentScheme PP M C D) : Prop :=
   ∀ pp, pp ∈ support cs.setup →
-    ∀ m₁ m₂, 𝒟[Prod.fst <$> cs.commit pp m₁] =
-      𝒟[Prod.fst <$> cs.commit pp m₂]
+    ∀ m₁ m₂, 𝒮[Prod.fst <$> cs.commit pp m₁] =
+      𝒮[Prod.fst <$> cs.commit pp m₂]
 
 /-! ### Computational hiding -/
 
@@ -120,7 +124,7 @@ the scheme's normal setup. Required for reductions that swap in the
 trapdoor setup without the adversary noticing. -/
 def TrapdoorExtractor.SetupConsistent {TD : Type} (extractor : TrapdoorExtractor PP TD C M)
     (cs : CommitmentScheme PP M C D) : Prop :=
-  𝒟[Prod.fst <$> extractor.setupExtract] = 𝒟[cs.setup]
+  𝒮[Prod.fst <$> extractor.setupExtract] = 𝒮[cs.setup]
 
 /-- Extraction experiment: generate parameters with trapdoor, honestly commit
 to message `m`, then check whether the extractor recovers `m` from the commitment.

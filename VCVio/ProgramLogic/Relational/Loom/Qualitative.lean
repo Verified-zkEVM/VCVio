@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import ToMathlib.Control.Monad.RelWP
-import VCVio.ProgramLogic.Relational.Basic
+module
+
+public import ToMathlib.Control.Monad.RelWP
+public import VCVio.ProgramLogic.Relational.Basic
 
 /-!
 # Qualitative `RelWP` carrier for `OracleComp` (`Prop`, scoped)
@@ -23,7 +25,7 @@ Prop EPost.nil EPost.nil` instance, derived from the existing
 
 This is the support-based / coupling-existence carrier:
 `CouplingPost oa ob R` holds iff there exists an SPMF coupling of
-`evalDist oa` and `evalDist ob` whose support is contained in `R`.
+`evalSPMF oa` and `evalSPMF ob` whose support is contained in `R`.
 
 ## Layout and discipline
 
@@ -58,6 +60,8 @@ do not redefine them here.
 See `.ignore/wp-cutover-plan.md` §"Three-tier carrier design" and
 §"Scoped instances" for the broader design.
 -/
+
+@[expose] public section
 
 universe u
 

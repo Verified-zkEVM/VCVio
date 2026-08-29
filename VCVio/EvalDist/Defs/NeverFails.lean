@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.EvalDist.Defs.AlternativeMonad
-import VCVio.EvalDist.Monad.Seq
+module
+
+public import VCVio.EvalDist.Defs.AlternativeMonad
+public import VCVio.EvalDist.Monad.Seq
 
 /-!
 # Computations that Never Fail
@@ -26,13 +28,15 @@ The existence of a `MonadLiftT m PMF` instance implies that `NeverFail mx` holds
 in the monad, since the `PMF` doesn't allow any probability of failing.
 -/
 
+@[expose] public section
+
 universe u v w
 
 variable {α β γ : Type u} {m : Type u → Type v} [Monad m]
 
 /--
 `NeverFail mx` states that the computation `mx : m α` has zero probability of failure,
-equivalently the mass of `(evalDist mx)` at `none` is `0`.
+equivalently the mass of `(evalSPMF mx)` at `none` is `0`.
 
 Formally: `NeverFail mx` iff `Pr[⊥ | mx] = 0`.
 
@@ -110,17 +114,17 @@ lemma of_probFailure_eq_zero (mx : m α) (h : Pr[⊥ | mx] = 0) : NeverFail mx :
 
 /--
 If `mx` is a pure return, it never fails.
-This follows since `evalDist pure x` is the Dirac distribution on `some x`.
+This follows since `evalSPMF pure x` is the Dirac distribution on `some x`.
 -/
 @[simp, grind .]
 instance instPure {x} : NeverFail (pure x : m α) where
-  probFailure_eq_zero := by simp [probFailure]
+  probFailure_eq_zero := by simp [probFailure_def]
 
 /--
 Precise bind lemma: if `mx` never fails and for all `x` in the support of `mx` the continuation
 `my x` never fails, then the whole bind never fails.
 
-Sketch: using `evalDist_bind` and the identity
+Sketch: using `evalSPMF_bind` and the identity
 
   `Pr[⊥ | mx >>= my] = Pr[⊥ | mx] + ∑ x, Pr[= x | mx] * Pr[⊥ | my x]`,
 

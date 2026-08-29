@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Init.Data.Vector.Basic
-import Mathlib.LinearAlgebra.Matrix.Defs
-import Mathlib.RingTheory.Ideal.Operations
-import Mathlib.RingTheory.Ideal.Quotient.Basic
-import Mathlib.RingTheory.Polynomial.Basic
+
+module
+public import Init.Data.Vector.Basic
+public import Mathlib.LinearAlgebra.Matrix.Defs
+public import Mathlib.RingTheory.Ideal.Operations
+public import Mathlib.RingTheory.Ideal.Quotient.Basic
+public import Mathlib.RingTheory.Polynomial.Basic
 
 /-!
 # Generic Negacyclic Ring Core
@@ -22,6 +24,8 @@ All definitions here are purely semantic — no executable array operations or m
 state. Executable array exposure is layered on top in `LatticeCrypto.Ring.Kernel`, and
 the canonical vector-backed instantiation lives in `LatticeCrypto.Ring.VectorBackend`.
 -/
+
+@[expose] public section
 
 
 open scoped BigOperators
@@ -42,7 +46,7 @@ variable {P : Type u} {k : Nat}
 
 /-- View a vector as a `Fin k → P` function. -/
 def toPi (v : PolyVec P k) : Fin k → P :=
-  fun i => v.get i
+  fun i => v[i.1]
 
 /-- Build a vector from a `Fin k → P` function. -/
 def ofPi (f : Fin k → P) : PolyVec P k :=
@@ -51,13 +55,13 @@ def ofPi (f : Fin k → P) : PolyVec P k :=
 @[simp] theorem toPi_ofPi (f : Fin k → P) :
     toPi (ofPi f) = f := by
   funext i
-  simp [toPi, ofPi, Vector.get]
+  simp [toPi, ofPi]
 
 @[simp] theorem ofPi_toPi (v : PolyVec P k) :
     ofPi (toPi v) = v := by
   apply Vector.ext
   intro i hi
-  simp [toPi, ofPi, Vector.get]
+  simp [toPi, ofPi]
 
 end PolyVec
 
@@ -67,7 +71,7 @@ variable {P : Type u} {rows cols : Nat}
 
 /-- View a row-major matrix as a Mathlib `Matrix`. -/
 def toMatrix (A : PolyMatrix P rows cols) : Matrix (Fin rows) (Fin cols) P :=
-  fun i j => (A.get i).get j
+  fun i j => A[i.1][j.1]
 
 /-- Build a row-major matrix from a Mathlib `Matrix`. -/
 def ofMatrix (A : Matrix (Fin rows) (Fin cols) P) : PolyMatrix P rows cols :=
@@ -76,7 +80,7 @@ def ofMatrix (A : Matrix (Fin rows) (Fin cols) P) : PolyMatrix P rows cols :=
 @[simp] theorem toMatrix_ofMatrix (A : Matrix (Fin rows) (Fin cols) P) :
     toMatrix (ofMatrix A) = A := by
   funext i j
-  simp [toMatrix, ofMatrix, Vector.get]
+  simp [toMatrix, ofMatrix]
 
 @[simp] theorem ofMatrix_toMatrix (A : PolyMatrix P rows cols) :
     ofMatrix (toMatrix A) = A := by
@@ -84,7 +88,7 @@ def ofMatrix (A : Matrix (Fin rows) (Fin cols) P) : PolyMatrix P rows cols :=
   intro i hi
   apply Vector.ext
   intro j hj
-  simp [toMatrix, ofMatrix, Vector.get]
+  simp [ofMatrix, toMatrix]
 
 end PolyMatrix
 
@@ -217,7 +221,7 @@ theorem ofBackend_injective
   apply PolyBackend.toPolynomial_injective
   simp only [NegacyclicQuotient.ofBackend, NegacyclicQuotient.ofPolynomial] at heq
   rcases Nat.eq_zero_or_pos backend.degree with hn | hn
-  · haveI : IsEmpty (Fin backend.degree) := hn ▸ inferInstance
+  · have : IsEmpty (Fin backend.degree) := hn ▸ inferInstance
     simp [PolyBackend.toPolynomial]
   have hmem : backend.toPolynomial p - backend.toPolynomial q ∈
       Ideal.span ({negacyclicModulus R backend.degree} : Set (Polynomial R)) := by

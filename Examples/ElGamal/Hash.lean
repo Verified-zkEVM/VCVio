@@ -3,11 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Examples.ElGamal.Common
-import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
-import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
-import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
-import VCVio.EvalDist.Bool
+
+module
+public import Examples.ElGamal.Common
+public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
+public import VCVio.EvalDist.Bool
 
 /-!
 # Hashed ElGamal Encryption
@@ -36,6 +38,8 @@ Main theorem: `|Pr[CPA wins] - 1/2| ≤ ddhAdvantage + esAdvantage`.
 
 Port of EasyCrypt's `hashed_elgamal_std.ec`.
 -/
+
+@[expose] public section
 
 
 open OracleComp OracleSpec ENNReal DiffieHellman
@@ -85,10 +89,10 @@ theorem correct :
   have hcomm : ∀ (a b : F), a • (b • g) = b • (a • g) := by
     intro a b; rw [← mul_smul, mul_comm, mul_smul]
   intro msg
-  simp only [ProbCompRuntime.evalDist, ProbCompRuntime.probComp, AsymmEncAlg.CorrectExp,
+  simp only [ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp, AsymmEncAlg.CorrectExp,
     hashedElGamal, bind_pure_comp, map_pure, Option.some.injEq, Functor.map_map, hcomm, bind_assoc,
-    bind_map_left, add_sub_cancel_left, decide_true, SPMFSemantics.ofMonadLift_evalDist, liftM_bind,
-    evalDist_uniformSample, liftM_map, probOutput_bind_const, SPMF.probFailure_liftM,
+    bind_map_left, add_sub_cancel_left, decide_true, SPMFSemantics.ofMonadLift_evalSPMF, liftM_bind,
+    evalSPMF_uniformSample, liftM_map, probOutput_bind_const, SPMF.probFailure_liftM,
     probFailure_of_liftM_PMF, tsub_zero, probOutput_map_const, probOutput_pure, ↓reduceIte, mul_one]
   change 1 - Pr[⊥ | ($ᵗ HK : ProbComp HK)] = 1
   simp
@@ -349,17 +353,17 @@ theorem esIdeal_eq_half
     let y ← ($ᵗ F)
     let h ← ($ᵗ M)
     adv.distinguish st (y • g, h + if b then m₁ else m₂)
-  have hf : ∀ hk, 𝒟[f hk true] = 𝒟[f hk false] := by
+  have hf : ∀ hk, 𝒮[f hk true] = 𝒮[f hk false] := by
     intro hk
     unfold f
-    rw [evalDist_bind, evalDist_bind]
+    rw [evalSPMF_bind, evalSPMF_bind]
     congr 1
     funext sk
-    rw [evalDist_bind, evalDist_bind]
+    rw [evalSPMF_bind, evalSPMF_bind]
     congr 1
     funext x
     rcases x with ⟨m₁, m₂, st⟩
-    rw [evalDist_bind, evalDist_bind]
+    rw [evalSPMF_bind, evalSPMF_bind]
     congr 1
     funext y
     simpa [add_comm, add_left_comm, add_assoc] using

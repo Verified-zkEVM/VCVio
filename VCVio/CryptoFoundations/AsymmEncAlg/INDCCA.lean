@@ -4,18 +4,22 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.CryptoFoundations.SecExp
+module
+
+public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.CryptoFoundations.SecExp
 
 /-!
 # Asymmetric Encryption Schemes: IND-CCA
 
 IND-CCA interfaces and games for asymmetric encryption schemes.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal
 
@@ -51,14 +55,15 @@ structure IND_CCA_Adversary (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C) w
 /-- Pre-challenge decryption oracle for the IND-CCA game. -/
 def IND_CCA_preChallengeImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     (sk : SK) : QueryImpl (IND_CCA_oracleSpec encAlg) (OracleComp spec) :=
-  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) + fun c => encAlg.decrypt sk c
+  QueryImpl.add (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec))
+    fun c => encAlg.decrypt sk c
 
 /-- Post-challenge decryption oracle for the IND-CCA game.
 The challenge ciphertext itself is answered with `none`, while all other ciphertexts are
 decrypted normally. -/
 def IND_CCA_postChallengeImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     (sk : SK) (cStar : C) : QueryImpl (IND_CCA_oracleSpec encAlg) (OracleComp spec) :=
-  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) + fun c =>
+  QueryImpl.add (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) fun c =>
     if c = cStar then return none else encAlg.decrypt sk c
 
 /-- IND-CCA security game in the standard two-phase form.
@@ -68,7 +73,7 @@ on the challenge ciphertext. -/
 def IND_CCA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : encAlg.IND_CCA_Adversary) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, sk) ← encAlg.keygen
     let (m₀, m₁, st) ← simulateQ (encAlg.IND_CCA_preChallengeImpl sk)
       (adversary.chooseMessages pk)

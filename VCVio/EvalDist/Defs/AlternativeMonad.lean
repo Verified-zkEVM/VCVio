@@ -3,16 +3,20 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.EvalDist.Defs.Basic
+
+module
+public import VCVio.EvalDist.Defs.Basic
 
 /-!
 # Denotational Semantics Over `AlternativeMonad`.
 
 This file defines `HasEvalSet.LawfulFailure`, a type-class refining `MonadLiftT m SetM` when
 given an `AlternativeMonad` instance on the base monad, enforcing that `failure` maps to the
-empty sub-distribution. Compatibility conditions then force the correct semantics for `evalDist`,
+empty sub-distribution. Compatibility conditions then force the correct semantics for `evalSPMF`,
 recorded in the `*_failure` simp lemmas below.
 -/
+
+@[expose] public section
 
 open ENNReal HasEvalSet
 
@@ -22,7 +26,7 @@ variable {m : Type u → Type v} [AlternativeMonad m] {α β γ : Type u}
 
 /-- Refinement of `MonadLiftT m SetM` when given an `AlternativeMonad` instance on the
 base monad, enforcing that `failure` maps to the empty sub-distribution. Compatibility
-conditions then force the correct semantics for `evalDist`, see below. -/
+conditions then force the correct semantics for `evalSPMF`, see below. -/
 protected class HasEvalSet.LawfulFailure (m : Type u → Type v)
     [AlternativeMonad m] [MonadLiftT m SetM] : Prop where
   support_failure' {α : Type u} : support (failure : m α) = ∅
@@ -52,5 +56,5 @@ lemma probFailure_failure [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompa
     Pr[⊥ | (failure : m α)] = 1 := by simp
 
 @[simp, grind =]
-lemma evalDist_failure [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
-    [LawfulFailure m] : 𝒟[(failure : m α)] = SPMF.mk (PMF.pure none) := by simp
+lemma evalSPMF_failure [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
+    [LawfulFailure m] : 𝒮[(failure : m α)] = SPMF.mk (PMF.pure none) := by simp

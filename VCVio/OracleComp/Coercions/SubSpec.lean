@@ -3,10 +3,12 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.SimSemantics.SimulateQ
-import ToMathlib.General
-import PolyFun.PFunctor.Lens.Cartesian
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import ToMathlib.General
+public import PolyFun.PFunctor.Lens.Cartesian
 
 /-!
 # Coercions Between Computations With Additional Oracles
@@ -38,10 +40,12 @@ the sense of `PFunctor.Lens.IsCartesian`. This is *strictly weaker* than
 `PFunctor.Lens.Equiv` (which would also require `onQuery` to be a bijection,
 ruling out the basic case `spec ⊂ₒ (spec + spec')` where `onQuery = Sum.inl`).
 Cartesianness is exactly the condition needed to preserve the uniform
-distribution under lifting (`evalDist_liftComp`); see
+distribution under lifting (`evalSPMF_liftComp`); see
 `LawfulSubSpec.toLens_isCartesian` for the bridge to the lens-level
 predicate.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp BigOperators ENNReal
 
@@ -146,7 +150,7 @@ into a larger one (e.g. `spec₁ ⊂ₒ (spec₁ + spec₂)` with `onQuery = Sum
 and these embeddings are essential to the API.
 
 Cartesianness is exactly what is needed to preserve the uniform distribution
-under the lift: see `evalDist_liftM_query` and the bridge
+under the lift: see `evalSPMF_liftM_query` and the bridge
 `LawfulSubSpec.toLens_isCartesian`. -/
 class LawfulSubSpec (spec : OracleSpec.{u, w} ι) (superSpec : OracleSpec.{v, w} τ)
     [h : SubSpec spec superSpec] : Prop where
@@ -171,8 +175,8 @@ lemma toLens_isCartesian : h.toLens.IsCartesian := fun t =>
 
 /-- Pushing the uniform distribution on `superSpec.Range` through the lens's
 backward fiber recovers the uniform distribution on `spec.Range`. Load-bearing
-for `evalDist_liftComp` below. -/
-lemma evalDist_liftM_query [superSpec.Fintype] [superSpec.Inhabited]
+for `evalSPMF_liftComp` below. -/
+lemma evalSPMF_liftM_query [superSpec.Fintype] [superSpec.Inhabited]
     [spec.Fintype] [spec.Inhabited] (t : spec.Domain) :
     (PMF.uniformOfFintype (superSpec.Range
       ((liftM (n := OracleQuery superSpec) (spec.query t)).input))).map
@@ -297,29 +301,29 @@ lemma liftComp_seqRight (mx : OracleComp spec α) (my : OracleComp spec β) :
 
 end liftComp
 
-section liftComp_evalDist
+section liftComp_evalSPMF
 
 variable {ι : Type u} {τ : Type v}
   {spec : OracleSpec ι} {superSpec : OracleSpec τ} {α : Type w}
 variable [spec.IsUniformSpec] [superSpec.IsUniformSpec]
     [h : spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
 
-@[simp, grind =] lemma evalDist_liftComp (mx : OracleComp spec α) :
-    𝒟[liftComp mx superSpec] = 𝒟[mx] := by
+@[simp, grind =] lemma evalSPMF_liftComp (mx : OracleComp spec α) :
+    𝒮[liftComp mx superSpec] = 𝒮[mx] := by
   induction mx using OracleComp.inductionOn with
   | pure x => simp
   | query_bind t mx ih =>
     simp only [liftComp_bind, liftComp_query, OracleQuery.cont_query, id_map,
-      OracleQuery.input_query, evalDist_bind, ih]
+      OracleQuery.input_query, evalSPMF_bind, ih]
     congr 1
     rw [show (liftM (query t) : OracleComp superSpec (spec.Range t)) =
           liftM (liftM (spec.query t) : OracleQuery superSpec _) from rfl,
-      evalDist_liftM, evalDist_query]
-    exact congrArg liftM (LawfulSubSpec.evalDist_liftM_query t)
+      evalSPMF_liftM, evalSPMF_query]
+    exact congrArg liftM (LawfulSubSpec.evalSPMF_liftM_query t)
 
 @[simp, grind =] lemma probOutput_liftComp (mx : OracleComp spec α) (x : α) :
-    Pr[= x | liftComp mx superSpec] = Pr[= x | mx] :=
-  congrFun (congrArg DFunLike.coe (evalDist_liftComp mx)) x
+    Pr[= x | liftComp mx superSpec] = Pr[= x | mx] := by
+  rw [probOutput_def, probOutput_def, evalSPMF_liftComp]
 
 @[simp, grind =] lemma probEvent_liftComp (mx : OracleComp spec α) (p : α → Prop) :
     Pr[ p | liftComp mx superSpec] = Pr[ p | mx] := by
@@ -330,7 +334,7 @@ lemma probFailure_liftComp (mx : OracleComp spec α) :
     Pr[⊥ | liftComp mx superSpec] = Pr[⊥ | mx] := by
   rw [probFailure_eq_zero, probFailure_eq_zero]
 
-end liftComp_evalDist
+end liftComp_evalSPMF
 
 section liftComp_support
 
@@ -340,7 +344,7 @@ variable {ι : Type u} {τ : Type v}
 
 /-- Support is preserved by `liftComp`: lifting a computation to a larger oracle spec
 does not change which outputs are reachable. This is the support analogue of
-`evalDist_liftComp`. -/
+`evalSPMF_liftComp`. -/
 @[simp] lemma support_liftComp (mx : OracleComp spec α) :
     support (liftComp mx superSpec) = support mx := by
   simp only [liftComp]
@@ -353,8 +357,7 @@ does not change which outputs are reachable. This is the support analogue of
       change support ((liftM : OracleQuery superSpec _ → OracleComp superSpec _)
         ((monadLift : OracleQuery spec _ → OracleQuery superSpec _) (OracleSpec.query t))) = _
       rw [support_liftM, show (monadLift (OracleSpec.query t) : OracleQuery superSpec _) =
-        ⟨h.onQuery t, h.onResponse t⟩ from by
-          convert h.liftM_eq_lift (OracleSpec.query t) using 1 <;> rfl]
+        ⟨h.onQuery t, h.onResponse t⟩ from h.liftM_eq_lift (OracleSpec.query t)]
       exact (LawfulSubSpec.onResponse_bijective (h := h) t).surjective.range_eq
     rw [hs]; simp
 

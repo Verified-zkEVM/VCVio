@@ -3,17 +3,19 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Batteries.Data.Rat.Float
-import Mathlib.Algebra.Order.Floor.Ring
-import Mathlib.Analysis.SpecialFunctions.Exp
-import LatticeCrypto.Falcon.Primitives
-import LatticeCrypto.Falcon.Concrete.FloatLike
-import LatticeCrypto.Falcon.Concrete.NTT
-import LatticeCrypto.Falcon.Concrete.Encoding
-import LatticeCrypto.Falcon.Concrete.FXR
-import Extern.Falcon.SamplerZ
-import Extern.Falcon.Sampling
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import Batteries.Data.Float.Rat
+public import Mathlib.Algebra.Order.Floor.Ring
+public import Mathlib.Analysis.SpecialFunctions.Exp
+public import LatticeCrypto.Falcon.Primitives
+public import LatticeCrypto.Falcon.Concrete.FloatLike
+public import LatticeCrypto.Falcon.Concrete.NTT
+public import LatticeCrypto.Falcon.Concrete.Encoding
+public import LatticeCrypto.Falcon.Concrete.FXR
+public import Extern.Falcon.SamplerZ
+public import Extern.Falcon.Sampling
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Concrete Falcon Instance
@@ -33,6 +35,8 @@ function for testing.
    bridge for the FFT conversion fields. Used to connect the proof-level Falcon
    interface to the concrete packed FFT representation.
 -/
+
+public section
 
 
 namespace Falcon.Concrete
@@ -202,14 +206,14 @@ noncomputable def concretePrimitives (p : Params) (hn : p.n = 2 ^ p.logn) :
 /-- `publicKeyBytes` for `concretePrimitives` unfolds to the concrete Falcon encoder. -/
 @[simp] theorem concretePrimitives_publicKeyBytes_eq
     (p : Params) (hn : p.n = 2 ^ p.logn) (h : Rq p.n) :
-    (concretePrimitives p hn).publicKeyBytes h = publicKeyBytes p.logn h := rfl
+    (concretePrimitives p hn).publicKeyBytes h = publicKeyBytes p.logn h := by rfl
 
 /-- `hashToPointForPublicKey` for `concretePrimitives` unfolds to the concrete FN-DSA hash path. -/
 @[simp] theorem concretePrimitives_hashToPointForPublicKey_eq
     (p : Params) (hn : p.n = 2 ^ p.logn) (h : Rq p.n)
     (salt : Bytes 40) (msg : List Byte) :
     (concretePrimitives p hn).hashToPointForPublicKey h salt msg =
-      hashToPoint p.n salt (publicKeyBytes p.logn h) msg := rfl
+      hashToPoint p.n salt (publicKeyBytes p.logn h) msg := by rfl
 
 /-! ## Named bundles -/
 

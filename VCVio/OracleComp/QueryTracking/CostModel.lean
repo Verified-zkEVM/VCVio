@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import VCVio.OracleComp.QueryTracking.QueryBound
-import VCVio.OracleComp.QueryTracking.QueryCost
-import VCVio.ProgramLogic.Unary.HoareTriple
+
+module
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.ProgramLogic.Unary.HoareTriple
 
 /-!
 # Cost Models for Oracle Computations
@@ -26,16 +28,15 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 - `costDist oa cm`: Joint distribution of `(output, totalCost)`.
 - `expectedCost oa cm val`: Expected total cost `E[val(cost)]`, computed via `wp`.
 - `WorstCaseCostBound`, `ExpectedCostBound`: Cost bound predicates.
-- `WorstCasePolyTime`, `ExpectedPolyTime`: Asymptotic polynomial-time predicates for computation
-  families indexed by a security parameter.
 
 ## Key Results
 
 - `fst_map_costDist`: Cost instrumentation doesn't change the output distribution.
 - `expectedCost_pure`: Expected cost of a pure computation is `0`.
 - `probEvent_cost_gt_le_expectedCost_div`: Markov's inequality for cost distributions.
-- `WorstCasePolyTime.toExpectedPolyTime`: Strict polynomial time implies expected polynomial time.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal
 open scoped BigOperators
@@ -351,8 +352,11 @@ theorem IsPerIndexQueryBound.toWorstCaseCostBound_unit_sum
             (oa := instrumentedRun (spec.query t : OracleComp spec (spec.Range t)) CostModel.unit)
             (f := fun u => instrumentedRun (mx u) CostModel.unit)
             (n₂ := ∑ i, Function.update qb t (qb t - 1) i)
-            (HasQuery.queryBoundedAboveBy_withUnitCost_query
-              (QueryImpl.ofLift spec (OracleComp spec)) t) (fun u => ih u (hqb.2 u))
+            (by simpa [instrumentedRun, CostModel.unit,
+                  HasQuery.Program.withUnitCost] using
+              (HasQuery.queryBoundedAboveBy_withUnitCost_query
+                (QueryImpl.ofLift spec (OracleComp spec)) t))
+            (fun u => ih u (hqb.2 u))
           simpa [instrumentedRun, simulateQ_bind] using hbind
         · have := sum_update_pred_eq qb t hqb.1
           omega

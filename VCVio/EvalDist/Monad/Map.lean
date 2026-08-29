@@ -3,12 +3,14 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.EvalDist.Monad.Basic
+
+module
+public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # Evaluation Distributions of Computations with `map`
 
-File for lemmas about `evalDist` and `support` involving the monadic `map`.
+File for lemmas about `evalSPMF` and `support` involving the monadic `map`.
 
 Note: we focus on lemmas that don't hold naively when reducing `<$>` to `>>=` using monad laws,
 since `map_eq_bind_pure_comp` can be applied to use `bind` lemmas fairly easily.
@@ -17,6 +19,8 @@ More generally we can consier `f` with `InjOn f (support mx)` and get good lemma
 
 TODO: many lemmas should probably have mirrored `bind_pure` versions.
 -/
+
+@[expose] public section
 
 universe u v w
 
@@ -37,23 +41,23 @@ lemma finSupport_map [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [HasEvalFinse
   grind [map_eq_bind_pure_comp]
 
 @[simp, grind =]
-lemma evalDist_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
+lemma evalSPMF_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
     (mx : m α) (f : α → β) :
-    𝒟[f <$> mx] = f <$> (𝒟[mx]) := by simp [monad_norm]
+    𝒮[f <$> mx] = f <$> (𝒮[mx]) := by simp [monad_norm]
 
-lemma evalDist_map_eq_of_evalDist_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
-    {mx my : m α} (h : 𝒟[mx] = 𝒟[my]) (f : α → β) :
-    𝒟[f <$> mx] = 𝒟[f <$> my] := by
-  simpa [evalDist_map] using congrArg (fun p => f <$> p) h
+lemma evalSPMF_map_eq_of_evalSPMF_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
+    {mx my : m α} (h : 𝒮[mx] = 𝒮[my]) (f : α → β) :
+    𝒮[f <$> mx] = 𝒮[f <$> my] := by
+  simpa [evalSPMF_map] using congrArg (fun p => f <$> p) h
 
-lemma probOutput_map_eq_of_evalDist_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
-    {mx my : m α} (h : 𝒟[mx] = 𝒟[my]) (f : α → β) (y : β) :
+lemma probOutput_map_eq_of_evalSPMF_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
+    {mx my : m α} (h : 𝒮[mx] = 𝒮[my]) (f : α → β) (y : β) :
     Pr[= y | f <$> mx] = Pr[= y | f <$> my] :=
-  evalDist_ext_iff.mp (evalDist_map_eq_of_evalDist_eq h f) y
+  evalSPMF_ext_iff.mp (evalSPMF_map_eq_of_evalSPMF_eq h f) y
 
 @[simp]
-lemma evalDist_comp_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m] (mx : m α) :
-    evalDist ∘ (fun f => f <$> mx) = fun f : (α → β) => f <$> 𝒟[mx] := by aesop
+lemma evalSPMF_comp_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m] (mx : m α) :
+    evalSPMF ∘ (fun f => f <$> mx) = fun f : (α → β) => f <$> 𝒮[mx] := by aesop
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (mx : m α) (f : α → β)
 
@@ -63,7 +67,6 @@ lemma probEvent_bind_pure_comp (q : β → Prop) :
   have := Classical.decPred q
   rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
   simp only [Function.comp_apply, probEvent_pure, mul_ite, mul_one, mul_zero]
-  rfl
 
 variable [LawfulMonad m]
 
@@ -75,7 +78,7 @@ lemma probOutput_map_eq_tsum_subtype [MonadLiftT m SetM] [LawfulMonadLiftT m Set
     [EvalDistCompatible m] (y : β) :
     Pr[= y | f <$> mx] = ∑' x : {x ∈ support mx | y = f x}, Pr[= x | mx] := by
   simp only [map_eq_bind_pure_comp, tsum_subtype _, probOutput_bind_eq_tsum, Function.comp_apply,
-    Set.indicator, Set.mem_setOf_eq]
+    Set.indicator, Set.mem_ofPred_eq]
   refine tsum_congr fun x => ?_
   by_cases hy : y = f x <;> by_cases hx : x ∈ support mx <;>
     simp [hy, hx, probOutput_eq_zero_of_not_mem_support]
@@ -132,7 +135,8 @@ Tagged `@[grind =]` only (not `@[simp]`): `simp` keeps its injective/equiv-map n
 with. -/
 @[grind =]
 lemma probOutput_map (y : β) : Pr[= y | f <$> mx] = Pr[ fun x => f x = y | mx] := by
-  rw [← probEvent_eq_eq_probOutput, probEvent_map]; rfl
+  rw [← probEvent_eq_eq_probOutput]
+  simpa only [Function.comp_def] using probEvent_map mx f (· = y)
 
 lemma probEvent_comp (q : β → Prop) : Pr[ q ∘ f | mx] = Pr[ q | f <$> mx] :=
   symm <| probEvent_map mx f q

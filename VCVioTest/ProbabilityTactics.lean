@@ -3,7 +3,9 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio
+
+module
+public import VCVio
 
 /-!
 # Probability tactic benchmark
@@ -29,6 +31,8 @@ Conventions:
 (`probFailure_eq_one_iff_not_nonempty`, `support_uniformSample_nonempty`) keep `Pr[⊥]=1` reasoning
 reachable. `ProbComp` itself never fails — interesting `Pr[⊥ | _]` lives in `OptionT ProbComp`.
 -/
+
+@[expose] public section
 
 open OracleComp ProbComp ENNReal
 
@@ -271,26 +275,26 @@ target(grind): a non-trivial `<$>`/`do` support equality needs `simp`'s computat
 example : support (do let b ← $ᵗ Bool; pure (!b)) = Set.univ := by
   ext b; cases b <;> simp
 
-/-! # 5. Evaluation distribution — `𝒟[_]` -/
+/-! # 5. Evaluation distribution — `𝒮[_]` -/
 
 /-! ## `bind`/`pure` normalisation
 A redundant `bind`/`pure` does not change the distribution. -/
 
-example (mx : ProbComp Bool) : 𝒟[do let x ← mx; pure x] = 𝒟[mx] := by simp
-example (mx : ProbComp Bool) : 𝒟[do let x ← mx; pure x] = 𝒟[mx] := by grind
+example (mx : ProbComp Bool) : 𝒮[do let x ← mx; pure x] = 𝒮[mx] := by simp
+example (mx : ProbComp Bool) : 𝒮[do let x ← mx; pure x] = 𝒮[mx] := by grind
 
-example (mx : ProbComp Bool) : 𝒟[mx >>= pure] = 𝒟[mx] := by simp
-example (mx : ProbComp Bool) : 𝒟[mx >>= pure] = 𝒟[mx] := by grind
+example (mx : ProbComp Bool) : 𝒮[mx >>= pure] = 𝒮[mx] := by simp
+example (mx : ProbComp Bool) : 𝒮[mx >>= pure] = 𝒮[mx] := by grind
 
 /-! ## One-time-pad secrecy
 Adding a uniform key makes the ciphertext distribution independent of the message (`ZMod 2` — a
 one-bit XOR pad).
 
-target(grind): this needs the translation-invariance lemma to fire before `evalDist_uniformSample`
+target(grind): this needs the translation-invariance lemma to fire before `evalSPMF_uniformSample`
 unfolds the uniform draw, so it is `simp only`-terminal. -/
 
-example (msg : ZMod 2) : 𝒟[(msg + ·) <$> ($ᵗ (ZMod 2))] = 𝒟[$ᵗ (ZMod 2)] := by
-  simp only [evalDist_add_left_uniform]
+example (msg : ZMod 2) : 𝒮[(msg + ·) <$> ($ᵗ (ZMod 2))] = 𝒮[$ᵗ (ZMod 2)] := by
+  simp only [evalSPMF_add_left_uniform]
 
 /-! # 6. The shape of `do`
 The automation should see through the full surface syntax of `do`-notation: a pure `let :=`, nested

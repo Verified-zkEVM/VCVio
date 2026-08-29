@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.EvalDist.Defs.Basic
+
+module
+public import VCVio.EvalDist.Defs.Basic
 
 /-!
 # Bundled Probability Semantics
@@ -27,14 +29,20 @@ not be visible at the final security-game interface. Typical examples include:
 - auxiliary logs or bookkeeping used only for the semantics
 - semantic monads that are more structured than the surface monad being specified
 
-The generic factoring pattern is captured by `SemanticsVia`. The probability-specific notions
-`SPMFSemantics` and `PMFSemantics` are then specializations where the observation target is
-respectively `SPMF` or `PMF`.
+The generic factoring pattern is captured by `SemanticsVia`. The primary probability-specific
+notion is `MeasureSemanticsVia`, whose observation target is a Mathlib `Measure` with mass at most
+one. The older `SPMFSemantics` and `PMFSemantics` bundles remain compatibility surfaces while
+downstream developments migrate; keeping them available avoids deprecation noise in the portions
+of the library deliberately retained as the finite executable layer.
 
 These semantics are deliberately *bundled* rather than typeclasses so that a construction can
 carry its intended semantics locally without forcing a single global instance on the ambient
 monad.
 -/
+
+@[expose] public section
+
+open MeasureTheory
 
 /-!
 ## Design Note
@@ -87,6 +95,70 @@ def denote (sem : SemanticsVia m Obs) (mx : m α) : Obs α :=
 
 end SemanticsVia
 
+/-! ## Measure-valued semantics -/
+
+/-- Bundled subprobability semantics factoring a surface monad through an internal monad.
+
+Unlike `SemanticsVia m Measure`, which cannot be formed because observing a `Measure α` requires
+a selected measurable space, the measurable-space argument is explicit in `observe`. Failure or
+nontermination is represented by missing mass. -/
+structure MeasureSemanticsVia (m : Type u → Type v) [Monad m] where
+  /-- Internal semantic monad. -/
+  Sem : Type u → Type w
+  /-- Monad structure carried by the internal semantics. -/
+  [instMonadSem : Monad Sem]
+  /-- Interpret a surface computation in the internal semantic monad. -/
+  interpret : m →ᵐ Sem
+  /-- Observe successful outputs as a Mathlib measure. -/
+  observe : {α : Type u} → [MeasurableSpace α] → Sem α → Measure α
+  /-- Every observation has total mass at most one. -/
+  observe_apply_univ_le_one : ∀ {α : Type u} [MeasurableSpace α] (mx : Sem α),
+    observe mx Set.univ ≤ 1
+
+instance {m : Type u → Type v} [Monad m] (sem : MeasureSemanticsVia m) : Monad sem.Sem :=
+  sem.instMonadSem
+
+namespace MeasureSemanticsVia
+
+variable {m : Type u → Type v} [Monad m] {α : Type u}
+
+/-- The visible measure denoted by a computation under a bundled semantics. -/
+noncomputable def evalDist (sem : MeasureSemanticsVia m) [MeasurableSpace α]
+    (mx : m α) : Measure α :=
+  sem.observe (sem.interpret mx)
+
+@[simp]
+theorem evalDist_apply_univ_le_one (sem : MeasureSemanticsVia m) [MeasurableSpace α]
+    (mx : m α) : sem.evalDist mx Set.univ ≤ 1 :=
+  sem.observe_apply_univ_le_one (sem.interpret mx)
+
+/-- Failure probability is the mass missing from the successful-output measure. -/
+noncomputable def probFailure (sem : MeasureSemanticsVia m) [MeasurableSpace α]
+    (mx : m α) : ENNReal :=
+  1 - sem.evalDist mx Set.univ
+
+@[simp]
+theorem probFailure_le_one (sem : MeasureSemanticsVia m) [MeasurableSpace α]
+    (mx : m α) : sem.probFailure mx ≤ 1 :=
+  tsub_le_self
+
+/-- Package a global `EvalDistSemantics` instance as a local bundled semantics. -/
+protected noncomputable def ofEvalDistSemantics (m : Type u → Type v) [Monad m]
+    [EvalDistSemantics m] : MeasureSemanticsVia m where
+  Sem := m
+  instMonadSem := inferInstance
+  interpret := MonadHom.id m
+  observe := fun mx => EvalDistSemantics.denote mx
+  observe_apply_univ_le_one := fun mx => EvalDistSemantics.apply_univ_le_one mx
+
+@[simp]
+theorem ofEvalDistSemantics_evalDist (mx : m α) [EvalDistSemantics m]
+    [MeasurableSpace α] :
+    (MeasureSemanticsVia.ofEvalDistSemantics m).evalDist mx = 𝒟[mx] := by
+  rfl
+
+end MeasureSemanticsVia
+
 /-- Bundled subprobabilistic semantics for a monad `m`.
 
 This is the specialization of `SemanticsVia` where the external observation target is `SPMF`.
@@ -110,7 +182,7 @@ def observeSPMF (sem : SPMFSemantics m) : {α : Type u} → sem.Sem α → SPMF 
 
 This first moves `mx` into the internal semantic monad via `interpret`, and then collapses the
 internal structure to the externally visible `SPMF` via `observeSPMF`. -/
-def evalDist (sem : SPMFSemantics m) (mx : m α) : SPMF α :=
+def evalSPMF (sem : SPMFSemantics m) (mx : m α) : SPMF α :=
   sem.toSemanticsVia.denote mx
 
 /-- The probability that `mx` fails to return a value under `sem`.
@@ -118,12 +190,12 @@ def evalDist (sem : SPMFSemantics m) (mx : m α) : SPMF α :=
 Since `SPMFSemantics` is subprobabilistic, failure is represented by the missing mass of the
 resulting `SPMF`, equivalently the probability of `none` in the underlying `Option`-valued PMF. -/
 def probFailure (sem : SPMFSemantics m) (mx : m α) : ENNReal :=
-  (sem.evalDist mx).run none
+  (sem.evalSPMF mx).run none
 
 /-- Failure probability under an `SPMFSemantics` is always at most `1`. -/
 @[simp]
 lemma probFailure_le_one (sem : SPMFSemantics m) (mx : m α) : sem.probFailure mx ≤ 1 :=
-  PMF.coe_le_one (sem.evalDist mx) none
+  PMF.coe_le_one (sem.evalSPMF mx) none
 
 /-- Package an ordinary `MonadLiftT m SPMF` instance as a bundled `SPMFSemantics`.
 
@@ -138,12 +210,13 @@ protected def ofMonadLift (m : Type u → Type v) [Monad m] [MonadLiftT m SPMF] 
   observe := fun mx => liftM mx
 
 @[simp]
-lemma ofMonadLift_evalDist (mx : m α) [MonadLiftT m SPMF] :
-    (SPMFSemantics.ofMonadLift m).evalDist mx = liftM mx := rfl
+lemma ofMonadLift_evalSPMF (mx : m α) [MonadLiftT m SPMF] :
+    (SPMFSemantics.ofMonadLift m).evalSPMF mx = liftM mx := rfl
 
 @[simp]
 lemma ofMonadLift_probFailure (mx : m α) [MonadLiftT m SPMF] :
-    (SPMFSemantics.ofMonadLift m).probFailure mx = Pr[⊥ | mx] := rfl
+    (SPMFSemantics.ofMonadLift m).probFailure mx = Pr[⊥ | mx] :=
+  (probFailure_def mx).symm
 
 end SPMFSemantics
 
@@ -166,7 +239,7 @@ def observePMF (sem : PMFSemantics m) : {α : Type u} → sem.Sem α → PMF α 
   sem.observe
 
 /-- The total distribution denoted by `mx` under the bundled semantics `sem`. -/
-def evalDist (sem : PMFSemantics m) (mx : m α) : PMF α :=
+def evalSPMF (sem : PMFSemantics m) (mx : m α) : PMF α :=
   sem.toSemanticsVia.denote mx
 
 /-- Forget that a total semantics is total, yielding the underlying subprobabilistic semantics.
@@ -192,7 +265,7 @@ protected def ofMonadLift (m : Type u → Type v) [Monad m] [MonadLiftT m PMF] :
   observe := fun mx => liftM mx
 
 @[simp]
-lemma ofMonadLift_evalDist (mx : m α) [MonadLiftT m PMF] :
-    (PMFSemantics.ofMonadLift m).evalDist mx = liftM mx := rfl
+lemma ofMonadLift_evalSPMF (mx : m α) [MonadLiftT m PMF] :
+    (PMFSemantics.ofMonadLift m).evalSPMF mx = liftM mx := rfl
 
 end PMFSemantics

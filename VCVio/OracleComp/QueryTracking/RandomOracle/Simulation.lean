@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.QueryTracking.Structures
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+
+module
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 
 /-!
 # Random-Oracle Simulation Helpers
@@ -30,7 +32,13 @@ Then the `roSim` namespace lemmas apply to `simulateQ impl`.
 ## Main definitions
 
 * `unifFwdImpl`: the identity forwarding implementation for `unifSpec`, lifted to `StateT`
+* `OracleComp.unifFwdAnswerImpl`: forwards uniform queries while using a fixed deterministic
+  answer table for the other summand
+* `OracleComp.probEvent_eq_one_simulateQ_unifFwdImpl_add_randomOracle_run_iff`: reduces a
+  probability-one claim for the combined lazy random oracle to all agreeing fixed answer tables
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 
@@ -39,7 +47,7 @@ variable {ι : Type} {hashSpec : OracleSpec ι}
 /-- The identity forwarding implementation for `unifSpec` queries, lifted to
 `StateT hashSpec.QueryCache ProbComp`. Each uniform query passes through to the underlying
 `ProbComp` without touching the cache state. -/
-noncomputable def unifFwdImpl (hashSpec : OracleSpec ι) :
+def unifFwdImpl (hashSpec : OracleSpec ι) :
     QueryImpl unifSpec (StateT hashSpec.QueryCache ProbComp) :=
   (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
     (StateT hashSpec.QueryCache ProbComp)
@@ -105,7 +113,7 @@ lemma simulateQ_liftM_spec_query (q : hashSpec.Domain) :
   change simulateQ (unifFwdImpl hashSpec + ro)
     (liftM (liftM (hashSpec.query q) :
       OracleQuery (unifSpec + hashSpec) _)) = _
-  simp [simulateQ_query]
+  exact QueryImpl.simulateQ_add_liftM_query_right (unifFwdImpl hashSpec) ro q
 
 /-- Simulating a `HasQuery.query` hash query through `unifFwdImpl + ro` dispatches it to the
 hash-oracle handler `ro`, matching `simulateQ_liftM_spec_query` through the monad-lift form. -/
@@ -122,12 +130,22 @@ namespace OracleComp
 
 variable {ι : Type} {spec : OracleSpec ι} {α : Type}
 
+/-- Interpret uniform queries probabilistically while answering every `spec` query with the
+deterministic table `f`. This is the fixed-table counterpart of
+`unifFwdImpl spec + randomOracle`. -/
+def unifFwdAnswerImpl (f : QueryImpl spec Id) :
+    QueryImpl (unifSpec + spec) ProbComp :=
+  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) + f.liftTarget ProbComp
+
 /-- The random-oracle simulation of a plain `OracleComp` never fails on any starting cache. -/
 theorem neverFail_simulateQ_randomOracle_run
-    [DecidableEq ι] [spec.Inhabited] [(t : spec.Domain) → SampleableType (spec.Range t)]
+    [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
     (oa : OracleComp spec α) (cache : spec.QueryCache) :
     NeverFail ((simulateQ randomOracle oa).run cache) := by
-  grind only [= neverFail_iff, = probFailure_of_liftM_PMF]
+  let : spec.Inhabited :=
+    { inhabitedB := fun t =>
+        Classical.inhabited_of_nonempty (α := spec.Range t) inferInstance }
+  infer_instance
 
 /-- Running the lazy random oracle on an uncached query `t` and binding the result samples the
 fresh answer uniformly, so the support of the bound computation is the union over all answers of
@@ -141,6 +159,125 @@ private lemma support_randomOracle_run_bind_of_uncached [DecidableEq ι] [spec.I
   rw [QueryImpl.withCaching_run_none _ hcache, support_bind, support_map,
     show support (uniformSampleImpl t) = Set.univ from support_uniformSample _]
   simp
+
+/-- Support characterization for a computation with both fresh uniform queries and a lazy
+random oracle.
+
+An output `a` is reachable from `cache` under `unifFwdImpl spec + randomOracle` iff it is
+reachable while keeping the uniform queries probabilistic and replacing the hash oracle by some
+total deterministic answer table that agrees with `cache`. The final lazy-oracle cache is
+existentially quantified away. -/
+theorem exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
+    [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
+    (oa : OracleComp (unifSpec + spec) α) (cache : spec.QueryCache) (a : α) :
+    (∃ f : QueryImpl spec Id, cache.AgreesWithFn f ∧
+      a ∈ support (simulateQ (unifFwdAnswerImpl f) oa))
+    ↔
+    (∃ cache' : spec.QueryCache,
+      (a, cache') ∈ support
+        ((simulateQ (unifFwdImpl spec +
+          (spec.randomOracle : QueryImpl spec (StateT spec.QueryCache ProbComp))) oa).run
+            cache)) := by
+  classical
+  let : spec.Inhabited :=
+    { inhabitedB := fun t =>
+        Classical.inhabited_of_nonempty (α := spec.Range t) inferInstance }
+  induction oa using OracleComp.inductionOn generalizing cache a with
+  | pure x =>
+    simp only [simulateQ_pure, support_pure, Set.mem_singleton_iff,
+      StateT.run_pure, Prod.mk.injEq]
+    refine ⟨fun ⟨_, _, h⟩ => ⟨cache, h, rfl⟩, fun ⟨_, ha, _⟩ => ?_⟩
+    obtain ⟨f, hf⟩ := QueryCache.exists_agreesWithFn (spec := spec) cache
+    exact ⟨f, hf, ha⟩
+  | query_bind t k ih =>
+    cases t with
+    | inl t =>
+      simp only [simulateQ_bind, simulateQ_spec_query, unifFwdAnswerImpl,
+        QueryImpl.add_apply_inl, HasQuery.toQueryImpl_apply, unifFwdImpl,
+        QueryImpl.liftTarget_apply, StateT.run_bind, StateT.run_liftM,
+        support_bind, Set.mem_iUnion]
+      constructor
+      · rintro ⟨f, hf, u, hu, ha⟩
+        obtain ⟨cache', hcache'⟩ := (ih u cache a).mp
+          ⟨f, hf, by simpa [unifFwdAnswerImpl] using ha⟩
+        exact ⟨cache', (u, cache), ⟨u, hu, by simp⟩, hcache'⟩
+      · rintro ⟨cache', ⟨u, cache₀⟩, ⟨u', hu', hpair⟩, ha⟩
+        have hpair' : (u, cache₀) = (u', cache) := by simpa using hpair
+        have hu : u = u' := congrArg Prod.fst hpair'
+        have hc : cache₀ = cache := congrArg Prod.snd hpair'
+        subst u'
+        subst cache₀
+        obtain ⟨f, hf, hs⟩ := (ih u cache a).mpr ⟨cache', ha⟩
+        exact ⟨f, hf, u, hu', by simpa [unifFwdAnswerImpl] using hs⟩
+    | inr t =>
+      have h_eval : ∀ f : QueryImpl spec Id,
+          simulateQ (unifFwdAnswerImpl f)
+              (liftM ((unifSpec + spec).query (Sum.inr t)) >>= k) =
+            simulateQ (unifFwdAnswerImpl f) (k (f t)) := by
+        intro f
+        rw [simulateQ_bind, simulateQ_spec_query]
+        change (pure (f t) : ProbComp _) >>= (fun u =>
+          simulateQ (unifFwdAnswerImpl f) (k u)) = _
+        rw [pure_bind]
+      simp_rw [h_eval]
+      rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+        QueryImpl.add_apply_inr]
+      rcases hcache : cache t with _ | u
+      · simp only [support_randomOracle_run_bind_of_uncached t hcache, Set.mem_iUnion]
+        constructor
+        · rintro ⟨f, hf, ha⟩
+          obtain ⟨cache', hcache'⟩ := (ih (f t) (cache.cacheQuery t (f t)) a).mp
+            ⟨f, (QueryCache.agreesWithFn_cacheQuery_iff cache t (f t) f hcache).mpr
+              ⟨hf, rfl⟩, ha⟩
+          exact ⟨cache', f t, hcache'⟩
+        · rintro ⟨cache', u, hcache'⟩
+          obtain ⟨f, hagree, ha⟩ := (ih u (cache.cacheQuery t u) a).mpr
+            ⟨cache', hcache'⟩
+          obtain ⟨hf, hfu⟩ :=
+            (QueryCache.agreesWithFn_cacheQuery_iff cache t u f hcache).mp hagree
+          exact ⟨f, hf, hfu ▸ ha⟩
+      · rw [QueryImpl.withCaching_run_some _ hcache, pure_bind]
+        constructor
+        · rintro ⟨f, hf, ha⟩
+          exact (ih u cache a).mp ⟨f, hf, hf hcache ▸ ha⟩
+        · intro hsupp
+          obtain ⟨f, hf, ha⟩ := (ih u cache a).mpr hsupp
+          exact ⟨f, hf, hf hcache ▸ ha⟩
+
+/-- Probability-one form of the combined uniform-query/random-oracle support characterization.
+
+The combined lazy-oracle simulation satisfies `p` almost surely from `preexisting_cache` iff,
+for every deterministic hash-answer table extending that cache, the computation that keeps fresh
+uniform queries probabilistic and uses that fixed table satisfies `p` almost surely. No separate
+`NeverFail` premise is needed: both interpretations are `ProbComp` computations and hence total. -/
+theorem probEvent_eq_one_simulateQ_unifFwdImpl_add_randomOracle_run_iff
+    [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
+    (oa : OracleComp (unifSpec + spec) α) (preexisting_cache : spec.QueryCache) (p : α → Prop) :
+    Pr[fun v => p v.1 |
+      (simulateQ (unifFwdImpl spec +
+        (spec.randomOracle : QueryImpl spec (StateT spec.QueryCache ProbComp))) oa).run
+          preexisting_cache] = 1
+    ↔
+    ∀ f : QueryImpl spec Id, preexisting_cache.AgreesWithFn f →
+      Pr[p | simulateQ (unifFwdAnswerImpl f) oa] = 1 := by
+  classical
+  rw [probEvent_eq_one_iff]
+  constructor
+  · rintro ⟨_, hsupp⟩ f hf
+    rw [probEvent_eq_one_iff]
+    refine ⟨probFailure_eq_zero' (by infer_instance), ?_⟩
+    intro a ha
+    obtain ⟨cache', hcache'⟩ :=
+      (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
+        oa preexisting_cache a).mp ⟨f, hf, ha⟩
+    exact hsupp (a, cache') hcache'
+  · intro h
+    refine ⟨probFailure_eq_zero' (by infer_instance), ?_⟩
+    rintro ⟨a, cache'⟩ ha
+    obtain ⟨f, hf, has⟩ :=
+      (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
+        oa preexisting_cache a).mpr ⟨cache', ha⟩
+    exact ((probEvent_eq_one_iff.mp (h f hf)).2 a has)
 
 /-- Support characterization for lazy random-oracle simulation.
 

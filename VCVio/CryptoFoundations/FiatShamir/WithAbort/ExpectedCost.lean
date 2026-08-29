@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.WithAbort.Cost
-import Mathlib.Analysis.SpecificLimits.Basic
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Cost
+public import Mathlib.Analysis.SpecificLimits.Basic
 
 /-!
 # Expected-cost PMF theorems for Fiat-Shamir with aborts
@@ -15,6 +17,8 @@ Expected random-oracle query costs of `fsAbortSignLoop` and
 induced output distributions. These drive the aggregate runtime bounds used
 in the security proof.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -472,7 +476,7 @@ theorem verify_expectedQueryCost_eq
       | none => val 0
       | some (w', _) => val (costFn (msg, w')) := by
   rcases sig with _ | ⟨w', z⟩
-  · letI : DecidableEq ω := Classical.decEq ω
+  · let : DecidableEq ω := Classical.decEq ω
     simp [FiatShamirWithAbort, HasQuery.expectedQueryCost, AddWriterT.expectedCost,
       HasQuery.Program.withAddCost]
   · refine HasQuery.expectedQueryCost_eq_of_usesCostExactly ?_ hval

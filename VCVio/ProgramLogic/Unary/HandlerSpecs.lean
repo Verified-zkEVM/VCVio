@@ -4,16 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Std.Tactic.Do
-import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.QueryTracking.CountingOracle
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.SeededOracle
-import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
-import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
-import VCVio.ProgramLogic.Unary.StdDoBridge
-import VCVio.ProgramLogic.Unary.WriterTBridge
+module
+
+public import Std.Tactic.Do
+public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.SeededOracle
+public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
+public import VCVio.ProgramLogic.Unary.StdDoBridge
+public import VCVio.ProgramLogic.Unary.WriterTBridge
 
 /-!
 # `Std.Do` handler specifications for `OracleComp` simulators
@@ -125,6 +127,8 @@ This single-`StateT`-layer pattern is preferred over genuinely stacked
   use `do` with `get` / `set` / `pure` would make it `mvcgen`-friendly,
   but is non-trivial given the existing dependents.
 -/
+
+@[expose] public section
 
 open Std.Do OracleSpec OracleComp
 
@@ -379,11 +383,11 @@ theorem seededOracle_triple_of_cons (t : spec.Domain)
     Std.Do.Triple
       (seededOracle t : StateT (QuerySeed spec) (OracleComp spec) (spec.Range t))
       (spred(fun seed => ⌜seed = seed₀⌝))
-      (⇓ v seed' => ⌜v = u ∧ seed' = Function.update seed₀ t us⌝) := by
+      (⇓ v seed' => ⌜v = u ∧ seed' = seed₀.update t us⌝) := by
   rw [triple_stateT_iff_forall_support]
   intro seed hseed v seed' hmem
   rw [hseed] at hmem
-  change v = u ∧ seed' = Function.update seed₀ t us
+  change v = u ∧ seed' = seed₀.update t us
   simpa only [seededOracle.apply_eq, StateT.run, StateT.mk, h, support_pure,
     Set.mem_singleton_iff, Prod.mk.injEq] using hmem
 
@@ -435,8 +439,9 @@ theorem loggingOracle_triple (t : spec.Domain) (log₀ : QueryLog spec) :
         WriterT (QueryLog spec) (OracleComp spec) (spec.Range t))
       (spred(fun log => ⌜log = log₀⌝))
       (⇓ v log' => ⌜log' = log₀ ++ [⟨t, v⟩]⌝) := by
-  unfold loggingOracle QueryImpl.withLogging QueryImpl.withTraceAppend QueryImpl.postInsert
-    QueryImpl.ofLift
+  unfold loggingOracle
+  rw [QueryImpl.withLogging_apply]
+  unfold QueryImpl.ofLift
   mvcgen
   subst_vars
   rw [wpProp_iff_forall_support]
@@ -451,8 +456,9 @@ theorem loggingOracle_triple_prefix (t : spec.Domain) (log₀ : QueryLog spec) :
         WriterT (QueryLog spec) (OracleComp spec) (spec.Range t))
       (spred(fun log => ⌜log = log₀⌝))
       (⇓ _ log' => ⌜log₀ <+: log'⌝) := by
-  unfold loggingOracle QueryImpl.withLogging QueryImpl.withTraceAppend QueryImpl.postInsert
-    QueryImpl.ofLift
+  unfold loggingOracle
+  rw [QueryImpl.withLogging_apply]
+  unfold QueryImpl.ofLift
   mvcgen
   subst_vars
   rw [wpProp_iff_forall_support]
@@ -501,6 +507,7 @@ theorem countingOracle_triple (t : spec.Domain) (qc₀ : QueryCount ι) :
       WriterT (QueryCount ι) (OracleComp spec) (spec.Range t)).run =
         (fun x => (x, QueryCount.single t * (1 : QueryCount ι))) <$>
           (HasQuery.query t : OracleComp spec _) := by
+    rw [OracleSpec.countingOracle_apply]
     change (_ >>= _ : OracleComp _ _) = _
     simp [WriterT.run_tell, HasQuery.instOfMonadLift_query, monad_norm]
   rw [hrun] at hmem
@@ -564,6 +571,7 @@ theorem costOracle_triple (costFn : spec.Domain → ω) (t : spec.Domain) (s₀ 
   have hrun : (costOracle costFn t : WriterT ω (OracleComp spec) (spec.Range t)).run =
       (fun x => (x, costFn t * (1 : ω))) <$>
         (HasQuery.query t : OracleComp spec _) := by
+    rw [costOracle_apply]
     change (_ >>= _ : OracleComp _ _) = _
     simp [WriterT.run_tell, HasQuery.instOfMonadLift_query, monad_norm]
   rw [hrun] at hmem

@@ -3,10 +3,12 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.QueryBound
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # ROM Collision Infrastructure
@@ -28,13 +30,17 @@ inside `cachingOracle`.
   corresponding log entry.
 -/
 
+@[expose] public section
+
 open OracleSpec OracleComp ENNReal Finset
 
 open scoped OracleSpec.PrimitiveQuery
 
+universe u
+
 namespace OracleComp
 
-variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι}
+variable {ι : Type u} [DecidableEq ι] {spec : OracleSpec.{u, u} ι}
 
 /-! ## Collision Predicates -/
 
@@ -92,7 +98,7 @@ lemma cache_lookup_eq_of_noCollision
 `cache_mid` to a state `zc`, with `z` obtained from `zc` by prepending the log entry `⟨t, u⟩`.
 Shared `query_bind` skeleton for the induction in `log_entry_in_cache_and_mono` and
 `cache_entry_in_log_or_initial`. -/
-private lemma exists_cont_of_run_simulateQ_query_bind {α : Type}
+private lemma exists_cont_of_run_simulateQ_query_bind {α : Type u}
     (t : spec.Domain) (mx : spec.Range t → OracleComp spec α)
     (cache₀ : QueryCache spec) (z : (α × QueryLog spec) × QueryCache spec)
     (hmem : z ∈ support ((simulateQ cachingOracle
@@ -180,7 +186,7 @@ For `query t >>= mx`: the logging oracle decomposes as
 `query t >>= fun u => map (prepend ⟨t,u⟩) ...`,
 and `cachingOracle` caches the query result `u` at `t`. By the IH applied to `mx u`,
 all sub-log entries are in the final cache, and cache monotonicity ensures `t ↦ u` persists. -/
-theorem log_entry_in_cache_and_mono {α : Type}
+theorem log_entry_in_cache_and_mono {α : Type u}
     (oa : OracleComp spec α)
     (cache₀ : QueryCache spec)
     (z : (α × QueryLog spec) × QueryCache spec)
@@ -211,7 +217,7 @@ log entry. Combined with `log_entry_in_cache_and_mono`, this shows that (startin
 the cache entries and log entries have the same set of `(input, output)` pairs.
 
 Proof by structural induction on `oa`, mirroring `log_entry_in_cache_and_mono`. -/
-theorem cache_entry_in_log_or_initial {α : Type}
+theorem cache_entry_in_log_or_initial {α : Type u}
     (oa : OracleComp spec α)
     (cache₀ : QueryCache spec)
     (z : (α × QueryLog spec) × QueryCache spec)

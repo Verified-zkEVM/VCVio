@@ -4,12 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.OracleComp.SimSemantics.StateT.Basic
+module
+
+public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-!
 # Fujisaki-Okamoto Shared Definitions
@@ -21,6 +23,8 @@ This file defines the shared objects used by the Fujisaki-Okamoto transform:
 - spread notions and OW-CPA games for the `ProbComp` specialization
 - OW-PCVA games for the general monadic interface
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -73,9 +77,11 @@ abbrev OW_CPA_Adversary := PK → C → OracleComp pke.OW_CPA_oracleSpec M
 
 /-- Implementation of the OW-CPA encryption oracle. -/
 def OW_CPA_queryImpl (pk : PK) : QueryImpl pke.OW_CPA_oracleSpec ProbComp :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) + fun msg => do
-    let r ← ($ᵗ R)
-    pure (pke.encrypt pk msg r)
+  QueryImpl.add
+    (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp))
+    (fun msg => do
+      let r ← ($ᵗ R)
+      pure (pke.encrypt pk msg r))
 
 /-- Main one-way under chosen-plaintext attack (OW-CPA) experiment.
 
@@ -140,7 +146,7 @@ def OW_PCVA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : OW_PCVA_Adversary encAlg) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, sk) ← encAlg.keygen
     let msg ← runtime.liftProbComp ($ᵗ M)
     let cStar ← encAlg.encrypt pk msg

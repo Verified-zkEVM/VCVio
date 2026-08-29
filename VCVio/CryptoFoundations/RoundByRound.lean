@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aristotle (Harmonic), Elias Judin
 -/
 
-import VCVio.CryptoFoundations.SecExp
-import VCVio.OracleComp.Constructions.SampleableType
+module
+
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # Round-indexed event games
@@ -42,6 +44,8 @@ TODO: the deferred computational layer needs a security-indexed family of encode
 extractors together with negligible per-round error, and lives behind the separate polytime
 framework. This module deliberately does not add that layer or depend on an unmerged branch.
 -/
+
+@[expose] public section
 
 noncomputable section
 
@@ -83,8 +87,8 @@ theorem experiment_advantage (games : GameFamily Round Context)
   classical
   calc (games.experiment round context).advantage
       = 1 - Pr[⊥ | (games.experiment round context).main] := by
-        simp only [SecExp.advantage]
-        exact congrArg (1 - ·) (SPMFSemantics.ofMonadLift_probFailure _)
+        simp only [SecExp.advantage, experiment, SPMFSemantics.ofMonadLift_evalSPMF,
+          probFailure_evalSPMF]
     _ = Pr[= () | (games.experiment round context).main] :=
         probOutput_punit_eq_sub_probFailure.symm
     _ = Pr[games.event round context | games.sample round context] :=
@@ -286,7 +290,21 @@ def TerminalCondition (games : KnowledgeExtractionFamily rounds) : Prop :=
 /-- The extensional extraction clause with a separate error for each round.
 
 For every fixed context and prover message whose preceding state is doomed, an escape probability
-strictly greater than the round's error requires the directly extracted witness to be valid. -/
+strictly greater than the round's error requires the directly extracted witness to be valid.
+
+The prover message is quantified **outside** the escape hypothesis, so each message carries its own
+extraction obligation. Definition 3.12 instead writes "for all `m ∈ M_i` we have
+`Pr[(x, τ, m, c) ∉ D] > ε_i`, then `Ext(x, τ, m)` outputs a witness", placing the quantifier inside
+the hypothesis; read literally that is `(∀ m, P m) → (∀ m, Q m)`, which this clause **strictly
+strengthens**. The per-message reading is the one the source itself uses: the same clause names the
+specific transcript `(x, τ, m)` an *RBR extractable partial transcript*, which carries no
+information under the literal reading, and the proof of Theorem 1.2 concludes that
+`(x, τ, EndNode(τ))` is extractable from that one message's escape probability. The literal `∀ m`
+appears to be carried over from Definition 3.11's soundness clause, where it belongs to the
+conclusion rather than the hypothesis.
+
+Like the rest of this layer, the clause is extensional: it constrains no runtime of `extract` and
+imposes no asymptotic condition on `error`. -/
 def ExtractionCondition (games : KnowledgeExtractionFamily rounds)
     (error : Fin rounds → ℝ≥0∞) : Prop :=
   ∀ round (context : games.Context round.castSucc) (message : games.Message round),

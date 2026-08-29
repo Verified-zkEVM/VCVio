@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-import VCVio.CryptoFoundations.SecExp
+
+module
+public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
+public import VCVio.CryptoFoundations.SecExp
 
 /-!
 # Asymmetric Encryption Schemes: One-Time IND-CPA
@@ -12,6 +14,8 @@ import VCVio.CryptoFoundations.SecExp
 This file contains the standard two-phase one-time IND-CPA game together with the `ProbComp`
 specialization used by the generic many-query lift.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp
 
@@ -38,7 +42,7 @@ variable {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
 sample keys, let the adversary choose challenge messages, encrypt one branch, and return whether
 the adversary guessed the hidden bit. -/
 def IND_CPA_OneTime_Game (runtime : ProbCompRuntime (OracleComp spec)) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let b : Bool ← runtime.liftProbComp ($ᵗ Bool)
     let (pk, _) ← encAlg.keygen
     let (m₁, m₂, state) ← adv.chooseMessages pk

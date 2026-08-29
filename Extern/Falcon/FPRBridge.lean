@@ -3,12 +3,15 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Batteries.Data.Rat.Float
-import LatticeCrypto.Falcon.Scheme
-import LatticeCrypto.Falcon.Concrete.FPR
-import Extern.Falcon.Instance
-import LatticeCrypto.Falcon.Concrete.Encoding
-import Mathlib.Analysis.SpecialFunctions.Pow.Real
+
+module
+import all Extern.Falcon.Instance
+public import Batteries.Data.Float.Rat
+public import LatticeCrypto.Falcon.Scheme
+public import LatticeCrypto.Falcon.Concrete.FPR
+public import Extern.Falcon.Instance
+public import LatticeCrypto.Falcon.Concrete.Encoding
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
 /-!
 # FPR ↔ ℝ Bridge Theorems
@@ -43,6 +46,8 @@ where `ε_renyi < 2^{-64}` for 53-bit mantissa precision.
 - Pornin 2019 (eprint 2019/893), Section 3 (precision analysis)
 - Falcon specification v1.2, Section 2.5.2 (sampler quality)
 -/
+
+@[expose] public section
 
 
 namespace Falcon.Concrete.FPRBridge

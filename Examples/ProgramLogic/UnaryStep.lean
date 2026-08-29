@@ -4,10 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Unary
-import VCVio.ProgramLogic.Unary.SimulateQ
-import VCVio.OracleComp.Constructions.Replicate
-import VCVio.OracleComp.Coercions.SubSpec
+module
+
+public import VCVio.ProgramLogic.Tactics.Unary
+public import VCVio.ProgramLogic.Unary.SimulateQ
+public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Coercions.SubSpec
 
 /-!
 # Unary VCGen Step Examples
@@ -15,6 +17,8 @@ import VCVio.OracleComp.Coercions.SubSpec
 This file validates one-step unary tactic behavior for raw `wp` goals,
 registered `@[vcspec]` hints, and `liftComp`.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open Lean.Order
@@ -343,7 +347,7 @@ example [SampleableType α] (post : α → ℝ≥0∞) :
 
 example (impl : QueryImpl spec (OracleComp spec))
     (hImpl : ∀ (t : spec.Domain),
-      𝒟[impl t] = 𝒟[(query t : OracleComp spec (spec.Range t))])
+      𝒮[impl t] = 𝒮[(query t : OracleComp spec (spec.Range t))])
     (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp⟦simulateQ impl oa⟧ post = wp⟦oa⟧ post := by
   simpa using OracleComp.ProgramLogic.wp_simulateQ_eq impl hImpl oa post

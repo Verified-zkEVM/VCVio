@@ -4,14 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.CryptoFoundations.IdenSchemeWithAbort
-import VCVio.CryptoFoundations.SignatureAlg
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.HasQuery.Basic
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+module
+
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.CryptoFoundations.IdenSchemeWithAbort
+public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.HasQuery.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 
 /-!
 # Fiat-Shamir-with-aborts transform
@@ -34,6 +36,8 @@ lemmas, expected-cost PMFs, and the EUF-CMA security statement live in the
 - EasyCrypt `FSabort.eca`, `SimplifiedScheme.ec`
 - NIST FIPS 204, Algorithms 2 (ML-DSA.Sign) and 3 (ML-DSA.Verify)
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -288,7 +292,7 @@ theorem correct
     (hc : ids.Complete) (maxAttempts : ℕ) (δ : ENNReal)
     (h_abort : ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
       ∀ msg : M,
-        Pr[= none | (runtime M).evalDist
+        Pr[= none | (runtime M).evalSPMF
           ((FiatShamirWithAbort
             (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
             ids hr M maxAttempts).sign pk sk msg)] ≤ δ) :
@@ -310,33 +314,35 @@ theorem correct
   set signOnly : Stmt → Wit → ProbComp (Option (Commit × Resp)) := fun pk sk =>
     StateT.run' (simulateQ impl (sigAlg.sign pk sk msg)) ∅
   suffices hRewrite :
-      (runtime M).evalDist (do
+      (runtime M).evalSPMF (do
         let (pk, sk) ← sigAlg.keygen
         let sig ← sigAlg.sign pk sk msg
         sigAlg.verify pk msg sig) =
-      𝒟[do
+      𝒮[do
         let (pk, sk) ← hr.gen
         signVerify pk sk] by
     rw [hRewrite]
+    rw [probOutput_evalSPMF]
     apply SignatureAlg.le_probOutput_bind_of_forall_support
     intro ⟨pk, sk⟩ hmem
     have hrel : rel pk sk = true := hr.gen_sound pk sk hmem
-    have habort : Pr[= none | 𝒟[signOnly pk sk]] ≤ δ := h_abort pk sk hrel msg
+    have habort : Pr[= none | 𝒮[signOnly pk sk]] ≤ δ := h_abort pk sk hrel msg
+    rw [probOutput_evalSPMF] at habort
     have hnoFail : Pr[⊥ | signVerify pk sk] = 0 := probFailure_of_liftM_PMF _
     calc
       Pr[= true | signVerify pk sk]
         = 1 - Pr[= false | signVerify pk sk] := by
           rw [probOutput_true_eq_sub, hnoFail, tsub_zero]
-      _ ≥ 1 - Pr[= none | 𝒟[signOnly pk sk]] :=
+      _ ≥ 1 - Pr[= none | signOnly pk sk] :=
           tsub_le_tsub_left
             (probOutput_false_signVerify_le_probOutput_none_sign ids hr M ro rfl hc hrel
               msg maxAttempts) 1
       _ ≥ 1 - δ := tsub_le_tsub_left habort 1
-  change 𝒟[(simulateQ impl (do
+  change 𝒮[(simulateQ impl (do
       let (pk, sk) ← sigAlg.keygen
       let sig ← sigAlg.sign pk sk msg
       sigAlg.verify pk msg sig)).run' ∅] =
-    𝒟[do
+    𝒮[do
       let (pk, sk) ← hr.gen
       signVerify pk sk]
   simp only [sigAlg, signVerify, FiatShamirWithAbort, simulateQ_bind]

@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Arithmetic
+
+module
+public import LatticeCrypto.Falcon.Arithmetic
 
 /-!
 # Concrete NTT for Falcon
@@ -21,6 +23,8 @@ with twiddle factors `ζ^(brv(k))` where `ζ` is a primitive `2n`-th root of uni
 - For `n = 1024`: `ζ = 11^(12288/2048) = 11^6 mod 12289`
 - For `n = 512`:  `ζ = 11^(12288/1024) = 11^12 mod 12289`
 -/
+
+public section
 
 
 namespace Falcon.Concrete

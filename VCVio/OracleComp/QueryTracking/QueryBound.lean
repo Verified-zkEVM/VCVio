@@ -3,13 +3,15 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import PolyFun.PFunctor.Bound
-import ToMathlib.General
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.QueryTracking.CountingOracle
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.StateT.Basic
+
+module
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import PolyFun.PFunctor.Bound
+public import ToMathlib.General
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-!
 # Bounding Queries Made by a Computation
@@ -27,6 +29,8 @@ satisfies the bound with the updated budget `cost t b`.
 The classical per-index and total query bounds are recovered by `IsPerIndexQueryBound`
 and `IsTotalQueryBound`.
 -/
+
+@[expose] public section
 
 open OracleSpec
 
@@ -79,12 +83,12 @@ lemma isQueryBound_query_bind_iff (t : ι) (mx : spec t → OracleComp spec α)
 lemma isQueryBound_query_iff (t : ι) (b : B)
     (canQuery : ι → B → Prop) (cost : ι → B → B) :
     IsQueryBound (liftM (spec.query t) : OracleComp spec _) b canQuery cost ↔
-    canQuery t b :=
-  by
-    simpa [IsQueryBound, OracleSpec.query_def, OracleComp.liftM_def,
-      PFunctor.FreeM.liftObj] using
-      PFunctor.FreeM.isRollBound_lift_iff
-        (P := spec.toPFunctor) t b canQuery cost
+    canQuery t b := by
+  rw [isQueryBound_iff_isRollBound, OracleComp.liftM_def]
+  change PFunctor.FreeM.IsRollBound
+    ((id : spec.Range t → spec.Range t) <$> PFunctor.FreeM.lift (P := spec.toPFunctor) t)
+    b canQuery cost ↔ canQuery t b
+  rw [PFunctor.FreeM.isRollBound_map_iff, PFunctor.FreeM.isRollBound_lift_iff]
 
 private lemma isQueryBound_map_aux (oa : OracleComp spec α) (f : α → β)
     (canQuery : ι → B → Prop) (cost : ι → B → B) :
@@ -1108,8 +1112,8 @@ theorem IsTotalQueryBound.residual_of_mem_support_run_simulateQ_le_cost
     {st₀ : σ} {z : α × σ}
     (hz : z ∈ support ((simulateQ impl oa).run st₀)) :
     IsTotalQueryBound (ob z.1) (n - (cost z.2 - cost st₀)) := by
-  letI : DecidableEq ι := Classical.decEq ι
-  letI : Fintype ι := Fintype.ofFinite ι
+  let : DecidableEq ι := Classical.decEq ι
+  let : Fintype ι := Fintype.ofFinite ι
   rcases countingOracle.exists_mem_support_simulate_of_mem_support_run_simulateQ_le_cost
       (spec := spec) (ι := ι) (impl := impl) cost hstep hz with
     ⟨qc, hqc, hcost⟩

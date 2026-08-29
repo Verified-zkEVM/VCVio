@@ -4,14 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Meta.Sym.Apply
-import VCVio.ProgramLogic.Tactics.Common.Registry
+module
+
+public meta import Lean.Meta.Sym.Apply
+public meta import VCVio.ProgramLogic.Tactics.Common.Registry
 
 /-!
 # Backward application for VCSpec entries
 
 Shared native application helpers for `@[vcspec]` entries.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 
@@ -52,7 +56,7 @@ private def VCSpecKind.traceLabel : VCSpecKind → String
 private def rawGoalTraceLabel (rawGoal : Bool) : String :=
   if rawGoal then "raw" else "folded"
 
-initialize vcSpecBackwardRuleCache :
+private initialize vcSpecBackwardRuleCache :
     IO.Ref (Std.HashMap VCSpecBackwardRuleCacheKey VCSpecBackwardRule) ←
   IO.mkRef {}
 

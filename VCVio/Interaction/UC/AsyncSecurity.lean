@@ -3,9 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import PolyFun.Interaction.Concurrent.Fairness
-import VCVio.Interaction.UC.AsyncRuntime
-import VCVio.Interaction.UC.Computational
+
+module
+
+public import PolyFun.Interaction.Concurrent.Fairness
+public import VCVio.Interaction.UC.AsyncRuntime
+public import VCVio.Interaction.UC.Computational
 
 /-!
 # Fair PPT security for asynchronous env-open processes
@@ -72,6 +75,8 @@ matches the universe constraints already imposed by
 through the runtime), and is required for `(openTheory.{u, 0, 0}
 Party).Closed` to be well-formed.
 -/
+
+@[expose] public section
 
 universe u
 
@@ -287,7 +292,10 @@ theorem weakFairOn_of_strongFairOn
     (run : AsyncRun ticketed.process.toProcess ticketed.envAction)
     (ticket : ticketed.Ticket) :
     StrongFairOn ticketed run ticket → WeakFairOn ticketed run ticket :=
-  fun hSF ⟨N, hN⟩ => hSF fun N' => ⟨max N N', le_max_right _ _, hN _ (le_max_left _ _)⟩
+  fun hSF hEA => by
+    obtain ⟨N, hN⟩ := Concurrent.ProcessOver.Run.eventuallyAlways_iff.mp hEA
+    exact hSF <| Concurrent.ProcessOver.Run.infinitelyOften_iff.mpr fun N' =>
+      ⟨max N N', le_max_right _ _, hN _ (le_max_left _ _)⟩
 
 /-- Strong fairness implies weak fairness for the whole run. -/
 theorem weakFair_of_strongFair

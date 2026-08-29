@@ -6,7 +6,7 @@
 |----------|---------|------------|
 | `A →ₒ B` | Singleton oracle spec (`OracleSpec.ofFn`) | `VCVio/OracleComp/OracleSpec.lean` |
 | `[]ₒ` | Empty oracle spec (`emptySpec`) | `VCVio/OracleComp/OracleSpec.lean` |
-| `spec₁ + spec₂` | Combine specs via `Sum.elim` | `VCVio/OracleComp/OracleSpec.lean` |
+| `spec₁ + spec₂` | PFunctor coproduct (dependent `Sum.rec`) | `VCVio/OracleComp/OracleSpec.lean` |
 | `⊂ₒ` | SubSpec relation | `VCVio/OracleComp/Coercions/SubSpec.lean` |
 | `∘ₛ` | QueryImpl composition | `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions.lean` |
 
@@ -14,13 +14,17 @@
 
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
-| `𝒟[mx]` | `evalDist mx` | `VCVio/EvalDist/Defs/Basic.lean` |
+| `𝒟[mx]` | primary `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure.lean` |
+| `𝒮[mx]` | explicit finite adapter, `evalSPMF mx` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[= x \| mx]` | `probOutput mx x` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[p \| mx]` | `probEvent mx p` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[⊥ \| mx]` | `probFailure mx` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[cond \| var ← src]` | `probEvent src (fun var => cond)` | `VCVio/EvalDist/Defs/Basic.lean` |
 
 **NOTE**: Legacy code and comments may still use the old `[= x | comp]` notation (without `Pr` prefix). Always use `Pr[...]` in new code.
+
+`Pr[...]` is a discrete compatibility notation. Use `probOutput_eq_evalDist`,
+`probEvent_eq_evalDist`, or `probFailure_eq_evalDist` to move a scalar statement to `𝒟[...]`.
 
 ## Sampling Notations
 

@@ -4,14 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import PolyFun.Control.Monad.Algebra
-import ToMathlib.Control.OptionT
-import ToMathlib.Control.StateT
-import ToMathlib.Control.WriterT
-import VCVio.EvalDist.Monad.Basic
-import VCVio.OracleComp.EvalDist
-import Loom.WP.Basic
-import Loom.Triple.Basic
+module
+
+public import PolyFun.Control.Monad.Algebra
+public import ToMathlib.Control.OptionT
+public import ToMathlib.Control.StateT
+public import ToMathlib.Control.WriterT
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.OracleComp.EvalDist
+public import Loom.WP.Basic
+public import Loom.Triple.Basic
 
 /-!
 # Quantitative `WP` carrier for `OracleComp` (Loom2 default)
@@ -68,6 +70,8 @@ stabilizes, this bridge collapses to a re-export and the lattice
 adapters can move to a shared `ToMathlib/Order/LeanOrderAdapter.lean`.
 -/
 
+@[expose] public section
+
 open ENNReal
 open Lean.Order
 open Std.Do'
@@ -96,7 +100,7 @@ lemma μ_bind_eq_tsum {α : Type}
 noncomputable instance instMAlgOrdered : MAlgOrdered (OracleComp spec) ℝ≥0∞ where
   μ := μ (spec := spec)
   μ_pure x := by
-    haveI : DecidableEq ℝ≥0∞ := Classical.decEq _
+    have : DecidableEq ℝ≥0∞ := Classical.decEq _
     simp [μ, probOutput_pure]
   μ_bind_mono f g hfg x := by
     simp_rw [μ_bind_eq_tsum]
@@ -163,7 +167,7 @@ variable {α β : Type}
 /-- Quantitative `Std.Do'.WP` interpretation of `OracleComp spec` valued in `ℝ≥0∞`.
 
 The `wpTrans` is the existing `MAlgOrdered.wp` (i.e. expectation of
-`post` under `evalDist`); the `EPost.nil` argument is ignored since
+`post` under `evalSPMF`); the `EPost.nil` argument is ignored since
 `OracleComp` has no first-class exception slot. The three `WP` axioms
 reduce to the existing `MAlgOrdered.{wp_pure, wp_bind, wp_mono}`
 equalities. -/

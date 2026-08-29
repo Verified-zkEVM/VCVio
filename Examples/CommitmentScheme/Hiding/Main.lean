@@ -3,7 +3,9 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import Examples.CommitmentScheme.Hiding.LoggingBounds
+
+module
+public import Examples.CommitmentScheme.Hiding.LoggingBounds
 
 /-!
 # Hiding for the random-oracle commitment scheme — main theorems
@@ -27,6 +29,8 @@ The per-salt bound `tvDist(real(s), sim(s)) ≤ t / |S|` is FALSE: a trivial
 adversary always querying salt `s` makes `Pr[bad(s)] = 1`. The averaging
 over the uniform salt is essential. -/
 
+@[expose] public section
+
 open OracleSpec OracleComp ENNReal
 
 variable {M S C : Type}
@@ -42,7 +46,7 @@ private lemma tvDist_liftComp_hidingAvgSpec {α : Type}
         (OracleComp.liftComp oa (HidingAvgSpec M S C))
         (OracleComp.liftComp ob (HidingAvgSpec M S C)) =
       tvDist oa ob := by
-  rw [tvDist, tvDist, evalDist_liftComp, evalDist_liftComp]
+  rw [tvDist, tvDist, evalSPMF_liftComp, evalSPMF_liftComp]
 
 omit [Fintype M] [DecidableEq C] in
 /-- **Hiding bound (averaged technical form, Lemma cm-hiding).**

@@ -4,15 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.OracleComp.QueryTracking.CountingOracle
-import VCVio.OracleComp.ProbComp
-import VCVio.EvalDist.Monad.Map
-import ToMathlib.Control.WriterT
-import ToMathlib.General
-import ToMathlib.Probability.ProbabilityMassFunction.TailSums
-import Mathlib.Algebra.Order.Monoid.Defs
-import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
+module
+
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Monad.Map
+public import ToMathlib.Control.WriterT
+public import ToMathlib.General
+public import ToMathlib.Probability.ProbabilityMassFunction.TailSums
+public import Mathlib.Algebra.Order.Monoid.Defs
+public import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
 
 /-!
 # Writer Cost Accounting
@@ -20,6 +22,8 @@ import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
 This file collects reusable `AddWriterT` facts for pathwise and expected cost reasoning.
 It also equips `QueryImpl` with additive writer-cost instrumentation.
 -/
+
+@[expose] public section
 
 open OracleSpec
 open scoped BigOperators
@@ -45,6 +49,26 @@ lemma withAddCost_apply {ω : Type} [AddMonoid ω]
     impl.withAddCost costFn t =
       (do AddWriterT.addTell (M := m) (costFn t); liftM (impl t)) := by
   simp [withAddCost, AddWriterT.addTell, QueryImpl.withCost]
+
+/-- Cost instrumentation on a left-summand query, with the component response type exposed. -/
+@[simp]
+lemma withAddCost_apply_inl {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    {ω : Type} [AddMonoid ω] (impl : QueryImpl (spec₁ + spec₂) m)
+    (costFn : (spec₁ + spec₂).Domain → ω) (t : spec₁.Domain) :
+    impl.withAddCost costFn (Sum.inl t) = (do
+      AddWriterT.addTell (costFn (Sum.inl t))
+      liftM (impl.restrictLeft t)) := by
+  rw [withAddCost_apply, restrictLeft_apply]
+
+/-- Cost instrumentation on a right-summand query, with the component response type exposed. -/
+@[simp]
+lemma withAddCost_apply_inr {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    {ω : Type} [AddMonoid ω] (impl : QueryImpl (spec₁ + spec₂) m)
+    (costFn : (spec₁ + spec₂).Domain → ω) (t : spec₂.Domain) :
+    impl.withAddCost costFn (Sum.inr t) = (do
+      AddWriterT.addTell (costFn (Sum.inr t))
+      liftM (impl.restrictRight t)) := by
+  rw [withAddCost_apply, restrictRight_apply]
 
 /-- Instrument an implementation with unit additive cost for every query. -/
 def withUnitCost (impl : QueryImpl spec m) :
@@ -316,7 +340,7 @@ lemma expectedCost_eq_tsum_outputs_of_costsAs
     (h : oa.CostsAs f) :
     expectedCost oa val = ∑' a : α, Pr[= a | oa.outputs] * val (f a) := by
   classical
-  letI : DecidableEq ω := Classical.decEq ω
+  let : DecidableEq ω := Classical.decEq ω
   unfold expectedCost
   rw [h]
   simp_rw [probOutput_map_eq_tsum, ← ENNReal.tsum_mul_right, mul_assoc]

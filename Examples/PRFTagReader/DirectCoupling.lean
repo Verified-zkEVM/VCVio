@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.Table
+module
+
+public import Examples.PRFTagReader.Table
 
 /-!
 # PRF Tag/Reader Protocol — Direct M_ideal/S_ideal Coupling Foundations
@@ -29,7 +31,7 @@ sub-table of the single-session one.
 
 * `slotZeroEmbed_injective` — the embedding is injective, the prerequisite for marginalization
   of a uniform single-session table onto a uniform multiple-session sub-table.
-* `evalDist_slotZeroSubTable_uniformSample` — drawing `gS` uniformly and projecting through
+* `evalSPMF_slotZeroSubTable_uniformSample` — drawing `gS` uniformly and projecting through
   `slotZeroSubTable` yields the uniform distribution on multiple-session tables. This is the
   eager-form coupling lifting the single-session sampler to a multiple-session sub-sampler.
 * `mReaderCellsFinset_image_subset_sReaderCellsFinset` — at any fixed transcript, the
@@ -45,6 +47,8 @@ The `slotZeroEmbed` and `slotZeroSubTable` names are thin, intent-naming aliases
 established sibling `projectTable`; the distribution and cell-subset lemmas re-derive the
 underlying facts in the explicit shape used by the direct coupling argument.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -113,14 +117,14 @@ distribution on multiple-session tables.
 This is the foundational marginalization step of the direct M_ideal/S_ideal coupling: the
 reference-slot cells of `gS` are themselves jointly uniform and independent of the off-slot
 cells, so the multiple-session sub-table is uniform whenever the single-session full table is. -/
-lemma evalDist_slotZeroSubTable_uniformSample
+lemma evalSPMF_slotZeroSubTable_uniformSample
     [Fintype TagId] [DecidableEq TagId]
     [Fintype Nonce] [DecidableEq Nonce]
     [Finite Digest] [Nonempty Digest] [SampleableType Digest] :
-    𝒟[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=
+    𝒮[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=
         fun gS => pure (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)] =
-      𝒟[$ᵗ (TagId × Nonce → Digest)] :=
-  evalDist_uniformSample_map_comp_injective (R := Digest)
+      𝒮[$ᵗ (TagId × Nonce → Digest)] :=
+  evalSPMF_uniformSample_map_comp_injective (R := Digest)
     (slotZeroEmbed_injective (TagId := TagId) (Nonce := Nonce)
       (sessionsPerTag := sessionsPerTag))
 
@@ -280,15 +284,15 @@ handlers — run on the sub-table `slotZeroSubTable gS` (multiple side) and on t
 This is the per-sample identical-until-bad bind primitive: in a bind chain
 `($ᵗ gS) >>= fun gS => multipleTableHandler ... tag s >>= continuation`, the multiple-side bind
 is interchangeable with the single-side bind whenever the queried tag has no prior sessions. -/
-lemma evalDist_multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero
+lemma evalSPMF_multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero
     (gS : (TagId × Fin sessionsPerTag) × Nonce → Digest)
     (tag : TagId) (s : UnlinkState TagId)
     (hzero : s.sessionsUsed tag = 0) :
-    𝒟[multipleTableHandler (sessionsPerTag := sessionsPerTag)
+    𝒮[multipleTableHandler (sessionsPerTag := sessionsPerTag)
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) (Sum.inl tag) s] =
-      𝒟[singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest) gS
+      𝒮[singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest) gS
           (Sum.inl tag) s] :=
-  congrArg evalDist
+  congrArg evalSPMF
     (multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero
       gS tag s hzero)
 
@@ -358,7 +362,7 @@ end ReaderStepCoupling
 
 /-! ### Composition
 
-The pieces above — the eager-table sub-sampler `evalDist_slotZeroSubTable_uniformSample`, the
+The pieces above — the eager-table sub-sampler `evalSPMF_slotZeroSubTable_uniformSample`, the
 deterministic reader lift `mReader_accepts_imp_sReader_accepts`, and the tag-step first-session
 equality `multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero` — are
 composed in `DirectCoupling/Compose.lean` by the eager-form induction

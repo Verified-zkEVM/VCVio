@@ -4,17 +4,19 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.CryptoFoundations.SigmaProtocol
-import VCVio.CryptoFoundations.SignatureAlg
-import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-import VCVio.OracleComp.HasQuery.Morphism
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.QueryTracking.QueryCost
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
-import VCVio.ProgramLogic.NotationCore
-import VCVio.ProgramLogic.Tactics.Unary
+module
+
+public import VCVio.CryptoFoundations.SigmaProtocol
+public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.OracleComp.HasQuery.Morphism
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.ProgramLogic.NotationCore
+public import VCVio.ProgramLogic.Tactics.Unary
 
 /-!
 # Fiat-Shamir transform for Σ-protocols
@@ -29,6 +31,8 @@ the naturality theorem, cost accounting, and completeness. The forking-lemma
 bridge lives in `FiatShamir.Sigma.Fork` and the EUF-CMA reduction in
 `FiatShamir.Sigma.Security`.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -101,65 +105,65 @@ noncomputable def runtime :
 
 /-- The cache-parametric Fiat-Shamir runtime commutes with `<$>`: mapping a function over the
 surface computation is the same as mapping it over the observed `SPMF`. A direct corollary of
-`SPMFSemantics.withStateOracle_evalDist_map`. -/
-lemma runtimeWithCache_evalDist_map
+`SPMFSemantics.withStateOracle_evalSPMF_map`. -/
+lemma runtimeWithCache_evalSPMF_map
     (cache : (M × Commit →ₒ Chal).QueryCache)
     {α β : Type} (f : α → β)
     (mx : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) :
-    (runtimeWithCache M cache).evalDist (f <$> mx) =
-      f <$> (runtimeWithCache M cache).evalDist mx :=
-  SPMFSemantics.withStateOracle_evalDist_map ..
+    (runtimeWithCache M cache).evalSPMF (f <$> mx) =
+      f <$> (runtimeWithCache M cache).evalSPMF mx :=
+  SPMFSemantics.withStateOracle_evalSPMF_map ..
 
 /-- The cache-parametric Fiat-Shamir runtime commutes with `>>= pure ∘ f`. A direct corollary of
-`runtimeWithCache_evalDist_map`. -/
-lemma runtimeWithCache_evalDist_bind_pure
+`runtimeWithCache_evalSPMF_map`. -/
+lemma runtimeWithCache_evalSPMF_bind_pure
     (cache : (M × Commit →ₒ Chal).QueryCache)
     {α β : Type} (mx : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) (f : α → β) :
-    (runtimeWithCache M cache).evalDist (mx >>= fun x => pure (f x)) =
-      f <$> (runtimeWithCache M cache).evalDist mx := by
+    (runtimeWithCache M cache).evalSPMF (mx >>= fun x => pure (f x)) =
+      f <$> (runtimeWithCache M cache).evalSPMF mx := by
   rw [show (mx >>= fun x => pure (f x)) = f <$> mx from (map_eq_bind_pure_comp _ f mx).symm,
-    runtimeWithCache_evalDist_map]
+    runtimeWithCache_evalSPMF_map]
 
 /-- The Fiat-Shamir runtime commutes with binding a lifted `ProbComp` prefix:
 evaluating `liftM oa >>= rest` under the runtime is the same as first sampling
 `oa` in `SPMF` and then evaluating `rest x` under the runtime. -/
-lemma runtimeWithCache_evalDist_bind_liftComp
+lemma runtimeWithCache_evalSPMF_bind_liftComp
     (cache : (M × Commit →ₒ Chal).QueryCache)
     {α β : Type} (oa : ProbComp α)
     (rest : α → OracleComp (unifSpec + (M × Commit →ₒ Chal)) β) :
-    (runtimeWithCache M cache).evalDist (liftM oa >>= rest) =
-      𝒟[oa] >>= fun x => (runtimeWithCache M cache).evalDist (rest x) := by
+    (runtimeWithCache M cache).evalSPMF (liftM oa >>= rest) =
+      𝒮[oa] >>= fun x => (runtimeWithCache M cache).evalSPMF (rest x) := by
   classical
   let impl := unifFwdImpl (M × Commit →ₒ Chal) + (randomOracle :
     QueryImpl (M × Commit →ₒ Chal) (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))
-  unfold runtimeWithCache ProbCompRuntime.evalDist SPMFSemantics.evalDist SemanticsVia.denote
-  change 𝒟[(simulateQ impl (liftM oa >>= rest)).run' cache] =
-      𝒟[oa] >>= fun x => 𝒟[(simulateQ impl (rest x)).run' cache]
-  rw [simulateQ_bind, roSim.run'_liftM_bind, evalDist_bind]
+  unfold runtimeWithCache ProbCompRuntime.evalSPMF SPMFSemantics.evalSPMF SemanticsVia.denote
+  change 𝒮[(simulateQ impl (liftM oa >>= rest)).run' cache] =
+      𝒮[oa] >>= fun x => 𝒮[(simulateQ impl (rest x)).run' cache]
+  rw [simulateQ_bind, roSim.run'_liftM_bind, evalSPMF_bind]
 
 /-- The Fiat-Shamir runtime commutes with `<$>`: `cache := ∅` instance of
-`runtimeWithCache_evalDist_map`. -/
-lemma runtime_evalDist_map
+`runtimeWithCache_evalSPMF_map`. -/
+lemma runtime_evalSPMF_map
     {α β : Type} (f : α → β)
     (mx : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) :
-    (runtime M).evalDist (f <$> mx) = f <$> (runtime M).evalDist mx :=
-  runtimeWithCache_evalDist_map M ∅ f mx
+    (runtime M).evalSPMF (f <$> mx) = f <$> (runtime M).evalSPMF mx :=
+  runtimeWithCache_evalSPMF_map M ∅ f mx
 
 /-- The Fiat-Shamir runtime commutes with `>>= pure ∘ f`: `cache := ∅` instance of
-`runtimeWithCache_evalDist_bind_pure`. -/
-lemma runtime_evalDist_bind_pure
+`runtimeWithCache_evalSPMF_bind_pure`. -/
+lemma runtime_evalSPMF_bind_pure
     {α β : Type} (mx : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) (f : α → β) :
-    (runtime M).evalDist (mx >>= fun x => pure (f x)) =
-      f <$> (runtime M).evalDist mx :=
-  runtimeWithCache_evalDist_bind_pure M ∅ mx f
+    (runtime M).evalSPMF (mx >>= fun x => pure (f x)) =
+      f <$> (runtime M).evalSPMF mx :=
+  runtimeWithCache_evalSPMF_bind_pure M ∅ mx f
 
-/-- `cache := ∅` instance of `runtimeWithCache_evalDist_bind_liftComp`. -/
-lemma runtime_evalDist_bind_liftComp
+/-- `cache := ∅` instance of `runtimeWithCache_evalSPMF_bind_liftComp`. -/
+lemma runtime_evalSPMF_bind_liftComp
     {α β : Type} (oa : ProbComp α)
     (rest : α → OracleComp (unifSpec + (M × Commit →ₒ Chal)) β) :
-    (runtime M).evalDist (liftM oa >>= rest) =
-      𝒟[oa] >>= fun x => (runtime M).evalDist (rest x) :=
-  runtimeWithCache_evalDist_bind_liftComp M ∅ oa rest
+    (runtime M).evalSPMF (liftM oa >>= rest) =
+      𝒮[oa] >>= fun x => (runtime M).evalSPMF (rest x) :=
+  runtimeWithCache_evalSPMF_bind_liftComp M ∅ oa rest
 
 end semantics
 
@@ -393,8 +397,8 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 
 open scoped Classical in
 omit [SampleableType Stmt] [SampleableType Wit] in
-private lemma perfectlyCorrect_evalDist_eq [SampleableType Chal] (msg : M) :
-    (runtime M).evalDist (do
+private lemma perfectlyCorrect_evalSPMF_eq [SampleableType Chal] (msg : M) :
+    (runtime M).evalSPMF (do
       let (pk, sk) ←
         (FiatShamir
           (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M).keygen
@@ -403,7 +407,7 @@ private lemma perfectlyCorrect_evalDist_eq [SampleableType Chal] (msg : M) :
           (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M).sign pk sk msg
       (FiatShamir
         (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M).verify pk msg sig) =
-      𝒟[do
+      𝒮[do
         let (pk, sk) ← hr.gen
         let (c, e) ← σ.commit pk sk
         let r ← $ᵗ Chal
@@ -415,7 +419,7 @@ private lemma perfectlyCorrect_evalDist_eq [SampleableType Chal] (msg : M) :
   have hSimQuery : ∀ (q : M × Commit),
       simulateQ impl (HasQuery.query q) = ro q :=
     roSim.simulateQ_HasQuery_query ro
-  change 𝒟[StateT.run' (simulateQ impl (do
+  change 𝒮[StateT.run' (simulateQ impl (do
       let (pk, sk) ←
         (FiatShamir
           (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M).keygen
@@ -476,7 +480,8 @@ theorem perfectlyCorrect [SampleableType Chal]
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M)
       (runtime M) := by
   intro msg
-  rw [perfectlyCorrect_evalDist_eq σ hr M msg]
+  rw [perfectlyCorrect_evalSPMF_eq σ hr M msg]
+  rw [probOutput_evalSPMF]
   change
     Pr[= true | (do
       let (pk, sk) ← hr.gen

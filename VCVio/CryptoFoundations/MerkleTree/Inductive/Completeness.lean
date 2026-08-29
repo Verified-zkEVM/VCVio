@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
-import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 
 /-!
 # Completeness of Inductive Merkle Trees
@@ -22,6 +24,8 @@ The proof is split into two pieces:
 * `InductiveMerkleTree.completeness` lifts the functional statement to the
   monadic API by reducing through `simulateQ`.
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 

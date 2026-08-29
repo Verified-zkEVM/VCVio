@@ -3,10 +3,12 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Concrete.NTRUSolver
-import Extern.Falcon.FFT
-import LatticeCrypto.Falcon.Concrete.NTT
-import Extern.Falcon.SamplerZ
+
+module
+public import LatticeCrypto.Falcon.Concrete.NTRUSolver
+public import Extern.Falcon.FFT
+public import LatticeCrypto.Falcon.Concrete.NTT
+public import Extern.Falcon.SamplerZ
 
 /-!
 # Concrete Falcon Key Generation
@@ -40,6 +42,8 @@ ported from Pornin's `c-fn-dsa` (`kgen.c`, `kgen_gauss.c`, `mq.c`).
 - Pornin 2025 (eprint 2025/1239)
 - Falcon specification v1.2, Algorithms 4–9
 -/
+
+public section
 
 
 namespace Falcon.Concrete.KeyGen

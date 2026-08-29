@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.ProgrammingOracle
-import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.ProgramLogic.Relational.SimulateQ
+
+module
+public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.ProgramLogic.Relational.SimulateQ
 
 /-!
 # TV-distance bound for `withProgramming` vs `withCaching`
@@ -43,6 +45,8 @@ namespace because they are TV-distance statements; the underlying `withProgrammi
 `QueryTracking/`.
 -/
 
+@[expose] public section
+
 open ENNReal OracleSpec OracleComp QueryImpl
 
 universe u
@@ -61,6 +65,8 @@ private lemma probOutput_withProgramming_eq_withCachingTrackingPolicy_of_not_bad
     Pr[= (u, (cache', false)) | (so.withProgramming policy t).run (cache, false)] =
       Pr[= (u, (cache', false)) | (so.withCachingTrackingPolicy policy t).run (cache, false)] := by
   classical
+  let _ : DecidableEq (spec.Range t) := Classical.decEq _
+  let _ : DecidableEq spec.QueryCache := Classical.decEq _
   cases hcache : cache t with
   | some v =>
     simp [QueryImpl.withProgramming_apply, QueryImpl.withCachingTrackingPolicy_apply, hcache]
@@ -229,6 +235,8 @@ private lemma probOutput_withProgramming_eq_withCachingTrackingPolicy_of_not_bad
     Pr[= (u, (cache', false)) | (so.withProgramming policy t).run (cache, false)] =
       Pr[= (u, (cache', false)) | (so.withCachingTrackingPolicy policy t).run (cache, false)] := by
   classical
+  let _ : DecidableEq (spec.Range t) := Classical.decEq _
+  let _ : DecidableEq spec.QueryCache := Classical.decEq _
   cases hcache : cache t with
   | some v =>
     have hL : (so.withProgramming policy t).run (cache, false) =

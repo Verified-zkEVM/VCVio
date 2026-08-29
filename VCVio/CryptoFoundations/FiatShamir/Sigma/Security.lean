@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Reductions
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Reductions
 
 /-!
 # EUF-CMA security of the Fiat-Shamir Σ-protocol transform
@@ -24,6 +26,8 @@ End-to-end security reduction, packaged as three theorems:
 - `euf_cma_bound`: the combined bound, instantiating `euf_cma_to_nma` into
   `euf_nma_bound`. The replay-forking denominator is `qH + 1`.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -154,8 +158,8 @@ theorem euf_cma_bound
           (qS : ENNReal) * (qS + qH) * β)
       (eps * (eps / (qH + 1 : ENNReal) - challengeSpaceInv Chal)) ≤
         Pr[= true | hardRelationExp hr reduction] := by
-  haveI : DecidableEq M := Classical.decEq M
-  haveI : DecidableEq Commit := Classical.decEq Commit
+  have : DecidableEq M := Classical.decEq M
+  have : DecidableEq Commit := Classical.decEq Commit
   obtain ⟨nmaAdv, hAdv⟩ := euf_cma_to_nma σ hr M simTranscript
     ζ_zk hζ_zk hhvzk β hPredSim adv qS qH hQ
   obtain ⟨reduction, hRed⟩ := euf_nma_bound σ hr M hss hss_nf nmaAdv qH
