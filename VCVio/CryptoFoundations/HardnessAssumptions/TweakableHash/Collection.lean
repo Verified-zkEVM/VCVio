@@ -10,9 +10,15 @@ public import VCVio.CryptoFoundations.TweakableHash
 /-!
 # The collection oracle for the single-function, distinct-tweak, multi-target games
 
-A reduction attacking one member of a tweakable-hash family must still evaluate the others to
-simulate the rest of the structure — SLH-DSA's `F`, `H` and `T_ℓ` share one public seed and one
-address space — and cannot do so once the seed is withheld from it. This oracle is that access.
+A reduction attacking one member of a tweakable-hash family must still evaluate members of that
+family to simulate the rest of the structure — SLH-DSA's `F`, `H` and `T_ℓ` share one public seed
+and one address space — and cannot do so once the seed is withheld from it. This oracle is that
+access.
+
+Which members it covers is fixed at instantiation, not here. `TweakableHashCollection.cons` puts the
+attacked member in the collection, so this oracle also evaluates it at tweaks that are not targets;
+that case is HK22's `Th_m ∈ Th_λ`, and a reduction against SLH-DSA needs it, since only a handful of
+the addresses at which `F` runs are targets.
 
 The collection is a parameter of each problem rather than a second game beside it. The stand-alone
 notion is the instance at the empty collection (`TweakableHashCollection.empty`), where the query

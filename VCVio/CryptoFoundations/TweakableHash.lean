@@ -31,9 +31,20 @@ existing `KeyedHashFamily` surface.
 `TweakableHashCollection` is a family of tweakable hashes sharing one public seed and one tweak
 space, differing only in their message types — SLH-DSA's `F`, `H` and `T_ℓ` under one `PK.seed` and
 one `ADRS` space. It carries no `seedGen` of its own: a game samples one seed, from the attacked
-member's `TweakableHash.seedGen`, and hands it to every member. The security notions under
-`HardnessAssumptions/TweakableHash/` are all stated in the collection form, with the stand-alone
-notion recovered at an empty index type.
+member's `TweakableHash.seedGen`, and hands it to every member.
+
+Indexing is by an explicit `ι`. HK22 and BDHMS both key a collection member by the *length* of the
+queried message, which cannot name two members of equal message length; `ι` can.
+
+The security notions under `HardnessAssumptions/TweakableHash/` take the attacked member and the
+collection as separate parameters, as BDHMS's `Game^{SM-DT-TCR-C}_{A,THF,THF_C,t}` does, so whether
+the attacked member is itself in the collection is fixed at instantiation:
+
+- `empty` gives the stand-alone notion, where the collection oracle is unqueryable. This is DKKW
+  Def. 3, whose adversary has the challenge oracle and nothing else.
+- `cons th thColl` puts the attacked member in its own collection at index `none`, which is HK22's
+  `Th_m ∈ Th_λ`. HK22 motivates it explicitly: a challenge query may depend on the output of
+  another member of the collection, "or even the same function but with different tweaks".
 -/
 
 @[expose] public section
@@ -84,5 +95,36 @@ stand-alone form of the notion. -/
 def empty (PkSeed Tweak Y : Type) : TweakableHashCollection Empty PkSeed Tweak Y where
   Msg i := i.elim
   eval i := i.elim
+
+/-- `thColl` extended with `th` at index `none`.
+
+This is how a game instantiation places its *attacked* member inside its own collection, which is
+what HK22's `Th_m ∈ Th_λ` asks for. The point is not bookkeeping: with the seed withheld during
+target selection, the challenge oracle evaluates the attacked member only at target tweaks and
+under the target cap, so without this the attacked member cannot be evaluated at a tweak that is
+not a target — and a reduction simulating SLH-DSA must evaluate `F` at every address of every WOTS
+chain, of which only a handful are targets.
+
+Membership is definitional rather than a hypothesis: `cons_eval_none` is `rfl`. -/
+def cons {ι PkSeed Tweak M Y : Type} (th : TweakableHash PkSeed Tweak M Y)
+    (thColl : TweakableHashCollection ι PkSeed Tweak Y) :
+    TweakableHashCollection (Option ι) PkSeed Tweak Y where
+  Msg := fun | none => M | some i => thColl.Msg i
+  eval := fun | none => th.eval | some i => thColl.eval i
+
+variable {ι PkSeed Tweak M Y : Type} {th : TweakableHash PkSeed Tweak M Y}
+  {thColl : TweakableHashCollection ι PkSeed Tweak Y}
+
+@[simp] theorem cons_eval_none : (cons th thColl).eval none = th.eval := rfl
+
+@[simp] theorem cons_eval_some (i : ι) : (cons th thColl).eval (some i) = thColl.eval i := rfl
+
+/-- Deliberately not `@[simp]`: `Msg` occurs inside the query type of the collection oracle's
+`OracleSpec`, so rewriting it under a `simulateQ` strands the goal in a form the query lemmas can
+no longer match. -/
+theorem cons_Msg_none : (cons th thColl).Msg none = M := rfl
+
+/-- Not `@[simp]`, for the reason given on `cons_Msg_none`. -/
+theorem cons_Msg_some (i : ι) : (cons th thColl).Msg (some i) = thColl.Msg i := rfl
 
 end TweakableHashCollection
