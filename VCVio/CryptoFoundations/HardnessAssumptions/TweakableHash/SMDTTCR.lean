@@ -98,8 +98,7 @@ def SM_DT_TCR_challengeOracle [DecidableEq Tweak]
     QueryImpl (SM_DT_TCR_challengeSpec Tweak M Y) (StateT (SM_DT_TCR_State Tweak M) ProbComp) :=
   fun tm => do
     let (qsChal, twsColl) ← get
-    if prob.numTargets ≤ qsChal.length ∨ (qsChal.any fun e => e.1 = tm.1) ∨
-        twsColl.any fun t => t = tm.1 then
+    if prob.numTargets ≤ qsChal.length ∨ ¬ TweakFresh Prod.fst qsChal twsColl tm.1 then
       return none
     else
       set (qsChal ++ [tm], twsColl)
@@ -110,7 +109,7 @@ def SM_DT_TCR_oracles [DecidableEq Tweak] (prob : SM_DT_TCR_Problem ι PkSeed Tw
     (pk : PkSeed) :
     QueryImpl (SM_DT_TCR_challengeSpec Tweak M Y + collectionSpec prob.thColl)
       (StateT (SM_DT_TCR_State Tweak M) ProbComp) :=
-  SM_DT_TCR_challengeOracle prob pk + collectionOracle (X := M) prob.thColl pk
+  SM_DT_TCR_challengeOracle prob pk + collectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk
 
 /-- The SM-TCR experiment. The public seed is sampled, the first phase runs against both oracles
 without it, the second phase runs with it and without them, and the adversary wins by naming a
@@ -131,11 +130,7 @@ noncomputable def SM_DT_TCR_Advantage [DecidableEq Tweak] [DecidableEq M] [Decid
     {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y} (adv : SM_DT_TCR_Adversary prob) : ℝ≥0∞ :=
   Pr[= true | SM_DT_TCR_Experiment adv]
 
-/-! ## Pinning the challenge oracle's conventions
-
-A kernel-debt gate cannot see a game that disagrees with the paper. The lemmas below fix the four
-branches of `SM_DT_TCR_challengeOracle` and the order of the history, so that a change of convention
-breaks a proof rather than passing silently. -/
+/-! ## Basic properties and conventions -/
 
 variable [DecidableEq Tweak] {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y} {pk : PkSeed}
   {t : Tweak} {m : M} {qsChal : List (Tweak × M)} {twsColl : List Tweak}
@@ -143,22 +138,18 @@ variable [DecidableEq Tweak] {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y} {pk 
 /-- A query with a tweak fresh to both histories, below the target cap, is answered with the hash
 and appended to the end of the challenge history. -/
 theorem SM_DT_TCR_challengeOracle_run_of_fresh (hlen : qsChal.length < prob.numTargets)
-    (hnew : ∀ e ∈ qsChal, e.1 ≠ t) (hcoll : t ∉ twsColl) :
+    (hfresh : TweakFresh Prod.fst qsChal twsColl t) :
     (SM_DT_TCR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
       pure (some (prob.th.eval pk t m), (qsChal ++ [(t, m)], twsColl)) := by
-  have hany : (qsChal.any fun e => decide (e.1 = t)) = false := by simpa using hnew
-  have hcany : (twsColl.any fun s => decide (s = t)) = false := by
-    simpa using fun s hs (h : s = t) => hcoll (h ▸ hs)
-  simp [SM_DT_TCR_challengeOracle, Nat.not_le.mpr hlen, hany, hcany]
+  simp [SM_DT_TCR_challengeOracle, Nat.not_le.mpr hlen, hfresh]
 
 /-- A query reusing a tweak already in the challenge history is rejected, and the state is
 unchanged. -/
 theorem SM_DT_TCR_challengeOracle_run_of_reused (m' : M) (hmem : (t, m') ∈ qsChal) :
     (SM_DT_TCR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
       pure (none, (qsChal, twsColl)) := by
-  have hany : (qsChal.any fun e => decide (e.1 = t)) = true :=
-    List.any_eq_true.mpr ⟨(t, m'), hmem, by simp⟩
-  simp [SM_DT_TCR_challengeOracle, hany]
+  have hres : TweakReserved Prod.fst qsChal t := ⟨(t, m'), hmem, rfl⟩
+  simp [SM_DT_TCR_challengeOracle, TweakFresh, hres]
 
 /-- A query at the target cap is rejected, and the state is unchanged. -/
 theorem SM_DT_TCR_challengeOracle_run_of_full (hlen : prob.numTargets ≤ qsChal.length) :
@@ -172,8 +163,6 @@ unchanged. This is the half of the two tweak sets' disjointness that the challen
 theorem SM_DT_TCR_challengeOracle_run_of_collection_clash (hmem : t ∈ twsColl) :
     (SM_DT_TCR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
       pure (none, (qsChal, twsColl)) := by
-  have hcany : (twsColl.any fun s => decide (s = t)) = true :=
-    List.any_eq_true.mpr ⟨t, hmem, by simp⟩
-  simp [SM_DT_TCR_challengeOracle, hcany]
+  simp [SM_DT_TCR_challengeOracle, TweakFresh, hmem]
 
 end TweakableHash

@@ -120,8 +120,7 @@ noncomputable def SM_DT_PRE_challengeOracle [DecidableEq Tweak] [SampleableType 
     QueryImpl (SM_DT_PRE_challengeSpec Tweak Y) (StateT (SM_DT_PRE_State Tweak M') ProbComp) :=
   fun t => do
     let (qsChal, twsColl) ← get
-    if prob.numTargets ≤ qsChal.length ∨ (qsChal.any fun e => e.1 = t) ∨
-        twsColl.any fun s => s = t then
+    if prob.numTargets ≤ qsChal.length ∨ ¬ TweakFresh Prod.fst qsChal twsColl t then
       return none
     else
       let x ← (($ᵗ M' : ProbComp M') : StateT (SM_DT_PRE_State Tweak M') ProbComp M')
@@ -133,7 +132,7 @@ noncomputable def SM_DT_PRE_oracles [DecidableEq Tweak] [SampleableType M']
     (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) (pk : PkSeed) :
     QueryImpl (SM_DT_PRE_challengeSpec Tweak Y + collectionSpec prob.thColl)
       (StateT (SM_DT_PRE_State Tweak M') ProbComp) :=
-  SM_DT_PRE_challengeOracle prob pk + collectionOracle (X := M') prob.thColl pk
+  SM_DT_PRE_challengeOracle prob pk + collectionOracle (Q := Tweak × M') Prod.fst prob.thColl pk
 
 /-- The SM-PRE experiment. The public seed is sampled, the first phase runs against both oracles
 without it, the second phase runs with it and without them, and the adversary wins by naming a
@@ -155,11 +154,7 @@ noncomputable def SM_DT_PRE_Advantage [DecidableEq Tweak] [DecidableEq Y] [Sampl
     {prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_PRE_Adversary prob) : ℝ≥0∞ :=
   Pr[= true | SM_DT_PRE_Experiment adv]
 
-/-! ## Pinning the challenge oracle's conventions
-
-A kernel-debt gate cannot see a game that disagrees with the paper. The lemmas below fix the four
-branches of `SM_DT_PRE_challengeOracle` and the order of the history, so that a change of convention
-breaks a proof rather than passing silently. -/
+/-! ## Basic properties and conventions -/
 
 variable [DecidableEq Tweak] [SampleableType M'] {prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y}
   {pk : PkSeed} {t : Tweak} {qsChal : List (Tweak × M')} {twsColl : List Tweak}
@@ -167,23 +162,19 @@ variable [DecidableEq Tweak] [SampleableType M'] {prob : SM_DT_PRE_Problem ι Pk
 /-- A query with a tweak fresh to both histories, below the target cap, draws its message from `M'`,
 answers with the hash of that message and appends it to the end of the challenge history. -/
 theorem SM_DT_PRE_challengeOracle_run_of_fresh (hlen : qsChal.length < prob.numTargets)
-    (hnew : ∀ e ∈ qsChal, e.1 ≠ t) (hcoll : t ∉ twsColl) :
+    (hfresh : TweakFresh Prod.fst qsChal twsColl t) :
     (SM_DT_PRE_challengeOracle prob pk t).run (qsChal, twsColl) =
       (fun x => (some (prob.th.eval pk t (prob.emb x)), (qsChal ++ [(t, x)], twsColl))) <$>
         ($ᵗ M') := by
-  have hany : (qsChal.any fun e => decide (e.1 = t)) = false := by simpa using hnew
-  have hcany : (twsColl.any fun s => decide (s = t)) = false := by
-    simpa using fun s hs (h : s = t) => hcoll (h ▸ hs)
-  simp [SM_DT_PRE_challengeOracle, Nat.not_le.mpr hlen, hany, hcany, Functor.map_map]
+  simp [SM_DT_PRE_challengeOracle, Nat.not_le.mpr hlen, hfresh, Functor.map_map]
 
 /-- A query reusing a tweak already in the challenge history is rejected, and the state is
 unchanged. -/
 theorem SM_DT_PRE_challengeOracle_run_of_reused (x : M') (hmem : (t, x) ∈ qsChal) :
     (SM_DT_PRE_challengeOracle prob pk t).run (qsChal, twsColl) =
       pure (none, (qsChal, twsColl)) := by
-  have hany : (qsChal.any fun e => decide (e.1 = t)) = true :=
-    List.any_eq_true.mpr ⟨(t, x), hmem, by simp⟩
-  simp [SM_DT_PRE_challengeOracle, hany]
+  have hres : TweakReserved Prod.fst qsChal t := ⟨(t, x), hmem, rfl⟩
+  simp [SM_DT_PRE_challengeOracle, TweakFresh, hres]
 
 /-- A query at the target cap is rejected, and the state is unchanged. -/
 theorem SM_DT_PRE_challengeOracle_run_of_full (hlen : prob.numTargets ≤ qsChal.length) :
@@ -197,8 +188,6 @@ unchanged. This is the half of the two tweak sets' disjointness that the challen
 theorem SM_DT_PRE_challengeOracle_run_of_collection_clash (hmem : t ∈ twsColl) :
     (SM_DT_PRE_challengeOracle prob pk t).run (qsChal, twsColl) =
       pure (none, (qsChal, twsColl)) := by
-  have hcany : (twsColl.any fun s => decide (s = t)) = true :=
-    List.any_eq_true.mpr ⟨t, hmem, by simp⟩
-  simp [SM_DT_PRE_challengeOracle, hcany]
+  simp [SM_DT_PRE_challengeOracle, TweakFresh, hmem]
 
 end TweakableHash
