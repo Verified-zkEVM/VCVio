@@ -3,10 +3,12 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
-import VCVio.EvalDist.Defs.Basic
-import VCVio.EvalDist.Monad.Basic
-import VCVio.EvalDist.Defs.NeverFails
+
+module
+public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
+public import VCVio.EvalDist.Defs.Basic
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.EvalDist.Defs.NeverFails
 
 /-!
 # Total Variation Distance for SPMFs and Monadic Computations
@@ -15,8 +17,10 @@ This file extends the TV distance from `PMF` (defined in
 `ToMathlib.Probability.ProbabilityMassFunction.TotalVariation`) to:
 
 1. `SPMF.tvDist` — on sub-probability mass functions (via `toPMF`)
-2. `tvDist` — on any monad with `MonadLiftT m SPMF` (via `evalDist`)
+2. `tvDist` — on any monad with `MonadLiftT m SPMF` (via `evalSPMF`)
 -/
+
+@[expose] public section
 
 noncomputable section
 
@@ -67,14 +71,14 @@ variable {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT
 /-- Total variation distance between two monadic computations,
 defined via their evaluation distributions. -/
 noncomputable def tvDist (mx my : m α) : ℝ :=
-  SPMF.tvDist (𝒟[mx]) (𝒟[my])
+  SPMF.tvDist (𝒮[mx]) (𝒮[my])
 
 omit [Monad m] [LawfulMonadLiftT m SPMF] in
 @[simp] lemma tvDist_self (mx : m α) : tvDist mx mx = 0 := SPMF.tvDist_self _
 
 omit [Monad m] [LawfulMonadLiftT m SPMF] in
 @[simp] lemma tvDist_eq_zero_iff (mx my : m α) :
-    tvDist mx my = 0 ↔ 𝒟[mx] = 𝒟[my] := by
+    tvDist mx my = 0 ↔ 𝒮[mx] = 𝒮[my] := by
   simp only [tvDist, SPMF.tvDist_eq_zero_iff, SPMF.toPMF_inj]
 
 omit [Monad m] [LawfulMonadLiftT m SPMF] in
@@ -94,11 +98,11 @@ lemma tvDist_le_one (mx my : m α) : tvDist mx my ≤ 1 := SPMF.tvDist_le_one _ 
 
 lemma tvDist_map_le [LawfulMonad m] {β : Type u} (f : α → β) (mx my : m α) :
     tvDist (f <$> mx) (f <$> my) ≤ tvDist mx my := by
-  simpa only [tvDist, evalDist_map] using SPMF.tvDist_map_le f (𝒟[mx]) (𝒟[my])
+  simpa only [tvDist, evalSPMF_map] using SPMF.tvDist_map_le f (𝒮[mx]) (𝒮[my])
 
 lemma tvDist_bind_right_le [LawfulMonad m] {β : Type u} (f : α → m β) (mx my : m α) :
     tvDist (mx >>= f) (my >>= f) ≤ tvDist mx my := by
-  simpa only [tvDist, evalDist_bind] using SPMF.tvDist_bind_right_le _ _ _
+  simpa only [tvDist, evalSPMF_bind] using SPMF.tvDist_bind_right_le _ _ _
 
 /-! ### TV distance bounds -/
 
@@ -114,10 +118,12 @@ lemma tvDist_le_probEvent_of_probOutput_eq_of_not
   rw [tvDist, SPMF.tvDist, PMF.tvDist]
   refine ENNReal.toReal_mono probEvent_ne_top ?_
   rw [PMF.etvDist, tsum_option _ ENNReal.summable]
-  have hfailx : (𝒟[mx]).toPMF none = 0 := probFailure_eq_zero (mx := mx)
-  have hfaily : (𝒟[my]).toPMF none = 0 := probFailure_eq_zero (mx := my)
+  have hfailx : (𝒮[mx]).toPMF none = 0 := by
+    simpa only [← SPMF.run_eq_toPMF, probFailure_def] using probFailure_eq_zero (mx := mx)
+  have hfaily : (𝒮[my]).toPMF none = 0 := by
+    simpa only [← SPMF.run_eq_toPMF, probFailure_def] using probFailure_eq_zero (mx := my)
   have hsum :
-      (∑' x, ENNReal.absDiff ((𝒟[mx]).toPMF (some x)) ((𝒟[my]).toPMF (some x))) =
+      (∑' x, ENNReal.absDiff ((𝒮[mx]).toPMF (some x)) ((𝒮[my]).toPMF (some x))) =
         ∑' x, ENNReal.absDiff (Pr[= x | mx]) (Pr[= x | my]) := by
     refine tsum_congr fun x => ?_
     simp [probOutput_def, SPMF.apply_eq_toPMF_some]
@@ -198,8 +204,8 @@ lemma tvDist_bind_left_le
     {α : Type u} {β : Type u}
     (mx : m α) (f g : α → m β) :
     tvDist (mx >>= f) (mx >>= g) ≤ ∑' a, Pr[= a | mx].toReal * tvDist (f a) (g a) := by
-  rw [tvDist, evalDist_bind, evalDist_bind]
-  simp_rw [evalDist_def]
+  rw [tvDist, evalSPMF_bind, evalSPMF_bind]
+  simp_rw [evalSPMF_def]
   calc
     SPMF.tvDist
         ((liftM (liftM mx : PMF α) : SPMF α) >>= fun a => liftM (liftM (f a) : PMF β))
@@ -212,11 +218,11 @@ lemma tvDist_bind_left_le
           refine tsum_congr fun a => ?_
           have h1 : ((liftM mx : PMF α) a).toReal = Pr[= a | mx].toReal := by
             congr 1
-            rw [probOutput_def, evalDist_def]
+            rw [probOutput_def, evalSPMF_def]
             exact (SPMF.liftM_apply (liftM mx : PMF α) a).symm
           have h2 : (liftM (liftM (f a) : PMF β) : SPMF β).tvDist
               (liftM (liftM (g a) : PMF β) : SPMF β) = tvDist (f a) (g a) := by
-            rw [tvDist, evalDist_def, evalDist_def]
+            rw [tvDist, evalSPMF_def, evalSPMF_def]
             rfl
           rw [h1, h2]
 
@@ -309,7 +315,7 @@ lemma tsum_probOutput_toReal_mul_tvDist_le_probEvent
     {m : Type u → Type v} [Monad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
     {α : Type u} {β : Type u}
     (mx : m α) (f g : α → m β) (bad : α → Prop)
-    (h_eq : ∀ a, ¬ bad a → 𝒟[f a] = 𝒟[g a]) :
+    (h_eq : ∀ a, ¬ bad a → 𝒮[f a] = 𝒮[g a]) :
     (∑' a, Pr[= a | mx].toReal * tvDist (f a) (g a))
       ≤ Pr[bad | mx].toReal := by
   classical
@@ -341,7 +347,7 @@ lemma tvDist_bind_left_event_le
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
     {α : Type u} {β : Type u}
     (mx : m α) (f g : α → m β) (bad : α → Prop)
-    (h_eq : ∀ a, ¬ bad a → 𝒟[f a] = 𝒟[g a]) :
+    (h_eq : ∀ a, ¬ bad a → 𝒮[f a] = 𝒮[g a]) :
     tvDist (mx >>= f) (mx >>= g) ≤ Pr[bad | mx].toReal :=
   le_trans (tvDist_bind_left_le mx f g)
     (tsum_probOutput_toReal_mul_tvDist_le_probEvent mx f g bad h_eq)
@@ -352,7 +358,7 @@ lemma ofReal_tvDist_bind_left_event_le
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
     {α : Type u} {β : Type u}
     (mx : m α) (f g : α → m β) (bad : α → Prop)
-    (h_eq : ∀ a, ¬ bad a → 𝒟[f a] = 𝒟[g a]) :
+    (h_eq : ∀ a, ¬ bad a → 𝒮[f a] = 𝒮[g a]) :
     ENNReal.ofReal (tvDist (mx >>= f) (mx >>= g)) ≤ Pr[bad | mx] := by
   refine le_trans (ENNReal.ofReal_le_ofReal
     (tvDist_bind_left_event_le mx f g bad h_eq)) ?_
@@ -364,7 +370,7 @@ lemma tvDist_bind_event_le
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
     {α : Type u} {β : Type u}
     (mx my : m α) (f g : α → m β) (bad : α → Prop)
-    (h_eq : ∀ a, ¬ bad a → 𝒟[f a] = 𝒟[g a]) :
+    (h_eq : ∀ a, ¬ bad a → 𝒮[f a] = 𝒮[g a]) :
     tvDist (mx >>= f) (my >>= g) ≤ Pr[bad | mx].toReal + tvDist mx my := by
   calc
     tvDist (mx >>= f) (my >>= g)
@@ -379,7 +385,7 @@ lemma ofReal_tvDist_bind_event_le
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
     {α : Type u} {β : Type u}
     (mx my : m α) (f g : α → m β) (bad : α → Prop)
-    (h_eq : ∀ a, ¬ bad a → 𝒟[f a] = 𝒟[g a]) :
+    (h_eq : ∀ a, ¬ bad a → 𝒮[f a] = 𝒮[g a]) :
     ENNReal.ofReal (tvDist (mx >>= f) (my >>= g))
       ≤ Pr[bad | mx] + ENNReal.ofReal (tvDist mx my) := by
   refine le_trans (ENNReal.ofReal_le_ofReal
@@ -394,7 +400,7 @@ lemma tvDist_bind_event_right_le
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
     {α : Type u} {β : Type u}
     (mx my : m α) (f g : α → m β) (bad : α → Prop)
-    (h_eq : ∀ a, ¬ bad a → 𝒟[f a] = 𝒟[g a]) :
+    (h_eq : ∀ a, ¬ bad a → 𝒮[f a] = 𝒮[g a]) :
     tvDist (mx >>= f) (my >>= g) ≤ tvDist mx my + Pr[bad | my].toReal := by
   calc
     tvDist (mx >>= f) (my >>= g)
@@ -409,7 +415,7 @@ lemma ofReal_tvDist_bind_event_right_le
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
     {α : Type u} {β : Type u}
     (mx my : m α) (f g : α → m β) (bad : α → Prop)
-    (h_eq : ∀ a, ¬ bad a → 𝒟[f a] = 𝒟[g a]) :
+    (h_eq : ∀ a, ¬ bad a → 𝒮[f a] = 𝒮[g a]) :
     ENNReal.ofReal (tvDist (mx >>= f) (my >>= g))
       ≤ ENNReal.ofReal (tvDist mx my) + Pr[bad | my] := by
   refine le_trans (ENNReal.ofReal_le_ofReal
@@ -433,10 +439,10 @@ lemma abs_probOutput_toReal_sub_le_tvDist
     simp [PMF.map_apply_eq, tsum_fintype]
   rw [← ENNReal.absDiff_toReal (PMF.apply_ne_top _ _) (PMF.apply_ne_top _ _)]
   apply ENNReal.toReal_mono (PMF.etvDist_ne_top _ _)
-  rw [← happ (𝒟[game₁]).toPMF, ← happ (𝒟[game₂]).toPMF,
+  rw [← happ (𝒮[game₁]).toPMF, ← happ (𝒮[game₂]).toPMF,
       ← PMF.etvDist_option_punit]
   exact PMF.etvDist_map_le (fun x : Option Bool => if x = some true then some () else none)
-    (𝒟[game₁]).toPMF (𝒟[game₂]).toPMF
+    (𝒮[game₁]).toPMF (𝒮[game₂]).toPMF
 
 end bool_tvdist
 

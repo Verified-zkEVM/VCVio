@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Abraxas1010 (IAOM / Apoth3osis)
 -/
 
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
 
 /-!
 # Batch Openings for Inductive Merkle Trees
@@ -73,6 +75,8 @@ correspondence lemmas) should be added before those consumers land, so they neit
 for nor expose a full-tree selection mask.
 -/
 
+@[expose] public section
+
 namespace InductiveMerkleTree
 
 open List OracleSpec OracleComp BinaryTree
@@ -113,8 +117,12 @@ inductive BatchProof (α : Type u) : {s : Skeleton} → LeafData Bool s → Type
       BatchProof α (.internal l r)
 
 /-- The tuple of claimed values for the leaves selected by `sel`: one `α` per selected
-leaf, `PUnit` at unselected leaves, products at internal nodes. -/
-@[simp, grind]
+leaf, `PUnit` at unselected leaves, products at internal nodes.
+
+The reducer is available at implicit transparency because dependent recursion
+on a batch proof must identify this type with the product of the recursively
+selected child values. -/
+@[simp, grind, implicit_reducible]
 def SelectedValues (α : Type u) : {s : Skeleton} → LeafData Bool s → Type u
   | _, .leaf true => α
   | _, .leaf false => PUnit

@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The PMF/SPMF boundary ratchet diffs against the pull-request base.
+          fetch-depth: 0
 
       - name: Set up Lean environment
         uses: leanprover/lean-action@v1
@@ -27,26 +30,77 @@ jobs:
           use-github-cache: false
           use-mathlib-cache: false
 
+      - name: Check PolyFun public boundary
+        run: |
+          bash scripts/test-polyfun-boundary.sh
+          bash scripts/check-polyfun-boundary.sh
+
+      - name: Check PMF/SPMF dependency boundary
+        run: |
+          bash scripts/test-pmf-boundary.sh
+          bash scripts/check-pmf-boundary.sh
+
+      - name: Report PMF/SPMF boundary trend
+        if: github.event_name == 'pull_request'
+        run: bash scripts/check-pmf-boundary.sh --report "origin/${{ github.base_ref }}"
+
+      - name: Check optional complexity backend isolation
+        run: |
+          bash scripts/test-complexity-backend-isolation.sh
+          bash scripts/check-complexity-backend-isolation.sh
+
       - name: Check for all imports in ToMathlib
-        run: lake exe mk_all --lib ToMathlib --check
+        run: lake exe mk_all --lib ToMathlib --module --check
 
       - name: Check for all imports in VCVio
-        run: lake exe mk_all --lib VCVio --check
+        run: lake exe mk_all --lib VCVio --module --check
 
       - name: Check for all imports in LatticeCrypto
-        run: lake exe mk_all --lib LatticeCrypto --check
+        run: lake exe mk_all --lib LatticeCrypto --module --check
 
       - name: Check for all imports in Extern
-        run: lake exe mk_all --lib Extern --check
+        run: lake exe mk_all --lib Extern --module --check
 
       - name: Check for all imports in HashSig
-        run: lake exe mk_all --lib HashSig --check
+        run: lake exe mk_all --lib HashSig --module --check
 
       - name: Check for all imports in Examples
-        run: lake exe mk_all --lib Examples --check
+        run: lake exe mk_all --lib Examples --module --check
 
       - name: Check for all imports in VCVioWidgets
-        run: lake exe mk_all --lib VCVioWidgets --check
+        run: lake exe mk_all --lib VCVioWidgets --module --check
+
+      - name: Check for all imports in VCVioTest
+        run: lake exe mk_all --lib VCVioTest --module --check
+
+  complexity_backend:
+    name: Optional Complexity Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Lean environment
+        uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+
+      - name: Materialize the pinned PolyFun checkout
+        run: lake update PolyFun
+
+      - name: Fetch Mathlib cache for the optional package
+        working-directory: VCVioComplexity
+        run: |
+          lake update
+          lake exe cache get
+
+      - name: Run exact-machine canaries, trust checks, and compatibility preflight
+        working-directory: VCVioComplexity
+        run: ./scripts/test.sh
 
   downstream_stub_link:
     name: Downstream Consumer Build (no submodules)
@@ -65,11 +119,11 @@ jobs:
           test: false
           lint: false
           use-github-cache: false
+          # The scratch consumer has its own package directory, hydrated below.
           use-mathlib-cache: false
       - name: Build a scratch consumer requiring VCVio by path
         env:
-          # The consumer's Main imports nothing, so Mathlib's olean cache is
-          # dead weight; skip its post-update `lake exe cache get` hook.
+          # Defer cache hydration until the scratch consumer's manifest exists.
           MATHLIB_NO_CACHE_ON_UPDATE: "1"
         run: |
           consumer="$RUNNER_TEMP/vcvio-consumer"
@@ -87,9 +141,39 @@ jobs:
             echo 'name = "consumer"'
             echo 'root = "Main"'
           } > "$consumer/lakefile.toml"
-          printf 'def main : IO Unit := IO.println "consumer ok"\n' > "$consumer/Main.lean"
+          {
+            echo 'module'
+            echo ''
+            echo '-- `public import`: the universe example below is a `public` declaration, so'
+            echo '-- the names in its type must be publicly imported, not just privately visible.'
+            echo 'public import VCVio'
+            echo 'public import VCVio.EvalDist.PFunctor'
+            echo ''
+            echo '#check OracleComp'
+            echo '#check PFunctor.IsProbabilitySpec'
+            echo '#check PFunctor.Handler.preInsert'
+            echo ''
+            echo '-- A downstream consumer whose oracle responses do not live in `Type 0`.'
+            echo '-- The public simulation-composition laws must apply at that generality:'
+            echo '-- a law that only holds at `Type 0` is not a reusable replacement for a'
+            echo '-- downstream adapter, which is exactly how ArkLib ended up carrying local'
+            echo '-- copies of six of them.'
+            echo 'universe uQuery uTarget'
+            echo ''
+            echo 'public example {i1 : Type} {i2 : Type}'
+            echo '    {s1 : OracleSpec.{0, uQuery} i1} {s2 : OracleSpec.{0, uQuery} i2}'
+            echo '    {t : Type uQuery -> Type uTarget} [Monad t] [LawfulMonad t]'
+            echo '    (f1 : QueryImpl s1 t) (f2 : QueryImpl s2 t)'
+            echo '    {A : Type uQuery} (x : OracleComp s1 A) :'
+            echo '    simulateQ (f1 + f2) (liftM x : OracleComp (s1 + s2) A) ='
+            echo '      simulateQ f1 x :='
+            echo '  QueryImpl.simulateQ_add_liftM_left f1 f2 x'
+            echo ''
+            echo 'public def main : IO Unit := IO.println "consumer ok"'
+          } > "$consumer/Main.lean"
           cd "$consumer"
           lake update
+          lake exe cache get
           lake build
           ./.lake/build/bin/consumer
 
@@ -181,10 +265,32 @@ jobs:
         run: |
           bash scripts/build_timing_report.sh run test_path "$BUILD_TIMING_RESULTS" -- \
             bash -eo pipefail -c 'lake env lean VCVioTest/Smoke.lean'
-      - name: Check round-by-round extraction regression
-        run: lake env lean VCVioTest/RoundByRound/OneRound.lean
-      - name: Check Merkle batch-opening canaries
-        run: lake env lean VCVioTest/MerkleTreeBatch.lean
+      # Enforcing from day one: new taint (exit 1: `sorryAx` or non-standard axioms not in
+      # the committed baseline) fails the build, as do infrastructure failures (exit 2:
+      # missing or unparsable baseline, tool breakage) — a broken tool must never read as
+      # a clean verdict.
+      # Sweeps the non-test libraries; Interop (the declared TCB) is bounded by
+      # its import-isolation gate instead.
+      # Exercise the sweep against its own fixtures before trusting its verdict on the
+      # library: the fixtures carry synthetic taint of each shape the tool reasons about
+      # (direct and transitive `sorryAx`, an axiom occurring only in a type, a mutual
+      # family whose taint crosses the cycle, generated `._native.` name shapes), plus
+      # the exit-code matrix CI depends on.
+      - name: Test the axiom sweep tool
+        run: ./scripts/test-axiomsweep.sh
+      - name: Axiom sweep
+        run: lake exe axiomsweep --check
+      # Build the whole canary library rather than a hand-maintained list of
+      # `lake env lean` invocations. Every module reachable from `VCVioTest.lean` is
+      # elaborated, so a canary added in a future PR is covered the moment
+      # `./scripts/update-lib.sh` registers it. `mk_all --lib VCVioTest --module --check`
+      # above only checks that the umbrella's import list is textually complete; it does
+      # not elaborate anything. Kept out of the timed build commands on purpose: the
+      # timing report compares exactly the seven non-test libraries.
+      - name: Build the canary library
+        run: lake build VCVioTest
+      - name: Build HashSig oracle canaries
+        run: lake build HashSigTest
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
         run: lake exe slhdsa_kat
       - name: Run SLH-DSA-C13 differential KAT

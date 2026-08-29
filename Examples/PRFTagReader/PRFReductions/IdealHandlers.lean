@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.PRFReductions.Reductions
+module
+
+public import Examples.PRFTagReader.PRFReductions.Reductions
 
 /-!
 # PRF Tag/Reader Protocol — Composed Ideal Handlers
@@ -13,6 +15,8 @@ The two ideal-PRF experiments collapsed into single stateful handlers `multipleI
 `singleIdealQueryImpl` over the unlinkability oracle interface, with their per-query reduction
 lemmas exposing the lazy-random-oracle behaviour via `idealCacheStep` / `idealCacheMapM`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -152,7 +156,7 @@ lemma unlinkToMultiplePRFTagImpl_run_of_lt (tag : TagId) (s : UnlinkState TagId)
       (sessionsPerTag := sessionsPerTag) tag).run s =
       (OracleComp.liftComp (spec := unifSpec)
           (superSpec := unifSpec + ((TagId × Nonce) →ₒ Digest)) ($ᵗ Nonce)) >>= fun nonce =>
-        ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query (Sum.inr (tag, nonce))) >>= fun auth =>
+        PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) (tag, nonce) >>= fun auth =>
           pure (some (⟨nonce, auth⟩ : TagTranscript Nonce Digest),
             { s with sessionsUsed :=
               Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }) := by
@@ -187,19 +191,12 @@ lazy random oracle: `idealCacheStep`. -/
 lemma simulateQ_prfIdeal_query_inr {D : Type} [DecidableEq D]
     (d : D) (c : (D →ₒ Digest).QueryCache) :
     (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Digest))
-        (liftM ((PRFScheme.PRFOracleSpec D Digest).query (Sum.inr d)) :
-          OracleComp (PRFScheme.PRFOracleSpec D Digest) Digest)).run c =
+        (PRFScheme.functionQuery (D := D) (R := Digest) d)).run c =
       idealCacheStep c d := by
-  rw [simulateQ_query]
-  change ((fun x => x) <$> PRFScheme.prfIdealQueryImpl (Sum.inr d)).run c = _
-  rw [id_map']
-  change (uniformSampleImpl.withCaching d).run c = _
+  rw [PRFScheme.simulateQ_prfIdealQueryImpl_functionQuery]
+  rw [randomOracle.run_eq]
   unfold idealCacheStep
-  cases hc : c d with
-  | none =>
-      rw [QueryImpl.withCaching_run_none uniformSampleImpl hc, map_eq_bind_pure_comp]
-      rfl
-  | some u => rw [QueryImpl.withCaching_run_some uniformSampleImpl hc]
+  cases h : c d <;> simp only [OracleSpec.Range, OracleSpec.ofFn]
 
 /-- Folding the lazy-random-oracle lookup `idealCacheStep` over a list of domain points, threading
 the cache: this is the reader-oracle's behaviour under `prfIdealQueryImpl`. -/
@@ -219,8 +216,7 @@ lemma simulateQ_prfIdeal_run_mapM {D α : Type} [DecidableEq D]
     (f : α → D) (l : List α) (c : (D →ₒ Digest).QueryCache) :
     (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Digest))
         (l.mapM (m := OracleComp (PRFScheme.PRFOracleSpec D Digest))
-          (fun a => (liftM ((PRFScheme.PRFOracleSpec D Digest).query (Sum.inr (f a))) :
-            OracleComp (PRFScheme.PRFOracleSpec D Digest) Digest)))).run c =
+          (fun a => PRFScheme.functionQuery (D := D) (R := Digest) (f a)))).run c =
       idealCacheMapM (l.map f) c := by
   induction l generalizing c with
   | nil => simp [idealCacheMapM]
@@ -243,9 +239,8 @@ lemma unlinkToMultiplePRFReaderImpl_run
       transcript).run s =
       ((Finset.univ : Finset TagId).toList.mapM
         (m := OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))
-        (fun tag => ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query
-          (Sum.inr (tag, transcript.nonce)) :
-          OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Digest))) >>= fun digests =>
+        (fun tag => PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest)
+          (tag, transcript.nonce))) >>= fun digests =>
         pure (ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth)), s) := by
   unfold unlinkToMultiplePRFReaderImpl
   simp
@@ -371,8 +366,8 @@ lemma unlinkToSinglePRFTagImpl_run_of_lt (tag : TagId) (s : UnlinkState TagId)
       (OracleComp.liftComp (spec := unifSpec)
           (superSpec := unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest))
           ($ᵗ Nonce)) >>= fun nonce =>
-        ((unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)).query
-          (Sum.inr ((tag, ⟨s.sessionsUsed tag, hslot⟩), nonce))) >>= fun auth =>
+        PRFScheme.functionQuery (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
+          ((tag, ⟨s.sessionsUsed tag, hslot⟩), nonce) >>= fun auth =>
           pure (some (⟨nonce, auth⟩ : TagTranscript Nonce Digest),
             { s with sessionsUsed :=
               Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }) := by
@@ -450,10 +445,9 @@ lemma unlinkToSinglePRFReaderImpl_run
       (sessionsPerTag := sessionsPerTag) transcript).run s =
       ((Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.mapM
         (m := OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))
-        (fun slot => ((unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)).query
-          (Sum.inr (slot, transcript.nonce)) :
-          OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest))
-            Digest))) >>= fun digests =>
+        (fun slot => PRFScheme.functionQuery
+          (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
+          (slot, transcript.nonce))) >>= fun digests =>
         pure (ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth)), s) := by
   unfold unlinkToSinglePRFReaderImpl
   simp

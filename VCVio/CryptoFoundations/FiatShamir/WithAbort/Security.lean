@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.QueryBounds
-import VCVio.CryptoFoundations.FiatShamir.WithAbort
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort
 
 /-!
 # EUF-CMA security of Fiat-Shamir with aborts
@@ -18,6 +20,8 @@ matching Theorem 3 of Barbosa et al. (CRYPTO 2023). Instantiates
 The scheme-specific NMA-to-hard-problem reduction lives with each concrete
 scheme (e.g. the ML-DSA MLWE + SelfTargetMSIS reduction).
 -/
+
+@[expose] public section
 
 universe u v
 

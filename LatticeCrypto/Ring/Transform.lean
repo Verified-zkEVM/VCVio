@@ -3,8 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Batteries.Data.Vector.Lemmas
-import LatticeCrypto.Ring.Kernel
+
+module
+
+import all Init.Data.Vector.Algebra
+
+public import Batteries.Data.Vector.Lemmas
+public import LatticeCrypto.Ring.Kernel
 
 /-!
 # Generic Transform Layer For Negacyclic Rings
@@ -24,6 +29,8 @@ coefficient-domain `NegacyclicRing`. Defines:
 Scheme-specific concrete NTTs (under `Concrete/NTT.lean`) provide executable
 `TransformOps` instances. Proof-oriented uses consume `TransformOps.Laws`.
 -/
+
+@[expose] public section
 
 
 universe u v
@@ -291,7 +298,7 @@ private theorem foldl_distribute {k} (a b : PolyVec Hat k) :
     subst a b
     simp only [Vector.eq_empty, Vector.foldl_empty, add_zero]
   | succ n ih =>
-    haveI : NeZero (n + 1) := ⟨Nat.succ_ne_zero n⟩
+    have : NeZero (n + 1) := ⟨Nat.succ_ne_zero n⟩
     rw [← Vector.push_pop_back a, ← Vector.push_pop_back b]
     set sum_a := a.pop.foldl (· + ·) 0
     set sum_b := b.pop.foldl (· + ·) 0
@@ -376,7 +383,7 @@ theorem dot_scalar_right {k} (cHat : Hat)
     simp only [sub_self] at h
     rw[h]
   | succ n ih =>
-    haveI : NeZero (n + 1) := ⟨Nat.succ_ne_zero n⟩
+    have : NeZero (n + 1) := ⟨Nat.succ_ne_zero n⟩
     rw [← Vector.push_pop_back row, ← Vector.push_pop_back v]
     change ops.dot (row.pop.push row.back) (ops.scalarVecMul cHat (v.pop.push v.back)) =
       ops.mulHat cHat (ops.dot (row.pop.push row.back) (v.pop.push v.back))

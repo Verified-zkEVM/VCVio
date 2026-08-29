@@ -4,11 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.DirectCoupling
-import Examples.PRFTagReader.DirectCoupling.StepLemmas
-import Examples.PRFTagReader.DirectCoupling.Swap
-import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
-import VCVio.EvalDist.Monad.Disagreement
+module
+
+public import Examples.PRFTagReader.DirectCoupling
+public import Examples.PRFTagReader.DirectCoupling.StepLemmas
+public import Examples.PRFTagReader.DirectCoupling.Swap
+public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
+public import VCVio.EvalDist.Monad.Disagreement
 
 /-!
 # PRF Tag/Reader Protocol — Direct Coupling, Slot-Positive Tag Step
@@ -19,7 +21,7 @@ slot-positive state the M side reads the slot-0 cell of `gS` (via `slotZeroSubTa
 side reads the realized slot-`K` cell, with `K = ⟨s.sessionsUsed tag, hslot⟩` non-zero.
 
 Each side marginalizes its own cell via the single-cell helper
-`evalDist_uniformSample_bind_update_map`, giving the induction hypothesis a fresh slot-0 draw on
+`evalSPMF_uniformSample_bind_update_map`, giving the induction hypothesis a fresh slot-0 draw on
 the M side; the resulting slot-0 → slot-`K` cache extension is then bridged on the S side by the
 permutation lemma `singleTableHandler_cache_swap_eq`. Cell-pair independence gives per-nonce
 equality off the multiple-bad flag, so the tag step charges no tag-side slack: the per-step
@@ -32,6 +34,8 @@ incurred.
 * `dcAux_tag_slotPositive` — the slot-positive tag induction step of the direct-coupling aux,
   taking the induction hypothesis as an explicit premise.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -142,7 +146,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
   -- Slot-positive tag case (1 ≤ k < sp). M reads slot-0 cell, S reads slot-K cell (K ≠ 0).
   -- (K ≠ 0).
   -- **Cell-pair independence strategy.** Each side marginalizes its own cell via a
-  -- single-cell helper (`evalDist_uniformSample_bind_update_map`), giving the IH a fresh
+  -- single-cell helper (`evalSPMF_uniformSample_bind_update_map`), giving the IH a fresh
   -- slot-0 draw on the M side; the resulting slot-0 → slot-K cache extension is then
   -- bridged on the S side by the permutation lemma `singleTableHandler_cache_swap_eq`.
   -- No per-step `cacheBadReader` charge is needed at this site: cell-pair independence gives
@@ -283,11 +287,11 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
     rw [hMstep gS gFine]
     exact bind_assoc ..
   rw [hLHS_eq, hRHS_eq, hBAD_eq]
-  -- Phase B-2: commute outer `$ᵗ gS`, `$ᵗ gFine` past inner `$ᵗ Nonce` at the `𝒟[·]`
+  -- Phase B-2: commute outer `$ᵗ gS`, `$ᵗ gFine` past inner `$ᵗ Nonce` at the `𝒮[·]`
   -- level so `n` is outermost. Identical structure to slot-zero (M-side LHS/BAD have the
   -- same shape — both read slot-0). RHS is shorter (no `gFine` binder).
   have hLHS_comm :
-      𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+      𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let n ← $ᵗ Nonce
             (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -303,7 +307,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                   (some (⟨n, OracleComp.tableExtending c gS
                     ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                     TagTranscript Nonce Digest))))]
-      = 𝒟[(do let n ← $ᵗ Nonce
+      = 𝒮[(do let n ← $ᵗ Nonce
               let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -321,7 +325,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                       TagTranscript Nonce Digest))))] := by
     -- Step (i): swap inner `gFine ← $ᵗ` past `n ← $ᵗ Nonce` under outer `gS`.
     have hStep1 : ∀ gS : (TagId × Fin sessionsPerTag) × Nonce → Digest,
-        𝒟[(do let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+        𝒮[(do let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let n ← $ᵗ Nonce
               (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                   z.1) <$>
@@ -336,7 +340,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                     (some (⟨n, OracleComp.tableExtending c gS
                       ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                       TagTranscript Nonce Digest))))]
-        = 𝒟[(do let n ← $ᵗ Nonce
+        = 𝒮[(do let n ← $ᵗ Nonce
                 let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                     z.1) <$>
@@ -351,10 +355,10 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                       (some (⟨n, OracleComp.tableExtending c gS
                         ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                         TagTranscript Nonce Digest))))] := fun gS =>
-      evalDist_bind_bind_swap
+      evalSPMF_bind_bind_swap
         ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) ($ᵗ Nonce) _
     have hPart1 :
-        𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+        𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let n ← $ᵗ Nonce
               (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -370,7 +374,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                     (some (⟨n, OracleComp.tableExtending c gS
                       ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                       TagTranscript Nonce Digest))))]
-        = 𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+        = 𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 let n ← $ᵗ Nonce
                 let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -386,12 +390,12 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                       (some (⟨n, OracleComp.tableExtending c gS
                         ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                         TagTranscript Nonce Digest))))] := by
-      rw [evalDist_bind, evalDist_bind]
+      rw [evalSPMF_bind, evalSPMF_bind]
       refine congrArg _ (funext fun gS => ?_)
       exact hStep1 gS
     -- Step (ii): swap outermost `gS` past `n`.
     have hStep2 :
-        𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+        𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let n ← $ᵗ Nonce
               let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -407,7 +411,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                     (some (⟨n, OracleComp.tableExtending c gS
                       ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                       TagTranscript Nonce Digest))))]
-        = 𝒟[(do let n ← $ᵗ Nonce
+        = 𝒮[(do let n ← $ᵗ Nonce
                 let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -423,29 +427,29 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                       (some (⟨n, OracleComp.tableExtending c gS
                         ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                         TagTranscript Nonce Digest))))] :=
-      evalDist_bind_bind_swap
+      evalSPMF_bind_bind_swap
         ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) ($ᵗ Nonce) _
     exact hPart1.trans hStep2
-  -- RHS commute: single `evalDist_bind_bind_swap` (no gFine binder).
+  -- RHS commute: single `evalSPMF_bind_bind_swap` (no gFine binder).
   have hRHS_comm :
-      𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+      𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let n ← $ᵗ Nonce
             (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce)
               (Digest := Digest) (sessionsPerTag := sessionsPerTag)
               (OracleComp.tableExtending c gS))
               (k (some (⟨n, OracleComp.tableExtending c gS
                   ((tag, slotK), n)⟩ : TagTranscript Nonce Digest)))).run' advM)]
-      = 𝒟[(do let n ← $ᵗ Nonce
+      = 𝒮[(do let n ← $ᵗ Nonce
               let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce)
                 (Digest := Digest) (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c gS))
                 (k (some (⟨n, OracleComp.tableExtending c gS
                     ((tag, slotK), n)⟩ : TagTranscript Nonce Digest)))).run' advM)] :=
-    evalDist_bind_bind_swap
+    evalSPMF_bind_bind_swap
       ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) ($ᵗ Nonce) _
   have hBAD_comm :
-      𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+      𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let n ← $ᵗ Nonce
             (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -461,7 +465,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                   (some (⟨n, OracleComp.tableExtending c gS
                     ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                     TagTranscript Nonce Digest))))]
-      = 𝒟[(do let n ← $ᵗ Nonce
+      = 𝒮[(do let n ← $ᵗ Nonce
               let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -479,7 +483,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                       TagTranscript Nonce Digest))))] := by
     -- Same two-step commute as hLHS_comm but with the (z.1, z.2.2) projection.
     have hStep1B : ∀ gS : (TagId × Fin sessionsPerTag) × Nonce → Digest,
-        𝒟[(do let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+        𝒮[(do let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let n ← $ᵗ Nonce
               (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                   (z.1, z.2.2)) <$>
@@ -494,7 +498,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                     (some (⟨n, OracleComp.tableExtending c gS
                       ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                       TagTranscript Nonce Digest))))]
-        = 𝒟[(do let n ← $ᵗ Nonce
+        = 𝒮[(do let n ← $ᵗ Nonce
                 let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                     (z.1, z.2.2)) <$>
@@ -509,10 +513,10 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                       (some (⟨n, OracleComp.tableExtending c gS
                         ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                         TagTranscript Nonce Digest))))] := fun gS =>
-      evalDist_bind_bind_swap
+      evalSPMF_bind_bind_swap
         ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) ($ᵗ Nonce) _
     have hPart1B :
-        𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+        𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let n ← $ᵗ Nonce
               (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -528,7 +532,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                     (some (⟨n, OracleComp.tableExtending c gS
                       ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                       TagTranscript Nonce Digest))))]
-        = 𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+        = 𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 let n ← $ᵗ Nonce
                 let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -544,11 +548,11 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                       (some (⟨n, OracleComp.tableExtending c gS
                         ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                         TagTranscript Nonce Digest))))] := by
-      rw [evalDist_bind, evalDist_bind]
+      rw [evalSPMF_bind, evalSPMF_bind]
       refine congrArg _ (funext fun gS => ?_)
       exact hStep1B gS
     have hStep2B :
-        𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+        𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let n ← $ᵗ Nonce
               let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -564,7 +568,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                     (some (⟨n, OracleComp.tableExtending c gS
                       ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                       TagTranscript Nonce Digest))))]
-        = 𝒟[(do let n ← $ᵗ Nonce
+        = 𝒮[(do let n ← $ᵗ Nonce
                 let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -580,7 +584,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                       (some (⟨n, OracleComp.tableExtending c gS
                         ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                         TagTranscript Nonce Digest))))] :=
-      evalDist_bind_bind_swap
+      evalSPMF_bind_bind_swap
         ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) ($ᵗ Nonce) _
     exact hPart1B.trans hStep2B
   rw [probOutput_congr rfl hLHS_comm,
@@ -624,22 +628,22 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
   --   asymmetry; rename u_0 ↔ u_K via the two-cell marginalization.
   rcases hc0 : c ((tag, (0 : Fin sessionsPerTag)), n) with _ | u₀
   · -- Case M-miss: c slot-0 = none. Marginalize slot-0 → IH → swap-bridge → re-marginalize.
-    haveI : Nonempty Digest :=
+    have : Nonempty Digest :=
       ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
     -- Step 1: marginalize gS over slot-0 cell (same pattern as slot-zero Case B).
     have hmarg : ∀ {β : Type}
         (Mψ : ((TagId × Fin sessionsPerTag) × Nonce → Digest) → ProbComp β),
-        𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest); Mψ gS)] =
-        𝒟[(do let u ← $ᵗ Digest
+        𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest); Mψ gS)] =
+        𝒮[(do let u ← $ᵗ Digest
               let gS' ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               Mψ (Function.update gS' ((tag, (0 : Fin sessionsPerTag)), n) u))] := by
       intro β Mψ
       have hbase :
-          𝒟[(do let u ← $ᵗ Digest
+          𝒮[(do let u ← $ᵗ Digest
                 let gS' ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 pure (Function.update gS' ((tag, (0 : Fin sessionsPerTag)), n) u))]
-          = 𝒟[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest))] :=
-        evalDist_uniformSample_bind_update ((tag, (0 : Fin sessionsPerTag)), n)
+          = 𝒮[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest))] :=
+        evalSPMF_uniformSample_bind_update ((tag, (0 : Fin sessionsPerTag)), n)
       have hL : (do let u ← $ᵗ Digest
                     let gS' ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                     Mψ (Function.update gS' ((tag, (0 : Fin sessionsPerTag)), n) u))
@@ -650,7 +654,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
         simp [bind_assoc]
       have hR : (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest); Mψ gS)
           = ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>= Mψ := rfl
-      rw [hL, hR, evalDist_bind, evalDist_bind, hbase]
+      rw [hL, hR, evalSPMF_bind, evalSPMF_bind, hbase]
     have hext_eq : ∀ (gS' : (TagId × Fin sessionsPerTag) × Nonce → Digest)
         (u : Digest),
         OracleComp.tableExtending c
@@ -703,7 +707,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest))))] := by
       refine probEvent_congr' (fun _ _ => Iff.rfl) ?_
       rw [hmarg _]
-      refine congrArg evalDist ?_
+      refine congrArg evalSPMF ?_
       refine bind_congr fun u => ?_
       refine bind_congr fun gS' => ?_
       refine bind_congr fun gFine => ?_
@@ -742,7 +746,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest))))] := by
       refine probEvent_congr' (fun _ _ => Iff.rfl) ?_
       rw [hmarg _]
-      refine congrArg evalDist ?_
+      refine congrArg evalSPMF ?_
       refine bind_congr fun u => ?_
       refine bind_congr fun gS' => ?_
       refine bind_congr fun gFine => ?_
@@ -750,17 +754,17 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
     -- Step 3: marginalize RHS S-event over slot-K cell (uncached by hcInv).
     have hmarg_K : ∀ {β : Type}
         (Mψ : ((TagId × Fin sessionsPerTag) × Nonce → Digest) → ProbComp β),
-        𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest); Mψ gS)] =
-        𝒟[(do let u ← $ᵗ Digest
+        𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest); Mψ gS)] =
+        𝒮[(do let u ← $ᵗ Digest
               let gS' ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               Mψ (Function.update gS' ((tag, slotK), n) u))] := by
       intro β Mψ
       have hbase :
-          𝒟[(do let u ← $ᵗ Digest
+          𝒮[(do let u ← $ᵗ Digest
                 let gS' ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 pure (Function.update gS' ((tag, slotK), n) u))]
-          = 𝒟[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest))] :=
-        evalDist_uniformSample_bind_update ((tag, slotK), n)
+          = 𝒮[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest))] :=
+        evalSPMF_uniformSample_bind_update ((tag, slotK), n)
       have hL : (do let u ← $ᵗ Digest
                     let gS' ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                     Mψ (Function.update gS' ((tag, slotK), n) u))
@@ -771,7 +775,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
         simp [bind_assoc]
       have hR : (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest); Mψ gS)
           = ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>= Mψ := rfl
-      rw [hL, hR, evalDist_bind, evalDist_bind, hbase]
+      rw [hL, hR, evalSPMF_bind, evalSPMF_bind, hbase]
     have hext_K_eq : ∀ (gS' : (TagId × Fin sessionsPerTag) × Nonce → Digest)
         (u : Digest),
         OracleComp.tableExtending c
@@ -805,7 +809,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM)] := by
       refine probEvent_congr' (fun _ _ => Iff.rfl) ?_
       rw [hmarg_K _]
-      refine congrArg evalDist ?_
+      refine congrArg evalSPMF ?_
       refine bind_congr fun u => ?_
       refine bind_congr fun gS' => ?_
       rw [hext_K_eq gS' u, hcell_K_u gS' u]

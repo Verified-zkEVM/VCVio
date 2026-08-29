@@ -4,11 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Unary.HoareTriple
-import VCVio.EvalDist.TVDist
-import VCVio.ProgramLogic.Relational.Basic
-import VCVio.ProgramLogic.Relational.QuantitativeDefs
-import ToMathlib.Control.Monad.RelWP
+module
+
+public import VCVio.ProgramLogic.Unary.HoareTriple
+public import VCVio.EvalDist.TVDist
+public import VCVio.ProgramLogic.Relational.Basic
+public import VCVio.ProgramLogic.Relational.QuantitativeDefs
+public import ToMathlib.Control.Monad.RelWP
 
 /-!
 # Ergonomic Notation and Convenience Layer for Program Logic
@@ -29,7 +31,7 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 - `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)
 
 ### Game-level
-- `g₁ ≡ₚ g₂` — game equivalence (`evalDist g₁ = evalDist g₂`)
+- `g₁ ≡ₚ g₂` — game equivalence (`evalSPMF g₁ = evalSPMF g₂`)
 
 ### Relational (EasyCrypt-inspired)
 - `⟪c₁ ~ c₂ | R⟫` — pRHL coupling triple
@@ -41,6 +43,8 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 - `GameEquiv g₁ g₂` — two games have the same output distribution
 - `AdvBound game ε` — advantage of a game is at most `ε`
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 
@@ -57,7 +61,7 @@ variable {α β : Type}
 
 /-- Two games have the same output distribution. -/
 def GameEquiv (g₁ g₂ : OracleComp spec₁ α) : Prop :=
-  𝒟[g₁] = 𝒟[g₂]
+  𝒮[g₁] = 𝒮[g₂]
 
 /-- Advantage of a Boolean game is at most `ε` (measured as deviation from 1/2). -/
 def AdvBound (game : OracleComp spec₁ Bool) (ε : ℝ) : Prop :=
@@ -74,7 +78,7 @@ def AdvBound (game : OracleComp spec₁ Bool) (ε : ℝ) : Prop :=
 
 theorem GameEquiv.probOutput_eq {g₁ g₂ : OracleComp spec₁ α}
     (h : GameEquiv g₁ g₂) (x : α) : Pr[= x | g₁] = Pr[= x | g₂] :=
-  probOutput_congr_evalDist h x
+  probOutput_congr_evalSPMF h x
 
 /-! ## Prop-to-ℝ≥0∞ indicator -/
 
@@ -144,7 +148,7 @@ scoped macro_rules (kind := relWpBracket)
   | `(rwp⟦ $c₁ ~ $c₂ | $post; $epost₁, $epost₂ ⟧) =>
       `(Std.Do'.rwp $c₁ $c₂ $post $epost₁ $epost₂)
 
-/-- Game equivalence: `g₁ ≡ₚ g₂` means `evalDist g₁ = evalDist g₂`.
+/-- Game equivalence: `g₁ ≡ₚ g₂` means `evalSPMF g₁ = evalSPMF g₂`.
 Uses `syntax` + `macro_rules` because `≡` conflicts with Mathlib's
 modular equivalence notation (`a ≡ b [MOD n]`). -/
 scoped syntax:50 term:50 " ≡ₚ " term:51 : term
@@ -240,7 +244,7 @@ theorem GameEquiv.of_relTriple {g₁ g₂ : OracleComp spec₁ α}
     (h : Relational.RelTriple (spec₁ := spec₁) (spec₂ := spec₁) g₁ g₂
       (Relational.EqRel α)) :
     GameEquiv g₁ g₂ :=
-  Relational.evalDist_eq_of_relTriple_eqRel h
+  Relational.evalSPMF_eq_of_relTriple_eqRel h
 
 /-- A bijection on a uniform sample is still uniform.
 This is the key lemma behind OTP-style perfect secrecy proofs. -/
@@ -257,13 +261,13 @@ theorem GameEquiv.bind_congr {g₁ g₂ : OracleComp spec₁ α}
     {f₁ f₂ : α → OracleComp spec₁ β}
     (hg : GameEquiv g₁ g₂) (hf : ∀ a, GameEquiv (f₁ a) (f₂ a)) :
     GameEquiv (g₁ >>= f₁) (g₂ >>= f₂) := by
-  rw [GameEquiv, evalDist_bind, evalDist_bind, hg, funext hf]
+  rw [GameEquiv, evalSPMF_bind, evalSPMF_bind, hg, funext hf]
 
 /-- Game equivalence is a congruence for map. -/
 theorem GameEquiv.map_congr {g₁ g₂ : OracleComp spec₁ α} (f : α → β)
     (hg : GameEquiv g₁ g₂) :
     GameEquiv (f <$> g₁) (f <$> g₂) := by
-  rw [GameEquiv, evalDist_map, evalDist_map, hg]
+  rw [GameEquiv, evalSPMF_map, evalSPMF_map, hg]
 
 /-- Advantage bound via TV distance. -/
 theorem AdvBound.of_tvDist {game₁ game₂ : OracleComp spec₁ Bool} {ε₁ ε₂ : ℝ}

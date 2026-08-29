@@ -3,13 +3,17 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.EvalDist.Monad.Basic
+
+module
+public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # Monad Evaluation Semantics Instances
 
 This file defines various instances of evaluation semantics for different monads
 -/
+
+@[expose] public section
 
 universe u v w
 
@@ -25,31 +29,32 @@ end SetM
 namespace SPMF
 
 @[simp, grind =]
-protected lemma evalDist_def (p : SPMF α) : evalDist p = p := rfl
+protected lemma evalSPMF_def (p : SPMF α) : evalSPMF p = p := rfl
 
 @[grind =]
 protected lemma support_eq_support (p : SPMF α) : support p = SPMF.support p := rfl
 
 @[grind =]
-lemma probOutput_eq_apply (p : SPMF α) (x : α) : Pr[= x | p] = p x := rfl
+lemma probOutput_eq_apply (p : SPMF α) (x : α) : Pr[= x | p] = p x :=
+  probOutput_def p x
 
-lemma evalDist_eq_iff {m} [Monad m] [MonadLiftT m SPMF] (mx : m α) (p : SPMF α) :
-    𝒟[mx] = p ↔ ∀ x, Pr[= x | mx] = p x := by
+lemma evalSPMF_eq_iff {m} [Monad m] [MonadLiftT m SPMF] (mx : m α) (p : SPMF α) :
+    𝒮[mx] = p ↔ ∀ x, Pr[= x | mx] = p x := by
   simp only [probOutput_def, DFunLike.ext_iff]
 
 end SPMF
 
 namespace PMF
 
-@[simp] lemma evalDist_eq (p : PMF α) : evalDist p = liftM p := rfl
+@[simp] lemma evalSPMF_eq (p : PMF α) : evalSPMF p = liftM p := rfl
 
 @[simp] lemma probOutput_eq_apply (p : PMF α) (x : α) : Pr[= x | p] = p x := by
   simp [probOutput_def]
 
 end PMF
 
-@[simp] lemma SPMF.evalDist_liftM (p : PMF α) :
-    evalDist (m := SPMF) (liftM p) = 𝒟[p] := rfl
+@[simp] lemma SPMF.evalSPMF_liftM (p : PMF α) :
+    evalSPMF (m := SPMF) (liftM p) = 𝒮[p] := rfl
 
 @[simp] lemma SPMF.probOutput_liftM (p : PMF α) (x : α) :
     Pr[= x | (liftM p : SPMF α)] = Pr[= x | p] := rfl

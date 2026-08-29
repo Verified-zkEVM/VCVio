@@ -3,8 +3,10 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.QueryTracking.QueryBound
-import VCVio.OracleComp.Constructions.Replicate
+
+module
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.Constructions.Replicate
 
 /-!
 # Query Bounds for Iteration Constructs
@@ -24,6 +26,8 @@ counting-oracle support point of `oa` lifts to an `n`-fold copy in
 For the variable-body case (`List.mapM` / `List.foldlM`), only the forward
 direction is available: the loop bound is the element-wise sum of body bounds.
 -/
+
+@[expose] public section
 
 open OracleSpec
 
@@ -126,8 +130,8 @@ private lemma countingOracle.support_simulate_replicate_const [DecidableEq ι]
 theorem isTotalQueryBound_replicate_iff [Finite ι] [IsUniformSpec spec]
     {oa : OracleComp spec α} {n k : ℕ} (hn : 0 < n) :
     IsTotalQueryBound (oa.replicate n) (n * k) ↔ IsTotalQueryBound oa k := by
-  letI : DecidableEq ι := Classical.decEq ι
-  letI : Fintype ι := Fintype.ofFinite ι
+  let : DecidableEq ι := Classical.decEq ι
+  let : Fintype ι := Fintype.ofFinite ι
   refine ⟨fun h => ?_, fun h => isTotalQueryBound_replicate h n⟩
   rw [isTotalQueryBound_iff_counting_total_le]
   intro z' hz'
@@ -138,8 +142,8 @@ theorem isTotalQueryBound_replicate_iff [Finite ι] [IsUniformSpec spec]
 theorem isQueryBoundP_replicate_iff [Finite ι] [IsUniformSpec spec]
     {oa : OracleComp spec α} {p : ι → Prop} [DecidablePred p] {n k : ℕ} (hn : 0 < n) :
     IsQueryBoundP (oa.replicate n) p (n * k) ↔ IsQueryBoundP oa p k := by
-  letI : DecidableEq ι := Classical.decEq ι
-  letI : Fintype ι := Fintype.ofFinite ι
+  let : DecidableEq ι := Classical.decEq ι
+  let : Fintype ι := Fintype.ofFinite ι
   refine ⟨fun h => ?_, fun h => isQueryBoundP_replicate h n⟩
   rw [isQueryBoundP_iff_counting_filter_le]
   intro z' hz'

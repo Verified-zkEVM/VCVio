@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Primitives
+
+module
+public import LatticeCrypto.Falcon.Primitives
 
 /-!
 # Falcon Encoding Interfaces
@@ -24,6 +26,8 @@ algorithms.
 - Falcon specification v1.2, Section 3.11 (key and signature formats)
 - Falcon specification v1.2, Section 3.12 (Algorithms 17–18: compress/decompress)
 -/
+
+@[expose] public section
 
 
 namespace Falcon

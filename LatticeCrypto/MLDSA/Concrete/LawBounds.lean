@@ -4,9 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
-import LatticeCrypto.MLDSA.Concrete.Encoding
-import LatticeCrypto.MLDSA.Concrete.NTT
-import LatticeCrypto.MLDSA.Concrete.Rounding
+module
+
+import all LatticeCrypto.MLDSA.Concrete.Encoding
+public import LatticeCrypto.MLDSA.Concrete.Encoding
+public import LatticeCrypto.MLDSA.Concrete.NTT
+public import LatticeCrypto.MLDSA.Concrete.Rounding
 
 /-!
 # Algebraic Range Bounds Behind the Concrete ML-DSA Primitive Laws
@@ -38,6 +41,8 @@ library and away from the native `@[extern]` surface.
 The `Primitives.Laws` fields that mention the assembled bundle `MLDSA.Concrete.concretePrimitives`
 are proven in `Extern/MLDSA/Laws.lean`, on top of the lemmas banked here.
 -/
+
+@[expose] public section
 
 
 namespace MLDSA.Concrete

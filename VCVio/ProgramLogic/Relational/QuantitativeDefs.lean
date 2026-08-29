@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Relational.Basic
+module
+
+public import VCVio.ProgramLogic.Relational.Basic
 
 /-!
 # Core eRHL Definitions
@@ -13,6 +15,8 @@ This file contains the lightweight definitions for the quantitative relational l
 It is intentionally separated from the heavier coupling-development file so downstream users
 that only need the interfaces and notation do not import the full theorem stack.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 
@@ -30,7 +34,7 @@ variable {α β : Type}
 under `c`. -/
 noncomputable def eRelWP (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (g : α → β → ℝ≥0∞) : ℝ≥0∞ :=
-  ⨆ (c : SPMF.Coupling (𝒟[oa]) (𝒟[ob])),
+  ⨆ (c : SPMF.Coupling (𝒮[oa]) (𝒮[ob])),
     ∑' z, Pr[= z | c.1] * g z.1 z.2
 
 /-- Indicator postcondition: lifts a `Prop`-valued relation to an `ℝ≥0∞`-valued one. -/

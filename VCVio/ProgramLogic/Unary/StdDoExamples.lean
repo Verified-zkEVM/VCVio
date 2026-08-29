@@ -4,12 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Std.Tactic.Do
-import VCVio.ProgramLogic.Unary.StdDoBridge
+module
+
+public import Std.Tactic.Do
+public import VCVio.ProgramLogic.Unary.StdDoBridge
 
 /-!
 # `Std.Do` / `mvcgen` examples for `OracleComp`
 -/
+
+@[expose] public section
 
 open Std.Do
 

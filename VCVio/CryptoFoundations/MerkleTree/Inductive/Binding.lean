@@ -3,7 +3,9 @@ Copyright (c) 2026 Vitalik Buterin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Vitalik Buterin
 -/
-import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
+
+module
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Defs
 
 /-!
 # Merkle Binding (Collision Lemma)
@@ -50,6 +52,8 @@ merely asserting its existence.
 - Dan Boneh and Victor Shoup. *A Graduate Course in Applied Cryptography.*
   §8.9 (Merkle-Damgård and Merkle trees).
 -/
+
+@[expose] public section
 
 namespace InductiveMerkleTree
 

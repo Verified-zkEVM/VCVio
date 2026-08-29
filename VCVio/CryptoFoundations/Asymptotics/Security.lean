@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.SecExp
-import VCVio.CryptoFoundations.Asymptotics.Negligible
+
+module
+public import VCVio.CryptoFoundations.SecExp
+public import VCVio.CryptoFoundations.Asymptotics.Negligible
 
 /-!
 # Asymptotic Security Experiments and Games
@@ -28,6 +30,8 @@ distinguishing games (`ProbComp.distAdvantage`), and any other advantage metric.
 - `SecurityGame.secureAgainst_of_close`: Game-hopping step.
 - `SecurityGame.secureAgainst_of_hybrid`: Hybrid argument over a chain of games.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal Filter
 

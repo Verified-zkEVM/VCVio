@@ -3,8 +3,11 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Elias Judin
 -/
-import VCVio.OracleComp.Coinductive.PolyTimeClosure
-import ToMathlib.Computability.MachineCounting
+
+module
+
+public import VCVio.OracleComp.Coinductive.PolyTimeClosure
+public import ToMathlib.Computability.MachineCounting
 
 /-!
 # Non-Triviality Certificates for the Polynomial-Time Adversary Model
@@ -34,6 +37,8 @@ spaces, elementary `p.eval n ≤ 2^(n/4)` growth bounds, and the diagonal constr
 All stages are fully proved; the two headline theorems at the end of the file are the
 model's falsifiable acceptance criteria.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp Computability
 

@@ -4,14 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics.Common.Suggestions
-import VCVio.ProgramLogic.Tactics.Relational.Internals
+module
+
+public meta import VCVio.ProgramLogic.Tactics.Common.Suggestions
+public meta import VCVio.ProgramLogic.Tactics.Relational.Internals
 
 /-!
 # Relational VC Tactics
 
 User-facing relational VCGen tactics and syntax.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 
@@ -42,7 +46,7 @@ private def runRVCGenStepWithTheoremNames
 
 /-- `rvcstep` applies one relational VCGen step.
 
-It first lowers `GameEquiv` / `evalDist` equality goals into relational mode, then
+It first lowers `GameEquiv` / `evalSPMF` equality goals into relational mode, then
 tries the obvious structural relational rule on `RelTriple` / `RelWP` / quantitative
 `Std.Do'.RelTriple` goals: synchronized conditionals, `simulateQ`, `Functor.map`,
 bounded traversals, bind decomposition, or random/query coupling.
@@ -278,7 +282,7 @@ macro "rel_inline" ids:ident* : tactic =>
 /-! ## Proof mode entry tactics -/
 
 /-- `by_equiv` transforms a `GameEquiv g₁ g₂` goal into `RelTriple g₁ g₂ (EqRel α)`.
-Also works for `evalDist g₁ = evalDist g₂` goals.
+Also works for `evalSPMF g₁ = evalSPMF g₂` goals.
 Always targets `RelTriple` (coupling-based), never `RelTriple'` (eRHL-based),
 so that `rvcstep` / `rvcgen` work on the resulting goal. -/
 macro "by_equiv" : tactic =>
@@ -286,18 +290,18 @@ macro "by_equiv" : tactic =>
     first
       | apply OracleComp.ProgramLogic.GameEquiv.of_relTriple
       | (change OracleComp.ProgramLogic.Relational.RelTriple _ _ _)
-      | (apply OracleComp.ProgramLogic.Relational.evalDist_eq_of_relTriple_eqRel))
+      | (apply OracleComp.ProgramLogic.Relational.evalSPMF_eq_of_relTriple_eqRel))
 
-/-- `rel_dist` reduces a `RelTriple oa ob (EqRel α)` goal to `evalDist oa = evalDist ob`.
+/-- `rel_dist` reduces a `RelTriple oa ob (EqRel α)` goal to `evalSPMF oa = evalSPMF ob`.
 
 This is the reverse direction of `by_equiv`: while `by_equiv` enters relational mode from a
 distributional equality, `rel_dist` exits relational mode back to distributional reasoning.
 
 Useful when both sides are equal in distribution but not syntactically identical, and the
-equality is easier to prove at the `evalDist` level than via stepwise coupling. -/
+equality is easier to prove at the `evalSPMF` level than via stepwise coupling. -/
 macro "rel_dist" : tactic =>
   `(tactic|
-    apply OracleComp.ProgramLogic.Relational.relTriple_eqRel_of_evalDist_eq)
+    apply OracleComp.ProgramLogic.Relational.relTriple_eqRel_of_evalSPMF_eq)
 
 /-- `game_trans` introduces an intermediate game for transitivity of `GameEquiv`.
 

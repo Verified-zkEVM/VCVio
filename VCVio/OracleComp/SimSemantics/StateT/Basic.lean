@@ -3,9 +3,11 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.EvalDist
-import VCVio.OracleComp.ProbComp
-import ToMathlib.Control.StateT
+
+module
+public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ProbComp
+public import ToMathlib.Control.StateT
 
 /-!
 # Query Implementations with State Monads
@@ -15,6 +17,8 @@ This file gives lemmas about `QueryImpl spec m` when `m` is something like `Stat
 TODO: should generalize things to `MonadState` once laws for it exist.
 -/
 
+@[expose] public section
+
 universe u v w x
 
 open OracleSpec
@@ -23,7 +27,7 @@ namespace QueryImpl
 
 /-- Push an outer oracle interpretation through the base monad of a
 `StateT`-valued query implementation. -/
-noncomputable def mapStateTBase {ι₀ ι₁ : Type _}
+def mapStateTBase {ι₀ ι₁ : Type _}
     {spec₀ : OracleSpec ι₀} {spec₁ : OracleSpec ι₁}
     {m : Type u → Type v} [Monad m] {σ : Type u}
     (outer : QueryImpl spec₁ m)
@@ -54,6 +58,26 @@ theorem simulateQ_mapStateTBase_run' {ι₀ ι₁ : Type _}
     simulateQ outer ((simulateQ inner oa).run' s) =
       (simulateQ (outer.mapStateTBase inner) oa).run' s := by
   simp [simulateQ_mapStateTBase_run]
+
+/-- Interpreting the base oracle of a stateful query implementation preserves every
+state invariant already preserved by the inner implementation, provided the outer
+interpreter preserves support. -/
+theorem mapStateTBase_preserves_inv {ι₀ ι₁ ι₂ : Type u}
+    {spec₀ : OracleSpec ι₀} {spec₁ : OracleSpec ι₁}
+    {spec₂ : OracleSpec ι₂} [IsUniformSpec spec₂] {σ : Type u}
+    (outer : QueryImpl spec₁ (OracleComp spec₂))
+    (inner : QueryImpl spec₀ (StateT σ (OracleComp spec₁)))
+    (inv : σ → Prop)
+    (houter : ∀ {α : Type u} (oa : OracleComp spec₁ α),
+      support (simulateQ outer oa) = support oa)
+    (hinner : ∀ t s, inv s →
+      ∀ y ∈ support ((inner t).run s), inv y.2) :
+    ∀ t s, inv s →
+      ∀ y ∈ support ((outer.mapStateTBase inner t).run s), inv y.2 := by
+  intro t s hs y hy
+  change y ∈ support (simulateQ outer ((inner t).run s)) at hy
+  rw [houter] at hy
+  exact hinner t s hs y hy
 
 /-- Given implementations for oracles in `spec₁` and `spec₂` in terms of state monads for
 two different contexts `σ₁` and `σ₂`, implement the combined set `spec₁ + spec₂` in terms
@@ -140,6 +164,19 @@ namespace OracleComp
 variable {ι : Type*} {spec : OracleSpec ι} {m : Type u → Type v} [Monad m] [LawfulMonad m]
   {σ : Type u} (so : QueryImpl spec (StateT σ m))
 
+/-- Simulating a query followed by a continuation, under a stateful handler, runs the handler
+at that query and threads its output state into the simulation of the continuation.
+
+This is the `StateT`-run form of `simulateQ_query_bind`: it is the step lemma that drives an
+`OracleComp.inductionOn` over a computation simulated by a stateful oracle, which would
+otherwise be re-derived per handler at the call site. -/
+lemma run_simulateQ_query_bind {α : Type u} (t : spec.Domain)
+    (oa : spec.Range t → OracleComp spec α) (s : σ) :
+    (simulateQ so ((liftM (spec.query t) : OracleComp spec _) >>= oa)).run s =
+      (so t).run s >>= fun us => (simulateQ so (oa us.1)).run us.2 := by
+  simp [simulateQ_bind, simulateQ_query, StateT.run_bind, monad_norm,
+    OracleQuery.cont_query, OracleQuery.input_query]
+
 /-- If the state type is `Subsingleton`, then we can represent simulation in terms of `simulate'`,
 adding back any state at the end of the computation. -/
 lemma StateT_run_simulateQ_eq_map_run'_simulateQ {α} [Subsingleton σ]
@@ -214,74 +251,74 @@ variable {ι : Type*} {spec : OracleSpec ι}
 open Option ENNReal BigOperators
 open scoped OracleSpec.PrimitiveQuery
 
-section simulateQ_evalDist
+section simulateQ_evalSPMF
 
 variable [IsUniformSpec spec]
 
 /-- If a `StateT` oracle implementation preserves distributions (each oracle query produces a
 uniform distribution after discarding state), then `simulateQ` followed by `run'` preserves
-`evalDist`. This is the key lemma for security proofs: it shows that stateful oracle
+`evalSPMF`. This is the key lemma for security proofs: it shows that stateful oracle
 implementations (e.g. counting/logging oracles) don't change outcome probabilities. -/
-lemma evalDist_simulateQ_run'_eq_evalDist {σ τ : Type u}
+lemma evalSPMF_simulateQ_run'_eq_evalSPMF {σ τ : Type u}
     (so : QueryImpl spec (StateT σ (OracleComp spec)))
     (h : ∀ (t : spec.Domain) (s : σ),
-      𝒟[(so t).run' s] = OptionT.lift (PMF.uniformOfFintype (spec.Range t)))
+      𝒮[(so t).run' s] = OptionT.lift (PMF.uniformOfFintype (spec.Range t)))
     (s : σ) (oa : OracleComp spec τ) :
-    𝒟[(simulateQ so oa).run' s] = 𝒟[oa] := by
+    𝒮[(simulateQ so oa).run' s] = 𝒮[oa] := by
   induction oa using OracleComp.inductionOn generalizing s with
   | pure x => simp
   | query_bind t mx ih =>
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
       OracleQuery.input_query, StateT.run'_eq, StateT.run_bind]
-    rw [@map_bind (OracleComp spec), evalDist_bind]
+    rw [@map_bind (OracleComp spec), evalSPMF_bind]
     simp_rw [← StateT.run'_eq, ih]
-    rw [← evalDist_bind, ← bind_map_left Prod.fst, ← StateT.run'_eq, evalDist_bind, h t s]
-    exact (evalDist_query_bind t mx).symm
+    rw [← evalSPMF_bind, ← bind_map_left Prod.fst, ← StateT.run'_eq, evalSPMF_bind, h t s]
+    exact (evalSPMF_query_bind t mx).symm
 
 /-- Stronger version with computational hypothesis: if the implementation passes through
-queries exactly, then `simulateQ` preserves `evalDist`. -/
-lemma evalDist_simulateQ_run'_of_run'_eq_query {σ τ : Type u}
+queries exactly, then `simulateQ` preserves `evalSPMF`. -/
+lemma evalSPMF_simulateQ_run'_of_run'_eq_query {σ τ : Type u}
     (so : QueryImpl spec (StateT σ (OracleComp spec)))
     (h : ∀ t s, (so t).run' s = query t)
     (s : σ) (oa : OracleComp spec τ) :
-    𝒟[(simulateQ so oa).run' s] = 𝒟[oa] := by
+    𝒮[(simulateQ so oa).run' s] = 𝒮[oa] := by
   rw [StateT_run'_simulateQ_eq_self so h]
 
 /-- Corollary for `probOutput`: stateful simulation preserves output probabilities. -/
 lemma probOutput_simulateQ_run'_eq {σ τ : Type u}
     (so : QueryImpl spec (StateT σ (OracleComp spec)))
     (h : ∀ (t : spec.Domain) (s : σ),
-      𝒟[(so t).run' s] = OptionT.lift (PMF.uniformOfFintype (spec.Range t)))
+      𝒮[(so t).run' s] = OptionT.lift (PMF.uniformOfFintype (spec.Range t)))
     (s : σ) (oa : OracleComp spec τ) (x : τ) :
     Pr[= x | (simulateQ so oa).run' s] = Pr[= x | oa] :=
-  probOutput_congr rfl (evalDist_simulateQ_run'_eq_evalDist so h s oa)
+  probOutput_congr rfl (evalSPMF_simulateQ_run'_eq_evalSPMF so h s oa)
 
 /-- Corollary for `probEvent`: stateful simulation preserves event probabilities. -/
 lemma probEvent_simulateQ_run'_eq {σ τ : Type u}
     (so : QueryImpl spec (StateT σ (OracleComp spec)))
     (h : ∀ (t : spec.Domain) (s : σ),
-      𝒟[(so t).run' s] = OptionT.lift (PMF.uniformOfFintype (spec.Range t)))
+      𝒮[(so t).run' s] = OptionT.lift (PMF.uniformOfFintype (spec.Range t)))
     (s : σ) (oa : OracleComp spec τ) (p : τ → Prop) :
     Pr[ p | (simulateQ so oa).run' s] = Pr[ p | oa] :=
-  probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_simulateQ_run'_eq_evalDist so h s oa)
+  probEvent_congr' (fun _ _ => Iff.rfl) (evalSPMF_simulateQ_run'_eq_evalSPMF so h s oa)
 
 /-- If two stateful oracle implementations agree on the post-`run` distribution of every
-query (`𝒟[(impl₁ t).run s] = 𝒟[(impl₂ t).run s]`), then simulating any computation through
+query (`𝒮[(impl₁ t).run s] = 𝒮[(impl₂ t).run s]`), then simulating any computation through
 either yields the same distribution on the run. -/
-lemma evalDist_simulateQ_run_congr
+lemma evalSPMF_simulateQ_run_congr
     {ι' : Type} {spec' : OracleSpec ι'} {σ α : Type}
     (impl₁ impl₂ : QueryImpl spec' (StateT σ (OracleComp spec)))
     (h : ∀ (t : spec'.Domain) (s : σ),
-      𝒟[(impl₁ t).run s] = 𝒟[(impl₂ t).run s])
+      𝒮[(impl₁ t).run s] = 𝒮[(impl₂ t).run s])
     (comp : OracleComp spec' α) (s : σ) :
-    𝒟[(simulateQ impl₁ comp).run s] =
-      𝒟[(simulateQ impl₂ comp).run s] := by
+    𝒮[(simulateQ impl₁ comp).run s] =
+      𝒮[(simulateQ impl₂ comp).run s] := by
   induction comp using OracleComp.inductionOn generalizing s <;> simp_all
 
 @[deprecated (since := "2026-06-25")]
-alias evalDist_simulateQ_run_eq_of_impl_evalDist_eq := evalDist_simulateQ_run_congr
+alias evalSPMF_simulateQ_run_eq_of_impl_evalSPMF_eq := evalSPMF_simulateQ_run_congr
 
-end simulateQ_evalDist
+end simulateQ_evalSPMF
 
 section support_simulateQ_StateT
 
@@ -291,7 +328,7 @@ omit [IsUniformSpec spec] in
 /-- Simulating an `OracleComp` through a stateful implementation in monad `m` can only shrink the
 support: any output reachable after simulation was already reachable in the original computation
 (where oracle queries may return any value). This is the support-level analogue of
-`evalDist_simulateQ_run'_eq_evalDist`. -/
+`evalSPMF_simulateQ_run'_eq_evalSPMF`. -/
 theorem support_simulateQ_run'_subset
     {n : Type w → Type _} [Monad n] [LawfulMonad n] [MonadLiftT n SetM] [LawfulMonadLiftT n SetM]
     {σ : Type w}
@@ -343,7 +380,7 @@ lemma OptionT.probEvent_eq_one_of_simulateQ_support
     (oa : OracleComp spec (Option α)) (s₀ : σ) (P : α → Prop)
     (h : ∀ x ∈ support oa, ∃ a, x = some a ∧ P a) :
     Pr[P | OptionT.mk ((simulateQ impl oa).run' s₀)] = 1 := by
-  letI := Classical.decPred P
+  let := Classical.decPred P
   rw [probEvent_eq_one_iff]
   constructor
   · rw [OptionT.probFailure_eq, OptionT.run_mk, probFailure_eq_zero, _root_.zero_add]
@@ -368,7 +405,7 @@ lemma OptionT.probEvent_eq_one_of_simulateQ_support_bind
     (oa : OracleComp spec (Option α)) (P : α → Prop)
     (h : ∀ x ∈ support oa, ∃ a, x = some a ∧ P a) :
     Pr[P | OptionT.mk (do let s ← init; (simulateQ impl oa).run' s)] = 1 := by
-  letI := Classical.decPred P
+  let := Classical.decPred P
   rw [probEvent_eq_one_iff]
   refine ⟨?_, ?_⟩
   · rw [OptionT.probFailure_eq, OptionT.run_mk, add_eq_zero]

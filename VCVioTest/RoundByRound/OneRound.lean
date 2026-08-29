@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aristotle (Harmonic), Elias Judin
 -/
 
-import VCVio.CryptoFoundations.RoundByRound
+module
+
+public import VCVio.CryptoFoundations.RoundByRound
 
 /-!
 # One-round regression for round-by-round knowledge extraction
@@ -33,7 +35,27 @@ At least one theorem (`oneRound_escape_prob`) establishes the concrete probabili
 instead of restating `KnowledgeExtractionFamily.extractionCondition_iff_isBounded` by application.
 The final `oneRound_extractionCondition_iff_isBounded` still exercises the generic bridge on this
 concrete family.
+
+One caveat about the family above, and the reason for the companion below. `ExtractionCondition`
+is a conditional, and for `oneRound` its antecedent `error < Pr[escape]` is unsatisfiable at
+`1 / 2`, since escape has probability exactly `1 / 2`. So `oneRound_extractionCondition_half` is
+vacuously true: axiom-clean while asserting nothing about extraction. This is the failure class in
+`docs/agents/gotchas.md` §14, and `#print axioms` cannot detect it.
+
+`oneRoundValid` supplies the missing certificate. It differs from `oneRound` only in its relation,
+so that `extract`'s output satisfies it, and then:
+
+* `oneRoundValid_hypotheses_satisfiable` exhibits a context that is doomed **and** whose escape
+  probability exceeds the error, so the clause's antecedents are jointly inhabitable;
+* `oneRoundValid_extractionCondition_zero` discharges the clause at `error = 0` *because
+  extraction succeeds*, with the trigger firing rather than silent;
+* `oneRoundValid_isBounded_zero` reaches the relation-holds branch of the generic bridge, which
+  `oneRound` cannot;
+* `oneRoundValid_extensionalConditions` bundles all three clauses at `error = 0`, since showing
+  each hypothesis separately inhabited is weaker than a witness for the whole bundle.
 -/
+
+@[expose] public section
 
 open scoped ENNReal
 
@@ -160,5 +182,76 @@ theorem oneRound_extractionCondition_iff_isBounded (error : Fin 1 → ℝ≥0∞
     oneRound.ExtractionCondition error ↔
       oneRound.toKnowledgeTransitionFamily.IsBounded error :=
   oneRound.extractionCondition_iff_isBounded error
+
+/-! ### A family whose extraction succeeds under a firing trigger
+
+In `oneRound` the extracted witness always fails the relation, so `ExtractionCondition` holds at
+`1 / 2` only because the strict trigger `error < Pr[escape]` never fires. The family below flips
+the relation so that `extract`'s output satisfies it, which exercises the complementary situation:
+the trigger fires and the extraction condition holds *because extraction succeeds*. It also reaches
+the relation-holds branch of `extractionCondition_iff_isBounded`, which `oneRound` cannot. -/
+
+/-- `oneRound` with the relation satisfied by the extracted witness. Everything determining the
+doomed set, the challenge distribution and the escape event is unchanged; only `relation` flips
+from `w = true` to `w = false`, so `extract`'s constant output `false` now satisfies it. -/
+noncomputable def oneRoundValid : KnowledgeExtractionFamily 1 :=
+  { oneRound with relation := fun _ w => w = false }
+
+/-- The escape event and challenge sampler are literally those of `oneRound`. -/
+theorem oneRoundValid_escape_prob (context : oneRoundValid.Context (0 : Fin 1).castSucc)
+    (message : oneRoundValid.Message 0) :
+    Pr[oneRoundValid.escapeEvent 0 context message | oneRoundValid.sampleChallenge 0] = 1 / 2 :=
+  oneRound_escape_prob context message
+
+/-- The directly extracted witness genuinely **satisfies** the relation, the mirror image of
+`oneRound_relation_fails`. -/
+theorem oneRoundValid_relation_holds (context : oneRoundValid.Context (0 : Fin 1).castSucc)
+    (message : oneRoundValid.Message 0) :
+    oneRoundValid.relation (oneRoundValid.statement (0 : Fin 1).castSucc context)
+      (oneRoundValid.extract 0 context message) := by
+  simp only [oneRoundValid, oneRound]
+
+/-- The strict escape trigger fires at `error = 0`, since escape has probability `1 / 2 > 0`. This
+is the hypothesis `oneRound` can never discharge. -/
+theorem oneRoundValid_trigger_fires (context : oneRoundValid.Context (0 : Fin 1).castSucc)
+    (message : oneRoundValid.Message 0) :
+    (0 : ℝ≥0∞) < Pr[oneRoundValid.escapeEvent 0 context message
+      | oneRoundValid.sampleChallenge 0] := by
+  rw [oneRoundValid_escape_prob context message]
+  exact ENNReal.half_pos (by norm_num)
+
+/-- **Satisfiability of the extraction clause's hypotheses.** `ExtractionCondition` is a
+conditional, so proving it says nothing unless its antecedents are jointly inhabitable: a context
+that is doomed *and* whose escape probability exceeds the error. Here both hold at once, at
+`error = 0`, for the initial context. Without this the clause below would be discharged by
+hypotheses no instance can meet — the vacuity that `#print axioms` cannot see. -/
+theorem oneRoundValid_hypotheses_satisfiable :
+    ∃ (context : oneRoundValid.Context (0 : Fin 1).castSucc) (message : oneRoundValid.Message 0),
+      oneRoundValid.doomed (0 : Fin 1).castSucc context ∧
+        (0 : ℝ≥0∞) < Pr[oneRoundValid.escapeEvent 0 context message
+          | oneRoundValid.sampleChallenge 0] :=
+  ⟨(0 : Fin 2), (), Or.inl rfl, oneRoundValid_trigger_fires (0 : Fin 2) ()⟩
+
+/-- The extraction condition holds at `error = 0` because extraction succeeds, not because the
+trigger stays silent — `oneRoundValid_hypotheses_satisfiable` exhibits a context meeting both
+antecedents. Read against `oneRound_not_extractionCondition_zero`, which fails at the same error
+with a failing extractor, this pins down that `ExtractionCondition` measures the extractor rather
+than the trigger. -/
+theorem oneRoundValid_extractionCondition_zero :
+    oneRoundValid.ExtractionCondition (fun _ => 0) := by
+  intro round context message _ _
+  exact oneRoundValid_relation_holds context message
+
+/-- Through the generic bridge, the doomed-subtype transition family is bounded by `0`: the bad
+event is empty because the extracted witness satisfies the relation. This is the relation-holds
+branch of `extractionCondition_iff_isBounded`. -/
+theorem oneRoundValid_isBounded_zero :
+    oneRoundValid.toKnowledgeTransitionFamily.IsBounded (fun _ => 0) :=
+  (oneRoundValid.extractionCondition_iff_isBounded _).mp oneRoundValid_extractionCondition_zero
+
+/-- All three extensional clauses hold for `oneRoundValid` at error `0`, with the extraction clause
+discharged under a firing trigger. -/
+theorem oneRoundValid_extensionalConditions : oneRoundValid.ExtensionalConditions (fun _ => 0) :=
+  ⟨oneRound_initialCondition, oneRound_terminalCondition, oneRoundValid_extractionCondition_zero⟩
 
 end VCVioTest.RoundByRound

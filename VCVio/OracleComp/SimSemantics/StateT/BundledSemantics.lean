@@ -3,12 +3,14 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.Append
-import VCVio.OracleComp.SimSemantics.StateT.Basic
-import VCVio.EvalDist.Defs.Semantics
-import ToMathlib.Control.StateT
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.EvalDist.Defs.Semantics
+public import ToMathlib.Control.StateT
 
 /-!
 # Bundled Subprobability Semantics for Oracle Simulations
@@ -21,6 +23,8 @@ the crypto constructions in this repo:
 3. the final semantics is obtained by running the hidden state from a fixed initial cache and then
    observing the resulting `ProbComp` as an `SPMF`
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 
@@ -50,12 +54,12 @@ This holds because `interpret` is the bundled monad morphism `simulateQ'`, and t
 observer `fun mx => toSPMF (StateT.run' mx s)` preserves `<$>` even though it is not a full
 monad morphism: `<$>` does not thread state, so `Prod.fst <$> (f <$> mx).run s` factors as
 `f <$> (Prod.fst <$> mx.run s) = f <$> StateT.run' mx s`. -/
-@[simp] lemma withStateOracle_evalDist_map
+@[simp] lemma withStateOracle_evalSPMF_map
     {ι : Type} {hashSpec : OracleSpec ι} {σ : Type}
     (hashImpl : QueryImpl hashSpec (StateT σ ProbComp)) (s : σ)
     {α β : Type} (f : α → β) (mx : OracleComp (unifSpec + hashSpec) α) :
-    (SPMFSemantics.withStateOracle hashImpl s).evalDist (f <$> mx) =
-      f <$> (SPMFSemantics.withStateOracle hashImpl s).evalDist mx := by
+    (SPMFSemantics.withStateOracle hashImpl s).evalSPMF (f <$> mx) =
+      f <$> (SPMFSemantics.withStateOracle hashImpl s).evalSPMF mx := by
   set impl := (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) + hashImpl
   change (liftM (StateT.run' (simulateQ impl (f <$> mx)) s) : SPMF _) =
     f <$> (liftM (StateT.run' (simulateQ impl mx) s) : SPMF _)
@@ -63,17 +67,17 @@ monad morphism: `<$>` does not thread state, so `Prod.fst <$> (f <$> mx).run s` 
 
 /-- `withStateOracle` commutes with the specific `>>= pure ∘ f` pattern produced by
 a do-block returning a pure value at the end. A direct corollary of
-`withStateOracle_evalDist_map`. -/
-lemma withStateOracle_evalDist_bind_pure
+`withStateOracle_evalSPMF_map`. -/
+lemma withStateOracle_evalSPMF_bind_pure
     {ι : Type} {hashSpec : OracleSpec ι} {σ : Type}
     (hashImpl : QueryImpl hashSpec (StateT σ ProbComp)) (s : σ)
     {α β : Type} (mx : OracleComp (unifSpec + hashSpec) α) (f : α → β) :
-    (SPMFSemantics.withStateOracle hashImpl s).evalDist (mx >>= fun x => pure (f x)) =
-      f <$> (SPMFSemantics.withStateOracle hashImpl s).evalDist mx := by
+    (SPMFSemantics.withStateOracle hashImpl s).evalSPMF (mx >>= fun x => pure (f x)) =
+      f <$> (SPMFSemantics.withStateOracle hashImpl s).evalSPMF mx := by
   calc
-    _ = (SPMFSemantics.withStateOracle hashImpl s).evalDist (f <$> mx) := by
+    _ = (SPMFSemantics.withStateOracle hashImpl s).evalSPMF (f <$> mx) := by
       rw [map_eq_bind_pure_comp]
       rfl
-    _ = _ := withStateOracle_evalDist_map hashImpl s f mx
+    _ = _ := withStateOracle_evalSPMF_map hashImpl s f mx
 
 end SPMFSemantics

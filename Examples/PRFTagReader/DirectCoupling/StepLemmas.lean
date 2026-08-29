@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.DirectCoupling
-import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
+module
+
+public import Examples.PRFTagReader.DirectCoupling
+public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
 
 /-!
 # PRF Tag/Reader Protocol — Direct-Coupling Handler Step Lemmas
@@ -23,9 +25,11 @@ reads the realized slot `⟨s.sessionsUsed tag, hslot⟩`, which is non-zero the
 
 * `slotPositive_MFine_tag_step` — the M-Fine tag-step shape at slot-positive states.
 * `slotPositive_S_tag_step` — the S tag-step shape at slot-positive states.
-* `evalDist_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant` — Fine-run distributions
+* `evalSPMF_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant` — Fine-run distributions
   after a `cacheBad` projection do not depend on the initial state's `cacheBad` field.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -134,24 +138,24 @@ produce identical Fine-run distributions after the projection `with cacheBad := 
 pointwise Fine→original bridge (`…_forget_cacheBad_pointwise_eq`) with the original-handler
 irrelevance (`…_multipleBadTableHandler_cacheBad_irrelevant`). Used in the reader case to discard
 the per-step `multipleBadReaderAdvance` perturbation of the initial state before applying the IH. -/
-lemma evalDist_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
+lemma evalSPMF_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
     {α : Type} (g : TagId × Nonce → Digest)
     (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (s : UnlinkState TagId) (sB sB' : UnlinkBadState TagId Nonce Digest) (cb : Bool)
     (hSU : sB.sessionsUsed = sB'.sessionsUsed)
     (hR : sB.responses = sB'.responses) (hB : sB.bad = sB'.bad) :
-    𝒟[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+    𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
         (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
           (sessionsPerTag := sessionsPerTag) g gFine) oa).run (s, sB)]
-      = 𝒟[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+      = 𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
         (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
           (sessionsPerTag := sessionsPerTag) g gFine) oa).run (s, sB')] := by
-  rw [evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
+  rw [evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
         g gFine oa (s, sB),
-      evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
+      evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
         g gFine oa (s, sB')]
-  exact evalDist_simulateQ_multipleBadTableHandler_cacheBad_irrelevant g oa s sB sB' cb hSU hR hB
+  exact evalSPMF_simulateQ_multipleBadTableHandler_cacheBad_irrelevant g oa s sB sB' cb hSU hR hB
 
 end UnlinkReduction
 

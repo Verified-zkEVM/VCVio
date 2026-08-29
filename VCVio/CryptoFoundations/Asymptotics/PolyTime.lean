@@ -3,8 +3,11 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.CryptoFoundations.Asymptotics.Security
-import VCVio.OracleComp.Coinductive.PolyTime
+
+module
+
+public import VCVio.CryptoFoundations.Asymptotics.Security
+public import VCVio.OracleComp.Coinductive.PolyTime
 
 /-!
 # Security Against Polynomial-Time Adversaries
@@ -17,6 +20,8 @@ instantiates the abstract `isPPT` slot of `SecurityGame.secureAgainst` with
 `secureAgainstPolyTime_of_advantage_le_mul_totalQueries` is where the certificate's
 derived query bound (`PolyTimeWitness.queryBound`) does quantitative work.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec Computability ENNReal
 

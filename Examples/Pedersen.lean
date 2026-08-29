@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.CommitmentScheme
-import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
-import VCVio.ProgramLogic.NotationCore
+
+module
+public import VCVio.CryptoFoundations.CommitmentScheme
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+public import VCVio.ProgramLogic.NotationCore
 
 /-!
 # Pedersen Commitment Scheme
@@ -25,6 +27,8 @@ Uses the same additive `Module F G` notation as `DiffieHellman.lean`:
 - Commitment to message `m : F`: sample `d ← $ᵗ F`, output `(d • g + m • h, d)`
 - Verification: check `c = d • g + m • h`
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal DiffieHellman CommitmentScheme
 
@@ -98,9 +102,9 @@ theorem perfectlyHiding [Finite F] (hg : Function.Bijective (· • g : F → G)
   let _ : Fintype F := Fintype.ofFinite F
   intro pp _hpp m₁ m₂
   rw [commit_fst_eq_map, commit_fst_eq_map]
-  have h₁ := evalDist_map_bijective_uniform_cross (α := F) (β := G)
+  have h₁ := evalSPMF_map_bijective_uniform_cross (α := F) (β := G)
     (fun d => d • g + m₁ • pp) (commit_fst_bijective hg pp m₁)
-  have h₂ := evalDist_map_bijective_uniform_cross (α := F) (β := G)
+  have h₂ := evalSPMF_map_bijective_uniform_cross (α := F) (β := G)
     (fun d => d • g + m₂ • pp) (commit_fst_bijective hg pp m₂)
   exact h₁.trans h₂.symm
 

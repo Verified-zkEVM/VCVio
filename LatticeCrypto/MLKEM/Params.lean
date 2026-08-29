@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # ML-KEM Parameters
@@ -12,6 +14,8 @@ This file collects the fixed constants and approved parameter sets from FIPS 203
 The development stays generic over the variable parameters while exposing the three
 named NIST-approved instantiations.
 -/
+
+@[expose] public section
 
 
 namespace MLKEM

@@ -3,8 +3,11 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.Coinductive.CoinFold
-import ToMathlib.Data.BitVec
+
+module
+
+public import VCVio.OracleComp.Coinductive.CoinFold
+public import ToMathlib.Data.BitVec
 
 /-!
 # Practical Polynomial-Time Constructions
@@ -26,6 +29,8 @@ witness constructor, at pinned canonical boundaries:
   the unbounded-advice collapse the advice bound exists to prevent — a genuine `f`
   needs a genuine machine, supplied through `OracleComp.isPolyTime_pure_of_witnesses`.
 -/
+
+@[expose] public section
 
 open OracleSpec Computability
 

@@ -3,8 +3,11 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.Coinductive.Machine
-import ToMathlib.Computability.BitEncoding
+
+module
+
+public import VCVio.OracleComp.Coinductive.Machine
+public import ToMathlib.Computability.BitEncoding
 
 /-!
 # Turing-Machine-Grounded Polynomial-Time Adversaries
@@ -74,6 +77,10 @@ it (closure properties, concrete constructions, asymptotic security) is pinned t
 `OracleSpec.{0, 0}` and `Type`: Cslib's single-tape machines, the bit-string
 encodings, `Polynomial ℕ`, and the program logic's `wp` all live at `Type 0`.
 -/
+
+@[expose] public section
+
+attribute [local implicit_reducible] PFunctor.Obj
 
 open OracleSpec OracleComp Computability
 
@@ -229,7 +236,9 @@ continuation: the coherence between `updateFlat` and the run semantics. -/
 theorem updateFlat_of_view_query [DecidableEq ι] (M : OracleMachine spec α β) {s : M.State}
     {t : ι} {next : spec.Range t → M.State} (hview : M.view s = Sum.inr ⟨t, next⟩)
     (r : spec.Range t) : M.updateFlat (s, ⟨t, r⟩) = next r := by
-  simp [updateFlat, hview]
+  unfold updateFlat
+  rw [hview]
+  simp
 
 end OracleComp.OracleMachine
 
@@ -557,7 +566,7 @@ state returns immediately. The input-state sibling of `DynComputation.ofFn`. -/
 def OracleComp.OracleMachine.ofPureFn {spec : OracleSpec.{0, 0} ι} {α β : Type} (f : α → β) :
     OracleMachine spec α β where
   State := α
-  toDynSystem := (fun s => Sum.inl (f s)) ⇆ fun _ => PEmpty.elim
+  toDynSystem := (fun s => Sum.inr (f s)) ⇆ fun _ => PEmpty.elim
   init := id
 
 @[simp] theorem OracleComp.OracleMachine.view_ofPureFn {spec : OracleSpec.{0, 0} ι} {α β : Type}
@@ -569,7 +578,7 @@ theorem OracleComp.OracleMachine.updateFlat_ofPureFn [DecidableEq ι]
     {spec : OracleSpec.{0, 0} ι} {α β : Type} (f : α → β) :
     (OracleMachine.ofPureFn (spec := spec) f).updateFlat = Prod.fst := by
   funext p
-  simp [OracleMachine.updateFlat]
+  rfl
 
 end SingleSpec
 

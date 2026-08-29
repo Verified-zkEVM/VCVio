@@ -3,9 +3,11 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.Coinductive.Machine
-import VCVio.OracleComp.Coinductive.Responder
-import PolyFun.PFunctor.Handler.Normalization
+
+module
+public import VCVio.OracleComp.Coinductive.Machine
+public import VCVio.OracleComp.Coinductive.Responder
+public import PolyFun.PFunctor.Handler.Normalization
 
 /-!
 # Wired Machine Runs: Fuelled Machines Against Stateful Responders
@@ -40,6 +42,8 @@ combinator behind same-interface security reductions (`OracleStrategy.reduce` is
 sub-spec special case).
 -/
 
+@[expose] public section
+
 universe u
 
 open OracleSpec PFunctor PFunctor.DynSystem
@@ -57,18 +61,19 @@ handler and run from the responder state. Input pair is responder-state-first
 state)` in `StateT.run` order. Early stopping at the first returned value is
 inherited from `runWith`. -/
 noncomputable def runAgainst (M : OracleMachine spec α β) (R : ProbResponder spec)
-    (k : ℕ) (p : R.State × M.State) : SPMF (Option β × R.State) :=
+    [R.IsExecutable] (k : ℕ) (p : R.State × M.State) : SPMF (Option β × R.State) :=
   (M.runWith R.toQueryImpl k p.2).run p.1
 
 /-- Regression canary: the wired run is definitionally the stateful `runWith` in
 `StateT.run` form. -/
 theorem runAgainst_eq_runWith_run (M : OracleMachine spec α β) (R : ProbResponder spec)
-    (k : ℕ) (r : R.State) (s : M.State) :
+    [R.IsExecutable] (k : ℕ) (r : R.State) (s : M.State) :
     M.runAgainst R k (r, s) = (M.runWith R.toQueryImpl k s).run r := rfl
 
 /-- A returned machine state's wired run is Dirac on its value and the unchanged
 responder state, at every fuel. -/
 theorem runAgainst_of_view_return (M : OracleMachine spec α β) (R : ProbResponder spec)
+    [R.IsExecutable]
     {s : M.State} {b : β} (hview : M.view s = Sum.inl b) (k : ℕ) (r : R.State) :
     M.runAgainst R k (r, s) = pure (some b, r) := by
   rw [runAgainst_eq_runWith_run, M.runWith_return R.toQueryImpl k s b hview]
@@ -77,7 +82,7 @@ theorem runAgainst_of_view_return (M : OracleMachine spec α β) (R : ProbRespon
 /-- Zero fuel cuts an unresolved query off with `none`, leaving the responder state
 unchanged. -/
 theorem runAgainst_zero_of_view_query (M : OracleMachine spec α β)
-    (R : ProbResponder spec) {s : M.State} {t : spec.Domain}
+    (R : ProbResponder spec) [R.IsExecutable] {s : M.State} {t : spec.Domain}
     {next : spec.Range t → M.State} (hview : M.view s = Sum.inr ⟨t, next⟩)
     (r : R.State) : M.runAgainst R 0 (r, s) = pure (none, r) := by
   rw [runAgainst_eq_runWith_run, M.runWith_query_zero R.toQueryImpl s t next hview]
@@ -87,11 +92,12 @@ theorem runAgainst_zero_of_view_query (M : OracleMachine spec α β)
 jointly samples the responder's answer and next state, then continues — PolyFun's
 `runWith_query_succ_stateT` read at `m := SPMF`. -/
 theorem runAgainst_succ_of_view_query (M : OracleMachine spec α β)
-    (R : ProbResponder spec) {s : M.State} {t : spec.Domain}
+    (R : ProbResponder spec) [R.IsExecutable] {s : M.State} {t : spec.Domain}
     {next : spec.Range t → M.State} (hview : M.view s = Sum.inr ⟨t, next⟩)
     (k : ℕ) (r : R.State) :
     M.runAgainst R (k + 1) (r, s) =
-      R.answer r t >>= fun q => M.runAgainst R k (q.2, next q.1) :=
+      ProbResponder.IsExecutable.answerSPMF (R := R) r t >>= fun q =>
+        M.runAgainst R k (q.2, next q.1) :=
   M.runWith_query_succ_stateT R.toQueryImpl k s t next hview r
 
 /-! ## Memoryless recovery -/
@@ -120,11 +126,13 @@ form of `OracleStrategy.iterateAgainst_ofHandlerFamily`. -/
     | inr q =>
       obtain ⟨t, next⟩ := q
       calc M.runAgainst (.ofHandlerFamily h) (k + 1) (γ, s)
-          = (ProbResponder.ofHandlerFamily h).answer γ t >>= fun p =>
+          = ProbResponder.IsExecutable.answerSPMF
+              (R := ProbResponder.ofHandlerFamily h) γ t >>= fun p =>
               M.runAgainst (.ofHandlerFamily h) k (p.2, next p.1) :=
             M.runAgainst_succ_of_view_query (.ofHandlerFamily h) hview k γ
         _ = h γ t >>= fun a =>
               (fun ob => (ob, γ)) <$> M.runWith (h γ) k (next a) := by
+            rw [ProbResponder.answerSPMF_ofSPMF]
             simp only [ProbResponder.ofHandlerFamily, bind_map_left]
             exact bind_congr fun a => ih (next a)
         _ = (fun ob => (ob, γ)) <$> M.runWith (h γ) (k + 1) s := by
@@ -145,7 +153,10 @@ pulled back along `w`. Pure factoring, no fuel induction: `unroll_wrap` translat
 unrolled query tree, and `ProbResponder.liftM_mapLens_pullback` re-reads the
 translation through the pulled-back handler. -/
 theorem runWith_wrap (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
-    (M : OracleMachine spec α β) (R : ProbResponder spec') (k : ℕ) (s : M.State) :
+    (M : OracleMachine spec α β) (R : ProbResponder spec') [R.IsExecutable]
+    [∀ t, letI := (R.pullback w).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)]
+    (k : ℕ) (s : M.State) :
     (M.wrap w).runWith R.toQueryImpl k s =
       M.runWith (R.pullback w).toQueryImpl k s := by
   simp only [DynComputation.runWith]
@@ -156,7 +167,10 @@ theorem runWith_wrap (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
 `runWith_wrap`. This is the workhorse of same-interface reductions at the game
 level. -/
 theorem runAgainst_wrap (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
-    (M : OracleMachine spec α β) (R : ProbResponder spec') (k : ℕ) (r : R.State)
+    (M : OracleMachine spec α β) (R : ProbResponder spec') [R.IsExecutable]
+    [∀ t, letI := (R.pullback w).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)]
+    (k : ℕ) (r : R.State)
     (s : M.State) :
     runAgainst (M.wrap w) R k (r, s) = M.runAgainst (R.pullback w) k (r, s) := by
   rw [runAgainst_eq_runWith_run, runAgainst_eq_runWith_run, runWith_wrap]

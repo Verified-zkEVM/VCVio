@@ -3,7 +3,10 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.Coinductive.PolyTimeClosure
+
+module
+
+public import VCVio.OracleComp.Coinductive.PolyTimeClosure
 
 /-!
 # Bounded Coin Fold: a Reusable Polynomial-Time Construction
@@ -30,6 +33,8 @@ Specialized to `coinSpec` (the coin oracle, answers `Bool`): this keeps the simu
 free of the dependent answer-type transport that an arbitrary-spec version would incur.
 Generalizing the fold to an arbitrary oracle is future work.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp Computability
 

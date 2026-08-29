@@ -3,8 +3,10 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import Mathlib.Data.Nat.Log
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import Mathlib.Data.Nat.Log
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # SLH-DSA Parameters
@@ -23,6 +25,8 @@ The Winternitz and FORS lengths are derived from the primary parameters exactly 
 - NIST FIPS 205 (SLH-DSA), Sections 4, 5, 9, 10, 11 (Table 2 parameter sets)
 - NIST SP 800-230 ipd (the reduced 2²⁴-usage parameter set)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA

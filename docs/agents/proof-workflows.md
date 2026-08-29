@@ -327,7 +327,7 @@ distribution-side observable:
 | `proj_simulateQ_preInsert` / `proj_simulateQ_postInsert` | Strip the instrumentation: `proj (simulateQ (so.preInsert nx) oa) = simulateQ so oa`. |
 | `probFailure_proj_simulateQ_*` | Failure probability is preserved by the wrapper. |
 | `NeverFail_proj_simulateQ_*_iff` | `NeverFail` lifts through the wrapper iff it holds on the base. |
-| `evalDist_proj_simulateQ_*` / `probOutput_proj_simulateQ_*` | Output-marginal distribution / probability is unchanged. |
+| `evalSPMF_proj_simulateQ_*` / `probOutput_proj_simulateQ_*` | Output-marginal distribution / probability is unchanged. |
 | `support_proj_simulateQ_*` / `finSupport_proj_simulateQ_*` | Output-marginal support / `Finset` support is unchanged. |
 | `simulateQ_preInsert.induct` / `simulateQ_postInsert.induct` (`@[elab_as_elim]`) | Induction principle parametric in the projection — useful when the bridges above are too rigid. |
 
@@ -411,7 +411,7 @@ before changing definitions or tactics for eRHL, pRHL, or apRHL.
 After the `HasQuery` cutover, the bare `query t` is `HasQuery.query t` and needs an expected type so Lean can pick the ambient monad. Either ascribe `(query t : OracleComp spec _)`, or use the primitive form `spec.query t : OracleQuery spec _` (e.g. when applying `liftM` or projecting `OracleQuery.cont`).
 
 ### "failed to synthesize ... MonadLiftT (OracleComp spec) SPMF"
-For `OracleComp spec`, add `[IsProbabilitySpec spec]` when you need `evalDist` or `Pr[...]`. Add `[IsUniformSpec spec]` when you need uniform/cardinality facts or lemmas relating `support` to nonzero probability. If you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`.
+For `OracleComp spec`, add `[IsProbabilitySpec spec]` when you need `evalSPMF` or `Pr[...]`. Add `[IsUniformSpec spec]` when you need uniform/cardinality facts or lemmas relating `support` to nonzero probability. If you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`.
 
 ### Universe mismatch around `SubSpec`
 `OracleComp` has 3 universe parameters, `SubSpec` has 6. Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.

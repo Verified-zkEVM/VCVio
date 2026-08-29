@@ -4,12 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Lacramioara Astefanoaei
 -/
 
-import VCVio.CryptoFoundations.PRF
-import VCVio.CryptoFoundations.MacAlg
-import VCVio.OracleComp.QueryTracking.LoggingOracle
-import VCVio.OracleComp.QueryTracking.CachingOracle
-import VCVio.OracleComp.SimSemantics.Append
-import ToMathlib.Control.StateT
+module
+
+public import VCVio.CryptoFoundations.PRF
+public import VCVio.CryptoFoundations.MacAlg
+public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.SimSemantics.Append
+public import ToMathlib.Control.StateT
 
 /-!
 # Deterministic MAC from a PRF
@@ -37,6 +39,8 @@ The standard construction of a message authentication code from a pseudorandom f
   (https://crypto.stanford.edu/~dabo/cryptobook/BonehShoup_0_6.pdf)
 -/
 
+@[expose] public section
+
 open OracleComp OracleSpec ENNReal
 
 namespace PRFScheme
@@ -57,7 +61,7 @@ theorem toMacAlg_perfectlyComplete [DecidableEq R] (prf : PRFScheme K D R) :
     prf.toMacAlg.PerfectlyComplete ProbCompRuntime.probComp := by
   intro msg
   simp only [toMacAlg, pure_bind, decide_true]
-  change Pr[= true | do let _ ← prf.keygen; pure true] = 1
+  change Pr[= true | 𝒮[(do let _ ← prf.keygen; pure true : ProbComp Bool)]] = 1
   simp
 
 /-! ## Security Reduction (Boneh-Shoup Theorem 6.2)
@@ -79,13 +83,13 @@ has exactly one valid tag, so the two notions coincide.
 variable [DecidableEq D] [DecidableEq R]
 
 /-- Query the `(D →ₒ R)` component of the PRF oracle spec. -/
-private def prfFuncQuery (msg : D) :
+def prfFuncQuery (msg : D) :
     OracleComp (unifSpec + (D →ₒ R)) R :=
   (unifSpec + (D →ₒ R)).query (Sum.inr msg)
 
 /-- Oracle implementation for the reduction: forwards `unifSpec` queries transparently
 and forwards `(D →ₒ R)` queries to the ambient oracle while logging them. -/
-noncomputable def macToPRFQueryImpl :
+def macToPRFQueryImpl :
     QueryImpl (unifSpec + (D →ₒ R))
       (WriterT (QueryLog (D →ₒ R)) (OracleComp (unifSpec + (D →ₒ R)))) :=
   let fwdTag : QueryImpl (D →ₒ R) (OracleComp (unifSpec + (D →ₒ R))) :=
@@ -99,7 +103,7 @@ noncomputable def macToPRFQueryImpl :
 logged-and-forwarded oracles, then verifies the forgery via one additional oracle query.
 If the forger makes Q tagging queries, the reduction makes Q + 1 oracle queries total;
 this can be tracked separately via `IsTotalQueryBound`. -/
-noncomputable def macToPRFReduction (prf : PRFScheme K D R)
+def macToPRFReduction (prf : PRFScheme K D R)
     (adversary : (prf.toMacAlg).UF_CMA_Adversary) :
     PRFAdversary D R :=
   ((simulateQ (macToPRFQueryImpl (D := D) (R := R)) adversary.main).run >>=
@@ -143,9 +147,8 @@ private theorem simulateQ_prfReal_macToPRFQueryImpl_run
       rw [simulateQ_prfRealQueryImpl_liftComp]
   | inr d =>
       ext
-      simp [QueryImpl.writerTMapBase, macToPRFQueryImpl, ufCmaImpl,
-        prfFuncQuery, prfRealQueryImpl, toMacAlg, MacAlg.taggingOracle,
-        map_eq_bind_pure_comp]
+      simp [QueryImpl.writerTMapBase, macToPRFQueryImpl, ufCmaImpl, prfFuncQuery,
+        toMacAlg, MacAlg.taggingOracle, map_eq_bind_pure_comp]
 
 /-- The prfRealExp with the reduction equals the UF-CMA body as a `ProbComp` computation. -/
 private theorem prfRealExp_macToPRFReduction_eq_body (prf : PRFScheme K D R)
@@ -167,6 +170,8 @@ theorem prfRealExp_macToPRFReduction_eq_UF_CMA_Exp (prf : PRFScheme K D R)
     Pr[= true | prf.prfRealExp (macToPRFReduction prf adversary)] =
       MacAlg.UF_CMA_Advantage ProbCompRuntime.probComp adversary := by
   rw [prfRealExp_macToPRFReduction_eq_body]
+  unfold MacAlg.UF_CMA_Advantage
+  rw [probOutput_def, probOutput_def]
   rfl
 
 /-- The ideal experiment decomposes as: run the forger (under the random-oracle simulation
@@ -205,9 +210,9 @@ private theorem log_cache_invariant_step_unif [SampleableType R]
     (hmem : z ∈ support ((simulateQ prfIdealQueryImpl
       (simulateQ macToPRFQueryImpl (liftM (OracleSpec.query (Sum.inl n)) >>= f)).run).run cache₀)) :
     cache₀ msg ≠ none ∨ QueryLog.wasQueried z.1.2 msg = true := by
-  simp only [simulateQ_bind, macToPRFQueryImpl, WriterT.run_bind', simulateQ_spec_query,
-    QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
-    StateT.run_bind] at hmem
+  rw [macToPRFQueryImpl, QueryImpl.simulateQ_add_query_bind_left] at hmem
+  simp only [QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
+    WriterT.run_bind', simulateQ_bind, StateT.run_bind] at hmem
   simp only [support_bind, Set.mem_iUnion, exists_prop] at hmem
   obtain ⟨⟨⟨val, log_q⟩, cache_mid⟩, hu, hmem⟩ := hmem
   change ((val, log_q), cache_mid) ∈ support
@@ -251,8 +256,8 @@ private theorem log_cache_invariant_step_query [SampleableType R]
     (hmem : z ∈ support ((simulateQ prfIdealQueryImpl (simulateQ macToPRFQueryImpl
       (liftM (OracleSpec.query (Sum.inr msg')) >>= f)).run).run cache₀)) :
     cache₀ msg ≠ none ∨ QueryLog.wasQueried z.1.2 msg = true := by
-  simp only [simulateQ_bind, macToPRFQueryImpl, prfFuncQuery, WriterT.run_bind',
-    simulateQ_spec_query, QueryImpl.add_apply_inr, StateT.run_bind] at hmem
+  rw [macToPRFQueryImpl, QueryImpl.simulateQ_add_query_bind_right] at hmem
+  simp only [prfFuncQuery, WriterT.run_bind', simulateQ_bind, StateT.run_bind] at hmem
   simp only [support_bind, Set.mem_iUnion, exists_prop] at hmem
   obtain ⟨⟨⟨val, log_q⟩, cache_mid⟩, hro, hmem⟩ := hmem
   dsimp only [Prod.fst, Prod.snd] at hmem

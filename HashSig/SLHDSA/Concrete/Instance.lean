@@ -3,8 +3,10 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.Scheme
-import HashSig.SLHDSA.Concrete.Sha2
+
+module
+public import HashSig.SLHDSA.RandomOracle
+public import HashSig.SLHDSA.Concrete.Sha2
 
 /-!
 # Concrete SLH-DSA-SHA2-128-24 instantiation
@@ -29,6 +31,8 @@ FORS trees — ~`10^9` hashes); `verify` is ~`400` hashes and is the executable 
 
 - NIST FIPS 205, §11.2.1 (SHA-2 category-1 instantiation), Fig 17 (signature layout)
 -/
+
+@[expose] public section
 
 
 namespace SLHDSA.Concrete
@@ -55,23 +59,41 @@ def zeros48 : ByteArray := ByteArray.mk (Array.replicate 48 0)
 def thashPrefix (pkSeed : Bytes 16) (adrs : Adrs) : ByteArray :=
   b16ToBA pkSeed ++ zeros48 ++ ByteArray.mk adrs.compressSha2.toArray
 
+/-- The fixed-width 22-byte SHA-2 address key. -/
+def shaAdrsKey (adrs : Adrs) : Bytes 22 :=
+  ⟨adrs.compressSha2.toArray, by simp [Adrs.compressSha2, Adrs.toBytesBE]⟩
+
+/-- The fixed-width SHA-2 public-hash key is exactly the FIPS 205 compressed address `ADRSc`. -/
+@[simp]
+theorem shaAdrsKey_toList (adrs : Adrs) :
+    (shaAdrsKey adrs).toList = adrs.compressSha2 := by
+  simp [shaAdrsKey]
+
+/-- The shared SHA-2 thash prefix from an already-canonicalized `ADRSc`. -/
+def thashPrefixEncoded (pkSeed : Bytes 16) (encodedAdrs : Bytes 22) : ByteArray :=
+  b16ToBA pkSeed ++ zeros48 ++ ByteArray.mk encodedAdrs.toArray
+
 /-- Concatenate a list of 16-byte nodes. -/
 def concatNodes (ys : List (Bytes 16)) : ByteArray :=
   ys.foldl (fun acc y => acc ++ b16ToBA y) ByteArray.empty
 
 /-! ### The SHA-2 tweakable hash family (FIPS 205 §11.2.1) -/
 
+/-- The common variable-arity SHA-2 tweakable hash underlying `F`, `H = T₂`, and `T_ℓ`. -/
+def shaThash (pkSeed : Bytes 16) (encodedAdrs : Bytes 22) (ys : List (Bytes 16)) : Bytes 16 :=
+  baToBytes (sha256 (thashPrefixEncoded pkSeed encodedAdrs ++ concatNodes ys)) 16
+
 /-- `F(PK.seed, ADRS, M₁) = Trunc₁₆(SHA-256(PK.seed ‖ 0^48 ‖ ADRSc ‖ M₁))`. -/
 def shaF (pkSeed : Bytes 16) (adrs : Adrs) (y : Bytes 16) : Bytes 16 :=
-  baToBytes (sha256 (thashPrefix pkSeed adrs ++ b16ToBA y)) 16
+  shaThash pkSeed (shaAdrsKey adrs) [y]
 
 /-- `H(PK.seed, ADRS, M_l ‖ M_r) = Trunc₁₆(SHA-256(PK.seed ‖ 0^48 ‖ ADRSc ‖ M_l ‖ M_r))`. -/
 def shaH (pkSeed : Bytes 16) (adrs : Adrs) (l r : Bytes 16) : Bytes 16 :=
-  baToBytes (sha256 (thashPrefix pkSeed adrs ++ b16ToBA l ++ b16ToBA r)) 16
+  shaThash pkSeed (shaAdrsKey adrs) [l, r]
 
 /-- `T_ℓ(PK.seed, ADRS, M) = Trunc₁₆(SHA-256(PK.seed ‖ 0^48 ‖ ADRSc ‖ M))`. -/
 def shaTl (pkSeed : Bytes 16) (adrs : Adrs) (ys : List (Bytes 16)) : Bytes 16 :=
-  baToBytes (sha256 (thashPrefix pkSeed adrs ++ concatNodes ys)) 16
+  shaThash pkSeed (shaAdrsKey adrs) ys
 
 /-- `PRF(PK.seed, SK.seed, ADRS) = Trunc₁₆(SHA-256(PK.seed ‖ 0^48 ‖ ADRSc ‖ SK.seed))`. -/
 def shaPRF (pkSeed : Bytes 16) (skSeed : Bytes 16) (adrs : Adrs) : Bytes 16 :=
@@ -94,9 +116,9 @@ def shaPrimitives : Primitives slhdsaSha2_128_24 where
   SkSeed := Bytes 16
   SkPrf := Bytes 16
   Y := Bytes 16
-  F := shaF
-  H := shaH
-  Tl := shaTl
+  AdrsKey := Bytes 22
+  adrsToKey := shaAdrsKey
+  Thash := shaThash
   PRF := shaPRF
   PRFmsg := shaPRFmsg
   Hmsg := shaHmsg
@@ -106,7 +128,7 @@ def shaPrimitives : Primitives slhdsaSha2_128_24 where
 
 /-- Decode the 3856-byte signature `R ‖ SIG_FORS ‖ SIG_HT` (FORS: `k` trees of
 `sk(16) ‖ auth(a×16)`; HT: WOTS `len×16` then XMSS auth `h'×16`). -/
-def decodeSignature (ba : ByteArray) : Signature shaPrimitives :=
+def decodeSignature (ba : ByteArray) : SignatureCore slhdsaSha2_128_24 shaPrimitives.core :=
   let R : Bytes 16 := baSliceToB16 ba 0
   let fors : Vector (Bytes 16 × List (Bytes 16)) 6 :=
     Vector.ofFn fun i : Fin 6 =>
@@ -119,16 +141,25 @@ def decodeSignature (ba : ByteArray) : Signature shaPrimitives :=
     (List.range 22).map fun j => baSliceToB16 ba (2416 + 1088 + j * 16)
   (R, fors, (wots, xmssAuth))
 
-/-- Concrete verification of a decoded reference signature against `(pkSeed, pkRoot, message)`. -/
+/-- Concrete FIPS 205 external verification of a decoded signature against
+`(pkSeed, pkRoot, message)`. -/
 def verifyBytes (pkSeed pkRoot : Bytes 16) (msg : List Byte) (sigBytes : ByteArray) : Bool :=
   letI : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
-  slhVerify shaPrimitives ⟨pkSeed, pkRoot⟩ msg (decodeSignature sigBytes)
+  slhVerifyInternal shaPrimitives (emptyContextMessage msg)
+    (decodeSignature sigBytes) ⟨pkSeed, pkRoot⟩
+
+/-- Verification against the internal `M'` interface. This entry point supports reference vectors
+whose message is already the exact input consumed by `H_msg`, without applying the external
+context encoding a second time. -/
+def verifyInternalBytes (pkSeed pkRoot : Bytes 16) (msg : List Byte)
+    (sigBytes : ByteArray) : Bool :=
+  letI : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
+  slhVerifyInternal shaPrimitives msg (decodeSignature sigBytes) ⟨pkSeed, pkRoot⟩
 
 /-! ### Completeness transfers to the concrete bundle
 
 The carrier instances are supplied explicitly: the structure projections `shaPrimitives.SkSeed`
-… are definitionally `Bytes 16`, but instance synthesis does not unfold them, so the abstract
-`slhdsaAlg_perfectlyComplete` cannot be specialized to `shaPrimitives` by `inferInstance` alone. -/
+… are definitionally `Bytes 16`, but instance synthesis does not unfold them automatically. -/
 
 instance : SampleableType shaPrimitives.SkSeed := inferInstanceAs (SampleableType (Bytes 16))
 instance : SampleableType shaPrimitives.SkPrf := inferInstanceAs (SampleableType (Bytes 16))
@@ -136,13 +167,11 @@ instance : SampleableType shaPrimitives.PkSeed := inferInstanceAs (SampleableTyp
 instance : SampleableType shaPrimitives.Y := inferInstanceAs (SampleableType (Bytes 16))
 instance : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
 
-/-- **Perfect completeness at the concrete SHA2-128-24 bundle.** The abstract
-`slhdsaAlg_perfectlyComplete` (proved for any `Primitives`) specialized to `shaPrimitives` — the
-exact bundle `verifyBytes` executes. This is the in-tree object asserting that the proved
-`Pr[verify (sign m)] = 1` property holds for the concrete code path the KAT exercises, closing the
-gap between the abstract theorem and the executable instance. -/
+/-- **Perfect completeness at the concrete SHA2-128-24 bundle.** This specializes the
+definitional concrete-function interpretation of the canonical oracle-parametric scheme to the
+exact primitive bundle exercised by `verifyBytes`. -/
 theorem shaPrimitives_perfectlyComplete :
-    (slhdsaAlg shaPrimitives).PerfectlyComplete ProbCompRuntime.probComp :=
-  slhdsaAlg_perfectlyComplete shaPrimitives
+    (slhdsaConcreteAlg shaPrimitives).PerfectlyComplete ProbCompRuntime.probComp :=
+  slhdsaConcreteAlg_perfectlyComplete shaPrimitives
 
 end SLHDSA.Concrete

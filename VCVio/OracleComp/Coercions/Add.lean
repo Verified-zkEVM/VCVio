@@ -3,8 +3,10 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.Coercions.SubSpec
-import VCVio.OracleComp.ProbComp
+
+module
+public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.ProbComp
 
 /-!
 # Coercing Computations to Larger Oracle Sets
@@ -18,7 +20,13 @@ either `OracleSpec.add` or `OracleSpec.sigma`. Each instance spells out the
 `MonadLiftT` instance chain.
 -/
 
+@[expose] public section
+
 open OracleSpec
+
+/- Lean 4.33 checks the `PFunctor.Obj`/dependent-pair conversion at implicit transparency
+while normalizing nested lifted queries. -/
+attribute [local implicit_reducible] PFunctor.Obj
 
 open scoped OracleSpec.PrimitiveQuery
 

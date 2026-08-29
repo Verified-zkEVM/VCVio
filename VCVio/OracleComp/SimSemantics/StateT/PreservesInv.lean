@@ -3,10 +3,12 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.SimSemantics.StateT.Basic
-import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
-import VCVio.EvalDist.Monad.Basic
+
+module
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # `StateT σ ProbComp` Invariant Theory
@@ -36,6 +38,8 @@ The `WriterT` analogue of this theory lives in
 - `StateT.outputIndependent_after_preservesInv` — non-interference: output-independent
   computation remains so after sequencing with an invariant-preserving computation
 -/
+
+@[expose] public section
 
 noncomputable section
 
@@ -150,7 +154,7 @@ initial state, as long as the initial state satisfies `Inv`.
 This is distributional equality of `run'` (which discards the final state). -/
 def OutputIndependent {σ α : Type} (mx : StateT σ ProbComp α) (Inv : σ → Prop) : Prop :=
   ∀ σ0 σ1, Inv σ0 → Inv σ1 →
-    𝒟[mx.run' σ0] = 𝒟[mx.run' σ1]
+    𝒮[mx.run' σ0] = 𝒮[mx.run' σ1]
 
 @[simp] lemma statePreserving_pure {σ α : Type} (a : α) :
     StatePreserving (pure a : StateT σ ProbComp α) := by
@@ -195,10 +199,10 @@ lemma outputIndependent_after_preservesInv {σ α β : Type}
     (hmyInv : PreservesInv my Inv)
     (hmyNoFail : NeverFailsUnder my Inv) :
     ∀ σ0, Inv σ0 →
-      𝒟[(my.run σ0) >>= fun us => mx.run' us.2] = 𝒟[mx.run' σ0] := by
+      𝒮[(my.run σ0) >>= fun us => mx.run' us.2] = 𝒮[mx.run' σ0] := by
   intro σ0 hσ0
   refine SPMF.ext fun a => ?_
-  change Pr[= a | (my.run σ0) >>= fun us => mx.run' us.2] = Pr[= a | mx.run' σ0]
+  rw [← probOutput_def, ← probOutput_def]
   rw [probOutput_bind_eq_tsum]
   have hbind_eq :
       (∑' us : β × σ, Pr[= us | my.run σ0] * Pr[= a | mx.run' us.2]) =

@@ -3,14 +3,18 @@ Copyright (c) 2025 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ToMathlib.ProbabilityTheory.FinRatPMF
-import VCVio.EvalDist.Defs.Basic
+
+module
+public import ToMathlib.ProbabilityTheory.FinRatPMF
+public import VCVio.EvalDist.Defs.Basic
 
 /-!
 # EvalDist Instances for `FinRatPMF.Raw`
 
 This file exposes the executable `FinRatPMF.Raw` monad to the generic `EvalDist` API.
 -/
+
+@[expose] public section
 
 universe u
 
@@ -51,7 +55,7 @@ noncomputable instance instLawfulMonadLiftTRawSetM : LawfulMonadLiftT Raw SetM w
     rw [hbind]
     exact PMF.support_bind _ _
 
-/-- Compatibility: `Raw`'s SetM support equals the SPMF support of its `evalDist`. -/
+/-- Compatibility: `Raw`'s SetM support equals the SPMF support of its `evalSPMF`. -/
 noncomputable instance : EvalDistCompatible Raw where
   support_eq_SPMF_support mx := by
     change ((liftM mx : PMF _).support : Set _) =
@@ -62,7 +66,7 @@ instance : HasEvalFinset Raw where
   finSupport := Raw.support
   coe_finSupport mx := by
     ext x
-    rw [Finset.mem_coe, _root_.mem_support_iff, Raw.mem_support_iff, probOutput_def, evalDist_def]
+    rw [Finset.mem_coe, _root_.mem_support_iff, Raw.mem_support_iff, probOutput_def, evalSPMF_def]
     change mx.prob x ≠ 0 ↔ (liftM (liftM mx : PMF _) : SPMF _) x ≠ 0
     rw [SPMF.liftM_apply]
     change mx.prob x ≠ 0 ↔ ((@Raw.toPMF _ (Classical.decEq _) mx) x) ≠ 0

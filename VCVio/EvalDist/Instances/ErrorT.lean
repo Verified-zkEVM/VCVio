@@ -3,8 +3,10 @@ Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.EvalDist.Monad.Map
-import Mathlib.Control.Lawful
+
+module
+public import VCVio.EvalDist.Monad.Map
+public import Mathlib.Control.Lawful
 
 /-!
 # Evaluation Semantics for ExceptT (ErrorT)
@@ -30,6 +32,8 @@ error cases contribute failure mass. We map:
 This means we only support one layer of failure. If you need nested error handling,
 you'll need to work with the underlying `m (Except ε α)` type directly.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -112,7 +116,8 @@ lemma finSupport_def [DecidableEq α] (mx : ExceptT ε m α) :
 @[simp low]
 lemma mem_finSupport_iff' [DecidableEq α] (mx : ExceptT ε m α) (x : α) :
     x ∈ finSupport mx ↔ Except.ok x ∈ finSupport mx.run := by
-  simp [finSupport_def, Finset.mem_preimage]
+  rw [finSupport_def]
+  exact Finset.mem_preimage
 
 @[simp]
 lemma finSupport_liftM [LawfulMonad m] [DecidableEq α] (mx : m α) :
@@ -190,13 +195,13 @@ instance instEvalDistCompatible (ε : Type u) (m : Type u → Type v) [Monad m]
 
 variable [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
 
-lemma evalDist_eq (mx : ExceptT ε m α) :
-    𝒟[mx] = ExceptT.toSPMF' mx := rfl
+lemma evalSPMF_eq (mx : ExceptT ε m α) :
+    𝒮[mx] = ExceptT.toSPMF' mx := rfl
 
 @[grind =]
 lemma probOutput_eq (mx : ExceptT ε m α) (x : α) :
     Pr[= x | mx] = Pr[= Except.ok x | mx.run] := by
-  change ExceptT.toSPMF' mx x = (liftM mx.run : SPMF _) (Except.ok x)
+  rw [probOutput_def, probOutput_def]
   exact toSPMF'_apply_eq mx x
 
 @[grind =]
@@ -204,11 +209,11 @@ lemma probFailure_eq (mx : ExceptT ε m α) :
     Pr[⊥ | mx] = Pr[⊥ | mx.run] +
       Pr[ (fun r => match r with | Except.error _ => True | Except.ok _ => False) | mx.run] := by
   simp only [probFailure_def, probEvent_eq_tsum_indicator, probOutput_def]
-  rw [show 𝒟[mx] = ((liftM mx.run : SPMF _) >>= fun r =>
+  rw [show 𝒮[mx] = ((liftM mx.run : SPMF _) >>= fun r =>
       match r with | Except.ok a => pure a | Except.error _ => failure : SPMF α) from rfl]
   simp only [SPMF.run_eq_toPMF, SPMF.toPMF_bind, Option.elimM, PMF.monad_bind_eq_bind,
     PMF.bind_apply, ENNReal.summable, tsum_option, Option.elim_none, PMF.pure_apply, ↓reduceIte,
-    mul_one, Option.elim_some, evalDist_def, SPMF.apply_eq_toPMF_some, ne_eq, PMF.apply_ne_top,
+    mul_one, Option.elim_some, evalSPMF_def, SPMF.apply_eq_toPMF_some, ne_eq, PMF.apply_ne_top,
     not_false_eq_true, add_right_inj_of_ne_top]
   refine tsum_congr fun r => ?_
   cases r <;> simp
@@ -218,17 +223,17 @@ lemma probOutput_liftM [LawfulMonad m] (mx : m α) (x : α) :
   rw [probOutput_eq]
   exact probOutput_map_injective mx (fun a b h => by cases h; rfl) x
 
-private lemma evalDist_liftM [LawfulMonad m] (mx : m α) :
-    𝒟[(liftM mx : ExceptT ε m α)] = 𝒟[mx] :=
-  SPMF.ext (probOutput_liftM mx)
+private lemma evalSPMF_liftM [LawfulMonad m] (mx : m α) :
+    𝒮[(liftM mx : ExceptT ε m α)] = 𝒮[mx] :=
+  evalSPMF_ext (probOutput_liftM mx)
 
 lemma probFailure_liftM [LawfulMonad m] (mx : m α) :
     Pr[⊥ | (liftM mx : ExceptT ε m α)] = Pr[⊥ | mx] := by
-  simp only [probFailure_def, evalDist_liftM]
+  simp only [probFailure_def, evalSPMF_liftM]
 
 lemma probEvent_liftM [LawfulMonad m] (mx : m α) (p : α → Prop) :
     Pr[ p | (liftM mx : ExceptT ε m α)] = Pr[ p | mx] := by
-  simp [probEvent_def, evalDist_liftM]
+  simp [probEvent_def, evalSPMF_liftM]
 
 end EvalSPMF
 

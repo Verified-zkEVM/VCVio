@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.ProgramLogic.Tactics
+module
+
+public import VCVio.ProgramLogic.Tactics
 
 /-!
 # Proof-Mode Entry / Exit Tactic Examples
@@ -13,6 +15,8 @@ This file validates proof-mode entry and exit tactics from
 `VCVio.ProgramLogic.Tactics`: `game_trans`, `by_equiv`, `by_upto`, `by_dist`,
 `rel_dist`, and relational simulation rules.
 -/
+
+@[expose] public section
 
 open ENNReal OracleSpec OracleComp
 open OracleComp.ProgramLogic
@@ -32,7 +36,7 @@ section HandlerNormalization
 /-- `handler_step` consumes PolyFun's generic handler normal form. -/
 example {m : Type → Type} [Monad m] [LawfulMonad m]
     (h : PFunctor.Handler.Stateful m Nat (PFunctor.monomial Bool Nat))
-    (query : Bool) (state : Nat) :
+    (query : (PFunctor.monomial Bool Nat).A) (state : Nat) :
     h.run (PFunctor.FreeM.lift query) state = (h query).run state := by
   handler_step
 
@@ -131,7 +135,7 @@ example
     (impl₂ : QueryImpl spec (StateT σ (OracleComp spec)))
     (oa : OracleComp spec α)
     (himpl : ∀ (t : spec.Domain) (s : σ),
-      𝒟[(impl₁ t).run s] = 𝒟[(impl₂ t).run s])
+      𝒮[(impl₁ t).run s] = 𝒮[(impl₂ t).run s])
     (s₁ s₂ : σ) (hs : s₁ = s₂) :
     ⟪(simulateQ impl₁ oa).run' s₁
      ~ (simulateQ impl₂ oa).run' s₂
@@ -198,7 +202,7 @@ variable {ι : Type} {spec : OracleSpec ι} [IsUniformSpec spec]
 variable {α : Type}
 
 example {oa ob : OracleComp spec α}
-    (h : 𝒟[oa] = 𝒟[ob]) :
+    (h : 𝒮[oa] = 𝒮[ob]) :
     ⟪oa ~ ob | EqRel α⟫ := by
   rel_dist
   exact h

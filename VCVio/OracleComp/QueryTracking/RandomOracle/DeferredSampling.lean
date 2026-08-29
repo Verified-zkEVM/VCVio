@@ -3,7 +3,9 @@ Copyright (c) 2026 Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
-import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
+
+module
+public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 
 /-!
 # Deferred sampling: tape factorization of answer-irrelevant draws
@@ -17,10 +19,10 @@ The technique underlies several proofs in this library (Fiat–Shamir with abort
 preimage sampling, collision/birthday bounds). Those proofs each instantiate a bespoke
 state machine; what is genuinely generic — and lives here — is:
 
-* **i.i.d. bind-commutation** (`evalDist_bind_comm`, `evalDist_bind_const_neverFails`,
-  `evalDist_bind_congr_left`): the *answer-irrelevant draw commutes past its
+* **i.i.d. bind-commutation** (`evalSPMF_bind_comm`, `evalSPMF_bind_const_neverFails`,
+  `evalSPMF_bind_congr_left`): the *answer-irrelevant draw commutes past its
   continuation* step at the distribution level. `OracleComp`'s syntactic `bind` is not
-  commutative, but its `evalDist` image into `SPMF` is; this is what lets a per-step draw
+  commutative, but its `evalSPMF` image into `SPMF` is; this is what lets a per-step draw
   be moved to the front tape.
 * **The list-multiplicity ε-kernel** (`tsum_count_eq_length`,
   `tsum_probOutput_fresh_mul_count_le`): one fresh draw `w ← oa`, *independent of* a
@@ -30,13 +32,15 @@ state machine; what is genuinely generic — and lives here — is:
 * **The general factorization statement** (`DeferredTape.Factorizes`): an abstract
   predicate packaging "the read-recording run distributes as a single front draw block
   followed by a tape-consuming run". Scheme-specific factorizations (e.g.
-  `FiatShamirWithAbort.evalDist_deferredDrawRead_eq_drawList_tapeDrawRead`) are instances
+  `FiatShamirWithAbort.evalSPMF_deferredDrawRead_eq_drawList_tapeDrawRead`) are instances
   of this shape; the predicate names the target so downstream consumers share vocabulary.
 
 The genuinely hard, scheme-specific glue — proving a particular state machine's run *is*
 a tape factorization — is not generic and stays with each scheme. What this module
 provides is the toolbox that those proofs are built out of.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec
 open scoped BigOperators ENNReal
@@ -47,19 +51,19 @@ namespace OracleComp.DeferredSampling
 
 These lemmas implement the *answer-irrelevant draw commutes past its continuation* step.
 `OracleComp`'s `bind` is syntactic and *not* commutative as a free monad, but its
-`evalDist` image into `SPMF` is — the two iterated sums over independent draws exchange by
+`evalSPMF` image into `SPMF` is — the two iterated sums over independent draws exchange by
 `ENNReal.tsum_comm`. This is the local resampling step that front-loads a draw whose value
 the rest of the computation may use but whose *position* is irrelevant. -/
 
 /-- **i.i.d. bind-commutation.** Two independent draws `oa`, `ob` feeding a common
 continuation `k` may be drawn in either order without changing the output distribution. -/
-theorem evalDist_bind_comm {α β γ : Type} (oa : ProbComp α) (ob : ProbComp β)
+theorem evalSPMF_bind_comm {α β γ : Type} (oa : ProbComp α) (ob : ProbComp β)
     (k : α → β → ProbComp γ) :
-    𝒟[oa >>= fun a => ob >>= fun b => k a b] = 𝒟[ob >>= fun b => oa >>= fun a => k a b] := by
+    𝒮[oa >>= fun a => ob >>= fun b => k a b] = 𝒮[ob >>= fun b => oa >>= fun a => k a b] := by
   refine SPMF.ext fun x => ?_
-  rw [show 𝒟[oa >>= fun a => ob >>= fun b => k a b] x
+  rw [show 𝒮[oa >>= fun a => ob >>= fun b => k a b] x
         = Pr[= x | oa >>= fun a => ob >>= fun b => k a b] from (probOutput_def _ _).symm,
-    show 𝒟[ob >>= fun b => oa >>= fun a => k a b] x
+    show 𝒮[ob >>= fun b => oa >>= fun a => k a b] x
         = Pr[= x | ob >>= fun b => oa >>= fun a => k a b] from (probOutput_def _ _).symm]
   rw [probOutput_bind_eq_tsum]
   rw [show (∑' a : α, Pr[= a | oa] * Pr[= x | ob >>= fun b => k a b])
@@ -76,18 +80,18 @@ theorem evalDist_bind_comm {α β γ : Type} (oa : ProbComp α) (ob : ProbComp �
 continuation ignores its value contributes only its total mass; when `od` never fails
 (mass `1`, e.g. a `drawList` front block) it can be discarded from the output
 distribution. -/
-theorem evalDist_bind_const_neverFails {α γ : Type} (od : ProbComp α) (hmass : Pr[⊥ | od] = 0)
-    (k : ProbComp γ) : 𝒟[od >>= fun _ => k] = 𝒟[k] := by
+theorem evalSPMF_bind_const_neverFails {α γ : Type} (od : ProbComp α) (hmass : Pr[⊥ | od] = 0)
+    (k : ProbComp γ) : 𝒮[od >>= fun _ => k] = 𝒮[k] := by
   refine SPMF.ext fun x => ?_
-  rw [show 𝒟[od >>= fun _ => k] x = Pr[= x | od >>= fun _ => k] from (probOutput_def _ _).symm,
-    show 𝒟[k] x = Pr[= x | k] from (probOutput_def _ _).symm]
+  rw [show 𝒮[od >>= fun _ => k] x = Pr[= x | od >>= fun _ => k] from (probOutput_def _ _).symm,
+    show 𝒮[k] x = Pr[= x | k] from (probOutput_def _ _).symm]
   rw [probOutput_bind_const, hmass]; simp
 
 /-- **Distribution-level congruence under a leading bind.** If two continuations agree as
 distributions pointwise then the bound computations agree as distributions. -/
-theorem evalDist_bind_congr_left {α β : Type} (oa : ProbComp α) (f g : α → ProbComp β)
-    (h : ∀ a, 𝒟[f a] = 𝒟[g a]) : 𝒟[oa >>= f] = 𝒟[oa >>= g] := by
-  rw [evalDist_bind, evalDist_bind]; exact congrArg _ (funext h)
+theorem evalSPMF_bind_congr_left {α β : Type} (oa : ProbComp α) (f g : α → ProbComp β)
+    (h : ∀ a, 𝒮[f a] = 𝒮[g a]) : 𝒮[oa >>= f] = 𝒮[oa >>= g] := by
+  rw [evalSPMF_bind, evalSPMF_bind]; exact congrArg _ (funext h)
 
 /-! ## The list-multiplicity ε-kernel
 
@@ -167,27 +171,27 @@ to first drawing an independent front tape `tape : ProbComp τ` and then running
 tape-consuming variant `tapeRun : τ → ProbComp γ` that reads its per-step draws off the
 tape head-first:
 
-`𝒟[run] = 𝒟[tape >>= tapeRun]`.
+`𝒮[run] = 𝒮[tape >>= tapeRun]`.
 
 A scheme establishes this by induction on its adversary computation: at an
-*answer-irrelevant* step the front tape commutes past the query (`evalDist_bind_comm`), and
+*answer-irrelevant* step the front tape commutes past the query (`evalSPMF_bind_comm`), and
 at a *drawing* step the inline draw block is split off the front tape. The
 over-provisioned suffix of the tape is discarded by the never-failing prefix lemma
-(`evalDist_bind_const_neverFails`). See
-`FiatShamirWithAbort.evalDist_deferredDrawRead_eq_drawList_tapeDrawRead` for a worked
+(`evalSPMF_bind_const_neverFails`). See
+`FiatShamirWithAbort.evalSPMF_deferredDrawRead_eq_drawList_tapeDrawRead` for a worked
 instance. -/
 def Factorizes {γ τ : Type} (run : ProbComp γ) (tape : ProbComp τ)
     (tapeRun : τ → ProbComp γ) : Prop :=
-  𝒟[run] = 𝒟[tape >>= tapeRun]
+  𝒮[run] = 𝒮[tape >>= tapeRun]
 
 /-- A factorization may be rewritten through any distribution-level continuation: if
 `run` factorizes through `tape`/`tapeRun`, then binding a continuation `k` after `run`
-factorizes through `tape` and `tapeRun >=> k` (definitional unfolding plus `evalDist_bind`
+factorizes through `tape` and `tapeRun >=> k` (definitional unfolding plus `evalSPMF_bind`
 associativity). This is the recombination step used when a factorized head feeds a fold. -/
 theorem Factorizes.bind {γ τ δ : Type} {run : ProbComp γ} {tape : ProbComp τ}
     {tapeRun : τ → ProbComp γ} (h : Factorizes run tape tapeRun) (k : γ → ProbComp δ) :
     Factorizes (run >>= k) tape (fun t => tapeRun t >>= k) := by
-  simp only [Factorizes, evalDist_bind] at h ⊢
+  simp only [Factorizes, evalSPMF_bind] at h ⊢
   rw [h, bind_assoc]
 
 /-! ## The answer-irrelevant step commute (the framework induction step)
@@ -210,28 +214,28 @@ followed by a tape-threaded continuation:
 
 Given the per-continuation factorization `hcont` (supplied by the inductive hypothesis), the leading
 answer-irrelevant step commutes past the front draw block: the continuation is rewritten by `hcont`
-under the step bind (`evalDist_bind_congr_left`), the front tape commutes past the answer-irrelevant
-step (`evalDist_bind_comm`), and the inner step bind is re-associated into the mapped tape-step form
+under the step bind (`evalSPMF_bind_congr_left`), the front tape commutes past the answer-irrelevant
+step (`evalSPMF_bind_comm`), and the inner step bind is re-associated into the mapped tape-step form
 (`bind_map_left`/`map_bind`). This is the genuine framework content of a tape factorization's
 non-drawing case; see
-`FiatShamirWithAbort.evalDist_tapePreserving_step_commute` for the worked Fiat–Shamir instance
+`FiatShamirWithAbort.evalSPMF_tapePreserving_step_commute` for the worked Fiat–Shamir instance
 (`tape := drawList (ids.commit pk sk) L`, `S := DeferredReadState …`). -/
-theorem evalDist_step_commute_tape {γ S Ans τ ρ : Type}
+theorem evalSPMF_step_commute_tape {γ S Ans τ ρ : Type}
     (step : ProbComp (Ans × S)) (tape : ProbComp τ)
     (proj : γ × ρ → γ × S)
     (defCont : Ans → S → ProbComp (γ × S))
     (tapeCont : Ans → S × τ → ProbComp (γ × ρ))
     (hcont : ∀ (a : Ans) (s' : S),
-      𝒟[defCont a s'] = 𝒟[tape >>= fun t => proj <$> tapeCont a (s', t)]) :
-    𝒟[step >>= fun p => defCont p.1 p.2] =
-      𝒟[tape >>= fun t =>
+      𝒮[defCont a s'] = 𝒮[tape >>= fun t => proj <$> tapeCont a (s', t)]) :
+    𝒮[step >>= fun p => defCont p.1 p.2] =
+      𝒮[tape >>= fun t =>
           proj <$>
             (((fun p : Ans × S => (p.1, (p.2, t))) <$> step) >>= fun p => tapeCont p.1 p.2)] := by
   classical
-  rw [evalDist_bind_congr_left step (fun p => defCont p.1 p.2)
+  rw [evalSPMF_bind_congr_left step (fun p => defCont p.1 p.2)
     (fun p => tape >>= fun t => proj <$> tapeCont p.1 (p.2, t)) (fun p => hcont p.1 p.2)]
-  rw [evalDist_bind_comm step tape (fun p t => proj <$> tapeCont p.1 (p.2, t))]
-  refine evalDist_bind_congr_left tape _ _ (fun t => ?_)
+  rw [evalSPMF_bind_comm step tape (fun p t => proj <$> tapeCont p.1 (p.2, t))]
+  refine evalSPMF_bind_congr_left tape _ _ (fun t => ?_)
   rw [bind_map_left, map_bind]
 
 /-! ## State-relation transfer for expected output functionals

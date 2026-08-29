@@ -3,14 +3,18 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-import VCVio.Prelude
-import ToMathlib.Control.OptionT
+
+module
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.Prelude
+public import ToMathlib.Control.OptionT
 
 /-!
 # Simulation Semantics for Oracles in a Computation
 
 -/
+
+@[expose] public section
 
 open OracleComp Prod
 
@@ -65,6 +69,15 @@ explicit `spec.query t`. -/
 lemma simulateQ_spec_query [LawfulMonad r] (t : spec.Domain) :
     simulateQ impl (liftM (spec.query t)) = impl t := by
   simp [simulateQ_query]
+
+/-- A direct-style `HasQuery.query` in `OracleComp` is the canonical primitive query when
+interpreted by `simulateQ`. -/
+@[simp, grind =]
+lemma simulateQ_HasQuery_query [LawfulMonad r] (t : spec.Domain) :
+    simulateQ impl
+        (HasQuery.query (spec := spec) (m := OracleComp spec) t) =
+      impl t := by
+  rw [HasQuery.instOfMonadLift_query, simulateQ_spec_query]
 
 /-- Companion to `simulateQ_query` for a query entering the computation through a
 *query-level lift chain*: simulating a query lifted from a sub-spec `spec'` applies the

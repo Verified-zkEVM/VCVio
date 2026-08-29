@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.CryptoFoundations.FiatShamir.WithAbort
-import VCVio.OracleComp.QueryTracking.QueryCost
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort
+public import VCVio.OracleComp.QueryTracking.QueryCost
 
 /-!
 # Cost accounting for Fiat-Shamir with aborts
@@ -16,6 +18,8 @@ query cost or the number of hash queries made by one signing/verification
 invocation; the expected-value versions live in
 `FiatShamir.WithAbort.ExpectedCost`.
 -/
+
+@[expose] public section
 
 universe u v
 

@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oleksandr Vovkotrub
 -/
 
-import Examples.PRFTagReader.Table
+module
+
+public import Examples.PRFTagReader.Table
 
 /-!
 # PRF Tag/Reader Protocol — Instrumented multiple-session handler
@@ -25,6 +27,8 @@ Includes:
 This infrastructure is consumed by the eager-table handlers in the sibling
 `MultipleToHybrid.EagerSetup` module and by the direct-coupling chain under `DirectCoupling/`.
 -/
+
+@[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -138,6 +142,7 @@ lemma multipleBadQueryImpl_tag_run (tag : TagId)
       (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
           (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) s.1 >>= fun r =>
         pure (r.1, (r.2.1, r.2.2), multipleBadAdvance tag s.2 r.1) := by
+  rw [multipleBadQueryImpl, QueryImpl.postInsert_apply]
   change (multipleIdealLiftedQueryImpl (Sum.inl tag) s) >>= _ = _
   rw [multipleIdealLiftedQueryImpl_run, bind_assoc]
   refine bind_congr fun r => ?_; rw [pure_bind]; rfl
@@ -152,6 +157,7 @@ lemma multipleBadQueryImpl_reader_run (transcript : TagTranscript Nonce Digest)
       (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
           (sessionsPerTag := sessionsPerTag) (Sum.inr transcript)) s.1 >>= fun r =>
         pure (r.1, (r.2.1, r.2.2), s.2) := by
+  rw [multipleBadQueryImpl, QueryImpl.postInsert_apply]
   change (multipleIdealLiftedQueryImpl (Sum.inr transcript) s) >>= _ = _
   rw [multipleIdealLiftedQueryImpl_run, bind_assoc]
   refine bind_congr fun r => ?_; rw [pure_bind]; rfl
@@ -189,8 +195,8 @@ lemma probOutput_multipleBad_run'_eq_multipleIdeal
     | inl tag =>
       change RelTriple ((multipleBadQueryImpl (Sum.inl tag)) s₁) _ _
       rw [multipleBadQueryImpl_tag_run]
-      refine relTriple_of_evalDist_eq_right
-        (congrArg evalDist (bind_pure ((multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
+      refine relTriple_of_evalSPMF_eq_right
+        (congrArg evalSPMF (bind_pure ((multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) s₁.1))) ?_
       refine relTriple_bind (relTriple_refl _) ?_
       rintro a b rfl
@@ -198,8 +204,8 @@ lemma probOutput_multipleBad_run'_eq_multipleIdeal
     | inr transcript =>
       change RelTriple ((multipleBadQueryImpl (Sum.inr transcript)) s₁) _ _
       rw [multipleBadQueryImpl_reader_run]
-      refine relTriple_of_evalDist_eq_right
-        (congrArg evalDist (bind_pure ((multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
+      refine relTriple_of_evalSPMF_eq_right
+        (congrArg evalSPMF (bind_pure ((multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) (sessionsPerTag := sessionsPerTag) (Sum.inr transcript)) s₁.1))) ?_
       refine relTriple_bind (relTriple_refl _) ?_
       rintro a b rfl

@@ -3,9 +3,11 @@ Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
-import ToMathlib.Data.ENNReal.SumSquares
-import VCVio.OracleComp.QueryTracking.CostModel
-import VCVio.OracleComp.QueryTracking.SeededOracle
+
+module
+public import ToMathlib.Data.ENNReal.SumSquares
+public import VCVio.OracleComp.QueryTracking.CostModel
+public import VCVio.OracleComp.QueryTracking.SeededOracle
 
 /-!
 # Seed-Based Forking Lemma (Bellare-Neven)
@@ -44,6 +46,8 @@ queries.
 * M. Bellare and G. Neven, *Multi-Signatures in the Plain Public-Key Model and a General
   Forking Lemma*, CCS 2006.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal Function Finset
 
@@ -197,7 +201,7 @@ private lemma expectedQueryCount_seededForkWithSeedValue_le_aux [spec.DecidableE
     (hmain : IsPerIndexQueryBound main qb) (hseed : ∀ t, qb t ≤ (seed t).length) :
     wp ($ᵗ spec.Range i) (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u)
       CostModel.unit (fun n : ℕ => (n : ENNReal))) ≤ qb i := by
-  letI : Fintype ι := Fintype.ofFinite ι
+  let : Fintype ι := Fintype.ofFinite ι
   rw [← wp_const ($ᵗ spec.Range i) (qb i : ENNReal)]
   refine wp_mono _ fun u => ?_
   have hbound := isPerIndexQueryBound_seededForkWithSeedValue
@@ -217,7 +221,7 @@ theorem expectedQueryCount_seededForkWithSeedValue_le
     wp (generateSeed spec qb js) (fun seed => wp ($ᵗ spec.Range i)
       (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u) CostModel.unit
         (fun n : ℕ => (n : ENNReal)))) ≤ qb i := by
-  letI : Fintype ι := Fintype.ofFinite ι
+  let : Fintype ι := Fintype.ofFinite ι
   rw [wp_eq_tsum]
   conv_rhs => rw [← wp_const (generateSeed spec qb js) (qb i : ENNReal), wp_eq_tsum]
   refine ENNReal.tsum_le_tsum fun seed => ?_
@@ -425,8 +429,8 @@ private lemma probOutput_noGuardComp_eq_tsum_factored (s : Fin (qb i + 1)) :
     simp [monad_norm]
   rw [hcomp, probOutput_some_map_some, probOutput_bind_bind_prod_mk_eq_mul']
   congr 1
-  exact probOutput_map_eq_of_evalDist_eq
-    (seededOracle.evalDist_liftComp_uniformSample_bind_simulateQ_run'_addValue
+  exact probOutput_map_eq_of_evalSPMF_eq
+    (seededOracle.evalSPMF_liftComp_uniformSample_bind_simulateQ_run'_addValue
       (σ.takeAtIndex i ↑s) i main) cf (some s)
 
 omit [spec.DecidableEq] in

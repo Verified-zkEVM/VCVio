@@ -174,6 +174,7 @@ lemma step_normCfg (hdec : ∀ s, dec (emb s) = some s) (c : tm.Cfg) :
     have hdq : dec (emb q) = some q := hdec q
     rcases htr : tm.tr q tp.head with ⟨⟨wr, dir⟩, q''⟩
     simp only [step, normCfg, reify, normTable, normTr, Option.map_some, hdq, htr]
+    rfl
 
 /-- `normCfg` is injective when `emb` is. -/
 lemma normCfg_injective (hemb : Function.Injective emb) :

@@ -3,9 +3,11 @@ Copyright (c) 2026 Nicolas Consigny. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolas Consigny
 -/
-import HashSig.SLHDSA.C13.Params
-import HashSig.SLHDSA.C13.Primitives
-import HashSig.SLHDSA.Xmss
+
+module
+public import HashSig.SLHDSA.C13.Params
+public import HashSig.SLHDSA.C13.Primitives
+public import HashSig.SLHDSA.Xmss
 
 /-!
 # FORS+C (C13)
@@ -16,7 +18,7 @@ secret is hashed (a degenerate height-0 contribution); the other `k − 1` trees
 paths normally. The `k` roots are compressed by `T_k`. FORS indices are sliced LSB-first from the
 `keccak256` message digest (read as a 256-bit integer), matching `SPHINCs-C13Asm.sol`.
 
-Reuses the generic Merkle theory `SLHDSA.Merkle`. `forsPkFromSig` reproduces `forsPkGen` on an
+Reuses the node-addressed `PerfectMerkleTree` layer. `forsPkFromSig` reproduces `forsPkGen` on an
 honest signature, given the forced-zero condition `forsIdx digest (k-1) = 0` (which the message
 randomizer is ground to satisfy).
 
@@ -25,11 +27,13 @@ randomizer is ground to satisfy).
 - ePrint 2025/2203 (FORS+C); the SPHINCs- repo verifier `src/SPHINCs-C13Asm.sol`
 -/
 
+@[expose] public section
+
 
 namespace SLHDSA.C13
 
 open SLHDSA (Adrs)
-open SLHDSA.Merkle
+open PerfectMerkleTree
 
 /-! ### Addresses, secret values, leaves, tree roots -/
 
@@ -98,7 +102,7 @@ def forsCSign (prims : Primitives) (digest : ℕ) (sk : prims.SkSeed) (pk : prim
     let t := i.val * 2 ^ params.a + forsIdx digest i.val
     (forsSkGen prims sk pk adrs t,
       if i.val < params.k - 1 then
-        authPath (forsLeaf prims sk pk adrs) (forsNodeHash prims pk adrs) 0 t params.a
+        authPath (forsLeaf prims sk pk adrs) (forsNodeHash prims pk adrs) t params.a
       else [])
 
 /-- FORS+C public-key recovery: reconstruct each tree's root (the last from its revealed leaf
@@ -108,7 +112,7 @@ def forsCPkFromSig (prims : Primitives) (sig : ForsSig prims) (digest : ℕ)
   prims.Tl pk (forsPkAdrs adrs) ((List.finRange params.k).map fun i =>
     let t := i.val * 2 ^ params.a + forsIdx digest i.val
     let leaf := prims.F pk (forsNodeAdrs adrs 0 t) (sig[i.val]).1
-    if i.val < params.k - 1 then climb (forsNodeHash prims pk adrs) 0 t leaf (sig[i.val]).2
+    if i.val < params.k - 1 then climb (forsNodeHash prims pk adrs) t leaf (sig[i.val]).2
     else leaf)
 
 /-! ### Correctness -/
@@ -128,8 +132,8 @@ theorem forsCPkFromSig_forsCSign (prims : Primitives) (digest : ℕ) (sk : prims
       rw [Nat.add_comm, Nat.add_mul_div_right _ _ (by positivity : 0 < 2 ^ params.a),
         Nat.div_eq_of_lt (forsIdx_lt digest i.val), Nat.zero_add]
     have key := climb_authPath (forsLeaf prims sk pk adrs) (forsNodeHash prims pk adrs)
-      params.a 0 (i.val * 2 ^ params.a + forsIdx digest i.val)
-    rw [Nat.zero_add, ht] at key
+      (i.val * 2 ^ params.a + forsIdx digest i.val) params.a
+    rw [ht] at key
     exact key
   · have hik : i.val = params.k - 1 := by omega
     rw [if_neg h, if_neg h]

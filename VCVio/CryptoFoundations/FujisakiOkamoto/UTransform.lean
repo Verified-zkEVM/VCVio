@@ -3,17 +3,21 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.CryptoFoundations.FujisakiOkamoto.TTransform
-import VCVio.CryptoFoundations.KeyEncapMech
-import VCVio.CryptoFoundations.PRF
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+
+module
+public import VCVio.CryptoFoundations.FujisakiOkamoto.TTransform
+public import VCVio.CryptoFoundations.KeyEncapMech
+public import VCVio.CryptoFoundations.PRF
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 
 /-!
 # Fujisaki-Okamoto U Transform
 
 This file defines the U-transform family on top of the T-transform oracle world.
 -/
+
+@[expose] public section
 
 
 universe u v
@@ -209,8 +213,9 @@ theorem encaps_usesExactFamilyWeightedCost {ω : Type} [AddMonoid ω]
       let k ← (runtime.withAddCost costFn) (Sum.inr (kdInput msg c))
       pure (c, k))
   ] = wCoins + wKey
+  simp_rw [QueryImpl.withAddCost_apply_inl, QueryImpl.withAddCost_apply_inr]
   rw [AddWriterT.hasCost_iff]
-  simp [QueryImpl.withAddCost_apply, AddWriterT.outputs, AddWriterT.costs, hCoins, hKeys]
+  simp [AddWriterT.outputs, AddWriterT.costs, hCoins, hKeys]
 
 /-- Under per-family upper bounds on the two U-transform oracle families, encapsulation incurs
 weighted query cost at most the sum of those bounds. -/
@@ -363,7 +368,7 @@ theorem decaps_usesWeightedQueryCostAtMost {ω : Type}
         (pk := pk) (sk := sk) (fb := fb) (c := c) (costFn := costFn) hdec)
       zero_le
   | some msg =>
-    letI := (runtime.withAddCost costFn).toHasQuery
+    let := (runtime.withAddCost costFn).toHasQuery
     simp only [HasQuery.Program.withAddCost, UTransform, FujisakiOkamoto.scheme, hdec]
     refine AddWriterT.pathwiseCostAtMost_bind (w₁ := wCoins) (w₂ := wKey) ?_ ?_
     · exact HasQuery.usesCostAtMost_query_of_le
@@ -464,40 +469,5 @@ noncomputable def runtime
     (hashImpl := queryImpl (M := M) (R := R) (KD := KD) (K := K))
     ((∅, ∅) : QueryCache M R KD K)
   toProbCompLift := ProbCompLift.ofMonadLift _
-
-/-- The generic U-transform CCA bound.
-
-**WARNING: this is a placeholder statement, not the final theorem.** The current shape is
-unsound as written: `correctnessBound₁` and `correctnessBound₂` are unconstrained `ℝ`
-parameters, so the right-hand side can be made arbitrarily negative while the left-hand side
-is a probability and hence nonnegative. In the final statement these slack terms must be
-constrained (for example, derived from a correctness/`δ`-correctness assumption on `pke`,
-quantified as nonnegative reals, or replaced by a concrete expression in `pke`'s correctness
-error and the adversary's query budget).
-
-The proof is intentionally deferred. The reduction artifacts (`prfAdv`, `owAdv`) are
-existentially quantified rather than passed in as unrelated inputs, but the bound itself
-still needs to be tightened before this can be a meaningful security claim. -/
-theorem IND_CCA_bound
-    {M PK SK R C KD K KPRF : Type}
-    [DecidableEq M] [DecidableEq C] [DecidableEq KD]
-    [SampleableType M] [SampleableType R] [SampleableType K]
-    (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
-    (prf : PRFScheme KPRF C K)
-    (kdInput : M → C → KD)
-    (adversary : (UTransform (m := OracleComp (UTransform.oracleSpec M R KD K))
-      pke kdInput (FujisakiOkamoto.implicitRejection prf)).IND_CCA_Adversary)
-    (correctnessBound₁ correctnessBound₂ : ℝ) :
-    ∃ prfAdv : PRFScheme.PRFAdversary C K,
-      ∃ owAdv : OW_PCVA_Adversary (TTransform pke),
-        (UTransform (m := OracleComp (UTransform.oracleSpec M R KD K))
-          pke kdInput (FujisakiOkamoto.implicitRejection prf)).IND_CCA_Advantage
-            (runtime (M := M) (R := R) (KD := KD) (K := K)) adversary ≤
-          PRFScheme.prfAdvantage prf prfAdv +
-          correctnessBound₁ +
-          correctnessBound₂ +
-          (OW_PCVA_Advantage (encAlg := TTransform pke) (TTransform.runtime (M := M)
-            (R := R)) owAdv).toReal := by
-  sorry
 
 end UTransform

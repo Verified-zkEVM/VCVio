@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma, Quang Dao
 -/
 
-import VCVio.OracleComp.Coercions.Add
-import VCVio.OracleComp.QueryTracking.QueryBound
+module
+
+public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # Query-count bounds for Fiat-Shamir adversaries
@@ -18,6 +20,8 @@ The two non-aborting EUF-CMA variants use exactly the same predicates, so they
 live here in the shared `FiatShamir` namespace. With-aborts call sites
 reference them via their fully qualified name.
 -/
+
+@[expose] public section
 
 universe u v
 
@@ -113,8 +117,8 @@ lemma nmaHashQueryBound_liftComp_zero [Inhabited Chal] [Finite Chal] {α : Type}
     (oa : ProbComp α) :
     nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := OracleComp.liftComp oa (unifSpec + (M × Commit →ₒ Chal))) 0 := by
-  haveI : Fintype Chal := Fintype.ofFinite Chal
-  letI : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
+  have : Fintype Chal := Fintype.ofFinite Chal
+  let : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
     IsUniformSpec.ofFintypeInhabited _
   rw [nmaHashQueryBound, OracleComp.liftComp_def]
   refine OracleComp.IsQueryBoundP.simulateQ_of_step

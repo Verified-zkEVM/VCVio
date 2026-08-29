@@ -3,9 +3,11 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Examples.Schnorr.SigmaProtocol
-import VCVio.CryptoFoundations.FiatShamir.Sigma.Security
-import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+
+module
+public import Examples.Schnorr.SigmaProtocol
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Security
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 
 /-!
 # Schnorr Signature via Fiat-Shamir: an end-to-end EUF-CMA proof
@@ -110,6 +112,8 @@ The Schnorr-specific inputs are exactly:
                                           on `G`, giving `β = 1/|F|`.
 -/
 
+@[expose] public section
+
 
 open OracleComp OracleSpec DiffieHellman
 open scoped ENNReal
@@ -196,15 +200,15 @@ theorem signature_euf_cma (g : G)
         ((qS : ENNReal) * (qS + qH) * ((Fintype.card F : ℝ≥0∞)⁻¹))
       eps * (eps / (qH + 1 : ENNReal) - FiatShamir.challengeSpaceInv F) ≤
         Pr[= true | dlogExp g reduction] := by
-  haveI : Inhabited F := ⟨0⟩
-  haveI : Inhabited G := ⟨(0 : F) • g⟩
+  have : Inhabited F := ⟨0⟩
+  have : Inhabited G := ⟨(0 : F) • g⟩
   obtain ⟨red, hred⟩ := FiatShamir.euf_cma_bound
     (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
     (Schnorr.sigma_speciallySound F G g)
     (by intro ω₁ p₁ ω₂ p₂; simp [Schnorr.sigma])
     (Schnorr.simTranscript F G g)
     (ζ_zk := 0) le_rfl
-    ((SigmaProtocol.perfectHVZK_iff_hvzk_zero _ _).mp (Schnorr.sigma_hvzk F G g))
+    ((ChallengeVerifyProtocol.perfectHVZK_iff_hvzk_zero _ _).mp (Schnorr.sigma_hvzk F G g))
     (β := (Fintype.card F : ℝ≥0∞)⁻¹)
     (Schnorr.sigma_simCommitPredictability F G g hg)
     adv qS qH hQ

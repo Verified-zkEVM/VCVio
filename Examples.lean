@@ -1,65 +1,69 @@
-import Examples.BR93
-import Examples.CommitmentScheme
-import Examples.CommitmentScheme.Binding
-import Examples.CommitmentScheme.Common
-import Examples.CommitmentScheme.Extractability
-import Examples.CommitmentScheme.Hiding
-import Examples.CommitmentScheme.Hiding.CountBounds
-import Examples.CommitmentScheme.Hiding.Defs
-import Examples.CommitmentScheme.Hiding.LoggingBounds
-import Examples.CommitmentScheme.Hiding.LoggingBounds.Average
-import Examples.CommitmentScheme.Hiding.LoggingBounds.QuerySalt
-import Examples.CommitmentScheme.Hiding.Main
-import Examples.CompositionDiagram
-import Examples.ElGamal.Basic
-import Examples.ElGamal.Common
-import Examples.ElGamal.Hash
-import Examples.ElGamal.ReductionCost
-import Examples.ElGamal.SSP
-import Examples.EvalDistCompatible.Basic
-import Examples.FrankingProtocol
-import Examples.OneTimePad.Basic
-import Examples.OneTimePad.HeapBasic
-import Examples.OneTimePad.HeapPar
-import Examples.OneTimePad.LeakageFree
-import Examples.OneTimePad.UC
-import Examples.PRFTagReader
-import Examples.PRFTagReader.Asymptotic
-import Examples.PRFTagReader.Auth
-import Examples.PRFTagReader.BadEvent
-import Examples.PRFTagReader.Collision
-import Examples.PRFTagReader.Collision.ForgeStep
-import Examples.PRFTagReader.Defs
-import Examples.PRFTagReader.DirectCoupling
-import Examples.PRFTagReader.DirectCoupling.Compose
-import Examples.PRFTagReader.DirectCoupling.ReaderCase
-import Examples.PRFTagReader.DirectCoupling.StepLemmas
-import Examples.PRFTagReader.DirectCoupling.Swap
-import Examples.PRFTagReader.DirectCoupling.TagSlotPositive
-import Examples.PRFTagReader.DirectCoupling.TagSlotZero
-import Examples.PRFTagReader.MultipleBadCollision
-import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
-import Examples.PRFTagReader.MultipleToHybrid.Setup
-import Examples.PRFTagReader.PRFReductions
-import Examples.PRFTagReader.PRFReductions.IdealHandlers
-import Examples.PRFTagReader.PRFReductions.Reductions
-import Examples.PRFTagReader.PRFReductions.Structural
-import Examples.PRFTagReader.Table
-import Examples.PRFTagReader.UnlinkReduction
-import Examples.PRGfromPRF
-import Examples.Pedersen
-import Examples.ProgramLogic.Probability
-import Examples.ProgramLogic.ProofMode
-import Examples.ProgramLogic.Relational
-import Examples.ProgramLogic.RelationalAnchored
-import Examples.ProgramLogic.RelationalDerived
-import Examples.ProgramLogic.RelationalStep
-import Examples.ProgramLogic.Unary
-import Examples.ProgramLogic.UnaryProbability
-import Examples.ProgramLogic.UnaryStep
-import Examples.ProgramLogic.UnaryTriple
-import Examples.Regev
-import Examples.Schnorr.SigmaProtocol
-import Examples.Schnorr.Signature
-import Examples.SealedSender.AspectObservation
-import Examples.SimpleTwoServerPIR
+module  -- shake: keep-all --deprecated_module: ignore
+
+public import Examples.BR93
+public import Examples.CommitmentScheme
+public import Examples.CommitmentScheme.Binding
+public import Examples.CommitmentScheme.Common
+public import Examples.CommitmentScheme.Extractability
+public import Examples.CommitmentScheme.Hiding
+public import Examples.CommitmentScheme.Hiding.CountBounds
+public import Examples.CommitmentScheme.Hiding.Defs
+public import Examples.CommitmentScheme.Hiding.LoggingBounds
+public import Examples.CommitmentScheme.Hiding.LoggingBounds.Average
+public import Examples.CommitmentScheme.Hiding.LoggingBounds.QuerySalt
+public import Examples.CommitmentScheme.Hiding.Main
+public import Examples.CompositionDiagram
+public import Examples.ElGamal.Basic
+public import Examples.ElGamal.Common
+public import Examples.ElGamal.ComputationalComplexity
+public import Examples.ElGamal.Hash
+public import Examples.ElGamal.ReductionCost
+public import Examples.ElGamal.SSP
+public import Examples.EvalDistCompatible.Basic
+public import Examples.FrankingProtocol
+public import Examples.OneTimePad.Basic
+public import Examples.OneTimePad.ComputationalComplexity
+public import Examples.OneTimePad.HeapBasic
+public import Examples.OneTimePad.HeapPar
+public import Examples.OneTimePad.LeakageFree
+public import Examples.OneTimePad.UC
+public import Examples.PRFTagReader
+public import Examples.PRFTagReader.Asymptotic
+public import Examples.PRFTagReader.Auth
+public import Examples.PRFTagReader.BadEvent
+public import Examples.PRFTagReader.Collision
+public import Examples.PRFTagReader.Collision.ForgeStep
+public import Examples.PRFTagReader.Defs
+public import Examples.PRFTagReader.DirectCoupling
+public import Examples.PRFTagReader.DirectCoupling.Compose
+public import Examples.PRFTagReader.DirectCoupling.ReaderCase
+public import Examples.PRFTagReader.DirectCoupling.StepLemmas
+public import Examples.PRFTagReader.DirectCoupling.Swap
+public import Examples.PRFTagReader.DirectCoupling.TagSlotPositive
+public import Examples.PRFTagReader.DirectCoupling.TagSlotZero
+public import Examples.PRFTagReader.MultipleBadCollision
+public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
+public import Examples.PRFTagReader.MultipleToHybrid.Setup
+public import Examples.PRFTagReader.PRFReductions
+public import Examples.PRFTagReader.PRFReductions.IdealHandlers
+public import Examples.PRFTagReader.PRFReductions.Reductions
+public import Examples.PRFTagReader.PRFReductions.Structural
+public import Examples.PRFTagReader.Table
+public import Examples.PRFTagReader.UnlinkReduction
+public import Examples.PRGfromPRF
+public import Examples.Pedersen
+public import Examples.ProgramLogic.Probability
+public import Examples.ProgramLogic.ProofMode
+public import Examples.ProgramLogic.Relational
+public import Examples.ProgramLogic.RelationalAnchored
+public import Examples.ProgramLogic.RelationalDerived
+public import Examples.ProgramLogic.RelationalStep
+public import Examples.ProgramLogic.Unary
+public import Examples.ProgramLogic.UnaryProbability
+public import Examples.ProgramLogic.UnaryStep
+public import Examples.ProgramLogic.UnaryTriple
+public import Examples.Regev
+public import Examples.Schnorr.SigmaProtocol
+public import Examples.Schnorr.Signature
+public import Examples.SealedSender.AspectObservation
+public import Examples.SimpleTwoServerPIR

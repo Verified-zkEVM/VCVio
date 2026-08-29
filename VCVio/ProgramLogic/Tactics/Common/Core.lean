@@ -4,17 +4,21 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Lean.Elab.Tactic.Basic
-import Lean.Meta.Match.MatcherApp
-import Lean.Meta.Sym.Pattern
-import VCVio.OracleComp.Constructions.Replicate
-import VCVio.ProgramLogic.NotationCore
+module
+
+public meta import Lean.Elab.Tactic.Basic
+public meta import Lean.Meta.Match.MatcherApp
+public meta import Lean.Meta.Sym.Pattern
+public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.ProgramLogic.NotationCore
 
 /-!
 # VCGen Planner Core
 
 Shared planning infrastructure for the unary and relational VCGen tactics.
 -/
+
+public meta section
 
 open Lean Elab Tactic Meta
 
@@ -265,7 +269,7 @@ key agrees with the patterns produced by `Sym.mkPatternFromDeclWithKey`.
 structure constructor.
 
 Do not use the more general `Sym.preprocessType` here. Besides being intended
-for declaration types rather than terms, in Lean 4.32 it also unfolds reducible
+for declaration types rather than terms, in Lean 4.33 it also unfolds reducible
 user programs. A program containing a matcher can then make later
 definitional equality reduce a matcher with loose de Bruijn variables and
 panic in `whnfEasyCases`. The wrappers below are the only newly
@@ -420,7 +424,7 @@ def isEvalDistEqGoal (target : Expr) : Bool :=
   if target.isAppOfArity ``Eq 3 then
     let lhs := target.getArg! 1
     let rhs := target.getArg! 2
-    (findAppWithHead? ``evalDist lhs).isSome && (findAppWithHead? ``evalDist rhs).isSome
+    (findAppWithHead? ``evalSPMF lhs).isSome && (findAppWithHead? ``evalSPMF rhs).isSome
   else
     false
 

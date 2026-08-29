@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import VCVio.OracleComp.ProbComp
-import VCVio.OracleComp.SimSemantics.StateT.Basic
+module
+
+public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-!
 # State-Projection Lemmas for `simulateQ`
@@ -35,6 +37,8 @@ This file is below `ProgramLogic` and is depended on by both `ProgramLogic/Relat
 (which proves the genuinely relational corollaries) and `OracleComp/QueryTracking/*` files that
 need to project away bookkeeping state from cached / programmed / seeded oracles.
 -/
+
+@[expose] public section
 
 universe u v
 

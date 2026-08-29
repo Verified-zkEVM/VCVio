@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCrypto.Falcon.Concrete.FPR
+
+module
+public import LatticeCrypto.Falcon.Concrete.FPR
 
 /-!
 # FloatLike: Typeclass for IEEE-754-like Floating-Point Operations
@@ -17,6 +19,8 @@ The typeclass captures exactly the operations used by the Falcon signing
 pipeline: FFT, LDL decomposition, discrete Gaussian sampling, and the
 FACCT exponential approximation.
 -/
+
+public section
 
 
 /-- Floating-point-like operations needed by the executable Falcon implementation. -/
@@ -113,7 +117,7 @@ private def floatRint (x : Float) : Int64 :=
     floorInt + 1
 
 /-- The fast native-`Float` Falcon floating-point backend. -/
-instance : FloatLike Float where
+@[no_expose] instance : FloatLike Float where
   zero := 0.0
   one := 1.0
   neg := Float.neg

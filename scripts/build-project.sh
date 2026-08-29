@@ -14,7 +14,11 @@ run_ffi=false
 [[ "${1:-}" == "--ffi" ]] && run_ffi=true
 
 echo "# Building Project"
-lake build Examples
+# `VCVioTest` is the canary library (grind capability gates, probability tactic
+# regressions, universe-polymorphism consumers). It is not a default target and is
+# not reachable from `Examples`, so build it explicitly — otherwise the local
+# workflow reproduces the CI blind spot that let two `grind` regressions through.
+lake build Examples VCVioTest
 
 if [[ "$run_ffi" == true ]]; then
   echo "# Initializing native FFI submodules"

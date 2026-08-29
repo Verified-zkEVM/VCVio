@@ -3,7 +3,9 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCryptoTest.MLDSA.Helpers
+
+module
+public import LatticeCryptoTest.MLDSA.Helpers
 
 /-!
 # ML-DSA-65 Test Vectors
@@ -15,6 +17,8 @@ Signing vectors specify a keygen seed and a message. The test generates keys fro
 signs the message with both Lean and mldsa-native (deterministic, `rnd = 0`), and compares the
 results byte-exactly.
 -/
+
+@[expose] public section
 
 
 namespace MLDSA.Test.ACVP

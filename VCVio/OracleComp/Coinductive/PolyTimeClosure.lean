@@ -3,7 +3,10 @@ Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
-import VCVio.OracleComp.Coinductive.PolyTime
+
+module
+
+public import VCVio.OracleComp.Coinductive.PolyTime
 
 /-!
 # Closure Properties of Polynomial-Time Adversaries
@@ -33,6 +36,8 @@ The remaining missing closure is sequential composition (`bind`), which needs th
 two-phase machine construction; with canonical boundaries its statement is finally
 well-formed (the mid boundary is shared by construction).
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp Computability
 

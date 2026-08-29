@@ -3,9 +3,11 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters
 -/
-import VCVio.OracleComp.QueryTracking.Collision
-import ToMathlib.Combinatorics.FinPairs
-import ToMathlib.Data.ENNReal.Gauss
+
+module
+public import VCVio.OracleComp.QueryTracking.Collision
+public import ToMathlib.Combinatorics.FinPairs
+public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # ROM Birthday Bound
@@ -14,6 +16,8 @@ Per-pair collision bounds and union bound birthday argument for random oracle
 collision probability. Covers both log-based and cache-based collision bounds,
 with per-index corollaries.
 -/
+
+@[expose] public section
 
 open OracleSpec OracleComp ENNReal Finset
 
@@ -27,7 +31,7 @@ variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι}
 /-! ## Per-Pair Collision Bound (Textbook Step 3)
 
 For each pair (i,j) of positions in the log with distinct inputs,
-Pr[outputs equal] ≤ 1/|C|. This is because in the evalDist model,
+Pr[outputs equal] ≤ 1/|C|. This is because in the evalSPMF model,
 each query returns an independent uniform sample. -/
 
 omit [DecidableEq ι] [spec.DecidableEq] in
@@ -272,7 +276,13 @@ theorem probEvent_logCollision_le_birthday_total {α : Type}
 
 open Classical in
 omit [spec.DecidableEq] in
-private lemma card_cacheQuery_collision_le_aux {cache₀ : QueryCache spec} {t : spec.Domain}
+/-- At a fresh query, the number of responses that would create a cache collision is at most
+the number of keys known to be populated in the current collision-free cache.
+
+The finite set `S` need only cover the populated keys; it may be a convenient external bound
+rather than the cache's exact support. This form is intended for adaptive birthday arguments,
+where `S` grows by one after each cache miss. -/
+theorem card_responses_creating_cacheCollision_le {cache₀ : QueryCache spec} {t : spec.Domain}
     {S : Finset spec.Domain} (hnocoll : ¬CacheHasCollision cache₀)
     (hSmem : ∀ t', cache₀ t' ≠ none → t' ∈ S) :
     (Finset.univ.filter (fun u => CacheHasCollision (cache₀.cacheQuery t u))).card ≤ S.card := by
@@ -389,7 +399,8 @@ private lemma probEvent_cacheCollision_run_le_sum_aux [Inhabited ι]
         classical
         obtain ⟨S, hScard, hSmem⟩ := hbnd
         rw [probEvent_query]
-        have hbad_le_k := (card_cacheQuery_collision_le_aux (t := t) hnocoll hSmem).trans hScard
+        have hbad_le_k :=
+          (card_responses_creating_cacheCollision_le (t := t) hnocoll hSmem).trans hScard
         calc (↑(Finset.univ.filter (fun u => CacheHasCollision (cache₀.cacheQuery t u))).card :
                 ℝ≥0∞) / ↑(Fintype.card (spec.Range t))
             ≤ (k : ℝ≥0∞) / ↑(Fintype.card (spec.Range t)) :=

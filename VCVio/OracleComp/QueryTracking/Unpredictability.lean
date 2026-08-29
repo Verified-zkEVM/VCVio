@@ -3,9 +3,11 @@ Copyright (c) 2026 James Waters. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: James Waters, Quang Dao
 -/
-import VCVio.OracleComp.QueryTracking.Birthday
-import VCVio.OracleComp.QueryTracking.ProgrammingOracle
-import VCVio.OracleComp.Constructions.SampleableType
+
+module
+public import VCVio.OracleComp.QueryTracking.Birthday
+public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # ROM Unpredictability and Collision Win Bounds
@@ -30,20 +32,23 @@ its `qP * qH * β` repackaging), keeping the relational theorem in the `ProgramL
 while the unpredictability primitive stays here in `QueryTracking`.
 -/
 
+@[expose] public section
+
 open OracleSpec OracleComp ENNReal Finset
 
 open scoped OracleSpec.PrimitiveQuery
 
-namespace OracleComp
+universe u
 
-variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι}
-  [spec.DecidableEq] [IsUniformSpec spec]
+namespace OracleComp
 
 /-! ## Unpredictability -/
 
 section Unpredictability
 
-variable {spec' : OracleSpec.{0, 0} ι} [spec'.DecidableEq] [IsUniformSpec spec']
+variable {ι : Type u} [DecidableEq ι] {spec : OracleSpec.{u, u} ι}
+  [spec.DecidableEq] [IsUniformSpec spec]
+  {spec' : OracleSpec.{u, u} ι} [spec'.DecidableEq] [IsUniformSpec spec']
 
 omit [spec'.DecidableEq] in
 /-- **Fresh query uniformity**: querying `cachingOracle` at an uncached point
@@ -64,7 +69,7 @@ holds for any computation regardless of how many queries it makes.
 
 A meaningful unpredictability bound should use `hbound` to establish that the queried point
 is fresh, giving a tight `1/|C|` bound on the probability of guessing the ROM output. -/
-theorem probEvent_unqueried_match_le {α : Type} {t : ℕ}
+theorem probEvent_unqueried_match_le {α : Type u} {t : ℕ}
     (oa : OracleComp spec' α)
     (_hbound : IsPerIndexQueryBound oa (fun _ => t))
     (predict : spec'.Domain) (_target : spec'.Range predict) :
@@ -81,7 +86,7 @@ total query bound. Each cache miss is a fresh uniform draw, so a union bound
 over the at most `n` misses gives the result.
 
 This is the reusable ROM lemma for the extractability "fresh target hit" case. -/
-theorem probEvent_cache_has_value_le_of_unique_preimage {α : Type}
+theorem probEvent_cache_has_value_le_of_unique_preimage {α : Type u}
     [Inhabited ι]
     (oa : OracleComp spec α)
     (n : ℕ) (hbound : IsTotalQueryBound oa n)
@@ -244,7 +249,7 @@ theorem probEvent_cache_has_value_le_of_unique_preimage {α : Type}
 /-- Special case of
 `probEvent_cache_has_value_le_of_unique_preimage` when the initial cache
 contains at most one preimage of `v₀` because the cache is collision-free. -/
-theorem probEvent_cache_has_value_le_of_noCollision {α : Type}
+theorem probEvent_cache_has_value_le_of_noCollision {α : Type u}
     [Inhabited ι]
     (oa : OracleComp spec α)
     (n : ℕ) (hbound : IsTotalQueryBound oa n)
@@ -264,7 +269,7 @@ theorem probEvent_cache_has_value_le_of_noCollision {α : Type}
 /-- Special case of
 `probEvent_cache_has_value_le_of_unique_preimage` when the initial cache
 contains no preimage of `v₀`. -/
-theorem probEvent_cache_has_value_le {α : Type}
+theorem probEvent_cache_has_value_le {α : Type u}
     [Inhabited ι]
     (oa : OracleComp spec α)
     (n : ℕ) (hbound : IsTotalQueryBound oa n)
@@ -280,9 +285,79 @@ theorem probEvent_cache_has_value_le {α : Type}
     (oa := oa) (n := n) hbound hrange v₀ cache₀
     fun t₀ _ v₁ _ hcache₁ _ hheq₁ _ => (hno_v₀ t₀ v₁ hcache₁ hheq₁).elim
 
+/-- **Finite-target cache-hit bound**: suppose every value in `targets` has at most one
+preimage in the initial cache. If `oa` makes at most `n` queries, then the probability that its
+cached execution creates a fresh entry whose value belongs to `targets` is at most
+`|targets| * n / |Range default|`.
+
+`targets.card` counts distinct output values, not positions or labels carrying those values.
+A consumer that starts from a positional collection can deduplicate its values into a `Finset`
+and then weaken the result using the corresponding cardinality bound. -/
+theorem probEvent_cache_hits_targets_le_of_unique_preimage {α : Type u}
+    [Inhabited ι]
+    (oa : OracleComp spec α)
+    (n : ℕ) (hbound : IsTotalQueryBound oa n)
+    (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t))
+    (targets : Finset (spec.Range default))
+    (cache₀ : QueryCache spec)
+    (hunique : ∀ v₀ ∈ targets,
+      ∀ t₀ t₁ : spec.Domain,
+        ∀ v₁ : spec.Range t₀, ∀ v₂ : spec.Range t₁,
+          cache₀ t₀ = some v₁ →
+          cache₀ t₁ = some v₂ →
+          HEq v₁ v₀ →
+          HEq v₂ v₀ →
+          t₀ = t₁) :
+    Pr[fun z => ∃ v₀ ∈ targets, ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+        z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀ |
+      (simulateQ cachingOracle oa).run cache₀] ≤
+      ((targets.card * n : ℕ) : ℝ≥0∞) *
+        (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ := by
+  calc
+    Pr[fun z => ∃ v₀ ∈ targets, ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+          z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀ |
+        (simulateQ cachingOracle oa).run cache₀]
+      ≤ ∑ v₀ ∈ targets,
+          Pr[fun z => ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+              z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀ |
+            (simulateQ cachingOracle oa).run cache₀] :=
+        probEvent_exists_finset_le_sum targets _ _
+    _ ≤ ∑ _v₀ ∈ targets,
+          (n : ℝ≥0∞) * (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ := by
+        refine Finset.sum_le_sum fun v₀ hv₀ => ?_
+        exact probEvent_cache_has_value_le_of_unique_preimage
+          oa n hbound hrange v₀ cache₀ (hunique v₀ hv₀)
+    _ = ((targets.card * n : ℕ) : ℝ≥0∞) *
+          (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ := by
+        simp [Nat.cast_mul, mul_assoc]
+
+/-- Finite-target cache-hit bound specialized to a collision-free initial cache. Collision
+freeness ensures that each distinct target value has at most one initial preimage. -/
+theorem probEvent_cache_hits_targets_le_of_noCollision {α : Type u}
+    [Inhabited ι]
+    (oa : OracleComp spec α)
+    (n : ℕ) (hbound : IsTotalQueryBound oa n)
+    (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t))
+    (targets : Finset (spec.Range default))
+    (cache₀ : QueryCache spec)
+    (hno : ¬ CacheHasCollision cache₀) :
+    Pr[fun z => ∃ v₀ ∈ targets, ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+        z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀ |
+      (simulateQ cachingOracle oa).run cache₀] ≤
+      ((targets.card * n : ℕ) : ℝ≥0∞) *
+        (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ :=
+  probEvent_cache_hits_targets_le_of_unique_preimage oa n hbound hrange targets cache₀
+    fun _ _ t₀ t₁ v₁ v₂ hcache₀ hcache₁ hheq₀ hheq₁ => not_not.1 fun hne =>
+      hno ⟨t₀, t₁, v₁, v₂, hne, hcache₀, hcache₁, hheq₀.trans hheq₁.symm⟩
+
 end Unpredictability
 
 /-! ## Collision-Based Win Bound -/
+
+section CollisionBasedWinBound
+
+variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι}
+  [spec.DecidableEq] [IsUniformSpec spec]
 
 omit [spec.DecidableEq] in
 /-- **WARNING: vacuously true.** The `[Unique ι]` hypothesis means `ι` has exactly one element,
@@ -304,6 +379,8 @@ theorem probEvent_collision_win_le {α : Type} {t : ℕ}
     Pr[win | (simulateQ cachingOracle oa).run ∅] ≤
       (t ^ 2 : ℝ≥0∞) / (2 * Fintype.card (spec.Range default)) :=
   (probEvent_mono hwin).trans (probEvent_cacheCollision_le_birthday' oa hbound hrange)
+
+end CollisionBasedWinBound
 
 /-! ## `HasUnpredictableSample` -/
 

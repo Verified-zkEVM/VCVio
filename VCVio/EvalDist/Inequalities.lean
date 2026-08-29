@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.EvalDist.Defs.Basic
-import ToMathlib.Data.ENNReal.SumSquares
+
+module
+public import VCVio.EvalDist.Defs.Basic
+public import ToMathlib.Data.ENNReal.SumSquares
 
 /-!
 # Probability-weighted Cauchy-Schwarz / Jensen inequalities
@@ -25,6 +27,8 @@ per-pk fork-success probability, `B x` the per-pk extraction-success probability
 `Pr[= · | mx]`), so this lemma sits at the heart of any keygen-marginalized fork-based
 extraction bound.
 -/
+
+@[expose] public section
 
 open ENNReal
 

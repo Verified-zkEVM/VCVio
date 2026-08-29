@@ -3,8 +3,10 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import LatticeCryptoTest.Falcon.Helpers
-import LatticeCryptoTest.Falcon.TestVectors
+
+module
+public import LatticeCryptoTest.Falcon.Helpers
+public import LatticeCryptoTest.Falcon.TestVectors
 
 /-!
 # Falcon Test Runner
@@ -22,6 +24,8 @@ lake build falcon_test
 .lake/build/bin/falcon_test
 ```
 -/
+
+public section
 
 set_option maxRecDepth 2048
 
@@ -74,11 +78,9 @@ private def prngNextSalt (s : PRNGState) : Bytes 40 × PRNGState := Id.run do
     st := s'
   return (Vector.ofFn fun ⟨i, _⟩ => bytes.getD i 0, st)
 
-def main : IO Unit := do
-  let st ← IO.mkRef ({} : TestState)
-  IO.println "=== Falcon Correctness Tests ==="
-  IO.println ""
-  flush
+-- Keep the test groups in separate opaque declarations. Lean's compiler `simp`
+-- pass scales poorly when all of these tests are generated from one large `do` block.
+def runFalconProtocolTests (st : IO.Ref TestState) : IO Unit := do
   -- ── 1. NTT roundtrip ──────────────────────────
   IO.println "1. NTT roundtrip (invNTT ∘ NTT = id) for Falcon"
   do
@@ -119,7 +121,9 @@ def main : IO Unit := do
     | some bytes =>
       match decompress n bytes 666 with
       | none => check st "decompress should succeed" false
-      | some s' => check st "decompress(compress(s)) = s" (s == s')
+      | some s' =>
+        check st "decompress(compress(s)) = s" (s == s')
+        check st "decompress rejects trailing bytes" ((decompress n (bytes ++ [0]) 666).isNone)
   IO.println ""
   -- ── 4. Public key encode/decode roundtrip ─────
   IO.println "4. Public key encode/decode roundtrip"
@@ -287,6 +291,43 @@ def main : IO Unit := do
     let prng2 := PRNGState.init seed
     let (accept1, _) := berExp prng2 zero half
     check st s!"berExp(zero, half) likely accepts (got {accept1})" accept1
+    -- `berExpReduce` must land `r` in `[0, log 2)`: `expm_p63` reads only `|r|`, so a
+    -- negative `r` is evaluated as `exp |r|` and inflates the acceptance weight by up to
+    -- `2x`. Rounding the quotient to nearest instead of toward `-∞` puts `r` below zero for
+    -- about half of all inputs, and `k / 32` catches it at 100 of the 199 points below.
+    let log2Bound : FPR := 0x3FE62E42FEFA39F7  -- `log 2`, rounded up by 8 ulp
+    let mut redBad : Nat := 0
+    let mut redCount : Nat := 0
+    for k in [1:200] do
+      let (_, r) := berExpReduce (scaled (Int64.ofNat k) (-5))
+      if (r >>> 63) != 0 || r > log2Bound then
+        redBad := if redBad == 0 then k else redBad
+        redCount := redCount + 1
+    check st s!"berExpReduce(k/32) ∈ [0, log 2] for k < 200" (redCount == 0)
+      s!"{redCount} of 199 outside, first at k={redBad}"
+    check st "berExpReduce(0) = (0, 0)"
+      (berExpReduce (F := FPR) zero == (0, zero))
+    -- `berExp` needs `x ≥ 0`, and `samplerZLoop` supplies it from the key-generation
+    -- invariant `σ ≤ σ₀`. In floating point that margin is exactly zero, so pin both sides:
+    -- `isigmaHi` is the representable `1/σ` just above `1/σ₀`, and `isigmaLo` is one ulp
+    -- down, where `σ` passes `σ₀` and `x` goes negative. The pair is what makes this a test
+    -- rather than a restatement.
+    let inv2s0 : FPR := scaled 5435486223186882 (-55)
+    let isigmaHi : FPR := scaled 4947651334655860 (-53)  -- σ = 1.8204999999999998 ≤ σ₀
+    let isigmaLo : FPR := scaled 4947651334655859 (-53)  -- σ = 1.8205000000000002 > σ₀
+    let xAt (isig : FPR) (z0 : Nat) : FPR :=
+      let dss := mul (mul isig isig) half
+      let diff := sub zero (ofInt (Int64.ofNat z0))  -- z = -z0 for b = 0, centre r = 0
+      sub (mul (mul diff diff) dss) (mul (ofInt (Int64.ofNat (z0 * z0))) inv2s0)
+    let mut hiNeg : Nat := 0
+    let mut loNeg : Nat := 0
+    for z0 in [0:26] do
+      if (xAt isigmaHi z0) >>> 63 != 0 then hiNeg := hiNeg + 1
+      if (xAt isigmaLo z0) >>> 63 != 0 then loNeg := loNeg + 1
+    check st "samplerZ x ≥ 0 for σ ≤ σ₀ (berExp's precondition)" (hiNeg == 0)
+      s!"{hiNeg} of 26 negative"
+    check st "samplerZ x < 0 one ulp past σ₀ (the margin is exactly zero)" (loNeg > 0)
+      s!"{loNeg} of 26 negative"
   IO.println ""
   -- ── 13. Falcon-1024 FFI end-to-end ─────────────
   IO.println "13. Falcon-1024 FFI end-to-end"
@@ -363,6 +404,8 @@ def main : IO Unit := do
       check st s!"Falcon-{paramName} wrong key: FFI rejects" (verCross == 0)
   IO.println ""
   flush
+
+def runFalconFloatingPointTests (st : IO.Ref TestState) : IO Unit := do
   -- ── 16. FloatLike Float arithmetic ──────────────
   IO.println "16. FloatLike Float arithmetic (native IEEE-754)"
   do
@@ -517,6 +560,8 @@ def main : IO Unit := do
       FPR.rint (aFFT.getD i 0) == FPR.rint (diff.getD i 0)
     check st "fpolyAdd then fpolySub ≈ identity" addSubOk
   IO.println ""
+
+def runFalconLowLevelTests (st : IO.Ref TestState) : IO Unit := do
   -- ── 23. BigInt31 basic ops ──────────────────────
   IO.println "23. BigInt31 basic ops"
   do
@@ -691,6 +736,8 @@ def main : IO Unit := do
       IO.println s!"  logn={logn}: selfadj split f0 size={sa0.size}, f1 size={sa1.size}"
   IO.println ""
   IO.println ""
+
+def runFalconSigningTests (st : IO.Ref TestState) : IO Unit := do
   -- ── 28. Pure-Lean signing smoke test ────────────
   IO.println "28. Pure-Lean signing smoke test (Float)"
   do
@@ -770,6 +817,16 @@ def main : IO Unit := do
           let lv3 := concreteVerify testFalcon512 pk2 msg.toList sig
           check st "wrong pk: Lean verify rejects pure-Lean sig" (!lv3)
   IO.println ""
+
+def main : IO Unit := do
+  let st ← IO.mkRef ({} : TestState)
+  IO.println "=== Falcon Correctness Tests ==="
+  IO.println ""
+  flush
+  runFalconProtocolTests st
+  runFalconFloatingPointTests st
+  runFalconLowLevelTests st
+  runFalconSigningTests st
   -- ── Summary ────────────────────────────────────
   let s ← st.get
   IO.println s!"=== {s.passed} passed, {s.failed} failed ==="

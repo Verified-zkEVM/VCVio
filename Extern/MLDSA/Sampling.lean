@@ -3,9 +3,13 @@ Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import Extern.Hashing
-import LatticeCrypto.MLDSA.Concrete.Encoding
-import LatticeCrypto.MLDSA.Concrete.NTT
+
+module
+import all LatticeCrypto.MLDSA.Concrete.Encoding
+import LatticeCrypto.MLDSA.Concrete.LawBounds
+public import Extern.Hashing
+public import LatticeCrypto.MLDSA.Concrete.Encoding
+public import LatticeCrypto.MLDSA.Concrete.NTT
 
 /-!
 # Concrete Sampling and Hash Wiring for ML-DSA
@@ -20,6 +24,8 @@ FIPS 204:
 - `ExpandMask`
 - message / commitment hash wrappers
 -/
+
+public section
 
 
 namespace MLDSA.Concrete
@@ -147,7 +153,7 @@ private def requireFullEtaSample (coeffs : Array ℤ) : Array ℤ :=
   else
     panic! s!"ML-DSA eta sampler produced {coeffs.size} coefficients; expected {ringDegree}"
 
-private def sampleEtaPoly (eta : Nat) (seed : Bytes 64) (nonce : Nat) : Rq :=
+def sampleEtaPoly (eta : Nat) (seed : Bytes 64) (nonce : Nat) : Rq :=
   let stream := shake256Stream (vectorToByteArray seed) nonce 1024
   let coeffs := requireFullEtaSample <| rejEtaCoeffs eta stream
   Vector.ofFn fun i => (coeffs.getD i.val 0 : Coeff)
@@ -165,6 +171,16 @@ def expandMask (rhoPrime : Bytes 64) (kappa : ℕ) (p : Params) : RqVec p.l :=
   let seed := vectorToByteArray rhoPrime
   Vector.ofFn fun i =>
     polyZUnpack p <| shake256Stream seed (kappa + i.val) (polyZPackedBytes p)
+
+/-- Every component produced by `expandMask` lies in the FIPS-204 `z` window for an approved
+parameter set. -/
+theorem expandMask_get_cInfNorm_le (p : Params) (hp : p.isApproved) (rhoPrime : Bytes 64)
+    (kappa : ℕ) (j : Fin p.l) :
+    LatticeCrypto.cInfNorm ((expandMask rhoPrime kappa p).get j) ≤ p.gamma1 := by
+  obtain ⟨hwidth, hq⟩ := approved_gamma1_width p hp
+  unfold expandMask
+  rw [Vector.get_ofFn]
+  exact bitUnpackPoly_z_cInfNorm_le _ p.gamma1 hwidth hq
 
 /-! ## Challenge sampling -/
 
@@ -223,7 +239,7 @@ def sampleInBall (p : Params) (seed : CommitHashBytes p) : Rq :=
   let coeffs : Array Coeff :=
     sampleInBallLoop stream signs ringDegree p.tau (ringDegree - p.tau)
       (Array.replicate ringDegree 0) 8 0
-  Vector.ofFn fun i => coeffs.getD i.val 0
+  LatticeCrypto.Poly.ofPi fun i => coeffs.getD i.val 0
 
 /-! ## Structural output bounds for the rejection samplers
 
@@ -295,7 +311,7 @@ theorem sampleInBall_coeff_mem (p : Params) (seed : CommitHashBytes p) (i : Fin 
     (sampleInBall p seed).get i = 0 ∨ (sampleInBall p seed).get i = 1 ∨
       (sampleInBall p seed).get i = -1 := by
   unfold sampleInBall
-  simp only [Vector.get_ofFn]
+  rw [LatticeCrypto.Poly.get_ofPi]
   apply sampleInBallLoop_mem
   intro j
   left
@@ -455,15 +471,16 @@ private theorem countNZ_replicate_zero : countNZ (Array.replicate ringDegree (0 
 
 /-- The `ℓ₁` norm of a polynomial materialized by `Vector.ofFn` from a defaulted-array lookup is the
 nonzero count of that array. -/
-private theorem l1Norm_ofFn_eq_countNZ (coeffs : Array Coeff) :
-    LatticeCrypto.l1Norm (Vector.ofFn (fun i : Fin ringDegree => coeffs.getD i.val 0))
+private theorem l1Norm_ofPi_eq_countNZ (coeffs : Array Coeff) :
+    LatticeCrypto.l1Norm (LatticeCrypto.Poly.ofPi
+      (fun i : Fin ringDegree => coeffs.getD i.val 0))
       = countNZ coeffs := by
   rw [LatticeCrypto.l1Norm_eq_sum]
   unfold countNZ
   rw [Finset.sum_range (fun j => (LatticeCrypto.centeredRepr (coeffs.getD j 0)).natAbs)]
   apply Finset.sum_congr rfl
   intro i _
-  rw [Vector.get_ofFn]
+  rw [LatticeCrypto.Poly.get_ofPi]
 
 set_option maxRecDepth 4000 in
 /-- The challenge loop, run from the all-zero accumulator over `[ringDegree - τ, ringDegree)`,
@@ -488,7 +505,7 @@ coefficients). This is the count needed for the challenge-product bound `‖c ·
 theorem sampleInBall_l1Norm (p : Params) (seed : CommitHashBytes p) :
     LatticeCrypto.l1Norm (sampleInBall p seed) ≤ p.tau := by
   unfold sampleInBall
-  rw [l1Norm_ofFn_eq_countNZ]
+  rw [l1Norm_ofPi_eq_countNZ]
   exact countNZ_sampleInBallLoop_le _ _ p
 
 /-- After a `push`, the defaulted lookup at any index is either the pushed value or the prior
