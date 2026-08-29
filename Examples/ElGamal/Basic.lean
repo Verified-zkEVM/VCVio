@@ -74,6 +74,18 @@ variable {F : Type} [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
 variable {G : Type} [AddCommGroup G] [Module F G] [SampleableType G]
 variable {gen : G}
 
+/-- The shared one-time DDH reduction body, parameterized by its three effectful operations.
+
+The closed probabilistic reduction, the open adversary interface, the profiled reduction, and the
+fully syntactic oracle program all instantiate this definition. -/
+abbrev oneTimeDDHReductionBody {m : Type → Type} [Monad m] {State : Type}
+    (chooseMessages : m (G × G × State)) (coin : m Bool)
+    (distinguish : State → G × G → m Bool) (B T : G) : m Bool :=
+  chooseMessages >>= fun ⟨m₁, m₂, state⟩ ↦
+    coin >>= fun bit ↦ do
+      let bit' ← distinguish state (B, T + if bit then m₁ else m₂)
+      pure (bit == bit')
+
 /-- ElGamal decryption perfectly inverts encryption: `Dec(sk, Enc(pk, msg)) = msg`. -/
 theorem correct [DecidableEq G] :
     (elGamalAsymmEnc F G gen).PerfectlyCorrect ProbCompRuntime.probComp := by
@@ -97,12 +109,8 @@ key, form the challenge ciphertext `(B, T + m_b)`, and return whether the one-ti
 guessed the hidden bit `b`. -/
 def IND_CPA_OneTime_DDHReduction
     (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)) :
-    DiffieHellman.DDHAdversary F G := fun _ A B T => do
-  let (m₁, m₂, st) ← adv.chooseMessages A
-  let bit ← ($ᵗ Bool)
-  let c : G × G := (B, T + if bit then m₁ else m₂)
-  let bit' ← adv.distinguish st c
-  pure (bit == bit')
+    DiffieHellman.DDHAdversary F G := fun _ A B T =>
+  oneTimeDDHReductionBody (adv.chooseMessages A) ($ᵗ Bool) adv.distinguish B T
 
 omit [DecidableEq G] in
 /-- Real-branch identification for the one-time ElGamal reduction. After unfolding
@@ -119,6 +127,7 @@ private lemma IND_CPA_OneTime_game_evalSPMF_eq_ddhExpReal
   ext z
   change Pr[= z | _] = Pr[= z | _]
   simp only [bind_pure_comp, bind_map_left]
+  simp only [map_eq_pure_bind]
   -- Step 1: swap $ᵗ Bool past $ᵗ F in LHS
   rw [probOutput_bind_bind_swap ($ᵗ Bool) ($ᵗ F)]
   -- Now LHS starts with $ᵗ F. Use congr under $ᵗ F.
@@ -230,7 +239,8 @@ private lemma IND_CPA_OneTime_DDHReduction_rand_half
         let bit ← ($ᵗ Bool)
         let bit' ← adv.distinguish st (b • gen, c • gen + if bit then m₁ else m₂)
         pure (decide (bit = bit'))]
-      · simpa [DiffieHellman.ddhExpRand, IND_CPA_OneTime_DDHReduction, monad_norm,
+      · simpa [DiffieHellman.ddhExpRand, IND_CPA_OneTime_DDHReduction,
+          oneTimeDDHReductionBody, monad_norm,
           show ∀ a b : Bool, (a == b) = decide (a = b) from by decide] using
           (probOutput_bind_bijective_uniform_cross
             (α := F) (β := G) (f := (· • gen)) hg

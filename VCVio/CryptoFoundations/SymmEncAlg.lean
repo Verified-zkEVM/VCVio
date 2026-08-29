@@ -5,14 +5,15 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
+public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.EvalDist.Prod
 public import VCVio.OracleComp.ProbComp
 
 /-!
 # Symmetric Encryption Schemes
 
-This file defines `SymmEncAlg m M K C`, a monad-generic symmetric encryption scheme with
-message space `M`, key space `K`, and ciphertext space `C`.
+This file gives the discrete-probability-facing correctness and perfect-secrecy predicates for
+`SymmEncAlg m M K C`.
 
 The struct follows the same pattern as `AsymmEncAlg`, `KEMScheme`, `MacAlg`, etc.: it is
 parameterized by an ambient monad `m` and uses plain `Type` parameters. Asymptotic security
@@ -32,26 +33,9 @@ universe u
 
 open OracleComp ENNReal
 
-/-- A monad-generic symmetric encryption scheme over an ambient monad `m`, with message
-space `M`, key space `K`, and ciphertext space `C`. -/
-structure SymmEncAlg (m : Type → Type u) [Monad m] (M K C : Type) where
-  /-- Sample a key. -/
-  keygen : m K
-  /-- Encrypt a message under a key. -/
-  encrypt : K → M → m C
-  /-- Decrypt a ciphertext under a key, returning `none` on failure. -/
-  decrypt : K → C → m (Option M)
-
 namespace SymmEncAlg
 
 variable {m : Type → Type u} [Monad m] {M K C : Type}
-
-/-- Round-trip experiment: sample a key, encrypt `msg`, then decrypt; used to state
-correctness via `Complete`. -/
-def CompleteExp (encAlg : SymmEncAlg m M K C) (msg : M) : m (Option M) := do
-  let k ← encAlg.keygen
-  let σ ← encAlg.encrypt k msg
-  encAlg.decrypt k σ
 
 /-- An encryption scheme is complete if decryption recovers every message with
 probability `1`. -/
@@ -59,31 +43,6 @@ def Complete [MonadLiftT m PMF] [LawfulMonadLiftT m PMF] (encAlg : SymmEncAlg m 
   ∀ msg : M, Pr[= msg | encAlg.CompleteExp msg] = 1
 
 section perfectSecrecy
-
-/-- Joint message/ciphertext experiment used to express perfect secrecy. -/
-def PerfectSecrecyExp (encAlg : SymmEncAlg m M K C) (mgen : m M) : m (M × C) := do
-  let msg' ← mgen
-  let k ← encAlg.keygen
-  return (msg', ← encAlg.encrypt k msg')
-
-/-- Ciphertext marginal induced by the perfect-secrecy experiment. -/
-def PerfectSecrecyCipherExp (encAlg : SymmEncAlg m M K C) (mgen : m M) : m C :=
-  Prod.snd <$> encAlg.PerfectSecrecyExp mgen
-
-/-- Ciphertext experiment conditioned on a fixed message. -/
-def PerfectSecrecyCipherGivenMsgExp (encAlg : SymmEncAlg m M K C) (msg : M) : m C := do
-  let k ← encAlg.keygen
-  encAlg.encrypt k msg
-
-lemma PerfectSecrecyExp_eq_bind [LawfulMonad m] (encAlg : SymmEncAlg m M K C) (mgen : m M) :
-    encAlg.PerfectSecrecyExp mgen =
-      mgen >>= fun msg => (msg, ·) <$> encAlg.PerfectSecrecyCipherGivenMsgExp msg := by
-  simp [PerfectSecrecyExp, PerfectSecrecyCipherGivenMsgExp, monad_norm]
-
-lemma PerfectSecrecyCipherExp_eq_bind [LawfulMonad m] (encAlg : SymmEncAlg m M K C) (mgen : m M) :
-    encAlg.PerfectSecrecyCipherExp mgen =
-      mgen >>= fun msg => encAlg.PerfectSecrecyCipherGivenMsgExp msg := by
-  simp [PerfectSecrecyCipherExp, PerfectSecrecyExp_eq_bind, monad_norm]
 
 variable [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
   [MonadLiftT m SetM] [EvalDistCompatible m]

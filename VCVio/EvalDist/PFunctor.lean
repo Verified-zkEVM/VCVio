@@ -111,14 +111,6 @@ theorem evalSPMF_lift_eq_uniform [h : P.IsUniformSpec] (operation : P.A) :
   exact congrArg (fun distribution : PMF (P.B operation) =>
     (distribution : SPMF (P.B operation))) (h.toPMF_eq_uniform operation)
 
-/-- Every direction of a single operation belongs to its syntactic support. -/
-@[simp]
-theorem support_lift (operation : P.A) :
-    support (FreeM.lift operation : FreeM P (P.B operation)) = Set.univ := by
-  change SetM.run ((FreeM.lift operation).liftM fun _ => Set.univ) = Set.univ
-  rw [FreeM.liftM_lift]
-  exact SetM.run_eq Set.univ
-
 /-- The support of an operation with a result continuation is the range of
 that continuation. -/
 @[simp]
@@ -128,6 +120,17 @@ theorem support_liftObj (object : P.Obj α) :
     Set.range object.2
   rw [FreeM.liftM_liftObj]
   exact Set.image_univ
+
+/-- Every direction of a single operation belongs to its `SetM`-fold support.
+
+This name distinguishes VCVio's denotational `support` from PolyFun's structural
+`MonadAttach.support_lift` theorem. -/
+@[simp]
+theorem support_lift_eq_univ (operation : P.A) :
+    support (FreeM.lift operation : FreeM P (P.B operation)) = Set.univ := by
+  change SetM.run ((FreeM.lift operation).liftM fun _ => Set.univ) = Set.univ
+  rw [FreeM.liftM_lift]
+  exact SetM.run_eq Set.univ
 
 /-- Syntactic support and distribution support agree for a uniformly
 interpreted polynomial free monad.
@@ -146,7 +149,7 @@ instance (priority := 100) instEvalDistCompatible [uniform : P.IsUniformSpec] :
     | pure result => simp
     | lift_bind operation next ih =>
         ext result
-        simp [uniform.toPMF_eq_uniform, ih]
+        simp [support_lift_eq_univ, uniform.toPMF_eq_uniform, ih]
 
 end FreeM
 end PFunctor

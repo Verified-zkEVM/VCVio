@@ -54,6 +54,29 @@ def roToy : OracleComp (unifSpec + (ℕ →ₒ Bool)) Bool := do
 def roToyProb : ProbComp Bool :=
   (simulateQ roSimPipeline roToy).run' ∅
 
+/-- A mixed toy computation that makes both a fresh uniform query and a hash query. -/
+def roMixedToy : OracleComp (unifSpec + (ℕ →ₒ Bool)) Bool := do
+  let coin : Fin 2 ← (unifSpec + (ℕ →ₒ Bool)).query (Sum.inl 1)
+  let hash ← (unifSpec + (ℕ →ₒ Bool)).query (Sum.inr 0)
+  pure ((coin == 0) == hash)
+
+/-- The fixed-hash-table interpretation remains computable while forwarding uniform queries. -/
+def roMixedFixed (f : QueryImpl ((ℕ →ₒ Bool) : OracleSpec ℕ) Id) : ProbComp Bool :=
+  simulateQ (OracleComp.unifFwdAnswerImpl f) roMixedToy
+
+/-- API canary for the probability-one bridge on a computation containing both query kinds. -/
+example (p : Bool → Prop) :
+    Pr[fun v => p v.1 | (simulateQ roSimPipeline roMixedToy).run
+      (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)] = 1
+    ↔
+    ∀ f : QueryImpl ((ℕ →ₒ Bool) : OracleSpec ℕ) Id,
+      (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache).AgreesWithFn f →
+        Pr[p | roMixedFixed f] = 1 := by
+  simpa only [roSimPipeline, roMixedFixed] using
+    (OracleComp.probEvent_eq_one_simulateQ_unifFwdImpl_add_randomOracle_run_iff
+      (oa := roMixedToy) (preexisting_cache :=
+        (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)) p)
+
 /-! ## Replay fork
 
 Locks `contextFork` and `contextForkCollision` on a minimal main computation, plus their
