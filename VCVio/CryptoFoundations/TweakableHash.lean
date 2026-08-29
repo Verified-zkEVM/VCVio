@@ -102,8 +102,7 @@ This is how a game instantiation places its *attacked* member inside its own col
 what HK22's `Th_m ∈ Th_λ` asks for. The point is not bookkeeping: with the seed withheld during
 target selection, the challenge oracle evaluates the attacked member only at target tweaks and
 under the target cap, so without this the attacked member cannot be evaluated at a tweak that is
-not a target — and a reduction simulating SLH-DSA must evaluate `F` at every address of every WOTS
-chain, of which only a handful are targets.
+not a target — and a reduction may need to do exactly that.
 
 Membership is definitional rather than a hypothesis: `cons_eval_none` is `rfl`. -/
 def cons {ι PkSeed Tweak M Y : Type} (th : TweakableHash PkSeed Tweak M Y)
