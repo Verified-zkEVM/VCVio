@@ -20,9 +20,7 @@ tweak being the 32-byte address `ADRS`), and against which their multi-target se
 This file provides the data abstraction only; the security games live under
 `HardnessAssumptions/TweakableHash/`. They take a `TweakableHash` whole rather than a
 partially-applied function, because `seedGen` is what samples
-the public parameter that the game must withhold from the adversary during target selection. A game
-stated over a bare `Tweak → M → Y` has no parameter to withhold, which is what separates
-single-function multi-target security from plain collision resistance.
+the public parameter that the game must withhold from the adversary during target selection.
 
 With `Tweak := Unit` this is definitionally a keyed hash family
 (`seedGen : ProbComp PkSeed`, `eval : PkSeed → M → Y`), so nothing is lost relative to the
