@@ -20,6 +20,7 @@ Use `VCVio/` when you are changing framework abstractions such as `SignatureAlg`
 - `LatticeCrypto/Ring/Kernel.lean`: `PolyKernel`, `NegacyclicRing`, `NegacyclicRingSemantics`, schoolbook multiplication.
 - `LatticeCrypto/Ring/VectorBackend.lean`: canonical vector-backed instantiation.
 - `LatticeCrypto/Ring/Transform.lean`: `TransformPoly`, `TransformOps`, and transform laws.
+- `LatticeCrypto/Ring/Sampling.lean`: `SampleableType` instances for `backend.Poly` and `TransformPoly`, so `$ᵗ Rq` / `$ᵗ Tq` (and the `RqVec` / `TqMatrix` vectors) work for any scheme whose coefficient type is sampleable.
 - `LatticeCrypto/Ring/Norms.lean`: centered representatives, `NormOps`, and generic norm infrastructure.
 - `LatticeCrypto/Ring/Rounding.lean`: abstract `RoundingOps` and `Power2RoundOps` used by ML-DSA.
 - `LatticeCrypto/Ring/IntegralLift.lean`: `IntegralLift` for Falcon integer-polynomial arithmetic.
