@@ -6,7 +6,8 @@ Authors: Nicolas Consigny
 
 module
 public import HashSig.SLHDSA.Scheme
-public import VCVio.CryptoFoundations.HardnessAssumptions.MultiTarget
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
 public import VCVio.CryptoFoundations.PRF
 
 /-!
@@ -23,8 +24,8 @@ generic `TweakableHash` and `PRFScheme` interfaces:
 - `Primitives.skPrfScheme` exposes the secret-value derivation function `PRF` at a public seed.
 
 These packages identify the primitive families to which an SLH-DSA security reduction applies.
-An aggregate EUF-CMA theorem additionally needs the seed-aware collection games from
-`HardnessAssumptions.MultiTarget`, SM-DT-DSPR and SM-DT-OpenPRE/UD variants, an `H_msg`
+An aggregate EUF-CMA theorem additionally needs the seed-aware collection games under
+`HardnessAssumptions.TweakableHash`, SM-DT-DSPR and SM-DT-OpenPRE/UD variants, an `H_msg`
 interleaved-target-subset-resilience game, explicit reductions from the forger, and checked query
 bounds. Primitive packaging alone does not supply those ingredients.
 
@@ -66,19 +67,40 @@ def Primitives.hHash [SampleableType prims.PkSeed] :
 exactly `arity` ordered nodes, while all members share the sampled public seed, canonical encoded
 address space, and output type. -/
 def Primitives.thashCollection :
-    TweakableHashCollection prims.PkSeed prims.AdrsKey prims.Y where
-  Index := ℕ
-  Message arity := Vector prims.Y arity
+    TweakableHashCollection ℕ prims.PkSeed prims.AdrsKey prims.Y where
+  Msg arity := Vector prims.Y arity
   eval := fun _ pkSeed adrsKey xs => prims.Thash pkSeed adrsKey xs.toList
 
-/-- The bounded multi-target collection problem for the `arity`-input member of `Thash`.
-The member and bound remain explicit so reductions cannot silently conflate `F`, `H`, and
-variable-arity `T_ℓ`, or an unbounded game with a `maxTargets`-bounded one. -/
-def Primitives.thashCollectionProblem (arity maxTargets : ℕ) :
-    MultiTarget.CollectionProblem prims.PkSeed prims.AdrsKey prims.Y where
-  collection := prims.thashCollection
-  target := arity
-  maxTargets := maxTargets
+/-- The fixed-arity member of SLH-DSA's public `Thash` collection. -/
+def Primitives.thashMember [SampleableType prims.PkSeed] (arity : ℕ) :
+    TweakableHash prims.PkSeed prims.AdrsKey (Vector prims.Y arity) prims.Y where
+  seedGen := $ᵗ prims.PkSeed
+  eval := fun pkSeed adrsKey xs => prims.Thash pkSeed adrsKey xs.toList
+
+/-- Evaluating the collection at `arity` is definitionally the same operation as evaluating the
+corresponding fixed-arity member. -/
+@[simp] theorem Primitives.thashCollection_eval [SampleableType prims.PkSeed] (arity : ℕ) :
+    prims.thashCollection.eval arity = (prims.thashMember arity).eval := rfl
+
+/-- The SM-DT-TCR problem for the `arity`-input member of `Thash`, with the whole `Thash`
+collection available during target selection. -/
+def Primitives.thashTcrProblem [SampleableType prims.PkSeed] (arity numTargets : ℕ) :
+    TweakableHash.SM_DT_TCR_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y arity) prims.Y where
+  th := prims.thashMember arity
+  thColl := prims.thashCollection
+  numTargets := numTargets
+
+/-- The unrestricted-subspace SM-DT-PRE problem for the `arity`-input member of `Thash`, with the
+whole `Thash` collection available during target selection. -/
+def Primitives.thashPreProblem [SampleableType prims.PkSeed] (arity numTargets : ℕ) :
+    TweakableHash.SM_DT_PRE_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y arity) (Vector prims.Y arity) prims.Y where
+  th := prims.thashMember arity
+  emb := id
+  emb_injective := Function.injective_id
+  thColl := prims.thashCollection
+  numTargets := numTargets
 
 /-- The message randomizer `PRF_msg` as a `PRFScheme` keyed by `SK.prf`; `eval` is
 `prims.PRFmsg`. -/
