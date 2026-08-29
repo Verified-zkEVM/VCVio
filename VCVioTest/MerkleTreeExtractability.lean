@@ -170,7 +170,9 @@ private lemma depthOneGame_eq :
   refine bind_congr (m := OracleComp (InductiveMerkleTree.spec Bool)) fun root => ?_
   cases root <;>
     simp [OracleSpec.withCacheOverlay,
-      InductiveMerkleTree.Extractor.tree, InductiveMerkleTree.Extractor.children,
+      InductiveMerkleTree.Extractor.tree, MerkleTreeExtractor.tree,
+      MerkleTreeExtractor.treeAt, MerkleTreeExtractor.children,
+      InductiveMerkleTree.Extractor.queryView,
       depthOneSkeleton, leftIndex, rightIndex, expectedTree,
       expectedLeftProof, expectedRightProof]
 
@@ -266,7 +268,9 @@ private lemma freshHitGame_eq :
   simp [InductiveMerkleTree.extractabilityGame,
     InductiveMerkleTree.extractabilityInner, OracleSpec.withCacheOverlay,
     freshHitAdversary, freshHitExtractedTree, freshHitExtractedProof,
-    InductiveMerkleTree.Extractor.tree, InductiveMerkleTree.Extractor.children,
+    InductiveMerkleTree.Extractor.tree, MerkleTreeExtractor.tree,
+    MerkleTreeExtractor.treeAt, MerkleTreeExtractor.children,
+    InductiveMerkleTree.Extractor.queryView,
     InductiveMerkleTree.verifyProof, InductiveMerkleTree.getPutativeRoot,
     InductiveMerkleTree.singleHash, depthOneSkeleton, leftIndex, leftProof_head]
 
@@ -325,7 +329,9 @@ private lemma proofOnlyGame_eq :
   refine bind_congr (m := OracleComp (InductiveMerkleTree.spec Bool)) fun root => ?_
   cases root <;>
     simp [OracleSpec.withCacheOverlay,
-      InductiveMerkleTree.Extractor.tree, InductiveMerkleTree.Extractor.children,
+      InductiveMerkleTree.Extractor.tree, MerkleTreeExtractor.tree,
+      MerkleTreeExtractor.treeAt, MerkleTreeExtractor.children,
+      InductiveMerkleTree.Extractor.queryView,
       depthOneSkeleton, rightIndex, expectedTree, expectedRightProof,
       wrongRightProof_head, QueryCache.cacheQuery_of_ne]
 

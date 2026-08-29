@@ -745,7 +745,7 @@ private lemma fresh_extractedTarget_of_extractor_disagreement
                   simpa [SkeletonLeafIndex.toNodeIndex, FullData.get] using hleaf)
               · refine Or.inr fun htail => hproof ?_
                 have hsibling : (extractor sr log proof.head).getRootValue = some proof.head :=
-                  optionPopulateDown_getRootValue _ _
+                  Extractor.tree_getRootValue sr log proof.head
                 have hproofList : proof.toList = proof.head :: proof.tail.toList := by
                   rw [← proof.cons_head_tail]
                   rfl
@@ -756,8 +756,11 @@ private lemma fresh_extractedTarget_of_extractor_disagreement
                 rw [hsibling, htail]
             obtain ⟨target, htarget, hfresh⟩ :=
               ih ancestor proof.tail hchainTail hchildDisagree
+            have hchildren : Extractor.children log root = some (ancestor, proof.head) := by
+              unfold Extractor.children MerkleTreeExtractor.children Extractor.queryView
+              simp [hfind]
             exact ⟨target, by
-              simp [extractedTargets, Extractor.targets, Extractor.children, hfind, htarget],
+              simp [extractedTargets, Extractor.targets, hchildren, htarget],
                 hfresh⟩
   | @ofRight sl sr idxRight ih =>
     obtain ⟨ancestor, hquery, hchainTail⟩ := hchain
@@ -812,7 +815,7 @@ private lemma fresh_extractedTarget_of_extractor_disagreement
                   simpa [SkeletonLeafIndex.toNodeIndex, FullData.get] using hleaf)
               · refine Or.inr fun htail => hproof ?_
                 have hsibling : (extractor sl log proof.head).getRootValue = some proof.head :=
-                  optionPopulateDown_getRootValue _ _
+                  Extractor.tree_getRootValue sl log proof.head
                 have hproofList : proof.toList = proof.head :: proof.tail.toList := by
                   rw [← proof.cons_head_tail]
                   rfl
@@ -823,8 +826,11 @@ private lemma fresh_extractedTarget_of_extractor_disagreement
                 rw [hsibling, htail]
             obtain ⟨target, htarget, hfresh⟩ :=
               ih ancestor proof.tail hchainTail hchildDisagree
+            have hchildren : Extractor.children log root = some (proof.head, ancestor) := by
+              unfold Extractor.children MerkleTreeExtractor.children Extractor.queryView
+              simp [hfind]
             exact ⟨target, by
-              simp [extractedTargets, Extractor.targets, Extractor.children, hfind, htarget],
+              simp [extractedTargets, Extractor.targets, hchildren, htarget],
                 hfresh⟩
 
 /-- Pointwise deterministic reduction for the cached suffix: once the commit cache is
@@ -1460,7 +1466,7 @@ private lemma chainInLog_of_extractor_internal_step_left
   rw [extractor_internal_eq_of_find?_eq sl sr log root x y hf]
   refine ⟨extLeaf, y ::ᵥ extProof, h_extLeaf, ?_, x, List.mem_of_find?_eq_some hf, h_chain⟩
   have h_root_value : (extractor sr log y).getRootValue = some y :=
-    optionPopulateDown_getRootValue _ _
+    Extractor.tree_getRootValue sr log y
   grind [Nat.succ_eq_add_one, List.Vector.toList_cons, SkeletonLeafIndex.depth]
 
 /-- Post-IH assembly for the `ofRight` case of `chainInLog_of_extractor_get_ne_none`.
@@ -1487,7 +1493,7 @@ private lemma chainInLog_of_extractor_internal_step_right
   rw [extractor_internal_eq_of_find?_eq sl sr log root x y hf]
   refine ⟨extLeaf, x ::ᵥ extProof, h_extLeaf, ?_, y, List.mem_of_find?_eq_some hf, h_chain⟩
   have h_root_value : (extractor sl log x).getRootValue = some x :=
-    optionPopulateDown_getRootValue _ _
+    Extractor.tree_getRootValue sl log x
   grind [Nat.succ_eq_add_one, List.Vector.toList_cons, SkeletonLeafIndex.depth]
 
 /-- **Extractor recovery to a log chain.** When the extractor's path at `idx`

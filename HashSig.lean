@@ -15,6 +15,7 @@ public import HashSig.SLHDSA.Concrete.Sha2
 public import HashSig.SLHDSA.Encoding
 public import HashSig.SLHDSA.Fors
 public import HashSig.SLHDSA.Hypertree
+public import HashSig.SLHDSA.MerkleExtractor
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.Params
 public import HashSig.SLHDSA.Primitives
