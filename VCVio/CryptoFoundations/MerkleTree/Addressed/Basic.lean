@@ -238,28 +238,34 @@ theorem findCollisionAddressed_isAncestorOf {s : Skeleton}
         trivial
       · simp at hw
 
-/-- If two openings at the same index recompute the same root but the branches differ
-somewhere (in leaf value or path), `findCollisionAddressed` finds a collision: the
-walk only returns `none` when the two branches agree at every compared level, which
-forces the leaf values to agree. -/
-theorem findCollisionAddressed_isSome {s : Skeleton}
+/-- If two distinct openings at the same index recompute the same root,
+`findCollisionAddressed` finds a collision.  Distinctness covers disagreement in either the leaf
+value or the authentication path. -/
+theorem findCollisionAddressed_isSome_of_opening_ne {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
     (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx x proof₁
       = getPutativeRootAddressedWithHash nodeHash idx y proof₂)
-    (hne : x ≠ y) :
+    (hne : (x, proof₁) ≠ (y, proof₂)) :
     (findCollisionAddressed nodeHash idx proof₁ proof₂ x y).isSome := by
   induction idx with
   | ofLeaf =>
     simp only [vector_eq_nil] at hroot
-    exact absurd hroot hne
+    exact (hne (Prod.ext hroot (List.Vector.ext fun i => i.elim0))).elim
   | ofLeft idxLeft ih =>
     rw [findCollisionAddressed]
     split
     · rename_i hagree
       simp only [Prod.mk.injEq] at hagree
       simp only [Option.isSome_map]
-      exact ih (fun a => nodeHash (.ofLeft a)) proof₁.tail proof₂.tail hagree.1
+      apply ih (fun a => nodeHash (.ofLeft a)) proof₁.tail proof₂.tail hagree.1
+      intro hbranch
+      have hvalue : x = y := congrArg Prod.fst hbranch
+      have htail : proof₁.tail = proof₂.tail := congrArg Prod.snd hbranch
+      apply hne
+      apply Prod.ext hvalue
+      exact proof₁.cons_head_tail.symm.trans
+        (hagree.2 ▸ htail ▸ proof₂.cons_head_tail)
     · split
       · simp
       · rename_i hne'
@@ -270,11 +276,29 @@ theorem findCollisionAddressed_isSome {s : Skeleton}
     · rename_i hagree
       simp only [Prod.mk.injEq] at hagree
       simp only [Option.isSome_map]
-      exact ih (fun a => nodeHash (.ofRight a)) proof₁.tail proof₂.tail hagree.2
+      apply ih (fun a => nodeHash (.ofRight a)) proof₁.tail proof₂.tail hagree.2
+      intro hbranch
+      have hvalue : x = y := congrArg Prod.fst hbranch
+      have htail : proof₁.tail = proof₂.tail := congrArg Prod.snd hbranch
+      apply hne
+      apply Prod.ext hvalue
+      exact proof₁.cons_head_tail.symm.trans
+        (hagree.1 ▸ htail ▸ proof₂.cons_head_tail)
     · split
       · simp
       · rename_i hne'
         exact absurd (by simpa [getPutativeRootAddressedWithHash] using hroot) hne'
+
+/-- Leaf-disagreement specialization of `findCollisionAddressed_isSome_of_opening_ne`. -/
+theorem findCollisionAddressed_isSome {s : Skeleton}
+    (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
+    (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
+    (hroot : getPutativeRootAddressedWithHash nodeHash idx x proof₁
+      = getPutativeRootAddressedWithHash nodeHash idx y proof₂)
+    (hne : x ≠ y) :
+    (findCollisionAddressed nodeHash idx proof₁ proof₂ x y).isSome :=
+  findCollisionAddressed_isSome_of_opening_ne nodeHash idx proof₁ proof₂ x y hroot
+    (fun h => hne (congrArg Prod.fst h))
 
 /-- **Binding, user-facing**: two openings of the same index recomputing the same
 root with distinct leaf values yield an address-tagged collision, as data. -/
