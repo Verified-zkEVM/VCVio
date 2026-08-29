@@ -12,8 +12,8 @@ public import VCVio.OracleComp.SimSemantics.Append
 /-!
 # Single-function, distinct-tweak, multi-target preimage resistance (SM-DT-PRE)
 
-The two-phase shape is that of SM-TCR — the public seed is sampled by the experiment, withheld while
-the adversary selects targets, then revealed with the challenge oracle removed — but the challenge
+The two-phase shape is that of SM-TCR — the public seed is sampled by the game, withheld while
+the adversary selects targets, then revealed with both oracles removed — but the challenge
 oracle differs: the adversary supplies only a tweak, and the oracle draws the message itself from
 the subspace `M'`. Winning means producing *any* preimage of a recorded image; unlike SM-TCR there
 is no requirement that it differ from the recorded message.
@@ -81,7 +81,7 @@ structure SM_DT_PRE_Problem (ι PkSeed Tweak M M' Y : Type) where
   numTargets : ℕ
 
 /-- The stand-alone SM-PRE problem, at the empty collection: the collection oracle's query type is
-uninhabited, so the adversary has only the challenge oracle. -/
+uninhabited, so the adversary has only its coins and the challenge oracle. -/
 def SM_DT_PRE_Problem.standalone (th : TweakableHash PkSeed Tweak M Y) (emb : M' → M)
     (emb_injective : Function.Injective emb) (numTargets : ℕ) :
     SM_DT_PRE_Problem Empty PkSeed Tweak M M' Y where
@@ -95,15 +95,20 @@ def SM_DT_PRE_Problem.standalone (th : TweakableHash PkSeed Tweak M Y) (emb : M'
 `(tweak, sampled message)` targets, and the list of tweaks spent on the collection oracle. -/
 abbrev SM_DT_PRE_State (Tweak M' : Type) : Type := List (Tweak × M') × List Tweak
 
+/-- What the first phase of an SM-PRE adversary runs against: its own coins, the challenge oracle,
+and the collection oracle. -/
+abbrev SM_DT_PRE_oracleSpec (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) :=
+  unifSpec + (SM_DT_PRE_challengeSpec Tweak Y + collectionSpec prob.thColl)
+
 /-- An SM-PRE adversary. `choose` selects tweaks through the challenge oracle, and may evaluate the
 rest of the collection, without access to the public seed; `invert` receives the seed and the
-private state, and has no oracle. -/
+private state, and keeps its coins but neither oracle. -/
 structure SM_DT_PRE_Adversary (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) where
   /-- Private state carried from `choose` to `invert`. -/
   State : Type
-  /-- Select tweaks through the challenge oracle, with collection access. The public seed is not an
-  input. -/
-  choose : OracleComp (SM_DT_PRE_challengeSpec Tweak Y + collectionSpec prob.thColl) State
+  /-- Select tweaks through the challenge oracle, with coins and collection access. The public seed
+  is not an input. -/
+  choose : OracleComp (SM_DT_PRE_oracleSpec prob) State
   /-- Given the revealed public seed, name a target index and a preimage in `M'`. -/
   invert : State → PkSeed → ProbComp (ℕ × M')
 
@@ -115,7 +120,7 @@ leaves the state untouched and draws nothing.
 
 Accepted queries are appended, so the history is in issue order and its `j`-th entry is the `j`-th
 target. -/
-noncomputable def SM_DT_PRE_challengeOracle [DecidableEq Tweak] [SampleableType M']
+def SM_DT_PRE_challengeOracle [DecidableEq Tweak] [SampleableType M']
     (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) (pk : PkSeed) :
     QueryImpl (SM_DT_PRE_challengeSpec Tweak Y) (StateT (SM_DT_PRE_State Tweak M') ProbComp) :=
   fun t => do
@@ -127,18 +132,20 @@ noncomputable def SM_DT_PRE_challengeOracle [DecidableEq Tweak] [SampleableType 
       set (qsChal ++ [(t, x)], twsColl)
       return some (prob.th.eval pk t (prob.emb x))
 
-/-- Both oracles of the SM-PRE game over the shared state, at a public seed. -/
-noncomputable def SM_DT_PRE_oracles [DecidableEq Tweak] [SampleableType M']
+/-- Everything the first phase queries, over the shared state, at a public seed: coins pass through
+to `ProbComp`, and the two oracles thread the state. -/
+def SM_DT_PRE_oracles [DecidableEq Tweak] [SampleableType M']
     (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) (pk : PkSeed) :
-    QueryImpl (SM_DT_PRE_challengeSpec Tweak Y + collectionSpec prob.thColl)
-      (StateT (SM_DT_PRE_State Tweak M') ProbComp) :=
-  SM_DT_PRE_challengeOracle prob pk + collectionOracle (Q := Tweak × M') Prod.fst prob.thColl pk
+    QueryImpl (SM_DT_PRE_oracleSpec prob) (StateT (SM_DT_PRE_State Tweak M') ProbComp) :=
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_PRE_State Tweak M') ProbComp) +
+    (SM_DT_PRE_challengeOracle prob pk +
+      collectionOracle (Q := Tweak × M') Prod.fst prob.thColl pk)
 
-/-- The SM-PRE experiment. The public seed is sampled, the first phase runs against both oracles
-without it, the second phase runs with it and without them, and the adversary wins by naming a
-recorded target `j` and any message of `M'` whose image under the `j`-th recorded tweak agrees with
-that of the `j`-th recorded message. An index outside the challenge history loses. -/
-noncomputable def SM_DT_PRE_Experiment [DecidableEq Tweak] [DecidableEq Y] [SampleableType M']
+/-- The SM-PRE game. The public seed is sampled, the first phase runs against both oracles without
+it, the second phase runs with it and without them, and the adversary wins by naming a recorded
+target `j` and any message of `M'` whose image under the `j`-th recorded tweak agrees with that of
+the `j`-th recorded message. An index outside the challenge history loses. -/
+def SM_DT_PRE_Game [DecidableEq Tweak] [DecidableEq Y] [SampleableType M']
     {prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_PRE_Adversary prob) :
     ProbComp Bool := do
   let pk ← prob.th.seedGen
@@ -152,7 +159,7 @@ noncomputable def SM_DT_PRE_Experiment [DecidableEq Tweak] [DecidableEq Y] [Samp
 /-- The SM-PRE advantage of an adversary. -/
 noncomputable def SM_DT_PRE_Advantage [DecidableEq Tweak] [DecidableEq Y] [SampleableType M']
     {prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_PRE_Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | SM_DT_PRE_Experiment adv]
+  Pr[= true | SM_DT_PRE_Game adv]
 
 /-! ## Basic properties and conventions -/
 

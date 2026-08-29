@@ -18,10 +18,11 @@ it received. It may evaluate the other members of the collection throughout, thr
 
 Shortened to `SM-TCR` in the prose below; the declaration names keep the full label.
 
-The seed is sampled by `SM_DT_TCR_Experiment` and passed only to `SM_DT_TCR_Adversary.forge`; it
-never reaches `SM_DT_TCR_Adversary.choose`. The two phases are separate fields at different types,
-`OracleComp (SM_DT_TCR_challengeSpec …)` against `ProbComp`, so "the oracle is removed once the seed
-is revealed" is a typing fact and not a runtime convention: `forge` has no oracle to query.
+The seed is sampled by `SM_DT_TCR_Game` and passed only to `SM_DT_TCR_Adversary.forge`; it never
+reaches `SM_DT_TCR_Adversary.choose`. Both phases carry their own coins, and the two are separate
+fields at different types — `OracleComp (SM_DT_TCR_oracleSpec prob)` against `ProbComp` — so "the
+oracles are gone once the seed is revealed" is a typing fact and not a runtime convention: `forge`
+has nothing left to query.
 
 `numTargets` bounds the accepted challenge queries and is the only query bound the game carries. See
 `TweakableHash.collectionOracle` for why the tweak restrictions are enforced in the oracles rather
@@ -63,7 +64,7 @@ structure SM_DT_TCR_Problem (ι PkSeed Tweak M Y : Type) where
   numTargets : ℕ
 
 /-- The stand-alone SM-TCR problem, at the empty collection: the collection oracle's query type is
-uninhabited, so the adversary has only the challenge oracle. -/
+uninhabited, so the adversary has only its coins and the challenge oracle. -/
 def SM_DT_TCR_Problem.standalone (th : TweakableHash PkSeed Tweak M Y) (numTargets : ℕ) :
     SM_DT_TCR_Problem Empty PkSeed Tweak M Y where
   th := th
@@ -74,15 +75,20 @@ def SM_DT_TCR_Problem.standalone (th : TweakableHash PkSeed Tweak M Y) (numTarge
 `(tweak, message)` targets, and the list of tweaks spent on the collection oracle. -/
 abbrev SM_DT_TCR_State (Tweak M : Type) : Type := List (Tweak × M) × List Tweak
 
+/-- What the first phase of an SM-TCR adversary runs against: its own coins, the challenge oracle,
+and the collection oracle. -/
+abbrev SM_DT_TCR_oracleSpec (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) :=
+  unifSpec + (SM_DT_TCR_challengeSpec Tweak M Y + collectionSpec prob.thColl)
+
 /-- An SM-TCR adversary. `choose` selects targets through the challenge oracle, and may evaluate the
 rest of the collection, without access to the public seed; `forge` receives the seed and the private
-state, and has no oracle. -/
+state, and keeps its coins but neither oracle. -/
 structure SM_DT_TCR_Adversary (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) where
   /-- Private state carried from `choose` to `forge`. -/
   State : Type
-  /-- Select targets through the challenge oracle, with collection access. The public seed is not an
-  input. -/
-  choose : OracleComp (SM_DT_TCR_challengeSpec Tweak M Y + collectionSpec prob.thColl) State
+  /-- Select targets through the challenge oracle, with coins and collection access. The public seed
+  is not an input. -/
+  choose : OracleComp (SM_DT_TCR_oracleSpec prob) State
   /-- Given the revealed public seed, name a target index and a colliding message. -/
   forge : State → PkSeed → ProbComp (ℕ × M)
 
@@ -104,18 +110,20 @@ def SM_DT_TCR_challengeOracle [DecidableEq Tweak]
       set (qsChal ++ [tm], twsColl)
       return some (prob.th.eval pk tm.1 tm.2)
 
-/-- Both oracles of the SM-TCR game over the shared state, at a public seed. -/
+/-- Everything the first phase queries, over the shared state, at a public seed: coins pass through
+to `ProbComp`, and the two oracles thread the state. -/
 def SM_DT_TCR_oracles [DecidableEq Tweak] (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y)
     (pk : PkSeed) :
-    QueryImpl (SM_DT_TCR_challengeSpec Tweak M Y + collectionSpec prob.thColl)
-      (StateT (SM_DT_TCR_State Tweak M) ProbComp) :=
-  SM_DT_TCR_challengeOracle prob pk + collectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk
+    QueryImpl (SM_DT_TCR_oracleSpec prob) (StateT (SM_DT_TCR_State Tweak M) ProbComp) :=
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_TCR_State Tweak M) ProbComp) +
+    (SM_DT_TCR_challengeOracle prob pk +
+      collectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk)
 
-/-- The SM-TCR experiment. The public seed is sampled, the first phase runs against both oracles
-without it, the second phase runs with it and without them, and the adversary wins by naming a
-recorded target `j` and a message colliding with — and differing from — the `j`-th recorded message.
-An index outside the challenge history loses. -/
-noncomputable def SM_DT_TCR_Experiment [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
+/-- The SM-TCR game. The public seed is sampled, the first phase runs against both oracles without
+it, the second phase runs with it and without them, and the adversary wins by naming a recorded
+target `j` and a message colliding with — and differing from — the `j`-th recorded message. An index
+outside the challenge history loses. -/
+def SM_DT_TCR_Game [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
     {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y} (adv : SM_DT_TCR_Adversary prob) :
     ProbComp Bool := do
   let pk ← prob.th.seedGen
@@ -128,7 +136,7 @@ noncomputable def SM_DT_TCR_Experiment [DecidableEq Tweak] [DecidableEq M] [Deci
 /-- The SM-TCR advantage of an adversary. -/
 noncomputable def SM_DT_TCR_Advantage [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
     {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y} (adv : SM_DT_TCR_Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | SM_DT_TCR_Experiment adv]
+  Pr[= true | SM_DT_TCR_Game adv]
 
 /-! ## Basic properties and conventions -/
 
