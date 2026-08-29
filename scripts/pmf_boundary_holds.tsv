@@ -12,3 +12,4 @@ ToMathlib/ProbabilityTheory/SPMF.lean	Defines SPMF itself; retires when SPMF is 
 ToMathlib/ProbabilityTheory/FinRatPMF.lean	Executable exact-sampling representation; retires with the FinRatPMF.Raw measure denotation.
 VCVio/EvalDist/Instances/FinRatPMF.lean	Executable representation instance; follows ToMathlib/ProbabilityTheory/FinRatPMF.lean.
 ToMathlib/Probability/ProbabilityMassFunction/Measure.lean	PMF-to-measure adapter; its whole purpose is the bridge, and it retires with PMF.
+VCVio/CryptoFoundations/SymmEncAlg/MeasureCompatibility.lean	Legacy predicate adapter; retires when SymmEncAlg's PMF-facing predicates do.
