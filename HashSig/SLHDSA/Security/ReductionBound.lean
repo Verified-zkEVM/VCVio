@@ -248,6 +248,24 @@ theorem concreteEufCmaAdvantage_le_lowLevelBound (adv : EufCmaAdversary prims)
   simpa [D1ReductionAdversaries.advantages] using
     TweakableHash.SM_DT_OpenPRE_le_TCR_DSPR reds.forsOpenPre cert.openPreCounting
 
+/-! ## Strong-unforgeability corollary -/
+
+/-- Most-general concrete SUF-CMA statement currently justified by the source reduction.  The
+ordinary forgery branch receives the complete low-level EUF bound above; the only additional term
+is the exact probability of returning a new valid signature for an already queried message.
+
+This theorem deliberately does not call that residual term negligible.  Closing it requires a
+new SLH-DSA-specific binding reduction beyond the cited EUF-CMA proof. -/
+theorem concreteStrongEufCmaAdvantage_le_lowLevelBound_add_sameMessage
+    (adv : StrongEufCmaAdversary prims) (reds : D1ReductionAdversaries prims)
+    (cert : D1EufCmaReductionCertificate prims adv.toUnforgeableAdv reds) :
+    concreteStrongEufCmaAdvantage prims adv ≤
+      (reds.advantages.withOpenPreReduction reds.openPreReductionTerms).bound p +
+        concreteSameMessageStrongAdvantage prims adv := by
+  exact (concreteStrongEufCmaAdvantage_le_euf_add_sameMessage prims adv).trans
+    (add_le_add (concreteEufCmaAdvantage_le_lowLevelBound prims
+      adv.toUnforgeableAdv reds cert) le_rfl)
+
 end ConcreteAdversaries
 
 end SLHDSA
