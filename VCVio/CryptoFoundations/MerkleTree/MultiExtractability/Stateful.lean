@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Extractor
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Map
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 
 /-!
@@ -68,62 +69,21 @@ theorem BatchOpening.anySelected (opening : BatchOpening Y s) :
     opening.selector.anySelected = true :=
   opening.proof.anySelected_of_batchProof
 
-/-- Map a selected-value payload without changing its selector. -/
-def mapSelectedValues (f : Y → Z) : {s : Skeleton} → (sel : LeafData Bool s) →
-    SelectedValues Y sel → SelectedValues Z sel
-  | _, .leaf true, value => f value
-  | _, .leaf false, _ => ⟨⟩
-  | _, .internal left right, values =>
-      (mapSelectedValues f left values.1, mapSelectedValues f right values.2)
-
-/-- Map every stored hash in an intrinsic pruned batch proof. -/
-def mapBatchProof (f : Y → Z) : {s : Skeleton} → {sel : LeafData Bool s} →
-    BatchProof Y sel → BatchProof Z sel
-  | _, _, .leaf => .leaf
-  | _, _, .internalBoth left right =>
-      .internalBoth (mapBatchProof f left) (mapBatchProof f right)
-  | _, _, .pruneRight h rightRoot left =>
-      .pruneRight h (f rightRoot) (mapBatchProof f left)
-  | _, _, .pruneLeft h leftRoot right =>
-      .pruneLeft h (f leftRoot) (mapBatchProof f right)
-
 /-- Map both observable payloads of a batch opening, preserving its selector. -/
 def BatchOpening.map (f : Y → Z) (opening : BatchOpening Y s) : BatchOpening Z s where
   selector := opening.selector
-  values := mapSelectedValues f opening.selector opening.values
-  proof := mapBatchProof f opening.proof
+  values := opening.values.map f
+  proof := opening.proof.map f
 
 @[simp]
 theorem BatchOpening.map_selector (f : Y → Z) (opening : BatchOpening Y s) :
     (opening.map f).selector = opening.selector := rfl
 
 @[simp]
-theorem mapSelectedValues_id {sel : LeafData Bool s} (values : SelectedValues Y sel) :
-    mapSelectedValues id sel values = values := by
-  induction sel with
-  | leaf selected =>
-      cases selected
-      · change (⟨⟩ : PUnit) = values
-        cases values
-        rfl
-      · rfl
-  | internal left right ihLeft ihRight =>
-      exact Prod.ext (ihLeft values.1) (ihRight values.2)
-
-@[simp]
-theorem mapBatchProof_id {sel : LeafData Bool s} (proof : BatchProof Y sel) :
-    mapBatchProof id proof = proof := by
-  induction proof with
-  | leaf => rfl
-  | internalBoth left right ihLeft ihRight => simp only [mapBatchProof, ihLeft, ihRight]
-  | pruneRight h rightRoot left ih => simp only [mapBatchProof, ih, id_eq]
-  | pruneLeft h leftRoot right ih => simp only [mapBatchProof, ih, id_eq]
-
-@[simp]
 theorem BatchOpening.map_id (opening : BatchOpening Y s) :
     opening.map id = opening := by
   cases opening
-  simp only [BatchOpening.map, mapSelectedValues_id, mapBatchProof_id]
+  simp only [BatchOpening.map, SelectedValues.map_id, BatchProof.map_id]
 
 /-! ## Configurations and commitment checkpoints -/
 
@@ -422,5 +382,28 @@ theorem not_failure_empty [DecidableEq Address] [DecidableEq Y]
       attempts terminalLog := by
   simp [Failure, HasAcceptedOpeningDisagreement, HasEqualRootExtractionDisagreement,
     HasCheckpointTerminalExtractionDisagreement]
+
+/-! ## Ordered-query canary -/
+
+private def canaryView :
+    MerkleTreeExtractor.QueryView (Bool × (Nat × Nat)) Bool Nat where
+  address := Prod.fst
+  input := Prod.snd
+
+private def canaryConfig : Configuration Unit Bool where
+  skeleton _ := .internal .leaf .leaf
+  addressKey _ _ := false
+
+private def canaryCheckpoint : Checkpoint (Bool × (Nat × Nat)) Nat canaryConfig () where
+  root := 7
+  cumulativeLog := [⟨(false, (2, 3)), 7⟩]
+
+/-- The checkpoint extractor uses the matching address and preserves ordered query children.
+
+This concrete producer canary rejects swapping the left/right query inputs, ignoring the address,
+or failing to follow a logged root response. -/
+example : Checkpoint.extractedTree canaryView canaryCheckpoint =
+    FullData.internal (some 7) (FullData.leaf (some 2)) (FullData.leaf (some 3)) := by
+  rfl
 
 end MerkleTreeMultiExtractability
