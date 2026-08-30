@@ -94,6 +94,47 @@ def d1XmssTreeAddresses (p : Params) : List Adrs :=
     p.d1ForsLeafAddresses.length = p.d1TargetProfile.forsLeaf := by
   simp [d1ForsLeafAddresses, d1TargetProfile, d1LeafCount, Nat.mul_assoc]
 
+/-- FORS leaf addresses are structurally duplicate-free before concrete compression.  The
+key-pair word identifies the XMSS leaf, while quotient and remainder of the global FORS leaf
+index recover the tree and local leaf. -/
+theorem d1ForsLeafAddresses_nodup (p : Params) :
+    p.d1ForsLeafAddresses.Nodup := by
+  let coords :=
+    ((List.range p.d1LeafCount).product (List.range p.k)).product (List.range p.t)
+  have hcoords : coords.Nodup :=
+    (List.nodup_range.product List.nodup_range).product List.nodup_range
+  have hmapped := hcoords.map_on (f := fun c : (ℕ × ℕ) × ℕ =>
+      forsNodeAdrs (forsAdrsOf c.1.1) 0 (c.1.2 * p.t + c.2)) (by
+    intro c hc d hd hadrs
+    obtain ⟨ci, hci, cj, hcj, cl, hcl, rfl⟩ :
+        ∃ ci < p.d1LeafCount, ∃ cj < p.k, ∃ cl < p.t, ((ci, cj), cl) = c := by
+      simpa [coords, List.product] using hc
+    obtain ⟨di, hdi, dj, hdj, dl, hdl, rfl⟩ :
+        ∃ di < p.d1LeafCount, ∃ dj < p.k, ∃ dl < p.t, ((di, dj), dl) = d := by
+      simpa [coords, List.product] using hd
+    have houter : ci = di := by
+      simpa [forsNodeAdrs, forsAdrsOf, Adrs.getKeyPairAddress,
+        Adrs.setTreeHeight, Adrs.setTreeIndex, Adrs.setKeyPairAddress,
+        Adrs.setTypeAndClear, Adrs.setTreeAddress, Adrs.zero] using
+          congrArg Adrs.word1 hadrs
+    have hglobal : cj * p.t + cl = dj * p.t + dl := by
+      simpa [forsNodeAdrs, forsAdrsOf, Adrs.getKeyPairAddress,
+        Adrs.setTreeHeight, Adrs.setTreeIndex, Adrs.setKeyPairAddress,
+        Adrs.setTypeAndClear, Adrs.setTreeAddress, Adrs.zero] using
+          congrArg Adrs.word3 hadrs
+    have htpos : 0 < p.t := by unfold Params.t; positivity
+    have htree : cj = dj := by
+      have hdiv := congrArg (fun x => x / p.t) hglobal
+      simpa [Nat.add_comm, Nat.add_mul_div_right, Nat.div_eq_of_lt,
+        hcl, hdl, htpos] using hdiv
+    have hleaf : cl = dl := by
+      have hmod := congrArg (fun x => x % p.t) hglobal
+      simpa [Nat.add_comm, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt,
+        hcl, hdl] using hmod
+    exact Prod.ext (Prod.ext houter htree) hleaf)
+  simpa [coords, List.product, d1ForsLeafAddresses, List.map_flatMap,
+    List.flatMap_map, List.flatMap_assoc, List.map_map, Function.comp_def] using hmapped
+
 @[simp] theorem d1ForsTreeAddresses_length (p : Params) :
     p.d1ForsTreeAddresses.length = p.d1TargetProfile.forsTree := by
   simp [d1ForsTreeAddresses, d1TargetProfile, d1LeafCount, t, Nat.mul_assoc]
