@@ -389,6 +389,16 @@ def skPrfSchemeAtSeed [SampleableType prims.SkSeed] (pkSeed : prims.PkSeed) :
   keygen := $ᵗ prims.SkSeed
   eval := fun skSeed adrs => prims.PRF pkSeed skSeed adrs
 
+@[simp] theorem msgPrfScheme_uniformKey [SampleableType prims.SkPrf] :
+    PRFScheme.UniformKey (msgPrfScheme prims) := rfl
+
+@[simp] theorem skPrfScheme_uniformKey [SampleableType prims.SkSeed] :
+    PRFScheme.UniformKey (skPrfScheme prims) := rfl
+
+@[simp] theorem skPrfSchemeAtSeed_uniformKey [SampleableType prims.SkSeed]
+    (pkSeed : prims.PkSeed) :
+    PRFScheme.UniformKey (skPrfSchemeAtSeed prims pkSeed) := rfl
+
 /-- `H_msg` as the keyed hash family used by the ITSR hop after `PRF_msg` has been replaced by a
 random function.  The sampled message key is the randomizer `R`; the input carries the actual
 `PK.seed`, `PK.root`, and external message jointly, so the hardness problem preserves their
