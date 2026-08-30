@@ -122,6 +122,23 @@ def Adversary.IsFullGameQueryBound [DecidableEq Y]
     (adversary : Adversary Cfg Query Address Y config) : Prop :=
   IsTotalQueryBound (extractabilityInner model config rounds adversary) queryBound
 
+/-- All adversarial oracle work—sequential commitments plus terminal opening production—while
+excluding honest `verifyClaims` queries. -/
+def Adversary.prefixProgram
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config) (rounds : ℕ) :
+    OracleComp (Query →ₒ Y) Unit := do
+  let (privateState, extractorState) ← adversary.committer.runFromEmpty config rounds
+  let _claims ← adversary.opening privateState extractorState
+  pure ()
+
+/-- Primary adversarial query-budget predicate for the refined `q` plus
+verifier-overhead theorem. -/
+def Adversary.IsAdversaryPrefixQueryBound
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config) (rounds queryBound : ℕ) : Prop :=
+  IsTotalQueryBound (adversary.prefixProgram rounds) queryBound
+
 /-- Uniform support-wise verifier overhead. This hypothesis is necessary because a terminal
 adversary can output an arbitrarily long pure claim list without making any oracle query. -/
 def Adversary.HasVerifierQueryBound
