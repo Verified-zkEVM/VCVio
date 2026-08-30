@@ -123,6 +123,55 @@ example :
 example : firstProof.queryCount = 2 ∧ outerProof.queryCount = 3 ∧ allProof.queryCount = 3 := by
   decide
 
+/-! ## Addressed traversal order -/
+
+/-- Observable tags for the three typed internal positions of `fourLeafSkeleton`. -/
+inductive DepthTwoAddress where
+  | rootNode
+  | leftNode
+  | rightNode
+deriving DecidableEq, Repr
+
+/-- Collapse the dependent internal-node index to a traceable address tag. -/
+def depthTwoAddress : SkeletonInternalIndex fourLeafSkeleton → DepthTwoAddress
+  | .ofInternal => .rootNode
+  | .ofLeft .ofInternal => .leftNode
+  | .ofRight .ofInternal => .rightNode
+
+/-- One effectful addressed-hash call, retaining its ordered children. -/
+structure AddressedHashEvent where
+  address : DepthTwoAddress
+  left : Nat
+  right : Nat
+deriving DecidableEq, Repr
+
+abbrev AddressedTraceM := StateM (List AddressedHashEvent)
+
+def addressWeight : DepthTwoAddress → Nat
+  | .rootNode => 0
+  | .leftNode => 100
+  | .rightNode => 200
+
+/-- Address-sensitive, noncommutative node hash with an observable append-only trace. -/
+def tracedAddressedHash (address : SkeletonInternalIndex fourLeafSkeleton)
+    (left right : Nat) : AddressedTraceM Nat := fun trace =>
+  let tag := depthTwoAddress address
+  (addressWeight tag + 2 * left + 3 * right + 1,
+    trace ++ [{ address := tag, left, right }])
+
+/-- The addressed batch fold visits left child, right child, then root; each recursive call
+receives the correct reindexed typed address and preserves ordered hash inputs.  The numeric result
+is also noncommutative, so neither swapping children nor merely repairing the trace can satisfy the
+canary. -/
+example : Id.run
+    ((AddressedMerkleTree.getPutativeBatchRootAddressedM tracedAddressedHash
+      (selectedValues leaves selectAll) allProof).run []) =
+    (876,
+      [{ address := .leftNode, left := 1, right := 2 },
+       { address := .rightNode, left := 3, right := 4 },
+       { address := .rootNode, left := 109, right := 219 }]) := by
+  decide
+
 /-- Opening no leaf is excluded by the dependent proof family. -/
 example : IsEmpty (BatchProof Nat selectNone) :=
   ⟨fun proof => by
