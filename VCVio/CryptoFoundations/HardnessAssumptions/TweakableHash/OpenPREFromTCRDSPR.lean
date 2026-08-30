@@ -25,7 +25,9 @@ adversary placeholders. The quantitative inequality
 `OpenPRE ≤ (DSPR success - SPprob) + 3 · TCR`
 
 still requires the source proof's finite-preimage counting argument and is intentionally not
-asserted here without that proof.
+asserted here without that proof. In particular, that theorem must assume a finite input space and
+`SM_DT_OpenPRE_Problem.HasUniformInputs`; the exact OpenPRE game itself permits any input
+distribution.
 -/
 
 @[expose] public section
@@ -122,6 +124,100 @@ noncomputable def SM_DT_OpenPRE_toDSPR [Inhabited M] [DecidableEq M]
     let sampled := (targets[j]?.map Prod.snd).getD default
     return (j, decide (sampled ≠ m ∨ j ∈ opened))
 
+/-! ## Finite preimage counting -/
+
+/-- Cardinality of the fiber of `y` under the hash fixed at `pk` and `t`. -/
+def PreimageCount [Fintype M] [DecidableEq Y] (th : TweakableHash PkSeed Tweak M Y)
+    (pk : PkSeed) (t : Tweak) (y : Y) : ℕ :=
+  (Finset.univ.filter fun m => th.eval pk t m = y).card
+
+/-- Every actual hash image has a nonempty fiber. -/
+theorem one_le_preimageCount_image [Fintype M] [DecidableEq Y]
+    (th : TweakableHash PkSeed Tweak M Y) (pk : PkSeed) (t : Tweak) (m : M) :
+    1 ≤ PreimageCount th pk t (th.eval pk t m) := by
+  change 0 < (Finset.univ.filter fun m' => th.eval pk t m' = th.eval pk t m).card
+  rw [Finset.card_pos]
+  exact ⟨m, by simp⟩
+
+/-- No fiber is larger than the finite message space. -/
+theorem preimageCount_le_card [Fintype M] [DecidableEq Y]
+    (th : TweakableHash PkSeed Tweak M Y) (pk : PkSeed) (t : Tweak) (y : Y) :
+    PreimageCount th pk t y ≤ Fintype.card M := by
+  exact Finset.card_le_card (Finset.filter_subset _ _)
+
+/-- The DSPR predicate is exactly the statement that the selected image's fiber has cardinality at
+least two. This is the finite-preimage lemma called `eqv_spex_szprefl` in the EasyCrypt proof. -/
+theorem secondPreimageExists_iff_two_le_preimageCount [Fintype M] [DecidableEq Y]
+    (th : TweakableHash PkSeed Tweak M Y) (pk : PkSeed) (t : Tweak) (m : M) :
+    SecondPreimageExists th pk t m ↔ 2 ≤ PreimageCount th pk t (th.eval pk t m) := by
+  classical
+  let s : Finset M := Finset.univ.filter fun m' => th.eval pk t m' = th.eval pk t m
+  have hm : m ∈ s := by simp [s]
+  change SecondPreimageExists th pk t m ↔ 2 ≤ s.card
+  rw [show 2 ≤ s.card ↔ 1 < s.card by omega, Finset.one_lt_card]
+  constructor
+  · rintro ⟨m', hne, heq⟩
+    exact ⟨m, hm, m', by simp [s, heq], hne⟩
+  · rintro ⟨a, ha, b, hb, hab⟩
+    by_cases ham : a = m
+    · refine ⟨b, ?_, ?_⟩
+      · intro hmb
+        exact hab (ham.trans hmb)
+      · have hbEq : th.eval pk t b = th.eval pk t m := by simpa [s] using hb
+        exact hbEq.symm
+    · refine ⟨a, (fun hma => ham hma.symm), ?_⟩
+      have haEq : th.eval pk t a = th.eval pk t m := by simpa [s] using ha
+      exact haEq.symm
+
+/-! ## Algebra of the fiber-cardinality strata -/
+
+/-- Reciprocal mass subtracted by the DSPR/SPprob gap on fibers of size at least two. -/
+noncomputable def SM_DT_OpenPRE_reciprocalMass {α : Type} [Fintype α]
+    (fiberSize : α → ℕ) (mass : α → ℝ≥0∞) : ℝ≥0∞ :=
+  ∑ a, 1 / (fiberSize a : ℝ≥0∞) * mass a
+
+/-- Collision mass gained by TCR on fibers of size at least two. -/
+noncomputable def SM_DT_OpenPRE_collisionMass {α : Type} [Fintype α]
+    (fiberSize : α → ℕ) (mass : α → ℝ≥0∞) : ℝ≥0∞ :=
+  ∑ a, ((fiberSize a - 1 : ℕ) : ℝ≥0∞) / fiberSize a * mass a
+
+/-- For a fiber of size `n ≥ 2`, the source proof's coefficient inequality is
+`1 + 1/n ≤ 3(n-1)/n`. -/
+theorem openPRE_fiber_coefficient_le (n : ℕ) (hn : 2 ≤ n) :
+    (1 : ℝ≥0∞) + 1 / n ≤ 3 * ((n - 1 : ℕ) / n : ℝ≥0∞) := by
+  have hn0 : (n : ℝ≥0∞) ≠ 0 := by
+    exact_mod_cast (Nat.ne_of_gt (by omega : 0 < n))
+  have hnInf : (n : ℝ≥0∞) ≠ ∞ := ENNReal.coe_ne_top
+  rw [show (1 : ℝ≥0∞) + 1 / n = (n + 1) / n by
+    calc
+      (1 : ℝ≥0∞) + 1 / n = n / n + 1 / n := by rw [ENNReal.div_self hn0 hnInf]
+      _ = (n + 1) / n := by exact ENNReal.div_add_div_same]
+  rw [ENNReal.div_le_iff hn0 hnInf, mul_assoc]
+  rw [ENNReal.div_mul_cancel hn0 hnInf]
+  norm_num
+  exact_mod_cast (by omega : n + 1 ≤ 3 * (n - 1))
+
+/-- Summing the pointwise coefficient inequality over arbitrary fiber-cardinality strata. -/
+theorem openPRE_multipleMass_add_reciprocal_le_three_collision {α : Type} [Fintype α]
+    (fiberSize : α → ℕ) (mass : α → ℝ≥0∞) (hsize : ∀ a, 2 ≤ fiberSize a) :
+    (∑ a, mass a) + SM_DT_OpenPRE_reciprocalMass fiberSize mass ≤
+      3 * SM_DT_OpenPRE_collisionMass fiberSize mass := by
+  rw [SM_DT_OpenPRE_reciprocalMass, SM_DT_OpenPRE_collisionMass,
+    ← Finset.sum_add_distrib, Finset.mul_sum]
+  apply Finset.sum_le_sum
+  intro a _
+  let n := fiberSize a
+  have hn : 2 ≤ n := hsize a
+  have hcoeff := openPRE_fiber_coefficient_le n hn
+  calc
+    mass a + 1 / (fiberSize a : ℝ≥0∞) * mass a =
+        ((1 : ℝ≥0∞) + 1 / n) * mass a := by simp [n, add_mul]
+    _ ≤ (3 * ((n - 1 : ℕ) / n : ℝ≥0∞)) * mass a := by gcongr
+    _ = 3 * (((fiberSize a - 1 : ℕ) : ℝ≥0∞) /
+        fiberSize a * mass a) := by
+      simp only [n]
+      ac_rfl
+
 /-! ## Quantitative reduction target -/
 
 /-- The exact right-hand side of the source reduction, instantiated with the concrete adversaries
@@ -132,5 +228,61 @@ noncomputable def SM_DT_OpenPRE_TCR_DSPR_Bound [Fintype M] [Inhabited M] [Decida
     (adv : SM_DT_OpenPRE_Adversary prob) : ℝ≥0∞ :=
   SM_DT_DSPR_Advantage (SM_DT_OpenPRE_toDSPR adv) +
     3 * SM_DT_TCR_Advantage (SM_DT_OpenPRE_toTCR adv)
+
+/-- The probability decomposition by the selected image's fiber cardinality. `singleMass` is the
+successful OpenPRE mass on fibers of size one. `multipleMass k` is the mass on fibers of size
+`k + 2`, aggregating over all selected target indices. The three fields are exactly the substantive
+probabilistic/coupling obligations remaining from the EasyCrypt proof; none is the desired final
+inequality in disguise. -/
+structure SM_DT_OpenPRE_CountingLemma [Fintype M] [Inhabited M] [DecidableEq Tweak]
+    [DecidableEq M] [DecidableEq Y] {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
+    (adv : SM_DT_OpenPRE_Adversary prob) where
+  /-- Successful mass whose selected image has exactly one preimage. -/
+  singleMass : ℝ≥0∞
+  /-- Successful masses for fiber cardinalities `2, …, Fintype.card M`. -/
+  multipleMass : Fin (Fintype.card M - 1) → ℝ≥0∞
+  /-- Decomposition of OpenPRE success by fiber cardinality. -/
+  openPRE_decomposition :
+    SM_DT_OpenPRE_Advantage adv = singleMass + ∑ k, multipleMass k
+  /-- Exact DSPR/SPprob truncated gap: singleton mass minus the reciprocal mass of larger
+  fibers. -/
+  dspr_decomposition :
+    SM_DT_DSPR_Advantage (SM_DT_OpenPRE_toDSPR adv) =
+      singleMass - SM_DT_OpenPRE_reciprocalMass (fun k => k.val + 2) multipleMass
+  /-- TCR success lower-bounds the collision-weighted mass of fibers of size at least two. -/
+  tcr_strata_le :
+    SM_DT_OpenPRE_collisionMass (fun k => k.val + 2) multipleMass ≤
+      SM_DT_TCR_Advantage (SM_DT_OpenPRE_toTCR adv)
+
+/-- Once the named fiber-counting/coupling lemma is supplied, the full quantitative reduction is
+pure ENNReal algebra. This is the exact `OpenPRE ≤ DSPR + 3·TCR` theorem interface. -/
+theorem SM_DT_OpenPRE_le_TCR_DSPR [Fintype M] [Inhabited M] [DecidableEq Tweak]
+    [DecidableEq M] [DecidableEq Y] {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
+    (adv : SM_DT_OpenPRE_Adversary prob) (hcount : SM_DT_OpenPRE_CountingLemma adv) :
+    SM_DT_OpenPRE_Advantage adv ≤ SM_DT_OpenPRE_TCR_DSPR_Bound adv := by
+  let reciprocal := SM_DT_OpenPRE_reciprocalMass
+    (fun k : Fin (Fintype.card M - 1) => k.val + 2) hcount.multipleMass
+  let collision := SM_DT_OpenPRE_collisionMass
+    (fun k : Fin (Fintype.card M - 1) => k.val + 2) hcount.multipleMass
+  have hsingle : hcount.singleMass ≤
+      SM_DT_DSPR_Advantage (SM_DT_OpenPRE_toDSPR adv) + reciprocal := by
+    rw [hcount.dspr_decomposition]
+    exact le_tsub_add
+  have hmultiple : (∑ k, hcount.multipleMass k) + reciprocal ≤ 3 * collision := by
+    exact openPRE_multipleMass_add_reciprocal_le_three_collision _ _ (fun _ => by omega)
+  have hcollision : 3 * collision ≤
+      3 * SM_DT_TCR_Advantage (SM_DT_OpenPRE_toTCR adv) := by
+    gcongr
+    exact hcount.tcr_strata_le
+  rw [hcount.openPRE_decomposition]
+  calc
+    hcount.singleMass + ∑ k, hcount.multipleMass k ≤
+        (SM_DT_DSPR_Advantage (SM_DT_OpenPRE_toDSPR adv) + reciprocal) +
+          ∑ k, hcount.multipleMass k := by gcongr
+    _ = SM_DT_DSPR_Advantage (SM_DT_OpenPRE_toDSPR adv) +
+        ((∑ k, hcount.multipleMass k) + reciprocal) := by ac_rfl
+    _ ≤ SM_DT_DSPR_Advantage (SM_DT_OpenPRE_toDSPR adv) + 3 * collision := by gcongr
+    _ ≤ SM_DT_DSPR_Advantage (SM_DT_OpenPRE_toDSPR adv) +
+        3 * SM_DT_TCR_Advantage (SM_DT_OpenPRE_toTCR adv) := by gcongr
 
 end TweakableHash

@@ -17,7 +17,8 @@ then revealed for the prediction phase. The adversary may evaluate the other mem
 tweakable-hash collection while selecting targets. All oracle queries are answered and recorded;
 the experiment loses if the final-validity monitor was poisoned by exceeding the cap, repeating a
 target tweak, or using a target tweak on the collection oracle. This is the source game's
-final-validity semantics, not the rejection-on-arrival semantics of the existing TCR/PRE games.
+final-validity semantics, shared by the TCR, PRE, and OpenPRE games in this directory and distinct
+from the legacy rejection-on-arrival oracle.
 
 The security quantity is **not** raw prediction success. `SM_DT_SP_Experiment` is the source
 proof's `SPprob` baseline: it runs the same adversary, including its prediction phase and target

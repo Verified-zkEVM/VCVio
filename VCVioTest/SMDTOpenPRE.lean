@@ -27,6 +27,10 @@ instance : Fintype Input where
   elems := {.only}
   complete x := by cases x; simp
 
+instance : Unique Input where
+  default := .only
+  uniq x := by cases x; rfl
+
 instance : SampleableType Seed where
   selectElem := pure .only
   mem_support_selectElem := by simp
@@ -162,6 +166,54 @@ private lemma dspr_reduction_openedSelected :
     TweakableHash.SM_DT_DSPR_Experiment
       (TweakableHash.SM_DT_OpenPRE_toDSPR openedSelected) = pure false := by
   rfl
+
+private lemma sp_reduction_valid :
+    TweakableHash.SM_DT_SP_Experiment (TweakableHash.SM_DT_OpenPRE_toDSPR valid) =
+      pure false := by
+  rfl
+
+/-- The singleton canary has a fiber of size one and no second preimage. -/
+theorem preimage_count_canary :
+    TweakableHash.PreimageCount hash .only false false = 1 ∧
+      ¬TweakableHash.SecondPreimageExists hash .only false .only := by
+  constructor
+  · have hle : TweakableHash.PreimageCount hash .only false false ≤ 1 := by
+      calc
+        TweakableHash.PreimageCount hash .only false false ≤ Fintype.card Input :=
+          TweakableHash.preimageCount_le_card hash .only false false
+        _ = 1 := Fintype.card_unique
+    have hge : 1 ≤ TweakableHash.PreimageCount hash .only false false :=
+      TweakableHash.one_le_preimageCount_image hash .only false .only
+    exact Nat.le_antisymm hle hge
+  · simp [TweakableHash.SecondPreimageExists]
+
+lemma no_multiple_index (k : Fin (Fintype.card Input - 1)) : False :=
+  Fin.elim0 k
+
+/-- Concrete witness that the quantitative theorem interface asks for a cardinality-stratified
+decomposition rather than assuming its conclusion. -/
+noncomputable def validCountingLemma : TweakableHash.SM_DT_OpenPRE_CountingLemma valid where
+  singleMass := 1
+  multipleMass := fun k => (no_multiple_index k).elim
+  openPRE_decomposition := by
+    simp only [TweakableHash.SM_DT_OpenPRE_Advantage, experiment_valid]
+    rw [Finset.sum_eq_zero (fun k _ => (no_multiple_index k).elim)]
+    simp
+  dspr_decomposition := by
+    simp only [TweakableHash.SM_DT_DSPR_Advantage, TweakableHash.SM_DT_DSPR_Success,
+      TweakableHash.SM_DT_SP_Probability, dspr_reduction_valid, sp_reduction_valid,
+      TweakableHash.SM_DT_OpenPRE_reciprocalMass]
+    rw [Finset.sum_eq_zero (fun k _ => (no_multiple_index k).elim)]
+    simp
+  tcr_strata_le := by
+    simp only [TweakableHash.SM_DT_OpenPRE_collisionMass]
+    rw [Finset.sum_eq_zero (fun k _ => (no_multiple_index k).elim)]
+    simp
+
+theorem quantitative_reduction_interface_canary :
+    TweakableHash.SM_DT_OpenPRE_Advantage valid ≤
+      TweakableHash.SM_DT_OpenPRE_TCR_DSPR_Bound valid :=
+  TweakableHash.SM_DT_OpenPRE_le_TCR_DSPR valid validCountingLemma
 
 /-- Mutation-resistant pins for prefix truncation, final validity, and the adaptive opening
 phase. -/

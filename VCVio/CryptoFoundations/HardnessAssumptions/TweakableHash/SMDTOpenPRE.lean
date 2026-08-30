@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
+public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
@@ -57,6 +58,13 @@ structure SM_DT_OpenPRE_Problem (ι PkSeed Tweak M Y : Type) where
   thColl : TweakableHashCollection ι PkSeed Tweak Y
   /-- The number of committed tweaks retained as targets. -/
   numTargets : ℕ
+
+/-- The property on `inputGen` required by the source DSPR/TCR quantitative reduction: every input
+is sampled uniformly with full support. Keeping it separate from the game permits a more general
+OpenPRE definition while making the reduction's additional hypothesis explicit. -/
+def SM_DT_OpenPRE_Problem.HasUniformInputs [SampleableType M]
+    (prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y) : Prop :=
+  prob.inputGen = $ᵗ M
 
 /-- The stand-alone OpenPRE problem, whose collection oracle is unqueryable. -/
 def SM_DT_OpenPRE_Problem.standalone (th : TweakableHash PkSeed Tweak M Y)
