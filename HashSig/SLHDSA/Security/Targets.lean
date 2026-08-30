@@ -52,6 +52,17 @@ theorem perfectInternalCoords_height_pos {h : ℕ} {zi : ℕ × ℕ}
       · simp
       · exact Nat.succ_pos zi.1
 
+/-- An internal coordinate's height never exceeds the height of its perfect tree. -/
+theorem perfectInternalCoords_height_le {h : ℕ} {zi : ℕ × ℕ}
+    (hmem : zi ∈ perfectInternalCoords h) : zi.1 ≤ h := by
+  induction h generalizing zi with
+  | zero => simp [perfectInternalCoords] at hmem
+  | succ h ih =>
+      simp only [perfectInternalCoords, List.mem_append, List.mem_map] at hmem
+      rcases hmem with ⟨i, _, rfl⟩ | ⟨zi, hzi, rfl⟩
+      · exact Nat.succ_le_succ (Nat.zero_le h)
+      · exact Nat.succ_le_succ (ih hzi)
+
 /-- At height `z`, a perfect tree of height `h` has exactly `2^(h-z)` node positions. -/
 theorem perfectInternalCoords_index_lt {h : ℕ} {zi : ℕ × ℕ}
     (hmem : zi ∈ perfectInternalCoords h) : zi.2 < 2 ^ (h - zi.1) := by

@@ -11,6 +11,7 @@ public import HashSig.SLHDSA.C13.WotsC
 public import HashSig.SLHDSA.C13.Xmss
 public import HashSig.SLHDSA.Concrete.Instance
 public import HashSig.SLHDSA.Concrete.Keccak
+public import HashSig.SLHDSA.Concrete.Security
 public import HashSig.SLHDSA.Concrete.Sha2
 public import HashSig.SLHDSA.Encoding
 public import HashSig.SLHDSA.Fors
