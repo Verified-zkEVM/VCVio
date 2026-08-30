@@ -193,6 +193,7 @@ lemma no_multiple_index (k : Fin (Fintype.card Input - 1)) : False :=
 /-- Concrete witness that the quantitative theorem interface asks for a cardinality-stratified
 decomposition rather than assuming its conclusion. -/
 noncomputable def validCountingLemma : TweakableHash.SM_DT_OpenPRE_CountingLemma valid where
+  uniformInputs := rfl
   singleMass := 1
   multipleMass := fun k => (no_multiple_index k).elim
   openPRE_decomposition := by

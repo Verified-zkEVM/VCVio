@@ -234,9 +234,12 @@ successful OpenPRE mass on fibers of size one. `multipleMass k` is the mass on f
 `k + 2`, aggregating over all selected target indices. The three fields are exactly the substantive
 probabilistic/coupling obligations remaining from the EasyCrypt proof; none is the desired final
 inequality in disguise. -/
-structure SM_DT_OpenPRE_CountingLemma [Fintype M] [Inhabited M] [DecidableEq Tweak]
-    [DecidableEq M] [DecidableEq Y] {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
+structure SM_DT_OpenPRE_CountingLemma [Fintype M] [Inhabited M] [SampleableType M]
+    [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
+    {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_OpenPRE_Adversary prob) where
+  /-- The source counting argument uses full uniform sampling of the finite input space. -/
+  uniformInputs : prob.HasUniformInputs
   /-- Successful mass whose selected image has exactly one preimage. -/
   singleMass : ℝ≥0∞
   /-- Successful masses for fiber cardinalities `2, …, Fintype.card M`. -/
@@ -256,8 +259,9 @@ structure SM_DT_OpenPRE_CountingLemma [Fintype M] [Inhabited M] [DecidableEq Twe
 
 /-- Once the named fiber-counting/coupling lemma is supplied, the full quantitative reduction is
 pure ENNReal algebra. This is the exact `OpenPRE ≤ DSPR + 3·TCR` theorem interface. -/
-theorem SM_DT_OpenPRE_le_TCR_DSPR [Fintype M] [Inhabited M] [DecidableEq Tweak]
-    [DecidableEq M] [DecidableEq Y] {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
+theorem SM_DT_OpenPRE_le_TCR_DSPR [Fintype M] [Inhabited M] [SampleableType M]
+    [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
+    {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_OpenPRE_Adversary prob) (hcount : SM_DT_OpenPRE_CountingLemma adv) :
     SM_DT_OpenPRE_Advantage adv ≤ SM_DT_OpenPRE_TCR_DSPR_Bound adv := by
   let reciprocal := SM_DT_OpenPRE_reciprocalMass
