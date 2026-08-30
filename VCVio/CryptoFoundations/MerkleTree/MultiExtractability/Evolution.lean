@@ -62,6 +62,65 @@ private lemma children_append_singleton_some_of_none_response_eq_root
       simp only [Bool.and_eq_true, beq_iff_eq] at hpredicate
       exact hpredicate.2
 
+private lemma children_append_singleton_eq_of_mem
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    (log : MerkleTreeExtractor.QueryLog Query Y) (address : Address) (root : Y)
+    (entry : (_ : Query) × Y) (hmem : entry ∈ log) :
+    MerkleTreeExtractor.children view (log ++ [entry]) address root =
+      MerkleTreeExtractor.children view log address root := by
+  unfold MerkleTreeExtractor.children
+  rw [List.find?_append]
+  cases hfind : List.find?
+      (fun candidate => view.address candidate.1 == address && candidate.2 == root) log with
+  | some found => simp
+  | none =>
+      have hpredicate := (List.find?_eq_none.mp hfind) entry hmem
+      simp [hpredicate]
+
+/-- Re-appending an entry already present in the log cannot change extraction. In a caching/logging
+execution this rules out cache hits as witnesses to the adjacent-step evolution theorem. -/
+theorem tree_append_singleton_eq_of_mem
+    (view : MerkleTreeExtractor.QueryView Query Address Y) (s : Skeleton)
+    (addressKey : SkeletonInternalIndex s → Address)
+    (log : MerkleTreeExtractor.QueryLog Query Y) (root : Y)
+    (entry : (_ : Query) × Y) (hmem : entry ∈ log) :
+    MerkleTreeExtractor.tree view s addressKey (log ++ [entry]) root =
+      MerkleTreeExtractor.tree view s addressKey log root := by
+  induction s generalizing root with
+  | leaf => rfl
+  | internal left right ihLeft ihRight =>
+      have hchildren := children_append_singleton_eq_of_mem
+        view log (addressKey .ofInternal) root entry hmem
+      simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt]
+      rw [hchildren]
+      cases hbefore : MerkleTreeExtractor.children view log
+          (addressKey .ofInternal) root with
+      | none => rfl
+      | some children =>
+          obtain ⟨leftRoot, rightRoot⟩ := children
+          have hleft := ihLeft (fun address => addressKey (.ofLeft address)) leftRoot
+          have hright := ihRight (fun address => addressKey (.ofRight address)) rightRoot
+          change MerkleTreeExtractor.treeAt view left
+              (fun address => addressKey (.ofLeft address)) (log ++ [entry]) leftRoot =
+            MerkleTreeExtractor.treeAt view left
+              (fun address => addressKey (.ofLeft address)) log leftRoot at hleft
+          change MerkleTreeExtractor.treeAt view right
+              (fun address => addressKey (.ofRight address)) (log ++ [entry]) rightRoot =
+            MerkleTreeExtractor.treeAt view right
+              (fun address => addressKey (.ofRight address)) log rightRoot at hright
+          change
+            FullData.internal (some root)
+                (MerkleTreeExtractor.treeAt view left
+                  (fun address => addressKey (.ofLeft address)) (log ++ [entry]) leftRoot)
+                (MerkleTreeExtractor.treeAt view right
+                  (fun address => addressKey (.ofRight address)) (log ++ [entry]) rightRoot) =
+              FullData.internal (some root)
+                (MerkleTreeExtractor.treeAt view left
+                  (fun address => addressKey (.ofLeft address)) log leftRoot)
+                (MerkleTreeExtractor.treeAt view right
+                  (fun address => addressKey (.ofRight address)) log rightRoot)
+          rw [hleft, hright]
+
 /-- Appending one entry can change extraction only when its response was a live target before the
 append. The target set is computed from the pre-sample log, so the statement is causal and can be
 fed to an online random-oracle stopping argument. -/

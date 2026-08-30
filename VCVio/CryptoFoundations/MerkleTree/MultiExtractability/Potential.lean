@@ -110,6 +110,72 @@ theorem sharedTargetCount_mono_keyCount
   unfold sharedTargetCount
   gcongr
 
+/-- Fresh-miss recurrence behind the safe online envelope. The local step pays collision against
+the existing cache and a hit in the target set predictable before sampling; the continuation then
+uses the enlarged cache. -/
+theorem multiCheckpointEnergy_miss_step
+    (nodeBudget checkpointCount verifierOverhead remaining cached continuationMisses : ℕ)
+    (hremaining : 0 < remaining) :
+    cached + sharedTargetCount nodeBudget checkpointCount cached +
+        multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+          (remaining - 1) (cached + 1) continuationMisses ≤
+      multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+        remaining cached (continuationMisses + 1) := by
+  have hkeys : cached + 1 + continuationMisses =
+      cached + (continuationMisses + 1) := by omega
+  have hchoose : (continuationMisses + 1).choose 2 =
+      continuationMisses + continuationMisses.choose 2 := by
+    rw [show continuationMisses + 1 = continuationMisses.succ by omega,
+      Nat.choose_succ_succ]
+    simp
+  have htarget := sharedTargetCount_mono_keyCount nodeBudget checkpointCount
+    (show cached ≤ cached + (continuationMisses + 1) by omega)
+  have htargetTerm :
+      sharedTargetCount nodeBudget checkpointCount cached +
+          sharedTargetCount nodeBudget checkpointCount
+              (cached + (continuationMisses + 1)) *
+            (remaining - 1 + verifierOverhead) ≤
+        sharedTargetCount nodeBudget checkpointCount
+            (cached + (continuationMisses + 1)) *
+          (remaining + verifierOverhead) := by
+    calc
+      _ ≤ sharedTargetCount nodeBudget checkpointCount
+              (cached + (continuationMisses + 1)) +
+            sharedTargetCount nodeBudget checkpointCount
+                (cached + (continuationMisses + 1)) *
+              (remaining - 1 + verifierOverhead) :=
+        Nat.add_le_add_right htarget _
+      _ = _ := by
+        have hremaining' : remaining + verifierOverhead =
+            (remaining - 1 + verifierOverhead) + 1 := by omega
+        rw [hremaining', Nat.mul_succ]
+        omega
+  have hcollision :
+      cached + continuationMisses * (cached + 1) + continuationMisses.choose 2 =
+        (continuationMisses + 1) * cached + (continuationMisses + 1).choose 2 := by
+    rw [hchoose]
+    simp only [Nat.mul_add, Nat.add_mul, Nat.mul_one, Nat.one_mul]
+    omega
+  unfold multiCheckpointEnergy
+  rw [hkeys]
+  calc
+    cached + sharedTargetCount nodeBudget checkpointCount cached +
+          (continuationMisses * (cached + 1) + continuationMisses.choose 2 +
+            sharedTargetCount nodeBudget checkpointCount
+                (cached + (continuationMisses + 1)) *
+              (remaining - 1 + verifierOverhead)) =
+        (cached + continuationMisses * (cached + 1) + continuationMisses.choose 2) +
+          (sharedTargetCount nodeBudget checkpointCount cached +
+            sharedTargetCount nodeBudget checkpointCount
+                (cached + (continuationMisses + 1)) *
+              (remaining - 1 + verifierOverhead)) := by ac_rfl
+    _ ≤ ((continuationMisses + 1) * cached + (continuationMisses + 1).choose 2) +
+          sharedTargetCount nodeBudget checkpointCount
+              (cached + (continuationMisses + 1)) *
+            (remaining + verifierOverhead) :=
+      Nat.add_le_add (le_of_eq hcollision) htargetTerm
+    _ = _ := rfl
+
 /-- Coarse closed form obtained from the safe finite maximum by separately maximizing the
 birthday and target-hit terms. -/
 theorem multiExtractabilitySafeNumerator_le_coarse
