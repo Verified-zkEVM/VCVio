@@ -86,6 +86,14 @@ instance (p : Params) : Decidable p.D1SecurityProfile := by
   unfold D1SecurityProfile
   infer_instance
 
+/-- The repository's supported SHA2-128-24 parameter record satisfies every arithmetic side
+condition of the single-tree security profile. -/
+theorem slhdsaSha2_128_24_d1SecurityProfile :
+    slhdsaSha2_128_24.D1SecurityProfile := by
+  have hlog : Nat.log 4 192 = 3 := by decide
+  norm_num [D1SecurityProfile, IsD1, slhdsaSha2_128_24, ParameterSet.params,
+    Params.len, Params.len1, Params.len2, Params.w, Params.t, hlog]
+
 /-- The SP 800-230 Initial Public Draft usage cap for the reduced parameter sets.  This is a
 draft-profile bound, not an FIPS 205 approval claim. -/
 def sp800230IpdSignatureLimit : ℕ := 2 ^ 24
@@ -104,6 +112,22 @@ def d1TargetProfile (p : Params) : D1TargetProfile where
   wotsPre := p.d1LeafCount * p.len
   wotsPk := p.d1LeafCount
   xmssTree := p.d1LeafCount - 1
+
+/-- Concrete target ledger for the only parameter set presently implemented by the repository.
+The WOTS-TCR entry is the source proof's loose `L * len * w` cap. -/
+theorem slhdsaSha2_128_24_d1TargetProfile :
+    slhdsaSha2_128_24.d1TargetProfile =
+      { forsLeaf := 422212465065984
+        forsTree := 422212439900160
+        forsRoots := 4194304
+        wotsUd := 285212672
+        wotsTcr := 1140850688
+        wotsPre := 285212672
+        wotsPk := 4194304
+        xmssTree := 4194303 } := by
+  have hlog : Nat.log 4 192 = 3 := by decide
+  norm_num [slhdsaSha2_128_24, ParameterSet.params, d1TargetProfile, d1LeafCount,
+    Params.len, Params.len1, Params.len2, Params.w, Params.t, hlog]
 
 @[simp] theorem d1TargetProfile_forsLeaf (p : Params) :
     p.d1TargetProfile.forsLeaf = 2 ^ p.hp * p.k * 2 ^ p.a := rfl
