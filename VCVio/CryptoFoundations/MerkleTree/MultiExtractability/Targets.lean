@@ -265,4 +265,115 @@ theorem ExtractorState.targetSet_card_le_sharedTargetCount
   simpa only [sharedTargetCount] using
     state.targetSet_card_le_min view cache keys hsupport
 
+/-! ## Live targets under a transient log -/
+
+/-- Targets of all already-recorded roots, re-extracted against an explicit current log. Unlike
+`ExtractorState.targetSet`, this set may grow during a later commitment phase and is the online
+monitor state used before sampling the next fresh response. -/
+def ExtractorState.liveTargetList [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (log : MerkleTreeExtractor.QueryLog Query Y) : List Y :=
+  state.checkpoints.flatMap fun checkpoint =>
+    MerkleTreeExtractor.targets view (config.skeleton checkpoint.1)
+      (config.addressKey checkpoint.1) log checkpoint.2.root
+
+/-- Deduplicated live target union at an explicit current log. -/
+def ExtractorState.liveTargetSet [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (log : MerkleTreeExtractor.QueryLog Query Y) : Finset Y :=
+  (state.liveTargetList view log).toFinset
+
+/-- Live targets remain bounded by the sum of the full node budgets of recorded checkpoints. -/
+theorem ExtractorState.liveTargetSet_card_le_totalNodeBudget
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (log : MerkleTreeExtractor.QueryLog Query Y) :
+    (state.liveTargetSet view log).card ≤ state.totalNodeBudget := by
+  calc
+    (state.liveTargetSet view log).card ≤ (state.liveTargetList view log).length :=
+      List.toFinset_card_le _
+    _ ≤ state.totalNodeBudget := by
+      unfold ExtractorState.liveTargetList ExtractorState.totalNodeBudget
+        nodeBudgetOfCheckpoints
+      induction state.checkpoints with
+      | nil => simp
+      | cons checkpoint checkpoints ih =>
+          obtain ⟨tag, checkpoint⟩ := checkpoint
+          simp only [List.flatMap_cons, List.length_append, List.map_cons, List.sum_cons]
+          exact Nat.add_le_add
+            (MerkleTreeExtractor.targets_length_le view (config.skeleton tag)
+              (config.addressKey tag) log checkpoint.root) ih
+
+/-- Cache/key facts for one transient online log. -/
+structure LogCacheKeysInvariant [DecidableEq Query]
+    (log : MerkleTreeExtractor.QueryLog Query Y)
+    (cache : Query → Option Y) (keys : Finset Query) : Prop where
+  /-- Every observed entry agrees with the current cache. -/
+  log_agrees : ∀ query response,
+    (⟨query, response⟩ : (_query : Query) × Y) ∈ log →
+    cache query = some response
+  /-- Every populated cache entry has already appeared in the online log. -/
+  cache_covered : ∀ query response, cache query = some response →
+    (⟨query, response⟩ : (_query : Query) × Y) ∈ log
+  /-- The finite key set is exactly the populated cache domain. -/
+  mem_keys_iff : ∀ query, query ∈ keys ↔ ∃ response, cache query = some response
+
+/-- Every live target is a recorded root or a child of a currently populated query key. -/
+theorem ExtractorState.liveTargetSet_subset_targetSupport
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (log : MerkleTreeExtractor.QueryLog Query Y)
+    (cache : Query → Option Y) (keys : Finset Query)
+    (hsupport : LogCacheKeysInvariant log cache keys) :
+    state.liveTargetSet view log ⊆ state.targetSupport view keys := by
+  intro target htarget
+  simp only [ExtractorState.liveTargetSet, List.mem_toFinset,
+    ExtractorState.liveTargetList, List.mem_flatMap] at htarget
+  obtain ⟨checkpoint, hcheckpoint, htarget⟩ := htarget
+  obtain ⟨tag, checkpoint⟩ := checkpoint
+  rcases MerkleTreeExtractor.mem_targets_root_or_log_input view
+      (config.skeleton tag) (config.addressKey tag) log checkpoint.root htarget with
+    hroot | ⟨entry, hentry, hleft | hright⟩
+  · subst target
+    apply Finset.mem_union_left
+    simp only [ExtractorState.checkpointRoots, List.mem_toFinset, List.mem_map]
+    exact ⟨⟨tag, checkpoint⟩, hcheckpoint, rfl⟩
+  · have hcache := hsupport.log_agrees entry.1 entry.2 hentry
+    have hkey : entry.1 ∈ keys := (hsupport.mem_keys_iff entry.1).2 ⟨entry.2, hcache⟩
+    rw [hleft]
+    apply Finset.mem_union_right
+    apply Finset.mem_union_left
+    exact Finset.mem_image.mpr ⟨entry.1, hkey, rfl⟩
+  · have hcache := hsupport.log_agrees entry.1 entry.2 hentry
+    have hkey : entry.1 ∈ keys := (hsupport.mem_keys_iff entry.1).2 ⟨entry.2, hcache⟩
+    rw [hright]
+    apply Finset.mem_union_right
+    apply Finset.mem_union_right
+    exact Finset.mem_image.mpr ⟨entry.1, hkey, rfl⟩
+
+/-- Online semantic target bound used by the checkpoint-aware stopping recurrence. -/
+theorem ExtractorState.liveTargetSet_card_le_sharedTargetCount
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (log : MerkleTreeExtractor.QueryLog Query Y)
+    (cache : Query → Option Y) (keys : Finset Query)
+    (hsupport : LogCacheKeysInvariant log cache keys) :
+    (state.liveTargetSet view log).card ≤
+      sharedTargetCount state.totalNodeBudget state.checkpoints.length keys.card := by
+  apply (Nat.le_min).2
+  refine ⟨state.liveTargetSet_card_le_totalNodeBudget view log, ?_⟩
+  exact (Finset.card_mono
+    (state.liveTargetSet_subset_targetSupport view log cache keys hsupport)).trans
+      (state.targetSupport_card_le view keys)
+
 end MerkleTreeMultiExtractability

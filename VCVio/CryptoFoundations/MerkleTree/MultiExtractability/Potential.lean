@@ -176,6 +176,69 @@ theorem multiCheckpointEnergy_miss_step
       Nat.add_le_add (le_of_eq hcollision) htargetTerm
     _ = _ := rfl
 
+private theorem multiCheckpointEnergy_zero
+    (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) :
+    multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead remaining cached 0 =
+      sharedTargetCount nodeBudget checkpointCount cached *
+        (remaining + verifierOverhead) := by
+  simp [multiCheckpointEnergy]
+
+/-- Terminal target-hit budget is contained in the safe finite maximum. -/
+theorem multiExtractabilitySafePotential_terminal_le
+    (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) :
+    sharedTargetCount nodeBudget checkpointCount cached *
+        (remaining + verifierOverhead) ≤
+      multiExtractabilitySafePotential
+        nodeBudget checkpointCount verifierOverhead remaining cached := by
+  rw [← multiCheckpointEnergy_zero]
+  exact Finset.le_sup (by simp)
+
+private theorem multiCheckpointEnergy_hit_le
+    (nodeBudget checkpointCount verifierOverhead remaining cached misses : ℕ) :
+    multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+        (remaining - 1) cached misses ≤
+      multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+        remaining cached misses := by
+  unfold multiCheckpointEnergy
+  gcongr
+  omega
+
+/-- A cached query consumes remaining budget without increasing the cache or target cap. -/
+theorem multiExtractabilitySafePotential_hit_le
+    (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) :
+    multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+        (remaining - 1) cached ≤
+      multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+        remaining cached := by
+  unfold multiExtractabilitySafePotential
+  apply Finset.sup_le
+  intro misses hmisses
+  apply (multiCheckpointEnergy_hit_le nodeBudget checkpointCount verifierOverhead
+    remaining cached misses).trans
+  apply Finset.le_sup
+  simp only [Finset.mem_range] at hmisses ⊢
+  omega
+
+/-- One fresh miss pays collision plus predictable live-target hit, then recurs with one more
+populated key and one fewer query. -/
+theorem multiExtractabilitySafePotential_miss_le
+    (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ)
+    (hremaining : 0 < remaining) :
+    cached + sharedTargetCount nodeBudget checkpointCount cached +
+        multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+          (remaining - 1) (cached + 1) ≤
+      multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+        remaining cached := by
+  unfold multiExtractabilitySafePotential
+  rw [Finset.add_sup (by simp)]
+  apply Finset.sup_le
+  intro continuationMisses hmisses
+  apply (multiCheckpointEnergy_miss_step nodeBudget checkpointCount verifierOverhead
+    remaining cached continuationMisses hremaining).trans
+  apply Finset.le_sup
+  simp only [Finset.mem_range] at hmisses ⊢
+  omega
+
 /-- Coarse closed form obtained from the safe finite maximum by separately maximizing the
 birthday and target-hit terms. -/
 theorem multiExtractabilitySafeNumerator_le_coarse
