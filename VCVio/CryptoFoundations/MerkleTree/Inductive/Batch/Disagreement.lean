@@ -210,7 +210,7 @@ theorem batchToSingleProofAddressed_const (hashFn : Y → Y → Y)
 /-- Unequal pruned proofs for one selector disagree on the expanded authentication path of
 some selected leaf. The selected values may differ as well: proof-data disagreement remains
 observable inside the subtree where the proof first differs. -/
-theorem exists_batchToSingleProofAddressed_ne_of_ne [DecidableEq Y] {s : Skeleton}
+theorem exists_batchToSingleProofAddressed_ne_of_ne {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → Y → Y → Y)
     {selector : LeafData Bool s} (values₁ values₂ : SelectedValues Y selector)
     (proof₁ proof₂ : BatchProof Y selector) (hne : proof₁ ≠ proof₂) :
@@ -224,7 +224,7 @@ theorem exists_batchToSingleProofAddressed_ne_of_ne [DecidableEq Y] {s : Skeleto
   | internalBoth leftProof₁ rightProof₁ ihLeft ihRight =>
       cases proof₂ with
       | internalBoth leftProof₂ rightProof₂ =>
-          by_cases hleft : leftProof₁ = leftProof₂
+          rcases Classical.em (leftProof₁ = leftProof₂) with hleft | hleft
           · have hright : rightProof₁ ≠ rightProof₂ := by
               intro hright
               subst leftProof₂
@@ -262,7 +262,7 @@ theorem exists_batchToSingleProofAddressed_ne_of_ne [DecidableEq Y] {s : Skeleto
           have hselected := rightProof₂.anySelected_of_batchProof
           exact False.elim (by simp [hright₁] at hselected)
       | pruneRight hright₂ rightRoot₂ leftProof₂ =>
-          by_cases hroot : rightRoot₁ = rightRoot₂
+          rcases Classical.em (rightRoot₁ = rightRoot₂) with hroot | hroot
           · have hproof : leftProof₁ ≠ leftProof₂ := by
               intro hproof
               subst rightRoot₂
@@ -297,7 +297,7 @@ theorem exists_batchToSingleProofAddressed_ne_of_ne [DecidableEq Y] {s : Skeleto
           have hselected := rightProof₁.anySelected_of_batchProof
           exact False.elim (by simp [hright₂] at hselected)
       | pruneLeft hleft₂ leftRoot₂ rightProof₂ =>
-          by_cases hroot : leftRoot₁ = leftRoot₂
+          rcases Classical.em (leftRoot₁ = leftRoot₂) with hroot | hroot
           · have hproof : rightProof₁ ≠ rightProof₂ := by
               intro hproof
               subst leftRoot₂
