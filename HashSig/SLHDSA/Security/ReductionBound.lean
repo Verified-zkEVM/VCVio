@@ -322,6 +322,30 @@ theorem concreteStrongEufCmaAdvantage_le_explicitLowLevelBound_add_sameMessage
     (add_le_add (concreteEufCmaAdvantage_le_explicitLowLevelBound prims
       adv.toUnforgeableAdv reds cert) le_rfl)
 
+/-- Quantitative SUF-CMA theorem under an explicit bound `ε` for the sole additional
+same-message/new-signature property. -/
+theorem concreteStrongEufCmaAdvantage_le_explicitLowLevelBound_add
+    (adv : StrongEufCmaAdversary prims) (reds : D1ReductionAdversaries prims)
+    (cert : D1EufCmaReductionCertificate prims adv.toUnforgeableAdv reds)
+    (ε : ℝ≥0∞) (hsame : concreteSameMessageStrongAdvantage prims adv ≤ ε) :
+    concreteStrongEufCmaAdvantage prims adv ≤
+      (PRFScheme.prfAdvantageENNReal (skPrfScheme prims) reds.skPrf +
+        PRFScheme.prfAdvantageENNReal (msgPrfScheme prims) reds.msgPrf) +
+      (KeyedHash.ITSRAdvantage reds.hmsgItsr +
+        (TweakableHash.SM_DT_DSPR_Advantage
+            (TweakableHash.SM_DT_OpenPRE_toDSPR reds.forsOpenPre) +
+          3 * TweakableHash.SM_DT_TCR_Advantage
+            (TweakableHash.SM_DT_OpenPRE_toTCR reds.forsOpenPre)) +
+        TweakableHash.SM_DT_TCR_Advantage reds.forsTreeTcr +
+        TweakableHash.SM_DT_TCR_Advantage reds.forsRootsTcr) +
+      (((p.w - 2) * TweakableHash.SM_DT_UD_Advantage reds.wotsUd +
+          TweakableHash.SM_DT_TCR_Advantage reds.wotsTcr +
+          TweakableHash.SM_DT_PRE_Advantage reds.wotsPre) +
+        TweakableHash.SM_DT_TCR_Advantage reds.wotsPkTcr +
+        TweakableHash.SM_DT_TCR_Advantage reds.xmssTreeTcr) + ε :=
+  (concreteStrongEufCmaAdvantage_le_explicitLowLevelBound_add_sameMessage
+    prims adv reds cert).trans (add_le_add le_rfl hsame)
+
 end ConcreteAdversaries
 
 end SLHDSA
