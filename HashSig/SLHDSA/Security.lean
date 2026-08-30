@@ -478,4 +478,66 @@ theorem concreteEufCmaExperiment_eq_simulate (adv : EufCmaAdversary prims) :
 
 end ConcreteEUF
 
+/-! ### Concrete SUF-CMA endpoint
+
+This endpoint is deliberately separate from the EUF reduction above.  Pair freshness admits a
+new valid signature on an already signed message, so no EUF theorem may be reused without an
+additional same-message binding/re-randomization reduction. -/
+
+section ConcreteSUF
+
+variable [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
+  [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.Y]
+
+/-- Strong-unforgeability adversaries against the canonical explicit-query SLH-DSA scheme. -/
+abbrev StrongEufCmaAdversary :=
+  SignatureAlg.strongUnforgeableAdv
+    (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec prims.core)) prims.core)
+
+/-- The executable SUF-CMA program before applying a public-hash runtime.  The final freshness
+test is on the exact returned `(message, signature)` pair rather than on the message alone. -/
+noncomputable def strongEufCmaProgram (adv : StrongEufCmaAdversary prims) :
+    OracleComp (unifSpec + publicHashSpec prims.core) Bool :=
+  letI : DecidableEq (List Byte) := Classical.decEq _
+  letI : DecidableEq (SignatureCore p prims.core) := Classical.decEq _
+  let sigAlg := slhdsaAlg
+    (m := OracleComp (unifSpec + publicHashSpec prims.core)) prims.core
+  do
+    let (pk, sk) ← sigAlg.keygen
+    let impl : QueryImpl
+        ((unifSpec + publicHashSpec prims.core) +
+          (List Byte →ₒ SignatureCore p prims.core))
+        (WriterT (QueryLog (List Byte →ₒ SignatureCore p prims.core))
+          (OracleComp (unifSpec + publicHashSpec prims.core))) :=
+      (HasQuery.toQueryImpl
+          (spec := unifSpec + publicHashSpec prims.core)
+          (m := OracleComp (unifSpec + publicHashSpec prims.core))).liftTarget
+        (WriterT (QueryLog (List Byte →ₒ SignatureCore p prims.core))
+          (OracleComp (unifSpec + publicHashSpec prims.core))) +
+        sigAlg.signingOracle pk sk
+    let simAdv : WriterT (QueryLog (List Byte →ₒ SignatureCore p prims.core))
+        (OracleComp (unifSpec + publicHashSpec prims.core))
+        (List Byte × SignatureCore p prims.core) := simulateQ impl (adv.main pk)
+    let ((msg, sig), log) ← simAdv.run
+    let verified ← sigAlg.verify pk msg sig
+    return !SignatureAlg.signingLogContains log msg sig && verified
+
+/-- Concrete-function SUF-CMA experiment for the supplied primitive bundle. -/
+noncomputable def concreteStrongEufCmaExperiment (adv : StrongEufCmaAdversary prims) : SPMF Bool :=
+  SignatureAlg.strongUnforgeableExp (PublicHash.concreteRuntime prims) adv
+
+/-- Concrete-function SUF-CMA advantage. -/
+noncomputable def concreteStrongEufCmaAdvantage (adv : StrongEufCmaAdversary prims) : ℝ≥0∞ :=
+  Pr[= true | concreteStrongEufCmaExperiment prims adv]
+
+/-- Endpoint bridge for SUF-CMA: as for EUF-CMA, one deterministic public-hash simulation
+surrounds key generation, all signing queries, and final verification. -/
+theorem concreteStrongEufCmaExperiment_eq_simulate (adv : StrongEufCmaAdversary prims) :
+    concreteStrongEufCmaExperiment prims adv =
+      (liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims))
+        (strongEufCmaProgram prims adv)) : SPMF Bool) := by
+  rfl
+
+end ConcreteSUF
+
 end SLHDSA
