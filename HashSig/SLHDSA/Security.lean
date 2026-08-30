@@ -181,6 +181,43 @@ def Primitives.d1XmssTreeTcrProblem [SampleableType prims.PkSeed] :
 
 /-! ### Deterministic component-reduction witnesses -/
 
+/-- A distinct secret value that hashes to an honest FORS leaf is an arity-one TCR witness at the
+exact leaf address. -/
+theorem Primitives.forsLeafCollision_to_tcrWitness [SampleableType prims.PkSeed]
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (idx : ℕ) (candidate : prims.Y)
+    (hne : forsSkGenCore prims.core sk pk adrs idx ≠ candidate)
+    (heq : forsLeaf prims sk pk adrs idx =
+      prims.F pk (forsNodeAdrs adrs 0 idx) candidate) :
+    let target : Vector prims.Y 1 := #v[forsSkGenCore prims.core sk pk adrs idx]
+    let collision : Vector prims.Y 1 := #v[candidate]
+    target ≠ collision ∧
+      (prims.thashMember 1).eval pk (prims.adrsToKey (forsNodeAdrs adrs 0 idx)) target =
+        (prims.thashMember 1).eval pk
+          (prims.adrsToKey (forsNodeAdrs adrs 0 idx)) collision := by
+  dsimp
+  constructor
+  · intro hv
+    apply hne
+    have hl := congrArg Vector.toList hv
+    simpa using hl
+  · simpa [Primitives.thashMember] using heq
+
+/-- A changed vector of WOTS chain ends that still compresses to the honest WOTS public key is an
+arity-`len` TCR witness at the exact `WOTS_PK` address. -/
+theorem Primitives.wotsPkBinding_to_tcrWitness [SampleableType prims.PkSeed]
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs)
+    (sig : WotsSig p prims.core)
+    (hpk : wotsPkFromSig prims sig msg pk adrs = wotsPkGen prims sk pk adrs)
+    (hne : wotsPkGenTops prims sk pk adrs ≠ wotsPkFromSigTops prims sig msg pk adrs) :
+    let target := wotsPkGenTops prims sk pk adrs
+    let collision := wotsPkFromSigTops prims sig msg pk adrs
+    target ≠ collision ∧
+      (prims.thashMember p.len).eval pk (prims.adrsToKey (wotsPkAdrs adrs)) target =
+        (prims.thashMember p.len).eval pk (prims.adrsToKey (wotsPkAdrs adrs)) collision := by
+  dsimp
+  refine ⟨hne, ?_⟩
+  simpa [Primitives.thashMember] using hpk.symm
+
 /-- The message-independent honest FORS roots committed by the arity-`k` compression. -/
 def Primitives.forsHonestRoots (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) : Vector prims.Y p.k :=
