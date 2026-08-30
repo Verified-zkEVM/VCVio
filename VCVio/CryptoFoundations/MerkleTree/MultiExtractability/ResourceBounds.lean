@@ -207,4 +207,25 @@ def Adversary.HasVerifierQueryBound
     claims ∈ support (adversary.opening privateState extractorState) →
     claimsQueryCount claims ≤ verifierBound
 
+/-- Support-wise cap on the number of terminal opening claims emitted by the adversary. -/
+def Adversary.HasOpeningCountBound
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config) (openingCount : ℕ) : Prop :=
+  ∀ privateState extractorState claims,
+    claims ∈ support (adversary.opening privateState extractorState) →
+    claims.length ≤ openingCount
+
+/-- A support-wise opening-count cap and a uniform per-configuration path bound produce the
+verifier-overhead predicate consumed by the executable security theorem. -/
+theorem Adversary.hasVerifierQueryBound_of_openingCountBound
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config)
+    (openingCount perClaim : ℕ)
+    (hcount : adversary.HasOpeningCountBound openingCount)
+    (hconfig : ∀ tag, (config.skeleton tag).leafCount - 1 ≤ perClaim) :
+    adversary.HasVerifierQueryBound (openingCount * perClaim) := by
+  intro privateState extractorState claims hclaims
+  exact claimsQueryCount_le_openingCount_mul claims openingCount perClaim
+    (hcount privateState extractorState claims hclaims) hconfig
+
 end MerkleTreeMultiExtractability

@@ -673,6 +673,37 @@ theorem strongFailure_rom_bound_schedule_of_queryBounds
     verifierOverhead perCheckpoint hcommit hopening hverifier hconfig hnodes hcheckpoints
     (adversary.terminalOpeningEvidenceProperty model)
 
+/-- Finite-opening specialization: at most `openingCount` claims, each with path cost at most
+`perClaim`, gives verifier overhead `openingCount * perClaim`. -/
+theorem strongFailure_rom_bound_schedule_of_openingCountBounds
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query) (phaseQueryBound : ℕ → ℕ)
+    (terminalQueryBound nodeBudget checkpointCount openingCount perClaim perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState)
+        (phaseQueryBound round))
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) terminalQueryBound)
+    (hopeningCount : adversary.HasOpeningCountBound openingCount)
+    (hperClaim : ∀ tag, (config.skeleton tag).leafCount - 1 ≤ perClaim)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (hnodes : rounds * perCheckpoint ≤ nodeBudget)
+    (hcheckpoints : rounds ≤ checkpointCount) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator nodeBudget checkpointCount (openingCount * perClaim)
+        (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) : ENNReal) *
+          (Nat.card Y : ENNReal)⁻¹ :=
+  strongFailure_rom_bound_schedule_of_queryBounds model config rounds adversary paddingQuery
+    phaseQueryBound terminalQueryBound nodeBudget checkpointCount (openingCount * perClaim)
+    perCheckpoint hcommit hopening
+    (adversary.hasVerifierQueryBound_of_openingCountBound openingCount perClaim
+      hopeningCount hperClaim)
+    hconfig hnodes hcheckpoints
+
 /-- Uniform-phase corollary of the fully discharged scheduled theorem. -/
 theorem strongFailure_rom_bound_of_queryBounds
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
