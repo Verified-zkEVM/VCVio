@@ -324,66 +324,6 @@ theorem batchRunInCache_of_mem_support_verifyOpening
   exact batchRunInCache_of_mem_support_getPutativeBatchRoot model addressKey
     opening.values opening.proof putativeRoot cache₀ cache₁ hroot
 
-/-- Every selected leaf of a cache-level batch run induces an ordinary authentication chain in
-the same cache.  Sibling roots recomputed by the pruned verifier are retained as the ordinary
-path's authentication values. -/
-theorem exists_chainInCache_of_batchRunInCache
-    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
-    (addressKey : SkeletonInternalIndex s → Address) (cache : (Query →ₒ Y).QueryCache)
-    {selector : LeafData Bool s} (values : SelectedValues Y selector)
-    (batchProof : BatchProof Y selector) (root : Y)
-    (hrun : BatchRunInCache model addressKey cache values batchProof root)
-    (index : SkeletonLeafIndex s) (selected : selector.get index = true) :
-    ∃ proof : List.Vector Y index.depth,
-      MerkleTreeExtractability.ChainInCache model addressKey cache
-        (selectedValueAt values index selected) root index proof := by
-  induction batchProof generalizing root with
-  | leaf =>
-      cases index with
-      | ofLeaf =>
-          refine ⟨List.Vector.nil, ?_⟩
-          simpa only [BatchRunInCache, selectedValueAt,
-            MerkleTreeExtractability.ChainInCache] using hrun.symm
-  | internalBoth leftProof rightProof ihLeft ihRight =>
-      obtain ⟨leftRoot, rightRoot, hleft, hright, hroot⟩ := hrun
-      cases index with
-      | ofLeft index =>
-          obtain ⟨proof, hchain⟩ := ihLeft
-            (fun position => addressKey (.ofLeft position)) values.1 leftRoot hleft index
-              (by simpa using selected)
-          refine ⟨List.Vector.cons rightRoot proof, ?_⟩
-          exact ⟨leftRoot, hroot, hchain⟩
-      | ofRight index =>
-          obtain ⟨proof, hchain⟩ := ihRight
-            (fun position => addressKey (.ofRight position)) values.2 rightRoot hright index
-              (by simpa using selected)
-          refine ⟨List.Vector.cons leftRoot proof, ?_⟩
-          exact ⟨rightRoot, hroot, hchain⟩
-  | pruneRight hright rightRoot leftProof ih =>
-      obtain ⟨leftRoot, hleft, hroot⟩ := hrun
-      cases index with
-      | ofLeft index =>
-          obtain ⟨proof, hchain⟩ := ih
-            (fun position => addressKey (.ofLeft position)) values.1 leftRoot hleft index
-              (by simpa using selected)
-          refine ⟨List.Vector.cons rightRoot proof, ?_⟩
-          exact ⟨leftRoot, hroot, hchain⟩
-      | ofRight index =>
-          exact absurd (LeafData.anySelected_of_get index (by simpa using selected))
-            (by simp [hright])
-  | pruneLeft hleft leftRoot rightProof ih =>
-      obtain ⟨rightRoot, hright, hroot⟩ := hrun
-      cases index with
-      | ofRight index =>
-          obtain ⟨proof, hchain⟩ := ih
-            (fun position => addressKey (.ofRight position)) values.2 rightRoot hright index
-              (by simpa using selected)
-          refine ⟨List.Vector.cons leftRoot proof, ?_⟩
-          exact ⟨rightRoot, hroot, hchain⟩
-      | ofLeft index =>
-          exact absurd (LeafData.anySelected_of_get index (by simpa using selected))
-            (by simp [hleft])
-
 /-- The canonical addressed batch-to-single path, instantiated with the final cache's completed
 hash function, is a chain in that cache. -/
 theorem chainInCache_batchToSingleProofAddressed_cacheNodeHash

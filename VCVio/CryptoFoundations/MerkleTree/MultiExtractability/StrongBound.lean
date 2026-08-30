@@ -235,6 +235,63 @@ theorem Adversary.batchRunInCache_of_terminalExecution_support
   exact batchRunInCache_of_mem_support_verifyClaims model claims cacheOpening cacheFinal attempts
     hverify tag attempt hmem haccepted
 
+/-- Reverse whole-structure disagreement at a checkpoint is exactly the explicit selected-values
+or pruned-proof disagreement consumed by the batch path kernel.  The selector is definitionally
+shared, so the dependent payload equalities are the only two possible equality obligations. -/
+theorem AcceptedOpeningDisagreement.toOpeningDisagreesWithTree
+    [DecidableEq Address] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address} {tag : Cfg}
+    {attempt : OpeningAttempt Query Y config tag}
+    (hdisagreement : AcceptedOpeningDisagreement model.view attempt) :
+    MerkleTreeBatchExtractability.OpeningDisagreesWithTree attempt.opening
+      (Checkpoint.extractedTree model.view attempt.checkpoint) := by
+  rcases attempt with ⟨checkpoint, ⟨selector, values, proof⟩, accepted⟩
+  simp only [AcceptedOpeningDisagreement] at hdisagreement
+  by_contra hnot
+  simp only [MerkleTreeBatchExtractability.OpeningDisagreesWithTree, not_or] at hnot
+  apply hdisagreement.2
+  simp only [Checkpoint.extractedOpening, InductiveMerkleTree.BatchOpening.map,
+    MerkleTreeBatchExtractability.extractedOpening] at hnot ⊢
+  have hvalues := not_ne_iff.mp hnot.1
+  have hproof := not_ne_iff.mp hnot.2
+  congr
+  · exact hvalues.symm
+  · exact hproof.symm
+
+/-- Honest batch verification always supplies the selected-path cache evidence required by the
+deterministic terminal extraction kernel. -/
+theorem Adversary.terminalOpeningEvidenceProperty
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config) :
+    adversary.TerminalOpeningEvidenceProperty model := by
+  intro privateState state cache z tag attempt hz hattempt _hcheckpoint hdisagreement
+  let tree := Checkpoint.extractedTree model.view attempt.checkpoint
+  let nodeHash := MerkleTreeBatchExtractability.cacheNodeHash model
+    (config.addressKey tag) z.2 attempt.checkpoint.root
+  have hrun := adversary.batchRunInCache_of_terminalExecution_support model
+    privateState state cache z hz tag attempt hattempt hdisagreement.1
+  have hopeningDisagrees :
+      MerkleTreeBatchExtractability.OpeningDisagreesWithTree attempt.opening tree :=
+    hdisagreement.toOpeningDisagreesWithTree model
+  obtain ⟨index, selected, hpath⟩ :=
+    hopeningDisagrees.exists_selectedValue_or_path_disagreement
+      nodeHash attempt.opening tree
+  refine ⟨{
+    index := index
+    selected := selected
+    proof := batchToSingleProofAddressed nodeHash attempt.opening.values
+      attempt.opening.proof index selected
+    chain := ?_
+    disagrees := ?_ }⟩
+  · exact
+      MerkleTreeBatchExtractability.chainInCache_batchToSingleProofAddressed_cacheNodeHash model
+        (config.addressKey tag) z.2 attempt.checkpoint.root attempt.opening.values
+        attempt.opening.proof attempt.checkpoint.root hrun index selected
+  · exact hpath
+
 /-- Terminal execution always preserves its input extractor state, grows the shared cache, and
 leaves every terminal-opening log entry in the final cache. -/
 theorem Adversary.terminalTraceInvariant
