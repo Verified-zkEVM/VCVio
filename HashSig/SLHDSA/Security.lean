@@ -206,6 +206,46 @@ def Primitives.d1XmssTreeTcrProblem [SampleableType prims.PkSeed] :
       (Vector prims.Y 2) prims.Y :=
   prims.thashTcrProblem 2 p.d1TargetProfile.xmssTree
 
+/-! The following projection lemmas pin every concrete game to the corresponding entry of the
+audited target ledger.  They are intentionally separate canaries: changing one problem's cap
+cannot silently alter the fully expanded security statement. -/
+
+@[simp] theorem Primitives.d1ForsLeafDsprProblem_numTargets
+    [SampleableType prims.PkSeed] :
+    prims.d1ForsLeafDsprProblem.numTargets = p.d1TargetProfile.forsLeaf := rfl
+
+@[simp] theorem Primitives.d1ForsLeafOpenPreProblem_numTargets
+    [SampleableType prims.PkSeed] [SampleableType prims.Y] :
+    prims.d1ForsLeafOpenPreProblem.numTargets = p.d1TargetProfile.forsLeaf := rfl
+
+@[simp] theorem Primitives.d1ForsTreeTcrProblem_numTargets
+    [SampleableType prims.PkSeed] :
+    prims.d1ForsTreeTcrProblem.numTargets = p.d1TargetProfile.forsTree := rfl
+
+@[simp] theorem Primitives.d1ForsRootsTcrProblem_numTargets
+    [SampleableType prims.PkSeed] :
+    prims.d1ForsRootsTcrProblem.numTargets = p.d1TargetProfile.forsRoots := rfl
+
+@[simp] theorem Primitives.d1WotsChainUdProblem_numTargets
+    [SampleableType prims.PkSeed] [SampleableType prims.Y] :
+    prims.d1WotsChainUdProblem.numTargets = p.d1TargetProfile.wotsUd := rfl
+
+@[simp] theorem Primitives.d1WotsChainTcrProblem_numTargets
+    [SampleableType prims.PkSeed] :
+    prims.d1WotsChainTcrProblem.numTargets = p.d1TargetProfile.wotsTcr := rfl
+
+@[simp] theorem Primitives.d1WotsChainPreProblem_numTargets
+    [SampleableType prims.PkSeed] :
+    prims.d1WotsChainPreProblem.numTargets = p.d1TargetProfile.wotsPre := rfl
+
+@[simp] theorem Primitives.d1WotsPkTcrProblem_numTargets
+    [SampleableType prims.PkSeed] :
+    prims.d1WotsPkTcrProblem.numTargets = p.d1TargetProfile.wotsPk := rfl
+
+@[simp] theorem Primitives.d1XmssTreeTcrProblem_numTargets
+    [SampleableType prims.PkSeed] :
+    prims.d1XmssTreeTcrProblem.numTargets = p.d1TargetProfile.xmssTree := rfl
+
 /-! ### Deterministic component-reduction witnesses -/
 
 /-- A distinct secret value that hashes to an honest FORS leaf is an arity-one TCR witness at the
