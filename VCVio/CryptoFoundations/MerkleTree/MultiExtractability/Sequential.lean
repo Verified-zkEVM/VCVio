@@ -78,6 +78,41 @@ theorem SequentialCommitter.runCommitments_zero
     committer.runCommitments 0 firstRound state extractorState =
       pure (state, extractorState) := rfl
 
+/-- Every supported execution of the sequential runner preserves the checkpoint-prefix invariant.
+
+This is the bridge a later random-oracle game needs in order to use `ExtractorState.WellFormed`
+without trusting the public state constructor. -/
+theorem SequentialCommitter.runCommitments_preserves_wellFormed
+    (committer : SequentialCommitter Cfg Query Y)
+    {config : Configuration Cfg Address} (rounds firstRound : ℕ)
+    (state : committer.State) (extractorState : ExtractorState Cfg Query Address Y config)
+    (hstate : extractorState.WellFormed)
+    (result : committer.State × ExtractorState Cfg Query Address Y config)
+    (hresult : result ∈ support
+      (committer.runCommitments rounds firstRound state extractorState)) :
+    result.2.WellFormed := by
+  induction rounds generalizing firstRound state extractorState result with
+  | zero =>
+      simp only [SequentialCommitter.runCommitments, mem_support_pure_iff] at hresult
+      subst result
+      exact hstate
+  | succ rounds ih =>
+      simp only [SequentialCommitter.runCommitments, mem_support_bind_iff] at hresult
+      obtain ⟨phaseResult, _hphase, hrest⟩ := hresult
+      obtain ⟨⟨tag, root, nextState⟩, phaseLog⟩ := phaseResult
+      exact ih (firstRound + 1) nextState (extractorState.record tag phaseLog root)
+        ((ExtractorState.WellFormed.record hstate tag phaseLog root)) result hrest
+
+/-- Every supported run from the canonical empty state produces a well-formed checkpoint history. -/
+theorem SequentialCommitter.runFromEmpty_wellFormed
+    (committer : SequentialCommitter Cfg Query Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (result : committer.State × ExtractorState Cfg Query Address Y config)
+    (hresult : result ∈ support (committer.runFromEmpty config rounds)) :
+    result.2.WellFormed :=
+  committer.runCommitments_preserves_wellFormed rounds 0 committer.initialState
+    ExtractorState.empty ExtractorState.wellFormed_empty result hresult
+
 /-- The pure state transition used after observing one phase output and its local query log. -/
 def ExtractorState.recordCommitmentOutput {config : Configuration Cfg Address}
     (extractorState : ExtractorState Cfg Query Address Y config)
