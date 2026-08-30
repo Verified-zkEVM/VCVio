@@ -32,7 +32,7 @@ asserted here without that proof.
 
 namespace TweakableHash
 
-open OracleComp OracleSpec
+open OracleComp OracleSpec ENNReal
 
 variable {ι PkSeed Tweak M Y : Type}
 
@@ -121,5 +121,16 @@ noncomputable def SM_DT_OpenPRE_toDSPR [Inhabited M] [DecidableEq M]
       (simulateQ (SM_DT_OpenPRE_findOracles targets) (adv.find privateState pk ys)).run []
     let sampled := (targets[j]?.map Prod.snd).getD default
     return (j, decide (sampled ≠ m ∨ j ∈ opened))
+
+/-! ## Quantitative reduction target -/
+
+/-- The exact right-hand side of the source reduction, instantiated with the concrete adversaries
+above. `SM_DT_DSPR_Advantage` already contains the truncated `DSPR success - SPprob` subtraction.
+This definition fixes the theorem statement without pretending the counting proof is complete. -/
+noncomputable def SM_DT_OpenPRE_TCR_DSPR_Bound [Fintype M] [Inhabited M] [DecidableEq Tweak]
+    [DecidableEq M] [DecidableEq Y] {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
+    (adv : SM_DT_OpenPRE_Adversary prob) : ℝ≥0∞ :=
+  SM_DT_DSPR_Advantage (SM_DT_OpenPRE_toDSPR adv) +
+    3 * SM_DT_TCR_Advantage (SM_DT_OpenPRE_toTCR adv)
 
 end TweakableHash
