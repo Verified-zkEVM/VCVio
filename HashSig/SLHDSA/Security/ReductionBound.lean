@@ -208,11 +208,12 @@ noncomputable def openPreReductionTerms (reds : D1ReductionAdversaries prims) :
   forsLeafTcr := TweakableHash.SM_DT_TCR_Advantage
     (TweakableHash.SM_DT_OpenPRE_toTCR reds.forsOpenPre)
 
-/-- The one mathematical lemma still needed to justify replacing OpenPRE by the executable
-DSPR/TCR reductions: the finite-preimage counting step from the source proof. -/
-def OpenPreCountingStatement (reds : D1ReductionAdversaries prims) : Prop :=
-  TweakableHash.SM_DT_OpenPRE_Advantage reds.forsOpenPre ≤
-    TweakableHash.SM_DT_OpenPRE_TCR_DSPR_Bound reds.forsOpenPre
+/-- The three concrete probability-decomposition/coupling obligations needed to justify replacing
+OpenPRE by the executable DSPR/TCR reductions.  This is strictly finer than assuming the target
+inequality: it exposes singleton and larger-fiber masses, the exact DSPR truncated subtraction,
+and the collision-weighted TCR lower bound. -/
+abbrev OpenPreCountingStatement (reds : D1ReductionAdversaries prims) :=
+  TweakableHash.SM_DT_OpenPRE_CountingLemma reds.forsOpenPre
 
 omit [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
   [DecidableEq prims.PkSeed] in
@@ -244,8 +245,8 @@ theorem concreteEufCmaAdvantage_le_lowLevelBound (adv : EufCmaAdversary prims)
     concreteEufCmaAdvantage prims adv ≤
       (reds.advantages.withOpenPreReduction reds.openPreReductionTerms).bound p := by
   apply d1_eufCma_le_lowLevelBound cert.composition
-  simpa [D1ReductionAdversaries.OpenPreCountingStatement,
-    D1ReductionAdversaries.advantages] using cert.openPreCounting
+  simpa [D1ReductionAdversaries.advantages] using
+    TweakableHash.SM_DT_OpenPRE_le_TCR_DSPR reds.forsOpenPre cert.openPreCounting
 
 end ConcreteAdversaries
 

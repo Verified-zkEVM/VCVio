@@ -156,6 +156,13 @@ def Primitives.d1ForsLeafOpenPreProblem [SampleableType prims.PkSeed]
       (Vector prims.Y 1) prims.Y :=
   prims.thashOpenPreProblem 1 p.d1TargetProfile.forsLeaf ($ᵗ Vector prims.Y 1)
 
+/-- The concrete FORS OpenPRE problem satisfies the uniform-input hypothesis required by the
+source OpenPRE-to-DSPR/TCR finite-fiber argument. -/
+@[simp] theorem Primitives.d1ForsLeafOpenPreProblem_hasUniformInputs
+    [SampleableType prims.PkSeed] [SampleableType prims.Y] :
+    prims.d1ForsLeafOpenPreProblem.HasUniformInputs := by
+  rfl
+
 /-- Collection SM-DT-TCR problem for every arity-two FORS internal node. -/
 def Primitives.d1ForsTreeTcrProblem [SampleableType prims.PkSeed] :
     TweakableHash.SM_DT_TCR_Problem ℕ prims.PkSeed prims.AdrsKey
