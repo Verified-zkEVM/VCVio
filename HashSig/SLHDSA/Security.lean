@@ -6,6 +6,9 @@ Authors: Nicolas Consigny
 
 module
 public import HashSig.SLHDSA.Scheme
+public import HashSig.SLHDSA.Security.TargetProfile
+public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
+public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
 public import VCVio.CryptoFoundations.PRF
@@ -21,7 +24,8 @@ generic `TweakableHash` and `PRFScheme` interfaces:
 - `Primitives.thashCollection` packages every fixed input arity of `Thash` under one public seed
   and encoded-address space;
 - `Primitives.msgPrfScheme` exposes the message randomizer `PRF_msg`; and
-- `Primitives.skPrfScheme` exposes the secret-value derivation function `PRF` at a public seed.
+- `Primitives.skPrfScheme` exposes the secret-value derivation function `PRF` jointly over its
+  public seed and address inputs.
 
 These packages identify the primitive families to which an SLH-DSA security reduction applies.
 An aggregate EUF-CMA theorem additionally needs the seed-aware collection games under
@@ -41,7 +45,7 @@ bounds. Primitive packaging alone does not supply those ingredients.
 @[expose] public section
 
 
-open OracleComp OracleSpec ENNReal
+open OracleComp OracleSpec ENNReal CollisionResistance
 
 namespace SLHDSA
 
@@ -102,6 +106,44 @@ def Primitives.thashPreProblem [SampleableType prims.PkSeed] (arity numTargets :
   thColl := prims.thashCollection
   numTargets := numTargets
 
+/-! ### Exact `d = 1` assumption instances -/
+
+/-- Collection SM-DT-TCR problem for every arity-two FORS internal node. -/
+def Primitives.d1ForsTreeTcrProblem [SampleableType prims.PkSeed] :
+    TweakableHash.SM_DT_TCR_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y 2) prims.Y :=
+  prims.thashTcrProblem 2 p.d1TargetProfile.forsTree
+
+/-- Collection SM-DT-TCR problem for every arity-`k` FORS-root compression. -/
+def Primitives.d1ForsRootsTcrProblem [SampleableType prims.PkSeed] :
+    TweakableHash.SM_DT_TCR_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y p.k) prims.Y :=
+  prims.thashTcrProblem p.k p.d1TargetProfile.forsRoots
+
+/-- Collection SM-DT-TCR problem for the WOTS arity-one hash member. -/
+def Primitives.d1WotsChainTcrProblem [SampleableType prims.PkSeed] :
+    TweakableHash.SM_DT_TCR_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y 1) prims.Y :=
+  prims.thashTcrProblem 1 p.d1TargetProfile.wotsTcr
+
+/-- Collection SM-DT-PRE problem for the WOTS arity-one hash member. -/
+def Primitives.d1WotsChainPreProblem [SampleableType prims.PkSeed] :
+    TweakableHash.SM_DT_PRE_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y 1) (Vector prims.Y 1) prims.Y :=
+  prims.thashPreProblem 1 p.d1TargetProfile.wotsPre
+
+/-- Collection SM-DT-TCR problem for every arity-`len` WOTS-public-key compression. -/
+def Primitives.d1WotsPkTcrProblem [SampleableType prims.PkSeed] :
+    TweakableHash.SM_DT_TCR_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y p.len) prims.Y :=
+  prims.thashTcrProblem p.len p.d1TargetProfile.wotsPk
+
+/-- Collection SM-DT-TCR problem for every arity-two node of the single XMSS tree. -/
+def Primitives.d1XmssTreeTcrProblem [SampleableType prims.PkSeed] :
+    TweakableHash.SM_DT_TCR_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y 2) prims.Y :=
+  prims.thashTcrProblem 2 p.d1TargetProfile.xmssTree
+
 /-- The message randomizer `PRF_msg` as a `PRFScheme` keyed by `SK.prf`; `eval` is
 `prims.PRFmsg`. -/
 def msgPrfScheme [SampleableType prims.SkPrf] :
@@ -109,11 +151,47 @@ def msgPrfScheme [SampleableType prims.SkPrf] :
   keygen := $ᵗ prims.SkPrf
   eval := fun skPrf rm => prims.PRFmsg skPrf rm.1 rm.2
 
-/-- The secret-value `PRF` at public seed `pkSeed` as a `PRFScheme` keyed by `SK.seed`; `eval` is
-`prims.PRF pkSeed`. -/
-def skPrfScheme [SampleableType prims.SkSeed] (pkSeed : prims.PkSeed) :
+/-- Secret-value generation as one PRF keyed by `SK.seed`, with the *actual* public seed and
+address both in its domain.  This is the source-faithful SKG family used by the top-level hybrid:
+the reduction may sample `PK.seed` exactly once and query this family at that same seed. -/
+def skPrfScheme [SampleableType prims.SkSeed] :
+    PRFScheme prims.SkSeed (prims.PkSeed × Adrs) prims.Y where
+  keygen := $ᵗ prims.SkSeed
+  eval := fun skSeed pa => prims.PRF pa.1 skSeed pa.2
+
+/-- Fixed-public-seed view retained for component lemmas whose public seed is already in scope. -/
+def skPrfSchemeAtSeed [SampleableType prims.SkSeed] (pkSeed : prims.PkSeed) :
     PRFScheme prims.SkSeed Adrs prims.Y where
   keygen := $ᵗ prims.SkSeed
   eval := fun skSeed adrs => prims.PRF pkSeed skSeed adrs
+
+/-- `H_msg` as the keyed hash family used by the ITSR hop after `PRF_msg` has been replaced by a
+random function.  The sampled message key is the randomizer `R`; the input carries the actual
+`PK.seed`, `PK.root`, and external message jointly, so the hardness problem preserves their
+coupling to key generation instead of silently fixing an unrelated public context.  The hash also
+includes the canonical empty-context encoding used by `slhdsaAlg`. -/
+def hmsgHashFamily [SampleableType prims.Y] :
+    KeyedHashFamily prims.Y (prims.PkSeed × prims.Y × List Byte) (Bytes p.m) where
+  keygen := $ᵗ prims.Y
+  hash := fun R input =>
+    prims.Hmsg R input.1 input.2.1 (emptyContextMessage input.2.2)
+
+/-- One semantic FORS leaf selected by message compression: XMSS leaf, FORS tree, and leaf in
+that tree. -/
+abbrev HmsgIndex := ℕ × ℕ × ℕ
+
+/-- Canonical `d = 1` semantic-index map for the M-FORS ITSR game. -/
+def d1HmsgIndices (p : Params) (digest : Bytes p.m) : List HmsgIndex :=
+  let (md, idxLeaf) := splitDigest p digest
+  (List.range p.k).map fun i => (idxLeaf, i, forsIdx p md i)
+
+/-- The exact message-compression ITSR problem for SLH-DSA public-key/message inputs.  It uses the
+scheme's external-message encoding and maps a digest to exactly the `k` source-game triples
+`(idxLeaf, FORS-tree index, selected leaf index)`.  A top-level reduction must assume `p.IsD1`. -/
+def hmsgItsrProblem [SampleableType prims.Y] :
+    KeyedHash.ITSRProblem prims.Y (prims.PkSeed × prims.Y × List Byte)
+      (Bytes p.m) HmsgIndex where
+  khf := hmsgHashFamily prims
+  indices := d1HmsgIndices p
 
 end SLHDSA
