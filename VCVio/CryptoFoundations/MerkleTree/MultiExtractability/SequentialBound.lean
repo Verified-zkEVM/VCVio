@@ -74,6 +74,8 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_le
       (∀ input value, cache input = some value →
         ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value) →
       state.StableAt view log →
+      state.totalNodeBudget ≤ nodeBudget →
+      state.checkpoints.length ≤ checkpointCount →
       Pr[ fun z => win z.1 |
         (simulateQ (Query →ₒ Y).cachingOracle (finish privateState state)).run cache] ≤
         (multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
@@ -106,8 +108,11 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_le
   induction rounds generalizing firstRound privateState extractorState cache log remaining
       cachedBound with
   | zero =>
+      have hnodes0 : extractorState.totalNodeBudget ≤ nodeBudget := by simpa using hnodes
+      have hcheckpoints0 : extractorState.checkpoints.length ≤ checkpointCount := by
+        simpa using hcheckpoints
       have hterminal := hfinish privateState extractorState cachedBound cache log
-        hstateLog hno hcacheBound hlogCache hcacheLog hstable
+        hstateLog hno hcacheBound hlogCache hcacheLog hstable hnodes0 hcheckpoints0
       have hremaining : terminalQueryBound ≤ remaining := by simpa using hbudget
       have hbase : Pr[ fun z => win z.1 |
           (simulateQ (Query →ₒ Y).cachingOracle

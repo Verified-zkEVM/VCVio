@@ -67,6 +67,8 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_le
       (∀ input value, cache input = some value →
         ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value) →
       state.StableAt view log →
+      state.totalNodeBudget ≤ nodeBudget →
+      state.checkpoints.length ≤ checkpointCount →
       Pr[ fun z => win z.1 |
         (simulateQ (Query →ₒ Y).cachingOracle (finish privateState state)).run cache] ≤
         (multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
@@ -124,6 +126,8 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_exact_le
       (∀ input value, cache input = some value →
         ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value) →
       state.StableAt view log →
+      state.totalNodeBudget ≤ rounds * perCheckpoint →
+      state.checkpoints.length ≤ rounds →
       Pr[ fun z => win z.1 |
         (simulateQ (Query →ₒ Y).cachingOracle (finish privateState state)).run cache] ≤
         (multiExtractabilitySafePotential (rounds * perCheckpoint) rounds verifierOverhead
