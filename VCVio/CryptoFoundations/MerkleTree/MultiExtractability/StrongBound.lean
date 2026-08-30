@@ -56,27 +56,28 @@ theorem extractabilityInner_eq_runFromEmptyThen [DecidableEq Y]
       adversary.committer.runFromEmptyThen config rounds
         (adversary.terminalExecution model) := rfl
 
-/-- The executable terminal phase uses exactly the opening budget plus a support-wise bound for
-honest verification. Query logging itself is resource-transparent. -/
-theorem Adversary.terminalExecution_isTotalQueryBound
+/-- Pointwise query accounting for the executable terminal phase.  The opening computation uses
+the supplied residual adversarial budget; honest verification contributes only its separately
+justified support-wise overhead. Query logging itself is resource-transparent. -/
+theorem Adversary.terminalExecution_isTotalQueryBound_of_opening
     [DecidableEq Y] [IsUniformSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     {config : Configuration Cfg Address}
     (adversary : Adversary Cfg Query Address Y config)
+    (privateState : adversary.committer.State)
+    (extractorState : ExtractorState Cfg Query Address Y config)
     (openingBound verifierBound : ℕ)
-    (hopening : ∀ privateState extractorState,
-      IsTotalQueryBound (adversary.opening privateState extractorState) openingBound)
+    (hopening : IsTotalQueryBound
+      (adversary.opening privateState extractorState) openingBound)
     (hverifier : adversary.HasVerifierQueryBound verifierBound) :
-    ∀ privateState extractorState,
-      IsTotalQueryBound (adversary.terminalExecution model privateState extractorState)
-        (openingBound + verifierBound) := by
-  intro privateState extractorState
+    IsTotalQueryBound (adversary.terminalExecution model privateState extractorState)
+      (openingBound + verifierBound) := by
   unfold Adversary.terminalExecution
   apply isTotalQueryBound_bind_of_mem_support
       (prefixBound := openingBound) (suffixBound := verifierBound)
   · exact (isTotalQueryBound_withQueryLog_iff
       (adversary.opening privateState extractorState) openingBound).2
-      (hopening privateState extractorState)
+      hopening
   · rintro ⟨claims, terminalSuffix⟩ hclaimsLogged
     have hclaims : claims ∈ support (adversary.opening privateState extractorState) := by
       have hmapped : claims ∈ support
@@ -92,6 +93,23 @@ theorem Adversary.terminalExecution_isTotalQueryBound
       ((verifyClaims_isTotalQueryBound model claims).mono
         (hverifier privateState extractorState claims hclaims))
       fun _ => trivial
+
+/-- Uniform specialization of pointwise terminal accounting. -/
+theorem Adversary.terminalExecution_isTotalQueryBound
+    [DecidableEq Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config)
+    (openingBound verifierBound : ℕ)
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) openingBound)
+    (hverifier : adversary.HasVerifierQueryBound verifierBound) :
+    ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.terminalExecution model privateState extractorState)
+        (openingBound + verifierBound) := by
+  intro privateState extractorState
+  exact adversary.terminalExecution_isTotalQueryBound_of_opening model privateState
+    extractorState openingBound verifierBound (hopening privateState extractorState) hverifier
 
 /-- Pointwise terminal theorem required by sequential composition.  This named interface makes
 the last cryptographic obligation auditable: no checkpoint evolution or query accounting is
@@ -405,25 +423,38 @@ theorem Adversary.terminalFreshTargetProperty_of_openingEvidence
     (adversary.terminalTraceInvariant model)
     (adversary.terminalAcceptedFreshProperty_of_openingEvidence model hevidence)
 
-/-- A total terminal query bound plus the deterministic fresh-target reduction discharges the
-probabilistic `TerminalStrongBound` interface.  This theorem contains the entire terminal random-
-oracle calculation; proving a concrete game secure is reduced to the support-level Merkle lemma
-`TerminalFreshTargetProperty`. -/
-theorem Adversary.terminalStrongBound_of_freshTarget
+/-- Pointwise terminal ROM estimate at the exact residual adversarial budget.  This is the
+terminal interface needed by global sequential accounting: earlier commitment phases may leave a
+different residual budget on every supported branch. -/
+theorem Adversary.probEvent_terminalExecution_le_of_freshTarget
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     {config : Configuration Cfg Address}
     (adversary : Adversary Cfg Query Address Y config)
-    (nodeBudget checkpointCount verifierOverhead terminalQueryBound : ℕ)
-    (hbound : ∀ privateState state,
-      IsTotalQueryBound (adversary.terminalExecution model privateState state)
-        (terminalQueryBound + verifierOverhead))
-    (hfresh : adversary.TerminalFreshTargetProperty model) :
-    adversary.TerminalStrongBound model nodeBudget checkpointCount verifierOverhead
-      terminalQueryBound := by
-  intro privateState state terminalCached cache log hstateLog hno hcacheBound hlogCache
-    hcacheLog hstable hnodeBudget hcheckpointCount
+    (nodeBudget checkpointCount verifierOverhead terminalRemaining terminalCached : ℕ)
+    (privateState : adversary.committer.State)
+    (state : ExtractorState Cfg Query Address Y config)
+    (cache : (Query →ₒ Y).QueryCache) (log : (Query →ₒ Y).QueryLog)
+    (hbound : IsTotalQueryBound (adversary.terminalExecution model privateState state)
+      (terminalRemaining + verifierOverhead))
+    (hfresh : adversary.TerminalFreshTargetProperty model)
+    (hstateLog : state.cumulativeLog = log)
+    (hno : ¬ CacheHasCollision cache)
+    (hcacheBound : ∃ keys : Finset Query, keys.card ≤ terminalCached ∧
+      ∀ input, cache input ≠ none → input ∈ keys)
+    (hlogCache : ∀ entry ∈ log, cache entry.1 = some entry.2)
+    (hcacheLog : ∀ input value, cache input = some value →
+      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value)
+    (hstable : state.StableAt model.view log)
+    (hnodeBudget : state.totalNodeBudget ≤ nodeBudget)
+    (hcheckpointCount : state.checkpoints.length ≤ checkpointCount) :
+    Pr[ fun z => StrongFailure model z.1 |
+      (simulateQ (Query →ₒ Y).cachingOracle
+        (adversary.terminalExecution model privateState state)).run cache] ≤
+      (multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+        terminalRemaining terminalCached : ENNReal) *
+          (Nat.card Y : ENNReal)⁻¹ := by
   let targets := state.liveTargetSet model.view log
   have htargets : targets.card ≤
       sharedTargetCount nodeBudget checkpointCount terminalCached := by
@@ -448,13 +479,37 @@ theorem Adversary.terminalStrongBound_of_freshTarget
     exact ⟨target, htarget, input, target, hfinal, hinitial, rfl⟩
   have hprob := OracleComp.probEvent_cache_hits_targets_le_of_noCollision_homogeneous
     (adversary.terminalExecution model privateState state)
-    (terminalQueryBound + verifierOverhead) (hbound privateState state) targets cache hno
+    (terminalRemaining + verifierOverhead) hbound targets cache hno
   refine hhit.trans (hprob.trans ?_)
   apply mul_le_mul_of_nonneg_right
-  · exact_mod_cast (Nat.mul_le_mul_right (terminalQueryBound + verifierOverhead) htargets).trans
+  · exact_mod_cast (Nat.mul_le_mul_right (terminalRemaining + verifierOverhead) htargets).trans
       (multiExtractabilitySafePotential_terminal_le nodeBudget checkpointCount verifierOverhead
-        terminalQueryBound terminalCached)
+        terminalRemaining terminalCached)
   · exact zero_le
+
+/-- A total terminal query bound plus the deterministic fresh-target reduction discharges the
+probabilistic `TerminalStrongBound` interface.  This theorem contains the entire terminal random-
+oracle calculation; proving a concrete game secure is reduced to the support-level Merkle lemma
+`TerminalFreshTargetProperty`. -/
+theorem Adversary.terminalStrongBound_of_freshTarget
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config)
+    (nodeBudget checkpointCount verifierOverhead terminalQueryBound : ℕ)
+    (hbound : ∀ privateState state,
+      IsTotalQueryBound (adversary.terminalExecution model privateState state)
+        (terminalQueryBound + verifierOverhead))
+    (hfresh : adversary.TerminalFreshTargetProperty model) :
+    adversary.TerminalStrongBound model nodeBudget checkpointCount verifierOverhead
+      terminalQueryBound := by
+  intro privateState state terminalCached cache log hstateLog hno hcacheBound hlogCache
+    hcacheLog hstable hnodeBudget hcheckpointCount
+  exact adversary.probEvent_terminalExecution_le_of_freshTarget model nodeBudget checkpointCount
+    verifierOverhead terminalQueryBound terminalCached privateState state cache log
+    (hbound privateState state) hfresh hstateLog hno hcacheBound hlogCache hcacheLog hstable
+    hnodeBudget hcheckpointCount
 
 /-- **Scheduled game-level finite-maximum theorem.**
 
