@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractability
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Evolution
 
 /-!
 # Inductive Merkle Extractability Canaries
@@ -377,5 +378,110 @@ example : CacheHasCollision collidingCache := by
 example : ((), collidingCache) ∈ support
     ((simulateQ (InductiveMerkleTree.spec Bool).cachingOracle twoDistinctQueries).run ∅) := by
   simp [twoDistinctQueries, collidingCache, QueryCache.cacheQuery_of_ne]
+
+/-! ## Online extractor evolution -/
+
+namespace EvolutionCanary
+
+open BinaryTree MerkleTreeMultiExtractability
+
+abbrev Query := Nat × (Nat × Nat)
+
+def queryView : MerkleTreeExtractor.QueryView Query Nat Nat where
+  address := Prod.fst
+  input := Prod.snd
+
+def skeleton : Skeleton :=
+  .internal (.internal .leaf .leaf) (.internal .leaf .leaf)
+
+/-- Distinct addresses for the root, left child, and right child internal nodes. -/
+def addressKey : SkeletonInternalIndex skeleton → Nat
+  | .ofInternal => 0
+  | .ofLeft .ofInternal => 1
+  | .ofRight .ofInternal => 2
+
+def root : Nat := 50
+
+/-- The root query is known, making `20` and `30` live non-root extractor targets. -/
+def preLog : MerkleTreeExtractor.QueryLog Query Nat :=
+  [⟨(0, (20, 30)), root⟩]
+
+/-- This entry expands the previously live left-child root. -/
+def growingEntry : (_ : Query) × Nat :=
+  ⟨(1, (2, 3)), 20⟩
+
+/-- Its response is unrelated to every live target in `preLog`. -/
+def decoyEntry : (_ : Query) × Nat :=
+  ⟨(1, (7, 8)), 999⟩
+
+def treeBefore : FullData (Option Nat) skeleton :=
+  .internal (some root)
+    (.internal (some 20) (.leaf none) (.leaf none))
+    (.internal (some 30) (.leaf none) (.leaf none))
+
+def treeAfterGrowth : FullData (Option Nat) skeleton :=
+  .internal (some root)
+    (.internal (some 20) (.leaf (some 2)) (.leaf (some 3)))
+    (.internal (some 30) (.leaf none) (.leaf none))
+
+example : MerkleTreeExtractor.tree queryView skeleton addressKey preLog root = treeBefore := by
+  rfl
+
+/-- Appending a response equal to the live left-child root expands precisely that subtree. -/
+example :
+    MerkleTreeExtractor.tree queryView skeleton addressKey (preLog ++ [growingEntry]) root =
+      treeAfterGrowth := by
+  rfl
+
+private theorem growingEntry_changes_tree :
+    MerkleTreeExtractor.tree queryView skeleton addressKey preLog root ≠
+      MerkleTreeExtractor.tree queryView skeleton addressKey (preLog ++ [growingEntry]) root := by
+  change treeBefore ≠ treeAfterGrowth
+  intro heq
+  have hleaf := congrArg
+    (fun tree : FullData (Option Nat) skeleton =>
+      tree.leftSubtree.leftSubtree.getRootValue) heq
+  simp [treeBefore, treeAfterGrowth] at hleaf
+
+/-- The singleton causal theorem identifies the appended non-root response as a pre-sample
+target. -/
+example : growingEntry.2 ∈
+    MerkleTreeExtractor.targets queryView skeleton addressKey preLog root :=
+  tree_ne_append_singleton_implies_response_mem_targets queryView skeleton addressKey preLog root
+    growingEntry.1 growingEntry.2 growingEntry_changes_tree
+
+/-- On the singleton suffix, the finite-suffix theorem's changing entry is necessarily the entry
+that expands the left subtree. -/
+example : ∃ before rest,
+    [growingEntry] = before ++ growingEntry :: rest ∧
+      growingEntry.2 ∈
+        MerkleTreeExtractor.targets queryView skeleton addressKey (preLog ++ before) root := by
+  obtain ⟨before, entry, rest, hsplit, hlive⟩ :=
+    tree_ne_append_implies_exists_live_hit queryView skeleton addressKey preLog [growingEntry] root
+      growingEntry_changes_tree
+  cases before with
+  | nil =>
+      simp only [List.nil_append, List.cons.injEq] at hsplit
+      obtain ⟨hentry, hrest⟩ := hsplit
+      subst entry
+      subst rest
+      exact ⟨[], [], rfl, hlive⟩
+  | cons first before =>
+      simp at hsplit
+
+/-- A response outside the pre-log target set cannot change extraction. -/
+example : decoyEntry.2 ∉
+      MerkleTreeExtractor.targets queryView skeleton addressKey preLog root ∧
+    MerkleTreeExtractor.tree queryView skeleton addressKey preLog root =
+      MerkleTreeExtractor.tree queryView skeleton addressKey (preLog ++ [decoyEntry]) root := by
+  have hnotmem : decoyEntry.2 ∉
+      MerkleTreeExtractor.targets queryView skeleton addressKey preLog root := by
+    decide
+  refine ⟨hnotmem, ?_⟩
+  by_contra hne
+  exact hnotmem (tree_ne_append_singleton_implies_response_mem_targets
+    queryView skeleton addressKey preLog root decoyEntry.1 decoyEntry.2 hne)
+
+end EvolutionCanary
 
 end VCVioTest.MerkleTreeExtractability
