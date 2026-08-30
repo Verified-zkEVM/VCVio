@@ -9,7 +9,7 @@ module
 public import VCVio.OracleComp.QueryTracking.AdaptivePrefix
 
 /-!
-# Exact Shared-Log Potential for Merkle Multi-Extractability
+# Safe Shared-Log Potential for Merkle Multi-Extractability
 
 This module owns the arithmetic security budget for a finite family of Merkle commitment
 checkpoints sharing one random-oracle log. If the extracted checkpoint trees contain at most
@@ -22,8 +22,10 @@ distinct candidate labels: every populated key contributes its two ordered child
 checkpoint contributes its root. This shared-log cap is strictly sharper than multiplying the
 single-tree `min (2L - 1) (2k + 1)` cap by the number of checkpoints.
 
-The exact numerator is a finite maximum over the adaptive commitment-prefix cache misses. Coarse
-closed forms are derived below as corollaries; they are not used as the primary theorem budget.
+The safe numerator is a finite maximum over the adaptive commitment-prefix cache misses. It
+deliberately overcharges queries made before a target exists. A future checkpoint-aware stopping
+theorem may derive a tighter exact numerator; this module does not identify the safe envelope with
+the textbook-tight potential. Coarse closed forms are derived below as corollaries.
 -/
 
 @[expose] public section
@@ -60,29 +62,29 @@ def multiCheckpointEnergy
 inputs. A probability theorem consuming this budget must separately prove the checkpoint-aware
 stopping lemma; unlike `terminalSuffixPotential`, this definition does not silently reuse the
 single-checkpoint adaptive-prefix theorem. -/
-def multiExtractabilityPotential
+def multiExtractabilitySafePotential
     (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) : ℕ :=
   (Finset.range (remaining + 1)).sup fun prefixMisses =>
     multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead remaining cached
       prefixMisses
 
 /-- Unrelaxed shared-ROM error numerator from an empty cache. -/
-def multiExtractabilityROMErrorNumerator
+def multiExtractabilitySafeNumerator
     (nodeBudget checkpointCount verifierOverhead queryBound : ℕ) : ℕ :=
-  multiExtractabilityPotential
+  multiExtractabilitySafePotential
     nodeBudget checkpointCount verifierOverhead queryBound 0
 
 /-- The exact numerator is the finite maximum over every feasible number of fresh prefix inputs.
 This theorem is the intended rewrite interface for audits and downstream arithmetic relaxations. -/
-theorem multiExtractabilityROMErrorNumerator_eq_sup
+theorem multiExtractabilitySafeNumerator_eq_sup
     (nodeBudget checkpointCount verifierOverhead queryBound : ℕ) :
-    multiExtractabilityROMErrorNumerator
+    multiExtractabilitySafeNumerator
         nodeBudget checkpointCount verifierOverhead queryBound =
       (Finset.range (queryBound + 1)).sup fun prefixMisses =>
         prefixMisses.choose 2 +
           min nodeBudget (2 * prefixMisses + checkpointCount) *
             (queryBound + verifierOverhead) := by
-  simp [multiExtractabilityROMErrorNumerator, multiExtractabilityPotential,
+  simp [multiExtractabilitySafeNumerator, multiExtractabilitySafePotential,
     multiCheckpointEnergy, sharedTargetCount]
 
 /-- Shared extraction never exposes more candidates than the total node budget. -/
@@ -100,12 +102,12 @@ theorem sharedTargetCount_le_querySupport
 
 /-- Coarse closed form obtained from the exact finite maximum by separately maximizing the
 birthday and target-hit terms. -/
-theorem multiExtractabilityROMErrorNumerator_le_coarse
+theorem multiExtractabilitySafeNumerator_le_coarse
     (nodeBudget checkpointCount verifierOverhead queryBound : ℕ) :
-    multiExtractabilityROMErrorNumerator
+    multiExtractabilitySafeNumerator
         nodeBudget checkpointCount verifierOverhead queryBound ≤
       queryBound.choose 2 + nodeBudget * (queryBound + verifierOverhead) := by
-  rw [multiExtractabilityROMErrorNumerator_eq_sup]
+  rw [multiExtractabilitySafeNumerator_eq_sup]
   apply Finset.sup_le
   intro prefixMisses hprefix
   simp only [Finset.mem_range] at hprefix
@@ -118,12 +120,12 @@ theorem multiExtractabilityROMErrorNumerator_le_coarse
 
 /-- A still simpler quadratic relaxation, useful when a consumer does not want binomial
 coefficients in its public statement. -/
-theorem multiExtractabilityROMErrorNumerator_le_quadratic
+theorem multiExtractabilitySafeNumerator_le_quadratic
     (nodeBudget checkpointCount verifierOverhead queryBound : ℕ) :
-    multiExtractabilityROMErrorNumerator
+    multiExtractabilitySafeNumerator
         nodeBudget checkpointCount verifierOverhead queryBound ≤
       queryBound * queryBound + nodeBudget * (queryBound + verifierOverhead) := by
-  exact (multiExtractabilityROMErrorNumerator_le_coarse
+  exact (multiExtractabilitySafeNumerator_le_coarse
     nodeBudget checkpointCount verifierOverhead queryBound).trans (by
       gcongr
       rw [Nat.choose_two_right]

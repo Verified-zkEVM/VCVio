@@ -7,10 +7,10 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Extractability
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Addressed
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Opening
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
-public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 
 /-!
 # Query-parametric batch openings for Merkle extractability
@@ -47,32 +47,33 @@ def getPutativeBatchRoot (model : MerkleTreeExtractability.NodeQueryModel Query 
     {s : Skeleton} → (addressKey : SkeletonInternalIndex s → Address) →
       {selector : LeafData Bool s} → SelectedValues Y selector → BatchProof Y selector →
         OracleComp (Query →ₒ Y) Y
-  | _, _, _, values, .leaf => pure values
-  | _, addressKey, _, values, .internalBoth leftProof rightProof => do
-      let leftRoot ← getPutativeBatchRoot model
-        (fun position => addressKey (.ofLeft position)) values.1 leftProof
-      let rightRoot ← getPutativeBatchRoot model
-        (fun position => addressKey (.ofRight position)) values.2 rightProof
-      liftM ((Query →ₒ Y).query
-        (model.mkQuery (addressKey .ofInternal) (leftRoot, rightRoot)))
-  | _, addressKey, _, values, .pruneRight _ rightRoot leftProof => do
-      let leftRoot ← getPutativeBatchRoot model
-        (fun position => addressKey (.ofLeft position)) values.1 leftProof
-      liftM ((Query →ₒ Y).query
-        (model.mkQuery (addressKey .ofInternal) (leftRoot, rightRoot)))
-  | _, addressKey, _, values, .pruneLeft _ leftRoot rightProof => do
-      let rightRoot ← getPutativeBatchRoot model
-        (fun position => addressKey (.ofRight position)) values.2 rightProof
-      liftM ((Query →ₒ Y).query
-        (model.mkQuery (addressKey .ofInternal) (leftRoot, rightRoot)))
+  | _, addressKey, _, values, proof =>
+      AddressedMerkleTree.getPutativeBatchRootAddressedM
+        (fun position left right => liftM ((Query →ₒ Y).query
+          (model.mkQuery (addressKey position) (left, right))))
+        values proof
 
 /-- Verify one packaged path-pruned batch opening against a claimed root. -/
 def verifyOpening [DecidableEq Y]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (root : Y) (opening : Opening Y s) :
-    OracleComp (Query →ₒ Y) Bool := do
-  let putativeRoot ← getPutativeBatchRoot model addressKey opening.values opening.proof
-  return putativeRoot == root
+    OracleComp (Query →ₒ Y) Bool :=
+  AddressedMerkleTree.verifyBatchProofAddressedM
+    (fun position left right => liftM ((Query →ₒ Y).query
+      (model.mkQuery (addressKey position) (left, right))))
+    opening.values root opening.proof
+
+/-- Honest batch verification is bounded by the exact number of internal nodes visited by the
+pruned proof. This is the safe verifier overhead used until a disagreement-witness theorem permits
+specialization to one selected path. -/
+theorem verifyOpening_isTotalQueryBound [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
+    (addressKey : SkeletonInternalIndex s → Address) (root : Y) (opening : Opening Y s) :
+    IsTotalQueryBound (verifyOpening model addressKey root opening) opening.proof.queryCount := by
+  apply AddressedMerkleTree.isTotalQueryBound_verifyBatchProofAddressedM
+  intro position left right
+  exact (isQueryBound_query_iff
+    (model.mkQuery (addressKey position) (left, right)) 1 _ _).mpr Nat.one_pos
 
 /-- A two-phase adversary that commits to a root and later returns a dynamically selected,
 path-pruned batch opening. -/
