@@ -9,13 +9,12 @@ module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
 
 /-!
-# Multi-target collection-oracle canary
+# Multi-target final-validity collection canary
 
-One end-to-end producer canary checks both directions of the security-critical tweak-separation
-rule. A collection query at an existing challenge tweak must return `none`; the adversary branches
-on that rejection, so forgetting the check turns its toy collision into a loss. In the other order,
-a challenge query at a tweak already spent on the collection oracle is rejected and leaves no
-target to forge against.
+The target and collection oracles answer every query. A tweak clash in either order is recorded and
+poisons the final-validity bit, so even a concrete collision loses. Repeated collection-only tweaks
+remain valid. These canaries fail if the game is mutated back to rejection-on-arrival, forgets one
+cross-oracle direction, or incorrectly requires collection tweaks to be distinct.
 -/
 
 @[expose] public section
@@ -40,7 +39,7 @@ def hash : TweakableHash Seed Bool Bool Bool where
 
 def collection : TweakableHashCollection Unit Seed Bool Bool where
   Msg _ := Bool
-  eval _ _ _ _ := false
+  eval _ _ _ m := m
 
 def problem : TweakableHash.SM_DT_TCR_Problem Unit Seed Bool Bool Bool where
   th := hash
@@ -49,78 +48,101 @@ def problem : TweakableHash.SM_DT_TCR_Problem Unit Seed Bool Bool Bool where
 
 @[simp] lemma problem_seedGen : problem.th.seedGen = pure .only := rfl
 
-@[simp] lemma problem_eval (pk : Seed) (tweak message : Bool) :
-    problem.th.eval pk tweak message = false := rfl
+abbrev Specs := unifSpec + (TweakableHash.SM_DT_TCR_challengeSpec Bool Bool Bool +
+  TweakableHash.finalValidityCollectionSpec problem.thColl)
+
+def challenge (t m : Bool) : OracleComp Specs Bool :=
+  liftM (Specs.query (.inr (.inl (t, m))))
+
+def collectionQuery (t : Bool) (m : problem.thColl.Msg ()) : OracleComp Specs Bool :=
+  liftM (Specs.query (.inr (.inr ⟨(), t, m⟩)))
 
 def challengeOnly : TweakableHash.SM_DT_TCR_Adversary problem where
   State := Unit
-  choose := do
-    let _ ← (liftM ((unifSpec + (TweakableHash.SM_DT_TCR_challengeSpec Bool Bool Bool +
-      TweakableHash.collectionSpec problem.thColl)).query (.inr (.inl (false, false)))) :
-      OracleComp (unifSpec + (TweakableHash.SM_DT_TCR_challengeSpec Bool Bool Bool +
-        TweakableHash.collectionSpec problem.thColl)) (Option Bool))
-    return ()
+  choose := challenge false false *> pure ()
   forge _ _ := pure (0, true)
 
 def challengeThenCollection : TweakableHash.SM_DT_TCR_Adversary problem where
-  State := Option Bool
+  State := Bool × Bool
   choose := do
-    let _ ← (liftM ((unifSpec + (TweakableHash.SM_DT_TCR_challengeSpec Bool Bool Bool +
-      TweakableHash.collectionSpec problem.thColl)).query (.inr (.inl (false, false)))) :
-      OracleComp (unifSpec + (TweakableHash.SM_DT_TCR_challengeSpec Bool Bool Bool +
-        TweakableHash.collectionSpec problem.thColl)) (Option Bool))
-    liftM ((unifSpec + (TweakableHash.SM_DT_TCR_challengeSpec Bool Bool Bool +
-      TweakableHash.collectionSpec problem.thColl)).query (.inr (.inr ⟨(), false, false⟩)))
-  forge answer _ := match answer with
-    | none => pure (0, true)
-    | some _ => pure (0, false)
+    let y₁ ← challenge false false
+    let y₂ ← collectionQuery false true
+    return (y₁, y₂)
+  forge _ _ := pure (0, true)
 
 def collectionThenChallenge : TweakableHash.SM_DT_TCR_Adversary problem where
-  State := Unit
+  State := Bool × Bool
   choose := do
-    let _ ← (liftM ((unifSpec + (TweakableHash.SM_DT_TCR_challengeSpec Bool Bool Bool +
-      TweakableHash.collectionSpec problem.thColl)).query (.inr (.inr ⟨(), false, false⟩))) :
-      OracleComp (unifSpec + (TweakableHash.SM_DT_TCR_challengeSpec Bool Bool Bool +
-        TweakableHash.collectionSpec problem.thColl)) (Option Bool))
-    let _ ← (liftM ((unifSpec + (TweakableHash.SM_DT_TCR_challengeSpec Bool Bool Bool +
-      TweakableHash.collectionSpec problem.thColl)).query (.inr (.inl (false, false)))) :
-      OracleComp (unifSpec + (TweakableHash.SM_DT_TCR_challengeSpec Bool Bool Bool +
-        TweakableHash.collectionSpec problem.thColl)) (Option Bool))
-    return ()
+    let y₁ ← collectionQuery false true
+    let y₂ ← challenge false false
+    return (y₁, y₂)
+  forge _ _ := pure (0, true)
+
+/-- Repeating a collection tweak is permitted; the subsequent fresh challenge remains valid. -/
+def repeatedCollection : TweakableHash.SM_DT_TCR_Adversary problem where
+  State := Bool × Bool
+  choose := do
+    let y₁ ← collectionQuery false false
+    let y₂ ← collectionQuery false true
+    let _ ← challenge true false
+    return (y₁, y₂)
   forge _ _ := pure (0, true)
 
 private lemma run_challengeOnly :
-    (simulateQ (TweakableHash.SM_DT_TCR_oracles problem .only) challengeOnly.choose).run ([], []) =
-      pure ((), ([(false, false)], [])) := by
+    (simulateQ (TweakableHash.SM_DT_TCR_oracles problem .only) challengeOnly.choose).run .initial =
+      pure ((), ⟨[(false, false)], [], true⟩) := by
   rfl
 
 private lemma run_challengeThenCollection :
     (simulateQ (TweakableHash.SM_DT_TCR_oracles problem .only)
-      challengeThenCollection.choose).run ([], []) =
-      pure (none, ([(false, false)], [])) := by
+      challengeThenCollection.choose).run .initial =
+      pure ((false, true), ⟨[(false, false)], [false], false⟩) := by
   rfl
 
 private lemma run_collectionThenChallenge :
     (simulateQ (TweakableHash.SM_DT_TCR_oracles problem .only)
-      collectionThenChallenge.choose).run ([], []) =
-      pure ((), ([], [false])) := by
+      collectionThenChallenge.choose).run .initial =
+      pure ((true, false), ⟨[(false, false)], [false], false⟩) := by
   rfl
 
-/-- Both query orders enforce challenge/collection tweak separation. -/
-theorem oracle_separation_canary :
+private lemma run_repeatedCollection :
+    (simulateQ (TweakableHash.SM_DT_TCR_oracles problem .only)
+      repeatedCollection.choose).run .initial =
+      pure ((false, true), ⟨[(true, false)], [false, false], true⟩) := by
+  rfl
+
+private lemma experiment_challengeOnly :
+    TweakableHash.SM_DT_TCR_Experiment challengeOnly = pure true := by
+  simp only [TweakableHash.SM_DT_TCR_Experiment, problem_seedGen, pure_bind]
+  rw [run_challengeOnly]
+  rfl
+
+private lemma experiment_challengeThenCollection :
+    TweakableHash.SM_DT_TCR_Experiment challengeThenCollection = pure false := by
+  simp only [TweakableHash.SM_DT_TCR_Experiment, problem_seedGen, pure_bind]
+  rw [run_challengeThenCollection]
+  rfl
+
+private lemma experiment_collectionThenChallenge :
+    TweakableHash.SM_DT_TCR_Experiment collectionThenChallenge = pure false := by
+  simp only [TweakableHash.SM_DT_TCR_Experiment, problem_seedGen, pure_bind]
+  rw [run_collectionThenChallenge]
+  rfl
+
+private lemma experiment_repeatedCollection :
+    TweakableHash.SM_DT_TCR_Experiment repeatedCollection = pure true := by
+  simp only [TweakableHash.SM_DT_TCR_Experiment, problem_seedGen, pure_bind]
+  rw [run_repeatedCollection]
+  rfl
+
+/-- Both clash orders are answered and recorded but lose through final validity; repeated
+collection tweaks remain legal. -/
+theorem final_validity_collection_canary :
     TweakableHash.SM_DT_TCR_Experiment challengeOnly = pure true ∧
-      TweakableHash.SM_DT_TCR_Experiment challengeThenCollection = pure true ∧
-      TweakableHash.SM_DT_TCR_Experiment collectionThenChallenge = pure false := by
-  constructor
-  · simp only [TweakableHash.SM_DT_TCR_Experiment, problem_seedGen, pure_bind]
-    rw [run_challengeOnly]
-    simp [challengeOnly, problem_eval]
-  · constructor
-    · simp only [TweakableHash.SM_DT_TCR_Experiment, problem_seedGen, pure_bind]
-      rw [run_challengeThenCollection]
-      simp [challengeThenCollection, problem_eval]
-    · simp only [TweakableHash.SM_DT_TCR_Experiment, problem_seedGen, pure_bind]
-      rw [run_collectionThenChallenge]
-      rfl
+      TweakableHash.SM_DT_TCR_Experiment challengeThenCollection = pure false ∧
+      TweakableHash.SM_DT_TCR_Experiment collectionThenChallenge = pure false ∧
+      TweakableHash.SM_DT_TCR_Experiment repeatedCollection = pure true :=
+  ⟨experiment_challengeOnly, experiment_challengeThenCollection,
+    experiment_collectionThenChallenge, experiment_repeatedCollection⟩
 
 end MultiTargetCollectionTest

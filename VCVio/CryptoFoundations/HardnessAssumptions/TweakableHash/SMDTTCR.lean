@@ -5,7 +5,7 @@ Authors: Nicolas Consigny, Matthias Meijers
 -/
 
 module
-public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
 public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
@@ -23,9 +23,10 @@ never reaches `SM_DT_TCR_Adversary.choose`. The two phases are separate fields a
 `OracleComp (SM_DT_TCR_challengeSpec …)` against `ProbComp`, so "the oracle is removed once the seed
 is revealed" is a typing fact and not a runtime convention: `forge` has no oracle to query.
 
-`numTargets` bounds the accepted challenge queries and is the only query bound the game carries. See
-`TweakableHash.collectionOracle` for why the tweak restrictions are enforced in the oracles rather
-than in the winning condition.
+All challenge and collection queries are answered and recorded. `numTargets`, distinct target
+tweaks, and target/collection disjointness are enforced by a sticky final-validity bit: a violating
+query poisons the bit but is not rejected. This is equivalent to the EasyCrypt/BDHMS final-predicate
+presentation and is intentionally distinct from rejection-on-arrival.
 
 ## References
 
@@ -47,10 +48,9 @@ variable {ι PkSeed Tweak M Y : Type}
 
 /-! ## The game -/
 
-/-- The challenge oracle's signature: a query is a `(tweak, message)` pair, and the response is
-`Option Y`, with `none` marking a rejected query. -/
+/-- The challenge oracle's signature: every `(tweak, message)` query returns its image. -/
 abbrev SM_DT_TCR_challengeSpec (Tweak M Y : Type) : OracleSpec (Tweak × M) :=
-  (Tweak × M) →ₒ Option Y
+  (Tweak × M) →ₒ Y
 
 /-- An SM-TCR problem: the tweakable hash under attack, the collection its other members form, and
 the bound on the number of targets the adversary may select. -/
@@ -59,7 +59,7 @@ structure SM_DT_TCR_Problem (ι PkSeed Tweak M Y : Type) where
   th : TweakableHash PkSeed Tweak M Y
   /-- The rest of the collection, evaluable by the adversary at the game's seed. -/
   thColl : TweakableHashCollection ι PkSeed Tweak Y
-  /-- The cap on accepted challenge-oracle queries. -/
+  /-- The maximum number of challenge queries allowed by final validity. -/
   numTargets : ℕ
 
 /-- The stand-alone SM-TCR problem, at the empty collection: the collection oracle's query type is
@@ -70,9 +70,8 @@ def SM_DT_TCR_Problem.standalone (th : TweakableHash PkSeed Tweak M Y) (numTarge
   thColl := .empty PkSeed Tweak Y
   numTargets := numTargets
 
-/-- The state threaded through both oracles of the SM-TCR game: the challenge history of accepted
-`(tweak, message)` targets, and the list of tweaks spent on the collection oracle. -/
-abbrev SM_DT_TCR_State (Tweak M : Type) : Type := List (Tweak × M) × List Tweak
+/-- Challenge/collection histories and sticky final-validity bit for SM-DT-TCR. -/
+abbrev SM_DT_TCR_State (Tweak M : Type) : Type := FinalValidityState (Tweak × M) Tweak
 
 /-- An SM-TCR adversary. `choose` selects targets through the challenge oracle, may evaluate the
 rest of the collection, and has private uniform randomness without access to the public seed;
@@ -83,36 +82,30 @@ structure SM_DT_TCR_Adversary (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) whe
   /-- Select targets through the challenge oracle, with private uniform randomness and collection
   access. The public seed is not an input. -/
   choose : OracleComp
-    (unifSpec + (SM_DT_TCR_challengeSpec Tweak M Y + collectionSpec prob.thColl)) State
+    (unifSpec +
+      (SM_DT_TCR_challengeSpec Tweak M Y + finalValidityCollectionSpec prob.thColl)) State
   /-- Given the revealed public seed, name a target index and a colliding message. -/
   forge : State → PkSeed → ProbComp (ℕ × M)
 
-/-- The challenge oracle at a public seed, answering with the hash of the queried `(tweak, message)`
-pair and recording that pair in the challenge history. A query is rejected with `none` when the
-target cap is reached, when its tweak already occurs in the challenge history, or when its tweak has
-been spent on the collection oracle; a rejected query leaves the state untouched.
-
-Accepted queries are appended, so the history is in issue order and its `j`-th entry is the `j`-th
-target. -/
+/-- The always-answering target oracle. Every query is appended in issue order; a cap, duplicate
+target tweak, or collection clash poisons final validity without changing the returned digest. -/
 def SM_DT_TCR_challengeOracle [DecidableEq Tweak]
     (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) (pk : PkSeed) :
     QueryImpl (SM_DT_TCR_challengeSpec Tweak M Y) (StateT (SM_DT_TCR_State Tweak M) ProbComp) :=
   fun tm => do
-    let (qsChal, twsColl) ← get
-    if prob.numTargets ≤ qsChal.length ∨ ¬ TweakFresh Prod.fst qsChal twsColl tm.1 then
-      return none
-    else
-      set (qsChal ++ [tm], twsColl)
-      return some (prob.th.eval pk tm.1 tm.2)
+    let st ← get
+    set (st.recordTarget prob.numTargets Prod.fst tm)
+    return prob.th.eval pk tm.1 tm.2
 
 /-- Both oracles of the SM-TCR game over the shared state, at a public seed. -/
 def SM_DT_TCR_oracles [DecidableEq Tweak] (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y)
     (pk : PkSeed) :
-    QueryImpl (unifSpec + (SM_DT_TCR_challengeSpec Tweak M Y + collectionSpec prob.thColl))
+    QueryImpl (unifSpec +
+      (SM_DT_TCR_challengeSpec Tweak M Y + finalValidityCollectionSpec prob.thColl))
       (StateT (SM_DT_TCR_State Tweak M) ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_TCR_State Tweak M) ProbComp) +
     (SM_DT_TCR_challengeOracle prob pk +
-      collectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk)
+      finalValidityCollectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk)
 
 /-- The SM-TCR experiment. The public seed is sampled, the first phase runs against both oracles
 without it, the second phase runs with it and without them, and the adversary wins by naming a
@@ -122,11 +115,13 @@ noncomputable def SM_DT_TCR_Experiment [DecidableEq Tweak] [DecidableEq M] [Deci
     {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y} (adv : SM_DT_TCR_Adversary prob) :
     ProbComp Bool := do
   let pk ← prob.th.seedGen
-  let (st, qsChal, _) ← (simulateQ (SM_DT_TCR_oracles prob pk) adv.choose).run ([], [])
-  let (j, m) ← adv.forge st pk
-  match qsChal[j]? with
+  let (privateState, gameState) ←
+    (simulateQ (SM_DT_TCR_oracles prob pk) adv.choose).run .initial
+  let (j, m) ← adv.forge privateState pk
+  match gameState.challenges[j]? with
   | none => return false
-  | some (t, mj) => return decide (m ≠ mj ∧ prob.th.eval pk t m = prob.th.eval pk t mj)
+  | some (t, mj) =>
+      return gameState.valid && decide (m ≠ mj ∧ prob.th.eval pk t m = prob.th.eval pk t mj)
 
 /-- The SM-TCR advantage of an adversary. -/
 noncomputable def SM_DT_TCR_Advantage [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
@@ -136,36 +131,12 @@ noncomputable def SM_DT_TCR_Advantage [DecidableEq Tweak] [DecidableEq M] [Decid
 /-! ## Basic properties and conventions -/
 
 variable [DecidableEq Tweak] {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y} {pk : PkSeed}
-  {t : Tweak} {m : M} {qsChal : List (Tweak × M)} {twsColl : List Tweak}
+  {t : Tweak} {m : M} {st : SM_DT_TCR_State Tweak M}
 
-/-- A query with a tweak fresh to both histories, below the target cap, is answered with the hash
-and appended to the end of the challenge history. -/
-theorem SM_DT_TCR_challengeOracle_run_of_fresh (hlen : qsChal.length < prob.numTargets)
-    (hfresh : TweakFresh Prod.fst qsChal twsColl t) :
-    (SM_DT_TCR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
-      pure (some (prob.th.eval pk t m), (qsChal ++ [(t, m)], twsColl)) := by
-  simp [SM_DT_TCR_challengeOracle, Nat.not_le.mpr hlen, hfresh]
-
-/-- A query reusing a tweak already in the challenge history is rejected, and the state is
-unchanged. -/
-theorem SM_DT_TCR_challengeOracle_run_of_reused (m' : M) (hmem : (t, m') ∈ qsChal) :
-    (SM_DT_TCR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
-      pure (none, (qsChal, twsColl)) := by
-  have hres : TweakReserved Prod.fst qsChal t := ⟨(t, m'), hmem, rfl⟩
-  simp [SM_DT_TCR_challengeOracle, TweakFresh, hres]
-
-/-- A query at the target cap is rejected, and the state is unchanged. -/
-theorem SM_DT_TCR_challengeOracle_run_of_full (hlen : prob.numTargets ≤ qsChal.length) :
-    (SM_DT_TCR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
-      pure (none, (qsChal, twsColl)) := by
-  simp [SM_DT_TCR_challengeOracle, hlen]
-
-/-- A query at a tweak already spent on the collection oracle is rejected, and the state is
-unchanged. This is the half of the two tweak sets' disjointness that the challenge oracle enforces;
-`collectionOracle_run_of_challenge_clash` is the other. -/
-theorem SM_DT_TCR_challengeOracle_run_of_collection_clash (hmem : t ∈ twsColl) :
-    (SM_DT_TCR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
-      pure (none, (qsChal, twsColl)) := by
-  simp [SM_DT_TCR_challengeOracle, TweakFresh, hmem]
+/-- Every target query is answered and recorded, including a query that poisons final validity. -/
+theorem SM_DT_TCR_challengeOracle_run :
+    (SM_DT_TCR_challengeOracle prob pk (t, m)).run st =
+      pure (prob.th.eval pk t m, st.recordTarget prob.numTargets Prod.fst (t, m)) := by
+  simp [SM_DT_TCR_challengeOracle]
 
 end TweakableHash
