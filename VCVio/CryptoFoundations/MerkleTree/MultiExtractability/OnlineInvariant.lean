@@ -117,4 +117,52 @@ theorem ExtractorState.StableAt.not_hasCheckpointTerminalExtractionDisagreement
   rintro ⟨tag, checkpoint, hcheckpoint, hdisagreement⟩
   exact hdisagreement (hstable tag checkpoint hcheckpoint)
 
+/-- At a common stable log, two checkpoints with the same configuration and root necessarily
+extract the same tree. -/
+theorem ExtractorState.StableAt.not_hasEqualRootExtractionDisagreement
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log) :
+    ¬ HasEqualRootExtractionDisagreement view state := by
+  rintro ⟨tag, left, right, hleft, hright, hroot, hne⟩
+  apply hne
+  rw [hstable tag left hleft, hstable tag right hright, hroot]
+
+/-- Under terminal stability, the strongest three-branch event reduces exactly to accepted-opening
+disagreement. This is stronger than the public two-branch reduction: equal-root inconsistency is
+also impossible at one common stable log. -/
+theorem failure_iff_hasAcceptedOpeningDisagreement_of_stableAt
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
+    (hstable : state.StableAt view (state.terminalLog terminalSuffix)) :
+    Failure view state attempts terminalSuffix ↔
+      HasAcceptedOpeningDisagreement view state attempts := by
+  simp only [Failure]
+  have hnoEqual := hstable.not_hasEqualRootExtractionDisagreement view
+  have hnoTerminal :=
+    hstable.not_hasCheckpointTerminalExtractionDisagreement view terminalSuffix
+  tauto
+
+/-- The textbook two-branch event has the same accepted-opening normal form under stability. -/
+theorem textbookFailure_iff_hasAcceptedOpeningDisagreement_of_stableAt
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (terminalLog : MerkleTreeExtractor.QueryLog Query Y)
+    (hstable : state.StableAt view terminalLog) :
+    TextbookFailure view state attempts ↔
+      HasAcceptedOpeningDisagreement view state attempts := by
+  simp only [TextbookFailure]
+  have hnoEqual := hstable.not_hasEqualRootExtractionDisagreement view
+  tauto
+
 end MerkleTreeMultiExtractability
