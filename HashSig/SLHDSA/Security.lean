@@ -408,6 +408,55 @@ theorem Primitives.xmssBinding_to_tcrWitness [SampleableType prims.PkSeed]
     exact Prod.ext hpairs.1 hpairs.2
   · exact heq
 
+/-- Exhaustive deterministic split underlying the fixed-length XMSS reduction.  A candidate XMSS
+signature that reconstructs the honest root either reaches exactly the honest vector of WOTS
+chain ends (the residual WOTS event), changes that vector while preserving its `WOTS_PK`
+compression (an arity-`len` TCR witness), or changes the reconstructed XMSS leaf (an arity-two
+tree TCR witness).
+
+This is the pointwise event inclusion needed before the probability-level `xmss` field of
+`D1CompositionCertificate` can be discharged; the remaining work is to construct the two
+source-game adversaries and transport this split through their transcripts. -/
+theorem Primitives.xmssRootForgery_to_wotsConsistency_or_tcrWitness
+    [SampleableType prims.PkSeed]
+    (msg : prims.Y) (sk : prims.SkSeed)
+    (pk : prims.PkSeed) (adrs : Adrs) (idx : ℕ) (hidx : idx < 2 ^ p.hp)
+    (sig : XmssSig p prims) (hlen : sig.2.length = p.hp)
+    (hroot : xmssPkFromSig prims idx sig msg pk adrs = xmssRoot prims sk pk adrs) :
+    wotsPkGenTops prims sk pk (wotsLeafAdrs adrs idx) =
+        wotsPkFromSigTops prims sig.1 msg pk (wotsLeafAdrs adrs idx) ∨
+      (let target := wotsPkGenTops prims sk pk (wotsLeafAdrs adrs idx)
+       let collision := wotsPkFromSigTops prims sig.1 msg pk (wotsLeafAdrs adrs idx)
+       target ≠ collision ∧
+         (prims.thashMember p.len).eval pk
+              (prims.adrsToKey (wotsPkAdrs (wotsLeafAdrs adrs idx))) target =
+           (prims.thashMember p.len).eval pk
+              (prims.adrsToKey (wotsPkAdrs (wotsLeafAdrs adrs idx))) collision) ∨
+      (∃ (h : ℕ) (c : prims.Y × prims.Y), 0 < h ∧ h ≤ p.hp ∧
+        let target : Vector prims.Y 2 :=
+          #v[xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h)),
+            xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h) + 1)]
+        let collision : Vector prims.Y 2 := #v[c.1, c.2]
+        target ≠ collision ∧
+          (prims.thashMember 2).eval pk
+              (prims.adrsToKey (xmssNodeAdrs adrs h (idx / 2 ^ h))) target =
+            (prims.thashMember 2).eval pk
+              (prims.adrsToKey (xmssNodeAdrs adrs h (idx / 2 ^ h))) collision) := by
+  let leafAdrs := wotsLeafAdrs adrs idx
+  by_cases hleaf : xmssLeaf prims sk pk adrs idx =
+      wotsPkFromSig prims sig.1 msg pk leafAdrs
+  · have hpk : wotsPkFromSig prims sig.1 msg pk leafAdrs =
+        wotsPkGen prims sk pk leafAdrs := by
+      rw [← xmssLeaf_eq_wotsPkGen]
+      exact hleaf.symm
+    by_cases htops : wotsPkGenTops prims sk pk leafAdrs =
+        wotsPkFromSigTops prims sig.1 msg pk leafAdrs
+    · exact Or.inl htops
+    · exact Or.inr <| Or.inl <|
+        prims.wotsPkBinding_to_tcrWitness msg sk pk leafAdrs sig.1 hpk htops
+  · exact Or.inr <| Or.inr <|
+      prims.xmssBinding_to_tcrWitness msg sk pk adrs idx hidx sig hlen hroot hleaf
+
 /-- The message randomizer `PRF_msg` as a `PRFScheme` keyed by `SK.prf`; `eval` is
 `prims.PRFmsg`. -/
 def msgPrfScheme [SampleableType prims.SkPrf] :
