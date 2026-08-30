@@ -79,4 +79,20 @@ example : replayAdv.advantage ProbCompRuntime.probComp = 0 ∧
     twoSignatureAlg, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
 
+/-- The SUF partition is exact on the two qualitatively different forgery branches: rerandomizing
+an already signed message contributes only to the same-message term, while a fresh-message
+forgery contributes only to EUF. -/
+example :
+    rerandomizeAdv.toUnforgeableAdv.advantage ProbCompRuntime.probComp = 0 ∧
+      rerandomizeAdv.sameMessageAdvantage ProbCompRuntime.probComp = 1 ∧
+      freshMessageAdv.toUnforgeableAdv.advantage ProbCompRuntime.probComp = 1 ∧
+      freshMessageAdv.sameMessageAdvantage ProbCompRuntime.probComp = 0 := by
+  simp [SignatureAlg.unforgeableAdv.advantage, SignatureAlg.unforgeableExp,
+    SignatureAlg.strongUnforgeableAdv.sameMessageAdvantage,
+    SignatureAlg.sameMessageStrongUnforgeableExp,
+    SignatureAlg.strongUnforgeableAdv.toUnforgeableAdv,
+    rerandomizeAdv, freshMessageAdv, twoSignatureAlg, SignatureAlg.signingOracle,
+    SignatureAlg.signingLogContains, QueryLog.wasQueried,
+    ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
+
 end SignatureAlgTest
