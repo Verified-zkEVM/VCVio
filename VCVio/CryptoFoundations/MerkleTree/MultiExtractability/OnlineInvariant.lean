@@ -115,6 +115,58 @@ theorem ExtractorState.StableAt.liveTargetSet_eq_targetSet
       (hstable tag checkpoint hcheckpoint)
     simpa [Checkpoint.targets] using heq.symm ▸ htarget
 
+/-- Fixed-set form of the one-entry stability rule. -/
+theorem ExtractorState.StableAt.append_of_not_mem_targetSet
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log)
+    (query : Query) (response : Y)
+    (hresponse : response ∉ state.targetSet view) :
+    state.StableAt view (log ++ [⟨query, response⟩]) := by
+  apply hstable.append_of_not_mem_liveTargetSet view query response
+  rwa [hstable.liveTargetSet_eq_targetSet view]
+
+/-- Appending a whole suffix preserves stability when every response avoids the immutable target
+set of the recorded checkpoints. -/
+theorem ExtractorState.StableAt.append_of_forall_not_mem_targetSet
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log)
+    (suffix : MerkleTreeExtractor.QueryLog Query Y)
+    (havoid : ∀ entry ∈ suffix, entry.2 ∉ state.targetSet view) :
+    state.StableAt view (log ++ suffix) := by
+  induction suffix generalizing log with
+  | nil => simpa using hstable
+  | cons entry suffix ih =>
+      have hhead : entry.2 ∉ state.targetSet view := havoid entry (by simp)
+      have hstable' := hstable.append_of_not_mem_targetSet view entry.1 entry.2 hhead
+      have htail : ∀ tailEntry ∈ suffix, tailEntry.2 ∉ state.targetSet view := by
+        intro tailEntry hmem
+        exact havoid tailEntry (by simp [hmem])
+      simpa [List.append_assoc] using ih hstable' htail
+
+/-- If a suffix destroys checkpoint stability, some response in that suffix belongs to the
+target set fixed at the beginning of the suffix. -/
+theorem ExtractorState.StableAt.exists_target_of_not_stable_append
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log)
+    (suffix : MerkleTreeExtractor.QueryLog Query Y)
+    (hnotStable : ¬ state.StableAt view (log ++ suffix)) :
+    ∃ entry ∈ suffix, entry.2 ∈ state.targetSet view := by
+  by_contra hnone
+  push Not at hnone
+  exact hnotStable (hstable.append_of_forall_not_mem_targetSet view suffix hnone)
+
 /-- Recording a root at a stable phase boundary preserves all old equalities and makes the new
 checkpoint stable by construction. -/
 theorem ExtractorState.StableAt.record
