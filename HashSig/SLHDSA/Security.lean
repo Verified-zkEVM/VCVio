@@ -530,6 +530,24 @@ noncomputable def concreteStrongEufCmaExperiment (adv : StrongEufCmaAdversary pr
 noncomputable def concreteStrongEufCmaAdvantage (adv : StrongEufCmaAdversary prims) : ℝ≥0∞ :=
   Pr[= true | concreteStrongEufCmaExperiment prims adv]
 
+/-- Concrete probability of producing a new valid signature for a message already submitted to
+the signing oracle.  This is the exact extra term needed to upgrade the EUF-CMA endpoint to
+SUF-CMA; it is not silently identified with any of the EUF hash assumptions. -/
+noncomputable def concreteSameMessageStrongAdvantage
+    (adv : StrongEufCmaAdversary prims) : ℝ≥0∞ :=
+  adv.sameMessageAdvantage (PublicHash.concreteRuntime prims)
+
+/-- The concrete SLH-DSA SUF advantage is bounded by the ordinary EUF advantage of the same
+adversary plus its same-message, new-signature probability.  A full SUF theorem therefore needs
+one additional scheme-specific reduction for the second term. -/
+theorem concreteStrongEufCmaAdvantage_le_euf_add_sameMessage
+    (adv : StrongEufCmaAdversary prims) :
+    concreteStrongEufCmaAdvantage prims adv ≤
+      concreteEufCmaAdvantage prims adv.toUnforgeableAdv +
+        concreteSameMessageStrongAdvantage prims adv := by
+  exact adv.advantage_le_euf_add_sameMessage (PublicHash.concreteRuntime prims)
+    (PublicHash.concreteRuntime_evalSPMF_bind_pure prims)
+
 /-- Endpoint bridge for SUF-CMA: as for EUF-CMA, one deterministic public-hash simulation
 surrounds key generation, all signing queries, and final verification. -/
 theorem concreteStrongEufCmaExperiment_eq_simulate (adv : StrongEufCmaAdversary prims) :

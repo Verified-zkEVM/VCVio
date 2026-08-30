@@ -266,6 +266,17 @@ verification all use the same concrete primitive bundle. -/
     (concreteRuntime prims).evalSPMF oa =
       (liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims)) oa) : SPMF α) := rfl
 
+/-- The concrete public-hash runtime factors a final pure map out of observation.  This is the
+runtime law required by the generic EUF/SUF event-partition lemmas. -/
+theorem concreteRuntime_evalSPMF_bind_pure (prims : Primitives p)
+    {α β : Type} (f : α → β)
+    (oa : OracleComp (unifSpec + publicHashSpec prims.core) α) :
+    (concreteRuntime prims).evalSPMF (oa >>= fun x => pure (f x)) =
+      f <$> (concreteRuntime prims).evalSPMF oa := by
+  simp only [concreteRuntime_evalSPMF, simulateQ_bind, simulateQ_pure,
+    liftM_bind, liftM_pure, map_eq_bind_pure_comp]
+  congr 1
+
 end PublicHash
 
 /-! ### End-to-end shared-ROM completeness -/
