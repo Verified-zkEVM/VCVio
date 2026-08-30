@@ -103,13 +103,38 @@ theorem BatchProof.map_injective_of_leftInverse (f : α → β) (g : β → α)
   have hgf : g ∘ f = id := funext hleft
   simpa only [BatchProof.map_comp, hgf, BatchProof.map_id] using hm
 
-/-- On an inhabited domain, an injective function induces an injective map on pruned
-batch proofs. -/
-theorem BatchProof.map_injective [Nonempty α] (f : α → β) (hf : Function.Injective f)
+/-- An injective function induces an injective map on pruned batch proofs. -/
+theorem BatchProof.map_injective (f : α → β) (hf : Function.Injective f)
     {s : Skeleton} {sel : LeafData Bool s} (proof₁ proof₂ : BatchProof α sel)
-    (h : proof₁.map f = proof₂.map f) : proof₁ = proof₂ :=
-  BatchProof.map_injective_of_leftInverse f (Function.invFun f)
-    (Function.leftInverse_invFun hf) proof₁ proof₂ h
+    (h : proof₁.map f = proof₂.map f) : proof₁ = proof₂ := by
+  induction proof₁ with
+  | leaf =>
+      cases proof₂ with
+      | leaf => rfl
+  | internalBoth pl₁ pr₁ ihl ihr =>
+      cases proof₂ with
+      | internalBoth pl₂ pr₂ =>
+          simp only [BatchProof.map] at h
+          injection h with _ _ _ _ hpl hpr
+          rw [ihl pl₂ hpl, ihr pr₂ hpr]
+      | pruneRight hr₂ rightRoot₂ pl₂ => cases h
+      | pruneLeft hl₂ leftRoot₂ pr₂ => cases h
+  | pruneRight hr₁ rightRoot₁ pl₁ ih =>
+      cases proof₂ with
+      | internalBoth pl₂ pr₂ => cases h
+      | pruneRight hr₂ rightRoot₂ pl₂ =>
+          simp only [BatchProof.map] at h
+          injection h with _ _ _ _ hroot hp
+          rw [hf hroot, ih pl₂ hp]
+      | pruneLeft hl₂ leftRoot₂ pr₂ => cases h
+  | pruneLeft hl₁ leftRoot₁ pr₁ ih =>
+      cases proof₂ with
+      | internalBoth pl₂ pr₂ => cases h
+      | pruneRight hr₂ rightRoot₂ pl₂ => cases h
+      | pruneLeft hl₂ leftRoot₂ pr₂ =>
+          simp only [BatchProof.map] at h
+          injection h with _ _ _ _ hroot hp
+          rw [hf hroot, ih pr₂ hp]
 
 /-- Selecting leaves commutes with pointwise mapping of leaf data. -/
 @[simp]

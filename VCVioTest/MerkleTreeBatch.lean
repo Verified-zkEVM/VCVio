@@ -7,7 +7,8 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
-public meta import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Addressed
+public meta import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.MapToSingle
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 
 /-!
@@ -103,6 +104,24 @@ example :
     allProof =
       .internalBoth (.internalBoth .leaf .leaf) (.internalBoth .leaf .leaf) := by
   rfl
+
+/-- Mapping into a partial-tree value type preserves both pruning directions and maps only
+the stored authentication frontier. -/
+example :
+    outerProof.map some =
+      .internalBoth (.pruneRight (by decide) (some 2) .leaf)
+        (.pruneLeft (by decide) (some 3) .leaf) := by
+  rfl
+
+/-- The all-selected proof contains no stored value for mapping to change. -/
+example :
+    allProof.map some =
+      .internalBoth (.internalBoth .leaf .leaf) (.internalBoth .leaf .leaf) := by
+  rfl
+
+/-- Structural query counting is exact on singleton, outer-pair, and all-selected traversals. -/
+example : firstProof.queryCount = 2 ∧ outerProof.queryCount = 3 ∧ allProof.queryCount = 3 := by
+  decide
 
 /-- Opening no leaf is excluded by the dependent proof family. -/
 example : IsEmpty (BatchProof Nat selectNone) :=
