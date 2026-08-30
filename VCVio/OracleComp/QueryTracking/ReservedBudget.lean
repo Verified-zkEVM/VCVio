@@ -54,4 +54,28 @@ theorem reserveQueries_isTotalQueryBound
     IsTotalQueryBound (reserveQueries query count) count :=
   (reserveQueries_isTotalQueryBound_iff query count count).2 le_rfl
 
+/-- Support-aware bind rule. Under uniform oracle semantics every syntactically reachable
+continuation value lies in `support oa`, so it suffices to bound the continuation on that support
+rather than on every value of its result type. -/
+theorem isTotalQueryBound_bind_of_mem_support
+    [IsUniformSpec spec]
+    {α β : Type} (oa : OracleComp spec α) (ob : α → OracleComp spec β)
+    (prefixBound suffixBound : ℕ)
+    (hprefix : IsTotalQueryBound oa prefixBound)
+    (hsuffix : ∀ x ∈ support oa, IsTotalQueryBound (ob x) suffixBound) :
+    IsTotalQueryBound (oa >>= ob) (prefixBound + suffixBound) := by
+  induction oa using OracleComp.inductionOn generalizing prefixBound with
+  | pure x =>
+      simpa using (hsuffix x (by simp)).mono (by omega : suffixBound ≤ prefixBound + suffixBound)
+  | query_bind query next ih =>
+      rw [isTotalQueryBound_query_bind_iff] at hprefix
+      rw [bind_assoc, isTotalQueryBound_query_bind_iff]
+      refine ⟨by omega, fun response => ?_⟩
+      apply (ih response (prefixBound - 1) (hprefix.2 response) ?_).mono
+      · omega
+      · intro x hx
+        apply hsuffix x
+        rw [mem_support_bind_iff]
+        exact ⟨response, by simp, hx⟩
+
 end OracleComp

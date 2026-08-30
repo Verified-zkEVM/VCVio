@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Endgame
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.InitializedBound
+public import VCVio.OracleComp.QueryTracking.ReservedBudget
 public import VCVio.OracleComp.QueryTracking.Unpredictability
 
 /-!
@@ -53,6 +54,43 @@ theorem extractabilityInner_eq_runFromEmptyThen [DecidableEq Y]
     extractabilityInner model config rounds adversary =
       adversary.committer.runFromEmptyThen config rounds
         (adversary.terminalExecution model) := rfl
+
+/-- The executable terminal phase uses exactly the opening budget plus a support-wise bound for
+honest verification. Query logging itself is resource-transparent. -/
+theorem Adversary.terminalExecution_isTotalQueryBound
+    [DecidableEq Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config)
+    (openingBound verifierBound : ℕ)
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) openingBound)
+    (hverifier : adversary.HasVerifierQueryBound verifierBound) :
+    ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.terminalExecution model privateState extractorState)
+        (openingBound + verifierBound) := by
+  intro privateState extractorState
+  unfold Adversary.terminalExecution
+  apply isTotalQueryBound_bind_of_mem_support
+      (prefixBound := openingBound) (suffixBound := verifierBound)
+  · exact (isTotalQueryBound_withQueryLog_iff
+      (adversary.opening privateState extractorState) openingBound).2
+      (hopening privateState extractorState)
+  · rintro ⟨claims, terminalSuffix⟩ hclaimsLogged
+    have hclaims : claims ∈ support (adversary.opening privateState extractorState) := by
+      have hmapped : claims ∈ support
+          (Prod.fst <$> (adversary.opening privateState extractorState).withQueryLog) := by
+        rw [support_map]
+        exact ⟨(claims, terminalSuffix), hclaimsLogged, rfl⟩
+      change claims ∈ support (Prod.fst <$> (simulateQ
+        (Query →ₒ Y).loggingOracle
+        (adversary.opening privateState extractorState)).run) at hmapped
+      simpa using hmapped
+    exact isTotalQueryBound_bind
+      (n₁ := verifierBound) (n₂ := 0)
+      ((verifyClaims_isTotalQueryBound model claims).mono
+        (hverifier privateState extractorState claims hclaims))
+      fun _ => trivial
 
 /-- Pointwise terminal theorem required by sequential composition.  This named interface makes
 the last cryptographic obligation auditable: no checkpoint evolution or query accounting is
@@ -420,6 +458,37 @@ theorem strongFailure_rom_bound_of_openingEvidence
     phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead perCheckpoint
     hcommit hconfig hnodes hcheckpoints hterminalBound
     (adversary.terminalFreshTargetProperty_of_openingEvidence model hevidence)
+
+/-- Fully resource-separated verifier-facing theorem. The terminal structural budget follows from
+the adversary's opening bound and the verifier overhead on claims in the opening's support. -/
+theorem strongFailure_rom_bound_of_openingEvidence_and_queryBounds
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query)
+    (phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead
+      perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState) phaseQueryBound)
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) terminalQueryBound)
+    (hverifier : adversary.HasVerifierQueryBound verifierOverhead)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (hnodes : rounds * perCheckpoint ≤ nodeBudget)
+    (hcheckpoints : rounds ≤ checkpointCount)
+    (hevidence : adversary.TerminalOpeningEvidenceProperty model) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator nodeBudget checkpointCount verifierOverhead
+        (rounds * phaseQueryBound + terminalQueryBound) : ENNReal) *
+          (Nat.card Y : ENNReal)⁻¹ :=
+  strongFailure_rom_bound_of_openingEvidence model config rounds adversary paddingQuery
+    phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead perCheckpoint
+    hcommit hconfig hnodes hcheckpoints
+    (adversary.terminalExecution_isTotalQueryBound model terminalQueryBound verifierOverhead
+      hopening hverifier)
+    hevidence
 
 /-- Exact uniform-shape specialization of the strongest game-level theorem. -/
 theorem strongFailure_rom_bound_exact
