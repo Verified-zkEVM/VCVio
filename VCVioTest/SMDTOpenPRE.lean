@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTOpenPRE
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.OpenPREFromTCRDSPR
 
 /-! # SM-DT-OpenPRE exact-game canaries -/
 
@@ -21,7 +21,11 @@ inductive Seed
 
 inductive Input
   | only
-  deriving Inhabited
+  deriving DecidableEq, Inhabited
+
+instance : Fintype Input where
+  elems := {.only}
+  complete x := by cases x; simp
 
 instance : SampleableType Seed where
   selectElem := pure .only
@@ -144,6 +148,21 @@ private lemma experiment_openedOther :
     TweakableHash.SM_DT_OpenPRE_Experiment openedOther = pure true := by
   rfl
 
+private lemma tcr_reduction_valid :
+    TweakableHash.SM_DT_TCR_Experiment (TweakableHash.SM_DT_OpenPRE_toTCR valid) =
+      pure false := by
+  rfl
+
+private lemma dspr_reduction_valid :
+    TweakableHash.SM_DT_DSPR_Experiment (TweakableHash.SM_DT_OpenPRE_toDSPR valid) =
+      pure true := by
+  rfl
+
+private lemma dspr_reduction_openedSelected :
+    TweakableHash.SM_DT_DSPR_Experiment
+      (TweakableHash.SM_DT_OpenPRE_toDSPR openedSelected) = pure false := by
+  rfl
+
 /-- Mutation-resistant pins for prefix truncation, final validity, and the adaptive opening
 phase. -/
 theorem exact_game_canary :
@@ -152,8 +171,15 @@ theorem exact_game_canary :
       TweakableHash.SM_DT_OpenPRE_Experiment collectionClash = pure false ∧
       TweakableHash.SM_DT_OpenPRE_Experiment openedSelected = pure false ∧
       TweakableHash.SM_DT_OpenPRE_Experiment duplicateTargets = pure false ∧
-      TweakableHash.SM_DT_OpenPRE_Experiment openedOther = pure true :=
+      TweakableHash.SM_DT_OpenPRE_Experiment openedOther = pure true ∧
+      TweakableHash.SM_DT_TCR_Experiment (TweakableHash.SM_DT_OpenPRE_toTCR valid) =
+        pure false ∧
+      TweakableHash.SM_DT_DSPR_Experiment (TweakableHash.SM_DT_OpenPRE_toDSPR valid) =
+        pure true ∧
+      TweakableHash.SM_DT_DSPR_Experiment
+        (TweakableHash.SM_DT_OpenPRE_toDSPR openedSelected) = pure false :=
   ⟨experiment_valid, experiment_overlong, experiment_collectionClash,
-    experiment_openedSelected, experiment_duplicateTargets, experiment_openedOther⟩
+    experiment_openedSelected, experiment_duplicateTargets, experiment_openedOther,
+    tcr_reduction_valid, dspr_reduction_valid, dspr_reduction_openedSelected⟩
 
 end SMDTOpenPRETest
