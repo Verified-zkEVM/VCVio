@@ -27,8 +27,9 @@ and signature space `S`.
 * `SignatureAlg`: a signature scheme as a `keygen`/`sign`/`verify` triple in a monad `m`.
 * `SignatureAlg.Complete`: completeness up to an error `δ`, with `PerfectlyComplete` the `δ = 0`
   case.
-* `SignatureAlg.unforgeableExp`, `eufNmaExp`, `managedRoNmaExp`: the EUF-CMA, EUF-NMA, and
-  managed-random-oracle NMA security experiments, with the corresponding adversary advantages.
+* `SignatureAlg.unforgeableExp`, `strongUnforgeableExp`, `eufNmaExp`, `managedRoNmaExp`: the
+  EUF-CMA, SUF-CMA, EUF-NMA, and managed-random-oracle NMA security experiments, with the
+  corresponding adversary advantages.
 -/
 
 @[expose] public section
@@ -55,9 +56,9 @@ variable {m : Type → Type v} [Monad m] {M PK SK S : Type}
 /-- The signing oracle for `sigAlg` under public key `pk` and secret key `sk`: the
 `QueryImpl` that answers each queried message by running `sigAlg.sign pk sk` on it.
 
-Every produced signature is recorded in a `WriterT (QueryLog (M →ₒ S))` writer layer, so an
-experiment running an adversary against this oracle can later read off which messages were
-signed and check the freshness of a forged message. -/
+Every successful response is recorded as its exact `(message, signature)` pair in a
+`WriterT (QueryLog (M →ₒ S))` writer layer. EUF-CMA projects this trace to queried messages;
+SUF-CMA checks whether the exact final pair occurs in it. -/
 def signingOracle (sigAlg : SignatureAlg m M PK SK S) (pk : PK) (sk : SK) :
     QueryImpl (M →ₒ S) (WriterT (QueryLog (M →ₒ S)) m) :=
   QueryImpl.withLogging (sigAlg.sign pk sk)
@@ -281,6 +282,65 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
   exact probEvent_mono fun _ _ => Bool.and_elim_right
 
 end unforgeable
+
+section strongUnforgeable
+
+variable {ι : Type u} {spec : OracleSpec ι} {M PK SK S : Type}
+  [DecidableEq M] [DecidableEq S]
+
+/-- Whether the signing-oracle trace contains the exact returned pair `(msg, σ)`. Unlike
+`QueryLog.wasQueried`, this predicate distinguishes two signatures returned for the same message. -/
+def signingLogContains (log : QueryLog (M →ₒ S)) (msg : M) (σ : S) : Bool :=
+  decide (⟨msg, σ⟩ ∈ log)
+
+@[simp]
+lemma signingLogContains_nil (msg : M) (σ : S) :
+    signingLogContains ([] : QueryLog (M →ₒ S)) msg σ = false := by
+  simp [signingLogContains]
+
+@[simp]
+lemma signingLogContains_singleton_self (msg : M) (σ : S) :
+    signingLogContains ([⟨msg, σ⟩] : QueryLog (M →ₒ S)) msg σ = true := by
+  simp [signingLogContains]
+
+/-- A SUF-CMA (strong unforgeability under chosen-message attack) adversary. As in EUF-CMA it
+receives the public key and has access to the scheme's ambient oracles plus the signing oracle,
+but its final pair is fresh when that exact `(message, signature)` pair was never returned. -/
+structure strongUnforgeableAdv (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
+  main (pk : PK) : OracleComp (spec + (M →ₒ S)) (M × S)
+
+/-- Strong unforgeability under chosen-message attack. The signing oracle logs every successful
+returned `(message, signature)` pair. The adversary succeeds exactly when its final pair verifies
+and that pair does not occur in the returned-pair log. In particular, a different valid signature
+for a previously signed message remains an eligible strong forgery. -/
+noncomputable def strongUnforgeableExp
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (adv : strongUnforgeableAdv sigAlg) :=
+  letI : DecidableEq M := Classical.decEq M
+  letI : DecidableEq S := Classical.decEq S
+  runtime.evalSPMF do
+    let (pk, sk) ← sigAlg.keygen
+    let impl : QueryImpl (spec + (M →ₒ S))
+        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
+      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+        sigAlg.signingOracle pk sk
+    let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
+      simulateQ impl (adv.main pk)
+    let ((msg, σ), log) ← simAdv.run
+    let verified ← sigAlg.verify pk msg σ
+    return !signingLogContains log msg σ && verified
+
+/-- The SUF-CMA success probability: the probability of outputting a valid pair not previously
+returned by the signing oracle. -/
+noncomputable def strongUnforgeableAdv.advantage
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (adv : strongUnforgeableAdv sigAlg) : ℝ≥0∞ :=
+  Pr[= true | strongUnforgeableExp runtime adv]
+
+end strongUnforgeable
 
 section eufNma
 
