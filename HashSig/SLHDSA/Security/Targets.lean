@@ -102,6 +102,16 @@ def d1XmssTreeAddresses (p : Params) : List Adrs :=
     p.d1ForsRootsAddresses.length = p.d1TargetProfile.forsRoots := by
   simp [d1ForsRootsAddresses, d1TargetProfile, d1LeafCount]
 
+/-- FORS-root-compression addresses are structurally distinct before concrete encoding: their
+key-pair word is exactly the XMSS leaf index. -/
+theorem d1ForsRootsAddresses_nodup (p : Params) :
+    p.d1ForsRootsAddresses.Nodup := by
+  apply List.Nodup.map_on (d := List.nodup_range)
+  intro i _ j _ hij
+  have hword := congrArg Adrs.word1 hij
+  simpa [forsPkAdrs, forsAdrsOf, Adrs.getKeyPairAddress, Adrs.setKeyPairAddress,
+    Adrs.setTypeAndClear, Adrs.setTreeAddress, Adrs.zero] using hword
+
 theorem d1WotsPreAddresses_length_le (p : Params) (core : CorePrimitives p)
     (messageAt : ℕ → core.Y) :
     (p.d1WotsPreAddresses core messageAt).length ≤ p.d1TargetProfile.wotsPre := by
@@ -145,6 +155,15 @@ theorem d1WotsTcrAddressSpace_length_le (p : Params) :
 @[simp] theorem d1WotsPkAddresses_length (p : Params) :
     p.d1WotsPkAddresses.length = p.d1TargetProfile.wotsPk := by
   simp [d1WotsPkAddresses, d1TargetProfile, d1LeafCount]
+
+/-- WOTS public-key-compression addresses are structurally distinct before concrete encoding. -/
+theorem d1WotsPkAddresses_nodup (p : Params) :
+    p.d1WotsPkAddresses.Nodup := by
+  apply List.Nodup.map_on (d := List.nodup_range)
+  intro i _ j _ hij
+  have hword := congrArg Adrs.word1 hij
+  simpa [wotsPkAdrs, wotsLeafAdrs, Adrs.getKeyPairAddress, Adrs.setKeyPairAddress,
+    Adrs.setTypeAndClear, Adrs.zero] using hword
 
 @[simp] theorem d1XmssTreeAddresses_length (p : Params) :
     p.d1XmssTreeAddresses.length = p.d1TargetProfile.xmssTree := by
