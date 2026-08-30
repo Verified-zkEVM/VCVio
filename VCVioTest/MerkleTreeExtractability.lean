@@ -379,6 +379,83 @@ example : ((), collidingCache) ∈ support
     ((simulateQ (InductiveMerkleTree.spec Bool).cachingOracle twoDistinctQueries).run ∅) := by
   simp [twoDistinctQueries, collidingCache, QueryCache.cacheQuery_of_ne]
 
+/-! ## Complete-query response injectivity -/
+
+namespace FullQueryInjectivityCanary
+
+/-- A complete hash query carries metadata in addition to its ordered child pair. -/
+structure TaggedQuery where
+  tag : Bool
+  childPair : Nat × Nat
+  deriving DecidableEq
+
+def queryView : MerkleTreeExtractor.QueryView TaggedQuery Unit Nat where
+  address := fun _ => ()
+  input := TaggedQuery.childPair
+
+def untagged : TaggedQuery := ⟨false, (2, 3)⟩
+
+def tagged : TaggedQuery := ⟨true, (2, 3)⟩
+
+/-- Both complete queries expose the same ordered children, so a collision check that only
+compares child projections cannot distinguish them. -/
+example : queryView.input untagged = queryView.input tagged := rfl
+
+/-- The tag remains part of the complete oracle query. -/
+example : untagged ≠ tagged := by decide
+
+def sameResponseLog : MerkleTreeExtractor.QueryLog TaggedQuery Nat :=
+  [⟨untagged, 7⟩, ⟨tagged, 7⟩]
+
+/-- Child-pair equality is too weak as the transcript collision predicate: it accepts this log. -/
+example : ∀ entry₁ ∈ sameResponseLog, ∀ entry₂ ∈ sameResponseLog,
+    entry₁.2 = entry₂.2 → queryView.input entry₁.1 = queryView.input entry₂.1 := by
+  intro entry₁ h₁ entry₂ h₂ _
+  simp only [sameResponseLog, List.mem_cons, List.not_mem_nil, or_false] at h₁ h₂
+  rcases h₁ with rfl | rfl <;> rcases h₂ with rfl | rfl <;> rfl
+
+/-- `ResponseInjectiveOn` compares complete queries, and therefore rejects the tag-only
+collision even though the ordered child pairs coincide. -/
+example : ¬ MerkleTreeExtractor.ResponseInjectiveOn sameResponseLog := by
+  intro hinjective
+  have hquery : untagged = tagged :=
+    hinjective ⟨untagged, 7⟩ (by simp [sameResponseLog])
+      ⟨tagged, 7⟩ (by simp [sameResponseLog]) rfl
+  exact (by decide : untagged ≠ tagged) hquery
+
+def distinctResponseLog : MerkleTreeExtractor.QueryLog TaggedQuery Nat :=
+  [⟨untagged, 7⟩, ⟨tagged, 8⟩]
+
+private lemma distinctResponseLog_injective :
+    MerkleTreeExtractor.ResponseInjectiveOn distinctResponseLog := by
+  intro entry₁ h₁ entry₂ h₂ hresponse
+  simp only [distinctResponseLog, List.mem_cons, List.not_mem_nil, or_false] at h₁ h₂
+  rcases h₁ with rfl | rfl <;> rcases h₂ with rfl | rfl
+  · rfl
+  · simp at hresponse
+  · simp at hresponse
+  · rfl
+
+def skeleton : BinaryTree.Skeleton := .internal .leaf .leaf
+
+def leftIndex : BinaryTree.SkeletonLeafIndex skeleton := .ofLeft .ofLeaf
+
+def leftProof : List.Vector Nat leftIndex.depth := ⟨[3], rfl⟩
+
+/-- With distinct responses, the generic recovery theorem consumes complete-query injectivity
+and recovers the tagged query's left opening. -/
+example :
+    (MerkleTreeExtractor.treeAt queryView skeleton (fun _ => ()) distinctResponseLog 8).get
+        leftIndex.toNodeIndex = some 2 ∧
+      (InductiveMerkleTree.generateProof
+        (MerkleTreeExtractor.treeAt queryView skeleton (fun _ => ()) distinctResponseLog 8)
+        leftIndex).toList = leftProof.toList.map some := by
+  apply MerkleTreeExtractor.opening_eq_of_chainInLogAt queryView distinctResponseLog
+    distinctResponseLog_injective (fun _ => ()) 8 2 leftIndex leftProof
+  exact ⟨tagged, 2, rfl, rfl, by simp [distinctResponseLog], rfl⟩
+
+end FullQueryInjectivityCanary
+
 /-! ## Online extractor evolution -/
 
 namespace EvolutionCanary
