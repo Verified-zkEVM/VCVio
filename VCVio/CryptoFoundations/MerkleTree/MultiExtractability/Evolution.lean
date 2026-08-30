@@ -221,4 +221,44 @@ theorem tree_ne_append_implies_exists_live_hit
         · simp [hsuffix]
         · simpa [List.append_assoc] using htarget
 
+/-- The reached-target list is a semantic projection of the extracted partial tree.  In
+particular, two logs producing the same extracted tree expose the same targets even when their
+irrelevant query entries differ. -/
+theorem MerkleTreeExtractor.targets_eq_of_tree_eq
+    (view : MerkleTreeExtractor.QueryView Query Address Y) (s : Skeleton)
+    (addressKey : SkeletonInternalIndex s → Address)
+    (leftLog rightLog : MerkleTreeExtractor.QueryLog Query Y) (leftRoot rightRoot : Y)
+    (htree : MerkleTreeExtractor.tree view s addressKey leftLog leftRoot =
+      MerkleTreeExtractor.tree view s addressKey rightLog rightRoot) :
+    MerkleTreeExtractor.targets view s addressKey leftLog leftRoot =
+      MerkleTreeExtractor.targets view s addressKey rightLog rightRoot := by
+  induction s generalizing leftRoot rightRoot with
+  | leaf =>
+      simpa [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
+        MerkleTreeExtractor.targets] using htree
+  | internal left right ihLeft ihRight =>
+      cases hleft : MerkleTreeExtractor.children view leftLog
+          (addressKey .ofInternal) leftRoot <;>
+        cases hright : MerkleTreeExtractor.children view rightLog
+          (addressKey .ofInternal) rightRoot
+      · simpa [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
+          MerkleTreeExtractor.targets, hleft, hright] using htree
+      · simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, hleft, hright,
+          Option.some.injEq, FullData.internal.injEq] at htree
+        have himpossible := congrArg FullData.getRootValue htree.2.1
+        simp [MerkleTreeExtractor.treeAt_getRootValue] at himpossible
+      · simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, hleft, hright,
+          Option.some.injEq, FullData.internal.injEq] at htree
+        have himpossible := congrArg FullData.getRootValue htree.2.1
+        simp [MerkleTreeExtractor.treeAt_getRootValue] at himpossible
+      · rename_i leftChildren rightChildren
+        obtain ⟨leftLeft, leftRight⟩ := leftChildren
+        obtain ⟨rightLeft, rightRight⟩ := rightChildren
+        simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, hleft, hright,
+          Option.some.injEq, FullData.internal.injEq] at htree
+        simp only [MerkleTreeExtractor.targets, hleft, hright]
+        rw [htree.1]
+        rw [ihLeft (fun position => addressKey (.ofLeft position)) _ _ htree.2.1]
+        rw [ihRight (fun position => addressKey (.ofRight position)) _ _ htree.2.2]
+
 end MerkleTreeMultiExtractability

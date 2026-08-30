@@ -86,6 +86,35 @@ theorem ExtractorState.StableAt.append_of_not_mem_liveTargetSet
   exact tree_ne_append_singleton_implies_response_mem_targets view
     (config.skeleton tag) (config.addressKey tag) log checkpoint.root query response hchanged
 
+/-- At a stable log, the dynamically re-extracted live target union is exactly the immutable
+checkpoint target union.  Thus harmless log growth cannot silently enlarge the set against which
+the next response is tested. -/
+theorem ExtractorState.StableAt.liveTargetSet_eq_targetSet
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log) :
+    state.liveTargetSet view log = state.targetSet view := by
+  ext target
+  simp only [ExtractorState.liveTargetSet, ExtractorState.targetSet, List.mem_toFinset,
+    ExtractorState.liveTargetList, ExtractorState.targetList, targetsOfCheckpoints,
+    List.mem_flatMap]
+  constructor
+  · rintro ⟨⟨tag, checkpoint⟩, hcheckpoint, htarget⟩
+    refine ⟨⟨tag, checkpoint⟩, hcheckpoint, ?_⟩
+    have heq := MerkleTreeExtractor.targets_eq_of_tree_eq view (config.skeleton tag)
+      (config.addressKey tag) checkpoint.cumulativeLog log checkpoint.root checkpoint.root
+      (hstable tag checkpoint hcheckpoint)
+    simpa [Checkpoint.targets] using heq ▸ htarget
+  · rintro ⟨⟨tag, checkpoint⟩, hcheckpoint, htarget⟩
+    refine ⟨⟨tag, checkpoint⟩, hcheckpoint, ?_⟩
+    have heq := MerkleTreeExtractor.targets_eq_of_tree_eq view (config.skeleton tag)
+      (config.addressKey tag) checkpoint.cumulativeLog log checkpoint.root checkpoint.root
+      (hstable tag checkpoint hcheckpoint)
+    simpa [Checkpoint.targets] using heq.symm ▸ htarget
+
 /-- Recording a root at a stable phase boundary preserves all old equalities and makes the new
 checkpoint stable by construction. -/
 theorem ExtractorState.StableAt.record
