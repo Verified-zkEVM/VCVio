@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import HashSig.SLHDSA.Concrete.Instance
-public import HashSig.SLHDSA.Security.Targets
+public import HashSig.SLHDSA.Security.ReductionBound
 
 /-!
 # Concrete SHA2-128-24 security side conditions
@@ -23,7 +23,7 @@ globally injective, but all coordinates retained by those families fit in its 32
 
 namespace SLHDSA.Concrete
 
-open SLHDSA
+open SLHDSA ENNReal
 
 /-- Lift restricted injectivity of the list-valued `ADRSc` encoding to its fixed-width vector. -/
 theorem shaAdrsKey_injective_of_header_eq {a b : Adrs}
@@ -226,5 +226,92 @@ theorem shaPrimitives_d1TargetTweakSeparation :
     shaAdrsKey_injective_on_d1WotsTcrAddressSpace
     shaAdrsKey_injective_on_d1WotsPkAddresses
     shaAdrsKey_injective_on_d1XmssTreeAddresses
+
+/-! ## Concrete reduction certificate and headline bounds -/
+
+/-- Package the remaining probabilistic reduction obligations into the generic certificate for
+the supported SHA2-128-24 instance.  Parameter validity, WOTS encoding injectivity, and reachable
+`ADRSc` target separation are discharged by the concrete theorems above. -/
+def shaD1EufCmaReductionCertificate
+    (adv : EufCmaAdversary shaPrimitives)
+    {reds : D1ReductionAdversaries shaPrimitives}
+    (composition : D1CompositionCertificate slhdsaSha2_128_24
+      (concreteEufCmaAdvantage shaPrimitives adv) reds.advantages)
+    (openPreCounting : reds.OpenPreCountingStatement) :
+    D1EufCmaReductionCertificate shaPrimitives adv reds where
+  profile := Params.slhdsaSha2_128_24_d1SecurityProfile
+  wotsEncodingInjective := shaPrimitives_wotsMessageEncodingInjective
+  targetSeparation := shaPrimitives_d1TargetTweakSeparation
+  composition := composition
+  openPreCounting := openPreCounting
+
+/-- Concrete SHA2-128-24 EUF-CMA theorem.  Every representation-level condition is proved; the
+only inputs are the three program-level composition inequalities and the named OpenPRE fiber
+counting/coupling statement.  The WOTS coefficient specializes from `w - 2` to exactly `2`. -/
+theorem sha2_128_24_concreteEufCmaAdvantage_le_explicitLowLevelBound
+    (adv : EufCmaAdversary shaPrimitives)
+    (reds : D1ReductionAdversaries shaPrimitives)
+    (composition : D1CompositionCertificate slhdsaSha2_128_24
+      (concreteEufCmaAdvantage shaPrimitives adv) reds.advantages)
+    (openPreCounting : reds.OpenPreCountingStatement) :
+    concreteEufCmaAdvantage shaPrimitives adv ≤
+      (PRFScheme.prfAdvantageENNReal (skPrfScheme shaPrimitives) reds.skPrf +
+        PRFScheme.prfAdvantageENNReal (msgPrfScheme shaPrimitives) reds.msgPrf) +
+      (KeyedHash.ITSRAdvantage reds.hmsgItsr +
+        (TweakableHash.SM_DT_DSPR_Advantage
+            (TweakableHash.SM_DT_OpenPRE_toDSPR reds.forsOpenPre) +
+          3 * TweakableHash.SM_DT_TCR_Advantage
+            (TweakableHash.SM_DT_OpenPRE_toTCR reds.forsOpenPre)) +
+        TweakableHash.SM_DT_TCR_Advantage reds.forsTreeTcr +
+        TweakableHash.SM_DT_TCR_Advantage reds.forsRootsTcr) +
+      ((2 * TweakableHash.SM_DT_UD_Advantage reds.wotsUd +
+          TweakableHash.SM_DT_TCR_Advantage reds.wotsTcr +
+          TweakableHash.SM_DT_PRE_Advantage reds.wotsPre) +
+        TweakableHash.SM_DT_TCR_Advantage reds.wotsPkTcr +
+        TweakableHash.SM_DT_TCR_Advantage reds.xmssTreeTcr) := by
+  have h := concreteEufCmaAdvantage_le_explicitLowLevelBound shaPrimitives adv reds
+    (shaD1EufCmaReductionCertificate adv composition openPreCounting)
+  norm_num [Params.w, slhdsaSha2_128_24, ParameterSet.params] at h
+  have hcoef : (4 : ℝ≥0∞) - 2 = 2 := by
+    change ((4 : ℕ) : ℝ≥0∞) - ((2 : ℕ) : ℝ≥0∞) = ((2 : ℕ) : ℝ≥0∞)
+    rw [← ENNReal.natCast_sub]
+  rw [hcoef] at h
+  exact h
+
+/-- Most-general concrete SHA2-128-24 SUF-CMA theorem currently justified: the complete EUF-CMA
+hash/PRF bound plus the exact residual probability of a new valid signature on an already signed
+message.  Bounding that final term is precisely the extra scheme-specific property needed beyond
+the cited EUF proof. -/
+theorem sha2_128_24_concreteStrongEufCmaAdvantage_le_explicitLowLevelBound_add_sameMessage
+    (adv : StrongEufCmaAdversary shaPrimitives)
+    (reds : D1ReductionAdversaries shaPrimitives)
+    (composition : D1CompositionCertificate slhdsaSha2_128_24
+      (concreteEufCmaAdvantage shaPrimitives adv.toUnforgeableAdv) reds.advantages)
+    (openPreCounting : reds.OpenPreCountingStatement) :
+    concreteStrongEufCmaAdvantage shaPrimitives adv ≤
+      (PRFScheme.prfAdvantageENNReal (skPrfScheme shaPrimitives) reds.skPrf +
+        PRFScheme.prfAdvantageENNReal (msgPrfScheme shaPrimitives) reds.msgPrf) +
+      (KeyedHash.ITSRAdvantage reds.hmsgItsr +
+        (TweakableHash.SM_DT_DSPR_Advantage
+            (TweakableHash.SM_DT_OpenPRE_toDSPR reds.forsOpenPre) +
+          3 * TweakableHash.SM_DT_TCR_Advantage
+            (TweakableHash.SM_DT_OpenPRE_toTCR reds.forsOpenPre)) +
+        TweakableHash.SM_DT_TCR_Advantage reds.forsTreeTcr +
+        TweakableHash.SM_DT_TCR_Advantage reds.forsRootsTcr) +
+      ((2 * TweakableHash.SM_DT_UD_Advantage reds.wotsUd +
+          TweakableHash.SM_DT_TCR_Advantage reds.wotsTcr +
+          TweakableHash.SM_DT_PRE_Advantage reds.wotsPre) +
+        TweakableHash.SM_DT_TCR_Advantage reds.wotsPkTcr +
+        TweakableHash.SM_DT_TCR_Advantage reds.xmssTreeTcr) +
+      concreteSameMessageStrongAdvantage shaPrimitives adv := by
+  have h := concreteStrongEufCmaAdvantage_le_explicitLowLevelBound_add_sameMessage
+    shaPrimitives adv reds
+      (shaD1EufCmaReductionCertificate adv.toUnforgeableAdv composition openPreCounting)
+  norm_num [Params.w, slhdsaSha2_128_24, ParameterSet.params] at h
+  have hcoef : (4 : ℝ≥0∞) - 2 = 2 := by
+    change ((4 : ℕ) : ℝ≥0∞) - ((2 : ℕ) : ℝ≥0∞) = ((2 : ℕ) : ℝ≥0∞)
+    rw [← ENNReal.natCast_sub]
+  rw [hcoef] at h
+  exact h
 
 end SLHDSA.Concrete

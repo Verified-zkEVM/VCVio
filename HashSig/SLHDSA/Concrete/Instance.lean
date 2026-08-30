@@ -177,6 +177,10 @@ instance : SampleableType shaPrimitives.SkSeed := inferInstanceAs (SampleableTyp
 instance : SampleableType shaPrimitives.SkPrf := inferInstanceAs (SampleableType (Bytes 16))
 instance : SampleableType shaPrimitives.PkSeed := inferInstanceAs (SampleableType (Bytes 16))
 instance : SampleableType shaPrimitives.Y := inferInstanceAs (SampleableType (Bytes 16))
+instance : Inhabited shaPrimitives.Y := inferInstanceAs (Inhabited (Bytes 16))
+instance : Fintype shaPrimitives.Y := inferInstanceAs (Fintype (Bytes 16))
+instance : DecidableEq shaPrimitives.PkSeed := inferInstanceAs (DecidableEq (Bytes 16))
+instance : DecidableEq shaPrimitives.AdrsKey := inferInstanceAs (DecidableEq (Bytes 22))
 instance : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
 
 /-- **Perfect completeness at the concrete SHA2-128-24 bundle.** This specializes the
