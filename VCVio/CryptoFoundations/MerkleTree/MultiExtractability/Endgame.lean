@@ -41,20 +41,17 @@ constrained by `EndgameInvariant`. -/
 abbrev CheckpointCacheAssignment (config : Configuration Cfg Address) :=
   (tag : Cfg) → Checkpoint Query Y config tag → (Query →ₒ Y).QueryCache
 
-/-- Single-path evidence erased by storing only an acceptance bit in `OpeningAttempt`.
-`proof_generated` pins the path to the canonical addressed expansion of the attempt's pruned
-batch proof; `chain` is the semantic consequence of shared-cache acceptance. -/
+/-- Single-path evidence erased by storing only an acceptance bit in `OpeningAttempt`. `chain` is
+the semantic consequence of shared-cache acceptance; `disagrees` connects that actual accepted
+path to checkpoint extraction.  No unused pure hash algebra is retained in this interface. -/
 structure OpeningKernelEvidence
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     {config : Configuration Cfg Address} {tag : Cfg}
     (attempt : OpeningAttempt Query Y config tag)
     (terminalCache : (Query →ₒ Y).QueryCache) where
-  nodeHash : SkeletonInternalIndex (config.skeleton tag) → Y → Y → Y
   index : SkeletonLeafIndex (config.skeleton tag)
   selected : attempt.opening.selector.get index = true
   proof : List.Vector Y index.depth
-  proof_generated : proof = batchToSingleProofAddressed nodeHash
-    attempt.opening.values attempt.opening.proof index selected
   chain : MerkleTreeExtractability.ChainInCache model (config.addressKey tag) terminalCache
     (selectedValueAt attempt.opening.values index selected) attempt.checkpoint.root index proof
   disagrees :
