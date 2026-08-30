@@ -248,6 +248,34 @@ theorem concreteEufCmaAdvantage_le_lowLevelBound (adv : EufCmaAdversary prims)
   simpa [D1ReductionAdversaries.advantages] using
     TweakableHash.SM_DT_OpenPRE_le_TCR_DSPR reds.forsOpenPre cert.openPreCounting
 
+/-- Fully expanded version of the concrete low-level theorem.  This is the reviewer-facing
+statement of the exact primitive properties and coefficients: two PRFs, H_msg ITSR, FORS-leaf
+DSPR and TCR (with coefficient three), FORS tree/root TCR, WOTS UD/TCR/PRE (with coefficient
+`w - 2` on UD), WOTS-public-key TCR, and XMSS-tree TCR. -/
+theorem concreteEufCmaAdvantage_le_explicitLowLevelBound (adv : EufCmaAdversary prims)
+    (reds : D1ReductionAdversaries prims) (cert : D1EufCmaReductionCertificate prims adv reds) :
+    concreteEufCmaAdvantage prims adv ≤
+      (PRFScheme.prfAdvantageENNReal (skPrfScheme prims) reds.skPrf +
+        PRFScheme.prfAdvantageENNReal (msgPrfScheme prims) reds.msgPrf) +
+      (KeyedHash.ITSRAdvantage reds.hmsgItsr +
+        (TweakableHash.SM_DT_DSPR_Advantage
+            (TweakableHash.SM_DT_OpenPRE_toDSPR reds.forsOpenPre) +
+          3 * TweakableHash.SM_DT_TCR_Advantage
+            (TweakableHash.SM_DT_OpenPRE_toTCR reds.forsOpenPre)) +
+        TweakableHash.SM_DT_TCR_Advantage reds.forsTreeTcr +
+        TweakableHash.SM_DT_TCR_Advantage reds.forsRootsTcr) +
+      (((p.w - 2) * TweakableHash.SM_DT_UD_Advantage reds.wotsUd +
+          TweakableHash.SM_DT_TCR_Advantage reds.wotsTcr +
+          TweakableHash.SM_DT_PRE_Advantage reds.wotsPre) +
+        TweakableHash.SM_DT_TCR_Advantage reds.wotsPkTcr +
+        TweakableHash.SM_DT_TCR_Advantage reds.xmssTreeTcr) := by
+  simpa [D1ReductionAdversaries.advantages, D1ReductionAdversaries.openPreReductionTerms,
+    D1HighLevelTerms.withOpenPreReduction, D1HighLevelTerms.bound,
+    D1HighLevelTerms.prfBound, D1HighLevelTerms.mForsBound,
+    D1HighLevelTerms.xmssBound, D1HighLevelTerms.wotsBound,
+    D1OpenPreReductionTerms.bound] using
+    concreteEufCmaAdvantage_le_lowLevelBound prims adv reds cert
+
 /-! ## Strong-unforgeability corollary -/
 
 /-- Most-general concrete SUF-CMA statement currently justified by the source reduction.  The
@@ -264,6 +292,32 @@ theorem concreteStrongEufCmaAdvantage_le_lowLevelBound_add_sameMessage
         concreteSameMessageStrongAdvantage prims adv := by
   exact (concreteStrongEufCmaAdvantage_le_euf_add_sameMessage prims adv).trans
     (add_le_add (concreteEufCmaAdvantage_le_lowLevelBound prims
+      adv.toUnforgeableAdv reds cert) le_rfl)
+
+/-- Fully expanded SUF-CMA corollary.  It has exactly the EUF hash/PRF terms above plus the
+scheme-specific same-message/new-signature probability, making the additional property needed
+for a genuine SUF theorem syntactically visible. -/
+theorem concreteStrongEufCmaAdvantage_le_explicitLowLevelBound_add_sameMessage
+    (adv : StrongEufCmaAdversary prims) (reds : D1ReductionAdversaries prims)
+    (cert : D1EufCmaReductionCertificate prims adv.toUnforgeableAdv reds) :
+    concreteStrongEufCmaAdvantage prims adv ≤
+      (PRFScheme.prfAdvantageENNReal (skPrfScheme prims) reds.skPrf +
+        PRFScheme.prfAdvantageENNReal (msgPrfScheme prims) reds.msgPrf) +
+      (KeyedHash.ITSRAdvantage reds.hmsgItsr +
+        (TweakableHash.SM_DT_DSPR_Advantage
+            (TweakableHash.SM_DT_OpenPRE_toDSPR reds.forsOpenPre) +
+          3 * TweakableHash.SM_DT_TCR_Advantage
+            (TweakableHash.SM_DT_OpenPRE_toTCR reds.forsOpenPre)) +
+        TweakableHash.SM_DT_TCR_Advantage reds.forsTreeTcr +
+        TweakableHash.SM_DT_TCR_Advantage reds.forsRootsTcr) +
+      (((p.w - 2) * TweakableHash.SM_DT_UD_Advantage reds.wotsUd +
+          TweakableHash.SM_DT_TCR_Advantage reds.wotsTcr +
+          TweakableHash.SM_DT_PRE_Advantage reds.wotsPre) +
+        TweakableHash.SM_DT_TCR_Advantage reds.wotsPkTcr +
+        TweakableHash.SM_DT_TCR_Advantage reds.xmssTreeTcr) +
+      concreteSameMessageStrongAdvantage prims adv := by
+  exact (concreteStrongEufCmaAdvantage_le_euf_add_sameMessage prims adv).trans
+    (add_le_add (concreteEufCmaAdvantage_le_explicitLowLevelBound prims
       adv.toUnforgeableAdv reds cert) le_rfl)
 
 end ConcreteAdversaries
