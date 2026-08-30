@@ -203,6 +203,38 @@ def Adversary.TerminalOpeningEvidenceProperty
     AcceptedOpeningDisagreement model.view attempt →
     Nonempty (OpeningKernelEvidence model attempt z.2)
 
+/-- A supported terminal execution retains the complete cache-level batch run for every accepted
+attempt selected from its result list.  This is the generic support bridge used before applying
+the pure selected-path disagreement theorem. -/
+theorem Adversary.batchRunInCache_of_terminalExecution_support
+    [DecidableEq Query] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config)
+    (privateState : adversary.committer.State)
+    (state : ExtractorState Cfg Query Address Y config)
+    (cache : (Query →ₒ Y).QueryCache)
+    (z : Transcript Cfg Query Address Y config × (Query →ₒ Y).QueryCache)
+    (hz : z ∈ support ((simulateQ (Query →ₒ Y).cachingOracle
+      (adversary.terminalExecution model privateState state)).run cache))
+    (tag : Cfg) (attempt : OpeningAttempt Query Y config tag)
+    (hmem : (⟨tag, attempt⟩ : AnyOpeningAttempt Cfg Query Address Y config) ∈ z.1.attempts)
+    (haccepted : attempt.accepted = true) :
+    MerkleTreeBatchExtractability.BatchRunInCache model (config.addressKey tag) z.2
+      attempt.opening.values attempt.opening.proof attempt.checkpoint.root := by
+  unfold Adversary.terminalExecution at hz
+  rw [simulateQ_bind, StateT.run_bind, support_bind] at hz
+  simp only [Set.mem_iUnion] at hz
+  obtain ⟨⟨⟨claims, terminalSuffix⟩, cacheOpening⟩, hopening, hz⟩ := hz
+  rw [simulateQ_bind, StateT.run_bind, support_bind] at hz
+  simp only [Set.mem_iUnion] at hz
+  obtain ⟨⟨attempts, cacheFinal⟩, hverify, hz⟩ := hz
+  simp only [simulateQ_pure, StateT.run_pure, support_pure,
+    Set.mem_singleton_iff] at hz
+  subst z
+  exact batchRunInCache_of_mem_support_verifyClaims model claims cacheOpening cacheFinal attempts
+    hverify tag attempt hmem haccepted
+
 /-- Terminal execution always preserves its input extractor state, grows the shared cache, and
 leaves every terminal-opening log entry in the final cache. -/
 theorem Adversary.terminalTraceInvariant
