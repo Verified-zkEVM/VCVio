@@ -71,6 +71,22 @@ structure SecretKeyCore (core : CorePrimitives p) where
 abbrev SignatureCore (p : Params) (core : CorePrimitives p) :=
   core.Y × ForsSigCore p core × HtSigCore p core
 
+namespace SignatureCore
+
+variable {core : CorePrimitives p}
+
+/-- A signature has the fixed authentication-path shape prescribed by the parameters: every
+FORS tree contributes exactly `a` sibling nodes and the single `d = 1` XMSS layer contributes
+exactly `h'` sibling nodes. The remaining components are already length-indexed by their types. -/
+def IsWellFormed (sig : SignatureCore p core) : Prop :=
+  (∀ i : Fin p.k, (sig.2.1[i.val]).2.length = p.a) ∧ sig.2.2.2.length = p.hp
+
+instance (sig : SignatureCore p core) : Decidable sig.IsWellFormed := by
+  unfold IsWellFormed
+  infer_instance
+
+end SignatureCore
+
 /-! ### Message-digest split (FIPS 205 §9) -/
 
 /-- Split the message digest into the FORS message `md` and the hypertree leaf index `idxLeaf`
@@ -123,12 +139,24 @@ def slhSignInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
 def slhVerifyInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] [DecidableEq core.Y]
     (msg : List Byte) (sig : SignatureCore p core) (pk : PublicKeyCore core) : m Bool := do
-  let digest ← PublicHash.hmsg core sig.1 pk.pkSeed pk.pkRoot msg
-  let idxLeaf := (splitDigest p digest).2
-  let md := (splitDigest p digest).1
-  let fAdrs := forsAdrsOf idxLeaf
-  let forsPk ← forsPkFromSigM core sig.2.1 md pk.pkSeed fAdrs
-  htVerifyM core forsPk sig.2.2 pk.pkSeed Adrs.zero 0 idxLeaf pk.pkRoot
+  if sig.IsWellFormed then
+    let digest ← PublicHash.hmsg core sig.1 pk.pkSeed pk.pkRoot msg
+    let idxLeaf := (splitDigest p digest).2
+    let md := (splitDigest p digest).1
+    let fAdrs := forsAdrsOf idxLeaf
+    let forsPk ← forsPkFromSigM core sig.2.1 md pk.pkSeed fAdrs
+    htVerifyM core forsPk sig.2.2 pk.pkSeed Adrs.zero 0 idxLeaf pk.pkRoot
+  else
+    return false
+
+/-- A malformed signature is rejected before any public-hash query is issued. -/
+@[simp] theorem slhVerifyInternalM_of_not_isWellFormed
+    (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec core) m] [DecidableEq core.Y]
+    (msg : List Byte) (sig : SignatureCore p core) (pk : PublicKeyCore core)
+    (hsig : ¬ sig.IsWellFormed) :
+    slhVerifyInternalM core msg sig pk = (pure false : m Bool) := by
+  simp [slhVerifyInternalM, hsig]
 
 /-! ### Pure deterministic interpretations -/
 
@@ -154,6 +182,43 @@ def slhVerifyInternal (prims : Primitives p) [DecidableEq prims.Y] (msg : List B
     (sig : SignatureCore p prims.core) (pk : PublicKeyCore prims.core) : Bool :=
   simulateQ (PublicHash.impl prims)
     (slhVerifyInternalM prims.core msg sig pk : OracleComp (publicHashSpec prims.core) Bool)
+
+/-- Pure internal key generation computes the `d = 1` hypertree root and packages the seeds. -/
+theorem slhKeygenInternal_eq (prims : Primitives p)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
+    slhKeygenInternal prims skSeed skPrf pkSeed =
+      let pkRoot := htRoot prims skSeed pkSeed Adrs.zero 0
+      (⟨pkSeed, pkRoot⟩, ⟨skSeed, skPrf, pkSeed, pkRoot⟩) := by
+  simp only [slhKeygenInternal, slhKeygenInternalM, simulateQ_bind,
+    simulateQ_pure, simulateQ_htRootM]
+  rfl
+
+/-- Pure deterministic verification rejects malformed signatures. -/
+@[simp] theorem slhVerifyInternal_of_not_isWellFormed
+    (prims : Primitives p) [DecidableEq prims.Y] (msg : List Byte)
+    (sig : SignatureCore p prims.core) (pk : PublicKeyCore prims.core)
+    (hsig : ¬ sig.IsWellFormed) :
+    slhVerifyInternal prims msg sig pk = false := by
+  rw [slhVerifyInternal]
+  rw [slhVerifyInternalM_of_not_isWellFormed prims.core msg sig pk hsig]
+  rfl
+
+/-- On a well-formed signature, pure verification follows Algorithm 20 after the format guard. -/
+theorem slhVerifyInternal_of_isWellFormed
+    (prims : Primitives p) [DecidableEq prims.Y] (msg : List Byte)
+    (sig : SignatureCore p prims.core) (pk : PublicKeyCore prims.core)
+    (hsig : sig.IsWellFormed) :
+    slhVerifyInternal prims msg sig pk =
+      let digest := prims.Hmsg sig.1 pk.pkSeed pk.pkRoot msg
+      let idxLeaf := (splitDigest p digest).2
+      let md := (splitDigest p digest).1
+      let fAdrs := forsAdrsOf idxLeaf
+      let forsPk := forsPkFromSig prims sig.2.1 md pk.pkSeed fAdrs
+      htVerify prims forsPk sig.2.2 pk.pkSeed Adrs.zero 0 idxLeaf pk.pkRoot := by
+  simp only [slhVerifyInternal, slhVerifyInternalM, hsig, if_pos, simulateQ_bind,
+    PublicHash.simulateQ_hmsg, simulateQ_forsPkFromSigM,
+    simulateQ_htVerifyM]
+  rfl
 
 /-! ### Naturality -/
 
@@ -202,8 +267,10 @@ theorem slhVerifyInternalM_natural (core : CorePrimitives p)
     (msg : List Byte) (sig : SignatureCore p core) (pk : PublicKeyCore core) :
     F.toMonadHom (slhVerifyInternalM core msg sig pk) =
       slhVerifyInternalM core msg sig pk := by
-  simp [slhVerifyInternalM, queryHom_hmsg core F,
-    forsPkFromSigM_natural core F, htVerifyM_natural core F]
+  by_cases hsig : sig.IsWellFormed
+  · simp [slhVerifyInternalM, hsig, queryHom_hmsg core F,
+      forsPkFromSigM_natural core F, htVerifyM_natural core F]
+  · simp [slhVerifyInternalM, hsig]
 
 /-! ### Structural query bounds -/
 
@@ -226,6 +293,27 @@ def slhVerifyInternalQueryBound (p : Params) (core : CorePrimitives p)
     (sig : SignatureCore p core) : ℕ :=
   1 + ((∑ i : Fin p.k, (fun j : Fin p.k => 1 + (sig.2.1[j.val]).2.length) i) + 1) +
     (p.len * (p.w - 1) + 1 + sig.2.2.2.length)
+
+/-- For a well-formed signature, the verification schedule has a parameter-only bound: one
+`H_msg`, `k` FORS leaf/path recoveries and one `T_k`, then WOTS+/XMSS recovery. -/
+theorem slhVerifyInternalQueryBound_eq_of_isWellFormed
+    (p : Params) (core : CorePrimitives p) (sig : SignatureCore p core)
+    (hsig : sig.IsWellFormed) :
+    slhVerifyInternalQueryBound p core sig =
+      1 + (p.k * (p.a + 1) + 1) + (p.len * (p.w - 1) + 1 + p.hp) := by
+  have hsum :
+      (∑ i : Fin p.k, (fun j : Fin p.k => 1 + (sig.2.1[j.val]).2.length) i) =
+        p.k * (p.a + 1) := by
+    calc
+      (∑ i : Fin p.k, (fun j : Fin p.k => 1 + (sig.2.1[j.val]).2.length) i) =
+          ∑ _ : Fin p.k, (p.a + 1) := by
+            apply Finset.sum_congr rfl
+            intro i _
+            change 1 + (sig.2.1[i.val]).2.length = p.a + 1
+            rw [hsig.1 i]
+            omega
+      _ = p.k * (p.a + 1) := by simp
+  simp [slhVerifyInternalQueryBound, hsum, hsig.2]
 
 private theorem publicHash_hmsg_isTotalQueryBound_one (core : CorePrimitives p)
     (r : core.Y) (pkSeed : core.PkSeed) (pkRoot : core.Y) (msg : List Byte) :
@@ -322,14 +410,27 @@ theorem slhVerifyInternalM_isTotalQueryBound (core : CorePrimitives p) [Decidabl
     IsTotalQueryBound
       (slhVerifyInternalM core msg sig pk : OracleComp (publicHashSpec core) Bool)
       (slhVerifyInternalQueryBound p core sig) := by
-  have hbound := isTotalQueryBound_bind
-    (publicHash_hmsg_isTotalQueryBound_one core sig.1 pk.pkSeed pk.pkRoot msg) fun digest =>
-      isTotalQueryBound_bind
-        (forsPkFromSigM_isTotalQueryBound core sig.2.1 (splitDigest p digest).1 pk.pkSeed
-          (forsAdrsOf (splitDigest p digest).2)) fun forsPk =>
-            htVerifyM_isTotalQueryBound_coarse core forsPk sig.2.2 pk.pkSeed Adrs.zero 0
-              (splitDigest p digest).2 pk.pkRoot
-  simpa [slhVerifyInternalM, slhVerifyInternalQueryBound, Nat.add_assoc] using hbound
+  by_cases hsig : sig.IsWellFormed
+  · have hbound := isTotalQueryBound_bind
+      (publicHash_hmsg_isTotalQueryBound_one core sig.1 pk.pkSeed pk.pkRoot msg) fun digest =>
+        isTotalQueryBound_bind
+          (forsPkFromSigM_isTotalQueryBound core sig.2.1 (splitDigest p digest).1 pk.pkSeed
+            (forsAdrsOf (splitDigest p digest).2)) fun forsPk =>
+              htVerifyM_isTotalQueryBound_coarse core forsPk sig.2.2 pk.pkSeed Adrs.zero 0
+                (splitDigest p digest).2 pk.pkRoot
+    simpa [slhVerifyInternalM, hsig, slhVerifyInternalQueryBound, Nat.add_assoc] using hbound
+  · simp [slhVerifyInternalM, hsig, IsTotalQueryBound]
+
+/-- Well-formed verification inherits the parameter-only structural query budget. -/
+theorem slhVerifyInternalM_isTotalQueryBound_of_isWellFormed
+    (core : CorePrimitives p) [DecidableEq core.Y]
+    (msg : List Byte) (sig : SignatureCore p core) (pk : PublicKeyCore core)
+    (hsig : sig.IsWellFormed) :
+    IsTotalQueryBound
+      (slhVerifyInternalM core msg sig pk : OracleComp (publicHashSpec core) Bool)
+      (1 + (p.k * (p.a + 1) + 1) + (p.len * (p.w - 1) + 1 + p.hp)) := by
+  simpa [slhVerifyInternalQueryBound_eq_of_isWellFormed p core sig hsig] using
+    slhVerifyInternalM_isTotalQueryBound core msg sig pk
 
 /-! ### Deterministic interpretations -/
 
@@ -387,6 +488,47 @@ theorem simulateQ_slhVerifyInternalM (prims : Primitives p) [DecidableEq prims.Y
           OracleComp (publicHashSpec prims.core) Bool) =
       slhVerifyInternal prims msg sig pk := rfl
 
+/-- The pure internal signer follows the same literal FIPS schedule as its oracle program. -/
+theorem slhSignInternal_eq (prims : Primitives p)
+    (msg : List Byte) (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
+    slhSignInternal prims msg sk addrnd =
+      let R := prims.PRFmsg sk.skPrf addrnd msg
+      let digest := prims.Hmsg R sk.pkSeed sk.pkRoot msg
+      let idxLeaf := (splitDigest p digest).2
+      let md := (splitDigest p digest).1
+      let fAdrs := forsAdrsOf idxLeaf
+      let forsSig := forsSign prims md sk.skSeed sk.pkSeed fAdrs
+      let forsPk := forsPkFromSig prims forsSig md sk.pkSeed fAdrs
+      let htSig := htSign prims forsPk sk.skSeed sk.pkSeed Adrs.zero 0 idxLeaf
+      (R, forsSig, htSig) := by
+  simp only [slhSignInternal, slhSignInternalM, simulateQ_bind, simulateQ_pure,
+    PublicHash.simulateQ_hmsg, simulateQ_forsSignM, simulateQ_forsPkFromSigM,
+    simulateQ_htSignM]
+  rfl
+
+/-- Every honestly generated internal signature has the fixed authentication-path shape
+prescribed by the parameters. -/
+theorem slhSignInternal_isWellFormed (prims : Primitives p)
+    (msg : List Byte) (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
+    (slhSignInternal prims msg sk addrnd).IsWellFormed := by
+  rw [slhSignInternal_eq]
+  simp [SignatureCore.IsWellFormed,
+    htSign_eq_xmssSign, xmssSign_eq_pair,
+    PerfectMerkleTree.authPath_length]
+
+private theorem slhVerifyInternal_slhSignInternal_aux
+    (prims : Primitives p) [DecidableEq prims.Y]
+    (msg : List Byte) (skSeed : prims.SkSeed) (skPrf : prims.SkPrf)
+    (pkSeed : prims.PkSeed) (addrnd : prims.Y) :
+    slhVerifyInternal prims msg
+        (slhSignInternal prims msg (slhKeygenInternal prims skSeed skPrf pkSeed).2 addrnd)
+        (slhKeygenInternal prims skSeed skPrf pkSeed).1 = true := by
+  have hformat := slhSignInternal_isWellFormed prims msg
+    (slhKeygenInternal prims skSeed skPrf pkSeed).2 addrnd
+  rw [slhVerifyInternal_of_isWellFormed prims msg _ _ hformat]
+  rw [slhSignInternal_eq, slhKeygenInternal_eq]
+  exact htVerify_htSign prims _ skSeed pkSeed Adrs.zero 0 _ (splitDigest_snd_lt p _)
+
 /-- Fixed-answer correctness of the canonical internal programs. Key generation, signing, and
 verification use one total deterministic answer function. This theorem does not install or make
 a claim about random-oracle caching. -/
@@ -399,13 +541,17 @@ theorem simulateQ_slhVerifyInternalM_slhSignInternalM_withPublicHash
       let (pk, sk) ← slhKeygenInternalM core skSeed skPrf pkSeed
       let sig ← slhSignInternalM core msg sk addrnd
       slhVerifyInternalM core msg sig pk) = true := by
-  simp only [slhKeygenInternalM, slhSignInternalM, slhVerifyInternalM,
-    simulateQ_bind, simulateQ_pure,
-    simulateQ_htRootM_withPublicHash, simulateQ_forsSignM_withPublicHash,
-    simulateQ_forsPkFromSigM_withPublicHash, simulateQ_htSignM_withPublicHash,
-    simulateQ_htVerifyM_withPublicHash]
-  exact htVerify_htSign (PublicHash.withPublicHash core answer) _ skSeed pkSeed Adrs.zero 0 _
-    (splitDigest_snd_lt p _)
+  simp only [simulateQ_bind, simulateQ_slhKeygenInternalM_withPublicHash,
+    simulateQ_slhSignInternalM_withPublicHash,
+    simulateQ_slhVerifyInternalM_withPublicHash]
+  change slhVerifyInternal (PublicHash.withPublicHash core answer) msg
+      (slhSignInternal (PublicHash.withPublicHash core answer) msg
+        (slhKeygenInternal (PublicHash.withPublicHash core answer)
+          skSeed skPrf pkSeed).2 addrnd)
+      (slhKeygenInternal (PublicHash.withPublicHash core answer)
+        skSeed skPrf pkSeed).1 = true
+  exact slhVerifyInternal_slhSignInternal_aux (PublicHash.withPublicHash core answer)
+    msg skSeed skPrf pkSeed addrnd
 
 /-- **Deterministic correctness core**: an honestly generated signature verifies, for every
 choice of seeds, randomizer, and deterministic public-hash implementation. -/
@@ -415,14 +561,7 @@ theorem slhVerifyInternal_slhSignInternal (prims : Primitives p) [DecidableEq pr
     slhVerifyInternal prims msg
         (slhSignInternal prims msg (slhKeygenInternal prims skSeed skPrf pkSeed).2 addrnd)
         (slhKeygenInternal prims skSeed skPrf pkSeed).1 = true := by
-  have h := simulateQ_slhVerifyInternalM_slhSignInternalM_withPublicHash
-    prims.core (PublicHash.impl prims) msg skSeed skPrf pkSeed addrnd
-  change ((do
-    let (pk, sk) ← slhKeygenInternal prims skSeed skPrf pkSeed
-    let sig ← slhSignInternal prims msg sk addrnd
-    slhVerifyInternal prims msg sig pk) : Id Bool) = true
-  simpa only [simulateQ_bind, simulateQ_slhKeygenInternalM,
-    simulateQ_slhSignInternalM, simulateQ_slhVerifyInternalM] using h
+  exact slhVerifyInternal_slhSignInternal_aux prims msg skSeed skPrf pkSeed addrnd
 
 /-! ### External-message encoding (FIPS 205 §10) -/
 

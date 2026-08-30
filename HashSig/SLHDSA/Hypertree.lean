@@ -283,6 +283,16 @@ theorem simulateQ_htSignM_withPublicHash (core : CorePrimitives p)
       htSign (PublicHash.withPublicHash core answer) msg sk pk adrs idxTree idxLeaf := by
   simp [htSign, PublicHash.impl_withPublicHash]
 
+/-- Canonical deterministic-handler parity for `d = 1` hypertree signing. -/
+@[simp]
+theorem simulateQ_htSignM (prims : Primitives p)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (idxTree idxLeaf : ℕ) :
+    simulateQ (PublicHash.impl prims)
+        (htSignM prims.core msg sk pk adrs idxTree idxLeaf :
+          OracleComp (publicHashSpec prims.core) (HtSigCore p prims.core)) =
+      htSign prims msg sk pk adrs idxTree idxLeaf := rfl
+
 @[simp]
 theorem simulateQ_htRootM_withPublicHash (core : CorePrimitives p)
     (answer : QueryImpl (publicHashSpec core) Id)
@@ -291,6 +301,15 @@ theorem simulateQ_htRootM_withPublicHash (core : CorePrimitives p)
         (htRootM core sk pk adrs idxTree : OracleComp (publicHashSpec core) core.Y) =
       htRoot (PublicHash.withPublicHash core answer) sk pk adrs idxTree := by
   simp [htRoot, PublicHash.impl_withPublicHash]
+
+/-- Canonical deterministic-handler parity for `d = 1` hypertree root generation. -/
+@[simp]
+theorem simulateQ_htRootM (prims : Primitives p)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (idxTree : ℕ) :
+    simulateQ (PublicHash.impl prims)
+        (htRootM prims.core sk pk adrs idxTree :
+          OracleComp (publicHashSpec prims.core) prims.Y) =
+      htRoot prims sk pk adrs idxTree := rfl
 
 @[simp]
 theorem simulateQ_htPkFromSigM_withPublicHash (core : CorePrimitives p)
@@ -313,6 +332,16 @@ theorem simulateQ_htVerifyM_withPublicHash (core : CorePrimitives p)
           OracleComp (publicHashSpec core) Bool) =
       htVerify (PublicHash.withPublicHash core answer) msg sig pk adrs idxTree idxLeaf pkRoot := by
   simp [htVerify, PublicHash.impl_withPublicHash]
+
+/-- Canonical deterministic-handler parity for `d = 1` hypertree verification. -/
+@[simp]
+theorem simulateQ_htVerifyM (prims : Primitives p) [DecidableEq prims.Y]
+    (msg : prims.Y) (sig : HtSigCore p prims.core) (pk : prims.PkSeed)
+    (adrs : Adrs) (idxTree idxLeaf : ℕ) (pkRoot : prims.Y) :
+    simulateQ (PublicHash.impl prims)
+        (htVerifyM prims.core msg sig pk adrs idxTree idxLeaf pkRoot :
+          OracleComp (publicHashSpec prims.core) Bool) =
+      htVerify prims msg sig pk adrs idxTree idxLeaf pkRoot := rfl
 
 /-! ### Correctness -/
 
