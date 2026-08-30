@@ -233,6 +233,8 @@ program-level component reductions, and the isolated OpenPRE counting lemma. -/
 structure D1EufCmaReductionCertificate (adv : EufCmaAdversary prims)
     (reds : D1ReductionAdversaries prims) where
   profile : p.D1SecurityProfile
+  /-- Distinct XMSS/WOTS node messages have distinct full-width message-digit encodings. -/
+  wotsEncodingInjective : prims.core.WotsMessageEncodingInjective
   targetSeparation : Primitives.D1TargetTweakSeparation prims
   composition : D1CompositionCertificate p (concreteEufCmaAdvantage prims adv) reds.advantages
   openPreCounting : reds.OpenPreCountingStatement
