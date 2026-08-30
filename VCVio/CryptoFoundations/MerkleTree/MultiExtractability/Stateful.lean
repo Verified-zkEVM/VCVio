@@ -7,8 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Extractor
-public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Map
-public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Opening
 
 /-!
 # Stateful transcript extraction for Merkle batch openings
@@ -49,41 +48,6 @@ universe u v w
 
 variable {Cfg : Type u} {Query : Type v} {Address : Type w} {Y Z : Type}
 variable {s : Skeleton}
-
-/-! ## Dependent batch openings -/
-
-/-- A nonempty, intrinsically path-pruned batch opening for a fixed skeleton.
-
-The selector determines both dependent payload fields.  No explicit nonemptiness proof is stored:
-`BatchProof` has no constructor at a selector whose `anySelected` value is `false`. -/
-structure BatchOpening (Y : Type) (s : Skeleton) where
-  /-- Dense selector for the leaves opened by this claim. -/
-  selector : LeafData Bool s
-  /-- Claimed values at exactly the selected leaves. -/
-  values : SelectedValues Y selector
-  /-- Canonical-shape pruned authentication data. -/
-  proof : BatchProof Y selector
-
-/-- Every packaged batch opening selects at least one leaf. -/
-theorem BatchOpening.anySelected (opening : BatchOpening Y s) :
-    opening.selector.anySelected = true :=
-  opening.proof.anySelected_of_batchProof
-
-/-- Map both observable payloads of a batch opening, preserving its selector. -/
-def BatchOpening.map (f : Y → Z) (opening : BatchOpening Y s) : BatchOpening Z s where
-  selector := opening.selector
-  values := opening.values.map f
-  proof := opening.proof.map f
-
-@[simp]
-theorem BatchOpening.map_selector (f : Y → Z) (opening : BatchOpening Y s) :
-    (opening.map f).selector = opening.selector := rfl
-
-@[simp]
-theorem BatchOpening.map_id (opening : BatchOpening Y s) :
-    opening.map id = opening := by
-  cases opening
-  simp only [BatchOpening.map, SelectedValues.map_id, BatchProof.map_id]
 
 /-! ## Configurations and commitment checkpoints -/
 
@@ -325,10 +289,11 @@ def HasCheckpointTerminalExtractionDisagreement [DecidableEq Address] [Decidable
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (terminalLog : MerkleTreeExtractor.QueryLog Query Y) : Prop :=
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y) : Prop :=
   ∃ tag checkpoint,
     ⟨tag, checkpoint⟩ ∈ state.checkpoints ∧
-    CheckpointTerminalExtractionDisagreement view checkpoint terminalLog
+    CheckpointTerminalExtractionDisagreement view checkpoint
+      (state.terminalLog terminalSuffix)
 
 /-- Deterministic bad event for stateful multi-commitment batch extraction. -/
 def Failure [DecidableEq Address] [DecidableEq Y]
@@ -336,19 +301,19 @@ def Failure [DecidableEq Address] [DecidableEq Y]
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
     (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
-    (terminalLog : MerkleTreeExtractor.QueryLog Query Y) : Prop :=
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y) : Prop :=
   HasAcceptedOpeningDisagreement view state attempts ∨
     HasEqualRootExtractionDisagreement view state ∨
-      HasCheckpointTerminalExtractionDisagreement view state terminalLog
+      HasCheckpointTerminalExtractionDisagreement view state terminalSuffix
 
 theorem Failure.ofAcceptedOpeningDisagreement [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
     (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
-    (terminalLog : MerkleTreeExtractor.QueryLog Query Y)
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
     (h : HasAcceptedOpeningDisagreement view state attempts) :
-    Failure view state attempts terminalLog :=
+    Failure view state attempts terminalSuffix :=
   Or.inl h
 
 theorem Failure.ofEqualRootExtractionDisagreement [DecidableEq Address] [DecidableEq Y]
@@ -356,9 +321,9 @@ theorem Failure.ofEqualRootExtractionDisagreement [DecidableEq Address] [Decidab
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
     (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
-    (terminalLog : MerkleTreeExtractor.QueryLog Query Y)
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
     (h : HasEqualRootExtractionDisagreement view state) :
-    Failure view state attempts terminalLog :=
+    Failure view state attempts terminalSuffix :=
   Or.inr (Or.inl h)
 
 theorem Failure.ofCheckpointTerminalExtractionDisagreement
@@ -367,9 +332,9 @@ theorem Failure.ofCheckpointTerminalExtractionDisagreement
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
     (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
-    (terminalLog : MerkleTreeExtractor.QueryLog Query Y)
-    (h : HasCheckpointTerminalExtractionDisagreement view state terminalLog) :
-    Failure view state attempts terminalLog :=
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
+    (h : HasCheckpointTerminalExtractionDisagreement view state terminalSuffix) :
+    Failure view state attempts terminalSuffix :=
   Or.inr (Or.inr h)
 
 /-- With no recorded commitments, none of the three deterministic failure branches can occur. -/
@@ -377,9 +342,9 @@ theorem not_failure_empty [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
-    (terminalLog : MerkleTreeExtractor.QueryLog Query Y) :
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y) :
     ¬ Failure view (ExtractorState.empty : ExtractorState Cfg Query Address Y config)
-      attempts terminalLog := by
+      attempts terminalSuffix := by
   simp [Failure, HasAcceptedOpeningDisagreement, HasEqualRootExtractionDisagreement,
     HasCheckpointTerminalExtractionDisagreement]
 
@@ -396,7 +361,7 @@ private def canaryConfig : Configuration Unit Bool where
 
 private def canaryCheckpoint : Checkpoint (Bool × (Nat × Nat)) Nat canaryConfig () where
   root := 7
-  cumulativeLog := [⟨(false, (2, 3)), 7⟩]
+  cumulativeLog := [⟨(true, (11, 13)), 7⟩, ⟨(false, (2, 3)), 7⟩]
 
 /-- The checkpoint extractor uses the matching address and preserves ordered query children.
 

@@ -37,13 +37,34 @@ shared log containing `keyCount` populated complete queries. -/
 def sharedTargetCount (nodeBudget checkpointCount keyCount : ℕ) : ℕ :=
   min nodeBudget (2 * keyCount + checkpointCount)
 
-/-- Exact adaptive-prefix potential for multi-extractability. `verifierOverhead` counts honest
-suffix queries separately from the adversary's remaining two-phase query budget. -/
-def multiExtractabilityPotential
+/-- Existing terminal-suffix potential. This charges target hits only after the adaptive prefix
+has terminated and is therefore suitable for a single checkpoint, but not by itself for
+checkpoint evolution during a multi-commitment prefix. -/
+def terminalSuffixPotential
     (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) : ℕ :=
   adaptivePrefixPotential
     (sharedTargetCount nodeBudget checkpointCount)
     verifierOverhead remaining cached
+
+/-- Multi-checkpoint stopping energy after `prefixMisses` fresh inputs. In addition to cache
+collision terms, the shared target set is charged against the entire remaining adversarial budget:
+a later commitment query may hit a target of an earlier checkpoint even before the terminal
+opening suffix begins. -/
+def multiCheckpointEnergy
+    (nodeBudget checkpointCount verifierOverhead remaining cached prefixMisses : ℕ) : ℕ :=
+  prefixMisses * cached + prefixMisses.choose 2 +
+    sharedTargetCount nodeBudget checkpointCount (cached + prefixMisses) *
+      (remaining + verifierOverhead)
+
+/-- Finite maximum of the multi-checkpoint energy over every feasible number of fresh prefix
+inputs. A probability theorem consuming this budget must separately prove the checkpoint-aware
+stopping lemma; unlike `terminalSuffixPotential`, this definition does not silently reuse the
+single-checkpoint adaptive-prefix theorem. -/
+def multiExtractabilityPotential
+    (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) : ℕ :=
+  (Finset.range (remaining + 1)).sup fun prefixMisses =>
+    multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead remaining cached
+      prefixMisses
 
 /-- Unrelaxed shared-ROM error numerator from an empty cache. -/
 def multiExtractabilityROMErrorNumerator
@@ -60,9 +81,9 @@ theorem multiExtractabilityROMErrorNumerator_eq_sup
       (Finset.range (queryBound + 1)).sup fun prefixMisses =>
         prefixMisses.choose 2 +
           min nodeBudget (2 * prefixMisses + checkpointCount) *
-            (queryBound - prefixMisses + verifierOverhead) := by
+            (queryBound + verifierOverhead) := by
   simp [multiExtractabilityROMErrorNumerator, multiExtractabilityPotential,
-    adaptivePrefixPotential, adaptivePrefixEnergy, sharedTargetCount]
+    multiCheckpointEnergy, sharedTargetCount]
 
 /-- Shared extraction never exposes more candidates than the total node budget. -/
 theorem sharedTargetCount_le_nodeBudget
@@ -93,9 +114,7 @@ theorem multiExtractabilityROMErrorNumerator_le_coarse
     Nat.choose_le_choose 2 hmisses
   have htarget : min nodeBudget (2 * prefixMisses + checkpointCount) ≤ nodeBudget :=
     Nat.min_le_left _ _
-  have hremaining : queryBound - prefixMisses + verifierOverhead ≤
-      queryBound + verifierOverhead := by omega
-  exact Nat.add_le_add hchoose (Nat.mul_le_mul htarget hremaining)
+  exact Nat.add_le_add hchoose (Nat.mul_le_mul_right _ htarget)
 
 /-- A still simpler quadratic relaxation, useful when a consumer does not want binomial
 coefficients in its public statement. -/
