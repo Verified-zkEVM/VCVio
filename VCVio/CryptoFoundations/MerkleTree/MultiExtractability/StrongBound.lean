@@ -544,9 +544,8 @@ theorem strongFailure_rom_bound_of_freshTarget
     (adversary.terminalStrongBound_of_freshTarget model nodeBudget checkpointCount
       verifierOverhead terminalQueryBound hterminalBound hfresh)
 
-/-- Strongest verifier-facing theorem: it remains only to supply the support-level selected-path
-evidence exported by honest batch verification.  All probability, cache evolution, checkpoint
-stability, and failure-branch reasoning is discharged internally. -/
+/-- Verifier-evidence interface retained as a reusable decomposition boundary. Honest batch
+verification discharges this premise unconditionally below. -/
 theorem strongFailure_rom_bound_of_openingEvidence
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
@@ -640,6 +639,66 @@ theorem strongFailure_rom_bound_schedule_of_openingEvidence_and_queryBounds
         hopening hverifier)
       (adversary.terminalFreshTargetProperty_of_openingEvidence model hevidence))
 
+/-- **Strongest fully discharged theorem in the current executable model.**
+
+Commitment rounds may have heterogeneous public query budgets, terminal adversarial work and
+honest verification are accounted separately, and the full strong failure event includes
+accepted value-or-proof disagreement, equal-root checkpoint disagreement, and terminal extraction
+evolution. The remaining limitation is explicit: this is a per-round schedule theorem, not yet
+the single overall-adversarial-`q` residual-budget theorem. -/
+theorem strongFailure_rom_bound_schedule_of_queryBounds
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query)
+    (phaseQueryBound : ℕ → ℕ)
+    (terminalQueryBound nodeBudget checkpointCount verifierOverhead perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState)
+        (phaseQueryBound round))
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) terminalQueryBound)
+    (hverifier : adversary.HasVerifierQueryBound verifierOverhead)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (hnodes : rounds * perCheckpoint ≤ nodeBudget)
+    (hcheckpoints : rounds ≤ checkpointCount) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator nodeBudget checkpointCount verifierOverhead
+        (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) : ENNReal) *
+          (Nat.card Y : ENNReal)⁻¹ :=
+  strongFailure_rom_bound_schedule_of_openingEvidence_and_queryBounds model config rounds
+    adversary paddingQuery phaseQueryBound terminalQueryBound nodeBudget checkpointCount
+    verifierOverhead perCheckpoint hcommit hopening hverifier hconfig hnodes hcheckpoints
+    (adversary.terminalOpeningEvidenceProperty model)
+
+/-- Uniform-phase corollary of the fully discharged scheduled theorem. -/
+theorem strongFailure_rom_bound_of_queryBounds
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query)
+    (phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead
+      perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState) phaseQueryBound)
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) terminalQueryBound)
+    (hverifier : adversary.HasVerifierQueryBound verifierOverhead)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (hnodes : rounds * perCheckpoint ≤ nodeBudget)
+    (hcheckpoints : rounds ≤ checkpointCount) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator nodeBudget checkpointCount verifierOverhead
+        (rounds * phaseQueryBound + terminalQueryBound) : ENNReal) *
+          (Nat.card Y : ENNReal)⁻¹ := by
+  simpa using strongFailure_rom_bound_schedule_of_queryBounds model config rounds adversary
+    paddingQuery (fun _ => phaseQueryBound) terminalQueryBound nodeBudget checkpointCount
+    verifierOverhead perCheckpoint hcommit hopening hverifier hconfig hnodes hcheckpoints
+
 /-- Exact uniform-shape specialization of the scheduled game-level theorem. -/
 theorem strongFailure_rom_bound_exact
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
@@ -661,6 +720,30 @@ theorem strongFailure_rom_bound_exact
   strongFailure_rom_bound model config rounds adversary paddingQuery phaseQueryBound
     terminalQueryBound (rounds * perCheckpoint) rounds verifierOverhead perCheckpoint
     hcommit hconfig le_rfl le_rfl hterminal
+
+/-- Fully discharged exact uniform-shape corollary: one checkpoint per round and a uniform
+per-checkpoint node envelope. -/
+theorem strongFailure_rom_bound_exact_of_queryBounds
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query)
+    (phaseQueryBound terminalQueryBound verifierOverhead perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState) phaseQueryBound)
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) terminalQueryBound)
+    (hverifier : adversary.HasVerifierQueryBound verifierOverhead)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator (rounds * perCheckpoint) rounds verifierOverhead
+        (rounds * phaseQueryBound + terminalQueryBound) : ENNReal) *
+          (Nat.card Y : ENNReal)⁻¹ :=
+  strongFailure_rom_bound_of_queryBounds model config rounds adversary paddingQuery
+    phaseQueryBound terminalQueryBound (rounds * perCheckpoint) rounds verifierOverhead
+    perCheckpoint hcommit hopening hverifier hconfig le_rfl le_rfl
 
 /-- The public textbook failure event inherits the finite-maximum bound. -/
 theorem publicFailure_rom_bound
@@ -716,5 +799,91 @@ theorem strongFailure_rom_bound_quadratic
   refine hstrong.trans (mul_le_mul_of_nonneg_right ?_ zero_le)
   exact_mod_cast multiExtractabilitySafeNumerator_le_quadratic nodeBudget checkpointCount
     verifierOverhead queryBound
+
+/-- The public/textbook two-branch event is a direct corollary of the fully discharged scheduled
+strong theorem. -/
+theorem publicFailure_rom_bound_schedule_of_queryBounds
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query) (phaseQueryBound : ℕ → ℕ)
+    (terminalQueryBound nodeBudget checkpointCount verifierOverhead perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState)
+        (phaseQueryBound round))
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) terminalQueryBound)
+    (hverifier : adversary.HasVerifierQueryBound verifierOverhead)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (hnodes : rounds * perCheckpoint ≤ nodeBudget)
+    (hcheckpoints : rounds ≤ checkpointCount) :
+    Pr[ PublicFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator nodeBudget checkpointCount verifierOverhead
+        (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) : ENNReal) *
+          (Nat.card Y : ENNReal)⁻¹ :=
+  publicFailure_rom_bound model config rounds adversary nodeBudget checkpointCount
+    verifierOverhead (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound)
+    (strongFailure_rom_bound_schedule_of_queryBounds model config rounds adversary paddingQuery
+      phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead
+      perCheckpoint hcommit hopening hverifier hconfig hnodes hcheckpoints)
+
+/-- Coarse binomial relaxation derived from the fully discharged scheduled theorem. -/
+theorem strongFailure_rom_bound_schedule_coarse_of_queryBounds
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query) (phaseQueryBound : ℕ → ℕ)
+    (terminalQueryBound nodeBudget checkpointCount verifierOverhead perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState)
+        (phaseQueryBound round))
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) terminalQueryBound)
+    (hverifier : adversary.HasVerifierQueryBound verifierOverhead)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (hnodes : rounds * perCheckpoint ≤ nodeBudget)
+    (hcheckpoints : rounds ≤ checkpointCount) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (((commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound).choose 2 +
+          nodeBudget * (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound +
+            verifierOverhead) : ℕ) : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
+  strongFailure_rom_bound_coarse model config rounds adversary nodeBudget checkpointCount
+    verifierOverhead (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound)
+    (strongFailure_rom_bound_schedule_of_queryBounds model config rounds adversary paddingQuery
+      phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead
+      perCheckpoint hcommit hopening hverifier hconfig hnodes hcheckpoints)
+
+/-- Quadratic relaxation derived from the fully discharged scheduled theorem. -/
+theorem strongFailure_rom_bound_schedule_quadratic_of_queryBounds
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query) (phaseQueryBound : ℕ → ℕ)
+    (terminalQueryBound nodeBudget checkpointCount verifierOverhead perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState)
+        (phaseQueryBound round))
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) terminalQueryBound)
+    (hverifier : adversary.HasVerifierQueryBound verifierOverhead)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (hnodes : rounds * perCheckpoint ≤ nodeBudget)
+    (hcheckpoints : rounds ≤ checkpointCount) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (((commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) *
+          (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) +
+        nodeBudget * (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound +
+          verifierOverhead) : ℕ) : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
+  strongFailure_rom_bound_quadratic model config rounds adversary nodeBudget checkpointCount
+    verifierOverhead (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound)
+    (strongFailure_rom_bound_schedule_of_queryBounds model config rounds adversary paddingQuery
+      phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead
+      perCheckpoint hcommit hopening hverifier hconfig hnodes hcheckpoints)
 
 end MerkleTreeMultiExtractability
