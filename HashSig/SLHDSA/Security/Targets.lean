@@ -42,6 +42,37 @@ def perfectInternalCoords : ℕ → List (ℕ × ℕ)
       simp [perfectInternalCoords, ih, pow_succ]
       omega
 
+theorem perfectInternalCoords_height_pos {h : ℕ} {zi : ℕ × ℕ}
+    (hmem : zi ∈ perfectInternalCoords h) : 0 < zi.1 := by
+  induction h with
+  | zero => simp [perfectInternalCoords] at hmem
+  | succ h ih =>
+      simp only [perfectInternalCoords, List.mem_append, List.mem_map] at hmem
+      rcases hmem with ⟨i, _, rfl⟩ | ⟨zi, hzi, rfl⟩
+      · simp
+      · exact Nat.succ_pos zi.1
+
+/-- Internal perfect-tree coordinates are never repeated. -/
+theorem perfectInternalCoords_nodup (h : ℕ) :
+    (perfectInternalCoords h).Nodup := by
+  induction h with
+  | zero => simp [perfectInternalCoords]
+  | succ h ih =>
+      rw [perfectInternalCoords, List.nodup_append]
+      refine ⟨?_, ?_, ?_⟩
+      · exact List.nodup_range.map (fun _ _ hpair => Prod.mk.inj hpair |>.2)
+      · exact ih.map (fun _ _ hpair => by
+          have hfst := congrArg Prod.fst hpair
+          have hsnd := congrArg Prod.snd hpair
+          exact Prod.ext (Nat.succ.inj hfst) hsnd)
+      · intro x hxLeft y hxRight hxy
+        obtain ⟨i, _, rfl⟩ := List.mem_map.mp hxLeft
+        obtain ⟨zi, hzi, rfl⟩ := List.mem_map.mp hxRight
+        have hheight := congrArg Prod.fst hxy
+        have hpos := perfectInternalCoords_height_pos hzi
+        simp only at hheight
+        omega
+
 namespace Params
 
 /-- Every FORS secret-leaf target address, before concrete address encoding. -/
@@ -276,6 +307,17 @@ theorem d1WotsPkAddresses_nodup (p : Params) :
 @[simp] theorem d1XmssTreeAddresses_length (p : Params) :
     p.d1XmssTreeAddresses.length = p.d1TargetProfile.xmssTree := by
   simp [d1XmssTreeAddresses, d1TargetProfile, d1LeafCount]
+
+/-- XMSS internal-node addresses are structurally duplicate-free before concrete compression. -/
+theorem d1XmssTreeAddresses_nodup (p : Params) :
+    p.d1XmssTreeAddresses.Nodup := by
+  apply List.Nodup.map_on (d := perfectInternalCoords_nodup p.hp)
+  intro zi _ zj _ hadrs
+  apply Prod.ext
+  · simpa [xmssNodeAdrs, Adrs.setTreeHeight, Adrs.setTreeIndex,
+      Adrs.setTypeAndClear, Adrs.zero] using congrArg Adrs.word2 hadrs
+  · simpa [xmssNodeAdrs, Adrs.setTreeHeight, Adrs.setTreeIndex,
+      Adrs.setTypeAndClear, Adrs.zero] using congrArg Adrs.word3 hadrs
 
 end Params
 
