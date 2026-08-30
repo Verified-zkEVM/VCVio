@@ -31,8 +31,8 @@ This matches the finite input type in the EasyCrypt development.
 ## References
 
 - Barbosa, Dupressoir, Hülsing, Meijers and Strub, *A Tight Security Proof for SPHINCS+, Formally
-  Verified*, [ePrint 2024/910](https://eprint.iacr.org/2024/910), Fig. 10 and the EasyCrypt theory
-  `TweakableHashFunctions.SMDTDSPR`.
+  Verified*, [ePrint 2024/910](https://eprint.iacr.org/2024/910), and its EasyCrypt theory
+  `TweakableHashFunctions.SMDTDSPR` in `proofs/TweakableHashFunctions.eca`.
 - Hülsing and Kudinov, *Recovering the Tight Security Proof of SPHINCS+*,
   [ePrint 2022/346](https://eprint.iacr.org/2022/346).
 - Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for Post-Quantum Ethereum*,
