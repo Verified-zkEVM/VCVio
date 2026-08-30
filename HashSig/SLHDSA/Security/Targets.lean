@@ -451,6 +451,37 @@ structure D1TargetTweakSeparation (prims : Primitives p) : Prop where
   wotsPk : prims.d1WotsPkTweaks.Nodup
   xmssTree : prims.d1XmssTreeTweaks.Nodup
 
+/-- Build the exact game-facing separation certificate from injectivity of the concrete address
+encoding on each reachable target family.  The structural `Nodup` facts are unconditional and
+proved above; consequently a concrete SHA instantiation need only reason about the information
+retained by `ADRSc` on these seven restricted domains. -/
+theorem D1TargetTweakSeparation.ofInjOn (prims : Primitives p)
+    (hForsLeaf : ∀ a ∈ p.d1ForsLeafAddresses, ∀ b ∈ p.d1ForsLeafAddresses,
+      prims.adrsToKey a = prims.adrsToKey b → a = b)
+    (hForsTree : ∀ a ∈ p.d1ForsTreeAddresses, ∀ b ∈ p.d1ForsTreeAddresses,
+      prims.adrsToKey a = prims.adrsToKey b → a = b)
+    (hForsRoots : ∀ a ∈ p.d1ForsRootsAddresses, ∀ b ∈ p.d1ForsRootsAddresses,
+      prims.adrsToKey a = prims.adrsToKey b → a = b)
+    (hWotsPre : ∀ messageAt : ℕ → prims.Y,
+      ∀ a ∈ p.d1WotsPreAddresses prims.core messageAt,
+        ∀ b ∈ p.d1WotsPreAddresses prims.core messageAt,
+          prims.adrsToKey a = prims.adrsToKey b → a = b)
+    (hWotsTcr : ∀ a ∈ p.d1WotsTcrAddressSpace, ∀ b ∈ p.d1WotsTcrAddressSpace,
+      prims.adrsToKey a = prims.adrsToKey b → a = b)
+    (hWotsPk : ∀ a ∈ p.d1WotsPkAddresses, ∀ b ∈ p.d1WotsPkAddresses,
+      prims.adrsToKey a = prims.adrsToKey b → a = b)
+    (hXmssTree : ∀ a ∈ p.d1XmssTreeAddresses, ∀ b ∈ p.d1XmssTreeAddresses,
+      prims.adrsToKey a = prims.adrsToKey b → a = b) :
+    D1TargetTweakSeparation prims where
+  forsLeaf := prims.encodeTargets_nodup_of_injOn _ p.d1ForsLeafAddresses_nodup hForsLeaf
+  forsTree := prims.encodeTargets_nodup_of_injOn _ p.d1ForsTreeAddresses_nodup hForsTree
+  forsRoots := prims.encodeTargets_nodup_of_injOn _ p.d1ForsRootsAddresses_nodup hForsRoots
+  wotsPre messageAt := prims.encodeTargets_nodup_of_injOn _
+    (p.d1WotsPreAddresses_nodup prims.core messageAt) (hWotsPre messageAt)
+  wotsTcr := prims.encodeTargets_nodup_of_injOn _ p.d1WotsTcrAddressSpace_nodup hWotsTcr
+  wotsPk := prims.encodeTargets_nodup_of_injOn _ p.d1WotsPkAddresses_nodup hWotsPk
+  xmssTree := prims.encodeTargets_nodup_of_injOn _ p.d1XmssTreeAddresses_nodup hXmssTree
+
 @[simp] theorem d1ForsLeafTweaks_length (prims : Primitives p) :
     prims.d1ForsLeafTweaks.length = p.d1TargetProfile.forsLeaf := by
   simp [d1ForsLeafTweaks, encodeTargets]
