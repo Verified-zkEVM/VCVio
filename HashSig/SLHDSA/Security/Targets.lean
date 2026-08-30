@@ -34,6 +34,7 @@ def perfectInternalCoords : ℕ → List (ℕ × ℕ)
       (List.range (2 ^ h)).map (fun i => (1, i)) ++
         (perfectInternalCoords h).map (fun zi => (zi.1 + 1, zi.2))
 
+/-- A perfect binary tree of height `h` has exactly `2^h - 1` internal coordinates. -/
 @[simp] theorem perfectInternalCoords_length (h : ℕ) :
     (perfectInternalCoords h).length = 2 ^ h - 1 := by
   induction h with
@@ -143,6 +144,7 @@ def d1WotsPkAddresses (p : Params) : List Adrs :=
 def d1XmssTreeAddresses (p : Params) : List Adrs :=
   (perfectInternalCoords p.hp).map fun zi => xmssNodeAdrs Adrs.zero zi.1 zi.2
 
+/-- The FORS-leaf address enumeration realizes the exact target-profile count. -/
 @[simp] theorem d1ForsLeafAddresses_length (p : Params) :
     p.d1ForsLeafAddresses.length = p.d1TargetProfile.forsLeaf := by
   simp [d1ForsLeafAddresses, d1TargetProfile, d1LeafCount, Nat.mul_assoc]
@@ -188,6 +190,7 @@ theorem d1ForsLeafAddresses_nodup (p : Params) :
   simpa [coords, List.product, d1ForsLeafAddresses, List.map_flatMap,
     List.flatMap_map, List.flatMap_assoc, List.map_map, Function.comp_def] using hmapped
 
+/-- The FORS-tree address enumeration realizes the exact target-profile count. -/
 @[simp] theorem d1ForsTreeAddresses_length (p : Params) :
     p.d1ForsTreeAddresses.length = p.d1TargetProfile.forsTree := by
   simp [d1ForsTreeAddresses, d1TargetProfile, d1LeafCount, t, Nat.mul_assoc]
@@ -246,6 +249,7 @@ theorem d1ForsTreeAddresses_nodup (p : Params) :
   simpa [coords, List.product, d1ForsTreeAddresses, List.map_flatMap,
     List.flatMap_map, List.flatMap_assoc, List.map_map, Function.comp_def] using hmapped
 
+/-- The FORS-root-compression enumeration realizes the exact target-profile count. -/
 @[simp] theorem d1ForsRootsAddresses_length (p : Params) :
     p.d1ForsRootsAddresses.length = p.d1TargetProfile.forsRoots := by
   simp [d1ForsRootsAddresses, d1TargetProfile, d1LeafCount]
@@ -260,6 +264,7 @@ theorem d1ForsRootsAddresses_nodup (p : Params) :
   simpa [forsPkAdrs, forsAdrsOf, Adrs.getKeyPairAddress, Adrs.setKeyPairAddress,
     Adrs.setTypeAndClear, Adrs.setTreeAddress, Adrs.zero] using hword
 
+/-- A message-dependent WOTS PRE transcript never exceeds its target-profile cap. -/
 theorem d1WotsPreAddresses_length_le (p : Params) (core : CorePrimitives p)
     (messageAt : ℕ → core.Y) :
     (p.d1WotsPreAddresses core messageAt).length ≤ p.d1TargetProfile.wotsPre := by
@@ -326,6 +331,7 @@ theorem d1WotsPreAddresses_nodup (p : Params) (core : CorePrimitives p)
   simpa [coords, encode, List.product, d1WotsPreAddresses, List.flatMap_map,
     List.flatMap_assoc, Function.comp_def] using hencoded
 
+/-- The reachable WOTS chain-step space stays within the source proof's loose TCR cap. -/
 theorem d1WotsTcrAddressSpace_length_le (p : Params) :
     p.d1WotsTcrAddressSpace.length ≤ p.d1TargetProfile.wotsTcr := by
   simp only [d1WotsTcrAddressSpace, List.length_flatMap, List.length_map,
@@ -367,6 +373,7 @@ theorem d1WotsTcrAddressSpace_nodup (p : Params) :
   simpa [coords, List.product, d1WotsTcrAddressSpace, List.map_flatMap,
     List.flatMap_map, List.flatMap_assoc, List.map_map, Function.comp_def] using hmapped
 
+/-- The WOTS public-key-compression enumeration realizes the exact target-profile count. -/
 @[simp] theorem d1WotsPkAddresses_length (p : Params) :
     p.d1WotsPkAddresses.length = p.d1TargetProfile.wotsPk := by
   simp [d1WotsPkAddresses, d1TargetProfile, d1LeafCount]
@@ -380,6 +387,7 @@ theorem d1WotsPkAddresses_nodup (p : Params) :
   simpa [wotsPkAdrs, wotsLeafAdrs, Adrs.getKeyPairAddress, Adrs.setKeyPairAddress,
     Adrs.setTypeAndClear, Adrs.zero] using hword
 
+/-- The XMSS-tree address enumeration realizes the exact target-profile count. -/
 @[simp] theorem d1XmssTreeAddresses_length (p : Params) :
     p.d1XmssTreeAddresses.length = p.d1TargetProfile.xmssTree := by
   simp [d1XmssTreeAddresses, d1TargetProfile, d1LeafCount]
