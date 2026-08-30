@@ -366,11 +366,41 @@ theorem Adversary.terminalStrongBound_of_freshTarget
         terminalQueryBound terminalCached)
   · exact zero_le
 
-/-- **Strongest game-level finite-maximum theorem.**
+/-- **Scheduled game-level finite-maximum theorem.**
 
 The adversary may choose configuration tags, roots, and terminal batch selectors adaptively.
 Every phase shares one cached homogeneous random oracle.  The hypotheses expose exactly the
 uniform structural resources required for a finite public bound. -/
+theorem strongFailure_rom_bound_schedule
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query)
+    (phaseQueryBound : ℕ → ℕ)
+    (terminalQueryBound nodeBudget checkpointCount verifierOverhead perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState)
+        (phaseQueryBound round))
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (hnodes : rounds * perCheckpoint ≤ nodeBudget)
+    (hcheckpoints : rounds ≤ checkpointCount)
+    (hterminal : adversary.TerminalStrongBound model nodeBudget checkpointCount
+      verifierOverhead terminalQueryBound) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator nodeBudget checkpointCount verifierOverhead
+        (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) : ENNReal) *
+          (Nat.card Y : ENNReal)⁻¹ := by
+  have hraw := adversary.committer.probEvent_runFromEmptyThen_le model.view config
+    (adversary.terminalExecution model) (StrongFailure model) paddingQuery
+    phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead
+    hcommit perCheckpoint hconfig hterminal rounds hnodes hcheckpoints
+  rw [extractabilityGame, OracleSpec.withCacheOverlay, StateT.run'_eq,
+    extractabilityInner_eq_runFromEmptyThen, probEvent_map]
+  simpa [Function.comp_def] using hraw
+
+/-- Uniform-phase specialization of `strongFailure_rom_bound_schedule`. -/
 theorem strongFailure_rom_bound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
@@ -391,16 +421,12 @@ theorem strongFailure_rom_bound
       (multiExtractabilitySafeNumerator nodeBudget checkpointCount verifierOverhead
         (rounds * phaseQueryBound + terminalQueryBound) : ENNReal) *
           (Nat.card Y : ENNReal)⁻¹ := by
-  have hraw := adversary.committer.probEvent_runFromEmptyThen_le model.view config
-    (adversary.terminalExecution model) (StrongFailure model) paddingQuery
-    phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead
-    hcommit perCheckpoint hconfig hterminal rounds hnodes hcheckpoints
-  rw [extractabilityGame, OracleSpec.withCacheOverlay, StateT.run'_eq,
-    extractabilityInner_eq_runFromEmptyThen, probEvent_map]
-  simpa [Function.comp_def] using hraw
+  simpa using strongFailure_rom_bound_schedule model config rounds adversary paddingQuery
+    (fun _ => phaseQueryBound) terminalQueryBound nodeBudget checkpointCount verifierOverhead
+    perCheckpoint hcommit hconfig hnodes hcheckpoints hterminal
 
-/-- Game-level theorem with no probabilistic terminal premise.  A structural query bound and the
-support-wise fresh-target reduction imply the strongest finite-maximum ROM bound. -/
+/-- Uniform-phase game theorem with no probabilistic terminal premise. A structural query bound
+and the support-wise fresh-target reduction imply the finite-maximum ROM bound. -/
 theorem strongFailure_rom_bound_of_freshTarget
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
@@ -490,7 +516,42 @@ theorem strongFailure_rom_bound_of_openingEvidence_and_queryBounds
       hopening hverifier)
     hevidence
 
-/-- Exact uniform-shape specialization of the strongest game-level theorem. -/
+/-- Strongest currently executable resource theorem: heterogeneous commitment budgets are summed
+exactly, while terminal opening work and honest verification remain separately bounded. This is
+still a public schedule theorem, not the future single overall-`q` residual-budget theorem. -/
+theorem strongFailure_rom_bound_schedule_of_openingEvidence_and_queryBounds
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query)
+    (phaseQueryBound : ℕ → ℕ)
+    (terminalQueryBound nodeBudget checkpointCount verifierOverhead perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState)
+        (phaseQueryBound round))
+    (hopening : ∀ privateState extractorState,
+      IsTotalQueryBound (adversary.opening privateState extractorState) terminalQueryBound)
+    (hverifier : adversary.HasVerifierQueryBound verifierOverhead)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (hnodes : rounds * perCheckpoint ≤ nodeBudget)
+    (hcheckpoints : rounds ≤ checkpointCount)
+    (hevidence : adversary.TerminalOpeningEvidenceProperty model) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator nodeBudget checkpointCount verifierOverhead
+        (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) : ENNReal) *
+          (Nat.card Y : ENNReal)⁻¹ :=
+  strongFailure_rom_bound_schedule model config rounds adversary paddingQuery phaseQueryBound
+    terminalQueryBound nodeBudget checkpointCount verifierOverhead perCheckpoint hcommit hconfig
+    hnodes hcheckpoints
+    (adversary.terminalStrongBound_of_freshTarget model nodeBudget checkpointCount
+      verifierOverhead terminalQueryBound
+      (adversary.terminalExecution_isTotalQueryBound model terminalQueryBound verifierOverhead
+        hopening hverifier)
+      (adversary.terminalFreshTargetProperty_of_openingEvidence model hevidence))
+
+/-- Exact uniform-shape specialization of the scheduled game-level theorem. -/
 theorem strongFailure_rom_bound_exact
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
@@ -512,7 +573,7 @@ theorem strongFailure_rom_bound_exact
     terminalQueryBound (rounds * perCheckpoint) rounds verifierOverhead perCheckpoint
     hcommit hconfig le_rfl le_rfl hterminal
 
-/-- The public textbook failure event inherits the strongest finite-maximum bound. -/
+/-- The public textbook failure event inherits the finite-maximum bound. -/
 theorem publicFailure_rom_bound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
@@ -529,7 +590,7 @@ theorem publicFailure_rom_bound
         queryBound : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
   publicFailure_bound_of_strongFailure_bound model config rounds adversary _ hstrong
 
-/-- Coarse binomial corollary of the strongest finite-maximum bound. -/
+/-- Coarse binomial corollary of the finite-maximum bound. -/
 theorem strongFailure_rom_bound_coarse
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
@@ -548,7 +609,7 @@ theorem strongFailure_rom_bound_coarse
   exact_mod_cast multiExtractabilitySafeNumerator_le_coarse nodeBudget checkpointCount
     verifierOverhead queryBound
 
-/-- Quadratic corollary of the strongest finite-maximum bound. -/
+/-- Quadratic corollary of the finite-maximum bound. -/
 theorem strongFailure_rom_bound_quadratic
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]

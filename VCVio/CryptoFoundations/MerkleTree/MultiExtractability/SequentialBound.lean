@@ -14,7 +14,7 @@ public import VCVio.OracleComp.QueryTracking.ReservedBudget
 # Sequential Composition of Stateful Merkle Phases
 
 This module composes the one-phase predictable-target theorem across a fixed number of commitment
-rounds. A uniform local phase bound is converted into one global adversarial budget. The proof-only
+rounds. A public per-round schedule is summed over the executed round interval. The proof-only
 `reserveQueries` continuation reserves the exact budget of later phases, allowing the stopping
 induction to expose a residual counter even though the executable terminal strategy may depend on
 the accumulated extractor state.
@@ -40,9 +40,25 @@ def SequentialCommitter.runCommitmentsThen
     committer.runCommitments rounds firstRound privateState extractorState
   finish finalPrivateState finalExtractorState
 
+/-- Exact adversarial query budget for `rounds` consecutive commitment phases beginning at
+`firstRound`, allowing a different public budget at every round. -/
+def commitmentQueryBudget (phaseBudget : ℕ → ℕ) : ℕ → ℕ → ℕ
+  | 0, _ => 0
+  | rounds + 1, firstRound =>
+      phaseBudget firstRound + commitmentQueryBudget phaseBudget rounds (firstRound + 1)
+
+/-- A constant phase schedule recovers the former uniform `rounds * phaseBudget` accounting. -/
+@[simp]
+theorem commitmentQueryBudget_const (phaseBudget rounds firstRound : ℕ) :
+    commitmentQueryBudget (fun _ => phaseBudget) rounds firstRound = rounds * phaseBudget := by
+  induction rounds generalizing firstRound with
+  | zero => simp [commitmentQueryBudget]
+  | succ rounds ih =>
+      simp [commitmentQueryBudget, ih, Nat.succ_mul, Nat.add_comm]
+
 /-- **Sequential predictable-target composition theorem.**
 
-The strongest form keeps one shared cache, one global node/checkpoint envelope, and one safe
+The scheduled form keeps one shared cache, one global node/checkpoint envelope, and one safe
 potential across every phase. `finish` is abstract: the next module instantiates its pointwise
 terminal bound with opening production and honest addressed batch verification. -/
 theorem SequentialCommitter.probEvent_runCommitmentsThen_le
@@ -55,10 +71,10 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_le
       OracleComp (Query →ₒ Y) R)
     (win : R → Prop)
     (paddingQuery : Query)
-    (phaseQueryBound terminalQueryBound : ℕ)
+    (phaseQueryBound : ℕ → ℕ) (terminalQueryBound : ℕ)
     (nodeBudget checkpointCount verifierOverhead : ℕ)
     (hcommit : ∀ round privateState,
-      IsTotalQueryBound (committer.commit round privateState) phaseQueryBound)
+      IsTotalQueryBound (committer.commit round privateState) (phaseQueryBound round))
     (perCheckpoint : ℕ)
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
     (hfinish : ∀ privateState
@@ -86,7 +102,8 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_le
     (cache : (Query →ₒ Y).QueryCache)
     (log : (Query →ₒ Y).QueryLog)
     (remaining cachedBound : ℕ)
-    (hbudget : rounds * phaseQueryBound + terminalQueryBound ≤ remaining)
+    (hbudget : commitmentQueryBudget phaseQueryBound rounds firstRound +
+      terminalQueryBound ≤ remaining)
     (hstateLog : extractorState.cumulativeLog = log)
     (hno : ¬ CacheHasCollision cache)
     (hcacheBound : ∃ keys : Finset Query,
@@ -113,7 +130,8 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_le
         simpa using hcheckpoints
       have hterminal := hfinish privateState extractorState cachedBound cache log
         hstateLog hno hcacheBound hlogCache hcacheLog hstable hnodes0 hcheckpoints0
-      have hremaining : terminalQueryBound ≤ remaining := by simpa using hbudget
+      have hremaining : terminalQueryBound ≤ remaining := by
+        simpa [commitmentQueryBudget] using hbudget
       have hbase : Pr[ fun z => win z.1 |
           (simulateQ (Query →ₒ Y).cachingOracle
             (committer.runCommitmentsThen 0 firstRound privateState extractorState finish)).run
@@ -129,7 +147,8 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_le
       · exact zero_le
   | succ rounds ih =>
       subst log
-      let futureBudget := rounds * phaseQueryBound + terminalQueryBound
+      let futureBudget := commitmentQueryBudget phaseQueryBound rounds (firstRound + 1) +
+        terminalQueryBound
       unfold SequentialCommitter.runCommitmentsThen
       simp only [SequentialCommitter.runCommitments]
       rw [bind_assoc]
@@ -154,7 +173,7 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_le
       · apply (isTotalQueryBound_bind (hcommit firstRound privateState)
           (fun _ => reserveQueries_isTotalQueryBound paddingQuery futureBudget)).mono
         dsimp only [futureBudget]
-        simpa [Nat.succ_mul, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hbudget
+        simpa only [commitmentQueryBudget, Nat.add_assoc] using hbudget
       · exact hno
       · exact hcacheBound
       · exact hlogCache
