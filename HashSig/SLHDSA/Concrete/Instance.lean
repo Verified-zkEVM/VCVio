@@ -124,6 +124,18 @@ def shaPrimitives : Primitives slhdsaSha2_128_24 where
   Hmsg := shaHmsg
   yToBytes := fun y => y
 
+/-- The supported SHA2-128-24 WOTS message encoding is injective.  Its 16-byte node is encoded as
+exactly 64 base-4 digits, so `base2b` consumes all 128 bits and performs no truncation. -/
+theorem shaPrimitives_wotsMessageEncodingInjective :
+    shaPrimitives.core.WotsMessageEncodingInjective := by
+  intro x y h
+  apply Vector.toList_inj.mp
+  apply base2b_two_injective_of_length 16
+  · exact x.2
+  · exact y.2
+  · simpa [wotsMsgDigitsCore, shaPrimitives, slhdsaSha2_128_24,
+      ParameterSet.params, Params.len1] using h
+
 /-! ### Fixed-width signature decoding (FIPS 205 Fig 17 wire format) -/
 
 /-- Decode the 3856-byte signature `R ‖ SIG_FORS ‖ SIG_HT` (FORS: `k` trees of
