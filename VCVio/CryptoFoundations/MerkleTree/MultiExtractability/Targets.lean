@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Stateful
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Potential
 import Mathlib.Data.Finset.Card
 
 /-!
@@ -250,5 +251,18 @@ theorem ExtractorState.targetSet_card_le_min
       min state.totalNodeBudget (2 * keys.card + state.checkpoints.length) :=
   (Nat.le_min).2 ⟨ExtractorState.targetSet_card_le_totalNodeBudget view state,
     ExtractorState.targetSet_card_le_querySupport view state cache keys hsupport⟩
+
+/-- Semantic form of the shared target-count function used by the safe online potential. -/
+theorem ExtractorState.targetSet_card_le_sharedTargetCount
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (cache : Query → Option Y) (keys : Finset Query)
+    (hsupport : state.CacheKeysInvariant cache keys) :
+    (state.targetSet view).card ≤
+      sharedTargetCount state.totalNodeBudget state.checkpoints.length keys.card := by
+  simpa only [sharedTargetCount] using
+    state.targetSet_card_le_min view cache keys hsupport
 
 end MerkleTreeMultiExtractability
