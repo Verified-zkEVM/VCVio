@@ -44,6 +44,57 @@ theorem adaptivePrefixRunFrom_eq_withQueryLog
   rw [map_eq_bind_pure_comp, bind_assoc]
   simp only [pure_bind, Function.comp_apply]
 
+/-- Executable `withQueryLog` form of the stable online phase theorem.  The abstract continuation
+is used only for structural query accounting; `suffix` is the computation actually executed
+after the logged prefix. -/
+theorem probEvent_withQueryLog_stablePhase_le
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (prefixComp : OracleComp (Query →ₒ Y) S)
+    (suffix : S → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
+    {C : Type} (continuation : S → OracleComp (Query →ₒ Y) C)
+    (win : R → Prop) (nodeBudget checkpointCount overhead remaining cached : ℕ)
+    (hbound : IsTotalQueryBound (prefixComp >>= continuation) remaining)
+    (cache : (Query →ₒ Y).QueryCache) (log : (Query →ₒ Y).QueryLog)
+    (hno : ¬ CacheHasCollision cache)
+    (hcacheBound : ∃ keys : Finset Query, keys.card ≤ cached ∧
+      ∀ input, cache input ≠ none → input ∈ keys)
+    (hlogCache : ∀ entry ∈ log, cache entry.1 = some entry.2)
+    (hcacheLog : ∀ input value, cache input = some value →
+      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value)
+    (hstable : state.StableAt view log)
+    (hnodeBudget : state.totalNodeBudget ≤ nodeBudget)
+    (hcheckpointCount : state.checkpoints.length ≤ checkpointCount)
+    (hterminal : ∀ (x : S) (terminalRemaining terminalCached : ℕ)
+        (terminalCache : (Query →ₒ Y).QueryCache)
+        (terminalLog : (Query →ₒ Y).QueryLog),
+      IsTotalQueryBound (continuation x) terminalRemaining →
+      ¬ CacheHasCollision terminalCache →
+      (∃ keys : Finset Query, keys.card ≤ terminalCached ∧
+        ∀ input, terminalCache input ≠ none → input ∈ keys) →
+      (∀ entry ∈ terminalLog, terminalCache entry.1 = some entry.2) →
+      (∀ input value, terminalCache input = some value →
+        ∃ entry ∈ terminalLog, entry.1 = input ∧ entry.2 = value) →
+      state.StableAt view terminalLog →
+      Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
+          (suffix x terminalLog)).run terminalCache] ≤
+        (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+          terminalRemaining terminalCached : ENNReal) *
+            (Nat.card Y : ENNReal)⁻¹) :
+    Pr[ fun z => win z.1 |
+      (simulateQ (Query →ₒ Y).cachingOracle
+        (prefixComp.withQueryLog >>= fun phaseResult =>
+          suffix phaseResult.1 (log ++ phaseResult.2))).run cache] ≤
+      (multiExtractabilitySafePotential nodeBudget checkpointCount overhead remaining cached :
+        ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
+  rw [← adaptivePrefixRunFrom_eq_withQueryLog prefixComp suffix cache log]
+  exact probEvent_stablePhaseRunFrom_le view state suffix continuation win
+    nodeBudget checkpointCount overhead prefixComp remaining cached hbound cache log
+    hno hcacheBound hlogCache hcacheLog hstable hnodeBudget hcheckpointCount hterminal
+
 /-- A raw commitment phase followed by cumulative-log recording has exactly the same cached
 semantics as the executable `withQueryLog` phase followed by suffix recording. -/
 theorem adaptivePrefixRunFrom_commit_eq
