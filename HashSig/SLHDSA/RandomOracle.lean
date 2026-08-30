@@ -246,6 +246,26 @@ noncomputable def runtime (core : CorePrimitives p)
     ProbCompRuntime (OracleComp (unifSpec + publicHashSpec core)) :=
   runtimeWithCache core ∅
 
+/-- Deterministic public-hash runtime for concrete security games.  Uniform queries retain their
+ordinary probabilistic meaning, while every `Thash`/`H_msg` query is answered by the supplied
+primitive bundle.  Unlike `runtime`, this runtime contains no lazy random-oracle cache. -/
+noncomputable def concreteRuntime (prims : Primitives p) :
+    ProbCompRuntime (OracleComp (unifSpec + publicHashSpec prims.core)) where
+  toSPMFSemantics :=
+    { Sem := ProbComp
+      instMonadSem := inferInstance
+      interpret := simulateQ' (unifFwdAnswerImpl (PublicHash.impl prims))
+      observe := fun mx => liftM mx }
+  toProbCompLift := ProbCompLift.ofMonadLift _
+
+/-- The deterministic runtime observes a whole oracle computation by one simulation with
+`unifFwdAnswerImpl`.  In particular, key generation, adversary calls, signing queries, and final
+verification all use the same concrete primitive bundle. -/
+@[simp] theorem concreteRuntime_evalSPMF (prims : Primitives p)
+    {α : Type} (oa : OracleComp (unifSpec + publicHashSpec prims.core) α) :
+    (concreteRuntime prims).evalSPMF oa =
+      (liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims)) oa) : SPMF α) := rfl
+
 end PublicHash
 
 /-! ### End-to-end shared-ROM completeness -/
