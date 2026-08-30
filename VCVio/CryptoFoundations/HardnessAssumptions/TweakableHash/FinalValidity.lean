@@ -113,7 +113,6 @@ theorem finalValidityInvariant_initial (numTargets : ℕ) (tweakOf : Q → Tweak
     FinalValidityInvariant numTargets tweakOf (.initial : FinalValidityState Q Tweak) := by
   simp [FinalValidityInvariant, FinalValidityState.initial, FinalValidBool]
 
-set_option linter.flexible false in
 /-- Recording a target query preserves exact correspondence between the poison bit and the source
 final predicate. -/
 theorem FinalValidityInvariant.recordTarget (numTargets : ℕ) (tweakOf : Q → Tweak)
@@ -124,23 +123,32 @@ theorem FinalValidityInvariant.recordTarget (numTargets : ℕ) (tweakOf : Q → 
   simp only [FinalValidityInvariant, FinalValidityState.recordTarget] at hinv ⊢
   rw [hinv]
   apply Bool.eq_iff_iff.mpr
-  simp [FinalValidBool, TweakFresh, TweakReserved, List.nodup_append]
-  constructor
-  · rintro ⟨⟨⟨⟨hlen, hnodup⟩, hdisjoint⟩, hlt⟩, hfresh, hnotColl⟩
-    refine ⟨⟨hlt, hnodup, hfresh⟩, ?_⟩
-    intro a ha b hb
-    rcases ha with ⟨x, hx, rfl⟩ | rfl
-    · exact hdisjoint x hx b hb
-    · intro heq
-      exact hnotColl (heq ▸ hb)
-  · rintro ⟨⟨hlt, hnodup, hfresh⟩, hdisjoint⟩
-    refine ⟨⟨⟨⟨Nat.le_of_lt hlt, hnodup⟩, ?_⟩, hlt⟩, hfresh, ?_⟩
-    · intro x hx b hb
-      exact hdisjoint (tweakOf x) (Or.inl ⟨x, hx, rfl⟩) b hb
-    · intro hmem
-      exact hdisjoint (tweakOf q) (Or.inr rfl) (tweakOf q) hmem rfl
+  have hcore :
+      ((((challenges.length ≤ numTargets ∧ (challenges.map tweakOf).Nodup) ∧
+          ∀ a ∈ challenges, ∀ b ∈ collectionTweaks, tweakOf a ≠ b) ∧
+          challenges.length < numTargets) ∧
+        (∀ x ∈ challenges, tweakOf x ≠ tweakOf q) ∧
+          tweakOf q ∉ collectionTweaks) ↔
+        ((challenges.length < numTargets ∧ (challenges.map tweakOf).Nodup ∧
+            ∀ x ∈ challenges, tweakOf x ≠ tweakOf q) ∧
+          ∀ a : Tweak, (∃ x ∈ challenges, tweakOf x = a) ∨ a = tweakOf q →
+            ∀ b ∈ collectionTweaks, a ≠ b) := by
+    constructor
+    · rintro ⟨⟨⟨⟨hlen, hnodup⟩, hdisjoint⟩, hlt⟩, hfresh, hnotColl⟩
+      refine ⟨⟨hlt, hnodup, hfresh⟩, ?_⟩
+      intro a ha b hb
+      rcases ha with ⟨x, hx, rfl⟩ | rfl
+      · exact hdisjoint x hx b hb
+      · intro heq
+        exact hnotColl (heq ▸ hb)
+    · rintro ⟨⟨hlt, hnodup, hfresh⟩, hdisjoint⟩
+      refine ⟨⟨⟨⟨Nat.le_of_lt hlt, hnodup⟩, ?_⟩, hlt⟩, hfresh, ?_⟩
+      · intro x hx b hb
+        exact hdisjoint (tweakOf x) (Or.inl ⟨x, hx, rfl⟩) b hb
+      · intro hmem
+        exact hdisjoint (tweakOf q) (Or.inr rfl) (tweakOf q) hmem rfl
+  simpa [FinalValidBool, TweakFresh, TweakReserved, List.nodup_append] using hcore
 
-set_option linter.flexible false in
 /-- Recording a collection query preserves exact correspondence between the poison bit and the
 source final predicate. -/
 theorem FinalValidityInvariant.recordCollection (numTargets : ℕ) (tweakOf : Q → Tweak)
@@ -151,20 +159,27 @@ theorem FinalValidityInvariant.recordCollection (numTargets : ℕ) (tweakOf : Q 
   simp only [FinalValidityInvariant, FinalValidityState.recordCollection] at hinv ⊢
   rw [hinv]
   apply Bool.eq_iff_iff.mpr
-  simp [FinalValidBool, TweakReserved]
-  constructor
-  · rintro ⟨⟨⟨hlen, hnodup⟩, hdisjoint⟩, hunreserved⟩
-    refine ⟨⟨hlen, hnodup⟩, ?_⟩
-    intro x hx b hb
-    rcases hb with hb | rfl
-    · exact hdisjoint x hx b hb
-    · exact hunreserved x hx
-  · rintro ⟨⟨hlen, hnodup⟩, hdisjoint⟩
-    refine ⟨⟨⟨hlen, hnodup⟩, ?_⟩, ?_⟩
-    · intro x hx b hb
-      exact hdisjoint x hx b (Or.inl hb)
-    · intro x hx
-      exact hdisjoint x hx t (Or.inr rfl)
+  have hcore :
+      (((challenges.length ≤ numTargets ∧ (challenges.map tweakOf).Nodup) ∧
+          ∀ a ∈ challenges, ∀ b ∈ collectionTweaks, tweakOf a ≠ b) ∧
+        ∀ x ∈ challenges, tweakOf x ≠ t) ↔
+        ((challenges.length ≤ numTargets ∧ (challenges.map tweakOf).Nodup) ∧
+          ∀ a ∈ challenges, ∀ b : Tweak, (b ∈ collectionTweaks ∨ b = t) →
+            tweakOf a ≠ b) := by
+    constructor
+    · rintro ⟨⟨⟨hlen, hnodup⟩, hdisjoint⟩, hunreserved⟩
+      refine ⟨⟨hlen, hnodup⟩, ?_⟩
+      intro x hx b hb
+      rcases hb with hb | rfl
+      · exact hdisjoint x hx b hb
+      · exact hunreserved x hx
+    · rintro ⟨⟨hlen, hnodup⟩, hdisjoint⟩
+      refine ⟨⟨⟨hlen, hnodup⟩, ?_⟩, ?_⟩
+      · intro x hx b hb
+        exact hdisjoint x hx b (Or.inl hb)
+      · intro x hx
+        exact hdisjoint x hx t (Or.inr rfl)
+  simpa [FinalValidBool, TweakReserved] using hcore
 
 end Correspondence
 
