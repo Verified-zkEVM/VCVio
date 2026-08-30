@@ -52,6 +52,17 @@ theorem perfectInternalCoords_height_pos {h : ℕ} {zi : ℕ × ℕ}
       · simp
       · exact Nat.succ_pos zi.1
 
+/-- At height `z`, a perfect tree of height `h` has exactly `2^(h-z)` node positions. -/
+theorem perfectInternalCoords_index_lt {h : ℕ} {zi : ℕ × ℕ}
+    (hmem : zi ∈ perfectInternalCoords h) : zi.2 < 2 ^ (h - zi.1) := by
+  induction h generalizing zi with
+  | zero => simp [perfectInternalCoords] at hmem
+  | succ h ih =>
+      simp only [perfectInternalCoords, List.mem_append, List.mem_map] at hmem
+      rcases hmem with ⟨i, hi, rfl⟩ | ⟨zi, hzi, rfl⟩
+      · simpa using hi
+      · simpa only [Nat.succ_sub_succ_eq_sub] using ih hzi
+
 /-- Internal perfect-tree coordinates are never repeated. -/
 theorem perfectInternalCoords_nodup (h : ℕ) :
     (perfectInternalCoords h).Nodup := by
@@ -169,6 +180,60 @@ theorem d1ForsLeafAddresses_nodup (p : Params) :
 @[simp] theorem d1ForsTreeAddresses_length (p : Params) :
     p.d1ForsTreeAddresses.length = p.d1TargetProfile.forsTree := by
   simp [d1ForsTreeAddresses, d1TargetProfile, d1LeafCount, t, Nat.mul_assoc]
+
+/-- FORS internal-node addresses are structurally duplicate-free before concrete compression. -/
+theorem d1ForsTreeAddresses_nodup (p : Params) :
+    p.d1ForsTreeAddresses.Nodup := by
+  let coords :=
+    ((List.range p.d1LeafCount).product (List.range p.k)).product
+      (perfectInternalCoords p.a)
+  have hcoords : coords.Nodup :=
+    (List.nodup_range.product List.nodup_range).product
+      (perfectInternalCoords_nodup p.a)
+  have hmapped := hcoords.map_on (f := fun c : (ℕ × ℕ) × (ℕ × ℕ) =>
+      forsNodeAdrs (forsAdrsOf c.1.1) c.2.1
+        (c.1.2 * 2 ^ (p.a - c.2.1) + c.2.2)) (by
+    intro c hc d hd hadrs
+    obtain ⟨ci, hci, cj, hcj, cz, hcz, rfl⟩ :
+        ∃ ci < p.d1LeafCount, ∃ cj < p.k, ∃ cz ∈ perfectInternalCoords p.a,
+          ((ci, cj), cz) = c := by
+      simpa [coords, List.product] using hc
+    obtain ⟨di, hdi, dj, hdj, dz, hdz, rfl⟩ :
+        ∃ di < p.d1LeafCount, ∃ dj < p.k, ∃ dz ∈ perfectInternalCoords p.a,
+          ((di, dj), dz) = d := by
+      simpa [coords, List.product] using hd
+    have houter : ci = di := by
+      simpa [forsNodeAdrs, forsAdrsOf, Adrs.getKeyPairAddress,
+        Adrs.setTreeHeight, Adrs.setTreeIndex, Adrs.setKeyPairAddress,
+        Adrs.setTypeAndClear, Adrs.setTreeAddress, Adrs.zero] using
+          congrArg Adrs.word1 hadrs
+    have hheight : cz.1 = dz.1 := by
+      simpa [forsNodeAdrs, forsAdrsOf, Adrs.getKeyPairAddress,
+        Adrs.setTreeHeight, Adrs.setTreeIndex, Adrs.setKeyPairAddress,
+        Adrs.setTypeAndClear, Adrs.setTreeAddress, Adrs.zero] using
+          congrArg Adrs.word2 hadrs
+    have hglobal : cj * 2 ^ (p.a - cz.1) + cz.2 =
+        dj * 2 ^ (p.a - dz.1) + dz.2 := by
+      simpa [forsNodeAdrs, forsAdrsOf, Adrs.getKeyPairAddress,
+        Adrs.setTreeHeight, Adrs.setTreeIndex, Adrs.setKeyPairAddress,
+        Adrs.setTypeAndClear, Adrs.setTreeAddress, Adrs.zero] using
+          congrArg Adrs.word3 hadrs
+    rw [hheight] at hglobal
+    have hczBound := perfectInternalCoords_index_lt hcz
+    have hdzBound := perfectInternalCoords_index_lt hdz
+    have hczBound' : cz.2 < 2 ^ (p.a - dz.1) := by simpa [hheight] using hczBound
+    have hpow : 0 < 2 ^ (p.a - dz.1) := by positivity
+    have htree : cj = dj := by
+      have hdiv := congrArg (fun x => x / 2 ^ (p.a - dz.1)) hglobal
+      simpa [Nat.add_comm, Nat.add_mul_div_right, Nat.div_eq_of_lt,
+        hczBound', hdzBound, hpow] using hdiv
+    have hnode : cz.2 = dz.2 := by
+      have hmod := congrArg (fun x => x % 2 ^ (p.a - dz.1)) hglobal
+      simpa [Nat.add_comm, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt,
+        hczBound', hdzBound] using hmod
+    exact Prod.ext (Prod.ext houter htree) (Prod.ext hheight hnode))
+  simpa [coords, List.product, d1ForsTreeAddresses, List.map_flatMap,
+    List.flatMap_map, List.flatMap_assoc, List.map_map, Function.comp_def] using hmapped
 
 @[simp] theorem d1ForsRootsAddresses_length (p : Params) :
     p.d1ForsRootsAddresses.length = p.d1TargetProfile.forsRoots := by
