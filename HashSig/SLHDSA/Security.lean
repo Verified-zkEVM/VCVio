@@ -160,6 +160,43 @@ def Primitives.d1XmssTreeTcrProblem [SampleableType prims.PkSeed] :
       (Vector prims.Y 2) prims.Y :=
   prims.thashTcrProblem 2 p.d1TargetProfile.xmssTree
 
+/-! ### Deterministic component-reduction witnesses -/
+
+/-- Translate the existing oriented XMSS binding theorem into the exact message/tweak shape of
+the arity-two TCR game.  The first vector is an honest internal-node target and the second is the
+distinct adversarial child pair recovered from the forged authentication path. -/
+theorem Primitives.xmssBinding_to_tcrWitness [SampleableType prims.PkSeed]
+    (msg : prims.Y) (sk : prims.SkSeed)
+    (pk : prims.PkSeed) (adrs : Adrs) (idx : ℕ) (hidx : idx < 2 ^ p.hp)
+    (sig : XmssSig p prims) (hlen : sig.2.length = p.hp)
+    (hroot : xmssPkFromSig prims idx sig msg pk adrs = xmssRoot prims sk pk adrs)
+    (hne : xmssLeaf prims sk pk adrs idx
+      ≠ wotsPkFromSig prims sig.1 msg pk (wotsLeafAdrs adrs idx)) :
+    ∃ (h : ℕ) (c : prims.Y × prims.Y), 0 < h ∧ h ≤ p.hp ∧
+      let target : Vector prims.Y 2 :=
+        #v[xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h)),
+          xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h) + 1)]
+      let collision : Vector prims.Y 2 := #v[c.1, c.2]
+      target ≠ collision ∧
+        (prims.thashMember 2).eval pk
+            (prims.adrsToKey (xmssNodeAdrs adrs h (idx / 2 ^ h))) target =
+          (prims.thashMember 2).eval pk
+            (prims.adrsToKey (xmssNodeAdrs adrs h (idx / 2 ^ h))) collision := by
+  obtain ⟨h, c, hpos, hle, hnePairs, heq⟩ :=
+    xmssPkFromSig_binding prims msg sk pk adrs idx hidx sig hlen hroot hne
+  refine ⟨h, c, hpos, hle, ?_⟩
+  dsimp
+  constructor
+  · intro hv
+    apply hnePairs
+    have hl := congrArg Vector.toList hv
+    have hpairs :
+        xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h)) = c.1 ∧
+          xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h) + 1) = c.2 := by
+      simpa using hl
+    exact Prod.ext hpairs.1 hpairs.2
+  · exact heq
+
 /-- The message randomizer `PRF_msg` as a `PRFScheme` keyed by `SK.prf`; `eval` is
 `prims.PRFmsg`. -/
 def msgPrfScheme [SampleableType prims.SkPrf] :

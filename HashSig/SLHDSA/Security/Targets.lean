@@ -9,12 +9,15 @@ public import HashSig.SLHDSA.Scheme
 public import HashSig.SLHDSA.Security.TargetProfile
 
 /-!
-# Concrete `d = 1` SLH-DSA target enumerations
+# Concrete `d = 1` SLH-DSA target coordinates
 
 The quantitative target profile is useful only if each number is tied to the actual ADRS values
-queried by the construction.  This module enumerates those reachable target coordinates and maps
-them through a primitive bundle's concrete address encoding.  The length theorems recover the
-caps in `Params.d1TargetProfile`.
+queried by the construction.  This module enumerates the message-independent FORS/XMSS targets
+and maps them through a primitive bundle's concrete address encoding.  WOTS target selection is
+message/hybrid dependent: its PRE transcript constructor is therefore parameterized by the honest
+message at each leaf, while its TCR declaration is only the reachable address space from which a
+reduction selects targets.  The length theorems recover, or upper-bound by, the caps in
+`Params.d1TargetProfile`.
 
 These theorems count issued targets.  They deliberately do not claim that `adrsToKey` is globally
 injective: a concrete instantiation must prove `Nodup`/cross-disjointness on these reachable lists.
@@ -60,16 +63,23 @@ def d1ForsTreeAddresses (p : Params) : List Adrs :=
 def d1ForsRootsAddresses (p : Params) : List Adrs :=
   (List.range p.d1LeafCount).map fun idxLeaf => forsPkAdrs (forsAdrsOf idxLeaf)
 
-/-- The WOTS arity-one target addresses used by UD-C and PRE-C. -/
-def d1WotsChainAddresses (p : Params) : List Adrs :=
-  (List.range p.d1LeafCount).flatMap fun idxLeaf =>
-    (List.range p.len).map fun chain => wotsChainAdrs (wotsLeafAdrs Adrs.zero idxLeaf) chain
-
-/-- The WOTS arity-one target addresses used by TCR-C, including every chain position. -/
-def d1WotsTcrAddresses (p : Params) : List Adrs :=
+/-- The actual WOTS PRE-C target transcript for one honest WOTS message at each XMSS leaf.  Chain
+`i` contributes a target at hash address `digit - 1` exactly when its honest digit is nonzero. -/
+def d1WotsPreAddresses (p : Params) (core : CorePrimitives p)
+    (messageAt : ℕ → core.Y) : List Adrs :=
   (List.range p.d1LeafCount).flatMap fun idxLeaf =>
     (List.range p.len).flatMap fun chain =>
-      (List.range p.w).map fun step =>
+      let digit := chainStepsCore core (messageAt idxLeaf) chain
+      if digit = 0 then [] else
+        [(wotsChainAdrs (wotsLeafAdrs Adrs.zero idxLeaf) chain).setHashAddress (digit - 1)]
+
+/-- Reachable WOTS chain-step address space.  Actual TCR-C targets form a message-dependent
+subsequence of this list.  There are only `w - 1` executed hash positions per chain; the source
+reduction deliberately uses the looser `len * w` target cap. -/
+def d1WotsTcrAddressSpace (p : Params) : List Adrs :=
+  (List.range p.d1LeafCount).flatMap fun idxLeaf =>
+    (List.range p.len).flatMap fun chain =>
+      (List.range (p.w - 1)).map fun step =>
         (wotsChainAdrs (wotsLeafAdrs Adrs.zero idxLeaf) chain).setHashAddress step
 
 /-- Every WOTS public-key-compression target address. -/
@@ -92,17 +102,45 @@ def d1XmssTreeAddresses (p : Params) : List Adrs :=
     p.d1ForsRootsAddresses.length = p.d1TargetProfile.forsRoots := by
   simp [d1ForsRootsAddresses, d1TargetProfile, d1LeafCount]
 
-@[simp] theorem d1WotsChainAddresses_length (p : Params) :
-    p.d1WotsChainAddresses.length = p.d1TargetProfile.wotsUd := by
-  simp [d1WotsChainAddresses, d1TargetProfile, d1LeafCount, Nat.mul_assoc]
+theorem d1WotsPreAddresses_length_le (p : Params) (core : CorePrimitives p)
+    (messageAt : ℕ → core.Y) :
+    (p.d1WotsPreAddresses core messageAt).length ≤ p.d1TargetProfile.wotsPre := by
+  simp only [d1WotsPreAddresses, List.length_flatMap]
+  calc
+    (List.map
+        (fun idxLeaf =>
+          (List.map
+            (fun chain =>
+              (if chainStepsCore core (messageAt idxLeaf) chain = 0 then [] else
+                [(wotsChainAdrs (wotsLeafAdrs Adrs.zero idxLeaf) chain).setHashAddress
+                  (chainStepsCore core (messageAt idxLeaf) chain - 1)]).length)
+            (List.range p.len)).sum)
+        (List.range p.d1LeafCount)).sum ≤
+        (List.map (fun _ => p.len) (List.range p.d1LeafCount)).sum := by
+      apply List.sum_le_sum
+      intro idxLeaf _
+      calc
+        _ ≤ (List.map (fun _ => 1) (List.range p.len)).sum := by
+          apply List.sum_le_sum
+          intro chain _
+          split <;> simp
+        _ = p.len := by simp
+    _ = p.d1TargetProfile.wotsPre := by
+      simp [d1TargetProfile, d1LeafCount]
 
-@[simp] theorem d1WotsChainAddresses_length_pre (p : Params) :
-    p.d1WotsChainAddresses.length = p.d1TargetProfile.wotsPre := by
-  simp [d1WotsChainAddresses, d1TargetProfile, d1LeafCount, Nat.mul_assoc]
-
-@[simp] theorem d1WotsTcrAddresses_length (p : Params) :
-    p.d1WotsTcrAddresses.length = p.d1TargetProfile.wotsTcr := by
-  simp [d1WotsTcrAddresses, d1TargetProfile, d1LeafCount, Nat.mul_assoc]
+theorem d1WotsTcrAddressSpace_length_le (p : Params) :
+    p.d1WotsTcrAddressSpace.length ≤ p.d1TargetProfile.wotsTcr := by
+  simp only [d1WotsTcrAddressSpace, List.length_flatMap, List.length_map,
+    List.length_range]
+  simp only [List.sum_replicate, List.map_const', nsmul_eq_mul]
+  simp only [List.length_range]
+  unfold d1TargetProfile
+  calc
+    p.d1LeafCount * (p.len * (p.w - 1)) =
+        (p.d1LeafCount * p.len) * (p.w - 1) :=
+      (Nat.mul_assoc _ _ _).symm
+    _ ≤ (p.d1LeafCount * p.len) * p.w :=
+      Nat.mul_le_mul_left _ (Nat.sub_le p.w 1)
 
 @[simp] theorem d1WotsPkAddresses_length (p : Params) :
     p.d1WotsPkAddresses.length = p.d1TargetProfile.wotsPk := by
@@ -131,11 +169,11 @@ def d1ForsTreeTweaks (prims : Primitives p) : List prims.AdrsKey :=
 def d1ForsRootsTweaks (prims : Primitives p) : List prims.AdrsKey :=
   prims.encodeTargets p.d1ForsRootsAddresses
 
-def d1WotsChainTweaks (prims : Primitives p) : List prims.AdrsKey :=
-  prims.encodeTargets p.d1WotsChainAddresses
+def d1WotsPreTweaks (prims : Primitives p) (messageAt : ℕ → prims.Y) : List prims.AdrsKey :=
+  prims.encodeTargets (p.d1WotsPreAddresses prims.core messageAt)
 
-def d1WotsTcrTweaks (prims : Primitives p) : List prims.AdrsKey :=
-  prims.encodeTargets p.d1WotsTcrAddresses
+def d1WotsTcrTweakSpace (prims : Primitives p) : List prims.AdrsKey :=
+  prims.encodeTargets p.d1WotsTcrAddressSpace
 
 def d1WotsPkTweaks (prims : Primitives p) : List prims.AdrsKey :=
   prims.encodeTargets p.d1WotsPkAddresses
@@ -151,21 +189,17 @@ def d1XmssTreeTweaks (prims : Primitives p) : List prims.AdrsKey :=
     prims.d1ForsTreeTweaks.length = p.d1TargetProfile.forsTree := by
   simp [d1ForsTreeTweaks, encodeTargets]
 
-@[simp] theorem d1WotsTcrTweaks_length (prims : Primitives p) :
-    prims.d1WotsTcrTweaks.length = p.d1TargetProfile.wotsTcr := by
-  simp [d1WotsTcrTweaks, encodeTargets]
+theorem d1WotsTcrTweakSpace_length_le (prims : Primitives p) :
+    prims.d1WotsTcrTweakSpace.length ≤ p.d1TargetProfile.wotsTcr := by
+  simpa [d1WotsTcrTweakSpace, encodeTargets] using p.d1WotsTcrAddressSpace_length_le
 
 @[simp] theorem d1ForsRootsTweaks_length (prims : Primitives p) :
     prims.d1ForsRootsTweaks.length = p.d1TargetProfile.forsRoots := by
   simp [d1ForsRootsTweaks, encodeTargets]
 
-@[simp] theorem d1WotsChainTweaks_length (prims : Primitives p) :
-    prims.d1WotsChainTweaks.length = p.d1TargetProfile.wotsUd := by
-  simp [d1WotsChainTweaks, encodeTargets]
-
-@[simp] theorem d1WotsChainTweaks_length_pre (prims : Primitives p) :
-    prims.d1WotsChainTweaks.length = p.d1TargetProfile.wotsPre := by
-  simp [d1WotsChainTweaks, encodeTargets]
+theorem d1WotsPreTweaks_length_le (prims : Primitives p) (messageAt : ℕ → prims.Y) :
+    (prims.d1WotsPreTweaks messageAt).length ≤ p.d1TargetProfile.wotsPre := by
+  simpa [d1WotsPreTweaks, encodeTargets] using p.d1WotsPreAddresses_length_le prims.core messageAt
 
 @[simp] theorem d1WotsPkTweaks_length (prims : Primitives p) :
     prims.d1WotsPkTweaks.length = p.d1TargetProfile.wotsPk := by
