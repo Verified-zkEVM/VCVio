@@ -138,6 +138,46 @@ theorem d1WotsPreAddresses_length_le (p : Params) (core : CorePrimitives p)
     _ = p.d1TargetProfile.wotsPre := by
       simp [d1TargetProfile, d1LeafCount]
 
+/-- Every message-dependent WOTS PRE transcript is structurally duplicate-free before concrete
+address compression.  Even though the selected hash step depends on the message, the leaf and
+chain words already identify each possible entry. -/
+theorem d1WotsPreAddresses_nodup (p : Params) (core : CorePrimitives p)
+    (messageAt : ℕ → core.Y) :
+    (p.d1WotsPreAddresses core messageAt).Nodup := by
+  let coords := (List.range p.d1LeafCount).product (List.range p.len)
+  let encode : ℕ × ℕ → Option Adrs := fun c =>
+    let digit := chainStepsCore core (messageAt c.1) c.2
+    if digit = 0 then none else
+      some ((wotsChainAdrs (wotsLeafAdrs Adrs.zero c.1) c.2).setHashAddress (digit - 1))
+  have hcoords : coords.Nodup := List.nodup_range.product List.nodup_range
+  have hunique : ∀ a a' b, b ∈ encode a → b ∈ encode a' → a = a' := by
+    intro a a' b hb hb'
+    simp only [encode] at hb hb'
+    split at hb <;> simp_all only [Option.not_mem_none, Option.mem_some_iff]
+    split at hb' <;> simp_all only [Option.not_mem_none, Option.mem_some_iff]
+    subst hb
+    have hadrs := hb'
+    apply Prod.ext
+    · simpa [wotsChainAdrs, wotsLeafAdrs, Adrs.getKeyPairAddress,
+        Adrs.setHashAddress, Adrs.setChainAddress, Adrs.setKeyPairAddress,
+        Adrs.setTypeAndClear, Adrs.zero] using (congrArg Adrs.word1 hadrs).symm
+    · simpa [wotsChainAdrs, wotsLeafAdrs, Adrs.getKeyPairAddress,
+        Adrs.setHashAddress, Adrs.setChainAddress, Adrs.setKeyPairAddress,
+        Adrs.setTypeAndClear, Adrs.zero] using (congrArg Adrs.word2 hadrs).symm
+  have hencoded := hcoords.filterMap hunique
+  rw [List.filterMap_eq_flatMap_toList] at hencoded
+  have hencode_toList : ∀ c : ℕ × ℕ,
+      (encode c).toList =
+        (let digit := chainStepsCore core (messageAt c.1) c.2
+         if digit = 0 then [] else
+           [(wotsChainAdrs (wotsLeafAdrs Adrs.zero c.1) c.2).setHashAddress (digit - 1)]) := by
+    intro c
+    simp only [encode]
+    split <;> simp_all
+  simp_rw [hencode_toList] at hencoded
+  simpa [coords, encode, List.product, d1WotsPreAddresses, List.flatMap_map,
+    List.flatMap_assoc, Function.comp_def] using hencoded
+
 theorem d1WotsTcrAddressSpace_length_le (p : Params) :
     p.d1WotsTcrAddressSpace.length ≤ p.d1TargetProfile.wotsTcr := by
   simp only [d1WotsTcrAddressSpace, List.length_flatMap, List.length_map,
@@ -151,6 +191,33 @@ theorem d1WotsTcrAddressSpace_length_le (p : Params) :
       (Nat.mul_assoc _ _ _).symm
     _ ≤ (p.d1LeafCount * p.len) * p.w :=
       Nat.mul_le_mul_left _ (Nat.sub_le p.w 1)
+
+/-- The complete reachable WOTS chain-step space is structurally duplicate-free before address
+compression.  Its three varying words recover `(leaf, chain, step)` exactly. -/
+theorem d1WotsTcrAddressSpace_nodup (p : Params) :
+    p.d1WotsTcrAddressSpace.Nodup := by
+  let coords :=
+    ((List.range p.d1LeafCount).product (List.range p.len)).product
+      (List.range (p.w - 1))
+  have hcoords : coords.Nodup :=
+    (List.nodup_range.product List.nodup_range).product List.nodup_range
+  have hinj : Function.Injective (fun c : (ℕ × ℕ) × ℕ =>
+      (wotsChainAdrs (wotsLeafAdrs Adrs.zero c.1.1) c.1.2).setHashAddress c.2) := by
+    intro c d h
+    apply Prod.ext
+    · apply Prod.ext
+      · simpa [wotsChainAdrs, wotsLeafAdrs, Adrs.getKeyPairAddress,
+          Adrs.setHashAddress, Adrs.setChainAddress, Adrs.setKeyPairAddress,
+          Adrs.setTypeAndClear, Adrs.zero] using congrArg Adrs.word1 h
+      · simpa [wotsChainAdrs, wotsLeafAdrs, Adrs.getKeyPairAddress,
+          Adrs.setHashAddress, Adrs.setChainAddress, Adrs.setKeyPairAddress,
+          Adrs.setTypeAndClear, Adrs.zero] using congrArg Adrs.word2 h
+    · simpa [wotsChainAdrs, wotsLeafAdrs, Adrs.getKeyPairAddress,
+        Adrs.setHashAddress, Adrs.setChainAddress, Adrs.setKeyPairAddress,
+        Adrs.setTypeAndClear, Adrs.zero] using congrArg Adrs.word3 h
+  have hmapped := hcoords.map hinj
+  simpa [coords, List.product, d1WotsTcrAddressSpace, List.map_flatMap,
+    List.flatMap_map, List.flatMap_assoc, List.map_map, Function.comp_def] using hmapped
 
 @[simp] theorem d1WotsPkAddresses_length (p : Params) :
     p.d1WotsPkAddresses.length = p.d1TargetProfile.wotsPk := by
