@@ -46,10 +46,10 @@ public import VCVio.CryptoFoundations.FujisakiOkamoto.TTransform
 public import VCVio.CryptoFoundations.FujisakiOkamoto.UTransform
 public import VCVio.CryptoFoundations.GPVHashAndSign
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
-public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
 public import VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning
 public import VCVio.CryptoFoundations.HardnessAssumptions.OneWay
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection

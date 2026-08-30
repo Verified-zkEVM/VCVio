@@ -23,6 +23,8 @@ public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.Scheme
 public import HashSig.SLHDSA.Security
 public import HashSig.SLHDSA.Security.ReductionBound
+public import HashSig.SLHDSA.Security.TargetProfile
+public import HashSig.SLHDSA.Security.Targets
 public import HashSig.SLHDSA.Wots
 public import HashSig.SLHDSA.WotsChecksum
 public import HashSig.SLHDSA.Xmss
