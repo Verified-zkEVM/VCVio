@@ -6,9 +6,10 @@ Authors: Nicolas Consigny
 
 module
 public import HashSig.SLHDSA.RandomOracle
-public import HashSig.SLHDSA.Security.TargetProfile
+public import HashSig.SLHDSA.Security.Targets
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTDSPR
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
 public import VCVio.CryptoFoundations.PRF
@@ -106,7 +107,22 @@ def Primitives.thashPreProblem [SampleableType prims.PkSeed] (arity numTargets :
   thColl := prims.thashCollection
   numTargets := numTargets
 
+/-- The source-final-validity SM-DT-DSPR problem for one fixed-arity `Thash` member, with the
+whole collection available during target selection. -/
+def Primitives.thashDsprProblem [SampleableType prims.PkSeed] (arity numTargets : ℕ) :
+    TweakableHash.SM_DT_DSPR_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y arity) prims.Y where
+  th := prims.thashMember arity
+  thColl := prims.thashCollection
+  numTargets := numTargets
+
 /-! ### Exact `d = 1` assumption instances -/
+
+/-- Source-final-validity SM-DT-DSPR problem for all arity-one FORS secret leaves. -/
+def Primitives.d1ForsLeafDsprProblem [SampleableType prims.PkSeed] :
+    TweakableHash.SM_DT_DSPR_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y 1) prims.Y :=
+  prims.thashDsprProblem 1 p.d1TargetProfile.forsLeaf
 
 /-- Collection SM-DT-TCR problem for every arity-two FORS internal node. -/
 def Primitives.d1ForsTreeTcrProblem [SampleableType prims.PkSeed] :
