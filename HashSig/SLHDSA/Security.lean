@@ -285,6 +285,154 @@ theorem Primitives.wotsPkBinding_to_tcrWitness [SampleableType prims.PkSeed]
   refine ⟨hne, ?_⟩
   simpa [Primitives.thashMember] using hpk.symm
 
+/-- Two distinct values whose equal-length WOTS chains converge yield an arity-one TCR witness
+at the first convergence step.  This is the deterministic collision-extraction kernel used by
+the source `Game3 → Game4` hop. -/
+theorem Primitives.wotsChainsConverge_to_tcrWitness [SampleableType prims.PkSeed]
+    (pk : prims.PkSeed) (adrs : Adrs) (x y : prims.Y) (i s : ℕ)
+    (hne : x ≠ y) (heq : chain prims pk adrs x i s = chain prims pk adrs y i s) :
+    ∃ k, k < s ∧
+      let target : Vector prims.Y 1 := #v[chain prims pk adrs x i k]
+      let collision : Vector prims.Y 1 := #v[chain prims pk adrs y i k]
+      target ≠ collision ∧
+        (prims.thashMember 1).eval pk
+            (prims.adrsToKey (adrs.setHashAddress (i + k))) target =
+          (prims.thashMember 1).eval pk
+            (prims.adrsToKey (adrs.setHashAddress (i + k))) collision := by
+  induction s with
+  | zero => simp only [chain_zero] at heq; exact (hne heq).elim
+  | succ s ih =>
+      by_cases hprev : chain prims pk adrs x i s = chain prims pk adrs y i s
+      · obtain ⟨k, hk, hw⟩ := ih hprev
+        exact ⟨k, Nat.lt_succ_of_lt hk, hw⟩
+      · refine ⟨s, Nat.lt_succ_self s, ?_⟩
+        dsimp
+        constructor
+        · intro hv
+          apply hprev
+          have hl := congrArg Vector.toList hv
+          simpa using hl
+        · simpa [Primitives.thashMember, chain_succ] using heq
+
+/-- A source-faithful pointwise WOTS chain split.  Suppose a forged chain starts at the smaller
+message digit `b`, an honest signature starts at the larger digit `a`, and both continuations
+reach the same public-key chain end.  Either the forged chain reaches the honest signature value,
+giving the exact PRE equation at hash index `a - 1`, or the two continuations contain an
+arity-one TCR witness.
+
+The `(w - 2) * UD` term does not arise from this pointwise split: in the EasyCrypt proof it pays
+for the preceding `Game2 → Game3` distributional hybrid that makes the value before the honest
+signature step uniform. -/
+theorem Primitives.wotsChainPair_to_tcr_or_preWitness [SampleableType prims.PkSeed]
+    (pk : prims.PkSeed) (adrs : Adrs) (honest forged : prims.Y) (a b : ℕ)
+    (hba : b < a) (ha : a < p.w)
+    (hend : chain prims pk adrs honest a (p.w - 1 - a) =
+      chain prims pk adrs forged b (p.w - 1 - b)) :
+    (∃ k, k < p.w - 1 - a ∧
+      let target : Vector prims.Y 1 := #v[chain prims pk adrs honest a k]
+      let collision : Vector prims.Y 1 :=
+        #v[chain prims pk adrs (chain prims pk adrs forged b (a - b)) a k]
+      target ≠ collision ∧
+        (prims.thashMember 1).eval pk
+            (prims.adrsToKey (adrs.setHashAddress (a + k))) target =
+          (prims.thashMember 1).eval pk
+            (prims.adrsToKey (adrs.setHashAddress (a + k))) collision) ∨
+      (let preimage : Vector prims.Y 1 :=
+        #v[chain prims pk adrs forged b (a - b - 1)]
+       (prims.thashMember 1).eval pk
+          (prims.adrsToKey (adrs.setHashAddress (a - 1))) preimage = honest) := by
+  let meeting := chain prims pk adrs forged b (a - b)
+  by_cases hmeeting : meeting = honest
+  · right
+    dsimp
+    have hstep := chain_succ prims pk adrs forged b (a - b - 1)
+    have hsub : a - b - 1 + 1 = a - b := by omega
+    have haddr : b + (a - b - 1) = a - 1 := by omega
+    rw [hsub, haddr] at hstep
+    simpa [Primitives.thashMember, meeting] using hstep.symm.trans hmeeting
+  · left
+    have hremaining : (a - b) + (p.w - 1 - a) = p.w - 1 - b := by omega
+    have hstart : b + (a - b) = a := by omega
+    have hforged : chain prims pk adrs meeting a (p.w - 1 - a) =
+        chain prims pk adrs forged b (p.w - 1 - b) := by
+      simpa [meeting, hremaining, hstart] using
+        chain_compose prims pk adrs forged b (a - b) (p.w - 1 - a)
+    exact prims.wotsChainsConverge_to_tcrWitness pk adrs honest meeting a
+      (p.w - 1 - a) (fun h => hmeeting h.symm) (hend.trans hforged.symm)
+
+private theorem exists_getD_lt_of_not_forall₂_le {xs ys : List ℕ}
+    (hlen : xs.length = ys.length) (hnot : ¬ WotsChecksum.Forall₂ (· ≤ ·) xs ys) :
+    ∃ i, i < xs.length ∧ ys.getD i 0 < xs.getD i 0 := by
+  induction xs generalizing ys with
+  | nil =>
+      cases ys with
+      | nil => exact (hnot .nil).elim
+      | cons => simp at hlen
+  | cons x xs ih =>
+      cases ys with
+      | nil => simp at hlen
+      | cons y ys =>
+          simp only [List.length_cons, Nat.succ.injEq] at hlen
+          by_cases hxy : x ≤ y
+          · have htail : ¬ WotsChecksum.Forall₂ (· ≤ ·) xs ys :=
+              fun h => hnot (.cons hxy h)
+            obtain ⟨i, hi, hlt⟩ := ih hlen htail
+            exact ⟨i + 1, by simp [hi], by simpa using hlt⟩
+          · exact ⟨0, by simp, by simpa using Nat.lt_of_not_ge hxy⟩
+
+/-- Pointwise classification of an accepted fresh WOTS forgery in the source `Game3` shape.
+The honest and forged signatures finish to the same vector of chain ends.  Checksum
+incomparability selects a chain on which the forged message digit is smaller; that chain then
+yields either the exact TCR witness used by `Game3 → Game4` or the exact PRE equation used to
+bound `Game4`.
+
+As in the source proof, the UD term is deliberately absent from this deterministic theorem: its
+coefficient `(w - 2)` belongs to the preceding distributional hybrid, not to a third kind of
+accepted-forgery witness. -/
+theorem Primitives.wotsAcceptedPair_to_tcr_or_preWitness [SampleableType prims.PkSeed]
+    (pk : prims.PkSeed) (adrs : Adrs) (msg msg' : prims.Y)
+    (sig sig' : WotsSig p prims.core) (hlgw : 0 < p.lgw)
+    (henc : prims.core.WotsMessageEncodingInjective) (hfresh : msg ≠ msg')
+    (haccepted : wotsPkFromSigTops prims sig msg pk adrs =
+      wotsPkFromSigTops prims sig' msg' pk adrs) :
+    ∃ i : Fin p.len,
+      let a := chainStepsCore prims.core msg i.val
+      let b := chainStepsCore prims.core msg' i.val
+      b < a ∧
+        ((∃ k, k < p.w - 1 - a ∧
+          let target : Vector prims.Y 1 :=
+            #v[chain prims pk (wotsChainAdrs adrs i.val) sig[i.val] a k]
+          let collision : Vector prims.Y 1 :=
+            #v[chain prims pk (wotsChainAdrs adrs i.val)
+              (chain prims pk (wotsChainAdrs adrs i.val) sig'[i.val] b (a - b)) a k]
+          target ≠ collision ∧
+            (prims.thashMember 1).eval pk
+                (prims.adrsToKey ((wotsChainAdrs adrs i.val).setHashAddress (a + k))) target =
+              (prims.thashMember 1).eval pk
+                (prims.adrsToKey ((wotsChainAdrs adrs i.val).setHashAddress (a + k)))
+                collision) ∨
+          (let preimage : Vector prims.Y 1 :=
+            #v[chain prims pk (wotsChainAdrs adrs i.val) sig'[i.val] b (a - b - 1)]
+           (prims.thashMember 1).eval pk
+              (prims.adrsToKey ((wotsChainAdrs adrs i.val).setHashAddress (a - 1))) preimage =
+            sig[i.val])) := by
+  have hlen (m : prims.Y) : (chainLengthsCore prims.core m).length = p.len := by
+    simpa [chainLengthsCore, Params.len] using
+      WotsChecksum.wotsFullDigits_length (wotsMsgDigitsCore prims.core m)
+        p.w p.len1 p.len2 (wotsMsgDigitsCore_length prims.core m)
+  have hnot := (chainLengthsCore_incomparable prims.core msg msg' hlgw henc hfresh).1
+  obtain ⟨i, hi, hlt⟩ := exists_getD_lt_of_not_forall₂_le
+    ((hlen msg).trans (hlen msg').symm) hnot
+  let fi : Fin p.len := ⟨i, by simpa [hlen msg] using hi⟩
+  have hend := congrArg (fun v : Vector prims.Y p.len => v[fi.val]) haccepted
+  simp only [wotsPkFromSigTops_eq_ofFn, Vector.getElem_ofFn] at hend
+  refine ⟨fi, ?_, ?_⟩
+  · simpa [fi, chainStepsCore] using hlt
+  · exact prims.wotsChainPair_to_tcr_or_preWitness pk (wotsChainAdrs adrs fi.val)
+      sig[fi.val] sig'[fi.val] (chainStepsCore prims.core msg fi.val)
+      (chainStepsCore prims.core msg' fi.val) (by simpa [fi, chainStepsCore] using hlt)
+      (chainStepsCore_lt prims.core msg fi.val) hend
+
 /-- The message-independent honest FORS roots committed by the arity-`k` compression. -/
 def Primitives.forsHonestRoots (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) : Vector prims.Y p.k :=
