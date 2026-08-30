@@ -69,10 +69,14 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Query
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.BatchExtractability
 public import VCVio.CryptoFoundations.MerkleTree.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Map
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Opening
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
@@ -82,6 +86,9 @@ public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Potential
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Sequential
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Stateful
 public import VCVio.CryptoFoundations.MerkleTree.Vector.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Vector.Defs
 public import VCVio.CryptoFoundations.PRF
