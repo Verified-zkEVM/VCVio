@@ -22,7 +22,8 @@ distinct candidate labels: every populated key contributes its two ordered child
 checkpoint contributes its root. This shared-log cap is strictly sharper than multiplying the
 single-tree `min (2L - 1) (2k + 1)` cap by the number of checkpoints.
 
-The safe numerator is a finite maximum over the adaptive commitment-prefix cache misses. It
+The safe numerator is a finite maximum over fresh adversarial inputs across every commitment
+phase and terminal opening production. It
 deliberately overcharges queries made before a target exists. A future checkpoint-aware stopping
 theorem may derive a tighter exact numerator; this module does not identify the safe envelope with
 the textbook-tight potential. Coarse closed forms are derived below as corollaries.
@@ -74,7 +75,8 @@ def multiExtractabilitySafeNumerator
   multiExtractabilitySafePotential
     nodeBudget checkpointCount verifierOverhead queryBound 0
 
-/-- The exact numerator is the finite maximum over every feasible number of fresh prefix inputs.
+/-- The safe, unrelaxed numerator is the finite maximum over every feasible number of fresh
+adversarial inputs.
 This theorem is the intended rewrite interface for audits and downstream arithmetic relaxations. -/
 theorem multiExtractabilitySafeNumerator_eq_sup
     (nodeBudget checkpointCount verifierOverhead queryBound : ℕ) :
@@ -100,7 +102,15 @@ theorem sharedTargetCount_le_querySupport
     sharedTargetCount nodeBudget checkpointCount keyCount ≤ 2 * keyCount + checkpointCount :=
   Nat.min_le_right _ _
 
-/-- Coarse closed form obtained from the exact finite maximum by separately maximizing the
+/-- The safe shared-target cap is monotone as fresh complete-query keys accumulate. -/
+theorem sharedTargetCount_mono_keyCount
+    (nodeBudget checkpointCount : ℕ) :
+    Monotone (sharedTargetCount nodeBudget checkpointCount) := by
+  intro left right hle
+  unfold sharedTargetCount
+  gcongr
+
+/-- Coarse closed form obtained from the safe finite maximum by separately maximizing the
 birthday and target-hit terms. -/
 theorem multiExtractabilitySafeNumerator_le_coarse
     (nodeBudget checkpointCount verifierOverhead queryBound : ℕ) :

@@ -67,8 +67,8 @@ def verifyClaims [DecidableEq Y]
         opening := claim.opening
         accepted }⟩ :: attempts
 
-/-- The honest verifier list consumes exactly the sum of the proof-dependent structural upper
-bounds. This is the safe full-batch overhead; a later disagreement witness may specialize each
+/-- The honest verifier list is bounded by the sum of the proof-dependent structural counts.
+This is the safe full-batch overhead; a later disagreement witness may specialize each
 accepted failure to one selected path. -/
 theorem verifyClaims_isTotalQueryBound [DecidableEq Y]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
@@ -149,5 +149,32 @@ theorem PublicFailure.toStrongFailure [DecidableEq Address] [DecidableEq Y]
     (h : PublicFailure model transcript) : StrongFailure model transcript :=
   TextbookFailure.toFailure model.view transcript.extractorState transcript.attempts
     transcript.terminalSuffix h
+
+/-- Probability of the public textbook event is at most probability of the strongest proof event. -/
+theorem prob_publicFailure_le_strongFailure
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config) :
+    Pr[PublicFailure model | extractabilityGame model config rounds adversary] ≤
+      Pr[StrongFailure model | extractabilityGame model config rounds adversary] :=
+  _root_.probEvent_mono
+    (mx := extractabilityGame model config rounds adversary)
+    (fun transcript _ h => PublicFailure.toStrongFailure model transcript h)
+
+/-- Any quantitative theorem for the strongest event immediately yields the same bound for the
+weaker textbook event. Downstream corollaries should use this theorem rather than repeat the event
+decomposition. -/
+theorem publicFailure_bound_of_strongFailure_bound
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config) (bound : ENNReal)
+    (hstrong :
+      Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤ bound) :
+    Pr[PublicFailure model | extractabilityGame model config rounds adversary] ≤ bound :=
+  (prob_publicFailure_le_strongFailure model config rounds adversary).trans hstrong
 
 end MerkleTreeMultiExtractability

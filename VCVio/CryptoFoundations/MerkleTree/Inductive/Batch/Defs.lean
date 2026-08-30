@@ -98,7 +98,7 @@ stores nothing (the verifier is given the claimed leaf value separately, via
 The hypotheses on the pruning constructors make the proof shape canonical for its selector:
 for every selector that selects at least one leaf exactly one constructor applies at each
 node. Conversely the family is *uninhabited* whenever `sel.anySelected = false` (see
-`BatchProof.anySelected_of_batchProof` in `Batch.Uniqueness`): there is no such thing as a
+`BatchProof.anySelected_of_batchProof` below): there is no such thing as a
 batch proof that opens nothing.
 -/
 inductive BatchProof (α : Type u) : {s : Skeleton} → LeafData Bool s → Type u

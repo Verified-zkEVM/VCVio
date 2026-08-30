@@ -195,7 +195,7 @@ theorem isTotalQueryBound_getPutativeBatchRootAddressedM
       simpa [Nat.add_mul] using isTotalQueryBound_bind hright fun rightRoot =>
         hnode .ofInternal leftRoot rightRoot
 
-/-- Unit-cost addressed batch reconstruction has exact structural budget
+/-- Unit-cost addressed batch reconstruction has structural upper bound
 `proof.queryCount`. -/
 theorem isTotalQueryBound_getPutativeBatchRootAddressedM_one
     {s : Skeleton} (nodeHash : SkeletonInternalIndex s → Y → Y → OracleComp spec Y)
