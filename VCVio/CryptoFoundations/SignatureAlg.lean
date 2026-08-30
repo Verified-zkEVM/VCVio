@@ -354,7 +354,7 @@ example, it may require signature binding or a rerandomization argument). -/
 noncomputable def sameMessageStrongUnforgeableExp
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : strongUnforgeableAdv sigAlg) : SPMF Bool :=
+    (adv : strongUnforgeableAdv sigAlg) :=
   letI : DecidableEq M := Classical.decEq M
   letI : DecidableEq S := Classical.decEq S
   runtime.evalSPMF do

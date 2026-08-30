@@ -525,7 +525,7 @@ noncomputable def eufCmaProgram (adv : EufCmaAdversary prims) :
     return !log.wasQueried msg && verified
 
 /-- Concrete-function EUF-CMA experiment for the supplied primitive bundle. -/
-noncomputable def concreteEufCmaExperiment (adv : EufCmaAdversary prims) : SPMF Bool :=
+noncomputable def concreteEufCmaExperiment (adv : EufCmaAdversary prims) :=
   SignatureAlg.unforgeableExp (PublicHash.concreteRuntime prims) adv
 
 /-- Concrete-function EUF-CMA advantage. -/
@@ -537,8 +537,8 @@ whole EUF-CMA program with `PublicHash.impl prims`.  Thus subsequent THF reducti
 the deterministic SLH-DSA scheme rather than the repository's separate ROM runtime. -/
 theorem concreteEufCmaExperiment_eq_simulate (adv : EufCmaAdversary prims) :
     concreteEufCmaExperiment prims adv =
-      (liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims))
-        (eufCmaProgram prims adv)) : SPMF Bool) := by
+      liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims))
+        (eufCmaProgram prims adv)) := by
   rfl
 
 end ConcreteEUF
@@ -588,7 +588,7 @@ noncomputable def strongEufCmaProgram (adv : StrongEufCmaAdversary prims) :
     return !SignatureAlg.signingLogContains log msg sig && verified
 
 /-- Concrete-function SUF-CMA experiment for the supplied primitive bundle. -/
-noncomputable def concreteStrongEufCmaExperiment (adv : StrongEufCmaAdversary prims) : SPMF Bool :=
+noncomputable def concreteStrongEufCmaExperiment (adv : StrongEufCmaAdversary prims) :=
   SignatureAlg.strongUnforgeableExp (PublicHash.concreteRuntime prims) adv
 
 /-- Concrete-function SUF-CMA advantage. -/
@@ -617,8 +617,8 @@ theorem concreteStrongEufCmaAdvantage_le_euf_add_sameMessage
 surrounds key generation, all signing queries, and final verification. -/
 theorem concreteStrongEufCmaExperiment_eq_simulate (adv : StrongEufCmaAdversary prims) :
     concreteStrongEufCmaExperiment prims adv =
-      (liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims))
-        (strongEufCmaProgram prims adv)) : SPMF Bool) := by
+      liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims))
+        (strongEufCmaProgram prims adv)) := by
   rfl
 
 end ConcreteSUF

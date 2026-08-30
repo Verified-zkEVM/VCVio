@@ -284,7 +284,7 @@ verification all use the same concrete primitive bundle. -/
 @[simp] theorem concreteRuntime_evalSPMF (prims : Primitives p)
     {α : Type} (oa : OracleComp (unifSpec + publicHashSpec prims.core) α) :
     (concreteRuntime prims).evalSPMF oa =
-      (liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims)) oa) : SPMF α) := rfl
+      liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims)) oa) := rfl
 
 /-- The concrete public-hash runtime factors a final pure map out of observation.  This is the
 runtime law required by the generic EUF/SUF event-partition lemmas. -/
