@@ -40,6 +40,17 @@ theorem ExtractorState.totalNodeBudget_record
   simp [ExtractorState.totalNodeBudget, nodeBudgetOfCheckpoints,
     Configuration.nodeBudget]
 
+/-- Cumulative-log recording has the same exact resource increment. -/
+@[simp]
+theorem ExtractorState.totalNodeBudget_recordCumulative
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (tag : Cfg) (cumulativeLog : MerkleTreeExtractor.QueryLog Query Y) (root : Y) :
+    (state.recordCumulative tag cumulativeLog root).totalNodeBudget =
+      state.totalNodeBudget + config.nodeBudget tag := by
+  simp [ExtractorState.totalNodeBudget, nodeBudgetOfCheckpoints,
+    Configuration.nodeBudget]
+
 /-- If every configuration has node budget at most `perCheckpoint`, a checkpoint list has total
 budget at most its length times `perCheckpoint`. -/
 theorem nodeBudgetOfCheckpoints_le_length_mul

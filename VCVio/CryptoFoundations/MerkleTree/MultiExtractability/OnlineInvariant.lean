@@ -105,6 +105,23 @@ theorem ExtractorState.StableAt.record
     cases hnew
     rfl
 
+/-- Proof-facing cumulative-log form of `StableAt.record`. -/
+theorem ExtractorState.StableAt.recordCumulative
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    (tag : Cfg) (cumulativeLog : MerkleTreeExtractor.QueryLog Query Y) (root : Y)
+    (hstable : state.StableAt view cumulativeLog) :
+    (state.recordCumulative tag cumulativeLog root).StableAt view cumulativeLog := by
+  intro recordedTag checkpoint hcheckpoint
+  rw [ExtractorState.recordCumulative_checkpoints] at hcheckpoint
+  rcases List.mem_append.mp hcheckpoint with hold | hnew
+  · exact hstable recordedTag checkpoint hold
+  · simp only [List.mem_singleton] at hnew
+    cases hnew
+    rfl
+
 /-- Stability rules out the checkpoint-versus-terminal branch at the same log. -/
 theorem ExtractorState.StableAt.not_hasCheckpointTerminalExtractionDisagreement
     [DecidableEq Address] [DecidableEq Y]

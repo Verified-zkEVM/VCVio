@@ -1,0 +1,58 @@
+/-
+Copyright (c) 2026 Quang Dao. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Quang Dao
+-/
+
+module
+
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.PhaseBound
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Sequential
+
+/-!
+# Execution Bridge for One Sequential Commitment Phase
+
+`probEvent_stablePhaseRunFrom_le` exposes a raw commitment computation through the combined
+caching/logging interpreter. The executable sequential runner instead uses `withQueryLog` inside
+the oracle syntax and records the returned phase-local suffix. This module proves that the two
+views are equal when the interpreter's initial cumulative log is the extractor state's log.
+-/
+
+@[expose] public section
+
+open OracleSpec OracleComp
+
+namespace MerkleTreeMultiExtractability
+
+variable {Cfg Query Address Y S R : Type}
+
+/-- A raw commitment phase followed by cumulative-log recording has exactly the same cached
+semantics as the executable `withQueryLog` phase followed by suffix recording. -/
+theorem adaptivePrefixRunFrom_commit_eq
+    [DecidableEq Query] [DecidableEq Y]
+    {config : Configuration Cfg Address}
+    (extractorState : ExtractorState Cfg Query Address Y config)
+    (commit : OracleComp (Query →ₒ Y) (Cfg × Y × S))
+    (rest : (Cfg × Y × S) → ExtractorState Cfg Query Address Y config →
+      OracleComp (Query →ₒ Y) R)
+    (cache : (Query →ₒ Y).QueryCache) :
+    adaptivePrefixRunFrom
+        (fun output cumulativeLog =>
+          rest output (extractorState.recordCumulative output.1 cumulativeLog output.2.1))
+        commit cache extractorState.cumulativeLog =
+      (simulateQ (Query →ₒ Y).cachingOracle
+        (commit.withQueryLog >>= fun phaseResult =>
+          rest phaseResult.1
+            (extractorState.record phaseResult.1.1 phaseResult.2 phaseResult.1.2.1))).run
+        cache := by
+  unfold adaptivePrefixRunFrom
+  rw [cachingLoggingOracle.run_simulateQ_eq_map_run_simulateQ_withQueryLog]
+  simp only [StateT.run_bind, simulateQ_bind]
+  rw [map_eq_bind_pure_comp, bind_assoc]
+  simp only [pure_bind, Function.comp_apply]
+  apply bind_congr
+  intro phaseResult
+  obtain ⟨⟨output, phaseLog⟩, nextCache⟩ := phaseResult
+  rw [ExtractorState.recordCumulative_append]
+
+end MerkleTreeMultiExtractability

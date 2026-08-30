@@ -122,6 +122,38 @@ def ExtractorState.record {config : Configuration Cfg Address}
   { cumulativeLog
     checkpoints := state.checkpoints ++ [⟨tag, { root, cumulativeLog }⟩] }
 
+/-- Record a checkpoint from an already accumulated log. This is the proof-facing form used when
+the caching/logging interpreter returns the full current log rather than a phase-local suffix. -/
+def ExtractorState.recordCumulative {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config) (tag : Cfg)
+    (cumulativeLog : MerkleTreeExtractor.QueryLog Query Y) (root : Y) :
+    ExtractorState Cfg Query Address Y config where
+  cumulativeLog := cumulativeLog
+  checkpoints := state.checkpoints ++ [⟨tag, { root, cumulativeLog }⟩]
+
+/-- `recordCumulative` agrees with the executable phase-suffix transition. -/
+theorem ExtractorState.recordCumulative_append
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config) (tag : Cfg)
+    (phaseLog : MerkleTreeExtractor.QueryLog Query Y) (root : Y) :
+    state.recordCumulative tag (state.cumulativeLog ++ phaseLog) root =
+      state.record tag phaseLog root := rfl
+
+@[simp]
+theorem ExtractorState.recordCumulative_cumulativeLog
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config) (tag : Cfg)
+    (cumulativeLog : MerkleTreeExtractor.QueryLog Query Y) (root : Y) :
+    (state.recordCumulative tag cumulativeLog root).cumulativeLog = cumulativeLog := rfl
+
+@[simp]
+theorem ExtractorState.recordCumulative_checkpoints
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config) (tag : Cfg)
+    (cumulativeLog : MerkleTreeExtractor.QueryLog Query Y) (root : Y) :
+    (state.recordCumulative tag cumulativeLog root).checkpoints =
+      state.checkpoints ++ [⟨tag, { root, cumulativeLog }⟩] := rfl
+
 @[simp]
 theorem ExtractorState.empty_cumulativeLog :
     ∀ {config : Configuration Cfg Address},
