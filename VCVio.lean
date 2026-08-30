@@ -59,6 +59,7 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTDSPR
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTOpenPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUDC
 public import VCVio.CryptoFoundations.HashCommitment
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 public import VCVio.CryptoFoundations.KEMDEM
