@@ -143,18 +143,24 @@ def Primitives.thashUdProblem [SampleableType prims.PkSeed] (arity numTargets : 
 
 /-! ### Exact `d = 1` assumption instances -/
 
-/-- Source-final-validity SM-DT-DSPR problem for all arity-one FORS secret leaves. -/
+/-- Source-final-validity stand-alone SM-DT-DSPR problem for all arity-one FORS secret leaves.
+The EasyCrypt OpenPRE-to-DSPR/TCR hop does not need collection access during target commitment;
+keeping this member stand-alone avoids strengthening the final theorem unnecessarily. -/
 def Primitives.d1ForsLeafDsprProblem [SampleableType prims.PkSeed] :
-    TweakableHash.SM_DT_DSPR_Problem ℕ prims.PkSeed prims.AdrsKey
+    TweakableHash.SM_DT_DSPR_Problem Empty prims.PkSeed prims.AdrsKey
       (Vector prims.Y 1) prims.Y :=
-  prims.thashDsprProblem 1 p.d1TargetProfile.forsLeaf
+  TweakableHash.SM_DT_DSPR_Problem.standalone
+    (prims.thashMember 1) p.d1TargetProfile.forsLeaf
 
-/-- Source-final-validity SM-DT-OpenPRE problem for all arity-one FORS secret leaves. -/
+/-- Source-final-validity stand-alone SM-DT-OpenPRE problem for all arity-one FORS secret leaves.
+Its executable DSPR and TCR reductions therefore attack the exact stand-alone properties used by
+the source low-level theorem, while the other SLH-DSA hash terms retain collection access. -/
 def Primitives.d1ForsLeafOpenPreProblem [SampleableType prims.PkSeed]
     [SampleableType prims.Y] :
-    TweakableHash.SM_DT_OpenPRE_Problem ℕ prims.PkSeed prims.AdrsKey
+    TweakableHash.SM_DT_OpenPRE_Problem Empty prims.PkSeed prims.AdrsKey
       (Vector prims.Y 1) prims.Y :=
-  prims.thashOpenPreProblem 1 p.d1TargetProfile.forsLeaf ($ᵗ Vector prims.Y 1)
+  TweakableHash.SM_DT_OpenPRE_Problem.standalone
+    (prims.thashMember 1) ($ᵗ Vector prims.Y 1) p.d1TargetProfile.forsLeaf
 
 /-- The concrete FORS OpenPRE problem satisfies the uniform-input hypothesis required by the
 source OpenPRE-to-DSPR/TCR finite-fiber argument. -/
