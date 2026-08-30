@@ -419,6 +419,21 @@ def d1HmsgIndices (p : Params) (digest : Bytes p.m) : List HmsgIndex :=
   let (md, idxLeaf) := splitDigest p digest
   (List.range p.k).map fun i => (idxLeaf, i, forsIdx p md i)
 
+@[simp] theorem d1HmsgIndices_length (p : Params) (digest : Bytes p.m) :
+    (d1HmsgIndices p digest).length = p.k := by
+  simp [d1HmsgIndices]
+
+/-- Every semantic ITSR coordinate lies in the exact single-tree/FORS ranges used by the target
+ledger. -/
+theorem d1HmsgIndices_mem_bounds (p : Params) (digest : Bytes p.m) (idx : HmsgIndex)
+    (hidx : idx ∈ d1HmsgIndices p digest) :
+    idx.1 < 2 ^ p.hp ∧ idx.2.1 < p.k ∧ idx.2.2 < p.t := by
+  unfold d1HmsgIndices at hidx
+  obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hidx
+  simp only [List.mem_range] at hi
+  dsimp only
+  exact ⟨splitDigest_snd_lt p digest, hi, forsIdx_lt p (splitDigest p digest).1 i⟩
+
 /-- The exact message-compression ITSR problem for SLH-DSA public-key/message inputs.  It uses the
 scheme's external-message encoding and maps a digest to exactly the `k` source-game triples
 `(idxLeaf, FORS-tree index, selected leaf index)`.  A top-level reduction must assume `p.IsD1`. -/
