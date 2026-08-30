@@ -361,4 +361,87 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
             nodeBudget checkpointCount overhead remaining cached hremaining
         · exact zero_le
 
+/-- Compatibility specialization where structural accounting does not depend on the accumulated
+log. -/
+theorem probEvent_onlineAdaptivePrefixRunFrom_le
+    [DecidableEq Query] [DecidableEq Y] [Finite Y] [Inhabited Y]
+    [IsUniformSpec (Query →ₒ Y)]
+    (suffix : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
+    (continuation : X → OracleComp (Query →ₒ Y) C)
+    (win : R → Prop)
+    (targets : (Query →ₒ Y).QueryLog → Finset Y)
+    (Good : (Query →ₒ Y).QueryCache → (Query →ₒ Y).QueryLog → Prop)
+    (nodeBudget checkpointCount overhead : ℕ)
+    (prefixComp : OracleComp (Query →ₒ Y) X)
+    (remaining cached : ℕ)
+    (hbound : IsTotalQueryBound (prefixComp >>= continuation) remaining)
+    (cache : (Query →ₒ Y).QueryCache)
+    (log : (Query →ₒ Y).QueryLog)
+    (hno : ¬ CacheHasCollision cache)
+    (hcacheBound : ∃ keys : Finset Query, keys.card ≤ cached ∧
+      ∀ input, cache input ≠ none → input ∈ keys)
+    (hlogCache : ∀ entry ∈ log, cache entry.1 = some entry.2)
+    (hcacheLog : ∀ input value, cache input = some value →
+      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value)
+    (hgood : Good cache log)
+    (hgoodHit : ∀ (currentCache : (Query →ₒ Y).QueryCache)
+        (currentLog : (Query →ₒ Y).QueryLog) query response,
+      Good currentCache currentLog → currentCache query = some response →
+      (∀ input value, currentCache input = some value →
+        ∃ entry ∈ currentLog, entry.1 = input ∧ entry.2 = value) →
+      Good currentCache (currentLog ++ [⟨query, response⟩]))
+    (hgoodMiss : ∀ (currentCache : (Query →ₒ Y).QueryCache)
+        (currentLog : (Query →ₒ Y).QueryLog) query response,
+      Good currentCache currentLog → currentCache query = none →
+      ¬ CacheHasCollision (currentCache.cacheQuery query response) →
+      response ∉ targets currentLog →
+      Good (currentCache.cacheQuery query response)
+        (currentLog ++ [⟨query, response⟩]))
+    (htargetBound : ∀ (currentCached : ℕ)
+        (currentCache : (Query →ₒ Y).QueryCache)
+        (currentLog : (Query →ₒ Y).QueryLog),
+      (∃ keys : Finset Query, keys.card ≤ currentCached ∧
+        ∀ input, currentCache input ≠ none → input ∈ keys) →
+      (∀ entry ∈ currentLog, currentCache entry.1 = some entry.2) →
+      (∀ input value, currentCache input = some value →
+        ∃ entry ∈ currentLog, entry.1 = input ∧ entry.2 = value) →
+      Good currentCache currentLog →
+      (targets currentLog).card ≤
+        sharedTargetCount nodeBudget checkpointCount currentCached)
+    (hterminal : ∀ (x : X) (terminalRemaining terminalCached : ℕ)
+        (terminalCache : (Query →ₒ Y).QueryCache)
+        (terminalLog : (Query →ₒ Y).QueryLog),
+      IsTotalQueryBound (continuation x) terminalRemaining →
+      ¬ CacheHasCollision terminalCache →
+      (∃ keys : Finset Query, keys.card ≤ terminalCached ∧
+        ∀ input, terminalCache input ≠ none → input ∈ keys) →
+      (∀ entry ∈ terminalLog, terminalCache entry.1 = some entry.2) →
+      (∀ input value, terminalCache input = some value →
+        ∃ entry ∈ terminalLog, entry.1 = input ∧ entry.2 = value) →
+      Good terminalCache terminalLog →
+      Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
+          (suffix x terminalLog)).run terminalCache] ≤
+        (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+          terminalRemaining terminalCached : ENNReal) *
+            (Nat.card Y : ENNReal)⁻¹) :
+    Pr[fun z => win z.1 |
+      adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
+        suffix prefixComp cache log] ≤
+      (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+        remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
+  apply probEvent_onlineAdaptivePrefixRunFrom_logged_le suffix
+    (fun x _ => continuation x) win targets Good nodeBudget checkpointCount overhead
+    prefixComp remaining cached log
+  · exact (isTotalQueryBound_loggedAccountingBind_const_iff
+      prefixComp log continuation remaining).2 hbound
+  · exact hno
+  · exact hcacheBound
+  · exact hlogCache
+  · exact hcacheLog
+  · exact hgood
+  · exact hgoodHit
+  · exact hgoodMiss
+  · exact htargetBound
+  · exact hterminal
+
 end MerkleTreeMultiExtractability
