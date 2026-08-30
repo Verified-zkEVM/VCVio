@@ -113,6 +113,73 @@ theorem SequentialCommitter.runFromEmpty_wellFormed
   committer.runCommitments_preserves_wellFormed rounds 0 committer.initialState
     ExtractorState.empty ExtractorState.wellFormed_empty result hresult
 
+/-- Support-wise accounting for a sequential commitment run.
+
+The result has exactly one new checkpoint per phase, and its cumulative log extends the initial
+log.  The prefix conclusion is the decomposition statement used by later stopping-time proofs: it
+is equivalent to the existence of a suffix whose append to the initial log is the final log. -/
+theorem SequentialCommitter.runCommitments_accounting
+    (committer : SequentialCommitter Cfg Query Y)
+    {config : Configuration Cfg Address} (rounds firstRound : ℕ)
+    (state : committer.State) (extractorState : ExtractorState Cfg Query Address Y config)
+    (result : committer.State × ExtractorState Cfg Query Address Y config)
+    (hresult : result ∈ support
+      (committer.runCommitments rounds firstRound state extractorState)) :
+    result.2.checkpoints.length = extractorState.checkpoints.length + rounds ∧
+      extractorState.cumulativeLog <+: result.2.cumulativeLog := by
+  induction rounds generalizing firstRound state extractorState result with
+  | zero =>
+      simp only [SequentialCommitter.runCommitments, mem_support_pure_iff] at hresult
+      subst result
+      exact ⟨by simp, List.prefix_rfl⟩
+  | succ rounds ih =>
+      simp only [SequentialCommitter.runCommitments, mem_support_bind_iff] at hresult
+      obtain ⟨phaseResult, _hphase, hrest⟩ := hresult
+      obtain ⟨⟨tag, root, nextState⟩, phaseLog⟩ := phaseResult
+      have haccount := ih (firstRound + 1) nextState
+        (extractorState.record tag phaseLog root) result hrest
+      constructor
+      · calc
+          result.2.checkpoints.length =
+              (extractorState.record tag phaseLog root).checkpoints.length + rounds := haccount.1
+          _ = (extractorState.checkpoints.length + 1) + rounds := by
+            rw [ExtractorState.record_checkpoints_length]
+          _ = extractorState.checkpoints.length + (rounds + 1) := by omega
+      · exact (List.prefix_append extractorState.cumulativeLog phaseLog).trans haccount.2
+
+/-- A supported sequential run adds exactly `rounds` checkpoints. -/
+theorem SequentialCommitter.runCommitments_checkpoint_count
+    (committer : SequentialCommitter Cfg Query Y)
+    {config : Configuration Cfg Address} (rounds firstRound : ℕ)
+    (state : committer.State) (extractorState : ExtractorState Cfg Query Address Y config)
+    (result : committer.State × ExtractorState Cfg Query Address Y config)
+    (hresult : result ∈ support
+      (committer.runCommitments rounds firstRound state extractorState)) :
+    result.2.checkpoints.length = extractorState.checkpoints.length + rounds :=
+  (committer.runCommitments_accounting rounds firstRound state extractorState result hresult).1
+
+/-- The terminal commitment log decomposes as the initial log followed by a phase suffix. -/
+theorem SequentialCommitter.runCommitments_cumulativeLog_prefix
+    (committer : SequentialCommitter Cfg Query Y)
+    {config : Configuration Cfg Address} (rounds firstRound : ℕ)
+    (state : committer.State) (extractorState : ExtractorState Cfg Query Address Y config)
+    (result : committer.State × ExtractorState Cfg Query Address Y config)
+    (hresult : result ∈ support
+      (committer.runCommitments rounds firstRound state extractorState)) :
+    extractorState.cumulativeLog <+: result.2.cumulativeLog :=
+  (committer.runCommitments_accounting rounds firstRound state extractorState result hresult).2
+
+/-- A supported run from the empty history records exactly the requested number of commitments. -/
+theorem SequentialCommitter.runFromEmpty_checkpoint_count
+    (committer : SequentialCommitter Cfg Query Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (result : committer.State × ExtractorState Cfg Query Address Y config)
+    (hresult : result ∈ support (committer.runFromEmpty config rounds)) :
+    result.2.checkpoints.length = rounds := by
+  simpa [SequentialCommitter.runFromEmpty] using
+    committer.runCommitments_checkpoint_count rounds 0 committer.initialState
+      (ExtractorState.empty : ExtractorState Cfg Query Address Y config) result hresult
+
 /-- The pure state transition used after observing one phase output and its local query log. -/
 def ExtractorState.recordCommitmentOutput {config : Configuration Cfg Address}
     (extractorState : ExtractorState Cfg Query Address Y config)

@@ -148,6 +148,15 @@ theorem ExtractorState.record_checkpoints
       state.checkpoints ++
         [⟨tag, { root, cumulativeLog := state.cumulativeLog ++ phaseLog }⟩] := rfl
 
+/-- Recording one commitment adds exactly one checkpoint. -/
+@[simp]
+theorem ExtractorState.record_checkpoints_length
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config) (tag : Cfg)
+    (phaseLog : MerkleTreeExtractor.QueryLog Query Y) (root : Y) :
+    (state.record tag phaseLog root).checkpoints.length = state.checkpoints.length + 1 := by
+  simp
+
 /-- Every recorded checkpoint transcript is a prefix of the state's current transcript. -/
 def ExtractorState.WellFormed {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config) : Prop :=
