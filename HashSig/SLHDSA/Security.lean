@@ -13,6 +13,7 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTDSPR
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTOpenPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUDC
 public import VCVio.CryptoFoundations.PRF
 
 /-!
@@ -128,6 +129,18 @@ def Primitives.thashOpenPreProblem [SampleableType prims.PkSeed] (arity numTarge
   thColl := prims.thashCollection
   numTargets := numTargets
 
+/-- The source-final-validity SM-DT-UD-C problem for one fixed-arity `Thash` member, with explicit
+real-input and ideal-output distributions and the whole collection available during selection. -/
+def Primitives.thashUdProblem [SampleableType prims.PkSeed] (arity numTargets : ℕ)
+    (inputGen : ProbComp (Vector prims.Y arity)) (outputGen : ProbComp prims.Y) :
+    TweakableHash.SM_DT_UD_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y arity) prims.Y where
+  th := prims.thashMember arity
+  inputGen := inputGen
+  outputGen := outputGen
+  thColl := prims.thashCollection
+  numTargets := numTargets
+
 /-! ### Exact `d = 1` assumption instances -/
 
 /-- Source-final-validity SM-DT-DSPR problem for all arity-one FORS secret leaves. -/
@@ -160,6 +173,13 @@ def Primitives.d1WotsChainTcrProblem [SampleableType prims.PkSeed] :
     TweakableHash.SM_DT_TCR_Problem ℕ prims.PkSeed prims.AdrsKey
       (Vector prims.Y 1) prims.Y :=
   prims.thashTcrProblem 1 p.d1TargetProfile.wotsTcr
+
+/-- Collection SM-DT-UD-C problem for WOTS chain starts.  The real world hashes a uniformly
+sampled arity-one chain value; the ideal world samples a uniform digest directly. -/
+def Primitives.d1WotsChainUdProblem [SampleableType prims.PkSeed] [SampleableType prims.Y] :
+    TweakableHash.SM_DT_UD_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y 1) prims.Y :=
+  prims.thashUdProblem 1 p.d1TargetProfile.wotsUd ($ᵗ Vector prims.Y 1) ($ᵗ prims.Y)
 
 /-- Collection SM-DT-PRE problem for the WOTS arity-one hash member. -/
 def Primitives.d1WotsChainPreProblem [SampleableType prims.PkSeed] :
