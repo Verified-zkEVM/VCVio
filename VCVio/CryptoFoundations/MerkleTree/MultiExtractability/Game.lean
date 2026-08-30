@@ -17,6 +17,11 @@ to dynamically selected pruned batch openings. The terminal adversary returns cl
 acceptance bits; `verifyClaims` computes every bit through the query-parametric addressed batch
 verifier. The terminal adversary log is snapshotted before honest verification, keeping terminal
 checkpoint evolution and fresh verifier queries as separate proof obligations.
+
+The executable game currently lives in `Type 0`, matching the probability and total-query-bound
+infrastructure it uses. The structural `Configuration`, checkpoint, and extractor-state APIs remain
+universe-polymorphic; lifting this game layer is an explicit interface generalization, not an
+implicit security assumption.
 -/
 
 @[expose] public section
