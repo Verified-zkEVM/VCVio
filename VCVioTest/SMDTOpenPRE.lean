@@ -47,11 +47,13 @@ def collection : TweakableHashCollection Unit Seed Bool Bool where
 
 def problem1 : TweakableHash.SM_DT_OpenPRE_Problem Unit Seed Bool Input Bool where
   th := hash
+  inputGen := $ᵗ Input
   thColl := collection
   numTargets := 1
 
 def problem2 : TweakableHash.SM_DT_OpenPRE_Problem Unit Seed Bool Input Bool where
   th := hash
+  inputGen := $ᵗ Input
   thColl := collection
   numTargets := 2
 

@@ -6,7 +6,6 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
-public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
@@ -50,15 +49,21 @@ abbrev SM_DT_OpenPRE_openSpec (M : Type) : OracleSpec ℕ := ℕ →ₒ M
 structure SM_DT_OpenPRE_Problem (ι PkSeed Tweak M Y : Type) where
   /-- The tweakable hash whose open-preimage resistance is in question. -/
   th : TweakableHash PkSeed Tweak M Y
+  /-- Distribution used to sample the hidden input of each retained target. Keeping this explicit,
+  rather than fixing uniform sampling, matches the source game's abstract proper distribution and
+  permits reductions to instantiate the exact distribution they embed. -/
+  inputGen : ProbComp M
   /-- The rest of the collection, available while the adversary commits to target tweaks. -/
   thColl : TweakableHashCollection ι PkSeed Tweak Y
   /-- The number of committed tweaks retained as targets. -/
   numTargets : ℕ
 
 /-- The stand-alone OpenPRE problem, whose collection oracle is unqueryable. -/
-def SM_DT_OpenPRE_Problem.standalone (th : TweakableHash PkSeed Tweak M Y) (numTargets : ℕ) :
+def SM_DT_OpenPRE_Problem.standalone (th : TweakableHash PkSeed Tweak M Y)
+    (inputGen : ProbComp M) (numTargets : ℕ) :
     SM_DT_OpenPRE_Problem Empty PkSeed Tweak M Y where
   th := th
+  inputGen := inputGen
   thColl := .empty PkSeed Tweak Y
   numTargets := numTargets
 
@@ -87,12 +92,12 @@ def SM_DT_OpenPRE_pickOracles [DecidableEq Tweak]
 
 /-- Sample and record targets for precisely the supplied list. The experiment calls this on the
 bounded prefix of the committed tweak list. -/
-noncomputable def SM_DT_OpenPRE_initializeTargets [DecidableEq Tweak] [SampleableType M]
+def SM_DT_OpenPRE_initializeTargets [DecidableEq Tweak]
     (prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y) (pk : PkSeed) :
     List Tweak → StateT (SM_DT_OpenPRE_State Tweak M) ProbComp (List Y)
   | [] => pure []
   | t :: ts => do
-      let x ← (($ᵗ M : ProbComp M) : StateT (SM_DT_OpenPRE_State Tweak M) ProbComp M)
+      let x ← (prob.inputGen : StateT (SM_DT_OpenPRE_State Tweak M) ProbComp M)
       let st ← get
       set (st.recordTarget prob.numTargets Prod.fst (t, x))
       let ys ← SM_DT_OpenPRE_initializeTargets prob pk ts
@@ -118,7 +123,7 @@ def SM_DT_OpenPRE_findOracles [Inhabited M] (targets : List (Tweak × M)) :
 target sampling. The selected index must exist, must never have been opened, and must name a valid
 preimage of the corresponding recorded image. -/
 noncomputable def SM_DT_OpenPRE_Experiment [DecidableEq Tweak] [DecidableEq Y] [Inhabited M]
-    [SampleableType M] {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
+    {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_OpenPRE_Adversary prob) : ProbComp Bool := do
   let pk ← prob.th.seedGen
   let ((privateState, tweaks), afterPick) ←
@@ -136,7 +141,7 @@ noncomputable def SM_DT_OpenPRE_Experiment [DecidableEq Tweak] [DecidableEq Y] [
 
 /-- The SM-DT-OpenPRE success probability. -/
 noncomputable def SM_DT_OpenPRE_Advantage [DecidableEq Tweak] [DecidableEq Y] [Inhabited M]
-    [SampleableType M] {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
+    {prob : SM_DT_OpenPRE_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_OpenPRE_Adversary prob) : ℝ≥0∞ :=
   Pr[= true | SM_DT_OpenPRE_Experiment adv]
 
