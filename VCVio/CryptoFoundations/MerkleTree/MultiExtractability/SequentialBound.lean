@@ -66,6 +66,7 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_le
         (terminalCached : ℕ)
         (cache : (Query →ₒ Y).QueryCache)
         (log : (Query →ₒ Y).QueryLog),
+      state.cumulativeLog = log →
       ¬ CacheHasCollision cache →
       (∃ keys : Finset Query, keys.card ≤ terminalCached ∧
         ∀ input, cache input ≠ none → input ∈ keys) →
@@ -106,7 +107,7 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_le
       cachedBound with
   | zero =>
       have hterminal := hfinish privateState extractorState cachedBound cache log
-        hno hcacheBound hlogCache hcacheLog hstable
+        hstateLog hno hcacheBound hlogCache hcacheLog hstable
       have hremaining : terminalQueryBound ≤ remaining := by simpa using hbudget
       have hbase : Pr[ fun z => win z.1 |
           (simulateQ (Query →ₒ Y).cachingOracle

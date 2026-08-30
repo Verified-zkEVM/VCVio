@@ -65,6 +65,7 @@ def Adversary.TerminalStrongBound
   ∀ privateState (state : ExtractorState Cfg Query Address Y config)
       (terminalCached : ℕ) (cache : (Query →ₒ Y).QueryCache)
       (log : (Query →ₒ Y).QueryLog),
+    state.cumulativeLog = log →
     ¬ CacheHasCollision cache →
     (∃ keys : Finset Query, keys.card ≤ terminalCached ∧
       ∀ input, cache input ≠ none → input ∈ keys) →

@@ -59,6 +59,7 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_le
         (terminalCached : ℕ)
         (cache : (Query →ₒ Y).QueryCache)
         (log : (Query →ₒ Y).QueryLog),
+      state.cumulativeLog = log →
       ¬ CacheHasCollision cache →
       (∃ keys : Finset Query, keys.card ≤ terminalCached ∧
         ∀ input, cache input ≠ none → input ∈ keys) →
@@ -115,6 +116,7 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_exact_le
         (terminalCached : ℕ)
         (cache : (Query →ₒ Y).QueryCache)
         (log : (Query →ₒ Y).QueryLog),
+      state.cumulativeLog = log →
       ¬ CacheHasCollision cache →
       (∃ keys : Finset Query, keys.card ≤ terminalCached ∧
         ∀ input, cache input ≠ none → input ∈ keys) →
