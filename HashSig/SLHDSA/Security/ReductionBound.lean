@@ -229,9 +229,12 @@ end D1ReductionAdversaries
 variable [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
   [Fintype prims.Y]
 
-/-- Reviewable boundary for the complete `d = 1` EUF-CMA reduction.  Besides the concrete game
-adversaries, it requires the parameter profile, reachable encoded-target separation, the three
-program-level component reductions, and the isolated OpenPRE counting lemma. -/
+/-- Reviewable boundary for the still-conditional `d = 1` EUF-CMA reduction.  Besides the concrete
+game adversaries, it records the parameter profile, reachable encoded-target separation, the four
+program-level composition inequalities, and the isolated OpenPRE counting lemma.
+
+The representation fields are gates for the future constructors of those program reductions;
+the algebraic theorem below currently projects only `composition` and `openPreCounting`. -/
 structure D1EufCmaReductionCertificate (adv : EufCmaAdversary prims)
     (reds : D1ReductionAdversaries prims) where
   profile : p.D1SecurityProfile
@@ -241,9 +244,9 @@ structure D1EufCmaReductionCertificate (adv : EufCmaAdversary prims)
   composition : D1CompositionCertificate p (concreteEufCmaAdvantage prims adv) reds.advantages
   openPreCounting : reds.OpenPreCountingStatement
 
-/-- The concrete, quantitative, low-level EUF-CMA statement obtained from a checked reduction
-certificate.  Every term is the advantage of the concrete adversary stored in `reds`; the FORS
-leaf DSPR/TCR adversaries are executable transformations of its OpenPRE adversary. -/
+/-- The concrete, quantitative, low-level EUF-CMA statement obtained from the explicit conditional
+certificate above.  Every term is the advantage of the concrete adversary stored in `reds`; the
+FORS-leaf DSPR/TCR adversaries are executable transformations of its OpenPRE adversary. -/
 theorem concreteEufCmaAdvantage_le_lowLevelBound (adv : EufCmaAdversary prims)
     (reds : D1ReductionAdversaries prims) (cert : D1EufCmaReductionCertificate prims adv reds) :
     concreteEufCmaAdvantage prims adv ≤
@@ -282,9 +285,10 @@ theorem concreteEufCmaAdvantage_le_explicitLowLevelBound (adv : EufCmaAdversary 
 
 /-! ## Strong-unforgeability corollary -/
 
-/-- Most-general concrete SUF-CMA statement currently justified by the source reduction.  The
-ordinary forgery branch receives the complete low-level EUF bound above; the only additional term
-is the exact probability of returning a new valid signature for an already queried message.
+/-- Most-general concrete SUF-CMA statement currently justified by the conditional source
+accounting.  The ordinary forgery branch receives the conditional low-level EUF expression above;
+the only additional term is the exact probability of returning a new valid signature for an
+already queried message.
 
 This theorem deliberately does not call that residual term negligible.  Closing it requires a
 new SLH-DSA-specific binding reduction beyond the cited EUF-CMA proof. -/

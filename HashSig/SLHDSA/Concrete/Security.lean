@@ -11,9 +11,10 @@ public import HashSig.SLHDSA.Security.ReductionBound
 /-!
 # Concrete SHA2-128-24 security side conditions
 
-This module discharges the two representation-level hypotheses used by the generic `d = 1`
-SLH-DSA reduction: full-width WOTS message encoding (proved in `Concrete.Instance`) and separation
-of every reachable target tweak after FIPS 205 `ADRSc` compression.
+This module discharges the two representation-level gates packaged for the future `d = 1`
+SLH-DSA program-reduction constructors: full-width WOTS message encoding (proved in
+`Concrete.Instance`) and separation of every reachable target tweak after FIPS 205 `ADRSc`
+compression.  The current conditional bound records these facts but does not yet consume them.
 
 The latter statement is deliberately restricted to the seven target families.  `ADRSc` is not
 globally injective, but all coordinates retained by those families fit in its 32-bit words.
@@ -279,10 +280,10 @@ theorem sha2_128_24_concreteEufCmaAdvantage_le_explicitLowLevelBound
   rw [hcoef] at h
   exact h
 
-/-- Most-general concrete SHA2-128-24 SUF-CMA theorem currently justified: the complete EUF-CMA
-hash/PRF bound plus the exact residual probability of a new valid signature on an already signed
-message.  Bounding that final term is precisely the extra scheme-specific property needed beyond
-the cited EUF proof. -/
+/-- Most-general concrete SHA2-128-24 SUF-CMA theorem currently justified: the conditional
+EUF-CMA low-level hash/PRF expression plus the exact residual probability of a new valid signature
+on an already signed message.  Bounding that final term is precisely the extra scheme-specific
+property needed beyond the cited EUF proof. -/
 theorem sha2_128_24_concreteStrongEufCmaAdvantage_le_explicitLowLevelBound_add_sameMessage
     (adv : StrongEufCmaAdversary shaPrimitives)
     (reds : D1ReductionAdversaries shaPrimitives)
