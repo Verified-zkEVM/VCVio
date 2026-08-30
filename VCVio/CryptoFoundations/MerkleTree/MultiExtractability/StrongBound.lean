@@ -106,6 +106,113 @@ def Adversary.TerminalFreshTargetProperty
     ∃ target ∈ state.liveTargetSet model.view log,
       MerkleTreeExtractability.CacheAddsValue cache z.2 target
 
+/-- Generic cache/log facts retained by terminal execution. -/
+def Adversary.TerminalTraceInvariant
+    [DecidableEq Query] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config) : Prop :=
+  ∀ privateState (state : ExtractorState Cfg Query Address Y config)
+      (cache : (Query →ₒ Y).QueryCache) (log : (Query →ₒ Y).QueryLog)
+      (z : Transcript Cfg Query Address Y config × (Query →ₒ Y).QueryCache),
+    state.cumulativeLog = log →
+    z ∈ support ((simulateQ (Query →ₒ Y).cachingOracle
+      (adversary.terminalExecution model privateState state)).run cache) →
+    z.1.extractorState = state ∧ cache ≤ z.2 ∧
+      ∀ entry ∈ z.1.terminalSuffix, z.2 entry.1 = some entry.2
+
+/-- The remaining Merkle-specific endgame obligation after terminal checkpoint evolution is
+handled generically: under final stability, an accepted opening disagreement adds a fresh value
+from the immutable checkpoint target set. -/
+def Adversary.TerminalAcceptedFreshProperty
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config) : Prop :=
+  ∀ privateState (state : ExtractorState Cfg Query Address Y config)
+      (cache : (Query →ₒ Y).QueryCache) (log : (Query →ₒ Y).QueryLog)
+      (z : Transcript Cfg Query Address Y config × (Query →ₒ Y).QueryCache),
+    state.cumulativeLog = log →
+    ¬ CacheHasCollision cache →
+    (∀ entry ∈ log, cache entry.1 = some entry.2) →
+    (∀ input value, cache input = some value →
+      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value) →
+    state.StableAt model.view log →
+    z ∈ support ((simulateQ (Query →ₒ Y).cachingOracle
+      (adversary.terminalExecution model privateState state)).run cache) →
+    state.StableAt model.view (log ++ z.1.terminalSuffix) →
+    HasAcceptedOpeningDisagreement model.view state z.1.attempts →
+    ∃ target ∈ state.targetSet model.view,
+      MerkleTreeExtractability.CacheAddsValue cache z.2 target
+
+/-- Terminal execution always preserves its input extractor state, grows the shared cache, and
+leaves every terminal-opening log entry in the final cache. -/
+theorem Adversary.terminalTraceInvariant
+    [DecidableEq Query] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config) :
+    adversary.TerminalTraceInvariant model := by
+  intro privateState state cache _log z _hstateLog hz
+  unfold Adversary.terminalExecution at hz
+  rw [simulateQ_bind, StateT.run_bind, support_bind] at hz
+  simp only [Set.mem_iUnion] at hz
+  obtain ⟨⟨⟨claims, terminalSuffix⟩, cacheOpening⟩, hopening, hz⟩ := hz
+  rw [simulateQ_bind, StateT.run_bind, support_bind] at hz
+  simp only [Set.mem_iUnion] at hz
+  obtain ⟨⟨attempts, cacheFinal⟩, hverify, hz⟩ := hz
+  simp only [simulateQ_pure, StateT.run_pure, support_pure,
+    Set.mem_singleton_iff] at hz
+  subst z
+  have hopeningInvariant := OracleComp.log_entry_in_cache_and_mono
+    (adversary.opening privateState state) cache
+    ((claims, terminalSuffix), cacheOpening) hopening
+  have hverifyMono : cacheOpening ≤ cacheFinal :=
+    simulateQ_cachingOracle_cache_le (verifyClaims model claims) cacheOpening
+      (attempts, cacheFinal) hverify
+  exact ⟨rfl, hopeningInvariant.2.trans hverifyMono,
+    fun entry hentry => hverifyMono (hopeningInvariant.1 entry hentry)⟩
+
+/-- Trace preservation, causal suffix stability, and the accepted-opening kernel together imply
+the single deterministic terminal fresh-target property used by the ROM theorem. -/
+theorem Adversary.terminalFreshTargetProperty_of_trace_and_accepted
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config)
+    (htrace : adversary.TerminalTraceInvariant model)
+    (haccepted : adversary.TerminalAcceptedFreshProperty model) :
+    adversary.TerminalFreshTargetProperty model := by
+  intro privateState state cache log z hstateLog hno hlogCache hcacheLog hstable hz hfailure
+  obtain ⟨hstate, hmono, hsuffixFinal⟩ :=
+    htrace privateState state cache log z hstateLog hz
+  have hfailure' : Failure model.view state z.1.attempts z.1.terminalSuffix := by
+    simpa only [StrongFailure, hstate] using hfailure
+  have freshOfNotStable
+      (hnotStable : ¬ state.StableAt model.view (log ++ z.1.terminalSuffix)) :
+      ∃ target ∈ state.liveTargetSet model.view log,
+        MerkleTreeExtractability.CacheAddsValue cache z.2 target := by
+    obtain ⟨target, htarget, hfresh⟩ :=
+      hstable.exists_freshTarget_of_not_stable_append model.view z.1.terminalSuffix
+        cache z.2 hcacheLog hmono hsuffixFinal hnotStable
+    refine ⟨target, ?_, hfresh⟩
+    rwa [hstable.liveTargetSet_eq_targetSet model.view]
+  rcases hfailure' with hopening | hequalRoot | hterminal
+  · by_cases hstableFinal : state.StableAt model.view (log ++ z.1.terminalSuffix)
+    · obtain ⟨target, htarget, hfresh⟩ := haccepted privateState state cache log z
+        hstateLog hno hlogCache hcacheLog hstable hz hstableFinal hopening
+      refine ⟨target, ?_, hfresh⟩
+      rwa [hstable.liveTargetSet_eq_targetSet model.view]
+    · exact freshOfNotStable hstableFinal
+  · exact (hstable.not_hasEqualRootExtractionDisagreement model.view hequalRoot).elim
+  · apply freshOfNotStable
+    intro hstableFinal
+    have hstableTerminal : state.StableAt model.view
+        (state.terminalLog z.1.terminalSuffix) := by
+      simpa [ExtractorState.terminalLog, hstateLog] using hstableFinal
+    exact hstableTerminal.not_hasCheckpointTerminalExtractionDisagreement
+      model.view z.1.terminalSuffix hterminal
+
 /-- A total terminal query bound plus the deterministic fresh-target reduction discharges the
 probabilistic `TerminalStrongBound` interface.  This theorem contains the entire terminal random-
 oracle calculation; proving a concrete game secure is reduced to the support-level Merkle lemma
