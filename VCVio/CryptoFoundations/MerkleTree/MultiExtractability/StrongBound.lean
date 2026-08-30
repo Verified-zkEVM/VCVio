@@ -15,9 +15,10 @@ public import VCVio.OracleComp.QueryTracking.Unpredictability
 # Strong Multi-Extractability Bound
 
 This module connects the generic sequential stopping theorem to the executable stateful game.
-The sole remaining semantic interface is `TerminalStrongBound`: after all commitment checkpoints
-have been recorded, it bounds terminal opening production plus honest batch verification under
-the exact cache/log/stability invariants maintained by the online proof.
+`TerminalStrongBound` is an internal decomposition boundary: after all commitment checkpoints
+have been recorded, it isolates terminal opening production plus honest batch verification under
+the exact cache/log/stability invariants maintained by the online proof. The final theorems
+discharge it from executable query bounds and honest-verifier semantics.
 
 The finite-maximum theorem owns the security statement.  The textbook event, coarse binomial
 bound, and quadratic bound are corollaries.
