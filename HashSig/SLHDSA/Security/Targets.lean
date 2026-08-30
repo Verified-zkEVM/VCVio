@@ -179,6 +179,23 @@ variable {p : Params}
 def encodeTargets (prims : Primitives p) (addresses : List Adrs) : List prims.AdrsKey :=
   addresses.map prims.adrsToKey
 
+/-- Exact proof interface for compressed-address separation: once an unencoded address list is
+known to be duplicate-free, its encoded image is duplicate-free iff `adrsToKey` is injective on
+that reachable list.  This avoids asking for the false global injectivity property of SHA ADRSc. -/
+theorem encodeTargets_nodup_iff_injOn (prims : Primitives p) (addresses : List Adrs)
+    (haddresses : addresses.Nodup) :
+    (prims.encodeTargets addresses).Nodup ↔
+      ∀ a ∈ addresses, ∀ b ∈ addresses, prims.adrsToKey a = prims.adrsToKey b → a = b := by
+  simpa [encodeTargets] using List.nodup_map_iff_inj_on (f := prims.adrsToKey) haddresses
+
+/-- Forward constructor form of `encodeTargets_nodup_iff_injOn`. -/
+theorem encodeTargets_nodup_of_injOn (prims : Primitives p) (addresses : List Adrs)
+    (haddresses : addresses.Nodup)
+    (hinj : ∀ a ∈ addresses, ∀ b ∈ addresses,
+      prims.adrsToKey a = prims.adrsToKey b → a = b) :
+    (prims.encodeTargets addresses).Nodup :=
+  (prims.encodeTargets_nodup_iff_injOn addresses haddresses).2 hinj
+
 def d1ForsLeafTweaks (prims : Primitives p) : List prims.AdrsKey :=
   prims.encodeTargets p.d1ForsLeafAddresses
 
