@@ -80,7 +80,8 @@ noncomputable def bound (p : Params) (terms : D1HighLevelTerms) : ℝ≥0∞ :=
 
 end D1HighLevelTerms
 
-/-- Independently auditable outputs of the three program-level component reductions.  These are
+/-- Independently auditable outputs of the top-level split and three program-level component
+reductions.  These are
 the obligations still produced by translating the EasyCrypt game hops to the repository's exact
 SLH-DSA program; separating them prevents an aggregate theorem from laundering that work into one
 field with the headline conclusion itself. -/
@@ -101,7 +102,8 @@ structure D1CompositionCertificate (p : Params) (eufAdv : ℝ≥0∞)
   /-- WOTS reduction to `(w - 2) * UD + TCR + PRE`. -/
   wots : wotsLoss ≤ terms.wotsBound p
 
-/-- Composition of the three explicit component obligations gives the exact high-level theorem. -/
+/-- Composition of the top-level split and three component obligations gives the exact high-level
+theorem. -/
 theorem D1CompositionCertificate.eufAdv_le_bound {p : Params} {eufAdv : ℝ≥0∞}
     {terms : D1HighLevelTerms} (cert : D1CompositionCertificate p eufAdv terms) :
     eufAdv ≤ terms.bound p := by
@@ -145,8 +147,8 @@ theorem D1HighLevelTerms.bound_le_withOpenPreReduction {p : Params}
   gcongr
 
 /-- Source-faithful low-level conclusion: the concrete EUF-CMA advantage is bounded by the exact
-PRF/ITSR/UD/TCR/PRE/DSPR expression once the three program-level component reductions and the
-OpenPRE counting lemma have been supplied. -/
+PRF/ITSR/UD/TCR/PRE/DSPR expression once the top-level split, three program-level component
+reductions, and the OpenPRE counting lemma have been supplied. -/
 theorem d1_eufCma_le_lowLevelBound {p : Params} {eufAdv : ℝ≥0∞}
     {terms : D1HighLevelTerms} {openPre : D1OpenPreReductionTerms}
     (cert : D1CompositionCertificate p eufAdv terms)

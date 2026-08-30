@@ -246,8 +246,9 @@ def shaD1EufCmaReductionCertificate
   openPreCounting := openPreCounting
 
 /-- Concrete SHA2-128-24 EUF-CMA theorem.  Every representation-level condition is proved; the
-only inputs are the three program-level composition inequalities and the named OpenPRE fiber
-counting/coupling statement.  The WOTS coefficient specializes from `w - 2` to exactly `2`. -/
+only inputs are the four explicit composition inequalities (top-level, M-FORS, XMSS, and WOTS)
+and the named OpenPRE fiber-counting/coupling statement.  The WOTS coefficient specializes from
+`w - 2` to exactly `2`. -/
 theorem sha2_128_24_concreteEufCmaAdvantage_le_explicitLowLevelBound
     (adv : EufCmaAdversary shaPrimitives)
     (reds : D1ReductionAdversaries shaPrimitives)
