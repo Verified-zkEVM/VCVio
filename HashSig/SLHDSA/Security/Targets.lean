@@ -181,6 +181,25 @@ def d1WotsPkTweaks (prims : Primitives p) : List prims.AdrsKey :=
 def d1XmssTreeTweaks (prims : Primitives p) : List prims.AdrsKey :=
   prims.encodeTargets p.d1XmssTreeAddresses
 
+/-- Concrete address-encoding side condition for the target-selection phases of the `d = 1`
+reductions.  The tweakable-hash games require distinct target tweaks, while `adrsToKey` need not
+be globally injective (the SHA instantiation deliberately truncates ADRS).  Consequently the
+right condition is `Nodup` on each reachable target family, including every message-dependent
+WOTS PRE transcript, rather than a false global injectivity assumption.
+
+The WOTS TCR field is stated for the whole reachable chain-step space, so it also covers every
+message-dependent subsequence selected by the reduction.  Cross-disjointness from collection
+queries remains a property of each concrete reduction transcript and is checked by the games'
+final-validity monitor. -/
+structure D1TargetTweakSeparation (prims : Primitives p) : Prop where
+  forsLeaf : prims.d1ForsLeafTweaks.Nodup
+  forsTree : prims.d1ForsTreeTweaks.Nodup
+  forsRoots : prims.d1ForsRootsTweaks.Nodup
+  wotsPre : ∀ messageAt : ℕ → prims.Y, (prims.d1WotsPreTweaks messageAt).Nodup
+  wotsTcr : prims.d1WotsTcrTweakSpace.Nodup
+  wotsPk : prims.d1WotsPkTweaks.Nodup
+  xmssTree : prims.d1XmssTreeTweaks.Nodup
+
 @[simp] theorem d1ForsLeafTweaks_length (prims : Primitives p) :
     prims.d1ForsLeafTweaks.length = p.d1TargetProfile.forsLeaf := by
   simp [d1ForsLeafTweaks, encodeTargets]
