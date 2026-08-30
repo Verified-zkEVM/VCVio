@@ -37,26 +37,71 @@ namespace MerkleTreeMultiExtractability
 
 variable {Query Y X R C : Type}
 
+/-- Run a prefix with an explicit phase-local query log, then choose a proof-only accounting
+continuation from its output and the resulting cumulative log.  This computation is used only for
+query accounting; the executable stopping theorem continues to run `adaptivePrefixRunFrom`. -/
+def loggedAccountingBind
+    (prefixComp : OracleComp (Query →ₒ Y) X)
+    (initialLog : (Query →ₒ Y).QueryLog)
+    (continuation : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) C) :
+    OracleComp (Query →ₒ Y) C :=
+  prefixComp.withQueryLog >>= fun result =>
+    continuation result.1 (initialLog ++ result.2)
+
+@[simp]
+theorem loggedAccountingBind_pure (x : X) (log : (Query →ₒ Y).QueryLog)
+    (continuation : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) C) :
+    loggedAccountingBind (pure x) log continuation = continuation x log := by
+  simp [loggedAccountingBind]
+
+theorem loggedAccountingBind_query_bind
+    (query : Query) (next : Y → OracleComp (Query →ₒ Y) X)
+    (log : (Query →ₒ Y).QueryLog)
+    (continuation : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) C) :
+    loggedAccountingBind
+        ((liftM ((Query →ₒ Y).query query) : OracleComp (Query →ₒ Y) Y) >>= next)
+        log continuation =
+      (liftM ((Query →ₒ Y).query query) : OracleComp (Query →ₒ Y) Y) >>= fun response =>
+        loggedAccountingBind (next response) (log ++ [⟨query, response⟩]) continuation := by
+  simp only [loggedAccountingBind, OracleComp.withQueryLog_bind, withQueryLog_query,
+    bind_assoc, pure_bind, map_eq_pure_bind, Prod.map, id_eq, List.append_assoc]
+
+/-- Ignoring the recorded log in the accounting continuation recovers ordinary bind accounting. -/
+theorem isTotalQueryBound_loggedAccountingBind_const_iff
+    (prefixComp : OracleComp (Query →ₒ Y) X)
+    (log : (Query →ₒ Y).QueryLog)
+    (continuation : X → OracleComp (Query →ₒ Y) C) (budget : ℕ) :
+    IsTotalQueryBound
+      (loggedAccountingBind prefixComp log (fun x _ => continuation x)) budget ↔
+        IsTotalQueryBound (prefixComp >>= continuation) budget := by
+  induction prefixComp using OracleComp.inductionOn generalizing budget log with
+  | pure x => simp
+  | query_bind query next ih =>
+      rw [loggedAccountingBind_query_bind, bind_assoc,
+        isTotalQueryBound_query_bind_iff, isTotalQueryBound_query_bind_iff]
+      exact and_congr_right fun _ => forall_congr' fun response => ih response _ _
+
 /-- **Online predictable-target adaptive-prefix bound.**
 
 The target set may change with the accumulated log, but its cardinality must be bounded from the
 pre-query cache/log invariants. The proof treats a target hit as an unrestricted bad branch; hence
 the conclusion applies to any terminal event whose good branches satisfy the recursive/terminal
 hypotheses, without requiring the execution to expose an explicit monitoring flag. -/
-theorem probEvent_onlineAdaptivePrefixRunFrom_le
+theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
     [DecidableEq Query] [DecidableEq Y] [Finite Y] [Inhabited Y]
     [IsUniformSpec (Query →ₒ Y)]
     (suffix : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
-    (continuation : X → OracleComp (Query →ₒ Y) C)
+    (continuation : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) C)
     (win : R → Prop)
     (targets : (Query →ₒ Y).QueryLog → Finset Y)
     (Good : (Query →ₒ Y).QueryCache → (Query →ₒ Y).QueryLog → Prop)
     (nodeBudget checkpointCount overhead : ℕ)
     (prefixComp : OracleComp (Query →ₒ Y) X)
     (remaining cached : ℕ)
-    (hbound : IsTotalQueryBound (prefixComp >>= continuation) remaining)
-    (cache : (Query →ₒ Y).QueryCache)
     (log : (Query →ₒ Y).QueryLog)
+    (hbound : IsTotalQueryBound
+      (loggedAccountingBind prefixComp log continuation) remaining)
+    (cache : (Query →ₒ Y).QueryCache)
     (hno : ¬ CacheHasCollision cache)
     (hcacheBound : ∃ keys : Finset Query, keys.card ≤ cached ∧
       ∀ input, cache input ≠ none → input ∈ keys)
@@ -91,7 +136,7 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_le
     (hterminal : ∀ (x : X) (terminalRemaining terminalCached : ℕ)
         (terminalCache : (Query →ₒ Y).QueryCache)
         (terminalLog : (Query →ₒ Y).QueryLog),
-      IsTotalQueryBound (continuation x) terminalRemaining →
+      IsTotalQueryBound (continuation x terminalLog) terminalRemaining →
       ¬ CacheHasCollision terminalCache →
       (∃ keys : Finset Query, keys.card ≤ terminalCached ∧
         ∀ input, terminalCache input ≠ none → input ∈ keys) →
@@ -118,8 +163,10 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_le
   | query_bind query next ih =>
       have hqueryBound : IsTotalQueryBound
           ((liftM ((Query →ₒ Y).query query) : OracleComp (Query →ₒ Y) _) >>= fun response =>
-            next response >>= continuation) remaining := by
-        simpa only [bind_assoc] using hbound
+            loggedAccountingBind (next response) (log ++ [⟨query, response⟩])
+              continuation) remaining := by
+        rw [← loggedAccountingBind_query_bind]
+        exact hbound
       rw [isTotalQueryBound_query_bind_iff] at hqueryBound
       obtain ⟨hremaining, hnext⟩ := hqueryBound
       by_cases hhit : ∃ response, cache query = some response
