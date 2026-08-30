@@ -5,7 +5,7 @@ Authors: Nicolas Consigny
 -/
 
 module
-public import HashSig.SLHDSA.Scheme
+public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.Security.TargetProfile
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
@@ -193,5 +193,65 @@ def hmsgItsrProblem [SampleableType prims.Y] :
       (Bytes p.m) HmsgIndex where
   khf := hmsgHashFamily prims
   indices := d1HmsgIndices p
+
+/-! ### Concrete EUF-CMA endpoint -/
+
+section ConcreteEUF
+
+variable [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
+  [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.Y]
+
+/-- Adversaries against the canonical explicit-query SLH-DSA scheme. -/
+abbrev EufCmaAdversary :=
+  SignatureAlg.unforgeableAdv
+    (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec prims.core)) prims.core)
+
+/-- The executable EUF-CMA program before applying a public-hash runtime.  Factoring the program
+out makes the concrete endpoint auditable: one deterministic simulation surrounds key generation,
+the adversary, every signing query, and final verification. -/
+noncomputable def eufCmaProgram (adv : EufCmaAdversary prims) :
+    OracleComp (unifSpec + publicHashSpec prims.core) Bool :=
+  letI : DecidableEq (List Byte) := Classical.decEq _
+  letI : DecidableEq (SignatureCore p prims.core) := Classical.decEq _
+  let sigAlg := slhdsaAlg
+    (m := OracleComp (unifSpec + publicHashSpec prims.core)) prims.core
+  do
+    let (pk, sk) ← sigAlg.keygen
+    let impl : QueryImpl
+        ((unifSpec + publicHashSpec prims.core) +
+          (List Byte →ₒ SignatureCore p prims.core))
+        (WriterT (QueryLog (List Byte →ₒ SignatureCore p prims.core))
+          (OracleComp (unifSpec + publicHashSpec prims.core))) :=
+      (HasQuery.toQueryImpl
+          (spec := unifSpec + publicHashSpec prims.core)
+          (m := OracleComp (unifSpec + publicHashSpec prims.core))).liftTarget
+        (WriterT (QueryLog (List Byte →ₒ SignatureCore p prims.core))
+          (OracleComp (unifSpec + publicHashSpec prims.core))) +
+        sigAlg.signingOracle pk sk
+    let simAdv : WriterT (QueryLog (List Byte →ₒ SignatureCore p prims.core))
+        (OracleComp (unifSpec + publicHashSpec prims.core))
+        (List Byte × SignatureCore p prims.core) := simulateQ impl (adv.main pk)
+    let ((msg, sig), log) ← simAdv.run
+    let verified ← sigAlg.verify pk msg sig
+    return !log.wasQueried msg && verified
+
+/-- Concrete-function EUF-CMA experiment for the supplied primitive bundle. -/
+noncomputable def concreteEufCmaExperiment (adv : EufCmaAdversary prims) : SPMF Bool :=
+  SignatureAlg.unforgeableExp (PublicHash.concreteRuntime prims) adv
+
+/-- Concrete-function EUF-CMA advantage. -/
+noncomputable def concreteEufCmaAdvantage (adv : EufCmaAdversary prims) : ℝ≥0∞ :=
+  Pr[= true | concreteEufCmaExperiment prims adv]
+
+/-- Endpoint bridge: the generic `SignatureAlg.unforgeableExp` is exactly one simulation of the
+whole EUF-CMA program with `PublicHash.impl prims`.  Thus subsequent THF reductions start from
+the deterministic SLH-DSA scheme rather than the repository's separate ROM runtime. -/
+theorem concreteEufCmaExperiment_eq_simulate (adv : EufCmaAdversary prims) :
+    concreteEufCmaExperiment prims adv =
+      (liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims))
+        (eufCmaProgram prims adv)) : SPMF Bool) := by
+  rfl
+
+end ConcreteEUF
 
 end SLHDSA
