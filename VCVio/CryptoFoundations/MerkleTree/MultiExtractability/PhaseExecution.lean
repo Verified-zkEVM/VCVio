@@ -26,6 +26,24 @@ namespace MerkleTreeMultiExtractability
 
 variable {Cfg Query Address Y S R : Type}
 
+/-- Generic execution bridge: exposing an adaptive prefix through the combined cache/log handler
+is exactly the executable `withQueryLog` prefix followed by a suffix receiving the accumulated
+log.  This theorem is useful both for commitment phases and for the terminal opening phase. -/
+theorem adaptivePrefixRunFrom_eq_withQueryLog
+    [DecidableEq Query] [DecidableEq Y]
+    (prefixComp : OracleComp (Query →ₒ Y) S)
+    (suffix : S → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
+    (cache : (Query →ₒ Y).QueryCache) (log : (Query →ₒ Y).QueryLog) :
+    adaptivePrefixRunFrom suffix prefixComp cache log =
+      (simulateQ (Query →ₒ Y).cachingOracle
+        (prefixComp.withQueryLog >>= fun phaseResult =>
+          suffix phaseResult.1 (log ++ phaseResult.2))).run cache := by
+  unfold adaptivePrefixRunFrom
+  rw [cachingLoggingOracle.run_simulateQ_eq_map_run_simulateQ_withQueryLog]
+  simp only [StateT.run_bind, simulateQ_bind]
+  rw [map_eq_bind_pure_comp, bind_assoc]
+  simp only [pure_bind, Function.comp_apply]
+
 /-- A raw commitment phase followed by cumulative-log recording has exactly the same cached
 semantics as the executable `withQueryLog` phase followed by suffix recording. -/
 theorem adaptivePrefixRunFrom_commit_eq
