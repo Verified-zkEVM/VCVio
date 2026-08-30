@@ -246,6 +246,26 @@ noncomputable def runtime (core : CorePrimitives p)
     ProbCompRuntime (OracleComp (unifSpec + publicHashSpec core)) :=
   runtimeWithCache core ∅
 
+/-- The shared lazy-public-hash runtime factors a final pure map out of observation. -/
+theorem runtimeWithCache_evalSPMF_bind_pure (core : CorePrimitives p)
+    [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y]
+    [SampleableType core.Y] [SampleableType (Bytes p.m)]
+    (cache : PublicHash.Cache core) {α β : Type} (f : α → β)
+    (oa : OracleComp (unifSpec + publicHashSpec core) α) :
+    (runtimeWithCache core cache).evalSPMF (oa >>= fun x => pure (f x)) =
+      f <$> (runtimeWithCache core cache).evalSPMF oa :=
+  SPMFSemantics.withStateOracle_evalSPMF_bind_pure _ _ oa f
+
+/-- Empty-cache specialization of `runtimeWithCache_evalSPMF_bind_pure`. -/
+theorem runtime_evalSPMF_bind_pure (core : CorePrimitives p)
+    [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y]
+    [SampleableType core.Y] [SampleableType (Bytes p.m)]
+    {α β : Type} (f : α → β)
+    (oa : OracleComp (unifSpec + publicHashSpec core) α) :
+    (runtime core).evalSPMF (oa >>= fun x => pure (f x)) =
+      f <$> (runtime core).evalSPMF oa :=
+  runtimeWithCache_evalSPMF_bind_pure core ∅ f oa
+
 /-- Deterministic public-hash runtime for concrete security games.  Uniform queries retain their
 ordinary probabilistic meaning, while every `Thash`/`H_msg` query is answered by the supplied
 primitive bundle.  Unlike `runtime`, this runtime contains no lazy random-oracle cache. -/
