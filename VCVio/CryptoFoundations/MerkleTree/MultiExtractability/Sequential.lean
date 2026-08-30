@@ -129,4 +129,23 @@ theorem ExtractorState.recordCommitmentOutput_cumulativeLog
     (extractorState.recordCommitmentOutput phaseLog output).cumulativeLog =
       extractorState.cumulativeLog ++ phaseLog := rfl
 
+/-! ## Sequential control-flow canary -/
+
+private abbrev sequentialCanaryCommitter : SequentialCommitter Bool Unit Nat where
+  State := Nat
+  initialState := 0
+  commit round state := pure (round == 1, 10 + state, state + 1)
+
+private def sequentialCanaryConfig : Configuration Bool Unit where
+  skeleton _ := .leaf
+  addressKey _ index := nomatch index
+
+/-- Two pure phases advance both the round number and private state, and retain checkpoints in
+commitment order.  This producer canary rejects skipping or reversing phases and failing to hand the
+first phase's state to the second. -/
+example : sequentialCanaryCommitter.runFromEmpty sequentialCanaryConfig 2 =
+    let initial : ExtractorState Bool Unit Unit Nat sequentialCanaryConfig := ExtractorState.empty
+    pure (2, (initial.record false [] 10).record true [] 11) := by
+  rfl
+
 end MerkleTreeMultiExtractability
