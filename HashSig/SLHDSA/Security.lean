@@ -10,6 +10,7 @@ public import HashSig.SLHDSA.Security.Targets
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTDSPR
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTOpenPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
 public import VCVio.CryptoFoundations.PRF
@@ -116,6 +117,17 @@ def Primitives.thashDsprProblem [SampleableType prims.PkSeed] (arity numTargets 
   thColl := prims.thashCollection
   numTargets := numTargets
 
+/-- The source-final-validity SM-DT-OpenPRE problem for one fixed-arity `Thash` member and the
+exact hidden-input distribution embedded by its reduction. -/
+def Primitives.thashOpenPreProblem [SampleableType prims.PkSeed] (arity numTargets : ℕ)
+    (inputGen : ProbComp (Vector prims.Y arity)) :
+    TweakableHash.SM_DT_OpenPRE_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y arity) prims.Y where
+  th := prims.thashMember arity
+  inputGen := inputGen
+  thColl := prims.thashCollection
+  numTargets := numTargets
+
 /-! ### Exact `d = 1` assumption instances -/
 
 /-- Source-final-validity SM-DT-DSPR problem for all arity-one FORS secret leaves. -/
@@ -123,6 +135,13 @@ def Primitives.d1ForsLeafDsprProblem [SampleableType prims.PkSeed] :
     TweakableHash.SM_DT_DSPR_Problem ℕ prims.PkSeed prims.AdrsKey
       (Vector prims.Y 1) prims.Y :=
   prims.thashDsprProblem 1 p.d1TargetProfile.forsLeaf
+
+/-- Source-final-validity SM-DT-OpenPRE problem for all arity-one FORS secret leaves. -/
+def Primitives.d1ForsLeafOpenPreProblem [SampleableType prims.PkSeed]
+    [SampleableType prims.Y] :
+    TweakableHash.SM_DT_OpenPRE_Problem ℕ prims.PkSeed prims.AdrsKey
+      (Vector prims.Y 1) prims.Y :=
+  prims.thashOpenPreProblem 1 p.d1TargetProfile.forsLeaf ($ᵗ Vector prims.Y 1)
 
 /-- Collection SM-DT-TCR problem for every arity-two FORS internal node. -/
 def Primitives.d1ForsTreeTcrProblem [SampleableType prims.PkSeed] :
@@ -161,6 +180,94 @@ def Primitives.d1XmssTreeTcrProblem [SampleableType prims.PkSeed] :
   prims.thashTcrProblem 2 p.d1TargetProfile.xmssTree
 
 /-! ### Deterministic component-reduction witnesses -/
+
+/-- The message-independent honest FORS roots committed by the arity-`k` compression. -/
+def Primitives.forsHonestRoots (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) : Vector prims.Y p.k :=
+  Vector.ofFn fun i => forsRoot prims sk pk adrs i.val
+
+/-- The roots reconstructed from a candidate FORS signature and digest. -/
+def Primitives.forsRecoveredRoots (sig : ForsSigCore p prims.core) (md : List Byte)
+    (pk : prims.PkSeed) (adrs : Adrs) : Vector prims.Y p.k :=
+  Vector.ofFn fun i =>
+    let idx := i.val * 2 ^ p.a + forsIdx p md i.val
+    PerfectMerkleTree.climb (forsNodeHash prims pk adrs) idx
+      (prims.F pk (forsNodeAdrs adrs 0 idx) (sig[i.val]).1) (sig[i.val]).2
+
+/-- A changed reconstructed FORS-root vector that still compresses to the honest FORS public key
+is directly an arity-`k` TCR witness at `forsPkAdrs`. -/
+theorem Primitives.forsRootsBinding_to_tcrWitness [SampleableType prims.PkSeed]
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs)
+    (sig : ForsSigCore p prims.core) (md : List Byte)
+    (hpk : forsPkFromSig prims sig md pk adrs = forsPkGen prims sk pk adrs)
+    (hne : prims.forsHonestRoots sk pk adrs ≠ prims.forsRecoveredRoots sig md pk adrs) :
+    let target := prims.forsHonestRoots sk pk adrs
+    let collision := prims.forsRecoveredRoots sig md pk adrs
+    target ≠ collision ∧
+      (prims.thashMember p.k).eval pk (prims.adrsToKey (forsPkAdrs adrs)) target =
+        (prims.thashMember p.k).eval pk (prims.adrsToKey (forsPkAdrs adrs)) collision := by
+  dsimp
+  refine ⟨hne, ?_⟩
+  simpa [Primitives.forsHonestRoots, Primitives.forsRecoveredRoots,
+    Primitives.thashMember] using hpk.symm
+
+/-- If one well-formed FORS authentication path reconstructs its honest root from a different
+leaf, it yields an arity-two TCR witness at an exact `FORS_TREE` address. -/
+theorem Primitives.forsTreeBinding_to_tcrWitness [SampleableType prims.PkSeed]
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs)
+    (sig : ForsSigCore p prims.core) (md : List Byte) (i : Fin p.k)
+    (hlen : (sig[i.val]).2.length = p.a)
+    (hroot : (prims.forsRecoveredRoots sig md pk adrs)[i.val] =
+      (prims.forsHonestRoots sk pk adrs)[i.val])
+    (hne :
+      let idx := i.val * 2 ^ p.a + forsIdx p md i.val
+      forsLeaf prims sk pk adrs idx ≠
+        prims.F pk (forsNodeAdrs adrs 0 idx) (sig[i.val]).1) :
+    let idx := i.val * 2 ^ p.a + forsIdx p md i.val
+    ∃ (h : ℕ) (c : prims.Y × prims.Y), 0 < h ∧ h ≤ p.a ∧
+      let target : Vector prims.Y 2 :=
+        #v[PerfectMerkleTree.merkleRoot (forsLeaf prims sk pk adrs)
+              (forsNodeHash prims pk adrs) (h - 1) (2 * (idx / 2 ^ h)),
+          PerfectMerkleTree.merkleRoot (forsLeaf prims sk pk adrs)
+              (forsNodeHash prims pk adrs) (h - 1) (2 * (idx / 2 ^ h) + 1)]
+      let collision : Vector prims.Y 2 := #v[c.1, c.2]
+      target ≠ collision ∧
+        (prims.thashMember 2).eval pk
+            (prims.adrsToKey (forsNodeAdrs adrs h (idx / 2 ^ h))) target =
+          (prims.thashMember 2).eval pk
+            (prims.adrsToKey (forsNodeAdrs adrs h (idx / 2 ^ h))) collision := by
+  dsimp only
+  let idx := i.val * 2 ^ p.a + forsIdx p md i.val
+  have ht : idx / 2 ^ p.a = i.val := by
+    dsimp [idx]
+    rw [Nat.add_comm, Nat.add_mul_div_right _ _ (by positivity : 0 < 2 ^ p.a),
+      Nat.div_eq_of_lt (forsIdx_lt p md i.val), Nat.zero_add]
+  have hroot' :
+      PerfectMerkleTree.climb (forsNodeHash prims pk adrs) idx
+          (prims.F pk (forsNodeAdrs adrs 0 idx) (sig[i.val]).1) (sig[i.val]).2 =
+        PerfectMerkleTree.merkleRoot (forsLeaf prims sk pk adrs)
+          (forsNodeHash prims pk adrs) p.a (idx / 2 ^ p.a) := by
+    rw [ht]
+    simpa [idx, Primitives.forsRecoveredRoots, Primitives.forsHonestRoots] using hroot
+  obtain ⟨h, c, hpos, hle, hnePairs, heq⟩ :=
+    PerfectMerkleTree.climb_binding (forsLeaf prims sk pk adrs)
+      (forsNodeHash prims pk adrs) p.a idx
+      (prims.F pk (forsNodeAdrs adrs 0 idx) (sig[i.val]).1) (sig[i.val]).2
+      hlen hroot' hne
+  refine ⟨h, c, hpos, hle, ?_⟩
+  dsimp
+  constructor
+  · intro hv
+    apply hnePairs
+    have hl := congrArg Vector.toList hv
+    have hpairs :
+        PerfectMerkleTree.merkleRoot (forsLeaf prims sk pk adrs)
+            (forsNodeHash prims pk adrs) (h - 1) (2 * (idx / 2 ^ h)) = c.1 ∧
+          PerfectMerkleTree.merkleRoot (forsLeaf prims sk pk adrs)
+            (forsNodeHash prims pk adrs) (h - 1) (2 * (idx / 2 ^ h) + 1) = c.2 := by
+      simpa using hl
+    exact Prod.ext hpairs.1 hpairs.2
+  · simpa [Primitives.thashMember] using heq
 
 /-- Translate the existing oriented XMSS binding theorem into the exact message/tweak shape of
 the arity-two TCR game.  The first vector is an honest internal-node target and the second is the
