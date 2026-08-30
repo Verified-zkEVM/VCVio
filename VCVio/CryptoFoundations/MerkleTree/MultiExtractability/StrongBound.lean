@@ -809,8 +809,9 @@ theorem strongFailure_rom_bound_of_openingEvidence_and_queryBounds
       hopening hverifier)
     hevidence
 
-/-- Heterogeneous scheduled specialization. Commitment and terminal-opening budgets are first
-composed into one whole-adversary bound, then passed to `strongFailure_rom_bound_global`. -/
+/-- Evidence-parameterized scheduled decomposition retained for callers that supply a custom
+terminal kernel. It follows the legacy reserved-budget route; the fully discharged theorem below
+instead derives the schedule from `strongFailure_rom_bound_global`. -/
 theorem strongFailure_rom_bound_schedule_of_openingEvidence_and_queryBounds
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
@@ -845,7 +846,8 @@ theorem strongFailure_rom_bound_schedule_of_openingEvidence_and_queryBounds
 
 /-- Fully discharged scheduled corollary of the single global-adversarial-`q` theorem. Commitment
 rounds may have heterogeneous public budgets; their exact sum plus the terminal opening budget is
-used only to discharge the owner theorem's whole-program query predicate. -/
+used only to discharge the owner theorem's whole-program query predicate. `_paddingQuery` is
+retained for source compatibility with the evidence-parameterized scheduled API and is ignored. -/
 theorem strongFailure_rom_bound_schedule_of_queryBounds
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
