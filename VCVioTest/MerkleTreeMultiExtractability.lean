@@ -12,8 +12,9 @@ public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.StrongBound
 # Stateful Merkle Multi-Extractability Canaries
 
 Small compile-time instantiations of the fully discharged game theorem. These examples pin the
-scheduled zero/one/multiple-round API, finite-opening resource composition, and the proof-only
-branch of full batch-opening disagreement without evaluating a probability distribution.
+single-global-query owner theorem, its scheduled zero/one/multiple-round and finite-opening
+corollaries, and the proof-only branch of full batch-opening disagreement without evaluating a
+probability distribution.
 -/
 
 @[expose] public section
@@ -81,6 +82,42 @@ private theorem per_checkpoint_bound :
   intro tag
   cases tag
   decide
+
+private theorem global_query_bound (rounds : ℕ) :
+    adversary.IsAdversaryPrefixQueryBound rounds 0 := by
+  have hbound := adversary.isAdversaryPrefixQueryBound_of_schedule rounds (fun _ => 0) 0
+    (fun _ _ => by trivial) opening_query_bound
+  simpa using hbound
+
+private theorem verifier_query_bound : adversary.HasVerifierQueryBound 0 :=
+  adversary.hasVerifierQueryBound_of_openingCountBound 0 1 opening_count_bound per_claim_bound
+
+/-- Direct canary for the owner theorem: one bound covers the complete adaptive adversarial
+prefix, with honest verification charged separately. -/
+theorem globalStrongBound (rounds : ℕ) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator (rounds * 3) rounds 0 0 : ENNReal) *
+        (Nat.card Bool : ENNReal)⁻¹ := by
+  simpa using strongFailure_rom_bound_global_of_openingCountBound model config rounds adversary
+    0 (rounds * 3) rounds 0 1 3 (global_query_bound rounds) opening_count_bound
+    per_claim_bound per_checkpoint_bound le_rfl le_rfl
+
+/-- The textbook event is derived directly from the global owner theorem. -/
+example (rounds : ℕ) :
+    Pr[ PublicFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator (rounds * 3) rounds 0 0 : ENNReal) *
+        (Nat.card Bool : ENNReal)⁻¹ := by
+  exact publicFailure_rom_bound_global model config rounds adversary 0 (rounds * 3) rounds 0 3
+    (global_query_bound rounds) verifier_query_bound per_checkpoint_bound le_rfl le_rfl
+
+/-- Closed-form weakening of the same global owner theorem. -/
+example (rounds : ℕ) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (((0 : ℕ).choose 2 + (rounds * 3) * (0 + 0) : ℕ) : ENNReal) *
+        (Nat.card Bool : ENNReal)⁻¹ := by
+  exact strongFailure_rom_bound_global_coarse model config rounds adversary 0
+    (rounds * 3) rounds 0 3 (global_query_bound rounds) verifier_query_bound
+    per_checkpoint_bound le_rfl le_rfl
 
 /-- One theorem instantiation covers every round count while exercising a genuinely
 heterogeneous public schedule (`round` itself bounds phase `round`). -/
