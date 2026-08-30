@@ -73,6 +73,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Disagreement
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
