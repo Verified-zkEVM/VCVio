@@ -154,6 +154,59 @@ example :
           (Nat.card Bool : ENNReal)⁻¹ :=
   scheduledStrongBound 3
 
+/-! ## Nonzero executable-query accounting -/
+
+/-- Every commitment makes one real oracle query. -/
+abbrev queryingCommitter : SequentialCommitter Unit Query Bool where
+  State := Unit
+  initialState := ()
+  commit _ _ := do
+    let root ← ((Query →ₒ Bool).query (false, false) : OracleComp (Query →ₒ Bool) Bool)
+    return ((), root, ())
+
+/-- The terminal opening also makes one real oracle query before emitting no claims. -/
+abbrev queryingAdversary : Adversary Unit Query Unit Bool config where
+  committer := queryingCommitter
+  opening _ _ := do
+    let _ ← ((Query →ₒ Bool).query (true, true) : OracleComp (Query →ₒ Bool) Bool)
+    return []
+
+private theorem querying_commit_bound (round : ℕ) (state : queryingCommitter.State) :
+    IsTotalQueryBound (queryingCommitter.commit round state) 1 := by
+  simp only [queryingCommitter]
+  rw [isTotalQueryBound_query_bind_iff]
+  exact ⟨by decide, fun _ => by trivial⟩
+
+private theorem querying_opening_bound (state : queryingCommitter.State)
+    (extractorState : ExtractorState Unit Query Unit Bool config) :
+    IsTotalQueryBound (queryingAdversary.opening state extractorState) 1 := by
+  rw [isTotalQueryBound_query_bind_iff]
+  exact ⟨by decide, fun _ => by trivial⟩
+
+private theorem querying_global_bound (rounds : ℕ) :
+    queryingAdversary.IsAdversaryPrefixQueryBound rounds (rounds + 1) := by
+  have hbound := queryingAdversary.isAdversaryPrefixQueryBound_of_schedule rounds
+    (fun _ => 1) 1 querying_commit_bound querying_opening_bound
+  simpa [commitmentQueryBudget_const] using hbound
+
+private theorem querying_opening_count_bound : queryingAdversary.HasOpeningCountBound 0 := by
+  intro state extractorState claims hclaims
+  simpa [queryingAdversary] using hclaims
+
+private theorem querying_verifier_bound : queryingAdversary.HasVerifierQueryBound 0 :=
+  queryingAdversary.hasVerifierQueryBound_of_openingCountBound 0 1
+    querying_opening_count_bound per_claim_bound
+
+/-- Nonzero canary for the exact owner theorem: the sole adversarial budget charges one query per
+commitment plus the terminal query, while the honest verifier remains separately zero-cost. -/
+theorem queryingGlobalStrongBound (rounds : ℕ) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds queryingAdversary] ≤
+      (multiExtractabilitySafeNumerator (rounds * 3) rounds 0 (rounds + 1) : ENNReal) *
+        (Nat.card Bool : ENNReal)⁻¹ := by
+  exact strongFailure_rom_bound_global_exact model config rounds queryingAdversary
+    (rounds + 1) 0 3 (querying_global_bound rounds) querying_verifier_bound
+    per_checkpoint_bound
+
 /-! ## Proof-only full-opening disagreement -/
 
 def selectRight : LeafData Bool skeleton :=
