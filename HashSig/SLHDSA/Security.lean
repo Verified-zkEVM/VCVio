@@ -751,6 +751,43 @@ section ConcreteSUF
 variable [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
   [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.Y]
 
+/-- Whether the signing trace contains the same signed `(R, M)` pair as the candidate signature.
+For SLH-DSA, `SignatureCore.1` is exactly the message randomizer `R`; the remaining signature
+components are intentionally ignored by this predicate. -/
+abbrev signingLogContainsRMessage
+    (log : QueryLog (List Byte →ₒ SignatureCore p prims.core))
+    (msg : List Byte) (sig : SignatureCore p prims.core) : Bool :=
+  SignatureAlg.signingLogContainsMessageKey (fun σ => σ.1) log msg sig
+
+omit [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
+  [SampleableType prims.PkSeed] [SampleableType prims.Y] in
+/-- Exact pointwise refinement of the generic same-message SUF residual.  A new signature on an
+old message either uses a fresh `(R, M)` pair, which remains eligible for the source ITSR hop, or
+reuses `(R, M)` while changing another signature component, which is the genuine binding
+residual. -/
+theorem sameMessageResidual_RMessage_partition
+    (log : QueryLog (List Byte →ₒ SignatureCore p prims.core))
+    (msg : List Byte) (sig : SignatureCore p prims.core) :
+    (log.wasQueried msg && !SignatureAlg.signingLogContains log msg sig) =
+      ((log.wasQueried msg && !signingLogContainsRMessage prims log msg sig) ||
+        (signingLogContainsRMessage prims log msg sig &&
+          !SignatureAlg.signingLogContains log msg sig)) := by
+  exact SignatureAlg.sameMessageResidual_messageKey_partition (fun σ => σ.1) log msg sig
+
+omit [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
+  [SampleableType prims.PkSeed] [SampleableType prims.Y] in
+/-- Reusing `(R, M)` in the exact-pair-fresh branch produces a previously returned signature with
+the same randomizer and message but different remaining components. -/
+theorem reusedRMessageFreshSignature_witness
+    (log : QueryLog (List Byte →ₒ SignatureCore p prims.core))
+    (msg : List Byte) (sig : SignatureCore p prims.core)
+    (hreused : signingLogContainsRMessage prims log msg sig = true)
+    (hfresh : SignatureAlg.signingLogContains log msg sig = false) :
+    ∃ sig' : SignatureCore p prims.core,
+      ⟨msg, sig'⟩ ∈ log ∧ sig'.1 = sig.1 ∧ sig' ≠ sig := by
+  exact SignatureAlg.signingLogContainsMessageKey_distinct_witness
+    (fun σ => σ.1) log msg sig hreused hfresh
+
 /-- Strong-unforgeability adversaries against the canonical explicit-query SLH-DSA scheme. -/
 abbrev StrongEufCmaAdversary :=
   SignatureAlg.strongUnforgeableAdv
