@@ -25,6 +25,7 @@ bound, and quadratic bound are corollaries.
 @[expose] public section
 
 open OracleSpec OracleComp
+open BinaryTree InductiveMerkleTree
 
 namespace MerkleTreeMultiExtractability
 
@@ -145,6 +146,25 @@ def Adversary.TerminalAcceptedFreshProperty
     ∃ target ∈ state.targetSet model.view,
       MerkleTreeExtractability.CacheAddsValue cache z.2 target
 
+/-- Support-level evidence expected from honest batch verification: every accepted disagreeing
+attempt exposes the generated selected path consumed by the deterministic extraction kernel. -/
+def Adversary.TerminalOpeningEvidenceProperty
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config) : Prop :=
+  ∀ privateState (state : ExtractorState Cfg Query Address Y config)
+      (cache : (Query →ₒ Y).QueryCache)
+      (z : Transcript Cfg Query Address Y config × (Query →ₒ Y).QueryCache)
+      tag (attempt : OpeningAttempt Query Y config tag),
+    z ∈ support ((simulateQ (Query →ₒ Y).cachingOracle
+      (adversary.terminalExecution model privateState state)).run cache) →
+    (⟨tag, attempt⟩ : AnyOpeningAttempt Cfg Query Address Y config) ∈ z.1.attempts →
+    (⟨tag, attempt.checkpoint⟩ : AnyCheckpoint Cfg Query Address Y config) ∈
+      state.checkpoints →
+    AcceptedOpeningDisagreement model.view attempt →
+    Nonempty (OpeningKernelEvidence model attempt z.2)
+
 /-- Terminal execution always preserves its input extractor state, grows the shared cache, and
 leaves every terminal-opening log entry in the final cache. -/
 theorem Adversary.terminalTraceInvariant
@@ -172,6 +192,37 @@ theorem Adversary.terminalTraceInvariant
       (attempts, cacheFinal) hverify
   exact ⟨rfl, hopeningInvariant.2.trans hverifyMono,
     fun entry hentry => hverifyMono (hopeningInvariant.1 entry hentry)⟩
+
+/-- Honest-verifier path evidence implies the accepted-opening fresh-target property. -/
+theorem Adversary.terminalAcceptedFreshProperty_of_openingEvidence
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config)
+    (hevidence : adversary.TerminalOpeningEvidenceProperty model) :
+    adversary.TerminalAcceptedFreshProperty model := by
+  intro privateState state cache log z hstateLog hno hlogCache hcacheLog hstable hz
+    _hstableFinal hopening
+  obtain ⟨_hstate, hmono, _hsuffixFinal⟩ :=
+    adversary.terminalTraceInvariant model privateState state cache log z hstateLog hz
+  obtain ⟨tag, attempt, hattempt, hcheckpoint, hdisagreement⟩ := hopening
+  obtain ⟨evidence⟩ :=
+    hevidence privateState state cache z tag attempt hz hattempt hcheckpoint hdisagreement
+  have hpathDisagreement := evidence.disagrees
+  rw [hstable tag attempt.checkpoint hcheckpoint] at hpathDisagreement
+  obtain ⟨target, htarget, hfresh⟩ :=
+    MerkleTreeExtractability.fresh_extractedTarget_of_extractor_disagreement
+      model (config.addressKey tag) evidence.index log cache z.2 attempt.checkpoint.root
+      (selectedValueAt attempt.opening.values evidence.index evidence.selected) evidence.proof
+      hlogCache hcacheLog hno hmono evidence.chain hpathDisagreement
+  refine ⟨target, ?_, hfresh⟩
+  simp only [ExtractorState.targetSet, List.mem_toFinset, ExtractorState.targetList,
+    targetsOfCheckpoints, List.mem_flatMap]
+  refine ⟨⟨tag, attempt.checkpoint⟩, hcheckpoint, ?_⟩
+  have htargetsEq := MerkleTreeExtractor.targets_eq_of_tree_eq model.view
+    (config.skeleton tag) (config.addressKey tag) attempt.checkpoint.cumulativeLog log
+    attempt.checkpoint.root attempt.checkpoint.root (hstable tag attempt.checkpoint hcheckpoint)
+  simpa [Checkpoint.targets] using htargetsEq.symm ▸ htarget
 
 /-- Trace preservation, causal suffix stability, and the accepted-opening kernel together imply
 the single deterministic terminal fresh-target property used by the ROM theorem. -/
@@ -212,6 +263,19 @@ theorem Adversary.terminalFreshTargetProperty_of_trace_and_accepted
       simpa [ExtractorState.terminalLog, hstateLog] using hstableFinal
     exact hstableTerminal.not_hasCheckpointTerminalExtractionDisagreement
       model.view z.1.terminalSuffix hterminal
+
+/-- The honest-verifier evidence property alone supplies the Merkle-specific part of the complete
+terminal fresh-target reduction; generic trace preservation is automatic. -/
+theorem Adversary.terminalFreshTargetProperty_of_openingEvidence
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (adversary : Adversary Cfg Query Address Y config)
+    (hevidence : adversary.TerminalOpeningEvidenceProperty model) :
+    adversary.TerminalFreshTargetProperty model :=
+  adversary.terminalFreshTargetProperty_of_trace_and_accepted model
+    (adversary.terminalTraceInvariant model)
+    (adversary.terminalAcceptedFreshProperty_of_openingEvidence model hevidence)
 
 /-- A total terminal query bound plus the deterministic fresh-target reduction discharges the
 probabilistic `TerminalStrongBound` interface.  This theorem contains the entire terminal random-
@@ -326,6 +390,36 @@ theorem strongFailure_rom_bound_of_freshTarget
     hnodes hcheckpoints
     (adversary.terminalStrongBound_of_freshTarget model nodeBudget checkpointCount
       verifierOverhead terminalQueryBound hterminalBound hfresh)
+
+/-- Strongest verifier-facing theorem: it remains only to supply the support-level selected-path
+evidence exported by honest batch verification.  All probability, cache evolution, checkpoint
+stability, and failure-branch reasoning is discharged internally. -/
+theorem strongFailure_rom_bound_of_openingEvidence
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    (config : Configuration Cfg Address) (rounds : ℕ)
+    (adversary : Adversary Cfg Query Address Y config)
+    (paddingQuery : Query)
+    (phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead
+      perCheckpoint : ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (adversary.committer.commit round privateState) phaseQueryBound)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (hnodes : rounds * perCheckpoint ≤ nodeBudget)
+    (hcheckpoints : rounds ≤ checkpointCount)
+    (hterminalBound : ∀ privateState state,
+      IsTotalQueryBound (adversary.terminalExecution model privateState state)
+        (terminalQueryBound + verifierOverhead))
+    (hevidence : adversary.TerminalOpeningEvidenceProperty model) :
+    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
+      (multiExtractabilitySafeNumerator nodeBudget checkpointCount verifierOverhead
+        (rounds * phaseQueryBound + terminalQueryBound) : ENNReal) *
+          (Nat.card Y : ENNReal)⁻¹ :=
+  strongFailure_rom_bound_of_freshTarget model config rounds adversary paddingQuery
+    phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead perCheckpoint
+    hcommit hconfig hnodes hcheckpoints hterminalBound
+    (adversary.terminalFreshTargetProperty_of_openingEvidence model hevidence)
 
 /-- Exact uniform-shape specialization of the strongest game-level theorem. -/
 theorem strongFailure_rom_bound_exact
