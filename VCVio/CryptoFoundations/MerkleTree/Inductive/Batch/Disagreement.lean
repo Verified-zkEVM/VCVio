@@ -8,7 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Addressed
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Opening
-public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.MapToSingle
 
 /-!
 # Deterministic batch-opening disagreement witnesses
@@ -41,6 +41,23 @@ open BinaryTree
 universe u
 
 variable {Y : Type u}
+
+/-- Every well-typed batch proof exposes at least one selected leaf. This is the indexed
+witness form of `BatchProof.anySelected_of_batchProof`. -/
+theorem BatchProof.exists_selected {s : Skeleton} {selector : LeafData Bool s}
+    (proof : BatchProof Y selector) :
+    ∃ index : SkeletonLeafIndex s, selector.get index = true := by
+  induction proof with
+  | leaf => exact ⟨.ofLeaf, rfl⟩
+  | internalBoth leftProof rightProof ihLeft ihRight =>
+      obtain ⟨index, selected⟩ := ihLeft
+      exact ⟨.ofLeft index, by simpa using selected⟩
+  | pruneRight hright rightRoot leftProof ih =>
+      obtain ⟨index, selected⟩ := ih
+      exact ⟨.ofLeft index, by simpa using selected⟩
+  | pruneLeft hleft leftRoot rightProof ih =>
+      obtain ⟨index, selected⟩ := ih
+      exact ⟨.ofRight index, by simpa using selected⟩
 
 /-- Unequal selected-value tuples for one selector disagree at a concrete selected leaf. -/
 theorem exists_selectedValueAt_ne_of_ne {s : Skeleton} {selector : LeafData Bool s}
@@ -189,6 +206,254 @@ theorem batchToSingleProofAddressed_const (hashFn : Y → Y → Y)
       | ofLeft index =>
           exact absurd (LeafData.anySelected_of_get index (by simpa using selected))
             (by simp [hleft])
+
+/-- Unequal pruned proofs for one selector disagree on the expanded authentication path of
+some selected leaf. The selected values may differ as well: proof-data disagreement remains
+observable inside the subtree where the proof first differs. -/
+theorem exists_batchToSingleProofAddressed_ne_of_ne [DecidableEq Y] {s : Skeleton}
+    (nodeHash : SkeletonInternalIndex s → Y → Y → Y)
+    {selector : LeafData Bool s} (values₁ values₂ : SelectedValues Y selector)
+    (proof₁ proof₂ : BatchProof Y selector) (hne : proof₁ ≠ proof₂) :
+    ∃ index : SkeletonLeafIndex s, ∃ selected : selector.get index = true,
+      batchToSingleProofAddressed nodeHash values₁ proof₁ index selected ≠
+        batchToSingleProofAddressed nodeHash values₂ proof₂ index selected := by
+  induction proof₁ with
+  | leaf =>
+      cases proof₂
+      exact (hne rfl).elim
+  | internalBoth leftProof₁ rightProof₁ ihLeft ihRight =>
+      cases proof₂ with
+      | internalBoth leftProof₂ rightProof₂ =>
+          by_cases hleft : leftProof₁ = leftProof₂
+          · have hright : rightProof₁ ≠ rightProof₂ := by
+              intro hright
+              subst leftProof₂
+              subst rightProof₂
+              exact hne rfl
+            obtain ⟨index, selected, hpath⟩ :=
+              ihRight (fun address => nodeHash (.ofRight address))
+                values₁.2 values₂.2 rightProof₂ hright
+            refine ⟨.ofRight index, by simpa using selected, ?_⟩
+            intro heq
+            apply hpath
+            apply List.Vector.toList_injective
+            have hlist := congrArg List.Vector.toList heq
+            exact (List.cons.inj (by
+              simpa only [batchToSingleProofAddressed, List.Vector.toList_cons] using hlist)).2
+          · obtain ⟨index, selected, hpath⟩ :=
+              ihLeft (fun address => nodeHash (.ofLeft address))
+                values₁.1 values₂.1 leftProof₂ hleft
+            refine ⟨.ofLeft index, by simpa using selected, ?_⟩
+            intro heq
+            apply hpath
+            apply List.Vector.toList_injective
+            have hlist := congrArg List.Vector.toList heq
+            exact (List.cons.inj (by
+              simpa only [batchToSingleProofAddressed, List.Vector.toList_cons] using hlist)).2
+      | pruneRight hright rightRoot leftProof =>
+          have hselected := rightProof₁.anySelected_of_batchProof
+          exact False.elim (by simp [hright] at hselected)
+      | pruneLeft hleft leftRoot rightProof =>
+          have hselected := leftProof₁.anySelected_of_batchProof
+          exact False.elim (by simp [hleft] at hselected)
+  | pruneRight hright₁ rightRoot₁ leftProof₁ ih =>
+      cases proof₂ with
+      | internalBoth leftProof₂ rightProof₂ =>
+          have hselected := rightProof₂.anySelected_of_batchProof
+          exact False.elim (by simp [hright₁] at hselected)
+      | pruneRight hright₂ rightRoot₂ leftProof₂ =>
+          by_cases hroot : rightRoot₁ = rightRoot₂
+          · have hproof : leftProof₁ ≠ leftProof₂ := by
+              intro hproof
+              subst rightRoot₂
+              subst leftProof₂
+              exact hne rfl
+            obtain ⟨index, selected, hpath⟩ :=
+              ih (fun address => nodeHash (.ofLeft address))
+                values₁.1 values₂.1 leftProof₂ hproof
+            refine ⟨.ofLeft index, by simpa using selected, ?_⟩
+            intro heq
+            apply hpath
+            apply List.Vector.toList_injective
+            have hlist := congrArg List.Vector.toList heq
+            exact (List.cons.inj (by
+              simpa only [batchToSingleProofAddressed, List.Vector.toList_cons] using hlist)).2
+          · obtain ⟨index, selected⟩ := leftProof₁.exists_selected
+            refine ⟨.ofLeft index, by simpa using selected, ?_⟩
+            intro heq
+            apply hroot
+            have hlist := congrArg List.Vector.toList heq
+            exact (List.cons.inj (by
+              simpa only [batchToSingleProofAddressed, List.Vector.toList_cons] using hlist)).1
+      | pruneLeft hleft₂ leftRoot₂ rightProof₂ =>
+          have hselected := leftProof₁.anySelected_of_batchProof
+          exact False.elim (by simp [hleft₂] at hselected)
+  | pruneLeft hleft₁ leftRoot₁ rightProof₁ ih =>
+      cases proof₂ with
+      | internalBoth leftProof₂ rightProof₂ =>
+          have hselected := leftProof₂.anySelected_of_batchProof
+          exact False.elim (by simp [hleft₁] at hselected)
+      | pruneRight hright₂ rightRoot₂ leftProof₂ =>
+          have hselected := rightProof₁.anySelected_of_batchProof
+          exact False.elim (by simp [hright₂] at hselected)
+      | pruneLeft hleft₂ leftRoot₂ rightProof₂ =>
+          by_cases hroot : leftRoot₁ = leftRoot₂
+          · have hproof : rightProof₁ ≠ rightProof₂ := by
+              intro hproof
+              subst leftRoot₂
+              subst rightProof₂
+              exact hne rfl
+            obtain ⟨index, selected, hpath⟩ :=
+              ih (fun address => nodeHash (.ofRight address))
+                values₁.2 values₂.2 rightProof₂ hproof
+            refine ⟨.ofRight index, by simpa using selected, ?_⟩
+            intro heq
+            apply hpath
+            apply List.Vector.toList_injective
+            have hlist := congrArg List.Vector.toList heq
+            exact (List.cons.inj (by
+              simpa only [batchToSingleProofAddressed, List.Vector.toList_cons] using hlist)).2
+          · obtain ⟨index, selected⟩ := rightProof₁.exists_selected
+            refine ⟨.ofRight index, by simpa using selected, ?_⟩
+            intro heq
+            apply hroot
+            have hlist := congrArg List.Vector.toList heq
+            exact (List.cons.inj (by
+              simpa only [batchToSingleProofAddressed, List.Vector.toList_cons] using hlist)).1
+
+/-- If a concrete pruned proof, mapped through `some`, differs from the canonical proof read
+from a partial tree, then some selected concrete authentication path differs from the tree's
+ordinary generated path. No consistency assumption on the partial tree or node hash is needed:
+the witness follows the first differing stored frontier value. -/
+theorem exists_batchToSingleProofAddressed_map_some_ne_generateProof {s : Skeleton}
+    (nodeHash : SkeletonInternalIndex s → Y → Y → Y)
+    {selector : LeafData Bool s} (values : SelectedValues Y selector)
+    (proof : BatchProof Y selector) (tree : FullData (Option Y) s)
+    (hne : proof.map some ≠
+      generateBatchProof tree selector proof.anySelected_of_batchProof) :
+    ∃ index : SkeletonLeafIndex s, ∃ selected : selector.get index = true,
+      (batchToSingleProofAddressed nodeHash values proof index selected).toList.map some ≠
+        (generateProof tree index).toList := by
+  induction proof with
+  | leaf =>
+      cases tree
+      exact (hne rfl).elim
+  | internalBoth leftProof rightProof ihLeft ihRight =>
+      cases tree with
+      | internal root leftTree rightTree =>
+          have hleftSelected := leftProof.anySelected_of_batchProof
+          have hrightSelected := rightProof.anySelected_of_batchProof
+          by_cases hleft : leftProof.map some ≠
+              generateBatchProof leftTree _ hleftSelected
+          · obtain ⟨index, selected, hpath⟩ :=
+              ihLeft (fun address => nodeHash (.ofLeft address))
+                values.1 leftTree hleft
+            refine ⟨.ofLeft index, by simpa using selected, ?_⟩
+            intro heq
+            apply hpath
+            change _ ::
+                (batchToSingleProofAddressed (fun address => nodeHash (.ofLeft address))
+                  values.1 leftProof index selected).toList.map some =
+              _ :: (generateProof leftTree index).toList at heq
+            exact (List.cons.inj heq).2
+          · have hright : rightProof.map some ≠
+                generateBatchProof rightTree _ hrightSelected := by
+              intro hright
+              apply hne
+              simp only [BatchProof.map]
+              rw [not_not.mp hleft, hright]
+              simp only [generateBatchProof]
+              split
+              · rfl
+              · rename_i _ hr
+                exact Bool.noConfusion (hrightSelected.symm.trans hr)
+              · rename_i hl _
+                exact Bool.noConfusion (hleftSelected.symm.trans hl)
+              · rename_i hl _
+                exact Bool.noConfusion (hleftSelected.symm.trans hl)
+            obtain ⟨index, selected, hpath⟩ :=
+              ihRight (fun address => nodeHash (.ofRight address))
+                values.2 rightTree hright
+            refine ⟨.ofRight index, by simpa using selected, ?_⟩
+            intro heq
+            apply hpath
+            change _ ::
+                (batchToSingleProofAddressed (fun address => nodeHash (.ofRight address))
+                  values.2 rightProof index selected).toList.map some =
+              _ :: (generateProof rightTree index).toList at heq
+            exact (List.cons.inj heq).2
+  | pruneRight hright rightRoot leftProof ih =>
+      cases tree with
+      | internal root leftTree rightTree =>
+          have hleftSelected := leftProof.anySelected_of_batchProof
+          by_cases hroot : some rightRoot ≠ rightTree.getRootValue
+          · obtain ⟨index, selected⟩ := leftProof.exists_selected
+            refine ⟨.ofLeft index, by simpa using selected, ?_⟩
+            intro heq
+            apply hroot
+            change some rightRoot :: _ = rightTree.getRootValue :: _ at heq
+            exact (List.cons.inj heq).1
+          · have hproof : leftProof.map some ≠
+                generateBatchProof leftTree _ hleftSelected := by
+              intro hproof
+              apply hne
+              simp only [BatchProof.map]
+              rw [not_not.mp hroot, hproof]
+              simp only [generateBatchProof]
+              split
+              · rename_i _ hr
+                exact Bool.noConfusion (hright.symm.trans hr)
+              · rfl
+              · rename_i hl _
+                exact Bool.noConfusion (hleftSelected.symm.trans hl)
+              · rename_i hl _
+                exact Bool.noConfusion (hleftSelected.symm.trans hl)
+            obtain ⟨index, selected, hpath⟩ :=
+              ih (fun address => nodeHash (.ofLeft address)) values.1 leftTree hproof
+            refine ⟨.ofLeft index, by simpa using selected, ?_⟩
+            intro heq
+            apply hpath
+            change some rightRoot ::
+                (batchToSingleProofAddressed (fun address => nodeHash (.ofLeft address))
+                  values.1 leftProof index selected).toList.map some =
+              rightTree.getRootValue :: (generateProof leftTree index).toList at heq
+            exact (List.cons.inj heq).2
+  | pruneLeft hleft leftRoot rightProof ih =>
+      cases tree with
+      | internal root leftTree rightTree =>
+          have hrightSelected := rightProof.anySelected_of_batchProof
+          by_cases hroot : some leftRoot ≠ leftTree.getRootValue
+          · obtain ⟨index, selected⟩ := rightProof.exists_selected
+            refine ⟨.ofRight index, by simpa using selected, ?_⟩
+            intro heq
+            apply hroot
+            change some leftRoot :: _ = leftTree.getRootValue :: _ at heq
+            exact (List.cons.inj heq).1
+          · have hproof : rightProof.map some ≠
+                generateBatchProof rightTree _ hrightSelected := by
+              intro hproof
+              apply hne
+              simp only [BatchProof.map]
+              rw [not_not.mp hroot, hproof]
+              simp only [generateBatchProof]
+              split
+              · rename_i hl _
+                exact Bool.noConfusion (hleft.symm.trans hl)
+              · rename_i hl _
+                exact Bool.noConfusion (hleft.symm.trans hl)
+              · rfl
+              · rename_i _ hr
+                exact Bool.noConfusion (hrightSelected.symm.trans hr)
+            obtain ⟨index, selected, hpath⟩ :=
+              ih (fun address => nodeHash (.ofRight address)) values.2 rightTree hproof
+            refine ⟨.ofRight index, by simpa using selected, ?_⟩
+            intro heq
+            apply hpath
+            change some leftRoot ::
+                (batchToSingleProofAddressed (fun address => nodeHash (.ofRight address))
+                  values.2 rightProof index selected).toList.map some =
+              leftTree.getRootValue :: (generateProof rightTree index).toList at heq
+            exact (List.cons.inj heq).2
 
 namespace BatchOpening
 

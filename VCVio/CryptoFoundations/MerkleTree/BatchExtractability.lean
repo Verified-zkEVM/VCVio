@@ -554,6 +554,31 @@ def OpeningDisagreesWithTree {s : Skeleton} (opening : Opening Y s)
   opening.values.map some ≠ (extractedOpening tree opening).values ∨
     opening.proof.map some ≠ (extractedOpening tree opening).proof
 
+/-- Full batch-opening disagreement is witnessed at one selected leaf, either by its claimed
+value or by the canonical addressed single path expanded from the pruned proof. The path branch
+is independent of consistency between `tree` and `nodeHash`: it follows a stored frontier value
+at the first structural proof disagreement. -/
+theorem OpeningDisagreesWithTree.exists_selectedValue_or_path_disagreement {s : Skeleton}
+    (nodeHash : SkeletonInternalIndex s → Y → Y → Y)
+    (opening : Opening Y s) (tree : FullData (Option Y) s)
+    (hne : OpeningDisagreesWithTree opening tree) :
+    ∃ index : SkeletonLeafIndex s, ∃ selected : opening.selector.get index = true,
+      some (selectedValueAt opening.values index selected) ≠ tree.get index.toNodeIndex ∨
+        (batchToSingleProofAddressed nodeHash opening.values opening.proof
+          index selected).toList.map some ≠
+          (generateProof tree index).toList := by
+  rcases hne with hvalues | hproof
+  · obtain ⟨index, selected, hvalue⟩ := exists_selectedValueAt_ne_of_ne
+      (opening.values.map some) (extractedOpening tree opening).values hvalues
+    refine ⟨index, selected, Or.inl ?_⟩
+    simpa only [selectedValueAt_map, extractedOpening,
+      selectedValueAt_selectedValues_toLeafData] using hvalue
+  · obtain ⟨index, selected, hpath⟩ :=
+      exists_batchToSingleProofAddressed_map_some_ne_generateProof
+        nodeHash opening.values opening.proof tree (by
+          simpa only [extractedOpening] using hproof)
+    exact ⟨index, selected, Or.inr hpath⟩
+
 /-- Oracle syntax for the batch extractability experiment. The extractor sees only the query
 log at the commitment checkpoint. The opening phase and honest batch verification execute after
 that snapshot and therefore cannot retroactively populate the extracted tree. -/
