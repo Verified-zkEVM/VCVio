@@ -95,6 +95,7 @@ def Adversary.TerminalFreshTargetProperty
       (cache : (Query →ₒ Y).QueryCache) (log : (Query →ₒ Y).QueryLog)
       (z : Transcript Cfg Query Address Y config × (Query →ₒ Y).QueryCache),
     state.cumulativeLog = log →
+    ¬ CacheHasCollision cache →
     (∀ entry ∈ log, cache entry.1 = some entry.2) →
     (∀ input value, cache input = some value →
       ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value) →
@@ -144,7 +145,7 @@ theorem Adversary.terminalStrongBound_of_freshTarget
     apply probEvent_mono
     intro z hz hfailure
     obtain ⟨target, htarget, input, hfinal, hinitial⟩ :=
-      hfresh privateState state cache log z hstateLog hlogCache hcacheLog hstable hz hfailure
+      hfresh privateState state cache log z hstateLog hno hlogCache hcacheLog hstable hz hfailure
     exact ⟨target, htarget, input, target, hfinal, hinitial, rfl⟩
   have hprob := OracleComp.probEvent_cache_hits_targets_le_of_noCollision_homogeneous
     (adversary.terminalExecution model privateState state)
