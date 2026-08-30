@@ -29,6 +29,17 @@ variable {Cfg Query Address Y : Type}
 def Configuration.nodeBudget (config : Configuration Cfg Address) (tag : Cfg) : ℕ :=
   2 * (config.skeleton tag).leafCount - 1
 
+/-- Recording one checkpoint adds exactly that configuration's full-tree node budget. -/
+@[simp]
+theorem ExtractorState.totalNodeBudget_record
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (tag : Cfg) (phaseLog : MerkleTreeExtractor.QueryLog Query Y) (root : Y) :
+    (state.record tag phaseLog root).totalNodeBudget =
+      state.totalNodeBudget + config.nodeBudget tag := by
+  simp [ExtractorState.totalNodeBudget, nodeBudgetOfCheckpoints,
+    Configuration.nodeBudget]
+
 /-- If every configuration has node budget at most `perCheckpoint`, a checkpoint list has total
 budget at most its length times `perCheckpoint`. -/
 theorem nodeBudgetOfCheckpoints_le_length_mul
@@ -75,6 +86,43 @@ theorem SequentialCommitter.runFromEmpty_totalNodeBudget_le
       result.2.totalNodeBudget_le_checkpointCount_mul perCheckpoint hconfig
     _ = rounds * perCheckpoint := by
       rw [committer.runFromEmpty_checkpoint_count config rounds result hresult]
+
+/-- An arbitrary supported sequential suffix adds at most `rounds * perCheckpoint` nodes to its
+initial extractor state. This additive form is the resource invariant used by phase induction. -/
+theorem SequentialCommitter.runCommitments_totalNodeBudget_le_add
+    (committer : SequentialCommitter Cfg Query Y)
+    {config : Configuration Cfg Address} (rounds firstRound : ℕ)
+    (state : committer.State)
+    (extractorState : ExtractorState Cfg Query Address Y config)
+    (perCheckpoint : ℕ)
+    (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
+    (result : committer.State × ExtractorState Cfg Query Address Y config)
+    (hresult : result ∈ support
+      (committer.runCommitments rounds firstRound state extractorState)) :
+    result.2.totalNodeBudget ≤
+      extractorState.totalNodeBudget + rounds * perCheckpoint := by
+  induction rounds generalizing firstRound state extractorState result with
+  | zero =>
+      simp only [SequentialCommitter.runCommitments, mem_support_pure_iff] at hresult
+      subst result
+      simp
+  | succ rounds ih =>
+      simp only [SequentialCommitter.runCommitments, mem_support_bind_iff] at hresult
+      obtain ⟨phaseResult, _hphase, hrest⟩ := hresult
+      obtain ⟨⟨tag, root, nextState⟩, phaseLog⟩ := phaseResult
+      have htail := ih (firstRound + 1) nextState
+        (extractorState.record tag phaseLog root) result hrest
+      calc
+        result.2.totalNodeBudget ≤
+            (extractorState.record tag phaseLog root).totalNodeBudget +
+              rounds * perCheckpoint := htail
+        _ = extractorState.totalNodeBudget + config.nodeBudget tag +
+              rounds * perCheckpoint := by rw [ExtractorState.totalNodeBudget_record]
+        _ ≤ extractorState.totalNodeBudget + perCheckpoint +
+              rounds * perCheckpoint := by gcongr; exact hconfig tag
+        _ = extractorState.totalNodeBudget + (rounds + 1) * perCheckpoint := by
+          rw [Nat.add_mul]
+          omega
 
 /-- A pruned proof never makes more verifier queries than the internal-node count of its
 skeleton. -/
