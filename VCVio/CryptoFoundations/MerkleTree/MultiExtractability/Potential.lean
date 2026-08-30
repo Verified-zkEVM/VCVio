@@ -150,6 +150,33 @@ theorem multiExtractabilitySafePotential_mono_budget
   exact multiCheckpointEnergy_mono_budget hnodes hcheckpoints
     verifierOverhead remaining cached prefixMisses
 
+/-- More remaining adversarial syntax can only enlarge the online energy. -/
+theorem multiCheckpointEnergy_mono_remaining
+    (nodeBudget checkpointCount verifierOverhead cached prefixMisses : ℕ) :
+    Monotone fun remaining =>
+      multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+        remaining cached prefixMisses := by
+  intro left right hremaining
+  unfold multiCheckpointEnergy
+  apply Nat.add_le_add_left
+  exact Nat.mul_le_mul_left _ (Nat.add_le_add_right hremaining verifierOverhead)
+
+/-- The safe potential is monotone in the remaining adversarial query budget. -/
+theorem multiExtractabilitySafePotential_mono_remaining
+    (nodeBudget checkpointCount verifierOverhead cached : ℕ) :
+    Monotone fun remaining =>
+      multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+        remaining cached := by
+  intro left right hremaining
+  unfold multiExtractabilitySafePotential
+  apply Finset.sup_le
+  intro prefixMisses hprefix
+  apply (multiCheckpointEnergy_mono_remaining nodeBudget checkpointCount
+    verifierOverhead cached prefixMisses hremaining).trans
+  apply Finset.le_sup
+  simp only [Finset.mem_range] at hprefix ⊢
+  omega
+
 /-- Fresh-miss recurrence behind the safe online envelope. The local step pays collision against
 the existing cache and a hit in the target set predictable before sampling; the continuation then
 uses the enlarged cache. -/
