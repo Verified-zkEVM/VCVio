@@ -61,6 +61,44 @@ def SequentialCommitter.runCommitmentsThenAccounting
           output.2.2
           (extractorState.recordCumulative output.1 terminalLog output.2.1) terminalLog
 
+/-- When the accounting finish agrees with an executable finish at the extractor state's own
+cumulative log, the proof-only accounting runner is extensionally the executable runner.  This
+bridge lets a whole-program query bound be stated on the ordinary adversary syntax while the
+stopping proof internally follows branch-specific residual budgets. -/
+theorem SequentialCommitter.runCommitmentsThenAccounting_eq_runCommitmentsThen
+    (committer : SequentialCommitter Cfg Query Y)
+    {config : Configuration Cfg Address}
+    (accountingFinish : committer.State → ExtractorState Cfg Query Address Y config →
+      (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) C)
+    (finish : committer.State → ExtractorState Cfg Query Address Y config →
+      OracleComp (Query →ₒ Y) C)
+    (hfinish : ∀ privateState extractorState,
+      accountingFinish privateState extractorState extractorState.cumulativeLog =
+        finish privateState extractorState)
+    (rounds firstRound : ℕ) (privateState : committer.State)
+    (extractorState : ExtractorState Cfg Query Address Y config)
+    (log : (Query →ₒ Y).QueryLog)
+    (hlog : extractorState.cumulativeLog = log) :
+    committer.runCommitmentsThenAccounting accountingFinish rounds firstRound privateState
+        extractorState log =
+      committer.runCommitmentsThen rounds firstRound privateState extractorState finish := by
+  induction rounds generalizing firstRound privateState extractorState log with
+  | zero =>
+      simp only [SequentialCommitter.runCommitmentsThenAccounting,
+        SequentialCommitter.runCommitmentsThen, SequentialCommitter.runCommitments,
+        pure_bind]
+      rw [← hlog, hfinish]
+  | succ rounds ih =>
+      simp only [SequentialCommitter.runCommitmentsThenAccounting,
+        SequentialCommitter.runCommitmentsThen, SequentialCommitter.runCommitments,
+        loggedAccountingBind, bind_assoc]
+      apply bind_congr
+      rintro ⟨⟨tag, root, nextPrivateState⟩, phaseLog⟩
+      rw [← hlog, ExtractorState.recordCumulative_append]
+      exact ih (firstRound + 1) nextPrivateState
+        (extractorState.record tag phaseLog root)
+        (extractorState.cumulativeLog ++ phaseLog) rfl
+
 /-- Exact adversarial query budget for `rounds` consecutive commitment phases beginning at
 `firstRound`, allowing a different public budget at every round. -/
 def commitmentQueryBudget (phaseBudget : ℕ → ℕ) : ℕ → ℕ → ℕ
@@ -76,6 +114,36 @@ theorem commitmentQueryBudget_const (phaseBudget rounds firstRound : ℕ) :
   | zero => simp [commitmentQueryBudget]
   | succ rounds ih =>
       simp [commitmentQueryBudget, ih, Nat.succ_mul, Nat.add_comm]
+
+/-- Public per-round bounds imply the corresponding exact whole-run bound.  This lemma makes the
+scheduled interface a genuine corollary of the global-query theorem rather than a separate
+security proof. -/
+theorem SequentialCommitter.runCommitments_isTotalQueryBound_schedule
+    (committer : SequentialCommitter Cfg Query Y)
+    {config : Configuration Cfg Address}
+    (phaseQueryBound : ℕ → ℕ)
+    (hcommit : ∀ round privateState,
+      IsTotalQueryBound (committer.commit round privateState) (phaseQueryBound round)) :
+    ∀ rounds firstRound privateState
+      (extractorState : ExtractorState Cfg Query Address Y config),
+      IsTotalQueryBound
+        (committer.runCommitments rounds firstRound privateState extractorState)
+        (commitmentQueryBudget phaseQueryBound rounds firstRound) := by
+  intro rounds
+  induction rounds with
+  | zero =>
+      intro firstRound privateState extractorState
+      trivial
+  | succ rounds ih =>
+      intro firstRound privateState extractorState
+      simp only [SequentialCommitter.runCommitments, commitmentQueryBudget]
+      apply isTotalQueryBound_bind
+      · exact (isTotalQueryBound_withQueryLog_iff
+          (committer.commit firstRound privateState) (phaseQueryBound firstRound)).2
+          (hcommit firstRound privateState)
+      · rintro ⟨⟨tag, root, nextPrivateState⟩, phaseLog⟩
+        exact ih (firstRound + 1) nextPrivateState
+          (extractorState.record tag phaseLog root)
 
 /-- **Global-budget sequential predictable-target composition theorem.**
 
