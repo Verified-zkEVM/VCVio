@@ -27,8 +27,9 @@ and signature space `S`.
 * `SignatureAlg`: a signature scheme as a `keygen`/`sign`/`verify` triple in a monad `m`.
 * `SignatureAlg.Complete`: completeness up to an error `δ`, with `PerfectlyComplete` the `δ = 0`
   case.
-* `SignatureAlg.unforgeableExp`, `eufNmaExp`, `managedRoNmaExp`: the EUF-CMA, EUF-NMA, and
-  managed-random-oracle NMA security experiments, with the corresponding adversary advantages.
+* `SignatureAlg.unforgeableExp`, `strongUnforgeableExp`, `eufNmaExp`, `managedRoNmaExp`: the
+  EUF-CMA, SUF-CMA, EUF-NMA, and managed-random-oracle NMA security experiments, with the
+  corresponding adversary advantages.
 -/
 
 @[expose] public section
@@ -55,9 +56,9 @@ variable {m : Type → Type v} [Monad m] {M PK SK S : Type}
 /-- The signing oracle for `sigAlg` under public key `pk` and secret key `sk`: the
 `QueryImpl` that answers each queried message by running `sigAlg.sign pk sk` on it.
 
-Every produced signature is recorded in a `WriterT (QueryLog (M →ₒ S))` writer layer, so an
-experiment running an adversary against this oracle can later read off which messages were
-signed and check the freshness of a forged message. -/
+Every successful response is recorded as its exact `(message, signature)` pair in a
+`WriterT (QueryLog (M →ₒ S))` writer layer. EUF-CMA projects this trace to queried messages;
+SUF-CMA checks whether the exact final pair occurs in it. -/
 def signingOracle (sigAlg : SignatureAlg m M PK SK S) (pk : PK) (sk : SK) :
     QueryImpl (M →ₒ S) (WriterT (QueryLog (M →ₒ S)) m) :=
   QueryImpl.withLogging (sigAlg.sign pk sk)
@@ -281,6 +282,292 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
   exact probEvent_mono fun _ _ => Bool.and_elim_right
 
 end unforgeable
+
+section strongUnforgeable
+
+variable {ι : Type u} {spec : OracleSpec ι} {M PK SK S : Type}
+  [DecidableEq M] [DecidableEq S]
+
+/-- Whether the signing-oracle trace contains the exact returned pair `(msg, σ)`. Unlike
+`QueryLog.wasQueried`, this predicate distinguishes two signatures returned for the same message. -/
+def signingLogContains (log : QueryLog (M →ₒ S)) (msg : M) (σ : S) : Bool :=
+  decide (⟨msg, σ⟩ ∈ log)
+
+@[simp]
+lemma signingLogContains_nil (msg : M) (σ : S) :
+    signingLogContains ([] : QueryLog (M →ₒ S)) msg σ = false := by
+  simp [signingLogContains]
+
+@[simp]
+lemma signingLogContains_singleton_self (msg : M) (σ : S) :
+    signingLogContains ([⟨msg, σ⟩] : QueryLog (M →ₒ S)) msg σ = true := by
+  simp [signingLogContains]
+
+/-- Whether the signing trace contains a response for the same message whose signature has the
+same scheme-specific key.  Taking `key` to be a signature randomizer partitions a same-message
+strong forgery according to freshness of the signed `(randomizer, message)` pair. -/
+def signingLogContainsMessageKey {K : Type} [DecidableEq K] (key : S → K)
+    (log : QueryLog (M →ₒ S)) (msg : M) (σ : S) : Bool :=
+  log.any fun q => decide (q.1 = msg ∧ key q.2 = key σ)
+
+omit [DecidableEq S] in
+/-- Membership characterization of `signingLogContainsMessageKey`. -/
+lemma signingLogContainsMessageKey_eq_true_iff {K : Type} [DecidableEq K]
+    (key : S → K) (log : QueryLog (M →ₒ S)) (msg : M) (σ : S) :
+    signingLogContainsMessageKey key log msg σ = true ↔
+      ∃ σ' : S, ⟨msg, σ'⟩ ∈ log ∧ key σ' = key σ := by
+  simp only [signingLogContainsMessageKey, List.any_eq_true, decide_eq_true_eq]
+  constructor
+  · rintro ⟨⟨msg', σ'⟩, hmem, hmsg, hkey⟩
+    change msg' = msg at hmsg
+    subst msg'
+    exact ⟨σ', hmem, hkey⟩
+  · rintro ⟨σ', hmem, hkey⟩
+    exact ⟨⟨msg, σ'⟩, hmem, rfl, hkey⟩
+
+/-- A logged response with the same message and key implies that the message was queried. -/
+lemma signingLogContainsMessageKey_implies_wasQueried {K : Type} [DecidableEq K]
+    (key : S → K) (log : QueryLog (M →ₒ S)) (msg : M) (σ : S)
+    (h : signingLogContainsMessageKey key log msg σ = true) :
+    log.wasQueried msg = true := by
+  rw [signingLogContainsMessageKey_eq_true_iff] at h
+  obtain ⟨σ', hmem, _⟩ := h
+  rw [QueryLog.wasQueried_eq_decide_mem_map_fst, decide_eq_true_eq]
+  exact List.mem_map.mpr ⟨⟨msg, σ'⟩, hmem, rfl⟩
+
+/-- Exact pair reuse implies reuse of every key extracted from the signature. -/
+lemma signingLogContains_implies_messageKey {K : Type} [DecidableEq K]
+    (key : S → K) (log : QueryLog (M →ₒ S)) (msg : M) (σ : S)
+    (h : signingLogContains log msg σ = true) :
+    signingLogContainsMessageKey key log msg σ = true := by
+  simp only [signingLogContains, decide_eq_true_eq] at h
+  rw [signingLogContainsMessageKey_eq_true_iff]
+  exact ⟨σ, h, rfl⟩
+
+/-- Exact Boolean partition of the generic same-message residual.  Its left branch has a fresh
+`(key σ, msg)` pair; its right branch reuses that pair while the full signature remains fresh. -/
+lemma sameMessageResidual_messageKey_partition {K : Type} [DecidableEq K]
+    (key : S → K) (log : QueryLog (M →ₒ S)) (msg : M) (σ : S) :
+    (log.wasQueried msg && !signingLogContains log msg σ) =
+      ((log.wasQueried msg && !signingLogContainsMessageKey key log msg σ) ||
+        (signingLogContainsMessageKey key log msg σ && !signingLogContains log msg σ)) := by
+  apply Bool.eq_iff_iff.mpr
+  simp only [Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true_eq_eq_false]
+  constructor
+  · rintro ⟨hmsg, hfresh⟩
+    by_cases hkey : signingLogContainsMessageKey key log msg σ = true
+    · exact Or.inr ⟨hkey, hfresh⟩
+    · exact Or.inl ⟨hmsg, Bool.eq_false_of_not_eq_true hkey⟩
+  · rintro (⟨hmsg, hkey⟩ | ⟨hkey, hfresh⟩)
+    · refine ⟨hmsg, ?_⟩
+      by_contra hexact
+      have hexact' : signingLogContains log msg σ = true :=
+        Bool.eq_true_of_not_eq_false hexact
+      have := signingLogContains_implies_messageKey key log msg σ hexact'
+      simp [hkey] at this
+    · exact ⟨signingLogContainsMessageKey_implies_wasQueried key log msg σ hkey, hfresh⟩
+
+/-- In the reused-key branch, the log contains a distinct signature for the same message and
+key.  This is the exact pointwise witness a scheme-specific binding reduction must consume. -/
+lemma signingLogContainsMessageKey_distinct_witness {K : Type} [DecidableEq K]
+    (key : S → K) (log : QueryLog (M →ₒ S)) (msg : M) (σ : S)
+    (hkey : signingLogContainsMessageKey key log msg σ = true)
+    (hfresh : signingLogContains log msg σ = false) :
+    ∃ σ' : S, ⟨msg, σ'⟩ ∈ log ∧ key σ' = key σ ∧ σ' ≠ σ := by
+  rw [signingLogContainsMessageKey_eq_true_iff] at hkey
+  obtain ⟨σ', hmem, hsame⟩ := hkey
+  refine ⟨σ', hmem, hsame, ?_⟩
+  intro heq
+  subst σ'
+  simp [signingLogContains, hmem] at hfresh
+
+/-- A SUF-CMA (strong unforgeability under chosen-message attack) adversary. As in EUF-CMA it
+receives the public key and has access to the scheme's ambient oracles plus the signing oracle,
+but its final pair is fresh when that exact `(message, signature)` pair was never returned. -/
+structure strongUnforgeableAdv (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
+  main (pk : PK) : OracleComp (spec + (M →ₒ S)) (M × S)
+
+/-- Strong unforgeability under chosen-message attack. The signing oracle logs every successful
+returned `(message, signature)` pair. The adversary succeeds exactly when its final pair verifies
+and that pair does not occur in the returned-pair log. In particular, a different valid signature
+for a previously signed message remains an eligible strong forgery. -/
+noncomputable def strongUnforgeableExp
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (adv : strongUnforgeableAdv sigAlg) :=
+  letI : DecidableEq M := Classical.decEq M
+  letI : DecidableEq S := Classical.decEq S
+  runtime.evalSPMF do
+    let (pk, sk) ← sigAlg.keygen
+    let impl : QueryImpl (spec + (M →ₒ S))
+        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
+      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+        sigAlg.signingOracle pk sk
+    let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
+      simulateQ impl (adv.main pk)
+    let ((msg, σ), log) ← simAdv.run
+    let verified ← sigAlg.verify pk msg σ
+    return !signingLogContains log msg σ && verified
+
+/-- The SUF-CMA success probability: the probability of outputting a valid pair not previously
+returned by the signing oracle. -/
+noncomputable def strongUnforgeableAdv.advantage
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (adv : strongUnforgeableAdv sigAlg) : ℝ≥0∞ :=
+  Pr[= true | strongUnforgeableExp runtime adv]
+
+/-- Forget pair freshness and regard a strong-unforgeability adversary as an ordinary
+EUF-CMA adversary.  The oracle interface and adversary program are unchanged. -/
+def strongUnforgeableAdv.toUnforgeableAdv
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (adv : strongUnforgeableAdv sigAlg) : unforgeableAdv sigAlg where
+  main := adv.main
+
+/-- The extra event separating SUF-CMA from EUF-CMA: the adversary returns a valid, new
+signature for a message that it did submit to the signing oracle.  This event is intentionally
+defined without assigning it to a cryptographic assumption; doing so is scheme-specific (for
+example, it may require signature binding or a rerandomization argument). -/
+noncomputable def sameMessageStrongUnforgeableExp
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (adv : strongUnforgeableAdv sigAlg) :=
+  letI : DecidableEq M := Classical.decEq M
+  letI : DecidableEq S := Classical.decEq S
+  runtime.evalSPMF do
+    let (pk, sk) ← sigAlg.keygen
+    let impl : QueryImpl (spec + (M →ₒ S))
+        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
+      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+        sigAlg.signingOracle pk sk
+    let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
+      simulateQ impl (adv.main pk)
+    let ((msg, σ), log) ← simAdv.run
+    let verified ← sigAlg.verify pk msg σ
+    return log.wasQueried msg && !signingLogContains log msg σ && verified
+
+/-- Probability of the same-message, new-signature event in the strong-unforgeability
+experiment. -/
+noncomputable def strongUnforgeableAdv.sameMessageAdvantage
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (adv : strongUnforgeableAdv sigAlg) : ℝ≥0∞ :=
+  Pr[= true | sameMessageStrongUnforgeableExp runtime adv]
+
+/-- Quantitative scheme property needed in addition to EUF-CMA for strong unforgeability: every
+adversary has at most `ε` probability of returning a new valid signature for a message previously
+submitted to the signing oracle. -/
+def SameMessageBinding (sigAlg : SignatureAlg (OracleComp spec) M PK SK S)
+    (runtime : ProbCompRuntime (OracleComp spec)) (ε : ℝ≥0∞) : Prop :=
+  ∀ adv : strongUnforgeableAdv sigAlg, adv.sameMessageAdvantage runtime ≤ ε
+
+omit [DecidableEq M] [DecidableEq S] in
+/-- **Generic SUF-to-EUF partition.** Every strong forgery either uses a message never queried
+to the signing oracle (an ordinary EUF-CMA forgery) or is a new valid signature for a previously
+queried message.  Consequently SUF-CMA is EUF-CMA plus precisely the latter, scheme-specific
+same-message event.
+
+The `h_pull` hypothesis is the same runtime-factoring law used by the EUF freshness lemma above.
+It is satisfied by the standard state-oracle runtimes used by VCVio. -/
+lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
+      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
+    (adv : strongUnforgeableAdv sigAlg) :
+    adv.advantage runtime ≤
+      adv.toUnforgeableAdv.advantage runtime + adv.sameMessageAdvantage runtime := by
+  let : DecidableEq M := Classical.decEq M
+  let : DecidableEq S := Classical.decEq S
+  unfold strongUnforgeableAdv.advantage strongUnforgeableExp
+    unforgeableAdv.advantage unforgeableExp
+    strongUnforgeableAdv.sameMessageAdvantage sameMessageStrongUnforgeableExp
+  set joint : OracleComp spec (M × S × QueryLog (M →ₒ S) × Bool) := do
+    let (pk, sk) ← sigAlg.keygen
+    let impl : QueryImpl (spec + (M →ₒ S))
+        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
+      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+        sigAlg.signingOracle pk sk
+    let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
+      simulateQ impl (adv.main pk)
+    let ((msg, σ), log) ← simAdv.run
+    let verified ← sigAlg.verify pk msg σ
+    pure (msg, σ, log, verified) with hjoint_def
+  have hSuf : (runtime.evalSPMF do
+        let (pk, sk) ← sigAlg.keygen
+        let impl : QueryImpl (spec + (M →ₒ S))
+            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
+          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+            sigAlg.signingOracle pk sk
+        let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
+          simulateQ impl (adv.main pk)
+        let ((msg, σ), log) ← simAdv.run
+        let verified ← sigAlg.verify pk msg σ
+        pure (!signingLogContains log msg σ && verified)) =
+      (fun t : M × S × QueryLog (M →ₒ S) × Bool =>
+        !signingLogContains t.2.2.1 t.1 t.2.1 && t.2.2.2) <$> runtime.evalSPMF joint := by
+    rw [← h_pull]
+    congr 1
+    simp only [hjoint_def, monad_norm]
+  have hEuf : (runtime.evalSPMF do
+        let (pk, sk) ← sigAlg.keygen
+        let impl : QueryImpl (spec + (M →ₒ S))
+            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
+          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+            sigAlg.signingOracle pk sk
+        let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
+          simulateQ impl (adv.toUnforgeableAdv.main pk)
+        let ((msg, σ), log) ← simAdv.run
+        let verified ← sigAlg.verify pk msg σ
+        pure (!log.wasQueried msg && verified)) =
+      (fun t : M × S × QueryLog (M →ₒ S) × Bool =>
+        !t.2.2.1.wasQueried t.1 && t.2.2.2) <$> runtime.evalSPMF joint := by
+    rw [← h_pull]
+    congr 1
+    simp only [strongUnforgeableAdv.toUnforgeableAdv, hjoint_def, monad_norm]
+  have hSame : (runtime.evalSPMF do
+        let (pk, sk) ← sigAlg.keygen
+        let impl : QueryImpl (spec + (M →ₒ S))
+            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
+          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+            sigAlg.signingOracle pk sk
+        let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
+          simulateQ impl (adv.main pk)
+        let ((msg, σ), log) ← simAdv.run
+        let verified ← sigAlg.verify pk msg σ
+        pure (log.wasQueried msg && !signingLogContains log msg σ && verified)) =
+      (fun t : M × S × QueryLog (M →ₒ S) × Bool =>
+        t.2.2.1.wasQueried t.1 &&
+          !signingLogContains t.2.2.1 t.1 t.2.1 && t.2.2.2) <$> runtime.evalSPMF joint := by
+    rw [← h_pull]
+    congr 1
+    simp only [hjoint_def, monad_norm]
+  rw [hSuf, hEuf, hSame, ← probEvent_eq_eq_probOutput, ← probEvent_eq_eq_probOutput,
+    ← probEvent_eq_eq_probOutput, probEvent_map, probEvent_map, probEvent_map]
+  exact (probEvent_mono'' fun t h => by
+    by_cases hm : t.2.2.1.wasQueried t.1 = true <;> simp_all).trans
+      (probEvent_or_le (runtime.evalSPMF joint) _ _)
+
+omit [DecidableEq M] [DecidableEq S] in
+/-- SUF-CMA from EUF-CMA plus a quantitative same-message binding property. -/
+lemma strongUnforgeableAdv.advantage_le_euf_add_of_sameMessageBinding
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
+      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
+    {ε : ℝ≥0∞} (hbinding : sigAlg.SameMessageBinding runtime ε)
+    (adv : strongUnforgeableAdv sigAlg) :
+    adv.advantage runtime ≤ adv.toUnforgeableAdv.advantage runtime + ε :=
+  (adv.advantage_le_euf_add_sameMessage runtime h_pull).trans
+    (add_le_add le_rfl (hbinding adv))
+
+end strongUnforgeable
 
 section eufNma
 

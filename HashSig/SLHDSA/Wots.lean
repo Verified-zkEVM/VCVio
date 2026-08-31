@@ -46,6 +46,19 @@ variable {p : Params}
 theorem Params.w_pos (p : Params) : 0 < p.w := by
   unfold Params.w; positivity
 
+/-- A positive Winternitz bit width gives the nondegenerate base required by the checksum
+incomparability theorem. -/
+theorem Params.one_lt_w (p : Params) (hlgw : 0 < p.lgw) : 1 < p.w := by
+  unfold Params.w
+  exact Nat.one_lt_pow (Nat.ne_of_gt hlgw) Nat.one_lt_two
+
+/-- The FIPS definition `len2 = log_w (len1 * (w - 1)) + 1` has enough digits to encode the
+largest checksum. -/
+theorem Params.checksum_lt_w_pow_len2 (p : Params) (hlgw : 0 < p.lgw) :
+    p.len1 * (p.w - 1) < p.w ^ p.len2 := by
+  simpa [Params.len2, Nat.succ_eq_add_one] using
+    Nat.lt_pow_succ_log_self (p.one_lt_w hlgw) (p.len1 * (p.w - 1))
+
 /-! ### The hash chain (FIPS 205 Algorithm 5) -/
 
 /-- Low-level callback-parametric implementation of the WOTS+ chain. -/
@@ -141,10 +154,52 @@ implementation-independent context. -/
 def wotsMsgDigitsCore (core : CorePrimitives p) (msg : core.Y) : List ℕ :=
   base2b (core.yToBytes msg).toList p.lgw p.len1
 
+/-- Structural encoding condition needed by the WOTS EUF reduction: distinct node messages must
+produce distinct message-digit vectors.  This is automatic for the supported byte-vector
+instantiation with its full-width base-`w` encoding, but it is not a consequence of the bare
+`CorePrimitives` carrier and therefore must be stated explicitly in generic security theorems. -/
+def CorePrimitives.WotsMessageEncodingInjective (core : CorePrimitives p) : Prop :=
+  Function.Injective (wotsMsgDigitsCore core)
+
+@[simp] theorem wotsMsgDigitsCore_length (core : CorePrimitives p) (msg : core.Y) :
+    (wotsMsgDigitsCore core msg).length = p.len1 := by
+  simp [wotsMsgDigitsCore]
+
+/-- Each message digit is in the Winternitz range. -/
+theorem wotsMsgDigitsCore_mem_lt (core : CorePrimitives p) (msg : core.Y) :
+    ∀ d ∈ wotsMsgDigitsCore core msg, d < p.w := by
+  simpa [wotsMsgDigitsCore, Params.w] using
+    base2b_lt (core.yToBytes msg).toList p.lgw p.len1
+
 /-- The full step-count list: message digits followed by the base-`w` checksum digits; length
 `len`, computed from the implementation-independent context. -/
 def chainLengthsCore (core : CorePrimitives p) (msg : core.Y) : List ℕ :=
   wotsFullDigits (wotsMsgDigitsCore core msg) p.w p.len1 p.len2
+
+/-- Scheme-level checksum incomparability.  Distinct WOTS message-digit encodings cannot be
+advanced componentwise in either direction.  This instantiates the abstract checksum theorem
+with the exact `Params.len1`/`Params.len2` formulas used by the executable WOTS code. -/
+theorem chainLengthsCore_incomparable_of_msgDigits_ne (core : CorePrimitives p)
+    (msg₁ msg₂ : core.Y) (hlgw : 0 < p.lgw)
+    (hne : wotsMsgDigitsCore core msg₁ ≠ wotsMsgDigitsCore core msg₂) :
+    ¬ WotsChecksum.Forall₂ (· ≤ ·) (chainLengthsCore core msg₁)
+        (chainLengthsCore core msg₂) ∧
+      ¬ WotsChecksum.Forall₂ (· ≤ ·) (chainLengthsCore core msg₂)
+        (chainLengthsCore core msg₁) := by
+  exact WotsChecksum.wots_fullDigits_incomparable p.w_pos
+    (wotsMsgDigitsCore_length core msg₁) (wotsMsgDigitsCore_length core msg₂)
+    (wotsMsgDigitsCore_mem_lt core msg₁) (wotsMsgDigitsCore_mem_lt core msg₂)
+    (p.checksum_lt_w_pow_len2 hlgw) hne
+
+/-- Message-level form consumed by a WOTS reduction.  The encoding side condition turns distinct
+node values into the digit inequality needed by checksum incomparability. -/
+theorem chainLengthsCore_incomparable (core : CorePrimitives p) (msg₁ msg₂ : core.Y)
+    (hlgw : 0 < p.lgw) (henc : core.WotsMessageEncodingInjective) (hne : msg₁ ≠ msg₂) :
+    ¬ WotsChecksum.Forall₂ (· ≤ ·) (chainLengthsCore core msg₁)
+        (chainLengthsCore core msg₂) ∧
+      ¬ WotsChecksum.Forall₂ (· ≤ ·) (chainLengthsCore core msg₂)
+        (chainLengthsCore core msg₁) :=
+  chainLengthsCore_incomparable_of_msgDigits_ne core msg₁ msg₂ hlgw (henc.ne hne)
 
 /-- Every entry of `chainLengthsCore` is a genuine base-`w` digit (`< w`). -/
 theorem chainLengthsCore_mem_lt (core : CorePrimitives p) (msg : core.Y) :

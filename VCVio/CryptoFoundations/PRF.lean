@@ -108,6 +108,20 @@ noncomputable def prfAdvantage [DecidableEq D] [SampleableType R]
   |(Pr[= true | prf.prfRealExp adversary]).toReal -
     (Pr[= true | prfIdealExp adversary]).toReal|
 
+/-- The PRF distinguishing advantage in the common `ENNReal` codomain used by the signature and
+hash-assumption games.  Keeping this coercion at the PRF boundary prevents an aggregate concrete
+security bound from silently mixing real-valued and extended-nonnegative-real advantages. -/
+noncomputable def prfAdvantageENNReal [DecidableEq D] [SampleableType R]
+    (prf : PRFScheme K D R) (adversary : PRFAdversary D R) : ℝ≥0∞ :=
+  ENNReal.ofReal (prfAdvantage prf adversary)
+
+/-- Coercing the nonnegative real-valued PRF advantage to `ENNReal` and back is lossless. -/
+@[simp] theorem prfAdvantageENNReal_toReal [DecidableEq D] [SampleableType R]
+    (prf : PRFScheme K D R) (adversary : PRFAdversary D R) :
+    (prfAdvantageENNReal prf adversary).toReal = prfAdvantage prf adversary := by
+  rw [prfAdvantageENNReal, ENNReal.toReal_ofReal]
+  exact abs_nonneg _
+
 /-! ## Forwarding lemmas for the PRF query implementations
 
 How `prfRealQueryImpl`/`prfIdealQueryImpl` act on a computation lifted in from the ambient

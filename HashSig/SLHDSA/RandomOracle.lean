@@ -246,6 +246,57 @@ noncomputable def runtime (core : CorePrimitives p)
     ProbCompRuntime (OracleComp (unifSpec + publicHashSpec core)) :=
   runtimeWithCache core ∅
 
+/-- The shared lazy-public-hash runtime factors a final pure map out of observation. -/
+theorem runtimeWithCache_evalSPMF_bind_pure (core : CorePrimitives p)
+    [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y]
+    [SampleableType core.Y] [SampleableType (Bytes p.m)]
+    (cache : PublicHash.Cache core) {α β : Type} (f : α → β)
+    (oa : OracleComp (unifSpec + publicHashSpec core) α) :
+    (runtimeWithCache core cache).evalSPMF (oa >>= fun x => pure (f x)) =
+      f <$> (runtimeWithCache core cache).evalSPMF oa :=
+  SPMFSemantics.withStateOracle_evalSPMF_bind_pure _ _ oa f
+
+/-- Empty-cache specialization of `runtimeWithCache_evalSPMF_bind_pure`. -/
+theorem runtime_evalSPMF_bind_pure (core : CorePrimitives p)
+    [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y]
+    [SampleableType core.Y] [SampleableType (Bytes p.m)]
+    {α β : Type} (f : α → β)
+    (oa : OracleComp (unifSpec + publicHashSpec core) α) :
+    (runtime core).evalSPMF (oa >>= fun x => pure (f x)) =
+      f <$> (runtime core).evalSPMF oa :=
+  runtimeWithCache_evalSPMF_bind_pure core ∅ f oa
+
+/-- Deterministic public-hash runtime for concrete security games.  Uniform queries retain their
+ordinary probabilistic meaning, while every `Thash`/`H_msg` query is answered by the supplied
+primitive bundle.  Unlike `runtime`, this runtime contains no lazy random-oracle cache. -/
+noncomputable def concreteRuntime (prims : Primitives p) :
+    ProbCompRuntime (OracleComp (unifSpec + publicHashSpec prims.core)) where
+  toSPMFSemantics :=
+    { Sem := ProbComp
+      instMonadSem := inferInstance
+      interpret := simulateQ' (unifFwdAnswerImpl (PublicHash.impl prims))
+      observe := fun mx => liftM mx }
+  toProbCompLift := ProbCompLift.ofMonadLift _
+
+/-- The deterministic runtime observes a whole oracle computation by one simulation with
+`unifFwdAnswerImpl`.  In particular, key generation, adversary calls, signing queries, and final
+verification all use the same concrete primitive bundle. -/
+@[simp] theorem concreteRuntime_evalSPMF (prims : Primitives p)
+    {α : Type} (oa : OracleComp (unifSpec + publicHashSpec prims.core) α) :
+    (concreteRuntime prims).evalSPMF oa =
+      liftM (simulateQ (unifFwdAnswerImpl (PublicHash.impl prims)) oa) := rfl
+
+/-- The concrete public-hash runtime factors a final pure map out of observation.  This is the
+runtime law required by the generic EUF/SUF event-partition lemmas. -/
+theorem concreteRuntime_evalSPMF_bind_pure (prims : Primitives p)
+    {α β : Type} (f : α → β)
+    (oa : OracleComp (unifSpec + publicHashSpec prims.core) α) :
+    (concreteRuntime prims).evalSPMF (oa >>= fun x => pure (f x)) =
+      f <$> (concreteRuntime prims).evalSPMF oa := by
+  simp only [concreteRuntime_evalSPMF, simulateQ_bind, simulateQ_pure,
+    liftM_bind, liftM_pure, map_eq_bind_pure_comp]
+  congr 1
+
 end PublicHash
 
 /-! ### End-to-end shared-ROM completeness -/

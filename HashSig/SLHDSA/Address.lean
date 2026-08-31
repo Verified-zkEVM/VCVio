@@ -136,6 +136,53 @@ def compressSha2 (a : Adrs) : List Byte :=
   toBytesBE a.layer 1 ++ toBytesBE a.tree 8 ++ toBytesBE a.type 1 ++
     toBytesBE a.word1 4 ++ toBytesBE a.word2 4 ++ toBytesBE a.word3 4
 
+/-- Four-byte big-endian encoding is injective on the 32-bit range. -/
+theorem toBytesBE_four_injective_of_lt {x y : ℕ}
+    (hx : x < 4294967296) (hy : y < 4294967296)
+    (h : toBytesBE x 4 = toBytesBE y 4) : x = y := by
+  simp only [toBytesBE, List.range_succ_eq_map, List.map_cons, List.cons.injEq] at h
+  norm_num at h
+  rcases h with ⟨h3, h2, h1, h0⟩
+  have h3' := congrArg UInt8.toNat h3
+  have h2' := congrArg UInt8.toNat h2
+  have h1' := congrArg UInt8.toNat h1
+  have h0' := congrArg UInt8.toNat h0
+  simp at h3' h2' h1' h0'
+  omega
+
+/-- SHA address compression is injective between addresses with a common layer/tree/type header
+provided their three type-dependent words are in the 32-bit range retained by `ADRSc`.  This is
+the reusable restricted-injectivity fact needed by the reachable SLH-DSA target families; it does
+not claim false global injectivity of the compressed address. -/
+theorem compressSha2_injective_of_header_eq {a b : Adrs}
+    (hlayer : a.layer = b.layer) (htree : a.tree = b.tree) (htype : a.type = b.type)
+    (ha1 : a.word1 < 4294967296) (hb1 : b.word1 < 4294967296)
+    (ha2 : a.word2 < 4294967296) (hb2 : b.word2 < 4294967296)
+    (ha3 : a.word3 < 4294967296) (hb3 : b.word3 < 4294967296)
+    (h : a.compressSha2 = b.compressSha2) : a = b := by
+  have hwords :
+      toBytesBE a.word1 4 ++ toBytesBE a.word2 4 ++ toBytesBE a.word3 4 =
+        toBytesBE b.word1 4 ++ toBytesBE b.word2 4 ++ toBytesBE b.word3 4 := by
+    simpa [compressSha2, hlayer, htree, htype] using h
+  have h1 : toBytesBE a.word1 4 = toBytesBE b.word1 4 := by
+    have := congrArg (List.take 4) hwords
+    simpa [toBytesBE] using this
+  have hw1 : a.word1 = b.word1 := toBytesBE_four_injective_of_lt ha1 hb1 h1
+  rw [hw1] at hwords
+  simp only [List.append_assoc] at hwords
+  have htail := List.append_cancel_left hwords
+  have h2 : toBytesBE a.word2 4 = toBytesBE b.word2 4 := by
+    have := congrArg (List.take 4) htail
+    simpa [toBytesBE] using this
+  have hw2 : a.word2 = b.word2 := toBytesBE_four_injective_of_lt ha2 hb2 h2
+  rw [hw2] at htail
+  have h3 : toBytesBE a.word3 4 = toBytesBE b.word3 4 :=
+    List.append_cancel_left htail
+  have hw3 : a.word3 = b.word3 := toBytesBE_four_injective_of_lt ha3 hb3 h3
+  cases a
+  cases b
+  simp_all only
+
 end Adrs
 
 end SLHDSA

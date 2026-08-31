@@ -5,10 +5,12 @@ public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.OracleClosure
+public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.ForkMeasure
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.GrindFailFast
+public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasureSemantics
@@ -23,6 +25,10 @@ public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.QueryHom
 public import VCVioTest.RoundByRound.OneRound
+public import VCVioTest.SMDTDSPR
+public import VCVioTest.SMDTOpenPRE
+public import VCVioTest.SMDTPRE
+public import VCVioTest.SMDTUDC
 public import VCVioTest.SampleableType
 public import VCVioTest.Smoke
 public import VCVioTest.UniformOn

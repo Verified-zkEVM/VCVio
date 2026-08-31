@@ -49,11 +49,17 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
 public import VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning
 public import VCVio.CryptoFoundations.HardnessAssumptions.OneWay
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.OpenPREFromTCRDSPR
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTDSPR
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTOpenPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUDC
 public import VCVio.CryptoFoundations.HashCommitment
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 public import VCVio.CryptoFoundations.KEMDEM
