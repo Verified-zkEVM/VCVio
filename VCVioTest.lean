@@ -1,5 +1,6 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import VCVioTest.AKE.UAKE.TranscriptFixtures
 public import VCVioTest.Computability
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.GrindFailFast

@@ -5,6 +5,7 @@ Authors: Ben Hamlin
 -/
 
 module
+
 public import VCVio.CryptoFoundations.AKE.UAKE.Defs
 
 /-!
@@ -26,9 +27,9 @@ These fixtures do *not* exercise `opImpl`, `recordOne`, or `recordOpt`.
 
 open OracleSpec OracleComp
 
-namespace AKE.UAKE
+namespace VCVioTest.AKE.UAKE
 
-namespace TranscriptFixtures
+open _root_.AKE.UAKE
 
 /-
 These are transcripts that should satisfy the `Matching` predicate for the
@@ -258,6 +259,4 @@ example :
       (result 2 [bogus2, relayed2] twoSessionChallenge2) = false := by
   decide
 
-end TranscriptFixtures
-
-end AKE.UAKE
+end VCVioTest.AKE.UAKE
