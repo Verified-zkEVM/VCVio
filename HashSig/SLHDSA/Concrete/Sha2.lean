@@ -113,6 +113,14 @@ def compress (st : Array UInt32) (m : ByteArray) (base : Nat) : Array UInt32 := 
   return #[st[0]! + a, st[1]! + b, st[2]! + c, st[3]! + d,
     st[4]! + e, st[5]! + f, st[6]! + g, st[7]! + h]
 
+/-- Serialize the eight-word SHA-224/SHA-256 state to exactly 32 bytes. -/
+def stateBytes32 (st : Array UInt32) : ByteArray :=
+  ByteArray.mk (Array.ofFn fun i : Fin 32 => (u32be st[i.val / 4]!)[i.val % 4]!)
+
+@[simp] theorem stateBytes32_size (st : Array UInt32) : (stateBytes32 st).size = 32 := by
+  change (Array.ofFn fun i : Fin 32 => (u32be st[i.val / 4]!)[i.val % 4]!).size = 32
+  exact Array.size_ofFn
+
 /-- Run the SHA-256 compression function from a selected initial state and serialize `outLen`
 digest bytes. This is the common FIPS 180-4 engine for SHA-224 and SHA-256. -/
 def sha256Family (initial : Array UInt32) (outLen : ℕ) (msg : ByteArray) : ByteArray := Id.run do
@@ -120,16 +128,19 @@ def sha256Family (initial : Array UInt32) (outLen : ℕ) (msg : ByteArray) : Byt
   let mut st := initial
   for b in [0:padded.size / 64] do
     st := compress st padded (b * 64)
-  let mut out := ByteArray.empty
-  for i in [0:8] do
-    out := out ++ u32be (st[i]!)
-  return out.extract 0 outLen
+  return (stateBytes32 st).extract 0 outLen
 
 /-- SHA-224 of a byte string (28-byte digest). -/
 def sha224 (msg : ByteArray) : ByteArray := sha256Family iv224 28 msg
 
 /-- SHA-256 of a byte string (32-byte digest). -/
 def sha256 (msg : ByteArray) : ByteArray := sha256Family iv 32 msg
+
+@[simp] theorem sha224_size (msg : ByteArray) : (sha224 msg).size = 28 := by
+  simp [sha224, sha256Family]
+
+@[simp] theorem sha256_size (msg : ByteArray) : (sha256 msg).size = 32 := by
+  simp [sha256, sha256Family]
 
 /-- MGF1 with SHA-256 (RFC 8017 §B.2.1): expand `seed` to `outLen` bytes. -/
 def mgf1 (seed : ByteArray) (outLen : Nat) : ByteArray := Id.run do
@@ -262,6 +273,14 @@ def compress512 (st : Array UInt64) (m : ByteArray) (base : Nat) : Array UInt64 
   return #[st[0]! + a, st[1]! + b, st[2]! + c, st[3]! + d,
     st[4]! + e, st[5]! + f, st[6]! + g, st[7]! + h]
 
+/-- Serialize the eight-word SHA-384/SHA-512 state to exactly 64 bytes. -/
+def stateBytes64 (st : Array UInt64) : ByteArray :=
+  ByteArray.mk (Array.ofFn fun i : Fin 64 => (u64be st[i.val / 8]!)[i.val % 8]!)
+
+@[simp] theorem stateBytes64_size (st : Array UInt64) : (stateBytes64 st).size = 64 := by
+  change (Array.ofFn fun i : Fin 64 => (u64be st[i.val / 8]!)[i.val % 8]!).size = 64
+  exact Array.size_ofFn
+
 /-- Run the SHA-512 compression function from a selected initial state and serialize `outLen`
 digest bytes. This is the common FIPS 180-4 engine for the SHA-384 and SHA-512 variants. -/
 def sha512Family (initial : Array UInt64) (outLen : ℕ) (msg : ByteArray) : ByteArray := Id.run do
@@ -269,10 +288,7 @@ def sha512Family (initial : Array UInt64) (outLen : ℕ) (msg : ByteArray) : Byt
   let mut st := initial
   for b in [0:padded.size / 128] do
     st := compress512 st padded (b * 128)
-  let mut out := ByteArray.empty
-  for i in [0:8] do
-    out := out ++ u64be (st[i]!)
-  return out.extract 0 outLen
+  return (stateBytes64 st).extract 0 outLen
 
 /-- SHA-384 of a byte string (48-byte digest). -/
 def sha384 (msg : ByteArray) : ByteArray := sha512Family iv384 48 msg
@@ -285,6 +301,18 @@ def sha512_224 (msg : ByteArray) : ByteArray := sha512Family iv512_224 28 msg
 
 /-- SHA-512/256 of a byte string (32-byte digest). -/
 def sha512_256 (msg : ByteArray) : ByteArray := sha512Family iv512_256 32 msg
+
+@[simp] theorem sha384_size (msg : ByteArray) : (sha384 msg).size = 48 := by
+  simp [sha384, sha512Family]
+
+@[simp] theorem sha512_size (msg : ByteArray) : (sha512 msg).size = 64 := by
+  simp [sha512, sha512Family]
+
+@[simp] theorem sha512_224_size (msg : ByteArray) : (sha512_224 msg).size = 28 := by
+  simp [sha512_224, sha512Family]
+
+@[simp] theorem sha512_256_size (msg : ByteArray) : (sha512_256 msg).size = 32 := by
+  simp [sha512_256, sha512Family]
 
 /-- MGF1 with SHA-512. -/
 def mgf1Sha512 (seed : ByteArray) (outLen : Nat) : ByteArray := Id.run do

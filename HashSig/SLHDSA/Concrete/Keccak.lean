@@ -81,11 +81,15 @@ def absorb (input : ByteArray) (rate : ℕ) (padByte : UInt8) : Array UInt64 := 
   return s
 
 /-- Squeeze the first `outLen` bytes from one state block. Callers keep `outLen ≤ rate`. -/
-def squeeze (s : Array UInt64) (outLen : ℕ) : ByteArray := Id.run do
-  let mut out := ByteArray.empty
-  for i in [0:outLen] do
-    out := out.push (((s[i / 8]! >>> ((i % 8) * 8).toUInt64) &&& 0xFF).toUInt8)
-  return out
+def squeeze (s : Array UInt64) (outLen : ℕ) : ByteArray :=
+  ByteArray.mk (Array.ofFn fun i : Fin outLen =>
+    ((s[i.val / 8]! >>> ((i.val % 8) * 8).toUInt64) &&& 0xFF).toUInt8)
+
+@[simp] theorem squeeze_size (s : Array UInt64) (outLen : ℕ) :
+    (squeeze s outLen).size = outLen := by
+  change (Array.ofFn fun i : Fin outLen =>
+    ((s[i.val / 8]! >>> ((i.val % 8) * 8).toUInt64) &&& 0xFF).toUInt8).size = outLen
+  exact Array.size_ofFn
 
 /-- Multi-block XOF squeeze. The initial absorbed state is emitted first; a new permutation is
 applied before each subsequent rate-sized block. -/
@@ -123,5 +127,17 @@ def shake128 (input : ByteArray) (outLen : ℕ) : ByteArray :=
 from both SHA3's `0x06` and Ethereum Keccak's `0x01`. -/
 def shake256 (input : ByteArray) (outLen : ℕ) : ByteArray :=
   squeezeXof (absorb input 136 0x1f) 136 outLen
+
+@[simp] theorem sha3_224_size (input : ByteArray) : (sha3_224 input).size = 28 := by
+  simp [sha3_224]
+
+@[simp] theorem sha3_256_size (input : ByteArray) : (sha3_256 input).size = 32 := by
+  simp [sha3_256]
+
+@[simp] theorem sha3_384_size (input : ByteArray) : (sha3_384 input).size = 48 := by
+  simp [sha3_384]
+
+@[simp] theorem sha3_512_size (input : ByteArray) : (sha3_512 input).size = 64 := by
+  simp [sha3_512]
 
 end SLHDSA.Concrete.Keccak
