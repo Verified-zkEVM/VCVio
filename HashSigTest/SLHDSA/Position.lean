@@ -21,6 +21,53 @@ namespace SLHDSA.PositionTest
 
 open FipsParameterSet
 
+/-! ## Total trajectories at small boundary depths -/
+
+/-- A minimal valid one-layer profile, with no tree-index bits in its digest. -/
+def oneLayerParams : Params :=
+  { n := 1, h := 4, d := 1, hp := 4, a := 8, k := 1, lgw := 1 }
+
+def oneLayerValidated : ValidatedParams := ⟨oneLayerParams, by decide⟩
+
+def oneLayerDigest : Bytes oneLayerParams.m :=
+  Vector.ofFn fun i => ([0xa5, 0xfe] : List Byte).getD i.val 0
+
+def oneLayerPosition : LayerPosition oneLayerValidated :=
+  LayerPosition.at oneLayerValidated (splitDigest oneLayerParams oneLayerDigest) ⟨0, by decide⟩
+
+/-- At `d = 1`, the total trajectory has only layer zero; the absent tree slice is zero and the
+low digest nibble selects the leaf. -/
+example : [oneLayerPosition.layer.val, oneLayerPosition.tree.val, oneLayerPosition.leaf.val] =
+    [0, 0, 14] := by
+  decide
+
+/-- A two-layer boundary profile, where the only transition must reach the final tree. -/
+def twoLayerParams : Params :=
+  { n := 1, h := 8, d := 2, hp := 4, a := 8, k := 1, lgw := 1 }
+
+def twoLayerValidated : ValidatedParams := ⟨twoLayerParams, by decide⟩
+
+def twoLayerDigest : Bytes twoLayerParams.m :=
+  Vector.ofFn fun i => ([0xa5, 0xab, 0xfe] : List Byte).getD i.val 0
+
+def twoLayerPosition0 : LayerPosition twoLayerValidated :=
+  LayerPosition.at twoLayerValidated (splitDigest twoLayerParams twoLayerDigest) ⟨0, by decide⟩
+
+def twoLayerPosition1 : LayerPosition twoLayerValidated :=
+  LayerPosition.at twoLayerValidated (splitDigest twoLayerParams twoLayerDigest) ⟨1, by decide⟩
+
+/-- The two-layer trajectory consumes the sole four-bit tree digit into the final leaf. -/
+example :
+    [[twoLayerPosition0.layer.val, twoLayerPosition0.tree.val, twoLayerPosition0.leaf.val],
+      [twoLayerPosition1.layer.val, twoLayerPosition1.tree.val, twoLayerPosition1.leaf.val]] =
+    [[0, 11, 14], [1, 0, 11]] := by
+  decide
+
+/-- The indexed two-layer trajectory agrees with one explicit recurrence step. -/
+example : twoLayerPosition1 = twoLayerPosition0.next (by decide) := by
+  exact LayerPosition.at_succ_eq_next twoLayerValidated
+    (splitDigest twoLayerParams twoLayerDigest) ⟨0, by decide⟩ (by decide)
+
 /-- A small valid three-layer profile with one digest byte for each parsed component. -/
 def threeLayerParams : Params :=
   { n := 1, h := 12, d := 3, hp := 4, a := 8, k := 1, lgw := 1 }
@@ -125,6 +172,18 @@ theorem position2Values :
     And.intro position2Layer (And.intro position2Tree position2Leaf)
 
 example : position2.tree.val = 0 := position2Tree
+
+/-- Direct arbitrary-layer access reproduces all positions of a nontrivial three-layer chain. -/
+example :
+    let parts := splitDigest threeLayerParams threeLayerDigest
+    let direct0 := LayerPosition.at threeLayerValidated parts ⟨0, by decide⟩
+    let direct1 := LayerPosition.at threeLayerValidated parts ⟨1, by decide⟩
+    let direct2 := LayerPosition.at threeLayerValidated parts ⟨2, by decide⟩
+    [[direct0.layer.val, direct0.tree.val, direct0.leaf.val],
+      [direct1.layer.val, direct1.tree.val, direct1.leaf.val],
+      [direct2.layer.val, direct2.tree.val, direct2.leaf.val]] =
+    [[0, 171, 14], [1, 10, 11], [2, 0, 10]] := by
+  decide
 
 /-- Increasing digest bytes make every slice boundary and big-endian conversion observable. -/
 def increasingDigest (p : Params) : Bytes p.m :=
