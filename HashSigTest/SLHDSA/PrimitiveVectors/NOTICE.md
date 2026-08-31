@@ -12,6 +12,11 @@ The 272-byte empty-message SHAKE256 value is the exact leading-byte projection o
 are independently derived rate-boundary regressions, not NIST vectors. `vectors.json` records the
 exact Python `hashlib.shake_256` derivation and independent OpenSSL corroboration.
 
+The SHA-224, SHA-384, SHA-512/224, SHA-512/256, SHA-3, and SHAKE128 examples are independently
+derived regressions. They cover `abc`, SHA-2 padding neighbors, SHA-3 exact-rate padding, and a
+multi-block SHAKE128 squeeze. `vectors.json` records the exact messages and independent
+Python/OpenSSL derivation boundary; these cases are not described as official NIST vectors.
+
 MGF1 has no standalone official vector corpus in RFC 8017. Its two compact cases are derived from
 the RFC's four-byte big-endian counter grammar and are explicitly classified as regression-only.
 RFC 8017 is Copyright (c) 2016 IETF Trust and the persons identified as its authors, subject to the

@@ -85,7 +85,7 @@ private def shakeA61In137Expected : String :=
 private def testProjection : IO Unit := do
   let source ← IO.FS.readFile "HashSigTest/SLHDSA/PrimitiveVectors/vectors.json"
   checkHex "primitive projection byte pin" (sha256 source.toUTF8)
-    "44971f8a7ab00e1a6af499dcf7cb5c1b34d96b4190f6e41108691beb0f7f4b40"
+    "a2d86492e31ca719827b780f5b3f9ef0ef4a59694c478f9f58c8567389bba570"
   let root ← match Lean.Json.parse source with
     | .ok value => pure value
     | .error error => throw (IO.userError s!"primitive projection JSON rejected: {error}")
@@ -105,6 +105,14 @@ private def sequenceBytes (start count : ℕ) : Bytes count :=
   Vector.ofFn fun i : Fin count => (start + i.val).toUInt8
 
 def testSha2 : IO Unit := do
+  checkHex "SHA-224 abc" (sha224 "abc".toUTF8)
+    "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7"
+  checkHex "SHA-224 55-byte padding neighbor"
+    (sha224 (ByteArray.mk (Array.replicate 55 0x61)))
+    "fb0bd626a70c28541dfa781bb5cc4d7d7f56622a58f01a0b1ddd646f"
+  checkHex "SHA-224 56-byte padding neighbor"
+    (sha224 (ByteArray.mk (Array.replicate 56 0x61)))
+    "d40854fc9caf172067136f2e29e1380b14626bf6f0dd06779f820dcd"
   checkHex "SHA-256 empty" (sha256 ByteArray.empty)
     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   checkHex "SHA-256 55-byte padding neighbor"
@@ -149,6 +157,33 @@ def testSha2 : IO Unit := do
         d7752bc95b577f229515394f3ae5cec870a4b2f8"))
     "a21b1077d52b27ac545af63b32746c6e3c51cb0cb9f281eb9f3580a6d4996d5c9917d2\
       a6e484627a9d5a06fa1b25327a9d710e027387fc3e07d7c4d14c6086cc"
+  checkHex "SHA-384 abc" (sha384 "abc".toUTF8)
+    "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed\
+      8086072ba1e7cc2358baeca134c825a7"
+  checkHex "SHA-384 111-byte padding neighbor"
+    (sha384 (ByteArray.mk (Array.replicate 111 0x61)))
+    "3c37955051cb5c3026f94d551d5b5e2ac38d572ae4e07172085fed81f8466b8f\
+      90dc23a8ffcdea0b8d8e58e8fdacc80a"
+  checkHex "SHA-384 112-byte padding neighbor"
+    (sha384 (ByteArray.mk (Array.replicate 112 0x61)))
+    "187d4e07cb306103c69967bf544d0dfbe9042577599c73c330abc0cb64c61236\
+      d5ed565ee19119d8c31779a38f791fcd"
+  checkHex "SHA-512/224 abc" (sha512_224 "abc".toUTF8)
+    "4634270f707b6a54daae7530460842e20e37ed265ceee9a43e8924aa"
+  checkHex "SHA-512/224 111-byte padding neighbor"
+    (sha512_224 (ByteArray.mk (Array.replicate 111 0x61)))
+    "3ebe1b48e8c66acb9ae014db95b4bec93de7e9572bff41cf566bd7d0"
+  checkHex "SHA-512/224 112-byte padding neighbor"
+    (sha512_224 (ByteArray.mk (Array.replicate 112 0x61)))
+    "79b41fef2a0439d2705724a67615f7bcbcd2bf5664a7774b80818eb6"
+  checkHex "SHA-512/256 abc" (sha512_256 "abc".toUTF8)
+    "53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23"
+  checkHex "SHA-512/256 111-byte padding neighbor"
+    (sha512_256 (ByteArray.mk (Array.replicate 111 0x61)))
+    "0239e429f98d0ed61ee8e2a7c30afe98c1c3a80ce5dff62a107e9c538f7632ce"
+  checkHex "SHA-512/256 112-byte padding neighbor"
+    (sha512_256 (ByteArray.mk (Array.replicate 112 0x61)))
+    "9216b5303edb66504570bee90e48ea5beaa5e9fe9f760bbd3e0460559fc005f6"
   ensure "SHA-256 length lower bound" (sha256InputLengthValid (2 ^ 61 - 1))
   ensure "SHA-256 length rejection boundary" (!sha256InputLengthValid (2 ^ 61))
   ensure "SHA-512 length lower bound" (sha512InputLengthValid (2 ^ 125 - 1))
@@ -186,6 +221,37 @@ def testHmacAndMgf : IO Unit := do
       .error (.maskTooLong "MGF1-SHA-512" (mgf1Sha512Maximum + 1) mgf1Sha512Maximum))
 
 def testShake : IO Unit := do
+  checkHex "SHA3-224 abc" (sha3_224 "abc".toUTF8)
+    "e642824c3f8cf24ad09234ee7d3c766fc9a3a5168d0c94ad73b46fdf"
+  checkHex "SHA3-224 exact-rate padding"
+    (sha3_224 (ByteArray.mk (Array.replicate 144 0x61)))
+    "f9019111996dcf160e284e320fd6d8825cabcd41a5ffdc4c5e9d64b6"
+  checkHex "SHA3-384 abc" (sha3_384 "abc".toUTF8)
+    "ec01498288516fc926459f58e2c6ad8df9b473cb0fc08c2596da7cf0e49be4b\
+      298d88cea927ac7f539f1edf228376d25"
+  checkHex "SHA3-384 exact-rate padding"
+    (sha3_384 (ByteArray.mk (Array.replicate 104 0x61)))
+    "3a4f3b6284e571238884e95655e8c8a60e068e4059a9734abc08823a900d1615\
+      92860243f00619ae699a29092ed91a16"
+  checkHex "SHA3-512 abc" (sha3_512 "abc".toUTF8)
+    "b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e\
+      10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0"
+  checkHex "SHA3-512 exact-rate padding"
+    (sha3_512 (ByteArray.mk (Array.replicate 72 0x61)))
+    "a8ae722a78e10cbbc413886c02eb5b369a03f6560084aff566bd597bb7ad8c1c\
+      cd86e81296852359bf2faddb5153c0a7445722987875e74287adac21adebe952"
+  checkHex "SHAKE128 abc 32" (shake128 "abc".toUTF8 32)
+    "5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8"
+  checkHex "SHAKE128 exact-rate padding"
+    (shake128 (ByteArray.mk (Array.replicate 168 0x61)) 32)
+    "c22e11586c22b713bde373fce93314d76829de2c21d940a28eb659b8dec953a2"
+  checkHex "SHAKE128 multi-block squeeze 200" (shake128 ByteArray.empty 200)
+    "7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef263cb1eea\
+      988004b93103cfb0aeefd2a686e01fa4a58e8a3639ca8a1e3f9ae57e235b8cc873c23d\
+      c62b8d260169afa2f75ab916a58d974918835d25e6a435085b2badfd6dfaac359a5efbb\
+      7bcc4b59d538df9a04302e10c8bc1cbf1a0b3a5120ea17cda7cfad765f5623474d368c\
+      cca8af0007cd9f5e4c849f167a580b14aabdefaee7eef47cb0fca9767be1fda69419dfb\
+      927e9df07348b196691abaeb580b32def58538b8d23f877"
   checkHex "SHAKE256 empty 32"
     (shake256 ByteArray.empty 32)
     "46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f"

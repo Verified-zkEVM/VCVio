@@ -56,6 +56,13 @@
       "corroboration": "OpenSSL 3.0.13 dgst -shake256 -xoflen 32 over the same generated input",
       "classification": "independent derived regression only; no copied vector corpus",
       "license": "tool outputs are locally derived facts; Python/OpenSSL implementations are not vendored"
+    },
+    "python_hashlib_prehash": {
+      "tool": "Python 3.12.3 hashlib",
+      "method": "named SHA-2/SHA-3 digest or SHAKE XOF over the byte recipe recorded per case",
+      "corroboration": "OpenSSL 3.0.13 dgst with the corresponding named digest or XOF length",
+      "classification": "independent derived regression only; no copied vector corpus",
+      "license": "tool outputs are locally derived facts; Python/OpenSSL implementations are not vendored"
     }
   },
   "vectors": {
@@ -82,6 +89,29 @@
     "mgf1_derived_regression": [
       {"algorithm":"MGF1-SHA-256","seed":"616263","out_len":33,"mask":"cf2db1ac9867debdf8ce91f99f141e5544bf26ca36b3fd4f8e4035eec42cab0d46"},
       {"algorithm":"MGF1-SHA-512","seed":"616263","out_len":65,"mask":"7231a01ead7829a9af72bc1022b1021d69302e97d7888bf7e06e00dee9826108b5a092e9eca7623bde11f0486e3d47c64e78754d9277e6d689557a75b6be7a8bf7"}
+    ],
+    "prehash_digest_regression": [
+      {"algorithm":"SHA-224","message_ascii":"abc","output":"23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7"},
+      {"algorithm":"SHA-224","input_recipe":{"byte":"61","count":55},"output":"fb0bd626a70c28541dfa781bb5cc4d7d7f56622a58f01a0b1ddd646f"},
+      {"algorithm":"SHA-224","input_recipe":{"byte":"61","count":56},"output":"d40854fc9caf172067136f2e29e1380b14626bf6f0dd06779f820dcd"},
+      {"algorithm":"SHA-384","message_ascii":"abc","output":"cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7"},
+      {"algorithm":"SHA-384","input_recipe":{"byte":"61","count":111},"output":"3c37955051cb5c3026f94d551d5b5e2ac38d572ae4e07172085fed81f8466b8f90dc23a8ffcdea0b8d8e58e8fdacc80a"},
+      {"algorithm":"SHA-384","input_recipe":{"byte":"61","count":112},"output":"187d4e07cb306103c69967bf544d0dfbe9042577599c73c330abc0cb64c61236d5ed565ee19119d8c31779a38f791fcd"},
+      {"algorithm":"SHA-512/224","message_ascii":"abc","output":"4634270f707b6a54daae7530460842e20e37ed265ceee9a43e8924aa"},
+      {"algorithm":"SHA-512/224","input_recipe":{"byte":"61","count":111},"output":"3ebe1b48e8c66acb9ae014db95b4bec93de7e9572bff41cf566bd7d0"},
+      {"algorithm":"SHA-512/224","input_recipe":{"byte":"61","count":112},"output":"79b41fef2a0439d2705724a67615f7bcbcd2bf5664a7774b80818eb6"},
+      {"algorithm":"SHA-512/256","message_ascii":"abc","output":"53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23"},
+      {"algorithm":"SHA-512/256","input_recipe":{"byte":"61","count":111},"output":"0239e429f98d0ed61ee8e2a7c30afe98c1c3a80ce5dff62a107e9c538f7632ce"},
+      {"algorithm":"SHA-512/256","input_recipe":{"byte":"61","count":112},"output":"9216b5303edb66504570bee90e48ea5beaa5e9fe9f760bbd3e0460559fc005f6"},
+      {"algorithm":"SHA3-224","message_ascii":"abc","output":"e642824c3f8cf24ad09234ee7d3c766fc9a3a5168d0c94ad73b46fdf"},
+      {"algorithm":"SHA3-224","input_recipe":{"byte":"61","count":144},"output":"f9019111996dcf160e284e320fd6d8825cabcd41a5ffdc4c5e9d64b6"},
+      {"algorithm":"SHA3-384","message_ascii":"abc","output":"ec01498288516fc926459f58e2c6ad8df9b473cb0fc08c2596da7cf0e49be4b298d88cea927ac7f539f1edf228376d25"},
+      {"algorithm":"SHA3-384","input_recipe":{"byte":"61","count":104},"output":"3a4f3b6284e571238884e95655e8c8a60e068e4059a9734abc08823a900d161592860243f00619ae699a29092ed91a16"},
+      {"algorithm":"SHA3-512","message_ascii":"abc","output":"b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0"},
+      {"algorithm":"SHA3-512","input_recipe":{"byte":"61","count":72},"output":"a8ae722a78e10cbbc413886c02eb5b369a03f6560084aff566bd597bb7ad8c1ccd86e81296852359bf2faddb5153c0a7445722987875e74287adac21adebe952"},
+      {"algorithm":"SHAKE128","message_ascii":"abc","out_len":32,"output":"5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8"},
+      {"algorithm":"SHAKE128","input_recipe":{"byte":"61","count":168},"out_len":32,"output":"c22e11586c22b713bde373fce93314d76829de2c21d940a28eb659b8dec953a2"},
+      {"algorithm":"SHAKE128","message":"","out_len":200,"output":"7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef263cb1eea988004b93103cfb0aeefd2a686e01fa4a58e8a3639ca8a1e3f9ae57e235b8cc873c23dc62b8d260169afa2f75ab916a58d974918835d25e6a435085b2badfd6dfaac359a5efbb7bcc4b59d538df9a04302e10c8bc1cbf1a0b3a5120ea17cda7cfad765f5623474d368ccca8af0007cd9f5e4c849f167a580b14aabdefaee7eef47cb0fca9767be1fda69419dfb927e9df07348b196691abaeb580b32def58538b8d23f877"}
     ],
     "shake256": [
       {"source":"SHAKE256ShortMsg.rsp","msg":"","out_len":32,"output":"46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f"},
