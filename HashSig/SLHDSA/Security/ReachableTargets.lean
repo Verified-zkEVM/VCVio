@@ -638,6 +638,197 @@ theorem wotsInstanceAddresses_nodup (vp : ValidatedParams) :
     (wotsInstanceAddresses vp).Nodup :=
   (allWotsInstances_nodup vp).map (wotsInstanceAdrs_injective vp)
 
+/-! ## WOTS chain and compression targets -/
+
+/-- A chain in a reachable all-layer WOTS instance. -/
+abbrev WotsChainCoord (vp : ValidatedParams) :=
+  LayerPosition vp × Fin vp.params.len
+
+/-- Every WOTS chain in every reachable instance. -/
+def allWotsChains (vp : ValidatedParams) : List (WotsChainCoord vp) :=
+  (allWotsInstances vp).product (List.finRange vp.params.len)
+
+@[simp]
+theorem allWotsChains_nodup (vp : ValidatedParams) : (allWotsChains vp).Nodup :=
+  (allWotsInstances_nodup vp).product (List.nodup_finRange vp.params.len)
+
+@[simp]
+theorem allWotsChains_length (vp : ValidatedParams) :
+    (allWotsChains vp).length = wotsInstanceCount vp.params * vp.params.len := by
+  rw [allWotsChains]
+  calc
+    ((allWotsInstances vp).product (List.finRange vp.params.len)).length =
+        (allWotsInstances vp).length * (List.finRange vp.params.len).length :=
+      List.length_product _ _
+    _ = wotsInstanceCount vp.params * vp.params.len := by simp
+
+/-- Address one concrete hash step of a reachable WOTS chain. -/
+def wotsStepAdrs {vp : ValidatedParams} (coord : WotsChainCoord vp)
+    (step : Fin (vp.params.w - 1)) : Adrs :=
+  (wotsChainAdrs (wotsInstanceAdrs coord.1) coord.2.val).setHashAddress step.val
+
+/-- Valid parameters always have at least one executable WOTS hash step. -/
+def firstWotsStep (vp : ValidatedParams) : Fin (vp.params.w - 1) :=
+  ⟨0, Nat.sub_pos_of_lt (Nat.one_lt_two_pow (Nat.ne_of_gt vp.valid.lgw_pos))⟩
+
+/-- The full reachable WOTS hash-step space, containing the `w - 1` executed steps of every
+chain. -/
+def wotsStepAddresses (vp : ValidatedParams) : List Adrs :=
+  ((allWotsChains vp).product (List.finRange (vp.params.w - 1))).map fun coord =>
+    wotsStepAdrs coord.1 coord.2
+
+/-- A reduction may select one reachable hash step from each chain, for example as a function of
+the honest WOTS message digits. -/
+def selectedWotsAddresses (vp : ValidatedParams)
+    (select : WotsChainCoord vp → Fin (vp.params.w - 1)) : List Adrs :=
+  (allWotsChains vp).map fun coord => wotsStepAdrs coord (select coord)
+
+/-- A PRE-style selection may omit chains whose honest digit is zero. -/
+def optionalWotsAddresses (vp : ValidatedParams)
+    (select : WotsChainCoord vp → Option (Fin (vp.params.w - 1))) : List Adrs :=
+  (allWotsChains vp).filterMap fun coord =>
+    (select coord).map (wotsStepAdrs coord)
+
+/-- Every WOTS public-key-compression target over every reachable instance. -/
+def wotsPkAddresses (vp : ValidatedParams) : List Adrs :=
+  (allWotsInstances vp).map fun pos => wotsPkAdrs (wotsInstanceAdrs pos)
+
+/-- The full executed WOTS step space has `w - 1` entries per chain. -/
+@[simp]
+theorem wotsStepAddresses_length (vp : ValidatedParams) :
+    (wotsStepAddresses vp).length =
+      wotsInstanceCount vp.params * vp.params.len * (vp.params.w - 1) := by
+  rw [wotsStepAddresses, List.length_map]
+  calc
+    ((allWotsChains vp).product (List.finRange (vp.params.w - 1))).length =
+        (allWotsChains vp).length * (List.finRange (vp.params.w - 1)).length :=
+      List.length_product _ _
+    _ = wotsInstanceCount vp.params * vp.params.len * (vp.params.w - 1) := by simp
+
+/-- The source proof's WOTS TCR role uses the looser cap of `w` targets per chain. -/
+theorem wotsStepAddresses_length_le_targetCount (vp : ValidatedParams) :
+    (wotsStepAddresses vp).length ≤ targetCount vp.params .wotsFTcr := by
+  rw [wotsStepAddresses_length]
+  unfold targetCount
+  exact Nat.mul_le_mul_left (wotsInstanceCount vp.params * vp.params.len)
+    (Nat.sub_le vp.params.w 1)
+
+/-- A total one-step-per-chain selection realizes the UD/PRE target cap exactly. -/
+@[simp]
+theorem selectedWotsAddresses_length (vp : ValidatedParams)
+    (select : WotsChainCoord vp → Fin (vp.params.w - 1)) :
+    (selectedWotsAddresses vp select).length = targetCount vp.params .wotsFUd := by
+  simp [selectedWotsAddresses, targetCount]
+
+/-- The WOTS UD and PRE roles have the same one-target-per-chain cap. -/
+theorem selectedWotsAddresses_length_eq_wotsFPre (vp : ValidatedParams)
+    (select : WotsChainCoord vp → Fin (vp.params.w - 1)) :
+    (selectedWotsAddresses vp select).length = targetCount vp.params .wotsFPre := by
+  simp [selectedWotsAddresses, targetCount]
+
+/-- Omitting zero-digit PRE chains can only reduce the one-target-per-chain cap. -/
+theorem optionalWotsAddresses_length_le_targetCount (vp : ValidatedParams)
+    (select : WotsChainCoord vp → Option (Fin (vp.params.w - 1))) :
+    (optionalWotsAddresses vp select).length ≤ targetCount vp.params .wotsFPre := by
+  calc
+    (optionalWotsAddresses vp select).length ≤ (allWotsChains vp).length :=
+      List.length_filterMap_le _ _
+    _ = targetCount vp.params .wotsFPre := by simp [targetCount]
+
+/-- The WOTS public-key-compression ledger realizes the `wotsTl` role exactly. -/
+@[simp]
+theorem wotsPkAddresses_length (vp : ValidatedParams) :
+    (wotsPkAddresses vp).length = targetCount vp.params .wotsTl := by
+  simp [wotsPkAddresses, targetCount]
+
+/-- Structured WOTS step addresses uniquely determine position, chain, and step. -/
+theorem wotsStepAdrs_injective (vp : ValidatedParams) :
+    Function.Injective (fun coord : WotsChainCoord vp × Fin (vp.params.w - 1) =>
+      wotsStepAdrs coord.1 coord.2) := by
+  intro c d hadrs
+  rcases c with ⟨⟨⟨cLayer, cTree, cLeaf⟩, cChain⟩, cStep⟩
+  rcases d with ⟨⟨⟨dLayer, dTree, dLeaf⟩, dChain⟩, dStep⟩
+  have hlayer : cLayer = dLayer := Fin.ext (by
+    simpa [wotsStepAdrs, wotsChainAdrs, wotsInstanceAdrs, wotsLeafAdrs,
+      LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setHashAddress,
+      Adrs.setChainAddress, Adrs.setKeyPairAddress, Adrs.setTypeAndClear,
+      Adrs.setTreeAddress, Adrs.setLayerAddress, Adrs.zero] using
+        congrArg Adrs.layer hadrs)
+  subst dLayer
+  have htree : cTree = dTree := Fin.ext (by
+    simpa [wotsStepAdrs, wotsChainAdrs, wotsInstanceAdrs, wotsLeafAdrs,
+      LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setHashAddress,
+      Adrs.setChainAddress, Adrs.setKeyPairAddress, Adrs.setTypeAndClear,
+      Adrs.setTreeAddress, Adrs.setLayerAddress, Adrs.zero] using
+        congrArg Adrs.tree hadrs)
+  subst dTree
+  have hleaf : cLeaf = dLeaf := Fin.ext (by
+    simpa [wotsStepAdrs, wotsChainAdrs, wotsInstanceAdrs, wotsLeafAdrs,
+      LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setHashAddress,
+      Adrs.setChainAddress, Adrs.setKeyPairAddress, Adrs.setTypeAndClear,
+      Adrs.setTreeAddress, Adrs.setLayerAddress, Adrs.zero] using
+        congrArg Adrs.word1 hadrs)
+  subst dLeaf
+  have hchain : cChain = dChain := Fin.ext (by
+    simpa [wotsStepAdrs, wotsChainAdrs, wotsInstanceAdrs, wotsLeafAdrs,
+      LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setHashAddress,
+      Adrs.setChainAddress, Adrs.setKeyPairAddress, Adrs.setTypeAndClear] using
+        congrArg Adrs.word2 hadrs)
+  subst dChain
+  have hstep : cStep = dStep := Fin.ext (by
+    simpa [wotsStepAdrs, wotsChainAdrs, wotsInstanceAdrs, wotsLeafAdrs,
+      LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setHashAddress,
+      Adrs.setChainAddress, Adrs.setKeyPairAddress, Adrs.setTypeAndClear] using
+        congrArg Adrs.word3 hadrs)
+  subst dStep
+  rfl
+
+/-- The full reachable WOTS hash-step space is structurally duplicate-free. -/
+theorem wotsStepAddresses_nodup (vp : ValidatedParams) :
+    (wotsStepAddresses vp).Nodup :=
+  ((allWotsChains_nodup vp).product (List.nodup_finRange (vp.params.w - 1))).map
+    (wotsStepAdrs_injective vp)
+
+/-- Any one-step-per-chain selection remains structurally duplicate-free. -/
+theorem selectedWotsAddresses_nodup (vp : ValidatedParams)
+    (select : WotsChainCoord vp → Fin (vp.params.w - 1)) :
+    (selectedWotsAddresses vp select).Nodup := by
+  apply (allWotsChains_nodup vp).map_on
+  intro c _ d _ hadrs
+  have hpair : (c, select c) = (d, select d) := by
+    apply wotsStepAdrs_injective vp
+    exact hadrs
+  exact congrArg Prod.fst hpair
+
+/-- WOTS public-key-compression addresses are structurally duplicate-free. -/
+theorem wotsPkAddresses_nodup (vp : ValidatedParams) :
+    (wotsPkAddresses vp).Nodup := by
+  apply (allWotsInstances_nodup vp).map_on
+  intro c _ d _ hadrs
+  cases c with
+  | mk cLayer cTree cLeaf =>
+    cases d with
+    | mk dLayer dTree dLeaf =>
+      have hlayer : cLayer = dLayer := Fin.ext (by
+        simpa [wotsPkAddresses, wotsPkAdrs, wotsInstanceAdrs, wotsLeafAdrs,
+          LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setKeyPairAddress,
+          Adrs.setTypeAndClear, Adrs.setTreeAddress, Adrs.setLayerAddress,
+          Adrs.zero] using congrArg Adrs.layer hadrs)
+      subst dLayer
+      have htree : cTree = dTree := Fin.ext (by
+        simpa [wotsPkAddresses, wotsPkAdrs, wotsInstanceAdrs, wotsLeafAdrs,
+          LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setKeyPairAddress,
+          Adrs.setTypeAndClear, Adrs.setTreeAddress, Adrs.setLayerAddress,
+          Adrs.zero] using congrArg Adrs.tree hadrs)
+      subst dTree
+      have hleaf : cLeaf = dLeaf := Fin.ext (by
+        simpa [wotsPkAddresses, wotsPkAdrs, wotsInstanceAdrs, wotsLeafAdrs,
+          LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setKeyPairAddress,
+          Adrs.setTypeAndClear, Adrs.setTreeAddress, Adrs.setLayerAddress,
+          Adrs.zero] using congrArg Adrs.word1 hadrs)
+      subst dLeaf
+      rfl
+
 /-! ## Concrete address encodings -/
 
 variable {p : Params}

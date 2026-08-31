@@ -66,6 +66,18 @@ example : (forsLeafAddresses twoLayer).length = 8 ∧
     (forsTreeAddresses twoLayer).length = 4 ∧
     (forsRootAddresses twoLayer).length = 4 := by decide
 
+/-- The first reachable WOTS steps traverse chains before leaves, trees, and layers. -/
+example : ((wotsStepAddresses twoLayer).take 4).map
+      (fun adrs => (adrs.layer, adrs.tree, adrs.word1, adrs.word2, adrs.word3)) =
+    [(0, 0, 0, 0, 0), (0, 0, 0, 1, 0),
+      (0, 0, 0, 2, 0), (0, 0, 0, 3, 0)] := by decide
+
+/-- The executed `w - 1` step space is strictly below the architecture's loose `w`-per-chain
+TCR cap in this profile, while WOTS Tℓ has one target per instance. -/
+example : (wotsStepAddresses twoLayer).length = 72 ∧
+    targetCount twoLayer.params .wotsFTcr = 144 ∧
+    (wotsPkAddresses twoLayer).length = 6 := by decide
+
 /-- A three-layer, height-one schedule has `4 + 2 + 1` trees, two WOTS leaves per tree, and
 one internal node per tree. -/
 example : (allXmssTrees threeLayer).length = 7 ∧
