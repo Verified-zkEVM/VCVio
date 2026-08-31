@@ -31,9 +31,10 @@ namespace SLHDSA.GeneralHypertree
 
 open OracleComp
 
-/-- A general hypertree signature contains exactly one XMSS signature for every layer. -/
+/-- The canonical intrinsic hypertree signature from `Hypertree`.  This namespace introduces the
+arbitrary-depth algorithms, not a second representation of their output. -/
 abbrev Signature (vp : ValidatedParams) (core : CorePrimitives vp.params) :=
-  Vector (XmssSig vp.params core) vp.params.d
+  HtSigCore vp.params core
 
 /-- The base XMSS address at a particular hypertree layer and tree. -/
 def layerAdrs (layer tree : ℕ) : Adrs :=
