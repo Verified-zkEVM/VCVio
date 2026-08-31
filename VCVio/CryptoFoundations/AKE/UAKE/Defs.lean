@@ -92,7 +92,8 @@ def PerfectlyCorrect [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W)
   2. an honest run of the protocol transfers exactly `rounds` messages.
 
   This does *not* enforce the WLOG T-speaks-last convention from DF'17. -/
-def Scheme.WellFormed [Monad m] [MonadLiftT m SetM] (proto : Scheme m K UK TK W) : Prop :=
+def Scheme.WellFormed [Monad m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    (proto : Scheme m K UK TK W) : Prop :=
   proto.U.OutputsOnlyAtCompletion ∧ proto.T.OutputsOnlyAtCompletion ∧
     ∀ uk tk, (uk, tk) ∈ support proto.setup →
       ∀ uOut tOut ms, (uOut, tOut, ms) ∈

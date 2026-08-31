@@ -232,6 +232,27 @@ theorem toy3_wellFormed : (toy3 ProbComp).WellFormed := by
   subst h
   rfl
 
+/-- A malformed U role: it hands out a key straight from its initial state. -/
+def outputAtInitParty : Party ProbComp Unit ℕ (Option Bool) where
+  State := Bool
+  init := fun _ => pure (.speakFirst false 1)
+  step := fun _ _ => pure .reject
+  output := fun _ => pure (some (some true))
+
+def outputAtInitScheme : Scheme ProbComp Bool Unit ℕ ℕ where
+  rounds := 2
+  setup := pure ((), 0)
+  U := outputAtInitParty
+  T := toyT2 ProbComp
+
+theorem not_outputsOnlyAtCompletion_outputAtInitParty :
+    ¬ outputAtInitParty.OutputsOnlyAtCompletion := fun h => by
+  simpa using h.1 () (.speakFirst false 1) ((mem_support_pure_iff _ _).2 rfl)
+    (some (some true)) ((mem_support_pure_iff _ _).2 rfl)
+
+theorem not_wellFormed_outputAtInitScheme : ¬ outputAtInitScheme.WellFormed := fun h =>
+  not_outputsOnlyAtCompletion_outputAtInitParty h.1
+
 /-! ## Oracle probes against `opImpl` -/
 
 abbrev toySpec : OracleSpec (Op ℕ) := oracleSpec Bool ℕ
