@@ -38,11 +38,36 @@ input.
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20171130/Supporting_Documentation/sphincs.pdf` | SHA-256 `8365127b5619356a4ca0a122b44b0458a7e5d447cb8997a07c2e70e43b085bde` | Round 1 history only |
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20190329/Supporting_Documentation/sphincs.pdf` | SHA-256 `58804cc62b4fbfac8e5f4e9df80639d719a7aaf13e706713ff605d168cbd2b23` | Round 2 history only |
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20201001/Supporting_Documentation/sphincs.pdf` | SHA-256 `540968e4d58cb582d5f85636beed7a10894622ed8b99a7a863f85996869743c6` | Round 3 history only |
-| primary/evidence | VCVio | repair base git `7b77e700b3d24a6ab94ed741a650954bbd90859a` | Invalidated S02 implementation retained only as exact repair input, not an accepted S03 predecessor; active 27-file SLH-DSA source-tree composite pinned separately |
+| primary/evidence | VCVio | repair base git `7b77e700b3d24a6ab94ed741a650954bbd90859a` | Invalidated S02 implementation retained only as exact repair input; active 28-file SLH-DSA source-tree composite pinned separately |
 | secondary | `sibling:reports/00-SYNTHESIS.md` … `07-literature-and-resources.md` | hashes recorded below | Orientation only; corrected findings cannot be cited as primary authority |
 | prompt | `sibling:prompt.md` | SHA-256 `2b40bca6253eeb3bcf84fa9178a66309509f446b07655e57342417319cd4d7cf` | Requirements; cryptographic claims require independent authority |
 
-The VCVio composite is specifically SHA-256 of the 27-line GNU `sha256sum` manifest produced, in
+## S04 primitive authorities and vectors
+
+FIPS 205 Section 11 remains the normative authority for composing the six SLH-DSA primitives.
+The following exact editions and bytes control the constituent algorithms. Remote records are
+pinned by URL, edition, byte size, and SHA-256 in `reference-manifest.json`; unlike sibling files,
+the ordinary validation gate checks their metadata rather than redownloading them.
+
+| Primitive | Controlling source | Exact pin | Load-bearing scope |
+|---|---|---|---|
+| SHA-256/SHA-512 | NIST FIPS 180-4, August 2015 update 1 | 833,315 bytes; SHA-256 `0455b406d89648d20cbde375561e19c245b9815e894164c2670772e3d54deb82` | Padding, big-endian length/word parsing, IVs, schedules, rounds; SHA-256 input below `2^64` bits and SHA-512 below `2^128` bits |
+| SHAKE256 | NIST FIPS 202, August 2015 | 1,459,683 bytes; SHA-256 `1592607831ff0908cc590632ce371c6c95e94025bb1a0c8ae90a4d0ec1ed025e` | Keccak-f[1600], 1088-bit/136-byte rate, SHAKE suffix/domain, repeated squeezing |
+| HMAC | NIST FIPS 198-1, July 2008 | 129,454 bytes; SHA-256 `67661ba1407b391c799ff407471de18f36697af51d78a777e817c067ac30da23` | HMAC construction and hash-then-pad keys; incorporated by FIPS 205 Section 11.2 |
+| MGF1 | RFC 8017, November 2016, Appendix B.2.1 | 154,696 bytes; SHA-256 `1e72dc473d18df3fc5598cdc12795a9f18f36f1aef15abc23a55eb0d58151d11` | Four-byte big-endian counter, leading truncation, and `maskLen <= 2^32 hLen`; incorporated by FIPS 205 Section 11.2 |
+
+The committed `HashSigTest/SLHDSA/PrimitiveVectors/vectors.json` projection is 8,950 bytes with
+SHA-256 `b086e6e79d07e6fc64dbf6fad56219015d96f7c2c7a22fbfd4d699b27d6406ec`.
+It identifies exact member hashes and cases from the pinned NIST CAVP SHA and SHAKE archives,
+exact NIST HMAC and SHAKE example PDFs, algorithms, input/output lengths, and expected bytes. The
+adjacent padding, absorb-rate, and all-profile fingerprint cases identify their independent
+derivation. The two compact MGF1 cases are regression-only because RFC 8017 defines MGF1 but does
+not publish a standalone KAT. NIST examples and CAVP response files are test evidence, not a NIST
+validation certificate; profile fingerprints are independent composition evidence, not NIST
+vectors. `PrimitiveVectors/NOTICE.md` preserves the NIST attribution/no-endorsement boundary and
+the RFC/IETF copyright classification.
+
+The VCVio composite is specifically SHA-256 of the 28-line GNU `sha256sum` manifest produced, in
 C-locale glob order, by:
 
 ```text

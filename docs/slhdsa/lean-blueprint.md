@@ -4,10 +4,9 @@ The module names below are targets, not claims about unimplemented successors. S
 candidate architecture is independently accepted, while D-006/D-009 remain unapproved and the bare
 scheme experiment interface does not freeze or establish general-construction refinement. S03 now
 implements the `Params`/`Address`/`Encoding`/`Codec` foundation; later construction arrows remain
-future work. Initial independent S03 review failed with five blockers; r1 confirmed their repairs
-but failed on one reversed-argument formula in the active session record. That prose repair remains
-pending fresh r2 acceptance. The S04 primitive bootstrap is documentation only and remains blocked;
-it does not make the SHA2/SHAKE target arrows current.
+future work. Independent S03 r2 accepted the repaired data/codec boundary. S04 now implements the
+pure Lean SHA2/SHAKE primitive layer and is pending independent review; later construction arrows
+remain future work.
 
 ```text
 HashSig.SLHDSA.Bytes
@@ -36,7 +35,9 @@ HashSig.SLHDSA.Security.Notions
   (S03 implemented at the wire boundary; construction invariants remain later work.)
 - `base2b_length`, digit bounds, MSB-first characterization, and checked fixed-width codecs.
   (S03 implemented.)
-- Primitive interface coherence, especially `yToBytes`; concrete SHA2/SHAKE equivalence lemmas.
+- Primitive byte coherence and the exact all-profile SHA2/SHAKE grammars. (S04 implemented with a
+  separate injectivity law bundle, checked SHA2 address adapter, pure hash/HMAC/MGF/XOF code, and
+  focused vector/grammar tests; construction-level refinement remains later work.)
 - `chain_compose`; WOTS digit/checksum incomparability; `pkFromSig_sign`.
 - Merkle `climb_authPath`; XMSS and FORS recovery correctness with valid indices.
 - General `d`-layer `htPkFromSig_htSign`, with index evolution invariants.

@@ -18,6 +18,128 @@
       "authority": "primary-normative"
     },
     {
+      "id": "fips180-4",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf",
+      "revision": "NIST.FIPS.180-4-upd1-2015-08",
+      "sha256": "0455b406d89648d20cbde375561e19c245b9815e894164c2670772e3d54deb82",
+      "size_bytes": 833315,
+      "publication_status": "final",
+      "authority": "primary-normative-sha2"
+    },
+    {
+      "id": "fips202",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf",
+      "revision": "NIST.FIPS.202-2015-08",
+      "sha256": "1592607831ff0908cc590632ce371c6c95e94025bb1a0c8ae90a4d0ec1ed025e",
+      "size_bytes": 1459683,
+      "publication_status": "final",
+      "authority": "primary-normative-shake"
+    },
+    {
+      "id": "fips198-1",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.198-1.pdf",
+      "revision": "NIST.FIPS.198-1-2008-07",
+      "sha256": "67661ba1407b391c799ff407471de18f36697af51d78a777e817c067ac30da23",
+      "size_bytes": 129454,
+      "publication_status": "final",
+      "authority": "primary-normative-hmac-incorporated-by-fips205"
+    },
+    {
+      "id": "rfc8017",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://www.rfc-editor.org/rfc/rfc8017.txt",
+      "revision": "RFC-8017-2016-11",
+      "sha256": "1e72dc473d18df3fc5598cdc12795a9f18f36f1aef15abc23a55eb0d58151d11",
+      "size_bytes": 154696,
+      "authority": "primary-mgf1-incorporated-by-fips205"
+    },
+    {
+      "id": "nist-sha-byte-vectors",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/shs/shabytetestvectors.zip",
+      "revision": "CAVS-11.0-observed-2026-08-31",
+      "sha256": "929ef80b7b3418aca026643f6f248815913b60e01741a44bba9e118067f4c9b8",
+      "size_bytes": 4909729,
+      "authority": "primary-vector-evidence-not-validation-certificate"
+    },
+    {
+      "id": "nist-shake-byte-vectors",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/sha3/shakebytetestvectors.zip",
+      "revision": "CAVS-19.0-observed-2026-08-31",
+      "sha256": "debfebc3157b3ceea002b84ca38476420389a3bf7e97dc5f53ea4689a16de4c7",
+      "size_bytes": 2116268,
+      "authority": "primary-vector-evidence-not-validation-certificate"
+    },
+    {
+      "id": "nist-hmac-byte-vectors",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/mac/hmactestvectors.zip",
+      "revision": "CAVS-11.0-observed-2026-08-31",
+      "sha256": "418c3837d38f249d6668146bd0090db24dd3c02d2e6797e3de33860a387ae4bd",
+      "size_bytes": 452025,
+      "authority": "primary-vector-evidence-not-validation-certificate"
+    },
+    {
+      "id": "nist-hmac-sha256-example",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/HMAC_SHA256.pdf",
+      "revision": "observed-2026-08-31",
+      "sha256": "ebb45f0b987ce07fc433cc5598c8948f127d6d0e1ebcbfd1af5a27944856c786",
+      "size_bytes": 97884,
+      "authority": "primary-vector-example"
+    },
+    {
+      "id": "nist-hmac-sha512-example",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/HMAC_SHA512.pdf",
+      "revision": "observed-2026-08-31",
+      "sha256": "391a955dfd884bcb3b310cb25679c36e3c7fbd058332cb3571b2a9e8fb63c09f",
+      "size_bytes": 109794,
+      "authority": "primary-vector-example"
+    },
+    {
+      "id": "nist-shake256-empty-example",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg0.pdf",
+      "revision": "observed-2026-08-31",
+      "sha256": "d736c1a93eb6440e1e6b640402e31ea5258281b2b9237f84ea0ba4186518fc59",
+      "size_bytes": 251349,
+      "authority": "primary-vector-example"
+    },
+    {
+      "id": "nist-shake256-1600-example",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg1600.pdf",
+      "revision": "observed-2026-08-31",
+      "sha256": "f4226f5c72914e5d2b331812c5973d8d685c8af1ccb97c2a3a2fd1c02fd173d1",
+      "size_bytes": 316397,
+      "authority": "primary-vector-example"
+    },
+    {
+      "id": "slhdsa-primitive-vector-projection",
+      "kind": "file",
+      "root": "repo",
+      "locator": "HashSigTest/SLHDSA/PrimitiveVectors/vectors.json",
+      "sha256": "b086e6e79d07e6fc64dbf6fad56219015d96f7c2c7a22fbfd4d699b27d6406ec",
+      "size_bytes": 8950,
+      "authority": "reviewed-projection-and-derived-regression-evidence"
+    },
+    {
       "id": "sp800-230-ipd",
       "kind": "url",
       "root": "remote",
@@ -259,6 +381,6 @@
     "manifest_line": "<lowercase-file-sha256><two ASCII spaces><repository-relative-path><LF>",
     "original_command": "sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum",
     "deterministic_command": "LC_ALL=C sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum",
-    "sha256": "da149a241a687c40890e5431e68c40e25cc6aa6a4e2e5a47f2562b024dedcdbe"
+    "sha256": "39990d89588702c566869e8262b145cc83b56ef125988ff842e0eb5c744aff59"
   }
 }

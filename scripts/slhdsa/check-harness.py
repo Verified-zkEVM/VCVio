@@ -427,21 +427,21 @@ FIPS205_RANDOMNESS = (
 # session and retain the structured checks below. The pin set is exhaustive, not a permanent freeze.
 S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
-        (3687, "6a4a1ac1bba6fa7648fb357720fb8279c1c99d922ddd5176184202a4187e9805"),
+        (3881, "cdfaaa4aad22cd5b6cc28e5863fd5de30949b3c3406cea9eea14e0f941a9976b"),
     "docs/slhdsa/matrices/coverage.csv":
-        (4202, "5ccbdb7ea9c95f5f4eef9ff057e7317cbf14722a47155cdc9dbc6b3339ab8fb8"),
+        (4689, "7227f1584f3f8611918f03a4f80b9b3953eec2af1a37570b13cd3bfaf490dd60"),
     "docs/slhdsa/matrices/decisions.csv":
         (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (48499, "3c1d200444122c00407ae6e789db3064c97603d57f9b7248d85f90a03031b25d"),
+        (58313, "c33b45a231bf0aa0edf3d9b4ee81f0668cc1ea3dbac300d8c8534ea19b42ab09"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (4187, "f49558de8ef1185b95adb166677a74f6061ac39bf107daf6579a0580bf1ae1ff"),
+        (4764, "d754ff1efb4951b48b7f63ed0cfe9db3dedb39881aaa45f6bb79388026acdbe1"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
-        (4822, "badfb0730f68eb840774444a792a0079b8a8ee90b45b0c694b188fcc5737aee4"),
+        (4959, "bc2c7e7947e7d83f3c559486a04e44bdb673f9a4f326bafda263f24d810440f3"),
 }
 
 # DECL-011--DECL-014 use typed dependency tokens. Earlier bootstrap rows retain their historical
@@ -542,6 +542,8 @@ def check_required_files() -> None:
             "missing elaborated S02 inventory probe scripts/slhdsa/S02InventoryProbe.lean")
     require((ROOT / "scripts/slhdsa/S03InventoryProbe.lean").is_file(),
             "missing elaborated S03 inventory probe scripts/slhdsa/S03InventoryProbe.lean")
+    require((ROOT / "scripts/slhdsa/S04InventoryProbe.lean").is_file(),
+            "missing elaborated S04 inventory probe scripts/slhdsa/S04InventoryProbe.lean")
     require((ROOT / "scripts/slhdsa/fixtures/SLHDSAPolicyIRMacro.lean").is_file(),
             "missing compiled-IR fixture macro")
     require((ROOT / "scripts/slhdsa/fixtures/HashSig/PolicyIRFixture.lean").is_file(),
@@ -630,6 +632,10 @@ def check_required_files() -> None:
             "validate.sh does not run the authoritative elaborated audit")
     require("lake env lean scripts/slhdsa/S02InventoryProbe.lean" in wrapper,
             "validate.sh does not run the S02 declaration-inventory probe")
+    require("lake env lean scripts/slhdsa/S04InventoryProbe.lean" in wrapper,
+            "validate.sh does not run the S04 declaration-inventory probe")
+    require("lake exe slhdsa_primitive_tests" in wrapper,
+            "validate.sh does not run the S04 primitive tests")
     for marker in ("python3 -B scripts/slhdsa/check-acvp-provenance.py",
                    "lake build HashSigTest", "--resolve-s01-parser-executable"):
         require(marker in wrapper, f"validate.sh: missing S01 gate {marker}")
@@ -2437,7 +2443,7 @@ ACVP_TRACE_MODULES = {
         Path("HashSigTest/SLHDSA/ACVP/StrictJson.lean"),
         "20f9aff3f5339e54d7fc5e148fadb0e37d8f4b4bd816938f0a81b4cf7b087089"),
 }
-LAKEFILE_R11_SHA256 = "632fd4fcd23d7380fd052773d1d6710d049d26263db48d3d7a48826c7ff22a5f"
+LAKEFILE_R11_SHA256 = "97e37eb1dc18e69c10a0c2e67f915df8d6d1c64bf5bda8ec6d43b3ef45417e9f"
 FRESH_BUILD_CHILD = "fresh-root-build"
 PARSER_EXPECTED_STDOUT = (
     b"SLH-DSA ACVP parser positive suite: PASS (16 cases)\n"

@@ -379,6 +379,10 @@ lean_exe slhdsa_c13_kat where
 lean_exe slhdsa_data_codec_tests where
   root := `HashSigTest.SLHDSA.DataCodecTests
 
+/-- S04 SHA2/SHAKE vectors, address rejection, and all-profile primitive grammars. -/
+lean_exe slhdsa_primitive_tests where
+  root := `HashSigTest.SLHDSA.PrimitiveTests
+
 /-- Fail-closed parser gate for the pinned NIST SLH-DSA sample JSON. -/
 lean_exe slhdsa_acvp_parser where
   root := `HashSigTest.SLHDSA.ACVP.ParserTests

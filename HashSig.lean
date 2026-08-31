@@ -10,6 +10,7 @@ public import HashSig.SLHDSA.C13.Scheme
 public import HashSig.SLHDSA.C13.WotsC
 public import HashSig.SLHDSA.C13.Xmss
 public import HashSig.SLHDSA.Codec
+public import HashSig.SLHDSA.Concrete.FIPS
 public import HashSig.SLHDSA.Concrete.Instance
 public import HashSig.SLHDSA.Concrete.Keccak
 public import HashSig.SLHDSA.Concrete.Sha2

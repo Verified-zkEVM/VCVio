@@ -85,6 +85,15 @@ H    = Trunc_n(SHA-512(PK.seed || toByte(0,128-n) || ADRS_c || M2))
 Tl   = Trunc_n(SHA-512(PK.seed || toByte(0,128-n) || ADRS_c || Ml))
 ```
 
+S04 realizes these grammars in `HashSig.SLHDSA.Concrete.FIPS`. `approvedPrimitives` selects the
+family from the closed `ParameterSet`, and focused fingerprints distinguish every one of the twelve
+profiles. The SHA2 claim is deliberately restricted to `Sha2Address`: its constructor checks full
+ADRS canonicality plus the one-byte layer and eight-byte tree bounds before exposing the 22-byte
+compression. The total abstract-bundle adapter fails closed to a zero result on an invalid in-memory
+address; callers needing normative behavior use the checked functions and handle rejection. This is
+a primitive-definition and executable-vector claim, not yet construction correctness or an
+abstract/concrete cryptographic refinement theorem.
+
 ## Algorithm ladder
 
 1. Common byte utilities and `base_2b`; WOTS checksum and chain.

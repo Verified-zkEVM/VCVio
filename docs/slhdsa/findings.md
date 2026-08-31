@@ -12,7 +12,7 @@ future independent session reviews add dispositions under the protocol rather th
 | F-004 | HIGH | OPEN | `qS/qH` do not bound adversary queries | They occur only in `slhdsaInterleavingLoss` | Add execution predicates and enforced instrumentation |
 | F-005 | HIGH | OPEN | Invented loss is unproved and unbounded above by one | Natural query inputs unrestricted; source calls it a stand-in | Remove from target theorem; derive an ITSR hop/loss |
 | F-006 | CRITICAL | OPEN | `Hmsg` ITSR and `T_l` security surfaces are absent | Current RHS has only PRFs, F-preimage, H-TCR, placeholder loss | Formalize selected primary notions and actual mapping |
-| F-007 | HIGH | OPEN | `yToBytes` has no coherence/injectivity law | `Primitives.lean:77` is an arbitrary function | Add only the laws required by construction/security bridge |
+| F-007 | HIGH | REMEDIATED-PENDING-REVIEW | `yToBytes` has no coherence/injectivity law | `Primitives.lean` previously exposed an arbitrary function only | S04 adds a separate `ByteLaws` injectivity bundle and proves it for both approved concrete families without burdening the structural primitive interface |
 | F-008 | CRITICAL | OPEN | Target samplers can be arbitrary and unrelated to honest use | Caller supplies `forsLeafInputs`/`wotsChainInputs` | Derive challenges from honest transcripts |
 | F-009 | HIGH | OPEN | No asymptotic security theorem or quantum semantics | One finite classical VCVio inequality | Add finite accounting then explicit asymptotic/classical-QROM layer |
 | F-010 | HIGH | OPEN | Main implementation is `d=1` and one legacy reduced set | Hypertree/Scheme fix tree/layer zero; Params names SHA2-128-24 | Generalize and implement all 12 sets |
@@ -92,12 +92,15 @@ future independent session reviews add dispositions under the protocol rather th
 | F-084 | HIGH | FIXED | Repository revision validation accepted any ancestor and mislabeled the invalidated repair base | S02-R6-004; independent r8 PASS | Require the exact session-linked repair-base field and correct its ledger meaning |
 | F-085 | HIGH | FIXED | Declaration dependencies/spans and S02 harness-edit scope prose were false | S02-R6-005; independent r8 PASS | Correct exact dependencies/full spans and describe the narrow harness repair accurately |
 | F-086 | HIGH | FIXED | The retained S03 bootstrap named no current accepted predecessor and could route work to invalidated commit `7b77e700` | S02-R7-001; independent r8 PASS | State that no accepted predecessor exists until r8 PASS and bind S03 only to that exact accepted repair commit |
-| F-087 | HIGH | REMEDIATED-PENDING-REVIEW | S03 parameter lookup discarded the hash family and mapped every SHAKE profile to its paired SHA2 profile | S03-001 | Include `HashFamily` in the lookup key, prove exact constructor recovery, and compare constructors in runtime tests |
-| F-088 | HIGH | REMEDIATED-PENDING-REVIEW | S03 exposed byte-encoding definitions and range bounds but no semantic `toInt (toByte ...)` reconstruction law | S03-002 | Prove total modulo reconstruction, its in-range corollary, and the checked-encoder connection; test zero, maximum, and overflow boundaries |
-| F-089 | HIGH | REMEDIATED-PENDING-REVIEW | S03 ADRS roundtrip started from a prevalidated byte carrier and did not reconstruct a structured address | S03-003 | Prove structured full-width serialization/parser identity under field bounds and canonical checked encode/decode semantics; test all layouts at maximum widths |
-| F-090 | HIGH | REMEDIATED-PENDING-REVIEW | Six S03 declaration rows falsely recorded an empty axiom footprint although their compiled roots use `propext` | S03-004 | Correct the rows and gate every S03 load-bearing root against an exact elaborated axiom inventory |
-| F-091 | MEDIUM | REMEDIATED-PENDING-REVIEW | Documentation described transparent exact-width codec aliases as opaque carriers | S03-005 | State the actual transparent-alias boundary consistently without claiming nominal separation |
-| F-092 | LOW | REMEDIATED-PENDING-REVIEW | The repaired S03 session reversed the value/length arguments in its displayed `toInt (toByte ...)` reconstruction law | S03-R1-001 | Record the compiled theorem exactly as `toInt (toByte x len) = x % 256 ^ len`, preserve and pin the r1 FAIL, and obtain fresh r2 review |
+| F-087 | HIGH | FIXED | S03 parameter lookup discarded the hash family and mapped every SHAKE profile to its paired SHA2 profile | S03-001; independent r2 PASS | Include `HashFamily` in the lookup key, prove exact constructor recovery, and compare constructors in runtime tests |
+| F-088 | HIGH | FIXED | S03 exposed byte-encoding definitions and range bounds but no semantic `toInt (toByte ...)` reconstruction law | S03-002; independent r2 PASS | Prove total modulo reconstruction, its in-range corollary, and the checked-encoder connection; test zero, maximum, and overflow boundaries |
+| F-089 | HIGH | FIXED | S03 ADRS roundtrip started from a prevalidated byte carrier and did not reconstruct a structured address | S03-003; independent r2 PASS | Prove structured full-width serialization/parser identity under field bounds and canonical checked encode/decode semantics; test all layouts at maximum widths |
+| F-090 | HIGH | FIXED | Six S03 declaration rows falsely recorded an empty axiom footprint although their compiled roots use `propext` | S03-004; independent r2 PASS | Correct the rows and gate every S03 load-bearing root against an exact elaborated axiom inventory |
+| F-091 | MEDIUM | FIXED | Documentation described transparent exact-width codec aliases as opaque carriers | S03-005; independent r2 PASS | State the actual transparent-alias boundary consistently without claiming nominal separation |
+| F-092 | LOW | FIXED | The repaired S03 session reversed the value/length arguments in its displayed `toInt (toByte ...)` reconstruction law | S03-R1-001; independent r2 PASS | Record the compiled theorem exactly as `toInt (toByte x len) = x % 256 ^ len`, preserve and pin the r1 FAIL, and obtain fresh r2 review |
+| F-093 | CRITICAL | REMEDIATED-PENDING-REVIEW | The existing Keccak squeeze returned capacity-state bytes instead of permuting after the first 136 SHAKE256 output bytes | S04 preflight differential and FIPS 202 section 6.2 | Add a distinct `0x1f` SHAKE256 domain and repeated 136-byte rate squeezing; test 135/136/137/272-byte outputs and multi-block absorption |
+| F-094 | HIGH | REMEDIATED-PENDING-REVIEW | Unchecked SHA2 address compression silently truncated noncanonical or over-wide `Nat` fields | S04 preflight and FIPS 205 section 11.2 | Introduce a checked proof-carrying canonical/narrow adapter, prove its encoded-byte identity, and make the total interface fail closed outside that domain |
+| F-095 | HIGH | REMEDIATED-PENDING-REVIEW | MGF1 accepted arbitrary output lengths with an implicit 32-bit counter conversion that could wrap | RFC 8017 B.2.1 | Add explicit SHA-256/SHA-512 length bounds and checked wrappers; retain exact 4-byte big-endian counters and reject the first out-of-domain length |
 
 Independent S00 re-review r9 accepted the repairs for F-021 through F-029. Their `FIXED` statuses
 administratively propagate that verdict; they are not an S01 self-review. Historical FAIL artifacts
@@ -156,6 +159,7 @@ modulo/in-range reconstruction and checked conversion, proves structured ADRS re
 checked-wire semantics, corrects and elaboration-gates the axiom ledger, and removes the opacity
 overclaim. Independent r1 confirmed all five substantive repairs at exact commit
 `dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e` but failed with F-092 because the session prose
-reversed `toByte`'s two natural-number arguments. The exact formula is corrected and the immutable
-r1 FAIL is pinned. F-087 through F-092 remain `REMEDIATED-PENDING-REVIEW` until a fresh independent
-S03 r2 verdict accepts the exact repair commit. S04 remains blocked.
+reversed `toByte`'s two natural-number arguments. Independent r2 accepted exact repair commit
+`79b42bf9662dcfe4336401096e9bd4ae0ed924d3` with zero findings, so F-087 through F-092 are fixed.
+S04 addresses F-007 and newly recorded F-093 through F-095; they remain
+`REMEDIATED-PENDING-REVIEW` until a fresh independent S04 verdict accepts the exact candidate.

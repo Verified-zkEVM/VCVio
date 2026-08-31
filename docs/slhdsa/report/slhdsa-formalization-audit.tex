@@ -72,10 +72,21 @@ insufficient bits, and wrong lengths. Checked ADRS setters enforce 32/96-bit fie
 rejects unknown types and noncanonical padding, while structured serialization/parsing identity and
 checked-wire semantics are proved under the exact bounds. Exact-width transparent key and signature
 aliases reject short and long input for all twelve profiles. Initial independent S03 review failed
-with five blockers. R1 confirmed all five substantive repairs but failed on one reversed-argument
-formula in the active S03 session record; that formula is corrected pending fresh r2. These remain
-data-layer claims, not primitive, construction, external-API, or ACVP conformance claims. COV-005
-and F-015/F-016/F-018 remain deferred/open.
+with five blockers and r1 found one reversed-argument formula in the session prose. Independent r2
+accepted exact repair commit
+\texttt{79b42bf9662dcfe4336401096e9bd4ae0ed924d3} with zero findings.
+
+S04 implements the primitive layer in pure Lean. SHA-256 is retained and SHA-512,
+HMAC-SHA-512, MGF1-SHA-512, and arbitrary-length SHAKE256 are added. SHAKE uses the FIPS
+\texttt{0x1f} domain and repeats the permutation after each 136-byte rate block; SHA3
+\texttt{0x06} and Ethereum Keccak \texttt{0x01} remain separate. A proof-carrying SHA2 adapter
+checks full-address canonicality and the one-byte layer/eight-byte tree bounds before exposing the
+22-byte compressed address. The exact six SHA2/SHAKE grammars are selected over all twelve closed
+parameter constructors, and a separate byte-law bundle proves fixed-width encoding injectivity
+without adding a cryptographic assumption to the structural interface. This candidate remains
+pending independent S04 review. It is a primitive executable-evidence claim, not construction,
+external-API, ACVP-certification, security, or deployment refinement. COV-005 and
+F-015/F-016/F-018 remain deferred/open.
 
 \section{Security definitions and theorem architecture}
 S02 defines an explicitly classical candidate architecture for EUF-CMA, PRF/PRFmsg, ITSR, TCR,
@@ -101,6 +112,14 @@ dependency and axiom footprints, computability boundaries, and theorem ladders.
 Report primitive vectors, ACVP key/sign/verify coverage by interface/profile/cell, provenance, and
 negative tests. Discuss the positive-vector limitation in ACVP-Server issue~\#469. Existing embedded
 vectors are regression evidence only.
+
+The S04 primitive executable passes NIST SHA-256/SHA-512, HMAC-SHA-256/512, and SHAKE256 examples;
+exact padding, long-key, multi-block-input, domain, and 135/136/137/272-byte XOF boundaries; derived
+RFC~8017 MGF1 second-block/truncation regressions and explicit counter-wrap rejection; checked
+SHA2-address positive/negative cases; and independently derived composition fingerprints and output
+widths for all twelve approved profiles. The projection pins every source/member/case and classifies
+derived MGF1/profile data separately. NIST response files and examples are test evidence, not a
+validation certificate, and the executable results are not a mathematical refinement proof.
 
 S01 pins final FIPS~205 and the work-in-progress ACVP SLH-DSA Internet-Draft~\cite{acvpSlhdsa},
 current ACVP-Server v1.1.0.43, and every public GenVal SLH-DSA artifact by path, size, and SHA-256.
@@ -132,8 +151,9 @@ well as by target declaration. The audit programmatically meta-imports compiled 
 extension finalization disabled. The S00 boundary exposed 680 declarations across 23 HashSig
 modules; after the repaired S02 modules it observes 1,629 owned constants across 27 modules. These
 counts are reproducible inventory evidence, not permanent invariants. The repaired S03 candidate observes
-2,010 owned constants across 28 modules while retaining the exact seven-helper boundary and axiom
-union. The historical controlled
+2,010 owned constants across 28 modules. The S04 candidate observes 2,139 constants across 29
+modules while retaining the exact seven-helper boundary and axiom union. These counts are
+observations, not stable limits. The historical controlled
 S00 imports observed 647 declarations at ordinary-exported visibility and 680 at both
 ordinary-private and meta-private visibility: the 33-declaration delta was caused by private
 visibility, not IR or meta loading. One
@@ -285,9 +305,10 @@ ADRS roundtrip, six false axiom rows, and an opacity overclaim. The repair recor
 remediated pending review, adds the corresponding laws and runtime boundaries, and gates 26 exact
 load-bearing roots with a compiled axiom probe. Independent r1 confirmed all five repairs at exact
 commit \texttt{dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e} but failed because the active
-session record wrote \texttt{toByte len x} instead of the compiled \texttt{toByte x len}. The
-formula and F-092 disposition are corrected. S04 remains blocked until a fresh independent S03 r2
-accepts the complete exact repair tree.
+session record wrote \texttt{toByte len x} instead of the compiled \texttt{toByte x len}.
+Independent r2 accepted exact repair commit
+\texttt{79b42bf9662dcfe4336401096e9bd4ae0ed924d3} with zero findings. S04 is therefore eligible and its
+primitive candidate is pending a fresh independent S04 review.
 
 \section{Coverage and traceability}
 Include construction-to-source-to-Lean-to-test coverage, proof obligations, assumptions, TCB, and

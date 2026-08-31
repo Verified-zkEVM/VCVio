@@ -18,8 +18,9 @@ No checkbox is discharged by a build alone.
   public key. Internal signer instrumentation and runtime accounting remain for S12.
 - [ ] S02 implements the proposed post-hop `Hmsg` ITSR experiment and every required FORS/WOTS
   `T_l` role, but D-006 remains unapproved and PO-006 is provisional.
-- [ ] `yToBytes` is injective/coherent where abstract digit extraction is security-relevant. Current
-  `Primitives` has a function but no law.
+- [x] S04 provides a separate `Primitives.ByteLaws` injectivity bundle, its `yToBytes_eq_iff`
+  theorem, and concrete witnesses for both approved families. This discharge remains pending S04
+  review and does not add a cryptographic assumption to the structural primitive interface.
 - [ ] S02's candidate removes caller-supplied target samplers. Under proposed D-009, each
   quantitative component is a standalone source-shaped challenger with its own target oracle and
   same-execution collection log where required. D-009 has no named approver, so PO-008 remains
@@ -42,7 +43,9 @@ No checkbox is discharged by a build alone.
 
 ## Algorithms and API
 
-- [ ] `F/H/T_l/PRF/PRF_msg/H_msg` types and concrete SHA2/SHAKE behavior match FIPS.
+- [ ] S04 implements the exact typed `F/H/T_l/PRF/PRF_msg/H_msg` grammars for all twelve sets,
+  with checked SHA2 addresses and focused standard/boundary/profile tests. Independent review and
+  a general mathematical refinement theorem remain, so executable evidence does not close PO-017.
 - [ ] WOTS+, XMSS, FORS, and general `d` hypertree exactness and deterministic correctness.
 - [ ] Digest yields `(md,idx_tree,idx_leaf)` with bounds and correct per-layer evolution.
 - [ ] Internal and external pure/pre-hash domain separation, context, OID, deterministic/hedged modes.

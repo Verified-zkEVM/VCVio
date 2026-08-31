@@ -1,19 +1,14 @@
-# S04 primitive interfaces and SHA2/SHAKE instantiations bootstrap
+# S04 primitive interfaces and SHA2/SHAKE instantiations candidate
 
-Status: bootstrap initialized; implementation blocked after S03 r1 FAIL pending corrected
-exact-commit acceptance.
+Status: implementation complete; independent S04 review pending.
 
-Date: 2026-08-26
+Date: 2026-08-31
 Branch: `codex/sphincsplus-formalization`
-Accepted predecessor: none. The S03 implementation payload is exact commit
-`caefbda5e7ed7cd7a6efb80191307de7a39eea43`; independent review of the complete bootstrap descendant
-`963a3e7dd425b8a8c9bb9e2e91b73868f6918768` failed with five blockers. R1 confirmed all five repairs
-at exact commit `dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e` but failed on one reversed-argument
-formula in the S03 record. The formula is corrected but remains unaccepted. A fresh independent S03
-r2 reviewer must review the complete exact corrected tree containing the payload, this successor
-record, both failed reviews, and every disposition. The reviewer, rather than this self-referential
-bootstrap, records the exact accepted commit. This bootstrap does not authorize source changes from
-a provisional candidate.
+Accepted predecessor: exact S03 repair commit
+`79b42bf9662dcfe4336401096e9bd4ae0ed924d3`, independently accepted with zero findings by
+`docs/slhdsa/reviews/S03-data-codec-review-r2.md`; the review artifact is committed in exact S04
+launch commit `4ce439ae38aea4f97189db8cd8781a62faaf8459`. The immutable initial and r1 FAIL reviews remain
+part of the reviewed history, and the r2 review explicitly replayed their complete finding set.
 
 ## Objective
 
@@ -37,10 +32,12 @@ Before any S04 Lean source changes:
 4. every primitive-vector corpus must have an exact source, revision or document locator, license,
    byte hash, algorithm/mode label, and expected result before it supports a claim.
 
-The currently pinned FIPS 205 final publication and
-`docs/slhdsa/matrices/fips205-profile.json` control the SLH-DSA composition grammars. Existing
-source comments cite supporting hash standards, but those comments are not a substitute for the
-missing S04 authority and vector pins.
+The preflight is complete. The accepted predecessor is recorded above. Exact FIPS 180-4, FIPS 202,
+FIPS 198-1, RFC 8017, CAVP archive, NIST example, and repository projection byte pins now live in
+`reference-manifest.json` and `source-ledger.md`. FIPS 205 final and
+`matrices/fips205-profile.json` control the SLH-DSA composition grammars. The committed projection
+preserves source locators, member hashes, classifications, and notices; derived MGF1 and profile
+fingerprints are explicitly regression/composition evidence rather than NIST vectors.
 
 ## Allowed scope
 
@@ -116,10 +113,54 @@ schema/provenance evidence rather than primitive or implementation-conformance v
 - a fresh reviewer authors `reviews/S04-primitives-review.md`. The implementer does not create,
   template, or pre-fill that review or verdict.
 
+## Candidate implementation and evidence
+
+- `Primitives.ByteLaws` isolates node-byte injectivity from the structural primitive bundle and
+  supplies `yToBytes_eq_iff`; both concrete families and all approved profiles have witnesses.
+- `Concrete.Sha2` retains the SHA-256 paths and adds pure Lean SHA-512, HMAC-SHA-512,
+  MGF1-SHA-512, explicit SHA input-domain predicates, and checked RFC 8017 MGF1 limits.
+- `Concrete.Keccak` retains Ethereum Keccak `0x01` and SHA3 `0x06`; SHAKE256 uses FIPS domain
+  `0x1f`, rate 136, and repeats the permutation across arbitrary output blocks.
+- `Concrete.FIPS` defines all six exact SHA2 and SHAKE grammars, selects them over the closed twelve
+  `ParameterSet` constructors, and exposes checked SHA2 operations over `Sha2Address`. That adapter
+  verifies canonicality, the one-byte layer, and eight-byte tree before compression. The existing
+  total interface fails closed to an all-zero result outside this domain and makes no normative
+  claim there. Fixed-width digest projection rejects a short source instead of padding partial
+  digest bytes; the total bundle's explicitly named conversion likewise fails closed.
+- `PrimitiveTests` checks official SHA-256/SHA-512/HMAC/SHAKE examples, padding neighbors,
+  multi-block input, long HMAC keys, derived MGF1 second-block/truncation cases, MGF1 bound
+  rejection, SHAKE 135/136/137/272-byte outputs, 135/136/137-byte and 200-byte inputs, domain
+  separation, positive/negative SHA2 addresses, all output widths, and independently derived exact
+  grammar fingerprints for all twelve approved profiles.
+
+Focused execution reports:
+
+```text
+lake build HashSig.SLHDSA.Concrete.FIPS
+Build completed successfully
+
+lake exe slhdsa_primitive_tests
+SLH-DSA S04 primitive tests: PASS (SHA2/SHAKE vectors; 12 profile grammars)
+
+lake env lean scripts/slhdsa/S04InventoryProbe.lean
+S04 declaration/axiom probe: PASS (11 exact load-bearing roots)
+
+./scripts/slhdsa/validate.sh --docs-only
+SLH-DSA docs-only validation: PASS
+
+./scripts/slhdsa/validate.sh
+SLH-DSA full baseline validation: PASS
+```
+
+The 11-root probe records one axiom-free byte-coherence theorem; the SHA2 roots use only
+`propext`, `Classical.choice`, and `Quot.sound`; SHAKE256 uses only `propext` and `Quot.sound`.
+No root introduces `sorryAx`. The full audit observes 29 HashSig modules, 2,139 owned constants,
+the exact inherited seven compiler helpers, and the unchanged exact axiom union. The exact
+candidate commit is recorded at handoff.
+
 ## Handoff
 
-S03 r1 failed and its one documentation finding is corrected pending r2. Leave S04 blocked until
-the exact corrected S03 candidate passes fresh independent review. After S03 acceptance, update
-this record with the exact accepted boundary,
-complete the authority preflight, and only then begin S04 source work. Preserve the primitive-only
-scope and do not move COV-005 or F-015/F-016/F-018.
+S03 r2 accepted the exact predecessor with zero findings, so S04 launched from commit
+`4ce439ae38aea4f97189db8cd8781a62faaf8459`. Review the exact candidate produced from this record,
+including the source/vector pins, focused executable, all-profile grammars, checked address domain,
+axiom inventory, and inherited regressions. Do not move COV-005 or F-015/F-016/F-018.

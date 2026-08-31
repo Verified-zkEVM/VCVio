@@ -81,7 +81,7 @@ S03 record's stale predecessor routing. Independent r8 accepted the exact routin
 with zero findings. D-006/D-009 remain proposals and do not discharge their dependent obligations
 without named owner approval.
 
-### S03 — data, widths, parameters, ADRS, and codecs (r1 FAIL; prose repair pending r2)
+### S03 — data, widths, parameters, ADRS, and codecs (r2 PASS)
 
 - Inputs: S01 tables and FIPS Sections 3–5/11; accepted S02 interfaces.
 - Allowed: `Params`, `Address`, `Encoding`, new byte/codec modules and focused tests.
@@ -89,16 +89,19 @@ without named owner approval.
   `base_2b` big-endian characterization, rejecting codecs.
 - Gates: `lake build HashSig`; all-set `#eval` sizes; codec/property tests; ACVP fixtures. Initial
   exact-commit review failed with five blockers. R1 confirmed all five repairs but failed on a
-  reversed-argument formula in the S03 record. After correction and complete gates, fresh
-  independent review r2 is recorded in `reviews/S03-data-codec-review-r2.md`.
+  reversed-argument formula in the S03 record. Independent r2 accepted exact repair commit
+  `79b42bf9662dcfe4336401096e9bd4ae0ed924d3` with zero findings.
 
-### S04 — primitive interfaces and SHA2/SHAKE instantiations (bootstrap only; blocked on S03 r2)
+### S04 — primitive interfaces and SHA2/SHAKE instantiations (candidate pending review)
 
 - Inputs: S03; FIPS Section 11; pinned hash standards/vectors.
 - Allowed: `Primitives`, `Concrete/Sha2`, `Concrete/Keccak` or new SHAKE/concrete modules.
 - Deliverables: width-indexed primitives, `yToBytes` coherence, SHA2/SHAKE definitions for all sets,
-  hash/MGF/HMAC/XOF vector evidence.
-- Gates: runtime primitive vectors plus elaboration; no unreviewed extern; review
+  hash/MGF/HMAC/XOF vector evidence. The candidate supplies pure Lean SHA-512, HMAC-SHA-512,
+  MGF1-SHA-512, repeated-rate SHAKE256, exact all-twelve primitive bundles, and a checked SHA2
+  compressed-address domain while preserving SHA-256, SHA3, Keccak, and legacy paths.
+- Gates: authoritative and derived-classified runtime vectors, all-profile grammar fingerprints,
+  exact axiom-footprint elaboration, inherited regressions, no unreviewed extern; review
   `reviews/S04-primitives-review.md`.
 
 ### S05 — WOTS+ construction

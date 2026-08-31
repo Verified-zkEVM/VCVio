@@ -170,11 +170,14 @@ static importer, retrieves the production regular-initializer ordinary and IR ar
 exact expected rejections (so loss of either path fails), and checks that the sentinel remains absent
 before and after audit. The temporary
 `.olean`, `.ilean`, `.ir`, and C artifacts are confined to a `mktemp` directory removed on exit.
-The wrapper then runs the exact 26-root S03 declaration/axiom probe, generated umbrella check,
+The wrapper then runs the exact 26-root S03 and 11-root S04 declaration/axiom probes, generated umbrella check,
 extern and interop isolation, the two inherited SLH-DSA KAT executables, and the S03 data/codec
-executable. The KAT PASS results are legacy runtime
+and S04 primitive executables. The KAT PASS results are legacy runtime
 regression evidence only, and the S03 PASS result covers exact table rows, endian fixtures, ADRS,
-and rejecting fixed-width codecs without claiming primitive or ACVP conformance. A successful
+and rejecting fixed-width codecs. The S04 result covers official SHA/HMAC/SHAKE vectors, derived
+MGF1 regressions, padding/rate/domain boundaries, checked SHA2 addresses, output widths, and exact
+all-twelve grammar fingerprints without claiming construction correctness, ACVP certification, or
+mathematical refinement. A successful
 `lake build` is elaboration evidence; it does not demonstrate concrete hash/vector execution. The
 repository-wide `lake build` remains a final pre-review gate when changes touch shared VCVio
 infrastructure.
@@ -218,6 +221,13 @@ At the repaired S03 candidate boundary the same audit observes 28 HashSig module
 constants. It still finds exactly the seven compiler helpers above and exactly the same transitive
 axiom union; these current counts are likewise inventory evidence rather than stable allowlist
 values.
+
+The S04 probe checks exact footprints for byte coherence, checked SHA2 address agreement, SHA2 and
+SHAKE bundle selection/coherence, pure SHA-512, and SHAKE256. `ByteLaws.yToBytes_eq_iff` is
+axiom-free; SHA2 roots use only `propext`, `Classical.choice`, and `Quot.sound`; SHAKE256 uses only
+`propext` and `Quot.sound`. None depends on `sorryAx`. The full S04 candidate audit observes 29
+HashSig modules and 2,139 HashSig-owned constants, retains exactly seven compiler helpers, and
+retains the same exact transitive axiom union. These counts are observations, not stable limits.
 
 ## Proof gate
 
