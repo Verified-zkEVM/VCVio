@@ -102,6 +102,11 @@ private def expectedOidArc : PrehashAlgorithm → ℕ
 private def ensure (label : String) (condition : Bool) : IO Unit :=
   unless condition do throw (IO.userError s!"SLH-DSA external-interface check failed: {label}")
 
+private def checkDigest (label : String) (algorithm : PrehashAlgorithm)
+    (message : List Byte) (expected : String) : IO Unit :=
+  ensure label
+    (ByteArray.mk (algorithm.digest message).toArray == parseHex expected)
+
 /-- Executable FIPS 180-4/FIPS 202 canaries for all twelve ACVP pre-hash choices, including
 their exact DER OIDs and digest widths. -/
 def run : IO Unit := do
@@ -118,6 +123,16 @@ def run : IO Unit := do
       (digest.toList.length == descriptor.outputLength)
     ensure s!"{algorithm.name}: abc digest"
       (ByteArray.mk digest.toArray == parseHex (expectedAbc algorithm))
+  checkDigest "SHA3-224 exact-rate padding" .sha3_224 (List.replicate 144 0x61)
+    "f9019111996dcf160e284e320fd6d8825cabcd41a5ffdc4c5e9d64b6"
+  checkDigest "SHA3-384 exact-rate padding" .sha3_384 (List.replicate 104 0x61)
+    "3a4f3b6284e571238884e95655e8c8a60e068e4059a9734abc08823a900d1615\
+    92860243f00619ae699a29092ed91a16"
+  checkDigest "SHA3-512 exact-rate padding" .sha3_512 (List.replicate 72 0x61)
+    "a8ae722a78e10cbbc413886c02eb5b369a03f6560084aff566bd597bb7ad8c1c\
+    cd86e81296852359bf2faddb5153c0a7445722987875e74287adac21adebe952"
+  checkDigest "SHAKE128 exact-rate padding" .shake128 (List.replicate 168 0x61)
+    "c22e11586c22b713bde373fce93314d76829de2c21d940a28eb659b8dec953a2"
   IO.println "SLH-DSA external-interface tests: PASS (12 prehash OIDs/digests; context boundary)"
 
 end SLHDSA.ExternalTest
