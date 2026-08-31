@@ -18,6 +18,10 @@ on:
       - "lakefile.lean"
       - "scripts/nolints-style.txt"
       - ".github/workflows/linting.yml"
+  # Merge-queue refs must run independently of PR path filters: the group can
+  # contain changes from several pull requests.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
     paths:
