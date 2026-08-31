@@ -41,8 +41,11 @@ Current records:
   and remote reconciliation are independently accepted at reviewed head `60918509...`.
 - [B03 — concurrent construction/query/security-stack integration](B03-concurrent-stack-integration.md):
   history-preserving merge of the shared intrinsic-signature, arbitrary-depth construction,
-  finite-query-bound, encoded-address, and conditional security-interface stack. General honest
-  correctness/completeness, S07 conformance, S09 APIs, and all security reductions remain open;
-  the unpushed candidate requires fresh independent review.
+  finite-query-bound, encoded-address, and conditional security-interface stack. Imported
+  `recoverFromPosition_signFromPosition`/`pkFromSig_sign` and
+  `GeneralScheme.verifyInternal_signInternal` discharge pure/fixed-answer arbitrary-depth
+  correctness and internal completeness. Callback `*With` parity, S07 conformance/runtime, S09
+  codecs/external APIs, and all security reductions remain open. Independent r0 found only three
+  active-document inconsistencies; the docs-only repair requires fresh successor review.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

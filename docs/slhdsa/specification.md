@@ -165,7 +165,9 @@ inside the EUF-CMA game, not a theorem parameter disconnected from the key. S02 
 an arbitrary signature-scheme experiment interface. B03 supplies a conditional `securityInterface`
 whose operations delegate to `GeneralScheme`, but this is only an interface shape:
 `ClassicalSecurityContext` assumes a `ReductionSystem`, and `RepairedMasterStatement` remains an
-unproved proposition. No general correctness refinement or S02/S11 reduction is discharged. Under
+unproved proposition. B03 separately discharges pure/fixed-answer construction correctness and
+internal `GeneralScheme` completeness, but the conditional security interface does not construct a
+probabilistic refinement or discharge any S02/S11 reduction. Under
 proposed D-009,
 formula-proved positive values are caps for the source-shaped
 standalone component-game target oracles; actual traces may be shorter or empty, in which case a

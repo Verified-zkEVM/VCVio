@@ -435,7 +435,7 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
         (3881, "cdfaaa4aad22cd5b6cc28e5863fd5de30949b3c3406cea9eea14e0f941a9976b"),
     "docs/slhdsa/matrices/coverage.csv":
-        (8666, "6047aa92f1754725d6a8e83e84b9d823e3b5d451cd1a6a653cd07454b8224f7f"),
+        (8813, "7e986b8f14fc8b125327609a726e52d3387c5c6d5737327788388ec8636d3d1c"),
     "docs/slhdsa/matrices/decisions.csv":
         (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
@@ -443,7 +443,7 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (8863, "26652a8ee627966c6a7ede2f9d35b50ee45570830c044bbf4d75e083782d804c"),
+        (8992, "6830a95ba15b2584024113286bd536e8c47ffa5578760bc39186b04cecb67015"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":

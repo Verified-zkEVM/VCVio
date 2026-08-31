@@ -1,7 +1,8 @@
 # B03 concurrent construction/query/security-stack integration
 
-Status: integration implementation complete; fresh independent B03 review required before push or
-S07.
+Status: integration implementation complete. Independent r0 found no blocking Lean issue and three
+active-document inconsistencies; this docs-only repair requires fresh successor review before push
+or S07.
 
 Date: 2026-08-31
 Branch: `codex/sphincsplus-formalization`
@@ -88,8 +89,8 @@ ReachableTargets, Concrete.Instance, and corresponding tests. Retained S05/S06 r
 documentation/provenance, PolicyAudit, and the authoritative wrapper are final gates recorded in the
 implementation handoff.
 
-A fresh reviewer must inspect the exact two history-preserving merge commits plus the bounded
-adaptation commit, confirm
+A fresh successor reviewer must inspect the exact two history-preserving merge commits, bounded
+adaptation commit, and docs-only repair atop immutable r0 FAIL, confirm
 historical S06/B02 session/review blobs are byte-identical, check that no missing correctness or
 security theorem is claimed, and replay the focused/full evidence. The implementer does not create
 the review artifact.

@@ -26,6 +26,10 @@ B02 and its remote reconciliation are independently accepted at reviewed head
 normal merge series first imported `fe469308b758ac381b770fb83cee4a7f792400cd`, then folded exact
 latest shared head `2014783d7d461b64164e3ec2844ce7f1eeb4c846` into merge
 `8917b7edb64614ab5417575a383abab15e396f2e` without rewriting either history.
+Independent B03 r0 reviewed candidate `157855d88b9bc550de5964bdd90d112ee16ae9dd`
+with no blocking technical finding but failed it on three active-document inconsistencies. Its
+immutable FAIL artifact is committed at `17f1b060861a146b0bd2c4e67b0a7637b788feb4`;
+the current docs-only repair requires fresh successor review before B03 acceptance or S07.
 
 B03 imports intrinsic XMSS/FORS signatures, typed-position arbitrary-depth hypertree and general
 internal-scheme programs, their naturality/deterministic interpretations, and structural finite

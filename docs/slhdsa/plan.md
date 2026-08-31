@@ -66,8 +66,9 @@ focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output
   Transcript,Architecture}.lean`; no component refactor or claimed reduction.
 - Deliverables: proposed repaired master theorem with exact quantifiers/coefficients and an explicit
   account of why the invalidated CCS WOTS proof is not reused; generated `PK.seed`
-  coupling; an abstract signature-scheme experiment interface, with general construction coupling
-  explicitly left to S08/S09; strictly positive formula-derived caps
+  coupling; an abstract signature-scheme experiment interface. At S02, construction coupling was
+  deferred; B03 later supplies a conditional `GeneralScheme` adapter while reduction coupling
+  remains S11 work. Also supply strictly positive formula-derived caps
   on standalone source-shaped component-game target traces;
   actual `qS/qH` predicates; ITSR/digest mapping; `F/H/T_l/Hmsg/PRF/PRFmsg` surfaces; explicit
   classical/QROM boundary. Remove the invented loss from the target architecture.
@@ -182,8 +183,8 @@ without named owner approval.
   Successors consume rather than duplicate or rename them.
 - Scheme boundary: FORS uses `parts.forsAdrs`. Signing and verification still call the d=1
   hypertree interface with `Adrs.zero`, tree zero, and `parts.idxLeaf.val`; this is FIPS-correct
-  only for valid `d = 1`, where the parsed `idxTree` is proved zero. General
-  `LayerPosition`-driven hypertree consumption is deferred to S08/S09, not B02 or S07.
+  only for valid `d = 1`, where the parsed `idxTree` is proved zero. B02 did not generalize that
+  surface; B03 subsequently imports `LayerPosition`-driven arbitrary-depth consumption.
 - Concurrent boundary: PR #594/#596 remain later security work and cumulative PR #591 remains
   reserved for S15. None is merged by B02.
 - Gates: all-twelve digest/trajectory canaries, Scheme compatibility and correctness roots, exact
@@ -219,10 +220,12 @@ at exact reviewed head `609185098935feea82f4d5b6fb7a9d62aefce9c9`.
   extractor integration.
 - Gates: intrinsic API migration, exact B03 axiom probe, focused construction/query/security builds,
   retained runtimes, aggregate/import/isolation/docs/provenance/policy, and independent review.
+  Independent r0 found no Lean issue and three active-document inconsistencies; this bounded repair
+  requires a fresh successor review.
 
-### S07 — FORS construction
+### S07 — FORS conformance construction
 
-- Inputs: accepted B02 over S03–S06; FIPS Section 8 and Appendix-A extraction delta.
+- Inputs: accepted B03 boundary over S03–S06/B02; FIPS Section 8 and Appendix-A extraction delta.
 - Allowed: FORS modules/tests; no reduction.
 - Deliverables: FIPS big-endian indices, valid trees/paths, sign/recovery correctness, separate
   fixtures for Appendix A's reference-alignment and per-tree-index clarification, and an explicit
@@ -232,22 +235,26 @@ at exact reviewed head `609185098935feea82f4d5b6fb7a9d62aefce9c9`.
 - Gates: extraction fixtures, tiny exhaustive tests, axioms; review
   `reviews/S07-fors-construction-review.md`.
 
-### S08 — general hypertree construction
+### S08 — hypertree callback parity and conformance
 
-- Inputs: S03–S07; FIPS Section 7; C13 `d=2` only as a non-normative design comparison.
-- Allowed: main hypertree and digest-split internals.
-- Deliverables: general `d` fold, exactly `d` signatures, tree/leaf index evolution, correctness for
-  every FIPS set; consume authoritative `LayerPosition`; no C13 merge.
-- Gates: `d=1/2/>2` tests, all-set execution, axioms; review
+- Inputs: accepted B03 and S07; FIPS Section 7; C13 `d=2` only as a non-normative comparison.
+- Allowed: callback adapters, conformance/address-trace tests, and bounded refinements over the
+  imported `GeneralHypertree`; do not rewrite its typed fold or correctness proof.
+- Deliverables: named callback `*With` ↔ explicit-query/pure parity, concrete all-depth/profile
+  conformance, reachable address traces, and trust review. Retain B03's exactly-`d` signatures,
+  `LayerPosition` evolution, and arbitrary-depth correctness.
+- Gates: callback parity probe, `d=1/2/>2` address/runtime tests, all-set execution, axioms; review
   `reviews/S08-hypertree-review.md`.
 
 ### S09 — internal and external FIPS APIs
 
-- Inputs: S03–S08; FIPS Sections 9–10.
-- Allowed: Scheme, pure/pre-hash API, signature/key codecs.
-- Deliverables: internal algorithms, pure/HashSLH-DSA domain separation, context/OID rules,
-  deterministic/hedged modes, completeness and reject behavior.
-- Gates: positive/negative API tests; all-set execution; zero `sorryAx` on completeness roots;
+- Inputs: accepted B03 and S07–S08 conformance work; FIPS Sections 9–10.
+- Allowed: external/pure/pre-hash adapters, mode handling, and signature/key codecs; retain B03's
+  internal `GeneralScheme` algorithms and completeness theorem.
+- Deliverables: pure/HashSLH-DSA domain separation, context/OID rules, fixed-width codecs,
+  deterministic/hedged modes, external API completeness, and rejection behavior.
+- Gates: positive/negative API tests; all-set execution; retain zero `sorryAx` on B03 internal roots
+  and require zero `sorryAx` on new external completeness/rejection roots;
   review `reviews/S09-api-review.md`.
 
 ### S10 — ACVP conformance evidence

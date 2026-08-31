@@ -9,8 +9,8 @@ No checkbox is discharged by a build alone.
   Actual traces may be shorter or empty; selecting a missing target makes the event false. The
   rejected legacy theorem still admits zero caller-supplied counts.
 - [ ] S02 packages public/secret seed and root coherence for each generated key, and primitive
-  queries use that public key. Its arbitrary `SchemeInterface` has no refinement law coupling
-  keygen/sign/verify/randomizer to general SLH-DSA; F-079/PO-003 remain open for S08/S09.
+  queries use that public key. B03 supplies a conditional `GeneralScheme` interface adapter, but no
+  reduction coupling law; F-079/PO-003 remain open for S11.
 - [ ] Every additive loss is proved bounded/finite from a game hop. Current
   `slhdsaInterleavingLoss` accepts unbounded `qS/qH`; for large queries it can exceed one and make the
   inequality trivial. Its formula is an invented stand-in, not a proved ITSR loss.
@@ -52,14 +52,17 @@ No checkbox is discharged by a build alone.
 - [x] S06 packages FIPS §6 leaf/node bounds and authentication width intrinsically, proves exact
   sibling entries and the honest FIPS climb equation to the canonical Merkle engine, retains honest
   recovery and arbitrary-signature binding, and closes approved reachable SHA2/SHAKE addresses.
-  Independent S06 r0 accepted the exact candidate with zero findings. FORS and general `d`
-  hypertree exactness remain successor work.
+  Independent S06 r0 accepted the exact candidate with zero findings. B03 subsequently discharges
+  arbitrary-`d` hypertree correctness; FORS conformance remains S07 work.
 - [x] B02 consumes PR #595's typed `(md,idx_tree,idx_leaf)` decomposition, exact byte extents,
   intrinsic bounds, FORS address, and `LayerPosition` low-bit/high-bit trajectory for all approved
-  profiles. The integration remains pending independent B02 review.
-- [ ] Scheme consumes `LayerPosition` through a general `d`-layer hypertree. It currently uses the
-  digest-derived FORS address but passes `Adrs.zero`, tree zero, and `idxLeaf` to the d=1 hypertree;
-  this is FIPS-correct only when valid `d=1` makes `idxTree = 0`. General consumption is S08/S09.
+  profiles. B02 and its remote reconciliation are independently accepted at exact reviewed head
+  `609185098935feea82f4d5b6fb7a9d62aefce9c9`; B02 alone did not claim general-hypertree
+  correctness.
+- [x] The legacy `Scheme` path remains a valid `d=1` compatibility surface: it passes `Adrs.zero`,
+  tree zero, and `idxLeaf` only where valid `d=1` proves `idxTree = 0`. B03's `GeneralScheme`
+  consumes `LayerPosition` for arbitrary `d`, and `DepthOneCompatibility` proves the two surfaces'
+  deterministic output agreement (reclassified PO-012).
 - [x] B03 imports typed arbitrary-`d` hypertree and GeneralScheme programs, naturality,
   deterministic interpretations, finite structural query upper bounds, and kernel-checked honest
   GeneralHypertree recovery plus internal GeneralScheme completeness (PO-021/PO-022).
@@ -68,8 +71,9 @@ No checkbox is discharged by a build alone.
   is proved, but general signing intentionally performs one discarded final recovery.
 - [ ] Intrinsic FORS `k`/`a` widths are imported, but S07 conformance fixtures, reachable-address
   checks, and approved-profile runtime remain PO-023.
-- [ ] Internal and external pure/pre-hash domain separation, context, OID, deterministic/hedged modes.
-- [ ] Completeness and reject behavior load-bearing roots have zero `sorryAx`.
+- [ ] External pure/pre-hash domain separation, context, OID, deterministic/hedged modes, and codecs.
+- [ ] Remaining external API completeness and reject-behavior roots have zero `sorryAx`; B03 already
+  closes internal `GeneralScheme` completeness.
 - [ ] ACVP evidence covers every claimed cell; positive pre-hash coverage is tracked separately due to
   issue #469. Existing two embedded KATs remain regression evidence only.
 
