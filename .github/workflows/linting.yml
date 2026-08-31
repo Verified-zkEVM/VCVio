@@ -6,6 +6,8 @@ on:
     paths:
       - "ToMathlib/**/*.lean"
       - "VCVio/**/*.lean"
+      - "VCVioTest/SMDTPREFinalValidity.lean"
+      - "VCVioTest/SMDTTCRFinalValidity.lean"
       - "Extern/**/*.lean"
       - "LatticeCrypto/**/*.lean"
       - "HashSig.lean"
@@ -27,6 +29,8 @@ on:
     paths:
       - "ToMathlib/**/*.lean"
       - "VCVio/**/*.lean"
+      - "VCVioTest/SMDTPREFinalValidity.lean"
+      - "VCVioTest/SMDTTCRFinalValidity.lean"
       - "Extern/**/*.lean"
       - "LatticeCrypto/**/*.lean"
       - "HashSig.lean"
@@ -88,4 +92,10 @@ jobs:
       # project deliberately defines no `lint-style` exe, so it does not link the
       # FFI backends). Pass the libraries explicitly for full coverage.
       - name: Run text-based style linters
-        run: lake exe lint-style ToMathlib VCVio Extern LatticeCrypto HashSig Examples VCVioWidgets Interop HashSigTest.SLHDSA.Params HashSigTest.SLHDSA.Position HashSigTest.SLHDSA.Oracle HashSigTest.SLHDSA.Wots HashSigTest.SLHDSA.Xmss HashSigTest.SLHDSA.Fors HashSigTest.SLHDSA.Hypertree HashSigTest.SLHDSA.Scheme HashSigTest.SLHDSA.Sha2KAT HashSigTest.SLHDSA.C13KAT
+        run: >-
+          lake exe lint-style ToMathlib VCVio Extern LatticeCrypto HashSig Examples VCVioWidgets
+          Interop VCVioTest.SMDTPREFinalValidity VCVioTest.SMDTTCRFinalValidity
+          HashSigTest.SLHDSA.Params HashSigTest.SLHDSA.Position HashSigTest.SLHDSA.Oracle
+          HashSigTest.SLHDSA.Wots HashSigTest.SLHDSA.Xmss HashSigTest.SLHDSA.Fors
+          HashSigTest.SLHDSA.Hypertree HashSigTest.SLHDSA.Scheme HashSigTest.SLHDSA.Sha2KAT
+          HashSigTest.SLHDSA.C13KAT
