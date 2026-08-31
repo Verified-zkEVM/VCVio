@@ -10,9 +10,12 @@ public import HashSig.SLHDSA.C13.Scheme
 public import HashSig.SLHDSA.C13.WotsC
 public import HashSig.SLHDSA.C13.Xmss
 public import HashSig.SLHDSA.Codec
+public import HashSig.SLHDSA.Concrete.FIPS
 public import HashSig.SLHDSA.Concrete.Instance
 public import HashSig.SLHDSA.Concrete.Keccak
 public import HashSig.SLHDSA.Concrete.Sha2
+public import HashSig.SLHDSA.Concrete.Wots
+public import HashSig.SLHDSA.Concrete.Xmss
 public import HashSig.SLHDSA.DepthOneCompatibility
 public import HashSig.SLHDSA.Encoding
 public import HashSig.SLHDSA.Fors
@@ -31,4 +34,6 @@ public import HashSig.SLHDSA.Scheme
 public import HashSig.SLHDSA.Security
 public import HashSig.SLHDSA.Wots
 public import HashSig.SLHDSA.WotsChecksum
+public import HashSig.SLHDSA.WotsEncoding
 public import HashSig.SLHDSA.Xmss
+public import HashSig.SLHDSA.XmssConformance
