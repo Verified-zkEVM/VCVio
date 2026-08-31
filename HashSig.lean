@@ -33,6 +33,7 @@ public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.Scheme
 public import HashSig.SLHDSA.Security
 public import HashSig.SLHDSA.Security.Architecture
+public import HashSig.SLHDSA.Security.CanonicalGames
 public import HashSig.SLHDSA.Security.GeneralScheme
 public import HashSig.SLHDSA.Security.Notions
 public import HashSig.SLHDSA.Security.OracleSurface
