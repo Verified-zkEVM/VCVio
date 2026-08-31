@@ -380,10 +380,12 @@ support variable output lengths and the exact FIPS domain padding.
 
 ### SHA2 parameter sets
 
-The SHA2 instantiations divide into two cases:
+Every SHA2 parameter set uses the compressed 22-byte `ADRSc`; none of the SHA2 instantiations
+serialize the full 32-byte `ADRS`. The hash choices divide as follows:
 
-- `n = 16` uses SHA-256, HMAC-SHA-256, MGF1-SHA-256, and the compressed 22-byte `ADRSc`;
-- `n = 24` or `n = 32` uses SHA-512, HMAC-SHA-512, MGF1-SHA-512, and full 32-byte `ADRS`.
+- for `n = 16`, the SHA2 functions use SHA-256, HMAC-SHA-256, and MGF1-SHA-256;
+- for `n = 24` or `n = 32`, `H_msg` and `PRF_msg` use the SHA-512-based MGF1 and HMAC
+  constructions, and `H` and `T_l` use SHA-512, while `F` and `PRF` continue to use SHA-256.
 
 The existing SHA-256 code SHOULD be generalized where that reduces duplication without weakening
 the exact formulas. SHA-512 and its derived variants MUST have independent primitive KATs before
@@ -392,9 +394,9 @@ they are used as evidence for SLH-DSA KATs.
 ### Address encoding
 
 `Adrs` may remain a structural record with natural-number fields. Concrete encoders MUST establish
-the reachable-field bounds needed to prevent truncation ambiguity. In particular, SHA2 category-1
-security proofs MUST continue to use restricted injectivity on reachable compressed addresses,
-not a false global injectivity claim about `ADRSc`.
+the reachable-field bounds needed to prevent truncation ambiguity. In particular, every SHA2
+security proof MUST use restricted injectivity on reachable compressed addresses, not a false
+global injectivity claim about `ADRSc`.
 
 ## Wire codecs
 
