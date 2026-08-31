@@ -9,12 +9,14 @@ public import HashSig.SLHDSA.C13.Primitives
 public import HashSig.SLHDSA.C13.Scheme
 public import HashSig.SLHDSA.C13.WotsC
 public import HashSig.SLHDSA.C13.Xmss
+public import HashSig.SLHDSA.Codec
 public import HashSig.SLHDSA.Concrete.Instance
 public import HashSig.SLHDSA.Concrete.Keccak
 public import HashSig.SLHDSA.Concrete.Sha2
 public import HashSig.SLHDSA.DepthOneCompatibility
 public import HashSig.SLHDSA.Encoding
 public import HashSig.SLHDSA.Fors
+public import HashSig.SLHDSA.FipsParams
 public import HashSig.SLHDSA.GeneralScheme
 public import HashSig.SLHDSA.GeneralSchemeQueryBound
 public import HashSig.SLHDSA.Hypertree

@@ -378,6 +378,10 @@ lean_exe slhdsa_kat where
 lean_exe slhdsa_c13_kat where
   root := `HashSigTest.SLHDSA.C13KAT
 
+/-- Exact parameter, endian, address, and rejecting-codec regression suite. -/
+lean_exe slhdsa_data_codec_tests where
+  root := `HashSigTest.SLHDSA.DataCodecTests
+
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
 TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every
