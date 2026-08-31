@@ -855,4 +855,32 @@ theorem encodeTargets_nodup_of_injOn (prims : Primitives p) (addresses : List Ad
     (encodeTargets prims addresses).Nodup :=
   (encodeTargets_nodup_iff_injOn prims addresses haddresses).2 hinj
 
+/-- Explicit encoded-address obligations for the eight target roles in the security architecture.
+
+`ValidatedParams` deliberately does not imply these facts: concrete address encodings have narrower
+field domains, most visibly SHA-2's one-byte layer and eight-byte tree.  A concrete security context
+must discharge this structure from approved-parameter range proofs (or assume the corresponding
+restricted encoder injectivity).  The WOTS UD/PRE fields quantify over the reduction's target
+selection because those roles expose one optional or total selected step per chain. -/
+structure EncodedTargetLedgerConditions (vp : ValidatedParams)
+    (prims : Primitives vp.params) : Prop where
+  /-- Encoded FORS leaf tweaks are distinct. -/
+  forsF : (encodeTargets prims (forsLeafAddresses vp)).Nodup
+  /-- Encoded FORS internal-node tweaks are distinct. -/
+  forsH : (encodeTargets prims (forsTreeAddresses vp)).Nodup
+  /-- Encoded FORS root-compression tweaks are distinct. -/
+  forsTl : (encodeTargets prims (forsRootAddresses vp)).Nodup
+  /-- Every total one-step-per-WOTS-chain UD selection has distinct encoded tweaks. -/
+  wotsFUd : ∀ select : WotsChainCoord vp → Fin (vp.params.w - 1),
+    (encodeTargets prims (selectedWotsAddresses vp select)).Nodup
+  /-- The complete executed WOTS hash-step ledger has distinct encoded tweaks. -/
+  wotsFTcr : (encodeTargets prims (wotsStepAddresses vp)).Nodup
+  /-- Every optional PRE selection has distinct encoded tweaks. -/
+  wotsFPre : ∀ select : WotsChainCoord vp → Option (Fin (vp.params.w - 1)),
+    (encodeTargets prims (optionalWotsAddresses vp select)).Nodup
+  /-- Encoded WOTS public-key-compression tweaks are distinct. -/
+  wotsTl : (encodeTargets prims (wotsPkAddresses vp)).Nodup
+  /-- Encoded XMSS internal-node tweaks are distinct. -/
+  xmssH : (encodeTargets prims (xmssNodeAddresses vp)).Nodup
+
 end SLHDSA.Security

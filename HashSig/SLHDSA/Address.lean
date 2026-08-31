@@ -225,6 +225,66 @@ def compressSha2 (a : Adrs) : List Byte :=
 @[simp] theorem compressSha2_length (a : Adrs) : a.compressSha2.length = 22 := by
   simp [compressSha2]
 
+/-- Parse the six address fields from the exact byte layout used by SHA-2 `ADRSc`.  This is a
+mathematical left inverse on the narrower SHA-2 address domain; it intentionally does not accept or
+reject addresses at the external codec boundary. -/
+def fromCompressedSha2 (raw : List Byte) : Adrs :=
+  let afterLayer := raw.drop 1
+  let afterTree := afterLayer.drop 8
+  let afterType := afterTree.drop 1
+  let afterWord1 := afterType.drop 4
+  let afterWord2 := afterWord1.drop 4
+  { layer := toInt (raw.take 1)
+    tree := toInt (afterLayer.take 8)
+    type := toInt (afterTree.take 1)
+    word1 := toInt (afterType.take 4)
+    word2 := toInt (afterWord1.take 4)
+    word3 := toInt (afterWord2.take 4) }
+
+/-- SHA-2 compressed-address parsing reconstructs every field that fits its exact compressed
+width: one byte for layer and type, eight bytes for the tree, and four bytes for each
+type-dependent word. -/
+theorem fromCompressedSha2_compressSha2 (a : Adrs)
+    (hlayer : Fits 1 a.layer = true) (htree : Fits 8 a.tree = true)
+    (htype : Fits 1 a.type = true) (hword1 : Fits 4 a.word1 = true)
+    (hword2 : Fits 4 a.word2 = true) (hword3 : Fits 4 a.word3 = true) :
+    fromCompressedSha2 a.compressSha2 = a := by
+  have hlayer' : a.layer < 256 ^ 1 := by simpa [Fits] using hlayer
+  have htree' : a.tree < 256 ^ 8 := by simpa [Fits] using htree
+  have htype' : a.type < 256 ^ 1 := by simpa [Fits] using htype
+  have hword1' : a.word1 < 256 ^ 4 := by simpa [Fits] using hword1
+  have hword2' : a.word2 < 256 ^ 4 := by simpa [Fits] using hword2
+  have hword3' : a.word3 < 256 ^ 4 := by simpa [Fits] using hword3
+  have htakeWord3 : (toByte a.word3 4).take 4 = toByte a.word3 4 := by
+    simpa only [toByte_length] using (List.take_length (l := toByte a.word3 4))
+  apply Adrs.ext
+  · simpa [fromCompressedSha2, compressSha2, toBytesBE] using
+      toInt_toByte a.layer 1 hlayer'
+  · simpa [fromCompressedSha2, compressSha2, toBytesBE] using
+      toInt_toByte a.tree 8 htree'
+  · simpa [fromCompressedSha2, compressSha2, toBytesBE] using
+      toInt_toByte a.type 1 htype'
+  · simpa [fromCompressedSha2, compressSha2, toBytesBE] using
+      toInt_toByte a.word1 4 hword1'
+  · simpa [fromCompressedSha2, compressSha2, toBytesBE] using
+      toInt_toByte a.word2 4 hword2'
+  · simpa [fromCompressedSha2, compressSha2, toBytesBE, htakeWord3] using
+      toInt_toByte a.word3 4 hword3'
+
+/-- SHA-2 `ADRSc` is injective when both structural addresses lie in its exact field-width domain.
+No claim is made for arbitrary `Adrs`: compression truncates out-of-range fields. -/
+theorem compressSha2_injective_of_fits {a b : Adrs}
+    (haLayer : Fits 1 a.layer = true) (haTree : Fits 8 a.tree = true)
+    (haType : Fits 1 a.type = true) (haWord1 : Fits 4 a.word1 = true)
+    (haWord2 : Fits 4 a.word2 = true) (haWord3 : Fits 4 a.word3 = true)
+    (hbLayer : Fits 1 b.layer = true) (hbTree : Fits 8 b.tree = true)
+    (hbType : Fits 1 b.type = true) (hbWord1 : Fits 4 b.word1 = true)
+    (hbWord2 : Fits 4 b.word2 = true) (hbWord3 : Fits 4 b.word3 = true)
+    (hbytes : a.compressSha2 = b.compressSha2) : a = b := by
+  rw [← fromCompressedSha2_compressSha2 a haLayer haTree haType haWord1 haWord2 haWord3,
+    ← fromCompressedSha2_compressSha2 b hbLayer hbTree hbType hbWord1 hbWord2 hbWord3,
+    hbytes]
+
 /-- The full serialization packaged at its exact wire width. -/
 def toVector (a : Adrs) : Bytes 32 := ⟨a.toBytes.toArray, by simp⟩
 
