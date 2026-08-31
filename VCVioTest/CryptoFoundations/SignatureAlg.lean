@@ -48,6 +48,17 @@ def rerandomizeAdv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg where
 def freshMessageAdv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg where
   main _ := pure (true, (true, true))
 
+/-- Return a fresh-message pair whose signature encodes the wrong message. -/
+def invalidFreshMessageAdv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg where
+  main _ := pure (true, (false, true))
+
+/-- Query one message, then return a fresh pair for that message whose signature encodes the
+other message. This reaches the same-message branch but must still fail verification. -/
+def invalidSameMessageAdv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg where
+  main _ := do
+    let _ ← (unifSpec + (Bool →ₒ ToySignature)).query (Sum.inr false)
+    return (false, (true, true))
+
 /-- Replaying an exact signing-oracle response loses SUF-CMA. -/
 example :
     SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp replayAdv {true} = 0 := by
@@ -83,6 +94,15 @@ example : replayAdv.advantage ProbCompRuntime.probComp = 0 ∧
     twoSignatureAlg, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
 
+/-- Exact-pair freshness alone is insufficient: an invalid fresh-message signature loses. -/
+example :
+    SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp
+        invalidFreshMessageAdv {true} = 0 := by
+  simp [SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
+    invalidFreshMessageAdv, twoSignatureAlg,
+    SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
+    ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
+
 /-- Exact replay is excluded from the same-message residual as well as from SUF itself. This
 pins exact-pair freshness independently in the residual experiment and its advantage endpoint. -/
 example :
@@ -91,6 +111,17 @@ example :
   simp [SignatureAlg.strongUnforgeableAdv.sameMessageAdvantage,
     SignatureAlg.sameMessageStrongUnforgeableExp, replayAdv, twoSignatureAlg,
     SignatureAlg.sameMessageStrongUnforgeableGame,
+    SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
+    ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
+
+/-- The same-message residual requires verification: a new but invalid pair has probability
+zero even after the message was submitted to the signing oracle. -/
+example :
+    SignatureAlg.sameMessageStrongUnforgeableExp ProbCompRuntime.probComp
+        invalidSameMessageAdv {true} = 0 := by
+  simp [SignatureAlg.sameMessageStrongUnforgeableExp,
+    SignatureAlg.sameMessageStrongUnforgeableGame,
+    invalidSameMessageAdv, twoSignatureAlg,
     SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
 
@@ -110,5 +141,37 @@ example :
     rerandomizeAdv, freshMessageAdv, twoSignatureAlg, SignatureAlg.signingOracle,
     SignatureAlg.signingLogContains, QueryLog.wasQueried,
     ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
+
+/-- The canonical plain-probability runtime satisfies the pure-return factoring law required by
+the generic joint-execution partition. -/
+private lemma probComp_evalSPMF_bind_pure
+    {α β : Type} (f : α → β) (mx : ProbComp α) :
+    ProbCompRuntime.probComp.evalSPMF (mx >>= fun x => pure (f x)) =
+      f <$> ProbCompRuntime.probComp.evalSPMF mx := by
+  change evalSPMF (mx >>= fun x => pure (f x)) = f <$> evalSPMF mx
+  rw [bind_pure_comp, evalSPMF_map]
+
+/-- Direct executable-runtime consumer of the public exact SUF partition. -/
+example (adv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg) :
+    adv.advantage ProbCompRuntime.probComp =
+      adv.toUnforgeableAdv.advantage ProbCompRuntime.probComp +
+        adv.sameMessageAdvantage ProbCompRuntime.probComp :=
+  adv.advantage_eq_euf_add_sameMessage ProbCompRuntime.probComp probComp_evalSPMF_bind_pure
+
+/-- The toy scheme satisfies the vacuous unit upper bound for the same-message residual. -/
+private lemma twoSignatureBinding :
+    twoSignatureAlg.SameMessageBinding ProbCompRuntime.probComp 1 := by
+  intro adv
+  unfold SignatureAlg.strongUnforgeableAdv.sameMessageAdvantage
+    SignatureAlg.sameMessageStrongUnforgeableExp
+  exact (MeasureTheory.measure_mono (Set.subset_univ {true})).trans
+    (SPMF.toMeasure_apply_univ_le_one _)
+
+/-- Direct consumer of the quantitative `SameMessageBinding` packaging. -/
+example (adv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg) :
+    adv.advantage ProbCompRuntime.probComp ≤
+      adv.toUnforgeableAdv.advantage ProbCompRuntime.probComp + 1 :=
+  adv.advantage_le_euf_add_of_sameMessageBinding ProbCompRuntime.probComp
+    probComp_evalSPMF_bind_pure twoSignatureBinding
 
 end SignatureAlgTest

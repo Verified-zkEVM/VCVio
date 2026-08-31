@@ -169,7 +169,7 @@ the adversary successfully forged a signature. The ambient oracle family is forw
 the signing oracle is logged, and the final check requires both signature validity and that the
 forged message was never submitted to the signing oracle. -/
 noncomputable def unforgeableExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) : SPMF Bool :=
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) :=
   letI : DecidableEq M := Classical.decEq M
   letI : DecidableEq S := Classical.decEq S
   runtime.evalSPMF do
@@ -199,7 +199,7 @@ signature; the bound `adv.advantage ≤ Pr[unforgeableExpNoFresh ⇒ true]` (see
 `unforgeableAdv.advantage_le_unforgeableExpNoFresh`) is the first game-hop
 in standard CMA-to-NMA reductions. -/
 noncomputable def unforgeableExpNoFresh {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) : SPMF Bool :=
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) :=
   letI : DecidableEq M := Classical.decEq M
   letI : DecidableEq S := Classical.decEq S
   runtime.evalSPMF do
@@ -303,6 +303,22 @@ lemma signingLogContains_singleton_self (msg : M) (σ : S) :
     signingLogContains ([⟨msg, σ⟩] : QueryLog (M →ₒ S)) msg σ = true := by
   simp [signingLogContains]
 
+/-- Exact returned-pair membership implies ordinary message membership in the same signing log. -/
+lemma wasQueried_eq_true_of_signingLogContains_eq_true
+    (log : QueryLog (M →ₒ S)) (msg : M) (σ : S)
+    (h : signingLogContains log msg σ = true) : log.wasQueried msg = true := by
+  rw [QueryLog.wasQueried_eq_decide_mem_map_fst, decide_eq_true_eq]
+  rw [signingLogContains, decide_eq_true_eq] at h
+  exact List.mem_map.mpr ⟨⟨msg, σ⟩, h, rfl⟩
+
+omit [DecidableEq M] [DecidableEq S] in
+/-- The runtime's compatibility measure agrees with its executable point probability on a
+singleton. This is the local bridge used by the measure-valued security experiments below. -/
+private lemma compatibilityMeasure_apply_singleton
+    (dist : SPMF Bool) (b : Bool) : dist.toMeasure {b} = Pr[= b | dist] := by
+  rw [SPMF.toMeasure_apply_singleton]
+  rfl
+
 /-- A SUF-CMA (strong unforgeability under chosen-message attack) adversary. As in EUF-CMA it
 receives the public key and has access to the scheme's ambient oracles plus the signing oracle,
 but its final pair is fresh when that exact `(message, signature)` pair was never returned. -/
@@ -339,15 +355,15 @@ noncomputable def strongUnforgeableExp
   (runtime.evalSPMF (strongUnforgeableGame adv)).toMeasure
 
 omit [DecidableEq M] [DecidableEq S] in
-/-- On a singleton event, the measure-valued SUF experiment agrees with the legacy executable
+/-- On a singleton event, the measure-valued SUF experiment agrees with the executable
 point-probability reading. -/
 lemma strongUnforgeableExp_apply_singleton
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) (b : Bool) :
     strongUnforgeableExp runtime adv {b} =
       Pr[= b | runtime.evalSPMF (strongUnforgeableGame adv)] := by
-  rw [strongUnforgeableExp, SPMF.toMeasure_apply_singleton]
-  rfl
+  exact compatibilityMeasure_apply_singleton
+    (runtime.evalSPMF (strongUnforgeableGame adv)) b
 
 /-- The SUF-CMA success probability: the probability of outputting a valid pair not previously
 returned by the signing oracle. -/
@@ -394,15 +410,15 @@ noncomputable def sameMessageStrongUnforgeableExp
   (runtime.evalSPMF (sameMessageStrongUnforgeableGame adv)).toMeasure
 
 omit [DecidableEq M] [DecidableEq S] in
-/-- On a singleton event, the measure-valued same-message experiment agrees with the legacy
+/-- On a singleton event, the measure-valued same-message experiment agrees with the
 executable point-probability reading. -/
 lemma sameMessageStrongUnforgeableExp_apply_singleton
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) (b : Bool) :
     sameMessageStrongUnforgeableExp runtime adv {b} =
       Pr[= b | runtime.evalSPMF (sameMessageStrongUnforgeableGame adv)] := by
-  rw [sameMessageStrongUnforgeableExp, SPMF.toMeasure_apply_singleton]
-  rfl
+  exact compatibilityMeasure_apply_singleton
+    (runtime.evalSPMF (sameMessageStrongUnforgeableGame adv)) b
 
 /-- Probability of the same-message, new-signature event in the strong-unforgeability
 experiment. -/
@@ -420,20 +436,20 @@ def SameMessageBinding (sigAlg : SignatureAlg (OracleComp spec) M PK SK S)
   ∀ adv : strongUnforgeableAdv sigAlg, adv.sameMessageAdvantage runtime ≤ ε
 
 omit [DecidableEq M] [DecidableEq S] in
-/-- **Generic SUF-to-EUF partition.** Every strong forgery either uses a message never queried
+/-- **Exact generic SUF-to-EUF partition.** Every strong forgery either uses a message never queried
 to the signing oracle (an ordinary EUF-CMA forgery) or is a new valid signature for a previously
-queried message.  Consequently SUF-CMA is EUF-CMA plus precisely the latter, scheme-specific
-same-message event.
+queried message. These events are disjoint and exhaustive inside the exact-pair-fresh success
+event, so SUF-CMA equals EUF-CMA plus precisely the latter, scheme-specific same-message event.
 
 The `h_pull` hypothesis is the same runtime-factoring law used by the EUF freshness lemma above.
 It is satisfied by the standard state-oracle runtimes used by VCVio. -/
-lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
+lemma strongUnforgeableAdv.advantage_eq_euf_add_sameMessage
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
     (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
       runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
     (adv : strongUnforgeableAdv sigAlg) :
-    adv.advantage runtime ≤
+    adv.advantage runtime =
       adv.toUnforgeableAdv.advantage runtime + adv.sameMessageAdvantage runtime := by
   let : DecidableEq M := Classical.decEq M
   let : DecidableEq S := Classical.decEq S
@@ -505,10 +521,10 @@ lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
     rw [← h_pull]
     congr 1
     simp only [hjoint_def, monad_norm]
-  rw [hSuf, hEuf, hSame, SPMF.toMeasure_apply_singleton,
-    SPMF.toMeasure_apply_singleton]
+  rw [hSuf, hEuf, hSame, compatibilityMeasure_apply_singleton,
+    compatibilityMeasure_apply_singleton]
   change Pr[= true | (fun t : M × S × QueryLog (M →ₒ S) × Bool =>
-      !signingLogContains t.2.2.1 t.1 t.2.1 && t.2.2.2) <$> runtime.evalSPMF joint] ≤
+      !signingLogContains t.2.2.1 t.1 t.2.1 && t.2.2.2) <$> runtime.evalSPMF joint] =
     Pr[= true | (fun t : M × S × QueryLog (M →ₒ S) × Bool =>
       !t.2.2.1.wasQueried t.1 && t.2.2.2) <$> runtime.evalSPMF joint] +
     Pr[= true | (fun t : M × S × QueryLog (M →ₒ S) × Bool =>
@@ -516,9 +532,27 @@ lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
         runtime.evalSPMF joint]
   rw [← probEvent_eq_eq_probOutput, ← probEvent_eq_eq_probOutput,
     ← probEvent_eq_eq_probOutput, probEvent_map, probEvent_map, probEvent_map]
-  exact (probEvent_mono'' fun t h => by
-    by_cases hm : t.2.2.1.wasQueried t.1 = true <;> simp_all).trans
-      (probEvent_or_le (runtime.evalSPMF joint) _ _)
+  simp only [probEvent_eq_tsum_ite, ← ENNReal.tsum_add]
+  refine tsum_congr fun t => ?_
+  by_cases hm : t.2.2.1.wasQueried t.1 = true
+  · cases hp : signingLogContains t.2.2.1 t.1 t.2.1 <;>
+      cases hv : t.2.2.2 <;> simp_all
+  · cases hp : signingLogContains t.2.2.1 t.1 t.2.1
+    · cases hv : t.2.2.2 <;> simp_all
+    · exact (hm (wasQueried_eq_true_of_signingLogContains_eq_true
+        t.2.2.1 t.1 t.2.1 hp)).elim
+
+omit [DecidableEq M] [DecidableEq S] in
+/-- Convenient inequality corollary of the exact SUF-to-EUF partition. -/
+lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
+      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
+    (adv : strongUnforgeableAdv sigAlg) :
+    adv.advantage runtime ≤
+      adv.toUnforgeableAdv.advantage runtime + adv.sameMessageAdvantage runtime :=
+  (adv.advantage_eq_euf_add_sameMessage runtime h_pull).le
 
 omit [DecidableEq M] [DecidableEq S] in
 /-- SUF-CMA from EUF-CMA plus a quantitative same-message binding property. -/
@@ -529,9 +563,9 @@ lemma strongUnforgeableAdv.advantage_le_euf_add_of_sameMessageBinding
       runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
     {ε : ℝ≥0∞} (hbinding : sigAlg.SameMessageBinding runtime ε)
     (adv : strongUnforgeableAdv sigAlg) :
-    adv.advantage runtime ≤ adv.toUnforgeableAdv.advantage runtime + ε :=
-  (adv.advantage_le_euf_add_sameMessage runtime h_pull).trans
-    (add_le_add le_rfl (hbinding adv))
+    adv.advantage runtime ≤ adv.toUnforgeableAdv.advantage runtime + ε := by
+  rw [adv.advantage_eq_euf_add_sameMessage runtime h_pull]
+  exact add_le_add le_rfl (hbinding adv)
 
 end strongUnforgeable
 
@@ -551,7 +585,7 @@ structure eufNmaAdv (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
 /-- The EUF-NMA experiment: generate a key pair, give the public key to the adversary
 (with no signing oracle), and check whether the adversary produced a valid forgery. -/
 def eufNmaExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : eufNmaAdv sigAlg) : SPMF Bool :=
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : eufNmaAdv sigAlg) :=
   runtime.evalSPMF do
     let (pk, _) ← sigAlg.keygen
     let (msg, σ) ← adv.main pk
@@ -584,7 +618,7 @@ structure managedRoNmaAdv (sigAlg : SignatureAlg (OracleComp spec) M PK SK S) wh
 and a `QueryCache`, then verify the forgery through `withCacheOverlay` so that programmed
 entries take priority over the real oracle. -/
 def managedRoNmaExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : managedRoNmaAdv sigAlg) : SPMF Bool :=
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : managedRoNmaAdv sigAlg) :=
   runtime.evalSPMF do
     let (pk, _) ← sigAlg.keygen
     let ((msg, σ), cache) ← adv.main pk

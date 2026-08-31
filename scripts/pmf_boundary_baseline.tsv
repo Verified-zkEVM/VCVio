@@ -39,7 +39,7 @@ VCVio/CryptoFoundations/KeyEncapMech.lean	3
 VCVio/CryptoFoundations/MacAlg.lean	1
 VCVio/CryptoFoundations/SecExp.lean	18
 VCVio/CryptoFoundations/SeededFork.lean	1
-VCVio/CryptoFoundations/SignatureAlg.lean	9
+VCVio/CryptoFoundations/SignatureAlg.lean	5
 VCVio/CryptoFoundations/SymmEncAlg.lean	13
 VCVio/CryptoFoundations/SymmEncAlg/MeasureCompatibility.lean	4
 VCVio/EvalDist/BitVec.lean	2
