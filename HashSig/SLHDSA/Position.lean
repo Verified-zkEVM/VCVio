@@ -18,7 +18,7 @@ low-bits/high-bits transition between hypertree layers.
 
 ## References
 
-- NIST FIPS 205, Section 4.1 and Algorithms 19–20 (message-digest decomposition)
+- NIST FIPS 205, Section 9 and Algorithms 19–20 (message-digest decomposition)
 - NIST FIPS 205, Algorithms 12–13 (hypertree layer recurrence)
 -/
 

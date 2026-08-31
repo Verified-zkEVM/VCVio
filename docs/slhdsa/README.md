@@ -17,13 +17,17 @@ Independent S05 r0 accepted exact candidate `33770467d9209d0e270db5edd7a88958641
 with zero findings; its review artifact is committed and pushed at exact head
 `7e029e660b9353f70e9de03ab4e6cc71f54e27da`.
 
-S06 is the current unpushed candidate. It adds a thin FIPS 205 §6 bounded XMSS interface over the
-existing canonical Merkle/XMSS semantics, exact authentication-path and climb characterizations,
-checked reachable SHA2/SHAKE addresses, and exhaustive height-two plus bounded concrete
-construction regressions. It does not claim an XMSS KAT, ACVP conformance, hash refinement, or a
-security reduction. PR #595 remains reserved across S07--S09; PRs #594 and #596 remain reserved
-for later security sessions. The cumulative addressed-Merkle/security stack at PR #591 remains
-unmerged and reserved for S15 integration.
+Independent S06 r0 accepted exact candidate `91845ddfa8a704400600fdbf1c64f82659c4ca52`
+with zero findings; its review artifact is committed and pushed at exact head
+`91e97865f4d1c91fac18172e41d91000142194de`.
+
+B02 is the current unpushed boundary candidate. It merges exact PR #595 head
+`be823fbb6745e95412efe2bf49e0e46055953413` as a preserved second parent and consumes its
+authoritative `DigestParts`, digest byte extents, `splitDigest`, `forsAdrs`, and `LayerPosition`
+surface across S07--S09. Scheme now uses the digest-derived FORS address, but its hypertree calls
+still pass `Adrs.zero`, tree zero, and `idxLeaf`; that path is FIPS-correct only for valid `d = 1`
+parameters. General `LayerPosition` consumption remains S08/S09. PRs #594 and #596 remain reserved
+for later security sessions, while cumulative PR #591 remains reserved for S15 integration.
 
 S01's pinned authority, provenance, and strict sample-schema parser anchors remain schema/provenance
 evidence rather than implementation conformance. Its descriptor/AST machinery is frozen absent a
@@ -65,8 +69,8 @@ building libraries or running algorithms; it does re-elaborate Lake configuratio
 TOML to verify the parser target and absence of effective source-directory/path-argument selectors.
 The second also checks the HashSig build, the authoritative elaborated-environment policy audit and
 compiled negative fixtures, generated umbrella, isolation rules, inherited KATs, S03 codecs, S04
-primitives, S05 WOTS construction, S06 XMSS construction, and the S01 provenance/strict-parser
-runtime gates. Immediately
+primitives, S05 WOTS construction, S06 XMSS construction, the B02 digest/position declaration
+probe, and the S01 provenance/strict-parser runtime gates. Immediately
 before the parser
 runtime, it reconfigures, rehashes, and disables caches while building into an initially absent
 private output root. It attests all three frozen parser/schema source-to-object-to-executable chains,

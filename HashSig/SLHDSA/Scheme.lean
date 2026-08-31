@@ -23,6 +23,11 @@ an explicit `HasQuery` operation:
 - `emptyContextMessage`, the FIPS 205 external-message encoding used by the canonical external
   scheme in `HashSig.SLHDSA.RandomOracle`.
 
+The current signing and verification programs pass `Adrs.zero`, tree index `0`, and
+`parts.idxLeaf.val` to the existing one-layer hypertree interface. This is FIPS-correct only for
+valid `d = 1` parameters, where `DigestParts.idxTree_eq_zero_of_d_eq_one` proves that the parsed
+tree index is zero. General hypertree consumption of `LayerPosition` is deferred to S08/S09.
+
 Signing follows FIPS 205 Algorithm 19 literally: after `H_msg`, it creates the FORS signature,
 recovers the FORS public key from that signature, and signs the recovered value with the
 hypertree. It does not independently regenerate the FORS public key.

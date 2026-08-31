@@ -32,7 +32,12 @@ Current records:
   accepted candidate `33770467...`; its review artifact is committed/pushed at `7e029e66...`.
 - [S06 — Merkle and XMSS construction](S06-xmss-construction.md): local bounded FIPS §6 adapter
   over the canonical Merkle/XMSS engine, exact authentication positions and climb equation,
-  checked concrete addresses, exhaustive height-two traces, and bounded concrete regressions. The
-  unpushed candidate requires fresh independent review.
+  checked concrete addresses, exhaustive height-two traces, and bounded concrete regressions.
+  Independent r0 accepted candidate `91845ddf...`; its review artifact is committed/pushed at
+  `91e97865...`.
+- [B02 — PR #595 digest/position boundary integration](B02-pr595-digest-position-integration.md):
+  history-preserving merge of the authoritative digest decomposition, FORS address, and typed
+  hypertree-position surface, with the current Scheme d=1 limitation explicit. The unpushed
+  integration candidate requires fresh independent review before S07.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

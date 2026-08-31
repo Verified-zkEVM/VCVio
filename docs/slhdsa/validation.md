@@ -171,7 +171,7 @@ static importer, retrieves the production regular-initializer ordinary and IR ar
 exact expected rejections (so loss of either path fails), and checks that the sentinel remains absent
 before and after audit. The temporary
 `.olean`, `.ilean`, `.ir`, and C artifacts are confined to a `mktemp` directory removed on exit.
-The wrapper then runs the exact S03, 11-root S04, 14-root S05, and 21-root S06
+The wrapper then runs the exact S03, 11-root S04, 14-root S05, 21-root S06, and 15-root B02
 declaration/axiom probes, generated umbrella check, extern and interop isolation, the two inherited
 SLH-DSA KAT executables, and the S03 data/codec, S04 primitive, S05 WOTS, and S06 XMSS construction
 executables. The KAT PASS results are legacy runtime regression evidence only, and the S03 PASS
@@ -260,6 +260,15 @@ binding, and the retained canonical XMSS roots. The exact 21-root union remains 
 Classical.choice, Quot.sound}` and no root depends on `sorryAx`. The candidate audit observes 36
 HashSig modules and 2,748 owned constants with the same exact five compiler helpers and standard
 axiom union. These counts remain reproducible observations rather than stable limits.
+
+The B02 probe pins exact message-digest byte extents and parsed indices, the valid-`d = 1`
+tree-zero boundary, typed hypertree-position initialization/transition/final/address facts,
+digest-derived FORS address fields, and retained Scheme query bounds and honest correctness. Its
+15 exact roots remain within `{propext, Classical.choice, Quot.sound}` and none depends on
+`sorryAx`. After integrating PR #595, the audit observes 37 HashSig modules and 2,852 owned
+constants with the same exact five compiler helpers and standard axiom union. These counts are
+reproducible observations rather than stable limits; general `LayerPosition` consumption remains
+an S08/S09 construction obligation.
 
 ## Proof gate
 

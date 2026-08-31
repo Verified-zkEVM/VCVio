@@ -111,11 +111,16 @@ soundness, and executable evaluation. Structural correctness does not imply cryp
 
 ## Current implementation
 
-The main tree is generic over opaque carriers and primitives but effectively implements only `d=1`:
-`HtSig` is one XMSS signature; layer/tree are fixed to zero; `splitDigest` omits `idx_tree`. The
-concrete SHA2-128-24 verifier uses fixed slices and an embedded C-reference regression vector. C13 is
-a parallel WOTS+C/FORS+C construction with `d=2`, keccak, and conditional grind correctness. Neither
-is the full FIPS205-12 external API.
+The main tree is generic over opaque carriers and primitives but its Scheme/hypertree path still
+implements only `d=1`: `HtSig` is one XMSS signature and the hypertree call fixes its base address
+and tree index to zero. `Position.splitDigest` now preserves typed `(md, idx_tree, idx_leaf)`, FORS
+uses the digest-derived tree/leaf address, and `LayerPosition` provides the bounded initial position,
+low-bit/high-bit layer transition, and address projection for all approved profiles. Scheme does not
+yet consume that trajectory for its hypertree call. Its fixed zero tree is FIPS-correct only for
+valid `d=1`, where `DigestParts.idxTree_eq_zero_of_d_eq_one` proves the parsed tree index is zero;
+general consumption remains S08/S09. The concrete SHA2-128-24 verifier uses fixed slices and an
+embedded C-reference regression vector. C13 is a parallel WOTS+C/FORS+C construction with `d=2`,
+keccak, and conditional grind correctness. Neither is the full FIPS205-12 external API.
 
 ## API contract
 

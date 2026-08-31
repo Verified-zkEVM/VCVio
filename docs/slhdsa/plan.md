@@ -124,7 +124,8 @@ without named owner approval.
   S11+; PR #595 (`be823fbb...`) owns `DigestParts`/typed `Position` across S07--S09 (S07 digest
   splitting/FORS addressing and S08/S09 typed hypertree positions); PR #596
   (`7068fd99...`) owns DSPR/OpenPRE/UD-C/ITSR games for S11--S16 and is coordinated with #594.
-  None is merged here, and S05 must not duplicate their deliverables.
+  None was merged at B01, and S05 did not duplicate their deliverables. B02 later consumes #595
+  through its exact two-parent merge; #594/#596 remain deferred.
 - Record and review: `sessions/B01-upstream-boundary-integration.md`; a fresh independent boundary
   review must accept the exact integration head before it is pushed or S05 begins.
 
@@ -140,7 +141,7 @@ without named owner approval.
   mathematical checksum view; `chainLengthsCore` uses it operationally; generic and checked SHA2
   address lemmas exclude fallback masking; all twelve `approvedPrimitives` profiles pass the
   construction exercise. PR #595 remains reserved across S07--S09, PR #594 for S11+, and PR #596
-  for S11--S16.
+  for S11--S16 at the S05 boundary; B02 later consumes #595 without rewriting S05.
 - Acceptance: independent r0 accepted exact candidate
   `33770467d9209d0e270db5edd7a88958641db2b2`; its review artifact is committed and pushed at
   exact head `7e029e660b9353f70e9de03ab4e6cc71f54e27da`.
@@ -162,18 +163,41 @@ without named owner approval.
 - Concurrent boundary: cumulative PR #591 exact inspected head
   `eff02207a77464edb07d750b8dbb00a9667543db` remains unmerged. Its addressed
   transcript/extractor/shared-ROM security stack is reserved for S15; S06 does not edit generic
-  addressed-Merkle files. PRs #594--#596 retain their recorded later ownership, including #595
-  across S07--S09.
-- Gates: exhaustive tiny trees, runtime vectors, axioms on roots; review
-  `reviews/S06-xmss-construction-review.md`.
+  addressed-Merkle files. At the S06 boundary PRs #594--#596 retained their recorded later
+  ownership, including #595 across S07--S09.
+- Acceptance: independent r0 accepted exact candidate
+  `91845ddfa8a704400600fdbf1c64f82659c4ca52`; its review artifact is committed and pushed at
+  exact head `91e97865f4d1c91fac18172e41d91000142194de`.
+
+### B02 — PR #595 digest and position boundary integration
+
+- Inputs: exact accepted/pushed S06 review head
+  `91e97865f4d1c91fac18172e41d91000142194de`; exact PR #595 head
+  `be823fbb6745e95412efe2bf49e0e46055953413`, based on already-merged PR #593.
+- Merge: normal no-ff merge commit `ad7a21c01af50559f6e8a4eec7a193aa601c74ee` with the
+  accepted S06 head as first parent and exact PR #595 as second parent; no conflict, squash, or
+  cherry-pick.
+- Ownership: PR #595's `DigestParts`, digest byte slices, `splitDigest`, `forsAdrs`, and
+  `LayerPosition.initial`/`next`/`toAdrs` plus trajectory tests are authoritative across S07--S09.
+  Successors consume rather than duplicate or rename them.
+- Scheme boundary: FORS uses `parts.forsAdrs`. Signing and verification still call the d=1
+  hypertree interface with `Adrs.zero`, tree zero, and `parts.idxLeaf.val`; this is FIPS-correct
+  only for valid `d = 1`, where the parsed `idxTree` is proved zero. General
+  `LayerPosition`-driven hypertree consumption is deferred to S08/S09, not B02 or S07.
+- Concurrent boundary: PR #594/#596 remain later security work and cumulative PR #591 remains
+  reserved for S15. None is merged by B02.
+- Gates: all-twelve digest/trajectory canaries, Scheme compatibility and correctness roots, exact
+  declaration/axiom footprint, aggregate/import/isolation/provenance checks, and independent B02
+  review before S07.
 
 ### S07 — FORS construction
 
-- Inputs: S03–S06; FIPS Section 8 and Appendix-A extraction delta.
+- Inputs: accepted B02 over S03–S06; FIPS Section 8 and Appendix-A extraction delta.
 - Allowed: FORS modules/tests; no reduction.
 - Deliverables: FIPS big-endian indices, valid trees/paths, sign/recovery correctness, separate
   fixtures for Appendix A's reference-alignment and per-tree-index clarification, and an explicit
-  incompatibility test against round-3 LSB-first behavior.
+  incompatibility test against round-3 LSB-first behavior. Consume authoritative
+  `DigestParts.md`, `DigestParts.forsAdrs`, and typed digest bounds; do not duplicate PR #595.
 - Gates: extraction fixtures, tiny exhaustive tests, axioms; review
   `reviews/S07-fors-construction-review.md`.
 
@@ -182,7 +206,7 @@ without named owner approval.
 - Inputs: S03–S07; FIPS Section 7; C13 `d=2` only as a non-normative design comparison.
 - Allowed: main hypertree and digest-split internals.
 - Deliverables: general `d` fold, exactly `d` signatures, tree/leaf index evolution, correctness for
-  every FIPS set; no C13 merge.
+  every FIPS set; consume authoritative `LayerPosition`; no C13 merge.
 - Gates: `d=1/2/>2` tests, all-set execution, axioms; review
   `reviews/S08-hypertree-review.md`.
 

@@ -388,6 +388,7 @@ lake env lean scripts/slhdsa/S03InventoryProbe.lean
 lake env lean scripts/slhdsa/S04InventoryProbe.lean
 lake env lean scripts/slhdsa/S05InventoryProbe.lean
 lake env lean scripts/slhdsa/S06InventoryProbe.lean
+lake env lean scripts/slhdsa/B02InventoryProbe.lean
 lake env lean scripts/slhdsa/PolicyAudit.lean
 
 fixture_root="$(mktemp -d)"

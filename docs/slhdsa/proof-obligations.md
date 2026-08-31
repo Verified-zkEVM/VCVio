@@ -52,9 +52,14 @@ No checkbox is discharged by a build alone.
 - [ ] S06 packages FIPS §6 leaf/node bounds and authentication width intrinsically, proves exact
   sibling entries and the honest FIPS climb equation to the canonical Merkle engine, retains honest
   recovery and arbitrary-signature binding, and closes approved reachable SHA2/SHAKE addresses.
-  Focused proofs and construction regressions pass; independent S06 review remains pending. FORS
-  and general `d` hypertree exactness remain successor work.
-- [ ] Digest yields `(md,idx_tree,idx_leaf)` with bounds and correct per-layer evolution.
+  Independent S06 r0 accepted the exact candidate with zero findings. FORS and general `d`
+  hypertree exactness remain successor work.
+- [x] B02 consumes PR #595's typed `(md,idx_tree,idx_leaf)` decomposition, exact byte extents,
+  intrinsic bounds, FORS address, and `LayerPosition` low-bit/high-bit trajectory for all approved
+  profiles. The integration remains pending independent B02 review.
+- [ ] Scheme consumes `LayerPosition` through a general `d`-layer hypertree. It currently uses the
+  digest-derived FORS address but passes `Adrs.zero`, tree zero, and `idxLeaf` to the d=1 hypertree;
+  this is FIPS-correct only when valid `d=1` makes `idxTree = 0`. General consumption is S08/S09.
 - [ ] Internal and external pure/pre-hash domain separation, context, OID, deterministic/hedged modes.
 - [ ] Completeness and reject behavior load-bearing roots have zero `sorryAx`.
 - [ ] ACVP evidence covers every claimed cell; positive pre-hash coverage is tracked separately due to
