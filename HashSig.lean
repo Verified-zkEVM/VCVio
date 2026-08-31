@@ -15,6 +15,8 @@ public import HashSig.SLHDSA.Concrete.Sha2
 public import HashSig.SLHDSA.Encoding
 public import HashSig.SLHDSA.Fors
 public import HashSig.SLHDSA.Hypertree
+public import HashSig.SLHDSA.HypertreeGeneral
+public import HashSig.SLHDSA.HypertreeGeneral.QueryBound
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.Params
 public import HashSig.SLHDSA.Position
