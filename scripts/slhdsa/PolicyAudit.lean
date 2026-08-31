@@ -79,7 +79,27 @@ def compilerHelperAllowlist : Array (Name × Name) := #[
   (`SLHDSA.base2bGo._unsafe_rec, `SLHDSA.base2bGo),
   (`SLHDSA.WotsChecksum.digitsOfBaseW._unsafe_rec, `SLHDSA.WotsChecksum.digitsOfBaseW),
   (`SLHDSA.chainWith._unsafe_rec, `SLHDSA.chainWith),
-  (`SLHDSA.C13.chain._unsafe_rec, `SLHDSA.C13.chain)
+  (`SLHDSA.C13.chain._unsafe_rec, `SLHDSA.C13.chain),
+  (`SLHDSA.xmssAuthPathWith._unsafe_rec, `SLHDSA.xmssAuthPathWith),
+  (`SLHDSA.forsAuthPathVector._unsafe_rec, `SLHDSA.forsAuthPathVector),
+  (`SLHDSA.forsAuthPathVectorM._unsafe_rec, `SLHDSA.forsAuthPathVectorM),
+  (`SLHDSA.LayerPosition.atWithLayer._unsafe_rec, `SLHDSA.LayerPosition.atWithLayer),
+  (`SLHDSA.GeneralHypertree.signFromPosition._unsafe_rec,
+    `SLHDSA.GeneralHypertree.signFromPosition),
+  (`SLHDSA.GeneralHypertree.signFromPositionM._unsafe_rec,
+    `SLHDSA.GeneralHypertree.signFromPositionM),
+  (`SLHDSA.GeneralHypertree.signFromPositionWith._unsafe_rec,
+    `SLHDSA.GeneralHypertree.signFromPositionWith),
+  (`SLHDSA.GeneralHypertree.recoverFromPosition._unsafe_rec,
+    `SLHDSA.GeneralHypertree.recoverFromPosition),
+  (`SLHDSA.GeneralHypertree.recoverFromPositionM._unsafe_rec,
+    `SLHDSA.GeneralHypertree.recoverFromPositionM),
+  (`SLHDSA.GeneralHypertree.recoverFromPositionWith._unsafe_rec,
+    `SLHDSA.GeneralHypertree.recoverFromPositionWith),
+  (`SLHDSA.GeneralHypertree.signLoopQueryBound._unsafe_rec,
+    `SLHDSA.GeneralHypertree.signLoopQueryBound),
+  (`SLHDSA.Security.perfectInternalCoords._unsafe_rec,
+    `SLHDSA.Security.perfectInternalCoords)
 ]
 
 private def isAllowedCompilerHelper (declName : Name) : Bool :=
@@ -154,7 +174,8 @@ private def validateCompilerHelpers (env : Environment) : CommandElabM Unit := w
     let axioms ← Lean.collectAxioms helper
     unless !axioms.contains helper && !axioms.contains ``sorryAx do
       throwError "compiler helper {helper} is an axiom or transitively uses sorryAx"
-  logInfo m!"SLH-DSA compiler-helper allowlist: PASS (5 exact `_unsafe_rec` auxiliaries)"
+  logInfo m!"SLH-DSA compiler-helper allowlist: PASS \
+    ({compilerHelperAllowlist.size} exact `_unsafe_rec` auxiliaries)"
 
 private def addUniqueFinding (findings : Array Finding) (finding : Finding) : Array Finding :=
   if findings.contains finding then findings else findings.push finding
