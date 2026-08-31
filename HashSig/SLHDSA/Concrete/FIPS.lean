@@ -196,6 +196,34 @@ def sha2AdrsKey (address : Adrs) : Bytes 22 :=
   | .ok value => value
   | .error _ => zeroBytes 22
 
+/-- On the checked SHA-2 address domain, the total primitive key is exactly `ADRSc`; the zero-key
+fallback is unreachable. -/
+theorem sha2AdrsKey_eq_compressed (address : Adrs)
+    (hcanonical : address.isCanonical = true)
+    (hlayer : Adrs.Fits 1 address.layer = true)
+    (htree : Adrs.Fits 8 address.tree = true) :
+    sha2AdrsKey address = ⟨address.compressSha2.toArray, by simp⟩ := by
+  simp [sha2AdrsKey, Adrs.compressSha2Checked, hcanonical, hlayer, htree]
+
+/-- The total SHA-2 primitive address key is injective between two checked-domain addresses.
+The one-byte type hypothesis is explicit because `ADRSc` compresses the full four-byte ADRS type
+field; canonicality supplies the three four-byte word bounds. -/
+theorem sha2AdrsKey_injective_of_domain {a b : Adrs}
+    (haCanonical : a.isCanonical = true) (haLayer : Adrs.Fits 1 a.layer = true)
+    (haTree : Adrs.Fits 8 a.tree = true) (haType : Adrs.Fits 1 a.type = true)
+    (hbCanonical : b.isCanonical = true) (hbLayer : Adrs.Fits 1 b.layer = true)
+    (hbTree : Adrs.Fits 8 b.tree = true) (hbType : Adrs.Fits 1 b.type = true)
+    (hkey : sha2AdrsKey a = sha2AdrsKey b) : a = b := by
+  rcases Adrs.fits_of_isCanonical a haCanonical with
+    ⟨_, _, _, haWord1, haWord2, haWord3⟩
+  rcases Adrs.fits_of_isCanonical b hbCanonical with
+    ⟨_, _, _, hbWord1, hbWord2, hbWord3⟩
+  rw [sha2AdrsKey_eq_compressed a haCanonical haLayer haTree,
+    sha2AdrsKey_eq_compressed b hbCanonical hbLayer hbTree] at hkey
+  apply Adrs.compressSha2_injective_of_fits haLayer haTree haType haWord1 haWord2 haWord3
+    hbLayer hbTree hbType hbWord1 hbWord2 hbWord3
+  exact congrArg Vector.toList hkey
+
 /-- The single variable-arity SHA2 tweakable-hash collection. FIPS 205 uses SHA-256 for the
 singleton `F` view in every category; larger arities use SHA-256 at `n = 16` and SHA-512 at
 `n = 24, 32`. -/
