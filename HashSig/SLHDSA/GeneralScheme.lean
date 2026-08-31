@@ -15,8 +15,10 @@ This module is the arbitrary-`d` construction boundary.  It retains every output
 the digest-derived FORS address, and invokes the general hypertree from the typed layer-zero
 position.  Key generation computes the root of the top-layer XMSS tree.
 
-The older `SLHDSA.Scheme` API remains available as an explicit one-layer compatibility surface
-while its downstream security consumers migrate to this construction.
+The structured key and signature types are the canonical types owned by `SLHDSA.Scheme`; this
+module generalizes the algorithms without introducing a parallel wire representation.  The older
+`d = 1` algorithms remain available as an explicit compatibility surface while downstream
+security consumers migrate to this construction.
 
 ## References
 
@@ -29,11 +31,10 @@ namespace SLHDSA.GeneralScheme
 
 open OracleComp
 
-/-- Structured internal signature with an intrinsically `d`-layer hypertree component. -/
-structure SignatureCore (vp : ValidatedParams) (core : CorePrimitives vp.params) where
-  randomness : core.Y
-  fors : ForsSigCore vp.params core
-  hypertree : GeneralHypertree.Signature vp core
+/-- The canonical structured internal signature, indexed by a validated parameter set here so the
+general Algorithms 18--20 can use it without defining a second representation. -/
+abbrev SignatureCore (vp : ValidatedParams) (core : CorePrimitives vp.params) :=
+  SLHDSA.SignatureCore vp.params core
 
 /-- FIPS Algorithm 18: derive the public root from layer `d - 1`, tree zero. -/
 def keygenInternalM (vp : ValidatedParams) (core : CorePrimitives vp.params)

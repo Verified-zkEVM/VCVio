@@ -34,35 +34,25 @@ open OracleComp
 
 /-- At depth one, the intrinsic general-hypertree signature is equivalent to the established
 single XMSS signature. -/
-def hypertreeSignatureEquiv (vp : ValidatedParams) (core : CorePrimitives vp.params)
-    (hd : vp.params.d = 1) :
-    GeneralHypertree.Signature vp core ≃ HtSigCore vp.params core where
-  toFun sig := sig[0]'(by omega)
-  invFun sig := (#v[sig]).cast hd.symm
-  left_inv sig := by
-    apply Vector.ext
-    intro i hi
-    have hi0 : i = 0 := by omega
-    subst i
-    simp
-  right_inv sig := by
-    simp
+abbrev hypertreeSignatureEquiv (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    (_hd : vp.params.d = 1) :
+    GeneralHypertree.Signature vp core ≃ HtSigCore vp.params core :=
+  Equiv.refl _
 
 /-- At depth one, the typed initial hypertree address is layer zero, tree zero, exactly as in the
 established one-layer API. -/
 theorem initial_toAdrs_eq_htAdrs_zero (vp : ValidatedParams) (hd : vp.params.d = 1)
     (parts : DigestParts vp.params) :
     (LayerPosition.initial vp parts).toAdrs = htAdrs Adrs.zero 0 := by
-  apply Adrs.ext <;>
-    simp [LayerPosition.toAdrs, htAdrs,
-      DigestParts.idxTree_eq_zero_of_d_eq_one vp.valid hd parts]
+  simp [LayerPosition.toAdrs, htAdrs,
+    DigestParts.idxTree_eq_zero_of_d_eq_one vp.valid hd parts]
 
 /-- General and established one-layer root generation are the same free-oracle program. -/
 theorem rootM_eq_htRootM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (hd : vp.params.d = 1) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] (sk : core.SkSeed) (pk : core.PkSeed) :
     (GeneralHypertree.rootM vp core sk pk : m core.Y) =
-      (htRootM core sk pk Adrs.zero 0 : m core.Y) := by
+      (htRootM core hd sk pk Adrs.zero 0 : m core.Y) := by
   simp [GeneralHypertree.rootM, GeneralHypertree.rootWith, htRootM, htRootWith,
     GeneralHypertree.layerAdrs, htAdrs, hd]
 
@@ -77,15 +67,21 @@ theorem signM_toOneLayer_eq (vp : ValidatedParams) (core : CorePrimitives vp.par
       let sig ← GeneralHypertree.signM vp core msg sk pk parts
       return hypertreeSignatureEquiv vp core hd sig) : m (HtSigCore vp.params core)) =
       ((do
-        let sig ← htSignM core msg sk pk Adrs.zero 0 parts.idxLeaf.val
-        let _ ← htPkFromSigM core msg sig pk Adrs.zero 0 parts.idxLeaf.val
+        let sig ← htSignM core hd msg sk pk Adrs.zero 0 parts.idxLeaf.val
+        let _ ← htPkFromSigM core hd msg sig pk Adrs.zero 0 parts.idxLeaf.val
         return sig) : m (HtSigCore vp.params core)) := by
   rcases vp with ⟨⟨n, h, d, hp, a, k, lgw⟩, hvalid⟩
   dsimp at hd ⊢
   subst d
+  have hsingle (sig : XmssSigCore _ core) :
+      #v[sig] = HtSigCore.singleLayer rfl sig := by
+    apply Vector.ext
+    intro i hi
+    simp [HtSigCore.singleLayer]
   simp [GeneralHypertree.signM, GeneralHypertree.signFromPositionM,
-    hypertreeSignatureEquiv, initial_toAdrs_eq_htAdrs_zero, htSignM, htPkFromSigM,
-    htSignWith, htPkFromSigWith, xmssSignM, xmssPkFromSigM]
+    initial_toAdrs_eq_htAdrs_zero, htSignM, htPkFromSigM,
+    htSignWith, htPkFromSigWith, hsingle,
+    xmssSignM, xmssPkFromSigM]
 
 /-- General depth-one root recovery is exactly the established one-layer free-oracle program after
 converting the intrinsic singleton signature. -/
@@ -95,14 +91,14 @@ theorem pkFromSigM_eq_htPkFromSigM (vp : ValidatedParams)
     (msg : core.Y) (sig : GeneralHypertree.Signature vp core) (pk : core.PkSeed)
     (parts : DigestParts vp.params) :
     (GeneralHypertree.pkFromSigM vp core msg sig pk parts : m core.Y) =
-      (htPkFromSigM core msg (hypertreeSignatureEquiv vp core hd sig) pk Adrs.zero 0
+      (htPkFromSigM core hd msg (hypertreeSignatureEquiv vp core hd sig) pk Adrs.zero 0
         parts.idxLeaf.val : m core.Y) := by
   rcases vp with ⟨⟨n, h, d, hp, a, k, lgw⟩, hvalid⟩
   dsimp at hd ⊢
   subst d
   simp [GeneralHypertree.pkFromSigM, GeneralHypertree.recoverFromPositionM,
-    hypertreeSignatureEquiv, initial_toAdrs_eq_htAdrs_zero,
-    htPkFromSigM, htPkFromSigWith, xmssPkFromSigM, Vector.head]
+    initial_toAdrs_eq_htAdrs_zero, htPkFromSigM, htPkFromSigWith,
+    HtSigCore.getSingleLayer, xmssPkFromSigM, Vector.head]
 
 /-- General depth-one verification is exactly the established one-layer free-oracle program after
 converting the intrinsic singleton signature. -/
@@ -112,7 +108,7 @@ theorem verifyM_eq_htVerifyM (vp : ValidatedParams) (core : CorePrimitives vp.pa
     (msg : core.Y) (sig : GeneralHypertree.Signature vp core) (pk : core.PkSeed)
     (parts : DigestParts vp.params) (pkRoot : core.Y) :
     (GeneralHypertree.verifyM vp core msg sig pk parts pkRoot : m Bool) =
-      (htVerifyM core msg (hypertreeSignatureEquiv vp core hd sig) pk Adrs.zero 0
+      (htVerifyM core hd msg (hypertreeSignatureEquiv vp core hd sig) pk Adrs.zero 0
         parts.idxLeaf.val pkRoot : m Bool) := by
   simp [GeneralHypertree.verifyM, htVerifyM, pkFromSigM_eq_htPkFromSigM vp core hd]
 
@@ -121,12 +117,12 @@ theorem verifyM_eq_htVerifyM (vp : ValidatedParams) (core : CorePrimitives vp.pa
 /-- The general depth-one top root is the established one-layer root. -/
 theorem root_eq_htRoot (vp : ValidatedParams) (prims : Primitives vp.params)
     (hd : vp.params.d = 1) (sk : prims.SkSeed) (pk : prims.PkSeed) :
-    GeneralHypertree.root vp prims sk pk = htRoot prims sk pk Adrs.zero 0 := by
+    GeneralHypertree.root vp prims sk pk = htRoot prims hd sk pk Adrs.zero 0 := by
   change simulateQ (PublicHash.impl prims)
       (GeneralHypertree.rootM vp prims.core sk pk :
         OracleComp (publicHashSpec prims.core) prims.Y) =
     simulateQ (PublicHash.impl prims)
-      (htRootM prims.core sk pk Adrs.zero 0 :
+      (htRootM prims.core hd sk pk Adrs.zero 0 :
         OracleComp (publicHashSpec prims.core) prims.Y)
   rw [rootM_eq_htRootM vp prims.core hd]
 
@@ -136,7 +132,7 @@ theorem sign_toOneLayer_eq (vp : ValidatedParams) (prims : Primitives vp.params)
     (hd : vp.params.d = 1) (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
     (parts : DigestParts vp.params) :
     hypertreeSignatureEquiv vp prims.core hd (GeneralHypertree.sign vp prims msg sk pk parts) =
-      htSign prims msg sk pk Adrs.zero 0 parts.idxLeaf.val := by
+      htSign prims hd msg sk pk Adrs.zero 0 parts.idxLeaf.val := by
   have h := congrArg (simulateQ (PublicHash.impl prims))
     (signM_toOneLayer_eq vp prims.core hd
       (m := OracleComp (publicHashSpec prims.core)) msg sk pk parts)
@@ -146,7 +142,7 @@ theorem sign_toOneLayer_eq (vp : ValidatedParams) (prims : Primitives vp.params)
           OracleComp (publicHashSpec prims.core)
             (GeneralHypertree.Signature vp prims.core))).run =
     (simulateQ (PublicHash.impl prims)
-      (htSignM prims.core msg sk pk Adrs.zero 0 parts.idxLeaf.val :
+      (htSignM prims.core hd msg sk pk Adrs.zero 0 parts.idxLeaf.val :
         OracleComp (publicHashSpec prims.core) (HtSigCore vp.params prims.core))).run
   have hr := congrArg Id.run h
   simpa only [simulateQ_bind, simulateQ_pure, Id.run_bind, Id.run_pure] using hr
@@ -157,13 +153,13 @@ theorem pkFromSig_eq_htPkFromSig (vp : ValidatedParams) (prims : Primitives vp.p
     (sig : GeneralHypertree.Signature vp prims.core) (pk : prims.PkSeed)
     (parts : DigestParts vp.params) :
     GeneralHypertree.pkFromSig vp prims msg sig pk parts =
-      htPkFromSig prims msg (hypertreeSignatureEquiv vp prims.core hd sig) pk Adrs.zero 0
+      htPkFromSig prims hd msg (hypertreeSignatureEquiv vp prims.core hd sig) pk Adrs.zero 0
         parts.idxLeaf.val := by
   change simulateQ (PublicHash.impl prims)
       (GeneralHypertree.pkFromSigM vp prims.core msg sig pk parts :
         OracleComp (publicHashSpec prims.core) prims.Y) =
     simulateQ (PublicHash.impl prims)
-      (htPkFromSigM prims.core msg (hypertreeSignatureEquiv vp prims.core hd sig) pk
+      (htPkFromSigM prims.core hd msg (hypertreeSignatureEquiv vp prims.core hd sig) pk
         Adrs.zero 0 parts.idxLeaf.val : OracleComp (publicHashSpec prims.core) prims.Y)
   rw [pkFromSigM_eq_htPkFromSigM vp prims.core hd]
 
@@ -173,13 +169,13 @@ theorem verify_eq_htVerify (vp : ValidatedParams) (prims : Primitives vp.params)
     (msg : prims.Y) (sig : GeneralHypertree.Signature vp prims.core) (pk : prims.PkSeed)
     (parts : DigestParts vp.params) (pkRoot : prims.Y) :
     GeneralHypertree.verify vp prims msg sig pk parts pkRoot =
-      htVerify prims msg (hypertreeSignatureEquiv vp prims.core hd sig) pk Adrs.zero 0
+      htVerify prims hd msg (hypertreeSignatureEquiv vp prims.core hd sig) pk Adrs.zero 0
         parts.idxLeaf.val pkRoot := by
   change simulateQ (PublicHash.impl prims)
       (GeneralHypertree.verifyM vp prims.core msg sig pk parts pkRoot :
         OracleComp (publicHashSpec prims.core) Bool) =
     simulateQ (PublicHash.impl prims)
-      (htVerifyM prims.core msg (hypertreeSignatureEquiv vp prims.core hd sig) pk
+      (htVerifyM prims.core hd msg (hypertreeSignatureEquiv vp prims.core hd sig) pk
         Adrs.zero 0 parts.idxLeaf.val pkRoot : OracleComp (publicHashSpec prims.core) Bool)
   rw [verifyM_eq_htVerifyM vp prims.core hd]
 
@@ -187,17 +183,10 @@ theorem verify_eq_htVerify (vp : ValidatedParams) (prims : Primitives vp.params)
 
 /-- At depth one, the structured general signature is equivalent to the established tuple
 representation. -/
-def schemeSignatureEquiv (vp : ValidatedParams) (core : CorePrimitives vp.params)
-    (hd : vp.params.d = 1) :
-    GeneralScheme.SignatureCore vp core ≃ SignatureCore vp.params core where
-  toFun sig := (sig.randomness, sig.fors, hypertreeSignatureEquiv vp core hd sig.hypertree)
-  invFun sig := ⟨sig.1, sig.2.1, (hypertreeSignatureEquiv vp core hd).symm sig.2.2⟩
-  left_inv sig := by
-    cases sig
-    simp
-  right_inv sig := by
-    rcases sig with ⟨randomness, fors, hypertree⟩
-    simp
+abbrev schemeSignatureEquiv (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    (_hd : vp.params.d = 1) :
+    GeneralScheme.SignatureCore vp core ≃ SignatureCore vp.params core :=
+  Equiv.refl _
 
 /-- General and established depth-one key generation are the same free-oracle program. -/
 theorem keygenInternalM_eq_slhKeygenInternalM (vp : ValidatedParams)
@@ -206,7 +195,7 @@ theorem keygenInternalM_eq_slhKeygenInternalM (vp : ValidatedParams)
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
     (GeneralScheme.keygenInternalM vp core skSeed skPrf pkSeed :
       m (PublicKeyCore core × SecretKeyCore core)) =
-      (slhKeygenInternalM core skSeed skPrf pkSeed :
+      (slhKeygenInternalM hd core skSeed skPrf pkSeed :
         m (PublicKeyCore core × SecretKeyCore core)) := by
   simp [GeneralScheme.keygenInternalM, slhKeygenInternalM,
     rootM_eq_htRootM vp core hd]
@@ -227,17 +216,22 @@ theorem signInternalM_toOneLayer_eq (vp : ValidatedParams)
         let parts := splitDigest vp.params digest
         let forsSig ← forsSignM core parts.md.toList sk.skSeed sk.pkSeed parts.forsAdrs
         let forsPk ← forsPkFromSigM core forsSig parts.md.toList sk.pkSeed parts.forsAdrs
-        let htSig ← htSignM core forsPk sk.skSeed sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
-        let _ ← htPkFromSigM core forsPk htSig sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
-        return (R, forsSig, htSig)) : m (SignatureCore vp.params core)) := by
+        let htSig ← htSignM core hd forsPk sk.skSeed sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
+        let _ ← htPkFromSigM core hd forsPk htSig sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
+        return ⟨R, forsSig, htSig⟩) : m (SignatureCore vp.params core)) := by
   rcases vp with ⟨⟨n, h, d, hp, a, k, lgw⟩, hvalid⟩
   dsimp at hd ⊢
   subst d
-  simp [GeneralScheme.signInternalM, schemeSignatureEquiv,
+  have hsingle (oneSig : XmssSigCore _ core) :
+      #v[oneSig] = HtSigCore.singleLayer rfl oneSig := by
+    apply Vector.ext
+    intro i hi
+    simp [HtSigCore.singleLayer]
+  simp [GeneralScheme.signInternalM,
     GeneralHypertree.signM, GeneralHypertree.signFromPositionM,
-    hypertreeSignatureEquiv, initial_toAdrs_eq_htAdrs_zero,
+    initial_toAdrs_eq_htAdrs_zero,
     htSignM, htPkFromSigM, htSignWith, htPkFromSigWith,
-    xmssSignM, xmssPkFromSigM, monad_norm]
+    hsingle, xmssSignM, xmssPkFromSigM, monad_norm]
 
 /-- General and established depth-one verification are the same free-oracle program after
 signature conversion. -/
@@ -247,7 +241,7 @@ theorem verifyInternalM_eq_slhVerifyInternalM (vp : ValidatedParams)
     [DecidableEq core.Y] (msg : List Byte) (sig : GeneralScheme.SignatureCore vp core)
     (pk : PublicKeyCore core) :
     (GeneralScheme.verifyInternalM vp core msg sig pk : m Bool) =
-      (slhVerifyInternalM core msg (schemeSignatureEquiv vp core hd sig) pk : m Bool) := by
+      (slhVerifyInternalM hd core msg (schemeSignatureEquiv vp core hd sig) pk : m Bool) := by
   simp [GeneralScheme.verifyInternalM, slhVerifyInternalM, schemeSignatureEquiv,
     verifyM_eq_htVerifyM vp core hd]
 
@@ -256,13 +250,13 @@ theorem keygenInternal_eq_slhKeygenInternal (vp : ValidatedParams)
     (prims : Primitives vp.params) (hd : vp.params.d = 1)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
     GeneralScheme.keygenInternal vp prims skSeed skPrf pkSeed =
-      slhKeygenInternal prims skSeed skPrf pkSeed := by
+      slhKeygenInternal hd prims skSeed skPrf pkSeed := by
   change (simulateQ (PublicHash.impl prims)
       (GeneralScheme.keygenInternalM vp prims.core skSeed skPrf pkSeed :
         OracleComp (publicHashSpec prims.core)
           (PublicKeyCore prims.core × SecretKeyCore prims.core))).run =
     (simulateQ (PublicHash.impl prims)
-      (slhKeygenInternalM prims.core skSeed skPrf pkSeed :
+      (slhKeygenInternalM hd prims.core skSeed skPrf pkSeed :
         OracleComp (publicHashSpec prims.core)
           (PublicKeyCore prims.core × SecretKeyCore prims.core))).run
   rw [keygenInternalM_eq_slhKeygenInternalM vp prims.core hd]
@@ -275,7 +269,7 @@ theorem signInternal_toOneLayer_eq (vp : ValidatedParams)
     (msg : List Byte) (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
     schemeSignatureEquiv vp prims.core hd
         (GeneralScheme.signInternal vp prims msg sk addrnd) =
-      slhSignInternal prims msg sk addrnd := by
+      slhSignInternal hd prims msg sk addrnd := by
   have h := congrArg (simulateQ (PublicHash.impl prims))
     (signInternalM_toOneLayer_eq vp prims.core hd
       (m := OracleComp (publicHashSpec prims.core)) msg sk addrnd)
@@ -285,7 +279,7 @@ theorem signInternal_toOneLayer_eq (vp : ValidatedParams)
           OracleComp (publicHashSpec prims.core)
             (GeneralScheme.SignatureCore vp prims.core))).run =
     (simulateQ (PublicHash.impl prims)
-      (slhSignInternalM prims.core msg sk addrnd :
+      (slhSignInternalM hd prims.core msg sk addrnd :
         OracleComp (publicHashSpec prims.core) (SignatureCore vp.params prims.core))).run
   have hr := congrArg Id.run h
   simpa only [slhSignInternalM, simulateQ_bind, simulateQ_pure,
@@ -298,12 +292,12 @@ theorem verifyInternal_eq_slhVerifyInternal (vp : ValidatedParams)
     (msg : List Byte) (sig : GeneralScheme.SignatureCore vp prims.core)
     (pk : PublicKeyCore prims.core) :
     GeneralScheme.verifyInternal vp prims msg sig pk =
-      slhVerifyInternal prims msg (schemeSignatureEquiv vp prims.core hd sig) pk := by
+      slhVerifyInternal hd prims msg (schemeSignatureEquiv vp prims.core hd sig) pk := by
   change (simulateQ (PublicHash.impl prims)
       (GeneralScheme.verifyInternalM vp prims.core msg sig pk :
         OracleComp (publicHashSpec prims.core) Bool)).run =
     (simulateQ (PublicHash.impl prims)
-      (slhVerifyInternalM prims.core msg (schemeSignatureEquiv vp prims.core hd sig) pk :
+      (slhVerifyInternalM hd prims.core msg (schemeSignatureEquiv vp prims.core hd sig) pk :
         OracleComp (publicHashSpec prims.core) Bool)).run
   rw [verifyInternalM_eq_slhVerifyInternalM vp prims.core hd]
 
