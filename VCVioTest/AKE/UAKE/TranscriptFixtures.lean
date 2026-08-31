@@ -19,8 +19,6 @@ contain the timestamps an honest relay produces under the clock discipline of
 `recordOne` / `recordOpt`: each recorded message consumes one tick, and the
 adversary relaying a message to the other session records it there at a later
 tick.
-
-These fixtures do *not* exercise `opImpl`, `recordOne`, or `recordOpt`.
 -/
 
 @[expose] public section
