@@ -50,22 +50,25 @@ def freshMessageAdv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg where
 
 /-- Replaying an exact signing-oracle response loses SUF-CMA. -/
 example :
-    SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp replayAdv = pure false := by
-  simp [SignatureAlg.strongUnforgeableExp, replayAdv, twoSignatureAlg,
+    SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp replayAdv {true} = 0 := by
+  simp [SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
+    replayAdv, twoSignatureAlg,
     SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
 
 /-- A different valid signature on an already queried message is an eligible strong forgery. -/
 example :
-    SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp rerandomizeAdv = pure true := by
-  simp [SignatureAlg.strongUnforgeableExp, rerandomizeAdv, twoSignatureAlg,
+    SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp rerandomizeAdv {true} = 1 := by
+  simp [SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
+    rerandomizeAdv, twoSignatureAlg,
     SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
 
 /-- A valid signature on a fresh message wins exactly as in the ordinary unforgeability game. -/
 example :
-    SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp freshMessageAdv = pure true := by
-  simp [SignatureAlg.strongUnforgeableExp, freshMessageAdv, twoSignatureAlg,
+    SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp freshMessageAdv {true} = 1 := by
+  simp [SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
+    freshMessageAdv, twoSignatureAlg,
     SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
 
@@ -75,8 +78,20 @@ example : replayAdv.advantage ProbCompRuntime.probComp = 0 ∧
     rerandomizeAdv.advantage ProbCompRuntime.probComp = 1 ∧
     freshMessageAdv.advantage ProbCompRuntime.probComp = 1 := by
   simp [SignatureAlg.strongUnforgeableAdv.advantage,
-    SignatureAlg.strongUnforgeableExp, replayAdv, rerandomizeAdv, freshMessageAdv,
+    SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
+    replayAdv, rerandomizeAdv, freshMessageAdv,
     twoSignatureAlg, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
+    ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
+
+/-- Exact replay is excluded from the same-message residual as well as from SUF itself. This
+pins exact-pair freshness independently in the residual experiment and its advantage endpoint. -/
+example :
+    SignatureAlg.sameMessageStrongUnforgeableExp ProbCompRuntime.probComp replayAdv {true} = 0 ∧
+      replayAdv.sameMessageAdvantage ProbCompRuntime.probComp = 0 := by
+  simp [SignatureAlg.strongUnforgeableAdv.sameMessageAdvantage,
+    SignatureAlg.sameMessageStrongUnforgeableExp, replayAdv, twoSignatureAlg,
+    SignatureAlg.sameMessageStrongUnforgeableGame,
+    SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
 
 /-- The SUF partition is exact on the two qualitatively different forgery branches: rerandomizing
@@ -90,6 +105,7 @@ example :
   simp [SignatureAlg.unforgeableAdv.advantage, SignatureAlg.unforgeableExp,
     SignatureAlg.strongUnforgeableAdv.sameMessageAdvantage,
     SignatureAlg.sameMessageStrongUnforgeableExp,
+    SignatureAlg.sameMessageStrongUnforgeableGame,
     SignatureAlg.strongUnforgeableAdv.toUnforgeableAdv,
     rerandomizeAdv, freshMessageAdv, twoSignatureAlg, SignatureAlg.signingOracle,
     SignatureAlg.signingLogContains, QueryLog.wasQueried,

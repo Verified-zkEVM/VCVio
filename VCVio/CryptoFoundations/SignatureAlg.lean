@@ -309,17 +309,15 @@ but its final pair is fresh when that exact `(message, signature)` pair was neve
 structure strongUnforgeableAdv (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
   main (pk : PK) : OracleComp (spec + (M →ₒ S)) (M × S)
 
-/-- Strong unforgeability under chosen-message attack. The signing oracle logs every successful
-returned `(message, signature)` pair. The adversary succeeds exactly when its final pair verifies
-and that pair does not occur in the returned-pair log. In particular, a different valid signature
-for a previously signed message remains an eligible strong forgery. -/
-noncomputable def strongUnforgeableExp
+/-- The computation underlying strong unforgeability under chosen-message attack. The signing
+oracle logs every successful returned `(message, signature)` pair. The adversary succeeds exactly
+when its final pair verifies and that pair does not occur in the returned-pair log. -/
+noncomputable def strongUnforgeableGame
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : strongUnforgeableAdv sigAlg) :=
+    (adv : strongUnforgeableAdv sigAlg) : OracleComp spec Bool :=
   letI : DecidableEq M := Classical.decEq M
   letI : DecidableEq S := Classical.decEq S
-  runtime.evalSPMF do
+  do
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
@@ -332,13 +330,32 @@ noncomputable def strongUnforgeableExp
     let verified ← sigAlg.verify pk msg σ
     return !signingLogContains log msg σ && verified
 
+/-- The canonical measure-valued SUF-CMA experiment. The explicit `SPMF.toMeasure` application
+is the compatibility boundary from the runtime's finite evaluator to VCVio's primary measure API. -/
+noncomputable def strongUnforgeableExp
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (adv : strongUnforgeableAdv sigAlg) : MeasureTheory.Measure Bool :=
+  (runtime.evalSPMF (strongUnforgeableGame adv)).toMeasure
+
+omit [DecidableEq M] [DecidableEq S] in
+/-- On a singleton event, the measure-valued SUF experiment agrees with the legacy executable
+point-probability reading. -/
+lemma strongUnforgeableExp_apply_singleton
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) (b : Bool) :
+    strongUnforgeableExp runtime adv {b} =
+      Pr[= b | runtime.evalSPMF (strongUnforgeableGame adv)] := by
+  rw [strongUnforgeableExp, SPMF.toMeasure_apply_singleton]
+  rfl
+
 /-- The SUF-CMA success probability: the probability of outputting a valid pair not previously
 returned by the signing oracle. -/
 noncomputable def strongUnforgeableAdv.advantage
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adv : strongUnforgeableAdv sigAlg) : ℝ≥0∞ :=
-  Pr[= true | strongUnforgeableExp runtime adv]
+  strongUnforgeableExp runtime adv {true}
 
 /-- Forget pair freshness and regard a strong-unforgeability adversary as an ordinary
 EUF-CMA adversary.  The oracle interface and adversary program are unchanged. -/
@@ -347,17 +364,16 @@ def strongUnforgeableAdv.toUnforgeableAdv
     (adv : strongUnforgeableAdv sigAlg) : unforgeableAdv sigAlg where
   main := adv.main
 
-/-- The extra event separating SUF-CMA from EUF-CMA: the adversary returns a valid, new
-signature for a message that it did submit to the signing oracle.  This event is intentionally
-defined without assigning it to a cryptographic assumption; doing so is scheme-specific (for
-example, it may require signature binding or a rerandomization argument). -/
-noncomputable def sameMessageStrongUnforgeableExp
+/-- The computation for the extra event separating SUF-CMA from EUF-CMA: the adversary returns a
+valid, new signature for a message that it did submit to the signing oracle. This event is
+intentionally defined without assigning it to a cryptographic assumption; doing so is
+scheme-specific (for example, it may require signature binding or a rerandomization argument). -/
+noncomputable def sameMessageStrongUnforgeableGame
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : strongUnforgeableAdv sigAlg) :=
+    (adv : strongUnforgeableAdv sigAlg) : OracleComp spec Bool :=
   letI : DecidableEq M := Classical.decEq M
   letI : DecidableEq S := Classical.decEq S
-  runtime.evalSPMF do
+  do
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
@@ -370,13 +386,31 @@ noncomputable def sameMessageStrongUnforgeableExp
     let verified ← sigAlg.verify pk msg σ
     return log.wasQueried msg && !signingLogContains log msg σ && verified
 
+/-- The canonical measure-valued same-message, new-signature experiment. -/
+noncomputable def sameMessageStrongUnforgeableExp
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (adv : strongUnforgeableAdv sigAlg) : MeasureTheory.Measure Bool :=
+  (runtime.evalSPMF (sameMessageStrongUnforgeableGame adv)).toMeasure
+
+omit [DecidableEq M] [DecidableEq S] in
+/-- On a singleton event, the measure-valued same-message experiment agrees with the legacy
+executable point-probability reading. -/
+lemma sameMessageStrongUnforgeableExp_apply_singleton
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) (b : Bool) :
+    sameMessageStrongUnforgeableExp runtime adv {b} =
+      Pr[= b | runtime.evalSPMF (sameMessageStrongUnforgeableGame adv)] := by
+  rw [sameMessageStrongUnforgeableExp, SPMF.toMeasure_apply_singleton]
+  rfl
+
 /-- Probability of the same-message, new-signature event in the strong-unforgeability
 experiment. -/
 noncomputable def strongUnforgeableAdv.sameMessageAdvantage
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adv : strongUnforgeableAdv sigAlg) : ℝ≥0∞ :=
-  Pr[= true | sameMessageStrongUnforgeableExp runtime adv]
+  sameMessageStrongUnforgeableExp runtime adv {true}
 
 /-- Quantitative scheme property needed in addition to EUF-CMA for strong unforgeability: every
 adversary has at most `ε` probability of returning a new valid signature for a message previously
@@ -403,9 +437,10 @@ lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
       adv.toUnforgeableAdv.advantage runtime + adv.sameMessageAdvantage runtime := by
   let : DecidableEq M := Classical.decEq M
   let : DecidableEq S := Classical.decEq S
-  unfold strongUnforgeableAdv.advantage strongUnforgeableExp
+  unfold strongUnforgeableAdv.advantage strongUnforgeableExp strongUnforgeableGame
     unforgeableAdv.advantage unforgeableExp
     strongUnforgeableAdv.sameMessageAdvantage sameMessageStrongUnforgeableExp
+    sameMessageStrongUnforgeableGame
   set joint : OracleComp spec (M × S × QueryLog (M →ₒ S) × Bool) := do
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
@@ -470,7 +505,16 @@ lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
     rw [← h_pull]
     congr 1
     simp only [hjoint_def, monad_norm]
-  rw [hSuf, hEuf, hSame, ← probEvent_eq_eq_probOutput, ← probEvent_eq_eq_probOutput,
+  rw [hSuf, hEuf, hSame, SPMF.toMeasure_apply_singleton,
+    SPMF.toMeasure_apply_singleton]
+  change Pr[= true | (fun t : M × S × QueryLog (M →ₒ S) × Bool =>
+      !signingLogContains t.2.2.1 t.1 t.2.1 && t.2.2.2) <$> runtime.evalSPMF joint] ≤
+    Pr[= true | (fun t : M × S × QueryLog (M →ₒ S) × Bool =>
+      !t.2.2.1.wasQueried t.1 && t.2.2.2) <$> runtime.evalSPMF joint] +
+    Pr[= true | (fun t : M × S × QueryLog (M →ₒ S) × Bool =>
+      t.2.2.1.wasQueried t.1 && !signingLogContains t.2.2.1 t.1 t.2.1 && t.2.2.2) <$>
+        runtime.evalSPMF joint]
+  rw [← probEvent_eq_eq_probOutput, ← probEvent_eq_eq_probOutput,
     ← probEvent_eq_eq_probOutput, probEvent_map, probEvent_map, probEvent_map]
   exact (probEvent_mono'' fun t h => by
     by_cases hm : t.2.2.1.wasQueried t.1 = true <;> simp_all).trans
