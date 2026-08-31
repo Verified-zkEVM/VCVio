@@ -288,12 +288,25 @@ with its explicit discarded-recovery trace; finite signing/recovery/verification
 encoded `AdrsKey` compatibility; the exact SUF event partition; structural reachable-target ledgers;
 and the conditional scheme-interface/proposition shape. Its 27 exact roots remain within
 `{propext, Classical.choice, Quot.sound}` and none depends on `sorryAx`. The query bounds are uniform
-structural upper bounds, not exact message-dependent counts. The current audit observes 44 HashSig
+structural upper bounds, not exact message-dependent counts. The B03 audit observed 44 HashSig
 modules and 3,447 owned constants and checks exactly seventeen named Lean-generated recursion
 helpers with safe ordinary parents, including the generated `perfectInternalCoords` ledger helper,
 and the unchanged standard axiom union. The callback-parametric `*With`
-refinement, concrete encoded injectivity, actual-query/target-input coverage, canonical PR #594/#596
-game adapters, the same-message SUF residual bound, and every security reduction remain open.
+refinement, concrete encoded injectivity, actual-query/target-input coverage, the same-message SUF
+residual bound, and every security reduction remain open.
+
+B04 imports `CanonicalGames` and `TraceTargets`. Focused elaboration checks encoded-address
+canonical problem instantiations, the uninhabited reduction-interface shape, WOTS address-and-budget
+contracts, and the deterministic logged-query consequence. Each inspected root uses only
+`{propext, Classical.choice, Quot.sound}` and none uses `sorryAx`. The source-policy fixture accepts
+qualified proof identifiers ending in `run_bind'`, `run_withLogging_apply`, `run_map`, or `run_pure`
+without weakening the existing unqualified `run_elab` or explicit mutation-token rejections.
+`CountingInterface`, a `ReductionAdversaries` inhabitant, outer-CMA log refinement,
+FORS/XMSS/hypertree trace bridges, canonical/bespoke experiment equivalences, and the master
+inequality remain open.
+The current B04 audit observes 46 HashSig modules and 3,612 owned constants, accepts the unchanged
+exact seventeen compiler-generated recursion helpers with their safe parents, and retains the exact
+standard transitive axiom union.
 
 ## Proof gate
 

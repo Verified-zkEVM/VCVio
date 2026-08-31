@@ -23,6 +23,7 @@
     {"id":"runtime-override","source":"@[implemented_by runtimeImpl] def logical : Nat := 0\n","expected":["runtime-override"]},
     {"id":"command-axiom-injection","source":"run_cmd Lean.addDecl (.axiomDecl payload)\n","expected":["environment-mutation"]},
     {"id":"run-elab-command","source":"run_elab do pure ()\n","expected":["environment-mutation"]},
+    {"id":"qualified-run-proof-identifiers","source":"example := by\n  simp only [WriterT.run_bind', QueryImpl.run_withLogging_apply]\n  simp only [Id.run_bind, Id.run_map, Id.run_pure]\n","expected":[]},
     {"id":"init-attribute","source":"@[init] def badInit : IO Unit := pure ()\n","expected":["runtime-attribute"]},
     {"id":"builtin-init-attribute","source":"@[builtin_init] def badInit : IO Unit := pure ()\n","expected":["runtime-attribute"]},
     {"id":"computed-field-attribute","source":"@[computed_field] sum : Bad → Nat := fun _ => 0\n","expected":["runtime-attribute"]},

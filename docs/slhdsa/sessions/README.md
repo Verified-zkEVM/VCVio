@@ -45,7 +45,11 @@ Current records:
   `recoverFromPosition_signFromPosition`/`pkFromSig_sign` and
   `GeneralScheme.verifyInternal_signInternal` discharge pure/fixed-answer arbitrary-depth
   correctness and internal completeness. Callback `*With` parity, S07 conformance/runtime, S09
-  codecs/external APIs, and all security reductions remain open. Independent r0 found only three
-  active-document inconsistencies; the docs-only repair requires fresh successor review.
+  codecs/external APIs, and all security reductions remain open. Independent r2 accepted exact
+  repair candidate `23a85b6d...` with zero findings.
+- [B04 — canonical-game and construction-trace visibility integration](B04-canonical-game-trace-integration.md):
+  history-preserving import of the canonical PR #594/#596 games, SLH-DSA problem instantiations,
+  and WOTS address-trace contracts. These are conditional interfaces; reductions, outer-CMA log
+  refinement, remaining construction traces, equivalences, and the master inequality stay open.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

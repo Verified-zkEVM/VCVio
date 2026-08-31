@@ -1,8 +1,8 @@
 # B03 concurrent construction/query/security-stack integration
 
-Status: integration implementation complete. Independent r0 found no blocking Lean issue and three
-active-document inconsistencies; this docs-only repair requires fresh successor review before push
-or S07.
+Status: accepted. Independent r0 found three active-document inconsistencies, r1 found one remaining
+index inconsistency, and r2 accepted exact repair candidate
+`23a85b6db2dd57e79a5dfab67a31b6d121193b57` with zero findings.
 
 Date: 2026-08-31
 Branch: `codex/sphincsplus-formalization`

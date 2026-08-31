@@ -22,14 +22,16 @@ with zero findings; its review artifact is committed and pushed at exact head
 `91e97865f4d1c91fac18172e41d91000142194de`.
 
 B02 and its remote reconciliation are independently accepted at reviewed head
-`609185098935feea82f4d5b6fb7a9d62aefce9c9`. B03 is the current unpushed boundary candidate. Its
+`609185098935feea82f4d5b6fb7a9d62aefce9c9`. Independent B03 r2 accepted the repaired integration
+candidate `23a85b6db2dd57e79a5dfab67a31b6d121193b57` with zero findings; its immutable review artifact
+is recorded at `e6ad65272816dfe78e0f2f5e6a0dccf5f3032cd1`. The B03
 normal merge series first imported `fe469308b758ac381b770fb83cee4a7f792400cd`, then folded exact
 latest shared head `2014783d7d461b64164e3ec2844ce7f1eeb4c846` into merge
 `8917b7edb64614ab5417575a383abab15e396f2e` without rewriting either history.
 Independent B03 r0 reviewed candidate `157855d88b9bc550de5964bdd90d112ee16ae9dd`
 with no blocking technical finding but failed it on three active-document inconsistencies. Its
-immutable FAIL artifact is committed at `17f1b060861a146b0bd2c4e67b0a7637b788feb4`;
-the current docs-only repair requires fresh successor review before B03 acceptance or S07.
+immutable FAIL artifact is committed at `17f1b060861a146b0bd2c4e67b0a7637b788feb4`; r1 found one
+remaining index inconsistency, and r2 accepted its exact repair.
 
 B03 imports intrinsic XMSS/FORS signatures, typed-position arbitrary-depth hypertree and general
 internal-scheme programs, their naturality/deterministic interpretations, and structural finite
@@ -42,11 +44,16 @@ performs the FIPS-mandated discarded final recovery and therefore has a longer f
 The exact SUF advantage partition and structural FORS/XMSS/WOTS reachable-target ledgers are useful
 security infrastructure, not reductions. The same-message SUF residual is unbounded; structural
 address/count/Nodup facts do not yet establish encoded injectivity, nonempty distinct-target batch
-packaging, actual-query coverage, target-input pairing, final-validity/disjointness, or canonical
-PR #594/#596 adapters. The new security interface remains conditional shape only:
-`ReductionSystem` is assumed and `RepairedMasterStatement` remains an unproved `Prop`. PRs #594 and
-#596 remain authoritative for generic games and require later adapters/equivalence, PR #585 theorem
-content may be ported but never raw-merged, and cumulative PR #591 remains reserved for S15.
+packaging, actual-query coverage, target-input pairing, or final-validity/disjointness.
+
+B04 history-preservingly imports the canonical PR #594/#596 generic games and adds thin SLH-DSA
+problem instantiations plus WOTS construction-address trace contracts. `CanonicalGames` and
+`TraceTargets` are conditional infrastructure: `CountingInterface`, an inhabitant of
+`ReductionAdversaries`, outer-CMA signing-log refinement, FORS/XMSS/hypertree trace bridges,
+old-to-canonical experiment equivalences, and the master inequality remain open. The security
+interface still assumes `ReductionSystem`, and `RepairedMasterStatement` remains an unproved
+`Prop`. PR #585 theorem content may be ported but never raw-merged, and cumulative PR #591 remains
+reserved for S15.
 
 S01's pinned authority, provenance, and strict sample-schema parser anchors remain schema/provenance
 evidence rather than implementation conformance. Its descriptor/AST machinery is frozen absent a

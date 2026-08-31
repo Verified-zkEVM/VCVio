@@ -86,9 +86,11 @@ No checkbox is discharged by a build alone.
   unproved `Prop`; neither discharges a security reduction.
 - [ ] The exact SUF advantage partition leaves the same-message residual unbounded and the repaired
   master statement EUF-only (PO-025).
-- [ ] Structural reachable-target ledgers still require concrete encoded injectivity, nonempty
-  `DistinctTargetBatch` packaging, actual-query/input alignment, final-validity/disjointness, and
-  canonical #594/#596 adapters (PO-026).
+- [ ] B04 instantiates the canonical #594/#596 games and proves WOTS programs stay within the
+  structural address ledger with their query bounds. The selected proof's `CountingInterface`, an
+  inhabitant of `ReductionAdversaries`, outer-CMA signing-log refinement, FORS/XMSS/hypertree trace
+  bridges, concrete encoded injectivity and distinct batches, old-to-canonical experiment
+  equivalences, and the master inequality remain PO-026.
 - [ ] Precise ITSR and selected tweakable-hash/PRF notions with positive target cardinalities.
 - [ ] Separate WOTS, FORS, XMSS/HT reductions; exact target/query/time transformations.
 - [ ] Sorry-free top composition with verified coefficients and quantitative computability.

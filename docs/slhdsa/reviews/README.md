@@ -93,11 +93,14 @@ files use the `-rN` suffix.
 - [B03 concurrent-stack integration review r1](B03-concurrent-stack-integration-review-r1.md):
   FAIL with zero blocking and one nonblocking reviews-index finding on docs-repair candidate
   `83fe7849a1bc8dfc8f046034b067200ac36a494b`; a fresh successor review is required.
+- [B03 concurrent-stack integration review r2](B03-concurrent-stack-integration-review-r2.md):
+  PASS with zero findings; exact repair candidate
+  `23a85b6db2dd57e79a5dfab67a31b6d121193b57` accepted.
 
 S03 implementation payload `caefbda5e7ed7cd7a6efb80191307de7a39eea43` and its repairs are accepted
 through r2. The immutable initial S04 FAIL is committed at
 `69cdabd443bf9c6bf203f8f5bb36dd54cdc86803`; its S04-001 repair and the later B01 boundary are
-accepted as recorded above. B02 is accepted at the exact reviewed head recorded above; B03 remains
-unaccepted pending a zero-finding successor review of the current minimal index repair.
+accepted as recorded above. B02 is accepted at the exact reviewed head recorded above, and B03 is
+accepted by the zero-finding r2 review. B04 integration requires its own fresh review.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

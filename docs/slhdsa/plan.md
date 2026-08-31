@@ -220,12 +220,28 @@ at exact reviewed head `609185098935feea82f4d5b6fb7a9d62aefce9c9`.
   extractor integration.
 - Gates: intrinsic API migration, exact B03 axiom probe, focused construction/query/security builds,
   retained runtimes, aggregate/import/isolation/docs/provenance/policy, and independent review.
-  Independent r0 found no Lean issue and three active-document inconsistencies; this bounded repair
-  requires a fresh successor review.
+  Independent r0 found no Lean issue and three active-document inconsistencies, r1 found one
+  remaining index inconsistency, and r2 accepted exact repair candidate
+  `23a85b6db2dd57e79a5dfab67a31b6d121193b57` with zero findings.
+
+### B04 — canonical-game and construction-trace visibility integration
+
+- Inputs: accepted B03 review head `e6ad65272816dfe78e0f2f5e6a0dccf5f3032cd1` and exact shared
+  head `c149dc23d2545aa4afab2705c7247af4608021ad`, reconciled by a normal no-ff merge.
+- Imported result: canonical PR #594/#596 generic final-validity, DSPR, OpenPRE, UD-C, and ITSR
+  games; SLH-DSA encoded-address problem instantiations; structural construction-address queries;
+  and WOTS generation/sign/recovery trace-and-budget contracts.
+- Boundary: `CanonicalGames.ReductionAdversaries` supplies required field types, not an inhabitant.
+  The imported trace predicate reaches WOTS programs and deterministic logged interpretations, not
+  the atomic outer-CMA signing log. `CountingInterface`, CMA log refinement, FORS/XMSS/hypertree
+  trace bridges, canonical/bespoke experiment equivalences, and a master inequality remain open.
+- Gates: focused canonical-game/trace modules and generic-game tests, exact standard axiom
+  footprints, source composite, strict policy scanner/audit, aggregate build, authoritative wrapper,
+  and independent review. No S07 construction or security reduction is part of B04.
 
 ### S07 — FORS conformance construction
 
-- Inputs: accepted B03 boundary over S03–S06/B02; FIPS Section 8 and Appendix-A extraction delta.
+- Inputs: accepted B04 boundary over B03/S03–S06/B02; FIPS Section 8 and Appendix-A extraction delta.
 - Allowed: FORS modules/tests; no reduction.
 - Deliverables: FIPS big-endian indices, valid trees/paths, sign/recovery correctness, separate
   fixtures for Appendix A's reference-alignment and per-tree-index clarification, and an explicit

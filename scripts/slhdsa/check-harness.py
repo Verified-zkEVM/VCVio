@@ -281,8 +281,8 @@ S03_DECLARATION_SPANS = {
     "DECL-039": (169, 1, 171, 65),
     "DECL-040": (185, 1, 191, 28),
     "DECL-041": (188, 1, 198, 18),
-    "DECL-042": (302, 1, 312, 48),
-    "DECL-043": (314, 1, 317, 20),
+    "DECL-042": (362, 1, 372, 48),
+    "DECL-043": (374, 1, 377, 20),
     "DECL-044": (34, 1, 36, 42),
     "DECL-045": (39, 1, 41, 42),
     "DECL-046": (44, 1, 46, 42),
@@ -292,9 +292,9 @@ S03_DECLARATION_SPANS = {
     "DECL-050": (79, 1, 81, 22),
     "DECL-051": (87, 1, 107, 35),
     "DECL-052": (122, 1, 127, 35),
-    "DECL-053": (248, 1, 268, 37),
-    "DECL-054": (336, 1, 339, 63),
-    "DECL-055": (342, 1, 344, 47),
+    "DECL-053": (308, 1, 328, 37),
+    "DECL-054": (396, 1, 399, 63),
+    "DECL-055": (402, 1, 404, 47),
 }
 S03_DECLARATION_AXIOMS = {
     "DECL-033": ["propext"],
@@ -435,15 +435,15 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
         (3881, "cdfaaa4aad22cd5b6cc28e5863fd5de30949b3c3406cea9eea14e0f941a9976b"),
     "docs/slhdsa/matrices/coverage.csv":
-        (8813, "7e986b8f14fc8b125327609a726e52d3387c5c6d5737327788388ec8636d3d1c"),
+        (9016, "c53c5e1d51cb7cff6bec4f7c4d7284790bb25aa11460ba796729791611e5de54"),
     "docs/slhdsa/matrices/decisions.csv":
         (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (114965, "539e0d5d630ff9aa8637dcabd72fbc59f19901a6db67fd9aa2db1cfbcb81cfd9"),
+        (121435, "9ca06d827e2cb6910e08f33cd6c8e8f99aaafbceaa328714761e9904bf0632c9"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (8992, "6830a95ba15b2584024113286bd536e8c47ffa5578760bc39186b04cecb67015"),
+        (9273, "5a9926eea73b1b56b518a6612d10556666b132e95580d63529ebb912f338b92b"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
@@ -2121,7 +2121,7 @@ def policy_findings(source: str) -> list[tuple[str, int]]:
             findings.append(("generated-axiom", token.line))
         elif leaf in {"addAndCompile", "addDecl", "axiomDecl", "builtin_initialize",
                        "initialize", "run_cmd", "register_option", "register_builtin_option",
-                       "register_label_attr"} or leaf.startswith("run_"):
+                       "register_label_attr"} or (token.text == leaf and leaf.startswith("run_")):
             findings.append(("environment-mutation", token.line))
     for index, token in enumerate(tokens[:-1]):
         if token.text == "@" and tokens[index + 1].text == "[":

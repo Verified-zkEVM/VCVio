@@ -180,9 +180,13 @@ is a law when an abstract carrier is used.
 The exact SUF identity partitions its advantage into the EUF event plus a disjoint
 same-message/new-signature residual. It supplies no bound on that residual and does not upgrade the
 EUF-only repaired master proposition. Reachable-target modules enumerate structural FORS, XMSS, and
-WOTS addresses with cardinality and `Nodup` theorems. They do not yet prove concrete encoded-address
-injectivity, package nonempty distinct batches, align entries with actual construction queries and
-inputs, or discharge final-validity/disjointness and canonical PR #594/#596 game adapters.
+WOTS addresses with cardinality and `Nodup` theorems. B04 imports canonical PR #594/#596 games,
+instantiates their encoded-address problem types, and proves WOTS construction programs stay inside
+the structural address union while retaining their query bounds. It does not supply the selected
+proof's `CountingInterface`, inhabit `ReductionAdversaries`, refine the atomic outer-CMA signing log,
+cover FORS/XMSS/hypertree program traces, prove concrete encoded-address injectivity or distinct
+target batches, relate the older architecture experiments to the canonical games, or prove the
+master inequality.
 
 Proposed D-006 selects the repaired tight EasyCrypt twelve-term theorem in classical `OracleComp`
 semantics, and proposed D-009 selects its standalone component-game boundary. Neither proposal has

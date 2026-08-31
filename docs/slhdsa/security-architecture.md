@@ -104,6 +104,12 @@ instrumentation remains later implementation work. Crucially, no exact-target pr
 certificate is required from this opaque log, so a no-query adversary yields an ordinary empty log
 rather than an impossible security context.
 
+B04's `TraceTargets` proves WOTS free-oracle programs use addresses from the structural ledger and
+transfers any such pathwise certificate to a deterministic public-hash query log. It does not splice
+that log into the outer atomic signing event. `CanonicalGames` instantiates the generic PR #594/#596
+problem types and types ten reduction fields, but supplies no `ReductionAdversaries` inhabitant or
+equivalence with the experiments in this document.
+
 Freshness compares the complete request: mode, context, prehash identifier/output length, and
 message. The forgery randomizer is the interface projection. Proving that projection is the exact
 signature `R` consumed by general signing, digest, and verification remains part of F-079/PO-003.
@@ -160,3 +166,7 @@ or scalar loss field.
 - `Transcript.lean`: original honest experiment, logging, freshness, and scheme-transcript ITSR.
 - `Architecture.lean`: roles/counts, target/collection oracle games, post-hop ITSR, twelve-term RHS,
   and master statement shape.
+- `CanonicalGames.lean`: conditional canonical generic-game instantiations, typed reduction fields,
+  and advantage terms; no reductions or master inequality.
+- `TraceTargets.lean`: structural construction-address predicate, WOTS trace contracts, and a
+  deterministic logged-execution consequence; no outer-CMA log refinement.
