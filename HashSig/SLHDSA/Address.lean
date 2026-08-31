@@ -13,7 +13,7 @@ public import HashSig.SLHDSA.Encoding
 The 32-byte hash address `ADRS` of FIPS 205 §4.2, used as the per-call tweak of every SLH-DSA
 tweakable hash. It consists of the fields `layer ‖ tree ‖ type ‖ w₁ ‖ w₂ ‖ w₃`
 (the `tree` field spanning words 1–3, i.e. 12 bytes / 96 bits; the final three words are
-type-dependent). We model it as a record of its fields rather than a raw byte vector. Existing
+type-dependent). We model it as a record of its fields rather than a raw byte vector. Internal
 construction code uses plain field updates under its algorithmic range preconditions; checked
 variants reject out-of-range external values. The address stays opaque to the verified core and
 enters only as the hash tweak.

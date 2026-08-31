@@ -72,7 +72,7 @@ def authPathVector (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y)
     {z : ℕ} (idx : Fin (2 ^ z)) : Vector Y z :=
   Vector.ofFn fun j => (PerfectMerkleTree.authPath leaf nodeHash idx.val z)[j.val]
 
-/-- Forgetting the intrinsic width recovers the existing Merkle authentication path exactly. -/
+/-- Forgetting the intrinsic width recovers the canonical Merkle authentication path exactly. -/
 @[simp] theorem authPathVector_toList (leaf : ℕ → Y)
     (nodeHash : ℕ → ℕ → Y → Y → Y) {z : ℕ} (idx : Fin (2 ^ z)) :
     (authPathVector leaf nodeHash idx).toList =
@@ -96,7 +96,7 @@ def authPathVector (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y)
 
 /-- The honest FIPS climb written as the Algorithm 11 loop. At step `k`, the parity of
 `idx / 2^k` selects the child order and the parent hash uses exact address
-`(k+1, idx / 2^(k+1))`. This is a characterization used below, not a replacement recovery API. -/
+`(k+1, idx / 2^(k+1))`. This characterization connects the loop to canonical recovery. -/
 def honestClimbFips (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y)
     (idx z : ℕ) : Y :=
   Nat.rec (leaf idx) (fun k node =>
@@ -152,8 +152,8 @@ theorem honestClimbFips_eq_merkleRoot (leaf : ℕ → Y)
         simp only [PerfectMerkleTree.sibling, if_neg h]
         rw [hleft]
 
-/-- The explicit FIPS loop is exactly the existing `authPath`/`climb` semantics on an honest
-opening. Arbitrary bounded signatures continue to call the existing `climb` engine directly. -/
+/-- The explicit FIPS loop is exactly the canonical `authPath`/`climb` semantics on an honest
+opening. -/
 theorem honestClimbFips_eq_climb_authPath (leaf : ℕ → Y)
     (nodeHash : ℕ → ℕ → Y → Y → Y) (idx z : ℕ) :
     honestClimbFips leaf nodeHash idx z =
@@ -248,7 +248,7 @@ def xmssAuthPath (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) (idx : LeafIndex p) : Vector prims.Y p.hp :=
   authPathVector (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs) idx
 
-/-- Erasing the typed authentication path recovers the exact existing path. -/
+/-- Erasing the typed authentication path recovers the exact canonical path. -/
 @[simp] theorem xmssAuthPath_toList (prims : Primitives p) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) (idx : LeafIndex p) :
     (xmssAuthPath prims sk pk adrs idx).toList =

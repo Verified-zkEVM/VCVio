@@ -20,7 +20,7 @@ and `PRF_msg`. Every SHAKE-family function uses the distinct FIPS SHAKE256 XOF.
 SHA2 address compression is exposed through `Sha2Address`, a proof-carrying result of the
 rejecting `Adrs.compressSha2Checked` boundary. The checked primitive entry points return errors for
 noncanonical or too-wide addresses. The total `Primitives` bundle maps that out-of-domain case to
-the all-zero node because the pre-existing generic construction interface is total; on the stated
+the all-zero node because the generic construction interface is total; on the stated
 FIPS address domain it is definitionally the checked grammar.
 
 ## References
@@ -52,8 +52,8 @@ def byteArrayPrefixChecked (bytes : ByteArray) (n : ℕ) : Except CodecError (By
 /-- The all-zero fixed-width byte vector. -/
 def zeroBytes (n : ℕ) : Bytes n := Vector.replicate n 0
 
-/-- Total, fail-closed projection used only where the pre-existing abstract interface requires a
-total result. Unlike the former helper, this never pads a partial digest with source bytes. -/
+/-- Total, fail-closed projection for abstract interfaces that require a total result. A source
+shorter than the requested width maps to the all-zero vector. -/
 def byteArrayPrefixOrZero (bytes : ByteArray) (n : ℕ) : Bytes n :=
   match byteArrayPrefixChecked bytes n with
   | .ok value => value
@@ -101,7 +101,7 @@ theorem compressSha2Checked_eq (address : Sha2Address) :
     address.value.compressSha2Checked = .ok address.bytes := by
   simp [Adrs.compressSha2Checked, address.canonical, address.layerFits, address.treeFits, bytes]
 
-/-- The proof-carrying adapter's bytes are the existing compressed serialization. -/
+/-- The proof-carrying adapter's bytes are the canonical compressed serialization. -/
 @[simp] theorem bytes_toList (address : Sha2Address) :
     address.bytes.toList = address.value.compressSha2 := by
   simp [bytes]
@@ -181,7 +181,7 @@ def sha2Hmsg (p : Params) (randomizer pkSeed pkRoot : Bytes p.n)
     byteArrayPrefixOrZero (mgf1Sha512 (bytesToByteArray randomizer ++
       bytesToByteArray pkSeed ++ inner) p.m) p.m
 
-/-- Convert the checked SHA2 operation to the pre-existing total primitive interface. Invalid
+/-- Convert the checked SHA2 operation to the total primitive interface. Invalid
 addresses cannot be FIPS inputs and map to the all-zero node rather than being silently
 truncated. -/
 def checkedNodeOrZero {n : ℕ} (result : Except CodecError (Bytes n)) : Bytes n :=
@@ -237,8 +237,9 @@ def sha2Thash (p : Params) (pkSeed : Bytes p.n) (address : Bytes 22)
   else
     byteArrayPrefixOrZero (sha512 (sha2Prefix512Key pkSeed address ++ payload)) p.n
 
-/-- The SHA2 primitive bundle at byte width `p.n`. FIPS-approved callers use this only through
-`approvedPrimitives`, and construction address-range proofs are successor-session obligations. -/
+/-- The SHA2 primitive bundle at byte width `p.n`. FIPS-approved callers select it through
+`approvedPrimitives`; checked-domain theorems establish that reachable construction addresses do
+not take the all-zero fallback. -/
 def sha2Primitives (p : Params) : Primitives p where
   PkSeed := Bytes p.n
   SkSeed := Bytes p.n
