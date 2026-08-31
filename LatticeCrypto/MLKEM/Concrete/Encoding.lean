@@ -231,9 +231,9 @@ private theorem digitsAppend_two_one_getD_zero_mod (n : Nat) :
     (Nat.digitsAppend 2 1 (n % 2 ^ 1)).getD 0 0 = n % 2 := by
   simpa [Nat.pow_one] using digitsAppend_two_one_getD_zero ⟨n % 2, Nat.mod_lt _ (by decide)⟩
 
-/-! ## ByteEncode / ByteDecode (Algorithms 4–5) -/
+/-! ## ByteEncode / ByteDecode (Algorithms 5–6) -/
 
-/-- FIPS 203 Algorithm 4: encode 256 `d`-bit coefficients into `32d` bytes. -/
+/-- FIPS 203 Algorithm 5: encode 256 `d`-bit coefficients into `32d` bytes. -/
 def byteEncode (d : Nat) (f : Rq) : ByteArray :=
   let bits : Array Nat := Array.ofFn fun idx : Fin (ringDegree * d) =>
     let coeff := idx.val / d
@@ -252,14 +252,14 @@ def byteEncode (d : Nat) (f : Rq) : ByteArray :=
     coeffBits.getD bit 0
   bitsToBytes bits
 
-/-- FIPS 203 Algorithm 5: decode `32d` bytes into 256 coefficients. -/
+/-- FIPS 203 Algorithm 6: decode `32d` bytes into 256 coefficients. -/
 def byteDecode (d : Nat) (bytes : ByteArray) : Rq :=
   let bits := bytesToBits bytes
   Vector.ofFn fun idx =>
     let coeffBits := List.ofFn fun j : Fin d => bits.getD (idx.val * d + j.val) 0
     ((Nat.ofDigits 2 coeffBits : Nat) : Coeff)
 
-/-- `byteEncode d` always produces exactly `32 * d` bytes (FIPS 203 Algorithm 4). -/
+/-- `byteEncode d` always produces exactly `32 * d` bytes (FIPS 203 Algorithm 5). -/
 theorem byteEncode_size (d : Nat) (f : Rq) :
     (byteEncode d f).size = 32 * d := by
   let bits : Array Nat := Array.ofFn fun idx : Fin (ringDegree * d) =>
