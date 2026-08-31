@@ -1,0 +1,15 @@
+# scripts/pmf_boundary_holds.tsv
+#
+# Files exempt from the --ratchet requirement (they may be touched without reducing their
+# PMF/SPMF count). The ceiling still applies: a held file may not grow.
+#
+# A hold is a review action, not a way to silence CI. Each row needs a reason and should name
+# what would let it be removed. Adding a row is a deliberate statement that this file is a
+# compatibility or execution surface whose coupling is not yet reducible.
+#
+# Format: <path>\t<reason>
+ToMathlib/ProbabilityTheory/SPMF.lean	Defines SPMF itself; retires when SPMF is replaced by a subprobability measure.
+ToMathlib/ProbabilityTheory/FinRatPMF.lean	Executable exact-sampling representation; retires with the FinRatPMF.Raw measure denotation.
+VCVio/EvalDist/Instances/FinRatPMF.lean	Executable representation instance; follows ToMathlib/ProbabilityTheory/FinRatPMF.lean.
+ToMathlib/Probability/ProbabilityMassFunction/Measure.lean	PMF-to-measure adapter; its whole purpose is the bridge, and it retires with PMF.
+VCVio/CryptoFoundations/SymmEncAlg/MeasureCompatibility.lean	Legacy predicate adapter; retires when SymmEncAlg's PMF-facing predicates do.

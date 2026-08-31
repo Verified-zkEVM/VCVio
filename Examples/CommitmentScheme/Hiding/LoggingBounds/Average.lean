@@ -107,7 +107,8 @@ lemma run_simulateQ_hidingAvgComp_eq_bind [Inhabited M] [Inhabited S]
             OracleComp (HidingAvgSpec M S C) S)).run
           (∅, fun _ => 0) =
         (liftM ((Unit →ₒ S).query ()) >>= fun s => pure (s, (∅, fun _ => 0))) := by
-    simp [hidingAvgQueryImpl, hidingAvgLeftImpl, simulateQ_query]
+    rw [simulateQ_spec_query, hidingAvgQueryImpl, QueryImpl.add_apply_inl]
+    simp [hidingAvgLeftImpl]
   rw [hidingAvgComp, simulateQ_bind, StateT.run_bind, hleftrun]
   change
     (liftM ((Unit →ₒ S).query ()) >>= fun s =>
@@ -540,7 +541,7 @@ lemma wp_finset_sum {α : Type}
     (oa : OracleComp (CMOracle M S C) α) (ss : Finset S) (f : S → α → ℝ≥0∞) :
     (ss.sum fun s => OracleComp.ProgramLogic.wp oa (f s)) =
       OracleComp.ProgramLogic.wp oa (fun z => ss.sum fun s => f s z) := by
-  letI := Classical.decEq S
+  let := Classical.decEq S
   refine Finset.induction_on ss ?_ ?_
   · simp
   · intro s ss hs ih
@@ -681,7 +682,7 @@ lemma sum_wp_distinguish_countPred_le_sum_initialPred_add_residual
         ((simulateQ hidingImplCountAll (A.distinguish qchoose.1.2 cm)).run qchoose.2)
         (fun z : Bool × HidingCountState M S C => (z.2.2 s - 1 : ℝ≥0∞))) ≤
       (∑ s : S, (qchoose.2.2 s - 1 : ℝ≥0∞)) + (t - ∑ s : S, qchoose.2.2 s) := by
-  haveI := Fintype.ofFinite M
+  have := Fintype.ofFinite M
   have hsplit :=
     sum_wp_countPred_le_sum_initialPred_add_sum_wp_countIncrements
       (M := M) (S := S) (C := C)
@@ -743,7 +744,7 @@ lemma sum_wp_distinguish_countPred_le_queryBound_of_choose_count_support
       OracleComp.ProgramLogic.wp
         ((simulateQ hidingImplCountAll (A.distinguish qchoose.1.2 cm)).run qchoose.2)
         (fun z : Bool × HidingCountState M S C => (z.2.2 s - 1 : ℝ≥0∞))) ≤ t := by
-  haveI := Fintype.ofFinite M
+  have := Fintype.ofFinite M
   have hsplit :=
     sum_wp_distinguish_countPred_le_sum_initialPred_add_residual
       (M := M) (S := S) (C := C) A hqchoose cm
@@ -815,7 +816,7 @@ lemma sum_wp_distinguish_incrementIndicators_le_queryResidual_of_choose_count_su
         (fun z : Bool × HidingCountState M S C =>
           OracleComp.ProgramLogic.propInd (qchoose.2.2 s < z.2.2 s))) ≤
       (t - ∑ s : S, qchoose.2.2 s) := by
-  haveI := Fintype.ofFinite M
+  have := Fintype.ofFinite M
   have hbound :
       IsTotalQueryBound (A.distinguish qchoose.1.2 cm) (t - ∑ s : S, qchoose.2.2 s) :=
     hiding_distinguish_totalBound_of_choose_count_support

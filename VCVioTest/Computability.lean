@@ -18,7 +18,7 @@ through `PMF`, `Classical.decEq`, or `Fintype.ofFinite`), this file fails to com
 
 The dividing line this file locks is: *programs* (`OracleComp` values, `QueryImpl` handlers,
 `StateT`/`WriterT` simulators, `ProbComp` runs) are computable, while *semantics*
-(`evalDist`, `Pr[⋯]`, `SPMF`, expected costs) remain noncomputable. Executability lets
+(`evalSPMF`, `Pr[⋯]`, `SPMF`, expected costs) remain noncomputable. Executability lets
 library users smoke-test security reductions by actually running them via
 `OracleComp.runIO`, turning "efficient by inspection" into inspection plus execution.
 
@@ -53,6 +53,29 @@ def roToy : OracleComp (unifSpec + (ℕ →ₒ Bool)) Bool := do
 /-- The toy computation run through the pipeline from the empty cache, as a `ProbComp`. -/
 def roToyProb : ProbComp Bool :=
   (simulateQ roSimPipeline roToy).run' ∅
+
+/-- A mixed toy computation that makes both a fresh uniform query and a hash query. -/
+def roMixedToy : OracleComp (unifSpec + (ℕ →ₒ Bool)) Bool := do
+  let coin : Fin 2 ← (unifSpec + (ℕ →ₒ Bool)).query (Sum.inl 1)
+  let hash ← (unifSpec + (ℕ →ₒ Bool)).query (Sum.inr 0)
+  pure ((coin == 0) == hash)
+
+/-- The fixed-hash-table interpretation remains computable while forwarding uniform queries. -/
+def roMixedFixed (f : QueryImpl ((ℕ →ₒ Bool) : OracleSpec ℕ) Id) : ProbComp Bool :=
+  simulateQ (OracleComp.unifFwdAnswerImpl f) roMixedToy
+
+/-- API canary for the probability-one bridge on a computation containing both query kinds. -/
+example (p : Bool → Prop) :
+    Pr[fun v => p v.1 | (simulateQ roSimPipeline roMixedToy).run
+      (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)] = 1
+    ↔
+    ∀ f : QueryImpl ((ℕ →ₒ Bool) : OracleSpec ℕ) Id,
+      (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache).AgreesWithFn f →
+        Pr[p | roMixedFixed f] = 1 := by
+  simpa only [roSimPipeline, roMixedFixed] using
+    (OracleComp.probEvent_eq_one_simulateQ_unifFwdImpl_add_randomOracle_run_iff
+      (oa := roMixedToy) (preexisting_cache :=
+        (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)) p)
 
 /-! ## Replay fork
 

@@ -21,9 +21,9 @@ simulation oracles and implementation transformers defined in the same directory
 
 open ENNReal OracleSpec OracleComp
 
--- Query logs are definitionally PolyFun traces for an oracle specification.
-set_option allowUnsafeReducibility true in
-attribute [local reducible] OracleSpec.toPFunctor PFunctor.Idx
+/- Query logs are definitionally PolyFun traces for an oracle specification. These reducers
+must remain available at implicit transparency when specializing that generic API. -/
+attribute [local implicit_reducible] PFunctor.Idx FreeMonoid
 
 universe u v w
 
@@ -33,7 +33,7 @@ variable {ι : Type u} {spec : OracleSpec ι}
 
 /-- Type to represent a cache of queries to oracles in `spec`.
 Defined to be a function from (indexed) inputs to an optional output. -/
-def QueryCache (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
+@[reducible] def QueryCache (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
   (t : spec.Domain) → Option (spec.Range t)
 
 namespace QueryCache
@@ -123,6 +123,18 @@ lemma enncard_empty : enncard (∅ : QueryCache spec) = 0 := by
 
 variable [DecidableEq ι] (cache : QueryCache spec)
 
+/- `simp` does not currently specialize Mathlib's dependent `Function.update` equations through
+the `QueryCache` abbreviation. Keep that representation detail behind cache-specific equations. -/
+@[simp]
+lemma functionUpdate_self (t : spec.Domain) (u : spec.Range t) :
+    Function.update cache t (some u) t = some u :=
+  Function.update_self t (some u) cache
+
+@[simp]
+lemma functionUpdate_of_ne {t' t : spec.Domain} (u : spec.Range t) (h : t' ≠ t) :
+    Function.update cache t (some u) t' = cache t' :=
+  Function.update_of_ne h (some u) cache
+
 /-- Add an index + input pair to the cache by updating the function
 (wrapper around `Function.update`). -/
 def cacheQuery (t : spec.Domain) (u : spec.Range t) : QueryCache spec :=
@@ -148,7 +160,17 @@ lemma agreesWithFn_cacheQuery_iff (t : spec.Domain) (u : spec.Range t) (f : Quer
 lemma toSet_cacheQuery_subset_insert (t : spec.Domain) (u : spec.Range t) :
     (cache.cacheQuery t u).toSet ⊆ insert ⟨t, u⟩ cache.toSet := by
   rintro ⟨t', u'⟩ hmem
-  rcases eq_or_ne t' t with rfl | ht <;> simp_all [cacheQuery]
+  rcases eq_or_ne t' t with ht | ht
+  · subst t'
+    change cache.cacheQuery t u t = some u' at hmem
+    have hu : u = u' := Option.some.inj ((cacheQuery_self cache t u).symm.trans hmem)
+    subst u'
+    exact Set.mem_insert _ _
+  · right
+    change cache.cacheQuery t u t' = some u' at hmem
+    change cache t' = some u'
+    rw [← cacheQuery_of_ne cache u ht]
+    exact hmem
 
 lemma toSet_encard_cacheQuery_le (t : spec.Domain) (u : spec.Range t) :
     (cache.cacheQuery t u).toSet.encard ≤ cache.toSet.encard + 1 :=
@@ -196,11 +218,11 @@ protected def snd (cache : QueryCache (spec₁ + spec₂)) : QueryCache spec₂ 
 
 /-- Embed a cache for `spec₁` into one for `spec₁ + spec₂`. -/
 protected def inl (cache : QueryCache spec₁) : QueryCache (spec₁ + spec₂) :=
-  fun | .inl t => cache t | .inr _ => none
+  Sum.rec cache (fun _ => none)
 
 /-- Embed a cache for `spec₂` into one for `spec₁ + spec₂`. -/
 protected def inr (cache : QueryCache spec₂) : QueryCache (spec₁ + spec₂) :=
-  fun | .inl _ => none | .inr t => cache t
+  Sum.rec (fun _ => none) cache
 
 @[simp] lemma fst_apply (cache : QueryCache (spec₁ + spec₂)) (t : ι₁) :
     cache.fst t = cache (.inl t) := rfl
@@ -231,6 +253,26 @@ protected def inr (cache : QueryCache spec₂) : QueryCache (spec₁ + spec₂) 
 
 @[simp] lemma snd_inl (cache : QueryCache spec₁) :
     (cache.inl : QueryCache (spec₁ + spec₂)).snd = ∅ := rfl
+
+/-- Embedding a left-component cache commutes with caching a left-component query. -/
+@[simp]
+lemma inl_cacheQuery [DecidableEq ι₁] [DecidableEq ι₂]
+    (cache : QueryCache spec₁) (t : spec₁.Domain) (u : spec₁.Range t) :
+    (cache.cacheQuery t u).inl =
+      (cache.inl : QueryCache (spec₁ + spec₂)).cacheQuery (.inl t) u := by
+  unfold QueryCache.cacheQuery QueryCache.inl
+  exact Sum.rec_update_left (γ := fun t => Option ((spec₁ + spec₂).Range t))
+    cache (fun _ => none) t (some u)
+
+/-- Embedding a right-component cache commutes with caching a right-component query. -/
+@[simp]
+lemma inr_cacheQuery [DecidableEq ι₁] [DecidableEq ι₂]
+    (cache : QueryCache spec₂) (t : spec₂.Domain) (u : spec₂.Range t) :
+    (cache.cacheQuery t u).inr =
+      (cache.inr : QueryCache (spec₁ + spec₂)).cacheQuery (.inr t) u := by
+  unfold QueryCache.cacheQuery QueryCache.inr
+  exact Sum.rec_update_right (γ := fun t => Option ((spec₁ + spec₂).Range t))
+    (fun _ => none) cache t (some u)
 
 @[simp] lemma fst_empty :
     (∅ : QueryCache (spec₁ + spec₂)).fst = (∅ : QueryCache spec₁) := rfl
@@ -354,6 +396,12 @@ section countQ
 /-- Count the number of queries with inputs satisfying `p`. -/
 def countQ (log : QueryLog spec) (p : spec.Domain → Prop) [DecidablePred p] : ℕ :=
   (log.getQ p).length
+
+@[simp]
+lemma countQ_cons (entry : (t : spec.Domain) × spec.Range t) (log : QueryLog spec)
+    (p : spec.Domain → Prop) [DecidablePred p] :
+    countQ (entry :: log) p = if p entry.1 then countQ log p + 1 else countQ log p := by
+  by_cases hp : p entry.1 <;> simp [countQ, getQ_cons, hp, Nat.add_comm]
 
 @[simp]
 lemma countQ_singleton (t : spec.Domain) (u : spec.Range t)
@@ -549,7 +597,7 @@ end QueryLog
 
 /-- A store of pre-generated seed values for oracle queries, indexed by oracle.
 Maps each oracle index `i` to a list of outputs `List (spec.Range i)`. -/
-def QuerySeed (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
+@[reducible] def QuerySeed (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
   (i : ι) → List (spec.Range i)
 
 namespace QuerySeed
@@ -568,6 +616,30 @@ lemma empty_apply (i : ι) : (∅ : QuerySeed spec) i = [] := rfl
 
 variable [DecidableEq ι]
 
+/- These equations are the public reduction surface for dependent updates of a `QuerySeed`.
+Using specialized lemmas avoids coupling all seed proofs to simplifier support for the generic
+dependent `Function.update`. -/
+@[simp]
+lemma functionUpdate_self (seed : QuerySeed spec) (i : ι) (xs : List (spec.Range i)) :
+    Function.update seed i xs i = xs :=
+  Function.update_self i xs seed
+
+@[simp]
+lemma functionUpdate_of_ne (seed : QuerySeed spec) (i : ι) (xs : List (spec.Range i))
+    (j : ι) (hj : j ≠ i) : Function.update seed i xs j = seed j :=
+  Function.update_of_ne hj xs seed
+
+@[simp]
+lemma functionUpdate_eq_self (seed : QuerySeed spec) (i : ι) :
+    Function.update seed i (seed i) = seed :=
+  Function.update_eq_self i seed
+
+@[simp]
+lemma functionUpdate_idem (seed : QuerySeed spec) (i : ι)
+    (xs ys : List (spec.Range i)) :
+    Function.update (Function.update seed i xs) i ys = Function.update seed i ys :=
+  Function.update_idem (a := i) xs ys seed
+
 /-- Replace the seed values at index `i`. -/
 def update (seed : QuerySeed spec) (i : ι) (xs : List (spec.Range i)) : QuerySeed spec :=
   Function.update seed i xs
@@ -575,17 +647,50 @@ def update (seed : QuerySeed spec) (i : ι) (xs : List (spec.Range i)) : QuerySe
 @[simp]
 lemma update_self (seed : QuerySeed spec) (i : ι) (xs : List (spec.Range i)) :
     seed.update i xs i = xs := by
-  simp [update]
+  exact functionUpdate_self seed i xs
 
 @[simp]
 lemma update_of_ne (seed : QuerySeed spec) (i : ι) (xs : List (spec.Range i))
     (j : ι) (hj : j ≠ i) :
     seed.update i xs j = seed j := by
-  simp [update, Function.update_of_ne hj]
+  exact functionUpdate_of_ne seed i xs j hj
+
+@[simp]
+lemma update_eq_self (seed : QuerySeed spec) (i : ι) : seed.update i (seed i) = seed :=
+  functionUpdate_eq_self seed i
+
+@[simp]
+lemma update_idem (seed : QuerySeed spec) (i : ι) (xs ys : List (spec.Range i)) :
+    (seed.update i xs).update i ys = seed.update i ys :=
+  functionUpdate_idem seed i xs ys
+
+/-- Updates at distinct seed indices commute. -/
+lemma update_comm (seed : QuerySeed spec) {i j : ι} (h : i ≠ j)
+    (xs : List (spec.Range i)) (ys : List (spec.Range j)) :
+    (seed.update i xs).update j ys = (seed.update j ys).update i xs := by
+  unfold update
+  exact Function.update_comm h xs ys seed
 
 /-- Append a list of values to the seed at index `i`. -/
 def addValues (seed : QuerySeed spec) {i : ι} (us : List (spec.Range i)) : QuerySeed spec :=
-  Function.update seed i (seed i ++ us)
+  seed.update i (seed i ++ us)
+
+/-- Replacing an index after appending there discards the appended values. -/
+@[simp]
+lemma update_addValues_same (seed : QuerySeed spec) (i : ι)
+    (us xs : List (spec.Range i)) :
+    (seed.addValues (i := i) us).update i xs = seed.update i xs := by
+  unfold addValues
+  exact update_idem seed i _ xs
+
+/-- Appending at one seed index commutes with replacing a distinct index. -/
+lemma update_addValues_comm (seed : QuerySeed spec) {i j : ι} (h : i ≠ j)
+    (us : List (spec.Range i)) (ys : List (spec.Range j)) :
+    (seed.addValues (i := i) us).update j ys =
+      (seed.update j ys).addValues (i := i) us := by
+  unfold addValues
+  rw [update_of_ne seed j ys i h]
+  exact update_comm seed h (seed i ++ us) ys
 
 @[simp]
 lemma addValues_self (seed : QuerySeed spec) {i : ι} (us : List (spec.Range i)) :
@@ -595,7 +700,7 @@ lemma addValues_self (seed : QuerySeed spec) {i : ι} (us : List (spec.Range i))
 @[simp]
 lemma addValues_of_ne (seed : QuerySeed spec) {i : ι} (us : List (spec.Range i))
     {j : ι} (hj : j ≠ i) : seed.addValues us j = seed j := by
-  simp [addValues, Function.update_of_ne hj]
+  simp [addValues, hj]
 
 @[simp]
 lemma addValues_nil (seed : QuerySeed spec) (i : ι) :
@@ -609,7 +714,7 @@ lemma addValues_cons (seed : QuerySeed spec) {i : ι} (u : spec.Range i)
 
 /-- Prepend a list of values to the seed at index `i`. -/
 def prependValues (seed : QuerySeed spec) {i : ι} (us : List (spec.Range i)) : QuerySeed spec :=
-  Function.update seed i (us ++ seed i)
+  seed.update i (us ++ seed i)
 
 @[simp]
 lemma prependValues_self (seed : QuerySeed spec) {i : ι} (us : List (spec.Range i)) :
@@ -624,7 +729,7 @@ lemma prependValues_singleton (seed : QuerySeed spec) {i : ι} (u : spec.Range i
 @[simp]
 lemma prependValues_of_ne (seed : QuerySeed spec) {i : ι} (us : List (spec.Range i))
     {j : ι} (hj : j ≠ i) : seed.prependValues us j = seed j := by
-  simp [prependValues, Function.update_of_ne hj]
+  simp [prependValues, hj]
 
 @[simp]
 lemma prependValues_nil (seed : QuerySeed spec) (i : ι) :
@@ -632,19 +737,19 @@ lemma prependValues_nil (seed : QuerySeed spec) (i : ι) :
   simp [prependValues]
 
 lemma prependValues_take_drop (seed : QuerySeed spec) (i : ι) (n : ℕ) :
-    QuerySeed.prependValues (Function.update seed i ((seed i).drop n))
+    QuerySeed.prependValues (seed.update i ((seed i).drop n))
       ((seed i).take n : List (spec.Range i)) = seed := by
   simp [prependValues]
 
 lemma eq_of_prependValues_eq (seed rest : QuerySeed spec)
     {i : ι} (xs : List (spec.Range i)) {n : ℕ} (hlen : xs.length = n)
     (h : rest.prependValues xs = seed) :
-    xs = (seed i).take n ∧ rest = Function.update seed i ((seed i).drop n) := by
+    xs = (seed i).take n ∧ rest = seed.update i ((seed i).drop n) := by
   subst hlen; subst h; simp [prependValues]
 
 lemma eq_of_prependValues_singleton_eq (seed rest : QuerySeed spec)
     {i : ι} (u : spec.Range i) (h : rest.prependValues [u] = seed) :
-    u :: rest i = seed i ∧ rest = Function.update seed i ((seed i).tail) := by
+    u :: rest i = seed i ∧ rest = seed.update i ((seed i).tail) := by
   subst h; simp [prependValues]
 
 abbrev addValue (seed : QuerySeed spec) (i : ι) (u : spec.Range i) :
@@ -653,7 +758,7 @@ abbrev addValue (seed : QuerySeed spec) (i : ι) (u : spec.Range i) :
 
 /-- Take only the first `n` values of the seed at index `i`. -/
 def takeAtIndex (seed : QuerySeed spec) (i : ι) (n : ℕ) : QuerySeed spec :=
-  Function.update seed i ((seed i).take n)
+  seed.update i ((seed i).take n)
 
 @[simp] lemma takeAtIndex_apply_self (seed : QuerySeed spec) (i : ι) (n : ℕ) :
     seed.takeAtIndex i n i = (seed i).take n := by
@@ -661,26 +766,26 @@ def takeAtIndex (seed : QuerySeed spec) (i : ι) (n : ℕ) : QuerySeed spec :=
 
 @[simp] lemma takeAtIndex_apply_of_ne (seed : QuerySeed spec) (i : ι) (n : ℕ) (j : ι)
     (hj : j ≠ i) : seed.takeAtIndex i n j = seed j := by
-  simp [takeAtIndex, Function.update_of_ne hj]
+  simp [takeAtIndex, hj]
 
 @[simp] lemma takeAtIndex_length (seed : QuerySeed spec) (i : ι) :
     seed.takeAtIndex i (seed i).length = seed :=
   funext fun j => by
     by_cases hj : j = i
     · subst hj; simp [takeAtIndex]
-    · simp [takeAtIndex, Function.update_of_ne hj]
+    · simp [takeAtIndex, hj]
 
 lemma takeAtIndex_addValues_drop (seed : QuerySeed spec) (i : ι) (n : ℕ) :
     (seed.takeAtIndex i n).addValues ((seed i).drop n) = seed := by
   ext j; by_cases hj : j = i
   · subst hj; simp [takeAtIndex, addValues, List.take_append_drop]
-  · simp [takeAtIndex, addValues, Function.update_of_ne hj]
+  · simp [takeAtIndex, addValues, hj]
 
 /-- Pop one value from index `i`, returning the consumed value and updated seed when nonempty. -/
 def pop (seed : QuerySeed spec) (i : ι) : Option (spec.Range i × QuerySeed spec) :=
   match seed i with
   | [] => none
-  | u :: us => some (u, Function.update seed i us)
+  | u :: us => some (u, seed.update i us)
 
 @[simp]
 lemma pop_eq_none_iff (seed : QuerySeed spec) (i : ι) :
@@ -692,8 +797,9 @@ lemma pop_eq_none_iff (seed : QuerySeed spec) (i : ι) :
 lemma pop_eq_some_of_cons (seed : QuerySeed spec) (i : ι)
     (u : spec.Range i) (us : List (spec.Range i))
     (h : seed i = u :: us) :
-    seed.pop i = some (u, Function.update seed i us) := by
-  unfold pop; simp [h]; rfl
+    seed.pop i = some (u, seed.update i us) := by
+  unfold pop
+  simp [h]
 
 lemma cons_of_pop_eq_some (seed : QuerySeed spec) (i : ι)
     (u : spec.Range i) (rest : QuerySeed spec)
@@ -710,7 +816,7 @@ lemma cons_of_pop_eq_some (seed : QuerySeed spec) (i : ι)
 lemma rest_eq_update_tail_of_pop_eq_some (seed : QuerySeed spec) (i : ι)
     (u : spec.Range i) (rest : QuerySeed spec)
     (h : seed.pop i = some (u, rest)) :
-    rest = Function.update seed i ((seed i).tail) := by
+    rest = seed.update i ((seed i).tail) := by
   unfold pop at h
   cases hsi : seed i with
   | nil => simp [hsi] at h
@@ -735,7 +841,7 @@ lemma eq_addValues_iff (seed seed' : QuerySeed spec)
       ∀ j, j ≠ i → seed' j = seed j := by
   constructor
   · rintro rfl
-    exact ⟨by simp, fun j hj => by simp [addValues, Function.update_of_ne hj]⟩
+    exact ⟨by simp, fun j hj => by simp [addValues, hj]⟩
   · rintro ⟨happ, hother⟩
     funext j
     by_cases hj : j = i
@@ -751,8 +857,7 @@ lemma addValues_eq_iff (seed seed' : QuerySeed spec)
 @[simp]
 lemma pop_prependValues_singleton (s' : QuerySeed spec) (i : ι) (u : spec.Range i) :
     (s'.prependValues [u]).pop i = some (u, s') := by
-  simp only [pop, prependValues, Function.update_self, List.singleton_append,
-    Function.update_idem, Function.update_eq_self]
+  simp only [pop, prependValues, update_self, List.singleton_append, update_idem, update_eq_self]
 
 lemma prependValues_singleton_injective (i : ι) :
     Function.Injective (fun (p : spec.Range i × QuerySeed spec) => p.2.prependValues [p.1]) := by
@@ -772,7 +877,8 @@ lemma eq_prependValues_of_pop_eq_some {seed : QuerySeed spec} {i : ι}
   funext j
   by_cases hj : j = i
   · subst hj; simpa [prependValues_singleton] using hcons
-  · simp [prependValues_of_ne _ _ hj, hrest, Function.update_of_ne hj]
+  · rw [prependValues_of_ne _ _ hj, hrest]
+    exact update_of_ne seed i _ j hj
 
 lemma pop_takeAtIndex_prependValues_of_ne (s' : QuerySeed spec) (i₀ : ι) (k : ℕ)
     {t : ι} (u₀ : spec.Range t) (hti : t ≠ i₀) :
@@ -783,7 +889,7 @@ lemma pop_takeAtIndex_prependValues_of_ne (s' : QuerySeed spec) (i₀ : ι) (k :
   rw [pop_eq_some_of_cons _ _ u₀ (s' t) h1]
   refine congrArg some (Prod.ext rfl (funext fun j => ?_))
   by_cases hj : j = t <;> by_cases hji : j = i₀ <;> subst_vars <;>
-    simp_all [Function.update_self, Function.update_of_ne, takeAtIndex_apply_self,
+    simp_all [update_self, update_of_ne, takeAtIndex_apply_self,
       takeAtIndex_apply_of_ne, prependValues_of_ne]
 
 lemma pop_takeAtIndex_prependValues_self (s' : QuerySeed spec) (i₀ : ι)
@@ -796,7 +902,7 @@ lemma pop_takeAtIndex_prependValues_self (s' : QuerySeed spec) (i₀ : ι)
   rw [pop_eq_some_of_cons _ _ u₀ ((s' i₀).take (k - 1)) h1]
   refine congrArg some (Prod.ext rfl (funext fun j => ?_))
   by_cases hj : j = i₀ <;> subst_vars <;>
-    simp_all [Function.update_self, Function.update_of_ne, takeAtIndex_apply_self,
+    simp_all [update_self, update_of_ne, takeAtIndex_apply_self,
       takeAtIndex_apply_of_ne, prependValues_of_ne]
 
 end QuerySeed

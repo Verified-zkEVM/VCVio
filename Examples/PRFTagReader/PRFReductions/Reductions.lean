@@ -50,8 +50,7 @@ def unlinkToMultiplePRFTagImpl :
     let nonce ← (OracleComp.liftComp (spec := unifSpec)
       (superSpec := unifSpec + ((TagId × Nonce) →ₒ Digest)) ($ᵗ Nonce) :
       OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Nonce)
-    let auth ← ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query (Sum.inr (tag, nonce)) :
-      OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Digest)
+    let auth ← PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) (tag, nonce)
     set { st with
       sessionsUsed := Function.update st.sessionsUsed tag (st.sessionsUsed tag + 1) }
     return some (⟨nonce, auth⟩ : TagTranscript Nonce Digest)
@@ -67,9 +66,8 @@ noncomputable def unlinkToMultiplePRFReaderImpl :
         (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) := fun transcript => do
   let digests ← (Finset.univ : Finset TagId).toList.mapM
     (m := OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))
-    (fun tag => ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query
-      (Sum.inr (tag, transcript.nonce)) :
-      OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Digest))
+    (fun tag => PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest)
+      (tag, transcript.nonce))
   return ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth))
 
 /-- Combined oracle implementation of the multiple-session reduction. -/
@@ -109,9 +107,8 @@ def unlinkToSinglePRFTagImpl :
     let nonce ← (OracleComp.liftComp (spec := unifSpec)
       (superSpec := unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) ($ᵗ Nonce) :
       OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) Nonce)
-    let auth ← ((unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)).query
-      (Sum.inr ((tag, sid), nonce)) :
-      OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) Digest)
+    let auth ← PRFScheme.functionQuery
+      (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest) ((tag, sid), nonce)
     set { st with
       sessionsUsed := Function.update st.sessionsUsed tag (st.sessionsUsed tag + 1) }
     return some (⟨nonce, auth⟩ : TagTranscript Nonce Digest)
@@ -128,9 +125,9 @@ noncomputable def unlinkToSinglePRFReaderImpl :
           (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))) := fun transcript => do
   let digests ← (Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.mapM
     (m := OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))
-    (fun slot => ((unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)).query
-      (Sum.inr (slot, transcript.nonce)) :
-      OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) Digest))
+    (fun slot => PRFScheme.functionQuery
+      (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
+      (slot, transcript.nonce))
   return ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth))
 
 /-- Combined oracle implementation of the single-session reduction. -/
@@ -173,19 +170,18 @@ lemma simulateQ_prfReal_unlinkToMultiplePRFTagImpl_run
       (unlinkTagQueryImpl (TagId := TagId) (Slot := TagId) (Nonce := Nonce) (Digest := Digest)
         (fun tag nonce => prfs.evalMultiple k tag nonce)
         (multiplePattern (TagId := TagId) sessionsPerTag) tag).run s := by
-  let so : QueryImpl ((TagId × Nonce) →ₒ Digest) ProbComp :=
-    fun d => pure (prfs.multiplePRFScheme.eval k d)
   let impl : QueryImpl (unifSpec + ((TagId × Nonce) →ₒ Digest)) ProbComp :=
-    HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) + so
+    PRFScheme.prfRealQueryImpl prfs.multiplePRFScheme k
   have hleft : ∀ {α : Type} (oa : ProbComp α),
-      simulateQ impl (liftComp oa (unifSpec + ((TagId × Nonce) →ₒ Digest))) = oa := fun oa =>
-    (QueryImpl.simulateQ_add_liftComp_left _ _ oa).trans (simulateQ_ofLift_eq_self _)
+      simulateQ impl (liftComp oa (unifSpec + ((TagId × Nonce) →ₒ Digest))) = oa := by
+    intro α oa
+    exact PRFScheme.simulateQ_prfRealQueryImpl_liftComp prfs.multiplePRFScheme k oa
   have hquery : ∀ (d : TagId × Nonce),
       simulateQ impl
-        (liftM ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query (Sum.inr d)) :
-          OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) _) =
-      (pure (prfs.evalMultiple k d.1 d.2) : ProbComp Digest) := fun d => by
-    simp [impl, so, QueryImpl.add_apply_inr, TagReaderPRFs.multiplePRFScheme]
+        (PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) d) =
+      (pure (prfs.evalMultiple k d.1 d.2) : ProbComp Digest) := by
+    intro d
+    exact PRFScheme.simulateQ_prfRealQueryImpl_functionQuery prfs.multiplePRFScheme k d
   unfold unlinkToMultiplePRFTagImpl unlinkTagQueryImpl
   by_cases hs : s.sessionsUsed tag < sessionsPerTag
   · simp only [StateT.run_bind, StateT.run_get, StateT.run_monadLift,
@@ -194,7 +190,8 @@ lemma simulateQ_prfReal_unlinkToMultiplePRFTagImpl_run
     simp only [simulateQ_bind, simulateQ_map, monadLift_eq_self, hleft]
     refine bind_congr fun nonce => ?_
     erw [hquery (tag, nonce.1)]
-    rfl
+    simp only [multiplePattern, map_pure, pure_bind, StateT.run_map, StateT.run_set,
+      simulateQ_pure]
   · simp [hs]
 
 omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
@@ -211,34 +208,31 @@ lemma simulateQ_prfReal_unlinkToMultiplePRFReaderImpl_run
       (unlinkReaderQueryImpl (TagId := TagId) (Slot := TagId) (Nonce := Nonce) (Digest := Digest)
         (fun tag nonce => prfs.evalMultiple k tag nonce)
         (multiplePattern (TagId := TagId) sessionsPerTag) transcript).run s := by
-  let so : QueryImpl ((TagId × Nonce) →ₒ Digest) ProbComp :=
-    fun d => pure (prfs.multiplePRFScheme.eval k d)
   let impl : QueryImpl (unifSpec + ((TagId × Nonce) →ₒ Digest)) ProbComp :=
-    HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) + so
+    PRFScheme.prfRealQueryImpl prfs.multiplePRFScheme k
   have hquery : ∀ (d : TagId × Nonce),
       simulateQ impl
-        (liftM ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query (Sum.inr d)) :
-          OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) _) =
-      (pure (prfs.evalMultiple k d.1 d.2) : ProbComp Digest) := fun d => by
-    simp [impl, so, QueryImpl.add_apply_inr, TagReaderPRFs.multiplePRFScheme]
+        (PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) d) =
+      (pure (prfs.evalMultiple k d.1 d.2) : ProbComp Digest) := by
+    intro d
+    exact PRFScheme.simulateQ_prfRealQueryImpl_functionQuery prfs.multiplePRFScheme k d
   have hmapM :
       simulateQ impl
         ((Finset.univ : Finset TagId).toList.mapM
           (m := OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))
-          (fun tag => ((unifSpec + ((TagId × Nonce) →ₒ Digest)).query
-            (Sum.inr (tag, transcript.nonce)) :
-            OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Digest))) =
+          (fun tag => PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest)
+            (tag, transcript.nonce))) =
       pure ((Finset.univ : Finset TagId).toList.map
         fun tag => prfs.evalMultiple k tag transcript.nonce) := by
     show simulateQ impl _ = _
     rw [simulateQ_list_mapM]
     induction (Finset.univ : Finset TagId).toList with
-    | nil => rfl
+    | nil => simp
     | cons t ts ih =>
       rw [List.mapM_cons]
       erw [hquery (t, transcript.nonce)]
       rw [pure_bind, ih, pure_bind]
-      rfl
+      simp
   have hAccept :
       decide (∃ d ∈ (Finset.univ : Finset TagId).toList.map
         fun tag => prfs.evalMultiple k tag transcript.nonce, d = transcript.auth) =
@@ -246,20 +240,21 @@ lemma simulateQ_prfReal_unlinkToMultiplePRFReaderImpl_run
         (fun tag nonce => prfs.evalMultiple k tag nonce)
         (multiplePattern (TagId := TagId) sessionsPerTag) transcript := by
     unfold unlinkReaderAccepts tagAccepts
-    simp only [List.mem_map, Finset.mem_toList, Finset.mem_univ, true_and, multiplePattern,
-      decide_eq_decide, decide_eq_true_eq]
+    rw [decide_eq_decide]
+    simp only [List.mem_map, Finset.mem_toList, Finset.mem_univ, true_and, multiplePattern]
     constructor
-    · rintro ⟨d, ⟨tag, rfl⟩, hd⟩
-      exact ⟨tag, ⟨⟨0, Nat.pos_of_ne_zero (NeZero.ne sessionsPerTag)⟩, hd⟩⟩
-    · rintro ⟨tag, _, hd⟩
-      exact ⟨_, ⟨tag, rfl⟩, hd⟩
+    · rintro ⟨d, ⟨tag, hd⟩, hauth⟩
+      refine ⟨tag, decide_eq_true ⟨⟨0, Nat.pos_of_ne_zero (NeZero.ne sessionsPerTag)⟩, ?_⟩⟩
+      exact hd.trans hauth
+    · rintro ⟨tag, htag⟩
+      obtain ⟨_, hd⟩ := of_decide_eq_true htag
+      exact ⟨transcript.auth, ⟨tag, hd⟩, Eq.refl transcript.auth⟩
   unfold unlinkToMultiplePRFReaderImpl unlinkReaderQueryImpl
   simp only [bind_pure_comp]
   change simulateQ impl _ = _
   simp only [StateT.run_map, StateT.run_monadLift, simulateQ_bind, simulateQ_map,
     monadLift_eq_self, hmapM, pure_bind, simulateQ_pure, map_pure]
-  rw [hAccept]
-  rfl
+  simp only [hAccept, StateT.run_pure]
 
 omit [Nonempty TagId] [DecidableEq Nonce] [SampleableType Digest] in
 /-- Inductive helper, multiple-session world: simulating the unlinkability adversary through the
@@ -325,21 +320,20 @@ lemma simulateQ_prfReal_unlinkToSinglePRFTagImpl_run
         (Digest := Digest)
         (fun slot nonce => prfs.evalSingle k slot.1 slot.2 nonce)
         (singlePattern (TagId := TagId) sessionsPerTag) tag).run s := by
-  let so : QueryImpl (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest) ProbComp :=
-    fun d => pure (prfs.singlePRFScheme.eval k d)
   let impl : QueryImpl (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) ProbComp :=
-    HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) + so
+    PRFScheme.prfRealQueryImpl prfs.singlePRFScheme k
   have hleft : ∀ {α : Type} (oa : ProbComp α),
       simulateQ impl
-        (liftComp oa (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest))) = oa :=
-    fun oa => (QueryImpl.simulateQ_add_liftComp_left _ _ oa).trans (simulateQ_ofLift_eq_self _)
+        (liftComp oa (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest))) = oa := by
+    intro α oa
+    exact PRFScheme.simulateQ_prfRealQueryImpl_liftComp prfs.singlePRFScheme k oa
   have hquery : ∀ (d : (TagId × Fin sessionsPerTag) × Nonce),
       simulateQ impl
-        (liftM ((unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)).query
-            (Sum.inr d)) :
-          OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) _) =
-      (pure (prfs.evalSingle k d.1.1 d.1.2 d.2) : ProbComp Digest) := fun d => by
-    simp [impl, so, QueryImpl.add_apply_inr, TagReaderPRFs.singlePRFScheme]
+        (PRFScheme.functionQuery
+          (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest) d) =
+      (pure (prfs.evalSingle k d.1.1 d.1.2 d.2) : ProbComp Digest) := by
+    intro d
+    exact PRFScheme.simulateQ_prfRealQueryImpl_functionQuery prfs.singlePRFScheme k d
   unfold unlinkToSinglePRFTagImpl unlinkTagQueryImpl
   by_cases hs : s.sessionsUsed tag < sessionsPerTag
   · simp only [StateT.run_bind, StateT.run_get, StateT.run_monadLift,
@@ -348,7 +342,8 @@ lemma simulateQ_prfReal_unlinkToSinglePRFTagImpl_run
     simp only [simulateQ_bind, simulateQ_map, monadLift_eq_self, hleft]
     refine bind_congr fun nonce => ?_
     erw [hquery ((tag, ⟨s.sessionsUsed tag, hs⟩), nonce.1)]
-    rfl
+    simp only [singlePattern, map_pure, pure_bind, StateT.run_map, StateT.run_set,
+      simulateQ_pure]
   · simp [hs]
 
 omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
@@ -367,37 +362,34 @@ lemma simulateQ_prfReal_unlinkToSinglePRFReaderImpl_run
         (Digest := Digest)
         (fun slot nonce => prfs.evalSingle k slot.1 slot.2 nonce)
         (singlePattern (TagId := TagId) sessionsPerTag) transcript).run s := by
-  let so : QueryImpl (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest) ProbComp :=
-    fun d => pure (prfs.singlePRFScheme.eval k d)
   let impl : QueryImpl (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) ProbComp :=
-    HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) + so
+    PRFScheme.prfRealQueryImpl prfs.singlePRFScheme k
   have hquery : ∀ (d : (TagId × Fin sessionsPerTag) × Nonce),
       simulateQ impl
-        (liftM ((unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)).query
-            (Sum.inr d)) :
-          OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) _) =
-      (pure (prfs.evalSingle k d.1.1 d.1.2 d.2) : ProbComp Digest) := fun d => by
-    simp [impl, so, QueryImpl.add_apply_inr, TagReaderPRFs.singlePRFScheme]
+        (PRFScheme.functionQuery
+          (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest) d) =
+      (pure (prfs.evalSingle k d.1.1 d.1.2 d.2) : ProbComp Digest) := by
+    intro d
+    exact PRFScheme.simulateQ_prfRealQueryImpl_functionQuery prfs.singlePRFScheme k d
   have hmapM :
       simulateQ impl
         ((Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.mapM
           (m := OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))
-          (fun slot => ((unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)).query
-            (Sum.inr (slot, transcript.nonce)) :
-            OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest))
-              Digest))) =
+          (fun slot => PRFScheme.functionQuery
+            (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
+            (slot, transcript.nonce))) =
       pure ((Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.map
         (fun slot : TagId × Fin sessionsPerTag =>
           prfs.evalSingle k slot.1 slot.2 transcript.nonce)) := by
     show simulateQ impl _ = _
     rw [simulateQ_list_mapM]
     induction (Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList with
-    | nil => rfl
+    | nil => simp
     | cons t ts ih =>
       rw [List.mapM_cons]
       erw [hquery (t, transcript.nonce)]
       rw [pure_bind, ih, pure_bind]
-      rfl
+      simp
   have hAccept :
       decide (∃ d ∈ (Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.map
         (fun slot : TagId × Fin sessionsPerTag =>
@@ -407,20 +399,20 @@ lemma simulateQ_prfReal_unlinkToSinglePRFReaderImpl_run
         (fun slot nonce => prfs.evalSingle k slot.1 slot.2 nonce)
         (singlePattern (TagId := TagId) sessionsPerTag) transcript := by
     unfold unlinkReaderAccepts tagAccepts
-    simp only [List.mem_map, Finset.mem_toList, Finset.mem_univ, true_and, singlePattern,
-      decide_eq_decide, decide_eq_true_eq]
+    rw [decide_eq_decide]
+    simp only [List.mem_map, Finset.mem_toList, Finset.mem_univ, true_and, singlePattern]
     constructor
-    · rintro ⟨d, ⟨⟨tag, sid⟩, hslot⟩, hd⟩
-      exact ⟨tag, ⟨sid, by rw [hslot]; exact hd⟩⟩
-    · rintro ⟨tag, ⟨sid, hd⟩⟩
-      exact ⟨_, ⟨(tag, sid), rfl⟩, hd⟩
+    · rintro ⟨d, ⟨⟨tag, sid⟩, hd⟩, hauth⟩
+      exact ⟨tag, decide_eq_true ⟨sid, hd.trans hauth⟩⟩
+    · rintro ⟨tag, htag⟩
+      obtain ⟨sid, hd⟩ := of_decide_eq_true htag
+      exact ⟨transcript.auth, ⟨(tag, sid), hd⟩, Eq.refl transcript.auth⟩
   unfold unlinkToSinglePRFReaderImpl unlinkReaderQueryImpl
   simp only [bind_pure_comp]
   change simulateQ impl _ = _
   simp only [StateT.run_map, StateT.run_monadLift, simulateQ_bind, simulateQ_map,
     monadLift_eq_self, hmapM, pure_bind, simulateQ_pure, map_pure]
-  rw [hAccept]
-  rfl
+  simp only [hAccept, StateT.run_pure]
 
 omit [Nonempty TagId] [DecidableEq Nonce] [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- Inductive helper, single-session world: simulating the unlinkability adversary through the

@@ -63,12 +63,12 @@ def TraceNoninterference [IsUniformSpec spec₁] [IsUniformSpec spec₂]
 of which computation produced them. This captures the property that an adversary observing
 only the trace cannot distinguish between the two computations.
 
-The comparison is made at the `SPMF` level via `evalDist`, allowing computations over
+The comparison is made at the `SPMF` level via `evalSPMF`, allowing computations over
 different oracle specs to be compared. -/
 def ProbLeakFree [IsUniformSpec spec₁] [IsUniformSpec spec₂]
     (oa₁ : OracleComp spec₁ (α × ω))
     (oa₂ : OracleComp spec₂ (β × ω)) : Prop :=
-  𝒟[Prod.snd <$> oa₁] = 𝒟[Prod.snd <$> oa₂]
+  𝒮[Prod.snd <$> oa₁] = 𝒮[Prod.snd <$> oa₂]
 
 /-! ### LeakageBound -/
 
@@ -78,7 +78,7 @@ leakage discrepancy. -/
 def LeakageBound [IsUniformSpec spec₁] [IsUniformSpec spec₂]
     (ε : ℝ) (oa₁ : OracleComp spec₁ (α × ω))
     (oa₂ : OracleComp spec₂ (β × ω)) : Prop :=
-  SPMF.tvDist (𝒟[Prod.snd <$> oa₁]) (𝒟[Prod.snd <$> oa₂]) ≤ ε
+  SPMF.tvDist (𝒮[Prod.snd <$> oa₁]) (𝒮[Prod.snd <$> oa₂]) ≤ ε
 
 /-! ### Bridge Lemmas -/
 
@@ -89,7 +89,7 @@ theorem traceNoninterference_implies_probLeakFree
     {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : TraceNoninterference oa₁ oa₂) :
     ProbLeakFree oa₁ oa₂ :=
-  ProgramLogic.Relational.evalDist_map_eq_of_relTriple' h
+  ProgramLogic.Relational.evalSPMF_map_eq_of_relTriple' h
 
 /-- `ProbLeakFree` is equivalent to `LeakageBound 0`. -/
 theorem probLeakFree_iff_leakageBound_zero
@@ -192,7 +192,7 @@ theorem probLeakFree_map_snd
     {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : ProbLeakFree oa₁ oa₂) {ω' : Type} (g : ω → ω') :
     ProbLeakFree (Prod.map id g <$> oa₁) (Prod.map id g <$> oa₂) := by
-  simp only [ProbLeakFree, snd_map_prod_map_eq_map, evalDist_map] at h ⊢
+  simp only [ProbLeakFree, snd_map_prod_map_eq_map, evalSPMF_map] at h ⊢
   exact congrArg (Functor.map g) h
 
 /-- Mapping the trace component with the same function preserves approximate trace
@@ -202,7 +202,7 @@ theorem leakageBound_map_snd
     {ε : ℝ} {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : LeakageBound ε oa₁ oa₂) {ω' : Type} (g : ω → ω') :
     LeakageBound ε (Prod.map id g <$> oa₁) (Prod.map id g <$> oa₂) := by
-  simp only [LeakageBound, snd_map_prod_map_eq_map, evalDist_map] at h ⊢
+  simp only [LeakageBound, snd_map_prod_map_eq_map, evalSPMF_map] at h ⊢
   exact le_trans (SPMF.tvDist_map_le g _ _) h
 
 /-- Mapping the trace component with the same function preserves trace noninterference. -/
@@ -250,7 +250,7 @@ theorem probLeakFree_bind_of_trace_only
     {f : ω → OracleComp spec₁ (γ × ω')} {g : ω → OracleComp spec₂ (δ × ω')}
     (hfg : ∀ w, ProbLeakFree (f w) (g w)) :
     ProbLeakFree (oa₁ >>= fun z => f z.2) (oa₂ >>= fun z => g z.2) := by
-  rw [ProbLeakFree, snd_map_bind_snd _ f, snd_map_bind_snd _ g, evalDist_bind, evalDist_bind, h]
+  rw [ProbLeakFree, snd_map_bind_snd _ f, snd_map_bind_snd _ g, evalSPMF_bind, evalSPMF_bind, h]
   exact congrArg _ (funext hfg)
 
 /-- Approximate trace independence is preserved by bind when the continuation depends
@@ -263,8 +263,8 @@ theorem leakageBound_bind_of_trace_only
     {f : ω → OracleComp spec₁ (γ × ω')} {g : ω → OracleComp spec₂ (δ × ω')}
     (hfg : ∀ w, ProbLeakFree (f w) (g w)) :
     LeakageBound ε (oa₁ >>= fun z => f z.2) (oa₂ >>= fun z => g z.2) := by
-  rw [LeakageBound, snd_map_bind_snd _ f, snd_map_bind_snd _ g, evalDist_bind, evalDist_bind,
-    show (fun w => 𝒟[Prod.snd <$> f w]) = fun w => 𝒟[Prod.snd <$> g w] from funext hfg]
+  rw [LeakageBound, snd_map_bind_snd _ f, snd_map_bind_snd _ g, evalSPMF_bind, evalSPMF_bind,
+    show (fun w => 𝒮[Prod.snd <$> f w]) = fun w => 𝒮[Prod.snd <$> g w] from funext hfg]
   exact le_trans (SPMF.tvDist_bind_right_le _ _ _) h
 
 end OracleComp.Leakage

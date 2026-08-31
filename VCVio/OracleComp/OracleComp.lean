@@ -5,6 +5,7 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
+public import Mathlib.Algebra.BigOperators.Group.Finset.Defs
 public import VCVio.OracleComp.HasQuery.Basic
 public import PolyFun.PFunctor.Free.Basic
 
@@ -31,6 +32,7 @@ variable {α β γ : Type v} {ι} {spec : OracleSpec.{u, v} ι}
 
 namespace OracleComp
 
+open scoped BigOperators
 open scoped OracleSpec.PrimitiveQuery
 
 /-- Interpret a raw polynomial free program as an oracle computation.
@@ -268,9 +270,13 @@ def isPure {α : Type _} : OracleComp spec α → Bool
 @[simp] lemma isPure_query_bind : isPure (liftM (OracleSpec.query t) >>= ou) = false := rfl
 
 @[simp] lemma pure_ne_query :
-    (pure u : OracleComp spec _) ≠ query t := by simp [OracleSpec.query_def]
+    (pure u : OracleComp spec _) ≠ query t := by
+  intro h
+  have h' := congrArg (isPure (spec := spec)) h
+  simp at h'
 @[simp] lemma query_ne_pure :
-    (query t : OracleComp spec _) ≠ pure u := by simp [OracleSpec.query_def]
+    (query t : OracleComp spec _) ≠ pure u := by
+  exact Ne.symm (pure_ne_query (spec := spec) t u)
 
 lemma pure_eq_query_iff_false : pure u = (query t : OracleComp spec _) ↔ False := by simp
 lemma query_eq_pure_iff_false : (query t : OracleComp spec _) = pure u ↔ False := by simp

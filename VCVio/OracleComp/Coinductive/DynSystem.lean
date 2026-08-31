@@ -124,12 +124,12 @@ distributional semantics: machine-level game values against `probHandler` are `P
 statements about the program. -/
 theorem simulateQ_probHandler {ι : Type} {spec : OracleSpec.{0, 0} ι}
     [IsProbabilitySpec spec] {α : Type} (oa : OracleComp spec α) :
-    simulateQ spec.probHandler oa = 𝒟[oa] := by
+    simulateQ spec.probHandler oa = 𝒮[oa] := by
   induction oa using OracleComp.inductionOn with
   | pure x => simp
   | query_bind t k ih =>
     rw [simulateQ_query_bind]
-    simp only [ih, evalDist_bind, evalDist_liftM_toPMF]
+    simp only [ih, evalSPMF_bind, evalSPMF_liftM_toPMF]
     simp [OracleSpec.probHandler, ← PMF.monad_map_eq_map]
 
 end OracleSpec

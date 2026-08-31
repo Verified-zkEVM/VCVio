@@ -254,7 +254,7 @@ def tryLowerRelGoal : TacticM Bool := withMainContext do
       apply OracleComp.ProgramLogic.GameEquiv.of_relTriple))
   else if isEvalDistEqGoal target then
     tryEvalTacticSyntax (← `(tactic|
-      apply OracleComp.ProgramLogic.Relational.evalDist_eq_of_relTriple_eqRel))
+      apply OracleComp.ProgramLogic.Relational.evalSPMF_eq_of_relTriple_eqRel))
   else
     return false
 
@@ -711,7 +711,7 @@ def runRelSimDistRule : TacticM Bool := withMainContext do
       if !(hasSimulateQRunLike oa) || !(hasSimulateQRunLike ob) || !isEqRelPost post then
         return false
       tryEvalTacticSyntax (← `(tactic|
-        apply OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run'_of_impl_evalDist_eq))
+        apply OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run'_of_impl_evalSPMF_eq))
   | none => return false
 
 private def rawRelWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
@@ -1725,11 +1725,11 @@ def throwRVCGenStepError : TacticM Unit := withMainContext do
   if isGameEquivGoal target then
     throwError "rvcstep: failed to lower the `GameEquiv` goal into relational proof mode."
   if isEvalDistEqGoal target then
-    throwError "rvcstep: failed to lower the `evalDist` equality into a `RelTriple` goal."
+    throwError "rvcstep: failed to lower the `evalSPMF` equality into a `RelTriple` goal."
   match relationalGoalParts? target with
   | none =>
       throwError m!
-        "rvcstep: expected a `GameEquiv`, `evalDist` equality, `RelTriple`, `RelWP`,\n\
+        "rvcstep: expected a `GameEquiv`, `evalSPMF` equality, `RelTriple`, `RelWP`,\n\
         or quantitative `Std.Do'.RelTriple` goal; got:{indentExpr target}"
   | some (oa, ob, post) =>
       let oa ← whnfReducible (← instantiateMVars oa)

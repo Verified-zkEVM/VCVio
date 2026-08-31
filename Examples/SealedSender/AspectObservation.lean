@@ -6,8 +6,6 @@ Authors: Quang Dao
 
 module
 
-import all PolyFun.Interaction.Multiparty.Observation
-
 public import PolyFun.Interaction.Multiparty.ObservationProfile
 
 /-!
@@ -155,12 +153,14 @@ types. -/
 
 /-- Sealed-sender Server is no more revealing than honest Server: drop `envFrom`. -/
 theorem serverSealed_le_serverHonest : serverSealed ≤ serverHonest :=
-  ⟨fun v => ⟨v.envTo, v.ciphertext, v.timestamp⟩, fun _ => rfl⟩
+  Observation.le_def.mpr <| Observation.refines_iff.mpr
+    ⟨fun v => ⟨v.envTo, v.ciphertext, v.timestamp⟩, fun _ => rfl⟩
 
 /-- Honest Server is no more revealing than fully-corrupted Server: project
 out the four observed fields. -/
 theorem serverHonest_le_serverFull : serverHonest ≤ serverFull :=
-  ⟨fun p => ⟨p.envFrom, p.envTo, p.ciphertext, p.timestamp⟩, fun _ => rfl⟩
+  Observation.le_def.mpr <| Observation.refines_iff.mpr
+    ⟨fun p => ⟨p.envFrom, p.envTo, p.ciphertext, p.timestamp⟩, fun _ => rfl⟩
 
 /-- By transitivity, sealed-sender Server is no more revealing than the fully
 corrupted Server. -/
@@ -169,7 +169,8 @@ theorem serverSealed_le_serverFull : serverSealed ≤ serverFull :=
 
 /-- Honest Network observer is no more revealing than the MAC-aware variant. -/
 theorem netHonest_le_netMacAware : netHonest ≤ netMacAware :=
-  ⟨fun v => ⟨v.envFrom, v.envTo, v.ctLen, v.timestamp⟩, fun _ => rfl⟩
+  Observation.le_def.mpr <| Observation.refines_iff.mpr
+    ⟨fun v => ⟨v.envFrom, v.envTo, v.ctLen, v.timestamp⟩, fun _ => rfl⟩
 
 end Observations
 

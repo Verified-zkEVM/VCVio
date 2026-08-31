@@ -4,7 +4,7 @@
 
 ### 1. Probability semantics require the right spec class
 
-Any file using `evalDist`, `probOutput`, `probEvent`, or `Pr[...]` on `OracleComp spec` needs `[IsProbabilitySpec spec]`. Lemmas that use uniform cardinalities, `PMF.uniformOfFintype`, or connect `support` to nonzero probability need `[IsUniformSpec spec]`. Plain `support` works on arbitrary `OracleComp spec`.
+Any file using `evalSPMF`, `probOutput`, `probEvent`, or `Pr[...]` on `OracleComp spec` needs `[IsProbabilitySpec spec]`. `evalDist` / `𝒟[…]` also needs a `MeasurableSpace` on the result type. Lemmas that use uniform cardinalities, `PMF.uniformOfFintype`, or connect `support` to nonzero probability need `[IsUniformSpec spec]`. Plain `support` works on arbitrary `OracleComp spec`.
 
 **Symptom**: "failed to synthesize instance" mentioning `MonadLiftT (OracleComp spec) SPMF`, `IsProbabilitySpec`, `IsUniformSpec`, or `EvalDistCompatible`.
 
@@ -17,9 +17,9 @@ and do not add `set_option autoImplicit false` in individual files.
 
 **Symptom**: "unknown identifier" for variables you expected Lean to infer.
 
-### 3. `evalDist` IS `simulateQ`
+### 3. `evalSPMF` is `simulateQ`; `evalDist` is measure-valued
 
-They share the exact same code path: `evalDist` is `simulateQ` with `m = PMF` and the `IsProbabilitySpec.toPMF` query implementation. Under `[IsUniformSpec spec]`, those query distributions are propositionally the uniform distributions. The `evalDist_eq_simulateQ` identity is definitional (`rfl`).
+`evalSPMF` is `simulateQ` with `m = PMF` and the `IsProbabilitySpec.toPMF` query implementation. Under `[IsUniformSpec spec]`, those query distributions are propositionally the uniform distributions. The `evalSPMF_eq_simulateQ` identity is definitional (`rfl`). The primary `evalDist` is the successful-output measure façade; on discrete free programs it agrees with the direct `FreeM.denote` fold.
 
 ### 4. `++ₒ` is dead — use `+`
 
@@ -37,18 +37,38 @@ Use `Examples/OneTimePad/Basic.lean` as the canonical reference for current styl
 
 ### 6. `query` resolves to `HasQuery.query`; use `spec.query` for the primitive
 
-The bare `query` identifier is the `export`ed `HasQuery.query`, so writing `query t : OracleComp spec _` produces a monadic value directly and works with `evalDist`. The primitive single-query syntax `OracleQuery spec _` is `OracleSpec.query` (marked `protected`); reach it via dot notation `spec.query t` (or the fully qualified `OracleSpec.query t`) when you need to apply `liftM`, project `OracleQuery.cont`, or pattern-match on the query structure.
+The bare `query` identifier is the `export`ed `HasQuery.query`, so writing `query t : OracleComp spec _` produces a monadic value directly and works with `evalSPMF`. The primitive single-query syntax `OracleQuery spec _` is `OracleSpec.query` (marked `protected`); reach it via dot notation `spec.query t` (or the fully qualified `OracleSpec.query t`) when you need to apply `liftM`, project `OracleQuery.cont`, or pattern-match on the query structure.
 
-### 7. Core types are `@[reducible]` thin wrappers
+### 7. Core types are thin wrappers with deliberate reducibility
 
-`OracleSpec`, `QueryImpl`, `OracleComp`, `OracleQuery`, and `OracleSpec.toPFunctor` are all `def`/`abbrev`/`@[reducible]` over `PFunctor` machinery, and the `Monad`/`Functor` instances come directly from `PFunctor.FreeM`/`PFunctor.Obj`. Lean may unfold them aggressively. Use `OracleComp.inductionOn` / `OracleComp.construct` as canonical eliminators rather than pattern matching on `PFunctor.FreeM.pure`/`roll`.
+`OracleSpec`, `QueryImpl`, `OracleComp`, `OracleQuery`, and
+`OracleSpec.toPFunctor` are thin `def`/`abbrev` façades over `PFunctor`
+machinery. Their reducibility statuses differ according to where elaboration
+needs them, and the `Monad`/`Functor` instances come directly from
+`PFunctor.FreeM`/`PFunctor.Obj`. Lean may unfold them aggressively. Use
+`OracleComp.inductionOn` / `OracleComp.construct` as canonical eliminators
+rather than pattern matching on `PFunctor.FreeM.pure`/`roll`.
 
 Two failure modes to recognize under this regime:
 
 - **Dot notation on monadic results fails.** The inferred type of `oa >>= ob` or `liftM (query t)` has head `PFunctor.FreeM`, not `OracleComp`, so `(query t >>= oa).myOracleCompLemma` reports `Invalid field … PFunctor.FreeM.myOracleCompLemma`. State such lemmas in prefix form (`myOracleCompLemma … (query t >>= oa)`); dot notation on plain variables of ascribed type `OracleComp spec α` still works.
-- **Never `attribute [local reducible]` a definition that instance keys mention.** Instance discrimination-tree keys are computed at declaration site; changing transparency locally makes queries normalize differently and instances like `MonadLiftT (OracleComp spec) SetM` silently vanish (`support`, `evalDist`, `Pr[…]` all stop elaborating). `toPFunctor` is globally reducible for exactly this consistency reason.
+- **Never `attribute [local reducible]` a definition that instance keys mention.** Instance discrimination-tree keys are computed at declaration site; changing transparency locally makes queries normalize differently and instances like `MonadLiftT (OracleComp spec) SetM` silently vanish (`support`, `evalSPMF`, `Pr[…]` all stop elaborating). `toPFunctor` is globally reducible for exactly this consistency reason.
 
 Relatedly, `OracleSpec.toPFunctor_add` is deliberately **not** `@[simp]`: `toPFunctor` occurs inside the instance-carrying type of an `OracleComp`, and rewriting `(spec + spec').toPFunctor` under a `simulateQ`/`liftM` strands goals in a form the `simulateQ_query` family can no longer match (typically visible as `simulateQ impl (liftM (query (Sum.inl t)))` refusing to simplify).
+
+Nested sums are a dedicated implicit-transparency boundary. `PFunctor.sum`
+uses the primitive dependent `Sum.rec`, and the OracleSpec `HAdd` instance
+calls that construction directly. Keep the latter at the ordinary
+`instance_reducible` status supplied by the `instance` command: making it
+implicit-reducible obstructs instance-mode normalization, while making it
+fully reducible changes ordinary simp normal forms. Do not replace the direct
+construction with a `Sum.elim` wrapper or use overloaded `+` inside the
+`HAdd` implementation: both add a semireducible/projection layer to response types such as
+`((spec₁ + spec₂) + spec₃).Range (.inr t)`. If a similar failure appears,
+enable `linter.tacticCheckInstances` on a minimal canary and fix the owning
+combinator rather than adding global reducibility attributes or a transparency
+compatibility option. Use `#guard_msgs` only when the canary documents an
+expected diagnostic, not when it guards successful elaboration.
 
 ### 8. Concrete subtype samplers built with `Fintype.ofFinite` can be whnf-hostile
 
@@ -88,7 +108,30 @@ position, even though the same fields elaborate separately.
 
 `OracleComp` has 3 universe parameters, `SubSpec` has 3 (`u, v, w`: indices `ι : Type u`, `τ : Type v`, shared response universe `w`). Universe unification errors are still common when composing specs or building reductions because the lens-style `MonadLift` parent can drag extra metavariables in.
 
-**Fix**: Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently. Keep `α β : Type` (not `Type u`).
+**Fix**: Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.
+
+**How far to generalize depends on what you are writing.**
+
+- A *local* definition, a proof-local variable, or a concrete scheme may pin `α β : Type`.
+  Nothing downstream reuses it, and the pinning keeps elaboration predictable.
+- A *public reusable law* — anything a downstream package will `rw`, `simp`, or `exact` —
+  must be universe-polymorphic. A law that holds only at `Type 0` is not a replacement for
+  the adapter a consumer would otherwise write; it is one more thing they have to work
+  around. Take `{ι : Type*}` for indices and `{α : Type u} {m : Type u → Type*}` for the
+  value universe and target monad.
+
+The composition surface already spells the shape to copy: `QueryImpl.parallelStateT`
+(`VCVio/OracleComp/SimSemantics/StateT/Basic.lean`), `QueryImpl.addReaderT`
+(`.../ReaderT/Basic.lean`), `QueryImpl.parallelWriterT` (`.../WriterT/Basic.lean`), and
+`VCVio/OracleComp/SimSemantics/Append.lean`. The constraint is always the same: **arbitrary
+index universes, one shared response universe, and `α` in that response universe** —
+`spec₁ + spec₂` goes through a dependent `Sum.rec`, which forces the response universes to agree but
+leaves the index universes free, and `simulateQ` forces `α` into the target monad's source
+universe.
+
+When adding such a law, add a nonzero-universe consumer alongside it. `VCVioTest/UniversePolymorphism.lean`
+is the in-repo canary, and the downstream scratch-consumer CI job builds one from outside
+the package.
 
 ## Proof Patterns
 
@@ -294,8 +337,8 @@ their executable modules contain colliding root-level `main` declarations.
 
 ### 26. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.32.2`: `lean-toolchain` pins `leanprover/lean4:v4.32.2` and
-`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.32.2"`.
+Both currently `v4.33.1`: `lean-toolchain` pins `leanprover/lean4:v4.33.1` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.33.1"`.
 When upgrading, update both lines simultaneously.
 
 ### 27. Use public references in shared docs

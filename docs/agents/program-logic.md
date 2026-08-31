@@ -11,6 +11,12 @@
 - `VCVio.ProgramLogic.Unary.StdDoBridge` is a narrow unary bridge for almost-sure correctness in the `.pure`
   `Std.Do` view. It is not the main engine for quantitative or relational VCGen.
 
+For continuous or otherwise non-discrete denotations, import
+`VCVio.ProgramLogic.Relational.Measure`. Its `MeasureProgramLogic.RelWP` uses an almost-everywhere
+postcondition under a Mathlib `Measure.Coupling`, and `eRelWP` integrates quantitative
+post-expectations with `lintegral`. The tactic proof mode below remains the finite, executable
+compatibility layer while measure-native tactic support is developed.
+
 ## In-Tree Walkthroughs
 
 - `Examples/ProgramLogic/UnaryStep.lean`: unary `vcstep` / `vcgen` examples.
@@ -25,7 +31,7 @@
 
 | Tactic | Goal shape | What it does |
 |--------|-----------|--------------|
-| `by_equiv` | `g₁ ≡ₚ g₂` or `evalDist g₁ = evalDist g₂` | Enters relational proof mode (`RelTriple`) |
+| `by_equiv` | `g₁ ≡ₚ g₂` or `evalSPMF g₁ = evalSPMF g₂` | Enters relational proof mode (`RelTriple`) |
 | `game_trans g₂` | `g₁ ≡ₚ g₃` | Splits into `g₁ ≡ₚ g₂` and `g₂ ≡ₚ g₃` |
 | `by_dist` | `AdvBound game ε` | Enters TV distance reasoning |
 | `by_upto bad` | identical-until-bad TV-distance goals | Applies the `simulateQ` up-to-bad bound |
@@ -41,7 +47,7 @@ before generating the remaining subgoals.
 
 | Tactic | Goal shape | What it does |
 |--------|-----------|--------------|
-| `rvcstep` | `g₁ ≡ₚ g₂`, `evalDist g₁ = evalDist g₂`, `⟪oa ~ ob \| R⟫`, or `⦃f⦄ oa ≈ₑ ob ⦃g⦄` | Lowers into relational mode if needed, then applies one obvious relational step |
+| `rvcstep` | `g₁ ≡ₚ g₂`, `evalSPMF g₁ = evalSPMF g₂`, `⟪oa ~ ob \| R⟫`, or `⦃f⦄ oa ≈ₑ ob ⦃g⦄` | Lowers into relational mode if needed, then applies one obvious relational step |
 | `rvcstep using t` | same | Supplies the explicit witness needed by the current shape (bind cut relation, bijection, traversal input relation, or simulation state relation) |
 | `rvcstep with thm` | same | Force one explicit relational theorem/assumption step |
 | `rvcstep left` / `rvcstep right` | raw `Std.Do'.rwp` or folded `Std.Do'.RelTriple` goals | Exposes a controlled one-sided bind step |
@@ -60,7 +66,7 @@ before generating the remaining subgoals.
 | `rvcgen?` | same | Runs `rvcgen` and emits the corresponding explicit script |
 | `rel_conseq` | `⟪oa ~ ob \| R'⟫` | Weakens/strengthens postcondition |
 | `rel_inline foo` | `⟪... ~ ... \| R⟫` | Unfolds definitions, simplifies |
-| `rel_dist` | `⟪oa ~ ob \| EqRel α⟫` | Exits relational mode back to `evalDist oa = evalDist ob` |
+| `rel_dist` | `⟪oa ~ ob \| EqRel α⟫` | Exits relational mode back to `evalSPMF oa = evalSPMF ob` |
 
 ### Optional arguments
 
@@ -258,9 +264,9 @@ All probability-equality control now lives under `vcstep`.
 
 | Tactic | What it does |
 |--------|--------------|
-| `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `GameEquiv` / `evalDist` equality and cheap leaf closure |
+| `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `GameEquiv` / `evalSPMF` equality and cheap leaf closure |
 | `rvcfinish` / `rvcgen!` | Opt-in residual search and consequence closing |
-| `rel_dist` | Turns `RelTriple oa ob (EqRel α)` into `evalDist oa = evalDist ob` |
+| `rel_dist` | Turns `RelTriple oa ob (EqRel α)` into `evalSPMF oa = evalSPMF ob` |
 
 ## Probability Equality Guide
 
@@ -352,13 +358,13 @@ Key rules:
 | `relTriple_bind` | Decompose bind on both sides |
 | `relTriple_refl` | Same computation → `EqRel` |
 | `relTriple_eqRel_of_eq` | Definitionally equal → `EqRel` |
-| `relTriple_eqRel_of_evalDist_eq` | Same distribution → `EqRel` |
+| `relTriple_eqRel_of_evalSPMF_eq` | Same distribution → `EqRel` |
 | `relTriple_query` | Same query → `EqRel` on response |
 | `relTriple_query_bij` | Same query with bijection `f` → `fun a b => f a = b` |
 | `relTriple_uniformSample_bij` | Uniform sampling with bijection |
 | `relTriple_if` | Synchronized conditional |
 | `relTriple_post_mono` | Weaken postcondition |
-| `evalDist_eq_of_relTriple_eqRel` | Extract `evalDist` equality from `EqRel` triple |
+| `evalSPMF_eq_of_relTriple_eqRel` | Extract `evalSPMF` equality from `EqRel` triple |
 
 ### Relational simulateQ
 
@@ -454,7 +460,7 @@ Projection and bridge variants:
 | `relTriple_simulateQ_run_writerT'` | Output-projection of `relTriple_simulateQ_run_writerT` (drops the writer component, yielding `EqRel α` on outputs) |
 | `relTriple_simulateQ_run_writerT_of_impl_eq` | `WriterT` analogue of `relTriple_simulateQ_run_of_impl_eq_preservesInv`: two handlers with identical `.run` outputs yield `EqRel (α × ω)` on whole simulations |
 | `probOutput_simulateQ_run_writerT_eq_of_impl_eq` | Output-probability projection of `relTriple_simulateQ_run_writerT_of_impl_eq` |
-| `evalDist_simulateQ_run_writerT_eq_of_impl_eq` | `evalDist` equality projection of `relTriple_simulateQ_run_writerT_of_impl_eq` |
+| `evalSPMF_simulateQ_run_writerT_eq_of_impl_eq` | `evalSPMF` equality projection of `relTriple_simulateQ_run_writerT_of_impl_eq` |
 | `relTriple_simulateQ_run_writerT_of_triples` | `WriterT` handler-level whole-program lift from unary triples (monoid variant) |
 | `relTriple_simulateQ_run_writerT'_of_triples` | Output-projection of `relTriple_simulateQ_run_writerT_of_triples` |
 | `relTriple_run_of_triple` | Per-call product coupling for `StateT` |

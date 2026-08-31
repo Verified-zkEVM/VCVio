@@ -243,14 +243,13 @@ resulting pathwise cost is proved exact on support. The canonical cost theorem i
 def IND_CPA_OneTime_DDHReduction_open
     {State : Type} (_gen A B T : G)
     [HasQuery (oneTimeINDCPASpec G G State (G × G)) ProbComp] :
-    ProbComp Bool := do
-  let (m₁, m₂, st) ← HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G))
-    (.chooseMessages A)
-  let bit ← ($ᵗ Bool)
-  let c : G × G := (B, T + if bit then m₁ else m₂)
-  let bit' ← HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G))
-    (.distinguish st c)
-  pure (bit == bit')
+    ProbComp Bool :=
+  oneTimeDDHReductionBody
+    (HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (.chooseMessages A))
+    ($ᵗ Bool)
+    (fun state ciphertext ↦
+      HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G))
+        (.distinguish state ciphertext)) B T
 
 /-- Resource-profile-instrumented form of [`IND_CPA_OneTime_DDHReduction_open`] with a concrete
 profile assigned to each reified adversary capability. -/
@@ -263,15 +262,14 @@ noncomputable def IND_CPA_OneTime_DDHReduction_openProfiled
     AddWriterT (ResourceProfile ω κ) ProbComp Bool := do
   AddWriterT.addTell (ResourceProfile.ofIntrinsic (κ := κ) intrinsic)
   AddWriterT.addTell (profile OneTimeINDCPACapability.chooseMessages)
-  let (m₁, m₂, st) ←
-    HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
+  let (m₁, m₂, state) ←
+    liftM <| HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
       (.chooseMessages A)
-  let bit ← ($ᵗ Bool : ProbComp Bool)
-  let c : G × G := (B, T + if bit then m₁ else m₂)
+  let bit ← liftM ($ᵗ Bool : ProbComp Bool)
   AddWriterT.addTell (profile OneTimeINDCPACapability.distinguish)
   let bit' ←
-    HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
-      (.distinguish st c)
+    liftM <| HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
+      (.distinguish state (B, T + if bit then m₁ else m₂))
   pure (bit == bit')
 
 /-- Resource-profile-instrumented form of [`IND_CPA_OneTime_DDHReduction_open`].
@@ -478,7 +476,7 @@ lemma IND_CPA_OneTime_DDHReduction_profiled_pathwiseCostEqOnSupport
       (IND_CPA_OneTime_DDHReduction_profiled
         (F := F) (G := G) (gen := gen) (ω := ω) (κ := κ) intrinsic profile adv g A B T)
       (OneTimeINDCPACapability.reductionTransform intrinsic profile) := by
-  letI := (oneTimeINDCPAImpl (gen := gen) adv).toHasQuery
+  let := (oneTimeINDCPAImpl (gen := gen) adv).toHasQuery
   simpa [IND_CPA_OneTime_DDHReduction_profiled] using
     (IND_CPA_OneTime_DDHReduction_openProfiled_pathwiseCostEqOnSupport
       (State := adv.State) (ω := ω) (κ := κ) intrinsic profile g A B T)
@@ -695,7 +693,7 @@ lemma IND_CPA_OneTime_DDHReduction_costed_pathwiseCostEqOnSupport
       (IND_CPA_OneTime_DDHReduction_costed
         (F := F) (G := G) (gen := gen) (ω := ω) intrinsic adv g A B T)
       (OneTimeINDCPACapability.reductionProfile intrinsic) := by
-  letI := (oneTimeINDCPAImpl (gen := gen) adv).toHasQuery
+  let := (oneTimeINDCPAImpl (gen := gen) adv).toHasQuery
   convert
     (IND_CPA_OneTime_DDHReduction_profiled_pathwiseCostEqOnSupport
       (F := F) (G := G) (gen := gen) (ω := ω) (κ := OneTimeINDCPACapability)

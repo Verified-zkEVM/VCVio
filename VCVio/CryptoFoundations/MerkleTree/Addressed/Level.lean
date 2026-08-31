@@ -49,7 +49,7 @@ theorem level_functional_completeness (th : TweakableHash PkSeed Tweak (Y × Y) 
     getPutativeRootLevel th pk tweakAt idx (ld.get idx)
       (generateProof (buildMerkleTreeLevel th pk tweakAt ld) idx)
     = (buildMerkleTreeLevel th pk tweakAt ld).getRootValue := by
-  letI : DecidableEq Y := Classical.decEq Y
+  let : DecidableEq Y := Classical.decEq Y
   exact addressed_functional_completeness idx ld (levelNodeHash th pk tweakAt)
 
 omit [DecidableEq Y] in
@@ -57,20 +57,20 @@ omit [DecidableEq Y] in
 binding at `levelNodeHash`: an adversarial opening verifying against an honestly
 built root with a different leaf yields two distinct pairs with equal digest under
 the tweak of the collision's level, the first pair being the honestly-precommitted
-one at the tagged address. -/
+one at the tagged address, an ancestor of the opened leaf. -/
 theorem level_oriented_binding (th : TweakableHash PkSeed Tweak (Y × Y) Y)
     (pk : PkSeed) (tweakAt : ℕ → Tweak) {s : Skeleton} (ld : LeafData Y s)
     (idx : SkeletonLeafIndex s) (y : Y) (proof₂ : List.Vector Y idx.depth)
     (hroot : getPutativeRootLevel th pk tweakAt idx y proof₂
       = (buildMerkleTreeLevel th pk tweakAt ld).getRootValue)
     (hne : ld.get idx ≠ y) :
-    ∃ (a : SkeletonInternalIndex s) (c : Y × Y),
+    ∃ (a : SkeletonInternalIndex s) (c : Y × Y), a.IsAncestorOf idx ∧
       (childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a) ≠ c ∧
       th.eval pk (tweakAt a.subtreeDepth)
           ((childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a).1,
            (childPairAt (buildMerkleTreeLevel th pk tweakAt ld) a).2)
         = th.eval pk (tweakAt a.subtreeDepth) (c.1, c.2) := by
-  letI : DecidableEq Y := Classical.decEq Y
+  let : DecidableEq Y := Classical.decEq Y
   exact addressed_oriented_binding (levelNodeHash th pk tweakAt) ld idx y proof₂ hroot hne
 
 end AddressedMerkleTree

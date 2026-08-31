@@ -46,7 +46,7 @@ variable {P : Type u} {k : Nat}
 
 /-- View a vector as a `Fin k → P` function. -/
 def toPi (v : PolyVec P k) : Fin k → P :=
-  fun i => v.get i
+  fun i => v[i.1]
 
 /-- Build a vector from a `Fin k → P` function. -/
 def ofPi (f : Fin k → P) : PolyVec P k :=
@@ -55,13 +55,13 @@ def ofPi (f : Fin k → P) : PolyVec P k :=
 @[simp] theorem toPi_ofPi (f : Fin k → P) :
     toPi (ofPi f) = f := by
   funext i
-  simp [toPi, ofPi, Vector.get]
+  simp [toPi, ofPi]
 
 @[simp] theorem ofPi_toPi (v : PolyVec P k) :
     ofPi (toPi v) = v := by
   apply Vector.ext
   intro i hi
-  simp [toPi, ofPi, Vector.get]
+  simp [toPi, ofPi]
 
 end PolyVec
 
@@ -71,7 +71,7 @@ variable {P : Type u} {rows cols : Nat}
 
 /-- View a row-major matrix as a Mathlib `Matrix`. -/
 def toMatrix (A : PolyMatrix P rows cols) : Matrix (Fin rows) (Fin cols) P :=
-  fun i j => (A.get i).get j
+  fun i j => A[i.1][j.1]
 
 /-- Build a row-major matrix from a Mathlib `Matrix`. -/
 def ofMatrix (A : Matrix (Fin rows) (Fin cols) P) : PolyMatrix P rows cols :=
@@ -80,7 +80,7 @@ def ofMatrix (A : Matrix (Fin rows) (Fin cols) P) : PolyMatrix P rows cols :=
 @[simp] theorem toMatrix_ofMatrix (A : Matrix (Fin rows) (Fin cols) P) :
     toMatrix (ofMatrix A) = A := by
   funext i j
-  simp [toMatrix, ofMatrix, Vector.get]
+  simp [toMatrix, ofMatrix]
 
 @[simp] theorem ofMatrix_toMatrix (A : PolyMatrix P rows cols) :
     ofMatrix (toMatrix A) = A := by
@@ -88,7 +88,7 @@ def ofMatrix (A : Matrix (Fin rows) (Fin cols) P) : PolyMatrix P rows cols :=
   intro i hi
   apply Vector.ext
   intro j hj
-  simp [toMatrix, ofMatrix, Vector.get]
+  simp [ofMatrix, toMatrix]
 
 end PolyMatrix
 
@@ -142,6 +142,30 @@ def mapCoeffs {Coeff' : Type v}
 @[ext] theorem ext_coeff {backend : PolyBackend Coeff} {p q : backend.Poly}
     (h : ∀ i, backend.coeff p i = backend.coeff q i) : p = q :=
   backend.build_coeff p ▸ backend.build_coeff q ▸ congr_arg backend.build (funext h)
+
+/-- The coefficient-indexing bijection between a backend carrier and `Fin degree → Coeff`,
+packaged from the `coeff_build` / `build_coeff` round-trip laws. -/
+def equivPi (backend : PolyBackend Coeff) : backend.Poly ≃ (Fin backend.degree → Coeff) where
+  toFun := backend.coeff
+  invFun := backend.build
+  left_inv := backend.build_coeff
+  right_inv f := funext (backend.coeff_build f)
+
+/-- `equivPi` reads coefficients through `PolyBackend.coeff`. -/
+@[simp] theorem equivPi_apply (backend : PolyBackend Coeff) (p : backend.Poly) :
+    backend.equivPi p = backend.coeff p :=
+  rfl
+
+/-- The inverse of `equivPi` rebuilds a carrier through `PolyBackend.build`. -/
+@[simp] theorem equivPi_symm_apply (backend : PolyBackend Coeff)
+    (f : Fin backend.degree → Coeff) :
+    backend.equivPi.symm f = backend.build f :=
+  rfl
+
+/-- A backend carrier over a finite coefficient type is finite, via `equivPi`. -/
+instance instFintypePoly (backend : PolyBackend Coeff) [Fintype Coeff] :
+    Fintype backend.Poly :=
+  Fintype.ofEquiv (Fin backend.degree → Coeff) backend.equivPi.symm
 
 end PolyBackend
 
@@ -221,7 +245,7 @@ theorem ofBackend_injective
   apply PolyBackend.toPolynomial_injective
   simp only [NegacyclicQuotient.ofBackend, NegacyclicQuotient.ofPolynomial] at heq
   rcases Nat.eq_zero_or_pos backend.degree with hn | hn
-  · haveI : IsEmpty (Fin backend.degree) := hn ▸ inferInstance
+  · have : IsEmpty (Fin backend.degree) := hn ▸ inferInstance
     simp [PolyBackend.toPolynomial]
   have hmem : backend.toPolynomial p - backend.toPolynomial q ∈
       Ideal.span ({negacyclicModulus R backend.degree} : Set (Polynomial R)) := by
