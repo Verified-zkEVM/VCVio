@@ -45,6 +45,7 @@ open OracleComp OracleSpec
 namespace SLHDSA
 
 variable {p : Params}
+variable (hd : p.d = 1)
 
 /-- The SLH-DSA public key over an implementation-independent context: public seed and
 hypertree root. -/
@@ -66,10 +67,14 @@ structure SecretKeyCore (core : CorePrimitives p) where
   /-- Hypertree root `PK.root`. -/
   pkRoot : core.Y
 
-/-- An SLH-DSA signature: randomizer `R`, FORS signature, and hypertree signature
-(`R ‖ SIG_FORS ‖ SIG_HT`). -/
-abbrev SignatureCore (p : Params) (core : CorePrimitives p) :=
-  core.Y × ForsSigCore p core × HtSigCore p core
+/-- An intrinsically shaped SLH-DSA signature (`R ‖ SIG_FORS ‖ SIG_HT`). -/
+structure SignatureCore (p : Params) (core : CorePrimitives p) where
+  /-- Message randomizer `R`. -/
+  randomness : core.Y
+  /-- Exactly `k` intrinsically shaped FORS tree signatures. -/
+  fors : ForsSigCore p core
+  /-- Exactly `d` intrinsically shaped XMSS signatures. -/
+  hypertree : HtSigCore p core
 
 /-! ### Canonical internal algorithms (FIPS 205 §9) -/
 
@@ -79,7 +84,7 @@ def slhKeygenInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m]
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
     m (PublicKeyCore core × SecretKeyCore core) := do
-  let pkRoot ← htRootM core skSeed pkSeed Adrs.zero 0
+  let pkRoot ← htRootM core hd skSeed pkSeed Adrs.zero 0
   return (⟨pkSeed, pkRoot⟩, ⟨skSeed, skPrf, pkSeed, pkRoot⟩)
 
 /-- Canonical SLH-DSA internal signing (FIPS 205 Algorithm 19). Its public-hash schedule is
@@ -94,18 +99,18 @@ def slhSignInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
   let parts := splitDigest p digest
   let forsSig ← forsSignM core parts.md.toList sk.skSeed sk.pkSeed parts.forsAdrs
   let forsPk ← forsPkFromSigM core forsSig parts.md.toList sk.pkSeed parts.forsAdrs
-  let htSig ← htSignM core forsPk sk.skSeed sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
-  return (R, forsSig, htSig)
+  let htSig ← htSignM core hd forsPk sk.skSeed sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
+  return ⟨R, forsSig, htSig⟩
 
 /-- Canonical SLH-DSA internal verification (FIPS 205 Algorithm 20). Its public-hash schedule is
 `H_msg`, FORS public-key recovery, then hypertree recovery and comparison with `PK.root`. -/
 def slhVerifyInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] [DecidableEq core.Y]
     (msg : List Byte) (sig : SignatureCore p core) (pk : PublicKeyCore core) : m Bool := do
-  let digest ← PublicHash.hmsg core sig.1 pk.pkSeed pk.pkRoot msg
+  let digest ← PublicHash.hmsg core sig.randomness pk.pkSeed pk.pkRoot msg
   let parts := splitDigest p digest
-  let forsPk ← forsPkFromSigM core sig.2.1 parts.md.toList pk.pkSeed parts.forsAdrs
-  htVerifyM core forsPk sig.2.2 pk.pkSeed Adrs.zero 0 parts.idxLeaf.val pk.pkRoot
+  let forsPk ← forsPkFromSigM core sig.fors parts.md.toList pk.pkSeed parts.forsAdrs
+  htVerifyM core hd forsPk sig.hypertree pk.pkSeed Adrs.zero 0 parts.idxLeaf.val pk.pkRoot
 
 /-! ### Pure deterministic interpretations -/
 
@@ -114,7 +119,7 @@ def slhVerifyInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
 def slhKeygenInternal (prims : Primitives p) (skSeed : prims.SkSeed) (skPrf : prims.SkPrf)
     (pkSeed : prims.PkSeed) : PublicKeyCore prims.core × SecretKeyCore prims.core :=
   simulateQ (PublicHash.impl prims)
-    (slhKeygenInternalM prims.core skSeed skPrf pkSeed :
+    (slhKeygenInternalM hd prims.core skSeed skPrf pkSeed :
       OracleComp (publicHashSpec prims.core)
         (PublicKeyCore prims.core × SecretKeyCore prims.core))
 
@@ -122,7 +127,7 @@ def slhKeygenInternal (prims : Primitives p) (skSeed : prims.SkSeed) (skPrf : pr
 def slhSignInternal (prims : Primitives p) (msg : List Byte) (sk : SecretKeyCore prims.core)
     (addrnd : prims.Y) : SignatureCore p prims.core :=
   simulateQ (PublicHash.impl prims)
-    (slhSignInternalM prims.core msg sk addrnd :
+    (slhSignInternalM hd prims.core msg sk addrnd :
       OracleComp (publicHashSpec prims.core) (SignatureCore p prims.core))
 
 /-- Pure internal verification is the deterministic interpretation of
@@ -130,7 +135,7 @@ def slhSignInternal (prims : Primitives p) (msg : List Byte) (sk : SecretKeyCore
 def slhVerifyInternal (prims : Primitives p) [DecidableEq prims.Y] (msg : List Byte)
     (sig : SignatureCore p prims.core) (pk : PublicKeyCore prims.core) : Bool :=
   simulateQ (PublicHash.impl prims)
-    (slhVerifyInternalM prims.core msg sig pk : OracleComp (publicHashSpec prims.core) Bool)
+    (slhVerifyInternalM hd prims.core msg sig pk : OracleComp (publicHashSpec prims.core) Bool)
 
 /-! ### Naturality -/
 
@@ -154,9 +159,9 @@ theorem slhKeygenInternalM_natural (core : CorePrimitives p)
     [HasQuery (publicHashSpec core) n]
     (F : HasQuery.QueryHom (publicHashSpec core) m n)
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
-    F.toMonadHom (slhKeygenInternalM core skSeed skPrf pkSeed) =
-      slhKeygenInternalM core skSeed skPrf pkSeed := by
-  simp [slhKeygenInternalM, htRootM_natural core F]
+    F.toMonadHom (slhKeygenInternalM hd core skSeed skPrf pkSeed) =
+      slhKeygenInternalM hd core skSeed skPrf pkSeed := by
+  simp [slhKeygenInternalM, htRootM_natural core hd F]
 
 /-- Query-preserving monad morphisms commute with canonical internal signing. -/
 theorem slhSignInternalM_natural (core : CorePrimitives p)
@@ -165,10 +170,10 @@ theorem slhSignInternalM_natural (core : CorePrimitives p)
     [HasQuery (publicHashSpec core) n]
     (F : HasQuery.QueryHom (publicHashSpec core) m n)
     (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
-    F.toMonadHom (slhSignInternalM core msg sk addrnd) =
-      slhSignInternalM core msg sk addrnd := by
+    F.toMonadHom (slhSignInternalM hd core msg sk addrnd) =
+      slhSignInternalM hd core msg sk addrnd := by
   simp [slhSignInternalM, queryHom_hmsg core F,
-    forsSignM_natural core F, forsPkFromSigM_natural core F, htSignM_natural core F]
+    forsSignM_natural core F, forsPkFromSigM_natural core F, htSignM_natural core hd F]
 
 /-- Query-preserving monad morphisms commute with canonical internal verification. -/
 theorem slhVerifyInternalM_natural (core : CorePrimitives p)
@@ -177,10 +182,10 @@ theorem slhVerifyInternalM_natural (core : CorePrimitives p)
     [HasQuery (publicHashSpec core) n] [DecidableEq core.Y]
     (F : HasQuery.QueryHom (publicHashSpec core) m n)
     (msg : List Byte) (sig : SignatureCore p core) (pk : PublicKeyCore core) :
-    F.toMonadHom (slhVerifyInternalM core msg sig pk) =
-      slhVerifyInternalM core msg sig pk := by
+    F.toMonadHom (slhVerifyInternalM hd core msg sig pk) =
+      slhVerifyInternalM hd core msg sig pk := by
   simp [slhVerifyInternalM, queryHom_hmsg core F,
-    forsPkFromSigM_natural core F, htVerifyM_natural core F]
+    forsPkFromSigM_natural core F, htVerifyM_natural core hd F]
 
 /-! ### Structural query bounds -/
 
@@ -200,9 +205,8 @@ def slhSignInternalQueryBound (p : Params) : ℕ :=
 tracks the actual authentication-path lengths. The hypertree term uses the maximum WOTS+ chain
 budget plus the supplied XMSS authentication-path length. -/
 def slhVerifyInternalQueryBound (p : Params) (core : CorePrimitives p)
-    (sig : SignatureCore p core) : ℕ :=
-  1 + ((∑ i : Fin p.k, (fun j : Fin p.k => 1 + (sig.2.1[j.val]).2.length) i) + 1) +
-    (p.len * (p.w - 1) + 1 + sig.2.2.2.length)
+    (_sig : SignatureCore p core) : ℕ :=
+  1 + (p.k * (p.a + 1) + 1) + (p.len * (p.w - 1) + 1 + p.hp)
 
 private theorem publicHash_hmsg_isTotalQueryBound_one (core : CorePrimitives p)
     (r : core.Y) (pkSeed : core.PkSeed) (pkRoot : core.Y) (msg : List Byte) :
@@ -215,11 +219,11 @@ private theorem publicHash_hmsg_isTotalQueryBound_one (core : CorePrimitives p)
 theorem slhKeygenInternalM_isTotalQueryBound (core : CorePrimitives p)
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
     IsTotalQueryBound
-      (slhKeygenInternalM core skSeed skPrf pkSeed :
+      (slhKeygenInternalM hd core skSeed skPrf pkSeed :
         OracleComp (publicHashSpec core) (PublicKeyCore core × SecretKeyCore core))
       (slhKeygenInternalQueryBound p) := by
   simpa [slhKeygenInternalM, slhKeygenInternalQueryBound] using
-    isTotalQueryBound_bind (htRootM_isTotalQueryBound core skSeed pkSeed Adrs.zero 0)
+    isTotalQueryBound_bind (htRootM_isTotalQueryBound core hd skSeed pkSeed Adrs.zero 0)
       (fun pkRoot => show IsTotalQueryBound
         (pure (PublicKeyCore.mk pkSeed pkRoot,
           SecretKeyCore.mk skSeed skPrf pkSeed pkRoot) :
@@ -229,10 +233,10 @@ private theorem htSignM_isTotalQueryBound_coarse (core : CorePrimitives p)
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
     (adrs : Adrs) (idxTree idxLeaf : ℕ) :
     IsTotalQueryBound
-      (htSignM core msg sk pk adrs idxTree idxLeaf :
+      (htSignM core hd msg sk pk adrs idxTree idxLeaf :
         OracleComp (publicHashSpec core) (HtSigCore p core))
       (p.len * (p.w - 1) + xmssAuthPathQueryBound p p.hp) := by
-  apply (htSignM_isTotalQueryBound core msg sk pk adrs idxTree idxLeaf).mono
+  apply (htSignM_isTotalQueryBound core hd msg sk pk adrs idxTree idxLeaf).mono
   have hsum :
       (∑ i : Fin p.len, chainStepsCore core msg i.val) ≤ p.len * (p.w - 1) := by
     calc
@@ -251,7 +255,7 @@ not a count of distinct lazy-random-oracle cache misses or fresh samples. -/
 theorem slhSignInternalM_isTotalQueryBound (core : CorePrimitives p)
     (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
     IsTotalQueryBound
-      (slhSignInternalM core msg sk addrnd :
+      (slhSignInternalM hd core msg sk addrnd :
         OracleComp (publicHashSpec core) (SignatureCore p core))
       (slhSignInternalQueryBound p) := by
   let R := core.PRFmsg sk.skPrf addrnd msg
@@ -262,10 +266,10 @@ theorem slhSignInternalM_isTotalQueryBound (core : CorePrimitives p)
         (forsSignM_then_forsPkFromSigM_isTotalQueryBound
           core parts.md.toList sk.skSeed sk.pkSeed parts.forsAdrs) fun sigAndPk =>
             isTotalQueryBound_bind
-              (htSignM_isTotalQueryBound_coarse core sigAndPk.2 sk.skSeed sk.pkSeed
+              (htSignM_isTotalQueryBound_coarse hd core sigAndPk.2 sk.skSeed sk.pkSeed
                 Adrs.zero 0 parts.idxLeaf.val) fun htSig =>
                   show IsTotalQueryBound
-                    (pure (R, sigAndPk.1, htSig) :
+                    (pure ⟨R, sigAndPk.1, htSig⟩ :
                       OracleComp (publicHashSpec core) (SignatureCore p core)) 0 from trivial
   simpa [slhSignInternalM, slhSignInternalQueryBound, R, bind_assoc] using hbound
 
@@ -273,10 +277,10 @@ private theorem htVerifyM_isTotalQueryBound_coarse (core : CorePrimitives p)
     [DecidableEq core.Y] (msg : core.Y) (sig : HtSigCore p core)
     (pk : core.PkSeed) (adrs : Adrs) (idxTree idxLeaf : ℕ) (pkRoot : core.Y) :
     IsTotalQueryBound
-      (htVerifyM core msg sig pk adrs idxTree idxLeaf pkRoot :
+      (htVerifyM core hd msg sig pk adrs idxTree idxLeaf pkRoot :
         OracleComp (publicHashSpec core) Bool)
-      (p.len * (p.w - 1) + 1 + sig.2.length) := by
-  apply (htVerifyM_isTotalQueryBound core msg sig pk adrs idxTree idxLeaf pkRoot).mono
+      (p.len * (p.w - 1) + 1 + p.hp) := by
+  apply (htVerifyM_isTotalQueryBound core hd msg sig pk adrs idxTree idxLeaf pkRoot).mono
   have hsum :
       (∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) ≤
         p.len * (p.w - 1) := by
@@ -295,15 +299,16 @@ distinct random-oracle cache misses. -/
 theorem slhVerifyInternalM_isTotalQueryBound (core : CorePrimitives p) [DecidableEq core.Y]
     (msg : List Byte) (sig : SignatureCore p core) (pk : PublicKeyCore core) :
     IsTotalQueryBound
-      (slhVerifyInternalM core msg sig pk : OracleComp (publicHashSpec core) Bool)
+      (slhVerifyInternalM hd core msg sig pk : OracleComp (publicHashSpec core) Bool)
       (slhVerifyInternalQueryBound p core sig) := by
   have hbound := isTotalQueryBound_bind
-    (publicHash_hmsg_isTotalQueryBound_one core sig.1 pk.pkSeed pk.pkRoot msg) fun digest =>
+    (publicHash_hmsg_isTotalQueryBound_one core sig.randomness pk.pkSeed pk.pkRoot msg)
+      fun digest =>
       let parts := splitDigest p digest
       isTotalQueryBound_bind
-        (forsPkFromSigM_isTotalQueryBound core sig.2.1 parts.md.toList pk.pkSeed
+        (forsPkFromSigM_isTotalQueryBound core sig.fors parts.md.toList pk.pkSeed
           parts.forsAdrs) fun forsPk =>
-            htVerifyM_isTotalQueryBound_coarse core forsPk sig.2.2 pk.pkSeed Adrs.zero 0
+            htVerifyM_isTotalQueryBound_coarse hd core forsPk sig.hypertree pk.pkSeed Adrs.zero 0
               parts.idxLeaf.val pk.pkRoot
   simpa [slhVerifyInternalM, slhVerifyInternalQueryBound, Nat.add_assoc] using hbound
 
@@ -314,54 +319,55 @@ theorem simulateQ_slhKeygenInternalM_withPublicHash (core : CorePrimitives p)
     (answer : QueryImpl (publicHashSpec core) Id)
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
     simulateQ answer
-        (slhKeygenInternalM core skSeed skPrf pkSeed :
+        (slhKeygenInternalM hd core skSeed skPrf pkSeed :
           OracleComp (publicHashSpec core) (PublicKeyCore core × SecretKeyCore core)) =
-      slhKeygenInternal (PublicHash.withPublicHash core answer) skSeed skPrf pkSeed := by
+      slhKeygenInternal (p := p) hd (PublicHash.withPublicHash core answer) skSeed skPrf
+        pkSeed := by
   simp [slhKeygenInternal, PublicHash.impl_withPublicHash]
 
 @[simp]
 theorem simulateQ_slhKeygenInternalM (prims : Primitives p)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
     simulateQ (PublicHash.impl prims)
-        (slhKeygenInternalM prims.core skSeed skPrf pkSeed :
+        (slhKeygenInternalM hd prims.core skSeed skPrf pkSeed :
           OracleComp (publicHashSpec prims.core)
             (PublicKeyCore prims.core × SecretKeyCore prims.core)) =
-      slhKeygenInternal prims skSeed skPrf pkSeed := rfl
+      slhKeygenInternal hd prims skSeed skPrf pkSeed := rfl
 
 @[simp]
 theorem simulateQ_slhSignInternalM_withPublicHash (core : CorePrimitives p)
     (answer : QueryImpl (publicHashSpec core) Id)
     (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
     simulateQ answer
-        (slhSignInternalM core msg sk addrnd :
+        (slhSignInternalM hd core msg sk addrnd :
           OracleComp (publicHashSpec core) (SignatureCore p core)) =
-      slhSignInternal (PublicHash.withPublicHash core answer) msg sk addrnd := by
+      slhSignInternal (p := p) hd (PublicHash.withPublicHash core answer) msg sk addrnd := by
   simp [slhSignInternal, PublicHash.impl_withPublicHash]
 
 @[simp]
 theorem simulateQ_slhSignInternalM (prims : Primitives p)
     (msg : List Byte) (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
     simulateQ (PublicHash.impl prims)
-        (slhSignInternalM prims.core msg sk addrnd :
+        (slhSignInternalM hd prims.core msg sk addrnd :
           OracleComp (publicHashSpec prims.core) (SignatureCore p prims.core)) =
-      slhSignInternal prims msg sk addrnd := rfl
+      slhSignInternal hd prims msg sk addrnd := rfl
 
 @[simp]
 theorem simulateQ_slhVerifyInternalM_withPublicHash (core : CorePrimitives p)
     (answer : QueryImpl (publicHashSpec core) Id) [DecidableEq core.Y]
     (msg : List Byte) (sig : SignatureCore p core) (pk : PublicKeyCore core) :
     simulateQ answer
-        (slhVerifyInternalM core msg sig pk : OracleComp (publicHashSpec core) Bool) =
-      slhVerifyInternal (PublicHash.withPublicHash core answer) msg sig pk := by
+        (slhVerifyInternalM hd core msg sig pk : OracleComp (publicHashSpec core) Bool) =
+      slhVerifyInternal (p := p) hd (PublicHash.withPublicHash core answer) msg sig pk := by
   simp [slhVerifyInternal, PublicHash.impl_withPublicHash]
 
 @[simp]
 theorem simulateQ_slhVerifyInternalM (prims : Primitives p) [DecidableEq prims.Y]
     (msg : List Byte) (sig : SignatureCore p prims.core) (pk : PublicKeyCore prims.core) :
     simulateQ (PublicHash.impl prims)
-        (slhVerifyInternalM prims.core msg sig pk :
+        (slhVerifyInternalM hd prims.core msg sig pk :
           OracleComp (publicHashSpec prims.core) Bool) =
-      slhVerifyInternal prims msg sig pk := rfl
+      slhVerifyInternal hd prims msg sig pk := rfl
 
 /-- Fixed-answer correctness of the canonical internal programs. Key generation, signing, and
 verification use one total deterministic answer function. This theorem does not install or make
@@ -372,15 +378,15 @@ theorem simulateQ_slhVerifyInternalM_slhSignInternalM_withPublicHash
     (msg : List Byte) (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed)
     (addrnd : core.Y) :
     simulateQ answer (do
-      let (pk, sk) ← slhKeygenInternalM core skSeed skPrf pkSeed
-      let sig ← slhSignInternalM core msg sk addrnd
-      slhVerifyInternalM core msg sig pk) = true := by
+      let (pk, sk) ← slhKeygenInternalM hd core skSeed skPrf pkSeed
+      let sig ← slhSignInternalM hd core msg sk addrnd
+      slhVerifyInternalM hd core msg sig pk) = true := by
   simp only [slhKeygenInternalM, slhSignInternalM, slhVerifyInternalM,
     simulateQ_bind, simulateQ_pure,
-    simulateQ_htRootM_withPublicHash, simulateQ_forsSignM_withPublicHash,
-    simulateQ_forsPkFromSigM_withPublicHash, simulateQ_htSignM_withPublicHash,
-    simulateQ_htVerifyM_withPublicHash]
-  exact htVerify_htSign (PublicHash.withPublicHash core answer) _ skSeed pkSeed Adrs.zero 0 _
+    simulateQ_htRootM_withPublicHash core hd, simulateQ_forsSignM_withPublicHash,
+    simulateQ_forsPkFromSigM_withPublicHash, simulateQ_htSignM_withPublicHash core hd,
+    simulateQ_htVerifyM_withPublicHash core hd]
+  exact htVerify_htSign (PublicHash.withPublicHash core answer) hd _ skSeed pkSeed Adrs.zero 0 _
     (splitDigest p _).idxLeaf.isLt
 
 /-- **Deterministic correctness core**: an honestly generated signature verifies, for every
@@ -388,15 +394,15 @@ choice of seeds, randomizer, and deterministic public-hash implementation. -/
 theorem slhVerifyInternal_slhSignInternal (prims : Primitives p) [DecidableEq prims.Y]
     (msg : List Byte) (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed)
     (addrnd : prims.Y) :
-    slhVerifyInternal prims msg
-        (slhSignInternal prims msg (slhKeygenInternal prims skSeed skPrf pkSeed).2 addrnd)
-        (slhKeygenInternal prims skSeed skPrf pkSeed).1 = true := by
+    slhVerifyInternal hd prims msg
+        (slhSignInternal hd prims msg (slhKeygenInternal hd prims skSeed skPrf pkSeed).2 addrnd)
+        (slhKeygenInternal hd prims skSeed skPrf pkSeed).1 = true := by
   have h := simulateQ_slhVerifyInternalM_slhSignInternalM_withPublicHash
-    prims.core (PublicHash.impl prims) msg skSeed skPrf pkSeed addrnd
+    hd prims.core (PublicHash.impl prims) msg skSeed skPrf pkSeed addrnd
   change ((do
-    let (pk, sk) ← slhKeygenInternal prims skSeed skPrf pkSeed
-    let sig ← slhSignInternal prims msg sk addrnd
-    slhVerifyInternal prims msg sig pk) : Id Bool) = true
+    let (pk, sk) ← slhKeygenInternal hd prims skSeed skPrf pkSeed
+    let sig ← slhSignInternal hd prims msg sk addrnd
+    slhVerifyInternal hd prims msg sig pk) : Id Bool) = true
   simpa only [simulateQ_bind, simulateQ_slhKeygenInternalM,
     simulateQ_slhSignInternalM, simulateQ_slhVerifyInternalM] using h
 

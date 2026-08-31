@@ -140,6 +140,30 @@ theorem isTotalQueryBound_authPathM
       rw [← auth_query_budget_succ]
       omega
 
+/-- The intrinsically shaped authentication-path program has the same callback budget as the
+list-valued traversal. -/
+theorem isTotalQueryBound_intrinsicAuthPathM
+    (leaf : ℕ → OracleComp spec Y)
+    (nodeHash : ℕ → ℕ → Y → Y → OracleComp spec Y)
+    (leafBudget nodeBudget idx z : ℕ)
+    (hleaf : ∀ i, IsTotalQueryBound (leaf i) leafBudget)
+    (hnode : ∀ h i l r, IsTotalQueryBound (nodeHash h i l r) nodeBudget) :
+    IsTotalQueryBound (intrinsicAuthPathM leaf nodeHash idx z)
+      ((2 ^ z - 1) * leafBudget + (2 ^ z - z - 1) * nodeBudget) := by
+  induction z with
+  | zero => exact trivial
+  | succ z ih =>
+      simp only [intrinsicAuthPathM]
+      have hsibling := isTotalQueryBound_merkleRootM leaf nodeHash
+        leafBudget nodeBudget z (sibling (idx / 2 ^ z)) hleaf hnode
+      have hboth := isTotalQueryBound_bind ih fun path =>
+        isTotalQueryBound_bind hsibling fun siblingRoot =>
+          show IsTotalQueryBound
+            (pure (path.push siblingRoot) : OracleComp spec _) 0 from trivial
+      refine hboth.mono ?_
+      rw [← auth_query_budget_succ]
+      omega
+
 /-- Compose an authentication-path traversal with a continuation whose bound applies to every
 well-formed result.  The path-length premise retains the structural fact that `authPathM` returns
 exactly one sibling per level; ordinary `isTotalQueryBound_bind` cannot express this refinement
