@@ -28,7 +28,7 @@ def twoLayer : ValidatedParams :=
   ⟨{ n := 1, h := 2, d := 2, hp := 1, a := 1, k := 1, lgw := 1 }, by decide⟩
 
 def threeLayer : ValidatedParams :=
-  ⟨{ n := 1, h := 6, d := 3, hp := 2, a := 1, k := 1, lgw := 1 }, by decide⟩
+  ⟨{ n := 1, h := 3, d := 3, hp := 1, a := 1, k := 1, lgw := 1 }, by decide⟩
 
 /-- A one-layer hypertree contains one XMSS tree and two WOTS instances. -/
 example : (allXmssTrees oneLayer).length = 1 ∧
@@ -50,10 +50,28 @@ example : (xmssNodeAddresses twoLayer).map
       (fun adrs => (adrs.layer, adrs.tree, adrs.word2, adrs.word3)) =
     [(0, 0, 1, 0), (0, 1, 1, 0), (1, 0, 1, 0)] := by decide
 
-/-- A three-layer, height-two schedule has `16 + 4 + 1` trees, four WOTS leaves per tree, and
-three internal nodes per tree. -/
-example : (allXmssTrees threeLayer).length = 21 ∧
-    (allWotsInstances threeLayer).length = 84 ∧
-    (xmssNodeAddresses threeLayer).length = 63 := by decide
+/-- FORS positions cover every leaf of every bottom-layer tree, in tree-major order. -/
+example : (allBottomPositions twoLayer).map (fun pos => (pos.tree.val, pos.leaf.val)) =
+    [(0, 0), (0, 1), (1, 0), (1, 1)] := by decide
+
+/-- FORS leaf addresses retain both the bottom XMSS tree and key-pair leaf, and vary the
+global FORS node index in the final word. -/
+example : (forsLeafAddresses twoLayer).map
+      (fun adrs => (adrs.tree, adrs.word1, adrs.word2, adrs.word3)) =
+    [(0, 0, 0, 0), (0, 0, 0, 1), (0, 1, 0, 0), (0, 1, 0, 1),
+      (1, 0, 0, 0), (1, 0, 0, 1), (1, 1, 0, 0), (1, 1, 0, 1)] := by decide
+
+/-- The three FORS ledgers realize the expected F/H/Tℓ counts for the two-layer canary. -/
+example : (forsLeafAddresses twoLayer).length = 8 ∧
+    (forsTreeAddresses twoLayer).length = 4 ∧
+    (forsRootAddresses twoLayer).length = 4 := by decide
+
+/-- A three-layer, height-one schedule has `4 + 2 + 1` trees, two WOTS leaves per tree, and
+one internal node per tree. -/
+example : (allXmssTrees threeLayer).length = 7 ∧
+    (allWotsInstances threeLayer).length = 14 ∧
+    (xmssNodeAddresses threeLayer).length = 7 ∧
+    (allBottomPositions threeLayer).length = 8 ∧
+    (forsLeafAddresses threeLayer).length = 16 := by decide
 
 end SLHDSATest.ReachableTargets

@@ -260,6 +260,281 @@ theorem perfectInternalCoords_nodup (h : ℕ) :
         simp only at hheight
         omega
 
+/-! ## Bottom-layer FORS coordinates -/
+
+/-- A reachable layer-zero position, where an SLH-DSA signature places its FORS instance. -/
+structure BottomPosition (vp : ValidatedParams) where
+  /-- XMSS tree at layer zero. -/
+  tree : Fin (2 ^ layerTreeHeight vp 0)
+  /-- XMSS leaf, which is also the FORS key-pair address. -/
+  leaf : Fin (2 ^ vp.params.hp)
+deriving Repr, DecidableEq, Fintype
+
+namespace BottomPosition
+
+/-- View a bottom position through the canonical layer-position API. -/
+def toLayerPosition {vp : ValidatedParams} (pos : BottomPosition vp) : LayerPosition vp where
+  layer := ⟨0, vp.valid.d_pos⟩
+  tree := pos.tree
+  leaf := pos.leaf
+
+/-- Turn the indices parsed by Algorithm 19 into their typed bottom position. -/
+def ofDigestParts (vp : ValidatedParams) (parts : DigestParts vp.params) : BottomPosition vp where
+  tree := ⟨parts.idxTree.val, by
+    simpa [layerTreeHeight, vp.valid.h_eq_layers, Nat.sub_mul] using parts.idxTree.isLt⟩
+  leaf := parts.idxLeaf
+
+/-- The base FORS address consumed by `GeneralScheme.signInternalM` and `verifyInternalM`. -/
+def forsAdrs {vp : ValidatedParams} (pos : BottomPosition vp) : Adrs :=
+  ((pos.toLayerPosition.toAdrs.setTypeAndClear .forsTree).setKeyPairAddress pos.leaf.val)
+
+@[simp]
+theorem forsAdrs_ofDigestParts (vp : ValidatedParams) (parts : DigestParts vp.params) :
+    (ofDigestParts vp parts).forsAdrs = parts.forsAdrs := by
+  rfl
+
+@[simp]
+theorem forsAdrs_tree {vp : ValidatedParams} (pos : BottomPosition vp) :
+    pos.forsAdrs.tree = pos.tree.val := rfl
+
+@[simp]
+theorem forsAdrs_keyPair {vp : ValidatedParams} (pos : BottomPosition vp) :
+    pos.forsAdrs.getKeyPairAddress = pos.leaf.val := rfl
+
+end BottomPosition
+
+/-- Enumerate every possible FORS instance position at layer zero exactly once. -/
+def allBottomPositions (vp : ValidatedParams) : List (BottomPosition vp) :=
+  (List.finRange (2 ^ layerTreeHeight vp 0)).flatMap fun tree =>
+    (List.finRange (2 ^ vp.params.hp)).map fun leaf => ⟨tree, leaf⟩
+
+@[simp]
+theorem allBottomPositions_nodup (vp : ValidatedParams) :
+    (allBottomPositions vp).Nodup := by
+  rw [allBottomPositions, List.nodup_flatMap]
+  constructor
+  · intro tree _
+    exact (List.nodup_finRange _).map_on (by
+      intro leaf _ leaf' _ hpos
+      exact Fin.ext (congrArg (fun pos : BottomPosition vp => pos.leaf.val) hpos))
+  · have htrees : List.Pairwise
+        (fun a b : Fin (2 ^ layerTreeHeight vp 0) => a ≠ b)
+        (List.finRange (2 ^ layerTreeHeight vp 0)) :=
+      List.nodup_iff_pairwise_ne.mp (List.nodup_finRange _)
+    apply htrees.imp
+    intro tree tree' hne
+    change List.Disjoint _ _
+    rw [List.disjoint_iff_ne]
+    intro a ha b hb hab
+    obtain ⟨leaf, _, rfl⟩ := List.mem_map.mp ha
+    obtain ⟨leaf', _, rfl⟩ := List.mem_map.mp hb
+    apply hne
+    exact congrArg (fun pos : BottomPosition vp => pos.tree) hab
+
+/-- The layer-zero position space has exactly `2^h` elements. -/
+@[simp]
+theorem allBottomPositions_length (vp : ValidatedParams) :
+    (allBottomPositions vp).length = 2 ^ vp.params.h := by
+  calc
+    (allBottomPositions vp).length =
+        2 ^ layerTreeHeight vp 0 * 2 ^ vp.params.hp := by
+      simp [allBottomPositions]
+    _ = 2 ^ (layerTreeHeight vp 0 + vp.params.hp) := by rw [pow_add]
+    _ = 2 ^ vp.params.h := by
+      congr 1
+      unfold layerTreeHeight
+      simp only [Nat.zero_add]
+      have hdpos := vp.valid.d_pos
+      have hd : vp.params.d - 1 + 1 = vp.params.d := by omega
+      calc
+        (vp.params.d - 1) * vp.params.hp + vp.params.hp =
+            (vp.params.d - 1 + 1) * vp.params.hp := by
+          rw [Nat.add_mul, one_mul]
+        _ = vp.params.d * vp.params.hp := by rw [hd]
+        _ = vp.params.h := vp.valid.h_eq_layers.symm
+
+/-! ## FORS target ledgers -/
+
+/-- Every arity-one FORS leaf target over every reachable bottom-layer position. -/
+def forsLeafAddresses (vp : ValidatedParams) : List Adrs :=
+  (((allBottomPositions vp).product (List.finRange vp.params.k)).product
+    (List.finRange vp.params.t)).map fun coord =>
+      forsNodeAdrs coord.1.1.forsAdrs 0 (coord.1.2.val * vp.params.t + coord.2.val)
+
+/-- Every arity-two FORS internal-node target over every reachable bottom-layer position. -/
+def forsTreeAddresses (vp : ValidatedParams) : List Adrs :=
+  (((allBottomPositions vp).product (List.finRange vp.params.k)).product
+    (perfectInternalCoords vp.params.a)).map fun coord =>
+      forsNodeAdrs coord.1.1.forsAdrs coord.2.1
+        (coord.1.2.val * 2 ^ (vp.params.a - coord.2.1) + coord.2.2)
+
+/-- Every arity-`k` FORS-root-compression target over all bottom-layer positions. -/
+def forsRootAddresses (vp : ValidatedParams) : List Adrs :=
+  (allBottomPositions vp).map fun pos => forsPkAdrs pos.forsAdrs
+
+@[simp]
+theorem forsLeafAddresses_length (vp : ValidatedParams) :
+    (forsLeafAddresses vp).length = targetCount vp.params .forsF := by
+  rw [forsLeafAddresses, List.length_map]
+  calc
+    (((allBottomPositions vp).product (List.finRange vp.params.k)).product
+        (List.finRange vp.params.t)).length =
+        ((allBottomPositions vp).product (List.finRange vp.params.k)).length *
+          (List.finRange vp.params.t).length := List.length_product _ _
+    _ = ((allBottomPositions vp).length * (List.finRange vp.params.k).length) *
+          (List.finRange vp.params.t).length := by
+      congr 1
+      exact List.length_product _ _
+    _ = targetCount vp.params .forsF := by simp [targetCount, Params.t]
+
+@[simp]
+theorem forsTreeAddresses_length (vp : ValidatedParams) :
+    (forsTreeAddresses vp).length = targetCount vp.params .forsH := by
+  rw [forsTreeAddresses, List.length_map]
+  calc
+    (((allBottomPositions vp).product (List.finRange vp.params.k)).product
+        (perfectInternalCoords vp.params.a)).length =
+        ((allBottomPositions vp).product (List.finRange vp.params.k)).length *
+          (perfectInternalCoords vp.params.a).length := List.length_product _ _
+    _ = ((allBottomPositions vp).length * (List.finRange vp.params.k).length) *
+          (perfectInternalCoords vp.params.a).length := by
+      congr 1
+      exact List.length_product _ _
+    _ = targetCount vp.params .forsH := by simp [targetCount]
+
+@[simp]
+theorem forsRootAddresses_length (vp : ValidatedParams) :
+    (forsRootAddresses vp).length = targetCount vp.params .forsTl := by
+  simp [forsRootAddresses, targetCount]
+
+/-- FORS leaf targets are structurally duplicate-free before concrete address encoding. -/
+theorem forsLeafAddresses_nodup (vp : ValidatedParams) :
+    (forsLeafAddresses vp).Nodup := by
+  have hcoords := ((allBottomPositions_nodup vp).product
+    (List.nodup_finRange vp.params.k)).product (List.nodup_finRange vp.params.t)
+  apply hcoords.map_on
+  intro c _ d _ hadrs
+  rcases c with ⟨⟨⟨ctree, cleaf⟩, cfors⟩, cnode⟩
+  rcases d with ⟨⟨⟨dtree, dleaf⟩, dfors⟩, dnode⟩
+  have hbottomTree : ctree = dtree := Fin.ext (by
+    simpa [forsNodeAdrs, BottomPosition.forsAdrs, BottomPosition.toLayerPosition,
+      LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setTreeHeight,
+      Adrs.setTreeIndex, Adrs.setKeyPairAddress, Adrs.setTypeAndClear,
+      Adrs.setTreeAddress, Adrs.setLayerAddress, Adrs.zero] using
+        congrArg Adrs.tree hadrs)
+  subst dtree
+  have hbottomLeaf : cleaf = dleaf := Fin.ext (by
+    simpa [forsNodeAdrs, BottomPosition.forsAdrs, BottomPosition.toLayerPosition,
+      LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setTreeHeight,
+      Adrs.setTreeIndex, Adrs.setKeyPairAddress, Adrs.setTypeAndClear,
+      Adrs.setTreeAddress, Adrs.setLayerAddress, Adrs.zero] using
+        congrArg Adrs.word1 hadrs)
+  subst dleaf
+  have hglobal : cfors.val * vp.params.t + cnode.val =
+      dfors.val * vp.params.t + dnode.val := by
+    simpa [forsNodeAdrs, BottomPosition.forsAdrs, BottomPosition.toLayerPosition,
+      LayerPosition.toAdrs, Adrs.setTreeHeight, Adrs.setTreeIndex,
+      Adrs.setKeyPairAddress, Adrs.setTypeAndClear] using congrArg Adrs.word3 hadrs
+  have htpos : 0 < vp.params.t := by unfold Params.t; positivity
+  have hfors : cfors = dfors := Fin.ext (by
+    have hdiv := congrArg (fun x => x / vp.params.t) hglobal
+    simpa [Nat.add_comm, Nat.add_mul_div_right, Nat.div_eq_of_lt,
+      cnode.isLt, dnode.isLt, htpos] using hdiv)
+  subst dfors
+  have hnode : cnode = dnode := Fin.ext (by
+    have hmod := congrArg (fun x => x % vp.params.t) hglobal
+    simpa [Nat.add_comm, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt,
+      cnode.isLt, dnode.isLt] using hmod)
+  subst dnode
+  rfl
+
+/-- FORS internal-node targets are structurally duplicate-free before concrete encoding. -/
+theorem forsTreeAddresses_nodup (vp : ValidatedParams) :
+    (forsTreeAddresses vp).Nodup := by
+  have hcoords := ((allBottomPositions_nodup vp).product
+    (List.nodup_finRange vp.params.k)).product
+      (perfectInternalCoords_nodup vp.params.a)
+  apply hcoords.map_on
+  intro c hc d hd hadrs
+  rcases c with ⟨⟨⟨ctree, cleaf⟩, cfors⟩, cnode⟩
+  rcases d with ⟨⟨⟨dtree, dleaf⟩, dfors⟩, dnode⟩
+  have hbottomTree : ctree = dtree := Fin.ext (by
+    simpa [forsNodeAdrs, BottomPosition.forsAdrs, BottomPosition.toLayerPosition,
+      LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setTreeHeight,
+      Adrs.setTreeIndex, Adrs.setKeyPairAddress, Adrs.setTypeAndClear,
+      Adrs.setTreeAddress, Adrs.setLayerAddress, Adrs.zero] using
+        congrArg Adrs.tree hadrs)
+  subst dtree
+  have hbottomLeaf : cleaf = dleaf := Fin.ext (by
+    simpa [forsNodeAdrs, BottomPosition.forsAdrs, BottomPosition.toLayerPosition,
+      LayerPosition.toAdrs, Adrs.getKeyPairAddress, Adrs.setTreeHeight,
+      Adrs.setTreeIndex, Adrs.setKeyPairAddress, Adrs.setTypeAndClear,
+      Adrs.setTreeAddress, Adrs.setLayerAddress, Adrs.zero] using
+        congrArg Adrs.word1 hadrs)
+  subst dleaf
+  have hheight : cnode.1 = dnode.1 := by
+    simpa [forsNodeAdrs, BottomPosition.forsAdrs, BottomPosition.toLayerPosition,
+      LayerPosition.toAdrs, Adrs.setTreeHeight, Adrs.setTreeIndex,
+      Adrs.setKeyPairAddress, Adrs.setTypeAndClear] using congrArg Adrs.word2 hadrs
+  have hglobal : cfors.val * 2 ^ (vp.params.a - cnode.1) + cnode.2 =
+      dfors.val * 2 ^ (vp.params.a - dnode.1) + dnode.2 := by
+    simpa [forsNodeAdrs, BottomPosition.forsAdrs, BottomPosition.toLayerPosition,
+      LayerPosition.toAdrs, Adrs.setTreeHeight, Adrs.setTreeIndex,
+      Adrs.setKeyPairAddress, Adrs.setTypeAndClear] using congrArg Adrs.word3 hadrs
+  rw [hheight] at hglobal
+  have hcPair :
+      BottomPosition.mk ctree cleaf ∈ allBottomPositions vp ∧
+        cnode ∈ perfectInternalCoords vp.params.a := by
+    simpa [forsTreeAddresses, List.product] using hc
+  have hdPair :
+      BottomPosition.mk ctree cleaf ∈ allBottomPositions vp ∧
+        dnode ∈ perfectInternalCoords vp.params.a := by
+    simpa [forsTreeAddresses, List.product] using hd
+  have hcMembership : cnode ∈ perfectInternalCoords vp.params.a := hcPair.2
+  have hdMembership : dnode ∈ perfectInternalCoords vp.params.a := hdPair.2
+  have hcBound := perfectInternalCoords_index_lt hcMembership
+  have hdBound := perfectInternalCoords_index_lt hdMembership
+  have hcBound' : cnode.2 < 2 ^ (vp.params.a - dnode.1) := by
+    simpa [hheight] using hcBound
+  have hpow : 0 < 2 ^ (vp.params.a - dnode.1) := by positivity
+  have hfors : cfors = dfors := Fin.ext (by
+    have hdiv := congrArg (fun x => x / 2 ^ (vp.params.a - dnode.1)) hglobal
+    simpa [Nat.add_comm, Nat.add_mul_div_right, Nat.div_eq_of_lt,
+      hcBound', hdBound, hpow] using hdiv)
+  subst dfors
+  have hnodeIndex : cnode.2 = dnode.2 := by
+    have hmod := congrArg (fun x => x % 2 ^ (vp.params.a - dnode.1)) hglobal
+    simpa [Nat.add_comm, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt,
+      hcBound', hdBound] using hmod
+  have hnode : cnode = dnode := Prod.ext hheight hnodeIndex
+  subst dnode
+  rfl
+
+/-- FORS root-compression targets are structurally duplicate-free before concrete encoding. -/
+theorem forsRootAddresses_nodup (vp : ValidatedParams) :
+    (forsRootAddresses vp).Nodup := by
+  apply (allBottomPositions_nodup vp).map_on
+  intro c _ d _ hadrs
+  cases c with
+  | mk ctree cleaf =>
+    cases d with
+    | mk dtree dleaf =>
+      have htree : ctree = dtree := Fin.ext (by
+        simpa [forsRootAddresses, forsPkAdrs, BottomPosition.forsAdrs,
+          BottomPosition.toLayerPosition, LayerPosition.toAdrs,
+          Adrs.getKeyPairAddress, Adrs.setKeyPairAddress, Adrs.setTypeAndClear,
+          Adrs.setTreeAddress, Adrs.setLayerAddress, Adrs.zero] using
+            congrArg Adrs.tree hadrs)
+      subst dtree
+      have hleaf : cleaf = dleaf := Fin.ext (by
+        simpa [forsRootAddresses, forsPkAdrs, BottomPosition.forsAdrs,
+          BottomPosition.toLayerPosition, LayerPosition.toAdrs,
+          Adrs.getKeyPairAddress, Adrs.setKeyPairAddress, Adrs.setTypeAndClear,
+          Adrs.setTreeAddress, Adrs.setLayerAddress, Adrs.zero] using
+            congrArg Adrs.word1 hadrs)
+      subst dleaf
+      rfl
+
 /-! ## XMSS and WOTS address ledgers -/
 
 /-- Every internal node of every reachable XMSS tree. -/
