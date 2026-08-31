@@ -34,11 +34,11 @@ example (hash : Adrs → core.Y → m core.Y)
     (compress : Adrs → List core.Y → m core.Y)
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
-    (layer tree leaf : ℕ) :
-    signLayersWith vp core hash compress nodeHash sk pk true 1 layer tree leaf msg = (do
-      let adrs := layerAdrs layer tree
-      let sig ← xmssSignWith core hash compress nodeHash msg sk pk adrs leaf
-      let _ ← xmssPkFromSigWith core hash compress nodeHash leaf sig msg adrs
+    (pos : LayerPosition vp) (hremaining : pos.layer.val + 1 = vp.params.d) :
+    signFromPositionWith vp core hash compress nodeHash sk pk true pos 1 hremaining msg = (do
+      let sig ← xmssSignWith core hash compress nodeHash msg sk pk pos.toAdrs pos.leaf.val
+      let _ ←
+        xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig msg pos.toAdrs
       return #v[sig]) := by
   rfl
 
@@ -48,16 +48,16 @@ example (hash : Adrs → core.Y → m core.Y)
     (compress : Adrs → List core.Y → m core.Y)
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
-    (layer tree leaf : ℕ) :
-    signLayersWith vp core hash compress nodeHash sk pk false 2 layer tree leaf msg = (do
-      let adrs0 := layerAdrs layer tree
-      let sig0 ← xmssSignWith core hash compress nodeHash msg sk pk adrs0 leaf
-      let root0 ← xmssPkFromSigWith core hash compress nodeHash leaf sig0 msg adrs0
-      let adrs1 := layerAdrs (layer + 1) (tree / 2 ^ vp.params.hp)
-      let sig1 ← xmssSignWith core hash compress nodeHash root0 sk pk adrs1
-        (tree % 2 ^ vp.params.hp)
+    (pos : LayerPosition vp) (hremaining : pos.layer.val + 2 = vp.params.d) :
+    signFromPositionWith vp core hash compress nodeHash sk pk false pos 2 hremaining msg = (do
+      let sig0 ← xmssSignWith core hash compress nodeHash msg sk pk pos.toAdrs pos.leaf.val
+      let root0 ←
+        xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig0 msg pos.toAdrs
+      let next := pos.next (by omega)
+      let sig1 ←
+        xmssSignWith core hash compress nodeHash root0 sk pk next.toAdrs next.leaf.val
       return (#v[sig1]).insertIdx 0 sig0) := by
-  simp [signLayersWith]
+  simp [signFromPositionWith]
 
 /-- General root generation always addresses layer `d - 1`, tree zero. -/
 example (hash : Adrs → core.Y → m core.Y)

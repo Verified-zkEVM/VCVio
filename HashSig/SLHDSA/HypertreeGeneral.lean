@@ -45,51 +45,56 @@ theorem layerAdrs_layer (layer tree : ℕ) : (layerAdrs layer tree).layer = laye
 @[simp]
 theorem layerAdrs_tree (layer tree : ℕ) : (layerAdrs layer tree).tree = tree := rfl
 
-/-- Private structural loop for FIPS Algorithm 12.
+/-- Typed structural loop for FIPS Algorithm 12.
 
-`recoverFinal` is true only for the `d = 1` entry call.  Every non-final component is recovered to
-obtain the message signed at the next layer. -/
-def signLayersWith (vp : ValidatedParams) (core : CorePrimitives vp.params)
+`recoverFinal` is true only for the `d = 1` entry call. Every non-final component is recovered to
+obtain the message signed at the next layer. The loop invariant states that `layers` is exactly the
+number of positions from `pos` through the final layer. -/
+def signFromPositionWith (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y)
     (compress : Adrs → List core.Y → m core.Y)
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
-    (sk : core.SkSeed) (pk : core.PkSeed) (recoverFinal : Bool) :
-    (layers layer tree leaf : ℕ) → core.Y →
+    (sk : core.SkSeed) (pk : core.PkSeed) (recoverFinal : Bool)
+    (pos : LayerPosition vp) :
+    (layers : ℕ) → pos.layer.val + layers = vp.params.d → core.Y →
       m (Vector (XmssSig vp.params core) layers)
-  | 0, _, _, _, _ => pure #v[]
-  | 1, layer, tree, leaf, msg => do
-      let adrs := layerAdrs layer tree
-      let sig ← xmssSignWith core hash compress nodeHash msg sk pk adrs leaf
+  | 0, _, _ => pure #v[]
+  | 1, _, msg => do
+      let sig ← xmssSignWith core hash compress nodeHash msg sk pk pos.toAdrs pos.leaf.val
       if recoverFinal then
-        let _ ← xmssPkFromSigWith core hash compress nodeHash leaf sig msg adrs
+        let _ ← xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig msg pos.toAdrs
         return #v[sig]
       else
         return #v[sig]
-  | layers + 2, layer, tree, leaf, msg => do
-      let adrs := layerAdrs layer tree
-      let sig ← xmssSignWith core hash compress nodeHash msg sk pk adrs leaf
-      let root ← xmssPkFromSigWith core hash compress nodeHash leaf sig msg adrs
-      let rest ← signLayersWith vp core hash compress nodeHash sk pk false (layers + 1)
-        (layer + 1) (tree / 2 ^ vp.params.hp) (tree % 2 ^ vp.params.hp) root
+  | layers + 2, hremaining, msg => do
+      let sig ← xmssSignWith core hash compress nodeHash msg sk pk pos.toAdrs pos.leaf.val
+      let root ←
+        xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig msg pos.toAdrs
+      let next := pos.next (by omega)
+      let rest ← signFromPositionWith vp core hash compress nodeHash sk pk false next
+        (layers + 1) (by simp [next]; omega) root
       return rest.insertIdx 0 sig
 
-/-- Private structural loop for FIPS Algorithm 13.  It consumes one signature per layer and
-threads each recovered XMSS root into the next layer. -/
-def recoverLayersWith (vp : ValidatedParams) (core : CorePrimitives vp.params)
+/-- Typed structural loop for FIPS Algorithm 13. It consumes one signature per layer and threads
+each recovered XMSS root into the next reachable position. -/
+def recoverFromPositionWith (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y)
     (compress : Adrs → List core.Y → m core.Y)
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
-    (pk : core.PkSeed) :
-    (layers layer tree leaf : ℕ) → core.Y →
+    (pk : core.PkSeed) (pos : LayerPosition vp) :
+    (layers : ℕ) → pos.layer.val + layers = vp.params.d → core.Y →
       Vector (XmssSig vp.params core) layers → m core.Y
-  | 0, _, _, _, msg, _ => pure msg
-  | layers + 1, layer, tree, leaf, msg, sigs => do
-      let root ← xmssPkFromSigWith core hash compress nodeHash leaf sigs.head msg
-        (layerAdrs layer tree)
-      recoverLayersWith vp core hash compress nodeHash pk layers (layer + 1)
-        (tree / 2 ^ vp.params.hp) (tree % 2 ^ vp.params.hp) root sigs.tail
+  | 0, _, msg, _ => pure msg
+  | 1, _, msg, sigs =>
+      xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sigs.head msg pos.toAdrs
+  | layers + 2, hremaining, msg, sigs => do
+      let root ←
+        xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sigs.head msg pos.toAdrs
+      let next := pos.next (by omega)
+      recoverFromPositionWith vp core hash compress nodeHash pk next (layers + 1)
+        (by simp [next]; omega) root sigs.tail
 
 /-! ## Callback-parametric construction -/
 
@@ -102,8 +107,8 @@ def signWith (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
     (parts : DigestParts vp.params) : m (Signature vp core) :=
   let pos := LayerPosition.initial vp parts
-  signLayersWith vp core hash compress nodeHash sk pk (vp.params.d == 1) vp.params.d
-    pos.layer.val pos.tree.val pos.leaf.val msg
+  signFromPositionWith vp core hash compress nodeHash sk pk (vp.params.d == 1) pos
+    vp.params.d (by simp [pos]) msg
 
 /-- Root of the unique top-layer XMSS tree: layer `d - 1`, tree zero. -/
 def rootWith (vp : ValidatedParams) (core : CorePrimitives vp.params)
@@ -124,18 +129,56 @@ def pkFromSigWith (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (msg : core.Y) (sig : Signature vp core) (pk : core.PkSeed)
     (parts : DigestParts vp.params) : m core.Y :=
   let pos := LayerPosition.initial vp parts
-  recoverLayersWith vp core hash compress nodeHash pk vp.params.d pos.layer.val pos.tree.val
-    pos.leaf.val msg sig
+  recoverFromPositionWith vp core hash compress nodeHash pk pos vp.params.d
+    (by simp [pos]) msg sig
 
 /-! ## Explicit-public-hash programs -/
+
+/-- Explicit-public-hash form of the typed structural signing loop. -/
+def signFromPositionM (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
+    (sk : core.SkSeed) (pk : core.PkSeed) (recoverFinal : Bool)
+    (pos : LayerPosition vp) :
+    (layers : ℕ) → pos.layer.val + layers = vp.params.d → core.Y →
+      m (Vector (XmssSig vp.params core) layers)
+  | 0, _, _ => pure #v[]
+  | 1, _, msg => do
+      let sig ← xmssSignM core msg sk pk pos.toAdrs pos.leaf.val
+      if recoverFinal then
+        let _ ← xmssPkFromSigM core pos.leaf.val sig msg pk pos.toAdrs
+        return #v[sig]
+      else
+        return #v[sig]
+  | layers + 2, hremaining, msg => do
+      let sig ← xmssSignM core msg sk pk pos.toAdrs pos.leaf.val
+      let root ← xmssPkFromSigM core pos.leaf.val sig msg pk pos.toAdrs
+      let next := pos.next (by omega)
+      let rest ← signFromPositionM vp core sk pk false next (layers + 1)
+        (by simp [next]; omega) root
+      return rest.insertIdx 0 sig
+
+/-- Explicit-public-hash form of the typed structural recovery loop. -/
+def recoverFromPositionM (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
+    (pk : core.PkSeed) (pos : LayerPosition vp) :
+    (layers : ℕ) → pos.layer.val + layers = vp.params.d → core.Y →
+      Vector (XmssSig vp.params core) layers → m core.Y
+  | 0, _, msg, _ => pure msg
+  | 1, _, msg, sigs =>
+      xmssPkFromSigM core pos.leaf.val sigs.head msg pk pos.toAdrs
+  | layers + 2, hremaining, msg, sigs => do
+      let root ← xmssPkFromSigM core pos.leaf.val sigs.head msg pk pos.toAdrs
+      let next := pos.next (by omega)
+      recoverFromPositionM vp core pk next (layers + 1) (by simp [next]; omega) root sigs.tail
 
 /-- Canonical explicit-public-hash hypertree signer for arbitrary `d`. -/
 def signM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
     (parts : DigestParts vp.params) : m (Signature vp core) :=
-  signWith vp core (PublicHash.f core pk) (PublicHash.tl core pk) (PublicHash.h core pk)
-    msg sk pk parts
+  let pos := LayerPosition.initial vp parts
+  signFromPositionM vp core sk pk (vp.params.d == 1) pos vp.params.d
+    (by simp [pos]) msg
 
 /-- Canonical explicit-public-hash top-root generation for arbitrary `d`. -/
 def rootM (vp : ValidatedParams) (core : CorePrimitives vp.params)
@@ -148,8 +191,8 @@ def pkFromSigM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
     (msg : core.Y) (sig : Signature vp core) (pk : core.PkSeed)
     (parts : DigestParts vp.params) : m core.Y :=
-  pkFromSigWith vp core (PublicHash.f core pk) (PublicHash.tl core pk) (PublicHash.h core pk)
-    msg sig pk parts
+  let pos := LayerPosition.initial vp parts
+  recoverFromPositionM vp core pk pos vp.params.d (by simp [pos]) msg sig
 
 /-- Canonical explicit-public-hash hypertree verification for arbitrary `d`. -/
 def verifyM (vp : ValidatedParams) (core : CorePrimitives vp.params)
@@ -158,6 +201,85 @@ def verifyM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (parts : DigestParts vp.params) (pkRoot : core.Y) : m Bool := do
   let recovered ← pkFromSigM vp core msg sig pk parts
   return decide (recovered = pkRoot)
+
+/-! ## Naturality -/
+
+/-- Query-preserving monad morphisms commute with the typed structural signer. -/
+theorem signFromPositionM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (sk : core.SkSeed) (pk : core.PkSeed) (recoverFinal : Bool)
+    (pos : LayerPosition vp) (layers : ℕ)
+    (hremaining : pos.layer.val + layers = vp.params.d) (msg : core.Y) :
+    F.toMonadHom (signFromPositionM vp core sk pk recoverFinal pos layers hremaining msg) =
+      signFromPositionM vp core sk pk recoverFinal pos layers hremaining msg := by
+  induction layers using Nat.twoStepInduction generalizing recoverFinal pos msg with
+  | zero => simp [signFromPositionM]
+  | one =>
+      cases recoverFinal <;>
+        simp [signFromPositionM, xmssSignM_natural core F, xmssPkFromSigM_natural core F]
+  | more layers _ ih =>
+      simp [signFromPositionM, xmssSignM_natural core F,
+        xmssPkFromSigM_natural core F, ih]
+
+/-- Query-preserving monad morphisms commute with the typed structural recovery loop. -/
+theorem recoverFromPositionM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (pk : core.PkSeed) (pos : LayerPosition vp) (layers : ℕ)
+    (hremaining : pos.layer.val + layers = vp.params.d) (msg : core.Y)
+    (sigs : Vector (XmssSig vp.params core) layers) :
+    F.toMonadHom (recoverFromPositionM vp core pk pos layers hremaining msg sigs) =
+      recoverFromPositionM vp core pk pos layers hremaining msg sigs := by
+  induction layers using Nat.twoStepInduction generalizing pos msg with
+  | zero => simp [recoverFromPositionM]
+  | one => simp [recoverFromPositionM, xmssPkFromSigM_natural core F]
+  | more layers _ ih =>
+      simp [recoverFromPositionM, xmssPkFromSigM_natural core F, ih]
+
+/-- Query-preserving monad morphisms commute with arbitrary-`d` hypertree signing. -/
+theorem signM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
+    (parts : DigestParts vp.params) :
+    F.toMonadHom (signM vp core msg sk pk parts) = signM vp core msg sk pk parts := by
+  exact signFromPositionM_natural vp core F sk pk _ _ _ _ _
+
+/-- Query-preserving monad morphisms commute with top-root generation. -/
+theorem rootM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (sk : core.SkSeed) (pk : core.PkSeed) :
+    F.toMonadHom (rootM vp core sk pk) = rootM vp core sk pk := by
+  exact xmssRootM_natural core F sk pk (layerAdrs (vp.params.d - 1) 0)
+
+/-- Query-preserving monad morphisms commute with arbitrary-`d` hypertree recovery. -/
+theorem pkFromSigM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (msg : core.Y) (sig : Signature vp core) (pk : core.PkSeed)
+    (parts : DigestParts vp.params) :
+    F.toMonadHom (pkFromSigM vp core msg sig pk parts) =
+      pkFromSigM vp core msg sig pk parts := by
+  exact recoverFromPositionM_natural vp core F pk _ _ _ _ _
+
+/-- Query-preserving monad morphisms commute with arbitrary-`d` hypertree verification. -/
+theorem verifyM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    [DecidableEq core.Y]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (msg : core.Y) (sig : Signature vp core) (pk : core.PkSeed)
+    (parts : DigestParts vp.params) (pkRoot : core.Y) :
+    F.toMonadHom (verifyM vp core msg sig pk parts pkRoot) =
+      verifyM vp core msg sig pk parts pkRoot := by
+  simp [verifyM, pkFromSigM_natural vp core F]
 
 /-! ## Pure deterministic interpretations -/
 

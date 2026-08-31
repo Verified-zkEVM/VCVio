@@ -66,6 +66,53 @@ def verifyInternalM (vp : ValidatedParams) (core : CorePrimitives vp.params)
   let forsPk ← forsPkFromSigM core sig.fors parts.md.toList pk.pkSeed parts.forsAdrs
   GeneralHypertree.verifyM vp core forsPk sig.hypertree pk.pkSeed parts pk.pkRoot
 
+/-! ## Naturality -/
+
+private theorem queryHom_hmsg {p : Params} (core : CorePrimitives p)
+    {m n : Type → Type*} [Monad m] [Monad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (r : core.Y) (pkSeed : core.PkSeed) (pkRoot : core.Y) (msg : List Byte) :
+    F.toMonadHom (PublicHash.hmsg core r pkSeed pkRoot msg) =
+      PublicHash.hmsg core r pkSeed pkRoot msg := by
+  change F.toMonadHom
+      (query (spec := publicHashSpec core) (.hmsg r pkSeed pkRoot msg)) =
+    query (spec := publicHashSpec core) (.hmsg r pkSeed pkRoot msg)
+  exact HasQuery.map_query F _
+
+/-- Query-preserving monad morphisms commute with general internal key generation. -/
+theorem keygenInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
+    F.toMonadHom (keygenInternalM vp core skSeed skPrf pkSeed) =
+      keygenInternalM vp core skSeed skPrf pkSeed := by
+  simp [keygenInternalM, GeneralHypertree.rootM_natural vp core F]
+
+/-- Query-preserving monad morphisms commute with general internal signing. -/
+theorem signInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
+    F.toMonadHom (signInternalM vp core msg sk addrnd) =
+      signInternalM vp core msg sk addrnd := by
+  simp [signInternalM, queryHom_hmsg core F, forsSignM_natural core F,
+    forsPkFromSigM_natural core F, GeneralHypertree.signM_natural vp core F]
+
+/-- Query-preserving monad morphisms commute with general internal verification. -/
+theorem verifyInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    [DecidableEq core.Y]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (msg : List Byte) (sig : SignatureCore vp core) (pk : PublicKeyCore core) :
+    F.toMonadHom (verifyInternalM vp core msg sig pk) =
+      verifyInternalM vp core msg sig pk := by
+  simp [verifyInternalM, queryHom_hmsg core F, forsPkFromSigM_natural core F,
+    GeneralHypertree.verifyM_natural vp core F]
+
 /-! ## Pure deterministic interpretations -/
 
 def keygenInternal (vp : ValidatedParams) (prims : Primitives vp.params)
