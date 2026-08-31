@@ -19,7 +19,11 @@ public import HashSig.SLHDSA.Concrete.Xmss
 public import HashSig.SLHDSA.Encoding
 public import HashSig.SLHDSA.FipsParams
 public import HashSig.SLHDSA.Fors
+public import HashSig.SLHDSA.GeneralScheme
+public import HashSig.SLHDSA.GeneralSchemeQueryBound
 public import HashSig.SLHDSA.Hypertree
+public import HashSig.SLHDSA.HypertreeGeneral
+public import HashSig.SLHDSA.HypertreeGeneral.QueryBound
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.Params
 public import HashSig.SLHDSA.Position
@@ -28,6 +32,7 @@ public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.Scheme
 public import HashSig.SLHDSA.Security
 public import HashSig.SLHDSA.Security.Architecture
+public import HashSig.SLHDSA.Security.GeneralScheme
 public import HashSig.SLHDSA.Security.Notions
 public import HashSig.SLHDSA.Security.OracleSurface
 public import HashSig.SLHDSA.Security.Transcript

@@ -9,11 +9,11 @@ public import HashSig.SLHDSA.Xmss
 public import Mathlib.Data.Nat.Bitwise
 
 /-!
-# Bounded XMSS construction interface
+# Typed XMSS construction interface
 
-This module gives FIPS 205 §6 typed indices, fixed-width authentication paths, and thin wrappers
-over the canonical natural-indexed `PerfectMerkleTree` and XMSS algorithms.  Erasure theorems keep
-`xmssNode`, `xmssSign`, and `xmssPkFromSig` as the sole construction semantics.
+This module gives FIPS 205 §6 typed indices and thin wrappers over the canonical natural-indexed
+`PerfectMerkleTree` and XMSS algorithms. `XmssSig` itself carries the fixed-width authentication
+path, so the wrappers refine positions without introducing a second signature representation.
 
 ## References
 
@@ -243,23 +243,6 @@ abbrev LeafIndex (p : Params) := Fin (2 ^ p.hp)
 /-- A valid node position in one XMSS tree. -/
 abbrev NodePosition (p : Params) := TreePosition p.hp
 
-/-- An XMSS signature adapter whose authentication path has intrinsic length `h'`. -/
-structure BoundedSig (p : Params) (core : CorePrimitives p) where
-  wots : WotsSig p core
-  auth : Vector core.Y p.hp
-
-namespace BoundedSig
-
-/-- Erase the bounded adapter to the canonical list-based XMSS signature. -/
-def erase {core : CorePrimitives p} (sig : BoundedSig p core) : XmssSig p core :=
-  (sig.wots, sig.auth.toList)
-
-@[simp] theorem erase_auth_length {core : CorePrimitives p} (sig : BoundedSig p core) :
-    sig.erase.2.length = p.hp := by
-  simp [erase]
-
-end BoundedSig
-
 /-- Typed access to the canonical FIPS authentication path. -/
 def xmssAuthPath (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) (idx : LeafIndex p) : Vector prims.Y p.hp :=
@@ -285,37 +268,33 @@ def xmssNodeAt (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed)
 
 /-- Thin typed signing wrapper over Algorithm 10. -/
 def xmssSignBounded (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed)
-    (pk : prims.PkSeed) (adrs : Adrs) (idx : LeafIndex p) : BoundedSig p prims :=
-  ⟨wotsSign prims msg sk pk (wotsLeafAdrs adrs idx.val),
-    xmssAuthPath prims sk pk adrs idx⟩
+    (pk : prims.PkSeed) (adrs : Adrs) (idx : LeafIndex p) : XmssSig p prims :=
+  xmssSign prims msg sk pk adrs idx.val
 
-/-- Erasing bounded signing recovers the existing Algorithm 10 result exactly. -/
-@[simp] theorem xmssSignBounded_erase (prims : Primitives p) (msg : prims.Y)
+/-- Typed signing is definitionally the canonical Algorithm 10 result. -/
+@[simp] theorem xmssSignBounded_eq (prims : Primitives p) (msg : prims.Y)
     (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (idx : LeafIndex p) :
-    (xmssSignBounded prims msg sk pk adrs idx).erase =
-      xmssSign prims msg sk pk adrs idx.val := by
-  rw [xmssSign_eq_pair]
-  simp [xmssSignBounded, BoundedSig.erase]
+    xmssSignBounded prims msg sk pk adrs idx =
+      xmssSign prims msg sk pk adrs idx.val := rfl
 
 /-- Thin typed recovery wrapper over Algorithm 11. -/
 def xmssPkFromSigBounded (prims : Primitives p) (idx : LeafIndex p)
-    (sig : BoundedSig p prims) (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) : prims.Y :=
-  xmssPkFromSig prims idx.val sig.erase msg pk adrs
+    (sig : XmssSig p prims) (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) : prims.Y :=
+  xmssPkFromSig prims idx.val sig msg pk adrs
 
 /-- Typed honest signing and recovery retains the canonical XMSS correctness theorem. -/
 theorem xmssPkFromSigBounded_xmssSignBounded (prims : Primitives p) (msg : prims.Y)
     (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (idx : LeafIndex p) :
     xmssPkFromSigBounded prims idx (xmssSignBounded prims msg sk pk adrs idx) msg pk adrs =
       xmssRoot prims sk pk adrs := by
-  simp only [xmssPkFromSigBounded, xmssSignBounded_erase]
+  simp only [xmssPkFromSigBounded, xmssSignBounded_eq]
   exact xmssPkFromSig_xmssSign prims msg sk pk adrs idx.val idx.isLt
 
-/-- The intrinsic authentication-path width discharges the well-formedness premise of the
-canonical XMSS binding theorem.  The collision witness remains the one exposed by the existing
-Algorithm 11 semantics; the bounded layer only removes an impossible malformed-path case. -/
+/-- The canonical signature's intrinsic authentication-path width supplies the exact path shape
+needed by the XMSS binding theorem. The typed wrapper additionally bounds the leaf position. -/
 theorem xmssPkFromSigBounded_binding (prims : Primitives p) (msg : prims.Y)
     (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (idx : LeafIndex p)
-    (sig : BoundedSig p prims)
+    (sig : XmssSig p prims)
     (hroot : xmssPkFromSigBounded prims idx sig msg pk adrs = xmssRoot prims sk pk adrs)
     (hne : xmssLeaf prims sk pk adrs idx.val
       ≠ wotsPkFromSig prims sig.wots msg pk (wotsLeafAdrs adrs idx.val)) :
@@ -327,8 +306,7 @@ theorem xmssPkFromSigBounded_binding (prims : Primitives p) (msg : prims.Y)
           (xmssNode prims sk pk adrs (h - 1) (2 * (idx.val / 2 ^ h)))
           (xmssNode prims sk pk adrs (h - 1) (2 * (idx.val / 2 ^ h) + 1))
         = prims.H pk (xmssNodeAdrs adrs h (idx.val / 2 ^ h)) c.1 c.2 := by
-  exact xmssPkFromSig_binding prims msg sk pk adrs idx.val idx.isLt sig.erase
-    sig.erase_auth_length hroot hne
+  exact xmssPkFromSig_binding prims msg sk pk adrs idx.val idx.isLt sig hroot hne
 
 /-- The typed XMSS authentication path carries the exact FIPS sibling-subtree position. -/
 @[simp] theorem xmssAuthPath_get (prims : Primitives p) (sk : prims.SkSeed)

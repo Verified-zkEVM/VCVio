@@ -130,16 +130,16 @@ def shaPrimitives : Primitives slhdsaSha2_128_24 where
 `sk(16) ‖ auth(a×16)`; HT: WOTS `len×16` then XMSS auth `h'×16`). -/
 def decodeSignature (ba : ByteArray) : SignatureCore slhdsaSha2_128_24 shaPrimitives.core :=
   let R : Bytes 16 := baSliceToB16 ba 0
-  let fors : Vector (Bytes 16 × List (Bytes 16)) 6 :=
+  let fors : ForsSigCore slhdsaSha2_128_24 shaPrimitives.core :=
     Vector.ofFn fun i : Fin 6 =>
       let base := 16 + i.val * 400
-      (baSliceToB16 ba base,
-        (List.range 24).map fun j => baSliceToB16 ba (base + 16 + j * 16))
+      ⟨baSliceToB16 ba base,
+        Vector.ofFn fun j : Fin 24 => baSliceToB16 ba (base + 16 + j.val * 16)⟩
   let wots : Vector (Bytes 16) 68 :=
     Vector.ofFn fun i : Fin 68 => baSliceToB16 ba (2416 + i.val * 16)
-  let xmssAuth : List (Bytes 16) :=
-    (List.range 22).map fun j => baSliceToB16 ba (2416 + 1088 + j * 16)
-  (R, fors, (wots, xmssAuth))
+  let xmssAuth : Vector (Bytes 16) 22 :=
+    Vector.ofFn fun j : Fin 22 => baSliceToB16 ba (2416 + 1088 + j.val * 16)
+  (R, fors, { wots := wots, auth := xmssAuth })
 
 /-- Concrete FIPS 205 external verification of a decoded signature against
 `(pkSeed, pkRoot, message)`. -/
