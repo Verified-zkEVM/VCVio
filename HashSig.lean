@@ -14,6 +14,7 @@ public import HashSig.SLHDSA.Concrete.FIPS
 public import HashSig.SLHDSA.Concrete.Instance
 public import HashSig.SLHDSA.Concrete.Keccak
 public import HashSig.SLHDSA.Concrete.Sha2
+public import HashSig.SLHDSA.Concrete.Wots
 public import HashSig.SLHDSA.Encoding
 public import HashSig.SLHDSA.FipsParams
 public import HashSig.SLHDSA.Fors
@@ -30,4 +31,5 @@ public import HashSig.SLHDSA.Security.OracleSurface
 public import HashSig.SLHDSA.Security.Transcript
 public import HashSig.SLHDSA.Wots
 public import HashSig.SLHDSA.WotsChecksum
+public import HashSig.SLHDSA.WotsEncoding
 public import HashSig.SLHDSA.Xmss

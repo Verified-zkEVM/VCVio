@@ -7,32 +7,24 @@ as standards conformance or as a security proof.
 
 ## Current gate
 
-Session S00 is **accepted by independent re-review r9** after eight preserved review failures and
-their evidence-backed dispositions. S01 reviews r0 through r15 are immutable **FAIL** artifacts.
-Independent r16 is **PASS**, so S01 is accepted and S02 is eligible to start. S02
-security-architecture reviews r1 through r3 are immutable **FAIL** artifacts; r4 initially passed,
-but the complete independent r5 audit found six blockers and invalidated that acceptance. R6 found
-five residual blockers. R7 confirmed all substantive repairs but found one stale successor-routing
-record. Independent R8 passed with zero findings and accepted exact S02 commit
-`a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`. S03 is implemented from that exact boundary. Its
-initial independent review of exact commit `963a3e7dd425b8a8c9bb9e2e91b73868f6918768` failed with
-five blockers. R1 confirmed all five substantive repairs at exact commit
-`dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e` but failed on one reversed-argument formula in the
-active session record. That sentence is corrected and the complete tree awaits fresh independent r2.
-S04 has a documentation-only bootstrap, but has no accepted predecessor and remains blocked until
-an independent review accepts an exact S03 commit. No S04 implementation or verdict exists.
-S01's pinned authority, provenance, and strict sample-schema parser anchors do not claim
-implementation conformance. R16
-accepted the F-061/F-062 repairs: cleanup uses constant/count-only evidence, preflights
-descriptor aliases before closing each unique integer once, and gates an exact scoped AST ownership
-lifecycle. This machinery is now frozen: later sessions should center on Lean deliverables and must
-not ratchet or reopen the descriptor/AST policy without a concrete regression. The allowlisted `sorry` remains the body of
-`SLHDSA.slhdsa_euf_cma_security`, whose declaration begins at
-`HashSig/SLHDSA/Security.lean:150` (the token is currently at line 175). This is an open critical
-proof obligation, not an accepted axiom. The repaired S02 modules define the proposed replacement
-architecture and proposed standalone component-game boundary; they do not prove or replace that
-legacy composition theorem. R8 accepted that accurately bounded candidate architecture, not the
-unproved theorem or proposed D-006/D-009 decisions.
+S00 through S04 are accepted at their recorded independent review boundaries. B01 then reconciled
+that work with upstream main and PR #593; independent B01 r1 accepted exact repair commit
+`1f3cfa89882af79755e87d90659edd7150186416` with zero findings, and its artifact is committed and
+pushed at exact head `4161910f57d3634d667a9072bf5a7731b49e4467`.
+S01 reviews r0 through r15 are immutable **FAIL** artifacts. Independent r16 is **PASS**, so S01 is accepted and S02 is eligible to start.
+
+S05 is the current unpushed candidate. It adds the exact FIPS 205 WOTS+ checksum byte pipeline,
+switches operational chain lengths to that pipeline while retaining the mathematical/correctness
+view, closes reachable WOTS addresses over the checked SHA2 boundary, and exercises all twelve
+approved SHA2/SHAKE profiles. It awaits a fresh independent S05 review and does not claim a WOTS
+KAT, ACVP conformance, or a security reduction. PR #595 remains reserved across S07--S09; PRs #594
+and #596 remain reserved for their later security sessions.
+
+S01's pinned authority, provenance, and strict sample-schema parser anchors remain schema/provenance
+evidence rather than implementation conformance. Its descriptor/AST machinery is frozen absent a
+concrete regression. The B01 HashSig aggregate has no admission exception; the S02 replacement
+security architecture remains a reviewed candidate architecture rather than a completed reduction
+or top-level theorem, and D-006/D-009 remain proposed.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true
 
@@ -66,9 +58,10 @@ lake exe slhdsa_acvp_parser
 The first command validates harness structure and the defense-in-depth source policy without
 building libraries or running algorithms; it does re-elaborate Lake configuration into disposable
 TOML to verify the parser target and absence of effective source-directory/path-argument selectors.
-The second also checks the HashSig build, the authoritative elaborated-environment
-policy audit and compiled negative fixtures, generated umbrella, isolation rules, and both runtime
-regressions, plus the S01 provenance and strict-parser runtime gates. Immediately before the parser
+The second also checks the HashSig build, the authoritative elaborated-environment policy audit and
+compiled negative fixtures, generated umbrella, isolation rules, inherited KATs, S03 codecs, S04
+primitives, S05 WOTS construction, and the S01 provenance/strict-parser runtime gates. Immediately
+before the parser
 runtime, it reconfigures, rehashes, and disables caches while building into an initially absent
 private output root. It attests all three frozen parser/schema source-to-object-to-executable chains,
 requires the exact 24-file current module/C/object/trace/sidecar manifest with trace-token agreement,

@@ -130,11 +130,17 @@ without named owner approval.
 
 ### S05 — WOTS+ construction
 
-- Inputs: S03–S04; FIPS Section 6.
+- Inputs: exact accepted/pushed B01 head `4161910f57d3634d667a9072bf5a7731b49e4467`;
+  FIPS 205 Section 5 and Appendix A.
 - Allowed: WOTS/checksum modules and tests; no security reduction.
 - Deliverables: exact algorithms, including the Appendix-A checksum-shift correction (with a
   non-`lgw=4` discriminating test), chain/address invariants, executable
   recovery correctness for approved sets.
+- Candidate result: `WotsEncoding` proves the exact padded-byte pipeline equal to the existing
+  mathematical checksum view; `chainLengthsCore` uses it operationally; generic and checked SHA2
+  address lemmas exclude fallback masking; all twelve `approvedPrimitives` profiles pass the
+  construction exercise. PR #595 remains reserved across S07--S09, PR #594 for S11+, and PR #596
+  for S11--S16.
 - Gates: component vectors/properties; `#print axioms` on WOTS correctness; review
   `reviews/S05-wots-construction-review.md`.
 

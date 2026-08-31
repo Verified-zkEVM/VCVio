@@ -69,10 +69,18 @@ files use the `-rN` suffix.
   commit `79b42bf9662dcfe4336401096e9bd4ae0ed924d3` accepted and S04 eligible.
 - [S04 primitive review](S04-primitives-review.md): FAIL with one blocking vector-evidence finding,
   S04-001; exact candidate `7f115c0ed5e6342d20db902c163b319b6b0df43d` remains unaccepted.
+- [S04 primitive review r1](S04-primitives-review-r1.md): PASS with zero findings; exact repair
+  commit `00f1416ea9b8e0eb4cabd1fe28c7029beef56c34` accepted.
+- [B01 integration review r0](B01-main-pr593-integration-review-r0.md): FAIL with two blocking
+  integration findings.
+- [B01 integration review r1](B01-main-pr593-integration-review-r1.md): PASS with zero findings;
+  exact repair commit `1f3cfa89882af79755e87d90659edd7150186416` accepted, with the review artifact
+  committed/pushed at `4161910f57d3634d667a9072bf5a7731b49e4467`.
 
 S03 implementation payload `caefbda5e7ed7cd7a6efb80191307de7a39eea43` and its repairs are accepted
 through r2. The immutable initial S04 FAIL is committed at
-`69cdabd443bf9c6bf203f8f5bb36dd54cdc86803`; its S04-001 repair is pending a fresh independent
-`S04-primitives-review-r1.md` of the exact repaired candidate.
+`69cdabd443bf9c6bf203f8f5bb36dd54cdc86803`; its S04-001 repair and the later B01 boundary are
+accepted as recorded above. S05 has no review artifact yet; its unpushed candidate requires a fresh
+independent review.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

@@ -389,6 +389,10 @@ lean_exe slhdsa_data_codec_tests where
 lean_exe slhdsa_primitive_tests where
   root := `HashSigTest.SLHDSA.PrimitiveTests
 
+/-- S05 WOTS+ checksum/construction exercise across all approved SHA2/SHAKE profiles. -/
+lean_exe slhdsa_wots_tests where
+  root := `HashSigTest.SLHDSA.WotsConstructionTests
+
 /-- Fail-closed parser gate for the pinned NIST SLH-DSA sample JSON. -/
 lean_exe slhdsa_acvp_parser where
   root := `HashSigTest.SLHDSA.ACVP.ParserTests

@@ -433,15 +433,15 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
         (3881, "cdfaaa4aad22cd5b6cc28e5863fd5de30949b3c3406cea9eea14e0f941a9976b"),
     "docs/slhdsa/matrices/coverage.csv":
-        (4689, "7227f1584f3f8611918f03a4f80b9b3953eec2af1a37570b13cd3bfaf490dd60"),
+        (5180, "ccc07d5e39e209852eff9f7a244c103f391b8409069d1f6580f4b94367a4ad10"),
     "docs/slhdsa/matrices/decisions.csv":
         (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (50552, "a8b9a6b3572fdd03b26109a3cdfb7f43122617b599176803b14f052c1c493fa1"),
+        (61228, "ac8195bb843384abbb0e3ed9b0a963073f8b71e8ad04b2be907f1938da6bb9f6"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (4764, "d754ff1efb4951b48b7f63ed0cfe9db3dedb39881aaa45f6bb79388026acdbe1"),
+        (5242, "793f4c55c73eea09d5369077d6862c67f4fe01a9604eb7091d1c06e535f30a4a"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
@@ -2464,7 +2464,7 @@ ACVP_TRACE_MODULES = {
         Path("HashSigTest/SLHDSA/ACVP/StrictJson.lean"),
         "20f9aff3f5339e54d7fc5e148fadb0e37d8f4b4bd816938f0a81b4cf7b087089"),
 }
-LAKEFILE_BOUNDARY_SHA256 = "e9e50014dd62a0229464814952ee93e867887a80a901c5ac0e487c32989833a9"
+LAKEFILE_BOUNDARY_SHA256 = "38dbe43443e43cb1e747a1dd2303625511e6f4092ad241384679b8c58aebf9b8"
 FRESH_BUILD_CHILD = "fresh-root-build"
 PARSER_EXPECTED_STDOUT = (
     b"SLH-DSA ACVP parser positive suite: PASS (16 cases)\n"

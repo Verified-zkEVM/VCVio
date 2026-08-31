@@ -46,7 +46,9 @@ No checkbox is discharged by a build alone.
 - [ ] S04 implements the exact typed `F/H/T_l/PRF/PRF_msg/H_msg` grammars for all twelve sets,
   with checked SHA2 addresses and focused standard/boundary/profile tests. Independent review and
   a general mathematical refinement theorem remain, so executable evidence does not close PO-017.
-- [ ] WOTS+, XMSS, FORS, and general `d` hypertree exactness and deterministic correctness.
+- [ ] S05 implements and kernel-connects the exact WOTS+ checksum byte pipeline, preserves the
+  existing deterministic recovery theorem, and exercises all twelve concrete profiles; independent
+  S05 review remains pending. XMSS, FORS, and general `d` hypertree exactness remain successor work.
 - [ ] Digest yields `(md,idx_tree,idx_leaf)` with bounds and correct per-layer evolution.
 - [ ] Internal and external pure/pre-hash domain separation, context, OID, deterministic/hedged modes.
 - [ ] Completeness and reject behavior load-bearing roots have zero `sorryAx`.

@@ -23,8 +23,12 @@ Current records:
   commit. Independent r1 accepted exact repair commit `00f1416e...` with zero findings; its review
   artifact is committed in exact accepted head `ca84e4f1...`.
 - [B01 — upstream architecture and parameter boundary integration](B01-upstream-boundary-integration.md):
-  history-preserving reconciliation of accepted S00--S04 with pinned upstream main and PR #593.
-  This record hands an unpushed candidate to a fresh independent boundary reviewer; it does not
-  self-certify acceptance or start S05.
+  history-preserving reconciliation of accepted S00--S04 with pinned upstream main and PR #593;
+  independent r1 accepted exact repair commit `1f3cfa89...` with zero findings, and the acceptance
+  artifact is committed/pushed at exact head `4161910f...`.
+- [S05 — WOTS+ construction](S05-wots-construction.md): exact FIPS checksum byte pipeline,
+  operational chain-length integration, checked SHA2 address closure, a discriminating
+  non-`lg_w = 4` canary, and all-twelve approved-profile construction exercise. The unpushed
+  candidate requires fresh independent review.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

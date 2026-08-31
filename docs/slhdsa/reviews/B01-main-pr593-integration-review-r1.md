@@ -2,12 +2,12 @@
 
 Verdict: **PASS**
 
-Date: 2026-08-31  
-Reviewer: independent successor reviewer (not the integration implementer or r0 reviewer)  
-Reviewed candidate: `1f3cfa89882af79755e87d90659edd7150186416`  
-Candidate tree: `aca02cc3fab97a5f72d3c41e695116aa3f6d1c72`  
-Required parent / immutable r0 FAIL artifact: `1fc92ddabdf045c8108a1fd00f250de497e0da7d`  
-Parent tree: `c6bcf2882c5614b4bd63580808de189f01d9301c`  
+Date: 2026-08-31
+Reviewer: independent successor reviewer (not the integration implementer or r0 reviewer)
+Reviewed candidate: `1f3cfa89882af79755e87d90659edd7150186416`
+Candidate tree: `aca02cc3fab97a5f72d3c41e695116aa3f6d1c72`
+Required parent / immutable r0 FAIL artifact: `1fc92ddabdf045c8108a1fd00f250de497e0da7d`
+Parent tree: `c6bcf2882c5614b4bd63580808de189f01d9301c`
 Integration parent of r0: `ef750c13f085a343637a05bbad91b25dc04a469c`
 
 ## Scope and repository state
@@ -113,7 +113,7 @@ admitted.
 
 ## Findings and verdict
 
-Blocking findings: **0**.  
+Blocking findings: **0**.
 Nonblocking findings: **0**.
 
 Both r0 findings are fixed with direct evidence, the repair remains within its declared scope, and
