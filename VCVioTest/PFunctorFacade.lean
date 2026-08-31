@@ -48,7 +48,7 @@ example := PFunctor.FreeM.evalSPMF_lift_eq_uniform (P := triPFunctor) ()
 
 example : support directSample = Set.univ := by
   simpa only [directSample] using
-    (PFunctor.FreeM.support_lift (P := triPFunctor) ())
+    (PFunctor.FreeM.support_lift_eq_univ (P := triPFunctor) ())
 
 example : EvalDistCompatible (PFunctor.FreeM triPFunctor) := inferInstance
 

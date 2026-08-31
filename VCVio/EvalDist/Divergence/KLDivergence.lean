@@ -77,9 +77,8 @@ theorem denote_bind_eq_comp (program : FreeM P α) (f : α → FreeM P β) :
 /-- Mapping a function is pushing the denotation forward along it. -/
 theorem denote_map (g : α → β) (program : FreeM P α) :
     denote (g <$> program) = (denote program).map g := by
-  have h : (g <$> program) = program >>= fun x => pure (g x) := by simp
-  rw [h, denote_bind_of_discrete]
-  exact Measure.bind_dirac_eq_map _ Measurable.of_discrete
+  change denote (FreeM.map g program) = (denote program).map g
+  exact denote_map_of_discrete program g
 
 /-! ### Data processing -/
 
