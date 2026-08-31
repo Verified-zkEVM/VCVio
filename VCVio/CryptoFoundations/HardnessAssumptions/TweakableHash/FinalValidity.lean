@@ -194,6 +194,15 @@ def collectionOracle [DecidableEq Tweak] (tweakOf : Q → Tweak)
     set (st.recordCollection tweakOf q.2.1)
     return thColl.eval q.1 pk q.2.1 q.2.2
 
+/-- Every collection query returns its real digest and is appended to the history, even when the
+incoming state is already poisoned. -/
+theorem collectionOracle_run [DecidableEq Tweak] (tweakOf : Q → Tweak)
+    (thColl : TweakableHashCollection ι PkSeed Tweak Y) (pk : PkSeed)
+    (q : (i : ι) × Tweak × thColl.Msg i) (st : State Q Tweak) :
+    (collectionOracle tweakOf thColl pk q).run st =
+      pure (thColl.eval q.1 pk q.2.1 q.2.2, st.recordCollection tweakOf q.2.1) := by
+  simp [collectionOracle]
+
 /-! ## Semantic pins -/
 
 variable [DecidableEq Tweak] (tweakOf : Q → Tweak)

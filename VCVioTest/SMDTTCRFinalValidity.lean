@@ -97,6 +97,16 @@ def repeatedTarget : TweakableHash.SM_DT_TCR_SourceFinalValidity.Adversary probl
     return (y₁, y₂)
   forge _ _ := pure (0, true)
 
+/-- A collection query after target duplication still returns its digest and is appended. -/
+def poisonThenCollection : TweakableHash.SM_DT_TCR_SourceFinalValidity.Adversary problem where
+  State := Bool × Bool × Bool
+  choose := do
+    let y₁ ← challenge false false
+    let y₂ ← challenge false true
+    let y₃ ← collectionQuery true true
+    return (y₁, y₂, y₃)
+  forge _ _ := pure (0, true)
+
 private lemma run_challengeOnly :
     (simulateQ (TweakableHash.SM_DT_TCR_SourceFinalValidity.oracles problem .only)
       challengeOnly.choose).run .initial =
@@ -125,6 +135,15 @@ private lemma run_repeatedTarget :
     (simulateQ (TweakableHash.SM_DT_TCR_SourceFinalValidity.oracles problem .only)
       repeatedTarget.choose).run .initial =
       pure ((false, false), ⟨[(false, false), (false, true)], [], false⟩) := by
+  rfl
+
+/-- Once poisoned, the monitor remains always-answering: the later collection digest and its tweak
+are both observable, while validity remains false. -/
+theorem poison_then_collection_history_canary :
+    (simulateQ (TweakableHash.SM_DT_TCR_SourceFinalValidity.oracles problem .only)
+      poisonThenCollection.choose).run .initial =
+      pure ((false, false, true),
+        ⟨[(false, false), (false, true)], [true], false⟩) := by
   rfl
 
 private lemma experiment_challengeOnly :
