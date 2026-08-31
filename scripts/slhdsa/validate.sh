@@ -424,5 +424,6 @@ lake exe slhdsa_data_codec_tests
 lake exe slhdsa_primitive_tests
 lake exe slhdsa_wots_tests
 lake exe slhdsa_xmss_tests
+lake exe slhdsa_fors_tests
 
 echo "SLH-DSA full baseline validation: PASS"

@@ -241,15 +241,24 @@ at exact reviewed head `609185098935feea82f4d5b6fb7a9d62aefce9c9`.
 
 ### S07 — FORS conformance construction
 
-- Inputs: accepted B04 boundary over B03/S03–S06/B02; FIPS Section 8 and Appendix-A extraction delta.
+- Inputs: exact accepted/pushed B04 head `d4f2ab9f0fedf71c42601802aa828eaf730582f6` over
+  B03/S03–S06/B02; FIPS Section 8 and Appendix-A extraction delta.
 - Allowed: FORS modules/tests; no reduction.
 - Deliverables: FIPS big-endian indices, valid trees/paths, sign/recovery correctness, separate
   fixtures for Appendix A's reference-alignment and per-tree-index clarification, and an explicit
   incompatibility test against round-3 LSB-first behavior. Consume authoritative
   `DigestParts.md`, `DigestParts.forsAdrs`, and typed digest bounds; consume the intrinsic
   `ForsTreeSigCore.sk`/`.auth` representation imported by B03; do not duplicate PR #595.
-- Gates: extraction fixtures, tiny exhaustive tests, axioms; review
-  `reviews/S07-fors-construction-review.md`.
+- Gates: extraction fixtures, tiny exhaustive tests, axioms, and independent review. Under the
+  durable-tree policy, the review is not committed as a repository artifact.
+- Candidate result: `ForsConformance` consumes `DigestParts.md` at its exact byte width, proves the
+  checked approved-profile capacity and canonical global/sibling/sign equations, and adds typed
+  FORS address grammar. `Concrete.Fors` closes approved SHA2 acceptance and SHAKE round trips for
+  digest bases, secrets, tree nodes/roots, and root aggregation. The executable distinguishes the
+  key-selection low-bit mask from per-tree MSB extraction and round-3 LSB behavior, exhausts all
+  one-byte digests in a height-two toy, checks all twelve profiles cheaply, and exercises concrete
+  SHA2/SHAKE-128f construction. Independent review is pending; no reduction, KAT, ACVP, or
+  program-trace claim follows.
 
 ### S08 — hypertree callback parity and conformance
 

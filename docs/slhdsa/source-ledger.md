@@ -38,7 +38,7 @@ input.
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20171130/Supporting_Documentation/sphincs.pdf` | SHA-256 `8365127b5619356a4ca0a122b44b0458a7e5d447cb8997a07c2e70e43b085bde` | Round 1 history only |
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20190329/Supporting_Documentation/sphincs.pdf` | SHA-256 `58804cc62b4fbfac8e5f4e9df80639d719a7aaf13e706713ff605d168cbd2b23` | Round 2 history only |
 | primary/legacy | `sibling:NIST-PQ-Submission-SPHINCS-20201001/Supporting_Documentation/sphincs.pdf` | SHA-256 `540968e4d58cb582d5f85636beed7a10894622ed8b99a7a863f85996869743c6` | Round 3 history only |
-| primary/evidence | VCVio | repair base git `7b77e700b3d24a6ab94ed741a650954bbd90859a` | Invalidated S02 implementation retained only as exact repair input; active 45-file SLH-DSA source-tree composite pinned separately |
+| primary/evidence | VCVio | repair base git `7b77e700b3d24a6ab94ed741a650954bbd90859a` | Invalidated S02 implementation retained only as exact repair input; active 47-file SLH-DSA source-tree composite pinned separately |
 | secondary | `sibling:reports/00-SYNTHESIS.md` … `07-literature-and-resources.md` | hashes recorded below | Orientation only; corrected findings cannot be cited as primary authority |
 | prompt | `sibling:prompt.md` | SHA-256 `2b40bca6253eeb3bcf84fa9178a66309509f446b07655e57342417319cd4d7cf` | Requirements; cryptographic claims require independent authority |
 
@@ -72,7 +72,7 @@ certificate; derived SHAKE rate-boundary cases and profile fingerprints are inde
 evidence, not NIST vectors. `PrimitiveVectors/NOTICE.md` preserves the NIST
 attribution/no-endorsement boundary and the RFC/IETF copyright classification.
 
-The VCVio composite is specifically SHA-256 of the 45-line GNU `sha256sum` manifest produced, in
+The VCVio composite is specifically SHA-256 of the 47-line GNU `sha256sum` manifest produced, in
 C-locale glob order, by:
 
 ```text

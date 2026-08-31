@@ -37,8 +37,9 @@ B03 imports intrinsic XMSS/FORS signatures, typed-position arbitrary-depth hyper
 internal-scheme programs, their naturality/deterministic interpretations, and structural finite
 query upper bounds. Kernel theorems now close arbitrary-depth pure/fixed-answer hypertree correctness
 and general internal sign/verify completeness. A Medium gap remains between the callback-parametric
-`*With` layer and the explicit-query/pure interpretations, and S07 fixtures/address/runtime plus S09
-codecs/external APIs remain open. Depth-one output compatibility is proved, while general signing
+`*With` layer and the explicit-query/pure interpretations, and S09 codecs/external APIs remain
+open. The S07 candidate now supplies the bounded FORS fixtures/address/runtime slice pending
+independent review. Depth-one output compatibility is proved, while general signing
 performs the FIPS-mandated discarded final recovery and therefore has a longer free-oracle trace.
 
 The exact SUF advantage partition and structural FORS/XMSS/WOTS reachable-target ledgers are useful
@@ -54,6 +55,18 @@ old-to-canonical experiment equivalences, and the master inequality remain open.
 interface still assumes `ReductionSystem`, and `RepairedMasterStatement` remains an unproved
 `Prop`. PR #585 theorem content may be ported but never raw-merged, and cumulative PR #591 remains
 reserved for S15.
+
+Independent B04 r0 accepted exact adaptation `ea3e3a0baa2f4e3b6aaf323f65ba6a3eccbfd170`
+with zero findings; the accepted review and synchronized shared-branch history are committed and
+pushed at exact S07 input head `d4f2ab9f0fedf71c42601802aa828eaf730582f6`.
+
+S07 now has a bounded implementation candidate over the canonical FORS kernel. It adds an
+intrinsically bounded `DigestParts.md` decoder with an approved-width checked boundary, exact
+MSB-first and historical-LSB incompatibility canaries, typed global/sibling coordinates, complete
+FORS address canonicality and checked SHA2/SHAKE boundary lemmas, 256 tiny-model digest cases,
+cheap all-twelve-profile digest/address checks, and SHA2/SHAKE-128f concrete sign/recovery/keygen
+regressions. It does not claim ACVP/KAT provenance, construction-trace coverage, or a reduction;
+independent S07 review remains pending.
 
 S01's pinned authority, provenance, and strict sample-schema parser anchors remain schema/provenance
 evidence rather than implementation conformance. Its descriptor/AST machinery is frozen absent a
@@ -95,8 +108,9 @@ building libraries or running algorithms; it does re-elaborate Lake configuratio
 TOML to verify the parser target and absence of effective source-directory/path-argument selectors.
 The second also checks the HashSig build, the authoritative elaborated-environment policy audit and
 compiled negative fixtures, generated umbrella, isolation rules, inherited KATs, S03 codecs, S04
-primitives, S05 WOTS construction, S06 XMSS construction, the B02 digest/position and B03
-construction/query/interface declaration probes, and the S01 provenance/strict-parser runtime gates. Immediately
+primitives, S05 WOTS construction, S06 XMSS construction, S07 FORS construction, the B02
+digest/position and B03 construction/query/interface declaration probes, and the S01
+provenance/strict-parser runtime gates. Immediately
 before the parser
 runtime, it reconfigures, rehashes, and disables caches while building into an initially absent
 private output root. It attests all three frozen parser/schema source-to-object-to-executable chains,

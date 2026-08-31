@@ -171,9 +171,10 @@ static importer, retrieves the production regular-initializer ordinary and IR ar
 exact expected rejections (so loss of either path fails), and checks that the sentinel remains absent
 before and after audit. The temporary
 `.olean`, `.ilean`, `.ir`, and C artifacts are confined to a `mktemp` directory removed on exit.
-The wrapper then runs the exact S03, 11-root S04, 14-root S05, 22-root S06, 15-root B02, and 27-root B03
+The wrapper then runs the exact S03, 11-root S04, 14-root S05, 22-root S06, 15-root B02, and
+27-root B03
 declaration/axiom probes, generated umbrella check, extern and interop isolation, the two inherited
-SLH-DSA KAT executables, and the S03 data/codec, S04 primitive, S05 WOTS, and S06 XMSS construction
+SLH-DSA KAT executables, and the S03 data/codec, S04 primitive, S05 WOTS, S06 XMSS, and S07 FORS construction
 executables. The KAT PASS results are legacy runtime regression evidence only, and the S03 PASS
 result covers exact table rows, endian fixtures, ADRS,
 and rejecting fixed-width codecs. The S04 result covers official SHA/HMAC/SHAKE vectors, derived
@@ -191,6 +192,11 @@ S06 result exhausts all four leaves and seven nodes of an address-sensitive heig
 enumerates reachable address acceptance/round trips cheaply for all twelve approved profiles, and
 checks bounded sign/recovery/root equality at indices 0 and 7 for SHA2/SHAKE-128f and SHA2-192f.
 It is construction regression evidence, not an XMSS KAT, ACVP certificate, hash refinement, or
+security reduction. The S07 result separates the digest key-selection low-bit mask from `a=6`
+MSB-first per-tree extraction and its round-3 LSB incompatibility, exhausts all 256 one-byte digests
+in a height-two toy, checks exact selected-path address acceptance/round trips for all twelve
+profiles without enumerating security ledgers, and runs SHA2/SHAKE-128f sign/recovery/keygen. It is
+derived construction evidence, not a FORS KAT, ACVP certificate, trace-coverage theorem, or
 security reduction. A successful
 `lake build` is elaboration evidence; it does not demonstrate concrete hash/vector execution. The
 repository-wide `lake build` remains a final pre-review gate when changes touch shared VCVio
@@ -306,6 +312,15 @@ FORS/XMSS/hypertree trace bridges, canonical/bespoke experiment equivalences, an
 inequality remain open.
 The current B04 audit observes 46 HashSig modules and 3,612 owned constants, accepts the unchanged
 exact seventeen compiler-generated recursion helpers with their safe parents, and retains the exact
+standard transitive axiom union.
+
+Focused S07 axiom inspection covered typed MSB-first decoding and global/sibling coordinates,
+honest intrinsic signing, all secret/node/root-aggregation address grammars, approved checked
+SHA2/SHAKE boundaries, and retained FORS correctness. Every inspected root stayed within
+`{propext, Classical.choice, Quot.sound}` and none used `sorryAx`. The isolated historical LSB
+helper is test-only conformance evidence and is not imported into the construction path. The S07
+candidate policy audit observed 48 HashSig modules and 3,727 owned constants, retained the exact
+seventeen compiler-generated recursion helpers with safe ordinary parents, and preserved the
 standard transitive axiom union.
 
 ## Proof gate

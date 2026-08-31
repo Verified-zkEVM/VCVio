@@ -124,8 +124,11 @@ correctness, and the general internal scheme proves sign/verify completeness. Th
 The older `Scheme` d=1 path remains for compatibility and is FIPS-correct when
 `DigestParts.idxTree_eq_zero_of_d_eq_one` applies. General depth-one signing returns the same
 signature but executes Algorithm 12's discarded final recovery, so its free-oracle trace is longer.
-S07 still owns FORS extraction/address/runtime conformance and S09 still owns codecs, external APIs,
-and reject behavior. The concrete SHA2-128-24 verifier and parallel C13 construction remain
+The S07 candidate now instantiates FORS extraction/address/runtime conformance with exact
+`DigestParts.md` widths, typed MSB-first indices and global sibling coordinates, checked SHA2/SHAKE
+address boundaries, a tiny exhaustive model, and bounded SHA2/SHAKE-128f construction tests;
+independent review is pending. S09 still owns codecs, external APIs, and reject behavior. The
+concrete SHA2-128-24 verifier and parallel C13 construction remain
 non-normative regressions, not full FIPS205-12 external APIs.
 
 ## API contract

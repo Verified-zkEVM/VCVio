@@ -435,15 +435,15 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
         (3881, "cdfaaa4aad22cd5b6cc28e5863fd5de30949b3c3406cea9eea14e0f941a9976b"),
     "docs/slhdsa/matrices/coverage.csv":
-        (9016, "c53c5e1d51cb7cff6bec4f7c4d7284790bb25aa11460ba796729791611e5de54"),
+        (9616, "4ac52347d893cc17b2d35b4f9d26d6436485201890a08acee91afacd76784d03"),
     "docs/slhdsa/matrices/decisions.csv":
         (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (121435, "9ca06d827e2cb6910e08f33cd6c8e8f99aaafbceaa328714761e9904bf0632c9"),
+        (131960, "98a983128c13fc0bf3bc4f79f1d411052b6483261bbd1cb78cd6832f6d74aafe"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (9273, "5a9926eea73b1b56b518a6612d10556666b132e95580d63529ebb912f338b92b"),
+        (9416, "3a9ae93a3532b39f8bf8268583160159f66690f4a0456bc3d8b016392a6bc38f"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
@@ -662,6 +662,8 @@ def check_required_files() -> None:
             "validate.sh does not run the S05 WOTS construction tests")
     require("lake exe slhdsa_xmss_tests" in wrapper,
             "validate.sh does not run the S06 XMSS construction tests")
+    require("lake exe slhdsa_fors_tests" in wrapper,
+            "validate.sh does not run the S07 FORS construction tests")
     for marker in ("python3 -B scripts/slhdsa/check-acvp-provenance.py",
                    "lake build HashSigTest", "--resolve-s01-parser-executable"):
         require(marker in wrapper, f"validate.sh: missing S01 gate {marker}")
@@ -2486,7 +2488,7 @@ ACVP_TRACE_MODULES = {
         Path("HashSigTest/SLHDSA/ACVP/StrictJson.lean"),
         "20f9aff3f5339e54d7fc5e148fadb0e37d8f4b4bd816938f0a81b4cf7b087089"),
 }
-LAKEFILE_BOUNDARY_SHA256 = "43bd578037cdb2723ef4b7650d04e3d06a62b7d906ea3ec00441b3bacfec41e6"
+LAKEFILE_BOUNDARY_SHA256 = "1b881e7fedf324f3640991654d2a500affd62dca8d347fe60eaf6b9c16f61374"
 FRESH_BUILD_CHILD = "fresh-root-build"
 PARSER_EXPECTED_STDOUT = (
     b"SLH-DSA ACVP parser positive suite: PASS (16 cases)\n"

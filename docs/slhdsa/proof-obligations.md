@@ -53,7 +53,7 @@ No checkbox is discharged by a build alone.
   sibling entries and the honest FIPS climb equation to the canonical Merkle engine, retains honest
   recovery and arbitrary-signature binding, and closes approved reachable SHA2/SHAKE addresses.
   Independent S06 r0 accepted the exact candidate with zero findings. B03 subsequently discharges
-  arbitrary-`d` hypertree correctness; FORS conformance remains S07 work.
+  arbitrary-`d` hypertree correctness.
 - [x] B02 consumes PR #595's typed `(md,idx_tree,idx_leaf)` decomposition, exact byte extents,
   intrinsic bounds, FORS address, and `LayerPosition` low-bit/high-bit trajectory for all approved
   profiles. B02 and its remote reconciliation are independently accepted at exact reviewed head
@@ -69,8 +69,12 @@ No checkbox is discharged by a build alone.
 - [ ] Callback-parametric `signFromPositionWith`/`recoverFromPositionWith` still lack a named parity
   theorem to the explicit-query/pure construction (PO-024, Medium). Depth-one output compatibility
   is proved, but general signing intentionally performs one discarded final recovery.
-- [ ] Intrinsic FORS `k`/`a` widths are imported, but S07 conformance fixtures, reachable-address
-  checks, and approved-profile runtime remain PO-023.
+- [x] The S07 candidate connects exact `DigestParts.md` widths to typed MSB-first FORS indices,
+  proves decoded global/sibling/sign equations and complete component address canonicality, closes
+  approved SHA2/SHAKE address boundaries, exhausts a height-two toy over all 256 byte digests,
+  checks all twelve profiles cheaply, and exercises SHA2/SHAKE-128f sign/recovery/keygen. PO-023 is
+  technically discharged pending independent review; no KAT, ACVP, trace-coverage, or reduction
+  claim follows.
 - [ ] External pure/pre-hash domain separation, context, OID, deterministic/hedged modes, and codecs.
 - [ ] Remaining external API completeness and reject-behavior roots have zero `sorryAx`; B03 already
   closes internal `GeneralScheme` completeness.

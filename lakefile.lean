@@ -397,6 +397,10 @@ lean_exe slhdsa_wots_tests where
 lean_exe slhdsa_xmss_tests where
   root := `HashSigTest.SLHDSA.XmssConstructionTests
 
+/-- S07 FORS extraction, address-domain, tiny exhaustion, and selected concrete-profile exercise. -/
+lean_exe slhdsa_fors_tests where
+  root := `HashSigTest.SLHDSA.ForsConstructionTests
+
 /-- Fail-closed parser gate for the pinned NIST SLH-DSA sample JSON. -/
 lean_exe slhdsa_acvp_parser where
   root := `HashSigTest.SLHDSA.ACVP.ParserTests

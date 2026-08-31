@@ -382,6 +382,6 @@
     "manifest_line": "<lowercase-file-sha256><two ASCII spaces><repository-relative-path><LF>",
     "original_command": "sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/HypertreeGeneral/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum",
     "deterministic_command": "LC_ALL=C sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/HypertreeGeneral/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum",
-    "sha256": "6ae29b5b4d7c96fb8b6189d42a01c26391ee8c27a5875c450567c8825a65050c"
+    "sha256": "dc256cb8820a42da707f31193f2c945b2b98b49d3a78cfe9299c717929dfc12b"
   }
 }
