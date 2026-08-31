@@ -378,7 +378,7 @@ lean_exe slhdsa_kat where
 lean_exe slhdsa_c13_kat where
   root := `HashSigTest.SLHDSA.C13KAT
 
-/-- Exact parameter, endian, address, and rejecting-codec regression suite. -/
+/-- Exact parameter-width and structured key/signature wire-codec regression suite. -/
 lean_exe slhdsa_data_codec_tests where
   root := `HashSigTest.SLHDSA.DataCodecTests
 
