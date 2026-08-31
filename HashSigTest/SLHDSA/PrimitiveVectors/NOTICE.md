@@ -2,10 +2,10 @@
 
 The numeric SHA-2, HMAC, and SHAKE example values projected in this directory come from the
 National Institute of Standards and Technology (NIST) sources identified byte-for-byte in
-`vectors.json` and `docs/slhdsa/reference-manifest.json`. NIST technical-series publications are
-U.S. Government works. NIST material is credited here as the source; its appearance does not imply
-NIST endorsement of this project or a validation certificate. The source archives and examples are
-provided without warranty, and these projections are regression/conformance evidence only.
+`vectors.json`. NIST technical-series publications are U.S. Government works. NIST material is
+credited here as the source; its appearance does not imply NIST endorsement of this project or a
+validation certificate. The source archives and examples are provided without warranty, and these
+projections are regression/conformance evidence only.
 
 The 272-byte empty-message SHAKE256 value is the exact leading-byte projection of NIST's 4096-bit
 `SHAKE256_Msg0.pdf` output. The 32-byte outputs for 135, 136, and 137 repetitions of byte `0x61`
