@@ -56,8 +56,9 @@ The following exact heads were inspected for ownership only and were not merged:
 
 - PR #594 `c0930e49f74580fc8c0c22fbbffd8496df38972a`: final-validity tweakable-hash games, to be
   consumed by S11+ security work;
-- PR #595 `be823fbb6745e95412efe2bf49e0e46055953413`: digest and hypertree positions, to be
-  reconciled by S08/S09; and
+- PR #595 `be823fbb6745e95412efe2bf49e0e46055953413`: `DigestParts` and typed `Position`
+  ownership, to be reconciled across S07--S09 (S07 digest splitting/FORS addressing and S08/S09
+  typed hypertree positions); and
 - PR #596 `7068fd993e35748822d07bba922fe70fe2953cd9`: DSPR, OpenPRE, UD-C, and ITSR games, to be
   consumed by S11--S16 in coordination with #594.
 

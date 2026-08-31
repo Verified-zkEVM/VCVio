@@ -2476,6 +2476,18 @@ PARSER_MODULE_ARTIFACT_KEYS = (
     "generated_c", "generated_c_hash",
     "export_object", "export_object_hash", "export_object_trace",
 )
+PARSER_TRACE_LINK_LAYOUTS = {
+    "Lean 4.32.2, commit f3b06c705e6c85f5314019d5d3baab0fec5b580c":
+        ("linkObjs",),
+    "Lean 4.33.1, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6":
+        (f"{PARSER_MODULE}:linkInfo", "Module.moreLinkObjs"),
+}
+PARSER_PERMITTED_LINK_LIBRARIES = (
+    "libleanhashing.a",
+    "libleanmlkem.a",
+    "libleanmldsa.a",
+    "libleanfalcon.a",
+)
 
 
 def write_srcdir_regression_project(
@@ -3037,6 +3049,80 @@ def require_trace_shape(trace: Any, label: str) -> list[list[Any]]:
     return inputs
 
 
+def supported_trace_lean_identity(trace_inputs: list[list[Any]], label: str) -> str:
+    """Return the one exact supported Lean build identity in a structured trace."""
+    identities = [
+        pair for pair in trace_inputs
+        if pair[0] in PARSER_TRACE_LINK_LAYOUTS
+    ]
+    require(len(identities) == 1
+            and isinstance(identities[0][1], str)
+            and re.fullmatch(r"[0-9a-f]{16}", identities[0][1]) is not None,
+            f"S01: {label} trace has no unique supported Lean identity")
+    return identities[0][0]
+
+
+def parser_link_objects_for_trace_inputs(binary_inputs: list[list[Any]]) -> list[list[Any]]:
+    """Select the exact link-object array for one explicitly pinned Lean trace layout."""
+
+    identity = supported_trace_lean_identity(binary_inputs, "parser executable")
+    layout = PARSER_TRACE_LINK_LAYOUTS[identity]
+
+    outer_keys = {candidate[0] for candidate in PARSER_TRACE_LINK_LAYOUTS.values()}
+    outer_groups = [pair for pair in binary_inputs if pair[0] in outer_keys]
+    require(len(outer_groups) == 1
+            and outer_groups[0][0] == layout[0]
+            and isinstance(outer_groups[0][1], list),
+            "S01: parser executable trace has no unique link-object layout group")
+
+    if len(layout) == 1:
+        return outer_groups[0][1]
+
+    link_info = outer_groups[0][1]
+    more_link_objects = [
+        pair for pair in link_info
+        if isinstance(pair, list) and len(pair) == 2 and pair[0] == layout[1]
+    ]
+    require(len(more_link_objects) == 1
+            and isinstance(more_link_objects[0][1], list),
+            "S01: parser executable trace has no unique nested Module.moreLinkObjs group")
+    return more_link_objects[0][1]
+
+
+def module_direct_import_entries(
+        module_inputs: list[list[Any]], importer: str) -> list[list[Any]]:
+    """Return direct-import records from the exact supported per-version dependency layout."""
+
+    identity = supported_trace_lean_identity(module_inputs, f"{importer} module")
+    if identity.startswith("Lean 4.33.1,"):
+        dependency_groups = [pair[1] for pair in module_inputs if pair[0] == "deps"]
+        require(len(dependency_groups) == 1 and isinstance(dependency_groups[0], list),
+                f"S01: {importer} trace has no unique 4.33 dependency group")
+        dependency_entries = dependency_groups[0]
+    else:
+        dependency_groups = [
+            pair[1] for pair in module_inputs if pair[0] == f"{importer}:deps"
+        ]
+        require(len(dependency_groups) == 1 and isinstance(dependency_groups[0], list),
+                f"S01: {importer} trace has no unique legacy dependency group")
+        nested_dependencies = [
+            pair[1] for pair in dependency_groups[0]
+            if isinstance(pair, list) and len(pair) == 2 and pair[0] == "deps"
+        ]
+        require(len(nested_dependencies) == 1
+                and isinstance(nested_dependencies[0], list),
+                f"S01: {importer} trace has malformed legacy structured dependencies")
+        dependency_entries = nested_dependencies[0]
+
+    imports = [
+        pair[1] for pair in dependency_entries
+        if isinstance(pair, list) and len(pair) == 2 and pair[0] == "imports"
+    ]
+    require(len(imports) == 1 and isinstance(imports[0], list),
+            f"S01: {importer} trace has no unique structured import-artifact group")
+    return imports[0]
+
+
 def validate_parser_build_trace_data(
         binary_path: Path,
         binary_trace: Any,
@@ -3060,9 +3146,26 @@ def validate_parser_build_trace_data(
     require(isinstance(binary_trace["outputs"], str),
             "S01: parser executable trace output hash is malformed")
 
-    link_groups = [pair[1] for pair in binary_inputs if pair[0] == "linkObjs"]
-    require(len(link_groups) == 1 and isinstance(link_groups[0], list),
-            "S01: parser executable trace has no unique structured linkObjs input")
+    link_objects = parser_link_objects_for_trace_inputs(binary_inputs)
+    require(all(isinstance(pair, list) and len(pair) == 2
+                and isinstance(pair[0], str) and isinstance(pair[1], str)
+                and re.fullmatch(r"[0-9a-f]{16}", pair[1]) is not None
+                for pair in link_objects),
+            "S01: parser executable link-object entries are malformed")
+    expected_link_paths = {
+        str(build_root / f"ir/{module.replace('.', '/')}.c.o.export")
+        for module in module_specs
+    }
+    if expected_root == ROOT and set(module_specs) == set(ACVP_TRACE_MODULES):
+        expected_link_paths |= {
+            str(build_root / f"lib/{library}")
+            for library in PARSER_PERMITTED_LINK_LIBRARIES
+        }
+    observed_link_paths = [pair[0] for pair in link_objects]
+    require(len(observed_link_paths) == len(expected_link_paths)
+            and len(set(observed_link_paths)) == len(observed_link_paths)
+            and set(observed_link_paths) == expected_link_paths,
+            "S01: parser executable link-object ownership is incomplete, duplicated, or excessive")
 
     module_inputs_by_name: dict[str, list[list[Any]]] = {}
     for module, (source_relative, source_sha256) in module_specs.items():
@@ -3078,18 +3181,31 @@ def validate_parser_build_trace_data(
         module_inputs_by_name[module] = module_inputs
 
         module_outputs = module_trace["outputs"]
-        require(isinstance(module_outputs, dict)
-                and set(module_outputs) in ({"o", "m", "i", "c"},
-                                            {"r", "o", "m", "i", "c"})
+        require(isinstance(module_outputs, dict),
+                f"S01: {short_name} module trace outputs are malformed")
+        module_identity = supported_trace_lean_identity(
+            module_inputs, f"{short_name} module")
+        expected_output_keys = (
+            ({"o", "m", "i", "c"}
+             | ({"rs", "r"} if module_outputs.get("m") is True else set()))
+            if module_identity.startswith("Lean 4.33.1,")
+            else set(module_outputs) & {"r"} | {"o", "m", "i", "c"}
+        )
+        require(set(module_outputs) == expected_output_keys
                 and isinstance(module_outputs["o"], list)
                 and len(module_outputs["o"]) >= 1
+                and (not module_identity.startswith("Lean 4.33.1,")
+                     or len(module_outputs["o"]) == (3 if module_outputs["m"] is True else 1))
                 and re.fullmatch(r"[0-9a-f]{16}\.olean", module_outputs["o"][0]) is not None
                 and all(re.fullmatch(r"[0-9a-f]{16}\.olean\.(?:server|private)", value)
                         is not None for value in module_outputs["o"][1:])
                 and isinstance(module_outputs["m"], bool)
                 and isinstance(module_outputs["i"], str)
                 and isinstance(module_outputs["c"], str)
-                and ("r" not in module_outputs or isinstance(module_outputs["r"], str)),
+                and ("r" not in module_outputs
+                     or re.fullmatch(r"[0-9a-f]{16}\.ir", module_outputs["r"]) is not None)
+                and ("rs" not in module_outputs
+                     or re.fullmatch(r"[0-9a-f]{16}\.ir\.sig", module_outputs["rs"]) is not None),
                 f"S01: {short_name} module trace outputs are malformed")
         require(isinstance(object_trace["outputs"], str),
                 f"S01: {short_name} object trace output hash is malformed")
@@ -3108,9 +3224,7 @@ def validate_parser_build_trace_data(
         require(hashlib.sha256(expected_source.read_bytes()).hexdigest() == source_sha256,
                 f"S01: {short_name} source bytes disagree with the frozen SHA-256")
 
-        object_links = [pair for pair in link_groups[0]
-                        if isinstance(pair, list) and len(pair) == 2
-                        and pair[0] == str(expected_object)]
+        object_links = [pair for pair in link_objects if pair[0] == str(expected_object)]
         require(len(object_links) == 1 and isinstance(object_links[0][1], str),
                 f"S01: executable does not link the exact {short_name} export object once")
         require(object_trace["outputs"] == object_links[0][1] + ".o",
@@ -3132,25 +3246,15 @@ def validate_parser_build_trace_data(
         if importer not in module_specs or imported not in module_specs:
             continue
         importer_inputs = module_inputs_by_name[importer]
-        deps_groups = [pair[1] for pair in importer_inputs if pair[0] == f"{importer}:deps"]
-        require(len(deps_groups) == 1 and isinstance(deps_groups[0], list),
-                f"S01: {importer} trace has no unique dependency group")
-        deps = [pair[1] for pair in deps_groups[0]
-                if isinstance(pair, list) and len(pair) == 2 and pair[0] == "deps"]
-        require(len(deps) == 1 and isinstance(deps[0], list),
-                f"S01: {importer} trace has malformed structured dependencies")
-        imports = [pair[1] for pair in deps[0]
-                   if isinstance(pair, list) and len(pair) == 2 and pair[0] == "imports"]
-        require(len(imports) == 1 and isinstance(imports[0], list),
-                f"S01: {importer} trace has no unique structured import-artifact group")
+        imports = module_direct_import_entries(importer_inputs, importer)
         expected_labels = {
             f"{imported} transitive imports (public)",
             f"{imported}:importArts",
         }
-        require({pair[0] for pair in imports[0]
+        require({pair[0] for pair in imports
                  if isinstance(pair, list) and len(pair) == 2
                  and isinstance(pair[0], str) and isinstance(pair[1], str)} == expected_labels
-                and len(imports[0]) == 2,
+                and len(imports) == 2,
                 f"S01: {importer} does not record the exact direct import relationship to {imported}")
 
 
@@ -4261,13 +4365,30 @@ def check_parser_build_input_self_tests(binary_path: Path, build_root: Path) -> 
 
         for mode in ("wrong", "missing", "duplicate"):
             mutated_binary = copy.deepcopy(binary_trace)
-            link_objects = next(pair[1] for pair in mutated_binary["inputs"]
-                                if pair[0] == "linkObjs")
+            link_objects = parser_link_objects_for_trace_inputs(mutated_binary["inputs"])
             object_entry = next(pair for pair in link_objects if pair[0] == expected_object)
             if mode == "wrong":
-                object_entry[1] = "0000000000000000"
+                if module.endswith("StrictJson"):
+                    link_objects.append([
+                        str(build_root / "ir/Unrelated/ParserDependency.c.o.export"),
+                        "0000000000000000",
+                    ])
+                else:
+                    object_entry[1] = "0000000000000000"
             elif mode == "missing":
                 link_objects.remove(object_entry)
+            elif module == PARSER_MODULE:
+                link_info = next(
+                    pair[1] for pair in mutated_binary["inputs"]
+                    if pair[0] == f"{PARSER_MODULE}:linkInfo")
+                more_link_objects = next(
+                    pair for pair in link_info if pair[0] == "Module.moreLinkObjs")
+                link_info.append(copy.deepcopy(more_link_objects))
+            elif module.endswith("Schema"):
+                link_info = next(
+                    pair for pair in mutated_binary["inputs"]
+                    if pair[0] == f"{PARSER_MODULE}:linkInfo")
+                mutated_binary["inputs"].append(copy.deepcopy(link_info))
             else:
                 link_objects.append(copy.deepcopy(object_entry))
             rejected(
@@ -4282,10 +4403,7 @@ def check_parser_build_input_self_tests(binary_path: Path, build_root: Path) -> 
         for mode in ("wrong", "missing"):
             mutated_modules = copy.deepcopy(module_traces)
             trace = mutated_modules[importer]
-            deps_group = next(pair[1] for pair in trace["inputs"]
-                              if pair[0] == f"{importer}:deps")
-            deps = next(pair[1] for pair in deps_group if pair[0] == "deps")
-            imports = next(pair[1] for pair in deps if pair[0] == "imports")
+            imports = module_direct_import_entries(trace["inputs"], importer)
             if mode == "wrong":
                 imports[0][0] = imports[0][0].replace(imported, "Wrong.Import")
             else:

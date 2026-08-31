@@ -121,7 +121,8 @@ without named owner approval.
   family/category lookup, component-size facts, concrete dispatch, and tests are compatibility
   adapters over those definitions.
 - Deferred concurrent work: PR #594 (`c0930e49...`) owns final-validity tweakable-hash games for
-  S11+; PR #595 (`be823fbb...`) owns digest and hypertree positions for S08/S09; PR #596
+  S11+; PR #595 (`be823fbb...`) owns `DigestParts`/typed `Position` across S07--S09 (S07 digest
+  splitting/FORS addressing and S08/S09 typed hypertree positions); PR #596
   (`7068fd99...`) owns DSPR/OpenPRE/UD-C/ITSR games for S11--S16 and is coordinated with #594.
   None is merged here, and S05 must not duplicate their deliverables.
 - Record and review: `sessions/B01-upstream-boundary-integration.md`; a fresh independent boundary
