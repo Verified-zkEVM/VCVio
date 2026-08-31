@@ -26,6 +26,12 @@ namespace SLHDSA.Concrete
 
 open SLHDSA ENNReal
 
+/-- Proof-only finite enumeration of the 128-bit node space.  This must remain local to the
+noncomputable security layer: exporting the computable `Fintype (Bytes 16)` from
+`Concrete.Instance` makes native executables eagerly allocate all `2^128` nodes at startup. -/
+noncomputable local instance : Fintype shaPrimitives.Y :=
+  inferInstanceAs (Fintype (Bytes 16))
+
 /-- Lift restricted injectivity of the list-valued `ADRSc` encoding to its fixed-width vector. -/
 theorem shaAdrsKey_injective_of_header_eq {a b : Adrs}
     (hlayer : a.layer = b.layer) (htree : a.tree = b.tree) (htype : a.type = b.type)
