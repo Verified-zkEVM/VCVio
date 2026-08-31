@@ -17,8 +17,9 @@ layer order.  The signer and root-recovery program share the FIPS low-bits/high-
 recurrence.
 
 The layer-zero root recovery in Algorithm 12 is unconditional.  Consequently the `d = 1` signer
-has the same output as the old one-layer signer but performs the discarded recovery prescribed by
-FIPS.  For `d > 1`, the final (top-layer) XMSS signature is not recovered by the signer.
+has the same output as the single-layer compatibility signer but performs the discarded recovery
+prescribed by FIPS.  For `d > 1`, the final (top-layer) XMSS signature is not recovered by the
+signer.
 
 ## References
 
@@ -187,42 +188,44 @@ def recoverFromPosition (vp : ValidatedParams) (prims : Primitives vp.params)
 
 /-! ## Explicit-public-hash programs -/
 
-/-- Explicit-public-hash form of the typed structural signing loop. -/
+/-- Explicit-public-hash form of the typed structural signing loop.  This is literally the
+callback loop above, specialized to the canonical public-hash queries. -/
 def signFromPositionM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
     (sk : core.SkSeed) (pk : core.PkSeed) (recoverFinal : Bool)
     (pos : LayerPosition vp) :
     (layers : ℕ) → pos.layer.val + layers = vp.params.d → core.Y →
-      m (Vector (XmssSig vp.params core) layers)
-  | 0, _, _ => pure #v[]
-  | 1, _, msg => do
-      let sig ← xmssSignM core msg sk pk pos.toAdrs pos.leaf.val
-      if recoverFinal then
-        let _ ← xmssPkFromSigM core pos.leaf.val sig msg pk pos.toAdrs
-        return #v[sig]
-      else
-        return #v[sig]
-  | layers + 2, hremaining, msg => do
-      let sig ← xmssSignM core msg sk pk pos.toAdrs pos.leaf.val
-      let root ← xmssPkFromSigM core pos.leaf.val sig msg pk pos.toAdrs
-      let next := pos.next (by omega)
-      let rest ← signFromPositionM vp core sk pk false next (layers + 1)
-        (by simp [next]; omega) root
-      return rest.insertIdx 0 sig
+      m (Vector (XmssSig vp.params core) layers) :=
+  signFromPositionWith vp core (PublicHash.f core pk) (PublicHash.tl core pk)
+    (PublicHash.h core pk) sk pk recoverFinal pos
 
-/-- Explicit-public-hash form of the typed structural recovery loop. -/
+/-- Explicit-public-hash form of the typed structural recovery loop.  This shares the callback
+implementation used by all other interpretations. -/
 def recoverFromPositionM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
     (pk : core.PkSeed) (pos : LayerPosition vp) :
     (layers : ℕ) → pos.layer.val + layers = vp.params.d → core.Y →
-      Vector (XmssSig vp.params core) layers → m core.Y
-  | 0, _, msg, _ => pure msg
-  | 1, _, msg, sigs =>
-      xmssPkFromSigM core pos.leaf.val sigs.head msg pk pos.toAdrs
-  | layers + 2, hremaining, msg, sigs => do
-      let root ← xmssPkFromSigM core pos.leaf.val sigs.head msg pk pos.toAdrs
-      let next := pos.next (by omega)
-      recoverFromPositionM vp core pk next (layers + 1) (by simp [next]; omega) root sigs.tail
+      Vector (XmssSig vp.params core) layers → m core.Y :=
+  recoverFromPositionWith vp core (PublicHash.f core pk) (PublicHash.tl core pk)
+    (PublicHash.h core pk) pk pos
+
+@[simp]
+private theorem xmssSignWith_publicHash_eq_xmssSignM
+    {p : Params} (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec core) m] (msg : core.Y) (sk : core.SkSeed)
+    (pk : core.PkSeed) (adrs : Adrs) (idx : ℕ) :
+    xmssSignWith core (PublicHash.f core pk) (PublicHash.tl core pk)
+        (PublicHash.h core pk) msg sk pk adrs idx =
+      (xmssSignM core msg sk pk adrs idx : m (XmssSig p core)) := rfl
+
+@[simp]
+private theorem xmssPkFromSigWith_publicHash_eq_xmssPkFromSigM
+    {p : Params} (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec core) m] (idx : ℕ) (sig : XmssSig p core)
+    (msg : core.Y) (pk : core.PkSeed) (adrs : Adrs) :
+    xmssPkFromSigWith core (PublicHash.f core pk) (PublicHash.tl core pk)
+        (PublicHash.h core pk) idx sig msg adrs =
+      (xmssPkFromSigM core idx sig msg pk adrs : m core.Y) := rfl
 
 /-- Canonical explicit-public-hash hypertree signer for arbitrary `d`. -/
 def signM (vp : ValidatedParams) (core : CorePrimitives vp.params)
@@ -274,11 +277,16 @@ theorem simulateQ_signFromPositionM_withPublicHash (vp : ValidatedParams)
   | zero => rfl
   | one =>
       cases recoverFinal <;>
-        simp only [signFromPositionM, signFromPosition, simulateQ_bind, simulateQ_pure,
+        simp only [signFromPositionM, signFromPositionWith, signFromPosition,
+          xmssSignWith_publicHash_eq_xmssSignM,
+          xmssPkFromSigWith_publicHash_eq_xmssPkFromSigM, simulateQ_bind, simulateQ_pure,
           simulateQ_xmssSignM_withPublicHash, simulateQ_xmssPkFromSigM_withPublicHash,
           Bool.false_eq_true, ↓reduceIte] <;> rfl
   | more layers _ ih =>
-      simp only [signFromPositionM, signFromPosition, simulateQ_bind, simulateQ_pure,
+      simp only [signFromPositionM] at ih
+      simp only [signFromPositionM, signFromPositionWith, signFromPosition,
+        xmssSignWith_publicHash_eq_xmssSignM,
+        xmssPkFromSigWith_publicHash_eq_xmssPkFromSigM, simulateQ_bind, simulateQ_pure,
         simulateQ_xmssSignM_withPublicHash, simulateQ_xmssPkFromSigM_withPublicHash, ih]
       rfl
 
@@ -298,10 +306,13 @@ theorem simulateQ_recoverFromPositionM_withPublicHash (vp : ValidatedParams)
   induction layers using Nat.twoStepInduction generalizing pos msg with
   | zero => rfl
   | one =>
-      simp only [recoverFromPositionM, recoverFromPosition,
+      simp only [recoverFromPositionM, recoverFromPositionWith, recoverFromPosition,
+        xmssPkFromSigWith_publicHash_eq_xmssPkFromSigM,
         simulateQ_xmssPkFromSigM_withPublicHash]
   | more layers _ ih =>
-      simp only [recoverFromPositionM, recoverFromPosition, simulateQ_bind,
+      simp only [recoverFromPositionM] at ih
+      simp only [recoverFromPositionM, recoverFromPositionWith, recoverFromPosition,
+        xmssPkFromSigWith_publicHash_eq_xmssPkFromSigM, simulateQ_bind,
         simulateQ_xmssPkFromSigM_withPublicHash, ih]
       rfl
 
@@ -361,12 +372,14 @@ theorem signFromPositionM_natural (vp : ValidatedParams) (core : CorePrimitives 
     F.toMonadHom (signFromPositionM vp core sk pk recoverFinal pos layers hremaining msg) =
       signFromPositionM vp core sk pk recoverFinal pos layers hremaining msg := by
   induction layers using Nat.twoStepInduction generalizing recoverFinal pos msg with
-  | zero => simp [signFromPositionM]
+  | zero => simp [signFromPositionM, signFromPositionWith]
   | one =>
       cases recoverFinal <;>
-        simp [signFromPositionM, xmssSignM_natural core F, xmssPkFromSigM_natural core F]
+        simp [signFromPositionM, signFromPositionWith,
+          xmssSignM_natural core F, xmssPkFromSigM_natural core F]
   | more layers _ ih =>
-      simp [signFromPositionM, xmssSignM_natural core F,
+      simp only [signFromPositionM] at ih
+      simp [signFromPositionM, signFromPositionWith, xmssSignM_natural core F,
         xmssPkFromSigM_natural core F, ih]
 
 /-- Query-preserving monad morphisms commute with the typed structural recovery loop. -/
@@ -380,10 +393,13 @@ theorem recoverFromPositionM_natural (vp : ValidatedParams) (core : CorePrimitiv
     F.toMonadHom (recoverFromPositionM vp core pk pos layers hremaining msg sigs) =
       recoverFromPositionM vp core pk pos layers hremaining msg sigs := by
   induction layers using Nat.twoStepInduction generalizing pos msg with
-  | zero => simp [recoverFromPositionM]
-  | one => simp [recoverFromPositionM, xmssPkFromSigM_natural core F]
+  | zero => simp [recoverFromPositionM, recoverFromPositionWith]
+  | one => simp [recoverFromPositionM, recoverFromPositionWith,
+      xmssPkFromSigM_natural core F]
   | more layers _ ih =>
-      simp [recoverFromPositionM, xmssPkFromSigM_natural core F, ih]
+      simp only [recoverFromPositionM] at ih
+      simp [recoverFromPositionM, recoverFromPositionWith,
+        xmssPkFromSigM_natural core F, ih]
 
 /-- Query-preserving monad morphisms commute with arbitrary-`d` hypertree signing. -/
 theorem signM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)

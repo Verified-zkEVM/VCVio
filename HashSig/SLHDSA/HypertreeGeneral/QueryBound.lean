@@ -134,7 +134,8 @@ theorem signFromPositionM_isTotalQueryBound (vp : ValidatedParams)
   | one =>
       cases recoverFinal with
       | false =>
-          simpa [signFromPositionM, signLoopQueryBound] using
+          simpa [signFromPositionM, signFromPositionWith, xmssSignM,
+            signLoopQueryBound] using
             isTotalQueryBound_bind
               (xmssSignM_isTotalQueryBound_coarse core msg sk pk pos.toAdrs pos.leaf.val)
               (fun sig => show IsTotalQueryBound
@@ -144,7 +145,8 @@ theorem signFromPositionM_isTotalQueryBound (vp : ValidatedParams)
             (xmssSignRecoverPairM_isTotalQueryBound core msg sk pk pos.toAdrs pos.leaf.val)
             (fun sigAndRoot => show IsTotalQueryBound
               (pure #v[sigAndRoot.1] : OracleComp (publicHashSpec core) _) 0 from trivial)
-          simpa [signFromPositionM, signLoopQueryBound, bind_assoc] using hbound
+          simpa [signFromPositionM, signFromPositionWith, xmssSignM, xmssPkFromSigM,
+            signLoopQueryBound, bind_assoc] using hbound
   | more layers _ ih =>
       let next := pos.next (by omega)
       have hbound := isTotalQueryBound_bind
@@ -154,7 +156,8 @@ theorem signFromPositionM_isTotalQueryBound (vp : ValidatedParams)
             (hremaining := by simp [next]; omega) (msg := pair.2))
           (fun rest => show IsTotalQueryBound
             (pure (rest.insertIdx 0 pair.1) : OracleComp (publicHashSpec core) _) 0 from trivial))
-      simpa [signFromPositionM, signLoopQueryBound, next, bind_assoc] using hbound
+      simpa [signFromPositionM, signFromPositionWith, xmssSignM, xmssPkFromSigM,
+        signLoopQueryBound, next, bind_assoc] using hbound
 
 theorem recoverFromPositionM_isTotalQueryBound (vp : ValidatedParams)
     (core : CorePrimitives vp.params) (pk : core.PkSeed) (pos : LayerPosition vp)
@@ -167,7 +170,7 @@ theorem recoverFromPositionM_isTotalQueryBound (vp : ValidatedParams)
   induction layers using Nat.twoStepInduction generalizing pos msg with
   | zero => trivial
   | one =>
-      simpa [recoverFromPositionM] using
+      simpa [recoverFromPositionM, recoverFromPositionWith, xmssPkFromSigM] using
         xmssPkFromSigM_isTotalQueryBound_coarse core pos.leaf.val sigs.head msg pk pos.toAdrs
   | more layers _ ih =>
       let next := pos.next (by omega)
@@ -175,8 +178,8 @@ theorem recoverFromPositionM_isTotalQueryBound (vp : ValidatedParams)
         (xmssPkFromSigM_isTotalQueryBound_coarse core pos.leaf.val sigs.head msg pk pos.toAdrs)
         (fun root => ih (pos := next) (hremaining := by simp [next]; omega)
           (msg := root) (sigs := sigs.tail))
-      simpa [recoverFromPositionM, next, Nat.add_mul, Nat.add_assoc, Nat.add_comm,
-        Nat.add_left_comm, two_mul] using hbound
+      simpa [recoverFromPositionM, recoverFromPositionWith, xmssPkFromSigM, next,
+        Nat.add_mul, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm, two_mul] using hbound
 
 theorem signLoopQueryBound_false (p : Params) (layers : ℕ) (hlayers : 0 < layers) :
     signLoopQueryBound p false layers =

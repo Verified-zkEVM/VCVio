@@ -182,8 +182,8 @@ def atWithLayer (p : ValidatedParams) (parts : DigestParts p.params) :
 /-- The hypertree position at an arbitrary valid layer.
 
 The construction follows the same low-bits/high-bits recurrence as repeated calls to `next`, but
-accepts a `Fin d` layer directly. This is the total trajectory interface used by generic-`d`
-hypertree algorithms. -/
+accepts a `Fin d` layer directly. This is the total random-access view of the same trajectory used
+by generic-`d` hypertree algorithms and by schedule tests. -/
 def atLayer (p : ValidatedParams) (parts : DigestParts p.params)
     (j : Fin p.params.d) : LayerPosition p :=
   (atWithLayer p parts j.val j.isLt).val
