@@ -58,8 +58,8 @@ end GeneratedKeyPair
 
 /-- An abstract signature-scheme experiment boundary.  The fields share one carrier, but this bare
 bundle deliberately supplies no refinement or correctness law coupling key generation, signing,
-verification, and the randomizer projection to the general SLH-DSA construction.  That construction
-witness remains a later S08/S09 obligation. -/
+verification, and the randomizer projection.  `GeneralScheme.securityInterface` supplies the
+arbitrary-depth SLH-DSA instance used by the concrete security surface. -/
 structure SchemeInterface {p : Params} (prims : Primitives p) where
   Signature : Type
   randomizer : Signature → prims.Y

@@ -190,6 +190,44 @@ they are fields of `MessageInput`. -/
 def Fresh (signed : List MessageInput) (forged : MessageInput) : Prop :=
   forged ∉ signed
 
+/-- Strong-unforgeability freshness: the exact candidate request/signature pair was not returned
+by the signing oracle.  A previously signed request may therefore still be fresh when paired with
+a distinct signature. -/
+def StrongFresh {Signature : Type} (signed : List (MessageInput × Signature))
+    (forged : MessageInput × Signature) : Prop :=
+  forged ∉ signed
+
+/-- The residual strong-unforgeability case: the request was signed before, but the exact
+request/signature pair is new. -/
+def SameMessageNewSignature {Signature : Type} (signed : List (MessageInput × Signature))
+    (forged : MessageInput × Signature) : Prop :=
+  forged.1 ∈ signed.map Prod.fst ∧ StrongFresh signed forged
+
+/-- Exact-pair freshness partitions into a new request or a previously signed request carrying a
+new signature. -/
+theorem strongFresh_iff_fresh_or_sameMessageNewSignature {Signature : Type}
+    (signed : List (MessageInput × Signature)) (forged : MessageInput × Signature) :
+    StrongFresh signed forged ↔
+      Fresh (signed.map Prod.fst) forged.1 ∨ SameMessageNewSignature signed forged := by
+  classical
+  by_cases hrequest : forged.1 ∈ signed.map Prod.fst
+  · simp [Fresh, SameMessageNewSignature, StrongFresh, hrequest]
+  · constructor
+    · intro _
+      exact Or.inl hrequest
+    · intro h
+      rcases h with h | h
+      · intro hpair
+        exact h (List.mem_map_of_mem hpair)
+      · exact h.2
+
+/-- The new-request and same-message/new-signature freshness branches are disjoint. -/
+theorem not_fresh_and_sameMessageNewSignature {Signature : Type}
+    (signed : List (MessageInput × Signature)) (forged : MessageInput × Signature) :
+    ¬ (Fresh (signed.map Prod.fst) forged.1 ∧ SameMessageNewSignature signed forged) := by
+  intro h
+  exact h.1 h.2.1
+
 /-- A tweak/input pair selected from an honest transcript.  The game output is always computed
 with its `eval` argument; it is not a caller-supplied field. -/
 structure TweakableTarget (Tweak Input : Type) where
