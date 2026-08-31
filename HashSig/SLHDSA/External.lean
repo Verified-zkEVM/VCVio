@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import HashSig.SLHDSA.GeneralScheme
-public import VCVio.OracleComp.Constructions.UniformSelect
+public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
 # SLH-DSA external interfaces
