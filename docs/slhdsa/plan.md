@@ -141,15 +141,29 @@ without named owner approval.
   address lemmas exclude fallback masking; all twelve `approvedPrimitives` profiles pass the
   construction exercise. PR #595 remains reserved across S07--S09, PR #594 for S11+, and PR #596
   for S11--S16.
-- Gates: component vectors/properties; `#print axioms` on WOTS correctness; review
-  `reviews/S05-wots-construction-review.md`.
+- Acceptance: independent r0 accepted exact candidate
+  `33770467d9209d0e270db5edd7a88958641db2b2`; its review artifact is committed and pushed at
+  exact head `7e029e660b9353f70e9de03ab4e6cc71f54e27da`.
 
 ### S06 — Merkle and XMSS construction
 
-- Inputs: S03–S05; FIPS Section 7; generic Merkle theory.
+- Inputs: exact accepted/pushed S05 review head
+  `7e029e660b9353f70e9de03ab4e6cc71f54e27da`; FIPS Section 6; generic Merkle theory.
 - Allowed: Merkle/XMSS modules and adapters; no reduction.
 - Deliverables: bounded nodes/paths, exact address evolution, sign/recovery correctness, reviewed
   adapter to generic Merkle semantics.
+- Candidate result: a local `HashSig` adapter gives typed leaf/node positions, intrinsic
+  authentication width with exact erasure, exact xor-sibling entries, and an explicit FIPS climb
+  equation to the existing `PerfectMerkleTree` engine. Generic address canonicality and checked
+  SHA2/SHAKE corollaries cover every approved reachable XMSS address. Exhaustive height-two traces,
+  all-twelve cheap address enumeration, and SHA2/SHAKE concrete construction cases pass. The
+  existing XMSS algorithms, generic Merkle engine, oracle/query theorems, and binding semantics
+  remain authoritative.
+- Concurrent boundary: cumulative PR #591 exact inspected head
+  `eff02207a77464edb07d750b8dbb00a9667543db` remains unmerged. Its addressed
+  transcript/extractor/shared-ROM security stack is reserved for S15; S06 does not edit generic
+  addressed-Merkle files. PRs #594--#596 retain their recorded later ownership, including #595
+  across S07--S09.
 - Gates: exhaustive tiny trees, runtime vectors, axioms on roots; review
   `reviews/S06-xmss-construction-review.md`.
 
@@ -165,7 +179,7 @@ without named owner approval.
 
 ### S08 — general hypertree construction
 
-- Inputs: S03–S07; FIPS Section 9; C13 `d=2` only as a non-normative design comparison.
+- Inputs: S03–S07; FIPS Section 7; C13 `d=2` only as a non-normative design comparison.
 - Allowed: main hypertree and digest-split internals.
 - Deliverables: general `d` fold, exactly `d` signatures, tree/leaf index evolution, correctness for
   every FIPS set; no C13 merge.

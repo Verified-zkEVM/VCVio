@@ -28,7 +28,11 @@ Current records:
   artifact is committed/pushed at exact head `4161910f...`.
 - [S05 — WOTS+ construction](S05-wots-construction.md): exact FIPS checksum byte pipeline,
   operational chain-length integration, checked SHA2 address closure, a discriminating
-  non-`lg_w = 4` canary, and all-twelve approved-profile construction exercise. The unpushed
-  candidate requires fresh independent review.
+  non-`lg_w = 4` canary, and all-twelve approved-profile construction exercise. Independent r0
+  accepted candidate `33770467...`; its review artifact is committed/pushed at `7e029e66...`.
+- [S06 — Merkle and XMSS construction](S06-xmss-construction.md): local bounded FIPS §6 adapter
+  over the canonical Merkle/XMSS engine, exact authentication positions and climb equation,
+  checked concrete addresses, exhaustive height-two traces, and bounded concrete regressions. The
+  unpushed candidate requires fresh independent review.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

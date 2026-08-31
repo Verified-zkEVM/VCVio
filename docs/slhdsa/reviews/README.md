@@ -76,11 +76,14 @@ files use the `-rN` suffix.
 - [B01 integration review r1](B01-main-pr593-integration-review-r1.md): PASS with zero findings;
   exact repair commit `1f3cfa89882af79755e87d90659edd7150186416` accepted, with the review artifact
   committed/pushed at `4161910f57d3634d667a9072bf5a7731b49e4467`.
+- [S05 WOTS+ construction review r0](S05-wots-review-r0.md): PASS with zero findings; exact
+  candidate `33770467d9209d0e270db5edd7a88958641db2b2` accepted, with the review artifact
+  committed/pushed at `7e029e660b9353f70e9de03ab4e6cc71f54e27da`.
 
 S03 implementation payload `caefbda5e7ed7cd7a6efb80191307de7a39eea43` and its repairs are accepted
 through r2. The immutable initial S04 FAIL is committed at
 `69cdabd443bf9c6bf203f8f5bb36dd54cdc86803`; its S04-001 repair and the later B01 boundary are
-accepted as recorded above. S05 has no review artifact yet; its unpushed candidate requires a fresh
+accepted as recorded above. S06 has no review artifact yet; its unpushed candidate requires a fresh
 independent review.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

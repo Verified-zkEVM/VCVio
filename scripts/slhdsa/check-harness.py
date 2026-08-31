@@ -433,15 +433,15 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
         (3881, "cdfaaa4aad22cd5b6cc28e5863fd5de30949b3c3406cea9eea14e0f941a9976b"),
     "docs/slhdsa/matrices/coverage.csv":
-        (5180, "ccc07d5e39e209852eff9f7a244c103f391b8409069d1f6580f4b94367a4ad10"),
+        (5795, "48f4812fef0577313a83022fd5a74e3105324e6abebe6887a22b206220d955be"),
     "docs/slhdsa/matrices/decisions.csv":
         (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (61228, "ac8195bb843384abbb0e3ed9b0a963073f8b71e8ad04b2be907f1938da6bb9f6"),
+        (77477, "46e91ac5f95534973d6a4866c7162fcd369ec1b9029bc6ee7e7f95ddcc1021d1"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (5242, "793f4c55c73eea09d5369077d6862c67f4fe01a9604eb7091d1c06e535f30a4a"),
+        (5861, "fa1353788d73e5f7abaa09d851c7fd4b313fea3c1b0ed3a2c76f69dce37d5179"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
@@ -548,6 +548,10 @@ def check_required_files() -> None:
             "missing elaborated S03 inventory probe scripts/slhdsa/S03InventoryProbe.lean")
     require((ROOT / "scripts/slhdsa/S04InventoryProbe.lean").is_file(),
             "missing elaborated S04 inventory probe scripts/slhdsa/S04InventoryProbe.lean")
+    require((ROOT / "scripts/slhdsa/S05InventoryProbe.lean").is_file(),
+            "missing elaborated S05 inventory probe scripts/slhdsa/S05InventoryProbe.lean")
+    require((ROOT / "scripts/slhdsa/S06InventoryProbe.lean").is_file(),
+            "missing elaborated S06 inventory probe scripts/slhdsa/S06InventoryProbe.lean")
     require((ROOT / "scripts/slhdsa/fixtures/SLHDSAPolicyIRMacro.lean").is_file(),
             "missing compiled-IR fixture macro")
     require((ROOT / "scripts/slhdsa/fixtures/HashSig/PolicyIRFixture.lean").is_file(),
@@ -638,8 +642,16 @@ def check_required_files() -> None:
             "validate.sh does not run the S02 declaration-inventory probe")
     require("lake env lean scripts/slhdsa/S04InventoryProbe.lean" in wrapper,
             "validate.sh does not run the S04 declaration-inventory probe")
+    require("lake env lean scripts/slhdsa/S05InventoryProbe.lean" in wrapper,
+            "validate.sh does not run the S05 declaration-inventory probe")
+    require("lake env lean scripts/slhdsa/S06InventoryProbe.lean" in wrapper,
+            "validate.sh does not run the S06 declaration-inventory probe")
     require("lake exe slhdsa_primitive_tests" in wrapper,
             "validate.sh does not run the S04 primitive tests")
+    require("lake exe slhdsa_wots_tests" in wrapper,
+            "validate.sh does not run the S05 WOTS construction tests")
+    require("lake exe slhdsa_xmss_tests" in wrapper,
+            "validate.sh does not run the S06 XMSS construction tests")
     for marker in ("python3 -B scripts/slhdsa/check-acvp-provenance.py",
                    "lake build HashSigTest", "--resolve-s01-parser-executable"):
         require(marker in wrapper, f"validate.sh: missing S01 gate {marker}")
@@ -2464,7 +2476,7 @@ ACVP_TRACE_MODULES = {
         Path("HashSigTest/SLHDSA/ACVP/StrictJson.lean"),
         "20f9aff3f5339e54d7fc5e148fadb0e37d8f4b4bd816938f0a81b4cf7b087089"),
 }
-LAKEFILE_BOUNDARY_SHA256 = "38dbe43443e43cb1e747a1dd2303625511e6f4092ad241384679b8c58aebf9b8"
+LAKEFILE_BOUNDARY_SHA256 = "43bd578037cdb2723ef4b7650d04e3d06a62b7d906ea3ec00441b3bacfec41e6"
 FRESH_BUILD_CHILD = "fresh-root-build"
 PARSER_EXPECTED_STDOUT = (
     b"SLH-DSA ACVP parser positive suite: PASS (16 cases)\n"

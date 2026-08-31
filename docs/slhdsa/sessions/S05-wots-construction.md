@@ -1,6 +1,6 @@
-# S05 WOTS+ construction candidate
+# S05 WOTS+ construction
 
-Status: implementation complete; fresh independent S05 review required before push.
+Status: accepted by independent r0 review with zero findings; candidate and review head pushed.
 
 Date: 2026-08-31
 Branch: `codex/sphincsplus-formalization`
@@ -14,6 +14,11 @@ the already-active comprehensive whitespace gate otherwise rejects accepted head
 Its historical review bytes remain recoverable unchanged as blob
 `28896bd808150a24da4256297b004e5be517c95d` in the acceptance
 commit; the r0 FAIL artifact remains untouched.
+
+Independent review `docs/slhdsa/reviews/S05-wots-review-r0.md` accepted exact candidate
+`33770467d9209d0e270db5edd7a88958641db2b2` (tree
+`9c1f8a3239c85e31fa6eb37bc82f8b8dec44ce78`) with zero findings. The review artifact is committed
+and pushed at exact head `7e029e660b9353f70e9de03ab4e6cc71f54e27da`.
 
 ## Scope and ownership
 
@@ -121,11 +126,10 @@ isolation/provenance/hygiene, and the compiled policy. That policy observed 34 H
 axiom union. Expected warnings were confined to absent optional native submodules, upstream
 non-HashSig admissions, and the policy's deliberate rejection fixtures.
 
-## Reviewer handoff
+## Acceptance
 
-Review the exact unpushed candidate commit containing this record. Replay the checksum arithmetic
-and byte-fit proof, the byte-to-mathematical digit theorem at both approved and non-`lg_w = 4`
-widths, the operational WOTS switch, every address-boundary theorem, the all-profile executable,
-the retained WOTS correctness axiom footprint, aggregate gates, and the ownership/absence of PRs
-#594--#596. The implementer does not author or pre-fill the independent review artifact. Any
-finding reopens S05; only a fresh zero-finding review may authorize push and S06 launch.
+Independent r0 replayed the checksum arithmetic and byte-fit proof, the byte-to-mathematical digit
+theorem at both approved and non-`lg_w = 4` widths, the operational WOTS switch, every address
+boundary, the all-profile executable, retained correctness footprint, aggregate gates, and
+ownership/absence of PRs #594--#596. Its zero-finding verdict accepts only the candidate above;
+S06 begins from the committed and pushed review head.

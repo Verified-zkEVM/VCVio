@@ -13,12 +13,17 @@ that work with upstream main and PR #593; independent B01 r1 accepted exact repa
 pushed at exact head `4161910f57d3634d667a9072bf5a7731b49e4467`.
 S01 reviews r0 through r15 are immutable **FAIL** artifacts. Independent r16 is **PASS**, so S01 is accepted and S02 is eligible to start.
 
-S05 is the current unpushed candidate. It adds the exact FIPS 205 WOTS+ checksum byte pipeline,
-switches operational chain lengths to that pipeline while retaining the mathematical/correctness
-view, closes reachable WOTS addresses over the checked SHA2 boundary, and exercises all twelve
-approved SHA2/SHAKE profiles. It awaits a fresh independent S05 review and does not claim a WOTS
-KAT, ACVP conformance, or a security reduction. PR #595 remains reserved across S07--S09; PRs #594
-and #596 remain reserved for their later security sessions.
+Independent S05 r0 accepted exact candidate `33770467d9209d0e270db5edd7a88958641db2b2`
+with zero findings; its review artifact is committed and pushed at exact head
+`7e029e660b9353f70e9de03ab4e6cc71f54e27da`.
+
+S06 is the current unpushed candidate. It adds a thin FIPS 205 §6 bounded XMSS interface over the
+existing canonical Merkle/XMSS semantics, exact authentication-path and climb characterizations,
+checked reachable SHA2/SHAKE addresses, and exhaustive height-two plus bounded concrete
+construction regressions. It does not claim an XMSS KAT, ACVP conformance, hash refinement, or a
+security reduction. PR #595 remains reserved across S07--S09; PRs #594 and #596 remain reserved
+for later security sessions. The cumulative addressed-Merkle/security stack at PR #591 remains
+unmerged and reserved for S15 integration.
 
 S01's pinned authority, provenance, and strict sample-schema parser anchors remain schema/provenance
 evidence rather than implementation conformance. Its descriptor/AST machinery is frozen absent a
@@ -60,7 +65,8 @@ building libraries or running algorithms; it does re-elaborate Lake configuratio
 TOML to verify the parser target and absence of effective source-directory/path-argument selectors.
 The second also checks the HashSig build, the authoritative elaborated-environment policy audit and
 compiled negative fixtures, generated umbrella, isolation rules, inherited KATs, S03 codecs, S04
-primitives, S05 WOTS construction, and the S01 provenance/strict-parser runtime gates. Immediately
+primitives, S05 WOTS construction, S06 XMSS construction, and the S01 provenance/strict-parser
+runtime gates. Immediately
 before the parser
 runtime, it reconfigures, rehashes, and disables caches while building into an initially absent
 private output root. It attests all three frozen parser/schema source-to-object-to-executable chains,

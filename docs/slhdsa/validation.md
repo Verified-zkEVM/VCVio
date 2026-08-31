@@ -171,11 +171,11 @@ static importer, retrieves the production regular-initializer ordinary and IR ar
 exact expected rejections (so loss of either path fails), and checks that the sentinel remains absent
 before and after audit. The temporary
 `.olean`, `.ilean`, `.ir`, and C artifacts are confined to a `mktemp` directory removed on exit.
-The wrapper then runs the exact S03, 11-root S04, and 14-root S05 declaration/axiom probes,
-generated umbrella check, extern and interop isolation, the two inherited SLH-DSA KAT executables,
-and the S03 data/codec, S04 primitive, and S05 WOTS construction executables. The KAT PASS results
-are legacy runtime
-regression evidence only, and the S03 PASS result covers exact table rows, endian fixtures, ADRS,
+The wrapper then runs the exact S03, 11-root S04, 14-root S05, and 21-root S06
+declaration/axiom probes, generated umbrella check, extern and interop isolation, the two inherited
+SLH-DSA KAT executables, and the S03 data/codec, S04 primitive, S05 WOTS, and S06 XMSS construction
+executables. The KAT PASS results are legacy runtime regression evidence only, and the S03 PASS
+result covers exact table rows, endian fixtures, ADRS,
 and rejecting fixed-width codecs. The S04 result covers official SHA/HMAC/SHAKE vectors, derived
 MGF1 regressions, padding/rate/domain boundaries, checked SHA2 addresses, output widths, and exact
 all-twelve grammar fingerprints without claiming construction correctness, ACVP certification, or
@@ -186,7 +186,12 @@ input records are independently derived regressions. The S05 result covers all t
 SHA2/SHAKE profiles, compares signing/recovery with public-key generation, and explicitly checks
 every reachable SHA2 WOTS address through the rejecting adapter. Its separate `lgw = 2` canary
 distinguishes the correct byte-aligned shift-zero encoding from erroneous shift-eight truncation;
-neither result is claimed as a WOTS KAT or ACVP certificate. A successful
+neither result is claimed as a WOTS KAT or ACVP certificate. The
+S06 result exhausts all four leaves and seven nodes of an address-sensitive height-two tree,
+enumerates reachable address acceptance/round trips cheaply for all twelve approved profiles, and
+checks bounded sign/recovery/root equality at indices 0 and 7 for SHA2/SHAKE-128f and SHA2-192f.
+It is construction regression evidence, not an XMSS KAT, ACVP certificate, hash refinement, or
+security reduction. A successful
 `lake build` is elaboration evidence; it does not demonstrate concrete hash/vector execution. The
 repository-wide `lake build` remains a final pre-review gate when changes touch shared VCVio
 infrastructure.
@@ -248,6 +253,13 @@ equivalence and bounds, generic/checked SHA2 WOTS address roots, and the retaine
 Quot.sound}` and no root depends on `sorryAx`. The S05 candidate audit observes 34 HashSig modules
 and 2,630 owned constants, with the same exact five compiler helpers and standard axiom union;
 these counts remain reproducible observations rather than stable limits.
+
+The S06 probe pins typed position and authentication-path erasure/entry roots, the explicit FIPS
+climb equalities, generic and checked concrete address boundaries, bounded honest correctness and
+binding, and the retained canonical XMSS roots. The exact 21-root union remains within `{propext,
+Classical.choice, Quot.sound}` and no root depends on `sorryAx`. The candidate audit observes 36
+HashSig modules and 2,748 owned constants with the same exact five compiler helpers and standard
+axiom union. These counts remain reproducible observations rather than stable limits.
 
 ## Proof gate
 

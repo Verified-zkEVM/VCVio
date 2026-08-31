@@ -393,6 +393,10 @@ lean_exe slhdsa_primitive_tests where
 lean_exe slhdsa_wots_tests where
   root := `HashSigTest.SLHDSA.WotsConstructionTests
 
+/-- S06 bounded XMSS construction, address-domain, and selected concrete-profile exercise. -/
+lean_exe slhdsa_xmss_tests where
+  root := `HashSigTest.SLHDSA.XmssConstructionTests
+
 /-- Fail-closed parser gate for the pinned NIST SLH-DSA sample JSON. -/
 lean_exe slhdsa_acvp_parser where
   root := `HashSigTest.SLHDSA.ACVP.ParserTests

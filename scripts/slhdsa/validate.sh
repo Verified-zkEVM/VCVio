@@ -387,6 +387,7 @@ lake env lean scripts/slhdsa/S02InventoryProbe.lean
 lake env lean scripts/slhdsa/S03InventoryProbe.lean
 lake env lean scripts/slhdsa/S04InventoryProbe.lean
 lake env lean scripts/slhdsa/S05InventoryProbe.lean
+lake env lean scripts/slhdsa/S06InventoryProbe.lean
 lake env lean scripts/slhdsa/PolicyAudit.lean
 
 fixture_root="$(mktemp -d)"
@@ -420,5 +421,6 @@ lake exe slhdsa_c13_kat
 lake exe slhdsa_data_codec_tests
 lake exe slhdsa_primitive_tests
 lake exe slhdsa_wots_tests
+lake exe slhdsa_xmss_tests
 
 echo "SLH-DSA full baseline validation: PASS"
