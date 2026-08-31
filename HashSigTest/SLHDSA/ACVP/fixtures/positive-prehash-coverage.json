@@ -1,0 +1,865 @@
+{
+  "provenance": {
+    "sourceRepository": "https://github.com/usnistgov/ACVP-Server",
+    "commit": "975de31eb83d87039ec88934fdc47d8c312b892d",
+    "release": "v1.1.0.43",
+    "promptPath": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/prompt.json",
+    "promptSha256": "4e7beb1233e47baa0acdd36417c66c45811aa40a4e32ffdb1a35d93b13b289fb",
+    "expectedResultsPath": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/expectedResults.json",
+    "expectedResultsSha256": "259f5e2a0665de0adc0fefa45b5db3a2a6ed13c3c44d14bdaf64a80aee12c687",
+    "derivation": "Join prompt tests to expectedResults by (tgId, tcId); retain testPassed=true cases from external/preHash groups; cross with registration parameterSets and hashAlgs in their upstream order."
+  },
+  "parameterSets": [
+    "SLH-DSA-SHA2-128s",
+    "SLH-DSA-SHAKE-128s",
+    "SLH-DSA-SHA2-128f",
+    "SLH-DSA-SHAKE-128f",
+    "SLH-DSA-SHA2-192s",
+    "SLH-DSA-SHAKE-192s",
+    "SLH-DSA-SHA2-192f",
+    "SLH-DSA-SHAKE-192f",
+    "SLH-DSA-SHA2-256s",
+    "SLH-DSA-SHAKE-256s",
+    "SLH-DSA-SHA2-256f",
+    "SLH-DSA-SHAKE-256f"
+  ],
+  "hashAlgorithms": [
+    "SHA2-224",
+    "SHA2-256",
+    "SHA2-384",
+    "SHA2-512",
+    "SHA2-512/224",
+    "SHA2-512/256",
+    "SHA3-224",
+    "SHA3-256",
+    "SHA3-384",
+    "SHA3-512",
+    "SHAKE-128",
+    "SHAKE-256"
+  ],
+  "counts": {
+    "parameterSets": 12,
+    "hashAlgorithms": 12,
+    "cells": 144,
+    "covered": 24,
+    "uncovered": 120
+  },
+  "cells": [
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHA2-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHA2-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHA2-512",
+      "covered": true,
+      "evidence": {
+        "tgId": 20,
+        "tcId": 268
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHA2-512/224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHA2-512/256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHA3-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHA3-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHA3-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128s",
+      "hashAlg": "SHAKE-256",
+      "covered": true,
+      "evidence": {
+        "tgId": 20,
+        "tcId": 271
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHA2-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHA2-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHA2-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHA2-512/224",
+      "covered": true,
+      "evidence": {
+        "tgId": 26,
+        "tcId": 351
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHA2-512/256",
+      "covered": true,
+      "evidence": {
+        "tgId": 26,
+        "tcId": 364
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHA3-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHA3-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHA3-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128s",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHA2-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHA2-256",
+      "covered": true,
+      "evidence": {
+        "tgId": 2,
+        "tcId": 25
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHA2-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHA2-512/224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHA2-512/256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHA3-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHA3-384",
+      "covered": true,
+      "evidence": {
+        "tgId": 2,
+        "tcId": 19
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHA3-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-128f",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHA2-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHA2-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHA2-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHA2-512/224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHA2-512/256",
+      "covered": true,
+      "evidence": {
+        "tgId": 8,
+        "tcId": 111
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHA3-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHA3-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHA3-512",
+      "covered": true,
+      "evidence": {
+        "tgId": 8,
+        "tcId": 107
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-128f",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHA2-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHA2-256",
+      "covered": true,
+      "evidence": {
+        "tgId": 22,
+        "tcId": 307
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHA2-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHA2-512/224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHA2-512/256",
+      "covered": true,
+      "evidence": {
+        "tgId": 22,
+        "tcId": 302
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHA3-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHA3-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHA3-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192s",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHA2-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHA2-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHA2-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHA2-512/224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHA2-512/256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHA3-256",
+      "covered": true,
+      "evidence": {
+        "tgId": 28,
+        "tcId": 386
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHA3-384",
+      "covered": true,
+      "evidence": {
+        "tgId": 28,
+        "tcId": 388
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHA3-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192s",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHA2-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHA2-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHA2-512",
+      "covered": true,
+      "evidence": {
+        "tgId": 4,
+        "tcId": 52
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHA2-512/224",
+      "covered": true,
+      "evidence": {
+        "tgId": 4,
+        "tcId": 53
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHA2-512/256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHA3-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHA3-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHA3-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-192f",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHA2-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHA2-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHA2-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHA2-512/224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHA2-512/256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHA3-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHA3-384",
+      "covered": true,
+      "evidence": {
+        "tgId": 10,
+        "tcId": 139
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHA3-512",
+      "covered": true,
+      "evidence": {
+        "tgId": 10,
+        "tcId": 129
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-192f",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHA2-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHA2-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHA2-512",
+      "covered": true,
+      "evidence": {
+        "tgId": 24,
+        "tcId": 331
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHA2-512/224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHA2-512/256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHA3-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHA3-384",
+      "covered": true,
+      "evidence": {
+        "tgId": 24,
+        "tcId": 328
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHA3-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256s",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHA2-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHA2-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHA2-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHA2-512/224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHA2-512/256",
+      "covered": true,
+      "evidence": {
+        "tgId": 30,
+        "tcId": 417
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHA3-256",
+      "covered": true,
+      "evidence": {
+        "tgId": 30,
+        "tcId": 412
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHA3-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHA3-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256s",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHA2-224",
+      "covered": true,
+      "evidence": {
+        "tgId": 6,
+        "tcId": 72
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHA2-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHA2-384",
+      "covered": true,
+      "evidence": {
+        "tgId": 6,
+        "tcId": 84
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHA2-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHA2-512/224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHA2-512/256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHA3-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHA3-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHA3-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHA2-256f",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHA2-224",
+      "covered": true,
+      "evidence": {
+        "tgId": 12,
+        "tcId": 167
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHA2-256",
+      "covered": true,
+      "evidence": {
+        "tgId": 12,
+        "tcId": 168
+      }
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHA2-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHA2-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHA2-512/224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHA2-512/256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHA3-224",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHA3-256",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHA3-384",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHA3-512",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHAKE-128",
+      "covered": false
+    },
+    {
+      "parameterSet": "SLH-DSA-SHAKE-256f",
+      "hashAlg": "SHAKE-256",
+      "covered": false
+    }
+  ]
+}

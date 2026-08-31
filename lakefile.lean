@@ -394,6 +394,10 @@ lean_exe slhdsa_wots_tests where
 lean_exe slhdsa_xmss_tests where
   root := `HashSigTest.SLHDSA.XmssConstructionTests
 
+/-- Fail-closed parser gate for the pinned NIST SLH-DSA sample JSON. -/
+lean_exe slhdsa_acvp_parser where
+  root := `HashSigTest.SLHDSA.ACVP.ParserTests
+
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
 TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every
