@@ -46,22 +46,44 @@ structure MessageInput where
   message : List Byte
 deriving Repr, DecidableEq
 
-/-- The parameter facts needed by the security architecture.  Approved parameter records can
-refine to these conditions without making positivity an implicit side condition of a game. -/
+/-- The parameter facts needed by the security architecture.  The generic arithmetic contract is
+the canonical `Params.Valid`; security adds only the restriction to the Winternitz exponents used
+by the approved theorem. -/
 structure ParameterConditions (p : Params) : Prop where
-  n_pos : 0 < p.n
-  hp_pos : 0 < p.hp
-  d_pos : 0 < p.d
-  a_pos : 0 < p.a
-  k_pos : 0 < p.k
-  len_pos : 0 < p.len
-  lgw_pos : 0 < p.lgw
+  valid : p.Valid
   lgw_approved : p.lgw = 2 ∨ p.lgw = 4 ∨ p.lgw = 8
-  h_eq : p.h = p.hp * p.d
 
-theorem ParameterConditions.lgw_ne_one {p : Params} (conditions : ParameterConditions p) :
+namespace ParameterConditions
+
+theorem n_pos {p : Params} (conditions : ParameterConditions p) : 0 < p.n :=
+  conditions.valid.n_pos
+
+theorem hp_pos {p : Params} (conditions : ParameterConditions p) : 0 < p.hp :=
+  conditions.valid.hp_pos
+
+theorem d_pos {p : Params} (conditions : ParameterConditions p) : 0 < p.d :=
+  conditions.valid.d_pos
+
+theorem a_pos {p : Params} (conditions : ParameterConditions p) : 0 < p.a :=
+  conditions.valid.a_pos
+
+theorem k_pos {p : Params} (conditions : ParameterConditions p) : 0 < p.k :=
+  conditions.valid.k_pos
+
+theorem len_pos {p : Params} (_conditions : ParameterConditions p) : 0 < p.len := by
+  simp [Params.len, Params.len2]
+
+theorem lgw_pos {p : Params} (conditions : ParameterConditions p) : 0 < p.lgw :=
+  conditions.valid.lgw_pos
+
+theorem h_eq {p : Params} (conditions : ParameterConditions p) : p.h = p.hp * p.d := by
+  simpa [Nat.mul_comm] using conditions.valid.h_eq_layers
+
+theorem lgw_ne_one {p : Params} (conditions : ParameterConditions p) :
     p.lgw ≠ 1 := by
   rcases conditions.lgw_approved with h | h | h <;> omega
+
+end ParameterConditions
 
 /-- A target cardinality whose positivity is part of the data.  Security games use `Fin value`,
 so this wrapper rules out `Fin 0` before a reduction or challenge family can be formed. -/
@@ -97,20 +119,23 @@ structure DigestIndex (p : Params) where
 def finOfNatPowTwo (bits value : ℕ) : Fin (2 ^ bits) :=
   ⟨value % (2 ^ bits), Nat.mod_lt _ (Nat.two_pow_pos bits)⟩
 
-/-- The FIPS 205 digest-to-`(idx_tree, idx_leaf, FORS indices)` map.  The byte regions are
-big-endian through `toInt`, while the FORS digits use the MSB-first `base2b` definition. -/
+/-- The FIPS 205 digest-to-`(idx_tree, idx_leaf, FORS indices)` map.  Tree and leaf parsing is
+delegated to the canonical `splitDigest`; only the FORS digits are added here. -/
 def digestIndex (p : Params) (digest : Bytes p.m) : DigestIndex p :=
-  let bytes := digest.toList
-  let md := bytes.take p.digestBytes
-  let treeBytes := (bytes.drop p.digestBytes).take p.treeIdxBytes
-  let leafBytes := bytes.drop (p.digestBytes + p.treeIdxBytes)
+  let parts := splitDigest p digest
   let forsDigits : Vector ℕ p.k :=
-    ⟨(base2b md p.a p.k).toArray, by simp⟩
+    ⟨(base2b parts.md.toList p.a p.k).toArray, by simp⟩
   {
-    tree := finOfNatPowTwo (p.h - p.hp) (toInt treeBytes)
-    leaf := finOfNatPowTwo p.hp (toInt leafBytes)
+    tree := parts.idxTree
+    leaf := parts.idxLeaf
     fors := fun i => finOfNatPowTwo p.a (forsDigits.get i)
   }
+
+@[simp] theorem digestIndex_tree (p : Params) (digest : Bytes p.m) :
+    (digestIndex p digest).tree = (splitDigest p digest).idxTree := rfl
+
+@[simp] theorem digestIndex_leaf (p : Params) (digest : Bytes p.m) :
+    (digestIndex p digest).leaf = (splitDigest p digest).idxLeaf := rfl
 
 /-- One leaf target selected by an `H_msg` digest. -/
 structure ITSRTarget (p : Params) where

@@ -601,8 +601,12 @@ structure ClassicalSecurityContext {p : Params} (prims : Primitives p)
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] [SampleableType prims.Y]
     [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
-    (_encode : MessageInput → List Byte) where
+    (encode : MessageInput → List Byte) where
   conditions : ParameterConditions p
+  /-- EUF freshness is stated on `MessageInput`, while the construction signs `encode request`.
+  Without this condition, a fresh external request may reuse a signed internal message. A
+  pre-hash interface that cannot supply it needs an explicit encoder collision term instead. -/
+  encode_injective : Function.Injective encode
   scheme : SchemeInterface prims
   reductions : ReductionSystem prims scheme conditions
 
