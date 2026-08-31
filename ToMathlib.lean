@@ -54,6 +54,7 @@ public import ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym
 public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
 public import ToMathlib.Probability.ProbabilityMassFunction.TailSums
 public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
+public import ToMathlib.Probability.UniformOn
 public import ToMathlib.ProbabilityTheory.Coupling
 public import ToMathlib.ProbabilityTheory.FinRatPMF
 public import ToMathlib.ProbabilityTheory.OptimalCoupling

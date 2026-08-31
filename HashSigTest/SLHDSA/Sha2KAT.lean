@@ -15,11 +15,13 @@ A deterministic reference vector produced by the SPHINCs- C reference
 `seed = 0^48`, `message = 0x00`, `opt_rand = 0^16`. The hex is
 `pk_seed(16) ‖ pk_root(16) ‖ sig(3856)`.
 
-`main` decodes it and checks that the pure-Lean concrete `verifyBytes`
-(`HashSig.SLHDSA.Concrete.Instance`) accepts the valid signature and rejects a tampered message
-— byte-exact agreement with the C reference, validating the whole verify path (SHA-256 / MGF1 /
-HMAC, `H_msg`, leaf-index split, `F`/`H`/`T_ℓ`, the 22-byte `ADRSc` layout, FORS / WOTS+ / XMSS
-reconstruction, and the FIPS 205 signature wire format). Run with `lake exe slhdsa_kat`.
+This vector predates the FIPS 205 external context wrapper, so `main` checks the pure-Lean
+internal-message entry point `verifyInternalBytes` (`HashSig.SLHDSA.Concrete.Instance`) accepts
+the valid signature and rejects a tampered message. It also checks that treating the vector's
+message as a raw external message fails, which distinguishes the two interfaces. Together these
+checks validate the whole verification path (SHA-256 / MGF1 / HMAC, `H_msg`, leaf-index split,
+`F`/`H`/`T_ℓ`, the 22-byte `ADRSc` layout, FORS / WOTS+ / XMSS reconstruction, and the FIPS 205
+signature wire format). Run with `lake exe slhdsa_kat`.
 -/
 
 public section
@@ -28,6 +30,15 @@ public section
 namespace SLHDSA.Concrete.KAT
 
 open SLHDSA SLHDSA.Concrete
+
+/-- Empty-context pure signing prefixes the raw message with the domain separator and context
+length byte required by FIPS 205 Algorithms 22 and 24. -/
+example : emptyContextMessage [1, 2] = [0, 0, 1, 2] := rfl
+
+/-- Concrete external verification is exactly internal verification after empty-context encoding. -/
+example (pkSeed pkRoot : Bytes 16) (msg : List Byte) (sigBytes : ByteArray) :
+    verifyBytes pkSeed pkRoot msg sigBytes =
+      verifyInternalBytes pkSeed pkRoot (emptyContextMessage msg) sigBytes := rfl
 
 /-- Reference vector `pk_seed(16) ‖ pk_root(16) ‖ sig(3856)` (hex). -/
 def vectorHex : String :=
@@ -129,18 +140,23 @@ private def parseHex (s : String) : ByteArray := Id.run do
   for i in [0:cs.size / 2] do o := o.push (hexVal cs[2 * i]! <<< 4 ||| hexVal cs[2 * i + 1]!)
   return o
 
-/-- Verify the embedded reference vector and a tampered-message rejection. -/
+/-- Verify the embedded internal-message vector, a tampered message, and separation from the
+external empty-context interface. -/
 def runKat : IO Unit := do
   let ba := parseHex vectorHex
   let pkSeed := baSliceToB16 ba 0
   let pkRoot := baSliceToB16 ba 16
   let sigBA := ba.extract 32 (32 + 3856)
-  let accepts := verifyBytes pkSeed pkRoot [0x00] sigBA
-  let rejects := verifyBytes pkSeed pkRoot [0x01] sigBA
-  if accepts && !rejects then
-    IO.println "SLH-DSA-SHA2-128-24 KAT: PASS (valid signature accepted, tampered rejected)"
+  let acceptsInternal := verifyInternalBytes pkSeed pkRoot [0x00] sigBA
+  let acceptsTamperedInternal := verifyInternalBytes pkSeed pkRoot [0x01] sigBA
+  let acceptsAsExternal := verifyBytes pkSeed pkRoot [0x00] sigBA
+  if acceptsInternal && !acceptsTamperedInternal && !acceptsAsExternal then
+    IO.println "SLH-DSA-SHA2-128-24 KAT: PASS"
   else
-    IO.eprintln s!"SLH-DSA-SHA2-128-24 KAT: FAIL (accepts={accepts} rejects={rejects})"
+    IO.eprintln "SLH-DSA-SHA2-128-24 KAT: FAIL"
+    IO.eprintln s!"acceptsInternal={acceptsInternal}"
+    IO.eprintln s!"acceptsTamperedInternal={acceptsTamperedInternal}"
+    IO.eprintln s!"acceptsAsExternal={acceptsAsExternal}"
     throw (IO.userError "SLH-DSA-SHA2-128-24 KAT failed")
 
 end SLHDSA.Concrete.KAT

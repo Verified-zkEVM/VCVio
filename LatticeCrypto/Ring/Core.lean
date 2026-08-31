@@ -143,6 +143,30 @@ def mapCoeffs {Coeff' : Type v}
     (h : ∀ i, backend.coeff p i = backend.coeff q i) : p = q :=
   backend.build_coeff p ▸ backend.build_coeff q ▸ congr_arg backend.build (funext h)
 
+/-- The coefficient-indexing bijection between a backend carrier and `Fin degree → Coeff`,
+packaged from the `coeff_build` / `build_coeff` round-trip laws. -/
+def equivPi (backend : PolyBackend Coeff) : backend.Poly ≃ (Fin backend.degree → Coeff) where
+  toFun := backend.coeff
+  invFun := backend.build
+  left_inv := backend.build_coeff
+  right_inv f := funext (backend.coeff_build f)
+
+/-- `equivPi` reads coefficients through `PolyBackend.coeff`. -/
+@[simp] theorem equivPi_apply (backend : PolyBackend Coeff) (p : backend.Poly) :
+    backend.equivPi p = backend.coeff p :=
+  rfl
+
+/-- The inverse of `equivPi` rebuilds a carrier through `PolyBackend.build`. -/
+@[simp] theorem equivPi_symm_apply (backend : PolyBackend Coeff)
+    (f : Fin backend.degree → Coeff) :
+    backend.equivPi.symm f = backend.build f :=
+  rfl
+
+/-- A backend carrier over a finite coefficient type is finite, via `equivPi`. -/
+instance instFintypePoly (backend : PolyBackend Coeff) [Fintype Coeff] :
+    Fintype backend.Poly :=
+  Fintype.ofEquiv (Fin backend.degree → Coeff) backend.equivPi.symm
+
 end PolyBackend
 
 

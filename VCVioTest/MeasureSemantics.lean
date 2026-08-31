@@ -90,6 +90,31 @@ theorem isProbabilityMeasure_denote_shiftedGaussian :
     fun_prop
   · exact Filter.Eventually.of_forall fun _ => ⟨by simp⟩
 
+/-! ## Native uniform semantics and composition laws -/
+
+/-- A finite, inhabited interface used without a discrete probability interpretation. -/
+@[expose, reducible] def nativeCoinSpec : PFunctor.{0, 0} := ⟨PUnit, fun _ => Bool⟩
+
+instance : nativeCoinSpec.Fintype where
+  fintypeB _ := inferInstance
+
+instance : nativeCoinSpec.Inhabited where
+  inhabitedB _ := inferInstance
+
+/-- The native uniform measure interpretation is an explicit value, not a global instance. -/
+@[instance_reducible]
+noncomputable def nativeCoinMeasureSpec : nativeCoinSpec.IsMeasureSpec :=
+  IsMeasureSpec.uniformOfFintypeInhabited _
+
+attribute [local instance] nativeCoinMeasureSpec
+
+/-- A native uniform operation denotes `uniformOn univ` directly. -/
+theorem denote_nativeCoin_lift :
+    FreeM.denote (FreeM.lift (P := nativeCoinSpec) PUnit.unit) =
+      (uniformOn Set.univ : Measure Bool) := by
+  rw [FreeM.denote_lift (P := nativeCoinSpec) PUnit.unit]
+  rfl
+
 /-! ## Measure-native distance and relational semantics -/
 
 /-- Total variation is available directly on a continuous computation. -/
@@ -172,6 +197,20 @@ example (p q : SPMF Bool) :
 example (p q : SPMF.{0} PUnit.{1}) :
     Measure.tvDist p.toMeasure q.toMeasure = SPMF.tvDist p q :=
   SPMF.toMeasure_tvDist_punit p q
+
+/-- Mapping a discrete program pushes its denoted measure forward. -/
+example (program : FreeM coinSpec Bool) :
+    FreeM.denote ((fun bit => !bit) <$> program) =
+      (FreeM.denote program).map fun bit => !bit :=
+  FreeM.denote_map_of_discrete program _
+
+/-- Two answer-independent executions denote the Mathlib product measure. -/
+example (first second : FreeM coinSpec Bool) :
+    FreeM.denote (do
+      let x ← first
+      let y ← second
+      pure (x, y)) = (FreeM.denote first).prod (FreeM.denote second) :=
+  FreeM.denote_bind_bind_prod_mk_eq_prod first second
 
 /-! ## Transformer stacks retain their effects -/
 
