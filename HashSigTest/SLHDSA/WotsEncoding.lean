@@ -6,7 +6,7 @@ Authors: Nicolas Consigny
 
 module
 
-public import HashSig.SLHDSA.WotsEncoding
+public import HashSig.SLHDSA.Wots
 
 /-!
 # WOTS+ Checksum Encoding Canaries
@@ -25,6 +25,20 @@ open WotsChecksum WotsEncoding
 
 def limited : Params := slhdsaSha2_128_24
 def zeroDigits : List ℕ := List.replicate limited.len1 0
+
+/-- Minimal byte-backed context used to exercise the operational WOTS digit path. -/
+def limitedCore : CorePrimitives limited where
+  PkSeed := Unit
+  SkSeed := Unit
+  SkPrf := Unit
+  Y := Bytes limited.n
+  AdrsKey := Unit
+  adrsToKey := fun _ => ()
+  PRF := fun _ _ _ => Vector.replicate limited.n 0
+  PRFmsg := fun _ _ _ => Vector.replicate limited.n 0
+  yToBytes := id
+
+def zeroNode : limitedCore.Y := Vector.replicate limited.n 0
 
 theorem byteList_eq_singleton_of_length_toInt (bytes : List Byte) (b : Byte)
     (hlen : bytes.length = 1) (hint : toInt bytes = b.toNat) : bytes = [b] := by
@@ -93,6 +107,20 @@ example : checksumDigits limited zeroDigits = [3, 0, 0, 0] := by
   have hlen2 : limited.len2 = 4 := by decide
   rw [hw, hlen2]
   norm_num [digitsOfBaseW]
+
+/-- Executable WOTS chain lengths use the normative checksum byte pipeline. -/
+example : chainLengthsCore limitedCore zeroNode = zeroDigits ++ [3, 0, 0, 0] := by
+  rw [chainLengthsCore_eq_wotsFullDigits limited_valid]
+  have hmsg : wotsMsgDigitsCore limitedCore zeroNode = zeroDigits := by
+    decide
+  rw [hmsg]
+  rw [show wotsFullDigits zeroDigits limited.w limited.len1 limited.len2 =
+      zeroDigits ++ [3, 0, 0, 0] by
+    rw [wotsFullDigits, limited_checksumValue]
+    have hw : limited.w = 4 := by decide
+    have hlen2 : limited.len2 = 4 := by decide
+    rw [hw, hlen2]
+    norm_num [digitsOfBaseW]]
 
 def historicalShiftedBytes : List Byte :=
   toByte (wotsChecksumValue limited.w zeroDigits <<< 8) (checksumByteLength limited)
