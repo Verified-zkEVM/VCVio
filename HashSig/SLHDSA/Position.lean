@@ -168,41 +168,43 @@ def next {p : ValidatedParams} (pos : LayerPosition p)
 
 /-- Build the position at a natural-number layer together with the fact that the resulting
 position has exactly that layer. This internal dependent result makes every trajectory step use
-`next`, so `at` cannot drift from the FIPS layer recurrence. -/
-private def atWithLayer (p : ValidatedParams) (parts : DigestParts p.params) :
+`next`, so `atLayer` cannot drift from the FIPS layer recurrence. -/
+def atWithLayer (p : ValidatedParams) (parts : DigestParts p.params) :
     (j : ℕ) → j < p.params.d → { pos : LayerPosition p // pos.layer.val = j }
   | 0, _ => ⟨initial p parts, rfl⟩
   | j + 1, hj =>
       let previous := atWithLayer p parts j (by omega)
       let current := previous.val.next (by simpa [previous.property] using hj)
-      ⟨current, by simp [current, previous]⟩
+      ⟨current, by
+        change previous.val.layer.val + 1 = j + 1
+        rw [previous.property]⟩
 
 /-- The hypertree position at an arbitrary valid layer.
 
 The construction follows the same low-bits/high-bits recurrence as repeated calls to `next`, but
 accepts a `Fin d` layer directly. This is the total trajectory interface used by generic-`d`
 hypertree algorithms. -/
-def at (p : ValidatedParams) (parts : DigestParts p.params)
+def atLayer (p : ValidatedParams) (parts : DigestParts p.params)
     (j : Fin p.params.d) : LayerPosition p :=
   (atWithLayer p parts j.val j.isLt).val
 
 @[simp]
-theorem at_layer_val (p : ValidatedParams) (parts : DigestParts p.params)
-    (j : Fin p.params.d) : (at p parts j).layer.val = j.val :=
+theorem atLayer_layer_val (p : ValidatedParams) (parts : DigestParts p.params)
+    (j : Fin p.params.d) : (atLayer p parts j).layer.val = j.val :=
   (atWithLayer p parts j.val j.isLt).property
 
 /-- The total trajectory starts at the digest-derived layer-zero position. -/
 @[simp]
-theorem at_zero_eq_initial (p : ValidatedParams) (parts : DigestParts p.params) :
-    at p parts ⟨0, p.valid.d_pos⟩ = initial p parts := by
+theorem atLayer_zero_eq_initial (p : ValidatedParams) (parts : DigestParts p.params) :
+    atLayer p parts ⟨0, p.valid.d_pos⟩ = initial p parts := by
   rfl
 
 /-- Advancing the total trajectory by one layer agrees with the primitive `next` transition. -/
-theorem at_succ_eq_next (p : ValidatedParams) (parts : DigestParts p.params)
+theorem atLayer_succ_eq_next (p : ValidatedParams) (parts : DigestParts p.params)
     (j : Fin p.params.d) (hnext : j.val + 1 < p.params.d) :
-    at p parts ⟨j.val + 1, hnext⟩ =
-      (at p parts j).next (by simpa using hnext) := by
-  simp [at, atWithLayer]
+    atLayer p parts ⟨j.val + 1, hnext⟩ =
+      (atLayer p parts j).next (by simpa using hnext) := by
+  simp [atLayer, atWithLayer]
 
 @[simp]
 theorem initial_layer_val (p : ValidatedParams) (parts : DigestParts p.params) :
