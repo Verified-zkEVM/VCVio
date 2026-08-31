@@ -52,15 +52,11 @@ theorem LayerPosition.toAdrs_eq_layerAdrs_of_isFinal {vp : ValidatedParams}
     (pos : LayerPosition vp)
     (hfinal : pos.layer.val + 1 = vp.params.d) :
     pos.toAdrs = layerAdrs (vp.params.d - 1) 0 := by
-  apply Adrs.ext
-  · change pos.layer.val = vp.params.d - 1
-    omega
-  · change pos.tree.val = 0
-    exact LayerPosition.tree_eq_zero_of_isFinal pos hfinal
-  · rfl
-  · rfl
-  · rfl
-  · rfl
+  have hlayer : pos.layer.val = vp.params.d - 1 := by omega
+  have htree : pos.tree.val = 0 :=
+    LayerPosition.tree_eq_zero_of_isFinal pos hfinal
+  simp [LayerPosition.toAdrs, layerAdrs, Adrs.zero, Adrs.setLayerAddress,
+    Adrs.setTreeAddress, hlayer, htree]
 
 /-- Typed structural loop for FIPS Algorithm 12.
 
