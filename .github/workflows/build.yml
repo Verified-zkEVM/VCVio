@@ -289,6 +289,11 @@ jobs:
       # timing report compares exactly the seven non-test libraries.
       - name: Build the canary library
         run: lake build VCVioTest
+      # `LatticeCryptoTest.lean` deliberately omits the native `Main` executables,
+      # which remain covered by the nightly FFI workflow. Building this library
+      # elaborates every Lean-only lattice helper, vector, and regression canary.
+      - name: Build the lattice crypto test library
+        run: lake build LatticeCryptoTest
       - name: Build HashSig oracle canaries
         run: lake build HashSigTest
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
