@@ -196,12 +196,12 @@ def slhSignInternalQueryBound (p : Params) : ℕ :=
       (p.k * (p.a + 1) + 1)) +
     (p.len * (p.w - 1) + xmssAuthPathQueryBound p p.hp))
 
-/-- Structural public-hash budget for verification of the supplied signature. The FORS term
-tracks the actual authentication-path lengths. The hypertree term uses the maximum WOTS+ chain
-budget plus the intrinsic XMSS authentication-path height. -/
+/-- Structural public-hash budget for verification. The intrinsic FORS shape contributes exactly
+`k * (a + 1) + 1`, and the intrinsic XMSS path contributes exactly `h'`; no caller-controlled
+list length appears in the budget. -/
 def slhVerifyInternalQueryBound (p : Params) (core : CorePrimitives p)
     (sig : SignatureCore p core) : ℕ :=
-  1 + ((∑ i : Fin p.k, (fun j : Fin p.k => 1 + (sig.2.1[j.val]).2.length) i) + 1) +
+  1 + (p.k * (p.a + 1) + 1) +
     (p.len * (p.w - 1) + 1 + p.hp)
 
 private theorem publicHash_hmsg_isTotalQueryBound_one (core : CorePrimitives p)
