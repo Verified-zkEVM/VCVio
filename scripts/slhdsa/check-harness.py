@@ -73,6 +73,7 @@ REQUIRED_FILES = (
     "reviews/S01-authority-and-conformance-review-r16.md",
     "reviews/S03-data-codec-review.md",
     "reviews/S03-data-codec-review-r1.md",
+    "reviews/S04-primitives-review.md",
     "report/README.md",
     "report/slhdsa-formalization-audit.tex",
     "report/references.bib",
@@ -208,6 +209,8 @@ S01_FAILED_REVIEW_HASHES = {
         "8a21aa42caec8659ed4cafc8e56ddb1dfcc0ec0559f6bc9b678ad3e65a07586b",
     "reviews/S03-data-codec-review-r1.md":
         "0d728bf15cca3ebc2c9402b777b30a0c6de41b35f44eb2309c6b828812e4b6ba",
+    "reviews/S04-primitives-review.md":
+        "75f47fd176cf360a86b0b25a1d7e674e1b11c664fbf86fa1279165f62ecf3229",
 }
 S01_ACCEPTED_REVIEW = {
     "path": "reviews/S01-authority-and-conformance-review-r16.md",
@@ -5381,6 +5384,90 @@ def check_source_tree_mutation(composite: dict[str, Any]) -> None:
     print("INFO: source-tree Security-byte mutation regression: PASS")
 
 
+def check_s04_primitive_projection() -> None:
+    data = read_json(ROOT / "HashSigTest/SLHDSA/PrimitiveVectors/vectors.json")
+    fips202 = data.get("sources", {}).get("fips202")
+    require(fips202 == {
+        "url": "https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf",
+        "size_bytes": 1459683,
+        "sha256": "1592607831ff0908cc590632ce371c6c95e94025bb1a0c8ae90a4d0ec1ed025e",
+        "locator": "Section 6.2 SHAKE; SHAKE256 capacity 512 and 1088-bit rate",
+        "license": ("NIST-authored U.S. government work; attribution and no-endorsement "
+                    "boundary retained in NOTICE.md"),
+    }, "S04 primitive projection: exact FIPS 202 authority record mismatch")
+    derivation = data.get("derivation_tools", {}).get("python_hashlib")
+    require(derivation == {
+        "tool": "Python 3.12.3 hashlib.shake_256",
+        "method": ("hashlib.shake_256(bytes.fromhex('61') * input_len_bytes)."
+                   "hexdigest(out_len)"),
+        "corroboration": ("OpenSSL 3.0.13 dgst -shake256 -xoflen 32 over the same "
+                          "generated input"),
+        "classification": "independent derived regression only; no copied vector corpus",
+        "license": ("tool outputs are locally derived facts; Python/OpenSSL implementations "
+                    "are not vendored"),
+    }, "S04 primitive projection: exact SHAKE derivation record mismatch")
+
+    empty272 = (
+        "46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f"
+        "d75dc4ddd8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be"
+        "141e96616fb13957692cc7edd0b45ae3dc07223c8e92937bef84bc0eab8628533"
+        "49ec75546f58fb7c2775c38462c5010d846c185c15111e595522a6bcd16cf86f"
+        "3d122109e3b1fdd943b6aec468a2d621a7c06c6a957c62b54dafc3be87567d67"
+        "7231395f6147293b68ceab7a9e0c58d864e8efde4e1b9a46cbe854713672f5ca"
+        "aae314ed9083dab4b099f8e300f01b8650f1f4b1d8fcf3f3cb53fb8e9eb2ea2"
+        "03bdc970f50ae55428a91f7f53ac266b28419c3778a15fd248d339ede785fb7f"
+        "5a1aaa96d313eacc890936c173cdcd0f")
+    expected = {
+        "shake256-empty-out272": {
+            "algorithm": "SHAKE256", "mode": "XOF", "input_len_bytes": 0,
+            "out_len": 272, "output": empty272,
+            "classification": "official-nist-example-prefix",
+        },
+        "shake256-a61-in135-out32": {
+            "algorithm": "SHAKE256", "mode": "XOF", "input_len_bytes": 135,
+            "out_len": 32,
+            "output": "55b991ece1e567b6e7c2c714444dd201cd51f4f3832d08e1d26bebc63e07a3d7",
+            "classification": "derived-regression-only",
+        },
+        "shake256-a61-in136-out32": {
+            "algorithm": "SHAKE256", "mode": "XOF", "input_len_bytes": 136,
+            "out_len": 32,
+            "output": "8fcc5a08f0a1f6827c9cf64ee8d16e0443106359ca6c8efd230759256f44996a",
+            "classification": "derived-regression-only",
+        },
+        "shake256-a61-in137-out32": {
+            "algorithm": "SHAKE256", "mode": "XOF", "input_len_bytes": 137,
+            "out_len": 32,
+            "output": "a44e1a438dad6273d540be65ee26386c59588efb09139dc086385d2db0c25782",
+            "classification": "derived-regression-only",
+        },
+    }
+    cases = data.get("vectors", {}).get("shake256")
+    require(isinstance(cases, list), "S04 primitive projection: SHAKE case list missing")
+    indexed = {case.get("id"): case for case in cases
+               if isinstance(case, dict) and isinstance(case.get("id"), str)}
+    for case_id, fields in expected.items():
+        case = indexed.get(case_id)
+        require(isinstance(case, dict),
+                f"S04 primitive projection: missing active case {case_id}")
+        for key, value in fields.items():
+            require(case.get(key) == value,
+                    f"S04 primitive projection: {case_id} exact {key} mismatch")
+        if case_id == "shake256-empty-out272":
+            require(case.get("source") == "SHAKE256_Msg0.pdf"
+                    and case.get("source_locator") ==
+                        "4096-bit output for the empty message; exact leading 272 bytes"
+                    and case.get("msg") == "",
+                    "S04 primitive projection: official empty-output provenance mismatch")
+        else:
+            count = fields["input_len_bytes"]
+            require(case.get("authority") == "FIPS 202 Section 6.2"
+                    and case.get("derivation") == "python_hashlib"
+                    and case.get("input_recipe") == {"byte": "61", "count": count},
+                    f"S04 primitive projection: derived provenance mismatch for {case_id}")
+    print("INFO: S04 primitive projection: PASS (4 exact SHAKE boundary cases)")
+
+
 def check_reference_manifest() -> None:
     data = read_json(DOCS / "reference-manifest.json")
     require(data.get("schema_version") == 1 and isinstance(data.get("entries"), list),
@@ -5441,6 +5528,7 @@ def check_reference_manifest() -> None:
     require(source_tree_composite_digest(composite, ROOT) == composite.get("sha256"),
             "reference-manifest.json: source-tree composite mismatch")
     check_source_tree_mutation(composite)
+    check_s04_primitive_projection()
 
 
 def validate_s01_authority_metadata(entries: dict[str, Any], profile: dict[str, Any]) -> None:

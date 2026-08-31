@@ -83,8 +83,12 @@ HMAC-SHA-512, MGF1-SHA-512, and arbitrary-length SHAKE256 are added. SHAKE uses 
 checks full-address canonicality and the one-byte layer/eight-byte tree bounds before exposing the
 22-byte compressed address. The exact six SHA2/SHAKE grammars are selected over all twelve closed
 parameter constructors, and a separate byte-law bundle proves fixed-width encoding injectivity
-without adding a cryptographic assumption to the structural interface. This candidate remains
-pending independent S04 review. It is a primitive executable-evidence claim, not construction,
+without adding a cryptographic assumption to the structural interface. Initial independent review
+of exact candidate
+\texttt{7f115c0ed5e6342d20db902c163b319b6b0df43d} failed solely with S04-001: four active SHAKE
+boundary oracles were absent from the projection while prose overclaimed complete case pinning.
+The repair adds and executable-binds those records and remains pending independent S04 r1 review.
+It is a primitive executable-evidence claim, not construction,
 external-API, ACVP-certification, security, or deployment refinement. COV-005 and
 F-015/F-016/F-018 remain deferred/open.
 
@@ -117,9 +121,15 @@ The S04 primitive executable passes NIST SHA-256/SHA-512, HMAC-SHA-256/512, and 
 exact padding, long-key, multi-block-input, domain, and 135/136/137/272-byte XOF boundaries; derived
 RFC~8017 MGF1 second-block/truncation regressions and explicit counter-wrap rejection; checked
 SHA2-address positive/negative cases; and independently derived composition fingerprints and output
-widths for all twelve approved profiles. The projection pins every source/member/case and classifies
-derived MGF1/profile data separately. NIST response files and examples are test evidence, not a
-validation certificate, and the executable results are not a mathematical refinement proof.
+widths for all twelve approved profiles. The projection identifies its included source/member/case
+records and classifies derived MGF1/profile data separately. For the four active SHAKE rate/squeeze
+boundary oracles, the
+projection records the exact official empty-input 272-byte prefix and the exact independently
+derived 135/136/137-byte
+\texttt{0x61} input cases, including classifications and provenance. The executable SHA-256-pins
+and parses the projection and compares those outputs to its active runtime constants. NIST response
+files and examples are test evidence, not a validation certificate; derived cases are regression
+evidence; and executable results are not a mathematical refinement proof.
 
 S01 pins final FIPS~205 and the work-in-progress ACVP SLH-DSA Internet-Draft~\cite{acvpSlhdsa},
 current ACVP-Server v1.1.0.43, and every public GenVal SLH-DSA artifact by path, size, and SHA-256.
@@ -308,7 +318,10 @@ commit \texttt{dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e} but failed because the 
 session record wrote \texttt{toByte len x} instead of the compiled \texttt{toByte x len}.
 Independent r2 accepted exact repair commit
 \texttt{79b42bf9662dcfe4336401096e9bd4ae0ed924d3} with zero findings. S04 is therefore eligible and its
-primitive candidate is pending a fresh independent S04 review.
+initial primitive candidate was rejected solely by S04-001 at exact review commit
+\texttt{69cdabd443bf9c6bf203f8f5bb36dd54cdc86803}. The repair records F-096 as remediated pending
+review, pins and binds the four missing SHAKE boundary records, preserves the immutable FAIL, and
+is pending a fresh independent S04 r1 review.
 
 \section{Coverage and traceability}
 Include construction-to-source-to-Lean-to-test coverage, proof obligations, assumptions, TCB, and

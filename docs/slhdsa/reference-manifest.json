@@ -135,8 +135,8 @@
       "kind": "file",
       "root": "repo",
       "locator": "HashSigTest/SLHDSA/PrimitiveVectors/vectors.json",
-      "sha256": "b086e6e79d07e6fc64dbf6fad56219015d96f7c2c7a22fbfd4d699b27d6406ec",
-      "size_bytes": 8950,
+      "sha256": "44971f8a7ab00e1a6af499dcf7cb5c1b34d96b4190f6e41108691beb0f7f4b40",
+      "size_bytes": 11867,
       "authority": "reviewed-projection-and-derived-regression-evidence"
     },
     {

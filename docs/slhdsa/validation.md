@@ -177,7 +177,10 @@ regression evidence only, and the S03 PASS result covers exact table rows, endia
 and rejecting fixed-width codecs. The S04 result covers official SHA/HMAC/SHAKE vectors, derived
 MGF1 regressions, padding/rate/domain boundaries, checked SHA2 addresses, output widths, and exact
 all-twelve grammar fingerprints without claiming construction correctness, ACVP certification, or
-mathematical refinement. A successful
+mathematical refinement. It also verifies the primitive projection's whole-file SHA-256, parses the
+four active SHAKE boundary records, and exact-compares their outputs to the runtime constants: the
+empty-input 272-byte record is an official NIST example prefix, while the 135/136/137-byte `0x61`
+input records are independently derived regressions. A successful
 `lake build` is elaboration evidence; it does not demonstrate concrete hash/vector execution. The
 repository-wide `lake build` remains a final pre-review gate when changes touch shared VCVio
 infrastructure.

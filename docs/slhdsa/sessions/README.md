@@ -18,6 +18,8 @@ Current records:
   failed with five blockers. R1 confirmed their repairs at `dab93b0a...` but failed on one active
   formula. Independent r2 accepted exact repair commit `79b42bf...` with zero findings.
 - [S04 — primitive interfaces and SHA2/SHAKE instantiations](S04-primitives-sha2-shake.md):
-  implementation candidate from exact accepted S03 r2; independent S04 review pending.
+  implementation candidate from exact accepted S03 r2; initial independent review of exact commit
+  `7f115c0e...` failed only with S04-001. The vector-evidence repair descends from the immutable FAIL
+  commit and is pending independent S04 r1 review.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

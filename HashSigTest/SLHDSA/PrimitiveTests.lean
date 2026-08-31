@@ -6,6 +6,7 @@ Authors: Nicolas Consigny
 
 module
 public import HashSig.SLHDSA.Concrete.FIPS
+public import Lean.Data.Json.Parser
 
 /-!
 # S04 SHA2, SHAKE, and SLH-DSA primitive tests
@@ -42,6 +43,60 @@ private def ensure (label : String) (condition : Bool) : IO Unit :=
 
 private def checkHex (label : String) (actual : ByteArray) (expected : String) : IO Unit :=
   ensure label (actual == parseHex expected)
+
+private abbrev JsonObject := Std.TreeMap.Raw String Lean.Json compare
+
+private def jsonField (label : String) (object : JsonObject) (key : String) :
+    Except String Lean.Json :=
+  match object.get? key with
+  | some value => .ok value
+  | none => .error s!"{label}: missing field {key}"
+
+private def projectionOutput (root : Lean.Json) (id : String) : Except String String := do
+  let rootObject ← root.getObj?
+  let vectorsObject ← (← jsonField "root" rootObject "vectors").getObj?
+  let shakeCases ← (← jsonField "vectors" vectorsObject "shake256").getArr?
+  for value in shakeCases do
+    let object ← value.getObj?
+    if let some idValue := object.get? "id" then
+      if (← idValue.getStr?) = id then
+        return ← (← jsonField id object "output").getStr?
+  throw s!"SHAKE projection case absent: {id}"
+
+private def shakeEmpty272Expected : String :=
+  "46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4dd\
+    d8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be141e96616fb13957\
+    692cc7edd0b45ae3dc07223c8e92937bef84bc0eab862853349ec75546f58fb7c2775c38\
+    462c5010d846c185c15111e595522a6bcd16cf86f3d122109e3b1fdd943b6aec468a2d6\
+    21a7c06c6a957c62b54dafc3be87567d677231395f6147293b68ceab7a9e0c58d864e8e\
+    fde4e1b9a46cbe854713672f5caaae314ed9083dab4b099f8e300f01b8650f1f4b1d8f\
+    cf3f3cb53fb8e9eb2ea203bdc970f50ae55428a91f7f53ac266b28419c3778a15fd248\
+    d339ede785fb7f5a1aaa96d313eacc890936c173cdcd0f"
+
+private def shakeA61In135Expected : String :=
+  "55b991ece1e567b6e7c2c714444dd201cd51f4f3832d08e1d26bebc63e07a3d7"
+
+private def shakeA61In136Expected : String :=
+  "8fcc5a08f0a1f6827c9cf64ee8d16e0443106359ca6c8efd230759256f44996a"
+
+private def shakeA61In137Expected : String :=
+  "a44e1a438dad6273d540be65ee26386c59588efb09139dc086385d2db0c25782"
+
+private def testProjection : IO Unit := do
+  let source ← IO.FS.readFile "HashSigTest/SLHDSA/PrimitiveVectors/vectors.json"
+  checkHex "primitive projection byte pin" (sha256 source.toUTF8)
+    "44971f8a7ab00e1a6af499dcf7cb5c1b34d96b4190f6e41108691beb0f7f4b40"
+  let root ← match Lean.Json.parse source with
+    | .ok value => pure value
+    | .error error => throw (IO.userError s!"primitive projection JSON rejected: {error}")
+  let check (id expected : String) : IO Unit :=
+    match projectionOutput root id with
+    | .ok projected => ensure s!"projection/runtime agreement {id}" (projected == expected)
+    | .error error => throw (IO.userError error)
+  check "shake256-empty-out272" shakeEmpty272Expected
+  check "shake256-a61-in135-out32" shakeA61In135Expected
+  check "shake256-a61-in136-out32" shakeA61In136Expected
+  check "shake256-a61-in137-out32" shakeA61In137Expected
 
 private def sequence (start count : ℕ) : ByteArray :=
   ByteArray.mk ((List.range count).map fun i => (start + i).toUInt8).toArray
@@ -145,27 +200,20 @@ def testShake : IO Unit := do
     (empty137.take (2 * 136)).toString
   checkHex "SHAKE256 squeeze 137 rate crossing" (shake256 ByteArray.empty 137) empty137
   checkHex "SHAKE256 squeeze 272 two blocks" (shake256 ByteArray.empty 272)
-    "46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4dd\
-      d8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be141e96616fb13957\
-      692cc7edd0b45ae3dc07223c8e92937bef84bc0eab862853349ec75546f58fb7c2775c38\
-      462c5010d846c185c15111e595522a6bcd16cf86f3d122109e3b1fdd943b6aec468a2d6\
-      21a7c06c6a957c62b54dafc3be87567d677231395f6147293b68ceab7a9e0c58d864e8e\
-      fde4e1b9a46cbe854713672f5caaae314ed9083dab4b099f8e300f01b8650f1f4b1d8f\
-      cf3f3cb53fb8e9eb2ea203bdc970f50ae55428a91f7f53ac266b28419c3778a15fd248\
-      d339ede785fb7f5a1aaa96d313eacc890936c173cdcd0f"
+    shakeEmpty272Expected
   checkHex "SHAKE256 1600-bit absorb"
     (shake256 (ByteArray.mk (Array.replicate 200 0xa3)) 64)
     "cd8a920ed141aa0407a22d59288652e9d9f1a7ee0c1e7c1ca699424da84a904d2d700caae\
       7396ece96604440577da4f3aa22aeb8857f961c4cd8e06f0ae6610b"
   checkHex "SHAKE256 absorb 135"
     (shake256 (ByteArray.mk (Array.replicate 135 0x61)) 32)
-    "55b991ece1e567b6e7c2c714444dd201cd51f4f3832d08e1d26bebc63e07a3d7"
+    shakeA61In135Expected
   checkHex "SHAKE256 absorb 136"
     (shake256 (ByteArray.mk (Array.replicate 136 0x61)) 32)
-    "8fcc5a08f0a1f6827c9cf64ee8d16e0443106359ca6c8efd230759256f44996a"
+    shakeA61In136Expected
   checkHex "SHAKE256 absorb 137"
     (shake256 (ByteArray.mk (Array.replicate 137 0x61)) 32)
-    "a44e1a438dad6273d540be65ee26386c59588efb09139dc086385d2db0c25782"
+    shakeA61In137Expected
   ensure "SHAKE domain differs from SHA3" (shake256 ByteArray.empty 32 != sha3_256 ByteArray.empty)
   ensure "SHAKE domain differs from Ethereum Keccak"
     (shake256 ByteArray.empty 32 != keccak256 ByteArray.empty)
@@ -251,6 +299,7 @@ def testAddressAndProfiles : IO Unit := do
     checkHex s!"six exact grammars {set.profile.name}" (sha256 outputs) (profileExpected set)
 
 def run : IO Unit := do
+  testProjection
   testSha2
   testHmacAndMgf
   testShake

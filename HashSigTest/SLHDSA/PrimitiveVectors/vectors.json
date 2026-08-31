@@ -3,6 +3,13 @@
   "generated_on": "2026-08-31",
   "classification": "exact projections of cited NIST examples plus explicitly labeled derived regressions; not a validation certificate",
   "sources": {
+    "fips202": {
+      "url": "https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf",
+      "size_bytes": 1459683,
+      "sha256": "1592607831ff0908cc590632ce371c6c95e94025bb1a0c8ae90a4d0ec1ed025e",
+      "locator": "Section 6.2 SHAKE; SHAKE256 capacity 512 and 1088-bit rate",
+      "license": "NIST-authored U.S. government work; attribution and no-endorsement boundary retained in NOTICE.md"
+    },
     "sha_archive": {
       "url": "https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/shs/shabytetestvectors.zip",
       "size_bytes": 4909729,
@@ -42,6 +49,15 @@
       "sha256": "f4226f5c72914e5d2b331812c5973d8d685c8af1ccb97c2a3a2fd1c02fd173d1"
     }
   },
+  "derivation_tools": {
+    "python_hashlib": {
+      "tool": "Python 3.12.3 hashlib.shake_256",
+      "method": "hashlib.shake_256(bytes.fromhex('61') * input_len_bytes).hexdigest(out_len)",
+      "corroboration": "OpenSSL 3.0.13 dgst -shake256 -xoflen 32 over the same generated input",
+      "classification": "independent derived regression only; no copied vector corpus",
+      "license": "tool outputs are locally derived facts; Python/OpenSSL implementations are not vendored"
+    }
+  },
   "vectors": {
     "sha256": [
       {"source":"SHA256ShortMsg.rsp","len_bits":0,"msg":"","md":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
@@ -70,7 +86,11 @@
     "shake256": [
       {"source":"SHAKE256ShortMsg.rsp","msg":"","out_len":32,"output":"46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f"},
       {"source":"SHAKE256_Msg0.pdf","msg":"","out_len":137,"output":"46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4ddd8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be141e96616fb13957692cc7edd0b45ae3dc07223c8e92937bef84bc0eab862853349ec75546f58fb7c2775c38462c5010d846c185c15111e595522a6bcd16cf86f3d122109e3b1fdd94"},
-      {"source":"SHAKE256_Msg1600.pdf","msg_repeat":{"byte":"a3","count":200},"out_len":64,"output":"cd8a920ed141aa0407a22d59288652e9d9f1a7ee0c1e7c1ca699424da84a904d2d700caae7396ece96604440577da4f3aa22aeb8857f961c4cd8e06f0ae6610b"}
+      {"id":"shake256-empty-out272","algorithm":"SHAKE256","mode":"XOF","source":"SHAKE256_Msg0.pdf","source_locator":"4096-bit output for the empty message; exact leading 272 bytes","classification":"official-nist-example-prefix","transformation":"leading-byte projection only; lowercase hex","license":"NIST-authored U.S. government work; attribution and no-endorsement boundary retained in NOTICE.md","msg":"","input_len_bytes":0,"out_len":272,"output":"46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4ddd8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be141e96616fb13957692cc7edd0b45ae3dc07223c8e92937bef84bc0eab862853349ec75546f58fb7c2775c38462c5010d846c185c15111e595522a6bcd16cf86f3d122109e3b1fdd943b6aec468a2d621a7c06c6a957c62b54dafc3be87567d677231395f6147293b68ceab7a9e0c58d864e8efde4e1b9a46cbe854713672f5caaae314ed9083dab4b099f8e300f01b8650f1f4b1d8fcf3f3cb53fb8e9eb2ea203bdc970f50ae55428a91f7f53ac266b28419c3778a15fd248d339ede785fb7f5a1aaa96d313eacc890936c173cdcd0f"},
+      {"source":"SHAKE256_Msg1600.pdf","msg_repeat":{"byte":"a3","count":200},"out_len":64,"output":"cd8a920ed141aa0407a22d59288652e9d9f1a7ee0c1e7c1ca699424da84a904d2d700caae7396ece96604440577da4f3aa22aeb8857f961c4cd8e06f0ae6610b"},
+      {"id":"shake256-a61-in135-out32","algorithm":"SHAKE256","mode":"XOF","authority":"FIPS 202 Section 6.2","derivation":"python_hashlib","classification":"derived-regression-only","input_recipe":{"byte":"61","count":135},"input_len_bytes":135,"out_len":32,"output":"55b991ece1e567b6e7c2c714444dd201cd51f4f3832d08e1d26bebc63e07a3d7"},
+      {"id":"shake256-a61-in136-out32","algorithm":"SHAKE256","mode":"XOF","authority":"FIPS 202 Section 6.2","derivation":"python_hashlib","classification":"derived-regression-only","input_recipe":{"byte":"61","count":136},"input_len_bytes":136,"out_len":32,"output":"8fcc5a08f0a1f6827c9cf64ee8d16e0443106359ca6c8efd230759256f44996a"},
+      {"id":"shake256-a61-in137-out32","algorithm":"SHAKE256","mode":"XOF","authority":"FIPS 202 Section 6.2","derivation":"python_hashlib","classification":"derived-regression-only","input_recipe":{"byte":"61","count":137},"input_len_bytes":137,"out_len":32,"output":"a44e1a438dad6273d540be65ee26386c59588efb09139dc086385d2db0c25782"}
     ]
   },
   "profile_fingerprints": {

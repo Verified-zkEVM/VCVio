@@ -1,6 +1,6 @@
 # S04 primitive interfaces and SHA2/SHAKE instantiations candidate
 
-Status: implementation complete; independent S04 review pending.
+Status: S04-001 repair complete; independent S04 r1 review pending.
 
 Date: 2026-08-31
 Branch: `codex/sphincsplus-formalization`
@@ -36,8 +36,9 @@ The preflight is complete. The accepted predecessor is recorded above. Exact FIP
 FIPS 198-1, RFC 8017, CAVP archive, NIST example, and repository projection byte pins now live in
 `reference-manifest.json` and `source-ledger.md`. FIPS 205 final and
 `matrices/fips205-profile.json` control the SLH-DSA composition grammars. The committed projection
-preserves source locators, member hashes, classifications, and notices; derived MGF1 and profile
-fingerprints are explicitly regression/composition evidence rather than NIST vectors.
+preserves source locators, member hashes, classifications, and notices; derived MGF1, SHAKE
+rate-boundary, and profile-fingerprint cases are explicitly regression/composition evidence rather
+than NIST vectors.
 
 ## Allowed scope
 
@@ -110,8 +111,9 @@ schema/provenance evidence rather than primitive or implementation-conformance v
   policy audit retains the exact permitted axiom union and exact seven compiler helpers;
 - the S03 data/codec executable, both legacy KATs, generated umbrella, extern/interop isolation,
   `git diff --check`, documentation/provenance gate, and full frozen wrapper pass; and
-- a fresh reviewer authors `reviews/S04-primitives-review.md`. The implementer does not create,
-  template, or pre-fill that review or verdict.
+- after the initial review's S04-001 FAIL, a fresh reviewer authors
+  `reviews/S04-primitives-review-r1.md`. The implementer does not create, template, or pre-fill
+  that re-review or verdict.
 
 ## Candidate implementation and evidence
 
@@ -131,7 +133,27 @@ schema/provenance evidence rather than primitive or implementation-conformance v
   multi-block input, long HMAC keys, derived MGF1 second-block/truncation cases, MGF1 bound
   rejection, SHAKE 135/136/137/272-byte outputs, 135/136/137-byte and 200-byte inputs, domain
   separation, positive/negative SHA2 addresses, all output widths, and independently derived exact
-  grammar fingerprints for all twelve approved profiles.
+  grammar fingerprints for all twelve approved profiles. It also SHA-256-pins and parses the
+  committed primitive projection, then requires the four active SHAKE boundary outputs to equal
+  the same constants used by runtime execution.
+
+## Independent review result and S04-001 repair
+
+The independent review of exact candidate `7f115c0ed5e6342d20db902c163b319b6b0df43d` is the
+immutable FAIL artifact `docs/slhdsa/reviews/S04-primitives-review.md`, committed at
+`69cdabd443bf9c6bf203f8f5bb36dd54cdc86803` with SHA-256
+`75f47fd176cf360a86b0b25a1d7e674e1b11c664fbf86fa1279165f62ecf3229`. Its only finding,
+S04-001, found that four already active and independently confirmed SHAKE runtime oracles were
+absent from the required projection while active prose overclaimed complete case pinning.
+
+The repair adds exactly those four records: the leading 272 bytes of the official NIST
+empty-message 4096-bit example, plus derived 32-byte outputs for `0x61` repeated 135, 136, and 137
+times. The records preserve source/locator/license data or exact derivation tool, method, and
+corroboration as applicable, and distinguish official-example projection from derived regression.
+The executable now checks the projection's exact whole-file hash, parses the four IDs, and compares
+their expected outputs to its active runtime constants. The documentation harness also requires
+their exact identifiers, lengths, outputs, classification, and provenance. No Lean algorithm or
+`HashSig` source changed in this repair.
 
 Focused execution reports:
 
@@ -155,12 +177,16 @@ SLH-DSA full baseline validation: PASS
 The 11-root probe records one axiom-free byte-coherence theorem; the SHA2 roots use only
 `propext`, `Classical.choice`, and `Quot.sound`; SHAKE256 uses only `propext` and `Quot.sound`.
 No root introduces `sorryAx`. The full audit observes 29 HashSig modules, 2,139 owned constants,
-the exact inherited seven compiler helpers, and the unchanged exact axiom union. The exact
+the exact inherited seven compiler helpers, and the unchanged exact axiom union. The exact repaired
 candidate commit is recorded at handoff.
 
 ## Handoff
 
 S03 r2 accepted the exact predecessor with zero findings, so S04 launched from commit
-`4ce439ae38aea4f97189db8cd8781a62faaf8459`. Review the exact candidate produced from this record,
-including the source/vector pins, focused executable, all-profile grammars, checked address domain,
-axiom inventory, and inherited regressions. Do not move COV-005 or F-015/F-016/F-018.
+`4ce439ae38aea4f97189db8cd8781a62faaf8459`. The initial S04 review rejected exact candidate
+`7f115c0ed5e6342d20db902c163b319b6b0df43d` solely as S04-001. Re-review the repaired candidate
+produced from FAIL commit `69cdabd443bf9c6bf203f8f5bb36dd54cdc86803`, including the four
+new projection records, executable projection binding, source/vector pins, focused executable,
+all-profile grammars, checked address domain, axiom inventory, and inherited regressions. The fresh
+review artifact is `reviews/S04-primitives-review-r1.md`; do not move COV-005 or
+F-015/F-016/F-018.

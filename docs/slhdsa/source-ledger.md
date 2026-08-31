@@ -56,16 +56,21 @@ the ordinary validation gate checks their metadata rather than redownloading the
 | HMAC | NIST FIPS 198-1, July 2008 | 129,454 bytes; SHA-256 `67661ba1407b391c799ff407471de18f36697af51d78a777e817c067ac30da23` | HMAC construction and hash-then-pad keys; incorporated by FIPS 205 Section 11.2 |
 | MGF1 | RFC 8017, November 2016, Appendix B.2.1 | 154,696 bytes; SHA-256 `1e72dc473d18df3fc5598cdc12795a9f18f36f1aef15abc23a55eb0d58151d11` | Four-byte big-endian counter, leading truncation, and `maskLen <= 2^32 hLen`; incorporated by FIPS 205 Section 11.2 |
 
-The committed `HashSigTest/SLHDSA/PrimitiveVectors/vectors.json` projection is 8,950 bytes with
-SHA-256 `b086e6e79d07e6fc64dbf6fad56219015d96f7c2c7a22fbfd4d699b27d6406ec`.
+The committed `HashSigTest/SLHDSA/PrimitiveVectors/vectors.json` projection is 11,867 bytes with
+SHA-256 `44971f8a7ab00e1a6af499dcf7cb5c1b34d96b4190f6e41108691beb0f7f4b40`.
 It identifies exact member hashes and cases from the pinned NIST CAVP SHA and SHAKE archives,
 exact NIST HMAC and SHAKE example PDFs, algorithms, input/output lengths, and expected bytes. The
-adjacent padding, absorb-rate, and all-profile fingerprint cases identify their independent
-derivation. The two compact MGF1 cases are regression-only because RFC 8017 defines MGF1 but does
-not publish a standalone KAT. NIST examples and CAVP response files are test evidence, not a NIST
-validation certificate; profile fingerprints are independent composition evidence, not NIST
-vectors. `PrimitiveVectors/NOTICE.md` preserves the NIST attribution/no-endorsement boundary and
-the RFC/IETF copyright classification.
+active SHAKE boundary records comprise the exact leading 272 bytes of the official NIST empty-input
+4096-bit example and independently derived 32-byte outputs for 135, 136, and 137 repetitions of
+`0x61`; the projection records the derivation method, tool versions, and corroboration for the
+derived cases. `PrimitiveTests` checks the projection's whole-file SHA-256, parses those four
+records, and compares their output bytes to the same constants exercised by the SHAKE runtime.
+The adjacent padding and all-profile fingerprint cases also identify their independent derivation.
+The two compact MGF1 cases are regression-only because RFC 8017 defines MGF1 but does not publish a
+standalone KAT. NIST examples and CAVP response files are test evidence, not a NIST validation
+certificate; derived SHAKE rate-boundary cases and profile fingerprints are independent regression
+evidence, not NIST vectors. `PrimitiveVectors/NOTICE.md` preserves the NIST
+attribution/no-endorsement boundary and the RFC/IETF copyright classification.
 
 The VCVio composite is specifically SHA-256 of the 28-line GNU `sha256sum` manifest produced, in
 C-locale glob order, by:

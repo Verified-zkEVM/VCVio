@@ -92,7 +92,7 @@ without named owner approval.
   reversed-argument formula in the S03 record. Independent r2 accepted exact repair commit
   `79b42bf9662dcfe4336401096e9bd4ae0ed924d3` with zero findings.
 
-### S04 — primitive interfaces and SHA2/SHAKE instantiations (candidate pending review)
+### S04 — primitive interfaces and SHA2/SHAKE instantiations (initial review FAIL; repair pending r1)
 
 - Inputs: S03; FIPS Section 11; pinned hash standards/vectors.
 - Allowed: `Primitives`, `Concrete/Sha2`, `Concrete/Keccak` or new SHAKE/concrete modules.
@@ -102,7 +102,9 @@ without named owner approval.
   compressed-address domain while preserving SHA-256, SHA3, Keccak, and legacy paths.
 - Gates: authoritative and derived-classified runtime vectors, all-profile grammar fingerprints,
   exact axiom-footprint elaboration, inherited regressions, no unreviewed extern; review
-  `reviews/S04-primitives-review.md`.
+  `reviews/S04-primitives-review-r1.md`. Initial review S04-001 rejected the first candidate because
+  four active SHAKE boundary oracles were absent from the projection; the repair pins and binds
+  exactly those records.
 
 ### S05 — WOTS+ construction
 

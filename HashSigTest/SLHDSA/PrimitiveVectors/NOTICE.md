@@ -7,6 +7,11 @@ U.S. Government works. NIST material is credited here as the source; its appeara
 NIST endorsement of this project or a validation certificate. The source archives and examples are
 provided without warranty, and these projections are regression/conformance evidence only.
 
+The 272-byte empty-message SHAKE256 value is the exact leading-byte projection of NIST's 4096-bit
+`SHAKE256_Msg0.pdf` output. The 32-byte outputs for 135, 136, and 137 repetitions of byte `0x61`
+are independently derived rate-boundary regressions, not NIST vectors. `vectors.json` records the
+exact Python `hashlib.shake_256` derivation and independent OpenSSL corroboration.
+
 MGF1 has no standalone official vector corpus in RFC 8017. Its two compact cases are derived from
 the RFC's four-byte big-endian counter grammar and are explicitly classified as regression-only.
 RFC 8017 is Copyright (c) 2016 IETF Trust and the persons identified as its authors, subject to the

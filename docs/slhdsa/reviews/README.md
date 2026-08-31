@@ -67,9 +67,12 @@ files use the `-rN` suffix.
   `dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e`.
 - [S03 data and codec review r2](S03-data-codec-review-r2.md): PASS with zero findings; exact repair
   commit `79b42bf9662dcfe4336401096e9bd4ae0ed924d3` accepted and S04 eligible.
+- [S04 primitive review](S04-primitives-review.md): FAIL with one blocking vector-evidence finding,
+  S04-001; exact candidate `7f115c0ed5e6342d20db902c163b319b6b0df43d` remains unaccepted.
 
 S03 implementation payload `caefbda5e7ed7cd7a6efb80191307de7a39eea43` and its repairs are accepted
-through r2. S04 now has an implementation candidate; no S04 review artifact or verdict exists until
-a fresh independent reviewer checks the exact candidate commit.
+through r2. The immutable initial S04 FAIL is committed at
+`69cdabd443bf9c6bf203f8f5bb36dd54cdc86803`; its S04-001 repair is pending a fresh independent
+`S04-primitives-review-r1.md` of the exact repaired candidate.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

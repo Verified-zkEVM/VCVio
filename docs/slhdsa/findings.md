@@ -101,6 +101,7 @@ future independent session reviews add dispositions under the protocol rather th
 | F-093 | CRITICAL | REMEDIATED-PENDING-REVIEW | The existing Keccak squeeze returned capacity-state bytes instead of permuting after the first 136 SHAKE256 output bytes | S04 preflight differential and FIPS 202 section 6.2 | Add a distinct `0x1f` SHAKE256 domain and repeated 136-byte rate squeezing; test 135/136/137/272-byte outputs and multi-block absorption |
 | F-094 | HIGH | REMEDIATED-PENDING-REVIEW | Unchecked SHA2 address compression silently truncated noncanonical or over-wide `Nat` fields | S04 preflight and FIPS 205 section 11.2 | Introduce a checked proof-carrying canonical/narrow adapter, prove its encoded-byte identity, and make the total interface fail closed outside that domain |
 | F-095 | HIGH | REMEDIATED-PENDING-REVIEW | MGF1 accepted arbitrary output lengths with an implicit 32-bit counter conversion that could wrap | RFC 8017 B.2.1 | Add explicit SHA-256/SHA-512 length bounds and checked wrappers; retain exact 4-byte big-endian counters and reject the first out-of-domain length |
+| F-096 | HIGH | REMEDIATED-PENDING-REVIEW | Four active SHAKE boundary oracles had no corresponding primitive-projection records while active prose overclaimed complete case pinning | S04-001; initial independent S04 FAIL | Add the official empty-input 272-byte prefix and derived `0x61` input 135/136/137 records with exact provenance/classification; bind the executable to the projection hash and parsed outputs; preserve the FAIL artifact and require r1 |
 
 Independent S00 re-review r9 accepted the repairs for F-021 through F-029. Their `FIXED` statuses
 administratively propagate that verdict; they are not an S01 self-review. Historical FAIL artifacts
@@ -161,5 +162,9 @@ overclaim. Independent r1 confirmed all five substantive repairs at exact commit
 `dab93b0a88543f21c5eb6e52c36d5fcc29c4e75e` but failed with F-092 because the session prose
 reversed `toByte`'s two natural-number arguments. Independent r2 accepted exact repair commit
 `79b42bf9662dcfe4336401096e9bd4ae0ed924d3` with zero findings, so F-087 through F-092 are fixed.
-S04 addresses F-007 and newly recorded F-093 through F-095; they remain
-`REMEDIATED-PENDING-REVIEW` until a fresh independent S04 verdict accepts the exact candidate.
+Initial independent S04 review of exact commit
+`7f115c0ed5e6342d20db902c163b319b6b0df43d` found the primitive implementation technically sound
+but failed it with S04-001/F-096 because four active SHAKE boundary oracles were absent from the
+projection. The repair adds and binds those exact records without changing the Lean algorithms.
+F-007 and F-093 through F-096 remain `REMEDIATED-PENDING-REVIEW` until a fresh independent S04 r1
+verdict accepts the exact repaired candidate.
