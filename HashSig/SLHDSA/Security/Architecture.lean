@@ -177,30 +177,74 @@ def TargetInput {p : Params} (prims : Primitives p) : TargetRole → Type
   | .forsTl => Vector prims.Y p.k
   | .wotsTl => Vector prims.Y p.len
 
-/-- Evaluate a named member of the tweakable-hash collection under one sampled public seed. -/
+/-- Evaluate a named member of the tweakable-hash collection under one sampled public seed.
+
+The tweak is the exact encoded address consumed by `Thash`, not the larger structural `Adrs`.
+This distinction matters for SHA-2 parameter sets, whose compression discards address fields. -/
 def targetEval {p : Params} (prims : Primitives p) (publicSeed : prims.PkSeed) :
-    ∀ role, Adrs → TargetInput prims role → prims.Y
-  | .forsF, address, input => prims.F publicSeed address input
-  | .forsH, address, input => prims.H publicSeed address input.1 input.2
-  | .forsTl, address, input => prims.Tl publicSeed address input.toList
-  | .wotsFUd, address, input => prims.F publicSeed address input
-  | .wotsFTcr, address, input => prims.F publicSeed address input
-  | .wotsFPre, address, input => prims.F publicSeed address input
-  | .wotsTl, address, input => prims.Tl publicSeed address input.toList
-  | .xmssH, address, input => prims.H publicSeed address input.1 input.2
+    ∀ role, prims.AdrsKey → TargetInput prims role → prims.Y
+  | .forsF, tweak, input => prims.Thash publicSeed tweak [input]
+  | .forsH, tweak, input => prims.Thash publicSeed tweak [input.1, input.2]
+  | .forsTl, tweak, input => prims.Thash publicSeed tweak input.toList
+  | .wotsFUd, tweak, input => prims.Thash publicSeed tweak [input]
+  | .wotsFTcr, tweak, input => prims.Thash publicSeed tweak [input]
+  | .wotsFPre, tweak, input => prims.Thash publicSeed tweak [input]
+  | .wotsTl, tweak, input => prims.Thash publicSeed tweak input.toList
+  | .xmssH, tweak, input => prims.Thash publicSeed tweak [input.1, input.2]
+
+@[simp] theorem targetEval_forsF_adrsToKey {p : Params} (prims : Primitives p)
+    (publicSeed : prims.PkSeed) (address : Adrs) (input : prims.Y) :
+    targetEval prims publicSeed .forsF (prims.adrsToKey address) input =
+      prims.F publicSeed address input := rfl
+
+@[simp] theorem targetEval_wotsFUd_adrsToKey {p : Params} (prims : Primitives p)
+    (publicSeed : prims.PkSeed) (address : Adrs) (input : prims.Y) :
+    targetEval prims publicSeed .wotsFUd (prims.adrsToKey address) input =
+      prims.F publicSeed address input := rfl
+
+@[simp] theorem targetEval_wotsFTcr_adrsToKey {p : Params} (prims : Primitives p)
+    (publicSeed : prims.PkSeed) (address : Adrs) (input : prims.Y) :
+    targetEval prims publicSeed .wotsFTcr (prims.adrsToKey address) input =
+      prims.F publicSeed address input := rfl
+
+@[simp] theorem targetEval_wotsFPre_adrsToKey {p : Params} (prims : Primitives p)
+    (publicSeed : prims.PkSeed) (address : Adrs) (input : prims.Y) :
+    targetEval prims publicSeed .wotsFPre (prims.adrsToKey address) input =
+      prims.F publicSeed address input := rfl
+
+@[simp] theorem targetEval_forsH_adrsToKey {p : Params} (prims : Primitives p)
+    (publicSeed : prims.PkSeed) (address : Adrs) (input : prims.Y × prims.Y) :
+    targetEval prims publicSeed .forsH (prims.adrsToKey address) input =
+      prims.H publicSeed address input.1 input.2 := rfl
+
+@[simp] theorem targetEval_xmssH_adrsToKey {p : Params} (prims : Primitives p)
+    (publicSeed : prims.PkSeed) (address : Adrs) (input : prims.Y × prims.Y) :
+    targetEval prims publicSeed .xmssH (prims.adrsToKey address) input =
+      prims.H publicSeed address input.1 input.2 := rfl
+
+@[simp] theorem targetEval_forsTl_adrsToKey {p : Params} (prims : Primitives p)
+    (publicSeed : prims.PkSeed) (address : Adrs) (input : Vector prims.Y p.k) :
+    targetEval prims publicSeed .forsTl (prims.adrsToKey address) input =
+      prims.Tl publicSeed address input.toList := rfl
+
+@[simp] theorem targetEval_wotsTl_adrsToKey {p : Params} (prims : Primitives p)
+    (publicSeed : prims.PkSeed) (address : Adrs) (input : Vector prims.Y p.len) :
+    targetEval prims publicSeed .wotsTl (prims.adrsToKey address) input =
+      prims.Tl publicSeed address input.toList := rfl
 
 @[reducible] def chosenTargetSpec {p : Params} (prims : Primitives p) (role : TargetRole) :
-    OracleSpec (Adrs × TargetInput prims role) :=
+    OracleSpec (prims.AdrsKey × TargetInput prims role) :=
   OracleSpec.ofFn fun _ => prims.Y
 
-@[reducible] def sampledTargetSpec {p : Params} (prims : Primitives p) : OracleSpec Adrs :=
+@[reducible] def sampledTargetSpec {p : Params} (prims : Primitives p) :
+    OracleSpec prims.AdrsKey :=
   OracleSpec.ofFn fun _ => prims.Y
 
 inductive CollectionQuery {p : Params} (prims : Primitives p) where
-  | f (address : Adrs) (input : prims.Y)
-  | h (address : Adrs) (left right : prims.Y)
-  | tlFors (address : Adrs) (inputs : Vector prims.Y p.k)
-  | tlWots (address : Adrs) (inputs : Vector prims.Y p.len)
+  | f (tweak : prims.AdrsKey) (input : prims.Y)
+  | h (tweak : prims.AdrsKey) (left right : prims.Y)
+  | tlFors (tweak : prims.AdrsKey) (inputs : Vector prims.Y p.k)
+  | tlWots (tweak : prims.AdrsKey) (inputs : Vector prims.Y p.len)
 
 @[reducible] def collectionSpec {p : Params} (prims : Primitives p) :
     OracleSpec (CollectionQuery prims) :=
@@ -216,7 +260,7 @@ def sampledTargetRealImpl {p : Params} (prims : Primitives p)
     QueryImpl (sampledTargetSpec prims) ProbComp
   | address => do
       let input ← $ᵗ prims.Y
-      return prims.F publicSeed address input
+      return prims.Thash publicSeed address [input]
 
 def sampledTargetIdealImpl {p : Params} (prims : Primitives p)
     [SampleableType prims.Y] : QueryImpl (sampledTargetSpec prims) ProbComp
@@ -224,10 +268,10 @@ def sampledTargetIdealImpl {p : Params} (prims : Primitives p)
 
 def collectionImpl {p : Params} (prims : Primitives p) (publicSeed : prims.PkSeed) :
     QueryImpl (collectionSpec prims) ProbComp
-  | .f address input => pure (prims.F publicSeed address input)
-  | .h address left right => pure (prims.H publicSeed address left right)
-  | .tlFors address inputs => pure (prims.Tl publicSeed address inputs.toList)
-  | .tlWots address inputs => pure (prims.Tl publicSeed address inputs.toList)
+  | .f tweak input => pure (prims.Thash publicSeed tweak [input])
+  | .h tweak left right => pure (prims.Thash publicSeed tweak [left, right])
+  | .tlFors tweak inputs => pure (prims.Thash publicSeed tweak inputs.toList)
+  | .tlWots tweak inputs => pure (prims.Thash publicSeed tweak inputs.toList)
 
 def sumQueryImpl {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     (left : QueryImpl spec₁ ProbComp) (right : QueryImpl spec₂ ProbComp) :
@@ -253,26 +297,27 @@ def runTwoPhase {ι : Type} {spec : OracleSpec ι} {Public Answer : Type}
 
 def chosenTargets {p : Params} {prims : Primitives p} {role : TargetRole} :
     QueryLog (chosenTargetSpec prims role) →
-      List (TweakableTarget Adrs (TargetInput prims role)) :=
+      List (TweakableTarget prims.AdrsKey (TargetInput prims role)) :=
   List.map fun entry => match entry with
     | ⟨(address, input), _⟩ => ⟨address, input⟩
 
 def chosenTargetsC {p : Params} {prims : Primitives p} {role : TargetRole} :
     QueryLog (chosenTargetSpec prims role + collectionSpec prims) →
-      List (TweakableTarget Adrs (TargetInput prims role)) :=
+      List (TweakableTarget prims.AdrsKey (TargetInput prims role)) :=
   List.filterMap fun entry => match entry with
     | ⟨.inl (address, input), _⟩ => some ⟨address, input⟩
     | _ => none
 
 def sampledTargets {p : Params} {prims : Primitives p} :
-    QueryLog (sampledTargetSpec prims + collectionSpec prims) → List (Adrs × prims.Y) :=
+    QueryLog (sampledTargetSpec prims + collectionSpec prims) →
+      List (prims.AdrsKey × prims.Y) :=
   List.filterMap fun entry => match entry with
     | ⟨.inl address, output⟩ => some (address, output)
     | _ => none
 
 def collectionTweaks {p : Params} {prims : Primitives p} {ι : Type}
     {leftSpec : OracleSpec ι} :
-    QueryLog (leftSpec + collectionSpec prims) → List Adrs :=
+    QueryLog (leftSpec + collectionSpec prims) → List prims.AdrsKey :=
   List.filterMap fun entry => match entry with
     | ⟨.inr (.f address _), _⟩ => some address
     | ⟨.inr (.h address _ _), _⟩ => some address
@@ -280,38 +325,40 @@ def collectionTweaks {p : Params} {prims : Primitives p} {ι : Type}
     | ⟨.inr (.tlWots address _), _⟩ => some address
     | _ => none
 
-def TargetTraceValid {p : Params} {Input : Type} (role : TargetRole)
-    (targets : List (TweakableTarget Adrs Input)) : Prop :=
+def TargetTraceValid {p : Params} {Tweak Input : Type} (role : TargetRole)
+    (targets : List (TweakableTarget Tweak Input)) : Prop :=
   targets.length ≤ targetCount p role ∧ (targets.map TweakableTarget.tweak).Nodup
 
-def SampledTraceValid {p : Params} {Output : Type} (role : TargetRole)
-    (targets : List (Adrs × Output)) : Prop :=
+def SampledTraceValid {p : Params} {Tweak Output : Type} (role : TargetRole)
+    (targets : List (Tweak × Output)) : Prop :=
   targets.length ≤ targetCount p role ∧ (targets.map Prod.fst).Nodup
 
-def CollectionDisjoint (targetTweaks collection : List Adrs) : Prop :=
+def CollectionDisjoint {Tweak : Type} (targetTweaks collection : List Tweak) : Prop :=
   ∀ tweak ∈ targetTweaks, tweak ∉ collection
 
 def TCRSuccess {p : Params} (prims : Primitives p) (publicSeed : prims.PkSeed)
-    (role : TargetRole) (targets : List (TweakableTarget Adrs (TargetInput prims role)))
+    (role : TargetRole)
+    (targets : List (TweakableTarget prims.AdrsKey (TargetInput prims role)))
     (selected : ℕ) (replacement : TargetInput prims role) : Prop :=
   ∃ target, targets[selected]? = some target ∧ replacement ≠ target.input ∧
     targetEval prims publicSeed role target.tweak replacement =
       targetEval prims publicSeed role target.tweak target.input
 
 def DSPRSuccess {p : Params} (prims : Primitives p) (publicSeed : prims.PkSeed)
-    (targets : List (TweakableTarget Adrs prims.Y)) (selected : ℕ) (guess : Bool) : Prop :=
+    (targets : List (TweakableTarget prims.AdrsKey prims.Y))
+    (selected : ℕ) (guess : Bool) : Prop :=
   ∃ target, targets[selected]? = some target ∧
     (guess = true ↔ HasSecondPreimage (targetEval prims publicSeed .forsF) target)
 
 def SPprobSuccess {p : Params} (prims : Primitives p) (publicSeed : prims.PkSeed)
-    (targets : List (TweakableTarget Adrs prims.Y)) (selected : ℕ) : Prop :=
+    (targets : List (TweakableTarget prims.AdrsKey prims.Y)) (selected : ℕ) : Prop :=
   ∃ target, targets[selected]? = some target ∧
     HasSecondPreimage (targetEval prims publicSeed .forsF) target
 
 def PRESuccess {p : Params} (prims : Primitives p) (publicSeed : prims.PkSeed)
-    (targets : List (Adrs × prims.Y)) (selected : ℕ) (candidate : prims.Y) : Prop :=
+    (targets : List (prims.AdrsKey × prims.Y)) (selected : ℕ) (candidate : prims.Y) : Prop :=
   ∃ target, targets[selected]? = some target ∧
-    prims.F publicSeed target.1 candidate = target.2
+    prims.Thash publicSeed target.1 [candidate] = target.2
 
 /-! ## Concrete standalone component experiments -/
 
