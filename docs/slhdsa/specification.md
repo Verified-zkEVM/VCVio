@@ -111,16 +111,22 @@ soundness, and executable evaluation. Structural correctness does not imply cryp
 
 ## Current implementation
 
-The main tree is generic over opaque carriers and primitives but its Scheme/hypertree path still
-implements only `d=1`: `HtSig` is one XMSS signature and the hypertree call fixes its base address
-and tree index to zero. `Position.splitDigest` now preserves typed `(md, idx_tree, idx_leaf)`, FORS
-uses the digest-derived tree/leaf address, and `LayerPosition` provides the bounded initial position,
-low-bit/high-bit layer transition, and address projection for all approved profiles. Scheme does not
-yet consume that trajectory for its hypertree call. Its fixed zero tree is FIPS-correct only for
-valid `d=1`, where `DigestParts.idxTree_eq_zero_of_d_eq_one` proves the parsed tree index is zero;
-general consumption remains S08/S09. The concrete SHA2-128-24 verifier uses fixed slices and an
-embedded C-reference regression vector. C13 is a parallel WOTS+C/FORS+C construction with `d=2`,
-keccak, and conditional grind correctness. Neither is the full FIPS205-12 external API.
+`Position.splitDigest` preserves typed `(md, idx_tree, idx_leaf)`, FORS uses the digest-derived
+tree/leaf address, and `LayerPosition.atLayer` exposes the bounded total trajectory. Canonical XMSS
+and FORS signatures now carry intrinsic `hp`, `a`, and `k` widths. `GeneralHypertree` and
+`GeneralScheme` consume these representations for arbitrary approved `d`, with typed layer loops,
+query-preserving naturality, deterministic interpretations, and proved finite structural query
+upper bounds. Those bounds are uniform caps, not claims of exact message-dependent counts.
+
+The arbitrary-depth pure and fixed-answer programs now have kernel-checked honest sign/recover/root
+correctness, and the general internal scheme proves sign/verify completeness. The callback-parametric
+`*With` programs still lack an explicit refinement theorem to the query/pure layer, a Medium gap.
+The older `Scheme` d=1 path remains for compatibility and is FIPS-correct when
+`DigestParts.idxTree_eq_zero_of_d_eq_one` applies. General depth-one signing returns the same
+signature but executes Algorithm 12's discarded final recovery, so its free-oracle trace is longer.
+S07 still owns FORS extraction/address/runtime conformance and S09 still owns codecs, external APIs,
+and reject behavior. The concrete SHA2-128-24 verifier and parallel C13 construction remain
+non-normative regressions, not full FIPS205-12 external APIs.
 
 ## API contract
 
@@ -156,9 +162,11 @@ OID/output-length obligations remain separate specification checks.
 
 Security architecture precedes refactoring. It must expose the actual scheme public seed generated
 inside the EUF-CMA game, not a theorem parameter disconnected from the key. S02 currently provides
-an arbitrary signature-scheme experiment interface, which removes the direct call to the
-transitional `d = 1` implementation but does not couple its fields to one general construction.
-That construction/refinement witness remains open in S08/S09. Under proposed D-009,
+an arbitrary signature-scheme experiment interface. B03 supplies a conditional `securityInterface`
+whose operations delegate to `GeneralScheme`, but this is only an interface shape:
+`ClassicalSecurityContext` assumes a `ReductionSystem`, and `RepairedMasterStatement` remains an
+unproved proposition. No general correctness refinement or S02/S11 reduction is discharged. Under
+proposed D-009,
 formula-proved positive values are caps for the source-shaped
 standalone component-game target oracles; actual traces may be shorter or empty, in which case a
 selected-target event fails. They are not asserted to be an exact family extracted from the outer
@@ -166,6 +174,13 @@ EUF transcript. Adversary predicates enforce signing/hash-query bounds; transcri
 names, inputs, outputs, addresses, keys, message/context mode, and order. `Hmsg`/digest mapping gets
 an ITSR game; `T_l` and the full tweakable-hash family are not omitted. `yToBytes`/encoding coherence
 is a law when an abstract carrier is used.
+
+The exact SUF identity partitions its advantage into the EUF event plus a disjoint
+same-message/new-signature residual. It supplies no bound on that residual and does not upgrade the
+EUF-only repaired master proposition. Reachable-target modules enumerate structural FORS, XMSS, and
+WOTS addresses with cardinality and `Nodup` theorems. They do not yet prove concrete encoded-address
+injectivity, package nonempty distinct batches, align entries with actual construction queries and
+inputs, or discharge final-validity/disjointness and canonical PR #594/#596 game adapters.
 
 Proposed D-006 selects the repaired tight EasyCrypt twelve-term theorem in classical `OracleComp`
 semantics, and proposed D-009 selects its standalone component-game boundary. Neither proposal has

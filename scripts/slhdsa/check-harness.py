@@ -231,32 +231,34 @@ S02_SOURCE_GLOBS = (
     "HashSig/SLHDSA/*.lean",
     "HashSig/SLHDSA/C13/*.lean",
     "HashSig/SLHDSA/Concrete/*.lean",
+    "HashSig/SLHDSA/HypertreeGeneral/*.lean",
     "HashSig/SLHDSA/Security/*.lean",
 )
 S02_SOURCE_COMMAND = (
     "sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean "
-    "HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum"
+    "HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/HypertreeGeneral/*.lean "
+    "HashSig/SLHDSA/Security/*.lean | sha256sum"
 )
 S02_SOURCE_DETERMINISTIC_COMMAND = f"LC_ALL=C {S02_SOURCE_COMMAND}"
 S02_DECLARATION_SPANS = {
     "DECL-015": (35, 1, 39, 48),
     "DECL-016": (63, 1, 68, 70),
     "DECL-017": (233, 1, 237, 42),
-    "DECL-018": (133, 1, 143, 58),
+    "DECL-018": (199, 1, 209, 58),
     "DECL-019": (133, 1, 155, 68),
-    "DECL-020": (394, 1, 395, 26),
-    "DECL-021": (397, 1, 408, 36),
-    "DECL-022": (410, 1, 425, 36),
-    "DECL-023": (427, 1, 439, 36),
-    "DECL-024": (441, 1, 453, 36),
-    "DECL-025": (455, 1, 470, 36),
-    "DECL-026": (472, 1, 486, 36),
-    "DECL-027": (488, 1, 502, 36),
-    "DECL-028": (504, 1, 515, 30),
-    "DECL-029": (519, 1, 551, 35),
-    "DECL-030": (562, 1, 569, 64),
-    "DECL-031": (571, 1, 590, 20),
-    "DECL-032": (592, 1, 599, 89),
+    "DECL-020": (441, 1, 442, 26),
+    "DECL-021": (444, 1, 455, 36),
+    "DECL-022": (457, 1, 472, 36),
+    "DECL-023": (474, 1, 486, 36),
+    "DECL-024": (488, 1, 500, 36),
+    "DECL-025": (502, 1, 517, 36),
+    "DECL-026": (519, 1, 533, 36),
+    "DECL-027": (535, 1, 549, 36),
+    "DECL-028": (551, 1, 562, 30),
+    "DECL-029": (566, 1, 598, 35),
+    "DECL-030": (613, 1, 620, 64),
+    "DECL-031": (682, 1, 701, 20),
+    "DECL-032": (703, 1, 710, 89),
 }
 S02_DECLARATION_DIRECT_DEPS = {
     "DECL-022": ["SLHDSA.Security.chosenTargetsC", "SLHDSA.Security.collectionTweaks",
@@ -433,15 +435,15 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
         (3881, "cdfaaa4aad22cd5b6cc28e5863fd5de30949b3c3406cea9eea14e0f941a9976b"),
     "docs/slhdsa/matrices/coverage.csv":
-        (6599, "bb912b679afc18146bcc03fe021c368f8520026895dd6feb8b8fa6fa821e1af6"),
+        (8666, "6047aa92f1754725d6a8e83e84b9d823e3b5d451cd1a6a653cd07454b8224f7f"),
     "docs/slhdsa/matrices/decisions.csv":
         (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (90440, "7c6de49eda643f31646bec019237ca8db7fd46ef97c0b731115e842dbc0155ca"),
+        (114965, "539e0d5d630ff9aa8637dcabd72fbc59f19901a6db67fd9aa2db1cfbcb81cfd9"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (6446, "7639b57e670027792d55fefefae1059a2da4c213998a8b0e50d3e786b341d18d"),
+        (8863, "26652a8ee627966c6a7ede2f9d35b50ee45570830c044bbf4d75e083782d804c"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
@@ -554,6 +556,8 @@ def check_required_files() -> None:
             "missing elaborated S06 inventory probe scripts/slhdsa/S06InventoryProbe.lean")
     require((ROOT / "scripts/slhdsa/B02InventoryProbe.lean").is_file(),
             "missing elaborated B02 inventory probe scripts/slhdsa/B02InventoryProbe.lean")
+    require((ROOT / "scripts/slhdsa/B03InventoryProbe.lean").is_file(),
+            "missing elaborated B03 inventory probe scripts/slhdsa/B03InventoryProbe.lean")
     require((ROOT / "scripts/slhdsa/fixtures/SLHDSAPolicyIRMacro.lean").is_file(),
             "missing compiled-IR fixture macro")
     require((ROOT / "scripts/slhdsa/fixtures/HashSig/PolicyIRFixture.lean").is_file(),
@@ -650,6 +654,8 @@ def check_required_files() -> None:
             "validate.sh does not run the S06 declaration-inventory probe")
     require("lake env lean scripts/slhdsa/B02InventoryProbe.lean" in wrapper,
             "validate.sh does not run the B02 declaration-inventory probe")
+    require("lake env lean scripts/slhdsa/B03InventoryProbe.lean" in wrapper,
+            "validate.sh does not run the B03 declaration-inventory probe")
     require("lake exe slhdsa_primitive_tests" in wrapper,
             "validate.sh does not run the S04 primitive tests")
     require("lake exe slhdsa_wots_tests" in wrapper,

@@ -171,7 +171,7 @@ static importer, retrieves the production regular-initializer ordinary and IR ar
 exact expected rejections (so loss of either path fails), and checks that the sentinel remains absent
 before and after audit. The temporary
 `.olean`, `.ilean`, `.ir`, and C artifacts are confined to a `mktemp` directory removed on exit.
-The wrapper then runs the exact S03, 11-root S04, 14-root S05, 21-root S06, and 15-root B02
+The wrapper then runs the exact S03, 11-root S04, 14-root S05, 22-root S06, 15-root B02, and 27-root B03
 declaration/axiom probes, generated umbrella check, extern and interop isolation, the two inherited
 SLH-DSA KAT executables, and the S03 data/codec, S04 primitive, S05 WOTS, and S06 XMSS construction
 executables. The KAT PASS results are legacy runtime regression evidence only, and the S03 PASS
@@ -196,7 +196,7 @@ security reduction. A successful
 repository-wide `lake build` remains a final pre-review gate when changes touch shared VCVio
 infrastructure.
 
-Lean 4.33.1 generates exactly these five partial runtime auxiliaries for safe, ordinary recursive
+Lean 4.33.1 generates exactly these seventeen partial runtime auxiliaries for safe, ordinary recursive
 definitions in the current HashSig environment:
 
 ```text
@@ -204,6 +204,18 @@ SLHDSA.base2bFill._unsafe_rec
 SLHDSA.base2bGo._unsafe_rec
 SLHDSA.WotsChecksum.digitsOfBaseW._unsafe_rec
 SLHDSA.chainWith._unsafe_rec
+SLHDSA.xmssAuthPathWith._unsafe_rec
+SLHDSA.forsAuthPathVectorM._unsafe_rec
+SLHDSA.forsAuthPathVector._unsafe_rec
+SLHDSA.LayerPosition.atWithLayer._unsafe_rec
+SLHDSA.GeneralHypertree.signFromPositionWith._unsafe_rec
+SLHDSA.GeneralHypertree.signFromPosition._unsafe_rec
+SLHDSA.GeneralHypertree.signFromPositionM._unsafe_rec
+SLHDSA.GeneralHypertree.recoverFromPositionWith._unsafe_rec
+SLHDSA.GeneralHypertree.recoverFromPosition._unsafe_rec
+SLHDSA.GeneralHypertree.recoverFromPositionM._unsafe_rec
+SLHDSA.GeneralHypertree.signLoopQueryBound._unsafe_rec
+SLHDSA.Security.perfectInternalCoords._unsafe_rec
 SLHDSA.C13.chain._unsafe_rec
 ```
 
@@ -254,9 +266,9 @@ Quot.sound}` and no root depends on `sorryAx`. The S05 candidate audit observes 
 and 2,630 owned constants, with the same exact five compiler helpers and standard axiom union;
 these counts remain reproducible observations rather than stable limits.
 
-The S06 probe pins typed position and authentication-path erasure/entry roots, the explicit FIPS
+The S06 probe pins typed position and intrinsic authentication-path adapter/entry roots, the explicit FIPS
 climb equalities, generic and checked concrete address boundaries, bounded honest correctness and
-binding, and the retained canonical XMSS roots. The exact 21-root union remains within `{propext,
+binding, and the retained canonical XMSS roots. The exact 22-root union remains within `{propext,
 Classical.choice, Quot.sound}` and no root depends on `sorryAx`. The candidate audit observes 36
 HashSig modules and 2,748 owned constants with the same exact five compiler helpers and standard
 axiom union. These counts remain reproducible observations rather than stable limits.
@@ -269,6 +281,19 @@ digest-derived FORS address fields, and retained Scheme query bounds and honest 
 constants with the same exact five compiler helpers and standard axiom union. These counts are
 reproducible observations rather than stable limits; general `LayerPosition` consumption remains
 an S08/S09 construction obligation.
+
+The B03 probe pins total typed layer trajectories; arbitrary-depth hypertree and general-scheme
+naturality, deterministic interpretations, and honest correctness; depth-one output compatibility
+with its explicit discarded-recovery trace; finite signing/recovery/verification query bounds;
+encoded `AdrsKey` compatibility; the exact SUF event partition; structural reachable-target ledgers;
+and the conditional scheme-interface/proposition shape. Its 27 exact roots remain within
+`{propext, Classical.choice, Quot.sound}` and none depends on `sorryAx`. The query bounds are uniform
+structural upper bounds, not exact message-dependent counts. The current audit observes 44 HashSig
+modules and 3,447 owned constants and checks exactly seventeen named Lean-generated recursion
+helpers with safe ordinary parents, including the generated `perfectInternalCoords` ledger helper,
+and the unchanged standard axiom union. The callback-parametric `*With`
+refinement, concrete encoded injectivity, actual-query/target-input coverage, canonical PR #594/#596
+game adapters, the same-message SUF residual bound, and every security reduction remain open.
 
 ## Proof gate
 

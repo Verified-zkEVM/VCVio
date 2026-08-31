@@ -37,7 +37,12 @@ Current records:
   `91e97865...`.
 - [B02 — PR #595 digest/position boundary integration](B02-pr595-digest-position-integration.md):
   history-preserving merge of the authoritative digest decomposition, FORS address, and typed
-  hypertree-position surface, with the current Scheme d=1 limitation explicit. The unpushed
-  integration candidate requires fresh independent review before S07.
+  hypertree-position surface, with the current Scheme d=1 limitation explicit. Its implementation
+  and remote reconciliation are independently accepted at reviewed head `60918509...`.
+- [B03 — concurrent construction/query/security-stack integration](B03-concurrent-stack-integration.md):
+  history-preserving merge of the shared intrinsic-signature, arbitrary-depth construction,
+  finite-query-bound, encoded-address, and conditional security-interface stack. General honest
+  correctness/completeness, S07 conformance, S09 APIs, and all security reductions remain open;
+  the unpushed candidate requires fresh independent review.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

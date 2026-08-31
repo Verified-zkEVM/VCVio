@@ -190,6 +190,36 @@ without named owner approval.
   declaration/axiom footprint, aggregate/import/isolation/provenance checks, and independent B02
   review before S07.
 
+Acceptance: initial B02 and its subsequent shared-branch reconciliation are independently accepted
+at exact reviewed head `609185098935feea82f4d5b6fb7a9d62aefce9c9`.
+
+### B03 — concurrent construction/query/security-stack integration
+
+- Inputs: exact reviewed B02 reconciliation head `609185098935feea82f4d5b6fb7a9d62aefce9c9`,
+  initial shared stack head `fe469308b758ac381b770fb83cee4a7f792400cd`, and latest exact shared
+  head `2014783d7d461b64164e3ec2844ce7f1eeb4c846` folded without rewriting history.
+- Merge: normal no-ff history reconciliation. Preserve intrinsic XMSS/FORS signatures,
+  `LayerPosition.atLayer`, arbitrary-depth `GeneralHypertree`/`GeneralScheme`, finite query-bound
+  modules, encoded `AdrsKey` games, and the conditional `Security.GeneralScheme` interface.
+- Imported result: construction loops, naturality, deterministic-handler parity, and uniform finite
+  query **upper bounds** are available. They are not exact message-dependent counts.
+- Correctness result: `recoverFromPosition_signFromPosition`, `pkFromSig_sign`, and
+  `GeneralScheme.verifyInternal_signInternal` close pure/fixed-answer arbitrary-depth construction
+  correctness. Depth-one output compatibility is proved, but its extra discarded final-recovery
+  query means the free-oracle trace is intentionally longer than the legacy signer.
+- Open boundaries: Medium callback `*With` to explicit-query/pure parity; S07 FORS conformance
+  fixtures/address/runtime; and S09 codecs/external APIs. The provisional security interface assumes `ReductionSystem`, while
+  `RepairedMasterStatement` is only an unproved proposition; no S02/S11 reduction is discharged.
+- Security infrastructure: SUF advantage partitions exactly into EUF plus the same-message residual,
+  but the residual has no bound. Reachable FORS/XMSS/WOTS ledgers prove only structural address,
+  cardinality, and `Nodup` facts; encoded injectivity, nonempty `DistinctTargetBatch` packaging,
+  actual-query/input alignment, final validity/disjointness, and #594/#596 adapters remain open.
+- Concurrent ownership: #594/#596 remain authoritative generic games and later work must relate or
+  replace bespoke games; port theorem content from #585 but never raw-merge it; #591 remains the S15
+  extractor integration.
+- Gates: intrinsic API migration, exact B03 axiom probe, focused construction/query/security builds,
+  retained runtimes, aggregate/import/isolation/docs/provenance/policy, and independent review.
+
 ### S07 — FORS construction
 
 - Inputs: accepted B02 over S03–S06; FIPS Section 8 and Appendix-A extraction delta.
@@ -197,7 +227,8 @@ without named owner approval.
 - Deliverables: FIPS big-endian indices, valid trees/paths, sign/recovery correctness, separate
   fixtures for Appendix A's reference-alignment and per-tree-index clarification, and an explicit
   incompatibility test against round-3 LSB-first behavior. Consume authoritative
-  `DigestParts.md`, `DigestParts.forsAdrs`, and typed digest bounds; do not duplicate PR #595.
+  `DigestParts.md`, `DigestParts.forsAdrs`, and typed digest bounds; consume the intrinsic
+  `ForsTreeSigCore.sk`/`.auth` representation imported by B03; do not duplicate PR #595.
 - Gates: extraction fixtures, tiny exhaustive tests, axioms; review
   `reviews/S07-fors-construction-review.md`.
 

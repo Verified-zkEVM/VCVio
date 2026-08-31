@@ -376,11 +376,12 @@
       "HashSig/SLHDSA/*.lean",
       "HashSig/SLHDSA/C13/*.lean",
       "HashSig/SLHDSA/Concrete/*.lean",
+      "HashSig/SLHDSA/HypertreeGeneral/*.lean",
       "HashSig/SLHDSA/Security/*.lean"
     ],
     "manifest_line": "<lowercase-file-sha256><two ASCII spaces><repository-relative-path><LF>",
-    "original_command": "sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum",
-    "deterministic_command": "LC_ALL=C sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum",
-    "sha256": "1d5df27f6d9c48d9af24755727e3f9d007ee9ff7bf6522c21bd44247bb6aba67"
+    "original_command": "sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/HypertreeGeneral/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum",
+    "deterministic_command": "LC_ALL=C sha256sum HashSig/SLHDSA/*.lean HashSig/SLHDSA/C13/*.lean HashSig/SLHDSA/Concrete/*.lean HashSig/SLHDSA/HypertreeGeneral/*.lean HashSig/SLHDSA/Security/*.lean | sha256sum",
+    "sha256": "a96482af2c7035f9cb7ef460f839fe6896707d4eb0fd68909e1c5cdad2f1e612"
   }
 }

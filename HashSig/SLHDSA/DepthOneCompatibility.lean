@@ -32,21 +32,25 @@ namespace SLHDSA.DepthOneCompatibility
 
 open OracleComp
 
+@[simp]
+private theorem vector_get_eq_getElem {α : Type*} {n : Nat} (v : Vector α n) (i : Fin n) :
+    v.get i = v[i.val] := rfl
+
 /-- At depth one, the intrinsic general-hypertree signature is equivalent to the established
 single XMSS signature. -/
 def hypertreeSignatureEquiv (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (hd : vp.params.d = 1) :
     GeneralHypertree.Signature vp core ≃ HtSigCore vp.params core where
-  toFun sig := sig[0]'(by omega)
+  toFun sig := sig.get ⟨0, by omega⟩
   invFun sig := (#v[sig]).cast hd.symm
   left_inv sig := by
     apply Vector.ext
     intro i hi
     have hi0 : i = 0 := by omega
     subst i
-    simp
+    simp [vector_get_eq_getElem]
   right_inv sig := by
-    simp
+    simp [vector_get_eq_getElem]
 
 /-- At depth one, the typed initial hypertree address is layer zero, tree zero, exactly as in the
 established one-layer API. -/
@@ -85,7 +89,7 @@ theorem signM_toOneLayer_eq (vp : ValidatedParams) (core : CorePrimitives vp.par
   subst d
   simp [GeneralHypertree.signM, GeneralHypertree.signFromPositionM,
     hypertreeSignatureEquiv, initial_toAdrs_eq_htAdrs_zero, htSignM, htPkFromSigM,
-    htSignWith, htPkFromSigWith, xmssSignM, xmssPkFromSigM]
+    htSignWith, htPkFromSigWith, xmssSignM, xmssPkFromSigM, vector_get_eq_getElem]
 
 /-- General depth-one root recovery is exactly the established one-layer free-oracle program after
 converting the intrinsic singleton signature. -/
@@ -102,7 +106,7 @@ theorem pkFromSigM_eq_htPkFromSigM (vp : ValidatedParams)
   subst d
   simp [GeneralHypertree.pkFromSigM, GeneralHypertree.recoverFromPositionM,
     hypertreeSignatureEquiv, initial_toAdrs_eq_htAdrs_zero,
-    htPkFromSigM, htPkFromSigWith, xmssPkFromSigM, Vector.head]
+    htPkFromSigM, htPkFromSigWith, xmssPkFromSigM, Vector.head, vector_get_eq_getElem]
 
 /-- General depth-one verification is exactly the established one-layer free-oracle program after
 converting the intrinsic singleton signature. -/
@@ -149,7 +153,7 @@ theorem sign_toOneLayer_eq (vp : ValidatedParams) (prims : Primitives vp.params)
       (htSignM prims.core msg sk pk Adrs.zero 0 parts.idxLeaf.val :
         OracleComp (publicHashSpec prims.core) (HtSigCore vp.params prims.core))).run
   have hr := congrArg Id.run h
-  simpa only [simulateQ_bind, simulateQ_pure, Id.run_bind, Id.run_pure] using hr
+  simpa [simulateQ_bind, simulateQ_pure] using hr
 
 /-- Deterministic depth-one root recovery agrees after signature conversion. -/
 theorem pkFromSig_eq_htPkFromSig (vp : ValidatedParams) (prims : Primitives vp.params)
@@ -237,7 +241,7 @@ theorem signInternalM_toOneLayer_eq (vp : ValidatedParams)
     GeneralHypertree.signM, GeneralHypertree.signFromPositionM,
     hypertreeSignatureEquiv, initial_toAdrs_eq_htAdrs_zero,
     htSignM, htPkFromSigM, htSignWith, htPkFromSigWith,
-    xmssSignM, xmssPkFromSigM, monad_norm]
+    xmssSignM, xmssPkFromSigM, vector_get_eq_getElem, monad_norm]
 
 /-- General and established depth-one verification are the same free-oracle program after
 signature conversion. -/
@@ -288,8 +292,7 @@ theorem signInternal_toOneLayer_eq (vp : ValidatedParams)
       (slhSignInternalM prims.core msg sk addrnd :
         OracleComp (publicHashSpec prims.core) (SignatureCore vp.params prims.core))).run
   have hr := congrArg Id.run h
-  simpa only [slhSignInternalM, simulateQ_bind, simulateQ_pure,
-    Id.run_bind, Id.run_pure] using hr
+  simpa [slhSignInternalM, simulateQ_bind, simulateQ_pure] using hr
 
 /-- Deterministic general verification specializes to established one-layer verification after
 signature conversion. -/

@@ -49,7 +49,7 @@ No checkbox is discharged by a build alone.
 - [x] S05 implements and kernel-connects the exact WOTS+ checksum byte pipeline, preserves the
   existing deterministic recovery theorem, and exercises all twelve concrete profiles; independent
   r0 accepted the exact candidate with zero findings.
-- [ ] S06 packages FIPS §6 leaf/node bounds and authentication width intrinsically, proves exact
+- [x] S06 packages FIPS §6 leaf/node bounds and authentication width intrinsically, proves exact
   sibling entries and the honest FIPS climb equation to the canonical Merkle engine, retains honest
   recovery and arbitrary-signature binding, and closes approved reachable SHA2/SHAKE addresses.
   Independent S06 r0 accepted the exact candidate with zero findings. FORS and general `d`
@@ -60,6 +60,14 @@ No checkbox is discharged by a build alone.
 - [ ] Scheme consumes `LayerPosition` through a general `d`-layer hypertree. It currently uses the
   digest-derived FORS address but passes `Adrs.zero`, tree zero, and `idxLeaf` to the d=1 hypertree;
   this is FIPS-correct only when valid `d=1` makes `idxTree = 0`. General consumption is S08/S09.
+- [x] B03 imports typed arbitrary-`d` hypertree and GeneralScheme programs, naturality,
+  deterministic interpretations, finite structural query upper bounds, and kernel-checked honest
+  GeneralHypertree recovery plus internal GeneralScheme completeness (PO-021/PO-022).
+- [ ] Callback-parametric `signFromPositionWith`/`recoverFromPositionWith` still lack a named parity
+  theorem to the explicit-query/pure construction (PO-024, Medium). Depth-one output compatibility
+  is proved, but general signing intentionally performs one discarded final recovery.
+- [ ] Intrinsic FORS `k`/`a` widths are imported, but S07 conformance fixtures, reachable-address
+  checks, and approved-profile runtime remain PO-023.
 - [ ] Internal and external pure/pre-hash domain separation, context, OID, deterministic/hedged modes.
 - [ ] Completeness and reject behavior load-bearing roots have zero `sorryAx`.
 - [ ] ACVP evidence covers every claimed cell; positive pre-hash coverage is tracked separately due to
@@ -69,6 +77,14 @@ No checkbox is discharged by a build alone.
 
 - [ ] Concrete primitive/vector equivalence and abstract/concrete refinement; executable algorithms.
 - [ ] Formal EUF-CMA, freshness, query bounds, transcript and oracle mapping.
+- [ ] B03's encoded `AdrsKey` compatibility equations and conditional GeneralScheme interface are
+  infrastructure only. `ReductionSystem` remains assumed and `RepairedMasterStatement` remains an
+  unproved `Prop`; neither discharges a security reduction.
+- [ ] The exact SUF advantage partition leaves the same-message residual unbounded and the repaired
+  master statement EUF-only (PO-025).
+- [ ] Structural reachable-target ledgers still require concrete encoded injectivity, nonempty
+  `DistinctTargetBatch` packaging, actual-query/input alignment, final-validity/disjointness, and
+  canonical #594/#596 adapters (PO-026).
 - [ ] Precise ITSR and selected tweakable-hash/PRF notions with positive target cardinalities.
 - [ ] Separate WOTS, FORS, XMSS/HT reductions; exact target/query/time transformations.
 - [ ] Sorry-free top composition with verified coefficients and quantitative computability.

@@ -21,13 +21,28 @@ Independent S06 r0 accepted exact candidate `91845ddfa8a704400600fdbf1c64f82659c
 with zero findings; its review artifact is committed and pushed at exact head
 `91e97865f4d1c91fac18172e41d91000142194de`.
 
-B02 is the current unpushed boundary candidate. It merges exact PR #595 head
-`be823fbb6745e95412efe2bf49e0e46055953413` as a preserved second parent and consumes its
-authoritative `DigestParts`, digest byte extents, `splitDigest`, `forsAdrs`, and `LayerPosition`
-surface across S07--S09. Scheme now uses the digest-derived FORS address, but its hypertree calls
-still pass `Adrs.zero`, tree zero, and `idxLeaf`; that path is FIPS-correct only for valid `d = 1`
-parameters. General `LayerPosition` consumption remains S08/S09. PRs #594 and #596 remain reserved
-for later security sessions, while cumulative PR #591 remains reserved for S15 integration.
+B02 and its remote reconciliation are independently accepted at reviewed head
+`609185098935feea82f4d5b6fb7a9d62aefce9c9`. B03 is the current unpushed boundary candidate. Its
+normal merge series first imported `fe469308b758ac381b770fb83cee4a7f792400cd`, then folded exact
+latest shared head `2014783d7d461b64164e3ec2844ce7f1eeb4c846` into merge
+`8917b7edb64614ab5417575a383abab15e396f2e` without rewriting either history.
+
+B03 imports intrinsic XMSS/FORS signatures, typed-position arbitrary-depth hypertree and general
+internal-scheme programs, their naturality/deterministic interpretations, and structural finite
+query upper bounds. Kernel theorems now close arbitrary-depth pure/fixed-answer hypertree correctness
+and general internal sign/verify completeness. A Medium gap remains between the callback-parametric
+`*With` layer and the explicit-query/pure interpretations, and S07 fixtures/address/runtime plus S09
+codecs/external APIs remain open. Depth-one output compatibility is proved, while general signing
+performs the FIPS-mandated discarded final recovery and therefore has a longer free-oracle trace.
+
+The exact SUF advantage partition and structural FORS/XMSS/WOTS reachable-target ledgers are useful
+security infrastructure, not reductions. The same-message SUF residual is unbounded; structural
+address/count/Nodup facts do not yet establish encoded injectivity, nonempty distinct-target batch
+packaging, actual-query coverage, target-input pairing, final-validity/disjointness, or canonical
+PR #594/#596 adapters. The new security interface remains conditional shape only:
+`ReductionSystem` is assumed and `RepairedMasterStatement` remains an unproved `Prop`. PRs #594 and
+#596 remain authoritative for generic games and require later adapters/equivalence, PR #585 theorem
+content may be ported but never raw-merged, and cumulative PR #591 remains reserved for S15.
 
 S01's pinned authority, provenance, and strict sample-schema parser anchors remain schema/provenance
 evidence rather than implementation conformance. Its descriptor/AST machinery is frozen absent a
@@ -69,8 +84,8 @@ building libraries or running algorithms; it does re-elaborate Lake configuratio
 TOML to verify the parser target and absence of effective source-directory/path-argument selectors.
 The second also checks the HashSig build, the authoritative elaborated-environment policy audit and
 compiled negative fixtures, generated umbrella, isolation rules, inherited KATs, S03 codecs, S04
-primitives, S05 WOTS construction, S06 XMSS construction, the B02 digest/position declaration
-probe, and the S01 provenance/strict-parser runtime gates. Immediately
+primitives, S05 WOTS construction, S06 XMSS construction, the B02 digest/position and B03
+construction/query/interface declaration probes, and the S01 provenance/strict-parser runtime gates. Immediately
 before the parser
 runtime, it reconfigures, rehashes, and disables caches while building into an initially absent
 private output root. It attests all three frozen parser/schema source-to-object-to-executable chains,

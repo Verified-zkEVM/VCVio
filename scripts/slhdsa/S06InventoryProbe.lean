@@ -36,7 +36,7 @@ private def roots : Array (Name × Array Name) := #[
   (``SLHDSA.XmssConformance.honestClimbFips_eq_climb_authPath, proofAxioms),
   (``SLHDSA.XmssConformance.wotsLeafAdrs_isCanonical, standardAxioms),
   (``SLHDSA.XmssConformance.xmssNodeAdrs_isCanonical, standardAxioms),
-  (``SLHDSA.XmssConformance.xmssSignBounded_erase, standardAxioms),
+  (``SLHDSA.XmssConformance.xmssSignBounded_eq, standardAxioms),
   (``SLHDSA.XmssConformance.xmssPkFromSigBounded_xmssSignBounded, standardAxioms),
   (``SLHDSA.XmssConformance.xmssPkFromSigBounded_binding, standardAxioms),
   (``SLHDSA.XmssConformance.xmssAuthPath_get, standardAxioms),
@@ -48,6 +48,7 @@ private def roots : Array (Name × Array Name) := #[
   (``SLHDSA.Concrete.shake_wotsLeafAdrs_roundtrip, standardAxioms),
   (``SLHDSA.Concrete.shake_xmssNodeAdrs_roundtrip, standardAxioms),
   (``SLHDSA.xmssNode_eq_merkleRoot, proofAxioms),
+  (``SLHDSA.xmssSign_eq_mk, standardAxioms),
   (``SLHDSA.xmssPkFromSig_xmssSign, standardAxioms),
   (``SLHDSA.xmssPkFromSig_binding, standardAxioms)
 ]
