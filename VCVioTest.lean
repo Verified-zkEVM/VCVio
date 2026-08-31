@@ -16,6 +16,7 @@ public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MerkleTreeExtractability
 public import VCVioTest.MerkleTreeMonadic
 public import VCVioTest.MonadProbability
+public import VCVioTest.MultiTargetCollection
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.PFunctorFacade
 public import VCVioTest.PerfectMerkleTree
