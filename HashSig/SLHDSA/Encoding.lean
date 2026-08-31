@@ -15,7 +15,7 @@ The pure conversion helpers of FIPS 205 §4.4: `toInt` (Algorithm 2, big-endian 
 integer), `toByte` (Algorithm 3, integer → big-endian byte string), and `base2b`
 (Algorithm 4, split a byte string into `outLen` big-endian `b`-bit digits, most significant
 first). These are used by WOTS+ (`b = lg_w`) and FORS (`b = a`) to derive digit/index vectors,
-and by the message-digest split (`Scheme.splitDigest`).
+and by the message-digest split (`Position.splitDigest`).
 
 ## References
 
