@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import HashSig.SLHDSA.GeneralScheme
+public import HashSig.SLHDSA.DepthOneCompatibility
 
 /-!
 # General internal-scheme canaries
@@ -23,6 +23,35 @@ open OracleComp
 
 variable (vp : ValidatedParams) (core : CorePrimitives vp.params)
 
+/-! ## Intrinsic depth canaries -/
+
+def depthOneParams : Params :=
+  { n := 1, h := 1, d := 1, hp := 1, a := 1, k := 1, lgw := 1 }
+
+def depthTwoParams : Params :=
+  { n := 1, h := 2, d := 2, hp := 1, a := 1, k := 1, lgw := 1 }
+
+def depthThreeParams : Params :=
+  { n := 1, h := 3, d := 3, hp := 1, a := 1, k := 1, lgw := 1 }
+
+/-- The canonical scheme type carries exactly one XMSS component at the compatibility depth. -/
+example (depthOneCore : CorePrimitives depthOneParams)
+    (sig : SignatureCore depthOneParams depthOneCore) :
+    sig.hypertree.toList.length = 1 := by
+  simp [depthOneParams]
+
+/-- The canonical scheme type cannot collapse a two-layer signature to one component. -/
+example (depthTwoCore : CorePrimitives depthTwoParams)
+    (sig : SignatureCore depthTwoParams depthTwoCore) :
+    sig.hypertree.toList.length = 2 := by
+  simp [depthTwoParams]
+
+/-- The canonical scheme type retains all three components at depth three. -/
+example (depthThreeCore : CorePrimitives depthThreeParams)
+    (sig : SignatureCore depthThreeParams depthThreeCore) :
+    sig.hypertree.toList.length = 3 := by
+  simp [depthThreeParams]
+
 /-- The structured scheme signature carries exactly `d` XMSS signatures. -/
 example (sig : GeneralScheme.SignatureCore vp core) :
     sig.hypertree.toArray.size = vp.params.d := sig.hypertree.size_toArray
@@ -34,6 +63,17 @@ example (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
         let pkRoot ← GeneralHypertree.rootM vp core skSeed pkSeed
         return (⟨pkSeed, pkRoot⟩, ⟨skSeed, skPrf, pkSeed, pkRoot⟩)) := by
   rfl
+
+/-- The old key-generation entry point is explicitly a `d = 1` compatibility wrapper for the
+general program, rather than a second unconstrained scheme. -/
+example (hd : vp.params.d = 1) (skSeed : core.SkSeed) (skPrf : core.SkPrf)
+    (pkSeed : core.PkSeed) :
+    (GeneralScheme.keygenInternalM vp core skSeed skPrf pkSeed :
+      OracleComp (publicHashSpec core) (PublicKeyCore core × SecretKeyCore core)) =
+    (slhKeygenInternalM hd core skSeed skPrf pkSeed :
+      OracleComp (publicHashSpec core) (PublicKeyCore core × SecretKeyCore core)) :=
+  DepthOneCompatibility.keygenInternalM_eq_slhKeygenInternalM
+    vp core hd skSeed skPrf pkSeed
 
 /-- Algorithm 19 retains every digest output and passes the typed parts to the general
 hypertree, rather than resetting the tree address to zero. -/

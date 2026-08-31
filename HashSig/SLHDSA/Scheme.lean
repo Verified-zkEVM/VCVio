@@ -9,18 +9,22 @@ public import HashSig.SLHDSA.Hypertree
 public import HashSig.SLHDSA.Position
 
 /-!
-# SLH-DSA Scheme (FIPS 205 §9–10)
+# Depth-one SLH-DSA compatibility scheme
 
-The top-level SLH-DSA signature scheme for the `d = 1` parameter set, assembled from FORS
-(`HashSig.SLHDSA.Fors`) and the single-layer hypertree (`HashSig.SLHDSA.Hypertree`). The canonical
-internal algorithms depend only on `CorePrimitives` and issue `H_msg` and every tweakable hash as
-an explicit `HasQuery` operation:
+The compatibility specialization of the SLH-DSA signature scheme to parameters satisfying
+`d = 1`, assembled from FORS (`HashSig.SLHDSA.Fors`) and the single-layer hypertree
+(`HashSig.SLHDSA.Hypertree`). The general Algorithms 18--20 in
+`HashSig.SLHDSA.GeneralScheme` are the canonical scheme path. These wrappers preserve the
+established one-layer API for security developments while making the restriction explicit.
+
+The compatibility programs depend only on `CorePrimitives` and issue `H_msg` and every tweakable
+hash as an explicit `HasQuery` operation:
 
 - `slhKeygenInternalM` / `slhSignInternalM` / `slhVerifyInternalM` (Algorithms 18–20),
 - `slhKeygenInternal` / `slhSignInternal` / `slhVerifyInternal`, the deterministic
   `PublicHash.impl` interpretations of those programs,
 - `splitDigest`, the typed message-digest split into `md`, `idxTree`, and `idxLeaf` (§9), and
-- `emptyContextMessage`, the FIPS 205 external-message encoding used by the canonical external
+- `emptyContextMessage`, the FIPS 205 external-message encoding used by the compatibility external
   scheme in `HashSig.SLHDSA.RandomOracle`.
 
 Signing follows FIPS 205 Algorithm 19 literally: after `H_msg`, it creates the FORS signature,
@@ -76,9 +80,9 @@ structure SignatureCore (p : Params) (core : CorePrimitives p) where
   /-- Exactly `d` intrinsically shaped XMSS signatures. -/
   hypertree : HtSigCore p core
 
-/-! ### Canonical internal algorithms (FIPS 205 §9) -/
+/-! ### Depth-one compatibility algorithms -/
 
-/-- Canonical SLH-DSA internal key generation (FIPS 205 Algorithm 18). The public root is
+/-- Depth-one compatibility specialization of internal key generation. The public root is
 computed by the explicit-query hypertree program. -/
 def slhKeygenInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m]
@@ -87,7 +91,7 @@ def slhKeygenInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
   let pkRoot ← htRootM core hd skSeed pkSeed Adrs.zero 0
   return (⟨pkSeed, pkRoot⟩, ⟨skSeed, skPrf, pkSeed, pkRoot⟩)
 
-/-- Canonical SLH-DSA internal signing (FIPS 205 Algorithm 19). Its public-hash schedule is
+/-- Depth-one compatibility specialization of internal signing. Its public-hash schedule is
 `H_msg`, FORS signing, recovery of the FORS public key from that signature, then hypertree
 signing. In particular, signing does not call `forsPkGenM`. -/
 def slhSignInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -102,7 +106,7 @@ def slhSignInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
   let htSig ← htSignM core hd forsPk sk.skSeed sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
   return ⟨R, forsSig, htSig⟩
 
-/-- Canonical SLH-DSA internal verification (FIPS 205 Algorithm 20). Its public-hash schedule is
+/-- Depth-one compatibility specialization of internal verification. Its public-hash schedule is
 `H_msg`, FORS public-key recovery, then hypertree recovery and comparison with `PK.root`. -/
 def slhVerifyInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] [DecidableEq core.Y]
@@ -152,7 +156,7 @@ private theorem queryHom_hmsg (core : CorePrimitives p)
     query (spec := publicHashSpec core) (.hmsg r pkSeed pkRoot msg)
   exact HasQuery.map_query F _
 
-/-- Query-preserving monad morphisms commute with canonical internal key generation. -/
+/-- Query-preserving monad morphisms commute with depth-one internal key generation. -/
 theorem slhKeygenInternalM_natural (core : CorePrimitives p)
     {m n : Type → Type*} [Monad m] [LawfulMonad m]
     [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]
@@ -163,7 +167,7 @@ theorem slhKeygenInternalM_natural (core : CorePrimitives p)
       slhKeygenInternalM hd core skSeed skPrf pkSeed := by
   simp [slhKeygenInternalM, htRootM_natural core hd F]
 
-/-- Query-preserving monad morphisms commute with canonical internal signing. -/
+/-- Query-preserving monad morphisms commute with depth-one internal signing. -/
 theorem slhSignInternalM_natural (core : CorePrimitives p)
     {m n : Type → Type*} [Monad m] [LawfulMonad m]
     [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]
@@ -175,7 +179,7 @@ theorem slhSignInternalM_natural (core : CorePrimitives p)
   simp [slhSignInternalM, queryHom_hmsg core F,
     forsSignM_natural core F, forsPkFromSigM_natural core F, htSignM_natural core hd F]
 
-/-- Query-preserving monad morphisms commute with canonical internal verification. -/
+/-- Query-preserving monad morphisms commute with depth-one internal verification. -/
 theorem slhVerifyInternalM_natural (core : CorePrimitives p)
     {m n : Type → Type*} [Monad m] [LawfulMonad m]
     [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]
@@ -369,7 +373,7 @@ theorem simulateQ_slhVerifyInternalM (prims : Primitives p) [DecidableEq prims.Y
           OracleComp (publicHashSpec prims.core) Bool) =
       slhVerifyInternal hd prims msg sig pk := rfl
 
-/-- Fixed-answer correctness of the canonical internal programs. Key generation, signing, and
+/-- Fixed-answer correctness of the depth-one compatibility programs. Key generation, signing, and
 verification use one total deterministic answer function. This theorem does not install or make
 a claim about random-oracle caching. -/
 theorem simulateQ_slhVerifyInternalM_slhSignInternalM_withPublicHash
