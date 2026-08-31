@@ -140,7 +140,7 @@ def digestSummary (ps : FipsParameterSet) : List ℕ :=
     parts.idxLeaf.val]
 
 /-- All six numerical shapes, in both families, use the exact byte offsets and bit masks. -/
-example : all.map digestSummary =
+theorem allDigestSummaries : all.map digestSummary =
   [[21, 20, 5935262955280923, 29], [25, 24, 1808788007904223008, 1],
     [30, 29, 8478472156619556, 294], [33, 32, 2387509390608836392, 1],
     [39, 38, 11021681357958189, 46], [40, 39, 2893890600475373103, 0],
@@ -152,6 +152,119 @@ example : all.map digestSummary =
   norm_num [increasingDigest, FipsParameterSet.params, Params.digestBytes, Params.treeIdxBytes,
     Params.leafIdxBytes, Params.m, toInt, Vector.toList_ofFn, List.ofFn, Fin.foldr,
     Fin.foldr.loop]
+
+/-! ## Named FIPS hypertree trajectories -/
+
+/-- The layer-zero position obtained from a named FIPS parameter set's increasing-byte digest. -/
+private def fipsInitialPosition (ps : FipsParameterSet) : LayerPosition ps.validatedParams :=
+  LayerPosition.initial ps.validatedParams (splitDigest ps.params (increasingDigest ps.params))
+
+@[simp]
+private theorem fipsInitialPosition_layer (ps : FipsParameterSet) :
+    (fipsInitialPosition ps).layer.val = 0 := rfl
+
+@[simp]
+private theorem fipsInitialPosition_tree (ps : FipsParameterSet) :
+    (fipsInitialPosition ps).tree.val =
+      (splitDigest ps.params (increasingDigest ps.params)).idxTree.val := rfl
+
+@[simp]
+private theorem fipsInitialPosition_leaf (ps : FipsParameterSet) :
+    (fipsInitialPosition ps).leaf.val =
+      (splitDigest ps.params (increasingDigest ps.params)).idxLeaf.val := rfl
+
+/-- The first FIPS layer transition, which exists for every named parameter set. -/
+private def fipsFirstPosition (ps : FipsParameterSet) : LayerPosition ps.validatedParams :=
+  (fipsInitialPosition ps).next (by cases ps <;> decide)
+
+/-- Initial and first-transition position fields followed by their independently projected address
+layer and tree. -/
+private def fipsFirstTransitionSummary (ps : FipsParameterSet) : List ℕ :=
+  let initial := fipsInitialPosition ps
+  let next := fipsFirstPosition ps
+  [initial.layer.val, initial.tree.val, initial.leaf.val,
+    initial.toAdrs.layer, initial.toAdrs.tree,
+    next.layer.val, next.tree.val, next.leaf.val,
+    next.toAdrs.layer, next.toAdrs.tree]
+
+@[simp]
+private theorem fipsFirstTransitionSummary_eq (ps : FipsParameterSet) :
+    fipsFirstTransitionSummary ps =
+      let parts := splitDigest ps.params (increasingDigest ps.params)
+      [0, parts.idxTree.val, parts.idxLeaf.val, 0, parts.idxTree.val,
+        1, parts.idxTree.val / 2 ^ ps.params.hp,
+        parts.idxTree.val % 2 ^ ps.params.hp,
+        1, parts.idxTree.val / 2 ^ ps.params.hp] := by
+  rfl
+
+/-- Every approved small/fast shape and both hash families follow the first FIPS transition and
+propagate the resulting layer and tree into the address. -/
+example : all.map fipsFirstTransitionSummary =
+  [[0, 5935262955280923, 29, 0, 5935262955280923,
+      1, 11592310459533, 27, 1, 11592310459533],
+    [0, 1808788007904223008, 1, 0, 1808788007904223008,
+      1, 226098500988027876, 0, 1, 226098500988027876],
+    [0, 8478472156619556, 294, 0, 8478472156619556,
+      1, 16559515930897, 292, 1, 16559515930897],
+    [0, 2387509390608836392, 1, 0, 2387509390608836392,
+      1, 298438673826104549, 0, 1, 298438673826104549],
+    [0, 11021681357958189, 46, 0, 11021681357958189,
+      1, 43053442804524, 45, 1, 43053442804524],
+    [0, 2893890600475373103, 0, 0, 2893890600475373103,
+      1, 180868162529710818, 15, 1, 180868162529710818],
+    [0, 5935262955280923, 29, 0, 5935262955280923,
+      1, 11592310459533, 27, 1, 11592310459533],
+    [0, 1808788007904223008, 1, 0, 1808788007904223008,
+      1, 226098500988027876, 0, 1, 226098500988027876],
+    [0, 8478472156619556, 294, 0, 8478472156619556,
+      1, 16559515930897, 292, 1, 16559515930897],
+    [0, 2387509390608836392, 1, 0, 2387509390608836392,
+      1, 298438673826104549, 0, 1, 298438673826104549],
+    [0, 11021681357958189, 46, 0, 11021681357958189,
+      1, 43053442804524, 45, 1, 43053442804524],
+    [0, 2893890600475373103, 0, 0, 2893890600475373103,
+      1, 180868162529710818, 15, 1, 180868162529710818]] := by
+  simp only [all, List.map_cons, List.map_nil, fipsFirstTransitionSummary_eq,
+    splitDigest_idxTree_val, splitDigest_idxLeaf_val]
+  norm_num [increasingDigest, FipsParameterSet.params, Params.digestBytes, Params.treeIdxBytes,
+    Params.leafIdxBytes, Params.m, toInt, Vector.toList_ofFn, List.ofFn, Fin.foldr,
+    Fin.foldr.loop]
+
+/-- Compact layer/tree/leaf view used to pin a complete named FIPS trajectory. -/
+private def positionSummary {p : ValidatedParams} (pos : LayerPosition p) : List ℕ :=
+  [pos.layer.val, pos.tree.val, pos.leaf.val]
+
+private def sha2_128sPosition0 :
+    LayerPosition (.SLHDSA_SHA2_128s : FipsParameterSet).validatedParams :=
+  fipsInitialPosition .SLHDSA_SHA2_128s
+
+private def sha2_128sPosition1 := sha2_128sPosition0.next (by decide)
+private def sha2_128sPosition2 := sha2_128sPosition1.next (by decide)
+private def sha2_128sPosition3 := sha2_128sPosition2.next (by decide)
+private def sha2_128sPosition4 := sha2_128sPosition3.next (by decide)
+private def sha2_128sPosition5 := sha2_128sPosition4.next (by decide)
+private def sha2_128sPosition6 := sha2_128sPosition5.next (by decide)
+
+@[simp]
+private theorem sha2_128s_hp :
+    (.SLHDSA_SHA2_128s : FipsParameterSet).validatedParams.params.hp = 9 := rfl
+
+/-- A full seven-layer approved small trajectory reaches the final zero tree without changing
+layer order or swapping the high- and low-bit components. -/
+example :
+    [sha2_128sPosition0, sha2_128sPosition1, sha2_128sPosition2, sha2_128sPosition3,
+      sha2_128sPosition4, sha2_128sPosition5, sha2_128sPosition6].map positionSummary =
+    [[0, 5935262955280923, 29], [1, 11592310459533, 27], [2, 22641231366, 141],
+      [3, 44221155, 6], [4, 86369, 227], [5, 168, 353], [6, 0, 168]] := by
+  simp only [List.map_cons, List.map_nil, positionSummary, sha2_128sPosition6,
+    sha2_128sPosition5, sha2_128sPosition4, sha2_128sPosition3, sha2_128sPosition2,
+    sha2_128sPosition1, sha2_128sPosition0, LayerPosition.next_layer_val,
+    LayerPosition.next_tree_val, LayerPosition.next_leaf_val, fipsInitialPosition_layer,
+    fipsInitialPosition_tree, fipsInitialPosition_leaf, splitDigest_idxTree_val,
+    splitDigest_idxLeaf_val, sha2_128s_hp]
+  norm_num [increasingDigest, FipsParameterSet.validatedParams, FipsParameterSet.params,
+    Params.digestBytes, Params.treeIdxBytes, Params.leafIdxBytes, Params.m, toInt,
+    Vector.toList_ofFn, List.ofFn, Fin.foldr, Fin.foldr.loop]
 
 /-- An all-ones digest reaches the maximum tree and leaf after discarding byte-alignment padding. -/
 def truncationBoundaryCorrect (ps : FipsParameterSet) : Bool :=
