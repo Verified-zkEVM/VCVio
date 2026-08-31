@@ -23,7 +23,7 @@ public meta section
 namespace SLHDSAS04InventoryProbe
 
 private def roots : Array (Name × Array Name) := #[
-  (``SLHDSA.Primitives.ByteLaws.yToBytes_eq_iff, #[]),
+  (``SLHDSA.CorePrimitives.ByteLaws.yToBytes_eq_iff, #[]),
   (``SLHDSA.Concrete.Sha2Address.compressSha2Checked_eq,
     #[``propext, ``Classical.choice, ``Quot.sound]),
   (``SLHDSA.Concrete.Sha2Address.bytes_toList,

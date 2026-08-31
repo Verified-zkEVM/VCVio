@@ -73,14 +73,12 @@ private def axiomAllowed (declName axiomName : Name) : Bool :=
   standardAxiomAllowlist.contains axiomName ||
     (declName == s00Placeholder && axiomName == ``sorryAx)
 
-/-- Exact Lean 4.32.2 compiler helpers generated for the current recursive HashSig definitions. -/
+/-- Exact Lean 4.33.1 compiler helpers generated for the current recursive HashSig definitions. -/
 def compilerHelperAllowlist : Array (Name × Name) := #[
   (`SLHDSA.base2bFill._unsafe_rec, `SLHDSA.base2bFill),
   (`SLHDSA.base2bGo._unsafe_rec, `SLHDSA.base2bGo),
-  (`SLHDSA.Merkle.merkleRoot._unsafe_rec, `SLHDSA.Merkle.merkleRoot),
-  (`SLHDSA.Merkle.climb._unsafe_rec, `SLHDSA.Merkle.climb),
   (`SLHDSA.WotsChecksum.digitsOfBaseW._unsafe_rec, `SLHDSA.WotsChecksum.digitsOfBaseW),
-  (`SLHDSA.chain._unsafe_rec, `SLHDSA.chain),
+  (`SLHDSA.chainWith._unsafe_rec, `SLHDSA.chainWith),
   (`SLHDSA.C13.chain._unsafe_rec, `SLHDSA.C13.chain)
 ]
 
@@ -156,7 +154,7 @@ private def validateCompilerHelpers (env : Environment) : CommandElabM Unit := w
     let axioms ← Lean.collectAxioms helper
     unless !axioms.contains helper && !axioms.contains ``sorryAx do
       throwError "compiler helper {helper} is an axiom or transitively uses sorryAx"
-  logInfo m!"SLH-DSA compiler-helper allowlist: PASS (7 exact `_unsafe_rec` auxiliaries)"
+  logInfo m!"SLH-DSA compiler-helper allowlist: PASS (5 exact `_unsafe_rec` auxiliaries)"
 
 private def addUniqueFinding (findings : Array Finding) (finding : Finding) : Array Finding :=
   if findings.contains finding then findings else findings.push finding
@@ -218,11 +216,11 @@ def collectHashSigModuleEntryFindings (env : Environment) : Array Finding := Id.
   return findings
 
 private def validateHashSigAxiomUnion (audit : AuditResult) : CommandElabM Unit := do
-  let expected := standardAxiomAllowlist.push ``sorryAx
+  let expected := standardAxiomAllowlist
   unless audit.axiomUnion.size == expected.size &&
       audit.axiomUnion.all expected.contains do
     throwError "HashSig transitive axiom union changed: {audit.axiomUnion}"
-  logInfo m!"SLH-DSA HashSig inventory: {audit.ownedCount} owned constants; transitive axiom union exactly [propext, Classical.choice, Quot.sound, sorryAx]"
+  logInfo m!"SLH-DSA HashSig inventory: {audit.ownedCount} owned constants; transitive axiom union exactly [propext, Classical.choice, Quot.sound]"
 
 private def findingLess (left right : Finding) : Bool :=
   if left.declName == right.declName then

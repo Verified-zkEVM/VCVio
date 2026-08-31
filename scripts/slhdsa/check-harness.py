@@ -162,8 +162,9 @@ DECL_REQUIRED = {
 }
 SOURCE_REQUIRED = {"path", "start_line", "start_column", "end_line", "end_column"}
 
-# Exact S00 token. Deletion is monotone; any addition, move, or alternate admission fails.
-SORRY_ALLOWLIST = {("HashSig/SLHDSA/Security.lean", 175, "sorry")}
+# The former S00 security placeholder was removed by the upstream architecture merge. Any
+# admission under HashSig is now an error; keeping this as an exact empty set preserves monotonicity.
+SORRY_ALLOWLIST: set[tuple[str, int, str]] = set()
 
 S01_FAILED_REVIEW_HASHES = {
     "reviews/S01-authority-and-conformance-review.md":
@@ -239,23 +240,23 @@ S02_SOURCE_COMMAND = (
 S02_SOURCE_DETERMINISTIC_COMMAND = f"LC_ALL=C {S02_SOURCE_COMMAND}"
 S02_DECLARATION_SPANS = {
     "DECL-015": (35, 1, 39, 48),
-    "DECL-016": (63, 1, 68, 61),
-    "DECL-017": (229, 1, 233, 42),
-    "DECL-018": (132, 1, 142, 58),
-    "DECL-019": (120, 1, 142, 68),
-    "DECL-020": (381, 1, 382, 26),
-    "DECL-021": (384, 1, 395, 36),
-    "DECL-022": (397, 1, 412, 36),
-    "DECL-023": (414, 1, 426, 36),
-    "DECL-024": (428, 1, 440, 36),
-    "DECL-025": (442, 1, 457, 36),
-    "DECL-026": (459, 1, 473, 36),
-    "DECL-027": (475, 1, 489, 36),
-    "DECL-028": (491, 1, 502, 30),
-    "DECL-029": (506, 1, 538, 35),
-    "DECL-030": (549, 1, 556, 64),
-    "DECL-031": (558, 1, 577, 20),
-    "DECL-032": (579, 1, 586, 89),
+    "DECL-016": (63, 1, 68, 70),
+    "DECL-017": (233, 1, 237, 42),
+    "DECL-018": (133, 1, 143, 58),
+    "DECL-019": (133, 1, 155, 68),
+    "DECL-020": (394, 1, 395, 26),
+    "DECL-021": (397, 1, 408, 36),
+    "DECL-022": (410, 1, 425, 36),
+    "DECL-023": (427, 1, 439, 36),
+    "DECL-024": (441, 1, 453, 36),
+    "DECL-025": (455, 1, 470, 36),
+    "DECL-026": (472, 1, 486, 36),
+    "DECL-027": (488, 1, 502, 36),
+    "DECL-028": (504, 1, 515, 30),
+    "DECL-029": (519, 1, 551, 35),
+    "DECL-030": (562, 1, 569, 64),
+    "DECL-031": (571, 1, 590, 20),
+    "DECL-032": (592, 1, 599, 89),
 }
 S02_DECLARATION_DIRECT_DEPS = {
     "DECL-022": ["SLHDSA.Security.chosenTargetsC", "SLHDSA.Security.collectionTweaks",
@@ -269,10 +270,10 @@ S02_DECLARATION_DIRECT_DEPS = {
                   "SLHDSA.Security.SampledTraceValid", "SLHDSA.Security.CollectionDisjoint"],
 }
 S03_DECLARATION_SPANS = {
-    "DECL-033": (132, 1, 168, 41),
-    "DECL-034": (187, 1, 195, 21),
-    "DECL-035": (198, 1, 201, 21),
-    "DECL-036": (244, 1, 247, 28),
+    "DECL-033": (271, 1, 272, 22),
+    "DECL-034": (57, 1, 65, 22),
+    "DECL-035": (68, 1, 71, 22),
+    "DECL-036": (53, 1, 53, 58),
     "DECL-037": (50, 1, 57, 10),
     "DECL-038": (139, 1, 142, 10),
     "DECL-039": (169, 1, 171, 65),
@@ -280,13 +281,13 @@ S03_DECLARATION_SPANS = {
     "DECL-041": (188, 1, 198, 18),
     "DECL-042": (302, 1, 312, 48),
     "DECL-043": (314, 1, 317, 20),
-    "DECL-044": (33, 1, 35, 42),
-    "DECL-045": (38, 1, 40, 42),
-    "DECL-046": (43, 1, 45, 42),
-    "DECL-047": (54, 1, 56, 31),
-    "DECL-048": (58, 1, 60, 31),
-    "DECL-049": (62, 1, 64, 37),
-    "DECL-050": (209, 1, 211, 21),
+    "DECL-044": (34, 1, 36, 42),
+    "DECL-045": (39, 1, 41, 42),
+    "DECL-046": (44, 1, 46, 42),
+    "DECL-047": (55, 1, 57, 31),
+    "DECL-048": (59, 1, 61, 31),
+    "DECL-049": (63, 1, 65, 37),
+    "DECL-050": (79, 1, 81, 22),
     "DECL-051": (87, 1, 107, 35),
     "DECL-052": (122, 1, 127, 35),
     "DECL-053": (248, 1, 268, 37),
@@ -294,10 +295,10 @@ S03_DECLARATION_SPANS = {
     "DECL-055": (342, 1, 344, 47),
 }
 S03_DECLARATION_AXIOMS = {
-    "DECL-033": [],
+    "DECL-033": ["propext"],
     "DECL-034": ["propext"],
     "DECL-035": ["propext"],
-    "DECL-036": ["propext", "Classical.choice", "Quot.sound"],
+    "DECL-036": [],
     "DECL-037": ["propext", "Classical.choice", "Quot.sound"],
     "DECL-038": ["propext"],
     "DECL-039": ["propext"],
@@ -436,7 +437,7 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/decisions.csv":
         (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
     "docs/slhdsa/matrices/declarations.jsonl":
-        (58313, "c33b45a231bf0aa0edf3d9b4ee81f0668cc1ea3dbac300d8c8534ea19b42ab09"),
+        (50552, "a8b9a6b3572fdd03b26109a3cdfb7f43122617b599176803b14f052c1c493fa1"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
@@ -2177,10 +2178,6 @@ def check_lean_policy() -> None:
     unexpected = found_admissions - SORRY_ALLOWLIST
     require(not unexpected, f"unexpected admissions: {sorted(unexpected)!r}")
     require(not violations, "prohibited HashSig declarations/options: " + "; ".join(violations))
-    security_lines = (ROOT / "HashSig/SLHDSA/Security.lean").read_text(encoding="utf-8").splitlines()
-    require(len(security_lines) >= 150 and
-            re.match(r"^theorem\s+slhdsa_euf_cma_security\b", security_lines[149]) is not None,
-            "Security.lean:150 is no longer the allowlisted theorem anchor")
     removed = SORRY_ALLOWLIST - found_admissions
     if removed:
         print(f"INFO: sorry allowlist shrank monotonically: removed {sorted(removed)!r}")
@@ -2319,7 +2316,8 @@ def parse_lake_executable_roots(source: str) -> dict[str, str]:
             require(len(words) == 3 and words[2] == "where"
                     and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_']*", words[1]) is not None,
                     f"S01: unsupported active lean_exe stanza at lakefile.lean:{line}")
-            require(words[1] not in roots and current is None,
+            require(words[1] not in roots and
+                    (current is None or current in roots),
                     f"S01: duplicate or incomplete active lean_exe mapping: {words[1]}")
             current = words[1]
             continue
@@ -2331,11 +2329,8 @@ def parse_lake_executable_roots(source: str) -> dict[str, str]:
                     is not None,
                     f"S01: ambiguous or malformed active executable root at lakefile.lean:{line}")
             roots[current] = words[4]
-            current = None
             continue
-        require(current is None,
-                f"S01: lean_exe root must be the next active command line before lakefile.lean:{line}")
-    require(current is None, "S01: active lean_exe has no root mapping")
+    require(current is None or current in roots, "S01: active lean_exe has no root mapping")
     return roots
 
 
@@ -2346,7 +2341,11 @@ def validate_lake_parser_mapping(source: str) -> None:
 
 
 def validate_lake_source_selector_surface(source: str) -> None:
-    """Reject aliases/metaprogramming that translated TOML may normalize to the default srcDir."""
+    """Reject selectors that can redirect the package or the S01 parser target.
+
+    Unrelated targets may select their own source directories; their elaborated records do not
+    affect the parser target and are outside this S01 gate.
+    """
 
     tokens, errors = lex_lean(source)
     require(not errors, f"S01: malformed lakefile selector lexical state: {errors}")
@@ -2356,12 +2355,31 @@ def validate_lake_source_selector_surface(source: str) -> None:
         leaf = token.text.rsplit(".", 1)[-1]
         require(leaf not in unsupported,
                 f"S01: unsupported metaprogramming in pinned Lake selector surface: {leaf}")
-        require(token.text not in {"srcDir", "moreLeanArgs", "weakLeanArgs"},
-                "S01: active Lake source/path argument selector is forbidden; the exact defaults "
-                "are required")
         require(not (token.text == "`" and index + 1 < len(tokens)
                      and tokens[index + 1].text == "("),
                 "S01: unsupported command quotation in pinned Lake selector surface")
+
+    by_line: dict[int, list[str]] = {}
+    for token in tokens:
+        by_line.setdefault(token.line, []).append(token.text)
+    package_open = False
+    parser_open = False
+    for line in sorted(by_line):
+        words = by_line[line]
+        if words[0] == "package":
+            package_open = words[-1] == "where"
+            parser_open = False
+            continue
+        if words[0] in {"require", "lean_lib", "lean_exe"}:
+            package_open = False
+        if words[0] == "lean_exe":
+            parser_open = len(words) >= 2 and words[1] == "slhdsa_acvp_parser"
+            continue
+        if package_open or parser_open:
+            require(not any(word in {"srcDir", "moreLeanArgs", "weakLeanArgs"}
+                            for word in words),
+                    "S01: active Lake source/path argument selector is forbidden for the package "
+                    "or parser target; the exact defaults are required")
 
 
 def validate_translated_lake_data(data: Any) -> None:
@@ -2446,7 +2464,7 @@ ACVP_TRACE_MODULES = {
         Path("HashSigTest/SLHDSA/ACVP/StrictJson.lean"),
         "20f9aff3f5339e54d7fc5e148fadb0e37d8f4b4bd816938f0a81b4cf7b087089"),
 }
-LAKEFILE_R11_SHA256 = "97e37eb1dc18e69c10a0c2e67f915df8d6d1c64bf5bda8ec6d43b3ef45417e9f"
+LAKEFILE_BOUNDARY_SHA256 = "e9e50014dd62a0229464814952ee93e867887a80a901c5ac0e487c32989833a9"
 FRESH_BUILD_CHILD = "fresh-root-build"
 PARSER_EXPECTED_STDOUT = (
     b"SLH-DSA ACVP parser positive suite: PASS (16 cases)\n"
@@ -2545,7 +2563,7 @@ def parse_strict_json_bytes(data: bytes, label: str) -> Any:
 def validate_fresh_build_lake_source(source: str) -> None:
     """Pin the exact root-package buildDir override and absence of the retired UInt64 helper."""
 
-    require(hashlib.sha256(source.encode("utf-8")).hexdigest() == LAKEFILE_R11_SHA256,
+    require(hashlib.sha256(source.encode("utf-8")).hexdigest() == LAKEFILE_BOUNDARY_SHA256,
             "S01: lakefile bytes changed; update the fresh-build/config pin deliberately")
     marker = (
         "buildDir := (get_config? buildDir).map System.FilePath.mk "

@@ -23,11 +23,10 @@ public meta section
 namespace SLHDSAS03InventoryProbe
 
 private def roots : Array (Name × Array Name) := #[
-  (``SLHDSA.ParameterSet.profile, #[]),
-  (``SLHDSA.ParameterSet.profile_sizes, #[``propext]),
-  (``SLHDSA.ParameterSet.wots_widths, #[``propext]),
-  (``SLHDSA.ParameterSet.ofParams_profile, #[]),
-  (``SLHDSA.ParameterSet.valid, #[``propext, ``Classical.choice, ``Quot.sound]),
+  (``SLHDSA.FipsParameterSet.params_valid, #[``propext]),
+  (``SLHDSA.FipsParameterSet.derived_widths_eq_expected, #[``propext]),
+  (``SLHDSA.FipsParameterSet.wots_widths, #[``propext]),
+  (``SLHDSA.FipsParameterSet.ofParams_self, #[]),
   (``SLHDSA.toInt_lt_pow, #[``propext, ``Classical.choice, ``Quot.sound]),
   (``SLHDSA.toInt_eq_ofDigits, #[``propext, ``Quot.sound]),
   (``SLHDSA.toInt_toByte_mod, #[``propext, ``Classical.choice, ``Quot.sound]),

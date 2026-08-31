@@ -142,9 +142,10 @@ It does not source-import `HashSig`: it programmatically meta-imports the compil
 `loadExts := false`, verifies initializer execution is disabled before and after import, and applies
 all decisions to the returned static environment. It determines declaration ownership from the
 defining module (`HashSig`/`HashSig.*`). For every owned declaration it permits exactly the
-transitive axioms `propext`, `Classical.choice`, and `Quot.sound`; `sorryAx` is permitted only for
-`SLHDSA.slhdsa_euf_cma_security`. Every other self, generated, or externally owned axiom dependency
-fails. It also rejects unsafe and source/user partial constants, extern attributes, regular/builtin
+transitive axioms `propext`, `Classical.choice`, and `Quot.sound`. The former S00
+`SLHDSA.slhdsa_euf_cma_security` exception was removed by upstream main during B01; `sorryAx` is no
+longer permitted anywhere in HashSig. Every other self, generated, or externally owned axiom
+dependency fails. It also rejects unsafe and source/user partial constants, extern attributes, regular/builtin
 initializer entries, and `implemented_by` runtime overrides.
 
 The meta import loads reachable IR without finalizing persistent extensions or executing their
@@ -185,16 +186,14 @@ input records are independently derived regressions. A successful
 repository-wide `lake build` remains a final pre-review gate when changes touch shared VCVio
 infrastructure.
 
-Lean 4.32.2 generates exactly these seven partial runtime auxiliaries for safe, ordinary recursive
+Lean 4.33.1 generates exactly these five partial runtime auxiliaries for safe, ordinary recursive
 definitions in the current HashSig environment:
 
 ```text
 SLHDSA.base2bFill._unsafe_rec
 SLHDSA.base2bGo._unsafe_rec
-SLHDSA.Merkle.merkleRoot._unsafe_rec
-SLHDSA.Merkle.climb._unsafe_rec
 SLHDSA.WotsChecksum.digitsOfBaseW._unsafe_rec
-SLHDSA.chain._unsafe_rec
+SLHDSA.chainWith._unsafe_rec
 SLHDSA.C13.chain._unsafe_rec
 ```
 
@@ -203,9 +202,9 @@ set and checks `Lean.Compiler.isUnsafeRecName?`, equal defining modules, an exis
 parent, helper partiality, and absence of unsafe/extern/init/override/axiom/`sorryAx` surfaces.
 
 A separate warning-as-error re-elaboration of every source module is not part of S00. Lean's warning
-channel is configurable and the one permitted `Security.lean` placeholder needs a semantic exception;
+channel is configurable; at the current B01 boundary there is no HashSig admission exception.
 per-file re-elaboration would also duplicate the build without establishing generated declarations or
-transitive dependencies. The compiled-environment `collectAxioms` audit checks the exact exception and
+transitive dependencies. The compiled-environment `collectAxioms` audit checks the exact empty admission policy and
 macro/tactic-generated declarations directly. Build warnings remain review evidence, not the
 authoritative admission decision.
 
@@ -231,6 +230,12 @@ axiom-free; SHA2 roots use only `propext`, `Classical.choice`, and `Quot.sound`;
 `propext` and `Quot.sound`. None depends on `sorryAx`. The full S04 candidate audit observes 29
 HashSig modules and 2,139 HashSig-owned constants, retains exactly seven compiler helpers, and
 retains the same exact transitive axiom union. These counts are observations, not stable limits.
+
+At B01, upstream main and Lean 4.33.1 change the inventory to 32 HashSig modules and the exact five
+helpers listed above. The aggregate upstream security placeholder is gone, so the transitive axiom
+union shrinks monotonically to exactly `{propext, Classical.choice, Quot.sound}`. The semantic gate
+continues to check every helper's generated-name relation, safe parent, ownership, and runtime
+surfaces; neither the helper rule nor the axiom rule is broadened.
 
 ## Proof gate
 

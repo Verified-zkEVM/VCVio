@@ -1,6 +1,6 @@
 # S04 primitive interfaces and SHA2/SHAKE instantiations candidate
 
-Status: S04-001 repair complete; independent S04 r1 review pending.
+Status: accepted by independent S04 r1 review with zero findings.
 
 Date: 2026-08-31
 Branch: `codex/sphincsplus-formalization`
@@ -107,8 +107,9 @@ schema/provenance evidence rather than primitive or implementation-conformance v
   including padding, empty-input, multi-block, truncation, and XOF rate-crossing cases;
 - all twelve approved profiles evaluate the exact six primitive grammars and exact `n`/`m` output
   widths, with SHA2 address preconditions tested positively and negatively;
-- changed load-bearing roots have saved `#print axioms` output without `sorryAx`; the full compiled
-  policy audit retains the exact permitted axiom union and exact seven compiler helpers;
+- changed load-bearing roots have saved `#print axioms` output without `sorryAx`; at the reviewed
+  S04 boundary the full compiled policy audit retained the exact permitted axiom union and exact
+  seven Lean 4.32.2 compiler helpers;
 - the S03 data/codec executable, both legacy KATs, generated umbrella, extern/interop isolation,
   `git diff --check`, documentation/provenance gate, and full frozen wrapper pass; and
 - after the initial review's S04-001 FAIL, a fresh reviewer authors
@@ -188,5 +189,7 @@ S03 r2 accepted the exact predecessor with zero findings, so S04 launched from c
 produced from FAIL commit `69cdabd443bf9c6bf203f8f5bb36dd54cdc86803`, including the four
 new projection records, executable projection binding, source/vector pins, focused executable,
 all-profile grammars, checked address domain, axiom inventory, and inherited regressions. The fresh
-review artifact is `reviews/S04-primitives-review-r1.md`; do not move COV-005 or
+review artifact `reviews/S04-primitives-review-r1.md` accepted exact repair commit
+`00f1416ea9b8e0eb4cabd1fe28c7029beef56c34` with zero findings and is committed in exact accepted
+boundary head `ca84e4f18610ba40dadd44466cd987507a199c24`. Do not move COV-005 or
 F-015/F-016/F-018.

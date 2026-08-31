@@ -33,8 +33,8 @@ namespace SLHDSA.Security
 
 /-- A generated SLH-DSA key pair with the public material shared by both views. -/
 structure GeneratedKeyPair {p : Params} (prims : Primitives p) where
-  publicKey : PublicKey prims
-  secretKey : SecretKey prims
+  publicKey : PublicKeyCore prims.core
+  secretKey : SecretKeyCore prims.core
   seed_eq : secretKey.pkSeed = publicKey.pkSeed
   root_eq : secretKey.pkRoot = publicKey.pkRoot
 
@@ -64,8 +64,8 @@ structure SchemeInterface {p : Params} (prims : Primitives p) where
   Signature : Type
   randomizer : Signature → prims.Y
   keygen : ProbComp (GeneratedKeyPair prims)
-  sign : SecretKey prims → MessageInput → ProbComp Signature
-  verify : PublicKey prims → MessageInput → Signature → Bool
+  sign : SecretKeyCore prims.core → MessageInput → ProbComp Signature
+  verify : PublicKeyCore prims.core → MessageInput → Signature → Bool
 
 /-! ## Named queries -/
 
@@ -81,7 +81,11 @@ inductive ConstructionRole where
   | wotsFPre
   | wotsTl
   | xmssH
-deriving Repr, DecidableEq, Fintype
+deriving Repr, DecidableEq
+
+instance : Fintype ConstructionRole where
+  elems := {.forsF, .forsH, .forsTl, .wotsFUd, .wotsFTcr, .wotsFPre, .wotsTl, .xmssH}
+  complete role := by cases role <;> simp
 
 @[simp]
 theorem constructionRole_card : Fintype.card ConstructionRole = 8 := by decide
@@ -97,7 +101,7 @@ deriving Repr, DecidableEq
 /-- The complete classical oracle trace vocabulary for an execution under public key `pk`.
 `pk` is a phantom index: primitive query constructors do not accept a second public seed. -/
 inductive Query {p : Params} (prims : Primitives p) (scheme : SchemeInterface prims)
-    (_pk : PublicKey prims) where
+    (_pk : PublicKeyCore prims.core) where
   | sign (request : MessageInput)
   | prf (secretSeed : prims.SkSeed) (address : Adrs)
   | prfMsg (secretPrf : prims.SkPrf) (optionalRandomness : prims.Y)
@@ -110,7 +114,7 @@ inductive Query {p : Params} (prims : Primitives p) (scheme : SchemeInterface pr
 
 /-- Result family for the named SLH-DSA execution queries. -/
 @[reducible] def oracleSpec {p : Params} (prims : Primitives p)
-    (scheme : SchemeInterface prims) (pk : PublicKey prims) :
+    (scheme : SchemeInterface prims) (pk : PublicKeyCore prims.core) :
     OracleSpec (Query prims scheme pk) :=
   OracleSpec.ofFn fun
     | .sign _ => scheme.Signature
@@ -126,7 +130,7 @@ inductive Query {p : Params} (prims : Primitives p) (scheme : SchemeInterface pr
 absent.  Signing is visible as a single query; a later implementation refinement exposes the
 honest signer's internal primitive trace without changing this public type. -/
 inductive AdversaryQuery {p : Params} (prims : Primitives p) (scheme : SchemeInterface prims)
-    (_pk : PublicKey prims) where
+    (_pk : PublicKeyCore prims.core) where
   | sign (request : MessageInput)
   | f (address : Adrs) (input : prims.Y)
   | h (address : Adrs) (left right : prims.Y)
@@ -136,7 +140,7 @@ inductive AdversaryQuery {p : Params} (prims : Primitives p) (scheme : SchemeInt
 
 /-- Result family for adversary-visible queries. -/
 @[reducible] def adversaryOracleSpec {p : Params} (prims : Primitives p)
-    (scheme : SchemeInterface prims) (pk : PublicKey prims) :
+    (scheme : SchemeInterface prims) (pk : PublicKeyCore prims.core) :
     OracleSpec (AdversaryQuery prims scheme pk) :=
   OracleSpec.ofFn fun
     | .sign _ => scheme.Signature
@@ -149,7 +153,7 @@ inductive AdversaryQuery {p : Params} (prims : Primitives p) (scheme : SchemeInt
 /-- Embed the public interface into the complete execution trace.  This operation introduces no
 secret query: it only relabels each public constructor with its execution-trace counterpart. -/
 def adversaryQueryImpl {p : Params} (prims : Primitives p) (scheme : SchemeInterface prims)
-    (pk : PublicKey prims) :
+    (pk : PublicKeyCore prims.core) :
     QueryImpl (adversaryOracleSpec prims scheme pk) (OracleComp (oracleSpec prims scheme pk))
   | .sign request => liftM ((oracleSpec prims scheme pk).query (.sign request))
   | .f address input => liftM ((oracleSpec prims scheme pk).query (.f .adversary address input))
@@ -164,12 +168,12 @@ def adversaryQueryImpl {p : Params} (prims : Primitives p) (scheme : SchemeInter
 
 /-- Exactly the public signing-query variant. -/
 def isSigningQuery {p : Params} {prims : Primitives p} {scheme : SchemeInterface prims}
-    {pk : PublicKey prims} : AdversaryQuery prims scheme pk → Prop
+    {pk : PublicKeyCore prims.core} : AdversaryQuery prims scheme pk → Prop
   | .sign _ => True
   | _ => False
 
 instance {p : Params} {prims : Primitives p} {scheme : SchemeInterface prims}
-    {pk : PublicKey prims} :
+    {pk : PublicKeyCore prims.core} :
     DecidablePred (isSigningQuery (prims := prims) (scheme := scheme) (pk := pk)) := fun query => by
   cases query <;> simp only [isSigningQuery] <;> infer_instance
 
@@ -177,12 +181,12 @@ instance {p : Params} {prims : Primitives p} {scheme : SchemeInterface prims}
 counts explicit `F`, `H`, both arities of `T_l`, and `H_msg` calls made by the adversary.  The
 repaired EasyCrypt master inequality has no extra additive `qH` loss. -/
 def isHashQuery {p : Params} {prims : Primitives p} {scheme : SchemeInterface prims}
-    {pk : PublicKey prims} : AdversaryQuery prims scheme pk → Prop
+    {pk : PublicKeyCore prims.core} : AdversaryQuery prims scheme pk → Prop
   | .f _ _ | .h _ _ _ | .tlFors _ _ | .tlWots _ _ | .hmsg _ _ => True
   | _ => False
 
 instance {p : Params} {prims : Primitives p} {scheme : SchemeInterface prims}
-    {pk : PublicKey prims} :
+    {pk : PublicKeyCore prims.core} :
     DecidablePred (isHashQuery (prims := prims) (scheme := scheme) (pk := pk)) := fun query => by
   cases query <;> simp only [isHashQuery] <;> infer_instance
 
@@ -210,18 +214,18 @@ def queryImpl {p : Params} {prims : Primitives p} (scheme : SchemeInterface prim
 /-- A classical adversary against the seed-indexed public oracle interface. -/
 structure ClassicalAdversary {p : Params} (prims : Primitives p)
     (scheme : SchemeInterface prims) where
-  main (pk : PublicKey prims) :
+  main (pk : PublicKeyCore prims.core) :
     OracleComp (adversaryOracleSpec prims scheme pk) (MessageInput × scheme.Signature)
 
 /-- Pathwise signing-query bound on an actual adversary computation. -/
 def SigningBound {p : Params} {prims : Primitives p} {scheme : SchemeInterface prims}
-    {pk : PublicKey prims} {α : Type}
+    {pk : PublicKeyCore prims.core} {α : Type}
     (program : OracleComp (adversaryOracleSpec prims scheme pk) α) (qS : ℕ) : Prop :=
   program.IsQueryBoundP isSigningQuery qS
 
 /-- Pathwise public-hash-query bound on an actual adversary computation. -/
 def HashQueryBound {p : Params} {prims : Primitives p} {scheme : SchemeInterface prims}
-    {pk : PublicKey prims} {α : Type}
+    {pk : PublicKeyCore prims.core} {α : Type}
     (program : OracleComp (adversaryOracleSpec prims scheme pk) α) (qH : ℕ) : Prop :=
   program.IsQueryBoundP isHashQuery qH
 
@@ -236,7 +240,7 @@ def AdversaryBounds {p : Params} {prims : Primitives p}
 
 @[simp]
 theorem signingBound_query_iff {p : Params} {prims : Primitives p}
-    (scheme : SchemeInterface prims) (pk : PublicKey prims)
+    (scheme : SchemeInterface prims) (pk : PublicKeyCore prims.core)
     (request : MessageInput) (qS : ℕ) :
     SigningBound
       (liftM ((adversaryOracleSpec prims scheme pk).query (.sign request)) :
@@ -245,7 +249,7 @@ theorem signingBound_query_iff {p : Params} {prims : Primitives p}
 
 @[simp]
 theorem hashQueryBound_f_iff {p : Params} {prims : Primitives p}
-    (scheme : SchemeInterface prims) (pk : PublicKey prims)
+    (scheme : SchemeInterface prims) (pk : PublicKeyCore prims.core)
     (address : Adrs) (input : prims.Y) (qH : ℕ) :
     HashQueryBound
       (liftM ((adversaryOracleSpec prims scheme pk).query (.f address input)) :
@@ -253,7 +257,7 @@ theorem hashQueryBound_f_iff {p : Params} {prims : Primitives p}
   simp [HashQueryBound, isHashQuery, OracleComp.isQueryBoundP_query_iff]
 
 theorem not_signingBound_zero {p : Params} {prims : Primitives p}
-    (scheme : SchemeInterface prims) (pk : PublicKey prims)
+    (scheme : SchemeInterface prims) (pk : PublicKeyCore prims.core)
     (request : MessageInput) :
     ¬ SigningBound
       (liftM ((adversaryOracleSpec prims scheme pk).query (.sign request)) :
@@ -261,7 +265,7 @@ theorem not_signingBound_zero {p : Params} {prims : Primitives p}
   simp
 
 theorem not_hashQueryBound_f_zero {p : Params} {prims : Primitives p}
-    (scheme : SchemeInterface prims) (pk : PublicKey prims)
+    (scheme : SchemeInterface prims) (pk : PublicKeyCore prims.core)
     (address : Adrs) (input : prims.Y) :
     ¬ HashQueryBound
       (liftM ((adversaryOracleSpec prims scheme pk).query (.f address input)) :
@@ -270,14 +274,14 @@ theorem not_hashQueryBound_f_zero {p : Params} {prims : Primitives p}
 
 @[simp]
 theorem signingBound_pure_zero {p : Params} {prims : Primitives p}
-    (scheme : SchemeInterface prims) (pk : PublicKey prims)
+    (scheme : SchemeInterface prims) (pk : PublicKeyCore prims.core)
     {α : Type} (value : α) :
     SigningBound (pure value : OracleComp (adversaryOracleSpec prims scheme pk) α) 0 := by
   simp [SigningBound]
 
 @[simp]
 theorem hashQueryBound_pure_zero {p : Params} {prims : Primitives p}
-    (scheme : SchemeInterface prims) (pk : PublicKey prims)
+    (scheme : SchemeInterface prims) (pk : PublicKeyCore prims.core)
     {α : Type} (value : α) :
     HashQueryBound (pure value : OracleComp (adversaryOracleSpec prims scheme pk) α) 0 := by
   simp [HashQueryBound]

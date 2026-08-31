@@ -37,7 +37,8 @@ structure Transcript {p : Params} {prims : Primitives p} (scheme : SchemeInterfa
 
 /-- Signing requests made in an execution log, in execution order. -/
 def signedRequests {p : Params} {prims : Primitives p} {scheme : SchemeInterface prims}
-    {pk : PublicKey prims} (log : QueryLog (oracleSpec prims scheme pk)) : List MessageInput :=
+    {pk : PublicKeyCore prims.core} (log : QueryLog (oracleSpec prims scheme pk)) :
+    List MessageInput :=
   log.filterMap fun entry =>
     match entry with
     | ⟨.sign request, _⟩ => some request

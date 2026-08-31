@@ -41,23 +41,22 @@ deriving Repr, BEq
 
 def expectedRows : List ExpectedRow :=
   [⟨"SLH-DSA-SHA2-128s", .sha2, 16, 63, 7, 9, 12, 14, 4, 30, 21, 7, 2, 1, 32, 64, 7856⟩,
-   ⟨"SLH-DSA-SHAKE-128s", .shake, 16, 63, 7, 9, 12, 14, 4, 30, 21, 7, 2, 1, 32, 64, 7856⟩,
    ⟨"SLH-DSA-SHA2-128f", .sha2, 16, 66, 22, 3, 6, 33, 4, 34, 25, 8, 1, 1, 32, 64, 17088⟩,
-   ⟨"SLH-DSA-SHAKE-128f", .shake, 16, 66, 22, 3, 6, 33, 4, 34, 25, 8, 1, 1, 32, 64, 17088⟩,
    ⟨"SLH-DSA-SHA2-192s", .sha2, 24, 63, 7, 9, 14, 17, 4, 39, 30, 7, 2, 3, 48, 96, 16224⟩,
-   ⟨"SLH-DSA-SHAKE-192s", .shake, 24, 63, 7, 9, 14, 17, 4, 39, 30, 7, 2, 3, 48, 96, 16224⟩,
    ⟨"SLH-DSA-SHA2-192f", .sha2, 24, 66, 22, 3, 8, 33, 4, 42, 33, 8, 1, 3, 48, 96, 35664⟩,
-   ⟨"SLH-DSA-SHAKE-192f", .shake, 24, 66, 22, 3, 8, 33, 4, 42, 33, 8, 1, 3, 48, 96, 35664⟩,
    ⟨"SLH-DSA-SHA2-256s", .sha2, 32, 64, 8, 8, 14, 22, 4, 47, 39, 7, 1, 5, 64, 128, 29792⟩,
-   ⟨"SLH-DSA-SHAKE-256s", .shake, 32, 64, 8, 8, 14, 22, 4, 47, 39, 7, 1, 5, 64, 128, 29792⟩,
    ⟨"SLH-DSA-SHA2-256f", .sha2, 32, 68, 17, 4, 9, 35, 4, 49, 40, 8, 1, 5, 64, 128, 49856⟩,
+   ⟨"SLH-DSA-SHAKE-128s", .shake, 16, 63, 7, 9, 12, 14, 4, 30, 21, 7, 2, 1, 32, 64, 7856⟩,
+   ⟨"SLH-DSA-SHAKE-128f", .shake, 16, 66, 22, 3, 6, 33, 4, 34, 25, 8, 1, 1, 32, 64, 17088⟩,
+   ⟨"SLH-DSA-SHAKE-192s", .shake, 24, 63, 7, 9, 14, 17, 4, 39, 30, 7, 2, 3, 48, 96, 16224⟩,
+   ⟨"SLH-DSA-SHAKE-192f", .shake, 24, 66, 22, 3, 8, 33, 4, 42, 33, 8, 1, 3, 48, 96, 35664⟩,
+   ⟨"SLH-DSA-SHAKE-256s", .shake, 32, 64, 8, 8, 14, 22, 4, 47, 39, 7, 1, 5, 64, 128, 29792⟩,
    ⟨"SLH-DSA-SHAKE-256f", .shake, 32, 68, 17, 4, 9, 35, 4, 49, 40, 8, 1, 5, 64, 128, 49856⟩]
 
-def observedRows : List ExpectedRow := ParameterSet.all.map fun s =>
+def observedRows : List ExpectedRow := FipsParameterSet.all.map fun s =>
   let p := s.params
-  let q := s.profile
-  ⟨q.name, q.family, p.n, p.h, p.d, p.hp, p.a, p.k, p.lgw, p.m,
-    p.digestBytes, p.treeIdxBytes, p.leafIdxBytes, q.category,
+  ⟨s.name, s.hashFamily, p.n, p.h, p.d, p.hp, p.a, p.k, p.lgw, p.m,
+    p.digestBytes, p.treeIdxBytes, p.leafIdxBytes, s.category,
     p.publicKeyBytes, p.secretKeyBytes, p.signatureBytes⟩
 
 def ensure (label : String) (condition : Bool) : IO Unit :=
@@ -65,19 +64,22 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 
 def testParameters : IO Unit := do
   ensure "all twelve FIPS Table 2 rows" (observedRows == expectedRows)
-  ensure "Fintype and ordered-list cardinalities" (ParameterSet.all.length == 12)
-  ensure "legacy reduced set excluded" (!slhdsaSha2_128_24.isApproved)
-  for s in ParameterSet.all do
-    ensure s!"approved profile {s.profile.name}" s.params.isApproved
-    ensure s!"approved parameter lookup {s.profile.name}"
-      (match ParameterSet.ofParams s.profile.family s.params with
+  ensure "canonical ordered-list cardinality" (FipsParameterSet.all.length == 12)
+  ensure "limited profile excluded from SHA2 FIPS lookup"
+    (FipsParameterSet.ofParams .sha2 slhdsaSha2_128_24 == none)
+  ensure "limited profile excluded from SHAKE FIPS lookup"
+    (FipsParameterSet.ofParams .shake slhdsaSha2_128_24 == none)
+  for s in FipsParameterSet.all do
+    ensure s!"valid profile {s.name}" (decide s.params.Valid)
+    ensure s!"FIPS parameter lookup {s.name}"
+      (match FipsParameterSet.ofParams s.hashFamily s.params with
        | some found => found == s
        | none => false)
   ensure "family-aware lookup selects SHAKE for the paired primary parameters"
-    (ParameterSet.ofParams .shake ParameterSet.SLHDSA_SHA2_128f.params ==
+    (FipsParameterSet.ofParams .shake FipsParameterSet.SLHDSA_SHA2_128f.params ==
       some .SLHDSA_SHAKE_128f)
   ensure "parameter lookup rejects a malformed row"
-    (ParameterSet.ofParams .sha2 ⟨16, 63, 7, 8, 12, 14, 4⟩ == none)
+    (FipsParameterSet.ofParams .sha2 ⟨16, 63, 7, 8, 12, 14, 4⟩ == none)
 
 def testEndian : IO Unit := do
   ensure "toInt MSB-first fixture" (toInt [0x12, 0x34, 0x56] == 0x123456)
@@ -191,33 +193,33 @@ def testAddress : IO Unit := do
     | .error _ => throw (IO.userError s!"S03 data/codec check failed: {label} rejected")
 
 def testFixedCodecs : IO Unit := do
-  for s in ParameterSet.all do
+  for s in FipsParameterSet.all do
     let p := s.params
     let pk := List.replicate p.publicKeyBytes (0 : Byte)
     let sk := List.replicate p.secretKeyBytes (0 : Byte)
     let sig := List.replicate p.signatureBytes (0 : Byte)
-    ensure s!"public key exact {s.profile.name}"
+    ensure s!"public key exact {s.name}"
       (match decodePublicKey s pk with | .ok bytes => bytes.toList == pk | _ => false)
-    ensure s!"secret key exact {s.profile.name}"
+    ensure s!"secret key exact {s.name}"
       (match decodeSecretKey s sk with | .ok bytes => bytes.toList == sk | _ => false)
-    ensure s!"signature exact {s.profile.name}"
+    ensure s!"signature exact {s.name}"
       (match decodeSignature s sig with | .ok bytes => bytes.toList == sig | _ => false)
-    ensure s!"public key short {s.profile.name}"
+    ensure s!"public key short {s.name}"
       (decodePublicKey s (pk.drop 1) ==
         .error (.invalidLength p.publicKeyBytes (p.publicKeyBytes - 1)))
-    ensure s!"public key long {s.profile.name}"
+    ensure s!"public key long {s.name}"
       (decodePublicKey s (0 :: pk) ==
         .error (.invalidLength p.publicKeyBytes (p.publicKeyBytes + 1)))
-    ensure s!"secret key short {s.profile.name}"
+    ensure s!"secret key short {s.name}"
       (decodeSecretKey s (sk.drop 1) ==
         .error (.invalidLength p.secretKeyBytes (p.secretKeyBytes - 1)))
-    ensure s!"secret key long {s.profile.name}"
+    ensure s!"secret key long {s.name}"
       (decodeSecretKey s (0 :: sk) ==
         .error (.invalidLength p.secretKeyBytes (p.secretKeyBytes + 1)))
-    ensure s!"signature short {s.profile.name}"
+    ensure s!"signature short {s.name}"
       (decodeSignature s (sig.drop 1) ==
         .error (.invalidLength p.signatureBytes (p.signatureBytes - 1)))
-    ensure s!"signature long {s.profile.name}"
+    ensure s!"signature long {s.name}"
       (decodeSignature s (0 :: sig) ==
         .error (.invalidLength p.signatureBytes (p.signatureBytes + 1)))
 

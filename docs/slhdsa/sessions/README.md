@@ -20,6 +20,11 @@ Current records:
 - [S04 — primitive interfaces and SHA2/SHAKE instantiations](S04-primitives-sha2-shake.md):
   implementation candidate from exact accepted S03 r2; initial independent review of exact commit
   `7f115c0e...` failed only with S04-001. The vector-evidence repair descends from the immutable FAIL
-  commit and is pending independent S04 r1 review.
+  commit. Independent r1 accepted exact repair commit `00f1416e...` with zero findings; its review
+  artifact is committed in exact accepted head `ca84e4f1...`.
+- [B01 — upstream architecture and parameter boundary integration](B01-upstream-boundary-integration.md):
+  history-preserving reconciliation of accepted S00--S04 with pinned upstream main and PR #593.
+  This record hands an unpushed candidate to a fresh independent boundary reviewer; it does not
+  self-certify acceptance or start S05.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true

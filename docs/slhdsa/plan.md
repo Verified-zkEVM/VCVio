@@ -92,7 +92,7 @@ without named owner approval.
   reversed-argument formula in the S03 record. Independent r2 accepted exact repair commit
   `79b42bf9662dcfe4336401096e9bd4ae0ed924d3` with zero findings.
 
-### S04 — primitive interfaces and SHA2/SHAKE instantiations (initial review FAIL; repair pending r1)
+### S04 — primitive interfaces and SHA2/SHAKE instantiations (r1 PASS)
 
 - Inputs: S03; FIPS Section 11; pinned hash standards/vectors.
 - Allowed: `Primitives`, `Concrete/Sha2`, `Concrete/Keccak` or new SHAKE/concrete modules.
@@ -104,7 +104,28 @@ without named owner approval.
   exact axiom-footprint elaboration, inherited regressions, no unreviewed extern; review
   `reviews/S04-primitives-review-r1.md`. Initial review S04-001 rejected the first candidate because
   four active SHAKE boundary oracles were absent from the projection; the repair pins and binds
-  exactly those records.
+  exactly those records. Independent r1 accepted exact repair commit
+  `00f1416ea9b8e0eb4cabd1fe28c7029beef56c34` with zero findings; the review artifact is committed
+  at the accepted boundary head `ca84e4f18610ba40dadd44466cd987507a199c24`.
+
+### B01 — upstream architecture and parameter boundary integration
+
+- Inputs: accepted S04 head `ca84e4f18610ba40dadd44466cd987507a199c24`; exact upstream main
+  `a9dd3bd2895d2ca8bbe02af480c1df7c3be64e24`; exact PR #593 head
+  `0caf09ca831ba0686db549b596ddfeb121de69ac`.
+- Scope: history-preserving merges and compatibility migration only. This is a boundary integration,
+  not S05 implementation; it adds no new WOTS+ construction behavior.
+- Canonical ownership: upstream owns `CorePrimitives`, `AdrsKey`, `Thash`, `PublicHash`, the
+  oracle-parametric WOTS/XMSS/FORS/HT/Scheme architecture, and Lean 4.33.1. PR #593 owns raw
+  `Params.Valid`, `ValidatedParams`, `FipsParameterSet`, and `LimitedParameterSet`. Local S03/S04
+  family/category lookup, component-size facts, concrete dispatch, and tests are compatibility
+  adapters over those definitions.
+- Deferred concurrent work: PR #594 (`c0930e49...`) owns final-validity tweakable-hash games for
+  S11+; PR #595 (`be823fbb...`) owns digest and hypertree positions for S08/S09; PR #596
+  (`7068fd99...`) owns DSPR/OpenPRE/UD-C/ITSR games for S11--S16 and is coordinated with #594.
+  None is merged here, and S05 must not duplicate their deliverables.
+- Record and review: `sessions/B01-upstream-boundary-integration.md`; a fresh independent boundary
+  review must accept the exact integration head before it is pushed or S05 begins.
 
 ### S05 — WOTS+ construction
 

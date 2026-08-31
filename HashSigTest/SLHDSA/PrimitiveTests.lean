@@ -222,7 +222,7 @@ private def profileAddress : Adrs :=
   { layer := 7, tree := 0x0102030405060708, type := AddrType.forsTree.toCode,
     word1 := 1, word2 := 2, word3 := 3 }
 
-private def profileExpected : ParameterSet → String
+private def profileExpected : FipsParameterSet → String
   | .SLHDSA_SHA2_128s => "126bdad7c0379199d768a61d767412a505785bfe348f013e97720384938e661e"
   | .SLHDSA_SHAKE_128s => "8c5c29c4ecfd8be0f2ab778a4d869846d3861b6a6639e6c54e9be8c66334bf3e"
   | .SLHDSA_SHA2_128f => "a70faae3a69a68a6dec37a659dc1c48baf005f868eb2a58a6dcb00a25f927bed"
@@ -236,7 +236,7 @@ private def profileExpected : ParameterSet → String
   | .SLHDSA_SHA2_256f => "9352f0249a322a2a1397fcfd1cfca97200d1aefba55a083587cf42988e72c73b"
   | .SLHDSA_SHAKE_256f => "56217933da0de7175fed5d132c030717eea4cc9d9b827ae3e234bce79a0973d8"
 
-private def profileOutputs (set : ParameterSet) : ByteArray :=
+private def profileOutputs (set : FipsParameterSet) : ByteArray :=
   let p := set.params
   let pkSeed := sequenceBytes 0 p.n
   let skSeed := sequenceBytes 0x20 p.n
@@ -248,7 +248,7 @@ private def profileOutputs (set : ParameterSet) : ByteArray :=
   let tl := [sequenceBytes 0xc0 p.n, sequenceBytes 0xd0 p.n, sequenceBytes 0xe0 p.n]
   let message : List Byte := [0xde, 0xad, 0xbe, 0xef, 0, 1]
   let append (out : ByteArray) (value : Bytes p.n) := out ++ bytesToByteArray value
-  match set.profile.family with
+  match set.hashFamily with
   | .sha2 =>
       let f := checkedNodeOrZero (sha2FChecked pkSeed profileAddress left)
       let h := checkedNodeOrZero (sha2HChecked pkSeed profileAddress left right)
@@ -292,11 +292,11 @@ def testAddressAndProfiles : IO Unit := do
     (match Sha2Address.ofAdrs noncanonical with
      | .error error => error == .noncanonicalAddress
      | .ok _ => false)
-  for set in ParameterSet.all do
+  for set in FipsParameterSet.all do
     let outputs := profileOutputs set
-    ensure s!"six output widths {set.profile.name}"
+    ensure s!"six output widths {set.name}"
       (outputs.size == 5 * set.params.n + set.params.m)
-    checkHex s!"six exact grammars {set.profile.name}" (sha256 outputs) (profileExpected set)
+    checkHex s!"six exact grammars {set.name}" (sha256 outputs) (profileExpected set)
 
 def run : IO Unit := do
   testProjection

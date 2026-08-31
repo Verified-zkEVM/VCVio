@@ -33,7 +33,11 @@ namespace SLHDSA.Security
 
 inductive PrimitiveRole where
   | prf | prfMsg | f | h | tl | hmsg
-deriving Repr, DecidableEq, Fintype
+deriving Repr, DecidableEq
+
+instance : Fintype PrimitiveRole where
+  elems := {.prf, .prfMsg, .f, .h, .tl, .hmsg}
+  complete role := by cases role <;> simp
 
 inductive MasterTermRole where
   | skgPrf
@@ -48,7 +52,12 @@ inductive MasterTermRole where
   | wotsFPreC
   | wotsTlTcrC
   | xmssHTcrC
-deriving Repr, DecidableEq, Fintype
+deriving Repr, DecidableEq
+
+instance : Fintype MasterTermRole where
+  elems := {.skgPrf, .mkgPrfMsg, .hmsgItsr, .forsFDspr, .forsFTcr, .forsHTcrC,
+    .forsTlTcrC, .wotsFUdC, .wotsFTcrC, .wotsFPreC, .wotsTlTcrC, .xmssHTcrC}
+  complete role := by cases role <;> simp
 
 inductive TargetRole where
   | forsF
@@ -59,7 +68,11 @@ inductive TargetRole where
   | wotsFPre
   | wotsTl
   | xmssH
-deriving Repr, DecidableEq, Fintype
+deriving Repr, DecidableEq
+
+instance : Fintype TargetRole where
+  elems := {.forsF, .forsH, .forsTl, .wotsFUd, .wotsFTcr, .wotsFPre, .wotsTl, .xmssH}
+  complete role := by cases role <;> simp
 
 @[simp] theorem primitiveRole_card : Fintype.card PrimitiveRole = 6 := by decide
 @[simp] theorem masterTermRole_card : Fintype.card MasterTermRole = 12 := by decide
@@ -317,14 +330,14 @@ the generic ITSR challenger supplies only the fresh message-randomizer oracle. -
 structure PostHopITSRAdversary {p : Params} (prims : Primitives p) where
   State : Type
   setup : ProbComp State
-  publicKey : State → PublicKey prims
+  publicKey : State → PublicKeyCore prims.core
   find : State → OracleComp (MessageInput →ₒ prims.Y) (ITSRInput prims)
 
 def itsrDefaultImpl {p : Params} (prims : Primitives p) [SampleableType prims.Y] :
     QueryImpl (MessageInput →ₒ prims.Y) ProbComp
   | _ => $ᵗ prims.Y
 
-def itsrOracleHistory {p : Params} {prims : Primitives p} (pk : PublicKey prims)
+def itsrOracleHistory {p : Params} {prims : Primitives p} (pk : PublicKeyCore prims.core)
     (encode : MessageInput → List Byte) :
     QueryLog (MessageInput →ₒ prims.Y) → List (ITSRRecord prims) :=
   List.map fun entry => match entry with
@@ -333,7 +346,7 @@ def itsrOracleHistory {p : Params} {prims : Primitives p} (pk : PublicKey prims)
         digest := prims.Hmsg randomizer pk.pkSeed pk.pkRoot (encode request)
       }
 
-def itsrChallengeForgery {p : Params} {prims : Primitives p} (pk : PublicKey prims)
+def itsrChallengeForgery {p : Params} {prims : Primitives p} (pk : PublicKeyCore prims.core)
     (encode : MessageInput → List Byte) (input : ITSRInput prims) : ITSRRecord prims :=
   {
     input := input

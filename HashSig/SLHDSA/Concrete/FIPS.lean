@@ -111,12 +111,20 @@ end Sha2Address
 /-! ## SHA2 family -/
 
 /-- FIPS's SHA2 prefix for `F` and `PRF`, which always use the SHA-256 block width. -/
+def sha2Prefix256Key {n : ℕ} (pkSeed : Bytes n) (address : Bytes 22) : ByteArray :=
+  bytesToByteArray pkSeed ++ zeroByteArray (64 - n) ++ bytesToByteArray address
+
+/-- SHA-256 prefix from a proof-carrying structural address. -/
 def sha2Prefix256 {n : ℕ} (pkSeed : Bytes n) (address : Sha2Address) : ByteArray :=
-  bytesToByteArray pkSeed ++ zeroByteArray (64 - n) ++ bytesToByteArray address.bytes
+  sha2Prefix256Key pkSeed address.bytes
 
 /-- FIPS's SHA2 prefix for category-3/5 `H` and `T_l`, using the SHA-512 block width. -/
+def sha2Prefix512Key {n : ℕ} (pkSeed : Bytes n) (address : Bytes 22) : ByteArray :=
+  bytesToByteArray pkSeed ++ zeroByteArray (128 - n) ++ bytesToByteArray address
+
+/-- SHA-512 prefix from a proof-carrying structural address. -/
 def sha2Prefix512 {n : ℕ} (pkSeed : Bytes n) (address : Sha2Address) : ByteArray :=
-  bytesToByteArray pkSeed ++ zeroByteArray (128 - n) ++ bytesToByteArray address.bytes
+  sha2Prefix512Key pkSeed address.bytes
 
 /-- Exact checked SHA2 `F` grammar. -/
 def sha2FChecked {n : ℕ} (pkSeed : Bytes n) (address : Adrs) (message : Bytes n) :
@@ -181,6 +189,26 @@ def checkedNodeOrZero {n : ℕ} (result : Except CodecError (Bytes n)) : Bytes n
   | .ok value => value
   | .error _ => zeroBytes n
 
+/-- Canonical SHA2 address key for the total abstract interface. Checked public entry points
+retain the rejection result; this projection maps out-of-domain structural addresses to zero. -/
+def sha2AdrsKey (address : Adrs) : Bytes 22 :=
+  match address.compressSha2Checked with
+  | .ok value => value
+  | .error _ => zeroBytes 22
+
+/-- The single variable-arity SHA2 tweakable-hash collection. FIPS 205 uses SHA-256 for the
+singleton `F` view in every category; larger arities use SHA-256 at `n = 16` and SHA-512 at
+`n = 24, 32`. -/
+def sha2Thash (p : Params) (pkSeed : Bytes p.n) (address : Bytes 22)
+    (messages : List (Bytes p.n)) : Bytes p.n :=
+  let payload := concatBytes messages
+  if messages.length = 1 then
+    byteArrayPrefixOrZero (sha256 (sha2Prefix256Key pkSeed address ++ payload)) p.n
+  else if p.n = 16 then
+    byteArrayPrefixOrZero (sha256 (sha2Prefix256Key pkSeed address ++ payload)) p.n
+  else
+    byteArrayPrefixOrZero (sha512 (sha2Prefix512Key pkSeed address ++ payload)) p.n
+
 /-- The SHA2 primitive bundle at byte width `p.n`. FIPS-approved callers use this only through
 `approvedPrimitives`, and construction address-range proofs are successor-session obligations. -/
 def sha2Primitives (p : Params) : Primitives p where
@@ -188,9 +216,9 @@ def sha2Primitives (p : Params) : Primitives p where
   SkSeed := Bytes p.n
   SkPrf := Bytes p.n
   Y := Bytes p.n
-  F := fun pkSeed address message => checkedNodeOrZero (sha2FChecked pkSeed address message)
-  H := fun pkSeed address left right => checkedNodeOrZero (sha2HChecked pkSeed address left right)
-  Tl := fun pkSeed address message => checkedNodeOrZero (sha2TlChecked pkSeed address message)
+  AdrsKey := Bytes 22
+  adrsToKey := sha2AdrsKey
+  Thash := sha2Thash p
   PRF := fun pkSeed skSeed address => checkedNodeOrZero (sha2PRFChecked pkSeed skSeed address)
   PRFmsg := sha2PRFmsg
   Hmsg := sha2Hmsg p
@@ -200,6 +228,9 @@ def sha2Primitives (p : Params) : Primitives p where
 
 /-- Full 32-byte ADRS serialization used by every SHAKE primitive. -/
 def shakeAddress (address : Adrs) : ByteArray := ByteArray.mk address.toBytes.toArray
+
+/-- SHAKE address payload from the canonical fixed-width key. -/
+def shakeAddressKey (address : Bytes 32) : ByteArray := bytesToByteArray address
 
 /-- SHAKE-family `F`. -/
 def shakeF {n : ℕ} (pkSeed : Bytes n) (address : Adrs) (message : Bytes n) : Bytes n :=
@@ -232,15 +263,21 @@ def shakeHmsg (p : Params) (randomizer pkSeed pkRoot : Bytes p.n)
   byteArrayPrefixOrZero (shake256 (bytesToByteArray randomizer ++ bytesToByteArray pkSeed ++
     bytesToByteArray pkRoot ++ ByteArray.mk message.toArray) p.m) p.m
 
+/-- The single variable-arity SHAKE256 tweakable-hash collection. -/
+def shakeThash (p : Params) (pkSeed : Bytes p.n) (address : Bytes 32)
+    (messages : List (Bytes p.n)) : Bytes p.n :=
+  byteArrayPrefixOrZero (shake256 (bytesToByteArray pkSeed ++ shakeAddressKey address ++
+    concatBytes messages) p.n) p.n
+
 /-- The SHAKE256 primitive bundle at byte width `p.n`. -/
 def shakePrimitives (p : Params) : Primitives p where
   PkSeed := Bytes p.n
   SkSeed := Bytes p.n
   SkPrf := Bytes p.n
   Y := Bytes p.n
-  F := shakeF
-  H := shakeH
-  Tl := shakeTl
+  AdrsKey := Bytes 32
+  adrsToKey := Adrs.toVector
+  Thash := shakeThash p
   PRF := shakePRF
   PRFmsg := shakePRFmsg
   Hmsg := shakeHmsg p
@@ -249,22 +286,22 @@ def shakePrimitives (p : Params) : Primitives p where
 /-! ## All approved profiles and byte coherence -/
 
 /-- Select the exact FIPS primitive family for one of the twelve approved parameter names. -/
-def approvedPrimitives (set : ParameterSet) : Primitives set.params :=
-  match set.profile.family with
+def approvedPrimitives (set : FipsParameterSet) : Primitives set.params :=
+  match set.hashFamily with
   | .sha2 => sha2Primitives set.params
   | .shake => shakePrimitives set.params
 
 /-- Fixed-width byte nodes satisfy the abstract representation-coherence boundary. -/
-theorem sha2Primitives_byteLaws (p : Params) : (sha2Primitives p).ByteLaws :=
+theorem sha2Primitives_byteLaws (p : Params) : (sha2Primitives p).core.ByteLaws :=
   ⟨fun _ _ h => h⟩
 
 /-- Fixed-width byte nodes satisfy the abstract representation-coherence boundary. -/
-theorem shakePrimitives_byteLaws (p : Params) : (shakePrimitives p).ByteLaws :=
+theorem shakePrimitives_byteLaws (p : Params) : (shakePrimitives p).core.ByteLaws :=
   ⟨fun _ _ h => h⟩
 
 /-- Every approved SHA2/SHAKE bundle satisfies byte coherence. -/
-theorem approvedPrimitives_byteLaws (set : ParameterSet) :
-    (approvedPrimitives set).ByteLaws := by
+theorem approvedPrimitives_byteLaws (set : FipsParameterSet) :
+    (approvedPrimitives set).core.ByteLaws := by
   cases set <;> exact ⟨fun _ _ h => h⟩
 
 end SLHDSA.Concrete

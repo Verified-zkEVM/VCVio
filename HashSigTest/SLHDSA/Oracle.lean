@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.Concrete.Instance
+import all Mathlib.Data.Nat.Digits.Lemmas
 
 /-!
 # Producer canaries for the SLH-DSA public-hash collection
@@ -122,12 +123,17 @@ example :
   · change shaAdrsKey Adrs.zero = shaAdrsKey (Adrs.zero.setLayerAddress 256)
     apply Vector.toArray_inj.mp
     simpa [shaAdrsKey] using
-      (show Adrs.zero.compressSha2 = (Adrs.zero.setLayerAddress 256).compressSha2 by decide)
+      (show Adrs.zero.compressSha2 =
+        (Adrs.zero.setLayerAddress 256).compressSha2 by
+          norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Adrs.zero,
+            Adrs.setLayerAddress])
   · change shaAdrsKey Adrs.zero = shaAdrsKey (Adrs.zero.setTreeAddress (2 ^ 64))
     apply Vector.toArray_inj.mp
     simpa [shaAdrsKey] using
       (show Adrs.zero.compressSha2 =
-        (Adrs.zero.setTreeAddress (2 ^ 64)).compressSha2 by decide)
+        (Adrs.zero.setTreeAddress (2 ^ 64)).compressSha2 by
+          norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Adrs.zero,
+            Adrs.setTreeAddress])
 
 /-- Every retained SHA-2 address field is observable in the compressed key. -/
 example :
@@ -137,6 +143,46 @@ example :
     Adrs.zero.compressSha2 ≠ (Adrs.zero.setKeyPairAddress 1).compressSha2 ∧
     Adrs.zero.compressSha2 ≠ (Adrs.zero.setChainAddress 1).compressSha2 ∧
     Adrs.zero.compressSha2 ≠ (Adrs.zero.setHashAddress 1).compressSha2 := by
-  decide
+  constructor
+  · intro h
+    have h' := congrArg (fun xs : List Byte => xs[0]?) h
+    norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Nat.digitsAppend, Adrs.zero,
+      Adrs.setLayerAddress] at h'
+    have := congrArg UInt8.toNat h'
+    norm_num [UInt8.toNat_ofNat] at this
+  constructor
+  · intro h
+    have h' := congrArg (fun xs : List Byte => xs[8]?) h
+    norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Nat.digitsAppend, Adrs.zero,
+      Adrs.setTreeAddress] at h'
+    have := congrArg UInt8.toNat h'
+    norm_num [UInt8.toNat_ofNat] at this
+  constructor
+  · intro h
+    have h' := congrArg (fun xs : List Byte => xs[9]?) h
+    norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Nat.digitsAppend, AddrType.toCode,
+      Adrs.zero, Adrs.setTypeAndClear] at h'
+    have := congrArg UInt8.toNat h'
+    norm_num [UInt8.toNat_ofNat] at this
+  constructor
+  · intro h
+    have h' := congrArg (fun xs : List Byte => xs[13]?) h
+    norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Nat.digitsAppend, Adrs.zero,
+      Adrs.setKeyPairAddress] at h'
+    have := congrArg UInt8.toNat h'
+    norm_num [UInt8.toNat_ofNat] at this
+  constructor
+  · intro h
+    have h' := congrArg (fun xs : List Byte => xs[17]?) h
+    norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Nat.digitsAppend, Adrs.zero,
+      Adrs.setChainAddress] at h'
+    have := congrArg UInt8.toNat h'
+    norm_num [UInt8.toNat_ofNat] at this
+  · intro h
+    have h' := congrArg (fun xs : List Byte => xs[21]?) h
+    norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Nat.digitsAppend, Adrs.zero,
+      Adrs.setHashAddress] at h'
+    have := congrArg UInt8.toNat h'
+    norm_num [UInt8.toNat_ofNat] at this
 
 end SLHDSA.PublicHashTest

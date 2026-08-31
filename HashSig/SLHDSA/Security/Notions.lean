@@ -138,7 +138,7 @@ structure ITSRRecord {p : Params} (prims : Primitives p) where
   digest : Bytes p.m
 
 /-- A recorded digest is the result of the attacked key's actual `H_msg` function. -/
-def ITSRRecord.Coherent {p : Params} {prims : Primitives p} (pk : PublicKey prims)
+def ITSRRecord.Coherent {p : Params} {prims : Primitives p} (pk : PublicKeyCore prims.core)
     (encode : MessageInput → List Byte) (record : ITSRRecord prims) : Prop :=
   record.digest = prims.Hmsg record.input.randomizer pk.pkSeed pk.pkRoot
     (encode record.input.request)
@@ -151,7 +151,7 @@ def itsrHistoryTargets {p : Params} {prims : Primitives p} :
 /-- ITSR success: a fresh `(randomizer, request)` pair selects only FORS targets already
 interleaved among prior honest digest outputs. -/
 def ITSRBreak {p : Params} {prims : Primitives p} [DecidableEq prims.Y]
-    (pk : PublicKey prims) (encode : MessageInput → List Byte)
+    (pk : PublicKeyCore prims.core) (encode : MessageInput → List Byte)
     (history : List (ITSRRecord prims)) (forgery : ITSRRecord prims) : Prop :=
   (∀ record ∈ history, record.Coherent pk encode) ∧ forgery.Coherent pk encode ∧
     (forgery.input.randomizer, forgery.input.request) ∉

@@ -28,18 +28,17 @@ including documentation overclaim, is FAIL and blocks all successor sessions.
 
 ## Current allowlist and monotonicity
 
-The only permitted `sorry` under `HashSig/**` is the body of
-`SLHDSA.slhdsa_euf_cma_security`, declaration anchor `HashSig/SLHDSA/Security.lean:150`, token line
-175 at the S00 commit. No new path/declaration may enter the allowlist. Sessions may only shrink it;
-moving or splitting the sorry is a failure. Completed load-bearing roots must report zero `sorryAx`
-even while the unrelated placeholder remains importable elsewhere.
+No `sorry` is now permitted under `HashSig/**`. The S00 allowlist contained only the body of
+`SLHDSA.slhdsa_euf_cma_security`; upstream main removed that deferred theorem during B01, so the
+monotone allowlist is empty. No path or declaration may re-enter it, and all load-bearing roots
+must report zero `sorryAx`.
 
 At S00 no source/user admission constructor, axiom, unsafe/extern/partial declaration, runtime
 implementation override, initializer/computed-field entry, or false linter suppression is permitted
 under `HashSig/**`. The authoritative full gate audits the elaborated environment and attributes a
 declaration to HashSig by its defining module (`HashSig` or `HashSig.*`), not by namespace. It permits
-exactly the three standard transitive axioms above, plus `sorryAx` only for the exact security
-placeholder; all other self, generated, or externally owned axiom dependencies fail. It also rejects
+exactly the three standard transitive axioms above; all other self, generated, or externally owned
+axiom dependencies fail. It also rejects
 unsafe/source-partial constants, extern attributes, regular/builtin initializer entries, and
 `implemented_by` overrides. For each imported HashSig module it rejects ordinary and IR
 persistent-extension entries in the regular/builtin initializer, extern, and `implemented_by`
@@ -57,7 +56,7 @@ identity, and leaves the side-effect
 sentinel absent. The authoritative HashSig audit must use that static import path and must not
 source-import HashSig.
 
-The only partial constants accepted by the semantic gate are seven exact Lean 4.32.2 compiler
+The only partial constants accepted by the semantic gate are five exact Lean 4.33.1 compiler
 `._unsafe_rec` auxiliaries listed in `validation.md` and `PolicyAudit.lean`. Each must retain the
 compiler-recursion name relation, its parent's HashSig defining module, a present safe/non-partial
 parent, and no unsafe/extern/init/override/axiom/`sorryAx` surface. The source lexer still rejects the
