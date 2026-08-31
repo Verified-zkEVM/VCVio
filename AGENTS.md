@@ -260,6 +260,8 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **Query tracking / weighted cost / expected runtime**: [`docs/agents/query-tracking.md`](docs/agents/query-tracking.md)
 - **Honest computational-complexity design and implementation status**:
   [`docs/design/computational-complexity.md`](docs/design/computational-complexity.md)
+- **SLH-DSA general-`d` formalization, FIPS 205 conformance, KAT, and security stack plan**:
+  [`docs/design/slh-dsa-fips205-generalization.md`](docs/design/slh-dsa-fips205-generalization.md)
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)
