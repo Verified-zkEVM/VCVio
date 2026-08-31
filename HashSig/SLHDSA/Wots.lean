@@ -134,6 +134,40 @@ def wotsChainAdrs (adrs : Adrs) (i : ℕ) : Adrs :=
 def wotsPkAdrs (adrs : Adrs) : Adrs :=
   (adrs.setTypeAndClear .wotsPk).setKeyPairAddress adrs.getKeyPairAddress
 
+/-- A canonical narrow base address yields a canonical WOTS secret-key address whenever the
+chain index fits its four-byte field. -/
+theorem wotsSkAdrs_isCanonical (adrs : Adrs) (i : ℕ)
+    (hbase : adrs.isCanonical = true) (hi : Adrs.Fits 4 i = true) :
+    (wotsSkAdrs adrs i).isCanonical = true := by
+  rcases Adrs.fits_of_isCanonical adrs hbase with
+    ⟨hlayer, htree, _htype, hword1, _hword2, _hword3⟩
+  simp [wotsSkAdrs, Adrs.setTypeAndClear, Adrs.setKeyPairAddress,
+    Adrs.setChainAddress, Adrs.getKeyPairAddress, Adrs.isCanonical,
+    hlayer, htree, hword1, hi]
+  norm_num [Adrs.Fits, AddrType.toCode]
+
+/-- Every WOTS hash-step address is canonical when its chain and hash indices fit their
+four-byte fields. -/
+theorem wotsChainHashAdrs_isCanonical (adrs : Adrs) (i j : ℕ)
+    (hbase : adrs.isCanonical = true) (hi : Adrs.Fits 4 i = true)
+    (hj : Adrs.Fits 4 j = true) :
+    ((wotsChainAdrs adrs i).setHashAddress j).isCanonical = true := by
+  rcases Adrs.fits_of_isCanonical adrs hbase with
+    ⟨hlayer, htree, _htype, hword1, _hword2, _hword3⟩
+  simp [wotsChainAdrs, Adrs.setTypeAndClear, Adrs.setKeyPairAddress,
+    Adrs.setChainAddress, Adrs.setHashAddress, Adrs.getKeyPairAddress,
+    Adrs.isCanonical, hlayer, htree, hword1, hi, hj]
+  norm_num [Adrs.Fits, AddrType.toCode]
+
+/-- WOTS public-key compression preserves canonicality of a canonical base address. -/
+theorem wotsPkAdrs_isCanonical (adrs : Adrs) (hbase : adrs.isCanonical = true) :
+    (wotsPkAdrs adrs).isCanonical = true := by
+  rcases Adrs.fits_of_isCanonical adrs hbase with
+    ⟨hlayer, htree, _htype, hword1, _hword2, _hword3⟩
+  simp [wotsPkAdrs, Adrs.setTypeAndClear, Adrs.setKeyPairAddress,
+    Adrs.getKeyPairAddress, Adrs.isCanonical, hlayer, htree, hword1]
+  norm_num [Adrs.Fits, AddrType.toCode]
+
 /-! ### Message-to-digit derivation (FIPS 205 §5.2–5.4) -/
 
 /-- The `len1` base-`w` message digits of the node being signed, computed from the
