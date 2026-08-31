@@ -200,7 +200,7 @@ def slhSignInternalQueryBound (p : Params) : ℕ :=
 `k * (a + 1) + 1`, and the intrinsic XMSS path contributes exactly `h'`; no caller-controlled
 list length appears in the budget. -/
 def slhVerifyInternalQueryBound (p : Params) (core : CorePrimitives p)
-    (sig : SignatureCore p core) : ℕ :=
+    (_sig : SignatureCore p core) : ℕ :=
   1 + (p.k * (p.a + 1) + 1) +
     (p.len * (p.w - 1) + 1 + p.hp)
 
