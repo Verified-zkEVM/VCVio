@@ -378,6 +378,13 @@ noncomputable def strongUnforgeableAdv.sameMessageAdvantage
     (adv : strongUnforgeableAdv sigAlg) : ℝ≥0∞ :=
   Pr[= true | sameMessageStrongUnforgeableExp runtime adv]
 
+/-- Quantitative scheme property needed in addition to EUF-CMA for strong unforgeability: every
+adversary has at most `ε` probability of returning a new valid signature for a message previously
+submitted to the signing oracle. -/
+def SameMessageBinding (sigAlg : SignatureAlg (OracleComp spec) M PK SK S)
+    (runtime : ProbCompRuntime (OracleComp spec)) (ε : ℝ≥0∞) : Prop :=
+  ∀ adv : strongUnforgeableAdv sigAlg, adv.sameMessageAdvantage runtime ≤ ε
+
 omit [DecidableEq M] [DecidableEq S] in
 /-- **Generic SUF-to-EUF partition.** Every strong forgery either uses a message never queried
 to the signing oracle (an ordinary EUF-CMA forgery) or is a new valid signature for a previously
@@ -468,6 +475,19 @@ lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
   exact (probEvent_mono'' fun t h => by
     by_cases hm : t.2.2.1.wasQueried t.1 = true <;> simp_all).trans
       (probEvent_or_le (runtime.evalSPMF joint) _ _)
+
+omit [DecidableEq M] [DecidableEq S] in
+/-- SUF-CMA from EUF-CMA plus a quantitative same-message binding property. -/
+lemma strongUnforgeableAdv.advantage_le_euf_add_of_sameMessageBinding
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
+      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
+    {ε : ℝ≥0∞} (hbinding : sigAlg.SameMessageBinding runtime ε)
+    (adv : strongUnforgeableAdv sigAlg) :
+    adv.advantage runtime ≤ adv.toUnforgeableAdv.advantage runtime + ε :=
+  (adv.advantage_le_euf_add_sameMessage runtime h_pull).trans
+    (add_le_add le_rfl (hbinding adv))
 
 end strongUnforgeable
 
