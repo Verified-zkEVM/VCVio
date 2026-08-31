@@ -45,7 +45,7 @@ HOLDS="${PMF_BOUNDARY_HOLDS:-scripts/pmf_boundary_holds.tsv}"
 if [[ -n "${PMF_BOUNDARY_LIBS:-}" ]]; then
   read -r -a LIBS <<< "$PMF_BOUNDARY_LIBS"
 else
-  LIBS=(VCVio ToMathlib LatticeCrypto HashSig Examples VCVioWidgets)
+  LIBS=(VCVio VCVioCslib ToMathlib LatticeCrypto HashSig Examples VCVioWidgets)
 fi
 CURRENT="$(mktemp "${TMPDIR:-/tmp}/vcvio-pmf-boundary.XXXXXX")"
 trap 'rm -f "$CURRENT"' EXIT
@@ -151,10 +151,24 @@ if [[ "$MODE" != "ceiling" ]]; then
   if git rev-parse --verify --quiet "$COMPARE_BASE" >/dev/null; then
     git diff --name-only "$COMPARE_BASE"...HEAD -- "${LIBS[@]}" > "$CHANGED"
     BASE_TREE="$(mktemp -d "${TMPDIR:-/tmp}/vcvio-pmf-base-tree.XXXXXX")"
-    if ! git archive "$COMPARE_BASE" -- "${LIBS[@]}" | tar -x -C "$BASE_TREE"; then
-      echo "PMF/SPMF boundary: could not materialize base ref '$COMPARE_BASE'." >&2
-      exit 2
+    BASE_LIBS=()
+    for lib in "${LIBS[@]}"; do
+      if git cat-file -e "$COMPARE_BASE:$lib" 2>/dev/null; then
+        BASE_LIBS+=("$lib")
+      fi
+    done
+    if (( ${#BASE_LIBS[@]} > 0 )); then
+      if ! git archive "$COMPARE_BASE" -- "${BASE_LIBS[@]}" | tar -x -C "$BASE_TREE"; then
+        echo "PMF/SPMF boundary: could not materialize base ref '$COMPARE_BASE'." >&2
+        exit 2
+      fi
     fi
+    # A PR may introduce a new library. Give the base snapshot an empty tree for
+    # every such path so report mode compares it against zero instead of failing
+    # while materializing a path that cannot exist at the base revision.
+    for lib in "${LIBS[@]}"; do
+      mkdir -p "$BASE_TREE/$lib"
+    done
     count_tree "$BASE_TREE" "$BASE_COUNTS"
   else
     echo "PMF/SPMF boundary: base ref '$COMPARE_BASE' not found; ceiling only." >&2

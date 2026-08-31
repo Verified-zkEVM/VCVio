@@ -18,7 +18,7 @@ echo "# Building Project"
 # regressions, universe-polymorphism consumers). It is not a default target and is
 # not reachable from `Examples`, so build it explicitly — otherwise the local
 # workflow reproduces the CI blind spot that let two `grind` regressions through.
-lake build Examples VCVioTest
+lake build Examples VCVioCslib VCVioTest
 
 if [[ "$run_ffi" == true ]]; then
   echo "# Initializing native FFI submodules"
@@ -37,5 +37,5 @@ echo "# Linting Files"
 # `lake exe lint-style` resolves to Mathlib's text-based linter; pass the project
 # libraries explicitly so it lints all of them (the default would be only the
 # `@[default_target]` `VCVio` lib).
-lake exe lint-style ToMathlib VCVio Extern LatticeCrypto Examples VCVioWidgets Interop \
+lake exe lint-style ToMathlib VCVio VCVioCslib Extern LatticeCrypto Examples VCVioWidgets Interop \
   && echo "All files okay"

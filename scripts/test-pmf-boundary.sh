@@ -121,6 +121,14 @@ if ! grep -q 'standalone occurrence(s) vs' <<< "$report"; then
   exit 1
 fi
 
+# Report mode must also handle a library introduced after the comparison base.
+# Its base count is zero; the absent path is not an archive failure.
+mkdir -p NewLib
+printf '%s\n' 'def newLibrary : Nat := 0' > NewLib/Clean.lean
+git add NewLib/Clean.lean
+git commit -qm 'fixture: add a new clean library'
+PMF_BOUNDARY_LIBS='Lib NewLib' "$CHECKER" --report "$BASE" >/dev/null
+
 # Reaching zero is success, including on systems with ripgrep installed.
 mkdir -p CleanLib
 printf '%s\n' 'def clean : Nat := 0' > CleanLib/Clean.lean
