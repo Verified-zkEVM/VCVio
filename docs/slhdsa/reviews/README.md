@@ -82,11 +82,22 @@ files use the `-rN` suffix.
 - [S06 XMSS construction review r0](S06-xmss-review-r0.md): PASS with zero findings; exact
   candidate `91845ddfa8a704400600fdbf1c64f82659c4ca52` accepted, with the review artifact
   committed/pushed at `91e97865f4d1c91fac18172e41d91000142194de`.
+- [B02 PR #595 integration review r0](B02-pr595-integration-review-r0.md): PASS with zero findings;
+  exact candidate `fc06e95c24abcf0cc85f57b1426cedf9698a632e` accepted.
+- [B02 remote-reconciliation review r0](B02-remote-reconciliation-review-r0.md): PASS with zero
+  findings; the integration and reconciliation artifacts are accepted at exact reviewed head
+  `609185098935feea82f4d5b6fb7a9d62aefce9c9`.
+- [B03 concurrent-stack integration review r0](B03-concurrent-stack-integration-review-r0.md):
+  FAIL with zero blocking and three nonblocking active-document findings on candidate
+  `157855d88b9bc550de5964bdd90d112ee16ae9dd`.
+- [B03 concurrent-stack integration review r1](B03-concurrent-stack-integration-review-r1.md):
+  FAIL with zero blocking and one nonblocking reviews-index finding on docs-repair candidate
+  `83fe7849a1bc8dfc8f046034b067200ac36a494b`; a fresh successor review is required.
 
 S03 implementation payload `caefbda5e7ed7cd7a6efb80191307de7a39eea43` and its repairs are accepted
 through r2. The immutable initial S04 FAIL is committed at
 `69cdabd443bf9c6bf203f8f5bb36dd54cdc86803`; its S04-001 repair and the later B01 boundary are
-accepted as recorded above. B02 has no review artifact yet; its unpushed integration candidate
-requires a fresh independent review before S07.
+accepted as recorded above. B02 is accepted at the exact reviewed head recorded above; B03 remains
+unaccepted pending a zero-finding successor review of the current minimal index repair.
 
 focused-parser-partition: legacy=8; source-object-link=21; imports=4; sha-output-binding=9; path-cli=20; output-types=2; artifacts=130; wrong-srcdir=2; stale=2; fresh-root=5; query-output=5; replacement-cache=3; descriptor-lifecycle=6; descriptor-ownership=17; total=234; sha-cli-is-subset-of-path-cli=6; nominal-success-excluded=true
