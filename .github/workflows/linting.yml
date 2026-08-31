@@ -6,6 +6,12 @@ on:
     paths:
       - "ToMathlib/**/*.lean"
       - "VCVio/**/*.lean"
+      - "VCVioTest/SMDTPREFinalValidity.lean"
+      - "VCVioTest/SMDTTCRFinalValidity.lean"
+      - "VCVioTest/ITSR.lean"
+      - "VCVioTest/SMDTDSPR.lean"
+      - "VCVioTest/SMDTOpenPRE.lean"
+      - "VCVioTest/SMDTUDC.lean"
       - "Extern/**/*.lean"
       - "LatticeCrypto/**/*.lean"
       - "HashSig.lean"
@@ -27,6 +33,12 @@ on:
     paths:
       - "ToMathlib/**/*.lean"
       - "VCVio/**/*.lean"
+      - "VCVioTest/SMDTPREFinalValidity.lean"
+      - "VCVioTest/SMDTTCRFinalValidity.lean"
+      - "VCVioTest/ITSR.lean"
+      - "VCVioTest/SMDTDSPR.lean"
+      - "VCVioTest/SMDTOpenPRE.lean"
+      - "VCVioTest/SMDTUDC.lean"
       - "Extern/**/*.lean"
       - "LatticeCrypto/**/*.lean"
       - "HashSig.lean"
@@ -90,7 +102,9 @@ jobs:
       - name: Run text-based style linters
         run: >-
           lake exe lint-style ToMathlib VCVio Extern LatticeCrypto HashSig Examples VCVioWidgets
-          Interop HashSigTest.SLHDSA.Params HashSigTest.SLHDSA.Position
+          Interop VCVioTest.SMDTPREFinalValidity VCVioTest.SMDTTCRFinalValidity
+          VCVioTest.ITSR VCVioTest.SMDTDSPR VCVioTest.SMDTOpenPRE VCVioTest.SMDTUDC
+          HashSigTest.SLHDSA.Params HashSigTest.SLHDSA.Position
           HashSigTest.SLHDSA.Oracle HashSigTest.SLHDSA.Wots HashSigTest.SLHDSA.Xmss
           HashSigTest.SLHDSA.Fors HashSigTest.SLHDSA.Hypertree
           HashSigTest.SLHDSA.HypertreeGeneral HashSigTest.SLHDSA.Scheme
