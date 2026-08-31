@@ -16,9 +16,8 @@ the digest-derived FORS address, and invokes the general hypertree from the type
 position.  Key generation computes the root of the top-layer XMSS tree.
 
 The structured key and signature types are the canonical types owned by `SLHDSA.Scheme`; this
-module generalizes the algorithms without introducing a parallel wire representation.  The older
-`d = 1` algorithms remain available as an explicit compatibility surface while downstream
-security consumers migrate to this construction.
+module implements the algorithms without introducing a parallel wire representation.  The
+proof-required `d = 1` API is an explicit compatibility surface for depth-one security consumers.
 
 ## References
 

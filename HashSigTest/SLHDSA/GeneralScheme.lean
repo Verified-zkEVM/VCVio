@@ -64,8 +64,8 @@ example (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
         return (⟨pkSeed, pkRoot⟩, ⟨skSeed, skPrf, pkSeed, pkRoot⟩)) := by
   rfl
 
-/-- The old key-generation entry point is explicitly a `d = 1` compatibility wrapper for the
-general program, rather than a second unconstrained scheme. -/
+/-- The depth-one key-generation entry point is a compatibility wrapper for the general program,
+rather than a second unconstrained scheme. -/
 example (hd : vp.params.d = 1) (skSeed : core.SkSeed) (skPrf : core.SkPrf)
     (pkSeed : core.PkSeed) :
     (GeneralScheme.keygenInternalM vp core skSeed skPrf pkSeed :
@@ -74,6 +74,49 @@ example (hd : vp.params.d = 1) (skSeed : core.SkSeed) (skPrf : core.SkPrf)
       OracleComp (publicHashSpec core) (PublicKeyCore core × SecretKeyCore core)) :=
   DepthOneCompatibility.keygenInternalM_eq_slhKeygenInternalM
     vp core hd skSeed skPrf pkSeed
+
+/-- At depth one, general signing has the compatibility schedule followed by the mandatory
+discarded XMSS recovery. Removing that recovery changes this exact free-oracle program. -/
+example (hd : vp.params.d = 1) (msg : List Byte) (sk : SecretKeyCore core)
+    (addrnd : core.Y) :
+    ((do
+      let sig ← GeneralScheme.signInternalM vp core msg sk addrnd
+      return DepthOneCompatibility.schemeSignatureEquiv vp core hd sig) :
+        OracleComp (publicHashSpec core) (SignatureCore vp.params core)) =
+      ((do
+        let R := core.PRFmsg sk.skPrf addrnd msg
+        let digest ← PublicHash.hmsg core R sk.pkSeed sk.pkRoot msg
+        let parts := splitDigest vp.params digest
+        let forsSig ← forsSignM core parts.md.toList sk.skSeed sk.pkSeed parts.forsAdrs
+        let forsPk ←
+          forsPkFromSigM core forsSig parts.md.toList sk.pkSeed parts.forsAdrs
+        let htSig ←
+          htSignM core hd forsPk sk.skSeed sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
+        let _ ←
+          htPkFromSigM core hd forsPk htSig sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
+        return ⟨R, forsSig, htSig⟩) :
+          OracleComp (publicHashSpec core) (SignatureCore vp.params core)) :=
+  DepthOneCompatibility.signInternalM_toOneLayer_eq vp core hd msg sk addrnd
+
+/-- Under a fixed public-hash implementation, the discarded recovery leaves the returned
+depth-one signature unchanged. -/
+example (prims : Primitives vp.params) (hd : vp.params.d = 1)
+    (msg : List Byte) (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
+    DepthOneCompatibility.schemeSignatureEquiv vp prims.core hd
+        (GeneralScheme.signInternal vp prims msg sk addrnd) =
+      slhSignInternal hd prims msg sk addrnd :=
+  DepthOneCompatibility.signInternal_toOneLayer_eq vp prims hd msg sk addrnd
+
+/-- General depth-one verification is exactly the compatibility verification program. -/
+example (hd : vp.params.d = 1) [DecidableEq core.Y]
+    (msg : List Byte) (sig : GeneralScheme.SignatureCore vp core)
+    (pk : PublicKeyCore core) :
+    (GeneralScheme.verifyInternalM vp core msg sig pk :
+      OracleComp (publicHashSpec core) Bool) =
+    (slhVerifyInternalM hd core msg
+      (DepthOneCompatibility.schemeSignatureEquiv vp core hd sig) pk :
+        OracleComp (publicHashSpec core) Bool) :=
+  DepthOneCompatibility.verifyInternalM_eq_slhVerifyInternalM vp core hd msg sig pk
 
 /-- Algorithm 19 retains every digest output and passes the typed parts to the general
 hypertree, rather than resetting the tree address to zero. -/

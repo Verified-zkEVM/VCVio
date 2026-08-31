@@ -15,7 +15,7 @@ The compatibility specialization of the SLH-DSA signature scheme to parameters s
 `d = 1`, assembled from FORS (`HashSig.SLHDSA.Fors`) and the single-layer hypertree
 (`HashSig.SLHDSA.Hypertree`). The general Algorithms 18--20 in
 `HashSig.SLHDSA.GeneralScheme` are the canonical scheme path. These wrappers preserve the
-established one-layer API for security developments while making the restriction explicit.
+explicit depth-one API required by specialized security developments.
 
 The compatibility programs depend only on `CorePrimitives` and issue `H_msg` and every tweakable
 hash as an explicit `HasQuery` operation:

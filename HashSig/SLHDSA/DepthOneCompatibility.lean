@@ -10,12 +10,12 @@ public import HashSig.SLHDSA.GeneralScheme
 /-!
 # One-layer compatibility for the general SLH-DSA construction
 
-This module relates the arbitrary-depth Algorithms 12--13 and 18--20 to the established
-single-layer API when `d = 1`.  The signature representations are equivalent, and key generation,
-root recovery, and verification agree as explicit-public-hash programs.
+This module relates the arbitrary-depth Algorithms 12--13 and 18--20 to the explicit
+single-layer compatibility API when `d = 1`.  The signature representations are equivalent, and
+key generation, root recovery, and verification agree as explicit-public-hash programs.
 
 Signing requires a more precise statement.  FIPS 205 Algorithm 12 recovers the layer-zero root
-even when that root is discarded at `d = 1`, whereas the established single-layer signer returns
+even when that root is discarded at `d = 1`, whereas the compatibility signer returns
 immediately after XMSS signing.  The general signer therefore has the same deterministic output
 but a strictly longer free-oracle trace.  The theorems below expose that extra recovery instead of
 claiming equality of the two oracle programs.
@@ -32,7 +32,7 @@ namespace SLHDSA.DepthOneCompatibility
 
 open OracleComp
 
-/-- At depth one, the intrinsic general-hypertree signature is equivalent to the established
+/-- At depth one, the intrinsic general-hypertree signature is equivalent to the compatibility
 single XMSS signature. -/
 abbrev hypertreeSignatureEquiv (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (_hd : vp.params.d = 1) :
@@ -40,14 +40,14 @@ abbrev hypertreeSignatureEquiv (vp : ValidatedParams) (core : CorePrimitives vp.
   Equiv.refl _
 
 /-- At depth one, the typed initial hypertree address is layer zero, tree zero, exactly as in the
-established one-layer API. -/
+one-layer API. -/
 theorem initial_toAdrs_eq_htAdrs_zero (vp : ValidatedParams) (hd : vp.params.d = 1)
     (parts : DigestParts vp.params) :
     (LayerPosition.initial vp parts).toAdrs = htAdrs Adrs.zero 0 := by
   simp [LayerPosition.toAdrs, htAdrs,
     DigestParts.idxTree_eq_zero_of_d_eq_one vp.valid hd parts]
 
-/-- General and established one-layer root generation are the same free-oracle program. -/
+/-- General and compatibility one-layer root generation are the same free-oracle program. -/
 theorem rootM_eq_htRootM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (hd : vp.params.d = 1) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] (sk : core.SkSeed) (pk : core.PkSeed) :
@@ -83,7 +83,7 @@ theorem signM_toOneLayer_eq (vp : ValidatedParams) (core : CorePrimitives vp.par
     initial_toAdrs_eq_htAdrs_zero, htSignM, htPkFromSigM,
     htSignWith, htPkFromSigWith, hsingle]
 
-/-- General depth-one root recovery is exactly the established one-layer free-oracle program after
+/-- General depth-one root recovery is exactly the compatibility free-oracle program after
 converting the intrinsic singleton signature. -/
 theorem pkFromSigM_eq_htPkFromSigM (vp : ValidatedParams)
     (core : CorePrimitives vp.params) (hd : vp.params.d = 1)
@@ -101,7 +101,7 @@ theorem pkFromSigM_eq_htPkFromSigM (vp : ValidatedParams)
     initial_toAdrs_eq_htAdrs_zero, htPkFromSigM, htPkFromSigWith,
     HtSigCore.getSingleLayer, Vector.head]
 
-/-- General depth-one verification is exactly the established one-layer free-oracle program after
+/-- General depth-one verification is exactly the compatibility free-oracle program after
 converting the intrinsic singleton signature. -/
 theorem verifyM_eq_htVerifyM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (hd : vp.params.d = 1) {m : Type → Type*} [Monad m]
@@ -115,7 +115,7 @@ theorem verifyM_eq_htVerifyM (vp : ValidatedParams) (core : CorePrimitives vp.pa
 
 /-! ## Deterministic-output compatibility -/
 
-/-- The general depth-one top root is the established one-layer root. -/
+/-- The general depth-one top root is the compatibility one-layer root. -/
 theorem root_eq_htRoot (vp : ValidatedParams) (prims : Primitives vp.params)
     (hd : vp.params.d = 1) (sk : prims.SkSeed) (pk : prims.PkSeed) :
     GeneralHypertree.root vp prims sk pk = htRoot prims hd sk pk Adrs.zero 0 := by
@@ -182,14 +182,14 @@ theorem verify_eq_htVerify (vp : ValidatedParams) (prims : Primitives vp.params)
 
 /-! ## Internal-scheme compatibility -/
 
-/-- At depth one, the structured general signature is equivalent to the established tuple
+/-- At depth one, the structured general signature is equivalent to the compatibility
 representation. -/
 abbrev schemeSignatureEquiv (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (_hd : vp.params.d = 1) :
     GeneralScheme.SignatureCore vp core ≃ SignatureCore vp.params core :=
   Equiv.refl _
 
-/-- General and established depth-one key generation are the same free-oracle program. -/
+/-- General and compatibility depth-one key generation are the same free-oracle program. -/
 theorem keygenInternalM_eq_slhKeygenInternalM (vp : ValidatedParams)
     (core : CorePrimitives vp.params) (hd : vp.params.d = 1)
     {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
@@ -201,7 +201,7 @@ theorem keygenInternalM_eq_slhKeygenInternalM (vp : ValidatedParams)
   simp [GeneralScheme.keygenInternalM, slhKeygenInternalM,
     rootM_eq_htRootM vp core hd]
 
-/-- Exact free-oracle trace of general internal signing at depth one.  This is the established
+/-- Exact free-oracle trace of general internal signing at depth one.  This is the compatibility
 Algorithm 19 schedule followed by the one additional, discarded XMSS recovery required by the
 general Algorithm 12. -/
 theorem signInternalM_toOneLayer_eq (vp : ValidatedParams)
@@ -235,7 +235,7 @@ theorem signInternalM_toOneLayer_eq (vp : ValidatedParams)
     htSignM, htPkFromSigM, htSignWith, htPkFromSigWith,
     hsingle, monad_norm]
 
-/-- General and established depth-one verification are the same free-oracle program after
+/-- General and compatibility depth-one verification are the same free-oracle program after
 signature conversion. -/
 theorem verifyInternalM_eq_slhVerifyInternalM (vp : ValidatedParams)
     (core : CorePrimitives vp.params) (hd : vp.params.d = 1)
@@ -247,7 +247,7 @@ theorem verifyInternalM_eq_slhVerifyInternalM (vp : ValidatedParams)
   simp [GeneralScheme.verifyInternalM, slhVerifyInternalM, schemeSignatureEquiv,
     verifyM_eq_htVerifyM vp core hd]
 
-/-- Deterministic general key generation specializes to established one-layer key generation. -/
+/-- Deterministic general key generation specializes to compatibility key generation. -/
 theorem keygenInternal_eq_slhKeygenInternal (vp : ValidatedParams)
     (prims : Primitives vp.params) (hd : vp.params.d = 1)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
@@ -263,7 +263,7 @@ theorem keygenInternal_eq_slhKeygenInternal (vp : ValidatedParams)
           (PublicKeyCore prims.core × SecretKeyCore prims.core))).run
   rw [keygenInternalM_eq_slhKeygenInternalM vp prims.core hd]
 
-/-- Deterministic general signing specializes to established one-layer signing after signature
+/-- Deterministic general signing specializes to compatibility signing after signature
 conversion.  This is output equality, not free-oracle-program equality; the exact additional
 recovery appears in `signInternalM_toOneLayer_eq`. -/
 theorem signInternal_toOneLayer_eq (vp : ValidatedParams)
@@ -287,7 +287,7 @@ theorem signInternal_toOneLayer_eq (vp : ValidatedParams)
   simpa only [slhSignInternalM, simulateQ_bind, simulateQ_pure,
     Id.run_bind, Id.run_pure] using hr
 
-/-- Deterministic general verification specializes to established one-layer verification after
+/-- Deterministic general verification specializes to compatibility verification after
 signature conversion. -/
 theorem verifyInternal_eq_slhVerifyInternal (vp : ValidatedParams)
     (prims : Primitives vp.params) (hd : vp.params.d = 1) [DecidableEq prims.Y]
