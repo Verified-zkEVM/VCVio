@@ -104,6 +104,7 @@ jobs:
           lake exe lint-style ToMathlib VCVio Extern LatticeCrypto HashSig Examples VCVioWidgets
           Interop VCVioTest.SMDTPREFinalValidity VCVioTest.SMDTTCRFinalValidity
           VCVioTest.ITSR VCVioTest.SMDTDSPR VCVioTest.SMDTOpenPRE VCVioTest.SMDTUDC
-          HashSigTest.SLHDSA.Oracle HashSigTest.SLHDSA.Wots HashSigTest.SLHDSA.Xmss
-          HashSigTest.SLHDSA.Fors HashSigTest.SLHDSA.Hypertree HashSigTest.SLHDSA.Scheme
-          HashSigTest.SLHDSA.Sha2KAT HashSigTest.SLHDSA.C13KAT
+          HashSigTest.SLHDSA.Params HashSigTest.SLHDSA.Position HashSigTest.SLHDSA.Oracle
+          HashSigTest.SLHDSA.Wots HashSigTest.SLHDSA.Xmss HashSigTest.SLHDSA.Fors
+          HashSigTest.SLHDSA.Hypertree HashSigTest.SLHDSA.Scheme HashSigTest.SLHDSA.Sha2KAT
+          HashSigTest.SLHDSA.C13KAT
