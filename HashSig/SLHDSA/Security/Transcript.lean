@@ -11,9 +11,10 @@ public import HashSig.SLHDSA.Security.OracleSurface
 # Honest SLH-DSA Security Transcripts
 
 This module fixes the probability space used by the security architecture.  Keys, signatures, and
-verification come from an abstract `SchemeInterface`; S02 does not claim that its fields refine one
-general SLH-DSA construction.  The adversary is interpreted through the public-only query language,
-and the complete execution query log is produced by VCVio's
+verification come from an abstract `SchemeInterface`, so the event definitions apply directly to
+the arbitrary-depth construction through `GeneralScheme.securityInterface`.  The adversary is
+interpreted through the public-only query language, and the complete execution query log is
+produced by VCVio's
 `QueryImpl.withLogging`.  The quantitative component games have their own source-shaped target
 oracles and do not claim that their targets occur in this outer scheme log.
 
@@ -43,6 +44,27 @@ def signedRequests {p : Params} {prims : Primitives p} {scheme : SchemeInterface
     match entry with
     | ⟨.sign request, _⟩ => some request
     | _ => none
+
+/-- Signing requests paired with the exact signatures returned by the honest signing oracle, in
+execution order.  This is the authoritative log for strong-unforgeability freshness. -/
+def signedPairs {p : Params} {prims : Primitives p} {scheme : SchemeInterface prims}
+    {pk : PublicKeyCore prims.core} (log : QueryLog (oracleSpec prims scheme pk)) :
+    List (MessageInput × scheme.Signature) :=
+  log.filterMap fun entry =>
+    match entry with
+    | ⟨.sign request, signature⟩ => some (request, signature)
+    | _ => none
+
+/-- Projecting the exact signed-pair log recovers the EUF-CMA request log. -/
+theorem signedRequests_eq_map_fst_signedPairs {p : Params} {prims : Primitives p}
+    {scheme : SchemeInterface prims} {pk : PublicKeyCore prims.core}
+    (log : QueryLog (oracleSpec prims scheme pk)) :
+    signedRequests log = (signedPairs log).map Prod.fst := by
+  induction log with
+  | nil => rfl
+  | cons entry log ih =>
+      rcases entry with ⟨query, answer⟩
+      cases query <;> simp_all [signedRequests, signedPairs]
 
 /-- Reconstruct the authoritative ITSR history from honest signing queries.  Each signing answer
 contains its message randomizer `R`; the digest is evaluated from that `R`, the complete request,
@@ -117,6 +139,50 @@ def ForgerySuccess {p : Params} {prims : Primitives p} (scheme : SchemeInterface
     (keys : GeneratedKeyPair prims) (transcript : Transcript scheme keys) : Prop :=
   scheme.verify keys.publicKey transcript.forgery.1 transcript.forgery.2 = true ∧
     Fresh (signedRequests transcript.log) transcript.forgery.1
+
+/-- SUF-CMA success: verification accepts and the exact forged request/signature pair was never
+returned by the signing oracle. -/
+def StrongForgerySuccess {p : Params} {prims : Primitives p} (scheme : SchemeInterface prims)
+    (keys : GeneratedKeyPair prims) (transcript : Transcript scheme keys) : Prop :=
+  scheme.verify keys.publicKey transcript.forgery.1 transcript.forgery.2 = true ∧
+    StrongFresh (signedPairs transcript.log) transcript.forgery
+
+/-- The strong-unforgeability residual: verification accepts a new signature on a request that
+was already submitted to the signing oracle. -/
+def SameMessageForgerySuccess {p : Params} {prims : Primitives p}
+    (scheme : SchemeInterface prims) (keys : GeneratedKeyPair prims)
+    (transcript : Transcript scheme keys) : Prop :=
+  scheme.verify keys.publicKey transcript.forgery.1 transcript.forgery.2 = true ∧
+    SameMessageNewSignature (signedPairs transcript.log) transcript.forgery
+
+/-- Every strong forgery is exhaustively either an EUF-CMA new-request forgery or a
+same-request/new-signature forgery. -/
+theorem strongForgerySuccess_iff_forgerySuccess_or_sameMessageForgerySuccess
+    {p : Params} {prims : Primitives p} (scheme : SchemeInterface prims)
+    (keys : GeneratedKeyPair prims) (transcript : Transcript scheme keys) :
+    StrongForgerySuccess scheme keys transcript ↔
+      ForgerySuccess scheme keys transcript ∨
+        SameMessageForgerySuccess scheme keys transcript := by
+  rw [StrongForgerySuccess, ForgerySuccess, SameMessageForgerySuccess,
+    signedRequests_eq_map_fst_signedPairs]
+  constructor
+  · rintro ⟨hverify, hfresh⟩
+    rcases (strongFresh_iff_fresh_or_sameMessageNewSignature _ _).mp hfresh with h | h
+    · exact Or.inl ⟨hverify, h⟩
+    · exact Or.inr ⟨hverify, h⟩
+  · rintro (h | h)
+    · exact ⟨h.1, (strongFresh_iff_fresh_or_sameMessageNewSignature _ _).mpr (Or.inl h.2)⟩
+    · exact ⟨h.1, (strongFresh_iff_fresh_or_sameMessageNewSignature _ _).mpr (Or.inr h.2)⟩
+
+/-- The EUF-CMA and same-request/new-signature success branches cannot both occur. -/
+theorem not_forgerySuccess_and_sameMessageForgerySuccess
+    {p : Params} {prims : Primitives p} (scheme : SchemeInterface prims)
+    (keys : GeneratedKeyPair prims) (transcript : Transcript scheme keys) :
+    ¬ (ForgerySuccess scheme keys transcript ∧
+      SameMessageForgerySuccess scheme keys transcript) := by
+  rw [ForgerySuccess, SameMessageForgerySuccess, signedRequests_eq_map_fst_signedPairs]
+  intro h
+  exact not_fresh_and_sameMessageNewSignature _ _ ⟨h.1.2, h.2.2⟩
 
 /-- ITSR success extracted from the same execution transcript as the forgery event. -/
 def TranscriptITSRBreak {p : Params} {prims : Primitives p} [DecidableEq prims.Y]

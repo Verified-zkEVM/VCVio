@@ -45,6 +45,22 @@ theorem layerAdrs_layer (layer tree : ℕ) : (layerAdrs layer tree).layer = laye
 @[simp]
 theorem layerAdrs_tree (layer tree : ℕ) : (layerAdrs layer tree).tree = tree := rfl
 
+/-- A reachable final-layer position uses exactly the unique top-tree address committed by key
+generation. -/
+theorem LayerPosition.toAdrs_eq_layerAdrs_of_isFinal {vp : ValidatedParams}
+    (pos : LayerPosition vp)
+    (hfinal : pos.layer.val + 1 = vp.params.d) :
+    pos.toAdrs = layerAdrs (vp.params.d - 1) 0 := by
+  apply Adrs.ext
+  · change pos.layer.val = vp.params.d - 1
+    omega
+  · change pos.tree.val = 0
+    exact LayerPosition.tree_eq_zero_of_isFinal pos hfinal
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+
 /-- Typed structural loop for FIPS Algorithm 12.
 
 `recoverFinal` is true only for the `d = 1` entry call. Every non-final component is recovered to
@@ -132,6 +148,46 @@ def pkFromSigWith (vp : ValidatedParams) (core : CorePrimitives vp.params)
   recoverFromPositionWith vp core hash compress nodeHash pk pos vp.params.d
     (by simp [pos]) msg sig
 
+/-! ## Pure typed structural loops -/
+
+/-- Deterministic specialization of FIPS Algorithm 12.  Keeping this structural loop explicit
+makes the all-layer correctness induction independent of oracle-program normalization.  The
+`recoverFinal` branch records Algorithm 12's mandatory, discarded layer-zero recovery when
+`d = 1`; because the interpretation is pure, its value is definitionally discarded. -/
+def signFromPosition (vp : ValidatedParams) (prims : Primitives vp.params)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (recoverFinal : Bool)
+    (pos : LayerPosition vp) :
+    (layers : ℕ) → pos.layer.val + layers = vp.params.d → prims.Y →
+      Vector (XmssSig vp.params prims.core) layers
+  | 0, _, _ => #v[]
+  | 1, _, msg =>
+      let sig := xmssSign prims msg sk pk pos.toAdrs pos.leaf.val
+      if recoverFinal then
+        let _ := xmssPkFromSig prims pos.leaf.val sig msg pk pos.toAdrs
+        #v[sig]
+      else
+        #v[sig]
+  | layers + 2, hremaining, msg =>
+      let sig := xmssSign prims msg sk pk pos.toAdrs pos.leaf.val
+      let root := xmssPkFromSig prims pos.leaf.val sig msg pk pos.toAdrs
+      let next := pos.next (by omega)
+      let rest := signFromPosition vp prims sk pk false next (layers + 1)
+        (by simp [next]; omega) root
+      rest.insertIdx 0 sig
+
+/-- Deterministic specialization of FIPS Algorithm 13 over the same typed trajectory. -/
+def recoverFromPosition (vp : ValidatedParams) (prims : Primitives vp.params)
+    (pk : prims.PkSeed) (pos : LayerPosition vp) :
+    (layers : ℕ) → pos.layer.val + layers = vp.params.d → prims.Y →
+      Vector (XmssSig vp.params prims.core) layers → prims.Y
+  | 0, _, msg, _ => msg
+  | 1, _, msg, sigs =>
+      xmssPkFromSig prims pos.leaf.val sigs.head msg pk pos.toAdrs
+  | layers + 2, hremaining, msg, sigs =>
+      let root := xmssPkFromSig prims pos.leaf.val sigs.head msg pk pos.toAdrs
+      let next := pos.next (by omega)
+      recoverFromPosition vp prims pk next (layers + 1) (by simp [next]; omega) root sigs.tail
+
 /-! ## Explicit-public-hash programs -/
 
 /-- Explicit-public-hash form of the typed structural signing loop. -/
@@ -201,6 +257,99 @@ def verifyM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (parts : DigestParts vp.params) (pkRoot : core.Y) : m Bool := do
   let recovered ← pkFromSigM vp core msg sig pk parts
   return decide (recovered = pkRoot)
+
+/-! ## Fixed-answer structural equations -/
+
+/-- Interpreting the explicit-hash structural signer by one fixed total answer function gives
+the corresponding pure typed loop. -/
+@[simp]
+theorem simulateQ_signFromPositionM_withPublicHash (vp : ValidatedParams)
+    (core : CorePrimitives vp.params) (answer : QueryImpl (publicHashSpec core) Id)
+    (sk : core.SkSeed) (pk : core.PkSeed) (recoverFinal : Bool)
+    (pos : LayerPosition vp) (layers : ℕ)
+    (hremaining : pos.layer.val + layers = vp.params.d) (msg : core.Y) :
+    simulateQ answer
+        (signFromPositionM vp core sk pk recoverFinal pos layers hremaining msg :
+          OracleComp (publicHashSpec core) (Vector (XmssSig vp.params core) layers)) =
+      signFromPosition vp (PublicHash.withPublicHash core answer) sk pk recoverFinal pos layers
+        hremaining msg := by
+  induction layers using Nat.twoStepInduction generalizing recoverFinal pos msg with
+  | zero => rfl
+  | one =>
+      cases recoverFinal <;>
+        simp only [signFromPositionM, signFromPosition, simulateQ_bind, simulateQ_pure,
+          simulateQ_xmssSignM_withPublicHash, simulateQ_xmssPkFromSigM_withPublicHash,
+          Bool.false_eq_true, ↓reduceIte] <;> rfl
+  | more layers _ ih =>
+      simp only [signFromPositionM, signFromPosition, simulateQ_bind, simulateQ_pure,
+        simulateQ_xmssSignM_withPublicHash, simulateQ_xmssPkFromSigM_withPublicHash, ih]
+      rfl
+
+/-- Interpreting the explicit-hash structural recovery loop by one fixed total answer function
+gives the corresponding pure typed loop. -/
+@[simp]
+theorem simulateQ_recoverFromPositionM_withPublicHash (vp : ValidatedParams)
+    (core : CorePrimitives vp.params) (answer : QueryImpl (publicHashSpec core) Id)
+    (pk : core.PkSeed) (pos : LayerPosition vp) (layers : ℕ)
+    (hremaining : pos.layer.val + layers = vp.params.d) (msg : core.Y)
+    (sigs : Vector (XmssSig vp.params core) layers) :
+    simulateQ answer
+        (recoverFromPositionM vp core pk pos layers hremaining msg sigs :
+          OracleComp (publicHashSpec core) core.Y) =
+      recoverFromPosition vp (PublicHash.withPublicHash core answer) pk pos layers hremaining
+        msg sigs := by
+  induction layers using Nat.twoStepInduction generalizing pos msg with
+  | zero => rfl
+  | one =>
+      simp only [recoverFromPositionM, recoverFromPosition,
+        simulateQ_xmssPkFromSigM_withPublicHash]
+  | more layers _ ih =>
+      simp only [recoverFromPositionM, recoverFromPosition, simulateQ_bind,
+        simulateQ_xmssPkFromSigM_withPublicHash, ih]
+      rfl
+
+/-! ## Functional correctness -/
+
+@[simp]
+private theorem head_insertIdx_zero {X : Type*} {n : ℕ} (rest : Vector X n) (x : X) :
+    (rest.insertIdx 0 x).head = x := by
+  simp [Vector.head, Vector.insertIdx_zero]
+
+@[simp]
+private theorem tail_insertIdx_zero {X : Type*} {n : ℕ} (rest : Vector X n) (x : X) :
+    (rest.insertIdx 0 x).tail = rest := by
+  rw [Vector.insertIdx_zero]
+  apply Vector.ext
+  intro i hi
+  simp [Vector.tail_eq_cast_extract]
+
+/-- Recovering the result of the typed structural signer reaches the unique top-layer XMSS root,
+for every positive validated hypertree depth.  The statement is independent of the initial
+digest-derived tree and leaf because the typed position recurrence proves that the final tree is
+zero. -/
+theorem recoverFromPosition_signFromPosition (vp : ValidatedParams)
+    (prims : Primitives vp.params) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (recoverFinal : Bool) (pos : LayerPosition vp) (layers : ℕ)
+    (hremaining : pos.layer.val + layers = vp.params.d) (msg : prims.Y) :
+    recoverFromPosition vp prims pk pos layers hremaining msg
+        (signFromPosition vp prims sk pk recoverFinal pos layers hremaining msg) =
+      xmssRoot prims sk pk (layerAdrs (vp.params.d - 1) 0) := by
+  induction layers using Nat.twoStepInduction generalizing recoverFinal pos msg with
+  | zero =>
+      have := pos.layer.isLt
+      omega
+  | one =>
+      cases recoverFinal <;>
+        change xmssPkFromSig prims pos.leaf.val
+          (xmssSign prims msg sk pk pos.toAdrs pos.leaf.val) msg pk pos.toAdrs = _
+      all_goals
+        rw [xmssPkFromSig_xmssSign prims msg sk pk pos.toAdrs pos.leaf.val pos.leaf.isLt]
+        rw [LayerPosition.toAdrs_eq_layerAdrs_of_isFinal pos (by omega)]
+  | more layers _ ih =>
+      simp only [signFromPosition, recoverFromPosition]
+      rw [head_insertIdx_zero, tail_insertIdx_zero]
+      rw [xmssPkFromSig_xmssSign prims msg sk pk pos.toAdrs pos.leaf.val pos.leaf.isLt]
+      exact ih false (pos.next (by omega)) _ _
 
 /-! ## Naturality -/
 
@@ -313,6 +462,74 @@ def verify (vp : ValidatedParams) (prims : Primitives vp.params) [DecidableEq pr
     (verifyM vp prims.core msg sig pk parts pkRoot :
       OracleComp (publicHashSpec prims.core) Bool)
 
+/-! ## Pure API equations and completeness -/
+
+/-- The canonical deterministic signer is exactly the pure typed Algorithm 12 loop. -/
+theorem sign_eq_signFromPosition (vp : ValidatedParams) (prims : Primitives vp.params)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (parts : DigestParts vp.params) :
+    sign vp prims msg sk pk parts =
+      let pos := LayerPosition.initial vp parts
+      signFromPosition vp prims sk pk (vp.params.d == 1) pos vp.params.d
+        (by simp [pos]) msg := by
+  unfold sign signM
+  rw [simulateQ_signFromPositionM_withPublicHash]
+  cases prims
+  rfl
+
+/-- The canonical deterministic verifier-side root recovery is exactly the pure typed Algorithm
+13 loop. -/
+theorem pkFromSig_eq_recoverFromPosition (vp : ValidatedParams)
+    (prims : Primitives vp.params) (msg : prims.Y)
+    (sig : Signature vp prims.core) (pk : prims.PkSeed)
+    (parts : DigestParts vp.params) :
+    pkFromSig vp prims msg sig pk parts =
+      let pos := LayerPosition.initial vp parts
+      recoverFromPosition vp prims pk pos vp.params.d (by simp [pos]) msg sig := by
+  unfold pkFromSig pkFromSigM
+  rw [simulateQ_recoverFromPositionM_withPublicHash]
+  cases prims
+  rfl
+
+/-- Key generation's general-hypertree root is the top-layer XMSS root. -/
+@[simp]
+theorem root_eq_xmssRoot (vp : ValidatedParams) (prims : Primitives vp.params)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) :
+    root vp prims sk pk = xmssRoot prims sk pk (layerAdrs (vp.params.d - 1) 0) := by
+  unfold root rootM rootWith
+  change simulateQ (PublicHash.impl prims)
+      (xmssRootM prims.core sk pk (layerAdrs (vp.params.d - 1) 0) :
+        OracleComp (publicHashSpec prims.core) prims.Y) = _
+  exact simulateQ_xmssRootM prims sk pk (layerAdrs (vp.params.d - 1) 0)
+
+/-- Arbitrary-depth hypertree completeness: honest signing and recovery yield the public root. -/
+theorem pkFromSig_sign (vp : ValidatedParams) (prims : Primitives vp.params)
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (parts : DigestParts vp.params) :
+    pkFromSig vp prims msg (sign vp prims msg sk pk parts) pk parts = root vp prims sk pk := by
+  rw [pkFromSig_eq_recoverFromPosition, sign_eq_signFromPosition, root_eq_xmssRoot]
+  exact recoverFromPosition_signFromPosition vp prims sk pk _ _ _ _ _
+
+/-- Deterministic verification is equality with the recovered top root. -/
+theorem verify_eq_decide (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y]
+    (msg : prims.Y) (sig : Signature vp prims.core) (pk : prims.PkSeed)
+    (parts : DigestParts vp.params) (pkRoot : prims.Y) :
+    verify vp prims msg sig pk parts pkRoot =
+      decide (pkFromSig vp prims msg sig pk parts = pkRoot) := by
+  unfold verify verifyM pkFromSig
+  simp only [simulateQ_bind, simulateQ_pure]
+  rfl
+
+/-- Honest arbitrary-depth hypertree signatures verify against the top-layer root. -/
+theorem verify_sign (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y]
+    (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (parts : DigestParts vp.params) :
+    verify vp prims msg (sign vp prims msg sk pk parts) pk parts (root vp prims sk pk) = true := by
+  rw [verify_eq_decide, pkFromSig_sign]
+  simp
+
 /-! ## Deterministic-handler parity -/
 
 @[simp]
@@ -354,5 +571,34 @@ theorem simulateQ_verifyM_withPublicHash (vp : ValidatedParams)
         (verifyM vp core msg sig pk parts pkRoot : OracleComp (publicHashSpec core) Bool) =
       verify vp (PublicHash.withPublicHash core answer) msg sig pk parts pkRoot := by
   simp [verify, PublicHash.impl_withPublicHash]
+
+/-- Fixed-answer arbitrary-depth hypertree completeness.  Signing, recovery, and top-root
+generation are interpreted by one total public-hash answer function. -/
+theorem simulateQ_pkFromSigM_signM_withPublicHash (vp : ValidatedParams)
+    (core : CorePrimitives vp.params) (answer : QueryImpl (publicHashSpec core) Id)
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
+    (parts : DigestParts vp.params) :
+    simulateQ answer (do
+      let sig ← signM vp core msg sk pk parts
+      pkFromSigM vp core msg sig pk parts) =
+    simulateQ answer (rootM vp core sk pk) := by
+  simp only [simulateQ_bind, simulateQ_signM_withPublicHash,
+    simulateQ_pkFromSigM_withPublicHash, simulateQ_rootM_withPublicHash]
+  exact pkFromSig_sign vp (PublicHash.withPublicHash core answer) msg sk pk parts
+
+/-- Fixed-answer arbitrary-depth hypertree verification completeness.  In particular, the
+`d = 1` execution retains Algorithm 12's discarded recovery through `signM`. -/
+theorem simulateQ_verifyM_signM_withPublicHash (vp : ValidatedParams)
+    (core : CorePrimitives vp.params) (answer : QueryImpl (publicHashSpec core) Id)
+    [DecidableEq core.Y]
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
+    (parts : DigestParts vp.params) :
+    simulateQ answer (do
+      let pkRoot ← rootM vp core sk pk
+      let sig ← signM vp core msg sk pk parts
+      verifyM vp core msg sig pk parts pkRoot) = true := by
+  simp only [simulateQ_bind, simulateQ_rootM_withPublicHash,
+    simulateQ_signM_withPublicHash, simulateQ_verifyM_withPublicHash]
+  exact verify_sign vp (PublicHash.withPublicHash core answer) msg sk pk parts
 
 end SLHDSA.GeneralHypertree

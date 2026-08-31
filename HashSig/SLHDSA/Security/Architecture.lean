@@ -619,6 +619,66 @@ noncomputable def eufAdvantage {p : Params} (prims : Primitives p)
   Pr[fun sample => ForgerySuccess scheme sample.1 sample.2 |
     honestTranscriptDistribution prims scheme encode adversary]
 
+/-- Strong-unforgeability advantage for the same honest transcript distribution as
+`eufAdvantage`.  Freshness is checked on exact request/signature pairs. -/
+noncomputable def sufAdvantage {p : Params} (prims : Primitives p)
+    [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
+    [SampleableType prims.PkSeed] [SampleableType prims.Y]
+    [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
+    (scheme : SchemeInterface prims) (encode : MessageInput → List Byte)
+    (adversary : ClassicalAdversary prims scheme) : ℝ≥0∞ :=
+  Pr[fun sample => StrongForgerySuccess scheme sample.1 sample.2 |
+    honestTranscriptDistribution prims scheme encode adversary]
+
+/-- Advantage of the residual SUF-CMA branch in which the forged request was signed before but
+the exact request/signature pair is new.  No negligible bound for this residual is asserted. -/
+noncomputable def sameMessageAdvantage {p : Params} (prims : Primitives p)
+    [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
+    [SampleableType prims.PkSeed] [SampleableType prims.Y]
+    [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
+    (scheme : SchemeInterface prims) (encode : MessageInput → List Byte)
+    (adversary : ClassicalAdversary prims scheme) : ℝ≥0∞ :=
+  Pr[fun sample => SameMessageForgerySuccess scheme sample.1 sample.2 |
+    honestTranscriptDistribution prims scheme encode adversary]
+
+/-- Exact SUF-CMA probability partition.  The identity is purely measure-theoretic: it combines
+the exhaustive event decomposition with its pointwise disjointness and does not bound the
+same-message residual. -/
+theorem sufAdvantage_eq_eufAdvantage_add_sameMessageAdvantage
+    {p : Params} (prims : Primitives p)
+    [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
+    [SampleableType prims.PkSeed] [SampleableType prims.Y]
+    [DecidableEq prims.PkSeed] [DecidableEq prims.Y]
+    (scheme : SchemeInterface prims) (encode : MessageInput → List Byte)
+    (adversary : ClassicalAdversary prims scheme) :
+    sufAdvantage prims scheme encode adversary =
+      eufAdvantage prims scheme encode adversary +
+        sameMessageAdvantage prims scheme encode adversary := by
+  classical
+  unfold sufAdvantage eufAdvantage sameMessageAdvantage
+  rw [probEvent_eq_tsum_ite, probEvent_eq_tsum_ite, probEvent_eq_tsum_ite,
+    ← ENNReal.tsum_add]
+  refine tsum_congr fun sample => ?_
+  have hpartition :=
+    strongForgerySuccess_iff_forgerySuccess_or_sameMessageForgerySuccess
+      scheme sample.1 sample.2
+  have hdisjoint :=
+    not_forgerySuccess_and_sameMessageForgerySuccess scheme sample.1 sample.2
+  by_cases heuf : ForgerySuccess scheme sample.1 sample.2
+  · have hsame : ¬ SameMessageForgerySuccess scheme sample.1 sample.2 :=
+      fun h => hdisjoint ⟨heuf, h⟩
+    have hsuf : StrongForgerySuccess scheme sample.1 sample.2 :=
+      hpartition.mpr (Or.inl heuf)
+    simp [hsuf, heuf, hsame]
+  · by_cases hsame : SameMessageForgerySuccess scheme sample.1 sample.2
+    · have hsuf : StrongForgerySuccess scheme sample.1 sample.2 :=
+        hpartition.mpr (Or.inr hsame)
+      simp [hsuf, heuf, hsame]
+    · have hsuf : ¬ StrongForgerySuccess scheme sample.1 sample.2 := by
+        intro h
+        exact hpartition.mp h |>.elim heuf hsame
+      simp [hsuf, heuf, hsame]
+
 noncomputable def repairedRHS {p : Params} {prims : Primitives p}
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] [SampleableType prims.Y]
