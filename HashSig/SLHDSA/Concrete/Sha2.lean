@@ -8,9 +8,10 @@ module
 public import HashSig.SLHDSA.Encoding
 
 /-!
-# Pure-Lean SHA-256 and SHA-512 with MGF1 and HMAC
+# Pure-Lean SHA-2 with MGF1 and HMAC
 
-Executable, FFI-free SHA-256 and SHA-512 over `ByteArray`, together with both SHA-2 variants of
+Executable, FFI-free SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224, and SHA-512/256 over
+`ByteArray`, together with the SHA-256 and SHA-512 variants of
 MGF1 (RFC 8017 B.2.1) and HMAC (FIPS 198-1). The SLH-DSA SHA2 instantiations select these
 functions exactly as prescribed by FIPS 205 Sections 11.2.1 and 11.2.2.
 
@@ -31,6 +32,11 @@ namespace SLHDSA.Concrete.Sha2
 def iv : Array UInt32 :=
   #[0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
     0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]
+
+/-- The eight SHA-224 initial hash values. -/
+def iv224 : Array UInt32 :=
+  #[0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939,
+    0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4]
 
 /-- The 64 SHA-256 round constants `K₀…K₆₃`. -/
 def k : Array UInt32 :=
@@ -107,16 +113,23 @@ def compress (st : Array UInt32) (m : ByteArray) (base : Nat) : Array UInt32 := 
   return #[st[0]! + a, st[1]! + b, st[2]! + c, st[3]! + d,
     st[4]! + e, st[5]! + f, st[6]! + g, st[7]! + h]
 
-/-- SHA-256 of a byte string (32-byte digest). -/
-def sha256 (msg : ByteArray) : ByteArray := Id.run do
+/-- Run the SHA-256 compression function from a selected initial state and serialize `outLen`
+digest bytes. This is the common FIPS 180-4 engine for SHA-224 and SHA-256. -/
+def sha256Family (initial : Array UInt32) (outLen : ℕ) (msg : ByteArray) : ByteArray := Id.run do
   let padded := pad msg
-  let mut st := iv
+  let mut st := initial
   for b in [0:padded.size / 64] do
     st := compress st padded (b * 64)
   let mut out := ByteArray.empty
   for i in [0:8] do
     out := out ++ u32be (st[i]!)
-  return out
+  return out.extract 0 outLen
+
+/-- SHA-224 of a byte string (28-byte digest). -/
+def sha224 (msg : ByteArray) : ByteArray := sha256Family iv224 28 msg
+
+/-- SHA-256 of a byte string (32-byte digest). -/
+def sha256 (msg : ByteArray) : ByteArray := sha256Family iv 32 msg
 
 /-- MGF1 with SHA-256 (RFC 8017 §B.2.1): expand `seed` to `outLen` bytes. -/
 def mgf1 (seed : ByteArray) (outLen : Nat) : ByteArray := Id.run do
@@ -152,6 +165,21 @@ def hmacSha256 (key msg : ByteArray) : ByteArray :=
 def iv512 : Array UInt64 :=
   #[0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
     0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179]
+
+/-- The eight SHA-384 initial hash values. -/
+def iv384 : Array UInt64 :=
+  #[0xcbbb9d5dc1059ed8, 0x629a292a367cd507, 0x9159015a3070dd17, 0x152fecd8f70e5939,
+    0x67332667ffc00b31, 0x8eb44a8768581511, 0xdb0c2e0d64f98fa7, 0x47b5481dbefa4fa4]
+
+/-- The eight SHA-512/224 initial hash values. -/
+def iv512_224 : Array UInt64 :=
+  #[0x8c3d37c819544da2, 0x73e1996689dcd4d6, 0x1dfab7ae32ff9c82, 0x679dd514582f9fcf,
+    0x0f6d2b697bd44da8, 0x77e36f7304c48942, 0x3f9d85a86a1d36c8, 0x1112e6ad91d692a1]
+
+/-- The eight SHA-512/256 initial hash values. -/
+def iv512_256 : Array UInt64 :=
+  #[0x22312194fc2bf72c, 0x9f555fa3c84c64c2, 0x2393b86b6f53b151, 0x963877195940eabd,
+    0x96283ee2a88effe3, 0xbe5e1e2553863992, 0x2b0199fc2c85b8aa, 0x0eb72ddc81c52ca2]
 
 /-- The 80 SHA-512 round constants. -/
 def k512 : Array UInt64 :=
@@ -234,16 +262,29 @@ def compress512 (st : Array UInt64) (m : ByteArray) (base : Nat) : Array UInt64 
   return #[st[0]! + a, st[1]! + b, st[2]! + c, st[3]! + d,
     st[4]! + e, st[5]! + f, st[6]! + g, st[7]! + h]
 
-/-- SHA-512 of a byte string (64-byte digest). -/
-def sha512 (msg : ByteArray) : ByteArray := Id.run do
+/-- Run the SHA-512 compression function from a selected initial state and serialize `outLen`
+digest bytes. This is the common FIPS 180-4 engine for the SHA-384 and SHA-512 variants. -/
+def sha512Family (initial : Array UInt64) (outLen : ℕ) (msg : ByteArray) : ByteArray := Id.run do
   let padded := pad512 msg
-  let mut st := iv512
+  let mut st := initial
   for b in [0:padded.size / 128] do
     st := compress512 st padded (b * 128)
   let mut out := ByteArray.empty
   for i in [0:8] do
     out := out ++ u64be (st[i]!)
-  return out
+  return out.extract 0 outLen
+
+/-- SHA-384 of a byte string (48-byte digest). -/
+def sha384 (msg : ByteArray) : ByteArray := sha512Family iv384 48 msg
+
+/-- SHA-512 of a byte string (64-byte digest). -/
+def sha512 (msg : ByteArray) : ByteArray := sha512Family iv512 64 msg
+
+/-- SHA-512/224 of a byte string (28-byte digest). -/
+def sha512_224 (msg : ByteArray) : ByteArray := sha512Family iv512_224 28 msg
+
+/-- SHA-512/256 of a byte string (32-byte digest). -/
+def sha512_256 (msg : ByteArray) : ByteArray := sha512Family iv512_256 32 msg
 
 /-- MGF1 with SHA-512. -/
 def mgf1Sha512 (seed : ByteArray) (outLen : Nat) : ByteArray := Id.run do

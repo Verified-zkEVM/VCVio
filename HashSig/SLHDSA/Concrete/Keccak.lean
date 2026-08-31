@@ -8,12 +8,12 @@ module
 public import HashSig.SLHDSA.Params
 
 /-!
-# Pure-Lean Keccak-f[1600], SHAKE256, keccak256, and SHA3-256
+# Pure-Lean Keccak-f[1600], SHAKE, Keccak-256, and SHA-3
 
 An executable, FFI-free Keccak-f[1600] permutation (FIPS 202) and distinct sponge domains for
-FIPS SHAKE256 (`0x1f`), FIPS SHA3-256 (`0x06`), and the EVM's original Keccak (`0x01`). SHAKE256
-uses the 136-byte rate and supports arbitrary whole-byte output lengths by permuting between
-squeeze blocks. `keccak256` remains the hash used by the separate C13 SLH-DSA variant.
+FIPS SHAKE (`0x1f`), FIPS SHA-3 (`0x06`), and the EVM's original Keccak (`0x01`) domains.
+SHAKE128 and SHAKE256 support arbitrary whole-byte output lengths by permuting between squeeze
+blocks. `keccak256` remains the hash used by the separate C13 SLH-DSA variant.
 
 ## References
 
@@ -105,6 +105,19 @@ def keccak256 (input : ByteArray) : ByteArray := squeeze (absorb input 136 0x01)
 
 /-- FIPS 202 `SHA3-256` (rate 136, pad `0x06`), 32-byte digest. -/
 def sha3_256 (input : ByteArray) : ByteArray := squeeze (absorb input 136 0x06) 32
+
+/-- FIPS 202 `SHA3-224` (rate 144, pad `0x06`), 28-byte digest. -/
+def sha3_224 (input : ByteArray) : ByteArray := squeeze (absorb input 144 0x06) 28
+
+/-- FIPS 202 `SHA3-384` (rate 104, pad `0x06`), 48-byte digest. -/
+def sha3_384 (input : ByteArray) : ByteArray := squeeze (absorb input 104 0x06) 48
+
+/-- FIPS 202 `SHA3-512` (rate 72, pad `0x06`), 64-byte digest. -/
+def sha3_512 (input : ByteArray) : ByteArray := squeeze (absorb input 72 0x06) 64
+
+/-- FIPS 202 SHAKE128 with a whole-byte output length. -/
+def shake128 (input : ByteArray) (outLen : ℕ) : ByteArray :=
+  squeezeXof (absorb input 168 0x1f) 168 outLen
 
 /-- FIPS 202 SHAKE256 with a whole-byte output length. The `0x1f` delimited suffix is distinct
 from both SHA3's `0x06` and Ethereum Keccak's `0x01`. -/

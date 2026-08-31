@@ -6,6 +6,8 @@ Authors: Quang Dao
 
 module
 public import HashSig.SLHDSA.GeneralScheme
+public import HashSig.SLHDSA.Concrete.Sha2
+public import HashSig.SLHDSA.Concrete.Keccak
 public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
@@ -27,6 +29,7 @@ boundary exposed here.
 namespace SLHDSA.External
 
 open OracleComp
+open Concrete
 
 /-- Failures rejected at the FIPS external-message boundary. -/
 inductive Error where
@@ -41,6 +44,114 @@ structure PrehashDescriptor where
   oidDer : List Byte
   outputLength : ℕ
   digest : List Byte → Bytes outputLength
+
+/-- The complete pre-hash algorithm menu accepted by the FIPS 205 ACVP external interface.
+SHAKE128 is squeezed to 256 bits and SHAKE256 to 512 bits, as required by Algorithm 23. -/
+inductive PrehashAlgorithm where
+  | sha2_224
+  | sha2_256
+  | sha2_384
+  | sha2_512
+  | sha2_512_224
+  | sha2_512_256
+  | sha3_224
+  | sha3_256
+  | sha3_384
+  | sha3_512
+  | shake128
+  | shake256
+deriving Repr, DecidableEq, BEq
+
+/-- Every approved pre-hash algorithm, in the ACVP registration order. -/
+def allPrehashAlgorithms : List PrehashAlgorithm :=
+  [.sha2_224, .sha2_256, .sha2_384, .sha2_512, .sha2_512_224, .sha2_512_256,
+    .sha3_224, .sha3_256, .sha3_384, .sha3_512, .shake128, .shake256]
+
+/-- ACVP spelling of an approved pre-hash algorithm. -/
+def PrehashAlgorithm.name : PrehashAlgorithm → String
+  | .sha2_224 => "SHA2-224"
+  | .sha2_256 => "SHA2-256"
+  | .sha2_384 => "SHA2-384"
+  | .sha2_512 => "SHA2-512"
+  | .sha2_512_224 => "SHA2-512/224"
+  | .sha2_512_256 => "SHA2-512/256"
+  | .sha3_224 => "SHA3-224"
+  | .sha3_256 => "SHA3-256"
+  | .sha3_384 => "SHA3-384"
+  | .sha3_512 => "SHA3-512"
+  | .shake128 => "SHAKE-128"
+  | .shake256 => "SHAKE-256"
+
+/-- Parse the exact ACVP spelling of an approved pre-hash algorithm. -/
+def PrehashAlgorithm.ofName? : String → Option PrehashAlgorithm
+  | "SHA2-224" => some .sha2_224
+  | "SHA2-256" => some .sha2_256
+  | "SHA2-384" => some .sha2_384
+  | "SHA2-512" => some .sha2_512
+  | "SHA2-512/224" => some .sha2_512_224
+  | "SHA2-512/256" => some .sha2_512_256
+  | "SHA3-224" => some .sha3_224
+  | "SHA3-256" => some .sha3_256
+  | "SHA3-384" => some .sha3_384
+  | "SHA3-512" => some .sha3_512
+  | "SHAKE-128" => some .shake128
+  | "SHAKE-256" => some .shake256
+  | _ => none
+
+@[simp] theorem PrehashAlgorithm.ofName?_name (algorithm : PrehashAlgorithm) :
+    PrehashAlgorithm.ofName? algorithm.name = some algorithm := by
+  cases algorithm <;> rfl
+
+/-- Digest widths fixed by FIPS 180-4/FIPS 202 and the FIPS 205 SHAKE choices. -/
+def PrehashAlgorithm.outputLength : PrehashAlgorithm → ℕ
+  | .sha2_224 | .sha2_512_224 | .sha3_224 => 28
+  | .sha2_256 | .sha2_512_256 | .sha3_256 | .shake128 => 32
+  | .sha2_384 | .sha3_384 => 48
+  | .sha2_512 | .sha3_512 | .shake256 => 64
+
+/-- Complete DER encoding of the NIST hash-algorithm object identifier (`hashAlgs` arcs 1–12). -/
+def PrehashAlgorithm.oidDer : PrehashAlgorithm → List Byte
+  | .sha2_256 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]
+  | .sha2_384 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02]
+  | .sha2_512 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03]
+  | .sha2_224 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x04]
+  | .sha2_512_224 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x05]
+  | .sha2_512_256 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x06]
+  | .sha3_224 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x07]
+  | .sha3_256 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x08]
+  | .sha3_384 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x09]
+  | .sha3_512 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0a]
+  | .shake128 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0b]
+  | .shake256 => [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0c]
+
+/-- Project an exact-width digest engine into its intrinsic byte-vector boundary. Each approved
+engine below has the corresponding fixed output width; executable KATs pin that invariant. -/
+def digestBytes (n : ℕ) (digest : ByteArray) : Bytes n :=
+  Vector.ofFn fun i : Fin n => digest[i.val]?.getD 0
+
+/-- The concrete, FFI-free digest for an approved pre-hash algorithm. -/
+def PrehashAlgorithm.digest (algorithm : PrehashAlgorithm) (message : List Byte) :
+    Bytes algorithm.outputLength :=
+  let input := ByteArray.mk message.toArray
+  match algorithm with
+  | .sha2_224 => digestBytes 28 (Sha2.sha224 input)
+  | .sha2_256 => digestBytes 32 (Sha2.sha256 input)
+  | .sha2_384 => digestBytes 48 (Sha2.sha384 input)
+  | .sha2_512 => digestBytes 64 (Sha2.sha512 input)
+  | .sha2_512_224 => digestBytes 28 (Sha2.sha512_224 input)
+  | .sha2_512_256 => digestBytes 32 (Sha2.sha512_256 input)
+  | .sha3_224 => digestBytes 28 (Keccak.sha3_224 input)
+  | .sha3_256 => digestBytes 32 (Keccak.sha3_256 input)
+  | .sha3_384 => digestBytes 48 (Keccak.sha3_384 input)
+  | .sha3_512 => digestBytes 64 (Keccak.sha3_512 input)
+  | .shake128 => digestBytes 32 (Keccak.shake128 input 32)
+  | .shake256 => digestBytes 64 (Keccak.shake256 input 64)
+
+/-- Canonical FIPS descriptor for an approved pre-hash algorithm. -/
+def PrehashAlgorithm.descriptor (algorithm : PrehashAlgorithm) : PrehashDescriptor where
+  oidDer := algorithm.oidDer
+  outputLength := algorithm.outputLength
+  digest := algorithm.digest
 
 /-- Common FIPS external-message encoder. Domain `0` denotes pure signing and domain `1`
 denotes pre-hash signing. -/

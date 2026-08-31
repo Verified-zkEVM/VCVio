@@ -34,10 +34,12 @@ example : encodePrehashMessage twoBytePrehash [0x10, 0x11] [0xff] =
     .ok [0x01, 0x02, 0x10, 0x11, 0x06, 0x01, 0x2a, 0xaa, 0xbb] := by
   decide
 
+set_option maxRecDepth 2048 in
 /-- The largest permitted context is accepted and contributes exactly 257 prefix bytes. -/
 example : (encodePureMessage (List.replicate 255 0x7f) []).map List.length = .ok 257 := by
   decide
 
+set_option maxRecDepth 2048 in
 /-- The first forbidden context length is rejected with its observed size. -/
 example : encodePureMessage (List.replicate 256 0x7f) [] = .error (.contextTooLong 256) := by
   decide
@@ -46,4 +48,78 @@ example : encodePureMessage (List.replicate 256 0x7f) [] = .error (.contextTooLo
 example : encodePureMessage [] [] ≠ encodePrehashMessage twoBytePrehash [] [] := by
   decide
 
+private def hexValue (c : Char) : UInt8 :=
+  if '0' ≤ c ∧ c ≤ '9' then (c.toNat - '0'.toNat).toUInt8
+  else if 'a' ≤ c ∧ c ≤ 'f' then (c.toNat - 'a'.toNat + 10).toUInt8
+  else if 'A' ≤ c ∧ c ≤ 'F' then (c.toNat - 'A'.toNat + 10).toUInt8
+  else 0
+
+private def parseHex (hex : String) : ByteArray := Id.run do
+  let chars := hex.toList.toArray
+  let mut out := ByteArray.empty
+  for i in [0:chars.size / 2] do
+    out := out.push (hexValue chars[2 * i]! <<< 4 ||| hexValue chars[2 * i + 1]!)
+  return out
+
+private def expectedAbc : PrehashAlgorithm → String
+  | .sha2_224 => "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7"
+  | .sha2_256 => "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  | .sha2_384 =>
+      "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed\
+      8086072ba1e7cc2358baeca134c825a7"
+  | .sha2_512 =>
+      "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a\
+      2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
+  | .sha2_512_224 => "4634270f707b6a54daae7530460842e20e37ed265ceee9a43e8924aa"
+  | .sha2_512_256 => "53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23"
+  | .sha3_224 => "e642824c3f8cf24ad09234ee7d3c766fc9a3a5168d0c94ad73b46fdf"
+  | .sha3_256 => "3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532"
+  | .sha3_384 =>
+      "ec01498288516fc926459f58e2c6ad8df9b473cb0fc08c2596da7cf0e49be4b\
+      298d88cea927ac7f539f1edf228376d25"
+  | .sha3_512 =>
+      "b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e\
+      10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0"
+  | .shake128 => "5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8"
+  | .shake256 =>
+      "483366601360a8771c6863080cc4114d8db44530f8f1e1ee4f94ea37e78b5739\
+      d5a15bef186a5386c75744c0527e1faa9f8726e462a12a4feb06bd8801e751e4"
+
+private def expectedOidArc : PrehashAlgorithm → ℕ
+  | .sha2_256 => 1
+  | .sha2_384 => 2
+  | .sha2_512 => 3
+  | .sha2_224 => 4
+  | .sha2_512_224 => 5
+  | .sha2_512_256 => 6
+  | .sha3_224 => 7
+  | .sha3_256 => 8
+  | .sha3_384 => 9
+  | .sha3_512 => 10
+  | .shake128 => 11
+  | .shake256 => 12
+
+private def ensure (label : String) (condition : Bool) : IO Unit :=
+  unless condition do throw (IO.userError s!"SLH-DSA external-interface check failed: {label}")
+
+/-- Executable FIPS 180-4/FIPS 202 canaries for all twelve ACVP pre-hash choices, including
+their exact DER OIDs and digest widths. -/
+def run : IO Unit := do
+  ensure "complete prehash menu" (allPrehashAlgorithms.length == 12)
+  for algorithm in allPrehashAlgorithms do
+    let descriptor := algorithm.descriptor
+    let digest := descriptor.digest [0x61, 0x62, 0x63]
+    ensure s!"{algorithm.name}: ACVP name round-trip"
+      (PrehashAlgorithm.ofName? algorithm.name == some algorithm)
+    ensure s!"{algorithm.name}: DER OID width" (descriptor.oidDer.length == 11)
+    ensure s!"{algorithm.name}: DER OID arc"
+      (descriptor.oidDer.getLast? == some (UInt8.ofNat (expectedOidArc algorithm)))
+    ensure s!"{algorithm.name}: intrinsic digest width"
+      (digest.toList.length == descriptor.outputLength)
+    ensure s!"{algorithm.name}: abc digest"
+      (ByteArray.mk digest.toArray == parseHex (expectedAbc algorithm))
+  IO.println "SLH-DSA external-interface tests: PASS (12 prehash OIDs/digests; context boundary)"
+
 end SLHDSA.ExternalTest
+
+def main : IO Unit := SLHDSA.ExternalTest.run
