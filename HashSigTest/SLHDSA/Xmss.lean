@@ -52,17 +52,17 @@ example (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
     (adrs : Adrs) (idx : ℕ) :
     (xmssSignM core msg sk pk adrs idx :
       OracleComp (publicHashSpec core) (XmssSig p core)) = (do
-      let path ← PerfectMerkleTree.authPathM (xmssLeafM core sk pk adrs)
-        (xmssNodeHashM core pk adrs) idx p.hp
+      let path ← xmssAuthPathWith core (PublicHash.f core pk) (PublicHash.tl core pk)
+        (PublicHash.h core pk) sk pk adrs idx p.hp
       let sig ← wotsSignM core msg sk pk (wotsLeafAdrs adrs idx)
-      return (sig, path)) := rfl
+      return { wots := sig, auth := path }) := rfl
 
 /-- Recovery computes the WOTS+ leaf before climbing the leaf-first authentication path. -/
 example (idx : ℕ) (sig : XmssSig p core) (msg : core.Y)
     (pk : core.PkSeed) (adrs : Adrs) :
     (xmssPkFromSigM core idx sig msg pk adrs :
       OracleComp (publicHashSpec core) core.Y) = (do
-      let leaf ← wotsPkFromSigM core sig.1 msg pk (wotsLeafAdrs adrs idx)
-      PerfectMerkleTree.climbM (xmssNodeHashM core pk adrs) idx leaf sig.2) := rfl
+      let leaf ← wotsPkFromSigM core sig.wots msg pk (wotsLeafAdrs adrs idx)
+      PerfectMerkleTree.climbM (xmssNodeHashM core pk adrs) idx leaf sig.auth.toList) := rfl
 
 end SLHDSA.XmssTest

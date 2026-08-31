@@ -137,9 +137,9 @@ def decodeSignature (ba : ByteArray) : SignatureCore slhdsaSha2_128_24 shaPrimit
         (List.range 24).map fun j => baSliceToB16 ba (base + 16 + j * 16))
   let wots : Vector (Bytes 16) 68 :=
     Vector.ofFn fun i : Fin 68 => baSliceToB16 ba (2416 + i.val * 16)
-  let xmssAuth : List (Bytes 16) :=
-    (List.range 22).map fun j => baSliceToB16 ba (2416 + 1088 + j * 16)
-  (R, fors, (wots, xmssAuth))
+  let xmssAuth : Vector (Bytes 16) 22 :=
+    Vector.ofFn fun j : Fin 22 => baSliceToB16 ba (2416 + 1088 + j.val * 16)
+  (R, fors, { wots := wots, auth := xmssAuth })
 
 /-- Concrete FIPS 205 external verification of a decoded signature against
 `(pkSeed, pkRoot, message)`. -/

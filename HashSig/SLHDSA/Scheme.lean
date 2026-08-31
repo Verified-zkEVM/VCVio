@@ -198,11 +198,11 @@ def slhSignInternalQueryBound (p : Params) : ℕ :=
 
 /-- Structural public-hash budget for verification of the supplied signature. The FORS term
 tracks the actual authentication-path lengths. The hypertree term uses the maximum WOTS+ chain
-budget plus the supplied XMSS authentication-path length. -/
+budget plus the intrinsic XMSS authentication-path height. -/
 def slhVerifyInternalQueryBound (p : Params) (core : CorePrimitives p)
     (sig : SignatureCore p core) : ℕ :=
   1 + ((∑ i : Fin p.k, (fun j : Fin p.k => 1 + (sig.2.1[j.val]).2.length) i) + 1) +
-    (p.len * (p.w - 1) + 1 + sig.2.2.2.length)
+    (p.len * (p.w - 1) + 1 + p.hp)
 
 private theorem publicHash_hmsg_isTotalQueryBound_one (core : CorePrimitives p)
     (r : core.Y) (pkSeed : core.PkSeed) (pkRoot : core.Y) (msg : List Byte) :
@@ -275,7 +275,7 @@ private theorem htVerifyM_isTotalQueryBound_coarse (core : CorePrimitives p)
     IsTotalQueryBound
       (htVerifyM core msg sig pk adrs idxTree idxLeaf pkRoot :
         OracleComp (publicHashSpec core) Bool)
-      (p.len * (p.w - 1) + 1 + sig.2.length) := by
+      (p.len * (p.w - 1) + 1 + p.hp) := by
   apply (htVerifyM_isTotalQueryBound core msg sig pk adrs idxTree idxLeaf pkRoot).mono
   have hsum :
       (∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) ≤

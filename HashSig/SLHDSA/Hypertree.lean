@@ -177,7 +177,7 @@ theorem htSignM_isTotalQueryBound (core : CorePrimitives p)
         xmssAuthPathQueryBound p p.hp) :=
   xmssSignM_isTotalQueryBound core msg sk pk (htAdrs adrs idxTree) idxLeaf
 
-/-- Hypertree root recovery inherits the complementary WOTS+ and supplied-path budget. -/
+/-- Hypertree root recovery inherits the complementary WOTS+ and fixed-height path budget. -/
 theorem htPkFromSigM_isTotalQueryBound (core : CorePrimitives p)
     (msg : core.Y) (sig : HtSigCore p core) (pk : core.PkSeed)
     (adrs : Adrs) (idxTree idxLeaf : ℕ) :
@@ -185,7 +185,7 @@ theorem htPkFromSigM_isTotalQueryBound (core : CorePrimitives p)
       (htPkFromSigM core msg sig pk adrs idxTree idxLeaf :
         OracleComp (publicHashSpec core) core.Y)
       ((∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) +
-        1 + sig.2.length) :=
+        1 + p.hp) :=
   xmssPkFromSigM_isTotalQueryBound core idxLeaf sig msg pk (htAdrs adrs idxTree)
 
 /-- The final Boolean comparison adds no oracle query to the inherited recovery budget. -/
@@ -196,7 +196,7 @@ theorem htVerifyM_isTotalQueryBound (core : CorePrimitives p) [DecidableEq core.
       (htVerifyM core msg sig pk adrs idxTree idxLeaf pkRoot :
         OracleComp (publicHashSpec core) Bool)
       ((∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) +
-        1 + sig.2.length) := by
+        1 + p.hp) := by
   have hbound := isTotalQueryBound_bind
     (htPkFromSigM_isTotalQueryBound core msg sig pk adrs idxTree idxLeaf) fun recovered =>
       show IsTotalQueryBound
