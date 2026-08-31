@@ -69,4 +69,11 @@ example (hash : Adrs → core.Y → m core.Y)
         (layerAdrs (vp.params.d - 1) 0) := by
   rfl
 
+/-- The public arbitrary-depth correctness theorem has no depth side condition beyond validated
+parameters. -/
+example (prims : Primitives vp.params) (msg : prims.Y)
+    (sk : prims.SkSeed) (pk : prims.PkSeed) (parts : DigestParts vp.params) :
+    pkFromSig vp prims msg (sign vp prims msg sk pk parts) pk parts = root vp prims sk pk := by
+  exact pkFromSig_sign vp prims msg sk pk parts
+
 end SLHDSA.GeneralHypertreeTest

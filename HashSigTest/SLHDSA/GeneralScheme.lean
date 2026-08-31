@@ -61,4 +61,14 @@ example [DecidableEq core.Y] (msg : List Byte)
         GeneralHypertree.verifyM vp core forsPk sig.hypertree pk.pkSeed parts pk.pkRoot) := by
   rfl
 
+/-- Honest internal signatures verify at every validated hypertree depth. -/
+example (prims : Primitives vp.params) [DecidableEq prims.Y]
+    (msg : List Byte) (skSeed : prims.SkSeed) (skPrf : prims.SkPrf)
+    (pkSeed : prims.PkSeed) (addrnd : prims.Y) :
+    GeneralScheme.verifyInternal vp prims msg
+        (GeneralScheme.signInternal vp prims msg
+          (GeneralScheme.keygenInternal vp prims skSeed skPrf pkSeed).2 addrnd)
+        (GeneralScheme.keygenInternal vp prims skSeed skPrf pkSeed).1 = true := by
+  exact GeneralScheme.verifyInternal_signInternal vp prims msg skSeed skPrf pkSeed addrnd
+
 end SLHDSA.GeneralSchemeTest

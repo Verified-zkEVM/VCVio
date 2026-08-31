@@ -113,6 +113,28 @@ theorem verifyInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp
   simp [verifyInternalM, queryHom_hmsg core F, forsPkFromSigM_natural core F,
     GeneralHypertree.verifyM_natural vp core F]
 
+/-! ## Fixed-answer completeness -/
+
+/-- Arbitrary-depth internal SLH-DSA completeness for one fixed total public-hash answer
+function.  Key generation, signing, FORS recovery, hypertree signing, and verification all share
+the same deterministic interpretation. -/
+theorem simulateQ_verifyInternalM_signInternalM_withPublicHash
+    (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    (answer : QueryImpl (publicHashSpec core) Id) [DecidableEq core.Y]
+    (msg : List Byte) (skSeed : core.SkSeed) (skPrf : core.SkPrf)
+    (pkSeed : core.PkSeed) (addrnd : core.Y) :
+    simulateQ answer (do
+      let (pk, sk) ← keygenInternalM vp core skSeed skPrf pkSeed
+      let sig ← signInternalM vp core msg sk addrnd
+      verifyInternalM vp core msg sig pk) = true := by
+  simp only [keygenInternalM, signInternalM, verifyInternalM,
+    simulateQ_bind, simulateQ_pure,
+    GeneralHypertree.simulateQ_rootM_withPublicHash,
+    simulateQ_forsSignM_withPublicHash, simulateQ_forsPkFromSigM_withPublicHash,
+    GeneralHypertree.simulateQ_signM_withPublicHash,
+    GeneralHypertree.simulateQ_verifyM_withPublicHash]
+  exact GeneralHypertree.verify_sign vp (PublicHash.withPublicHash core answer) _ skSeed pkSeed _
+
 /-! ## Pure deterministic interpretations -/
 
 def keygenInternal (vp : ValidatedParams) (prims : Primitives vp.params)
@@ -135,5 +157,50 @@ def verifyInternal (vp : ValidatedParams) (prims : Primitives vp.params)
     (msg : List Byte) (sig : SignatureCore vp prims.core) (pk : PublicKeyCore prims.core) : Bool :=
   simulateQ (PublicHash.impl prims)
     (verifyInternalM vp prims.core msg sig pk : OracleComp (publicHashSpec prims.core) Bool)
+
+@[simp]
+theorem simulateQ_keygenInternalM (vp : ValidatedParams) (prims : Primitives vp.params)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
+    simulateQ (PublicHash.impl prims)
+        (keygenInternalM vp prims.core skSeed skPrf pkSeed :
+          OracleComp (publicHashSpec prims.core)
+            (PublicKeyCore prims.core × SecretKeyCore prims.core)) =
+      keygenInternal vp prims skSeed skPrf pkSeed := rfl
+
+@[simp]
+theorem simulateQ_signInternalM (vp : ValidatedParams) (prims : Primitives vp.params)
+    (msg : List Byte) (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
+    simulateQ (PublicHash.impl prims)
+        (signInternalM vp prims.core msg sk addrnd :
+          OracleComp (publicHashSpec prims.core) (SignatureCore vp prims.core)) =
+      signInternal vp prims msg sk addrnd := rfl
+
+@[simp]
+theorem simulateQ_verifyInternalM (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y]
+    (msg : List Byte) (sig : SignatureCore vp prims.core) (pk : PublicKeyCore prims.core) :
+    simulateQ (PublicHash.impl prims)
+        (verifyInternalM vp prims.core msg sig pk :
+          OracleComp (publicHashSpec prims.core) Bool) =
+      verifyInternal vp prims msg sig pk := rfl
+
+/-- **General internal SLH-DSA correctness**: every honestly generated arbitrary-depth
+signature verifies for every choice of seeds, randomizer, message, and deterministic public-hash
+implementation. -/
+theorem verifyInternal_signInternal (vp : ValidatedParams)
+    (prims : Primitives vp.params) [DecidableEq prims.Y]
+    (msg : List Byte) (skSeed : prims.SkSeed) (skPrf : prims.SkPrf)
+    (pkSeed : prims.PkSeed) (addrnd : prims.Y) :
+    verifyInternal vp prims msg
+        (signInternal vp prims msg (keygenInternal vp prims skSeed skPrf pkSeed).2 addrnd)
+        (keygenInternal vp prims skSeed skPrf pkSeed).1 = true := by
+  have h := simulateQ_verifyInternalM_signInternalM_withPublicHash
+    vp prims.core (PublicHash.impl prims) msg skSeed skPrf pkSeed addrnd
+  change ((do
+    let (pk, sk) ← keygenInternal vp prims skSeed skPrf pkSeed
+    let sig ← signInternal vp prims msg sk addrnd
+    verifyInternal vp prims msg sig pk) : Id Bool) = true
+  simpa only [simulateQ_bind, simulateQ_keygenInternalM,
+    simulateQ_signInternalM, simulateQ_verifyInternalM] using h
 
 end SLHDSA.GeneralScheme
