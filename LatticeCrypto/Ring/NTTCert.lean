@@ -340,6 +340,44 @@ theorem inverseStage_scaleCoeffs
     simp only [inverseStage, inverseButterfly, scaleCoeffs, Equiv.symm_apply_apply]
   <;> ring
 
+/-- A forward butterfly stage is additive. -/
+theorem forwardStage_add
+    {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
+    (z : Pair → R) (left right : Coord → R) :
+    forwardStage layout z (left + right) =
+      forwardStage layout z left + forwardStage layout z right := by
+  funext coord
+  rw [← layout.equiv.apply_symm_apply coord]
+  obtain ⟨pair, side⟩ := layout.equiv.symm coord
+  cases side <;>
+    simp only [forwardStage, forwardButterfly, Equiv.symm_apply_apply, Pi.add_apply]
+  <;> ring
+
+/-- A forward butterfly stage preserves subtraction. -/
+theorem forwardStage_sub
+    {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
+    (z : Pair → R) (left right : Coord → R) :
+    forwardStage layout z (left - right) =
+      forwardStage layout z left - forwardStage layout z right := by
+  funext coord
+  rw [← layout.equiv.apply_symm_apply coord]
+  obtain ⟨pair, side⟩ := layout.equiv.symm coord
+  cases side <;>
+    simp only [forwardStage, forwardButterfly, Equiv.symm_apply_apply, Pi.sub_apply]
+  <;> ring
+
+/-- A forward butterfly stage preserves zero. -/
+theorem forwardStage_zero
+    {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
+    (z : Pair → R) :
+    forwardStage layout z 0 = 0 := by
+  funext coord
+  rw [← layout.equiv.apply_symm_apply coord]
+  obtain ⟨pair, side⟩ := layout.equiv.symm coord
+  cases side <;>
+    simp only [forwardStage, forwardButterfly, Equiv.symm_apply_apply, Pi.zero_apply, mul_zero,
+      add_zero, sub_zero]
+
 /-- Package the two laws needed to compose an unnormalised transform stage:
 the inverse/forward roundtrip and compatibility of the inverse with a scalar
 accumulated by inner stages. -/
@@ -350,6 +388,9 @@ structure ScaledStage (R : Type*) [CommRing R] (Coord : Type w) where
   inverse_forward : ∀ input, inverse (forward input) = scaleCoeffs scalar input
   inverse_scale : ∀ c input,
     inverse (scaleCoeffs c input) = scaleCoeffs c (inverse input)
+  forward_add : ∀ left right, forward (left + right) = forward left + forward right
+  forward_sub : ∀ left right, forward (left - right) = forward left - forward right
+  forward_zero : forward 0 = 0
 
 /-- Build a composable stage certificate from a butterfly layout and matching
 twiddle tables.  For ML-KEM's syntactic `zRev * (y - x)`, the `zInv` supplied
@@ -363,6 +404,9 @@ def butterflyStage {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pa
   scalar := 2
   inverse_forward := inverseStage_forwardStage layout z zInv hz
   inverse_scale := inverseStage_scaleCoeffs layout zInv
+  forward_add := forwardStage_add layout z
+  forward_sub := forwardStage_sub layout z
+  forward_zero := forwardStage_zero layout z
 
 /-- Apply a list of stages from left to right. -/
 def forwardStages {Coord : Type w} : List (ScaledStage R Coord) →
@@ -398,5 +442,36 @@ theorem inverseStages_forwardStages {Coord : Type w}
       funext coord
       simp [scaleCoeffs]
       ring
+
+/-- A sequence of certified forward stages is additive. -/
+theorem forwardStages_add {Coord : Type w} (stages : List (ScaledStage R Coord))
+    (left right : Coord → R) :
+    forwardStages stages (left + right) =
+      forwardStages stages left + forwardStages stages right := by
+  induction stages generalizing left right with
+  | nil => rfl
+  | cons stage stages ih =>
+      simp only [forwardStages]
+      rw [stage.forward_add, ih]
+
+/-- A sequence of certified forward stages preserves subtraction. -/
+theorem forwardStages_sub {Coord : Type w} (stages : List (ScaledStage R Coord))
+    (left right : Coord → R) :
+    forwardStages stages (left - right) =
+      forwardStages stages left - forwardStages stages right := by
+  induction stages generalizing left right with
+  | nil => rfl
+  | cons stage stages ih =>
+      simp only [forwardStages]
+      rw [stage.forward_sub, ih]
+
+/-- A sequence of certified forward stages preserves zero. -/
+theorem forwardStages_zero {Coord : Type w} (stages : List (ScaledStage R Coord)) :
+    forwardStages stages 0 = 0 := by
+  induction stages with
+  | nil => rfl
+  | cons stage stages ih =>
+      simp only [forwardStages]
+      rw [stage.forward_zero, ih]
 
 end LatticeCrypto.NTTCert
