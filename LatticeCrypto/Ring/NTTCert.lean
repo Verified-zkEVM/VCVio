@@ -26,6 +26,12 @@ The concrete NTT certification strategy works as follows:
 This module provides `basis`, `applyMatrix`, `idMatrix`, and the composition /
 identity / additivity lemmas that the scheme-specific `Concrete/NTT.lean` files
 use.
+
+The second part of this module provides an algebraic butterfly interface.  A
+`ButterflyLayout` records a proof-relevant partition of a coefficient index
+type into pairs.  This lets concrete loop developments separate the indexing
+proof (that an array loop implements a layout) from the small ring calculation
+showing that matching forward and inverse butterflies cancel.
 -/
 
 @[expose] public section
@@ -162,5 +168,228 @@ theorem applyMatrix_sub
   · intro f' g' i; exact congr_fun (hsub f' g') i
   · intros; exact mul_sub _ _ _
   · intro φ ψ; exact Finset.sum_sub_distrib (f := φ) (g := ψ)
+
+/-! ## Structural butterfly certificates -/
+
+universe v w
+
+variable {R : Type*} [CommRing R]
+
+/-- A partition of the coefficient coordinates `Coord` into pairs indexed by
+`Pair`.  `false` names the left coordinate and `true` the right coordinate.
+
+Using an equivalence rather than separate index functions packages coverage,
+disjointness, and uniqueness in the form needed by a butterfly-stage proof. -/
+structure ButterflyLayout (Pair : Type v) (Coord : Type w) where
+  equiv : Pair × Bool ≃ Coord
+
+/-- The forward two-coordinate butterfly `(u, v) ↦ (u + z*v, u - z*v)`. -/
+def forwardButterfly (z u v : R) : Bool → R
+  | false => u + z * v
+  | true => u - z * v
+
+/-- The inverse-oriented two-coordinate butterfly
+`(x, y) ↦ (x + y, z⁻¹*(x - y))`.
+
+Some concrete NTT specifications write the second coordinate as
+`(-z⁻¹) * (y - x)`; that expression is propositionally equal to this one. -/
+def inverseButterfly (zInv x y : R) : Bool → R
+  | false => x + y
+  | true => zInv * (x - y)
+
+/-- The same inverse butterfly with the right-minus-left convention used by
+the ML-KEM loop.  Its coefficient is the *negation* of the `zInv` expected by
+`inverseButterfly`; keeping this spelling explicit prevents a sign convention
+from being hidden in a concrete refinement proof. -/
+def inverseButterflyRev (zRev x y : R) : Bool → R
+  | false => x + y
+  | true => zRev * (y - x)
+
+theorem inverseButterflyRev_eq (zRev x y : R) :
+    inverseButterflyRev zRev x y = inverseButterfly (-zRev) x y := by
+  funext side
+  cases side <;> simp only [inverseButterflyRev, inverseButterfly]
+  ring
+
+/-- Apply one forward butterfly to every pair in a layout. -/
+def forwardStage {Pair : Type v} {Coord : Type w}
+    (layout : ButterflyLayout Pair Coord) (z : Pair → R)
+    (input : Coord → R) : Coord → R := fun coord =>
+  let pairSide := layout.equiv.symm coord
+  forwardButterfly (z pairSide.1)
+    (input (layout.equiv (pairSide.1, false)))
+    (input (layout.equiv (pairSide.1, true))) pairSide.2
+
+/-- Apply one inverse butterfly to every pair in a layout. -/
+def inverseStage {Pair : Type v} {Coord : Type w}
+    (layout : ButterflyLayout Pair Coord) (zInv : Pair → R)
+    (input : Coord → R) : Coord → R := fun coord =>
+  let pairSide := layout.equiv.symm coord
+  inverseButterfly (zInv pairSide.1)
+    (input (layout.equiv (pairSide.1, false)))
+    (input (layout.equiv (pairSide.1, true))) pairSide.2
+
+/-- Inverse stage using ML-KEM's right-minus-left spelling. -/
+def inverseStageRev {Pair : Type v} {Coord : Type w}
+    (layout : ButterflyLayout Pair Coord) (zRev : Pair → R)
+    (input : Coord → R) : Coord → R := fun coord =>
+  let pairSide := layout.equiv.symm coord
+  inverseButterflyRev (zRev pairSide.1)
+    (input (layout.equiv (pairSide.1, false)))
+    (input (layout.equiv (pairSide.1, true))) pairSide.2
+
+theorem inverseStageRev_eq {Pair : Type v} {Coord : Type w}
+    (layout : ButterflyLayout Pair Coord) (zRev : Pair → R) :
+    inverseStageRev layout zRev = inverseStage layout (fun pair => -zRev pair) := by
+  funext input coord
+  simp only [inverseStageRev, inverseStage]
+  exact congrFun (inverseButterflyRev_eq _ _ _) _
+
+/-- Pointwise scalar multiplication for coefficient functions. -/
+def scaleCoeffs {Coord : Type w} (c : R) (input : Coord → R) : Coord → R :=
+  fun coord => c * input coord
+
+/-- A matching inverse butterfly cancels a forward butterfly up to the factor
+`2` introduced by the unnormalised sum/difference convention. -/
+theorem inverseButterfly_forwardButterfly
+    (z zInv u v : R) (hz : zInv * z = 1) :
+    inverseButterfly zInv (forwardButterfly z u v false)
+        (forwardButterfly z u v true) =
+      fun side => scaleCoeffs (2 : R) (fun b => if b then v else u) side := by
+  funext side
+  cases side <;>
+    simp only [inverseButterfly, forwardButterfly, scaleCoeffs]
+  · simp only [Bool.false_eq_true, ↓reduceIte]
+    ring
+  · calc
+      zInv * (u + z * v - (u - z * v)) = zInv * (z * v + z * v) := by ring
+      _ = (zInv * z) * v + (zInv * z) * v := by ring
+      _ = 2 * v := by rw [hz]; ring
+
+/-- Matching inverse and forward stages cancel pointwise up to multiplication
+by `2`.  The only concrete algebraic obligation is the per-pair twiddle inverse
+law; all schedule coverage and non-overlap follows from `layout.equiv`. -/
+theorem inverseStage_forwardStage
+    {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
+    (z zInv : Pair → R) (hz : ∀ pair, zInv pair * z pair = 1)
+    (input : Coord → R) :
+    inverseStage layout zInv (forwardStage layout z input) =
+      scaleCoeffs (2 : R) input := by
+  funext coord
+  rw [← layout.equiv.apply_symm_apply coord]
+  obtain ⟨pair, side⟩ := layout.equiv.symm coord
+  cases side <;>
+    simp only [inverseStage, forwardStage, inverseButterfly, forwardButterfly, scaleCoeffs,
+      Equiv.symm_apply_apply]
+  · ring
+  · calc
+      zInv pair *
+          (input (layout.equiv (pair, false)) +
+              z pair * input (layout.equiv (pair, true)) -
+            (input (layout.equiv (pair, false)) -
+              z pair * input (layout.equiv (pair, true)))) =
+        zInv pair *
+          (z pair * input (layout.equiv (pair, true)) +
+            z pair * input (layout.equiv (pair, true))) := by ring
+      _ =
+          (zInv pair * z pair) * input (layout.equiv (pair, true)) +
+            (zInv pair * z pair) * input (layout.equiv (pair, true)) := by ring
+      _ = 2 * input (layout.equiv (pair, true)) := by rw [hz]; ring
+
+/-- A stage commutes with pointwise scalar multiplication. -/
+theorem inverseStage_scaleCoeffs
+    {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
+    (zInv : Pair → R) (c : R) (input : Coord → R) :
+    inverseStage layout zInv (scaleCoeffs c input) =
+      scaleCoeffs c (inverseStage layout zInv input) := by
+  funext coord
+  rw [← layout.equiv.apply_symm_apply coord]
+  obtain ⟨pair, side⟩ := layout.equiv.symm coord
+  cases side <;>
+    simp only [inverseStage, inverseButterfly, scaleCoeffs, Equiv.symm_apply_apply]
+  <;> ring
+
+/-- Package the two laws needed to compose an unnormalised transform stage:
+the inverse/forward roundtrip and compatibility of the inverse with a scalar
+accumulated by inner stages. -/
+structure ScaledStage (R : Type*) [CommRing R] (Coord : Type w) where
+  forward : (Coord → R) → (Coord → R)
+  inverse : (Coord → R) → (Coord → R)
+  scalar : R
+  inverse_forward : ∀ input, inverse (forward input) = scaleCoeffs scalar input
+  inverse_scale : ∀ c input,
+    inverse (scaleCoeffs c input) = scaleCoeffs c (inverse input)
+
+/-- Build a composable stage certificate from a butterfly layout and matching
+twiddle tables.  For ML-KEM's syntactic `zRev * (y - x)`, the `zInv` supplied
+here must be `-zRev`; for ML-DSA it is the coefficient already multiplying
+`(x - y)`.  In both cases the obligation is explicitly `zInv * z = 1`. -/
+def butterflyStage {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
+    (z zInv : Pair → R) (hz : ∀ pair, zInv pair * z pair = 1) :
+    ScaledStage R Coord where
+  forward := forwardStage layout z
+  inverse := inverseStage layout zInv
+  scalar := 2
+  inverse_forward := inverseStage_forwardStage layout z zInv hz
+  inverse_scale := inverseStage_scaleCoeffs layout zInv
+
+/-- Apply a list of stages from left to right. -/
+def forwardStages {Coord : Type w} : List (ScaledStage R Coord) →
+    (Coord → R) → (Coord → R)
+  | [], input => input
+  | stage :: stages, input => forwardStages stages (stage.forward input)
+
+/-- Apply the inverse stages in reverse order. -/
+def inverseStages {Coord : Type w} : List (ScaledStage R Coord) →
+    (Coord → R) → (Coord → R)
+  | [], input => input
+  | stage :: stages, input => stage.inverse (inverseStages stages input)
+
+/-- Product of the scale factors introduced by a list of stages, in the order
+in which the corresponding inverse stages expose them. -/
+def stageScalar {Coord : Type w} : List (ScaledStage R Coord) → R
+  | [] => 1
+  | stage :: stages => stageScalar stages * stage.scalar
+
+/-- A reverse sequence of certified inverse stages cancels its forward stage
+sequence, accumulating only the product of the per-stage scale factors. -/
+theorem inverseStages_forwardStages {Coord : Type w}
+    (stages : List (ScaledStage R Coord)) (input : Coord → R) :
+    inverseStages stages (forwardStages stages input) =
+      scaleCoeffs (stageScalar stages) input := by
+  induction stages generalizing input with
+  | nil =>
+      funext coord
+      simp [inverseStages, forwardStages, stageScalar, scaleCoeffs]
+  | cons stage stages ih =>
+      simp only [forwardStages, inverseStages, stageScalar]
+      rw [ih (stage.forward input), stage.inverse_scale, stage.inverse_forward]
+      funext coord
+      simp [scaleCoeffs]
+      ring
+
+/-- `inverse` is a left inverse to `forward` up to a pointwise scalar. -/
+def ScaledLeftInverse {Coord : Type w} (c : R)
+    (inverse forward : (Coord → R) → (Coord → R)) : Prop :=
+  ∀ input, inverse (forward input) = scaleCoeffs c input
+
+/-- Compose two scaled inverse certificates.  This is the induction step used
+to turn per-layer butterfly facts into an end-to-end NTT roundtrip law. -/
+theorem ScaledLeftInverse.comp
+    {Coord : Type w} {cOuter cInner : R}
+    {inverseOuter forwardOuter inverseInner forwardInner :
+      (Coord → R) → (Coord → R)}
+    (hOuter : ScaledLeftInverse cOuter inverseOuter forwardOuter)
+    (hInner : ScaledLeftInverse cInner inverseInner forwardInner)
+    (hOuterScale : ∀ c input,
+      inverseOuter (scaleCoeffs c input) = scaleCoeffs c (inverseOuter input)) :
+    ScaledLeftInverse (cInner * cOuter)
+      (inverseOuter ∘ inverseInner) (forwardInner ∘ forwardOuter) := by
+  intro input
+  change inverseOuter (inverseInner (forwardInner (forwardOuter input))) = _
+  rw [hInner (forwardOuter input), hOuterScale, hOuter input]
+  funext coord
+  simp [scaleCoeffs]
+  ring
 
 end LatticeCrypto.NTTCert
