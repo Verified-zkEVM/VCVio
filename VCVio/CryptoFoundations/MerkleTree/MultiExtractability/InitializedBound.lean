@@ -34,7 +34,7 @@ def SequentialCommitter.runFromEmptyThen
       OracleComp (Query →ₒ Y) R) : OracleComp (Query →ₒ Y) R :=
   committer.runCommitmentsThen rounds 0 committer.initialState ExtractorState.empty finish
 
-/-- Empty-state specialization of the strongest sequential predictable-target theorem.
+/-- Empty-state specialization of the scheduled sequential predictable-target theorem.
 
 `nodeBudget` and `checkpointCount` remain caller-chosen uniform envelopes.  Taking them to be
 `rounds * perCheckpoint` and `rounds` gives the exact structural corollary below; larger values
@@ -48,10 +48,10 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_le
     (finish : committer.State → ExtractorState Cfg Query Address Y config →
       OracleComp (Query →ₒ Y) R)
     (win : R → Prop) (paddingQuery : Query)
-    (phaseQueryBound terminalQueryBound : ℕ)
+    (phaseQueryBound : ℕ → ℕ) (terminalQueryBound : ℕ)
     (nodeBudget checkpointCount verifierOverhead : ℕ)
     (hcommit : ∀ round privateState,
-      IsTotalQueryBound (committer.commit round privateState) phaseQueryBound)
+      IsTotalQueryBound (committer.commit round privateState) (phaseQueryBound round))
     (perCheckpoint : ℕ)
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
     (hfinish : ∀ privateState
@@ -59,6 +59,7 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_le
         (terminalCached : ℕ)
         (cache : (Query →ₒ Y).QueryCache)
         (log : (Query →ₒ Y).QueryLog),
+      state.cumulativeLog = log →
       ¬ CacheHasCollision cache →
       (∃ keys : Finset Query, keys.card ≤ terminalCached ∧
         ∀ input, cache input ≠ none → input ∈ keys) →
@@ -66,6 +67,8 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_le
       (∀ input value, cache input = some value →
         ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value) →
       state.StableAt view log →
+      state.totalNodeBudget ≤ nodeBudget →
+      state.checkpoints.length ≤ checkpointCount →
       Pr[ fun z => win z.1 |
         (simulateQ (Query →ₒ Y).cachingOracle (finish privateState state)).run cache] ≤
         (multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
@@ -78,13 +81,14 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_le
       (simulateQ (Query →ₒ Y).cachingOracle
         (committer.runFromEmptyThen config rounds finish)).run ∅] ≤
       (multiExtractabilitySafeNumerator nodeBudget checkpointCount verifierOverhead
-        (rounds * phaseQueryBound + terminalQueryBound) : ENNReal) *
+        (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) : ENNReal) *
           (Nat.card Y : ENNReal)⁻¹ := by
   apply committer.probEvent_runCommitmentsThen_le view finish win paddingQuery
     phaseQueryBound terminalQueryBound nodeBudget checkpointCount verifierOverhead
     hcommit perCheckpoint hconfig hfinish rounds 0 committer.initialState ExtractorState.empty
     (∅ : (Query →ₒ Y).QueryCache) []
-    (rounds * phaseQueryBound + terminalQueryBound) 0 (by omega) rfl
+    (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) 0
+    (by omega) rfl
   · rintro ⟨_, _, _, _, _, hcached, _, _⟩
     simp at hcached
   · exact ⟨∅, by simp, fun input hinput => (hinput (by simp)).elim⟩
@@ -115,6 +119,7 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_exact_le
         (terminalCached : ℕ)
         (cache : (Query →ₒ Y).QueryCache)
         (log : (Query →ₒ Y).QueryLog),
+      state.cumulativeLog = log →
       ¬ CacheHasCollision cache →
       (∃ keys : Finset Query, keys.card ≤ terminalCached ∧
         ∀ input, cache input ≠ none → input ∈ keys) →
@@ -122,6 +127,8 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_exact_le
       (∀ input value, cache input = some value →
         ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value) →
       state.StableAt view log →
+      state.totalNodeBudget ≤ rounds * perCheckpoint →
+      state.checkpoints.length ≤ rounds →
       Pr[ fun z => win z.1 |
         (simulateQ (Query →ₒ Y).cachingOracle (finish privateState state)).run cache] ≤
         (multiExtractabilitySafePotential (rounds * perCheckpoint) rounds verifierOverhead
@@ -133,8 +140,8 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_exact_le
       (multiExtractabilitySafeNumerator (rounds * perCheckpoint) rounds verifierOverhead
         (rounds * phaseQueryBound + terminalQueryBound) : ENNReal) *
           (Nat.card Y : ENNReal)⁻¹ := by
-  exact committer.probEvent_runFromEmptyThen_le view config finish win paddingQuery
-    phaseQueryBound terminalQueryBound (rounds * perCheckpoint) rounds verifierOverhead
+  simpa using committer.probEvent_runFromEmptyThen_le view config finish win paddingQuery
+    (fun _ => phaseQueryBound) terminalQueryBound (rounds * perCheckpoint) rounds verifierOverhead
     hcommit perCheckpoint hconfig hfinish rounds le_rfl le_rfl
 
 /-- Coarse binomial relaxation of the initialized finite-maximum theorem. -/

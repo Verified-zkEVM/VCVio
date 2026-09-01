@@ -28,6 +28,41 @@ universe u v
 
 variable {α : Type u} {β : Type v}
 
+/-- Reading a selected value from the selected tuple of a full tree recovers the tree value at
+the corresponding leaf node. -/
+theorem selectedValueAt_selectedValues_toLeafData {s : Skeleton}
+    (tree : FullData α s) (selector : LeafData Bool s)
+    (idx : SkeletonLeafIndex s) (hidx : selector.get idx = true) :
+    selectedValueAt (selectedValues tree.toLeafData selector) idx hidx =
+      tree.get idx.toNodeIndex := by
+  induction idx with
+  | ofLeaf =>
+      cases tree with
+      | leaf value =>
+          cases selector with
+          | leaf selected =>
+              cases selected with
+              | false => simp at hidx
+              | true => rfl
+  | ofLeft idx ih =>
+      cases tree with
+      | internal root left right =>
+          cases selector with
+          | internal leftSelector rightSelector =>
+              change selectedValueAt
+                (selectedValues left.toLeafData leftSelector) idx _ =
+                  left.get idx.toNodeIndex
+              convert ih left leftSelector (by simpa using hidx) using 1
+  | ofRight idx ih =>
+      cases tree with
+      | internal root left right =>
+          cases selector with
+          | internal leftSelector rightSelector =>
+              change selectedValueAt
+                (selectedValues right.toLeafData rightSelector) idx _ =
+                  right.get idx.toNodeIndex
+              convert ih right rightSelector (by simpa using hidx) using 1
+
 /-- Reading a selected value commutes with pointwise mapping. -/
 @[simp]
 theorem selectedValueAt_map (f : α → β) {s : Skeleton} {sel : LeafData Bool s}

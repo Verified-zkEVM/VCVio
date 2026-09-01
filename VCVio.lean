@@ -100,6 +100,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Endgame
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Evolution
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Game
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.InitializedBound
@@ -112,6 +113,7 @@ public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.ResourceBou
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Sequential
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.SequentialBound
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Stateful
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.StrongBound
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Targets
 public import VCVio.CryptoFoundations.MerkleTree.Vector.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Vector.Defs

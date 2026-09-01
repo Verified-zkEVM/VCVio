@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 
+public import VCVio.CryptoFoundations.MerkleTree.ExtractionKernel
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Evolution
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Targets
 
@@ -85,6 +86,165 @@ theorem ExtractorState.StableAt.append_of_not_mem_liveTargetSet
   refine ⟨⟨tag, checkpoint⟩, hcheckpoint, ?_⟩
   exact tree_ne_append_singleton_implies_response_mem_targets view
     (config.skeleton tag) (config.addressKey tag) log checkpoint.root query response hchanged
+
+/-- At a stable log, the dynamically re-extracted live target union is exactly the immutable
+checkpoint target union.  Thus harmless log growth cannot silently enlarge the set against which
+the next response is tested. -/
+theorem ExtractorState.StableAt.liveTargetSet_eq_targetSet
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log) :
+    state.liveTargetSet view log = state.targetSet view := by
+  ext target
+  simp only [ExtractorState.liveTargetSet, ExtractorState.targetSet, List.mem_toFinset,
+    ExtractorState.liveTargetList, ExtractorState.targetList, targetsOfCheckpoints,
+    List.mem_flatMap]
+  constructor
+  · rintro ⟨⟨tag, checkpoint⟩, hcheckpoint, htarget⟩
+    refine ⟨⟨tag, checkpoint⟩, hcheckpoint, ?_⟩
+    have heq := MerkleTreeExtractor.targets_eq_of_tree_eq view (config.skeleton tag)
+      (config.addressKey tag) checkpoint.cumulativeLog log checkpoint.root checkpoint.root
+      (hstable tag checkpoint hcheckpoint)
+    simpa [Checkpoint.targets] using heq ▸ htarget
+  · rintro ⟨⟨tag, checkpoint⟩, hcheckpoint, htarget⟩
+    refine ⟨⟨tag, checkpoint⟩, hcheckpoint, ?_⟩
+    have heq := MerkleTreeExtractor.targets_eq_of_tree_eq view (config.skeleton tag)
+      (config.addressKey tag) checkpoint.cumulativeLog log checkpoint.root checkpoint.root
+      (hstable tag checkpoint hcheckpoint)
+    simpa [Checkpoint.targets] using heq.symm ▸ htarget
+
+/-- Fixed-set form of the one-entry stability rule. -/
+theorem ExtractorState.StableAt.append_of_not_mem_targetSet
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log)
+    (query : Query) (response : Y)
+    (hresponse : response ∉ state.targetSet view) :
+    state.StableAt view (log ++ [⟨query, response⟩]) := by
+  apply hstable.append_of_not_mem_liveTargetSet view query response
+  rwa [hstable.liveTargetSet_eq_targetSet view]
+
+/-- Appending a whole suffix preserves stability when every response avoids the immutable target
+set of the recorded checkpoints. -/
+theorem ExtractorState.StableAt.append_of_forall_not_mem_targetSet
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log)
+    (suffix : MerkleTreeExtractor.QueryLog Query Y)
+    (havoid : ∀ entry ∈ suffix, entry.2 ∉ state.targetSet view) :
+    state.StableAt view (log ++ suffix) := by
+  induction suffix generalizing log with
+  | nil => simpa using hstable
+  | cons entry suffix ih =>
+      have hhead : entry.2 ∉ state.targetSet view := havoid entry (by simp)
+      have hstable' := hstable.append_of_not_mem_targetSet view entry.1 entry.2 hhead
+      have htail : ∀ tailEntry ∈ suffix, tailEntry.2 ∉ state.targetSet view := by
+        intro tailEntry hmem
+        exact havoid tailEntry (by simp [hmem])
+      simpa [List.append_assoc] using ih hstable' htail
+
+/-- If a suffix destroys checkpoint stability, some response in that suffix belongs to the
+target set fixed at the beginning of the suffix. -/
+theorem ExtractorState.StableAt.exists_target_of_not_stable_append
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log)
+    (suffix : MerkleTreeExtractor.QueryLog Query Y)
+    (hnotStable : ¬ state.StableAt view (log ++ suffix)) :
+    ∃ entry ∈ suffix, entry.2 ∈ state.targetSet view := by
+  by_contra hnone
+  push Not at hnone
+  exact hnotStable (hstable.append_of_forall_not_mem_targetSet view suffix hnone)
+
+/-- If a suffix adds no fresh value from the fixed target set, it preserves stability.  Target-
+valued cache hits are harmless because the exact query/response entry was already present in the
+initial log; non-target misses use the causal one-entry rule. -/
+theorem ExtractorState.StableAt.append_of_no_freshTarget
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log)
+    (suffix : MerkleTreeExtractor.QueryLog Query Y)
+    (initialCache finalCache : (Query →ₒ Y).QueryCache)
+    (hcacheLog : ∀ input value, initialCache input = some value →
+      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value)
+    (hmono : initialCache ≤ finalCache)
+    (hsuffixFinal : ∀ entry ∈ suffix, finalCache entry.1 = some entry.2)
+    (hnoFresh : ∀ target ∈ state.targetSet view,
+      ¬ MerkleTreeExtractability.CacheAddsValue initialCache finalCache target) :
+    state.StableAt view (log ++ suffix) := by
+  induction suffix generalizing log with
+  | nil => simpa using hstable
+  | cons entry suffix ih =>
+      have hfinal : finalCache entry.1 = some entry.2 := hsuffixFinal entry (by simp)
+      have hstable' : state.StableAt view (log ++ [entry]) := by
+        cases hinitial : initialCache entry.1 with
+        | none =>
+            apply hstable.append_of_not_mem_targetSet view entry.1 entry.2
+            intro htarget
+            exact hnoFresh entry.2 htarget ⟨entry.1, hfinal, hinitial⟩
+        | some value =>
+            have hvalueFinal := hmono hinitial
+            rw [hfinal] at hvalueFinal
+            obtain rfl := Option.some.inj hvalueFinal
+            obtain ⟨cachedEntry, hcachedEntry, hquery, hvalue⟩ :=
+              hcacheLog entry.1 entry.2 hinitial
+            have hentryEq : cachedEntry = entry := by
+              rcases cachedEntry with ⟨cachedQuery, cachedValue⟩
+              rw [Sigma.ext_iff]
+              exact ⟨hquery, heq_of_eq hvalue⟩
+            subst cachedEntry
+            exact hstable.append_cached view entry.1 entry.2 hcachedEntry
+      have hsuffixFinal' : ∀ tailEntry ∈ suffix,
+          finalCache tailEntry.1 = some tailEntry.2 := by
+        intro tailEntry hmem
+        exact hsuffixFinal tailEntry (by simp [hmem])
+      have hcacheLog' : ∀ input value, initialCache input = some value →
+          ∃ cachedEntry ∈ log ++ [entry],
+            cachedEntry.1 = input ∧ cachedEntry.2 = value := by
+        intro input value hcached
+        obtain ⟨cachedEntry, hmem, hquery, hvalue⟩ := hcacheLog input value hcached
+        exact ⟨cachedEntry, List.mem_append_left _ hmem, hquery, hvalue⟩
+      simpa [List.append_assoc] using
+        ih hstable' hcacheLog' hsuffixFinal'
+
+/-- Terminal destabilization yields a target value added under a key absent from the initial
+cache.  This is the deterministic fixed-target form consumed by the terminal ROM theorem. -/
+theorem ExtractorState.StableAt.exists_freshTarget_of_not_stable_append
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    (hstable : state.StableAt view log)
+    (suffix : MerkleTreeExtractor.QueryLog Query Y)
+    (initialCache finalCache : (Query →ₒ Y).QueryCache)
+    (hcacheLog : ∀ input value, initialCache input = some value →
+      ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value)
+    (hmono : initialCache ≤ finalCache)
+    (hsuffixFinal : ∀ entry ∈ suffix, finalCache entry.1 = some entry.2)
+    (hnotStable : ¬ state.StableAt view (log ++ suffix)) :
+    ∃ target ∈ state.targetSet view,
+      MerkleTreeExtractability.CacheAddsValue initialCache finalCache target := by
+  by_contra hnone
+  push Not at hnone
+  exact hnotStable
+    (hstable.append_of_no_freshTarget view suffix initialCache finalCache
+      hcacheLog hmono hsuffixFinal hnone)
 
 /-- Recording a root at a stable phase boundary preserves all old equalities and makes the new
 checkpoint stable by construction. -/

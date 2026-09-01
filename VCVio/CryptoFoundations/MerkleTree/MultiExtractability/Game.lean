@@ -90,6 +90,54 @@ theorem verifyClaims_isTotalQueryBound [DecidableEq Y]
         fun _ => isTotalQueryBound_bind (n₁ := claimsQueryCount claims) (n₂ := 0)
           ih fun _ => trivial
 
+/-- Every accepted attempt retained by a supported list-verifier run carries the exact
+cache-level execution tree of its originating batch opening in the final shared cache. -/
+theorem batchRunInCache_of_mem_support_verifyClaims
+    [DecidableEq Query] [DecidableEq Y]
+    (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
+    {config : Configuration Cfg Address}
+    (claims : List (OpeningClaim Query Y config))
+    (cache₀ cache₁ : (Query →ₒ Y).QueryCache)
+    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (hrun : (attempts, cache₁) ∈ support
+      ((simulateQ (Query →ₒ Y).cachingOracle (verifyClaims model claims)).run cache₀))
+    (tag : Cfg) (attempt : OpeningAttempt Query Y config tag)
+    (hmem : (⟨tag, attempt⟩ : AnyOpeningAttempt Cfg Query Address Y config) ∈ attempts)
+    (haccepted : attempt.accepted = true) :
+    MerkleTreeBatchExtractability.BatchRunInCache model (config.addressKey tag) cache₁
+      attempt.opening.values attempt.opening.proof attempt.checkpoint.root := by
+  induction claims generalizing cache₀ cache₁ attempts with
+  | nil =>
+      simp only [verifyClaims, simulateQ_pure, StateT.run_pure, support_pure,
+        Set.mem_singleton_iff] at hrun
+      injection hrun with hattempts _
+      subst attempts
+      simp at hmem
+  | cons claim claims ih =>
+      simp only [verifyClaims, simulateQ_bind, StateT.run_bind,
+        mem_support_bind_iff] at hrun
+      obtain ⟨⟨accepted, cacheVerify⟩, hverify, hrun⟩ := hrun
+      obtain ⟨⟨rest, cacheRest⟩, hrest, hfinal⟩ := hrun
+      simp only [simulateQ_pure, StateT.run_pure, support_pure,
+        Set.mem_singleton_iff] at hfinal
+      injection hfinal with hattempts hcache
+      subst attempts
+      subst cache₁
+      rcases List.mem_cons.mp hmem with hhead | htail
+      · cases hhead
+        have haccepted' : accepted = true := by simpa using haccepted
+        subst accepted
+        have hbatch :=
+          MerkleTreeBatchExtractability.batchRunInCache_of_mem_support_verifyOpening
+            model (config.addressKey claim.tag) claim.checkpoint.root claim.opening
+              cache₀ cacheVerify hverify
+        exact MerkleTreeBatchExtractability.batchRunInCache_mono model
+          (config.addressKey claim.tag)
+          (simulateQ_cachingOracle_cache_le (verifyClaims model claims)
+            cacheVerify (rest, cacheRest) hrest)
+          claim.opening.values claim.opening.proof claim.checkpoint.root hbatch
+      · exact ih cacheVerify cacheRest rest hrest htail
+
 /-- Sequential multi-commitment adversary with a terminal, adaptively chosen list of batch
 opening claims. The private commitment state remains abstract. -/
 structure Adversary (Cfg : Type) (Query : Type) (Address : Type) (Y : Type)
