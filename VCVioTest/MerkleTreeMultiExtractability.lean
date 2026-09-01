@@ -207,6 +207,74 @@ theorem queryingGlobalStrongBound (rounds : ℕ) :
     (rounds + 1) 0 3 (querying_global_bound rounds) querying_verifier_bound
     per_checkpoint_bound
 
+/-! ## Checkpoint-dependent opening claims -/
+
+def selectBoth : LeafData Bool skeleton :=
+  .internal (.leaf true) (.leaf true)
+
+def claimingOpening : BatchOpening Bool skeleton where
+  selector := selectBoth
+  values := (false, false)
+  proof := .internalBoth .leaf .leaf
+
+/-- Turn a real recorded checkpoint into a claim against that exact checkpoint. -/
+def checkpointClaim (checkpoint : Checkpoint Query Bool config ()) :
+    OpeningClaim Query Bool config where
+  tag := ()
+  checkpoint := checkpoint
+  opening := claimingOpening
+
+/-- Read the extractor state and emit claims for its first `rounds` recorded checkpoints. On a
+canonical `rounds`-round execution this covers the entire checkpoint list; `take` makes the public
+resource predicate hold uniformly even on unreachable states with longer histories. -/
+def checkpointClaims (rounds : ℕ)
+    (extractorState : ExtractorState Unit Query Unit Bool config) :
+    List (OpeningClaim Query Bool config) :=
+  (extractorState.checkpoints.take rounds).map fun
+    | ⟨(), checkpoint⟩ => checkpointClaim checkpoint
+
+/-- Unlike the preceding adversaries, the opening continuation observes the extractor state and
+emits nonempty claims whenever a checkpoint exists. -/
+abbrev claimingAdversary (rounds : ℕ) : Adversary Unit Query Unit Bool config where
+  committer := queryingCommitter
+  opening _ extractorState := pure (checkpointClaims rounds extractorState)
+
+private theorem claiming_opening_bound (rounds : ℕ) (state : queryingCommitter.State)
+    (extractorState : ExtractorState Unit Query Unit Bool config) :
+    IsTotalQueryBound ((claimingAdversary rounds).opening state extractorState) 0 := by
+  trivial
+
+private theorem claiming_global_bound (rounds : ℕ) :
+    (claimingAdversary rounds).IsAdversaryPrefixQueryBound rounds rounds := by
+  have hbound := (claimingAdversary rounds).isAdversaryPrefixQueryBound_of_schedule rounds
+    (fun _ => 1) 0 querying_commit_bound (claiming_opening_bound rounds)
+  simpa [commitmentQueryBudget_const] using hbound
+
+private theorem claiming_opening_count_bound (rounds : ℕ) :
+    (claimingAdversary rounds).HasOpeningCountBound rounds := by
+  intro state extractorState claims hclaims
+  have hclaims' : claims = checkpointClaims rounds extractorState := by
+    simpa [claimingAdversary] using hclaims
+  subst claims
+  simp [checkpointClaims]
+
+private theorem claiming_verifier_bound (rounds : ℕ) :
+    (claimingAdversary rounds).HasVerifierQueryBound rounds := by
+  simpa using (claimingAdversary rounds).hasVerifierQueryBound_of_openingCountBound
+    rounds 1 (claiming_opening_count_bound rounds) per_claim_bound
+
+/-- This owner-theorem instantiation has nonzero honest-verifier overhead and forces the terminal
+opening continuation to depend on the extractor state. It exercises the accounting bridge used to
+separate ghost continuation queries from real adversarial queries. -/
+theorem claimingGlobalStrongBound (rounds : ℕ) :
+    Pr[ StrongFailure model |
+        extractabilityGame model config rounds (claimingAdversary rounds)] ≤
+      (multiExtractabilitySafeNumerator (rounds * 3) rounds rounds rounds : ENNReal) *
+        (Nat.card Bool : ENNReal)⁻¹ := by
+  exact strongFailure_rom_bound_global_exact model config rounds (claimingAdversary rounds)
+    rounds rounds 3 (claiming_global_bound rounds) (claiming_verifier_bound rounds)
+    per_checkpoint_bound
+
 /-! ## Proof-only full-opening disagreement -/
 
 def selectRight : LeafData Bool skeleton :=
