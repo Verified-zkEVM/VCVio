@@ -23,10 +23,10 @@ checkpoint contributes its root. This shared-log cap is strictly sharper than mu
 single-tree `min (2L - 1) (2k + 1)` cap by the number of checkpoints.
 
 The safe numerator is a finite maximum over fresh adversarial inputs across every commitment
-phase and terminal opening production. It
-deliberately overcharges queries made before a target exists. A future checkpoint-aware stopping
-theorem may derive a tighter exact numerator; this module does not identify the safe envelope with
-the textbook-tight potential. Coarse closed forms are derived below as corollaries.
+phase and terminal opening production. It deliberately overcharges queries made before a target
+exists. `MultiExtractability.OnlineBound` proves the checkpoint-aware stopping recurrence for this
+envelope; this module still does not identify it with a tighter textbook potential. Coarse closed
+forms are derived below as corollaries.
 -/
 
 @[expose] public section
@@ -109,6 +109,73 @@ theorem sharedTargetCount_mono_keyCount
   intro left right hle
   unfold sharedTargetCount
   gcongr
+
+/-- The shared target cap is monotone in both global resource envelopes. -/
+theorem sharedTargetCount_mono_budget
+    {leftNodeBudget rightNodeBudget leftCheckpointCount rightCheckpointCount keyCount : ℕ}
+    (hnodes : leftNodeBudget ≤ rightNodeBudget)
+    (hcheckpoints : leftCheckpointCount ≤ rightCheckpointCount) :
+    sharedTargetCount leftNodeBudget leftCheckpointCount keyCount ≤
+      sharedTargetCount rightNodeBudget rightCheckpointCount keyCount := by
+  unfold sharedTargetCount
+  gcongr
+
+/-- Enlarging the global node/checkpoint envelope can only enlarge the online energy. -/
+theorem multiCheckpointEnergy_mono_budget
+    {leftNodeBudget rightNodeBudget leftCheckpointCount rightCheckpointCount : ℕ}
+    (hnodes : leftNodeBudget ≤ rightNodeBudget)
+    (hcheckpoints : leftCheckpointCount ≤ rightCheckpointCount)
+    (verifierOverhead remaining cached prefixMisses : ℕ) :
+    multiCheckpointEnergy leftNodeBudget leftCheckpointCount verifierOverhead
+        remaining cached prefixMisses ≤
+      multiCheckpointEnergy rightNodeBudget rightCheckpointCount verifierOverhead
+        remaining cached prefixMisses := by
+  unfold multiCheckpointEnergy
+  gcongr
+  exact sharedTargetCount_mono_budget hnodes hcheckpoints
+
+/-- Enlarging the global node/checkpoint envelope can only enlarge the safe potential. -/
+theorem multiExtractabilitySafePotential_mono_budget
+    {leftNodeBudget rightNodeBudget leftCheckpointCount rightCheckpointCount : ℕ}
+    (hnodes : leftNodeBudget ≤ rightNodeBudget)
+    (hcheckpoints : leftCheckpointCount ≤ rightCheckpointCount)
+    (verifierOverhead remaining cached : ℕ) :
+    multiExtractabilitySafePotential leftNodeBudget leftCheckpointCount verifierOverhead
+        remaining cached ≤
+      multiExtractabilitySafePotential rightNodeBudget rightCheckpointCount verifierOverhead
+        remaining cached := by
+  unfold multiExtractabilitySafePotential
+  apply Finset.sup_mono_fun
+  intro prefixMisses _
+  exact multiCheckpointEnergy_mono_budget hnodes hcheckpoints
+    verifierOverhead remaining cached prefixMisses
+
+/-- More remaining adversarial syntax can only enlarge the online energy. -/
+theorem multiCheckpointEnergy_mono_remaining
+    (nodeBudget checkpointCount verifierOverhead cached prefixMisses : ℕ) :
+    Monotone fun remaining =>
+      multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+        remaining cached prefixMisses := by
+  intro left right hremaining
+  unfold multiCheckpointEnergy
+  apply Nat.add_le_add_left
+  exact Nat.mul_le_mul_left _ (Nat.add_le_add_right hremaining verifierOverhead)
+
+/-- The safe potential is monotone in the remaining adversarial query budget. -/
+theorem multiExtractabilitySafePotential_mono_remaining
+    (nodeBudget checkpointCount verifierOverhead cached : ℕ) :
+    Monotone fun remaining =>
+      multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+        remaining cached := by
+  intro left right hremaining
+  unfold multiExtractabilitySafePotential
+  apply Finset.sup_le
+  intro prefixMisses hprefix
+  apply (multiCheckpointEnergy_mono_remaining nodeBudget checkpointCount
+    verifierOverhead cached prefixMisses hremaining).trans
+  apply Finset.le_sup
+  simp only [Finset.mem_range] at hprefix ⊢
+  omega
 
 /-- Fresh-miss recurrence behind the safe online envelope. The local step pays collision against
 the existing cache and a hit in the target set predictable before sampling; the continuation then

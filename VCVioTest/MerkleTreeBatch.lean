@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Addressed
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Disagreement
 public meta import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.MapToSingle
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Game
@@ -174,6 +175,28 @@ example : Id.run
        { address := .rootNode, left := 109, right := 219 }]) := by
   decide
 
+/-- Pure counterpart of `tracedAddressedHash`, retaining address sensitivity and child order. -/
+def pureAddressedHash (address : SkeletonInternalIndex fourLeafSkeleton)
+    (left right : Nat) : Nat :=
+  addressWeight (depthTwoAddress address) + 2 * left + 3 * right + 1
+
+/-- Addressed batch-to-single expansion recomputes the right sibling subtree under the right-child
+address and then retains the lower left-child sibling.  Reindexing either subtree incorrectly
+changes `219`, while reversing proof order changes the vector. -/
+example :
+    (batchToSingleProofAddressed pureAddressedHash
+      (selectedValues leaves selectOuter) outerProof firstIndex firstSelected).toList =
+      [219, 2] := by
+  rfl
+
+/-- The generated addressed path recomputes the same noncommutative, address-sensitive root as
+the pruned batch opening. -/
+example :
+    AddressedMerkleTree.getPutativeRootAddressedWithHash pureAddressedHash firstIndex 1
+      (batchToSingleProofAddressed pureAddressedHash
+        (selectedValues leaves selectOuter) outerProof firstIndex firstSelected) = 876 := by
+  rfl
+
 /-- Opening no leaf is excluded by the dependent proof family. -/
 example : IsEmpty (BatchProof Nat selectNone) :=
   ⟨fun proof => by
@@ -228,12 +251,92 @@ def constantHash (_left _right : Nat) : Nat :=
 theorem selectedValuesDiffer :
     selectedValueAt leftValues pairLeftIndex leftSelected ≠
       selectedValueAt bothValues pairLeftIndex bothLeftSelected := by
-  native_decide
+  decide
 
 theorem putativeRootsAgree :
     getPutativeBatchRootWithHash constantHash leftValues leftProof =
       getPutativeBatchRootWithHash constantHash bothValues bothProof :=
   rfl
+
+def bothValuesRightChanged : SelectedValues Nat selectBoth := by
+  change Nat × Nat
+  exact (2, 9)
+
+def bothOpening₁ : BatchOpening Nat pairSkeleton where
+  selector := selectBoth
+  values := bothValues
+  proof := bothProof
+
+def bothOpening₂ : BatchOpening Nat pairSkeleton where
+  selector := selectBoth
+  values := bothValuesRightChanged
+  proof := bothProof
+
+def pairNodeHash (_ : SkeletonInternalIndex pairSkeleton) : Nat → Nat → Nat :=
+  constantHash
+
+def pairRightIndex : SkeletonLeafIndex pairSkeleton :=
+  .ofRight .ofLeaf
+
+theorem bothOpeningsValuesNotHEq : ¬ HEq bothOpening₁.values bothOpening₂.values := by
+  intro heq
+  have hvalues : bothValues = bothValuesRightChanged := eq_of_heq heq
+  have hright := congrArg
+    (fun values : SelectedValues Nat selectBoth =>
+      selectedValueAt values pairRightIndex rfl) hvalues
+  change 7 = 9 at hright
+  omega
+
+theorem bothOpening₁Accepted :
+    BatchOpening.AcceptedAddressedWithHash pairNodeHash 0 bothOpening₁ := rfl
+
+theorem bothOpening₂Accepted :
+    BatchOpening.AcceptedAddressedWithHash pairNodeHash 0 bothOpening₂ := rfl
+
+/-- The structural decomposition must take the right branch: the left values agree, while the
+right values are `7` and `9`. -/
+example : ∃ index : SkeletonLeafIndex pairSkeleton,
+    ∃ selected : selectBoth.get index = true,
+      selectedValueAt bothValues index selected ≠
+          selectedValueAt bothValuesRightChanged index selected ∧
+        index = pairRightIndex := by
+  obtain ⟨index, selected, hvalue⟩ :=
+    exists_selectedValueAt_ne_of_ne bothValues bothValuesRightChanged (by
+      intro heq
+      have hright := congrArg
+        (fun values : SelectedValues Nat selectBoth =>
+          selectedValueAt values pairRightIndex rfl) heq
+      change 7 = 9 at hright
+      omega)
+  refine ⟨index, selected, hvalue, ?_⟩
+  cases index with
+  | ofLeft index =>
+      cases index
+      exact (hvalue rfl).elim
+  | ofRight index =>
+      cases index
+      rfl
+
+/-- The full-opening bridge takes the same right branch.  Its witness type additionally carries
+both canonical generated paths and their equations to the shared accepted root. -/
+example : ∃ witness : BatchOpening.SelectedPathDisagreement
+    pairNodeHash 0 bothOpening₁ bothOpening₂,
+    witness.index = pairRightIndex := by
+  obtain ⟨witness⟩ := BatchOpening.selectedPathDisagreement_of_accepted
+    pairNodeHash 0 bothOpening₁ bothOpening₂ rfl bothOpeningsValuesNotHEq
+      bothOpening₁Accepted bothOpening₂Accepted
+  have hindex : witness.index = pairRightIndex := by
+    rcases witness with
+      ⟨index, selected₁, selected₂, hleaf, proof₁, proof₂, hproof₁, hproof₂,
+        hverifies₁, hverifies₂⟩
+    cases index with
+    | ofLeft index =>
+        cases index
+        exact (hleaf rfl).elim
+    | ofRight index =>
+        cases index
+        rfl
+  exact ⟨witness, hindex⟩
 
 example :
     ∃ l₁ r₁ l₂ r₂,

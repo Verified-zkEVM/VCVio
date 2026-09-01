@@ -324,6 +324,29 @@ structure LogCacheKeysInvariant [DecidableEq Query]
   /-- The finite key set is exactly the populated cache domain. -/
   mem_keys_iff : ∀ query, query ∈ keys ↔ ∃ response, cache query = some response
 
+/-- Minimal online support needed to bound targets. The key set may overapproximate the populated
+cache domain; this is the form preserved by a syntactic `cached` upper bound. -/
+structure LogCacheKeysCover [DecidableEq Query]
+    (log : MerkleTreeExtractor.QueryLog Query Y)
+    (cache : Query → Option Y) (keys : Finset Query) : Prop where
+  /-- Every observed entry agrees with the current cache. -/
+  log_agrees : ∀ query response,
+    (⟨query, response⟩ : (_query : Query) × Y) ∈ log →
+    cache query = some response
+  /-- Every populated cache key belongs to the finite support. -/
+  cache_keys : ∀ query, cache query ≠ none → query ∈ keys
+
+/-- Exact online cache/log/key invariants imply the weaker finite-support cover. -/
+theorem LogCacheKeysInvariant.toCover [DecidableEq Query]
+    {log : MerkleTreeExtractor.QueryLog Query Y}
+    {cache : Query → Option Y} {keys : Finset Query}
+    (hsupport : LogCacheKeysInvariant log cache keys) :
+    LogCacheKeysCover log cache keys where
+  log_agrees := hsupport.log_agrees
+  cache_keys query hquery := by
+    apply (hsupport.mem_keys_iff query).2
+    exact Option.ne_none_iff_exists'.mp hquery
+
 /-- Every live target is a recorded root or a child of a currently populated query key. -/
 theorem ExtractorState.liveTargetSet_subset_targetSupport
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
@@ -332,7 +355,7 @@ theorem ExtractorState.liveTargetSet_subset_targetSupport
     (state : ExtractorState Cfg Query Address Y config)
     (log : MerkleTreeExtractor.QueryLog Query Y)
     (cache : Query → Option Y) (keys : Finset Query)
-    (hsupport : LogCacheKeysInvariant log cache keys) :
+    (hsupport : LogCacheKeysCover log cache keys) :
     state.liveTargetSet view log ⊆ state.targetSupport view keys := by
   intro target htarget
   simp only [ExtractorState.liveTargetSet, List.mem_toFinset,
@@ -347,13 +370,13 @@ theorem ExtractorState.liveTargetSet_subset_targetSupport
     simp only [ExtractorState.checkpointRoots, List.mem_toFinset, List.mem_map]
     exact ⟨⟨tag, checkpoint⟩, hcheckpoint, rfl⟩
   · have hcache := hsupport.log_agrees entry.1 entry.2 hentry
-    have hkey : entry.1 ∈ keys := (hsupport.mem_keys_iff entry.1).2 ⟨entry.2, hcache⟩
+    have hkey : entry.1 ∈ keys := hsupport.cache_keys entry.1 (by simp [hcache])
     rw [hleft]
     apply Finset.mem_union_right
     apply Finset.mem_union_left
     exact Finset.mem_image.mpr ⟨entry.1, hkey, rfl⟩
   · have hcache := hsupport.log_agrees entry.1 entry.2 hentry
-    have hkey : entry.1 ∈ keys := (hsupport.mem_keys_iff entry.1).2 ⟨entry.2, hcache⟩
+    have hkey : entry.1 ∈ keys := hsupport.cache_keys entry.1 (by simp [hcache])
     rw [hright]
     apply Finset.mem_union_right
     apply Finset.mem_union_right
@@ -373,7 +396,27 @@ theorem ExtractorState.liveTargetSet_card_le_sharedTargetCount
   apply (Nat.le_min).2
   refine ⟨state.liveTargetSet_card_le_totalNodeBudget view log, ?_⟩
   exact (Finset.card_mono
-    (state.liveTargetSet_subset_targetSupport view log cache keys hsupport)).trans
+    (state.liveTargetSet_subset_targetSupport view log cache keys hsupport.toCover)).trans
       (state.targetSupport_card_le view keys)
+
+/-- Online target bound from a finite cache-key cover of cardinality at most `cached`. This is the
+form consumed by adaptive-prefix induction, where the exact cache domain need not itself be
+enumerable. -/
+theorem ExtractorState.liveTargetSet_card_le_sharedTargetCount_of_cover
+    [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (log : MerkleTreeExtractor.QueryLog Query Y)
+    (cache : Query → Option Y) (keys : Finset Query) (cached : ℕ)
+    (hkeys : keys.card ≤ cached)
+    (hsupport : LogCacheKeysCover log cache keys) :
+    (state.liveTargetSet view log).card ≤
+      sharedTargetCount state.totalNodeBudget state.checkpoints.length cached := by
+  apply (Nat.le_min).2
+  refine ⟨state.liveTargetSet_card_le_totalNodeBudget view log, ?_⟩
+  exact (Finset.card_mono
+    (state.liveTargetSet_subset_targetSupport view log cache keys hsupport)).trans
+      ((state.targetSupport_card_le view keys).trans (by gcongr))
 
 end MerkleTreeMultiExtractability
