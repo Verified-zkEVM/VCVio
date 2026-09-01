@@ -132,7 +132,7 @@ structure ExtractorState.CacheKeysInvariant [DecidableEq Query]
     (state : ExtractorState Cfg Query Address Y config)
     (cache : Query → Option Y) (keys : Finset Query) : Prop where
   /-- Every checkpoint log is a prefix of the shared cumulative log. -/
-  wellFormed : state.WellFormed
+  checkpointLogsPrefixCumulativeLog : state.CheckpointLogsPrefixCumulativeLog
   /-- Every cumulative log entry agrees with the shared cache. -/
   log_agrees : ∀ query response,
     (⟨query, response⟩ : (_query : Query) × Y) ∈ state.cumulativeLog →
@@ -202,7 +202,7 @@ theorem ExtractorState.targetSet_subset_targetSupport
     apply Finset.mem_union_left
     simp only [ExtractorState.checkpointRoots, List.mem_toFinset, List.mem_map]
     exact ⟨⟨tag, checkpoint⟩, hcheckpoint, rfl⟩
-  · have hprefix := hsupport.wellFormed tag checkpoint hcheckpoint
+  · have hprefix := hsupport.checkpointLogsPrefixCumulativeLog tag checkpoint hcheckpoint
     rcases hprefix with ⟨suffix, hsuffix⟩
     have hentryState : entry ∈ state.cumulativeLog := by
       rw [← hsuffix]
@@ -213,7 +213,7 @@ theorem ExtractorState.targetSet_subset_targetSupport
     apply Finset.mem_union_right
     apply Finset.mem_union_left
     exact Finset.mem_image.mpr ⟨entry.1, hkey, rfl⟩
-  · have hprefix := hsupport.wellFormed tag checkpoint hcheckpoint
+  · have hprefix := hsupport.checkpointLogsPrefixCumulativeLog tag checkpoint hcheckpoint
     rcases hprefix with ⟨suffix, hsuffix⟩
     have hentryState : entry ∈ state.cumulativeLog := by
       rw [← hsuffix]
@@ -253,7 +253,7 @@ theorem ExtractorState.targetSet_card_le_min
     ExtractorState.targetSet_card_le_querySupport view state cache keys hsupport⟩
 
 /-- Semantic form of the shared target-count function used by the safe online potential. -/
-theorem ExtractorState.targetSet_card_le_sharedTargetCount
+theorem ExtractorState.targetSet_card_le_sharedExtractedLabelCountBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
@@ -261,8 +261,8 @@ theorem ExtractorState.targetSet_card_le_sharedTargetCount
     (cache : Query → Option Y) (keys : Finset Query)
     (hsupport : state.CacheKeysInvariant cache keys) :
     (state.targetSet view).card ≤
-      sharedTargetCount state.totalNodeBudget state.checkpoints.length keys.card := by
-  simpa only [sharedTargetCount] using
+      sharedExtractedLabelCountBound state.totalNodeBudget state.checkpoints.length keys.card := by
+  simpa only [sharedExtractedLabelCountBound] using
     state.targetSet_card_le_min view cache keys hsupport
 
 /-! ## Live targets under a transient log -/
@@ -383,7 +383,7 @@ theorem ExtractorState.liveTargetSet_subset_targetSupport
     exact Finset.mem_image.mpr ⟨entry.1, hkey, rfl⟩
 
 /-- Online semantic target bound used by the checkpoint-aware stopping recurrence. -/
-theorem ExtractorState.liveTargetSet_card_le_sharedTargetCount
+theorem ExtractorState.liveTargetSet_card_le_sharedExtractedLabelCountBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
@@ -392,7 +392,7 @@ theorem ExtractorState.liveTargetSet_card_le_sharedTargetCount
     (cache : Query → Option Y) (keys : Finset Query)
     (hsupport : LogCacheKeysInvariant log cache keys) :
     (state.liveTargetSet view log).card ≤
-      sharedTargetCount state.totalNodeBudget state.checkpoints.length keys.card := by
+      sharedExtractedLabelCountBound state.totalNodeBudget state.checkpoints.length keys.card := by
   apply (Nat.le_min).2
   refine ⟨state.liveTargetSet_card_le_totalNodeBudget view log, ?_⟩
   exact (Finset.card_mono
@@ -402,7 +402,7 @@ theorem ExtractorState.liveTargetSet_card_le_sharedTargetCount
 /-- Online target bound from a finite cache-key cover of cardinality at most `cached`. This is the
 form consumed by adaptive-prefix induction, where the exact cache domain need not itself be
 enumerable. -/
-theorem ExtractorState.liveTargetSet_card_le_sharedTargetCount_of_cover
+theorem ExtractorState.liveTargetSet_card_le_sharedExtractedLabelCountBound_of_cover
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
@@ -412,7 +412,7 @@ theorem ExtractorState.liveTargetSet_card_le_sharedTargetCount_of_cover
     (hkeys : keys.card ≤ cached)
     (hsupport : LogCacheKeysCover log cache keys) :
     (state.liveTargetSet view log).card ≤
-      sharedTargetCount state.totalNodeBudget state.checkpoints.length cached := by
+      sharedExtractedLabelCountBound state.totalNodeBudget state.checkpoints.length cached := by
   apply (Nat.le_min).2
   refine ⟨state.liveTargetSet_card_le_totalNodeBudget view log, ?_⟩
   exact (Finset.card_mono

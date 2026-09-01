@@ -81,12 +81,12 @@ theorem mem_targets_root_or_log_input (s : Skeleton)
     (MerkleTreeExtractor.mem_targets_root_or_log_input queryView s addressKey log root htarget)
 
 /-- The leaf and authentication path exposed by an extracted partial tree. -/
-abbrev Opening (Y : Type v) {s : Skeleton} (idx : SkeletonLeafIndex s) :=
-  MerkleTreeExtractor.Opening Y idx
+abbrev ExtractedOpening (Y : Type v) {s : Skeleton} (idx : SkeletonLeafIndex s) :=
+  MerkleTreeExtractor.ExtractedOpening Y idx
 
 /-- Inspect one opening of an extracted partial tree. -/
 abbrev opening {s : Skeleton} (tree : FullData (Option Y) s)
-    (idx : SkeletonLeafIndex s) : Opening Y idx :=
+    (idx : SkeletonLeafIndex s) : ExtractedOpening Y idx :=
   MerkleTreeExtractor.opening tree idx
 
 /-- Equal responses in the finite log imply equality of complete addressed queries. -/

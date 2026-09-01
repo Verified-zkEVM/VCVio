@@ -162,12 +162,6 @@ def cachedKeyCount (cache : PrefixSpec.QueryCache) : Nat :=
     cachedKeyCount (onceCached answer) = 1 := by
   cases answer <;> decide
 
-/-- Any extractor target bound indexed by populated cache keys therefore receives `1`, not the
-syntactic query count `2`, after the repeated-query prefix. -/
-example (targetCount : Nat → Nat) (answer : Bool) :
-    targetCount (cachedKeyCount (onceCached answer)) = targetCount 1 := by
-  rw [cachedKeyCount_onceCached]
-
 /-- For either miss response, the first query populates one key and the repeated query is a hit:
 the log has length two, while the final cache is exactly the once-populated cache. This catches
 both accidentally charging only cache misses to the total query budget and accidentally growing
@@ -183,6 +177,16 @@ exactly the queried key and leaves the other Boolean key fresh. -/
 example (answer : Bool) :
     (onceCached answer) false = some answer ∧ (onceCached answer) true = none := by
   simp [onceCached, QueryCache.cacheQuery_of_ne]
+
+/-- A nonempty input transcript is preserved, and two hits on a preloaded key neither overwrite
+the cache nor disturb the earlier entry. -/
+example (falseAnswer trueAnswer : Bool) :
+    let cache := (onceCached falseAnswer).cacheQuery true trueAnswer
+    let log : PrefixSpec.QueryLog := [⟨true, trueAnswer⟩]
+    (log ++ [⟨false, falseAnswer⟩, ⟨false, falseAnswer⟩], cache) ∈ support
+      (adaptivePrefixRunFrom returnLog repeatedPrefix cache log) := by
+  simp [adaptivePrefixRunFrom, repeatedPrefix, returnLog, onceCached,
+    QueryCache.cacheQuery_of_ne]
 
 end AdaptivePrefixCanary
 

@@ -22,8 +22,7 @@ address `()`. `extractabilityInner_eq_unaddressed` exposes the concrete unaddres
 inspection. `Adversary` packages its committing and opening phases together with their shared
 auxiliary state.
 
-The latter half of this file retains the independent log-chain collision and extractor-recovery
-lemmas used by existing clients. They are deterministic log facts, not a second ROM proof.
+The latter half provides deterministic log-chain collision and extractor-recovery lemmas.
 -/
 
 @[expose] public section
@@ -102,7 +101,7 @@ theorem extractabilityInner_eq_unaddressed [DecidableEq α] {s : Skeleton}
     getPutativeRoot_unitAddress_eq, Extractor.tree]
 
 /-- Extraction failure means successful verification with a mismatching extracted opening. -/
-def AdversaryWinsExtractabilityInner {s : Skeleton} {AuxState : Type} :
+def OpeningExtractionFailure {s : Skeleton} {AuxState : Type} :
     α × AuxState ×
       ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
        FullData (Option α) s × List.Vector (Option α) idx.depth × Bool) → Prop :=
@@ -118,20 +117,13 @@ def extractabilityGame [DecidableEq α] {s : Skeleton} (𝒜 : Adversary α s) :
        FullData (Option α) s × List.Vector (Option α) idx.depth × Bool)) :=
   (spec α).withCacheOverlay ∅ (extractabilityInner 𝒜)
 
-/-- Extraction-failure event for `extractabilityGame`. -/
-def AdversaryWinsExtractabilityGame {s : Skeleton} {AuxState : Type} :
-    α × AuxState ×
-      ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
-       FullData (Option α) s × List.Vector (Option α) idx.depth × Bool) → Prop :=
-  AdversaryWinsExtractabilityInner
-
-private theorem adversaryWinsExtractability_eq_generic
+private theorem openingExtractionFailure_eq_generic
     {s : Skeleton} {AuxState : Type} :
-    (AdversaryWinsExtractabilityGame :
+    (OpeningExtractionFailure :
       α × AuxState ×
         ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
          FullData (Option α) s × List.Vector (Option α) idx.depth × Bool) → Prop) =
-      MerkleTreeExtractability.AdversaryWinsExtractabilityGame := by
+      MerkleTreeExtractability.OpeningExtractionFailure := by
   funext z
   rcases z with ⟨_, _, ⟨_, _, _, _, _, _⟩⟩
   rfl
@@ -158,10 +150,10 @@ def extractabilityROMErrorNumerator (s : Skeleton) (qb : ℕ) : ℕ :=
 theorem extractability_rom_bound [DecidableEq α] [Fintype α] [Inhabited α]
     [IsUniformSpec (spec α)] {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[AdversaryWinsExtractabilityGame | extractabilityGame 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityGame 𝒜] ≤
       (extractabilityROMErrorNumerator s qb : ENNReal) *
     (Fintype.card α : ENNReal)⁻¹ := by
-  rw [adversaryWinsExtractability_eq_generic]
+  rw [openingExtractionFailure_eq_generic]
   simpa [extractabilityGame, extractabilityInner, extractabilityROMErrorNumerator,
     MerkleTreeExtractability.extractabilityGame] using
     MerkleTreeExtractability.extractability_rom_bound
@@ -170,11 +162,11 @@ theorem extractability_rom_bound [DecidableEq α] [Fintype α] [Inhabited α]
 theorem extractability_rom_bound_coarse [DecidableEq α] [Fintype α] [Inhabited α]
     [IsUniformSpec (spec α)] {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[AdversaryWinsExtractabilityGame | extractabilityGame 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityGame 𝒜] ≤
       ((max ((2 * s.leafCount - 1) * qb) (qb.choose 2) +
         (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card α : ENNReal)⁻¹ := by
-  rw [adversaryWinsExtractability_eq_generic]
+  rw [openingExtractionFailure_eq_generic]
   simpa [extractabilityGame, extractabilityInner,
     MerkleTreeExtractability.extractabilityGame] using
     MerkleTreeExtractability.extractability_rom_bound_coarse
@@ -185,10 +177,10 @@ theorem extractability_rom_bound_birthday_dominates
     {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hqb : 2 * (2 * s.leafCount - 1) + 1 ≤ qb) :
-    Pr[AdversaryWinsExtractabilityGame | extractabilityGame 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityGame 𝒜] ≤
       ((qb.choose 2 + (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card α : ENNReal)⁻¹ := by
-  rw [adversaryWinsExtractability_eq_generic]
+  rw [openingExtractionFailure_eq_generic]
   simpa [extractabilityGame, extractabilityInner,
     MerkleTreeExtractability.extractabilityGame] using
     MerkleTreeExtractability.extractability_rom_bound_birthday_dominates
@@ -200,9 +192,9 @@ theorem extractability_rom_bound_quadratic
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hdominance : 2 * (2 * s.leafCount - 1) + 1 ≤ qb)
     (hdepth : 2 * (2 * s.leafCount - 1) * s.depth ≤ qb) :
-    Pr[AdversaryWinsExtractabilityGame | extractabilityGame 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityGame 𝒜] ≤
       (qb : ENNReal) ^ 2 / (2 * Fintype.card α) := by
-  rw [adversaryWinsExtractability_eq_generic]
+  rw [openingExtractionFailure_eq_generic]
   simpa [extractabilityGame, extractabilityInner,
     MerkleTreeExtractability.extractabilityGame] using
     MerkleTreeExtractability.extractability_rom_bound_quadratic

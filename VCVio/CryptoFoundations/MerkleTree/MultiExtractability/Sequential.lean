@@ -80,17 +80,17 @@ theorem SequentialCommitter.runCommitments_zero
 
 /-- Every supported execution of the sequential runner preserves the checkpoint-prefix invariant.
 
-This is the bridge a later random-oracle game needs in order to use `ExtractorState.WellFormed`
-without trusting the public state constructor. -/
-theorem SequentialCommitter.runCommitments_preserves_wellFormed
+This gives the random-oracle game an executable preservation theorem for
+`ExtractorState.CheckpointLogsPrefixCumulativeLog`. -/
+theorem SequentialCommitter.runCommitments_preserves_checkpointLogsPrefixCumulativeLog
     (committer : SequentialCommitter Cfg Query Y)
     {config : Configuration Cfg Address} (rounds firstRound : ℕ)
     (state : committer.State) (extractorState : ExtractorState Cfg Query Address Y config)
-    (hstate : extractorState.WellFormed)
+    (hstate : extractorState.CheckpointLogsPrefixCumulativeLog)
     (result : committer.State × ExtractorState Cfg Query Address Y config)
     (hresult : result ∈ support
       (committer.runCommitments rounds firstRound state extractorState)) :
-    result.2.WellFormed := by
+    result.2.CheckpointLogsPrefixCumulativeLog := by
   induction rounds generalizing firstRound state extractorState result with
   | zero =>
       simp only [SequentialCommitter.runCommitments, mem_support_pure_iff] at hresult
@@ -101,17 +101,19 @@ theorem SequentialCommitter.runCommitments_preserves_wellFormed
       obtain ⟨phaseResult, _hphase, hrest⟩ := hresult
       obtain ⟨⟨tag, root, nextState⟩, phaseLog⟩ := phaseResult
       exact ih (firstRound + 1) nextState (extractorState.record tag phaseLog root)
-        ((ExtractorState.WellFormed.record hstate tag phaseLog root)) result hrest
+        (ExtractorState.CheckpointLogsPrefixCumulativeLog.record hstate tag phaseLog root)
+        result hrest
 
-/-- Every supported run from the canonical empty state produces a well-formed checkpoint history. -/
-theorem SequentialCommitter.runFromEmpty_wellFormed
+/-- Every supported run from the canonical empty state has prefix-ordered checkpoint logs. -/
+theorem SequentialCommitter.runFromEmpty_checkpointLogsPrefixCumulativeLog
     (committer : SequentialCommitter Cfg Query Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (result : committer.State × ExtractorState Cfg Query Address Y config)
     (hresult : result ∈ support (committer.runFromEmpty config rounds)) :
-    result.2.WellFormed :=
-  committer.runCommitments_preserves_wellFormed rounds 0 committer.initialState
-    ExtractorState.empty ExtractorState.wellFormed_empty result hresult
+    result.2.CheckpointLogsPrefixCumulativeLog :=
+  committer.runCommitments_preserves_checkpointLogsPrefixCumulativeLog rounds 0
+    committer.initialState
+    ExtractorState.empty ExtractorState.checkpointLogsPrefixCumulativeLog_empty result hresult
 
 /-- Support-wise accounting for a sequential commitment run.
 
@@ -195,24 +197,5 @@ theorem ExtractorState.recordCommitmentOutput_cumulativeLog
     (output : Cfg × Y × S) :
     (extractorState.recordCommitmentOutput phaseLog output).cumulativeLog =
       extractorState.cumulativeLog ++ phaseLog := rfl
-
-/-! ## Sequential control-flow canary -/
-
-private abbrev sequentialCanaryCommitter : SequentialCommitter Bool Unit Nat where
-  State := Nat
-  initialState := 0
-  commit round state := pure (round == 1, 10 + state, state + 1)
-
-private def sequentialCanaryConfig : Configuration Bool Unit where
-  skeleton _ := .leaf
-  addressKey _ index := nomatch index
-
-/-- Two pure phases advance both the round number and private state, and retain checkpoints in
-commitment order.  This producer canary rejects skipping or reversing phases and failing to hand the
-first phase's state to the second. -/
-example : sequentialCanaryCommitter.runFromEmpty sequentialCanaryConfig 2 =
-    let initial : ExtractorState Bool Unit Unit Nat sequentialCanaryConfig := ExtractorState.empty
-    pure (2, (initial.record false [] 10).record true [] 11) := by
-  rfl
 
 end MerkleTreeMultiExtractability

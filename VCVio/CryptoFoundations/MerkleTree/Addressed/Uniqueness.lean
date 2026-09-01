@@ -18,13 +18,13 @@ oracle address/key and the ordered child pair. Thus the result has the shape con
 address-aware random-oracle or collision-resistance argument.
 
 `openingQueries` enumerates exactly the node-hash inputs induced by one leaf opening.
-`QueryInjectiveOn` asks for injectivity only among entries of a supplied list.  If two complete
+`NodeHashInjectiveOnQueries` asks for injectivity only among entries of a supplied list. If two
+complete
 openings are covered by that list and recompute the same root, `opening_unique_of_queryInjectiveOn`
 proves equality of both the leaf value and authentication path.
 
-The existing global-injectivity results remain available through the older unaddressed API.
-Addressed batch openings are not yet defined, so their queried-domain uniqueness theorem is
-deliberately outside this module.
+The theorem applies to single addressed openings; batch-opening uniqueness is developed in the
+batch modules.
 -/
 
 @[expose] public section
@@ -39,7 +39,7 @@ variable {Address : Type u} {Y : Type v}
 
 /-- The addressed node hash is injective on the supplied finite query transcript.  Unlike
 `Function.Injective2`, this permits collisions outside the observed domain. -/
-def QueryInjectiveOn
+def NodeHashInjectiveOnQueries
     (nodeHash : Address → Y → Y → Y)
     (log : List (NodeQuery Address Y)) : Prop :=
   ∀ q₁ ∈ log, ∀ q₂ ∈ log,
@@ -102,7 +102,7 @@ equality of both the leaf and the authentication path. -/
 theorem opening_unique_of_queryInjectiveOn {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (nodeHash : Address → Y → Y → Y)
-    (log : List (NodeQuery Address Y)) (hinj : QueryInjectiveOn nodeHash log)
+    (log : List (NodeQuery Address Y)) (hinj : NodeHashInjectiveOnQueries nodeHash log)
     (idx : SkeletonLeafIndex s) (proof₁ proof₂ : List.Vector Y idx.depth) (x y : Y)
     (hcovered₁ : OpeningCovered addressKey nodeHash log idx x proof₁)
     (hcovered₂ : OpeningCovered addressKey nodeHash log idx y proof₂)
