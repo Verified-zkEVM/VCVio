@@ -10,7 +10,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
 public import VCVio.OracleComp.QueryTracking.Collision
 public import ToMathlib.Data.IndexedBinaryTree.Lemmas
-import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
+import VCVio.OracleComp.QueryTracking.AdaptivePrefix
 import VCVio.OracleComp.QueryTracking.Unpredictability
 
 /-!
@@ -266,95 +266,22 @@ realized commit length. -/
 private def extractabilityRunFrom {s : Skeleton} (𝒜 : Adversary α s)
     (commit : OracleComp (spec α) (α × 𝒜.AuxState))
     (cache : (spec α).QueryCache) (log : (spec α).QueryLog) :=
-  (simulateQ (spec α).cachingLoggingOracle commit).run (cache, log) >>= fun z =>
-    (simulateQ (spec α).cachingOracle
-      (extractabilityRest 𝒜 z.1.1 z.1.2 z.2.2)).run z.2.1
+  adaptivePrefixRunFrom
+    (fun x queryLog => extractabilityRest 𝒜 x.1 x.2 queryLog) commit cache log
 
 /-- Exact stopping-time contribution after `commitMisses` further fresh commit inputs:
 collision hazard against the `cached` previous keys, birthday collisions among the new cache
 entries, and the remaining opening/verifier fresh-target hazard. Cache hits consume the
 remaining total-query budget without increasing `commitMisses`. -/
 private def extractabilityEnergy (treeTargetCount depth remaining cached commitMisses : ℕ) : ℕ :=
-  commitMisses * cached + commitMisses.choose 2 +
-    min treeTargetCount (2 * (cached + commitMisses) + 1) *
-      (remaining - commitMisses + depth)
+  adaptivePrefixEnergy (fun keyCount => min treeTargetCount (2 * keyCount + 1))
+    depth remaining cached commitMisses
 
 /-- Finite maximum over every possible number of further fresh commit inputs/cache misses. -/
 private def extractabilityExactPotential
   (treeTargetCount depth remaining cached : ℕ) : ℕ :=
-  (Finset.range (remaining + 1)).sup fun commitMisses =>
-    extractabilityEnergy treeTargetCount depth remaining cached commitMisses
-
-private lemma extractabilityEnergy_zero
-    (treeTargetCount depth remaining cached : ℕ) :
-    extractabilityEnergy treeTargetCount depth remaining cached 0 =
-      min treeTargetCount (2 * cached + 1) * (remaining + depth) := by
-  simp [extractabilityEnergy]
-
-private lemma extractabilityEnergy_hit_le
-    (treeTargetCount depth remaining cached commitMisses : ℕ) :
-    extractabilityEnergy treeTargetCount depth (remaining - 1) cached commitMisses ≤
-      extractabilityEnergy treeTargetCount depth remaining cached commitMisses := by
-  unfold extractabilityEnergy
-  gcongr
-  omega
-
-private lemma extractabilityEnergy_miss_eq
-    (treeTargetCount depth remaining cached commitMisses : ℕ)
-    (hcommit : commitMisses < remaining) :
-    cached + extractabilityEnergy treeTargetCount depth (remaining - 1) (cached + 1)
-        commitMisses =
-      extractabilityEnergy treeTargetCount depth remaining cached (commitMisses + 1) := by
-  have hcap :
-      min treeTargetCount (2 * (cached + 1 + commitMisses) + 1) =
-        min treeTargetCount (2 * (cached + (commitMisses + 1)) + 1) := by
-    congr 2
-    omega
-  have hremaining' : remaining - 1 - commitMisses = remaining - (commitMisses + 1) := by
-    omega
-  have hchoose : (commitMisses + 1).choose 2 =
-      commitMisses + commitMisses.choose 2 := by
-    rw [show commitMisses + 1 = commitMisses.succ by omega, Nat.choose_succ_succ]
-    simp
-  unfold extractabilityEnergy
-  rw [hcap, hremaining', hchoose]
-  simp only [Nat.mul_succ, Nat.succ_mul]
-  omega
-
-private lemma extractabilityExactPotential_terminal_le
-    (treeTargetCount depth remaining cached : ℕ) :
-    min treeTargetCount (2 * cached + 1) * (remaining + depth) ≤
-      extractabilityExactPotential treeTargetCount depth remaining cached := by
-  rw [← extractabilityEnergy_zero]
-  exact Finset.le_sup (by simp)
-
-private lemma extractabilityExactPotential_hit_le
-    (treeTargetCount depth remaining cached : ℕ) :
-    extractabilityExactPotential treeTargetCount depth (remaining - 1) cached ≤
-      extractabilityExactPotential treeTargetCount depth remaining cached := by
-  unfold extractabilityExactPotential
-  apply Finset.sup_le
-  intro commitMisses hcommit
-  apply (extractabilityEnergy_hit_le treeTargetCount depth remaining cached commitMisses).trans
-  apply Finset.le_sup
-  simp only [Finset.mem_range] at hcommit ⊢
-  omega
-
-private lemma extractabilityExactPotential_miss_le
-    (treeTargetCount depth remaining cached : ℕ) (hremaining : 0 < remaining) :
-    cached + extractabilityExactPotential treeTargetCount depth (remaining - 1) (cached + 1) ≤
-      extractabilityExactPotential treeTargetCount depth remaining cached := by
-  unfold extractabilityExactPotential
-  rw [Finset.add_sup (by simp)]
-  apply Finset.sup_le
-  intro commitMisses hcommit
-  rw [extractabilityEnergy_miss_eq treeTargetCount depth remaining cached commitMisses
-    (by
-      simp only [Finset.mem_range] at hcommit
-      omega)]
-  apply Finset.le_sup
-  simp only [Finset.mem_range] at hcommit ⊢
-  omega
+  adaptivePrefixPotential (fun keyCount => min treeTargetCount (2 * keyCount + 1))
+    depth remaining cached
 
 private lemma extractabilityInner_eq_commit_bind_rest {s : Skeleton} (𝒜 : Adversary α s) :
     extractabilityInner 𝒜 =
@@ -960,182 +887,52 @@ private lemma extractabilityRunFrom_le_potential
       (extractabilityExactPotential (2 * s.leafCount - 1) s.depth remaining cached : ENNReal) *
         (@Fintype.card ((spec α).Range default)
           (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)⁻¹ := by
-  let treeTargetCount := 2 * s.leafCount - 1
-  let C := (@Fintype.card ((spec α).Range default)
-    (OracleSpec.instFintypeRangeOfFintype default) : ENNReal)
-  induction commit using OracleComp.inductionOn generalizing remaining cached cache log with
-  | pure x =>
-      let targetCount := min treeTargetCount (2 * cached + 1)
-      have hopening : IsTotalQueryBound (𝒜.opening x.2) remaining := by
-        have hmapped : IsTotalQueryBound ((fun _ => ()) <$> 𝒜.opening x.2) remaining := by
-          simpa using hbound
-        exact (isQueryBound_map_iff (𝒜.opening x.2) (fun _ => ()) remaining _ _).mp
-          hmapped
-      have htargets : (extractedTargets s log x.1).toFinset.card ≤ targetCount := by
-        obtain ⟨keys, hkeysCard, hkeysMem⟩ := hcacheBound
-        have htree : (extractedTargets s log x.1).toFinset.card ≤ treeTargetCount := by
-          calc
-            (extractedTargets s log x.1).toFinset.card ≤
-                (extractedTargets s log x.1).length := List.toFinset_card_le _
-            _ ≤ treeTargetCount := extractedTargets_length_le s log x.1
-        have hcache : (extractedTargets s log x.1).toFinset.card ≤ 2 * cached + 1 :=
-          (extractedTargets_toFinset_card_le_cacheKeys s log x.1 keys hlogCache hkeysMem).trans
-            (by omega)
-        exact le_min htree hcache
-      have hsuffix := extractability_rest_noCollision_le_of_opening_bound
-        𝒜 remaining targetCount (root := x.1) (aux := x.2)
-        hopening hlogCache hcacheLog htargets hno
-      simp only [extractabilityRunFrom, simulateQ_pure, StateT.run_pure, pure_bind]
-      refine hsuffix.trans ?_
-      change ((targetCount * (remaining + s.depth) : ℕ) : ENNReal) * C⁻¹ ≤
-        (extractabilityExactPotential treeTargetCount s.depth remaining cached : ENNReal) * C⁻¹
-      gcongr
-      exact extractabilityExactPotential_terminal_le
-        treeTargetCount s.depth remaining cached
-  | query_bind t next ih =>
-      have hqueryBound : IsTotalQueryBound
-          ((liftM ((spec α).query t) : OracleComp (spec α) _) >>= fun u =>
-            next u >>= fun x => 𝒜.opening x.2 >>= fun _ => pure ()) remaining := by
-        simpa only [bind_assoc] using hbound
-      rw [isTotalQueryBound_query_bind_iff] at hqueryBound
-      obtain ⟨hremaining, hnext⟩ := hqueryBound
-      by_cases hhit : ∃ value, cache t = some value
-      · obtain ⟨value, hvalue⟩ := hhit
-        have hrun : extractabilityRunFrom 𝒜
-            ((liftM ((spec α).query t) : OracleComp (spec α) _) >>= next) cache log =
-            extractabilityRunFrom 𝒜 (next value) cache
-              (log ++ [⟨t, value⟩]) := by
-          simp only [extractabilityRunFrom, OracleComp.run_simulateQ_query_bind,
-            cachingLoggingOracle.run_some hvalue, pure_bind]
-        rw [hrun]
-        have hlogCache' : ∀ entry ∈ log ++ [⟨t, value⟩],
-            cache entry.1 = some entry.2 := by
-          intro entry hentry
-          rw [List.mem_append] at hentry
-          rcases hentry with hentry | hentry
-          · exact hlogCache entry hentry
-          · rw [List.mem_singleton] at hentry
-            subst entry
-            exact hvalue
-        have hcacheLog' : ∀ input output, cache input = some output →
-            ∃ entry ∈ log ++ [⟨t, value⟩], entry.1 = input ∧ entry.2 = output := by
-          intro input output hcached
-          obtain ⟨entry, hentry, hi, ho⟩ := hcacheLog input output hcached
-          exact ⟨entry, List.mem_append_left _ hentry, hi, ho⟩
-        have hrec := ih value (remaining := remaining - 1) (cached := cached)
-          (hnext value) (cache := cache) (log := log ++ [⟨t, value⟩])
-          hno hcacheBound hlogCache' hcacheLog'
-        refine hrec.trans ?_
-        apply mul_le_mul_of_nonneg_right
-        · exact_mod_cast extractabilityExactPotential_hit_le
-            treeTargetCount s.depth remaining cached
-        · exact zero_le
-      · push Not at hhit
-        have hnone : cache t = none := Option.eq_none_iff_forall_ne_some.mpr hhit
-        have hrun : extractabilityRunFrom 𝒜
-            ((liftM ((spec α).query t) : OracleComp (spec α) _) >>= next) cache log =
-            (liftM ((spec α).query t) : OracleComp (spec α) _) >>= fun value =>
-              extractabilityRunFrom 𝒜 (next value) (cache.cacheQuery t value)
-                (log ++ [⟨t, value⟩]) := by
-          simp only [extractabilityRunFrom, OracleComp.run_simulateQ_query_bind,
-            cachingLoggingOracle.run_none hnone]
-          rfl
-        rw [hrun]
-        have hcollision : Pr[fun value => CacheHasCollision (cache.cacheQuery t value) |
-            (liftM ((spec α).query t) : OracleComp (spec α) _)] ≤
-              (cached : ENNReal) * C⁻¹ := by
-          classical
-          obtain ⟨keys, hkeysCard, hkeysMem⟩ := hcacheBound
-          rw [probEvent_query]
-          have hbad := (OracleComp.card_responses_creating_cacheCollision_le
-            (t := t) hno hkeysMem).trans hkeysCard
-          have hcard : @Fintype.card ((spec α).Range t)
-              (OracleSpec.instFintypeRangeOfFintype t) =
-              @Fintype.card ((spec α).Range default)
-                (OracleSpec.instFintypeRangeOfFintype default) :=
-            @Fintype.card_congr ((spec α).Range t) ((spec α).Range default)
-              (OracleSpec.instFintypeRangeOfFintype t)
-              (OracleSpec.instFintypeRangeOfFintype default) (Equiv.refl α)
-          calc
-            ((Finset.univ.filter
-                (fun value => CacheHasCollision (cache.cacheQuery t value))).card : ENNReal) /
-                @Fintype.card ((spec α).Range t)
-                  (OracleSpec.instFintypeRangeOfFintype t)
-              ≤ (cached : ENNReal) / @Fintype.card ((spec α).Range t)
-                  (OracleSpec.instFintypeRangeOfFintype t) :=
-                ENNReal.div_le_div_right (by exact_mod_cast hbad) _
-            _ = (cached : ENNReal) * C⁻¹ := by
-              rw [hcard, ENNReal.div_eq_inv_mul, mul_comm]
-        have hcontinuation : ∀ value ∈ support
-            (liftM ((spec α).query t) : OracleComp (spec α) _),
-            ¬ CacheHasCollision (cache.cacheQuery t value) →
-            Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
-              extractabilityRunFrom 𝒜 (next value) (cache.cacheQuery t value)
-                (log ++ [⟨t, value⟩])] ≤
-              (extractabilityExactPotential treeTargetCount s.depth
-                (remaining - 1) (cached + 1) : ENNReal) * C⁻¹ := by
-          intro value _ hno'
-          have hcacheBound' : ∃ keys : Finset (α × α), keys.card ≤ cached + 1 ∧
-              ∀ input, (cache.cacheQuery t value) input ≠ none → input ∈ keys := by
-            obtain ⟨keys, hkeysCard, hkeysMem⟩ := hcacheBound
-            refine ⟨insert t keys, (Finset.card_insert_le t keys).trans (by omega), ?_⟩
-            intro input hinput
-            by_cases hi : input = t
-            · exact hi ▸ Finset.mem_insert_self _ _
-            · rw [QueryCache.cacheQuery_of_ne cache value hi] at hinput
-              exact Finset.mem_insert_of_mem (hkeysMem input hinput)
-          have hlogCache' : ∀ entry ∈ log ++ [⟨t, value⟩],
-              (cache.cacheQuery t value) entry.1 = some entry.2 := by
-            rintro ⟨input, output⟩ hentry
-            rw [List.mem_append] at hentry
-            rcases hentry with hentry | hentry
-            · by_cases hi : input = t
-              · subst input
-                have := hlogCache ⟨t, output⟩ hentry
-                simp [hnone] at this
-              · rw [QueryCache.cacheQuery_of_ne cache value hi]
-                exact hlogCache ⟨input, output⟩ hentry
-            · rw [List.mem_singleton] at hentry
-              have hinput : input = t := congrArg Sigma.fst hentry
-              subst input
-              have houtput : output = value := eq_of_heq (Sigma.mk.inj_iff.mp hentry).2
-              subst output
-              exact QueryCache.cacheQuery_self cache t value
-          have hcacheLog' : ∀ input output,
-              (cache.cacheQuery t value) input = some output →
-              ∃ entry ∈ log ++ [⟨t, value⟩], entry.1 = input ∧ entry.2 = output := by
-            intro input output hcached
-            by_cases hi : input = t
-            · subst input
-              rw [QueryCache.cacheQuery_self] at hcached
-              obtain rfl := Option.some.inj hcached
-              exact ⟨⟨t, value⟩, by simp, rfl, rfl⟩
-            · rw [QueryCache.cacheQuery_of_ne cache value hi] at hcached
-              obtain ⟨entry, hentry, heqInput, heqOutput⟩ :=
-                hcacheLog input output hcached
-              exact ⟨entry, List.mem_append_left _ hentry, heqInput, heqOutput⟩
-          have hrec := ih value (remaining := remaining - 1) (cached := cached + 1)
-            (hnext value) (cache := cache.cacheQuery t value)
-            (log := log ++ [⟨t, value⟩]) hno' hcacheBound' hlogCache' hcacheLog'
-          exact hrec
-        have hcombined := probEvent_bind_le_add
-          (mx := (liftM ((spec α).query t) : OracleComp (spec α) _))
-          (my := fun value => extractabilityRunFrom 𝒜 (next value)
-            (cache.cacheQuery t value) (log ++ [⟨t, value⟩]))
-          (p := fun value => ¬ CacheHasCollision (cache.cacheQuery t value))
-          (q := fun z => ¬ AdversaryWinsExtractabilityGame z.1)
-          (ε₁ := (cached : ENNReal) * C⁻¹)
-          (ε₂ := (extractabilityExactPotential treeTargetCount s.depth
-            (remaining - 1) (cached + 1) : ENNReal) * C⁻¹)
-          (by simpa [not_not] using hcollision)
-          (by simpa [not_not] using hcontinuation)
-        simp only [not_not] at hcombined
-        refine hcombined.trans ?_
-        rw [← add_mul]
-        apply mul_le_mul_of_nonneg_right
-        · exact_mod_cast extractabilityExactPotential_miss_le
-            treeTargetCount s.depth remaining cached hremaining
-        · exact zero_le
+  let targetCount := fun keyCount => min (2 * s.leafCount - 1) (2 * keyCount + 1)
+  have hcard : Nat.card α =
+      @Fintype.card ((spec α).Range default)
+        (OracleSpec.instFintypeRangeOfFintype default) := by
+    calc
+      Nat.card α = Nat.card ((spec α).Range default) :=
+        Nat.card_congr (Equiv.refl α).symm
+      _ = @Fintype.card ((spec α).Range default)
+          (OracleSpec.instFintypeRangeOfFintype default) :=
+        @Nat.card_eq_fintype_card ((spec α).Range default)
+          (OracleSpec.instFintypeRangeOfFintype default)
+  have hgeneric := probEvent_adaptivePrefixRunFrom_le
+    (suffix := fun x queryLog => extractabilityRest 𝒜 x.1 x.2 queryLog)
+    (continuation := fun x => 𝒜.opening x.2 >>= fun _ => pure ())
+    (win := AdversaryWinsExtractabilityGame) (targetCount := targetCount)
+    (overhead := s.depth) commit remaining cached hbound cache log hno hcacheBound
+    hlogCache hcacheLog
+    (fun x terminalRemaining terminalCached terminalCache terminalLog hopening hno'
+      hcacheBound' hlogCache' hcacheLog' => by
+        have hopening' : IsTotalQueryBound (𝒜.opening x.2) terminalRemaining := by
+          have hmapped : IsTotalQueryBound
+              ((fun _ => ()) <$> 𝒜.opening x.2) terminalRemaining := by
+            simpa using hopening
+          exact (isQueryBound_map_iff (𝒜.opening x.2) (fun _ => ())
+            terminalRemaining _ _).mp hmapped
+        have htargets :
+            (extractedTargets s terminalLog x.1).toFinset.card ≤
+              targetCount terminalCached := by
+          obtain ⟨keys, hkeysCard, hkeysMem⟩ := hcacheBound'
+          have htree : (extractedTargets s terminalLog x.1).toFinset.card ≤
+              2 * s.leafCount - 1 := by
+            calc
+              (extractedTargets s terminalLog x.1).toFinset.card ≤
+                  (extractedTargets s terminalLog x.1).length := List.toFinset_card_le _
+              _ ≤ 2 * s.leafCount - 1 := extractedTargets_length_le s terminalLog x.1
+          have hcache : (extractedTargets s terminalLog x.1).toFinset.card ≤
+              2 * terminalCached + 1 :=
+            (extractedTargets_toFinset_card_le_cacheKeys s terminalLog x.1 keys
+              hlogCache' hkeysMem).trans (by omega)
+          exact le_min htree hcache
+        simpa only [hcard] using
+          (extractability_rest_noCollision_le_of_opening_bound
+            𝒜 terminalRemaining (targetCount terminalCached) (root := x.1) (aux := x.2)
+            hopening' hlogCache' hcacheLog' htargets hno'))
+  simpa only [extractabilityRunFrom, extractabilityExactPotential, targetCount, hcard]
+    using hgeneric
 
 /-- Initialize the stopping-time induction at the empty cache and empty log, then transport
 the combined caching/logging semantics back to `extractabilityGame`. -/
@@ -1160,7 +957,7 @@ private lemma extractability_win_le_stopping_bound
         (spec α).QueryCache) input = none) hinput⟩
     · simp
     · simp
-  rw [extractabilityRunFrom,
+  rw [extractabilityRunFrom, adaptivePrefixRunFrom,
     cachingLoggingOracle.run_simulateQ_eq_map_run_simulateQ_withQueryLog] at hmain
   simp only [List.nil_append] at hmain
   rw [extractabilityGame, OracleSpec.withCacheOverlay, StateT.run'_eq,
@@ -1199,6 +996,7 @@ theorem extractability_rom_bound
     @Fintype.card_congr ((spec α).Range default) α
       (OracleSpec.instFintypeRangeOfFintype default) inferInstance (Equiv.refl α)
   simpa only [extractabilityExactPotential, extractabilityEnergy,
+    adaptivePrefixPotential, adaptivePrefixEnergy,
     extractabilityROMErrorNumerator, Nat.mul_zero, Nat.zero_add, hcard] using hbound
 
 private lemma target_mul_sub_add_choose_le_choose
