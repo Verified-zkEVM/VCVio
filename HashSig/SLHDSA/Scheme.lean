@@ -201,11 +201,11 @@ def slhSignInternalQueryBound (p : Params) : ℕ :=
       (p.k * (p.a + 1) + 1)) +
     (p.len * (p.w - 1) + xmssAuthPathQueryBound p p.hp))
 
-/-- Structural public-hash budget for verification of the supplied signature. The FORS term
-tracks the actual authentication-path lengths. The hypertree term uses the maximum WOTS+ chain
-budget plus the supplied XMSS authentication-path length. -/
-def slhVerifyInternalQueryBound (p : Params) (core : CorePrimitives p)
-    (_sig : SignatureCore p core) : ℕ :=
+/-- Structural public-hash budget for verification. Intrinsic signature shapes fix every
+authentication-path length at the type level, so the budget depends only on the parameters:
+one `H_msg`, `k * (a + 1) + 1` FORS recovery calls, and a hypertree term using the maximum
+WOTS+ chain budget plus the `h'`-step XMSS authentication path. -/
+def slhVerifyInternalQueryBound (p : Params) : ℕ :=
   1 + (p.k * (p.a + 1) + 1) + (p.len * (p.w - 1) + 1 + p.hp)
 
 private theorem publicHash_hmsg_isTotalQueryBound_one (core : CorePrimitives p)
@@ -300,7 +300,7 @@ theorem slhVerifyInternalM_isTotalQueryBound (core : CorePrimitives p) [Decidabl
     (msg : List Byte) (sig : SignatureCore p core) (pk : PublicKeyCore core) :
     IsTotalQueryBound
       (slhVerifyInternalM hd core msg sig pk : OracleComp (publicHashSpec core) Bool)
-      (slhVerifyInternalQueryBound p core sig) := by
+      (slhVerifyInternalQueryBound p) := by
   have hbound := isTotalQueryBound_bind
     (publicHash_hmsg_isTotalQueryBound_one core sig.randomness pk.pkSeed pk.pkRoot msg)
       fun digest =>
