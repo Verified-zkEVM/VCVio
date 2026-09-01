@@ -171,9 +171,13 @@ static importer, retrieves the production regular-initializer ordinary and IR ar
 exact expected rejections (so loss of either path fails), and checks that the sentinel remains absent
 before and after audit. The temporary
 `.olean`, `.ilean`, `.ir`, and C artifacts are confined to a `mktemp` directory removed on exit.
-The wrapper then runs the exact S03, 11-root S04, 14-root S05, 22-root S06, 15-root B02, and
-27-root B03
-declaration/axiom probes, generated umbrella check, extern and interop isolation, the two inherited
+The wrapper then runs `scripts/slhdsa/AxiomAudit.lean`. That permanent audit resolves 151 unique
+load-bearing roots and requires exact footprint equality: six roots are axiom-free, 25 use only
+`propext`, ten use exactly `propext` and `Quot.sound`, and 110 use exactly `propext`,
+`Classical.choice`, and `Quot.sound`. It rejects duplicate roots as well as any added or removed
+logical dependency. Its inventory covers the construction, position, query-bound, canonical-game,
+trace-target, and security-interface surfaces through the current FORS boundary. The wrapper then
+runs the generated umbrella check, extern and interop isolation, the two inherited
 SLH-DSA KAT executables, and the S03 data/codec, S04 primitive, S05 WOTS, S06 XMSS, and S07 FORS construction
 executables. The KAT PASS results are legacy runtime regression evidence only, and the S03 PASS
 result covers exact table rows, endian fixtures, ADRS,

@@ -544,20 +544,8 @@ def check_required_files() -> None:
     require(not missing_s01, f"missing S01 files: {', '.join(missing_s01)}")
     require((ROOT / "scripts/slhdsa/PolicyAudit.lean").is_file(),
             "missing elaborated-environment audit scripts/slhdsa/PolicyAudit.lean")
-    require((ROOT / "scripts/slhdsa/S02InventoryProbe.lean").is_file(),
-            "missing elaborated S02 inventory probe scripts/slhdsa/S02InventoryProbe.lean")
-    require((ROOT / "scripts/slhdsa/S03InventoryProbe.lean").is_file(),
-            "missing elaborated S03 inventory probe scripts/slhdsa/S03InventoryProbe.lean")
-    require((ROOT / "scripts/slhdsa/S04InventoryProbe.lean").is_file(),
-            "missing elaborated S04 inventory probe scripts/slhdsa/S04InventoryProbe.lean")
-    require((ROOT / "scripts/slhdsa/S05InventoryProbe.lean").is_file(),
-            "missing elaborated S05 inventory probe scripts/slhdsa/S05InventoryProbe.lean")
-    require((ROOT / "scripts/slhdsa/S06InventoryProbe.lean").is_file(),
-            "missing elaborated S06 inventory probe scripts/slhdsa/S06InventoryProbe.lean")
-    require((ROOT / "scripts/slhdsa/B02InventoryProbe.lean").is_file(),
-            "missing elaborated B02 inventory probe scripts/slhdsa/B02InventoryProbe.lean")
-    require((ROOT / "scripts/slhdsa/B03InventoryProbe.lean").is_file(),
-            "missing elaborated B03 inventory probe scripts/slhdsa/B03InventoryProbe.lean")
+    require((ROOT / "scripts/slhdsa/AxiomAudit.lean").is_file(),
+            "missing permanent exact-root audit scripts/slhdsa/AxiomAudit.lean")
     require((ROOT / "scripts/slhdsa/fixtures/SLHDSAPolicyIRMacro.lean").is_file(),
             "missing compiled-IR fixture macro")
     require((ROOT / "scripts/slhdsa/fixtures/HashSig/PolicyIRFixture.lean").is_file(),
@@ -641,21 +629,19 @@ def check_required_files() -> None:
         require(marker in audit, f"PolicyAudit.lean: missing static semantic gate {marker}")
     require("import HashSig" not in audit,
             "PolicyAudit.lean must not source-import HashSig")
+    axiom_audit = (ROOT / "scripts/slhdsa/AxiomAudit.lean").read_text(encoding="utf-8")
+    for marker in ("expectedRoots.size == 151", "seen.contains root",
+                   "Lean.collectAxioms root", "sameNames observed expected",
+                   "footprints 6/25/10/110"):
+        require(marker in axiom_audit,
+                f"AxiomAudit.lean: missing exact-root gate {marker}")
     wrapper = (ROOT / "scripts/slhdsa/validate.sh").read_text(encoding="utf-8")
     require("lake env lean scripts/slhdsa/PolicyAudit.lean" in wrapper,
             "validate.sh does not run the authoritative elaborated audit")
-    require("lake env lean scripts/slhdsa/S02InventoryProbe.lean" in wrapper,
-            "validate.sh does not run the S02 declaration-inventory probe")
-    require("lake env lean scripts/slhdsa/S04InventoryProbe.lean" in wrapper,
-            "validate.sh does not run the S04 declaration-inventory probe")
-    require("lake env lean scripts/slhdsa/S05InventoryProbe.lean" in wrapper,
-            "validate.sh does not run the S05 declaration-inventory probe")
-    require("lake env lean scripts/slhdsa/S06InventoryProbe.lean" in wrapper,
-            "validate.sh does not run the S06 declaration-inventory probe")
-    require("lake env lean scripts/slhdsa/B02InventoryProbe.lean" in wrapper,
-            "validate.sh does not run the B02 declaration-inventory probe")
-    require("lake env lean scripts/slhdsa/B03InventoryProbe.lean" in wrapper,
-            "validate.sh does not run the B03 declaration-inventory probe")
+    require("lake env lean scripts/slhdsa/AxiomAudit.lean" in wrapper,
+            "validate.sh does not run the permanent exact-root audit")
+    require("InventoryProbe.lean" not in wrapper,
+            "validate.sh still depends on a phase-specific inventory probe")
     require("lake exe slhdsa_primitive_tests" in wrapper,
             "validate.sh does not run the S04 primitive tests")
     require("lake exe slhdsa_wots_tests" in wrapper,

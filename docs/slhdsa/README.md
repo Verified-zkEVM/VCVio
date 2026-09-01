@@ -108,8 +108,8 @@ building libraries or running algorithms; it does re-elaborate Lake configuratio
 TOML to verify the parser target and absence of effective source-directory/path-argument selectors.
 The second also checks the HashSig build, the authoritative elaborated-environment policy audit and
 compiled negative fixtures, generated umbrella, isolation rules, inherited KATs, S03 codecs, S04
-primitives, S05 WOTS construction, S06 XMSS construction, S07 FORS construction, the B02
-digest/position and B03 construction/query/interface declaration probes, and the S01
+primitives, S05 WOTS construction, S06 XMSS construction, S07 FORS construction, the permanent
+exact load-bearing axiom audit, and the S01
 provenance/strict-parser runtime gates. Immediately
 before the parser
 runtime, it reconfigures, rehashes, and disables caches while building into an initially absent
