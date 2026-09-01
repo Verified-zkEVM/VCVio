@@ -69,7 +69,12 @@ theorem probEvent_log_entry_eq_le {α : Type}
         calc _ ≤ ∑' x : spec.Range entry.1,
                 (Fintype.card (spec.Range entry.1) : ℝ≥0∞)⁻¹ * if x = entry.2 then 1 else 0 :=
               ENNReal.tsum_le_tsum fun x => mul_le_mul' le_rfl <| by
-                split <;> simp_all [Sigma.ext_iff]
+                by_cases hx : x = entry.2
+                · subst hx; simp
+                · have hentry : (⟨entry.1, x⟩ : (t : spec.Domain) × spec.Range t) ≠ entry := by
+                    intro h
+                    exact hx (eq_of_heq (Sigma.ext_iff.mp h).2)
+                  simp [hx, hentry]
           _ = _ := by simp
       · refine le_of_eq_of_le (ENNReal.tsum_eq_zero.mpr fun x => ?_) zero_le
         rw [if_neg fun h => ht (by cases h; rfl), mul_zero]
