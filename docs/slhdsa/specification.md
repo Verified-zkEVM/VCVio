@@ -41,9 +41,9 @@ SHA2 compressed address require round-trip/noninterference/range lemmas. The imp
 modulo and in-range reconstruction laws for big-endian `toByte`/`toInt`, checked 32-bit/96-bit
 address setters, type-and-clear field laws, exact 32/22-byte length theorems, canonical type/padding
 rejection, structured serialization/parser identity under exact field bounds, and checked-wire
-decode semantics. Exact-width transparent key and signature carrier aliases reject every wrong
-length for all twelve profiles; their semantic parsing remains construction work, not a claim of
-conformance.
+decode semantics. Exact-width carriers and `ExternalCodec` provide structured semantic parsing for
+all twelve profiles, with inverse laws, strict length rejection, and exact component projections.
+External context/prehash identity, OID, and mode validation remain open for S09b.
 
 ## Exact primitive instantiation grammars
 
