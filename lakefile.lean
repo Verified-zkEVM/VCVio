@@ -394,6 +394,10 @@ lean_exe slhdsa_wots_tests where
 lean_exe slhdsa_xmss_tests where
   root := `HashSigTest.SLHDSA.XmssConstructionTests
 
+/-- General-hypertree trajectories, checked addresses, and selected concrete construction. -/
+lean_exe slhdsa_hypertree_tests where
+  root := `HashSigTest.SLHDSA.HypertreeConformanceTests
+
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
 TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every
