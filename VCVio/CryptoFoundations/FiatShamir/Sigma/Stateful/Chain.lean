@@ -445,19 +445,23 @@ private lemma cmaSimLoggedLeft_preserves_inv
         exact congrArg Prod.snd hx'.symm
       rcases hx with ⟨hxmem, hnext⟩ | ⟨hxmem, hnext⟩
       · have hxinner := state_eq false hxmem
+        have hxkey : xKeypair = some (pk, sk) :=
+          congrArg (fun state => state.2.1) hxinner
         rcases hnext with ⟨u, nextCache, nextKeypair, hnext⟩
         rcases hnext with ⟨hu, rfl⟩ | ⟨hu, rfl⟩
         all_goals
           cases htarget : xCache (m, xCommit)
           all_goals simp [htarget] at hu
-          all_goals simp_all
+          all_goals exact hu.2.trans hxkey
       · have hxinner := state_eq true hxmem
+        have hxkey : xKeypair = some (pk, sk) :=
+          congrArg (fun state => state.2.1) hxinner
         rcases hnext with ⟨u, nextCache, nextKeypair, hnext⟩
         rcases hnext with ⟨hu, rfl⟩ | ⟨hu, rfl⟩
         all_goals
           cases htarget : xCache (m, xCommit)
           all_goals simp [htarget] at hu
-          all_goals simp_all
+          all_goals exact hu.2.trans hxkey
 omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 private lemma cmaSimLoggedLeft_project_step
     (hr : GenerableRelation Stmt Wit rel)
