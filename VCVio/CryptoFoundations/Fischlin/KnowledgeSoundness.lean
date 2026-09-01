@@ -1499,10 +1499,10 @@ end INV'
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
-/-- **The generalized supermartingale induction (multi-record cells).** As
-`main_induction`, but instead of joint injectivity of `(key, coord)`, only the *relevant*
-records matter, and within a cell relevant records are separated by an abstract challenge
-tag `chalOf` (`hcell`). Caching a second relevant record at an already-revealed cell kills
+/-- **The generalized supermartingale induction (multi-record cells).** The induction tracks
+only *relevant* records, and within a cell relevant records are separated by an abstract
+challenge tag `chalOf` (`hcell`). Caching a second relevant record at an already-revealed cell
+kills
 the slot (`hdead_kill`); all other relevant/live cache misses are martingale reveal steps;
 irrelevant and dead-slot misses leave the potential unchanged. The bound is unchanged:
 `q·μ + Φ + μ`. -/
@@ -2003,8 +2003,8 @@ private noncomputable def ksLeaf (x : Stmt) (msg : M)
         σ hr ρ b S M).verify x msg π)).run' cache]
 
 omit [SampleableType Chal] in
-/-- **Per-leaf bound.** Under the weakened coupling invariant `INV'` for the Fischlin
-classifiers, the leaf payoff is at most the live multi-slot potential plus one fresh slot
+/-- **Per-leaf bound.** Under the generalized multi-record coupling invariant `INV'` for the
+Fischlin classifiers, the leaf payoff is at most the live multi-slot potential plus one fresh slot
 potential: when the scan misses (`CachePinned`), the verifier's acceptance probability is
 *exactly* the slot potential of the proof's commitment-list key, which is either a live
 summand of `Phi` or (if untouched) exactly `μ`. -/
