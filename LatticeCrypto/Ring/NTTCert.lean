@@ -125,10 +125,12 @@ theorem applyCoeffTransform_comp
     exact backend.coeff_build _ coord
   rw [hcoeff, hroundtrip, backend.build_coeff]
 
+omit [Ring Coeff] in
 /-- Lift additivity of a coefficient transformation through a backend whose
 addition is pointwise on coefficients. -/
 theorem applyCoeffTransform_add
     (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
+    [Add Coeff]
     [Add backend.Poly]
     (hcoeffAdd : ∀ left right : backend.Poly,
       backend.coeff (left + right) = backend.coeff left + backend.coeff right)
@@ -147,9 +149,11 @@ theorem applyCoeffTransform_add
   funext coord
   simp only [backend.coeff_build, Pi.add_apply]
 
+omit [Ring Coeff] in
 /-- Lift subtraction preservation through a pointwise backend. -/
 theorem applyCoeffTransform_sub
     (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
+    [Sub Coeff]
     [Sub backend.Poly]
     (hcoeffSub : ∀ left right : backend.Poly,
       backend.coeff (left - right) = backend.coeff left - backend.coeff right)
@@ -168,9 +172,11 @@ theorem applyCoeffTransform_sub
   funext coord
   simp only [backend.coeff_build, Pi.sub_apply]
 
+omit [Ring Coeff] in
 /-- Lift zero preservation through a pointwise backend. -/
 theorem applyCoeffTransform_zero
     (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
+    [Zero Coeff]
     [Zero backend.Poly]
     (hcoeffZero : backend.coeff (0 : backend.Poly) = 0)
     (htransformZero : transform 0 = 0) :
