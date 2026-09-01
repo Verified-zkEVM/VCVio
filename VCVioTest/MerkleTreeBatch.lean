@@ -7,15 +7,18 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
-public meta import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Addressed
+public meta import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.MapToSingle
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Game
 
 /-!
 # Inductive Merkle Batch-Opening Canaries
 
 Concrete examples that pin the public behavior of path-pruned batch openings: hash argument
 order, pruning shape, the singleton reduction to an ordinary authentication path, the
-all-selected and empty-selector boundaries, and cross-selector collision extraction.
+all-selected and empty-selector boundaries, cross-selector collision extraction, and the
+multi-opening verifier's accepting and rejecting branches.
 -/
 
 @[expose] public section
@@ -104,6 +107,73 @@ example :
       .internalBoth (.internalBoth .leaf .leaf) (.internalBoth .leaf .leaf) := by
   rfl
 
+/-- Mapping into a partial-tree value type preserves both pruning directions and maps only
+the stored authentication frontier. -/
+example :
+    outerProof.map some =
+      .internalBoth (.pruneRight (by decide) (some 2) .leaf)
+        (.pruneLeft (by decide) (some 3) .leaf) := by
+  rfl
+
+/-- The all-selected proof contains no stored value for mapping to change. -/
+example :
+    allProof.map some =
+      .internalBoth (.internalBoth .leaf .leaf) (.internalBoth .leaf .leaf) := by
+  rfl
+
+/-- Structural query counting is exact on singleton, outer-pair, and all-selected traversals. -/
+example : firstProof.queryCount = 2 ∧ outerProof.queryCount = 3 ∧ allProof.queryCount = 3 := by
+  decide
+
+/-! ## Addressed traversal order -/
+
+/-- Observable tags for the three typed internal positions of `fourLeafSkeleton`. -/
+inductive DepthTwoAddress where
+  | rootNode
+  | leftNode
+  | rightNode
+deriving DecidableEq, Repr
+
+/-- Collapse the dependent internal-node index to a traceable address tag. -/
+def depthTwoAddress : SkeletonInternalIndex fourLeafSkeleton → DepthTwoAddress
+  | .ofInternal => .rootNode
+  | .ofLeft .ofInternal => .leftNode
+  | .ofRight .ofInternal => .rightNode
+
+/-- One effectful addressed-hash call, retaining its ordered children. -/
+structure AddressedHashEvent where
+  address : DepthTwoAddress
+  left : Nat
+  right : Nat
+deriving DecidableEq, Repr
+
+abbrev AddressedTraceM := StateM (List AddressedHashEvent)
+
+def addressWeight : DepthTwoAddress → Nat
+  | .rootNode => 0
+  | .leftNode => 100
+  | .rightNode => 200
+
+/-- Address-sensitive, noncommutative node hash with an observable append-only trace. -/
+def tracedAddressedHash (address : SkeletonInternalIndex fourLeafSkeleton)
+    (left right : Nat) : AddressedTraceM Nat := fun trace =>
+  let tag := depthTwoAddress address
+  (addressWeight tag + 2 * left + 3 * right + 1,
+    trace ++ [{ address := tag, left, right }])
+
+/-- The addressed batch fold visits left child, right child, then root; each recursive call
+receives the correct reindexed typed address and preserves ordered hash inputs.  The numeric result
+is also noncommutative, so neither swapping children nor merely repairing the trace can satisfy the
+canary. -/
+example : Id.run
+    ((AddressedMerkleTree.getPutativeBatchRootAddressedM tracedAddressedHash
+      (selectedValues leaves selectAll) allProof).run []) =
+    (876,
+      [{ address := .leftNode, left := 1, right := 2 },
+       { address := .rightNode, left := 3, right := 4 },
+       { address := .rootNode, left := 109, right := 219 }]) := by
+  decide
+
 /-- Opening no leaf is excluded by the dependent proof family. -/
 example : IsEmpty (BatchProof Nat selectNone) :=
   ⟨fun proof => by
@@ -176,5 +246,59 @@ example :
   exact getPutativeBatchRootWithHash_binding constantHash
     leftValues leftProof bothValues bothProof pairLeftIndex leftSelected bothLeftSelected
     selectedValuesDiffer putativeRootsAgree
+
+/-! ## Multi-opening verification -/
+
+open _root_.MerkleTreeMultiExtractability
+
+abbrev VerifierQuery := Nat × Nat
+
+/-- Complete-query model for the deterministic multi-opening verifier canary. -/
+def verifierModel : MerkleTreeExtractability.NodeQueryModel VerifierQuery Unit Nat where
+  view := {
+    address := fun _ => ()
+    input := id }
+  mkQuery _ input := input
+  address_mkQuery := by intros; rfl
+  input_mkQuery := by intros; rfl
+
+def verifierConfig : Configuration Unit Unit where
+  skeleton _ := pairSkeleton
+  addressKey _ _ := ()
+
+def acceptingClaim : OpeningClaim VerifierQuery Nat verifierConfig where
+  tag := ()
+  checkpoint := {
+    root := 26
+    cumulativeLog := [] }
+  opening := {
+    selector := selectBoth
+    values := bothValues
+    proof := bothProof }
+
+def rejectingClaim : OpeningClaim VerifierQuery Nat verifierConfig where
+  tag := ()
+  checkpoint := {
+    root := 27
+    cumulativeLog := [] }
+  opening := {
+    selector := selectBoth
+    values := bothValues
+    proof := bothProof }
+
+def verifierImpl : QueryImpl (VerifierQuery →ₒ Nat) Id :=
+  fun query => orderedHash query.1 query.2
+
+def attemptBits (attempts : List (AnyOpeningAttempt Unit VerifierQuery Unit Nat verifierConfig)) :
+    List Bool :=
+  attempts.map fun ⟨_, attempt⟩ => attempt.accepted
+
+/-- `verifyClaims` preserves one attempt per claim and records both verifier outcomes. This rejects
+dropping a nonempty claim list, hard-coding acceptance, or reversing the claim order. -/
+example :
+    let attempts := simulateQ verifierImpl
+      (verifyClaims verifierModel [acceptingClaim, rejectingClaim])
+    attempts.length = 2 ∧ attemptBits attempts = [true, false] := by
+  decide
 
 end VCVioTest.MerkleTreeBatch

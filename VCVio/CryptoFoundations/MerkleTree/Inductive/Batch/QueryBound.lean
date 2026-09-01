@@ -28,7 +28,9 @@ namespace InductiveMerkleTree
 
 open OracleComp OracleSpec BinaryTree
 
-variable {α β : Type}
+universe u v
+
+variable {α : Type u} {β : Type v}
 
 /-- The exact number of internal-node hash queries made while checking a batch proof. -/
 @[simp, grind]
@@ -43,6 +45,10 @@ def BatchProof.queryCount : {s : Skeleton} → {sel : LeafData Bool s} → Batch
 theorem BatchProof.queryCount_map (f : α → β) {s : Skeleton} {sel : LeafData Bool s}
     (proof : BatchProof α sel) : (proof.map f).queryCount = proof.queryCount := by
   induction proof <;> simp_all only [BatchProof.map, BatchProof.queryCount]
+
+section TotalQueryBound
+
+variable {α : Type}
 
 /-- Computing a putative batch root makes at most `proof.queryCount` oracle queries. -/
 theorem getPutativeBatchRoot_isTotalQueryBound {s : Skeleton} {sel : LeafData Bool s}
@@ -75,6 +81,8 @@ theorem verifyBatchProof_isTotalQueryBound [DecidableEq α]
   unfold verifyBatchProof
   exact isTotalQueryBound_bind (n₂ := 0)
     (getPutativeBatchRoot_isTotalQueryBound values proof) fun _ => trivial
+
+end TotalQueryBound
 
 /-- The pruned verifier never visits more internal nodes than exist in the skeleton. -/
 theorem BatchProof.queryCount_le_leafCount_sub_one :
@@ -136,6 +144,10 @@ theorem BatchProof.depth_le_queryCount {s : Skeleton} {sel : LeafData Bool s}
       | ofLeft idxL =>
           exact absurd (LeafData.anySelected_of_get idxL (by simpa using hidx)) (by simp [hl])
 
+section TotalQueryBound
+
+variable {α : Type}
+
 /-- Skeleton-uniform query bound for computing a putative batch root. -/
 theorem getPutativeBatchRoot_isTotalQueryBound_leafCount {s : Skeleton}
     {sel : LeafData Bool s} (values : SelectedValues α sel) (proof : BatchProof α sel) :
@@ -154,5 +166,7 @@ theorem verifyBatchProof_isTotalQueryBound_leafCount [DecidableEq α] {s : Skele
       (s.leafCount - 1) :=
   (verifyBatchProof_isTotalQueryBound values rootValue proof).mono
     proof.queryCount_le_leafCount_sub_one
+
+end TotalQueryBound
 
 end InductiveMerkleTree

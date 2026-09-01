@@ -155,6 +155,15 @@ theorem ExtractorState.record_checkpoints
       state.checkpoints ++
         [⟨tag, { root, cumulativeLog := state.cumulativeLog ++ phaseLog }⟩] := rfl
 
+/-- Recording one commitment adds exactly one checkpoint. -/
+@[simp]
+theorem ExtractorState.record_checkpoints_length
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config) (tag : Cfg)
+    (phaseLog : MerkleTreeExtractor.QueryLog Query Y) (root : Y) :
+    (state.record tag phaseLog root).checkpoints.length = state.checkpoints.length + 1 := by
+  simp
+
 /-- Every recorded checkpoint transcript is a prefix of the state's current transcript. -/
 def ExtractorState.WellFormed {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config) : Prop :=
@@ -321,6 +330,48 @@ def Failure [DecidableEq Address] [DecidableEq Y]
   HasAcceptedOpeningDisagreement view state attempts ∨
     HasEqualRootExtractionDisagreement view state ∨
       HasCheckpointTerminalExtractionDisagreement view state terminalSuffix
+
+/-- The textbook-facing failure event: an accepted chosen opening disagrees with its checkpoint
+extraction, or two equal roots at checkpoints of the same configuration have inconsistent
+extractions. Checkpoint-to-terminal evolution is an internal strengthening used in the proof, not
+part of this public event. Both branches compare checkpoints only within one configuration tag;
+cross-tag root reuse is outside the event. -/
+def TextbookFailure [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config)) : Prop :=
+  HasAcceptedOpeningDisagreement view state attempts ∨
+    HasEqualRootExtractionDisagreement view state
+
+/-- The stronger three-branch proof event subsumes the textbook-facing failure event. -/
+theorem TextbookFailure.toFailure [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
+    (h : TextbookFailure view state attempts) :
+    Failure view state attempts terminalSuffix := by
+  rcases h with hopening | hequalRoot
+  · exact Or.inl hopening
+  · exact Or.inr (Or.inl hequalRoot)
+
+/-- If checkpoint extraction is stable under the terminal suffix, the strong and textbook events
+coincide. This is a deterministic specialization, independent of any probability semantics. -/
+theorem failure_iff_textbookFailure_of_noTerminalDisagreement
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
+    (hstable : ¬ HasCheckpointTerminalExtractionDisagreement
+      view state terminalSuffix) :
+    Failure view state attempts terminalSuffix ↔
+      TextbookFailure view state attempts := by
+  simp only [Failure, TextbookFailure]
+  tauto
 
 theorem Failure.ofAcceptedOpeningDisagreement [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
