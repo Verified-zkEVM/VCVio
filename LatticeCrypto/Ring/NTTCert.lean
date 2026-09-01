@@ -9,12 +9,11 @@ public import Mathlib.Algebra.BigOperators.Ring.Finset
 public import LatticeCrypto.Ring.VectorBackend
 
 /-!
-# Shared Matrix Certification Scaffolding For Concrete NTTs
+# Shared Certification Scaffolding For Concrete NTTs
 
-Centralizes the standard-basis evaluation and matrix-application reasoning
-shared by the concrete ML-DSA and ML-KEM NTT developments.
+This module provides two proof-facing routes for concrete NTT developments.
 
-The concrete NTT certification strategy works as follows:
+The matrix route works as follows:
 1. Evaluate the executable NTT loop kernel on each standard-basis vector to
    extract the transform matrix `M` as a `Fin n → Fin n → Coeff` function.
 2. Define the public `ntt` / `invNTT` as `applyMatrix M` / `applyMatrix M⁻¹`,
@@ -23,15 +22,17 @@ The concrete NTT certification strategy works as follows:
 3. Prove that `M · M⁻¹ = I` (via `applyMatrix_comp` and `applyMatrix_id`) to
    obtain the roundtrip laws.
 
-This module provides `basis`, `applyMatrix`, `idMatrix`, and the composition /
-identity / additivity lemmas that the scheme-specific `Concrete/NTT.lean` files
-use.
+The first part below retains the reusable `basis`, `applyMatrix`, `idMatrix`,
+and composition / identity / additivity lemmas for developments that use that
+route.
 
-The second part of this module provides an algebraic butterfly interface.  A
+The structural route, now used by both ML-KEM and ML-DSA, avoids a dense matrix
+certificate. A
 `ButterflyLayout` records a proof-relevant partition of a coefficient index
-type into pairs.  This lets concrete loop developments separate the indexing
+type into pairs. This lets concrete loop developments separate the indexing
 proof (that an array loop implements a layout) from the small ring calculation
-showing that matching forward and inverse butterflies cancel.
+showing that matching forward and inverse butterflies cancel. `ScaledStage`
+then composes those local facts and tracks the final normalization factor.
 -/
 
 @[expose] public section
