@@ -22,6 +22,10 @@ The executable game currently lives in `Type 0`, matching the probability and to
 infrastructure it uses. The structural `Configuration`, checkpoint, and extractor-state APIs remain
 universe-polymorphic; lifting this game layer is an explicit interface generalization, not an
 implicit security assumption.
+
+As in `SequentialCommitter.runCommitments`, `rounds` is a fixed public horizon. Quantifying the
+resulting bound over `rounds` supports an adaptive stopping policy through a uniform maximum, but
+the executable game does not itself let the adversary choose when to stop.
 -/
 
 @[expose] public section
