@@ -35,7 +35,8 @@ general Algorithms 18--20 can use it without defining a second representation. -
 abbrev SignatureCore (vp : ValidatedParams) (core : CorePrimitives vp.params) :=
   SLHDSA.SignatureCore vp.params core
 
-/-- FIPS Algorithm 18: derive the public root from layer `d - 1`, tree zero. -/
+/-- FIPS Algorithm 18: derive the public root from layer `d - 1`, tree zero. The pair is
+returned as `(PK, SK)`, the repository-wide keygen convention; FIPS 205 lists `(SK, PK)`. -/
 def keygenInternalM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :

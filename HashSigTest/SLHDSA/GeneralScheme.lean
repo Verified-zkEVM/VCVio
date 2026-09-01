@@ -13,6 +13,11 @@ public import HashSig.SLHDSA.DepthOneCompatibility
 
 These equations pin the general Algorithms 18--20 composition boundary: top-layer key generation,
 digest-derived FORS addressing, and the arbitrary-`d` hypertree call.
+
+The depth canaries pin type-level widths only. No executable `d > 1` primitive instance exists
+in the tree yet, so exact-execution coverage of the general path is deferred to the refinement
+and KAT slices; until then the arbitrary-depth guarantees are the symbolic correctness and
+query-bound theorems.
 -/
 
 public section
@@ -33,6 +38,10 @@ def depthTwoParams : Params :=
 
 def depthThreeParams : Params :=
   { n := 1, h := 3, d := 3, hp := 1, a := 1, k := 1, lgw := 1 }
+
+/-- The depth canaries satisfy the full validity predicate, so they exercise exactly the
+parameter class the general theorems quantify over. -/
+example : depthOneParams.Valid ∧ depthTwoParams.Valid ∧ depthThreeParams.Valid := by decide
 
 /-- The canonical scheme type carries exactly one XMSS component at the compatibility depth. -/
 example (depthOneCore : CorePrimitives depthOneParams)
@@ -64,8 +73,8 @@ example (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
         return (⟨pkSeed, pkRoot⟩, ⟨skSeed, skPrf, pkSeed, pkRoot⟩)) := by
   rfl
 
-/-- The depth-one key-generation entry point is a compatibility wrapper for the general program,
-rather than a second unconstrained scheme. -/
+/-- The depth-one key-generation entry point agrees with the general program as an exact
+free-oracle equation, so no second unconstrained scheme exists. -/
 example (hd : vp.params.d = 1) (skSeed : core.SkSeed) (skPrf : core.SkPrf)
     (pkSeed : core.PkSeed) :
     (GeneralScheme.keygenInternalM vp core skSeed skPrf pkSeed :

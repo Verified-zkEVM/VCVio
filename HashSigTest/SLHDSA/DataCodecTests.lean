@@ -11,9 +11,11 @@ public import HashSig
 # Structured SLH-DSA wire-codec regression tests
 
 These tests exercise the canonical key and signature codecs at depth one, depth two, and all
-twelve approved FIPS 205 parameter sets. Every structured signature boundary receives a marker:
+twelve approved FIPS 205 parameter sets, instantiated over the identity byte carrier `byteCore`
+rather than a concrete hash suite. Every structured signature boundary receives a marker:
 `R`, each FORS secret and authentication node, every WOTS chain value, and every XMSS
-authentication node. Short and long inputs are rejected before semantic decoding.
+authentication node. Short and long inputs are rejected before semantic decoding. End-to-end
+integration with a concrete primitive suite belongs to the suites' own test executables.
 -/
 
 public section
@@ -46,6 +48,7 @@ The hash operations are irrelevant to codec tests and return zero nodes. -/
   skSeed := WireCodec.bytes p.n
   skPrf := WireCodec.bytes p.n
   y := WireCodec.bytes p.n
+  y_toBytes := fun _ => rfl
 
 def zeroPublicKey (p : Params) : PublicKeyCore (byteCore p) :=
   ⟨zeroBytes p.n, zeroBytes p.n⟩
