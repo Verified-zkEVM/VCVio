@@ -17,6 +17,10 @@ to dynamically selected pruned batch openings. The terminal adversary returns cl
 acceptance bits; `verifyClaims` computes every bit through the query-parametric addressed batch
 verifier. The terminal adversary log is snapshotted before honest verification, keeping terminal
 checkpoint evolution and fresh verifier queries as separate proof obligations.
+
+As in `SequentialCommitter.runCommitments`, `rounds` is a fixed public horizon. Quantifying the
+resulting bound over `rounds` supports an adaptive stopping policy through a uniform maximum, but
+the executable game does not itself let the adversary choose when to stop.
 -/
 
 @[expose] public section

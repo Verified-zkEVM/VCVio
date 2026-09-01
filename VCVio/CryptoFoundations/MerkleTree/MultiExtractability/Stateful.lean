@@ -36,6 +36,10 @@ The aggregate `Failure` predicate is the disjunction used by a future random-ora
 theorem.  This file does not call these predicates unlikely, does not assign a query bound, and does
 not claim that different configuration tags use independent random oracles.  Those are separate
 game and resource-accounting obligations.
+
+Failure events relate an opening or pair of checkpoints only within the same configuration tag.
+Reuse of one root across distinct tags is outside the modeled event, even though the tags may select
+different skeletons or address maps.
 -/
 
 @[expose] public section
@@ -62,7 +66,10 @@ structure Configuration (Cfg : Type u) (Address : Type w) where
   /-- Address assigned to every internal position under a configuration tag. -/
   addressKey : (tag : Cfg) → SkeletonInternalIndex (skeleton tag) → Address
 
-/-- Immutable extraction input captured immediately after one commitment phase. -/
+/-- Immutable extraction input captured immediately after one commitment phase.
+
+The `config` and `tag` parameters are phantom in the stored `root` and `cumulativeLog` fields, but
+they determine the skeleton and address map used by `Checkpoint.extractedTree`. -/
 structure Checkpoint (Query : Type v) (Y : Type) (config : Configuration Cfg Address)
     (tag : Cfg) where
   /-- Root emitted by the commitment phase. -/
@@ -304,7 +311,10 @@ theorem not_checkpointTerminalExtractionDisagreement_self
     ¬ CheckpointTerminalExtractionDisagreement view checkpoint checkpoint.cumulativeLog := by
   simp [CheckpointTerminalExtractionDisagreement, Checkpoint.extractedTree]
 
-/-- Some accepted, recorded opening attempt disagrees with its checkpoint extraction. -/
+/-- Some accepted, recorded opening attempt disagrees with its checkpoint extraction.
+
+The attempt and recorded checkpoint must carry the same configuration tag; cross-tag root reuse is
+outside this event. -/
 def HasAcceptedOpeningDisagreement [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
@@ -315,7 +325,10 @@ def HasAcceptedOpeningDisagreement [DecidableEq Address] [DecidableEq Y]
     ⟨tag, attempt.checkpoint⟩ ∈ state.checkpoints ∧
     AcceptedOpeningDisagreement view attempt
 
-/-- Two recorded checkpoints for one configuration and root have inconsistent extractions. -/
+/-- Two recorded checkpoints for one configuration and root have inconsistent extractions.
+
+Both checkpoints must carry the same configuration tag; cross-tag root reuse is outside this
+event. -/
 def HasEqualRootExtractionDisagreement [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
@@ -336,7 +349,10 @@ def HasCheckpointTerminalExtractionDisagreement [DecidableEq Address] [Decidable
     CheckpointTerminalExtractionDisagreement view checkpoint
       (state.terminalLog terminalSuffix)
 
-/-- Deterministic bad event for stateful multi-commitment batch extraction. -/
+/-- Deterministic bad event for stateful multi-commitment batch extraction.
+
+Its opening and equal-root branches compare checkpoints only within one configuration tag;
+cross-tag root reuse is outside the event. -/
 def Failure [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
@@ -350,7 +366,8 @@ def Failure [DecidableEq Address] [DecidableEq Y]
 /-- The textbook-facing failure event: an accepted chosen opening disagrees with its checkpoint
 extraction, or two equal roots at checkpoints of the same configuration have inconsistent
 extractions. Checkpoint-to-terminal evolution is an internal strengthening used in the proof, not
-part of this public event. -/
+part of this public event. Both branches compare checkpoints only within one configuration tag;
+cross-tag root reuse is outside the event. -/
 def TextbookFailure [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
