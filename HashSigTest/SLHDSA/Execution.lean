@@ -12,7 +12,8 @@ public import HashSig.SLHDSA.Concrete.FIPS
 # SLH-DSA pure-execution tests
 
 Falsifiable order and shape canaries for the streaming Merkle evaluator, plus one end-to-end
-approved-profile execution of deterministic key generation, signing, and verification.
+approved-profile execution of deterministic key generation, signing, and verification for each
+of the six numerical parameter shapes.
 -/
 
 public section
