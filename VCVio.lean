@@ -69,6 +69,7 @@ public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.MacAlg
 public import VCVio.CryptoFoundations.MacFromPRF
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Level
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed
@@ -76,6 +77,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Query
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
