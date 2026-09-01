@@ -309,4 +309,85 @@ theorem keygenWithSeeds_eq_spec (vp : ValidatedParams) (prims : Primitives vp.pa
       External.keygenWithSeeds vp prims skSeed skPrf pkSeed := by
   simp [keygenWithSeeds, External.keygenWithSeeds, keygenInternal_eq_spec]
 
+/-! ## Encoded-message composition -/
+
+/-- Execute signing after a canonical external encoder has accepted and encoded the message.
+Passing the `Except` result rather than raw bytes preserves the encoder's policy checks and error
+order. Pure callers use `External.encodePureMessage`; FIPS pre-hash callers use the checked
+`Concrete.Prehash.encodeMessage` registry boundary. -/
+def signEncodedWithRandomizer (vp : ValidatedParams) (prims : Primitives vp.params)
+    (encoded : Except External.Error (List Byte)) (sk : SecretKeyCore prims.core)
+    (addrnd : prims.Y) : Except External.Error (GeneralScheme.SignatureCore vp prims.core) := do
+  let message ← encoded
+  return signInternal vp prims message sk addrnd
+
+/-- Execute verification after a canonical external encoder has accepted and encoded the message.
+Every encoding or policy failure is rejected as `false`, matching Algorithms 24 and 25. -/
+def verifyEncoded (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y] (encoded : Except External.Error (List Byte))
+    (signature : GeneralScheme.SignatureCore vp prims.core)
+    (pk : PublicKeyCore prims.core) : Bool :=
+  match encoded with
+  | .error _ => false
+  | .ok message => verifyInternal vp prims message signature pk
+
+theorem signEncodedWithRandomizer_eq_spec (vp : ValidatedParams)
+    (prims : Primitives vp.params) (encoded : Except External.Error (List Byte))
+    (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
+    signEncodedWithRandomizer vp prims encoded sk addrnd =
+      encoded.map fun message => GeneralScheme.signInternal vp prims message sk addrnd := by
+  cases encoded <;>
+    simp [signEncodedWithRandomizer, Except.map, signInternal_eq_spec]
+
+theorem verifyEncoded_eq_spec (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y] (encoded : Except External.Error (List Byte))
+    (signature : GeneralScheme.SignatureCore vp prims.core) (pk : PublicKeyCore prims.core) :
+    verifyEncoded vp prims encoded signature pk =
+      match encoded with
+      | .error _ => false
+      | .ok message => GeneralScheme.verifyInternal vp prims message signature pk := by
+  cases encoded <;> simp [verifyEncoded, verifyInternal_eq_spec]
+
+/-- The efficient composition with the pure-message encoder is exactly Algorithm 22. -/
+theorem signEncodedWithRandomizer_pure_eq_external (vp : ValidatedParams)
+    (prims : Primitives vp.params) (message context : List Byte)
+    (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
+    signEncodedWithRandomizer vp prims (External.encodePureMessage context message) sk addrnd =
+      External.signPureWithRandomizer vp prims message context sk addrnd := by
+  simp [signEncodedWithRandomizer, External.signPureWithRandomizer, signInternal_eq_spec]
+
+/-- The efficient composition with a descriptor encoder is exactly the generic Algorithm 23
+core. FIPS callers obtain the descriptor only through the checked concrete registry. -/
+theorem signEncodedWithRandomizer_prehash_eq_external (vp : ValidatedParams)
+    (prims : Primitives vp.params) (prehash : External.PrehashDescriptor)
+    (message context : List Byte) (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
+    signEncodedWithRandomizer vp prims
+        (External.encodePrehashMessageWithDescriptor prehash context message) sk addrnd =
+      External.signPrehashWithDescriptorAndRandomizer vp prims prehash message context sk
+        addrnd := by
+  simp [signEncodedWithRandomizer, External.signPrehashWithDescriptorAndRandomizer,
+    signInternal_eq_spec]
+
+/-- The efficient composition with the pure-message encoder is exactly Algorithm 24. -/
+theorem verifyEncoded_pure_eq_external (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y] (message : List Byte)
+    (signature : GeneralScheme.SignatureCore vp prims.core) (context : List Byte)
+    (pk : PublicKeyCore prims.core) :
+    verifyEncoded vp prims (External.encodePureMessage context message) signature pk =
+      External.verifyPure vp prims message signature context pk := by
+  cases h : External.encodePureMessage context message <;>
+    simp [verifyEncoded, External.verifyPure, h, verifyInternal_eq_spec]
+
+/-- The efficient composition with a descriptor encoder is exactly the generic Algorithm 25
+core. FIPS callers obtain the descriptor only through the checked concrete registry. -/
+theorem verifyEncoded_prehash_eq_external (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y] (prehash : External.PrehashDescriptor) (message : List Byte)
+    (signature : GeneralScheme.SignatureCore vp prims.core) (context : List Byte)
+    (pk : PublicKeyCore prims.core) :
+    verifyEncoded vp prims
+        (External.encodePrehashMessageWithDescriptor prehash context message) signature pk =
+      External.verifyPrehashWithDescriptor vp prims prehash message signature context pk := by
+  cases h : External.encodePrehashMessageWithDescriptor prehash context message <;>
+    simp [verifyEncoded, External.verifyPrehashWithDescriptor, h, verifyInternal_eq_spec]
+
 end SLHDSA.Execution
