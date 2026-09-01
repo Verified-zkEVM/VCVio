@@ -238,20 +238,22 @@ def loopMultiplyNTTs (fHat gHat : Tq) : Tq :=
       a0 * b1 + a1 * b0⟩
 
 private theorem layer_shape :
-    ∀ s : Fin 7, 2 ^ s.val * (2 * (128 / 2 ^ s.val)) = ringDegree := by
+    ∀ s : Fin 7, 2 ^ s.val * (2 * (128 / 2 ^ s.val)) = polyBackend.degree := by
   decide
+
+private abbrev NTTCoord := Fin polyBackend.degree
 
 /-- The blocked coordinate layout used by layer `s` of Algorithms 9 and 10. -/
 private def layerLayout (s : Fin 7) :
     LatticeCrypto.NTTCert.ButterflyLayout
-      (Fin (2 ^ s.val) × Fin (128 / 2 ^ s.val)) (Fin ringDegree) where
+      (Fin (2 ^ s.val) × Fin (128 / 2 ^ s.val)) NTTCoord where
   equiv := (LatticeCrypto.NTTCert.blockLayout (2 ^ s.val) (128 / 2 ^ s.val)).equiv.trans
     (finCongr (layer_shape s))
 
 /-- One structurally certified ML-KEM butterfly layer. The group coordinate chooses the
 twiddle; the within-group coordinate selects one of the independent butterflies. -/
 private def nttStage (s : Fin 7) :
-    LatticeCrypto.NTTCert.ScaledStage Coeff (Fin ringDegree) :=
+    LatticeCrypto.NTTCert.ScaledStage Coeff NTTCoord :=
   LatticeCrypto.NTTCert.butterflyStageRev (layerLayout s)
     (fun pair => getZ zetaArray (2 ^ s.val + pair.1.val))
     (fun pair => getZ zetaArray (2 ^ (s.val + 1) - 1 - pair.1.val))
@@ -268,7 +270,7 @@ private def nttStage (s : Fin 7) :
 
 /-- The seven forward layers, ordered as Algorithm 9 executes them. -/
 private def nttStages :
-    List (LatticeCrypto.NTTCert.ScaledStage Coeff (Fin ringDegree)) :=
+    List (LatticeCrypto.NTTCert.ScaledStage Coeff NTTCoord) :=
   [nttStage 0, nttStage 1, nttStage 2, nttStage 3, nttStage 4, nttStage 5, nttStage 6]
 
 private theorem nInv_stageScalar :
@@ -276,28 +278,28 @@ private theorem nInv_stageScalar :
   change ((3303 * 128 : Nat) : ZMod 3329) = ((1 : Nat) : ZMod 3329)
   rw [ZMod.natCast_eq_natCast_iff']
 
-/-- Opaque proof-facing coefficient transform. Keeping the assembled stage list behind this
-boundary prevents downstream algebraic proofs from unfolding seven dependent layouts. -/
-private def nttCoeffs (input : Fin ringDegree → Coeff) : Fin ringDegree → Coeff :=
+/-- Named proof-facing coefficient transform. Keeping the assembled stage list behind this
+boundary lets downstream algebraic proofs use focused interface lemmas. -/
+private def nttCoeffs (input : NTTCoord → Coeff) : NTTCoord → Coeff :=
   LatticeCrypto.NTTCert.forwardStages nttStages input
 
-/-- Opaque proof-facing inverse coefficient transform, including the final normalization. -/
-private def invNTTCoeffs (input : Fin ringDegree → Coeff) : Fin ringDegree → Coeff :=
+/-- Named proof-facing inverse coefficient transform, including the final normalization. -/
+private def invNTTCoeffs (input : NTTCoord → Coeff) : NTTCoord → Coeff :=
   LatticeCrypto.NTTCert.scaleCoeffs nInv
     (LatticeCrypto.NTTCert.inverseStages nttStages input)
 
-private theorem invNTTCoeffs_nttCoeffs (input : Fin ringDegree → Coeff) :
+private theorem invNTTCoeffs_nttCoeffs (input : NTTCoord → Coeff) :
     invNTTCoeffs (nttCoeffs input) = input := by
   unfold invNTTCoeffs nttCoeffs
   exact LatticeCrypto.NTTCert.scale_inverseStages_forwardStages
     nttStages nInv nInv_stageScalar input
 
-private theorem nttCoeffs_add (left right : Fin ringDegree → Coeff) :
+private theorem nttCoeffs_add (left right : NTTCoord → Coeff) :
     nttCoeffs (left + right) = nttCoeffs left + nttCoeffs right := by
   unfold nttCoeffs
   exact LatticeCrypto.NTTCert.forwardStages_add nttStages left right
 
-private theorem nttCoeffs_sub (left right : Fin ringDegree → Coeff) :
+private theorem nttCoeffs_sub (left right : NTTCoord → Coeff) :
     nttCoeffs (left - right) = nttCoeffs left - nttCoeffs right := by
   unfold nttCoeffs
   exact LatticeCrypto.NTTCert.forwardStages_sub nttStages left right
@@ -326,12 +328,12 @@ private def rqEquivTq : Rq ≃ Tq where
 /-- Proof-oriented NTT assembled from the seven certified butterfly layers. -/
 @[implemented_by loopNTT]
 def ntt (f : Rq) : Tq :=
-  rqEquivTq (rqEquivCoeffFun.symm (nttCoeffs (rqEquivCoeffFun f)))
+  ⟨LatticeCrypto.NTTCert.applyCoeffTransform polyBackend nttCoeffs f⟩
 
 /-- Proof-oriented inverse NTT assembled from the matching reverse layers and final scaling. -/
 @[implemented_by loopInvNTT]
 def invNTT (fHat : Tq) : Rq :=
-  rqEquivCoeffFun.symm (invNTTCoeffs (rqEquivCoeffFun (rqEquivTq.symm fHat)))
+  LatticeCrypto.NTTCert.applyCoeffTransform polyBackend invNTTCoeffs fHat.coeffs
 
 /-- Proof-oriented `MultiplyNTTs` transported through the proven NTT isomorphism. -/
 @[implemented_by loopMultiplyNTTs]
@@ -340,9 +342,8 @@ def multiplyNTTs (fHat gHat : Tq) : Tq :=
 
 /-- The concrete inverse transform is a left inverse to the concrete forward transform. -/
 theorem invNTT_ntt (f : Rq) : invNTT (ntt f) = f := by
-  apply rqEquivCoeffFun.injective
-  simp only [invNTT, ntt, Equiv.apply_symm_apply, Equiv.symm_apply_apply]
-  exact invNTTCoeffs_nttCoeffs (rqEquivCoeffFun f)
+  exact LatticeCrypto.NTTCert.applyCoeffTransform_comp
+    nttCoeffs invNTTCoeffs invNTTCoeffs_nttCoeffs f
 
 private theorem ntt_injective : Function.Injective ntt := by
   intro f g h
@@ -357,19 +358,19 @@ private theorem ntt_surjective : Function.Surjective ntt := by
   let : Finite Rq := Finite.of_equiv (Fin ringDegree → Coeff) rqEquivCoeffFun.symm
   exact ntt_injective.surjective_of_finite rqEquivTq
 
-private theorem rqEquivCoeffFun_add (f g : Rq) :
-    rqEquivCoeffFun (f + g) = rqEquivCoeffFun f + rqEquivCoeffFun g := by
+private theorem hadd_rq (f g : Rq) :
+    polyBackend.coeff (f + g) = polyBackend.coeff f + polyBackend.coeff g := by
   funext i
   change (f + g).get i = f.get i + g.get i
   exact coeffRing.add_coeff f g i
 
-private theorem rqEquivCoeffFun_sub (f g : Rq) :
-    rqEquivCoeffFun (f - g) = rqEquivCoeffFun f - rqEquivCoeffFun g := by
+private theorem hsub_rq (f g : Rq) :
+    polyBackend.coeff (f - g) = polyBackend.coeff f - polyBackend.coeff g := by
   funext i
   change (f - g).get i = f.get i - g.get i
   exact coeffRing.sub_coeff f g i
 
-private theorem rqEquivCoeffFun_zero : rqEquivCoeffFun (0 : Rq) = 0 := by
+private theorem hzero_rq : polyBackend.coeff (0 : Rq) = 0 := by
   funext i
   change (0 : Rq).get i = 0
   exact LatticeCrypto.vectorRing_zero_get i
@@ -384,17 +385,13 @@ theorem ntt_invNTT (fHat : Tq) : ntt (invNTT fHat) = fHat := by
 
 /-- The concrete NTT is additive on the coefficient-vector carrier of `T_q`. -/
 theorem ntt_add_toRq (f g : Rq) : (ntt (f + g) : Rq) = (ntt f : Rq) + (ntt g : Rq) := by
-  apply rqEquivCoeffFun.injective
-  simp only [ntt, rqEquivTq, LatticeCrypto.TransformPoly.toPoly,
-    Equiv.apply_symm_apply, rqEquivCoeffFun_add]
-  rw [nttCoeffs_add]
+  exact LatticeCrypto.NTTCert.applyCoeffTransform_add nttCoeffs hadd_rq
+    nttCoeffs_add f g
 
 /-- The concrete NTT preserves subtraction on the coefficient-vector carrier of `T_q`. -/
 theorem ntt_sub_toRq (f g : Rq) : (ntt (f - g) : Rq) = (ntt f : Rq) - (ntt g : Rq) := by
-  apply rqEquivCoeffFun.injective
-  simp only [ntt, rqEquivTq, LatticeCrypto.TransformPoly.toPoly,
-    Equiv.apply_symm_apply, rqEquivCoeffFun_sub]
-  rw [nttCoeffs_sub]
+  exact LatticeCrypto.NTTCert.applyCoeffTransform_sub nttCoeffs hsub_rq
+    nttCoeffs_sub f g
 
 /-- The concrete NTT is additive. -/
 theorem ntt_add (f g : Rq) : ntt (f + g) = ntt f + ntt g := by
@@ -439,10 +436,7 @@ theorem concreteNTTRingLaws : NTTRingLaws concreteNTTRingOps where
   toHat_fromHat := ntt_invNTT
   toHat_zero := by
     apply LatticeCrypto.TransformPoly.ext
-    apply rqEquivCoeffFun.injective
-    simp only [ntt, rqEquivTq, LatticeCrypto.TransformPoly.toPoly,
-      Equiv.apply_symm_apply, rqEquivCoeffFun_zero]
-    rw [nttCoeffs_zero]
+    exact LatticeCrypto.NTTCert.applyCoeffTransform_zero nttCoeffs hzero_rq nttCoeffs_zero
   toHat_mul f g := by
     change ntt (negacyclicMul f g) = multiplyNTTs (ntt f) (ntt g)
     simp only [multiplyNTTs, invNTT_ntt]
