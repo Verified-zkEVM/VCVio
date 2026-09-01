@@ -245,7 +245,8 @@ private def extractabilityRunFrom (model : NodeQueryModel Query Address Y) {s : 
 collision hazard against the `cached` previous keys, birthday collisions among the new cache
 entries, and the remaining opening/verifier fresh-target hazard. Cache hits consume the
 remaining total-query budget without increasing `commitMisses`. -/
-private def extractabilityEnergy (treeTargetCount depth remaining cached commitMisses : ℕ) : ℕ :=
+private def extractabilityEnergy
+    (treeTargetCount depth remaining cached commitMisses : ℕ) : ℕ :=
   adaptivePrefixEnergy (fun keyCount => min treeTargetCount (2 * keyCount + 1))
     depth remaining cached commitMisses
 
@@ -270,7 +271,7 @@ but the extracted leaf or authentication proof does not match the adversary's op
 is the single-leaf specialization of Merkle extractability, and compares the full authentication
 path at that leaf.
 -/
-def AdversaryWinsExtractabilityInner {s : Skeleton} {AuxState : Type} :
+def OpeningExtractionFailure {s : Skeleton} {AuxState : Type} :
     Y × AuxState ×
       ((idx : SkeletonLeafIndex s) × Y × List.Vector Y idx.depth ×
        FullData (Option Y) s × List.Vector (Option Y) idx.depth × Bool) → Prop
@@ -288,13 +289,6 @@ def extractabilityGame (model : NodeQueryModel Query Address Y) {s : Skeleton}
         ((idx : SkeletonLeafIndex s) × Y × List.Vector Y idx.depth ×
          FullData (Option Y) s × List.Vector (Option Y) idx.depth × Bool)) :=
   (Query →ₒ Y).withCacheOverlay ∅ (extractabilityInner model addressKey 𝒜)
-
-/-- The extraction-failure event for `extractabilityGame`. -/
-def AdversaryWinsExtractabilityGame {s : Skeleton} {AuxState : Type} :
-    Y × AuxState ×
-      ((idx : SkeletonLeafIndex s) × Y × List.Vector Y idx.depth ×
-       FullData (Option Y) s × List.Vector (Option Y) idx.depth × Bool) → Prop :=
-  AdversaryWinsExtractabilityInner
 
 omit [DecidableEq Query] in
 /--
@@ -404,7 +398,7 @@ private lemma extractability_rest_win_implies_fresh_target_of_invariants
     (hno : ¬ CacheHasCollision cacheCommit) :
     ∀ z ∈ support ((simulateQ (Query →ₒ Y).cachingOracle
         (extractabilityRest model addressKey 𝒜 root aux log)).run cacheCommit),
-      AdversaryWinsExtractabilityGame z.1 →
+      OpeningExtractionFailure z.1 →
       ∃ target ∈ extractedTargets model s addressKey log root,
         CacheAddsValue cacheCommit z.2 target := by
   intro z hz hwin
@@ -422,7 +416,7 @@ private lemma extractability_rest_win_implies_fresh_target_of_invariants
     Set.mem_singleton_iff] at hz
   have hcacheFinal : z.2 = cacheFinal := congrArg Prod.snd hz
   rw [hz] at hwin
-  simp only [AdversaryWinsExtractabilityGame, AdversaryWinsExtractabilityInner] at hwin
+  simp only [OpeningExtractionFailure] at hwin
   obtain ⟨hverified, hdisagree⟩ := hwin
   subst verified
   have hchain : ChainInCache model addressKey cacheFinal leaf root idx proof :=
@@ -449,7 +443,7 @@ private lemma extractability_rest_noCollision_le_of_opening_bound
       ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value)
     (htargets : (extractedTargets model s addressKey log root).toFinset.card ≤ targetBound)
     (hno : ¬ CacheHasCollision cacheCommit) :
-    Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
+    Pr[fun z => OpeningExtractionFailure z.1 |
       (simulateQ (Query →ₒ Y).cachingOracle
         (extractabilityRest model addressKey 𝒜 root aux log)).run cacheCommit] ≤
       ((targetBound * (openingBound + s.depth) : ℕ) : ENNReal) *
@@ -464,7 +458,7 @@ private lemma extractability_rest_noCollision_le_of_opening_bound
           (verifyOpening_isTotalQueryBound_skeleton_depth model addressKey idx leaf root proof)
           fun _ => trivial
   calc
-    Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
+    Pr[fun z => OpeningExtractionFailure z.1 |
         (simulateQ (Query →ₒ Y).cachingOracle
           (extractabilityRest model addressKey 𝒜 root aux log)).run cacheCommit]
       ≤ Pr[fun z => ∃ target ∈ targets, ∃ input : Query, ∃ value : Y,
@@ -507,7 +501,7 @@ private lemma extractabilityRunFrom_le_potential
     (hlogCache : ∀ entry ∈ log, cache entry.1 = some entry.2)
     (hcacheLog : ∀ input value, cache input = some value →
       ∃ entry ∈ log, entry.1 = input ∧ entry.2 = value) :
-    Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
+    Pr[fun z => OpeningExtractionFailure z.1 |
       extractabilityRunFrom model addressKey 𝒜 commit cache log] ≤
       (extractabilityExactPotential (2 * s.leafCount - 1) s.depth remaining cached : ENNReal) *
         (Nat.card Y : ENNReal)⁻¹ := by
@@ -516,7 +510,7 @@ private lemma extractabilityRunFrom_le_potential
     (suffix := fun x queryLog =>
       extractabilityRest model addressKey 𝒜 x.1 x.2 queryLog)
     (continuation := fun x => 𝒜.opening x.2 >>= fun _ => pure ())
-    (win := AdversaryWinsExtractabilityGame) (targetCount := targetCount)
+    (win := OpeningExtractionFailure) (targetCount := targetCount)
     (overhead := s.depth) commit remaining cached hbound cache log hno hcacheBound
     hlogCache hcacheLog
     (fun x terminalRemaining terminalCached terminalCache terminalLog hopening hno'
@@ -561,10 +555,10 @@ private lemma extractability_win_le_stopping_bound
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[AdversaryWinsExtractabilityGame | extractabilityGame model addressKey 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityGame model addressKey 𝒜] ≤
       (extractabilityExactPotential (2 * s.leafCount - 1) s.depth qb 0 : ENNReal) *
         (Nat.card Y : ENNReal)⁻¹ := by
-  have hmain : Pr[fun z => AdversaryWinsExtractabilityGame z.1 |
+  have hmain : Pr[fun z => OpeningExtractionFailure z.1 |
       extractabilityRunFrom model addressKey 𝒜 𝒜.commit ∅ []] ≤
       (extractabilityExactPotential (2 * s.leafCount - 1) s.depth qb 0 : ENNReal) *
         (Nat.card Y : ENNReal)⁻¹ := by
@@ -607,7 +601,7 @@ theorem extractability_rom_bound
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[AdversaryWinsExtractabilityGame | extractabilityGame model addressKey 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityGame model addressKey 𝒜] ≤
       (extractabilityROMErrorNumerator s qb : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
   have hbound := extractability_win_le_stopping_bound model addressKey 𝒜 qb h
@@ -695,7 +689,7 @@ theorem extractability_rom_bound_coarse
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[AdversaryWinsExtractabilityGame | extractabilityGame model addressKey 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityGame model addressKey 𝒜] ≤
       ((max ((2 * s.leafCount - 1) * qb) (qb.choose 2) +
         (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
@@ -711,7 +705,7 @@ theorem extractability_rom_bound_birthday_dominates
     (𝒜 : Adversary Query Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hqb : 2 * (2 * s.leafCount - 1) + 1 ≤ qb) :
-    Pr[AdversaryWinsExtractabilityGame | extractabilityGame model addressKey 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityGame model addressKey 𝒜] ≤
       ((qb.choose 2 + (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
   let targetCount := 2 * s.leafCount - 1
@@ -735,7 +729,7 @@ theorem extractability_rom_bound_quadratic
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hdominance : 2 * (2 * s.leafCount - 1) + 1 ≤ qb)
     (hdepth : 2 * (2 * s.leafCount - 1) * s.depth ≤ qb) :
-    Pr[AdversaryWinsExtractabilityGame | extractabilityGame model addressKey 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityGame model addressKey 𝒜] ≤
       (qb : ENNReal) ^ 2 / (2 * Fintype.card Y) := by
   let targetCount := 2 * s.leafCount - 1
   let numerator := qb.choose 2 + targetCount * s.depth

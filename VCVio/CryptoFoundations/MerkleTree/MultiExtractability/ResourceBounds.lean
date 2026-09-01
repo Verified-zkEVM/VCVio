@@ -182,7 +182,7 @@ def Adversary.IsFullGameQueryBound [DecidableEq Y]
   IsTotalQueryBound (extractabilityInner model config rounds adversary) queryBound
 
 /-- All adversarial oracle work—sequential commitments plus terminal opening production—while
-excluding honest `verifyClaims` queries. -/
+excluding honest `verifyOpeningClaims` queries. -/
 def Adversary.prefixProgram
     {config : Configuration Cfg Address}
     (adversary : Adversary Cfg Query Address Y config) (rounds : ℕ) :

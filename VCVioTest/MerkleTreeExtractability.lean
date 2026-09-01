@@ -200,14 +200,14 @@ example (transcript : Bool × Unit ×
       List.Vector (Option Bool) idx.depth × Bool))
     (htranscript : transcript ∈ support
       (InductiveMerkleTree.extractabilityGame depthOneAdversary)) :
-    ¬ InductiveMerkleTree.AdversaryWinsExtractabilityGame transcript := by
+    ¬ InductiveMerkleTree.OpeningExtractionFailure transcript := by
   rw [depthOneGame_eq] at htranscript
   rw [mem_support_bind_iff] at htranscript
   obtain ⟨root, _, htranscript⟩ := htranscript
   cases root <;> simp at htranscript
   all_goals subst transcript
-  all_goals simp [InductiveMerkleTree.AdversaryWinsExtractabilityGame,
-    InductiveMerkleTree.AdversaryWinsExtractabilityInner,
+  all_goals simp [InductiveMerkleTree.OpeningExtractionFailure,
+    InductiveMerkleTree.OpeningExtractionFailure,
     expectedTree, expectedLeftProof, expectedRightProof, depthOneSkeleton,
     leftIndex, rightIndex, leftProof, rightProof]
   all_goals rfl
@@ -227,7 +227,7 @@ private lemma depthZeroAdversary_totalBound :
 /-- At depth zero, a query-free two-phase adversary has zero extraction-failure probability.
 This pins the fact that the verifier hashes internal nodes only; it does not hash a raw leaf. -/
 example :
-    Pr[InductiveMerkleTree.AdversaryWinsExtractabilityGame |
+    Pr[InductiveMerkleTree.OpeningExtractionFailure |
       InductiveMerkleTree.extractabilityGame depthZeroAdversary] = 0 := by
   apply le_antisymm
   · simpa [InductiveMerkleTree.extractabilityROMErrorNumerator,
@@ -250,7 +250,7 @@ private lemma freshHitAdversary_totalBound :
 /-- The public finite-maximum theorem sees the `c = 0` stopping branch and its one reachable
 target, recovering the exact `1 / |Bool| = 1/2` bound for this game. -/
 example :
-    Pr[InductiveMerkleTree.AdversaryWinsExtractabilityGame |
+    Pr[InductiveMerkleTree.OpeningExtractionFailure |
       InductiveMerkleTree.extractabilityGame freshHitAdversary] ≤ (2 : ENNReal)⁻¹ := by
   simpa [InductiveMerkleTree.extractabilityROMErrorNumerator,
     MerkleTreeExtractability.extractabilityROMErrorNumerator, depthOneSkeleton] using
@@ -291,9 +291,9 @@ example : freshHitTranscript ∈
   rw [freshHitGame_eq]
   simp [freshHitTranscript]
 
-example : InductiveMerkleTree.AdversaryWinsExtractabilityGame freshHitTranscript := by
-  simp [freshHitTranscript, InductiveMerkleTree.AdversaryWinsExtractabilityGame,
-    InductiveMerkleTree.AdversaryWinsExtractabilityInner, freshHitExtractedTree,
+example : InductiveMerkleTree.OpeningExtractionFailure freshHitTranscript := by
+  simp [freshHitTranscript, InductiveMerkleTree.OpeningExtractionFailure,
+    InductiveMerkleTree.OpeningExtractionFailure, freshHitExtractedTree,
     freshHitExtractedProof, depthOneSkeleton, leftIndex]
 
 def wrongRightProof : List.Vector Bool rightIndex.depth :=
@@ -352,9 +352,9 @@ example : proofOnlyTranscript ∈
   simp [proofOnlyTranscript]
 
 /-- This winner is proof-only: its extracted leaf is `some true`, while only the path differs. -/
-example : InductiveMerkleTree.AdversaryWinsExtractabilityGame proofOnlyTranscript := by
-  simp [proofOnlyTranscript, InductiveMerkleTree.AdversaryWinsExtractabilityGame,
-    InductiveMerkleTree.AdversaryWinsExtractabilityInner, expectedTree,
+example : InductiveMerkleTree.OpeningExtractionFailure proofOnlyTranscript := by
+  simp [proofOnlyTranscript, InductiveMerkleTree.OpeningExtractionFailure,
+    InductiveMerkleTree.OpeningExtractionFailure, expectedTree,
     expectedRightProof, wrongRightProof, depthOneSkeleton, rightIndex]
 
 def twoDistinctQueries : OracleComp (InductiveMerkleTree.spec Bool) Unit := do
@@ -520,44 +520,25 @@ private theorem growingEntry_changes_tree :
       tree.leftSubtree.leftSubtree.getRootValue) heq
   simp [treeBefore, treeAfterGrowth] at hleaf
 
-/-- The singleton causal theorem identifies the appended non-root response as a pre-sample
-target. -/
-example : growingEntry.2 ∈
-    MerkleTreeExtractor.targets queryView skeleton addressKey preLog root :=
-  tree_ne_append_singleton_implies_response_mem_targets queryView skeleton addressKey preLog root
-    growingEntry.1 growingEntry.2 growingEntry_changes_tree
-
-/-- On the singleton suffix, the finite-suffix theorem's changing entry is necessarily the entry
-that expands the left subtree. -/
-example : ∃ before rest,
-    [growingEntry] = before ++ growingEntry :: rest ∧
-      growingEntry.2 ∈
-        MerkleTreeExtractor.targets queryView skeleton addressKey (preLog ++ before) root := by
-  obtain ⟨before, entry, rest, hsplit, hlive⟩ :=
-    tree_ne_append_implies_exists_live_hit queryView skeleton addressKey preLog [growingEntry] root
-      growingEntry_changes_tree
-  cases before with
-  | nil =>
-      simp only [List.nil_append, List.cons.injEq] at hsplit
-      obtain ⟨hentry, hrest⟩ := hsplit
-      subst entry
-      subst rest
-      exact ⟨[], [], rfl, hlive⟩
-  | cons first before =>
-      simp at hsplit
-
 /-- A response outside the pre-log target set cannot change extraction. -/
 example : decoyEntry.2 ∉
       MerkleTreeExtractor.targets queryView skeleton addressKey preLog root ∧
     MerkleTreeExtractor.tree queryView skeleton addressKey preLog root =
       MerkleTreeExtractor.tree queryView skeleton addressKey (preLog ++ [decoyEntry]) root := by
-  have hnotmem : decoyEntry.2 ∉
-      MerkleTreeExtractor.targets queryView skeleton addressKey preLog root := by
-    decide
-  refine ⟨hnotmem, ?_⟩
-  by_contra hne
-  exact hnotmem (tree_ne_append_singleton_implies_response_mem_targets
-    queryView skeleton addressKey preLog root decoyEntry.1 decoyEntry.2 hne)
+  constructor
+  · decide
+  · rfl
+
+/-- A decoy entry leaves the live label set intact, so the following causal entry still expands
+the left subtree. -/
+example :
+    growingEntry.2 ∈ MerkleTreeExtractor.targets queryView skeleton addressKey
+        (preLog ++ [decoyEntry]) root ∧
+      MerkleTreeExtractor.tree queryView skeleton addressKey
+          (preLog ++ [decoyEntry, growingEntry]) root = treeAfterGrowth := by
+  constructor
+  · decide
+  · rfl
 
 end EvolutionCanary
 

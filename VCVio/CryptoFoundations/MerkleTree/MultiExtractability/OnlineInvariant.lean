@@ -316,12 +316,12 @@ theorem failure_iff_hasAcceptedOpeningDisagreement_of_stableAt
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
     (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
     (hstable : state.StableAt view (state.terminalLog terminalSuffix)) :
-    Failure view state attempts terminalSuffix ↔
+    AnyCheckpointExtractionDisagreement view state attempts terminalSuffix ↔
       HasAcceptedOpeningDisagreement view state attempts := by
-  simp only [Failure]
+  simp only [AnyCheckpointExtractionDisagreement]
   have hnoEqual := hstable.not_hasEqualRootExtractionDisagreement view
   have hnoTerminal :=
     hstable.not_hasCheckpointTerminalExtractionDisagreement view terminalSuffix
@@ -333,12 +333,12 @@ theorem textbookFailure_iff_hasAcceptedOpeningDisagreement_of_stableAt
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
     (terminalLog : MerkleTreeExtractor.QueryLog Query Y)
     (hstable : state.StableAt view terminalLog) :
-    TextbookFailure view state attempts ↔
+    OpeningOrEqualRootDisagreement view state attempts ↔
       HasAcceptedOpeningDisagreement view state attempts := by
-  simp only [TextbookFailure]
+  simp only [OpeningOrEqualRootDisagreement]
   have hnoEqual := hstable.not_hasEqualRootExtractionDisagreement view
   tauto
 
