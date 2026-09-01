@@ -451,7 +451,9 @@ private lemma cmaSimLoggedLeft_preserves_inv
         rcases hnext with ⟨hu, rfl⟩ | ⟨hu, rfl⟩
         all_goals
           cases htarget : xCache (m, xCommit)
-          all_goals simp [htarget] at hu
+          all_goals
+            simp only [htarget, support_pure, Set.mem_singleton_iff, Prod.mk.injEq,
+              Bool.false_eq_true, Bool.true_eq_false, and_false, and_true, true_and] at hu
           all_goals exact hu.2.trans hxkey
       · have hxinner := state_eq true hxmem
         have hxkey : xKeypair = some (pk, sk) :=
@@ -460,7 +462,9 @@ private lemma cmaSimLoggedLeft_preserves_inv
         rcases hnext with ⟨hu, rfl⟩ | ⟨hu, rfl⟩
         all_goals
           cases htarget : xCache (m, xCommit)
-          all_goals simp [htarget] at hu
+          all_goals
+            simp only [htarget, support_pure, Set.mem_singleton_iff, Prod.mk.injEq,
+              Bool.false_eq_true, Bool.true_eq_false, and_false, and_true, true_and] at hu
           all_goals exact hu.2.trans hxkey
 omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 private lemma cmaSimLoggedLeft_project_step
