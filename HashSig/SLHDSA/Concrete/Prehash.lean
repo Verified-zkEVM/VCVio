@@ -167,6 +167,7 @@ def requireStrength (p : Params) (algorithm : Algorithm) : Except Error Unit :=
 /-- Checked Algorithm 23/25 message encoding. -/
 def encodeMessage (p : Params) (algorithm : Algorithm) (context message : List Byte) :
     Except Error (List Byte) := do
+  requireContext context
   requireStrength p algorithm
   encodePrehashMessageWithDescriptor algorithm.descriptor context message
 
@@ -174,6 +175,7 @@ def encodeMessage (p : Params) (algorithm : Algorithm) (context message : List B
 def signWithRandomizer (vp : ValidatedParams) (prims : Primitives vp.params)
     (algorithm : Algorithm) (message context : List Byte) (sk : SecretKeyCore prims.core)
     (addrnd : prims.Y) : Except Error (GeneralScheme.SignatureCore vp prims.core) := do
+  requireContext context
   requireStrength vp.params algorithm
   signPrehashWithDescriptorAndRandomizer vp prims algorithm.descriptor message context sk addrnd
 
@@ -182,6 +184,7 @@ def signDeterministic (vp : ValidatedParams) (prims : Primitives vp.params)
     (pkSeedToRandomizer : prims.PkSeed → prims.Y) (algorithm : Algorithm)
     (message context : List Byte) (sk : SecretKeyCore prims.core) :
     Except Error (GeneralScheme.SignatureCore vp prims.core) := do
+  requireContext context
   requireStrength vp.params algorithm
   signPrehashWithDescriptorDeterministic vp prims pkSeedToRandomizer algorithm.descriptor
     message context sk
@@ -191,17 +194,24 @@ noncomputable def sign (vp : ValidatedParams) (prims : Primitives vp.params)
     [SampleableType prims.Y] (algorithm : Algorithm) (message context : List Byte)
     (sk : SecretKeyCore prims.core) :
     ProbComp (Except Error (GeneralScheme.SignatureCore vp prims.core)) :=
-  match requireStrength vp.params algorithm with
+  match requireContext context with
   | .error error => pure (.error error)
-  | .ok _ => signPrehashWithDescriptor vp prims algorithm.descriptor message context sk
+  | .ok _ =>
+      match requireStrength vp.params algorithm with
+      | .error error => pure (.error error)
+      | .ok _ => signPrehashWithDescriptor vp prims algorithm.descriptor message context sk
 
 /-- Checked Algorithm 25. Weak pairings and message-boundary failures reject as `false`. -/
 def verify (vp : ValidatedParams) (prims : Primitives vp.params) [DecidableEq prims.Y]
     (algorithm : Algorithm) (message : List Byte)
     (signature : GeneralScheme.SignatureCore vp prims.core) (context : List Byte)
     (pk : PublicKeyCore prims.core) : Bool :=
-  match requireStrength vp.params algorithm with
+  match requireContext context with
   | .error _ => false
-  | .ok _ => verifyPrehashWithDescriptor vp prims algorithm.descriptor message signature context pk
+  | .ok _ =>
+      match requireStrength vp.params algorithm with
+      | .error _ => false
+      | .ok _ =>
+          verifyPrehashWithDescriptor vp prims algorithm.descriptor message signature context pk
 
 end SLHDSA.Concrete.Prehash
