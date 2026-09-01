@@ -348,4 +348,51 @@ theorem approvedPrimitives_byteLaws (set : FipsParameterSet) :
     (approvedPrimitives set).core.ByteLaws := by
   cases set <;> exact ⟨fun _ _ h => h⟩
 
+/-! ## Deterministic-variant randomizer pinning
+
+FIPS 205 Algorithm 19 line 2 fixes the deterministic signing variants' hedging input to
+`opt_rand = PK.seed`.  The abstract primitive interface deliberately keeps `PkSeed` and `Y`
+independent, so the normative pin is expressed here, where both carriers of every approved
+family are concrete `n`-byte vectors and the conversion is the identity. -/
+
+/-- FIPS 205 Algorithm 19 line 2 for the SHA2 family: the deterministic variant's `opt_rand`
+is exactly `PK.seed`.  Both carriers are `Bytes p.n`, so the conversion is the identity. -/
+def sha2RandomizerOfPkSeed (p : Params) :
+    (sha2Primitives p).PkSeed → (sha2Primitives p).Y := id
+
+/-- FIPS 205 Algorithm 19 line 2 for the SHAKE family: the deterministic variant's `opt_rand`
+is exactly `PK.seed`.  Both carriers are `Bytes p.n`, so the conversion is the identity. -/
+def shakeRandomizerOfPkSeed (p : Params) :
+    (shakePrimitives p).PkSeed → (shakePrimitives p).Y := id
+
+/-- The SHA2 pinned randomizer's byte encoding is exactly the public-seed bytes. -/
+@[simp] theorem yToBytes_sha2RandomizerOfPkSeed (p : Params)
+    (seed : (sha2Primitives p).PkSeed) :
+    (sha2Primitives p).yToBytes (sha2RandomizerOfPkSeed p seed) = seed := rfl
+
+/-- The SHAKE pinned randomizer's byte encoding is exactly the public-seed bytes. -/
+@[simp] theorem yToBytes_shakeRandomizerOfPkSeed (p : Params)
+    (seed : (shakePrimitives p).PkSeed) :
+    (shakePrimitives p).yToBytes (shakeRandomizerOfPkSeed p seed) = seed := rfl
+
+/-- Set-level FIPS 205 Algorithm 19 line 2 dispatch: the canonical `opt_rand = PK.seed`
+conversion for each of the twelve approved parameter sets, in the exact primitive family
+selected by `approvedPrimitives`.  FIPS-conforming deterministic signing must pass this
+conversion (or use an entry point that already does). -/
+def approvedRandomizerOfPkSeed :
+    (set : FipsParameterSet) → (approvedPrimitives set).PkSeed → (approvedPrimitives set).Y
+  | .SLHDSA_SHA2_128s | .SLHDSA_SHA2_128f | .SLHDSA_SHA2_192s | .SLHDSA_SHA2_192f
+  | .SLHDSA_SHA2_256s | .SLHDSA_SHA2_256f => sha2RandomizerOfPkSeed _
+  | .SLHDSA_SHAKE_128s | .SLHDSA_SHAKE_128f | .SLHDSA_SHAKE_192s | .SLHDSA_SHAKE_192f
+  | .SLHDSA_SHAKE_256s | .SLHDSA_SHAKE_256f => shakeRandomizerOfPkSeed _
+
+/-- Set-level binding of FIPS 205 Algorithm 19 line 2: for every approved parameter set the
+pinned deterministic randomizer *is* the public seed.  The equality is heterogeneous because
+the seed and node carriers coincide only after the family dispatch reduces; the per-family
+`@[simp]` byte-encoding lemmas state the homogeneous form. -/
+theorem approvedRandomizerOfPkSeed_heq (set : FipsParameterSet)
+    (seed : (approvedPrimitives set).PkSeed) :
+    HEq (approvedRandomizerOfPkSeed set seed) seed := by
+  cases set <;> rfl
+
 end SLHDSA.Concrete
