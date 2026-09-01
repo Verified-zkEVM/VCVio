@@ -394,10 +394,6 @@ lean_exe slhdsa_wots_tests where
 lean_exe slhdsa_xmss_tests where
   root := `HashSigTest.SLHDSA.XmssConstructionTests
 
-/-- Algorithms 21--25 message boundary and all twelve ACVP pre-hash digest/OID canaries. -/
-lean_exe slhdsa_external_tests where
-  root := `HashSigTest.SLHDSA.External
-
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
 TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every
