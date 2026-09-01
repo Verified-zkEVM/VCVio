@@ -66,13 +66,13 @@ theorem probEvent_stablePhaseRunFrom_logged_le
       state.StableAt view terminalLog →
       Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
           (suffix x terminalLog)).run terminalCache] ≤
-        (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+        (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
     Pr[ fun z => win z.1 |
       adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
         suffix prefixComp cache log] ≤
-      (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+      (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
         remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
   apply probEvent_onlineAdaptivePrefixRunFrom_logged_le suffix continuation win
     (state.liveTargetSet view) (fun _ currentLog => state.StableAt view currentLog)
@@ -91,19 +91,19 @@ theorem probEvent_stablePhaseRunFrom_logged_le
     exact hstableCurrent.append_of_not_mem_liveTargetSet view query response hresponse
   · intro currentCached currentCache currentLog hkeys hlogCacheCurrent _hcacheLogCurrent _
     obtain ⟨keys, hkeysCard, hkeysMem⟩ := hkeys
-    apply (state.liveTargetSet_card_le_sharedTargetCount_of_cover view currentLog currentCache
-      keys currentCached hkeysCard {
+    apply (state.liveTargetSet_card_le_sharedExtractedLabelCountBound_of_cover view currentLog
+      currentCache keys currentCached hkeysCard {
         log_agrees := fun query response hentry =>
           hlogCacheCurrent ⟨query, response⟩ hentry
         cache_keys := hkeysMem }).trans
-    exact sharedTargetCount_mono_budget hnodeBudget hcheckpointCount
+    exact sharedExtractedLabelCountBound_mono_budget hnodeBudget hcheckpointCount
   · exact hterminal
 
 /-- A stateful phase is bounded by any uniform node/checkpoint envelope containing its immutable
 checkpoint state. Using a uniform envelope is the strongest composable form: after a pure phase
 boundary records a new checkpoint, the recursive phase can keep the same final resource budget.
 The local target-cardinality obligation is discharged by
-`liveTargetSet_card_le_sharedTargetCount_of_cover`. -/
+`liveTargetSet_card_le_sharedExtractedLabelCountBound_of_cover`. -/
 theorem probEvent_stablePhaseRunFrom_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
@@ -140,13 +140,13 @@ theorem probEvent_stablePhaseRunFrom_le
       state.StableAt view terminalLog →
       Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
           (suffix x terminalLog)).run terminalCache] ≤
-        (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+        (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
     Pr[ fun z => win z.1 |
       adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
         suffix prefixComp cache log] ≤
-      (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+      (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
         remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
   apply probEvent_onlineAdaptivePrefixRunFrom_le suffix continuation win
     (state.liveTargetSet view) (fun _ currentLog => state.StableAt view currentLog)
@@ -165,12 +165,12 @@ theorem probEvent_stablePhaseRunFrom_le
     exact hstableCurrent.append_of_not_mem_liveTargetSet view query response hresponse
   · intro currentCached currentCache currentLog hkeys hlogCacheCurrent _hcacheLogCurrent _
     obtain ⟨keys, hkeysCard, hkeysMem⟩ := hkeys
-    apply (state.liveTargetSet_card_le_sharedTargetCount_of_cover view currentLog currentCache
-      keys currentCached hkeysCard {
+    apply (state.liveTargetSet_card_le_sharedExtractedLabelCountBound_of_cover view currentLog
+      currentCache keys currentCached hkeysCard {
         log_agrees := fun query response hentry =>
           hlogCacheCurrent ⟨query, response⟩ hentry
         cache_keys := hkeysMem }).trans
-    exact sharedTargetCount_mono_budget hnodeBudget hcheckpointCount
+    exact sharedExtractedLabelCountBound_mono_budget hnodeBudget hcheckpointCount
   · exact hterminal
 
 /-- Exact-state specialization of `probEvent_stablePhaseRunFrom_le`. This is convenient for a
@@ -209,13 +209,13 @@ theorem probEvent_stablePhaseRunFrom_exact_le
       state.StableAt view terminalLog →
       Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
           (suffix x terminalLog)).run terminalCache] ≤
-        (multiExtractabilitySafePotential state.totalNodeBudget state.checkpoints.length
+        (multiCheckpointErrorNumerator state.totalNodeBudget state.checkpoints.length
           overhead terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
     Pr[ fun z => win z.1 |
       adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
         suffix prefixComp cache log] ≤
-      (multiExtractabilitySafePotential state.totalNodeBudget state.checkpoints.length
+      (multiCheckpointErrorNumerator state.totalNodeBudget state.checkpoints.length
         overhead remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
   probEvent_stablePhaseRunFrom_le view state suffix continuation win
     state.totalNodeBudget state.checkpoints.length overhead prefixComp remaining cached hbound

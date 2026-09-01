@@ -38,13 +38,10 @@ universe u
 
 variable {Query Y : Type} {Address : Type u}
 
-/-- Local compatibility name for the neutral packaged batch-opening abstraction. -/
-abbrev Opening := InductiveMerkleTree.BatchOpening
-
 /-- Recompute the putative root of a path-pruned batch opening through the complete queries
 specified by `model`.  Internal positions are mapped to their actual oracle addresses by
 `addressKey`. -/
-def getPutativeBatchRoot (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) :
+def getPutativeBatchRootM (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) :
     {s : Skeleton} → (addressKey : SkeletonInternalIndex s → Address) →
       {selector : LeafData Bool s} → SelectedValues Y selector → BatchProof Y selector →
         OracleComp (Query →ₒ Y) Y
@@ -57,7 +54,8 @@ def getPutativeBatchRoot (model : MerkleTreeExtractability.NodeQueryModel Query 
 /-- Verify one packaged path-pruned batch opening against a claimed root. -/
 def verifyOpening [DecidableEq Y]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
-    (addressKey : SkeletonInternalIndex s → Address) (root : Y) (opening : Opening Y s) :
+    (addressKey : SkeletonInternalIndex s → Address) (root : Y)
+    (opening : InductiveMerkleTree.BatchOpening Y s) :
     OracleComp (Query →ₒ Y) Bool :=
   AddressedMerkleTree.verifyBatchProofAddressedM
     (fun position left right => liftM ((Query →ₒ Y).query
@@ -69,7 +67,8 @@ pruned proof. This is the safe verifier overhead used until a disagreement-witne
 specialization to one selected path. -/
 theorem verifyOpening_isTotalQueryBound [DecidableEq Y]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
-    (addressKey : SkeletonInternalIndex s → Address) (root : Y) (opening : Opening Y s) :
+    (addressKey : SkeletonInternalIndex s → Address) (root : Y)
+    (opening : InductiveMerkleTree.BatchOpening Y s) :
     IsTotalQueryBound (verifyOpening model addressKey root opening) opening.proof.queryCount := by
   apply AddressedMerkleTree.isTotalQueryBound_verifyBatchProofAddressedM
   intro position left right
@@ -80,7 +79,7 @@ theorem verifyOpening_isTotalQueryBound [DecidableEq Y]
 intermediate roots returned by the verifier and the final-cache entry for every internal node.
 Unlike a pure hash function, this relation does not need a default response for queries that the
 verifier never makes. -/
-def BatchRunInCache
+def BatchProofEvaluatesInCache
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) :
     {s : Skeleton} → (addressKey : SkeletonInternalIndex s → Address) →
       (cache : (Query →ₒ Y).QueryCache) → {selector : LeafData Bool s} →
@@ -88,25 +87,25 @@ def BatchRunInCache
   | _, _, _, _, values, .leaf, root => root = values
   | _, addressKey, cache, _, values, .internalBoth leftProof rightProof, root =>
       ∃ leftRoot rightRoot,
-        BatchRunInCache model (fun position => addressKey (.ofLeft position)) cache
+        BatchProofEvaluatesInCache model (fun position => addressKey (.ofLeft position)) cache
           values.1 leftProof leftRoot ∧
-        BatchRunInCache model (fun position => addressKey (.ofRight position)) cache
+        BatchProofEvaluatesInCache model (fun position => addressKey (.ofRight position)) cache
           values.2 rightProof rightRoot ∧
         cache (model.mkQuery (addressKey .ofInternal) (leftRoot, rightRoot)) = some root
   | _, addressKey, cache, _, values, .pruneRight _ rightRoot leftProof, root =>
       ∃ leftRoot,
-        BatchRunInCache model (fun position => addressKey (.ofLeft position)) cache
+        BatchProofEvaluatesInCache model (fun position => addressKey (.ofLeft position)) cache
           values.1 leftProof leftRoot ∧
         cache (model.mkQuery (addressKey .ofInternal) (leftRoot, rightRoot)) = some root
   | _, addressKey, cache, _, values, .pruneLeft _ leftRoot rightProof, root =>
       ∃ rightRoot,
-        BatchRunInCache model (fun position => addressKey (.ofRight position)) cache
+        BatchProofEvaluatesInCache model (fun position => addressKey (.ofRight position)) cache
           values.2 rightProof rightRoot ∧
         cache (model.mkQuery (addressKey .ofInternal) (leftRoot, rightRoot)) = some root
 
 /-- Total addressed hash function obtained by completing a partial cache with an arbitrary
-default.  Results below only evaluate it at queries certified by `BatchRunInCache`, so the choice
-of default is semantically irrelevant. -/
+default. Results below only evaluate it at queries certified by `BatchProofEvaluatesInCache`, so
+the choice of default is semantically irrelevant. -/
 def cacheNodeHash
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
@@ -117,13 +116,13 @@ def cacheNodeHash
 
 /-- Replaying a certified cache-level batch run through the cache-completed pure hash recovers
 the recorded root. -/
-theorem getPutativeBatchRootAddressedWithHash_cacheNodeHash_eq_of_batchRunInCache
+theorem getPutativeBatchRootAddressedWithHash_cacheNodeHash_eq_of_batchProofEvaluatesInCache
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (cache : (Query →ₒ Y).QueryCache) (default : Y)
     {selector : LeafData Bool s} (values : SelectedValues Y selector)
     (proof : BatchProof Y selector) (root : Y)
-    (hrun : BatchRunInCache model addressKey cache values proof root) :
+    (hrun : BatchProofEvaluatesInCache model addressKey cache values proof root) :
     AddressedMerkleTree.getPutativeBatchRootAddressedWithHash
       (cacheNodeHash model addressKey cache default) values proof = root := by
   induction proof generalizing root with
@@ -167,14 +166,14 @@ theorem getPutativeBatchRootAddressedWithHash_cacheNodeHash_eq_of_batchRunInCach
       rw [hrightRoot]
       simp [cacheNodeHash, hroot]
 /-- A batch execution tree remains valid when the cache grows. -/
-theorem batchRunInCache_mono
+theorem batchProofEvaluatesInCache_mono
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     {cache₁ cache₂ : (Query →ₒ Y).QueryCache} (hle : cache₁ ≤ cache₂)
     {selector : LeafData Bool s} (values : SelectedValues Y selector)
     (proof : BatchProof Y selector) (root : Y)
-    (hrun : BatchRunInCache model addressKey cache₁ values proof root) :
-    BatchRunInCache model addressKey cache₂ values proof root := by
+    (hrun : BatchProofEvaluatesInCache model addressKey cache₁ values proof root) :
+    BatchProofEvaluatesInCache model addressKey cache₂ values proof root := by
   induction proof generalizing root with
   | leaf => exact hrun
   | internalBoth leftProof rightProof ihLeft ihRight =>
@@ -194,9 +193,9 @@ theorem batchRunInCache_mono
         ih (fun position => addressKey (.ofRight position)) values.2 rightRoot hright,
         hle hroot⟩
 
-/-- Every supported addressed batch-root computation is represented by `BatchRunInCache` in its
-final cache. -/
-theorem batchRunInCache_of_mem_support_getPutativeBatchRoot
+/-- Every supported addressed batch-root computation is represented by
+`BatchProofEvaluatesInCache` in its final cache. -/
+theorem batchProofEvaluatesInCache_of_mem_support_getPutativeBatchRootM
     [DecidableEq Query]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
@@ -205,17 +204,17 @@ theorem batchRunInCache_of_mem_support_getPutativeBatchRoot
     (cache₀ cache₁ : (Query →ₒ Y).QueryCache)
     (hmem : (root, cache₁) ∈ support
       ((simulateQ (Query →ₒ Y).cachingOracle
-        (getPutativeBatchRoot model addressKey values proof)).run cache₀)) :
-    BatchRunInCache model addressKey cache₁ values proof root := by
+        (getPutativeBatchRootM model addressKey values proof)).run cache₀)) :
+    BatchProofEvaluatesInCache model addressKey cache₁ values proof root := by
   induction proof generalizing root cache₀ cache₁ with
   | leaf =>
-      simp only [getPutativeBatchRoot,
+      simp only [getPutativeBatchRootM,
         AddressedMerkleTree.getPutativeBatchRootAddressedM, simulateQ_pure,
         StateT.run_pure, support_pure,
         Set.mem_singleton_iff] at hmem
       exact congrArg Prod.fst hmem
   | internalBoth leftProof rightProof ihLeft ihRight =>
-      simp only [getPutativeBatchRoot,
+      simp only [getPutativeBatchRootM,
         AddressedMerkleTree.getPutativeBatchRootAddressedM,
         simulateQ_bind, StateT.run_bind,
         mem_support_bind_iff] at hmem
@@ -230,7 +229,7 @@ theorem batchRunInCache_of_mem_support_getPutativeBatchRoot
               cachingOracle.simulateQ_query] using hhash)
       have hleftMono : cacheLeft ≤ cache₁ :=
         (simulateQ_cachingOracle_cache_le
-          (getPutativeBatchRoot model
+          (getPutativeBatchRootM model
             (fun position => addressKey (.ofRight position)) values.2 rightProof)
           cacheLeft (rightRoot, cacheRight) hright).trans
           (simulateQ_cachingOracle_cache_le
@@ -243,17 +242,17 @@ theorem batchRunInCache_of_mem_support_getPutativeBatchRoot
             (model.mkQuery (addressKey .ofInternal) (leftRoot, rightRoot))))
           cacheRight (root, cache₁) hhash
       exact ⟨leftRoot, rightRoot,
-        batchRunInCache_mono model
+        batchProofEvaluatesInCache_mono model
           (fun position => addressKey (.ofLeft position)) hleftMono values.1 leftProof leftRoot
           (ihLeft (fun position => addressKey (.ofLeft position)) values.1 leftRoot
             cache₀ cacheLeft hleft),
-        batchRunInCache_mono model
+        batchProofEvaluatesInCache_mono model
           (fun position => addressKey (.ofRight position)) hrightMono values.2 rightProof rightRoot
           (ihRight (fun position => addressKey (.ofRight position)) values.2 rightRoot
             cacheLeft cacheRight hright),
         hentry⟩
   | pruneRight hright rightRoot leftProof ih =>
-      simp only [getPutativeBatchRoot,
+      simp only [getPutativeBatchRootM,
         AddressedMerkleTree.getPutativeBatchRootAddressedM,
         simulateQ_bind, StateT.run_bind,
         mem_support_bind_iff] at hmem
@@ -271,13 +270,13 @@ theorem batchRunInCache_of_mem_support_getPutativeBatchRoot
             (model.mkQuery (addressKey .ofInternal) (leftRoot, rightRoot))))
           cacheLeft (root, cache₁) hhash
       exact ⟨leftRoot,
-        batchRunInCache_mono model
+        batchProofEvaluatesInCache_mono model
           (fun position => addressKey (.ofLeft position)) hmono values.1 leftProof leftRoot
           (ih (fun position => addressKey (.ofLeft position)) values.1 leftRoot
             cache₀ cacheLeft hleft),
         hentry⟩
   | pruneLeft hleft leftRoot rightProof ih =>
-      simp only [getPutativeBatchRoot,
+      simp only [getPutativeBatchRootM,
         AddressedMerkleTree.getPutativeBatchRootAddressedM,
         simulateQ_bind, StateT.run_bind,
         mem_support_bind_iff] at hmem
@@ -295,7 +294,7 @@ theorem batchRunInCache_of_mem_support_getPutativeBatchRoot
             (model.mkQuery (addressKey .ofInternal) (leftRoot, rightRoot))))
           cacheRight (root, cache₁) hhash
       exact ⟨rightRoot,
-        batchRunInCache_mono model
+        batchProofEvaluatesInCache_mono model
           (fun position => addressKey (.ofRight position)) hmono values.2 rightProof rightRoot
           (ih (fun position => addressKey (.ofRight position)) values.2 rightRoot
             cache₀ cacheRight hright),
@@ -303,15 +302,16 @@ theorem batchRunInCache_of_mem_support_getPutativeBatchRoot
 
 /-- Every supported successful batch-verifier run has a cache-level execution tree rooted at the
 claimed commitment. -/
-theorem batchRunInCache_of_mem_support_verifyOpening
+theorem batchProofEvaluatesInCache_of_mem_support_verifyOpening
     [DecidableEq Query] [DecidableEq Y]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (root : Y)
-    (opening : Opening Y s) (cache₀ cache₁ : (Query →ₒ Y).QueryCache)
+    (opening : InductiveMerkleTree.BatchOpening Y s)
+    (cache₀ cache₁ : (Query →ₒ Y).QueryCache)
     (hmem : (true, cache₁) ∈ support
       ((simulateQ (Query →ₒ Y).cachingOracle
         (verifyOpening model addressKey root opening)).run cache₀)) :
-    BatchRunInCache model addressKey cache₁ opening.values opening.proof root := by
+    BatchProofEvaluatesInCache model addressKey cache₁ opening.values opening.proof root := by
   unfold verifyOpening AddressedMerkleTree.verifyBatchProofAddressedM at hmem
   rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hmem
   obtain ⟨⟨putativeRoot, cacheMid⟩, hroot, hfinal⟩ := hmem
@@ -321,7 +321,7 @@ theorem batchRunInCache_of_mem_support_verifyOpening
   have hputative : putativeRoot = root := by
     simpa only [beq_iff_eq] using haccepted.symm
   subst root
-  exact batchRunInCache_of_mem_support_getPutativeBatchRoot model addressKey
+  exact batchProofEvaluatesInCache_of_mem_support_getPutativeBatchRootM model addressKey
     opening.values opening.proof putativeRoot cache₀ cache₁ hroot
 
 /-- The canonical addressed batch-to-single path, instantiated with the final cache's completed
@@ -332,7 +332,7 @@ theorem chainInCache_batchToSingleProofAddressed_cacheNodeHash
     (cache : (Query →ₒ Y).QueryCache) (default : Y)
     {selector : LeafData Bool s} (values : SelectedValues Y selector)
     (batchProof : BatchProof Y selector) (root : Y)
-    (hrun : BatchRunInCache model addressKey cache values batchProof root)
+    (hrun : BatchProofEvaluatesInCache model addressKey cache values batchProof root)
     (index : SkeletonLeafIndex s) (selected : selector.get index = true) :
     MerkleTreeExtractability.ChainInCache model addressKey cache
       (selectedValueAt values index selected) root index
@@ -342,7 +342,7 @@ theorem chainInCache_batchToSingleProofAddressed_cacheNodeHash
   | leaf =>
       cases index with
       | ofLeaf =>
-          simpa only [BatchRunInCache, selectedValueAt,
+          simpa only [BatchProofEvaluatesInCache, selectedValueAt,
             MerkleTreeExtractability.ChainInCache] using hrun.symm
   | internalBoth leftProof rightProof ihLeft ihRight =>
       obtain ⟨leftRoot, rightRoot, hleft, hright, hroot⟩ := hrun
@@ -350,7 +350,7 @@ theorem chainInCache_batchToSingleProofAddressed_cacheNodeHash
       | ofLeft index =>
           simp only [batchToSingleProofAddressed]
           have hsibling :=
-            getPutativeBatchRootAddressedWithHash_cacheNodeHash_eq_of_batchRunInCache
+            getPutativeBatchRootAddressedWithHash_cacheNodeHash_eq_of_batchProofEvaluatesInCache
               model (fun position => addressKey (.ofRight position)) cache default
               values.2 rightProof rightRoot hright
           have hsibling' :
@@ -375,7 +375,7 @@ theorem chainInCache_batchToSingleProofAddressed_cacheNodeHash
       | ofRight index =>
           simp only [batchToSingleProofAddressed]
           have hsibling :=
-            getPutativeBatchRootAddressedWithHash_cacheNodeHash_eq_of_batchRunInCache
+            getPutativeBatchRootAddressedWithHash_cacheNodeHash_eq_of_batchProofEvaluatesInCache
               model (fun position => addressKey (.ofLeft position)) cache default
               values.1 leftProof leftRoot hleft
           have hsibling' :
@@ -436,13 +436,14 @@ theorem chainInCache_batchToSingleProofAddressed_cacheNodeHash
             (by simp [hleft])
 
 /-- A certified successful batch run is accepted by the pure hash obtained from its final cache. -/
-theorem acceptedAddressedWithHash_cacheNodeHash_of_batchRunInCache
+theorem acceptedAddressedWithHash_cacheNodeHash_of_batchProofEvaluatesInCache
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
-    (cache : (Query →ₒ Y).QueryCache) (default root : Y) (opening : Opening Y s)
-    (hrun : BatchRunInCache model addressKey cache opening.values opening.proof root) :
+    (cache : (Query →ₒ Y).QueryCache) (default root : Y)
+    (opening : InductiveMerkleTree.BatchOpening Y s)
+    (hrun : BatchProofEvaluatesInCache model addressKey cache opening.values opening.proof root) :
     opening.AcceptedAddressedWithHash (cacheNodeHash model addressKey cache default) root :=
-  getPutativeBatchRootAddressedWithHash_cacheNodeHash_eq_of_batchRunInCache
+  getPutativeBatchRootAddressedWithHash_cacheNodeHash_eq_of_batchProofEvaluatesInCache
     model addressKey cache default opening.values opening.proof root hrun
 
 /-- A two-phase adversary that commits to a root and later returns a dynamically selected,
@@ -453,7 +454,7 @@ structure Adversary (Query Y : Type) (s : Skeleton) where
   /-- Produce a claimed Merkle root and continuation state. -/
   commit : OracleComp (Query →ₒ Y) (Y × AuxState)
   /-- Choose the selector, claimed values, and pruned proof after the commitment checkpoint. -/
-  opening : AuxState → OracleComp (Query →ₒ Y) (Opening Y s)
+  opening : AuxState → OracleComp (Query →ₒ Y) (InductiveMerkleTree.BatchOpening Y s)
 
 /-- The adversary's two phases, excluding honest verification, have total query bound `qb`. -/
 def Adversary.IsTwoPhaseTotalQueryBound {s : Skeleton}
@@ -470,7 +471,8 @@ program underlying the shared-cache ROM game; extraction and the winning event a
 top so that neither can be hidden in the adversary interface. -/
 def openingInner {s : Skeleton} (adversary : Adversary Query Y s) :
     OracleComp (Query →ₒ Y)
-      (Y × adversary.AuxState × (Query →ₒ Y).QueryLog × Opening Y s) := do
+      (Y × adversary.AuxState × (Query →ₒ Y).QueryLog ×
+        InductiveMerkleTree.BatchOpening Y s) := do
   let ((root, aux), queryLog) ← adversary.commit.withQueryLog
   let opening ← adversary.opening aux
   return (root, aux, queryLog, opening)
@@ -481,7 +483,8 @@ def openingInner {s : Skeleton} (adversary : Adversary Query Y s) :
 chosen by the adversary. Missing nodes remain explicit as `none`; this definition does not fill
 or otherwise complete the extractor's output. -/
 def extractedOpening {s : Skeleton} (tree : FullData (Option Y) s)
-    (opening : Opening Y s) : Opening (Option Y) s where
+    (opening : InductiveMerkleTree.BatchOpening Y s) :
+    InductiveMerkleTree.BatchOpening (Option Y) s where
   selector := opening.selector
   values := selectedValues tree.toLeafData opening.selector
   proof := generateBatchProof tree opening.selector opening.anySelected
@@ -489,7 +492,7 @@ def extractedOpening {s : Skeleton} (tree : FullData (Option Y) s)
 /-- The adversary's concrete opening is not the `Option.some` image of the canonical opening
 read from the commitment-checkpoint extraction. This is deliberately full-opening disagreement:
 both selected leaf values and the entire pruned authentication frontier are covered. -/
-def OpeningDisagreesWithTree {s : Skeleton} (opening : Opening Y s)
+def OpeningDisagreesWithTree {s : Skeleton} (opening : InductiveMerkleTree.BatchOpening Y s)
     (tree : FullData (Option Y) s) : Prop :=
   opening.values.map some ≠ (extractedOpening tree opening).values ∨
     opening.proof.map some ≠ (extractedOpening tree opening).proof
@@ -500,7 +503,7 @@ is independent of consistency between `tree` and `nodeHash`: it follows a stored
 at the first structural proof disagreement. -/
 theorem OpeningDisagreesWithTree.exists_selectedValue_or_path_disagreement {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → Y → Y → Y)
-    (opening : Opening Y s) (tree : FullData (Option Y) s)
+    (opening : InductiveMerkleTree.BatchOpening Y s) (tree : FullData (Option Y) s)
     (hne : OpeningDisagreesWithTree opening tree) :
     ∃ index : SkeletonLeafIndex s, ∃ selected : opening.selector.get index = true,
       some (selectedValueAt opening.values index selected) ≠ tree.get index.toNodeIndex ∨
@@ -526,7 +529,8 @@ def extractabilityInner [DecidableEq Address] [DecidableEq Y]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (adversary : Adversary Query Y s) :
     OracleComp (Query →ₒ Y)
-      (Y × adversary.AuxState × Opening Y s × FullData (Option Y) s × Bool) := do
+      (Y × adversary.AuxState × InductiveMerkleTree.BatchOpening Y s ×
+        FullData (Option Y) s × Bool) := do
   let ((root, aux), queryLog) ← adversary.commit.withQueryLog
   let tree := MerkleTreeExtractor.tree model.view s addressKey queryLog root
   let opening ← adversary.opening aux
@@ -536,8 +540,8 @@ def extractabilityInner [DecidableEq Address] [DecidableEq Y]
 /-- The exact public failure event for one commitment and one dynamically selected batch
 opening: the opening is accepted but differs from checkpoint extraction. Internal proof events
 used to establish a ROM bound are intentionally not conflated with this public definition. -/
-def AdversaryWinsExtractability {s : Skeleton} {AuxState : Type} :
-    Y × AuxState × Opening Y s × FullData (Option Y) s × Bool → Prop
+def BatchOpeningExtractionFailure {s : Skeleton} {AuxState : Type} :
+    Y × AuxState × InductiveMerkleTree.BatchOpening Y s × FullData (Option Y) s × Bool → Prop
   | (_, _, opening, tree, verified) =>
       verified = true ∧ OpeningDisagreesWithTree opening tree
 
@@ -548,7 +552,8 @@ def extractabilityGame [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (adversary : Adversary Query Y s) :
     OracleComp (Query →ₒ Y)
-      (Y × adversary.AuxState × Opening Y s × FullData (Option Y) s × Bool) :=
+      (Y × adversary.AuxState × InductiveMerkleTree.BatchOpening Y s ×
+        FullData (Option Y) s × Bool) :=
   (Query →ₒ Y).withCacheOverlay ∅
     (extractabilityInner model addressKey adversary)
 

@@ -18,7 +18,7 @@ the extractor records the cumulative log and the claimed root, tagged by the tre
 force for that commitment.  The extracted partial tree is a pure projection of that immutable
 checkpoint through `MerkleTreeExtractor.tree`.
 
-A batch opening is the existing intrinsic, path-pruned `InductiveMerkleTree.BatchProof`, packaged
+A batch opening uses the intrinsic, path-pruned `InductiveMerkleTree.BatchProof`, packaged
 with its dependent selector and selected values.  The package does not carry a separate nonempty
 hypothesis: existence of its `proof` field already implies that its selector contains a selected
 leaf.
@@ -32,13 +32,12 @@ The three failure predicates are deliberately deterministic:
 * `CheckpointTerminalExtractionDisagreement` says that a checkpoint extraction changes when the
   terminal transcript is used, covering queries made after the final commitment.
 
-The aggregate `Failure` predicate is the disjunction used by a future random-oracle probability
-theorem.  This file does not call these predicates unlikely, does not assign a query bound, and does
-not claim that different configuration tags use independent random oracles.  Those are separate
-game and resource-accounting obligations.
+`AnyCheckpointExtractionDisagreement` is the disjunction of these three events. This file defines
+the deterministic event only; the game and resource-accounting modules provide its probability
+bound.
 
-Failure events relate an opening or pair of checkpoints only within the same configuration tag.
-Reuse of one root across distinct tags is outside the modeled event, even though the tags may select
+Disagreement events relate an opening or pair of checkpoints only within the same configuration
+tag. Reuse of one root across distinct tags is outside the modeled event, even when the tags select
 different skeletons or address maps.
 -/
 
@@ -58,8 +57,8 @@ variable {s : Skeleton}
 /-- A family of Merkle configurations over a shared query view and response type.
 
 Indexing the shape and address map by `Cfg` makes a tag determine its dependent tree type.  The
-structure intentionally contains no oracle-independence assertion; domain separation between tags
-must be supplied by a later oracle model. -/
+structure intentionally contains no oracle-independence assertion; callers must supply any domain
+separation required between tags. -/
 structure Configuration (Cfg : Type u) (Address : Type w) where
   /-- Shape of commitments made under each configuration tag. -/
   skeleton : Cfg → Skeleton
@@ -197,22 +196,26 @@ theorem ExtractorState.record_checkpoints_length
   simp
 
 /-- Every recorded checkpoint transcript is a prefix of the state's current transcript. -/
-def ExtractorState.WellFormed {config : Configuration Cfg Address}
+def ExtractorState.CheckpointLogsPrefixCumulativeLog {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config) : Prop :=
   ∀ tag checkpoint, ⟨tag, checkpoint⟩ ∈ state.checkpoints →
     checkpoint.cumulativeLog <+: state.cumulativeLog
 
 /-- The empty extractor state satisfies the checkpoint-prefix invariant. -/
-theorem ExtractorState.wellFormed_empty {config : Configuration Cfg Address} :
-    (ExtractorState.empty : ExtractorState Cfg Query Address Y config).WellFormed := by
+theorem ExtractorState.checkpointLogsPrefixCumulativeLog_empty
+    {config : Configuration Cfg Address} :
+    ExtractorState.CheckpointLogsPrefixCumulativeLog
+      (ExtractorState.empty : ExtractorState Cfg Query Address Y config) := by
   intro tag checkpoint hmem
   simp at hmem
 
 /-- Recording one commitment preserves the checkpoint-prefix invariant. -/
-theorem ExtractorState.WellFormed.record {config : Configuration Cfg Address}
-    {state : ExtractorState Cfg Query Address Y config} (hstate : state.WellFormed)
+theorem ExtractorState.CheckpointLogsPrefixCumulativeLog.record
+    {config : Configuration Cfg Address}
+    {state : ExtractorState Cfg Query Address Y config}
+    (hstate : state.CheckpointLogsPrefixCumulativeLog)
     (tag : Cfg) (phaseLog : MerkleTreeExtractor.QueryLog Query Y) (root : Y) :
-    (state.record tag phaseLog root).WellFormed := by
+    (state.record tag phaseLog root).CheckpointLogsPrefixCumulativeLog := by
   intro recordedTag checkpoint hmem
   rw [ExtractorState.record_checkpoints] at hmem
   rcases List.mem_append.mp hmem with hprevious | hnew
@@ -248,7 +251,7 @@ theorem ExtractorState.prefix_terminalLog {config : Configuration Cfg Address}
 /-! ## Opening attempts and deterministic failure events -/
 
 /-- One verifier decision for a claimed opening against a recorded commitment checkpoint. -/
-structure OpeningAttempt (Query : Type v) (Y : Type)
+structure EvaluatedOpeningClaim (Query : Type v) (Y : Type)
     (config : Configuration Cfg Address) (tag : Cfg) where
   /-- Checkpoint whose root the opening claims to open. -/
   checkpoint : Checkpoint Query Y config tag
@@ -258,9 +261,9 @@ structure OpeningAttempt (Query : Type v) (Y : Type)
   accepted : Bool
 
 /-- An opening attempt paired with its dependent configuration. -/
-abbrev AnyOpeningAttempt (Cfg : Type u) (Query : Type v) (Address : Type w) (Y : Type)
+abbrev AnyEvaluatedOpeningClaim (Cfg : Type u) (Query : Type v) (Address : Type w) (Y : Type)
     (config : Configuration Cfg Address) :=
-  (tag : Cfg) ×' OpeningAttempt Query Y config tag
+  (tag : Cfg) ×' EvaluatedOpeningClaim Query Y config tag
 
 /-- An accepted opening disagrees with the canonical partial opening extracted at commitment time.
 
@@ -269,7 +272,7 @@ the extracted tree is observable and causes disagreement. -/
 def AcceptedOpeningDisagreement [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address} {tag : Cfg}
-    (attempt : OpeningAttempt Query Y config tag) : Prop :=
+    (attempt : EvaluatedOpeningClaim Query Y config tag) : Prop :=
   attempt.accepted = true ∧
     attempt.checkpoint.extractedOpening view attempt.opening ≠ attempt.opening.map some
 
@@ -319,7 +322,7 @@ def HasAcceptedOpeningDisagreement [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config)) : Prop :=
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config)) : Prop :=
   ∃ tag attempt,
     ⟨tag, attempt⟩ ∈ attempts ∧
     ⟨tag, attempt.checkpoint⟩ ∈ state.checkpoints ∧
@@ -353,121 +356,102 @@ def HasCheckpointTerminalExtractionDisagreement [DecidableEq Address] [Decidable
 
 Its opening and equal-root branches compare checkpoints only within one configuration tag;
 cross-tag root reuse is outside the event. -/
-def Failure [DecidableEq Address] [DecidableEq Y]
+def AnyCheckpointExtractionDisagreement [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
     (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y) : Prop :=
   HasAcceptedOpeningDisagreement view state attempts ∨
     HasEqualRootExtractionDisagreement view state ∨
       HasCheckpointTerminalExtractionDisagreement view state terminalSuffix
 
-/-- The textbook-facing failure event: an accepted chosen opening disagrees with its checkpoint
+/-- An accepted chosen opening disagrees with its checkpoint
 extraction, or two equal roots at checkpoints of the same configuration have inconsistent
 extractions. Checkpoint-to-terminal evolution is an internal strengthening used in the proof, not
 part of this public event. Both branches compare checkpoints only within one configuration tag;
 cross-tag root reuse is outside the event. -/
-def TextbookFailure [DecidableEq Address] [DecidableEq Y]
+def OpeningOrEqualRootDisagreement [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config)) : Prop :=
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config)) : Prop :=
   HasAcceptedOpeningDisagreement view state attempts ∨
     HasEqualRootExtractionDisagreement view state
 
-/-- The stronger three-branch proof event subsumes the textbook-facing failure event. -/
-theorem TextbookFailure.toFailure [DecidableEq Address] [DecidableEq Y]
+/-- Opening or equal-root disagreement implies disagreement at some checkpoint. -/
+theorem OpeningOrEqualRootDisagreement.toAnyCheckpointExtractionDisagreement
+    [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
     (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
-    (h : TextbookFailure view state attempts) :
-    Failure view state attempts terminalSuffix := by
+    (h : OpeningOrEqualRootDisagreement view state attempts) :
+    AnyCheckpointExtractionDisagreement view state attempts terminalSuffix := by
   rcases h with hopening | hequalRoot
   · exact Or.inl hopening
   · exact Or.inr (Or.inl hequalRoot)
 
 /-- If checkpoint extraction is stable under the terminal suffix, the strong and textbook events
 coincide. This is a deterministic specialization, independent of any probability semantics. -/
-theorem failure_iff_textbookFailure_of_noTerminalDisagreement
+theorem anyCheckpointDisagreement_iff_openingOrEqualRootDisagreement_of_noTerminalDisagreement
     [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
     (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
     (hstable : ¬ HasCheckpointTerminalExtractionDisagreement
       view state terminalSuffix) :
-    Failure view state attempts terminalSuffix ↔
-      TextbookFailure view state attempts := by
-  simp only [Failure, TextbookFailure]
+    AnyCheckpointExtractionDisagreement view state attempts terminalSuffix ↔
+      OpeningOrEqualRootDisagreement view state attempts := by
+  simp only [AnyCheckpointExtractionDisagreement, OpeningOrEqualRootDisagreement]
   tauto
 
-theorem Failure.ofAcceptedOpeningDisagreement [DecidableEq Address] [DecidableEq Y]
-    (view : MerkleTreeExtractor.QueryView Query Address Y)
-    {config : Configuration Cfg Address}
-    (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
-    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
-    (h : HasAcceptedOpeningDisagreement view state attempts) :
-    Failure view state attempts terminalSuffix :=
-  Or.inl h
-
-theorem Failure.ofEqualRootExtractionDisagreement [DecidableEq Address] [DecidableEq Y]
-    (view : MerkleTreeExtractor.QueryView Query Address Y)
-    {config : Configuration Cfg Address}
-    (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
-    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
-    (h : HasEqualRootExtractionDisagreement view state) :
-    Failure view state attempts terminalSuffix :=
-  Or.inr (Or.inl h)
-
-theorem Failure.ofCheckpointTerminalExtractionDisagreement
+theorem AnyCheckpointExtractionDisagreement.ofAcceptedOpeningDisagreement
     [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
     (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
-    (h : HasCheckpointTerminalExtractionDisagreement view state terminalSuffix) :
-    Failure view state attempts terminalSuffix :=
-  Or.inr (Or.inr h)
+    (h : HasAcceptedOpeningDisagreement view state attempts) :
+    AnyCheckpointExtractionDisagreement view state attempts terminalSuffix :=
+  Or.inl h
 
-/-- With no recorded commitments, none of the three deterministic failure branches can occur. -/
-theorem not_failure_empty [DecidableEq Address] [DecidableEq Y]
+theorem AnyCheckpointExtractionDisagreement.ofEqualRootExtractionDisagreement
+    [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (state : ExtractorState Cfg Query Address Y config)
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
+    (h : HasEqualRootExtractionDisagreement view state) :
+    AnyCheckpointExtractionDisagreement view state attempts terminalSuffix :=
+  Or.inr (Or.inl h)
+
+theorem AnyCheckpointExtractionDisagreement.ofCheckpointTerminalExtractionDisagreement
+    [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (state : ExtractorState Cfg Query Address Y config)
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
+    (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
+    (h : HasCheckpointTerminalExtractionDisagreement view state terminalSuffix) :
+    AnyCheckpointExtractionDisagreement view state attempts terminalSuffix :=
+  Or.inr (Or.inr h)
+
+/-- With no recorded commitments, none of the three disagreement branches can occur. -/
+theorem not_anyCheckpointExtractionDisagreement_empty [DecidableEq Address] [DecidableEq Y]
+    (view : MerkleTreeExtractor.QueryView Query Address Y)
+    {config : Configuration Cfg Address}
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
     (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y) :
-    ¬ Failure view (ExtractorState.empty : ExtractorState Cfg Query Address Y config)
-      attempts terminalSuffix := by
-  simp [Failure, HasAcceptedOpeningDisagreement, HasEqualRootExtractionDisagreement,
-    HasCheckpointTerminalExtractionDisagreement]
-
-/-! ## Ordered-query canary -/
-
-private def canaryView :
-    MerkleTreeExtractor.QueryView (Bool × (Nat × Nat)) Bool Nat where
-  address := Prod.fst
-  input := Prod.snd
-
-private def canaryConfig : Configuration Unit Bool where
-  skeleton _ := .internal .leaf .leaf
-  addressKey _ _ := false
-
-private def canaryCheckpoint : Checkpoint (Bool × (Nat × Nat)) Nat canaryConfig () where
-  root := 7
-  cumulativeLog := [⟨(true, (11, 13)), 7⟩, ⟨(false, (2, 3)), 7⟩]
-
-/-- The checkpoint extractor uses the matching address and preserves ordered query children.
-
-This concrete producer canary rejects swapping the left/right query inputs, ignoring the address,
-or failing to follow a logged root response. -/
-example : Checkpoint.extractedTree canaryView canaryCheckpoint =
-    FullData.internal (some 7) (FullData.leaf (some 2)) (FullData.leaf (some 3)) := by
-  rfl
+    ¬ AnyCheckpointExtractionDisagreement view
+      (ExtractorState.empty : ExtractorState Cfg Query Address Y config)
+        attempts terminalSuffix := by
+  simp [AnyCheckpointExtractionDisagreement, HasAcceptedOpeningDisagreement,
+    HasEqualRootExtractionDisagreement, HasCheckpointTerminalExtractionDisagreement]
 
 end MerkleTreeMultiExtractability

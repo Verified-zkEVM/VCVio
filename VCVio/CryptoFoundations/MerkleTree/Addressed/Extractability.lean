@@ -59,7 +59,7 @@ theorem rom_bound [DecidableEq Address] [DecidableEq Y] [Fintype Y] [Inhabited Y
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[MerkleTreeExtractability.AdversaryWinsExtractabilityGame |
+    Pr[MerkleTreeExtractability.OpeningExtractionFailure |
       game addressKey 𝒜] ≤
       (MerkleTreeExtractability.extractabilityROMErrorNumerator s qb : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
@@ -72,7 +72,7 @@ theorem rom_bound_coarse [DecidableEq Address] [DecidableEq Y] [Fintype Y] [Inha
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[MerkleTreeExtractability.AdversaryWinsExtractabilityGame |
+    Pr[MerkleTreeExtractability.OpeningExtractionFailure |
       game addressKey 𝒜] ≤
       ((max ((2 * s.leafCount - 1) * qb) (qb.choose 2) +
         (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
@@ -88,7 +88,7 @@ theorem rom_bound_birthday_dominates
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hqb : 2 * (2 * s.leafCount - 1) + 1 ≤ qb) :
-    Pr[MerkleTreeExtractability.AdversaryWinsExtractabilityGame |
+    Pr[MerkleTreeExtractability.OpeningExtractionFailure |
       game addressKey 𝒜] ≤
       ((qb.choose 2 + (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
@@ -105,7 +105,7 @@ theorem rom_bound_quadratic
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hdominance : 2 * (2 * s.leafCount - 1) + 1 ≤ qb)
     (hdepth : 2 * (2 * s.leafCount - 1) * s.depth ≤ qb) :
-    Pr[MerkleTreeExtractability.AdversaryWinsExtractabilityGame |
+    Pr[MerkleTreeExtractability.OpeningExtractionFailure |
       game addressKey 𝒜] ≤
       (qb : ENNReal) ^ 2 / (2 * Fintype.card Y) := by
   simpa [game] using
