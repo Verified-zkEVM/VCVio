@@ -164,7 +164,8 @@ private lemma depthOneGame_eq :
         let extractedProof := InductiveMerkleTree.generateProof extractedTree idx
         let verified ← InductiveMerkleTree.verifyProof idx leaf root proof
         return (root, aux,
-          ⟨idx, leaf, proof, extractedTree, extractedProof, verified⟩) from rfl]
+          ⟨idx, leaf, proof, extractedTree, extractedProof, verified⟩) from
+      InductiveMerkleTree.extractabilityInner_eq_unaddressed depthOneAdversary]
   rw [withCacheOverlay_bind, depthOneCommit_cached_eq]
   simp only [bind_assoc, pure_bind]
   refine bind_congr (m := OracleComp (InductiveMerkleTree.spec Bool)) fun root => ?_
@@ -228,7 +229,8 @@ example :
     Pr[InductiveMerkleTree.AdversaryWinsExtractabilityGame |
       InductiveMerkleTree.extractabilityGame depthZeroAdversary] = 0 := by
   apply le_antisymm
-  · simpa [InductiveMerkleTree.extractabilityROMErrorNumerator] using
+  · simpa [InductiveMerkleTree.extractabilityROMErrorNumerator,
+      MerkleTreeExtractability.extractabilityROMErrorNumerator] using
       InductiveMerkleTree.extractability_rom_bound
       depthZeroAdversary 0 depthZeroAdversary_totalBound
   · exact zero_le
@@ -249,7 +251,8 @@ target, recovering the exact `1 / |Bool| = 1/2` bound for this game. -/
 example :
     Pr[InductiveMerkleTree.AdversaryWinsExtractabilityGame |
       InductiveMerkleTree.extractabilityGame freshHitAdversary] ≤ (2 : ENNReal)⁻¹ := by
-  simpa [InductiveMerkleTree.extractabilityROMErrorNumerator, depthOneSkeleton] using
+  simpa [InductiveMerkleTree.extractabilityROMErrorNumerator,
+    MerkleTreeExtractability.extractabilityROMErrorNumerator, depthOneSkeleton] using
     InductiveMerkleTree.extractability_rom_bound
     freshHitAdversary 0 freshHitAdversary_totalBound
 
@@ -266,7 +269,7 @@ private lemma freshHitGame_eq :
         pure (false, (), ⟨leftIndex, false, leftProof,
           freshHitExtractedTree, freshHitExtractedProof, answer == false⟩)) := by
   simp [InductiveMerkleTree.extractabilityGame,
-    InductiveMerkleTree.extractabilityInner, OracleSpec.withCacheOverlay,
+    InductiveMerkleTree.extractabilityInner_eq_unaddressed, OracleSpec.withCacheOverlay,
     freshHitAdversary, freshHitExtractedTree, freshHitExtractedProof,
     InductiveMerkleTree.Extractor.tree, MerkleTreeExtractor.tree,
     MerkleTreeExtractor.treeAt, MerkleTreeExtractor.children,
