@@ -501,14 +501,17 @@ private lemma cmaSimLoggedLeft_project_step
               QueryImpl.id'_apply, uniformSampleImpl, hcache]
     · subst keypair
       conv_lhs =>
-        simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
-          QueryImpl.mapStateTBase, QueryImpl.Stateful.Frame.linkReshape,
-          QueryImpl.Stateful.linkWith,
-          StateT.run_bind, StateT.run_mk, StateT.run_map, StateT.run_monadLift,
-          monadLift_self, simulateQ_bind, simulateQ_map, simulateQ_query,
-          OracleQuery.input_query, OracleQuery.cont_query, id_map,
-          bind_pure_comp, pure_bind, map_bind, Functor.map_map, Prod.map_apply,
-          id_eq]
+        simp only [add_apply_inr, cmaSimLoggedLeftImpl, cmaSimLoggedImpl,
+          QueryImpl.flattenStateT, QueryImpl.mapStateTBase, cmaSim, cmaFrame,
+          cmaOuterLens, Prod.mk.eta, cmaNmaLens, cmaSignLogImpl, bind_pure_comp,
+          StateT.run_bind, StateT.run_get, StateT.run_monadLift, monadLift_self,
+          StateT.run_map, StateT.run_set, map_pure, Functor.map_map, pure_bind,
+          simulateQ_map, simulateQ_query, OracleQuery.input_query,
+          OracleQuery.cont_query, QueryImpl.Stateful.linkWith, cmaToNma,
+          cmaSignSim, liftComp_eq_liftM, PFunctor.Lens.State.mk_get,
+          StateT.run_mk, simulateQ_bind, nma, nmaPublic, id_map, nmaProgram,
+          map_bind, QueryImpl.Stateful.Frame.linkReshape,
+          PFunctor.Lens.State.mk_put, Prod.map_apply, id_eq, cmaSimLoggedProj]
       conv_rhs =>
         simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
           QueryImpl.mapStateTBase, QueryImpl.Stateful.Frame.linkReshape,
