@@ -26,7 +26,7 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 def zeroBytes (n : ℕ) : Bytes n := Vector.replicate n 0
 
 def markerBytes (n tag : ℕ) : Bytes n :=
-  ⟨(toByte tag n).toArray, by simp [toByte]⟩
+  ⟨(toByte tag n).toArray, by simp⟩
 
 /-- A proof-only primitive context whose semantic carriers are exactly the FIPS byte carriers.
 The hash operations are irrelevant to codec tests and return zero nodes. -/
