@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Extractability
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Opening
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
@@ -36,20 +37,8 @@ universe u
 
 variable {Query Y : Type} {Address : Type u}
 
-/-- A nonempty path-pruned batch opening for a fixed tree skeleton.  Nonemptiness is enforced by
-the `BatchProof` field: that dependent family has no constructor for an all-false selector. -/
-structure Opening (Y : Type) (s : Skeleton) where
-  /-- Leaves claimed by this opening. -/
-  selector : LeafData Bool s
-  /-- Claimed values at the selected leaves. -/
-  values : SelectedValues Y selector
-  /-- Minimal path-pruned authentication frontier. -/
-  proof : BatchProof Y selector
-
-/-- Every packaged batch opening selects at least one leaf. -/
-theorem Opening.anySelected {s : Skeleton} (opening : Opening Y s) :
-    opening.selector.anySelected = true :=
-  opening.proof.anySelected_of_batchProof
+/-- Local compatibility name for the neutral packaged batch-opening abstraction. -/
+abbrev Opening := InductiveMerkleTree.BatchOpening
 
 /-- Recompute the putative root of a path-pruned batch opening through the complete queries
 specified by `model`.  Internal positions are mapped to their actual oracle addresses by
