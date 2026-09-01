@@ -11,7 +11,12 @@ public import HashSig.SLHDSA.Concrete.Prehash
 # SLH-DSA external-interface canaries
 
 Direct boundary examples that distinguish the pure and pre-hash domains, context placement,
-DER-OID placement, digest placement, and the required 255/256-byte rejection boundary.
+DER-OID placement, digest placement, and the required 255/256-byte rejection boundary. The
+executable suite also pins the FIPS 205 Algorithm 19 line 2 deterministic randomizer
+(`opt_rand = PK.seed`) across all twelve approved profiles and runs end-to-end
+keygen→sign→verify round trips through the pinned deterministic external entry points for one
+SHA2 and one SHAKE profile, including tamper, wrong-message, and verify-side overlong-context
+rejections.
 -/
 
 public section
@@ -146,6 +151,82 @@ private def expectedAbc : Algorithm → String
 private def ensure (label : String) (condition : Bool) : IO Unit :=
   unless condition do throw (IO.userError s!"SLH-DSA external-interface check failed: {label}")
 
+/-! ## FIPS deterministic-variant pinning and pinned external round trips -/
+
+private def testBytes (n offset : ℕ) : SLHDSA.Bytes n :=
+  Vector.ofFn fun i => UInt8.ofNat (i.val * 7 + offset)
+
+private def flip16 (bytes : SLHDSA.Bytes 16) : SLHDSA.Bytes 16 :=
+  bytes.set 0 (bytes[0] ^^^ 0x01)
+
+private def checkPin (set : FipsParameterSet)
+    (seed : (SLHDSA.Concrete.approvedPrimitives set).PkSeed)
+    (expected : SLHDSA.Bytes set.params.n) : Bool :=
+  ((SLHDSA.Concrete.approvedPrimitives set).yToBytes
+    (SLHDSA.Concrete.approvedRandomizerOfPkSeed set seed)).toList == expected.toList
+
+/-- FIPS 205 Algorithm 19 line 2: the pinned deterministic randomizer's byte encoding is
+exactly the `PK.seed` bytes, exercised through the set-level dispatch for each profile. -/
+private def pinnedRandomizerAgrees : FipsParameterSet → Bool
+  | .SLHDSA_SHA2_128s => checkPin .SLHDSA_SHA2_128s (testBytes 16 5) (testBytes 16 5)
+  | .SLHDSA_SHA2_128f => checkPin .SLHDSA_SHA2_128f (testBytes 16 6) (testBytes 16 6)
+  | .SLHDSA_SHA2_192s => checkPin .SLHDSA_SHA2_192s (testBytes 24 7) (testBytes 24 7)
+  | .SLHDSA_SHA2_192f => checkPin .SLHDSA_SHA2_192f (testBytes 24 8) (testBytes 24 8)
+  | .SLHDSA_SHA2_256s => checkPin .SLHDSA_SHA2_256s (testBytes 32 9) (testBytes 32 9)
+  | .SLHDSA_SHA2_256f => checkPin .SLHDSA_SHA2_256f (testBytes 32 10) (testBytes 32 10)
+  | .SLHDSA_SHAKE_128s => checkPin .SLHDSA_SHAKE_128s (testBytes 16 11) (testBytes 16 11)
+  | .SLHDSA_SHAKE_128f => checkPin .SLHDSA_SHAKE_128f (testBytes 16 12) (testBytes 16 12)
+  | .SLHDSA_SHAKE_192s => checkPin .SLHDSA_SHAKE_192s (testBytes 24 13) (testBytes 24 13)
+  | .SLHDSA_SHAKE_192f => checkPin .SLHDSA_SHAKE_192f (testBytes 24 14) (testBytes 24 14)
+  | .SLHDSA_SHAKE_256s => checkPin .SLHDSA_SHAKE_256s (testBytes 32 15) (testBytes 32 15)
+  | .SLHDSA_SHAKE_256f => checkPin .SLHDSA_SHAKE_256f (testBytes 32 16) (testBytes 32 16)
+
+/-- End-to-end keygen→sign→verify through the pinned deterministic external entry points
+(pure Algorithm 22 and checked pre-hash Algorithm 23), with tampered-signature,
+wrong-message, and verify-side overlong-context rejections. -/
+private def roundTrip (label : String) (set : FipsParameterSet)
+    (inst : DecidableEq (SLHDSA.Concrete.approvedPrimitives set).Y)
+    (skSeed : (SLHDSA.Concrete.approvedPrimitives set).SkSeed)
+    (skPrf : (SLHDSA.Concrete.approvedPrimitives set).SkPrf)
+    (pkSeed : (SLHDSA.Concrete.approvedPrimitives set).PkSeed)
+    (algorithm : Algorithm)
+    (tamper : GeneralScheme.SignatureCore set.validatedParams
+        (SLHDSA.Concrete.approvedPrimitives set).core →
+      GeneralScheme.SignatureCore set.validatedParams
+        (SLHDSA.Concrete.approvedPrimitives set).core) : IO Unit := do
+  let vp := set.validatedParams
+  let prims := SLHDSA.Concrete.approvedPrimitives set
+  let message : List Byte := [0x4d, 0x53, 0x47]
+  let wrongMessage : List Byte := [0x4d, 0x53, 0x58]
+  let context : List Byte := [0xc0, 0xff]
+  let longContext : List Byte := List.replicate 256 0x00
+  let (sk, pk) := keygenWithSeeds vp prims skSeed skPrf pkSeed
+  let pureSig ← match SLHDSA.Concrete.signPureDeterministicApproved set message context sk with
+    | .error error => throw (IO.userError s!"{label}: pure pinned signing failed: {repr error}")
+    | .ok signature => pure signature
+  ensure s!"{label}: pure pinned sign/verify round trip"
+    (@verifyPure vp prims inst message pureSig context pk)
+  ensure s!"{label}: pure tampered-signature reject"
+    (!(@verifyPure vp prims inst message (tamper pureSig) context pk))
+  ensure s!"{label}: pure wrong-message reject"
+    (!(@verifyPure vp prims inst wrongMessage pureSig context pk))
+  ensure s!"{label}: pure overlong-context verify reject"
+    (!(@verifyPure vp prims inst message pureSig longContext pk))
+  let preSig ← match SLHDSA.Concrete.Prehash.signDeterministicApproved set algorithm
+      message context sk with
+    | .error error =>
+        throw (IO.userError s!"{label}: prehash pinned signing failed: {repr error}")
+    | .ok signature => pure signature
+  ensure s!"{label}: prehash pinned sign/verify round trip"
+    (@SLHDSA.Concrete.Prehash.verify vp prims inst algorithm message preSig context pk)
+  ensure s!"{label}: prehash tampered-signature reject"
+    (!(@SLHDSA.Concrete.Prehash.verify vp prims inst algorithm message
+      (tamper preSig) context pk))
+  ensure s!"{label}: prehash wrong-message reject"
+    (!(@SLHDSA.Concrete.Prehash.verify vp prims inst algorithm wrongMessage preSig context pk))
+  ensure s!"{label}: prehash overlong-context verify reject"
+    (!(@SLHDSA.Concrete.Prehash.verify vp prims inst algorithm message preSig longContext pk))
+
 private def checkDigest (label : String) (algorithm : Algorithm)
     (message : List Byte) (expected : String) : IO Unit := do
   match algorithm.digest message with
@@ -214,7 +295,17 @@ def run : IO Unit := do
     cd86e81296852359bf2faddb5153c0a7445722987875e74287adac21adebe952"
   checkDigest "SHAKE128 exact-rate padding" .shake128 (List.replicate 168 0x61)
     "c22e11586c22b713bde373fce93314d76829de2c21d940a28eb659b8dec953a2"
-  IO.println "SLH-DSA external-interface tests: PASS (12 bound OIDs/digests; strength/context)"
+  for set in FipsParameterSet.all do
+    ensure s!"{set.name}: pinned deterministic randomizer equals PK.seed bytes"
+      (pinnedRandomizerAgrees set)
+  roundTrip "SLH-DSA-SHA2-128f" .SLHDSA_SHA2_128f
+    (inferInstanceAs (DecidableEq (SLHDSA.Bytes 16))) (testBytes 16 1) (testBytes 16 2)
+    (testBytes 16 3) .sha2_256 (fun sig => { sig with randomness := flip16 sig.randomness })
+  roundTrip "SLH-DSA-SHAKE-128f" .SLHDSA_SHAKE_128f
+    (inferInstanceAs (DecidableEq (SLHDSA.Bytes 16))) (testBytes 16 1) (testBytes 16 2)
+    (testBytes 16 3) .shake128 (fun sig => { sig with randomness := flip16 sig.randomness })
+  IO.println "SLH-DSA external-interface tests: PASS (12 bound OIDs/digests; strength/context; \
+    12 pinned opt_rand = PK.seed profiles; SHA2-128f and SHAKE-128f pinned round trips)"
 
 end SLHDSA.ExternalTest
 

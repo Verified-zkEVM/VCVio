@@ -38,9 +38,12 @@ inductive Error where
   | digestLengthMismatch (expected actual : ℕ)
 deriving Repr, DecidableEq
 
-/-- Abstract pre-hash/OID binding used by the descriptor-parametric semantics. This is an
-extension boundary, not by itself an assertion that the pair is FIPS approved. Concrete FIPS
-adapters provide a closed algorithm registry and strength checks. -/
+/-- Abstract pre-hash/OID binding used by the descriptor-parametric semantics. This descriptor
+surface is an extension seam only: constructing a value is not by itself an assertion that the
+OID/digest pair is FIPS approved. The closed `SLHDSA.Concrete.Prehash.Algorithm` enumeration is
+the FIPS-approved registry; callers wanting FIPS conformance must use the enum entry points in
+`SLHDSA.Concrete.Prehash` (which also enforce the §10.2 strength policy) rather than
+instantiating descriptors directly. -/
 structure PrehashDescriptor where
   oidDer : List Byte
   outputLength : ℕ
@@ -53,6 +56,15 @@ def requireContext (context : List Byte) : Except Error Unit :=
   else
     .error (.contextTooLong context.length)
 
+/-- A context within the FIPS 205 255-byte bound passes the boundary check. -/
+theorem requireContext_eq_ok (context : List Byte) (h : context.length ≤ 255) :
+    requireContext context = .ok () := if_pos h
+
+/-- A context beyond the FIPS 205 255-byte bound is rejected with its observed length. -/
+theorem requireContext_eq_error (context : List Byte) (h : 255 < context.length) :
+    requireContext context = .error (.contextTooLong context.length) :=
+  if_neg (Nat.not_le.mpr h)
+
 /-- Common FIPS external-message encoder. Domain `0` denotes pure signing and domain `1`
 denotes pre-hash signing. -/
 def encodeMessage (domain : Byte) (context body : List Byte) : Except Error (List Byte) := do
@@ -63,6 +75,15 @@ def encodeMessage (domain : Byte) (context body : List Byte) : Except Error (Lis
 def encodePureMessage (context message : List Byte) : Except Error (List Byte) :=
   encodeMessage 0 context message
 
+/-- Under the context bound, the pure encoder is a deterministic total function of its inputs;
+in particular signing and verification compute the same `M'`. -/
+theorem encodePureMessage_eq_ok (context message : List Byte) (h : context.length ≤ 255) :
+    encodePureMessage context message =
+      .ok ([0, UInt8.ofNat context.length] ++ context ++ message) := by
+  unfold encodePureMessage encodeMessage
+  rw [requireContext_eq_ok context h]
+  rfl
+
 /-- Descriptor-parametric Algorithm 23/25 message input:
 `0x01 || toByte(|ctx|, 1) || ctx || OID || PH(M)`. FIPS-facing adapters must bind the descriptor
 to an approved algorithm and enforce the security-strength requirement. -/
@@ -71,6 +92,19 @@ def encodePrehashMessageWithDescriptor (prehash : PrehashDescriptor)
   requireContext context
   let digest ← prehash.digest message
   encodeMessage 1 context (prehash.oidDer ++ digest.toList)
+
+/-- Under the context bound and a successful descriptor digest, the pre-hash encoder is a
+deterministic total function of its inputs; in particular signing and verification compute the
+same `M'`. -/
+theorem encodePrehashMessageWithDescriptor_eq_ok (prehash : PrehashDescriptor)
+    (context message : List Byte) (h : context.length ≤ 255)
+    {digest : Bytes prehash.outputLength} (hdigest : prehash.digest message = .ok digest) :
+    encodePrehashMessageWithDescriptor prehash context message =
+      .ok ([1, UInt8.ofNat context.length] ++ context ++
+        (prehash.oidDer ++ digest.toList)) := by
+  unfold encodePrehashMessageWithDescriptor encodeMessage
+  rw [requireContext_eq_ok context h, hdigest]
+  rfl
 
 /-- Algorithm 21 after its approved random-bit generator has produced the three seeds. This
 explicit boundary is the deterministic entry point used by ACVP key-generation vectors. -/
@@ -97,8 +131,12 @@ def signPureWithRandomizer (vp : ValidatedParams) (prims : Primitives vp.params)
   let encoded ← encodePureMessage context message
   return GeneralScheme.signInternal vp prims encoded sk addrnd
 
-/-- Deterministic Algorithm 22. FIPS sets `opt_rand = PK.seed`; the conversion is explicit
-because the proof-level primitive interface deliberately keeps `PkSeed` and `Y` independent. -/
+/-- Deterministic Algorithm 22. FIPS 205 Algorithm 19 line 2 normatively sets
+`opt_rand = PK.seed`; the conversion is an explicit parameter only because the proof-level
+primitive interface deliberately keeps `PkSeed` and `Y` independent. FIPS-conforming callers
+must pass the canonical conversion for the selected approved family
+(`SLHDSA.Concrete.approvedRandomizerOfPkSeed`), or use the pinned entry point
+`SLHDSA.Concrete.signPureDeterministicApproved` which does so. -/
 def signPureDeterministic (vp : ValidatedParams) (prims : Primitives vp.params)
     (pkSeedToRandomizer : prims.PkSeed → prims.Y) (message context : List Byte)
     (sk : SecretKeyCore prims.core) :
@@ -123,7 +161,10 @@ def signPrehashWithDescriptorAndRandomizer (vp : ValidatedParams)
   let encoded ← encodePrehashMessageWithDescriptor prehash context message
   return GeneralScheme.signInternal vp prims encoded sk addrnd
 
-/-- Deterministic descriptor-parametric Algorithm 23 core. -/
+/-- Deterministic descriptor-parametric Algorithm 23 core. FIPS 205 Algorithm 19 line 2
+normatively sets `opt_rand = PK.seed`; FIPS-conforming callers must pass the canonical
+conversion (`SLHDSA.Concrete.approvedRandomizerOfPkSeed`), or use the pinned checked entry
+point `SLHDSA.Concrete.Prehash.signDeterministicApproved` which does so. -/
 def signPrehashWithDescriptorDeterministic (vp : ValidatedParams)
     (prims : Primitives vp.params) (pkSeedToRandomizer : prims.PkSeed → prims.Y)
     (prehash : PrehashDescriptor)
@@ -161,5 +202,70 @@ def verifyPrehashWithDescriptor (vp : ValidatedParams) (prims : Primitives vp.pa
   match encodePrehashMessageWithDescriptor prehash context message with
   | .error _ => false
   | .ok encoded => GeneralScheme.verifyInternal vp prims encoded signature pk
+
+/-! ## External completeness and boundary rejection
+
+Signing and verification encode `M'` with the same deterministic encoder, so the external
+sign→verify round trips are corollaries of the internal completeness theorem
+`GeneralScheme.verifyInternal_signInternal`.  Both statements quantify over an arbitrary
+hedging randomizer, covering the hedged and the deterministic (`opt_rand = PK.seed`) variants
+at once. -/
+
+/-- **External pure completeness** (Algorithms 21, 22, 24): under the FIPS 205 context bound,
+pure-mode signing under an honestly generated key succeeds, and verifying the produced
+signature for the same message and context with the matching public key accepts. -/
+theorem verifyPure_signPureWithRandomizer (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y] (message context : List Byte)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) (addrnd : prims.Y)
+    (hcontext : context.length ≤ 255) :
+    (signPureWithRandomizer vp prims message context
+        (keygenWithSeeds vp prims skSeed skPrf pkSeed).1 addrnd).map
+      (fun signature => verifyPure vp prims message signature context
+        (keygenWithSeeds vp prims skSeed skPrf pkSeed).2) = .ok true := by
+  simp only [signPureWithRandomizer, verifyPure,
+    encodePureMessage_eq_ok context message hcontext]
+  exact congrArg Except.ok
+    (GeneralScheme.verifyInternal_signInternal vp prims _ skSeed skPrf pkSeed addrnd)
+
+/-- **External pre-hash completeness** (Algorithms 21, 23, 25): under the FIPS 205 context
+bound and a successful descriptor digest, pre-hash signing under an honestly generated key
+succeeds, and verifying the produced signature for the same message and context with the
+matching public key accepts. -/
+theorem verifyPrehashWithDescriptor_signPrehashWithDescriptorAndRandomizer
+    (vp : ValidatedParams) (prims : Primitives vp.params) [DecidableEq prims.Y]
+    (prehash : PrehashDescriptor) (message context : List Byte)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) (addrnd : prims.Y)
+    (hcontext : context.length ≤ 255)
+    {digest : Bytes prehash.outputLength} (hdigest : prehash.digest message = .ok digest) :
+    (signPrehashWithDescriptorAndRandomizer vp prims prehash message context
+        (keygenWithSeeds vp prims skSeed skPrf pkSeed).1 addrnd).map
+      (fun signature => verifyPrehashWithDescriptor vp prims prehash message signature context
+        (keygenWithSeeds vp prims skSeed skPrf pkSeed).2) = .ok true := by
+  simp only [signPrehashWithDescriptorAndRandomizer, verifyPrehashWithDescriptor,
+    encodePrehashMessageWithDescriptor_eq_ok prehash context message hcontext hdigest]
+  exact congrArg Except.ok
+    (GeneralScheme.verifyInternal_signInternal vp prims _ skSeed skPrf pkSeed addrnd)
+
+/-- Algorithm 24 lines 1--2: pure verification rejects an overlong context as `false` for
+every signature and public key, before any hashing. -/
+theorem verifyPure_eq_false_of_contextTooLong (vp : ValidatedParams)
+    (prims : Primitives vp.params) [DecidableEq prims.Y] (message : List Byte)
+    (signature : GeneralScheme.SignatureCore vp prims.core) (context : List Byte)
+    (pk : PublicKeyCore prims.core) (h : 255 < context.length) :
+    verifyPure vp prims message signature context pk = false := by
+  unfold verifyPure encodePureMessage encodeMessage
+  rw [requireContext_eq_error context h]
+  rfl
+
+/-- Algorithm 25 lines 1--2: pre-hash verification rejects an overlong context as `false` for
+every signature and public key, before evaluating the pre-hash. -/
+theorem verifyPrehashWithDescriptor_eq_false_of_contextTooLong (vp : ValidatedParams)
+    (prims : Primitives vp.params) [DecidableEq prims.Y] (prehash : PrehashDescriptor)
+    (message : List Byte) (signature : GeneralScheme.SignatureCore vp prims.core)
+    (context : List Byte) (pk : PublicKeyCore prims.core) (h : 255 < context.length) :
+    verifyPrehashWithDescriptor vp prims prehash message signature context pk = false := by
+  unfold verifyPrehashWithDescriptor encodePrehashMessageWithDescriptor
+  rw [requireContext_eq_error context h]
+  rfl
 
 end SLHDSA.External

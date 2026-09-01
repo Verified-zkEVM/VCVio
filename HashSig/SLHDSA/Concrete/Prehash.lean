@@ -8,6 +8,7 @@ module
 public import HashSig.SLHDSA.External
 public import HashSig.SLHDSA.Concrete.Sha2
 public import HashSig.SLHDSA.Concrete.Keccak
+public import HashSig.SLHDSA.Concrete.FIPS
 
 /-!
 # Checked FIPS 205 pre-hash adapter
@@ -16,6 +17,11 @@ This module closes the descriptor-parametric external semantics over the twelve 
 named by ACVP. An `Algorithm` determines the digest implementation, exact output width, and DER
 OID together. The public signing and verification entry points also enforce FIPS 205 §10.2's
 `2n`-byte collision-strength boundary.
+
+It also hosts the FIPS-pinned deterministic entry points (`signDeterministicApproved` and
+`signPureDeterministicApproved`), which bind the deterministic variants' `opt_rand` input to
+`PK.seed` via `SLHDSA.Concrete.approvedRandomizerOfPkSeed` as FIPS 205 Algorithm 19 line 2
+requires, together with sign→verify completeness theorems for the checked boundary.
 -/
 
 @[expose] public section
@@ -143,13 +149,23 @@ def digestBytesExact (n : ℕ) (digest : ByteArray) : Except Error (Bytes n) :=
   else
     .error (.digestLengthMismatch n digest.size)
 
-/-- Exact-width digest checked against the engine's advertised width. -/
+/-- Exact-width digest checked against the engine's advertised width through the fail-closed
+projection; `Algorithm.digest_eq_ok` shows the error branch is unreachable for the registry
+engines. -/
 def Algorithm.digest (algorithm : Algorithm) (message : List Byte) :
     Except Error (Bytes algorithm.outputLength) :=
-  .ok (Vector.ofFn fun i : Fin algorithm.outputLength =>
-    (algorithm.digestRaw message)[i.val]'(by
-      rw [algorithm.digestRaw_size message]
-      exact i.isLt))
+  digestBytesExact algorithm.outputLength (algorithm.digestRaw message)
+
+/-- Every registry digest engine meets its advertised exact width (`digestRaw_size`), so the
+checked digest succeeds on every message. -/
+theorem Algorithm.digest_eq_ok (algorithm : Algorithm) (message : List Byte) :
+    algorithm.digest message =
+      .ok (Vector.ofFn fun i : Fin algorithm.outputLength =>
+        (algorithm.digestRaw message)[i.val]'(by
+          rw [algorithm.digestRaw_size message]
+          exact i.isLt)) := by
+  unfold Algorithm.digest digestBytesExact
+  rw [dif_pos (algorithm.digestRaw_size message)]
 
 /-- Canonical binding of one registry entry's DER OID and digest implementation. -/
 def Algorithm.descriptor (algorithm : Algorithm) : PrehashDescriptor where
@@ -179,7 +195,10 @@ def signWithRandomizer (vp : ValidatedParams) (prims : Primitives vp.params)
   requireStrength vp.params algorithm
   signPrehashWithDescriptorAndRandomizer vp prims algorithm.descriptor message context sk addrnd
 
-/-- Checked deterministic Algorithm 23. -/
+/-- Checked deterministic Algorithm 23. FIPS 205 Algorithm 19 line 2 normatively sets
+`opt_rand = PK.seed`; FIPS-conforming callers must pass the canonical conversion for the
+selected approved family (`SLHDSA.Concrete.approvedRandomizerOfPkSeed`), or use the pinned
+entry point `signDeterministicApproved` which does so. -/
 def signDeterministic (vp : ValidatedParams) (prims : Primitives vp.params)
     (pkSeedToRandomizer : prims.PkSeed → prims.Y) (algorithm : Algorithm)
     (message context : List Byte) (sk : SecretKeyCore prims.core) :
@@ -214,4 +233,111 @@ def verify (vp : ValidatedParams) (prims : Primitives vp.params) [DecidableEq pr
       | .ok _ =>
           verifyPrehashWithDescriptor vp prims algorithm.descriptor message signature context pk
 
+/-! ## Checked completeness and boundary rejection -/
+
+/-- A registry algorithm meeting the §10.2 strength policy passes the checked boundary. -/
+theorem requireStrength_eq_ok (p : Params) (algorithm : Algorithm)
+    (h : algorithm.ValidFor p) : requireStrength p algorithm = .ok () :=
+  if_pos ((algorithm.validFor_iff p).mpr h)
+
+/-- **Checked pre-hash completeness** (Algorithms 21, 23, 25): under the FIPS 205 context
+bound and the §10.2 strength policy, checked pre-hash signing under an honestly generated key
+succeeds, and checked verification of the produced signature for the same message and context
+with the matching public key accepts. -/
+theorem verify_signWithRandomizer (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y] (algorithm : Algorithm) (message context : List Byte)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) (addrnd : prims.Y)
+    (hcontext : context.length ≤ 255) (hstrength : algorithm.ValidFor vp.params) :
+    (signWithRandomizer vp prims algorithm message context
+        (keygenWithSeeds vp prims skSeed skPrf pkSeed).1 addrnd).map
+      (fun signature => verify vp prims algorithm message signature context
+        (keygenWithSeeds vp prims skSeed skPrf pkSeed).2) = .ok true := by
+  simp only [signWithRandomizer, verify, requireContext_eq_ok context hcontext,
+    requireStrength_eq_ok vp.params algorithm hstrength]
+  exact verifyPrehashWithDescriptor_signPrehashWithDescriptorAndRandomizer vp prims
+    algorithm.descriptor message context skSeed skPrf pkSeed addrnd hcontext
+    (algorithm.digest_eq_ok message)
+
+/-- Algorithm 25 lines 1--2: checked verification rejects an overlong context as `false` for
+every signature and public key, before the strength policy and before any hashing. -/
+theorem verify_eq_false_of_contextTooLong (vp : ValidatedParams)
+    (prims : Primitives vp.params) [DecidableEq prims.Y] (algorithm : Algorithm)
+    (message : List Byte) (signature : GeneralScheme.SignatureCore vp prims.core)
+    (context : List Byte) (pk : PublicKeyCore prims.core) (h : 255 < context.length) :
+    verify vp prims algorithm message signature context pk = false := by
+  unfold verify
+  rw [requireContext_eq_error context h]
+
+/-! ## FIPS-pinned deterministic entry point -/
+
+/-- Checked deterministic Algorithm 23 pinned to FIPS 205 Algorithm 19 line 2: `opt_rand` is
+`PK.seed` under `approvedRandomizerOfPkSeed`, in the exact approved primitive family selected
+by `approvedPrimitives`. FIPS-conforming deterministic pre-hash signing must use this entry
+point (or pass the same conversion to `signDeterministic` explicitly). -/
+def signDeterministicApproved (set : FipsParameterSet) (algorithm : Algorithm)
+    (message context : List Byte) (sk : SecretKeyCore (approvedPrimitives set).core) :
+    Except Error
+      (GeneralScheme.SignatureCore set.validatedParams (approvedPrimitives set).core) :=
+  signDeterministic set.validatedParams (approvedPrimitives set)
+    (approvedRandomizerOfPkSeed set) algorithm message context sk
+
+/-- Completeness of the pinned deterministic checked entry point: the honest key pair produced
+by Algorithm 21 round-trips through `signDeterministicApproved` and `verify`. -/
+theorem verify_signDeterministicApproved (set : FipsParameterSet)
+    [DecidableEq (approvedPrimitives set).Y] (algorithm : Algorithm)
+    (message context : List Byte) (skSeed : (approvedPrimitives set).SkSeed)
+    (skPrf : (approvedPrimitives set).SkPrf) (pkSeed : (approvedPrimitives set).PkSeed)
+    (hcontext : context.length ≤ 255) (hstrength : algorithm.ValidFor set.params) :
+    (signDeterministicApproved set algorithm message context
+        (keygenWithSeeds set.validatedParams (approvedPrimitives set)
+          skSeed skPrf pkSeed).1).map
+      (fun signature => verify set.validatedParams (approvedPrimitives set) algorithm message
+        signature context
+        (keygenWithSeeds set.validatedParams (approvedPrimitives set)
+          skSeed skPrf pkSeed).2) = .ok true :=
+  verify_signWithRandomizer set.validatedParams (approvedPrimitives set) algorithm message
+    context skSeed skPrf pkSeed
+    (approvedRandomizerOfPkSeed set
+      (keygenWithSeeds set.validatedParams (approvedPrimitives set)
+        skSeed skPrf pkSeed).1.pkSeed)
+    hcontext hstrength
+
 end SLHDSA.Concrete.Prehash
+
+namespace SLHDSA.Concrete
+
+/-! ## FIPS-pinned deterministic pure-mode entry point -/
+
+/-- Deterministic Algorithm 22 pinned to FIPS 205 Algorithm 19 line 2: `opt_rand` is `PK.seed`
+under `approvedRandomizerOfPkSeed`, in the exact approved primitive family selected by
+`approvedPrimitives`. FIPS-conforming deterministic pure-mode signing must use this entry
+point (or pass the same conversion to `External.signPureDeterministic` explicitly). -/
+def signPureDeterministicApproved (set : FipsParameterSet) (message context : List Byte)
+    (sk : SecretKeyCore (approvedPrimitives set).core) :
+    Except External.Error
+      (GeneralScheme.SignatureCore set.validatedParams (approvedPrimitives set).core) :=
+  External.signPureDeterministic set.validatedParams (approvedPrimitives set)
+    (approvedRandomizerOfPkSeed set) message context sk
+
+/-- Completeness of the pinned deterministic pure-mode entry point: the honest key pair
+produced by Algorithm 21 round-trips through `signPureDeterministicApproved` and
+`External.verifyPure`. -/
+theorem verifyPure_signPureDeterministicApproved (set : FipsParameterSet)
+    [DecidableEq (approvedPrimitives set).Y] (message context : List Byte)
+    (skSeed : (approvedPrimitives set).SkSeed) (skPrf : (approvedPrimitives set).SkPrf)
+    (pkSeed : (approvedPrimitives set).PkSeed) (hcontext : context.length ≤ 255) :
+    (signPureDeterministicApproved set message context
+        (External.keygenWithSeeds set.validatedParams (approvedPrimitives set)
+          skSeed skPrf pkSeed).1).map
+      (fun signature => External.verifyPure set.validatedParams (approvedPrimitives set)
+        message signature context
+        (External.keygenWithSeeds set.validatedParams (approvedPrimitives set)
+          skSeed skPrf pkSeed).2) = .ok true :=
+  External.verifyPure_signPureWithRandomizer set.validatedParams (approvedPrimitives set)
+    message context skSeed skPrf pkSeed
+    (approvedRandomizerOfPkSeed set
+      (External.keygenWithSeeds set.validatedParams (approvedPrimitives set)
+        skSeed skPrf pkSeed).1.pkSeed)
+    hcontext
+
+end SLHDSA.Concrete
