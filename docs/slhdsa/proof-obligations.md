@@ -16,6 +16,8 @@ separate obligations.
   bounded approved-profile tests.
 - Arbitrary-depth hypertree honest sign/recovery and internal general-scheme sign/verify
   completeness, with finite structural query upper bounds.
+- Callback-parametric XMSS and arbitrary-depth hypertree programs refine the canonical
+  explicit-query programs and their fixed-answer pure interpretations.
 - Depth-one deterministic output compatibility. The arbitrary-depth signer intentionally executes
   the final discarded recovery required by its control flow, so free-oracle traces need not match.
 - Exact SUF event partition into EUF and same-message/new-signature events. This is an identity, not
@@ -23,8 +25,6 @@ separate obligations.
 
 ## Open construction and API obligations
 
-- Prove callback-parametric arbitrary-depth `*With` programs refine explicit-query and pure
-  interpretations.
 - Implement signature/key codecs and external pure/pre-hash APIs, including context length,
   OID/output-strength metadata, deterministic/hedged modes, and rejection behavior.
 - Prove a general mathematical refinement from abstract primitive bundles to concrete SHA-2/SHAKE

@@ -183,7 +183,16 @@ private def standardRoots : Array Name := #[
   ``SLHDSA.Concrete.sha2_digestForsAdrs_isOk,
   ``SLHDSA.Concrete.sha2_forsSkAdrs_isOk,
   ``SLHDSA.Concrete.sha2_forsNodeAdrs_isOk,
-  ``SLHDSA.Concrete.sha2_forsPkAdrs_isOk
+  ``SLHDSA.Concrete.sha2_forsPkAdrs_isOk,
+  ``SLHDSA.GeneralHypertree.signFromPositionWith_one_recover,
+  ``SLHDSA.GeneralHypertree.signFromPositionWith_two,
+  ``SLHDSA.GeneralHypertree.signFromPositionWith_eq_signFromPositionM,
+  ``SLHDSA.GeneralHypertree.recoverFromPositionWith_eq_recoverFromPositionM,
+  ``SLHDSA.GeneralHypertree.simulateQ_signWith_publicHash,
+  ``SLHDSA.GeneralHypertree.simulateQ_pkFromSigWith_publicHash,
+  ``SLHDSA.HypertreeConformance.trace_succ,
+  ``SLHDSA.Concrete.sha2_layerPosition_toAdrs_isOk,
+  ``SLHDSA.Concrete.shake_layerPosition_toAdrs_roundtrip
 ]
 
 private def sameNames (left right : Array Name) : Bool :=
@@ -196,8 +205,8 @@ private def expectedRoots : Array (Name × Array Name) :=
     standardRoots.map (·, #[``propext, ``Classical.choice, ``Quot.sound])
 
 run_cmd do
-  unless expectedRoots.size == 151 do
-    throwError "SLH-DSA axiom audit root count changed: expected 151, observed {expectedRoots.size}"
+  unless expectedRoots.size == 160 do
+    throwError "SLH-DSA axiom audit root count changed: expected 160, observed {expectedRoots.size}"
   let mut seen : Array Name := #[]
   for (root, expected) in expectedRoots do
     if seen.contains root then
@@ -206,6 +215,6 @@ run_cmd do
     let observed ← Lean.collectAxioms root
     unless sameNames observed expected do
       throwError "SLH-DSA axiom footprint changed for {root}: expected {expected}, observed {observed}"
-  logInfo m!"SLH-DSA axiom audit: PASS ({expectedRoots.size} unique exact roots; footprints 6/25/10/110)"
+  logInfo m!"SLH-DSA axiom audit: PASS ({expectedRoots.size} unique exact roots; footprints 6/25/10/119)"
 
 end SLHDSAAxiomAudit

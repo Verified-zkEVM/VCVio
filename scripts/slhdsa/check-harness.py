@@ -241,15 +241,15 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
         (2489, "71347114ec62e7757907bead905527ff7a8bd1d254abaf4812171d3368211350"),
     "docs/slhdsa/matrices/coverage.csv":
-        (6279, "ee27ff277bd688388a5bf1835ab525f41c92228c47d0cc50260809440fad585d"),
+        (6332, "b8490b9ed56c1d1dfac93b83f60d7dbdb09427c24675295e66025fe38c7a606a"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (5684, "2959c812f4e2b2d006a882d8c7df459037031ce21ab5314b7e8211a085c24d21"),
+        (5780, "5589b4c4b0b6d16f91a813c77954167c8e329ae64b814769aedb9c6c464b6d3f"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
-        (3145, "4a0c896bd831e0dc1b77c015bee4269156d9d4144f186821a64f7a7ecfcf6978"),
+        (3145, "ee799304a4eb331659c184a1b2a98f803ca32a91183b6a110af9ccf6dfddb5f0"),
 }
 
 # The four load-bearing ACVP roots retain the exact typed dependency/visibility boundary formerly
@@ -364,9 +364,9 @@ def check_required_files() -> None:
     require("import HashSig" not in audit,
             "PolicyAudit.lean must not source-import HashSig")
     axiom_audit = (ROOT / "scripts/slhdsa/AxiomAudit.lean").read_text(encoding="utf-8")
-    for marker in ("expectedRoots.size == 151", "seen.contains root",
+    for marker in ("expectedRoots.size == 160", "seen.contains root",
                    "Lean.collectAxioms root", "sameNames observed expected",
-                   "footprints 6/25/10/110"):
+                   "footprints 6/25/10/119"):
         require(marker in axiom_audit,
                 f"AxiomAudit.lean: missing exact-root gate {marker}")
     wrapper = (ROOT / "scripts/slhdsa/validate.sh").read_text(encoding="utf-8")
@@ -384,6 +384,8 @@ def check_required_files() -> None:
             "validate.sh does not run the S06 XMSS construction tests")
     require("lake exe slhdsa_fors_tests" in wrapper,
             "validate.sh does not run the S07 FORS construction tests")
+    require("lake exe slhdsa_hypertree_tests" in wrapper,
+            "validate.sh does not run the hypertree conformance tests")
     for marker in ("python3 -B scripts/slhdsa/check-acvp-provenance.py",
                    "lake build HashSigTest", "--resolve-acvp-parser-executable"):
         require(marker in wrapper, f"validate.sh: missing S01 gate {marker}")
@@ -448,7 +450,7 @@ def check_required_files() -> None:
                    "SLHDSA_POLICY_RUN_IR_FIXTURE=1", "test ! -e"):
         require(marker in wrapper, f"validate.sh: missing compiled-IR gate {marker}")
     validation = (DOCS / "validation.md").read_text(encoding="utf-8")
-    for marker in ("151 unique load-bearing roots", "exactly 17 generated unsafe recursion helpers",
+    for marker in ("160 unique load-bearing roots", "exactly 17 generated unsafe recursion helpers",
                    PARSER_FOCUSED_PARTITION):
         require(marker in validation,
                 f"validation.md: missing permanent audit evidence {marker!r}")
@@ -2194,7 +2196,7 @@ ACVP_TRACE_MODULES = {
         Path("HashSigTest/SLHDSA/ACVP/StrictJson.lean"),
         "20f9aff3f5339e54d7fc5e148fadb0e37d8f4b4bd816938f0a81b4cf7b087089"),
 }
-LAKEFILE_BOUNDARY_SHA256 = "1b881e7fedf324f3640991654d2a500affd62dca8d347fe60eaf6b9c16f61374"
+LAKEFILE_BOUNDARY_SHA256 = "ce6cd16b8335d02ec40e4765579750a58aa99e12757ceb01b1f79c515fa2ab1c"
 FRESH_BUILD_CHILD = "fresh-root-build"
 PARSER_EXPECTED_STDOUT = (
     b"SLH-DSA ACVP parser positive suite: PASS (16 cases)\n"
@@ -5611,7 +5613,7 @@ def validate_s01_matrix_records(
     require("TCB-003" not in tcb
             and tcb.get("TCB-009", {}).get("component") ==
                 "Permanent curated AxiomAudit roots"
-            and "151 unique exact roots" in tcb.get("TCB-009", {}).get("mitigation", ""),
+            and "160 unique exact roots" in tcb.get("TCB-009", {}).get("mitigation", ""),
             "S01: permanent exact-root trust boundary mismatch")
     require(tcb.get("TCB-010", {}).get("component") ==
             "Lean 4.33.1 generated unsafe recursion"

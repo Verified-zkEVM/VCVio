@@ -120,8 +120,10 @@ upper bounds. Those bounds are uniform caps, not claims of exact message-depende
 
 The arbitrary-depth pure and fixed-answer programs now have kernel-checked honest sign/recover/root
 correctness, and the general internal scheme proves sign/verify completeness. The callback-parametric
-`*With` programs still lack an explicit refinement theorem to the query/pure layer, a Medium gap.
-The older `Scheme` d=1 path remains for compatibility and is FIPS-correct when
+XMSS and hypertree `*With` programs have exact public-hash refinements to the explicit-query
+programs and fixed-answer pure interpretations. `HypertreeConformance` exposes the exact typed
+layer/tree/leaf trajectory; approved-position addresses are checked at both the compressed SHA2 and
+full SHAKE boundaries. The older `Scheme` d=1 path remains for compatibility and is FIPS-correct when
 `DigestParts.idxTree_eq_zero_of_d_eq_one` applies. General depth-one signing returns the same
 signature but executes Algorithm 12's discarded final recovery, so its free-oracle trace is longer.
 `ForsConformance` and `Concrete.Fors` instantiate FORS extraction/address/runtime conformance with exact

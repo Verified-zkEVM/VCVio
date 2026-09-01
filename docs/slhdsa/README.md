@@ -13,14 +13,13 @@ not, by itself, an ACVP certificate, a cryptographic reduction, or a deployment 
   vector regressions.
 - WOTS+, XMSS, and FORS construction layers, including FIPS checksum/digest-index pipelines,
   intrinsic signature widths, checked reachable addresses, and bounded concrete regressions.
-- Arbitrary-depth hypertree and internal-scheme programs with typed position evolution, naturality,
-  structural query upper bounds, and honest sign/recover/verify correctness.
+- Arbitrary-depth hypertree and internal-scheme programs with typed position evolution, callback to
+  query/pure refinement, structural query upper bounds, and honest sign/recover/verify correctness.
 - A legacy depth-one compatibility surface, plus non-normative legacy and C13 executable
   regressions.
 
 External pure/pre-hash APIs, codecs, context/OID domain separation, reject behavior, and complete
-ACVP implementation evidence remain open. The callback-parametric arbitrary-depth loops also lack a
-named refinement theorem to the explicit-query/pure interpretations.
+ACVP implementation evidence remain open.
 
 ## Security boundary
 
