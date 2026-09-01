@@ -329,7 +329,10 @@ private def profileOutputsWith (p : Params)
 
 /-- Exercise the six operations through the exact bundle exported for each approved profile.
 Keeping this selector exhaustive makes a mutation in either the family dispatch or any bundle
-field observable in the independently generated profile fingerprint. -/
+field observable in the profile fingerprint. The fingerprints were generated with independent
+tooling (a from-spec Python implementation of §11) but by the same authorship pipeline, so
+they guard against implementation drift rather than a shared misreading of the standard;
+reference-implementation ACVP cross-checks are the KAT slice's responsibility. -/
 private def profileOutputs : FipsParameterSet → ByteArray
   | .SLHDSA_SHA2_128s => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHA2_128s)
       (approvedPrimitives .SLHDSA_SHA2_128s).F (approvedPrimitives .SLHDSA_SHA2_128s).H
