@@ -379,22 +379,20 @@ private lemma simulatedNmaUnifSim_fsUniform_run
         monadLift_self, bind_pure_comp, simulateQ_map, bind_map_left, map_bind]
       exact bind_congr (m := ProbComp) fun u ↦ ih u cache
 
-omit [SampleableType Stmt] [SampleableType Wit] [SampleableType Chal] [Finite Chal] in
-private def cmaSimLoggedLeftOrnament
+omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
+private lemma cmaSimLoggedLeft_preserves_inv
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
-    (pk : Stmt) (sk : Wit) :
-    QueryImpl.StateOrnament
-      (cmaSimLoggedLeftImpl (M := M) (Commit := Commit)
+    (pk : Stmt) (sk : Wit) : ∀ t s,
+    cmaSimFixedKeyInv (M := M) (Commit := Commit) (Chal := Chal)
+      (Stmt := Stmt) (Wit := Wit) pk sk s →
+    ∀ z ∈ support (m := ProbComp)
+      ((cmaSimLoggedLeftImpl (M := M) (Commit := Commit)
         (Chal := Chal) (Resp := Resp) (Stmt := Stmt) (Wit := Wit)
-        hr simT)
-      (simulatedNmaLoggedProbImpl (M := M) (Commit := Commit)
-        (Chal := Chal) (Resp := Resp) simT pk) where
-  inv := cmaSimFixedKeyInv (M := M) (Commit := Commit) (Chal := Chal)
-    (Stmt := Stmt) (Wit := Wit) pk sk
-  proj := cmaSimLoggedProj (M := M) (Commit := Commit)
-    (Chal := Chal) (Stmt := Stmt) (Wit := Wit)
-  preserves_inv := fun t s hs => by
+        hr simT t).run s),
+      cmaSimFixedKeyInv (M := M) (Commit := Commit) (Chal := Chal)
+        (Stmt := Stmt) (Wit := Wit) pk sk z.2 := by
+    intro t s hs
     rcases s with ⟨signed, ⟨⟨log, cache, keypair⟩, bad⟩⟩
     simp only [cmaSimFixedKeyInv] at hs ⊢
     rcases t with ((n | mc) | m)
@@ -456,7 +454,23 @@ private def cmaSimLoggedLeftOrnament
           cases htarget : xCache (m, xCommit)
           all_goals simp [htarget] at hu
           all_goals simp_all
-  project_step := fun t s hs => by
+omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
+private lemma cmaSimLoggedLeft_project_step
+    (hr : GenerableRelation Stmt Wit rel)
+    (simT : Stmt → ProbComp (Commit × Chal × Resp))
+    (pk : Stmt) (sk : Wit) : ∀ t s,
+    cmaSimFixedKeyInv (M := M) (Commit := Commit) (Chal := Chal)
+      (Stmt := Stmt) (Wit := Wit) pk sk s →
+    Prod.map id (cmaSimLoggedProj (M := M) (Commit := Commit)
+        (Chal := Chal) (Stmt := Stmt) (Wit := Wit)) <$>
+      (cmaSimLoggedLeftImpl (M := M) (Commit := Commit)
+        (Chal := Chal) (Resp := Resp) (Stmt := Stmt) (Wit := Wit)
+        hr simT t).run s =
+      (simulatedNmaLoggedProbImpl (M := M) (Commit := Commit)
+        (Chal := Chal) (Resp := Resp) simT pk t).run
+        (cmaSimLoggedProj (M := M) (Commit := Commit)
+          (Chal := Chal) (Stmt := Stmt) (Wit := Wit) s) := by
+    intro t s hs
     rcases s with ⟨signed, ⟨⟨log, cache, keypair⟩, bad⟩⟩
     simp only [cmaSimFixedKeyInv] at hs
     rcases t with ((n | mc) | m)
@@ -525,6 +539,26 @@ private def cmaSimLoggedLeftOrnament
           simp [advCache, htarget]
       | none =>
           simp [advCache, htarget]
+
+omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
+private def cmaSimLoggedLeftOrnament
+    (hr : GenerableRelation Stmt Wit rel)
+    (simT : Stmt → ProbComp (Commit × Chal × Resp))
+    (pk : Stmt) (sk : Wit) :
+    QueryImpl.StateOrnament
+      (cmaSimLoggedLeftImpl (M := M) (Commit := Commit)
+        (Chal := Chal) (Resp := Resp) (Stmt := Stmt) (Wit := Wit)
+        hr simT)
+      (simulatedNmaLoggedProbImpl (M := M) (Commit := Commit)
+        (Chal := Chal) (Resp := Resp) simT pk) where
+  inv := cmaSimFixedKeyInv (M := M) (Commit := Commit) (Chal := Chal)
+    (Stmt := Stmt) (Wit := Wit) pk sk
+  proj := cmaSimLoggedProj (M := M) (Commit := Commit)
+    (Chal := Chal) (Stmt := Stmt) (Wit := Wit)
+  preserves_inv := cmaSimLoggedLeft_preserves_inv (M := M) (Commit := Commit)
+    (Chal := Chal) (Resp := Resp) (Stmt := Stmt) (Wit := Wit) hr simT pk sk
+  project_step := cmaSimLoggedLeft_project_step (M := M) (Commit := Commit)
+    (Chal := Chal) (Resp := Resp) (Stmt := Stmt) (Wit := Wit) hr simT pk sk
 
 omit [DecidableEq M] [DecidableEq Commit] [SampleableType Stmt] [SampleableType Wit]
   [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
