@@ -81,16 +81,14 @@ def isNativeTrust (a : String) : Bool :=
   a == "Lean.ofReduceBool" || a == "Lean.trustCompiler" || (a.splitOn "._native.").length > 1
 
 /-- The native trust this repository has already accepted, listed by full axiom name so
-the acceptance is auditable in source rather than hidden in a JSON allowlist. Both come
-from the ML-DSA / ML-KEM NTT inversion certificates, whose loop kernels the kernel cannot
-unfold in principle (`while` → `Loop.forIn` → `partial`); see the burndown note in
-`LatticeCrypto/{MLDSA,MLKEM}/Concrete/NTT.lean`.
+the acceptance is auditable in source rather than hidden in a JSON allowlist. The remaining
+entry comes from the ML-DSA NTT inversion certificate; ML-KEM now has a structural
+butterfly-stage proof. See the burndown note in `LatticeCrypto/MLDSA/Concrete/NTT.lean`.
 
 Fails closed: if a private-name index or module path shifts, the entry stops matching and
 `--check` goes red until someone consciously re-accepts it. -/
 def grandfatheredNativeTrust : List String :=
-  ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide",
-   "_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]
+  ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]
 
 /-- Axioms that may never be baselined: native-compiler trust beyond what
 `grandfatheredNativeTrust` already accepts. Unlike `sorryAx` debt — honest work in
