@@ -108,6 +108,7 @@ jobs:
           HashSigTest.SLHDSA.DataCodecTests
           HashSigTest.SLHDSA.PrimitiveTests HashSigTest.SLHDSA.WotsEncoding
           HashSigTest.SLHDSA.WotsConstructionTests HashSigTest.SLHDSA.XmssConstructionTests
+          HashSigTest.SLHDSA.ForsConstructionTests
           HashSigTest.SLHDSA.Wots HashSigTest.SLHDSA.Xmss HashSigTest.SLHDSA.Fors
           HashSigTest.SLHDSA.Hypertree HashSigTest.SLHDSA.HypertreeGeneral
           HashSigTest.SLHDSA.Scheme HashSigTest.SLHDSA.GeneralScheme
