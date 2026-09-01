@@ -79,10 +79,13 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Query
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.BatchExtractability
 public import VCVio.CryptoFoundations.MerkleTree.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Map
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
