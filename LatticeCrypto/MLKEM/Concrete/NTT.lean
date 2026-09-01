@@ -85,6 +85,85 @@ private def nInv : Coeff := 3303
 /-- Safe array access with fallback to zero. -/
 private def getZ (a : Array Coeff) (i : Nat) : Coeff := a.getD i 0
 
+private theorem bitRev7_layer_partner :
+    ∀ (s : Fin 7) (g : Fin (2 ^ s.val)),
+      bitRev7 (2 ^ s.val + g.val) +
+          bitRev7 (2 ^ (s.val + 1) - 1 - g.val) = 128 := by
+  decide
+
+private theorem layer_twiddle_index_bounds :
+    ∀ (s : Fin 7) (g : Fin (2 ^ s.val)),
+      2 ^ s.val + g.val < 128 ∧
+        2 ^ (s.val + 1) - 1 - g.val < 128 := by
+  decide
+
+private theorem getZ_zetaArray (i : Nat) (hi : i < 128) :
+    getZ zetaArray i = zeta ^ bitRev7 i := by
+  simp [getZ, zetaArray, hi]
+
+private theorem zeta_pow_128 : (zeta : Coeff) ^ 128 = -1 := by
+  have h2 : (zeta : Coeff) ^ 2 = 289 := by
+    norm_num [MLKEM.zeta, MLKEM.modulus]
+  have h4 : (zeta : Coeff) ^ 4 = 296 := by
+    calc
+      zeta ^ 4 = (zeta ^ 2) ^ 2 := by ring
+      _ = (289 : Coeff) ^ 2 := by rw [h2]
+      _ = 296 := by
+        change ((289 ^ 2 : Nat) : ZMod 3329) = ((296 : Nat) : ZMod 3329)
+        rw [ZMod.natCast_eq_natCast_iff']
+        norm_num
+  have h8 : (zeta : Coeff) ^ 8 = 1062 := by
+    calc
+      zeta ^ 8 = (zeta ^ 4) ^ 2 := by ring
+      _ = (296 : Coeff) ^ 2 := by rw [h4]
+      _ = 1062 := by
+        change ((296 ^ 2 : Nat) : ZMod 3329) = ((1062 : Nat) : ZMod 3329)
+        rw [ZMod.natCast_eq_natCast_iff']
+        norm_num
+  have h16 : (zeta : Coeff) ^ 16 = 2642 := by
+    calc
+      zeta ^ 16 = (zeta ^ 8) ^ 2 := by ring
+      _ = (1062 : Coeff) ^ 2 := by rw [h8]
+      _ = 2642 := by
+        change ((1062 ^ 2 : Nat) : ZMod 3329) = ((2642 : Nat) : ZMod 3329)
+        rw [ZMod.natCast_eq_natCast_iff']
+        norm_num
+  have h32 : (zeta : Coeff) ^ 32 = 2580 := by
+    calc
+      zeta ^ 32 = (zeta ^ 16) ^ 2 := by ring
+      _ = (2642 : Coeff) ^ 2 := by rw [h16]
+      _ = 2580 := by
+        change ((2642 ^ 2 : Nat) : ZMod 3329) = ((2580 : Nat) : ZMod 3329)
+        rw [ZMod.natCast_eq_natCast_iff']
+        norm_num
+  have h64 : (zeta : Coeff) ^ 64 = 1729 := by
+    calc
+      zeta ^ 64 = (zeta ^ 32) ^ 2 := by ring
+      _ = (2580 : Coeff) ^ 2 := by rw [h32]
+      _ = 1729 := by
+        change ((2580 ^ 2 : Nat) : ZMod 3329) = ((1729 : Nat) : ZMod 3329)
+        rw [ZMod.natCast_eq_natCast_iff']
+        norm_num
+  calc
+    zeta ^ 128 = (zeta ^ 64) ^ 2 := by ring
+    _ = (1729 : Coeff) ^ 2 := by rw [h64]
+    _ = -1 := by
+      rw [eq_neg_iff_add_eq_zero]
+      change (((1729 ^ 2 + 1 : Nat) : ZMod 3329)) = 0
+      rw [ZMod.natCast_eq_zero_iff]
+      norm_num
+
+/-- The twiddle used by a forward butterfly and the complementary twiddle
+used by its matching inverse butterfly multiply to `-1`. -/
+private theorem zetaArray_layer_partner :
+    ∀ (s : Fin 7) (g : Fin (2 ^ s.val)),
+      getZ zetaArray (2 ^ s.val + g.val) *
+          getZ zetaArray (2 ^ (s.val + 1) - 1 - g.val) = -1 := by
+  intro s g
+  obtain ⟨hforward, hinverse⟩ := layer_twiddle_index_bounds s g
+  rw [getZ_zetaArray _ hforward, getZ_zetaArray _ hinverse, ← pow_add]
+  rw [bitRev7_layer_partner s g, zeta_pow_128]
+
 /-! ## Forward NTT (Algorithm 9) -/
 
 private def nttLayer (a : Array Coeff) (len : Nat) (k : Nat) : Array Coeff × Nat := Id.run do
