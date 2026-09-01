@@ -49,8 +49,7 @@ namespace MLDSA.Concrete
 
 open MLDSA LatticeCrypto
 
-set_option maxRecDepth 4000
-
+set_option maxRecDepth 1200 in
 /-- The ML-DSA centered infinity norm `polyNorm` agrees with the backend-generic
 `LatticeCrypto.cInfNorm` on the canonical vector backend. This is the bridge that lets the
 `polyNorm`-stated `Primitives.Laws` fields consume the `cInfNorm`-stated rounding lemmas. -/
