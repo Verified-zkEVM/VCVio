@@ -13,10 +13,9 @@ public import HashSig.SLHDSA.HypertreeConformance
 # Hypertree conformance and construction tests
 
 Discriminating one-, two-, and three-layer trajectories and a small arbitrary-depth construction
-exercise the FIPS 205 hypertree boundary. Cheap structural
-checks cover every approved profile; bounded SHA2-128f and SHAKE-128f runs exercise the general
-sign/recover/root path.  These are derived construction regressions, not KAT, ACVP, or security
-reduction evidence.
+exercise the FIPS 205 hypertree boundary. Cheap structural checks cover every approved profile;
+bounded SHA2-128f and SHAKE-128f runs exercise the general sign/recover/root path.  These are
+derived construction regressions, not KAT, ACVP, or security reduction evidence.
 -/
 
 @[expose] public section

@@ -27,6 +27,42 @@ namespace GeneralHypertree
 
 /-! ## Arbitrary-depth callback refinement -/
 
+/-- Exact depth-one callback schedule: Algorithm 12 recovers the sole XMSS signature and discards
+the result before returning it. This is the sole compile-time witness of the FIPS-mandated
+discarded recovery — the pure interpretations are blind to it and every query-count theorem is
+only an upper bound. -/
+theorem signFromPositionWith_one_recover (vp : ValidatedParams)
+    (core : CorePrimitives vp.params) {m : Type → Type*} [Monad m] [LawfulMonad m]
+    (hash : Adrs → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
+    (pos : LayerPosition vp) (hremaining : pos.layer.val + 1 = vp.params.d) :
+    signFromPositionWith vp core hash compress nodeHash sk pk true pos 1 hremaining msg = (do
+      let sig ← xmssSignWith core hash compress nodeHash msg sk pk pos.toAdrs pos.leaf.val
+      let _ ← xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig msg pos.toAdrs
+      return #v[sig]) := by
+  rfl
+
+/-- Exact two-layer callback schedule: the first XMSS root becomes the top-layer message, while
+the top signature is returned without an additional discarded recovery — the compile-time
+witness of Algorithm 12's `j < d - 1` recovery guard. -/
+theorem signFromPositionWith_two (vp : ValidatedParams)
+    (core : CorePrimitives vp.params) {m : Type → Type*} [Monad m] [LawfulMonad m]
+    (hash : Adrs → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
+    (pos : LayerPosition vp) (hremaining : pos.layer.val + 2 = vp.params.d) :
+    signFromPositionWith vp core hash compress nodeHash sk pk false pos 2 hremaining msg = (do
+      let sig0 ← xmssSignWith core hash compress nodeHash msg sk pk pos.toAdrs pos.leaf.val
+      let root0 ←
+        xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig0 msg pos.toAdrs
+      let next := pos.next (by omega)
+      let sig1 ← xmssSignWith core hash compress nodeHash root0 sk pk next.toAdrs next.leaf.val
+      return (#v[sig1]).insertIdx 0 sig0) := by
+  simp [signFromPositionWith]
+
 /-- Callback-parametric general hypertree signing is the canonical explicit-query signer after
 instantiating the three public-hash callbacks. This theorem is intentionally not a simp rule: it
 marks an API boundary rather than choosing a global normal form. -/
