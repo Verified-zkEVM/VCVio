@@ -25,10 +25,6 @@ namespace MLKEM.Concrete
 
 open MLKEM
 
-local instance : NeZero modulus := by
-  unfold modulus
-  exact ⟨by decide⟩
-
 /-! ## Bit-level helpers -/
 
 /-- Extract the `j`-th bit (LSB = 0) of a byte. -/
