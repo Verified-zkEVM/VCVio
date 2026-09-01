@@ -45,8 +45,24 @@ example : forsIdx extractionParams [18, 16] 0 = 4 := by decide
 /-- On `[0x12,0x34]`, the second six-bit FIPS index crosses the byte boundary and is `35`. -/
 example : forsIdx extractionParams [0x12, 0x34] 1 = 35 := by decide
 
+def extractionDigest : ForsDigest extractionParams := #v[0x12, 0x34]
+
+/-- The typed decoder agrees at the byte-boundary fixture, anchoring the arithmetic
+characterization `decodeIndices_get_bigEndian` at concrete cross-byte values `4` and `35`. -/
+example : (decodeIndices extractionParams extractionDigest)[0].val = 4 ∧
+    (decodeIndices extractionParams extractionDigest)[1].val = 35 := by
+  have h0 := decodeIndices_get_bigEndian extractionParams extractionDigest ⟨0, by decide⟩
+  have h1 := decodeIndices_get_bigEndian extractionParams extractionDigest ⟨1, by decide⟩
+  norm_num [extractionParams, extractionDigest, toInt] at h0 h1
+  exact ⟨h0, h1⟩
+
 example : round3ForsIdxLSB extractionParams [18, 16] 0 ≠
     forsIdx extractionParams [18, 16] 0 := by decide
+
+/-- The LSB-first rule also disagrees on the byte-crossing second index, so the discrimination
+does not depend on the non-crossing case alone. -/
+example : round3ForsIdxLSB extractionParams [0x12, 0x34] 1 ≠
+    forsIdx extractionParams [0x12, 0x34] 1 := by decide
 
 def keySelectionParams : Params :=
   { n := 1, h := 4, d := 1, hp := 4, a := 6, k := 2, lgw := 1 }
