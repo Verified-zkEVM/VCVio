@@ -312,7 +312,7 @@ lemma wasQueried_eq_true_of_signingLogContains_eq_true
   exact List.mem_map.mpr ⟨⟨msg, σ⟩, h, rfl⟩
 
 omit [DecidableEq M] [DecidableEq S] in
-/-- The runtime's compatibility measure agrees with its executable point probability on a
+/-- An `SPMF`'s compatibility measure agrees with its executable point probability on a
 singleton. This is the local bridge used by the measure-valued security experiments below. -/
 private lemma compatibilityMeasure_apply_singleton
     (dist : SPMF Bool) (b : Bool) : dist.toMeasure {b} = Pr[= b | dist] := by
@@ -430,7 +430,15 @@ noncomputable def strongUnforgeableAdv.sameMessageAdvantage
 
 /-- Quantitative scheme property needed in addition to EUF-CMA for strong unforgeability: every
 adversary has at most `ε` probability of returning a new valid signature for a message previously
-submitted to the signing oracle. -/
+submitted to the signing oracle.
+
+This quantifies over *all* adversaries with no query or time bound, so it is an
+information-theoretic property. It is satisfiable with small `ε` only for schemes whose valid
+signatures are (statistically close to) unique per message, such as unique-signature schemes.
+For schemes where an unbounded adversary can find a second valid signature — hash-based schemes
+like SLH-DSA included — no `ε < 1` can hold, and quantitative results should instead consume the
+per-adversary partition `strongUnforgeableAdv.advantage_eq_euf_add_sameMessage` directly,
+bounding the same-message term for the specific reduction adversary at hand. -/
 def SameMessageBinding (sigAlg : SignatureAlg (OracleComp spec) M PK SK S)
     (runtime : ProbCompRuntime (OracleComp spec)) (ε : ℝ≥0∞) : Prop :=
   ∀ adv : strongUnforgeableAdv sigAlg, adv.sameMessageAdvantage runtime ≤ ε

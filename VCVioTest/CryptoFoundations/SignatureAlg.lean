@@ -142,21 +142,14 @@ example :
     SignatureAlg.signingLogContains, QueryLog.wasQueried,
     ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
 
-/-- The canonical plain-probability runtime satisfies the pure-return factoring law required by
-the generic joint-execution partition. -/
-private lemma probComp_evalSPMF_bind_pure
-    {α β : Type} (f : α → β) (mx : ProbComp α) :
-    ProbCompRuntime.probComp.evalSPMF (mx >>= fun x => pure (f x)) =
-      f <$> ProbCompRuntime.probComp.evalSPMF mx := by
-  change evalSPMF (mx >>= fun x => pure (f x)) = f <$> evalSPMF mx
-  rw [bind_pure_comp, evalSPMF_map]
-
-/-- Direct executable-runtime consumer of the public exact SUF partition. -/
+/-- Direct executable-runtime consumer of the public exact SUF partition, discharging the
+pull-through hypothesis with the library-level `ProbCompRuntime.probComp_evalSPMF_bind_pure`. -/
 example (adv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg) :
     adv.advantage ProbCompRuntime.probComp =
       adv.toUnforgeableAdv.advantage ProbCompRuntime.probComp +
         adv.sameMessageAdvantage ProbCompRuntime.probComp :=
-  adv.advantage_eq_euf_add_sameMessage ProbCompRuntime.probComp probComp_evalSPMF_bind_pure
+  adv.advantage_eq_euf_add_sameMessage ProbCompRuntime.probComp
+    ProbCompRuntime.probComp_evalSPMF_bind_pure
 
 /-- The toy scheme satisfies the vacuous unit upper bound for the same-message residual. -/
 private lemma twoSignatureBinding :
@@ -172,6 +165,6 @@ example (adv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg) :
     adv.advantage ProbCompRuntime.probComp ≤
       adv.toUnforgeableAdv.advantage ProbCompRuntime.probComp + 1 :=
   adv.advantage_le_euf_add_of_sameMessageBinding ProbCompRuntime.probComp
-    probComp_evalSPMF_bind_pure twoSignatureBinding
+    ProbCompRuntime.probComp_evalSPMF_bind_pure twoSignatureBinding
 
 end SignatureAlgTest
