@@ -56,7 +56,7 @@ def xmssNodeAdrs (adrs : Adrs) (z t : ℕ) : Adrs :=
   ((adrs.setTypeAndClear .tree).setTreeHeight z).setTreeIndex t
 
 /-- An XMSS signature whose WOTS+ component and authentication path have their FIPS-prescribed
-lengths in the type.  Decoding validates malformed paths before the proof-level verifier. -/
+lengths in the type, so no caller-supplied length invariant is needed downstream. -/
 structure XmssSigCore (p : Params) (core : CorePrimitives p) where
   /-- The `len` WOTS+ chain values. -/
   wots : WotsSig p core

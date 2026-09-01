@@ -13,10 +13,9 @@ public import HashSig.SLHDSA.Fors
 Hypertree signatures are represented canonically as exactly `d` intrinsically shaped XMSS
 signatures.  The executable algorithms here are explicit single-layer wrappers requiring a proof
 that `d = 1`.  For the SLH-DSA-SHA2-128-24 parameter set, Algorithms 12–13 then collapse to one
-XMSS layer. The `*M`
-algorithms in this file depend
-only on `CorePrimitives` and issue every public hash through `HasQuery`. The established pure API
-is defined as the literal `simulateQ` interpretation of those programs.
+XMSS layer. The `*M` algorithms in this file depend only on `CorePrimitives` and issue every
+public hash through `HasQuery`. The established pure API is defined as the literal `simulateQ`
+interpretation of those programs.
 
 The `*With` definitions expose the thin callback-parametric composition with XMSS. The
 `htPkFromSigM` recovery function is the computational core of verification; keeping it visible

@@ -17,9 +17,8 @@ layer order.  The signer and root-recovery program share the FIPS low-bits/high-
 recurrence.
 
 The layer-zero root recovery in Algorithm 12 is unconditional.  Consequently the `d = 1` signer
-has the same output as the single-layer compatibility signer but performs the discarded recovery
-prescribed by FIPS.  For `d > 1`, the final (top-layer) XMSS signature is not recovered by the
-signer.
+performs the discarded recovery prescribed by FIPS even though its layer loop body is empty.
+For `d > 1`, the final (top-layer) XMSS signature is not recovered by the signer.
 
 ## References
 
@@ -100,6 +99,8 @@ def recoverFromPositionWith (vp : ValidatedParams) (core : CorePrimitives vp.par
     (pk : core.PkSeed) (pos : LayerPosition vp) :
     (layers : ℕ) → pos.layer.val + layers = vp.params.d → core.Y →
       Vector (XmssSig vp.params core) layers → m core.Y
+  -- The zero case only makes the match total: `pos.layer.isLt` contradicts
+  -- `pos.layer.val + 0 = d`, so no caller can supply its proof argument.
   | 0, _, msg, _ => pure msg
   | 1, _, msg, sigs =>
       xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sigs.head msg pos.toAdrs
@@ -504,7 +505,8 @@ theorem pkFromSig_eq_recoverFromPosition (vp : ValidatedParams)
   cases prims
   rfl
 
-/-- Key generation's general-hypertree root is the top-layer XMSS root. -/
+/-- The general-hypertree root — the value FIPS 205 Algorithm 18 publishes as `PK.root` — is
+the top-layer XMSS root at tree zero. -/
 @[simp]
 theorem root_eq_xmssRoot (vp : ValidatedParams) (prims : Primitives vp.params)
     (sk : prims.SkSeed) (pk : prims.PkSeed) :
