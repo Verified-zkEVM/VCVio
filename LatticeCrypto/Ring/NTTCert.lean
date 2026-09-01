@@ -183,6 +183,37 @@ disjointness, and uniqueness in the form needed by a butterfly-stage proof. -/
 structure ButterflyLayout (Pair : Type v) (Coord : Type w) where
   equiv : Pair × Bool ≃ Coord
 
+/-- The standard blocked NTT layout.  A pair is a block number and an offset
+inside that block; its coordinates are
+`group * (2 * len) + offset` and that index plus `len`.
+
+This layout is directly usable by the nested `start`/`j` loops in the FIPS 203
+and FIPS 204 kernels and packages their coverage/disjointness arithmetic. -/
+def blockLayout (groups len : Nat) :
+    ButterflyLayout (Fin groups × Fin len) (Fin (groups * (2 * len))) where
+  equiv := (Equiv.prodAssoc (Fin groups) (Fin len) Bool).trans
+    ((Equiv.refl (Fin groups)).prodCongr (Equiv.prodComm (Fin len) Bool) |>.trans
+      ((Equiv.refl (Fin groups)).prodCongr
+        ((finTwoEquiv.symm.prodCongr (Equiv.refl (Fin len))).trans finProdFinEquiv) |>.trans
+          finProdFinEquiv))
+
+@[simp] theorem blockLayout_left_val (groups len : Nat)
+    (group : Fin groups) (offset : Fin len) :
+    ((blockLayout groups len).equiv ((group, offset), false)).val =
+      group.val * (2 * len) + offset.val := by
+  have h : offset.val + 2 * len * group.val = group.val * (2 * len) + offset.val := by
+    ac_rfl
+  simpa [blockLayout, finProdFinEquiv, finTwoEquiv] using h
+
+@[simp] theorem blockLayout_right_val (groups len : Nat)
+    (group : Fin groups) (offset : Fin len) :
+    ((blockLayout groups len).equiv ((group, offset), true)).val =
+      group.val * (2 * len) + len + offset.val := by
+  have h : offset.val + len + 2 * len * group.val =
+      group.val * (2 * len) + len + offset.val := by
+    ac_rfl
+  simpa [blockLayout, finProdFinEquiv, finTwoEquiv] using h
+
 /-- The forward two-coordinate butterfly `(u, v) ↦ (u + z*v, u - z*v)`. -/
 def forwardButterfly (z u v : R) : Bool → R
   | false => u + z * v
@@ -367,29 +398,5 @@ theorem inverseStages_forwardStages {Coord : Type w}
       funext coord
       simp [scaleCoeffs]
       ring
-
-/-- `inverse` is a left inverse to `forward` up to a pointwise scalar. -/
-def ScaledLeftInverse {Coord : Type w} (c : R)
-    (inverse forward : (Coord → R) → (Coord → R)) : Prop :=
-  ∀ input, inverse (forward input) = scaleCoeffs c input
-
-/-- Compose two scaled inverse certificates.  This is the induction step used
-to turn per-layer butterfly facts into an end-to-end NTT roundtrip law. -/
-theorem ScaledLeftInverse.comp
-    {Coord : Type w} {cOuter cInner : R}
-    {inverseOuter forwardOuter inverseInner forwardInner :
-      (Coord → R) → (Coord → R)}
-    (hOuter : ScaledLeftInverse cOuter inverseOuter forwardOuter)
-    (hInner : ScaledLeftInverse cInner inverseInner forwardInner)
-    (hOuterScale : ∀ c input,
-      inverseOuter (scaleCoeffs c input) = scaleCoeffs c (inverseOuter input)) :
-    ScaledLeftInverse (cInner * cOuter)
-      (inverseOuter ∘ inverseInner) (forwardInner ∘ forwardOuter) := by
-  intro input
-  change inverseOuter (inverseInner (forwardInner (forwardOuter input))) = _
-  rw [hInner (forwardOuter input), hOuterScale, hOuter input]
-  funext coord
-  simp [scaleCoeffs]
-  ring
 
 end LatticeCrypto.NTTCert
