@@ -22,7 +22,7 @@ distinct candidate labels: every populated key contributes its two ordered child
 checkpoint contributes its root. This shared-log cap is strictly sharper than multiplying the
 single-tree `min (2L - 1) (2k + 1)` cap by the number of checkpoints.
 
-The safe numerator is a finite maximum over fresh adversarial inputs across every commitment
+The error numerator is a finite maximum over fresh adversarial inputs across every commitment
 phase and terminal opening production. It deliberately overcharges queries made before a target
 exists. `MultiExtractability.OnlineBound` proves the checkpoint-aware stopping recurrence for this
 envelope; this module still does not identify it with a tighter textbook potential. Coarse closed
@@ -37,141 +37,131 @@ open OracleComp
 
 /-- Sharp structural cap on the union of labels reachable in all checkpoint extractions from a
 shared log containing `keyCount` populated complete queries. -/
-def sharedTargetCount (nodeBudget checkpointCount keyCount : ℕ) : ℕ :=
+def sharedExtractedLabelCountBound (nodeBudget checkpointCount keyCount : ℕ) : ℕ :=
   min nodeBudget (2 * keyCount + checkpointCount)
 
-/-- Existing terminal-suffix potential. This charges target hits only after the adaptive prefix
-has terminated and is therefore suitable for a single checkpoint, but not by itself for
-checkpoint evolution during a multi-commitment prefix. -/
-def terminalSuffixPotential
-    (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) : ℕ :=
-  adaptivePrefixPotential
-    (sharedTargetCount nodeBudget checkpointCount)
-    verifierOverhead remaining cached
-
-/-- Multi-checkpoint stopping energy after `prefixMisses` fresh inputs. In addition to cache
+/-- Multi-checkpoint error numerator after `prefixMisses` fresh inputs. In addition to cache
 collision terms, the shared target set is charged against the entire remaining adversarial budget:
 a later commitment query may hit a target of an earlier checkpoint even before the terminal
 opening suffix begins. -/
-def multiCheckpointEnergy
+def multiCheckpointErrorNumeratorAtMissCount
     (nodeBudget checkpointCount verifierOverhead remaining cached prefixMisses : ℕ) : ℕ :=
   prefixMisses * cached + prefixMisses.choose 2 +
-    sharedTargetCount nodeBudget checkpointCount (cached + prefixMisses) *
+    sharedExtractedLabelCountBound nodeBudget checkpointCount (cached + prefixMisses) *
       (remaining + verifierOverhead)
 
-/-- Finite maximum of the multi-checkpoint energy over every feasible number of fresh prefix
-inputs. A probability theorem consuming this budget must separately prove the checkpoint-aware
-stopping lemma; unlike `terminalSuffixPotential`, this definition does not silently reuse the
-single-checkpoint adaptive-prefix theorem. -/
-def multiExtractabilitySafePotential
+/-- Finite maximum of the multi-checkpoint error numerator over every feasible number of fresh
+prefix inputs. -/
+def multiCheckpointErrorNumerator
     (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) : ℕ :=
   (Finset.range (remaining + 1)).sup fun prefixMisses =>
-    multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead remaining cached
-      prefixMisses
+    multiCheckpointErrorNumeratorAtMissCount nodeBudget checkpointCount verifierOverhead
+      remaining cached prefixMisses
 
 /-- Unrelaxed shared-ROM error numerator from an empty cache. -/
-def multiExtractabilitySafeNumerator
+def multiCheckpointROMErrorNumerator
     (nodeBudget checkpointCount verifierOverhead queryBound : ℕ) : ℕ :=
-  multiExtractabilitySafePotential
+  multiCheckpointErrorNumerator
     nodeBudget checkpointCount verifierOverhead queryBound 0
 
 /-- The safe, unrelaxed numerator is the finite maximum over every feasible number of fresh
 adversarial inputs.
 This theorem is the intended rewrite interface for audits and downstream arithmetic relaxations. -/
-theorem multiExtractabilitySafeNumerator_eq_sup
+theorem multiCheckpointROMErrorNumerator_eq_sup
     (nodeBudget checkpointCount verifierOverhead queryBound : ℕ) :
-    multiExtractabilitySafeNumerator
+    multiCheckpointROMErrorNumerator
         nodeBudget checkpointCount verifierOverhead queryBound =
       (Finset.range (queryBound + 1)).sup fun prefixMisses =>
         prefixMisses.choose 2 +
           min nodeBudget (2 * prefixMisses + checkpointCount) *
             (queryBound + verifierOverhead) := by
-  simp [multiExtractabilitySafeNumerator, multiExtractabilitySafePotential,
-    multiCheckpointEnergy, sharedTargetCount]
+  simp [multiCheckpointROMErrorNumerator, multiCheckpointErrorNumerator,
+    multiCheckpointErrorNumeratorAtMissCount, sharedExtractedLabelCountBound]
 
 /-- Shared extraction never exposes more candidates than the total node budget. -/
-theorem sharedTargetCount_le_nodeBudget
+theorem sharedExtractedLabelCountBound_le_nodeBudget
     (nodeBudget checkpointCount keyCount : ℕ) :
-    sharedTargetCount nodeBudget checkpointCount keyCount ≤ nodeBudget :=
+    sharedExtractedLabelCountBound nodeBudget checkpointCount keyCount ≤ nodeBudget :=
   Nat.min_le_left _ _
 
 /-- Shared extraction never exposes more than two children per populated complete query plus one
 root per checkpoint. -/
-theorem sharedTargetCount_le_querySupport
+theorem sharedExtractedLabelCountBound_le_querySupport
     (nodeBudget checkpointCount keyCount : ℕ) :
-    sharedTargetCount nodeBudget checkpointCount keyCount ≤ 2 * keyCount + checkpointCount :=
+    sharedExtractedLabelCountBound nodeBudget checkpointCount keyCount ≤
+      2 * keyCount + checkpointCount :=
   Nat.min_le_right _ _
 
 /-- The safe shared-target cap is monotone as fresh complete-query keys accumulate. -/
-theorem sharedTargetCount_mono_keyCount
+theorem sharedExtractedLabelCountBound_mono_keyCount
     (nodeBudget checkpointCount : ℕ) :
-    Monotone (sharedTargetCount nodeBudget checkpointCount) := by
+    Monotone (sharedExtractedLabelCountBound nodeBudget checkpointCount) := by
   intro left right hle
-  unfold sharedTargetCount
+  unfold sharedExtractedLabelCountBound
   gcongr
 
 /-- The shared target cap is monotone in both global resource envelopes. -/
-theorem sharedTargetCount_mono_budget
+theorem sharedExtractedLabelCountBound_mono_budget
     {leftNodeBudget rightNodeBudget leftCheckpointCount rightCheckpointCount keyCount : ℕ}
     (hnodes : leftNodeBudget ≤ rightNodeBudget)
     (hcheckpoints : leftCheckpointCount ≤ rightCheckpointCount) :
-    sharedTargetCount leftNodeBudget leftCheckpointCount keyCount ≤
-      sharedTargetCount rightNodeBudget rightCheckpointCount keyCount := by
-  unfold sharedTargetCount
+    sharedExtractedLabelCountBound leftNodeBudget leftCheckpointCount keyCount ≤
+      sharedExtractedLabelCountBound rightNodeBudget rightCheckpointCount keyCount := by
+  unfold sharedExtractedLabelCountBound
   gcongr
 
 /-- Enlarging the global node/checkpoint envelope can only enlarge the online energy. -/
-theorem multiCheckpointEnergy_mono_budget
+theorem multiCheckpointErrorNumeratorAtMissCount_mono_budget
     {leftNodeBudget rightNodeBudget leftCheckpointCount rightCheckpointCount : ℕ}
     (hnodes : leftNodeBudget ≤ rightNodeBudget)
     (hcheckpoints : leftCheckpointCount ≤ rightCheckpointCount)
     (verifierOverhead remaining cached prefixMisses : ℕ) :
-    multiCheckpointEnergy leftNodeBudget leftCheckpointCount verifierOverhead
+    multiCheckpointErrorNumeratorAtMissCount leftNodeBudget leftCheckpointCount verifierOverhead
         remaining cached prefixMisses ≤
-      multiCheckpointEnergy rightNodeBudget rightCheckpointCount verifierOverhead
+      multiCheckpointErrorNumeratorAtMissCount rightNodeBudget rightCheckpointCount verifierOverhead
         remaining cached prefixMisses := by
-  unfold multiCheckpointEnergy
+  unfold multiCheckpointErrorNumeratorAtMissCount
   gcongr
-  exact sharedTargetCount_mono_budget hnodes hcheckpoints
+  exact sharedExtractedLabelCountBound_mono_budget hnodes hcheckpoints
 
 /-- Enlarging the global node/checkpoint envelope can only enlarge the safe potential. -/
-theorem multiExtractabilitySafePotential_mono_budget
+theorem multiCheckpointErrorNumerator_mono_budget
     {leftNodeBudget rightNodeBudget leftCheckpointCount rightCheckpointCount : ℕ}
     (hnodes : leftNodeBudget ≤ rightNodeBudget)
     (hcheckpoints : leftCheckpointCount ≤ rightCheckpointCount)
     (verifierOverhead remaining cached : ℕ) :
-    multiExtractabilitySafePotential leftNodeBudget leftCheckpointCount verifierOverhead
+    multiCheckpointErrorNumerator leftNodeBudget leftCheckpointCount verifierOverhead
         remaining cached ≤
-      multiExtractabilitySafePotential rightNodeBudget rightCheckpointCount verifierOverhead
+      multiCheckpointErrorNumerator rightNodeBudget rightCheckpointCount verifierOverhead
         remaining cached := by
-  unfold multiExtractabilitySafePotential
+  unfold multiCheckpointErrorNumerator
   apply Finset.sup_mono_fun
   intro prefixMisses _
-  exact multiCheckpointEnergy_mono_budget hnodes hcheckpoints
+  exact multiCheckpointErrorNumeratorAtMissCount_mono_budget hnodes hcheckpoints
     verifierOverhead remaining cached prefixMisses
 
 /-- More remaining adversarial syntax can only enlarge the online energy. -/
-theorem multiCheckpointEnergy_mono_remaining
+theorem multiCheckpointErrorNumeratorAtMissCount_mono_remaining
     (nodeBudget checkpointCount verifierOverhead cached prefixMisses : ℕ) :
     Monotone fun remaining =>
-      multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+      multiCheckpointErrorNumeratorAtMissCount nodeBudget checkpointCount verifierOverhead
         remaining cached prefixMisses := by
   intro left right hremaining
-  unfold multiCheckpointEnergy
+  unfold multiCheckpointErrorNumeratorAtMissCount
   apply Nat.add_le_add_left
   exact Nat.mul_le_mul_left _ (Nat.add_le_add_right hremaining verifierOverhead)
 
 /-- The safe potential is monotone in the remaining adversarial query budget. -/
-theorem multiExtractabilitySafePotential_mono_remaining
+theorem multiCheckpointErrorNumerator_mono_remaining
     (nodeBudget checkpointCount verifierOverhead cached : ℕ) :
     Monotone fun remaining =>
-      multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+      multiCheckpointErrorNumerator nodeBudget checkpointCount verifierOverhead
         remaining cached := by
   intro left right hremaining
-  unfold multiExtractabilitySafePotential
+  unfold multiCheckpointErrorNumerator
   apply Finset.sup_le
   intro prefixMisses hprefix
-  apply (multiCheckpointEnergy_mono_remaining nodeBudget checkpointCount
+  apply (multiCheckpointErrorNumeratorAtMissCount_mono_remaining nodeBudget checkpointCount
     verifierOverhead cached prefixMisses hremaining).trans
   apply Finset.le_sup
   simp only [Finset.mem_range] at hprefix ⊢
@@ -180,13 +170,13 @@ theorem multiExtractabilitySafePotential_mono_remaining
 /-- Fresh-miss recurrence behind the safe online envelope. The local step pays collision against
 the existing cache and a hit in the target set predictable before sampling; the continuation then
 uses the enlarged cache. -/
-theorem multiCheckpointEnergy_miss_step
+theorem multiCheckpointErrorNumeratorAtMissCount_miss_step
     (nodeBudget checkpointCount verifierOverhead remaining cached continuationMisses : ℕ)
     (hremaining : 0 < remaining) :
-    cached + sharedTargetCount nodeBudget checkpointCount cached +
-        multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+    cached + sharedExtractedLabelCountBound nodeBudget checkpointCount cached +
+        multiCheckpointErrorNumeratorAtMissCount nodeBudget checkpointCount verifierOverhead
           (remaining - 1) (cached + 1) continuationMisses ≤
-      multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+      multiCheckpointErrorNumeratorAtMissCount nodeBudget checkpointCount verifierOverhead
         remaining cached (continuationMisses + 1) := by
   have hkeys : cached + 1 + continuationMisses =
       cached + (continuationMisses + 1) := by omega
@@ -195,20 +185,20 @@ theorem multiCheckpointEnergy_miss_step
     rw [show continuationMisses + 1 = continuationMisses.succ by omega,
       Nat.choose_succ_succ]
     simp
-  have htarget := sharedTargetCount_mono_keyCount nodeBudget checkpointCount
+  have htarget := sharedExtractedLabelCountBound_mono_keyCount nodeBudget checkpointCount
     (show cached ≤ cached + (continuationMisses + 1) by omega)
   have htargetTerm :
-      sharedTargetCount nodeBudget checkpointCount cached +
-          sharedTargetCount nodeBudget checkpointCount
+      sharedExtractedLabelCountBound nodeBudget checkpointCount cached +
+          sharedExtractedLabelCountBound nodeBudget checkpointCount
               (cached + (continuationMisses + 1)) *
             (remaining - 1 + verifierOverhead) ≤
-        sharedTargetCount nodeBudget checkpointCount
+        sharedExtractedLabelCountBound nodeBudget checkpointCount
             (cached + (continuationMisses + 1)) *
           (remaining + verifierOverhead) := by
     calc
-      _ ≤ sharedTargetCount nodeBudget checkpointCount
+      _ ≤ sharedExtractedLabelCountBound nodeBudget checkpointCount
               (cached + (continuationMisses + 1)) +
-            sharedTargetCount nodeBudget checkpointCount
+            sharedExtractedLabelCountBound nodeBudget checkpointCount
                 (cached + (continuationMisses + 1)) *
               (remaining - 1 + verifierOverhead) :=
         Nat.add_le_add_right htarget _
@@ -223,64 +213,65 @@ theorem multiCheckpointEnergy_miss_step
     rw [hchoose]
     simp only [Nat.mul_add, Nat.add_mul, Nat.mul_one, Nat.one_mul]
     omega
-  unfold multiCheckpointEnergy
+  unfold multiCheckpointErrorNumeratorAtMissCount
   rw [hkeys]
   calc
-    cached + sharedTargetCount nodeBudget checkpointCount cached +
+    cached + sharedExtractedLabelCountBound nodeBudget checkpointCount cached +
           (continuationMisses * (cached + 1) + continuationMisses.choose 2 +
-            sharedTargetCount nodeBudget checkpointCount
+            sharedExtractedLabelCountBound nodeBudget checkpointCount
                 (cached + (continuationMisses + 1)) *
               (remaining - 1 + verifierOverhead)) =
         (cached + continuationMisses * (cached + 1) + continuationMisses.choose 2) +
-          (sharedTargetCount nodeBudget checkpointCount cached +
-            sharedTargetCount nodeBudget checkpointCount
+          (sharedExtractedLabelCountBound nodeBudget checkpointCount cached +
+            sharedExtractedLabelCountBound nodeBudget checkpointCount
                 (cached + (continuationMisses + 1)) *
               (remaining - 1 + verifierOverhead)) := by ac_rfl
     _ ≤ ((continuationMisses + 1) * cached + (continuationMisses + 1).choose 2) +
-          sharedTargetCount nodeBudget checkpointCount
+          sharedExtractedLabelCountBound nodeBudget checkpointCount
               (cached + (continuationMisses + 1)) *
             (remaining + verifierOverhead) :=
       Nat.add_le_add (le_of_eq hcollision) htargetTerm
     _ = _ := rfl
 
-private theorem multiCheckpointEnergy_zero
+private theorem multiCheckpointErrorNumeratorAtMissCount_zero
     (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) :
-    multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead remaining cached 0 =
-      sharedTargetCount nodeBudget checkpointCount cached *
+    multiCheckpointErrorNumeratorAtMissCount nodeBudget checkpointCount verifierOverhead
+        remaining cached 0 =
+      sharedExtractedLabelCountBound nodeBudget checkpointCount cached *
         (remaining + verifierOverhead) := by
-  simp [multiCheckpointEnergy]
+  simp [multiCheckpointErrorNumeratorAtMissCount]
 
 /-- Terminal target-hit budget is contained in the safe finite maximum. -/
-theorem multiExtractabilitySafePotential_terminal_le
+theorem multiCheckpointErrorNumerator_terminal_le
     (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) :
-    sharedTargetCount nodeBudget checkpointCount cached *
+    sharedExtractedLabelCountBound nodeBudget checkpointCount cached *
         (remaining + verifierOverhead) ≤
-      multiExtractabilitySafePotential
+      multiCheckpointErrorNumerator
         nodeBudget checkpointCount verifierOverhead remaining cached := by
-  rw [← multiCheckpointEnergy_zero]
+  rw [← multiCheckpointErrorNumeratorAtMissCount_zero]
   exact Finset.le_sup (by simp)
 
-private theorem multiCheckpointEnergy_hit_le
+private theorem multiCheckpointErrorNumeratorAtMissCount_hit_le
     (nodeBudget checkpointCount verifierOverhead remaining cached misses : ℕ) :
-    multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+    multiCheckpointErrorNumeratorAtMissCount nodeBudget checkpointCount verifierOverhead
         (remaining - 1) cached misses ≤
-      multiCheckpointEnergy nodeBudget checkpointCount verifierOverhead
+      multiCheckpointErrorNumeratorAtMissCount nodeBudget checkpointCount verifierOverhead
         remaining cached misses := by
-  unfold multiCheckpointEnergy
+  unfold multiCheckpointErrorNumeratorAtMissCount
   gcongr
   omega
 
 /-- A cached query consumes remaining budget without increasing the cache or target cap. -/
-theorem multiExtractabilitySafePotential_hit_le
+theorem multiCheckpointErrorNumerator_hit_le
     (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ) :
-    multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+    multiCheckpointErrorNumerator nodeBudget checkpointCount verifierOverhead
         (remaining - 1) cached ≤
-      multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+      multiCheckpointErrorNumerator nodeBudget checkpointCount verifierOverhead
         remaining cached := by
-  unfold multiExtractabilitySafePotential
+  unfold multiCheckpointErrorNumerator
   apply Finset.sup_le
   intro misses hmisses
-  apply (multiCheckpointEnergy_hit_le nodeBudget checkpointCount verifierOverhead
+  apply (multiCheckpointErrorNumeratorAtMissCount_hit_le nodeBudget checkpointCount verifierOverhead
     remaining cached misses).trans
   apply Finset.le_sup
   simp only [Finset.mem_range] at hmisses ⊢
@@ -288,32 +279,32 @@ theorem multiExtractabilitySafePotential_hit_le
 
 /-- One fresh miss pays collision plus predictable live-target hit, then recurs with one more
 populated key and one fewer query. -/
-theorem multiExtractabilitySafePotential_miss_le
+theorem multiCheckpointErrorNumerator_miss_le
     (nodeBudget checkpointCount verifierOverhead remaining cached : ℕ)
     (hremaining : 0 < remaining) :
-    cached + sharedTargetCount nodeBudget checkpointCount cached +
-        multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+    cached + sharedExtractedLabelCountBound nodeBudget checkpointCount cached +
+        multiCheckpointErrorNumerator nodeBudget checkpointCount verifierOverhead
           (remaining - 1) (cached + 1) ≤
-      multiExtractabilitySafePotential nodeBudget checkpointCount verifierOverhead
+      multiCheckpointErrorNumerator nodeBudget checkpointCount verifierOverhead
         remaining cached := by
-  unfold multiExtractabilitySafePotential
+  unfold multiCheckpointErrorNumerator
   rw [Finset.add_sup (by simp)]
   apply Finset.sup_le
   intro continuationMisses hmisses
-  apply (multiCheckpointEnergy_miss_step nodeBudget checkpointCount verifierOverhead
-    remaining cached continuationMisses hremaining).trans
+  apply (multiCheckpointErrorNumeratorAtMissCount_miss_step nodeBudget checkpointCount
+    verifierOverhead remaining cached continuationMisses hremaining).trans
   apply Finset.le_sup
   simp only [Finset.mem_range] at hmisses ⊢
   omega
 
 /-- Coarse closed form obtained from the safe finite maximum by separately maximizing the
 birthday and target-hit terms. -/
-theorem multiExtractabilitySafeNumerator_le_coarse
+theorem multiCheckpointROMErrorNumerator_le_coarse
     (nodeBudget checkpointCount verifierOverhead queryBound : ℕ) :
-    multiExtractabilitySafeNumerator
+    multiCheckpointROMErrorNumerator
         nodeBudget checkpointCount verifierOverhead queryBound ≤
       queryBound.choose 2 + nodeBudget * (queryBound + verifierOverhead) := by
-  rw [multiExtractabilitySafeNumerator_eq_sup]
+  rw [multiCheckpointROMErrorNumerator_eq_sup]
   apply Finset.sup_le
   intro prefixMisses hprefix
   simp only [Finset.mem_range] at hprefix
@@ -326,12 +317,12 @@ theorem multiExtractabilitySafeNumerator_le_coarse
 
 /-- A still simpler quadratic relaxation, useful when a consumer does not want binomial
 coefficients in its public statement. -/
-theorem multiExtractabilitySafeNumerator_le_quadratic
+theorem multiCheckpointROMErrorNumerator_le_quadratic
     (nodeBudget checkpointCount verifierOverhead queryBound : ℕ) :
-    multiExtractabilitySafeNumerator
+    multiCheckpointROMErrorNumerator
         nodeBudget checkpointCount verifierOverhead queryBound ≤
       queryBound * queryBound + nodeBudget * (queryBound + verifierOverhead) := by
-  exact (multiExtractabilitySafeNumerator_le_coarse
+  exact (multiCheckpointROMErrorNumerator_le_coarse
     nodeBudget checkpointCount verifierOverhead queryBound).trans (by
       gcongr
       rw [Nat.choose_two_right]

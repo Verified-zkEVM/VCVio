@@ -132,7 +132,7 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
         ∃ entry ∈ currentLog, entry.1 = input ∧ entry.2 = value) →
       Good currentCache currentLog →
       (targets currentLog).card ≤
-        sharedTargetCount nodeBudget checkpointCount currentCached)
+        sharedExtractedLabelCountBound nodeBudget checkpointCount currentCached)
     (hterminal : ∀ (x : X) (terminalRemaining terminalCached : ℕ)
         (terminalCache : (Query →ₒ Y).QueryCache)
         (terminalLog : (Query →ₒ Y).QueryLog),
@@ -146,13 +146,13 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
       Good terminalCache terminalLog →
       Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
           (suffix x terminalLog)).run terminalCache] ≤
-        (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+        (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
     Pr[fun z => win z.1 |
       adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
         suffix prefixComp cache log] ≤
-      (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+      (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
         remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
   let cardY := (Nat.card Y : ENNReal)
   induction prefixComp using OracleComp.inductionOn generalizing remaining cached cache log with
@@ -162,7 +162,8 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
         hno hcacheBound hlogCache hcacheLog hgood
   | query_bind query next ih =>
       have hqueryBound : IsTotalQueryBound
-          ((liftM ((Query →ₒ Y).query query) : OracleComp (Query →ₒ Y) _) >>= fun response =>
+          ((liftM ((Query →ₒ Y).query query) : OracleComp (Query →ₒ Y) _) >>=
+            fun response =>
             loggedAccountingBind (next response) (log ++ [⟨query, response⟩])
               continuation) remaining := by
         rw [← loggedAccountingBind_query_bind]
@@ -200,7 +201,7 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
           (hgoodHit cache log query response hgood hresponse hcacheLog)
         refine hrec.trans ?_
         apply mul_le_mul_of_nonneg_right
-        · exact_mod_cast multiExtractabilitySafePotential_hit_le
+        · exact_mod_cast multiCheckpointErrorNumerator_hit_le
             nodeBudget checkpointCount overhead remaining cached
         · exact zero_le
       · push Not at hhit
@@ -221,7 +222,7 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
             CacheHasCollision (cache.cacheQuery query response) ∨
               response ∈ targets log |
             (liftM ((Query →ₒ Y).query query) : OracleComp (Query →ₒ Y) _)] ≤
-              ((cached + sharedTargetCount nodeBudget checkpointCount cached : ℕ) :
+              ((cached + sharedExtractedLabelCountBound nodeBudget checkpointCount cached : ℕ) :
                 ENNReal) * cardY⁻¹ := by
           classical
           let _ : Fintype Y := OracleSpec.instFintypeRangeOfFintype query
@@ -234,7 +235,7 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
               (Finset.univ.filter fun response : Y =>
                 CacheHasCollision (cache.cacheQuery query response) ∨
                   response ∈ targets log).card ≤
-                cached + sharedTargetCount nodeBudget checkpointCount cached := by
+                cached + sharedExtractedLabelCountBound nodeBudget checkpointCount cached := by
             calc
               _ ≤ (Finset.univ.filter fun response : Y =>
                       CacheHasCollision (cache.cacheQuery query response)).card +
@@ -253,7 +254,7 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
                     have heq : (Finset.univ.filter fun response : Y =>
                         response ∈ targets log) = targets log := by ext; simp
                     exact le_of_eq (congrArg Finset.card heq))
-              _ ≤ cached + sharedTargetCount nodeBudget checkpointCount cached :=
+              _ ≤ cached + sharedExtractedLabelCountBound nodeBudget checkpointCount cached :=
                 Nat.add_le_add_left htargets cached
           have hcard :
               @Fintype.card ((Query →ₒ Y).Range query)
@@ -271,12 +272,12 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
                   response ∈ targets log).card : ENNReal) /
                 @Fintype.card ((Query →ₒ Y).Range query)
                   (OracleSpec.instFintypeRangeOfFintype query)
-              ≤ ((cached + sharedTargetCount nodeBudget checkpointCount cached : ℕ) :
-                    ENNReal) /
+              ≤ ((cached + sharedExtractedLabelCountBound nodeBudget checkpointCount
+                    cached : ℕ) : ENNReal) /
                   @Fintype.card ((Query →ₒ Y).Range query)
                     (OracleSpec.instFintypeRangeOfFintype query) :=
                 ENNReal.div_le_div_right (by exact_mod_cast horCard) _
-            _ = ((cached + sharedTargetCount nodeBudget checkpointCount cached : ℕ) :
+            _ = ((cached + sharedExtractedLabelCountBound nodeBudget checkpointCount cached : ℕ) :
                   ENNReal) * cardY⁻¹ := by
               rw [hcard, ENNReal.div_eq_inv_mul, mul_comm]
         have hcontinuation : ∀ response ∈ support
@@ -287,7 +288,7 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
               adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
                 suffix (next response) (cache.cacheQuery query response)
                 (log ++ [⟨query, response⟩])] ≤
-              (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+              (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
                 (remaining - 1) (cached + 1) : ENNReal) * cardY⁻¹ := by
           intro response _ hsafe
           have hcacheBound' : ∃ keys : Finset Query, keys.card ≤ cached + 1 ∧
@@ -347,9 +348,10 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
             ¬ (CacheHasCollision (cache.cacheQuery query response) ∨
               response ∈ targets log))
           (q := fun z => ¬ win z.1)
-          (ε₁ := ((cached + sharedTargetCount nodeBudget checkpointCount cached : ℕ) :
-            ENNReal) * cardY⁻¹)
-          (ε₂ := (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+          (ε₁ :=
+            ((cached + sharedExtractedLabelCountBound nodeBudget checkpointCount cached : ℕ) :
+                ENNReal) * cardY⁻¹)
+          (ε₂ := (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
             (remaining - 1) (cached + 1) : ENNReal) * cardY⁻¹)
           (by simpa only [not_not] using hbad)
           (by simpa only [not_not] using hcontinuation)
@@ -357,12 +359,11 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
         refine hcombined.trans ?_
         rw [← add_mul]
         apply mul_le_mul_of_nonneg_right
-        · exact_mod_cast multiExtractabilitySafePotential_miss_le
+        · exact_mod_cast multiCheckpointErrorNumerator_miss_le
             nodeBudget checkpointCount overhead remaining cached hremaining
         · exact zero_le
 
-/-- Compatibility specialization where structural accounting does not depend on the accumulated
-log. -/
+/-- Specialization where structural accounting does not depend on the accumulated log. -/
 theorem probEvent_onlineAdaptivePrefixRunFrom_le
     [DecidableEq Query] [DecidableEq Y] [Finite Y] [Inhabited Y]
     [IsUniformSpec (Query →ₒ Y)]
@@ -407,7 +408,7 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_le
         ∃ entry ∈ currentLog, entry.1 = input ∧ entry.2 = value) →
       Good currentCache currentLog →
       (targets currentLog).card ≤
-        sharedTargetCount nodeBudget checkpointCount currentCached)
+        sharedExtractedLabelCountBound nodeBudget checkpointCount currentCached)
     (hterminal : ∀ (x : X) (terminalRemaining terminalCached : ℕ)
         (terminalCache : (Query →ₒ Y).QueryCache)
         (terminalLog : (Query →ₒ Y).QueryLog),
@@ -421,13 +422,13 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_le
       Good terminalCache terminalLog →
       Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
           (suffix x terminalLog)).run terminalCache] ≤
-        (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+        (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
     Pr[fun z => win z.1 |
       adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
         suffix prefixComp cache log] ≤
-      (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+      (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
         remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
   apply probEvent_onlineAdaptivePrefixRunFrom_logged_le suffix
     (fun x _ => continuation x) win targets Good nodeBudget checkpointCount overhead

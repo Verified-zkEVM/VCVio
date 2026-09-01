@@ -22,13 +22,13 @@ public import Mathlib.Algebra.BigOperators.Ring.Finset
 Pure-Lean executable kernels for FIPS 203 Algorithms 9–11 (NTT, NTT⁻¹, MultiplyNTTs),
 specialised to `q = 3329`, `n = 256`, `ζ = 17`.
 
-The proof-oriented `ntt` / `invNTT` interface composes seven blocked butterfly stages. Each stage
-partitions the 256 coordinates into disjoint pairs, and a kernel-checked bit-reversal identity shows
-that its forward and inverse twiddles multiply to `-1`. The paired butterflies cancel up to `2`,
-so the seven stages accumulate a factor of `2^7`, cancelled by `nInv`. At runtime,
-`@[implemented_by]` rebinds these proof-oriented definitions to the existing imperative loop
-kernels, preserving their intended `O(n log n)` behavior. The equivalence between those runtime
-kernels and the structural definitions remains the standard `implemented_by` trust boundary.
+The public `ntt` / `invNTT` interface is exposed in a proof-oriented form assembled from the seven
+butterfly layers of Algorithms 9 and 10. Each layer carries its exact blocked coordinate layout and
+complementary twiddle law; their structural composition proves the inverse laws after the final
+normalization. At runtime, `@[implemented_by]` rebinds those public definitions to the original fast
+loop kernels, so execution keeps the intended `O(n log n)` / `O(n)` behavior. That compiler
+substitution remains the executable refinement boundary: the structural formulas mirror the loops,
+but this module does not yet prove the imperative `Array` programs extensionally equal to them.
 
 ## Coefficient ordering in `MultiplyNTTs`
 

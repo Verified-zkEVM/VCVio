@@ -41,13 +41,14 @@ constrained by `EndgameInvariant`. -/
 abbrev CheckpointCacheAssignment (config : Configuration Cfg Address) :=
   (tag : Cfg) → Checkpoint Query Y config tag → (Query →ₒ Y).QueryCache
 
-/-- Single-path evidence erased by storing only an acceptance bit in `OpeningAttempt`. `chain` is
+/-- Single-path evidence erased by storing only an acceptance bit in `EvaluatedOpeningClaim`.
+`chain` is
 the semantic consequence of shared-cache acceptance; `disagrees` connects that actual accepted
 path to checkpoint extraction.  No unused pure hash algebra is retained in this interface. -/
 structure OpeningKernelEvidence
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     {config : Configuration Cfg Address} {tag : Cfg}
-    (attempt : OpeningAttempt Query Y config tag)
+    (attempt : EvaluatedOpeningClaim Query Y config tag)
     (terminalCache : (Query →ₒ Y).QueryCache) where
   index : SkeletonLeafIndex (config.skeleton tag)
   selected : attempt.opening.selector.get index = true
@@ -66,7 +67,7 @@ structure EndgameInvariant
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
     (terminalSuffix : MerkleTreeExtractor.QueryLog Query Y)
     (terminalCache : (Query →ₒ Y).QueryCache)
     (cacheAt : CheckpointCacheAssignment (Query := Query) (Y := Y) config) : Prop where
@@ -87,7 +88,7 @@ structure EndgameInvariant
       MerkleTreeExtractor.tree model.view (config.skeleton tag) (config.addressKey tag)
         (state.terminalLog terminalSuffix) checkpoint.root
   opening_kernel : ∀ tag attempt,
-    (⟨tag, attempt⟩ : AnyOpeningAttempt Cfg Query Address Y config) ∈ attempts →
+    (⟨tag, attempt⟩ : AnyEvaluatedOpeningClaim Cfg Query Address Y config) ∈ attempts →
     (⟨tag, attempt.checkpoint⟩ : AnyCheckpoint Cfg Query Address Y config) ∈
       state.checkpoints →
     AcceptedOpeningDisagreement model.view attempt →
@@ -108,11 +109,11 @@ def HasFreshCheckpointTarget
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
-    (attempts : List (AnyOpeningAttempt Cfg Query Address Y config))
+    (attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config))
     (terminalCache : (Query →ₒ Y).QueryCache)
     (cacheAt : CheckpointCacheAssignment (Query := Query) (Y := Y) config) : Prop :=
   ∃ tag attempt,
-    (⟨tag, attempt⟩ : AnyOpeningAttempt Cfg Query Address Y config) ∈ attempts ∧
+    (⟨tag, attempt⟩ : AnyEvaluatedOpeningClaim Cfg Query Address Y config) ∈ attempts ∧
     (⟨tag, attempt.checkpoint⟩ : AnyCheckpoint Cfg Query Address Y config) ∈
       state.checkpoints ∧
     ∃ target ∈ MerkleTreeExtractability.extractedTargets model
@@ -125,7 +126,7 @@ variable
   {config : Configuration Cfg Address}
   {model : MerkleTreeExtractability.NodeQueryModel Query Address Y}
   {state : ExtractorState Cfg Query Address Y config}
-  {attempts : List (AnyOpeningAttempt Cfg Query Address Y config)}
+  {attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config)}
   {terminalSuffix : MerkleTreeExtractor.QueryLog Query Y}
   {terminalCache : (Query →ₒ Y).QueryCache}
   {cacheAt : CheckpointCacheAssignment (Query := Query) (Y := Y) config}
@@ -162,7 +163,7 @@ theorem EndgameInvariant.not_checkpointTerminalExtractionDisagreement
 extractor target. Equal-root and terminal-evolution branches are discharged by stability. -/
 theorem failure_implies_checkpointCollision_or_freshTarget
     (invariant : EndgameInvariant model state attempts terminalSuffix terminalCache cacheAt)
-    (hfailure : Failure model.view state attempts terminalSuffix) :
+    (hfailure : AnyCheckpointExtractionDisagreement model.view state attempts terminalSuffix) :
     HasCheckpointCacheCollision state cacheAt ∨
       HasFreshCheckpointTarget model state attempts terminalCache cacheAt := by
   classical
@@ -191,7 +192,7 @@ theorem failure_implies_freshTarget_of_noCheckpointCollision
     (hno : ∀ tag checkpoint,
       (⟨tag, checkpoint⟩ : AnyCheckpoint Cfg Query Address Y config) ∈ state.checkpoints →
       ¬ CacheHasCollision (cacheAt tag checkpoint))
-    (hfailure : Failure model.view state attempts terminalSuffix) :
+    (hfailure : AnyCheckpointExtractionDisagreement model.view state attempts terminalSuffix) :
     HasFreshCheckpointTarget model state attempts terminalCache cacheAt := by
   rcases failure_implies_checkpointCollision_or_freshTarget invariant hfailure with
     hcollision | hfresh
@@ -200,7 +201,7 @@ theorem failure_implies_freshTarget_of_noCheckpointCollision
   · exact hfresh
 
 /-- Transcript specialization of the strong deterministic endgame. -/
-theorem StrongFailure.implies_freshTarget
+theorem Transcript.HasAnyCheckpointExtractionDisagreement.implies_freshTarget
     {config : Configuration Cfg Address}
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (transcript : Transcript Cfg Query Address Y config)
@@ -212,13 +213,13 @@ theorem StrongFailure.implies_freshTarget
       (⟨tag, checkpoint⟩ : AnyCheckpoint Cfg Query Address Y config) ∈
         transcript.extractorState.checkpoints →
       ¬ CacheHasCollision (cacheAt tag checkpoint))
-    (hfailure : StrongFailure model transcript) :
+    (hfailure : Transcript.HasAnyCheckpointExtractionDisagreement model transcript) :
     HasFreshCheckpointTarget model transcript.extractorState transcript.attempts
       terminalCache cacheAt :=
   failure_implies_freshTarget_of_noCheckpointCollision invariant hno hfailure
 
 /-- Public/textbook failure inherits the same deterministic fresh-target conclusion. -/
-theorem PublicFailure.implies_freshTarget
+theorem Transcript.HasOpeningOrEqualRootDisagreement.implies_freshTarget
     {config : Configuration Cfg Address}
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (transcript : Transcript Cfg Query Address Y config)
@@ -230,10 +231,12 @@ theorem PublicFailure.implies_freshTarget
       (⟨tag, checkpoint⟩ : AnyCheckpoint Cfg Query Address Y config) ∈
         transcript.extractorState.checkpoints →
       ¬ CacheHasCollision (cacheAt tag checkpoint))
-    (hfailure : PublicFailure model transcript) :
+    (hfailure : Transcript.HasOpeningOrEqualRootDisagreement model transcript) :
     HasFreshCheckpointTarget model transcript.extractorState transcript.attempts
       terminalCache cacheAt :=
-  StrongFailure.implies_freshTarget model transcript terminalCache cacheAt invariant hno
-    (PublicFailure.toStrongFailure model transcript hfailure)
+  Transcript.HasAnyCheckpointExtractionDisagreement.implies_freshTarget model transcript
+    terminalCache cacheAt invariant hno
+    (Transcript.HasOpeningOrEqualRootDisagreement.toHasAnyCheckpointExtractionDisagreement
+      model transcript hfailure)
 
 end MerkleTreeMultiExtractability

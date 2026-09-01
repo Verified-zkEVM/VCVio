@@ -24,8 +24,9 @@ Pure-Lean executable kernels for FIPS 204 Algorithms 41, 42, and 47, specialized
 The proof-oriented `ntt` / `invNTT` interface composes eight blocked butterfly stages.
 Complementary bit-reversed twiddles make the inverse stages cancel the forward stages up to
 `2^8`, and `nInv` removes that factor. Runtime execution remains rebound to the existing
-imperative kernels through `@[implemented_by]`; equivalence with the structural definitions
-is the standard `implemented_by` trust boundary.
+imperative kernels through `@[implemented_by]`. This remains the executable refinement boundary:
+the structural formulas mirror the loops, but this module does not yet prove the imperative
+`Array` programs extensionally equal to them.
 -/
 
 public section

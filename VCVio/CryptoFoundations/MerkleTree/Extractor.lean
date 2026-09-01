@@ -87,7 +87,7 @@ def targets (view : QueryView Query Address Y) : (subtree : Skeleton) →
               targets view right (fun address => addressKey (.ofRight address)) log rightRoot
 
 /-- The leaf and authentication path exposed by an extracted partial tree at `idx`. -/
-structure Opening (Y : Type w) {s : Skeleton} (idx : SkeletonLeafIndex s) where
+structure ExtractedOpening (Y : Type w) {s : Skeleton} (idx : SkeletonLeafIndex s) where
   /-- Extracted leaf, or `none` when the transcript does not reach it. -/
   leaf : Option Y
   /-- Extracted sibling path; unknown siblings are represented by `none`. -/
@@ -95,7 +95,7 @@ structure Opening (Y : Type w) {s : Skeleton} (idx : SkeletonLeafIndex s) where
 
 /-- Inspect the leaf and authentication path extracted at `idx`. -/
 def opening {s : Skeleton} (tree : FullData (Option Y) s)
-    (idx : SkeletonLeafIndex s) : Opening Y idx where
+    (idx : SkeletonLeafIndex s) : ExtractedOpening Y idx where
   leaf := tree.get idx.toNodeIndex
   proof := generateProof tree idx
 

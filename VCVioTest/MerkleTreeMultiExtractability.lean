@@ -11,10 +11,8 @@ public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.StrongBound
 /-!
 # Stateful Merkle Multi-Extractability Canaries
 
-Small compile-time instantiations of the fully discharged game theorem. These examples pin the
-single-global-query owner theorem, its scheduled zero/one/multiple-round and finite-opening
-corollaries, and the proof-only branch of full batch-opening disagreement without evaluating a
-probability distribution.
+Small compile-time instantiations of the whole-adversary game theorem with real oracle queries,
+checkpoint-dependent claims, and proof-frontier disagreement.
 -/
 
 @[expose] public section
@@ -46,31 +44,6 @@ def config : Configuration Unit Unit where
   skeleton _ := skeleton
   addressKey _ _ := ()
 
-/-- Query-free commitments make the theorem canary about API composition rather than arithmetic. -/
-abbrev committer : SequentialCommitter Unit Query Bool where
-  State := Unit
-  initialState := ()
-  commit _ _ := pure ((), false, ())
-
-/-- The terminal phase emits no claims; the finite-opening specialization therefore has zero
-honest-verifier overhead. -/
-abbrev adversary : Adversary Unit Query Unit Bool config where
-  committer := committer
-  opening _ _ := pure []
-
-private theorem commit_query_bound (round : ℕ) (state : committer.State) :
-    IsTotalQueryBound (committer.commit round state) round := by
-  trivial
-
-private theorem opening_query_bound (state : committer.State)
-    (extractorState : ExtractorState Unit Query Unit Bool config) :
-    IsTotalQueryBound (adversary.opening state extractorState) 0 := by
-  trivial
-
-private theorem opening_count_bound : adversary.HasOpeningCountBound 0 := by
-  intro state extractorState claims hclaims
-  simpa [adversary] using hclaims
-
 private theorem per_claim_bound :
     ∀ tag, (config.skeleton tag).leafCount - 1 ≤ 1 := by
   intro tag
@@ -82,77 +55,6 @@ private theorem per_checkpoint_bound :
   intro tag
   cases tag
   decide
-
-private theorem global_query_bound (rounds : ℕ) :
-    adversary.IsAdversaryPrefixQueryBound rounds 0 := by
-  have hbound := adversary.isAdversaryPrefixQueryBound_of_schedule rounds (fun _ => 0) 0
-    (fun _ _ => by trivial) opening_query_bound
-  simpa using hbound
-
-private theorem verifier_query_bound : adversary.HasVerifierQueryBound 0 :=
-  adversary.hasVerifierQueryBound_of_openingCountBound 0 1 opening_count_bound per_claim_bound
-
-/-- Direct canary for the owner theorem: one bound covers the complete adaptive adversarial
-prefix, with honest verification charged separately. -/
-theorem globalStrongBound (rounds : ℕ) :
-    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
-      (multiExtractabilitySafeNumerator (rounds * 3) rounds 0 0 : ENNReal) *
-        (Nat.card Bool : ENNReal)⁻¹ := by
-  simpa using strongFailure_rom_bound_global_of_openingCountBound model config rounds adversary
-    0 (rounds * 3) rounds 0 1 3 (global_query_bound rounds) opening_count_bound
-    per_claim_bound per_checkpoint_bound le_rfl le_rfl
-
-/-- The textbook event is derived directly from the global owner theorem. -/
-example (rounds : ℕ) :
-    Pr[ PublicFailure model | extractabilityGame model config rounds adversary] ≤
-      (multiExtractabilitySafeNumerator (rounds * 3) rounds 0 0 : ENNReal) *
-        (Nat.card Bool : ENNReal)⁻¹ := by
-  exact publicFailure_rom_bound_global model config rounds adversary 0 (rounds * 3) rounds 0 3
-    (global_query_bound rounds) verifier_query_bound per_checkpoint_bound le_rfl le_rfl
-
-/-- Closed-form weakening of the same global owner theorem. -/
-example (rounds : ℕ) :
-    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
-      (((0 : ℕ).choose 2 + (rounds * 3) * (0 + 0) : ℕ) : ENNReal) *
-        (Nat.card Bool : ENNReal)⁻¹ := by
-  exact strongFailure_rom_bound_global_coarse model config rounds adversary 0
-    (rounds * 3) rounds 0 3 (global_query_bound rounds) verifier_query_bound
-    per_checkpoint_bound le_rfl le_rfl
-
-/-- One theorem instantiation covers every round count while exercising a genuinely
-heterogeneous public schedule (`round` itself bounds phase `round`). -/
-theorem scheduledStrongBound (rounds : ℕ) :
-    Pr[ StrongFailure model | extractabilityGame model config rounds adversary] ≤
-      (multiExtractabilitySafeNumerator (rounds * 3) rounds (0 * 1)
-        (commitmentQueryBudget (fun round => round) rounds 0 + 0) : ENNReal) *
-          (Nat.card Bool : ENNReal)⁻¹ := by
-  exact strongFailure_rom_bound_schedule_of_openingCountBounds model config rounds adversary
-    (false, false) (fun round => round) 0 (rounds * 3) rounds 0 1 3
-    commit_query_bound opening_query_bound opening_count_bound per_claim_bound
-    per_checkpoint_bound le_rfl le_rfl
-
-/-! The three specializations make accidental zero/successor/index-shift API regressions visible. -/
-
-example :
-    Pr[ StrongFailure model | extractabilityGame model config 0 adversary] ≤
-      (multiExtractabilitySafeNumerator (0 * 3) 0 (0 * 1)
-        (commitmentQueryBudget (fun round => round) 0 0 + 0) : ENNReal) *
-          (Nat.card Bool : ENNReal)⁻¹ :=
-  scheduledStrongBound 0
-
-example :
-    Pr[ StrongFailure model | extractabilityGame model config 1 adversary] ≤
-      (multiExtractabilitySafeNumerator (1 * 3) 1 (0 * 1)
-        (commitmentQueryBudget (fun round => round) 1 0 + 0) : ENNReal) *
-          (Nat.card Bool : ENNReal)⁻¹ :=
-  scheduledStrongBound 1
-
-example :
-    Pr[ StrongFailure model | extractabilityGame model config 3 adversary] ≤
-      (multiExtractabilitySafeNumerator (3 * 3) 3 (0 * 1)
-        (commitmentQueryBudget (fun round => round) 3 0 + 0) : ENNReal) *
-          (Nat.card Bool : ENNReal)⁻¹ :=
-  scheduledStrongBound 3
 
 /-! ## Nonzero executable-query accounting -/
 
@@ -197,13 +99,14 @@ private theorem querying_verifier_bound : queryingAdversary.HasVerifierQueryBoun
   queryingAdversary.hasVerifierQueryBound_of_openingCountBound 0 1
     querying_opening_count_bound per_claim_bound
 
-/-- Nonzero canary for the exact owner theorem: the sole adversarial budget charges one query per
+/-- Nonzero canary for the uniform-shape theorem: the adversarial budget charges one query per
 commitment plus the terminal query, while the honest verifier remains separately zero-cost. -/
 theorem queryingGlobalStrongBound (rounds : ℕ) :
-    Pr[ StrongFailure model | extractabilityGame model config rounds queryingAdversary] ≤
-      (multiExtractabilitySafeNumerator (rounds * 3) rounds 0 (rounds + 1) : ENNReal) *
+    Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
+      extractabilityGame model config rounds queryingAdversary] ≤
+      (multiCheckpointROMErrorNumerator (rounds * 3) rounds 0 (rounds + 1) : ENNReal) *
         (Nat.card Bool : ENNReal)⁻¹ := by
-  exact strongFailure_rom_bound_global_exact model config rounds queryingAdversary
+  exact anyCheckpointDisagreement_rom_bound_uniformShape model config rounds queryingAdversary
     (rounds + 1) 0 3 (querying_global_bound rounds) querying_verifier_bound
     per_checkpoint_bound
 
@@ -267,11 +170,12 @@ private theorem claiming_verifier_bound (rounds : ℕ) :
 opening continuation to depend on the extractor state. It exercises the accounting bridge used to
 separate ghost continuation queries from real adversarial queries. -/
 theorem claimingGlobalStrongBound (rounds : ℕ) :
-    Pr[ StrongFailure model |
+    Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
         extractabilityGame model config rounds (claimingAdversary rounds)] ≤
-      (multiExtractabilitySafeNumerator (rounds * 3) rounds rounds rounds : ENNReal) *
+      (multiCheckpointROMErrorNumerator (rounds * 3) rounds rounds rounds : ENNReal) *
         (Nat.card Bool : ENNReal)⁻¹ := by
-  exact strongFailure_rom_bound_global_exact model config rounds (claimingAdversary rounds)
+  exact anyCheckpointDisagreement_rom_bound_uniformShape model config rounds
+    (claimingAdversary rounds)
     rounds rounds 3 (claiming_global_bound rounds) (claiming_verifier_bound rounds)
     per_checkpoint_bound
 
@@ -315,5 +219,40 @@ example :
             (generateProof extractedTree index).toList :=
   proof_only_disagreement.exists_selectedValue_or_path_disagreement
     (fun _ _ _ => false) proofOnlyOpening extractedTree
+
+/-! ## Ordered transcript and phase execution -/
+
+private def orderedView :
+    MerkleTreeExtractor.QueryView (Bool × (Nat × Nat)) Bool Nat where
+  address := Prod.fst
+  input := Prod.snd
+
+private def orderedConfig : Configuration Unit Bool where
+  skeleton _ := .internal .leaf .leaf
+  addressKey _ _ := false
+
+private def orderedCheckpoint : Checkpoint (Bool × (Nat × Nat)) Nat orderedConfig () where
+  root := 7
+  cumulativeLog := [⟨(true, (11, 13)), 7⟩, ⟨(false, (2, 3)), 7⟩]
+
+/-- Extraction uses the matching address and preserves the order of query children. -/
+example : Checkpoint.extractedTree orderedView orderedCheckpoint =
+    FullData.internal (some 7) (FullData.leaf (some 2)) (FullData.leaf (some 3)) := by
+  rfl
+
+private abbrev phaseOrderCommitter : SequentialCommitter Bool Unit Nat where
+  State := Nat
+  initialState := 0
+  commit round state := pure (round == 1, 10 + state, state + 1)
+
+private def phaseOrderConfig : Configuration Bool Unit where
+  skeleton _ := .leaf
+  addressKey _ index := nomatch index
+
+/-- Two phases advance private state and retain checkpoints in commitment order. -/
+example : phaseOrderCommitter.runFromEmpty phaseOrderConfig 2 =
+    let initial : ExtractorState Bool Unit Unit Nat phaseOrderConfig := ExtractorState.empty
+    pure (2, (initial.record false [] 10).record true [] 11) := by
+  rfl
 
 end VCVioTest.MerkleTreeMultiExtractabilityCanary
