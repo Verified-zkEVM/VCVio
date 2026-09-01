@@ -270,6 +270,57 @@ def check_manifest_files(root: Path, entries: list[tuple[str, int, str]], label:
                 f"{expected_size}/{expected_hash}, got {actual[0]}/{actual[1]}")
 
 
+def check_lossless_corpus() -> None:
+    manifest = load_json(FIXTURE_ROOT / "corpus-manifest.json")
+    require(set(manifest) == {
+        "schemaVersion", "format", "source", "generationCommand", "encoding",
+        "measurements", "output"}, "lossless corpus manifest keys are not exact")
+    require(manifest["schemaVersion"] == 1, "lossless corpus manifest version")
+    require(manifest["format"] == "VCVio SLH-DSA ACVP lossless binary corpus v1",
+            "lossless corpus format identity")
+    source = manifest["source"]
+    require(source == {
+        "repository": "https://github.com/usnistgov/ACVP-Server",
+        "commit": SERVER_COMMIT,
+        "release": SERVER_RELEASE,
+        "files": [
+            {"path": path, "size": size, "sha256": sha256}
+            for path, size, sha256 in SERVER_ARTIFACTS
+            if path.endswith(("prompt.json", "expectedResults.json"))
+        ],
+    }, "lossless corpus source pin or source-file hashes differ")
+    require(manifest["generationCommand"] ==
+            "python3 scripts/slhdsa/generate-acvp-corpus.py "
+            "--source-root /path/to/pinned/ACVP-Server --write",
+            "lossless corpus generation command differs")
+    encoding = manifest["encoding"]
+    require(encoding.get("byteOrder") == "big-endian"
+            and encoding.get("lengthPrefix") == "unsigned 32-bit bytes"
+            and encoding.get("optionEncoding") ==
+                "one-byte presence tag followed by value when present",
+            "lossless corpus encoding metadata differs")
+    require(set(encoding.get("preserves", [])) == {
+        "skSeed", "skPrf", "pkSeed", "pk", "sk", "message", "context",
+        "hashAlg", "additionalRandomness", "signature", "testPassed", "vsId",
+        "tgId", "tcId", "testType", "parameterSet", "signatureInterface",
+        "preHash", "deterministic",
+    }, "lossless corpus preservation inventory differs")
+    require(manifest["measurements"] == {
+        "keyGen": {"groups": 12, "tests": 120, "payloadBytes": 25920},
+        "sigGen": {"groups": 72, "tests": 624, "payloadBytes": 18978789},
+        "sigVer": {"groups": 36, "tests": 504, "payloadBytes": 15217612,
+                   "positive": 72, "negative": 432},
+    }, "lossless corpus measurements differ")
+    output = manifest["output"]
+    require(output == {
+        "path": "HashSigTest/SLHDSA/ACVP/fixtures/corpus.bin",
+        "size": 34252414,
+        "sha256": "efd851009f802502f722b49579b00345e401e3b955e7ac8b775324d6375bbb98",
+    }, "lossless corpus output record differs")
+    require(digest(REPO_ROOT / output["path"]) == (output["size"], output["sha256"]),
+            "committed lossless corpus bytes differ from the manifest")
+
+
 def git_head(root: Path, label: str) -> str:
     try:
         result = subprocess.run(
@@ -890,6 +941,13 @@ def check_server_checkout(root_text: str) -> None:
         measured[mode] = mode_counts
     require(measured == SAMPLE_SUITE_MEASUREMENTS,
             "full checkout sample-suite measurements changed")
+    try:
+        subprocess.run([
+            sys.executable, str(REPO_ROOT / "scripts/slhdsa/generate-acvp-corpus.py"),
+            "--source-root", str(root), "--check"], cwd=REPO_ROOT, check=True,
+            timeout=60)
+    except (OSError, subprocess.SubprocessError) as error:
+        raise CheckError(f"lossless corpus does not regenerate exactly: {error}") from error
 
 
 def check_protocol_checkout(root_text: str) -> None:
@@ -915,6 +973,7 @@ def main() -> int:
         check_registrations()
         check_slice_shapes()
         check_coverage()
+        check_lossless_corpus()
 
         server_root = os.environ.get("SLHDSA_ACVP_SERVER_ROOT")
         protocol_root = os.environ.get("SLHDSA_ACVP_PROTOCOL_ROOT")
@@ -925,7 +984,7 @@ def main() -> int:
 
         print(
             "SLH-DSA ACVP provenance: PASS "
-            f"(9 committed artifacts; 15 server artifacts; "
+            f"(9 schema/provenance artifacts + 1 lossless corpus; 15 server artifacts; "
             f"full suites 12/120, 72/624, 36/504 (+72/-432); "
             f"144 coverage cells/24 positive; "
             f"authority mutation tests: 8 rejected; "

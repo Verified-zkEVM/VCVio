@@ -5,16 +5,18 @@ Authors: Nicolas Consigny
 -/
 
 module
+public import HashSigTest.SLHDSA.ACVP.Corpus
 public import HashSigTest.SLHDSA.ACVP.Schema
 public import Lean.Data.Json.Printer
 
 /-!
 # Runtime tests for the strict ACVP sample parser
 
-The positive gate parses the committed NIST sample fixtures. The separate negative gate exercises
-fail-closed syntax, schema, conditional-field, width, identifier, and pairing behavior. These tests
-are parser/schema-format validation evidence only. They are not implementation-conformance
-evidence, construction evidence, or security evidence.
+The positive gate parses the committed NIST sample fixtures, including the complete lossless binary
+corpus. The separate negative gate exercises fail-closed syntax, schema, conditional-field, width,
+identifier, pairing, truncation, and full-consumption behavior. These tests are parser and corpus
+format validation evidence only. They are not implementation-conformance, construction, or
+security evidence.
 -/
 
 public section
@@ -26,6 +28,8 @@ open SLHDSA.Test.ACVP
 
 private def fixtureRoot : System.FilePath := "HashSigTest/SLHDSA/ACVP/fixtures"
 
+private def corpusPath : System.FilePath := fixtureRoot / "corpus.bin"
+
 private def requireOk {α : Type} (label : String) : Except String α → IO α
   | .ok value => pure value
   | .error error => throw <| IO.userError s!"{label}: unexpected rejection: {error}"
@@ -33,6 +37,50 @@ private def requireOk {α : Type} (label : String) : Except String α → IO α
 private def requireError {α : Type} (label : String) : Except String α → IO Unit
   | .error _ => pure ()
   | .ok _ => throw <| IO.userError s!"{label}: unexpectedly accepted"
+
+private def requireTrue (label : String) (condition : Bool) : IO Unit :=
+  if condition then pure () else throw <| IO.userError s!"{label}: assertion failed"
+
+private def optionSize : Option ByteArray → Nat
+  | none => 0
+  | some bytes => bytes.size
+
+private def keyGenPayloadBytes (data : Corpus.Data) : Nat :=
+  data.keyGen.foldl (fun total group => total + group.tests.foldl (fun subtotal test =>
+    subtotal + test.skSeed.size + test.skPrf.size + test.pkSeed.size + test.pk.size + test.sk.size) 0) 0
+
+private def sigGenPayloadBytes (data : Corpus.Data) : Nat :=
+  data.sigGen.foldl (fun total group => total + group.tests.foldl (fun subtotal test =>
+    subtotal + test.sk.size + test.message.size + optionSize test.context +
+      optionSize test.additionalRandomness + test.signature.size) 0) 0
+
+private def sigVerPayloadBytes (data : Corpus.Data) : Nat :=
+  data.sigVer.foldl (fun total group => total + group.tests.foldl (fun subtotal test =>
+    subtotal + test.pk.size + test.message.size + optionSize test.context + test.signature.size) 0) 0
+
+private def runCorpusPositive : IO Unit := do
+  let bytes ← IO.FS.readBinFile corpusPath
+  requireTrue "corpus exact byte size" (bytes.size == 34252414)
+  let data ← requireOk "lossless binary corpus" (Corpus.decode bytes)
+  requireTrue "keyGen group count" (data.keyGen.size == 12)
+  requireTrue "sigGen group count" (data.sigGen.size == 72)
+  requireTrue "sigVer group count" (data.sigVer.size == 36)
+  requireTrue "keyGen case count" (data.keyGenCount == 120)
+  requireTrue "sigGen case count" (data.sigGenCount == 624)
+  requireTrue "sigVer case count" (data.sigVerCount == 504)
+  requireTrue "sigVer positive count" (data.sigVerPositiveCount == 72)
+  requireTrue "sigVer negative count" (data.sigVerCount - data.sigVerPositiveCount == 432)
+  requireTrue "keyGen retained payload" (keyGenPayloadBytes data == 25920)
+  requireTrue "sigGen retained payload" (sigGenPayloadBytes data == 18978789)
+  requireTrue "sigVer retained payload" (sigVerPayloadBytes data == 15217612)
+
+private def runCorpusNegative : IO Unit := do
+  let bytes ← IO.FS.readBinFile corpusPath
+  requireError "binary magic mutation" (Corpus.decode (bytes.set! 0 0))
+  requireError "binary group count mutation" (Corpus.decode (bytes.set! 18 11))
+  requireError "binary field width mutation" (Corpus.decode (bytes.set! 41 15))
+  requireError "binary truncation" (Corpus.decode (bytes.extract 0 (bytes.size - 1)))
+  requireError "binary trailing byte" (Corpus.decode (bytes ++ ⟨#[0]⟩))
 
 private def nestedPair (path : System.FilePath) : IO (Prompt × Results) := do
   let source ← IO.FS.readFile path
@@ -195,9 +243,12 @@ private def runNegative : IO Nat := do
   return 52
 
 private def runAll : IO Unit := do
+  runCorpusPositive
+  runCorpusNegative
   let positive ← runPositive
   let negative ← runNegative
-  IO.println s!"SLH-DSA ACVP parser runtime gate: PASS ({positive + negative} cases)"
+  IO.println <| s!"SLH-DSA ACVP parser/runtime corpus gate: PASS ({positive + negative} JSON cases; " ++
+    "120/624/504 lossless binary cases; 5 binary rejection cases)"
 
 end SLHDSA.Test.ACVP.ParserTests
 

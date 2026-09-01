@@ -71,10 +71,18 @@ def parameterSets : Array ParamInfo := #[
   ⟨"SLH-DSA-SHAKE-256f", "SHAKE", 32, 68, 17, 4, 9, 35, 4, 49, 5, 64, 128, 49856⟩
 ]
 
+inductive PromptPayload where
+  | keyGen (skSeed skPrf pkSeed : ByteArray)
+  | sigGen (sk message : ByteArray) (context : Option ByteArray)
+      (hashAlg : Option HashAlg) (additionalRandomness : Option ByteArray)
+  | sigVer (pk message : ByteArray) (context : Option ByteArray)
+      (hashAlg : Option HashAlg) (signature : ByteArray)
+  deriving BEq
+
 structure PromptTest where
   tcId : Nat
-  signatureBytes : Option Nat := none
-  deriving BEq, Repr
+  payload : PromptPayload
+  deriving BEq
 
 structure PromptGroup where
   tgId : Nat
@@ -83,35 +91,35 @@ structure PromptGroup where
   preHash : Option PreHash := none
   deterministic : Option Bool := none
   tests : Array PromptTest
-  deriving BEq, Repr
+  deriving BEq
 
 structure Prompt where
   vsId : Nat
   mode : Mode
   groups : Array PromptGroup
-  deriving BEq, Repr
+  deriving BEq
 
 inductive ResultPayload where
-  | keyGen (pkBytes skBytes : Nat)
-  | sigGen (signatureBytes : Nat)
+  | keyGen (pk sk : ByteArray)
+  | sigGen (signature : ByteArray)
   | sigVer (passed : Bool)
-  deriving BEq, Repr
+  deriving BEq
 
 structure ResultTest where
   tcId : Nat
   payload : ResultPayload
-  deriving BEq, Repr
+  deriving BEq
 
 structure ResultGroup where
   tgId : Nat
   tests : Array ResultTest
-  deriving BEq, Repr
+  deriving BEq
 
 structure Results where
   vsId : Nat
   mode : Mode
   groups : Array ResultGroup
-  deriving BEq, Repr
+  deriving BEq
 
 abbrev Object := Std.TreeMap.Raw String Json compare
 
@@ -189,26 +197,37 @@ private def parameterByName (name : String) : Except String ParamInfo :=
   | some info => .ok info
   | none => fail s!"unsupported parameterSet {name}"
 
-private def isHexChar (char : Char) : Bool :=
-  ('0' ≤ char && char ≤ '9') || ('a' ≤ char && char ≤ 'f') || ('A' ≤ char && char ≤ 'F')
+private def hexNibble (char : Char) : Option Nat :=
+  if '0' ≤ char && char ≤ '9' then some (char.toNat - '0'.toNat)
+  else if 'a' ≤ char && char ≤ 'f' then some (char.toNat - 'a'.toNat + 10)
+  else if 'A' ≤ char && char ≤ 'F' then some (char.toNat - 'A'.toNat + 10)
+  else none
 
-private def hexBytes (label value : String) : Except String Nat := do
-  if value.length % 2 != 0 then fail s!"{label}: odd-length hex"
-  if !value.toList.all isHexChar then fail s!"{label}: non-hex character"
-  return value.length / 2
+private def decodeHexAux (label : String) : List Char → ByteArray → Except String ByteArray
+  | [], bytes => pure bytes
+  | high :: low :: rest, bytes => do
+      let some highNibble := hexNibble high | fail s!"{label}: non-hex character"
+      let some lowNibble := hexNibble low | fail s!"{label}: non-hex character"
+      decodeHexAux label rest (bytes.push (UInt8.ofNat (16 * highNibble + lowNibble)))
+  | [_], _ => fail s!"{label}: odd-length hex"
 
-private def exactHex (label : String) (value : Json) (bytes : Nat) : Except String Unit := do
-  let count ← hexBytes label (← asString label value)
-  if count != bytes then fail s!"{label}: expected {bytes} bytes, got {count}"
+private def hexBytes (label value : String) : Except String ByteArray :=
+  decodeHexAux label value.toList ByteArray.empty
 
-private def boundedHex (label : String) (value : Json) (maximum : Nat) : Except String Nat := do
-  let count ← hexBytes label (← asString label value)
-  if count > maximum then fail s!"{label}: exceeds {maximum} bytes"
-  return count
+private def exactHex (label : String) (value : Json) (bytes : Nat) : Except String ByteArray := do
+  let decoded ← hexBytes label (← asString label value)
+  if decoded.size != bytes then fail s!"{label}: expected {bytes} bytes, got {decoded.size}"
+  return decoded
 
-private def messageHex (value : Json) : Except String Unit := do
-  let count ← boundedHex "message" value 8192
-  if count == 0 then fail "message: at least one byte required"
+private def boundedHex (label : String) (value : Json) (maximum : Nat) : Except String ByteArray := do
+  let decoded ← hexBytes label (← asString label value)
+  if decoded.size > maximum then fail s!"{label}: exceeds {maximum} bytes"
+  return decoded
+
+private def messageHex (value : Json) : Except String ByteArray := do
+  let message ← boundedHex "message" value 8192
+  if message.isEmpty then fail "message: at least one byte required"
+  return message
 
 private def parseCommonTop (json : Json) : Except String (Object × Nat × Mode) := do
   let object ← asObject "vector set" json
@@ -234,10 +253,10 @@ private def parseKeyGenTest (parameter : ParamInfo) (json : Json) : Except Strin
   let object ← asObject "keyGen test" json
   requireKeys "keyGen test" object ["tcId", "skSeed", "skPrf", "pkSeed"]
   let tcId ← positiveId "tcId" (← field "keyGen test" object "tcId")
-  exactHex "skSeed" (← field "keyGen test" object "skSeed") parameter.n
-  exactHex "skPrf" (← field "keyGen test" object "skPrf") parameter.n
-  exactHex "pkSeed" (← field "keyGen test" object "pkSeed") parameter.n
-  return { tcId }
+  let skSeed ← exactHex "skSeed" (← field "keyGen test" object "skSeed") parameter.n
+  let skPrf ← exactHex "skPrf" (← field "keyGen test" object "skPrf") parameter.n
+  let pkSeed ← exactHex "pkSeed" (← field "keyGen test" object "pkSeed") parameter.n
+  return { tcId, payload := .keyGen skSeed skPrf pkSeed }
 
 private def parseSignatureTest (mode : Mode) (parameter : ParamInfo)
     (interface : SignatureInterface) (preHash : Option PreHash) (deterministic : Option Bool)
@@ -252,25 +271,32 @@ private def parseSignatureTest (mode : Mode) (parameter : ParamInfo)
   if deterministic == some false then keys := "additionalRandomness" :: keys
   requireKeys label object keys
   let tcId ← positiveId "tcId" (← field label object "tcId")
-  messageHex (← field label object "message")
-  if mode == .sigGen then
+  let message ← messageHex (← field label object "message")
+  let key ← if mode == .sigGen then
     exactHex "sk" (← field label object "sk") parameter.secretKeyBytes
   else
     exactHex "pk" (← field label object "pk") parameter.publicKeyBytes
-  if interface == .external then
-    let _ ← boundedHex "context" (← field label object "context") 255
-  if preHash == some .preHash then
-    let _ ← parseHashAlg (← asString "hashAlg" (← field label object "hashAlg"))
-  if deterministic == some false then
-    exactHex "additionalRandomness" (← field label object "additionalRandomness") parameter.n
-  let signatureBytes ← if mode == .sigVer then
-    let count ← hexBytes "signature" (← asString "signature" (← field label object "signature"))
-    let allowed := count == parameter.signatureBytes || count + 1 == parameter.signatureBytes ||
-      count == parameter.signatureBytes + 1
-    if !allowed then fail "signature: sigVer sample permits only exact or one-byte size mutations"
-    pure (some count)
+  let context ← if interface == .external then
+    some <$> boundedHex "context" (← field label object "context") 255
   else pure none
-  return { tcId, signatureBytes }
+  let hashAlg ← if preHash == some .preHash then
+    some <$> parseHashAlg (← asString "hashAlg" (← field label object "hashAlg"))
+  else pure none
+  let randomness ← if deterministic == some false then
+    some <$> exactHex "additionalRandomness" (← field label object "additionalRandomness") parameter.n
+  else pure none
+  let signature ← if mode == .sigVer then
+    let bytes ← hexBytes "signature" (← asString "signature" (← field label object "signature"))
+    let allowed := bytes.size == parameter.signatureBytes || bytes.size + 1 == parameter.signatureBytes ||
+      bytes.size == parameter.signatureBytes + 1
+    if !allowed then fail "signature: sigVer sample permits only exact or one-byte size mutations"
+    pure (some bytes)
+  else pure none
+  let payload ← match mode, signature with
+    | .sigGen, none => pure (.sigGen key message context hashAlg randomness)
+    | .sigVer, some bytes => pure (.sigVer key message context hashAlg bytes)
+    | _, _ => fail s!"{label}: internal mode/payload mismatch"
+  return { tcId, payload }
 
 private def parsePromptGroup (mode : Mode) (json : Json) : Except String PromptGroup := do
   let object ← asObject "prompt group" json
@@ -387,14 +413,17 @@ private def validatePair (prompt : Prompt) (results : Results) : Except String U
         | fail s!"missing result tcId {test.tcId}"
       match prompt.mode, result.payload with
       | .keyGen, .keyGen pk sk =>
-          if pk != group.parameter.publicKeyBytes || sk != group.parameter.secretKeyBytes then
+          if pk.size != group.parameter.publicKeyBytes || sk.size != group.parameter.secretKeyBytes then
             fail s!"keyGen output width mismatch at tcId {test.tcId}"
       | .sigGen, .sigGen signature =>
-          if signature != group.parameter.signatureBytes then
+          if signature.size != group.parameter.signatureBytes then
             fail s!"sigGen signature width mismatch at tcId {test.tcId}"
       | .sigVer, .sigVer passed =>
-          if passed && test.signatureBytes != some group.parameter.signatureBytes then
-            fail s!"positive sigVer result has noncanonical signature width at tcId {test.tcId}"
+          match test.payload with
+          | .sigVer _ _ _ _ signature =>
+              if passed && signature.size != group.parameter.signatureBytes then
+                fail s!"positive sigVer result has noncanonical signature width at tcId {test.tcId}"
+          | _ => fail s!"prompt payload mode mismatch at tcId {test.tcId}"
       | _, _ => fail s!"result payload mode mismatch at tcId {test.tcId}"
 
 /-- Parse and jointly validate one prompt/expected-results pair. -/

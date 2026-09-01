@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "format": "VCVio SLH-DSA ACVP lossless binary corpus v1",
+  "source": {
+    "repository": "https://github.com/usnistgov/ACVP-Server",
+    "commit": "975de31eb83d87039ec88934fdc47d8c312b892d",
+    "release": "v1.1.0.43",
+    "files": [
+      {
+        "path": "gen-val/json-files/SLH-DSA-keyGen-FIPS205/prompt.json",
+        "size": 32454,
+        "sha256": "bce170976f257ee3dfc8c54ea46722ccb553539847daa6d8048f0216cc28b51c"
+      },
+      {
+        "path": "gen-val/json-files/SLH-DSA-keyGen-FIPS205/expectedResults.json",
+        "size": 45192,
+        "sha256": "f35f74b6676d6b369c87e88c36698f28c14d5929d31e507d910288c69258afee"
+      },
+      {
+        "path": "gen-val/json-files/SLH-DSA-sigGen-FIPS205/prompt.json",
+        "size": 5512830,
+        "sha256": "afa673eacdf0aec53512a159159b7632684adfcd0d88f8640a7f6f5796aacdc8"
+      },
+      {
+        "path": "gen-val/json-files/SLH-DSA-sigGen-FIPS205/expectedResults.json",
+        "size": 32595492,
+        "sha256": "71e8e0f7e4b0cfd1747314299204d9d4d50968d200a4ae873921eaa7aabeaad1"
+      },
+      {
+        "path": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/prompt.json",
+        "size": 30513796,
+        "sha256": "4e7beb1233e47baa0acdd36417c66c45811aa40a4e32ffdb1a35d93b13b289fb"
+      },
+      {
+        "path": "gen-val/json-files/SLH-DSA-sigVer-FIPS205/expectedResults.json",
+        "size": 39216,
+        "sha256": "259f5e2a0665de0adc0fefa45b5db3a2a6ed13c3c44d14bdaf64a80aee12c687"
+      }
+    ]
+  },
+  "generationCommand": "python3 scripts/slhdsa/generate-acvp-corpus.py --source-root /path/to/pinned/ACVP-Server --write",
+  "encoding": {
+    "byteOrder": "big-endian",
+    "lengthPrefix": "unsigned 32-bit bytes",
+    "optionEncoding": "one-byte presence tag followed by value when present",
+    "preserves": [
+      "skSeed",
+      "skPrf",
+      "pkSeed",
+      "pk",
+      "sk",
+      "message",
+      "context",
+      "hashAlg",
+      "additionalRandomness",
+      "signature",
+      "testPassed",
+      "vsId",
+      "tgId",
+      "tcId",
+      "testType",
+      "parameterSet",
+      "signatureInterface",
+      "preHash",
+      "deterministic"
+    ]
+  },
+  "measurements": {
+    "keyGen": {
+      "groups": 12,
+      "tests": 120,
+      "payloadBytes": 25920
+    },
+    "sigGen": {
+      "groups": 72,
+      "tests": 624,
+      "payloadBytes": 18978789
+    },
+    "sigVer": {
+      "groups": 36,
+      "tests": 504,
+      "payloadBytes": 15217612,
+      "positive": 72,
+      "negative": 432
+    }
+  },
+  "output": {
+    "path": "HashSigTest/SLHDSA/ACVP/fixtures/corpus.bin",
+    "size": 34252414,
+    "sha256": "efd851009f802502f722b49579b00345e401e3b955e7ac8b775324d6375bbb98"
+  }
+}

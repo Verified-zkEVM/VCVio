@@ -106,7 +106,8 @@ jobs:
           VCVioTest.ITSR VCVioTest.SMDTDSPR VCVioTest.SMDTOpenPRE VCVioTest.SMDTUDC
           HashSigTest.SLHDSA.Params HashSigTest.SLHDSA.Position HashSigTest.SLHDSA.Oracle
           HashSigTest.SLHDSA.DataCodecTests
-          HashSigTest.SLHDSA.ACVP.ParserTests HashSigTest.SLHDSA.ACVP.Schema
+          HashSigTest.SLHDSA.ACVP.Corpus HashSigTest.SLHDSA.ACVP.ParserTests
+          HashSigTest.SLHDSA.ACVP.Schema
           HashSigTest.SLHDSA.ACVP.StrictJson
           HashSigTest.SLHDSA.External
           HashSigTest.SLHDSA.PrimitiveTests HashSigTest.SLHDSA.WotsEncoding
