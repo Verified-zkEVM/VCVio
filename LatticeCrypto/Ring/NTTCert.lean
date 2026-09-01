@@ -408,6 +408,25 @@ def butterflyStage {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pa
   forward_sub := forwardStage_sub layout z
   forward_zero := forwardStage_zero layout z
 
+/-- Build a stage certificate using the right-minus-left inverse spelling of
+the ML-KEM loop.  The sign is visible in the required twiddle law:
+`(-zRev pair) * z pair = 1`. -/
+def butterflyStageRev {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
+    (z zRev : Pair → R) (hz : ∀ pair, (-zRev pair) * z pair = 1) :
+    ScaledStage R Coord where
+  forward := forwardStage layout z
+  inverse := inverseStageRev layout zRev
+  scalar := 2
+  inverse_forward := by
+    rw [inverseStageRev_eq]
+    exact inverseStage_forwardStage layout z (fun pair => -zRev pair) hz
+  inverse_scale := by
+    rw [inverseStageRev_eq]
+    exact inverseStage_scaleCoeffs layout (fun pair => -zRev pair)
+  forward_add := forwardStage_add layout z
+  forward_sub := forwardStage_sub layout z
+  forward_zero := forwardStage_zero layout z
+
 /-- Apply a list of stages from left to right. -/
 def forwardStages {Coord : Type w} : List (ScaledStage R Coord) →
     (Coord → R) → (Coord → R)
