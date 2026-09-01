@@ -398,6 +398,10 @@ lean_exe slhdsa_xmss_tests where
 lean_exe slhdsa_external_tests where
   root := `HashSigTest.SLHDSA.External
 
+/-- Refined pure key-generation/signing/verification execution and benchmark canaries. -/
+lean_exe slhdsa_execution_tests where
+  root := `HashSigTest.SLHDSA.Execution
+
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
 TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every
