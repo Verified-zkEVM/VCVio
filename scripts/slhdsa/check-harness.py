@@ -249,7 +249,7 @@ S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
-        (3098, "8f75e3ec5e5465a34b94e33d6fb88f1dc733445b0b42e07d4dbd267103346431"),
+        (3145, "4a0c896bd831e0dc1b77c015bee4269156d9d4144f186821a64f7a7ecfcf6978"),
 }
 
 # The four load-bearing ACVP roots retain the exact typed dependency/visibility boundary formerly

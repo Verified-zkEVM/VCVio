@@ -29,7 +29,7 @@ environment-mutation commands; token-boundary fixtures distinguish these from re
 ## Build, import, isolation, and runtime gates
 
 The wrapper runs the aggregate build plus `HashSig` and `HashSigTest`; validates the generated
-umbrella; and checks ordinary/interop isolation. Runtime targets cover legacy regressions, all-set
+umbrella; and checks extern/interop isolation. Runtime targets cover legacy regressions, all-set
 parameter/codec behavior, primitive vectors and grammar fingerprints, WOTS, XMSS, FORS, and the
 strict ACVP parser. These runs are construction regressions: they do not establish cryptographic
 hardness, ACVP certification, or deployment refinement.
