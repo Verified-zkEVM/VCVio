@@ -31,12 +31,11 @@ example (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
       OracleComp (publicHashSpec core) (SignatureCore p core)) = (do
         let R := core.PRFmsg sk.skPrf addrnd msg
         let digest ← PublicHash.hmsg core R sk.pkSeed sk.pkRoot msg
-        let idxLeaf := (splitDigest p digest).2
-        let md := (splitDigest p digest).1
-        let fAdrs := forsAdrsOf idxLeaf
-        let forsSig ← forsSignM core md sk.skSeed sk.pkSeed fAdrs
-        let forsPk ← forsPkFromSigM core forsSig md sk.pkSeed fAdrs
-        let htSig ← htSignM core forsPk sk.skSeed sk.pkSeed Adrs.zero 0 idxLeaf
+        let parts := splitDigest p digest
+        let forsSig ← forsSignM core parts.md.toList sk.skSeed sk.pkSeed parts.forsAdrs
+        let forsPk ←
+          forsPkFromSigM core forsSig parts.md.toList sk.pkSeed parts.forsAdrs
+        let htSig ← htSignM core forsPk sk.skSeed sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
         return (R, forsSig, htSig)) := by
   rfl
 
@@ -45,11 +44,9 @@ example [DecidableEq core.Y] (msg : List Byte) (sig : SignatureCore p core)
     (pk : PublicKeyCore core) :
     (slhVerifyInternalM core msg sig pk : OracleComp (publicHashSpec core) Bool) = (do
       let digest ← PublicHash.hmsg core sig.1 pk.pkSeed pk.pkRoot msg
-      let idxLeaf := (splitDigest p digest).2
-      let md := (splitDigest p digest).1
-      let fAdrs := forsAdrsOf idxLeaf
-      let forsPk ← forsPkFromSigM core sig.2.1 md pk.pkSeed fAdrs
-      htVerifyM core forsPk sig.2.2 pk.pkSeed Adrs.zero 0 idxLeaf pk.pkRoot) := by
+      let parts := splitDigest p digest
+      let forsPk ← forsPkFromSigM core sig.2.1 parts.md.toList pk.pkSeed parts.forsAdrs
+      htVerifyM core forsPk sig.2.2 pk.pkSeed Adrs.zero 0 parts.idxLeaf.val pk.pkRoot) := by
   rfl
 
 end SLHDSA.SchemeTest
