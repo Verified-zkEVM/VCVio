@@ -959,12 +959,8 @@ private theorem simulateQ_fsBaseImpl_postKeygenFreshWriterComp_run'_eq
     (outer := fsBaseImpl (M := M) (Commit := Commit) (Chal := Chal))
     (inner := implW) (oa := adv.main pk), hmap]
   let : DecidableEq (Commit × Resp) := Classical.decEq _
-  conv_lhs =>
-    simp [implS, baseS, fsBaseImpl, cmaRealFixedSign, SourceSigAlg, FiatShamir,
-      randomOracle, QueryLog.wasQueried_eq_decide_mem_map_fst, StateT.run_bind]
-  conv_rhs =>
-    simp [implS, baseS, fsBaseImpl, cmaRealFixedSign, SourceSigAlg, FiatShamir,
-      randomOracle, QueryLog.wasQueried_eq_decide_mem_map_fst, StateT.run_bind]
+  simp [implS, baseS, fsBaseImpl, cmaRealFixedSign, SourceSigAlg, FiatShamir,
+    randomOracle, QueryLog.wasQueried_eq_decide_mem_map_fst, StateT.run_bind]
 
 private theorem runtime_evalSPMF_postKeygenFreshWriterComp_eq
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) (pk : Stmt) (sk : Wit) :
