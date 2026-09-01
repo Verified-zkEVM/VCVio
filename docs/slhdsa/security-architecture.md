@@ -1,130 +1,80 @@
-# S02 classical security architecture
+# Classical security architecture
 
-Status: accepted by independent r8 PASS at exact commit `a80e4d336276cd86fb80be64e82d9d57e7dfc8b3`.
+This document describes the implemented game boundary and its missing proof obligations. It does
+not claim a completed security theorem.
 
-This document records the proposed shape of the classical SLH-DSA reduction before any component
-proof is attempted. D-006 and D-009 remain proposed with no named approver, so this is a candidate
-design rather than an accepted theorem/game selection. It is not a claim that the reduction has
-been proved. Accepted S00/S01 infrastructure is unchanged, and the rejected placeholder in
-`HashSig/SLHDSA/Security.lean` is not an authority for this design.
+## Authority and semantics
 
-## Authority and repair boundary
+The repaired EasyCrypt development at revision
+`a28e4c53897a4bb57b575a177225862d48f824b7` is the load-bearing classical proof source. CCS 2019
+is historical comparison authority; its invalid WOTS reasoning is not reused. The Lean model uses
+classical `OracleComp`/`ProbComp` semantics. It contains no quantum state, superposition queries,
+unitary oracle, or classical-to-QROM lifting.
 
-The load-bearing source is `EUFCMA_SPHINCS_PLUS` in `proofs/SPHINCS_PLUS.ec:4338-4370`, pinned at
-revision `a28e4c53897a4bb57b575a177225862d48f824b7`. CCS 2019 Theorem 17 is historical authority for
-the PRF, PRFmsg, Hmsg/ITSR, and reconstructed FORS boundary. Its invalid WOTS reasoning is not
-reused; the WOTS boundary is the repaired Hülsing-Kudinov/EasyCrypt UD-C, TCR-C, and PRE-C split.
+## Candidate master expression
 
-The EasyCrypt development is classical. It has no quantum state, superposition-query semantics,
-unitary oracle, or classical-to-QROM lift. Lean therefore exposes only `OracleComp` semantics;
-`QROMClaim` is deliberately uninhabited.
+The modeled source order has twelve terms:
 
-## Exact master inequality
-
-Under proposed D-006, the candidate RHS has exactly these twelve terms in source order:
-
-1. SKG PRF advantage.
-2. MKG PRFmsg advantage.
-3. Hmsg ITSR probability.
-4. `max(0, Pr[DSPR_F] - SPprob_F)`.
-5. `3 * Pr[TCR_F]`.
-6. FORS-H TCR-C.
-7. FORS-Tl TCR-C.
-8. `(w - 2) * Adv[WOTS-F UD-C]`.
-9. WOTS-F TCR-C.
-10. WOTS-F PRE-C.
-11. WOTS-Tl TCR-C.
+1. secret-key-generation PRF advantage;
+2. message-randomization PRF advantage;
+3. Hmsg ITSR probability;
+4. `max(0, Pr[DSPR_F] - SPprob_F)`;
+5. `3 * Pr[TCR_F]`;
+6. FORS-H TCR-C;
+7. FORS-Tl TCR-C;
+8. `(w - 2) * Adv[WOTS-F UD-C]`;
+9. WOTS-F TCR-C;
+10. WOTS-F PRE-C;
+11. WOTS-Tl TCR-C;
 12. XMSS-H TCR-C.
 
-`MasterTermRole` is a closed twelve-constructor type. SKG and MKG use VCVio `PRFScheme` real/ideal
-experiments. The ITSR term runs a post-SKG/post-MKG reduction against the default fresh-key oracle.
-Under proposed D-009, the other nine target-bearing terms are standalone source-shaped oracle
-games, not events applied after an original-scheme transcript. This implemented candidate does not
-supersede the earlier contract unless D-009 receives named approval.
+`MasterTermRole` closes this list. `RepairedMasterStatement` fixes parameters, encodings, and a
+complete `ReductionSystem` before quantifying over adversaries and their query-bound witnesses. It
+is a `Prop` definition: no concrete reduction system or proof of the inequality is supplied.
 
-There is no birthday/interleaving term and no additive `qS`/`qH` term. The rejected expression
-`qS * (qS + qH) / 2^(8*m)` is not in the pinned theorem and is not probability-bounded for arbitrary
-inputs: `m=1,qS=17,qH=0` gives `289/256 > 1`.
+## Target and collection games
 
-## Standalone target games
+Two-phase programs query challenger-owned target oracles during `pick` and return private state to a
+non-querying finish phase. TCR and DSPR target queries log `(tweak,input)`; real PRE/UD queries
+sample hidden inputs and expose only primitive outputs, while ideal UD samples outputs. Collection
+variants interpret target and collection oracles under the same public seed and execution and test
+distinct target tweaks plus target/collection disjointness. Invalid selection, excessive or
+duplicate targets, or overlap makes the event false.
 
-`TwoPhaseAdversary` models the source `pick`/`find`, `pick`/`guess`, and `pick`/`distinguish`
-interfaces. Its `pick` phase can query the relevant game oracles and returns private state; its
-`finish` phase receives the sampled public seed and that state but has no oracle access. The same
-stateful program is run independently in the DSPR and SPprob experiments, and SPprob ignores only
-the returned Boolean guess.
+Formula-derived target counts are positive upper bounds. An execution may make fewer or zero target
+queries; selecting a nonexistent target fails rather than making the context inconsistent.
 
-For TCR and DSPR, the target oracle accepts `(tweak,input)`, evaluates the role-specific primitive,
-and logs the target. For PRE and real UD, each target query samples a fresh hidden `Y` input and
-returns its F output. Ideal UD samples a fresh `Y` output. No real input or output is preloaded from
-an earlier execution, and the program sees outputs only through its oracle.
+## ITSR and outer transcript
 
-Each `-C` program receives the sum of its target oracle and the collection oracle. Both are
-interpreted with the same sampled public seed and logged during the same `pick` execution. The event
-checks that actual target tweaks and actual collection tweaks are disjoint. It also checks the
-formula-derived target-query bound and distinctness of the actual target trace. Invalid selection,
-too many targets, duplicate tweaks, or overlap makes the event false; none makes the context
-uninhabitable.
+The post-hop ITSR setup owns reduction state after the two PRF hops. Each oracle request samples a
+fresh randomizer and records the Hmsg request; the final event checks freshness and target reuse.
+The original CMA transcript separately records honest signing requests and projects their Hmsg
+inputs. A proof connecting these structures to a concrete general-scheme reduction is still needed.
 
-The collection language distinguishes F, H, FORS-Tl, and WOTS-Tl input types. `TargetInput`
-separates all eight theorem roles, including fixed vectors of length `k` and `len` for the two Tl
-roles.
+Generated key records preserve public/secret seed and root coherence, and public queries are indexed
+by that key. `SigningBound` and `HashQueryBound` are predicates on the actual adversary program.
+`qH` covers explicit F, H, both Tl arities, and Hmsg calls. Internal construction instrumentation
+and the outer atomic signing-log refinement remain open.
 
-## ITSR hybrid
+## Construction connections
 
-`PostHopITSRAdversary` owns a `ProbComp` setup phase and its private state. That setup is the typed
-boundary for the NPRF key material after both preceding PRF hops; the generic challenger does not
-generate or inject a real SLH secret key. The state exposes only the public Hmsg parameters and the
-reduction's oracle program.
+`CanonicalGames` instantiates the canonical generic problem types with encoded addresses and types
+the required reduction fields. `ReachableTargets` provides structural FORS/XMSS/WOTS ledgers with
+cardinality and `Nodup` facts. `TraceTargets` proves WOTS free-oracle programs stay inside their
+structural address union and transfers that certificate to deterministic public-hash logs.
 
-The default ITSR oracle samples a fresh `Y` for each request and logs `(request,randomizer)`. The
-challenger recomputes every Hmsg digest under the program-owned public parameters, then checks that
-the returned `(randomizer,request)` is fresh and that its digest targets are contained in the union
-of earlier targets. Message caching required by the concrete EUF-to-ITSR reduction belongs inside
-that fixed reduction program, matching the source module boundary.
+Still required are concrete encoded injectivity, nonempty distinct-target batches, input pairing,
+FORS/XMSS/hypertree trace bridges, outer-CMA log refinement, experiment equivalences, an inhabitant
+of `ReductionAdversaries`, the selected `CountingInterface`, and the master inequality. The exact
+SUF partition also leaves its same-message residual unbounded.
 
-The original EUF transcript separately projects `(R,request)` from honest signing entries and
-proves Hmsg coherence. That projection is useful for the scheme experiment but is not substituted
-for the quantitative standalone ITSR game.
-
-## Key, transcript, and query coupling
-
-`SchemeInterface` is an arbitrary signature-scheme experiment boundary: it bundles a signature
-carrier, randomizer projection, coherent key distribution, signing operation, and verification
-operation, but supplies no law coupling those fields to each other or to the general SLH-DSA
-construction. It removes the previous syntactic call to the known single-layer implementation; it
-does not prove construction refinement. F-079 and PO-003 therefore remain open for S08/S09. A
-generated pair packages public/secret seed and root equality. Original EUF execution queries are
-indexed by that public key; `queryImpl` uses its seed/root. The public adversary language cannot
-express PRF or PRFmsg.
-
-`honestTranscriptDistribution` owns original key generation and uses `QueryImpl.withLogging`. It is
-the LHS EUF probability space. Honest signing is currently one outer event; internal construction
-instrumentation remains later implementation work. Crucially, no exact-target provider or
-certificate is required from this opaque log, so a no-query adversary yields an ordinary empty log
-rather than an impossible security context.
-
-B04's `TraceTargets` proves WOTS free-oracle programs use addresses from the structural ledger and
-transfers any such pathwise certificate to a deterministic public-hash query log. It does not splice
-that log into the outer atomic signing event. `CanonicalGames` instantiates the generic PR #594/#596
-problem types and types ten reduction fields, but supplies no `ReductionAdversaries` inhabitant or
-equivalence with the experiments in this document.
-
-Freshness compares the complete request: mode, context, prehash identifier/output length, and
-message. The forgery randomizer is the interface projection. Proving that projection is the exact
-signature `R` consumed by general signing, digest, and verification remains part of F-079/PO-003.
-
-`SigningBound` and `HashQueryBound` are `OracleComp.IsQueryBoundP` properties of the actual public
-adversary program for every public key. `qH` counts explicit adversarial F, H, both Tl arities, and
-Hmsg. These budgets are structural premises, not extra RHS loss.
-
-## Formula-derived target bounds
+## Exact target caps
 
 Let `N_i = 2^(hp*(d-i-1))`, `C_X = sum_i N_i`, and
-`C_W = sum_i N_i * 2^hp`. The game caps are:
+`C_W = sum_i N_i * 2^hp`.
 
-| role | maximum target queries |
-| --- | ---: |
+| Role | Upper bound |
+|---|---:|
 | FORS F | `2^h * k * 2^a` |
 | FORS H | `2^h * k * (2^a - 1)` |
 | FORS Tl | `2^h` |
@@ -134,39 +84,5 @@ Let `N_i = 2^(hp*(d-i-1))`, `C_X = sum_i N_i`, and
 | WOTS Tl | `C_W` |
 | XMSS H | `C_X * (2^hp - 1)` |
 
-The FORS EasyCrypt variable named `d` is the number of FORS instances and maps to `2^h`, not
-`Params.d`. `ParameterConditions` requires positivity, `h=hp*d`, and `lgw in {2,4,8}`.
-`targetCount_pos` proves every cap positive. A game may make fewer target queries, including zero,
-as in the source; selecting a nonexistent target simply fails its event.
-
-## Quantifier order and non-claims
-
-`ClassicalSecurityContext` fixes parameters, conditions, encoding, and the complete named reduction
-system before `RepairedMasterStatement` quantifies over every adversary and its `qS/qH` witnesses.
-The context has no target/transcript sampler, public seed, free target count, component probability,
-or scalar loss field.
-
-- `RepairedMasterStatement` is a proposition-valued definition, not a theorem.
-- The context accepts any scheme-interface implementation; S02 neither reviews its construction
-  refinement nor claims the current `d = 1` construction instantiates the general FIPS experiment.
-- D-006 and D-009 remain proposed and unapproved. Their affected obligations remain pending.
-- Constructing the authoritative concrete reductions and proving the inequality remain future work.
-- Post-hop setup is a typed reduction boundary; proving the concrete NPRF setup correspondence is a
-  later reduction obligation.
-- Request encoding remains explicit until the external pure/prehash API is formalized.
-- Honest signing internals remain uninstrumented; component games no longer depend on that absent
-  trace refinement.
-- No classical result is cast or advertised as QROM.
-- The rejected legacy `Security.lean` remains untouched and its findings are not globally closed.
-
-## Lean surface
-
-- `Notions.lean`: requests, digest mapping, ITSR, target predicates, and classical/QROM boundary.
-- `OracleSurface.lean`: generated-key provenance, public/internal queries, origin tags, and bounds.
-- `Transcript.lean`: original honest experiment, logging, freshness, and scheme-transcript ITSR.
-- `Architecture.lean`: roles/counts, target/collection oracle games, post-hop ITSR, twelve-term RHS,
-  and master statement shape.
-- `CanonicalGames.lean`: conditional canonical generic-game instantiations, typed reduction fields,
-  and advantage terms; no reductions or master inequality.
-- `TraceTargets.lean`: structural construction-address predicate, WOTS trace contracts, and a
-  deterministic logged-execution consequence; no outer-CMA log refinement.
+The FORS proof variable called `d` denotes a number of FORS instances and maps to `2^h`; it is not
+`Params.d`. `ParameterConditions` enforces positivity, `h = hp*d`, and `lgw ∈ {2,4,8}`.

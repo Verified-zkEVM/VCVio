@@ -13,6 +13,9 @@
       "locator": "NIST.FIPS.205.pdf",
       "sha256": "8ef34228276f3386d23cb0da8c14592b8cfb0db3358016bba64df7a004f8d13d",
       "size_bytes": 1055752,
+      "title": "Stateless Hash-Based Digital Signature Standard",
+      "authors": ["National Institute of Standards and Technology"],
+      "doi": "10.6028/NIST.FIPS.205",
       "publication_status": "final",
       "publication_date": "2024-08-13",
       "authority": "primary-normative"
@@ -150,6 +153,9 @@
       "publication_status": "initial-public-draft",
       "publication_date": "2026-04-13",
       "signature_cap_per_key": 16777216,
+      "title": "Additional SLH-DSA Parameter Sets for Limited-Signature Use Cases",
+      "authors": ["Quynh Dang", "Dustin Moody"],
+      "doi": "10.6028/NIST.SP.800-230.ipd",
       "profile_id": "SP800-230-IPD-6SET",
       "authority": "primary-nonnormative-draft-profile"
     },
@@ -159,6 +165,10 @@
       "root": "sibling",
       "locator": "SPHINCS_EC.pdf",
       "sha256": "d1ca5fff2e7544c3591d665cd04a2e0f7454c0a2971388911eb6f6303c026001",
+      "title": "A Tight Security Proof for SPHINCS+, Formally Verified",
+      "authors": ["Manuel Barbosa", "François Dupressoir", "Andreas Hülsing", "Matthias Meijers", "Pierre-Yves Strub"],
+      "year": 2024,
+      "eprint": "2024/910",
       "authority": "primary-security"
     },
     {
@@ -167,7 +177,26 @@
       "root": "sibling",
       "locator": "papers/sphincsplus-framework-CCS2019.pdf",
       "sha256": "9b49545b61bc194f0d7793556b04ca8f2257990057e229f51164ce2aafe89aa6",
+      "title": "The SPHINCS+ Signature Framework",
+      "authors": ["Daniel J. Bernstein", "Andreas Hülsing", "Stefan Kölbl", "Ruben Niederhagen", "Joost Rijneveld", "Peter Schwabe"],
+      "year": 2019,
+      "doi": "10.1145/3319535.3363229",
       "authority": "primary-security-historical-invalidated"
+    },
+    {
+      "id": "hulsing-kudinov-2022",
+      "kind": "url",
+      "root": "remote",
+      "locator": "https://doi.org/10.1007/978-3-031-22966-4_1",
+      "revision": "ASIACRYPT-2022-LNCS-13794-chapter-1",
+      "title": "Recovering the Tight Security Proof of SPHINCS+",
+      "authors": ["Andreas Hülsing", "Mikhail A. Kudinov"],
+      "venue": "Advances in Cryptology -- ASIACRYPT 2022, Part IV",
+      "series": "Lecture Notes in Computer Science",
+      "volume": "13794",
+      "pages": "3-33",
+      "year": 2022,
+      "authority": "primary-security-repair"
     },
     {
       "id": "sphincs-r3.1",
@@ -306,6 +335,8 @@
       "locator": "https://github.com/usnistgov/ACVP.git",
       "revision": "892fd14710f3a7edbea230d0aecc5511e0257f8e",
       "document": "draft-livelsberger-acvp-slh-dsa-01",
+      "document_title": "ACVP SLH-DSA JSON Specification",
+      "document_author": "B. Livelsberger",
       "document_date": "2024-06-25",
       "root_source_sha256": "d9c7088a6bb0531b2a5ab65104f467a7abe0e5ffc4d22f8ec1b7b90978d7d061",
       "source_composite_sha256": "bc38ec528afcaa7f6a8155fd75a7612166203c789a540c0ac42e860a04c40a54",

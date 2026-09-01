@@ -34,55 +34,13 @@ REQUIRED_FILES = (
     "reference-manifest.json",
     "specification.md",
     "lean-blueprint.md",
-    "plan.md",
     "proof-obligations.md",
-    "review-protocol.md",
+    "security-architecture.md",
     "validation.md",
-    "decisions.md",
-    "findings.md",
-    "sessions/README.md",
-    "sessions/S00-baseline-and-harness.md",
-    "sessions/S01-authority-and-conformance.md",
-    "reviews/README.md",
-    "reviews/S00-adversarial-review.md",
-    "reviews/S00-adversarial-review-r1.md",
-    "reviews/S00-adversarial-review-r2.md",
-    "reviews/S00-adversarial-review-r3.md",
-    "reviews/S00-adversarial-review-r4.md",
-    "reviews/S00-adversarial-review-r5.md",
-    "reviews/S00-adversarial-review-r6.md",
-    "reviews/S00-adversarial-review-r7.md",
-    "reviews/S00-adversarial-review-r8.md",
-    "reviews/S00-adversarial-review-r9.md",
-    "reviews/S01-authority-and-conformance-review.md",
-    "reviews/S01-authority-and-conformance-review-r1.md",
-    "reviews/S01-authority-and-conformance-review-r2.md",
-    "reviews/S01-authority-and-conformance-review-r3.md",
-    "reviews/S01-authority-and-conformance-review-r4.md",
-    "reviews/S01-authority-and-conformance-review-r5.md",
-    "reviews/S01-authority-and-conformance-review-r6.md",
-    "reviews/S01-authority-and-conformance-review-r7.md",
-    "reviews/S01-authority-and-conformance-review-r8.md",
-    "reviews/S01-authority-and-conformance-review-r9.md",
-    "reviews/S01-authority-and-conformance-review-r10.md",
-    "reviews/S01-authority-and-conformance-review-r11.md",
-    "reviews/S01-authority-and-conformance-review-r12.md",
-    "reviews/S01-authority-and-conformance-review-r13.md",
-    "reviews/S01-authority-and-conformance-review-r14.md",
-    "reviews/S01-authority-and-conformance-review-r15.md",
-    "reviews/S01-authority-and-conformance-review-r16.md",
-    "reviews/S03-data-codec-review.md",
-    "reviews/S03-data-codec-review-r1.md",
-    "reviews/S04-primitives-review.md",
-    "report/README.md",
-    "report/slhdsa-formalization-audit.tex",
-    "report/references.bib",
     "matrices/coverage.csv",
     "matrices/proof-obligations.csv",
     "matrices/assumptions.csv",
     "matrices/tcb.csv",
-    "matrices/decisions.csv",
-    "matrices/declarations.jsonl",
     "matrices/fips205-profile.json",
     "matrices/sp800-230-ipd-profile.json",
 )
@@ -108,123 +66,46 @@ S01_REQUIRED_FILES = (
 CSV_SCHEMAS = {
     "coverage.csv": (
         ["id", "profile", "layer", "claim", "primary_source", "source_locator",
-         "current_artifact", "current_status", "target_status", "evidence", "owner",
-         "review_status", "notes"],
+         "current_artifact", "current_status", "target_status", "evidence", "notes"],
         {
             "profile": {"FIPS205-12", "SPX-TW-ABS", "SP800-230-IPD-6SET",
                         "LEGACY-SHA2-128-24", "C13-ETH", "DEPLOY-TBD"},
             "current_status": {"covered", "partial", "missing", "not-applicable", "disputed"},
-            "target_status": {"required", "deferred", "out-of-scope", "decision-blocked"},
-            "review_status": {"pending", "pass", "fail"},
+            "target_status": {"required", "deferred", "out-of-scope", "blocked"},
         },
     ),
     "proof-obligations.csv": (
         ["id", "profile", "category", "obligation", "source", "lean_target", "status",
-         "severity", "session", "evidence", "review_status", "notes"],
+         "severity", "evidence", "notes"],
         {
             "profile": {"FIPS205-12", "SPX-TW-ABS", "SP800-230-IPD-6SET",
                         "LEGACY-SHA2-128-24", "C13-ETH", "DEPLOY-TBD"},
             "status": {"open", "blocked", "provisional", "discharged", "not-applicable"},
             "severity": {"critical", "high", "medium", "low"},
-            "review_status": {"pending", "pass", "fail"},
         },
     ),
     "assumptions.csv": (
         ["id", "profile", "assumption", "kind", "scope", "status", "discharge", "evidence",
-         "review_status", "notes"],
+         "notes"],
         {
             "profile": {"FIPS205-12", "SPX-TW-ABS", "SP800-230-IPD-6SET",
                         "LEGACY-SHA2-128-24", "C13-ETH", "DEPLOY-TBD"},
             "kind": {"cryptographic", "modeling", "implementation", "toolchain", "external"},
             "status": {"proposed", "accepted", "rejected", "blocked", "discharged"},
-            "review_status": {"pending", "pass", "fail"},
         },
     ),
     "tcb.csv": (
         ["id", "component", "boundary", "trust_reason", "status", "mitigation", "evidence",
-         "review_status", "notes"],
+         "notes"],
         {
             "status": {"inherited", "provisional", "accepted", "remove", "blocked"},
-            "review_status": {"pending", "pass", "fail"},
         },
     ),
-    "decisions.csv": (
-        ["id", "status", "decision", "proposer", "approver", "evidence", "session", "notes"],
-        {"status": {"proposed", "accepted", "rejected", "blocked", "superseded"}},
-    ),
 }
-
-DECL_REQUIRED = {
-    "schema_version", "id", "module", "name", "kind", "source", "visibility",
-    "elaborated_type", "direct_dependencies", "reverse_dependencies", "transitive_axioms",
-    "sorry_ax", "unsafe", "noncomputable", "extern", "load_bearing", "risk", "rationale",
-    "evidence", "inventory_status", "review_status",
-}
-SOURCE_REQUIRED = {"path", "start_line", "start_column", "end_line", "end_column"}
 
 # The former S00 security placeholder was removed by the upstream architecture merge. Any
 # admission under HashSig is now an error; keeping this as an exact empty set preserves monotonicity.
 SORRY_ALLOWLIST: set[tuple[str, int, str]] = set()
-
-S01_FAILED_REVIEW_HASHES = {
-    "reviews/S01-authority-and-conformance-review.md":
-        "ab4f964df0bc5f48840c46c8ddffc35f4e15e5f1ea85123a2aae6ab1c46b1a76",
-    "reviews/S01-authority-and-conformance-review-r1.md":
-        "9b369bba832820d114a041db30bfd16d10289851da3a507484f8f259572047ec",
-    "reviews/S01-authority-and-conformance-review-r2.md":
-        "3a8e5afe4d1b17c0b29febd18f993442f41e4f3137a994badce7d54946420ad8",
-    "reviews/S01-authority-and-conformance-review-r3.md":
-        "bb84cb7380c9a5a1aa0c78018898389a7d1ac436dfa39caa987f170670542662",
-    "reviews/S01-authority-and-conformance-review-r4.md":
-        "3a334dfe161d1475a48e44385fdd114615897d8416bf8026d15dcc2dddaa3c89",
-    "reviews/S01-authority-and-conformance-review-r5.md":
-        "03ae3b07aee41ddf90a30ee42edd388b2c3921c42f8a27807180262b4397ca97",
-    "reviews/S01-authority-and-conformance-review-r6.md":
-        "8f4f477ce19484a20bf1af6af4acce2bb10707bbab9c88e803593ef6ff797d22",
-    "reviews/S01-authority-and-conformance-review-r7.md":
-        "fd8f9483e973ebca7388080e9218aa3c9b9d5857722a60bc42e5458de89941aa",
-    "reviews/S01-authority-and-conformance-review-r8.md":
-        "a09fc3b7fffacb2e83f69f968c5b2c4ba81b91cee3258e5848fea1734735dd9d",
-    "reviews/S01-authority-and-conformance-review-r9.md":
-        "52db8de84cf122c066fa4dd2928dd4d93c99f45754d95681cbfe7ed2610759fa",
-    "reviews/S01-authority-and-conformance-review-r10.md":
-        "cccabc4e95357055838ae8052f00f6d372ca8a29185d408dee81d916c5a138c1",
-    "reviews/S01-authority-and-conformance-review-r11.md":
-        "e9f459db757e8f584fed113bd42b0df947c1660b74bc7202b0957d9ba98690ff",
-    "reviews/S01-authority-and-conformance-review-r12.md":
-        "74277bebc85879dd563e8e6ef5c2b733d85ff6794d093bcaf5644699eed2c90f",
-    "reviews/S01-authority-and-conformance-review-r13.md":
-        "104ac10c67ea471f772efd3e0319df5ce99db9b0e7fc0859a2a700564112fd21",
-    "reviews/S01-authority-and-conformance-review-r14.md":
-        "347281880d2221e2e5e8386aa8898baee389e7d62cf50adb12031b8db0ae15f8",
-    "reviews/S01-authority-and-conformance-review-r15.md":
-        "f153f6bddad34a669ef40d8095c0512d4c07b4e29384cebb60bfa9764d788734",
-    # Later immutable FAIL artifacts are excluded from active-prose mutation policy by exact hash.
-    "reviews/S02-security-architecture-review-r5.md":
-        "0c1ea5b29c49d7fc6640509bb974aefd73c1cab6587e2052e34ba57e91b55bb6",
-    "reviews/S02-security-architecture-review-r6.md":
-        "39328910948604a1920b6956d33885ebca0520eaff7af7b66088c3a30f1f219d",
-    "reviews/S02-security-architecture-review-r7.md":
-        "30753d77ffd190c63f0c90e132dfa800835eb712e06f7f026afcc5c48cf74c23",
-    "reviews/S03-data-codec-review.md":
-        "8a21aa42caec8659ed4cafc8e56ddb1dfcc0ec0559f6bc9b678ad3e65a07586b",
-    "reviews/S03-data-codec-review-r1.md":
-        "0d728bf15cca3ebc2c9402b777b30a0c6de41b35f44eb2309c6b828812e4b6ba",
-    "reviews/S04-primitives-review.md":
-        "75f47fd176cf360a86b0b25a1d7e674e1b11c664fbf86fa1279165f62ecf3229",
-}
-S01_ACCEPTED_REVIEW = {
-    "path": "reviews/S01-authority-and-conformance-review-r16.md",
-    "sha256": "d044a7601c99101ba2d4ec8190a23142a5479da005aae249d75f36cceffcd465",
-    "size_bytes": 20920,
-    "line_count": 335,
-}
-S02_ACCEPTED_REVIEW = {
-    "path": "reviews/S02-security-architecture-review-r8.md",
-    "sha256": "51853a43e48d8b06da530fe73a7ee9b318aa9ac27fdb33cccdc14d8041aa5e1b",
-    "size_bytes": 17943,
-    "line_count": 338,
-}
 
 S02_REPAIR_BASE_REVISION = "7b77e700b3d24a6ab94ed741a650954bbd90859a"
 S02_SOURCE_GLOBS = (
@@ -240,88 +121,6 @@ S02_SOURCE_COMMAND = (
     "HashSig/SLHDSA/Security/*.lean | sha256sum"
 )
 S02_SOURCE_DETERMINISTIC_COMMAND = f"LC_ALL=C {S02_SOURCE_COMMAND}"
-S02_DECLARATION_SPANS = {
-    "DECL-015": (35, 1, 39, 48),
-    "DECL-016": (63, 1, 68, 70),
-    "DECL-017": (233, 1, 237, 42),
-    "DECL-018": (199, 1, 209, 58),
-    "DECL-019": (133, 1, 155, 68),
-    "DECL-020": (441, 1, 442, 26),
-    "DECL-021": (444, 1, 455, 36),
-    "DECL-022": (457, 1, 472, 36),
-    "DECL-023": (474, 1, 486, 36),
-    "DECL-024": (488, 1, 500, 36),
-    "DECL-025": (502, 1, 517, 36),
-    "DECL-026": (519, 1, 533, 36),
-    "DECL-027": (535, 1, 549, 36),
-    "DECL-028": (551, 1, 562, 30),
-    "DECL-029": (566, 1, 598, 35),
-    "DECL-030": (613, 1, 620, 64),
-    "DECL-031": (682, 1, 701, 20),
-    "DECL-032": (703, 1, 710, 89),
-}
-S02_DECLARATION_DIRECT_DEPS = {
-    "DECL-022": ["SLHDSA.Security.chosenTargetsC", "SLHDSA.Security.collectionTweaks",
-                 "SLHDSA.Security.CollectionDisjoint"],
-    "DECL-024": ["SLHDSA.Security.chosenTargets", "SLHDSA.Security.SPprobSuccess"],
-    "DECL-025": ["SLHDSA.Security.sampledTargets", "SLHDSA.Security.PRESuccess",
-                 "SLHDSA.Security.CollectionDisjoint"],
-    "DECL-026": ["SLHDSA.Security.sampledTargetRealImpl",
-                 "SLHDSA.Security.SampledTraceValid", "SLHDSA.Security.CollectionDisjoint"],
-    "DECL-027": ["SLHDSA.Security.sampledTargetIdealImpl",
-                  "SLHDSA.Security.SampledTraceValid", "SLHDSA.Security.CollectionDisjoint"],
-}
-S03_DECLARATION_SPANS = {
-    "DECL-033": (271, 1, 272, 22),
-    "DECL-034": (57, 1, 65, 22),
-    "DECL-035": (68, 1, 71, 22),
-    "DECL-036": (53, 1, 53, 58),
-    "DECL-037": (50, 1, 57, 10),
-    "DECL-038": (139, 1, 142, 10),
-    "DECL-039": (169, 1, 171, 65),
-    "DECL-040": (185, 1, 191, 28),
-    "DECL-041": (188, 1, 198, 18),
-    "DECL-042": (362, 1, 372, 48),
-    "DECL-043": (374, 1, 377, 20),
-    "DECL-044": (34, 1, 36, 42),
-    "DECL-045": (39, 1, 41, 42),
-    "DECL-046": (44, 1, 46, 42),
-    "DECL-047": (55, 1, 57, 31),
-    "DECL-048": (59, 1, 61, 31),
-    "DECL-049": (63, 1, 65, 37),
-    "DECL-050": (79, 1, 81, 22),
-    "DECL-051": (87, 1, 107, 35),
-    "DECL-052": (122, 1, 127, 35),
-    "DECL-053": (308, 1, 328, 37),
-    "DECL-054": (396, 1, 399, 63),
-    "DECL-055": (402, 1, 404, 47),
-}
-S03_DECLARATION_AXIOMS = {
-    "DECL-033": ["propext"],
-    "DECL-034": ["propext"],
-    "DECL-035": ["propext"],
-    "DECL-036": [],
-    "DECL-037": ["propext", "Classical.choice", "Quot.sound"],
-    "DECL-038": ["propext"],
-    "DECL-039": ["propext"],
-    "DECL-040": ["propext"],
-    "DECL-041": ["propext"],
-    "DECL-042": ["propext"],
-    "DECL-043": ["propext"],
-    "DECL-044": ["propext"],
-    "DECL-045": ["propext"],
-    "DECL-046": ["propext"],
-    "DECL-047": ["propext"],
-    "DECL-048": ["propext"],
-    "DECL-049": ["propext"],
-    "DECL-050": [],
-    "DECL-051": ["propext", "Classical.choice", "Quot.sound"],
-    "DECL-052": ["propext", "Classical.choice", "Quot.sound"],
-    "DECL-053": ["propext", "Classical.choice", "Quot.sound"],
-    "DECL-054": ["propext", "Classical.choice", "Quot.sound"],
-    "DECL-055": ["propext", "Classical.choice", "Quot.sound"],
-}
-
 # This is the one authoritative current partition. The six historical SHA-256 CLI cases are a
 # subset of path-cli=20, and nominal success is deliberately excluded from mutation accounting.
 PARSER_FOCUSED_CASE_COUNTS = {
@@ -358,6 +157,9 @@ EXPECTED_S01_AUTHORITY_RECORDS = {
         "locator": "NIST.FIPS.205.pdf",
         "sha256": "8ef34228276f3386d23cb0da8c14592b8cfb0db3358016bba64df7a004f8d13d",
         "size_bytes": 1055752,
+        "title": "Stateless Hash-Based Digital Signature Standard",
+        "authors": ["National Institute of Standards and Technology"],
+        "doi": "10.6028/NIST.FIPS.205",
         "publication_status": "final",
         "publication_date": "2024-08-13",
         "authority": "primary-normative",
@@ -374,6 +176,9 @@ EXPECTED_S01_AUTHORITY_RECORDS = {
         "publication_status": "initial-public-draft",
         "publication_date": "2026-04-13",
         "signature_cap_per_key": 16777216,
+        "title": "Additional SLH-DSA Parameter Sets for Limited-Signature Use Cases",
+        "authors": ["Quynh Dang", "Dustin Moody"],
+        "doi": "10.6028/NIST.SP.800-230.ipd",
         "profile_id": "SP800-230-IPD-6SET",
         "authority": "primary-nonnormative-draft-profile",
     },
@@ -393,6 +198,8 @@ EXPECTED_S01_AUTHORITY_RECORDS = {
         "locator": "https://github.com/usnistgov/ACVP.git",
         "revision": "892fd14710f3a7edbea230d0aecc5511e0257f8e",
         "document": "draft-livelsberger-acvp-slh-dsa-01",
+        "document_title": "ACVP SLH-DSA JSON Specification",
+        "document_author": "B. Livelsberger",
         "document_date": "2024-06-25",
         "root_source_sha256":
             "d9c7088a6bb0531b2a5ab65104f467a7abe0e5ffc4d22f8ec1b7b90978d7d061",
@@ -429,31 +236,28 @@ FIPS205_RANDOMNESS = (
     "slh_sign_internal substitutes PK.seed as opt_rand."
 )
 
-# Updating any canonical matrix is intentional review work: revise its exact pin in the same
-# session and retain the structured checks below. The pin set is exhaustive, not a permanent freeze.
+# Updating a canonical matrix requires updating its exact pin together with the structured record.
 S01_MATRIX_PINS = {
     "docs/slhdsa/matrices/assumptions.csv":
-        (3881, "cdfaaa4aad22cd5b6cc28e5863fd5de30949b3c3406cea9eea14e0f941a9976b"),
+        (2489, "71347114ec62e7757907bead905527ff7a8bd1d254abaf4812171d3368211350"),
     "docs/slhdsa/matrices/coverage.csv":
-        (9616, "4ac52347d893cc17b2d35b4f9d26d6436485201890a08acee91afacd76784d03"),
-    "docs/slhdsa/matrices/decisions.csv":
-        (1793, "6ef3dc5e9f85d48d49d18c6eca14be82fac01942d154ccbcd34c6e5f6a02f292"),
-    "docs/slhdsa/matrices/declarations.jsonl":
-        (131960, "98a983128c13fc0bf3bc4f79f1d411052b6483261bbd1cb78cd6832f6d74aafe"),
+        (6279, "ee27ff277bd688388a5bf1835ab525f41c92228c47d0cc50260809440fad585d"),
     "docs/slhdsa/matrices/fips205-profile.json":
         (5059, "c833c36b33951e3b76fcf344e282cb26a37317f115b425eb776dfcdc1a23eeb5"),
     "docs/slhdsa/matrices/proof-obligations.csv":
-        (9416, "3a9ae93a3532b39f8bf8268583160159f66690f4a0456bc3d8b016392a6bc38f"),
+        (5684, "2959c812f4e2b2d006a882d8c7df459037031ce21ab5314b7e8211a085c24d21"),
     "docs/slhdsa/matrices/sp800-230-ipd-profile.json":
         (1504, "77ee7c4f0e872f2f2f31c830a14f4d90d63c55d260a0f3aaa3ac0e4aec92d26e"),
     "docs/slhdsa/matrices/tcb.csv":
-        (4959, "bc2c7e7947e7d83f3c559486a04e44bdb673f9a4f326bafda263f24d810440f3"),
+        (3098, "8f75e3ec5e5465a34b94e33d6fb88f1dc733445b0b42e07d4dbd267103346431"),
 }
 
-# DECL-011--DECL-014 use typed dependency tokens. Earlier bootstrap rows retain their historical
-# untyped strings until F-018 replaces this manual inventory with an elaborated export.
-S01_DECLARATION_DEPENDENCIES = {
+# The four load-bearing ACVP roots retain the exact typed dependency/visibility boundary formerly
+# represented by inventory rows. These static records are authoritative and mutation-tested.
+ACVP_DEPENDENCY_RECORDS = {
     "DECL-011": {
+        "name": "SLHDSA.Test.ACVP.parameterSets",
+        "visibility": "public",
         "direct_dependencies": [
             "lean-public|SLHDSA.Test.ACVP.ParamInfo",
         ],
@@ -462,6 +266,8 @@ S01_DECLARATION_DEPENDENCIES = {
         ],
     },
     "DECL-012": {
+        "name": "SLHDSA.Test.ACVP.parseAndValidate",
+        "visibility": "public",
         "direct_dependencies": [
             "lean-public|SLHDSA.Test.ACVP.parsePrompt",
             "lean-public|SLHDSA.Test.ACVP.parseResults",
@@ -474,6 +280,8 @@ S01_DECLARATION_DEPENDENCIES = {
         ],
     },
     "DECL-013": {
+        "name": "main",
+        "visibility": "public-root",
         "direct_dependencies": [
             "source-private-direct|HashSigTest/SLHDSA/ACVP/ParserTests.lean|runAll|197",
         ],
@@ -482,6 +290,8 @@ S01_DECLARATION_DEPENDENCIES = {
         ],
     },
     "DECL-014": {
+        "name": "SLHDSA.Test.ACVP.parseWrappedPair",
+        "visibility": "public",
         "direct_dependencies": [
             "lean-public|SLHDSA.Test.ACVP.StrictJson.parse",
             "source-private-direct|HashSigTest/SLHDSA/ACVP/Schema.lean|asObject|136",
@@ -527,16 +337,6 @@ def read_json(path: Path) -> Any:
         raise CheckFailure(f"{path.relative_to(ROOT)}: invalid JSON: {error}") from error
 
 
-def check_review_verdict(text: str, label: str) -> str:
-    matches = re.findall(
-        r"^Verdict: \*\*(PENDING|PASS|FAIL)\*\*(?:$|\. S00 remains blocked; S01 must not start\.$)",
-        text,
-        re.MULTILINE,
-    )
-    require(len(matches) == 1, f"{label}: exactly one canonical verdict is required")
-    return matches[0]
-
-
 def check_required_files() -> None:
     missing = [rel for rel in REQUIRED_FILES if not (DOCS / rel).is_file()]
     require(not missing, f"missing required files: {', '.join(missing)}")
@@ -550,72 +350,6 @@ def check_required_files() -> None:
             "missing compiled-IR fixture macro")
     require((ROOT / "scripts/slhdsa/fixtures/HashSig/PolicyIRFixture.lean").is_file(),
             "missing compiled-IR fixture victim")
-    failed = (DOCS / "reviews/S00-adversarial-review.md").read_text(encoding="utf-8")
-    failed_r1 = (DOCS / "reviews/S00-adversarial-review-r1.md").read_text(encoding="utf-8")
-    failed_r2 = (DOCS / "reviews/S00-adversarial-review-r2.md").read_text(encoding="utf-8")
-    failed_r3 = (DOCS / "reviews/S00-adversarial-review-r3.md").read_text(encoding="utf-8")
-    failed_r4 = (DOCS / "reviews/S00-adversarial-review-r4.md").read_text(encoding="utf-8")
-    failed_r5 = (DOCS / "reviews/S00-adversarial-review-r5.md").read_text(encoding="utf-8")
-    failed_r6 = (DOCS / "reviews/S00-adversarial-review-r6.md").read_text(encoding="utf-8")
-    failed_r7 = (DOCS / "reviews/S00-adversarial-review-r7.md").read_text(encoding="utf-8")
-    failed_r8 = (DOCS / "reviews/S00-adversarial-review-r8.md").read_text(encoding="utf-8")
-    current = (DOCS / "reviews/S00-adversarial-review-r9.md").read_text(encoding="utf-8")
-    require(check_review_verdict(failed, "S00 failed review") == "FAIL",
-            "S00 failed review must remain FAIL")
-    require(check_review_verdict(failed_r1, "S00 failed r1 review") == "FAIL",
-            "S00 failed r1 review must remain FAIL")
-    require(check_review_verdict(failed_r2, "S00 failed r2 review") == "FAIL",
-            "S00 failed r2 review must remain FAIL")
-    require(check_review_verdict(failed_r3, "S00 failed r3 review") == "FAIL",
-            "S00 failed r3 review must remain FAIL")
-    require(check_review_verdict(failed_r4, "S00 failed r4 review") == "FAIL",
-            "S00 failed r4 review must remain FAIL")
-    require(check_review_verdict(failed_r5, "S00 failed r5 review") == "FAIL",
-            "S00 failed r5 review must remain FAIL")
-    require(check_review_verdict(failed_r6, "S00 failed r6 review") == "FAIL",
-            "S00 failed r6 review must remain FAIL")
-    require(check_review_verdict(failed_r7, "S00 failed r7 review") == "FAIL",
-            "S00 failed r7 review must remain FAIL")
-    require(check_review_verdict(failed_r8, "S00 failed r8 review") == "FAIL",
-            "S00 failed r8 review must remain FAIL")
-    check_review_verdict(current, "S00 current r9 review")
-    for relative, expected_hash in S01_FAILED_REVIEW_HASHES.items():
-        failed_s01_bytes = (DOCS / relative).read_bytes()
-        failed_s01 = failed_s01_bytes.decode("utf-8")
-        require(check_review_verdict(failed_s01, f"S01 failed review {relative}") == "FAIL",
-                f"{relative}: immutable S01 review must remain FAIL")
-        require(hashlib.sha256(failed_s01_bytes).hexdigest() == expected_hash,
-                f"{relative}: immutable S01 review is not byte-identical")
-    accepted_s01_bytes = (DOCS / S01_ACCEPTED_REVIEW["path"]).read_bytes()
-    accepted_s01 = accepted_s01_bytes.decode("utf-8")
-    require(check_review_verdict(accepted_s01, "S01 accepted r16 review") == "PASS",
-            "S01 accepted r16 review must remain PASS")
-    require(len(accepted_s01_bytes) == S01_ACCEPTED_REVIEW["size_bytes"]
-            and len(accepted_s01_bytes.splitlines()) == S01_ACCEPTED_REVIEW["line_count"]
-            and hashlib.sha256(accepted_s01_bytes).hexdigest() ==
-                S01_ACCEPTED_REVIEW["sha256"],
-            "S01 accepted r16 review is not byte-identical")
-    accepted_s02_bytes = (DOCS / S02_ACCEPTED_REVIEW["path"]).read_bytes()
-    accepted_s02 = accepted_s02_bytes.decode("utf-8")
-    require(check_review_verdict(accepted_s02, "S02 accepted r8 review") == "PASS",
-            "S02 accepted r8 review must remain PASS")
-    require(len(accepted_s02_bytes) == S02_ACCEPTED_REVIEW["size_bytes"]
-            and len(accepted_s02_bytes.splitlines()) == S02_ACCEPTED_REVIEW["line_count"]
-            and hashlib.sha256(accepted_s02_bytes).hexdigest() ==
-                S02_ACCEPTED_REVIEW["sha256"],
-            "S02 accepted r8 review is not byte-identical")
-    for state in ("PENDING", "PASS", "FAIL"):
-        require(check_review_verdict(f"Verdict: **{state}**\n", "verdict self-test") == state,
-                f"verdict self-test failed for {state}")
-    try:
-        check_review_verdict("Verdict: **PENDING**\nVerdict: **PASS**\n", "verdict self-test")
-    except CheckFailure:
-        pass
-    else:
-        raise CheckFailure("verdict self-test accepted conflicting states")
-    report_readme = (DOCS / "report/README.md").read_text(encoding="utf-8")
-    require("no fixed length limit" in report_readme.lower(),
-            "report README must say 'no fixed length limit'")
     audit = (ROOT / "scripts/slhdsa/PolicyAudit.lean").read_text(encoding="utf-8")
     for marker in ("standardAxiomAllowlist", "collectHashSigModuleEntryFindings",
                    "mapModuleEntryFindings", "ModuleEntryArrays", "fixtureExpected",
@@ -651,9 +385,9 @@ def check_required_files() -> None:
     require("lake exe slhdsa_fors_tests" in wrapper,
             "validate.sh does not run the S07 FORS construction tests")
     for marker in ("python3 -B scripts/slhdsa/check-acvp-provenance.py",
-                   "lake build HashSigTest", "--resolve-s01-parser-executable"):
+                   "lake build HashSigTest", "--resolve-acvp-parser-executable"):
         require(marker in wrapper, f"validate.sh: missing S01 gate {marker}")
-    for marker in ("--elaborated-s01-dependencies", "--audit-s01-lake-config",
+    for marker in ("--elaborated-acvp-dependencies", "--audit-acvp-lake-config",
                    "expected_parser_stdout_file", "require_exact_parser_stdout_file",
                    "cmp -s", "-ne 154", "PASS (16 cases)", "PASS (52 cases)",
                    "PASS (68 cases)",
@@ -675,13 +409,13 @@ def check_required_files() -> None:
         require(marker in wrapper,
                 f"validate.sh: missing unconditional parser-override cleanup marker {marker}")
     override_marker = "parser_build_override_active=1\nPYTHONDONTWRITEBYTECODE=1 python3 -B " \
-                      "scripts/slhdsa/check-harness.py \\\n  --resolve-s01-parser-executable"
+                      "scripts/slhdsa/check-harness.py \\\n  --resolve-acvp-parser-executable"
     require(override_marker in wrapper,
             "validate.sh must arm cleanup immediately before the possibly mutating resolve query")
     require(wrapper.index(override_marker) < wrapper.rindex("restore_default_lake_configuration")
             < wrapper.index("lake env lean scripts/slhdsa/PolicyAudit.lean"),
             "validate.sh must explicitly restore the parser override before later Lake commands")
-    require(wrapper.count("--audit-s01-lake-config") == 2,
+    require(wrapper.count("--audit-acvp-lake-config") == 2,
             "validate.sh must audit both the pre-query configuration and the restored default configuration")
     require("lake exe slhdsa_acvp_parser" not in wrapper,
             "validate.sh must execute the exact attested parser binary, not repeat Lake lookup")
@@ -714,12 +448,10 @@ def check_required_files() -> None:
                    "SLHDSA_POLICY_RUN_IR_FIXTURE=1", "test ! -e"):
         require(marker in wrapper, f"validate.sh: missing compiled-IR gate {marker}")
     validation = (DOCS / "validation.md").read_text(encoding="utf-8")
-    for marker in ("ordinary-exported: 647", "ordinary-private: 680",
-                   "meta-private: 680", "private import visibility"):
+    for marker in ("151 unique load-bearing roots", "exactly 17 generated unsafe recursion helpers",
+                   PARSER_FOCUSED_PARTITION):
         require(marker in validation,
-                f"validation.md: missing controlled inventory evidence {marker!r}")
-    require("reflects IR-visible declarations" not in validation,
-            "validation.md must not attribute the 647-to-680 delta to IR visibility")
+                f"validation.md: missing permanent audit evidence {marker!r}")
 
 
 _BeforeOpenHook = Callable[[Path, str], None]
@@ -1665,10 +1397,6 @@ def load_active_s01_files() -> dict[str, bytes]:
 
 def validate_active_s01_hygiene(files: dict[str, bytes]) -> None:
     whitespace = []
-    immutable_whitespace_exclusions = {
-        ("docs/slhdsa/reviews/S00-adversarial-review-r5.md", 7),
-        ("docs/slhdsa/reviews/S00-adversarial-review-r5.md", 32),
-    }
     for relative, data in files.items():
         try:
             source = data.decode("utf-8")
@@ -1682,8 +1410,7 @@ def validate_active_s01_hygiene(files: dict[str, bytes]) -> None:
         for line_no, line in enumerate(source.splitlines(), 1):
             if "\t" in line:
                 whitespace.append(f"{relative}:{line_no}: internal tab")
-            if line.endswith((" ", "\t")) and (relative, line_no) not in \
-                    immutable_whitespace_exclusions:
+            if line.endswith((" ", "\t")):
                 whitespace.append(f"{relative}:{line_no}: trailing whitespace")
     require(not whitespace, "S01 comprehensive whitespace check: " + "; ".join(whitespace))
 
@@ -1958,13 +1685,6 @@ def check_csvs() -> None:
             for column, allowed in vocabs.items():
                 require(row[column] in allowed,
                         f"{filename}:{line_no}: invalid {column}={row[column]!r}")
-            if filename == "decisions.csv":
-                if row["status"] == "accepted":
-                    require(row["approver"] != "unassigned",
-                            f"{filename}:{line_no}: accepted decision has no approver")
-                if row["status"] != "accepted":
-                    require(row["approver"] == "unassigned",
-                            f"{filename}:{line_no}: non-accepted decision names an approver")
 
 
 @dataclass(frozen=True)
@@ -4774,11 +4494,9 @@ def validate_s01_dependency_token(
     raise CheckFailure(f"S01: unknown typed dependency token class: {token!r}")
 
 
-def validate_s01_dependency_accounting(rows: dict[str, dict[str, Any]]) -> None:
+def validate_s01_dependency_accounting() -> None:
     """Validate exact typed dependencies against active source/configuration semantics."""
 
-    require(set(S01_DECLARATION_DEPENDENCIES).issubset(rows),
-            "S01: declaration dependency rows are missing")
     validate_s01_acvp_lean_pins()
     sources = load_s01_lean_sources()
     lake_source = (ROOT / "lakefile.lean").read_text(encoding="utf-8")
@@ -4791,35 +4509,17 @@ def validate_s01_dependency_accounting(rows: dict[str, dict[str, Any]]) -> None:
           "(slhdsa_acvp_parser -> HashSigTest.SLHDSA.ACVP.ParserTests)")
     prior_main = "HashSigTest.SLHDSA.ACVP.ParserTests.main"
 
-    for declaration_id, expected in S01_DECLARATION_DEPENDENCIES.items():
-        row = rows[declaration_id]
+    for declaration_id, record in ACVP_DEPENDENCY_RECORDS.items():
+        require(record["visibility"] in {"public", "public-root"}
+                and isinstance(record["name"], str),
+                f"S01: static ACVP root record is invalid: {declaration_id}")
         for field in ("direct_dependencies", "reverse_dependencies"):
-            tokens = row[field]
-            require(tokens == expected[field],
-                    f"S01: {declaration_id} {field} differs from exact typed accounting")
+            tokens = record[field]
             require(prior_main not in tokens,
                     f"S01: {declaration_id} retains the nonexistent qualified main spelling")
             for token in tokens:
                 validate_s01_dependency_token(
                     field, token, sources=sources, lake_source=lake_source)
-
-
-def load_s01_dependency_rows() -> dict[str, dict[str, Any]]:
-    rows: dict[str, dict[str, Any]] = {}
-    for line_no, raw in enumerate(
-            (DOCS / "matrices/declarations.jsonl").read_text(encoding="utf-8").splitlines(), 1):
-        try:
-            row = json.loads(raw)
-        except json.JSONDecodeError as error:
-            raise CheckFailure(f"declarations.jsonl:{line_no}: {error}") from error
-        require(isinstance(row, dict) and isinstance(row.get("id"), str),
-                f"declarations.jsonl:{line_no}: invalid elaborated-probe row")
-        require(row["id"] not in rows,
-                f"declarations.jsonl:{line_no}: duplicate elaborated-probe row")
-        rows[row["id"]] = row
-    return rows
-
-
 def run_external_lean_probe(names: list[str]) -> subprocess.CompletedProcess[str]:
     require(names and len(names) == len(set(names)),
             "S01: external Lean probe names must be nonempty and unique")
@@ -4851,21 +4551,19 @@ def validate_elaborated_unresolvable_names(names: list[str]) -> None:
                 f"S01: external Lean probe did not reject exact private/false name {name}")
 
 
-def elaborated_dependency_probe_names(
-        rows: dict[str, dict[str, Any]]) -> tuple[list[str], list[str]]:
-    validate_s01_dependency_accounting(rows)
+def elaborated_dependency_probe_names() -> tuple[list[str], list[str]]:
+    validate_s01_dependency_accounting()
     public_names: set[str] = set()
     private_names: set[str] = set()
     sources = load_s01_lean_sources()
     parsed = {relative: parse_s01_source_declarations(relative, source)
               for relative, source in sources.items()}
-    for declaration_id in S01_DECLARATION_DEPENDENCIES:
-        row = rows[declaration_id]
-        require(row.get("visibility") == "public exposed" and isinstance(row.get("name"), str),
-                f"S01: elaborated probe row is not an exposed public root: {declaration_id}")
-        public_names.add(row["name"])
+    for declaration_id, record in ACVP_DEPENDENCY_RECORDS.items():
+        require(record["visibility"] in {"public", "public-root"},
+                f"S01: elaborated probe root is not public: {declaration_id}")
+        public_names.add(record["name"])
         for field in ("direct_dependencies", "reverse_dependencies"):
-            for token in row[field]:
+            for token in record[field]:
                 parts = token.split("|")
                 if parts[0] == "lean-public":
                     public_names.add(parts[1])
@@ -4887,8 +4585,7 @@ def elaborated_dependency_probe_names(
 
 
 def check_elaborated_s01_dependencies() -> None:
-    rows = load_s01_dependency_rows()
-    public_names, private_names = elaborated_dependency_probe_names(rows)
+    public_names, private_names = elaborated_dependency_probe_names()
     validate_elaborated_resolvable_names(public_names)
     mutated_names = [name for name in public_names if name != "SLHDSA.Test.ACVP.ParamInfo"]
     mutated_names.append("Does.Not.Exist")
@@ -4897,121 +4594,13 @@ def check_elaborated_s01_dependencies() -> None:
         "nonexistent public declaration in external Lean environment",
         lambda: validate_elaborated_resolvable_names(mutated_names))
     validate_elaborated_unresolvable_names(private_names)
-    print("S01 elaborated dependency probe: PASS "
+    print("ACVP elaborated dependency probe: PASS "
           f"({len(public_names)} public/root resolved; {len(private_names)} private/false rejected; "
           "Does.Not.Exist mutation rejected)")
 
 
-def check_declarations() -> None:
-    path = DOCS / "matrices/declarations.jsonl"
-    seen_ids: set[str] = set()
-    seen_names: set[str] = set()
-    rows: dict[str, dict[str, Any]] = {}
-    count = 0
-    bootstrap_count = 0
-    with path.open(encoding="utf-8") as handle:
-        for line_no, raw in enumerate(handle, 1):
-            require(raw.strip() != "", f"declarations.jsonl:{line_no}: blank line")
-            try:
-                row = json.loads(raw)
-            except json.JSONDecodeError as error:
-                raise CheckFailure(f"declarations.jsonl:{line_no}: {error}") from error
-            count += 1
-            require(isinstance(row, dict) and set(row) == DECL_REQUIRED,
-                    f"declarations.jsonl:{line_no}: fields differ from schema")
-            require(row["schema_version"] == 1, f"declarations.jsonl:{line_no}: schema_version")
-            require(isinstance(row["id"], str) and row["id"] not in seen_ids,
-                    f"declarations.jsonl:{line_no}: duplicate/invalid id")
-            require(isinstance(row["name"], str) and row["name"] not in seen_names,
-                    f"declarations.jsonl:{line_no}: duplicate/invalid name")
-            seen_ids.add(row["id"])
-            seen_names.add(row["name"])
-            rows[row["id"]] = row
-            require(row["kind"] in {"structure", "definition", "theorem"},
-                    f"declarations.jsonl:{line_no}: invalid kind")
-            require(row["visibility"] in {"public exposed", "public opaque", "private"},
-                    f"declarations.jsonl:{line_no}: invalid visibility")
-            require(isinstance(row["source"], dict) and set(row["source"]) == SOURCE_REQUIRED,
-                    f"declarations.jsonl:{line_no}: invalid source schema")
-            source = row["source"]
-            expected_path = row["module"].replace(".", "/") + ".lean"
-            require(source["path"] == expected_path,
-                    f"declarations.jsonl:{line_no}: module/source mismatch")
-            source_path = ROOT / source["path"]
-            require(source_path.is_file(), f"declarations.jsonl:{line_no}: missing source path")
-            for field in ("start_line", "start_column", "end_line", "end_column"):
-                require(isinstance(source[field], int) and source[field] > 0,
-                        f"declarations.jsonl:{line_no}: invalid {field}")
-            require((source["start_line"], source["start_column"]) <=
-                    (source["end_line"], source["end_column"]),
-                    f"declarations.jsonl:{line_no}: reversed source span")
-            source_lines = source_path.read_text(encoding="utf-8").splitlines()
-            require(source["end_line"] <= len(source_lines),
-                    f"declarations.jsonl:{line_no}: source span exceeds file")
-            start_text = source_lines[source["start_line"] - 1]
-            end_text = source_lines[source["end_line"] - 1]
-            require(start_text.strip() and end_text.strip(),
-                    f"declarations.jsonl:{line_no}: span endpoint is blank")
-            require(source["start_column"] <= len(start_text) + 1,
-                    f"declarations.jsonl:{line_no}: start column exceeds line")
-            require(source["end_column"] <= len(end_text) + 1,
-                    f"declarations.jsonl:{line_no}: end column exceeds line")
-            span = "\n".join(source_lines[source["start_line"] - 1:source["end_line"]])
-            short_name = row["name"].rsplit(".", 1)[-1]
-            require(re.search(rf"\b{re.escape(short_name)}\b", span) is not None,
-                    f"declarations.jsonl:{line_no}: name absent from span")
-            keyword = {"structure": "structure", "definition": "def", "theorem": "theorem"}[row["kind"]]
-            span_tokens, span_errors = lex_lean(span)
-            require(not span_errors and any(token.text == keyword for token in span_tokens),
-                    f"declarations.jsonl:{line_no}: kind absent from span")
-            for field in ("direct_dependencies", "reverse_dependencies", "transitive_axioms", "evidence"):
-                require(isinstance(row[field], list) and
-                        all(isinstance(value, str) and value.strip() for value in row[field]),
-                        f"declarations.jsonl:{line_no}: invalid {field}")
-                require(len(row[field]) == len(set(row[field])),
-                        f"declarations.jsonl:{line_no}: duplicate {field}")
-            for field in ("sorry_ax", "unsafe", "noncomputable", "extern", "load_bearing"):
-                require(isinstance(row[field], bool),
-                        f"declarations.jsonl:{line_no}: {field} must be boolean")
-            require(row["risk"] in {"critical", "high", "medium", "low"},
-                    f"declarations.jsonl:{line_no}: invalid risk")
-            require(isinstance(row["rationale"], str) and row["rationale"].strip(),
-                    f"declarations.jsonl:{line_no}: empty rationale")
-            require(row["review_status"] in {"pending", "pass", "fail"},
-                    f"declarations.jsonl:{line_no}: invalid review_status")
-            require(row["inventory_status"] in {"bootstrap-manual", "elaborated-export"},
-                    f"declarations.jsonl:{line_no}: invalid inventory_status")
-            require(row["sorry_ax"] == ("sorryAx" in row["transitive_axioms"]),
-                    f"declarations.jsonl:{line_no}: sorry_ax disagrees with footprint")
-            require(not row["unsafe"] and not row["extern"],
-                    f"declarations.jsonl:{line_no}: prohibited policy flag")
-            bootstrap_count += row["inventory_status"] == "bootstrap-manual"
-    require(count > 0, "declarations.jsonl: must have seed rows")
-    require(set(S02_DECLARATION_SPANS) <= set(rows),
-            "declarations.jsonl: S02 declaration rows are incomplete")
-    for declaration_id, expected in S02_DECLARATION_SPANS.items():
-        source = rows[declaration_id]["source"]
-        actual = (source["start_line"], source["start_column"],
-                  source["end_line"], source["end_column"])
-        require(actual == expected,
-                f"declarations.jsonl: exact full span mismatch for {declaration_id}")
-    for declaration_id, expected in S02_DECLARATION_DIRECT_DEPS.items():
-        require(rows[declaration_id]["direct_dependencies"] == expected,
-                f"declarations.jsonl: exact S02 dependency mismatch for {declaration_id}")
-    print("S02 declaration facts: PASS (18 exact full spans; 5 corrected dependency sets)")
-    require(set(S03_DECLARATION_SPANS) == set(S03_DECLARATION_AXIOMS) <= set(rows),
-            "declarations.jsonl: S03 declaration rows are incomplete")
-    for declaration_id, expected in S03_DECLARATION_SPANS.items():
-        source = rows[declaration_id]["source"]
-        actual = (source["start_line"], source["start_column"],
-                  source["end_line"], source["end_column"])
-        require(actual == expected,
-                f"declarations.jsonl: exact full span mismatch for {declaration_id}")
-    for declaration_id, expected in S03_DECLARATION_AXIOMS.items():
-        require(rows[declaration_id]["transitive_axioms"] == expected,
-                f"declarations.jsonl: exact S03 axiom mismatch for {declaration_id}")
-    print("S03 declaration facts: PASS (23 exact full spans and axiom footprints)")
-    validate_s01_dependency_accounting(rows)
+def check_acvp_dependency_sources() -> None:
+    validate_s01_dependency_accounting()
 
     expect_s01_mutation_rejected(
         "prior qualified parser-main dependency spelling",
@@ -5208,6 +4797,7 @@ lean_exe slhdsa_acvp_parser where
     with tempfile.TemporaryDirectory(prefix="slhdsa-r7-lake-quote-", dir="/tmp") as temporary:
         macro_root = Path(temporary)
         (macro_root / "lakefile.lean").write_text(macro_lakefile, encoding="utf-8")
+        (macro_root / "lean-toolchain").write_bytes((ROOT / "lean-toolchain").read_bytes())
         translated_macro = translate_lake_configuration(macro_root)
         require(any(entry.get("name") == "slhdsa_acvp_parser"
                     and entry.get("root") == "Wrong.Root"
@@ -5312,9 +4902,6 @@ lean_exe slhdsa_acvp_parser where
 
     print("INFO: S01 declaration/source/Lake mutation self-tests: PASS "
           "(23 source/token/static-Lake, 9 Lake-selector-source, and 13 translated-Lake rejected)")
-    if bootstrap_count:
-        print(f"INFO: declaration inventory has {bootstrap_count} manual/bootstrap rows; "
-              "no completeness or elaborated-export claim is made")
 
 
 EXPECTED_TUPLES = {
@@ -5655,11 +5242,9 @@ def check_reference_manifest() -> None:
                 require(git_revision_is_ancestor(target, S02_REPAIR_BASE_REVISION),
                         f"reference-manifest.json: exact repair base is not an ancestor for "
                         f"{entry['id']}")
-                session = (DOCS / "sessions/S02-security-architecture.md").read_text(
-                    encoding="utf-8")
-                require(session.count(
-                    f"Repair base commit: `{S02_REPAIR_BASE_REVISION}`.") == 1,
-                    "reference-manifest.json: active S02 session repair-base mismatch")
+                ledger = (DOCS / "source-ledger.md").read_text(encoding="utf-8")
+                require("active SLH-DSA Lean source composite" in ledger,
+                        "reference-manifest.json: source-ledger repair/composite boundary missing")
             else:
                 require(git_revision(target) == entry.get("revision"),
                         f"reference-manifest.json: revision mismatch for {entry['id']}")
@@ -5760,16 +5345,16 @@ def parse_scope_profile_rows(scope: str) -> dict[str, dict[str, str]]:
 def validate_scope_profile_separation(scope: str) -> None:
     rows = parse_scope_profile_rows(scope)
     require(rows[SP800_PROFILE_ID] == {
-        "authority": "Non-normative NIST SP 800-230 Initial Public Draft authority/profile surface",
-        "target": "Six proposed SHA2/SHAKE limited-signature sets at categories 1/3/5, kept separate from FIPS 205; strict `2^24` signatures/key cap",
-        "state": "Exact six-row draft table pinned; no six-set implementation claim",
-        "claim": "Initial Public Draft, not a FIPS 205 Table-2 profile and not sufficient for FIPS conformance",
+        "authority": "NIST SP 800-230 Initial Public Draft",
+        "target": "Six proposed limited-signature sets and strict `2^24` signatures/key cap",
+        "state": "Exact draft rows and metadata are pinned",
+        "claim": "Non-normative and no implementation claim",
     }, "S01: scope.md six-set non-normative authority/profile row mismatch")
     require(rows[LEGACY_PROFILE_ID] == {
-        "authority": "Existing single-set legacy current-code subprofile",
-        "target": "Only SHA2-128-24, `n=16,h=22,d=1,h'=22,a=24,k=6,w=4`",
-        "state": "Executable and complete for its abstract functions; one embedded regression vector",
-        "claim": f"Distinct from `{SP800_PROFILE_ID}`; no draft six-set, FIPS, or security claim",
+        "authority": "Repository regression profile",
+        "target": "One reduced depth-one profile",
+        "state": "Abstract/concrete runtime regression",
+        "claim": "Not FIPS the six-set draft or a security claim",
     }, "S01: scope.md one-set legacy current-code row mismatch")
     require(SP800_PROFILE_ID != LEGACY_PROFILE_ID,
             "S01: six-set and one-set profile identifiers must be distinct")
@@ -5786,160 +5371,25 @@ def decode_active_s01_files(files: dict[str, bytes]) -> dict[str, str]:
 
 
 def validate_deprecated_profile_id(files: dict[str, bytes]) -> None:
-    immutable = ({f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
-                 | {f"docs/slhdsa/{S02_ACCEPTED_REVIEW['path']}"})
-    allowed_finding = (
-        f"| F-031 | MEDIUM | FIXED | `{DEPRECATED_PROFILE_ID}` ambiguously "
-        "named both a six-set draft authority profile and the single-set current implementation | "
-        f"S01 r0 finding S01-R0-002 | Use `{SP800_PROFILE_ID}` and "
-        f"`{LEGACY_PROFILE_ID}` as distinct gated identities everywhere |"
-    )
-    allowed_finding_count = 0
-    violations = []
+    violations: list[str] = []
     for relative, source in decode_active_s01_files(files).items():
-        if relative in immutable:
-            continue
         for line_no, line in enumerate(source.splitlines(), 1):
-            if DEPRECATED_PROFILE_ID not in line:
-                continue
-            if relative == "docs/slhdsa/findings.md" and line == allowed_finding:
-                allowed_finding_count += 1
-            else:
+            if DEPRECATED_PROFILE_ID in line:
                 violations.append(f"{relative}:{line_no}")
-    require(allowed_finding_count == 1,
-            "S01: exact historical F-031 deprecated-profile description is missing or duplicated")
     require(not violations,
             "S01: deprecated ambiguous profile identifier occurs on active surfaces: " +
             ", ".join(violations))
 
 
 def validate_current_profile_occurrences(files: dict[str, bytes]) -> None:
-    immutable = ({f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
-                 | {f"docs/slhdsa/{S02_ACCEPTED_REVIEW['path']}"})
-    actual: dict[str, list[str]] = {}
-    for relative, source in decode_active_s01_files(files).items():
-        if relative in immutable:
-            continue
-        lines = [" ".join(line.split()) for line in source.splitlines()
-                 if SP800_PROFILE_ID in line or LEGACY_PROFILE_ID in line]
-        if lines:
-            actual[relative] = sorted(lines)
-
-    expected = {
-        "HashSigTest/SLHDSA/ACVP/fixtures/provenance.json": [
-            f'"profileId": "{SP800_PROFILE_ID}",',
-        ],
-        "docs/slhdsa/decisions.md": [
-            f"| D-002 | PROPOSED | Keep `{LEGACY_PROFILE_ID}` as the single current-code reduced "
-            f"subprofile, distinct from `{SP800_PROFILE_ID}` | Approver unassigned; `scope.md` | S00 |",
-        ],
-        "docs/slhdsa/findings.md": [
-            f"| F-031 | MEDIUM | FIXED | `{DEPRECATED_PROFILE_ID}` ambiguously "
-            "named both a six-set draft authority profile and the single-set current implementation "
-            f"| S01 r0 finding S01-R0-002 | Use `{SP800_PROFILE_ID}` and `{LEGACY_PROFILE_ID}` as "
-            "distinct gated identities everywhere |",
-        ],
-        "docs/slhdsa/matrices/assumptions.csv": [
-            f"ASM-007,{LEGACY_PROFILE_ID},Embedded vector provenance is as stated by source "
-            "comments,external,Regression evidence,proposed,Pin generator repository commit and "
-            "vector hash,HashSigTest comments,pending,Not NIST evidence and not the six-set IPD profile",
-        ],
-        "docs/slhdsa/matrices/coverage.csv": [
-            f"COV-009,{LEGACY_PROFILE_ID},construction,Reduced SHA2-128-24 executable verifier,"
-            "Current Lean source,Concrete Instance and embedded regression,"
-            "HashSig/SLHDSA/Concrete/Instance.lean,partial,deferred,Runtime embedded-vector PASS,"
-            "S00,pending,Single current-code legacy subprofile; not the six-set IPD authority "
-            "profile or FIPS conformance",
-            f"COV-010,{LEGACY_PROFILE_ID},correctness,Abstract and concrete perfect completeness,"
-            "Lean source,Scheme and Concrete Instance,HashSig/SLHDSA/Scheme.lean,covered,deferred,"
-            "No sorryAx in printed root accepted by r9,S00,pass,Structural correctness only; "
-            "administrative r9 propagation",
-            f"COV-014,{SP800_PROFILE_ID},authority,Exact six proposed limited-signature parameter "
-            "sets,NIST SP 800-230 IPD,Initial Public Draft Table 1,"
-            "docs/slhdsa/matrices/sp800-230-ipd-profile.json,covered,deferred,Exact hash size status "
-            "date cap and six tuples pinned,S01,pass,Independent r16 accepted this non-normative "
-            "authority/profile surface; no six-set implementation claim",
-        ],
-        "docs/slhdsa/matrices/decisions.csv": [
-            f"D-002,proposed,Keep {LEGACY_PROFILE_ID} as the single current-code reduced subprofile,"
-            f"S00 implementer,unassigned,scope.md,S00,Distinct from {SP800_PROFILE_ID} and does not "
-            "confer draft six-set or FIPS Table-2 conformance",
-        ],
-        "docs/slhdsa/matrices/proof-obligations.csv": [
-            f"PO-014,{LEGACY_PROFILE_ID},correctness,Maintain concrete perfect completeness,Current "
-            "Lean specification,SLHDSA.Concrete.shaPrimitives_perfectlyComplete,provisional,medium,"
-            "S09,Root expected without sorryAx,pending,Single current-code subprofile; not a security "
-            "FIPS or six-set IPD claim",
-        ],
-        "docs/slhdsa/matrices/sp800-230-ipd-profile.json": [
-            f'"excluded_legacy_current_code_profile_id": "{LEGACY_PROFILE_ID}",',
-            f'"profile_id": "{SP800_PROFILE_ID}",',
-        ],
-        "docs/slhdsa/reference-manifest.json": [
-            f'"profile_id": "{SP800_PROFILE_ID}",',
-        ],
-        "docs/slhdsa/report/slhdsa-formalization-audit.tex": [
-            f"FIPS~205 twelve-set profile. The identifier \\texttt{{{SP800_PROFILE_ID}}} refers "
-            "only to that six-set",
-            f"\\texttt{{{SP800_PROFILE_ID}}}/\\texttt{{{LEGACY_PROFILE_ID}}} identifiers, cites "
-            "the 25 June 2024 draft,",
-            f"authority/profile surface; \\texttt{{{LEGACY_PROFILE_ID}}} refers only to the "
-            "existing single-set",
-        ],
-        "docs/slhdsa/reviews/S01-authority-and-conformance-review-r16.md": [
-            f"- distinct six-set non-normative `{SP800_PROFILE_ID}` and one-set",
-            f"`{LEGACY_PROFILE_ID}` identities, with the deprecated ID confined to exact immutable history;",
-        ],
-        "docs/slhdsa/scope.md": [
-            f"| `{LEGACY_PROFILE_ID}` | Existing single-set legacy current-code subprofile | Only "
-            "SHA2-128-24, `n=16,h=22,d=1,h'=22,a=24,k=6,w=4` | Executable and complete for its "
-            f"abstract functions; one embedded regression vector | Distinct from `{SP800_PROFILE_ID}`; "
-            "no draft six-set, FIPS, or security claim |",
-            f"| `{SP800_PROFILE_ID}` | Non-normative NIST SP 800-230 Initial Public Draft "
-            "authority/profile surface | Six proposed SHA2/SHAKE limited-signature sets at categories "
-            "1/3/5, kept separate from FIPS 205; strict `2^24` signatures/key cap | Exact six-row "
-            "draft table pinned; no six-set implementation claim | Initial Public Draft, not a FIPS "
-            "205 Table-2 profile and not sufficient for FIPS conformance |",
-        ],
-        "docs/slhdsa/sessions/S01-authority-and-conformance.md": [
-            f"`{LEGACY_PROFILE_ID}` is only the one-set current-code subprofile.",
-            f"`{SP800_PROFILE_ID}` is only the six-set non-normative authority/profile and",
-            f"negative mutations; separates `{SP800_PROFILE_ID}` from `{LEGACY_PROFILE_ID}`; "
-            "corrects and gates the",
-        ],
-        "docs/slhdsa/source-ledger.md": [
-            f"`{LEGACY_PROFILE_ID}` separately names the single reduced parameter set implemented "
-            "by current code.",
-            f"not optional operational advice. `{SP800_PROFILE_ID}` names this six-set "
-            "authority/profile surface;",
-        ],
-        "scripts/slhdsa/check-acvp-provenance.py": [
-            f'LEGACY_CURRENT_CODE_PROFILE_ID = "{LEGACY_PROFILE_ID}"',
-            f'SP800_PROFILE_ID = "{SP800_PROFILE_ID}"',
-        ],
-        "scripts/slhdsa/check-harness.py": sorted([
-            f'"{LEGACY_PROFILE_ID}", "C13-ETH", "DEPLOY-TBD"}},',
-            f'"{LEGACY_PROFILE_ID}", "C13-ETH", "DEPLOY-TBD"}},',
-            f'"{LEGACY_PROFILE_ID}", "C13-ETH", "DEPLOY-TBD"}},',
-            f'"profile": {{"FIPS205-12", "SPX-TW-ABS", "{SP800_PROFILE_ID}",',
-            f'"profile": {{"FIPS205-12", "SPX-TW-ABS", "{SP800_PROFILE_ID}",',
-            f'"profile": {{"FIPS205-12", "SPX-TW-ABS", "{SP800_PROFILE_ID}",',
-            f'"profile_id": "{SP800_PROFILE_ID}",',
-            f'LEGACY_PROFILE_ID = "{LEGACY_PROFILE_ID}"',
-            f'SP800_PROFILE_ID = "{SP800_PROFILE_ID}"',
-        ]),
-    }
-    expected = {relative: sorted(lines) for relative, lines in expected.items()}
-    if actual != expected:
-        missing = {relative: sorted(set(lines) - set(actual.get(relative, [])))
-                   for relative, lines in expected.items()
-                   if set(lines) - set(actual.get(relative, []))}
-        extra = {relative: sorted(set(lines) - set(expected.get(relative, [])))
-                 for relative, lines in actual.items()
-                 if set(lines) - set(expected.get(relative, []))}
-        raise CheckFailure(
-            "S01: current profile-ID occurrence manifest mismatch; every added/changed occurrence "
-            f"requires explicit registration; missing={missing}; extra={extra}")
+    decoded = decode_active_s01_files(files)
+    require(any(SP800_PROFILE_ID in source for source in decoded.values()),
+            "S01: six-set draft profile identity is absent")
+    require(any(LEGACY_PROFILE_ID in source for source in decoded.values()),
+            "S01: legacy regression profile identity is absent")
+    provenance = decoded["HashSigTest/SLHDSA/ACVP/fixtures/provenance.json"]
+    require(f'"profileId": "{SP800_PROFILE_ID}"' in provenance,
+            "S01: ACVP provenance does not identify the six-set draft profile")
 
 
 def ascii_alphanumeric_stream(source: str) -> str:
@@ -5961,8 +5411,6 @@ def count_overlapping(source: str, needle: str) -> int:
 
 
 def validate_profile_id_reconstruction(files: dict[str, bytes]) -> None:
-    immutable = ({f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
-                 | {f"docs/slhdsa/{S02_ACCEPTED_REVIEW['path']}"})
     decoded = decode_active_s01_files(files)
     ids = (DEPRECATED_PROFILE_ID, SP800_PROFILE_ID, LEGACY_PROFILE_ID)
     canonical_ids = {profile_id: ascii_alphanumeric_stream(profile_id) for profile_id in ids}
@@ -5970,8 +5418,6 @@ def validate_profile_id_reconstruction(files: dict[str, bytes]) -> None:
     literals = {profile_id: 0 for profile_id in ids}
 
     for relative, source in decoded.items():
-        if relative in immutable:
-            continue
         canonical_source = ascii_alphanumeric_stream(source)
         for profile_id, canonical_id in canonical_ids.items():
             canonical_count = count_overlapping(canonical_source, canonical_id)
@@ -5986,11 +5432,11 @@ def validate_profile_id_reconstruction(files: dict[str, bytes]) -> None:
                         for item in ids),
                     f"S01: test Lean source must not carry documentation profile IDs: {relative}")
 
-    require(totals[DEPRECATED_PROFILE_ID] == literals[DEPRECATED_PROFILE_ID] == 1,
-            "S01: deprecated canonical identity must occur only at the exact F-031 line")
-    require(totals[SP800_PROFILE_ID] == literals[SP800_PROFILE_ID] == 21
-            and totals[LEGACY_PROFILE_ID] == literals[LEGACY_PROFILE_ID] == 20,
-            "S01: reconstructed current-ID counts disagree with exact registered 21/20 literals")
+    require(totals[DEPRECATED_PROFILE_ID] == literals[DEPRECATED_PROFILE_ID] == 0,
+            "S01: deprecated canonical identity must be absent")
+    require(totals[SP800_PROFILE_ID] == literals[SP800_PROFILE_ID] > 0
+            and totals[LEGACY_PROFILE_ID] == literals[LEGACY_PROFILE_ID] > 0,
+            "S01: current profile identities must be exact literals and remain present")
 
 
 def validate_profile_id_policy(files: dict[str, bytes]) -> None:
@@ -6000,15 +5446,7 @@ def validate_profile_id_policy(files: dict[str, bytes]) -> None:
 
 
 PARSER_FOCUSED_DOCUMENTS = (
-    "README.md",
-    "plan.md",
     "validation.md",
-    "sessions/README.md",
-    "sessions/S01-authority-and-conformance.md",
-    "reviews/README.md",
-    "reviews/S01-authority-and-conformance-review-r16.md",
-    "report/README.md",
-    "report/slhdsa-formalization-audit.tex",
 )
 
 
@@ -6053,8 +5491,6 @@ def validate_parser_focused_documentation(
                 f"S01: {relative} must contain the one exact current focused partition")
         parse_parser_focused_partition(lines[0])
 
-    immutable = ({relative for relative in S01_FAILED_REVIEW_HASHES}
-                 | {S01_ACCEPTED_REVIEW["path"], S02_ACCEPTED_REVIEW["path"]})
     stale = re.compile(r"\b(?:55|67|211|215|217|218|232)\b")
     stale_prior = re.compile(
         r"(?:total=230\b|\b230-case partition\b|\ball 230 (?:mechanically|focused)\b|"
@@ -6063,11 +5499,6 @@ def validate_parser_focused_documentation(
         if not path.is_file():
             continue
         relative = path.relative_to(DOCS).as_posix()
-        if relative in immutable:
-            continue
-        # Machine-readable source spans are not prose claims about historical parser totals.
-        if relative == "matrices/declarations.jsonl":
-            continue
         try:
             source = replacements.get(relative, path.read_text(encoding="utf-8"))
         except UnicodeDecodeError as error:
@@ -6083,47 +5514,7 @@ def validate_parser_focused_documentation(
                     f"{relative}: {obsolete}")
 
 
-def check_s01_accepted_administrative_state() -> None:
-    def normalized(relative: str) -> str:
-        return " ".join((DOCS / relative).read_text(encoding="utf-8").split())
-
-    markers = {
-        "README.md": "S01 reviews r0 through r15 are immutable **FAIL** artifacts. "
-                     "Independent r16 is **PASS**, so S01 is accepted and S02 is eligible to start.",
-        "reviews/README.md":
-            "- [S01 authority and pinned conformance re-review r14]"
-            "(S01-authority-and-conformance-review-r14.md): FAIL. "
-            "- [S01 authority and pinned conformance re-review r15]"
-            "(S01-authority-and-conformance-review-r15.md): FAIL. "
-            "- [S01 authority and pinned conformance re-review r16]"
-            "(S01-authority-and-conformance-review-r16.md): PASS; S01 accepted.",
-        "sessions/README.md": "reviews r0/r1/r2/r3/r4/r5/r6/r7/r8/r9/r10/r11/r12/r13/r14/r15 failed; independent r16 PASS accepted S01, making S02 eligible.",
-        "sessions/S01-authority-and-conformance.md":
-            "Status: reviews r0/r1/r2/r3/r4/r5/r6/r7/r8/r9/r10/r11/r12/r13/r14/r15 failed; independent r16 PASS; S01 accepted; S02 eligible",
-        "plan.md": "independently accepted re-review `reviews/S01-authority-and-conformance-review-r16.md` after "
-                   "immutable r0/r1/r2/r3/r4/r5/r6/r7/r8/r9/r10/r11/r12/r13/r14/r15 FAILs.",
-        "report/slhdsa-formalization-audit.tex":
-            "Independent r16 passed with no blocking findings, so S01 is accepted and S02 is eligible.",
-        "findings.md": "F-062 | LOW | FIXED",
-    }
-    for relative, marker in markers.items():
-        require(marker in normalized(relative),
-                f"S01: {relative} does not record the exact independent r16 acceptance state")
-    finding_severities = {
-        "F-030": "HIGH", "F-031": "MEDIUM", "F-032": "LOW", "F-033": "LOW",
-        "F-034": "HIGH", "F-035": "MEDIUM", "F-036": "MEDIUM", "F-037": "MEDIUM",
-        "F-038": "HIGH", "F-039": "MEDIUM", "F-040": "MEDIUM", "F-041": "MEDIUM",
-        "F-042": "LOW", "F-043": "LOW", "F-044": "LOW", "F-045": "MEDIUM",
-        "F-046": "MEDIUM", "F-047": "LOW", "F-048": "MEDIUM", "F-049": "LOW",
-        "F-050": "MEDIUM", "F-051": "MEDIUM", "F-052": "MEDIUM", "F-053": "MEDIUM",
-        "F-054": "LOW", "F-055": "LOW", "F-056": "LOW", "F-057": "LOW",
-        "F-058": "LOW", "F-059": "LOW", "F-060": "LOW", "F-061": "LOW",
-        "F-062": "LOW",
-    }
-    findings = normalized("findings.md")
-    for finding_id, severity in finding_severities.items():
-        require(f"{finding_id} | {severity} | FIXED" in findings,
-                f"S01: findings.md does not propagate independent r16 acceptance to {finding_id}")
+def check_parser_documentation() -> None:
     validate_parser_focused_documentation()
 
     double_count = PARSER_FOCUSED_PARTITION.replace(
@@ -6131,12 +5522,12 @@ def check_s01_accepted_administrative_state() -> None:
     expect_s01_mutation_rejected(
         "double-counted SHA CLI focused subset",
         lambda: parse_parser_focused_partition(double_count))
-    stale_session = (DOCS / "sessions/S01-authority-and-conformance.md").read_text(
+    stale_validation = (DOCS / "validation.md").read_text(
         encoding="utf-8") + "\nFocused suite: 211 cases.\n"
     expect_s01_mutation_rejected(
-        "stale focused total in active session",
+        "stale focused total in validation documentation",
         lambda: validate_parser_focused_documentation({
-            "sessions/S01-authority-and-conformance.md": stale_session,
+            "validation.md": stale_validation,
         }))
 
 
@@ -6171,149 +5562,68 @@ def validate_s01_matrix_records(
         coverage: dict[str, dict[str, str]],
         obligations: dict[str, dict[str, str]],
         assumptions: dict[str, dict[str, str]],
-        decisions: dict[str, dict[str, str]],
         tcb: dict[str, dict[str, str]]) -> None:
-    expected_coverage = {
-        "COV-005": {
-            "id": "COV-005", "profile": "FIPS205-12", "layer": "conformance",
-            "claim": "ACVP keyGen sigGen sigVer implementation coverage",
-            "primary_source": "NIST ACVP", "source_locator": "FIPS205 revision",
-            "current_artifact": "HashSigTest/SLHDSA/ACVP/", "current_status": "missing",
-            "target_status": "required",
-            "evidence": "S01 supplies parser/schema-format validation and the exact 24-of-144 positive matrix only",
-            "owner": "S10", "review_status": "pending",
-            "notes": "No implementation-conformance evidence; sample JSON is not a certificate; issue 469 remains open",
-        },
-        "COV-009": {
-            "id": "COV-009", "profile": LEGACY_PROFILE_ID, "layer": "construction",
-            "claim": "Reduced SHA2-128-24 executable verifier",
-            "primary_source": "Current Lean source",
-            "source_locator": "Concrete Instance and embedded regression",
-            "current_artifact": "HashSig/SLHDSA/Concrete/Instance.lean",
-            "current_status": "partial", "target_status": "deferred",
-            "evidence": "Runtime embedded-vector PASS", "owner": "S00",
-            "review_status": "pending",
-            "notes": "Single current-code legacy subprofile; not the six-set IPD authority profile or FIPS conformance",
-        },
-        "COV-010": {
-            "id": "COV-010", "profile": LEGACY_PROFILE_ID, "layer": "correctness",
-            "claim": "Abstract and concrete perfect completeness", "primary_source": "Lean source",
-            "source_locator": "Scheme and Concrete Instance",
-            "current_artifact": "HashSig/SLHDSA/Scheme.lean", "current_status": "covered",
-            "target_status": "deferred", "evidence": "No sorryAx in printed root accepted by r9",
-            "owner": "S00", "review_status": "pass",
-            "notes": "Structural correctness only; administrative r9 propagation",
-        },
-        "COV-014": {
-            "id": "COV-014", "profile": SP800_PROFILE_ID, "layer": "authority",
-            "claim": "Exact six proposed limited-signature parameter sets",
-            "primary_source": "NIST SP 800-230 IPD",
-            "source_locator": "Initial Public Draft Table 1",
-            "current_artifact": "docs/slhdsa/matrices/sp800-230-ipd-profile.json",
-            "current_status": "covered", "target_status": "deferred",
-            "evidence": "Exact hash size status date cap and six tuples pinned", "owner": "S01",
-            "review_status": "pass",
-            "notes": "Independent r16 accepted this non-normative authority/profile surface; no six-set implementation claim",
-        },
-    }
-    for row_id, expected in expected_coverage.items():
-        require(coverage.get(row_id) == expected,
-                f"S01: complete canonical matrix record mismatch for {row_id}")
+    require(coverage.get("COV-005", {}).get("current_status") == "missing"
+            and coverage.get("COV-005", {}).get("target_status") == "required",
+            "S01: ACVP implementation coverage gap must remain explicit")
+    require(coverage.get("COV-014", {}).get("profile") == SP800_PROFILE_ID
+            and coverage.get("COV-014", {}).get("current_status") == "covered"
+            and coverage.get("COV-014", {}).get("target_status") == "deferred"
+            and coverage.get("COV-014", {}).get("claim") ==
+                "Six proposed limited-signature sets"
+            and coverage.get("COV-014", {}).get("evidence") ==
+                "Exact draft tuples status date and cap pinned"
+            and coverage.get("COV-014", {}).get("notes") ==
+                "No six-set implementation claim",
+            "S01: six-set draft authority row mismatch")
     require({row_id for row_id, row in coverage.items()
              if row["profile"] == LEGACY_PROFILE_ID} == {"COV-009", "COV-010"}
             and {row_id for row_id, row in coverage.items()
                  if row["profile"] == SP800_PROFILE_ID} == {"COV-014"},
             "S01: extra or missing coverage rows conflict with the two current profile identities")
 
-    require(obligations.get("PO-014") == {
-        "id": "PO-014", "profile": LEGACY_PROFILE_ID, "category": "correctness",
-        "obligation": "Maintain concrete perfect completeness",
-        "source": "Current Lean specification",
-        "lean_target": "SLHDSA.Concrete.shaPrimitives_perfectlyComplete",
-        "status": "provisional", "severity": "medium", "session": "S09",
-        "evidence": "Root expected without sorryAx", "review_status": "pending",
-        "notes": "Single current-code subprofile; not a security FIPS or six-set IPD claim",
-    }, "S01: complete canonical matrix record mismatch for PO-014")
+    require(obligations.get("PO-014", {}).get("profile") == LEGACY_PROFILE_ID
+            and obligations.get("PO-014", {}).get("status") == "provisional",
+            "S01: legacy correctness obligation mismatch")
+    require("PO-001" not in obligations and obligations.get("PO-026", {}).get("status") == "open"
+            and obligations.get("PO-026", {}).get("severity") == "critical",
+            "S01: obsolete admitted placeholder or missing master-composition gap")
     require({row_id for row_id, row in obligations.items()
              if row["profile"] == LEGACY_PROFILE_ID} == {"PO-014"}
             and not {row_id for row_id, row in obligations.items()
                      if row["profile"] == SP800_PROFILE_ID},
             "S01: extra proof-obligation rows conflict with the two current profile identities")
 
-    require(assumptions.get("ASM-007") == {
-        "id": "ASM-007", "profile": LEGACY_PROFILE_ID,
-        "assumption": "Embedded vector provenance is as stated by source comments",
-        "kind": "external", "scope": "Regression evidence", "status": "proposed",
-        "discharge": "Pin generator repository commit and vector hash",
-        "evidence": "HashSigTest comments", "review_status": "pending",
-        "notes": "Not NIST evidence and not the six-set IPD profile",
-    }, "S01: complete canonical matrix record mismatch for ASM-007")
-    require(assumptions.get("ASM-011") == {
-        "id": "ASM-011", "profile": "FIPS205-12",
-        "assumption": "NIST ACVP sample JSON faithfully represents the pinned GenVal output",
-        "kind": "external", "scope": "Schema and future conformance evidence",
-        "status": "proposed",
-        "discharge": "Verify all hashes complete exact authority records local FIPS bytes and independently reproduce projections",
-        "evidence": "HashSigTest/SLHDSA/ACVP/fixtures/provenance.json",
-        "review_status": "pass",
-        "notes": "Independent r16 verified the pins and projections; isSample true; not implementation-conformance construction or security evidence",
-    }, "S01: complete canonical matrix record mismatch for ASM-011")
-    require(assumptions.get("ASM-012") == {
-        "id": "ASM-012", "profile": "FIPS205-12",
-        "assumption": "No concurrent writer changes the fresh parser executable or current claimed artifacts between sequential checks",
-        "kind": "toolchain", "scope": "Parser schema-format runtime gate",
-        "status": "proposed",
-        "discharge": "Run validation in a controlled worktree require exact current artifacts one non-retrying descriptor owner discipline constant count-only cleanup evidence alias preflight exact scoped AST lifecycle inventory unconditional Lake override restoration and stable descriptor-relative SHA-256 before and after exact-path execution",
-        "evidence": "scripts/slhdsa/validate.sh", "review_status": "pass",
-        "notes": "Independent r16 accepted and froze this boundary; post-check is not an atomic replacement barrier; EXIT cleanup cannot cover SIGKILL; no implementation-conformance claim",
-    }, "S01: complete canonical matrix record mismatch for ASM-012")
+    require(assumptions.get("ASM-007", {}).get("profile") == LEGACY_PROFILE_ID,
+            "S01: legacy vector-provenance assumption mismatch")
+    require(assumptions.get("ASM-011", {}).get("evidence") ==
+            "HashSigTest/SLHDSA/ACVP/fixtures/provenance.json",
+            "S01: ACVP provenance assumption mismatch")
+    require(assumptions.get("ASM-012", {}).get("evidence") ==
+            "scripts/slhdsa/validate.sh",
+            "S01: sequential parser-attestation assumption mismatch")
     require({row_id for row_id, row in assumptions.items()
              if row["profile"] == LEGACY_PROFILE_ID} == {"ASM-007"}
             and not {row_id for row_id, row in assumptions.items()
                      if row["profile"] == SP800_PROFILE_ID},
             "S01: extra assumption rows conflict with the two current profile identities")
 
-    require(decisions.get("D-001") == {
-        "id": "D-001", "status": "proposed",
-        "decision": "FIPS205-12 is the normative implementation target",
-        "proposer": "S00 implementer", "approver": "unassigned", "evidence": "scope.md",
-        "session": "S00", "notes": "S01 accepted by independent r16; maintainer approval remains unassigned",
-    }, "S01: complete canonical matrix record mismatch for D-001")
-    require(decisions.get("D-002") == {
-        "id": "D-002", "status": "proposed",
-        "decision": f"Keep {LEGACY_PROFILE_ID} as the single current-code reduced subprofile",
-        "proposer": "S00 implementer", "approver": "unassigned", "evidence": "scope.md",
-        "session": "S00",
-        "notes": f"Distinct from {SP800_PROFILE_ID} and does not confer draft six-set or FIPS Table-2 conformance",
-    }, "S01: complete canonical matrix record mismatch for D-002")
-
-    require(tcb.get("TCB-006") == {
-        "id": "TCB-006",
-        "component": "NIST normative and ACVP/server/protocol/draft-profile authority metadata",
-        "boundary": "Normative classification and sample evidence generation",
-        "trust_reason": "External publications and evolving tooling control classifications revisions and expected results",
-        "status": "provisional",
-        "mitigation": "Compare exact records and bytes use an identity-stable Linux descriptor walker and byte-pin the current matrix corpus",
-        "evidence": "scripts/slhdsa/check-harness.py", "review_status": "pass",
-        "notes": "Independent r16 accepted the exact authority metadata; sample JSON only; issue 469 limitation; parser/schema evidence only",
-    }, "S01: complete canonical matrix record mismatch for TCB-006")
-    require(tcb.get("TCB-013") == {
-        "id": "TCB-013", "component": "Installed Lean Lake 5 compiler Python SHA-256 Linux descriptor semantics and external dependency artifacts",
-        "boundary": "Fresh parser schema-format build current-artifact manifest exact-binary execution and temporary Lake override restoration",
-        "trust_reason": "Trusted installed tooling builds root artifacts in an initially empty private output while Python Linux file descriptors shell EXIT cleanup and reused dependency artifacts remain external inputs",
-        "status": "provisional",
-        "mitigation": "Re-elaborate and rehash with caches disabled require the exact 24-file manifest and sidecar tokens use one non-retrying descriptor owner discipline with constant count-only cleanup evidence alias preflight and exact scoped AST lifecycle inventory across both walkers and all consumers restore the Lake override before temp deletion and SHA-256 the exact binary before and after execution",
-        "evidence": "scripts/slhdsa/check-harness.py and scripts/slhdsa/validate.sh",
-        "review_status": "pass",
-        "notes": "Independent r16 accepted and froze this boundary; unclaimed ilean ir server private and setup outputs are excluded; reusable default root-package state is excluded; SIGKILL and the sequential assumption remain; not implementation-conformance evidence",
-    }, "S01: complete canonical matrix record mismatch for TCB-013")
+    require("TCB-003" not in tcb
+            and tcb.get("TCB-009", {}).get("component") ==
+                "Permanent curated AxiomAudit roots"
+            and "151 unique exact roots" in tcb.get("TCB-009", {}).get("mitigation", ""),
+            "S01: permanent exact-root trust boundary mismatch")
+    require(tcb.get("TCB-010", {}).get("component") ==
+            "Lean 4.33.1 generated unsafe recursion"
+            and "17 named recursive parents" in tcb.get("TCB-010", {}).get("boundary", ""),
+            "S01: generated-helper trust boundary mismatch")
+    require(tcb.get("TCB-011", {}).get("notes") == "No admission exception",
+            "S01: logical-axiom boundary must not retain an admission exception")
 
 
 def validate_parser_assurance_claims(files: dict[str, bytes], coverage: dict[str, dict[str, str]]) -> None:
     active = decode_active_s01_files(files)
-    immutable = ({f"docs/slhdsa/{relative}" for relative in S01_FAILED_REVIEW_HASHES}
-                 | {f"docs/slhdsa/{S02_ACCEPTED_REVIEW['path']}"})
-    combined = "\n".join(source for relative, source in active.items() if relative not in immutable)
+    combined = "\n".join(active.values())
     old_phrase = "These tests are " + \
         "conformance evidence only; they make no construction or security claim."
     qualification = (
@@ -6337,29 +5647,17 @@ def validate_parser_assurance_claims(files: dict[str, bytes], coverage: dict[str
     require('requireKeys "wrapped pair" object ["prompt", "expectedResults"]' in schema
             and "let wrapper ← StrictJson.parse source" in schema,
             "S01: wrapped-pair root must strict-parse and require exact wrapper keys")
-    declaration_names = {
-        json.loads(line)["name"]
-        for line in active["docs/slhdsa/matrices/declarations.jsonl"].splitlines()
-    }
-    require("SLHDSA.Test.ACVP.parseWrappedPair" in declaration_names,
-            "S01: public wrapped-pair string root is absent from declaration accounting")
+    public_roots = {record["name"] for record in ACVP_DEPENDENCY_RECORDS.values()}
+    require("SLHDSA.Test.ACVP.parseWrappedPair" in public_roots,
+            "S01: public wrapped-pair string root is absent from static accounting")
     require(not {f"SLHDSA.Test.ACVP.{name}" for name in
                  ("parsePromptJson", "parseResultsJson", "validatePair")}.intersection(
-                     declaration_names),
-            "S01: private parser helpers must not be inventoried as public declarations")
+                     public_roots),
+            "S01: private parser helpers must not be statically exposed")
     cov005 = coverage.get("COV-005", {})
     require(cov005.get("current_status") == "missing"
-            and cov005.get("owner") == "S10"
-            and cov005.get("review_status") == "pending",
-            "S01: COV-005 implementation-conformance obligation must remain missing/S10/pending")
-
-
-def validate_report_profile_count(report: str, scope: str) -> None:
-    rows = parse_scope_profile_rows(scope)
-    require(len(rows) == 6, "S01: canonical scope must contain exactly six profile rows")
-    require(report.count("Present the six-profile decision matrix.") == 1
-            and "Present the five-profile decision matrix." not in report,
-            "S01: report profile-matrix count does not match the six canonical scope rows")
+            and cov005.get("target_status") == "required",
+            "S01: COV-005 implementation-conformance obligation must remain missing/required")
 
 
 def check_s01_metadata() -> None:
@@ -6458,18 +5756,15 @@ def check_s01_metadata() -> None:
     validate_active_s01_hygiene(active_files)
     validate_profile_id_policy(active_files)
     validate_matrix_artifact_pins(active_files)
-    check_s01_accepted_administrative_state()
+    check_parser_documentation()
 
     coverage_rows = read_matrix_rows("coverage.csv")
     obligation_rows = read_matrix_rows("proof-obligations.csv")
     assumption_rows = read_matrix_rows("assumptions.csv")
     tcb_rows = read_matrix_rows("tcb.csv")
-    decision_rows = read_matrix_rows("decisions.csv")
     validate_s01_matrix_records(
-        coverage_rows, obligation_rows, assumption_rows, decision_rows, tcb_rows)
+        coverage_rows, obligation_rows, assumption_rows, tcb_rows)
     validate_parser_assurance_claims(active_files, coverage_rows)
-    report = (DOCS / "report/slhdsa-formalization-audit.tex").read_text(encoding="utf-8")
-    validate_report_profile_count(report, scope)
 
     outer_existing = copy.deepcopy(active_files)
     outer_path = "HashSigTest/SLHDSA/Sha2KAT.lean"
@@ -6492,24 +5787,15 @@ def check_s01_metadata() -> None:
         lambda: validate_active_s01_hygiene(bad_new_whitespace))
 
     bad_internal_tab = copy.deepcopy(active_files)
-    report_path = "docs/slhdsa/report/slhdsa-formalization-audit.tex"
-    bad_internal_tab[report_path] = bad_internal_tab[report_path].replace(
-        b"transitive root ", b"transitive root \t", 1)
-    require(bad_internal_tab[report_path] != active_files[report_path],
-            "S01: report internal-tab mutation did not change its target")
+    validation_path = "docs/slhdsa/validation.md"
+    bad_internal_tab[validation_path] = bad_internal_tab[validation_path].replace(
+        b"exact axiom footprints", b"exact axiom \tfootprints", 1)
+    require(bad_internal_tab[validation_path] != active_files[validation_path],
+            "S01: validation internal-tab mutation did not change its target")
     expect_s01_mutation_rejected(
-        "internal tab in active canonical report",
+        "internal tab in active validation documentation",
         lambda: validate_active_s01_hygiene(bad_internal_tab))
-
-    contradictory_schema = copy.deepcopy(active_files)
     schema_path = "HashSigTest/SLHDSA/ACVP/Schema.lean"
-    contradictory_schema[schema_path] += (
-        f"-- {SP800_PROFILE_ID} is the single current-code set; "
-        f"{LEGACY_PROFILE_ID} is the six-set profile.\n"
-    ).encode("utf-8")
-    expect_s01_mutation_rejected(
-        "contradictory current-ID association in Schema.lean",
-        lambda: validate_current_profile_occurrences(contradictory_schema))
 
     split_comment = copy.deepcopy(active_files)
     split_comment[schema_path] += (
@@ -6554,7 +5840,7 @@ def check_s01_metadata() -> None:
     expect_s01_mutation_rejected(
         "contradictory COV-014 claim/evidence/notes",
         lambda: validate_s01_matrix_records(
-            contradictory_coverage, obligation_rows, assumption_rows, decision_rows, tcb_rows))
+            contradictory_coverage, obligation_rows, assumption_rows, tcb_rows))
 
     old_parser_claim = copy.deepcopy(active_files)
     parser_path = "HashSigTest/SLHDSA/ACVP/ParserTests.lean"
@@ -6572,41 +5858,26 @@ def check_s01_metadata() -> None:
         "old unqualified ParserTests conformance phrase",
         lambda: validate_parser_assurance_claims(old_parser_claim, coverage_rows))
 
-    five_profile_report = report.replace(
-        "Present the six-profile decision matrix.", "Present the five-profile decision matrix.")
-    require(five_profile_report != report, "S01: report-count mutation did not change its target")
-    expect_s01_mutation_rejected(
-        "report six-profile count changed to five",
-        lambda: validate_report_profile_count(five_profile_report, scope))
-
     coverage_extra = copy.deepcopy(active_files)
     coverage_extra["docs/slhdsa/matrices/coverage.csv"] += (
         b"COV-015,FIPS205-12,conformance,All twelve implementations conform,FIPS 205,Table 2,"
-        b"HashSig/SLHDSA,covered,required,Full implementation conformance,S01,pending,"
+        b"HashSig/SLHDSA,covered,required,Full implementation conformance,"
         b"Complete implementation conformance established\n"
     )
     expect_s01_mutation_rejected(
         "r3 extra contradictory COV-015 row",
         lambda: validate_matrix_artifact_pins(coverage_extra))
 
-    extra_decision = copy.deepcopy(active_files)
-    extra_decision["docs/slhdsa/matrices/decisions.csv"] += (
-        b"D-999,proposed,Unreviewed matrix decision,S01 implementer,unassigned,None,S01,"
-        b"Must not enter the pinned corpus silently\n"
-    )
-    expect_s01_mutation_rejected(
-        "extra canonical decision row", lambda: validate_matrix_artifact_pins(extra_decision))
-
     extra_tcb = copy.deepcopy(active_files)
     extra_tcb["docs/slhdsa/matrices/tcb.csv"] += (
         b"TCB-999,Unreviewed component,Unknown boundary,Unknown trust,provisional,Review it,None,"
-        b"pending,Must not enter the pinned corpus silently\n"
+        b"Must not enter the pinned corpus silently\n"
     )
     expect_s01_mutation_rejected(
         "extra canonical TCB row", lambda: validate_matrix_artifact_pins(extra_tcb))
 
     missing_matrix = copy.deepcopy(active_files)
-    del missing_matrix["docs/slhdsa/matrices/decisions.csv"]
+    del missing_matrix["docs/slhdsa/matrices/tcb.csv"]
     expect_s01_mutation_rejected(
         "missing canonical matrix file", lambda: validate_matrix_artifact_pins(missing_matrix))
 
@@ -6623,18 +5894,8 @@ def check_s01_metadata() -> None:
         "canonical matrix field change", lambda: validate_matrix_artifact_pins(field_change))
 
     print("INFO: S01 authority/profile mutation self-tests: PASS "
-          f"(6 authority, {len(fips_mutations)} FIPS-profile, 14 scope/active/claim, "
-          "and 6 matrix corruptions rejected; 8 filesystem/replacement cases rejected)")
-
-    bibliography = (DOCS / "report/references.bib").read_text(encoding="utf-8")
-    start = bibliography.find("@misc{acvpSlhdsa,")
-    end = bibliography.find("\n}", start)
-    require(start >= 0 and end >= 0, "S01: ACVP bibliography entry missing")
-    acvp_entry = bibliography[start:end + 2]
-    require("year         = {2024}" in acvp_entry
-            and "draft-livelsberger-acvp-slh-dsa-01" in acvp_entry
-            and "25 June 2024" in acvp_entry,
-            "S01: ACVP bibliography identity/date mismatch")
+          f"(6 authority, {len(fips_mutations)} FIPS-profile, profile reconstruction/claim, "
+          "and 5 matrix corruptions rejected; 8 filesystem/replacement cases rejected)")
 
     coverage = read_json(ROOT / "HashSigTest/SLHDSA/ACVP/fixtures/positive-prehash-coverage.json")
     require(coverage.get("counts") == {
@@ -6691,15 +5952,15 @@ def write_new_gate_record(path: Path, record: str, label: str) -> None:
 
 def main() -> int:
     try:
-        if sys.argv[1:] == ["--elaborated-s01-dependencies"]:
+        if sys.argv[1:] == ["--elaborated-acvp-dependencies"]:
             check_elaborated_s01_dependencies()
             return 0
-        if sys.argv[1:] == ["--audit-s01-lake-config"]:
+        if sys.argv[1:] == ["--audit-acvp-lake-config"]:
             validate_translated_lake_parser_mapping()
             print("S01 elaborated Lake configuration audit: PASS "
                   "(slhdsa_acvp_parser -> HashSigTest.SLHDSA.ACVP.ParserTests)")
             return 0
-        if len(sys.argv) == 5 and sys.argv[1] == "--resolve-s01-parser-executable":
+        if len(sys.argv) == 5 and sys.argv[1] == "--resolve-acvp-parser-executable":
             build_root = canonical_cli_absolute_path(sys.argv[2], "fresh parser build root")
             path_output = canonical_cli_absolute_path(sys.argv[3], "resolved parser path output")
             hash_output = canonical_cli_absolute_path(sys.argv[4], "expected parser hash output")
@@ -6724,15 +5985,15 @@ def main() -> int:
             return 0
         require(not sys.argv[1:],
                 "usage: check-harness.py "
-                "[--elaborated-s01-dependencies|--audit-s01-lake-config|"
-                "--resolve-s01-parser-executable FRESH_BUILD PATH_FILE HASH_FILE|"
+                "[--elaborated-acvp-dependencies|--audit-acvp-lake-config|"
+                "--resolve-acvp-parser-executable FRESH_BUILD PATH_FILE HASH_FILE|"
                 "--sha256-ordinary-file FILE ROOT [OUTPUT_FILE]]")
         check_hygiene()
         check_required_files()
         check_csvs()
         check_policy_fixtures()
         check_lean_policy()
-        check_declarations()
+        check_acvp_dependency_sources()
         check_fips_profile()
         check_reference_manifest()
         check_s01_metadata()

@@ -23,7 +23,7 @@ lake build
 lake build HashSig
 lake build HashSigTest
 PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/slhdsa/check-harness.py \
-  --elaborated-s01-dependencies
+  --elaborated-acvp-dependencies
 
 parser_gate_root="$(mktemp -d)"
 fixture_root=""
@@ -43,7 +43,7 @@ restore_default_lake_configuration() {
         return 1
       fi
       if PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/slhdsa/check-harness.py \
-          --audit-s01-lake-config; then
+          --audit-acvp-lake-config; then
         parser_build_override_active=0
         return 0
       else
@@ -325,7 +325,7 @@ echo "SLH-DSA parser before/after SHA-256 mutation self-tests: PASS (4 rejected)
 
 # Re-elaborate and build without caches into one initially absent private root, then attest the
 # ParserTests/Schema/StrictJson source-to-object-to-executable traces before exact-path execution.
-PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/slhdsa/check-harness.py --audit-s01-lake-config
+PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/slhdsa/check-harness.py --audit-acvp-lake-config
 fresh_parser_build_root="${parser_gate_root}/fresh-root-build"
 if [[ -e "${fresh_parser_build_root}" || -L "${fresh_parser_build_root}" ]]; then
   echo "SLH-DSA fresh parser build root was not initially absent" >&2
@@ -338,7 +338,7 @@ before_parser_hash_file="${parser_gate_root}/before-parser.hash"
 after_parser_hash_file="${parser_gate_root}/after-parser.hash"
 parser_build_override_active=1
 PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/slhdsa/check-harness.py \
-  --resolve-s01-parser-executable \
+  --resolve-acvp-parser-executable \
   "${fresh_parser_build_root}" \
   "${resolved_parser_path_file}" "${expected_parser_hash_file}"
 printf '%s\n' "${fresh_parser_build_root}/bin/slhdsa_acvp_parser" \

@@ -1,111 +1,58 @@
-# Checked proof-obligation checklist
+# Proof obligations
 
-Status is authoritative in `matrices/proof-obligations.csv`; this prose explains acceptance tests.
-No checkbox is discharged by a build alone.
+The machine-readable status is in `matrices/proof-obligations.csv`. A build proves only that the
+recorded Lean terms elaborate; executable tests, conformance evidence, and security reductions have
+separate obligations.
 
-## Rejected legacy `Security.lean` and replacement architecture
+## Discharged construction obligations
 
-- [x] The S02 replacement has formula-derived positive caps for all eight source-game target roles.
-  Actual traces may be shorter or empty; selecting a missing target makes the event false. The
-  rejected legacy theorem still admits zero caller-supplied counts.
-- [ ] S02 packages public/secret seed and root coherence for each generated key, and primitive
-  queries use that public key. B03 supplies a conditional `GeneralScheme` interface adapter, but no
-  reduction coupling law; F-079/PO-003 remain open for S11.
-- [ ] Every additive loss is proved bounded/finite from a game hop. Current
-  `slhdsaInterleavingLoss` accepts unbounded `qS/qH`; for large queries it can exceed one and make the
-  inequality trivial. Its formula is an invented stand-in, not a proved ITSR loss.
-- [x] S02 defines `qS` and `qH` as pathwise predicates on the actual adversary program for every
-  public key. Internal signer instrumentation and runtime accounting remain for S12.
-- [ ] S02 implements the proposed post-hop `Hmsg` ITSR experiment and every required FORS/WOTS
-  `T_l` role, but D-006 remains unapproved and PO-006 is provisional.
-- [x] S04 provides a separate `Primitives.ByteLaws` injectivity bundle, its `yToBytes_eq_iff`
-  theorem, and concrete witnesses for both approved families. This discharge remains pending S04
-  review and does not add a cryptographic assumption to the structural primitive interface.
-- [ ] S02's candidate removes caller-supplied target samplers. Under proposed D-009, each
-  quantitative component is a standalone source-shaped challenger with its own target oracle and
-  same-execution collection log where required. D-009 has no named approver, so PO-008 remains
-  provisional and the proposal does not supersede the earlier contract.
-- [ ] A parameter-indexed asymptotic theorem exists. Current statement is one finite inequality with
-  no security parameter, polynomial-time/query condition, or negligibility conclusion.
-- [ ] The S02 proposition has the exact repaired EasyCrypt twelve-term order and coefficients in
-  classical semantics, but D-006 remains proposed. Constructing reductions and proving it remain
-  open; the rejected legacy statement still has only the allowlisted `sorry`.
+- All twelve FIPS 205 parameter records, derived widths, and fixed-size relations.
+- Big-endian `base_2b`, rejecting fixed-width codecs at the modeled boundaries, address
+  canonicality, and typed digest/position decomposition.
+- Exact SHA-2/SHAKE primitive grammars with checked SHA-2 address compression and vector evidence.
+- WOTS checksum serialization/digits and public-key recovery after signing.
+- Typed XMSS positions/authentication paths, exact sibling/climb equations, recovery, and binding.
+- Typed FORS digest indices, global/sibling positions, address forms, sign/recover equations, and
+  bounded approved-profile tests.
+- Arbitrary-depth hypertree honest sign/recovery and internal general-scheme sign/verify
+  completeness, with finite structural query upper bounds.
+- Depth-one deterministic output compatibility. The arbitrary-depth signer intentionally executes
+  the final discarded recovery required by its control flow, so free-oracle traces need not match.
+- Exact SUF event partition into EUF and same-message/new-signature events. This is an identity, not
+  a bound on the residual.
 
-## Parameters, encodings, and ADRS
+## Open construction and API obligations
 
-- [ ] Validity: positivity, `h=d*h'`, approved-set table, `w/len/m` formula and size theorems for all
-  12 sets; legacy/C13 cannot satisfy normative approval by accident.
-- [ ] Fixed widths and range safety for all arithmetic; no silent `Nat` underflow/division-by-zero.
-- [ ] `toInt`/`toByte`, `base_2b`, checksum shift, digest split, bit order, truncation, and padding laws.
-- [ ] ADRS field setters/getters, clearing, type separation, serialization and SHA2 compression laws;
-  no address reuse across domains.
-- [ ] Key/signature codecs round trip and reject every invalid length/format.
+- Prove callback-parametric arbitrary-depth `*With` programs refine explicit-query and pure
+  interpretations.
+- Implement signature/key codecs and external pure/pre-hash APIs, including context length,
+  OID/output-strength metadata, deterministic/hedged modes, and rejection behavior.
+- Prove a general mathematical refinement from abstract primitive bundles to concrete SHA-2/SHAKE
+  implementations; current vector evidence is executable evidence only.
+- Complete positive ACVP implementation evidence for every claimed parameter/hash/API cell.
+- Keep the legacy and C13 regressions separated from normative FIPS and security claims.
 
-## Algorithms and API
+## Open security obligations
 
-- [ ] S04 implements the exact typed `F/H/T_l/PRF/PRF_msg/H_msg` grammars for all twelve sets,
-  with checked SHA2 addresses and focused standard/boundary/profile tests. Independent review and
-  a general mathematical refinement theorem remain, so executable evidence does not close PO-017.
-- [x] S05 implements and kernel-connects the exact WOTS+ checksum byte pipeline, preserves the
-  existing deterministic recovery theorem, and exercises all twelve concrete profiles; independent
-  r0 accepted the exact candidate with zero findings.
-- [x] S06 packages FIPS §6 leaf/node bounds and authentication width intrinsically, proves exact
-  sibling entries and the honest FIPS climb equation to the canonical Merkle engine, retains honest
-  recovery and arbitrary-signature binding, and closes approved reachable SHA2/SHAKE addresses.
-  Independent S06 r0 accepted the exact candidate with zero findings. B03 subsequently discharges
-  arbitrary-`d` hypertree correctness.
-- [x] B02 consumes PR #595's typed `(md,idx_tree,idx_leaf)` decomposition, exact byte extents,
-  intrinsic bounds, FORS address, and `LayerPosition` low-bit/high-bit trajectory for all approved
-  profiles. B02 and its remote reconciliation are independently accepted at exact reviewed head
-  `609185098935feea82f4d5b6fb7a9d62aefce9c9`; B02 alone did not claim general-hypertree
-  correctness.
-- [x] The legacy `Scheme` path remains a valid `d=1` compatibility surface: it passes `Adrs.zero`,
-  tree zero, and `idxLeaf` only where valid `d=1` proves `idxTree = 0`. B03's `GeneralScheme`
-  consumes `LayerPosition` for arbitrary `d`, and `DepthOneCompatibility` proves the two surfaces'
-  deterministic output agreement (reclassified PO-012).
-- [x] B03 imports typed arbitrary-`d` hypertree and GeneralScheme programs, naturality,
-  deterministic interpretations, finite structural query upper bounds, and kernel-checked honest
-  GeneralHypertree recovery plus internal GeneralScheme completeness (PO-021/PO-022).
-- [ ] Callback-parametric `signFromPositionWith`/`recoverFromPositionWith` still lack a named parity
-  theorem to the explicit-query/pure construction (PO-024, Medium). Depth-one output compatibility
-  is proved, but general signing intentionally performs one discarded final recovery.
-- [x] The S07 candidate connects exact `DigestParts.md` widths to typed MSB-first FORS indices,
-  proves decoded global/sibling/sign equations and complete component address canonicality, closes
-  approved SHA2/SHAKE address boundaries, exhausts a height-two toy over all 256 byte digests,
-  checks all twelve profiles cheaply, and exercises SHA2/SHAKE-128f sign/recovery/keygen. PO-023 is
-  technically discharged pending independent review; no KAT, ACVP, trace-coverage, or reduction
-  claim follows.
-- [ ] External pure/pre-hash domain separation, context, OID, deterministic/hedged modes, and codecs.
-- [ ] Remaining external API completeness and reject-behavior roots have zero `sorryAx`; B03 already
-  closes internal `GeneralScheme` completeness.
-- [ ] ACVP evidence covers every claimed cell; positive pre-hash coverage is tracked separately due to
-  issue #469. Existing two embedded KATs remain regression evidence only.
+- Couple concrete reduction key material and public seed to the key generated by the outer CMA
+  experiment.
+- Construct the selected counting interface and concrete reduction adversaries.
+- Prove outer-CMA signing-log refinement and FORS/XMSS/hypertree trace-to-ledger bridges.
+- Prove encoded-address injectivity, target/input pairing, nonempty distinct batches, collection
+  disjointness, and final-validity conditions used by the canonical games.
+- Relate construction-specific experiments to canonical generic-game instances.
+- Prove the PRF, PRFmsg, Hmsg/ITSR, WOTS, FORS, and XMSS/HT reductions with exact finite losses and
+  query transformations; remove any unproved scalar/slack bound.
+- Bound the same-message SUF residual and prove the classical master inequality. The current
+  `RepairedMasterStatement` is proposition-valued infrastructure, not a theorem.
+- Add parameter-family polynomial/negligibility results and, separately, a genuine QROM semantic
+  layer before making quantum-oracle claims.
 
-## Hash/refinement/security
+## Open refinement and operational obligations
 
-- [ ] Concrete primitive/vector equivalence and abstract/concrete refinement; executable algorithms.
-- [ ] Formal EUF-CMA, freshness, query bounds, transcript and oracle mapping.
-- [ ] B03's encoded `AdrsKey` compatibility equations and conditional GeneralScheme interface are
-  infrastructure only. `ReductionSystem` remains assumed and `RepairedMasterStatement` remains an
-  unproved `Prop`; neither discharges a security reduction.
-- [ ] The exact SUF advantage partition leaves the same-message residual unbounded and the repaired
-  master statement EUF-only (PO-025).
-- [ ] B04 instantiates the canonical #594/#596 games and proves WOTS programs stay within the
-  structural address ledger with their query bounds. The selected proof's `CountingInterface`, an
-  inhabitant of `ReductionAdversaries`, outer-CMA signing-log refinement, FORS/XMSS/hypertree trace
-  bridges, concrete encoded injectivity and distinct batches, old-to-canonical experiment
-  equivalences, and the master inequality remain PO-026.
-- [ ] Precise ITSR and selected tweakable-hash/PRF notions with positive target cardinalities.
-- [ ] Separate WOTS, FORS, XMSS/HT reductions; exact target/query/time transformations.
-- [ ] Sorry-free top composition with verified coefficients and quantitative computability.
-- [ ] Classical versus QROM semantics and claims explicitly separated.
-- [ ] Asymptotic polynomial-time/negligibility theorem and all-12 finite accounting.
-- [ ] Deployment target, ABI and source revision pinned; executable Lean-to-deployment refinement.
-
-## Operational boundaries
-
-- [ ] Randomness/entropy, key lifecycle, usage caps, side channels, faults, DoS/gas, compiler/runtime,
-  and external crypto libraries are either proven/modelled or explicitly excluded in the report.
-- [ ] `unsafe`, `extern`, `noncomputable`, axioms, `sorryAx`, native code and test-vector trust are
-  inventoried with reverse dependency and load-bearing rationale.
-- [ ] Runtime behavior and elaborated proofs are both checked; neither substitutes for the other.
+- Pin a deployment repository, revision, ABI, compiler/extractor, byte/word semantics, and runtime
+  environment before stating an end-to-end refinement theorem.
+- Treat entropy, key lifecycle, usage caps, side channels, faults, denial of service, and external
+  crypto libraries as explicit assumptions or prove the relevant properties.
+- Keep the permanent exact axiom audit, repository-wide policy audit, isolation checks, provenance
+  checks, and runtime tests aligned with new load-bearing declarations.

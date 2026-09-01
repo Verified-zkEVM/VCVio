@@ -67,11 +67,8 @@ def standardAxiomAllowlist : Array Name := #[
   ``Quot.sound
 ]
 
-def s00Placeholder : Name := `SLHDSA.slhdsa_euf_cma_security
-
-private def axiomAllowed (declName axiomName : Name) : Bool :=
-  standardAxiomAllowlist.contains axiomName ||
-    (declName == s00Placeholder && axiomName == ``sorryAx)
+private def axiomAllowed (_declName axiomName : Name) : Bool :=
+  standardAxiomAllowlist.contains axiomName
 
 /-- Exact Lean 4.33.1 compiler helpers generated for the current recursive HashSig definitions. -/
 def compilerHelperAllowlist : Array (Name × Name) := #[

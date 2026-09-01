@@ -483,6 +483,9 @@ def check_authority_document_data(reference: dict[str, Any], profile: dict[str, 
         "locator": "NIST.FIPS.205.pdf",
         "sha256": "8ef34228276f3386d23cb0da8c14592b8cfb0db3358016bba64df7a004f8d13d",
         "size_bytes": 1055752,
+        "title": "Stateless Hash-Based Digital Signature Standard",
+        "authors": ["National Institute of Standards and Technology"],
+        "doi": "10.6028/NIST.FIPS.205",
         "publication_status": "final",
         "publication_date": "2024-08-13",
         "authority": "primary-normative",
@@ -512,6 +515,8 @@ def check_authority_document_data(reference: dict[str, Any], profile: dict[str, 
         "locator": "https://github.com/usnistgov/ACVP.git",
         "revision": PROTOCOL_COMMIT,
         "document": PROTOCOL_DOCUMENT,
+        "document_title": "ACVP SLH-DSA JSON Specification",
+        "document_author": "B. Livelsberger",
         "document_date": PROTOCOL_DOCUMENT_DATE,
         "root_source_sha256": PROTOCOL_ROOT_ARTIFACT[2],
         "source_composite_sha256": PROTOCOL_COMPOSITE_SHA256,
@@ -528,6 +533,9 @@ def check_authority_document_data(reference: dict[str, Any], profile: dict[str, 
         "publication_status": "initial-public-draft",
         "publication_date": "2026-04-13",
         "signature_cap_per_key": 16777216,
+        "title": "Additional SLH-DSA Parameter Sets for Limited-Signature Use Cases",
+        "authors": ["Quynh Dang", "Dustin Moody"],
+        "doi": "10.6028/NIST.SP.800-230.ipd",
         "profile_id": SP800_PROFILE_ID,
         "authority": "primary-nonnormative-draft-profile",
     }, "reference manifest SP 800-230 IPD authority metadata mismatch")
@@ -547,21 +555,16 @@ def check_authority_document_data(reference: dict[str, Any], profile: dict[str, 
     }, "SP 800-230 IPD profile is not the exact six-row non-normative authority record")
 
 
-def check_bibliographic_identity() -> None:
-    path = REPO_ROOT / "docs" / "slhdsa" / "report" / "references.bib"
-    try:
-        bibliography = path.read_text(encoding="utf-8")
-    except OSError as error:
-        raise CheckError(f"cannot read {path}: {error}") from error
-    start = bibliography.find("@misc{acvpSlhdsa,")
-    require(start >= 0, "ACVP protocol bibliography entry is missing")
-    end = bibliography.find("\n}", start)
-    require(end >= 0, "ACVP protocol bibliography entry is malformed")
-    entry = bibliography[start:end + 2]
-    require("year         = {2024}" in entry
-            and "draft-livelsberger-acvp-slh-dsa-01" in entry
-            and "25 June 2024" in entry,
-            "ACVP protocol bibliography identity/date mismatch")
+def check_bibliographic_identity(reference: dict[str, Any]) -> None:
+    by_id = {entry.get("id"): entry for entry in reference.get("entries", [])
+             if isinstance(entry, dict)}
+    require(by_id.get("tight-proof-paper", {}).get("eprint") == "2024/910"
+            and by_id.get("ccs2019-framework", {}).get("doi") ==
+                "10.1145/3319535.3363229"
+            and by_id.get("hulsing-kudinov-2022", {}).get("locator") ==
+                "https://doi.org/10.1007/978-3-031-22966-4_1"
+            and by_id.get("acvp-protocol", {}).get("document_author") == "B. Livelsberger",
+            "reference manifest security/ACVP bibliographic metadata mismatch")
 
 
 def validate_provenance_controlling_sources(sources: dict[str, Any]) -> None:
@@ -595,7 +598,7 @@ def check_authority_documents_and_mutations() -> None:
     profile = load_json(REPO_ROOT / "docs" / "slhdsa" / "matrices" /
                         "sp800-230-ipd-profile.json")
     check_authority_document_data(reference, profile)
-    check_bibliographic_identity()
+    check_bibliographic_identity(reference)
     provenance = load_json(FIXTURE_ROOT / "provenance.json")
     validate_provenance_controlling_sources(provenance.get("sources", {}))
 

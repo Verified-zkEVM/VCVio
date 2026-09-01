@@ -8,7 +8,7 @@ widths, and all index/address range constraints. Derived `w,len1,len2,len,m` and
 must be equal to FIPS formulas and evaluated for every approved set. Truncation, padding, modular
 reduction, shifts, and big-endian `toInt`/`toByte` behavior require executable definitions and laws.
 
-S03 keeps generic `Params` for existing constructions but adds a closed twelve-constructor
+The implementation keeps generic `Params` for shared constructions and adds a closed twelve-constructor
 `ParameterSet`, exact `ParameterProfile` rows, executable approval/malformed-row rejection, and a
 family-aware lookup with a proved exact constructor inverse, plus a proved `Params.Valid` witness
 for every approved name. The SHA2-128-24 reduced profile is now a
@@ -37,7 +37,7 @@ exactly
 `SK.seed || SK.prf || PK.seed || PK.root` and `PK.seed || PK.root`; signatures are
 `R || SIG_FORS || SIG_HT`. Decoders must reject wrong lengths and malformed fields rather than
 silently pad/slice. Address fields, type tags, `setTypeAndClear`, the 32-byte encoding, and the
-SHA2 compressed address require round-trip/noninterference/range lemmas. S03 provides the total
+SHA2 compressed address require round-trip/noninterference/range lemmas. The implementation provides total
 modulo and in-range reconstruction laws for big-endian `toByte`/`toInt`, checked 32-bit/96-bit
 address setters, type-and-clear field laws, exact 32/22-byte length theorems, canonical type/padding
 rejection, structured serialization/parser identity under exact field bounds, and checked-wire
@@ -85,7 +85,7 @@ H    = Trunc_n(SHA-512(PK.seed || toByte(0,128-n) || ADRS_c || M2))
 Tl   = Trunc_n(SHA-512(PK.seed || toByte(0,128-n) || ADRS_c || Ml))
 ```
 
-S04 realizes these grammars in `HashSig.SLHDSA.Concrete.FIPS`. `approvedPrimitives` selects the
+`HashSig.SLHDSA.Concrete.FIPS` realizes these grammars. `approvedPrimitives` selects the
 family from the closed `ParameterSet`, and focused fingerprints distinguish every one of the twelve
 profiles. The SHA2 claim is deliberately restricted to `Sha2Address`: its constructor checks full
 ADRS canonicality plus the one-byte layer and eight-byte tree bounds before exposing the 22-byte
@@ -124,10 +124,10 @@ correctness, and the general internal scheme proves sign/verify completeness. Th
 The older `Scheme` d=1 path remains for compatibility and is FIPS-correct when
 `DigestParts.idxTree_eq_zero_of_d_eq_one` applies. General depth-one signing returns the same
 signature but executes Algorithm 12's discarded final recovery, so its free-oracle trace is longer.
-The S07 candidate now instantiates FORS extraction/address/runtime conformance with exact
+`ForsConformance` and `Concrete.Fors` instantiate FORS extraction/address/runtime conformance with exact
 `DigestParts.md` widths, typed MSB-first indices and global sibling coordinates, checked SHA2/SHAKE
-address boundaries, a tiny exhaustive model, and bounded SHA2/SHAKE-128f construction tests;
-independent review is pending. S09 still owns codecs, external APIs, and reject behavior. The
+address boundaries, a tiny exhaustive model, and bounded SHA2/SHAKE-128f construction tests.
+Codecs, external APIs, and reject behavior remain open. The
 concrete SHA2-128-24 verifier and parallel C13 construction remain
 non-normative regressions, not full FIPS205-12 external APIs.
 
@@ -163,16 +163,15 @@ OID/output-length obligations remain separate specification checks.
 
 ## Security surfaces
 
-Security architecture precedes refactoring. It must expose the actual scheme public seed generated
-inside the EUF-CMA game, not a theorem parameter disconnected from the key. S02 currently provides
-an arbitrary signature-scheme experiment interface. B03 supplies a conditional `securityInterface`
+The security architecture must expose the actual scheme public seed generated
+inside the EUF-CMA game, not a theorem parameter disconnected from the key. It provides an
+arbitrary signature-scheme experiment interface and a conditional `securityInterface`
 whose operations delegate to `GeneralScheme`, but this is only an interface shape:
 `ClassicalSecurityContext` assumes a `ReductionSystem`, and `RepairedMasterStatement` remains an
-unproved proposition. B03 separately discharges pure/fixed-answer construction correctness and
+unproved proposition. The construction separately discharges pure/fixed-answer correctness and
 internal `GeneralScheme` completeness, but the conditional security interface does not construct a
-probabilistic refinement or discharge any S02/S11 reduction. Under
-proposed D-009,
-formula-proved positive values are caps for the source-shaped
+probabilistic refinement or discharge any component reduction. Formula-proved positive values are
+caps for the source-shaped
 standalone component-game target oracles; actual traces may be shorter or empty, in which case a
 selected-target event fails. They are not asserted to be an exact family extracted from the outer
 EUF transcript. Adversary predicates enforce signing/hash-query bounds; transcripts record oracle
@@ -183,7 +182,8 @@ is a law when an abstract carrier is used.
 The exact SUF identity partitions its advantage into the EUF event plus a disjoint
 same-message/new-signature residual. It supplies no bound on that residual and does not upgrade the
 EUF-only repaired master proposition. Reachable-target modules enumerate structural FORS, XMSS, and
-WOTS addresses with cardinality and `Nodup` theorems. B04 imports canonical PR #594/#596 games,
+WOTS addresses with cardinality and `Nodup` theorems. `CanonicalGames` imports the canonical generic
+games,
 instantiates their encoded-address problem types, and proves WOTS construction programs stay inside
 the structural address union while retaining their query bounds. It does not supply the selected
 proof's `CountingInterface`, inhabit `ReductionAdversaries`, refine the atomic outer-CMA signing log,
@@ -191,10 +191,10 @@ cover FORS/XMSS/hypertree program traces, prove concrete encoded-address injecti
 target batches, relate the older architecture experiments to the canonical games, or prove the
 master inequality.
 
-Proposed D-006 selects the repaired tight EasyCrypt twelve-term theorem in classical `OracleComp`
-semantics, and proposed D-009 selects its standalone component-game boundary. Neither proposal has
-a named approver, so affected obligations remain pending and this prose does not treat either as an
-accepted supersession. CCS 2019 Theorem 17 remains historical comparison authority, and no QROM
+The modeled candidate selects the repaired tight EasyCrypt twelve-term theorem in classical
+`OracleComp` semantics and a standalone component-game boundary. These definitions do not prove the
+reductions or final inequality. CCS 2019 Theorem 17 remains historical comparison authority, and no
+QROM
 lifting or completed master proof is claimed. No invented `qS(qS+qH)/2^(8m)` loss is retained in
 the candidate architecture.
 
