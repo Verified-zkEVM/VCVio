@@ -140,7 +140,11 @@ def Adversary.IsAdversaryPrefixQueryBound
   IsTotalQueryBound (adversary.prefixProgram rounds) queryBound
 
 /-- Uniform support-wise verifier overhead. This hypothesis is necessary because a terminal
-adversary can output an arbitrarily long pure claim list without making any oracle query. -/
+adversary can output an arbitrarily long pure claim list without making any oracle query.
+
+The bound quantifies over every well-typed private and extractor state, including states unreachable
+from `SequentialCommitter.runFromEmpty`, so it is stronger than the executable theorem needs. A
+reachability-restricted predicate is the natural weakening if this uniform form is too restrictive. -/
 def Adversary.HasVerifierQueryBound
     {config : Configuration Cfg Address}
     (adversary : Adversary Cfg Query Address Y config) (verifierBound : ℕ) : Prop :=

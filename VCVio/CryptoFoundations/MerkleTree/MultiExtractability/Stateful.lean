@@ -318,7 +318,8 @@ def Failure [DecidableEq Address] [DecidableEq Y]
 /-- The textbook-facing failure event: an accepted chosen opening disagrees with its checkpoint
 extraction, or two equal roots at checkpoints of the same configuration have inconsistent
 extractions. Checkpoint-to-terminal evolution is an internal strengthening used in the proof, not
-part of this public event. -/
+part of this public event. Both branches compare checkpoints only within one configuration tag;
+cross-tag root reuse is outside the event. -/
 def TextbookFailure [DecidableEq Address] [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}

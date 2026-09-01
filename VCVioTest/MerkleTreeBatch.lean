@@ -10,13 +10,15 @@ public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Addressed
 public meta import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.MapToSingle
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Game
 
 /-!
 # Inductive Merkle Batch-Opening Canaries
 
 Concrete examples that pin the public behavior of path-pruned batch openings: hash argument
 order, pruning shape, the singleton reduction to an ordinary authentication path, the
-all-selected and empty-selector boundaries, and cross-selector collision extraction.
+all-selected and empty-selector boundaries, cross-selector collision extraction, and the
+multi-opening verifier's accepting and rejecting branches.
 -/
 
 @[expose] public section
@@ -244,5 +246,59 @@ example :
   exact getPutativeBatchRootWithHash_binding constantHash
     leftValues leftProof bothValues bothProof pairLeftIndex leftSelected bothLeftSelected
     selectedValuesDiffer putativeRootsAgree
+
+/-! ## Multi-opening verification -/
+
+open _root_.MerkleTreeMultiExtractability
+
+abbrev VerifierQuery := Nat × Nat
+
+/-- Complete-query model for the deterministic multi-opening verifier canary. -/
+def verifierModel : MerkleTreeExtractability.NodeQueryModel VerifierQuery Unit Nat where
+  view := {
+    address := fun _ => ()
+    input := id }
+  mkQuery _ input := input
+  address_mkQuery := by intros; rfl
+  input_mkQuery := by intros; rfl
+
+def verifierConfig : Configuration Unit Unit where
+  skeleton _ := pairSkeleton
+  addressKey _ _ := ()
+
+def acceptingClaim : OpeningClaim VerifierQuery Nat verifierConfig where
+  tag := ()
+  checkpoint := {
+    root := 26
+    cumulativeLog := [] }
+  opening := {
+    selector := selectBoth
+    values := bothValues
+    proof := bothProof }
+
+def rejectingClaim : OpeningClaim VerifierQuery Nat verifierConfig where
+  tag := ()
+  checkpoint := {
+    root := 27
+    cumulativeLog := [] }
+  opening := {
+    selector := selectBoth
+    values := bothValues
+    proof := bothProof }
+
+def verifierImpl : QueryImpl (VerifierQuery →ₒ Nat) Id :=
+  fun query => orderedHash query.1 query.2
+
+def attemptBits (attempts : List (AnyOpeningAttempt Unit VerifierQuery Unit Nat verifierConfig)) :
+    List Bool :=
+  attempts.map fun ⟨_, attempt⟩ => attempt.accepted
+
+/-- `verifyClaims` preserves one attempt per claim and records both verifier outcomes. This rejects
+dropping a nonempty claim list, hard-coding acceptance, or reversing the claim order. -/
+example :
+    let attempts := simulateQ verifierImpl
+      (verifyClaims verifierModel [acceptingClaim, rejectingClaim])
+    attempts.length = 2 ∧ attemptBits attempts = [true, false] := by
+  decide
 
 end VCVioTest.MerkleTreeBatch
