@@ -118,9 +118,9 @@ def forsPkGenWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     forsRootWith core hash nodeHash sk pk adrs i.val
   compress (forsPkAdrs adrs) roots.toList
 
-/-- Low-level callback-parametric FORS signing. `authPathM` evaluates only sibling subtrees, so
-the selected leaf is revealed but never hashed by signing. Trees are processed in increasing
-order. -/
+/-- Low-level callback-parametric FORS signing. `intrinsicAuthPathM` evaluates only sibling
+subtrees, so the selected leaf is revealed but never hashed by signing. Trees are processed in
+increasing order. -/
 def forsSignWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y)
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
@@ -465,37 +465,6 @@ private theorem isTotalQueryBound_ofFnM {ι α : Type} {spec : OracleSpec ι} {k
       simpa using isTotalQueryBound_bind (n₂ := 0) (h (Fin.last k))
         (fun a => show IsTotalQueryBound (pure (xs.push a) : OracleComp spec _) 0 from trivial)
 
-/-- Compose `Vector.ofFnM` with a continuation whose bound depends on an invariant satisfied by
-every generated entry.  The entry hypothesis is deliberately a refined bind rule rather than a
-plain query bound: it lets structured producers such as `authPathM` carry their path-length fact
-into the final continuation without claiming that arbitrary oracle outputs satisfy it. -/
-private theorem isTotalQueryBound_ofFnM_bind_of_forall
-    {ι α β : Type} {spec : OracleSpec ι} {k : ℕ}
-    (g : Fin k → OracleComp spec α) (P : α → Prop) (budget : Fin k → ℕ)
-    (hentry : ∀ i (rest : α → OracleComp spec β) (restBudget : ℕ),
-      (∀ x, P x → IsTotalQueryBound (rest x) restBudget) →
-      IsTotalQueryBound (g i >>= rest) (budget i + restBudget))
-    (rest : Vector α k → OracleComp spec β) (restBudget : ℕ)
-    (hrest : ∀ xs, (∀ i : Fin k, P xs[i.val]) → IsTotalQueryBound (rest xs) restBudget) :
-    IsTotalQueryBound (Vector.ofFnM g >>= rest) ((∑ i, budget i) + restBudget) := by
-  induction k generalizing restBudget with
-  | zero =>
-      rw [Vector.ofFnM_zero]
-      simpa using hrest #v[] (fun i => Fin.elim0 i)
-  | succ k ih =>
-      rw [Vector.ofFnM_succ, bind_assoc, Fin.sum_univ_castSucc]
-      have hprefix := ih
-        (g := fun i => g i.castSucc) (budget := fun i => budget i.castSucc)
-        (rest := fun xs => g (Fin.last k) >>= fun x => rest (xs.push x))
-        (restBudget := budget (Fin.last k) + restBudget)
-        (fun i rest' restBudget' h => hentry i.castSucc rest' restBudget' h)
-        (fun xs hxs => hentry (Fin.last k) (fun x => rest (xs.push x)) restBudget
-          (fun x hx => hrest (xs.push x) (fun i => by
-            refine Fin.lastCases ?_ (fun j => ?_) i
-            · simpa using hx
-            · simpa using hxs j)))
-      simpa [Nat.add_assoc] using hprefix
-
 private theorem publicHash_f_isTotalQueryBound_one (core : CorePrimitives p)
     (pk : core.PkSeed) (adrs : Adrs) (x : core.Y) :
     IsTotalQueryBound
@@ -630,16 +599,6 @@ theorem forsPkFromSigM_isTotalQueryBound (core : CorePrimitives p)
       simpa [idx, Nat.add_comm] using hbound)
   simpa using isTotalQueryBound_bind hroots fun roots =>
     publicHash_tl_isTotalQueryBound_one core pk (forsPkAdrs adrs) roots.toList
-
-/-- For a FIPS-shaped signature with `a` authentication nodes per tree, recovery has structural
-upper bound `k * (a + 1) + 1`: one `F` and `a` `H` calls per tree, then `T_k`. The constant is
-the exact callback count; `IsTotalQueryBound` exposes it through the library's upper-bound API. -/
-theorem forsPkFromSigM_isTotalQueryBound_fips (core : CorePrimitives p)
-    (sig : ForsSigCore p core) (md : List Byte) (pk : core.PkSeed) (adrs : Adrs) :
-    IsTotalQueryBound
-      (forsPkFromSigM core sig md pk adrs : OracleComp (publicHashSpec core) core.Y)
-      (p.k * (p.a + 1) + 1) :=
-  forsPkFromSigM_isTotalQueryBound core sig md pk adrs
 
 /-- Honest FORS signing followed by recovery stays within the full signing-and-recovery
 schedule.  Signing computes only sibling subtrees; every generated authentication path has

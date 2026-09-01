@@ -14,10 +14,11 @@ public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 /-!
 # SLH-DSA in the public-hash random-oracle model
 
-This file lifts the canonical internal SLH-DSA programs for the repository's current `d = 1`
-formalization into one external signature algorithm.
+This file lifts the explicit-evidence `d = 1` compatibility programs of `HashSig.SLHDSA.Scheme`
+into one external signature algorithm; the canonical scheme path for every validated depth is
+`HashSig.SLHDSA.GeneralScheme`.
 Fresh seeds and the signing randomizer are lifted from `ProbComp`; `H_msg` and every tweakable
-hash remain explicit `HasQuery (publicHashSpec core)` calls. The canonical random-oracle
+hash remain explicit `HasQuery (publicHashSpec core)` calls. The random-oracle
 specialization uses one lazy cache for the complete experiment. Consequently key generation,
 the adversary, every signing-oracle call, and final verification all see the same public-hash
 table.
@@ -36,10 +37,10 @@ namespace SLHDSA
 variable {p : Params}
 variable (hd : p.d = 1)
 
-/-! ### Canonical external algorithms -/
+/-! ### External algorithms over the depth-one compatibility surface -/
 
-/-- External key generation: sample the three FIPS 205 seeds, then run the canonical internal
-explicit-query program. -/
+/-- External key generation: sample the three FIPS 205 seeds, then run the `d = 1`
+compatibility internal explicit-query program. -/
 def slhKeygenM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.SkSeed] [SampleableType core.SkPrf]
@@ -50,7 +51,7 @@ def slhKeygenM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
   slhKeygenInternalM hd core skSeed skPrf pkSeed
 
 /-- External hedged signing for the empty-context API: sample `addrnd`, encode the external
-message, then run the canonical internal explicit-query signer. -/
+message, then run the `d = 1` compatibility internal explicit-query signer. -/
 def slhSignM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.Y] (sk : SecretKeyCore core) (msg : List Byte) :
@@ -58,16 +59,17 @@ def slhSignM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
   let addrnd ← (monadLift ($ᵗ core.Y) : m core.Y)
   slhSignInternalM hd core (emptyContextMessage msg) sk addrnd
 
-/-- External empty-context verification via the canonical internal explicit-query verifier. -/
+/-- External empty-context verification via the `d = 1` compatibility internal explicit-query
+verifier. -/
 def slhVerifyM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] [DecidableEq core.Y]
     (pk : PublicKeyCore core) (msg : List Byte) (sig : SignatureCore p core) : m Bool :=
   slhVerifyInternalM hd core (emptyContextMessage msg) sig pk
 
-/-- The single canonical oracle-parametric signature scheme for the current `d = 1` SLH-DSA
-formalization. Its algorithms are generic over the public-randomness lift and the public-hash
+/-- The oracle-parametric signature scheme over the explicit-evidence `d = 1` compatibility
+surface. Its algorithms are generic over the public-randomness lift and the public-hash
 query capability. The unrestricted `Params` carrier does not yet encode `d = 1` as a type-level
-invariant. -/
+invariant; the canonical arbitrary-depth internal scheme is `HashSig.SLHDSA.GeneralScheme`. -/
 def slhdsaAlg (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.SkSeed] [SampleableType core.SkPrf]
@@ -80,7 +82,7 @@ def slhdsaAlg (core : CorePrimitives p) {m : Type → Type*} [Monad m]
 
 /-! ### Deterministic public-hash specialization -/
 
-/-- The concrete-function scheme is definitionally the canonical oracle-parametric scheme
+/-- The concrete-function scheme is definitionally the oracle-parametric scheme above
 interpreted by preserving uniform sampling and answering every public-hash query with `prims`.
 There is no second implementation and therefore no scheme-equivalence theorem to maintain. -/
 def slhdsaConcreteAlg (prims : Primitives p)
@@ -252,7 +254,7 @@ end PublicHash
 /-! ### End-to-end shared-ROM completeness -/
 
 open scoped Classical in
-/-- The canonical oracle-parametric SLH-DSA scheme is perfectly complete under the runtime that
+/-- The depth-one oracle-parametric SLH-DSA scheme is perfectly complete under the runtime that
 threads one lazy public-hash random-oracle cache through the entire experiment.
 
 The proof uses the generic mixed-uniform/random-oracle probability-one bridge. It reduces the

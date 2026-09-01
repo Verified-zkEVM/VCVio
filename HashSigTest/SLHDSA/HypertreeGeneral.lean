@@ -85,7 +85,8 @@ example (core : CorePrimitives sha2_128sVp.params) {m : Type → Type*} [Monad m
         (LayerPosition.initial sha2_128sVp parts) 7 (by rfl) msg := by
   rfl
 
-/-- Algorithm 18's root for SHA2-128s is the XMSS root at layer six, tree zero. -/
+/-- The value FIPS 205 Algorithm 18 publishes as `PK.root` for SHA2-128s is the XMSS root at
+layer six, tree zero. -/
 example (core : CorePrimitives sha2_128sVp.params) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] (sk : core.SkSeed) (pk : core.PkSeed) :
     (rootM sha2_128sVp core sk pk : m core.Y) =

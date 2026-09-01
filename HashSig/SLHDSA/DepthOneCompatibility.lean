@@ -33,7 +33,10 @@ namespace SLHDSA.DepthOneCompatibility
 open OracleComp
 
 /-- At depth one, the intrinsic general-hypertree signature is equivalent to the compatibility
-single XMSS signature. -/
+single XMSS signature. The two types are definitionally equal at every depth (both are
+`Vector (XmssSigCore p core) p.d`), so this is `Equiv.refl`; the abbreviation marks the API
+boundary where a genuine representation conversion would sit, and its evidence argument keeps
+callers at the depth-one surface. -/
 abbrev hypertreeSignatureEquiv (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (_hd : vp.params.d = 1) :
     GeneralHypertree.Signature vp core ≃ HtSigCore vp.params core :=
@@ -183,7 +186,8 @@ theorem verify_eq_htVerify (vp : ValidatedParams) (prims : Primitives vp.params)
 /-! ## Internal-scheme compatibility -/
 
 /-- At depth one, the structured general signature is equivalent to the compatibility
-representation. -/
+representation. As with `hypertreeSignatureEquiv`, the types are definitionally equal at every
+depth, so this is `Equiv.refl` with an evidence argument marking the depth-one boundary. -/
 abbrev schemeSignatureEquiv (vp : ValidatedParams) (core : CorePrimitives vp.params)
     (_hd : vp.params.d = 1) :
     GeneralScheme.SignatureCore vp core ≃ SignatureCore vp.params core :=
