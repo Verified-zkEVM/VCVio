@@ -8,7 +8,6 @@ module
 
 
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Map
-public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 
 /-!
 # Packaged Batch Merkle Openings
