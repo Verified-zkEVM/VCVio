@@ -215,7 +215,8 @@ def Adversary.HasVerifierQueryBound
 
 The cap quantifies over every well-typed private and extractor state, including states unreachable
 from `SequentialCommitter.runFromEmpty`, so it is stronger than the executable theorem needs. A
-reachability-restricted predicate is the natural weakening if this uniform form is too restrictive. -/
+reachability-restricted predicate is the natural weakening if this uniform form is too
+restrictive. -/
 def Adversary.HasOpeningCountBound
     {config : Configuration Cfg Address}
     (adversary : Adversary Cfg Query Address Y config) (openingCount : ℕ) : Prop :=
