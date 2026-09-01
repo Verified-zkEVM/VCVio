@@ -106,6 +106,20 @@ theorem intrinsicAuthPath_toList (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → 
   | succ z ih =>
       rw [intrinsicAuthPath, Vector.toList_push, ih, authPath_succ]
 
+/-- Forgetting the intrinsic path width preserves the complete monadic program, including the
+order of all leaf and node callbacks. This is the bridge that lets distributional and
+query-tracking facts about `authPathM` transfer to `intrinsicAuthPathM` and back inside any
+lawful monad, `OracleComp` included. -/
+theorem intrinsicAuthPathM_toList {m : Type v → Type*} [Monad m] [LawfulMonad m]
+    (leaf : ℕ → m Y) (nodeHash : ℕ → ℕ → Y → Y → m Y) (idx z : ℕ) :
+    (fun path => path.toList) <$> intrinsicAuthPathM leaf nodeHash idx z =
+      authPathM leaf nodeHash idx z := by
+  induction z with
+  | zero => simp [intrinsicAuthPathM, authPathM]
+  | succ z ih =>
+      rw [intrinsicAuthPathM, authPathM, ← ih]
+      simp [Vector.toList_push]
+
 /-- Effectfully recover a root from a leaf value and a leaf-first authentication path. -/
 def climbM {m : Type v → Type*} [Monad m] (nodeHash : ℕ → ℕ → Y → Y → m Y)
     (idx : ℕ) (node : Y) (auth : List Y) : m Y :=
