@@ -69,6 +69,7 @@ public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.MacAlg
 public import VCVio.CryptoFoundations.MacFromPRF
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Level
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Monadic
@@ -76,10 +77,16 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Query
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.BatchExtractability
+public import VCVio.CryptoFoundations.MerkleTree.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Map
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Opening
+public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.ToSingle
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Binding
@@ -89,6 +96,9 @@ public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Potential
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Sequential
+public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Stateful
 public import VCVio.CryptoFoundations.MerkleTree.Vector.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Vector.Defs
 public import VCVio.CryptoFoundations.PRF
@@ -171,6 +181,7 @@ public import VCVio.OracleComp.OracleSpec
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.QueryTracking
+public import VCVio.OracleComp.QueryTracking.AdaptivePrefix
 public import VCVio.OracleComp.QueryTracking.Birthday
 public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
 public import VCVio.OracleComp.QueryTracking.CachingOracle
