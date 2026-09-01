@@ -160,6 +160,9 @@ def run : IO Unit := do
     (SLHDSA.Concrete.Prehash.all == expectedAlgorithms.map (·.algorithm))
   ensure "prehash menu has no duplicates"
     (SLHDSA.Concrete.Prehash.all.eraseDups == SLHDSA.Concrete.Prehash.all)
+  ensure "unknown prehash name rejected" (Algorithm.ofName? "SHA2-999" == none)
+  ensure "prehash names are case-sensitive" (Algorithm.ofName? "sha2-256" == none)
+  ensure "prehash names reject trailing bytes" (Algorithm.ofName? "SHA2-256 " == none)
   let encoded ← match SLHDSA.Concrete.Prehash.encodeMessage
       FipsParameterSet.SLHDSA_SHA2_128s.params
       .sha2_256 [0x10, 0x11] [0xff] with
