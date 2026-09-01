@@ -271,22 +271,6 @@ private lemma runtime_evalSPMF_eq
   simp only [SPMFSemantics.withStateOracle]
   rfl
 
-omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
-/-- The Fischlin runtime commutes with binding a lifted `ProbComp` prefix. -/
-private lemma runtime_evalSPMF_bind_liftComp
-    {α β : Type} (oa : ProbComp α)
-    (rest : α → OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M) β) :
-    (runtime ρ b M).evalSPMF (liftM oa >>= rest) =
-      𝒮[oa] >>= fun x => (runtime ρ b M).evalSPMF (rest x) := by
-  classical
-  rw [runtime_evalSPMF_eq]
-  simp_rw [runtime_evalSPMF_eq]
-  rw [simulateQ_bind,
-    roSim.run'_liftM_bind
-      (ro := randomOracle (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M)) (oa := oa)
-      (rest := fun x => simulateQ (fischlinImpl ρ b M) (rest x)) (s := ∅)]
-  rw [evalSPMF_bind]
-
 /-- The pure-probability model game `G` for Fischlin completeness.
 
 Mirrors `keygen >>= sign >>= verify`, but the prover's per-repetition search uses
