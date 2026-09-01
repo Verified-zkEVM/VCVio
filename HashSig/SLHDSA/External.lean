@@ -76,14 +76,15 @@ def encodePrehashMessageWithDescriptor (prehash : PrehashDescriptor)
 explicit boundary is the deterministic entry point used by ACVP key-generation vectors. -/
 def keygenWithSeeds (vp : ValidatedParams) (prims : Primitives vp.params)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
-    PublicKeyCore prims.core × SecretKeyCore prims.core :=
-  GeneralScheme.keygenInternal vp prims skSeed skPrf pkSeed
+    SecretKeyCore prims.core × PublicKeyCore prims.core :=
+  let (pk, sk) := GeneralScheme.keygenInternal vp prims skSeed skPrf pkSeed
+  (sk, pk)
 
 /-- Algorithm 21 under the repository's ideal total random source. -/
 noncomputable def keygen (vp : ValidatedParams) (prims : Primitives vp.params)
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] :
-    ProbComp (PublicKeyCore prims.core × SecretKeyCore prims.core) := do
+    ProbComp (SecretKeyCore prims.core × PublicKeyCore prims.core) := do
   let skSeed ← $ᵗ prims.SkSeed
   let skPrf ← $ᵗ prims.SkPrf
   let pkSeed ← $ᵗ prims.PkSeed

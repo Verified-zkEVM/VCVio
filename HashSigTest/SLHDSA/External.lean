@@ -31,6 +31,37 @@ def fixedDescriptor : PrehashDescriptor where
   outputLength := 2
   digest := fun _ => .ok #v[0xaa, 0xbb]
 
+structure ExpectedAlgorithm where
+  algorithm : Algorithm
+  name : String
+  oidDer : List Byte
+  outputLength : ℕ
+
+def expectedAlgorithms : List ExpectedAlgorithm :=
+  [⟨.sha2_224, "SHA2-224", [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x04], 28⟩,
+   ⟨.sha2_256, "SHA2-256", [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01], 32⟩,
+   ⟨.sha2_384, "SHA2-384", [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02], 48⟩,
+   ⟨.sha2_512, "SHA2-512", [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03], 64⟩,
+   ⟨.sha2_512_224, "SHA2-512/224",
+     [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x05], 28⟩,
+   ⟨.sha2_512_256, "SHA2-512/256",
+     [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x06], 32⟩,
+   ⟨.sha3_224, "SHA3-224", [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x07], 28⟩,
+   ⟨.sha3_256, "SHA3-256", [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x08], 32⟩,
+   ⟨.sha3_384, "SHA3-384", [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x09], 48⟩,
+   ⟨.sha3_512, "SHA3-512", [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0a], 64⟩,
+   ⟨.shake128, "SHAKE-128", [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0b], 32⟩,
+   ⟨.shake256, "SHAKE-256", [0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0c], 64⟩]
+
+/-! A seeded canary pins the FIPS Algorithm 21 `(SK, PK)` adapter over the canonical internal
+`(PK, SK)` convenience order. A regression that removes the swap changes both the type and value. -/
+example (vp : ValidatedParams) (prims : Primitives vp.params)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
+    keygenWithSeeds vp prims skSeed skPrf pkSeed =
+      let (pk, sk) := GeneralScheme.keygenInternal vp prims skSeed skPrf pkSeed
+      (sk, pk) := by
+  rfl
+
 /-- Rejects a wrong pure domain byte or a missing empty-context length byte. -/
 example : encodePureMessage [] [0xcc] = .ok [0x00, 0x00, 0xcc] := by
   decide
@@ -112,20 +143,6 @@ private def expectedAbc : Algorithm → String
       "483366601360a8771c6863080cc4114d8db44530f8f1e1ee4f94ea37e78b5739\
       d5a15bef186a5386c75744c0527e1faa9f8726e462a12a4feb06bd8801e751e4"
 
-private def expectedOidArc : Algorithm → ℕ
-  | .sha2_256 => 1
-  | .sha2_384 => 2
-  | .sha2_512 => 3
-  | .sha2_224 => 4
-  | .sha2_512_224 => 5
-  | .sha2_512_256 => 6
-  | .sha3_224 => 7
-  | .sha3_256 => 8
-  | .sha3_384 => 9
-  | .sha3_512 => 10
-  | .shake128 => 11
-  | .shake256 => 12
-
 private def ensure (label : String) (condition : Bool) : IO Unit :=
   unless condition do throw (IO.userError s!"SLH-DSA external-interface check failed: {label}")
 
@@ -139,7 +156,10 @@ private def checkDigest (label : String) (algorithm : Algorithm)
 /-- Executable FIPS 180-4/FIPS 202 canaries for all twelve ACVP pre-hash choices, including
 their exact DER OIDs and digest widths. -/
 def run : IO Unit := do
-  ensure "complete prehash menu" (SLHDSA.Concrete.Prehash.all.length == 12)
+  ensure "complete independent prehash menu"
+    (SLHDSA.Concrete.Prehash.all == expectedAlgorithms.map (·.algorithm))
+  ensure "prehash menu has no duplicates"
+    (SLHDSA.Concrete.Prehash.all.eraseDups == SLHDSA.Concrete.Prehash.all)
   let encoded ← match SLHDSA.Concrete.Prehash.encodeMessage
       FipsParameterSet.SLHDSA_SHA2_128s.params
       .sha2_256 [0x10, 0x11] [0xff] with
@@ -155,13 +175,13 @@ def run : IO Unit := do
     (encodePureMessage [] [] !=
       SLHDSA.Concrete.Prehash.encodeMessage
         FipsParameterSet.SLHDSA_SHA2_128s.params .sha2_256 [] [])
-  for algorithm in SLHDSA.Concrete.Prehash.all do
-    ensure s!"{algorithm.name}: ACVP name round-trip"
-      (Algorithm.ofName? algorithm.name == some algorithm)
-    ensure s!"{algorithm.name}: DER OID width" (algorithm.oidDer.length == 11)
-    ensure s!"{algorithm.name}: DER OID arc"
-      (algorithm.oidDer.getLast? == some (UInt8.ofNat (expectedOidArc algorithm)))
-    checkDigest s!"{algorithm.name}: abc digest" algorithm [0x61, 0x62, 0x63]
+  for row in expectedAlgorithms do
+    let algorithm := row.algorithm
+    ensure s!"{row.name}: exact ACVP name" (algorithm.name == row.name)
+    ensure s!"{row.name}: exact parser binding" (Algorithm.ofName? row.name == some algorithm)
+    ensure s!"{row.name}: complete DER OID" (algorithm.oidDer == row.oidDer)
+    ensure s!"{row.name}: exact output width" (algorithm.outputLength == row.outputLength)
+    checkDigest s!"{row.name}: abc digest" algorithm [0x61, 0x62, 0x63]
       (expectedAbc algorithm)
   ensure "SHA2-224 is below category 1"
     (!Algorithm.sha2_224.validFor FipsParameterSet.SLHDSA_SHA2_128s.params)
