@@ -187,29 +187,6 @@ theorem applyCoeffTransform_zero
     backend.build 0 = backend.build (backend.coeff 0) := congrArg backend.build hcoeffZero.symm
     _ = 0 := backend.build_coeff 0
 
-/-! ## Executable array bridge -/
-
-/-- Read through a safe array update, retaining both the updated-index and
-out-of-bounds behavior of `set!`/`getD`. -/
-theorem array_getD_set! {α : Type*} (xs : Array α) (i j : Nat) (value fallback : α) :
-    (xs.set! i value).getD j fallback =
-      if i = j then if i < xs.size then value else fallback else xs.getD j fallback := by
-  by_cases hij : i = j
-  · subst j
-    by_cases hi : i < xs.size <;>
-      simp [Array.getD, Array.set!_eq_setIfInBounds, hi]
-  · by_cases hj : j < xs.size <;>
-      simp [Array.getD, Array.set!_eq_setIfInBounds, hij, hj]
-
-/-- Read through two in-bounds updates.  The second update wins when the two
-indices coincide. -/
-theorem array_getD_set!_set! {α : Type*} (xs : Array α) (i j coord : Nat)
-    (left right fallback : α) (hi : i < xs.size) (hj : j < xs.size) :
-    ((xs.set! i left).set! j right).getD coord fallback =
-      if j = coord then right else if i = coord then left else xs.getD coord fallback := by
-  rw [array_getD_set!, Array.size_set!, array_getD_set!]
-  simp only [hi, hj, ↓reduceIte]
-
 /-- Pointwise distributivity of `applyMatrix` over a binary backend operation
 `op` whose coefficient image distributes over multiplication and finite sums.
 Specializes to `applyMatrix_add` and `applyMatrix_sub`. -/

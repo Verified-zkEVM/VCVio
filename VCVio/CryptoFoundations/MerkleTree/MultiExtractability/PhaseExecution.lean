@@ -81,14 +81,14 @@ theorem probEvent_withQueryLog_stablePhase_le
       state.StableAt view terminalLog →
       Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
           (suffix x terminalLog)).run terminalCache] ≤
-        (multiExtractabilitySafePotential nodeBudget checkpointCount overhead
+        (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
     Pr[ fun z => win z.1 |
       (simulateQ (Query →ₒ Y).cachingOracle
         (prefixComp.withQueryLog >>= fun phaseResult =>
           suffix phaseResult.1 (log ++ phaseResult.2))).run cache] ≤
-      (multiExtractabilitySafePotential nodeBudget checkpointCount overhead remaining cached :
+      (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead remaining cached :
         ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
   rw [← adaptivePrefixRunFrom_eq_withQueryLog prefixComp suffix cache log]
   exact probEvent_stablePhaseRunFrom_le view state suffix continuation win

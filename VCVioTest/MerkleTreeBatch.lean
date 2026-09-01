@@ -344,7 +344,8 @@ example :
           (batchToSingleProof constantHash leftValues leftProof pairLeftIndex leftSelected)
           (batchToSingleProof constantHash bothValues bothProof pairLeftIndex bothLeftSelected)
           (selectedValueAt leftValues pairLeftIndex leftSelected)
-          (selectedValueAt bothValues pairLeftIndex bothLeftSelected) = some (l₁, r₁, l₂, r₂)
+          (selectedValueAt bothValues pairLeftIndex bothLeftSelected) =
+            some (l₁, r₁, l₂, r₂)
         ∧ Collision constantHash l₁ r₁ l₂ r₂ := by
   exact getPutativeBatchRootWithHash_binding constantHash
     leftValues leftProof bothValues bothProof pairLeftIndex leftSelected bothLeftSelected
@@ -392,16 +393,16 @@ def rejectingClaim : OpeningClaim VerifierQuery Nat verifierConfig where
 def verifierImpl : QueryImpl (VerifierQuery →ₒ Nat) Id :=
   fun query => orderedHash query.1 query.2
 
-def attemptBits (attempts : List (AnyOpeningAttempt Unit VerifierQuery Unit Nat verifierConfig)) :
+def attemptBits
+    (attempts : List (AnyEvaluatedOpeningClaim Unit VerifierQuery Unit Nat verifierConfig)) :
     List Bool :=
   attempts.map fun ⟨_, attempt⟩ => attempt.accepted
 
-/-- `verifyClaims` preserves one attempt per claim and records both verifier outcomes. This rejects
-dropping a nonempty claim list, hard-coding acceptance, or reversing the claim order. -/
+/-- `verifyOpeningClaims` preserves duplicates and records every verifier outcome in order. -/
 example :
     let attempts := simulateQ verifierImpl
-      (verifyClaims verifierModel [acceptingClaim, rejectingClaim])
-    attempts.length = 2 ∧ attemptBits attempts = [true, false] := by
+      (verifyOpeningClaims verifierModel [acceptingClaim, rejectingClaim, acceptingClaim])
+    attempts.length = 3 ∧ attemptBits attempts = [true, false, true] := by
   decide
 
 end VCVioTest.MerkleTreeBatch
