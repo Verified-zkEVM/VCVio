@@ -6,6 +6,7 @@ Authors: Nicolas Consigny
 
 module
 public import HashSig.SLHDSA.Hypertree
+public import HashSig.SLHDSA.Position
 
 /-!
 # SLH-DSA Scheme (FIPS 205 §9–10)
@@ -18,8 +19,7 @@ an explicit `HasQuery` operation:
 - `slhKeygenInternalM` / `slhSignInternalM` / `slhVerifyInternalM` (Algorithms 18–20),
 - `slhKeygenInternal` / `slhSignInternal` / `slhVerifyInternal`, the deterministic
   `PublicHash.impl` interpretations of those programs,
-- `splitDigest`, the message-digest split into `(md, idxLeaf)` (§9; for `d = 1` the tree index
-  is always `0`, so it is omitted), and
+- `splitDigest`, the typed message-digest split into `md`, `idxTree`, and `idxLeaf` (§9), and
 - `emptyContextMessage`, the FIPS 205 external-message encoding used by the canonical external
   scheme in `HashSig.SLHDSA.RandomOracle`.
 
@@ -71,25 +71,6 @@ structure SecretKeyCore (core : CorePrimitives p) where
 abbrev SignatureCore (p : Params) (core : CorePrimitives p) :=
   core.Y × ForsSigCore p core × HtSigCore p core
 
-/-! ### Message-digest split (FIPS 205 §9) -/
-
-/-- Split the message digest into the FORS message `md` and the hypertree leaf index `idxLeaf`
-(reduced mod `2^{h'}`). For `d = 1` the tree-index field is empty, so the tree index is `0` and
-omitted. -/
-def splitDigest (p : Params) (digest : Bytes p.m) : List Byte × ℕ :=
-  let bytes := digest.toList
-  (bytes.take p.digestBytes,
-    toInt ((bytes.drop (p.digestBytes + p.treeIdxBytes)).take p.leafIdxBytes) % 2 ^ p.hp)
-
-theorem splitDigest_snd_lt (p : Params) (digest : Bytes p.m) :
-    (splitDigest p digest).2 < 2 ^ p.hp := by
-  simp only [splitDigest]
-  exact Nat.mod_lt _ (by positivity)
-
-/-- The FORS base address keyed to the per-message hypertree leaf `idxLeaf` (FIPS 205 Alg 19). -/
-def forsAdrsOf (idxLeaf : ℕ) : Adrs :=
-  ((Adrs.zero.setTreeAddress 0).setTypeAndClear .forsTree).setKeyPairAddress idxLeaf
-
 /-! ### Canonical internal algorithms (FIPS 205 §9) -/
 
 /-- Canonical SLH-DSA internal key generation (FIPS 205 Algorithm 18). The public root is
@@ -110,12 +91,10 @@ def slhSignInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     m (SignatureCore p core) := do
   let R := core.PRFmsg sk.skPrf addrnd msg
   let digest ← PublicHash.hmsg core R sk.pkSeed sk.pkRoot msg
-  let idxLeaf := (splitDigest p digest).2
-  let md := (splitDigest p digest).1
-  let fAdrs := forsAdrsOf idxLeaf
-  let forsSig ← forsSignM core md sk.skSeed sk.pkSeed fAdrs
-  let forsPk ← forsPkFromSigM core forsSig md sk.pkSeed fAdrs
-  let htSig ← htSignM core forsPk sk.skSeed sk.pkSeed Adrs.zero 0 idxLeaf
+  let parts := splitDigest p digest
+  let forsSig ← forsSignM core parts.md.toList sk.skSeed sk.pkSeed parts.forsAdrs
+  let forsPk ← forsPkFromSigM core forsSig parts.md.toList sk.pkSeed parts.forsAdrs
+  let htSig ← htSignM core forsPk sk.skSeed sk.pkSeed Adrs.zero 0 parts.idxLeaf.val
   return (R, forsSig, htSig)
 
 /-- Canonical SLH-DSA internal verification (FIPS 205 Algorithm 20). Its public-hash schedule is
@@ -124,11 +103,9 @@ def slhVerifyInternalM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] [DecidableEq core.Y]
     (msg : List Byte) (sig : SignatureCore p core) (pk : PublicKeyCore core) : m Bool := do
   let digest ← PublicHash.hmsg core sig.1 pk.pkSeed pk.pkRoot msg
-  let idxLeaf := (splitDigest p digest).2
-  let md := (splitDigest p digest).1
-  let fAdrs := forsAdrsOf idxLeaf
-  let forsPk ← forsPkFromSigM core sig.2.1 md pk.pkSeed fAdrs
-  htVerifyM core forsPk sig.2.2 pk.pkSeed Adrs.zero 0 idxLeaf pk.pkRoot
+  let parts := splitDigest p digest
+  let forsPk ← forsPkFromSigM core sig.2.1 parts.md.toList pk.pkSeed parts.forsAdrs
+  htVerifyM core forsPk sig.2.2 pk.pkSeed Adrs.zero 0 parts.idxLeaf.val pk.pkRoot
 
 /-! ### Pure deterministic interpretations -/
 
@@ -280,15 +257,13 @@ theorem slhSignInternalM_isTotalQueryBound (core : CorePrimitives p)
   let R := core.PRFmsg sk.skPrf addrnd msg
   have hbound := isTotalQueryBound_bind
     (publicHash_hmsg_isTotalQueryBound_one core R sk.pkSeed sk.pkRoot msg) fun digest =>
-      let idxLeaf := (splitDigest p digest).2
-      let md := (splitDigest p digest).1
-      let fAdrs := forsAdrsOf idxLeaf
+      let parts := splitDigest p digest
       isTotalQueryBound_bind
         (forsSignM_then_forsPkFromSigM_isTotalQueryBound
-          core md sk.skSeed sk.pkSeed fAdrs) fun sigAndPk =>
+          core parts.md.toList sk.skSeed sk.pkSeed parts.forsAdrs) fun sigAndPk =>
             isTotalQueryBound_bind
               (htSignM_isTotalQueryBound_coarse core sigAndPk.2 sk.skSeed sk.pkSeed
-                Adrs.zero 0 idxLeaf) fun htSig =>
+                Adrs.zero 0 parts.idxLeaf.val) fun htSig =>
                   show IsTotalQueryBound
                     (pure (R, sigAndPk.1, htSig) :
                       OracleComp (publicHashSpec core) (SignatureCore p core)) 0 from trivial
@@ -324,11 +299,12 @@ theorem slhVerifyInternalM_isTotalQueryBound (core : CorePrimitives p) [Decidabl
       (slhVerifyInternalQueryBound p core sig) := by
   have hbound := isTotalQueryBound_bind
     (publicHash_hmsg_isTotalQueryBound_one core sig.1 pk.pkSeed pk.pkRoot msg) fun digest =>
+      let parts := splitDigest p digest
       isTotalQueryBound_bind
-        (forsPkFromSigM_isTotalQueryBound core sig.2.1 (splitDigest p digest).1 pk.pkSeed
-          (forsAdrsOf (splitDigest p digest).2)) fun forsPk =>
+        (forsPkFromSigM_isTotalQueryBound core sig.2.1 parts.md.toList pk.pkSeed
+          parts.forsAdrs) fun forsPk =>
             htVerifyM_isTotalQueryBound_coarse core forsPk sig.2.2 pk.pkSeed Adrs.zero 0
-              (splitDigest p digest).2 pk.pkRoot
+              parts.idxLeaf.val pk.pkRoot
   simpa [slhVerifyInternalM, slhVerifyInternalQueryBound, Nat.add_assoc] using hbound
 
 /-! ### Deterministic interpretations -/
@@ -405,7 +381,7 @@ theorem simulateQ_slhVerifyInternalM_slhSignInternalM_withPublicHash
     simulateQ_forsPkFromSigM_withPublicHash, simulateQ_htSignM_withPublicHash,
     simulateQ_htVerifyM_withPublicHash]
   exact htVerify_htSign (PublicHash.withPublicHash core answer) _ skSeed pkSeed Adrs.zero 0 _
-    (splitDigest_snd_lt p _)
+    (splitDigest p _).idxLeaf.isLt
 
 /-- **Deterministic correctness core**: an honestly generated signature verifies, for every
 choice of seeds, randomizer, and deterministic public-hash implementation. -/
