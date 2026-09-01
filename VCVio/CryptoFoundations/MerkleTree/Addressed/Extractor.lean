@@ -57,6 +57,29 @@ def tree (s : Skeleton) (addressKey : SkeletonInternalIndex s → Address)
     (log : (nodeSpec Address Y).QueryLog) (root : Y) : FullData (Option Y) s :=
   MerkleTreeExtractor.tree queryView s addressKey log root
 
+/-- The non-dummy labels reached by addressed extraction from `root`. -/
+def targets (s : Skeleton) (addressKey : SkeletonInternalIndex s → Address)
+    (log : (nodeSpec Address Y).QueryLog) (root : Y) : List Y :=
+  MerkleTreeExtractor.targets queryView s addressKey log root
+
+/-- Addressed extraction exposes at most one target for each node of the skeleton. -/
+theorem targets_length_le (s : Skeleton)
+    (addressKey : SkeletonInternalIndex s → Address)
+    (log : (nodeSpec Address Y).QueryLog) (root : Y) :
+    (targets s addressKey log root).length ≤ 2 * s.leafCount - 1 :=
+  MerkleTreeExtractor.targets_length_le queryView s addressKey log root
+
+/-- Every addressed extractor target is the claimed root or one component of a complete logged
+node query. -/
+theorem mem_targets_root_or_log_input (s : Skeleton)
+    (addressKey : SkeletonInternalIndex s → Address)
+    (log : (nodeSpec Address Y).QueryLog) (root : Y) {target : Y}
+    (htarget : target ∈ targets s addressKey log root) :
+    target = root ∨
+      ∃ entry ∈ log, target = entry.1.input.1 ∨ target = entry.1.input.2 := by
+  simpa [queryView] using
+    (MerkleTreeExtractor.mem_targets_root_or_log_input queryView s addressKey log root htarget)
+
 /-- The leaf and authentication path exposed by an extracted partial tree. -/
 abbrev Opening (Y : Type v) {s : Skeleton} (idx : SkeletonLeafIndex s) :=
   MerkleTreeExtractor.Opening Y idx
