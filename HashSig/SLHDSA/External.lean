@@ -46,13 +46,18 @@ structure PrehashDescriptor where
   outputLength : ℕ
   digest : List Byte → Except Error (Bytes outputLength)
 
-/-- Common FIPS external-message encoder. Domain `0` denotes pure signing and domain `1`
-denotes pre-hash signing. -/
-def encodeMessage (domain : Byte) (context body : List Byte) : Except Error (List Byte) :=
+/-- Enforce the Algorithm 22--25 context bound before evaluating the message body or pre-hash. -/
+def requireContext (context : List Byte) : Except Error Unit :=
   if context.length ≤ 255 then
-    .ok ([domain, UInt8.ofNat context.length] ++ context ++ body)
+    .ok ()
   else
     .error (.contextTooLong context.length)
+
+/-- Common FIPS external-message encoder. Domain `0` denotes pure signing and domain `1`
+denotes pre-hash signing. -/
+def encodeMessage (domain : Byte) (context body : List Byte) : Except Error (List Byte) := do
+  requireContext context
+  return [domain, UInt8.ofNat context.length] ++ context ++ body
 
 /-- Algorithm 22/24 message input: `0x00 || toByte(|ctx|, 1) || ctx || M`. -/
 def encodePureMessage (context message : List Byte) : Except Error (List Byte) :=
@@ -63,6 +68,7 @@ def encodePureMessage (context message : List Byte) : Except Error (List Byte) :
 to an approved algorithm and enforce the security-strength requirement. -/
 def encodePrehashMessageWithDescriptor (prehash : PrehashDescriptor)
     (context message : List Byte) : Except Error (List Byte) := do
+  requireContext context
   let digest ← prehash.digest message
   encodeMessage 1 context (prehash.oidDer ++ digest.toList)
 

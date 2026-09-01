@@ -21,6 +21,16 @@ namespace SLHDSA.ExternalTest
 open SLHDSA.External
 open SLHDSA.Concrete.Prehash
 
+def failingDescriptor : PrehashDescriptor where
+  oidDer := [0x06, 0x01, 0x2a]
+  outputLength := 2
+  digest := fun _ => .error (.digestLengthMismatch 2 0)
+
+def fixedDescriptor : PrehashDescriptor where
+  oidDer := [0x06, 0x01, 0x2a]
+  outputLength := 2
+  digest := fun _ => .ok #v[0xaa, 0xbb]
+
 /-- Rejects a wrong pure domain byte or a missing empty-context length byte. -/
 example : encodePureMessage [] [0xcc] = .ok [0x00, 0x00, 0xcc] := by
   decide
@@ -33,6 +43,25 @@ example : (encodePureMessage (List.replicate 255 0x7f) []).map List.length = .ok
 set_option maxRecDepth 2048 in
 /-- The first forbidden context length is rejected with its observed size. -/
 example : encodePureMessage (List.replicate 256 0x7f) [] = .error (.contextTooLong 256) := by
+  decide
+
+set_option maxRecDepth 2048 in
+/-- Algorithm 23 rejects the context before evaluating even a failing pre-hash descriptor. -/
+example : encodePrehashMessageWithDescriptor failingDescriptor
+    (List.replicate 256 0x7f) [] = .error (.contextTooLong 256) := by
+  decide
+
+set_option maxRecDepth 2048 in
+/-- The largest permitted pre-hash context remains accepted. -/
+example : (encodePrehashMessageWithDescriptor fixedDescriptor
+    (List.replicate 255 0x7f) []).map List.length = .ok 262 := by
+  decide
+
+set_option maxRecDepth 2048 in
+/-- Context rejection also precedes the concrete strength-policy check. -/
+example : SLHDSA.Concrete.Prehash.encodeMessage
+    FipsParameterSet.SLHDSA_SHA2_256s.params .sha2_256 (List.replicate 256 0x7f) [] =
+    .error (.contextTooLong 256) := by
   decide
 
 /-- A category-5 parameter rejects the category-1 SHA-256 pre-hash before signing. -/
