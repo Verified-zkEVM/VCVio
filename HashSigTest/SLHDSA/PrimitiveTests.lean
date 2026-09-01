@@ -302,8 +302,13 @@ private def profileExpected : FipsParameterSet → String
   | .SLHDSA_SHA2_256f => "9352f0249a322a2a1397fcfd1cfca97200d1aefba55a083587cf42988e72c73b"
   | .SLHDSA_SHAKE_256f => "56217933da0de7175fed5d132c030717eea4cc9d9b827ae3e234bce79a0973d8"
 
-private def profileOutputs (set : FipsParameterSet) : ByteArray :=
-  let p := set.params
+private def profileOutputsWith (p : Params)
+    (f : Bytes p.n → Adrs → Bytes p.n → Bytes p.n)
+    (h : Bytes p.n → Adrs → Bytes p.n → Bytes p.n → Bytes p.n)
+    (tlHash : Bytes p.n → Adrs → List (Bytes p.n) → Bytes p.n)
+    (prf : Bytes p.n → Bytes p.n → Adrs → Bytes p.n)
+    (prfMsg : Bytes p.n → Bytes p.n → List Byte → Bytes p.n)
+    (hMsg : Bytes p.n → Bytes p.n → Bytes p.n → List Byte → Bytes p.m) : ByteArray :=
   let pkSeed := sequenceBytes 0 p.n
   let skSeed := sequenceBytes 0x20 p.n
   let pkRoot := sequenceBytes 0x40 p.n
@@ -314,25 +319,66 @@ private def profileOutputs (set : FipsParameterSet) : ByteArray :=
   let tl := [sequenceBytes 0xc0 p.n, sequenceBytes 0xd0 p.n, sequenceBytes 0xe0 p.n]
   let message : List Byte := [0xde, 0xad, 0xbe, 0xef, 0, 1]
   let append (out : ByteArray) (value : Bytes p.n) := out ++ bytesToByteArray value
-  match set.hashFamily with
-  | .sha2 =>
-      let f := checkedNodeOrZero (sha2FChecked pkSeed profileAddress left)
-      let h := checkedNodeOrZero (sha2HChecked pkSeed profileAddress left right)
-      let t := checkedNodeOrZero (sha2TlChecked pkSeed profileAddress tl)
-      let prf := checkedNodeOrZero (sha2PRFChecked pkSeed skSeed profileAddress)
-      let prfMsg := sha2PRFmsg skSeed optRand message
-      let hMsg := sha2Hmsg p randomizer pkSeed pkRoot message
-      append (append (append (append (append ByteArray.empty f) h) t) prf) prfMsg ++
-        bytesToByteArray hMsg
-  | .shake =>
-      let f := shakeF pkSeed profileAddress left
-      let h := shakeH pkSeed profileAddress left right
-      let t := shakeTl pkSeed profileAddress tl
-      let prf := shakePRF pkSeed skSeed profileAddress
-      let prfMsg := shakePRFmsg skSeed optRand message
-      let hMsg := shakeHmsg p randomizer pkSeed pkRoot message
-      append (append (append (append (append ByteArray.empty f) h) t) prf) prfMsg ++
-        bytesToByteArray hMsg
+  append (append (append (append (append ByteArray.empty
+    (f pkSeed profileAddress left))
+    (h pkSeed profileAddress left right))
+    (tlHash pkSeed profileAddress tl))
+    (prf pkSeed skSeed profileAddress))
+    (prfMsg skSeed optRand message) ++
+    bytesToByteArray (hMsg randomizer pkSeed pkRoot message)
+
+/-- Exercise the six operations through the exact bundle exported for each approved profile.
+Keeping this selector exhaustive makes a mutation in either the family dispatch or any bundle
+field observable in the independently generated profile fingerprint. -/
+private def profileOutputs : FipsParameterSet → ByteArray
+  | .SLHDSA_SHA2_128s => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHA2_128s)
+      (approvedPrimitives .SLHDSA_SHA2_128s).F (approvedPrimitives .SLHDSA_SHA2_128s).H
+      (approvedPrimitives .SLHDSA_SHA2_128s).Tl (approvedPrimitives .SLHDSA_SHA2_128s).PRF
+      (approvedPrimitives .SLHDSA_SHA2_128s).PRFmsg (approvedPrimitives .SLHDSA_SHA2_128s).Hmsg
+  | .SLHDSA_SHAKE_128s => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHAKE_128s)
+      (approvedPrimitives .SLHDSA_SHAKE_128s).F (approvedPrimitives .SLHDSA_SHAKE_128s).H
+      (approvedPrimitives .SLHDSA_SHAKE_128s).Tl (approvedPrimitives .SLHDSA_SHAKE_128s).PRF
+      (approvedPrimitives .SLHDSA_SHAKE_128s).PRFmsg (approvedPrimitives .SLHDSA_SHAKE_128s).Hmsg
+  | .SLHDSA_SHA2_128f => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHA2_128f)
+      (approvedPrimitives .SLHDSA_SHA2_128f).F (approvedPrimitives .SLHDSA_SHA2_128f).H
+      (approvedPrimitives .SLHDSA_SHA2_128f).Tl (approvedPrimitives .SLHDSA_SHA2_128f).PRF
+      (approvedPrimitives .SLHDSA_SHA2_128f).PRFmsg (approvedPrimitives .SLHDSA_SHA2_128f).Hmsg
+  | .SLHDSA_SHAKE_128f => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHAKE_128f)
+      (approvedPrimitives .SLHDSA_SHAKE_128f).F (approvedPrimitives .SLHDSA_SHAKE_128f).H
+      (approvedPrimitives .SLHDSA_SHAKE_128f).Tl (approvedPrimitives .SLHDSA_SHAKE_128f).PRF
+      (approvedPrimitives .SLHDSA_SHAKE_128f).PRFmsg (approvedPrimitives .SLHDSA_SHAKE_128f).Hmsg
+  | .SLHDSA_SHA2_192s => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHA2_192s)
+      (approvedPrimitives .SLHDSA_SHA2_192s).F (approvedPrimitives .SLHDSA_SHA2_192s).H
+      (approvedPrimitives .SLHDSA_SHA2_192s).Tl (approvedPrimitives .SLHDSA_SHA2_192s).PRF
+      (approvedPrimitives .SLHDSA_SHA2_192s).PRFmsg (approvedPrimitives .SLHDSA_SHA2_192s).Hmsg
+  | .SLHDSA_SHAKE_192s => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHAKE_192s)
+      (approvedPrimitives .SLHDSA_SHAKE_192s).F (approvedPrimitives .SLHDSA_SHAKE_192s).H
+      (approvedPrimitives .SLHDSA_SHAKE_192s).Tl (approvedPrimitives .SLHDSA_SHAKE_192s).PRF
+      (approvedPrimitives .SLHDSA_SHAKE_192s).PRFmsg (approvedPrimitives .SLHDSA_SHAKE_192s).Hmsg
+  | .SLHDSA_SHA2_192f => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHA2_192f)
+      (approvedPrimitives .SLHDSA_SHA2_192f).F (approvedPrimitives .SLHDSA_SHA2_192f).H
+      (approvedPrimitives .SLHDSA_SHA2_192f).Tl (approvedPrimitives .SLHDSA_SHA2_192f).PRF
+      (approvedPrimitives .SLHDSA_SHA2_192f).PRFmsg (approvedPrimitives .SLHDSA_SHA2_192f).Hmsg
+  | .SLHDSA_SHAKE_192f => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHAKE_192f)
+      (approvedPrimitives .SLHDSA_SHAKE_192f).F (approvedPrimitives .SLHDSA_SHAKE_192f).H
+      (approvedPrimitives .SLHDSA_SHAKE_192f).Tl (approvedPrimitives .SLHDSA_SHAKE_192f).PRF
+      (approvedPrimitives .SLHDSA_SHAKE_192f).PRFmsg (approvedPrimitives .SLHDSA_SHAKE_192f).Hmsg
+  | .SLHDSA_SHA2_256s => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHA2_256s)
+      (approvedPrimitives .SLHDSA_SHA2_256s).F (approvedPrimitives .SLHDSA_SHA2_256s).H
+      (approvedPrimitives .SLHDSA_SHA2_256s).Tl (approvedPrimitives .SLHDSA_SHA2_256s).PRF
+      (approvedPrimitives .SLHDSA_SHA2_256s).PRFmsg (approvedPrimitives .SLHDSA_SHA2_256s).Hmsg
+  | .SLHDSA_SHAKE_256s => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHAKE_256s)
+      (approvedPrimitives .SLHDSA_SHAKE_256s).F (approvedPrimitives .SLHDSA_SHAKE_256s).H
+      (approvedPrimitives .SLHDSA_SHAKE_256s).Tl (approvedPrimitives .SLHDSA_SHAKE_256s).PRF
+      (approvedPrimitives .SLHDSA_SHAKE_256s).PRFmsg (approvedPrimitives .SLHDSA_SHAKE_256s).Hmsg
+  | .SLHDSA_SHA2_256f => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHA2_256f)
+      (approvedPrimitives .SLHDSA_SHA2_256f).F (approvedPrimitives .SLHDSA_SHA2_256f).H
+      (approvedPrimitives .SLHDSA_SHA2_256f).Tl (approvedPrimitives .SLHDSA_SHA2_256f).PRF
+      (approvedPrimitives .SLHDSA_SHA2_256f).PRFmsg (approvedPrimitives .SLHDSA_SHA2_256f).Hmsg
+  | .SLHDSA_SHAKE_256f => profileOutputsWith (FipsParameterSet.params .SLHDSA_SHAKE_256f)
+      (approvedPrimitives .SLHDSA_SHAKE_256f).F (approvedPrimitives .SLHDSA_SHAKE_256f).H
+      (approvedPrimitives .SLHDSA_SHAKE_256f).Tl (approvedPrimitives .SLHDSA_SHAKE_256f).PRF
+      (approvedPrimitives .SLHDSA_SHAKE_256f).PRFmsg (approvedPrimitives .SLHDSA_SHAKE_256f).Hmsg
 
 def testAddressAndProfiles : IO Unit := do
   ensure "fixed-width primitive projection rejects short input"
