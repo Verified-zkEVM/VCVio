@@ -13,14 +13,14 @@ public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractor
 /-!
 # Unaddressed Merkle extractability specialization
 
-This file preserves the established `InductiveMerkleTree` API while making its game and ROM bounds
-thin unit-address specializations of `MerkleTreeExtractability`. The canonical stopping-time proof,
+This file exposes the ordinary unaddressed `InductiveMerkleTree` extractability API as a thin
+unit-address specialization of `MerkleTreeExtractability`. The canonical stopping-time proof,
 source comparison, extractor accounting, and probability numerator live in the generic module.
 
 `unitAddressQueryModel` interprets an ordinary `(left, right)` hash input as a complete query with
-address `()`. `extractabilityInner_eq_unaddressed` exposes the familiar concrete program for API
-inspection. The existing `Adversary` structure remains a structure so its qualified constructor and
-eliminators are source-compatible.
+address `()`. `extractabilityInner_eq_unaddressed` exposes the concrete unaddressed program for API
+inspection. `Adversary` packages its committing and opening phases together with their shared
+auxiliary state.
 
 The latter half of this file retains the independent log-chain collision and extractor-recovery
 lemmas used by existing clients. They are deterministic log facts, not a second ROM proof.
@@ -44,11 +44,14 @@ def unitAddressQueryModel :
   address_mkQuery := by simp [Extractor.queryView]
   input_mkQuery := by intro _ input; rfl
 
-/-- An adversary in the established unaddressed API. The structure is retained so its
-qualified constructor and eliminators remain source-compatible. -/
+/-- A two-phase adversary for the ordinary unaddressed Merkle extractability game. -/
 structure Adversary (α : Type) (s : Skeleton) where
+  /-- Auxiliary state carried from the committing phase to the opening phase. -/
   AuxState : Type
+  /-- Committing phase: produce a claimed root and auxiliary state. -/
   commit : OracleComp (spec α) (α × AuxState)
+  /-- Opening phase: given the auxiliary state, produce a leaf index, claimed leaf value, and
+  authentication path. -/
   opening : AuxState → OracleComp (spec α)
     ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth)
 
@@ -65,7 +68,10 @@ def Adversary.IsTwoPhaseTotalQueryBound {s : Skeleton}
   MerkleTreeExtractability.Adversary.IsTwoPhaseTotalQueryBound 𝒜.toGeneric qb
 
 /-- Canonical unaddressed extractability syntax, obtained by unit-address specialization. -/
-def extractabilityInner [DecidableEq α] {s : Skeleton} (𝒜 : Adversary α s) :=
+def extractabilityInner [DecidableEq α] {s : Skeleton} (𝒜 : Adversary α s) :
+    OracleComp (spec α) (α × 𝒜.AuxState ×
+      ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
+       FullData (Option α) s × List.Vector (Option α) idx.depth × Bool)) :=
   MerkleTreeExtractability.extractabilityInner unitAddressQueryModel (fun _ => ()) 𝒜.toGeneric
 
 private lemma getPutativeRoot_unitAddress_eq {s : Skeleton}
@@ -106,7 +112,10 @@ def AdversaryWinsExtractabilityInner {s : Skeleton} {AuxState : Type} :
         proof.toList.map some ≠ extractedProof.toList)
 
 /-- Shared-random-oracle extractability game for the ordinary unaddressed tree. -/
-def extractabilityGame [DecidableEq α] {s : Skeleton} (𝒜 : Adversary α s) :=
+def extractabilityGame [DecidableEq α] {s : Skeleton} (𝒜 : Adversary α s) :
+    OracleComp (spec α) (α × 𝒜.AuxState ×
+      ((idx : SkeletonLeafIndex s) × α × List.Vector α idx.depth ×
+       FullData (Option α) s × List.Vector (Option α) idx.depth × Bool)) :=
   (spec α).withCacheOverlay ∅ (extractabilityInner 𝒜)
 
 /-- Extraction-failure event for `extractabilityGame`. -/
