@@ -9,7 +9,7 @@ Bytes -> Params -> Address -> Encoding -> Position
   -> Xmss -> XmssConformance
   -> Fors -> ForsConformance
   -> HypertreeGeneral -> GeneralScheme
-  -> external API / codecs
+  -> ExternalCodec -> external API
 
 Security.Notions -> OracleSurface -> Transcript -> Architecture
   -> ReachableTargets -> CanonicalGames -> TraceTargets
@@ -26,7 +26,7 @@ implementations.
 
 ## Remaining technical order
 
-1. Implement fixed-width signature/key codecs and external pure/pre-hash APIs, including context
+1. Implement external pure/pre-hash APIs over the completed structured codecs, including context
    length, OID/output-strength records, deterministic/hedged modes, and rejection laws.
 2. Complete implementation-level ACVP key-generation/signing/verification evidence for every
    claimed parameter/hash cell with independently reproducible provenance.

@@ -15,10 +15,12 @@ not, by itself, an ACVP certificate, a cryptographic reduction, or a deployment 
   intrinsic signature widths, checked reachable addresses, and bounded concrete regressions.
 - Arbitrary-depth hypertree and internal-scheme programs with typed position evolution, callback to
   query/pure refinement, structural query upper bounds, and honest sign/recover/verify correctness.
+- Exact structured public-key, secret-key, and arbitrary-depth signature codecs for all twelve
+  approved profiles, with component projections, inverse laws, and strict length rejection.
 - A legacy depth-one compatibility surface, plus non-normative legacy and C13 executable
   regressions.
 
-External pure/pre-hash APIs, codecs, context/OID domain separation, reject behavior, and complete
+External pure/pre-hash APIs, context/OID domain separation, mode-specific rejection, and complete
 ACVP implementation evidence remain open.
 
 ## Security boundary

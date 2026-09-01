@@ -18,6 +18,8 @@ separate obligations.
   completeness, with finite structural query upper bounds.
 - Callback-parametric XMSS and arbitrary-depth hypertree programs refine the canonical
   explicit-query programs and their fixed-answer pure interpretations.
+- Structured approved-profile public-key, secret-key, and signature codecs have exact lengths,
+  semantic/wire inverse laws, strict malformed-length rejection, and exact component projections.
 - Depth-one deterministic output compatibility. The arbitrary-depth signer intentionally executes
   the final discarded recovery required by its control flow, so free-oracle traces need not match.
 - Exact SUF event partition into EUF and same-message/new-signature events. This is an identity, not
@@ -25,8 +27,8 @@ separate obligations.
 
 ## Open construction and API obligations
 
-- Implement signature/key codecs and external pure/pre-hash APIs, including context length,
-  OID/output-strength metadata, deterministic/hedged modes, and rejection behavior.
+- Implement external pure/pre-hash APIs, including context length, OID/output-strength metadata,
+  deterministic/hedged modes, and mode-specific rejection behavior.
 - Prove a general mathematical refinement from abstract primitive bundles to concrete SHA-2/SHAKE
   implementations; current vector evidence is executable evidence only.
 - Complete positive ACVP implementation evidence for every claimed parameter/hash/API cell.

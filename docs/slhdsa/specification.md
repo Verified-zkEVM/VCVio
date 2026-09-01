@@ -103,7 +103,8 @@ abstract/concrete cryptographic refinement theorem.
 5. FORS secret generation, node/sign/public-key recovery using FIPS big-endian `base_2b` indices.
 6. A `d`-layer hypertree carrying exactly `d` XMSS signatures and the evolving tree/leaf indices.
 7. Internal keygen/sign/verify with digest split `(md, idx_tree, idx_leaf)`.
-8. External pure and pre-hash APIs with FIPS domain separation, context length checks, OID encoding,
+8. Structured key and signature codecs, then external pure and pre-hash APIs with FIPS domain
+   separation, context length checks, OID encoding,
    deterministic and hedged signing modes, and specified rejection behavior.
 
 For each layer the target includes type/size equations, a deterministic correctness theorem, decoder
@@ -129,7 +130,11 @@ signature but executes Algorithm 12's discarded final recovery, so its free-orac
 `ForsConformance` and `Concrete.Fors` instantiate FORS extraction/address/runtime conformance with exact
 `DigestParts.md` widths, typed MSB-first indices and global sibling coordinates, checked SHA2/SHAKE
 address boundaries, a tiny exhaustive model, and bounded SHA2/SHAKE-128f construction tests.
-Codecs, external APIs, and reject behavior remain open. The
+`ExternalCodec` gives exact semantic encoders and strict decoders for approved public keys, secret
+keys, and arbitrary-depth signatures. It proves structured/wire inverse laws, exact lengths and
+row-major component projections for R, FORS, WOTS+, and authentication paths; all twelve profiles
+exercise every component boundary and malformed lengths. Context construction, pure/pre-hash mode
+selection, OID metadata, randomized-mode policy, and their rejection laws remain open. The
 concrete SHA2-128-24 verifier and parallel C13 construction remain
 non-normative regressions, not full FIPS205-12 external APIs.
 

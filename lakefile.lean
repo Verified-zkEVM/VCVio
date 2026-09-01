@@ -405,6 +405,10 @@ lean_exe slhdsa_fors_tests where
 lean_exe slhdsa_hypertree_tests where
   root := `HashSigTest.SLHDSA.HypertreeConformanceTests
 
+/-- Structured FIPS key/signature codec layout, rejection, and bounded construction exercise. -/
+lean_exe slhdsa_external_codec_tests where
+  root := `HashSigTest.SLHDSA.ExternalCodecTests
+
 /-- Fail-closed parser gate for the pinned NIST SLH-DSA sample JSON. -/
 lean_exe slhdsa_acvp_parser where
   root := `HashSigTest.SLHDSA.ACVP.ParserTests

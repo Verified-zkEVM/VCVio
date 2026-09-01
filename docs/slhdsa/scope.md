@@ -2,7 +2,7 @@
 
 | Profile | Authority and purpose | Required target | Current state | Security/refinement claim |
 |---|---|---|---|---|
-| `FIPS205-12` | Normative FIPS 205 | All twelve approved sets and internal/external APIs | Internal arbitrary-depth construction is modeled | External APIs codecs ACVP coverage and security remain open |
+| `FIPS205-12` | Normative FIPS 205 | All twelve approved sets and internal/external APIs | Internal construction and structured codecs are modeled | External mode APIs ACVP coverage and security remain open |
 | `SPX-TW-ABS` | Repaired classical SPHINCS+-TW proof sources | Exact games reductions and composition | Conditional games and target infrastructure exist | Reductions SUF residual master inequality asymptotics and QROM remain open |
 | `SP800-230-IPD-6SET` | NIST SP 800-230 Initial Public Draft | Six proposed limited-signature sets and strict `2^24` signatures/key cap | Exact draft rows and metadata are pinned | Non-normative and no implementation claim |
 | `LEGACY-SHA2-128-24` | Repository regression profile | One reduced depth-one profile | Abstract/concrete runtime regression | Not FIPS the six-set draft or a security claim |

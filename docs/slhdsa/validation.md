@@ -14,9 +14,9 @@ fresh strict-parser gate.
 
 ## Permanent logical audits
 
-`scripts/slhdsa/AxiomAudit.lean` names 160 unique load-bearing roots. It checks equality with exact
-expected axiom sets, not merely absence of admissions: 6 roots are axiom-free, 25 use only
-`propext`, 10 use `propext` and `Quot.sound`, and 119 use the standard
+`scripts/slhdsa/AxiomAudit.lean` names 177 unique load-bearing roots. It checks equality with exact
+expected axiom sets, not merely absence of admissions: 6 roots are axiom-free, 26 use only
+`propext`, 11 use `propext` and `Quot.sound`, and 134 use the standard
 `{propext, Classical.choice, Quot.sound}` set.
 
 `scripts/slhdsa/PolicyAudit.lean` inventories HashSig-owned declarations and rejects unexpected
@@ -31,7 +31,8 @@ environment-mutation commands; token-boundary fixtures distinguish these from re
 The wrapper runs the aggregate build plus `HashSig` and `HashSigTest`; validates the generated
 umbrella; and checks extern/interop isolation. Runtime targets cover legacy regressions, all-set
 parameter/codec behavior, primitive vectors and grammar fingerprints, WOTS, XMSS, FORS, hypertree
-trajectory/address refinement, and the strict ACVP parser. These runs are construction regressions:
+trajectory/address refinement, structured key/signature layouts and rejection, and the strict ACVP
+parser. These runs are construction regressions:
 they do not establish cryptographic hardness, ACVP certification, or deployment refinement.
 
 ## Strict ACVP parser gate

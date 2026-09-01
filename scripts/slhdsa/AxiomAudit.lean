@@ -48,6 +48,7 @@ private def propextRoots : Array Name := #[
   ``SLHDSA.decodePublicKey_encode,
   ``SLHDSA.decodeSecretKey_encode,
   ``SLHDSA.decodeSignature_encode,
+  ``SLHDSA.ExternalCodec.signatureNodeBytes,
   ``SLHDSA.LayerPosition.initial,
   ``SLHDSA.LayerPosition.toAdrs_tree,
   ``SLHDSA.DigestParts.forsAdrs_tree,
@@ -67,6 +68,7 @@ private def proofRoots : Array Name := #[
   ``SLHDSA.XmssConformance.TreePosition.index_lt_leafCount,
   ``SLHDSA.XmssConformance.honestClimbFips_eq_merkleRoot,
   ``SLHDSA.XmssConformance.honestClimbFips_eq_climb_authPath,
+  ``SLHDSA.ExternalCodec.Signature.encode_block_byte?,
   ``SLHDSA.xmssNode_eq_merkleRoot,
   ``SLHDSA.DigestParts.idxTree_eq_zero_of_d_eq_one,
   ``SLHDSA.LayerPosition.tree_eq_zero_of_isFinal,
@@ -192,7 +194,22 @@ private def standardRoots : Array Name := #[
   ``SLHDSA.GeneralHypertree.simulateQ_pkFromSigWith_publicHash,
   ``SLHDSA.HypertreeConformance.trace_succ,
   ``SLHDSA.Concrete.sha2_layerPosition_toAdrs_isOk,
-  ``SLHDSA.Concrete.shake_layerPosition_toAdrs_roundtrip
+  ``SLHDSA.Concrete.shake_layerPosition_toAdrs_roundtrip,
+  ``SLHDSA.ExternalCodec.coreSignatureOfNodes_nodesOfCoreSignature,
+  ``SLHDSA.ExternalCodec.coreSignatureNodeEquiv_randomness_block?,
+  ``SLHDSA.ExternalCodec.coreSignatureNodeEquiv_fors_secret_block?,
+  ``SLHDSA.ExternalCodec.coreSignatureNodeEquiv_fors_auth_block?,
+  ``SLHDSA.ExternalCodec.coreSignatureNodeEquiv_xmss_wots_block?,
+  ``SLHDSA.ExternalCodec.coreSignatureNodeEquiv_xmss_auth_block?,
+  ``SLHDSA.ExternalCodec.decodePublicKeyCore_encode,
+  ``SLHDSA.ExternalCodec.decodeSecretKeyCore_encode,
+  ``SLHDSA.ExternalCodec.decodeSignatureCore_encode,
+  ``SLHDSA.ExternalCodec.encodePublicKeyCore_of_decode_eq_ok,
+  ``SLHDSA.ExternalCodec.encodeSecretKeyCore_of_decode_eq_ok,
+  ``SLHDSA.ExternalCodec.encodeSignatureCore_of_decode_eq_ok,
+  ``SLHDSA.ExternalCodec.decodePublicKeyCore_of_length_ne,
+  ``SLHDSA.ExternalCodec.decodeSecretKeyCore_of_length_ne,
+  ``SLHDSA.ExternalCodec.decodeSignatureCore_of_length_ne
 ]
 
 private def sameNames (left right : Array Name) : Bool :=
@@ -205,8 +222,8 @@ private def expectedRoots : Array (Name × Array Name) :=
     standardRoots.map (·, #[``propext, ``Classical.choice, ``Quot.sound])
 
 run_cmd do
-  unless expectedRoots.size == 160 do
-    throwError "SLH-DSA axiom audit root count changed: expected 160, observed {expectedRoots.size}"
+  unless expectedRoots.size == 177 do
+    throwError "SLH-DSA axiom audit root count changed: expected 177, observed {expectedRoots.size}"
   let mut seen : Array Name := #[]
   for (root, expected) in expectedRoots do
     if seen.contains root then
@@ -215,6 +232,6 @@ run_cmd do
     let observed ← Lean.collectAxioms root
     unless sameNames observed expected do
       throwError "SLH-DSA axiom footprint changed for {root}: expected {expected}, observed {observed}"
-  logInfo m!"SLH-DSA axiom audit: PASS ({expectedRoots.size} unique exact roots; footprints 6/25/10/119)"
+  logInfo m!"SLH-DSA axiom audit: PASS ({expectedRoots.size} unique exact roots; footprints 6/26/11/134)"
 
 end SLHDSAAxiomAudit
