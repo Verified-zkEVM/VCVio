@@ -28,6 +28,7 @@ public import VCVioTest.QueryHom
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.SMDTDSPR
 public import VCVioTest.SMDTOpenPRE
+public import VCVioTest.SMDTPRE
 public import VCVioTest.SMDTPREFinalValidity
 public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUDC
