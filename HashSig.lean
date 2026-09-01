@@ -18,6 +18,7 @@ public import HashSig.SLHDSA.Hypertree
 public import HashSig.SLHDSA.MerkleExtractor
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.Params
+public import HashSig.SLHDSA.Position
 public import HashSig.SLHDSA.Primitives
 public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.Scheme
