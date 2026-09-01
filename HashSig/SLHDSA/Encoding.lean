@@ -26,8 +26,10 @@ and by the message-digest split (`Position.splitDigest`).
 
 namespace SLHDSA
 
-/-- Failures exposed by checked fixed-width SLH-DSA wire decoders.  The additional constructors
-are shared with the checked address and digit boundaries introduced by concrete suites. -/
+/-- Failures exposed by checked fixed-width SLH-DSA decoders. `invalidLength` reports a wrong
+exact byte width and is the sole failure of the structured wire codecs; `zeroDigitWidth` and
+`insufficientInput` classify digit-extraction boundaries; `outOfRange`, `invalidAddressType`,
+and `noncanonicalAddress` classify checked address encodings. -/
 inductive CodecError where
   | invalidLength (expected actual : ℕ)
   | zeroDigitWidth
