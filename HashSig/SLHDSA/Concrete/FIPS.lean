@@ -183,14 +183,23 @@ def sha2Hmsg (p : Params) (randomizer pkSeed pkRoot : Bytes p.n)
 
 /-- Convert the checked SHA2 operation to the total primitive interface. Invalid
 addresses cannot be FIPS inputs and map to the all-zero node rather than being silently
-truncated. -/
+truncated. The all-zero node is itself a possible honest digest, so this fallback aliases a
+legitimate value rather than flagging one; arguments about the error branch must exclude it
+through the checked entry points, not by inspecting the output. -/
 def checkedNodeOrZero {n : ℕ} (result : Except CodecError (Bytes n)) : Bytes n :=
   match result with
   | .ok value => value
   | .error _ => zeroBytes n
 
 /-- Canonical SHA2 address key for the total abstract interface. Checked public entry points
-retain the rejection result; this projection maps out-of-domain structural addresses to zero. -/
+retain the rejection result; this projection maps out-of-domain structural addresses to zero.
+
+Caution: the all-zero 22-byte key is also the genuine `ADRSc` of the canonical all-zero
+WOTS-hash address, and no 22-byte value lies outside the compressed image, so an out-of-domain
+address aliases a legitimate reachable key rather than a distinguished sentinel. Security
+arguments must carry the `isCanonical`/`Fits` domain hypotheses of
+`sha2AdrsKey_injective_of_domain`; the fallback may not be treated as unreachable or harmless
+without them. -/
 def sha2AdrsKey (address : Adrs) : Bytes 22 :=
   match address.compressSha2Checked with
   | .ok value => value
@@ -226,7 +235,13 @@ theorem sha2AdrsKey_injective_of_domain {a b : Adrs}
 
 /-- The single variable-arity SHA2 tweakable-hash collection. FIPS 205 uses SHA-256 for the
 singleton `F` view in every category; larger arities use SHA-256 at `n = 16` and SHA-512 at
-`n = 24, 32`. -/
+`n = 24, 32`.
+
+Caution: a singleton application of the `Tl` field at `n = 24, 32` therefore computes `F`'s
+SHA-256 / `64 − n` padding formula, not the SHA-512 / `128 − n` form §11.2.2 prescribes for
+`T_1`. The scheme never takes that branch — every FIPS `Tl` call has arity `len ≥ 35` or
+`k ≥ 14`, and `H` always has arity 2 — so singleton `Tl` at those widths is outside this
+bundle's FIPS contract. -/
 def sha2Thash (p : Params) (pkSeed : Bytes p.n) (address : Bytes 22)
     (messages : List (Bytes p.n)) : Bytes p.n :=
   let payload := concatBytes messages

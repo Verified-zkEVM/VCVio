@@ -169,26 +169,11 @@ theorem decodeExact_eq_error_of_length_ne (n : ℕ) (raw : List Byte)
     decodeExact n raw = .error (.invalidLength n raw.length) := by
   simp [decodeExact, h]
 
-/-- Consume bytes from the front of `inp` into the `(total, bits)` accumulator until at least
-`b` bits are buffered (the inner `while` of `base2b`). Returns the leftover input and the
-updated accumulator. -/
-def base2bFill (b : ℕ) : List Byte → ℕ → ℕ → (List Byte × ℕ × ℕ)
-  | [], total, bits => ([], total, bits)
-  | x :: xs, total, bits =>
-      if b ≤ bits then (x :: xs, total, bits)
-      else base2bFill b xs (total * 256 + x.toNat) (bits + 8)
-
-/-- Emit `out` big-endian `b`-bit digits, threading the `(total, bits)` bit buffer. -/
-def base2bGo (b : ℕ) : ℕ → List Byte → ℕ → ℕ → List ℕ
-  | 0, _, _, _ => []
-  | out + 1, inp, total, bits =>
-      let r := base2bFill b inp total bits
-      let bits' := r.2.2 - b
-      ((r.2.1 >>> bits') % 2 ^ b) :: base2bGo b out r.1 r.2.1 bits'
-
 /-- `base2b(X, b, outLen)`: the first `outLen` MSB-first `b`-bit digits (FIPS 205 Algorithm 4).
 Normative callers satisfy `outLen*b ≤ 8*|X|`; `base2bChecked` enforces that precondition at a wire
-boundary. The direct arithmetic form makes the big-endian extraction rule explicit. -/
+boundary. The direct arithmetic form makes the big-endian extraction rule explicit. Outside the
+precondition the truncated subtraction in the exponent yields low-order digits rather than
+zero-extended ones, so raw callers must not rely on any particular out-of-domain behaviour. -/
 def base2b (x : List Byte) (b outLen : ℕ) : List ℕ :=
   (List.range outLen).map (fun i =>
     toInt x / 2 ^ (8 * x.length - b * (i + 1)) % 2 ^ b)
