@@ -310,6 +310,8 @@ jobs:
         run: lake exe slhdsa_wots_tests
       - name: Run SLH-DSA XMSS construction tests
         run: lake exe slhdsa_xmss_tests
+      - name: Run SLH-DSA FORS construction tests
+        run: lake exe slhdsa_fors_tests
       # - name: Run ML-KEM tests
       #   run: |
       #     .lake/build/bin/mlkem_test
