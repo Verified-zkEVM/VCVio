@@ -462,6 +462,18 @@ theorem inverseStages_forwardStages {Coord : Type w}
       simp [scaleCoeffs]
       ring
 
+/-- Normalize the accumulated stage factor.  Concrete NTT developments use
+this with their final `nInv` constant, leaving only the small closed identity
+`nInv * stageScalar stages = 1`. -/
+theorem scale_inverseStages_forwardStages {Coord : Type w}
+    (stages : List (ScaledStage R Coord)) (nInv : R)
+    (hnorm : nInv * stageScalar stages = 1) (input : Coord → R) :
+    scaleCoeffs nInv (inverseStages stages (forwardStages stages input)) = input := by
+  rw [inverseStages_forwardStages]
+  funext coord
+  simp only [scaleCoeffs]
+  rw [← mul_assoc, hnorm, one_mul]
+
 /-- A sequence of certified forward stages is additive. -/
 theorem forwardStages_add {Coord : Type w} (stages : List (ScaledStage R Coord))
     (left right : Coord → R) :
