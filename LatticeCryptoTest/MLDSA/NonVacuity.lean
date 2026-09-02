@@ -60,8 +60,6 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
   [DecidableEq prims.High]
   (M : Type) [DecidableEq M] [Inhabited M] [DecidableEq (Commitment p prims)]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
-  [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)]
-  [SampleableType (TqMatrix p.k p.l)]
   [SampleableType (CommitHashBytes p)]
   [SampleableType (PublicKey p prims)]
 
@@ -96,8 +94,8 @@ noncomputable def trivialForger (maxAttempts : ℕ) :
 
 /-! ## Per-hypothesis discharges -/
 
-omit [DecidableEq (Commitment p prims)] [SampleableType (RqVec p.k)]
-  [SampleableType (TqMatrix p.k p.l)] [SampleableType (PublicKey p prims)] in
+omit [DecidableEq (Commitment p prims)]
+  [SampleableType (PublicKey p prims)] in
 /-- `hhvzk` at the trivial budget: any simulator is a `ζ_zk = 1` HVZK simulator, since total
 variation distance never exceeds one. -/
 lemma neverAbortSim_hvzk :
@@ -105,7 +103,6 @@ lemma neverAbortSim_hvzk :
   fun _ _ _ => tvDist_le_one _ _
 
 omit nttOps [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
-  [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] [SampleableType (TqMatrix p.k p.l)]
   [SampleableType (CommitHashBytes p)] [SampleableType (PublicKey p prims)] in
 /-- The never-aborting simulator indeed never aborts: the probability of `none` is zero. -/
 lemma probOutput_none_neverAbortSim (pk : PublicKey p prims) :
@@ -113,7 +110,7 @@ lemma probOutput_none_neverAbortSim (pk : PublicKey p prims) :
   probOutput_eq_zero_of_not_mem_support (by simp [neverAbortSim, support_pure])
 
 omit [DecidableEq M] [DecidableEq (Commitment p prims)] [Inhabited (Commitment p prims)]
-  [Inhabited (Response p prims)] [SampleableType (TqMatrix p.k p.l)]
+  [Inhabited (Response p prims)]
   [SampleableType (CommitHashBytes p)] [SampleableType (PublicKey p prims)] in
 /-- The trivial forger makes no signing and no random-oracle queries. -/
 lemma trivialForger_signHashQueryBound (maxAttempts : ℕ) (pk : PublicKey p prims) :
@@ -123,8 +120,8 @@ lemma trivialForger_signHashQueryBound (maxAttempts : ℕ) (pk : PublicKey p pri
   ⟨isQueryBoundP_pure _ _ _, isQueryBoundP_pure _ _ _⟩
 
 omit nttOps [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
-  [Inhabited (Commitment p prims)] [Inhabited (Response p prims)] [SampleableType (RqVec p.l)]
-  [SampleableType (RqVec p.k)] [SampleableType (CommitHashBytes p)]
+  [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+  [SampleableType (CommitHashBytes p)]
   [SampleableType (PublicKey p prims)] in
 /-- `expandAIdealization` holds unconditionally at the trivial budget `εA = 1`: the two branch
 probabilities both lie in `[0, 1]`, so their difference is at most one in absolute value.  This
