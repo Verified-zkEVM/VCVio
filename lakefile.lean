@@ -394,6 +394,10 @@ lean_exe slhdsa_wots_tests where
 lean_exe slhdsa_xmss_tests where
   root := `HashSigTest.SLHDSA.XmssConstructionTests
 
+/-- S07 FORS extraction, address-domain, tiny exhaustion, and selected concrete-profile exercise. -/
+lean_exe slhdsa_fors_tests where
+  root := `HashSigTest.SLHDSA.ForsConstructionTests
+
 /-- General-hypertree trajectories, checked addresses, and selected concrete construction. -/
 lean_exe slhdsa_hypertree_tests where
   root := `HashSigTest.SLHDSA.HypertreeConformanceTests
