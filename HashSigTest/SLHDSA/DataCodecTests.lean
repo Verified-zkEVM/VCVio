@@ -235,6 +235,12 @@ def checkApprovedEndToEnd (set : FipsParameterSet)
     (match Concrete.decodeApprovedSignature set (0 :: raw) with
      | .error _ => true
      | .ok _ => false)
+  let flipped := raw.set 0 (raw.headD 0 ^^^ 0x01)
+  ensure s!"{set.name}: same-length corrupted wire decodes but fails verification"
+    (match Concrete.decodeApprovedSignature set flipped with
+     | .error _ => false
+     | .ok corrupted =>
+         !(GeneralScheme.verifyInternal vp prims endToEndMessage corrupted pk))
   let pkRaw := Concrete.encodeApprovedPublicKey set pk
   ensure s!"{set.name}: exact FIPS public-key width"
     (pkRaw.length == set.params.publicKeyBytes)
