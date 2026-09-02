@@ -109,6 +109,8 @@ jobs:
           VCVioTest.CryptoFoundations.SignatureAlg
           HashSigTest.SLHDSA.Params HashSigTest.SLHDSA.Position HashSigTest.SLHDSA.Oracle
           HashSigTest.SLHDSA.DataCodecTests
+          HashSigTest.SLHDSA.External
+          HashSig.SLHDSA.Concrete.Prehash
           HashSigTest.SLHDSA.PrimitiveTests HashSigTest.SLHDSA.WotsEncoding
           HashSigTest.SLHDSA.WotsConstructionTests HashSigTest.SLHDSA.XmssConstructionTests
           HashSigTest.SLHDSA.ForsConstructionTests
