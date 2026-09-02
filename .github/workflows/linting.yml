@@ -13,7 +13,7 @@ on:
       - "VCVioTest/SMDTOpenPRE.lean"
       - "VCVioTest/SMDTUDC.lean"
       - "VCVioTest/CryptoFoundations/SignatureAlg.lean"
-      - "VCVioTest/MultiTargetCollection.lean"
+      - "VCVioTest/SMDTTCR.lean"
       - "VCVioTest/SMDTPRE.lean"
       - "Extern/**/*.lean"
       - "LatticeCrypto/**/*.lean"
@@ -43,7 +43,7 @@ on:
       - "VCVioTest/SMDTOpenPRE.lean"
       - "VCVioTest/SMDTUDC.lean"
       - "VCVioTest/CryptoFoundations/SignatureAlg.lean"
-      - "VCVioTest/MultiTargetCollection.lean"
+      - "VCVioTest/SMDTTCR.lean"
       - "VCVioTest/SMDTPRE.lean"
       - "Extern/**/*.lean"
       - "LatticeCrypto/**/*.lean"
@@ -108,7 +108,7 @@ jobs:
       - name: Run text-based style linters
         run: >-
           lake exe lint-style ToMathlib VCVio Extern LatticeCrypto HashSig Examples VCVioWidgets
-          Interop VCVioTest.MultiTargetCollection VCVioTest.SMDTPRE
+          Interop VCVioTest.SMDTTCR VCVioTest.SMDTPRE
           VCVioTest.SMDTPREFinalValidity VCVioTest.SMDTTCRFinalValidity
           VCVioTest.ITSR VCVioTest.SMDTDSPR VCVioTest.SMDTOpenPRE VCVioTest.SMDTUDC
           VCVioTest.CryptoFoundations.SignatureAlg

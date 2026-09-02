@@ -9,7 +9,7 @@ module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
 
 /-!
-# End-to-end canaries for the multi-target collection oracle
+# End-to-end canaries for SM-DT-TCR and the collection oracle
 
 The pins in `HardnessAssumptions/TweakableHash/` stop at an oracle's `run`; these run the whole
 game, winning condition included, on a collapsing tweakable hash where every pair of messages
@@ -37,7 +37,7 @@ summand; this canary stops elaborating if that summand goes away.
 
 open OracleComp OracleSpec TweakableHash
 
-namespace MultiTargetCollectionTest
+namespace SMDTTCRTest
 
 /-! ## A collapsing tweakable hash
 
@@ -273,4 +273,4 @@ theorem win_coin :
   rw [run_coinFlip]
   simp [coinFlip, problem_eval]
 
-end MultiTargetCollectionTest
+end SMDTTCRTest

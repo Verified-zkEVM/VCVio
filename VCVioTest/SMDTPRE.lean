@@ -21,9 +21,8 @@ The challenge oracle draws its own message, so the subspace is a one-element typ
 `SampleableType` instance is written out rather than inferred. That makes the draw reduce, and the
 transcripts below are then equations between `pure`s rather than statements about `support`.
 
-Because the target cap is one, append order is unobservable here; `MultiTargetCollection.lean`
-carries the order canaries for the SM-TCR side, whose challenge history is built by the same
-`TweakFresh` discipline.
+Because the target cap is one, append order is unobservable here; `SMDTTCR.lean` carries the order
+canaries for the SM-TCR side, whose challenge history is built by the same `TweakFresh` discipline.
 -/
 
 @[expose] public section
