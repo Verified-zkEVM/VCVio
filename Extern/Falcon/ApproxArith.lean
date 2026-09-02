@@ -87,6 +87,14 @@ compound lemma below could be instantiated at it. `valid_zero`, `valid_one` and
 `inRange_of_valid` rule that out: the format's own constants are in the domain, and a value
 the format holds is a result it can round to, so `InRange` is inhabited wherever `Valid` is.
 
+That domain obligation reaches consumers too, and silently. A denotation is total, so it has
+to send the non-finite encodings somewhere: the `FPR` instance sends Inf and NaN to `0`. A
+downstream statement about `interp` of a computation that overflows, written *without* a
+`Valid` gate on that computation, is therefore a true theorem — about `0`, not about the value
+the algorithm produces. The error bounds here cannot be misread that way, since each one is
+conditioned on its operands' validity, but nothing stops a caller from stating an ungated
+corollary. `Valid` has to be threaded through every intermediate a proof reasons about.
+
 The machine epsilon for IEEE-754 binary64 is `2^{-52} ≈ 2.22 × 10^{-16}`. -/
 class HasRealSemantics (F : Type) [FloatLike F] (ε : outParam ℝ) where
   interp : F → ℝ
