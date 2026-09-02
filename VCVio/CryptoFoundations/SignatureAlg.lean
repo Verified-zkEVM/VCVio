@@ -544,9 +544,15 @@ lemma strongUnforgeableAdv.advantage_eq_euf_add_sameMessage
   refine tsum_congr fun t => ?_
   by_cases hm : t.2.2.1.wasQueried t.1 = true
   · cases hp : signingLogContains t.2.2.1 t.1 t.2.1 <;>
-      cases hv : t.2.2.2 <;> simp_all
+      cases hv : t.2.2.2 <;>
+      simp only [Function.comp_apply, Bool.and_eq_true, Bool.not_eq_eq_eq_not,
+        Bool.not_true, hp, hv, hm, Bool.false_eq_true, true_and, false_and,
+        and_false, if_false, if_true, zero_add, add_zero]
   · cases hp : signingLogContains t.2.2.1 t.1 t.2.1
-    · cases hv : t.2.2.2 <;> simp_all
+    · cases hv : t.2.2.2 <;>
+        simp only [Function.comp_apply, Bool.and_eq_true, Bool.not_eq_eq_eq_not,
+          Bool.not_true, hp, hv, hm, Bool.false_eq_true, true_and, false_and,
+          and_false, if_false, if_true, add_zero]
     · exact (hm (wasQueried_eq_true_of_signingLogContains_eq_true
         t.2.2.1 t.1 t.2.1 hp)).elim
 
