@@ -5,6 +5,7 @@ public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.OracleClosure
+public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.ForkMeasure
 public import VCVioTest.Forking.WithoutReplacement
@@ -16,6 +17,7 @@ public import VCVioTest.MeasureSemantics
 public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MerkleTreeExtractability
 public import VCVioTest.MerkleTreeMonadic
+public import VCVioTest.MerkleTreeMultiExtractability
 public import VCVioTest.MonadProbability
 public import VCVioTest.MultiTargetCollection
 public import VCVioTest.OracleComp.SecurityFamily

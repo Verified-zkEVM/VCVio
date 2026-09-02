@@ -75,10 +75,61 @@ truncation behavior when `x` does not fit. -/
 def toByte (x len : ℕ) : List Byte :=
   ((Nat.digitsAppend 256 len (x % 256 ^ len)).map UInt8.ofNat).reverse
 
+<<<<<<< HEAD
 @[simp] theorem toByte_length (x len : ℕ) : (toByte x len).length = len := by
   simp only [toByte, List.length_reverse, List.length_map]
   apply Nat.length_digitsAppend (by decide)
   exact Nat.mod_lt _ (by positivity)
+=======
+/-- Decode a list only when its length is exactly the requested wire width. -/
+def decodeExact (n : ℕ) (raw : List Byte) : Except CodecError (Bytes n) :=
+  if h : raw.length = n then
+    .ok ⟨raw.toArray, by simpa using h⟩
+  else
+    .error (.invalidLength n raw.length)
+
+/-- Fixed-width vectors encode without adding or dropping bytes. -/
+def encodeExact {n : ℕ} (bytes : Bytes n) : List Byte := bytes.toList
+
+@[simp] theorem decodeExact_encode {n : ℕ} (bytes : Bytes n) :
+    decodeExact n (encodeExact bytes) = .ok bytes := by
+  simp only [decodeExact, encodeExact, Vector.length_toList, ↓reduceDIte]
+  congr 1
+
+/-- A successful exact-width decode has consumed the complete input. -/
+theorem decodeExact_eq_ok_iff {n : ℕ} {raw : List Byte} {bytes : Bytes n} :
+    decodeExact n raw = .ok bytes ↔ raw = bytes.toList := by
+  simp only [decodeExact]
+  split
+  · constructor
+    · intro h
+      injection h with hbytes
+      subst bytes
+      simp
+    · intro h
+      subst raw
+      congr 1
+  · constructor
+    · simp
+    · intro h
+      subst raw
+      simp_all
+
+/-- Inputs of any other length are rejected before structured parsing begins. -/
+theorem decodeExact_eq_error_of_length_ne (n : ℕ) (raw : List Byte)
+    (h : raw.length ≠ n) :
+    decodeExact n raw = .error (.invalidLength n raw.length) := by
+  simp [decodeExact, h]
+
+/-- Consume bytes from the front of `inp` into the `(total, bits)` accumulator until at least
+`b` bits are buffered (the inner `while` of `base2b`). Returns the leftover input and the
+updated accumulator. -/
+def base2bFill (b : ℕ) : List Byte → ℕ → ℕ → (List Byte × ℕ × ℕ)
+  | [], total, bits => ([], total, bits)
+  | x :: xs, total, bits =>
+      if b ≤ bits then (x :: xs, total, bits)
+      else base2bFill b xs (total * 256 + x.toNat) (bits + 8)
+>>>>>>> origin/main
 
 /-- MSB-first characterization of Algorithm 3 as the reversal of its fixed-width little-endian
 base-256 digit list. -/

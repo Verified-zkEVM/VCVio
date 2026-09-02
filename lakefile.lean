@@ -382,6 +382,7 @@ lean_exe slhdsa_c13_kat where
 lean_exe slhdsa_data_codec_tests where
   root := `HashSigTest.SLHDSA.DataCodecTests
 
+<<<<<<< HEAD
 /-- SHA2/SHAKE vectors, address rejection, and all-profile primitive grammars. -/
 lean_exe slhdsa_primitive_tests where
   root := `HashSigTest.SLHDSA.PrimitiveTests
@@ -394,6 +395,8 @@ lean_exe slhdsa_wots_tests where
 lean_exe slhdsa_xmss_tests where
   root := `HashSigTest.SLHDSA.XmssConstructionTests
 
+=======
+>>>>>>> origin/main
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
 TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every

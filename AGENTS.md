@@ -170,7 +170,7 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - Drawing without replacement and its expected draw count: `VCVio/OracleComp/Constructions/WithoutReplacement.lean`, `ToMathlib/Probability/NegativeHypergeometric.lean`
 - Expected values of `ℝ≥0∞`-valued functionals: `VCVio/EvalDist/Expectation.lean`
 - Fischlin transform: `VCVio/CryptoFoundations/Fischlin.lean`
-- Interaction spec and transcript: `PolyFun/Interaction/Basic/Spec.lean`
+- Interaction type tree and path: `PolyFun/Interaction/Basic/TypeTree.lean`
 - Two-party roles and strategies: `PolyFun/Interaction/TwoParty/Strategy.lean`
 - Two-party composition and factorization: `PolyFun/Interaction/TwoParty/Compose.lean`
 - Multiparty local views: `PolyFun/Interaction/Multiparty/Core.lean`
@@ -178,17 +178,17 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - Concurrent processes and execution: `PolyFun/Interaction/Concurrent/Process.lean`
 - Open systems (interfaces, composition): `PolyFun/Interaction/UC/OpenTheory.lean`
 - Open processes (boundary traffic, UC bridge): `PolyFun/Interaction/UC/OpenProcess.lean` (monad-parametric `OpenProcess m Party Δ` with intrinsic `stepSampler` field and `OpenStep.boundaryTrace`)
-- Concrete open-theory model: `PolyFun/Interaction/UC/OpenProcessModel.lean` (`openTheory m Party schedulerSampler` threads `Spec.Sampler` through `map` / `par` / `wire` / `plug`)
+- Concrete open-theory model: `PolyFun/Interaction/UC/OpenProcessModel.lean` (`openTheory Party m schedulerSampler` threads `TypeTree.Sampler` through `map` / `par` / `wire` / `plug`)
 - UC emulation and security: `PolyFun/Interaction/UC/Emulates.lean`
 - Computational UC observation layer: `VCVio/Interaction/UC/Computational.lean`
-- Per-node samplers as data (`Spec.Sampler m spec` = `Decoration (fun X => m X) spec`): `PolyFun/Interaction/Basic/Sampler.lean`
-- `Spec.Fintype` ornament + canonical uniform sampler: `PolyFun/Interaction/Basic/SpecFintype.lean`, `VCVio/Interaction/UC/Runtime.lean`
+- Per-node samplers as data (`TypeTree.Sampler m tree` = `Decoration (fun X => m X) tree`): `PolyFun/Interaction/Basic/Sampler.lean`
+- `TypeTree.Fintype` / `TypeTree.Nonempty` ornaments + canonical uniform sampler: `PolyFun/Interaction/Basic/TypeTreeFintype.lean`, `VCVio/Interaction/UC/Runtime.lean`
 - Oracle-aware runtime semantics (monad-parametric process execution, `processSemanticsOracle`): `VCVio/Interaction/UC/Runtime.lean` (no `sampler` argument; pulled from `process.stepSampler`)
 - End-to-end UC `ObservedCompEmulates 0` at a three-port boundary: `Examples/OneTimePad/UC.lean`
-- Interaction examples: `PolyFun/Interaction/TwoParty/Examples.lean`, `PolyFun/Interaction/Multiparty/Examples.lean`, `PolyFun/Interaction/Concurrent/Examples.lean`
+- Interaction examples: `PolyFunTest/Interaction/TwoParty/Examples.lean`, `PolyFunTest/Interaction/Multiparty/Examples.lean`, `PolyFunTest/Interaction/Concurrent/Examples.lean`
 - Program logic tactics: `VCVio/ProgramLogic/Tactics.lean`
 - Program logic tactic walkthroughs: `Examples/ProgramLogic/`
-- Generic lattice ring layer: `LatticeCrypto/Ring/Core.lean`, `LatticeCrypto/Ring/Kernel.lean`, `LatticeCrypto/Ring/VectorBackend.lean`, `LatticeCrypto/Ring/Transform.lean`, `LatticeCrypto/Ring/Norms.lean`, `LatticeCrypto/Ring/Rounding.lean`
+- Generic lattice ring layer: `LatticeCrypto/Ring/Core.lean`, `LatticeCrypto/Ring/Kernel.lean`, `LatticeCrypto/Ring/VectorBackend.lean`, `LatticeCrypto/Ring/Transform.lean`, `LatticeCrypto/Ring/NTTCert.lean` (matrix and structural butterfly-stage certificates), `LatticeCrypto/Ring/Norms.lean`, `LatticeCrypto/Ring/Rounding.lean`
 - ML-DSA proof-level IDS: `LatticeCrypto/MLDSA/Scheme.lean`
 - ML-DSA FIPS signing layer: `LatticeCrypto/MLDSA/Signature.lean`
 - ML-KEM internal deterministic core: `LatticeCrypto/MLKEM/Internal.lean`

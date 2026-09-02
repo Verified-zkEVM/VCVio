@@ -31,7 +31,7 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 def zeroBytes (n : ℕ) : Bytes n := Vector.replicate n 0
 
 def markerBytes (n tag : ℕ) : Bytes n :=
-  ⟨(toByte tag n).toArray, by simp⟩
+  ⟨(toByte tag n).toArray, by simp [toByte]⟩
 
 /-- A proof-only primitive context whose semantic carriers are exactly the FIPS byte carriers.
 The hash operations are irrelevant to codec tests and return zero nodes. -/
@@ -58,13 +58,6 @@ def zeroPublicKey (p : Params) : PublicKeyCore (byteCore p) :=
 
 def zeroSecretKey (p : Params) : SecretKeyCore (byteCore p) :=
   ⟨zeroBytes p.n, zeroBytes p.n, zeroBytes p.n, zeroBytes p.n⟩
-
-def zeroSignature (p : Params) : SignatureCore p (byteCore p) :=
-  ⟨zeroBytes p.n,
-    Vector.ofFn fun _ =>
-      ⟨zeroBytes p.n, Vector.ofFn fun _ => zeroBytes p.n⟩,
-    Vector.ofFn fun _ =>
-      ⟨Vector.ofFn (fun _ => zeroBytes p.n), Vector.ofFn fun _ => zeroBytes p.n⟩⟩
 
 def forsSecretTag (p : Params) (tree : ℕ) : ℕ :=
   2 + tree * (1 + p.a)
@@ -193,6 +186,7 @@ def testAllFipsSets : IO Unit := do
     checkKeyCodecs set.name vp.params
     checkSignatureBoundaries set.name vp
 
+<<<<<<< HEAD
 /-! ## End-to-end over the real approved primitives
 
 Honest keygen / sign / encode / decode / verify at the fast 128-bit profiles of both hash
@@ -268,15 +262,21 @@ def testApprovedEndToEnd : IO Unit := do
   checkApprovedEndToEnd .SLHDSA_SHAKE_128f
     (seedBytes 16 1) (seedBytes 16 2) (seedBytes 16 3) (seedBytes 16 4)
 
+=======
+>>>>>>> origin/main
 def run : IO Unit := do
   checkKeyCodecs "d=1 canary" d1.params
   checkSignatureBoundaries "d=1 canary" d1
   checkKeyCodecs "d=2 canary" d2.params
   checkSignatureBoundaries "d=2 canary" d2
   testAllFipsSets
+<<<<<<< HEAD
   testApprovedEndToEnd
   IO.println "SLH-DSA structured wire codecs: PASS \
     (d=1, d=2, all 12 FIPS sets, SHA2/SHAKE-128f end-to-end)"
+=======
+  IO.println "SLH-DSA structured wire codecs: PASS (d=1, d=2, all 12 FIPS sets)"
+>>>>>>> origin/main
 
 end SLHDSA.DataCodecTests
 
