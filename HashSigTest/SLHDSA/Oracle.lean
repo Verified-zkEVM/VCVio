@@ -130,7 +130,8 @@ example :
       (show Adrs.zero.compressSha2 =
         (Adrs.zero.setTreeAddress (2 ^ 64)).compressSha2 by
           norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Adrs.zero,
-            Adrs.setTreeAddress])
+            Adrs.setTreeAddress]
+          decide)
 
 /-- Every retained SHA-2 address field is observable in the compressed key. -/
 example :

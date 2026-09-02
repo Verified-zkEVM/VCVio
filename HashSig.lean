@@ -10,6 +10,7 @@ public import HashSig.SLHDSA.C13.Scheme
 public import HashSig.SLHDSA.C13.WotsC
 public import HashSig.SLHDSA.C13.Xmss
 public import HashSig.SLHDSA.Codec
+public import HashSig.SLHDSA.Concrete.Codec
 public import HashSig.SLHDSA.Concrete.FIPS
 public import HashSig.SLHDSA.Concrete.Instance
 public import HashSig.SLHDSA.Concrete.Keccak
@@ -19,6 +20,7 @@ public import HashSig.SLHDSA.Concrete.Wots
 public import HashSig.SLHDSA.Concrete.Xmss
 public import HashSig.SLHDSA.DepthOneCompatibility
 public import HashSig.SLHDSA.Encoding
+public import HashSig.SLHDSA.EncodingLemmas
 public import HashSig.SLHDSA.External
 public import HashSig.SLHDSA.FipsParams
 public import HashSig.SLHDSA.Fors
@@ -27,6 +29,7 @@ public import HashSig.SLHDSA.GeneralSchemeQueryBound
 public import HashSig.SLHDSA.Hypertree
 public import HashSig.SLHDSA.HypertreeGeneral
 public import HashSig.SLHDSA.HypertreeGeneral.QueryBound
+public import HashSig.SLHDSA.MerkleExtractor
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.Params
 public import HashSig.SLHDSA.Position

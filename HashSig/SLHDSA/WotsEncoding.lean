@@ -5,7 +5,7 @@ Authors: Nicolas Consigny
 -/
 
 module
-public import HashSig.SLHDSA.Encoding
+public import HashSig.SLHDSA.EncodingLemmas
 public import HashSig.SLHDSA.WotsChecksum
 
 /-!
@@ -75,11 +75,13 @@ theorem checksumShift_lt_eight (p : Params) : checksumShift p < 8 := by
     (checksumBytes p digits).length = checksumByteLength p := by
   simp [checksumBytes]
 
-/-- The checksum byte string is the MSB-first Algorithm 3 representation. -/
+/-- The checksum byte string is the MSB-first Algorithm 3 representation: byte `i` carries
+base-256 digit `checksumByteLength p - 1 - i` of the shifted checksum value. -/
 theorem checksumBytes_bigEndian (p : Params) (digits : List ℕ) :
     checksumBytes p digits =
-      ((Nat.digitsAppend 256 (checksumByteLength p)
-        (shiftedChecksumValue p digits % 256 ^ checksumByteLength p)).map UInt8.ofNat).reverse :=
+      (List.range (checksumByteLength p)).map (fun i =>
+        UInt8.ofNat (shiftedChecksumValue p digits /
+          256 ^ (checksumByteLength p - 1 - i) % 256)) :=
   rfl
 
 /-- The checksum decoder always emits exactly `len2` digits. -/
@@ -145,7 +147,11 @@ private theorem base2b_toByte_shift_eq_digitsOfBaseW (x b len : ℕ)
     base2b
         (toByte (x * 2 ^ ((8 - (len * b) % 8) % 8)) ((len * b + 7) / 8)) b len =
       digitsOfBaseW x (2 ^ b) len := by
-  rw [base2b, digitsOfBaseW_eq_range]
+  have hbits : len * b ≤
+      8 * (toByte (x * 2 ^ ((8 - len * b % 8) % 8)) ((len * b + 7) / 8)).length := by
+    rw [toByte_length]
+    omega
+  rw [base2b_bigEndian _ _ _ hbits, digitsOfBaseW_eq_range]
   apply List.map_congr_left
   intro i hi
   have hi' : i < len := List.mem_range.mp hi
