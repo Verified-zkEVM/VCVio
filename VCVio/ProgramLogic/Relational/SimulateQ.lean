@@ -1008,7 +1008,7 @@ private lemma probEvent_output_bad_eq
     rintro ⟨a, s, b⟩
     by_cases hb : b = true
     · simp [hb]
-    · have hb' : b = false := by cases b <;> simp_all
+    · have hb' : b = false := Bool.eq_false_of_not_eq_true hb
       subst hb'
       simpa using
         probOutput_simulateQ_run_eq_of_not_output_bad impl₁ impl₂ h_agree_good
@@ -1053,7 +1053,7 @@ theorem tvDist_simulateQ_le_probEvent_output_bad
   set sim₂ := (simulateQ impl₂ oa).run (s₀, false)
   have h_eq : ∀ (z : α × σ × Bool), ¬(z.2.2 = true) → Pr[= z | sim₁] = Pr[= z | sim₂] := by
     rintro ⟨x, s, b⟩ hb
-    have hb' : b = false := by cases b <;> simp_all
+    have hb' : b = false := Bool.eq_false_of_not_eq_true hb
     subst hb'
     exact probOutput_simulateQ_run_eq_of_not_output_bad impl₁ impl₂ h_agree_good
       h_mono₁ h_mono₂ oa s₀ x s
@@ -1287,7 +1287,7 @@ theorem tvDist_simulateQ_run_le_probEvent_output_bad
   set sim₂ := (simulateQ impl₂ oa).run (s₀, false)
   have h_eq : ∀ (z : α × σ × Bool), ¬(z.2.2 = true) → Pr[= z | sim₁] = Pr[= z | sim₂] := by
     rintro ⟨x, s, b⟩ hb
-    have hb' : b = false := by cases b <;> simp_all
+    have hb' : b = false := Bool.eq_false_of_not_eq_true hb
     subst hb'
     exact probOutput_simulateQ_run_eq_of_not_output_bad' impl₁ impl₂ h_agree_good
       h_mono₁ h_mono₂ oa s₀ x s
@@ -3450,7 +3450,8 @@ lemma avgBadM_query_bind_eq
           Pr[= z | (impl t).run p] *
             Pr[fun w : γ × σ × Bool => w.2.2 = true |
               (simulateQ impl (cont z.1)).run z.2] := by
-  simp [avgBadM, probEvent_bind_eq_tsum]
+  simp only [avgBadM, simulateQ_bind, simulateQ_query, OracleQuery.input_query,
+    OracleQuery.cont_query, id_map, StateT.run_bind, probEvent_bind_eq_tsum]
 
 /-- **Post-step joint measure of a query step (bare-measure form).** The measure over
 `(output, post-state)` produced by averaging the per-state impl step `Pr[= z | (impl t).run p]`
