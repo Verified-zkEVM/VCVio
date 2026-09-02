@@ -285,22 +285,22 @@ private theorem xmssExt {x y : XmssSigCore slhdsaSha2_128_24 shaPrimitives.core}
 
 private theorem forsSecret_off (i : ℕ) :
     16 + i * 400 = WireLayout.forsSecretOffset slhdsaSha2_128_24 i := by
-  show 16 + i * 400 = 16 + i * ((1 + 24) * 16)
+  change 16 + i * 400 = 16 + i * ((1 + 24) * 16)
   ring
 
 private theorem forsAuth_off (i j : ℕ) :
     16 + i * 400 + 16 + j * 16 = WireLayout.forsAuthOffset slhdsaSha2_128_24 i j := by
-  show 16 + i * 400 + 16 + j * 16 = 16 + i * ((1 + 24) * 16) + (1 + j) * 16
+  change 16 + i * 400 + 16 + j * 16 = 16 + i * ((1 + 24) * 16) + (1 + j) * 16
   ring
 
 private theorem wots_off (c : ℕ) :
     2416 + c * 16 = WireLayout.wotsOffset slhdsaSha2_128_24 0 c := by
-  show 2416 + c * 16 = 16 + 6 * ((1 + 24) * 16) + 0 * ((68 + 22) * 16) + c * 16
+  change 2416 + c * 16 = 16 + 6 * ((1 + 24) * 16) + 0 * ((68 + 22) * 16) + c * 16
   ring
 
 private theorem xmssAuth_off (j : ℕ) :
     2416 + 1088 + j * 16 = WireLayout.xmssAuthOffset slhdsaSha2_128_24 0 j := by
-  show 2416 + 1088 + j * 16
+  change 2416 + 1088 + j * 16
       = 16 + 6 * ((1 + 24) * 16) + 0 * ((68 + 22) * 16) + (68 + j) * 16
   ring
 

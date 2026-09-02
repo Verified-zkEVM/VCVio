@@ -19,6 +19,7 @@ public import HashSig.SLHDSA.Concrete.Wots
 public import HashSig.SLHDSA.Concrete.Xmss
 public import HashSig.SLHDSA.DepthOneCompatibility
 public import HashSig.SLHDSA.Encoding
+public import HashSig.SLHDSA.EncodingLemmas
 public import HashSig.SLHDSA.FipsParams
 public import HashSig.SLHDSA.Fors
 public import HashSig.SLHDSA.GeneralScheme

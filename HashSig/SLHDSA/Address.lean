@@ -5,7 +5,7 @@ Authors: Nicolas Consigny
 -/
 
 module
-public import HashSig.SLHDSA.Encoding
+public import HashSig.SLHDSA.EncodingLemmas
 
 /-!
 # SLH-DSA Addresses (ADRS)
