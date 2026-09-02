@@ -323,9 +323,9 @@ lemma probOutput_fst_map_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
   rw [fst_map_run_simulateQ]
 
 @[simp]
-lemma evalDist_fst_map_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
+lemma evalSPMF_fst_map_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
     [IsUniformSpec spec] (oa : OracleComp spec α) :
-    𝒟[Prod.fst <$> (simulateQ spec.loggingOracle oa).run] = 𝒟[oa] := by
+    𝒮[Prod.fst <$> (simulateQ spec.loggingOracle oa).run] = 𝒮[oa] := by
   rw [fst_map_run_simulateQ]
 
 @[simp]
@@ -339,7 +339,7 @@ end loggingOracle
 namespace OracleComp
 
 lemma run_simulateQ_loggingOracle_query_bind
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} {α : Type}
+    {ι : Type u} {spec : OracleSpec.{u, u} ι} {α : Type u}
     (t : spec.Domain) (mx : spec.Range t → OracleComp spec α) :
     (simulateQ loggingOracle (liftM (query t) >>= mx)).run =
       (query t : OracleComp spec _) >>= fun u =>

@@ -164,6 +164,16 @@ structure BoundedAdversary {ι : Type u} [DecidableEq ι]
 
 All return `ℝ` via `.toReal` conversion from `ℝ≥0∞`. This is essential since subtraction on `ℝ≥0∞` is truncated.
 
+### Forking bounds and measure semantics
+
+`VCVio/CryptoFoundations/SeededFork.lean` and `ReplayFork.lean` prove the
+seeded and context-fork success bounds through the established `Pr[...]`
+surface. `ForkMeasure.lean` states the same final bounds as the Mathlib measure
+of the `Option.isSome` event, using the canonical measure semantics induced by
+the oracle specification's existing per-query probability interpretation.
+These are transport corollaries; the forking arguments remain in the two
+original modules.
+
 ## Hardness Assumptions
 
 ### Discrete Log Assumptions (DLog / CDH / DDH)

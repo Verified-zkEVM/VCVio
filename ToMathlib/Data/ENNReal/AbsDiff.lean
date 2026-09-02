@@ -62,6 +62,17 @@ lemma absDiff_triangle (a b c : ℝ≥0∞) :
         add_le_add (tsub_le_tsub_add_tsub a b c) (tsub_le_tsub_add_tsub c b a)
     _ = ((a - b) + (b - a)) + ((b - c) + (c - b)) := by ring
 
+/-- `|a - b| + 2·min a b = a + b`, the truncated-subtraction form of the identity that splits a
+total mass into its overlap and its discrepancy. -/
+lemma absDiff_add_two_mul_min (a b : ℝ≥0∞) :
+    ENNReal.absDiff a b + 2 * (a ⊓ b) = a + b := by
+  have h1 : a - b + a ⊓ b = a := tsub_add_min
+  have h2 : b - a + b ⊓ a = b := tsub_add_min
+  rw [ENNReal.absDiff, two_mul]
+  calc a - b + (b - a) + (a ⊓ b + a ⊓ b)
+      = (a - b + a ⊓ b) + ((b - a) + b ⊓ a) := by rw [inf_comm b a]; ac_rfl
+    _ = a + b := by rw [h1, h2]
+
 lemma absDiff_toReal {a b : ℝ≥0∞} (ha : a ≠ ⊤) (hb : b ≠ ⊤) :
     (ENNReal.absDiff a b).toReal = |a.toReal - b.toReal| := by
   rcases le_total a b with hab | hab

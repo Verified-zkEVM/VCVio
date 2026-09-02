@@ -74,7 +74,7 @@ theorem correct (hcorrect : tdp.Correct) :
     let c ← (do let r ← $ᵗ Rand; pure (tdp.forward x.1 r, hash r + msg))
     let msg' ← pure (some (c.2 - hash (tdp.inverse x.2 c.1)))
     pure (decide (msg' = some msg))
-  change Pr[= true | ProbCompRuntime.probComp.evalDist mx] = 1
+  change Pr[= true | ProbCompRuntime.probComp.evalSPMF mx] = 1
   simp only [mx]
   have huniq : ∀ y ∈ support mx, y = true := by
     intro y hy
@@ -248,9 +248,9 @@ private lemma bind_logged_lift_of_log_unused {β : Type} (p : ProbComp β)
 omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand] [Inhabited Rand]
   [Inhabited M] in
 /-- Right-translating a uniform challenge mask by a constant preserves the output distribution. -/
-private lemma evalDist_bind_add_right_uniform {γ : Type} (m : M) (f : M → ProbComp γ) :
-    𝒟[(do let h ← $ᵗ M; f (h + m))] = 𝒟[(do let h ← $ᵗ M; f h)] := by
-  refine evalDist_ext fun z => ?_
+private lemma evalSPMF_bind_add_right_uniform {γ : Type} (m : M) (f : M → ProbComp γ) :
+    𝒮[(do let h ← $ᵗ M; f (h + m))] = 𝒮[(do let h ← $ᵗ M; f h)] := by
+  refine evalSPMF_ext fun z => ?_
   exact probOutput_bind_add_right_uniform (α := M) m f z
 
 /-- Real one-time CPA game in the random-oracle model. -/
@@ -361,7 +361,7 @@ omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] [Inhabited Rand] i
 /-- Uniform masking step: once the challenge hash output is replaced by a fresh uniform mask,
 adding either challenge message yields the same ciphertext distribution. -/
 theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
-    𝒟[game1 tdp adv] = 𝒟[game2 tdp adv] := by
+    𝒮[game1 tdp adv] = 𝒮[game2 tdp adv] := by
   rw [game1, game2]
   -- Push the random-oracle simulation through both games: lifted samples become plain
   -- `ProbComp` binds, the adversary's `choose`/`guess` thread the cache, and the trailing
@@ -369,11 +369,11 @@ theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
   simp only [run'_simulateQ_bind, run_liftM, simulateQ_pure, bind_assoc, pure_bind]
   simp only [StateT.run'_eq, StateT.run_pure, map_eq_bind_pure_comp, Function.comp,
     bind_assoc, pure_bind]
-  refine evalDist_bind_congr' _ fun b => ?_
-  refine evalDist_bind_congr' _ fun ks => ?_
-  refine evalDist_bind_congr' _ fun mmst => ?_
-  refine evalDist_bind_congr' _ fun r => ?_
-  exact evalDist_bind_add_right_uniform (if b = true then mmst.1.1 else mmst.1.2.1)
+  refine evalSPMF_bind_congr' _ fun b => ?_
+  refine evalSPMF_bind_congr' _ fun ks => ?_
+  refine evalSPMF_bind_congr' _ fun mmst => ?_
+  refine evalSPMF_bind_congr' _ fun r => ?_
+  exact evalSPMF_bind_add_right_uniform (if b = true then mmst.1.1 else mmst.1.2.1)
     (fun x => (simulateQ roQueryImpl (adv.guess mmst.1.2.2 (tdp.forward ks.1 r, x))).run mmst.2 >>=
       fun p => pure (b == p.1))
 

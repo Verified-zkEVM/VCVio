@@ -32,7 +32,7 @@ def DistEquiv [IsUniformSpec I] {σ₀ σ₁ : Type}
     (h₀ : QueryImpl.Stateful I E σ₀) (s₀ : σ₀)
     (h₁ : QueryImpl.Stateful I E σ₁) (s₁ : σ₁) : Prop :=
   ∀ {α : Type} (A : OracleComp E α),
-    𝒟[h₀.run s₀ A] = 𝒟[h₁.run s₁ A]
+    𝒮[h₀.run s₀ A] = 𝒮[h₁.run s₁ A]
 
 @[inherit_doc DistEquiv]
 scoped notation:50 "(" h₀ ", " s₀ ")" " ≡ᵈ " "(" h₁ ", " s₁ ")" =>
@@ -52,17 +52,17 @@ namespace DistEquiv
 variable {σ σ₀ σ₁ σ₂ : Type}
 variable [IsUniformSpec I]
 
-private lemma simulateQ_StateT_evalDist_congr_import {α : Type}
+private lemma simulateQ_StateT_evalSPMF_congr_import {α : Type}
     {h₀ h₁ : QueryImpl E (StateT σ (OracleComp I))}
     (hh : ∀ (q : E.Domain) (s : σ),
-      𝒟[(h₀ q).run s] = 𝒟[(h₁ q).run s])
+      𝒮[(h₀ q).run s] = 𝒮[(h₁ q).run s])
     (A : OracleComp E α) (s : σ) :
-    𝒟[(simulateQ h₀ A).run s] = 𝒟[(simulateQ h₁ A).run s] := by
+    𝒮[(simulateQ h₀ A).run s] = 𝒮[(simulateQ h₁ A).run s] := by
   induction A using OracleComp.inductionOn generalizing s with
   | pure x => simp
   | query_bind t k ih =>
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query,
-      id_map, StateT.run_bind, evalDist_bind, hh t s]
+      id_map, StateT.run_bind, evalSPMF_bind, hh t s]
     exact bind_congr fun p => ih p.1 p.2
 
 /-! ## Relation laws -/
@@ -86,39 +86,39 @@ protected theorem trans
 
 /-! ## Constructors -/
 
-theorem of_run_evalDist
+theorem of_run_evalSPMF
     {h₀ : QueryImpl.Stateful I E σ₀} {s₀ : σ₀}
     {h₁ : QueryImpl.Stateful I E σ₁} {s₁ : σ₁}
     (h : ∀ {α : Type} (A : OracleComp E α),
-      𝒟[h₀.run s₀ A] = 𝒟[h₁.run s₁ A]) :
+      𝒮[h₀.run s₀ A] = 𝒮[h₁.run s₁ A]) :
     (h₀, s₀) ≡ᵈ (h₁, s₁) := fun A => h A
 
-theorem run_evalDist_eq
+theorem run_evalSPMF_eq
     {h₀ : QueryImpl.Stateful I E σ₀} {s₀ : σ₀}
     {h₁ : QueryImpl.Stateful I E σ₁} {s₁ : σ₁}
     (h : (h₀, s₀) ≡ᵈ (h₁, s₁)) {α : Type} (A : OracleComp E α) :
-    𝒟[h₀.run s₀ A] = 𝒟[h₁.run s₁ A] := h A
+    𝒮[h₀.run s₀ A] = 𝒮[h₁.run s₁ A] := h A
 
-theorem run₀_evalDist_eq
+theorem run₀_evalSPMF_eq
     {h₀ : QueryImpl.Stateful I E σ₀} {h₁ : QueryImpl.Stateful I E σ₁}
     [Inhabited σ₀] [Inhabited σ₁]
     (h : h₀ ≡ᵈ₀ h₁) {α : Type} (A : OracleComp E α) :
-    𝒟[h₀.run₀ A] = 𝒟[h₁.run₀ A] :=
+    𝒮[h₀.run₀ A] = 𝒮[h₁.run₀ A] :=
   h A
 
-theorem runProb_evalDist_eq
+theorem runProb_evalSPMF_eq
     {h₀ : QueryImpl.Stateful unifSpec E σ₀} {s₀ : σ₀}
     {h₁ : QueryImpl.Stateful unifSpec E σ₁} {s₁ : σ₁}
     (h : (h₀, s₀) ≡ᵈ (h₁, s₁)) {α : Type} (A : OracleComp E α) :
-    𝒟[h₀.runProb s₀ A] = 𝒟[h₁.runProb s₁ A] := by
+    𝒮[h₀.runProb s₀ A] = 𝒮[h₁.runProb s₁ A] := by
   simpa only [runProb_eq_run] using h A
 
-theorem runProb₀_evalDist_eq
+theorem runProb₀_evalSPMF_eq
     {h₀ : QueryImpl.Stateful unifSpec E σ₀} {h₁ : QueryImpl.Stateful unifSpec E σ₁}
     [Inhabited σ₀] [Inhabited σ₁]
     (h : h₀ ≡ᵈ₀ h₁) {α : Type} (A : OracleComp E α) :
-    𝒟[h₀.runProb₀ A] = 𝒟[h₁.runProb₀ A] := by
-  simpa only [runProb₀] using run₀_evalDist_eq h A
+    𝒮[h₀.runProb₀ A] = 𝒮[h₁.runProb₀ A] := by
+  simpa only [runProb₀] using run₀_evalSPMF_eq h A
 
 theorem of_run_eq
     {h₀ : QueryImpl.Stateful I E σ₀} {s₀ : σ₀}
@@ -130,24 +130,24 @@ theorem of_run_eq
 theorem of_step
     {h₀ h₁ : QueryImpl.Stateful I E σ}
     (h_impl : ∀ (q : E.Domain) (s : σ),
-      𝒟[(h₀ q).run s] = 𝒟[(h₁ q).run s])
+      𝒮[(h₀ q).run s] = 𝒮[(h₁ q).run s])
     (s₀ : σ) :
     (h₀, s₀) ≡ᵈ (h₁, s₀) := by
   intro α A
-  simp only [QueryImpl.Stateful.run, StateT.run'_eq, evalDist_map]
-  exact congrArg _ (simulateQ_StateT_evalDist_congr_import h_impl A s₀)
+  simp only [QueryImpl.Stateful.run, StateT.run'_eq, evalSPMF_map]
+  exact congrArg _ (simulateQ_StateT_evalSPMF_congr_import h_impl A s₀)
 
 theorem of_step_bij
     (h₀ : QueryImpl.Stateful unifSpec E σ₀)
     (h₁ : QueryImpl.Stateful unifSpec E σ₁) (φ : σ₀ ≃ σ₁)
     (h_impl : ∀ (q : E.Domain) (s : σ₀),
-      𝒟[(h₀ q).run s] =
-        𝒟[Prod.map id φ.symm <$> (h₁ q).run (φ s)])
+      𝒮[(h₀ q).run s] =
+        𝒮[Prod.map id φ.symm <$> (h₁ q).run (φ s)])
     (s₀ : σ₀) :
     (h₀, s₀) ≡ᵈ (h₁, φ s₀) := by
   intro α A
-  simp only [QueryImpl.Stateful.run, StateT.run'_eq, evalDist_map,
-    simulateQ_StateT_evalDist_congr_of_bij h₀ h₁ φ h_impl A s₀, Functor.map_map, Prod.map_fst,
+  simp only [QueryImpl.Stateful.run, StateT.run'_eq, evalSPMF_map,
+    simulateQ_StateT_evalSPMF_congr_of_bij h₀ h₁ φ h_impl A s₀, Functor.map_map, Prod.map_fst,
     id_eq]
 
 /-! ## Bridge to advantage -/
@@ -158,7 +158,7 @@ theorem advantage_left
     (h : (h₀, s₀) ≡ᵈ (h₀', s₀'))
     (h₁ : QueryImpl.Stateful unifSpec E σ₁) (s₁ : σ₁) (A : OracleComp E Bool) :
     h₀.advantage s₀ h₁ s₁ A = h₀'.advantage s₀' h₁ s₁ A :=
-  advantage_eq_of_evalDist_runProb_eq (h A)
+  advantage_eq_of_evalSPMF_runProb_eq (h A)
 
 theorem advantage_right
     (h₀ : QueryImpl.Stateful unifSpec E σ₀) (s₀ : σ₀)
@@ -166,7 +166,7 @@ theorem advantage_right
     {h₁' : QueryImpl.Stateful unifSpec E σ} {s₁' : σ}
     (h : (h₁, s₁) ≡ᵈ (h₁', s₁')) (A : OracleComp E Bool) :
     h₀.advantage s₀ h₁ s₁ A = h₀.advantage s₀ h₁' s₁' A :=
-  advantage_eq_of_evalDist_runProb_eq_right (h A)
+  advantage_eq_of_evalSPMF_runProb_eq_right (h A)
 
 theorem advantage_zero
     {h₀ : QueryImpl.Stateful unifSpec E σ₀} {s₀ : σ₀}
@@ -210,17 +210,17 @@ theorem parSum_congr
     {h₁ h₁' : QueryImpl.Stateful I₁ E₁ σ₁} {s₁ : σ₁}
     {h₂ h₂' : QueryImpl.Stateful I₂ E₂ σ₂} {s₂ : σ₂}
     (hh₁ : ∀ (q : E₁.Domain) (s : σ₁),
-      𝒟[(h₁ q).run s] = 𝒟[(h₁' q).run s])
+      𝒮[(h₁ q).run s] = 𝒮[(h₁' q).run s])
     (hh₂ : ∀ (q : E₂.Domain) (s : σ₂),
-      𝒟[(h₂ q).run s] = 𝒟[(h₂' q).run s]) :
+      𝒮[(h₂ q).run s] = 𝒮[(h₂' q).run s]) :
     (h₁.parSum h₂, (s₁, s₂)) ≡ᵈ (h₁'.parSum h₂', (s₁, s₂)) := by
   refine of_step ?_ (s₁, s₂)
   intro q s
   rcases q with t | t
-  · exact evalDist_map_eq_of_evalDist_eq
-      ((evalDist_liftComp _).trans ((hh₁ t s.1).trans (evalDist_liftComp _).symm)) _
-  · exact evalDist_map_eq_of_evalDist_eq
-      ((evalDist_liftComp _).trans ((hh₂ t s.2).trans (evalDist_liftComp _).symm)) _
+  · exact evalSPMF_map_eq_of_evalSPMF_eq
+      ((evalSPMF_liftComp _).trans ((hh₁ t s.1).trans (evalSPMF_liftComp _).symm)) _
+  · exact evalSPMF_map_eq_of_evalSPMF_eq
+      ((evalSPMF_liftComp _).trans ((hh₂ t s.2).trans (evalSPMF_liftComp _).symm)) _
 
 end ParCongr
 

@@ -133,35 +133,35 @@ lemma probOutput_bind_add_right_uniform [AddGroup α] {β : Type}
 
 /-- Translating a uniform additive sample preserves the full evaluation distribution. -/
 @[simp]
-lemma evalDist_add_left_uniform [AddGroup α] (m : α) :
-    𝒟[((m + ·) : α → α) <$> ($ᵗ α)] = 𝒟[$ᵗ α] :=
-  evalDist_ext (probOutput_add_left_uniform (α := α) m)
+lemma evalSPMF_add_left_uniform [AddGroup α] (m : α) :
+    𝒮[((m + ·) : α → α) <$> ($ᵗ α)] = 𝒮[$ᵗ α] :=
+  evalSPMF_ext (probOutput_add_left_uniform (α := α) m)
 
 /-- Two additive translations of a uniform sample have the same evaluation distribution. -/
-lemma evalDist_add_left_uniform_eq [AddGroup α] (m₁ m₂ : α) :
-    𝒟[((m₁ + ·) : α → α) <$> ($ᵗ α)] =
-      𝒟[((m₂ + ·) : α → α) <$> ($ᵗ α)] :=
-  (evalDist_add_left_uniform (α := α) m₁).trans (evalDist_add_left_uniform (α := α) m₂).symm
+lemma evalSPMF_add_left_uniform_eq [AddGroup α] (m₁ m₂ : α) :
+    𝒮[((m₁ + ·) : α → α) <$> ($ᵗ α)] =
+      𝒮[((m₂ + ·) : α → α) <$> ($ᵗ α)] :=
+  (evalSPMF_add_left_uniform (α := α) m₁).trans (evalSPMF_add_left_uniform (α := α) m₂).symm
 
-/-- Right-translation analogue of `evalDist_add_left_uniform`: right-adding a constant to a
+/-- Right-translation analogue of `evalSPMF_add_left_uniform`: right-adding a constant to a
 uniform sample in `AddGroup α` preserves the full evaluation distribution. -/
 @[simp]
-lemma evalDist_add_right_uniform [AddGroup α] (m : α) :
-    𝒟[((· + m) : α → α) <$> ($ᵗ α)] = 𝒟[$ᵗ α] :=
-  evalDist_ext (probOutput_add_right_uniform (α := α) m)
+lemma evalSPMF_add_right_uniform [AddGroup α] (m : α) :
+    𝒮[((· + m) : α → α) <$> ($ᵗ α)] = 𝒮[$ᵗ α] :=
+  evalSPMF_ext (probOutput_add_right_uniform (α := α) m)
 
 /-- Two right-translations of a uniform sample have the same evaluation distribution. -/
-lemma evalDist_add_right_uniform_eq [AddGroup α] (m₁ m₂ : α) :
-    𝒟[((· + m₁) : α → α) <$> ($ᵗ α)] =
-      𝒟[((· + m₂) : α → α) <$> ($ᵗ α)] :=
-  (evalDist_add_right_uniform (α := α) m₁).trans (evalDist_add_right_uniform (α := α) m₂).symm
+lemma evalSPMF_add_right_uniform_eq [AddGroup α] (m₁ m₂ : α) :
+    𝒮[((· + m₁) : α → α) <$> ($ᵗ α)] =
+      𝒮[((· + m₂) : α → α) <$> ($ᵗ α)] :=
+  (evalSPMF_add_right_uniform (α := α) m₁).trans (evalSPMF_add_right_uniform (α := α) m₂).symm
 
 /-- Pushing forward uniform sampling via a bijection preserves the full evaluation distribution. -/
-lemma evalDist_map_bijective_uniform_cross
+lemma evalSPMF_map_bijective_uniform_cross
     {β : Type} [SampleableType β] [Finite α]
     (f : α → β) (hf : Function.Bijective f) :
-    𝒟[f <$> ($ᵗ α)] = 𝒟[$ᵗ β] :=
-  evalDist_ext (probOutput_map_bijective_uniform_cross (α := α) (β := β) f hf)
+    𝒮[f <$> ($ᵗ α)] = 𝒮[$ᵗ β] :=
+  evalSPMF_ext (probOutput_map_bijective_uniform_cross (α := α) (β := β) f hf)
 
 /-- **Bijective uniform + right-translation gives uniform.** Sampling `x ← $ᵗ α`, transporting
 through a bijection `f : α → β`, and right-adding any fixed `m : β` yields the same distribution
@@ -170,36 +170,36 @@ as sampling `y ← $ᵗ β` directly, as observed by any continuation `cont : β
 This is the "one-time pad" fact underlying many cryptographic reductions: bijective transport
 makes `f x` uniform on `β`, and in any `AddGroup β` right-translation `(· + m)` is a bijection
 on the uniform measure, so the sum is again uniform. -/
-lemma evalDist_bind_bijective_add_right_uniform {β γ : Type}
+lemma evalSPMF_bind_bijective_add_right_uniform {β γ : Type}
     [AddGroup β] [SampleableType β] [Finite α]
     (f : α → β) (hf : Function.Bijective f) (m : β) (cont : β → ProbComp γ) :
-    𝒟[do let x ← ($ᵗ α); cont (f x + m)] =
-      𝒟[do let y ← ($ᵗ β); cont y] := by
+    𝒮[do let x ← ($ᵗ α); cont (f x + m)] =
+      𝒮[do let y ← ($ᵗ β); cont y] := by
   rw [show (do let x ← ($ᵗ α); cont (f x + m)) = (f <$> ($ᵗ α)) >>= fun y => cont (y + m)
-        from by simp [monad_norm], evalDist_bind,
-      evalDist_map_bijective_uniform_cross (α := α) (β := β) f hf, ← evalDist_bind,
+        from by simp [monad_norm], evalSPMF_bind,
+      evalSPMF_map_bijective_uniform_cross (α := α) (β := β) f hf, ← evalSPMF_bind,
       show (do let y ← ($ᵗ β); cont (y + m)) = (((· + m) : β → β) <$> ($ᵗ β)) >>= cont
-        from by simp [monad_norm], evalDist_bind, evalDist_add_right_uniform (α := β) m,
-      ← evalDist_bind]
+        from by simp [monad_norm], evalSPMF_bind, evalSPMF_add_right_uniform (α := β) m,
+      ← evalSPMF_bind]
 
-/-- Constant-irrelevance form of `evalDist_bind_bijective_add_right_uniform`: sampling through a
+/-- Constant-irrelevance form of `evalSPMF_bind_bijective_add_right_uniform`: sampling through a
 bijection and right-adding a constant has a distribution independent of the constant. Any two
 offsets produce the same evaluation distribution. -/
-lemma evalDist_bind_bijective_add_right_eq {β γ : Type}
+lemma evalSPMF_bind_bijective_add_right_eq {β γ : Type}
     [AddGroup β] [SampleableType β] [Finite α]
     (f : α → β) (hf : Function.Bijective f) (m₁ m₂ : β) (cont : β → ProbComp γ) :
-    𝒟[do let x ← ($ᵗ α); cont (f x + m₁)] =
-      𝒟[do let x ← ($ᵗ α); cont (f x + m₂)] := by
-  rw [evalDist_bind_bijective_add_right_uniform (α := α) (β := β) f hf m₁ cont,
-      ← evalDist_bind_bijective_add_right_uniform (α := α) (β := β) f hf m₂ cont]
+    𝒮[do let x ← ($ᵗ α); cont (f x + m₁)] =
+      𝒮[do let x ← ($ᵗ α); cont (f x + m₂)] := by
+  rw [evalSPMF_bind_bijective_add_right_uniform (α := α) (β := β) f hf m₁ cont,
+      ← evalSPMF_bind_bijective_add_right_uniform (α := α) (β := β) f hf m₂ cont]
 
 lemma probFailure_uniformSample : Pr[⊥ | $ᵗ α] = 0 := by aesop
 
 @[simp] instance : NeverFail ($ᵗ α) := inferInstance
 
 @[simp, grind =]
-lemma evalDist_uniformSample [Fintype α] [Nonempty α] :
-    𝒟[$ᵗ α] = liftM (PMF.uniformOfFintype α) := by aesop
+lemma evalSPMF_uniformSample [Fintype α] [Nonempty α] :
+    𝒮[$ᵗ α] = liftM (PMF.uniformOfFintype α) := by aesop
 
 @[simp, grind =]
 lemma support_uniformSample : support ($ᵗ α) = Set.univ :=
@@ -328,8 +328,9 @@ instance (α : Type) (n : ℕ) [SampleableType α] : SampleableType (Vector α n
       simp only [Nat.recAux]
       erw [← Vector.push_pop_back x, ← Vector.push_pop_back y,
         probOutput_seq_map_eq_mul_of_injective2 _ _ _ hpush x.pop x.back,
-        probOutput_seq_map_eq_mul_of_injective2 _ _ _ hpush y.pop y.back,
-        probOutput_uniformSample_inj, ih x.pop y.pop]
+        probOutput_seq_map_eq_mul_of_injective2 _ _ _ hpush y.pop y.back]
+      exact congrArg₂ (· * ·) (ih x.pop y.pop)
+        (SampleableType.probOutput_selectElem_eq x.back y.back)
 
 /-- The array-backed `Vector α n` is equivalent to an `n`-indexed function. -/
 def arrayVectorEquivFin (α : Type u) (n : ℕ) : Vector α n ≃ (Fin n → α) where
@@ -452,16 +453,16 @@ This is the `t`-marginal independence of the uniform (product) distribution on `
 at coordinate `t` is uniform and independent of the others, so replacing it with a fresh
 independent uniform draw leaves the joint distribution unchanged. It is the marginalization step
 behind eager-sampling reformulations of oracle responses. -/
-lemma evalDist_uniformSample_bind_update
+lemma evalSPMF_uniformSample_bind_update
     {D R : Type} [Finite D] [DecidableEq D] [Finite R] [Nonempty R]
     [SampleableType R] [SampleableType (D → R)] (t : D) :
-    𝒟[do let u ← $ᵗ R; let g ← $ᵗ (D → R); pure (Function.update g t u)] =
-      𝒟[$ᵗ (D → R)] := by
+    𝒮[do let u ← $ᵗ R; let g ← $ᵗ (D → R); pure (Function.update g t u)] =
+      𝒮[$ᵗ (D → R)] := by
   classical
   let := Fintype.ofFinite D
   let := Fintype.ofFinite R
   have : Nonempty (D → R) := ⟨fun _ => Classical.arbitrary R⟩
-  refine evalDist_ext fun h => ?_
+  refine evalSPMF_ext fun h => ?_
   rw [probOutput_uniformSample (D → R) h, probOutput_bind_eq_sum_fintype]
   -- For each fixed `u`, count the tables `g` whose `t`-update equals `h`.
   have hinner : ∀ u : R,
@@ -501,14 +502,14 @@ lemma evalDist_uniformSample_bind_update
 
 Mapping the uniform distribution on `α × β` through `Prod.fst` yields the uniform distribution on
 `α`: the `Prod.fst`-marginal of a uniform (product) distribution is uniform. -/
-lemma evalDist_map_fst_uniformSample_prod {α β : Type} [Finite α]
+lemma evalSPMF_map_fst_uniformSample_prod {α β : Type} [Finite α]
     [Finite β] [Nonempty β] [SampleableType α] [SampleableType β] [SampleableType (α × β)] :
-    𝒟[Prod.fst <$> ($ᵗ (α × β))] = 𝒟[$ᵗ α] := by
+    𝒮[Prod.fst <$> ($ᵗ (α × β))] = 𝒮[$ᵗ α] := by
   classical
   let := Fintype.ofFinite α
   let := Fintype.ofFinite β
   have : DecidableEq α := Classical.decEq α
-  refine evalDist_ext fun x => ?_
+  refine evalSPMF_ext fun x => ?_
   rw [probOutput_uniformSample α x, probOutput_map_eq_sum_fintype_ite]
   simp only [probOutput_uniformSample (α × β)]
   rw [← Finset.sum_filter, Finset.sum_const, nsmul_eq_mul]
@@ -532,11 +533,11 @@ This is the marginalization of the uniform (product) distribution on `B → R` o
 coordinates indexed by `Set.range e`: those coordinates are jointly uniform and independent of
 the rest, and `e` reindexes the block by `A`. It underlies eager-sampling reformulations that
 project a fine-grained random-oracle table onto a coarser one. -/
-lemma evalDist_uniformSample_map_comp_injective
+lemma evalSPMF_uniformSample_map_comp_injective
     {A B R : Type} [Finite A] [Finite B] [Finite R]
     [Nonempty R] [SampleableType R] [SampleableType (A → R)] [SampleableType (B → R)]
     {e : A → B} (he : Function.Injective e) :
-    𝒟[do let g ← $ᵗ (B → R); pure (g ∘ e)] = 𝒟[$ᵗ (A → R)] := by
+    𝒮[do let g ← $ᵗ (B → R); pure (g ∘ e)] = 𝒮[$ᵗ (A → R)] := by
   classical
   let := Fintype.ofFinite A
   let := Fintype.ofFinite B
@@ -552,19 +553,19 @@ lemma evalDist_uniformSample_map_comp_injective
       (Equiv.sumArrowEquivProdArrow _ _ _)
   have hφ1 : ∀ g : B → R, (φ g).1 = g ∘ e := fun g => funext fun a => by
     simp [φ, Equiv.sumArrowEquivProdArrow, Equiv.ofInjective]
-  calc 𝒟[do let g ← $ᵗ (B → R); pure (g ∘ e)]
-      = 𝒟[Prod.fst <$> (φ <$> ($ᵗ (B → R)))] := by
+  calc 𝒮[do let g ← $ᵗ (B → R); pure (g ∘ e)]
+      = 𝒮[Prod.fst <$> (φ <$> ($ᵗ (B → R)))] := by
         simp only [bind_pure_comp, Functor.map_map, Function.comp_def, hφ1]
-    _ = 𝒟[Prod.fst <$> ($ᵗ ((A → R) × (C → R)))] := by
-        rw [evalDist_map, evalDist_ext fun p =>
-          probOutput_map_bijective_uniform_cross (α := B → R) φ φ.bijective p, ← evalDist_map]
-    _ = 𝒟[$ᵗ (A → R)] := evalDist_map_fst_uniformSample_prod
+    _ = 𝒮[Prod.fst <$> ($ᵗ ((A → R) × (C → R)))] := by
+        rw [evalSPMF_map, evalSPMF_ext fun p =>
+          probOutput_map_bijective_uniform_cross (α := B → R) φ φ.bijective p, ← evalSPMF_map]
+    _ = 𝒮[$ᵗ (A → R)] := evalSPMF_map_fst_uniformSample_prod
 
 /-- Patch a uniform function table at every point of a list `l`, drawing one fresh uniform value
 per list entry. With `l = []` the table is returned unchanged; with `l = d :: ds` the tail is
 patched first and the head point `d` is then overwritten with a fresh uniform draw.
 
-This is the iterated form of `Function.update` used by `evalDist_uniformSample_patchList`: the
+This is the iterated form of `Function.update` used by `evalSPMF_uniformSample_patchList`: the
 outermost update is at the head, so the list is consumed head-first. -/
 def patchTable {D R : Type} [DecidableEq D] [SampleableType R] :
     List D → (D → R) → ProbComp (D → R)
@@ -587,18 +588,18 @@ lemma patchTable_cons {D R : Type} [DecidableEq D] [SampleableType R]
 Drawing a uniform table `g : D → R` and then `patchTable l g` — overwriting `g` at every point of
 `l` with independent fresh uniform draws — yields the same distribution as drawing the table
 directly. The points of `l` need not be distinct: each `Function.update` is the outermost
-operation of its recursion step, so `evalDist_uniformSample_bind_update` applies regardless of
+operation of its recursion step, so `evalSPMF_uniformSample_bind_update` applies regardless of
 overlap. This is the marginalization step behind trace-conditioned eager-table reformulations,
 where the patched points are determined only after the table is sampled. -/
-lemma evalDist_uniformSample_patchList
+lemma evalSPMF_uniformSample_patchList
     {D R : Type} [Finite D] [DecidableEq D] [Finite R] [Nonempty R]
     [SampleableType R] [SampleableType (D → R)] (l : List D) :
-    𝒟[do let g ← $ᵗ (D → R); patchTable l g] = 𝒟[$ᵗ (D → R)] := by
+    𝒮[do let g ← $ᵗ (D → R); patchTable l g] = 𝒮[$ᵗ (D → R)] := by
   classical
   induction l with
   | nil => simp
   | cons d ds ih =>
-    refine evalDist_ext fun h => ?_
+    refine evalSPMF_ext fun h => ?_
     set blk : ProbComp (D → R) := (do let g ← $ᵗ (D → R); patchTable ds g) with hblk
     have hlhs :
         Pr[= h | do let g ← $ᵗ (D → R); patchTable (d :: ds) g]
@@ -608,7 +609,7 @@ lemma evalDist_uniformSample_patchList
     simp_rw [fun g' : D → R => OracleComp.probOutput_congr rfl ih (x := g')]
     rw [← probOutput_bind_eq_tsum, probOutput_bind_bind_swap ($ᵗ (D → R)) ($ᵗ R)
       (fun g' u => pure (Function.update g' d u))]
-    exact OracleComp.probOutput_congr rfl (evalDist_uniformSample_bind_update d)
+    exact OracleComp.probOutput_congr rfl (evalSPMF_uniformSample_bind_update d)
 
 end Marginalization
 
@@ -660,7 +661,7 @@ bit by running `f` has success probability exactly 1/2.
 This is the core lemma behind "all-random hybrid has probability 1/2" arguments. -/
 lemma probOutput_decide_eq_uniformBool_half
     (f : Bool → ProbComp Bool)
-    (heq : 𝒟[f true] = 𝒟[f false]) :
+    (heq : 𝒮[f true] = 𝒮[f false]) :
     Pr[= true | do let b ← $ᵗ Bool; let b' ← f b; return decide (b = b')] = 1 / 2 := by
   rw [probOutput_bind_eq_tsum]
   simp only [tsum_fintype (L := .unconditional _), Fintype.sum_bool,
@@ -669,7 +670,7 @@ lemma probOutput_decide_eq_uniformBool_half
         simp,
     show Pr[= true | f false >>= fun b' => pure (decide (false = b'))] = Pr[= false | f false] by
         simp,
-    evalDist_ext_iff.mp heq true, ← mul_add,
+    evalSPMF_ext_iff.mp heq true, ← mul_add,
     show Pr[= true | f false] + Pr[= false | f false] = 1 by simp, mul_one]
   simp [one_div]
 
@@ -681,11 +682,11 @@ variable {ι : Type*} {spec : OracleSpec ι}
 
 /-- Uniformly sampling a response has the same distribution as issuing the
 corresponding query to a uniform oracle specification. -/
-lemma evalDist_uniformSample_eq_query [∀ i, SampleableType (spec.Range i)]
+lemma evalSPMF_uniformSample_eq_query [∀ i, SampleableType (spec.Range i)]
     [IsUniformSpec spec] (t : spec.Domain) :
-    𝒟[$ᵗ spec.Range t] =
-      𝒟[(spec.query t : OracleComp spec (spec.Range t))] := by
-  rw [evalDist_uniformSample, OracleComp.evalDist_query]
+    𝒮[$ᵗ spec.Range t] =
+      𝒮[(spec.query t : OracleComp spec (spec.Range t))] := by
+  rw [evalSPMF_uniformSample, OracleComp.evalSPMF_query]
 
 /-- Uniformly sampling a response and issuing the corresponding uniform-oracle query
 assign the same probability to every output. -/
@@ -693,7 +694,7 @@ lemma probOutput_uniformSample_eq_query [∀ i, SampleableType (spec.Range i)]
     [IsUniformSpec spec] (t : spec.Domain) (u : spec.Range t) :
     Pr[= u | $ᵗ spec.Range t] =
       Pr[= u | (spec.query t : OracleComp spec (spec.Range t))] := by
-  rw [probOutput_def, probOutput_def, evalDist_uniformSample_eq_query]
+  rw [probOutput_def, probOutput_def, evalSPMF_uniformSample_eq_query]
 
 /-- Uniformly sampling a response and issuing the corresponding uniform-oracle query
 assign the same probability to every event. -/
@@ -701,8 +702,7 @@ lemma probEvent_uniformSample_eq_query [∀ i, SampleableType (spec.Range i)]
     [IsUniformSpec spec] (t : spec.Domain) (p : spec.Range t → Prop) :
     Pr[p | $ᵗ spec.Range t] =
       Pr[p | (spec.query t : OracleComp spec (spec.Range t))] := by
-  unfold probEvent
-  rw [evalDist_uniformSample_eq_query]
+  rw [probEvent_def, probEvent_def, evalSPMF_uniformSample_eq_query]
 
 /-- Given that the output type of all oracles has a `SampleableType` instance, replace all queries
 with uniformly random responses by calling the corresponding `uniformSample` at each query. -/
@@ -720,18 +720,18 @@ namespace uniformSampleImpl
 variable [∀ i, SampleableType (spec.Range i)]
 
 @[simp]
-lemma evalDist_simulateQ [IsUniformSpec spec] {α : Type}
+lemma evalSPMF_simulateQ [IsUniformSpec spec] {α : Type}
     (oa : OracleComp spec α) :
-    𝒟[simulateQ uniformSampleImpl oa] = 𝒟[oa] := by
-  apply OracleComp.evalDist_simulateQ_eq_evalDist
+    𝒮[simulateQ uniformSampleImpl oa] = 𝒮[oa] := by
+  apply OracleComp.evalSPMF_simulateQ_eq_evalSPMF
   intro t
   simp [uniformSampleImpl]
 
 @[simp]
 lemma probOutput_simulateQ [IsUniformSpec spec] {α : Type}
     (oa : OracleComp spec α) (x : α) :
-    Pr[= x | simulateQ uniformSampleImpl oa] = Pr[= x | oa] :=
-  congrFun (congrArg DFunLike.coe (evalDist_simulateQ oa)) x
+    Pr[= x | simulateQ uniformSampleImpl oa] = Pr[= x | oa] := by
+  rw [probOutput_def, probOutput_def, evalSPMF_simulateQ]
 
 @[simp]
 lemma probEvent_simulateQ [IsUniformSpec spec] {α : Type}
@@ -743,7 +743,7 @@ lemma probEvent_simulateQ [IsUniformSpec spec] {α : Type}
 lemma support_simulateQ [IsUniformSpec spec] {α : Type}
     (oa : OracleComp spec α) :
     support (simulateQ uniformSampleImpl oa) = support oa :=
-  Set.ext fun x => mem_support_iff_of_evalDist_eq (evalDist_simulateQ oa) x
+  Set.ext fun x => mem_support_iff_of_evalSPMF_eq (evalSPMF_simulateQ oa) x
 
 @[simp]
 lemma finSupport_simulateQ [IsUniformSpec spec] {α : Type}

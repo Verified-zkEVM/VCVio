@@ -649,17 +649,17 @@ private lemma cmaSignKeySource_sound
       simpa [CmaData.Valid] using hvalid
 
 omit [DecidableEq M] [DecidableEq Commit] in
-private lemma cmaRealSignGhost_public_evalDist_eq_publicDist
+private lemma cmaRealSignGhost_public_evalSPMF_eq_publicDist
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (hr : GenerableRelation Stmt Wit rel)
     (m : M)
     (s : CmaData M Commit Chal Stmt Wit) :
-    𝒟[CmaRealSignGhost.public <$>
+    𝒮[CmaRealSignGhost.public <$>
       cmaRealSignGhostDist M Commit Chal σ hr m s] =
-    𝒟[cmaRealSignPublicDist M Commit Chal σ hr s] := by
+    𝒮[cmaRealSignPublicDist M Commit Chal σ hr s] := by
   rcases s with ⟨log, cache, keypair⟩
   simp only [cmaRealSignGhostDist, cmaRealSignPublicDist, ChallengeVerifyProtocol.realTranscript,
-    cmaSignPublicOfTranscript, evalDist_bind, evalDist_map, map_bind, bind_pure_comp,
+    cmaSignPublicOfTranscript, evalSPMF_bind, evalSPMF_map, map_bind, bind_pure_comp,
     Functor.map_map]
   refine bind_congr fun key => ?_
   refine bind_congr fun cp => ?_
@@ -667,12 +667,12 @@ private lemma cmaRealSignGhost_public_evalDist_eq_publicDist
   refine bind_congr fun ghostResp => ?_
   cases hcache : cache (m, cp.1) with
   | none =>
-      simp only [evalDist_pure, map_pure, Function.comp_apply, CmaRealSignGhost.public]
+      simp only [evalSPMF_pure, map_pure, Function.comp_apply, CmaRealSignGhost.public]
       rfl
   | some cachedCh =>
-      simp only [evalDist_map, Functor.map_map, Function.comp_apply, CmaRealSignGhost.public]
+      simp only [evalSPMF_map, Functor.map_map, Function.comp_apply, CmaRealSignGhost.public]
       exact spmf_map_const_of_no_failure
-        (probFailure_evalDist_eq_zero (σ.respond key.1 key.2 cp.2 cachedCh)) _
+        (probFailure_evalSPMF_eq_zero (σ.respond key.1 key.2 cp.2 cachedCh)) _
 
 omit [DecidableEq M] [DecidableEq Commit] in
 private lemma cmaSignPublicDist_tv_le_hvzk
@@ -781,13 +781,13 @@ private lemma cmaSimSignPublicBad_prob_le_roCacheCount_mul
         _ = QueryCache.enncard cache * β := by
               rw [tsum_probOutput_of_liftM_PMF, one_mul]
 
-private lemma cmaRealSignStep_evalDist_eq_ghost
+private lemma cmaRealSignStep_evalSPMF_eq_ghost
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (hr : GenerableRelation Stmt Wit rel)
     (m : M)
     (s : CmaData M Commit Chal Stmt Wit) :
-    𝒟[((cmaReal M Commit Chal σ hr) (CmaQuery.sign m)).run (s, false)] =
-      𝒟[cmaRealSignGhostOut M Commit Chal m s <$>
+    𝒮[((cmaReal M Commit Chal σ hr) (CmaQuery.sign m)).run (s, false)] =
+      𝒮[cmaRealSignGhostOut M Commit Chal m s <$>
         cmaRealSignGhostDist M Commit Chal σ hr m s] := by
   rcases s with ⟨log, cache, keypair⟩
   obtain _ | key := keypair <;>
@@ -802,14 +802,14 @@ private lemma cmaRealSignStep_evalDist_eq_ghost
         conv_lhs => simp [hcache, cmaRealSignGhostOut, cmaSignKeyedData]
         conv_rhs => simp [hcache, cmaRealSignGhostOut, cmaSignKeyedData]
         rw [spmf_bind_bind_const_of_no_failure
-          (p := 𝒟[(($ᵗ Chal) : ProbComp Chal)])
-          (q := fun ch => 𝒟[σ.respond key.1 key.2 cp.2 ch])
+          (p := 𝒮[(($ᵗ Chal) : ProbComp Chal)])
+          (q := fun ch => 𝒮[σ.respond key.1 key.2 cp.2 ch])
           (r := (fun actualResp =>
             ((cp.1, actualResp), ((log ++ [m], cache, some key), false))) <$>
-            𝒟[σ.respond key.1 key.2 cp.2 cachedCh])]
-        · exact probFailure_evalDist_eq_zero (($ᵗ Chal) : ProbComp Chal)
+            𝒮[σ.respond key.1 key.2 cp.2 cachedCh])]
+        · exact probFailure_evalSPMF_eq_zero (($ᵗ Chal) : ProbComp Chal)
         · intro ch
-          exact probFailure_evalDist_eq_zero (σ.respond key.1 key.2 cp.2 ch)
+          exact probFailure_evalSPMF_eq_zero (σ.respond key.1 key.2 cp.2 ch)
 
 private lemma nma_simulateQ_liftM_unif_run {α : Type}
     (hr : GenerableRelation Stmt Wit rel)
@@ -832,13 +832,13 @@ private lemma nma_simulateQ_liftM_unif_run {α : Type}
         simp [Functor.map_map])
       oa s
 
-private lemma cmaSimSignStep_evalDist_eq_public
+private lemma cmaSimSignStep_evalSPMF_eq_public
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (m : M)
     (s : CmaData M Commit Chal Stmt Wit) :
-    𝒟[((cmaSim M Commit Chal hr simT) (CmaQuery.sign m)).run (s, false)] =
-      𝒟[cmaSimSignPublicOut M Commit Chal m s <$>
+    𝒮[((cmaSim M Commit Chal hr simT) (CmaQuery.sign m)).run (s, false)] =
+      𝒮[cmaSimSignPublicOut M Commit Chal m s <$>
         cmaSimSignPublicDist M Commit Chal hr simT s] := by
   rcases s with ⟨log, cache, keypair⟩
   unfold cmaSim
@@ -850,7 +850,7 @@ private lemma cmaSimSignStep_evalDist_eq_public
   on_goal 1 => refine bind_congr fun key => ?_
   all_goals
     change
-      (𝒟[(simulateQ (nma M Commit Chal hr)
+      (𝒮[(simulateQ (nma M Commit Chal hr)
         (liftM (simT key.1) :
           OracleComp (nmaSpec M Commit Chal Stmt) (Commit × Chal × Resp))).run
           (cache, some key, false)] >>= _) = _
@@ -858,8 +858,8 @@ private lemma cmaSimSignStep_evalDist_eq_public
       show ((fun a : Commit × Chal × Resp => (a, cache, some key, false)) <$> simT key.1) =
         (simT key.1 >>= fun a => pure (a, cache, some key, false)) by
           rw [map_eq_bind_pure_comp]
-          rfl, evalDist_bind]
-    simp only [evalDist_pure, bind_pure_comp]
+          rfl, evalSPMF_bind]
+    simp only [evalSPMF_pure, bind_pure_comp]
     rw [bind_map_left, map_eq_bind_pure_comp]
     refine bind_congr fun t => ?_
     cases hcache : cache (m, t.1) with
@@ -896,15 +896,15 @@ theorem cmaReal_cmaSim_tv_sign_le_cmaSignEpsCore_of_valid
   let bad : CmaSignPublic Stmt Wit Commit Chal Resp → Prop :=
     cmaSimSignPublicBad M Commit Chal m s
   have hreal :
-      𝒟[((cmaReal M Commit Chal σ hr) (CmaQuery.sign m)).run (s, false)] =
-        𝒟[realOut <$> realGhost] := by
+      𝒮[((cmaReal M Commit Chal σ hr) (CmaQuery.sign m)).run (s, false)] =
+        𝒮[realOut <$> realGhost] := by
     simpa [realGhost, realOut] using
-      cmaRealSignStep_evalDist_eq_ghost M Commit Chal σ hr m s
+      cmaRealSignStep_evalSPMF_eq_ghost M Commit Chal σ hr m s
   have hsim :
-      𝒟[((cmaSim M Commit Chal hr simT) (CmaQuery.sign m)).run (s, false)] =
-        𝒟[simOut <$> simPub] := by
+      𝒮[((cmaSim M Commit Chal hr simT) (CmaQuery.sign m)).run (s, false)] =
+        𝒮[simOut <$> simPub] := by
     simpa [simPub, simOut] using
-      cmaSimSignStep_evalDist_eq_public M Commit Chal hr simT m s
+      cmaSimSignStep_evalSPMF_eq_public M Commit Chal hr simT m s
   have hstep :
       ENNReal.ofReal (tvDist
         (((cmaReal M Commit Chal σ hr) (CmaQuery.sign m)).run (s, false))
@@ -923,10 +923,10 @@ theorem cmaReal_cmaSim_tv_sign_le_cmaSignEpsCore_of_valid
   have hpublic :
       ENNReal.ofReal (tvDist (CmaRealSignGhost.public <$> realGhost) simPub) ≤ ζ_zk := by
     have hpub_eval :
-        𝒟[CmaRealSignGhost.public <$> realGhost] =
-          𝒟[cmaRealSignPublicDist M Commit Chal σ hr s] := by
+        𝒮[CmaRealSignGhost.public <$> realGhost] =
+          𝒮[cmaRealSignPublicDist M Commit Chal σ hr s] := by
       simpa [realGhost] using
-        cmaRealSignGhost_public_evalDist_eq_publicDist M Commit Chal σ hr m s
+        cmaRealSignGhost_public_evalSPMF_eq_publicDist M Commit Chal σ hr m s
     simpa [tvDist, simPub, hpub_eval] using
       cmaSignPublicDist_tv_le_hvzk M Commit Chal σ hr simT ζ_zk hζ_zk hHVZK s hvalid
   have hbad :

@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The PMF/SPMF boundary ratchet diffs against the pull-request base.
+          fetch-depth: 0
 
       - name: Set up Lean environment
         uses: leanprover/lean-action@v1
@@ -31,6 +34,20 @@ jobs:
         run: |
           bash scripts/test-polyfun-boundary.sh
           bash scripts/check-polyfun-boundary.sh
+
+      - name: Check PMF/SPMF dependency boundary
+        run: |
+          bash scripts/test-pmf-boundary.sh
+          bash scripts/check-pmf-boundary.sh
+
+      - name: Report PMF/SPMF boundary trend
+        if: github.event_name == 'pull_request'
+        run: bash scripts/check-pmf-boundary.sh --report "origin/${{ github.base_ref }}"
+
+      - name: Check optional complexity backend isolation
+        run: |
+          bash scripts/test-complexity-backend-isolation.sh
+          bash scripts/check-complexity-backend-isolation.sh
 
       - name: Check for all imports in ToMathlib
         run: lake exe mk_all --lib ToMathlib --module --check
@@ -55,6 +72,35 @@ jobs:
 
       - name: Check for all imports in VCVioTest
         run: lake exe mk_all --lib VCVioTest --module --check
+
+  complexity_backend:
+    name: Optional Complexity Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Lean environment
+        uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+
+      - name: Materialize the pinned PolyFun checkout
+        run: lake update PolyFun
+
+      - name: Fetch Mathlib cache for the optional package
+        working-directory: VCVioComplexity
+        run: |
+          lake update
+          lake exe cache get
+
+      - name: Run exact-machine canaries, trust checks, and compatibility preflight
+        working-directory: VCVioComplexity
+        run: ./scripts/test.sh
 
   downstream_stub_link:
     name: Downstream Consumer Build (no submodules)
@@ -243,6 +289,8 @@ jobs:
       # timing report compares exactly the seven non-test libraries.
       - name: Build the canary library
         run: lake build VCVioTest
+      - name: Build HashSig oracle canaries
+        run: lake build HashSigTest
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
         run: lake exe slhdsa_kat
       - name: Run SLH-DSA-C13 differential KAT

@@ -14,10 +14,6 @@ Minimal executable that imports the full VCVio library and runs a trivial comput
 Used by CI to measure build timing and verify the library typechecks end-to-end.
 -/
 
-#check OracleComp
-
 @[expose] public section
-
-
 def main : IO Unit := do
   IO.println "VCVio smoke test OK"

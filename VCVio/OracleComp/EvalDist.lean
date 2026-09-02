@@ -141,25 +141,25 @@ its public API. Lean 4.33 requires that wrapper at implicit transparency when
 specializing the generic simulation laws. -/
 attribute [local implicit_reducible] SetM
 
-section evalDist_main
+section evalSPMF_main
 
-lemma evalDist_eq_simulateQ [IsProbabilitySpec spec] (mx : OracleComp spec α) :
-    𝒟[mx] = simulateQ IsProbabilitySpec.toPMF mx := rfl
+lemma evalSPMF_eq_simulateQ [IsProbabilitySpec spec] (mx : OracleComp spec α) :
+    𝒮[mx] = simulateQ IsProbabilitySpec.toPMF mx := rfl
 
 /-- Abstract distribution of a single lifted query under `IsProbabilitySpec`:
 the per-query distribution `toPMF` is pushed forward through the query's
-continuation. Uniform-content sibling: `evalDist_liftM`. -/
-lemma evalDist_liftM_toPMF [IsProbabilitySpec spec] (q : OracleQuery spec α) :
-    𝒟[(liftM q : OracleComp spec α)] =
+continuation. Uniform-content sibling: `evalSPMF_liftM`. -/
+lemma evalSPMF_liftM_toPMF [IsProbabilitySpec spec] (q : OracleQuery spec α) :
+    𝒮[(liftM q : OracleComp spec α)] =
       (IsProbabilitySpec.toPMF q.input).map q.cont := by
-  simp [evalDist_eq_simulateQ, SPMF.liftM_eq_map, PMF.map_comp, PMF.monad_map_eq_map]
+  simp [evalSPMF_eq_simulateQ, SPMF.liftM_eq_map, PMF.map_comp, PMF.monad_map_eq_map]
 
 /-- `liftM (query t) : OracleComp spec _` evaluates to the per-query distribution
 `IsProbabilitySpec.toPMF t`, lifted to `SPMF`. -/
-lemma evalDist_query_toPMF [IsProbabilitySpec spec] (t : spec.Domain) :
-    𝒟[(query t : OracleComp spec _)] =
+lemma evalSPMF_query_toPMF [IsProbabilitySpec spec] (t : spec.Domain) :
+    𝒮[(query t : OracleComp spec _)] =
       (IsProbabilitySpec.toPMF t : SPMF (spec.Range t)) := by
-  rw [evalDist_liftM_toPMF]; simp [PMF.map_id]
+  rw [evalSPMF_liftM_toPMF]; simp [PMF.map_id]
 
 @[simp, grind =] lemma support_liftM (q : OracleQuery spec α) :
     support (liftM q : OracleComp spec α) = Set.range q.cont := by
@@ -199,7 +199,7 @@ lemma support_finite [spec.Fintype] (mx : OracleComp spec α) : (support mx).Fin
   | pure x => simp
   | query_bind t f h => simpa using Set.finite_iUnion h
 
-end evalDist_main
+end evalSPMF_main
 
 section finSupport
 
@@ -229,23 +229,23 @@ lemma mem_finSupport_query [spec.DecidableEq] (t : spec.Domain) (u : spec.Range 
 
 end finSupport
 
-section evalDist
+section evalSPMF
 
 variable [IsUniformSpec spec]
 
 @[simp low, grind =]
-lemma evalDist_liftM (q : OracleQuery spec α) :
-    𝒟[(liftM q : OracleComp spec α)] =
+lemma evalSPMF_liftM (q : OracleQuery spec α) :
+    𝒮[(liftM q : OracleComp spec α)] =
       (PMF.uniformOfFintype (spec.Range q.input)).map q.cont := by
-  rw [evalDist_liftM_toPMF]
+  rw [evalSPMF_liftM_toPMF]
   exact congrArg (fun p : PMF (spec.Range q.input) =>
       ((PMF.map q.cont p : PMF α) : SPMF α))
     (IsUniformSpec.toPMF_eq_uniform q.input)
 
 @[simp, grind =]
-lemma evalDist_query (t : spec.Domain) :
-    𝒟[(query t : OracleComp spec _)] = PMF.uniformOfFintype (spec.Range t) := by
-  rw [evalDist_liftM]; simp [PMF.map_id]
+lemma evalSPMF_query (t : spec.Domain) :
+    𝒮[(query t : OracleComp spec _)] = PMF.uniformOfFintype (spec.Range t) := by
+  rw [evalSPMF_liftM]; simp [PMF.map_id]
 
 @[simp low, grind =]
 lemma probOutput_liftM_eq_div (q : OracleQuery spec α) (x : α) :
@@ -297,14 +297,14 @@ lemma probEvent_query_le_inv_of_unique (t : spec.Domain) (p : spec.Range t → P
     simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx hy
     exact hunique x y hx hy
 
-end evalDist
+end evalSPMF
 
 section supportEvalDist
 
 variable [IsUniformSpec spec] (oa : OracleComp spec α) (x : α)
 
 /-- `OracleComp spec` admits the bridge between its direct `support` semantics and the
-`SPMF.support` of its `evalDist`. -/
+`SPMF.support` of its `evalSPMF`. -/
 instance instEvalDistCompatible : EvalDistCompatible (OracleComp spec) := by
   let : PFunctor.IsUniformSpec spec.toPFunctor := IsUniformSpec.toPFunctor
   exact PFunctor.FreeM.instEvalDistCompatible
@@ -313,26 +313,26 @@ instance instEvalDistCompatible : EvalDistCompatible (OracleComp spec) := by
 nonzero probability. This is `EvalDistCompatible.support_eq_SPMF_support` specialized to the
 oracle façade, and it is the named bridge to reach for when a proof needs to move between the
 two semantics without unfolding either into its `SetM` / `SPMF` interpreter. -/
-lemma support_eq_evalDist_support :
-    support oa = SPMF.support (𝒟[oa]) :=
+lemma support_eq_evalSPMF_support :
+    support oa = SPMF.support (𝒮[oa]) :=
   EvalDistCompatible.support_eq_SPMF_support oa
 
-/-- An output has non-zero probability in `evalDist` iff it is in computation support. -/
+/-- An output has non-zero probability in `evalSPMF` iff it is in computation support. -/
 @[simp]
-lemma mem_support_evalDist_iff :
-    some x ∈ (𝒟[oa]).run.support ↔ x ∈ support oa := by
-  rw [support_eq_evalDist_support, PMF.mem_support_iff, SPMF.mem_support_iff,
+lemma mem_support_evalSPMF_iff :
+    some x ∈ (𝒮[oa]).run.support ↔ x ∈ support oa := by
+  rw [support_eq_evalSPMF_support, PMF.mem_support_iff, SPMF.mem_support_iff,
     SPMF.apply_eq_toPMF_some, SPMF.run_eq_toPMF]
 
-alias ⟨mem_support_of_mem_support_evalDist, mem_support_evalDist⟩ := mem_support_evalDist_iff
+alias ⟨mem_support_of_mem_support_evalSPMF, mem_support_evalSPMF⟩ := mem_support_evalSPMF_iff
 
-/-- Finite-support variant of `mem_support_evalDist_iff`. -/
+/-- Finite-support variant of `mem_support_evalSPMF_iff`. -/
 @[simp]
-lemma mem_support_evalDist_iff' [DecidableEq α] :
-    some x ∈ (𝒟[oa]).run.support ↔ x ∈ finSupport oa := by
-  rw [mem_support_evalDist_iff (oa := oa) (x := x), mem_finSupport_iff_mem_support]
+lemma mem_support_evalSPMF_iff' [DecidableEq α] :
+    some x ∈ (𝒮[oa]).run.support ↔ x ∈ finSupport oa := by
+  rw [mem_support_evalSPMF_iff (oa := oa) (x := x), mem_finSupport_iff_mem_support]
 
-alias ⟨mem_finSupport_of_mem_support_evalDist, mem_support_evalDist'⟩ := mem_support_evalDist_iff'
+alias ⟨mem_finSupport_of_mem_support_evalSPMF, mem_support_evalSPMF'⟩ := mem_support_evalSPMF_iff'
 
 end supportEvalDist
 
@@ -356,26 +356,26 @@ lemma not_noFailure_of_probFailure_pos {oa : OracleComp spec α} (h : 0 < probFa
 
 end NeverFail
 
-section evalDistConvenience
+section evalSPMFConvenience
 
 variable [IsUniformSpec spec] [IsProbabilitySpec spec']
 
-lemma evalDist_query_bind
+lemma evalSPMF_query_bind
     (t : spec.Domain) (ou : spec.Range t → OracleComp spec α) :
-    𝒟[(query t : OracleComp spec _) >>= ou] =
+    𝒮[(query t : OracleComp spec _) >>= ou] =
       (PMF.uniformOfFintype (spec.Range t) : SPMF _) >>=
-        fun u => evalDist (ou u) := by
-  rw [evalDist_bind, evalDist_query]
+        fun u => evalSPMF (ou u) := by
+  rw [evalSPMF_bind, evalSPMF_query]
 
 lemma probOutput_congr {x y : α} {oa : OracleComp spec α} {oa' : OracleComp spec' α}
-    (h1 : x = y) (h2 : 𝒟[oa] = 𝒟[oa']) : Pr[= x | oa] = Pr[= y | oa'] := by
+    (h1 : x = y) (h2 : 𝒮[oa] = 𝒮[oa']) : Pr[= x | oa] = Pr[= y | oa'] := by
   simp_rw [probOutput_def, h1, h2]
 
 /-- Two events have equal probabilities when their predicates agree on the support of the
 first computation and the two computations share an evaluation distribution. -/
 lemma probEvent_congr' {p q : α → Prop} {oa : OracleComp spec α} {oa' : OracleComp spec' α}
     (h1 : ∀ x, x ∈ support oa → (p x ↔ q x))
-    (h2 : 𝒟[oa] = 𝒟[oa']) : Pr[ p | oa] = Pr[ q | oa'] := by
+    (h2 : 𝒮[oa] = 𝒮[oa']) : Pr[ p | oa] = Pr[ q | oa'] := by
   have hpr : (Pr[= · | oa]) = (Pr[= · | oa']) := funext fun x => probOutput_congr rfl h2
   rw [probEvent_eq_tsum_indicator, probEvent_eq_tsum_indicator, hpr]
   refine tsum_congr fun x => ?_
@@ -387,16 +387,16 @@ lemma probEvent_congr' {p q : α → Prop} {oa : OracleComp spec α} {oa' : Orac
   · have hz : Pr[= x | oa'] = 0 := congrFun hpr.symm x ▸ probOutput_eq_zero_of_not_mem_support hx
     rw [Set.indicator_apply_eq_zero.2 fun _ => hz, Set.indicator_apply_eq_zero.2 fun _ => hz]
 
-lemma evalDist_ext_probEvent {oa : OracleComp spec α} {oa' : OracleComp spec' α}
-    (h : ∀ x, Pr[= x | oa] = Pr[= x | oa']) : (𝒟[oa]).run = (𝒟[oa']).run := by
-  have heval : 𝒟[oa] = 𝒟[oa'] := evalDist_ext h
+lemma evalSPMF_ext_probEvent {oa : OracleComp spec α} {oa' : OracleComp spec' α}
+    (h : ∀ x, Pr[= x | oa] = Pr[= x | oa']) : (𝒮[oa]).run = (𝒮[oa']).run := by
+  have heval : 𝒮[oa] = 𝒮[oa'] := evalSPMF_ext h
   simp [heval]
 
 lemma probFailure_eq_sub_probEvent' (oa : OracleComp spec α) :
     Pr[⊥ | oa] = 1 - Pr[ fun _ => True | oa] :=
   _root_.probFailure_eq_sub_probEvent oa
 
-end evalDistConvenience
+end evalSPMFConvenience
 
 section guard
 
@@ -503,26 +503,26 @@ lemma probEvent_orElse (oa oa' : OptionT (OracleComp spec) α) (p : α → Prop)
 
 end orElse
 
-section simulateQ_evalDist
+section simulateQ_evalSPMF
 
 variable [IsProbabilitySpec spec] [IsProbabilitySpec spec']
 
 /-- If an oracle implementation preserves the distribution of each source query, then
 `simulateQ` preserves the distribution of every source computation. -/
-lemma evalDist_simulateQ_eq_evalDist
+lemma evalSPMF_simulateQ_eq_evalSPMF
     (so : QueryImpl spec' (OracleComp spec))
-    (h : ∀ t : spec'.Domain, 𝒟[so t] =
-      𝒟[(query t : OracleComp spec' (spec'.Range t))])
+    (h : ∀ t : spec'.Domain, 𝒮[so t] =
+      𝒮[(query t : OracleComp spec' (spec'.Range t))])
     (oa : OracleComp spec' α) :
-    𝒟[simulateQ so oa] = 𝒟[oa] := by
+    𝒮[simulateQ so oa] = 𝒮[oa] := by
   induction oa using OracleComp.inductionOn with
   | pure x =>
       simp
   | query_bind t mx ih =>
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
-        OracleQuery.input_query, evalDist_bind, ih, h t]
+        OracleQuery.input_query, evalSPMF_bind, ih, h t]
 
-end simulateQ_evalDist
+end simulateQ_evalSPMF
 
 section supportWhen
 
@@ -576,14 +576,14 @@ lemma supportWhen_mono {o₁ o₂ : QueryImpl spec Set}
 
 end supportWhen
 
-section evalDistWhen
+section evalSPMFWhen
 
 /-- The output distribution of `mx` when queries follow the specified distribution. -/
 @[reducible, simp]
-noncomputable def evalDistWhen (d : QueryImpl spec SPMF) (mx : OracleComp spec α) : SPMF α :=
+noncomputable def evalSPMFWhen (d : QueryImpl spec SPMF) (mx : OracleComp spec α) : SPMF α :=
   simulateQ (r := SPMF) d mx
 
-end evalDistWhen
+end evalSPMFWhen
 
 section supportPeel
 

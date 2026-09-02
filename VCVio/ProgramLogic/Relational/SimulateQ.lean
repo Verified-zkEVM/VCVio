@@ -84,7 +84,7 @@ which is what `probEvent_le_of_relTriple_simulateQ_run` consumes to transport an
 `relTriple_simulateQ_run_mono` weakens `himpl` to let the two handlers return *different* answers,
 paying for it with a self-referential recoupling hypothesis on the continuation.
 `relTriple_simulateQ_run'` is this rule with the state component projected away, keeping only
-output equality, and `relTriple_simulateQ_run'_of_impl_evalDist_eq` specializes that to a shared
+output equality, and `relTriple_simulateQ_run'_of_impl_evalSPMF_eq` specializes that to a shared
 state space with `Eq` as the invariant. -/
 theorem relTriple_simulateQ_run
     {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
@@ -154,7 +154,7 @@ theorem relTriple_simulateQ_run_mono
 /-- **Marginal stochastic dominance from a coupling.** If `oa` and `ob` are related by a
 coupling whose post-relation `R` carries an event implication `P a → Q b`, then the marginal
 probability of `P` on the left is at most that of `Q` on the right. This is the one-sided
-(inequality) counterpart of `evalDist_map_eq_of_relTriple`: where the latter extracts a
+(inequality) counterpart of `evalSPMF_map_eq_of_relTriple`: where the latter extracts a
 distributional equality from output equality, this extracts a probability inequality from an
 output implication.
 
@@ -173,7 +173,8 @@ theorem probEvent_le_of_relTriple_imp
   rw [relTriple_iff_relWP, relWP_iff_couplingPost] at h
   obtain ⟨c, hc⟩ := h
   -- read each marginal off the single coupling distribution `c`
-  change Pr[P | 𝒟[oa]] ≤ Pr[Q | 𝒟[ob]]
+  rw [show Pr[P | oa] = Pr[P | 𝒮[oa]] by simp only [probEvent_evalSPMF],
+    show Pr[Q | ob] = Pr[Q | 𝒮[ob]] by simp only [probEvent_evalSPMF]]
   conv_lhs => rw [← c.2.map_fst, probEvent_fst_map]
   conv_rhs => rw [← c.2.map_snd, probEvent_snd_map]
   -- pointwise monotonicity of `probEvent` on `c`
@@ -186,13 +187,13 @@ two simulations of `oa` produce equal outputs, the final states being discarded 
 The hypotheses are exactly those of `relTriple_simulateQ_run`, so all the probabilistic content
 still sits in `himpl`; only the conclusion changes shape, from a relation on `(output, state)`
 pairs to an `EqRel` between two plain computations. That is the form the transport lemmas
-`probOutput_eq_of_relTriple_eqRel` and `evalDist_eq_of_relTriple_eqRel` consume, so reach for it
+`probOutput_eq_of_relTriple_eqRel` and `evalSPMF_eq_of_relTriple_eqRel` consume, so reach for it
 whenever the residual states are bookkeeping the statement should not mention; keep
 `relTriple_simulateQ_run` when the conclusion must still constrain them, since the projection
 cannot be undone. `rvcgen` applies this rule on its own, first specializing `R_state` to `Eq`.
 
-`relTriple_simulateQ_run'_of_impl_evalDist_eq` specializes it to a shared state space with `Eq`
-as the invariant, trading `himpl` for a per-query `evalDist` equality. -/
+`relTriple_simulateQ_run'_of_impl_evalSPMF_eq` specializes it to a shared state space with `Eq`
+as the invariant, trading `himpl` for a per-query `evalSPMF` equality. -/
 theorem relTriple_simulateQ_run'
     {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     [IsUniformSpec spec₁] [IsUniformSpec spec₂] {σ₁ σ₂ : Type}
@@ -254,7 +255,7 @@ theorem probEvent_le_of_relTriple_simulateQ_run
 
 If corresponding oracle calls have identical full `(output, state)` distributions whenever the
 states are equal, then the simulated computations have identical output distributions. This
-packages the common pattern "prove per-query `evalDist` equality, then use `Eq` as the state
+packages the common pattern "prove per-query `evalSPMF` equality, then use `Eq` as the state
 invariant" into a single theorem.
 
 Applying it leaves `himpl` as the only real side goal: `σ`, the two implementations and `oa` are
@@ -266,24 +267,24 @@ The neighbouring rules tie the two state spaces together differently — `relTri
 through an arbitrary state invariant plus a per-query relational triple, and
 `relTriple_simulateQ_run'_of_query_map_eq` through a projection of the first state space onto the
 second. Reach for this one when both simulations share a state space and per-query agreement is an
-equality of distributions rather than of computations. `OracleComp.evalDist_simulateQ_run_congr`
-draws the same conclusion as a bare `evalDist` equality on `run`, but only when both
+equality of distributions rather than of computations. `OracleComp.evalSPMF_simulateQ_run_congr`
+draws the same conclusion as a bare `evalSPMF` equality on `run`, but only when both
 implementations also share the ambient spec they simulate into. -/
-theorem relTriple_simulateQ_run'_of_impl_evalDist_eq
+theorem relTriple_simulateQ_run'_of_impl_evalSPMF_eq
     {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     [IsUniformSpec spec₁] [IsUniformSpec spec₂] {σ : Type}
     (impl₁ : QueryImpl spec (StateT σ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (StateT σ (OracleComp spec₂)))
     (oa : OracleComp spec α)
     (himpl : ∀ (t : spec.Domain) (s : σ),
-      𝒟[(impl₁ t).run s] = 𝒟[(impl₂ t).run s])
+      𝒮[(impl₁ t).run s] = 𝒮[(impl₂ t).run s])
     (s₁ s₂ : σ) (hs : s₁ = s₂) :
     RelTriple
       ((simulateQ impl₁ oa).run' s₁)
       ((simulateQ impl₂ oa).run' s₂)
       (EqRel α) :=
   relTriple_simulateQ_run' impl₁ impl₂ Eq oa
-    (fun t s _ h => h ▸ relTriple_of_evalDist_eq (himpl t s) fun _ => ⟨rfl, rfl⟩) s₁ s₂ hs
+    (fun t s _ h => h ▸ relTriple_of_evalSPMF_eq (himpl t s) fun _ => ⟨rfl, rfl⟩) s₁ s₂ hs
 
 /-! ### `WriterT` analogue -/
 
@@ -366,7 +367,7 @@ distributions.
 
 Applying it: `z` ranges over the *joint* pair `α × ω`, so this equates the probability of an
 output together with its accumulated log, never the output marginal alone. Reach for
-`evalDist_simulateQ_run_writerT_eq_of_impl_eq` instead when the next step consumes the whole
+`evalSPMF_simulateQ_run_writerT_eq_of_impl_eq` instead when the next step consumes the whole
 distribution rather than one point mass. -/
 theorem probOutput_simulateQ_run_writerT_eq_of_impl_eq
     {ι₁ : Type u}
@@ -385,16 +386,16 @@ handlers that agree pointwise on `.run` send `oa` to one `(output, accumulator)`
 Applying it: `himpl_eq` carries the entire content, so discharge it first. The conclusion equates
 whole distributions, the shape a surrounding `bind`, `tvDist` or `probEvent` step rewrites with
 directly; `probOutput_simulateQ_run_writerT_eq_of_impl_eq` states the same fact one output pair at
-a time. The two are interderivable through `evalDist_ext`, so pick whichever matches the goal. -/
-theorem evalDist_simulateQ_run_writerT_eq_of_impl_eq
+a time. The two are interderivable through `evalSPMF_ext`, so pick whichever matches the goal. -/
+theorem evalSPMF_simulateQ_run_writerT_eq_of_impl_eq
     {ι₁ : Type u}
     {spec₁ : OracleSpec ι₁} [IsUniformSpec spec₁]
     {ω : Type} [Monoid ω]
     (impl₁ impl₂ : QueryImpl spec (WriterT ω (OracleComp spec₁)))
     (himpl_eq : ∀ (t : spec.Domain), (impl₁ t).run = (impl₂ t).run)
     (oa : OracleComp spec α) :
-    𝒟[(simulateQ impl₁ oa).run] = 𝒟[(simulateQ impl₂ oa).run] :=
-  evalDist_eq_of_relTriple_eqRel <|
+    𝒮[(simulateQ impl₁ oa).run] = 𝒮[(simulateQ impl₂ oa).run] :=
+  evalSPMF_eq_of_relTriple_eqRel <|
     relTriple_simulateQ_run_writerT_of_impl_eq impl₁ impl₂ himpl_eq oa
 
 /-- Output projection of `relTriple_simulateQ_run_writerT`: the same monoid-congruence
@@ -461,10 +462,10 @@ theorem relTriple_simulateQ_run_of_impl_eq_preservesInv
       (oa := (impl₂ t).run s₁)
       (ob := (impl₂ t).run s₁)
       (R := fun p₁ p₂ => p₁.1 = p₂.1 ∧ p₁.2 = p₂.2 ∧ Inv p₁.2)).2
-    refine ⟨_root_.SPMF.Coupling.refl (𝒟[(impl₂ t).run s₁]), ?_⟩
+    refine ⟨_root_.SPMF.Coupling.refl (𝒮[(impl₂ t).run s₁]), ?_⟩
     intro z hz
     rcases (mem_support_bind_iff
-      (𝒟[(impl₂ t).run s₁])
+      (𝒮[(impl₂ t).run s₁])
       (fun a => (pure (a, a) : SPMF ((spec.Range t × σ) × (spec.Range t × σ)))) z).1 hz with
       ⟨a, ha, hz'⟩
     have hzEq : z = (a, a) := by
@@ -564,7 +565,7 @@ already determined by unification against the goal.
 
 The neighbouring rules tie the two state spaces together more loosely — `relTriple_simulateQ_run'`
 through an arbitrary state invariant plus a per-query relational triple, and
-`relTriple_simulateQ_run'_of_impl_evalDist_eq` through per-query `evalDist` equality on a shared
+`relTriple_simulateQ_run'_of_impl_evalSPMF_eq` through per-query `evalSPMF` equality on a shared
 state space. Reach for this one when the second implementation is the first one read through a
 state projection, so that `hproj` is an equality of computations rather than of distributions. -/
 theorem relTriple_simulateQ_run'_of_query_map_eq

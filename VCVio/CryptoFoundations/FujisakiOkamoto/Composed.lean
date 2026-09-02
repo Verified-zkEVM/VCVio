@@ -113,39 +113,4 @@ noncomputable def singleRORuntime
     (∅ : SingleROQueryCache PKHash M R K)
   toProbCompLift := ProbCompLift.ofMonadLift _
 
-/-- Main composed Fujisaki-Okamoto IND-CCA theorem statement.
-
-**WARNING: this is a placeholder statement, not the final theorem.** The current shape is
-unsound as written: `correctnessBound` and `epsMsg` are unconstrained `ℝ` parameters, so
-the right-hand side can be made arbitrarily negative while the left-hand side is a
-probability and hence nonnegative. In the final composed FO statement these slack terms
-must be constrained (`correctnessBound` is the underlying PKE's `δ`-correctness error, and
-`epsMsg` is the message-distribution collision/min-entropy term, both provably nonnegative
-quantities derived from `pke`).
-
-The proof is intentionally deferred. The reduction artifacts (`cpaAdv₁`, `cpaAdv₂`,
-`prfAdv`) are existentially quantified rather than passed in as unrelated inputs, but the
-bound itself still needs to be tightened before this can be a meaningful security claim. -/
-theorem IND_CCA_bound
-    {M PK SK R C KD K KPRF : Type}
-    [DecidableEq M] [DecidableEq C] [DecidableEq KD]
-    [SampleableType M] [SampleableType R] [SampleableType K]
-    (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
-    (kdInput : M → C → KD)
-    (prf : PRFScheme KPRF C K)
-    (adversary : (FujisakiOkamoto pke kdInput (implicitRejection prf)).IND_CCA_Adversary)
-    (correctnessBound epsMsg : ℝ)
-    (qHK : ℕ) :
-    ∃ cpaAdv₁ cpaAdv₂ : (pke.toAsymmEncAlg ProbCompRuntime.probComp).IND_CPA_adversary,
-      ∃ prfAdv : PRFScheme.PRFAdversary C K,
-        (FujisakiOkamoto pke kdInput (implicitRejection prf)).IND_CCA_Advantage
-            (twoRORuntime (M := M) (R := R) (KD := KD) (K := K))
-            adversary ≤
-          2 * ((pke.toAsymmEncAlg ProbCompRuntime.probComp).IND_CPA_advantage cpaAdv₁).toReal +
-          2 * ((pke.toAsymmEncAlg ProbCompRuntime.probComp).IND_CPA_advantage cpaAdv₂).toReal +
-          PRFScheme.prfAdvantage prf prfAdv +
-          ((2 * qHK + 3 : ℕ) : ℝ) * correctnessBound +
-          2 * ((2 * qHK + 2 : ℕ) : ℝ) * epsMsg := by
-  sorry
-
 end FujisakiOkamoto

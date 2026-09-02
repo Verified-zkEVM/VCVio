@@ -21,14 +21,14 @@ The lazy oracle samples a fresh uniform value on first query and caches it for
 consistency, so caching only ever affects *repeated* queries. Since every fresh
 table entry is uniform and independent, lazily sampling on demand is
 distributionally identical to pre-sampling the whole table. The marginalization
-lemma `evalDist_uniformSample_bind_update` is the workhorse: it absorbs each
+lemma `evalSPMF_uniformSample_bind_update` is the workhorse: it absorbs each
 fresh on-demand uniform draw into the pre-sampled table.
 
 ## Main results
 
-* `evalDist_simulateQ_randomOracle_run'_eq_tableExtending`: the generalized,
+* `evalSPMF_simulateQ_randomOracle_run'_eq_tableExtending`: the generalized,
   cache-parametrized form, the induction vehicle.
-* `evalDist_simulateQ_randomOracle_run'_empty_eq_uniformTable`: the empty-cache
+* `evalSPMF_simulateQ_randomOracle_run'_empty_eq_uniformTable`: the empty-cache
   corollary — the lazy-vs-eager equivalence proper.
 -/
 
@@ -69,10 +69,10 @@ lemma tableExtending_update_of_none (c : (D →ₒ R).QueryCache) (g : D → R)
 /-- **Marginalization, post-composed.** For any continuation `ψ : (D → R) → α`, drawing a fresh
 uniform `u`, then a full uniform table `g`, and evaluating `ψ` on `Function.update g t u` has the
 same distribution as evaluating `ψ` on a directly drawn uniform table. -/
-lemma evalDist_uniformSample_bind_update_map {α : Type} (t : D) (ψ : (D → R) → α) :
-    𝒟[do let u ← $ᵗ R; let g ← $ᵗ (D → R); pure (ψ (Function.update g t u))] =
-      𝒟[do let g ← $ᵗ (D → R); pure (ψ g)] := by
-  rw [bind_pure_comp, evalDist_map, ← evalDist_uniformSample_bind_update t]
+lemma evalSPMF_uniformSample_bind_update_map {α : Type} (t : D) (ψ : (D → R) → α) :
+    𝒮[do let u ← $ᵗ R; let g ← $ᵗ (D → R); pure (ψ (Function.update g t u))] =
+      𝒮[do let g ← $ᵗ (D → R); pure (ψ g)] := by
+  rw [bind_pure_comp, evalSPMF_map, ← evalSPMF_uniformSample_bind_update t]
   simp [map_bind, bind_pure_comp]
 
 /-- **Two-cell marginalization, post-composed.** For any continuation `ψ : (D → R) → α` and any
@@ -83,48 +83,48 @@ same distribution as evaluating `ψ` on a directly drawn uniform table.
 This is the joint marginal independence at the coordinate pair `(t₁, t₂)`: those two coordinates
 are jointly uniform and independent of the rest, so replacing them with fresh independent uniforms
 leaves the joint distribution unchanged. Two-cell analogue of
-`evalDist_uniformSample_bind_update_map`.
+`evalSPMF_uniformSample_bind_update_map`.
 
 Used at the slot-positive case of the DC unlinkability reduction to marginalize the two cells
 `((tag, 0), n)` (read by M) and `((tag, slotK), n)` (read by S, with `slotK ≠ 0`) as independent
 uniforms, enabling the IH-rename closure without any per-step cacheBadReader charge. -/
-lemma evalDist_uniformSample_bind_update_two_map {α : Type} {t₁ t₂ : D} (hne : t₁ ≠ t₂)
+lemma evalSPMF_uniformSample_bind_update_two_map {α : Type} {t₁ t₂ : D} (hne : t₁ ≠ t₂)
     (ψ : (D → R) → α) :
-    𝒟[do let u₁ ← $ᵗ R; let u₂ ← $ᵗ R; let g ← $ᵗ (D → R);
+    𝒮[do let u₁ ← $ᵗ R; let u₂ ← $ᵗ R; let g ← $ᵗ (D → R);
          pure (ψ (Function.update (Function.update g t₁ u₁) t₂ u₂))] =
-      𝒟[do let g ← $ᵗ (D → R); pure (ψ g)] := by
+      𝒮[do let g ← $ᵗ (D → R); pure (ψ g)] := by
   simp_rw [Function.update_comm hne]
-  rw [evalDist_bind]
+  rw [evalSPMF_bind]
   refine (congrArg _ (funext fun u₁ =>
-    evalDist_uniformSample_bind_update_map t₂ fun h => ψ (Function.update h t₁ u₁))).trans ?_
-  rw [← evalDist_bind]
-  exact evalDist_uniformSample_bind_update_map t₁ ψ
+    evalSPMF_uniformSample_bind_update_map t₂ fun h => ψ (Function.update h t₁ u₁))).trans ?_
+  rw [← evalSPMF_bind]
+  exact evalSPMF_uniformSample_bind_update_map t₁ ψ
 
 omit [Finite D] [Finite R] [Nonempty R] in
-/-- Pure-case base step for `evalDist_simulateQ_randomOracle_run'_eq_tableExtending`: running
+/-- Pure-case base step for `evalSPMF_simulateQ_randomOracle_run'_eq_tableExtending`: running
 `pure a` under the lazy oracle ignores the table, so its distribution is the constant `pure a`,
 matching the eager side after the (discarded) uniform table draw. -/
-private lemma evalDist_simulateQ_randomOracle_run'_pure_eq_tableExtending {α : Type} (a : α)
+private lemma evalSPMF_simulateQ_randomOracle_run'_pure_eq_tableExtending {α : Type} (a : α)
     (c : (D →ₒ R).QueryCache) :
-    𝒟[(simulateQ randomOracle (pure a : OracleComp (D →ₒ R) α)).run' c] =
-      𝒟[do let g ← $ᵗ (D → R);
+    𝒮[(simulateQ randomOracle (pure a : OracleComp (D →ₒ R) α)).run' c] =
+      𝒮[do let g ← $ᵗ (D → R);
             pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) (pure a))] := by
-  refine evalDist_ext fun x => ?_
+  refine evalSPMF_ext fun x => ?_
   simp [simulateQ_pure, evalWithAnswerFn_pure]
 
-/-- Inductive `query`/`bind` step for `evalDist_simulateQ_randomOracle_run'_eq_tableExtending`:
+/-- Inductive `query`/`bind` step for `evalSPMF_simulateQ_randomOracle_run'_eq_tableExtending`:
 given the eager-table identity for every continuation `k u`, it holds for `liftM (query t) >>= k`.
 On a cache miss the fresh uniform draw is absorbed into the table by
-`evalDist_uniformSample_bind_update_map`; on a cache hit the table already answers with `c t`. -/
-private lemma evalDist_simulateQ_randomOracle_run'_query_bind_eq_tableExtending {α : Type} (t : D)
+`evalSPMF_uniformSample_bind_update_map`; on a cache hit the table already answers with `c t`. -/
+private lemma evalSPMF_simulateQ_randomOracle_run'_query_bind_eq_tableExtending {α : Type} (t : D)
     (k : R → OracleComp (D →ₒ R) α)
     (ih : ∀ (u : R) (c : (D →ₒ R).QueryCache),
-      𝒟[(simulateQ randomOracle (k u)).run' c] =
-        𝒟[do let g ← $ᵗ (D → R);
+      𝒮[(simulateQ randomOracle (k u)).run' c] =
+        𝒮[do let g ← $ᵗ (D → R);
               pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) (k u))])
     (c : (D →ₒ R).QueryCache) :
-    𝒟[(simulateQ randomOracle (liftM ((D →ₒ R).query t) >>= k)).run' c] =
-      𝒟[do let g ← $ᵗ (D → R);
+    𝒮[(simulateQ randomOracle (liftM ((D →ₒ R).query t) >>= k)).run' c] =
+      𝒮[do let g ← $ᵗ (D → R);
             pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g))
               (liftM ((D →ₒ R).query t) >>= k))] := by
   classical
@@ -160,11 +160,11 @@ private lemma evalDist_simulateQ_randomOracle_run'_query_bind_eq_tableExtending 
       simp only [hψ]
       rw [tableExtending_cacheQuery, ← tableExtending_update_of_none c g hc u]
       simp only [Function.update_self]
-    trans 𝒟[do let u ← $ᵗ R; let g ← $ᵗ (D → R); pure (ψ (Function.update g t u))]
-    · rw [evalDist_bind, evalDist_bind]
+    trans 𝒮[do let u ← $ᵗ R; let g ← $ᵗ (D → R); pure (ψ (Function.update g t u))]
+    · rw [evalSPMF_bind, evalSPMF_bind]
       refine congrArg _ (funext fun u => ?_)
       rw [ih u (c.cacheQuery t u), bind_pure_comp, bind_pure_comp, hfun u]
-    · exact evalDist_uniformSample_bind_update_map t ψ
+    · exact evalSPMF_uniformSample_bind_update_map t ψ
   · rw [QueryImpl.withCaching_run_some _ hc, pure_bind, ih u c]
     have h : ∀ g : D → R, tableExtending c g t = u := fun g => by simp [tableExtending, hc]
     simp_rw [h]
@@ -177,15 +177,15 @@ against the table that overlays `c` on `g`.
 
 This is the induction vehicle: the cache `c` is generalized so the `query`/`bind` step can recurse
 through `cacheQuery`. -/
-theorem evalDist_simulateQ_randomOracle_run'_eq_tableExtending
+theorem evalSPMF_simulateQ_randomOracle_run'_eq_tableExtending
     {α : Type} (oa : OracleComp (D →ₒ R) α) (c : (D →ₒ R).QueryCache) :
-    𝒟[(simulateQ randomOracle oa).run' c] =
-      𝒟[do let g ← $ᵗ (D → R);
+    𝒮[(simulateQ randomOracle oa).run' c] =
+      𝒮[do let g ← $ᵗ (D → R);
             pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) oa)] := by
   induction oa using OracleComp.inductionOn generalizing c with
-  | pure a => exact evalDist_simulateQ_randomOracle_run'_pure_eq_tableExtending a c
+  | pure a => exact evalSPMF_simulateQ_randomOracle_run'_pure_eq_tableExtending a c
   | query_bind t k ih =>
-    exact evalDist_simulateQ_randomOracle_run'_query_bind_eq_tableExtending t k ih c
+    exact evalSPMF_simulateQ_randomOracle_run'_query_bind_eq_tableExtending t k ih c
 
 omit [DecidableEq D] [Finite D] [Finite R] [Nonempty R] [SampleableType R]
   [SampleableType (D → R)] in
@@ -201,14 +201,14 @@ same output distribution as: sample a full answer table `g : D → R` uniformly,
 computation deterministically against `g`.
 
 This is the empty-cache specialization of
-`evalDist_simulateQ_randomOracle_run'_eq_tableExtending`: the classic lazy-vs-eager-sampling
+`evalSPMF_simulateQ_randomOracle_run'_eq_tableExtending`: the classic lazy-vs-eager-sampling
 equivalence. Lazy caching only affects repeated queries, and since each fresh table entry is
 uniform and independent, sampling on demand matches pre-sampling the whole table. -/
-theorem evalDist_simulateQ_randomOracle_run'_empty_eq_uniformTable
+theorem evalSPMF_simulateQ_randomOracle_run'_empty_eq_uniformTable
     {α : Type} (oa : OracleComp (D →ₒ R) α) :
-    𝒟[(simulateQ randomOracle oa).run' ∅] =
-      𝒟[do let g ← $ᵗ (D → R); pure (evalWithAnswerFn (QueryImpl.ofFn g) oa)] := by
-  rw [evalDist_simulateQ_randomOracle_run'_eq_tableExtending oa ∅]
+    𝒮[(simulateQ randomOracle oa).run' ∅] =
+      𝒮[do let g ← $ᵗ (D → R); pure (evalWithAnswerFn (QueryImpl.ofFn g) oa)] := by
+  rw [evalSPMF_simulateQ_randomOracle_run'_eq_tableExtending oa ∅]
   simp_rw [tableExtending_empty]
 
 end OracleComp

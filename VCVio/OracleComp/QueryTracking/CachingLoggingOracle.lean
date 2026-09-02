@@ -152,6 +152,51 @@ lemma apply_eq (t : spec.Domain) :
     QueryImpl.withCachingAux_apply]
   cases hcache : s.1 t <;> simp [hcache]
 
+/-- Cache hit: return the stored response and append it to the query log. -/
+lemma run_some {t : spec.Domain} {cache : QueryCache spec} {trace : QueryLog spec}
+    {u : spec.Range t} (h : cache t = some u) :
+    (cachingLoggingOracle t).run (cache, trace) =
+      pure (u, (cache, trace ++ [⟨t, u⟩])) := by
+  rw [apply_eq]
+  simp [h]
+
+/-- Cache miss: issue the underlying query, cache its response, and append it to the query log. -/
+lemma run_none {t : spec.Domain} {cache : QueryCache spec} {trace : QueryLog spec}
+    (h : cache t = none) :
+    (cachingLoggingOracle t).run (cache, trace) =
+      (fun u => (u, (cache.cacheQuery t u, trace ++ [⟨t, u⟩]))) <$>
+        (query t : OracleComp spec _) := by
+  rw [apply_eq]
+  simp [h, monad_norm]
+
+/-- Running the combined caching-and-logging handler is equivalent to first adding the
+writer-style query log and then interpreting the resulting computation through the caching
+handler. The explicit state rearrangement also appends the newly produced log to an arbitrary
+initial trace, so the statement composes across phases. -/
+theorem run_simulateQ_eq_map_run_simulateQ_withQueryLog {α : Type u}
+    (oa : OracleComp spec α) (cache₀ : QueryCache spec) (trace₀ : QueryLog spec) :
+    (simulateQ cachingLoggingOracle oa).run (cache₀, trace₀) =
+      (fun z : (α × QueryLog spec) × QueryCache spec =>
+        (z.1.1, (z.2, trace₀ ++ z.1.2))) <$>
+        (simulateQ cachingOracle oa.withQueryLog).run cache₀ := by
+  change (simulateQ cachingLoggingOracle oa).run (cache₀, trace₀) =
+    (fun z : (α × QueryLog spec) × QueryCache spec =>
+      (z.1.1, (z.2, trace₀ ++ z.1.2))) <$>
+      (simulateQ cachingOracle (simulateQ loggingOracle oa).run).run cache₀
+  induction oa using OracleComp.inductionOn generalizing cache₀ trace₀ with
+  | pure x => simp
+  | query_bind t mx ih =>
+      rw [OracleComp.run_simulateQ_query_bind]
+      rw [OracleComp.run_simulateQ_loggingOracle_query_bind]
+      rw [OracleComp.run_simulateQ_query_bind]
+      cases hcache : cache₀ t with
+      | none =>
+          rw [run_none hcache, cachingOracle.run_none hcache]
+          simp [ih, List.append_assoc, monad_norm]
+      | some u =>
+          rw [run_some hcache, cachingOracle.run_some hcache]
+          simp [ih, List.append_assoc, monad_norm]
+
 /-- Projecting away the log component recovers the ordinary caching semantics. -/
 theorem fst_map_run_simulateQ {α : Type u}
     (oa : OracleComp spec α) (s : QueryCache spec × QueryLog spec) :
