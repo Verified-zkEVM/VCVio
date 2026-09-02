@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.HopLemmas
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.NMAHandler
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: NMAReduction
@@ -16,8 +17,8 @@ The NMA reduction: the two-layer nested managed simulation
 linked-run coupling identifying it with the final hybrid.
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
-transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` re-exports
-all of its modules and holds the overview docstring.
+transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` assembles
+the headline `euf_cma_to_nma` and holds the overview docstring.
 -/
 
 @[expose] public section
@@ -738,7 +739,7 @@ lemma hybridSimRun_le_managedRun_verify (pk : Stmt) (sk : Wit) :
   -- With the nested boundary exposed, the bound is the pair of state projections out of the
   -- layered ghost-tagged run, followed by the verify-tail split.
   --
-  -- (a) HYBRID SIDE. `ghostNmaImpl` (`GhostBodies.lean`) runs the adversary over
+  -- (a) HYBRID SIDE. `ghostNmaImpl` (`GhostBodies/NMAHandler.lean`) runs the adversary over
   -- `NmaGhostState = ((baseCache, ghostCache), signed)`, with
   -- `simGhostSignBody`/`ghostSignProgramCont` writing the accepted transcript to the ghost layer
   -- and the base oracles writing live RO reads to the base layer. Its overlay projection back to

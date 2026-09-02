@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.BodyHops
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.BodyBounds
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: GhostReadCharge
@@ -15,8 +16,8 @@ The lazy-side ghost-read charge: query-bound transport across decidability
 instances and the lazy ghost handler's per-read charge accounting.
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
-transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` re-exports
-all of its modules and holds the overview docstring.
+transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` assembles
+the headline `euf_cma_to_nma` and holds the overview docstring.
 -/
 
 @[expose] public section

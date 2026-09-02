@@ -17,8 +17,8 @@ independence of the ghost-blind step, and the ghost-domain invariant
 `ghostHybridImpl_preserves_signed_inv`.
 
 Part of the hybrid signing-body development for the CMA-to-NMA reduction;
-`VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies` re-exports all of
-its modules and holds the overview docstring.
+`VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Bodies` opens the
+chain and holds the overview docstring.
 -/
 
 @[expose] public section

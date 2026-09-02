@@ -32,14 +32,12 @@ public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Spec
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Cost
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.ExpectedCost
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Bodies
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.BodyBounds
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.GhostLayer
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.NMAHandler
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Projections
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.Assembly
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.BodyHops
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.CouplingEngine
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.GhostReadCharge

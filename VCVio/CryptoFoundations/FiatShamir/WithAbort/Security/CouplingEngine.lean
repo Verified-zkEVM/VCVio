@@ -17,8 +17,8 @@ with its deferral primitives and the attempt-count law. Not on the live path of
 the ghost-read bound; retained as general infrastructure.
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
-transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` re-exports
-all of its modules and holds the overview docstring.
+transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` assembles
+the headline `euf_cma_to_nma` and holds the overview docstring.
 -/
 
 @[expose] public section

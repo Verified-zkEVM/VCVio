@@ -13,11 +13,38 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort
 
 The first-success retry loops (`firstSome` and its distribution laws) and
 the cache-level signing bodies of the CMA-to-NMA hybrid chain (`realSignBody`,
-`progSignBody`, `transSignBody`, `simSignBody`).
+`progSignBody`, `transSignBody`, `simSignBody`). This module opens the hybrid
+signing-body development and holds its overview.
 
-Part of the hybrid signing-body development for the CMA-to-NMA reduction;
-`VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies` re-exports all of
-its modules and holds the overview docstring.
+## Overview
+
+The development provides the cache-level signing bodies of the CMA-to-NMA
+hybrid chain for the Fiat-Shamir-with-aborts transform, together with the
+run-level hybrid handlers (`hybridBaseImpl`, `hybridSignImpl`) and the
+ghost-layer presentation of the reprogramming bodies used by the Prog → Trans
+hop:
+
+* `ghostSignBody` acts on a two-layer cache, writing accepted transcripts to
+  the real layer and rejected-attempt programmings to the ghost layer; the
+  projections `run_ghostSignBody_overlay` and `run_ghostSignBody_fst` recover
+  `progSignBody` and the accepted-only programming loop of `transSignBody`.
+* `ghostHybridImpl` instruments the adversary's oracles over the layered cache
+  with a monotone bad flag firing on adversarial reads of the ghost layer,
+  with per-step projections onto both hybrid games
+  (`ghostHybridImpl_proj_prog`, `ghostHybridImpl_proj_trans`) and the
+  ghost-domain invariant `ghostHybridImpl_preserves_signed_inv`.
+
+The hybrid experiment itself and the hop lemmas live in the
+`FiatShamir.WithAbort.Security` modules.
+
+## Module layout
+
+The development is split along its phases, each module publicly importing its
+predecessor: `Bodies` (retry loops and the four signing bodies), `GhostLayer`
+(the two-layer cache presentation and the ghost-instrumented handlers),
+`Projections` (projections onto both hybrid games and the ghost-domain
+invariant), `BodyBounds` (the body-level collision and deferred-sampling
+bounds), and `NMAHandler` (the layered ghost-tagged NMA handler).
 -/
 
 @[expose] public section

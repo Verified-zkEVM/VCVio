@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.Loss
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Projections
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: BodyHops
@@ -16,8 +17,8 @@ The per-signing-query core of the Trans → Sim hop
 continuation of the hybrid experiment (`hybridVerifyCont`).
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
-transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` re-exports
-all of its modules and holds the overview docstring.
+transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` assembles
+the headline `euf_cma_to_nma` and holds the overview docstring.
 -/
 
 @[expose] public section

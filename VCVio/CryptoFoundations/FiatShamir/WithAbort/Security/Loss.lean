@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import Mathlib.Data.Nat.Choose.Cast
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Bodies
 public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 public import VCVio.ProgramLogic.Relational.SimulateQ
 public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
@@ -21,8 +21,8 @@ The CMA-to-NMA statistical loss of the Fiat-Shamir-with-aborts reduction
 (after Theorem 3, CRYPTO 2023): `cmaToNmaLoss` and its per-key part `perKeyLoss`.
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
-transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` re-exports
-all of its modules and holds the overview docstring.
+transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` assembles
+the headline `euf_cma_to_nma` and holds the overview docstring.
 -/
 
 @[expose] public section

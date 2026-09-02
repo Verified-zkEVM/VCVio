@@ -17,8 +17,8 @@ over a two-layer cache) and the ghost-instrumented hybrid handlers
 run-level hybrid handlers).
 
 Part of the hybrid signing-body development for the CMA-to-NMA reduction;
-`VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies` re-exports all of
-its modules and holds the overview docstring.
+`VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Bodies` opens the
+chain and holds the overview docstring.
 -/
 
 @[expose] public section
