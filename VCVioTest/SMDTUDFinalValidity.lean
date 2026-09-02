@@ -12,7 +12,8 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUDFi
 # SM-DT-UD final-validity canaries
 
 These executable games pin real/ideal separation, always-answering cap/duplicate/cross poisoning,
-and the fact that repeated collection-only tweaks remain valid.
+the fact that repeated collection-only tweaks remain valid, and the game's behaviour at a strict
+message subspace.
 -/
 
 @[expose] public section
@@ -259,6 +260,80 @@ theorem repeated_collection_allowed_canary :
     SM_DT_UD_SourceFinalValidity.Experiment .real repeatCollection = pure true ∧
       SM_DT_UD_SourceFinalValidity.Experiment .ideal repeatCollection = pure true := by
   exact ⟨experiment_repeatCollection_real, experiment_repeatCollection_ideal⟩
+
+/-! ## A proper subspace
+
+`problem` above runs at `M' = M` with `emb := id`, where `emb` is unobservable. The declarations
+below run the same game at a strict subspace `M' ⊊ M`.
+-/
+
+/-- A one-element type standing in for a strict subspace of the message space `Bool`. -/
+inductive Input
+  | only
+
+instance : SampleableType Input where
+  selectElem := pure .only
+  mem_support_selectElem := by simp
+  probOutput_selectElem_eq x y := by cases x; cases y; rfl
+
+@[simp] lemma uniformSample_input : ($ᵗ Input : ProbComp Input) = pure .only := rfl
+
+/-- Inputs are drawn uniformly from a one-element subspace whose embedding is `true`. Since
+`hash.eval` is the identity, the real world's answer is exactly the element of `M` that `emb`
+selects, so replacing `emb` changes the observable transcript. -/
+def subspaceProblem : SM_DT_UD_SourceFinalValidity.Problem Unit Seed Bool Bool Input Bool where
+  th := hash
+  emb := fun _ => true
+  emb_injective a b _ := by cases a; cases b; rfl
+  inputGen := $ᵗ Input
+  outputGen := pure false
+  thColl := collection
+  numTargets := 1
+
+@[simp] lemma subspaceProblem_seedGen : subspaceProblem.th.seedGen = pure .only := rfl
+
+/-- Returning the challenge answer verbatim exposes which element of `M` was hashed. -/
+def subspaceProbe : SM_DT_UD_SourceFinalValidity.Adversary subspaceProblem where
+  State := Bool
+  pick := challenge false
+  distinguish y _ := pure y
+
+private lemma run_subspaceProbe_real :
+    (simulateQ (SM_DT_UD_SourceFinalValidity.oracles .real subspaceProblem .only)
+      subspaceProbe.pick).run .initial =
+      pure (true, ⟨[false], [], true⟩) := by
+  rfl
+
+private lemma run_subspaceProbe_ideal :
+    (simulateQ (SM_DT_UD_SourceFinalValidity.oracles .ideal subspaceProblem .only)
+      subspaceProbe.pick).run .initial =
+      pure (false, ⟨[false], [], true⟩) := by
+  rfl
+
+private lemma experiment_subspaceProbe_real :
+    SM_DT_UD_SourceFinalValidity.Experiment .real subspaceProbe = pure true := by
+  simp only [SM_DT_UD_SourceFinalValidity.Experiment, subspaceProblem_seedGen, pure_bind]
+  rw [run_subspaceProbe_real]
+  rfl
+
+private lemma experiment_subspaceProbe_ideal :
+    SM_DT_UD_SourceFinalValidity.Experiment .ideal subspaceProbe = pure false := by
+  simp only [SM_DT_UD_SourceFinalValidity.Experiment, subspaceProblem_seedGen, pure_bind]
+  rw [run_subspaceProbe_ideal]
+  rfl
+
+/-- The strict subspace is a usable instantiation: the hidden input is uniform on `M'` rather than
+on `M`, which is the hypothesis a bound in `|M'|` needs, and the real world hashes `emb x`, so the
+transcript records the embedded element. -/
+theorem subspace_emb_applied_canary :
+    subspaceProblem.HasUniformInputs ∧
+      SM_DT_UD_SourceFinalValidity.Experiment .real subspaceProbe = pure true ∧
+      SM_DT_UD_SourceFinalValidity.Experiment .ideal subspaceProbe = pure false ∧
+      SM_DT_UD_SourceFinalValidity.DirectedAdvantage subspaceProbe = 1 := by
+  refine ⟨rfl, experiment_subspaceProbe_real, experiment_subspaceProbe_ideal, ?_⟩
+  simp [SM_DT_UD_SourceFinalValidity.DirectedAdvantage,
+    SM_DT_UD_SourceFinalValidity.RealSuccess, SM_DT_UD_SourceFinalValidity.IdealSuccess,
+    experiment_subspaceProbe_real, experiment_subspaceProbe_ideal]
 
 /-- The phase types expose the challenge/collection bundle only before seed reveal. -/
 example : OracleComp Specs separate.State := separate.pick
