@@ -84,34 +84,34 @@ theorem cma_to_nma_advantage_bound
         (Stateful.statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
           (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv))⟩
 
-section evalDistBridge
+section evalSPMFBridge
 
 variable [SampleableType Chal]
 
 /-- The `ofLift + uniformSampleImpl` simulation on `unifSpec + (Unit →ₒ Chal)` preserves
-`evalDist`. Both oracle components sample uniformly from their range. -/
-private lemma evalDist_simulateQ_unifChalImpl {α : Type}
+`evalSPMF`. Both oracle components sample uniformly from their range. -/
+private lemma evalSPMF_simulateQ_unifChalImpl {α : Type}
     (oa : OracleComp (unifSpec + (Unit →ₒ Chal)) α) :
-    evalDist (simulateQ (QueryImpl.ofLift unifSpec ProbComp +
-      (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa) = evalDist oa := by
-  apply OracleComp.evalDist_simulateQ_eq_evalDist
+    evalSPMF (simulateQ (QueryImpl.ofLift unifSpec ProbComp +
+      (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa) = evalSPMF oa := by
+  apply OracleComp.evalSPMF_simulateQ_eq_evalSPMF
   rintro (n | u)
   · simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply]
-    rw [evalDist_query (spec := unifSpec + (Unit →ₒ Chal))]
-    exact evalDist_query (spec := unifSpec) n
+    rw [evalSPMF_query (spec := unifSpec + (Unit →ₒ Chal))]
+    exact evalSPMF_query (spec := unifSpec) n
   · simp only [QueryImpl.add_apply_inr, uniformSampleImpl]
-    exact show (evalDist ($ᵗ ((ofFn fun _ : Unit => Chal).Range u)) :
+    exact show (evalSPMF ($ᵗ ((ofFn fun _ : Unit => Chal).Range u)) :
         SPMF ((ofFn fun _ : Unit => Chal).Range u)) = _ by
-      rw [evalDist_uniformSample, evalDist_query]; rfl
+      rw [evalSPMF_uniformSample, evalSPMF_query]; rfl
 
 /-- Corollary: `probEvent` is preserved by the `ofLift + uniformSampleImpl` simulation. -/
 private lemma probEvent_simulateQ_unifChalImpl {α : Type}
     (oa : OracleComp (unifSpec + (Unit →ₒ Chal)) α) (p : α → Prop) :
     Pr[ p | simulateQ (QueryImpl.ofLift unifSpec ProbComp +
       (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa] = Pr[ p | oa] :=
-  probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_simulateQ_unifChalImpl oa)
+  probEvent_congr' (fun _ _ => Iff.rfl) (evalSPMF_simulateQ_unifChalImpl oa)
 
-end evalDistBridge
+end evalSPMFBridge
 
 section nmaToExtraction
 

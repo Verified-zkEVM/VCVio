@@ -103,10 +103,16 @@ section add
 
 /-- `spec₁ + spec₂` specifies access to oracles in both `spec₁` and `spec₂`.
 The input is split as a sum type of the two original input sets.
-This corresponds exactly to addition of the corresponding `PFunctor`. -/
-@[implicit_reducible] instance {ι ι'} :
+This corresponds exactly to addition of the corresponding `PFunctor`.
+
+The ordinary instance reducibility assigned by the `instance` command lets its `HAdd.hAdd`
+projection reduce while checking dependent implicit types such as
+`(spec₁ + spec₂).Range (.inl t)`, without unfolding combined specifications during ordinary
+reducible-transparency tactic matching. -/
+instance {ι ι'} :
     HAdd (OracleSpec ι) (OracleSpec ι') (OracleSpec (ι ⊕ ι')) where
-  hAdd spec spec' := Sum.elim spec spec'
+  hAdd spec spec' :=
+    OracleSpec.ofPFunctor (PFunctor.sum spec.toPFunctor spec'.toPFunctor)
 
 lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
     spec + spec' = Sum.elim spec spec' := rfl

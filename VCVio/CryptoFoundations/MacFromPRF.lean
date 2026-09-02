@@ -61,7 +61,7 @@ theorem toMacAlg_perfectlyComplete [DecidableEq R] (prf : PRFScheme K D R) :
     prf.toMacAlg.PerfectlyComplete ProbCompRuntime.probComp := by
   intro msg
   simp only [toMacAlg, pure_bind, decide_true]
-  change Pr[= true | do let _ ← prf.keygen; pure true] = 1
+  change Pr[= true | 𝒮[(do let _ ← prf.keygen; pure true : ProbComp Bool)]] = 1
   simp
 
 /-! ## Security Reduction (Boneh-Shoup Theorem 6.2)
@@ -147,9 +147,8 @@ private theorem simulateQ_prfReal_macToPRFQueryImpl_run
       rw [simulateQ_prfRealQueryImpl_liftComp]
   | inr d =>
       ext
-      simpa [QueryImpl.writerTMapBase, macToPRFQueryImpl, ufCmaImpl, prfFuncQuery,
-        toMacAlg, MacAlg.taggingOracle, map_eq_bind_pure_comp] using
-        simulateQ_prfRealQueryImpl_inr prf k d
+      simp [QueryImpl.writerTMapBase, macToPRFQueryImpl, ufCmaImpl, prfFuncQuery,
+        toMacAlg, MacAlg.taggingOracle, map_eq_bind_pure_comp]
 
 /-- The prfRealExp with the reduction equals the UF-CMA body as a `ProbComp` computation. -/
 private theorem prfRealExp_macToPRFReduction_eq_body (prf : PRFScheme K D R)
@@ -171,6 +170,8 @@ theorem prfRealExp_macToPRFReduction_eq_UF_CMA_Exp (prf : PRFScheme K D R)
     Pr[= true | prf.prfRealExp (macToPRFReduction prf adversary)] =
       MacAlg.UF_CMA_Advantage ProbCompRuntime.probComp adversary := by
   rw [prfRealExp_macToPRFReduction_eq_body]
+  unfold MacAlg.UF_CMA_Advantage
+  rw [probOutput_def, probOutput_def]
   rfl
 
 /-- The ideal experiment decomposes as: run the forger (under the random-oracle simulation

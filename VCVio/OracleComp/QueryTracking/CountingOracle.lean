@@ -111,11 +111,11 @@ These lemmas connect the result-marginal distribution of a `withCost`-instrument
 computation to the distribution of the uninstrumented computation, enabling direct
 probability-level reasoning about traced computations. -/
 
-lemma evalDist_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+lemma evalSPMF_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
-    𝒟[Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] =
-      𝒟[simulateQ so mx] :=
-  evalDist_fst_run_withTraceBefore so costFn mx
+    𝒮[Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] =
+      𝒮[simulateQ so mx] :=
+  evalSPMF_fst_run_withTraceBefore so costFn mx
 
 lemma probOutput_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) (x : α) :
@@ -193,9 +193,9 @@ lemma fst_map_run_simulateQ (costFn : spec.Domain → ω) (oa : OracleComp spec 
   rw [costOracle, QueryImpl.fst_map_run_withCost, simulateQ_ofLift_eq_self]
 
 @[simp]
-lemma evalDist_fst_run_simulateQ [IsUniformSpec spec]
+lemma evalSPMF_fst_run_simulateQ [IsUniformSpec spec]
     (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
-    𝒟[Prod.fst <$> (simulateQ (costOracle costFn) oa).run] = 𝒟[oa] := by
+    𝒮[Prod.fst <$> (simulateQ (costOracle costFn) oa).run] = 𝒮[oa] := by
   rw [fst_map_run_simulateQ]
 
 @[simp]
@@ -260,9 +260,9 @@ lemma probOutput_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 
   rw [fst_map_run_simulateQ]
 
 @[simp]
-lemma evalDist_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀} [DecidableEq ι₀]
+lemma evalSPMF_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀} [DecidableEq ι₀]
     [IsUniformSpec spec₀] {α : Type} (oa : OracleComp spec₀ α) :
-    𝒟[Prod.fst <$> (simulateQ (spec₀.countingOracle) oa).run] = 𝒟[oa] := by
+    𝒮[Prod.fst <$> (simulateQ (spec₀.countingOracle) oa).run] = 𝒮[oa] := by
   rw [fst_map_run_simulateQ]
 
 @[simp]

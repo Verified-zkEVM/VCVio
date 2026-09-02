@@ -8,6 +8,7 @@ module
 public import VCVio.EvalDist.PFunctor
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.QueryTracking.Tracing
+import VCVio.OracleComp.QueryTracking.LoggingOracle
 
 /-!
 # PFunctor and OracleSpec Semantics Canaries
@@ -38,16 +39,16 @@ noncomputable instance : triPFunctor.IsUniformSpec :=
 def directSample : PFunctor.FreeM triPFunctor (Fin 3) :=
   PFunctor.FreeM.lift ()
 
-example : 𝒟[directSample] =
+example : 𝒮[directSample] =
     (PFunctor.IsProbabilitySpec.toPMF (P := triPFunctor) () : SPMF (Fin 3)) := by
   simpa only [directSample] using
-    (PFunctor.FreeM.evalDist_lift (P := triPFunctor) ())
+    (PFunctor.FreeM.evalSPMF_lift (P := triPFunctor) ())
 
-example := PFunctor.FreeM.evalDist_lift_eq_uniform (P := triPFunctor) ()
+example := PFunctor.FreeM.evalSPMF_lift_eq_uniform (P := triPFunctor) ()
 
 example : support directSample = Set.univ := by
   simpa only [directSample] using
-    (PFunctor.FreeM.support_lift (P := triPFunctor) ())
+    (PFunctor.FreeM.support_lift_eq_univ (P := triPFunctor) ())
 
 example : EvalDistCompatible (PFunctor.FreeM triPFunctor) := inferInstance
 
@@ -101,11 +102,50 @@ noncomputable example : PFunctor.IsUniformSpec boolOracleSpec.toPFunctor :=
   OracleSpec.IsUniformSpec.toPFunctor
 
 example (program : OracleComp boolOracleSpec Bool) :
-    𝒟[program] = program.liftM PFunctor.IsProbabilitySpec.toPMF :=
-  PFunctor.FreeM.evalDist_eq_liftM program
+    𝒮[program] = program.liftM PFunctor.IsProbabilitySpec.toPMF :=
+  PFunctor.FreeM.evalSPMF_eq_liftM program
 
 example (program : OracleComp boolOracleSpec Bool) :
-    𝒟[program] = simulateQ OracleSpec.IsProbabilitySpec.toPMF program :=
-  OracleComp.evalDist_eq_simulateQ program
+    𝒮[program] = simulateQ OracleSpec.IsProbabilitySpec.toPMF program :=
+  OracleComp.evalSPMF_eq_simulateQ program
+
+/-! ## Nested coproduct transparency -/
+
+section NestedCoproductTransparency
+
+variable {ι₁ ι₂ ι₃ : Type}
+variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂} {spec₃ : OracleSpec ι₃}
+
+set_option linter.tacticCheckInstances true
+
+example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) (t : spec₂.Domain)
+    (consume : spec₂.Range t → Nat) :
+    consume (impl (.inl (.inr t))) = consume (impl (.inl (.inr t))) := by
+  rfl
+
+example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) (t : spec₃.Domain)
+    (consume : spec₃.Range t → Nat) :
+    consume (impl (.inr t)) = consume (impl (.inr t)) := by
+  rfl
+
+example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) :
+    QueryImpl spec₃ (StateT (List spec₃.Domain) Id) :=
+  QueryImpl.appendInputLog (fun t => impl (.inr t))
+
+example [IsProbabilitySpec ((spec₁ + spec₂) + spec₃)] (t : spec₂.Domain)
+    (program : OracleComp ((spec₁ + spec₂) + spec₃)
+      ((((spec₁ + spec₂) + spec₃).Range (.inl (.inr t))) × Bool)) :
+    Pr[fun z : spec₂.Range t × Bool => z.2 = true | program] =
+      Pr[fun z : spec₂.Range t × Bool => z.2 = true | program] := by
+  rfl
+
+example [IsProbabilitySpec ((spec₁ + spec₂) + spec₃)] (t : spec₃.Domain)
+    (program : OracleComp ((spec₁ + spec₂) + spec₃)
+      ((((spec₁ + spec₂) + spec₃).Range (.inr t)) × Bool)) :
+    Pr[fun z : spec₃.Range t × Bool => z.2 = true | program] =
+      Pr[fun z : spec₃.Range t × Bool => z.2 = true | program] := by
+  rfl
+
+end NestedCoproductTransparency
 
 end VCVioTest.PFunctorFacade

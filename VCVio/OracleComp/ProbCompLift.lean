@@ -70,8 +70,8 @@ namespace ProbCompRuntime
 variable {m : Type → Type v} [Monad m] {α : Type}
 
 /-- Observe an ambient computation as an `SPMF` using the runtime's bundled semantics. -/
-def evalDist (runtime : ProbCompRuntime m) (mx : m α) : SPMF α :=
-  runtime.toSPMFSemantics.evalDist mx
+def evalSPMF (runtime : ProbCompRuntime m) (mx : m α) : SPMF α :=
+  runtime.toSPMFSemantics.evalSPMF mx
 
 /-- Failure probability of an ambient computation under the runtime's bundled semantics. -/
 def probFailure (runtime : ProbCompRuntime m) (mx : m α) : ENNReal :=

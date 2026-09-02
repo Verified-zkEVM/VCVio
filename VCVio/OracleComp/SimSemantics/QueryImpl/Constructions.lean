@@ -28,7 +28,7 @@ a new `QueryImpl spec n` that wraps the base with that side effect:
 Both come with a complete generic theory, parametric in a projection
 `proj : ∀ {γ}, n γ → m γ` that strips the instrumentation: `proj_simulateQ_preInsert`,
 `probFailure_proj_simulateQ_preInsert`, `NeverFail_proj_simulateQ_preInsert_iff`,
-`evalDist_proj_simulateQ_preInsert`, `probOutput_proj_simulateQ_preInsert`,
+`evalSPMF_proj_simulateQ_preInsert`, `probOutput_proj_simulateQ_preInsert`,
 `support_proj_simulateQ_preInsert`, `finSupport_proj_simulateQ_preInsert`, and the
 induction principle `simulateQ_preInsert.induct` (with `postInsert` analogues). Query-bound
 transfer through these wrappers lives in `QueryTracking/QueryBound.lean`.
@@ -194,9 +194,9 @@ lemma simulateQ_preInsert_const_pure [Monad m]
     funext t; simp
   rw [h, simulateQ_liftTarget]
 
-/-! #### `evalDist` / `probOutput` / `support` bridges for `preInsert` -/
+/-! #### `evalSPMF` / `probOutput` / `support` bridges for `preInsert` -/
 
-lemma evalDist_proj_simulateQ_preInsert [Monad m]
+lemma evalSPMF_proj_simulateQ_preInsert [Monad m]
     [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (nx : spec.Domain → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
@@ -205,7 +205,7 @@ lemma evalDist_proj_simulateQ_preInsert [Monad m]
         proj (b >>= f) = proj b >>= fun x => proj (f x))
     (hproj_apply : ∀ t, proj ((so.preInsert nx) t) = so t)
     (oa : OracleComp spec β) :
-    𝒟[proj (simulateQ (so.preInsert nx) oa)] = 𝒟[simulateQ so oa] := by
+    𝒮[proj (simulateQ (so.preInsert nx) oa)] = 𝒮[simulateQ so oa] := by
   rw [proj_simulateQ_preInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma probOutput_proj_simulateQ_preInsert [Monad m]
@@ -363,9 +363,9 @@ lemma simulateQ_postInsert_const_pure
   have h : so.postInsert (fun _ _ => (pure x : n α)) = so.liftTarget n := by funext t; simp
   rw [h, simulateQ_liftTarget]
 
-/-! #### `evalDist` / `probOutput` / `support` bridges for `postInsert` -/
+/-! #### `evalSPMF` / `probOutput` / `support` bridges for `postInsert` -/
 
-lemma evalDist_proj_simulateQ_postInsert
+lemma evalSPMF_proj_simulateQ_postInsert
     [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
@@ -374,7 +374,7 @@ lemma evalDist_proj_simulateQ_postInsert
         proj (b >>= f) = proj b >>= fun x => proj (f x))
     (hproj_apply : ∀ t, proj ((so.postInsert nx) t) = so t)
     (oa : OracleComp spec β) :
-    𝒟[proj (simulateQ (so.postInsert nx) oa)] = 𝒟[simulateQ so oa] := by
+    𝒮[proj (simulateQ (so.postInsert nx) oa)] = 𝒮[simulateQ so oa] := by
   rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma probOutput_proj_simulateQ_postInsert

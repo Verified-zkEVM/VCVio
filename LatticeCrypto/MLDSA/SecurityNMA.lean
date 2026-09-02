@@ -85,8 +85,6 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
 
 section KeyGen
 
-variable [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)]
-
 /-- Build an ML-DSA public/secret key pair from the raw key material
 `(ρ, ρ', key, s₁, s₂, t)`, splitting `t` via `Power2Round`. This is the common tail of both the
 real and the uniform-`t` key generators: only the *distribution* of `t` differs between them.
@@ -121,7 +119,7 @@ def keygen1 : ProbComp (PublicKey p prims × SecretKey p) := do
   let t ← $ᵗ (RqVec p.k)
   return keyFromMaterial p prims rho key s1 s2 t
 
-omit [DecidableEq prims.High] [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] in
+omit [DecidableEq prims.High] in
 /-- `keyFromMaterial` reproduces `keyGenFromSeed` on the honest material derived from a seed. -/
 theorem keyFromMaterial_eq (seed : Bytes 32) :
     let (rho, rhoPrime, key) := prims.expandSeed seed
@@ -178,7 +176,7 @@ lemma polyVecBounded_zero (k b : ℕ) : polyVecBounded (0 : RqVec k) b := by
 uniform on the centered interval `[-b, b]`. This is the secret/error
 distribution of the Module-LWE assumption used by ML-DSA (`η ∈ {2, 4}` for the
 approved parameter sets). -/
-noncomputable def sampleShortVec (k b : ℕ) [SampleableType (RqVec k)] : ProbComp (RqVec k) :=
+noncomputable def sampleShortVec (k b : ℕ) : ProbComp (RqVec k) :=
   letI : Fintype {v : RqVec k // polyVecBounded v b} := .ofFinite _
   letI : Nonempty {v : RqVec k // polyVecBounded v b} := ⟨0, polyVecBounded_zero k b⟩
   letI : SampleableType {v : RqVec k // polyVecBounded v b} := .ofFintype _
@@ -214,7 +212,7 @@ omit nttOps in
 /-- Every output of `sampleShortVec k b` lies in the `b`-bounded box: the sampler draws from
 the subtype `{v // polyVecBounded v b}` and projects out the value, so support membership
 carries the bound. -/
-lemma mem_support_sampleShortVec {k b : ℕ} [SampleableType (RqVec k)] {v : RqVec k}
+lemma mem_support_sampleShortVec {k b : ℕ} {v : RqVec k}
     (hv : v ∈ support (sampleShortVec k b)) : polyVecBounded v b := by
   simp only [sampleShortVec, support_map] at hv
   obtain ⟨u, -, rfl⟩ := hv
@@ -253,7 +251,6 @@ end KeyGen
 section Game
 
 variable {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
-  [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)]
   [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec]
 
 /-- The EUF-NMA game over an arbitrary forging strategy `main` and an arbitrary key generator
@@ -275,7 +272,7 @@ noncomputable def nmaGame
         (M × Option (Commitment p prims × Response p prims))) :
     SPMF Bool :=
   (FiatShamirWithAbort.runtime (Commit := Commitment p prims)
-    (Chal := CommitHashBytes p) M).evalDist do
+    (Chal := CommitHashBytes p) M).evalSPMF do
       let (pk, _) ← (FiatShamirWithAbort.runtime (Commit := Commitment p prims)
         (Chal := CommitHashBytes p) M).liftProbComp keygen
       let (msg, σ) ← main pk
@@ -306,7 +303,7 @@ noncomputable def nmaGameShort
         (M × Option (Commitment p prims × Response p prims))) :
     SPMF Bool :=
   (FiatShamirWithAbort.runtime (Commit := Commitment p prims)
-    (Chal := CommitHashBytes p) M).evalDist do
+    (Chal := CommitHashBytes p) M).evalSPMF do
       let (pk, _) ← (FiatShamirWithAbort.runtime (Commit := Commitment p prims)
         (Chal := CommitHashBytes p) M).liftProbComp keygen
       let (msg, σ) ← main pk
@@ -330,8 +327,6 @@ end Game
 section Distinguisher
 
 variable {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
-  [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)]
-  [SampleableType (TqMatrix p.k p.l)]
   [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec]
 
 /-- The random-oracle simulation implementation used by `FiatShamirWithAbort.runtime`: forward
@@ -348,7 +343,7 @@ def roImpl :
 
 /-- Observe an oracle computation as a plain `ProbComp` by simulating its random oracle from an
 empty cache and discarding the final cache state. This is exactly the `ProbComp` underlying
-`FiatShamirWithAbort.runtime.evalDist` (see `BundledSemantics.withStateOracle`), exposed so the
+`FiatShamirWithAbort.runtime.evalSPMF` (see `BundledSemantics.withStateOracle`), exposed so the
 MLWE distinguisher — which must inhabit `… → ProbComp Bool` — can run the NMA game internally. -/
 def simulateToProbComp {α : Type}
     (mx : OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) α) :
@@ -372,8 +367,7 @@ The matrix never appears as a free challenge: phrasing the MLWE instance over se
 ROM modeling of Dilithium with `ExpandA` a random oracle, and it makes the distinguisher `B` total
 (no `ExpandA`-surjectivity assumption). Relating an abstract matrix-based MLWE problem to this
 concrete seed-based one is a statement-level bridge obligation. -/
-def mldsaMLWE (p : Params) (prims : Primitives p)
-    [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] :
+def mldsaMLWE (p : Params) (prims : Primitives p) :
     LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := do
     let seed ← $ᵗ (Bytes 32)
@@ -425,8 +419,7 @@ is not information-theoretically trivial, since `ExpandA(ρ) · s₁ + s₂` wit
 `(s₁, s₂)` is far from uniform. Bridging the seed-based challenge to the standard
 uniform-matrix form is `advantage_mldsaMLWEShort_le_matrix`, under the explicit
 `expandAIdealization` assumption. -/
-noncomputable def mldsaMLWEShort (p : Params) (prims : Primitives p)
-    [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] :
+noncomputable def mldsaMLWEShort (p : Params) (prims : Primitives p) :
     LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := $ᵗ (Bytes 32)
   sampleSecret := sampleShortVec p.l p.eta
@@ -439,9 +432,7 @@ public challenge is a uniform matrix `A`, the secret and error are uniform on th
 `η`-bounded box, and the decision target is `A · s₁ + s₂` versus uniform. This is the
 literature-facing hardness assumption; `mldsaMLWEShort` reduces to it under
 `expandAIdealization` (`advantage_mldsaMLWEShort_le_matrix`). -/
-noncomputable def mldsaMatrixMLWE (p : Params)
-    [SampleableType (TqMatrix p.k p.l)]
-    [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)] :
+noncomputable def mldsaMatrixMLWE (p : Params) :
     LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := $ᵗ (TqMatrix p.k p.l)
   sampleSecret := sampleShortVec p.l p.eta
@@ -461,8 +452,7 @@ unrestricted-quantifier form is only satisfiable at large `εA` (a distinguisher
 recompute `ExpandA(ρ)` and compare); pending the cost-model infrastructure (#460) it
 should be read computationally, against bounded distinguishers, where it is the
 assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
-def expandAIdealization (p : Params) (prims : Primitives p)
-    [SampleableType (TqMatrix p.k p.l)] (εA : ℝ) : Prop :=
+def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ) : Prop :=
   ∀ [IsUniformSpec unifSpec] (D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool),
     |(Pr[= true | do
         let rho ← $ᵗ (Bytes 32)
@@ -515,7 +505,7 @@ distinguisher `D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s�
 Proof recipe: rewrite both advantages via `advantage_eq_game_boolDistAdvantage` and
 `ProbComp.boolDistAdvantage`; the `game1` branches are identified by stripping the
 unused matrix draw (`probOutput_bind_const`, with `Pr[⊥ | $ᵗ _] = 0`) and commuting
-the independent uniform draws (`evalDist_bind_bind_swap`); the `game0` branches
+the independent uniform draws (`evalSPMF_bind_bind_swap`); the `game0` branches
 are `≤ εA` by `hA` applied at `D` above, after `bind_assoc` normalization. Conclude
 by the triangle inequality. -/
 lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
@@ -557,7 +547,7 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
     rw [probOutput_bind_const, probFailure_uniformSample]
     simp only [tsub_zero, one_mul]
     rw [probOutput_def, probOutput_def,
-      evalDist_bind_bind_swap
+      evalSPMF_bind_bind_swap
         ($ᵗ (Bytes 32)) ($ᵗ (RqVec p.k)) (fun rho t => B (rho, t))]
   have h0 : |(Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B]).toReal -
       (Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm]).toReal| ≤ εA := by
@@ -576,13 +566,13 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
       -- Commute the trailing `ρ` draw to the front (three independent-draw transpositions).
       rw [probOutput_def, probOutput_def]
       congr 1
-      refine Eq.trans (evalDist_bind_congr' _ (fun A => evalDist_bind_congr' _ (fun s1 =>
-        evalDist_bind_bind_swap (sampleShortVec p.k p.eta) ($ᵗ (Bytes 32))
+      refine Eq.trans (evalSPMF_bind_congr' _ (fun A => evalSPMF_bind_congr' _ (fun s1 =>
+        evalSPMF_bind_bind_swap (sampleShortVec p.k p.eta) ($ᵗ (Bytes 32))
           (fun s2 rho => B (rho, A * s1 + s2))))) ?_
-      refine Eq.trans (evalDist_bind_congr' _ (fun A =>
-        evalDist_bind_bind_swap (sampleShortVec p.l p.eta) ($ᵗ (Bytes 32))
+      refine Eq.trans (evalSPMF_bind_congr' _ (fun A =>
+        evalSPMF_bind_bind_swap (sampleShortVec p.l p.eta) ($ᵗ (Bytes 32))
           (fun s1 rho => sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2)))) ?_
-      exact evalDist_bind_bind_swap
+      exact evalSPMF_bind_bind_swap
         ($ᵗ (TqMatrix p.k p.l)) ($ᵗ (Bytes 32))
         (fun A rho => sampleShortVec p.l p.eta >>= fun s1 =>
           sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2))
@@ -627,16 +617,14 @@ theorem advantage_eq_game_boolDistAdvantage
   exact ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch _ _
 
 variable {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
-  [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)]
   [SampleableType (CommitHashBytes p)]
 
-omit [SampleableType (RqVec p.k)] in
 /-- **NMA-game / distinguisher plumbing.** Pushing the `keygen` sampling out of the
 Fiat-Shamir-with-aborts runtime: the `Pr[= true]` of `nmaGame … keygen` equals the `Pr[= true]` of
 first sampling `(pk, _) ← keygen` (in plain `ProbComp`) and then running the forge-and-verify tail
 through `simulateToProbComp` — which is exactly the body of `distinguisherB` evaluated at `pk`.
 
-This is the bundled-semantics fact `runtime.evalDist (liftM oa >>= rest) = 𝒟[oa] >>= …`
+This is the bundled-semantics fact `runtime.evalSPMF (liftM oa >>= rest) = 𝒮[oa] >>= …`
 (`SPMFSemantics.withStateOracle` interpret/observe with `roSim.run'_liftM_bind`), specialised to
 the ML-DSA NMA game. It discharges the runtime plumbing but deliberately makes no claim that two
 different key distributions coincide. -/
@@ -648,7 +636,7 @@ theorem nmaGame_eq_keygen_bind
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     nmaGame p prims hr maxAttempts keygen main =
-      𝒟[(do
+      𝒮[(do
         let (pk, _) ← keygen
         simulateToProbComp p prims (M := M) (do
           let (msg, σ) ← main pk
@@ -664,20 +652,19 @@ theorem nmaGame_eq_keygen_bind
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) Bool := fun pk => do
     let (msg, σ) ← main pk
     (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify pk msg σ
-  unfold nmaGame FiatShamirWithAbort.runtime ProbCompRuntime.evalDist
-    ProbCompRuntime.liftProbComp SPMFSemantics.evalDist SemanticsVia.denote
-  change 𝒟[(simulateQ impl (liftM keygen >>= fun pk => rest pk.1)).run' ∅] =
-    𝒟[keygen >>= fun pk => simulateToProbComp p prims (rest pk.1)]
+  unfold nmaGame FiatShamirWithAbort.runtime ProbCompRuntime.evalSPMF
+    ProbCompRuntime.liftProbComp SPMFSemantics.evalSPMF SemanticsVia.denote
+  change 𝒮[(simulateQ impl (liftM keygen >>= fun pk => rest pk.1)).run' ∅] =
+    𝒮[keygen >>= fun pk => simulateToProbComp p prims (rest pk.1)]
   rw [simulateQ_bind,
     roSim.run'_liftM_bind (ro := ro) (oa := keygen)
       (rest := fun pk => simulateQ impl (rest pk.1)) (s := ∅)]
-  rw [evalDist_bind, evalDist_bind]
+  rw [evalSPMF_bind, evalSPMF_bind]
   simp only [simulateToProbComp, roImpl]
   rfl
 
 /-! ### The exact short-model key-swap hop -/
 
-omit [SampleableType (RqVec p.k)] in
 /-- Short-model NMA-game / distinguisher plumbing: the `nmaGame_eq_keygen_bind` rewrite at the
 short scheme. Pushing the `keygen` sampling out of the Fiat-Shamir-with-aborts runtime, the
 `Pr[= true]` of `nmaGameShort … keygen` equals that of first sampling `(pk, _) ← keygen` in
@@ -691,7 +678,7 @@ theorem nmaGameShort_eq_keygen_bind
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     nmaGameShort p prims hr maxAttempts keygen main =
-      𝒟[(do
+      𝒮[(do
         let (pk, _) ← keygen
         simulateToProbComp p prims (M := M) (do
           let (msg, σ) ← main pk
@@ -707,14 +694,14 @@ theorem nmaGameShort_eq_keygen_bind
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) Bool := fun pk => do
     let (msg, σ) ← main pk
     (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
-  unfold nmaGameShort FiatShamirWithAbort.runtime ProbCompRuntime.evalDist
-    ProbCompRuntime.liftProbComp SPMFSemantics.evalDist SemanticsVia.denote
-  change 𝒟[(simulateQ impl (liftM keygen >>= fun pk => rest pk.1)).run' ∅] =
-    𝒟[keygen >>= fun pk => simulateToProbComp p prims (rest pk.1)]
+  unfold nmaGameShort FiatShamirWithAbort.runtime ProbCompRuntime.evalSPMF
+    ProbCompRuntime.liftProbComp SPMFSemantics.evalSPMF SemanticsVia.denote
+  change 𝒮[(simulateQ impl (liftM keygen >>= fun pk => rest pk.1)).run' ∅] =
+    𝒮[keygen >>= fun pk => simulateToProbComp p prims (rest pk.1)]
   rw [simulateQ_bind,
     roSim.run'_liftM_bind (ro := ro) (oa := keygen)
       (rest := fun pk => simulateQ impl (rest pk.1)) (s := ∅)]
-  rw [evalDist_bind, evalDist_bind]
+  rw [evalSPMF_bind, evalSPMF_bind]
   simp only [simulateToProbComp, roImpl]
   rfl
 
@@ -729,7 +716,7 @@ Proof recipe: both branches follow the same shape: `rw [nmaGameShort_eq_keygen_b
 `simp only [LearningWithErrors.game0/1, LearningWithErrors.distr/uniformDistr,
 distinguisherBShort, mldsaMLWEShort, keygenShort/1, keyFromMaterial, bind_assoc, pure_bind]`,
 strip the leading `K` draw with `probOutput_bind_const` (`Pr[⊥ | $ᵗ (Bytes 32)] = 0`), and
-close with `probOutput_def`/`SPMF.evalDist_def`. -/
+close with `probOutput_def`/`SPMF.evalSPMF_def`. -/
 theorem nma_keyswap_hop_short
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
@@ -741,11 +728,11 @@ theorem nma_keyswap_hop_short
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
         (distinguisherBShort p prims hr maxAttempts main) := by
   set B := distinguisherBShort p prims hr maxAttempts main (M := M) with hB
-  -- `Pr[= true | 𝒟[Y]] = Pr[= true | Y]` holds definitionally (the SPMF self-lift is `id`).
-  have peel : ∀ (Y : ProbComp Bool), Pr[= true | 𝒟[Y]] = Pr[= true | Y] := fun _ => rfl
+  -- `Pr[= true | 𝒮[Y]] = Pr[= true | Y]` holds definitionally (the SPMF self-lift is `id`).
+  have peel : ∀ (Y : ProbComp Bool), Pr[= true | 𝒮[Y]] = Pr[= true | Y] := fun _ => rfl
   have hkey : Pr[⊥ | ($ᵗ (Bytes 32) : ProbComp (Bytes 32))] = 0 := probFailure_uniformSample _
-  have hss : ∀ (k b : ℕ) [SampleableType (RqVec k)], Pr[⊥ | sampleShortVec k b] = 0 := by
-    intro k b _
+  have hss : ∀ (k b : ℕ), Pr[⊥ | sampleShortVec k b] = 0 := by
+    intro k b
     simp only [sampleShortVec, probFailure_map, probFailure_uniformSample]
   rw [advantage_eq_game_boolDistAdvantage (mldsaMLWEShort p prims) B,
     ProbComp.boolDistAdvantage, nmaAdvantageShort, nmaAdvantageShort]
@@ -775,7 +762,6 @@ end Hop
 section Extractor
 
 variable {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
-  [SampleableType (RqVec p.l)] [SampleableType (RqVec p.k)]
   [SampleableType (CommitHashBytes p)]
 
 /-- The concrete SelfTargetMSIS problem embedded by ML-DSA verification (Lemma 7, Step 3).
@@ -976,7 +962,7 @@ theorem nmaAdvantage_keygen1_le_stmsis
   classical
   rw [nmaAdvantage, nmaGame_eq_keygen_bind, SelfTargetMSIS.advantage,
     SelfTargetMSIS.experiment]
-  rw [probOutput_def, SPMF.evalDist_def]
+  rw [probOutput_def, SPMF.evalSPMF_def]
   -- The STMSIS `sampleParams` is exactly `keygen1` followed by publishing `(ExpandA(ρ), pk)`, so
   -- both `Pr[= true]`s bind over the same `keygen1` prefix; compare them per-key.
   change Pr[= true | (keygen1 p prims) >>= _] ≤
@@ -1046,8 +1032,8 @@ endpoint reached here: it is the tailored verifier relation, and reducing it to 
 SelfTargetMSIS normal form `[I_m | A] · y` (challenge in the final coefficient block of the
 short preimage `y`) is follow-up work. -/
 
-omit [DecidableEq prims.High] [DecidableEq (Commitment p prims)] [SampleableType (RqVec p.l)]
-  [SampleableType (RqVec p.k)] [SampleableType (CommitHashBytes p)] in
+omit [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
+  [SampleableType (CommitHashBytes p)] in
 /-- Under the transform laws, the verifier's recomputation `computeWApprox` is the plain
 coefficient-domain matrix expression `Â·z − c·(t₁·2^d)`: the transform round trip
 disappears, `*`/`•` are the transform-backed matrix-vector and scalar-vector products on
@@ -1063,8 +1049,7 @@ theorem computeWApprox_eq_mul_sub_smul (h_transform : NTTRingLaws nttOps)
   simp only [computeWApprox]
   exact nttOps.unhatVec_sub _ _
 
-omit [DecidableEq (Commitment p prims)] [SampleableType (RqVec p.k)]
-  [SampleableType (CommitHashBytes p)] in
+omit [DecidableEq (Commitment p prims)] [SampleableType (CommitHashBytes p)] in
 /-- **What the identification verifier's accept means algebraically.** With
 `c = SampleInBall(c̃)`, the verifier accepts `(w₁, c̃, (z, h))` exactly when the norm gates
 `‖z‖∞ < γ₁ − β` and `weight(h) ≤ ω` hold and the published commitment `w₁` satisfies the
@@ -1300,7 +1285,7 @@ theorem nmaAdvantage_keygenShort1_le_stmsis
   classical
   rw [nmaAdvantageShort, nmaGameShort_eq_keygen_bind, SelfTargetMSIS.advantage,
     SelfTargetMSIS.experiment]
-  rw [probOutput_def, SPMF.evalDist_def]
+  rw [probOutput_def, SPMF.evalSPMF_def]
   -- The short STMSIS `sampleParams` is exactly `keygenShort1` followed by publishing
   -- `(ExpandA(ρ), pk)`, so both `Pr[= true]`s bind over the same prefix; compare them per-key.
   change Pr[= true | (keygenShort1 p prims) >>= _] ≤

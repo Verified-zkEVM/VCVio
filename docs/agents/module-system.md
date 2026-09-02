@@ -88,6 +88,135 @@ and characterization `…_iff` theorems. Mark a definition `@[expose]` only when
 downstream definitional equality is an intentional part of the API and a
 theorem would materially obstruct ordinary use.
 
+### Visibility and transparency are separate
+
+Four mechanisms that are easy to conflate control different parts of an API:
+
+| Mechanism | Question it answers |
+| --- | --- |
+| `public` / `private` and the import form | May the importing module name the declaration? |
+| `@[expose]` | Is the body available to an ordinary importer for reduction? |
+| `@[reducible]`, `@[instance_reducible]`, `@[implicit_reducible]` | At which `isDefEq` transparency modes may an available body unfold? |
+| Public equations | Can clients cross the boundary propositionally without unfolding it? |
+
+An exposed body is not necessarily reducible during proof automation, and a
+reducibility attribute cannot make an unavailable body appear. Likewise,
+`import all` can make same-package implementation declarations available, but
+does not change their reducibility status. It therefore cannot repair a term
+that is well-typed only at a stronger transparency mode. Both
+`PolyFun.PFunctor.Basic` and `VCVio.OracleComp.OracleSpec` deliberately expose
+their relevant definitions, so the coproduct problem is a reducibility and
+normal-form problem, not a module import problem.
+
+Lean's useful transparency ladder here is:
+
+- `.reducible` unfolds only `@[reducible]` declarations and is used for many
+  speculative matches in tactics;
+- `.instances` additionally unfolds `@[instance_reducible]` declarations,
+  including ordinary instance definitions;
+- `.implicit` additionally unfolds `@[implicit_reducible]` declarations and
+  is used to check implicit and instance-implicit arguments; and
+- `.default` also unfolds ordinary semireducible definitions and is used when
+  checking user-written terms more aggressively.
+
+Broader reducibility is not automatically better. In particular, definitions
+that determine typeclass discrimination keys must not be made locally
+reducible after their instances have been indexed. Prefer the narrowest stable
+normal form that makes the intended dependent types well-formed.
+
+### Implicit transparency in Lean 4.33
+
+With `backward.isDefEq.respectTransparency.types` enabled, the type of a value
+assigned to a metavariable must itself check at `.implicit` transparency. A
+goal can therefore elaborate at `.default`, yet be unusable by `rw`, `simp`,
+or a tactic-generated metavariable because a dependent type still needs an
+ordinary semireducible wrapper to unfold. This is a useful invariant: it finds
+terms whose apparent type correctness depended on proof automation silently
+using a much stronger transparency mode.
+
+For a focused diagnosis, put the smallest reproducer under:
+
+```lean
+set_option linter.tacticCheckInstances true
+
+example ... := by
+  ...
+```
+
+The linter checks every tactic goal at `.implicit` and reports ordinary
+definitions that only the successful `.default` check unfolded. Fix the owner
+of the unstable normal form. Depending on whether unfolding is part of the
+API, that normally means using a public equation, spelling a primitive
+dependent recursor directly, or marking the smallest intentional wrapper with
+the appropriate reducibility attribute. Do not globally change the status of
+core eliminators, disable the transparency check, or use `import all` as a
+substitute.
+
+Use `#guard_msgs` only when the test is meant to preserve an expected
+diagnostic; do not wrap a passing regression canary with it.
+
+### The PolyFun–OracleSpec coproduct seam
+
+`OracleSpec ι` intentionally remains the dependent family `ι → Type`, while
+`spec.toPFunctor` packages the same data as `⟨ι, spec⟩`. This middle ground is
+useful: oracle code gets `Domain`, `Range`, function application, and existing
+typeclass indices, while generic code gets the actual `PFunctor`. The
+`toPFunctor` / `ofPFunctor` round trips are definitionally equal, so a new
+wrapper structure or a wholesale conversion to `PFunctor` would add migration
+cost without strengthening the abstraction boundary.
+
+The sensitive operation is coproduct. A nested handler response contains a
+type such as
+
+```lean
+((spec₁ + spec₂) + spec₃).Range (.inl (.inr t))
+```
+
+PolyFun previously represented its direction family through the ordinary
+wrapper `Sum.elim P.B Q.B`. Reducing the displayed type then crossed the
+oracle `HAdd` projection, the PFunctor `HAdd` projection, and `Sum.elim` before
+reaching the primitive dependent recursor. The last wrapper is semireducible,
+so the chain could stop at `.implicit`.
+
+`PFunctor.sum` now writes `Sum.rec` directly and publishes its position and
+branch-direction equations. The OracleSpec `HAdd` is a plain instance, so the
+`instance` command gives it `instance_reducible`, and its body calls
+`PFunctor.sum` by name. Using the overloaded `+` inside that instance would
+insert another `HAdd.hAdd` projection into the instance's own dependent type;
+naming the construction directly keeps the instance well-typed at
+`.implicit`.
+
+The instance's exact status matters. Explicitly changing it to
+`@[implicit_reducible]` removes the `instance_reducible` status used during
+instance unification, while changing it to `@[reducible]` makes ordinary
+`simp` matching unfold combined specs and destabilizes established support
+normal forms. The default instance status occupies the required middle
+ground. No global attribute on `Sum.elim`, `Sum.rec`, or `HAdd.hAdd` is needed.
+
+This change is deliberately limited to binary coproduct. `PFunctor.sigma`,
+`PFunctor.pi`, products, and their OracleSpec façades also build dependent
+families and should be audited with concrete canaries when they appear in
+implicit-transparency diagnostics. They are not changed merely because their
+definitions look structurally similar.
+
+### How Lean core and Mathlib handle similar cases
+
+Lean core's transparency documentation specifically recommends
+`@[implicit_reducible]` for operations used in type parameters and for the two
+sides of public `rfl` laws. Core monad transformers such as `StateT`, `OptionT`,
+and `ReaderT` follow that pattern. Mathlib applies it selectively as well:
+`Quiver.Hom.op` / `Quiver.Hom.unop` are implicit-reducible coercion wrappers,
+and `AlternatingFaceMapComplex.obj` is an implicit-reducible construction whose
+structure projections occur in dependent categorical types.
+
+Mathlib also contains scoped `backward.isDefEq.respectTransparency... false`
+blocks around compatibility-sensitive declarations, especially in categorical
+code, so there is precedent for local migration shims. Those blocks document
+remaining debt rather than providing a good library boundary for this case:
+the PolyFun coproduct has a small intrinsic normal form that works with the
+check enabled. `MathlibTest/TacticCheckInstances*.lean` exercises the same
+linter used by the canaries here.
+
 `PFunctor.Handler.liftTarget` is one deliberate transparent exception. Its
 pointwise reduction changes only the target monad, and dependent handler
 result types need that reduction during elaboration; an application theorem

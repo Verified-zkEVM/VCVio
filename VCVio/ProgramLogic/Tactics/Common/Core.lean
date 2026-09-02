@@ -424,7 +424,7 @@ def isEvalDistEqGoal (target : Expr) : Bool :=
   if target.isAppOfArity ``Eq 3 then
     let lhs := target.getArg! 1
     let rhs := target.getArg! 2
-    (findAppWithHead? ``evalDist lhs).isSome && (findAppWithHead? ``evalDist rhs).isSome
+    (findAppWithHead? ``evalSPMF lhs).isSome && (findAppWithHead? ``evalSPMF rhs).isSome
   else
     false
 

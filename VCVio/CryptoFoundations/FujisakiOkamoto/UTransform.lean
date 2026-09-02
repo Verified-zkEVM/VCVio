@@ -470,39 +470,4 @@ noncomputable def runtime
     ((∅, ∅) : QueryCache M R KD K)
   toProbCompLift := ProbCompLift.ofMonadLift _
 
-/-- The generic U-transform CCA bound.
-
-**WARNING: this is a placeholder statement, not the final theorem.** The current shape is
-unsound as written: `correctnessBound₁` and `correctnessBound₂` are unconstrained `ℝ`
-parameters, so the right-hand side can be made arbitrarily negative while the left-hand side
-is a probability and hence nonnegative. In the final statement these slack terms must be
-constrained (for example, derived from a correctness/`δ`-correctness assumption on `pke`,
-quantified as nonnegative reals, or replaced by a concrete expression in `pke`'s correctness
-error and the adversary's query budget).
-
-The proof is intentionally deferred. The reduction artifacts (`prfAdv`, `owAdv`) are
-existentially quantified rather than passed in as unrelated inputs, but the bound itself
-still needs to be tightened before this can be a meaningful security claim. -/
-theorem IND_CCA_bound
-    {M PK SK R C KD K KPRF : Type}
-    [DecidableEq M] [DecidableEq C] [DecidableEq KD]
-    [SampleableType M] [SampleableType R] [SampleableType K]
-    (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
-    (prf : PRFScheme KPRF C K)
-    (kdInput : M → C → KD)
-    (adversary : (UTransform (m := OracleComp (UTransform.oracleSpec M R KD K))
-      pke kdInput (FujisakiOkamoto.implicitRejection prf)).IND_CCA_Adversary)
-    (correctnessBound₁ correctnessBound₂ : ℝ) :
-    ∃ prfAdv : PRFScheme.PRFAdversary C K,
-      ∃ owAdv : OW_PCVA_Adversary (TTransform pke),
-        (UTransform (m := OracleComp (UTransform.oracleSpec M R KD K))
-          pke kdInput (FujisakiOkamoto.implicitRejection prf)).IND_CCA_Advantage
-            (runtime (M := M) (R := R) (KD := KD) (K := K)) adversary ≤
-          PRFScheme.prfAdvantage prf prfAdv +
-          correctnessBound₁ +
-          correctnessBound₂ +
-          (OW_PCVA_Advantage (encAlg := TTransform pke) (TTransform.runtime (M := M)
-            (R := R)) owAdv).toReal := by
-  sorry
-
 end UTransform

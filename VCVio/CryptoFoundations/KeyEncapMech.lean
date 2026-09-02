@@ -53,7 +53,7 @@ def CorrectExp : m Bool :=
 
 /-- Perfect correctness of a KEM. -/
 def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
-  Pr[= true | runtime.evalDist kem.CorrectExp] = 1
+  Pr[= true | runtime.evalSPMF kem.CorrectExp] = 1
 
 end Correct
 
@@ -73,7 +73,7 @@ structure IND_CPA_Adversary (_kem : KEMScheme (OracleComp spec) K PK SK C) where
 def IND_CPA_Exp {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CPA_Adversary) (b : Bool) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, _sk) ← kem.keygen
     let st ← adversary.preChallenge pk
     let (cStar, kReal) ← kem.encaps pk
@@ -85,7 +85,7 @@ whether the adversary guessed it correctly. -/
 def IND_CPA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CPA_Adversary) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, _sk) ← kem.keygen
     let st ← adversary.preChallenge pk
     let b ← runtime.liftProbComp ($ᵗ Bool)
@@ -140,7 +140,7 @@ def IND_CCA_postChallengeImpl (kem : KEMScheme (OracleComp spec) K PK SK C)
 def IND_CCA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CCA_Adversary) : SPMF Bool :=
-  runtime.evalDist do
+  runtime.evalSPMF do
     let (pk, sk) ← kem.keygen
     let st ← simulateQ (kem.IND_CCA_preChallengeImpl sk) (adversary.preChallenge pk)
     let b ← runtime.liftProbComp ($ᵗ Bool)

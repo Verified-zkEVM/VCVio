@@ -11,7 +11,7 @@ public import ToMathlib.Data.ENNReal.Gauss
 /-!
 # Evaluation Distributions of Computations with `Bind`
 
-File for lemmas about `evalDist` and `support` involving the monadic `pure` and `bind`.
+File for lemmas about `evalSPMF` and `support` involving the monadic `pure` and `bind`.
 -/
 
 @[expose] public section
@@ -62,16 +62,16 @@ lemma mem_finSupport_pure_iff' [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [Ha
     [DecidableEq α] (x y : α) : x ∈ finSupport (pure y : m α) ↔ y = x := by aesop
 
 @[simp, grind =, game_rule]
-lemma evalDist_pure [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] {α : Type u} (x : α) :
-    𝒟[(pure x : m α)] = pure x := by simp [evalDist]
+lemma evalSPMF_pure [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] {α : Type u} (x : α) :
+    𝒮[(pure x : m α)] = pure x := by simp [evalSPMF]
 
 @[simp]
-lemma evalDist_comp_pure [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] :
-    evalDist ∘ (pure : α → m α) = pure := by aesop
+lemma evalSPMF_comp_pure [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] :
+    evalSPMF ∘ (pure : α → m α) = pure := by aesop
 
 @[simp]
-lemma evalDist_comp_pure' [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (f : α → β) :
-    evalDist ∘ (pure : β → m β) ∘ f = pure ∘ f := by grind
+lemma evalSPMF_comp_pure' [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (f : α → β) :
+    evalSPMF ∘ (pure : β → m β) ∘ f = pure ∘ f := by grind
 
 @[simp, grind =, game_rule]
 lemma probOutput_pure [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [DecidableEq α] (x y : α) :
@@ -178,13 +178,13 @@ lemma mem_finSupport_bind_iff [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [Has
       ∃ x ∈ finSupport mx, y ∈ finSupport (my x) := by aesop
 
 @[simp, grind =, game_rule]
-lemma evalDist_bind [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (mx : m α) (my : α → m β) :
-    𝒟[mx >>= my] = 𝒟[mx] >>= fun x => 𝒟[my x] :=
+lemma evalSPMF_bind [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (mx : m α) (my : α → m β) :
+    𝒮[mx >>= my] = 𝒮[mx] >>= fun x => 𝒮[my x] :=
   monadLift_bind mx my
 
-lemma evalDist_bind_of_support_eq_empty [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+lemma evalSPMF_bind_of_support_eq_empty [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     [MonadLiftT m SetM] [EvalDistCompatible m] (mx : m α) (my : α → m β)
-    (h : support mx = ∅) : 𝒟[mx >>= my] = failure := by
+    (h : support mx = ∅) : 𝒮[mx >>= my] = failure := by
   simp [SPMF.ext_iff, ← probOutput_def, h]
 
 @[grind =, game_rule]
@@ -635,15 +635,15 @@ lemma probEvent_bind_congr' (mx : m α) {ob₁ ob₂ : α → m β} (q : β → 
     Pr[ q | mx >>= ob₁] = Pr[ q | mx >>= ob₂] :=
   probEvent_bind_congr fun x _ => h x
 
-lemma evalDist_bind_congr {mx : m α} {ob₁ ob₂ : α → m β}
-    (h : ∀ x ∈ support mx, 𝒟[ob₁ x] = 𝒟[ob₂ x]) :
-    𝒟[mx >>= ob₁] = 𝒟[mx >>= ob₂] :=
-  evalDist_ext fun y => probOutput_bind_congr fun x hx => evalDist_ext_iff.mp (h x hx) y
+lemma evalSPMF_bind_congr {mx : m α} {ob₁ ob₂ : α → m β}
+    (h : ∀ x ∈ support mx, 𝒮[ob₁ x] = 𝒮[ob₂ x]) :
+    𝒮[mx >>= ob₁] = 𝒮[mx >>= ob₂] :=
+  evalSPMF_ext fun y => probOutput_bind_congr fun x hx => evalSPMF_ext_iff.mp (h x hx) y
 
-lemma evalDist_bind_congr' (mx : m α) {ob₁ ob₂ : α → m β}
-    (h : ∀ x, 𝒟[ob₁ x] = 𝒟[ob₂ x]) :
-    𝒟[mx >>= ob₁] = 𝒟[mx >>= ob₂] :=
-  evalDist_bind_congr fun x _ => h x
+lemma evalSPMF_bind_congr' (mx : m α) {ob₁ ob₂ : α → m β}
+    (h : ∀ x, 𝒮[ob₁ x] = 𝒮[ob₂ x]) :
+    𝒮[mx >>= ob₁] = 𝒮[mx >>= ob₂] :=
+  evalSPMF_bind_congr fun x _ => h x
 
 lemma probEvent_bind_mono {mx : m α} {my oc : α → m β} {q : β → Prop}
     (h : ∀ x ∈ support mx, Pr[ q | my x] ≤ Pr[ q | oc x]) :
@@ -882,30 +882,30 @@ variable [MonadLiftT m SPMF]
 equal as `m`-computations when `m` is non-commutative, the two draws are independent, so their
 output distributions agree. The `probEvent`/`probOutput` forms (`probEvent_bind_bind_swap`,
 `probOutput_bind_bind_swap`) are corollaries. -/
-lemma evalDist_bind_bind_swap [LawfulMonadLiftT m SPMF]
+lemma evalSPMF_bind_bind_swap [LawfulMonadLiftT m SPMF]
     (mx : m α) (my : m β) (f : α → β → m γ) :
-    𝒟[mx >>= fun a => my >>= fun b => f a b] =
-      𝒟[my >>= fun b => mx >>= fun a => f a b] := by
-  refine evalDist_ext fun x => ?_
+    𝒮[mx >>= fun a => my >>= fun b => f a b] =
+      𝒮[my >>= fun b => mx >>= fun a => f a b] := by
+  refine evalSPMF_ext fun x => ?_
   simp only [probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_left]
   rw [ENNReal.tsum_comm]
   exact tsum_congr fun b => tsum_congr fun a => mul_left_comm _ _ _
 
 /-- Swapping two independent random draws preserves probability of any event. Corollary of
-`evalDist_bind_bind_swap`. -/
+`evalSPMF_bind_bind_swap`. -/
 lemma probEvent_bind_bind_swap [LawfulMonadLiftT m SPMF]
     (mx : m α) (my : m β) (f : α → β → m γ) (q : γ → Prop) :
     Pr[ q | mx >>= fun a => my >>= fun b => f a b] =
       Pr[ q | my >>= fun b => mx >>= fun a => f a b] := by
-  rw [probEvent_def, probEvent_def, evalDist_bind_bind_swap]
+  rw [probEvent_def, probEvent_def, evalSPMF_bind_bind_swap]
 
 /-- Swapping two independent random draws preserves the probability of any fixed output. Corollary
-of `evalDist_bind_bind_swap`. -/
+of `evalSPMF_bind_bind_swap`. -/
 lemma probOutput_bind_bind_swap [LawfulMonadLiftT m SPMF]
     (mx : m α) (my : m β) (f : α → β → m γ) (z : γ) :
     Pr[= z | mx >>= fun a => my >>= fun b => f a b] =
       Pr[= z | my >>= fun b => mx >>= fun a => f a b] := by
-  rw [probOutput_def, probOutput_def, evalDist_bind_bind_swap]
+  rw [probOutput_def, probOutput_def, evalSPMF_bind_bind_swap]
 
 /-! ## Complement bounds -/
 
