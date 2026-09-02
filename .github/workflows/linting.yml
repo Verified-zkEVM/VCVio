@@ -108,6 +108,7 @@ jobs:
           VCVioTest.ITSR VCVioTest.SMDTDSPR VCVioTest.SMDTOpenPRE VCVioTest.SMDTUDC
           VCVioTest.CryptoFoundations.SignatureAlg
           HashSigTest.SLHDSA.Params HashSigTest.SLHDSA.Position HashSigTest.SLHDSA.Oracle
+          HashSigTest.SLHDSA.DataCodecTests
           HashSigTest.SLHDSA.Wots HashSigTest.SLHDSA.Xmss HashSigTest.SLHDSA.Fors
           HashSigTest.SLHDSA.Hypertree HashSigTest.SLHDSA.HypertreeGeneral
           HashSigTest.SLHDSA.Scheme HashSigTest.SLHDSA.GeneralScheme
