@@ -34,12 +34,21 @@ Properties that only concern the interaction — `PerfectlyComplete`, `HVZK`, `P
 `SpeciallySound` lives on `SigmaProtocol`, since it is the property that consumes `extract`.
 
 Both records are parameterized by the monad `m` in which the participants compute, so the prover
-may query oracles as well as sample randomness. `PerfectlyComplete` quantifies over the
-verifier's challenge pointwise, so it needs no sampling structure on `m`; the sampled form is
-recovered by `PerfectlyComplete.probOutput_uniform_challenge_eq_one`. The transcript-facing
-properties (`realTranscript`, `HVZK`, `PerfectHVZK`) draw the challenge as `liftM ($ᵗ Chal)`,
-which requires `[MonadLiftT ProbComp m]`; at `m := ProbComp` this is definitionally the plain
-uniform sample (`realTranscript_probComp`).
+may query oracles as well as sample randomness. Every probability- or support-bearing property
+assumes the *lawful* semantic lifts `[LawfulMonadLiftT m SPMF]` and `[LawfulMonadLiftT m SetM]`
+together with the bridge `[EvalDistCompatible m]`: lawfulness is what lets probability statements
+about the composite protocol decompose along its `bind`s, and the bridge ties the support-based
+notions (`SpeciallySound`) and the probability-based ones (`PerfectlyComplete`, `HVZK`) to a
+single coherent semantics of the same protocol.
+
+`PerfectlyComplete` quantifies over the verifier's challenge pointwise, so its statement needs no
+sampling structure on `m`; at `m := ProbComp` it is equivalent to the sampled form
+(`perfectlyComplete_iff_probOutput_uniform_challenge_eq_one`, with the two directions available
+separately as `PerfectlyComplete.probOutput_uniform_challenge_eq_one` and
+`perfectlyComplete_of_probOutput_uniform_challenge_eq_one`). The transcript-facing properties
+(`realTranscript`, `HVZK`, `PerfectHVZK`) draw the challenge as `liftM ($ᵗ Chal)`, which requires
+`[MonadLiftT ProbComp m]`; at `m := ProbComp` this is definitionally the plain uniform sample
+(`realTranscript_probComp`).
 
 ## Type Parameters
 
@@ -73,12 +82,22 @@ Commitments are split into a public part `Commit` (revealed to the verifier) and
 `Chal`; since that challenge is its only message, the protocol is public-coin. Prover responses
 are in `Resp`, and verification is deterministic.
 
-The prover's computations live in an arbitrary monad `m`; each property assumes only the
-semantics it consumes (a `MonadLiftT m SPMF` lift for probability statements, a
-`MonadLiftT m SetM` lift for `support`-based ones, and a `MonadLiftT ProbComp m` lift where the
-uniform challenge is drawn inside the transcript). Taking `m := ProbComp` recovers the usual
-notion of a protocol whose only randomness is uniform sampling, but a general `m` lets the
-prover additionally query oracles (e.g. a hash oracle for the Kilian transform).
+The prover's computations live in an arbitrary monad `m`. Probability-bearing properties assume
+the lawful lift `[MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]`, support-bearing ones the lawful
+lift `[MonadLiftT m SetM] [LawfulMonadLiftT m SetM]`, and both carry the bridge
+`[EvalDistCompatible m]` so that the two routes describe one semantics of the same protocol
+(a `MonadLiftT ProbComp m` lift is additionally used where the uniform challenge is drawn inside
+the transcript). Taking `m := ProbComp` recovers the usual notion of a protocol whose only
+randomness is uniform sampling.
+
+A general `m` also admits provers that query oracles, with one semantic caveat: the probability
+denotation of `OracleComp spec` under `[IsProbabilitySpec spec]` samples a *fresh independent*
+response for every query, so instantiating these properties at a bare oracle monad is meaningful
+only for oracles where independent per-query responses are the intended semantics (e.g. genuine
+sampling oracles). A shared random oracle — such as the hash oracle of the Kilian or Fiat-Shamir
+transforms, where equal inputs must receive equal answers — must first be interpreted through the
+caching layer (`OracleSpec.cachingOracle` / `withCacheOverlay`) before lifting into `SPMF` /
+`SetM`.
 
 This is the interaction alone. A Σ-protocol additionally carries a witness extractor; see
 `SigmaProtocol`, which extends this structure. -/
@@ -110,7 +129,7 @@ structure SigmaProtocol
 
 namespace ChallengeVerifyProtocol
 
-variable {m : Type → Type} [Monad m] [MonadLiftT m SPMF]
+variable {m : Type → Type} [Monad m]
   {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
 section complete
@@ -121,8 +140,11 @@ convinces the verifier with probability `1` on every challenge the verifier migh
 Since the verifier's challenge is drawn uniformly, quantifying over the challenge pointwise is
 equivalent to drawing it and asking for acceptance probability `1` — but the pointwise form
 needs no sampling structure on `m`, and is the shape consumers such as the Fischlin transform
-extract anyway. -/
-def PerfectlyComplete (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) :
+extract anyway. At `m := ProbComp` the equivalence with the sampled form is
+`perfectlyComplete_iff_probOutput_uniform_challenge_eq_one`. -/
+def PerfectlyComplete [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) :
     Prop :=
   ∀ x w, rel x w = true → ∀ ω,
     Pr[= true | do
@@ -151,32 +173,92 @@ lemma PerfectlyComplete.probOutput_uniform_challenge_eq_one [SampleableType Chal
   simp only [hc', mul_one]
   exact tsum_probOutput_eq_one' (by simp)
 
+/-- Converse of `PerfectlyComplete.probOutput_uniform_challenge_eq_one` at `m := ProbComp`:
+if the honest run that draws its challenge uniformly accepts with probability `1`, then it
+accepts with probability `1` on every individual challenge. This holds because the uniform
+draw puts positive weight on every challenge, so no challenge can be rejected with positive
+probability. Together with the forward direction this gives
+`perfectlyComplete_iff_probOutput_uniform_challenge_eq_one`. -/
+lemma perfectlyComplete_of_probOutput_uniform_challenge_eq_one [SampleableType Chal]
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    (hc : ∀ x w, rel x w = true →
+      Pr[= true | do
+        let (pc, sc) ← σ.commit x w
+        let ω ← $ᵗ Chal
+        let π ← σ.respond x w sc ω
+        return σ.verify x pc ω π] = 1) :
+    σ.PerfectlyComplete := by
+  intro x w h ω
+  have h1 := hc x w h
+  rw [show (do
+      let (pc, sc) ← σ.commit x w
+      let ω ← $ᵗ Chal
+      let π ← σ.respond x w sc ω
+      return σ.verify x pc ω π) = σ.commit x w >>= fun a =>
+        ($ᵗ Chal : ProbComp Chal) >>= fun ω =>
+          σ.respond x w a.2 ω >>= fun π => pure (σ.verify x a.1 ω π) from rfl,
+    probOutput_bind_bind_swap, probOutput_bind_eq_tsum] at h1
+  by_contra hω
+  have hlt : Pr[= true | σ.commit x w >>= fun a =>
+      σ.respond x w a.2 ω >>= fun π => pure (σ.verify x a.1 ω π)] < 1 :=
+    lt_of_le_of_ne probOutput_le_one hω
+  have hpos : 0 < Pr[= ω | ($ᵗ Chal : ProbComp Chal)] :=
+    (probOutput_pos_iff _ _).2 (by simp)
+  refine absurd (h1.trans (tsum_probOutput_eq_one' (mx := ($ᵗ Chal : ProbComp Chal))
+    (by simp)).symm) (ne_of_lt (ENNReal.tsum_lt_tsum (i := ω) ?_ ?_ ?_))
+  · rw [h1]; exact ENNReal.one_ne_top
+  · exact fun ω' => mul_le_of_le_one_right' probOutput_le_one
+  · calc Pr[= ω | ($ᵗ Chal : ProbComp Chal)] * _
+        = _ * Pr[= ω | ($ᵗ Chal : ProbComp Chal)] := mul_comm _ _
+      _ < 1 * Pr[= ω | ($ᵗ Chal : ProbComp Chal)] :=
+          (ENNReal.mul_lt_mul_iff_left hpos.ne' probOutput_ne_top).2 hlt
+      _ = Pr[= ω | ($ᵗ Chal : ProbComp Chal)] := one_mul _
+
+/-- At `m := ProbComp`, the pointwise-challenge form `PerfectlyComplete` is equivalent to the
+sampled form that draws the challenge uniformly and asks for acceptance probability `1`. -/
+lemma perfectlyComplete_iff_probOutput_uniform_challenge_eq_one [SampleableType Chal]
+    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp) :
+    σ.PerfectlyComplete ↔ ∀ x w, rel x w = true →
+      Pr[= true | do
+        let (pc, sc) ← σ.commit x w
+        let ω ← $ᵗ Chal
+        let π ← σ.respond x w sc ω
+        return σ.verify x pc ω π] = 1 :=
+  ⟨fun hc _ _ h => hc.probOutput_uniform_challenge_eq_one h,
+    perfectlyComplete_of_probOutput_uniform_challenge_eq_one⟩
+
 end complete
 
 end ChallengeVerifyProtocol
 
 namespace SigmaProtocol
 
-variable {m : Type → Type} [MonadLiftT m SetM]
+variable {m : Type → Type} [Monad m]
   {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
 section speciallySound
 
 /-- Special soundness at a particular statement: given two accepting transcripts with the same
 commitment but different challenges, the extracted witness is valid. -/
-def SpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+def SpeciallySoundAt [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (x : Stmt) : Prop :=
   ∀ pc ω₁ ω₂ p₁ p₂, ω₁ ≠ ω₂ →
     σ.verify x pc ω₁ p₁ = true → σ.verify x pc ω₂ p₂ = true →
     ∀ w ∈ support (σ.extract ω₁ p₁ ω₂ p₂), rel x w = true
 
 /-- A Σ-protocol is specially sound if `SpeciallySoundAt` holds for all statements. -/
-def SpeciallySound (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m) : Prop :=
+def SpeciallySound [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m) : Prop :=
   ∀ x, SpeciallySoundAt σ x
 
 /-- Special soundness immediately validates any witness returned by the Σ-protocol extractor from
 two accepting transcripts with the same statement and commitment and with distinct challenges. -/
 theorem extract_sound_of_speciallySoundAt
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m) {x : Stmt}
     (hss : σ.SpeciallySoundAt x)
     {pc : Commit} {ω₁ ω₂ : Chal} {p₁ p₂ : Resp} (hω : ω₁ ≠ ω₂)
@@ -191,7 +273,7 @@ end SigmaProtocol
 
 namespace ChallengeVerifyProtocol
 
-variable {m : Type → Type} [Monad m] [MonadLiftT m SPMF]
+variable {m : Type → Type} [Monad m]
   {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
 section hvzk
@@ -227,14 +309,18 @@ The simulated transcript is produced by `simTranscript` given only the statement
 Note: the `sim` field of `SigmaProtocol` only produces a public commitment. For HVZK we need
 a full transcript simulator `Stmt → m (Commit × Chal × Resp)`. We parameterize by this
 simulator, which also keeps the property available on a bare `ChallengeVerifyProtocol`. -/
-def HVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+def HVZK [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) (ζ_zk : ℝ) : Prop :=
   ∀ x w, rel x w = true →
     tvDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk
 
 /-- Exact honest-verifier zero-knowledge: the real transcript distribution equals the
 simulated one. -/
-def PerfectHVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+def PerfectHVZK [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) : Prop :=
   ∀ x w, rel x w = true →
     𝒮[σ.realTranscript x w] = 𝒮[simTranscript x]
@@ -242,6 +328,8 @@ def PerfectHVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp
 /-- The perfect HVZK property is equivalent to the approximate HVZK property with `ζ_zk = 0`. -/
 @[grind =]
 lemma perfectHVZK_iff_hvzk_zero
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) :
     σ.PerfectHVZK simTranscript ↔ σ.HVZK simTranscript 0 := by
@@ -261,7 +349,8 @@ programmed cache entries in the Fiat-Shamir CMA-to-NMA reduction. For Schnorr,
 The `_σ : ChallengeVerifyProtocol …` argument is dummy (the predicate only depends on
 `simTranscript` and `β`); it is present to enable field-notation usage like
 `σ.simCommitPredictability simTranscript β`. -/
-def simCommitPredictability
+def simCommitPredictability [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     (_σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) (β : ℝ≥0∞) : Prop :=
   ∀ x : Stmt, ∀ c₀ : Commit, probOutput (Prod.fst <$> simTranscript x) c₀ ≤ β
@@ -290,6 +379,8 @@ satisfy this when `pk` admits a witness (the proof uses a witness-indexed biject
 response variable); for statements outside the relation's image, the simulator's joint may
 have any structure. -/
 def simChalUniformGivenCommit [Fintype Chal]
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     (_σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) : Prop :=
   ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →

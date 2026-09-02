@@ -87,11 +87,20 @@ such as the Fischlin transform and the Fiat-Shamir Σ-layer can run them. Dot no
 through the parent projection, so a `SigmaProtocol` uses the interaction properties directly.
 
 The monad `m` carries the participants' computations: `m := ProbComp` is the usual protocol whose
-only randomness is uniform sampling, while a general `m` lets the prover query oracles. Each
-property assumes only the semantics it consumes (`MonadLiftT m SPMF` for probability statements,
-`MonadLiftT m SetM` for `SpeciallySound`). `PerfectlyComplete` quantifies over the verifier's
-challenge pointwise, so it needs no sampling structure on `m`; the sampled form is recovered by
-`PerfectlyComplete.probOutput_uniform_challenge_eq_one`. The transcript-facing properties
+only randomness is uniform sampling, while a general `m` lets the prover query oracles. Every
+probability- or support-bearing property assumes the lawful semantic lifts
+`[MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]`
+together with the bridge `[EvalDistCompatible m]`, so probability statements decompose along
+`bind` and the support-based notions (`SpeciallySound`) and probability-based ones
+(`PerfectlyComplete`, `HVZK`) refer to one coherent semantics of the same protocol. Caveat for
+oracle-querying provers: the probability denotation of `OracleComp spec` samples a fresh
+independent response per query, so a shared random oracle (equal inputs must get equal answers)
+must be interpreted through the caching layer (`OracleSpec.cachingOracle` / `withCacheOverlay`)
+before lifting into `SPMF` / `SetM`. `PerfectlyComplete` quantifies over the verifier's
+challenge pointwise, so it needs no sampling structure on `m`; at `m := ProbComp` it is
+equivalent to the sampled form (`perfectlyComplete_iff_probOutput_uniform_challenge_eq_one`,
+directions `PerfectlyComplete.probOutput_uniform_challenge_eq_one` and
+`perfectlyComplete_of_probOutput_uniform_challenge_eq_one`). The transcript-facing properties
 (`realTranscript`, `HVZK`, `PerfectHVZK`) draw the challenge as `liftM ($ᵗ Chal)` and so ask for
 `[SampleableType Chal] [MonadLiftT ProbComp m]`; at `m := ProbComp` that is definitionally the
 plain `$ᵗ Chal` (`realTranscript_probComp`).
