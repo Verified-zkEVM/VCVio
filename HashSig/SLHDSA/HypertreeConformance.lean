@@ -28,11 +28,12 @@ namespace GeneralHypertree
 /-! ## Arbitrary-depth callback refinement -/
 
 /-- Exact depth-one callback schedule: Algorithm 12 recovers the sole XMSS signature and discards
-the result before returning it. This is the sole compile-time witness of the FIPS-mandated
-discarded recovery — the pure interpretations are blind to it and every query-count theorem is
-only an upper bound. -/
+the result before returning it. This is a compile-time witness of the FIPS-mandated discarded
+recovery at the loop-level callback API — the pure interpretations are blind to it and every
+query-count theorem is only an upper bound; `DepthOneCompatibility.signM_toOneLayer_eq`
+witnesses the same schedule at the scheme level. -/
 theorem signFromPositionWith_one_recover (vp : ValidatedParams)
-    (core : CorePrimitives vp.params) {m : Type → Type*} [Monad m] [LawfulMonad m]
+    (core : CorePrimitives vp.params) {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y)
     (compress : Adrs → List core.Y → m core.Y)
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
@@ -60,7 +61,7 @@ theorem signFromPositionWith_two (vp : ValidatedParams)
         xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig0 msg pos.toAdrs
       let next := pos.next (by omega)
       let sig1 ← xmssSignWith core hash compress nodeHash root0 sk pk next.toAdrs next.leaf.val
-      return (#v[sig1]).insertIdx 0 sig0) := by
+      return #v[sig0, sig1]) := by
   simp [signFromPositionWith]
 
 /-- Callback-parametric general hypertree signing is the canonical explicit-query signer after
