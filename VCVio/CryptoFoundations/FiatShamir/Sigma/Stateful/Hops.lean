@@ -779,7 +779,7 @@ private lemma cmaSimSignPublicBad_prob_le_roCacheCount_mul
         _ = (∑' key : Stmt × Wit, Pr[= key | hr.gen]) * (QueryCache.enncard cache * β) := by
               rw [ENNReal.tsum_mul_right]
         _ = QueryCache.enncard cache * β := by
-              rw [tsum_probOutput_of_liftM_PMF, one_mul]
+              rw [tsum_probOutput_eq_one' probFailure_eq_zero, one_mul]
 
 private lemma cmaRealSignStep_evalSPMF_eq_ghost
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
