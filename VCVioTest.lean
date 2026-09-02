@@ -30,7 +30,7 @@ public import VCVioTest.SMDTDSPR
 public import VCVioTest.SMDTOpenPRE
 public import VCVioTest.SMDTPREFinalValidity
 public import VCVioTest.SMDTTCRFinalValidity
-public import VCVioTest.SMDTUDC
+public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SampleableType
 public import VCVioTest.Smoke
 public import VCVioTest.UniformOn

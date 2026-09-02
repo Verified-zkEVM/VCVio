@@ -10,9 +10,9 @@ public import VCVio.OracleComp.SimSemantics.Append
 public import ToMathlib.Data.ENNReal.AbsDiff
 
 /-!
-# Single-function, distinct-tweak, multi-target undetectability in a collection
+# Source-final-validity SM-DT-UD
 
-SM-DT-UD-C asks an adversary to distinguish sampled images of one tweakable hash from samples of
+SM-DT-UD asks an adversary to distinguish sampled images of one tweakable hash from samples of
 an explicit output distribution. The public seed is sampled by the experiment and withheld while
 the adversary selects target tweaks through the challenge oracle and evaluates the shared hash
 collection. The seed is revealed only after those oracles have been removed.
@@ -21,7 +21,7 @@ In the real world, a challenge at `t` samples `m ← inputGen` and returns `th.e
 ideal world it returns `y ← outputGen`. Both worlds answer and record every query. The sticky
 final-validity monitor checks the target cap, distinct target tweaks, and target/collection
 disjointness only in the experiment's final conjunction; repeated collection-only tweaks remain
-valid. These declarations live in `TweakableHash.SM_DT_UD_C_SourceFinalValidity` so that the
+valid. These declarations live in `TweakableHash.SM_DT_UD_SourceFinalValidity` so that the
 winning semantics are visible at every public use site.
 
 The source security quantity is oriented: `DirectedAdvantage` is the signed real gap
@@ -46,7 +46,7 @@ open OracleComp OracleSpec ENNReal
 
 variable {ι PkSeed Tweak M Y : Type}
 
-namespace SM_DT_UD_C_SourceFinalValidity
+namespace SM_DT_UD_SourceFinalValidity
 
 /-! ## The game -/
 
@@ -61,7 +61,7 @@ deriving DecidableEq, Repr
 /-- The challenge oracle takes a target tweak and returns a digest in both worlds. -/
 abbrev challengeSpec (Tweak Y : Type) : OracleSpec Tweak := Tweak →ₒ Y
 
-/-- An SM-DT-UD-C problem: attacked hash, explicit real and ideal sampling distributions, shared
+/-- An SM-DT-UD problem: attacked hash, explicit real and ideal sampling distributions, shared
 collection, and target cap. -/
 structure Problem (ι PkSeed Tweak M Y : Type) where
   /-- The tweakable hash whose sampled images should be indistinguishable from `outputGen`. -/
@@ -88,7 +88,7 @@ def Problem.standalone (th : TweakableHash PkSeed Tweak M Y)
 /-- Target tweaks, collection tweaks, and the sticky final-validity bit. -/
 abbrev State (Tweak : Type) : Type := SourceFinalValidity.State Tweak Tweak
 
-/-- An SM-DT-UD-C adversary split exactly at the public-seed reveal. -/
+/-- An SM-DT-UD adversary split exactly at the public-seed reveal. -/
 structure Adversary (prob : Problem ι PkSeed Tweak M Y) where
   /-- Private state passed from target selection to the distinguishing phase. -/
   State : Type
@@ -132,7 +132,7 @@ def oracles [DecidableEq Tweak] (world : World)
     (challengeOracle world prob pk +
       SourceFinalValidity.collectionOracle (Q := Tweak) id prob.thColl pk)
 
-/-- The source-final-validity SM-DT-UD-C experiment. The seed is hidden during `pick`, revealed to
+/-- The source-final-validity SM-DT-UD experiment. The seed is hidden during `pick`, revealed to
 `distinguish`, and success is the adversary's bit conjoined with the final validity monitor. -/
 noncomputable def Experiment [DecidableEq Tweak]
     (world : World) {prob : Problem ι PkSeed Tweak M Y}
@@ -153,12 +153,12 @@ noncomputable def IdealSuccess [DecidableEq Tweak]
     {prob : Problem ι PkSeed Tweak M Y} (adv : Adversary prob) : ℝ≥0∞ :=
   Pr[= true | Experiment .ideal adv]
 
-/-- Source SM-DT-UD-C advantage: the directed signed gap from the real world to the ideal world. -/
+/-- Source SM-DT-UD advantage: the directed signed gap from the real world to the ideal world. -/
 noncomputable def DirectedAdvantage [DecidableEq Tweak]
     {prob : Problem ι PkSeed Tweak M Y} (adv : Adversary prob) : ℝ :=
   (RealSuccess adv).toReal - (IdealSuccess adv).toReal
 
-/-- Orientation-independent magnitude of the SM-DT-UD-C advantage in `ℝ≥0∞`. This is
+/-- Orientation-independent magnitude of the SM-DT-UD advantage in `ℝ≥0∞`. This is
 deliberately separate from the source game's signed `DirectedAdvantage`. -/
 noncomputable def AbsoluteAdvantage [DecidableEq Tweak]
     {prob : Problem ι PkSeed Tweak M Y} (adv : Adversary prob) : ℝ≥0∞ :=
@@ -190,6 +190,6 @@ theorem challengeOracle_run :
         response world prob pk t := by
   simp [challengeOracle, Functor.map_map]
 
-end SM_DT_UD_C_SourceFinalValidity
+end SM_DT_UD_SourceFinalValidity
 
 end TweakableHash
