@@ -40,8 +40,10 @@ def collection : TweakableHashCollection Unit Seed Bool Bool where
   Msg _ := Bool
   eval _ _ _ m := m
 
-def problem : SM_DT_UD_SourceFinalValidity.Problem Unit Seed Bool Bool Bool where
+def problem : SM_DT_UD_SourceFinalValidity.Problem Unit Seed Bool Bool Bool Bool where
   th := hash
+  emb := id
+  emb_injective := Function.injective_id
   inputGen := pure false
   outputGen := pure true
   thColl := collection
