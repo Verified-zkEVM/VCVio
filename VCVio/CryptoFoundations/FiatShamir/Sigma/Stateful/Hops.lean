@@ -791,7 +791,9 @@ private lemma cmaRealSignStep_evalSPMF_eq_ghost
         cmaRealSignGhostDist M Commit Chal σ hr m s] := by
   rcases s with ⟨log, cache, keypair⟩
   obtain _ | key := keypair <;>
-    (conv_lhs => simp [fs_simp, _root_.FiatShamir, StateT.run_mk]) <;>
+    (conv_lhs =>
+      simp only [cmaReal, cmaRealSourceFull, bind_pure_comp, Prod.mk.eta,
+        StateT.run_mk, liftM_bind]) <;>
     (conv_rhs => simp [cmaRealSignGhostDist, cmaSignKeySource])
   on_goal 1 => refine bind_congr fun key => ?_
   all_goals
