@@ -137,8 +137,11 @@ post-processor `g`. This section pins the GPV-concrete witnesses for the handler
 handlers, and proves the two *structural* conjuncts of the predicate against them — the `NeverFail`
 of the real step and the off-collision branch agreement under regularity. The two run-equalities
 `realRun = 𝒮[signRunF stepReal c qSign …]` / `progRun = 𝒮[signRunF stepProg c qSign …]` together
-with the cache-growth bound on the *adaptive* run's recorded slices are the front-loading fold
-factorization, established via `gpv_tvDist_tape_runs_le_collisionBound` below.
+with the cache-growth bound on the *adaptive* run's recorded slices would be the front-loading fold
+factorization; that factorization is not established here, and the Step-1 bound
+`gpv_tvDist_real_programmed_le_collisionBound` is instead proved by the original-run route
+(`gpv_tvDist_orig_run_le_probEvent_flag`, `gpv_orig_flag_le_collisionBound`). The per-body
+splices below are the signing-step ingredients the fold factorization would consume.
 
 The handler state is the lazy random-oracle cache `(Salt × M →ₒ Range).QueryCache`; both step
 handlers update it at the freshly drawn salt `r` and the `n`-th signing message `msgs n`. The
@@ -233,8 +236,8 @@ none` the oracle draws a fresh uniform target `u ← $ᵗ Range`, records `(r, m
 `u`; the body then draws the trapdoor preimage and yields the updated cache. The handler
 `gpvStepReal` draws the same uniform target `c ← $ᵗ Range`, the same trapdoor preimage, and records
 `(r, msgs n) ↦ c` — so the two recorded-cache distributions coincide. This is the *per-body splice*
-of the adaptive→`signRunF` fold factorization (the signing-step case of
-`gpv_tvDist_tape_runs_le_collisionBound`): it recasts one inline signing-oracle body, on a
+of the adaptive→`signRunF` fold factorization (the signing-step case of the real run-equality
+`realRun = 𝒮[signRunF gpvStepReal c qSign …]`): it recasts one inline signing-oracle body, on a
 fresh-salt cache miss, as the concrete `signRunF` real step, with the fresh salt `r` front-loaded
 out of the body. It is *pinned* to the concrete `randomOracle` and `gpvStepReal`, requires only the
 cache-miss side condition `hmiss` (guaranteed for a fresh salt), and is unconditional otherwise. -/
@@ -269,8 +272,8 @@ concrete `signRunF` programmed step: draw the same fresh salt `r ← $ᵗ Salt`,
 
 This is the programmed-side dual of `evalSPMF_gpvSignBody_run_eq_gpvStepReal`, and the signing-step
 case of the *programmed* run-equality
-`progGameRun … = 𝒮[signRunF gpvStepProg c qSign …]` underlying
-`gpv_tvDist_tape_runs_le_collisionBound`. It is *pinned* to the concrete `progGameRun` signing body
+`progGameRun … = 𝒮[signRunF gpvStepProg c qSign …]` of the fold
+factorization. It is *pinned* to the concrete `progGameRun` signing body
 and the concrete `gpvStepProg`: the cache transition
 `cache ↦ cache.cacheQuery (r, msgs n) (psf.eval pk s)`
 on both sides is the same, the salt draw is the same front-loaded `$ᵗ Salt`, and `domainSample` is

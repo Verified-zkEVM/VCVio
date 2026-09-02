@@ -52,8 +52,8 @@ signing step handled by a bespoke per-body salt splice. -/
 
 /-! ### The pinned GPV game runs
 
-The front-tape coupling `gpv_tvDist_tape_runs_le_collisionBound` is pinned to the *actual* GPV game
-runs of the adversary's main computation `adv.main pk`, not to free `SPMF` parameters or to a
+The Step-1 coupling `gpv_tvDist_real_programmed_le_collisionBound` is pinned to the *actual* GPV
+game runs of the adversary's main computation `adv.main pk`, not to free `SPMF` parameters or to a
 hash-only run under a deterministic programming policy. Two named game-run distributions model the
 two worlds of the sign-then-hash hop:
 
@@ -521,7 +521,7 @@ theorem realGameRun_eq_run'_implReal
 
 /-! ### GPV tape-consuming impls
 
-The fold coupling `gpv_tvDist_tape_runs_le_collisionBound` follows the worked Fiat–Shamir instance
+The front-tape factorization follows the worked Fiat–Shamir instance
 `FiatShamirWithAbort.evalSPMF_deferredDrawRead_eq_drawList_tapeDrawRead`: an
 `OracleComp.inductionOn`
 over `adv.main pk` that front-loads every signing query's fresh salt draw into a single front draw
@@ -676,8 +676,8 @@ step on a consed tape `r :: tl`, at a *missing* cache key `(r, msgs n) = none`, 
 exactly as the concrete `signRunF` real step `gpvStepReal` at the consumed head salt `r`.
 
 This is the GPV analogue of Fiat–Shamir's per-body splice (the signing-step case of the fold
-factorization): it relates the tape-consuming signing step to the `signRunF` handler underlying
-`gpv_tvDist_tape_runs_le_collisionBound`. It is *pinned* to the concrete
+factorization): it relates the tape-consuming signing step to the `signRunF` handler of the
+sequenced coupling `signRunF_tvDist_le_collisionBound`. It is *pinned* to the concrete
 `gpvRealImplTape` and
 `gpvStepReal`, and reduces (via `gpvRealImplTape_run_sign_cons`) to the inline splice
 `evalSPMF_gpvSignBody_run_eq_gpvStepReal`: with the head salt `r` already supplied (front-loaded out
@@ -731,8 +731,8 @@ programmed side forward-samples `sd ← domainSample pk`, records `(r, msg) ↦ 
 returns `((r, sd), cache'', tl)`. Both apply the *same* deterministic post-processing
 `fun (c, s) => ((r, s), cache.cacheQuery (r, msg) c, tl)` to a `(target, preimage)` pair drawn from
 two distributions that coincide by PSF regularity `hreg`. This is the signing-query case of the
-per-step no-bad-path agreement underlying `gpv_tvDist_tape_runs_le_collisionBound`, the full-output
-generalization of the cache-marginal `gpvStep_agree`. -/
+per-step no-bad-path agreement underlying the tape-route identical-until-bad coupling, the
+full-output generalization of the cache-marginal `gpvStep_agree`. -/
 theorem evalSPMF_gpvImplTape_run_sign_miss_eq (pk : PK) (sk : SK)
     (domainSample : PK → ProbComp Domain) (msg : M) (r : Salt) (tl : List Salt)
     (cache : (Salt × M →ₒ Range).QueryCache) (hmiss : cache (r, msg) = none)
@@ -771,14 +771,17 @@ theorem evalSPMF_gpvImplTape_run_sign_miss_eq (pk : PK) (sk : SK)
 
 /-! ### Flag-instrumented tape handlers (the identical-until-bad collision flag)
 
-The per-tape identical-until-bad coupling `gpv_tvDist_tape_runs_le_collisionBound` is
-established, in the Fiat–Shamir template, by instrumenting the two tape handlers with a
-collision *flag*: a `Bool` threaded through the state, set the first time a consumed signing tape
-head salt `r` is already a key of the running random-oracle cache. Off the flag (no salt has yet
-collided) the two handlers agree in distribution by the `hreg` first marginal; once the flag fires
-it stays set (bad-monotone). The framework lemma `tvDist_simulateQ_run_le_probEvent_output_bad`
-then bounds the per-tape TV by the run-level flag probability, which the cardinality telescope
-(`saltSeq` / `tapeCheck`) bounds by `collisionBound`.
+A per-tape identical-until-bad coupling over the front salt tape would be established, in the
+Fiat–Shamir template, by instrumenting the two tape handlers with a collision *flag*: a `Bool`
+threaded through the state, set the first time a consumed signing tape head salt `r` is already a
+key of the running random-oracle cache. Off the flag (no salt has yet collided) the two handlers
+agree in distribution by the `hreg` first marginal; once the flag fires it stays set
+(bad-monotone). The framework lemma `tvDist_simulateQ_run_le_probEvent_output_bad` would then
+bound the per-tape TV by the run-level flag probability, which the cardinality telescope
+(`saltSeq` / `tapeCheck`) bounds by `collisionBound`. This section builds the flag-instrumented
+tape handlers and their off-flag agreements; the coupling headline over the tape is not
+established, and the Step-1 bound `gpv_tvDist_real_programmed_le_collisionBound` is proved by
+the inline-salt route of `FlagHandlers.lean` instead.
 
 `saltKeyed cache r` is the per-step bad predicate: the head salt `r` is already a key of the cache
 (some `(r, m)` is recorded). It is the collision event the flag accumulates. -/
@@ -1024,8 +1027,8 @@ omit [Fintype Salt] [DecidableEq Range] in
 collision flag stays `false`), the full signing-step output distributions of `gpvRealImplTapeFlag`
 and `progGameRunImplTapeFlag`, started from the off-bad state `((cache, r :: tl), false)`, coincide.
 
-This is the framework `h_agree_good` *signing case* of the identical-until-bad coupling
-`gpv_tvDist_tape_runs_le_collisionBound`, lifted from the underlying tape-handler agreement
+This is the framework `h_agree_good` *signing case* of the tape-route identical-until-bad
+coupling, lifted from the underlying tape-handler agreement
 `evalSPMF_gpvImplTape_run_sign_miss_eq` (the joint `hreg` substitution): off the collision flag both
 flag handlers OR the same `false` collision indicator (the head salt is unkeyed) into the prior
 `false` flag, and apply the same flag post-processing to the agreeing underlying signing-step

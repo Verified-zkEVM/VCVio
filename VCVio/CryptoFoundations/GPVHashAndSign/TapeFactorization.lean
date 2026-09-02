@@ -556,28 +556,33 @@ theorem progGameRun_eq_drawList_progGameRunImplTape (pk : PK)
   rw [map_bind]
   simp only [Functor.map_map]
 
-/-! ## Direct front-tape derivation of the Step-1 TV bound
+/-! ## Front-tape ingredients for the Step-1 TV bound
 
-The pieces below derive `gpv_tvDist_real_programmed_le_collisionBound` *directly* from the
-front-tape factorization (`realGameRun_eq_drawList_gpvRealImplTape` /
-`progGameRun_eq_drawList_progGameRunImplTape`), via the direct front-tape coupling
-`gpv_tvDist_tape_runs_le_collisionBound`.
+The pieces below are the tape-route ingredients for `gpv_tvDist_real_programmed_le_collisionBound`,
+starting from the front-tape factorization (`realGameRun_eq_drawList_gpvRealImplTape` /
+`progGameRun_eq_drawList_progGameRunImplTape`). They are not the route by which that bound is
+proved: `GameIdentification.lean` derives it from the original-run reduction
+`gpv_tvDist_orig_run_le_probEvent_flag` and the telescope `gpv_orig_flag_le_collisionBound`, with
+every salt drawn inline. The tape-route coupling headline — a bound on the tape-averaged TV between
+the real and programmed tape-consuming runs directly by `(collisionBound …).toReal` — is not
+established in this development.
 
 After the front-tape factorization both pinned game runs are `drawList ($ᵗ Salt) qSign` followed by
-the tape-consuming run of `adv.main pk`. The TV distance is then bounded by:
+the tape-consuming run of `adv.main pk`. The tape route would bound the TV distance by:
 
 * **(C) data processing** — `tvDist_drawList_bind_le` reduces the TV of the two factored runs to the
   expectation over the front salt tape of the per-tape TV distance (`tvDist_bind_left_le`).
-* **(A) per-tape identical-until-bad** — `gpv_tvDist_tape_runs_le_collisionBound`: the tape-averaged
-  TV between the real and programmed tape-consuming runs of `adv.main pk` over the front tape is
-  bounded *directly* by `(collisionBound …).toReal`. The per-tape bad event is a fresh tape salt
-  hitting the actual running random-oracle cache; its salt-averaged probability telescopes to
-  `collisionBound`.
+* **(A) per-tape identical-until-bad** — the tape-averaged TV between the real and programmed
+  tape-consuming runs of `adv.main pk` over the front tape, bounded by `(collisionBound …).toReal`.
+  The per-tape bad event is a fresh tape salt hitting the actual running random-oracle cache; its
+  salt-averaged probability telescopes to `collisionBound`. The per-step no-bad-path agreements
+  below (`gpvImplTape_run_unif_eq`, `gpvImplTape_run_read_hit_eq`,
+  `evalSPMF_gpvImplTape_run_read_miss_eq`, `gpvImplTapeFlag_h_agree_good`) are its ingredients.
 
 The salt-tape birthday infrastructure (`tapeCheck`, `drawList_tapeCheck_eq_saltSeq`,
 `probEvent_tapeCheck_drawList_le_collisionBound`) records the explicit-list form of the
 salt-averaged `saltSeq` telescope; it is the analytic tool the run-level collision-flag charge of
-`(A)` reduces to via the flag-instrumented inductive coupling. -/
+`(A)` would reduce to via the flag-instrumented inductive coupling. -/
 
 /-- **Salt-tape collision check.** `tapeCheck c n tape` is the explicit-list analogue of the
 salt-averaged `saltSeq` disjunction: it reports `true` iff some head salt of the front `n`-block
@@ -663,8 +668,8 @@ marginal* of `hreg` needed to identify those two answer distributions: the progr
 
 The trapdoor-sampler suffix `s ← psf.trapdoorSample pk sk c` on the real side is discarded using its
 totality (`hNF : NeverFail`), so the real first marginal collapses to the bare uniform draw
-`$ᵗ Range`. This is the per-step off-collision answer agreement underlying the identical-until-bad
-coupling `gpv_tvDist_tape_runs_le_collisionBound`: it is the distributional (not pointwise)
+`$ᵗ Range`. This is the per-step off-collision answer agreement underlying the tape-route
+identical-until-bad coupling `(A)`: it is the distributional (not pointwise)
 agreement of the real and programmed random-oracle answers that the identical-until-bad
 machinery consumes as its no-bad-path agreement hypothesis. -/
 theorem evalSPMF_eval_domainSample_eq_uniform (pk : PK) (sk : SK)
@@ -696,7 +701,7 @@ omit [DecidableEq Range] [Fintype Salt] in
 sample on the random component and leave the cache and the salt tape untouched.
 
 This is the trivial "free query" case of the per-step no-bad-path agreement underlying the
-identical-until-bad coupling `gpv_tvDist_tape_runs_le_collisionBound`: the two
+tape-route identical-until-bad coupling `(A)`: the two
 tape-consuming GPV runs never diverge on a uniform query, so it contributes no charge to the bad
 event. -/
 theorem gpvImplTape_run_unif_eq (pk : PK) (sk : SK) (domainSample : PK → ProbComp Domain)
@@ -713,7 +718,7 @@ without touching the cache, and the programmed oracle likewise returns the recor
 leave the salt tape untouched.
 
 This is the "cached read" free case of the per-step no-bad-path agreement underlying the
-identical-until-bad coupling `gpv_tvDist_tape_runs_le_collisionBound`: a read that hits the
+tape-route identical-until-bad coupling `(A)`: a read that hits the
 cache returns the same recorded answer on both sides (the divergence between the lazy and programmed
 oracles can only arise on a *miss*, where a fresh answer is sampled). -/
 theorem gpvImplTape_run_read_hit_eq (pk : PK) (sk : SK) (domainSample : PK → ProbComp Domain)
@@ -737,7 +742,7 @@ return it, salt tape untouched). Hence the two tape handlers' read-on-miss trans
 output distributions.
 
 This is the genuinely distributional (not pointwise) per-step no-bad-path agreement underlying the
-identical-until-bad coupling `gpv_tvDist_tape_runs_le_collisionBound`: it is the
+tape-route identical-until-bad coupling `(A)`: it is the
 read-query case
 of the `hreg`-substitution bridge that the identical-until-bad machinery consumes as its
 no-bad agreement hypothesis. The lazy-vs-programmed *answer* divergence is invisible to the output
@@ -792,9 +797,8 @@ is `probOutput_flagTag_false`: where the flag fires the off-bad output probabili
 sides; where it stays `false` the two flagged steps reduce to their agreeing underlying steps.
 
 It is *true-as-stated* and *pinned* to the concrete flag handlers (no free parameters); it is the
-off-collision no-divergence ingredient the per-tape identical-until-bad coupling
-`gpv_tvDist_tape_runs_le_collisionBound` consumes (the cardinality telescope bounds the run-level
-flag probability by `collisionBound`). -/
+off-collision no-divergence ingredient the tape-route identical-until-bad coupling `(A)` would
+consume (the cardinality telescope bounds the run-level flag probability by `collisionBound`). -/
 theorem gpvImplTapeFlag_h_agree_good (pk : PK) (sk : SK) (domainSample : PK → ProbComp Domain)
     (hNF : ∀ c, NeverFail (psf.trapdoorSample pk sk c))
     (hreg : 𝒮[(do let sd ← domainSample pk; pure (psf.eval pk sd, sd)

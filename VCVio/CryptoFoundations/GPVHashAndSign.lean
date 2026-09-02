@@ -52,10 +52,14 @@ signing query. The precise EUF-CMA bound from [FGdG+25] Theorem 1 is:
   `                  + tail_bound + Q_s · (C_s + Q_H) / 2^k`
 
 where the salt-collision term `Q_s · (C_s + Q_H) / 2^k` bounds the probability that
-a fresh salt collides with any prior RO query. The formalized statement uses the birthday
-bound `(qSign + qHash)² / (2 · |Salt|)` (`GPVHashAndSign.collisionBound`), counting every
-salt appearing in a signing or random-oracle query; it is slightly looser than the
-[FGdG+25] term but still negligible for Falcon's 320-bit salts.
+a fresh salt collides with any prior RO query. The constant the formalized statements prove is
+the closed birthday form `(qSign + qHash)² / (2 · |Salt|)` (`GPVHashAndSign.collisionBound`),
+counting every salt appearing in a signing or random-oracle query. The underlying telescope
+establishes the exact union sum `∑_{j < qSign} (j + qHash) / |Salt|`
+(`GPVHashAndSign.sum_range_div_card_le_collisionBound`); the closed form is looser than that sum
+by the `qHash² / 2` term, which dominates when `qHash ≫ qSign`, and is negligible for Falcon's
+320-bit salts at any realistic budget. GPV08 Proposition 6.2 itself only sketches the
+same-message salt reuse term `Q_sign² / 2^k`.
 
 The proof decomposes into:
 - `GPVHashAndSign.reduction`: the collision-finding adversary (sign-then-hash simulation)
@@ -63,6 +67,18 @@ The proof decomposes into:
 - `GPVHashAndSign.collisionBound`: the salt-collision birthday bound
 - `GPVHashAndSign.forgery_yields_collision`: the core distinct-preimage game-hop
 - `GPVHashAndSign.forgery_yields_collision_or_exact_match`: the explicit split bound
+
+## Public endpoints
+
+- `GPVHashAndSign.euf_cma_split_bound_of_queryBound`: the split bound (collision term,
+  exact-match term, salt-collision term) for every adversary obeying the query bound.
+- `GPVHashAndSign.euf_cma_collision_bound_of_queryBound`: the closed collision-style bound, with
+  the exact-match term priced by the trapdoor guessing probability.
+
+Both discharge the random-oracle convention `ForgesQueriedPoint` by the append-forgery-query
+compiler at one extra hash query; the `ForgesQueriedPoint`-hypothesis forms
+`GPVHashAndSign.euf_cma_split_bound` / `GPVHashAndSign.euf_cma_collision_bound` are the
+primitives they chain through.
 
 ## References
 

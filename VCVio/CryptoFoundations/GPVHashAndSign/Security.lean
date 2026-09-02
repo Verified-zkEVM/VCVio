@@ -13,6 +13,13 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.EmbedIndex
 The trap-count to fresh-signature projections, the reservoir extraction of the
 programmed-preimage branch, the forgery dichotomy, and the headline EUF-CMA
 bounds.
+
+The headline bounds here, `euf_cma_split_bound` and `euf_cma_collision_bound`, carry the
+random-oracle convention `ForgesQueriedPoint` as a hypothesis. They are the primitive forms that
+the append-forgery-query compiler chains through; the public endpoints for consumers are the
+all-adversaries corollaries `euf_cma_split_bound_of_queryBound` and
+`euf_cma_collision_bound_of_queryBound` in `AppendQuery.lean`, whose only structural hypothesis on
+the adversary is the query bound.
 -/
 
 @[expose] public section
@@ -1881,10 +1888,17 @@ branch gives the collision term; the exact-match branch the `(qSign + qHash) · 
 specialization of `euf_cma_split_bound` and is derived from it; the exact-match term is *bounded*,
 not dropped, since `programmedPreimageAdvantage ≥ 1 / |Domain| > 0` for a finite domain.
 
-The salt-collision term `(qSign + qHash)² / (2 · |Salt|)` is the birthday bound on a fresh
+The salt-collision term `(qSign + qHash)² / (2 · |Salt|)` is `collisionBound`, the closed birthday
+form of the union sum `∑_{j < qSign} (j + qHash) / |Salt|` the telescope establishes: a fresh
 signing salt colliding with any previously recorded `(salt, message)` random-oracle input (a
-prior signing salt or an adversary hash query). For Falcon with 40-byte salts
-(`|Salt| = 2^320`), this is `2^{-191}` even for `qSign = qHash = 2^64`.
+prior signing salt or an adversary hash query). It is the constant this theorem proves; the
+`collisionBound` docstring records how it relates to the GPV08 and [FGdG+25] constants. For Falcon
+with 40-byte salts (`|Salt| = 2^320`), this is `2^{-191}` even for `qSign = qHash = 2^64`.
+
+This form carries the `ForgesQueriedPoint` convention as a hypothesis and leaves `εpp` abstract.
+The endpoint for consumers is `euf_cma_collision_bound_of_queryBound`, which discharges the
+convention by the append-forgery-query compiler and prices `εpp` by the trapdoor guessing
+probability.
 
 References: GPV08 Section 6; BDF+11 for the QROM extension. -/
 theorem euf_cma_collision_bound [DecidableEq Domain]
@@ -1928,7 +1942,11 @@ This theorem makes both branches of the GPV proof explicit:
 - and the birthday salt-collision term.
 
 It is the most honest generic statement available from the current API, before any additional
-PSF-specific min-entropy lemma collapses the exact-match branch into the collision branch. -/
+PSF-specific min-entropy lemma collapses the exact-match branch into the collision branch.
+
+This form carries the `ForgesQueriedPoint` convention as a hypothesis; the endpoint for consumers
+is `euf_cma_split_bound_of_queryBound`, which discharges it for every adversary at one extra hash
+query via the append-forgery-query compiler. -/
 theorem euf_cma_split_bound [DecidableEq Domain]
     [Inhabited Range] [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)

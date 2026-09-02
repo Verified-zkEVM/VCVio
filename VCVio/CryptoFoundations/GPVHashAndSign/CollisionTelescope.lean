@@ -40,9 +40,9 @@ sample a short preimage `s ← D_short`, set `c := psf.eval pk s`, program the R
 `(r, m) := c`, and return `(r, s)`. This is indistinguishable from Game 0 when the PSF
 sampler is correct (the output distribution conditioned on the target is the same).
 
-**Bad event**: A salt collision occurs (two distinct signing queries or the forgery reuse
-the same `(salt, message)` pair as a prior RO entry). Under the birthday bound, this
-happens with probability at most `q_S² / (2 · |Salt|)`.
+**Bad event**: A fresh signing salt lands on a `(salt, message)` pair already recorded in the
+random oracle, by a prior signing query or an adversary hash query. Under the birthday bound,
+this happens with probability at most `(q_S + q_H)² / (2 · |Salt|)` (`collisionBound`).
 
 **Game 2 (reduction)**: The simulator programs the random oracle with hidden short preimages.
 If the adversary forges on a fresh `(salt, message)` pair and the forged short preimage differs
@@ -123,14 +123,21 @@ noncomputable def reduction
     | some sHidden => pure (sHidden, sStar)
     | none => pure (sStar, sStar)
 
-/-- The salt-collision birthday bound (GPV08, Proposition 6.2).
+/-- The salt-collision birthday bound, in the closed form `(qSign + qHash)² / (2 · |Salt|)`.
 
 For `qSign` signing queries and `qHash` random-oracle queries, with salts drawn uniformly from a
-set of size `|Salt|`, the standard GPV/FDH-with-salt bound on a fresh signing salt colliding with
-any previously recorded random-oracle input (a prior signing salt or an adversary hash query) is
-`(qSign + qHash)² / (2 · |Salt|)`. This upper-bounds the exact union sum
-`qSign·(qSign-1)/2 + qSign·qHash` over the `qSign` fresh draws, each compared against at most
-`j + qHash` recorded entries.
+set of size `|Salt|`, this bounds the probability that a fresh signing salt collides with any
+previously recorded random-oracle input (a prior signing salt or an adversary hash query). What
+the telescope actually establishes is the exact union sum `∑_{j < qSign} (j + qHash) / |Salt|`
+(`sum_range_div_card_le_collisionBound`): the `j`-th fresh draw is compared against at most
+`j + qHash` recorded entries, and `∑_{j < qSign} (j + qHash) = qSign·(qSign-1)/2 + qSign·qHash`
+is at most `(qSign + qHash)² / 2`. This closed form is the constant the headline bounds state.
+
+Relation to the literature: GPV08 (Proposition 6.2) only sketches the same-message salt reuse
+term `Q_sign² / 2^k`; the salt-vs-hash-query accounting is the `Q_s · (C_s + Q_H) / 2^k` term of
+[FGdG+25] Theorem 1, recorded in the umbrella module docstring. The closed form here is looser
+than the union sum by the `qHash² / 2` term, which dominates when `qHash ≫ qSign`; at Falcon's
+symmetric budget below the difference is immaterial.
 
 For Falcon with 40-byte salts (`|Salt| = 2^320`) and `qSign, qHash ≤ 2^64`:
   `collisionBound (Bytes 40) (2^64) (2^64) = 2^130 / (2 · 2^320) = 2^{-191}`. -/
@@ -435,17 +442,16 @@ with the bad event averaged over the fresh salt draw. It specializes
 `signRunF` is the flag-carrying sequenced signing process: it draws `qSign` fresh salts in turn,
 applies a per-step answer handler `step n state r`, and sets a Boolean flag the first time a drawn
 salt lands in its recorded cache slice `c n`. Its flag-true marginal is the run-level counterpart of
-the `saltSeq` collision event. `signRunF_flag_le_saltSeq` records that the flag-true probability of
-the *real* run is bounded by `Pr[saltSeq c qSign = true]` (the flag fires iff some draw collides,
-which is exactly the `saltSeq` disjunction marginalized over the threaded state).
+the `saltSeq` collision event: the flag fires iff some draw collides, which is exactly the
+`saltSeq` disjunction marginalized over the threaded state.
 
-`signRunF_tvDist_le_flag` is the multi-step coupling: the total-variation distance between the real
-and programmed sequenced runs is bounded by the run-level flag-true probability. Off the per-step
+`signRunF_tvDist_le_saltSeq` is the multi-step coupling: the total-variation distance between the
+real and programmed sequenced runs is bounded by `Pr[saltSeq c qSign = true]`. Off the per-step
 collision the *current* step distributions agree (via `h_step`), but the two runs recurse with
 *different* per-step handlers, so the off-bad agreement is threaded through the recursion with the
 accumulating flag rather than obtained by a single application of the per-step primitive (the tails
-differ). Chaining it with `signRunF_flag_le_saltSeq` and the telescope
-`probEvent_saltSeq_le_collisionBound` yields the salt-inclusive coupling. -/
+differ). Chaining it with the telescope `probEvent_saltSeq_le_collisionBound` yields the
+salt-inclusive coupling `signRunF_tvDist_le_collisionBound`. -/
 
 omit [DecidableEq Salt] [Fintype Salt] in
 /-- **Per-step salt-inclusive identical-until-bad coupling.**
@@ -460,7 +466,7 @@ probability that the fresh salt lands in `cache`, namely `card cache / |Salt|` (
 This is the single-step instance of the fundamental-lemma-of-game-playing with the bad event
 averaged over the fresh salt draw. It specializes `tvDist_bind_left_event_le` at
 `mx := $ᵗ Salt` and `bad := (· ∈ cache)`. It is the per-step core the sequenced coupling
-`signRunF_tvDist_le_flag` accumulates. -/
+`signRunF_tvDist_le_saltSeq` accumulates. -/
 theorem tvDist_signStep_real_programmed_le_collision [Nonempty Salt] {β : Type}
     (cache : Finset Salt) (freal fprog : Salt → ProbComp β)
     (h_eq : ∀ r, r ∉ cache → 𝒮[freal r] = 𝒮[fprog r]) :

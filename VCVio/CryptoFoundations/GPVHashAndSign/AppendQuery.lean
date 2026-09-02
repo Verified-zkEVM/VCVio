@@ -33,6 +33,11 @@ query bound: the `ForgesQueriedPoint` hypothesis is discharged by the compiler. 
 remaining exact-match term by the sampler's guessing probability
 (`programmedPreimageAdvantage_le_trapdoorGuessingProbability`) gives the closed collision-style
 headline `euf_cma_collision_bound_of_queryBound`.
+
+These two `_of_queryBound` theorems are the public endpoints of the GPV development: they are the
+statements a scheme instantiation should consume, so that `ForgesQueriedPoint` never becomes an
+unstated convention at the instantiation. The `ForgesQueriedPoint`-hypothesis forms in
+`Security.lean` are the primitives the compiler chains through.
 -/
 
 @[expose] public section

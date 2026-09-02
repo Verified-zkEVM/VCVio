@@ -425,9 +425,9 @@ projection of the flagless original run with that of the flagged run, and
 projections to the actual game runs; the data-processing contraction `tvDist_map_le` then reduces
 the framework total-variation bound to the original-run TV distance.
 
-Unlike the front-tape reduction `gpv_tvDist_tape_run_le_probEvent_flag`, there is **no upfront salt
-tape**: each signing salt is drawn inline at its step, so the run-level flag probability telescopes
-*directly* to the salt-averaged birthday term (no re-interleaving). -/
+Unlike a reduction over a front-loaded salt tape (`TapeFactorization.lean`), there is **no upfront
+salt tape**: each signing salt is drawn inline at its step, so the run-level flag probability
+telescopes *directly* to the salt-averaged birthday term (no re-interleaving). -/
 theorem gpv_tvDist_orig_run_le_probEvent_flag (pk : PK) (sk : SK)
     (adv : SignatureAlg.unforgeableAdv
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))

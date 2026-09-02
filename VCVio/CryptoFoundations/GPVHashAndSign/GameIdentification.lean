@@ -508,8 +508,8 @@ run-level collision-flag probability of the flag-instrumented *original* (inline
 bad-monotonicity `h_mono`s) — with the original-run cardinality telescope `(A2)`
 `gpv_orig_flag_le_collisionBound`, which bounds that flag probability by
 `(collisionBound …).toReal`.  Because each signing salt is drawn inline at its step, this route
-avoids the upfront-tape re-interleaving that the front-tape coupling
-`gpv_tvDist_tape_runs_le_collisionBound` `(A)` requires. -/
+avoids the upfront-tape re-interleaving that a coupling over the front-loaded salt tape
+(`TapeFactorization.lean`) would require; that tape-route coupling is not established here. -/
 theorem gpv_tvDist_real_programmed_le_collisionBound
     [Finite Range] [Inhabited Range] [Nonempty Salt]
     (pk : PK) (sk : SK)
@@ -692,12 +692,15 @@ theorem tvDist_runtime_real_programmed_le_collisionBound_saltInclusive
 
 /-! ## Step 1 and the wiring to the headline bounds
 
-**Step 1 (sign-then-hash ≡ real).** `gpv_tvDist_real_programmed_le_collisionBound` *consumes* the
-direct front-tape coupling `gpv_tvDist_tape_runs_le_collisionBound`: after the front-tape
-factorization bridges put both pinned GPV game runs into `drawList ($ᵗ Salt) qSign >>= tape-run`
-shape, the per-tape identical-until-bad coupling `(A)` and the front-tape birthday bound `(B)`
-discharge the salt-inclusive sign-then-hash hop `tvDist realRun progRun ≤ collisionBound`. The
-front-tape coupling is invoked on the Step-1 path.
+**Step 1 (sign-then-hash ≡ real).** `gpv_tvDist_real_programmed_le_collisionBound` is proved by
+the *original-run* route, with every signing salt drawn inline at its step: the
+identical-until-bad reduction `gpv_tvDist_orig_run_le_probEvent_flag` bounds the salt-inclusive
+sign-then-hash hop `tvDist realRun progRun` by the run-level collision-flag probability of the
+flag-instrumented real handler `gpvRealImplFlag`, and the original-run cardinality telescope `(A2)`
+`gpv_orig_flag_le_collisionBound` bounds that flag probability by `collisionBound`. The front-tape
+factorization of `TapeFactorization.lean` (both game runs as `drawList ($ᵗ Salt) qSign` followed
+by a tape-consuming run) is not on this path: it is reusable infrastructure whose own coupling
+headline over the tape is not established.
 
 **Wiring Step 1 to the headline bounds.** Two facts connect
 `gpv_tvDist_real_programmed_le_collisionBound` to the headline bounds:
