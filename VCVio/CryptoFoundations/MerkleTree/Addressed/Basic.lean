@@ -21,22 +21,15 @@ level-separated tree (`nodeHash` through the depth of the addressed subtree), an
 XMSS/SLH-DSA-style fully-addressed trees (`nodeHash` through an arbitrary
 address-to-tweak map) — inherits all of it by specialization.
 
-**Scope note (staged, deliberately).** The pre-existing unaddressed API in
-`MerkleTree.Inductive` is *not* re-expressed as a wrapper around this engine: its
+The unaddressed API in `MerkleTree.Inductive` is not defined as a wrapper around this engine: its
 definitions (`getPutativeRootWithHash`, `populateUp`, `findCollision`) stand
-unchanged, and this module is added alongside them. What the `Instances` section
-below establishes instead is that the unaddressed API is **propositionally
-subsumed** at the constant instance — its build and putative-root computations are
+independently. The `Instances` section establishes that the unaddressed API is
+**propositionally subsumed** at the constant instance: its build and putative-root computations are
 recovered (`populateUpAddressed_const`, `getPutativeRootAddressed_const`), its
 completeness theorem is *re-derived* from this engine's rather than reproved
 (`functional_completeness_of_addressed`), and its constructive collision walk is
 literally this engine's walk with the address tag erased
-(`findCollisionAddressed_const`). Turning that propositional subsumption into a
-definitional one — redefining the unaddressed entry points as constant
-specializations — would change a load-bearing upstream API consumed by
-`Inductive.Extractability`, `Inductive.Batch`, `Uniqueness` and `QueryBound`, so it
-is left as a follow-up for the maintainers rather than performed inside this
-contribution.
+(`findCollisionAddressed_const`).
 
 Design: at each recursion step into a child, the engine passes the *reindexed* hash
 `fun a => nodeHash (.ofLeft a)` (resp. `.ofRight`) — the address is threaded by
@@ -56,14 +49,18 @@ Contents:
   the constructive collision kernel, returning the collision **as data, tagged with
   the address** at which it occurs: two distinct pairs with equal hash *under that
   address's hash function*.
+* `findCollisionAddressed_oriented` — the same walk oriented from an honest tree and
+  opening toward an adversarial opening.
 * `getPutativeRootAddressedWithHash_binding_collision` — the user-facing binding
   statement: distinct leaf values verifying to the same root at the same index yield
   an address-tagged collision.
+* `addressed_oriented_binding` — the oriented binding statement used by
+  target-collision-resistance reductions.
 
 The symmetric collision statement here is deliberately **not** phrased as a
 target-collision-resistance win: TCR is directional (one endpoint fixed at
-target-registration time). The oriented reduction against a sampled-target game is
-the follow-up consumer of the address tag.
+target-registration time). The oriented results retain which collision endpoint came from the
+honest tree so downstream reductions can preserve that direction.
 -/
 
 @[expose] public section
