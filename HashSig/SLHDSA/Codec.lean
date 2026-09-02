@@ -28,7 +28,7 @@ used by the decoder.
 
 ## References
 
-- NIST FIPS 205, Figures 16 and 17
+- NIST FIPS 205, Figures 15–17
 - NIST FIPS 205, Algorithms 18--20
 -/
 
@@ -602,14 +602,15 @@ private theorem mul_add_le_mul {i j n : ℕ} (h : i < j) : i * n + n ≤ j * n :
 
 /-! ### Wire normal forms -/
 
-/-- The public-key wire is `PK.seed || PK.root` (FIPS 205 Algorithm 21). -/
+/-- The public-key wire is `PK.seed || PK.root` (FIPS 205 Figure 16; Algorithm 18). -/
 theorem encodePublicKey_eq {p : Params} {core : CorePrimitives p}
     (atomic : CoreWireCodec p core) (key : PublicKeyCore core) :
     encodePublicKey atomic key
       = atomic.pkSeed.encode key.pkSeed ++ atomic.y.encode key.pkRoot := by
   simp [encodePublicKey, publicKeyCodec, publicKeyFieldsEquiv]
 
-/-- The secret-key wire is `SK.seed || SK.prf || PK.seed || PK.root` (FIPS 205 Alg 22). -/
+/-- The secret-key wire is `SK.seed || SK.prf || PK.seed || PK.root` (FIPS 205 Figure 15;
+Algorithm 18 line 4). -/
 theorem encodeSecretKey_eq {p : Params} {core : CorePrimitives p}
     (atomic : CoreWireCodec p core) (key : SecretKeyCore core) :
     encodeSecretKey atomic key

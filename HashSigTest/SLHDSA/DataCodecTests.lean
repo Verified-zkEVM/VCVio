@@ -56,13 +56,6 @@ def zeroPublicKey (p : Params) : PublicKeyCore (byteCore p) :=
 def zeroSecretKey (p : Params) : SecretKeyCore (byteCore p) :=
   ⟨zeroBytes p.n, zeroBytes p.n, zeroBytes p.n, zeroBytes p.n⟩
 
-def zeroSignature (p : Params) : SignatureCore p (byteCore p) :=
-  ⟨zeroBytes p.n,
-    Vector.ofFn fun _ =>
-      ⟨zeroBytes p.n, Vector.ofFn fun _ => zeroBytes p.n⟩,
-    Vector.ofFn fun _ =>
-      ⟨Vector.ofFn (fun _ => zeroBytes p.n), Vector.ofFn fun _ => zeroBytes p.n⟩⟩
-
 def forsSecretTag (p : Params) (tree : ℕ) : ℕ :=
   2 + tree * (1 + p.a)
 
