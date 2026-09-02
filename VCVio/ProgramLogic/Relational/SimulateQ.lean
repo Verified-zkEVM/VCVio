@@ -466,7 +466,7 @@ theorem relTriple_simulateQ_run_of_impl_eq_preservesInv
     intro z hz
     rcases (mem_support_bind_iff
       (𝒮[(impl₂ t).run s₁])
-      (fun a => (pure (a, a) : SPMF ((spec.Range t × σ) × (spec.Range t × σ)))) z).1 hz with
+      (fun a => pure (a, a)) z).1 hz with
       ⟨a, ha, hz'⟩
     have hzEq : z = (a, a) := by
       simpa [support_pure, Set.mem_singleton_iff] using hz'
