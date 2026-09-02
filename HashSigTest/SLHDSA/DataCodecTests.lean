@@ -186,7 +186,6 @@ def testAllFipsSets : IO Unit := do
     checkKeyCodecs set.name vp.params
     checkSignatureBoundaries set.name vp
 
-<<<<<<< HEAD
 /-! ## End-to-end over the real approved primitives
 
 Honest keygen / sign / encode / decode / verify at the fast 128-bit profiles of both hash
@@ -262,21 +261,15 @@ def testApprovedEndToEnd : IO Unit := do
   checkApprovedEndToEnd .SLHDSA_SHAKE_128f
     (seedBytes 16 1) (seedBytes 16 2) (seedBytes 16 3) (seedBytes 16 4)
 
-=======
->>>>>>> origin/main
 def run : IO Unit := do
   checkKeyCodecs "d=1 canary" d1.params
   checkSignatureBoundaries "d=1 canary" d1
   checkKeyCodecs "d=2 canary" d2.params
   checkSignatureBoundaries "d=2 canary" d2
   testAllFipsSets
-<<<<<<< HEAD
   testApprovedEndToEnd
   IO.println "SLH-DSA structured wire codecs: PASS \
     (d=1, d=2, all 12 FIPS sets, SHA2/SHAKE-128f end-to-end)"
-=======
-  IO.println "SLH-DSA structured wire codecs: PASS (d=1, d=2, all 12 FIPS sets)"
->>>>>>> origin/main
 
 end SLHDSA.DataCodecTests
 
