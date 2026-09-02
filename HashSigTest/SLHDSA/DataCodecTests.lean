@@ -14,8 +14,11 @@ These tests exercise the canonical key and signature codecs at depth one, depth 
 twelve approved FIPS 205 parameter sets, instantiated over the identity byte carrier `byteCore`
 rather than a concrete hash suite. Every structured signature boundary receives a marker:
 `R`, each FORS secret and authentication node, every WOTS chain value, and every XMSS
-authentication node. Short and long inputs are rejected before semantic decoding. End-to-end
-integration with a concrete primitive suite belongs to the suites' own test executables.
+authentication node. Short and long inputs are rejected before semantic decoding.
+
+An end-to-end exercise over the real approved primitives then keygens, signs, encodes,
+decodes, and verifies at SLH-DSA-SHA2-128f and SLH-DSA-SHAKE-128f through
+`Concrete.approvedWireCodec`, checking the exact FIPS byte widths of the resulting wires.
 -/
 
 public section
@@ -183,13 +186,90 @@ def testAllFipsSets : IO Unit := do
     checkKeyCodecs set.name vp.params
     checkSignatureBoundaries set.name vp
 
+/-! ## End-to-end over the real approved primitives
+
+Honest keygen / sign / encode / decode / verify at the fast 128-bit profiles of both hash
+families, driving the general scheme over `Concrete.approvedPrimitives` and crossing the byte
+boundary through `Concrete.encodeApprovedSignature` / `Concrete.decodeApprovedSignature`. -/
+
+instance : DecidableEq (Concrete.approvedPrimitives .SLHDSA_SHA2_128f).Y :=
+  inferInstanceAs (DecidableEq (Bytes 16))
+
+instance : DecidableEq (Concrete.approvedPrimitives .SLHDSA_SHAKE_128f).Y :=
+  inferInstanceAs (DecidableEq (Bytes 16))
+
+def seedBytes (n salt : ℕ) : Bytes n :=
+  Vector.ofFn fun i => UInt8.ofNat (salt + 17 * i.val)
+
+def endToEndMessage : List Byte :=
+  "FIPS 205 wire".toUTF8.toList
+
+def checkApprovedEndToEnd (set : FipsParameterSet)
+    [DecidableEq (Concrete.approvedPrimitives set).Y]
+    (skSeed : (Concrete.approvedPrimitives set).SkSeed)
+    (skPrf : (Concrete.approvedPrimitives set).SkPrf)
+    (pkSeed : (Concrete.approvedPrimitives set).PkSeed)
+    (addrnd : (Concrete.approvedPrimitives set).Y) : IO Unit := do
+  let vp := set.validatedParams
+  let prims := Concrete.approvedPrimitives set
+  let (pk, sk) := GeneralScheme.keygenInternal vp prims skSeed skPrf pkSeed
+  let sig := GeneralScheme.signInternal vp prims endToEndMessage sk addrnd
+  ensure s!"{set.name}: honest signature verifies before the byte boundary"
+    (GeneralScheme.verifyInternal vp prims endToEndMessage sig pk)
+  let raw := Concrete.encodeApprovedSignature set sig
+  ensure s!"{set.name}: exact FIPS signature width" (raw.length == set.params.signatureBytes)
+  match Concrete.decodeApprovedSignature set raw with
+  | .error error =>
+      throw (IO.userError s!"{set.name}: honest wire signature rejected: {repr error}")
+  | .ok decoded =>
+      ensure s!"{set.name}: decoded wire signature verifies"
+        (GeneralScheme.verifyInternal vp prims endToEndMessage decoded pk)
+  ensure s!"{set.name}: tampered wire signature rejected as non-exact"
+    (match Concrete.decodeApprovedSignature set (0 :: raw) with
+     | .error _ => true
+     | .ok _ => false)
+  let flipped := raw.set 0 (raw.headD 0 ^^^ 0x01)
+  ensure s!"{set.name}: same-length corrupted wire decodes but fails verification"
+    (match Concrete.decodeApprovedSignature set flipped with
+     | .error _ => false
+     | .ok corrupted =>
+         !(GeneralScheme.verifyInternal vp prims endToEndMessage corrupted pk))
+  let pkRaw := Concrete.encodeApprovedPublicKey set pk
+  ensure s!"{set.name}: exact FIPS public-key width"
+    (pkRaw.length == set.params.publicKeyBytes)
+  match Concrete.decodeApprovedPublicKey set pkRaw with
+  | .error error =>
+      throw (IO.userError s!"{set.name}: honest wire public key rejected: {repr error}")
+  | .ok decodedPk =>
+      ensure s!"{set.name}: signature verifies under the decoded wire public key"
+        (GeneralScheme.verifyInternal vp prims endToEndMessage sig decodedPk)
+  let skRaw := Concrete.encodeApprovedSecretKey set sk
+  ensure s!"{set.name}: exact FIPS secret-key width"
+    (skRaw.length == set.params.secretKeyBytes)
+  match Concrete.decodeApprovedSecretKey set skRaw with
+  | .error error =>
+      throw (IO.userError s!"{set.name}: honest wire secret key rejected: {repr error}")
+  | .ok decodedSk =>
+      ensure s!"{set.name}: decoded secret key re-encodes canonically"
+        (Concrete.encodeApprovedSecretKey set decodedSk == skRaw)
+  IO.println s!"{set.name}: end-to-end keygen/sign/encode/decode/verify PASS \
+    ({raw.length} signature bytes)"
+
+def testApprovedEndToEnd : IO Unit := do
+  checkApprovedEndToEnd .SLHDSA_SHA2_128f
+    (seedBytes 16 1) (seedBytes 16 2) (seedBytes 16 3) (seedBytes 16 4)
+  checkApprovedEndToEnd .SLHDSA_SHAKE_128f
+    (seedBytes 16 1) (seedBytes 16 2) (seedBytes 16 3) (seedBytes 16 4)
+
 def run : IO Unit := do
   checkKeyCodecs "d=1 canary" d1.params
   checkSignatureBoundaries "d=1 canary" d1
   checkKeyCodecs "d=2 canary" d2.params
   checkSignatureBoundaries "d=2 canary" d2
   testAllFipsSets
-  IO.println "SLH-DSA structured wire codecs: PASS (d=1, d=2, all 12 FIPS sets)"
+  testApprovedEndToEnd
+  IO.println "SLH-DSA structured wire codecs: PASS \
+    (d=1, d=2, all 12 FIPS sets, SHA2/SHAKE-128f end-to-end)"
 
 end SLHDSA.DataCodecTests
 
