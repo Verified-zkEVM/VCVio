@@ -18,8 +18,10 @@ This file builds the reduction infrastructure for the ML-DSA EUF-NMA analysis:
 1. **Exact short-secret MLWE key swap.** `keygenShort` samples `(s₁, s₂)` on the `η`-bounded box
    used by the ML-DSA assumption, while `keygenShort1` replaces `t = Â · s₁ + s₂` by a uniform
    vector. `nma_keyswap_hop_short` identifies their NMA-game gap with the seed-based
-   `mldsaMLWEShort` advantage, and `advantage_mldsaMLWEShort_le_matrix` relates that problem to
-   uniform-matrix MLWE under an explicit `ExpandA` idealization.
+   `mldsaMLWEShort` advantage. `advantage_mldsaMLWEShort_le_matrix` relates that problem to
+   uniform-matrix MLWE under the `expandAIdealization` assumption, which has no instance below
+   the trivial budget; the quantitative route to the uniform-matrix problem is the random-oracle
+   model of `LatticeCrypto.MLDSA.SecurityExpandARO`.
 2. **Seed-derived scaffolding.** `keygen0` and `keygen1` describe the concrete seed-derived and
    uniform-`t` key distributions. The generic lemma `nmaGame_eq_keygen_bind` factors either
    key-generator prefix out of the NMA runtime. The older full-ring `mldsaMLWE` definitions remain
@@ -506,13 +508,19 @@ distinguisher `D` receiving both the seed and the matrix, the pair
 `(ρ, ExpandA(ρ))` for uniform `ρ` is `εA`-indistinguishable from `(ρ, A)` with `A`
 uniform and independent of `ρ`.
 
-This is the standard random-oracle reading of `ExpandA` (Dilithium's `A = ExpandA(ρ)`
-with `ExpandA` modeled as a random function), stated once with inspectable content
-rather than supplied per-reduction. For a fixed deterministic `prims.expandA` the
-unrestricted-quantifier form is only satisfiable at large `εA` (a distinguisher may
-recompute `ExpandA(ρ)` and compare); pending the cost-model infrastructure (#460) it
-should be read computationally, against bounded distinguishers, where it is the
-assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
+**This predicate has no useful instance.** For the fixed deterministic function
+`prims.expandA` the distinguisher `D ρ Â := pure (decide (Â = ExpandA(ρ)))` accepts the real
+branch with probability `1` and the ideal branch with probability `1 / |TqMatrix|`, so the
+inequality forces `εA` to be essentially `1`. Restricting to bounded distinguishers would not
+change that: recomputing `ExpandA(ρ)` is the same efficient evaluation that key generation and
+verification themselves perform. Consequently `nma_security_short_matrix`, the only consumer,
+is non-quantitative scaffolding.
+
+Reaching the uniform-matrix problem requires *modelling* `ExpandA` as a random oracle rather
+than assuming a property of a fixed function. That model is
+`LatticeCrypto.MLDSA.SecurityExpandARO`, where `ExpandA` is an oracle shared by key generation,
+verification, and the reduction, and both reductions program it at a self-chosen seed; its
+headline `MLDSA.NMA.nma_security_rom` reaches `mldsaMatrixMLWE` with no idealization slack. -/
 def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ) : Prop :=
   ∀ [IsUniformSpec unifSpec] (D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool),
     |(Pr[= true | do
@@ -2213,9 +2221,12 @@ The live short-secret reduction and the extraction bound are fully proven:
 
 - **MLWE key swap (`nma_keyswap_hop_short`).** The exact NMA-game gap for
   `keygenShort` / `keygenShort1` is the advantage of `distinguisherBShort` against
-  `mldsaMLWEShort`. `advantage_mldsaMLWEShort_le_matrix` supplies the explicit seed-to-matrix
-  bridge. The older `mldsaMLWE` / `distinguisherB` declarations are scaffolding only: their
-  full-ring real branch is not the seed-derived `keygen0` distribution.
+  `mldsaMLWEShort`. `advantage_mldsaMLWEShort_le_matrix` supplies the seed-to-matrix bridge, but
+  only under `expandAIdealization`, which has no instance below the trivial budget; the
+  quantitative uniform-matrix statement is `MLDSA.NMA.nma_security_rom` in
+  `LatticeCrypto.MLDSA.SecurityExpandARO`. The older `mldsaMLWE` / `distinguisherB` declarations
+  are scaffolding only: their full-ring real branch is not the seed-derived `keygen0`
+  distribution.
 - **STMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** The uniform-`t` NMA advantage is bounded
   by the SelfTargetMSIS advantage of `extractorC`; after `nmaGame_eq_keygen_bind` both sides bind
   over the same `keygen1` prefix, so `probOutput_bind_mono` reduces to the per-key lemma
@@ -2241,12 +2252,18 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
 /-- **The matrix-MLWE-facing NMA headline.** `nma_security_short` with the abstract-problem
 bridge discharged: the MLWE leg lands on the standard uniform-matrix short-secret problem
 `mldsaMatrixMLWE`, at the cost of one application of the `expandAIdealization` assumption
-(`advantage_mldsaMLWEShort_le_matrix`, supplying the bridge slack `εA`). The SelfTargetMSIS leg
-still lands on the *tailored* `mldsaSTMSISShort`, not the standard SelfTargetMSIS normal form —
-that second bridge is follow-up work, so only the MLWE side is stated against a standard
-literature problem here. No caller-supplied inequality remains: every hypothesis is a
-satisfiable pinned equality (`keygenShort_generable`), a proven reduction, or the named XOF
-idealization. -/
+(`advantage_mldsaMLWEShort_le_matrix`, supplying the bridge slack `εA`).
+
+**Non-quantitative.** `expandAIdealization` has no instance below `εA ≈ 1` (see its docstring),
+so this corollary carries no security content at any parameter set; it records the shape of the
+seed-to-matrix bridge. The quantitative statement over the uniform-matrix problem is
+`MLDSA.NMA.nma_security_rom` in `LatticeCrypto.MLDSA.SecurityExpandARO`, which models `ExpandA`
+as a random oracle shared by key generation, verification, and the reduction instead of assuming
+a property of the fixed `prims.expandA`.
+
+The SelfTargetMSIS leg lands on the *tailored* `mldsaSTMSISShort`, not the standard
+SelfTargetMSIS normal form — that second bridge is follow-up work, so only the MLWE side is
+stated against a standard literature problem here. -/
 theorem nma_security_short_matrix (maxAttempts : ℕ) (εA : ℝ)
     (hA : NMA.expandAIdealization p prims εA)
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
