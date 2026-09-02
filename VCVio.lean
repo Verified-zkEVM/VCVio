@@ -115,8 +115,6 @@ public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.SequentialB
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Stateful
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.StrongBound
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Targets
-public import VCVio.CryptoFoundations.MerkleTree.Vector.Completeness
-public import VCVio.CryptoFoundations.MerkleTree.Vector.Defs
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
