@@ -844,8 +844,13 @@ private lemma cmaSimSignStep_evalSPMF_eq_public
   unfold cmaSim
   obtain _ | key := keypair <;>
     (conv_lhs =>
-      simp [QueryImpl.Stateful.linkWith_apply_run, QueryImpl.Stateful.Frame.linkReshape,
-        cmaToNma, cmaSignSim, nma, nmaPublic, nmaProgram, cmaFrame, cmaOuterLens, cmaNmaLens]) <;>
+      simp only [cmaFrame, cmaOuterLens, Prod.mk.eta, cmaNmaLens,
+        QueryImpl.Stateful.linkWith_apply_run, cmaToNma, cmaSignSim, liftComp_eq_liftM,
+        bind_pure_comp, PFunctor.Lens.State.mk_get, StateT.run_mk, simulateQ_bind,
+        simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, nma, nmaPublic,
+        id_map, simulateQ_map, nmaProgram, StateT.run_bind, StateT.run_map, pure_bind,
+        bind_map_left, map_bind, Functor.map_map, QueryImpl.Stateful.Frame.linkReshape,
+        PFunctor.Lens.State.mk_put, liftM_bind, liftM_map]) <;>
     (conv_rhs => simp [cmaSimSignPublicDist, cmaSignKeySource])
   on_goal 1 => refine bind_congr fun key => ?_
   all_goals
