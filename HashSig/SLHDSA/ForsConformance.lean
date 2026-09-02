@@ -76,19 +76,24 @@ def decodeIndices (p : Params) (md : ForsDigest p) : Vector (LeafIndex p) p.k :=
     (decodeIndices p md)[i.val].val = forsIdx p md.toList i.val := by
   simp [decodeIndices]
 
-/-- The typed decoder is definitionally the existing Algorithm 4/FORS mathematical view. -/
+/-- The typed decoder satisfies the Algorithm 4 MSB-first arithmetic characterization: index
+`i` is the `i`-th `a`-bit digit from the top of the big-endian digest value. The digest always
+carries enough bits because `digestBytes = ⌈k·a/8⌉`. -/
 theorem decodeIndices_get_bigEndian (p : Params) (md : ForsDigest p)
     (i : TreeIndex p) :
     (decodeIndices p md)[i.val].val =
       toInt md.toList /
         2 ^ (8 * p.digestBytes - p.a * (i.val + 1)) % 2 ^ p.a := by
+  have hmd : md.toList.length = p.digestBytes := by simp
+  have hlen : p.k * p.a ≤ 8 * md.toList.length := by
+    rw [hmd]
+    have hdb : p.digestBytes = (p.k * p.a + 7) / 8 := rfl
+    omega
   rw [decodeIndices_get_val]
   unfold forsIdx
-  have hi : i.val < (base2b md.toList p.a p.k).length := by
-    rw [base2b_length]
-    exact i.isLt
-  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi]
-  simp [base2b]
+  rw [base2b_bigEndian md.toList p.a p.k hlen]
+  rw [List.getD_eq_getElem?_getD, List.getElem?_map, List.getElem?_range i.isLt]
+  simp [hmd]
 
 /-- Global leaf coordinate used by Algorithms 15–17: tree offset plus the local leaf. -/
 def globalLeafIndex (p : Params) (tree : TreeIndex p) (leaf : LeafIndex p) :

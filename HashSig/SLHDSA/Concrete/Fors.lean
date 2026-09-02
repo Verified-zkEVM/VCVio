@@ -30,15 +30,13 @@ theorem fips_forsDigest_capacity (set : FipsParameterSet) :
     set.params.k * set.params.a ≤ 8 * set.params.digestBytes := by
   cases set <;> decide
 
-/-- The checked Algorithm 4 boundary accepts the authoritative `DigestParts.md` extent and returns
-exactly the mathematical digit list consumed by the typed FORS decoder. -/
-theorem fips_decodeDigestParts_checked (set : FipsParameterSet)
+/-- The authoritative `DigestParts.md` extent satisfies Algorithm 4's normative width
+precondition, so the typed FORS decoder's MSB-first arithmetic characterization
+(`decodeIndices_get_bigEndian`) applies to every approved digest. -/
+theorem fips_decodeDigestParts_capacity (set : FipsParameterSet)
     (parts : DigestParts set.params) :
-    base2bChecked parts.md.toList set.params.a set.params.k =
-      .ok (base2b parts.md.toList set.params.a set.params.k) := by
-  apply base2bChecked_eq
-  · cases set <;> decide
-  · simpa using fips_forsDigest_capacity set
+    set.params.k * set.params.a ≤ 8 * parts.md.toList.length := by
+  simpa using fips_forsDigest_capacity set
 
 /-- The largest approved FORS global coordinate remains inside one four-byte address word. -/
 theorem fips_forsCoordinate_bound (set : FipsParameterSet) :

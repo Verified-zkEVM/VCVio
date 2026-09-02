@@ -130,11 +130,8 @@ def checkApprovedProfile (set : FipsParameterSet) : IO Unit := do
   let digest : Bytes p.m := fixedBytes p.m 11
   let parts := splitDigest p digest
   let indices := decodeDigestParts parts
-  match base2bChecked parts.md.toList p.a p.k with
-  | .error err => throw (IO.userError s!"{set.name}: rejected exact FORS digest: {repr err}")
-  | .ok digits =>
-      ensure s!"{set.name}: checked decoder equals canonical digits"
-        (digits == base2b parts.md.toList p.a p.k)
+  ensure s!"{set.name}: digest carries all k*a normative index bits"
+    (p.k * p.a ≤ 8 * parts.md.toList.length)
   ensure s!"{set.name}: exact decoded tree count" (indices.toList.length == p.k)
   checkAddress set "digest-derived FORS base" parts.forsAdrs
   checkAddress set "FORS public-key compression" (forsPkAdrs parts.forsAdrs)
