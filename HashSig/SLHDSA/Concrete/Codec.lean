@@ -7,6 +7,7 @@ Authors: Nicolas Consigny
 module
 public import HashSig.SLHDSA.Codec
 public import HashSig.SLHDSA.Concrete.FIPS
+public import HashSig.SLHDSA.Concrete.Instance
 public import HashSig.SLHDSA.GeneralScheme
 
 /-!
@@ -165,7 +166,7 @@ input. -/
 def decodeApprovedSignature (set : FipsParameterSet) (raw : List Byte) :
     Except CodecError
       (GeneralScheme.SignatureCore set.validatedParams (approvedPrimitives set).core) :=
-  decodeSignature set.validatedParams (approvedWireCodec set) raw
+  SLHDSA.decodeSignature set.validatedParams (approvedWireCodec set) raw
 
 /-- The approved public-key wire always has exactly the FIPS width `2n`. -/
 @[simp] theorem encodeApprovedPublicKey_length (set : FipsParameterSet)
@@ -203,6 +204,164 @@ def decodeApprovedSignature (set : FipsParameterSet) (raw : List Byte) :
     (signature :
       GeneralScheme.SignatureCore set.validatedParams (approvedPrimitives set).core) :
     decodeApprovedSignature set (encodeApprovedSignature set signature) = .ok signature :=
-  decodeSignature_encode set.validatedParams (approvedWireCodec set) signature
+  SLHDSA.decodeSignature_encode set.validatedParams (approvedWireCodec set) signature
+
+/-! ## Agreement with the legacy SLH-DSA-SHA2-128-24 decoder
+
+`SLHDSA.Concrete.decodeSignature` (`HashSig.SLHDSA.Concrete.Instance`) predates the strict
+codec: it reads the 3856-byte SLH-DSA-SHA2-128-24 wire at hard-coded offsets, without a width
+check. The theorems below reconcile the two byte boundaries: on every canonical wire — in
+particular on every input the strict checked decoder accepts — the legacy decoder produces
+exactly the same structured signature, so main hosts one FIPS byte layout, stated once. -/
+
+/-- The validated SLH-DSA-SHA2-128-24 parameter bundle, with a reducible `params` projection so
+codec statements over `sha128_24Vp.params` unify with the concrete bundle's `slhdsaSha2_128_24`
+index at every transparency level. -/
+@[reducible] def sha128_24Vp : ValidatedParams :=
+  ⟨slhdsaSha2_128_24, LimitedParameterSet.params_valid .SLHDSA_SHA2_128_24⟩
+
+/-- The atomic wire codec of the concrete SLH-DSA-SHA2-128-24 bundle: every carrier of
+`shaPrimitives` is definitionally `Bytes 16`, and each field is the identity byte codec. -/
+def shaWireCodec : CoreWireCodec slhdsaSha2_128_24 shaPrimitives.core where
+  pkSeed := WireCodec.bytes 16
+  skSeed := WireCodec.bytes 16
+  skPrf := WireCodec.bytes 16
+  y := WireCodec.bytes 16
+  y_toBytes := fun _ => rfl
+
+/-- The pinned SHA2-128-24 codec serializes `PK.seed` as exactly its own bytes. -/
+@[simp] theorem shaWireCodec_pkSeed_equiv (seed : Bytes 16) :
+    shaWireCodec.pkSeed.equiv seed = seed := rfl
+
+/-- The pinned SHA2-128-24 codec serializes `SK.seed` as exactly its own bytes. -/
+@[simp] theorem shaWireCodec_skSeed_equiv (seed : Bytes 16) :
+    shaWireCodec.skSeed.equiv seed = seed := rfl
+
+/-- The pinned SHA2-128-24 codec serializes `SK.prf` as exactly its own bytes. -/
+@[simp] theorem shaWireCodec_skPrf_equiv (seed : Bytes 16) :
+    shaWireCodec.skPrf.equiv seed = seed := rfl
+
+/-- The pinned SHA2-128-24 codec serializes a node as exactly its own bytes. -/
+@[simp] theorem shaWireCodec_y_equiv (value : Bytes 16) :
+    shaWireCodec.y.equiv value = value := rfl
+
+/-- Reading 16 bytes at `off'` from a canonical wire recovers the component whose strict slice
+sits at the equal offset `off`. -/
+private theorem baSliceToB16_of_slice {raw : List Byte} {v : Bytes 16} {off : ℕ} (off' : ℕ)
+    (hoff : off' = off) (hslice : (raw.drop off).take 16 = WireCodec.encode shaWireCodec.y v)
+    (hfit : off' + 16 ≤ raw.length) :
+    baSliceToB16 (ByteArray.mk raw.toArray) off' = v := by
+  subst hoff
+  have hslice' : (raw.drop off').take 16 = v.toList := hslice
+  apply Vector.ext
+  intro i hi
+  have hidx : off' + i < raw.length := by omega
+  have htake : i < ((raw.drop off').take 16).length := by
+    simp only [List.length_take, List.length_drop]
+    omega
+  have hv : v[i] = raw[off' + i]'hidx := by
+    have h := (List.getElem_of_eq hslice' htake).symm
+    simpa using h
+  simp only [baSliceToB16, Vector.getElem_ofFn]
+  have hsize : off' + i < (ByteArray.mk raw.toArray).size := by
+    simpa [ByteArray.size] using hidx
+  rw [getElem!_pos (ByteArray.mk raw.toArray) (off' + i) hsize]
+  exact ((show (ByteArray.mk raw.toArray)[off' + i]'hsize = raw[off' + i]'hidx from rfl)).trans
+    hv.symm
+
+private theorem forsTreeExt {x y : ForsTreeSigCore slhdsaSha2_128_24 shaPrimitives.core}
+    (h1 : x.sk = y.sk) (h2 : x.auth = y.auth) : x = y := by
+  cases x
+  cases y
+  simp only [ForsTreeSigCore.mk.injEq]
+  exact ⟨h1, h2⟩
+
+private theorem xmssExt {x y : XmssSigCore slhdsaSha2_128_24 shaPrimitives.core}
+    (h1 : x.wots = y.wots) (h2 : x.auth = y.auth) : x = y := by
+  cases x
+  cases y
+  simp only [XmssSigCore.mk.injEq]
+  exact ⟨h1, h2⟩
+
+private theorem forsSecret_off (i : ℕ) :
+    16 + i * 400 = WireLayout.forsSecretOffset slhdsaSha2_128_24 i := by
+  show 16 + i * 400 = 16 + i * ((1 + 24) * 16)
+  ring
+
+private theorem forsAuth_off (i j : ℕ) :
+    16 + i * 400 + 16 + j * 16 = WireLayout.forsAuthOffset slhdsaSha2_128_24 i j := by
+  show 16 + i * 400 + 16 + j * 16 = 16 + i * ((1 + 24) * 16) + (1 + j) * 16
+  ring
+
+private theorem wots_off (c : ℕ) :
+    2416 + c * 16 = WireLayout.wotsOffset slhdsaSha2_128_24 0 c := by
+  show 2416 + c * 16 = 16 + 6 * ((1 + 24) * 16) + 0 * ((68 + 22) * 16) + c * 16
+  ring
+
+private theorem xmssAuth_off (j : ℕ) :
+    2416 + 1088 + j * 16 = WireLayout.xmssAuthOffset slhdsaSha2_128_24 0 j := by
+  show 2416 + 1088 + j * 16
+      = 16 + 6 * ((1 + 24) * 16) + 0 * ((68 + 22) * 16) + (68 + j) * 16
+  ring
+
+/-- **Strict-encode / legacy-decode identity.** Decoding a canonical strict SLH-DSA-SHA2-128-24
+signature wire with the legacy fixed-offset decoder recovers exactly the encoded signature, so
+the legacy byte layout agrees with the strict FIPS codec on every well-formed wire. -/
+theorem decodeSignature_encodeSignature
+    (sig : SignatureCore slhdsaSha2_128_24 shaPrimitives.core) :
+    Concrete.decodeSignature
+      (ByteArray.mk (SLHDSA.encodeSignature sha128_24Vp shaWireCodec sig).toArray) = sig := by
+  have hlen : (SLHDSA.encodeSignature sha128_24Vp shaWireCodec sig).length = 3856 :=
+    SLHDSA.encodeSignature_length sha128_24Vp shaWireCodec sig
+  unfold Concrete.decodeSignature
+  conv_rhs => rw [show sig = (⟨sig.randomness, sig.fors, sig.hypertree⟩ :
+    SignatureCore slhdsaSha2_128_24 shaPrimitives.core) from rfl]
+  simp only []
+  congr 1
+  · exact baSliceToB16_of_slice 0 rfl
+      (SLHDSA.encodeSignature_randomness_slice sha128_24Vp shaWireCodec sig) (by omega)
+  · apply Vector.ext
+    intro i hi
+    have hi6 : i < 6 := hi
+    refine (Vector.getElem_ofFn hi6).trans ?_
+    refine forsTreeExt ?_ ?_
+    · exact baSliceToB16_of_slice _ (forsSecret_off i)
+        (SLHDSA.encodeSignature_forsSecret_slice sha128_24Vp shaWireCodec sig ⟨i, hi6⟩)
+        (by omega)
+    · apply Vector.ext
+      intro j hj
+      have hj24 : j < 24 := hj
+      refine (Vector.getElem_ofFn hj24).trans ?_
+      exact baSliceToB16_of_slice _ (forsAuth_off i j)
+        (SLHDSA.encodeSignature_forsAuth_slice sha128_24Vp shaWireCodec sig ⟨i, hi6⟩
+          ⟨j, hj24⟩)
+        (by omega)
+  · refine Eq.trans (congrArg (HtSigCore.singleLayer shaParams_d_eq_one) (xmssExt ?_ ?_))
+      (HtSigCore.singleLayer_getSingleLayer shaParams_d_eq_one sig.hypertree)
+    · apply Vector.ext
+      intro c hc
+      have hc68 : c < 68 := hc
+      refine (Vector.getElem_ofFn hc68).trans ?_
+      exact baSliceToB16_of_slice _ (wots_off c)
+        (SLHDSA.encodeSignature_wots_slice sha128_24Vp shaWireCodec sig ⟨0, by decide⟩
+          ⟨c, hc68⟩)
+        (by omega)
+    · apply Vector.ext
+      intro j hj
+      have hj22 : j < 22 := hj
+      refine (Vector.getElem_ofFn hj22).trans ?_
+      exact baSliceToB16_of_slice _ (xmssAuth_off j)
+        (SLHDSA.encodeSignature_xmssAuth_slice sha128_24Vp shaWireCodec sig ⟨0, by decide⟩
+          ⟨j, hj22⟩)
+        (by omega)
+
+/-- Whenever the strict checked decoder accepts a byte string, the legacy fixed-offset
+SLH-DSA-SHA2-128-24 decoder produces exactly the same structured signature. -/
+theorem decodeSignature_eq_of_strict_ok {raw : List Byte}
+    {sig : SignatureCore slhdsaSha2_128_24 shaPrimitives.core}
+    (h : SLHDSA.decodeSignature sha128_24Vp shaWireCodec raw = .ok sig) :
+    Concrete.decodeSignature (ByteArray.mk raw.toArray) = sig := by
+  rw [(SLHDSA.decodeSignature_eq_ok_iff sha128_24Vp shaWireCodec raw sig).mp h]
+  exact decodeSignature_encodeSignature sig
 
 end SLHDSA.Concrete
