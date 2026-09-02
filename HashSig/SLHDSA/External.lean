@@ -84,6 +84,12 @@ theorem encodePureMessage_eq_ok (context message : List Byte) (h : context.lengt
   rw [requireContext_eq_ok context h]
   rfl
 
+/-- The empty-context external encoding is exactly the compatibility surface's
+`emptyContextMessage`, so the two definitions of the FIPS `M'` for the empty context cannot
+diverge. -/
+@[simp] theorem encodePureMessage_nil (message : List Byte) :
+    encodePureMessage [] message = .ok (emptyContextMessage message) := rfl
+
 /-- Descriptor-parametric Algorithm 23/25 message input:
 `0x01 || toByte(|ctx|, 1) || ctx || OID || PH(M)`. FIPS-facing adapters must bind the descriptor
 to an approved algorithm and enforce the security-strength requirement. -/
