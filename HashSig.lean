@@ -12,6 +12,8 @@ public import HashSig.SLHDSA.C13.Xmss
 public import HashSig.SLHDSA.Codec
 public import HashSig.SLHDSA.Concrete.Codec
 public import HashSig.SLHDSA.Concrete.FIPS
+public import HashSig.SLHDSA.Concrete.Fors
+public import HashSig.SLHDSA.Concrete.Hypertree
 public import HashSig.SLHDSA.Concrete.Instance
 public import HashSig.SLHDSA.Concrete.Keccak
 public import HashSig.SLHDSA.Concrete.Prehash
@@ -24,9 +26,11 @@ public import HashSig.SLHDSA.EncodingLemmas
 public import HashSig.SLHDSA.External
 public import HashSig.SLHDSA.FipsParams
 public import HashSig.SLHDSA.Fors
+public import HashSig.SLHDSA.ForsConformance
 public import HashSig.SLHDSA.GeneralScheme
 public import HashSig.SLHDSA.GeneralSchemeQueryBound
 public import HashSig.SLHDSA.Hypertree
+public import HashSig.SLHDSA.HypertreeConformance
 public import HashSig.SLHDSA.HypertreeGeneral
 public import HashSig.SLHDSA.HypertreeGeneral.QueryBound
 public import HashSig.SLHDSA.MerkleExtractor
