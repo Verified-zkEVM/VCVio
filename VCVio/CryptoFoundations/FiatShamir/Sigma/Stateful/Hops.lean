@@ -691,7 +691,7 @@ private lemma cmaSignPublicDist_tv_le_hvzk
   cases keypair with
   | some key =>
       refine (ENNReal.ofReal_le_iff_le_toReal htop).mpr <| le_trans ?_
-        (hHVZK key.1 key.2 (by simpa [CmaData.Valid] using hvalid))
+        (hHVZK.tvDist_le key.1 key.2 (by simpa [CmaData.Valid] using hvalid))
       rw [cmaRealSignPublicDist_some, cmaSimSignPublicDist_some]
       exact tvDist_map_le (cmaSignPublicOfTranscript key.1 key.2)
         (σ.realTranscript key.1 key.2) (simT key.1)
@@ -707,7 +707,7 @@ private lemma cmaSignPublicDist_tv_le_hvzk
       intro key hkey
       exact (ENNReal.ofReal_le_iff_le_toReal htop).mpr <|
         (tvDist_map_le (cmaSignPublicOfTranscript key.1 key.2) (σ.realTranscript key.1 key.2)
-          (simT key.1)).trans (hHVZK key.1 key.2 (hr.gen_sound key.1 key.2 hkey))
+          (simT key.1)).trans (hHVZK.tvDist_le key.1 key.2 (hr.gen_sound key.1 key.2 hkey))
 
 omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
@@ -736,7 +736,7 @@ private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
     Pr[ fun t : Commit × Chal × Resp => ∃ ch, cache (m, t.1) = some ch | simT pk]
         = Pr[hit | commitDist] := by simp [commitDist, hit]
     _ = ∑ c ∈ S, Pr[= c | commitDist] := by simp [S, probEvent_eq_sum_filter_finSupport]
-    _ ≤ ∑ c ∈ S, β := Finset.sum_le_sum fun c _ => hCommit pk c
+    _ ≤ ∑ c ∈ S, β := Finset.sum_le_sum fun c _ => hCommit.probOutput_le pk c
     _ = (S.card : ℝ≥0∞) * β := by simp [Finset.sum_const, nsmul_eq_mul]
     _ ≤ QueryCache.enncard cache * β := mul_le_mul' h_card_le le_rfl
 

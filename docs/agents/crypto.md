@@ -87,16 +87,23 @@ such as the Fischlin transform and the Fiat-Shamir Σ-layer can run them. Dot no
 through the parent projection, so a `SigmaProtocol` uses the interaction properties directly.
 
 The monad `m` carries the participants' computations: `m := ProbComp` is the usual protocol whose
-only randomness is uniform sampling, while a general `m` lets the prover query oracles. Every
-probability- or support-bearing property assumes the lawful semantic lifts
-`[MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]`
-together with the bridge `[EvalDistCompatible m]`, so probability statements decompose along
-`bind` and the support-based notions (`SpeciallySound`) and probability-based ones
-(`PerfectlyComplete`, `HVZK`) refer to one coherent semantics of the same protocol. Caveat for
+only randomness is uniform sampling, while a general `m` lets the prover query oracles.
+Probability-bearing properties (`PerfectlyComplete`, `HVZK`, `PerfectHVZK`,
+`simCommitPredictability`, `simChalUniformGivenCommit`) are measure-native: they assume
+`[EvalDistSemantics m]` and read the protocol through `discreteEvalDist` / `discreteTVDist`
+(the canonical top-σ-algebra measure reading, since the protocol's type parameters carry no
+ambient measurable structure). Support-bearing notions (`SpeciallySound`) assume only
+`[MonadLiftT m SetM]`. At `m := ProbComp` every property is restated through the traditional
+`Pr[…]` / `tvDist` surface by a companion bridge lemma (`perfectlyComplete_iff_probOutput`,
+`hvzk_iff_tvDist`, `perfectHVZK_iff_evalSPMF_eq`, `simCommitPredictability_iff_probOutput`,
+`simChalUniformGivenCommit_iff_probEvent`) with application-shaped forms such as
+`PerfectlyComplete.probOutput_eq_one` and `HVZK.tvDist_le`; the discrete developments prove and
+consume the definitions exclusively through these bridges
+(`VCVio/EvalDist/DiscreteMeasureCompat.lean` supplies the underlying dictionary). Caveat for
 oracle-querying provers: the probability denotation of `OracleComp spec` samples a fresh
 independent response per query, so a shared random oracle (equal inputs must get equal answers)
 must be interpreted through the caching layer (`OracleSpec.cachingOracle` / `withCacheOverlay`)
-before lifting into `SPMF` / `SetM`. `PerfectlyComplete` quantifies over the verifier's
+before taking its probability denotation. `PerfectlyComplete` quantifies over the verifier's
 challenge pointwise, so it needs no sampling structure on `m`; at `m := ProbComp` it is
 equivalent to the sampled form (`perfectlyComplete_iff_probOutput_uniform_challenge_eq_one`,
 directions `PerfectlyComplete.probOutput_uniform_challenge_eq_one` and

@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.Constructions.SampleableType
-public import VCVio.EvalDist.TVDist
+public import VCVio.EvalDist.DiscreteMeasureCompat
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 
 /-!
@@ -34,12 +34,19 @@ Properties that only concern the interaction — `PerfectlyComplete`, `HVZK`, `P
 `SpeciallySound` lives on `SigmaProtocol`, since it is the property that consumes `extract`.
 
 Both records are parameterized by the monad `m` in which the participants compute, so the prover
-may query oracles as well as sample randomness. Every probability- or support-bearing property
-assumes the *lawful* semantic lifts `[LawfulMonadLiftT m SPMF]` and `[LawfulMonadLiftT m SetM]`
-together with the bridge `[EvalDistCompatible m]`: lawfulness is what lets probability statements
-about the composite protocol decompose along its `bind`s, and the bridge ties the support-based
-notions (`SpeciallySound`) and the probability-based ones (`PerfectlyComplete`, `HVZK`) to a
-single coherent semantics of the same protocol.
+may query oracles as well as sample randomness. Probability-bearing properties are stated
+against the primary measure semantics: they assume `[EvalDistSemantics m]` and read the relevant
+computations through `discreteEvalDist` (the canonical top-σ-algebra measure) and
+`discreteTVDist`, since the protocol's type parameters carry no ambient measurable structure.
+Support-bearing properties (`SpeciallySound`) assume only the qualitative lift
+`[MonadLiftT m SetM]`.
+
+At `m := ProbComp` each property is restated through the traditional discrete surface by a
+companion bridge lemma: `perfectlyComplete_iff_probOutput`, `hvzk_iff_tvDist`,
+`perfectHVZK_iff_evalSPMF_eq`, `simCommitPredictability_iff_probOutput`, and
+`simChalUniformGivenCommit_iff_probEvent`, together with application-shaped forms such as
+`PerfectlyComplete.probOutput_eq_one` and `HVZK.tvDist_le`. Downstream discrete developments
+prove and consume the measure-native definitions exclusively through these bridges.
 
 `PerfectlyComplete` quantifies over the verifier's challenge pointwise, so its statement needs no
 sampling structure on `m`; at `m := ProbComp` it is equivalent to the sampled form
@@ -83,12 +90,12 @@ Commitments are split into a public part `Commit` (revealed to the verifier) and
 are in `Resp`, and verification is deterministic.
 
 The prover's computations live in an arbitrary monad `m`. Probability-bearing properties assume
-the lawful lift `[MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]`, support-bearing ones the lawful
-lift `[MonadLiftT m SetM] [LawfulMonadLiftT m SetM]`, and both carry the bridge
-`[EvalDistCompatible m]` so that the two routes describe one semantics of the same protocol
-(a `MonadLiftT ProbComp m` lift is additionally used where the uniform challenge is drawn inside
-the transcript). Taking `m := ProbComp` recovers the usual notion of a protocol whose only
-randomness is uniform sampling.
+the measure semantics `[EvalDistSemantics m]` and read the protocol through its canonical
+discrete measure `discreteEvalDist`; support-bearing ones assume the qualitative lift
+`[MonadLiftT m SetM]` (a `MonadLiftT ProbComp m` lift is additionally used where the uniform
+challenge is drawn inside the transcript). Taking `m := ProbComp` recovers the usual notion of a
+protocol whose only randomness is uniform sampling, with every property restated through
+`Pr[…]` / `tvDist` by its companion bridge lemma.
 
 A general `m` also admits provers that query oracles, with one semantic caveat: the probability
 denotation of `OracleComp spec` under `[IsProbabilitySpec spec]` samples a *fresh independent*
@@ -96,8 +103,8 @@ response for every query, so instantiating these properties at a bare oracle mon
 only for oracles where independent per-query responses are the intended semantics (e.g. genuine
 sampling oracles). A shared random oracle — such as the hash oracle of the Kilian or Fiat-Shamir
 transforms, where equal inputs must receive equal answers — must first be interpreted through the
-caching layer (`OracleSpec.cachingOracle` / `withCacheOverlay`) before lifting into `SPMF` /
-`SetM`.
+caching layer (`OracleSpec.cachingOracle` / `withCacheOverlay`) before taking its probability
+denotation.
 
 This is the interaction alone. A Σ-protocol additionally carries a witness extractor; see
 `SigmaProtocol`, which extends this structure. -/
@@ -135,22 +142,56 @@ variable {m : Type → Type} [Monad m]
 section complete
 
 /-- A protocol is perfectly complete if, on valid statement-witness pairs, the honest prover
-convinces the verifier with probability `1` on every challenge the verifier might send.
+convinces the verifier with probability `1` on every challenge the verifier might send: the
+canonical discrete measure of the acceptance experiment puts all its mass on `true`.
 
 Since the verifier's challenge is drawn uniformly, quantifying over the challenge pointwise is
 equivalent to drawing it and asking for acceptance probability `1` — but the pointwise form
 needs no sampling structure on `m`, and is the shape consumers such as the Fischlin transform
-extract anyway. At `m := ProbComp` the equivalence with the sampled form is
+extract anyway. At `m := ProbComp` the traditional probability form is
+`perfectlyComplete_iff_probOutput`, and the equivalence with the sampled form is
 `perfectlyComplete_iff_probOutput_uniform_challenge_eq_one`. -/
-def PerfectlyComplete [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+def PerfectlyComplete [EvalDistSemantics m]
     (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) :
     Prop :=
   ∀ x w, rel x w = true → ∀ ω,
+    discreteEvalDist (do
+      let (pc, sc) ← σ.commit x w
+      let π ← σ.respond x w sc ω
+      return σ.verify x pc ω π) {true} = 1
+
+/-- At `m := ProbComp`, perfect completeness is the traditional pointwise statement that the
+honest run accepts with probability `1` on every challenge. -/
+lemma perfectlyComplete_iff_probOutput
+    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp) :
+    σ.PerfectlyComplete ↔ ∀ x w, rel x w = true → ∀ ω,
+      Pr[= true | do
+        let (pc, sc) ← σ.commit x w
+        let π ← σ.respond x w sc ω
+        return σ.verify x pc ω π] = 1 := by
+  unfold PerfectlyComplete
+  simp_rw [discreteEvalDist_apply_singleton]
+
+/-- Probability form of `PerfectlyComplete` at `m := ProbComp`, shaped for direct application. -/
+lemma PerfectlyComplete.probOutput_eq_one
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    (hc : σ.PerfectlyComplete) (x : Stmt) (w : Wit) (h : rel x w = true) (ω : Chal) :
     Pr[= true | do
       let (pc, sc) ← σ.commit x w
       let π ← σ.respond x w sc ω
-      return σ.verify x pc ω π] = 1
+      return σ.verify x pc ω π] = 1 :=
+  (σ.perfectlyComplete_iff_probOutput).mp hc x w h ω
+
+/-- Establish `PerfectlyComplete` at `m := ProbComp` from the traditional probability form. -/
+lemma perfectlyComplete_of_probOutput
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    (h : ∀ x w, rel x w = true → ∀ ω,
+      Pr[= true | do
+        let (pc, sc) ← σ.commit x w
+        let π ← σ.respond x w sc ω
+        return σ.verify x pc ω π] = 1) :
+    σ.PerfectlyComplete :=
+  (σ.perfectlyComplete_iff_probOutput).mpr h
 
 /-- Sampled-challenge form of `PerfectlyComplete` for `ProbComp`-valued protocols: the honest
 run that draws its challenge uniformly accepts with probability `1`. -/
@@ -168,7 +209,7 @@ lemma PerfectlyComplete.probOutput_uniform_challenge_eq_one [SampleableType Chal
   rw [probOutput_bind_bind_swap]
   have hc' : ∀ ω : Chal, Pr[= true | σ.commit x w >>= fun a =>
       σ.respond x w a.2 ω >>= fun π => pure (σ.verify x a.1 ω π)] = 1 :=
-    fun ω => hc x w h ω
+    fun ω => hc.probOutput_eq_one x w h ω
   rw [probOutput_bind_eq_tsum]
   simp only [hc', mul_one]
   exact tsum_probOutput_eq_one' (by simp)
@@ -188,7 +229,7 @@ lemma perfectlyComplete_of_probOutput_uniform_challenge_eq_one [SampleableType C
         let π ← σ.respond x w sc ω
         return σ.verify x pc ω π] = 1) :
     σ.PerfectlyComplete := by
-  intro x w h ω
+  refine perfectlyComplete_of_probOutput fun x w h ω => ?_
   have h1 := hc x w h
   rw [show (do
       let (pc, sc) ← σ.commit x w
@@ -240,8 +281,7 @@ section speciallySound
 
 /-- Special soundness at a particular statement: given two accepting transcripts with the same
 commitment but different challenges, the extracted witness is valid. -/
-def SpeciallySoundAt [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+def SpeciallySoundAt [MonadLiftT m SetM]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (x : Stmt) : Prop :=
   ∀ pc ω₁ ω₂ p₁ p₂, ω₁ ≠ ω₂ →
@@ -249,16 +289,14 @@ def SpeciallySoundAt [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     ∀ w ∈ support (σ.extract ω₁ p₁ ω₂ p₂), rel x w = true
 
 /-- A Σ-protocol is specially sound if `SpeciallySoundAt` holds for all statements. -/
-def SpeciallySound [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+def SpeciallySound [MonadLiftT m SetM]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m) : Prop :=
   ∀ x, SpeciallySoundAt σ x
 
+omit [Monad m] in
 /-- Special soundness immediately validates any witness returned by the Σ-protocol extractor from
 two accepting transcripts with the same statement and commitment and with distinct challenges. -/
-theorem extract_sound_of_speciallySoundAt
-    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+theorem extract_sound_of_speciallySoundAt [MonadLiftT m SetM]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m) {x : Stmt}
     (hss : σ.SpeciallySoundAt x)
     {pc : Commit} {ω₁ ω₂ : Chal} {p₁ p₂ : Resp} (hω : ω₁ ≠ ω₂)
@@ -301,7 +339,8 @@ lemma realTranscript_probComp
       return (pc, ω, π) := rfl
 
 /-- Honest-verifier zero-knowledge: the real transcript distribution is within total variation
-distance `ζ_zk` of the simulated one.
+distance `ζ_zk` of the simulated one, measured between the canonical discrete measures of the
+two transcripts.
 
 The real transcript is `σ.realTranscript x w`.
 The simulated transcript is produced by `simTranscript` given only the statement `x`.
@@ -309,38 +348,88 @@ The simulated transcript is produced by `simTranscript` given only the statement
 Note: the `sim` field of `SigmaProtocol` only produces a public commitment. For HVZK we need
 a full transcript simulator `Stmt → m (Commit × Chal × Resp)`. We parameterize by this
 simulator, which also keeps the property available on a bare `ChallengeVerifyProtocol`. -/
-def HVZK [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+def HVZK [EvalDistSemantics m]
     (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) (ζ_zk : ℝ) : Prop :=
   ∀ x w, rel x w = true →
-    tvDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk
+    discreteTVDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk
 
 /-- Exact honest-verifier zero-knowledge: the real transcript distribution equals the
 simulated one. -/
-def PerfectHVZK [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+def PerfectHVZK [EvalDistSemantics m]
     (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) : Prop :=
   ∀ x w, rel x w = true →
-    𝒮[σ.realTranscript x w] = 𝒮[simTranscript x]
+    discreteEvalDist (σ.realTranscript x w) = discreteEvalDist (simTranscript x)
 
 /-- The perfect HVZK property is equivalent to the approximate HVZK property with `ζ_zk = 0`. -/
 @[grind =]
-lemma perfectHVZK_iff_hvzk_zero
-    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+lemma perfectHVZK_iff_hvzk_zero [EvalDistSemantics m]
     (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) :
     σ.PerfectHVZK simTranscript ↔ σ.HVZK simTranscript 0 := by
   refine ⟨fun h x w hx => ?_, fun h x w hx => ?_⟩
-  · exact le_of_eq ((tvDist_eq_zero_iff _ _).2 (h x w hx))
-  · exact (tvDist_eq_zero_iff _ _).1 (le_antisymm (h x w hx) (tvDist_nonneg _ _))
+  · exact le_of_eq ((discreteTVDist_eq_zero_iff _ _).2 (h x w hx))
+  · exact (discreteTVDist_eq_zero_iff _ _).1
+      (le_antisymm (h x w hx) (discreteTVDist_nonneg _ _))
+
+/-- At `m := ProbComp`, HVZK is the traditional total-variation bound between the real and
+simulated transcript distributions. -/
+lemma hvzk_iff_tvDist
+    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+    (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (ζ_zk : ℝ) :
+    σ.HVZK simTranscript ζ_zk ↔ ∀ x w, rel x w = true →
+      tvDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk := by
+  unfold HVZK
+  simp_rw [discreteTVDist_eq_tvDist]
+
+/-- Total-variation form of `HVZK` at `m := ProbComp`, shaped for direct application. -/
+lemma HVZK.tvDist_le
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {simTranscript : Stmt → ProbComp (Commit × Chal × Resp)} {ζ_zk : ℝ}
+    (h : σ.HVZK simTranscript ζ_zk) (x : Stmt) (w : Wit) (hx : rel x w = true) :
+    tvDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk :=
+  (σ.hvzk_iff_tvDist simTranscript ζ_zk).mp h x w hx
+
+/-- Establish `HVZK` at `m := ProbComp` from the traditional total-variation bound. -/
+lemma hvzk_of_tvDist_le
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {simTranscript : Stmt → ProbComp (Commit × Chal × Resp)} {ζ_zk : ℝ}
+    (h : ∀ x w, rel x w = true →
+      tvDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk) :
+    σ.HVZK simTranscript ζ_zk :=
+  (σ.hvzk_iff_tvDist simTranscript ζ_zk).mpr h
+
+/-- At `m := ProbComp`, perfect HVZK is equality of the executable transcript denotations. -/
+lemma perfectHVZK_iff_evalSPMF_eq
+    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+    (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) :
+    σ.PerfectHVZK simTranscript ↔ ∀ x w, rel x w = true →
+      𝒮[σ.realTranscript x w] = 𝒮[simTranscript x] := by
+  unfold PerfectHVZK
+  simp_rw [discreteEvalDist_eq_iff]
+
+/-- Executable form of `PerfectHVZK` at `m := ProbComp`, shaped for direct application. -/
+lemma PerfectHVZK.evalSPMF_eq
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {simTranscript : Stmt → ProbComp (Commit × Chal × Resp)}
+    (h : σ.PerfectHVZK simTranscript) (x : Stmt) (w : Wit) (hx : rel x w = true) :
+    𝒮[σ.realTranscript x w] = 𝒮[simTranscript x] :=
+  (σ.perfectHVZK_iff_evalSPMF_eq simTranscript).mp h x w hx
+
+/-- Establish `PerfectHVZK` at `m := ProbComp` from executable denotation equality. -/
+lemma perfectHVZK_of_evalSPMF_eq
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {simTranscript : Stmt → ProbComp (Commit × Chal × Resp)}
+    (h : ∀ x w, rel x w = true →
+      𝒮[σ.realTranscript x w] = 𝒮[simTranscript x]) :
+    σ.PerfectHVZK simTranscript :=
+  (σ.perfectHVZK_iff_evalSPMF_eq simTranscript).mpr h
 
 open scoped ENNReal in
 /-- The simulator's commitment marginal has predictability at most `β`: no single
-commitment value is output with probability exceeding `β`. Equivalently, the commitment
-has min-entropy at least `-log₂ β`.
+commitment value carries mass exceeding `β` in the canonical discrete measure. Equivalently,
+the commitment has min-entropy at least `-log₂ β`.
 
 This is a companion assumption to `HVZK` that bounds the collision probability of
 programmed cache entries in the Fiat-Shamir CMA-to-NMA reduction. For Schnorr,
@@ -349,17 +438,52 @@ programmed cache entries in the Fiat-Shamir CMA-to-NMA reduction. For Schnorr,
 The `_σ : ChallengeVerifyProtocol …` argument is dummy (the predicate only depends on
 `simTranscript` and `β`); it is present to enable field-notation usage like
 `σ.simCommitPredictability simTranscript β`. -/
-def simCommitPredictability [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+def simCommitPredictability [EvalDistSemantics m]
     (_σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) (β : ℝ≥0∞) : Prop :=
-  ∀ x : Stmt, ∀ c₀ : Commit, probOutput (Prod.fst <$> simTranscript x) c₀ ≤ β
+  ∀ x : Stmt, ∀ c₀ : Commit,
+    discreteEvalDist (Prod.fst <$> simTranscript x) {c₀} ≤ β
 
 open scoped ENNReal in
+omit [SampleableType Chal] in
+/-- At `m := ProbComp`, commit-predictability is the traditional point-probability bound on the
+simulator's commitment marginal. -/
+lemma simCommitPredictability_iff_probOutput
+    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+    (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (β : ℝ≥0∞) :
+    σ.simCommitPredictability simTranscript β ↔
+      ∀ x : Stmt, ∀ c₀ : Commit, Pr[= c₀ | Prod.fst <$> simTranscript x] ≤ β := by
+  unfold simCommitPredictability
+  simp_rw [discreteEvalDist_apply_singleton]
+
+open scoped ENNReal in
+omit [SampleableType Chal] in
+/-- Probability form of `simCommitPredictability` at `m := ProbComp`, shaped for direct
+application. -/
+lemma simCommitPredictability.probOutput_le
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {simTranscript : Stmt → ProbComp (Commit × Chal × Resp)} {β : ℝ≥0∞}
+    (h : σ.simCommitPredictability simTranscript β) (x : Stmt) (c₀ : Commit) :
+    Pr[= c₀ | Prod.fst <$> simTranscript x] ≤ β :=
+  (σ.simCommitPredictability_iff_probOutput simTranscript β).mp h x c₀
+
+open scoped ENNReal in
+omit [SampleableType Chal] in
+/-- Establish `simCommitPredictability` at `m := ProbComp` from the traditional
+point-probability bound. -/
+lemma simCommitPredictability_of_probOutput_le
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {simTranscript : Stmt → ProbComp (Commit × Chal × Resp)} {β : ℝ≥0∞}
+    (h : ∀ x : Stmt, ∀ c₀ : Commit, Pr[= c₀ | Prod.fst <$> simTranscript x] ≤ β) :
+    σ.simCommitPredictability simTranscript β :=
+  (σ.simCommitPredictability_iff_probOutput simTranscript β).mpr h
+
+open scoped ENNReal in
+omit [SampleableType Chal] in
 /-- Conditional uniformity of the simulator's challenge given its commitment, expressed
 in product form: for any statement `x` admitting a witness, any commit value `c₀`, and
-any challenge value `ch₀`, the joint marginal `Pr[(commit, chal) = (c₀, ch₀)]` factors as
-`Pr[commit = c₀] * (1 / |Chal|)`.
+any challenge value `ch₀`, the joint marginal mass of `(commit, chal) = (c₀, ch₀)` factors as
+the mass of `commit = c₀` times `1 / |Chal|`.
 
 This is a strengthening of `simCommitPredictability` (which only bounds the commit
 marginal). Where the latter says "no commit value is too likely", `simChalUniformGivenCommit`
@@ -371,23 +495,67 @@ uniform conditional on the simulator's commit (which is what gets compared again
 random oracle's would-be answer).
 
 The product form `P[(c₀, ch₀)] = P[c₀] * 1/|Chal|` avoids conditional-probability
-ambiguities when `P[c₀] = 0` and is the most directly-usable shape inside the `tvDist`
+ambiguities when `P[c₀] = 0` and is the most directly-usable shape inside the total-variation
 calculation.
 
 The `rel pk sk = true` hypothesis is needed because typical Schnorr-style simulators only
 satisfy this when `pk` admits a witness (the proof uses a witness-indexed bijection on the
 response variable); for statements outside the relation's image, the simulator's joint may
 have any structure. -/
-def simChalUniformGivenCommit [Fintype Chal]
-    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+def simChalUniformGivenCommit [Fintype Chal] [EvalDistSemantics m]
     (_σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) : Prop :=
   ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
     ∀ (c₀ : Commit) (ch₀ : Chal),
-      Pr[fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
-        Pr[fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
+      discreteEvalDist (simTranscript pk)
+          {t : Commit × Chal × Resp | t.1 = c₀ ∧ t.2.1 = ch₀} =
+        discreteEvalDist (simTranscript pk) {t : Commit × Chal × Resp | t.1 = c₀} *
           (Fintype.card Chal : ℝ≥0∞)⁻¹
+
+open scoped ENNReal in
+omit [SampleableType Chal] in
+/-- At `m := ProbComp`, conditional challenge-uniformity is the traditional event-probability
+product form. -/
+lemma simChalUniformGivenCommit_iff_probEvent [Fintype Chal]
+    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+    (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) :
+    σ.simChalUniformGivenCommit simTranscript ↔
+      ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
+        ∀ (c₀ : Commit) (ch₀ : Chal),
+          Pr[fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
+            Pr[fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
+              (Fintype.card Chal : ℝ≥0∞)⁻¹ := by
+  unfold simChalUniformGivenCommit
+  simp_rw [discreteEvalDist_apply_setOf]
+
+open scoped ENNReal in
+omit [SampleableType Chal] in
+/-- Event-probability form of `simChalUniformGivenCommit` at `m := ProbComp`, shaped for direct
+application. -/
+lemma simChalUniformGivenCommit.probEvent_eq [Fintype Chal]
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {simTranscript : Stmt → ProbComp (Commit × Chal × Resp)}
+    (h : σ.simChalUniformGivenCommit simTranscript)
+    (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true) (c₀ : Commit) (ch₀ : Chal) :
+    Pr[fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
+      Pr[fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
+        (Fintype.card Chal : ℝ≥0∞)⁻¹ :=
+  (σ.simChalUniformGivenCommit_iff_probEvent simTranscript).mp h pk sk hrel c₀ ch₀
+
+open scoped ENNReal in
+omit [SampleableType Chal] in
+/-- Establish `simChalUniformGivenCommit` at `m := ProbComp` from the traditional
+event-probability product form. -/
+lemma simChalUniformGivenCommit_of_probEvent [Fintype Chal]
+    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {simTranscript : Stmt → ProbComp (Commit × Chal × Resp)}
+    (h : ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
+      ∀ (c₀ : Commit) (ch₀ : Chal),
+        Pr[fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
+          Pr[fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
+            (Fintype.card Chal : ℝ≥0∞)⁻¹) :
+    σ.simChalUniformGivenCommit simTranscript :=
+  (σ.simChalUniformGivenCommit_iff_probEvent simTranscript).mpr h
 
 end hvzk
 

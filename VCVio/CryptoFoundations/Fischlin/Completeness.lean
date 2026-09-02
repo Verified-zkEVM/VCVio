@@ -1260,7 +1260,7 @@ private lemma verify_of_perfectlyComplete
     (pc : Commit) (sc : PrvState) (hpc : (pc, sc) ∈ support (σ.commit pk sk))
     (ω : Chal) (resp : Resp) (hresp : resp ∈ support (σ.respond pk sk sc ω)) :
     σ.verify pk pc ω resp = true := by
-  have h1 := (probOutput_eq_one_iff_forall _ true |>.mp (hc pk sk hrel ω)).2
+  have h1 := (probOutput_eq_one_iff_forall _ true |>.mp (hc.probOutput_eq_one pk sk hrel ω)).2
   have hmem : (σ.verify pk pc ω resp) ∈ support (do
       let (pc, sc) ← σ.commit pk sk
       let π ← σ.respond pk sk sc ω

@@ -101,7 +101,7 @@ omit [Fintype F] [DecidableEq F] in
 an accepting transcript. Follows from `add_smul` and `mul_smul`. -/
 theorem sigma_complete (g : G) :
     (sigma F G g).PerfectlyComplete := by
-  intro pk sk h ω
+  refine ChallengeVerifyProtocol.perfectlyComplete_of_probOutput fun pk sk h ω => ?_
   have h_eq : sk • g = pk := of_decide_eq_true h
   simp only [sigma, monad_norm]
   have hverify : ∀ (r c : F), (r + c * sk) • g = r • g + c • pk := by
@@ -142,7 +142,7 @@ The proof swaps sampling order and uses uniformity of `F` to reindex via the bij
 theorem sigma_hvzk (g : G) [Finite F] :
     (sigma F G g).PerfectHVZK (simTranscript F G g) := by
   let _ : Fintype F := Fintype.ofFinite F
-  intro pk sk h_sk
+  refine ChallengeVerifyProtocol.perfectHVZK_of_evalSPMF_eq fun pk sk h_sk => ?_
   have h_eq : sk • g = pk := of_decide_eq_true h_sk
   apply evalSPMF_ext
   intro t
@@ -202,7 +202,7 @@ theorem sigma_simCommitPredictability (g : G)
       ((Fintype.card F : ℝ≥0∞)⁻¹) := by
   classical
   let : Fintype G := Fintype.ofBijective _ hg
-  intro pk c₀
+  refine ChallengeVerifyProtocol.simCommitPredictability_of_probOutput_le fun pk c₀ => ?_
   have hcard_FG : Fintype.card G = Fintype.card F := (Fintype.card_of_bijective hg).symm
   have hinv_eq : (Fintype.card F : ℝ≥0∞)⁻¹ = (Fintype.card G : ℝ≥0∞)⁻¹ := by rw [hcard_FG]
   have hbij_c : ∀ c : F, Function.Bijective (fun z : F => z • g - c • pk) := fun c =>
@@ -248,8 +248,9 @@ closed form `realTranscript_eq_indep`; in that form the commit `r • g` and cha
 theorem sigma_simChalUniformGivenCommit (g : G) :
     (sigma F G g).simChalUniformGivenCommit (simTranscript F G g) := by
   classical
-  intro pk sk hsk c₀ ch₀
-  have hHVZK := sigma_hvzk F G g pk sk hsk
+  refine ChallengeVerifyProtocol.simChalUniformGivenCommit_of_probEvent
+    fun pk sk hsk c₀ ch₀ => ?_
+  have hHVZK := (sigma_hvzk F G g).evalSPMF_eq pk sk hsk
   have hReal := realTranscript_eq_indep F G g pk sk
   set ind : ProbComp (G × F × F) := do
     let r ← $ᵗ F
