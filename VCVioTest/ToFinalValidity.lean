@@ -21,6 +21,9 @@ This file pins that the conversion resolves that disagreement in the winning dir
 that adversary to a source-final-validity adversary that wins, because the wrapper declines to
 forward the poisoning query and synthesises the `none` its counterpart received. A conversion that
 merely renamed the phases would inherit the losing outcome.
+
+The SM-PRE section runs the same transcript at the game whose challenge oracle draws its own
+message, over a one-element message subspace so the draw reduces.
 -/
 
 @[expose] public section
@@ -99,5 +102,63 @@ theorem advantage_challengeThenCollection_canary :
   refine ⟨?_, ?_⟩ <;>
     simp [SM_DT_TCR_Advantage, SM_DT_TCR_SourceFinalValidity.Advantage,
       experiment_challengeThenCollection, toSourceFinalValidity_suppresses_poison_canary]
+
+/-! ## SM-DT-PRE
+
+The same transcript at the game whose challenge oracle draws its own message. `M'` is a one-element
+subspace so the draw is deterministic and the run reduces. -/
+
+inductive Input
+  | only
+
+instance : SampleableType Input where
+  selectElem := pure .only
+  mem_support_selectElem := by simp
+  probOutput_selectElem_eq x y := by cases x; cases y; rfl
+
+@[simp] lemma uniformSample_input : ($ᵗ Input : ProbComp Input) = pure .only := rfl
+
+def preProblem : SM_DT_PRE_Problem Unit Seed Bool Bool Input Bool where
+  th := hash
+  emb := fun _ => false
+  emb_injective a b _ := by cases a; cases b; rfl
+  thColl := collection
+  numTargets := 1
+
+@[simp] lemma preProblem_seedGen : preProblem.th.seedGen = pure .only := rfl
+
+abbrev PreSpecs := unifSpec + (SM_DT_PRE_challengeSpec Bool Bool +
+  collectionSpec preProblem.thColl)
+
+def preChallenge (t : Bool) : OracleComp PreSpecs (Option Bool) :=
+  liftM (PreSpecs.query (.inr (.inl t)))
+
+def preCollectionQuery (t : Bool) (m : preProblem.thColl.Msg ()) :
+    OracleComp PreSpecs (Option Bool) :=
+  liftM (PreSpecs.query (.inr (.inr ⟨(), t, m⟩)))
+
+/-- Take a target, then clash with it on the collection oracle. -/
+def preChallengeThenCollection : SM_DT_PRE_Adversary preProblem where
+  State := Option Bool
+  choose := do
+    let _ ← preChallenge false
+    preCollectionQuery false false
+  invert answer _ := match answer with
+    | none => pure (0, .only)
+    | some _ => pure (1, .only)
+
+/-- End-to-end SM-PRE: the clash is refused, and the inversion at the recorded target wins. -/
+theorem pre_experiment_challengeThenCollection :
+    SM_DT_PRE_Experiment preChallengeThenCollection = pure true := by
+  simp only [SM_DT_PRE_Experiment, preProblem_seedGen, pure_bind]
+  rw [show (simulateQ (SM_DT_PRE_oracles preProblem .only) preChallengeThenCollection.choose).run
+      ([], []) = pure (none, ([(false, Input.only)], [])) from rfl]
+  rfl
+
+/-- The SM-PRE conversion carries that win across to the monitor game. -/
+theorem pre_toSourceFinalValidity_suppresses_poison_canary :
+    SM_DT_PRE_SourceFinalValidity.Experiment
+        preChallengeThenCollection.toSourceFinalValidity = pure true := by
+  rw [SM_DT_PRE_experiment_toSourceFinalValidity, pre_experiment_challengeThenCollection]
 
 end ToFinalValidityTest
