@@ -56,9 +56,8 @@ The managed NMA run is a two-layer nested simulation: an *inner managed* handler
 the inner cache, and an *outer runtime* handler `nmaInnerImpl` (`unifFwdImpl + randomOracle`)
 re-simulates the residual live queries. Their `link`, `nmaLinkImpl pk`, is the single
 combined simulation over the product cache that the per-step state-coupling projects onto.
-These were previously inline `letI` bindings inside `simulatedNmaAdv` and
-`managedRun_eq_link_run`; promoting them to top level makes `nmaLinkImpl pk` a nameable
-handler so the coupling can be stated and proved one query step at a time. -/
+Naming the three handlers at top level lets the coupling be stated and proved against
+`nmaLinkImpl pk` one query step at a time. -/
 
 omit [SampleableType Stmt] [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
 /-- **Uniform-only nested-simulation collapse.**
@@ -171,13 +170,13 @@ Hence the consistent per-step projection is:
   inner cache; and
 * `outer := base` — the live-read base layer only.
 
-This is the corrected projection: an earlier attempt set `inner := baseEmbed base` and
-`outer := overlayCache base ghost`, which is inconsistent — the random-oracle step writes a
-live read into the inner cache (so it must carry the overlay), while the signing step writes
-the programmed transcript into the inner cache and never touches the outer (so the outer must
-exclude ghost points). With `inner := baseEmbed (overlay base ghost)` and `outer := base` both
-the RO step and the sign step become exact per-step equalities. The signed-message list is
-forgotten — the linked handler carries no such list. -/
+Both components are forced by the two step shapes: the random-oracle step writes a live read
+into the inner cache, so the inner component must carry the overlay; the signing step writes
+the programmed transcript into the inner cache and never touches the outer, so the outer
+component must exclude ghost points. With `inner := baseEmbed (overlay base ghost)` and
+`outer := base` both the RO step and the sign step are exact per-step equalities; the swapped
+assignment `(baseEmbed base, overlayCache base ghost)` makes neither step a state function. The
+signed-message list is forgotten — the linked handler carries no such list. -/
 def proj2 (s : NmaGhostState M Commit Chal) :
     (unifSpec + (M × Commit →ₒ Chal)).QueryCache × (M × Commit →ₒ Chal).QueryCache :=
   (baseEmbed M (overlayCache M s.1.1 s.1.2), s.1.1)
@@ -335,14 +334,13 @@ equals the linked managed handler `nmaLinkImpl` applied to the projected state �
 The redesign is what makes this exact. The linked managed `sigSim` writes the accepted transcript
 into the *inner managed cache* (`cacheQuery (.inr (msg, w)) c`) and leaves the *outer runtime
 cache* untouched. The layered run writes the same transcript into the *ghost layer*, leaving the
-base layer untouched. Under the new `proj2`, the inner managed cache is recovered as `baseEmbed`
+base layer untouched. Under `proj2`, the inner managed cache is recovered as `baseEmbed`
 of the *full overlay* `overlayCache base ghost`, so the ghost-layer write surfaces in `proj2`'s
 *first* slot exactly where `sigSim` writes (`overlayCache_cacheQuery_ghost` then
 `baseEmbed_cacheQuery`), while the outer cache is `proj2`'s *second* slot `base`, untouched on both
 sides. There is no slot swap and no dependence on whether `(msg, w)` coincides with a prior live
 read: `proj2`'s first component carries the full overlay, so the sign point lands in the same inner
-slot regardless. (This supersedes the earlier `proj2 = (baseEmbed base, overlayCache base ghost)`
-projection, for which this step was provably *not* a per-step state function.)
+slot regardless.
 
 PROOF SHAPE. `link_impl_apply_run` exposes the linked RHS as the nested simulation
 `simulateQ nmaInnerImpl ((nmaOuterImpl pk (.inr msg)).run outerCache)`; `simp [nmaOuterImpl]`
@@ -909,9 +907,9 @@ managed-cache run of `simulatedNmaAdv` followed by overlay verification
 `fsAbortSignLoop_cache_invariant`, every entry programmed by the signing simulation has
 its message recorded in the signed list, so on fresh forgeries the overlay agrees with
 the live oracle at the verification point and the freshness conjunct can only decrease
-the left-hand side. A hash-query-bound transfer in the style of
-`FiatShamir.simulatedNmaAdv_hashQueryBound` (the loop issues no live hash queries)
-should accompany this lemma when the downstream consumer needs NMA query bounds. -/
+the left-hand side. The matching hash-query-bound transfer is
+`simulatedNmaAdv_nmaHashQueryBound` in `FiatShamir.WithAbort.Security`: the simulated signing
+loop issues no live hash queries, so the NMA adversary keeps the CMA adversary's hash budget. -/
 lemma probOutput_hybridExp_sim_le_managedRoNmaExp :
     Pr[= true | do
         let (pk, sk) ← hr.gen
