@@ -757,6 +757,42 @@ private lemma simulatedNmaUnifFork_nested_preserves_state
   subst st
   simp
 
+omit [SampleableType Stmt] [Inhabited Chal] in
+private lemma forkLoggedImpl_sign_support
+    (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) (m : M)
+    (advCache : (fsRoSpec M Commit Chal).QueryCache)
+    (liveCache : (M × Commit →ₒ Chal).QueryCache)
+    (queryLog : List (M × Commit)) (signed : List M)
+    {z : (Commit × Resp) × (ForkBaseState M Commit Chal × List M)}
+    (hz : z ∈ support ((forkLoggedImpl (M := M) (Commit := Commit)
+      (Chal := Chal) (Resp := Resp) simT pk (.inr m)).run
+        ((advCache, liveCache, queryLog), signed))) :
+    ∃ xCommit xChal xResp xAdvCache xLiveCache xQueryLog,
+      ((((xCommit, xChal, xResp), xAdvCache), (xLiveCache, xQueryLog)) ∈ support
+        ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+          ((simulateQ (simulatedNmaUnifSim (M := M) (Commit := Commit)
+            (Chal := Chal)) (simT pk)).run advCache)).run (liveCache, queryLog))) ∧
+      ((match xAdvCache (.inr (m, xCommit)) with
+        | some _ => ((xCommit, xResp), xAdvCache)
+        | none => ((xCommit, xResp),
+            xAdvCache.cacheQuery (.inr (m, xCommit)) xChal)).1,
+        ((match xAdvCache (.inr (m, xCommit)) with
+          | some _ => ((xCommit, xResp), xAdvCache)
+          | none => ((xCommit, xResp),
+              xAdvCache.cacheQuery (.inr (m, xCommit)) xChal)).2,
+          xLiveCache, xQueryLog),
+        signed ++ [m]) = z := by
+  have hz' := by
+    simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
+      QueryImpl.mapStateTBase] using hz
+  rcases hz' with ⟨xCommit, xChal, xResp, xAdvCache, xLiveCache,
+    xQueryLog, hxmem, hout⟩
+  refine ⟨xCommit, xChal, xResp, xAdvCache, xLiveCache, xQueryLog, hxmem, ?_⟩
+  convert hout using 1
+  congr 4
+  all_goals
+    cases xAdvCache (.inr (m, xCommit)) <;> rfl
+
 omit [SampleableType Stmt] in
 private lemma forkLoggedImpl_preserves_inv_step
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
@@ -883,8 +919,8 @@ private lemma forkLoggedImpl_preserves_inv_step
         · intro mc' ch' hcache'
           exact hlogInv mc' ch' hcache'
   · have hz' := by
-      simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
-        QueryImpl.mapStateTBase] using hz
+      exact forkLoggedImpl_sign_support (M := M) (Commit := Commit)
+        (Chal := Chal) (Resp := Resp) simT pk m advCache liveCache queryLog signed hz
     rcases hz' with ⟨xCommit, xChal, xResp, xAdvCache, xLiveCache,
       xQueryLog, hxmem, rfl⟩
     let x := (((xCommit, xChal, xResp), xAdvCache), (xLiveCache, xQueryLog))
@@ -1040,8 +1076,8 @@ private lemma forkLoggedImpl_preserves_live_adv_inv_step
                 (t' := Sum.inr mc') v hne
               exact hne_cache.trans hadv_old
   · have hz' := by
-      simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
-        QueryImpl.mapStateTBase] using hz
+      exact forkLoggedImpl_sign_support (M := M) (Commit := Commit)
+        (Chal := Chal) (Resp := Resp) simT pk m advCache liveCache queryLog signed hz
     rcases hz' with ⟨xCommit, xChal, xResp, xAdvCache, xLiveCache,
       xQueryLog, hxmem, rfl⟩
     let x := (((xCommit, xChal, xResp), xAdvCache), (xLiveCache, xQueryLog))
