@@ -20,6 +20,7 @@ public import HashSig.SLHDSA.GeneralSchemeQueryBound
 public import HashSig.SLHDSA.Hypertree
 public import HashSig.SLHDSA.HypertreeGeneral
 public import HashSig.SLHDSA.HypertreeGeneral.QueryBound
+public import HashSig.SLHDSA.MerkleExtractor
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.Params
 public import HashSig.SLHDSA.Position
