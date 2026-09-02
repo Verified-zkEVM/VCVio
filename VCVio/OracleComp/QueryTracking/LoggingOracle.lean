@@ -433,6 +433,14 @@ end isQueryBound
     OracleComp spec (α × QueryLog spec) :=
   WriterT.run (simulateQ (QueryImpl.ofLift spec (OracleComp spec)).withLogging mx)
 
+/-- Query logging is resource-transparent: it preserves the exact total query-bound predicate. -/
+theorem isTotalQueryBound_withQueryLog_iff {α : Type}
+    (mx : OracleComp spec α) (n : ℕ) :
+    IsTotalQueryBound mx.withQueryLog n ↔ IsTotalQueryBound mx n := by
+  simpa [withQueryLog] using
+    (isTotalQueryBound_run_simulateQ_withLogging_iff
+      (QueryImpl.ofLift spec (OracleComp spec)) mx n)
+
 /-- Erase an intrinsic execution path to its output and query log. -/
 @[reducible] def pathLogResult {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}
     (mx : OracleComp oSpec β) (path : PFunctor.FreeM.Path mx) :
