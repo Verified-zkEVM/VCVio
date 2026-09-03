@@ -26,7 +26,7 @@ mirror); otherwise a single terminal tactic + a `target(...)` note. Operations w
 API yet are recorded as `target` gaps at the end.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp ProbComp ENNReal
 

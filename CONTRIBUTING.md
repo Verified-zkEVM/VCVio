@@ -72,6 +72,8 @@ holds the number of files per library that open a broad `@[expose] public sectio
 `scripts/expose_boundary_baseline.tsv`. Converting a file to selective exposure lowers the count:
 run `scripts/check-expose-boundary.sh --update-baseline` in the same PR so the ceiling follows. A
 PR that needs a higher ceiling raises the baseline explicitly and says why in its description.
+Executable fixtures whose every definition is computed or unfolded by later examples are the one
+kind of file that legitimately stays on `@[expose] public section`.
 Executable and runtime implementation modules should use opaque `public section` when callers do
 not need to unfold their definitions.
 
