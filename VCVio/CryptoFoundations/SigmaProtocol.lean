@@ -522,8 +522,8 @@ lemma simChalUniformGivenCommit_iff_probEvent [Fintype Chal]
     σ.simChalUniformGivenCommit simTranscript ↔
       ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
         ∀ (c₀ : Commit) (ch₀ : Chal),
-          Pr[fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
-            Pr[fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
+          Pr[ fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
+            Pr[ fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
               (Fintype.card Chal : ℝ≥0∞)⁻¹ := by
   unfold simChalUniformGivenCommit
   simp_rw [discreteEvalDist_apply_setOf]
@@ -537,8 +537,8 @@ lemma simChalUniformGivenCommit.probEvent_eq [Fintype Chal]
     {simTranscript : Stmt → ProbComp (Commit × Chal × Resp)}
     (h : σ.simChalUniformGivenCommit simTranscript)
     (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true) (c₀ : Commit) (ch₀ : Chal) :
-    Pr[fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
-      Pr[fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
+    Pr[ fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
+      Pr[ fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
         (Fintype.card Chal : ℝ≥0∞)⁻¹ :=
   (σ.simChalUniformGivenCommit_iff_probEvent simTranscript).mp h pk sk hrel c₀ ch₀
 
@@ -551,8 +551,8 @@ lemma simChalUniformGivenCommit_of_probEvent [Fintype Chal]
     {simTranscript : Stmt → ProbComp (Commit × Chal × Resp)}
     (h : ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
       ∀ (c₀ : Commit) (ch₀ : Chal),
-        Pr[fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
-          Pr[fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
+        Pr[ fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
+          Pr[ fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
             (Fintype.card Chal : ℝ≥0∞)⁻¹) :
     σ.simChalUniformGivenCommit simTranscript :=
   (σ.simChalUniformGivenCommit_iff_probEvent simTranscript).mpr h
