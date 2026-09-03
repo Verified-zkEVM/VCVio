@@ -61,7 +61,7 @@ theorem commutativeAt_of_commutative {m} [Monad m] [Commutative m] {α β} (ma :
 
 alias bind_swap := bind_comm_comp
 
-@[simp] theorem CommutativeAt.bind_comm {m : Type u → Type v} [Monad m] [LawfulMonad m]
+theorem CommutativeAt.bind_comm {m : Type u → Type v} [Monad m] [LawfulMonad m]
     {α β : Type u}
     (ma : m α) (mb : m β) (h : CommutativeAt m ma mb) :
       (ma >>= fun a => mb >>= fun b => pure (a, b)) =

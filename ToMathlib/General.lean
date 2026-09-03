@@ -116,13 +116,13 @@ lemma Prod.snd_comp_map {α : Type u} {β : Type v} {γ : Type w} {δ : Type x}
     (f : α → γ) (g : β → δ) : Prod.snd ∘ Prod.map f g = g ∘ Prod.snd :=
   funext fun ⟨_, _⟩ => rfl
 
-@[simp, grind =]
+@[grind =]
 lemma fst_map_prod_map {m : Type u → Type v} [Functor m] [LawfulFunctor m] {α β γ δ : Type u}
     (mx : m (α × β)) (f : α → γ) (g : β → δ) :
     Prod.fst <$> Prod.map f g <$> mx = (f ∘ Prod.fst) <$> mx := by
   simp [Functor.map_map]; rfl
 
-@[simp, grind =]
+@[grind =]
 lemma snd_map_prod_map {m : Type u → Type v} [Functor m] [LawfulFunctor m] {α β γ δ : Type u}
     (mx : m (α × β)) (f : α → γ) (g : β → δ) :
     Prod.snd <$> Prod.map f g <$> mx = (g ∘ Prod.snd) <$> mx := by
@@ -140,7 +140,6 @@ lemma fst_map_prod_map_eq_map {m : Type u → Type v} [Functor m] [LawfulFunctor
     Prod.fst <$> Prod.map f g <$> mx = f <$> (Prod.fst <$> mx) :=
   (fst_map_prod_map mx f g).trans (Functor.map_map Prod.fst f mx).symm
 
-@[simp]
 lemma List.prod_map_const {α M : Type*} [CommMonoid M] (xs : List α) (c : M) :
     (xs.map (fun _ => c)).prod = c ^ xs.length := by
   induction xs with

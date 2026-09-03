@@ -209,7 +209,7 @@ lemma probOutput_pos_iff : 0 < Pr[= x | mx] ↔ x ∈ support mx := by
   rw [pos_iff_ne_zero, ne_eq, probOutput_eq_zero_iff, not_not]
 alias ⟨mem_support_of_probOutput_pos, probOutput_pos⟩ := probOutput_pos_iff
 
-@[simp, grind =]
+@[grind =]
 lemma probOutput_pos_iff' [HasEvalFinset m] [DecidableEq α] :
     0 < Pr[= x | mx] ↔ x ∈ finSupport mx := by grind
 alias ⟨mem_finSupport_of_probOutput_pos, probOutput_pos'⟩ := probOutput_pos_iff'
@@ -291,19 +291,16 @@ lemma probEvent_eq_zero_iff :
 alias ⟨_, probEvent_eq_zero⟩ := probEvent_eq_zero_iff
 
 -- `simp`-only: `grind` saturates on this support-quantifier characterization.
-@[simp]
 lemma probEvent_eq_zero_iff' [HasEvalFinset m] [DecidableEq α] :
     Pr[ p | mx] = 0 ↔ ∀ x ∈ finSupport mx, ¬ p x := by grind [probEvent_eq_zero_iff]
 alias ⟨_, probEvent_eq_zero'⟩ := probEvent_eq_zero_iff'
 
 -- `simp`-only: `grind` saturates on this support-quantifier characterization.
-@[simp]
 lemma probEvent_ne_zero_iff : Pr[ p | mx] ≠ 0 ↔ ∃ x ∈ support mx, p x := by
   grind [probEvent_eq_zero_iff]
 alias ⟨_, probEvent_ne_zero⟩ := probEvent_ne_zero_iff
 
 -- `simp`-only: `grind` saturates on this support-quantifier characterization.
-@[simp]
 lemma probEvent_ne_zero_iff' [HasEvalFinset m] [DecidableEq α] :
     Pr[ p | mx] ≠ 0 ↔ ∃ x ∈ finSupport mx, p x := by aesop
 alias ⟨_, probEvent_ne_zero'⟩ := probEvent_ne_zero_iff'
@@ -316,7 +313,7 @@ lemma probEvent_pos_iff : 0 < Pr[ p | mx] ↔ ∃ x ∈ support mx, p x := by
 alias ⟨_, probEvent_pos⟩ := probEvent_pos_iff
 
 -- `grind`-safe in isolation; see `probEvent_pos_iff`.
-@[simp, grind =]
+@[grind =]
 lemma probEvent_pos_iff' [HasEvalFinset m] [DecidableEq α] :
     0 < Pr[ p | mx] ↔ ∃ x ∈ finSupport mx, p x := by grind [probEvent_pos_iff]
 alias ⟨_, probEvent_pos'⟩ := probEvent_pos_iff'
@@ -498,7 +495,6 @@ lemma evalSPMF_eq_mk_iff [MonadLiftT m SPMF] (mx : m α) (p : PMF (Option α)) :
 lemma evalSPMF_eq_liftM [MonadLiftT m SPMF] {mx : m α} {p : PMF α}
     (h : ∀ x, Pr[= x | mx] = p x) : 𝒮[mx] = liftM p := by aesop
 
-@[simp]
 lemma evalSPMF_apply_eq_zero_iff [MonadLiftT m SPMF] [MonadLiftT m SetM]
     [EvalDistCompatible m] (mx : m α) (x : Option α) :
     (𝒮[mx]).run x = 0 ↔ x.rec (Pr[⊥ | mx] = 0) (· ∉ support mx) := by
@@ -507,7 +503,6 @@ lemma evalSPMF_apply_eq_zero_iff [MonadLiftT m SPMF] [MonadLiftT m SetM]
   | some y => simp [OptionT.run, mem_support_iff_evalSPMF_apply_ne_zero,
       SPMF.apply_eq_toPMF_some, SPMF.toPMF]
 
-@[simp]
 lemma evalSPMF_apply_eq_zero_iff' [MonadLiftT m SPMF] [MonadLiftT m SetM]
     [EvalDistCompatible m] [HasEvalFinset m] [DecidableEq α] (mx : m α)
     (x : Option α) : (𝒮[mx]).run x = 0 ↔ x.rec (Pr[⊥ | mx] = 0) (· ∉ finSupport mx) := by
@@ -578,11 +573,11 @@ lemma probOutput_true_eq_probEvent {α} {m : Type → Type u} [Monad m]
   simp [probEvent_eq_tsum_indicator, probOutput_def, evalSPMF, map_eq_bind_pure_comp]
   congr 1; aesop
 
-@[simp] lemma tsum_probOutput_add_probFailure [MonadLiftT m SPMF] (mx : m α) :
+lemma tsum_probOutput_add_probFailure [MonadLiftT m SPMF] (mx : m α) :
     (∑' x, Pr[= x | mx]) + Pr[⊥ | mx] = 1 := by
   aesop (rule_sets := [UnfoldEvalDist])
 
-@[simp] lemma probFailure_add_tsum_probOutput [MonadLiftT m SPMF] (mx : m α) :
+lemma probFailure_add_tsum_probOutput [MonadLiftT m SPMF] (mx : m α) :
     Pr[⊥ | mx] + ∑' x, Pr[= x | mx] = 1 := by
   aesop (rule_sets := [UnfoldEvalDist])
 
@@ -603,9 +598,9 @@ variable {mx : m α} {mxe : OptionT m α} {x : α} {p : α → Prop}
 @[simp, grind .] lemma not_one_lt_probOutput [MonadLiftT m SPMF] :
     ¬ 1 < Pr[= x | mx] := not_lt.2 probOutput_le_one
 
-@[simp] lemma tsum_probOutput_le_one [MonadLiftT m SPMF] : ∑' x : α, Pr[= x | mx] ≤ 1 :=
+lemma tsum_probOutput_le_one [MonadLiftT m SPMF] : ∑' x : α, Pr[= x | mx] ≤ 1 :=
   le_of_le_of_eq (le_add_self) (probFailure_add_tsum_probOutput mx)
-@[simp] lemma tsum_probOutput_ne_top [MonadLiftT m SPMF] : ∑' x : α, Pr[= x | mx] ≠ ⊤ :=
+lemma tsum_probOutput_ne_top [MonadLiftT m SPMF] : ∑' x : α, Pr[= x | mx] ≠ ⊤ :=
   ne_top_of_le_ne_top one_ne_top tsum_probOutput_le_one
 
 @[simp, grind .] lemma probEvent_le_one [MonadLiftT m SPMF] : Pr[ p | mx] ≤ 1 := by
@@ -659,14 +654,14 @@ alias ⟨_, one_eq_probOutput⟩ := one_eq_probOutput_iff
 
 -- `grind`-safe in isolation, and the natural mirror of `one_eq_probOutput_iff'` (which kept its
 -- `grind` tag): both are the `finSupport`-singleton characterization. See `probability.md`.
-@[simp, grind =]
+@[grind =]
 lemma probOutput_eq_one_iff' [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
     [HasEvalFinset m] [DecidableEq α] :
     Pr[= x | mx] = 1 ↔ Pr[⊥ | mx] = 0 ∧ finSupport mx = {x} := by
   rw [probOutput_eq_one_iff, finSupport_eq_iff_support_eq_coe, Finset.coe_singleton]
 alias ⟨_, probOutput_eq_one'⟩ := probOutput_eq_one_iff'
 
-@[simp, grind =]
+@[grind =]
 lemma one_eq_probOutput_iff' [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
     [HasEvalFinset m] [DecidableEq α] :
     1 = Pr[= x | mx] ↔ Pr[⊥ | mx] = 0 ∧ finSupport mx = {x} := by
@@ -773,7 +768,7 @@ lemma probEvent_False (mx : m α) :
     Pr[ fun _ => False | mx] = 0 := by
   simp [probEvent_eq_tsum_indicator]
 
-@[simp, grind =]
+@[grind =]
 lemma probEvent_false (mx : m α) :
     Pr[ fun _ => false | mx] = 0 := by aesop
 
@@ -996,7 +991,6 @@ lemma one_eq_probEvent_iff' [HasEvalFinset m] [DecidableEq α] :
 
 alias ⟨_, one_eq_probEvent'⟩ := one_eq_probEvent_iff'
 
-@[simp]
 lemma function_support_probOutput :
     Function.support (Pr[= · | mx]) = support mx := by
   simp only [Function.support, ne_eq, probOutput_eq_zero_iff, not_not, Set.ofPred_mem_eq]
