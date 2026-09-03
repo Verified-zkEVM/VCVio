@@ -33,6 +33,8 @@ public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUDC
 public import VCVioTest.SampleableType
 public import VCVioTest.Smoke
+public import VCVioTest.Tactic.Finiteness
+public import VCVioTest.Tactic.GCongr
 public import VCVioTest.UniformOn
 public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability
