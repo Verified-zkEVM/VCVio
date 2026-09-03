@@ -47,13 +47,28 @@ open OracleComp OracleSpec
 
 open scoped OracleSpec.PrimitiveQuery
 
+namespace StateT
+
+/-- `PreservesInv mx Inv` means that starting from any state satisfying `Inv`, every reachable
+post-state (support-wise) also satisfies `Inv`. -/
+def PreservesInv {σ α : Type} (mx : StateT σ ProbComp α) (Inv : σ → Prop) : Prop :=
+  ∀ σ0, Inv σ0 → ∀ z ∈ support (mx.run σ0), Inv z.2
+
+end StateT
+
 namespace QueryImpl
 
 /-- `PreservesInv impl Inv` means every oracle query implementation step preserves `Inv`
-on all reachable post-states (support-based). -/
+on all reachable post-states (support-based): each `impl t` is a `StateT.PreservesInv`
+computation. -/
 def PreservesInv {ι : Type} {spec : OracleSpec ι} {σ : Type}
     (impl : QueryImpl spec (StateT σ ProbComp)) (Inv : σ → Prop) : Prop :=
-  ∀ t σ0, Inv σ0 → ∀ z ∈ support ((impl t).run σ0), Inv z.2
+  ∀ t, StateT.PreservesInv (impl t) Inv
+
+lemma preservesInv_iff {ι : Type} {spec : OracleSpec ι} {σ : Type}
+    (impl : QueryImpl spec (StateT σ ProbComp)) (Inv : σ → Prop) :
+    PreservesInv impl Inv ↔ ∀ t, StateT.PreservesInv (impl t) Inv :=
+  Iff.rfl
 
 lemma PreservesInv.trivial {ι : Type} {spec : OracleSpec ι} {σ : Type}
     (impl : QueryImpl spec (StateT σ ProbComp)) :
@@ -137,11 +152,6 @@ namespace StateT
 every outcome in the support of `mx.run σ0` has final state equal to `σ0`. -/
 def StatePreserving {σ α : Type} (mx : StateT σ ProbComp α) : Prop :=
   ∀ σ0, ∀ z ∈ support (mx.run σ0), z.2 = σ0
-
-/-- `PreservesInv mx Inv` means that starting from any state satisfying `Inv`, every reachable
-post-state (support-wise) also satisfies `Inv`. -/
-def PreservesInv {σ α : Type} (mx : StateT σ ProbComp α) (Inv : σ → Prop) : Prop :=
-  ∀ σ0, Inv σ0 → ∀ z ∈ support (mx.run σ0), Inv z.2
 
 /-- `NeverFailsUnder mx Inv` means that starting from any state satisfying `Inv`, the computation
 does not fail (its failure probability is `0`). -/
