@@ -9,19 +9,26 @@ Mathlib measures for closed denotations, kernels for environment/state-indexed c
 effect-preserving outcome types for transformers, and keep `Pr[...]` as the discrete compatibility
 surface. [`docs/reading/`](../reading/README.md) indexes the full design record.
 
-The primary notation is now measure-valued: `𝒟[mx] : Measure α`. The former finite distribution
-API is explicit as `evalSPMF mx` / `𝒮[mx]`. `Pr[...]` remains the discrete compatibility façade;
-theorems `probOutput_eq_evalSPMF_toMeasure`, `probEvent_eq_evalSPMF_toMeasure`, and
-`probFailure_eq_evalSPMF_toMeasure` state its meaning through the explicit compatibility measure.
-Direct `FreeM` measure semantics has corresponding `FreeM.evalDist_apply_singleton` and
-`FreeM.evalDist_apply_setOf` coherence lemmas. This split is intentional. An unconditional
-`Eq.rec` law for `Pr[...]` only needs equality of result types in the discrete façade, whereas a
-measure denotation also depends on the selected `MeasurableSpace`; type equality does not identify
-those structures. We therefore do not install a blanket finite-type measurable-space instance.
+The primary notation is measure-valued: `𝒟[mx] : Measure α`. The finite distribution API is
+explicit as `evalSPMF mx` / `𝒮[mx]`, and `Pr[...]` remains the discrete compatibility façade. One
+class connects the two: `DiscreteEvalDistCompatible m` says that integrating a measurable
+functional against `𝒟[mx]` is the façade expectation `∑' x, Pr[= x | mx] * g x`. Everything else
+is derived from it, in the simp direction, so measure-side goals reduce *into* the façade:
+`evalDist_apply_singleton` (`𝒟[mx] {x} = Pr[= x | mx]`), `evalDist_apply_setOf`
+(`𝒟[mx] {x | p x} = Pr[p | mx]` on a discrete space), `evalDist_apply_univ`
+(`𝒟[mx] univ = 1 - Pr[⊥ | mx]`), and `lintegral_evalDist` (`∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g`).
+The compatibility adapter satisfies the class definitionally; the free-monad fold satisfies it
+whenever its measure specification agrees with its probability specification
+(`PFunctor.IsMeasureSpec.Compatible`, which `IsProbabilitySpec.toMeasureSpec` satisfies by `rfl`).
+The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq.rec` law for `Pr[...]`
+only needs equality of result types, whereas a measure denotation also depends on the selected
+`MeasurableSpace`, so there is no blanket finite-type measurable-space instance.
 
-`evalDist_eq_evalSPMF_toMeasure` is the sole deprecated whole-denotation bridge. It applies to the
-canonical compatibility adapter; measure-native semantics should remain on `𝒟[…]` instead of
-round-tripping through the finite backend.
+The adapter is also `LawfulEvalDistSemantics` (`instLawfulEvalDistSemanticsOfMonadLiftTSPMF`), so
+the Giry laws `evalDist_pure`, `evalDist_bind`, `evalDist_map` and the const laws hold with no
+measure specification in scope; `evalDist_eq_evalSPMF_toMeasure` is its definitional unfolding.
+`evalDist_bind`/`evalDist_map` are deliberately not `@[simp]` on either side: a bind is expanded
+only on request (`gotchas.md` §10), and the measure side has no separate family of sum lemmas.
 
 ## Core Definitions
 

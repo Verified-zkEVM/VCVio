@@ -58,9 +58,8 @@ theorem le_denote_isSome_seededFork_sq
             ((Fintype.card (spec.Range i) : ℕ) : ℝ≥0∞)) ≤
       PFunctor.FreeM.denote (seededFork main qb js i cf)
         {result | result.isSome} := by
-  rw [PFunctor.FreeM.denote_apply_setOf (fun _ => rfl)
-    (seededFork main qb js i cf) (fun result => result.isSome)
-    Option.measurableSet_isSome]
+  change _ ≤ 𝒟[seededFork main qb js i cf] {result | result.isSome}
+  rw [evalDist_apply _ Option.measurableSet_isSome]
   exact le_probEvent_isSome_seededFork_sq main qb js i cf
 
 end seeded
@@ -84,9 +83,8 @@ theorem le_denote_isSome_contextFork
      acc * (acc / q - h⁻¹)) ≤
       PFunctor.FreeM.denote (contextFork main qb i cf)
         {result | result.isSome} := by
-  rw [PFunctor.FreeM.denote_apply_setOf (fun _ => rfl)
-    (contextFork main qb i cf) (fun result => result.isSome)
-    Option.measurableSet_isSome]
+  change _ ≤ 𝒟[contextFork main qb i cf] {result | result.isSome}
+  rw [evalDist_apply _ Option.measurableSet_isSome]
   exact le_probEvent_isSome_contextFork main qb i cf hreach
 
 end replay
