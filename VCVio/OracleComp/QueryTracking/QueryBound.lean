@@ -1878,3 +1878,5 @@ structure PolyQueries {ι : Type} [DecidableEq ι] {spec : ℕ → OracleSpec ι
     IsPerIndexQueryBound (oa n x) (fun i => (qb i).eval n)
 
 end OracleComp
+
+set_option linter.style.longFile 2000

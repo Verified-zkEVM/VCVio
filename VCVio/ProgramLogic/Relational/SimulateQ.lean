@@ -3520,3 +3520,5 @@ lemma tsum_tsum_postStepOutM_mul
 end AveragedStateMeasureBad
 
 end OracleComp.ProgramLogic.Relational
+
+set_option linter.style.longFile 3700
