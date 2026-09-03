@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 concurrency:
@@ -289,12 +291,31 @@ jobs:
       # timing report compares exactly the seven non-test libraries.
       - name: Build the canary library
         run: lake build VCVioTest
+      # `LatticeCryptoTest.lean` deliberately omits the native `Main` executables,
+      # which remain covered by the nightly FFI workflow. Building this library
+      # elaborates every Lean-only lattice helper, vector, and regression canary.
+      - name: Build the lattice crypto test library
+        run: lake build LatticeCryptoTest
       - name: Build HashSig oracle canaries
         run: lake build HashSigTest
       - name: Run SLH-DSA-SHA2-128-24 differential KAT
         run: lake exe slhdsa_kat
       - name: Run SLH-DSA-C13 differential KAT
         run: lake exe slhdsa_c13_kat
+      - name: Run SLH-DSA structured-codec boundary tests
+        run: lake exe slhdsa_data_codec_tests
+      - name: Run SLH-DSA primitive vector tests
+        run: lake exe slhdsa_primitive_tests
+      - name: Run SLH-DSA WOTS construction tests
+        run: lake exe slhdsa_wots_tests
+      - name: Run SLH-DSA XMSS construction tests
+        run: lake exe slhdsa_xmss_tests
+      - name: Run SLH-DSA FORS construction tests
+        run: lake exe slhdsa_fors_tests
+      - name: Run SLH-DSA hypertree conformance tests
+        run: lake exe slhdsa_hypertree_tests
+      - name: Run SLH-DSA external-interface tests
+        run: lake exe slhdsa_external_tests
       # - name: Run ML-KEM tests
       #   run: |
       #     .lake/build/bin/mlkem_test
