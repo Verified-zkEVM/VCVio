@@ -136,11 +136,6 @@ abbrev instMonadLiftTSetM : MonadLiftT (OracleComp spec) SetM :=
 abbrev instLawfulMonadLiftTSetM : LawfulMonadLiftT (OracleComp spec) SetM :=
   PFunctor.FreeM.instLawfulMonadLiftTSetM
 
-/- `supportWhen` presents Mathlib's `SetM` interpreter as ordinary sets in
-its public API. Lean 4.33 requires that wrapper at implicit transparency when
-specializing the generic simulation laws. -/
-attribute [local implicit_reducible] SetM
-
 section evalSPMF_main
 
 lemma evalSPMF_eq_simulateQ [IsProbabilitySpec spec] (mx : OracleComp spec α) :
