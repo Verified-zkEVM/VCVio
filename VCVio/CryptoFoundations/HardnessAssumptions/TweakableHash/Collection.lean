@@ -25,6 +25,13 @@ notion is the instance at the empty collection (`TweakableHashCollection.empty`)
 type is uninhabited — pinned by `isEmpty_domain_collectionSpec_empty`; the games' `standalone`
 constructors package that instantiation.
 
+Module names in this directory follow from that. Their base name identifies the *property* rather
+than distinguishing its stand-alone and collection-indexed instances: since the latter subsumes the
+former, there is no separate collection module and no `…C` suffix, unlike the EasyCrypt development
+this family is transcribed from. Where both validity presentations exist, the `FinalValidity` suffix
+marks the sticky monitor (`TweakableHash.SourceFinalValidity`); an unsuffixed name denotes the
+rejection-on-arrival game defined here.
+
 The target/challenge tweaks must be distinct from each other and from every tweak submitted to the
 collection oracle. This API enforces that discipline in the oracles: the collection oracle rejects
 any tweak already in the challenge history, and each game's challenge oracle rejects a tweak already
