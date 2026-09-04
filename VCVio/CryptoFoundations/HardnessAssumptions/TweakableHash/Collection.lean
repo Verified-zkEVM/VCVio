@@ -38,7 +38,11 @@ any tweak already in the challenge history, and each game's challenge oracle rej
 in its own or the collection oracle's history. This follows DKKW's rejection-on-arrival presentation
 and extends it across the collection boundary. BDHMS instead records every query and checks its
 `VQS_t` predicate only in the final winning condition; that is a distinct adaptive experiment, not a
-definitional presentation of this one.
+definitional presentation of this one, rendered by `TweakableHash.SourceFinalValidity`. The two
+presentations have distinct adversary types, so neither admits the other's adversaries directly.
+`TweakableHash.ToFinalValidity` instead supplies, per game, an explicit conversion sending an
+adversary here to one against the corresponding source-final-validity game at exactly the same
+advantage; `TweakableHash.SM_DT_TCR_advantage_toSourceFinalValidity` is the SM-DT-TCR member.
 
 ## References
 
