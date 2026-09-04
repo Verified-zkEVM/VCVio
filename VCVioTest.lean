@@ -19,7 +19,6 @@ public import VCVioTest.MerkleTreeExtractability
 public import VCVioTest.MerkleTreeMonadic
 public import VCVioTest.MerkleTreeMultiExtractability
 public import VCVioTest.MonadProbability
-public import VCVioTest.MultiTargetCollection
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.PFunctorFacade
 public import VCVioTest.PerfectMerkleTree
@@ -28,7 +27,9 @@ public import VCVioTest.QueryHom
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.SMDTDSPR
 public import VCVioTest.SMDTOpenPRE
+public import VCVioTest.SMDTPRE
 public import VCVioTest.SMDTPREFinalValidity
+public import VCVioTest.SMDTTCR
 public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUDC
 public import VCVioTest.SampleableType
