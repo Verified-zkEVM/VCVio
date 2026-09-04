@@ -31,10 +31,14 @@ injective `emb : M' → M`, matching `TweakableHash.SM_DT_PRE_Problem`. A subspa
 by a predicate is the case `M' := Subtype p`, `emb := Subtype.val` (`Subtype.val_injective`); the
 unrestricted notion is recovered exactly at `M' := M`, `emb := id` (`Function.injective_id`), so
 the parameterization costs no generality. It buys the ability to state bounds in `|M'|` rather than
-`|M|`: `Problem.HasUniformInputs` fixes `inputGen` to the uniform distribution on the subspace,
-which is what a quantitative bound of the form `q / |M'|` needs. A strict subspace is the case a
-reduction meets when the challenge must be distributed as the value it replaces — a digest, for a
-hash chain.
+`|M|`. `Problem.HasUniformInputs` and `Problem.HasUniformOutputs` identify the distributional
+instance in which the hidden input is uniform on the subspace and the ideal response is uniform on
+the output space. A strict subspace is the case a reduction meets when the challenge must be
+distributed as the value it replaces — a digest, for a hash chain.
+
+These distributional predicates do not identify the final-validity presentation with the
+rejection-on-arrival presentation in which an invalid challenge query returns no answer. Relating
+the two presentations for SM-DT-UD requires a separate game conversion.
 
 The source security quantity is oriented: `DirectedAdvantage` is the signed real gap
 `Pr[real = true] - Pr[ideal = true]`. It can be negative, so swapping the real and ideal worlds is
@@ -49,7 +53,8 @@ orientation-independent bounds, with a proved bridge between the two views.
 - Hülsing and Kudinov, *Recovering the Tight Security Proof of SPHINCS+*,
   [ePrint 2022/346](https://eprint.iacr.org/2022/346), Def. 4 and Def. 7.
 - Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for Post-Quantum Ethereum*,
-  [ePrint 2025/055](https://eprint.iacr.org/2025/055), §3.1 Def. 5 for the subspace-indexed form.
+  [ePrint 2025/055](https://eprint.iacr.org/2025/055), §3.1 Def. 5 for the subspace-indexed uniform
+  distributions. Its invalid-query behavior is rejection-on-arrival rather than final validity.
 -/
 
 @[expose] public section
@@ -83,8 +88,8 @@ structure Problem (ι PkSeed Tweak M M' Y : Type) where
   /-- The map into `M` of the subspace the real challenge world samples from. -/
   emb : M' → M
   /-- `emb` identifies `M'` with a subset of `M`. This is what makes the oracle's uniform draw on
-  `M'` a uniform draw on a subset of `M`: under a non-injective `emb` the law of `emb x` is the
-  pushforward of the uniform distribution, which is not uniform on the image. No definition or
+  `M'` a uniform draw on a subset of cardinality `|M'|`: without injectivity the pushforward need
+  not be uniform on its image, and the image need not have cardinality `|M'|`. No definition or
   proof in this module uses the field; it is a side condition carried for the reductions that state
   bounds in `|M'|`, as in `TweakableHash.SM_DT_PRE_Problem`. -/
   emb_injective : Function.Injective emb
@@ -97,17 +102,25 @@ structure Problem (ι PkSeed Tweak M M' Y : Type) where
   /-- The maximum number of challenge queries allowed by final validity. -/
   numTargets : ℕ
 
-/-- The property on `inputGen` that a quantitative bound in `|M'|` requires: the hidden input is
-uniform on the subspace, with full support. Keeping it separate from the game permits a more
-general definition while making the reduction's additional hypothesis explicit.
+/-- One distributional hypothesis of a quantitative bound in `|M'|`: the hidden input is uniform
+on the subspace, with full support. Keeping it separate from the game permits a more general
+definition while making the reduction's additional hypothesis explicit.
 
 Uniformity is asked of the subspace rather than of `M`, which is what lets a bound of the form
-`q / |M'|` be stated at a strict `M' ⊊ M`. Compare
+`q / |M'|` refer to a strict `M' ⊊ M`. Such a bound also requires the appropriate ideal-output
+distribution, oracle model, and query budget. Compare
 `TweakableHash.SM_DT_OpenPRE_SourceFinalValidity.Problem.HasUniformInputs`, whose game samples from
 the full message space and whose uniformity hypothesis is therefore the one on `M`. -/
 def Problem.HasUniformInputs [SampleableType M']
     (prob : Problem ι PkSeed Tweak M M' Y) : Prop :=
   prob.inputGen = $ᵗ M'
+
+/-- The ideal challenge distribution is uniform on the output space. Together with
+`Problem.HasUniformInputs`, this selects the challenge distributions used by the standard
+subspace-indexed SM-DT-UD experiment while leaving the abstract game available for other hybrids. -/
+def Problem.HasUniformOutputs [SampleableType Y]
+    (prob : Problem ι PkSeed Tweak M M' Y) : Prop :=
+  prob.outputGen = $ᵗ Y
 
 /-- The stand-alone SM-DT-UD problem, whose collection oracle is unqueryable. -/
 def Problem.standalone (th : TweakableHash PkSeed Tweak M Y) (emb : M' → M)
