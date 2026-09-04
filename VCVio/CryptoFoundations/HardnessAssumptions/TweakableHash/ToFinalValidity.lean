@@ -7,7 +7,7 @@ Authors: Matthias Meijers
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPREFinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCRFinalValidity
-public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
+import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
 /-!
 # Converting rejection-on-arrival adversaries to source-final-validity adversaries
@@ -45,7 +45,7 @@ The replica records tweaks alone. That is all the acceptance test reads, and it 
   presentation the source-final-validity games render.
 -/
 
-@[expose] public section
+public section
 
 namespace TweakableHash
 
@@ -59,12 +59,12 @@ A wrapper that holds only the tweaks of the challenge history decides the same a
 the game, which holds whole queries. -/
 
 /-- Reservation is decided by the tweaks of the challenge history alone. -/
-theorem tweakReserved_map_iff (tweakOf : Q → Tweak) (qs : List Q) (t : Tweak) :
+private theorem tweakReserved_map_iff (tweakOf : Q → Tweak) (qs : List Q) (t : Tweak) :
     TweakReserved id (qs.map tweakOf) t ↔ TweakReserved tweakOf qs t := by
   simp [TweakReserved]
 
 /-- Freshness is decided by the tweaks of the challenge history alone. -/
-theorem tweakFresh_map_iff (tweakOf : Q → Tweak) (qs : List Q) (twsColl : List Tweak)
+private theorem tweakFresh_map_iff (tweakOf : Q → Tweak) (qs : List Q) (twsColl : List Tweak)
     (t : Tweak) :
     TweakFresh id (qs.map tweakOf) twsColl t ↔ TweakFresh tweakOf qs twsColl t := by
   simp [TweakFresh, tweakReserved_map_iff]
@@ -86,7 +86,7 @@ wrapper and the monitor's oracles to compose. -/
 /-- The challenge half of the wrapper: a query over the target cap, or at a tweak the replica
 already records on either oracle, is answered `none` and not forwarded. The test is
 `SM_DT_TCR_challengeOracle`'s, read through the replica. -/
-def SM_DT_TCR_toSourceFinalValidityChallengeOracle [DecidableEq Tweak]
+private def SM_DT_TCR_toSourceFinalValidityChallengeOracle [DecidableEq Tweak]
     (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) :
     QueryImpl (SM_DT_TCR_challengeSpec Tweak M Y)
       (StateT (List Tweak × List Tweak)
@@ -103,7 +103,7 @@ def SM_DT_TCR_toSourceFinalValidityChallengeOracle [DecidableEq Tweak]
 
 /-- The collection half of the wrapper: a query at a tweak the challenge oracle has reserved is
 answered `none` and not forwarded; otherwise it is forwarded and its tweak recorded. -/
-def SM_DT_TCR_toSourceFinalValidityCollectionOracle [DecidableEq Tweak]
+private def SM_DT_TCR_toSourceFinalValidityCollectionOracle [DecidableEq Tweak]
     (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) :
     QueryImpl (collectionSpec prob.thColl)
       (StateT (List Tweak × List Tweak)
@@ -124,7 +124,7 @@ replica of the two tweak histories.
 Private randomness passes straight through. A query the rejection-on-arrival oracles would refuse is
 answered `none` and **not forwarded**, so the monitor never sees the query that would poison it; an
 accepted query is forwarded verbatim and its tweak appended to the replica. -/
-def SM_DT_TCR_toSourceFinalValidityOracles [DecidableEq Tweak]
+private def SM_DT_TCR_toSourceFinalValidityOracles [DecidableEq Tweak]
     (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) :
     QueryImpl (unifSpec + (SM_DT_TCR_challengeSpec Tweak M Y + collectionSpec prob.thColl))
       (StateT (List Tweak × List Tweak)
@@ -342,7 +342,7 @@ reason as its SM-TCR counterpart. -/
 /-- The challenge half of the wrapper. On the accepting path the message is drawn by the monitor's
 oracle, not here; on the rejecting path nothing is drawn at all, exactly as
 `SM_DT_PRE_challengeOracle` does. -/
-def SM_DT_PRE_toSourceFinalValidityChallengeOracle [DecidableEq Tweak]
+private def SM_DT_PRE_toSourceFinalValidityChallengeOracle [DecidableEq Tweak]
     (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) :
     QueryImpl (SM_DT_PRE_challengeSpec Tweak Y)
       (StateT (List Tweak × List Tweak)
@@ -358,7 +358,7 @@ def SM_DT_PRE_toSourceFinalValidityChallengeOracle [DecidableEq Tweak]
         fun y => pure (some y, (s.1 ++ [t], s.2))
 
 /-- The collection half of the wrapper. -/
-def SM_DT_PRE_toSourceFinalValidityCollectionOracle [DecidableEq Tweak]
+private def SM_DT_PRE_toSourceFinalValidityCollectionOracle [DecidableEq Tweak]
     (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) :
     QueryImpl (collectionSpec prob.thColl)
       (StateT (List Tweak × List Tweak)
@@ -374,7 +374,7 @@ def SM_DT_PRE_toSourceFinalValidityCollectionOracle [DecidableEq Tweak]
         fun y => pure (some y, (s.1, s.2 ++ [q.2.1]))
 
 /-- Private randomness passes through; the two game oracles are wrapped. -/
-def SM_DT_PRE_toSourceFinalValidityOracles [DecidableEq Tweak]
+private def SM_DT_PRE_toSourceFinalValidityOracles [DecidableEq Tweak]
     (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) :
     QueryImpl (unifSpec + (SM_DT_PRE_challengeSpec Tweak Y + collectionSpec prob.thColl))
       (StateT (List Tweak × List Tweak)
