@@ -6,6 +6,7 @@ Authors: Quang Dao
 module
 
 public import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
+public import Mathlib.Topology.EMetricSpace.Weak
 
 /-!
 # Symmetric Absolute Difference and Supporting Lemmas for `ℝ≥0∞`
@@ -20,6 +21,7 @@ interactions. These are the building blocks for total variation distance on `PMF
 
 ## Main results
 
+- `ENNReal.absDiff_eq_edist` — `absDiff` is Mathlib's `edist` on `ℝ≥0∞` (the weak extended metric)
 - `ENNReal.absDiff_toReal` — connection to real-valued absolute difference
 - `ENNReal.absDiff_triangle` — triangle inequality
 - `ENNReal.absDiff_tsum_le` — subadditivity of `absDiff` over infinite sums
@@ -47,6 +49,24 @@ lemma absDiff_comm (a b : ℝ≥0∞) : ENNReal.absDiff a b = ENNReal.absDiff b 
 
 lemma absDiff_le_add (a b : ℝ≥0∞) : ENNReal.absDiff a b ≤ a + b :=
   add_le_add tsub_le_self tsub_le_self
+
+/-- `absDiff` is the extended distance Mathlib puts on `ℝ≥0∞` (through `WithTop ℝ≥0`, a weak
+extended metric: `⊤` is at distance `⊤` from every finite point and `0` from itself). Mathlib has
+no closed form for that `edist` yet, so this is the bridge from the truncated-subtraction spelling
+to `edist` and its `WeakPseudoEMetricSpace` lemmas. -/
+lemma absDiff_eq_edist (a b : ℝ≥0∞) : ENNReal.absDiff a b = edist a b := by
+  induction a with
+  | top => induction b with
+    | top => simp [ENNReal.absDiff]; rfl
+    | coe b => simp [ENNReal.absDiff]; rfl
+  | coe a => induction b with
+    | top => simp [ENNReal.absDiff]; rfl
+    | coe b =>
+      change _ = ((edist a b : ℝ≥0∞))
+      rw [edist_nndist, ENNReal.absDiff, ← ENNReal.coe_sub, ← ENNReal.coe_sub, ← ENNReal.coe_add,
+        NNReal.nndist_eq]
+      congr 1
+      rcases le_total a b with h | h <;> simp [tsub_eq_zero_of_le h]
 
 lemma absDiff_triangle (a b c : ℝ≥0∞) :
     ENNReal.absDiff a c ≤ ENNReal.absDiff a b + ENNReal.absDiff b c := by
