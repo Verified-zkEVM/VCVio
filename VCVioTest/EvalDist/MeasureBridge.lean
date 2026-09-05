@@ -105,6 +105,24 @@ example (mx : OptionT ProbComp Bool) (g : Bool → ℝ≥0∞) :
 example (mx : OptionT ProbComp Bool) (my : OptionT ProbComp (Fin 3)) :
     𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my] := by simp
 
+/-! ## A unit-test program
+
+A coin and a die drawn independently, closed on the measure side by the same calls as the
+façade: the point mass is the product of the two uniform masses (the closed form `simp` reaches;
+merging `2⁻¹ * 6⁻¹` into `12⁻¹` is `ℝ≥0∞` arithmetic, not a probability rule), an event on one
+coordinate needs the bind expanded under `Pr[…]` and `ENNReal.div_self` for the total factor. -/
+
+/-- A coin and a die, drawn independently. -/
+def coinDie : ProbComp (Bool × Fin 6) := do
+  let b ← $ᵗ Bool
+  let d ← $ᵗ (Fin 6)
+  pure (b, d)
+
+example : 𝒟[coinDie] {(true, 0)} = 2⁻¹ * 6⁻¹ := by simp [coinDie]
+example : 𝒟[coinDie] {z | z.1 = true} = 2⁻¹ := by
+  simp [coinDie, probEvent_bind_eq_tsum, ENNReal.div_self]
+example (g : Bool × Fin 6 → ℝ≥0∞) : ∫⁻ z, g z ∂𝒟[coinDie] = expectedValue coinDie g := by simp
+
 /-! ## Continuous carriers are untouched -/
 
 /-- Without a discrete carrier the bridge does not fire: `lintegral_evalDist` needs
