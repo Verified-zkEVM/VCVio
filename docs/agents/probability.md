@@ -31,7 +31,9 @@ measure specification in scope; `evalDist_eq_evalSPMF_toMeasure` is its definiti
 only on request (`gotchas.md` §10), and the measure side has no separate family of sum lemmas.
 Independent products denote product measures: `evalDist_mOfFn` and `evalDist_mPi`
 (`VCVio/EvalDist/IndepProductMeasure.lean`) identify `𝒟[Fintype.mPi f]` with
-`Measure.pi fun i => 𝒟[f i]`, through `Measure.pi_eq` and the coordinatewise event product.
+`Measure.pi fun i => 𝒟[f i]`, through `Measure.pi_eq` and the coordinatewise event product;
+`evalDist_map_eval_mPi` reads one coordinate back off the product through Mathlib's
+`Measure.pi_map_eval` when the other factors never fail.
 
 ## Core Definitions
 
