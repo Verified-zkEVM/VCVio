@@ -62,7 +62,6 @@ noncomputable local instance instIsUniformSpecChalSingleton [Fintype Chal] :
     IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
   IsUniformSpec.ofFintypeInhabited _
 
-@[simp]
 private lemma simulateQ_id_add_uniform_query_inl
     {ι : Type*} (spec : OracleSpec ι) [∀ i, SampleableType (spec.Range i)]
     (n : unifSpec.Domain) :
@@ -73,7 +72,6 @@ private lemma simulateQ_id_add_uniform_query_inl
   change (QueryImpl.id' unifSpec n) = _
   exact QueryImpl.id'_apply n
 
-@[simp]
 private lemma simulateQ_id_add_uniform_query_inr
     {ι : Type*} (spec : OracleSpec ι) [∀ i, SampleableType (spec.Range i)]
     (t : spec.Domain) :
@@ -160,7 +158,6 @@ private abbrev ForkBaseState (M Commit Chal : Type)
   (fsRoSpec M Commit Chal).QueryCache × Fork.SimState M Commit Chal
 
 omit [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
-@[simp]
 private lemma mem_support_forkSim_pure_nested_iff
     {α : Type} (x : α) (cache : (fsRoSpec M Commit Chal).QueryCache)
     (liveSt : Fork.SimState M Commit Chal)
@@ -1424,7 +1421,6 @@ private lemma forkLoggedProbImpl_run [Fintype Chal]
       (oa := oa) (s := s)
 
 omit [Finite Chal] [Inhabited Chal] in
-@[simp]
 private lemma forkWrappedUniform_forkSim_query_inl_run
     [Fintype Chal] (n : unifSpec.Domain)
     (liveSt : Fork.SimState M Commit Chal) :

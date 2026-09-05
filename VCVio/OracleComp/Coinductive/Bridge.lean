@@ -50,7 +50,7 @@ def toITree (oa : OracleComp spec α) : ITree spec.toPFunctor α :=
 @[simp] theorem toITree_pure (x : α) :
     toITree (pure x : OracleComp spec α) = ITree.pure x := rfl
 
-@[simp] theorem toITree_queryBind (t : spec.Domain) (k : spec.Range t → OracleComp spec α) :
+theorem toITree_queryBind (t : spec.Domain) (k : spec.Range t → OracleComp spec α) :
     toITree (queryBind t k) = ITree.query (F := spec.toPFunctor) t (fun u => toITree (k u)) :=
   rfl
 

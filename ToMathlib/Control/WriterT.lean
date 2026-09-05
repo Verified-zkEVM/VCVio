@@ -122,7 +122,6 @@ lemma bind_def' (x : WriterT ω m α) (f : α → WriterT ω m β) :
 lemma run_pure' [LawfulMonad m] (x : α) :
     (pure x : WriterT ω m α).run = pure (x, ∅) := rfl
 
-@[simp]
 lemma run_bind' [LawfulMonad m] (x : WriterT ω m α) (f : α → WriterT ω m β) :
     (x >>= f).run = x.run >>= fun (a, w₁) => Prod.map id (w₁ ++ ·) <$> (f a).run := rfl
 
@@ -131,7 +130,6 @@ lemma run_seqLeft' {m : Type u → Type v} [Monad m] {ω : Type u} [Monoid ω] {
     (x : WriterT ω m α) (y : WriterT ω m β) :
     (x *> y).run = x.run >>= fun z => Prod.map id (z.2 * ·) <$> y.run := rfl
 
-@[simp]
 lemma run_map' (x : WriterT ω m α) (f : α → β) : (f <$> x).run = Prod.map f id <$> x.run := rfl
 
 /-- `Prod.fst <$> WriterT.run` preserves `pure` (Append flavour). -/
@@ -240,12 +238,10 @@ lemma costs_def (oa : AddWriterT ω M α) :
 lemma run_addTell [AddMonoid ω] (w : ω) :
     (addTell (M := M) w).run = pure (⟨⟩, Multiplicative.ofAdd w) := rfl
 
-@[simp]
 lemma outputs_addTell [AddMonoid ω] [LawfulMonad M] (w : ω) :
     (addTell (M := M) w).outputs = pure ⟨⟩ := by
   simp [outputs, addTell]
 
-@[simp]
 lemma costs_addTell [AddMonoid ω] [LawfulMonad M] (w : ω) :
     (addTell (M := M) w).costs = pure w := by
   simp [costs, addTell]
