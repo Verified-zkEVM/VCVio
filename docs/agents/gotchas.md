@@ -312,13 +312,22 @@ off via `weak.linter.unicodeLinter, false` in `lakefile.lean`. This is a policy 
 dodge: VCVio docstrings legitimately use FIPS-204 math notation (a combining tilde on `c`) and
 diacritics in cited author names, which the Mathlib allowlist would otherwise reject.
 
+A trailing `set_option linter.style.longFile <ceiling>` in a file above 1500 lines is not a
+dodge either: it is how that linter is meant to be used (Mathlib does the same), the linter
+rejects a ceiling more than a hundred lines above the file's length, and the number only moves
+down as the file is split. Likewise `scripts/nolints.json` grandfathers the environment-linter
+findings (`lake lint`) that predate the gate; entries leave it when the finding is fixed
+(`lake lint -- --update` regenerates it from the current findings), and nothing is added to it
+to silence a new one.
+
 ### 24. After adding new `.lean` files, run `./scripts/update-lib.sh`
 
 This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
 `HashSig.lean`, `Examples.lean`, `VCVioWidgets.lean`, and `VCVioTest.lean`.
 It also updates the legacy `Interop.lean` umbrella without enabling module mode.
-CI checks the active module roots; `Interop` remains dormant and is migrated separately.
+CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
+from the committed file; `Interop` remains dormant and is migrated separately.
 
 ### 25. Active Lean sources use explicit module scopes
 
