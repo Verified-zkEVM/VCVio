@@ -262,11 +262,6 @@ jobs:
         run: ./scripts/test-axiomsweep.sh
       - name: Axiom sweep
         run: lake exe axiomsweep --check
-      # Batteries' environment linters over the seven proof libraries (the `lintDriver` in
-      # `lakefile.lean`). Runs after the warm rebuild so it only imports oleans that exist;
-      # it links no native backend.
-      - name: Lint
-        run: lake lint
       # `lake test` runs the `test` script from `lakefile.lean`: it builds the three test
       # libraries (every module reachable from `VCVioTest.lean`, the Lean-only lattice helpers
       # and vectors, the SLH-DSA canaries) and runs the smoke test and the SLH-DSA test
@@ -464,3 +459,40 @@ jobs:
                 body,
               });
             }
+
+  lint:
+    name: Lint
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Batteries' environment linters over the seven proof libraries (the `lintDriver` in
+      # `lakefile.lean`) import one whole environment per library; run inside `Build Project`
+      # they pushed the hosted runner into a shutdown, so they get a fresh runner and the
+      # oleans that job saved. `fail-on-cache-miss` keeps a missing cache from turning into a
+      # second full build.
+      - name: Restore Lake cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('lake-manifest.json') }}-${{ github.sha }}
+          fail-on-cache-miss: true
+      - name: Set up Lean environment
+        uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Fetch Mathlib cache
+        run: lake exe cache get
+      # One driver process per library bounds peak memory to one environment; `--no-build`
+      # because the oleans come from the restored cache. `scripts/nolints.json` is read from
+      # the repository root by every invocation.
+      - name: Lint each library
+        run: |
+          for lib in ToMathlib VCVio LatticeCrypto Extern HashSig Examples VCVioWidgets; do
+            lake exe runLinter --no-build "$lib"
+          done
