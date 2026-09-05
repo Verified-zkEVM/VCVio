@@ -105,6 +105,24 @@ example (mx : OptionT ProbComp Bool) (g : Bool → ℝ≥0∞) :
 example (mx : OptionT ProbComp Bool) (my : OptionT ProbComp (Fin 3)) :
     𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my] := by simp
 
+/-! ## Independent products are product measures -/
+
+example (g : Fin 3 → ProbComp Bool) : 𝒟[Fin.mOfFn 3 g] = Measure.pi fun i => 𝒟[g i] :=
+  evalDist_mOfFn 3 g
+example (f : Bool → ProbComp (Fin 3)) : 𝒟[Fintype.mPi f] = Measure.pi fun i => 𝒟[f i] :=
+  evalDist_mPi f
+example (f : Bool → ProbComp (Fin 3)) (v : Bool → Fin 3) :
+    𝒟[Fintype.mPi f] {v} = ∏ i, Pr[= v i | f i] := by
+  simp [evalDist_mPi]
+
+/-- The coordinate marginal of a product: the measure-side twin of `probEvent_coord_mPi`. -/
+example (f : Bool → ProbComp (Fin 3)) (i : Bool) :
+    (𝒟[Fintype.mPi f]).map (Function.eval i) = 𝒟[f i] :=
+  evalDist_map_eval_mPi f (fun _ => probFailure_eq_zero) i
+example (f : Bool → ProbComp (Fin 3)) (i : Bool) :
+    (𝒟[Fintype.mPi f]).map (Function.eval i) = 𝒟[f i] := by
+  simp [evalDist_mPi, Measure.pi_map_eval]
+
 /-! ## A unit-test program
 
 A coin and a die drawn independently, closed on the measure side by the same calls as the
