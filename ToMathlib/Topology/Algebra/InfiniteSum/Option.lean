@@ -8,7 +8,7 @@ module
 public import Mathlib.Topology.Algebra.InfiniteSum.Basic
 public import Mathlib.Topology.Instances.ENNReal.Lemmas
 /-!
-# Infinite sums over `Option` and along a `cast`
+# Infinite sums over `Option`
 -/
 
 public section
@@ -28,8 +28,3 @@ lemma tsum_option {α β : Type*} [AddCommMonoid α] [TopologicalSpace α]
   · intro x
     cases x <;> simp
   · simp
-
-theorem tsum_cast {α β : Type u} {f : α → ENNReal} {g : β → ENNReal}
-    (h : α = β) (h' : ∀ a, f a = g (cast h a)) :
-      (∑' (a : α), f a) = (∑' (b : β), g b) := by
-  subst h; simp [h']
