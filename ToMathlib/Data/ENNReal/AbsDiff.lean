@@ -70,11 +70,8 @@ lemma absDiff_eq_edist (a b : ℝ≥0∞) : ENNReal.absDiff a b = edist a b := b
 
 lemma absDiff_triangle (a b c : ℝ≥0∞) :
     ENNReal.absDiff a c ≤ ENNReal.absDiff a b + ENNReal.absDiff b c := by
-  unfold ENNReal.absDiff
-  calc (a - c) + (c - a)
-      ≤ ((a - b) + (b - c)) + ((c - b) + (b - a)) :=
-        add_le_add (tsub_le_tsub_add_tsub (b := b)) (tsub_le_tsub_add_tsub (b := b))
-    _ = ((a - b) + (b - a)) + ((b - c) + (c - b)) := by ring
+  simp only [absDiff_eq_edist]
+  exact WeakPseudoEMetricSpace.edist_triangle a b c
 
 /-- `|a - b| + 2·min a b = a + b`, the truncated-subtraction form of the identity that splits a
 total mass into its overlap and its discrepancy. -/
@@ -116,12 +113,8 @@ lemma absDiff_tsub_tsub {a b c : ℝ≥0∞} (ha : a ≤ c) (hb : b ≤ c) (hc :
     exact ENNReal.add_sub_cancel_left hca_ne
 
 @[simp] lemma absDiff_eq_zero {a b : ℝ≥0∞} : ENNReal.absDiff a b = 0 ↔ a = b := by
-  constructor
-  · intro h
-    have h1 : a - b = 0 := by exact_mod_cast (add_eq_zero.mp h).1
-    have h2 : b - a = 0 := by exact_mod_cast (add_eq_zero.mp h).2
-    exact le_antisymm (tsub_eq_zero_iff_le.mp h1) (tsub_eq_zero_iff_le.mp h2)
-  · rintro rfl; exact absDiff_self _
+  rw [absDiff_eq_edist]
+  exact ⟨WeakEMetricSpace.eq_of_edist_eq_zero, fun h => h ▸ WeakPseudoEMetricSpace.edist_self a⟩
 
 /-! ### Tsum inequalities -/
 
