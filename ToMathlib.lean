@@ -48,6 +48,8 @@ public import ToMathlib.MeasureTheory.MeasurableSpace.Option
 public import ToMathlib.MeasureTheory.Measure.Bool
 public import ToMathlib.MeasureTheory.Measure.Bounds
 public import ToMathlib.MeasureTheory.Measure.Coupling
+public import ToMathlib.MeasureTheory.Measure.Coupling.Bind
+public import ToMathlib.MeasureTheory.Measure.Coupling.Residual
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Monotone
 public import ToMathlib.MeasureTheory.Measure.Option

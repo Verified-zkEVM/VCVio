@@ -271,6 +271,7 @@ public import VCVio.ProgramLogic.Relational.Loom.Probabilistic
 public import VCVio.ProgramLogic.Relational.Loom.Qualitative
 public import VCVio.ProgramLogic.Relational.Loom.Quantitative
 public import VCVio.ProgramLogic.Relational.Measure
+public import VCVio.ProgramLogic.Relational.Measure.Bind
 public import VCVio.ProgramLogic.Relational.ProgrammingOracle
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
