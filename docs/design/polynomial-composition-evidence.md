@@ -66,7 +66,6 @@ remain separate from review checkouts.
 | PolyFun #200 | Five `mvcgen` warnings are asserted in tests instead of suppressed. Full validation and source-style checks pass. | Merged as `7ee80169dcc966d9a6e52a6ef5c1a16de65758c0`. |
 | VCVio #662 | Reference signed shifts checked; 4,385 product/square tests agree with exact integer arithmetic, while the original code fails. Full validation passes on current-main contents. | Merged as `91cbdae0694dca614dc7be9e4a0c044fc7ee898c` through the merge queue. |
 | VCVio #702 | Reviewed lint orchestration and API migrations; resolved the Falcon test rename conflict. Combined candidate passes full validation and the 4,385 arithmetic checks. | Merged as `ffc3e8bc49444380b979ebf0ea0831afe5c8c43b` through the merge queue. |
-
 | PolyFun #201 | Full validation, source style, ordinary VCVio imports, and fresh CI pass. Composition operands and parenthesization checked. | Merged as `328218a25b2a6139925ebc95732ef49903e9ba99`. |
 | PolyFun #202 | Constructor normal forms and public path observations reviewed with the published cslib prerequisite and its tests. Full validation and fresh CI pass. | Merged as `a137b66c4d894e1a6faa7abaa0cbc4c1a6aef62d`. |
 | PolyFun #203 | Prefix concatenation, query budget, trace witness and cost erasure reviewed. Full validation and fresh CI pass, with zero trust debt. | Merged as `988a1ab00bf3fe8da73c648757033548586f45d4`. |
@@ -75,8 +74,10 @@ remain separate from review checkouts.
 | VCVio #690 | Full combined validation and fresh CI pass. | Merged as `841fae0553ab796822ab88c0756e37c8f12b3ccd`. |
 | VCVio #693 | Full combined validation and fresh CI pass. | Merged as `9788aa7150b5c0abbce59f6fc33fcda245b7676b`. |
 | VCVio #684 | Verified source branches and refreshed documentation and validation instructions; documentation checks and CI pass. | Merged as `3ecdb0a606a874d7d2332a18d966af3570eca82b`. |
-| VCVio #694–696 | The combined stack passes full validation: 18,243 declarations across 594 modules, 40 existing sorry-tainted declarations, zero nonstandard-axiom taint. | Rewritten heads are receiving fresh checks after intervening main changes. |
-| VCVio #572 | Consolidated PolyFun pin, positive-natural scheduler masses and constructor API integration pass full local validation and optional backend checks. | Current-main integration validation is running before publication. |
+| VCVio #694 | Full combined validation and fresh CI pass. | Merged as `2b7d667fc44e3103d628b6d610d7443cf4befcef`. |
+| PolyFun #205 | Public routed-packet observations support VCVio state/packet/schedule transport. Full validation and style checks pass with zero trust debt. | Merged as `f6d49cfa38f02ef5872e8c2ba4380793dc2d8dc8`. |
+| VCVio #695–696 | The combined stack passes full validation: 18,243 declarations across 594 modules, 40 existing sorry-tainted declarations, zero nonstandard-axiom taint. | Rewritten heads are receiving fresh checks after intervening main changes. |
+| VCVio #572 | Current-main integration passes full validation and optional backend checks: 18,382 declarations across 598 modules. | Published atop #696; after #694 merged, the rewritten tree is identical to the validated candidate. |
 
 GitHub's native stacked-PR merge endpoint rewrites and retargets descendants automatically.
 Preserve the original references, fetch each rewritten head, compare its complete source tree,
@@ -89,7 +90,7 @@ or merge-queue entry is not a completed merge.
 | --- | --- | --- | --- |
 | Sequential substitution | Measurable coupling bind, explicit residual mass | State-law handler contracts | Validated; PRF reader discard uses the residual rule |
 | Indexed wiring | Local contracts imply a whole wired-program bound | PRF tag/reader, cached/eager oracle | Kernel contracts and Gaussian wiring validated; full PRF wiring contracts remain |
-| System composition | Routed execution transports schedules, packets and samplers | Bounded PRF network | Pending |
+| System composition | Routed execution transports schedules, packets and samplers | Bounded PRF network | FIFO runtime, identity transport and serial PRF consumer validated; raw open-syntax factorization remains |
 | Quantitative substitution | Executable normalization and derived resource bounds | ElGamal and exact-backend canary | Pending |
 
 ## Acceptance boundaries
@@ -147,3 +148,32 @@ Full validation (`./scripts/validate.sh --lint --test --axioms`) passes at this 
 nonstandard-axiom taint. The log is `/private/tmp/vcvio-kernel-wiring-validation.log`.
 This is a checkpoint within milestone 1. Local contracts for the complete PRF wiring, the bounded
 routed network and executable resource closure are still implementation obligations.
+
+## Validated FIFO execution checkpoint
+
+`OracleNetwork` executes a shared stateful service for static clients with one outstanding
+request each. Requests and typed responses use one FIFO queue; fresh tickets and dependent
+query tags guard resumption. A scheduled activation can emit, service, or deliver traffic.
+Unfinished traffic stays in the returned state, and service calls are atomic at this boundary.
+
+`OracleNetwork.Serial.run_serialSchedule` derives completion in `3 * n` activations from an
+all-branch query bound. The entire runtime result equals the existing traced oracle interpreter,
+including verdict, private service state, delivered response transcript and tickets actually used.
+`OracleNetwork.Transport.run_rename` transports this execution along a static identity bijection,
+including its pending queue and explicit schedule, as an equality in every lawful surface monad.
+
+`Examples/PRFTagReader/Network.lean` derives the schedule from the existing separate tag and reader
+budgets. The original direct-coupling loss holds for network verdicts and the network-observed bad
+state, with the same assumptions. `VCVioTest/OracleNetwork.lean` checks adaptive answers, two-client
+FIFO ordering, pending responses after service execution, duplicate activation, and stale or
+mistagged responses. These results concern the explicit serial schedule; raw `plug`/`par`/`wire`
+factorization and the corresponding contextual-security consumer remain obligations.
+
+`Examples/ProgramLogic/RandomOracleWiring.lean` adds a concrete two-port adaptive/repeated-query
+consumer of the cached/eager wiring theorem. Its first and third replies read the same cell of
+one shared table, including an arbitrary initial cache.
+
+Full combined validation passes (`/private/tmp/vcvio-packet-runtime-validation.log`):
+18,615 declarations across 618 modules, 40 existing sorry-tainted declarations, zero nonstandard
+axiom taint, and all lint and test gates green. The generic packet API separately passes PolyFun's
+full validation and style checks (11,395 declarations across 295 modules, zero trust debt).

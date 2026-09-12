@@ -26,6 +26,9 @@ VCVio retains the computational and runtime interpretation of PolyFun's generic 
 | `VCVio/Interaction/UC/Runtime.lean` | Synchronous runtime semantics for closed open processes, including `processSemantics`, `processSemanticsProbComp`, and `processSemanticsOracle`. |
 | `VCVio/Interaction/UC/AsyncRuntime.lean` | Asynchronous runtime semantics with process ticks and environment events. |
 | `VCVio/Interaction/UC/AsyncSecurity.lean` | Fair-PPT security wrappers for asynchronous env-open executions. |
+| `VCVio/Interaction/UC/OracleNetwork.lean` | Explicit FIFO requests/responses for static oracle clients, with ticket-checked resumption. |
+| `VCVio/Interaction/UC/OracleNetwork/Serial.lean` | Derived bounded serial schedule, transcript and verdict agreement with traced oracle interpretation. |
+| `VCVio/Interaction/UC/OracleNetwork/Transport.lean` | Transport of complete runtime states, pending packets and schedules along identity bijections. |
 | `VCVio/Interaction/UC/Standard.lean` | Standard VCVio UC imports and conveniences. |
 | `VCVio/Interaction/UC/StdDoBridge.lean` | Bridges from VCVio program-logic/Std.Do idioms into the UC runtime layer. |
 
@@ -128,3 +131,9 @@ import VCVio.Interaction.UC.Standard
 ```
 
 When editing VCVio, prefer importing the specific PolyFun module you need rather than re-exporting large generic surfaces through VCVio.
+
+For explicit FIFO oracle clients, `OracleNetwork.run` consumes a finite list of client and delivery
+activations. `run_serialSchedule` proves that an all-branch bound of `n` queries suffices for
+`3 * n` activations and preserves the complete traced oracle result. The PRF tag/reader consumer
+is `Examples/PRFTagReader/Network.lean`. This runtime treats each service computation atomically;
+it does not assume fairness or provide raw open-syntax contextual factorization.

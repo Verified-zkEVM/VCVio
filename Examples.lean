@@ -43,6 +43,7 @@ public import Examples.PRFTagReader.DirectCoupling.TagSlotZero
 public import Examples.PRFTagReader.MultipleBadCollision
 public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
 public import Examples.PRFTagReader.MultipleToHybrid.Setup
+public import Examples.PRFTagReader.Network
 public import Examples.PRFTagReader.PRFReductions
 public import Examples.PRFTagReader.PRFReductions.IdealHandlers
 public import Examples.PRFTagReader.PRFReductions.Reductions
@@ -55,6 +56,7 @@ public import Examples.ProgramLogic.GaussianWiring
 public import Examples.ProgramLogic.MeasureCoupling
 public import Examples.ProgramLogic.Probability
 public import Examples.ProgramLogic.ProofMode
+public import Examples.ProgramLogic.RandomOracleWiring
 public import Examples.ProgramLogic.Relational
 public import Examples.ProgramLogic.RelationalAnchored
 public import Examples.ProgramLogic.RelationalDerived

@@ -185,6 +185,9 @@ public import VCVio.EvalDist.WithFailure
 public import VCVio.Interaction.UC.AsyncRuntime
 public import VCVio.Interaction.UC.AsyncSecurity
 public import VCVio.Interaction.UC.Computational
+public import VCVio.Interaction.UC.OracleNetwork
+public import VCVio.Interaction.UC.OracleNetwork.Serial
+public import VCVio.Interaction.UC.OracleNetwork.Transport
 public import VCVio.Interaction.UC.ProportionalScheduler
 public import VCVio.Interaction.UC.Runtime
 public import VCVio.Interaction.UC.Standard
@@ -231,6 +234,7 @@ public import VCVio.OracleComp.QueryTracking.ObservationOracle
 public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
+public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
