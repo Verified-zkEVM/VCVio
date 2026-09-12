@@ -46,6 +46,14 @@ theorem sharedGaussian_isCoupling (variance : ℝ≥0) (z : ℝ × ℝ) :
     simpa only [Function.comp_def, zero_add] using
       gaussianReal_map_const_add (μ := 0) (v := variance) z.2
 
+/-- Shared Gaussian noise preserves the offset of a pair of initial states almost everywhere. -/
+theorem sharedGaussian_ae_offset (variance : ℝ≥0) (offset : ℝ) (z : ℝ × ℝ)
+    (hz : z.2 = z.1 + offset) :
+    ∀ᵐ out ∂sharedGaussian variance z, out.2 = out.1 + offset := by
+  rw [sharedGaussian]
+  apply (ae_map_iff (by fun_prop) (by measurability)).2
+  exact Filter.Eventually.of_forall fun noise => by dsimp; rw [hz]; ring
+
 /-- Adding Gaussian noise to both sides preserves an offset under arbitrary initial state laws.
 Positive variance gives genuinely continuous transitions; zero variance is included as well. -/
 theorem gaussian_bind_preserves_offset (μ ν : Measure ℝ) (offset : ℝ) (variance : ℝ≥0)
@@ -57,10 +65,7 @@ theorem gaussian_bind_preserves_offset (μ ν : Measure ℝ) (offset : ℝ) (var
   have hrel : MeasurableSet {z : ℝ × ℝ | z.2 = z.1 + offset} := by measurability
   apply hinit.bind hm hm (measurable_sharedGaussian variance) hrel
   intro z hz
-  refine ⟨sharedGaussian_isCoupling variance z, ?_⟩
-  rw [sharedGaussian]
-  apply (ae_map_iff (by fun_prop) hrel).2
-  exact Filter.Eventually.of_forall fun noise => by dsimp; rw [hz]; ring
+  exact ⟨sharedGaussian_isCoupling variance z, sharedGaussian_ae_offset variance offset z hz⟩
 
 /-- An entirely unmatched left law is an admissible residual, even when the right computation
 has no successful outputs. Exact coupling cannot express this comparison for nonzero left mass. -/

@@ -163,12 +163,15 @@ public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Disagreement
+public import VCVio.EvalDist.Monad.Discard
 public import VCVio.EvalDist.Monad.Map
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.Monad.Seq
 public import VCVio.EvalDist.Monad.UniformTable
 public import VCVio.EvalDist.Option
 public import VCVio.EvalDist.PFunctor
+public import VCVio.EvalDist.PFunctorKernel
+public import VCVio.EvalDist.PFunctorKernelTransport
 public import VCVio.EvalDist.PFunctorMeasure
 public import VCVio.EvalDist.PFunctorMeasure.Core
 public import VCVio.EvalDist.PFunctorPath
@@ -177,6 +180,7 @@ public import VCVio.EvalDist.RenyiDivergence
 public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.TVDist
 public import VCVio.EvalDist.TVDist.Positivity
+public import VCVio.EvalDist.WiringKernel
 public import VCVio.EvalDist.WithFailure
 public import VCVio.Interaction.UC.AsyncRuntime
 public import VCVio.Interaction.UC.AsyncSecurity
@@ -235,6 +239,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Eager
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Wiring
 public import VCVio.OracleComp.QueryTracking.ResourceProfile
 public import VCVio.OracleComp.QueryTracking.SeededOracle
 public import VCVio.OracleComp.QueryTracking.Structures
@@ -255,6 +260,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
+public import VCVio.OracleComp.SimSemantics.Wiring
 public import VCVio.OracleComp.SimSemantics.WriterT.Basic
 public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
 public import VCVio.OracleComp.Traversal
@@ -265,6 +271,7 @@ public import VCVio.ProgramLogic.Relational.Basic
 public import VCVio.ProgramLogic.Relational.Examples
 public import VCVio.ProgramLogic.Relational.FromUnary
 public import VCVio.ProgramLogic.Relational.HandlerFromUnary
+public import VCVio.ProgramLogic.Relational.KernelHandler
 public import VCVio.ProgramLogic.Relational.Leakage
 public import VCVio.ProgramLogic.Relational.Loom.Coherence
 public import VCVio.ProgramLogic.Relational.Loom.Probabilistic
@@ -280,6 +287,7 @@ public import VCVio.ProgramLogic.Relational.SimulateQ.Basic
 public import VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 public import VCVio.ProgramLogic.Relational.SimulateQ.Resource
 public import VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
+public import VCVio.ProgramLogic.Relational.WiringKernel
 public import VCVio.ProgramLogic.SeededFork
 public import VCVio.ProgramLogic.Tactics
 public import VCVio.ProgramLogic.Tactics.Common

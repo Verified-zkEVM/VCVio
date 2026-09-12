@@ -51,6 +51,7 @@ public import Examples.PRFTagReader.Table
 public import Examples.PRFTagReader.UnlinkReduction
 public import Examples.PRGfromPRF
 public import Examples.Pedersen
+public import Examples.ProgramLogic.GaussianWiring
 public import Examples.ProgramLogic.MeasureCoupling
 public import Examples.ProgramLogic.Probability
 public import Examples.ProgramLogic.ProofMode

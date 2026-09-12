@@ -42,6 +42,17 @@ namespace IsSubcouplingWithResidual
 
 variable {c : Measure (α × β)} {r μ : Measure α} {ν : Measure β}
 
+/-- Discarding a measurable part of an exact coupling records its entire first marginal as
+unmatched mass. The retained second marginal remains dominated by the original right law. -/
+theorem of_restrict (hc : IsCoupling c μ ν) {good : Set (α × β)}
+    (hgood : MeasurableSet good) :
+    IsSubcouplingWithResidual (c.restrict good) (c.restrict goodᶜ).fst μ ν := by
+  constructor
+  · rw [Measure.fst, Measure.fst, ← Measure.map_add _ _ measurable_fst,
+      Measure.restrict_add_restrict_compl hgood]
+    exact hc.fst_eq
+  · exact (Measure.map_mono Measure.restrict_le_self measurable_snd).trans_eq hc.snd_eq
+
 /-- Sequential substitution propagates old residual mass and accumulates conditional residuals.
 All conditional obligations are relative to the actual joint initial-state law. -/
 theorem bind (hc : IsSubcouplingWithResidual c r μ ν)

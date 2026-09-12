@@ -20,7 +20,7 @@ public section
 
 open MeasureTheory
 
-universe u v w
+universe u v w x y
 
 namespace MeasureProgramLogic
 
@@ -28,7 +28,8 @@ variable {α γ : Type u} {β δ : Type v}
 variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ] [MeasurableSpace δ]
 
 /-- Compose a relational state law with measurable conditional couplings. -/
-theorem CouplingPost.bind {μ : Measure α} {ν : Measure β}
+theorem CouplingPost.bind {γ : Type x} {δ : Type y}
+    [MeasurableSpace γ] [MeasurableSpace δ] {μ : Measure α} {ν : Measure β}
     {R : α → β → Prop} {S : γ → δ → Prop} (hinit : CouplingPost μ ν R)
     {k : α → Measure γ} {l : β → Measure δ} {j : α × β → Measure (γ × δ)}
     (hk : Measurable k) (hl : Measurable l) (hj : Measurable j)

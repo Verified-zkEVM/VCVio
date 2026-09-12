@@ -71,7 +71,12 @@ remain separate from review checkouts.
 | PolyFun #202 | Constructor normal forms and public path observations reviewed with the published cslib prerequisite and its tests. Full validation and fresh CI pass. | Merged as `a137b66c4d894e1a6faa7abaa0cbc4c1a6aef62d`. |
 | PolyFun #203 | Prefix concatenation, query budget, trace witness and cost erasure reviewed. Full validation and fresh CI pass, with zero trust debt. | Merged as `988a1ab00bf3fe8da73c648757033548586f45d4`. |
 | VCVio #686 | Measure/cost congruence rules and their positive/negative tactic tests pass in the full integration and fresh CI. | Merged as `82252d8344519961f63163247b68bfe8257433c7`. |
-| VCVio #687–696 | The combined stack passes full validation: 18,243 declarations across 594 modules, 40 existing sorry-tainted declarations, zero nonstandard-axiom taint. All branches were atomically rebased onto merged #702, preserving the validated tree. | #687 is queued; the remaining PRs await bottom-up checks and merge. |
+| VCVio #687 | Full combined validation and fresh CI pass. | Merged as `17771926df735157a98f8d5ef2d0a48df2fe816b`. |
+| VCVio #690 | Full combined validation and fresh CI pass. | Merged as `841fae0553ab796822ab88c0756e37c8f12b3ccd`. |
+| VCVio #693 | Full combined validation and fresh CI pass. | Merged as `9788aa7150b5c0abbce59f6fc33fcda245b7676b`. |
+| VCVio #684 | Verified source branches and refreshed documentation and validation instructions; documentation checks and CI pass. | Merged as `3ecdb0a606a874d7d2332a18d966af3570eca82b`. |
+| VCVio #694–696 | The combined stack passes full validation: 18,243 declarations across 594 modules, 40 existing sorry-tainted declarations, zero nonstandard-axiom taint. | Rewritten heads are receiving fresh checks after intervening main changes. |
+| VCVio #572 | Consolidated PolyFun pin, positive-natural scheduler masses and constructor API integration pass full local validation and optional backend checks. | Current-main integration validation is running before publication. |
 
 GitHub's native stacked-PR merge endpoint rewrites and retargets descendants automatically.
 Preserve the original references, fetch each rewritten head, compare its complete source tree,
@@ -82,8 +87,8 @@ or merge-queue entry is not a completed merge.
 
 | Construction | Required evidence | Consumer | Status |
 | --- | --- | --- | --- |
-| Sequential substitution | Measurable coupling bind, explicit residual mass | State-law handler contracts | Foundation compiles; wiring adoption pending |
-| Indexed wiring | Local contracts imply a whole wired-program bound | PRF tag/reader, cached/eager oracle | Pending |
+| Sequential substitution | Measurable coupling bind, explicit residual mass | State-law handler contracts | Validated; PRF reader discard uses the residual rule |
+| Indexed wiring | Local contracts imply a whole wired-program bound | PRF tag/reader, cached/eager oracle | Kernel contracts and Gaussian wiring validated; full PRF wiring contracts remain |
 | System composition | Routed execution transports schedules, packets and samplers | Bounded PRF network | Pending |
 | Quantitative substitution | Executable normalization and derived resource bounds | ElGamal and exact-backend canary | Pending |
 
@@ -117,3 +122,28 @@ arbitrary initial state laws, and checks propagation of entirely unmatched mass 
 possibly lossy continuation. These modules compile on the original pinned dependencies. This
 is foundation evidence only: the wired PRF proof, cached/eager reuse, and contextual and resource
 milestones are still required before strengthening the paper's claims.
+
+## Validated kernel and wiring checkpoint
+
+`FreeM.runKernel` interprets countable query answers with arbitrary measurable private states.
+It preserves subprobability bounds and sequential handler substitution. Its state-transport and
+almost-everywhere invariant theorems prove both marginals of `KernelHandler.CouplingContract`.
+Those contracts extend through free handlers and the existing `PFunctor.Wiring` syntax, including
+arbitrary coupled initial-state measures. This common-answer contract does not assert a
+pointwise coupling for eager hidden tables.
+
+`Examples/ProgramLogic/GaussianWiring.lean` instantiates the rule with a two-port box whose ports
+share one continuous Gaussian state service. The sequencing theorem threads the successor state
+from the first call into the second; recursive networks preserve the offset under initial laws.
+
+The explicit discard subcoupling keeps the rejected region as residual mass. The PRF reader's
+asymmetric-discard proof uses its measure-semantic rule, and the headline direct-coupling theorem
+compiles with the original loss and assumptions. `RandomOracle/Wiring.lean` transports the
+cache-parametrized lazy/eager measure equality through recursive wiring; its eager randomness
+remains in the initial table law.
+
+Full validation (`./scripts/validate.sh --lint --test --axioms`) passes at this checkpoint:
+18,338 declarations across 608 modules, 40 existing sorry-tainted declarations and zero
+nonstandard-axiom taint. The log is `/private/tmp/vcvio-kernel-wiring-validation.log`.
+This is a checkpoint within milestone 1. Local contracts for the complete PRF wiring, the bounded
+routed network and executable resource closure are still implementation obligations.
