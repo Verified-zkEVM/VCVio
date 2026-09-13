@@ -345,7 +345,8 @@ bit fields (`FPR.decode` + `FPR.Bits.toReal`) with no dependence on the opaque
 `Float.ofBits`/`Float.toRat0` runtime path, so it reduces in the kernel. Every field below is a
 theorem of `FPRBridge.lean` under the name it carries here, except that `div_error` / `div_valid`
 take their hypotheses in a different order. -/
-noncomputable instance : FloatLike.HasRealSemantics FPR ieee754_machineEpsilon where
+noncomputable instance instHasRealSemanticsFPR :
+    FloatLike.HasRealSemantics FPR ieee754_machineEpsilon where
   interp := Falcon.Concrete.FPRBridge.toReal
   Valid := Falcon.Concrete.FPRBridge.FPR.IsNormalOrZero
   InRange := Falcon.Concrete.FPRBridge.FPR.InNormalMagnitudeRange
