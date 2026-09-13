@@ -574,9 +574,9 @@ lean_exe slhdsa_suf_residual_tests where
 
 /-- Scheme games and the two experiment splits: over the scheme-dispatch fixture's own two-layer
 profile, with an `H_msg` whose message fold — unlike the one the earlier fixtures in this lane use,
-which is asserted here to be blind to it at every message — is asserted to see FIPS 205's
-empty-context encoding at each of the three messages this fixture carries, a one-byte fold having
-collisions and no universal separation being claimed; over that bundle the dispatch
+which is blind to it at every message, as this fixture asserts at two of them — is asserted to see
+FIPS 205's empty-context encoding at each of the three messages this fixture carries, a one-byte
+fold having collisions and no universal separation being claimed; over that bundle the dispatch
 selector is run against two mutant readers of itself, one with that encoding dropped and one reading
 its public seed off the secret key rather than the public key, and asserted to disagree with each at
 fixture data; two forgeries differing only in the FORS half, with the whole hypertree signature held
@@ -589,7 +589,8 @@ byte rather than two and is separated from the real map by the transcript alone;
 of the strong-unforgeability residual are run at the embedded transcript, with each of the five
 conjuncts the logged branch yields asserted on its own and three of them falsified alone.  Nothing
 probabilistic is run: every advantage and both instrumented experiments are `noncomputable`, so the
-two splits are pinned by elaboration only. -/
+two splits, and the eight theorems bounding each half by the advantage it splits and by its own
+branch, are pinned by elaboration only. -/
 lean_exe slhdsa_scheme_game_tests where
   root := `HashSigTest.SLHDSA.SchemeGames
 

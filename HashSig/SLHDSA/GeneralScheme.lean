@@ -203,8 +203,7 @@ unfold. -/
 hypertree's top-layer root under the secret seed.
 
 This is the first component of the returned pair, which this repository orders `(PK, SK)` where
-FIPS 205 lists `(SK, PK)`.  The second component is stated by `keygenInternal_snd`, separately
-because a consumer reads the two at different places. -/
+FIPS 205 lists `(SK, PK)`.  The second component is stated by `keygenInternal_snd`. -/
 theorem keygenInternal_fst (vp : ValidatedParams) (prims : Primitives vp.params)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
     (keygenInternal vp prims skSeed skPrf pkSeed).1 =
@@ -216,10 +215,11 @@ theorem keygenInternal_fst (vp : ValidatedParams) (prims : Primitives vp.params)
 /-- The secret key FIPS 205 Algorithm 18 retains: the two secret values and the public seed it was
 given, and the same top-layer root the published key carries.
 
-This is the second component of the returned pair.  It is a separate equation rather than the
-second projection of one pair equation because its two consumers are different: a proof that reads
-what the verifier was handed rewrites with `keygenInternal_fst`, and a proof that reads what the
-signer holds rewrites with this one.  Both name the `bind` law and no more, key generation making
+This is the second component of the returned pair, stated as its own equation rather than as the
+second projection of one pair equation.  The two are consumed together: the only proof in the
+repository that rewrites with either is `SLHDSA.Security.generalAlg_keygen_eq`, which rewrites with
+both at one goal.  (`keygenInternal_fst` is additionally restated as a pin in
+`HashSigTest.SLHDSA.SchemeWitnesses`.)  Both name the `bind` law and no more, key generation making
 no `H_msg` query.
 
 The `pkRoot` field is the *published* root, not a second computation of it: this equation and
