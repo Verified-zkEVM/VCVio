@@ -649,6 +649,28 @@ theorem advantage_le_forsHalf_add_hypertreeHalf (adv : unforgeableAdv (generalAl
   advantage_le_arms ProbCompRuntime.probComp
     (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv (forsArm prims)
 
+/-! ### Which branch each name is attached to
+
+`advantage_le_forsHalf_add_hypertreeHalf` is symmetric in its two summands, so it holds just as
+well of a module in which the two names are attached to the wrong branches, and no fixture can
+catch that: both are `noncomputable`.  The two `example`s below are the canary.  They are
+`example`s rather than theorems, and they are here rather than in the test module, because both
+reasons are the same one: the bodies are not exposed, so a `theorem … := rfl` exported from this
+module is refused ("Not a definitional equality", with the note that every definition that has to
+be unfolded must be exposed) and the same statement in an importing module is refused for the same
+reason.  An `example` is not exported and sees the body.
+
+Swapping the two definitions' bodies — with or without a matching flip of `forsArm`'s polarity —
+fails these two at build time. -/
+
+example (adv : unforgeableAdv (generalAlg prims)) :
+    forsHalf adv = Pr[fun x => x.1 = true ∧ x.2 = true |
+      instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims)] := rfl
+
+example (adv : unforgeableAdv (generalAlg prims)) :
+    hypertreeHalf adv = Pr[fun x => x.1 = true ∧ x.2 = false |
+      instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims)] := rfl
+
 end Halves
 
 /-! ## The signing log at the internal message -/
@@ -939,6 +961,23 @@ theorem strongAdvantage_le_halves (adv : strongUnforgeableAdv (generalAlg prims)
   rw [strongAdvantage_eq_advantage_add_sameMessage adv]
   exact add_le_add (advantage_le_forsHalf_add_hypertreeHalf adv.toUnforgeableAdv)
     (sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer adv)
+
+/-! ### Which branch each name is attached to, again
+
+The same canary for the same-message split, for the same reason and with the same shape.  Here the
+`true` branch is the *same-randomizer* one, because `randomizerLogged` reports membership; getting
+that round the wrong way is the likeliest single-character error in the module and the reason these
+are stated at all. -/
+
+example (adv : strongUnforgeableAdv (generalAlg prims)) :
+    sameRandomizerHalf adv = Pr[fun x => x.1 = true ∧ x.2 = true |
+      instrumentedSameMessageExp ProbCompRuntime.probComp adv
+        (randomizerLogged (prims := prims))] := rfl
+
+example (adv : strongUnforgeableAdv (generalAlg prims)) :
+    freshRandomizerHalf adv = Pr[fun x => x.1 = true ∧ x.2 = false |
+      instrumentedSameMessageExp ProbCompRuntime.probComp adv
+        (randomizerLogged (prims := prims))] := rfl
 
 end SufHalves
 
