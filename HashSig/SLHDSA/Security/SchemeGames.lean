@@ -195,7 +195,9 @@ then leaves the two dispatch halves, their two branch bounds and their two `exam
 synthesize `DecidableEq (GeneralScheme.SignatureCore vp prims.core)`, and the two `_le_advantage`
 theorems with unsolved goals.  So the tally is one error per `omit` of this block plus those eight,
 which is the shape to quote rather than a number a later declaration moves: at this head, three and
-eight, eleven errors, with three warnings beside them where a failed proof is admitted, and no
+eight, eleven errors, with three warnings beside them — one at each of the two `_le_advantage`
+theorems, whose proofs fail and are admitted, and one at the split above them, whose own proof
+succeeds and which is warned about only because it names the two halves that failed — and no
 `congr` step is ever reached.
 
 The selector is a function of the sampled key pair and the returned pair.  It may read the *secret*
