@@ -30,12 +30,15 @@ public import VCVioTest.MonadProbability
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.SecurityFamily
+public import VCVioTest.OracleNetwork
 public import VCVioTest.PFunctorFacade
 public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProgramLogic.GCongr
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
+public import VCVioTest.ReactiveNetwork
+public import VCVioTest.ReactiveNetworkAdversarial
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
 public import VCVioTest.SMDTDSPRFinalValidity
