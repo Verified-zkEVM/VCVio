@@ -231,9 +231,10 @@ omit [DecidableEq M] [DecidableEq S] in
 branches of the success event.
 
 This is an inequality and not an equality, and the inequality is the only direction a union bound
-gives.  The two events are in fact disjoint and their union is the success event, so equality holds;
-`VCVio.EvalDist` has no exact disjoint-split lemma to say so, and the `≤` direction is what a bound
-consumes, so no equality is claimed.
+gives.  The two events are in fact disjoint and their union is the success event, so equality holds.
+What `VCVio.EvalDist` offers on that surface is `probEvent_or_le`, `probEvent_le_add_of_imp_or` and
+`probEvent_compl`, all inequalities or complements, and no disjoint-union equality; the `≤`
+direction is what a bound consumes, so no equality is claimed and none is proved.
 
 *Experiment split.* -/
 theorem advantage_le_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -332,7 +333,8 @@ samples the three seeds, signing samples the per-signature `addrnd`, and both si
 verification apply the FIPS 205 §10 empty-context encoding to the caller's message.
 
 `SLHDSA.slhdsaAlg` and `SLHDSA.slhdsaConcreteAlg` of `HashSig.SLHDSA.RandomOracle` are the only
-other `SignatureAlg`s in the repository and both take `hd : p.d = 1` and run the depth-one
+other `SignatureAlg`s in `HashSig` — the repository has others, in `LatticeCrypto`, `Examples` and
+`VCVio`, none of them hash-based — and both take `hd : p.d = 1` and run the depth-one
 *compatibility* programs.  Every witness family of this lane is stated over `GeneralScheme`, so
 routing a scheme game through the compatibility programs would put the depth-one bridge — whose
 point is that the two signers agree on outputs and differ in oracle traces — inside a probability
