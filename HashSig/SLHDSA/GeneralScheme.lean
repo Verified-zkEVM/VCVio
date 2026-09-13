@@ -192,22 +192,43 @@ them is available by `rfl` downstream: `keygenInternalM` and `verifyInternalM` a
 `publicHashSpec`, and their interpretation under `simulateQ (PublicHash.impl prims)` reduces only
 once the `bind` law — and, where an `H_msg` query is made, the handler equation for it — has fired.
 Each proof names the rewrites its own equation needs and no more: `verifyInternal_eq` names both,
-`keygenInternal_fst` only the `bind` law, because key generation makes no `H_msg` query at all, and
-`verifyInternal_eq_decide` names neither, being the previous equation composed with
-`GeneralHypertree.verify_eq_decide`.  Each closes the remainder inside this module, where the pure
-definitions' bodies are available.  Downstream the verification reduction is additionally stopped
-inside the component loops by `Vector.ofFnM`, whose body an importer cannot unfold. -/
+`keygenInternal_fst` and `keygenInternal_snd` only the `bind` law, because key generation makes no
+`H_msg` query at all, and `verifyInternal_eq_decide` names neither, being the previous equation
+composed with `GeneralHypertree.verify_eq_decide`.  Each closes the remainder inside this module,
+where the pure definitions' bodies are available.  Downstream the verification reduction is
+additionally stopped inside the component loops by `Vector.ofFnM`, whose body an importer cannot
+unfold. -/
 
 /-- The public key FIPS 205 Algorithm 18 publishes: the public seed it was given, and the general
 hypertree's top-layer root under the secret seed.
 
 This is the first component of the returned pair, which this repository orders `(PK, SK)` where
-FIPS 205 lists `(SK, PK)`.  The second component is not stated, because no consumer of this
-equation reads it; `keygenInternalM`'s own `do` block exhibits it. -/
+FIPS 205 lists `(SK, PK)`.  The second component is stated by `keygenInternal_snd`, separately
+because a consumer reads the two at different places. -/
 theorem keygenInternal_fst (vp : ValidatedParams) (prims : Primitives vp.params)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
     (keygenInternal vp prims skSeed skPrf pkSeed).1 =
       ⟨pkSeed, GeneralHypertree.root vp prims skSeed pkSeed⟩ := by
+  unfold keygenInternal keygenInternalM GeneralHypertree.root
+  simp only [simulateQ_bind]
+  rfl
+
+/-- The secret key FIPS 205 Algorithm 18 retains: the two secret values and the public seed it was
+given, and the same top-layer root the published key carries.
+
+This is the second component of the returned pair.  It is a separate equation rather than the
+second projection of one pair equation because its two consumers are different: a proof that reads
+what the verifier was handed rewrites with `keygenInternal_fst`, and a proof that reads what the
+signer holds rewrites with this one.  Both name the `bind` law and no more, key generation making
+no `H_msg` query.
+
+The `pkRoot` field is the *published* root, not a second computation of it: this equation and
+`keygenInternal_fst` name one `GeneralHypertree.root` application, which is what lets a consumer
+identify `sk.pkRoot` with `pk.pkRoot` without unfolding either side. -/
+theorem keygenInternal_snd (vp : ValidatedParams) (prims : Primitives vp.params)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
+    (keygenInternal vp prims skSeed skPrf pkSeed).2 =
+      ⟨skSeed, skPrf, pkSeed, GeneralHypertree.root vp prims skSeed pkSeed⟩ := by
   unfold keygenInternal keygenInternalM GeneralHypertree.root
   simp only [simulateQ_bind]
   rfl
