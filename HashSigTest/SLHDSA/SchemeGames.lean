@@ -23,8 +23,8 @@ all four halves, both splits.  So the four probabilistic statements — the two 
 exact partition at the canonical runtime, and the four-term bound — have no runtime coverage at all
 and cannot be given any.  They are pinned by elaboration, in `Pins`, and their content is checked by
 mutation testing and by the two pairs of `example`s the library module carries beside the halves.
-A reader of the other seven fixtures in this lane will expect runtime coverage of the headline;
-there cannot be any, and every executable check below is therefore about the *deterministic* data
+A reader of the lane's other fixtures will expect runtime coverage of the headline; there cannot
+be any, and every executable check below is therefore about the *deterministic* data
 the two splits are instrumented with.
 
 ## The profile is the SUF residual fixture's, with one deliberate change to its `H_msg`
@@ -150,10 +150,10 @@ signature; there is no log in its argument list.
 
 The dispatch bit is not compared against any bound, and no half is evaluated: they are
 `noncomputable`.  Whether the two names `forsHalf` and `hypertreeHalf` are attached to the right
-branches is settled inside the library module, by two `example`s that see the unexposed bodies, and
-not here — an importing module cannot state that equation at all.  Nothing here says that any
-honest value was recorded as a game target, that any execution produced any log below, or that
-either half is bounded by anything.
+branches is settled inside the library module, by four `example`s — two per split — that see the
+unexposed bodies, and not here: an importing module cannot state that equation at all.  Nothing
+here says that any honest value was recorded as a game target, that any execution produced any log
+below, or that either half is bounded by anything.
 
 ## The pins
 
@@ -187,8 +187,9 @@ Two hypertree layers of height two, two FORS trees of height one, `w = 16`, `len
 /-- The toy parameters are valid. -/
 theorem toyValid : toyParams.Valid := by decide
 
--- Exposed, because this file states four instances and three `DecidableEq`s whose types are
--- written at `toy.params`: without the attribute the build runs into Lean's hundred-error ceiling
+-- Exposed, because this file states three `DecidableEq` instances whose types are written at
+-- `toy.params`, and every signature and digest it builds is at `toy`: without the attribute the
+-- build runs into Lean's hundred-error ceiling
 -- — a hundred errors and the line saying `maximum number of errors (100; from option 'maxErrors')
 -- reached`, so the count is a floor and not a total — the first at the `ForsTreeSigCore` instance,
 -- `Application type mismatch: the argument toyPrimitives.core has type CorePrimitives toyParams
