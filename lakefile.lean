@@ -412,7 +412,8 @@ script test (args) do
     #["exe", "slhdsa_hypertree_witness_tests"],
     #["exe", "slhdsa_scheme_witness_tests"],
     #["exe", "slhdsa_hmsg_witness_tests"],
-    #["exe", "slhdsa_suf_residual_tests"]]
+    #["exe", "slhdsa_suf_residual_tests"],
+    #["exe", "slhdsa_scheme_game_tests"]]
   if args.contains "--ffi" then
     steps := steps ++ #[#["exe", "mlkem_test"], #["exe", "mldsa_test"], #["exe", "falcon_test"]]
   for cmdArgs in steps do
@@ -570,6 +571,25 @@ neither of the other two reaches, and is where the two `Bool` log predicates of 
 are read at four entries. -/
 lean_exe slhdsa_suf_residual_tests where
   root := `HashSigTest.SLHDSA.SufResidual
+
+/-- Scheme games and the two experiment splits: over the scheme-dispatch fixture's own two-layer
+profile, with an `H_msg` whose message fold — unlike the one the earlier fixtures in this lane use,
+which is asserted here to be blind to it — can see FIPS 205's empty-context encoding, the dispatch
+selector is run against two mutant readers of itself, one with that encoding dropped and one reading
+its public seed off the secret key rather than the public key, and asserted to disagree with each at
+fixture data; two forgeries differing only in the FORS half, with the whole hypertree signature held
+fixed and one digest between them, are shown to take opposite arms, and a third differing only in
+the hypertree half to take the same arm as the signature it came from, which is the selector's
+structural blindness exhibited rather than hidden; a signing log is internalised to the messages the
+signer actually hashed and its four readings are pinned by value across three logs — a hedged log,
+the deterministic variant's, and a four-entry one — against a third mutant that prefixes one zero
+byte rather than two and is separated from the real map by the transcript alone; and both branches
+of the strong-unforgeability residual are run at the embedded transcript, with each of the five
+conjuncts the logged branch yields asserted on its own and three of them falsified alone.  Nothing
+probabilistic is run: every advantage and both instrumented experiments are `noncomputable`, so the
+two splits are pinned by elaboration only. -/
+lean_exe slhdsa_scheme_game_tests where
+  root := `HashSigTest.SLHDSA.SchemeGames
 
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
