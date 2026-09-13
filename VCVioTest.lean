@@ -37,6 +37,7 @@ public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProgramLogic.GCongr
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
+public import VCVioTest.ReactiveNetwork
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
 public import VCVioTest.SMDTDSPRFinalValidity

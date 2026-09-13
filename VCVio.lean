@@ -189,6 +189,7 @@ public import VCVio.Interaction.UC.OracleNetwork
 public import VCVio.Interaction.UC.OracleNetwork.Serial
 public import VCVio.Interaction.UC.OracleNetwork.Transport
 public import VCVio.Interaction.UC.ProportionalScheduler
+public import VCVio.Interaction.UC.ReactiveRuntime
 public import VCVio.Interaction.UC.Runtime
 public import VCVio.Interaction.UC.Standard
 public import VCVio.Interaction.UC.StdDoBridge

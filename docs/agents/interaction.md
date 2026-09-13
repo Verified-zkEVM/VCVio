@@ -137,3 +137,17 @@ activations. `run_serialSchedule` proves that an all-branch bound of `n` queries
 `3 * n` activations and preserves the complete traced oracle result. The PRF tag/reader consumer
 is `Examples/PRFTagReader/Network.lean`. This runtime treats each service computation atomically;
 it does not assume fairness or provide raw open-syntax contextual factorization.
+
+## Reactive execution and observations
+
+The canonical semantic direction is [the reactive UC contract](../design/uc-semantics.md).
+PolyFun's `ReactiveProcess`/`ReactiveNetwork` modules supply actual typed input reactions,
+token passing and FIFO delivery, prefix and identity-transport laws, and exact cofree-behavior
+adequacy. The existing `OpenProcess` model has a different, activation/output-only scope.
+
+[`ReactiveRuntime`](../../VCVio/Interaction/UC/ReactiveRuntime.lean) samples shared setup and
+reads the actual environment outcome after finite execution. Its Measure equations and
+behavior-adequacy theorems are the downstream entry points. Returned values, explicit abort,
+and an unfinished prefix are separate observations. Defining an experiment does not establish
+UC composition or computational admissibility; see the
+[implementation ledger](../design/polynomial-composition-evidence.md).

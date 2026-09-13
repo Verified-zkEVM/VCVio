@@ -1,6 +1,7 @@
 # Polynomial composition as cryptographic evidence
 
-This work starts with PR consolidation, followed by three dependent milestones. A milestone is complete only when its concrete
+The [UC semantic contract](uc-semantics.md) incorporates the September 13 review and governs the
+execution and security milestones below. A milestone is complete only when its concrete
 consumer uses the new theorem, the stated assumptions are checked, and validation passes.
 
 1. **Probabilistic wiring.** Compose measurable conditional couplings and subcouplings over
@@ -8,19 +9,72 @@ consumer uses the new theorem, the stated assumptions are checked, and validatio
    retain explicit measurability and unmatched mass. Refactor the PRF tag/reader proof into
    local contracts without changing its loss. Exercise reuse with cached/eager random oracles
    and a continuous kernel example.
-2. **Routed bounded execution.** Give unquotiented open syntax actual FIFO packet delivery,
-   stable component identities, explicit schedules and bounded adaptive clients. Prove
-   observation-relative factorization, then use the PRF network's transcript and verdict as
-   the contextual-security consumer. Structural activation equivalence alone is insufficient.
+2. **Reactive bounded execution.** Give unquotiented open syntax actual reactive inputs,
+   stable component identities, and explicit token-passing and FIFO execution disciplines.
+   Prove prefix and observation-relative factorization laws, then use the PRF network and a
+   non-vacuous single-use OTP UC experiment as consumers. Structural activation equivalence
+   alone is insufficient; exact cofree behavior does not erase scheduling or delivery costs.
 3. **Resource closure.** Construct an executable caller/handler phase machine with bounded
    administrative iteration, a uniform dependent dispatcher and derived prefix/resource bounds.
    Instantiate it for the ElGamal reduction and an inhabited variable-size exact backend.
+
+## Revised UC implementation order
+
+- [x] Consolidate the semantic review, literature boundaries, and ownership decisions in
+  `uc-semantics.md`; retain the completed checkpoints below.
+- [x] Add the common reactive substrate in PolyFun and adapt the existing FIFO implementation.
+- [x] Implement token and FIFO execution with actual typed delivery, prefix/resumption laws,
+  dependent identity transport, and exact cofree-behavior adequacy.
+- [ ] Prove observation-relative graph/plug factorization and the full serial policy bridge.
+- [x] Derive concrete token/FIFO terminal experiments and their Measure observations, with
+  behavior adequacy and a nonconstant-observation regression.
+- [ ] Add graded contextual composition for these reactive observations.
+- [ ] Complete PRF local contracts and a reactive OTP pilot with operational simulators.
+- [ ] Connect executable resource closure to permitted contexts and simulators.
+- [ ] Construct measurable infinite trajectories and prove truncation bounds.
+
+VCVio #494 is a historical design snapshot to supersede after the consolidated replacement is
+reviewed. Its activation-to-behavior and unrestricted effectful-cofree identifications are not
+implementation requirements. The incomplete packet-diagram factorization prototype is retained
+in its isolated checkout; it is not a completed runtime or a dependency of the reactive core.
 
 The first source of constructions is the polynomial-functor literature, particularly
 [Niu and Spivak's *Polynomial Functors*](https://arxiv.org/abs/2312.00990), its treatment of
 substitution and systems, and the existing PolyFun implementations of wiring, displays and
 responders. Evidence must connect each construction to a theorem and a cryptographic consumer;
 neither a second notation for handlers nor an assumed bound on the completed machine suffices.
+
+## Reactive foundation checkpoint (September 13)
+
+[PolyFun #209](https://github.com/Verified-zkEVM/PolyFun/pull/209) is merged at
+`2116a47ea3aaefde403cff05584e1a21d56cf107`. `ReactiveProcess` is an alias over the existing
+`DynComputation`/`Resumption` carriers and a receive/send/effect/tick/yield polynomial.
+`ReactiveNetwork` gives each stable component identity its own packet and effect interfaces;
+it retains private component states and threads one shared handler state. Incoming packets
+select real continuations. Both runners retain queues, control, abort/return outcomes, and fuel.
+
+`runFIFO_reindex` and `runToken_reindex` transport dependent packet recipients and execution
+along identity bijections. `runFIFO_behavior` and `runToken_behavior` establish actual-execution
+adequacy for the cofree behavior map, for any lawful monad. `serialRound_eq_token` compares one
+FIFO activation followed by delivery with one token activation from an empty queue; it retains
+the extra delivery fuel. This is a local serial comparison, not arbitrary policy equivalence.
+
+The finite polynomial `RequestNetwork` extraction replaces duplicated VCVio execution bodies
+with the oracle facade. Its trace-erasure proof consumes universal-fold naturality through
+`WriterT.eraseHom`. The existing adaptive FIFO regressions and PRF tag-reader network consumer
+pass through that facade. `VCVio/Interaction/UC/ReactiveRuntime.lean` samples private setup,
+executes the selected runner, and observes the environment's actual terminal outcome. Its
+Measure laws preserve exact behavior. None of these results asserts general plug factorization,
+UC security, simulator efficiency, or equivalence to conventional ITMs.
+
+Validation of PolyFun: full build, environment/style linters, test library, docs/import checks,
+and axiom sweep; 11,801 declarations across 306 modules, zero sorry or nonstandard-axiom taint.
+All remote checks passed before merge. Logs: `/private/tmp/uc-polyfun-validation.log` and
+`/private/tmp/uc-pinned-canaries.log`. VCVio's full `./scripts/validate.sh --lint --test --axioms`
+passes against the published pin: 18,519 declarations across 620 modules, the same 40 existing
+sorry-tainted declarations, and zero nonstandard-axiom taint. The output-measure regression
+separates constant-false and constant-true networks. Full log:
+`/private/tmp/uc-vcvio-validation.log`. The broader unchecked obligations above remain active.
 
 ## Baseline and ownership
 
