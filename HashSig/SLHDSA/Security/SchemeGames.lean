@@ -254,14 +254,15 @@ omit [DecidableEq M] [DecidableEq S] in
 The projection equation above says what the first component of a run is.  This says what the
 second one is, at the selectors whose value is fixed in advance.  With it and its same-message
 twin absent nothing in the repository says anything about the second component at all, and the
-final `return` may discard the selector it is handed or negate it: three edits of that line were
-measured in that configuration — `sel pk sk msg σ || true`, a literal `true` with the binder
-renamed `_sel`, and `!sel pk sk msg σ` — and each elaborates this module and its fixture with zero
-errors and zero warnings.  On the first, `hypertreeHalf` is provably `0` and `forsHalf` provably
-the advantage it splits, both proved in Lean on that mutant, so the dispatch split reads
-`a ≤ a + 0` while all eight half-bounds below hold; on the third the recorded bit is provably the
-selector's negation at both experiments, which exchanges the two names of each split — the class
-the four `example`s exist to refuse, reached where they cannot see it.  With this theorem present
+final `return` may discard the selector it is handed or negate it.  Three edits of the two
+experiments' last lines were measured in that configuration; at this one they read
+`sel pk sk msg σ || true`, a literal `true` with the binder renamed `_sel`, and `!sel pk sk msg σ`,
+and each elaborates this module and its fixture with zero errors and zero warnings.  On the first,
+`hypertreeHalf` is provably `0` and `forsHalf` provably the advantage it splits, both proved in Lean
+on that mutant, so the dispatch split reads `a ≤ a + 0` while all eight half-bounds below hold; on
+the third the recorded bit is provably the selector's negation at both experiments, which exchanges
+the two names of each split — the class the four `example`s exist to refuse, reached where they
+cannot see it.  With this theorem present
 and the twin absent, each of the three gives one error here.
 
 What it does not pin is which of a run's values the selector is applied to; the paragraph beside
