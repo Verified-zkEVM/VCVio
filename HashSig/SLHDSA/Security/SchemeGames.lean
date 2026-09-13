@@ -148,8 +148,10 @@ that carries `@[expose]`.
 
 The six generic declarations of the first section are stated over an arbitrary `SignatureAlg` and
 are not SLH-DSA-specific.  They are here rather than in `VCVio.CryptoFoundations.SignatureAlg`
-because this slice already edits one merged module; promoting them is a six-declaration move whose
-only SLH-DSA content is the two selectors, and it is left to the maintainer.
+because this slice already edits one merged module; promoting them is a six-declaration move that
+would leave the two selectors behind as the only SLH-DSA content, and it is left to the maintainer.
+None of the six mentions an SLH-DSA type; the target file, if they move, is
+`VCVio/CryptoFoundations/SignatureAlg.lean`, beside the two experiments whose bodies they duplicate.
 
 ## References
 
@@ -181,9 +183,12 @@ paired with a selector bit read off the same run.
 
 The body is `SignatureAlg.unforgeableExp`'s with one component added to the final `return`.  It
 opens with the same two `letI : DecidableEq _ := Classical.decEq _` lines that experiment opens
-with, and it has to: those override whatever `DecidableEq` instances are in scope, and the
-projection equation's `congr` step does not close if the two computations disagree about which
-instance the log predicates are read at.
+with, and it has to — though not by the mechanism the shape suggests.  Dropping them puts
+`[DecidableEq M]` and `[DecidableEq S]` back into this definition's signature, which makes the
+`omit`s below illegal — `cannot omit referenced section variable`, at the first two of them — and
+then leaves the two dispatch halves and their two `example`s unable to synthesize
+`DecidableEq (GeneralScheme.SignatureCore vp prims.core)`, and the two `_le_advantage` theorems
+with unsolved goals.  Measured: eight errors, and no `congr` step is ever reached.
 
 The selector is a function of the sampled key pair and the returned pair.  It may read the *secret*
 key, so a selector is not in general something a reduction can evaluate; what a union bound needs is
@@ -921,10 +926,12 @@ theorem freshRandomizer_wins_or_uncovered [SampleableType prims.Y] [DecidableEq 
   wins_or_uncovered_of_notMem_loggedRandomizers pk
     (by rw [loggedRandomizers_internalLog]; exact (randomizerLogged_eq_false_iff log msg sig).mp h)
 
-/-- **The logged branch, with its four facts.**  On that branch the forged signature comes with a
+/-- **The logged branch, with its four facts besides the membership.**  On that branch the forged
+signature comes with a
 signature the log returned at the same message which carries the same randomizer, differs from it,
 splits to the same internal digest against the same public key, and differs from it in its FORS half
-or in its hypertree half.
+or in its hypertree half.  The existential's body has those four conjuncts and the membership makes
+five, which is the base `HashSigTest.SLHDSA.SchemeGames` counts on.
 
 The freshness hypothesis is the same-message experiment's own `!signingLogContains` conjunct, so on
 the success event of the instrumented experiment it holds.  Nothing beyond these four facts is
@@ -974,6 +981,9 @@ theorem itsrFresh_or_sameRandomizer_external
           schemeParts vp prims (emptyContextMessage msg) sig' pk ∧
         (sig.fors ≠ sig'.fors ∨ sig.hypertree ≠ sig'.hypertree) := by
   classical
+  -- `Bool.eq_false_or_eq_true : ∀ (b : Bool), b = true ∨ b = false` yields the `true` disjunct
+  -- *first*, against what its name suggests, so the first branch here is the logged one and the
+  -- second the fresh one.  The pairing looks inverted and is not.
   rcases Bool.eq_false_or_eq_true (randomizerLogged log msg sig) with h | h
   · exact Or.inr (sameRandomizer_of_randomizerLogged pk hfresh h)
   · exact Or.inl (freshRandomizer_notMem_embedTargets pk h)

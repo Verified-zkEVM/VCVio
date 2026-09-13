@@ -574,7 +574,9 @@ lean_exe slhdsa_suf_residual_tests where
 
 /-- Scheme games and the two experiment splits: over the scheme-dispatch fixture's own two-layer
 profile, with an `H_msg` whose message fold — unlike the one the earlier fixtures in this lane use,
-which is asserted here to be blind to it — can see FIPS 205's empty-context encoding, the dispatch
+which is asserted here to be blind to it at every message — is asserted to see FIPS 205's
+empty-context encoding at each of the three messages this fixture carries, a one-byte fold having
+collisions and no universal separation being claimed; over that bundle the dispatch
 selector is run against two mutant readers of itself, one with that encoding dropped and one reading
 its public seed off the secret key rather than the public key, and asserted to disagree with each at
 fixture data; two forgeries differing only in the FORS half, with the whole hypertree signature held

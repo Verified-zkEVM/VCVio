@@ -193,8 +193,10 @@ Two hypertree layers of height two, two FORS trees of height one, `w = 16`, `len
 /-- The toy parameters are valid. -/
 theorem toyValid : toyParams.Valid := by decide
 
--- Exposed, because this file states three `DecidableEq` instances whose types are written at
--- `toy.params`, and every signature and digest it builds is at `toy`: without the attribute the
+-- Exposed, because this file states three `DecidableEq` instances at this profile — two written at
+-- `toy.params` (`ForsTreeSigCore` and `XmssSigCore`) and one at `toy` itself
+-- (`GeneralScheme.SignatureCore toy toyPrimitives.core`) — and every signature and digest it builds
+-- is at `toy`: without the attribute the
 -- build runs into Lean's hundred-error ceiling
 -- — a hundred errors and the line saying `maximum number of errors (100; from option 'maxErrors')
 -- reached`, so the count is a floor and not a total — the first at the `ForsTreeSigCore` instance,
@@ -224,8 +226,16 @@ def mixByte (x : UInt8) : UInt8 := ((x * (181 : UInt8)) ^^^ (x >>> (3 : UInt8)))
 
 /-- The fold this bundle's `H_msg` and `PRF_msg` read a message through: the same bytes, folded
 through `mixByte` from the message's own length.  Both the position of a byte and the number of
-bytes reach the result, so the FIPS 205 §10 encoding moves it and the internal message is a
-different `H_msg` input from the external one. -/
+bytes reach the result, so the FIPS 205 §10 encoding moves it *at each of the three messages this
+bundle carries*, which `checkFixture` asserts rather than assumes.
+
+No universal claim is made and none would be true: the fold returns one byte, so it cannot be
+injective, and the collisions are not rare.  Of the 65,793 messages of length at most two, 192
+satisfy `byteMix m = byteMix (emptyContextMessage m)` — all of them of length two, the first being
+`[0x03, 0x00]`, where both sides are `237`.  At such a message the toy `H_msg` digest is identical,
+because `toyDigestByte` reads the message only through this fold, so `forsArm` and `forsArmRaw`
+agree there and the internal-message canary would be blind.  That is why the canary is asserted at
+named messages and not argued from the fold's shape. -/
 def byteMix (m : List Byte) : UInt8 :=
   m.foldl (fun acc b => mixByte (acc ^^^ b)) (UInt8.ofNat (m.length % 256))
 
