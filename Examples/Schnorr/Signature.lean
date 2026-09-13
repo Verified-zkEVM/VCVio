@@ -96,10 +96,12 @@ verification is independent of the challenge.
 
   ↓ composes
 
-* `cma_to_nma_advantage_bound`: CMA → managed-RO NMA via HVZK simulation
+* `cma_to_nma_advantage_bound`: CMA → managed-RO NMA via HVZK simulation, for the
+  adversary `FiatShamir.cmaToNmaAdv`
   (`Sigma/Reductions.lean` → `Sigma/Stateful/Chain.lean`);
 * `nma_to_hard_relation_bound`: managed-RO NMA → witness extraction via the
-  replay-forking lemma `Fork.replayForkingBound`
+  replay-forking lemma `Fork.replayForkingBound`, for the witness finder
+  `FiatShamir.nmaReduction`
   (`Sigma/Reductions.lean` → `Sigma/Fork.lean` → `ReplayFork.lean`)
   and special soundness `SigmaProtocol.extract_sound_of_speciallySoundAt`.
 
@@ -160,12 +162,23 @@ private theorem hardRelationExp_dlogGenerable_eq_dlogExp
   exact probOutput_bind_congr' _ true fun x =>
     probOutput_bind_congr' _ true fun sk => by simp [hg.1.eq_iff]
 
+/-- DLog adversary built from a Schnorr EUF-CMA adversary: the Fiat-Shamir witness finder
+`FiatShamir.cmaReduction` for the Schnorr Σ-protocol and the Schnorr HVZK simulator, run on the
+challenge public key. The generator argument of `DLogAdversary` is ignored because the
+reduction is specialized to `g`. -/
+def dlogReduction (g : G) (M : Type) [DecidableEq M]
+    (adv : SignatureAlg.unforgeableAdv (signature F G g M)) (qH : ℕ) :
+    DLogAdversary F G :=
+  letI : Inhabited F := ⟨0⟩
+  fun _ pk => FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
+    (Schnorr.simTranscript F G g) adv qH pk
+
 /-- **EUF-CMA reduction for Schnorr signatures (Pointcheval-Stern).**
 
 The bound is
 
 ```
-ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ reduction succeeds in dlogExp g ],
+ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ dlogReduction g M adv qH succeeds in dlogExp g ],
 ε' := ε  -  qS · (qS + qH) / |F|,
 ```
 
@@ -186,8 +199,8 @@ Three Schnorr-specific facts feed in:
   is uniform on `G` whenever `F` acts simply transitively via `g`, giving
   the commit-collision bound `β = 1/|F|`.
 
-The result is delivered in the textbook DLog form `dlogExp g reduction` via
-the conversion `hardRelationExp_dlogGenerable_eq_dlogExp`. -/
+The result is delivered in the textbook DLog form `dlogExp g (dlogReduction F G g M adv qH)`
+via the conversion `hardRelationExp_dlogGenerable_eq_dlogExp`. -/
 theorem signature_euf_cma (g : G)
     (hg : Function.Bijective (· • g : F → G))
     (M : Type) [DecidableEq M]
@@ -195,14 +208,12 @@ theorem signature_euf_cma (g : G)
     (qS qH : ℕ)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound (M := M) (Commit := G) (Chal := F)
       (S' := G × F) (oa := adv.main pk) qS qH) :
-    ∃ reduction : DLogAdversary F G,
-      let eps := adv.advantage (FiatShamir.runtime (Commit := G) (Chal := F) M) -
-        ((qS : ENNReal) * (qS + qH) * ((Fintype.card F : ℝ≥0∞)⁻¹))
-      eps * (eps / (qH + 1 : ENNReal) - FiatShamir.challengeSpaceInv F) ≤
-        Pr[= true | dlogExp g reduction] := by
-  have : Inhabited F := ⟨0⟩
-  have : Inhabited G := ⟨(0 : F) • g⟩
-  obtain ⟨red, hred⟩ := FiatShamir.euf_cma_bound
+    let eps := adv.advantage (FiatShamir.runtime (Commit := G) (Chal := F) M) -
+      ((qS : ENNReal) * (qS + qH) * ((Fintype.card F : ℝ≥0∞)⁻¹))
+    eps * (eps / (qH + 1 : ENNReal) - FiatShamir.challengeSpaceInv F) ≤
+      Pr[= true | dlogExp g (dlogReduction F G g M adv qH)] := by
+  let : Inhabited F := ⟨0⟩
+  have hred := FiatShamir.euf_cma_bound
     (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
     (Schnorr.sigma_speciallySound F G g)
     (by intro ω₁ p₁ ω₂ p₂; simp [Schnorr.sigma])
@@ -213,8 +224,9 @@ theorem signature_euf_cma (g : G)
     (Schnorr.sigma_simCommitPredictability F G g hg)
     adv qS qH hQ
   simp only [mul_zero, ENNReal.ofReal_zero, zero_add] at hred ⊢
-  exact ⟨fun _ pk => red pk,
-    hred.trans (le_of_eq (hardRelationExp_dlogGenerable_eq_dlogExp F G g hg red))⟩
+  exact hred.trans (le_of_eq (hardRelationExp_dlogGenerable_eq_dlogExp F G g hg
+    (FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
+      (Schnorr.simTranscript F G g) adv qH)))
 
 #guard_msgs (drop info) in
 #print axioms signature_euf_cma
