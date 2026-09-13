@@ -6,6 +6,19 @@ citations inline.
 
 ## Papers
 
+### DKKW25
+
+Justin Drake, Dmitry Khovratovich, Mikhail Kudinov, and Benedikt Wagner.
+*Hash-Based Multi-Signatures for Post-Quantum Ethereum*.
+*IACR Communications in Cryptology*, Volume 2, Issue 1.
+DOI: <https://doi.org/10.62056/aey7qjp10>
+Preprint: <https://eprint.iacr.org/2025/055>
+
+Used in:
+- `docs/agents/crypto.md`
+- `VCVio/CryptoFoundations/SyncSignatureAlg.lean` and its security module
+- `VCVio/CryptoFoundations/SyncMultiSignatureAlg.lean` and its security module
+
 ### ERHL25
 
 Martin Avanzini, Gilles Barthe, Davide Davoli, and Benjamin Grégoire.

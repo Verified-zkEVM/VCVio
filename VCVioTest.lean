@@ -48,6 +48,8 @@ public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SampleableType
 public import VCVioTest.Smoke
 public import VCVioTest.StateTLift
+public import VCVioTest.SyncMultiSignatureAlg
+public import VCVioTest.SyncSignatureAlg
 public import VCVioTest.Tactic.Expectation
 public import VCVioTest.Tactic.Finiteness
 public import VCVioTest.Tactic.FunProp
