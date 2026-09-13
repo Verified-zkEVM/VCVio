@@ -168,4 +168,3 @@ theorem accepts_empty (alg : SyncMultiSignatureAlg m M PK SK S A E)
       alg.verify pks ep msg (alg.aggregate ep msg fun i => (pks i, i.elim0)) := rfl
 
 end SyncMultiSignatureAlg
-

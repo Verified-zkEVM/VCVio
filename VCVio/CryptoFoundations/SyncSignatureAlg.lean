@@ -164,4 +164,3 @@ theorem complete_zero_iff (alg : SyncSignatureAlg m M PK SK S E)
   simp [Complete, successMass_eq_probability]
 
 end SyncSignatureAlg
-
