@@ -191,9 +191,9 @@ opens with the same two `letI : DecidableEq _ := Classical.decEq _` lines that e
 with, and it has to — though not by the mechanism the shape suggests.  Dropping them puts
 `[DecidableEq M]` and `[DecidableEq S]` back into this definition's signature, which makes the
 `omit`s below illegal — `cannot omit referenced section variable`, at the first two of them — and
-then leaves the two dispatch halves and their two `example`s unable to synthesize
-`DecidableEq (GeneralScheme.SignatureCore vp prims.core)`, and the two `_le_advantage` theorems
-with unsolved goals.  Measured: eight errors, and no `congr` step is ever reached.
+then leaves the two dispatch halves, their two branch bounds and their two `example`s unable to
+synthesize `DecidableEq (GeneralScheme.SignatureCore vp prims.core)`, and the two `_le_advantage`
+theorems with unsolved goals.  Measured: ten errors, and no `congr` step is ever reached.
 
 The selector is a function of the sampled key pair and the returned pair.  It may read the *secret*
 key, so a selector is not in general something a reduction can evaluate; what a union bound needs is
