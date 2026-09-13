@@ -163,7 +163,9 @@ its experiment recorded is settled there too, and by eight theorems rather than 
 `example`s, for a reason this file cannot repair: an `example … := rfl` moves with the body it is
 `rfl` against, so a paired weakening of all four halves survives it, survives every check below,
 and survives this executable.  That the recorded bit is the selector's own value rather than its
-negation or a constant is one level down again, and is `instrumentedEufExp_const` and its twin.
+negation or a constant is one level down again, and is `instrumentedEufExp_const` and its twin,
+which refuse both of those shapes and every other recorded bit that is not that constant at a
+constant selector.
 Two directions below those are refused by nothing in either module — which of a run's values the
 selector is applied to, and any combination of two applications of the selector that agrees with it
 wherever the selector is constant — and the paragraphs that close the library module's own section

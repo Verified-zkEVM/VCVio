@@ -812,9 +812,15 @@ The two families together bound each half above by the advantage, above by its o
 below — as a pair — by the split, which makes it an event of the success bit and of the bit the
 experiment recorded.  Whether the recorded bit is the selector's own value is one level down and
 not these eight theorems' question: a `return` that discarded or negated the selector leaves all
-eight provable.  `instrumentedEufExp_const` and its twin refuse a `return` that replaces the
-selector by a constant or by its negation, and nothing wider than that; the paragraphs that close
-this section say what still escapes them.
+eight provable.  `instrumentedEufExp_const` and its twin refuse that, and a good deal more.  Each
+is an equation about the *whole* experiment at a constant selector, so what it forces is that the
+recorded bit be that constant whenever the selector is, and that everything else the run does still
+be the library game's: recording the selector conjoined with the verification bit gives one error,
+at `instrumentedEufExp_const`; reading the selector at an independently sampled key pair gives two,
+at that equation and at the projection equation above it; moving the same-message experiment's own
+success argument gives two, at that experiment's pair.  What they do not reach is a recorded bit
+that already agrees with the selector wherever the selector is constant, and the paragraphs that
+close this section say what that leaves.
 
 What they do not pin is the *selector argument*, which is named in this module and which a paired
 edit of this module could therefore move throughout; the four `Pins` entries at which the test
