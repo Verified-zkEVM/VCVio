@@ -53,6 +53,12 @@ The proof decomposes into:
 - `GPVHashAndSign.forgery_yields_collision`: the core distinct-preimage game-hop
 - `GPVHashAndSign.forgery_yields_collision_or_exact_match`: the explicit split bound
 
+The reductions `reduction` and `programmedPreimageReduction`, and the two game-hop lemmas, are
+currently `sorry` placeholders. The public bounds `euf_cma_collision_bound` and
+`euf_cma_split_bound` are stated for these named reductions: an existentially quantified
+collision finder or preimage finder would make the bounds trivially satisfiable by an adversary
+that outputs a valid solution chosen classically.
+
 ## References
 
 - [FGdG+25]: Fouque, Gajland, de Groote, Janneck, Kiltz. "A Closer Look at Falcon."
@@ -370,7 +376,7 @@ theorem forgery_yields_collision_or_exact_match [DecidableEq Domain]
 
 For any adversary `A` making at most `qSign` signing queries against the GPV hash-and-sign
 scheme with a correct PSF and `k`-bit salts, and making at most `qHash`
-random-oracle queries, there exists a collision-finding reduction `B` such that:
+random-oracle queries, the collision-finding reduction `B = reduction psf hr M Salt A` satisfies:
 
   `Adv^{EUF-CMA}(A) ≤ Adv^{collision}(B) + qSign² / (2 · |Salt|)`
 
@@ -390,20 +396,18 @@ theorem euf_cma_collision_bound [DecidableEq Domain]
     (hQ : ∀ pk, signHashQueryBound
       (S' := Salt × Domain) (α := M × (Salt × Domain))
       (oa := adv.main pk) (qSign := qSign) (qHash := qHash)) :
-    ∃ (red : CollisionAdversary (PK := PK) (Domain := Domain)),
-      adv.advantage (runtime M Salt) ≤
-        collisionFindingAdvantage (psf := psf) (hr := hr) red +
-        collisionBound Salt qSign :=
-  ⟨reduction psf hr M Salt adv,
-    forgery_yields_collision psf hr M Salt hcorrect qSign qHash adv hQ⟩
+    adv.advantage (runtime M Salt) ≤
+      collisionFindingAdvantage (psf := psf) (hr := hr) (reduction psf hr M Salt adv) +
+      collisionBound Salt qSign :=
+  forgery_yields_collision psf hr M Salt hcorrect qSign qHash adv hQ
 
 /-- **Split GPV PFDH bound in the random-oracle model**.
 
 This theorem makes both branches of the GPV proof explicit:
 
-- a collision term for the distinct-preimage branch,
-- a programmed-preimage replay term for the exact-match branch, with the explicit
-  multi-target factor `qSign + qHash`,
+- a collision term for the distinct-preimage branch, for the reduction `reduction`,
+- a programmed-preimage replay term for the exact-match branch, for the reduction
+  `programmedPreimageReduction`, with the explicit multi-target factor `qSign + qHash`,
 - and the birthday salt-collision term.
 
 It is the most honest generic statement available from the current API, before any additional
@@ -415,16 +419,12 @@ theorem euf_cma_split_bound [DecidableEq Domain]
     (hQ : ∀ pk, signHashQueryBound
       (S' := Salt × Domain) (α := M × (Salt × Domain))
       (oa := adv.main pk) (qSign := qSign) (qHash := qHash)) :
-    ∃ (collisionRed : CollisionAdversary (PK := PK) (Domain := Domain))
-      (exactMatchRed : ProgrammedPreimageAdversary
-        (PK := PK) (Domain := Domain) (Range := Range)),
-      adv.advantage (runtime M Salt) ≤
-        collisionFindingAdvantage (psf := psf) (hr := hr) collisionRed +
-          ((qSign + qHash : ℕ) : ENNReal) *
-            programmedPreimageAdvantage (psf := psf) (hr := hr) exactMatchRed +
-          collisionBound Salt qSign :=
-  ⟨reduction psf hr M Salt adv,
-    programmedPreimageReduction psf hr M Salt adv,
-    forgery_yields_collision_or_exact_match psf hr M Salt hcorrect qSign qHash adv hQ⟩
+    adv.advantage (runtime M Salt) ≤
+      collisionFindingAdvantage (psf := psf) (hr := hr) (reduction psf hr M Salt adv) +
+        ((qSign + qHash : ℕ) : ENNReal) *
+          programmedPreimageAdvantage (psf := psf) (hr := hr)
+            (programmedPreimageReduction psf hr M Salt adv) +
+        collisionBound Salt qSign :=
+  forgery_yields_collision_or_exact_match psf hr M Salt hcorrect qSign qHash adv hQ
 
 end GPVHashAndSign

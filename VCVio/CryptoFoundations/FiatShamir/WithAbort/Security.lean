@@ -70,7 +70,8 @@ noncomputable def cmaToNmaLoss (qS qH : ℕ) (ε p ζ_zk δ : ℝ) (_hp : p < 1)
 /-- **CMA-to-NMA reduction for Fiat-Shamir with aborts (Theorem 3, CRYPTO 2023).**
 
 For any EUF-CMA adversary `A` making at most `qS` signing-oracle queries and `qH`
-random-oracle queries, there exists an NMA reduction such that:
+random-oracle queries, the intended statement bounds the advantage of an explicit NMA
+reduction `B`:
 
   `Adv^{EUF-CMA}(A) ≤ Adv^{EUF-NMA}(B) + L`
 
@@ -88,15 +89,23 @@ The scheme-specific reduction from NMA to computational assumptions (e.g., MLWE 
 SelfTargetMSIS for ML-DSA) is stated separately with each scheme; see
 `MLDSA.euf_cma_security`.
 
-**WARNING: this is a placeholder statement, not the final theorem.** The current shape is
-unsound as written: `ε` and `δ : ℝ` are unconstrained signed reals (only `0 ≤ ζ_zk` and
-`p_abort < 1` are assumed). Choosing `ε`, `δ` very negative drives `cmaToNmaLoss` into
-`(-∞, 0)`; `ENNReal.ofReal` clamps to `0`; the bound collapses to
-`adv.advantage ≤ Pr[hard relation reduction]` with no statistical slack, which is generally
-false for any non-trivially-secure hard relation. In the final statement `ε` and `δ` should
-be nonnegative (e.g. `ℝ≥0` or constrained by `0 ≤ ε`, `0 ≤ δ` hypotheses), and `p_abort`
-should additionally be `0 ≤ p_abort` so the divisors `1 - p` and `(1 - p)²` carry their
-intended sign. The proof is intentionally deferred. -/
+**WARNING: this is a placeholder statement with no security content.** Two defects must be
+fixed before it is proved:
+
+1. The reduction is existentially quantified. `GenerableRelation.gen_sound` guarantees a
+   witness for every generated statement, so the reduction that returns such a witness, chosen
+   classically, wins `hardRelationExp` with probability `1`, and the statement holds for every
+   adversary. The final statement must name the reduction, as `FiatShamir.euf_cma_bound` does
+   with `FiatShamir.cmaReduction`; this requires a with-aborts analogue of
+   `FiatShamir.cmaToNmaAdv`.
+2. `ε`, `p_abort`, and `δ : ℝ` are not tied to the identification scheme and are not
+   constrained to be nonnegative (only `0 ≤ ζ_zk` and `p_abort < 1` are assumed). Choosing `ε`
+   and `δ` very negative drives `cmaToNmaLoss` below `0`, and `ENNReal.ofReal` clamps the loss
+   to `0`. In the final statement `ε`, `p_abort`, and `δ` should be nonnegative and identified
+   with the commitment-guessing probability, abort probability, and regularity failure
+   probability of `ids`.
+
+The proof is intentionally deferred. -/
 theorem euf_cma_bound
     (hc : ids.Complete)
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
@@ -125,9 +134,9 @@ theorem euf_cma_bound
 /-- Perfect-HVZK special case of `euf_cma_bound`, where the simulator contributes no
 `qS · ζ_zk` loss term.
 
-**WARNING: this is a placeholder statement, not the final theorem.** It inherits the
-unsoundness of `euf_cma_bound` (unconstrained signed `ε`, `δ : ℝ`); see that theorem's
-docstring. -/
+**WARNING: this is a placeholder statement with no security content.** It inherits both
+defects of `euf_cma_bound` (existentially quantified reduction; unconstrained `ε`, `p_abort`,
+`δ : ℝ`); see that theorem's docstring. -/
 theorem euf_cma_bound_perfectHVZK
     (hc : ids.Complete)
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
