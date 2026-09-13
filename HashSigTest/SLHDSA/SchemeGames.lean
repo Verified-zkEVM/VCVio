@@ -167,7 +167,7 @@ negation or a constant is one level down again, and is `instrumentedEufExp_const
 which refuse both of those shapes and every other recorded bit that is not that constant at a
 constant selector.
 Two directions below those are refused by nothing in either module — which of a run's values the
-selector is applied to, and any combination of two applications of the selector that agrees with it
+selector is applied to, and any combination of applications of the selector that agrees with it
 wherever the selector is constant — and the paragraphs that close the library module's own section
 beside the four halves record both rather than claiming them.  What this file adds to those
 eight is the selector argument: the four `Pins` entries restating the branch bounds name `forsArm`

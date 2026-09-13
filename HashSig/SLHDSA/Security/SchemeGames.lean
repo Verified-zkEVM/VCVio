@@ -270,7 +270,7 @@ cannot see it.  With this theorem present
 and the twin absent, each of the three gives one error here.
 
 What it does not pin is anything about a selector that is *not* constant: neither which of a run's
-values the selector is applied to, nor any combination of two such applications that agrees with the
+values the selector is applied to, nor any combination of such applications that agrees with the
 selector wherever the selector is constant.  The paragraphs that close the section beside the four
 halves state both, with their measurements.
 
@@ -839,16 +839,20 @@ splits, the four `example`s and every fixture pin silent: measured, zero errors 
 both modules.
 
 *What the recorded bit is, beyond its value at a constant selector.*  The two selector equations are
-stated at constant selectors, so any `f : Bool → Bool → Bool` with `f b b = b`, applied to two
-applications of the selector, satisfies both of them at every `b` while recording a different
-predicate.  Recording `sel pk sk msg σ && sel pk sk ((log.map Sigma.fst).headD msg) σ`, and the
-same at the same-message experiment, makes `forsHalf` the probability that the adversary forges and
-the FORS arm is true both at its own forgery and at the signing log's first message — a strictly
+stated at constant selectors, so any combination of applications of the selector that agrees with it
+wherever the selector is constant satisfies both of them at every `b` while recording a different
+predicate.  The simplest such combinations are the `f : Bool → Bool → Bool` with `f b b = b` applied
+to two applications of the selector; a third application conjoined in, and a choice between two
+applications made by a run value, are as silent as those.
+Recording `sel pk sk msg σ && sel pk sk ((log.map Sigma.fst).headD msg) σ`, and the same at the
+same-message experiment, makes `forsHalf` the probability that the adversary forges and the FORS
+arm is true both at its own forgery and at the signing log's first message — a strictly
 smaller event, with `hypertreeHalf` strictly larger, both splits still provable and every equation
 this module states still true.  Measured: zero errors and zero warnings in both modules, a full
 `lake build` of both libraries at exit 0, and a freshly linked executable that passes all
-seventy-seven runtime checks.  The same zeros hold for `||`, and for
-`cond (sel … == sel …) (sel …) (!sel …)`, in the same place.
+seventy-seven runtime checks.  Zero errors and zero warnings in both modules hold in the same place
+for `||`, for `cond (sel … == sel …) (sel …) (!sel …)`, for a third application conjoined in and
+for `cond (log.wasQueried msg) (sel …) (sel …)`.
 
 One further law refuses part of the second direction and not the whole of it, which is why none was
 added.  Post-composition naturality in the selector — the experiment at
