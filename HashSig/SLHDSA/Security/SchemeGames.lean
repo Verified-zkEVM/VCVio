@@ -839,8 +839,10 @@ predicate.  Recording `sel pk sk msg σ && sel pk sk ((log.map Sigma.fst).headD 
 same at the same-message experiment, makes `forsHalf` the probability that the adversary forges and
 the FORS arm is true both at its own forgery and at the signing log's first message — a strictly
 smaller event, with `hypertreeHalf` strictly larger, both splits still provable and every equation
-this module states still true.  Measured: zero errors and zero warnings in both modules, and the
-same for `||` and for `cond (sel … == sel …) (sel …) (!sel …)` in the same place.
+this module states still true.  Measured: zero errors and zero warnings in both modules, a full
+`lake build` of both libraries at exit 0, and a freshly linked executable that passes all
+seventy-seven runtime checks.  The same zeros hold for `||`, and for
+`cond (sel … == sel …) (sel …) (!sel …)`, in the same place.
 
 One further law refuses part of the second direction and not the whole of it, which is why none was
 added.  Post-composition naturality in the selector — the experiment at
