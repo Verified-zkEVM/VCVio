@@ -719,9 +719,10 @@ fails these two at build time.
 **Whether a half is an event of the success bit at all.**  This the `example`s cannot reach, and
 the reason is structural: they are `rfl` against the body, so a paired edit of the body moves them
 with it.  Drop the conjunct `x.1 = true` from all four halves and re-prove both splits by
-monotonicity, and this module elaborates with zero errors, the test module is untouched, all
-seventy-seven runtime checks still pass — and both headline theorems become information-free, since
-`Pr[sel = true] + Pr[sel = false]` is the experiment's total mass and dominates every event.  The
+monotonicity: with the two theorems below absent, that module elaborates with zero errors, needs no
+edit to the test module, and passes all seventy-seven runtime checks — and both headline theorems
+are then information-free, since `Pr[sel = true] + Pr[sel = false]` is the experiment's total mass
+and dominates every event.  All three were measured.  The
 two theorems below are that canary.  They are *semantic* rather than syntactic — each half is at
 most the advantage it splits, which is false of the weakened halves — so no paired edit of the body
 carries them along; against that weakening each fails at the success conjunct it no longer has.
