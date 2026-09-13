@@ -166,10 +166,10 @@ and survives this executable.  That the recorded bit is the selector's own value
 negation or a constant is one level down again, and is `instrumentedEufExp_const` and its twin;
 which of a run's values the selector is applied to is refused by nothing in either module, and the
 library module's own paragraph records that rather than claiming it.  What this file adds to those
-eight is the selector argument: the four `Pins` entries
-restating the branch bounds name `forsArm` and `randomizerLogged`, so a library-side edit taking one
-split's two halves at another selector fails that split's two of them here, `Type mismatch` each,
-although it leaves the library module elaborating with zero errors.  Nothing here says that any
+eight is the selector argument: the four `Pins` entries restating the branch bounds name `forsArm`
+and `randomizerLogged`, so a library-side edit taking one split's two halves at another selector
+fails that split's two of them here, `Type mismatch` each, although it leaves the library module
+elaborating with zero errors.  Nothing here says that any
 honest value was recorded as a game target, that any execution produced any log below, or that
 either half is bounded by anything.
 

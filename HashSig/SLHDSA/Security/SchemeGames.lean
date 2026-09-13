@@ -761,9 +761,10 @@ theorem advantage_le_forsHalf_add_hypertreeHalf (adv : unforgeableAdv (generalAl
 /-! ### What pins the four halves, in two kinds
 
 A half is `Pr[fun x => x.1 = true ∧ x.2 = b | …]`: an event of two conjuncts, one reading the
-experiment's success bit and one reading its selector bit.  Two kinds of silent edit leave both
-splits provable, and they need canaries of different kinds.  The first is a *naming* error and the
-second a *vacuity* one.
+experiment's success bit and one reading the bit it recorded.  Two kinds of silent edit *of the
+half itself* leave both splits provable, and they need canaries of different kinds; the first is a
+*naming* error and the second a *vacuity* one.  Edits one level down, of the experiment the half
+reads, are the last three paragraphs of this section.
 
 **Which branch each name is attached to.**  `advantage_le_forsHalf_add_hypertreeHalf` is symmetric
 in its two summands, so it holds just as well of a module in which the two names are attached to
