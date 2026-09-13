@@ -26,17 +26,17 @@ namespace VCVioTest.ProbabilityNotation
 
 example (mx : ProbComp Bool) :
     Pr{let b ← mx}[b] = 𝒟[mx] {true} := by
-  rw [probEventBinding_eq_evalDist_of_discrete]
+  rw [prEvent_eq_evalDist_of_discrete]
   simp
 
 example (mx : OptionT ProbComp Bool) :
     Pr{let b ← mx}[b] = 𝒟[mx] {true} := by
-  rw [probEventBinding_eq_evalDist_of_discrete]
+  rw [prEvent_eq_evalDist_of_discrete]
   simp
 
 example (mx : FinRatPMF.Raw Bool) :
     Pr{let b ← mx}[b] = ((mx.prob true : NNReal) : ENNReal) := by
-  rw [probEventBinding_eq_evalDist_of_discrete]
+  rw [prEvent_eq_evalDist_of_discrete]
   change 𝒟[mx] {true} = _
   exact FinRatPMF.Raw.evalDist_apply_singleton_eq_prob mx true
 
@@ -46,7 +46,7 @@ example : FinRatPMF.Raw.coin.prob true = 1 / 2 := by
 example (mx : ProbComp (Fin 3)) :
     Pr{let n ← mx; let value := n.val}[value = 1] =
       𝒟[mx] {n | n.val = 1} := by
-  simpa only using probEventBinding_eq_evalDist_of_discrete mx (fun n => n.val = 1)
+  simpa only using prEvent_eq_evalDist_of_discrete mx (fun n => n.val = 1)
 
 open VCVioTest.MeasureSemantics in
 example :

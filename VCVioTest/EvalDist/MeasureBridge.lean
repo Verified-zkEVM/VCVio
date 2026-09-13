@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio
+public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 
 /-!
 # The measure gate
@@ -107,10 +108,30 @@ example (mx : OptionT ProbComp Bool) (my : OptionT ProbComp (Fin 3)) :
 
 /-! ## Independent products are product measures -/
 
+section repeatedSampling
+
+local instance : MeasurableSpace (List Bool) := ⊤
+
+/-- Repeated sampling computes its mass through Mathlib's measure bind. -/
+example (oa : ProbComp Bool) (n : ℕ) :
+    𝒟[oa.replicate n] Set.univ = (𝒟[oa] Set.univ) ^ n := by simp
+example (oa : ProbComp Bool) (n : ℕ) :
+    𝒟[oa.replicate n] Set.univ = (𝒟[oa] Set.univ) ^ n := by grind
+
+end repeatedSampling
+
 example (g : Fin 3 → ProbComp Bool) : 𝒟[Fin.mOfFn 3 g] = Measure.pi fun i => 𝒟[g i] :=
   evalDist_mOfFn 3 g
 example (f : Bool → ProbComp (Fin 3)) : 𝒟[Fintype.mPi f] = Measure.pi fun i => 𝒟[f i] :=
   evalDist_mPi f
+example (n : ℕ) :
+    𝒟[Fin.mOfFn n (fun _ => ($ᵗ Bool : ProbComp Bool))] =
+      ProbabilityTheory.uniformOn Set.univ :=
+  evalDist_mOfFn_const_uniform n ($ᵗ Bool : ProbComp Bool) evalDist_uniformSample
+example :
+    𝒟[Fintype.mPi (fun _ : Fin 3 => ($ᵗ Bool : ProbComp Bool))] =
+      ProbabilityTheory.uniformOn Set.univ :=
+  evalDist_mPi_const_uniform ($ᵗ Bool : ProbComp Bool) evalDist_uniformSample
 example (f : Bool → ProbComp (Fin 3)) (v : Bool → Fin 3) :
     𝒟[Fintype.mPi f] {v} = ∏ i, Pr[= v i | f i] := by
   simp [evalDist_mPi]
@@ -118,7 +139,7 @@ example (f : Bool → ProbComp (Fin 3)) (v : Bool → Fin 3) :
 /-- The coordinate marginal of a product: the measure-side twin of `probEvent_coord_mPi`. -/
 example (f : Bool → ProbComp (Fin 3)) (i : Bool) :
     (𝒟[Fintype.mPi f]).map (Function.eval i) = 𝒟[f i] :=
-  evalDist_map_eval_mPi f (fun _ => probFailure_eq_zero) i
+  evalDist_map_eval_mPi f (fun _ => by simp) i
 example (f : Bool → ProbComp (Fin 3)) (i : Bool) :
     (𝒟[Fintype.mPi f]).map (Function.eval i) = 𝒟[f i] := by
   simp [evalDist_mPi, Measure.pi_map_eval]

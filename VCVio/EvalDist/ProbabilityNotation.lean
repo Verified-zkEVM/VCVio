@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.Defs.Basic
+public import VCVio.EvalDist.Defs.Measure.Core
 
 /-!
 # Measure events for computation notation
@@ -21,8 +21,18 @@ open MeasureTheory
 
 universe v
 
+/-- Probability of a successful event after an ordinary Lean `do` sequence.
+The event is interpreted by the primary measure semantics. -/
+syntax (name := prEvent) "Pr{" doSeq "}[" term "]" : term
+
+macro_rules (kind := prEvent)
+  -- `doSeqBracketed`
+  | `(Pr{{$items*}}[$t]) => `(𝒟[do $items:doSeqItem* return $t:term] {True})
+  -- `doSeqIndent`
+  | `(Pr{$items*}[$t]) => `(𝒟[do $items:doSeqItem* return $t:term] {True})
+
 /-- A measurable predicate returned by a computation has the probability of its event. -/
-theorem probEventBinding_eq_evalDist {m : Type → Type v} [Monad m] [LawfulMonad m]
+theorem prEvent_eq_evalDist {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} [MeasurableSpace α] (mx : m α) (p : α → Prop)
     (hp : Measurable p) :
@@ -33,10 +43,21 @@ theorem probEventBinding_eq_evalDist {m : Type → Type v} [Monad m] [LawfulMona
   simp
 
 /-- On a discrete output space every predicate is a measurable event. -/
-theorem probEventBinding_eq_evalDist_of_discrete
+theorem prEvent_eq_evalDist_of_discrete
     {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
     (mx : m α) (p : α → Prop) :
     Pr{let x ← mx}[p x] = 𝒟[mx] {x | p x} :=
-  probEventBinding_eq_evalDist mx p Measurable.of_discrete
+  prEvent_eq_evalDist mx p Measurable.of_discrete
+
+/-- Implication between events bounds their probabilities on a discrete output space. -/
+theorem prEvent_mono_of_discrete
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :
+    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
+  rw [prEvent_eq_evalDist_of_discrete,
+    prEvent_eq_evalDist_of_discrete]
+  exact measure_mono (Set.ofPred_subset_ofPred.mpr hpq)

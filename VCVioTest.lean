@@ -32,6 +32,7 @@ public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleNetwork
+public import VCVioTest.OracleComp.UniformMeasureSpec
 public import VCVioTest.PFunctorFacade
 public import VCVioTest.PRFNetworkKernel
 public import VCVioTest.PerfectMerkleTree

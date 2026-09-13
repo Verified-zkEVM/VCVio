@@ -248,15 +248,19 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
   `grind` saturation cycle `docs/agents/probability.md` documents. `∀ᵐ` has 2 uses in `V:VCVio/`.
 
 **Integration candidates (ranked).**
-1. `evalDist_mPi : 𝒟[Fintype.mPi f] = Measure.pi fun i => 𝒟[f i]` (induction as in
-   `V:VCVio/EvalDist/PFunctorMeasure/Core.lean:170`, transport by `Measure.pi_map_piCongrLeft`
-   `M:…/Pi.lean:746`), after which `probOutput_mOfFn`/`probOutput_mPi`
-   (`V:VCVio/EvalDist/IndepProduct.lean:69,287`) are `Measure.pi_singleton` (`:298`),
-   `probEvent_coord_mPi` (`:314`) is `Measure.pi_pi` (`:290`), and "independent"/"same
+1. **Done:** `evalDist_mOfFn` and `evalDist_mPi` now use `evalDist_pair`,
+   `measurePreserving_piFinSuccAbove`, and `Measure.pi_map_piCongrLeft` directly, without a
+   discrete-probability bridge. The monadic `Fintype.mPi` traversal lives in
+   `ToMathlib.Control.Monad.Fold`. The scalar `probOutput_mOfFn`/`probOutput_mPi`
+   (`V:VCVio/EvalDist/IndepProduct.lean:69,287`) can be derived from `Measure.pi_singleton`
+   (`:298`), `probEvent_coord_mPi` (`:314`) from `Measure.pi_pi` (`:290`), and "independent"/"same
    distribution" can be phrased with `IndepFun` (`M:Probability/Independence/Basic.lean:144`;
    `indepFun_iff_map_prod_eq_prod_map_map` `:703` is `probOutput_seq_map_prod_mk_eq_mul`
    `V:VCVio/EvalDist/Prod.lean:91` in measure form), `HasLaw` (`M:Probability/HasLaw.lean:39`) and
    `IdentDistrib` (`M:Probability/IdentDistrib.lean:71`) — all three have 0 uses in VCVio.
+   The uniform-on-product laws also use Mathlib's `ProbabilityTheory.uniformOn_pi`
+   (`M:Probability/UniformOn.lean:226`); Fischlin's small-sum proof now counts its target set
+   directly against that product measure.
 2. Measure-side twins of the expectation algebra: `expectedValue_bind/map/mono/add/const`
    (`V:VCVio/EvalDist/Expectation.lean:49–85`) via `lintegral_bind` (`M:…/GiryMonad.lean:285`),
    `lintegral_map` (`M:…/Lebesgue/Map.lean:27`), `lintegral_mono` (`M:…/Lebesgue/Basic.lean:84`),

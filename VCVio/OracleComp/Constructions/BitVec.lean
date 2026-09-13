@@ -8,29 +8,54 @@ module
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.EvalDist.BitVec
 public import VCVio.EvalDist.Prod
+public import VCVio.EvalDist.BitVec.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 /-!
-# Probability lemmas for uniform `BitVec` sampling
+# Uniform bit-vector sampling
 
-Lemmas about `probOutput` for `ProbComp (BitVec n)` computations involving XOR with
-uniformly sampled keys. These are reusable building blocks for encryption proofs
-(e.g., one-time pad privacy).
+Uniform XOR keys give a uniform ciphertext measure and make the ciphertext independent of
+the message. Singleton-probability corollaries provide the same facts to discrete clients.
 -/
 
 @[expose] public section
 
-open OracleSpec OracleComp ENNReal
+open OracleSpec OracleComp ENNReal MeasureTheory ProbabilityTheory
+
+/-- XOR with a sampled uniform bit vector has a native uniform output measure. -/
+theorem evalDist_xor_uniformSample [OracleSpec.IsUniformMeasureSpec unifSpec]
+    (sp : ℕ) (msg : BitVec sp) :
+    𝒟[(fun k : BitVec sp => k ^^^ msg) <$> ($ᵗ BitVec sp)] = uniformOn Set.univ :=
+  evalDist_xor_uniform_right _ msg (SampleableType.evalDist_bitVec sp)
+
+/-- A sampled key makes the one-time-pad ciphertext independent of the message. -/
+theorem evalDist_pair_xor_uniformSample [OracleSpec.IsUniformMeasureSpec unifSpec]
+    (sp : ℕ) (mx : ProbComp (BitVec sp)) :
+    𝒟[do
+      let msg ← mx
+      let key ← $ᵗ BitVec sp
+      return (msg, key ^^^ msg)] =
+        𝒟[mx].prod (uniformOn Set.univ : Measure (BitVec sp)) :=
+  evalDist_pair_xor_uniform_right mx ($ᵗ BitVec sp) id
+    (SampleableType.evalDist_bitVec sp)
+
+/-- A sampled key gives every ciphertext the native uniform output measure. -/
+theorem evalDist_cipher_from_pair_uniformSample
+    [OracleSpec.IsUniformMeasureSpec unifSpec]
+    (sp : ℕ) (mx : ProbComp (BitVec sp)) :
+    𝒟[do
+      let msg ← mx
+      let key ← $ᵗ BitVec sp
+      return key ^^^ msg] = uniformOn Set.univ := by
+  exact evalDist_bind_xor_uniform mx ($ᵗ BitVec sp) id (by simp)
+    (SampleableType.evalDist_bitVec sp)
 
 lemma probOutput_xor_uniform (sp : ℕ) (msg σ : BitVec sp) :
     Pr[= σ | (fun k : BitVec sp => k ^^^ msg) <$> ($ᵗ BitVec sp)] =
       (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
-  calc
-    Pr[= σ | (fun k : BitVec sp => k ^^^ msg) <$> ($ᵗ BitVec sp)] =
-        Pr[= σ | (msg ^^^ ·) <$> ($ᵗ BitVec sp)] := by
-          simp [BitVec.xor_comm]
-    _ = Pr[= msg ^^^ σ | ($ᵗ BitVec sp)] := by simp
-    _ = (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
-          simp [probOutput_uniformSample]
+  have hxor := evalDist_xor_uniform_right ($ᵗ BitVec sp) msg evalDist_uniformSample
+  rw [← evalDist_apply_singleton, hxor, uniformOn_univ_apply_singleton]
 
 lemma probOutput_pair_xor_uniform (sp : ℕ) (mx : ProbComp (BitVec sp))
     (msg σ : BitVec sp) :
@@ -39,36 +64,14 @@ lemma probOutput_pair_xor_uniform (sp : ℕ) (mx : ProbComp (BitVec sp))
       let k ← $ᵗ BitVec sp
       return (msg', k ^^^ msg')] =
       Pr[= msg | mx] * (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
-  let inv : ℝ≥0∞ := (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹
-  rw [probOutput_bind_eq_tsum]
-  have hinner (msg' : BitVec sp) :
-      Pr[= (msg, σ) | do
-        let k ← $ᵗ BitVec sp
-        return (msg', k ^^^ msg')] = if msg = msg' then inv else 0 := by
-    calc
-      Pr[= (msg, σ) | do
-        let k ← $ᵗ BitVec sp
-        return (msg', k ^^^ msg')] =
-          Pr[= (msg, σ) |
-            (msg', ·) <$> ((fun k : BitVec sp => k ^^^ msg') <$> ($ᵗ BitVec sp))] := by
-            simp
-      _ = if msg = msg' then
-          Pr[= σ | (fun k : BitVec sp => k ^^^ msg') <$> ($ᵗ BitVec sp)] else 0 := by
-            simpa using
-              (probOutput_prod_mk_snd_map
-                (my := (fun k : BitVec sp => k ^^^ msg') <$> ($ᵗ BitVec sp))
-                (x := msg') (z := (msg, σ)))
-      _ = if msg = msg' then inv else 0 := by
-            by_cases h : msg = msg' <;> simp [h, inv, probOutput_xor_uniform]
-  simp_rw [hinner]
-  calc
-    ∑' msg', Pr[= msg' | mx] * (if msg = msg' then inv else 0) =
-        ∑' msg', (Pr[= msg' | mx] * (if msg = msg' then 1 else 0)) * inv := by
-          refine tsum_congr fun msg' => ?_
-          by_cases h : msg = msg' <;> simp [h, inv, mul_comm]
-    _ = (∑' msg', Pr[= msg' | mx] * (if msg = msg' then 1 else 0)) * inv := by
-          rw [ENNReal.tsum_mul_right]
-    _ = Pr[= msg | mx] * inv := by simp
+  have hpair := evalDist_pair_xor_uniform_right mx ($ᵗ BitVec sp) (fun msg' => msg')
+    evalDist_uniformSample
+  rw [← evalDist_apply_singleton, hpair]
+  have hsingleton : ({(msg, σ)} : Set (BitVec sp × BitVec sp)) = {msg} ×ˢ {σ} := by
+    ext z
+    simp
+  rw [hsingleton, Measure.prod_prod, evalDist_apply_singleton,
+    uniformOn_univ_apply_singleton]
 
 lemma probOutput_cipher_from_pair_uniform (sp : ℕ) (mx : ProbComp (BitVec sp))
     (σ : BitVec sp) :
@@ -77,8 +80,7 @@ lemma probOutput_cipher_from_pair_uniform (sp : ℕ) (mx : ProbComp (BitVec sp))
       let k ← $ᵗ BitVec sp
       return (k ^^^ msg')] =
       (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
-  rw [probOutput_bind_of_const (mx := mx)
-    (y := σ) (r := (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹)]
-  · simp
-  · intro msg hmsg
-    simpa using probOutput_xor_uniform sp msg σ
+  have hmx : 𝒟[mx] Set.univ = 1 := by simp
+  have hcipher := evalDist_bind_xor_uniform mx ($ᵗ BitVec sp) (fun msg' => msg') hmx
+    evalDist_uniformSample
+  rw [← evalDist_apply_singleton, hcipher, uniformOn_univ_apply_singleton]
