@@ -112,7 +112,9 @@ signature; there is no log in its argument list.
 **R5**, `SignatureAlg.signingLogContains (internalLog log) (emptyContextMessage msg) sig`.
 
 * At **L1** it catches a head-only reader and a message-blind one — `(msgP, sigP2)` is the log's
-  last entry and `(msgQ, sigP2)` is no entry — and an identity internalisation.
+  last entry and `(msgQ, sigP2)` is no entry — an identity internalisation, and a reader that drops
+  its first entry: `(msgP, sigP1)` is this log's first entry and occurs nowhere else in it, so the
+  predicate reads `true` here and `false` under a head-drop.
 * At **L2**, *blank*: nothing this predicate can show there that L1 and L3 do not.
 * At **L3** it catches truncation at four entries, that pair being in the last entry only.
 
@@ -134,9 +136,9 @@ signature; there is no log in its argument list.
 
 *This fixture cannot discriminate these; another could.*
 
-- **R2 and R5 × L3, for a reader that drops its first entry.**  L3's first pair recurs at its third
-  entry, so dropping the head changes nothing there.  L1 catches it for R2; nothing here catches it
-  for R5.
+- **R2 and R5 × L3, for a reader that drops its first entry.**  L3's first pair, `(msgP, detSigP)`,
+  recurs at its third entry, so dropping the head changes nothing there for either reader.  This is
+  a property of L3's shape, and L1 is where both readers catch a head-drop instead.
 - **R2 × L2, for message-blindness.**  L2's two messages carry different randomizers, so a
   message-blind reader is caught there as well — but only because of that choice.  A later edit that
   made them coincide would take this cell dark without failing anything.
@@ -667,7 +669,9 @@ transcript is pinned by value on all three logs: L1's three distinct entries ref
 truncation, L2's repeat refuses collapsing, and L3's four entries refuse a truncation that bites
 only there.  `internalLogOne`, which prefixes one byte rather than two, is asserted to give a
 different transcript while giving the same per-message list — the two are separated by the
-transcript alone, because both maps are injective.  Twelve properties. -/
+transcript alone, because both maps are injective.  The exact-pair predicate is read at L1's first
+entry as well as at its last, so a reader that drops its head is caught here rather than left to
+L3, where that log's repeated first pair would hide it.  Thirteen properties. -/
 def checkInternalLog : IO Unit := do
   ensure "the internalised log lists, at the internal message, what the log lists at the raw one"
     (loggedSignatures (internalLog signingLog) (emptyContextMessage msgP) ==
@@ -714,6 +718,8 @@ def checkInternalLog : IO Unit := do
         sigP1 &&
       !SignatureAlg.signingLogContains (internalLog thriceSignedLog) (emptyContextMessage msgP)
         sigP2)
+  ensure "and the pair a three-entry log holds only in its first entry, which a head-drop loses"
+    (SignatureAlg.signingLogContains (internalLog signingLog) (emptyContextMessage msgP) sigP1)
 
 /-- The same-message selector, across the three logs.
 
