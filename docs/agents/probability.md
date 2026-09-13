@@ -7,11 +7,21 @@ The accepted design for new work is
 [`Denotational Probability Semantics`](../reading/denotational-probability-semantics.md): use
 Mathlib measures for closed denotations, kernels for environment/state-indexed computations,
 effect-preserving outcome types for transformers, and keep `Pr[...]` as the discrete compatibility
-surface. [`docs/reading/`](../reading/README.md) indexes the full design record.
+surface. The [notation and computability account](../design/probability-notation-computability.md)
+records which finite events can be evaluated exactly and which semantics require measurable
+proofs. [`docs/reading/`](../reading/README.md) indexes the full design record.
 
 The primary notation is measure-valued: `𝒟[mx] : Measure α`. The generic classes and Giry laws
 live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
 `VCVio.EvalDist.PFunctorMeasure.Core`. These core modules do not import a PMF/SPMF backend.
+`Pr{let x ← mx; ...}[event]` is the computation-style event notation. It elaborates
+an ordinary Lean `do` sequence, returns its final Boolean or proposition, and takes
+the `{True}` mass of that result's `𝒟`. It works with a direct measure-only oracle
+interpretation as well as a finite compatibility interpretation. The
+`probEventBinding_eq_evalDist` theorem requires a measurable predicate; its
+discrete specialization discharges that condition. For an optional computation,
+successful outputs are measured through `dropNone`, so failure contributes no mass.
+The `OptionT` measure instance also works when the base monad has no finite lift.
 `VCVio.EvalDist.Monad.Measure` provides `evalDist_bind_bind_swap` for jointly measurable
 continuations and `evalDist_bind_bind_bind_rotate` for discrete intermediate results. Their
 measure-level proofs use Tonelli's theorem and preserve subprobability mass.
@@ -39,6 +49,12 @@ whenever its measure specification agrees with its probability specification
 The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq.rec` law for `Pr[...]`
 only needs equality of result types, whereas a measure denotation also depends on the selected
 `MeasurableSpace`, so there is no blanket finite-type measurable-space instance.
+
+`SPMF`, `evalSPMF`, `probOutput`, `probEvent`, and `probFailure` are deprecated.
+Mathlib owns `PMF`, so VCVio's `usesRetiredProbability` environment linter
+records direct uses of it and the local finite API in `scripts/nolints.json`.
+New theorem statements should prefer `𝒟` or `Pr{...}[...]` and use a named
+compatibility equation only when discrete execution is needed.
 
 The adapter is also `LawfulEvalDistSemantics` (`instLawfulEvalDistSemanticsOfMonadLiftTSPMF`), so
 the Giry laws `evalDist_pure`, `evalDist_bind`, `evalDist_map` and the const laws hold with no

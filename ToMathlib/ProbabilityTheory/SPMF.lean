@@ -306,3 +306,6 @@ protected lemma fmap_eq_map (f : α → β) (c : SPMF α) :
   by rw [← SPMF.toPMF_inj, SPMF.toPMF_map, SPMF.toPMF_mk, PMF.monad_map_eq_map]
 
 end SPMF
+
+attribute [deprecated "VCVio retiring probability API: use Measure or Kernel"
+  (since := "2026-09-13")] SPMF

@@ -84,7 +84,8 @@ instance : EvalDistCompatible SPMF where
   support_eq_SPMF_support _ := rfl
 
 /-- The resulting distribution of running the monadic computation `mx`. -/
-@[reducible, inline]
+@[deprecated "VCVio retiring probability API: use the measure `𝒟[mx]`"
+  (since := "2026-09-13"), reducible, inline]
 def evalSPMF [MonadLiftT m SPMF] {α : Type u} (mx : m α) : SPMF α := liftM mx
 
 /-- Evaluation distribution notation for any monad lifting into `SPMF`. -/
@@ -112,6 +113,7 @@ section probability_notation
 
 This remains definitionally the point mass of the executable `SPMF` semantics;
 `evalDist_apply_singleton` is the equivalent measure-level reading. -/
+@[deprecated "VCVio retiring probability API: use `𝒟[mx] {x}`" (since := "2026-09-13")]
 def probOutput [MonadLiftT m SPMF] (mx : m α) (x : α) : ℝ≥0∞ :=
   evalSPMF mx x
 
@@ -120,10 +122,14 @@ def probOutput [MonadLiftT m SPMF] (mx : m α) (x : α) : ℝ≥0∞ :=
 The traditional notation remains the executable `SPMF` event API and is therefore usable for
 arbitrary predicates. General measure developments should apply `𝒟[mx]` to a measurable event;
 `evalDist_apply_setOf` bridges the two on discrete spaces. -/
+@[deprecated "VCVio retiring probability API: use `𝒟[mx] {x | p x}`"
+  (since := "2026-09-13")]
 noncomputable def probEvent [MonadLiftT m SPMF] (mx : m α) (p : α → Prop) : ℝ≥0∞ :=
   (evalSPMF mx).run.toOuterMeasure (some '' {x | p x})
 
 /-- Probability that a computation `mx` will fail to return a value. -/
+@[deprecated "VCVio retiring probability API: use `1 - 𝒟[mx] Set.univ`"
+  (since := "2026-09-13")]
 def probFailure [MonadLiftT m SPMF] (mx : m α) : ℝ≥0∞ :=
   (evalSPMF mx).run none
 
@@ -404,24 +410,15 @@ syntax (name := probEventBinding1)
 macro_rules (kind := probEventBinding1)
   | `(Pr[ $cond:term | $var:ident ← $src:term]) => `(Pr[ fun $var => $cond | $src])
 
-/-- Probability that a computation returns a value satisfying a predicate.
-See `probOutput_true_eq_probEvent` for relation to the above definitions. -/
+/-- Probability of a successful event after an ordinary Lean `do` sequence.
+The event is interpreted by the primary measure semantics. -/
 syntax (name := probEventBinding2) "Pr{" doSeq "}[" term "]" : term
 
 macro_rules (kind := probEventBinding2)
   -- `doSeqBracketed`
-  | `(Pr{{$items*}}[$t]) => `(probOutput (do $items:doSeqItem* return $t:term) True)
+  | `(Pr{{$items*}}[$t]) => `(𝒟[do $items:doSeqItem* return $t:term] {True})
   -- `doSeqIndent`
-  | `(Pr{$items*}[$t]) => `(probOutput (do $items:doSeqItem* return $t:term) True)
-
-/-- Tests for all the different probability notations. -/
-noncomputable example {m : Type → Type u} [Monad m] [MonadLiftT m SPMF] (mx : m ℕ) : Unit :=
-  let _ := Pr[= 10 | mx]
-  let _ := Pr[ fun x => x^2 + x < 10 | mx]
-  let _ := Pr[ x^2 + x < 10 | x ← mx]
-  let _ := Pr{let x ← mx}[x = 10]
-  let _ := Pr[⊥ | mx]
-  ()
+  | `(Pr{$items*}[$t]) => `(𝒟[do $items:doSeqItem* return $t:term] {True})
 
 end probability_notation
 
@@ -541,6 +538,7 @@ section sums
 lemma probOutput_true_eq_probEvent {α} {m : Type → Type u} [Monad m]
     [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (mx : m α) (p : α → Prop) : Pr{let x ← mx}[p x] = Pr[ p | mx] := by
+  rw [evalDist_eq_evalSPMF_toMeasure, SPMF.toMeasure_apply_singleton]
   simp [probEvent_eq_tsum_indicator, probOutput_def, evalSPMF, map_eq_bind_pure_comp]
   congr 1; aesop
 

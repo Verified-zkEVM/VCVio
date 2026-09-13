@@ -15,6 +15,7 @@ import tempfile
 
 BASELINE = Path("scripts/nolints.json")
 TEST_ROOTS = ("VCVioTest", "LatticeCryptoTest", "HashSigTest")
+RETIRED_PROBABILITY_LINTER = "usesRetiredProbability"
 
 
 def run(*args: str, **kwargs) -> subprocess.CompletedProcess:
@@ -112,10 +113,18 @@ def collect(tool: str, libraries: list[str], baseline: str) -> set[tuple[str, st
             path = scratch / BASELINE
             path.parent.mkdir()
             path.write_text(baseline)
-            result = run(tool, "--update", "--no-build", library, cwd=scratch,
-                         stdout=subprocess.PIPE)
-            # A successful complete run writes the JSON before printing this marker.
-            if f"-- Linting passed for {library}." not in result.stdout:
+            result = subprocess.run((tool, "--update", "--no-build", library), cwd=scratch,
+                                    text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # Batteries writes the updated JSON before exiting 1 for findings missing
+            # from the input baseline. This is expected while enrolling new debt.
+            passed = result.returncode == 0 and \
+                f"-- Linting passed for {library}." in result.stdout
+            found = result.returncode == 1 and \
+                "linter reports:" in result.stdout and "-- Found " in result.stdout
+            if not (passed or found):
+                if result.returncode:
+                    raise subprocess.CalledProcessError(result.returncode, result.args,
+                                                        result.stdout, result.stderr)
                 raise ValueError(f"Incomplete linter output for {library}: {result.stdout}")
             current.update(read_pairs(path.read_text(), library))
             print(result.stdout, end="", flush=True)
@@ -159,7 +168,11 @@ def environment(libraries: list[str], *, no_build: bool, prune: bool,
     if base_ref:
         base = run("git", "merge-base", "HEAD", base_ref, stdout=subprocess.PIPE).stdout.strip()
         previous = run("git", "show", f"{base}:{BASELINE}", stdout=subprocess.PIPE).stdout
-        additions = baseline - read_pairs(previous, base_ref)
+        # Retiring PMF/SPMF is tracked in nolints.json by declaration. A declaration
+        # that already used this API may first be exposed by a new import or linter
+        # improvement, so review additions to this one ledger in the baseline diff.
+        additions = {pair for pair in baseline - read_pairs(previous, base_ref)
+                     if pair[0] != RETIRED_PROBABILITY_LINTER}
         if additions:
             raise ValueError("Lint baseline additions relative to the merge base:\n"
                              + format_pairs(additions))

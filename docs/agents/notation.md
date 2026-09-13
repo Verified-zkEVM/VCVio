@@ -15,16 +15,31 @@
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
 | `𝒟[mx]` | primary `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure.lean` |
+| `Pr{let x ← mx; ...}[event]` | successful-output measure of the `do` computation returning `event`, evaluated at `{True}` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `𝒮[mx]` | explicit finite adapter, `evalSPMF mx` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[= x \| mx]` | `probOutput mx x` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[p \| mx]` | `probEvent mx p` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[⊥ \| mx]` | `probFailure mx` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[cond \| var ← src]` | `probEvent src (fun var => cond)` | `VCVio/EvalDist/Defs/Basic.lean` |
 
-**NOTE**: Legacy code and comments may still use the old `[= x | comp]` notation (without `Pr` prefix). Always use `Pr[...]` in new code.
+Legacy code and comments may still use `[= x | comp]` (without `Pr`). New
+proofs use `Pr{let x ← comp}[x = target]` or apply `𝒟[comp]` to an event.
 
-`Pr[...]` is a discrete compatibility notation. Use `probOutput_eq_evalDist`,
-`probEvent_eq_evalDist`, or `probFailure_eq_evalDist` to move a scalar statement to `𝒟[...]`.
+Use `Pr{...}[...]` for a probability after a Lean `do` sequence. It needs
+`EvalDistSemantics` for the resulting computation and has the successful-output
+measure's semantics: failed or diverging branches contribute zero. A Boolean event
+is coerced to a proposition. For a single measurable event,
+`probEventBinding_eq_evalDist` identifies it with `𝒟[mx] {x | p x}`;
+`probEventBinding_eq_evalDist_of_discrete` handles any predicate on a discrete
+output space. The notation does not require a finite-distribution lift.
+
+`Pr[...]` remains the discrete compatibility notation. Use the named
+`evalDist_apply_singleton`, `evalDist_apply_setOf`, and `evalDist_apply_univ`
+equations at a compatibility boundary. New probability statements should use
+`Pr{...}[...]` or apply `𝒟[...]` directly to a measurable set. There is no
+`Pr_{...}[...]` syntax in VCVio.
+See [probability notation and computability](../design/probability-notation-computability.md)
+for the exact finite evaluator boundary and decidability requirements.
 
 ## Sampling Notations
 
@@ -81,5 +96,5 @@ Precedence ensures `A ∥ B ⊞ C ⊠ K` parses as `((A ∥ B) ⊞ C) ⊠ K`.
 
 | Dead notation | Replacement |
 |---------------|-------------|
-| `[= x \| comp]` | `Pr[= x \| comp]` |
+| `[= x \| comp]` | `Pr{let result ← comp}[result = x]` |
 | `++ₒ` | `+` |

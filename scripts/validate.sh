@@ -21,7 +21,7 @@ Usage: ./scripts/validate.sh [--lint] [--test] [--ffi] [--axioms]
 Default fast checks (shared with per-PR CI):
   - lake build of the seven proof libraries, with the non-sorry warning budget
   - ./scripts/check-imports.sh (generated umbrella modules are current)
-  - the boundary ratchets: PolyFun, PMF/SPMF, broad expose, complexity backend,
+  - the boundary checks: PolyFun, broad expose, complexity backend,
     Extern and Interop isolation
   - lake lint -- --style-only on every library and test module
   - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
@@ -67,6 +67,7 @@ for lib in "${PROOF_LIBS[@]}"; do
 done
 python3 ./scripts/check-warning-log.py "$BUILD_LOG" "${warning_args[@]}" \
   --exclude-substring 'declaration uses `sorry`' \
+  --exclude-substring 'VCVio retiring probability API' \
   --label 'repository non-sorry warnings'
 
 echo ""
@@ -80,8 +81,6 @@ echo ""
 echo "# Checking boundaries"
 bash scripts/test-polyfun-boundary.sh
 bash scripts/check-polyfun-boundary.sh
-bash scripts/test-pmf-boundary.sh
-bash scripts/check-pmf-boundary.sh
 if [[ -f scripts/check-expose-boundary.sh ]]; then
   bash scripts/test-expose-boundary.sh
   bash scripts/check-expose-boundary.sh
@@ -118,7 +117,9 @@ if (( run_test )); then
   python3 ./scripts/check-warning-log.py "$TEST_LOG" \
     --path-prefix VCVioTest/ --path-prefix VCVioTest.lean \
     --path-prefix LatticeCryptoTest/ --path-prefix LatticeCryptoTest.lean \
-    --path-prefix HashSigTest/ --label 'test-library warnings'
+    --path-prefix HashSigTest/ \
+    --exclude-substring 'VCVio retiring probability API' \
+    --label 'test-library warnings'
 fi
 
 if (( run_axioms )); then
