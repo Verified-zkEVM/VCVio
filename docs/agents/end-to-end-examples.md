@@ -22,9 +22,14 @@ on a single concrete scheme. Reading order:
    `FiatShamir.runtime`.
 3. **Reductions:**
    [`VCVio/CryptoFoundations/FiatShamir/Sigma/Security.lean`](../../VCVio/CryptoFoundations/FiatShamir/Sigma/Security.lean)
-   exposes `euf_cma_to_nma` (CMA → managed-RO NMA via HVZK simulation) and
-   `euf_nma_bound` (managed-RO NMA → witness extraction via the replay forking
-   lemma and special soundness), composed in `euf_cma_bound`.
+   exposes `euf_cma_to_nma` (CMA → managed-RO NMA via HVZK simulation, for the
+   NMA adversary `cmaToNmaAdv`) and `euf_nma_bound` (managed-RO NMA → witness
+   extraction via the replay forking lemma and special soundness, for the
+   witness finder `nmaReduction`), composed in `euf_cma_bound` for
+   `cmaReduction`. The reductions are named in every statement:
+   `∃ reduction, bound ≤ Pr[= true | hardRelationExp hr reduction]` holds
+   trivially, because a classical choice of witness per statement succeeds with
+   probability `1`.
 4. **Forking lemma:** the replay-based forking lemma lives in
    [`VCVio/CryptoFoundations/ReplayFork.lean`](../../VCVio/CryptoFoundations/ReplayFork.lean)
    and is specialized to Fiat-Shamir managed-RO traces in
@@ -39,7 +44,7 @@ The combined statement, `Schnorr.signature_euf_cma`, instantiates
 Pointcheval-Stern bound
 
 ```
-ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ B succeeds in dlogExp g ],
+ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ dlogReduction adv qH succeeds in dlogExp g ],
 ε' := ε  -  qS · (qS + qH) / |F|,
 ```
 
