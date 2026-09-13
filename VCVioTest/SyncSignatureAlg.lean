@@ -167,7 +167,7 @@ verifier accepts both signatures, although its signer returns only one signature
 -/
 
 
-namespace SyncSignatureSecurity.Probe
+namespace SyncSignatureUnforgeability.Probe
 
 open OracleComp OracleSpec
 
@@ -287,4 +287,4 @@ theorem strongUnforgeableExp_post_runtime [DecidableEq E] [DecidableEq M] [Decid
     strongUnforgeableExp alg runtime adv =
       𝒟[strongValid alg <$> runtime.evalSPMF (interaction alg adv)] := rfl
 
-end SyncSignatureSecurity.Probe
+end SyncSignatureUnforgeability.Probe

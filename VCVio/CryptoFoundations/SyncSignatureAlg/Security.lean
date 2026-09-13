@@ -33,7 +33,7 @@ it is sufficient for both validity checks, but is not a chronological log of all
 
 public section
 
-namespace SyncSignatureSecurity
+namespace SyncSignatureUnforgeability
 
 open OracleSpec OracleComp ENNReal
 
@@ -273,4 +273,4 @@ theorem advantage_le_strongAdvantage
     ← probEvent_eq_eq_probOutput, probEvent_map]
   exact probEvent_mono fun out _ h => strongValid_of_valid alg out h
 
-end SyncSignatureSecurity
+end SyncSignatureUnforgeability

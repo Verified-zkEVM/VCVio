@@ -50,8 +50,8 @@ Their correctness predicates range over every runtime-producible key or finite o
 Returned failure and missing runtime mass count against correctness; moving the observation into
 the surface computation requires the explicit runtime laws. Empty and repeated tuples are retained.
 
-The security modules expose `SyncSignatureSecurity.unforgeableExp`,
-`SyncSignatureSecurity.strongUnforgeableExp` and `SyncMultiSignatureSecurity.unforgeableExp`.
+The unforgeability modules expose `SyncSignatureUnforgeability.unforgeableExp`,
+`SyncSignatureUnforgeability.strongUnforgeableExp` and `SyncMultiSignatureUnforgeability.unforgeableExp`.
 These Boolean output measures apply the winning observation after runtime evaluation. The single
 strong notion tests exact returned message/signature-pair freshness; the regular notions test
 message freshness. An eligible failed request consumes its epoch, and duplicate requests preserve

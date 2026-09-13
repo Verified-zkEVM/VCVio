@@ -254,10 +254,10 @@ multiplicity, returned failure and missing mass. The toy schemes are deliberatel
 -/
 
 
-namespace SyncMultiSignatureSecurity.Probe
+namespace SyncMultiSignatureUnforgeability.Probe
 
 open OracleComp OracleSpec
-open SyncSignatureSecurity (History emptyHistory signingSpec)
+open SyncSignatureUnforgeability (History emptyHistory signingSpec)
 
 /-- Only key zero is generated; every aggregate is accepted. Signing `true` returns failure. -/
 @[expose] def toy : SyncMultiSignatureAlg ProbComp Bool Nat Unit Bool Bool Bool where
@@ -432,4 +432,4 @@ theorem unforgeableExp_post_runtime [DecidableEq E] [DecidableEq M] [DecidableEq
     unforgeableExp alg runtime adv =
       𝒟[valid alg <$> runtime.evalSPMF (interaction alg adv)] := rfl
 
-end SyncMultiSignatureSecurity.Probe
+end SyncMultiSignatureUnforgeability.Probe

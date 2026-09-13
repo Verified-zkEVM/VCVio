@@ -28,10 +28,10 @@ admissible adversary classes when applying bounds, separately from this semantic
 
 public section
 
-namespace SyncMultiSignatureSecurity
+namespace SyncMultiSignatureUnforgeability
 
 open OracleSpec OracleComp ENNReal
-open SyncSignatureSecurity (History emptyHistory signingSpec)
+open SyncSignatureUnforgeability (History emptyHistory signingSpec)
 
 universe u
 
@@ -39,10 +39,10 @@ variable {M PK SK S A E : Type}
 
 /-- An adversary-chosen ordered participant tuple, epoch, message and aggregate signature. -/
 structure Forgery (PK E M A : Type) where
-  /-- The participant count may be zero. -/
-  count : ℕ
+  /-- The participant arity may be zero. -/
+  arity : ℕ
   /-- Public keys retain their order and multiplicity. -/
-  pks : Fin count → PK
+  pks : Fin arity → PK
   /-- The candidate's synchronized epoch. -/
   ep : E
   /-- The candidate's common message. -/
@@ -72,8 +72,8 @@ theorem fresh_used [DecidableEq M] (history : History E M S) (ep : E)
 /-- The projection after an eligible request records its message independently of the answer. -/
 theorem messageHistory_record_unused [DecidableEq E] (history : History E M S)
     (ep : E) (msg : M) (answer : Option S) (h : history ep = none) :
-    messageHistory (SyncSignatureSecurity.record history ep msg answer) ep = some msg := by
-  simp [messageHistory, SyncSignatureSecurity.record_unused history ep msg answer h]
+    messageHistory (SyncSignatureUnforgeability.record history ep msg answer) ep = some msg := by
+  simp [messageHistory, SyncSignatureUnforgeability.record_unused history ep msg answer h]
 
 /-- At least one index must carry the challenger key; other keys are unrestricted. -/
 @[expose] def containsKey [DecidableEq PK] {k : ℕ} (pks : Fin k → PK) (pk : PK) : Bool :=
@@ -230,14 +230,4 @@ theorem outputMeasure_eq_runtime [DecidableEq E]
       Pr[= true | runtime.evalSPMF (winCondition <$> interaction alg adv)] := by
   rw [outputMeasure_apply_singleton, hfactor]
 
-/-- A bound for an explicit adversary class also holds for every subclass. -/
-theorem advantage_bound_of_subset [DecidableEq E] [DecidableEq M] [DecidableEq PK]
-    (alg : SyncMultiSignatureAlg (OracleComp spec) M PK SK S A E)
-    (runtime : ProbCompRuntime (OracleComp spec))
-    (admissible restricted : Set (Adversary spec PK E M S A)) (ε : ℝ≥0∞)
-    (hbound : ∀ adv ∈ admissible, advantage alg runtime adv ≤ ε)
-    (hsubset : restricted ⊆ admissible) :
-    ∀ adv ∈ restricted, advantage alg runtime adv ≤ ε :=
-  fun adv h => hbound adv (hsubset h)
-
-end SyncMultiSignatureSecurity
+end SyncMultiSignatureUnforgeability
