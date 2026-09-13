@@ -106,13 +106,15 @@ unforgeability does not occur in the development.
 
 ## Labels
 
-Fifty-two declarations, twenty-six of them about a probability.
+Fifty-four declarations, twenty-eight of them about a probability.
 
 *Experiment split* — a statement about a probability of an experiment, or about what one run of
 one produced:
 
-* `instrumentedEufExp`, `instrumentedEufExp_fst`, `advantage_le_arms`;
-* `instrumentedSameMessageExp`, `instrumentedSameMessageExp_fst`, `sameMessageAdvantage_le_arms`;
+* `instrumentedEufExp`, `instrumentedEufExp_fst`, `instrumentedEufExp_const`,
+  `advantage_le_arms`;
+* `instrumentedSameMessageExp`, `instrumentedSameMessageExp_fst`,
+  `instrumentedSameMessageExp_const`, `sameMessageAdvantage_le_arms`;
 * `forsHalf`, `hypertreeHalf`, `advantage_le_forsHalf_add_hypertreeHalf`;
 * `freshRandomizerHalf`, `sameRandomizerHalf`,
   `sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer`;
@@ -145,15 +147,16 @@ key, a message, a signature and witness data:
 * `freshRandomizer_notMem_embedTargets`, `freshRandomizer_wins_or_uncovered`,
   `sameRandomizer_of_randomizerLogged`, `itsrFresh_or_sameRandomizer_external`.
 
-Those fifty-two are the module's whole interface; none is `private`, and `generalAlg` is the one
+Those fifty-four are the module's whole interface; none is `private`, and `generalAlg` is the one
 that carries `@[expose]`.
 
-The six generic declarations of the first section are stated over an arbitrary `SignatureAlg` and
-are not SLH-DSA-specific.  They are here rather than in `VCVio.CryptoFoundations.SignatureAlg`
-because this slice already edits one merged module; promoting them is a six-declaration move that
-would leave the two selectors behind as the only SLH-DSA content, and it is left to the maintainer.
-None of the six mentions an SLH-DSA type; the target file, if they move, is
-`VCVio/CryptoFoundations/SignatureAlg.lean`, beside the two experiments whose bodies they duplicate.
+The eight generic declarations of the first section are stated over an arbitrary `SignatureAlg`
+and are not SLH-DSA-specific.  They are here rather than in
+`VCVio.CryptoFoundations.SignatureAlg` because this slice already edits one merged module;
+promoting them is an eight-declaration move that would leave the two selectors behind as the only
+SLH-DSA content, and it is left to the maintainer.  None of the eight mentions an SLH-DSA type; the
+target file, if they move, is `VCVio/CryptoFoundations/SignatureAlg.lean`, beside the two
+experiments whose bodies they duplicate.
 
 ## References
 
@@ -246,6 +249,37 @@ theorem instrumentedEufExp_fst {sigAlg : SignatureAlg (OracleComp spec) M PK SK 
   simp
 
 omit [DecidableEq M] [DecidableEq S] in
+/-- **The selector equation.**  At a constant selector the recorded bit is that constant.
+
+The projection equation above says what the first component of a run is.  This says what the
+second one is, at the selectors whose value is fixed in advance.  With it and its same-message
+twin absent nothing in the repository says anything about the second component at all, and the
+final `return` may discard the selector it is handed or negate it: three edits of that line were
+measured in that configuration — `sel pk sk msg σ || true`, a literal `true` with the binder
+renamed `_sel`, and `!sel pk sk msg σ` — and each elaborates this module and its fixture with zero
+errors and zero warnings.  On the first, `hypertreeHalf` is provably `0` and `forsHalf` provably
+the advantage it splits, both proved in Lean on that mutant, so the dispatch split reads
+`a ≤ a + 0` while all eight half-bounds below hold; on the third the recorded bit is provably the
+selector's negation at both experiments, which exchanges the two names of each split — the class
+the four `example`s exist to refuse, reached where they cannot see it.  With this theorem present
+and the twin absent, each of the three gives one error here.
+
+What it does not pin is which of a run's values the selector is applied to; the paragraph beside
+the four halves says what that leaves open.
+
+*Experiment split.* -/
+theorem instrumentedEufExp_const {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
+      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
+    (adv : unforgeableAdv sigAlg) (b : Bool) :
+    instrumentedEufExp runtime adv (fun _ _ _ _ => b) =
+      (fun x => (x, b)) <$> unforgeableExp runtime adv := by
+  rw [unforgeableExp, instrumentedEufExp, ← h_pull fun x => (x, b)]
+  congr 1
+  simp
+
+omit [DecidableEq M] [DecidableEq S] in
 /-- **The dispatch split, generically.**  The advantage is at most the sum of the two selector
 branches of the success event.
 
@@ -311,6 +345,27 @@ theorem instrumentedSameMessageExp_fst {sigAlg : SignatureAlg (OracleComp spec) 
     runtime.evalSPMF (sameMessageStrongUnforgeableGame adv) =
       Prod.fst <$> instrumentedSameMessageExp runtime adv sel := by
   rw [instrumentedSameMessageExp, ← h_pull Prod.fst]
+  congr 1
+  rw [sameMessageStrongUnforgeableGame]
+  simp
+
+omit [DecidableEq M] [DecidableEq S] in
+/-- The selector equation for the same-message experiment.
+
+The same three edits at this experiment's last line are silent in the same way, and this is the
+statement that refuses them: with it present and `instrumentedEufExp_const` absent, each gives one
+error here.  With both present each gives two, one per experiment.
+
+*Experiment split.* -/
+theorem instrumentedSameMessageExp_const
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
+      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
+    (adv : strongUnforgeableAdv sigAlg) (b : Bool) :
+    instrumentedSameMessageExp runtime adv (fun _ _ _ => b) =
+      (fun x => (x, b)) <$> runtime.evalSPMF (sameMessageStrongUnforgeableGame adv) := by
+  rw [instrumentedSameMessageExp, ← h_pull fun x => (x, b)]
   congr 1
   rw [sameMessageStrongUnforgeableGame]
   simp
@@ -744,14 +799,26 @@ half is provably *equal* to the advantage it splits, which was checked by provin
 mutant, so the split reads `a ≤ a + a` and `forsHalf_le_advantage` reads `a ≤ a`; on the first,
 `Pr[sel = true] + Pr[sel = false]` is the experiment's total mass and dominates every event.
 
-The two families together make each half an event of the success bit *and* of its own selector bit:
-bounded above by the advantage, above by its own branch, and below — as a pair — by the split.
+The two families together bound each half above by the advantage, above by its own branch, and
+below — as a pair — by the split, which makes it an event of the success bit and of the bit the
+experiment recorded.  Whether the recorded bit is the selector's own value is one level down and
+not these eight theorems' question: a `return` that discarded or negated the selector leaves all
+eight provable.  `instrumentedEufExp_const` and its twin are that question's answer.
+
 What they do not pin is the *selector argument*, which is named in this module and which a paired
 edit of this module could therefore move throughout; the four `Pins` entries at which the test
 module restates the branch bounds do pin it, being in a file no library-side edit touches.  A module
 whose two halves of one split are taken at a constant selector rather than at `forsArm` or
 `randomizerLogged` elaborates here with zero errors and fails exactly that split's two `Pins`
-entries, with a `Type mismatch` each. -/
+entries, with a `Type mismatch` each.
+
+One layer below all of these is refused by nothing, here or in the test module: which of a run's
+values each selector is applied to.  Passing the signing log's first message, where the log has
+one, in place of the message the adversary returned — in both experiments' last lines — leaves the
+two projection equations, the two selector equations, all eight bounds, both splits, the four
+`example`s and every fixture pin silent: measured, zero errors and zero warnings in both modules.
+Refusing it needs a law about the joint distribution of a run's key pair, message and signature,
+which this slice does not state; it is recorded here rather than closed. -/
 
 /-- The FORS half is at most the advantage it splits.
 

@@ -589,8 +589,9 @@ byte rather than two and is separated from the real map by the transcript alone;
 of the strong-unforgeability residual are run at the embedded transcript, with each of the five
 conjuncts the logged branch yields asserted on its own and three of them falsified alone.  Nothing
 probabilistic is run: every advantage and both instrumented experiments are `noncomputable`, so the
-two splits, and the eight theorems bounding each half by the advantage it splits and by its own
-branch, are pinned by elaboration only. -/
+two splits, the eight theorems bounding each half by the advantage it splits and by its own branch,
+and the two equations saying what each experiment records at a constant selector, are pinned by
+elaboration only. -/
 lean_exe slhdsa_scheme_game_tests where
   root := `HashSigTest.SLHDSA.SchemeGames
 

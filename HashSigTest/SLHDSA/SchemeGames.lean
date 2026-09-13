@@ -24,8 +24,9 @@ generic union bounds, the two splits, the library's exact partition at the canon
 four-term bound, the four bounding each half by the advantage it splits, the four bounding each half
 by its own branch, and perfect completeness — have no runtime coverage at all and cannot be given
 any.  They are pinned by elaboration, in `Pins`, and their content is checked by mutation testing,
-by the two pairs of `example`s the library module carries beside the halves, and by those eight
-half-bounding theorems, which the `example`s cannot replace.
+by the two pairs of `example`s the library module carries beside the halves, by those eight
+half-bounding theorems, which the `example`s cannot replace, and by the two selector equations,
+which neither the `example`s nor the eight can reach.
 A reader of the lane's other fixtures will expect runtime coverage of the headline; there cannot
 be any, and every executable check below is therefore about the *deterministic* data
 the two splits are instrumented with.
@@ -157,11 +158,15 @@ The dispatch bit is not compared against any bound, and no half is evaluated: th
 `noncomputable`.  Whether the four names `forsHalf`, `hypertreeHalf`, `sameRandomizerHalf` and
 `freshRandomizerHalf` are attached to the right branches is settled inside the library module, by
 four `example`s — two per split — that see the unexposed bodies, and not here: an importing module
-cannot state that equation at all.  That each half is an event of the success bit *and* of its own
-selector bit is settled there too, and by eight theorems rather than by those `example`s, for a
-reason this file cannot repair: an `example … := rfl` moves with the body it is `rfl` against, so a
-paired weakening of all four halves survives it, survives every check below, and survives this
-executable.  What this file adds to those eight is the selector argument: the four `Pins` entries
+cannot state that equation at all.  That each half is an event of the success bit *and* of the bit
+its experiment recorded is settled there too, and by eight theorems rather than by those
+`example`s, for a reason this file cannot repair: an `example … := rfl` moves with the body it is
+`rfl` against, so a paired weakening of all four halves survives it, survives every check below,
+and survives this executable.  That the recorded bit is the selector's own value rather than its
+negation or a constant is one level down again, and is `instrumentedEufExp_const` and its twin;
+which of a run's values the selector is applied to is refused by nothing in either module, and the
+library module's own paragraph records that rather than claiming it.  What this file adds to those
+eight is the selector argument: the four `Pins` entries
 restating the branch bounds name `forsArm` and `randomizerLogged`, so a library-side edit taking one
 split's two halves at another selector fails that split's two of them here, `Type mismatch` each,
 although it leaves the library module elaborating with zero errors.  Nothing here says that any
@@ -170,7 +175,7 @@ either half is bounded by anything.
 
 ## The pins
 
-Every one of the fifty-two declarations the library module exports appears as an `example` at
+Every one of the fifty-four declarations the library module exports appears as an `example` at
 this bundle's types, with generic arguments where the statement has them.  Seven further `example`s
 are the profile's own `decide` pins, inherited with the copied block.
 -/
@@ -850,7 +855,7 @@ def checkBranches : IO Unit := do
 
 /-! ## The pins
 
-Every one of the fifty-two declarations the library module exports, as an `example` at this
+Every one of the fifty-four declarations the library module exports, as an `example` at this
 bundle's types, with generic arguments where the statement has them. -/
 
 section Pins
@@ -883,6 +888,11 @@ example : unforgeableExp ProbCompRuntime.probComp adv =
   instrumentedEufExp_fst ProbCompRuntime.probComp
     (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv sel
 
+example (b : Bool) : instrumentedEufExp ProbCompRuntime.probComp adv (fun _ _ _ _ => b) =
+    (fun x => (x, b)) <$> unforgeableExp ProbCompRuntime.probComp adv :=
+  instrumentedEufExp_const ProbCompRuntime.probComp
+    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv b
+
 example : adv.advantage ProbCompRuntime.probComp ≤
     Pr[fun x => x.1 = true ∧ x.2 = true | instrumentedEufExp ProbCompRuntime.probComp adv sel] +
     Pr[fun x => x.1 = true ∧ x.2 = false | instrumentedEufExp ProbCompRuntime.probComp adv sel] :=
@@ -893,6 +903,13 @@ example : ProbCompRuntime.probComp.evalSPMF (sameMessageStrongUnforgeableGame sa
     Prod.fst <$> instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel :=
   instrumentedSameMessageExp_fst ProbCompRuntime.probComp
     (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) sadv lsel
+
+example (b : Bool) :
+    instrumentedSameMessageExp ProbCompRuntime.probComp sadv (fun _ _ _ => b) =
+      (fun x => (x, b)) <$>
+        ProbCompRuntime.probComp.evalSPMF (sameMessageStrongUnforgeableGame sadv) :=
+  instrumentedSameMessageExp_const ProbCompRuntime.probComp
+    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) sadv b
 
 example : sadv.sameMessageAdvantage ProbCompRuntime.probComp ≤
     Pr[fun x => x.1 = true ∧ x.2 = true |
