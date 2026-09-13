@@ -196,6 +196,14 @@ theorem toyValid : toyParams.Valid := by decide
 /-- The validated form of `toyParams`. -/
 @[expose] def toy : ValidatedParams := ⟨toyParams, toyValid⟩
 
+example : toyParams.w = 16 := by decide
+example : toyParams.len = 4 := by decide
+example : toyParams.m = 3 := by decide
+example : toyParams.digestBytes = 1 := by decide
+example : toyParams.treeIdxBytes = 1 := by decide
+example : toyParams.leafIdxBytes = 1 := by decide
+example : toyParams.t = 2 := by decide
+
 /-- The exclusive-or fold the SUF residual fixture's `H_msg` reads a message through.  Nothing in
 this bundle uses it.  It is here so that `checkFixture` can assert what it cannot see: prefixing two
 `0x00` bytes leaves it unchanged, at every message, so at that fixture's bundle the external-message
