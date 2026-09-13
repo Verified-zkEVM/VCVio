@@ -58,8 +58,11 @@ log's keys are the raw `msg`.  Two consequences, both of which a statement can g
 type error.
 
 * `forsArm` must split the digest of the *internal* message.  A selector applied to the raw `msg`
-  is a different, silently wrong predicate: it still has type `Bool`, every statement below still
-  elaborates, and only a fixture at a bundle whose `H_msg` reads its message separates the two.
+  is a different, silently wrong predicate: it still has type `Bool`, and every statement below
+  still elaborates.  What separates the two is a fixture at a bundle whose `H_msg` can see two
+  prefixed zero bytes — which is a real condition and not an automatic one: the fixture this lane
+  inherited folds a message by exclusive-or, which cannot, and `HashSigTest.SLHDSA.SchemeGames`
+  asserts that blindness before replacing the fold.
 * The `H_msg` transcript a reduction records is the transcript of the *internal* messages, so the
   log has to be internalised before `HashSig.SLHDSA.Security.SufResidual`'s transport lemmas apply
   to it.  `internalLog` is that map and `loggedSignatures_internalLog` is what makes it harmless:
@@ -82,8 +85,9 @@ either half of either split by a hardness advantage.  In particular:
   and differing in one of the two component halves — the four facts of the right disjunct of
   `itsrFresh_or_sameRandomizer`, which is a statement about two adversarial signatures and not
   about honest committed material.
-* The secret key the selectors read is the experiment's, so neither split says anything about what
-  a reduction that does not hold the secret key can observe.
+* The secret key the *dispatch* selector reads is the experiment's, so that split says nothing about
+  what a reduction which does not hold the secret key can observe.  The same-message selector reads
+  only the signing log, which such a reduction does hold — and bounds nothing either.
 * No PRF hop is taken: `generalAlg` derives its FORS secret values and its message randomizer from
   the seeds through `prims.PRF` and `prims.PRFmsg`, exactly as `GeneralScheme` does.
 
