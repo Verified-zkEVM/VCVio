@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+import all LatticeCrypto.Falcon.Concrete.FloatLike
 public import LatticeCrypto.Falcon.Concrete.FloatLike
 public import Extern.Falcon.FPRBridge
 public import Mathlib.Analysis.SpecialFunctions.Pow.Real
@@ -356,18 +357,24 @@ noncomputable instance : FloatLike.HasRealSemantics FPR ieee754_machineEpsilon w
   valid_one := Falcon.Concrete.FPRBridge.FPR.isNormalOrZero_one
   inRange_of_valid := fun _ h =>
     Falcon.Concrete.FPRBridge.FPR.inNormalMagnitudeRange_toReal_of_isNormalOrZero h
-  add_error := Falcon.Concrete.FPRBridge.add_error
+  add_error := by
+    simpa only [ieee754_machineEpsilon, FloatLike.add] using Falcon.Concrete.FPRBridge.add_error
   add_valid := Falcon.Concrete.FPRBridge.add_isNormalOrZero
-  mul_error := Falcon.Concrete.FPRBridge.mul_error
+  mul_error := by
+    simpa only [ieee754_machineEpsilon, FloatLike.mul] using Falcon.Concrete.FPRBridge.mul_error
   mul_valid := Falcon.Concrete.FPRBridge.mul_isNormalOrZero
-  div_error := fun a b ha hb hbne hr => Falcon.Concrete.FPRBridge.div_error a b hbne ha hb hr
+  div_error := fun a b ha hb hbne hr => by
+    simpa only [ieee754_machineEpsilon, FloatLike.div] using
+      Falcon.Concrete.FPRBridge.div_error a b hbne ha hb hr
   div_valid := fun a b ha hb hbne hr =>
     Falcon.Concrete.FPRBridge.div_isNormalOrZero a b hbne ha hb hr
-  sqrt_error := Falcon.Concrete.FPRBridge.sqrt_error
+  sqrt_error := by
+    simpa only [ieee754_machineEpsilon, FloatLike.sqrt] using Falcon.Concrete.FPRBridge.sqrt_error
   sqrt_valid := Falcon.Concrete.FPRBridge.sqrt_isNormalOrZero
   neg_exact := Falcon.Concrete.FPRBridge.toReal_neg
   neg_valid := fun _ => Falcon.Concrete.FPRBridge.FPR.isNormalOrZero_neg
-  sub_error := Falcon.Concrete.FPRBridge.sub_error
+  sub_error := by
+    simpa only [ieee754_machineEpsilon, FloatLike.sub] using Falcon.Concrete.FPRBridge.sub_error
   sub_valid := Falcon.Concrete.FPRBridge.sub_isNormalOrZero
 
 end
