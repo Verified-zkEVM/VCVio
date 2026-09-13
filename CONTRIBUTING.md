@@ -13,6 +13,10 @@ Before sending work for review:
 - Run `lake exe cache get && lake build`.
 - After adding new `.lean` files, run `./scripts/update-lib.sh`.
 - Avoid leaving `sorry` in finished work unless the change is explicitly meant to preserve partial work.
+- State security reductions for a named reduction, simulator, or extractor, not for one that merely
+  exists. Adversary types carry no resource bound and Lean can choose witnesses classically, so
+  `∃ B, bound ≤ advantage B` holds for every scheme. See
+  [Name the reduction in the theorem statement](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
 - Keep repo-wide Lean options in `lakefile.lean`. Do not restate `autoImplicit = false` with per-file `set_option` lines.
 - Do not disable linters locally or globally to make warnings disappear. Fix the underlying issue instead of adding `set_option linter.* false`, `set_option weak.linter.* false`, or repo-level linter suppressions.
 

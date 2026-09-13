@@ -59,7 +59,7 @@ omit [Fintype Stmt] [Fintype Commit] [Fintype Resp] [Fintype Chal]
 EUF-CMA adversary against simulated signing transcripts and a managed random oracle, then issue
 one live random-oracle query at the forgery's hash point. -/
 abbrev cmaToNmaAdv
-    [DecidableEq M] [DecidableEq Commit] [SampleableType Stmt] [SampleableType Wit]
+    [DecidableEq M] [DecidableEq Commit]
     [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (adv : SignatureAlg.unforgeableAdv
@@ -395,7 +395,7 @@ NMA-to-witness reduction `nmaReduction` applied to the CMA-to-NMA adversary `cma
 with fork slot parameter `qH`. -/
 abbrev cmaReduction
     [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
-    [SampleableType Stmt] [SampleableType Wit] [SampleableType Chal]
+    [SampleableType Wit] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
