@@ -128,6 +128,8 @@ or `VCVioTest/`. This contract is enforced by
 
 10. **`PMF`/`SPMF` is a retiring surface, not a coequal representation.** New semantic code uses `Measure`/`Kernel` and the measure-backed `Pr{...}[...]` notation. Local `SPMF`, `evalSPMF`, and the legacy scalar evaluation functions are deprecated. Mathlib owns `PMF`, so VCVio cannot attach Lean's `deprecated` attribute to that imported declaration; `ToMathlib.Lint.usesRetiredProbability` detects direct use of it, alongside the local deprecated declarations. The exact `scripts/nolints.json` entries track existing dependent declarations and must shrink as they migrate. Compiler deprecation warnings remain visible in Lean; the build warning budget delegates only these tagged warnings to the environment linter. The old source-count script has been removed. See `docs/reading/denotational-probability-semantics.md`.
 
+11. **Name the reduction in security theorems.** Write `bound ≤ Pr[= true | exp (myReduction adv)]`, never `∃ B, bound ≤ Pr[= true | exp B]`. Adversary types such as `X → ProbComp W` carry no resource bound, and `Classical.choice` can pick a witness directly, so the existential form holds for every scheme and passes the axiom sweep. The same applies to simulators (`∃ sim ζ, HVZK sim ζ` holds with `ζ := 1`), extractors, and distinguishers. If the reduction does not exist yet, use a named `sorry` definition or a warned placeholder instead. See [`docs/agents/crypto.md`](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
+
 For the full list, see `docs/agents/gotchas.md`.
 
 ## Naming Conventions
