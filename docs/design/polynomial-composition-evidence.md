@@ -76,8 +76,14 @@ remain separate from review checkouts.
 | VCVio #684 | Verified source branches and refreshed documentation and validation instructions; documentation checks and CI pass. | Merged as `3ecdb0a606a874d7d2332a18d966af3570eca82b`. |
 | VCVio #694 | Full combined validation and fresh CI pass. | Merged as `2b7d667fc44e3103d628b6d610d7443cf4befcef`. |
 | PolyFun #205 | Public routed-packet observations support VCVio state/packet/schedule transport. Full validation and style checks pass with zero trust debt. | Merged as `f6d49cfa38f02ef5872e8c2ba4380793dc2d8dc8`. |
-| VCVio #695–696 | The combined stack passes full validation: 18,243 declarations across 594 modules, 40 existing sorry-tainted declarations, zero nonstandard-axiom taint. | Rewritten heads are receiving fresh checks after intervening main changes. |
-| VCVio #572 | Current-main integration passes full validation and optional backend checks: 18,382 declarations across 598 modules. | Published atop #696; after #694 merged, the rewritten tree is identical to the validated candidate. |
+| VCVio #695 | Rewritten source tree equals the fully validated candidate; fresh CI passes. | Merged as `c2519daa8818ac8ed4978060a0aa660b9605f09d`. |
+| VCVio #696 | Rewritten source tree equals the fully validated candidate; fresh CI passes. | Merged as `58d44e16c09b1c24b585fa5cacc4067581034b6b`. |
+| VCVio #572 | Current-main integration passes full validation and optional backend checks: 18,382 declarations across 598 modules. | Merged as `963706b6f81e36f826736b44def0cad8cf051e1c`; its complete tree equals the validated scheduler candidate. |
+
+All 20 PRs selected for the original consolidation are merged. New generic support PRs #205 and
+#206 are also merged. PolyFun #206 is `a40f295a50f10f3217b3b9a51eb88c77125acd20`; its dispatcher
+passes full validation and source style with 11,445 declarations across 296 modules and zero
+trust debt. The public pure-polynomial observation equation is published in #207.
 
 GitHub's native stacked-PR merge endpoint rewrites and retargets descendants automatically.
 Preserve the original references, fetch each rewritten head, compare its complete source tree,
@@ -91,7 +97,7 @@ or merge-queue entry is not a completed merge.
 | Sequential substitution | Measurable coupling bind, explicit residual mass | State-law handler contracts | Validated; PRF reader discard uses the residual rule |
 | Indexed wiring | Local contracts imply a whole wired-program bound | PRF tag/reader, cached/eager oracle | Kernel contracts and Gaussian wiring validated; full PRF wiring contracts remain |
 | System composition | Routed execution transports schedules, packets and samplers | Bounded PRF network | FIFO runtime, identity transport and serial PRF consumer validated; raw open-syntax factorization remains |
-| Quantitative substitution | Executable normalization and derived resource bounds | ElGamal and exact-backend canary | Pending |
+| Quantitative substitution | Executable normalization and derived resource bounds | ElGamal and exact-backend canary | Operational dispatcher and ElGamal erasure compile; backend closure remains |
 
 ## Acceptance boundaries
 
@@ -177,3 +183,25 @@ Full combined validation passes (`/private/tmp/vcvio-packet-runtime-validation.l
 18,615 declarations across 618 modules, 40 existing sorry-tainted declarations, zero nonstandard
 axiom taint, and all lint and test gates green. The generic packet API separately passes PolyFun's
 full validation and style checks (11,395 declarations across 295 modules, zero trust debt).
+
+## Validated handler execution consumers
+
+PolyFun's `FreeM.HandlerMachine` retains an unfinished caller or handler after any fuel prefix,
+counts administrative entry/return and inner queries separately, and proves exact semantic
+resumption. Component query bounds derive completion without assuming a bound on the completed
+execution. `Examples/ElGamal/HandlerExecution.lean` consumes the derived `3 * (inner + 2)` fuel
+bound and recovers the existing reduction's full adaptive oracle program after result erasure.
+
+The optional backend now has exact word copying and sum/option tagging for arbitrary trusted
+representations. These machines take `n + 2` or `n + 3` transitions on every raw binary word.
+`VCVioComplexityTest/Backend/HandlerCanary.lean` realizes a completed uniform echo-handler call
+on arbitrary-length input. The derived work is `2n + 7`, state size is `n + 1`, and readout size is
+`n + 2`; the kernel trust probe permits only the standard extensionality, choice and quotient
+principles. This realization specializes the echo program: it does not compile arbitrary
+callers or handlers. General backend iteration and handler-resource closure remain obligations.
+
+Full root validation passes at this checkpoint: 18,619 declarations across 619 modules,
+40 existing sorry-tainted declarations and zero nonstandard-axiom taint. The optional backend
+build and trust checks pass, with only the recorded upstream compatibility blockers. Logs are
+`/private/tmp/vcvio-handler-consumers-validation.log` and
+`/private/tmp/vcvio-handler-canary-validation.log`.
