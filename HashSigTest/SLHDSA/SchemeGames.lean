@@ -157,7 +157,7 @@ either half is bounded by anything.
 
 ## The pins
 
-Every one of the forty-three declarations the library module exports appears as an `example` at this
+Every one of the forty-four declarations the library module exports appears as an `example` at this
 bundle's types, with generic arguments where the statement has them.  Seven further `example`s are
 the profile's own `decide` pins, inherited with the copied block.
 -/
@@ -822,7 +822,7 @@ def checkBranches : IO Unit := do
 
 /-! ## The pins
 
-Every one of the forty-three declarations the library module exports, as an `example` at this
+Every one of the forty-four declarations the library module exports, as an `example` at this
 bundle's types, with generic arguments where the statement has them. -/
 
 section Pins
@@ -873,6 +873,9 @@ example : sadv.sameMessageAdvantage ProbCompRuntime.probComp ≤
       instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel] :=
   sameMessageAdvantage_le_arms ProbCompRuntime.probComp
     (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) sadv lsel
+
+example : (generalAlg (vp := toy) toyPrimitives).PerfectlyComplete ProbCompRuntime.probComp :=
+  generalAlg_perfectlyComplete
 
 example : (generalAlg (vp := toy) toyPrimitives).keygen = (do
     let skSeed ← $ᵗ toyPrimitives.SkSeed

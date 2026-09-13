@@ -87,6 +87,9 @@ either half of either split by a hardness advantage.  In particular:
 * No PRF hop is taken: `generalAlg` derives its FORS secret values and its message randomizer from
   the seeds through `prims.PRF` and `prims.PRFmsg`, exactly as `GeneralScheme` does.
 
+What *is* established about the algebra itself is `generalAlg_perfectlyComplete`: honest signatures
+verify with probability one, so neither bound is a statement about a scheme that accepts nothing.
+
 ## Correspondence with the EasyCrypt development
 
 The dispatch selector is the case `valid_MFORSTWESNPRF <- pkFORS' = pkFORS` of `SPHINCS_PLUS.ec`,
@@ -99,7 +102,7 @@ unforgeability does not occur in the development.
 
 ## Labels
 
-Forty-three declarations, seventeen of them about a probability.
+Forty-four declarations, eighteen of them about a probability.
 
 *Experiment split* — a statement about a probability of an experiment, or about what one run of
 one produced:
@@ -111,7 +114,9 @@ one produced:
   `sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer`;
 * `strongAdvantage_eq_advantage_add_sameMessage`, `strongAdvantage_le_halves`;
 * `honestKey_of_mem_support`, `findWitness_isSome_of_mem_support`, `exists_witness_of_mem_support`,
-  the three that read the key pair off the support of key generation.
+  the three that read the key pair off the support of key generation;
+* `generalAlg_perfectlyComplete`, which is what keeps both bounds from being about a signature
+  algebra that verifies nothing.
 
 *Deterministic inclusion* — a statement whose free objects are a primitive bundle, seeds, a public
 key, a message, a signature and witness data:
@@ -131,7 +136,7 @@ key, a message, a signature and witness data:
 * `freshRandomizer_notMem_embedTargets`, `freshRandomizer_wins_or_uncovered`,
   `sameRandomizer_of_randomizerLogged`, `itsrFresh_or_sameRandomizer_external`.
 
-Those forty-three are the module's whole interface; none is `private`, and `generalAlg` is the one
+Those forty-four are the module's whole interface; none is `private`, and `generalAlg` is the one
 that carries `@[expose]`.
 
 The six generic declarations of the first section are stated over an arbitrary `SignatureAlg` and
@@ -419,6 +424,38 @@ theorem generalAlg_keygen_eq :
   refine bind_congr fun skSeed => bind_congr fun skPrf => bind_congr fun pkSeed => ?_
   rw [← GeneralScheme.keygenInternal_fst vp prims skSeed skPrf pkSeed,
     ← GeneralScheme.keygenInternal_snd vp prims skSeed skPrf pkSeed]
+
+/-- **The algebra is not vacuous.**  Every honest key pair, message and per-signature randomness
+produces a signature that verifies, with probability one.
+
+Both splits are upper bounds, so a signature algebra that verified nothing would satisfy them
+trivially; this is the statement that says it does not, and it is the reason `generalAlg` is a
+packaging of the real algorithms rather than three plausible-looking `do` blocks.
+
+The whole computation reduces to four uniform samples followed by `pure true`, because
+`GeneralScheme.verifyInternal_signInternal` holds at every choice of seeds, randomizer and message
+— there is no failure event to bound, and no `δ`.
+
+*Experiment split.* -/
+theorem generalAlg_perfectlyComplete :
+    (generalAlg prims).PerfectlyComplete ProbCompRuntime.probComp := by
+  intro msg
+  have hbody : (do
+      let (pk, sk) ← (generalAlg prims).keygen
+      let sig ← (generalAlg prims).sign pk sk msg
+      (generalAlg prims).verify pk msg sig) = (do
+      let _skSeed ← $ᵗ prims.SkSeed
+      let _skPrf ← $ᵗ prims.SkPrf
+      let _pkSeed ← $ᵗ prims.PkSeed
+      let _addrnd ← $ᵗ prims.Y
+      pure true) := by
+    rw [generalAlg_keygen]
+    simp only [generalAlg_sign, generalAlg_verify, bind_assoc, pure_bind]
+    refine bind_congr fun skSeed => bind_congr fun skPrf => bind_congr fun pkSeed => ?_
+    refine bind_congr fun addrnd => ?_
+    rw [GeneralScheme.verifyInternal_signInternal]
+  rw [hbody]
+  simp [ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
 
 /-- **The honest key pair, read off the support.**  On every run of key generation the published key
 is the honest one for the secret key that run produced: its seed is the secret key's public seed and
