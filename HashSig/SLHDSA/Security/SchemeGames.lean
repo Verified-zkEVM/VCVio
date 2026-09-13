@@ -854,17 +854,26 @@ seventy-seven runtime checks.  Zero errors and zero warnings in both modules hol
 for `||`, for `cond (sel … == sel …) (sel …) (!sel …)`, for a third application conjoined in and
 for `cond (log.wasQueried msg) (sel …) (sel …)`.
 
-One further law refuses part of the second direction and not the whole of it, which is why none was
-added.  Post-composition naturality in the selector — the experiment at
+One further law narrows the second direction without closing it, and is recorded here rather than
+stated.  Post-composition naturality in the selector — the experiment at
 `fun pk sk m s => g (sel pk sk m s)` is `fun x => (x.1, g x.2)` mapped over the experiment at `sel`,
 for any `g : Bool → Bool` — is provable here by the same `h_pull` argument the two selector
-equations take, and the `&&` and the `||` mutant both fail it, because `!a && !b` and `!(a && b)`
-differ.  The `cond` mutant satisfies it at all four `g : Bool → Bool`; with that law present and its
-one-line proof adjusted, the `cond` mutant is again zero errors and zero warnings in both modules.
-Adding it would therefore refuse two of the three and leave the third, which is the shape of
-over-claim the two selector equations have already made once.  Refusing the family needs a law about
-the joint distribution of a run's key pair, message and signature, which this slice does not state.
-Both directions are recorded here rather than closed. -/
+equations take.  It is not a canary beside them but a generalisation of them:
+`instrumentedEufExp_const` follows from it and the projection equation in three lines — the law at
+the constantly-`false` selector and a constant `g`, the projection equation at that same selector,
+and `Functor.map_map` — which elaborates here at zero errors, and gives two with the law taken back
+out.  Of the five shapes above it refuses three: the `&&`, the `||` and the third conjoined
+application each give one error, at the law itself, because `!a && !b` and `!(a && b)` differ.  The
+other two satisfy it — the `cond` shape at every `g : Bool → Bool`, and the run-value choice because
+post-composition passes through a `cond` — and each is back to zero errors and zero warnings in both
+modules once the law's `simp` is given the Boolean lemma it needs: `Bool.apply_cond` for the
+run-value choice, and for the `cond` shape one that has itself to be stated and proved, by
+decomposing `g` at `true` and `false` and deciding the four Booleans that remain.  So what the law
+offers is to replace the two selector equations by one statement and two corollaries, which is a
+change of exported shape rather than of what is proved, and it would leave the direction open
+either way.  Refusing the family outright needs a law about the joint distribution of a run's key
+pair, message and signature, which this slice does not state.  Both directions are recorded here
+rather than closed. -/
 
 /-- The FORS half is at most the advantage it splits.
 
