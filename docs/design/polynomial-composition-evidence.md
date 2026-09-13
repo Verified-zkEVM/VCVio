@@ -29,7 +29,10 @@ consumer uses the new theorem, the stated assumptions are checked, and validatio
 - [x] Derive concrete token/FIFO terminal experiments and their Measure observations, with
   behavior adequacy and a nonconstant-observation regression.
 - [ ] Add graded contextual composition for these reactive observations.
-- [ ] Complete PRF local contracts and a reactive OTP pilot with operational simulators.
+- [x] Implement a restricted reactive OTP pilot with an executable, environment-independent
+  simulator and counterexamples for plaintext leakage, key reuse, and execution hypotheses.
+- [ ] Complete PRF local contracts and extend the OTP pilot to separate channel/adversary
+  processes with the access and composition laws needed for broader UC.
 - [ ] Connect executable resource closure to permitted contexts and simulators.
 - [ ] Construct measurable infinite trajectories and prove truncation bounds.
 
@@ -75,6 +78,41 @@ passes against the published pin: 18,519 declarations across 620 modules, the sa
 sorry-tainted declarations, and zero nonstandard-axiom taint. The output-measure regression
 separates constant-false and constant-true networks. Full log:
 `/private/tmp/uc-vcvio-validation.log`. The broader unchecked obligations above remain active.
+
+## Operational and adversarial spike checkpoint (September 13)
+
+`Examples/OneTimePad/Reactive.lean` realizes a typed environment/service exchange through the
+existing `FreeM` and `DynComputation.ofFreeM` APIs. The environment retains its chosen input
+and private auxiliary state; only the message is routed to the service. Generic equations
+identify nine token activations and eleven FIFO activations with the same stateful conversation.
+The FIFO schedule charges both packet deliveries explicitly.
+
+`Reactive/Security.lean` proves a generic simulation theorem from correct decryption and a
+message-independent ciphertext law. Its OTP instance works at every bit width. One executable
+simulator is chosen before quantifying over the environments and their countable private state
+types. The ideal service stores the message, while the simulator samples ciphertext without
+a message argument and invokes the delivery adversary only on that ciphertext. A concrete
+downstream canary also transports this security observation through the cofree behavior map.
+
+`Reactive/Separation.lean` supplies independent negative evidence for both semantic premises:
+the correct but leaking service is distinguished from every simulator with probabilities
+1 versus 1/2; a service with uniform ciphertexts but incorrect decoding is distinguished with
+probabilities 1 versus 0. Uniform marginal ciphertext laws also coexist with distinguishable
+joint laws when the key is reused. `VCVioTest/ReactiveNetworkAdversarial.lean` refutes omission
+of delivery activations, sufficient fuel, an empty serial queue, and reply-preserving shared
+state conditions. The queue counterexample is proved reachable from a real FIFO prefix.
+
+The actor and adversary scope remains intentionally explicit: the sender, authenticated channel,
+and receiver are aggregated into one service; the delivery adversary is an atomic effectful
+program. This checkpoint does not assert general contextual composition, arbitrary side
+interactions, simulator efficiency, or a translation to conventional ITMs. The
+[semantic contract's counterexample matrix](uc-semantics.md#adversarial-evidence) records the
+proved boundaries and the remaining gates.
+
+Validation: `./scripts/validate.sh --lint --test --axioms` passes with 18,673 declarations across
+623 modules, the same 40 existing sorry-tainted declarations, and no nonstandard-axiom taint.
+No new lint baseline entries or test warnings were introduced. Full log:
+`/private/tmp/uc-semantic-spikes-validated.log`.
 
 ## Baseline and ownership
 

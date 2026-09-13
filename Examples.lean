@@ -26,6 +26,9 @@ public import Examples.OneTimePad.ComputationalComplexity
 public import Examples.OneTimePad.HeapBasic
 public import Examples.OneTimePad.HeapPar
 public import Examples.OneTimePad.LeakageFree
+public import Examples.OneTimePad.Reactive
+public import Examples.OneTimePad.Reactive.Security
+public import Examples.OneTimePad.Reactive.Separation
 public import Examples.OneTimePad.UC
 public import Examples.PRFTagReader
 public import Examples.PRFTagReader.Asymptotic

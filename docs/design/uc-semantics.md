@@ -89,6 +89,51 @@ A context-transforming function does not become an operational simulator just by
 name. Constant-zero and constant-one services must be distinguishable, and leaking plaintext must
 invalidate the OTP security claim.
 
+The first operational spike is now `Examples/OneTimePad/Reactive{,/Security,/Separation}.lean`.
+Its environment chooses a message jointly with private auxiliary state and observes the actual
+reply while retaining that state. The auxiliary state stays in the environment's continuation;
+only the message crosses the packet boundary. A separate
+service actor encrypts, obtains a ciphertext-only delivery decision, decrypts the retained
+ciphertext when permitted, and sends the reply. Token and FIFO execution agree with the same
+stateful conversation after nine and eleven activations, respectively. Uniform OTP has a fixed
+executable simulator for every such delivery adversary, simultaneously for all environments
+with countable private auxiliary state.
+The ideal service stores the message; the simulator's ciphertext sampler has no message input.
+
+This is a restricted single-use authenticated service model. The delivery adversary is an atomic
+effectful program, and sender, channel, and receiver are aggregated in the service actor. The
+result does not yet supply separate adversary/channel processes, arbitrary side interactions,
+graph/plug factorization, or PPT closure. Those remain the next gates for the broader UC claim.
+
+## Adversarial evidence
+
+Counterexamples test the boundaries of a definition as well as successful instances. They do
+not by themselves establish correspondence with a conventional UC model. The current spikes
+are checked theorems, rather than failures of a proof tactic:
+
+| Proposed invalid inference | Checked counterexample |
+| --- | --- |
+| Correct decryption implies security | `leakingSystem_correct` holds, but `leaking_tokenLaw_ne` and `leaking_fifoLaw_ne` separate the leaking service from **every** allowed simulator. The same random-message environment accepts with probability 1 versus 1/2. |
+| Ciphertext secrecy suffices without correct decryption | `brokenDecoder_ciphertext_uniform` holds, while `brokenDecoder_tokenLaw_ne` separates the service from every simulator by recognizing delivery of the wrong plaintext. |
+| Uniform ciphertext marginals imply joint secrecy | `reusedPair_first` and `reusedPair_second` give uniform marginals, while `reusedPair_laws_ne` distinguishes the joint laws under key reuse. |
+| Token and FIFO need the same fuel | The operational OTP spike finishes in nine token activations; its FIFO prefix of length nine remains unfinished. |
+| Scheduling a receiver suffices for delivery | A schedule activating both actors without a delivery leaves the environment unfinished. |
+| The serial comparison needs no queue premise | `serialRound_ne_token_with_pending` refutes that equation on a state reached by a real FIFO send. |
+| Equal final shared state permits reordering effects | `shared_state_equality_does_not_preserve_replies` has equal final states and different client replies. |
+
+The execution counterexamples are in `VCVioTest/ReactiveNetworkAdversarial.lean`; cryptographic
+separation theorems are in `Examples/OneTimePad/Reactive/Separation.lean`. Terminal-measure
+separation explicitly requires measurable singletons. The tests retain unfinished execution as
+`none`, rather than interpreting it as a failed security verdict or an abort.
+
+The concrete finite observation canaries instantiate both simulation and separation at a
+fully distinguishing measurable space. The OTP canary also consumes `tokenLaw_behavior`,
+checking that the same security observation survives the passage from private machine states
+to their cofree behaviors. Private environment-memory tests use equal transmitted messages
+and different retained states to confirm that the runtime does not discard this information.
+
+## Computational and probability obligations
+
 Fixed total-variation bounds are statistical. Computational UC restricts adversaries, simulators,
 and environments by proved resource witnesses and uses their Boolean observations. Unrestricted
 total variation of an exposed transcript is a stronger statistical requirement. Structural
