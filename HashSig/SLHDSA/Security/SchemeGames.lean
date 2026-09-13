@@ -256,8 +256,9 @@ omit [DecidableEq M] [DecidableEq S] in
 
 The projection equation above says what the first component of a run is.  This says what the
 second one is, at the selectors whose value is fixed in advance.  With it and its same-message
-twin absent nothing in the repository says anything about the second component at all, and the
-final `return` may discard the selector it is handed or negate it.  Three edits of the two
+twin absent nothing in the repository says what the second component *is* — the four `_le_branch`
+theorems below bound it above and identify it with nothing — and the final `return` may discard the
+selector it is handed or negate it.  Three edits of the two
 experiments' last lines were measured in that configuration; at this one they read
 `sel pk sk msg σ || true`, a literal `true` with the binder renamed `_sel`, and `!sel pk sk msg σ`,
 and each elaborates this module and its fixture with zero errors and zero warnings.  On the first,
@@ -268,8 +269,10 @@ the two names of each split — the class the four `example`s exist to refuse, r
 cannot see it.  With this theorem present
 and the twin absent, each of the three gives one error here.
 
-What it does not pin is which of a run's values the selector is applied to; the paragraph beside
-the four halves says what that leaves open.
+What it does not pin is anything about a selector that is *not* constant: neither which of a run's
+values the selector is applied to, nor any combination of two such applications that agrees with the
+selector wherever the selector is constant.  The last paragraph beside the four halves states both,
+with their measurements.
 
 *Experiment split.* -/
 theorem instrumentedEufExp_const {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -766,8 +769,9 @@ theorem advantage_le_forsHalf_add_hypertreeHalf (adv : unforgeableAdv (generalAl
 A half is `Pr[fun x => x.1 = true ∧ x.2 = b | …]`: an event of two conjuncts, one reading the
 experiment's success bit and one reading the bit it recorded.  Two kinds of silent edit *of the
 half itself* leave both splits provable, and they need canaries of different kinds; the first is a
-*naming* error and the second a *vacuity* one.  Edits one level down, of the experiment the half
-reads, are the last three paragraphs of this section.
+*naming* error and the second a *vacuity* one.  What these eight leave open — the selector argument
+the half names, and two edits one level down, of the experiment the half reads — is the last three
+paragraphs of this section.
 
 **Which branch each name is attached to.**  `advantage_le_forsHalf_add_hypertreeHalf` is symmetric
 in its two summands, so it holds just as well of a module in which the two names are attached to
@@ -808,7 +812,9 @@ The two families together bound each half above by the advantage, above by its o
 below — as a pair — by the split, which makes it an event of the success bit and of the bit the
 experiment recorded.  Whether the recorded bit is the selector's own value is one level down and
 not these eight theorems' question: a `return` that discarded or negated the selector leaves all
-eight provable.  `instrumentedEufExp_const` and its twin are that question's answer.
+eight provable.  `instrumentedEufExp_const` and its twin refuse a `return` that replaces the
+selector by a constant or by its negation, and nothing wider than that; the last paragraph of this
+section says what still escapes them.
 
 What they do not pin is the *selector argument*, which is named in this module and which a paired
 edit of this module could therefore move throughout; the four `Pins` entries at which the test
@@ -817,13 +823,36 @@ whose two halves of one split are taken at a constant selector rather than at `f
 `randomizerLogged` elaborates here with zero errors and fails exactly that split's two `Pins`
 entries, with a `Type mismatch` each.
 
-One layer below all of these is refused by nothing, here or in the test module: which of a run's
-values each selector is applied to.  Passing the signing log's first message, where the log has
-one, in place of the message the adversary returned — in both experiments' last lines — leaves the
-two projection equations, the two selector equations, all eight bounds, both splits, the four
-`example`s and every fixture pin silent: measured, zero errors and zero warnings in both modules.
-Refusing it needs a law about the joint distribution of a run's key pair, message and signature,
-which this slice does not state; it is recorded here rather than closed. -/
+Two directions one layer below all of these are refused by nothing, here or in the test module, and
+both are edits of what the experiments' last lines record.
+
+*Which of a run's values each selector is applied to.*  Passing the signing log's first message,
+where the log has one, in place of the message the adversary returned — in both experiments' last
+lines — leaves the two projection equations, the two selector equations, all eight bounds, both
+splits, the four `example`s and every fixture pin silent: measured, zero errors and zero warnings in
+both modules.
+
+*What the recorded bit is, beyond its value at a constant selector.*  The two selector equations are
+stated at constant selectors, so any `f : Bool → Bool → Bool` with `f b b = b`, applied to two
+applications of the selector, satisfies both of them at every `b` while recording a different
+predicate.  Recording `sel pk sk msg σ && sel pk sk ((log.map Sigma.fst).headD msg) σ`, and the
+same at the same-message experiment, makes `forsHalf` the probability that the adversary forges and
+the FORS arm is true both at its own forgery and at the signing log's first message — a strictly
+smaller event, with `hypertreeHalf` strictly larger, both splits still provable and every equation
+this module states still true.  Measured: zero errors and zero warnings in both modules, and the
+same for `||` and for `cond (sel … == sel …) (sel …) (!sel …)` in the same place.
+
+One further law refuses part of the second direction and not the whole of it, which is why none was
+added.  Post-composition naturality in the selector — the experiment at
+`fun pk sk m s => g (sel pk sk m s)` is `fun x => (x.1, g x.2)` mapped over the experiment at `sel`,
+for any `g : Bool → Bool` — is provable here by the same `h_pull` argument the two selector
+equations take, and the `&&` and the `||` mutant both fail it, because `!a && !b` and `!(a && b)`
+differ.  The `cond` mutant satisfies it at all four `g : Bool → Bool`; with that law present and its
+one-line proof adjusted, the `cond` mutant is again zero errors and zero warnings in both modules.
+Adding it would therefore refuse two of the three and leave the third, which is the shape of
+over-claim the two selector equations have already made once.  Refusing the family needs a law about
+the joint distribution of a run's key pair, message and signature, which this slice does not state.
+Both directions are recorded here rather than closed. -/
 
 /-- The FORS half is at most the advantage it splits.
 
