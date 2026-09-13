@@ -195,8 +195,8 @@ then leaves the two dispatch halves, their two branch bounds and their two `exam
 synthesize `DecidableEq (GeneralScheme.SignatureCore vp prims.core)`, and the two `_le_advantage`
 theorems with unsolved goals.  So the tally is one error per `omit` of this block plus those eight,
 which is the shape to quote rather than a number a later declaration moves: at this head, three and
-eight, eleven errors, with three `sorry` warnings beside them where a failed proof is admitted,
-and no `congr` step is ever reached.
+eight, eleven errors, with three warnings beside them where a failed proof is admitted, and no
+`congr` step is ever reached.
 
 The selector is a function of the sampled key pair and the returned pair.  It may read the *secret*
 key, so a selector is not in general something a reduction can evaluate; what a union bound needs is
@@ -258,8 +258,8 @@ The projection equation above says what the first component of a run is.  This s
 second one is, at the selectors whose value is fixed in advance.  With it and its same-message
 twin absent nothing in the repository says what the second component *is* — the four `_le_branch`
 theorems below bound it above and identify it with nothing — and the final `return` may discard the
-selector it is handed or negate it.  Three edits of the two
-experiments' last lines were measured in that configuration; at this one they read
+selector it is handed or negate it.  Three edits of the two experiments' last lines were measured
+in that configuration; at this one they read
 `sel pk sk msg σ || true`, a literal `true` with the binder renamed `_sel`, and `!sel pk sk msg σ`,
 and each elaborates this module and its fixture with zero errors and zero warnings.  On the first,
 `hypertreeHalf` is provably `0` and `forsHalf` provably the advantage it splits, both proved in Lean
