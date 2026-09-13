@@ -106,7 +106,7 @@ unforgeability does not occur in the development.
 
 ## Labels
 
-Forty-four declarations, eighteen of them about a probability.
+Forty-eight declarations, twenty-two of them about a probability.
 
 *Experiment split* — a statement about a probability of an experiment, or about what one run of
 one produced:
@@ -116,6 +116,9 @@ one produced:
 * `forsHalf`, `hypertreeHalf`, `advantage_le_forsHalf_add_hypertreeHalf`;
 * `freshRandomizerHalf`, `sameRandomizerHalf`,
   `sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer`;
+* `forsHalf_le_advantage`, `hypertreeHalf_le_advantage`,
+  `sameRandomizerHalf_le_sameMessageAdvantage`, `freshRandomizerHalf_le_sameMessageAdvantage`,
+  the four that bound each half by the advantage it splits;
 * `strongAdvantage_eq_advantage_add_sameMessage`, `strongAdvantage_le_halves`;
 * `honestKey_of_mem_support`, `findWitness_isSome_of_mem_support`, `exists_witness_of_mem_support`,
   the three that read the key pair off the support of key generation;
@@ -140,7 +143,7 @@ key, a message, a signature and witness data:
 * `freshRandomizer_notMem_embedTargets`, `freshRandomizer_wins_or_uncovered`,
   `sameRandomizer_of_randomizerLogged`, `itsrFresh_or_sameRandomizer_external`.
 
-Those forty-four are the module's whole interface; none is `private`, and `generalAlg` is the one
+Those forty-eight are the module's whole interface; none is `private`, and `generalAlg` is the one
 that carries `@[expose]`.
 
 The six generic declarations of the first section are stated over an arbitrary `SignatureAlg` and
@@ -692,19 +695,59 @@ theorem advantage_le_forsHalf_add_hypertreeHalf (adv : unforgeableAdv (generalAl
   advantage_le_arms ProbCompRuntime.probComp
     (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv (forsArm prims)
 
-/-! ### Which branch each name is attached to
+/-! ### What pins the two halves, in two kinds
 
-`advantage_le_forsHalf_add_hypertreeHalf` is symmetric in its two summands, so it holds just as
-well of a module in which the two names are attached to the wrong branches, and no fixture can
-catch that: both are `noncomputable`.  The two `example`s below are the canary.  They are
-`example`s rather than theorems, and they are here rather than in the test module, because both
-reasons are the same one: the bodies are not exposed, so a `theorem … := rfl` exported from this
-module is refused ("Not a definitional equality", with the note that every definition that has to
-be unfolded must be exposed) and the same statement in an importing module is refused for the same
-reason.  An `example` is not exported and sees the body.
+The halves admit two silent weakenings of different shapes, and they need canaries of different
+kinds.  The first is a *naming* error and the second is a *vacuity* one.
 
+**Which branch each name is attached to.**  `advantage_le_forsHalf_add_hypertreeHalf` is symmetric
+in its two summands, so it holds just as well of a module in which the two names are attached to
+the wrong branches, and no fixture can catch that: both are `noncomputable`.  The two `example`s
+below are that canary.  They are `example`s rather than theorems, and they are here rather than in
+the test module, because both reasons are the same one: the bodies are not exposed, so a
+`theorem … := rfl` exported from this module is refused ("Not a definitional equality", with the
+note that every definition that has to be unfolded must be exposed) and the same statement in an
+importing module is refused for the same reason.  An `example` is not exported and sees the body.
 Swapping the two definitions' bodies — with or without a matching flip of `forsArm`'s polarity —
-fails these two at build time. -/
+fails these two at build time.
+
+**Whether a half is an event of the success bit at all.**  This the `example`s cannot reach, and
+the reason is structural: they are `rfl` against the body, so a paired edit of the body moves them
+with it.  Drop the conjunct `x.1 = true` from all four halves and re-prove both splits by
+monotonicity, and this module elaborates with zero errors, the test module is untouched, all
+seventy-seven runtime checks still pass — and both headline theorems become information-free, since
+`Pr[sel = true] + Pr[sel = false]` is the experiment's total mass and dominates every event.  The
+two theorems below are that canary.  They are *semantic* rather than syntactic — each half is at
+most the advantage it splits, which is false of the weakened halves — so no paired edit of the body
+carries them along; against that weakening each fails at the success conjunct it no longer has.
+They are also the splits' other direction, so each pair is pinned from both sides. -/
+
+/-- The FORS half is at most the advantage it splits.
+
+Not a weaker `advantage_le_forsHalf_add_hypertreeHalf`: that bounds the advantage by the two halves
+and this bounds one half by the advantage, and neither follows from the other.  What it pins is that
+`forsHalf` is an event of the *success bit*, the conjunct a paired weakening of both halves can drop
+without breaking either split.
+
+*Experiment split.* -/
+theorem forsHalf_le_advantage (adv : unforgeableAdv (generalAlg prims)) :
+    forsHalf adv ≤ adv.advantage ProbCompRuntime.probComp := by
+  rw [forsHalf, unforgeableAdv.advantage,
+    instrumentedEufExp_fst ProbCompRuntime.probComp
+      (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv (forsArm prims),
+    ← probEvent_eq_eq_probOutput, probEvent_map]
+  exact probEvent_mono fun x _ hx => hx.1
+
+/-- The hypertree half is at most the advantage it splits.
+
+*Experiment split.* -/
+theorem hypertreeHalf_le_advantage (adv : unforgeableAdv (generalAlg prims)) :
+    hypertreeHalf adv ≤ adv.advantage ProbCompRuntime.probComp := by
+  rw [hypertreeHalf, unforgeableAdv.advantage,
+    instrumentedEufExp_fst ProbCompRuntime.probComp
+      (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv (forsArm prims),
+    ← probEvent_eq_eq_probOutput, probEvent_map]
+  exact probEvent_mono fun x _ hx => hx.1
 
 example (adv : unforgeableAdv (generalAlg prims)) :
     forsHalf adv = Pr[fun x => x.1 = true ∧ x.2 = true |
@@ -1005,12 +1048,40 @@ theorem strongAdvantage_le_halves (adv : strongUnforgeableAdv (generalAlg prims)
   exact add_le_add (advantage_le_forsHalf_add_hypertreeHalf adv.toUnforgeableAdv)
     (sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer adv)
 
-/-! ### Which branch each name is attached to, again
+/-! ### What pins the two same-message halves
 
-The same canary for the same-message split, for the same reason and with the same shape.  Here the
-`true` branch is the *same-randomizer* one, because `randomizerLogged` reports membership; getting
-that round the wrong way is the likeliest single-character error in the module and the reason these
+Both canaries again, for the same two weakenings and for the same reasons.  Here the `true` branch
+is the *same-randomizer* one, because `randomizerLogged` reports membership; getting that round the
+wrong way is the likeliest single-character error in the module and the reason the two `example`s
 are stated at all. -/
+
+/-- The same-randomizer half is at most the same-message advantage it splits.
+
+*Experiment split.* -/
+theorem sameRandomizerHalf_le_sameMessageAdvantage
+    (adv : strongUnforgeableAdv (generalAlg prims)) :
+    sameRandomizerHalf adv ≤ adv.sameMessageAdvantage ProbCompRuntime.probComp := by
+  rw [sameRandomizerHalf, strongUnforgeableAdv.sameMessageAdvantage,
+    sameMessageStrongUnforgeableExp_apply_singleton,
+    instrumentedSameMessageExp_fst ProbCompRuntime.probComp
+      (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv
+      (randomizerLogged (prims := prims)),
+    ← probEvent_eq_eq_probOutput, probEvent_map]
+  exact probEvent_mono fun x _ hx => hx.1
+
+/-- The fresh-randomizer half is at most the same-message advantage it splits.
+
+*Experiment split.* -/
+theorem freshRandomizerHalf_le_sameMessageAdvantage
+    (adv : strongUnforgeableAdv (generalAlg prims)) :
+    freshRandomizerHalf adv ≤ adv.sameMessageAdvantage ProbCompRuntime.probComp := by
+  rw [freshRandomizerHalf, strongUnforgeableAdv.sameMessageAdvantage,
+    sameMessageStrongUnforgeableExp_apply_singleton,
+    instrumentedSameMessageExp_fst ProbCompRuntime.probComp
+      (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv
+      (randomizerLogged (prims := prims)),
+    ← probEvent_eq_eq_probOutput, probEvent_map]
+  exact probEvent_mono fun x _ hx => hx.1
 
 example (adv : strongUnforgeableAdv (generalAlg prims)) :
     sameRandomizerHalf adv = Pr[fun x => x.1 = true ∧ x.2 = true |

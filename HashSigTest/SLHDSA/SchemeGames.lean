@@ -153,15 +153,19 @@ signature; there is no log in its argument list.
 The dispatch bit is not compared against any bound, and no half is evaluated: they are
 `noncomputable`.  Whether the two names `forsHalf` and `hypertreeHalf` are attached to the right
 branches is settled inside the library module, by four `example`s — two per split — that see the
-unexposed bodies, and not here: an importing module cannot state that equation at all.  Nothing
-here says that any honest value was recorded as a game target, that any execution produced any log
-below, or that either half is bounded by anything.
+unexposed bodies, and not here: an importing module cannot state that equation at all.  That the
+halves are events of the success bit at all is settled there too, and by theorems rather than by
+those `example`s, for a reason this file cannot repair: an `example … := rfl` moves with the body
+it is `rfl` against, so a paired weakening of all four halves survives it, survives every check
+below, and survives this executable.  Nothing here says that any honest value was recorded as a
+game target, that any execution produced any log below, or that either half is bounded by
+anything.
 
 ## The pins
 
-Every one of the forty-four declarations the library module exports appears as an `example` at this
-bundle's types, with generic arguments where the statement has them.  Seven further `example`s are
-the profile's own `decide` pins, inherited with the copied block.
+Every one of the forty-eight declarations the library module exports appears as an `example` at
+this bundle's types, with generic arguments where the statement has them.  Seven further `example`s
+are the profile's own `decide` pins, inherited with the copied block.
 -/
 
 public section
@@ -1073,6 +1077,17 @@ example : sadv.advantage ProbCompRuntime.probComp ≤
     (forsHalf sadv.toUnforgeableAdv + hypertreeHalf sadv.toUnforgeableAdv) +
       (freshRandomizerHalf sadv + sameRandomizerHalf sadv) :=
   strongAdvantage_le_halves sadv
+
+example : forsHalf adv ≤ adv.advantage ProbCompRuntime.probComp := forsHalf_le_advantage adv
+
+example : hypertreeHalf adv ≤ adv.advantage ProbCompRuntime.probComp :=
+  hypertreeHalf_le_advantage adv
+
+example : sameRandomizerHalf sadv ≤ sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+  sameRandomizerHalf_le_sameMessageAdvantage sadv
+
+example : freshRandomizerHalf sadv ≤ sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+  freshRandomizerHalf_le_sameMessageAdvantage sadv
 
 end Pins
 
