@@ -271,8 +271,8 @@ and the twin absent, each of the three gives one error here.
 
 What it does not pin is anything about a selector that is *not* constant: neither which of a run's
 values the selector is applied to, nor any combination of two such applications that agrees with the
-selector wherever the selector is constant.  The last paragraph beside the four halves states both,
-with their measurements.
+selector wherever the selector is constant.  The paragraphs that close the section beside the four
+halves state both, with their measurements.
 
 *Experiment split.* -/
 theorem instrumentedEufExp_const {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -770,8 +770,8 @@ A half is `Pr[fun x => x.1 = true ∧ x.2 = b | …]`: an event of two conjuncts
 experiment's success bit and one reading the bit it recorded.  Two kinds of silent edit *of the
 half itself* leave both splits provable, and they need canaries of different kinds; the first is a
 *naming* error and the second a *vacuity* one.  What these eight leave open — the selector argument
-the half names, and two edits one level down, of the experiment the half reads — is the last three
-paragraphs of this section.
+the half names, and two edits one level down, of the experiment the half reads — is what the
+paragraphs that close this section are about.
 
 **Which branch each name is attached to.**  `advantage_le_forsHalf_add_hypertreeHalf` is symmetric
 in its two summands, so it holds just as well of a module in which the two names are attached to
@@ -813,8 +813,8 @@ below — as a pair — by the split, which makes it an event of the success bit
 experiment recorded.  Whether the recorded bit is the selector's own value is one level down and
 not these eight theorems' question: a `return` that discarded or negated the selector leaves all
 eight provable.  `instrumentedEufExp_const` and its twin refuse a `return` that replaces the
-selector by a constant or by its negation, and nothing wider than that; the last paragraph of this
-section says what still escapes them.
+selector by a constant or by its negation, and nothing wider than that; the paragraphs that close
+this section say what still escapes them.
 
 What they do not pin is the *selector argument*, which is named in this module and which a paired
 edit of this module could therefore move throughout; the four `Pins` entries at which the test

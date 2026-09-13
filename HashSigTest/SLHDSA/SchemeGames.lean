@@ -166,8 +166,8 @@ and survives this executable.  That the recorded bit is the selector's own value
 negation or a constant is one level down again, and is `instrumentedEufExp_const` and its twin.
 Two directions below those are refused by nothing in either module — which of a run's values the
 selector is applied to, and any combination of two applications of the selector that agrees with it
-wherever the selector is constant — and the library module's own last paragraph beside the four
-halves records both rather than claiming them.  What this file adds to those
+wherever the selector is constant — and the paragraphs that close the library module's own section
+beside the four halves record both rather than claiming them.  What this file adds to those
 eight is the selector argument: the four `Pins` entries restating the branch bounds name `forsArm`
 and `randomizerLogged`, so a library-side edit taking one split's two halves at another selector
 fails that split's two of them here, `Type mismatch` each, although it leaves the library module
