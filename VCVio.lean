@@ -142,6 +142,7 @@ public import VCVio.EvalDist.Defs.Basic
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Measure
 public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.Defs.Measure.OptionT
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Defs.Semantics
 public import VCVio.EvalDist.Defs.Support
@@ -172,6 +173,7 @@ public import VCVio.EvalDist.PFunctor
 public import VCVio.EvalDist.PFunctorMeasure
 public import VCVio.EvalDist.PFunctorMeasure.Core
 public import VCVio.EvalDist.PFunctorPath
+public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.RenyiDivergence
 public import VCVio.EvalDist.ResumptionMeasure

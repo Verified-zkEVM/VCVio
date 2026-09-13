@@ -1500,12 +1500,11 @@ them are distance/coupling files whose content §4.5 already identifies as havin
 counterpart. That is a different problem from the evaluator migration and should be scheduled
 separately.
 
-These are historical bare-`PMF` measurements, not the current CI allowance. The later
-[`scripts/check-pmf-boundary.sh`](../../scripts/check-pmf-boundary.sh) guard deliberately counts
-both standalone `PMF` and `SPMF`, because every explicit `SPMF` use retains a transitive `PMF`
-dependency. At the 2026-08-30 VCVio base, its committed
-[`scripts/pmf_boundary_baseline.tsv`](../../scripts/pmf_boundary_baseline.tsv) contains 1,923
-occurrences across 109 files. The earlier bare-`PMF` breakdown above superseded an even older
+These are historical bare-`PMF` measurements, not the current migration ledger. A later
+source-count guard counted both standalone `PMF` and `SPMF`, because every explicit `SPMF` use
+retains a transitive `PMF` dependency. At the 2026-08-30 VCVio base, that guard recorded 1,923
+occurrences across 109 files. The current declaration-level ledger is `scripts/nolints.json`.
+The earlier bare-`PMF` breakdown above superseded an even older
 revision produced with `grep -c`, which counted matching *lines* rather than occurrences; its
 aggregate totals were unaffected, but its per-file breakdown was not.
 
@@ -1560,8 +1559,8 @@ has already happened.
 
 ### 20.3 Documentation and implementation disposition
 
-The measure-semantics spike, accepted baseline, PMF boundary guard, and measure-primary probability
-surface are all present on VCVio `main`. Readers should therefore follow this order:
+The measure-semantics spike, accepted baseline, and measure-primary probability surface
+are present. Readers should therefore follow this order:
 
 1. use [`docs/agents/probability.md`](../agents/probability.md) for current proof and API guidance;
 2. use [`denotational-probability-semantics.md`](denotational-probability-semantics.md) for the

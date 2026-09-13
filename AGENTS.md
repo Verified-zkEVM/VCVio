@@ -126,7 +126,7 @@ or `VCVioTest/`. This contract is enforced by
 8. **Interop TCB isolation is mandatory**. Core VCVio (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `Examples/`, `LatticeCryptoTest/`, `Extern/`, `VCVioWidgets/`, `VCVioTest/`) must never `import Interop.…`, `import Hax.…`, or `import Aeneas.…`. CI fails the PR if it does. See `docs/agents/interop.md`.
 9. **Extern link-safety isolation is mandatory**. Proof libraries (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) must never `import Extern.…`: the native backends behind it are built as empty stubs whenever the `third_party/` submodules are absent — always the case for Lake dependency checkouts — so importing `Extern` would break downstream executable links. Test libraries may import it. Enforced by `scripts/check-extern-isolation.sh` in CI.
 
-10. **`PMF`/`SPMF` is a retiring surface, not a coequal representation.** Upstream is dismantling `PMF` construction by construction — the pinned Mathlib already deprecates `PMF.bernoulli` and `PMF.binomial` for measure-valued replacements. New semantic code uses `Measure`/`Kernel`; a change that touches a file still carrying explicit `PMF`/`SPMF` identifiers should leave that source count lower than it found it. `scripts/check-pmf-boundary.sh` enforces a per-file ceiling on every build (a file absent from the baseline has an allowance of zero) and reports the actual source-count trend against the base ref on every pull request; comments and string literals do not count. This is a syntactic migration proxy, not semantic dependency analysis. `SPMF` counts because `SPMF := OptionT PMF`. `--ratchet` is the opt-in mode for a deliberate reduction pass, with holds recorded in `scripts/pmf_boundary_holds.tsv`. See `docs/reading/denotational-probability-semantics.md`.
+10. **`PMF`/`SPMF` is a retiring surface, not a coequal representation.** New semantic code uses `Measure`/`Kernel` and the measure-backed `Pr{...}[...]` notation. Local `SPMF`, `evalSPMF`, and the legacy scalar evaluation functions are deprecated. Mathlib owns `PMF`, so VCVio cannot attach Lean's `deprecated` attribute to that imported declaration; `ToMathlib.Lint.usesRetiredProbability` detects direct use of it, alongside the local deprecated declarations. The exact `scripts/nolints.json` entries track existing dependent declarations and must shrink as they migrate. Compiler deprecation warnings remain visible in Lean; the build warning budget delegates only these tagged warnings to the environment linter. The old source-count script has been removed. See `docs/reading/denotational-probability-semantics.md`.
 
 For the full list, see `docs/agents/gotchas.md`.
 
@@ -228,7 +228,7 @@ lake exe cache get && lake build
 
 `lake build` builds the seven proof libraries (the default targets); `lake build VCVio` is
 the fast path for framework-only work. `./scripts/validate.sh` runs the fast per-PR CI checks
-locally in CI's order (build and warning budget, umbrella check, boundary ratchets, style
+locally in CI's order (build and warning budget, umbrella check, remaining boundary checks, style
 linters, agent-docs checks); `--lint` adds Batteries' environment linters, one process per
 proof library as in CI. `lake lint` runs both source-style and environment checks;
 `-- --style-only` and `-- --env-only` select either pass, and `-- --no-build` requires existing

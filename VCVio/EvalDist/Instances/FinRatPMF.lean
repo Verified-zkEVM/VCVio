@@ -75,5 +75,18 @@ instance : HasEvalFinset Raw where
 @[simp] lemma finSupport_eq_support [DecidableEq α] (mx : Raw α) :
     finSupport mx = mx.support := rfl
 
+/-- For finite rational computations, the singleton measure is computed by `Raw.prob`.
+The latter needs only decidable equality and can be evaluated by `#eval`. -/
+theorem evalDist_apply_singleton_eq_prob [MeasurableSpace α]
+    [MeasurableSingletonClass α] [dec : DecidableEq α] (mx : Raw α) (x : α) :
+    𝒟[mx] {x} = ((mx.prob x : NNReal) : ENNReal) := by
+  rw [evalDist_apply_singleton, probOutput_def, evalSPMF_def]
+  change ((liftM (liftM mx : PMF α) : SPMF α) x) = _
+  rw [SPMF.liftM_apply]
+  change (@Raw.toPMF _ (Classical.decEq _) mx) x = _
+  rw [@Raw.toPMF_apply _ (Classical.decEq _) mx x]
+  exact congrArg (fun q : ℚ≥0 => ((q : NNReal) : ENNReal))
+    (Raw.prob_eq_prob (Classical.decEq _) dec mx x)
+
 end Raw
 end FinRatPMF
