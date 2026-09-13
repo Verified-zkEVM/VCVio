@@ -163,10 +163,10 @@ reason this file cannot repair: an `example … := rfl` moves with the body it i
 paired weakening of all four halves survives it, survives every check below, and survives this
 executable.  What this file adds to those eight is the selector argument: the four `Pins` entries
 restating the branch bounds name `forsArm` and `randomizerLogged`, so a library-side edit taking one
-split's two halves at another selector fails them here although it leaves the library module
-elaborating with zero errors.  Nothing here says that any honest value was recorded as a
-game target, that any execution produced any log below, or that either half is bounded by
-anything.
+split's two halves at another selector fails that split's two of them here, `Type mismatch` each,
+although it leaves the library module elaborating with zero errors.  Nothing here says that any
+honest value was recorded as a game target, that any execution produced any log below, or that
+either half is bounded by anything.
 
 ## The pins
 

@@ -725,7 +725,7 @@ theorems below with them: five errors with the split's proof left alone, four wi
 reason is structural: they are `rfl` against the body, so a paired edit of the body moves them with
 it.  The predicate is a conjunction of two conjuncts, so exactly three deletions weaken it, and the
 two families of four — the four theorems below and the four the same-message section states — refuse
-them one family each.  Each deletion is applied to all four halves, with both splits re-proved by
+all three between them.  Each deletion is applied to all four halves, with both splits re-proved by
 monotonicity and all four `example`s moved:
 
 * drop `x.1 = true`, keeping the selector conjunct: the four `…_le_advantage` theorems fail, four
@@ -747,11 +747,11 @@ mutant, so the split reads `a ≤ a + a` and `forsHalf_le_advantage` reads `a �
 The two families together make each half an event of the success bit *and* of its own selector bit:
 bounded above by the advantage, above by its own branch, and below — as a pair — by the split.
 What they do not pin is the *selector argument*, which is named in this module and which a paired
-edit of this module could therefore move throughout; the four `Pins` entries the test module states
-them at do pin it, being in a file no library-side edit touches.  A module whose two halves of one
-split are taken at a constant selector rather than at `forsArm` or `randomizerLogged` elaborates
-here with zero errors and fails exactly that split's two `Pins` entries, with a `Type mismatch`
-each. -/
+edit of this module could therefore move throughout; the four `Pins` entries at which the test
+module restates the branch bounds do pin it, being in a file no library-side edit touches.  A module
+whose two halves of one split are taken at a constant selector rather than at `forsArm` or
+`randomizerLogged` elaborates here with zero errors and fails exactly that split's two `Pins`
+entries, with a `Type mismatch` each. -/
 
 /-- The FORS half is at most the advantage it splits.
 
