@@ -18,13 +18,16 @@ live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances li
 an ordinary Lean `do` sequence, returns its final Boolean or proposition, and takes
 the `{True}` mass of that result's `𝒟`. It works with a direct measure-only oracle
 interpretation as well as a finite compatibility interpretation. The
-`probEventBinding_eq_evalDist` theorem requires a measurable predicate; its
+`prEvent_eq_evalDist` theorem requires a measurable predicate; its
 discrete specialization discharges that condition. For an optional computation,
 successful outputs are measured through `dropNone`, so failure contributes no mass.
 The `OptionT` measure instance also works when the base monad has no finite lift.
 `VCVio.EvalDist.Monad.Measure` provides `evalDist_bind_bind_swap` for jointly measurable
 continuations and `evalDist_bind_bind_bind_rotate` for discrete intermediate results. Their
 measure-level proofs use Tonelli's theorem and preserve subprobability mass.
+The generic `evalDist_pair` law denotes independent sequential draws by Mathlib's product
+measure. `evalDist_bind_apply_univ` expresses bind success mass as a `lintegral`, while
+`evalDist_map_apply_univ` states map preserves that mass; both live in the measure core.
 
 `VCVio.EvalDist.Monad.UniformTable` supplies cell resampling/extraction, permutation,
 and injective restriction laws with explicit uniform-measure hypotheses. Its native counting
@@ -56,6 +59,25 @@ records direct uses of it and the local finite API in `scripts/nolints.json`.
 New theorem statements should prefer `𝒟` or `Pr{...}[...]` and use a named
 compatibility equation only when discrete execution is needed.
 
+The notation alone does not make a theorem measure-native: `evalDist` retains its
+`EvalDistSemantics` instance as an implicit argument. If that instance is the
+`MonadLiftT … SPMF` adapter, the theorem's elaborated type still refers to `SPMF`,
+and `usesRetiredProbability` correctly reports it. State generic measure laws under
+an explicit `EvalDistSemantics`, or select a direct `PFunctor.IsMeasureSpec` before
+elaborating a concrete theorem. Keep sampler calibration through the old class in
+compatibility proofs until the sampler's certificate itself is measure-valued.
+For the finite-range oracle, `OracleSpec.IsUniformMeasureSpec.unifSpec` is an
+explicit native interpretation. With that instance selected,
+`ProbComp.evalDist_uniformFin` simplifies a query to `uniformOn Set.univ`, and
+`ProbComp.prEvent_uniformFin` evaluates a decidable event by counting
+its satisfying outcomes. These laws avoid a point-mass detour; the
+`FinEnum.SampleableType` construction also has a native uniformity proof in
+`SampleableType.NativeMeasure`, using finite-range sampling and equivalence
+transport. Its product sampler law uses `evalDist_pair` and the existing
+`uniformOn_univ_prod` construction. These supply the `BitVec` key law and the measure-level
+one-time-pad independence theorem. An arbitrary `SampleableType` implementation
+still needs a measure-valued certificate or a construction-specific proof.
+
 The adapter is also `LawfulEvalDistSemantics` (`instLawfulEvalDistSemanticsOfMonadLiftTSPMF`), so
 the Giry laws `evalDist_pure`, `evalDist_bind`, `evalDist_map` and the const laws hold with no
 measure specification in scope; `evalDist_eq_evalSPMF_toMeasure` is its definitional unfolding.
@@ -63,9 +85,20 @@ measure specification in scope; `evalDist_eq_evalSPMF_toMeasure` is its definiti
 only on request (`gotchas.md` §10), and the measure side has no separate family of sum lemmas.
 Independent products denote product measures: `evalDist_mOfFn` and `evalDist_mPi`
 (`VCVio/EvalDist/IndepProductMeasure.lean`) identify `𝒟[Fintype.mPi f]` with
-`Measure.pi fun i => 𝒟[f i]`, through `Measure.pi_eq` and the coordinatewise event product;
-`evalDist_map_eval_mPi` reads one coordinate back off the product through Mathlib's
-`Measure.pi_map_eval` when the other factors never fail.
+`Measure.pi fun i => 𝒟[f i]` directly from `LawfulEvalDistSemantics` and Mathlib's
+`measurePreserving_piFinSuccAbove`/`pi_map_piCongrLeft`. The index traversal itself lives in
+`ToMathlib.Control.Monad.Fold`, so these measure laws do not import the scalar product proofs.
+`evalDist_map_eval_mPi` reads one coordinate back through `Measure.pi_map_eval` when the factors
+have full mass; `lintegral_evalDist_mPi_coord` then integrates a coordinate functional directly.
+For finite uniform-output computations, `evalDist_mOfFn_uniformOn_pi` and
+`evalDist_mPi_uniformOn_pi` combine those laws with Mathlib's `uniformOn_pi`, allowing each
+factor its own uniform set. Their constant-full-space corollaries take the single-draw
+uniformity certificate explicitly; the Fischlin small-sum count supplies its compatibility
+certificate at the boundary instead of inducting over singleton probabilities.
+`OracleComp.evalDist_replicate_succ` uses Mathlib's `Measure.bind` and `Measure.map` for repeated
+list-valued sampling, and `evalDist_replicate_apply_univ` gives its success mass as a power.
+Because Mathlib does not install a generic measurable space on `List α`, these laws require the
+chosen list measurable space and measurability of each `List.cons x` map explicitly.
 
 Failure on the measure side is missing mass, recorded in `VCVio/EvalDist/FailureMeasure.lean`:
 `Pr[⊥ | mx] = 1 - 𝒟[mx] univ`, `IsProbabilityMeasure 𝒟[mx] ↔ Pr[⊥ | mx] = 0` (an instance under

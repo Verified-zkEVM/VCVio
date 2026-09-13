@@ -6,6 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.EvalDist.Defs.Measure
+public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Typeclasses for Denotational Monad Semantics
@@ -409,16 +410,6 @@ syntax (name := probEventBinding1)
 
 macro_rules (kind := probEventBinding1)
   | `(Pr[ $cond:term | $var:ident ← $src:term]) => `(Pr[ fun $var => $cond | $src])
-
-/-- Probability of a successful event after an ordinary Lean `do` sequence.
-The event is interpreted by the primary measure semantics. -/
-syntax (name := probEventBinding2) "Pr{" doSeq "}[" term "]" : term
-
-macro_rules (kind := probEventBinding2)
-  -- `doSeqBracketed`
-  | `(Pr{{$items*}}[$t]) => `(𝒟[do $items:doSeqItem* return $t:term] {True})
-  -- `doSeqIndent`
-  | `(Pr{$items*}[$t]) => `(𝒟[do $items:doSeqItem* return $t:term] {True})
 
 end probability_notation
 

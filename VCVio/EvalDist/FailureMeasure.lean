@@ -25,8 +25,7 @@ account of failure against the façade bridge `DiscreteEvalDistCompatible`:
 * `evalDist_withFailure_apply_none`/`_some` — the failure-completed denotation
   `(𝒟[mx]).withFailure : Measure (Option α)` is the probability measure with the failure mass at
   `none` and the point probabilities at `some x`.
-* `evalDist_bind_apply_univ`, `evalDist_map_apply_univ`, `probFailure_bind_eq_add_expectedValue`
-  — how success mass moves through `bind` and `map`, in `expectedValue` form.
+* `probFailure_bind_eq_add_expectedValue` — the discrete accounting identity for bind failure.
 * `OptionT.evalDist_eq_dropNone` — an `OptionT` computation denotes the `dropNone` of its run:
   the `none` branch is discarded mass, not an output.
 -/
@@ -93,26 +92,6 @@ instance (mx : m α) : IsProbabilityMeasure (𝒟[mx]).withFailure :=
   Measure.withFailure_isProbabilityMeasure _ (evalDist_apply_univ_le_one mx)
 
 end compatible
-
-section lawful
-
-variable [Monad m] [MonadLiftT m SPMF] [EvalDistSemantics m] [DiscreteEvalDistCompatible m]
-  [LawfulEvalDistSemantics m] [MeasurableSpace α] [DiscreteMeasurableSpace α]
-  [MeasurableSpace β]
-
-/-- The success mass of a bind is the expected success mass of the continuation. -/
-theorem evalDist_bind_apply_univ (mx : m α) (f : α → m β) :
-    𝒟[mx >>= f] Set.univ = expectedValue mx fun x => 𝒟[f x] Set.univ := by
-  rw [evalDist_bind_of_discrete, Measure.bind_apply MeasurableSet.univ
-    Measurable.of_discrete.aemeasurable, lintegral_evalDist]
-
-omit [MonadLiftT m SPMF] [DiscreteEvalDistCompatible m] [DiscreteMeasurableSpace α] in
-/-- A measurable map preserves success mass. -/
-theorem evalDist_map_apply_univ [LawfulMonad m] (mx : m α) {f : α → β} (hf : Measurable f) :
-    𝒟[f <$> mx] Set.univ = 𝒟[mx] Set.univ := by
-  rw [evalDist_map mx hf, Measure.map_apply hf MeasurableSet.univ, Set.preimage_univ]
-
-end lawful
 
 /-- `probFailure_bind_eq_add_tsum` with the sum packaged as an `expectedValue`: the failure of
 a bind is the prefix failure plus the expected failure of the continuation. -/

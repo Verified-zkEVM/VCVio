@@ -31,6 +31,7 @@ public import VCVioTest.MonadProbability
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.SecurityFamily
+public import VCVioTest.OracleComp.UniformMeasureSpec
 public import VCVioTest.PFunctorFacade
 public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics

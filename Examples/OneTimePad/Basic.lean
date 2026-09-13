@@ -47,6 +47,16 @@ def oneTimePad (sp : ℕ) :
 
 namespace oneTimePad
 
+/-- The one-time-pad experiment has independent message and ciphertext measures under
+the native uniform-oracle interpretation. -/
+theorem evalDist_perfectSecrecyExp [OracleSpec.IsUniformMeasureSpec unifSpec]
+    (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
+    𝒟[(oneTimePad sp).PerfectSecrecyExp mgen] =
+      𝒟[mgen].prod (ProbabilityTheory.uniformOn Set.univ :
+        MeasureTheory.Measure (BitVec sp)) := by
+  simpa [SymmEncAlg.PerfectSecrecyExp, oneTimePad, monad_norm] using
+    evalDist_pair_xor_uniformSample sp mgen
+
 /-- Encryption and decryption are inverses for any OTP key. -/
 lemma complete (sp : ℕ) : (oneTimePad sp).Complete := by
   intro msg

@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import ToMathlib.MeasureTheory.Measure.Subprobability
+public import Mathlib.MeasureTheory.Measure.Prod
 
 /-!
 # Measure-valued evaluation and its composition laws
@@ -97,6 +98,21 @@ theorem evalDist_map_of_discrete {m : Type u → Type v} [Monad m] [LawfulMonad 
     𝒟[f <$> mx] = 𝒟[mx].map f :=
   evalDist_map mx Measurable.of_discrete
 
+/-- Independent sequential draws denote Mathlib's product measure. -/
+theorem evalDist_pair {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type u} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    [MeasurableSpace β] (mx : m α) (my : m β) :
+    𝒟[do let x ← mx; let y ← my; return (x, y)] = 𝒟[mx].prod 𝒟[my] := by
+  rw [evalDist_bind_of_discrete mx]
+  have h (x : α) :
+      𝒟[my >>= fun y => pure (x, y)] = (𝒟[my]).map (Prod.mk x) := by
+    simpa only [map_eq_bind_pure_comp, Function.comp_def] using
+      (evalDist_map my (measurable_const.prodMk measurable_id :
+        Measurable (Prod.mk x : β → α × β)))
+  simp_rw [h]
+  rw [Measure.prod]
+
 /-- A constant continuation scales the continuation's measure by the success mass
 (`Measure.bind_const`); the measure form of `probOutput_bind_const`. -/
 @[simp]
@@ -127,3 +143,20 @@ theorem lintegral_evalDist_map {m : Type u → Type v} [Monad m] [LawfulMonad m]
     [MeasurableSpace β] (mx : m α) {f : α → β} (hf : Measurable f) {g : β → ENNReal}
     (hg : Measurable g) : ∫⁻ y, g y ∂𝒟[f <$> mx] = ∫⁻ x, g (f x) ∂𝒟[mx] := by
   rw [evalDist_map mx hf, lintegral_map hg hf]
+
+/-- The success mass of a bind is the integral of its continuation's success mass. -/
+theorem evalDist_bind_apply_univ {m : Type u → Type v} [Monad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type u} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    [MeasurableSpace β] (mx : m α) (f : α → m β) :
+    𝒟[mx >>= f] Set.univ = ∫⁻ x, 𝒟[f x] Set.univ ∂𝒟[mx] := by
+  rw [evalDist_bind_of_discrete mx f,
+    Measure.bind_apply MeasurableSet.univ Measurable.of_discrete.aemeasurable]
+
+/-- A measurable map preserves the successful-output mass. -/
+theorem evalDist_map_apply_univ {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
+    (mx : m α) {f : α → β} (hf : Measurable f) :
+    𝒟[f <$> mx] Set.univ = 𝒟[mx] Set.univ := by
+  rw [evalDist_map mx hf, Measure.map_apply hf MeasurableSet.univ, Set.preimage_univ]

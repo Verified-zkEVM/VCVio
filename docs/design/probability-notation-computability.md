@@ -7,7 +7,7 @@ block returning the event and applies that computation's `evalDist` measure to
 probability parser or an Arklib-style notation family.
 
 The notation is a semantic expression, not an evaluation algorithm. For a
-measurable predicate `p`, `probEventBinding_eq_evalDist` identifies
+measurable predicate `p`, `prEvent_eq_evalDist` identifies
 `Pr{let x ← mx}[p x]` with `𝒟[mx] {x | p x}`. The discrete variant needs no
 separate measurability proof. For `OptionT`, the semantics discards `none` mass,
 so a failed branch contributes zero; a computation that explicitly returns an

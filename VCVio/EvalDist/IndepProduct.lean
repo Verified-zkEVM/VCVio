@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.Expectation
+public import ToMathlib.Control.Monad.Fold
 
 /-!
 # Independent products of computations
@@ -260,12 +261,6 @@ section mPi
 universe v'
 
 variable {α : Type} {m : Type → Type v'} [Monad m] [LawfulMonad m] {ι : Type} [Fintype ι]
-
-/-- The independent product of a family of computations indexed by a finite type, obtained by
-transporting `Fin.mOfFn` along `Fintype.equivFin`. -/
-noncomputable def Fintype.mPi (f : ι → m α) : m (ι → α) :=
-  (Equiv.arrowCongr (Fintype.equivFin ι).symm (Equiv.refl α)) <$>
-    Fin.mOfFn (Fintype.card ι) fun k => f ((Fintype.equivFin ι).symm k)
 
 section support
 

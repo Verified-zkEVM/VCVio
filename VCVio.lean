@@ -136,6 +136,7 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.EvalDist.BitVec
+public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Bool
 public import VCVio.EvalDist.Defs.AlternativeMonad
 public import VCVio.EvalDist.Defs.Basic
@@ -199,11 +200,15 @@ public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.OracleComp.Constructions.Fork
 public import VCVio.OracleComp.Constructions.GenerateSeed
 public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.Constructions.WithoutReplacement
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.OracleComp.FinRatPMF
 public import VCVio.OracleComp.HasQuery.Basic
 public import VCVio.OracleComp.HasQuery.Morphism

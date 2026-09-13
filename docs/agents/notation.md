@@ -15,7 +15,7 @@
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
 | `𝒟[mx]` | primary `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure.lean` |
-| `Pr{let x ← mx; ...}[event]` | successful-output measure of the `do` computation returning `event`, evaluated at `{True}` | `VCVio/EvalDist/Defs/Basic.lean` |
+| `Pr{let x ← mx; ...}[event]` | `prEvent`: successful-output measure of the `do` computation returning `event`, evaluated at `{True}` | `VCVio/EvalDist/ProbabilityNotation.lean` |
 | `𝒮[mx]` | explicit finite adapter, `evalSPMF mx` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[= x \| mx]` | `probOutput mx x` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[p \| mx]` | `probEvent mx p` | `VCVio/EvalDist/Defs/Basic.lean` |
@@ -29,8 +29,8 @@ Use `Pr{...}[...]` for a probability after a Lean `do` sequence. It needs
 `EvalDistSemantics` for the resulting computation and has the successful-output
 measure's semantics: failed or diverging branches contribute zero. A Boolean event
 is coerced to a proposition. For a single measurable event,
-`probEventBinding_eq_evalDist` identifies it with `𝒟[mx] {x | p x}`;
-`probEventBinding_eq_evalDist_of_discrete` handles any predicate on a discrete
+`prEvent_eq_evalDist` identifies it with `𝒟[mx] {x | p x}`;
+`prEvent_eq_evalDist_of_discrete` handles any predicate on a discrete
 output space. The notation does not require a finite-distribution lift.
 
 `Pr[...]` remains the discrete compatibility notation. Use the named

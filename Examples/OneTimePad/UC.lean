@@ -267,7 +267,7 @@ theorem probability_realCipherObserve (sp : ℕ) (msg : BitVec sp)
     Pr{let x ← realCipherObserve sp msg P}[x = ()] =
       (Finset.univ.filter fun k : BitVec sp => P (k ^^^ msg) = true).card /
         (Fintype.card (BitVec sp) : ℝ≥0∞) := by
-  rw [probEventBinding_eq_evalDist_of_discrete]
+  rw [prEvent_eq_evalDist_of_discrete]
   change 𝒟[realCipherObserve sp msg P] {()} = _
   rw [evalDist_apply_singleton, probOutput_realCipherObserve]
 
