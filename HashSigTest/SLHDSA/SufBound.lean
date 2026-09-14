@@ -100,10 +100,13 @@ separated: `forgeryDet`'s randomizer occurs at `msgP` and nowhere else.  It is n
 
 ## What the checks cannot catch
 
-* **A paired edit of `Summands.sufBound` that also moves this file.**  The expression is this pull
-  request's own; nothing outside these two files constrains it.  Changed in the library module alone
-  it fails the `Pins` entries here; changed in both, nothing fails, and at that point the claim has
-  been changed rather than a bug found.
+* **A reordering or reassociation of `Summands.sufBound`'s two residuals that also moves this file.**
+  The expression is this pull request's own; nothing outside these two files constrains its order or
+  its association.  Either edit made in the library module alone fails three `Pins` entries here;
+  made in both, nothing fails, and at that point the claim has been changed rather than a bug found.
+  A coefficient other than one on a residual and a stray additive constant are *not* in this class —
+  the library refuses each on its own, at `sufBound_eq_bound_add_sameMessage_of_unfoldings` and, for
+  the constant, at `sufBound_eq_bound_of_residuals_zero` as well.
 * **Anything about a probability.**  See above.
 * **Which of the two halves the consumption form bounds.**  The theorem
   `strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le` takes a bound on the *fresh* half and
