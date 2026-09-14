@@ -68,11 +68,11 @@ exercised there.
 
 ## What is here
 
-Fifty-three runtime checks in four groups — the two coefficients (14), the eight caps at both
+Fifty-seven runtime checks in four groups — the two coefficients (18), the eight caps at both
 profiles (16), the `T_ℓ` discrimination and its arity pairing (10), and the routing table (13) —
-and sixty-six `example`s in `Pins`, at least one for each of the twenty declarations the library
-module exports, plus the two `T_ℓ` attacked-member equations, the ten games' declared caps and the
-fourteen profile pins.
+and sixty-nine `example`s in `Pins`, at least one for each of the twenty-one declarations the
+library module exports, plus the two `T_ℓ` attacked-member equations, the ten games' declared caps
+and the sixteen profile pins.
 
 ## References
 
@@ -113,6 +113,14 @@ theorem toyValid : toyParams.Valid := by decide
 /-- The SP 800-230 reduced parameter set, as a bare `Params`: the profile at which the two `T_ℓ`
 caps coincide.  No primitive bundle is built at it here. -/
 def p24 : Params := LimitedParameterSet.params .SLHDSA_SHA2_128_24
+
+/-- A *valid* parameter set with `lgw = 1`, hence `w = 2` and an undetectability coefficient of
+zero.  It is here because `Params.Valid` does not rule this out, and at it the WOTS+-`F`
+undetectability summand leaves the bound — correctly, since the source's hybrid over chain
+positions has `w - 2` steps.  `SLHDSA.Security.two_le_w` does not say otherwise and
+`bound_wotsFUd_coefficient_add_two` is what it buys. -/
+def widthTwoParams : Params :=
+  { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 1 }
 
 /-- A deliberately invalid parameter set with `lgw = 0`, hence `w = 1`.  It exists so that the
 `ℕ`-truncation `two_le_w` rules out has a witness: at it the undetectability coefficient would be
@@ -271,6 +279,11 @@ def checkCoefficients : IO Unit := do
   ensure "p24 w - 2" (p24.w - 2 == 2)
   ensure "p24 2 <= w" (2 ≤ p24.w)
   ensure "p24 d = 1" (p24.d == 1)
+  -- a *valid* set at which the coefficient is legitimately zero: `Valid` permits `lgw = 1`
+  ensure "width-two w" (widthTwoParams.w == 2)
+  ensure "width-two lgw" (widthTwoParams.lgw == 1)
+  ensure "width-two coefficient is zero" (widthTwoParams.w - 2 == 0)
+  ensure "width-two is valid" (decide widthTwoParams.Valid)
   -- the truncation `two_le_w` rules out, exhibited at a parameter set where it fires
   ensure "degenerate w" (degenerateParams.w == 1)
   ensure "degenerate w - 2 truncates to zero" (degenerateParams.w - 2 == 0)
@@ -387,6 +400,9 @@ example : (Summands.mk 0 0 0 0 0 0 0 0 0 0 0 0).bound p = 0 := bound_eq_zero_of_
 
 example : (Summands.mk 0 0 0 0 0 0 0 x 0 0 0 0).bound p = (p.w - 2 : ℕ) * x :=
   bound_wotsFUd_coefficient p x
+
+example (h : p.Valid) : (Summands.mk 0 0 0 0 0 0 0 x 0 0 0 0).bound p + 2 * x = (p.w : ℝ≥0∞) * x :=
+  bound_wotsFUd_coefficient_add_two h x
 
 example : (Summands.mk 0 0 0 0 x 0 0 0 0 0 0 0).bound p = 3 * x :=
   bound_forsFTcr_coefficient p x
@@ -637,6 +653,8 @@ example : targetCount p24 .forsTl = targetCount p24 .wotsTl := by decide
 example : targetCount toyParams .forsTl ≠ targetCount toyParams .wotsTl := by decide
 example : degenerateParams.w - 2 = 0 := by decide
 example : ¬ degenerateParams.Valid := by decide
+example : widthTwoParams.w - 2 = 0 := by decide
+example : widthTwoParams.Valid := by decide
 
 end Pins
 

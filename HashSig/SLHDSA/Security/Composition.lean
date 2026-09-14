@@ -35,13 +35,15 @@ first.  Three things are true of it and worth stating separately.
   `advantage ≤ prf + prf + ideal`, `ideal ≤ forsBranch + hypertreeBranch`, and one bound per
   branch, and the step from there to the conclusion is arithmetic this module does — including one
   step that is not arithmetic at all (below).
-* **It is not constructible from nothing.**  `Certificate.ofBranchBounds` is the measurement of
-  exactly how much it does need: given the twelve adversaries, the counting interface and *two*
-  inequalities — one per branch of `SchemeGames`' dispatch split, stated at `forsHalf adv` and
-  `hypertreeHalf adv` — it builds a certificate, discharging `split` from
-  `advantage_le_forsHalf_add_hypertreeHalf` and `prfHops` from `le_add_self`.  So `split` is
-  provably instantiable and is not a disguised assumption; what remains unproven is the two branch
-  bounds, which is H2 of the slice plan and the bulk of the EasyCrypt development.
+* **How much it needs is measured, not asserted.**  `Certificate.ofBranchBounds` builds one from
+  the twelve adversaries, the counting interface and *two* inequalities — one per branch of
+  `SchemeGames`' dispatch split, stated at `forsHalf adv` and `hypertreeHalf adv` — discharging
+  `split` from `advantage_le_forsHalf_add_hypertreeHalf` and `prfHops` from `le_add_self`.  So
+  `split` is provably instantiable and is not a disguised assumption, and what remains unproven is
+  the two branch bounds, which is the bulk of the EasyCrypt development.  What is *not* claimed is
+  that the structure is uninhabited: no proof of that is given or attempted, and the honest
+  statement is the weaker one, that no route to a certificate is known here which does not pass
+  through an inequality nothing in this repository proves.
 * **`ofBranchBounds` takes no PRF hop.**  It sets `idealAdvantage := adv.advantage`, so in the
   certificate it returns the two PRF summands are pure slack: they appear in the bound and do no
   work.  A certificate that takes a real PRF hop has to choose a smaller `idealAdvantage`, and
@@ -92,14 +94,15 @@ this lane's own dispatch split rather than at the source's.
 
 ## Labels
 
-Twenty declarations.
+Twenty-one declarations.
 
 *Composition arithmetic* — a statement about the bound expression or about a certificate:
 
 * `prfAbsAdvantage`, `prfAbsAdvantage_toReal`;
 * `two_le_w`;
 * `Summands`, `Summands.bound`, `Summands.bound_eq`, `bound_eq_zero_of_summands_zero`,
-  `bound_wotsFUd_coefficient`, `bound_forsFTcr_coefficient`;
+  `bound_wotsFUd_coefficient`, `bound_wotsFUd_coefficient_add_two`,
+  `bound_forsFTcr_coefficient`;
 * `Certificate`, `Certificate.summands`, `Certificate.bound_eq`, `advantage_le_bound`;
 * `Certificate.ofBranchBounds`, `Certificate.ofBranchBounds_summands`,
   `advantage_le_bound_of_halves`.
@@ -250,6 +253,26 @@ theorem bound_wotsFUd_coefficient (p : Params) (x : ℝ≥0∞) :
     (Summands.mk 0 0 0 0 0 0 0 x 0 0 0 0).bound p = (p.w - 2 : ℕ) * x := by
   rw [Summands.bound_eq]
   simp
+
+/-- **The `ℕ` subtraction in the undetectability coefficient is exact.**  At a validated parameter
+set the coefficient plus two is the Winternitz width, so `(p.w - 2 : ℕ)` is a difference and not a
+truncation.  This is what `two_le_w` is for.
+
+It does *not* say the coefficient is non-zero.  `Params.Valid` requires only `0 < p.lgw`, so it
+admits `lgw = 1`, where `p.w = 2`, the coefficient is `0`, and the WOTS+-`F` undetectability
+summand leaves the bound entirely — correctly, because the source's hybrid over chain positions
+has `w - 2` steps and at `w = 2` it has none.  What `two_le_w` rules out is `p.w = 1`, where the
+subtraction would truncate a negative difference to zero and the summand would vanish for a
+reason that is an artefact of `ℕ`.  `HashSigTest.SLHDSA.Composition` carries both parameter sets
+and asserts which of the two is `Valid`.
+
+*Composition arithmetic.* -/
+theorem bound_wotsFUd_coefficient_add_two {p : Params} (h : p.Valid) (x : ℝ≥0∞) :
+    (Summands.mk 0 0 0 0 0 0 0 x 0 0 0 0).bound p + 2 * x = (p.w : ℝ≥0∞) * x := by
+  rw [bound_wotsFUd_coefficient, ← add_mul]
+  congr 1
+  rw [show ((2 : ℝ≥0∞)) = ((2 : ℕ) : ℝ≥0∞) by norm_num, ← Nat.cast_add,
+    Nat.sub_add_cancel (two_le_w h)]
 
 /-- The coefficient on the FORS-`F` target-collision summand, isolated: it is three.
 
