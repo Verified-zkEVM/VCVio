@@ -1097,6 +1097,270 @@ example (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
           pkSeed).summands.bound toy.params :=
   freeCertificate_headline (vp := toy) (prims := toyPrimitives) (adv := adv) t pkSeed
 
+/-! ### The certificate anchoring does not refuse
+
+`freeCertificate` is refused by anchoring, because its `forsBranch` is `0`.  A certificate is not.
+The one below sets the three `ℝ≥0∞` fields to `adv.advantage`, `forsHalf adv` and
+`hypertreeHalf adv`, which are the three values the anchoring inequalities ask for, so each of them
+holds at it by `le_refl`; the three `example`s after it are those inequalities, and they are what
+the `@[expose]` is for.  Each branch bound is then the same chain — the half is at most the
+advantage, the advantage is at most one, and one is the advantage of a game on that branch whose
+winning condition has no distinctness clause.  The FORS side has one, the open-preimage game, which
+is why `forsBranch := forsHalf adv` is not an obstacle; the hypertree side has the preimage game.
+
+What this certificate does not supply is `counting`, now asked for at an adversary of advantage one
+rather than zero.  That is the whole of what anchoring buys, and the next subsection says what it
+amounts to. -/
+
+section Anchored
+
+variable {vp : ValidatedParams} {prims : Primitives vp.params}
+  [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableType prims.PkSeed]
+  [SampleableType prims.Y] [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey]
+  [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
+
+omit [Fintype prims.Y] in
+/-- **The FORS branch bound holds at the winning open-preimage adversary**, for every adversary and
+with the branch stated at `forsHalf adv` itself.  The right-hand side's second summand is the
+OpenPRE advantage, which `winningOpenPre_advantage` makes one, so the chain lands. -/
+theorem forsHalf_le_winningOpenPre {adv : unforgeableAdv (generalAlg prims)} (t : prims.AdrsKey)
+    (itsrAdv : ITSRAdversary (hmsgItsrProblem prims))
+    (forsHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (forsHTcrCProblem prims))
+    (forsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (forsTlTcrCProblem prims)) :
+    forsHalf adv ≤ ITSRAdvantage itsrAdv
+      + SM_DT_OpenPRE_SourceFinalValidity.Advantage (winningOpenPre (forsFOpenPreProblem prims) t)
+      + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
+      + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv := by
+  calc forsHalf adv ≤ adv.advantage ProbCompRuntime.probComp := forsHalf_le_advantage adv
+    _ ≤ 1 := probOutput_le_one
+    _ = SM_DT_OpenPRE_SourceFinalValidity.Advantage
+          (winningOpenPre (forsFOpenPreProblem prims) t) :=
+        (winningOpenPre_advantage _ t (by
+          rw [forsFOpenPreProblem_numTargets]
+          exact targetCount_pos vp.params vp.valid TargetRole.forsF)).symm
+    _ ≤ _ := le_add_right (le_add_right le_add_self)
+
+omit [DecidableEq prims.PkSeed] [Fintype prims.Y] [Inhabited prims.Y] in
+/-- **The hypertree branch bound holds at the free preimage adversary**, with the branch stated at
+`hypertreeHalf adv` itself.  This is the same chain as the FORS one, landing on the preimage
+summand instead. -/
+theorem hypertreeHalf_le_freePre {adv : unforgeableAdv (generalAlg prims)} (t : prims.AdrsKey)
+    (wotsFUdAdv : SM_DT_UD_SourceFinalValidity.Adversary (wotsFUdCProblem prims))
+    (wotsFTcrAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsFTcrCProblem prims))
+    (wotsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsTlTcrCProblem prims))
+    (xmssHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (xmssHTcrCProblem prims)) :
+    hypertreeHalf adv ≤
+      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
+        + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
+        + SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t)
+        + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv := by
+  calc hypertreeHalf adv ≤ adv.advantage ProbCompRuntime.probComp := hypertreeHalf_le_advantage adv
+    _ ≤ 1 := probOutput_le_one
+    _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+        (freePreAdv_advantage prims t).symm
+    _ ≤ _ := le_add_right (le_add_right le_add_self)
+
+-- Exposed so that the three anchoring inequalities below can be `le_refl`: without the attribute
+-- this file's later declarations cannot see that the three `ℝ≥0∞` fields are the anchored values.
+/-- **A `Certificate` whose three named quantities are the experiment's own.**  The two arguments
+that are data are an address key and a public seed, as in `freeCertificate`; the third is a
+`CountingInterface` at an adversary whose advantage is one, which is the one input that is not
+data and is not known to exist. -/
+@[expose] noncomputable def anchoredCertificate {adv : unforgeableAdv (generalAlg prims)}
+    (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
+    (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
+      (winningOpenPre (forsFOpenPreProblem prims) t)) :
+    Certificate prims adv where
+  skgAdv := (pure true : OracleComp (PRFScheme.PRFOracleSpec Adrs prims.Y) Bool)
+  mkgAdv := (pure true :
+    OracleComp (PRFScheme.PRFOracleSpec (prims.Y × List Byte) prims.Y) Bool)
+  pkSeed := pkSeed
+  itsrAdv := ⟨(pure (default, ⟨pkSeed, default, []⟩) :
+    OracleComp (unifSpec + ITSRTargetSpec (HmsgITSRInput prims.PkSeed prims.Y) prims.Y)
+      (prims.Y × HmsgITSRInput prims.PkSeed prims.Y))⟩
+  openPreAdv := winningOpenPre (forsFOpenPreProblem prims) t
+  counting := counting
+  forsHAdv := idleTcr _
+  forsTlAdv := idleTcr _
+  wotsFUdAdv := idleUd _
+  wotsFTcrAdv := idleTcr _
+  wotsFPreAdv := freePreAdv prims t
+  wotsTlAdv := idleTcr _
+  xmssHAdv := idleTcr _
+  idealAdvantage := adv.advantage ProbCompRuntime.probComp
+  forsBranch := forsHalf adv
+  hypertreeBranch := hypertreeHalf adv
+  prfHops := le_add_self
+  split := advantage_le_forsHalf_add_hypertreeHalf adv
+  forsBranch_le := forsHalf_le_winningOpenPre t _ _ _
+  hypertreeBranch_le := hypertreeHalf_le_freePre t _ _ _ _
+
+/-- **The bound that certificate names is at least one too**, for the same reason
+`freeCertificate`'s is: the preimage summand is one. -/
+theorem one_le_anchoredCertificate_bound {adv : unforgeableAdv (generalAlg prims)}
+    (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
+    (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
+      (winningOpenPre (forsFOpenPreProblem prims) t)) :
+    1 ≤ (anchoredCertificate (adv := adv) t pkSeed counting).summands.bound vp.params := by
+  rw [Certificate.bound_eq]
+  calc (1 : ℝ≥0∞) = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+        (freePreAdv_advantage prims t).symm
+    _ ≤ _ := le_add_right (le_add_right le_add_self)
+
+/-! The three inequalities a full anchoring would add to `Certificate`, at this certificate. -/
+
+example (adv : unforgeableAdv (generalAlg prims)) (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
+    (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
+      (winningOpenPre (forsFOpenPreProblem prims) t)) :
+    (anchoredCertificate (adv := adv) t pkSeed counting).idealAdvantage ≤
+      adv.advantage ProbCompRuntime.probComp := le_refl _
+
+example (adv : unforgeableAdv (generalAlg prims)) (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
+    (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
+      (winningOpenPre (forsFOpenPreProblem prims) t)) :
+    forsHalf adv ≤ (anchoredCertificate (adv := adv) t pkSeed counting).forsBranch := le_refl _
+
+example (adv : unforgeableAdv (generalAlg prims)) (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
+    (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
+      (winningOpenPre (forsFOpenPreProblem prims) t)) :
+    hypertreeHalf adv ≤
+      (anchoredCertificate (adv := adv) t pkSeed counting).hypertreeBranch := le_refl _
+
+end Anchored
+
+/-- The same certificate at the toy bundle.  There is no unconditional form of this one: the
+counting interface is a hypothesis here because nothing constructs it. -/
+noncomputable example (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
+    (adv : unforgeableAdv (generalAlg (vp := toy) toyPrimitives))
+    (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
+      (winningOpenPre (forsFOpenPreProblem toyPrimitives) t)) :
+    Certificate (vp := toy) toyPrimitives adv :=
+  anchoredCertificate (vp := toy) (prims := toyPrimitives) (adv := adv) t pkSeed counting
+
+/-! ### What the counting interface costs where it is not free
+
+The interface is a proof obligation about masses, and at an adversary that wins outright it looks
+like a question about that structure.  It is not: at any open-preimage adversary of advantage one,
+over a finite input type with at least two elements and with uniformly sampled inputs, the
+interface exists exactly when `1 ≤ TCRDSPRBound` holds — that is, exactly when the adversary's two
+induced reductions satisfy `DSPR + 3 · TCR ≥ 1`.
+
+The forward direction is `advantage_le_tcrDsprBound` at the winning advantage.  The reverse is a
+construction, and where it puts its mass is the interesting part: everything on the stratum of
+fibre size two, `singleMass := 1 - 2d` and `multipleMass 0 := 2d` with `d := (1 - DSPR) / 3`.  At
+that stratum the reciprocal and collision masses are both `d`, the two decompositions read
+`1 = (1 - 2d) + 2d` and `(1 - 2d) - d = DSPR`, and the strata inequality reads `d ≤ TCR`, which is
+`1 ≤ DSPR + 3 · TCR` rearranged.  Fibre size two is where the source's factor of three comes from —
+at fibre size `n` the same construction needs `(n - 1)(1 - DSPR) / (n + 1) ≤ TCR`, which is
+weakest at `n = 2`.
+
+So the question the previous subsection leaves is not about the interface's shape.  It is whether
+`winningOpenPre`'s own two induced reductions satisfy that inequality, and that turns on which
+preimage the adversary returns: `openPreInverse` is `Function.invFun`, which is `Classical.choose`
+of a non-empty fibre, and nothing in the model says whether what it returns is the sampled target
+or a different preimage of the same image.  Neither the inequality nor its negation is proved here
+at that adversary.  An adversary that sampled its preimage uniformly from the fibre instead would
+satisfy it — the conditional law of the target given its image is uniform on the fibre when the
+inputs are, so the returned preimage differs from the target often enough — but that argument is a
+paper one, and what it needs to become a checked one is exactly the conditional-distribution
+coupling VCVio calls "the substantive probabilistic coupling still to be constructed".  So the
+reading this file supports is that anchoring very probably closes nothing, and that settling it
+needs the coupling the library leaves open. -/
+
+section Counting
+
+/-- The DSPR advantage is a truncated difference of probabilities, so it never exceeds one. -/
+theorem dspr_advantage_le_one {ix PkS Tw Msg Nd : Type} [Fintype Msg] [DecidableEq Tw]
+    [DecidableEq Msg] [DecidableEq Nd]
+    {prob : SM_DT_DSPR_SourceFinalValidity.Problem ix PkS Tw Msg Nd}
+    (a : SM_DT_DSPR_SourceFinalValidity.Adversary prob) :
+    SM_DT_DSPR_SourceFinalValidity.Advantage a ≤ 1 :=
+  le_trans tsub_le_self probOutput_le_one
+
+/-- **The counting interface exists at a winning adversary exactly when its two reductions sum
+to one.**  Both directions: the forward one is VCVio's own inequality at an advantage of one, and
+the reverse puts all the mass on the fibre-size-two stratum. -/
+theorem nonempty_countingInterface_iff {ix PkS Tw Msg Nd : Type} [Fintype Msg] [Inhabited Msg]
+    [SampleableType Msg] [DecidableEq Tw] [DecidableEq Msg] [DecidableEq Nd]
+    {prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd}
+    (adv : SM_DT_OpenPRE_SourceFinalValidity.Adversary prob)
+    (hu : prob.HasUniformInputs) (hcard : 2 ≤ Fintype.card Msg)
+    (hone : SM_DT_OpenPRE_SourceFinalValidity.Advantage adv = 1) :
+    Nonempty (SM_DT_OpenPRE_SourceFinalValidity.CountingInterface adv) ↔
+      1 ≤ SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound adv := by
+  constructor
+  · rintro ⟨hc⟩
+    have h := SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound adv hc
+    rwa [hone] at h
+  · intro h
+    have : NeZero (Fintype.card Msg - 1) := ⟨by omega⟩
+    set D := SM_DT_DSPR_SourceFinalValidity.Advantage
+      (SM_DT_OpenPRE_SourceFinalValidity.toDSPR adv) with hD
+    set T := SM_DT_TCR_SourceFinalValidity.Advantage
+      (SM_DT_OpenPRE_SourceFinalValidity.toTCR adv) with hT
+    have hD1 : D ≤ 1 := dspr_advantage_le_one _
+    set e : ℝ≥0∞ := 1 - D with he
+    set d : ℝ≥0∞ := e / 3 with hd
+    have h3 : (3 : ℝ≥0∞) ≠ 0 := by norm_num
+    have h3t : (3 : ℝ≥0∞) ≠ ⊤ := by norm_num
+    have h2 : (2 : ℝ≥0∞) ≠ 0 := by norm_num
+    have h2t : (2 : ℝ≥0∞) ≠ ⊤ := by norm_num
+    have h3d : 3 * d = e := by rw [hd]; exact ENNReal.mul_div_cancel h3 h3t
+    have hhalf : (1 : ℝ≥0∞) / 2 * (2 * d) = d := by
+      rw [one_div, ← mul_assoc, ENNReal.inv_mul_cancel h2 h2t, one_mul]
+    have hsum : 2 * d + 1 / 2 * (2 * d) = e := by rw [hhalf, ← h3d]; ring
+    have hc1 : 2 * d ≤ 1 := by
+      calc 2 * d ≤ 3 * d := by gcongr; norm_num
+        _ = e := h3d
+        _ ≤ 1 := tsub_le_self
+    have hTle : d ≤ T := by
+      rw [hd]
+      refine ENNReal.div_le_of_le_mul ?_
+      rw [he, tsub_le_iff_right]
+      calc (1 : ℝ≥0∞) ≤ SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound adv := h
+        _ = D + 3 * T := rfl
+        _ = T * 3 + D := by ring
+    exact ⟨{ uniformInputs := hu
+             singleMass := 1 - 2 * d
+             multipleMass := fun k => if k = 0 then 2 * d else 0
+             openPRE_decomposition := by
+               rw [hone]
+               simp only [Finset.sum_ite_eq', Finset.mem_univ, if_true]
+               exact (tsub_add_cancel_of_le hc1).symm
+             dspr_decomposition := by
+               rw [SM_DT_OpenPRE_SourceFinalValidity.reciprocalMass]
+               simp only [mul_ite, mul_zero, Finset.sum_ite_eq', Finset.mem_univ, if_true,
+                 Fin.val_zero, zero_add, Nat.cast_ofNat]
+               rw [tsub_tsub, hsum, he]
+               exact (ENNReal.sub_sub_cancel one_ne_top hD1).symm
+             tcr_strata_le := by
+               rw [SM_DT_OpenPRE_SourceFinalValidity.collisionMass]
+               simp only [mul_ite, mul_zero, Finset.sum_ite_eq', Finset.mem_univ, if_true,
+                 Fin.val_zero, zero_add, Nat.cast_ofNat]
+               rw [show ((2 - 1 : ℕ) : ℝ≥0∞) = 1 by norm_num, hhalf]
+               exact hTle }⟩
+
+variable {vp : ValidatedParams} (prims : Primitives vp.params)
+  [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.AdrsKey]
+  [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
+
+/-- **The open question, at the adversary the anchored certificate uses.**  The FORS-`F`
+open-preimage problem has uniform inputs and `winningOpenPre` wins it, so what is left of
+`anchoredCertificate`'s missing field is one inequality between two advantages. -/
+theorem nonempty_counting_winningOpenPre_iff (t : prims.AdrsKey)
+    (hcard : 2 ≤ Fintype.card prims.Y) :
+    Nonempty (SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
+        (winningOpenPre (forsFOpenPreProblem prims) t)) ↔
+      1 ≤ SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound
+        (winningOpenPre (forsFOpenPreProblem prims) t) :=
+  nonempty_countingInterface_iff _ (forsFOpenPreProblem_hasUniformInputs prims) hcard
+    (winningOpenPre_advantage _ t (by
+      rw [forsFOpenPreProblem_numTargets]
+      exact targetCount_pos vp.params vp.valid TargetRole.forsF))
+
+end Counting
+
 end Vacuity
 
 /-- Run the four check groups in order, then report. -/
