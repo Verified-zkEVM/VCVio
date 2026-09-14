@@ -37,11 +37,15 @@ and injective restriction laws with explicit uniform-measure hypotheses. Its nat
 proofs live in `ToMathlib.MeasureTheory.Measure.UniformTable`. The continuation may lose mass.
 `evalDist_map_equiv_of_uniform` packages Mathlib's `uniformOn_univ_map_equiv` for a computation;
 use it for a uniform permutation before introducing a bind continuation.
+`evalDist_bind_bijective_of_uniform` reindexes any continuation after a uniform draw,
+using the finite-uniform pushforward law. `evalDist_bind_congr` compares continuation
+measures pointwise without a measurable-space instance on the intermediate result.
 `VCVio.OracleComp.EvalDist.Measure` gives `evalDist_bind_congr_of_support` by structural
 induction, without a probability/support bridge. These laws power the PRF tag/reader cache,
 composed-handler, and shared-observation proofs. `SampleableType.MeasureCompatibility`
-calibrates the existing sampler at the compatibility boundary; native proofs take that
-calibration as an explicit hypothesis.
+keeps the finite adapter calibration for legacy runtimes. BR93's measure-level masking
+step takes the chosen measure's uniformity certificate explicitly; its finite corollary
+uses the adapter calibration.
 
 The finite distribution API is
 explicit as `evalSPMF mx` / `𝒮[mx]`, and `Pr[...]` remains the discrete compatibility façade. One
@@ -92,11 +96,14 @@ its satisfying outcomes. These laws avoid a point-mass detour; the
 `SampleableType.NativeMeasure`, using finite-range sampling and equivalence
 transport. Its product sampler law uses `evalDist_pair` and the existing
 `uniformOn_univ_prod` construction. These supply the `BitVec` key law and the measure-level
-one-time-pad independence theorem. An arbitrary `SampleableType` implementation
-still needs a measure-valued certificate or a construction-specific proof.
+one-time-pad independence theorem. An arbitrary `SampleableType` still carries a
+finite-probability uniformity law; a native measure proof takes a separate
+`𝒟[$ᵗ α] = uniformOn Set.univ` certificate until that class surface is migrated.
 `ProbComp.evalDist_decide_eq_uniformBool_half` proves that an independent Boolean guess
 matches a fair hidden bit with mass `1/2`; it uses the native uniform measure and
 Mathlib's `lintegral_fintype`, so all-random game hops need no point-probability sum.
+`ProbComp.evalDist_bind_not_uniformBool` applies the uniform-reindexing law to any
+continuation after complementing a fair bit.
 
 The type classes separate a choice of response measures (`IsMeasureSpec`) from the
 additional uniformity and finite-range laws (`IsUniformMeasureSpec`). A blanket instance

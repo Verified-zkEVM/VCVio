@@ -10,6 +10,8 @@ public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import ToMathlib.MeasureTheory.Measure.UniformTable
 public import ToMathlib.MeasureTheory.DiscreteInstances
+import VCVio.EvalDist.Monad.Measure
+import Mathlib.Logic.Equiv.Bool
 
 /-!
 # Native measure laws for uniform sampling constructions
@@ -87,6 +89,13 @@ end SampleableType
 namespace ProbComp
 
 open OracleComp OracleSpec ENNReal
+
+/-- Complementing a fair hidden bit does not change the measure of any subsequent computation. -/
+theorem evalDist_bind_not_uniformBool [OracleSpec.IsUniformMeasureSpec unifSpec]
+    {α : Type} [MeasurableSpace α] (f : Bool → ProbComp α) :
+    𝒟[do let b ← ($ᵗ Bool); f (!b)] = 𝒟[do let b ← ($ᵗ Bool); f b] :=
+  evalDist_bind_bijective_of_uniform ($ᵗ Bool : ProbComp Bool)
+    SampleableType.evalDist_finEnum Bool.not Bool.not_bijective f
 
 /-- A fair hidden bit is guessed with probability one half when the guess distribution does not
 depend on that bit. -/
