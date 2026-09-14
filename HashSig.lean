@@ -43,6 +43,7 @@ public import HashSig.SLHDSA.Scheme
 public import HashSig.SLHDSA.Security
 public import HashSig.SLHDSA.Security.CanonicalGames
 public import HashSig.SLHDSA.Security.ComponentTraces
+public import HashSig.SLHDSA.Security.Composition
 public import HashSig.SLHDSA.Security.EncodedTargets
 public import HashSig.SLHDSA.Security.ForsWitnesses
 public import HashSig.SLHDSA.Security.HmsgWitnesses
