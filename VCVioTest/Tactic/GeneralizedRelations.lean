@@ -131,7 +131,8 @@ example {ι α : Type} {spec : OracleSpec ι} (oa : OracleComp spec α)
 
 section Costs
 
-variable {α : Type} {m : Type → Type*} [Monad m] [MonadLiftT m SetM]
+variable {α : Type} {m : Type → Type*} [Monad m] [LawfulMonad m]
+  [MonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
 variable (oa : AddWriterT ℕ m α) {a b c : ℕ}
 
 example (h : a ≤ b) :

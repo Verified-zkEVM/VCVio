@@ -39,7 +39,8 @@ section generic
 
 variable {α β : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
   [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
+  [EvalDistCompatible m]
 
 /-! ## `pure` — all heads close by both `simp` and `grind`. -/
 

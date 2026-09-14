@@ -456,8 +456,10 @@ theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
     𝒮[game1 tdp adv] = 𝒮[game2 tdp adv] := by
   let : MeasurableSpace M := ⊤
   let : EvalDistSemantics ProbComp := instEvalDistSemanticsOfMonadLiftTSPMF
+  have hM : 𝒟[($ᵗ M : ProbComp M)] = ProbabilityTheory.uniformOn Set.univ :=
+    evalDist_uniformSample
   exact evalSPMF_eq_of_evalDist_eq _ _
-    (evalDist_game1_eq_game2 (hM := evalDist_uniformSample) adv)
+    (evalDist_game1_eq_game2 hM adv)
 
 omit [Inhabited Rand] [Fintype Rand] [Inhabited M] [Fintype M] [DecidableEq M]
   [AddCommGroup M] in

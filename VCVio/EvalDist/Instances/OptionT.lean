@@ -12,9 +12,8 @@ public import VCVio.EvalDist.Option
 /-!
 # Probability Distributions on Potentially Failing Computations
 
-This file lifts `MonadLiftT _ SetM` and `MonadLiftT _ SPMF` semantics through the
-`OptionT` monad transformer, providing `support`, `finSupport`, and `evalSPMF`-based
-probability lemmas for `OptionT m α` in terms of the underlying `m (Option α)`.
+This file gives `OptionT` finite-support and legacy probability lemmas in terms of
+the underlying `m (Option α)`. Its support comes from PolyFun's `MonadAttach` instance.
 -/
 
 @[expose] public section
@@ -27,46 +26,17 @@ namespace OptionT
 
 section EvalSet
 
-/-- Standalone `MonadLiftT (OptionT m) SetM` instance under the weaker `[MonadLiftT m SetM]`
-assumption. Keeping this standalone means `support` on `OptionT m` works without requiring a
-full `MonadLiftT m SPMF` lift — only `MonadLiftT m SetM` is needed.
+variable [MonadAttach m]
 
-We declare a `MonadLiftT` (rather than `MonadLift`) so the instance has no `semiOutParam`
-arguments to synthesize — `OptionT m`'s `m` cannot be recovered from the `SetM` codomain. -/
-noncomputable instance instMonadLiftTSetM {m : Type u → Type v} [Monad m]
-    [MonadLiftT m SetM] : MonadLiftT (OptionT m) SetM where
-  monadLift mx := some ⁻¹' (support (OptionT.run mx))
-
-noncomputable instance instLawfulMonadLiftTSetM {m : Type u → Type v} [Monad m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] :
-    LawfulMonadLiftT (OptionT m) SetM where
-  monadLift_pure mx := by
-    change some ⁻¹' (support (OptionT.run (pure mx : OptionT m _))) = pure mx
-    simp [Set.ext_iff]
-  monadLift_bind mx my := by
-    change (some ⁻¹' (support (OptionT.run (mx >>= my))) : SetM _) =
-      ((some ⁻¹' (support mx.run)) >>= fun a => some ⁻¹' (support (my a).run) : SetM _)
-    ext x
-    simp only [Set.mem_preimage]
-    rw [OptionT.run_bind, Option.elimM, mem_support_bind_iff]
-    constructor
-    · rintro ⟨(_ | a), ha, hx⟩
-      · simp at hx
-      · exact Set.mem_iUnion₂.mpr ⟨a, ha, by simpa using hx⟩
-    · intro h
-      obtain ⟨a, ha, hx⟩ := Set.mem_iUnion₂.mp h
-      exact ⟨some a, ha, by simpa using hx⟩
-
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
-
-omit [LawfulMonadLiftT m SetM] in
 @[aesop unsafe norm, grind =]
-lemma support_def (mx : OptionT m α) : support mx = some ⁻¹' (support mx.run) := rfl
+lemma support_def (mx : OptionT m α) : support mx = some ⁻¹' (support mx.run) := by
+  ext x
+  exact MonadAttach.OptionT.canReturn_iff
 
-omit [LawfulMonadLiftT m SetM] in
-@[simp low]
 lemma mem_support_iff (mx : OptionT m α) (x : α) :
     x ∈ support mx ↔ some x ∈ support mx.run := by grind
+
+variable [LawfulMonad m] [ExactMonadAttach m]
 
 @[simp]
 lemma support_liftM (mx : m α) :
@@ -93,12 +63,12 @@ end EvalSet
 section HasEvalFinset
 
 /-- Lift a `HasEvalFinset` instance to `OptionT`. by just taking preimage under `some`. -/
-noncomputable instance (m : Type u → Type v) [Monad m] [MonadLiftT m SetM] [HasEvalFinset m] :
+noncomputable instance (m : Type u → Type v) [Monad m] [MonadAttach m] [HasEvalFinset m] :
     HasEvalFinset (OptionT m) where
   finSupport mx := (finSupport mx.run).preimage some (by simp)
   coe_finSupport := by aesop
 
-variable [MonadLiftT m SetM] [HasEvalFinset m]
+variable [MonadAttach m] [HasEvalFinset m]
 
 @[aesop unsafe norm, grind =]
 lemma finSupport_def [DecidableEq α] (mx : OptionT m α) :
@@ -110,12 +80,12 @@ lemma mem_finSupport_iff [DecidableEq α] (mx : OptionT m α) (x : α) :
   simp [finSupport_def, Finset.mem_preimage]
 
 @[simp]
-lemma finSupport_liftM [LawfulMonadLiftT m SetM] [LawfulMonad m] [DecidableEq α] (mx : m α) :
+lemma finSupport_liftM [ExactMonadAttach m] [LawfulMonad m] [DecidableEq α] (mx : m α) :
     finSupport (liftM mx : OptionT m α) = finSupport mx := by
   ext x; simp [mem_finSupport_iff, mem_finSupport_iff_mem_support]
 
 @[simp]
-lemma finSupport_lift [LawfulMonadLiftT m SetM] [LawfulMonad m] [DecidableEq α] (mx : m α) :
+lemma finSupport_lift [ExactMonadAttach m] [LawfulMonad m] [DecidableEq α] (mx : m α) :
     finSupport (OptionT.lift mx) = finSupport mx := by
   ext x; simp [mem_finSupport_iff, mem_finSupport_iff_mem_support]
 
@@ -143,24 +113,24 @@ noncomputable instance instLawfulMonadLiftTSPMF (m : Type u → Type v) [Monad m
     simp
 
 instance instLawfulFailure (m : Type u → Type v) [Monad m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
     [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] :
     HasEvalSet.LawfulFailure (OptionT m) where
   support_failure' := by aesop
 
-/-- The SetM-lift of `OptionT m` (preimage of `support mx.run` under `some`) agrees with the
+/-- The native support of `OptionT m` (preimage of `support mx.run` under `some`) agrees with the
 SPMF-lift (the `OptionT.mapM'` bind into `SPMF`) on outputs, given `EvalDistCompatible m`. -/
 instance instEvalDistCompatible (m : Type u → Type v) [Monad m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    [MonadAttach m]
     [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     [EvalDistCompatible m] :
     EvalDistCompatible (OptionT m) where
   support_eq_SPMF_support {α} mx := by
-    change some ⁻¹' (SetM.run (liftM mx.run : SetM (Option α))) =
+    change some ⁻¹' (support mx.run) =
       SPMF.support ((MonadHom.ofLift m SPMF) mx.run >>=
         fun y => match y with | some a => pure a | none => failure : SPMF α)
     rw [SPMF.support_bind]
-    have hbridge : SetM.run (liftM mx.run : SetM (Option α)) =
+    have hbridge : support mx.run =
         SPMF.support ((MonadHom.ofLift m SPMF) mx.run) :=
       EvalDistCompatible.support_eq_SPMF_support mx.run
     rw [hbridge]

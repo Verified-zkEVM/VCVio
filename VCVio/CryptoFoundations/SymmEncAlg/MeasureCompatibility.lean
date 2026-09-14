@@ -74,7 +74,7 @@ theorem measureComplete_iff_complete [MeasurableSpace M] [MeasurableSingletonCla
 theorem measurePerfectSecrecyAt_iff_ciphertextRowsEqualAt
     [MeasurableSpace C] [MeasurableSingletonClass C] [Countable C]
     [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     (encAlg : SymmEncAlg m M K C) (semantics : ProbabilitySemantics m)
     (hsingleton : ∀ (msg : M) (ciphertext : C),
       semantics.denote (encAlg.PerfectSecrecyCipherGivenMsgExp msg) {ciphertext} =

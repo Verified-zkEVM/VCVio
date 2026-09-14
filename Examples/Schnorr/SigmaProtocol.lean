@@ -115,7 +115,7 @@ theorem sigma_speciallySound (g : G) :
     SpeciallySound (sigma F G g) := by
   intro pk R c₁ c₂ z₁ z₂ h_ne h_v1 h_v2 w h_w
   dsimp [sigma] at *
-  simp only [support_pure, Set.mem_singleton_iff] at h_w
+  simp only [Set.mem_singleton_iff] at h_w
   subst h_w
   simp only [decide_eq_true_eq] at h_v1 h_v2 ⊢
   have h_sub : (z₁ - z₂) • g = (c₁ - c₂) • pk := by

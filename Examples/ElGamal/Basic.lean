@@ -8,6 +8,9 @@ module
 public import Examples.ElGamal.Common
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+import VCVio.OracleComp.EvalDist.UniformCompatibility
+import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+import ToMathlib.Probability.UniformOn
 
 /-!
 # ElGamal Encryption: IND-CPA via the generic one-time lift
@@ -95,8 +98,13 @@ theorem correct [DecidableEq G] :
     have : r • (sk • gen) = sk • (r • gen) := by
       rw [← mul_smul, ← mul_smul, mul_comm]
     rw [this, add_sub_cancel_right]
-  simp [AsymmEncAlg.PerfectlyCorrect, ProbCompRuntime.probComp, ProbCompRuntime.evalSPMF,
-    AsymmEncAlg.CorrectExp, elGamalAsymmEnc, hcancel, probFailure_of_liftM_PMF]
+  simp only [AsymmEncAlg.PerfectlyCorrect]
+  intro msg
+  simp only [ProbCompRuntime.probComp, ProbCompRuntime.evalSPMF,
+    SPMFSemantics.ofMonadLift_evalSPMF]
+  rw [probOutput_evalSPMF]
+  simp [AsymmEncAlg.CorrectExp, elGamalAsymmEnc, hcancel,
+    probOutput_bind_const, probOutput_map_const]
 
 section IND_CPA
 
@@ -288,13 +296,11 @@ private lemma IND_CPA_OneTime_DDHReduction_rand_half
       probOutput_bind_congr' ($ᵗ G) true (fun pk => by
         simpa [probOutput_uniformSample] using hhalf pk)
     _ = 1 / 2 := by
-      rw [probOutput_bind_eq_tsum]
-      have hbool : Pr[= true | ($ᵗ Bool)] = (1 / 2 : ℝ≥0∞) := by
-        simp [probOutput_uniformSample]
-      simp_rw [hbool]
-      have hsum : ∑' x : G, Pr[= x | ($ᵗ G)] = 1 :=
-        tsum_probOutput_of_liftM_PMF ($ᵗ G)
-      rw [ENNReal.tsum_mul_right, hsum, one_mul]
+      let : MeasurableSpace G := ⊤
+      rw [← evalDist_apply_singleton, evalDist_bind_const,
+        OracleComp.evalDist_apply_univ_eq_one, one_smul, evalDist_uniformSample,
+        ProbabilityTheory.uniformOn_univ_apply_singleton]
+      norm_num
 
 omit [DecidableEq G] in
 /-- The absolute one-time signed IND-CPA advantage of ElGamal is exactly twice the DDH guess

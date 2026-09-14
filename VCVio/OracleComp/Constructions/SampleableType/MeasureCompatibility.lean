@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.EvalDist.Monad.Measure
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 
 /-!
 # Measure compatibility for the discrete sampling frontend
@@ -21,9 +22,11 @@ public section
 
 open OracleComp OracleSpec MeasureTheory ProbabilityTheory
 
-/-- The compatibility measure of the certified uniform sampler is uniform. -/
+/-- A certified uniform sampler has uniform measure whenever its measure semantics agrees
+with its finite distribution on singleton masses. -/
 theorem evalDist_uniformSample {α : Type} [SampleableType α] [MeasurableSpace α]
-    [MeasurableSingletonClass α] :
+    [MeasurableSingletonClass α] [EvalDistSemantics ProbComp]
+    [DiscreteEvalDistCompatible ProbComp] :
     𝒟[$ᵗ α] = uniformOn Set.univ := by
   classical
   let : Fintype α := Fintype.ofFinite α
@@ -34,7 +37,9 @@ theorem evalDist_uniformSample {α : Type} [SampleableType α] [MeasurableSpace 
 
 /-- Recover a discrete frontend equality from equality of its successful-output measures. -/
 theorem evalSPMF_eq_of_evalDist_eq {α : Type} [MeasurableSpace α]
-    [MeasurableSingletonClass α] (mx my : ProbComp α) (h : 𝒟[mx] = 𝒟[my]) :
+    [MeasurableSingletonClass α] [EvalDistSemantics ProbComp]
+    [DiscreteEvalDistCompatible ProbComp]
+    (mx my : ProbComp α) (h : 𝒟[mx] = 𝒟[my]) :
     𝒮[mx] = 𝒮[my] := by
   apply evalSPMF_ext
   intro x
@@ -42,8 +47,11 @@ theorem evalSPMF_eq_of_evalDist_eq {α : Type} [MeasurableSpace α]
 
 /-- Equality of discrete frontend distributions preserves their successful-output measures. -/
 theorem evalDist_eq_of_evalSPMF_eq {α : Type} [MeasurableSpace α]
+    [EvalDistSemantics ProbComp] [DiscreteEvalDistCompatible ProbComp]
     (mx my : ProbComp α) (h : 𝒮[mx] = 𝒮[my]) : 𝒟[mx] = 𝒟[my] :=
-  congrArg (fun p => p.toMeasure) h
+  Measure.ext fun s hs => by
+    rw [evalDist_apply mx hs, evalDist_apply my hs]
+    simp only [probEvent_def, h]
 
 namespace ProbComp.DiscreteCompatibility
 

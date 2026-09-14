@@ -143,7 +143,7 @@ theorem probEvent_le_of_relTriple_imp
   conv_lhs => rw [← c.2.map_fst, probEvent_fst_map]
   conv_rhs => rw [← c.2.map_snd, probEvent_snd_map]
   -- pointwise monotonicity of `probEvent` on `c`
-  exact probEvent_mono fun z hz => himp z.1 z.2 (hc z hz)
+  exact spmf_probEvent_mono c.1 fun z hz hpz => himp z.1 z.2 (hc z hz) hpz
 
 /-- **Output-projected relational `simulateQ`.** Under the per-query coupling of
 `relTriple_simulateQ_run` — equal answers while the state invariant `R_state` is preserved — the

@@ -108,9 +108,18 @@ continuation after complementing a fair bit.
 The type classes separate a choice of response measures (`IsMeasureSpec`) from the
 additional uniformity and finite-range laws (`IsUniformMeasureSpec`). A blanket instance
 from `[spec.Fintype] [spec.Inhabited]` would silently choose a distribution for an arbitrary
-oracle, so only the concrete `unifSpec` and `coinSpec` instances are global. Syntactic
-`OracleComp.support` is defined by a `SetM` fold and needs neither measure class; a
+oracle, so only the concrete `unifSpec` and `coinSpec` instances are global. Structural
+`OracleComp.support` needs neither measure class; a
 positive-mass bridge needs assumptions on the chosen measures.
+For oracle-relative possibility, use `OracleComp.reachableWhen possibleOutputs oa`:
+it follows only the query responses in `possibleOutputs`, with pure/query/bind laws
+and a `gcongr` monotonicity rule. PolyFun defines the underlying
+`FreeM.reachableUnder` from an angelic operation-indexed weakest-precondition
+fold. `reachableWhen_univ_eq_support` identifies its all-responses case with
+`MonadAttach.support`; `supportWhen_eq_reachableWhen` keeps the old `SetM` fold
+available as a deprecated compatibility bridge. This distinction matters for
+stateful handlers: `MonadAttach` records possible returned values, while a
+state-dependent notion must retain the starting state or operation policy.
 `OracleComp.mem_support_iff_evalDist_singleton_pos_of_fullSupport` takes the precise
 full-support condition on each answer measure, without adding a class for that one law.
 `OracleComp.mem_support_iff_evalDist_singleton_pos` discharges it from

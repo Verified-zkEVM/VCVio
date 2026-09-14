@@ -276,7 +276,7 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
     simp only [hjoint_def, monad_norm]
   rw [hExp, hNoFresh, ← probEvent_eq_eq_probOutput, ← probEvent_eq_eq_probOutput,
     probEvent_map, probEvent_map]
-  exact probEvent_mono fun _ _ => Bool.and_elim_right
+  exact probEvent_mono'' fun _ => Bool.and_elim_right
 
 end unforgeable
 
