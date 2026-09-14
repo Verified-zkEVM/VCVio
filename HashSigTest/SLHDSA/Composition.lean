@@ -12,8 +12,8 @@ public import HashSig.SLHDSA.Security.Composition
 
 Executable checks for the *decidable* data that `HashSig.SLHDSA.Security.Composition`'s bound is
 parameterised by — the two coefficients, the twelve summands' routing to the named games of
-`HashSig.SLHDSA.Security.CanonicalGames`, and those games' target caps — together with one
-elaboration pin per exported declaration of that module.
+`HashSig.SLHDSA.Security.CanonicalGames`, and those games' target caps — together with at least
+one elaboration pin per exported declaration of that module.
 
 ## Nothing about the bound itself is runnable, and that is a property of the subject
 
@@ -22,10 +22,10 @@ headline `advantage_le_bound`, the certificate, the two transports and every sta
 probability have **no runtime coverage at all** and cannot be given any.  The runtime checks below
 are about `Params`-level data only: `p.w - 2`, `SLHDSA.Security.targetCount`, and a routing table
 this file writes down.  What pins the bound's own shape is the `Pins` section, which restates each
-of the twenty exported declarations, and mutation testing against those pins.
+of the twenty-one exported declarations, and mutation testing against those pins.
 
-A reader of the seven other fixtures in this lane will look for the headline among the runtime
-checks; it is not there, and no fixture could put it there.
+A reader of the lane's other fixtures will look for the headline among the runtime checks; it is
+not there, and no fixture could put it there.
 
 ## The two profiles, and why there are two
 
