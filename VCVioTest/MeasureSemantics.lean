@@ -66,10 +66,8 @@ noncomputable instance : gaussSpec.IsMeasureSpec where
 This is the statement the conversion buys: it does not typecheck against a `PMF`-valued
 semantics, because its subject is not a `PMF`. -/
 theorem denote_gauss_lift :
-    FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit) = gaussianReal 0 1 := by
-  change Measure.bind (gaussianReal 0 1)
-      (fun b => FreeM.denote (P := gaussSpec) (Pure.pure b)) = _
-  simp
+    FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit) = gaussianReal 0 1 :=
+  FreeM.denote_lift (P := gaussSpec) PUnit.unit
 
 /-- Primary notation selects the direct measure fold when no discrete backend exists. -/
 example : 𝒟[(FreeM.lift PUnit.unit : FreeM gaussSpec ℝ)] = gaussianReal 0 1 :=
@@ -89,8 +87,10 @@ made explicit. -/
 
 theorem denote_shiftedGaussian :
     FreeM.denote shiftedGaussian =
-      Measure.bind (gaussianReal 0 1) fun sample => Measure.dirac (sample + 1) :=
-  rfl
+      Measure.bind (gaussianReal 0 1) fun sample => Measure.dirac (sample + 1) := by
+  apply FreeM.denote_liftBind (P := gaussSpec)
+  change AEMeasurable (fun sample : ℝ => Measure.dirac (sample + 1)) (gaussianReal 0 1)
+  fun_prop
 
 /-- The continuous composition remains a probability measure. This proof is the canary for the
 measurable-continuation boundary that a `PMF` semantics cannot state. -/
@@ -149,9 +149,7 @@ example : MeasureProgramLogic.RelWP shiftedGaussian shiftedGaussian (· = ·) :=
 noncomputable instance : coinSpec.IsProbabilitySpec where
   toPMF _ := PMF.uniformOfFintype Bool
 
-noncomputable instance : coinSpec.IsMeasureSpec where
-  toMeasure _ := (PMF.uniformOfFintype Bool).toMeasure
-  isProbabilityMeasure _ := PMF.toMeasure.isProbabilityMeasure _
+noncomputable instance : coinSpec.IsMeasureSpec := IsProbabilitySpec.toMeasureSpec _
 
 /-- The coin's measure specification is its probability specification read as a measure. -/
 instance : PFunctor.IsMeasureSpec.Compatible coinSpec := ⟨fun _ => rfl⟩
@@ -290,11 +288,10 @@ example : Resumption.outputMeasure 0 delayedTrue = 0 := by
 failure result. -/
 theorem outputMeasure_one_delayedTrue :
     Resumption.outputMeasure 1 delayedTrue = Measure.dirac true := by
-  change (Measure.bind (IsMeasureSpec.toMeasure (P := coinSpec) PUnit.unit)
-    (fun _ => Measure.dirac (some true))).dropNone = Measure.dirac true
+  rw [delayedTrue, Resumption.outputMeasure_query_succ (P := coinSpec)]
   rw [Measure.bind_const,
     (IsMeasureSpec.isProbabilityMeasure (P := coinSpec) PUnit.unit).measure_univ, one_smul]
-  simp
+  exact Resumption.outputMeasure_pure (P := coinSpec) 0 true
 
 /-- The fuel-free returned-output semantics sees the delayed return with total mass one. -/
 example : Resumption.returnedMeasure delayedTrue Set.univ = 1 := by
