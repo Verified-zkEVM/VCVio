@@ -22,7 +22,9 @@ headline `advantage_le_bound`, the certificate, the two transports and every sta
 probability have **no runtime coverage at all** and cannot be given any.  The runtime checks below
 are about `Params`-level data only: `p.w - 2`, `SLHDSA.Security.targetCount`, and a routing table
 this file writes down.  What pins the bound's own shape is the `Pins` section, which restates each
-of the twenty-one exported declarations, and mutation testing against those pins.
+of the twenty-one exported declarations, and mutation testing against those pins; what pins the
+*strength* of the hypotheses is the vacuity canary at the end, which is elaboration-only for the
+same reason.
 
 A reader of the lane's other fixtures will look for the headline among the runtime checks; it is
 not there, and no fixture could put it there.
@@ -38,12 +40,19 @@ attribute, which is measured unnecessary here.
 
 `SLHDSA.LimitedParameterSet.SLHDSA_SHA2_128_24` is here as a bare `Params`, with no primitive
 bundle, because it is the profile at which the summand-to-game routing has a cell that goes dark.
-At `d = 1` the FORS `T_k` and WOTS+ `T_len` compressions have **the same cap** — both `2 ^ 22` —
-so a cap check alone cannot tell the two `T_ℓ` games apart there, which is the most plausible
-mis-wiring in the module since they are both target-collision games on the shared collection.  This
-file asserts that coincidence rather than hiding it, and pairs the cap check with an arity check:
-`k = 6` against `len = 68`.  At `toyParams` the two caps differ, 16 against 20, so the two-layer
-profile is where a cap check does discriminate.
+The FORS `T_k` and WOTS+ `T_len` compressions are both target-collision games on the shared
+collection, which makes them the most plausible mis-wiring in the module, and at `d = 1` they have
+**the same cap** — both `2 ^ 22` at this profile, and `2 ^ h` at every one-layer parameter set,
+which the `Pins` section proves.  At `toyParams`, where `d = 2`, the caps differ, 16 against 20;
+`Pins` proves that separation general too, for every `2 ≤ d`.
+
+So the caps separate the two `T_ℓ` games exactly when the hypertree has more than one layer, and
+what is left at `d = 1` is the **arity**, `p.k` against `p.len`.  That is not a property of
+`Params.Valid`, which relates neither: `collideParams` below is *valid*, has `d = 1` and
+`k = len = 6`, and at it `forsTlTcrCProblem` and `wotsTlTcrCProblem` are the same term by `rfl`,
+so no check of any kind can tell them apart there.  What makes the separation true where it
+matters is the parameter table: every FIPS 205 set and the SP 800-230 set has `k ≠ len`, asserted
+below over the whole table rather than at the two profiles this file carries.
 
 ## The reader-by-log matrix is empty, by construction
 
@@ -65,11 +74,12 @@ exercised there.
   carries.
 * **Anything about a probability.**  See above.
 * **What a certificate's three named quantities mean.**  `idealAdvantage`, `forsBranch` and
-  `hypertreeBranch` are `ℝ≥0∞` fields with no tie to any experiment, and a certificate that puts
-  the whole obligation on one branch satisfies the other two inequalities for free.  The pins below
-  restate the fields' types, which is all there is to restate.  Nor is the certificate's `pkSeed`
-  tied to the seed key generation sampled.  Both are recorded in the library module's docstring as
-  open.
+  `hypertreeBranch` are `ℝ≥0∞` fields with no tie to any experiment, so the pins can only restate
+  their types.  That no check *catches* it does not mean no check *records* it: the vacuity canary
+  below exhibits the certificate that puts the whole obligation on one branch and closes the goal
+  it leaves, which is the fact rather than the absence of one.  The certificate's `pkSeed` is
+  likewise not tied to the seed key generation sampled, and that one is recorded in the library
+  module's docstring as open with nothing here checking it.
 * **Whether the summands are the source's.**  The routing table below says which Lean game each
   summand is the advantage of; that the twelve games are the source's twelve is a reading of
   `SPHINCS_PLUS.ec`, `FORS_ES.ec`, `FL_SL_XMSS_MT_ES.ec` and `WOTS_TW_ES.ec`, recorded in the
@@ -77,11 +87,14 @@ exercised there.
 
 ## What is here
 
-Fifty-seven runtime checks in four groups — the two coefficients (18), the eight caps at both
-profiles (16), the `T_ℓ` discrimination and its arity pairing (10), and the routing table (13) —
-and sixty-nine `example`s in `Pins`, at least one for each of the twenty-one declarations the
-library module exports, plus the two `T_ℓ` attacked-member equations, the ten games' declared caps
-and the sixteen profile pins.
+Sixty-seven runtime checks in four groups — the two coefficients (18), the eight caps at both
+profiles (16), the `T_ℓ` separation and the valid profile where it fails (20), and the routing
+table (13).  Eighty `example`s in `Pins`: at least one for each of the twenty-one declarations the
+library module exports, the two `T_ℓ` attacked-member equations, the ten games' declared caps, the
+three general cap separations and the game identity they explain, the `ITSRProblem` shape, and
+twenty-two profile pins.  Then the vacuity canary — eighteen declarations and four `example`s,
+which together build a closed `Certificate` from an address key and a public seed and prove that
+the bound it names is at least one.
 
 ## References
 
@@ -102,9 +115,12 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 /-! ## The two profiles -/
 
 -- Exposed, and what the attribute is for was read off the errors its removal alone produces in
--- this file: nineteen, no error ceiling reached, the first inside the bundle below at
--- `yToBytes := id`, `Type mismatch: id`, and the rest one `(kernel) declaration type mismatch`
--- and one code-generation failure at each of the nine instances written at `toyPrimitives`.
+-- this file: thirty-six, no error ceiling reached.  One `Type mismatch: id` inside the bundle
+-- below, at `yToBytes := id`; eighteen `(kernel) declaration type mismatch`, two at each of the
+-- nine instances written at `toyPrimitives`; nine code-generation failures at those same nine
+-- instances, six `failed to compile definition` and three `Failed to find LCNF signature`; and
+-- eight `Application type mismatch` in the vacuity canary's toy instantiations, where `toy.params`
+-- has to be `toyParams` for the generic declarations to apply.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
@@ -112,10 +128,11 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 /-- The toy parameters are valid. -/
 theorem toyValid : toyParams.Valid := by decide
 
--- Exposed for a different reason from `toyParams`, also read off its removal: eight errors, none
+-- Exposed for a different reason from `toyParams`, also read off its removal: seven errors, none
 -- of them in the bundle and all of them in the pins, where the certificate's own `vp` has to
--- reduce to `toyParams` for the bundle's instances to be found.  Five are `typeclass instance
--- problem is stuck` on `DecidableEq ?m` and three `failed to synthesize`.
+-- reduce to `toyParams` for the bundle's instances to be found.  Six are `typeclass instance
+-- problem is stuck` and the seventh is a `(deterministic) timeout at isDefEq`; none is a
+-- `failed to synthesize`.
 /-- The validated form of `toyParams`. -/
 @[expose] def toy : ValidatedParams := ⟨toyParams, toyValid⟩
 
@@ -125,11 +142,20 @@ def p24 : Params := LimitedParameterSet.params .SLHDSA_SHA2_128_24
 
 /-- A *valid* parameter set with `lgw = 1`, hence `w = 2` and an undetectability coefficient of
 zero.  It is here because `Params.Valid` does not rule this out, and at it the WOTS+-`F`
-undetectability summand leaves the bound — correctly, since the source's hybrid over chain
-positions has `w - 2` steps.  `SLHDSA.Security.two_le_w` does not say otherwise and
+undetectability summand leaves the bound.  Whether that is right the source does not say: it fixes
+`w` to 4, 16 or 256 (`WOTS_TW_ES.ec`, `val_w`) and states neither hypertree lemma outside that set,
+so `Params.Valid` is more permissive here than the parameter space of the theorem the bound
+mirrors.  `SLHDSA.Security.two_le_w` does not settle it either, and
 `bound_wotsFUd_coefficient_add_two` is what it buys. -/
 def widthTwoParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 1 }
+
+/-- A *valid* parameter set with `d = 1` and `k = len`, at which the two `T_ℓ` compression games
+are literally the same object: same attacked hash, same collection, same cap, same arity.  It is
+here because `Params.Valid` relates `k` to nothing, so the arity separation the routing relies on
+is a property of the shipped parameter table and not of validity. -/
+def collideParams : Params :=
+  { n := 1, h := 4, d := 1, hp := 4, a := 2, k := 6, lgw := 2 }
 
 /-- A deliberately invalid parameter set with `lgw = 0`, hence `w = 1`.  It exists so that the
 `ℕ`-truncation `two_le_w` rules out has a witness: at it the undetectability coefficient would be
@@ -170,13 +196,14 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteMix msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed for code generation, and that is the whole of it: without the attribute, twenty-nine
--- errors, every one of them `Compilation failed, locally inferred compilation type differs from
--- type that would be inferred in other modules`, two at each of the nine instances and the rest at
--- the definitions that read the carrier.  `@[reducible]`, which the scheme-game fixture's copy of
--- this bundle also carries, is *not* needed here and is not written: removing it alone leaves the
--- build at zero errors, because no check below resolves an instance through the carrier by
--- unfolding it — the nine instances name `Bytes 1` and `Adrs` directly.
+-- Exposed for code generation, and that is the whole of it: without the attribute, thirty errors,
+-- every one of them `Compilation failed, locally inferred compilation type differs from type that
+-- would be inferred in other modules` — two at each of the nine instances below, eleven at the
+-- pins that name the certificate's fields at this bundle's types, and one at the `ITSRProblem`
+-- shape pin.  `@[reducible]`, which the scheme-game fixture's copy of this bundle also carries,
+-- is *not* needed here and is not written: the build is clean without it, because no check below
+-- resolves an instance through the carrier by unfolding it — the nine instances name `Bytes 1`
+-- and `Adrs` directly.
 /-- The toy bundle: one byte per node, a collapsing order- and address-sensitive `Thash`, and an
 `H_msg` that depends on all four of its arguments. -/
 @[expose] def toyPrimitives : Primitives toyParams where
@@ -230,8 +257,13 @@ One row per summand of `Summands`, in the source's order: the field's name, the 
 7.1--7.5 lands in that game.  Three summands have no role and no witness: the two `PRF` hops and the
 undetectability term, which in the source comes from the `Game2 → Game3` step of
 `MEUFGCMA_WOTSTWESNPRF` rather than from a forgery.  The `H_msg` ITSR game has a witness but no
-`TargetRole`: its transcript is capped by the number of signing queries and the `k` indices each
-digest selects, not by a structural ledger. -/
+`TargetRole`, and no cap of any other kind either: `KeyedHash.ITSRProblem` has two fields, the
+keyed hash family and the index map, and `ITSRTargetOracle` answers and records every query with
+no bound and no poison bit.  The source's `MCO_ITSR` term is bounded through its reduction, whose
+target count is the forger's signing queries because the reduction is built from the forger; the
+Lean advantage is a supremum over adversaries with unbounded transcripts, which is a strictly
+larger quantity.  `Pins` restates the two-field shape, so a cap added later has to be noticed
+here. -/
 
 /-- A routing row: the summand's field name, its game's cap role, and whether a witness family of
 this lane lands in that game. -/
@@ -300,8 +332,8 @@ def checkCoefficients : IO Unit := do
   ensure "toy is valid" (decide toyParams.Valid)
   ensure "p24 is valid" (decide p24.Valid)
 
-/-- **The twelve caps, at both profiles.**  Each summand with a role, against
-`SLHDSA.Security.targetCount` at that role. -/
+/-- **The eight caps, at both profiles.**  One check per `TargetRole` constructor, against
+`SLHDSA.Security.targetCount` at that role: eight roles, sixteen checks. -/
 def checkCaps : IO Unit := do
   ensure "toy forsF" (targetCount toyParams .forsF == 64)
   ensure "toy forsH" (targetCount toyParams .forsH == 32)
@@ -320,11 +352,13 @@ def checkCaps : IO Unit := do
   ensure "p24 wotsTl" (targetCount p24 .wotsTl == 2 ^ 22)
   ensure "p24 xmssH" (targetCount p24 .xmssH == 2 ^ 22 - 1)
 
-/-- **The cell that goes dark, and the arity check that is paired with it.**  The two `T_ℓ`
-compressions are both target-collision games on the shared `Thash` collection; at `d = 1` their caps
-coincide, so at the profile the corollary of the next pull request will use, a cap check alone
-cannot tell `forsTlTcrCProblem` from `wotsTlTcrCProblem`.  The arity does tell them apart at both
-profiles, and so does the `th` each game fixes, which the `Pins` section restates. -/
+/-- **The cell that goes dark, and what is left when it does.**  The two `T_ℓ` compressions are
+both target-collision games on the shared `Thash` collection; at `d = 1` their caps coincide, so at
+the profile the corollary of the next pull request will use, a cap check alone cannot tell
+`forsTlTcrCProblem` from `wotsTlTcrCProblem`.  What is left there is the arity, `p.k` against
+`p.len`, and `Params.Valid` does not relate the two: `collideParams` is valid with `k = len`, and
+at it the two games are the same term.  So the last group here asserts the separation where it is
+actually true, over the whole shipped parameter table. -/
 def checkTlDiscrimination : IO Unit := do
   -- at the two-layer profile the caps discriminate
   ensure "toy forsTl ≠ wotsTl" (targetCount toyParams .forsTl != targetCount toyParams .wotsTl)
@@ -340,6 +374,22 @@ def checkTlDiscrimination : IO Unit := do
   -- the other pair of same-shaped games: FORS-`H` and XMSS-`H` are both two-node `H` collisions
   ensure "toy forsH ≠ xmssH" (targetCount toyParams .forsH != targetCount toyParams .xmssH)
   ensure "p24 forsH ≠ xmssH" (targetCount p24 .forsH != targetCount p24 .xmssH)
+  -- the valid profile at which nothing discriminates, asserted rather than hidden
+  ensure "collide is valid" (decide collideParams.Valid)
+  ensure "collide d = 1" (collideParams.d == 1)
+  ensure "collide k" (collideParams.k == 6)
+  ensure "collide len" (collideParams.len == 6)
+  ensure "collide k = len" (collideParams.k == collideParams.len)
+  ensure "collide forsTl = wotsTl" (targetCount collideParams .forsTl ==
+    targetCount collideParams .wotsTl)
+  ensure "collide w is not two" (collideParams.w == 4)
+  -- so the arity separation is a fact about the table, asserted over all of it
+  ensure "every FIPS 205 set has k ≠ len"
+    (FipsParameterSet.all.all fun ps => ps.params.k != ps.params.len)
+  ensure "twelve FIPS 205 sets" (FipsParameterSet.all.length == 12)
+  ensure "the SP 800-230 set has k ≠ len"
+    ((LimitedParameterSet.params .SLHDSA_SHA2_128_24).k !=
+      (LimitedParameterSet.params .SLHDSA_SHA2_128_24).len)
 
 /-- **The routing table.**  Twelve rows, three of them roleless, nine witness-backed, and the eight
 `TargetRole` constructors covered with `forsF` used twice. -/
@@ -372,9 +422,9 @@ def checkRouting : IO Unit := do
 
 /-! ## The pins
 
-Every one of the twenty declarations `HashSig.SLHDSA.Security.Composition` exports, restated at this
-bundle's types, with generic arguments where the statement has them.  These are the only check on
-the bound's own shape: a library-side edit of a coefficient, of a summand's routing, or of a
+Every one of the twenty-one declarations `HashSig.SLHDSA.Security.Composition` exports, restated at
+this bundle's types, with generic arguments where the statement has them.  These are the only check
+on the bound's own shape: a library-side edit of a coefficient, of a summand's routing, or of a
 certificate field's type moves the library statement and fails the pin here, which no library-side
 edit can reach. -/
 
@@ -495,7 +545,7 @@ example : c.summands.bound toy.params =
 example : adv.advantage ProbCompRuntime.probComp ≤ c.summands.bound toy.params :=
   advantage_le_bound c
 
-/-! ### The anti-vacuity constructor -/
+/-! ### The branch-bounds constructor -/
 
 section OfBranch
 
@@ -620,7 +670,7 @@ example (pkSeed : toyPrimitives.PkSeed) (address : Adrs)
       toyPrimitives.Tl pkSeed address input.toList :=
   wotsTlTcrCProblem_eval_adrsToKey toyPrimitives pkSeed address input
 
-/-! ### The caps the twelve games declare, tied to `targetCount`
+/-! ### The caps the ten games declare, tied to `targetCount`
 
 The runtime checks read `targetCount`; these tie each game's own `numTargets` field to it, so the
 routing table's third column is about the games and not only about the cap function. -/
@@ -646,6 +696,69 @@ example : (wotsTlTcrCProblem toyPrimitives).numTargets = targetCount toyParams .
 example : (xmssHTcrCProblem toyPrimitives).numTargets = targetCount toyParams .xmssH :=
   xmssHTcrCProblem_numTargets toyPrimitives
 
+/-! ### The two `T_ℓ` games' separation, in general
+
+The runtime group asserts the caps at three named profiles.  These three say what is true of every
+validated parameter set: the caps separate the two `T_ℓ` compressions exactly when the hypertree
+has more than one layer, and at one layer they coincide.  The fourth exhibits the consequence —
+at a valid `d = 1` profile with `k = len` the two games are the *same term*, so no cap check, no
+arity check and no attacked-member equation can distinguish them there. -/
+
+example (p : Params) (h : p.Valid) (hd : p.d = 1) :
+    targetCount p .forsTl = targetCount p .wotsTl := by
+  rw [show targetCount p .forsTl = 2 ^ p.h from rfl,
+    show targetCount p .wotsTl = wotsInstanceCount p from rfl,
+    wotsInstanceCount_eq_xmssTreeCount_mul, xmssTreeCount_eq_geomSum, hd]
+  simp [h.h_eq_layers, hd]
+
+example (p : Params) (h : p.Valid) (hd : 2 ≤ p.d) :
+    targetCount p .forsTl < targetCount p .wotsTl := by
+  rw [show targetCount p .forsTl = 2 ^ p.h from rfl,
+    show targetCount p .wotsTl = wotsInstanceCount p from rfl,
+    wotsInstanceCount_eq_xmssTreeCount_mul, xmssTreeCount_eq_geomSum, h.h_eq_layers, pow_mul']
+  have hlast : (2 ^ p.hp) ^ (p.d - 1) < ∑ i ∈ Finset.range p.d, (2 ^ p.hp) ^ i := by
+    have hsub : ({p.d - 1, 0} : Finset ℕ) ⊆ Finset.range p.d := by
+      intro x hx
+      simp only [Finset.mem_insert, Finset.mem_singleton] at hx
+      rcases hx with rfl | rfl <;> exact Finset.mem_range.mpr (by omega)
+    calc (2 ^ p.hp) ^ (p.d - 1) < (2 ^ p.hp) ^ (p.d - 1) + (2 ^ p.hp) ^ 0 := by simp
+      _ = ∑ i ∈ ({p.d - 1, 0} : Finset ℕ), (2 ^ p.hp) ^ i := by
+          rw [Finset.sum_insert (by simp; omega), Finset.sum_singleton]
+      _ ≤ ∑ i ∈ Finset.range p.d, (2 ^ p.hp) ^ i := Finset.sum_le_sum_of_subset hsub
+  calc (2 ^ p.hp) ^ p.d = (2 ^ p.hp) ^ (p.d - 1) * 2 ^ p.hp := by
+        rw [← pow_succ]; congr 1; omega
+    _ < (∑ i ∈ Finset.range p.d, (2 ^ p.hp) ^ i) * 2 ^ p.hp :=
+        (Nat.mul_lt_mul_right (Nat.two_pow_pos _)).mpr hlast
+
+/-- The other pair of same-shaped games is separated everywhere, with no side condition beyond
+validity: the XMSS internal-node cap is `2 ^ h - 1` and the FORS one is at least `2 ^ h`. -/
+example (p : Params) (h : p.Valid) : targetCount p .xmssH < targetCount p .forsH := by
+  rw [targetCount_xmssH_eq p h]
+  have hfors : 2 ^ p.h ≤ targetCount p .forsH := by
+    rw [show targetCount p .forsH = 2 ^ p.h * p.k * (2 ^ p.a - 1) from rfl]
+    calc 2 ^ p.h = 2 ^ p.h * 1 * 1 := by ring
+      _ ≤ 2 ^ p.h * p.k * (2 ^ p.a - 1) :=
+          Nat.mul_le_mul (Nat.mul_le_mul_left _ h.k_pos)
+            (Nat.sub_pos_of_lt (Nat.one_lt_two_pow (Nat.ne_of_gt h.a_pos)))
+  have hpos : 0 < 2 ^ p.h := Nat.two_pow_pos _
+  omega
+
+example (prims : Primitives collideParams) [SampleableType prims.PkSeed] :
+    forsTlTcrCProblem prims = wotsTlTcrCProblem prims := rfl
+
+/-! ### The ITSR game's shape
+
+`KeyedHash.ITSRProblem` has exactly two fields and neither is a target cap, which is why the
+`MCO_ITSR` summand has no `TargetRole` row and no cap of any other kind.  An added third field
+fails this pin. -/
+
+example (khf : CollisionResistance.KeyedHashFamily toyPrimitives.Y
+      (HmsgITSRInput toyPrimitives.PkSeed toyPrimitives.Y) (Bytes toyParams.m))
+    (indices : Bytes toyParams.m → List (HmsgIndex toyParams)) :
+    ITSRProblem toyPrimitives.Y (HmsgITSRInput toyPrimitives.PkSeed toyPrimitives.Y)
+      (Bytes toyParams.m) (HmsgIndex toyParams) :=
+  ⟨khf, indices⟩
+
 /-! ### The profile pins -/
 
 example : toyParams.w = 16 := by decide
@@ -664,6 +777,12 @@ example : degenerateParams.w - 2 = 0 := by decide
 example : ¬ degenerateParams.Valid := by decide
 example : widthTwoParams.w - 2 = 0 := by decide
 example : widthTwoParams.Valid := by decide
+example : collideParams.Valid := by decide
+example : collideParams.k = collideParams.len := by decide
+example : collideParams.d = 1 := by decide
+example : targetCount collideParams .forsTl = targetCount collideParams .wotsTl := by decide
+example (ps : FipsParameterSet) : ps.params.k ≠ ps.params.len := by cases ps <;> decide
+example (ps : LimitedParameterSet) : ps.params.k ≠ ps.params.len := by cases ps; decide
 
 end Pins
 
