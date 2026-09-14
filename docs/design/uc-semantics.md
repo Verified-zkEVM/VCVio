@@ -122,6 +122,7 @@ are checked theorems, rather than failures of a proof tactic:
 | Scheduling a receiver suffices for delivery | A schedule activating both actors without a delivery leaves the environment unfinished. |
 | The serial comparison needs no queue premise | `serialRound_ne_token_with_pending` refutes that equation on a state reached by a real FIFO send. |
 | Equal final shared state permits reordering effects | `shared_state_equality_does_not_preserve_replies` has equal final states and different client replies. |
+| Equal immediate reply laws permit adaptive replacement | `ReactiveKernel.Tests.response_laws_equal` holds at every common starting state, but `response_only_replacement_false` separates the two-operation executions; `joint_laws_differ` rejects the stronger contract. |
 
 The execution counterexamples are in `VCVioTest/ReactiveNetworkAdversarial.lean`; cryptographic
 separation theorems are in `Examples/OneTimePad/Reactive/Separation.lean`. Terminal-measure

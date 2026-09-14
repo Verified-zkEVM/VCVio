@@ -144,6 +144,33 @@ randomized encryption. These are finite single-use results. They do not yet deri
 contextual OTP replacement, statically indexed sessions, a general dummy-adversary theorem,
 or computational resource closure.
 
+## Joint local-kernel checkpoint
+
+Full `./scripts/validate.sh --lint --test --axioms` passes: 18,915 declarations across
+632 production modules, the same 40 existing sorry-tainted declarations, and zero
+nonstandard-axiom taint. Log: `/private/tmp/uc-joint-kernels-validation.log`.
+
+`ReactiveKernel` lifts equality of each operation's joint reply/service-state measure to
+complete residual-state laws for every finite token horizon and fixed FIFO schedule. The
+theorem retains queues, private machines, control, and elapsed activations. Measurable
+structures and discrete reply/state products are explicit. Two individually discrete
+uncountable spaces are not silently treated as having a discrete product.
+
+The same local premise lifts through adaptive oracle interpretation in
+`OracleComp.evalDist_simulateQ_run_congr`. `Examples/PRFTagReader/Network/Kernel.lean` consumes
+it to preserve actual packet verdicts and bad-state observations. Its
+`multiple_le_single_add_bad_of_joint_law` transports the existing direct-coupling bound with
+all three loss terms unchanged. The bounded serial schedule and atomic-service scope remain
+those of the original PRF network theorem.
+
+The positive PRF consumer changes every handler to draw and discard an extra fair bit and
+admits the full reduction for every bounded adaptive client. This preserves semantics, not
+implementation cost. The reactive negative test compares handlers with identical immediate
+reply laws at every common starting state: one stores false, the other true, and a later
+read makes their actual observation measures different. The joint contract correctly rejects
+that replacement. General related-state couplings and computational cost transport require
+additional contracts; reply marginals alone cannot supply them.
+
 ## Complexity foundation: source audit and adoption decision
 
 This audit distinguishes the current VCVio pins from upstream source inspected on September 13.

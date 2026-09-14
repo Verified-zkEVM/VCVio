@@ -32,6 +32,7 @@ VCVio retains the computational and runtime interpretation of PolyFun's generic 
 | `VCVio/Interaction/UC/ReactiveRuntime.lean` | Setup-sampled token/FIFO execution and measures of actual terminal environment outcomes. |
 | `VCVio/Interaction/UC/ReactiveSecurity.lean` | Fixed outcome observations and graded statistical replacement for executable handled assemblies. |
 | `VCVio/Interaction/UC/ReactiveWorld.lean` | Actual adversary/backchannel wiring and named executable statistical simulators. |
+| `VCVio/Interaction/UC/ReactiveKernel.lean` | Joint local-handler laws preserve complete residual-state measures at every token/FIFO prefix. |
 | `VCVio/Interaction/UC/Standard.lean` | Standard VCVio UC imports and conveniences. |
 | `VCVio/Interaction/UC/StdDoBridge.lean` | Bridges from VCVio program-logic/Std.Do idioms into the UC runtime layer. |
 
@@ -187,6 +188,15 @@ activations. `run_serialSchedule` proves that an all-branch bound of `n` queries
 `3 * n` activations and preserves the complete traced oracle result. The PRF tag/reader consumer
 is `Examples/PRFTagReader/Network.lean`. This runtime treats each service computation atomically;
 it does not assume fairness or provide raw open-syntax contextual factorization.
+
+`Examples/PRFTagReader/Network/Kernel.lean` transports that packet reduction under joint local
+response/state laws. It retains the bad-world state event and all three original loss terms.
+The shared adaptive-oracle theorem is `evalDist_simulateQ_run_congr` in
+`VCVio/OracleComp/SimSemantics/StateT/Measure.lean`. Measurable state spaces and discrete
+response/state products are explicit premises. `VCVioTest/PRFNetworkKernel.lean` admits handlers
+that draw extra discarded randomness, demonstrating semantic preservation without claiming
+unchanged implementation cost. `VCVioTest/ReactiveKernel.lean` refutes response-only replacement:
+equal immediate replies can store different bits which a later call reveals.
 
 ## Reactive execution and observations
 
