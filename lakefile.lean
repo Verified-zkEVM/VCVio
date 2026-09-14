@@ -620,8 +620,9 @@ builds a closed `Certificate` at an arbitrary validated parameter set from an ad
 public seed, and proves that the bound it names is at least one.  It builds a second one from
 those two and a counting interface at an open-preimage adversary of advantage one, whose three
 `ℝ≥0∞` fields are the experiment's own quantities — so tying those fields to the experiment
-refuses the first certificate and not the second — and proves that such an interface exists
-exactly when that adversary's two induced reductions satisfy `DSPR + 3 · TCR ≥ 1`. -/
+refuses the first certificate and not the second — and proves that over a node type with at least
+two elements such an interface exists exactly when that adversary's two induced reductions satisfy
+`DSPR + 3 · TCR ≥ 1`. -/
 lean_exe slhdsa_composition_tests where
   root := `HashSigTest.SLHDSA.Composition
 

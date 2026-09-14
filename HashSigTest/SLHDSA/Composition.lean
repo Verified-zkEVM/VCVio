@@ -1180,8 +1180,9 @@ theorem hypertreeHalf_le_freePre {adv : unforgeableAdv (generalAlg prims)} (t : 
 -- and not a reduced type.
 /-- **A `Certificate` whose three named quantities are the experiment's own.**  The two arguments
 that are data are an address key and a public seed, as in `freeCertificate`; the third is a
-`CountingInterface` at an adversary whose advantage is one, which is the one input that is not
-data and is not known to exist. -/
+`CountingInterface` at an adversary whose advantage is one, and it is the one input here that is
+not data.  Nothing constructs it, and `nonempty_counting_winningOpenPre_iff` below says exactly
+what constructing it would take. -/
 noncomputable def anchoredCertificate {adv : unforgeableAdv (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
     (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
