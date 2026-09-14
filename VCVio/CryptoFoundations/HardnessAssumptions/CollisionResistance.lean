@@ -62,6 +62,7 @@ protocol parameter.
 
 
 open OracleComp OracleSpec ENNReal
+open scoped OracleSpec.UniformMeasure
 
 namespace CollisionResistance
 
@@ -85,7 +86,6 @@ def crExp [DecidableEq X] [DecidableEq Y]
 produces a valid collision for `f`. -/
 noncomputable def crAdvantage [DecidableEq X] [DecidableEq Y]
     (f : X → Y) (adversary : CRAdversary X) : ℝ≥0∞ :=
-  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   𝒟[crExp f adversary] {true}
 
 /-! ## Keyed Hash Function Families -/
@@ -117,7 +117,6 @@ def keyedCRExp [DecidableEq X] [DecidableEq Y]
 valid collision under the sampled key. -/
 noncomputable def keyedCRAdvantage [DecidableEq X] [DecidableEq Y]
     (H : KeyedHashFamily K X Y) (adversary : KeyedCRAdversary K X) : ℝ≥0∞ :=
-  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   𝒟[keyedCRExp H adversary] {true}
 
 /-! ## ROM-Level Collision Resistance

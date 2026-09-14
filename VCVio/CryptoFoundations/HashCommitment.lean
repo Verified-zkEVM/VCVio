@@ -39,6 +39,7 @@ chain `binding ≤ keyed-CR ≤ birthday`.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal CommitmentScheme
+open scoped OracleSpec.UniformMeasure
 
 namespace CollisionResistance
 
@@ -78,7 +79,6 @@ theorem bindingAdvantage_toCommitment_le_keyedCRAdvantage
     (H : KeyedHashFamily K (M × S) C) (A : BindingAdv K M C S) :
     bindingAdvantage H.toCommitment A ≤
       keyedCRAdvantage H (bindingAdv_toCRAdv A) := by
-  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   let : MeasurableSpace K := ⊤
   let : MeasurableSpace (C × M × S × M × S) := ⊤
   unfold bindingAdvantage CommitmentScheme.bindingExp

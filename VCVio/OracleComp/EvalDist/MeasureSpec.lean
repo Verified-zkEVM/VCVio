@@ -79,6 +79,14 @@ noncomputable def IsUniformMeasureSpec.unifSpec : IsUniformMeasureSpec _root_.un
 noncomputable def IsUniformMeasureSpec.coinSpec : IsUniformMeasureSpec _root_.coinSpec :=
   ofFintypeInhabited _
 
+namespace UniformMeasure
+
+/-- Select the native measure interpretation of the concrete uniform-selection oracle. -/
+noncomputable scoped instance instUnifSpec : IsUniformMeasureSpec _root_.unifSpec :=
+  IsUniformMeasureSpec.unifSpec
+
+end UniformMeasure
+
 end OracleSpec
 
 namespace OracleComp

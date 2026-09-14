@@ -33,6 +33,7 @@ properties: correctness, hiding, and binding.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal
+open scoped OracleSpec.UniformMeasure
 
 /-- A non-interactive commitment scheme with public parameters `PP`, message space `M`,
 commitment space `C`, and opening (decommitment) space `D`. -/
@@ -86,7 +87,6 @@ def hidingExp (cs : CommitmentScheme PP M C D) (adversary : HidingAdv PP M C) : 
 deviates from the `1 / 2` of a random guess. -/
 noncomputable def hidingAdvantage (cs : CommitmentScheme PP M C D) (adversary : HidingAdv PP M C) :
     ℝ :=
-  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   |(𝒟[cs.hidingExp adversary] {true}).toReal - 1 / 2|
 
 /-! ### Computational binding -/
@@ -106,7 +106,6 @@ def bindingExp [DecidableEq M] (cs : CommitmentScheme PP M C D) (adversary : Bin
 opening a single commitment to two distinct messages. -/
 noncomputable def bindingAdvantage [DecidableEq M] (cs : CommitmentScheme PP M C D)
     (adversary : BindingAdv PP M C D) : ℝ≥0∞ :=
-  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   𝒟[cs.bindingExp adversary] {true}
 
 /-! ### Trapdoor extractability -/

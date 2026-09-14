@@ -55,9 +55,11 @@ For a finite uniform oracle, `OracleSpec.IsUniformMeasureSpec.instCompatible` pr
 agreement for the native `uniformOn Set.univ` interpretation. It lets a theorem about a direct
 uniform measure fold use an existing finite probability equation at the compatibility boundary.
 For `ProbComp Bool` security games, use `boolDistAdvantage` for a two-game gap and
-`𝒟[game] {true}` for a success probability, selecting `IsUniformMeasureSpec.unifSpec`
-explicitly. `boolDistAdvantage_self`, `boolDistAdvantage_comm`, and
-`boolDistAdvantage_triangle` keep elementary metric proofs independent of the finite façade.
+`𝒟[game] {true}` for a success probability. Use
+`open scoped OracleSpec.UniformMeasure` once in a module that uses the direct
+uniform measure interpretation of `ProbComp`. `boolDistAdvantage_self`,
+`boolDistAdvantage_comm`, and `boolDistAdvantage_triangle` keep elementary
+metric proofs independent of the finite façade.
 The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq.rec` law for `Pr[...]`
 only needs equality of result types, whereas a measure denotation also depends on the selected
 `MeasurableSpace`, so there is no blanket finite-type measurable-space instance.
@@ -75,8 +77,10 @@ and `usesRetiredProbability` correctly reports it. State generic measure laws un
 an explicit `EvalDistSemantics`, or select a direct `PFunctor.IsMeasureSpec` before
 elaborating a concrete theorem. Keep sampler calibration through the old class in
 compatibility proofs until the sampler's certificate itself is measure-valued.
-For the finite-range oracle, `OracleSpec.IsUniformMeasureSpec.unifSpec` is an
-explicit native interpretation. With that instance selected,
+For the finite-range oracle, `OracleSpec.IsUniformMeasureSpec.unifSpec` is the
+native interpretation selected by `open scoped OracleSpec.UniformMeasure`.
+The scope applies only to the concrete uniform-selection oracle; other oracle
+specifications still require an explicit measure interpretation. With that scope open,
 `ProbComp.evalDist_uniformFin` simplifies a query to `uniformOn Set.univ`, and
 `ProbComp.prEvent_uniformFin` evaluates a decidable event by counting
 its satisfying outcomes. These laws avoid a point-mass detour; the
