@@ -1128,8 +1128,6 @@
  ["usesRetiredProbability", "AsymmEncAlg.runAgainst_IND_CPA_responder_eq"],
  ["usesRetiredProbability", "AsymmEncAlg.runAgainst_IND_CPA_swap"],
  ["usesRetiredProbability", "AsymmEncAlg.run_IND_CPA_responder_eq"],
- ["usesRetiredProbability", "BR93.br93AsymmEnc.badEventProb"],
- ["usesRetiredProbability", "BR93.br93AsymmEnc.badEventProb_le_tdpAdvantage"],
  ["usesRetiredProbability", "BR93.br93AsymmEnc.correct"],
  ["usesRetiredProbability", "BR93.br93AsymmEnc.cpaGame_gap_le_badEvent"],
  ["usesRetiredProbability", "BR93.br93AsymmEnc.game1_eq_game2"],

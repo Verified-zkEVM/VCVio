@@ -19,7 +19,10 @@ an ordinary Lean `do` sequence, returns its final Boolean or proposition, and ta
 the `{True}` mass of that result's `𝒟`. It works with a direct measure-only oracle
 interpretation as well as a finite compatibility interpretation. The
 `prEvent_eq_evalDist` theorem requires a measurable predicate; its
-discrete specialization discharges that condition. For an optional computation,
+discrete specialization discharges that condition. `prEvent_eq_evalDist_decide`
+equates an event with a Boolean experiment's final `decide`, without requiring
+a measurable space on the intermediate result. Factor the common sampling run
+once when both forms of a security game are public. For an optional computation,
 successful outputs are measured through `dropNone`, so failure contributes no mass.
 The `OptionT` measure instance also works when the base monad has no finite lift.
 `VCVio.EvalDist.Monad.Measure` provides `evalDist_bind_bind_swap` for jointly measurable
@@ -91,13 +94,22 @@ transport. Its product sampler law uses `evalDist_pair` and the existing
 `uniformOn_univ_prod` construction. These supply the `BitVec` key law and the measure-level
 one-time-pad independence theorem. An arbitrary `SampleableType` implementation
 still needs a measure-valued certificate or a construction-specific proof.
+`ProbComp.evalDist_decide_eq_uniformBool_half` proves that an independent Boolean guess
+matches a fair hidden bit with mass `1/2`; it uses the native uniform measure and
+Mathlib's `lintegral_fintype`, so all-random game hops need no point-probability sum.
 
 The type classes separate a choice of response measures (`IsMeasureSpec`) from the
 additional uniformity and finite-range laws (`IsUniformMeasureSpec`). A blanket instance
 from `[spec.Fintype] [spec.Inhabited]` would silently choose a distribution for an arbitrary
 oracle, so only the concrete `unifSpec` and `coinSpec` instances are global. Syntactic
 `OracleComp.support` is defined by a `SetM` fold and needs neither measure class; a
-positive-mass bridge needs assumptions on the chosen measures. Compatibility proofs that
+positive-mass bridge needs assumptions on the chosen measures.
+`OracleComp.mem_support_iff_evalDist_singleton_pos_of_fullSupport` takes the precise
+full-support condition on each answer measure, without adding a class for that one law.
+`OracleComp.mem_support_iff_evalDist_singleton_pos` discharges it from
+`IsUniformMeasureSpec`; use this native bridge when relating structural reachability to
+singleton mass. Neither theorem requires the PMF-based `IsUniformSpec` class.
+Compatibility proofs that
 still use the finite frontend can open `ProbComp.DiscreteCompatibility` locally, leaving
 the native interpretation as the default elsewhere.
 

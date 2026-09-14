@@ -70,6 +70,16 @@ theorem prEvent_eq_evalDist_decide_of_discrete
   ext x
   simp
 
+/-- A final decidable event has the same success mass whether it is returned as a proposition
+or decided to a Boolean; no measurable structure on intermediate values is needed. -/
+theorem prEvent_eq_evalDist_decide
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (p : α → Prop) [DecidablePred p] :
+    Pr{let x ← mx}[p x] = 𝒟[do let x ← mx; return decide (p x)] {true} := by
+  let : MeasurableSpace α := ⊤
+  exact prEvent_eq_evalDist_decide_of_discrete mx p
+
 /-- Implication between events bounds their probabilities on a discrete output space. -/
 theorem prEvent_mono_of_discrete
     {m : Type → Type v} [Monad m] [LawfulMonad m]

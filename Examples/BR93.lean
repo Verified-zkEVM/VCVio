@@ -14,6 +14,7 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.EvalDist.Monad.Measure
+import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 /-!
 # Bellare-Rogaway 1993 Encryption
@@ -393,7 +394,7 @@ def badEventExp (tdp : TrapdoorPermutation PK SK Rand)
 /-- Probability of the bad event. -/
 noncomputable def badEventProb (tdp : TrapdoorPermutation PK SK Rand)
     (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : ℝ :=
-  (Pr[= true | badEventExp tdp adv]).toReal
+  (𝒟[badEventExp tdp adv] {true}).toReal
 
 /-- Inversion reduction: run the BR93 adversary in the idealized challenge game, log its
 random-oracle queries, and return the first query whose image under the trapdoor permutation
@@ -454,8 +455,8 @@ omit [Inhabited Rand] [Fintype Rand] [Inhabited M] [Fintype M] [DecidableEq M]
   [AddCommGroup M] in
 /-- In the all-random game, the challenge ciphertext is independent of the hidden bit, so the
 adversary succeeds with probability exactly `1/2`. -/
-theorem game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
-    Pr[= true | game2 tdp adv] = 1 / 2 := by
+theorem evalDist_game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+    𝒟[game2 tdp adv] {true} = 1 / 2 := by
   let f : Bool → ProbComp Bool := fun _ =>
     (simulateQ roQueryImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
       let (pk, _sk) ← liftM tdp.keygen
@@ -464,9 +465,15 @@ theorem game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
       let h ← liftM ($ᵗ M)
       let c : Rand × M := (tdp.forward pk r, h)
       adv.guess st c)).run' ∅
-  change Pr[= true | do let b ← $ᵗ Bool; let b' ← f b; return decide (b = b')] = 1 / 2
-  simpa [game2, f] using
-    (probOutput_decide_eq_uniformBool_half f (by rfl))
+  change 𝒟[do let b ← $ᵗ Bool; let b' ← f b; return decide (b = b')] {true} = 1 / 2
+  exact ProbComp.evalDist_decide_eq_uniformBool_half f (by rfl)
+
+omit [Inhabited Rand] [Fintype Rand] [Inhabited M] [Fintype M] [DecidableEq M]
+  [AddCommGroup M] in
+/-- The finite-frontend form of `evalDist_game2_eq_half`. -/
+theorem game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+    Pr[= true | game2 tdp adv] = 1 / 2 := by
+  simpa only [evalDist_apply_singleton] using evalDist_game2_eq_half (tdp := tdp) adv
 
 omit [Inhabited Rand] [Fintype Rand] [DecidableEq Rand] [SampleableType Rand] [Inhabited M]
   [Fintype M] [DecidableEq M] [SampleableType M] [AddCommGroup M] in
@@ -638,8 +645,8 @@ private lemma tdpExp_eq_observation (adv : CPA_Adv (PK := PK) (Rand := Rand) (M 
       decide (tdp.forward x.1 (transcriptPreimage (tdp := tdp) x.1
         (tdp.forward x.1 x.2.1) x.2.2) = tdp.forward x.1 x.2.1)) <$>
       challengeTranscriptExp (tdp := tdp) adv := by
-  simp only [tdpExp, inverter_eq, challengeTranscriptExp, map_bind, map_pure,
-    bind_map_left]
+  simp only [tdpExp, tdpRun, inverter_eq, challengeTranscriptExp, map_bind, map_pure,
+    bind_map_left, bind_assoc, pure_bind]
 
 omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] [Inhabited Rand] in
 /-- The bad-event experiment observes the shared challenge transcript under any lawful
@@ -696,10 +703,9 @@ omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] in
 constructed from the adversary's random-oracle transcript. -/
 theorem badEventProb_le_tdpAdvantage (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
     badEventProb tdp adv ≤ (tdpAdvantage tdp (inverter tdp adv)).toReal := by
-  rw [badEventProb, tdpAdvantage]
-  simp only [evalDist_apply_singleton]
-  apply ENNReal.toReal_mono (ne_top_of_le_ne_top ENNReal.one_ne_top probOutput_le_one)
-  simpa only [evalDist_apply_singleton] using measure_badEventExp_le_tdpExp (tdp := tdp) adv
+  rw [badEventProb, tdpAdvantage_eq_evalDist_tdpExp]
+  exact ENNReal.toReal_mono (MeasureTheory.measure_ne_top _ _)
+    (measure_badEventExp_le_tdpExp (tdp := tdp) adv)
 
 omit [Fintype Rand] [Fintype M] [DecidableEq M] in
 /-- Main BR93 bound for this file's custom one-time ROM CPA game: the distinguishing
