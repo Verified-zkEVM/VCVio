@@ -158,12 +158,13 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 /-! ## The profile -/
 
 -- Exposed, and what the attribute is for was read off the errors its removal alone produces in
--- this file, against the untouched library: fifty, no error ceiling reached.  Eighteen
--- `(kernel) declaration type mismatch` and fourteen `failed to compile definition`, with three
--- `Failed to find LCNF signature` beside them, over the nine instances written at this bundle;
--- eight `Application type mismatch`, six of them at the two restatements of the vacuity canary at
--- this profile, where `toy.params` has to be `toyParams`; and five `Type mismatch`, one
--- `failed to synthesize` and one index-validity failure at the definitions that read the carrier.
+-- this file, against the untouched library: fifty-one, no error ceiling reached.  Eighteen
+-- `(kernel) declaration type mismatch` and three `Failed to find LCNF signature`, all of them at
+-- the nine instances written at this bundle, and fifteen `failed to compile definition`, six of
+-- those there and nine further down; eight `Application type mismatch`, six of them at the two
+-- restatements of the vacuity canary at this profile, where `toy.params` has to be `toyParams`;
+-- and five `Type mismatch`, one `failed to synthesize` and one index-validity failure at the
+-- definitions that read the carrier.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
@@ -172,8 +173,8 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 theorem toyValid : toyParams.Valid := by decide
 
 -- Exposed, because the three signature `DecidableEq` instances below are stated at `toy.params`
--- and every signature, log and forgery this file builds is at `toy`.  Removed alone: fifty-seven
--- errors, twenty-five `Application type mismatch`, twenty-five `failed to synthesize`, and seven
+-- and every signature, log and forgery this file builds is at `toy`.  Removed alone: sixty-seven
+-- errors, thirty-four `failed to synthesize`, twenty-five `Application type mismatch`, and eight
 -- `(deterministic) timeout` at the 200000-heartbeat limit.  Which operation each timeout reports is
 -- not recorded here: it is a property of where the budget runs out rather than of this file, and
 -- one mutation in this lane has produced four timeouts of two different kinds in a single run.
@@ -209,10 +210,11 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
     root.toNat * (14 * i + 89) + (byteMix msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
 -- Exposed and `@[reducible]`, for two different reasons, each read off the errors that removing
--- that attribute alone produces.  Exposed, for code generation: sixty-two errors, thirty
+-- that attribute alone produces.  Exposed, for code generation: sixty-three errors, thirty
 -- `Compilation failed, locally inferred compilation type differs from type that would be inferred
--- in other modules`, eighteen `failed to compile definition`, ten `failed to synthesize` and four
--- `Application type mismatch`, twenty-one of them at the nine instances just below.  Reducible,
+-- in other modules`, nineteen `failed to compile definition`, ten `failed to synthesize` and four
+-- `Application type mismatch`, eighteen of them at the nine instances just below and three more at
+-- the three signature-equality instances after those.  Reducible,
 -- because the carrier has to unfold to `Bytes 1` for instance resolution to reach it: without it,
 -- exactly two errors and only these — `failed to synthesize` `GetElem toyPrimitives.Y ℕ` at
 -- `byteOf`, and the index-validity failure it causes there.

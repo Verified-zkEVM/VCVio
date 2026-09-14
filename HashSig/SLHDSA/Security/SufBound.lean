@@ -150,10 +150,13 @@ this module.  Two of the four have no refusal anywhere and are named rather than
   the paired edit leaves this module clean and fails one fixture pin, and moving that pin too leaves
   **nothing** failing anywhere.  What decides which is right is the argument above — the fresh
   branch has the `H_msg` bridge and the other has nothing — and not a check.
-* **The shape of `Summands.sufBound`.**  Swapping the two residuals, reassociating them, putting a
-  coefficient of two on one, or adding a constant: each leaves this module clean once its proofs are
-  repaired, and fails between three and seven fixture entries.  An edit that moves those entries too
-  is silent, and at that point the claim has been changed rather than a bug found.
+* **The order of the two residuals in `Summands.sufBound`, and their association.**  Swapping them
+  or reassociating the sum leaves this module clean once its four proofs are repaired, and fails
+  three fixture entries either way; an edit that moves those entries too is silent, and at that
+  point the claim has been changed rather than a bug found.  Two neighbouring edits are *not* in
+  this class, and the difference is the exactness pair: a coefficient other than one on a residual
+  makes `sufBound_eq_bound_add_sameMessage_of_unfoldings` false, one library error, and a stray
+  additive constant makes both it and `sufBound_eq_bound_of_residuals_zero` false, two.
 * **The strength of the certificate.**  Inherited unchanged from
   `HashSig.SLHDSA.Security.Composition`, where it is measured: nothing refuses a certificate, and
   the fixture there builds one from an address key and a public seed.  Adding the residual does not
