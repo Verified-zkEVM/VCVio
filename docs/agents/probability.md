@@ -32,6 +32,8 @@ measure. `evalDist_bind_apply_univ` expresses bind success mass as a `lintegral`
 `VCVio.EvalDist.Monad.UniformTable` supplies cell resampling/extraction, permutation,
 and injective restriction laws with explicit uniform-measure hypotheses. Its native counting
 proofs live in `ToMathlib.MeasureTheory.Measure.UniformTable`. The continuation may lose mass.
+`evalDist_map_equiv_of_uniform` packages Mathlib's `uniformOn_univ_map_equiv` for a computation;
+use it for a uniform permutation before introducing a bind continuation.
 `VCVio.OracleComp.EvalDist.Measure` gives `evalDist_bind_congr_of_support` by structural
 induction, without a probability/support bridge. These laws power the PRF tag/reader cache,
 composed-handler, and shared-observation proofs. `SampleableType.MeasureCompatibility`
