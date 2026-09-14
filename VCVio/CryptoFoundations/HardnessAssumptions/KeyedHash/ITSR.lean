@@ -113,9 +113,8 @@ noncomputable def ITSRAdvantage [DecidableEq K] [DecidableEq X] [DecidableEq Ind
 theorem ITSRAdvantage_eq_evalDist_experiment [DecidableEq K] [DecidableEq X]
     [DecidableEq Index] {prob : ITSRProblem K X Y Index} (adv : ITSRAdversary prob) :
     ITSRAdvantage adv = 𝒟[ITSRExperiment adv] {true} := by
-  let : MeasurableSpace ((K × X) × ITSRTranscript K X) := ⊤
   simpa only [ITSRAdvantage, ITSRExperiment] using
-    (prEvent_eq_evalDist_decide_of_discrete (mx := adv.run)
+    (prEvent_eq_evalDist_decide (mx := adv.run)
       (p := fun z => prob.Wins z.2 z.1))
 
 @[simp] theorem ITSRTargetOracle_run (prob : ITSRProblem K X Y Index)

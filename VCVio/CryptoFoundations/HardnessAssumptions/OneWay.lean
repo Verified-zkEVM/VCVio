@@ -9,6 +9,7 @@ public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.ProbComp
+import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # One-Way Functions and Trapdoor Permutations
@@ -49,18 +50,32 @@ variable {X Y : Type}
 /-- An OWF adversary receives `f(x)` and tries to find a preimage. -/
 def OWFAdversary (X Y : Type) := Y → ProbComp X
 
+/-- Sample a challenge and the adversary's candidate preimage. -/
+def owfRun [SampleableType X] (f : X → Y) (adversary : OWFAdversary X Y) :
+    ProbComp (X × X) := do
+  let x ← $ᵗ X
+  let x' ← adversary (f x)
+  return (x, x')
+
 /-- One-wayness experiment: sample `x` uniformly, give the adversary `f(x)`,
 and check whether the adversary's output is a valid preimage. -/
 def owfExp [SampleableType X] [DecidableEq Y] (f : X → Y) (adversary : OWFAdversary X Y) :
     ProbComp Bool := do
-  let x ← $ᵗ X
-  let x' ← adversary (f x)
+  let (x, x') ← owfRun f adversary
   return decide (f x' = f x)
 
 /-- OWF advantage: the probability of successfully inverting `f`. -/
-noncomputable def owfAdvantage [SampleableType X] [DecidableEq Y] (f : X → Y)
+noncomputable def owfAdvantage [SampleableType X] (f : X → Y)
     (adversary : OWFAdversary X Y) : ℝ≥0∞ :=
-  𝒟[owfExp f adversary] {true}
+  Pr{let (x, x') ← owfRun f adversary}[f x' = f x]
+
+/-- The event-style success mass agrees with the Boolean OWF experiment. -/
+theorem owfAdvantage_eq_evalDist_owfExp [SampleableType X] [DecidableEq Y]
+    (f : X → Y) (adversary : OWFAdversary X Y) :
+    owfAdvantage f adversary = 𝒟[owfExp f adversary] {true} := by
+  simpa only [owfAdvantage, owfExp] using
+    (prEvent_eq_evalDist_decide (mx := owfRun f adversary)
+      (p := fun z => f z.2 = f z.1))
 
 /-! ## Trapdoor Permutations -/
 
@@ -84,19 +99,35 @@ def TrapdoorPermutation.Correct (tdp : TrapdoorPermutation PK SK X) : Prop :=
 and tries to find a valid preimage of `y`. -/
 def TDPAdversary (PK X : Type) := PK → X → ProbComp X
 
+/-- Generate keys, sample a challenge, and retain the adversary's candidate preimage. -/
+def tdpRun [SampleableType X] (tdp : TrapdoorPermutation PK SK X)
+    (adversary : TDPAdversary PK X) : ProbComp ((PK × X) × X) := do
+  let (pk, _) ← tdp.keygen
+  let x ← $ᵗ X
+  let x' ← adversary pk (tdp.forward pk x)
+  return ((pk, x), x')
+
 /-- TDP inversion experiment: generate keys, sample `x` uniformly,
 and check whether the adversary outputs a valid preimage of `f(pk, x)`. -/
 def tdpExp [SampleableType X] [DecidableEq X] (tdp : TrapdoorPermutation PK SK X)
     (adversary : TDPAdversary PK X) : ProbComp Bool := do
-  let (pk, _) ← tdp.keygen
-  let x ← $ᵗ X
-  let x' ← adversary pk (tdp.forward pk x)
+  let ((pk, x), x') ← tdpRun tdp adversary
   return decide (tdp.forward pk x' = tdp.forward pk x)
 
 /-- TDP advantage: the probability of successfully producing a valid preimage
 without the trapdoor. -/
-noncomputable def tdpAdvantage [SampleableType X] [DecidableEq X]
+noncomputable def tdpAdvantage [SampleableType X]
     (tdp : TrapdoorPermutation PK SK X) (adversary : TDPAdversary PK X) : ℝ≥0∞ :=
-  𝒟[tdpExp tdp adversary] {true}
+  Pr{
+    let ((pk, x), x') ← tdpRun tdp adversary
+  }[tdp.forward pk x' = tdp.forward pk x]
+
+/-- The event-style success mass agrees with the Boolean TDP experiment. -/
+theorem tdpAdvantage_eq_evalDist_tdpExp [SampleableType X] [DecidableEq X]
+    (tdp : TrapdoorPermutation PK SK X) (adversary : TDPAdversary PK X) :
+    tdpAdvantage tdp adversary = 𝒟[tdpExp tdp adversary] {true} := by
+  simpa only [tdpAdvantage, tdpExp] using
+    (prEvent_eq_evalDist_decide (mx := tdpRun tdp adversary)
+      (p := fun z => tdp.forward z.1.1 z.2 = tdp.forward z.1.1 z.1.2))
 
 end OneWay

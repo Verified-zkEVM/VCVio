@@ -83,3 +83,43 @@ theorem evalDist_bitVec [OracleSpec.IsUniformMeasureSpec unifSpec] (n : ℕ) :
   evalDist_finEnum
 
 end SampleableType
+
+namespace ProbComp
+
+open OracleComp OracleSpec ENNReal
+
+/-- A fair hidden bit is guessed with probability one half when the guess distribution does not
+depend on that bit. -/
+theorem evalDist_decide_eq_uniformBool_half [OracleSpec.IsUniformMeasureSpec unifSpec]
+    (f : Bool → ProbComp Bool) (heq : 𝒟[f true] = 𝒟[f false]) :
+    𝒟[do let b ← ($ᵗ Bool); let b' ← f b; return decide (b = b')] {true} = 1 / 2 := by
+  have hinner (b : Bool) :
+      𝒟[do let b' ← f b; return decide (b = b')] {true} = 𝒟[f b] {b} := by
+    rw [← prEvent_eq_evalDist_decide (mx := f b) (p := fun b' => b = b'),
+      prEvent_eq_evalDist_of_discrete]
+    congr 1
+    ext x
+    simp [eq_comm]
+  change 𝒟[($ᵗ Bool : ProbComp Bool) >>= fun b => do
+    let b' ← f b
+    return decide (b = b')] {true} = _
+  rw [evalDist_bind_of_discrete,
+    Measure.bind_apply (measurableSet_singleton true) (Measurable.of_discrete).aemeasurable]
+  simp_rw [hinner]
+  rw [lintegral_fintype, Fintype.sum_bool, heq]
+  have hbool : 𝒟[($ᵗ Bool : ProbComp Bool)] = uniformOn Set.univ :=
+    SampleableType.evalDist_finEnum
+  rw [hbool]
+  simp only [uniformOn_univ_apply_singleton, Fintype.card_bool]
+  have hmass : 𝒟[f false] {true} + 𝒟[f false] {false} = 1 := by
+    have hprob : 𝒟[f false] Set.univ = 1 :=
+      OracleComp.evalDist_apply_univ_eq_one (f false)
+    have hset : (Set.univ : Set Bool) = {true} ∪ {false} := by
+      ext b
+      cases b <;> simp
+    rw [hset, measure_union (by simp) (measurableSet_singleton false)] at hprob
+    exact hprob
+  rw [← add_mul, hmass]
+  norm_num
+
+end ProbComp
