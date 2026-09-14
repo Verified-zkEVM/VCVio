@@ -84,6 +84,10 @@ theorem conversation_idealOperations (env : Environment Message Cipher Memory)
       env.observe input.1 input.2 (ciphertext, if permitted then some input.1 else none)) := by
   simp [conversation, idealOperations, apply_ite]
 
+section measureSemantics
+
+variable [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+
 /-- A terminal acceptance event is exactly the acceptance event of the executed conversation. -/
 theorem tokenLaw_apply_returned [MeasurableSpace (Option (Outcome Bool))]
     [MeasurableSingletonClass (Option (Outcome Bool))]
@@ -94,9 +98,11 @@ theorem tokenLaw_apply_returned [MeasurableSpace (Option (Outcome Bool))]
       𝒟[setup >>= fun state => conversation env ops state] {verdict} := by
   rw [tokenLaw_eq_evalDist, tokenExperiment_eq]
   simp only [← map_bind]
-  rw [evalDist_apply_singleton, evalDist_apply_singleton]
-  exact probOutput_map_injective _
-    (fun _ _ h => Outcome.returned.inj (Option.some.inj h)) verdict
+  rw [evalDist_map_of_discrete,
+    Measure.map_apply Measurable.of_discrete (MeasurableSet.singleton _)]
+  congr 1
+  ext result
+  simp
 
 variable [MeasurableSpace Memory] [Countable Memory] [MeasurableSingletonClass Memory]
   [MeasurableSpace Message] [Countable Message] [MeasurableSingletonClass Message]
@@ -145,6 +151,8 @@ theorem tokenLaw_simulation [MeasurableSpace (Option (Outcome Bool))]
   rw [evalDist_map_of_discrete, evalDist_map_of_discrete,
     conversation_simulation system setup draw correct secret]
 
+end measureSemantics
+
 /-- The single-use one-time pad uses the same XOR operation for encryption and decryption. -/
 @[expose] def oneTimePad (width : ℕ) :
     CipherSystem (BitVec width) (BitVec width) (BitVec width) :=
@@ -174,9 +182,8 @@ theorem oneTimePad_simulation (width : ℕ)
     let e : BitVec width ≃ BitVec width :=
       ⟨fun key => key ^^^ message, fun key => key ^^^ message,
         fun key => by simp [BitVec.xor_assoc], fun key => by simp [BitVec.xor_assoc]⟩
-    simpa only [bind_pure, ← map_eq_pure_bind, oneTimePad, e, Equiv.coe_fn_mk] using
-      (evalDist_bind_uniform_equiv ($ᵗ BitVec width) evalDist_uniformSample e
-        (fun ciphertext => (pure ciphertext : ProbComp (BitVec width)))).symm
+    simpa only [oneTimePad, e, Equiv.coe_fn_mk] using
+      (evalDist_map_equiv_of_uniform ($ᵗ BitVec width) evalDist_uniformSample e)
   have ht := tokenLaw_simulation (oneTimePad width) ($ᵗ BitVec width) ($ᵗ BitVec width)
     (fun key message => by simp [oneTimePad]) secret adversary env 0
   refine ⟨ht, ?_⟩

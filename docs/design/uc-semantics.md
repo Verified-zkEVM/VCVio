@@ -117,7 +117,7 @@ are checked theorems, rather than failures of a proof tactic:
 | --- | --- |
 | Correct decryption implies security | `leakingSystem_correct` holds, but `leaking_tokenLaw_ne` and `leaking_fifoLaw_ne` separate the leaking service from **every** allowed simulator. The same random-message environment accepts with probability 1 versus 1/2. |
 | Ciphertext secrecy suffices without correct decryption | `brokenDecoder_ciphertext_uniform` holds, while `brokenDecoder_tokenLaw_ne` separates the service from every simulator by recognizing delivery of the wrong plaintext. |
-| Uniform ciphertext marginals imply joint secrecy | `reusedPair_first` and `reusedPair_second` give uniform marginals, while `reusedPair_laws_ne` distinguishes the joint laws under key reuse. |
+| Uniform ciphertext marginals imply joint secrecy | `evalDist_reusedPair_fst` and `evalDist_reusedPair_snd_of_uniform` give uniform marginals, while `reusedPair_laws_ne` distinguishes the joint laws under key reuse. |
 | Token and FIFO need the same fuel | The operational OTP spike finishes in nine token activations; its FIFO prefix of length nine remains unfinished. |
 | Scheduling a receiver suffices for delivery | A schedule activating both actors without a delivery leaves the environment unfinished. |
 | The serial comparison needs no queue premise | `serialRound_ne_token_with_pending` refutes that equation on a state reached by a real FIFO send. |
