@@ -38,6 +38,7 @@ public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProgramLogic.GCongr
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
+public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
 public import VCVioTest.ReactiveNetwork
 public import VCVioTest.ReactiveNetworkAdversarial

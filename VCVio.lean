@@ -189,6 +189,7 @@ public import VCVio.Interaction.UC.OracleNetwork
 public import VCVio.Interaction.UC.OracleNetwork.Serial
 public import VCVio.Interaction.UC.OracleNetwork.Transport
 public import VCVio.Interaction.UC.ProportionalScheduler
+public import VCVio.Interaction.UC.ReactiveBudget
 public import VCVio.Interaction.UC.ReactiveKernel
 public import VCVio.Interaction.UC.ReactiveRuntime
 public import VCVio.Interaction.UC.ReactiveSecurity
@@ -196,6 +197,7 @@ public import VCVio.Interaction.UC.ReactiveWorld
 public import VCVio.Interaction.UC.Runtime
 public import VCVio.Interaction.UC.Standard
 public import VCVio.Interaction.UC.StdDoBridge
+public import VCVio.OracleComp.CanReturn
 public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.Coercions.SubSpec
 public import VCVio.OracleComp.Coinductive.Bridge
