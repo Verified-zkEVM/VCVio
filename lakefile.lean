@@ -414,7 +414,8 @@ script test (args) do
     #["exe", "slhdsa_hmsg_witness_tests"],
     #["exe", "slhdsa_suf_residual_tests"],
     #["exe", "slhdsa_scheme_game_tests"],
-    #["exe", "slhdsa_composition_tests"]]
+    #["exe", "slhdsa_composition_tests"],
+    #["exe", "slhdsa_suf_bound_tests"]]
   if args.contains "--ffi" then
     steps := steps ++ #[#["exe", "mlkem_test"], #["exe", "mldsa_test"], #["exe", "falcon_test"]]
   for cmdArgs in steps do
@@ -625,6 +626,30 @@ two elements such an interface exists exactly when that adversary's two induced 
 `DSPR + 3 · TCR ≥ 1`. -/
 lean_exe slhdsa_composition_tests where
   root := `HashSigTest.SLHDSA.Composition
+
+/-- The strong-unforgeability residual bound: nothing about the bound itself is runnable, because
+every statement the module exports is about a probability and every probability in it is
+`noncomputable`, so what runs is the decidable shadow of the residual — which branch of the
+same-message selector a forgery lands in, read at three signing logs over the scheme-dispatch
+fixture's own two-layer profile.  Five forgeries are sent through it: one under randomness no log
+carries, one carrying the randomizer the log recorded at a *different* message, and three that are
+second signatures under a randomizer the log did carry at this message, one at each of the hedged
+log's two entries and one at the deterministic variant's single one.  Each is asserted to satisfy
+the same-message experiment's own freshness conjunct first, and the logged signature itself is
+asserted to fail it.  The two FIPS 205 §9.2 variants are compared at the same three queries: the
+hedged default leaves two randomizers at the twice-signed message and the deterministic alternative
+one, which is asserted to move a forgery between the two branches in both directions — and the
+deterministic log's own second signature is asserted to be on the *logged* branch, so that branch is
+inhabited under either variant.  A fourth reader, sweeping the whole log rather than the entries at
+one message, is asserted to disagree with the real one at the cross-message forgery and to agree
+everywhere else these logs reach.  Everything about the bound's own shape — the three-part
+expression, the unit coefficient on each residual, the two equivalences saying the residual cancels,
+and each of the thirteen exported statements — is pinned by elaboration, at least one `example` per
+declaration, in a file no library-side edit can reach.  So is the strength of its hypotheses: the
+vacuity canary rebuilds the composition fixture's free certificate and proves that at it the
+strong-unforgeability headline bounds the advantage by something at least one. -/
+lean_exe slhdsa_suf_bound_tests where
+  root := `HashSigTest.SLHDSA.SufBound
 
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
