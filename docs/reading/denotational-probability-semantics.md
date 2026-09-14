@@ -100,6 +100,28 @@ Consequently, VCVio promises ergonomic monadic equations for discrete programs a
 composition for continuous/state-indexed semantics. It does not promise a universal
 `FreeM.denote_bind` theorem for continuous interfaces without a measurable-program invariant.
 
+`FreeM.denote` explicitly assigns zero measure to an operation whose denoted continuation is
+not almost everywhere measurable. Its universal subprobability bound follows by splitting this
+case from measurable Giry composition. `denote_liftBind` and `evalDist_liftBind` require the
+measurability premise; `denote_liftBind_of_not_aemeasurable` exposes the zero case. Zero here is
+the specified interpretation of an invalid continuation, not a proof that a valid program
+diverges or returns an abort.
+
+`VCVioTest/MeasurabilityBoundary.lean` gives a finite separating example. Its answer type contains
+two bits but has only trivial measurable sets. Every branch returning the underlying discrete
+bit is individually a Dirac probability measure; the family of branch laws is not almost
+everywhere measurable, and the composed program has zero measure. A constant continuation over
+the same operation remains lossless. This rules out inferring a probability measure merely from
+lossless operations and lossless individual continuations.
+
+The explicit fallback also avoids depending on an upstream convention outside the measurable
+fragment. At Mathlib `e06eff5f95374108acfaf19f1ff7473aa7771df2`,
+[`Measure.map`](https://github.com/leanprover-community/mathlib4/blob/e06eff5f95374108acfaf19f1ff7473aa7771df2/Mathlib/MeasureTheory/Measure/Map.lean)
+assigns an arbitrary Dirac mass to a non-almost-everywhere-measurable pushforward of a nonzero
+measure. When the codomain is itself a space of measures, that convention alone supplies no
+subprobability bound after `Measure.join`. The guarded fold and its finite counterexample were
+spike-tested on both the current 4.33.1 dependencies and that isolated 4.34.0-rc2 candidate.
+
 This is also why merely fixing the output type does not solve the coalgebraic problem. The state
 transition itself must be measurable. Kernel construction sites expose that obligation, and the
 resulting kernels compose using Mathlib's existing laws.

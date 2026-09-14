@@ -63,10 +63,11 @@ theorem denote_eq_toMeasure [P.IsProbabilitySpec] [IsMeasureSpec.Compatible P]
   induction program with
   | pure x => simpa using (PMF.toMeasure_pure x).symm
   | lift_bind a cont ih =>
+      rw [denote_liftBind (P := P) _ _ Measurable.of_discrete.aemeasurable]
       change Measure.bind (IsMeasureSpec.toMeasure a) (fun b => denote (cont b))
           = ((IsProbabilitySpec.toPMF a).bind
               fun u => (cont u).liftM IsProbabilitySpec.toPMF).toMeasure
-      rw [PMF.toMeasure_bind, IsMeasureSpec.Compatible.toMeasure_eq a]
+      rw [(IsProbabilitySpec.toPMF a).toMeasure_bind, IsMeasureSpec.Compatible.toMeasure_eq a]
       exact Measure.bind_congr_right (Filter.Eventually.of_forall fun b => ih b)
 
 /-- Every `PMF`-valued interpretation induces a measure-valued one, by taking the measure of
