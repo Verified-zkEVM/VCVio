@@ -154,9 +154,11 @@ this module.  Two of the four have no refusal anywhere and are named rather than
   or reassociating the sum leaves this module clean once its four proofs are repaired, and fails
   three fixture entries either way; an edit that moves those entries too is silent, and at that
   point the claim has been changed rather than a bug found.  Two neighbouring edits are *not* in
-  this class, and the difference is the exactness pair: a coefficient other than one on a residual
-  makes `sufBound_eq_bound_add_sameMessage_of_unfoldings` false, one library error, and a stray
-  additive constant makes both it and `sufBound_eq_bound_of_residuals_zero` false, two.
+  this class.  A coefficient other than one on a residual makes
+  `sufBound_eq_bound_add_sameMessage_of_unfoldings` false — one library error, at that statement and
+  nowhere else here.  A stray additive constant makes both it and
+  `sufBound_eq_bound_of_residuals_zero` false, two, of which only the first is new: the zero law
+  refused a stray constant before the statement beside it was written.
 * **The strength of the certificate.**  Inherited unchanged from
   `HashSig.SLHDSA.Security.Composition`, where it is measured: nothing refuses a certificate, and
   the fixture there builds one from an address key and a public seed.  Adding the residual does not
@@ -176,12 +178,15 @@ this module.  Two of the four have no refusal anywhere and are named rather than
   `strongAdvantage_le_sufBound` therefore goes through the exported `≤` and is, as far as anything
   proved here can tell, possibly strict.  What closes it is the halves' two defining equations —
   not one, and not an `@[expose]`: the module that owns them already proves both by `rfl`, as two
-  unnamed `example`s, so naming them or naming their consequence there is a pure addition to it.
+  unnamed `example`s, so naming them there is a pure addition to it.  Naming their *consequence*
+  there is not: that module's own same-message split is a `≤`, and the equality the consequence
+  needs is `sameMessageAdvantage_eq_arms` above, which would have to move down beside it.
   `sameMessageAdvantage_eq_halves_of_unfoldings` and
-  `sufBound_eq_bound_add_sameMessage_of_unfoldings` take them as hypotheses and draw the
-  consequence, so the gap is one named theorem wide — the two equations, or the single joint
-  equality they give — and that theorem belongs one module down.  It is not added there in this
-  pull request because that module is under review as it stands.
+  `sufBound_eq_bound_add_sameMessage_of_unfoldings` take the two equations as hypotheses and draw
+  the consequence, so the gap is one named theorem wide — the two equations, or, with the arms
+  equality moved down beside them, the single joint equality they give — and that theorem belongs
+  one module down.  It is not added there in this pull request because that module is under review
+  as it stands.
 * **Nothing about `SameMessageBinding`.**  VCVio's own docstring says no `ε < 1` can hold for a
   hash-based scheme, and issue #629 item 2b records that the per-adversary partition is what a
   quantitative result must consume.  This module consumes the partition.
@@ -529,9 +534,11 @@ Neither hypothesis is discharged here and neither can be: `freshRandomizerHalf` 
 that module does not expose, so a consumer's `rfl` reports that the two sides are not definitionally
 equal and names the half as a definition it could not unfold.  Inside that module both are `rfl`,
 and it already proves both, as two unnamed `example`s beside its four half-bounds.  Naming them
-there — or naming this conclusion there, where it needs no hypotheses — is a pure addition to that
-module and would discharge these two hypotheses at every call site.  That is where this statement
-belongs; it is stated here because that module is under review as it stands.
+there is a pure addition to that module and would discharge these two hypotheses at every call
+site.  Naming this conclusion there instead, where it would need no hypotheses, is not a pure
+addition: that module's own same-message split is a `≤`, so the conclusion would carry
+`sameMessageAdvantage_eq_arms` down with it.  That is where this statement belongs; it is stated
+here because that module is under review as it stands.
 
 *Experiment split.* -/
 theorem sameMessageAdvantage_eq_halves_of_unfoldings
