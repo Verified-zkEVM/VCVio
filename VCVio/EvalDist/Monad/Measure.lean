@@ -56,6 +56,23 @@ theorem evalDist_bind_bind_bind_rotate [DiscreteMeasurableSpace α]
   simp only [evalDist_bind_of_discrete]
   exact Measure.bind_bind_bind_rotate _ _ _ hf
 
+/-- Compare event masses after a common draw using an almost-everywhere continuation bound. -/
+theorem evalDist_bind_apply_mono (mx : m α) (f g : α → m β)
+    (hf : Measurable fun a => 𝒟[f a]) (hg : Measurable fun a => 𝒟[g a])
+    {event : Set β} (hevent : MeasurableSet event)
+    (hfg : ∀ᵐ a ∂𝒟[mx], 𝒟[f a] event ≤ 𝒟[g a] event) :
+    𝒟[mx >>= f] event ≤ 𝒟[mx >>= g] event := by
+  rw [evalDist_bind mx f hf, evalDist_bind mx g hg]
+  exact Measure.bind_apply_mono _ _ _ hf hg hevent hfg
+
+/-- For a discrete common draw, a pointwise continuation bound suffices. -/
+theorem evalDist_bind_apply_mono_of_discrete [DiscreteMeasurableSpace α]
+    (mx : m α) (f g : α → m β) {event : Set β} (hevent : MeasurableSet event)
+    (hfg : ∀ a, 𝒟[f a] event ≤ 𝒟[g a] event) :
+    𝒟[mx >>= f] event ≤ 𝒟[mx >>= g] event :=
+  evalDist_bind_apply_mono mx f g .of_discrete .of_discrete hevent
+    (Filter.Eventually.of_forall hfg)
+
 /-- Charge a bad intermediate event separately from uniformly bounded good continuations. -/
 theorem evalDist_bind_apply_le_add_of_bad (mx : m α) (f : α → m β)
     (hf : Measurable fun a => 𝒟[f a]) {bad : Set α} (hbad : MeasurableSet bad)

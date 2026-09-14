@@ -7,6 +7,7 @@ Authors: XC0R
 module
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
+public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
@@ -77,11 +78,17 @@ theorem bindingAdvantage_toCommitment_le_keyedCRAdvantage
     (H : KeyedHashFamily K (M × S) C) (A : BindingAdv K M C S) :
     bindingAdvantage H.toCommitment A ≤
       keyedCRAdvantage H (bindingAdv_toCRAdv A) := by
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  let : MeasurableSpace K := ⊤
+  let : MeasurableSpace (C × M × S × M × S) := ⊤
   unfold bindingAdvantage CommitmentScheme.bindingExp
     keyedCRAdvantage keyedCRExp bindingAdv_toCRAdv KeyedHashFamily.toCommitment
   simp only [monad_norm]
-  refine probOutput_bind_mono fun k _ => ?_
-  refine probOutput_bind_mono fun ⟨c, m₁, s₁, m₂, s₂⟩ _ => ?_
-  grind
+  refine evalDist_bind_apply_mono_of_discrete _ _ _ (MeasurableSet.singleton true) fun k => ?_
+  refine evalDist_bind_apply_mono_of_discrete _ _ _ (MeasurableSet.singleton true)
+    fun ⟨c, m₁, s₁, m₂, s₂⟩ => ?_
+  simp only [evalDist_pure, MeasureTheory.Measure.dirac_apply]
+  simp [Set.indicator]
+  split_ifs <;> simp_all
 
 end CollisionResistance

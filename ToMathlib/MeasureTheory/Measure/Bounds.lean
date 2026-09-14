@@ -24,6 +24,14 @@ namespace MeasureTheory.Measure
 
 variable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
 
+/-- Almost-everywhere event-mass bounds on measurable continuations remain valid after binding. -/
+theorem bind_apply_mono (μ : Measure α) (f g : α → Measure β)
+    (hf : Measurable f) (hg : Measurable g) {event : Set β} (hevent : MeasurableSet event)
+    (hfg : ∀ᵐ a ∂μ, f a event ≤ g a event) :
+    μ.bind f event ≤ μ.bind g event := by
+  rw [bind_apply hevent hf.aemeasurable, bind_apply hevent hg.aemeasurable]
+  exact lintegral_mono_ae hfg
+
 /-- Charge a measurable bad set and integrate an upper bound on the remaining branches. -/
 theorem bind_apply_le_add_lintegral_of_bad (μ : Measure α) [IsSubprobabilityMeasure μ]
     (f : α → Measure β) (hf : Measurable f) [∀ a, IsSubprobabilityMeasure (f a)]
