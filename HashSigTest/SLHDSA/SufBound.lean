@@ -56,15 +56,19 @@ twice-signed message's entries separated; L2 is the log FIPS 205 §9.2's determi
 produce for the same three queries; L3 is four entries, one message three times, with `sigP1`'s
 randomizer at its tail rather than its head.
 
-**R1**, `SchemeGames.randomizerLogged`, the residual's own selector.  At **L1** it catches a reader
-that ignores the message — the cross forgery's randomizer is in the log at the *other* message and
-must read `false`; one that keeps only the first signature at a message, since `forgeryLate` must
-read `true`; one that keeps only the last, since `forgeryEarly` must read `true`; and one that drops
-the log's head, since L1's head is the only place any log here carries `sigP1`'s randomizer at
-`msgP`.  At **L2** it catches a reader that reports membership only when a message carries two
+**R1**, `SchemeGames.randomizerLogged`, the residual's own selector.  Every "catches" below was
+measured by substituting the mutant reader into all three check groups and counting which of the
+thirty-two fire; the control, the real reader under the mutant's name, fires none.
+
+At **L1** it catches a reader that ignores the message — the cross forgery's randomizer is in the
+log at the *other* message and must read `false` — and one that drops the log's head, since L1's
+head is the only place any log here carries `sigP1`'s randomizer at `msgP` (**1** check fires, in
+this group).  At **L2** it catches a reader that reports membership only when a message carries two
 *distinct* randomizers: L2's list at each message is constant and `forgeryDet` must still read
-`true`.  At **L3** it catches truncation that bites only at length four, and a reader that stops at
-the first match at a message, which L3 gives three of.
+`true`.  Across the three logs it catches a reader that keeps only the first signature at a message
+(**3** fire, one here and two in the third group), one that keeps only the last (**1** fires, in
+this group), and truncation of the log to three entries (**1** fires, in the third group, which is
+the only group that reads the four-entry log).
 
 **R2**, `SignatureAlg.signingLogContains`, the same-message experiment's own freshness conjunct.  At
 **L1** it separates a forgery from the signature it shares a randomizer with: `forgeryEarly` reads
@@ -85,9 +89,11 @@ separated: `forgeryDet`'s randomizer occurs at `msgP` and nowhere else.  It is n
   further log would separate them; none is added, because L1 already does and the matrix says so
   rather than leaving the other two cells looking covered.
 * **R1 under reordering and de-duplication, at every log.**  R1 is `∈` on a list.  Membership is
-  invariant under permutation and under `eraseDups`, so no log can make either visible.  This is the
-  same structural blind spot `HashSigTest.SLHDSA.SufResidual` records for its own predicates, for
-  the same reason; it is a property of the predicate and not a gap in the fixture.
+  invariant under permutation and under `eraseDups`, so no log can make either visible.  Measured
+  rather than argued: a reader that reverses the log and one that collapses the per-message list to
+  its distinct values each fire **0 of 32**.  This is the same structural blind spot
+  `HashSigTest.SLHDSA.SufResidual` records for its own predicates, for the same reason; it is a
+  property of the predicate and not a gap in the fixture.
 * **R1 at L3 under a dropped head.**  L3's head pair recurs at its third entry, so dropping it
   changes nothing there.  L1 catches it; L3 does not.
 * **Every reader against anything probabilistic.**  See above.
