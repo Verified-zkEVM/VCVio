@@ -83,7 +83,11 @@ lemma advantage_eq_of_evalSPMF_runProb_eq {σ₀ σ₀' σ₁ : Type}
     {A : OracleComp E Bool}
     (h_eq : 𝒮[h₀.runProb s₀ A] = 𝒮[h₀'.runProb s₀' A]) :
     h₀.advantage s₀ h₁ s₁ A = h₀'.advantage s₀' h₁ s₁ A := by
-  simp only [advantage, ProbComp.boolDistAdvantage, probOutput_congr rfl h_eq]
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  have hm : 𝒟[h₀.runProb s₀ A] {true} = 𝒟[h₀'.runProb s₀' A] {true} := by
+    simpa only [evalDist_apply_singleton] using probOutput_congr rfl h_eq
+  simp only [advantage, ProbComp.boolDistAdvantage]
+  rw [hm]
 
 lemma advantage_eq_of_evalSPMF_runProb_eq_right {σ₀ σ₁ σ₁' : Type}
     {h₀ : QueryImpl.Stateful unifSpec E σ₀} {s₀ : σ₀}
@@ -92,7 +96,11 @@ lemma advantage_eq_of_evalSPMF_runProb_eq_right {σ₀ σ₁ σ₁' : Type}
     {A : OracleComp E Bool}
     (h_eq : 𝒮[h₁.runProb s₁ A] = 𝒮[h₁'.runProb s₁' A]) :
     h₀.advantage s₀ h₁ s₁ A = h₀.advantage s₀ h₁' s₁' A := by
-  simp only [advantage, ProbComp.boolDistAdvantage, probOutput_congr rfl h_eq]
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  have hm : 𝒟[h₁.runProb s₁ A] {true} = 𝒟[h₁'.runProb s₁' A] {true} := by
+    simpa only [evalDist_apply_singleton] using probOutput_congr rfl h_eq
+  simp only [advantage, ProbComp.boolDistAdvantage]
+  rw [hm]
 
 lemma advantage_triangle {σ₀ σ₁ σ₂ : Type}
     (h₀ : QueryImpl.Stateful unifSpec E σ₀) (s₀ : σ₀)
