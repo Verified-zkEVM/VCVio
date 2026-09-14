@@ -94,13 +94,13 @@ profiles (16), the `T_ℓ` separation and the valid profile where it fails (20),
 table (13).  Eighty `example`s in `Pins`: at least one for each of the twenty-one declarations the
 library module exports, the two `T_ℓ` attacked-member equations, the ten games' declared caps, the
 three general cap separations and the game identity they explain, the `ITSRProblem` shape, and
-twenty-two profile pins.  Then the vacuity canary — twenty-five declarations and eight `example`s.
+twenty-two profile pins.  Then the vacuity canary — twenty-five declarations and ten `example`s.
 They build a closed `Certificate` from an address key and a public seed and prove that the bound it
 names is at least one; then a second one, from those two and a `CountingInterface` at an
 open-preimage adversary of advantage one, whose three `ℝ≥0∞` fields are the experiment's own
 quantities, so that anchoring those fields refuses the first and not the second; and then the
 equivalence that turns the existence of that interface into an inequality between two named
-advantages.
+advantages, restated at this file's own bundle.
 
 ## References
 
@@ -1384,6 +1384,25 @@ theorem nonempty_counting_winningOpenPre_iff (t : prims.AdrsKey)
       exact targetCount_pos vp.params vp.valid TargetRole.forsF))
 
 end Counting
+
+/-! ### The same equivalence at the toy bundle
+
+The subsection above is at an arbitrary bundle, and the one hypothesis it leaves undischarged is
+about the node type.  At this file's bundle that hypothesis is `2 ≤ Fintype.card (Bytes 1)`, which
+`decide` settles, so the equivalence is not a statement about an empty class of bundles.  Both
+`decide`s need a deeper recursion limit than the default, measured: 2048 is enough for neither and
+4096 is enough for both. -/
+
+set_option maxRecDepth 4096 in
+example : 2 ≤ Fintype.card toyPrimitives.Y := by decide
+
+set_option maxRecDepth 4096 in
+example (t : Adrs) :
+    Nonempty (SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
+        (winningOpenPre (forsFOpenPreProblem toyPrimitives) t)) ↔
+      1 ≤ SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound
+        (winningOpenPre (forsFOpenPreProblem toyPrimitives) t) :=
+  nonempty_counting_winningOpenPre_iff (vp := toy) toyPrimitives t (by decide)
 
 end Vacuity
 
