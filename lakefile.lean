@@ -630,7 +630,7 @@ lean_exe slhdsa_composition_tests where
 /-- The strong-unforgeability residual bound: nothing about the bound itself is runnable, because
 every statement the module exports is about a probability and every probability in it is
 `noncomputable`, so what runs is the decidable shadow of the residual — which branch of the
-same-message selector a forgery lands in, read at three signing logs over the scheme-dispatch
+same-message selector a forgery lands in, read at three signing logs over the scheme-games
 fixture's own two-layer profile.  Five forgeries are sent through it: one under randomness no log
 carries, one carrying the randomizer the log recorded at a *different* message, and three that are
 second signatures under a randomizer the log did carry at this message, one at each of the hedged
@@ -645,7 +645,7 @@ one message, is asserted to disagree with the real one at the cross-message forg
 with it at a forgery under randomness no log carries and at the deterministic log's second
 signature.  Everything about the bound's own shape — the three-part
 expression, the unit coefficient on each residual, the two equivalences saying the residual cancels,
-and each of the thirteen exported statements — is pinned by elaboration, at least one `example` per
+and each of the fifteen exported statements — is pinned by elaboration, at least one `example` per
 declaration, in a file no library-side edit can reach.  So is the strength of its hypotheses: the
 vacuity canary rebuilds the composition fixture's free certificate and proves that at it the
 strong-unforgeability headline bounds the advantage by something at least one. -/
