@@ -6,6 +6,8 @@ Authors: Devon Tuma
 
 module
 public import PolyFun.Interaction.UC.ReactiveNetwork.Behavior
+public import PolyFun.Interaction.UC.ReactiveNetwork.Serial
+public import PolyFun.Interaction.UC.ReactiveNetwork.Transport
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.Constructions.SampleableType
 
@@ -50,6 +52,22 @@ variable {Node result S : Type} {boundary : PortBoundary}
   let finalState ← runFIFO impl schedule (initial network service)
   pure (outcome network.environment finalState)
 
+/-- Execute the serial FIFO policy, charging one local and one delivery activation per round.
+Only the public control holder selects the next local activation. -/
+@[expose] def serialExperiment (rounds : ℕ) : ProbComp (Option (Outcome result)) := do
+  let service ← setup
+  let finalState ← runSerial impl rounds (initial network service)
+  pure (outcome network.environment finalState)
+
+/-- The serial FIFO policy has the same terminal observation as token passing at the
+corresponding round count, including all unfinished prefixes. -/
+theorem serialExperiment_eq_tokenExperiment (rounds : ℕ) :
+    serialExperiment network impl setup rounds = tokenExperiment network impl setup rounds := by
+  simp only [serialExperiment, tokenExperiment, ← map_eq_pure_bind]
+  apply bind_congr
+  intro service
+  exact outcome_runSerial impl network.environment rounds (initial network service) rfl
+
 /-- Passing to exact cofree behavior preserves the token experiment. -/
 theorem tokenExperiment_behavior (fuel : ℕ) :
     tokenExperiment network.behavior impl setup fuel = tokenExperiment network impl setup fuel := by
@@ -71,6 +89,72 @@ theorem fifoExperiment_behavior (schedule : List (Activation Node)) :
   funext finalState
   rw [show network.behavior.environment = network.environment from rfl, outcome_behavior]
 
+/-- Renaming nodes preserves the token experiment when handlers and control move together. -/
+theorem tokenExperiment_reindex {Node' : Type} [DecidableEq Node'] (e : Node' ≃ Node)
+    (fuel : ℕ) :
+    tokenExperiment (network.reindex e) (fun node => impl (e node)) setup fuel =
+      tokenExperiment network impl setup fuel := by
+  simp only [tokenExperiment, initial_reindex, runToken_reindex, bind_map_left]
+  congr 1
+  funext service
+  congr 1
+  funext state
+  rw [Network.reindex_environment]
+  simpa only [Equiv.apply_symm_apply] using
+    congrArg (pure (f := ProbComp)) (outcome_reindex e (e.symm network.environment) state)
+
+/-- FIFO relabeling preserves observations when delivery positions and node activations are
+transported together. -/
+theorem fifoExperiment_reindex {Node' : Type} [DecidableEq Node'] (e : Node' ≃ Node)
+    (schedule : List (Activation Node)) :
+    fifoExperiment (network.reindex e) (fun node => impl (e node)) setup
+        (schedule.map (Activation.reindex e)) =
+      fifoExperiment network impl setup schedule := by
+  simp only [fifoExperiment, initial_reindex, runFIFO_reindex, bind_map_left]
+  congr 1
+  funext service
+  congr 1
+  funext state
+  rw [Network.reindex_environment]
+  simpa only [Equiv.apply_symm_apply] using
+    congrArg (pure (f := ProbComp)) (outcome_reindex e (e.symm network.environment) state)
+
+/-- Equal network data has the same token experiment with the transported handlers. -/
+theorem tokenExperiment_castNetwork {network' : Network Node boundary result}
+    (h : network = network') (fuel : ℕ) :
+    tokenExperiment network' (castHandlers h impl) setup fuel =
+      tokenExperiment network impl setup fuel := by
+  cases h
+  rw [castHandlers_rfl]
+
+/-- Equal network data has the same FIFO experiment with the transported handlers. -/
+theorem fifoExperiment_castNetwork {network' : Network Node boundary result}
+    (h : network = network') (schedule : List (Activation Node)) :
+    fifoExperiment network' (castHandlers h impl) setup schedule =
+      fifoExperiment network impl setup schedule := by
+  cases h
+  rw [castHandlers_rfl]
+
+/-- A proved graph factorization preserves the actual token experiment and private setup. -/
+theorem tokenExperiment_factorization {Node' : Type} [DecidableEq Node']
+    {network' : Network Node' boundary result} (e : Node' ≃ Node)
+    (h : network.reindex e = network') (fuel : ℕ) :
+    tokenExperiment network' (castHandlers h (fun node => impl (e node))) setup fuel =
+      tokenExperiment network impl setup fuel :=
+  (tokenExperiment_castNetwork _ _ setup h fuel).trans
+    (tokenExperiment_reindex network impl setup e fuel)
+
+/-- A proved graph factorization preserves the actual FIFO experiment with its schedule
+transported, including the order of effects and delivery activations. -/
+theorem fifoExperiment_factorization {Node' : Type} [DecidableEq Node']
+    {network' : Network Node' boundary result} (e : Node' ≃ Node)
+    (h : network.reindex e = network') (schedule : List (Activation Node)) :
+    fifoExperiment network' (castHandlers h (fun node => impl (e node))) setup
+        (schedule.map (Activation.reindex e)) =
+      fifoExperiment network impl setup schedule :=
+  (fifoExperiment_castNetwork _ _ setup h _).trans
+    (fifoExperiment_reindex network impl setup e schedule)
+
 variable [MeasurableSpace (Option (Outcome result))]
 
 /-- The measure of terminal token observations at a finite execution horizon. -/
@@ -80,6 +164,15 @@ noncomputable def tokenLaw (fuel : ℕ) : Measure (Option (Outcome result)) :=
 /-- The measure of terminal FIFO observations after a specified finite schedule. -/
 noncomputable def fifoLaw (schedule : List (Activation Node)) : Measure (Option (Outcome result)) :=
   𝒟[fifoExperiment network impl setup schedule]
+
+/-- The measure of actual environment outcomes under the serial FIFO policy. -/
+noncomputable def serialLaw (rounds : ℕ) : Measure (Option (Outcome result)) :=
+  𝒟[serialExperiment network impl setup rounds]
+
+/-- Token and serial FIFO observations agree at every corresponding finite prefix. -/
+theorem serialLaw_eq_tokenLaw (rounds : ℕ) :
+    serialLaw network impl setup rounds = tokenLaw network impl setup rounds := by
+  simp only [serialLaw, tokenLaw, serialExperiment_eq_tokenExperiment]
 
 /-- The token law is the measure denoted by the actual execution experiment. -/
 theorem tokenLaw_eq_evalDist (fuel : ℕ) :
@@ -98,5 +191,35 @@ theorem tokenLaw_behavior (fuel : ℕ) :
 theorem fifoLaw_behavior (schedule : List (Activation Node)) :
     fifoLaw network.behavior impl setup schedule = fifoLaw network impl setup schedule := by
   simp only [fifoLaw, fifoExperiment_behavior]
+
+/-- Node relabeling preserves the actual finite token observation measure. -/
+theorem tokenLaw_reindex {Node' : Type} [DecidableEq Node'] (e : Node' ≃ Node) (fuel : ℕ) :
+    tokenLaw (network.reindex e) (fun node => impl (e node)) setup fuel =
+      tokenLaw network impl setup fuel := by
+  simp only [tokenLaw, tokenExperiment_reindex]
+
+/-- Node relabeling preserves FIFO observation measures with the transported schedule. -/
+theorem fifoLaw_reindex {Node' : Type} [DecidableEq Node'] (e : Node' ≃ Node)
+    (schedule : List (Activation Node)) :
+    fifoLaw (network.reindex e) (fun node => impl (e node)) setup
+        (schedule.map (Activation.reindex e)) = fifoLaw network impl setup schedule := by
+  simp only [fifoLaw, fifoExperiment_reindex]
+
+/-- Runtime graph factorization preserves the finite token observation measure. -/
+theorem tokenLaw_factorization {Node' : Type} [DecidableEq Node']
+    {network' : Network Node' boundary result} (e : Node' ≃ Node)
+    (h : network.reindex e = network') (fuel : ℕ) :
+    tokenLaw network' (castHandlers h (fun node => impl (e node))) setup fuel =
+      tokenLaw network impl setup fuel := by
+  simp only [tokenLaw, tokenExperiment_factorization network impl setup e h]
+
+/-- Runtime graph factorization preserves finite FIFO observation measures with the
+corresponding schedule. -/
+theorem fifoLaw_factorization {Node' : Type} [DecidableEq Node']
+    {network' : Network Node' boundary result} (e : Node' ≃ Node)
+    (h : network.reindex e = network') (schedule : List (Activation Node)) :
+    fifoLaw network' (castHandlers h (fun node => impl (e node))) setup
+        (schedule.map (Activation.reindex e)) = fifoLaw network impl setup schedule := by
+  simp only [fifoLaw, fifoExperiment_factorization network impl setup e h]
 
 end Interaction.UC.ReactiveRuntime

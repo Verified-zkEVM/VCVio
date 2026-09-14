@@ -3,6 +3,8 @@
 Status: accepted implementation direction, September 13, 2026. The implementation ledger is
 [polynomial-composition-evidence.md](polynomial-composition-evidence.md); unchecked milestones
 there remain obligations. This document consolidates the semantic review of VCVio #494 and #633.
+The [static computational UC campaign](uc-campaign.md) gives the next implementation sequence
+and the source-backed complexity adoption decision.
 
 ## Semantic contract
 

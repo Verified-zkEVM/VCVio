@@ -48,6 +48,17 @@ example : fifoExperiment (network Bool Bool Unit) impl (pure ()) (fifoSchedule.t
 /-- Stopping just before the environment's verdict retains a residual computation. -/
 example : tokenExperiment (network Bool Bool Unit) impl (pure ()) 8 = pure none := rfl
 
+/-- Serial FIFO transfers the successful observation through the generic prefix theorem. -/
+example : serialExperiment (network Bool Bool Unit) impl (pure ()) 9 =
+    pure (some (.returned true)) := by
+  rw [serialExperiment_eq_tokenExperiment]
+  rfl
+
+/-- The serial comparison also preserves unfinished execution, not just completed verdicts. -/
+example : serialExperiment (network Bool Bool Unit) impl (pure ()) 8 = pure none := by
+  rw [serialExperiment_eq_tokenExperiment]
+  rfl
+
 /-- Repeatedly scheduling both actors without delivering cannot produce a reply. -/
 example : fifoExperiment (network Bool Bool Unit) impl (pure ())
     [.node false, .node false, .node true, .node true, .node true,
@@ -97,6 +108,10 @@ theorem serialRound_ne_token_with_pending :
   rw [serialRound_without_empty_queue.1, serialRound_without_empty_queue.2] at projected
   have distinguish := congrArg (fun program : ProbComp ℕ => Pr[= 0 | program]) projected
   simp at distinguish
+
+/-- The finite-policy theorem also needs the empty-queue premise, even for one round. -/
+example : runSerial impl 1 queued ≠ State.addElapsed 1 <$> runToken impl 1 queued := by
+  simpa only [runSerial, runToken, bind_pure] using serialRound_ne_token_with_pending
 
 /-- Incorrect decryption changes the environment's actual result. -/
 example : tokenExperiment (network Bool Bool Unit)
