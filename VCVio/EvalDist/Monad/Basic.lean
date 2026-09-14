@@ -7,6 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.EvalDist.Defs.Basic
 public import ToMathlib.Data.ENNReal.Gauss
+import VCVio.EvalDist.Monad.Measure
 
 /-!
 # Evaluation Distributions of Computations with `Bind`
@@ -324,27 +325,6 @@ lemma probEvent_le_add_of_imp_or [MonadLiftT m SPMF]
     (h : ∀ x ∈ support mx, p x → q x ∨ r x) :
     Pr[ p | mx] ≤ Pr[ q | mx] + Pr[ r | mx] :=
   (probEvent_mono h).trans (probEvent_or_le mx q r)
-
-/-- Prefix-event split for a bind. Prefix points satisfying `p` are charged in
-full; off-prefix continuations are charged by the uniform tail bound `ε`. -/
-lemma probEvent_bind_le_probEvent_add [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
-    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {ε : ENNReal}
-    (h : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] ≤ ε) :
-    Pr[ q | mx >>= my] ≤ Pr[ p | mx] + ε := by
-  classical
-  rw [probEvent_bind_eq_expectedValue]
-  calc expectedValue mx (fun x => Pr[ q | my x])
-      ≤ expectedValue mx (fun x => (if p x then 1 else 0) + ε) := by
-        gcongr with x hx
-        by_cases hp : p x
-        · simp only [if_pos hp]; exact probEvent_le_one.trans le_self_add
-        · simp only [if_neg hp, zero_add]; exact h x hx hp
-    _ = Pr[ p | mx] + expectedValue mx (fun _ => ε) := by
-        rw [expectedValue_add, expectedValue_ite_one]
-    _ ≤ Pr[ p | mx] + ε := by
-        gcongr
-        exact expectedValue_le_of_le mx fun _ => le_rfl
 
 /-- Convex prefix-event split for a bind. The off-prefix tail bound `ε` is charged
 only on the mass outside `p`, giving `Pr[p] + (1 - Pr[p]) * ε`. -/
@@ -816,21 +796,31 @@ lemma probEvent_bind_le_add {mx : m α} {my : α → m β}
     (h₂ : ∀ x ∈ support mx, p x → Pr[ fun y => ¬q y | my x] ≤ ε₂) :
     Pr[ fun y => ¬q y | mx >>= my] ≤ ε₁ + ε₂ := by
   classical
-  rw [probEvent_bind_eq_tsum]
-  calc ∑' x, Pr[= x | mx] * Pr[ fun y => ¬q y | my x]
-      ≤ ∑' x, (Pr[= x | mx] * ε₂ + if ¬p x then Pr[= x | mx] else 0) := by
-        refine ENNReal.tsum_le_tsum fun x => ?_
-        by_cases hx : x ∈ support mx
-        · by_cases hp : p x
-          · rw [if_neg (not_not_intro hp), add_zero]
-            exact mul_le_mul' le_rfl (h₂ x hx hp)
-          · rw [if_pos hp]
-            exact (mul_le_of_le_one_right zero_le probEvent_le_one).trans le_add_self
-        · simp [probOutput_eq_zero_of_not_mem_support hx]
-    _ = (∑' x, Pr[= x | mx]) * ε₂ + Pr[ fun x => ¬p x | mx] := by
-        rw [ENNReal.tsum_add, ENNReal.tsum_mul_right, probEvent_eq_tsum_ite]
-    _ ≤ 1 * ε₂ + ε₁ := add_le_add (mul_le_mul' tsum_probOutput_le_one le_rfl) h₁
-    _ = ε₁ + ε₂ := by ring
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  have hs : ∀ᵐ x ∂𝒟[mx], x ∈ support mx := by
+    rw [MeasureTheory.ae_iff]
+    simpa only [evalDist_apply_setOf] using
+      (probEvent_eq_zero_iff (mx := mx) (p := fun x => x ∉ support mx)).2 (by simp)
+  have hbound := evalDist_bind_apply_le_add_lintegral_of_bad
+    (bad := {x | ¬p x}) (event := {y | ¬q y}) mx my Measurable.of_discrete
+    MeasurableSet.of_discrete MeasurableSet.of_discrete (fun _ => 0) (by
+      filter_upwards [hs] with x hx hp
+      simpa only [evalDist_apply_setOf, zero_add] using h₂ x hx (not_not.mp hp))
+  have h₁' : 𝒟[mx] {x | ¬p x} ≤ ε₁ := by simpa only [evalDist_apply_setOf] using h₁
+  simpa only [evalDist_apply_setOf] using hbound.trans (by
+    simpa only [MeasureTheory.lintegral_zero, add_zero] using add_le_add_left h₁' ε₂)
+
+/-- Prefix-event split for a bind. Prefix points satisfying `p` are charged in
+full; off-prefix continuations are charged by the uniform tail bound `ε`. -/
+lemma probEvent_bind_le_probEvent_add
+    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {ε : ENNReal}
+    (h : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] ≤ ε) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] + ε := by
+  simpa only [not_not] using (probEvent_bind_le_add (mx := mx) (my := my)
+    (p := fun x => ¬p x) (q := fun y => ¬q y) (ε₁ := Pr[ p | mx]) (ε₂ := ε)
+    (by simp only [not_not]; change Pr[p | mx] ≤ Pr[p | mx]; exact le_rfl)
+    (by simpa only [not_not] using h))
 
 /-- `probEvent` version of `probEvent_bind_mono` with additive error bound. -/
 lemma probEvent_bind_congr_le_add {mx : m α} {my oc : α → m β}
