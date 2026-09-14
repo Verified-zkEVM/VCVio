@@ -65,6 +65,15 @@ theorem evalDist_bind_apply_le_add_of_bad (mx : m α) (f : α → m β)
   rw [evalDist_bind mx f hf]
   exact Measure.bind_apply_le_add_of_bad _ _ hf hbad hevent hbadBound hgood
 
+/-- Charge a bad intermediate event and integrate an almost-everywhere continuation bound. -/
+theorem evalDist_bind_apply_le_add_lintegral_of_bad (mx : m α) (f : α → m β)
+    (hf : Measurable fun a => 𝒟[f a]) {bad : Set α} (hbad : MeasurableSet bad)
+    {event : Set β} (hevent : MeasurableSet event) (bound : α → ENNReal) {ε : ENNReal}
+    (hgood : ∀ᵐ a ∂𝒟[mx], a ∉ bad → 𝒟[f a] event ≤ bound a + ε) :
+    𝒟[mx >>= f] event ≤ 𝒟[mx] bad + ε + ∫⁻ a, bound a ∂𝒟[mx] := by
+  rw [evalDist_bind mx f hf]
+  exact Measure.bind_apply_le_add_lintegral_of_bad _ _ hf hbad hevent hgood
+
 /-- Compare two denoted continuations outside a measurable disagreement set. -/
 theorem evalDist_bind_apply_le_add_of_disagree (mx : m α) (f g : α → m β)
     (hf : Measurable fun a => 𝒟[f a]) (hg : Measurable fun a => 𝒟[g a])
