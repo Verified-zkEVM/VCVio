@@ -667,6 +667,307 @@ example : widthTwoParams.Valid := by decide
 
 end Pins
 
+/-! ## The vacuity canary
+
+Every other check in this file refuses a claim about a *definition*: a coefficient, a summand's
+routing, a cap, a certificate field's type.  This one refuses a claim about the *hypotheses*, and
+it is the first in this lane to do so.  It builds a closed `SLHDSA.Security.Certificate` — all
+twenty fields supplied, all four inequalities proved — at an **arbitrary** `ValidatedParams`, an
+arbitrary primitive bundle carrying the instances the structure asks for, and an arbitrary
+adversary, from an address key and a public seed and no security assumption whatever; and it
+proves that the bound that certificate names is at least one.  `advantage_le_bound` at it is
+`adv.advantage ≤ (something ≥ 1)`, which `probOutput_le_one` already gives.
+
+What it is for.  Three docstrings in the library module, this file, and the pull-request body once
+said that no route to a certificate was known which avoided proving something hard.  Ship the
+route as a checked fact and no later edit can quietly restore that reading: the moment an
+adversary field becomes a function of `adv`, or the three `ℝ≥0∞` fields are anchored to the
+experiment, `freeCertificate` stops elaborating and this section has to be revisited on purpose.
+
+What it does not say.  It is not a soundness bug: `advantage_le_bound` is true and its proof is
+correct.  It says that the antecedent is free, so the implication carries no information about
+SLH-DSA.  The library module's "A certificate costs nothing" records what would change that.
+
+The two games that do the work are the two whose winning conditions have no distinctness clause.
+`SM_DT_PRE_SourceFinalValidity` accepts on `th.eval pk t (emb m) = th.eval pk t (emb x)`, and
+`SM_DT_OpenPRE_SourceFinalValidity` on `th.eval pk t m = th.eval pk t x`; both hand the adversary
+an image the game has just computed, so the fibre is non-empty and `Function.invFun` wins.  The
+five target-collision games and the decisional game do carry one, and none of them is driven
+anywhere here.  `winningOpenPre` is included because the FORS branch's only such game is the
+open-preimage one, and what stops it from making the FORS branch free as well is the `counting`
+field: the interface below is inhabited at `idleOpenPre`, whose advantage is zero, and whether one
+exists at `winningOpenPre`, whose advantage is one, is open.  `winningOpenPre_advantage` needs
+nothing of the input distribution, not even `HasUniformInputs` — measured by removing it. -/
+
+section Vacuity
+
+open OracleComp OracleSpec ENNReal SignatureAlg
+
+/-! ### Adversaries that assume nothing
+
+`idleTcr` and `idleUd` are here only to fill fields: nothing below reads their advantages. -/
+
+/-- A target-collision adversary that forges nothing. -/
+def idleTcr {ix PkS Tw Msg Nd : Type} [Inhabited Msg]
+    (prob : SM_DT_TCR_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
+    SM_DT_TCR_SourceFinalValidity.Adversary prob where
+  State := Unit
+  choose := pure ()
+  forge := fun _ _ => pure (0, default)
+
+/-- An undetectability adversary that always answers `false`. -/
+def idleUd {ix PkS Tw Msg Msg' Nd : Type}
+    (prob : SM_DT_UD_SourceFinalValidity.Problem ix PkS Tw Msg Msg' Nd) :
+    SM_DT_UD_SourceFinalValidity.Adversary prob where
+  State := Unit
+  pick := pure ()
+  distinguish := fun _ _ => pure false
+
+-- Exposed, and it is the only one of the six adversaries here that needs to be; measured by
+-- removing each attribute alone.  Inside this file's `public section` a definition's body is not
+-- available to later declarations, so `(Problem.toDSPR (idleOpenPre prob)).State` does not reduce
+-- to `Unit × _ × _` and `idleOpenPre_toDSPR_choose` cannot even be stated: three errors, a
+-- `Type mismatch` at that statement, the `unknownIdentifier` it causes in `idleOpenPre_dspr`, and
+-- that theorem's `unsolved goals`.
+/-- An open-preimage adversary that commits to no target and opens nothing. -/
+@[expose] def idleOpenPre {ix PkS Tw Msg Nd : Type} [Inhabited Msg]
+    (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
+    SM_DT_OpenPRE_SourceFinalValidity.Adversary prob where
+  State := Unit
+  pick := pure ((), [])
+  find := fun _ _ _ => pure (0, default)
+
+/-- It records no challenge, so the selected index misses and its advantage is zero. -/
+theorem idleOpenPre_advantage {ix PkS Tw Msg Nd : Type} [DecidableEq Tw] [DecidableEq Nd]
+    [Inhabited Msg] (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
+    SM_DT_OpenPRE_SourceFinalValidity.Advantage (idleOpenPre prob) = 0 := by
+  unfold SM_DT_OpenPRE_SourceFinalValidity.Advantage
+    SM_DT_OpenPRE_SourceFinalValidity.Experiment
+  simp [idleOpenPre, SM_DT_OpenPRE_SourceFinalValidity.initializeTargets,
+    SourceFinalValidity.State.initial]
+
+/-- The induced DSPR adversary's selection phase makes no challenge query either.  Stated
+separately because the `do` block has to be reduced before the experiment can be. -/
+theorem idleOpenPre_toDSPR_choose {ix PkS Tw Msg Nd : Type} [DecidableEq Msg] [Inhabited Msg]
+    (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
+    (SM_DT_OpenPRE_SourceFinalValidity.toDSPR (idleOpenPre prob)).choose = pure ((), [], []) := by
+  change (do
+      let __x ← (pure ((), []) :
+        OracleComp (unifSpec + (SM_DT_TCR_SourceFinalValidity.challengeSpec Tw Msg Nd +
+          SourceFinalValidity.collectionSpec prob.thColl)) (Unit × List Tw))
+      let __x_1 ← SM_DT_OpenPRE_SourceFinalValidity.reductionInitialize prob
+        (List.take prob.numTargets __x.2)
+      pure (__x.1, __x_1)) = _
+  rw [pure_bind]
+  simp [SM_DT_OpenPRE_SourceFinalValidity.reductionInitialize]
+  rfl
+
+/-- So the induced DSPR advantage is zero: both its experiment and its `SPprob` baseline reject. -/
+theorem idleOpenPre_dspr {ix PkS Tw Msg Nd : Type} [Fintype Msg] [DecidableEq Tw]
+    [DecidableEq Msg] [DecidableEq Nd] [Inhabited Msg]
+    (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
+    SM_DT_DSPR_SourceFinalValidity.Advantage
+      (SM_DT_OpenPRE_SourceFinalValidity.toDSPR (idleOpenPre prob)) = 0 := by
+  unfold SM_DT_DSPR_SourceFinalValidity.Advantage SM_DT_DSPR_SourceFinalValidity.Success
+    SM_DT_DSPR_SourceFinalValidity.SPProbability
+    SM_DT_DSPR_SourceFinalValidity.Experiment SM_DT_DSPR_SourceFinalValidity.SPExperiment
+  simp only [idleOpenPre_toDSPR_choose]
+  simp [SM_DT_OpenPRE_SourceFinalValidity.toDSPR, idleOpenPre,
+    SourceFinalValidity.State.initial]
+
+/-- **The counting interface is inhabited from nothing.**  VCVio calls it "deliberately a proof
+obligation, not a theorem supplied by this file"; at an adversary that records no target every
+mass is zero, both decompositions read `0 = 0`, and the strata inequality reads `0 ≤ _`.  Its one
+real input is `Problem.HasUniformInputs`, which `forsFOpenPreProblem_hasUniformInputs` proves. -/
+noncomputable def idleCounting {ix PkS Tw Msg Nd : Type} [Fintype Msg] [DecidableEq Tw]
+    [DecidableEq Msg] [DecidableEq Nd] [Inhabited Msg] [SampleableType Msg]
+    {prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd}
+    (h : prob.HasUniformInputs) :
+    SM_DT_OpenPRE_SourceFinalValidity.CountingInterface (idleOpenPre prob) where
+  uniformInputs := h
+  singleMass := 0
+  multipleMass := fun _ => 0
+  openPRE_decomposition := by simp [idleOpenPre_advantage]
+  dspr_decomposition := by
+    simp [idleOpenPre_dspr, SM_DT_OpenPRE_SourceFinalValidity.reciprocalMass]
+  tcr_strata_le := by simp [SM_DT_OpenPRE_SourceFinalValidity.collisionMass]
+
+/-! ### The two games with no distinctness clause -/
+
+/-- Classical inversion of the open-preimage game's attacked map at one seed and one tweak. -/
+noncomputable def openPreInverse {ix PkS Tw Msg Nd : Type} [Nonempty Msg]
+    (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) (pk : PkS) (t : Tw) :
+    Nd → Msg :=
+  Function.invFun (fun m => prob.th.eval pk t m)
+
+theorem openPreInverse_eval {ix PkS Tw Msg Nd : Type} [Nonempty Msg]
+    (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) (pk : PkS) (t : Tw)
+    (a : Msg) :
+    prob.th.eval pk t (openPreInverse prob pk t (prob.th.eval pk t a)) = prob.th.eval pk t a :=
+  Function.invFun_eq (f := fun m => prob.th.eval pk t m) ⟨a, rfl⟩
+
+/-- One committed target, nothing opened, and the revealed image inverted classically. -/
+noncomputable def winningOpenPre {ix PkS Tw Msg Nd : Type} [Nonempty Msg] [Inhabited Nd]
+    (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) (t : Tw) :
+    SM_DT_OpenPRE_SourceFinalValidity.Adversary prob where
+  State := Unit
+  pick := pure ((), [t])
+  find := fun _ pk ys => pure (0, openPreInverse prob pk t (ys.headD default))
+
+/-- **Open-preimage resistance is unconditionally false in this model.**  The winning condition is
+an equality of images with no `m ≠ x` clause, the target the adversary must invert is unopened
+because it opened nothing, and one committed tweak is inside every positive cap. -/
+theorem winningOpenPre_advantage {ix PkS Tw Msg Nd : Type} [DecidableEq Tw] [DecidableEq Nd]
+    [Inhabited Msg] [Inhabited Nd]
+    (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) (t : Tw)
+    (h : 0 < prob.numTargets) :
+    SM_DT_OpenPRE_SourceFinalValidity.Advantage (winningOpenPre prob t) = 1 := by
+  have htake : List.take prob.numTargets [t] = [t] :=
+    List.take_of_length_le (by simpa using Nat.succ_le_of_lt h)
+  unfold SM_DT_OpenPRE_SourceFinalValidity.Advantage
+    SM_DT_OpenPRE_SourceFinalValidity.Experiment
+  simp [winningOpenPre, htake, openPreInverse_eval, h,
+    SM_DT_OpenPRE_SourceFinalValidity.initializeTargets,
+    SourceFinalValidity.State.initial, SourceFinalValidity.State.recordTarget,
+    TweakableHash.TweakFresh, TweakableHash.TweakReserved]
+
+section Preimage
+
+variable {vp : ValidatedParams} (prims : Primitives vp.params)
+  [SampleableType prims.PkSeed] [SampleableType prims.Y]
+  [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
+
+/-- Classical inversion of the WOTS+-`F` preimage game's attacked map. -/
+noncomputable def wotsFPreInverse (pk : prims.PkSeed) (t : prims.AdrsKey) : prims.Y → prims.Y :=
+  Function.invFun fun m =>
+    (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb m)
+
+omit [DecidableEq prims.AdrsKey] [DecidableEq prims.Y] in
+theorem wotsFPreInverse_eval (pk : prims.PkSeed) (t : prims.AdrsKey) (a : prims.Y) :
+    (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb
+        (wotsFPreInverse prims pk t ((wotsFPreCProblem prims).th.eval pk t
+          ((wotsFPreCProblem prims).emb a)))) =
+      (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb a) :=
+  Function.invFun_eq (f := fun m =>
+    (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb m)) ⟨a, rfl⟩
+
+/-- One challenge query, then classical inversion of the image it was answered with. -/
+noncomputable def freePreAdv (t : prims.AdrsKey) :
+    SM_DT_PRE_SourceFinalValidity.Adversary (wotsFPreCProblem prims) where
+  State := prims.Y
+  choose := liftM ((unifSpec +
+    (SM_DT_PRE_SourceFinalValidity.challengeSpec prims.AdrsKey prims.Y +
+      SourceFinalValidity.collectionSpec (wotsFPreCProblem prims).thColl)).query (.inr (.inl t)))
+  invert := fun y pk => pure (0, wotsFPreInverse prims pk t y)
+
+/-- **Preimage resistance is unconditionally false in this model**, at every validated parameter
+set and every primitive bundle: the tenth summand of `Summands.bound` is exactly one here. -/
+theorem freePreAdv_advantage (t : prims.AdrsKey) :
+    SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) = 1 := by
+  unfold SM_DT_PRE_SourceFinalValidity.Advantage SM_DT_PRE_SourceFinalValidity.Experiment
+  simp [freePreAdv, wotsFPreInverse_eval, SM_DT_PRE_SourceFinalValidity.oracles,
+    SM_DT_PRE_SourceFinalValidity.challengeOracle,
+    SourceFinalValidity.State.recordTarget, SourceFinalValidity.State.initial,
+    TweakableHash.TweakFresh, TweakableHash.TweakReserved,
+    targetCount_pos vp.params vp.valid TargetRole.wotsFPre]
+
+end Preimage
+
+/-! ### The closed certificate -/
+
+section Closed
+
+variable {vp : ValidatedParams} {prims : Primitives vp.params}
+  [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableType prims.PkSeed]
+  [SampleableType prims.Y] [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey]
+  [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
+
+/-- **A `Certificate` from nothing.**  The two arguments are an address key and a public seed,
+which are data the scheme itself has and not assumptions.  `forsBranch := 0` puts the whole
+obligation on `hypertreeBranch_le`, and `freePreAdv_advantage` discharges it. -/
+noncomputable def freeCertificate {adv : unforgeableAdv (generalAlg prims)}
+    (t : prims.AdrsKey) (pkSeed : prims.PkSeed) : Certificate prims adv where
+  skgAdv := (pure true : OracleComp (PRFScheme.PRFOracleSpec Adrs prims.Y) Bool)
+  mkgAdv := (pure true :
+    OracleComp (PRFScheme.PRFOracleSpec (prims.Y × List Byte) prims.Y) Bool)
+  pkSeed := pkSeed
+  itsrAdv := ⟨(pure (default, ⟨pkSeed, default, []⟩) :
+    OracleComp (unifSpec + ITSRTargetSpec (HmsgITSRInput prims.PkSeed prims.Y) prims.Y)
+      (prims.Y × HmsgITSRInput prims.PkSeed prims.Y))⟩
+  openPreAdv := idleOpenPre (forsFOpenPreProblem prims)
+  counting := idleCounting (forsFOpenPreProblem_hasUniformInputs prims)
+  forsHAdv := idleTcr _
+  forsTlAdv := idleTcr _
+  wotsFUdAdv := idleUd _
+  wotsFTcrAdv := idleTcr _
+  wotsFPreAdv := freePreAdv prims t
+  wotsTlAdv := idleTcr _
+  xmssHAdv := idleTcr _
+  idealAdvantage := adv.advantage ProbCompRuntime.probComp
+  forsBranch := 0
+  hypertreeBranch := adv.advantage ProbCompRuntime.probComp
+  prfHops := le_add_self
+  split := by simp
+  forsBranch_le := by simp
+  hypertreeBranch_le := by
+    calc adv.advantage ProbCompRuntime.probComp ≤ 1 := probOutput_le_one
+      _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+          (freePreAdv_advantage prims t).symm
+      _ ≤ _ := le_add_right (le_add_right le_add_self)
+
+/-- **The bound that certificate names is at least one**, so it is the trivial bound. -/
+theorem one_le_freeCertificate_bound {adv : unforgeableAdv (generalAlg prims)}
+    (t : prims.AdrsKey) (pkSeed : prims.PkSeed) :
+    1 ≤ (freeCertificate (adv := adv) t pkSeed).summands.bound vp.params := by
+  rw [Certificate.bound_eq]
+  calc (1 : ℝ≥0∞) = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+        (freePreAdv_advantage prims t).symm
+    _ ≤ _ := le_add_right (le_add_right le_add_self)
+
+/-- **The headline at that certificate.**  Both conjuncts together are the whole canary: the
+conditional bound holds, and what it bounds the advantage by is at least one. -/
+theorem freeCertificate_headline {adv : unforgeableAdv (generalAlg prims)}
+    (t : prims.AdrsKey) (pkSeed : prims.PkSeed) :
+    adv.advantage ProbCompRuntime.probComp ≤
+        (freeCertificate (adv := adv) t pkSeed).summands.bound vp.params ∧
+      1 ≤ (freeCertificate (adv := adv) t pkSeed).summands.bound vp.params :=
+  ⟨advantage_le_bound _, one_le_freeCertificate_bound t pkSeed⟩
+
+end Closed
+
+/-! ### The same three facts at the toy bundle
+
+The section above is at an arbitrary `ValidatedParams` and an arbitrary bundle; these restate it
+at the profile the rest of this file uses, so a change that breaks only the concrete case is
+caught too. -/
+
+example (t : Adrs) :
+    SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv (vp := toy) toyPrimitives t) = 1 :=
+  freePreAdv_advantage (vp := toy) toyPrimitives t
+
+example (t : Adrs) :
+    SM_DT_OpenPRE_SourceFinalValidity.Advantage
+      (winningOpenPre (forsFOpenPreProblem toyPrimitives) t) = 1 :=
+  winningOpenPre_advantage (forsFOpenPreProblem toyPrimitives) t (by
+    rw [forsFOpenPreProblem_numTargets]
+    exact targetCount_pos toyParams toyValid TargetRole.forsF)
+
+noncomputable example (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
+    (adv : unforgeableAdv (generalAlg (vp := toy) toyPrimitives)) :
+    Certificate (vp := toy) toyPrimitives adv :=
+  freeCertificate (vp := toy) (prims := toyPrimitives) (adv := adv) t pkSeed
+
+example (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
+    (adv : unforgeableAdv (generalAlg (vp := toy) toyPrimitives)) :
+    adv.advantage ProbCompRuntime.probComp ≤
+        (freeCertificate (vp := toy) (prims := toyPrimitives) (adv := adv) t pkSeed).summands.bound
+          toy.params ∧
+      1 ≤ (freeCertificate (vp := toy) (prims := toyPrimitives) (adv := adv) t
+          pkSeed).summands.bound toy.params :=
+  freeCertificate_headline (vp := toy) (prims := toyPrimitives) (adv := adv) t pkSeed
+
+end Vacuity
+
 /-- Run the four check groups in order, then report. -/
 def main : IO Unit := do
   checkCoefficients
