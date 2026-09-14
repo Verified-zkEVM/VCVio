@@ -72,9 +72,10 @@ the first match at a message, which L3 gives three of.
 signature.  It is not read at **L3**.
 
 **R3**, `randomizerLoggedRaw`, the mutant that sweeps the whole log rather than the entries at this
-message.  At **L1** it is separated from R1, at the cross forgery, which is the only place any log
-here separates them.  At **L2** it is not separated: `forgeryDet`'s randomizer occurs at `msgP` and
-nowhere else.  It is not read at **L3**.
+message.  At **L1** it is separated from R1 at the cross forgery, and a mutation sweep finds one
+further reading in this file that separates them: any forgery read at `msgU`, which no log carries,
+where the per-message reader is `false` and the whole-log one is not.  At **L2** it is not
+separated: `forgeryDet`'s randomizer occurs at `msgP` and nowhere else.  It is not read at **L3**.
 
 **Cells that cannot discriminate, and why.**
 

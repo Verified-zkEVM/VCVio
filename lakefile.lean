@@ -640,9 +640,10 @@ asserted to fail it.  The two FIPS 205 §9.2 variants are compared at the same t
 hedged default leaves two randomizers at the twice-signed message and the deterministic alternative
 one, which is asserted to move a forgery between the two branches in both directions — and the
 deterministic log's own second signature is asserted to be on the *logged* branch, so that branch is
-inhabited under either variant.  A fourth reader, sweeping the whole log rather than the entries at
+inhabited under either variant.  A third reader, sweeping the whole log rather than the entries at
 one message, is asserted to disagree with the real one at the cross-message forgery and to agree
-everywhere else these logs reach.  Everything about the bound's own shape — the three-part
+with it at a forgery under randomness no log carries and at the deterministic log's second
+signature.  Everything about the bound's own shape — the three-part
 expression, the unit coefficient on each residual, the two equivalences saying the residual cancels,
 and each of the thirteen exported statements — is pinned by elaboration, at least one `example` per
 declaration, in a file no library-side edit can reach.  So is the strength of its hypotheses: the
