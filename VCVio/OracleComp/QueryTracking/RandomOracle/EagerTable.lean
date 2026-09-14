@@ -191,6 +191,17 @@ theorem evalSPMF_simulateQ_randomOracle_run'_eq_tableExtending
   | query_bind t k ih =>
     exact evalSPMF_simulateQ_randomOracle_run'_query_bind_eq_tableExtending t k ih c
 
+/-- The lazy oracle and a uniformly completed initial cache have the same successful-output
+measure. The eager table is sampled in the initial law, rather than fixed pointwise. -/
+theorem evalDist_simulateQ_randomOracle_run'_eq_tableExtending
+    {α : Type} [MeasurableSpace α] (oa : OracleComp (D →ₒ R) α)
+    (c : (D →ₒ R).QueryCache) :
+    𝒟[(simulateQ randomOracle oa).run' c] =
+      𝒟[do let g ← $ᵗ (D → R);
+            pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) oa)] := by
+  simp only [evalDist_eq_evalSPMF_toMeasure,
+    evalSPMF_simulateQ_randomOracle_run'_eq_tableExtending]
+
 omit [DecidableEq D] [Finite D] [Finite R] [Nonempty R] [SampleableType R]
   [SampleableType (D → R)] in
 /-- Overlaying the empty cache leaves a full table unchanged. -/

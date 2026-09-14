@@ -192,7 +192,11 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - Per-node samplers as data (`TypeTree.Sampler m tree` = `Decoration (fun X => m X) tree`): `PolyFun/Interaction/Basic/Sampler.lean`
 - `TypeTree.Fintype` / `TypeTree.Nonempty` ornaments + canonical uniform sampler: `PolyFun/Interaction/Basic/TypeTreeFintype.lean`, `VCVio/Interaction/UC/Runtime.lean`
 - Oracle-aware runtime semantics (monad-parametric process execution, `processSemanticsOracle`): `VCVio/Interaction/UC/Runtime.lean` (no `sampler` argument; pulled from `process.stepSampler`)
-- End-to-end UC `ObservedCompEmulates 0` at a three-port boundary: `Examples/OneTimePad/UC.lean`
+- Observation-interface `ObservedCompEmulates 0` smoke test: `Examples/OneTimePad/UC.lean`
+- Reactive single-use OTP execution and simulation with private environment state:
+  `Examples/OneTimePad/Reactive.lean`, `Examples/OneTimePad/Reactive/Security.lean`
+- Semantic counterexamples (plaintext leakage, wrong decoding, key reuse, delivery and fuel):
+  `Examples/OneTimePad/Reactive/Separation.lean`, `VCVioTest/ReactiveNetworkAdversarial.lean`
 - Interaction examples: `PolyFunTest/Interaction/TwoParty/Examples.lean`, `PolyFunTest/Interaction/Multiparty/Examples.lean`, `PolyFunTest/Interaction/Concurrent/Examples.lean`
 - Program logic tactics: `VCVio/ProgramLogic/Tactics.lean`
 - Program logic tactic walkthroughs: `Examples/ProgramLogic/`

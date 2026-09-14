@@ -10,6 +10,7 @@ public import Examples.PRFTagReader.DirectCoupling
 public import Examples.PRFTagReader.DirectCoupling.StepLemmas
 public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
 public import VCVio.EvalDist.Monad.Disagreement
+public import VCVio.EvalDist.Monad.Discard
 
 /-!
 # PRF Tag/Reader Protocol — Direct Coupling, Reader Step
@@ -35,7 +36,7 @@ unit.
 
 @[expose] public section
 
-open OracleComp OracleSpec ENNReal
+open OracleComp OracleSpec ENNReal MeasureTheory
 
 namespace PRFTagReader
 
@@ -745,23 +746,22 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
                 (cacheBadReader (sessionsPerTag := sessionsPerTag) gS transcript)))).run' s] +
           ((Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
             (Fintype.card Digest : ℝ≥0∞) := by
-      refine le_trans ?_ (add_le_add_right hEmass _)
-      rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum, probEvent_bind_eq_tsum,
-        ← ENNReal.tsum_add]
-      refine ENNReal.tsum_le_tsum fun gS => ?_
-      rw [← mul_add]
-      gcongr _ * ?_
-      by_cases hcb : cacheBadReader (sessionsPerTag := sessionsPerTag) gS transcript = true
-      · -- `E gS`: drop the `false`-run summand (`Pr ≤ 1`); charge it to the `E` term, which is
-        -- `1` here.
-        rw [hcb, probEvent_pure_eq_indicator]
-        simp only [Set.indicator, Set.mem_ofPred_eq, if_true]
-        exact probOutput_le_one.trans le_add_self
-      · -- `¬E gS`: `cacheBadReader gS = false`, so the actual S-run uses the bit `false`, the two
-        -- summands coincide, and the `E` term is `0`.
-        rw [Bool.not_eq_true] at hcb
-        rw [hcb, probEvent_pure_eq_indicator]
-        simp only [Set.indicator, Set.mem_ofPred_eq, reduceCtorEq, if_false, add_zero, le_refl]
+      let : MeasurableSpace ((TagId × Fin sessionsPerTag) × Nonce → Digest) := ⊤
+      rw [← evalDist_apply_singleton, ← evalDist_apply_singleton]
+      refine (evalDist_bind_apply_le_of_discard _ _
+        (fun gS => (simulateQ (singleTableHandler (OracleComp.tableExtending c₀ gS))
+          (k (ReaderReply.ofBool (cacheBadReader
+            (sessionsPerTag := sessionsPerTag) gS transcript)))).run' s) measurable_from_top
+        measurable_from_top (bad := {gS | cacheBadReader
+          (sessionsPerTag := sessionsPerTag) gS transcript = true})
+        MeasurableSet.of_discrete ?_ (measurableSet_singleton true)).trans ?_
+      · exact Filter.Eventually.of_forall fun gS hg => by
+          have hcb : cacheBadReader (sessionsPerTag := sessionsPerTag) gS transcript = false :=
+            by simpa only [Set.mem_ofPred_eq, Bool.not_eq_true] using hg
+          rw [hcb]
+      · apply add_le_add le_rfl
+        simpa only [evalDist_apply_setOf, bind_pure_comp, probEvent_map, Function.comp_def]
+          using hEmass
     -- Flatten the right-hand slack and split the `(qR'+1)` units so the discard's `T·sp/|D|`
     -- and the `≤`-monotone `qR' ≤ qR'+1` headroom land in their own summands.
     have hsplitR : ((qR' + 1) * Fintype.card TagId : ℕ) =

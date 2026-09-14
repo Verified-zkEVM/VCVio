@@ -26,6 +26,10 @@ VCVio retains the computational and runtime interpretation of PolyFun's generic 
 | `VCVio/Interaction/UC/Runtime.lean` | Synchronous runtime semantics for closed open processes, including `processSemantics`, `processSemanticsProbComp`, and `processSemanticsOracle`. |
 | `VCVio/Interaction/UC/AsyncRuntime.lean` | Asynchronous runtime semantics with process ticks and environment events. |
 | `VCVio/Interaction/UC/AsyncSecurity.lean` | Fair-PPT security wrappers for asynchronous env-open executions. |
+| `VCVio/Interaction/UC/OracleNetwork.lean` | Explicit FIFO requests/responses for static oracle clients, with ticket-checked resumption. |
+| `VCVio/Interaction/UC/OracleNetwork/Serial.lean` | Derived bounded serial schedule, transcript and verdict agreement with traced oracle interpretation. |
+| `VCVio/Interaction/UC/OracleNetwork/Transport.lean` | Transport of complete runtime states, pending packets and schedules along identity bijections. |
+| `VCVio/Interaction/UC/ReactiveRuntime.lean` | Setup-sampled token/FIFO execution and measures of actual terminal environment outcomes. |
 | `VCVio/Interaction/UC/Standard.lean` | Standard VCVio UC imports and conveniences. |
 | `VCVio/Interaction/UC/StdDoBridge.lean` | Bridges from VCVio program-logic/Std.Do idioms into the UC runtime layer. |
 
@@ -95,14 +99,26 @@ Important definitions:
 The generic equivalence-style UC judgments live in PolyFun.
 The VCVio layer gives them a crypto-facing distributional interpretation.
 Use the `Observed*` definitions when you intentionally work relative to a chosen observer.
-Use `Standard.UCSecure exec ε π F` when stating textbook UC security for a fixed execution experiment; `Execution.ofSemantics` is an explicit bridge from an observer to such an execution.
+`Standard.UCSecure exec ε π F` states security relative to the supplied execution experiment.
+Correspondence with textbook UC additionally needs justified execution, access, simulator,
+and resource models. `Execution.ofSemantics` packages an observer as an execution; that
+constructor alone does not establish those obligations.
 
 ## Examples
 
-The main smoke test for the integration is `Examples/OneTimePad/UC.lean`.
-It builds real and ideal one-time-pad systems as PolyFun open-theory objects and proves the observation-level statement `ObservedCompEmulates 0`.
+Start concrete reactive execution work with `Examples/OneTimePad/Reactive.lean` and
+`Reactive/Security.lean`. They derive both runners from an actual input/output conversation
+and prove single-use OTP simulation for ciphertext-only delivery adversaries, including
+environments retaining countable private auxiliary state across the exchange. The actor and
+access restrictions are explicit; this is not yet a general UC composition theorem.
+`Reactive/Separation.lean` proves that plaintext leakage defeats every allowed simulator
+and that uniform ciphertext marginals do not justify key reuse.
+`VCVioTest/ReactiveNetworkAdversarial.lean` checks insufficient fuel, missing deliveries,
+a reachable nonempty serial queue, and shared-state reply dependence.
 
-Use it as the first example when wiring a concrete protocol into the UC runtime and computational observation layer.
+`Examples/OneTimePad/UC.lean` remains an observation-interface smoke test. Its chosen observer
+makes arbitrary systems indistinguishable, so its `ObservedCompEmulates 0` theorem is not
+evidence of network execution adequacy.
 For lower-level probabilistic and oracle examples, see `docs/agents/probability.md` and `docs/agents/oracle-comp.md`.
 
 ## Import Guide
@@ -128,3 +144,23 @@ import VCVio.Interaction.UC.Standard
 ```
 
 When editing VCVio, prefer importing the specific PolyFun module you need rather than re-exporting large generic surfaces through VCVio.
+
+For explicit FIFO oracle clients, `OracleNetwork.run` consumes a finite list of client and delivery
+activations. `run_serialSchedule` proves that an all-branch bound of `n` queries suffices for
+`3 * n` activations and preserves the complete traced oracle result. The PRF tag/reader consumer
+is `Examples/PRFTagReader/Network.lean`. This runtime treats each service computation atomically;
+it does not assume fairness or provide raw open-syntax contextual factorization.
+
+## Reactive execution and observations
+
+The canonical semantic direction is [the reactive UC contract](../design/uc-semantics.md).
+PolyFun's `ReactiveProcess`/`ReactiveNetwork` modules supply actual typed input reactions,
+token passing and FIFO delivery, prefix and identity-transport laws, and exact cofree-behavior
+adequacy. The existing `OpenProcess` model has a different, activation/output-only scope.
+
+[`ReactiveRuntime`](../../VCVio/Interaction/UC/ReactiveRuntime.lean) samples shared setup and
+reads the actual environment outcome after finite execution. Its Measure equations and
+behavior-adequacy theorems are the downstream entry points. Returned values, explicit abort,
+and an unfinished prefix are separate observations. Defining an experiment does not establish
+UC composition or computational admissibility; see the
+[implementation ledger](../design/polynomial-composition-evidence.md).
