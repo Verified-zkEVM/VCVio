@@ -1119,7 +1119,8 @@ example (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
 
 /-! ### The certificate anchoring does not refuse
 
-`freeCertificate` is refused by anchoring, because its `forsBranch` is `0`.  A certificate is not.
+`freeCertificate` is refused by anchoring, because its `forsBranch` is `0`.  A certificate built
+from one further input is not.
 The one below sets the three `ℝ≥0∞` fields to `adv.advantage`, `forsHalf adv` and
 `hypertreeHalf adv`, which are the three values the anchoring inequalities ask for, so each of them
 holds at it by `le_refl`, which the three `example`s after it are.  Each branch bound is then the
