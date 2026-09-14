@@ -189,6 +189,7 @@ public import VCVio.Interaction.UC.OracleNetwork
 public import VCVio.Interaction.UC.OracleNetwork.Serial
 public import VCVio.Interaction.UC.OracleNetwork.Transport
 public import VCVio.Interaction.UC.ProportionalScheduler
+public import VCVio.Interaction.UC.ReactiveKernel
 public import VCVio.Interaction.UC.ReactiveRuntime
 public import VCVio.Interaction.UC.ReactiveSecurity
 public import VCVio.Interaction.UC.ReactiveWorld
@@ -264,6 +265,7 @@ public import VCVio.OracleComp.SimSemantics.ReaderT.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.OracleComp.SimSemantics.StateT.Measure
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
