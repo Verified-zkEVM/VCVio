@@ -31,9 +31,10 @@ checks; it is not there, and no fixture could put it there.
 
 `toyParams` is the two-layer profile of the scheme-dispatch, SUF-residual and scheme-game fixtures,
 copied rather than imported for the reason those files give: a `lean_exe` root must own its `main`,
-and a module that imports another fixture cannot declare one.  The primitive bundle is theirs
-verbatim; what this file drops is the exclusive-or fold, which only that file's `H_msg` blindness
-assertion used, and every message, signature and log, because no reader here reads one.
+and a module that imports another fixture cannot declare one.  The primitive bundle is theirs less
+three things: the exclusive-or fold, which only that file's `H_msg` blindness assertion used; every
+message, signature and log, because no reader here reads one; and the bundle's `@[reducible]`
+attribute, which is measured unnecessary here.
 
 `SLHDSA.LimitedParameterSet.SLHDSA_SHA2_128_24` is here as a bare `Params`, with no primitive
 bundle, because it is the profile at which the summand-to-game routing has a cell that goes dark.
@@ -55,11 +56,13 @@ exercised there.
 
 ## What the checks cannot catch
 
-* **A paired edit of the `w − 2` coefficient.**  Nothing in the repository derives it.  Changing it
-  in `Summands.bound` *and* in `Certificate.hypertreeBranch_le` together gives a consistent,
-  compiling, differently scaled theorem, and the only checks that see it are the `Pins` entries in
-  this file, which restate both statements with the coefficient in them.  A reviewer who changes
-  both and this file has changed the claim, not found a bug in it.
+* **A paired edit of the `w − 2` coefficient that also moves this file.**  Nothing in the
+  repository derives the coefficient.  Changed throughout the library module it leaves that module
+  elaborating clean and fails eleven `Pins` entries here, which restate the bound expression, the
+  two branch expressions and the coefficient as a numeral at two profiles.  Changed here as well,
+  nothing anywhere fails and the executable passes — at which point the claim has been changed
+  rather than a bug found, and the only remaining check is the source citation the library module
+  carries.
 * **Anything about a probability.**  See above.
 * **Whether the summands are the source's.**  The routing table below says which Lean game each
   summand is the advantage of; that the twelve games are the source's twelve is a reading of

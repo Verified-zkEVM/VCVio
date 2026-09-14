@@ -58,14 +58,20 @@ other by applying `TweakableHash.SM_DT_OpenPRE_SourceFinalValidity.advantage_le_
 the certificate's `counting` field.  That is the only step of the proof that is not `gcongr` and
 `ring`, and it is why the `3` in `Summands.bound` is not a transcription: the library derives it
 from `openPRE_multipleMass_add_reciprocal_le_three_collision`, and a `Summands.bound` that said
-`2 *` fails to elaborate against the library's own `TCRDSPRBound`.
+`2 *` fails to elaborate against the library's own `TCRDSPRBound` — two errors, at this proof's
+`gcongr` step and at `openPre_le_summands_forsF`, however many other statements move with it.  It
+is pinned *from below* by the library and only from above by `HashSigTest.SLHDSA.Composition`:
+raised to `4 *`, with those two proofs repaired, this module elaborates clean and six fixture pins
+fail.
 
 The other coefficient, `(p.w - 2 : ℕ)`, is **not** derived anywhere in Lean.  VCVio has no
 hybrid-argument machinery for SM-DT-UD; the coefficient is carried from
-`MEUFGCMA_WOTSTWESNPRF` and `EUFNAGCMA_FLSLXMSSMTTWESNPRF`, and a paired edit of it in
-`Summands.bound` and in `Certificate.hypertreeBranch_le` is refused by nothing inside this
-repository.  `two_le_w` is the one thing that is pinned about it: at a validated parameter set
-`2 ≤ p.w`, so the `ℕ`-truncation never fires and the coefficient is never silently zero.
+`MEUFGCMA_WOTSTWESNPRF` and `EUFNAGCMA_FLSLXMSSMTTWESNPRF`.  Nothing inside *this module* refuses
+a paired edit of it — changed throughout, with `bound_wotsFUd_coefficient_add_two`'s own constant
+moved with it, the module elaborates clean — and eleven pins in
+`HashSigTest.SLHDSA.Composition` fail.  An edit that moves those pins too is silent everywhere,
+and at that point the claim has been changed rather than a bug found; the only remaining check is
+the source citation above.
 
 ## What is not established, and cannot be read into the inequality
 
@@ -246,10 +252,11 @@ theorem bound_eq_zero_of_summands_zero (p : Params) :
 /-- The coefficient on the undetectability summand, isolated: it is `w − 2` and it multiplies
 `wotsFUd` alone.
 
-This is the one coefficient nothing in this repository derives.  It is pinned here against the
-expression and in `HashSigTest.SLHDSA.Composition` against a numeral at two profiles, and against
-nothing else: a paired edit of it here and in `Certificate.hypertreeBranch_le` produces a
-consistent, compiling, differently-scaled theorem.
+This is the one coefficient nothing in this repository derives.  Inside this module it is pinned
+only relative to the constant in `bound_wotsFUd_coefficient_add_two`, so an edit that moves both
+leaves the module elaborating clean; what refuses it is `HashSigTest.SLHDSA.Composition`, which
+restates this equation, that one, the two branch expressions and the coefficient as a numeral at
+two profiles, in a file no edit of this module reaches.
 
 *Composition arithmetic.* -/
 theorem bound_wotsFUd_coefficient (p : Params) (x : ℝ≥0∞) :
@@ -282,6 +289,8 @@ theorem bound_wotsFUd_coefficient_add_two {p : Params} (h : p.Valid) (x : ℝ≥
 Unlike `bound_wotsFUd_coefficient` this one is pinned from below by the library:
 `advantage_le_bound` applies `SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound`, whose
 `TCRDSPRBound` has the literal `3`, so a coefficient smaller than three does not elaborate there.
+Larger than three does elaborate, once two proofs are repaired, and is refused by the fixture
+alone.
 
 *Composition arithmetic.* -/
 theorem bound_forsFTcr_coefficient (p : Params) (x : ℝ≥0∞) :
