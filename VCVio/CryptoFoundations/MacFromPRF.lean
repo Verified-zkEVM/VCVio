@@ -392,7 +392,8 @@ theorem prf_implies_uf_cma [Nonempty R] [SampleableType R] [Fintype R]
       prf.prfAdvantage (macToPRFReduction prf adversary) +
         (Fintype.card R : ℝ)⁻¹ := by
   rw [← prfRealExp_macToPRFReduction_eq_UF_CMA_Exp prf adversary]
-  unfold prfAdvantage
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  simp only [prfAdvantage, ProbComp.boolDistAdvantage, evalDist_apply_singleton]
   set a := (Pr[= true | prf.prfRealExp (macToPRFReduction prf adversary)]).toReal
   set b := (Pr[= true | prfIdealExp (macToPRFReduction prf adversary)]).toReal
   linarith [le_abs_self (a - b), prfIdealExp_macToPRFReduction_le prf adversary]

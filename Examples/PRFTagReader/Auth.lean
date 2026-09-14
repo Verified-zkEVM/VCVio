@@ -282,13 +282,13 @@ theorem authExp_le_prfAdvantage_add_authRF
       (Pr[= true | authRFExp adversary]).toReal := by
   have hreal := prfRealExp_authToPRFReduction_eq_authExp prfs adversary
   have hRF : authRFExp adversary = PRFScheme.prfIdealExp (authToPRFReduction adversary) := rfl
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   rw [← hreal, hRF]
-  unfold PRFScheme.prfAdvantage
+  simp only [PRFScheme.prfAdvantage, ProbComp.boolDistAdvantage, evalDist_apply_singleton]
   set a := (Pr[= true | PRFScheme.prfRealExp prfs.multiplePRFScheme
     (authToPRFReduction adversary)]).toReal
   set b := (Pr[= true | PRFScheme.prfIdealExp (authToPRFReduction adversary)]).toReal
-  have : a - b ≤ |a - b| := le_abs_self _
-  linarith
+  simpa only [add_comm] using le_add_of_sub_left_le (le_abs_self (a - b))
 
 omit [Nonempty TagId] in
 /-- In the ideal authentication world, a forged reader acceptance never occurs. -/

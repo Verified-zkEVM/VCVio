@@ -135,6 +135,17 @@ lemma ProbComp.boolDistAdvantage_triangle (p q r : ProbComp Bool) :
     p.boolDistAdvantage r ≤ p.boolDistAdvantage q + q.boolDistAdvantage r :=
   abs_sub_le _ _ _
 
+/-- A Boolean game has zero distinguishing advantage against itself. -/
+@[simp, grind =]
+lemma ProbComp.boolDistAdvantage_self (p : ProbComp Bool) : p.boolDistAdvantage p = 0 := by
+  unfold boolDistAdvantage
+  simp only [sub_self, abs_zero]
+
+/-- Boolean distinguishing advantage is symmetric. -/
+lemma ProbComp.boolDistAdvantage_comm (p q : ProbComp Bool) :
+    p.boolDistAdvantage q = q.boolDistAdvantage p :=
+  abs_sub_comm _ _
+
 /-- The `true`-branch probability of one Boolean-valued game is bounded above by the
 `true`-branch probability of another game plus their distinguishing advantage.
 
