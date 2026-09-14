@@ -81,6 +81,41 @@ protocol-scale verification, and quantum proposals. Its dated API inventory and 
 sequence are superseded by the current semantic contract and campaign; those broader proposals
 are not being presented as completed or removed by retiring that PR.
 
+## Executable statistical-security checkpoint
+
+Merged [PolyFun #211](https://github.com/Verified-zkEVM/PolyFun/pull/211), commit
+`025109160102028c04a950a6f02c78951c5e5f3d` (identical tree to the validated head
+`a6a377018d5de1ec8fd8458527fec5e8141d4cd1`), carries intrinsic polynomial-operation
+interpreters through raw compilation and all four parallel/wired graph factorizations.
+Token and FIFO observation equations retain the actual effects and transport schedules.
+Its full validation passes: 12,025 declarations across 312 production modules, with zero
+sorry or nonstandard-axiom taint. Log: `/private/tmp/uc-handled-polyfun-validation.log`.
+VCVio full validation passes against the published dependency: 18,752 declarations across
+625 modules, the same 40 existing sorry-tainted declarations, and zero nonstandard-axiom
+taint. Log: `/private/tmp/uc-reactive-security-validation.log`.
+
+VCVio's `ReactiveSecurity` fixes an injective observation of returned Booleans, explicit
+aborts, and unfinished prefixes. Its `ProbComp` interpretation is total and `law_univ`
+proves unit mass. Generic PolyFun tests separately distinguish failing interpreters from
+unfinished executions in the `Option` monad. `Contextual` has additive statistical
+transitivity and parallel/wired replacement; `ContextualWithin` requires explicit admission
+of each executable residual context.
+
+`ReactiveWorld` connects a protocol's adversarial interface to an ordinary handled assembly,
+retaining its environment backchannel. `Simulates` names an executable witness;
+`StatisticallyEmulates` chooses it before every closing environment and horizon. The
+transitivity theorem feeds the first simulator to the second emulation theorem and adds
+errors. This is a finite-prefix statistical layer, not uniform computational admission.
+
+The executed tests derive the server's observation from a five-activation request/draw/reply
+conversation. False, uniform, and true local operations have adjacent distances one half and
+endpoint distance one, refuting fixed-positive-error transitivity. The allowed-context API
+consumes those comparisons with the correct sum. An explicit relay/backchannel conversation
+needs nine activations and remains unfinished at five, preventing a free timed identity claim.
+Its factorization test uses the generic wired observation theorem. General dummy-adversary
+factorization, uniform executable admission, separated cryptographic consumers, and network
+resource closure remain outstanding stages of the completion contract.
+
 ## Complexity foundation: source audit and adoption decision
 
 This audit distinguishes the current VCVio pins from upstream source inspected on September 13.

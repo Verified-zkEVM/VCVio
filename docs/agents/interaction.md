@@ -30,6 +30,8 @@ VCVio retains the computational and runtime interpretation of PolyFun's generic 
 | `VCVio/Interaction/UC/OracleNetwork/Serial.lean` | Derived bounded serial schedule, transcript and verdict agreement with traced oracle interpretation. |
 | `VCVio/Interaction/UC/OracleNetwork/Transport.lean` | Transport of complete runtime states, pending packets and schedules along identity bijections. |
 | `VCVio/Interaction/UC/ReactiveRuntime.lean` | Setup-sampled token/FIFO execution and measures of actual terminal environment outcomes. |
+| `VCVio/Interaction/UC/ReactiveSecurity.lean` | Fixed outcome observations and graded statistical replacement for executable handled assemblies. |
+| `VCVio/Interaction/UC/ReactiveWorld.lean` | Actual adversary/backchannel wiring and named executable statistical simulators. |
 | `VCVio/Interaction/UC/Standard.lean` | Standard VCVio UC imports and conveniences. |
 | `VCVio/Interaction/UC/StdDoBridge.lean` | Bridges from VCVio program-logic/Std.Do idioms into the UC runtime layer. |
 
@@ -125,6 +127,18 @@ corresponding experiment and Measure equations, with FIFO schedules transported 
 `serialLaw_eq_tokenLaw` compares every serial FIFO prefix with its corresponding token prefix;
 the underlying state theorem retains the extra delivery cost and requires an empty queue.
 The raw relay canary and untransported-schedule counterexample live in PolyFun's UC tests.
+
+`HandledAssembly` also carries each local polynomial-operation interpreter. `ReactiveSecurity`
+specializes it to total `ProbComp` sampling and proves additive statistical composition from
+actual token execution. Its fixed observation retains returned Booleans, explicit aborts, and
+unfinished prefixes; `law_univ` proves unit observation mass. `ContextualWithin` requires
+explicit admission of each constructed residual context. `ReactiveWorld` wires separate honest,
+adversarial, and environment backchannel interfaces. Its named simulators are executable
+assemblies chosen before the environment and horizon. These statistical statements do not
+certify uniformity across security parameters, resource closure, or a dummy-adversary theorem.
+`VCVioTest/ReactiveSecurity.lean` proves an executed fixed-error transitivity counterexample;
+`VCVioTest/ReactiveWorld.lean` tests a three-component relay/backchannel exchange, including
+its four additional forwarding activations.
 
 `Examples/OneTimePad/UC.lean` remains an observation-interface smoke test. Its chosen observer
 makes arbitrary systems indistinguishable, so its `ObservedCompEmulates 0` theorem is not
