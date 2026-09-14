@@ -140,7 +140,7 @@ end CacheAuxProjection
 section CachingAuxInvariant
 
 variable {Q : Type w} {m' : Type (max u w) → Type v} [Monad m'] [LawfulMonad m']
-  [MonadLiftT m' SetM] [LawfulMonadLiftT m' SetM]
+  [MonadAttach m'] [ExactMonadAttach m']
 
 /-- One-step invariant preservation for the auxiliary component of `withCachingAux`. -/
 theorem withCachingAux_aux_inv_of_mem
@@ -185,7 +185,7 @@ variable [spec.DecidableEq]
 omit [spec.DecidableEq] in
 /-- Running `withCaching` at state `cache` produces a result whose cache is `≥ cache`.
 On a cache hit the state is unchanged; on a miss a single entry is added. -/
-lemma withCaching_cache_le [LawfulMonad m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+lemma withCaching_cache_le [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
     (so : QueryImpl spec m) (t : spec.Domain) (cache₀ : QueryCache spec)
     (z) (hz : z ∈ support ((so.withCaching t).run cache₀)) :
     cache₀ ≤ z.2 := by

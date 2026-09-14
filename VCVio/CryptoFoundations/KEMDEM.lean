@@ -47,12 +47,13 @@ def composeWithDEM [Monad m]
 section Correct
 
 variable [DecidableEq K] [DecidableEq M] [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
 
 omit [LawfulMonadLiftT m SPMF] in
 /-- From KEM correctness at the monadic probability level, every reachable decapsulation of an
 honest ciphertext returns the encapsulated key. -/
 private lemma kem_decaps_mem_support
+    [LawfulMonad m]
     {kem : KEMScheme m K PK SK CKEM}
     (hkem : Pr[= true | kem.CorrectExp] = 1)
     {pk : PK} {sk : SK} (hks : (pk, sk) ∈ support kem.keygen)
@@ -60,8 +61,8 @@ private lemma kem_decaps_mem_support
     {kOpt : Option K} (hkOpt : kOpt ∈ support (kem.decaps sk c)) :
     kOpt = some k := by
   have hmem : decide (kOpt = some k) ∈ support kem.CorrectExp := by
-    simp only [KEMScheme.CorrectExp, support_bind, support_pure, Set.mem_iUnion,
-      Set.mem_singleton_iff, decide_eq_decide, exists_prop, Prod.exists]
+    simp only [KEMScheme.CorrectExp, mem_support_bind_iff, support_pure,
+      Set.mem_singleton_iff, decide_eq_decide, Prod.exists]
     exact ⟨pk, sk, hks, c, k, hck, kOpt, hkOpt, Iff.rfl⟩
   simpa [((probOutput_eq_one_iff (mx := kem.CorrectExp) (x := true)).mp hkem).2] using hmem
 
@@ -195,8 +196,9 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
   have hkey : 𝒟[runtime.liftProbComp ($ᵗ K)] Set.univ = 1 := by
     change (runtime.evalSPMF (runtime.liftProbComp ($ᵗ K))).toMeasure Set.univ = _
     rw [heval_liftProbComp]
-    rw [show (𝒮[$ᵗ K]).toMeasure = ProbabilityTheory.uniformOn Set.univ from
-      evalDist_uniformSample]
+    rw [show (𝒮[$ᵗ K]).toMeasure = ProbabilityTheory.uniformOn Set.univ from by
+      let : EvalDistSemantics ProbComp := instEvalDistSemanticsOfMonadLiftTSPMF
+      exact evalDist_uniformSample]
     simp
   have htotal (real side : Bool) :
       𝒟[KEMDEM.hybrid prepare encaps finish (runtime.liftProbComp ($ᵗ K)) real side] {true} +

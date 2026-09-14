@@ -156,7 +156,7 @@ lemma fsAbortSignLoop_cache_invariant
     roSim.simulateQ_HasQuery_query _
   induction n generalizing s₀ with
   | zero =>
-    simp [fsAbortSignLoop, simulateQ_pure, StateT.run_pure, support_pure] at hsup
+    simp [fsAbortSignLoop, simulateQ_pure, StateT.run_pure] at hsup
   | succ n ih =>
     simp only [fsAbortSignLoop, simulateQ_bind] at hsup
     rw [StateT.run_bind] at hsup

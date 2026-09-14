@@ -88,6 +88,10 @@ noncomputable def probComp : ProbCompRuntime ProbComp where
   toSPMFSemantics := SPMFSemantics.ofMonadLift ProbComp
   toProbCompLift := ProbCompLift.id
 
+@[simp]
+lemma probComp_evalSPMF (mx : ProbComp α) :
+    probComp.evalSPMF mx = _root_.evalSPMF mx := rfl
+
 /-- The canonical `ProbComp` runtime satisfies the pure-return factoring law: `evalSPMF`
 commutes with binding a pure function. Security decompositions that couple several
 experiments through one joint execution (e.g. the exact SUF-CMA partition in

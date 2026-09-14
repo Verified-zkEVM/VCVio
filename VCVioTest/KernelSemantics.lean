@@ -42,13 +42,13 @@ example : lossyKernel true = Measure.dirac true := by
   simp [lossyKernel, lossyFamily]
 
 example : lossyKernel false = 0 := by
-  simp [lossyKernel, lossyFamily]
+  simp [lossyKernel, lossyFamily, evalDist_eq_evalSPMF_toMeasure]
 
 example : lossyKernel true Set.univ = 1 := by
   simp [lossyKernel, lossyFamily]
 
 example : lossyKernel false Set.univ = 0 := by
-  simp [lossyKernel, lossyFamily]
+  simp [lossyKernel, lossyFamily, evalDist_eq_evalSPMF_toMeasure]
 
 /-! ## Executable responders -/
 

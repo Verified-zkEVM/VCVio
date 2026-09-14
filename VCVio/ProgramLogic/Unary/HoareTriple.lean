@@ -388,7 +388,7 @@ theorem le_probOutput_iff_triple_indicator (oa : OracleComp spec α) [DecidableE
   rw [triple_iff_le_wp, ← probOutput_eq_wp_indicator]
 
 /-- The support event of an `OracleComp` occurs almost surely. -/
-@[simp] theorem probEvent_mem_support (oa : OracleComp spec α) :
+theorem probEvent_mem_support (oa : OracleComp spec α) :
     Pr[ fun x => x ∈ support oa | oa] = 1 := by
   rw [probEvent_eq_one_iff]
   refine ⟨by simp, fun x hx => hx⟩

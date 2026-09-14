@@ -28,42 +28,40 @@ variable {m : Type u → Type v} [AlternativeMonad m] {α β γ : Type u}
 base monad, enforcing that `failure` maps to the empty sub-distribution. Compatibility
 conditions then force the correct semantics for `evalSPMF`, see below. -/
 protected class HasEvalSet.LawfulFailure (m : Type u → Type v)
-    [AlternativeMonad m] [MonadLiftT m SetM] : Prop where
+    [AlternativeMonad m] [MonadAttach m] : Prop where
   support_failure' {α : Type u} : support (failure : m α) = ∅
-
-/-- `failure` in `SPMF` itself has empty support, so the generic failure laws below apply to the
-finite backend directly. -/
-instance : HasEvalSet.LawfulFailure SPMF where
-  support_failure' := by
-    intro α
-    ext x
-    change x ∈ (failure : SPMF _).support ↔ x ∈ (∅ : Set _)
-    simp [SPMF.mem_support_iff, SPMF.failure_apply]
 
 open HasEvalSet (LawfulFailure)
 
 @[simp, grind =]
-lemma support_failure [MonadLiftT m SetM] [LawfulFailure m] :
+lemma support_failure [MonadAttach m] [LawfulFailure m] :
     support (failure : m α) = ∅ :=
   HasEvalSet.LawfulFailure.support_failure'
 
 @[simp, grind =]
-lemma finSupport_failure [MonadLiftT m SetM] [LawfulFailure m] [HasEvalFinset m]
+lemma finSupport_failure [MonadAttach m] [LawfulFailure m] [HasEvalFinset m]
     [DecidableEq α] : finSupport (failure : m α) = ∅ := by grind
 
 @[simp, grind =]
-lemma probOutput_failure [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
-    [LawfulFailure m] (x : α) : Pr[= x | (failure : m α)] = 0 := by simp
+lemma probOutput_failure [MonadLiftT m SPMF]
+    [MonadAttach m] [EvalDistCompatible m]
+    [LawfulFailure m] (x : α) : Pr[= x | (failure : m α)] = 0 :=
+  (probOutput_eq_zero_iff _ _).2 (by simp)
 
 @[simp, grind =]
-lemma probEvent_failure [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
-    [LawfulFailure m] (p : α → Prop) : Pr[ p | (failure : m α)] = 0 := by simp
+lemma probEvent_failure [MonadLiftT m SPMF]
+    [MonadAttach m] [EvalDistCompatible m]
+    [LawfulFailure m] (p : α → Prop) : Pr[ p | (failure : m α)] = 0 :=
+  (probEvent_eq_zero_iff).2 (by simp)
 
 @[simp, grind =]
-lemma probFailure_failure [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma probFailure_failure [MonadLiftT m SPMF]
+    [MonadAttach m] [EvalDistCompatible m]
     [LawfulFailure m] :
-    Pr[⊥ | (failure : m α)] = 1 := by simp
+    Pr[⊥ | (failure : m α)] = 1 :=
+  (probFailure_eq_one_iff _).2 (by simp)
 
 @[simp, grind =]
-lemma evalSPMF_failure [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma evalSPMF_failure [MonadLiftT m SPMF]
+    [MonadAttach m] [EvalDistCompatible m]
     [LawfulFailure m] : 𝒮[(failure : m α)] = SPMF.mk (PMF.pure none) := by simp

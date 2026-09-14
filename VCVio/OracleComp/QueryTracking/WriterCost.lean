@@ -88,7 +88,7 @@ variable {α β : Type}
 
 section pathwiseCost
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 
 /-- Pathwise upper bound for an `AddWriterT` computation: every reachable execution result carries
 additive cost at most `w`. -/
@@ -112,7 +112,7 @@ def PathwiseCostEqOnSupport {ω : Type} [AddMonoid ω] [Preorder ω]
     (oa : AddWriterT ω m α) (w : ω) : Prop :=
   PathwiseCostAtMost oa w ∧ PathwiseCostAtLeast oa w
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 @[simp] lemma pathwiseCostEqOnSupport_iff {ω : Type} [AddMonoid ω] [Preorder ω]
     (oa : AddWriterT ω m α) (w : ω) :
     PathwiseCostEqOnSupport oa w ↔ PathwiseCostAtMost oa w ∧ PathwiseCostAtLeast oa w :=
@@ -129,50 +129,50 @@ def PathwiseHasCost {ω : Type} [AddMonoid ω] [Preorder ω]
     (oa : AddWriterT ω m α) (w : ω) : Prop :=
   (support oa.run).Nonempty ∧ PathwiseCostEqOnSupport oa w
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 @[simp] lemma pathwiseHasCost_iff {ω : Type} [AddMonoid ω] [Preorder ω]
     (oa : AddWriterT ω m α) (w : ω) :
     PathwiseHasCost oa w ↔
       (support oa.run).Nonempty ∧ PathwiseCostEqOnSupport oa w :=
   Iff.rfl
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma PathwiseHasCost.nonempty {ω : Type} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseHasCost oa w) :
     (support oa.run).Nonempty :=
   h.1
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma PathwiseCostEqOnSupport.atMost {ω : Type} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseCostEqOnSupport oa w) :
     PathwiseCostAtMost oa w :=
   h.1
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma PathwiseCostEqOnSupport.atLeast {ω : Type} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseCostEqOnSupport oa w) :
     PathwiseCostAtLeast oa w :=
   h.2
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma PathwiseHasCost.eqOnSupport {ω : Type} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseHasCost oa w) :
     PathwiseCostEqOnSupport oa w :=
   h.2
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma PathwiseHasCost.atMost {ω : Type} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseHasCost oa w) :
     PathwiseCostAtMost oa w :=
   h.2.1
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma PathwiseHasCost.atLeast {ω : Type} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseHasCost oa w) :
     PathwiseCostAtLeast oa w :=
   h.2.2
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma PathwiseHasCost.unique {ω : Type} [AddMonoid ω] [PartialOrder ω]
     {oa : AddWriterT ω m α} {w₁ w₂ : ω}
     (h₁ : PathwiseHasCost oa w₁) (h₂ : PathwiseHasCost oa w₂) :
@@ -210,7 +210,7 @@ end pathwiseCost
 section expectedCost
 
 variable {ω : Type}
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
   [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [EvalDistCompatible m]
 
 /-- The expected additive cost of an `AddWriterT` computation, obtained by taking the expectation
@@ -230,7 +230,7 @@ noncomputable abbrev expectedCostNat
 
 section tailBounds
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [LawfulMonadLiftT m SPMF] [EvalDistCompatible m]
+omit [MonadAttach m] [ExactMonadAttach m] [LawfulMonadLiftT m SPMF] [EvalDistCompatible m]
 
 /-- Tail-sum formula for the natural-valued expected cost of an `AddWriterT` computation:
 
@@ -278,7 +278,7 @@ lemma expectedCostNat_eq_sum_tail_probs_of_pathwiseCostAtMost
     rcases hc with ⟨z, hz, rfl⟩
     exact not_lt_of_ge (le_trans (h z hz) hnb)
 
-omit [LawfulMonadLiftT m SetM] [LawfulMonadLiftT m SPMF] in
+omit [ExactMonadAttach m] [LawfulMonadLiftT m SPMF] in
 lemma expectedCost_le_of_support_bound
     (oa : AddWriterT ω m α) (val : ω → ENNReal) (c : ENNReal)
     (h : ∀ w ∈ support oa.costs, val w ≤ c) :
@@ -327,7 +327,7 @@ lemma le_expectedCost_of_pathwiseCostAtLeast [AddMonoid ω] [LawfulMonad m] [Pre
             exact hval (h z hz)
           · rw [probOutput_eq_zero_of_not_mem_support hc, zero_mul, zero_mul]
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+omit [MonadAttach m] [ExactMonadAttach m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     [EvalDistCompatible m] in
 lemma expectedCost_eq_tsum_outputs_of_costsAs
     [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
@@ -348,7 +348,7 @@ end expectedCost
 
 section weightedPathwiseBounds
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 variable {ω : Type} [AddCommMonoid ω] [PartialOrder ω]
 
 lemma pathwiseCostAtMost_pure [LawfulMonad m] (x : α) :
@@ -373,11 +373,11 @@ lemma pathwiseHasCost_pure [LawfulMonad m] (x : α) :
 
 lemma pathwiseCostAtMost_monadLift [LawfulMonad m] (x : m α) :
     PathwiseCostAtMost (monadLift x : AddWriterT ω m α) 0 := by
-  simp [PathwiseCostAtMost, support_map]
+  simp [PathwiseCostAtMost]
 
 lemma pathwiseCostAtLeast_monadLift [LawfulMonad m] (x : m α) :
     PathwiseCostAtLeast (monadLift x : AddWriterT ω m α) 0 := by
-  simp [PathwiseCostAtLeast, support_map]
+  simp [PathwiseCostAtLeast]
 
 lemma pathwiseCostEqOnSupport_monadLift [LawfulMonad m] (x : m α) :
     PathwiseCostEqOnSupport (monadLift x : AddWriterT ω m α) 0 :=
@@ -396,11 +396,11 @@ lemma pathwiseHasCost_monadLift_of_supportNonempty [LawfulMonad m] (x : m α)
 
 lemma pathwiseCostAtMost_liftM [LawfulMonad m] (x : m α) :
     PathwiseCostAtMost (liftM x : AddWriterT ω m α) 0 := by
-  simp [PathwiseCostAtMost, support_map]
+  simp [PathwiseCostAtMost]
 
 lemma pathwiseCostAtLeast_liftM [LawfulMonad m] (x : m α) :
     PathwiseCostAtLeast (liftM x : AddWriterT ω m α) 0 := by
-  simp [PathwiseCostAtLeast, support_map]
+  simp [PathwiseCostAtLeast]
 
 lemma pathwiseCostEqOnSupport_liftM [LawfulMonad m] (x : m α) :
     PathwiseCostEqOnSupport (liftM x : AddWriterT ω m α) 0 :=
@@ -436,14 +436,14 @@ lemma pathwiseHasCost_probCompLift_of_supportNonempty [LawfulMonad m] [MonadLift
     PathwiseHasCost (monadLift x : AddWriterT ω m α) 0 :=
   pathwiseHasCost_monadLift_of_supportNonempty (m := m) (ω := ω) (x := (liftM x : m α)) hx
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 @[gcongr]
 lemma pathwiseCostAtMost_mono {oa : AddWriterT ω m α} {w₁ w₂ : ω}
     (h : PathwiseCostAtMost oa w₁) (hw : w₁ ≤ w₂) :
     PathwiseCostAtMost oa w₂ :=
   fun z hz ↦ (h z hz).trans hw
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma pathwiseCostAtLeast_mono {oa : AddWriterT ω m α} {w₁ w₂ : ω}
     (h : PathwiseCostAtLeast oa w₂) (hw : w₁ ≤ w₂) :
     PathwiseCostAtLeast oa w₁ :=
@@ -620,7 +620,7 @@ end weightedPathwiseBounds
 
 section unitCostBounds
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 
 /-- Pathwise upper bound for a unit-cost `AddWriterT` computation. -/
 def QueryBoundedAboveBy (oa : AddWriterT ℕ m α) (n : ℕ) : Prop :=
@@ -646,14 +646,14 @@ lemma queryBoundedBelowBy_monadLift [LawfulMonad m] (x : m α) :
     QueryBoundedBelowBy (monadLift x : AddWriterT ℕ m α) 0 :=
   pathwiseCostAtLeast_monadLift x
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 @[gcongr]
 lemma queryBoundedAboveBy_mono {oa : AddWriterT ℕ m α} {n₁ n₂ : ℕ}
     (h : QueryBoundedAboveBy oa n₁) (hn : n₁ ≤ n₂) :
     QueryBoundedAboveBy oa n₂ :=
   pathwiseCostAtMost_mono h hn
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma queryBoundedBelowBy_mono {oa : AddWriterT ℕ m α} {n₁ n₂ : ℕ}
     (h : QueryBoundedBelowBy oa n₂) (hn : n₁ ≤ n₂) :
     QueryBoundedBelowBy oa n₁ :=
@@ -704,11 +704,11 @@ carries exactly `n` unit queries. -/
 def QueryCostExactly (oa : AddWriterT ℕ m α) (n : ℕ) : Prop :=
   PathwiseCostEqOnSupport oa n
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma QueryCostExactly.toAbove {oa : AddWriterT ℕ m α} {n : ℕ}
     (h : QueryCostExactly oa n) : QueryBoundedAboveBy oa n := h.atMost
 
-omit [Monad m] [LawfulMonadLiftT m SetM] in
+omit [Monad m] [ExactMonadAttach m] in
 lemma QueryCostExactly.toBelow {oa : AddWriterT ℕ m α} {n : ℕ}
     (h : QueryCostExactly oa n) : QueryBoundedBelowBy oa n := h.atLeast
 
@@ -746,7 +746,7 @@ end unitCostBounds
 section expectedUnitCost
 
 variable [MonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
 
 lemma expectedCostNat_le_of_queryBoundedAboveBy [LawfulMonad m]
     {oa : AddWriterT ℕ m α} {n : ℕ}
@@ -761,7 +761,7 @@ end expectedUnitCost
 section expectedUnitCostPMF
 
 variable [MonadLiftT m PMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+  [MonadAttach m] [ExactMonadAttach m]
 
 lemma le_expectedCostNat_of_queryBoundedBelowBy [LawfulMonad m] [EvalDistCompatible m]
     {oa : AddWriterT ℕ m α} {n : ℕ}

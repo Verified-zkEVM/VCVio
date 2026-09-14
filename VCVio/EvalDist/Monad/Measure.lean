@@ -45,6 +45,24 @@ theorem evalDist_bind_bijective_of_uniform [LawfulMonad m]
   rw [hprogram, evalDist_bind_of_discrete, hmap]
   exact (evalDist_bind_of_discrete mx f).symm
 
+/-- A bijection transports a uniform draw to a possibly different uniformly sampled type
+before an arbitrary continuation. -/
+theorem evalDist_bind_bijective_uniform_cross [LawfulMonad m]
+    [DiscreteMeasurableSpace α] [DiscreteMeasurableSpace β]
+    [MeasurableSingletonClass α] [MeasurableSingletonClass β]
+    [Finite α] [Finite β] [Nonempty α] [Nonempty β]
+    (mx : m α) (my : m β)
+    (hα : 𝒟[mx] = uniformOn Set.univ) (hβ : 𝒟[my] = uniformOn Set.univ)
+    (e : α → β) (he : Function.Bijective e) (f : β → m γ) :
+    𝒟[mx >>= fun x => f (e x)] = 𝒟[my >>= f] := by
+  have hmap : 𝒟[e <$> mx] = 𝒟[my] := by
+    rw [evalDist_map_of_discrete, hα, hβ]
+    exact map_uniformOn_univ_of_bijective Measurable.of_discrete he
+  have hprogram : (mx >>= fun x => f (e x)) = (e <$> mx) >>= f := by
+    simp [map_eq_bind_pure_comp, bind_assoc]
+  rw [hprogram, evalDist_bind_of_discrete, hmap]
+  exact (evalDist_bind_of_discrete my f).symm
+
 /-- Independent computations commute under a jointly measurable denoted continuation. -/
 theorem evalDist_bind_bind_swap (mx : m α) (my : m β) (f : α → β → m γ)
     (hf : Measurable fun p : α × β => 𝒟[f p.1 p.2]) :

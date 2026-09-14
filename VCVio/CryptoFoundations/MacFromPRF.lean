@@ -60,9 +60,20 @@ def toMacAlg [DecidableEq R] (prf : PRFScheme K D R) : MacAlg ProbComp D K R whe
 theorem toMacAlg_perfectlyComplete [DecidableEq R] (prf : PRFScheme K D R) :
     prf.toMacAlg.PerfectlyComplete ProbCompRuntime.probComp := by
   intro msg
-  simp only [toMacAlg, pure_bind, decide_true]
-  change Pr[= true | 𝒮[(do let _ ← prf.keygen; pure true : ProbComp Bool)]] = 1
-  simp
+  rw [ProbCompRuntime.probComp_evalSPMF, probOutput_evalSPMF]
+  simp only [toMacAlg, bind_pure_comp, map_eq_bind_pure_comp,
+    probOutput_eq_one_iff, probFailure_of_liftM_PMF, MonadAttach.support_bind,
+    MonadAttach.mem_support, Function.comp_apply, MonadAttach.support_pure, true_and]
+  obtain ⟨a, ha⟩ := OracleComp.support_nonempty prf.keygen
+  ext b
+  simp only [Set.mem_iUnion, Set.mem_singleton_iff]
+  constructor
+  · rintro ⟨_, _, i, hi, hb⟩
+    subst i
+    simpa using hb
+  · intro hb
+    subst b
+    exact ⟨a, ha, prf.eval a msg, rfl, by simp⟩
 
 /-! ## Security Reduction (Boneh-Shoup Theorem 6.2)
 

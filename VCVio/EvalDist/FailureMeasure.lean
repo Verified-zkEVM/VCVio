@@ -68,7 +68,7 @@ instance [Monad m] (mx : m α) [NeverFail mx] : IsProbabilityMeasure 𝒟[mx] :=
 
 /-- `failure` denotes the zero measure. -/
 @[simp]
-theorem evalDist_failure [AlternativeMonad m] [MonadLiftT m SetM] [EvalDistCompatible m]
+theorem evalDist_failure [AlternativeMonad m] [MonadAttach m] [EvalDistCompatible m]
     [HasEvalSet.LawfulFailure m] : 𝒟[(failure : m α)] = 0 := by
   rw [← Measure.measure_univ_eq_zero, evalDist_apply_univ, probFailure_failure, tsub_self]
 

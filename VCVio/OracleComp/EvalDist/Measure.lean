@@ -28,7 +28,7 @@ open OracleComp OracleSpec MeasureTheory ProbabilityTheory
 namespace OracleComp
 
 /-- Equal continuation measures on structural support give equal composed measures. -/
-theorem evalDist_bind_congr_of_support {ι α β : Type} {spec : OracleSpec ι}
+theorem evalDist_bind_congr_of_support {ι α β : Type} {spec : OracleSpec.{0, 0} ι}
     [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [MeasurableSpace β]
     [EvalDistSemantics (OracleComp spec)] [LawfulEvalDistSemantics (OracleComp spec)]
@@ -48,7 +48,7 @@ theorem evalDist_bind_congr_of_support {ι α β : Type} {spec : OracleSpec ι}
 singleton mass. The full-support hypothesis belongs to the chosen measure interpretation;
 finiteness alone does not determine it. -/
 theorem mem_support_iff_evalDist_singleton_pos_of_fullSupport
-    {ι : Type} {spec : OracleSpec ι}
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [OracleSpec.IsMeasureSpec spec]

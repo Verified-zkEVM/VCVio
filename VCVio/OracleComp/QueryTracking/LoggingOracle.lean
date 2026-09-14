@@ -163,7 +163,7 @@ lemma run_withLogging_apply [LawfulMonad m₀] (so : QueryImpl loggedSpec m₀)
 This response-independent provenance fact is stable even when the query was transported from
 a component of a dependent sum specification. -/
 lemma fst_eq_input_of_mem_support_run_simulateQ_withLogging_liftM
-    [LawfulMonad m₀] [MonadLiftT m₀ SetM] [LawfulMonadLiftT m₀ SetM]
+    [LawfulMonad m₀] [MonadAttach m₀] [ExactMonadAttach m₀]
     {α' : Type} (so : QueryImpl loggedSpec m₀) (q : OracleQuery loggedSpec α')
     {z : α' × QueryLog loggedSpec}
     (hz : z ∈ support ((simulateQ so.withLogging
@@ -183,7 +183,7 @@ lemma fst_eq_input_of_mem_support_run_simulateQ_withLogging_liftM
 /-- State-transformer form of
 `fst_eq_input_of_mem_support_run_simulateQ_withLogging_liftM`. -/
 lemma fst_eq_input_of_mem_support_run_simulateQ_withLogging_liftM_stateT
-    {σ : Type} [LawfulMonad m₀] [MonadLiftT m₀ SetM] [LawfulMonadLiftT m₀ SetM]
+    {σ : Type} [LawfulMonad m₀] [MonadAttach m₀] [ExactMonadAttach m₀]
     {α' : Type} (so : QueryImpl loggedSpec (StateT σ m₀))
     (q : OracleQuery loggedSpec α') (s : σ)
     {z : (α' × QueryLog loggedSpec) × σ}

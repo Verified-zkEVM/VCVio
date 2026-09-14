@@ -198,9 +198,9 @@ theorem evalDist_simulateQ_randomOracle_run'_eq_tableExtending
     (c : (D →ₒ R).QueryCache) :
     𝒟[(simulateQ randomOracle oa).run' c] =
       𝒟[do let g ← $ᵗ (D → R);
-            pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) oa)] := by
-  simp only [evalDist_eq_evalSPMF_toMeasure,
-    evalSPMF_simulateQ_randomOracle_run'_eq_tableExtending]
+            pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) oa)] :=
+  evalDist_eq_of_evalSPMF_eq _ _
+    (evalSPMF_simulateQ_randomOracle_run'_eq_tableExtending oa c)
 
 omit [DecidableEq D] [Finite D] [Finite R] [Nonempty R] [SampleableType R]
   [SampleableType (D → R)] in

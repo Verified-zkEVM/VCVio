@@ -141,7 +141,7 @@ def withProgramming
 
 /-! ## Bad-flag monotonicity -/
 
-variable [LawfulMonad m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
 
 /-- The bad flag of `withProgramming` is monotone: once set, every query keeps it set. -/
 lemma withProgramming_bad_monotone
@@ -199,7 +199,7 @@ def withCachingTrackingPolicy
     (fun (t : spec.Domain) (_ : spec.QueryCache) (bad : Bool) =>
       (fun u => (u, if (policy t).isSome then true else bad)) <$> so t)
 
-omit [LawfulMonad m] [MonadLiftT m SetM] in
+omit [LawfulMonad m] [MonadAttach m] in
 @[simp] lemma withCachingTrackingPolicy_apply
     (so : QueryImpl spec m) (policy : ProgrammingPolicy spec) (t : spec.Domain) :
     so.withCachingTrackingPolicy policy t =

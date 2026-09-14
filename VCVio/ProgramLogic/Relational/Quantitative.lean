@@ -410,7 +410,7 @@ private lemma evalSPMF_map_val_pack_eq {ι : Type u} {spec : OracleSpec ι} [IsU
           rw [← probEvent_eq_eq_probOutput]
           exact probEvent_map (mx := 𝒮[oa]) (f := val ∘ pack) (q := fun y : α => y = x)
       _ = Pr[ fun y : α => y = x | 𝒮[oa]] :=
-          probEvent_ext fun y hy => by
+          spmf_probEvent_ext (𝒮[oa]) fun y hy => by
             simp [hpack y (mem_finSupport_of_mem_support_evalSPMF (oa := oa) (x := y) hy)]
       _ = Pr[= x | 𝒮[oa]] := by simp
   simp only [Functor.map_map]
@@ -493,9 +493,13 @@ theorem relTriple'_iff_couplingPost
               Pr[ fun z : α × β => R z.1 z.2 | c.1] := by
         intro c
         rw [probEvent_map]
-        refine probEvent_ext fun z hz => ?_
-        have hzfst : z.1 ∈ support 𝒮[oa] := by rw [← c.2.map_fst, support_map]; exact ⟨z, hz, rfl⟩
-        have hzsnd : z.2 ∈ support 𝒮[ob] := by rw [← c.2.map_snd, support_map]; exact ⟨z, hz, rfl⟩
+        refine spmf_probEvent_ext c.1 fun z hz => ?_
+        have hzfst : z.1 ∈ (𝒮[oa]).support := by
+          rw [← c.2.map_fst, spmf_support_map]
+          exact ⟨z, hz, rfl⟩
+        have hzsnd : z.2 ∈ (𝒮[ob]).support := by
+          rw [← c.2.map_snd, spmf_support_map]
+          exact ⟨z, hz, rfl⟩
         simp [packPair, packA, packB,
           mem_finSupport_of_mem_support_evalSPMF (oa := oa) (x := z.1) hzfst,
           mem_finSupport_of_mem_support_evalSPMF (oa := ob) (x := z.2) hzsnd]
@@ -534,7 +538,7 @@ theorem relTriple'_iff_couplingPost
                 (hlift_obj c).symm
           _ ≤ Pr[ fun z : α × β => R z.1 z.2 | cMax.1] := by
             rw [hpush_obj]; exact hsub_le_max cLift
-      exact ⟨cMax, (probEvent_eq_one_iff (mx := cMax.1) (p := fun z : α × β => R z.1 z.2)).1
+      exact ⟨cMax, (spmf_probEvent_eq_one_iff cMax.1 (fun z : α × β => R z.1 z.2)).1
         (le_antisymm probEvent_le_one (le_trans h hupper)) |>.2⟩
     · have : IsEmpty (SPMF.Coupling (𝒮[oa]) (𝒮[ob])) := not_nonempty_iff.mp hne
       simp [eRelWP] at h
@@ -543,9 +547,12 @@ theorem relTriple'_iff_couplingPost
     refine le_iSup_of_le c <| le_of_eq ?_
     rw [← coupling_tsum_probOutput_eq_one c]
     refine tsum_congr fun z => ?_
-    by_cases hz : z ∈ support c.1
+    by_cases hz : z ∈ c.1.support
     · simp [RelPost.indicator, hc z hz]
-    · simp [probOutput_eq_zero_of_not_mem_support hz]
+    · have hzero : c.1 z = 0 := by
+        by_contra hne
+        exact hz ((SPMF.mem_support_iff c.1 z).2 hne)
+      simp [probOutput_def, hzero]
 
 /-- Bridge: `RelTriple'` agrees with the existing `RelTriple`. -/
 theorem relTriple'_iff_relTriple
@@ -861,7 +868,7 @@ private lemma probOutput_diag_le_min_marginals
       Pr[= (a, a) | c.1] = Pr[fun z : α × α => z = (a, a) | c.1] :=
         (probEvent_eq_eq_probOutput c.1 (a, a)).symm
       _ ≤ Pr[fun z : α × α => z.1 = a | c.1] :=
-        _root_.probEvent_mono fun z _ hz => by
+        probEvent_mono'' fun z hz => by
           simp [hz]
       _ = Pr[fun x : α => x = a | Prod.fst <$> c.1] := by
         change Pr[((fun x : α => x = a) ∘ Prod.fst) | c.1] = _
@@ -874,7 +881,7 @@ private lemma probOutput_diag_le_min_marginals
       Pr[= (a, a) | c.1] = Pr[fun z : α × α => z = (a, a) | c.1] :=
         (probEvent_eq_eq_probOutput c.1 (a, a)).symm
       _ ≤ Pr[fun z : α × α => z.2 = a | c.1] :=
-        _root_.probEvent_mono fun z _ hz => by
+        probEvent_mono'' fun z hz => by
           simp [hz]
       _ = Pr[fun x : α => x = a | Prod.snd <$> c.1] := by
         change Pr[((fun x : α => x = a) ∘ Prod.snd) | c.1] = _
