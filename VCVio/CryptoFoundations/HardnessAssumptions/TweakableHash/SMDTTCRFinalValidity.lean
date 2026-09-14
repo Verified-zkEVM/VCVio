@@ -7,6 +7,7 @@ Authors: Nicolas Consigny, Matthias Meijers, Quang Dao
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 
 /-!
 # Source-final-validity SM-DT-TCR
@@ -107,7 +108,7 @@ noncomputable def Experiment [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
 /-- The source-final-validity SM-DT-TCR advantage. -/
 noncomputable def Advantage [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
     {prob : Problem ι PkSeed Tweak M Y} (adv : Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | Experiment adv]
+  𝒟[Experiment adv] {true}
 
 variable [DecidableEq Tweak] {prob : Problem ι PkSeed Tweak M Y} {pk : PkSeed}
   {t : Tweak} {m : M} {st : State Tweak M}

@@ -31,7 +31,9 @@ measure's semantics: failed or diverging branches contribute zero. A Boolean eve
 is coerced to a proposition. For a single measurable event,
 `prEvent_eq_evalDist` identifies it with `𝒟[mx] {x | p x}`;
 `prEvent_eq_evalDist_of_discrete` handles any predicate on a discrete
-output space. The notation does not require a finite-distribution lift.
+output space. `prEvent_eq_evalDist_decide_of_discrete` connects an event to a
+Boolean experiment that returns `decide` of the same predicate. The notation
+does not require a finite-distribution lift.
 
 `Pr[...]` remains the discrete compatibility notation. Use the named
 `evalDist_apply_singleton`, `evalDist_apply_setOf`, and `evalDist_apply_univ`

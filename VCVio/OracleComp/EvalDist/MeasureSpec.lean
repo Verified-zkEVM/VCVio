@@ -53,7 +53,7 @@ class IsUniformMeasureSpec (spec : OracleSpec.{u, v} ι)
   /-- Each query uses the uniform probability measure on its response type. -/
   toMeasure_eq_uniform : ∀ t, toMeasure t = uniformOn Set.univ
 
-attribute [reducible, instance] IsUniformMeasureSpec.fintype IsUniformMeasureSpec.inhabited
+attribute [reducible, instance 100] IsUniformMeasureSpec.fintype IsUniformMeasureSpec.inhabited
 attribute [simp] IsUniformMeasureSpec.toMeasure_eq_uniform
 
 /-- Select uniform measure semantics for a finite, inhabited oracle specification. -/
@@ -79,13 +79,7 @@ noncomputable def IsUniformMeasureSpec.unifSpec : IsUniformMeasureSpec _root_.un
 noncomputable def IsUniformMeasureSpec.coinSpec : IsUniformMeasureSpec _root_.coinSpec :=
   ofFintypeInhabited _
 
-namespace UniformMeasure
-
-/-- Select the native measure interpretation of the concrete uniform-selection oracle. -/
-noncomputable scoped instance instUnifSpec : IsUniformMeasureSpec _root_.unifSpec :=
-  IsUniformMeasureSpec.unifSpec
-
-end UniformMeasure
+attribute [instance] IsUniformMeasureSpec.unifSpec IsUniformMeasureSpec.coinSpec
 
 end OracleSpec
 

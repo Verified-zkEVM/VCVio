@@ -55,9 +55,10 @@ For a finite uniform oracle, `OracleSpec.IsUniformMeasureSpec.instCompatible` pr
 agreement for the native `uniformOn Set.univ` interpretation. It lets a theorem about a direct
 uniform measure fold use an existing finite probability equation at the compatibility boundary.
 For `ProbComp Bool` security games, use `boolDistAdvantage` for a two-game gap and
-`𝒟[game] {true}` for a success probability. Use
-`open scoped OracleSpec.UniformMeasure` once in a module that uses the direct
-uniform measure interpretation of `ProbComp`. `boolDistAdvantage_self`,
+`𝒟[game] {true}` for a success probability; prefer `Pr{...}[winningCondition]`
+when the game ends by testing a predicate. The native uniform measure instances for
+`unifSpec` and `coinSpec` are global, so no local uniform certificate is needed.
+`boolDistAdvantage_self`,
 `boolDistAdvantage_comm`, and `boolDistAdvantage_triangle` keep elementary
 metric proofs independent of the finite façade.
 The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq.rec` law for `Pr[...]`
@@ -77,10 +78,10 @@ and `usesRetiredProbability` correctly reports it. State generic measure laws un
 an explicit `EvalDistSemantics`, or select a direct `PFunctor.IsMeasureSpec` before
 elaborating a concrete theorem. Keep sampler calibration through the old class in
 compatibility proofs until the sampler's certificate itself is measure-valued.
-For the finite-range oracle, `OracleSpec.IsUniformMeasureSpec.unifSpec` is the
-native interpretation selected by `open scoped OracleSpec.UniformMeasure`.
-The scope applies only to the concrete uniform-selection oracle; other oracle
-specifications still require an explicit measure interpretation. With that scope open,
+For the finite-range and fair-coin oracles, `OracleSpec.IsUniformMeasureSpec.unifSpec`
+and `OracleSpec.IsUniformMeasureSpec.coinSpec` are the canonical native interpretations.
+Their instances apply only to these concrete oracle specifications; other oracle
+specifications still require an explicit measure interpretation. With the native instance,
 `ProbComp.evalDist_uniformFin` simplifies a query to `uniformOn Set.univ`, and
 `ProbComp.prEvent_uniformFin` evaluates a decidable event by counting
 its satisfying outcomes. These laws avoid a point-mass detour; the
@@ -90,6 +91,15 @@ transport. Its product sampler law uses `evalDist_pair` and the existing
 `uniformOn_univ_prod` construction. These supply the `BitVec` key law and the measure-level
 one-time-pad independence theorem. An arbitrary `SampleableType` implementation
 still needs a measure-valued certificate or a construction-specific proof.
+
+The type classes separate a choice of response measures (`IsMeasureSpec`) from the
+additional uniformity and finite-range laws (`IsUniformMeasureSpec`). A blanket instance
+from `[spec.Fintype] [spec.Inhabited]` would silently choose a distribution for an arbitrary
+oracle, so only the concrete `unifSpec` and `coinSpec` instances are global. Syntactic
+`OracleComp.support` is defined by a `SetM` fold and needs neither measure class; a
+positive-mass bridge needs assumptions on the chosen measures. Compatibility proofs that
+still use the finite frontend can open `ProbComp.DiscreteCompatibility` locally, leaving
+the native interpretation as the default elsewhere.
 
 The adapter is also `LawfulEvalDistSemantics` (`instLawfulEvalDistSemanticsOfMonadLiftTSPMF`), so
 the Giry laws `evalDist_pure`, `evalDist_bind`, `evalDist_map` and the const laws hold with no

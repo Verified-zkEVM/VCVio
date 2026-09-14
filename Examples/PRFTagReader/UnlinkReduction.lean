@@ -112,7 +112,6 @@ theorem unlinkabilityAdvantage_le_two_prf_plus_collision [Fintype Nonce] [Fintyp
   have h3 := unlinkPRFIdeal_gap_le_unlinkBad (TagId := TagId) (Nonce := Nonce)
     (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary qReader qTag
     hqReader hqTag
-  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   unfold unlinkabilityAdvantage PRFScheme.prfAdvantage ProbComp.boolDistAdvantage
   simp only [evalDist_apply_singleton]
   rw [h1, h2]

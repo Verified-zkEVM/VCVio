@@ -195,8 +195,8 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
   have hkey : 𝒟[runtime.liftProbComp ($ᵗ K)] Set.univ = 1 := by
     change (runtime.evalSPMF (runtime.liftProbComp ($ᵗ K))).toMeasure Set.univ = _
     rw [heval_liftProbComp]
-    change 𝒟[$ᵗ K] Set.univ = _
-    rw [evalDist_uniformSample]
+    rw [show (𝒮[$ᵗ K]).toMeasure = ProbabilityTheory.uniformOn Set.univ from
+      evalDist_uniformSample]
     simp
   have htotal (real side : Bool) :
       𝒟[KEMDEM.hybrid prepare encaps finish (runtime.liftProbComp ($ᵗ K)) real side] {true} +

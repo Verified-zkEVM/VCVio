@@ -35,6 +35,7 @@ cache hit.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal
+open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 

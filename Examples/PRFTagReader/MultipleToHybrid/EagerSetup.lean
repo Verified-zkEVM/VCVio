@@ -38,6 +38,7 @@ direct-coupling headline in `DirectCoupling.Compose`.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
+open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 

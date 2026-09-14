@@ -37,6 +37,7 @@ unit.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal MeasureTheory
+open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 

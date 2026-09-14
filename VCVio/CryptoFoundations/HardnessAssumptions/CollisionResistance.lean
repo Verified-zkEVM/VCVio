@@ -62,7 +62,6 @@ protocol parameter.
 
 
 open OracleComp OracleSpec ENNReal
-open scoped OracleSpec.UniformMeasure
 
 namespace CollisionResistance
 

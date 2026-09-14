@@ -282,7 +282,6 @@ theorem authExp_le_prfAdvantage_add_authRF
       (Pr[= true | authRFExp adversary]).toReal := by
   have hreal := prfRealExp_authToPRFReduction_eq_authExp prfs adversary
   have hRF : authRFExp adversary = PRFScheme.prfIdealExp (authToPRFReduction adversary) := rfl
-  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   rw [← hreal, hRF]
   simp only [PRFScheme.prfAdvantage, ProbComp.boolDistAdvantage, evalDist_apply_singleton]
   set a := (Pr[= true | PRFScheme.prfRealExp prfs.multiplePRFScheme

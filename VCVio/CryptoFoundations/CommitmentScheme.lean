@@ -33,7 +33,6 @@ properties: correctness, hiding, and binding.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal
-open scoped OracleSpec.UniformMeasure
 
 /-- A non-interactive commitment scheme with public parameters `PP`, message space `M`,
 commitment space `C`, and opening (decommitment) space `D`. -/

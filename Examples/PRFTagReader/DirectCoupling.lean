@@ -51,6 +51,7 @@ underlying facts in the explicit shape used by the direct coupling argument.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
+open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 

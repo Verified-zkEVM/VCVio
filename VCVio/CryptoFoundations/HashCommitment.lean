@@ -39,7 +39,6 @@ chain `binding ≤ keyed-CR ≤ birthday`.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal CommitmentScheme
-open scoped OracleSpec.UniformMeasure
 
 namespace CollisionResistance
 

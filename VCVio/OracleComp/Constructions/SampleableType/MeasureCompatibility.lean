@@ -44,3 +44,11 @@ theorem evalSPMF_eq_of_evalDist_eq {α : Type} [MeasurableSpace α]
 theorem evalDist_eq_of_evalSPMF_eq {α : Type} [MeasurableSpace α]
     (mx my : ProbComp α) (h : 𝒮[mx] = 𝒮[my]) : 𝒟[mx] = 𝒟[my] :=
   congrArg (fun p => p.toMeasure) h
+
+namespace ProbComp.DiscreteCompatibility
+
+-- Give the existing finite adapter precedence in explicitly scoped compatibility proofs.
+scoped[ProbComp.DiscreteCompatibility] attribute [instance 1000]
+  instEvalDistSemanticsOfMonadLiftTSPMF
+
+end ProbComp.DiscreteCompatibility
