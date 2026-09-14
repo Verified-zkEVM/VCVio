@@ -617,7 +617,11 @@ each certificate field's game, the ten games' declared caps and the two open-pre
 is pinned by elaboration, at least one `example` per exported declaration, in a file no
 library-side edit can reach.  So is the strength of the bound's hypotheses: a vacuity canary
 builds a closed `Certificate` at an arbitrary validated parameter set from an address key and a
-public seed, and proves that the bound it names is at least one. -/
+public seed, and proves that the bound it names is at least one.  It builds a second one from
+those two and a counting interface at an open-preimage adversary of advantage one, whose three
+`ℝ≥0∞` fields are the experiment's own quantities — so tying those fields to the experiment
+refuses the first certificate and not the second — and proves that such an interface exists
+exactly when that adversary's two induced reductions satisfy `DSPR + 3 · TCR ≥ 1`. -/
 lean_exe slhdsa_composition_tests where
   root := `HashSigTest.SLHDSA.Composition
 

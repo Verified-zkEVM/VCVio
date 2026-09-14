@@ -67,19 +67,21 @@ exercised there.
 
 * **A paired edit of the `w − 2` coefficient that also moves this file.**  Nothing in the
   repository derives the coefficient.  Changed throughout the library module it leaves that module
-  elaborating clean and fails eleven `Pins` entries here, which restate the bound expression, the
-  two branch expressions and the coefficient as a numeral at two profiles.  Changed here as well,
-  nothing anywhere fails and the executable passes — at which point the claim has been changed
-  rather than a bug found, and the only remaining check is the source citation the library module
-  carries.
+  elaborating clean and fails seventeen entries here: eleven `Pins` entries, which restate the
+  bound expression, the two branch expressions and the coefficient as a numeral at two profiles,
+  and six in the vacuity canary, whose anchored certificate restates it in the hypertree branch
+  bound.  Changed here as well, nothing anywhere fails and the executable passes — at which point
+  the claim has been changed rather than a bug found, and the only remaining check is the source
+  citation the library module carries.
 * **Anything about a probability.**  See above.
 * **What a certificate's three named quantities mean.**  `idealAdvantage`, `forsBranch` and
   `hypertreeBranch` are `ℝ≥0∞` fields with no tie to any experiment, so the pins can only restate
   their types.  That no check *catches* it does not mean no check *records* it: the vacuity canary
   below exhibits the certificate that puts the whole obligation on one branch and closes the goal
-  it leaves, which is the fact rather than the absence of one.  The certificate's `pkSeed` is
-  likewise not tied to the seed key generation sampled, and that one is recorded in the library
-  module's docstring as open with nothing here checking it.
+  it leaves, which is the fact rather than the absence of one, and beside it the certificate whose
+  three quantities *are* the experiment's own, which is what tying them would leave.  The
+  certificate's `pkSeed` is likewise not tied to the seed key generation sampled, and that one is
+  recorded in the library module's docstring as open with nothing here checking it.
 * **Whether the summands are the source's.**  The routing table below says which Lean game each
   summand is the advantage of; that the twelve games are the source's twelve is a reading of
   `SPHINCS_PLUS.ec`, `FORS_ES.ec`, `FL_SL_XMSS_MT_ES.ec` and `WOTS_TW_ES.ec`, recorded in the
@@ -92,9 +94,13 @@ profiles (16), the `T_ℓ` separation and the valid profile where it fails (20),
 table (13).  Eighty `example`s in `Pins`: at least one for each of the twenty-one declarations the
 library module exports, the two `T_ℓ` attacked-member equations, the ten games' declared caps, the
 three general cap separations and the game identity they explain, the `ITSRProblem` shape, and
-twenty-two profile pins.  Then the vacuity canary — eighteen declarations and four `example`s,
-which together build a closed `Certificate` from an address key and a public seed and prove that
-the bound it names is at least one.
+twenty-two profile pins.  Then the vacuity canary — twenty-five declarations and eight `example`s.
+They build a closed `Certificate` from an address key and a public seed and prove that the bound it
+names is at least one; then a second one, from those two and a `CountingInterface` at an
+open-preimage adversary of advantage one, whose three `ℝ≥0∞` fields are the experiment's own
+quantities, so that anchoring those fields refuses the first and not the second; and then the
+equivalence that turns the existence of that interface into an inequality between two named
+advantages.
 
 ## References
 
@@ -115,12 +121,12 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 /-! ## The two profiles -/
 
 -- Exposed, and what the attribute is for was read off the errors its removal alone produces in
--- this file: thirty-six, no error ceiling reached.  One `Type mismatch: id` inside the bundle
--- below, at `yToBytes := id`; eighteen `(kernel) declaration type mismatch`, two at each of the
--- nine instances written at `toyPrimitives`; nine code-generation failures at those same nine
--- instances, six `failed to compile definition` and three `Failed to find LCNF signature`; and
--- eight `Application type mismatch` in the vacuity canary's toy instantiations, where `toy.params`
--- has to be `toyParams` for the generic declarations to apply.
+-- this file: thirty-eight, no error ceiling reached.  One `Type mismatch: id` inside the bundle
+-- below, at `yToBytes := id`; eighteen `(kernel) declaration type mismatch` spread over the nine
+-- instances written at `toyPrimitives`, between one and three each; nine code-generation failures
+-- at those same nine instances, six `failed to compile definition` and three `Failed to find LCNF
+-- signature`; and ten `Application type mismatch` in the vacuity canary's toy instantiations,
+-- where `toy.params` has to be `toyParams` for the generic declarations to apply.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
@@ -131,7 +137,7 @@ theorem toyValid : toyParams.Valid := by decide
 -- Exposed for a different reason from `toyParams`, also read off its removal: seven errors, none
 -- of them in the bundle and all of them in the pins, where the certificate's own `vp` has to
 -- reduce to `toyParams` for the bundle's instances to be found.  Six are `typeclass instance
--- problem is stuck` and the seventh is a `(deterministic) timeout at isDefEq`; none is a
+-- problem is stuck` and the seventh is a `(deterministic) timeout at whnf`; none is a
 -- `failed to synthesize`.
 /-- The validated form of `toyParams`. -/
 @[expose] def toy : ValidatedParams := ⟨toyParams, toyValid⟩
@@ -254,16 +260,16 @@ instance : SampleableType toyPrimitives.Y := inferInstanceAs (SampleableType (By
 
 One row per summand of `Summands`, in the source's order: the field's name, the `TargetRole` whose
 `targetCount` caps the game the summand is the advantage of, and whether a witness family of slices
-7.1--7.5 lands in that game.  Three summands have no role and no witness: the two `PRF` hops and the
-undetectability term, which in the source comes from the `Game2 → Game3` step of
-`MEUFGCMA_WOTSTWESNPRF` rather than from a forgery.  The `H_msg` ITSR game has a witness but no
-`TargetRole`, and no cap of any other kind either: `KeyedHash.ITSRProblem` has two fields, the
-keyed hash family and the index map, and `ITSRTargetOracle` answers and records every query with
-no bound and no poison bit.  The source's `MCO_ITSR` term is bounded through its reduction, whose
-target count is the forger's signing queries because the reduction is built from the forger; the
-Lean advantage is a supremum over adversaries with unbounded transcripts, which is a strictly
-larger quantity.  `Pins` restates the two-field shape, so a cap added later has to be noticed
-here. -/
+7.1--7.5 lands in that game.  Two summands have neither a role nor a witness, the two `PRF` hops.
+A third has a role but no witness, the undetectability term, which in the source comes from the
+`Game2 → Game3` step of `MEUFGCMA_WOTSTWESNPRF` rather than from a forgery.  And a third has a
+witness but no `TargetRole`, the `H_msg` ITSR term, which has no cap of any other kind either:
+`KeyedHash.ITSRProblem` has two fields, the keyed hash family and the index map, and
+`ITSRTargetOracle` answers and records every query with no bound and no poison bit.  The source's
+`MCO_ITSR` term is bounded through its reduction, whose target count is the forger's signing
+queries because the reduction is built from the forger; the Lean advantage is a supremum over
+adversaries with unbounded transcripts, which is a strictly larger quantity.  `Pins` restates the
+two-field shape, so a cap added later has to be noticed here. -/
 
 /-- A routing row: the summand's field name, its game's cap role, and whether a witness family of
 this lane lands in that game. -/
@@ -802,18 +808,22 @@ said that no route to a certificate was known which avoided proving something ha
 route as a checked fact is what keeps that reading from coming back.  Measured, against the two
 changes that would make the bound mean something:
 
-* **Anchoring.**  Add `forsBranch_ge : forsHalf adv ≤ forsBranch` to `Certificate` and repair
-  `Certificate.ofBranchBounds` with `le_refl`: the library elaborates clean and this file has
-  **one** error, `Fields missing`, at `freeCertificate`.  With this section deleted the file has
-  **none**, so the canary is the sole refusal and no pin sees the change.  No repair of
-  `freeCertificate` is known: taking `forsBranch := forsHalf adv` turns `forsBranch_le` into the
-  FORS-branch bound itself, which is the open question below.
+* **Anchoring.**  Add the three inequalities `idealAdvantage ≤ adv.advantage`,
+  `forsHalf adv ≤ forsBranch` and `hypertreeHalf adv ≤ hypertreeBranch` to `Certificate` and repair
+  `Certificate.ofBranchBounds` with three `le_refl`s: the library elaborates clean and this file
+  has **two** errors, both `Fields missing`, one at each of the two certificates below.  With this
+  section deleted it has **none**, so the canary is the sole refusal and no pin sees the change.
+  Only the first of the two is refused.  `freeCertificate`'s `forsBranch` is `0`, so the second of
+  the three inequalities asks for `forsHalf adv ≤ 0` there, and an attempt to discharge it leaves
+  `forsHalf adv = 0` at an arbitrary adversary.  `anchoredCertificate` is repaired by three
+  `le_refl`s and nothing else, its three quantities being the anchored ones already — measured,
+  **one** error then, at `freeCertificate` alone.
 * **A reduction field.**  Make `wotsFPreAdv` a function `unforgeableAdv (generalAlg prims) → _`
-  at its four declaration sites: the library again elaborates clean and this file has **eighteen**
-  errors, nine in `Pins` and nine here.  These nine go away under a one-line repair,
-  `wotsFPreAdv := fun _ => freePreAdv prims t`, because a field of function type is still freely
-  chosen.  So this canary *notifies* on that change; only fixing the function at the structure,
-  which deletes the field, refuses it.
+  at its four declaration sites: the library again elaborates clean and this file has
+  **twenty-five** errors, nine in `Pins` and sixteen here.  The sixteen go away under a one-line
+  repair at each certificate, `wotsFPreAdv := fun _ => freePreAdv prims t`, because a field of
+  function type is still freely chosen.  So this canary *notifies* on that change; only fixing the
+  function at the structure, which deletes the field, refuses it.
 
 What it does not say.  It is not a soundness bug: `advantage_le_bound` is true and its proof is
 correct.  It says that the antecedent is free, so the implication carries no information about
@@ -823,12 +833,15 @@ The two games that do the work are the two whose winning conditions have no dist
 `SM_DT_PRE_SourceFinalValidity` accepts on `th.eval pk t (emb m) = th.eval pk t (emb x)`, and
 `SM_DT_OpenPRE_SourceFinalValidity` on `th.eval pk t m = th.eval pk t x`; both hand the adversary
 an image the game has just computed, so the fibre is non-empty and `Function.invFun` wins.  The
-five target-collision games and the decisional game do carry one, and none of them is driven
-anywhere here.  `winningOpenPre` is included because the FORS branch's only such game is the
-open-preimage one, and what stops it from making the FORS branch free as well is the `counting`
-field: the interface below is inhabited at `idleOpenPre`, whose advantage is zero, and whether one
-exists at `winningOpenPre`, whose advantage is one, is open.  `winningOpenPre_advantage` needs
-nothing of the input distribution, not even `HasUniformInputs` — measured by removing it. -/
+five target-collision games and the decisional game do carry one, and none of them is driven to
+advantage one here — the decisional game is driven to *zero*, by `idleOpenPre_dspr`, which is the
+second step of the vacuity.  `winningOpenPre` is included because the FORS branch's only
+distinctness-free game is the open-preimage one, and what stops it from making that branch free
+with no further input is the `counting` field: the interface below is inhabited at `idleOpenPre`,
+whose advantage is zero, and at `winningOpenPre`, whose advantage is one, it exists exactly when
+`1 ≤ TCRDSPRBound` does — `nonempty_counting_winningOpenPre_iff`, which is as far as this file
+takes the question.  `winningOpenPre_advantage` needs nothing of the input distribution, not even
+`HasUniformInputs` — measured by removing it. -/
 
 section Vacuity
 
@@ -854,12 +867,13 @@ def idleUd {ix PkS Tw Msg Msg' Nd : Type}
   pick := pure ()
   distinguish := fun _ _ => pure false
 
--- Exposed, and it is the only one of the six adversaries here that needs to be; measured by
--- removing each attribute alone.  Inside this file's `public section` a definition's body is not
--- available to later declarations, so `(Problem.toDSPR (idleOpenPre prob)).State` does not reduce
--- to `Unit × _ × _` and `idleOpenPre_toDSPR_choose` cannot even be stated: three errors, a
--- `Type mismatch` at that statement, the `unknownIdentifier` it causes in `idleOpenPre_dspr`, and
--- that theorem's `unsolved goals`.
+-- Exposed, and it is the only one of the ten definitions in this section that is: the file
+-- elaborates clean with this attribute and no other one here.  Inside a `public section` a
+-- definition's body is not available to later declarations, so without it
+-- `(Problem.toDSPR (idleOpenPre prob)).State` does not reduce to `Unit × _ × _` and
+-- `idleOpenPre_toDSPR_choose` cannot even be stated: three errors, a `Type mismatch` at that
+-- statement, the `unknownIdentifier` it causes in `idleOpenPre_dspr`, and that theorem's
+-- `unsolved goals`.
 /-- An open-preimage adversary that commits to no target and opens nothing. -/
 @[expose] def idleOpenPre {ix PkS Tw Msg Nd : Type} [Inhabited Msg]
     (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
@@ -1102,11 +1116,11 @@ example (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
 `freeCertificate` is refused by anchoring, because its `forsBranch` is `0`.  A certificate is not.
 The one below sets the three `ℝ≥0∞` fields to `adv.advantage`, `forsHalf adv` and
 `hypertreeHalf adv`, which are the three values the anchoring inequalities ask for, so each of them
-holds at it by `le_refl`; the three `example`s after it are those inequalities, and they are what
-the `@[expose]` is for.  Each branch bound is then the same chain — the half is at most the
-advantage, the advantage is at most one, and one is the advantage of a game on that branch whose
-winning condition has no distinctness clause.  The FORS side has one, the open-preimage game, which
-is why `forsBranch := forsHalf adv` is not an obstacle; the hypertree side has the preimage game.
+holds at it by `le_refl`, which the three `example`s after it are.  Each branch bound is then the
+same chain — the half is at most the advantage, the advantage is at most one, and one is the
+advantage of a game on that branch whose winning condition has no distinctness clause.  The FORS
+side has one, the open-preimage game, which is why `forsBranch := forsHalf adv` is not an obstacle;
+the hypertree side has the preimage game.
 
 What this certificate does not supply is `counting`, now asked for at an adversary of advantage one
 rather than zero.  That is the whole of what anchoring buys, and the next subsection says what it
@@ -1161,13 +1175,14 @@ theorem hypertreeHalf_le_freePre {adv : unforgeableAdv (generalAlg prims)} (t : 
         (freePreAdv_advantage prims t).symm
     _ ≤ _ := le_add_right (le_add_right le_add_self)
 
--- Exposed so that the three anchoring inequalities below can be `le_refl`: without the attribute
--- this file's later declarations cannot see that the three `ℝ≥0∞` fields are the anchored values.
+-- This one needs no `@[expose]`, measured: the three anchoring inequalities below elaborate as
+-- `le_refl` without it.  Unlike `idleOpenPre`, what the later declarations need of it is a value
+-- and not a reduced type.
 /-- **A `Certificate` whose three named quantities are the experiment's own.**  The two arguments
 that are data are an address key and a public seed, as in `freeCertificate`; the third is a
 `CountingInterface` at an adversary whose advantage is one, which is the one input that is not
 data and is not known to exist. -/
-@[expose] noncomputable def anchoredCertificate {adv : unforgeableAdv (generalAlg prims)}
+noncomputable def anchoredCertificate {adv : unforgeableAdv (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
     (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
       (winningOpenPre (forsFOpenPreProblem prims) t)) :

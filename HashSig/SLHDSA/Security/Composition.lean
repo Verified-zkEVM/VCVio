@@ -60,9 +60,11 @@ And two things about it that nothing here refuses, stated as open rather than cl
   `hypertreeBranch := idealAdvantage := adv.advantage` satisfies `prfHops`, `split` and
   `forsBranch_le` for free and puts the whole obligation on `hypertreeBranch_le`; nothing in this
   module sees the difference, and `HashSigTest.SLHDSA.Composition` builds exactly that certificate
-  and discharges the one goal it leaves.  Refusing it would mean fixing the fields to
-  `forsHalf adv` and `hypertreeHalf adv` in the structure itself, which would also fix the split
-  this slice takes and is a choice for the slice that bounds a branch.
+  and discharges the one goal it leaves.  Refusing *that* certificate needs the fields tied to the
+  experiment, by the inequalities of "What would make it one" below or by fixing them to
+  `forsHalf adv` and `hypertreeHalf adv` outright — which would also fix the split this slice takes
+  and is a choice for the slice that bounds a branch.  Neither refuses every certificate: the same
+  fixture builds the one that takes those values.
 * **`pkSeed` is not tied to the key generation the adversary plays against.**  It is the seed
   `skPrfScheme` is indexed at, chosen by whoever supplies the certificate; a reader who assumes it
   is the seed the experiment sampled is reading something the structure does not say.  The
@@ -112,17 +114,39 @@ statement about SLH-DSA's security, and a `Certificate` is not evidence of anyth
   theorem, so each summand is stated at `R adv` and cannot be re-chosen.  Those are the source's
   twelve `R_…(A)` modules; the slice plan sizes them at roughly twenty-four thousand lines of
   EasyCrypt, and none of them exists here, so none of the twelve can be written yet.  This is the
-  only change that makes the statement a security statement.
-* **Anchoring the three `ℝ≥0∞` fields** to the experiment — `forsHalf adv ≤ forsBranch`,
-  `hypertreeHalf adv ≤ hypertreeBranch`, `idealAdvantage ≤ adv.advantage` — is much smaller, and
-  it does refuse the certificate above, which sets `forsBranch := 0`.  It does not obviously close
-  the hole.  The hypertree branch stays free, since `hypertreeHalf adv ≤ 1 = wotsFPre`; and the
-  FORS branch has its own game with no distinctness clause, `SM_DT_OpenPRE_SourceFinalValidity`,
-  whose advantage the fixture also drives to one.  What stops that half from composing is the
-  `counting` field, whose two equations tie the open-preimage advantage to the `DSPR` and `TCR`
-  advantages of VCVio's two induced reductions; at an adversary that wins outright neither is
-  computable from nothing, and whether a `CountingInterface` exists there is open.  So anchoring
-  is worth doing and is not a fix.
+  only change that makes the statement a security statement.  Turning a *field* into one of
+  function type is not enough — it is still freely chosen, and the fixture's canary is repaired
+  under that change by one line per certificate; the function has to be fixed at the structure or
+  at the theorem, which deletes the field.
+* **Anchoring the three `ℝ≥0∞` fields** to the experiment — `idealAdvantage ≤ adv.advantage`,
+  `forsHalf adv ≤ forsBranch`, `hypertreeHalf adv ≤ hypertreeBranch` — is much smaller, and it
+  removes one route rather than the hole.  It does refuse the certificate above, which sets
+  `forsBranch := 0`: of the three inequalities it adds that one certificate fails exactly the
+  second, which asks there for `forsHalf adv ≤ 0`, and what is left of an attempt to discharge that
+  is `forsHalf adv = 0` at an arbitrary adversary.  What it does not refuse is a certificate.
+  Each half has a game whose winning condition carries no distinctness clause — the
+  preimage game on the hypertree side, `SM_DT_OpenPRE_SourceFinalValidity` on the FORS side — so
+  each branch bound holds at the anchored value itself, by the chain `half ≤ adv.advantage ≤ 1 =
+  that game's advantage ≤ that branch's right-hand side`.  `HashSigTest.SLHDSA.Composition` builds
+  the certificate that takes them: `idealAdvantage := adv.advantage`, `forsBranch := forsHalf adv`,
+  `hypertreeBranch := hypertreeHalf adv`, from an address key, a public seed and one
+  `CountingInterface` at the winning open-preimage adversary, with all three anchoring
+  inequalities holding at it by `le_refl`.  So what anchoring buys is that one field, asked for at
+  an adversary of advantage one rather than at one of advantage zero, and nothing else.
+
+  What it buys is settled down to an inequality.  At any open-preimage adversary of advantage one
+  over a finite input type with at least two elements and with uniformly sampled inputs, a
+  `CountingInterface` exists **exactly when** `1 ≤ TCRDSPRBound` at it — that is, when its two
+  induced reductions satisfy `DSPR + 3 · TCR ≥ 1`.  The fixture proves both directions; the reverse
+  one puts every unit of mass on the stratum of fibre size two, which is where the `3` in this
+  bound comes from, since at fibre size `n` the same construction needs
+  `(n − 1)(1 − DSPR) / (n + 1) ≤ TCR` and that is weakest at `n = 2`.  Whether the fixture's own
+  winning adversary satisfies the inequality turns on which preimage `Function.invFun` returns, and
+  is settled neither here nor there.  An adversary drawing its preimage uniformly from the fibre
+  would satisfy it, because the conditional law of a uniform target given its image is uniform on
+  the fibre — but that is an argument on paper, and what it would take to make it a checked one is
+  exactly the coupling VCVio leaves open.  So anchoring very probably closes nothing, and what
+  would settle that is the coupling rather than the anchoring.
 * **A resource bound** on the quantified adversaries would rule out both fixture adversaries at
   once: `Function.invFun` is not a computation, and an unbounded commitment phase is not a
   bounded one.  `OracleComp` carries no such bound; adding one is a change to VCVio, not to this
@@ -146,10 +170,11 @@ The other coefficient, `(p.w - 2 : ℕ)`, is **not** derived anywhere in Lean.  
 hybrid-argument machinery for SM-DT-UD; the coefficient is carried from
 `MEUFGCMA_WOTSTWESNPRF` and `EUFNAGCMA_FLSLXMSSMTTWESNPRF`.  Nothing inside *this module* refuses
 a paired edit of it — changed throughout, with `bound_wotsFUd_coefficient_add_two`'s own constant
-moved with it, the module elaborates clean — and eleven pins in
-`HashSigTest.SLHDSA.Composition` fail.  An edit that moves those pins too is silent everywhere,
-and at that point the claim has been changed rather than a bug found; the only remaining check is
-the source citation above.
+moved with it, the module elaborates clean — and seventeen entries of
+`HashSigTest.SLHDSA.Composition` fail: eleven pins, and six in its vacuity canary, which restates
+the coefficient in the hypertree branch bound of the certificate that survives anchoring.  An edit
+that moves those entries too is silent everywhere, and at that point the claim has been changed
+rather than a bug found; the only remaining check is the source citation above.
 
 ## What is not established, and cannot be read into the inequality
 
@@ -168,7 +193,10 @@ follows.  In particular:
 * the OpenPRE counting interface is assumed.  Its `uniformInputs` field is dischargeable from
   `CanonicalGames.forsFOpenPreProblem_hasUniformInputs`; its two equations and its inequality are,
   in VCVio's own words, "the substantive probabilistic coupling still to be constructed", and they
-  are also dischargeable at an adversary that records no target, where every mass is zero;
+  are also dischargeable at an adversary that records no target, where every mass is zero.  At an
+  adversary that wins outright, over an input type with at least two elements and sampled
+  uniformly as this one's is, they are equivalent to `1 ≤ TCRDSPRBound` at it, which is neither
+  proved nor refuted here;
 * the `MCO_ITSR` summand carries no query bound.  `KeyedHash.ITSRProblem` has two fields and
   neither is a target cap: `ITSRTargetOracle` answers and records every query, so the Lean
   advantage is a supremum over adversaries with unbounded target transcripts.  The source's term
