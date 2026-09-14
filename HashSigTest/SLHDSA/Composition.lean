@@ -1301,9 +1301,9 @@ theorem dspr_advantage_le_one {ix PkS Tw Msg Nd : Type} [Fintype Msg] [Decidable
     SM_DT_DSPR_SourceFinalValidity.Advantage a ≤ 1 :=
   le_trans tsub_le_self probOutput_le_one
 
-/-- **The counting interface exists at a winning adversary exactly when its two reductions sum
-to one.**  Both directions: the forward one is VCVio's own inequality at an advantage of one, and
-the reverse puts all the mass on the fibre-size-two stratum. -/
+/-- **The counting interface exists at a winning adversary exactly when `DSPR + 3 · TCR` reaches
+one at its two reductions.**  Both directions: the forward one is VCVio's own inequality at an
+advantage of one, and the reverse puts all the mass on the fibre-size-two stratum. -/
 theorem nonempty_countingInterface_iff {ix PkS Tw Msg Nd : Type} [Fintype Msg] [Inhabited Msg]
     [SampleableType Msg] [DecidableEq Tw] [DecidableEq Msg] [DecidableEq Nd]
     {prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd}
@@ -1370,7 +1370,8 @@ variable {vp : ValidatedParams} (prims : Primitives vp.params)
 
 /-- **The open question, at the adversary the anchored certificate uses.**  The FORS-`F`
 open-preimage problem has uniform inputs and `winningOpenPre` wins it, so what is left of
-`anchoredCertificate`'s missing field is one inequality between two advantages. -/
+`anchoredCertificate`'s missing field is one inequality between two advantages — over a node type
+with at least two elements, which is the one hypothesis this statement still carries. -/
 theorem nonempty_counting_winningOpenPre_iff (t : prims.AdrsKey)
     (hcard : 2 ≤ Fintype.card prims.Y) :
     Nonempty (SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
