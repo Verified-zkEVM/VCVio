@@ -798,10 +798,22 @@ proves that the bound that certificate names is at least one.  `advantage_le_bou
 `adv.advantage ≤ (something ≥ 1)`, which `probOutput_le_one` already gives.
 
 What it is for.  Three docstrings in the library module, this file, and the pull-request body once
-said that no route to a certificate was known which avoided proving something hard.  Ship the
-route as a checked fact and no later edit can quietly restore that reading: the moment an
-adversary field becomes a function of `adv`, or the three `ℝ≥0∞` fields are anchored to the
-experiment, `freeCertificate` stops elaborating and this section has to be revisited on purpose.
+said that no route to a certificate was known which avoided proving something hard.  Shipping the
+route as a checked fact is what keeps that reading from coming back.  Measured, against the two
+changes that would make the bound mean something:
+
+* **Anchoring.**  Add `forsBranch_ge : forsHalf adv ≤ forsBranch` to `Certificate` and repair
+  `Certificate.ofBranchBounds` with `le_refl`: the library elaborates clean and this file has
+  **one** error, `Fields missing`, at `freeCertificate`.  With this section deleted the file has
+  **none**, so the canary is the sole refusal and no pin sees the change.  No repair of
+  `freeCertificate` is known: taking `forsBranch := forsHalf adv` turns `forsBranch_le` into the
+  FORS-branch bound itself, which is the open question below.
+* **A reduction field.**  Make `wotsFPreAdv` a function `unforgeableAdv (generalAlg prims) → _`
+  at its four declaration sites: the library again elaborates clean and this file has **eighteen**
+  errors, nine in `Pins` and nine here.  These nine go away under a one-line repair,
+  `wotsFPreAdv := fun _ => freePreAdv prims t`, because a field of function type is still freely
+  chosen.  So this canary *notifies* on that change; only fixing the function at the structure,
+  which deletes the field, refuses it.
 
 What it does not say.  It is not a soundness bug: `advantage_le_bound` is true and its proof is
 correct.  It says that the antecedent is free, so the implication carries no information about
