@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.ProbComp
 
 /-!
@@ -59,7 +60,8 @@ def owfExp [SampleableType X] [DecidableEq Y] (f : X → Y) (adversary : OWFAdve
 /-- OWF advantage: the probability of successfully inverting `f`. -/
 noncomputable def owfAdvantage [SampleableType X] [DecidableEq Y] (f : X → Y)
     (adversary : OWFAdversary X Y) : ℝ≥0∞ :=
-  Pr[= true | owfExp f adversary]
+  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  𝒟[owfExp f adversary] {true}
 
 /-! ## Trapdoor Permutations -/
 
@@ -96,6 +98,7 @@ def tdpExp [SampleableType X] [DecidableEq X] (tdp : TrapdoorPermutation PK SK X
 without the trapdoor. -/
 noncomputable def tdpAdvantage [SampleableType X] [DecidableEq X]
     (tdp : TrapdoorPermutation PK SK X) (adversary : TDPAdversary PK X) : ℝ≥0∞ :=
-  Pr[= true | tdpExp tdp adversary]
+  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  𝒟[tdpExp tdp adversary] {true}
 
 end OneWay

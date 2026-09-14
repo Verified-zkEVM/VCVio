@@ -67,14 +67,14 @@ noncomputable def advantage₀ {σ₀ σ₁ : Type} [Inhabited σ₀] [Inhabited
 lemma advantage_self (h : QueryImpl.Stateful unifSpec E σ) (s₀ : σ)
     (A : OracleComp E Bool) :
     h.advantage s₀ h s₀ A = 0 := by
-  simp [advantage, ProbComp.boolDistAdvantage]
+  simp only [advantage, ProbComp.boolDistAdvantage_self]
 
 lemma advantage_symm {σ₀ σ₁ : Type}
     (h₀ : QueryImpl.Stateful unifSpec E σ₀) (s₀ : σ₀)
     (h₁ : QueryImpl.Stateful unifSpec E σ₁) (s₁ : σ₁)
     (A : OracleComp E Bool) :
     h₀.advantage s₀ h₁ s₁ A = h₁.advantage s₁ h₀ s₀ A := by
-  simp [advantage, ProbComp.boolDistAdvantage, abs_sub_comm]
+  exact ProbComp.boolDistAdvantage_comm _ _
 
 lemma advantage_eq_of_evalSPMF_runProb_eq {σ₀ σ₀' σ₁ : Type}
     {h₀ : QueryImpl.Stateful unifSpec E σ₀} {s₀ : σ₀}

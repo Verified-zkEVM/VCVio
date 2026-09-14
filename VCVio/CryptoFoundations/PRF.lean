@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 
+public import VCVio.CryptoFoundations.SecExp
 public import VCVio.OracleComp.Coercions.SubSpec
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.ProbComp
@@ -105,8 +106,7 @@ def prfIdealExp [DecidableEq D] [SampleableType R]
 a random function. -/
 noncomputable def prfAdvantage [DecidableEq D] [SampleableType R]
     (prf : PRFScheme K D R) (adversary : PRFAdversary D R) : ℝ :=
-  |(Pr[= true | prf.prfRealExp adversary]).toReal -
-    (Pr[= true | prfIdealExp adversary]).toReal|
+  (prf.prfRealExp adversary).boolDistAdvantage (prfIdealExp adversary)
 
 /-! ## Forwarding lemmas for the PRF query implementations
 
