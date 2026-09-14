@@ -121,12 +121,13 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 /-! ## The two profiles -/
 
 -- Exposed, and what the attribute is for was read off the errors its removal alone produces in
--- this file: thirty-eight, no error ceiling reached.  One `Type mismatch: id` inside the bundle
+-- this file: forty-three, no error ceiling reached.  One `Type mismatch: id` inside the bundle
 -- below, at `yToBytes := id`; eighteen `(kernel) declaration type mismatch` spread over the nine
 -- instances written at `toyPrimitives`, between one and three each; nine code-generation failures
 -- at those same nine instances, six `failed to compile definition` and three `Failed to find LCNF
--- signature`; and ten `Application type mismatch` in the vacuity canary's toy instantiations,
--- where `toy.params` has to be `toyParams` for the generic declarations to apply.
+-- signature`; and fifteen in the vacuity canary's toy instantiations, thirteen
+-- `Application type mismatch` and two `(kernel) application type mismatch`, where `toy.params` has
+-- to be `toyParams` for the generic declarations to apply.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
