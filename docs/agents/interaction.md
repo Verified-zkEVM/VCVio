@@ -140,6 +140,19 @@ certify uniformity across security parameters, resource closure, or a dummy-adve
 `VCVioTest/ReactiveWorld.lean` tests a three-component relay/backchannel exchange, including
 its four additional forwarding activations.
 
+`Examples/OneTimePad/Separated.lean` gives six actual actors: environment, private setup,
+sender, public authenticated channel, delivery adversary, and receiver. Setup shares travel
+only on internal routes; every local interpreter remains stateless outside its declared
+sampling computation. `Separated/Execution.lean` derives the complete conversation from
+29 token activations, including one ciphertext/advice backchannel round. `Separated/Security.lean`
+proves OTP simulation with advice depending on the environment's private input and memory.
+`Separated/Aggregate.lean` relates this execution to the earlier 9-activation aggregate model
+when advice depends only on ciphertext. The different costs remain explicit.
+`VCVioTest/SeparatedOTP.lean` separates short prefixes, ignored advice, and incorrect receivers
+at the level of actual observation laws. This is still a fixed single-use conversation;
+arbitrary context composition, static multisession execution, and computational admission
+require the subsequent campaign results.
+
 `Examples/OneTimePad/UC.lean` remains an observation-interface smoke test. Its chosen observer
 makes arbitrary systems indistinguishable, so its `ObservedCompEmulates 0` theorem is not
 evidence of network execution adequacy.

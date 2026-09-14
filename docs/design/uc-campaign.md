@@ -116,6 +116,34 @@ Its factorization test uses the generic wired observation theorem. General dummy
 factorization, uniform executable admission, separated cryptographic consumers, and network
 resource closure remain outstanding stages of the completion contract.
 
+## Separated single-use OTP checkpoint
+
+Full `./scripts/validate.sh --lint --test --axioms` passes: 18,896 declarations across
+629 production modules, the same 40 existing sorry-tainted declarations, and zero
+nonstandard-axiom taint. Log: `/private/tmp/uc-separated-validation.log`.
+
+`Examples/OneTimePad/Separated` now defines six distinct polynomial machines for the
+environment, private setup, sender, authenticated public channel, delivery adversary,
+and receiver. The setup samples locally and distributes private shares only on internal
+routes. The public channel retains its original ciphertext and accepts a Boolean delivery
+decision. The adversary has one actual ciphertext/advice round with the environment;
+advice may depend on the chosen plaintext and retained private memory.
+
+`experiment_eq` proves that 29 token activations execute the complete conversation. Drop
+and delivery retain their explicit costs. The ideal encoding sends an independently sampled
+ciphertext to the sender and preserves the plaintext privately for the receiver. Correctness
+and a message-independent ciphertext law imply equality of the two actual observation
+measures; `oneTimePad_experiment_simulation` instantiates that theorem with the named uniform
+ciphertext sampler. No advice countability or key measurability is required by this simulation
+proof. The aggregate bridge retains the respective 29/9 budgets and requires ciphertext-only
+advice, matching the earlier model's access restrictions.
+
+Executed counterexamples distinguish the 28-step unfinished prefix, suppressing real
+backchannel advice, and a receiver which returns the wrong plaintext despite using the same
+randomized encryption. These are finite single-use results. They do not yet derive arbitrary
+contextual OTP replacement, statically indexed sessions, a general dummy-adversary theorem,
+or computational resource closure.
+
 ## Complexity foundation: source audit and adoption decision
 
 This audit distinguishes the current VCVio pins from upstream source inspected on September 13.
