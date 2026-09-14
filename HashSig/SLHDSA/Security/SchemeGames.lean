@@ -873,8 +873,8 @@ run-value choice, and for the `cond` shape one that has itself to be stated and 
 decomposing `g` at `true` and `false` and deciding the four Booleans that remain.  So what the law
 offers is a change of exported shape rather than of what is proved — `instrumentedEufExp_const`
 becomes its corollary, and the same move would be wanted at the same-message experiment — and it
-would leave the direction open either way.  Refusing the family outright needs a law about the joint distribution of a run's key
-pair, message and signature, which this slice does not state.  Both directions are recorded here
+would leave the direction open either way.  Refusing the family outright needs a law about the
+joint distribution of a run's key pair, message and signature, which this slice does not state.  Both directions are recorded here
 rather than closed. -/
 
 /-- The FORS half is at most the advantage it splits.
