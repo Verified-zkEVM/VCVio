@@ -116,8 +116,13 @@ full-support condition on each answer measure, without adding a class for that o
 `OracleComp.mem_support_iff_evalDist_singleton_pos` discharges it from
 `IsUniformMeasureSpec`; use this native bridge when relating structural reachability to
 singleton mass. Neither theorem requires the PMF-based `IsUniformSpec` class.
-Compatibility proofs that
-still use the finite frontend can open `ProbComp.DiscreteCompatibility` locally, leaving
+Structural support itself needs no probability interpretation. In particular,
+`OracleComp.support_nonempty` needs only `[spec.Inhabited]`; counting-oracle support
+and worst-case query bounds use that weaker assumption rather than `IsUniformSpec`.
+Keep the class hierarchy for chosen answer measures, and state one-off properties such as
+positive singleton mass as explicit hypotheses instead of adding a mixin for each bridge.
+Compatibility proofs that still use the finite frontend can open
+`ProbComp.DiscreteCompatibility` locally, leaving
 the native interpretation as the default elsewhere.
 
 The adapter is also `LawfulEvalDistSemantics` (`instLawfulEvalDistSemanticsOfMonadLiftTSPMF`), so

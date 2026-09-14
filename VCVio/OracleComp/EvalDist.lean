@@ -139,6 +139,16 @@ lemma mem_support_query (t : spec.Domain) (u : spec.Range t) :
     u ∈ support (query t : OracleComp spec _) := by
   rw [support_query]; trivial
 
+/-- An oracle computation has a reachable output when every query has an answer. -/
+theorem support_nonempty [spec.Inhabited] (mx : OracleComp spec α) :
+    (support mx).Nonempty := by
+  induction mx using OracleComp.inductionOn with
+  | pure x => exact ⟨x, by simp⟩
+  | query_bind t k ih =>
+      obtain ⟨x, hx⟩ := ih default
+      exact ⟨x, (mem_support_bind_iff _ _ _).2
+        ⟨default, mem_support_query t default, hx⟩⟩
+
 alias support_liftM_query := support_query
 
 /-- Support-aware bind congruence: if two continuations agree on all elements in the support

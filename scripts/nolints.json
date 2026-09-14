@@ -1047,7 +1047,6 @@
  ["unusedArguments", "VCVio.StateSeparating.CellRef.SupportPreserves"],
  ["unusedArguments", "VCVio.StateSeparating.CellRef.SupportPreserves.prob_unchanged_eq_one"],
  ["unusedArguments", "VCVio.StateSeparating.CellRef.SupportPreservesExcept"],
- ["unusedArguments", "WorstCaseCostBound"],
  ["unusedArguments", "WriterT.run_bind'"],
  ["unusedArguments", "WriterT.run_pure'"],
  ["unusedArguments", "WriterT.wpAppend"],
