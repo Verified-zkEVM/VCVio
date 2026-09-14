@@ -100,7 +100,7 @@ separated: `forgeryDet`'s randomizer occurs at `msgP` and nowhere else.  It is n
 
 ## What the checks cannot catch
 
-* **A reordering or reassociation of `Summands.sufBound`'s two residuals that also moves this file.**
+* **A reordering or reassociation of `Summands.sufBound`'s two residuals that moves this file too.**
   The expression is this pull request's own; nothing outside these two files constrains its order or
   its association.  Either edit made in the library module alone fails three `Pins` entries here;
   made in both, nothing fails, and at that point the claim has been changed rather than a bug found.
