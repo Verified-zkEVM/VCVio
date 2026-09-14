@@ -24,10 +24,10 @@ VCVio's SUF-to-EUF partition and names what the crossing costs.
 
 and `strongAdvantage_le_sufBound` refines the residual into the two named halves of
 `HashSig.SLHDSA.Security.SchemeGames`, the fresh-randomizer one and the same-randomizer one.  That
-refinement is a `≤` because the halves' bodies are not exposed;
-`sufBound_eq_bound_add_sameMessage_of_unfoldings` says what it costs, by supplying the two defining
-equations that module proves and does not name, and concluding that the two right-hand sides are
-equal.
+refinement is a `≤` because the halves' bodies are not exposed, and
+`sufBound_eq_bound_add_sameMessage_of_unfoldings` says what that costs: take the two defining
+equations that module proves and does not name as hypotheses, and the two right-hand sides are
+equal, so the refinement is the headline and not a weakening of it.
 
 ## This adds nothing to the previous module's inequality, and that is a theorem here
 
@@ -179,9 +179,9 @@ this module.  Two of the four have no refusal anywhere and are named rather than
   unnamed `example`s, so naming them or naming their consequence there is a pure addition to it.
   `sameMessageAdvantage_eq_halves_of_unfoldings` and
   `sufBound_eq_bound_add_sameMessage_of_unfoldings` take them as hypotheses and draw the
-  consequence, so the gap is one named `theorem … := rfl` wide and that theorem belongs one module
-  down.  It is not added there in this pull request because that module is under review as it
-  stands.
+  consequence, so the gap is one named theorem wide — the two equations, or the single joint
+  equality they give — and that theorem belongs one module down.  It is not added there in this
+  pull request because that module is under review as it stands.
 * **Nothing about `SameMessageBinding`.**  VCVio's own docstring says no `ε < 1` can hold for a
   hash-based scheme, and issue #629 item 2b records that the per-adversary partition is what a
   quantitative result must consume.  This module consumes the partition.
@@ -366,14 +366,16 @@ end Cancel
 /-- **The strong-unforgeability bound expression**: the twelve-summand existential bound of
 `Composition.Summands.bound`, plus a fresh-randomizer residual, plus a same-randomizer residual.
 
-The two residuals carry coefficient one and are added as a group, which is the association
+The two residuals are added as a group, which is the association
 `SchemeGames.strongAdvantage_le_halves` produces and the one `HashSigTest.SLHDSA.SufBound`'s
 `sufBound` examples pin; `sufBound_eq_bound_of_residuals_zero` fixes the value at zero residuals and
-says nothing about the residuals themselves.  Calling it a *bound* is a statement about the shape of
-the expression and not about its size.  The same-randomizer residual is the term this lane holds out
-of scope, and nothing here or anywhere in this repository bounds it; `s.bound p` is not bounded
-either, since the vacuity canary `HashSigTest.SLHDSA.SufBound` rebuilds constructs a certificate at
-which it is freely at least one.
+says nothing about the residuals themselves.  That they carry coefficient one is pinned here, by
+`sufBound_eq_bound_add_sameMessage_of_unfoldings`, whose equation a coefficient makes false.
+
+Calling it a *bound* is a statement about the shape of the expression and not about its size.  The
+same-randomizer residual is the term this lane holds out of scope, and nothing here or anywhere in
+this repository bounds it; `s.bound p` is not bounded either, since the vacuity canary that
+`HashSigTest.SLHDSA.SufBound` rebuilds constructs a certificate at which it is freely at least one.
 
 *Residual arithmetic.* -/
 noncomputable def Summands.sufBound (s : Summands) (p : Params) (fresh same : ℝ≥0∞) : ℝ≥0∞ :=
@@ -391,8 +393,9 @@ theorem Summands.sufBound_eq (s : Summands) (p : Params) (fresh same : ℝ≥0�
 moves that value — a stray additive constant, or a second copy of `s.bound p` — and nothing about
 how the residuals enter it.  With this statement and the unfolding equation alone present, putting
 a coefficient other than one on either residual, swapping the two, reassociating the sum, and
-dropping either from the body altogether all leave it provable by the same proof; what pins the
-coefficients, the order and the association is `HashSigTest.SLHDSA.SufBound`'s `sufBound` examples.
+dropping either from the body altogether all leave it provable by the same proof.  What pins the
+order and the association is `HashSigTest.SLHDSA.SufBound`'s `sufBound` examples; what pins the
+coefficients is those and `sufBound_eq_bound_add_sameMessage_of_unfoldings`.
 
 *Residual arithmetic.* -/
 theorem sufBound_eq_bound_of_residuals_zero (s : Summands) (p : Params) :
