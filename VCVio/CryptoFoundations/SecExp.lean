@@ -7,8 +7,10 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.TVDist
 public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.QueryTracking.QueryBound
 
@@ -33,14 +35,16 @@ open OracleComp OracleSpec ENNReal Polynomial Prod
 
 This is the canonical single-game formulation for hidden-bit guessing experiments. -/
 noncomputable def ProbComp.boolBiasAdvantage (p : ProbComp Bool) : ℝ :=
-  |(Pr[= true | p]).toReal - (Pr[= false | p]).toReal|
+  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  |(𝒟[p] {true}).toReal - (𝒟[p] {false}).toReal|
 
 /-- Distinguishing advantage between two Boolean-valued games, measured on the `true` branch.
 
 For Boolean outputs this is equivalent to measuring the gap on `false`; choosing `true` is just a
 conventional presentation. -/
 noncomputable def ProbComp.boolDistAdvantage (p q : ProbComp Bool) : ℝ :=
-  |(Pr[= true | p]).toReal - (Pr[= true | q]).toReal|
+  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  |(𝒟[p] {true}).toReal - (𝒟[q] {true}).toReal|
 
 /-- Bias advantage of a Boolean-valued subdistribution: the gap between the probabilities of
 returning `true` and `false`.
@@ -140,7 +144,9 @@ probability inequality `Pr[true|p] ≤ Pr[true|q] + ENNReal.ofReal ε` that plug
 `calc`-style bounds. -/
 lemma ProbComp.probOutput_true_le_add_ofReal_boolDistAdvantage (p q : ProbComp Bool) :
     Pr[= true | p] ≤ Pr[= true | q] + ENNReal.ofReal (p.boolDistAdvantage q) := by
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   unfold ProbComp.boolDistAdvantage
+  simp only [evalDist_apply_singleton]
   set a : ℝ := (Pr[= true | p]).toReal
   set b : ℝ := (Pr[= true | q]).toReal
   rw [show Pr[= true | p] = ENNReal.ofReal a from (ENNReal.ofReal_toReal probOutput_ne_top).symm,
@@ -151,8 +157,10 @@ lemma ProbComp.probOutput_true_le_add_ofReal_boolDistAdvantage (p q : ProbComp B
 /-- Re-express Boolean bias as twice the absolute deviation of `Pr[true]` from `1/2`. -/
 lemma ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half (p : ProbComp Bool) :
     p.boolBiasAdvantage = 2 * |(Pr[= true | p]).toReal - 1 / 2| := by
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   have hfalse : Pr[= false | p] = 1 - Pr[= true | p] := by simp [probOutput_false_eq_sub]
   unfold ProbComp.boolBiasAdvantage
+  simp only [evalDist_apply_singleton]
   rw [hfalse, ENNReal.toReal_sub_of_le probOutput_le_one ENNReal.one_ne_top, ENNReal.toReal_one,
     show (Pr[= true | p]).toReal - (1 - (Pr[= true | p]).toReal) =
       2 * ((Pr[= true | p]).toReal - 1 / 2) by ring,
@@ -167,9 +175,11 @@ lemma ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch
       let z ← if b then real else rand
       pure (b == z)).boolBiasAdvantage =
     real.boolDistAdvantage rand := by
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   rw [ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half,
-    probOutput_uniformBool_branch_toReal_sub_half, ProbComp.boolDistAdvantage, abs_div, abs_two,
-    mul_div_cancel₀ _ two_ne_zero]
+    probOutput_uniformBool_branch_toReal_sub_half, ProbComp.boolDistAdvantage]
+  simp only [evalDist_apply_singleton]
+  rw [abs_div, abs_two, mul_div_cancel₀ _ two_ne_zero]
 
 /-- Version of `boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch` with a shared sampled
 prefix before the real/random branch is chosen. -/
@@ -186,6 +196,7 @@ lemma ProbComp.boolBiasAdvantage_bind_uniformBool_eq_boolDistAdvantage
       (do
         let a ← pref
         rand a) := by
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   let game : ProbComp Bool := do
     let a ← pref
     let b ← ($ᵗ Bool)
@@ -201,42 +212,43 @@ lemma ProbComp.boolBiasAdvantage_bind_uniformBool_eq_boolDistAdvantage
     let b ← ($ᵗ Bool)
     let z ← if b then left else right
     pure (b == z)
-  have hbranch : 𝒮[game] = 𝒮[branchGame] := by
-    apply evalSPMF_ext
-    intro x
+  have hbranch : 𝒟[game] = 𝒟[branchGame] := by
+    let : MeasurableSpace α := ⊤
     calc
-      Pr[= x | game] =
-          Pr[= x | do
-            let b ← ($ᵗ Bool)
-            let a ← pref
-            let z ← if b then real a else rand a
-            pure (b == z)] := by
-              simpa [game, monad_norm] using
-                (probOutput_bind_bind_swap pref ($ᵗ Bool)
-                  (fun a b => do
-                    let z ← if b then real a else rand a
-                    pure (b == z))
-                  x)
-      _ = Pr[= x | branchGame] := by
-            refine probOutput_bind_congr' ($ᵗ Bool) x ?_
-            intro b
-            cases b <;> simp [left, right]
+      𝒟[game] = 𝒟[($ᵗ Bool) >>= fun b => pref >>= fun a => do
+          let z ← if b then real a else rand a
+          pure (b == z)] := by
+            simpa [game, monad_norm] using
+              (evalDist_bind_bind_swap pref ($ᵗ Bool)
+                (fun a b => do
+                  let z ← if b then real a else rand a
+                  pure (b == z))
+                (measurable_from_prod_countable_left fun _ => .of_discrete))
+      _ = 𝒟[branchGame] := by
+        congr 1
+        simp only [branchGame]
+        apply bind_congr
+        intro b
+        cases b <;> simp [left, right]
   rw [show game.boolBiasAdvantage = branchGame.boolBiasAdvantage by
     unfold ProbComp.boolBiasAdvantage
-    rw [evalSPMF_ext_iff.mp hbranch true, evalSPMF_ext_iff.mp hbranch false]]
+    rw [hbranch]]
   simpa [branchGame, left, right] using
     ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch left right
 
 /-- The **advantage** of a game `p`, assumed to be a probabilistic computation ending with a `guard`
   statement, is the absolute difference between the probability of success and 1/2. -/
-noncomputable def ProbComp.guessAdvantage (p : ProbComp Unit) : ℝ := |1 / 2 - (Pr[= () | p]).toReal|
+noncomputable def ProbComp.guessAdvantage (p : ProbComp Unit) : ℝ :=
+  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  |1 / 2 - (𝒟[p] {()}).toReal|
 
 /-- The guess advantage of `p` equals the absolute difference between `1/2` and `p`'s
   probability of failure. -/
 lemma ProbComp.guessAdvantage_eq_half_sub_probFailure (p : ProbComp Unit) :
     p.guessAdvantage = |1 / 2 - (Pr[⊥ | p]).toReal| := by
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   have h : Pr[= () | p] = 1 - Pr[⊥ | p] := probOutput_eq_sub_probFailure_of_unit
-  simp only [guessAdvantage, h,
+  simp only [guessAdvantage, evalDist_apply_singleton, h,
     ENNReal.toReal_sub_of_le probFailure_le_one one_ne_top, ENNReal.toReal_one]
   rw [show (1 : ℝ) / 2 - (1 - (Pr[⊥ | p]).toReal) = -(1 / 2 - (Pr[⊥ | p]).toReal) from by ring,
     abs_neg]
@@ -245,15 +257,17 @@ lemma ProbComp.guessAdvantage_eq_half_sub_probFailure (p : ProbComp Unit) :
   probabilities of failure and success. -/
 lemma ProbComp.guessAdvantage_eq_half_of_sub (p : ProbComp Unit) :
     p.guessAdvantage = 2⁻¹ * |(Pr[⊥ | p]).toReal - (Pr[= () | p]).toReal| := by
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   have h : Pr[= () | p] = 1 - Pr[⊥ | p] := probOutput_eq_sub_probFailure_of_unit
-  simp only [guessAdvantage, h,
+  simp only [guessAdvantage, evalDist_apply_singleton, h,
     ENNReal.toReal_sub_of_le probFailure_le_one one_ne_top, ENNReal.toReal_one]
   grind
 
 /-- The **advantage** between two games `p` and `q`, modeled as probabilistic computations returning
   `Unit`, is the absolute difference between their probabilities of success. -/
 noncomputable def ProbComp.distAdvantage (p q : ProbComp Unit) : ℝ :=
-  |(Pr[= () | p]).toReal - (Pr[= () | q]).toReal|
+  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  |(𝒟[p] {()}).toReal - (𝒟[q] {()}).toReal|
 
 /-- A game has zero distinguishing advantage against itself. -/
 @[simp]
@@ -268,9 +282,10 @@ lemma ProbComp.distAdvantage_comm (p q : ProbComp Unit) :
 /-- Distinguishing advantage equals the gap between the two games' failure probabilities. -/
 lemma ProbComp.distAdvantage_eq_abs_sub_probFailure (p q : ProbComp Unit) :
     p.distAdvantage q = |(Pr[⊥ | p]).toReal - (Pr[⊥ | q]).toReal| := by
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   have hp : Pr[= () | p] = 1 - Pr[⊥ | p] := probOutput_eq_sub_probFailure_of_unit
   have hq : Pr[= () | q] = 1 - Pr[⊥ | q] := probOutput_eq_sub_probFailure_of_unit
-  simp only [distAdvantage, hp, hq,
+  simp only [distAdvantage, evalDist_apply_singleton, hp, hq,
     ENNReal.toReal_sub_of_le probFailure_le_one one_ne_top, ENNReal.toReal_one]
   rw [show (1 - (Pr[⊥ | p]).toReal) - (1 - (Pr[⊥ | q]).toReal) =
     -((Pr[⊥ | p]).toReal - (Pr[⊥ | q]).toReal) by ring, abs_neg]
@@ -298,7 +313,9 @@ lemma ProbComp.distAdvantage_le_sum_range {n : ℕ} (games : ℕ → ProbComp Un
 /-- Distinguishing advantage coincides with the total-variation distance of the two games. -/
 lemma ProbComp.distAdvantage_eq_tvDist (p q : ProbComp Unit) :
     p.distAdvantage q = tvDist p q := by
-  simp only [distAdvantage, tvDist, SPMF.tvDist, PMF.tvDist_option_punit]
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  simp only [distAdvantage, evalDist_apply_singleton]
+  simp only [tvDist, SPMF.tvDist, PMF.tvDist_option_punit]
   simp only [probOutput_def, SPMF.apply_eq_toPMF_some]
 
 /-- A security adversary bundling a computation with a bound on the number of queries it makes,

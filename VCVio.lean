@@ -217,6 +217,7 @@ public import VCVio.OracleComp.Constructions.WithoutReplacement
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.EvalDist.MeasureSpec
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.FinRatPMF
 public import VCVio.OracleComp.HasQuery.Basic
 public import VCVio.OracleComp.HasQuery.Morphism

@@ -51,6 +51,9 @@ is derived from it, in the simp direction, so measure-side goals reduce *into* t
 The compatibility adapter satisfies the class definitionally; the free-monad fold satisfies it
 whenever its measure specification agrees with its probability specification
 (`PFunctor.IsMeasureSpec.Compatible`, which `IsProbabilitySpec.toMeasureSpec` satisfies by `rfl`).
+For a finite uniform oracle, `OracleSpec.IsUniformMeasureSpec.instCompatible` proves the same
+agreement for the native `uniformOn Set.univ` interpretation. It lets a theorem about a direct
+uniform measure fold use an existing finite probability equation at the compatibility boundary.
 The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq.rec` law for `Pr[...]`
 only needs equality of result types, whereas a measure denotation also depends on the selected
 `MeasurableSpace`, so there is no blanket finite-type measurable-space instance.

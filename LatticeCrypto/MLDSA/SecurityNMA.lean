@@ -535,8 +535,10 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
         simp only [LearningWithErrors.experiment, LearningWithErrors.game0,
           LearningWithErrors.game1, bind_assoc]]
     exact ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch _ _
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   rw [hadv (mldsaMLWEShort p prims) B, hadv (mldsaMatrixMLWE p) Bm,
     ProbComp.boolDistAdvantage, ProbComp.boolDistAdvantage]
+  simp only [evalDist_apply_singleton]
   have h1 : Pr[= true | LearningWithErrors.game1 (mldsaMLWEShort p prims) B] =
       Pr[= true | LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm] := by
     simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, mldsaMLWEShort,
@@ -725,6 +727,7 @@ theorem nma_keyswap_hop_short
         (nmaAdvantageShort p prims hr maxAttempts (keygenShort1 p prims) main).toReal| ≤
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
         (distinguisherBShort p prims hr maxAttempts main) := by
+  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   set B := distinguisherBShort p prims hr maxAttempts main (M := M) with hB
   -- `Pr[= true | 𝒮[Y]] = Pr[= true | Y]` holds definitionally (the SPMF self-lift is `id`).
   have peel : ∀ (Y : ProbComp Bool), Pr[= true | 𝒮[Y]] = Pr[= true | Y] := fun _ => rfl
@@ -734,6 +737,7 @@ theorem nma_keyswap_hop_short
     simp only [sampleShortVec, probFailure_map, probFailure_uniformSample]
   rw [advantage_eq_game_boolDistAdvantage (mldsaMLWEShort p prims) B,
     ProbComp.boolDistAdvantage, nmaAdvantageShort, nmaAdvantageShort]
+  simp only [evalDist_apply_singleton]
   have hH1 : Pr[= true | nmaGameShort p prims hr maxAttempts (keygenShort1 p prims) main] =
       Pr[= true | LearningWithErrors.game1 (mldsaMLWEShort p prims) B] := by
     rw [nmaGameShort_eq_keygen_bind]
