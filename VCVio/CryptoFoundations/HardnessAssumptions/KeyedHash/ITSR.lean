@@ -32,6 +32,7 @@ SLH-DSA reduction, where the sampled key is the per-message randomizer produced 
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal
+open scoped OracleSpec.UniformMeasure
 open CollisionResistance
 
 namespace KeyedHash
@@ -99,7 +100,7 @@ noncomputable def ITSRExperiment [DecidableEq K] [DecidableEq X] [DecidableEq In
 /-- ITSR success probability. -/
 noncomputable def ITSRAdvantage [DecidableEq K] [DecidableEq X] [DecidableEq Index]
     {prob : ITSRProblem K X Y Index} (adv : ITSRAdversary prob) : ℝ≥0∞ :=
-  Pr[= true | ITSRExperiment adv]
+  𝒟[ITSRExperiment adv] {true}
 
 @[simp] theorem ITSRTargetOracle_run (prob : ITSRProblem K X Y Index)
     (x : X) (targets : ITSRTranscript K X) :
