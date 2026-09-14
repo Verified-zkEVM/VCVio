@@ -123,8 +123,8 @@ statement about SLH-DSA's security, and a `Certificate` is not evidence of anyth
   removes one route rather than the hole.  It does refuse the certificate above, which sets
   `forsBranch := 0`: of the three inequalities it adds that one certificate fails exactly the
   second, which asks there for `forsHalf adv ≤ 0`, and what is left of an attempt to discharge that
-  is `forsHalf adv = 0` at an arbitrary adversary.  What it does not refuse is a certificate.
-  Each half has a game whose winning condition carries no distinctness clause — the
+  is `forsHalf adv = 0` at an arbitrary adversary.  What it does not do is make a certificate hard
+  to come by.  Each half has a game whose winning condition carries no distinctness clause — the
   preimage game on the hypertree side, `SM_DT_OpenPRE_SourceFinalValidity` on the FORS side — so
   each branch bound holds at the anchored value itself, by the chain `half ≤ adv.advantage ≤ 1 =
   that game's advantage ≤ that branch's right-hand side`.  `HashSigTest.SLHDSA.Composition` builds
@@ -138,10 +138,13 @@ statement about SLH-DSA's security, and a `Certificate` is not evidence of anyth
   over a finite input type with at least two elements and with uniformly sampled inputs, a
   `CountingInterface` exists **exactly when** `1 ≤ TCRDSPRBound` at it — that is, when its two
   induced reductions satisfy `DSPR + 3 · TCR ≥ 1`.  The fixture proves both directions; the reverse
-  one puts every unit of mass on the stratum of fibre size two, which is where the `3` in this
-  bound comes from, since at fibre size `n` the same construction needs
-  `(n − 1)(1 − DSPR) / (n + 1) ≤ TCR` and that is weakest at `n = 2`.  Whether the fixture's own
-  winning adversary satisfies the inequality turns on which preimage `Function.invFun` returns, and
+  one puts every unit of mass on the stratum of fibre size two, which is where the `3` binds twice
+  over: the pointwise inequality `1 + 1/n ≤ 3 · (n − 1)/n` that
+  `openPRE_multipleMass_add_reciprocal_le_three_collision` sums is an equality at `n = 2` and
+  strict above it, and the reverse construction's own requirement,
+  `(n − 1)(1 − DSPR) / (n + 1) ≤ TCR` at fibre size `n`, is weakest there too.  Whether the
+  fixture's own winning adversary satisfies the inequality turns on which preimage
+  `Function.invFun` returns, and
   is settled neither here nor there.  An adversary drawing its preimage uniformly from the fibre
   would satisfy it, because the conditional law of a uniform target given its image is uniform on
   the fibre — but that is an argument on paper, and what it would take to make it a checked one is

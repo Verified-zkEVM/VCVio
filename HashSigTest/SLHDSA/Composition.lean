@@ -801,7 +801,10 @@ twenty fields supplied, all four inequalities proved — at an **arbitrary** `Va
 arbitrary primitive bundle carrying the instances the structure asks for, and an arbitrary
 adversary, from an address key and a public seed and no security assumption whatever; and it
 proves that the bound that certificate names is at least one.  `advantage_le_bound` at it is
-`adv.advantage ≤ (something ≥ 1)`, which `probOutput_le_one` already gives.
+`adv.advantage ≤ (something ≥ 1)`, which `probOutput_le_one` already gives.  It then builds a
+second certificate, whose three `ℝ≥0∞` fields are the experiment's own quantities and whose one
+further input is a `CountingInterface` at an adversary of advantage one — which is what tying
+those fields to the experiment would leave.
 
 What it is for.  Three docstrings in the library module, this file, and the pull-request body once
 said that no route to a certificate was known which avoided proving something hard.  Shipping the
@@ -838,10 +841,11 @@ advantage one here — the decisional game is driven to *zero*, by `idleOpenPre_
 second step of the vacuity.  `winningOpenPre` is included because the FORS branch's only
 distinctness-free game is the open-preimage one, and what stops it from making that branch free
 with no further input is the `counting` field: the interface below is inhabited at `idleOpenPre`,
-whose advantage is zero, and at `winningOpenPre`, whose advantage is one, it exists exactly when
-`1 ≤ TCRDSPRBound` does — `nonempty_counting_winningOpenPre_iff`, which is as far as this file
-takes the question.  `winningOpenPre_advantage` needs nothing of the input distribution, not even
-`HasUniformInputs` — measured by removing it. -/
+whose advantage is zero, and at `winningOpenPre`, whose advantage is one, it exists — over a node
+type with at least two elements — exactly when `1 ≤ TCRDSPRBound` does,
+`nonempty_counting_winningOpenPre_iff`, which is as far as this file takes the question.
+`winningOpenPre_advantage` needs nothing of the input distribution, not even `HasUniformInputs` —
+measured by removing it. -/
 
 section Vacuity
 
