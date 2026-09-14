@@ -46,6 +46,33 @@ theorem bind_apply_le_add_of_bad (μ : Measure α) [IsSubprobabilityMeasure μ]
       ((mul_le_mul' le_rfl (measure_univ_le μ)).trans_eq (mul_one ε₂)) hbadBound
     _ = _ := add_comm _ _
 
+/-- Compare two sequential experiments by charging a measurable disagreement set and a uniform
+bound on the remaining branches. -/
+theorem bind_apply_le_add_of_disagree (μ : Measure α) [IsSubprobabilityMeasure μ]
+    (f g : α → Measure β) (hf : Measurable f) (hg : Measurable g)
+    [∀ a, IsSubprobabilityMeasure (f a)] {bad : Set α} (hbad : MeasurableSet bad)
+    {event : Set β} (hevent : MeasurableSet event) {ε : ENNReal}
+    (hgood : ∀ᵐ a ∂μ, a ∉ bad → f a event ≤ g a event + ε) :
+    μ.bind f event ≤ μ.bind g event + μ bad + ε := by
+  rw [bind_apply hevent hf.aemeasurable, bind_apply hevent hg.aemeasurable]
+  calc
+    _ ≤ ∫⁻ a, bad.indicator 1 a + (ε + g a event) ∂μ := by
+      apply lintegral_mono_ae
+      filter_upwards [hgood] with a ha
+      by_cases h : a ∈ bad
+      · simpa [h] using (measure_le_one (f a) event).trans
+          (le_add_right le_rfl : (1 : ENNReal) ≤ 1 + (ε + g a event))
+      · simpa [h, add_comm] using ha h
+    _ = μ bad + (ε * μ Set.univ + ∫⁻ a, g a event ∂μ) := by
+      rw [lintegral_add_left (measurable_one.indicator hbad), lintegral_indicator_one hbad,
+        lintegral_add_left measurable_const, lintegral_const]
+    _ ≤ ∫⁻ a, g a event ∂μ + μ bad + ε := by
+      have hmass : ε * μ Set.univ ≤ ε :=
+        (mul_le_mul' le_rfl (measure_univ_le μ)).trans_eq (mul_one ε)
+      calc
+        _ ≤ μ bad + (ε + ∫⁻ a, g a event ∂μ) := by gcongr
+        _ = _ := by ac_rfl
+
 end MeasureTheory.Measure
 
 namespace ProbabilityTheory
