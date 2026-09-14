@@ -860,20 +860,20 @@ One further law narrows the second direction without closing it, and is recorded
 stated.  Post-composition naturality in the selector — the experiment at
 `fun pk sk m s => g (sel pk sk m s)` is `fun x => (x.1, g x.2)` mapped over the experiment at `sel`,
 for any `g : Bool → Bool` — is provable here by the same `h_pull` argument the two selector
-equations take.  It is not a canary beside them but a generalisation of them:
+equations take.  It is not a canary beside them but a generalisation:
 `instrumentedEufExp_const` follows from it and the projection equation in three lines — the law at
 the constantly-`false` selector and a constant `g`, the projection equation at that same selector,
-and `Functor.map_map` — which elaborates here at zero errors, and gives two with the law taken back
-out.  Of the five shapes above it refuses three: the `&&`, the `||` and the third conjoined
+and `Functor.map_map` — which elaborates here at zero errors, and gives two errors when the law is
+removed.  Of the five shapes above it refuses three: the `&&`, the `||` and the third conjoined
 application each give one error, at the law itself, because `!a && !b` and `!(a && b)` differ.  The
 other two satisfy it — the `cond` shape at every `g : Bool → Bool`, and the run-value choice because
 post-composition passes through a `cond` — and each is back to zero errors and zero warnings in both
 modules once the law's `simp` is given the Boolean lemma it needs: `Bool.apply_cond` for the
 run-value choice, and for the `cond` shape one that has itself to be stated and proved, by
 decomposing `g` at `true` and `false` and deciding the four Booleans that remain.  So what the law
-offers is to replace the two selector equations by one statement and two corollaries, which is a
-change of exported shape rather than of what is proved, and it would leave the direction open
-either way.  Refusing the family outright needs a law about the joint distribution of a run's key
+offers is a change of exported shape rather than of what is proved — `instrumentedEufExp_const`
+becomes its corollary, and the same move would be wanted at the same-message experiment — and it
+would leave the direction open either way.  Refusing the family outright needs a law about the joint distribution of a run's key
 pair, message and signature, which this slice does not state.  Both directions are recorded here
 rather than closed. -/
 
