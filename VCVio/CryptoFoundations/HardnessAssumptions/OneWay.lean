@@ -60,7 +60,6 @@ def owfExp [SampleableType X] [DecidableEq Y] (f : X → Y) (adversary : OWFAdve
 /-- OWF advantage: the probability of successfully inverting `f`. -/
 noncomputable def owfAdvantage [SampleableType X] [DecidableEq Y] (f : X → Y)
     (adversary : OWFAdversary X Y) : ℝ≥0∞ :=
-  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   𝒟[owfExp f adversary] {true}
 
 /-! ## Trapdoor Permutations -/
@@ -98,7 +97,6 @@ def tdpExp [SampleableType X] [DecidableEq X] (tdp : TrapdoorPermutation PK SK X
 without the trapdoor. -/
 noncomputable def tdpAdvantage [SampleableType X] [DecidableEq X]
     (tdp : TrapdoorPermutation PK SK X) (adversary : TDPAdversary PK X) : ℝ≥0∞ :=
-  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   𝒟[tdpExp tdp adversary] {true}
 
 end OneWay

@@ -131,7 +131,6 @@ def searchExperiment [Add Output] [DecidableEq Secret]
 /-- Search advantage for the noisy-learning experiment. -/
 noncomputable def searchAdvantage [Add Output] [DecidableEq Secret]
     (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) : ℝ :=
-  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   (𝒟[searchExperiment problem adv] {true}).toReal
 
 end Generic

@@ -45,7 +45,6 @@ We model a cyclic group as:
 
 
 open OracleComp OracleSpec ENNReal
-open scoped OracleSpec.UniformMeasure
 
 namespace DiffieHellman
 

@@ -44,7 +44,6 @@ Port of EasyCrypt's `hashed_elgamal_std.ec`.
 
 
 open OracleComp OracleSpec ENNReal DiffieHellman
-open scoped OracleSpec.UniformMeasure
 
 /-! ## Hashed ElGamal Scheme -/
 

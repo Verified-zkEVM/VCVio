@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
@@ -153,13 +154,13 @@ baseline subtraction cannot be accidentally omitted at a call site. -/
 noncomputable def Success [Fintype M] [DecidableEq Tweak] [DecidableEq M]
     [DecidableEq Y] {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | Experiment adv]
+  𝒟[Experiment adv] {true}
 
 /-- The `SPprob` baseline success probability. -/
 noncomputable def SPProbability [Fintype M] [DecidableEq Tweak] [DecidableEq M]
     [DecidableEq Y] {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | SPExperiment adv]
+  𝒟[SPExperiment adv] {true}
 
 /-- SM-DT-DSPR advantage: the ENNReal truncated difference `Pr[DSPR] - Pr[SPprob]`. -/
 noncomputable def Advantage [Fintype M] [DecidableEq Tweak] [DecidableEq M]

@@ -19,9 +19,10 @@ measure side reduces *into* the discrete façade: singleton, event and total mas
 own `simp`/`grind` contract applies. The Giry laws for `bind`/`map` stay out of default `simp`
 on both sides, and the integral form of a bind is an intermediate, not a target.
 
-The same entries run with the compatibility adapter (no measure specification in scope), with
-the free-monad fold (a local `IsProbabilitySpec.toMeasureSpec`), and over `OptionT ProbComp`,
-where failure mass is visible; all three satisfy `DiscreteEvalDistCompatible`. The total-mass
+The adapter checks open `ProbComp.DiscreteCompatibility` explicitly. Other entries exercise the
+native free-monad fold, a local `IsProbabilitySpec.toMeasureSpec`, and `OptionT ProbComp`,
+where failure mass is visible; these interpretations satisfy `DiscreteEvalDistCompatible` at
+their compatibility boundaries. The total-mass
 entries use `Fin 3` rather than `Bool` because Mathlib's `simp` rewrites `(Set.univ : Set Bool)`
 to the literal `{false, true}` before any `𝒟`-keyed lemma can see it.
 -/
@@ -34,6 +35,9 @@ open scoped ENNReal
 namespace VCVioTest.MeasureBridge
 
 /-! ## Adapter side: `ProbComp` with no measure specification -/
+
+section adapter
+open scoped ProbComp.DiscreteCompatibility
 
 example (mx : ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] := by simp
 example (mx : ProbComp Bool) (p : Bool → Prop) : 𝒟[mx] {b | p b} = Pr[p | mx] := by simp
@@ -72,6 +76,8 @@ example (mx : ProbComp Bool) (f : Bool → ProbComp (Fin 3)) (s : Set (Fin 3)) :
   rw [evalDist_bind_of_discrete,
     Measure.bind_apply MeasurableSet.of_discrete Measurable.of_discrete.aemeasurable]
 
+end adapter
+
 /-! ## Free-monad fold: `ProbComp` with a local measure specification -/
 
 section measureSpec
@@ -99,12 +105,17 @@ end measureSpec
 
 /-! ## `OptionT ProbComp`: failure mass is visible -/
 
+section optionCompatibility
+open scoped ProbComp.DiscreteCompatibility
+
 example (mx : OptionT ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] := by simp
 example (mx : OptionT ProbComp (Fin 3)) : 𝒟[mx] Set.univ = 1 - Pr[⊥ | mx] := by simp
 example (mx : OptionT ProbComp Bool) (g : Bool → ℝ≥0∞) :
     ∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g := by simp
 example (mx : OptionT ProbComp Bool) (my : OptionT ProbComp (Fin 3)) :
     𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my] := by simp
+
+end optionCompatibility
 
 /-! ## Independent products are product measures -/
 
@@ -127,11 +138,13 @@ example (f : Bool → ProbComp (Fin 3)) : 𝒟[Fintype.mPi f] = Measure.pi fun i
 example (n : ℕ) :
     𝒟[Fin.mOfFn n (fun _ => ($ᵗ Bool : ProbComp Bool))] =
       ProbabilityTheory.uniformOn Set.univ :=
-  evalDist_mOfFn_const_uniform n ($ᵗ Bool : ProbComp Bool) evalDist_uniformSample
+  evalDist_mOfFn_const_uniform n ($ᵗ Bool : ProbComp Bool)
+    (SampleableType.evalDist_finEnum (α := Bool))
 example :
     𝒟[Fintype.mPi (fun _ : Fin 3 => ($ᵗ Bool : ProbComp Bool))] =
       ProbabilityTheory.uniformOn Set.univ :=
-  evalDist_mPi_const_uniform ($ᵗ Bool : ProbComp Bool) evalDist_uniformSample
+  evalDist_mPi_const_uniform ($ᵗ Bool : ProbComp Bool)
+    (SampleableType.evalDist_finEnum (α := Bool))
 example (f : Bool → ProbComp (Fin 3)) (v : Bool → Fin 3) :
     𝒟[Fintype.mPi f] {v} = ∏ i, Pr[= v i | f i] := by
   simp [evalDist_mPi]
@@ -175,6 +188,9 @@ example : 𝒟[familyWithFailure false] ≠ 0 := by
 
 /-! ## Failure is missing mass -/
 
+section failureCompatibility
+open scoped ProbComp.DiscreteCompatibility
+
 example : 𝒟[(failure : OptionT ProbComp Bool)] = 0 := by simp
 example (mx : OptionT ProbComp Bool) : (𝒟[mx]).withFailure {none} = Pr[⊥ | mx] := by simp
 example (mx : OptionT ProbComp Bool) (x : Bool) :
@@ -198,6 +214,8 @@ example : (𝒟[lossyCoin]).withFailure {some true} = 2⁻¹ := by
   simp [lossyCoin, OptionT.probOutput_eq, probOutput_bind_eq_tsum]
 example : 𝒟[lossyCoin] = (𝒟[lossyCoin.run]).dropNone :=
   OptionT.evalDist_eq_dropNone lossyCoin
+
+end failureCompatibility
 
 /-! ## A unit-test program
 

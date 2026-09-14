@@ -696,7 +696,6 @@ omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] in
 constructed from the adversary's random-oracle transcript. -/
 theorem badEventProb_le_tdpAdvantage (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
     badEventProb tdp adv ≤ (tdpAdvantage tdp (inverter tdp adv)).toReal := by
-  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   rw [badEventProb, tdpAdvantage]
   simp only [evalDist_apply_singleton]
   apply ENNReal.toReal_mono (ne_top_of_le_ne_top ENNReal.one_ne_top probOutput_le_one)

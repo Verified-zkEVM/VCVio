@@ -7,8 +7,9 @@ Machine-checked cryptographic proofs in Lean, built on Mathlib.
 1. Run `lake exe cache get && lake build`.
 2. Read `Examples/OneTimePad/Basic.lean` for a compact modern proof (correctness and privacy).
 3. Choose the work area by task: use `VCVio/` for oracle/probability/program-logic work, `LatticeCrypto/` for lattice schemes and reductions, and `LatticeCryptoTest/` for vectors or differential tests.
-4. If probability lemmas fail unexpectedly, first check for `[IsProbabilitySpec spec]`
-   or `[IsUniformSpec spec]` as appropriate.
+4. If `𝒟` lemmas fail unexpectedly, check for `[OracleSpec.IsMeasureSpec spec]`
+   and the required measurable spaces. The concrete `unifSpec` and `coinSpec`
+   have native uniform-measure instances; other specs need a chosen interpretation.
 
 `AGENTS.md` is the canonical guide. `CLAUDE.md` is a symlink to this file.
 
@@ -116,7 +117,7 @@ or `VCVioTest/`. This contract is enforced by
 
 ## Critical Gotchas
 
-1. **Probability assumptions are explicit.** `support` on `OracleComp spec` works for arbitrary specs. `evalSPMF` / `Pr[...]` need `[IsProbabilitySpec spec]`; `evalDist` / `𝒟[…]` additionally need an ambient `MeasurableSpace` on the result. Uniform/cardinality lemmas and `support ↔ Pr[= _] ≠ 0` need `[IsUniformSpec spec]`. Use `IsUniformSpec.ofFintypeInhabited` when you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics.
+1. **Probability assumptions are explicit for arbitrary specs.** `support` on `OracleComp spec` works without a probability interpretation. `evalSPMF` / `Pr[...]` need `[IsProbabilitySpec spec]`; direct `evalDist` / `𝒟[…]` need `[OracleSpec.IsMeasureSpec spec]` and an ambient `MeasurableSpace` on the result. Native uniform-measure instances are global for `unifSpec` and `coinSpec`. Uniform/cardinality lemmas and `support ↔ Pr[= _] ≠ 0` need `[IsUniformSpec spec]`. Use `IsUniformSpec.ofFintypeInhabited` when you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics.
 2. **`autoImplicit = false` is set globally in `lakefile.lean`**. Do not add `set_option autoImplicit false` in individual files. Every variable must be explicitly declared.
 3. **`evalSPMF` IS `simulateQ`** with `IsProbabilitySpec.toPMF`; under `[IsUniformSpec spec]` this is uniform. This is definitional (`rfl`). `evalDist` is its successful-output measure façade on the discrete compatibility path and agrees with the direct `FreeM.denote` measure fold when both specifications are present. These identities are internal to `VCVio/EvalDist/**` and `VCVio/OracleComp/**`: code outside those directories crosses them through the public equation lemmas (`evalSPMF_eq_simulateQ`, `probOutput_def`, `support_def`). Existing downstream `rfl` uses are grandfathered; new proofs use the public equations.
 4. **`++ₒ` is dead** — use `+` for combining oracle specs.

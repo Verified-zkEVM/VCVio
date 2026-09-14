@@ -576,7 +576,6 @@ theorem security
     PRGScheme.prgAdvantage (streamPRG prf n) adv ≤
       PRFScheme.prfAdvantage prf (prfReduction (S := S) (O := O) n adv) +
       collisionProb (S := S) (O := O) n := by
-  let : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
   let prgReal := PRGScheme.prgRealExp (streamPRG prf n) adv
   let prfReal := PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)
   let prfIdeal := PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)

@@ -51,6 +51,25 @@ theorem prEvent_eq_evalDist_of_discrete
     Pr{let x ← mx}[p x] = 𝒟[mx] {x | p x} :=
   prEvent_eq_evalDist mx p Measurable.of_discrete
 
+/-- Checking a decidable event at the end of a computation gives the same success mass as
+returning its decision as a Boolean. -/
+theorem prEvent_eq_evalDist_decide_of_discrete
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : m α) (p : α → Prop) [DecidablePred p] :
+    Pr{let x ← mx}[p x] = 𝒟[do let x ← mx; return decide (p x)] {true} := by
+  rw [prEvent_eq_evalDist_of_discrete]
+  change 𝒟[mx] {x | p x} =
+    𝒟[mx >>= (pure ∘ fun x => decide (p x))] {true}
+  rw [← map_eq_bind_pure_comp,
+    evalDist_map mx (Measurable.of_discrete : Measurable fun x => decide (p x)),
+    Measure.map_apply (Measurable.of_discrete : Measurable fun x => decide (p x))
+      (measurableSet_singleton true)]
+  congr 1
+  ext x
+  simp
+
 /-- Implication between events bounds their probabilities on a discrete output space. -/
 theorem prEvent_mono_of_discrete
     {m : Type → Type v} [Monad m] [LawfulMonad m]

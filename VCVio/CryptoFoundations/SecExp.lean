@@ -30,7 +30,6 @@ We also define `BoundedAdversary α β` as an oracle computation bundled with a 
 universe u v w
 
 open OracleComp OracleSpec ENNReal Polynomial Prod
-open scoped OracleSpec.UniformMeasure
 
 /-- Bias advantage of a Boolean-valued game: the gap between the probabilities of the two outputs.
 

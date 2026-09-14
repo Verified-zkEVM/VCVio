@@ -11,6 +11,7 @@ public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+import VCVio.OracleComp.EvalDist.UniformCompatibility
 
 /-!
 # Uniform bit-vector sampling
@@ -48,13 +49,15 @@ theorem evalDist_cipher_from_pair_uniformSample
       let msg ← mx
       let key ← $ᵗ BitVec sp
       return key ^^^ msg] = uniformOn Set.univ := by
-  exact evalDist_bind_xor_uniform mx ($ᵗ BitVec sp) id (by simp)
+  exact evalDist_bind_xor_uniform mx ($ᵗ BitVec sp) id
+    (OracleComp.evalDist_apply_univ_eq_one mx)
     (SampleableType.evalDist_bitVec sp)
 
 lemma probOutput_xor_uniform (sp : ℕ) (msg σ : BitVec sp) :
     Pr[= σ | (fun k : BitVec sp => k ^^^ msg) <$> ($ᵗ BitVec sp)] =
       (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
-  have hxor := evalDist_xor_uniform_right ($ᵗ BitVec sp) msg evalDist_uniformSample
+  have hxor := evalDist_xor_uniform_right ($ᵗ BitVec sp) msg
+    (SampleableType.evalDist_bitVec sp)
   rw [← evalDist_apply_singleton, hxor, uniformOn_univ_apply_singleton]
 
 lemma probOutput_pair_xor_uniform (sp : ℕ) (mx : ProbComp (BitVec sp))
@@ -65,7 +68,7 @@ lemma probOutput_pair_xor_uniform (sp : ℕ) (mx : ProbComp (BitVec sp))
       return (msg', k ^^^ msg')] =
       Pr[= msg | mx] * (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
   have hpair := evalDist_pair_xor_uniform_right mx ($ᵗ BitVec sp) (fun msg' => msg')
-    evalDist_uniformSample
+    (SampleableType.evalDist_bitVec sp)
   rw [← evalDist_apply_singleton, hpair]
   have hsingleton : ({(msg, σ)} : Set (BitVec sp × BitVec sp)) = {msg} ×ˢ {σ} := by
     ext z
@@ -80,7 +83,7 @@ lemma probOutput_cipher_from_pair_uniform (sp : ℕ) (mx : ProbComp (BitVec sp))
       let k ← $ᵗ BitVec sp
       return (k ^^^ msg')] =
       (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
-  have hmx : 𝒟[mx] Set.univ = 1 := by simp
+  have hmx : 𝒟[mx] Set.univ = 1 := OracleComp.evalDist_apply_univ_eq_one mx
   have hcipher := evalDist_bind_xor_uniform mx ($ᵗ BitVec sp) (fun msg' => msg') hmx
-    evalDist_uniformSample
+    (SampleableType.evalDist_bitVec sp)
   rw [← evalDist_apply_singleton, hcipher, uniformOn_univ_apply_singleton]
