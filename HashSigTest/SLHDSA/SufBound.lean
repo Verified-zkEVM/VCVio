@@ -31,17 +31,23 @@ not there, and no fixture could put it there.
 ## The profile is the lane's, copied rather than imported
 
 The block below is the one `HashSigTest.SLHDSA.SchemeGames` builds — the same seven parameters, the
-same five byte maps, the same three honest seeds, the same published root, the same two messages and
-the same deterministic-variant signatures — so the lane's executables run on one profile and a
-reviewer can diff the blocks.  It is copied because a `lean_exe` root must own its `main`: importing
-another fixture reports `` `main` has already been declared``, measured rather than assumed.
+same six byte maps, the same three honest seeds, the same published root, the same three messages,
+the same three signature `DecidableEq` instances and the same three logs — so the lane's executables
+run on one profile and a reviewer can diff the blocks.  It is copied because a `lean_exe` root must
+own its `main`: importing another fixture reports `` `main` has already been declared``, measured
+rather than assumed.
 
-Three differences from that file's copy.  `byteFold`, `otherPkSeed`, `msgU`'s siblings and every
-declaration about the dispatch arm are dropped, because no reader here reads a public key or a
-digest.  Four instances that file does not carry are added — `DecidableEq` on the public seed and on
-the address key, `Fintype` and `Inhabited` on the node type — because the vacuity canary builds a
-`SLHDSA.Security.Certificate`, whose section asks for them.  And the forgeries are different: this
-file needs one second signature per logged randomizer rather than one per dispatch arm.
+Diffed against that file's block by declared name, from `toyParams` to the readers, there are eleven
+differences.  Seven declarations are dropped: `byteFold` and `toyByteLaws`, which only that file's
+`H_msg` blindness assertion and its extractor pins used; `otherPkSeed`, because no reader here reads
+a public key; and `sigD`, `sigE`, `sigH` and `sigLate`, its four dispatch-arm forgeries.  Four are
+added: `forgeryEarly` and `forgeryLate`, which are `sigD`'s and `sigLate`'s bodies under names that
+say what they are for here — a second signature under each of the hedged log's two randomizers at
+one message; `forgeryDet`, the same at the deterministic variant's single randomizer, which that
+file has no use for; and `randomizerLoggedRaw`, the mutant reader.  Four instances that file does
+not carry are added beside them — `DecidableEq` on the public seed and on the address key, `Fintype`
+and `Inhabited` on the node type — because the vacuity canary builds a
+`SLHDSA.Security.Certificate`, whose section asks for them.
 
 ## The reader-by-log matrix
 

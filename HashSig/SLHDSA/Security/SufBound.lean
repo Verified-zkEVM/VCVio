@@ -54,11 +54,14 @@ extra steps, and `HashSigTest.SLHDSA.SufBound` ships that reading too.
 
 **What is not free is the residual itself.**  Every summand of `Summands.bound` is the advantage of
 an adversary a certificate supplies, chosen with nothing tying it to `sadv`; the residual is a
-probability of `sadv`'s own experiment, so it cannot be re-chosen, and the four bounds below —
-each half by the advantage it splits and by its own branch — pin it from above at both ends.  What
-is missing is a bound, not an anchor: nothing in this repository bounds either half, and the
-same-randomizer one has nothing to route into.  The distinction matters because the two kinds of
-looseness have different repairs, and only one of them is the EasyCrypt development.
+probability of `sadv`'s own experiment, so it cannot be re-chosen at all.  Between the headline and
+the two halves it is pinned above and below by named statements: `sameMessageAdvantage_eq_arms`
+identifies it exactly with the two arms, `freshRandomizerHalf_le_strongAdvantage` and
+`sameRandomizerHalf_le_strongAdvantage` put each half under the advantage this module bounds, and
+`SchemeGames`' four half-bounds put each half under the advantage it splits and under its own
+branch.  What is missing is a bound, not an anchor: nothing in this repository bounds either half,
+and the same-randomizer one has nothing to route into.  The distinction matters because the two
+kinds of looseness have different repairs, and only one of them is the EasyCrypt development.
 
 ## The same-randomizer term has no counterpart in the source, and here is the argument
 
@@ -73,8 +76,17 @@ message with no per-signature argument, and the signing oracle before the `MKG` 
 (`SPHINCS_PLUS.ec:2082-2086`) — and the hop's equivalence identifies that table with the generic
 `PRF` oracle's own memo table, `O_CMA_SPHINCSPLUSTWFS_NPRF.mmap{1} = O_PRF_Default.m{2}`
 (`SPHINCS_PLUS.ec:3112`).  On both sides of the hop, re-signing a message returns the identical
-signature, so a transcript there carries **one randomizer per message** and the case this term
-names is empty.
+signature, so a transcript there carries **one randomizer per message**.
+
+That is the whole of the formulation difference, and it is narrower than it looks.  It does *not*
+make the same-randomizer case empty: a second signature reusing a message's one randomizer is still
+in it, and reusing the randomizer costs an adversary nothing, because the randomizer is a field of
+the signature it was handed.  `HashSigTest.SLHDSA.SufBound` runs that at the deterministic
+variant's own log, where the case is inhabited.  What the hedged default changes is the *size* of
+the logged-randomizer list at a message, and so how hard the **fresh** branch is to reach.
+`HashSig.SLHDSA.Security.SufResidual`'s module docstring says the second branch "is empty for the
+deterministic variant"; that is the sentence those checks falsify, and its own fixture's docstring
+states the narrower fact correctly.
 
 **The Lean signer is not.**  FIPS 205 Algorithm 19 sets `opt_rand ← addrnd` and then
 `R ← PRF_msg(SK.prf, opt_rand, M)`; §9.2 makes that hedged variant the default and offers
@@ -92,9 +104,10 @@ signature is compared anywhere.  So the source's ITSR pair-freshness conjunct is
 own game's message freshness, which is the step a strong-unforgeability freshness condition cannot
 take.
 
-Two independent reasons, then, and neither is an omission: the term is this lane's alone, the
-source neither bounds it nor needs to, and no coefficient of `EUFCMA_SPHINCS_PLUS` may be
-transcribed onto it.
+Two independent reasons, then, and neither is an omission: the source's game never reaches the case
+because its freshness test is on the message alone, and its signer could not have populated the
+logged-randomizer list as widely if it had.  So the term is this lane's alone, the source neither
+bounds it nor needs to, and no coefficient of `EUFCMA_SPHINCS_PLUS` may be transcribed onto it.
 
 **It is not zero either.**  On this branch the two signatures split to one digest against one
 public key (`SufResidual.schemeParts_eq_of_randomizer_eq`) and differ in the FORS half or in the
@@ -117,6 +130,31 @@ The fresh half is the one with somewhere to go: `SchemeGames.freshRandomizer_not
 and `freshRandomizer_wins_or_uncovered` carry it into the `H_msg` bridge.  Neither is consumed
 here — bounding it is an adversary construction, which is the same deferral the previous module's
 two branch bounds carry.
+
+## What nothing here refuses
+
+Four levels, each measured on copies held outside the worktree, against the fixture that ships with
+this module.  Two of the four have no refusal anywhere and are named rather than argued away.
+
+* **The two equivalences, weakened to implications.**  With `strongAdvantage_le_add_sameMessage_iff`
+  and `strongAdvantage_le_add_arms_iff` restated as `euf ≤ ε → advantage ≤ ε + residual` and both
+  consumers repaired, this module elaborates clean and the fixture reports two errors, at the two
+  pins that restate them.  So the module's own honest core is refused by the fixture alone; an edit
+  that moves the fixture too is silent.
+* **Which half the consumption form bounds.**
+  `strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le` takes a bound on the fresh half.  The
+  mirror statement, taking one on the same-randomizer half, is equally true and equally provable:
+  the paired edit leaves this module clean and fails one fixture pin, and moving that pin too leaves
+  **nothing** failing anywhere.  What decides which is right is the argument above — the fresh
+  branch has the `H_msg` bridge and the other has nothing — and not a check.
+* **The shape of `Summands.sufBound`.**  Swapping the two residuals, reassociating them, putting a
+  coefficient of two on one, or adding a constant: each leaves this module clean once its proofs are
+  repaired, and fails between three and seven fixture entries.  An edit that moves those entries too
+  is silent, and at that point the claim has been changed rather than a bug found.
+* **The strength of the certificate.**  Inherited unchanged from
+  `HashSig.SLHDSA.Security.Composition`, where it is measured: nothing refuses a certificate, and
+  the fixture there builds one from an address key and a public seed.  Adding the residual does not
+  touch that question, which is why this module's vacuity is exactly that module's.
 
 ## What is not established
 
