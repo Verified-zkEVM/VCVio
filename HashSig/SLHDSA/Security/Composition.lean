@@ -30,8 +30,9 @@ A `Certificate` bundles twelve adversary fields, the OpenPRE counting interface,
 and four inequalities.  It is the honest content of this module and a reader should attack it
 first.  Three things are true of it and worth stating separately.
 
-* **No field is the conclusion.**  No field mentions `Summands.bound` or `Certificate.summands`; a
-  certificate cannot say "the bound holds".  The four inequalities decompose as
+* **No field is the conclusion.**  No field's *type* names `Summands.bound`,
+  `Certificate.summands` or `advantage_le_bound`, so a certificate cannot say "the bound holds".
+  The four inequalities decompose as
   `advantage ≤ prf + prf + ideal`, `ideal ≤ forsBranch + hypertreeBranch`, and one bound per
   branch, and the step from there to the conclusion is arithmetic this module does — including one
   step that is not arithmetic at all (below).
@@ -68,9 +69,11 @@ repository.  `two_le_w` is the one thing that is pinned about it: at a validated
 
 ## What is not established, and cannot be read into the inequality
 
-The bound is conditional on every field of the certificate, and **no field is populated anywhere
-in this repository**.  There is no `Certificate` in `HashSig`, in `HashSigTest` or anywhere else;
-`ofBranchBounds` is a constructor, not an instance.  In particular:
+The bound is conditional on every field of the certificate, and **no closed term of type
+`Certificate` exists anywhere in this repository**.  Every occurrence of one is under a hypothesis
+nothing here discharges: `ofBranchBounds` is a constructor taking two unproved inequalities, and
+the one place a certificate is built — the fixture's pin of that constructor — builds it from
+variables.  In particular:
 
 * no reduction adversary is constructed, so the twelve adversary fields are hypotheses about
   objects that do not exist here;
