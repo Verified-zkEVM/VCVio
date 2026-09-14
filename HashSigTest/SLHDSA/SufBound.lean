@@ -133,7 +133,7 @@ one in the stack.
 
 Thirty-two runtime checks in three groups — the branch each forgery lands in at the hedged log (13),
 what the two FIPS 205 §9.2 variants change (10), and the reader at a longer log and against a mutant
-of itself (9).  Seventeen `example`s in `Pins`: one for each of the thirteen declarations the
+of itself (9).  Nineteen `example`s in `Pins`: one for each of the fifteen declarations the
 library module exports, plus three coefficient pins on the two residuals and the three-part shape
 written out.  Then the vacuity canary: thirteen declarations copied from
 `HashSigTest.SLHDSA.Composition` and four new ones, which put the strong-unforgeability headline at
@@ -497,7 +497,7 @@ def checkLogs : IO Unit := do
 
 /-! ## The pins
 
-One `example` for each of the thirteen declarations `HashSig.SLHDSA.Security.SufBound` exports,
+One `example` for each of the fifteen declarations `HashSig.SLHDSA.Security.SufBound` exports,
 restated at this bundle's own types, plus the shape pins on `Summands.sufBound`.  These are the only
 thing that refuses a weakening of a statement: every statement in that module is about a
 probability, so no `ensure` above can see any of them. -/
@@ -606,6 +606,38 @@ example (hfresh : freshRandomizerHalf sadv ≤ x) :
     sadv.advantage ProbCompRuntime.probComp ≤
       c.summands.bound toy.params + x + sameRandomizerHalf sadv :=
   strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le c x hfresh
+
+/-! ### The two halves at their defining equations
+
+Both hypotheses below are `rfl` in the module that defines the halves and are not available here or
+in the module under test, so these two pins are the only place in this file where a statement is
+pinned at hypotheses nothing discharges. -/
+
+example
+    (hfresh : freshRandomizerHalf sadv =
+      Pr[ fun z => z.1 = true ∧ z.2 = false |
+        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
+          (randomizerLogged (vp := toy) (prims := toyPrimitives))])
+    (hsame : sameRandomizerHalf sadv =
+      Pr[ fun z => z.1 = true ∧ z.2 = true |
+        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
+          (randomizerLogged (vp := toy) (prims := toyPrimitives))]) :
+    sadv.sameMessageAdvantage ProbCompRuntime.probComp =
+      freshRandomizerHalf sadv + sameRandomizerHalf sadv :=
+  sameMessageAdvantage_eq_halves_of_unfoldings sadv hfresh hsame
+
+example
+    (hfresh : freshRandomizerHalf sadv =
+      Pr[ fun z => z.1 = true ∧ z.2 = false |
+        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
+          (randomizerLogged (vp := toy) (prims := toyPrimitives))])
+    (hsame : sameRandomizerHalf sadv =
+      Pr[ fun z => z.1 = true ∧ z.2 = true |
+        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
+          (randomizerLogged (vp := toy) (prims := toyPrimitives))]) :
+    s.sufBound toyParams (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) =
+      s.bound toyParams + sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+  sufBound_eq_bound_add_sameMessage_of_unfoldings s toyParams sadv hfresh hsame
 
 end Pins
 
