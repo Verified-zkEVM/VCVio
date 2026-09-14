@@ -7,6 +7,7 @@ Authors: XC0R
 module
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.QueryTracking.Birthday
 
 /-!
@@ -84,7 +85,8 @@ def crExp [DecidableEq X] [DecidableEq Y]
 produces a valid collision for `f`. -/
 noncomputable def crAdvantage [DecidableEq X] [DecidableEq Y]
     (f : X → Y) (adversary : CRAdversary X) : ℝ≥0∞ :=
-  Pr[= true | crExp f adversary]
+  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  𝒟[crExp f adversary] {true}
 
 /-! ## Keyed Hash Function Families -/
 
@@ -115,7 +117,8 @@ def keyedCRExp [DecidableEq X] [DecidableEq Y]
 valid collision under the sampled key. -/
 noncomputable def keyedCRAdvantage [DecidableEq X] [DecidableEq Y]
     (H : KeyedHashFamily K X Y) (adversary : KeyedCRAdversary K X) : ℝ≥0∞ :=
-  Pr[= true | keyedCRExp H adversary]
+  letI : OracleSpec.IsUniformMeasureSpec unifSpec := OracleSpec.IsUniformMeasureSpec.unifSpec
+  𝒟[keyedCRExp H adversary] {true}
 
 /-! ## ROM-Level Collision Resistance
 
