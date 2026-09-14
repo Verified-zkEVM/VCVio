@@ -64,6 +64,12 @@ exercised there.
   rather than a bug found, and the only remaining check is the source citation the library module
   carries.
 * **Anything about a probability.**  See above.
+* **What a certificate's three named quantities mean.**  `idealAdvantage`, `forsBranch` and
+  `hypertreeBranch` are `ℝ≥0∞` fields with no tie to any experiment, and a certificate that puts
+  the whole obligation on one branch satisfies the other two inequalities for free.  The pins below
+  restate the fields' types, which is all there is to restate.  Nor is the certificate's `pkSeed`
+  tied to the seed key generation sampled.  Both are recorded in the library module's docstring as
+  open.
 * **Whether the summands are the source's.**  The routing table below says which Lean game each
   summand is the advantage of; that the twelve games are the source's twelve is a reading of
   `SPHINCS_PLUS.ec`, `FORS_ES.ec`, `FL_SL_XMSS_MT_ES.ec` and `WOTS_TW_ES.ec`, recorded in the

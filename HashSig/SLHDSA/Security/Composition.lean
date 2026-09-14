@@ -52,6 +52,23 @@ attack it first.  Three things are true of it and worth stating separately.
   work.  A certificate that takes a real PRF hop has to choose a smaller `idealAdvantage`, and
   nothing in this repository can.  `advantage_le_bound_of_halves` is that reading as one statement.
 
+And two things about it that nothing here refuses, stated as open rather than claimed closed.
+
+* **The three named quantities mean only what the four inequalities say.**  `idealAdvantage`,
+  `forsBranch` and `hypertreeBranch` are `ℝ≥0∞` fields with no tie to any experiment.  Their names
+  describe the intended reading — an advantage surviving two PRF hops, split into the two branches
+  of `SchemeGames`' dispatch — and `ofBranchBounds` exhibits a certificate that honours it, but no
+  certificate is obliged to.  One with `forsBranch := adv.advantage` and `hypertreeBranch := 0`
+  satisfies `split` and `hypertreeBranch_le` for free and puts the whole obligation on
+  `forsBranch_le`; nothing in this module or in `HashSigTest.SLHDSA.Composition` sees the
+  difference.  Refusing it would mean fixing the fields to `forsHalf adv` and `hypertreeHalf adv`
+  in the structure itself, which would also fix the split this slice takes and is a choice for the
+  slice that bounds a branch.
+* **`pkSeed` is not tied to the key generation the adversary plays against.**  It is the seed
+  `skPrfScheme` is indexed at, chosen by whoever supplies the certificate; a reader who assumes it
+  is the seed the experiment sampled is reading something the structure does not say.  The
+  obligation that makes it the right one is inside `prfHops`, which is a hypothesis.
+
 ## Where the arithmetic is not arithmetic
 
 `Certificate.forsBranch_le` carries the **OpenPRE** advantage of `forsFOpenPreProblem`, not the
