@@ -326,9 +326,10 @@ theorem elGamal_oneTime_signedAdvantageReal_abs_eq_two_mul_ddhGuessAdvantage
       (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)]).toReal := by
     rw [IND_CPA_OneTime_DDHReduction_rand_half hg adv]
     simp [ENNReal.toReal_ofNat]
-  rw [h_real, h_rand]
-  exact DiffieHellman.ddhDistAdvantage_eq_two_mul_ddhGuessAdvantage gen
-    (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)
+  simpa only [h_real, h_rand, DiffieHellman.ddhDistAdvantage,
+    ProbComp.boolDistAdvantage, evalDist_apply_singleton] using
+    DiffieHellman.ddhDistAdvantage_eq_two_mul_ddhGuessAdvantage gen
+      (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)
 
 /-- **Main theorem.** If an adversary makes at most `q` LR queries and every extracted one-time
 ElGamal DDH reduction has guess advantage at most `ε`, then ElGamal has IND-CPA advantage at most
