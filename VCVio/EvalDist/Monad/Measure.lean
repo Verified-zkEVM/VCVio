@@ -64,3 +64,13 @@ theorem evalDist_bind_apply_le_add_of_bad (mx : m α) (f : α → m β)
     𝒟[mx >>= f] event ≤ ε₁ + ε₂ := by
   rw [evalDist_bind mx f hf]
   exact Measure.bind_apply_le_add_of_bad _ _ hf hbad hevent hbadBound hgood
+
+/-- Compare two denoted continuations outside a measurable disagreement set. -/
+theorem evalDist_bind_apply_le_add_of_disagree (mx : m α) (f g : α → m β)
+    (hf : Measurable fun a => 𝒟[f a]) (hg : Measurable fun a => 𝒟[g a])
+    {bad : Set α} (hbad : MeasurableSet bad)
+    {event : Set β} (hevent : MeasurableSet event) {ε : ENNReal}
+    (hgood : ∀ᵐ a ∂𝒟[mx], a ∉ bad → 𝒟[f a] event ≤ 𝒟[g a] event + ε) :
+    𝒟[mx >>= f] event ≤ 𝒟[mx >>= g] event + 𝒟[mx] bad + ε := by
+  rw [evalDist_bind mx f hf, evalDist_bind mx g hg]
+  exact Measure.bind_apply_le_add_of_disagree _ _ _ hf hg hbad hevent hgood

@@ -6,6 +6,7 @@ Authors: Oleksandr Vovkotrub
 
 module
 public import VCVio.EvalDist.Monad.Basic
+public import VCVio.EvalDist.Monad.Measure
 
 /-!
 # Disagreement-Aware Additive Bind Bounds
@@ -29,7 +30,7 @@ specialisation is `m = ProbComp`.
 
 universe u v
 
-open ENNReal OracleComp.EvalDist
+open MeasureTheory ENNReal OracleComp.EvalDist
 
 variable {α β γ : Type u} {m : Type u → Type v} [Monad m]
   [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
@@ -44,20 +45,20 @@ lemma probEvent_bind_le_add_of_disagree {mx : m α}
     (h : ∀ x ∈ support mx, ¬ D x → Pr[ q | my x] ≤ Pr[ q | oc x] + ε₂) :
     Pr[ q | mx >>= my] ≤ Pr[ q | mx >>= oc] + ε₁ + ε₂ := by
   classical
-  rw [probEvent_bind_eq_expectedValue, probEvent_bind_eq_expectedValue]
-  calc expectedValue mx (fun x => Pr[ q | my x])
-      ≤ expectedValue mx (fun x => Pr[ q | oc x] + (if D x then 1 else 0) + ε₂) := by
-        gcongr with x hx
-        by_cases hDx : D x
-        · simp only [if_pos hDx]
-          exact probEvent_le_one.trans (le_add_right (le_add_left le_rfl))
-        · simp only [if_neg hDx, add_zero]; exact h x hx hDx
-    _ = expectedValue mx (fun x => Pr[ q | oc x]) + Pr[ D | mx]
-          + expectedValue mx (fun _ => ε₂) := by
-        rw [expectedValue_add, expectedValue_add, expectedValue_ite_one]
-    _ ≤ expectedValue mx (fun x => Pr[ q | oc x]) + ε₁ + ε₂ := by
-        gcongr
-        exact expectedValue_le_of_le mx fun _ => le_rfl
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  have hs : ∀ᵐ x ∂𝒟[mx], x ∈ support mx := by
+    rw [ae_iff]
+    simpa only [evalDist_apply_setOf] using
+      (probEvent_eq_zero_iff (mx := mx) (p := fun x => x ∉ support mx)).2 (by simp)
+  have hbound := evalDist_bind_apply_le_add_of_disagree (bad := {x | D x})
+    (event := {y | q y}) mx my oc Measurable.of_discrete Measurable.of_discrete
+    MeasurableSet.of_discrete MeasurableSet.of_discrete (by
+      filter_upwards [hs] with x hx hDx
+      simpa only [evalDist_apply_setOf] using h x hx hDx)
+  have hD' : 𝒟[mx] {x | D x} ≤ ε₁ := by simpa only [evalDist_apply_setOf] using hD
+  simpa only [evalDist_apply_setOf] using
+    hbound.trans (add_le_add_left (add_le_add_right hD' _) _)
 
 /-- **Three-way disagreement-aware additive bind bound (hop A).** A coupled three-world variant of
 `probEvent_bind_le_add_of_disagree`: the three worlds share the sampling computation `mx`, and at
