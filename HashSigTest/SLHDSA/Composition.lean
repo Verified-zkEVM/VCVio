@@ -137,8 +137,10 @@ theorem toyValid : toyParams.Valid := by decide
 -- Exposed for a different reason from `toyParams`, also read off its removal: seven errors, none
 -- of them in the bundle and all of them in the pins, where the certificate's own `vp` has to
 -- reduce to `toyParams` for the bundle's instances to be found.  Six are `typeclass instance
--- problem is stuck` and the seventh is a `(deterministic) timeout at whnf`; none is a
--- `failed to synthesize`.
+-- problem is stuck` and the seventh is a `(deterministic) timeout` at the 200000-heartbeat limit;
+-- none is a `failed to synthesize`.  Which operation that timeout names is an artefact of where
+-- the budget happens to run out — two runs of this same measurement have disagreed about it — so
+-- it is not recorded here.
 /-- The validated form of `toyParams`. -/
 @[expose] def toy : ValidatedParams := ⟨toyParams, toyValid⟩
 
