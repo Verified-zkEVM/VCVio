@@ -33,6 +33,7 @@ VCVio retains the computational and runtime interpretation of PolyFun's generic 
 | `VCVio/Interaction/UC/ReactiveSecurity.lean` | Fixed outcome observations and graded statistical replacement for executable handled assemblies. |
 | `VCVio/Interaction/UC/ReactiveWorld.lean` | Actual adversary/backchannel wiring and named executable statistical simulators. |
 | `VCVio/Interaction/UC/ReactiveKernel.lean` | Joint local-handler laws preserve complete residual-state measures at every token/FIFO prefix. |
+| `VCVio/Interaction/UC/ReactiveBudget.lean` | Global rank certificates exclude unfinished probabilistic observations after sufficient activations. |
 | `VCVio/Interaction/UC/Standard.lean` | Standard VCVio UC imports and conveniences. |
 | `VCVio/Interaction/UC/StdDoBridge.lean` | Bridges from VCVio program-logic/Std.Do idioms into the UC runtime layer. |
 
@@ -197,6 +198,14 @@ response/state products are explicit premises. `VCVioTest/PRFNetworkKernel.lean`
 that draw extra discarded randomness, demonstrating semantic preservation without claiming
 unchanged implementation cost. `VCVioTest/ReactiveKernel.lean` refutes response-only replacement:
 equal immediate replies can store different bits which a later call reveals.
+
+`ReactiveBudget` instantiates PolyFun's `TokenBudgetCertificate` on actual `ProbComp` runs.
+`OracleComp.canReturn_iff_mem_support` connects exact monadic return reachability to the oracle
+support fold. A rank covering every supported initial setup proves zero observation measure
+for unfinished execution; every supported prefix retains its exact elapsed count. The
+probabilistic countdown in `VCVioTest/ReactiveBudget.lean` consumes that result and separates a
+short prefix. These certificates count activations. They do not certify the implementation
+cost of atomic handlers, routing, queues, parsing, randomness, initialization, or output recovery.
 
 ## Reactive execution and observations
 

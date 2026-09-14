@@ -171,6 +171,36 @@ read makes their actual observation measures different. The joint contract corre
 that replacement. General related-state couplings and computational cost transport require
 additional contracts; reply marginals alone cannot supply them.
 
+## Global activation-budget checkpoint
+
+Merged [PolyFun #212](https://github.com/Verified-zkEVM/PolyFun/pull/212), commit
+`2348446013d72990237232444e656955f85f97c9`, has the identical tree to validated head
+`7a9bf3e5d9cbe52c39903e5ec5cb3d94af2de9c4`. VCVio's full
+`./scripts/validate.sh --lint --test --axioms` also passes: 18,920 declarations across
+634 production modules, the same 40 existing sorry-tainted declarations, and zero
+nonstandard-axiom taint. Log: `/private/tmp/uc-reactive-budget-validation.log`.
+
+PolyFun's `ReactiveNetwork/Budget` retains exact token/FIFO activation counts on every successful
+prefix. `TokenBudgetCertificate` requires a global rank on invariant network states, decreasing
+on each successful activation while the environment is unfinished. Nonempty progress is a
+separate field. Its theorems promise terminal successful results after sufficient fuel and at
+least one possible result; they do not assert that every branch of an arbitrary interpreter
+returns. Full PolyFun validation passes: 12,052 declarations across 313 production modules,
+zero sorry or nonstandard-axiom taint. Log: `/private/tmp/uc-activation-budget-validation.log`.
+
+The generic positive consumer certifies an arbitrary countdown. The feedback counterexample
+executes arbitrarily many productive four-activation rounds between two finite-state actors,
+each with a two-operation receive/send reaction, and rejects any global rank certificate.
+An everywhere-failing interpreter is also rejected. Existing ranked quantitative-realizer
+certificates remain responsible for backend costs; the activation certificate supplies a
+distinct network-level obligation alongside them.
+
+VCVio's `ReactiveBudget` bridges these laws to oracle support and setup-sampled observation
+measures. A rank bound covering every supported setup proves zero unfinished mass. Its actual
+probabilistic countdown samples on every activation, consumes the generic certificate at every
+width, and retains the short-prefix separation. No polynomial-time classification follows from
+an activation bound alone.
+
 ## Complexity foundation: source audit and adoption decision
 
 This audit distinguishes the current VCVio pins from upstream source inspected on September 13.
