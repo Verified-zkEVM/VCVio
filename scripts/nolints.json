@@ -2341,7 +2341,6 @@
  ["usesRetiredProbability", "VCVio.StateSeparating.QueryImpl.PreservesCell.prob_changed_eq_zero"],
  ["usesRetiredProbability", "VCVio.StateSeparating.QueryImpl.PreservesCell.prob_unchanged_eq_sub_probFailure"],
  ["usesRetiredProbability", "WorstCaseCostBound.toExpectedCostBound"],
- ["usesRetiredProbability", "_private.Examples.BR93.0.BR93.br93AsymmEnc.evalSPMF_bind_add_right_uniform"],
  ["usesRetiredProbability", "_private.Examples.CommitmentScheme.Binding.0.binding_rest_noCollision_le_inv"],
  ["usesRetiredProbability", "_private.Examples.CommitmentScheme.Binding.0.binding_win_le_advCollision_add_fresh"],
  ["usesRetiredProbability", "_private.Examples.CommitmentScheme.Extractability.0.extractability_rest_noCollision_le_inv"],

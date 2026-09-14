@@ -80,6 +80,17 @@ theorem evalDist_bind_of_discrete {m : Type u → Type v} [Monad m] [EvalDistSem
     𝒟[mx >>= f] = Measure.bind 𝒟[mx] fun x => 𝒟[f x] :=
   evalDist_bind mx f Measurable.of_discrete
 
+/-- Pointwise equality of continuation measures gives equality after a common bind. The
+intermediate type uses a local discrete measurable space, so callers need no measurable-space
+instance for it. -/
+theorem evalDist_bind_congr {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
+    [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace β]
+    (mx : m α) (f g : α → m β) (h : ∀ x, 𝒟[f x] = 𝒟[g x]) :
+    𝒟[mx >>= f] = 𝒟[mx >>= g] := by
+  let : MeasurableSpace α := ⊤
+  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
+  exact Measure.bind_congr_right (Filter.Eventually.of_forall h)
+
 /-- `Functor.map` along a measurable function denotes the pushforward measure. -/
 theorem evalDist_map {m : Type u → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
     [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]

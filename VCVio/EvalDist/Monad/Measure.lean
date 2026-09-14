@@ -8,24 +8,42 @@ module
 public import VCVio.EvalDist.Defs.Measure.Core
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Bounds
+import ToMathlib.Probability.UniformOn
 
 /-!
-# Independent draws under measure-valued evaluation
+# Measure-valued computation laws
 
 The Giry composition laws transport measure-level independence to computation syntax.
 The general interchange theorem requires joint measurability; the three-draw law
 specializes to discrete intermediate results and leaves the final result space arbitrary.
+Uniform finite draws can be reindexed by a bijection before an arbitrary continuation.
 -/
 
 public section
 
-open MeasureTheory Function
+open MeasureTheory ProbabilityTheory Function
 
 universe u v
 
 variable {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
   [LawfulEvalDistSemantics m] {α β γ δ : Type u}
   [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ] [MeasurableSpace δ]
+
+/-- Reindexing a uniform draw by a bijection does not change the measure of any subsequent
+computation. The uniformity hypothesis can come from either native sampling or a compatibility
+certificate. -/
+theorem evalDist_bind_bijective_of_uniform [LawfulMonad m]
+    [DiscreteMeasurableSpace α] [MeasurableSingletonClass α] [Finite α] [Nonempty α]
+    (mx : m α) (huniform : 𝒟[mx] = uniformOn Set.univ)
+    (e : α → α) (he : Function.Bijective e) (f : α → m β) :
+    𝒟[mx >>= fun x => f (e x)] = 𝒟[mx >>= f] := by
+  have hmap : 𝒟[e <$> mx] = 𝒟[mx] := by
+    rw [evalDist_map_of_discrete, huniform]
+    exact map_uniformOn_univ_of_bijective Measurable.of_discrete he
+  have hprogram : (mx >>= fun x => f (e x)) = (e <$> mx) >>= f := by
+    simp [map_eq_bind_pure_comp, bind_assoc]
+  rw [hprogram, evalDist_bind_of_discrete, hmap]
+  exact (evalDist_bind_of_discrete mx f).symm
 
 /-- Independent computations commute under a jointly measurable denoted continuation. -/
 theorem evalDist_bind_bind_swap (mx : m α) (my : m β) (f : α → β → m γ)

@@ -15,6 +15,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.EvalDist.Monad.Measure
 import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 
 /-!
 # Bellare-Rogaway 1993 Encryption
@@ -319,14 +320,6 @@ private lemma find?_rightLog (log : QueryLog (RO_Spec Rand M)) (p : Rand → Boo
   funext ⟨t, u⟩
   cases t <;> simp
 
-omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand] [Inhabited Rand]
-  [Inhabited M] in
-/-- Right-translating a uniform challenge mask by a constant preserves the output distribution. -/
-private lemma evalSPMF_bind_add_right_uniform {γ : Type} (m : M) (f : M → ProbComp γ) :
-    𝒮[(do let h ← $ᵗ M; f (h + m))] = 𝒮[(do let h ← $ᵗ M; f h)] := by
-  refine evalSPMF_ext fun z => ?_
-  exact probOutput_bind_add_right_uniform (α := M) m f z
-
 /-- Real one-time CPA game in the random-oracle model. -/
 def cpaGame (tdp : TrapdoorPermutation PK SK Rand)
     (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : ProbComp Bool :=
@@ -432,10 +425,14 @@ theorem cpaGame_gap_le_badEvent (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M
   sorry
 
 omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] [Inhabited Rand] in
-/-- Uniform masking step: once the challenge hash output is replaced by a fresh uniform mask,
-adding either challenge message yields the same ciphertext distribution. -/
-theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
-    𝒮[game1 tdp adv] = 𝒮[game2 tdp adv] := by
+/-- Uniform masking step for any lawful measure semantics that interprets the challenge mask
+uniformly. -/
+theorem evalDist_game1_eq_game2 [MeasurableSpace M] [DiscreteMeasurableSpace M]
+    [MeasurableSingletonClass M] [EvalDistSemantics ProbComp]
+    [LawfulEvalDistSemantics ProbComp]
+    (hM : 𝒟[($ᵗ M : ProbComp M)] = ProbabilityTheory.uniformOn Set.univ)
+    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+    𝒟[game1 tdp adv] = 𝒟[game2 tdp adv] := by
   rw [game1, game2]
   -- Push the random-oracle simulation through both games: lifted samples become plain
   -- `ProbComp` binds, the adversary's `choose`/`guess` thread the cache, and the trailing
@@ -443,13 +440,24 @@ theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
   simp only [run'_simulateQ_bind, run_liftM, simulateQ_pure, bind_assoc, pure_bind]
   simp only [StateT.run'_eq, StateT.run_pure, map_eq_bind_pure_comp, Function.comp,
     bind_assoc, pure_bind]
-  refine evalSPMF_bind_congr' _ fun b => ?_
-  refine evalSPMF_bind_congr' _ fun ks => ?_
-  refine evalSPMF_bind_congr' _ fun mmst => ?_
-  refine evalSPMF_bind_congr' _ fun r => ?_
-  exact evalSPMF_bind_add_right_uniform (if b = true then mmst.1.1 else mmst.1.2.1)
+  refine evalDist_bind_congr _ _ _ fun b => ?_
+  refine evalDist_bind_congr _ _ _ fun ks => ?_
+  refine evalDist_bind_congr _ _ _ fun mmst => ?_
+  refine evalDist_bind_congr _ _ _ fun r => ?_
+  exact evalDist_bind_bijective_of_uniform ($ᵗ M : ProbComp M) hM
+    (fun x => x + if b = true then mmst.1.1 else mmst.1.2.1)
+    (AddGroup.addRight_bijective (if b = true then mmst.1.1 else mmst.1.2.1))
     (fun x => (simulateQ roQueryImpl (adv.guess mmst.1.2.2 (tdp.forward ks.1 r, x))).run mmst.2 >>=
       fun p => pure (b == p.1))
+
+omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] [Inhabited Rand] in
+/-- Finite-distribution form of the uniform masking step. -/
+theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+    𝒮[game1 tdp adv] = 𝒮[game2 tdp adv] := by
+  let : MeasurableSpace M := ⊤
+  let : EvalDistSemantics ProbComp := instEvalDistSemanticsOfMonadLiftTSPMF
+  exact evalSPMF_eq_of_evalDist_eq _ _
+    (evalDist_game1_eq_game2 (hM := evalDist_uniformSample) adv)
 
 omit [Inhabited Rand] [Fintype Rand] [Inhabited M] [Fintype M] [DecidableEq M]
   [AddCommGroup M] in
