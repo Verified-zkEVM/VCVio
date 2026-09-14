@@ -422,7 +422,7 @@ example : (Summands.mk 0 0 0 0 0 0 0 x 0 0 0 0).bound p24 = 2 * x := by
 
 /-! ### The certificate, field by field
 
-The twelve adversary fields are pinned at the games they are adversaries against, which is the
+The eleven adversary fields are pinned at the games they are adversaries against, which is the
 check that a summand is wired to the game its name says.  Nothing inside the library module pins
 this: the field types are declared there and a paired edit moves them. -/
 

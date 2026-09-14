@@ -18,7 +18,7 @@ This is the module that finally writes the SLH-DSA security result as an inequal
 `SLHDSA.Security.advantage_le_bound` says: for any adversary `adv` against the external SLH-DSA
 algebra `generalAlg`, and any `Certificate` for that adversary,
 
-`adv.advantage ProbCompRuntime.probComp ≤ (c.summands prims).bound vp.params`
+`adv.advantage ProbCompRuntime.probComp ≤ c.summands.bound vp.params`
 
 where `Summands.bound` is the twelve-summand expression of `EUFCMA_SPHINCS_PLUS`, at the source's
 coefficients, and `Certificate.summands` routes each summand to the advantage of a named game of
@@ -26,9 +26,11 @@ coefficients, and `Certificate.summands` routes each summand to the advantage of
 
 ## What a `Certificate` is, and what it is not
 
-A `Certificate` bundles twelve adversary fields, the OpenPRE counting interface, three real numbers
-and four inequalities.  It is the honest content of this module and a reader should attack it
-first.  Three things are true of it and worth stating separately.
+A `Certificate` has twenty fields: eleven adversaries, the public seed the secret-value `PRF` is
+keyed at, the OpenPRE counting interface, three named quantities in `ℝ≥0∞` and four inequalities.
+Eleven adversaries and twelve summands, because the FORS-`F` `DSPR` and `3 · TCR` summands are read
+off one open-preimage adversary.  It is the honest content of this module and a reader should
+attack it first.  Three things are true of it and worth stating separately.
 
 * **No field is the conclusion.**  No field's *type* names `Summands.bound`,
   `Certificate.summands` or `advantage_le_bound`, so a certificate cannot say "the bound holds".
@@ -37,7 +39,7 @@ first.  Three things are true of it and worth stating separately.
   branch, and the step from there to the conclusion is arithmetic this module does — including one
   step that is not arithmetic at all (below).
 * **How much it needs is measured, not asserted.**  `Certificate.ofBranchBounds` builds one from
-  the twelve adversaries, the counting interface and *two* inequalities — one per branch of
+  the eleven adversaries, the counting interface and *two* inequalities — one per branch of
   `SchemeGames`' dispatch split, stated at `forsHalf adv` and `hypertreeHalf adv` — discharging
   `split` from `advantage_le_forsHalf_add_hypertreeHalf` and `prfHops` from `le_add_self`.  So
   `split` is provably instantiable and is not a disguised assumption, and what remains unproven is
@@ -78,10 +80,10 @@ the source citation above.
 The bound is conditional on every field of the certificate, and **no closed term of type
 `Certificate` exists anywhere in this repository**.  Every occurrence of one is under a hypothesis
 nothing here discharges: `ofBranchBounds` is a constructor taking two unproved inequalities, and
-the one place a certificate is built — the fixture's pin of that constructor — builds it from
+the two places a certificate is built — the fixture's pins of that constructor — build it from
 variables.  In particular:
 
-* no reduction adversary is constructed, so the twelve adversary fields are hypotheses about
+* no reduction adversary is constructed, so the eleven adversary fields are hypotheses about
   objects that do not exist here;
 * nothing says any honest value was recorded as a valid challenge target before a forgery, that
   any execution produced any target transcript, or that a game's final-validity bit survived;
@@ -310,10 +312,11 @@ variable [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableT
 
 /-- **A composition certificate for one EUF-CMA adversary against `generalAlg`.**
 
-Twelve adversary fields against the games of `HashSig.SLHDSA.Security.CanonicalGames`, the public
+Eleven adversary fields against the games of `HashSig.SLHDSA.Security.CanonicalGames`, the public
 seed the secret-value `PRF` is keyed at, VCVio's OpenPRE counting interface, three named quantities
-and four inequalities.  Every one of them is a hypothesis; none is discharged in this repository,
-and the module docstring says per field why.
+and four inequalities: twenty fields for twelve summands, because one open-preimage adversary
+supplies two of them.  Every one of the twenty is a hypothesis; none is discharged in this
+repository, and the module docstring says per field why.
 
 The four inequalities are a chain, not a restatement of the conclusion.  `prfHops` moves from the
 real experiment to a key-idealized quantity this module only names; `split` moves from that to two
@@ -321,7 +324,7 @@ branches; the two `_le` fields bound each branch by its own games.  Nothing here
 `Summands.bound`, and the step from `forsBranch_le`'s OpenPRE advantage to the bound's
 `DSPR + 3·TCR` pair is `advantage_le_bound`'s work and consumes `counting`.
 
-`Certificate.ofBranchBounds` builds one from the twelve adversaries, `counting`, and two branch
+`Certificate.ofBranchBounds` builds one from the eleven adversaries, `counting`, and two branch
 bounds stated at `SchemeGames`' own dispatch halves, which is the measurement of how much a
 certificate needs: `split` and `prfHops` are discharged there, the two branch bounds are not.
 
@@ -445,7 +448,7 @@ external SLH-DSA algebra is at most the twelve-summand expression its certificat
 
 Read what this does and does not say.  It is an implication whose antecedent is a `Certificate`,
 and no `Certificate` exists anywhere in this repository; nothing here bounds any of the twelve
-summands, constructs any of the twelve adversaries, records any challenge, or establishes any
+summands, constructs any of the eleven adversaries, records any challenge, or establishes any
 game's final validity.  What it does is compose: the certificate's four inequalities plus VCVio's
 OpenPRE-to-`DSPR + 3·TCR` coupling give the source's expression, and the coupling is where the
 `3` comes from.
@@ -508,7 +511,7 @@ variable [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableT
 
 variable {prims}
 
-/-- **A certificate from the two branch bounds.**  Given the twelve adversaries, the counting
+/-- **A certificate from the two branch bounds.**  Given the eleven adversaries, the counting
 interface, and one inequality per branch of `SchemeGames`' dispatch split — stated at `forsHalf adv`
 and `hypertreeHalf adv`, the two probabilities of the instrumented experiment — this builds a
 certificate.
@@ -570,7 +573,7 @@ noncomputable def Certificate.ofBranchBounds {adv : unforgeableAdv (generalAlg p
   hypertreeBranch_le := hhyper
 
 /-- `ofBranchBounds` smuggles nothing into the summands: the certificate it returns names the same
-twelve advantages of the same twelve adversaries it was handed.
+twelve advantages of the same eleven adversaries it was handed.
 
 *Composition arithmetic.* -/
 theorem Certificate.ofBranchBounds_summands {adv : unforgeableAdv (generalAlg prims)}
