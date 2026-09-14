@@ -49,6 +49,10 @@ neither a second notation for handlers nor an assumed bound on the completed mac
 
 ## Reactive foundation checkpoint (September 13)
 
+This section records the merged foundation. The subsequent routed-composition work, including
+the all-prefix serial theorem and exact graph/plug factorizations, is tracked in the
+[UC campaign checkpoint](uc-campaign.md#routed-composition-checkpoint).
+
 [PolyFun #209](https://github.com/Verified-zkEVM/PolyFun/pull/209) is merged at
 `2116a47ea3aaefde403cff05584e1a21d56cf107`. `ReactiveProcess` is an alias over the existing
 `DynComputation`/`Resumption` carriers and a receive/send/effect/tick/yield polynomial.

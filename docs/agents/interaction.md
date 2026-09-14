@@ -116,6 +116,16 @@ and that uniform ciphertext marginals do not justify key reuse.
 `VCVioTest/ReactiveNetworkAdversarial.lean` checks insufficient fuel, missing deliveries,
 a reachable nonempty serial queue, and shared-state reply dependence.
 
+`PolyFun.Interaction.UC.ReactiveNetwork.Assembly` compiles raw open syntax to finite typed
+diagrams; select the single global environment after composition. `Factorization` and
+`Factorization.Right` prove all four parallel/wired closure factorizations under explicit
+node bijections, retaining the original machines. The generic `runToken_reindex_cast` and
+`runFIFO_reindex_cast` transport complete residual states. `ReactiveRuntime` derives the
+corresponding experiment and Measure equations, with FIFO schedules transported too.
+`serialLaw_eq_tokenLaw` compares every serial FIFO prefix with its corresponding token prefix;
+the underlying state theorem retains the extra delivery cost and requires an empty queue.
+The raw relay canary and untransported-schedule counterexample live in PolyFun's UC tests.
+
 `Examples/OneTimePad/UC.lean` remains an observation-interface smoke test. Its chosen observer
 makes arbitrary systems indistinguishable, so its `ObservedCompEmulates 0` theorem is not
 evidence of network execution adequacy.
