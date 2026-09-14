@@ -160,16 +160,13 @@ end ExpectedCost
 
 /-! ## Worst-Case Cost Bounds -/
 
-/-- Every execution path of `oa` under `cm` has total cost at most `bound`.
-
-Currently unused outside this file; retained as scaffolding for future asymptotic analyses. -/
-def WorstCaseCostBound [AddCommMonoid ω] [Preorder ω] [IsUniformSpec spec]
+/-- Every execution path of `oa` under `cm` has total cost at most `bound`. -/
+def WorstCaseCostBound [AddCommMonoid ω] [Preorder ω]
     (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) : Prop :=
   AddWriterT.PathwiseCostAtMost (instrumentedRun oa cm) bound
 
-/-- `WorstCaseCostBound` is equivalently a support bound over the old `costDist` view. -/
+/-- `WorstCaseCostBound` is equivalently a support bound over `costDist`. -/
 theorem worstCaseCostBound_iff_support_bound [AddCommMonoid ω] [Preorder ω]
-    [IsUniformSpec spec]
     (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) :
     WorstCaseCostBound oa cm bound ↔
       ∀ z ∈ support (costDist oa cm), Multiplicative.toAdd z.2 ≤ bound := by
@@ -183,9 +180,7 @@ section CostBounds
 variable [AddCommMonoid ω]
 variable [IsUniformSpec spec]
 
-/-- The expected cost of `oa` under `cm` (valued by `val`) is at most `bound`.
-
-Currently unused outside this file; retained as scaffolding for future asymptotic analyses. -/
+/-- The expected cost of `oa` under `cm` (valued by `val`) is at most `bound`. -/
 def ExpectedCostBound (oa : OracleComp spec α) (cm : CostModel spec ω)
     (val : ω → ℝ≥0∞) (bound : ℝ≥0∞) : Prop :=
   expectedCost oa cm val ≤ bound
@@ -239,14 +234,6 @@ private lemma addCostOracle_unit_run_apply (t : spec.Domain) :
 
 section UnitCostBridge
 
-private lemma exists_mem_support [IsUniformSpec spec] (oa : OracleComp spec α) :
-    ∃ x, x ∈ support oa := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => exact ⟨x, by simp⟩
-  | query_bind t mx ih =>
-      obtain ⟨x, hx⟩ := ih default
-      exact ⟨x, (mem_support_bind_iff _ _ _).2 ⟨default, mem_support_query t default, hx⟩⟩
-
 private lemma exists_mem_support_costDist_of_mem_support
     [AddCommMonoid ω]
     (oa : OracleComp spec α) (cm : CostModel spec ω) {x : α}
@@ -271,7 +258,7 @@ private lemma mem_support_costDist_unit_query_bind_of_mem_support
     exact ⟨z, hz, by simp [Nat.add_comm]⟩
 
 private theorem isPerIndexQueryBound_of_unit_support_bound
-    [DecidableEq ι] [IsUniformSpec spec]
+    [DecidableEq ι] [spec.Inhabited]
     {oa : OracleComp spec α} {bound : ℕ}
     (hSupport : ∀ z ∈ support (costDist oa CostModel.unit),
       Multiplicative.toAdd z.2 ≤ bound) :
@@ -282,7 +269,7 @@ private theorem isPerIndexQueryBound_of_unit_support_bound
   | query_bind t mx ih =>
       rw [isPerIndexQueryBound_query_bind_iff]
       refine ⟨?_, fun u => ?_⟩
-      · rcases exists_mem_support (mx default) with ⟨x, hx⟩
+      · rcases OracleComp.support_nonempty (mx default) with ⟨x, hx⟩
         rcases exists_mem_support_costDist_of_mem_support (mx default) CostModel.unit hx with
           ⟨c, hc⟩
         have hle : Multiplicative.toAdd c + 1 ≤ bound := by
@@ -304,7 +291,7 @@ private theorem isPerIndexQueryBound_of_unit_support_bound
 if every execution uses at most `bound` total unit-cost steps, then each oracle index
 is queried at most `bound` times. -/
 theorem WorstCaseCostBound.toIsPerIndexQueryBound_unit
-    [DecidableEq ι] [IsUniformSpec spec]
+    [DecidableEq ι] [spec.Inhabited]
     {oa : OracleComp spec α} {bound : ℕ}
     (h : WorstCaseCostBound oa CostModel.unit bound) :
     IsPerIndexQueryBound oa (fun _ => bound) :=
@@ -322,7 +309,7 @@ private lemma sum_update_pred_eq
 /-- If `main` makes at most `qb i` queries to each oracle `i`, then its total query count
 (under the unit cost model) is at most `∑ i, qb i` on every execution path. -/
 theorem IsPerIndexQueryBound.toWorstCaseCostBound_unit_sum
-    [DecidableEq ι] [Fintype ι] [IsUniformSpec spec]
+    [DecidableEq ι] [Fintype ι]
     {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb) :
     WorstCaseCostBound oa CostModel.unit (∑ i, qb i) := by

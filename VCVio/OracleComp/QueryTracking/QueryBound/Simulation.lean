@@ -260,20 +260,15 @@ omit [Fintype ι] in
 /-- The counting-oracle simulation of any `OracleComp` has non-empty support whenever every
 oracle range is inhabited. Used by the converse direction of
 `isTotalQueryBound_iff_counting_total_le`. -/
-lemma countingOracle.support_simulate_nonempty [IsUniformSpec spec]
+lemma countingOracle.support_simulate_nonempty [spec.Inhabited]
     (oa : OracleComp spec α) :
-    (support (countingOracle.simulate oa 0)).Nonempty := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => exact ⟨(x, 0), by rw [countingOracle.mem_support_simulate_pure_iff]⟩
-  | query_bind t mx ih =>
-      obtain ⟨z, hz⟩ := ih default
-      refine ⟨(z.1, QueryCount.single t + z.2), ?_⟩
-      exact countingOracle.add_single_mem_support_simulate_queryBind hz
+    (support (countingOracle.simulate oa 0)).Nonempty :=
+  OracleComp.support_nonempty _
 
 /-- Converse of `IsTotalQueryBound.counting_total_le`: a counting-oracle bound on every
 support path implies the structural total query bound. Together they characterize
 `IsTotalQueryBound` purely in terms of the counting-oracle support. -/
-theorem isTotalQueryBound_iff_counting_total_le [IsUniformSpec spec]
+theorem isTotalQueryBound_iff_counting_total_le [spec.Inhabited]
     {oa : OracleComp spec α} {n : ℕ} :
     IsTotalQueryBound oa n ↔
       ∀ z ∈ support (countingOracle.simulate oa 0), (∑ i, z.2 i) ≤ n := by
@@ -489,7 +484,7 @@ theorem IsQueryBoundP.residual_of_mem_support_counting [DecidableEq ι] [Fintype
 /-- Predicate-targeted analogue of `isTotalQueryBound_iff_counting_total_le`: a
 counting-oracle filtered-sum bound characterizes the structural `IsQueryBoundP` bound. -/
 theorem isQueryBoundP_iff_counting_filter_le
-    [DecidableEq ι] [Fintype ι] [IsUniformSpec spec]
+    [DecidableEq ι] [Fintype ι] [spec.Inhabited]
     {oa : OracleComp spec α} {n : ℕ} :
     IsQueryBoundP oa p n ↔
       ∀ z ∈ support (countingOracle.simulate oa 0),
