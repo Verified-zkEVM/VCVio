@@ -29,6 +29,10 @@ public import Examples.OneTimePad.LeakageFree
 public import Examples.OneTimePad.Reactive
 public import Examples.OneTimePad.Reactive.Security
 public import Examples.OneTimePad.Reactive.Separation
+public import Examples.OneTimePad.Separated
+public import Examples.OneTimePad.Separated.Aggregate
+public import Examples.OneTimePad.Separated.Execution
+public import Examples.OneTimePad.Separated.Security
 public import Examples.OneTimePad.UC
 public import Examples.PRFTagReader
 public import Examples.PRFTagReader.Asymptotic

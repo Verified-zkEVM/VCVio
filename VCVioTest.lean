@@ -51,6 +51,7 @@ public import VCVioTest.SMDTTCR
 public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SampleableType
+public import VCVioTest.SeparatedOTP
 public import VCVioTest.Smoke
 public import VCVioTest.StateTLift
 public import VCVioTest.Tactic.Expectation
