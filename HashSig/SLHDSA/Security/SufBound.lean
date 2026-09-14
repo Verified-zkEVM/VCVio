@@ -465,7 +465,8 @@ assumed: the step it takes is
 `sameMessageAdvantage_eq_arms` at `SchemeGames.randomizerLogged` — true, proved above at every
 selector, and not transportable to the named halves from here, because their bodies are not
 exposed.  So this statement is possibly strict and this module cannot tell; what would settle it,
-and nothing more, is `sufBound_eq_bound_add_sameMessage_of_unfoldings`' two hypotheses.
+and nothing more, is the pair of hypotheses
+`sufBound_eq_bound_add_sameMessage_of_unfoldings` takes.
 
 Like the headline, it says nothing about the size of what it bounds by:
 `HashSigTest.SLHDSA.SufBound.freeCertificate_sufBound_headline` exhibits a certificate at which
