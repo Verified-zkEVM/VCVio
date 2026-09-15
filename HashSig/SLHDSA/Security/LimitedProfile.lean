@@ -187,9 +187,24 @@ instance : DecidableEq limitedPrimitives.PkSeed := inferInstanceAs (DecidableEq 
 compressed twenty-two-byte form. -/
 instance : DecidableEq limitedPrimitives.AdrsKey := inferInstanceAs (DecidableEq (Bytes 22))
 
+-- **This one is not written like the other eight, and the reason was measured.**  Lean evaluates
+-- a top-level constant of non-function type when its module is initialised, before any `main`
+-- runs.  Written `inferInstanceAs (Fintype (Bytes 16))` like its neighbours, this instance is a
+-- `Finset.univ` of `2 ^ 128` sixteen-byte vectors built at the start of every executable that
+-- imports this module, however little of it that executable uses: so written,
+-- `slhdsa_limited_profile_tests` reached 29.5 GB resident in 25 seconds without printing its
+-- first check, and none of its checks reads a `Fintype`.  Marking that term `noncomputable` does
+-- not fix it — the auxiliary definition the elaborator creates for it is compiled anyway, the
+-- generated C still carries the product-`Fintype` call, and the binary still does not reach its
+-- first check.  Going through `Fintype.ofFinite`, whose argument is the `Prop`-valued `Finite`
+-- and which is noncomputable by construction, leaves no code to generate: measured, the module's
+-- generated C then contains no product-`Fintype` call at all and the executable starts at once.
+-- The three other carrier instances that are constants are harmless — `SampleableType` is a
+-- sampling program and `Inhabited` is one sixteen-byte vector — and `DecidableEq` is a function.
 /-- Finiteness of the node type, which the `DSPR` advantage asks for.  It is a proof-level
-instance: the type has `2 ^ 128` elements and nothing here enumerates it. -/
-instance : Fintype limitedPrimitives.Y := inferInstanceAs (Fintype (Bytes 16))
+instance: the type has `2 ^ 128` elements and nothing may enumerate it. -/
+noncomputable instance : Fintype limitedPrimitives.Y :=
+  @Fintype.ofFinite _ (inferInstanceAs (Finite (Bytes 16)))
 
 /-- Inhabitedness of the node type, which the OpenPRE coupling asks for. -/
 instance : Inhabited limitedPrimitives.Y := inferInstanceAs (Inhabited (Bytes 16))
