@@ -29,7 +29,7 @@ Three things, and they are all this module does.
 * **It turns the one `Params`-level coefficient into a numeral.**  `Summands.bound` carries
   `(p.w - 2 : ℕ)` on the WOTS+-`F` undetectability summand; here `lgw = 2`, so `w = 4` and the
   coefficient is `2`.  `limitedAdvantage_le_summands` is the bound with that numeral and with the
-  library's `3` written out, which is the form the reduced profile's bound is usually quoted in.
+  library's `3` written out, in one inequality.
 * **It turns the eight target caps into numerals.**  `limitedTargetCount_*` below.
 
 ## What instantiating does not do
@@ -41,9 +41,9 @@ with nothing tying any of them to the adversary being bounded, so — as
 `HashSigTest.SLHDSA.Composition` checks — a closed certificate is constructible from an address
 key and a public seed at *every* validated parameter set and *every* bundle carrying those nine
 instances, and the bound it names is then at least one.  This profile and this bundle are one such
-pair: `HashSigTest.SLHDSA.LimitedProfile` builds that certificate here, at these numerals, and
-proves that the bound it names is at least one, so at it `limitedAdvantage_le_bound` is
-`probOutput_le_one` with extra steps.  Every deferral of the two general modules is inherited
+pair: `HashSigTest.SLHDSA.LimitedProfile` builds that certificate here and proves that the bound
+it names is at least one, so at it `limitedAdvantage_le_bound` is `probOutput_le_one` with extra
+steps.  Every deferral of the two general modules is inherited
 unchanged: no reduction adversary is constructed, no challenge is recorded, no game's final
 validity is established, neither PRF hop is taken, the undetectability hybrid is not performed,
 the `MCO_ITSR` summand carries no query bound, the same-randomizer residual has no bound at all,
@@ -86,9 +86,9 @@ bound.
 
 ## Labels
 
-Twenty-seven declarations, of which nine are instances.
+Thirty-four declarations, of which nine are instances.
 
-*Profile data* — a statement about the parameter set, the bundle, or a cap at it.  Sixteen:
+*Profile data* — a statement about the parameter set, the bundle, or a cap at it.  Twenty:
 
 * `limitedVp`, `limitedPrimitives`, `limitedVp_params`, `limitedPrimitives_eq`;
 * `limitedParams_d`, `limitedParams_w`, `limitedParams_wotsFUd_coefficient`,
@@ -103,7 +103,8 @@ Twenty-seven declarations, of which nine are instances.
 * `limitedAdvantage_le_bound`, `limitedBound_eq`, `limitedAdvantage_le_summands`;
 * `limitedStrongAdvantage_le_bound_add_sameMessage`, `limitedStrongAdvantage_le_sufBound`.
 
-None is `private`; `limitedPrimitives` carries `@[expose]` and nothing else does.
+None is `private`.  Two carry `@[expose]`, `limitedVp` and `limitedPrimitives`, and the comment
+above each records the errors its removal alone produces.
 
 ## References
 

@@ -33,9 +33,10 @@ which is elaboration-only for the same reason.
 bundle is `Concrete.sha2Primitives` at it.  Instantiating discharges nine carrier instances, turns
 `(p.w - 2 : ℕ)` into `2`, and turns eight caps into numerals.  It changes nothing about the
 `Certificate` hypothesis, and the canary at the end is that sentence as a checked fact: the
-free-certificate construction of `HashSigTest.SLHDSA.Composition` is rebuilt here and applied at
-this bundle, so `limitedAdvantage_le_bound` at the certificate it returns bounds the advantage by
-something at least one.
+free-certificate construction of `HashSigTest.SLHDSA.Composition`, carried through
+`HashSigTest.SLHDSA.SufBound`, is rebuilt here and applied at this bundle, so
+`limitedAdvantage_le_bound` at the certificate it returns bounds the advantage by something at
+least one.
 
 ## The two cells that go dark at this profile, both asserted rather than hidden
 
@@ -53,6 +54,17 @@ something at least one.
   chain hash.  So neither a cap nor an arity can separate those two rows, and what does is the
   game: the eighth summand is an undetectability advantage and the tenth a preimage advantage,
   which is a fact about the two `Certificate` fields' types and is pinned in `Pins`.
+
+## What is here
+
+Fifty-two runtime checks in five groups — the profile's seven parameters and the sizes they derive
+(19), the eight caps and the two structural counts at `d = 1` (10), four arithmetic relations
+between the caps (5), the two dark cells (7), and the summand table checked against `targetCount`
+(11).  Fifty-four `example`s in `Pins`: one for each of the thirty-four declarations the library
+module exports, the five carriers its instances are stated at, the ten games' caps at this bundle,
+the two `T_ℓ` games' arities, the general coincidence of the two WOTS+-`F` caps, and the two
+certificate fields whose types are all that separates them.  Then the vacuity canary — fifteen
+declarations copied from `HashSigTest.SLHDSA.SufBound` and four restatements at this bundle.
 
 ## What the checks cannot catch
 
