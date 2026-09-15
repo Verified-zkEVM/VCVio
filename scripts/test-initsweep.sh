@@ -162,8 +162,16 @@ assert hazard["irLoadTimeCount"] == len(hazard["irOffenders"]), hazard["irLoadTi
 ir_offenders = {entry["name"]: entry for entry in hazard["irOffenders"]}
 assert all(entry["via"] == "ir-only" for entry in ir_offenders.values()), ir_offenders
 
-# One per kind of evidence a mangled name can carry, because a clause that tested only one
-# of the three would accept the other two.
+# One per kind of evidence a mangled name can carry. What these three witnesses actually
+# falsify, measured by deleting each test from `irDeclEvidence` in turn and re-running this
+# matrix: the **argument** test only — without it `countOf` disappears and two assertions
+# below fail, while deleting the entry-point loop or the result test leaves all five offenders
+# and their evidence arrays byte-identical and this matrix green. That is structural and is
+# recorded in `irDeclEvidence`'s docstring: nine of the ten entry points also take an
+# enumeration-class instance and the tenth is `noncomputable`, so on this route the list has
+# no reach the argument test lacks. The entry-point list and the builder test are pinned on
+# the *value* route instead, by `Plain` / `Opaque` / `Initialize` and by `Named` — also
+# checked by mutation.
 #  * an entry point for `Fintype`, which is on the list;
 by_entry_point = [name for name, entry in ir_offenders.items()
                   if entry["entryPoints"] == ["Fintype.card"]]

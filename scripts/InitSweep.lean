@@ -212,6 +212,27 @@ rest about reach.
   a `List (Fin 3 → Bool)` built by nested `List.flatMap` over `[true, false]` is accepted.
   The gate keys on named entry points and on types, so an enumeration written from scratch
   is invisible to it.
+* A **closure** carries the enumeration past all three compiled-declaration tests, because
+  the specialised function then consumes no enumeration class at all. Constructed:
+
+  ```lean
+  @[specialize] def applyIt (f : Unit → Nat) : Nat := f ()
+  def topApply (_u : Unit) : Nat := applyIt (fun _ => (Finset.univ : Finset P8).card)
+  ```
+
+  The module's initialiser assigns exactly one thing, `applyIt._at_.topApply.spec_1`, whose
+  chain forces a closed term built by `Fintype.piFinset`; the gate reports the module clean.
+  The declarations that *do* carry `Fintype.piFinset` in their names are lifted closed terms,
+  which this clause excludes by construction. Three measurements bound it: `@[specialize]`
+  occurs **0** times in the nine swept libraries; without the attribute the same module's
+  initialiser is **empty**; and `List.map`, `List.foldl` and `Option.map` over the same
+  closure each produce **no** eager assignment at all. Closing it would mean testing the
+  lifted closed terms by name, which is measurable and was measured: 3 of the 10864 closed
+  terms in the seven roots carry an entry point, all three under `Fischlin.smallSumCount`,
+  and the emitted C shows none of the three is ever initialised — so that change would buy
+  this route at the price of flagging any module that merely *contains* a monomorphic call to
+  an enumeration function, whether or not anything runs at load. The route is left open and
+  named rather than closed at that price.
 * A **specialisation** is caught only by what its name records, which is the chain of
   functions and not the instance. Three kinds are caught, each constructed and each in the
   fixture: a specialisation of an entry point (`Fintype.card._at_.f.spec_0`), of the other
@@ -295,34 +316,50 @@ def defaultRoots : Array Name :=
 enumerates a type. Listed in source, with the reason each one is here, so the gate's reach
 is auditable where the gate is rather than in a data file.
 
-* `Finset.univ` — the enumeration itself; the elements of a type as a `Finset`.
-* `Fintype.elems` — the field `Finset.univ` projects, reached directly by instance code.
-* `Fintype.card` — forces the enumeration in order to count it.
+Each reason below is what the **emitted C** does for a load-time constant that names it, not
+what its declaration looks like: `lean … -c` over one constant per name, with the initialiser
+chain read. That matters because two of these were first excluded on a reading of the
+declaration — `FinEnum.toList` because it "returns a `List`", `FinEnum.card` because it "is a
+field, so reading it costs a pointer" — and the emitted C contradicted both.
+
+* `Finset.univ` — the enumeration itself; the elements of a type as a `Finset`. Its constant's
+  `_init_` forces a closed term that builds the `Finset`.
+* `Fintype.elems` — compiles to exactly the same thing: the projection is folded through the
+  instance and the constant forces the same closed term `Finset.univ` does (measured, same
+  symbol).
+* `Fintype.card` — forces the enumeration in order to count it; its `_init_` chain ends in a
+  `Fintype.card._at_.…` specialisation of the carrier.
 * `Fintype.piFinset` — the product enumeration; this is what the `2 ^ 128` initialiser
   that motivated this gate actually built.
 * `Fintype.ofFinite` — the noncomputable route from a `Finite` proof to a `Fintype`. A
   constant naming it *and* carrying compiled code means the route that was supposed to
-  erase the enumeration did not.
+  erase the enumeration did not. It is the one name here that no other test would catch on
+  the compiled-declaration route: its type takes no enumeration-class instance.
 * `Fintype.ofEquiv` — transports an enumeration along an equivalence, so it inherits the
   size of the source type.
 * `Set.toFinset` — enumerates the ambient type in order to filter it.
-* `FinEnum.toList` — materialises the list of every element of a `FinEnum`. It is here for
-  the case the class test alone cannot see: `def xs : List Bool := FinEnum.toList Bool` uses
-  an instance that was already materialised by the module that defines it, so the builder
-  filter in `entryPointsOf` drops the instance, and what remains is this call — which builds
-  a fresh list of every element at load. `FinEnum.card` is deliberately **not** here: it is a
-  field of the class, so reading it costs a pointer and the enumeration is paid for by
-  whatever constructed the instance, which the class test does see. (`Fintype`'s counterpart
-  needs no such entry: `Finset.univ` is already the first name on this list.)
+* `FinEnum.toList` — materialises the list of every element of a `FinEnum`, through
+  `List.finRange` and `List.mapTR`. It is needed for the case the class test cannot see:
+  `def xs : List Bool := FinEnum.toList Bool` uses an instance the defining module already
+  materialised, so the builder filter in `entryPointsOf` drops the instance and this call is
+  all that is left.
+* `FinEnum.card` and `FinEnum.equiv` — the class's two fields, and **not** pointer reads. The
+  compiler inlines the instance (`instance : FinEnum Bool := .ofList [true, false] _`) and
+  constant-folds the projection through it, so `def n : Nat := FinEnum.card Bool` emits an
+  `_init_` that re-runs `FinEnum.ofList`'s `xs.dedup` (`List.pwFilter`, quadratic) and
+  `xs.length` over the element list, and never references the instance symbol at all;
+  `FinEnum.equiv` is the same chain with the deduplicated list captured in both closures of
+  the equivalence. `Fintype`'s counterpart of this shape is `Fintype.elems`, above.
 
-This list is an occurrence test on the elaborated term, and on its own it is a test of how
+The list is an occurrence test on the elaborated term, and on its own it is a test of how
+
 the hazard was *spelled*: `instance : Fintype bundle.Y := inferInstanceAs (Fintype (Bytes 16))`
 names `Finset.univ` and `Fintype.piFinset` only because `inferInstanceAs` forces an
 auxiliary that unfolds the instance. `enumerationClasses` is what makes the clause a class
 test. -/
 def enumerationEntryPoints : List Name :=
   [`Finset.univ, `Fintype.elems, `Fintype.card, `Fintype.piFinset, `Fintype.ofFinite,
-    `Fintype.ofEquiv, `Set.toFinset, `FinEnum.toList]
+    `Fintype.ofEquiv, `Set.toFinset, `FinEnum.toList, `FinEnum.card, `FinEnum.equiv]
 
 /-- Classes an instance of which can materialise a collection of the type's elements, so
 that naming one of their *builders* in a load-time value means the collection is built then.
@@ -522,11 +559,15 @@ partial def bindsEnumerationClass : Expr → Bool
 
 /-- Whether `n` *takes* an enumeration-class instance, so that applying it materialises that
 instance's collection. This is the test that survives specialisation: the specialiser records
-the function chain in the mangled name and specialises the instance away, so what a
-compiled declaration returns says nothing, while what the function it came from consumes says
-everything. `Fintype.card`, `Fintype.piFinset`, `FinEnum.toList` and a user's
-`count (α) [Fintype α]` all take one; `useFinset (s : Finset α)` does not, because its caller
-built the enumeration and the caller is tested on its own account. -/
+the function chain in the mangled name and specialises the instance away, so what a compiled
+declaration returns says little, while what the function it came from consumes is a signal
+that survives. It is a sufficient condition and not a complete one — an enumeration can enter
+a specialised function through a **closure** instead, and then no segment consumes a class at
+all; see the `@[specialize]` bullet in the known limits.
+
+`Fintype.card`, `Fintype.piFinset`, `FinEnum.toList` and a user's `count (α) [Fintype α]` all
+take one; `useFinset (s : Finset α)` does not, because its caller built the enumeration and
+the caller is tested on its own account. -/
 def takesEnumerationClassArg (env : Environment) (n : Name) : Bool :=
   match env.find? n with
   | some ci => bindsEnumerationClass ci.type
@@ -539,18 +580,24 @@ instance. There is no value to read — these declarations are not in the enviro
 so the name is all there is, which is why this clause is an addition to the value test and
 not a replacement for it.
 
-The three are complementary, and the third is the one with reach. A membership test on the
-entry-point list catches exactly the names on it — `Fintype.card._at_.f.spec_0`, and
-`FinEnum.toList._at_.f.spec_0` since that name joined the list — and nothing else; the result
-test catches a segment that *builds* an instance (`FinEnum.ofList`, `Pi.instFintype`,
-`Fintype.ofBijective`); and the argument test catches a segment that *consumes* one, which is
-the only one of the three that reaches a function on no list and of no class — a user's
-`count (α) [Fintype α]`, specialised at a fixed carrier and initialised at load. Testing only
-the list is what this clause did when it was written, and the witness that showed it was
-`FinEnum.toList` before it was added: the list grows one name at a time and the hazard does
-not. Measured over this tree: 0 of the 1473 compiled declarations of the seven default roots
-and 0 of the 1 in the test libraries, so the third test ships at no baseline cost, and
-`VCVioInitSweepTestFixtures.Hazard.Specialised` carries one witness per test. -/
+The argument test is the one with reach, and on this route it is the only one whose reach can
+be demonstrated. Of the ten entry points, nine also take an enumeration-class instance, so on
+a segment the list finds nothing the argument test would not; the tenth, `Fintype.ofFinite`,
+is `noncomputable` and has no compiled code, so it can never *be* a segment. The result test
+covers a segment that builds an instance without consuming one (`FinEnum.ofList`,
+`Fin.fintype`), which is a shape this compiler did not produce in any specialisation I could
+construct — a `FinEnum.ofList` call, a wrapper around it, and a `@[specialize]` wrapper all
+fold into lifted closed terms instead. Both are kept because they are sound and free, not
+because a fixture pins them: `scripts/test-initsweep.sh`'s three compiled-declaration
+witnesses pin the argument test only, which was measured by deleting each test in turn and
+re-running the matrix (deleting either of the other two leaves the five offenders and their
+evidence arrays byte-identical). The entry-point list and the builder test *are* pinned on the
+value route, by the `Plain` / `Opaque` / `Initialize` fixtures and by `Named` respectively —
+also measured by mutation.
+
+Measured over this tree: 0 of the 1473 compiled declarations of the seven default roots and 0
+of the 1 in the test libraries carry evidence of any kind, so all three tests ship at no
+baseline cost. -/
 def irDeclEvidence (env : Environment) (n : Name) : Array String := Id.run do
   let segments := specialisationSegments n
   let mut hits : Array String := #[]

@@ -24,7 +24,7 @@ same enumeration through `Pi.instFintype`, which no entry-point name matches; `I
 flagged on the declaration whose registered initialiser body carries the enumeration;
 `Decide` writes no instance at all and enumerates through the `Decidable` instance;
 `Opaque` hides its value from the kernel's view and not from the backend; and `Specialised`
-has no parameterless constant of its own — the work is in a specialisation the compiler
-lifted out of a function, which the environment sweep cannot name and the compiled-declaration
-sweep can.
+has no parameterless constant of its own — its initialiser assigns five specialisations the
+compiler lifted out of three functions, which the environment sweep cannot name and the
+compiled-declaration sweep can, one per kind of evidence such a name carries.
 -/
