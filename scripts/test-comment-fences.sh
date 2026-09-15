@@ -68,6 +68,20 @@ def i' : Char := '"'
 
 /-- Nested /- comments -/ still work. -/
 def j : Nat := 0
+
+-- An ordinary string nested in interpolation keeps its comment delimiters literal.
+def nestedLiteral : String := s!"{("{
+/- literal text -/ stays literal}" : String)}"
+
+-- Escaped opening braces stay in the literal chunk rather than opening code.
+def escapedBrace : String := s!"\{
+/- literal text -/ stays literal}"
+
+-- Quotes and braces in nested raw strings, characters, and identifiers are not syntax.
+def «{quoted}» : Nat := 1
+def nestedRaw : String := s!"{(r#"{
+/- literal text -/ stays literal}"# : String)}"
+def braceCharacter : String := s!"{('{': Char)} {«{quoted}»}"
 LEAN
 git add -A
 git commit -qm 'fixture: accepted shapes'
@@ -203,6 +217,35 @@ LEAN
 expect_status 1 identifier-drift "$CHECKER"
 grep -q "Lib/IdentifierDrift.lean:3:" "$FIXTURE_REPO/identifier-drift.log"
 rm Lib/IdentifierDrift.lean
+
+# Interpolation terms are real Lean code. Literal chunks and nested strings are not.
+cat > Lib/Interpolation.lean <<'LEAN'
+import Lean
+
+def direct : String := s!"{
+/- real comment -/ (1 : Nat)}"
+def nested : String := s!"{s!"{
+/- real comment -/ (2 : Nat)}"}"
+def braces : String := s!"{({ fst := 1, snd := 2 } : Nat × Nat).1 +
+/- real comment -/ 3}"
+def message : Lean.MessageData := m!"{
+/- real comment -/ (4 : Nat)}"
+def format : Lean.Format := f!"{
+/- real comment -/ (5 : Nat)}"
+def separated : String := s! /- prefix annotation -/ "{
+/- real comment -/ (6 : Nat)}"
+def error : Lean.CoreM Unit := throwError "{
+/- real comment -/ (7 : Nat)}"
+def traceMessage : Lean.CoreM Unit := do
+  trace[Elab] "{
+/- real comment -/ (8 : Nat)}"
+LEAN
+expect_status 1 interpolation "$CHECKER"
+for line in 4 6 8 10 12 14 16 19; do
+  grep -q "Lib/Interpolation.lean:$line:" "$FIXTURE_REPO/interpolation.log"
+done
+grep -q 'Comment fences: 8 block comment(s)' "$FIXTURE_REPO/interpolation.log"
+rm Lib/Interpolation.lean
 
 # --- the shapes the positional rule rejects, although they hide nothing -------------------
 

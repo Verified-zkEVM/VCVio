@@ -77,12 +77,20 @@ each of them Lean that elaborates with no error and no warning, so the boundary 
 down rather than rediscovered. Nothing in the repository is written any of those ways: the
 check's baseline is zero and it re-establishes that on every run.
 
+Interpolated strings are code inside each unescaped `{ ... }`, and literal text outside it.
+The scanner recognizes the core `s!`, `m!`, `f!`, `println!`, `dbg_trace`, and `throwError`
+prefix forms, plus `trace[...]` and `Macro.trace[...]`. Nested strings, braces in terms,
+escaped opening braces, and comment delimiters in literal chunks keep their lexical roles.
+Lean's syntax is extensible: custom interpolation syntax and argument-bearing message
+helpers such as `throwErrorAt ref "..."` are not recognized here. Their literal is skipped,
+so comments in their interpolations are outside this lexical gate's coverage.
+
 Scope: every Lean source the repository tracks or would track — tracked files plus untracked
 ones that are not ignored — with the vendored `third_party/` tree excluded. `lakefile.lean`
 is in scope and is the file the rule was written for; it is also outside `scripts/lint.py`'s
 style pass, which covers the library and test roots only.
 
-What this cannot catch. One shape is uncovered everywhere, as the same-line `/--` form is:
+What this cannot catch. The same-line `/--` form has an uncovered layout:
 
 * a comment at the left margin whose declaration is *indented on the next line*.  The
   comment is the last thing on its line, so the rule does not apply; and
@@ -123,6 +131,7 @@ Usage:
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -136,19 +145,40 @@ def block_comments(source: str) -> list[tuple[int, int, int, str]]:
 
     Line and column numbers are 1- and 0-based. Lean's block comments nest and ignore
     string syntax inside themselves, so only `/-` and `-/` are tracked once one is open;
-    outside them, string, raw-string and character literals are skipped whole so their
-    contents cannot be read as delimiters. A comment left unterminated at end of file is
+    outside them, literal string chunks, raw strings and character literals are skipped
+    so their contents cannot be read as delimiters. Recognized interpolated strings
+    resume code scanning inside each unescaped brace pair, including nested strings. A comment left unterminated at end of file is
     reported as closing there, which is what Lean would report too.
     """
     result: list[tuple[int, int, int, str]] = []
     index, size, line = 0, len(source), 1
     line_start = 0
+    interpolations: list[int] = []
+    in_literal = False
+    last_token = ""
     while index < size:
         character = source[index]
         if character == "\n":
             line += 1
             index += 1
             line_start = index
+            continue
+        if in_literal:
+            if character == "\\":
+                if index + 1 < size and source[index + 1] == "\n":
+                    line += 1
+                    line_start = index + 2
+                index += 2
+                continue
+            if character == '"':
+                interpolations.pop()
+                in_literal = False
+                last_token = "<string>"
+            elif character == "{":
+                interpolations[-1] = 1
+                in_literal = False
+                last_token = "{"
+            index += 1
             continue
         if source.startswith("--", index):
             newline = source.find("\n", index)
@@ -178,6 +208,7 @@ def block_comments(source: str) -> list[tuple[int, int, int, str]]:
             continue
         if character == "r" and source.startswith('"', index + 1):
             index, line, line_start = skip_raw_string(source, index + 1, 0, line, line_start)
+            last_token = "<string>"
             continue
         if character == "r" and source.startswith("#", index + 1):
             hashes = 0
@@ -186,14 +217,22 @@ def block_comments(source: str) -> list[tuple[int, int, int, str]]:
             if source.startswith('"', index + 1 + hashes):
                 index, line, line_start = skip_raw_string(source, index + 1 + hashes, hashes,
                                                           line, line_start)
+                last_token = "<string>"
                 continue
         if character == '"':
-            index, line, line_start = skip_string(source, index, line, line_start)
+            if is_interpolated_string(source, index, last_token):
+                interpolations.append(0)
+                in_literal = True
+                index += 1
+            else:
+                index, line, line_start = skip_string(source, index, line, line_start)
+            last_token = "<string>"
             continue
         if character == "'" and not is_identifier_tail(source, index - 1):
             skipped = skip_character_literal(source, index)
             if skipped is not None:
                 index = skipped
+                last_token = "<character>"
                 continue
         if character == "«":
             closing = source.find("»", index)
@@ -203,9 +242,43 @@ def block_comments(source: str) -> list[tuple[int, int, int, str]]:
                     line += 1
                     line_start = offset + 1
             index = end
+            last_token = "<identifier>"
             continue
+        if character.isalpha() or character == "_":
+            end = index + 1
+            while end < size and (is_identifier_tail(source, end) or source[end] == "."):
+                end += 1
+            last_token = source[index:end]
+            index = end
+            continue
+        if interpolations:
+            if character == "{":
+                interpolations[-1] += 1
+            elif character == "}":
+                interpolations[-1] -= 1
+                if interpolations[-1] == 0:
+                    in_literal = True
+        if not character.isspace():
+            last_token = character
         index += 1
     return result
+
+
+
+INTERPOLATED_PREFIXES = {"s!", "m!", "f!", "println!", "dbg_trace", "throwError"}
+
+
+def is_interpolated_string(source: str, index: int, last_token: str) -> bool:
+    """Recognize core prefix forms and the trace macros' bracketed name.
+
+    This is lexical recognition, not Lean's extensible parser. Argument-bearing message
+    helpers and user-defined interpolation syntax need explicit recognition before their
+    brace contents can be checked.
+    """
+    if last_token in INTERPOLATED_PREFIXES:
+        return True
+    return re.search(r"(?:^|[^\w.])(?:trace|Macro\.trace)\s*\[[^\]\n]*\]\s*$",
+                     source[:index]) is not None
 
 
 def is_identifier_tail(source: str, index: int) -> bool:
