@@ -208,12 +208,21 @@ instance : DecidableEq limitedPrimitives.AdrsKey := inferInstanceAs (DecidableEq
 -- `Finset.univ` of `2 ^ 128` sixteen-byte vectors built at the start of every executable that
 -- imports this module, however little of it that executable uses: so written,
 -- `slhdsa_limited_profile_tests` reached 29.5 GB resident in 25 seconds without printing its
--- first check, and none of its checks reads a `Fintype`.  Marking that term `noncomputable` does
--- not fix it — the auxiliary definition the elaborator creates for it is compiled anyway, the
--- generated C still carries the product-`Fintype` call, and the binary still does not reach its
--- first check.  Going through `Fintype.ofFinite`, whose argument is the `Prop`-valued `Finite`
--- and which is noncomputable by construction, leaves no code to generate: measured, the module's
--- generated C then contains no product-`Fintype` call at all and the executable starts at once.
+-- first check, and none of its checks reads a `Fintype`.
+--
+-- Marking that term `noncomputable` does not fix it, and this is the part to state exactly rather
+-- than assert.  Probed with `Lean.IR.findEnvDecl` over the constants this module adds, at this
+-- commit: written plainly, both `instFintypeYLimitedPrimitives` and the `_aux_1` the elaborator
+-- creates for it are computable and both have IR; written `noncomputable`, the instance loses its
+-- IR but `_aux_1` keeps it and stays computable — and `_aux_1` is itself a top-level constant of
+-- non-function type, so the module initialiser builds it whatever the instance is marked.  The
+-- emitted C says the same: `lean -c` gives 41 940 bytes with 59 lines naming the instance and a
+-- `Fintype.piFinset` call for the plain form, and 41 297 bytes with 54 such lines and the same
+-- call for the `noncomputable` one.  Going through `Fintype.ofFinite`, whose argument is the
+-- `Prop`-valued `Finite` and which is noncomputable by construction, creates no `_aux_1` at all —
+-- only a `_proof_1`, which has no IR — and its C is 30 612 bytes naming the instance nowhere and
+-- carrying no `Fintype` call at all, and with it the executable starts at once.  The
+-- `noncomputable` form was compiled and probed but deliberately never run.
 -- The three other carrier instances that are constants are harmless — `SampleableType` is a
 -- sampling program and `Inhabited` is one sixteen-byte vector — and `DecidableEq` is a function.
 /-- Finiteness of the node type, which the `DSPR` advantage asks for.  It is a proof-level
