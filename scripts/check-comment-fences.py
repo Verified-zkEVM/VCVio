@@ -141,7 +141,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 
 def block_comments(source: str) -> list[tuple[int, int, int, str]]:
-    """Every block comment, as `(open line, open column, close line, text after `-/`)`.
+    """Recognized block comments, as `(open line, open column, close line, text after `-/`)`.
 
     Line and column numbers are 1- and 0-based. Lean's block comments nest and ignore
     string syntax inside themselves, so only `/-` and `-/` are tracked once one is open;
@@ -277,7 +277,7 @@ def is_interpolated_string(source: str, index: int, last_token: str) -> bool:
     """
     if last_token in INTERPOLATED_PREFIXES:
         return True
-    return re.search(r"(?:^|[^\w.])(?:trace|Macro\.trace)\s*\[[^\]\n]*\]\s*$",
+    return re.search(r"(?:^|[^\w.])(?:trace|Macro\.trace)\[[^\]\n]*\]\s*$",
                      source[:index]) is not None
 
 

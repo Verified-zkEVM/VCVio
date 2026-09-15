@@ -82,6 +82,11 @@ def «{quoted}» : Nat := 1
 def nestedRaw : String := s!"{(r#"{
 /- literal text -/ stays literal}"# : String)}"
 def braceCharacter : String := s!"{('{': Char)} {«{quoted}»}"
+
+-- `trace[` is a macro token; a spaced function application takes an ordinary string.
+def trace (_ : List Nat) (msg : String) : String := msg
+def spacedTrace : String := trace [1] "{
+/- literal text -/ stays literal}"
 LEAN
 git add -A
 git commit -qm 'fixture: accepted shapes'
