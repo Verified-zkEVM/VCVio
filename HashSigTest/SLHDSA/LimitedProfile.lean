@@ -57,14 +57,16 @@ least one.
 
 ## What is here
 
-Fifty-two runtime checks in five groups — the profile's seven parameters and the sizes they derive
-(19), the eight caps and the two structural counts at `d = 1` (10), four arithmetic relations
-between the caps (5), the two dark cells (7), and the summand table checked against `targetCount`
-(11).  Fifty-four `example`s in `Pins`: one for each of the thirty-four declarations the library
-module exports, the five carriers its instances are stated at, the ten games' caps at this bundle,
-the two `T_ℓ` games' arities, the general coincidence of the two WOTS+-`F` caps, and the two
-certificate fields whose types are all that separates them.  Then the vacuity canary — fifteen
-declarations copied from `HashSigTest.SLHDSA.SufBound` and four restatements at this bundle.
+Fifty-five runtime checks in five groups — the profile's seven parameters and the sizes they
+derive (19), the eight caps and the two structural counts at `d = 1` (10), four arithmetic
+relations between the caps (5), the two dark cells (7), and the summand table checked against
+`targetCount`, against the names its own rows carry, and against the arities of the games those
+names denote (14).  Fifty-four `example`s in `Pins`: one for each of the thirty-four declarations
+the library module exports, the five carriers its instances are stated at, the ten games' caps at
+this bundle, the two `T_ℓ` games' arities, the general coincidence of the two WOTS+-`F` caps, and
+the two certificate fields whose types are all that separates them.  Then the vacuity canary —
+fifteen declarations copied from `HashSigTest.SLHDSA.SufBound` and four restatements at this
+bundle.
 
 ## What the checks cannot catch
 
@@ -119,8 +121,10 @@ One row per summand of `SLHDSA.Security.Summands`, in the source's order: the fi
 `TargetRole` whose `targetCount` caps the game the summand is the advantage of, that cap *at this
 profile* as a numeral, and the arity of the hash the game attacks.  Three rows have no role — the
 two `PRF` hops, which are not tweakable-hash games at all, and the `H_msg` ITSR term, whose game
-has no target cap of any kind.  The caps are checked against `targetCount` below rather than only
-being written here. -/
+has no target cap of any kind.  No column is only written here: the caps are checked against
+`targetCount` below, each role against the name its own row carries, and every one of the nine
+arities against a literal — six of them in `checkDarkCells` and the other three in
+`checkSummandTable`. -/
 
 /-- A summand row: the field name, its game's cap role, that cap at this profile, and the arity of
 the attacked hash. -/
@@ -234,9 +238,11 @@ def checkDarkCells : IO Unit := do
     ((summands.filter (fun r => r.summand == "forsHTcr" || r.summand == "xmssHTcr")).map
       (·.arity) == [some 2, some 2])
 
-/-- **The summand table**, checked against `targetCount` rather than only written down: twelve
-rows in the source's order, three of them roleless, and every row that has a role carrying that
-role's cap at this profile. -/
+/-- **The summand table**, checked rather than only written down: twelve rows in the source's
+order, three of them roleless, every row that has a role carrying that role's cap at this profile
+and carrying the role its own name denotes, and the three arity cells `checkDarkCells` does not
+read — `forsFDspr`, `forsFTcr` and `wotsFTcr`, which are single-node games like the two it does
+read. -/
 def checkSummandTable : IO Unit := do
   ensure "twelve summands" (summands.length == 12)
   ensure "names distinct" ((summands.map (·.summand)).eraseDups.length == 12)
@@ -260,6 +266,26 @@ def checkSummandTable : IO Unit := do
       ["forsFDspr", "forsFTcr"])
   ensure "every cap is positive"
     (summands.all fun r => match r.cap with | some c => 0 < c | none => true)
+  ensure "every role row carries the role its own name denotes"
+    (summands.all fun r => match r.summand, r.role with
+      | _, none => true
+      | "forsFDspr", some role => role == .forsF
+      | "forsFTcr", some role => role == .forsF
+      | "forsHTcr", some role => role == .forsH
+      | "forsTlTcr", some role => role == .forsTl
+      | "wotsFUd", some role => role == .wotsFUd
+      | "wotsFTcr", some role => role == .wotsFTcr
+      | "wotsFPre", some role => role == .wotsFPre
+      | "wotsTlTcr", some role => role == .wotsTl
+      | "xmssHTcr", some role => role == .xmssH
+      | _, some _ => false)
+  ensure "the five single-node games have arity one"
+    ((summands.filter fun r =>
+        ["forsFDspr", "forsFTcr", "wotsFUd", "wotsFTcr", "wotsFPre"].contains r.summand).map
+      (·.arity) == [some 1, some 1, some 1, some 1, some 1])
+  ensure "the two H games have arity two"
+    ((summands.filter fun r => ["forsHTcr", "xmssHTcr"].contains r.summand).map (·.arity) ==
+      [some 2, some 2])
 
 /-! ## The pins
 
