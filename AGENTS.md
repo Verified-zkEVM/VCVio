@@ -285,19 +285,20 @@ beginning of a line, and it does report the `/-` and `/-!` forms of this shape �
 silent on the `/--` form, because a doc comment is part of the command it documents, so the
 command starts at the `/--`, at column 0. So this gate is the only thing that sees the
 doc-comment form anywhere; over the seven proof and three test libraries it deliberately
-repeats for the other forms what the whitespace linter already says, and in four places it
-is the only check of any kind that reads the sources for this, for three different reasons.
+repeats for the other forms what the whitespace linter already says; and in four further
+places it is the only check that can *fail* on any form of the shape, for three different
+reasons.
 `lakefile.lean` and `VCVioComplexity/lakefile.lean` are elaborated by Lake from
 `import Lake`, with no Mathlib linter registered. `Interop/` is not a default target and no
 job builds it. `scripts/` is built on every pull request, but nothing there imports Mathlib,
 so the `weak.` option is silently dropped and the linter is never registered — one Mathlib
 import in one axiom-sweep fixture would flip that. `VCVioComplexity/` sets
 `linter.style.whitespace` explicitly in its own lakefile and the blocking `complexity_backend`
-job builds it, so there the linter does run and does warn; what is missing is the gate, since
-`check-warning-log.py` is invoked only with the proof- and test-library prefixes and
-`VCVioComplexity/scripts/test.sh` pipes its log nowhere. A block comment that opens part-way
-into a line is untouched however many lines it spans — that is an annotation inside an
-expression, a field or a tactic block, and a wrapped field docstring of exactly that shape is
+job builds it, so there the linter does run and does warn — what is missing is not the linter
+but the gate, since `check-warning-log.py` is invoked only with the proof- and test-library
+prefixes and `VCVioComplexity/scripts/test.sh` pipes its log nowhere. A block comment that
+opens part-way into a line is untouched however many lines it spans — that is an annotation
+inside an expression, a field or a tactic block, and a wrapped field docstring of that shape is
 this repository's commonest documentation idiom. The rule is positional, so it does reject a
 comment in front of a term, field, tactic or list element written at column 0; those shapes
 are clean Lean and are asserted, as rejections, in the fixture matrix. Not covered: a
