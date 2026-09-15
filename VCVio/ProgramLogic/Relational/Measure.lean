@@ -19,9 +19,10 @@ impossible output.
 
 `eRelWP` is the quantitative counterpart. It takes a supremum over measure couplings and
 integrates the post-expectation with `lintegral`. Neither definition depends on a finite
-distribution, countable support, or point probabilities. This first layer intentionally provides
-only witness constructors, reflexivity, and monotonicity; sequential bind/gluing rules require a
-measurable family of conditional couplings and are deferred to a later relational-logic PR.
+distribution, countable support, or point probabilities. Witness constructors, reflexivity, and
+monotonicity are provided here. `VCVio.ProgramLogic.Relational.Measure.Bind` gives sequential
+composition with explicit measurable conditional couplings, while
+`VCVio.ProgramLogic.Relational.KernelHandler` lifts local contracts through polynomial programs.
 -/
 
 @[expose] public section
