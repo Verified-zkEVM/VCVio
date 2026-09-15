@@ -376,8 +376,7 @@ theorem limitedBound_eq (c : Certificate limitedPrimitives adv) :
         + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
         + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
         + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv := by
-  rw [Certificate.bound_eq, limitedParams_wotsFUd_coefficient]
-  norm_num
+  rw [Certificate.bound_eq, limitedParams_wotsFUd_coefficient, Nat.cast_ofNat]
 
 /-- **The reduced profile's bound, as one inequality.**  This is the form the corollary is quoted
 in: twelve named advantages, the source's order, the source's `3`, and this profile's `2` where
