@@ -10,12 +10,11 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Cost
 public import Mathlib.Analysis.SpecificLimits.Basic
 
 /-!
-# Expected-cost PMF theorems for Fiat-Shamir with aborts
+# Expected-cost theorems for Fiat-Shamir with aborts
 
 Expected random-oracle query costs of `fsAbortSignLoop` and
-`FiatShamirWithAbort.sign`/`verify`, stated as `tsum` identities over the
-induced output distributions. These drive the aggregate runtime bounds used
-in the security proof.
+`FiatShamirWithAbort.sign`/`verify`, stated as tail-probability identities over the
+induced output measures. These drive the aggregate runtime bounds used in the security proof.
 -/
 
 @[expose] public section
@@ -314,16 +313,16 @@ length `i` returns `none`, meaning that the `(i + 1)`-st attempt is reached. -/
 theorem sign_queryTailProbability_eq_probAllFirstAttemptsAbort
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     {i maxAttempts : ℕ} (hi : i < maxAttempts) :
-    Pr[ fun q ↦ i < q |
-      HasQuery.queryCountDist
+    Pr{let q ← HasQuery.queryCountDist
         (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
           (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
-        runtime] =
+        runtime}[i < q] =
       Pr[= none |
         HasQuery.Program.eval
           (fun [HasQuery (M × Commit →ₒ Chal) m] =>
             fsAbortSignLoop (m := m) ids M pk sk msg i)
           runtime] := by
+  rw [prEvent_eq_evalDist_of_discrete, evalDist_apply_setOf]
   obtain ⟨extra, rfl⟩ := Nat.exists_eq_add_of_lt hi
   exact signLoop_queryTailProbability_eq_probNonePrefix
     (ids := ids) (M := M) (runtime := runtime) (pk := pk) (sk := sk) (msg := msg)
@@ -335,11 +334,10 @@ single-attempt abort probability, as long as `i < maxAttempts`. -/
 theorem sign_queryTailProbability_eq_signAttemptAbortProbability_pow
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     {i maxAttempts : ℕ} (hi : i < maxAttempts) :
-    Pr[ fun q ↦ i < q |
-      HasQuery.queryCountDist
+    Pr{let q ← HasQuery.queryCountDist
         (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
           (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
-        runtime] =
+        runtime}[i < q] =
       (signAttemptAbortProbability (ids := ids) (M := M) runtime pk sk msg) ^ i := by
   rw [sign_queryTailProbability_eq_probAllFirstAttemptsAbort (hr := hr) (hi := hi)]
   exact sign_abortPrefixProbability_eq_signAttemptAbortProbability_pow
@@ -384,17 +382,17 @@ theorem sign_expectedQueries_eq_sum_signAttemptAbortProbability_powers
   exact Finset.sum_congr rfl fun i _ =>
     sign_abortPrefixProbability_eq_signAttemptAbortProbability_pow ids M runtime pk sk msg i
 
-omit [LawfulMonadLiftT m PMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Once `i` reaches `maxAttempts`, the signer never makes more than `i` queries, so the tail
 event has probability zero. -/
 private theorem sign_queryTailProbability_eq_zero_of_le
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     {i maxAttempts : ℕ} (hi : maxAttempts ≤ i) :
-    Pr[ fun q ↦ i < q |
-      HasQuery.queryCountDist
+    Pr{let q ← HasQuery.queryCountDist
         (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
           (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
-        runtime] = 0 := by
+        runtime}[i < q] = 0 := by
+  rw [prEvent_eq_evalDist_of_discrete, evalDist_apply_setOf]
   refine probEvent_eq_zero fun c hc => ?_
   have hc' : c ∈ support
       (AddWriterT.costs
@@ -416,11 +414,10 @@ single-attempt abort probability. -/
 theorem sign_queryTailProbability_le_signAttemptAbortProbability_pow
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     (i maxAttempts : ℕ) :
-    Pr[ fun q ↦ i < q |
-      HasQuery.queryCountDist
+    Pr{let q ← HasQuery.queryCountDist
         (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
           (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
-        runtime] ≤
+        runtime}[i < q] ≤
       (signAttemptAbortProbability (ids := ids) (M := M) runtime pk sk msg) ^ i := by
   by_cases hi : i < maxAttempts
   · rw [sign_queryTailProbability_eq_signAttemptAbortProbability_pow

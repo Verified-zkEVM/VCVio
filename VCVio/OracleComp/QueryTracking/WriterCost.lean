@@ -9,9 +9,12 @@ module
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.QueryTracking.CountingOracle
 public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Map
 public import ToMathlib.Control.WriterT
 public import ToMathlib.Probability.ProbabilityMassFunction.TailSums
+public import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
 public import Mathlib.Algebra.Order.Monoid.Defs
 public import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
 
@@ -210,27 +213,120 @@ end pathwiseCost
 section expectedCost
 
 variable {ω : Type}
-variable [MonadAttach m] [ExactMonadAttach m]
-  [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [EvalDistCompatible m]
+variable [EvalDistSemantics m]
 
 /-- The expected additive cost of an `AddWriterT` computation, obtained by taking the expectation
 of its cost marginal.
 
-This expectation is computed over the base monad's subdistribution semantics on `oa.costs`. In
-particular, if the underlying computation can fail, the missing mass contributes `0`, exactly as
-for other `wp`-style expectations in VCVio. -/
+This is a Lebesgue integral against the base monad's successful-output measure. If the underlying
+computation can fail, the missing mass contributes `0`. -/
 noncomputable def expectedCost
     (oa : AddWriterT ω m α) (val : ω → ENNReal) : ENNReal :=
-  ∑' w : ω, Pr[= w | oa.costs] * val w
+  letI : MeasurableSpace ω := ⊤
+  ∫⁻ w, val w ∂𝒟[oa.costs]
 
 /-- Convenience specialization of [`AddWriterT.expectedCost`] to natural-valued additive costs. -/
 noncomputable abbrev expectedCostNat
     (oa : AddWriterT ℕ m α) : ENNReal :=
   expectedCost oa (fun n ↦ ↑n)
 
-section tailBounds
+/-- The successful mass of the cost marginal, using its canonical discrete measurable space. -/
+noncomputable def costMass (oa : AddWriterT ω m α) : ENNReal :=
+  letI : MeasurableSpace ω := ⊤
+  𝒟[oa.costs] Set.univ
 
-omit [MonadAttach m] [ExactMonadAttach m] [LawfulMonadLiftT m SPMF] [EvalDistCompatible m]
+/-- The mass assigned to a particular cost, using the canonical discrete measurable space. -/
+noncomputable def costMassAt (oa : AddWriterT ω m α) (w : ω) : ENNReal :=
+  letI : MeasurableSpace ω := ⊤
+  𝒟[oa.costs] {w}
+
+/-- Expected cost is monotone in its valuation. -/
+@[gcongr]
+theorem expectedCost_mono (oa : AddWriterT ω m α) {val₁ val₂ : ω → ENNReal}
+    (h : ∀ w, val₁ w ≤ val₂ w) :
+    expectedCost oa val₁ ≤ expectedCost oa val₂ := by
+  let : MeasurableSpace ω := ⊤
+  exact MeasureTheory.lintegral_mono h
+
+/-- A zero valuation has zero expected cost. -/
+@[simp]
+theorem expectedCost_zero (oa : AddWriterT ω m α) :
+    expectedCost oa (fun _ => 0) = 0 := by
+  let : MeasurableSpace ω := ⊤
+  simp [expectedCost]
+
+/-- The expectation of a constant is that constant times the successful mass. -/
+@[simp]
+theorem expectedCost_const (oa : AddWriterT ω m α) (c : ENNReal) :
+    expectedCost oa (fun _ => c) = c * costMass oa := by
+  let : MeasurableSpace ω := ⊤
+  simp [expectedCost, costMass, MeasureTheory.lintegral_const]
+
+/-- A pure writer computation has its initial zero cost in expectation. -/
+@[simp]
+theorem expectedCost_pure [AddMonoid ω] [LawfulMonad m] [LawfulEvalDistSemantics m]
+    (x : α) (val : ω → ENNReal) :
+    expectedCost (pure x : AddWriterT ω m α) val = val 0 := by
+  let : MeasurableSpace ω := ⊤
+  simp [expectedCost, AddWriterT.costs]
+
+/-- The cost of `oa` is at most `w` almost everywhere under its denotational semantics. -/
+noncomputable def AECostAtMost [Preorder ω] (oa : AddWriterT ω m α) (w : ω) : Prop :=
+  letI : MeasurableSpace ω := ⊤
+  ∀ᵐ c ∂𝒟[oa.costs], c ≤ w
+
+/-- The cost of `oa` is at least `w` almost everywhere under its denotational semantics. -/
+noncomputable def AECostAtLeast [Preorder ω] (oa : AddWriterT ω m α) (w : ω) : Prop :=
+  letI : MeasurableSpace ω := ⊤
+  ∀ᵐ c ∂𝒟[oa.costs], w ≤ c
+
+/-- An almost-everywhere bound on the valued cost bounds its expectation. -/
+theorem expectedCost_le_of_ae_le
+    (oa : AddWriterT ω m α) {val : ω → ENNReal} {c : ENNReal}
+    (h : letI : MeasurableSpace ω := ⊤; ∀ᵐ w ∂𝒟[oa.costs], val w ≤ c) :
+    expectedCost oa val ≤ c := by
+  let : MeasurableSpace ω := ⊤
+  calc
+    expectedCost oa val ≤ ∫⁻ _w : ω, c ∂𝒟[oa.costs] :=
+      MeasureTheory.lintegral_mono_ae h
+    _ = c * 𝒟[oa.costs] Set.univ := MeasureTheory.lintegral_const _
+    _ ≤ c * 1 :=
+      mul_le_mul_of_nonneg_left (evalDist_apply_univ_le_one oa.costs) zero_le
+    _ = c := mul_one _
+
+/-- The expected cost is its usual mass-weighted sum on a countable cost space. -/
+theorem expectedCost_eq_tsum [Countable ω]
+    (oa : AddWriterT ω m α) (val : ω → ENNReal) :
+    expectedCost oa val = ∑' w : ω, costMassAt oa w * val w := by
+  let : MeasurableSpace ω := ⊤
+  simp only [expectedCost, costMassAt]
+  rw [MeasureTheory.lintegral_countable']
+  exact tsum_congr fun w ↦ mul_comm _ _
+
+/-- An almost-everywhere cost bound bounds the expected value of every monotone valuation. -/
+theorem expectedCost_le_of_aeCostAtMost [Preorder ω]
+    (oa : AddWriterT ω m α) {w : ω} {val : ω → ENNReal}
+    (h : AECostAtMost oa w) (hval : Monotone val) :
+    expectedCost oa val ≤ val w :=
+  expectedCost_le_of_ae_le oa (h.mono fun _c hc ↦ hval hc)
+
+/-- A lower almost-everywhere cost bound gives a lower expected-cost bound for a lossless
+computation. -/
+theorem le_expectedCost_of_aeCostAtLeast [Preorder ω]
+    (oa : AddWriterT ω m α) {w : ω} {val : ω → ENNReal}
+    (h : AECostAtLeast oa w) (hval : Monotone val)
+    (hmass : costMass oa = 1) :
+    val w ≤ expectedCost oa val := by
+  let : MeasurableSpace ω := ⊤
+  simp only [AECostAtLeast] at h
+  simp only [costMass] at hmass
+  calc
+    val w = ∫⁻ _c : ω, val w ∂𝒟[oa.costs] := by
+      rw [MeasureTheory.lintegral_const, hmass, mul_one]
+    _ ≤ expectedCost oa val :=
+      MeasureTheory.lintegral_mono_ae (h.mono fun c hc ↦ hval hc)
+
+section tailBounds
 
 /-- Tail-sum formula for the natural-valued expected cost of an `AddWriterT` computation:
 
@@ -238,52 +334,61 @@ omit [MonadAttach m] [ExactMonadAttach m] [LawfulMonadLiftT m SPMF] [EvalDistCom
 
 This is the standard discrete expectation identity specialized to the writer-cost marginal. -/
 lemma expectedCostNat_eq_tsum_tail_probs
+    [LawfulMonad m] [LawfulEvalDistSemantics m]
     (oa : AddWriterT ℕ m α) :
-    expectedCostNat oa = ∑' i : ℕ, Pr[ fun c ↦ i < c | oa.costs ] := by
-  unfold expectedCostNat expectedCost
-  rw [ENNReal.tsum_mul_nat_eq_tsum_tail (fun n ↦ Pr[= n | oa.costs])]
+    expectedCostNat oa = ∑' i : ℕ, Pr{let c ← oa.costs}[i < c] := by
+  rw [expectedCostNat, expectedCost_eq_tsum,
+    ENNReal.tsum_mul_nat_eq_tsum_tail (fun n ↦ costMassAt oa n)]
+  let : MeasurableSpace ℕ := ⊤
   refine tsum_congr fun i ↦ ?_
-  rw [probEvent_eq_tsum_indicator]
+  rw [prEvent_eq_evalDist_of_discrete,
+    ← MeasureTheory.Measure.tsum_indicator_apply_singleton 𝒟[oa.costs] {n | i < n}
+      MeasurableSet.of_discrete]
   refine tsum_congr fun n ↦ ?_
-  by_cases h : i < n <;> simp [Set.indicator, h]
+  by_cases h : i < n <;> simp [costMassAt, Set.indicator, h]
 
 /-- Tail domination bounds the expected natural-valued writer cost.
 
 If the tail probability `Pr[i < cost]` is bounded by `a i` for every `i`, then
 `E[cost] ≤ ∑ i, a i`. -/
 lemma expectedCostNat_le_tsum_of_tail_probs_le
+    [LawfulMonad m] [LawfulEvalDistSemantics m]
     (oa : AddWriterT ℕ m α) {a : ℕ → ENNReal}
-    (h : ∀ i : ℕ, Pr[ fun c ↦ i < c | oa.costs ] ≤ a i) :
+    (h : ∀ i : ℕ, Pr{let c ← oa.costs}[i < c] ≤ a i) :
     expectedCostNat oa ≤ ∑' i : ℕ, a i :=
   (expectedCostNat_eq_tsum_tail_probs oa).trans_le (ENNReal.tsum_le_tsum h)
 
 end tailBounds
 
-omit [LawfulMonadLiftT m SPMF] in
 /-- Finite tail-sum formula for natural-valued writer cost under a pathwise upper bound.
 
 If every execution path of `oa` incurs cost at most `n`, then the tail probabilities vanish above
 `n`, so the infinite tail sum truncates to `Finset.range n`. -/
 lemma expectedCostNat_eq_sum_tail_probs_of_pathwiseCostAtMost
-    [LawfulMonad m]
+    [MonadAttach m] [ExactMonadAttach m] [MonadLiftT m SPMF]
+    [LawfulMonad m] [LawfulEvalDistSemantics m] [DiscreteEvalDistCompatible m]
+    [EvalDistCompatible m]
     {oa : AddWriterT ℕ m α} {n : ℕ}
     (h : PathwiseCostAtMost oa n) :
-    expectedCostNat oa = ∑ i ∈ Finset.range n, Pr[ fun c ↦ i < c | oa.costs ] := by
+    expectedCostNat oa = ∑ i ∈ Finset.range n, Pr{let c ← oa.costs}[i < c] := by
   rw [expectedCostNat_eq_tsum_tail_probs]
   symm
   rw [tsum_eq_sum (s := Finset.range n) (fun b hb ↦ ?_)]
   · have hnb : n ≤ b := Nat.le_of_not_lt (by simpa [Finset.mem_range] using hb)
+    rw [prEvent_eq_evalDist_of_discrete, evalDist_apply_setOf]
     refine probEvent_eq_zero fun c hc ↦ ?_
     rw [AddWriterT.costs_def, support_map] at hc
     rcases hc with ⟨z, hz, rfl⟩
     exact not_lt_of_ge (le_trans (h z hz) hnb)
 
-omit [ExactMonadAttach m] [LawfulMonadLiftT m SPMF] in
 lemma expectedCost_le_of_support_bound
+    [MonadAttach m] [MonadLiftT m SPMF]
+    [DiscreteEvalDistCompatible m] [EvalDistCompatible m]
     (oa : AddWriterT ω m α) (val : ω → ENNReal) (c : ENNReal)
     (h : ∀ w ∈ support oa.costs, val w ≤ c) :
     expectedCost oa val ≤ c := by
-  unfold expectedCost
+  let : MeasurableSpace ω := ⊤
+  rw [expectedCost, DiscreteEvalDistCompatible.lintegral_evalDist oa.costs Measurable.of_discrete]
   calc
     ∑' w : ω, Pr[= w | oa.costs] * val w
         ≤ ∑' w : ω, Pr[= w | oa.costs] * c :=
@@ -295,9 +400,10 @@ lemma expectedCost_le_of_support_bound
     _ ≤ 1 * c := by gcongr; exact tsum_probOutput_le_one
     _ = c := one_mul c
 
-omit [LawfulMonadLiftT m SPMF] in
 lemma expectedCost_le_of_pathwiseCostAtMost [AddMonoid ω]
-    [LawfulMonad m] [Preorder ω]
+    [MonadAttach m] [ExactMonadAttach m] [MonadLiftT m SPMF]
+    [LawfulMonad m] [DiscreteEvalDistCompatible m]
+    [EvalDistCompatible m] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} {val : ω → ENNReal}
     (h : PathwiseCostAtMost oa w) (hval : Monotone val) :
     expectedCost oa val ≤ val w := by
@@ -306,13 +412,15 @@ lemma expectedCost_le_of_pathwiseCostAtMost [AddMonoid ω]
   rcases hc with ⟨z, hz, rfl⟩
   exact hval (h z hz)
 
-omit [LawfulMonadLiftT m SPMF] in
 lemma le_expectedCost_of_pathwiseCostAtLeast [AddMonoid ω] [LawfulMonad m] [Preorder ω]
+    [MonadAttach m] [ExactMonadAttach m] [MonadLiftT m SPMF]
+    [DiscreteEvalDistCompatible m] [EvalDistCompatible m]
     {oa : AddWriterT ω m α} {w : ω} {val : ω → ENNReal}
     (h : PathwiseCostAtLeast oa w) (hval : Monotone val)
     (hnf : Pr[⊥ | oa.costs] = 0) :
     val w ≤ expectedCost oa val := by
-  unfold expectedCost
+  let : MeasurableSpace ω := ⊤
+  rw [expectedCost, DiscreteEvalDistCompatible.lintegral_evalDist oa.costs Measurable.of_discrete]
   have hmass : ∑' c : ω, Pr[= c | oa.costs] = 1 := by
     rw [tsum_probOutput_eq_sub (mx := oa.costs), hnf, tsub_zero]
   calc
@@ -327,22 +435,92 @@ lemma le_expectedCost_of_pathwiseCostAtLeast [AddMonoid ω] [LawfulMonad m] [Pre
             exact hval (h z hz)
           · rw [probOutput_eq_zero_of_not_mem_support hc, zero_mul, zero_mul]
 
-omit [MonadAttach m] [ExactMonadAttach m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [EvalDistCompatible m] in
 lemma expectedCost_eq_tsum_outputs_of_costsAs
     [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
+    [DiscreteEvalDistCompatible m]
     {oa : AddWriterT ω m α} {f : α → ω} {val : ω → ENNReal}
     (h : oa.CostsAs f) :
     expectedCost oa val = ∑' a : α, Pr[= a | oa.outputs] * val (f a) := by
   classical
+  let : MeasurableSpace ω := ⊤
   let : DecidableEq ω := Classical.decEq ω
-  unfold expectedCost
-  rw [h]
+  rw [expectedCost, DiscreteEvalDistCompatible.lintegral_evalDist oa.costs Measurable.of_discrete,
+    h]
   simp_rw [probOutput_map_eq_tsum, ← ENNReal.tsum_mul_right, mul_assoc]
   rw [ENNReal.tsum_comm]
   refine tsum_congr fun a ↦ ?_
   rw [ENNReal.tsum_mul_left]
   simp
+
+/-- If cost is a function of the output, its expectation is the integral of that function over
+the output measure. Both intermediate types use their canonical discrete measurable spaces. -/
+lemma expectedCost_eq_lintegral_outputs_of_costsAs
+    [LawfulMonad m] [LawfulEvalDistSemantics m]
+    {oa : AddWriterT ω m α} {f : α → ω} {val : ω → ENNReal}
+    (h : oa.CostsAs f) :
+    expectedCost oa val =
+      letI : MeasurableSpace α := ⊤
+      ∫⁻ a, val (f a) ∂𝒟[oa.outputs] := by
+  let : MeasurableSpace ω := ⊤
+  let : MeasurableSpace α := ⊤
+  rw [expectedCost, h,
+    lintegral_evalDist_map oa.outputs Measurable.of_discrete Measurable.of_discrete]
+
+/-- A pathwise upper bound becomes an almost-everywhere upper bound under lossless
+`OracleComp` measure semantics. -/
+lemma aeCostAtMost_of_pathwiseCostAtMost
+    {ι : Type} {spec : OracleSpec ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    [AddMonoid ω] [Preorder ω]
+    {oa : AddWriterT ω (OracleComp spec) α} {w : ω}
+    (h : PathwiseCostAtMost oa w) : AECostAtMost oa w := by
+  let : MeasurableSpace ω := ⊤
+  apply OracleComp.ae_of_forall_mem_support oa.costs
+  intro c hc
+  rw [AddWriterT.costs_def, support_map] at hc
+  obtain ⟨z, hz, rfl⟩ := hc
+  exact h z hz
+
+/-- A pathwise lower bound becomes an almost-everywhere lower bound under lossless
+`OracleComp` measure semantics. -/
+lemma aeCostAtLeast_of_pathwiseCostAtLeast
+    {ι : Type} {spec : OracleSpec ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    [AddMonoid ω] [Preorder ω]
+    {oa : AddWriterT ω (OracleComp spec) α} {w : ω}
+    (h : PathwiseCostAtLeast oa w) : AECostAtLeast oa w := by
+  let : MeasurableSpace ω := ⊤
+  apply OracleComp.ae_of_forall_mem_support oa.costs
+  intro c hc
+  rw [AddWriterT.costs_def, support_map] at hc
+  obtain ⟨z, hz, rfl⟩ := hc
+  exact h z hz
+
+/-- A pathwise exact cost has exactly that expectation under lossless measure semantics for
+`OracleComp`. -/
+lemma expectedCost_eq_of_pathwiseCostEqOnSupport
+    {ι : Type} {spec : OracleSpec ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    [AddMonoid ω] [PartialOrder ω]
+    (oa : AddWriterT ω (OracleComp spec) α) {w : ω} (val : ω → ENNReal)
+    (h : PathwiseCostEqOnSupport oa w) :
+    expectedCost oa val = val w := by
+  let : MeasurableSpace ω := ⊤
+  have hcost (c : ω) (hc : c ∈ support oa.costs) : c = w := by
+    rw [AddWriterT.costs_def, support_map] at hc
+    obtain ⟨z, hz, rfl⟩ := hc
+    exact le_antisymm (h.atMost z hz) (h.atLeast z hz)
+  have hdenote : 𝒟[oa.costs] = MeasureTheory.Measure.dirac w := by
+    have hbind := OracleComp.evalDist_bind_congr_of_support oa.costs
+      (fun c => pure c) (fun _ => pure w) fun c hc => by simp [hcost c hc]
+    simp only [bind_pure] at hbind
+    rw [evalDist_bind_const, OracleComp.evalDist_apply_univ_eq_one, one_smul,
+      evalDist_pure] at hbind
+    exact hbind
+  rw [expectedCost, hdenote, MeasureTheory.lintegral_dirac]
 
 end expectedCost
 

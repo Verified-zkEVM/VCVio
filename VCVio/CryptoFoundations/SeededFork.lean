@@ -194,6 +194,8 @@ theorem isPerIndexQueryBound_seededForkWithSeedValue
 section generateSeedCoverage
 
 variable [∀ i, SampleableType (spec.Range i)]
+variable [∀ i, MeasurableSpace (spec.Range i)]
+  [∀ i, DiscreteMeasurableSpace (spec.Range i)]
 
 private lemma expectedQueryCount_seededForkWithSeedValue_le_aux [spec.DecidableEq] [Finite ι]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
@@ -267,9 +269,9 @@ theorem seededForkExpectedQueryWork_le
       ((js.map fun j => qb j * sampleCost j).sum + sampleCost i + qb i : ENNReal) :=
   add_le_add
     (add_le_add
-      (AddWriterT.expectedCostNat_le_of_queryBoundedAboveBy
-        (generateSeed_queryCostExactly (spec := spec) qb js sampleCost hSample).toAbove)
-      (AddWriterT.expectedCostNat_le_of_queryBoundedAboveBy (hSample i).toAbove))
+      (AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _
+        (generateSeed_queryCostExactly (spec := spec) qb js sampleCost hSample)).le
+      (AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _ (hSample i)).le)
     (expectedQueryCount_seededForkWithSeedValue_le
       (main := main) (qb := qb) (js := js) (i := i) (cf := cf) hmain hjs)
 

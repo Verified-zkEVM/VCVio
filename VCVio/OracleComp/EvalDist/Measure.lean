@@ -7,8 +7,9 @@ Authors: Devon Tuma
 module
 public import VCVio.OracleComp.EvalDist
 public import VCVio.EvalDist.Monad.Measure
-public import VCVio.OracleComp.EvalDist.MeasureSpec
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 import ToMathlib.Probability.UniformOn
+import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Measure reasoning from structural support
@@ -43,6 +44,29 @@ theorem evalDist_bind_congr_of_support {ι α β : Type} {spec : OracleSpec.{0, 
     apply Filter.Eventually.of_forall
     intro u
     exact ih u fun a ha => h a ((mem_support_bind_iff _ _ _).mpr ⟨u, by simp, ha⟩)
+
+/-- A predicate that holds on every structurally reachable output holds almost everywhere under
+the lossless measure semantics. This is the general bridge for converting pathwise invariants to
+measure-theoretic bounds. -/
+theorem ae_of_forall_mem_support
+    {ι α : Type} {spec : OracleSpec.{0, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec]
+    [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : OracleComp spec α) (p : α → Prop) (h : ∀ x ∈ support mx, p x) :
+    ∀ᵐ x ∂𝒟[mx], p x := by
+  let : IsProbabilityMeasure 𝒟[mx] :=
+    ⟨OracleComp.evalDist_apply_univ_eq_one mx⟩
+  rw [MeasureTheory.ae_iff_prob_eq_one Measurable.of_discrete]
+  rw [← prEvent_eq_evalDist_of_discrete]
+  change 𝒟[mx >>= (pure ∘ p)] {True} = 1
+  rw [OracleComp.evalDist_bind_congr_of_support mx (pure ∘ p) (fun _ => pure True)]
+  · rw [evalDist_bind_const, OracleComp.evalDist_apply_univ_eq_one, one_smul,
+      evalDist_pure]
+    simp
+  · intro x hx
+    simp [h x hx]
 
 /-- Structural support is positive singleton mass when every oracle response has positive
 singleton mass. The full-support hypothesis belongs to the chosen measure interpretation;

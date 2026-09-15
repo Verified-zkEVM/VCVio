@@ -24,6 +24,18 @@ open MeasureTheory ProbabilityTheory
 
 universe u v
 
+namespace OracleSpec
+
+/-- The uniform measure interpretation induced by an existing uniform oracle specification. -/
+noncomputable instance (priority := 50) instIsUniformMeasureSpecOfIsUniformSpec
+    {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [IsUniformSpec spec] : IsUniformMeasureSpec spec :=
+  IsUniformMeasureSpec.ofFintypeInhabited spec
+
+end OracleSpec
+
 namespace OracleSpec.IsUniformMeasureSpec
 
 variable {ι : Type u} {spec : OracleSpec.{u, v} ι}
