@@ -90,9 +90,7 @@ theorem correct :
   have hcomm : ∀ (a b : F), a • (b • g) = b • (a • g) := by
     intro a b; rw [← mul_smul, mul_comm, mul_smul]
   intro msg
-  simp only [ProbCompRuntime.probComp, ProbCompRuntime.evalSPMF,
-    SPMFSemantics.ofMonadLift_evalSPMF]
-  rw [probOutput_evalSPMF]
+  rw [ProbCompRuntime.probComp_evalDist, evalDist_apply_singleton]
   simp [AsymmEncAlg.CorrectExp, hashedElGamal, hcomm,
     probOutput_bind_const, probOutput_map_const]
 

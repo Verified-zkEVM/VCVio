@@ -56,19 +56,20 @@ def implicitRejection {K C KPRF : Type} (prf : PRFScheme KPRF C K) : RejectionPo
   keygen := prf.keygen
   onReject := fun kPrf c => some (prf.eval kPrf c)
 
-/-- Bundled subprobabilistic semantics for an FO hash world, obtained by hiding the
+/-- Bundled measure semantics for an FO hash world, obtained by hiding the
 variant-specific cache after running the public-randomness-plus-hash simulation. -/
-noncomputable def spmfSemantics {ι : Type} {hashOracleSpec : OracleSpec ι}
+noncomputable def measureSemantics {ι : Type} {hashOracleSpec : OracleSpec ι}
     {M PK C R K : Type} (variant : Variant hashOracleSpec M PK C R K) :
-    SPMFSemantics (OracleComp (unifSpec + hashOracleSpec)) :=
-  SPMFSemantics.withStateOracle variant.queryImpl variant.initCache
+    MeasureSemanticsVia (OracleComp (unifSpec + hashOracleSpec)) :=
+  MeasureSemanticsVia.withStateOracle variant.queryImpl variant.initCache
 
 /-- Full public-randomness runtime for an FO hash world. -/
 noncomputable def runtime {ι : Type} {hashOracleSpec : OracleSpec ι}
     {M PK C R K : Type} (variant : Variant hashOracleSpec M PK C R K) :
     ProbCompRuntime (OracleComp (unifSpec + hashOracleSpec)) where
-  toSPMFSemantics := spmfSemantics variant
+  toMeasureSemanticsVia := measureSemantics variant
   toProbCompLift := ProbCompLift.ofMonadLift _
+  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
 
 /-- Generic FO construction parameterized by a hash world and a rejection policy. -/
 def scheme
@@ -469,9 +470,10 @@ noncomputable def runtime
     {M R KD K : Type}
     [DecidableEq M] [DecidableEq KD] [SampleableType R] [SampleableType K] :
     ProbCompRuntime (OracleComp (oracleSpec M R KD K)) where
-  toSPMFSemantics := SPMFSemantics.withStateOracle
+  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
     (hashImpl := queryImpl (M := M) (R := R) (KD := KD) (K := K))
     ((∅, ∅) : QueryCache M R KD K)
   toProbCompLift := ProbCompLift.ofMonadLift _
+  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
 
 end UTransform

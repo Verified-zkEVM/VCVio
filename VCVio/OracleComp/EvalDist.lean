@@ -609,6 +609,7 @@ lemma supportWhen_mono {o₁ o₂ : QueryImpl spec Set}
       exact ⟨u, h q hu, ih u hy⟩
 
 /-- The historical `SetM` interpretation agrees with operation-indexed reachability. -/
+@[deprecated "VCVio retiring support API: use reachableWhen" (since := "2026-09-15")]
 theorem supportWhen_eq_reachableWhen (o : QueryImpl spec Set) (oa : OracleComp spec α) :
     supportWhen o oa = reachableWhen o oa := by
   induction oa using OracleComp.inductionOn with

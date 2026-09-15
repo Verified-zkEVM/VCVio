@@ -244,8 +244,9 @@ namespace TTransform
 noncomputable def runtime
     [DecidableEq M] [SampleableType R] :
     ProbCompRuntime (OracleComp (TTransform.oracleSpec M R)) where
-  toSPMFSemantics := SPMFSemantics.withStateOracle TTransform.queryImpl ∅
+  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle TTransform.queryImpl ∅
   toProbCompLift := ProbCompLift.ofMonadLift _
+  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
 
 /-- Structural query bound for T-transform OW-PCVA adversaries: uniform-sampling queries are
 unrestricted, while `qH`, `qP`, and `qV` bound the hash, plaintext-checking, and validity

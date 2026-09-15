@@ -118,8 +118,7 @@ private lemma evalDist_simulateQ_randomOracle_run'_pure_eq_tableExtending
   let : MeasurableSpace (D → R) := ⊤
   simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure,
     evalWithAnswerFn_pure]
-  rw [evalDist_bind_const, SampleableType.evalDist_uniformSample]
-  simp
+  rw [OracleComp.evalDist_bind_const]
 
 /-- Inductive `query`/`bind` step for `evalDist_simulateQ_randomOracle_run'_eq_tableExtending`:
 given the eager-table identity for every continuation `k u`, it holds for `liftM (query t) >>= k`.

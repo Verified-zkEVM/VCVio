@@ -62,11 +62,27 @@ theorem ae_of_forall_mem_support
   rw [← prEvent_eq_evalDist_of_discrete]
   change 𝒟[mx >>= (pure ∘ p)] {True} = 1
   rw [OracleComp.evalDist_bind_congr_of_support mx (pure ∘ p) (fun _ => pure True)]
-  · rw [evalDist_bind_const, OracleComp.evalDist_apply_univ_eq_one, one_smul,
-      evalDist_pure]
+  · rw [OracleComp.evalDist_bind_const, evalDist_pure]
     simp
   · intro x hx
     simp [h x hx]
+
+/-- Compare event masses after a common oracle computation when the continuation bound only
+needs to hold on structurally reachable outputs. This is the operational specialization of
+`evalDist_bind_apply_mono`: structural reachability supplies its almost-everywhere premise. -/
+theorem evalDist_bind_apply_mono_of_support
+    {ι α β : Type} {spec : OracleSpec.{0, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec]
+    [MeasurableSpace β]
+    (mx : OracleComp spec α) (f g : α → OracleComp spec β)
+    {event : Set β} (hevent : MeasurableSet event)
+    (hfg : ∀ a ∈ support mx, 𝒟[f a] event ≤ 𝒟[g a] event) :
+    𝒟[mx >>= f] event ≤ 𝒟[mx >>= g] event := by
+  let : MeasurableSpace α := ⊤
+  exact evalDist_bind_apply_mono mx f g .of_discrete .of_discrete hevent
+    (ae_of_forall_mem_support mx _ hfg)
 
 /-- Structural support is positive singleton mass when every oracle response has positive
 singleton mass. The full-support hypothesis belongs to the chosen measure interpretation;
@@ -121,6 +137,33 @@ theorem mem_support_iff_evalDist_singleton_pos_of_fullSupport
         obtain ⟨u, hu⟩ := hs
         exact ⟨u, mem_support_query t u, (ih u).2 (pos_iff_ne_zero.mpr hu)⟩
 
+/-- An event has probability one exactly when it contains every structurally reachable output,
+provided every oracle response has positive singleton mass. -/
+theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
+    {ι α : Type} {spec : OracleSpec.{0, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec]
+    (hfull : ∀ t (u : spec.Range t),
+      0 < OracleSpec.IsMeasureSpec.toMeasure t {u})
+    [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : OracleComp spec α) (p : α → Prop) :
+    𝒟[mx] {x | p x} = 1 ↔ ∀ x ∈ support mx, p x := by
+  let : IsProbabilityMeasure 𝒟[mx] :=
+    ⟨OracleComp.evalDist_apply_univ_eq_one mx⟩
+  rw [← MeasureTheory.ae_iff_prob_eq_one Measurable.of_discrete]
+  constructor
+  · intro hp x hx
+    by_contra hpx
+    have hxzero : 𝒟[mx] {x} = 0 :=
+      measure_mono_null (by
+        intro y hy
+        simpa [Set.mem_singleton_iff.mp hy] using hpx)
+        (MeasureTheory.ae_iff.mp hp)
+    exact (ne_of_gt
+      ((mem_support_iff_evalDist_singleton_pos_of_fullSupport hfull mx x).mp hx)) hxzero
+  · exact ae_of_forall_mem_support mx p
+
 /-- Under native uniform oracle semantics, structural reachability is positive singleton mass. -/
 theorem mem_support_iff_evalDist_singleton_pos
     {ι : Type} {spec : OracleSpec ι}
@@ -132,6 +175,25 @@ theorem mem_support_iff_evalDist_singleton_pos
     x ∈ support mx ↔ 0 < 𝒟[mx] {x} := by
   apply mem_support_iff_evalDist_singleton_pos_of_fullSupport
     (fun t u => ?_) mx x
+  have heq : OracleSpec.IsMeasureSpec.toMeasure (spec := spec) t =
+      uniformOn (Set.univ : Set (spec.Range t)) :=
+    OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform t
+  rw [heq, ProbabilityTheory.uniformOn_univ_apply_singleton]
+  exact ENNReal.inv_pos.mpr (by simp)
+
+/-- Under native uniform oracle semantics, an event has probability one exactly when it contains
+every structurally reachable output. -/
+@[grind =]
+theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support
+    {ι α : Type} {spec : OracleSpec ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [OracleSpec.IsUniformMeasureSpec spec]
+    [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : OracleComp spec α) (p : α → Prop) :
+    𝒟[mx] {x | p x} = 1 ↔ ∀ x ∈ support mx, p x := by
+  apply evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
+  intro t u
   have heq : OracleSpec.IsMeasureSpec.toMeasure (spec := spec) t =
       uniformOn (Set.univ : Set (spec.Range t)) :=
     OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform t

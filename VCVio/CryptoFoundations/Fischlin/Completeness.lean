@@ -278,11 +278,12 @@ used by the bundled `withStateOracle` runtime. -/
 omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
 /-- The Fischlin runtime denotes a surface computation by simulating it with `fischlinImpl`
 starting from the empty cache and discarding the final cache. -/
-private lemma runtime_evalSPMF_eq
-    {α : Type} (mx : OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M) α) :
-    (runtime ρ b M).evalSPMF mx = 𝒮[(simulateQ (fischlinImpl ρ b M) mx).run' ∅] := by
-  unfold runtime ProbCompRuntime.evalSPMF SPMFSemantics.evalSPMF SemanticsVia.denote
-  simp only [SPMFSemantics.withStateOracle]
+private lemma runtime_evalDist_eq
+    {α : Type} [MeasurableSpace α]
+    (mx : OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M) α) :
+    (runtime ρ b M).evalDist mx = 𝒟[(simulateQ (fischlinImpl ρ b M) mx).run' ∅] := by
+  unfold runtime ProbCompRuntime.evalDist
+  simp only [MeasureSemanticsVia.withStateOracle_evalDist]
   rfl
 
 /-- The pure-probability model game `G` for Fischlin completeness.
@@ -1141,7 +1142,7 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
 
 omit [SampleableType Chal] in
 /-- **Residual: full-game distribution surgery.** After collapsing the random-oracle runtime to a
-`StateT`-simulation on the empty cache (`runtime_evalSPMF_eq`), the entire Fischlin game
+`StateT`-simulation on the empty cache (`runtime_evalDist_eq`), the entire Fischlin game
 `keygen >>= sign >>= verify`, observed as a `ProbComp Bool` via `StateT.run'`, has the same
 distribution as `modelGame`.
 
@@ -1187,7 +1188,7 @@ field separates repetitions), so each is a cache miss whose answer is a fresh un
 matching `fischlinUnifSearch`. The chosen transcript's hash was cached during `sign`, so the
 verifier's re-query is a cache hit returning that same value, matching the model's direct read. -/
 private lemma fischlin_game_eq_model (msg : M) :
-    Pr[= true | (runtime ρ b M).evalSPMF do
+    (runtime ρ b M).evalDist (do
       let (pk, sk) ←
         (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).keygen
@@ -1195,10 +1196,10 @@ private lemma fischlin_game_eq_model (msg : M) :
         (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).sign pk sk msg
       (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
-        σ hr ρ b S M).verify pk msg sig]
-      = Pr[= true | modelGame σ hr ρ b S] := by
-  rw [runtime_evalSPMF_eq]
-  rw [probOutput_evalSPMF, probOutput_def, probOutput_def,
+        σ hr ρ b S M).verify pk msg sig) {true}
+      = 𝒟[modelGame σ hr ρ b S] {true} := by
+  rw [runtime_evalDist_eq, evalDist_apply_singleton, evalDist_apply_singleton,
+    probOutput_def, probOutput_def,
     fischlin_game_run'_eq_modelGame σ hr ρ b S M msg]
 
 /-- Support membership for the pure-probability search: any kept triple `(ω, resp, h)` has its
@@ -1430,7 +1431,7 @@ Unlike the Fiat-Shamir transform (which is perfectly complete), the Fischlin tra
 has a non-zero completeness error because the prover's proof-of-work search may fail
 to find hash values whose sum is at most `S`. -/
 theorem almostComplete (hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (msg : M) :
-    Pr[= true | (runtime ρ b M).evalSPMF do
+    (runtime ρ b M).evalDist (do
       let (pk, sk) ←
         (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).keygen
@@ -1438,13 +1439,14 @@ theorem almostComplete (hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (msg : M) :
         (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).sign pk sk msg
       (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
-        σ hr ρ b S M).verify pk msg sig]
+        σ hr ρ b S M).verify pk msg sig) {true}
     ≥ 1 - completenessError ρ b S (FinEnum.card Chal) := by
   rw [ge_iff_le, fischlin_game_eq_model σ hr ρ b S M msg]
   have hbound := model_reject_le σ hr ρ b S M hρ hc msg
-  set P : ℝ≥0∞ := Pr[= true | modelGame σ hr ρ b S] with hP
+  rw [← evalDist_apply_singleton] at hbound
+  set P : ℝ≥0∞ := 𝒟[modelGame σ hr ρ b S] {true} with hP
   -- From `1 - P ≤ e` and `P ≤ 1` conclude `1 - e ≤ P`.
-  have hP1 : P ≤ 1 := probOutput_le_one
+  have hP1 : P ≤ 1 := MeasureTheory.measure_le_one _ _
   rw [tsub_le_iff_right] at hbound ⊢
   rwa [add_comm] at hbound
 

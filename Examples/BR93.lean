@@ -78,8 +78,7 @@ theorem correct (hcorrect : tdp.Correct) :
     let c ← (do let r ← $ᵗ Rand; pure (tdp.forward x.1 r, hash r + msg))
     let msg' ← pure (some (c.2 - hash (tdp.inverse x.2 c.1)))
     pure (decide (msg' = some msg))
-  change Pr[= true | ProbCompRuntime.probComp.evalSPMF mx] = 1
-  simp only [mx]
+  rw [ProbCompRuntime.probComp_evalDist]
   have huniq : ∀ y ∈ support mx, y = true := by
     intro y hy
     rw [mem_support_bind_iff] at hy
@@ -95,7 +94,7 @@ theorem correct (hcorrect : tdp.Correct) :
     obtain rfl := hmsg'
     obtain rfl := hy
     simp [hcorrect pk sk hpksk r]
-  change Pr[= true | mx] = 1
+  rw [evalDist_apply_singleton]
   exact probOutput_eq_one_of_support_subset_singleton
     (NeverFail.probFailure_eq_zero (mx := mx)) huniq
 

@@ -41,7 +41,7 @@ The standard construction of a message authentication code from a pseudorandom f
 
 @[expose] public section
 
-open OracleComp OracleSpec ENNReal
+open MeasureTheory OracleComp OracleSpec ENNReal
 
 namespace PRFScheme
 
@@ -60,20 +60,15 @@ def toMacAlg [DecidableEq R] (prf : PRFScheme K D R) : MacAlg ProbComp D K R whe
 theorem toMacAlg_perfectlyComplete [DecidableEq R] (prf : PRFScheme K D R) :
     prf.toMacAlg.PerfectlyComplete ProbCompRuntime.probComp := by
   intro msg
-  rw [ProbCompRuntime.probComp_evalSPMF, probOutput_evalSPMF]
-  simp only [toMacAlg, bind_pure_comp, map_eq_bind_pure_comp,
-    probOutput_eq_one_iff, probFailure_of_liftM_PMF, MonadAttach.support_bind,
-    MonadAttach.mem_support, Function.comp_apply, MonadAttach.support_pure, true_and]
-  obtain ⟨a, ha⟩ := OracleComp.support_nonempty prf.keygen
-  ext b
-  simp only [Set.mem_iUnion, Set.mem_singleton_iff]
-  constructor
-  · rintro ⟨_, _, i, hi, hb⟩
-    subst i
-    simpa using hb
-  · intro hb
-    subst b
-    exact ⟨a, ha, prf.eval a msg, rfl, by simp⟩
+  let : MeasurableSpace K := ⊤
+  rw [ProbCompRuntime.probComp_evalDist]
+  simp only [toMacAlg, monad_norm, decide_true]
+  rw [show (do let k ← prf.keygen; pure true) = (fun _ => true) <$> prf.keygen by
+    simp only [map_eq_bind_pure_comp, Function.comp_def]]
+  rw [evalDist_map prf.keygen measurable_const,
+    Measure.map_apply measurable_const (measurableSet_singleton true)]
+  rw [show (fun _ : K => true) ⁻¹' {true} = Set.univ by ext; simp,
+    OracleComp.evalDist_apply_univ_eq_one]
 
 /-! ## Security Reduction (Boneh-Shoup Theorem 6.2)
 
@@ -181,8 +176,9 @@ theorem prfRealExp_macToPRFReduction_eq_UF_CMA_Exp (prf : PRFScheme K D R)
     Pr[= true | prf.prfRealExp (macToPRFReduction prf adversary)] =
       MacAlg.UF_CMA_Advantage ProbCompRuntime.probComp adversary := by
   rw [prfRealExp_macToPRFReduction_eq_body]
-  unfold MacAlg.UF_CMA_Advantage
-  rw [probOutput_def, probOutput_def]
+  rw [← evalDist_apply_singleton]
+  unfold MacAlg.UF_CMA_Advantage MacAlg.UF_CMA_Exp
+  rw [ProbCompRuntime.probComp_evalDist]
   rfl
 
 /-- The ideal experiment decomposes as: run the forger (under the random-oracle simulation

@@ -517,8 +517,7 @@ lemma expectedCost_eq_of_pathwiseCostEqOnSupport
     have hbind := OracleComp.evalDist_bind_congr_of_support oa.costs
       (fun c => pure c) (fun _ => pure w) fun c hc => by simp [hcost c hc]
     simp only [bind_pure] at hbind
-    rw [evalDist_bind_const, OracleComp.evalDist_apply_univ_eq_one, one_smul,
-      evalDist_pure] at hbind
+    rw [OracleComp.evalDist_bind_const, evalDist_pure] at hbind
     exact hbind
   rw [expectedCost, hdenote, MeasureTheory.lintegral_dirac]
 

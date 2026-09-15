@@ -122,4 +122,15 @@ theorem evalDist_apply_univ_eq_one [∀ t, MeasurableSpace (spec.Range t)]
   change (PFunctor.FreeM.denote mx) Set.univ = 1
   exact (PFunctor.FreeM.isProbabilityMeasure_denote mx).measure_univ
 
+/-- Discarding the result of a lossless oracle computation leaves the continuation's output
+measure unchanged. The discarded result type needs no ambient measurable-space instance. -/
+@[simp]
+theorem evalDist_bind_const [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec] {α β : Type v} [MeasurableSpace β]
+    (mx : OracleComp spec α) (my : OracleComp spec β) :
+    𝒟[mx >>= fun _ => my] = 𝒟[my] := by
+  let : MeasurableSpace α := ⊤
+  rw [_root_.evalDist_bind_const, evalDist_apply_univ_eq_one, one_smul]
+
 end OracleComp

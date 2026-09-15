@@ -49,6 +49,10 @@ def simulateQ' [LawfulMonad r] (impl : QueryImpl spec r) : OracleComp spec →�
   toFun_pure' _ := simulateQ_pure _ _
   toFun_bind' _ _ := simulateQ_bind _ _ _
 
+@[simp, grind =]
+lemma simulateQ'_apply [LawfulMonad r] (impl : QueryImpl spec r) (mx : OracleComp spec α) :
+    simulateQ' impl mx = simulateQ impl mx := rfl
+
 @[simp, grind =, game_rule]
 lemma simulateQ_query [LawfulMonad r] (q : OracleQuery spec α) :
     simulateQ impl (liftM q) = q.cont <$> (impl q.input) := by

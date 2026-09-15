@@ -533,7 +533,7 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
   induction oa using OracleComp.inductionOn generalizing s c sB with
   | pure b =>
     simp only [simulateQ_pure, StateT.run_pure, map_pure]
-    rw [evalDist_bind_const, hTable]
+    rw [_root_.evalDist_bind_const, hTable]
     simp
   | query_bind t f ih =>
     rw [multipleBad_run_query_bind', map_bind]
@@ -1080,7 +1080,7 @@ lemma evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad
       𝒟[sampleFine] Set.univ •
         𝒟[(simulateQ (multipleBadTableHandler (sessionsPerTag := sessionsPerTag) g) oa).run p] := by
   simp_rw [map_bind, simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq]
-  exact evalDist_bind_const _ _
+  exact _root_.evalDist_bind_const _ _
 
 omit [Nonempty TagId] [SampleableType Digest] in
 /-- **Fine→original eager-table bridge.** Marginalizing the Fine-run output distribution over a

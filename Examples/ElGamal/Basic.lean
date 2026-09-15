@@ -100,9 +100,7 @@ theorem correct [DecidableEq G] :
     rw [this, add_sub_cancel_right]
   simp only [AsymmEncAlg.PerfectlyCorrect]
   intro msg
-  simp only [ProbCompRuntime.probComp, ProbCompRuntime.evalSPMF,
-    SPMFSemantics.ofMonadLift_evalSPMF]
-  rw [probOutput_evalSPMF]
+  rw [ProbCompRuntime.probComp_evalDist, evalDist_apply_singleton]
   simp [AsymmEncAlg.CorrectExp, elGamalAsymmEnc, hcancel,
     probOutput_bind_const, probOutput_map_const]
 
@@ -297,8 +295,7 @@ private lemma IND_CPA_OneTime_DDHReduction_rand_half
         simpa [probOutput_uniformSample] using hhalf pk)
     _ = 1 / 2 := by
       let : MeasurableSpace G := ⊤
-      rw [← evalDist_apply_singleton, evalDist_bind_const,
-        OracleComp.evalDist_apply_univ_eq_one, one_smul, evalDist_uniformSample,
+      rw [← evalDist_apply_singleton, OracleComp.evalDist_bind_const, evalDist_uniformSample,
         ProbabilityTheory.uniformOn_univ_apply_singleton]
       norm_num
 

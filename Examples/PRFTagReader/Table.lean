@@ -406,7 +406,7 @@ lemma evalDist_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending
   induction oa using OracleComp.inductionOn generalizing s c with
   | pure b =>
     simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
-    rw [evalDist_bind_const, hTable]
+    rw [_root_.evalDist_bind_const, hTable]
     simp
   | query_bind t f ih =>
     rw [multipleIdeal_run'_query_bind']
@@ -676,7 +676,7 @@ lemma evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
   induction oa using OracleComp.inductionOn generalizing s c with
   | pure b =>
     simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
-    rw [evalDist_bind_const, hTable]
+    rw [_root_.evalDist_bind_const, hTable]
     simp
   | query_bind t f ih =>
     rw [singleIdeal_run'_query_bind']

@@ -92,7 +92,8 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
               (simulateQ (roImpl b T) (mx p.1)).run p.2)
             = (HasQuery.query (spec := unifSpec) (m := ProbComp) n) >>=
               fun a => (simulateQ (roImpl b T) (mx a)).run cache := by
-          simp only [unifFwdImpl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply]
+          rw [unifFwdImpl.eq_toQueryImpl]
+          simp only [QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply]
           rw [OracleComp.liftM_run_StateT, bind_assoc]
           simp only [pure_bind]
         rw [hrun]
