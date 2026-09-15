@@ -14,16 +14,16 @@ A declaration with parameters is not itself initialised at module load — but t
 may lift a parameterless *specialisation* out of its body, and when that specialisation's
 result is a ground value the backend assigns it in the module initialiser like any other
 value. The module below has no parameterless environment constant at all, and its initialiser
-assigns three specialisations that enumerate their carrier before `main` runs. Reading
-environment constants cannot see any of them, which is why the sweep also walks the module's
-compiled declarations.
+assigns five specialisations that enumerate their carrier before `main` runs (read off
+`.lake/build/ir/…/Specialised.c`). Reading environment constants cannot see any of them,
+which is why the sweep also walks the module's compiled declarations.
 
-The three are one per kind of evidence the name carries: `Fintype.card` is on the
-entry-point list; `FinEnum.toList` is on it for the other enumeration class; and `countOf` is
-a *user* function, on no list at all, which gives itself away by taking a `Fintype` instance
-as an argument. A clause that tested only the entry-point list would accept the third, and
-one that tested only what a segment returns would accept all three — `Fintype.card` returns
-`ℕ`, `FinEnum.toList` returns a `List`.
+The three functions below are one per kind of evidence a mangled name carries: `Fintype.card`
+is on the entry-point list; `FinEnum.toList` is on it for the other enumeration class; and
+`countOf` is a *user* function, on no list at all, which gives itself away by taking a
+`Fintype` instance as an argument. A clause that tested only the entry-point list would
+accept the third, and one that tested only what a segment returns would accept all three —
+`Fintype.card` returns `ℕ`, `FinEnum.toList` returns a `List`.
 -/
 
 public section
