@@ -537,7 +537,7 @@ instance. There is no value to read — these declarations are not in the enviro
 so the name is all there is, which is why this clause is an addition to the value test and
 not a replacement for it.
 
-The third test is the one with reach. Testing only the seven entry points would make this
+The third test is the one with reach. Testing only the entry-point list would make this
 clause a list membership check on one class's accessors: `Fintype.card._at_.f.spec_0` is
 caught because `Fintype.card` happens to be on that list, while
 `FinEnum.toList._at_.f.spec_0` — the same hazard in the other class of the pair — is not,
