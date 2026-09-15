@@ -19,11 +19,14 @@ instantiates both at one parameter set — the SP 800-230 reduced profile
 
 ## What instantiating does
 
-Three things, and they are all this module does.
+Three things.  Two declarations fall outside them — the profile facts of
+*The two profile facts the witness families need* below, which nothing here consumes — and apart
+from those two the three below are all this module does.
 
 * **It discharges the instance obligations.**  `Certificate` asks for nine carrier instances, and
-  at this bundle none of them is found by instance search: every one of the nine is stated with
-  `inferInstanceAs` at the byte type the carrier is definitionally equal to.  Measured, the nine
+  at this bundle none of them is found by instance search.  Eight of the nine are stated with
+  `inferInstanceAs` at the byte type the carrier is definitionally equal to; the ninth goes
+  through `Fintype.ofFinite`, for the reason the comment above it gives.  Measured, the nine
   written with plain `inferInstance` instead give nine instance-synthesis failures, one per
   declaration, over the five distinct carriers `Y`, `PkSeed`, `SkSeed`, `SkPrf` and `AdrsKey`.
 * **It turns the one `Params`-level coefficient into a numeral.**  `Summands.bound` carries
@@ -312,6 +315,11 @@ theorem limitedTargetCount_xmssH :
 /-- Fixed-width byte nodes satisfy the representation-coherence boundary, which is what
 `SchemeWitnesses.findWitness_isSome` asks of a bundle.
 
+Like `limitedEncodedConditions` below it is stated here and consumed nowhere: it is not a
+hypothesis of the corollaries, deleting it with its docstring leaves the library at 0 errors, and
+its only occurrence in this repository is its own pin in `HashSigTest.SLHDSA.LimitedProfile`.
+What would ask it is the witness extraction of slice 7.
+
 *Profile data.* -/
 theorem limitedPrimitives_byteLaws : limitedPrimitives.core.ByteLaws :=
   Concrete.sha2Primitives_byteLaws _
@@ -419,6 +427,10 @@ twelve-summand expression plus the same-message residual.
 `SufBound.strongAdvantage_le_add_sameMessage_iff` says this is the existential corollary above and
 nothing more — the residual on the right is the residual inside the left, and the two cancel.
 
+The `Certificate` hypothesis is as free here as it is for the existential corollary above:
+`HashSigTest.SLHDSA.LimitedProfile` builds a closed one at this bundle from an address key and a
+public seed and proves the bound it names is at least one.
+
 *Profile corollary.* -/
 theorem limitedStrongAdvantage_le_bound_add_sameMessage
     (c : Certificate limitedPrimitives sadv.toUnforgeableAdv) :
@@ -433,7 +445,9 @@ the fresh-randomizer half plus the same-randomizer half of
 which has no counterpart in the source at all.
 
 Like the statement it instantiates this one is a `≤` and may be strict; what would close it is the
-two defining equations `SufBound.sufBound_eq_bound_add_sameMessage_of_unfoldings` takes.
+two defining equations `SufBound.sufBound_eq_bound_add_sameMessage_of_unfoldings` takes.  And like
+every headline in this module it carries the free `Certificate` hypothesis, one of which
+`HashSigTest.SLHDSA.LimitedProfile` builds at this bundle from an address key and a public seed.
 
 *Profile corollary.* -/
 theorem limitedStrongAdvantage_le_sufBound
