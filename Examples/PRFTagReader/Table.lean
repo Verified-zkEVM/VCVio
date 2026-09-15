@@ -21,7 +21,7 @@ The eager-table reformulation of the composed ideal handlers, in four parts:
   `evalDist_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending`;
 * the composed single-world measure equivalence
   `evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending`;
-* the eager-form success probabilities `probOutput_*_run'_eq_tableSample`
+* the eager-form single-world success probability `probOutput_singleIdeal_run'_eq_tableSample`
   and the `projectTable` helper that bridges the two table types.
 
 All declarations live inside `section EagerComposed`, whose variable block drops `K`
@@ -201,57 +201,11 @@ lemma evalDist_idealCacheMapM_bind_uniformTable_comp {D : Type} [DecidableEq D] 
     refine Eq.trans ?_ (evalDist_idealCacheStep_bind_uniformTable_comp hDigest hTable c d cont)
     exact OracleComp.evalDist_bind_congr_of_support _ _ _ (fun r _ => ih r.2)
 
-omit [DecidableEq Digest] in
-/-- **Cache-branch eager-table step.** A single lazy-random-oracle lookup `idealCacheStep` at a
-domain point `d`, followed by sampling a full random-oracle table for the remaining computation,
-has the same output distribution as directly sampling the table: the fresh on-demand draw of a
-cache miss is absorbed by `evalDist_bind_bind_update`.
-
-This is the per-query workhorse for an eager-sampling reformulation of the composed ideal handler:
-it reconciles the lazy cache step with the up-front table draw, generalized over an arbitrary
-continuation `ψ` of the resulting full table. -/
-lemma evalSPMF_idealCacheStep_bind_uniformTable {D : Type} [DecidableEq D] [Finite D]
-    [Finite Digest] [SampleableType (D → Digest)]
-    {β : Type} (c : (D →ₒ Digest).QueryCache) (d : D) (ψ : (D → Digest) → β) :
-    𝒮[do let r ← idealCacheStep (Digest := Digest) c d;
-          let g ← $ᵗ (D → Digest);
-          pure (ψ (OracleComp.tableExtending r.2 g))] =
-      𝒮[do let g ← $ᵗ (D → Digest); pure (ψ (OracleComp.tableExtending c g))] := by
-  let : MeasurableSpace Digest := ⊤
-  let : MeasurableSpace β := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_idealCacheStep_bind_uniformTable_comp
-    evalDist_uniformSample evalDist_uniformSample c d (fun g => pure (ψ g))
-
-
-omit [DecidableEq Digest] in
-/-- **Single-cell extraction at the bind level.** Drawing a uniform function table `g : D → R` and
-then running an arbitrary continuation that depends on `g` and on the cell value `g t` is
-distributionally equal to drawing the cell value `u : R` uniformly first, then drawing `g`, then
-running the continuation against the `t`-update of `g` (whose `t`-cell is `u`).
-
-This is the bind-level lift of `evalSPMF_uniformSample_bind_update_map`: instead of carrying a
-`pure (ψ g)`-only continuation, the result is parametric over an arbitrary `ProbComp β`-valued
-continuation, exposing the cell read `g t` outside the table draw. It is the reusable
-cell-extraction step underlying the cell-patch coupling in the hop-A fresh tag-step branch. -/
-lemma evalSPMF_uniformSample_bind_cell_extract {D R : Type}
-    [Finite D] [DecidableEq D] [Finite R] [Nonempty R]
-    [SampleableType R] [SampleableType (D → R)] (t : D) {β : Type}
-    (cont : (D → R) → R → ProbComp β) :
-    𝒮[do let g ← $ᵗ (D → R); cont g (g t)] =
-      𝒮[do let u ← $ᵗ R; let g ← $ᵗ (D → R); cont (Function.update g t u) u] := by
-  let : MeasurableSpace R := ⊤
-  let : MeasurableSpace β := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_bind_cell_extract ($ᵗ R) ($ᵗ (D → R))
-    evalDist_uniformSample evalDist_uniformSample t cont
-
-
 /-! #### Reader table-iteration lemma
 
 `idealCacheMapM` folds the lazy random-oracle lookup `idealCacheStep` over a list of cache cells —
 this is exactly the reader query's behaviour under the composed ideal handler. The lemmas below lift
-the single-cell eager-table absorption (`evalSPMF_idealCacheStep_bind_uniformTable`) to a whole
+the single-cell eager-table absorption (`evalDist_idealCacheStep_bind_uniformTable_comp`) to a whole
 list, by induction on the cell list. The end result: folding `idealCacheStep` over a list `l` and
 then sampling one full table is distributionally the same as sampling the full table up front and
 reading the cells deterministically against `tableExtending`. -/
@@ -419,74 +373,6 @@ lemma idealCacheMapM_cache_isSome_of_mem {D : Type} [DecidableEq D]
       exact idealCacheStep_cache_self_dom c d step hstep
     · exact ih step.2 rest hrest hdes
 
-omit [DecidableEq Digest] in
-/-- **Reader table-iteration lemma.** Folding the lazy random-oracle lookup
-`idealCacheStep` over a list of cells `l`, then sampling one full random-oracle table for the
-remaining computation, has the same output distribution as directly sampling the table: every
-fresh on-demand draw of a cache miss is absorbed into the up-front table draw.
-
-This lifts the single-cell absorption `evalSPMF_idealCacheStep_bind_uniformTable` to a whole list
-by induction on `l`, and is the reader-query workhorse of the eager-sampling reformulation. -/
-lemma evalSPMF_idealCacheMapM_bind_uniformTable {D : Type} [DecidableEq D] [Finite D]
-    [Finite Digest] [SampleableType (D → Digest)]
-    {β : Type} (l : List D) (c : (D →ₒ Digest).QueryCache) (ψ : (D → Digest) → β) :
-    𝒮[do let r ← idealCacheMapM (Digest := Digest) l c;
-          let g ← $ᵗ (D → Digest);
-          pure (ψ (OracleComp.tableExtending r.2 g))] =
-      𝒮[do let g ← $ᵗ (D → Digest); pure (ψ (OracleComp.tableExtending c g))] := by
-  let : MeasurableSpace Digest := ⊤
-  let : MeasurableSpace β := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_idealCacheMapM_bind_uniformTable_comp
-    evalDist_uniformSample evalDist_uniformSample l c (fun g => pure (ψ g))
-
-
-omit [DecidableEq Digest] in
-/-- Computation-valued form of `evalSPMF_idealCacheStep_bind_uniformTable`: the continuation `Mψ`
-returns a probabilistic computation rather than a pure value. -/
-lemma evalSPMF_idealCacheStep_bind_uniformTable_comp {D : Type} [DecidableEq D] [Finite D]
-    [Finite Digest] [SampleableType (D → Digest)]
-    {β : Type} (c : (D →ₒ Digest).QueryCache) (d : D) (Mψ : (D → Digest) → ProbComp β) :
-    𝒮[do let r ← idealCacheStep (Digest := Digest) c d;
-          let g ← $ᵗ (D → Digest);
-          Mψ (OracleComp.tableExtending r.2 g)] =
-      𝒮[do let g ← $ᵗ (D → Digest); Mψ (OracleComp.tableExtending c g)] := by
-  let : MeasurableSpace Digest := ⊤
-  let : MeasurableSpace β := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_idealCacheStep_bind_uniformTable_comp
-    evalDist_uniformSample evalDist_uniformSample c d Mψ
-
-
-omit [DecidableEq Digest] in
-/-- Computation-valued form of `evalSPMF_idealCacheMapM_bind_uniformTable`. -/
-lemma evalSPMF_idealCacheMapM_bind_uniformTable_comp {D : Type} [DecidableEq D] [Finite D]
-    [Finite Digest] [SampleableType (D → Digest)]
-    {β : Type} (l : List D) (c : (D →ₒ Digest).QueryCache) (Mψ : (D → Digest) → ProbComp β) :
-    𝒮[do let r ← idealCacheMapM (Digest := Digest) l c;
-          let g ← $ᵗ (D → Digest);
-          Mψ (OracleComp.tableExtending r.2 g)] =
-      𝒮[do let g ← $ᵗ (D → Digest); Mψ (OracleComp.tableExtending c g)] := by
-  let : MeasurableSpace Digest := ⊤
-  let : MeasurableSpace β := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_idealCacheMapM_bind_uniformTable_comp
-    evalDist_uniformSample evalDist_uniformSample l c Mψ
-
-
-/-- Distribution-level bind congruence: if two continuations agree (in distribution) on every
-output in the support of the head computation, the full binds have equal distributions. -/
-lemma evalSPMF_bind_congr_of_support {α β : Type}
-    (mx : ProbComp α) (my my' : α → ProbComp β)
-    (h : ∀ a ∈ support mx, 𝒮[my a] = 𝒮[my' a]) :
-    𝒮[mx >>= my] = 𝒮[mx >>= my'] := by
-  let : MeasurableSpace β := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  apply OracleComp.evalDist_bind_congr_of_support
-  intro a ha
-  exact evalDist_eq_of_evalSPMF_eq _ _ (h a ha)
-
-
 /-! #### Composed multiple-world eager-table equivalence
 
 The composed ideal handler `multipleIdealQueryImpl` embeds the lazy random oracle. The lemma below
@@ -495,8 +381,8 @@ lifts the eager-table equivalence to the composed handler: running `multipleIdea
 `c`, and running the deterministic real handler `multipleTableHandler (tableExtending c g)`.
 
 The proof is `OracleComp.inductionOn` on the adversary, generalized over the state. The tag-query
-case is discharged by the single-cell absorption `evalSPMF_idealCacheStep_bind_uniformTable`; the
-reader-query case by the list absorption `evalSPMF_idealCacheMapM_bind_uniformTable`. -/
+case is discharged by `evalDist_idealCacheStep_bind_uniformTable_comp`; the reader-query case by
+`evalDist_idealCacheMapM_bind_uniformTable_comp`. -/
 
 omit [Nonempty TagId] in
 /-- **Step A, multiple world.** Running the composed multiple-session ideal handler
@@ -674,21 +560,6 @@ lemma evalDist_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending
           exact ⟨transcript.auth, ⟨tag, hd⟩, Eq.refl transcript.auth⟩
       beta_reduce
       rw [hAccept]
-
-omit [Nonempty TagId] in
-/-- Discrete frontend form of the measure-based eager-table identity. -/
-lemma evalSPMF_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending
-    [Fintype Nonce] [Finite Digest]
-    (oa : UnlinkAdversary TagId Nonce Digest)
-    (s : UnlinkState TagId) (c : ((TagId × Nonce) →ₒ Digest).QueryCache) :
-    𝒮[(simulateQ (multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag)) oa).run' (s, c)] =
-      𝒮[do let g ← $ᵗ (TagId × Nonce → Digest);
-            (simulateQ (multipleTableHandler (sessionsPerTag := sessionsPerTag)
-              (OracleComp.tableExtending c g)) oa).run' s] := by
-  let : MeasurableSpace Digest := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending
-    evalDist_uniformSample evalDist_uniformSample oa s c
 
 /-! #### Composed single-world eager-table equivalence
 
@@ -949,41 +820,12 @@ lemma evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
       beta_reduce
       rw [hAccept]
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
-/-- Discrete frontend form of the measure-based eager-table identity. -/
-lemma evalSPMF_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
-    [Fintype Nonce] [Finite Digest]
-    (oa : UnlinkAdversary TagId Nonce Digest)
-    (s : UnlinkState TagId)
-    (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache) :
-    𝒮[(simulateQ (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag)) oa).run' (s, c)] =
-      𝒮[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>= fun g =>
-            (simulateQ (singleTableHandler (OracleComp.tableExtending c g)) oa).run' s] := by
-  let : MeasurableSpace Digest := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
-    evalDist_uniformSample evalDist_uniformSample oa s c
-
 /-! #### Eager-form success probabilities
 
 With both ideal worlds shown equal in distribution to deterministic table-handler runs,
 the two ideal-world success probabilities are exposed as
 table-sampled deterministic runs from the empty cache (`tableExtending ∅ g = g`). These are the
 precise eager forms on which the coupled-table union bound operates. -/
-
-omit [Nonempty TagId] in
-/-- Eager form of the multiple-session ideal success probability: sample a full random-oracle
-table `g`, then run the deterministic real multiple-session table handler. -/
-lemma probOutput_multipleIdeal_run'_eq_tableSample [Fintype Nonce] [Finite Digest]
-    (adv : UnlinkAdversary TagId Nonce Digest) :
-    Pr[= true | (simulateQ (multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag)) adv).run'
-        (UnlinkState.init, ∅)] =
-      Pr[= true | ($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
-        (simulateQ (multipleTableHandler (sessionsPerTag := sessionsPerTag) g) adv).run'
-          UnlinkState.init] := by
-  rw [probOutput_def, probOutput_def,
-    evalSPMF_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending adv UnlinkState.init ∅]
-  simp only [OracleComp.tableExtending_empty]
 
 omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Eager form of the single-session ideal success probability: sample a full random-oracle
@@ -993,9 +835,11 @@ lemma probOutput_singleIdeal_run'_eq_tableSample [Fintype Nonce] [Finite Digest]
     Pr[= true | (simulateQ (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag)) adv).run'
         (UnlinkState.init, ∅)] =
       Pr[= true | ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>= fun g =>
-        (simulateQ (singleTableHandler g) adv).run' UnlinkState.init] := by
-  rw [probOutput_def, probOutput_def,
-    evalSPMF_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending adv UnlinkState.init ∅]
+          (simulateQ (singleTableHandler g) adv).run' UnlinkState.init] := by
+  let : MeasurableSpace Digest := ⊤
+  rw [← evalDist_apply_singleton, ← evalDist_apply_singleton,
+    evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
+      evalDist_uniformSample evalDist_uniformSample adv UnlinkState.init ∅]
   simp only [OracleComp.tableExtending_empty]
 
 /-- The reference-slot projection of a single-session random-oracle table onto a multiple-session
@@ -1004,27 +848,6 @@ coupling map underlying the eager-route comparison of the two ideal worlds. -/
 def projectTable
     (gS : (TagId × Fin sessionsPerTag) × Nonce → Digest) : TagId × Nonce → Digest :=
   fun p => gS ((p.1, (0 : Fin sessionsPerTag)), p.2)
-
-omit [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest] in
-/-- **M4a — projecting a uniform single-session table is a uniform multiple-session table.**
-
-Drawing a uniform single-session random-oracle table `gS` and projecting it onto the reference
-session slot (`projectTable`) yields the uniform distribution on multiple-session tables. This is
-the marginalization step of the coupled-table union bound: the reference-slot cells of `gS` are
-themselves jointly uniform and independent of the off-slot cells. -/
-lemma evalSPMF_projectTable_uniformSample
-    [Fintype Nonce] [Finite Digest] [Nonempty Digest] :
-    𝒮[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=
-        fun gS => pure (projectTable (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) gS)] =
-      𝒮[$ᵗ (TagId × Nonce → Digest)] := by
-  have he : Function.Injective
-      (fun p : TagId × Nonce => ((p.1, (0 : Fin sessionsPerTag)), p.2)) := by
-    intro p q h
-    simp only [Prod.mk.injEq] at h
-    exact Prod.ext h.1.1 h.2
-  exact evalSPMF_uniformSample_map_comp_injective (R := Digest) he
-
 
 end EagerComposed
 

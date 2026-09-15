@@ -86,8 +86,6 @@ theorem conversation_idealOperations (env : Environment Message Cipher Memory)
 
 section measureSemantics
 
-variable [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
-
 /-- A terminal acceptance event is exactly the acceptance event of the executed conversation. -/
 theorem tokenLaw_apply_returned [MeasurableSpace (Option (Outcome Bool))]
     [MeasurableSingletonClass (Option (Outcome Bool))]

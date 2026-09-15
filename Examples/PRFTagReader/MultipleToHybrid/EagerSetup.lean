@@ -354,7 +354,7 @@ reading off its value at a fixed cell `x` produces a uniform digest, so any spec
 appears with probability `1 / |Digest|`.
 
 This is a consequence of the marginalization lemma
-`OracleComp.evalSPMF_uniformSample_bind_update_map`: rewriting a uniform function as the
+`OracleComp.evalDist_uniformSample_bind_update_map`: rewriting a uniform function as the
 post-composition of a fresh uniform value at `x` with a uniform function at the remaining cells. -/
 lemma probOutput_uniformSample_fun_eval [Finite TagId] [Finite Nonce] [Fintype Digest]
     [Nonempty Digest]
@@ -364,10 +364,13 @@ lemma probOutput_uniformSample_fun_eval [Finite TagId] [Finite Nonce] [Fintype D
                 pure (gFine x)] =
       (Fintype.card Digest : ℝ≥0∞)⁻¹ := by
   classical
-  -- Bridge via `evalSPMF_uniformSample_bind_update_map` at the cell `x`, with `ψ = fun g => g x`.
-  have hbridge :=
-    OracleComp.evalSPMF_uniformSample_bind_update_map
-      (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest) x (fun g => g x)
+  let : MeasurableSpace Digest := ⊤
+  let : MeasurableSpace (((TagId × Fin sessionsPerTag) × Nonce) → Digest) :=
+    MeasurableSpace.pi
+  have hbridge := evalSPMF_eq_of_evalDist_eq _ _ <|
+    OracleComp.evalDist_uniformSample_bind_update_map
+      (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
+      evalDist_uniformSample evalDist_uniformSample x (fun g => g x)
   have hLHS :
       (do let u ← ($ᵗ Digest); let g ← ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest));
           pure ((Function.update g x u) x))

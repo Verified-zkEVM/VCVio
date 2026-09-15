@@ -60,10 +60,18 @@ def budget (n : ℕ) : TokenBudgetCertificate (impl n) (fun _ => True) where
       obtain ⟨answer, _, rfl⟩ := hstep
       simp
   progress state _ := by
-    have hnonempty : (_root_.support (activate (impl n) .token state.focus state)).Nonempty := by
-      simp [Set.nonempty_iff_ne_empty, ← probFailure_eq_one_iff]
-    obtain ⟨next, hnext⟩ := hnonempty
-    exact ⟨next, (canReturn_iff_mem_support _ _).mpr hnext⟩
+    cases state.focus
+    cases hs : state.localState () with
+    | zero => simp [activate, network, DynComputation.view_ofStep, hs, step]
+    | succ k =>
+      have hprogress : ∃ answer service,
+          MonadAttach.CanReturn ((impl n () ()).run state.service) (answer, service) := by
+        refine ⟨false, state.service, ?_⟩
+        change MonadAttach.CanReturn
+          (($ᵗ Bool) >>= fun bit => pure (bit, state.service)) (false, state.service)
+        rw [MonadAttach.canReturn_bind_iff]
+        exact ⟨false, (canReturn_iff_mem_support _ _).mpr (mem_support_uniformSample _), by simp⟩
+      simpa [activate, network, DynComputation.view_ofStep, hs, step] using hprogress
 
 local instance : MeasurableSpace (Option (Outcome Bool)) := ⊤
 local instance : DiscreteMeasurableSpace (Option (Outcome Bool)) := ⟨fun _ => trivial⟩

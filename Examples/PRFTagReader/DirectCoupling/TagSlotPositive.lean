@@ -21,7 +21,7 @@ slot-positive state the M side reads the slot-0 cell of `gS` (via `slotZeroSubTa
 side reads the realized slot-`K` cell, with `K = ⟨s.sessionsUsed tag, hslot⟩` non-zero.
 
 Each side marginalizes its own cell via the single-cell helper
-`evalSPMF_uniformSample_bind_update_map`, giving the induction hypothesis a fresh slot-0 draw on
+`evalDist_uniformSample_bind_update_map`, giving the induction hypothesis a fresh slot-0 draw on
 the M side; the resulting slot-0 → slot-`K` cache extension is then bridged on the S side by the
 permutation lemma `singleTableHandler_cache_swap_eq`. Cell-pair independence gives per-nonce
 equality off the multiple-bad flag, so the tag step charges no tag-side slack: the per-step
@@ -147,7 +147,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest]
   -- Slot-positive tag case (1 ≤ k < sp). M reads slot-0 cell, S reads slot-K cell (K ≠ 0).
   -- (K ≠ 0).
   -- **Cell-pair independence strategy.** Each side marginalizes its own cell via a
-  -- single-cell helper (`evalSPMF_uniformSample_bind_update_map`), giving the IH a fresh
+  -- single-cell helper (`evalDist_uniformSample_bind_update_map`), giving the IH a fresh
   -- slot-0 draw on the M side; the resulting slot-0 → slot-K cache extension is then
   -- bridged on the S side by the permutation lemma `singleTableHandler_cache_swap_eq`.
   -- No per-step `cacheBadReader` charge is needed at this site: cell-pair independence gives
