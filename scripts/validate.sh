@@ -23,7 +23,8 @@ Default fast checks (shared with per-PR CI):
   - ./scripts/check-imports.sh (generated umbrella modules are current)
   - the boundary ratchets: PolyFun, PMF/SPMF, broad expose, complexity backend,
     Extern and Interop isolation
-  - the comment-fence rule over every tracked Lean source, both lakefiles included
+  - the comment-fence rule over every Lean source the repository tracks or would
+    track, `third_party/` excluded and both lakefiles included
   - lake lint -- --style-only on every library and test module
   - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
 

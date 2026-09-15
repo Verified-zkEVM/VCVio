@@ -4,10 +4,11 @@
 # Exercise check-comment-fences.py against fixtures: the declaration hidden after a
 # reflowed docstring that motivated the gate, the same shape for a single-line comment at
 # the margin, the indented multi-line annotations that must stay legal (a wrapped
-# structure-field docstring is this repository's dominant documentation idiom and the rule
+# structure-field docstring is this repository's commonest documentation idiom and the rule
 # must not reach it), the literal forms that could confuse a lexical scanner, the line
-# numbering that a raw string or a gap escape would drift, the shapes the rule knowingly
-# does not cover, and the file selection.
+# numbering that a raw string or a gap escape would drift, the column-0 shapes the
+# positional rule rejects although they are clean Lean, the shapes the rule knowingly does
+# not cover, and the file selection.
 #
 # The checker takes its default file list from git, so the fixtures live in a throwaway
 # repository with the script copied into it.
@@ -74,10 +75,13 @@ expect_status 0 accepted "$CHECKER"
 grep -q "Comment fences: OK" "$FIXTURE_REPO/accepted.log"
 
 # A block comment that opens part-way into a line is an annotation inside some larger piece
-# of syntax, and must stay accepted however many lines it spans. Every shape below is Lean
-# that elaborates with the package's own options and Mathlib's standard linter set on, with
-# no error and no warning; the rule fired on all seven while it also keyed on "spans more
-# than one line", and shape 2 is the repository's dominant documentation idiom.
+# of syntax, and must stay accepted however many lines it spans; and a comment at the margin
+# followed only by more comments hides nothing either. All nine shapes below are Lean that
+# elaborates with the package's own options and Mathlib's standard linter set on, with no
+# error and no warning (measured with `Mathlib.Init` imported, so the `weak.` option is
+# actually registered). The rule fired on 1-7 while it also keyed on "spans more than one
+# line", and on 8-9 until it learned to skip what cannot hide anything; shape 2 is this
+# repository's commonest documentation idiom.
 cat > Lib/Innocent.lean <<'LEAN'
 /-- 1. A multi-line inline annotation inside an expression. -/
 def one (x y : Nat) : Nat :=
@@ -116,6 +120,9 @@ def six : List Nat :=
 theorem seven : True := by
   /- explain the step
      over two lines -/ trivial
+
+/- 8. A second block comment after the first hides nothing. -/ /- and neither does this -/
+/- 9. Nor does a line comment. -/ -- a trailing note
 LEAN
 git add -A
 git commit -qm 'fixture: indented multi-line annotations'
@@ -176,15 +183,52 @@ expect_status 1 raw-drift "$CHECKER"
 grep -q "Lib/RawDrift.lean:6:" "$FIXTURE_REPO/raw-drift.log"
 rm Lib/RawDrift.lean
 
+# --- the shapes the positional rule rejects, although they hide nothing -------------------
+
+# The test is where the comment opens, not what follows it, and Lean lets a term, a
+# structure field, a tactic and a list element begin at column 0 where the enclosing
+# command's indentation has run out. A comment in front of one of those is rejected like a
+# top-level one. All four elaborate with no error and no warning (measured), so these are
+# rejections of clean Lean, asserted here so the boundary is written down rather than
+# rediscovered — the absence of exactly this fixture is what let an earlier, wider version
+# of the rule reach seven such shapes unnoticed.
+cat > Lib/ColumnZero.lean <<'LEAN'
+def term : Nat :=
+/- the seed -/ 1
+
+structure Field where
+/-- doc -/ a : Nat
+
+theorem tactic : True := by
+/- explain -/ trivial
+
+def element : List Nat :=
+  [1,
+/- two -/ 2,
+   3]
+LEAN
+expect_status 1 column-zero "$CHECKER"
+grep -q "Lib/ColumnZero.lean:2: .* followed by '1'" "$FIXTURE_REPO/column-zero.log"
+grep -q "Lib/ColumnZero.lean:5: .* followed by 'a : Nat'" "$FIXTURE_REPO/column-zero.log"
+grep -q "Lib/ColumnZero.lean:8: .* followed by 'trivial'" "$FIXTURE_REPO/column-zero.log"
+grep -q "Lib/ColumnZero.lean:12: .* followed by '2,'" "$FIXTURE_REPO/column-zero.log"
+rm Lib/ColumnZero.lean
+
 # --- the shapes the rule knowingly does not reach -----------------------------------------
 
 # Asserted so the documented gap cannot change without this test saying so. Each of these
-# puts a declaration somewhere other than the left margin of its own line, and none has a
-# block comment at column 0, so the rule does not reach them. The first is uncovered
-# everywhere, including the libraries that elaborate: `linter.style.whitespace` measures the
-# command from its doc comment, which is at column 0, so it draws no warning either
-# (measured). The other two the linter does report, so they fail CI in a library file — but
-# not in `lakefile.lean`, `scripts/` or `VCVioComplexity/`, which no Lean linter elaborates.
+# puts a declaration somewhere other than the left margin of its own line, and none of them
+# has code after the `-/` of a comment at column 0 — the first because its comment ends its
+# own line, the next three because their comments are not at column 0 or there is no comment
+# at all, and the last because its delimiter is a string quote and not a comment. The first
+# is uncovered everywhere, including the libraries that elaborate: `linter.style.whitespace`
+# measures the command from its doc comment, which is at column 0, so it draws no warning
+# either (measured). The other four the linter does report, so they fail CI in the seven
+# proof and three test libraries — but not in `lakefile.lean`, `VCVioComplexity/lakefile.lean`
+# or `Interop/`, which nothing elaborates; not in `scripts/`, which per-PR CI builds but
+# whose sources import no Mathlib, so the `weak.` option is dropped and the linter is never
+# registered; and not effectively in `VCVioComplexity/`, where the linter does run and warn
+# but no step turns that warning into a failure.
 cat > Lib/Uncovered.lean <<'LEAN'
 /-- A docstring at the margin, its declaration indented on the next line. -/
   def hiddenOne : Nat := 1
@@ -192,6 +236,12 @@ cat > Lib/Uncovered.lean <<'LEAN'
   /-- Indented, and on the target's line. -/ def hiddenTwo : Nat := 1
 
 def a : Nat := 1 /- note -/ def hiddenThree : Nat := 2
+
+def b : Nat := 1
+  def hiddenFour : Nat := 1
+
+def gapped : String := "first half \
+second half" def hiddenFive : Nat := 2
 LEAN
 expect_status 0 uncovered "$CHECKER"
 rm Lib/Uncovered.lean

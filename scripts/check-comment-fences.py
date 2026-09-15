@@ -14,43 +14,73 @@ of a line, and this package turns it on through `weak.linter.mathlibStandardSet`
 silent on the *doc-comment* form of the shape above, and that is positional rather than a
 property of the lakefile: a doc comment is part of the command it documents, so the command
 *does* start at the beginning of a line — the line where the `/--` opened, several lines
-earlier. The other forms it does catch. Measured by elaborating a probe with that option
-on: a `def` after the `-/` of a two-line `/--` docstring draws no warning, while the same
-`def` after a `/-` or a `/-!` at the margin, an indented `def`, and a second `def` after a
-mid-line `/- … -/` each draw one. So the shape divides into three parts:
+earlier. The other forms it does catch. (Everything below was measured by elaborating
+probes with that option on and `Mathlib.Init` imported: unless something in the import
+closure registers it the `weak.` option is silently dropped, which is the mechanism of the
+`scripts/` case.)
 
-* the `/--` form draws nothing anywhere, the 740 files the elaboration linters do run over
+So the shape divides by what a warning *does*, not by whether a linter exists:
+
+* the `/--` form draws nothing anywhere, the libraries the elaboration linters do run over
   included, because the linter's position for such a command is the `/--` at column 0 and
   there is nothing left to report. Witnessed for four spellings: a wrapped `/--` and a
   one-line `/--`, each before a `def` and before `@[simp] theorem` / `instance`. *That is
   the historical defect, and it is what this gate is for.*
-* every form of it — `/--`, `/-` and `/-!` — is uncovered in the 33 sources no Lean linter
-  elaborates: `lakefile.lean`, the 8 under `scripts/`, the 14 under `VCVioComplexity/`, and
-  the 10 under `Interop/`, which is in the style pass but never built.
-* the `/-` and `/-!` forms already fail CI in the other 740 files, through
-  `linter.style.whitespace` in the build log and `scripts/check-warning-log.py`. This gate
-  is redundant there and deliberately says the same thing. `scripts/lint.py`'s text-based
-  style pass, by contrast, catches none of this in any of its 750 files: its four linters
-  have no model of a comment at all.
+* the `/-` and `/-!` forms, wrapped or on one line, each draw a warning, as an indented
+  `def` and a second `def` after a mid-line `/- … -/` do. In the seven proof libraries and
+  the three test libraries that warning is already a CI failure, because
+  `scripts/check-warning-log.py` reads the build log with a `--path-prefix` per library.
+  This gate is redundant there and deliberately says the same thing.
+* four places elaborate no such warning, or elaborate one that fails nothing, and every
+  form of the shape survives in them:
+
+  - `lakefile.lean` and `VCVioComplexity/lakefile.lean`: Lake elaborates each from
+    `import Lake`, with no Mathlib linter registered.
+  - `Interop/`: not a default target and no CI job builds it, so nothing elaborates it.
+  - `scripts/`: per-PR CI *does* build it (`lake build VCVioAxiomSweepTestFixtures`, then
+    `lake exe axiomsweep --check`), but no source there has Mathlib in its import closure —
+    `AxiomSweep.lean` imports `Lean`, the axiom-sweep fixture modules import nothing outside
+    their own library — so `weak.linter.mathlibStandardSet` is dropped and the linter is
+    never registered. One Mathlib import in one fixture would flip that.
+  - `VCVioComplexity/`: its own lakefile sets `linter.style.whitespace` explicitly, its
+    sources do import Mathlib, and the `complexity_backend` job builds it on every pull
+    request, so the linter runs and warns. What is missing there is the *gate*:
+    `check-warning-log.py` is invoked only with the proof- and test-library prefixes, and
+    `VCVioComplexity/scripts/test.sh` pipes its build log nowhere.
+
+  `scripts/lint.py`'s text-based style pass reaches only `Interop/` of those four, and
+  catches none of this in any file: its four linters have no model of a comment at all.
 
 The rule, in one sentence: *a block comment that begins its line must be the last thing on
-the line where it ends.* A comment at column 0 is a top-level comment, and code written
-after its `-/` is a declaration that no longer starts its own line. A comment that opens
-part-way into a line is untouched however many lines it spans: it is an annotation inside
-an expression, a field, a constructor or a tactic block, the code around it is on the line
-the reader is already reading, and it hides nothing. Reaching those would cost innocent
-code: the repository holds 90 block comments that both span lines and start off the margin,
-every one of them a `/--` docstring, 86 on a `structure` or `class` field and 4 on an
-inductive constructor, across 35 files. A rule that also keyed on "spans more than one line"
-would put each of them one docstring reflow away from failing CI, with a message telling the
-author to move a declaration off a left margin it was never on.
+the line where it ends.* The test is positional — where the comment opens, not what the text
+after it turns out to be. A comment at column 0 is a top-level comment wherever the code
+around it is indented, and code written after its `-/` is then a declaration that no longer
+starts its own line. A comment that opens part-way into a line is untouched however many
+lines it spans: it is an annotation inside an expression, a field, a constructor or a tactic
+block, the code around it is on the line the reader is already reading, and it hides
+nothing. Reaching those would cost innocent code — a wrapped field docstring, a `/--`
+opening indented inside a `structure` or `class` body and closing on the line of the field
+it documents, is this repository's commonest documentation idiom, and a rule that also keyed
+on "spans more than one line" would put every one of them one reflow away from failing CI,
+with a message telling the author to move a declaration off a left margin it was never on.
 
-Scope: every Lean source the repository tracks, plus untracked ones that are not ignored,
-and `third_party/` excluded as vendored. `lakefile.lean` is in scope and is the file the
-rule was written for; it is also outside `scripts/lint.py`'s style pass, which covers the
-library and test roots only.
+Two things written after the `-/` hide nothing and are skipped: further complete `/- … -/`
+comments, and a `--` comment running to the end of the line.
 
-What this cannot catch. One shape is uncovered everywhere, as the same-line form was:
+Rejected by design, and not a declaration: Lean also lets a term, a structure field, a
+tactic or a list element begin at column 0, where the enclosing command's indentation has
+run out, and a comment written in front of one of those is rejected like a top-level one.
+Four such shapes are asserted in the fixture matrix (`Lib/ColumnZero.lean`), each of them
+Lean that elaborates with no error and no warning, so the boundary is written down rather
+than rediscovered. Nothing in the repository is written that way: the check's baseline is
+zero and it re-establishes that on every run.
+
+Scope: every Lean source the repository tracks or would track — tracked files plus untracked
+ones that are not ignored — with the vendored `third_party/` tree excluded. `lakefile.lean`
+is in scope and is the file the rule was written for; it is also outside `scripts/lint.py`'s
+style pass, which covers the library and test roots only.
+
+What this cannot catch. One shape is uncovered everywhere, as the same-line `/--` form is:
 
 * a comment at the left margin whose declaration is *indented on the next line*.  The
   comment is the last thing on its line, so the rule does not apply; and
@@ -58,24 +88,30 @@ What this cannot catch. One shape is uncovered everywhere, as the same-line form
   warning either.  Measured in a library file with the standard set on: an indented `def`
   is flagged, the same `def` under a margin docstring is not.
 
-The rest are uncovered only in those 33 sources — `lakefile.lean`, the 8 under `scripts/`,
-the 14 under `VCVioComplexity/`, the 10 under `Interop/`:
+The other four are reported by `linter.style.whitespace` wherever it is registered, so they
+fail CI in the ten built libraries and survive in the four places above:
 
 * an *indented* comment followed by a declaration on its closing line,
   `  /-- Doc. -/ lean_exe hidden where`;
 * a single-line comment that starts mid-line and is followed by a declaration,
   `def a := 1 /- note -/ def b := 2`;
-* a bare indented command, or two declarations on one line, with no comment involved.
+* a bare indented command, or two declarations on one line, with no comment involved;
+* a declaration written after the closing quote of a *multi-line string literal* — the same
+  hiding with a different delimiter, in all three spellings (a plain string over two lines,
+  one held together by a gap escape, and a raw string):
 
-`linter.style.whitespace` reports all three in a library file and the warning fails CI
-through `scripts/check-warning-log.py`; in `lakefile.lean` nothing reports them.  So for the
-file this rule was written for it closes the doc-comment sub-case and leaves the rest of the
-class open.  Widening to "nothing may ever follow `-/`" would cover the mid-line form and
-would also reject the annotations above, which have no defect behind them.
+      def banner : String := "first line
+      second line" def hidden : Nat := 2
 
-None of these occurs in the tracked sources today.  Measured over all 773: no comment off
-the margin has anything after its `-/`, and no comment at the margin is followed by an
-indented command.
+  `lakefile.lean` uses multi-line strings itself, and nothing checks what follows one:
+  not this rule, which is about comments, and not the linter, which does not run there.
+
+All five are asserted accepted in the fixture matrix (`Lib/Uncovered.lean`), so a documented
+gap cannot move without the test saying so.  For the file this rule was written for it
+closes the doc-comment sub-case and leaves the rest of the class open.  Widening to "nothing
+may ever follow `-/`" would cover the mid-line form and would also reject the wrapped field
+docstrings above, which have no defect behind them — and would still not reach the string
+form.
 
 Usage:
     scripts/check-comment-fences.py            # every tracked/untracked Lean source
@@ -229,19 +265,49 @@ def skip_raw_string(source: str, index: int, hashes: int, line: int,
     return end, line, line_start
 
 
+def hidden_code(trailing: str) -> str:
+    """What is left of the text after a `-/` once the things that hide nothing are removed.
+
+    Two of them: further complete `/- ... -/` comments, and a `--` comment running to the
+    end of the line. So `/- a -/ /- b -/ def x` still reports `def x`, while `/- a -/ /- b
+    -/` and `/- a -/ -- note` report nothing and are accepted. A block comment that opens
+    here and does not close on this line is left in place: whatever follows it is on a later
+    line, and the rule reports rather than guesses.
+    """
+    rest = trailing.strip()
+    while rest.startswith("/-"):
+        depth, cursor = 0, 0
+        while cursor < len(rest):
+            if rest.startswith("/-", cursor):
+                depth += 1
+                cursor += 2
+            elif rest.startswith("-/", cursor):
+                depth -= 1
+                cursor += 2
+                if depth == 0:
+                    break
+            else:
+                cursor += 1
+        if depth != 0:
+            return rest
+        rest = rest[cursor:].strip()
+    return "" if rest.startswith("--") else rest
+
+
 def violations(path: Path, source: str) -> list[str]:
     """Every place in `source` where a block comment at the left margin hides what follows
     it. A comment that opens part-way into a line is an annotation inside some larger piece
     of syntax and is skipped however many lines it spans; see the module docstring."""
     found = []
     for _open_line, open_column, close_line, trailing in block_comments(source):
-        if not trailing.strip():
-            continue
         if open_column != 0:
+            continue
+        hidden = hidden_code(trailing)
+        if not hidden:
             continue
         found.append(
             f"{path}:{close_line}: a block comment that starts its line is followed by "
-            f"{trailing.strip()!r} on the line where it ends"
+            f"{hidden!r} on the line where it ends"
         )
     return found
 

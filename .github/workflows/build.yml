@@ -67,11 +67,16 @@ jobs:
       # has any notion of a comment. `linter.style.whitespace` is not in that pass at all:
       # it is a syntax linter that runs during elaboration under the package's
       # `weak.linter.mathlibStandardSet`, and its warnings fail the build job through
-      # check-warning-log.py. It reports the `/-` and `/-!` forms in the ten built
-      # libraries, but never the `/--` form, whose command starts at the `/--` at column 0.
-      # This check is text only, so it belongs in this job rather than behind a build, and
-      # it is the only thing that reads lakefile.lean, scripts/, VCVioComplexity/ and
-      # Interop/ for this at all.
+      # check-warning-log.py. It reports the `/-` and `/-!` forms in the seven proof and
+      # three test libraries, but never the `/--` form, whose command starts at the `/--`
+      # at column 0. This check is text only, so it belongs in this job rather than behind
+      # a build, and for lakefile.lean, VCVioComplexity/lakefile.lean, Interop/ and
+      # scripts/ it is the only check of any kind that reads them for this: Lake
+      # elaborates the two lakefiles from `import Lake` with no Mathlib linter registered,
+      # nothing builds Interop/, and scripts/ is built here but imports no Mathlib, so the
+      # `weak.` option is dropped. Over VCVioComplexity/ the linter does run and warn --
+      # its own lakefile enables it explicitly and the complexity_backend job builds it --
+      # but no step turns that warning into a failure.
       - name: Check comment fences
         run: |
           bash scripts/test-comment-fences.sh
