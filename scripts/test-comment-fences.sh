@@ -4,7 +4,7 @@
 # Exercise check-comment-fences.py against fixtures: the declaration hidden after a
 # reflowed docstring that motivated the gate, the same shape for a single-line comment at
 # the margin, the indented multi-line annotations that must stay legal (a wrapped
-# structure-field docstring is this repository's commonest documentation idiom and the rule
+# structure-field docstring is a common documentation shape in this repository and the rule
 # must not reach it), the literal forms that could confuse a lexical scanner, the line
 # numbering that a raw string or a gap escape would drift, the column-0 shapes the
 # positional rule rejects although they are clean Lean, the shapes the rule knowingly does
@@ -80,8 +80,8 @@ grep -q "Comment fences: OK" "$FIXTURE_REPO/accepted.log"
 # elaborates with the package's own options and Mathlib's standard linter set on, with no
 # error and no warning (measured with `Mathlib.Init` imported, so the `weak.` option is
 # actually registered). The rule fired on 1-7 while it also keyed on "spans more than one
-# line", and on 8-9 until it learned to skip what cannot hide anything; shape 2 is this
-# repository's commonest documentation idiom.
+# line", and on 8-9 until it learned to skip what cannot hide anything; shape 2 is the
+# common one — most of this repository's multi-line off-margin comments are that shape.
 cat > Lib/Innocent.lean <<'LEAN'
 /-- 1. A multi-line inline annotation inside an expression. -/
 def one (x y : Nat) : Nat :=

@@ -298,8 +298,8 @@ job builds it, so there the linter does run and does warn — what is missing is
 but the gate, since `check-warning-log.py` is invoked only with the proof- and test-library
 prefixes and `VCVioComplexity/scripts/test.sh` pipes its log nowhere. A block comment that
 opens part-way into a line is untouched however many lines it spans — that is an annotation
-inside an expression, a field or a tactic block, and a wrapped field docstring of that shape is
-this repository's commonest documentation idiom. The rule is positional, so it does reject a
+inside an expression, a field or a tactic block, and wrapped field docstrings of that shape
+are common here. The rule is positional, so it does reject a
 comment in front of a term, field, tactic or list element written at column 0; those shapes
 are clean Lean and are asserted, as rejections, in the fixture matrix. Not covered: a
 declaration indented on its own line, which the whitespace linter reports in the built

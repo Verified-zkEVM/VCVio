@@ -60,7 +60,7 @@ lines it spans: it is an annotation inside an expression, a field, a constructor
 block, the code around it is on the line the reader is already reading, and it hides
 nothing. Reaching those would cost innocent code — a wrapped field docstring, a `/--`
 opening indented inside a `structure` or `class` body and closing on the line of the field
-it documents, is this repository's commonest documentation idiom, and a rule that also keyed
+it documents, is a common shape in this repository, and a rule that also keyed
 on "spans more than one line" would put every one of them one reflow away from failing CI,
 with a message telling the author to move a declaration off a left margin it was never on.
 
