@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 
+public import VCVioComplexityTest.Backend.HandlerCanary
 public import VCVioComplexityTest.Backend.OracleCanary
 public import VCVioComplexityTest.Backend.PureCanary
 public import VCVioComplexityTest.Compatibility

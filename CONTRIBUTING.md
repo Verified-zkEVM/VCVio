@@ -13,8 +13,28 @@ Before sending work for review:
 - Run `lake exe cache get && lake build`.
 - After adding new `.lean` files, run `./scripts/update-lib.sh`.
 - Avoid leaving `sorry` in finished work unless the change is explicitly meant to preserve partial work.
+- State security reductions for a named reduction, simulator, or extractor, not for one that merely
+  exists. Adversary types carry no resource bound and Lean can choose witnesses classically, so
+  `∃ B, bound ≤ advantage B` holds for every scheme. See
+  [Name the reduction in the theorem statement](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
 - Keep repo-wide Lean options in `lakefile.lean`. Do not restate `autoImplicit = false` with per-file `set_option` lines.
 - Do not disable linters locally or globally to make warnings disappear. Fix the underlying issue instead of adding `set_option linter.* false`, `set_option weak.linter.* false`, or repo-level linter suppressions.
+
+## Pull Request Checks And Merge Queue
+
+Before enqueuing a reviewed PR, inspect every check on its current head, including lint and
+downstream builds beyond the required-check subset. Resolve failed and cancelled runs; a
+successful duplicate does not clear a cancelled run. Use `gh run rerun RUN_ID` for a cancelled
+workflow and `gh run rerun RUN_ID --failed` after diagnosing retryable failures. Wait for the
+reruns to finish before enqueuing.
+
+VCVio's `main` uses the merge queue. GitHub-marked stacked PRs require the
+[asynchronous merge API](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request-asynchronously):
+`PUT /repos/Verified-zkEVM/VCVio/pulls/NUMBER/merge-async` with `sha` set to the reviewed head
+and `merge_action` set to `merge_queue`. Omit custom merge-method and commit-message parameters;
+the queue controls them. The ordinary CLI auto-merge path and GraphQL enqueue operation reject
+these stacked PRs. Check the returned request UUID and queue entry, then wait for the queue's
+checks and actual merge result before reporting a merge.
 
 ## Attribution And File Headers
 
