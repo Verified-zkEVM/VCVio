@@ -216,17 +216,19 @@ with a cross-reference when slice 8 opens.
 
 Slice 8 has opened — #708, #715 and #718, with the profile corollary pending — so that condition
 is met and the cross-reference exists. Two things about it are worth writing down before anyone
-acts on it. The replacement is four pull requests and **none of them is on `main`**, so closing
-#585 now removes the only description of the donor's `Concrete/Security.lean` while its
-replacement is still under review. And the replacement claims less than #585's own description
-does: that description lists a "concrete SHA2-128-24 conditional EUF-CMA theorem with the WOTS
-coefficient reduced to exactly `2`", which is what `Security/LimitedProfile.lean` now states, but
-the lane has since measured that the certificate such a theorem is conditional on costs an address
-key and a public seed, so the statement is about the shape of the source's expression rather than
-about the profile's security. The recommendation from slice 8 is therefore to close #585 when
-slice 8's last pull request merges, not when it opens, and for the closing comment to name the
-four replacements, say that none is merged yet, and record that the replacement theorem is
-conditional in that specific way.
+acts on it, and only the first bears on the timing. The replacement is four pull requests and
+**none of them is on `main`**, so closing #585 now removes the only description of the donor's
+`Concrete/Security.lean` while its replacement is still under review. The second is a requirement
+on the closing comment rather than a reason to wait: the replacement claims less than #585's own
+description does — that description lists a "concrete SHA2-128-24 conditional EUF-CMA theorem
+with the WOTS coefficient reduced to exactly `2`", which is what `Security/LimitedProfile.lean`
+now states, but the lane has since measured that the certificate such a theorem is conditional on
+costs an address key and a public seed, so the statement is about the shape of the source's
+expression rather than about the profile's security. The recommendation from slice 8 is therefore
+to close #585 when slice 8's last pull request merges, or when the stack is abandoned, whichever
+comes first — not when it opens — and for the closing comment to name the four replacements, say
+that none is merged yet, and record that the replacement theorem is conditional in that specific
+way.
 
 ## Corrections to the plan document
 
