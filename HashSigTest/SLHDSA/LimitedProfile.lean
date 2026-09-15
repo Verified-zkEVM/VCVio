@@ -261,9 +261,9 @@ role columns the role check admits with the names fixed:
   and 4088 of the 4096 falsify one, which is why the *three* conjuncts are named and not two;
 * each of those five nevertheless fires first on its own edit: a deleted row stops at "twelve
   summands", a duplicated name at "names distinct", a row that loses its role at "three summands
-  have no cap role", the roleless set moved at "the roleless three are…", a role used twice at
-  "all eight roles are used", and the FORS-F role moved onto another row at "the two FORS-F rows
-  are…";
+  have no cap role", the roleless set moved at "the roleless three are the two PRF hops and the
+  ITSR term", a role used twice at "all eight roles are used", and the FORS-F role moved onto
+  another row at "the two FORS-F rows are the DSPR and TCR summands";
 * the cap and arity checks are implied by nothing here — each has a witness satisfying all three
   conjuncts and falsifying it alone;
 * two checks that could *not* fire were deleted.  "The FORS-F role is the only one used twice" is
