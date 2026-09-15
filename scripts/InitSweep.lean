@@ -46,10 +46,10 @@ own build; `scripts/test-initsweep.sh` carries the fixtures that falsify each on
   genuinely free, and the difference is worth knowing: `def mkY (_u : Unit) : Fintype T :=
   inferInstance` returns an already-initialised pointer, and
   `def elemsY (_u : Unit) : Finset T := Finset.univ` keeps its closed term behind a
-  `lean_obj_once` cell that is forced on the first call. `VCVioInitSweepTestFixtures.Hazard.Specialised`
-  is the first shape; the two controls in `Clean/Negatives.lean` are polymorphic, so nothing
-  can be specialised at a fixed carrier and they are safe for that reason rather than for the
-  reason a reader might assume.
+  `lean_obj_once` cell that is forced on the first call.
+  `VCVioInitSweepTestFixtures.Hazard.Specialised` is the first shape; the two controls in
+  `Clean/Negatives.lean` are polymorphic, so nothing can be specialised at a fixed carrier,
+  and they are safe for that reason rather than for the reason a reader might assume.
 
   The LLVM backend's `Lean.IR.EmitLLVM.emitDeclInit` (`Lean/Compiler/IR/EmitLLVM.lean:1282`)
   makes the same parameterless decision (`d.params.size == 0`, line 1294) and is **strictly
