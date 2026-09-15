@@ -170,7 +170,7 @@ example (answer : Bool) :
     ([⟨false, answer⟩, ⟨false, answer⟩], onceCached answer) ∈ support
       (adaptivePrefixRunFrom returnLog repeatedPrefix
         (∅ : PrefixSpec.QueryCache) ([] : PrefixSpec.QueryLog)) := by
-  simp [adaptivePrefixRunFrom, repeatedPrefix, returnLog, onceCached]
+  cases answer <;> simp [adaptivePrefixRunFrom, repeatedPrefix, returnLog, onceCached]
 
 /-- The miss/hit branches are distinguishable at another input: the populated cache contains
 exactly the queried key and leaves the other Boolean key fresh. -/

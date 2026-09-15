@@ -453,7 +453,7 @@ def getRegisteredUnaryVCSpecEntries (comp : Expr) : MetaM (Array VCSpecEntry) :=
   let comp ← whnfReducible (← instantiateMVars comp)
   let comp ← symMatchKey comp
   let registry := vcSpecRegistry.getState (← getEnv)
-  return Lean.Meta.Sym.getMatch registry.unary comp
+  return Lean.Meta.Sym.getMatch (← getMCtx) registry.unary comp
 
 /-- Retrieve unary `@[vcspec]` entries without reducible `whnf` on the computation.
 
@@ -463,7 +463,7 @@ larger monadic expressions. -/
 def getRegisteredUnaryVCSpecEntriesNoWhnf (comp : Expr) : MetaM (Array VCSpecEntry) := do
   let comp ← symMatchKey comp
   let registry := vcSpecRegistry.getState (← getEnv)
-  return Lean.Meta.Sym.getMatch registry.unary comp
+  return Lean.Meta.Sym.getMatch (← getMCtx) registry.unary comp
 
 /-- Relational `@[vcspec]` entries whose `oa` pattern matches the left computation `oa`
 and whose `rightHead?` equals the head constant of the right computation `ob`, queried
@@ -472,7 +472,7 @@ def getRegisteredRelationalVCSpecEntries (oa ob : Expr) : MetaM (Array VCSpecEnt
   let oa ← symMatchKey (← whnfReducible (← instantiateMVars oa))
   let some rightHead ← headOfWhnf ob | return #[]
   let registry := vcSpecRegistry.getState (← getEnv)
-  let candidates := Lean.Meta.Sym.getMatch registry.relational oa
+  let candidates := Lean.Meta.Sym.getMatch (← getMCtx) registry.relational oa
   return candidates.filter fun entry =>
     match entry.rightHead? with
     | some h => h == rightHead

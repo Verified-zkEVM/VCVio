@@ -183,7 +183,7 @@ def getRegisteredWpStepEntries (oa : Expr) : MetaM (Array WpStepEntry) := do
   let oa ← withReducible <| whnf oa
   let oa ← symMatchKey oa
   let registry := wpStepRegistry.getState (← getEnv)
-  return Lean.Meta.Sym.getMatch registry.compTree oa
+  return Lean.Meta.Sym.getMatch (← getMCtx) registry.compTree oa
 
 /-- Retrieve `@[wpStep]` entries without normalizing the computation first.
 
@@ -193,6 +193,6 @@ candidates such as successor/cons unfoldings. -/
 def getRegisteredWpStepEntriesNoWhnf (oa : Expr) : MetaM (Array WpStepEntry) := do
   let oa ← symMatchKey oa
   let registry := wpStepRegistry.getState (← getEnv)
-  return Lean.Meta.Sym.getMatch registry.compTree oa
+  return Lean.Meta.Sym.getMatch (← getMCtx) registry.compTree oa
 
 end OracleComp.ProgramLogic

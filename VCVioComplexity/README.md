@@ -4,10 +4,16 @@
 complexity-theory backend substrate. It is not imported by VCVio's root library and therefore
 does not add complexitylib to ordinary VCVio consumers.
 
+This preservation draft uses the Lean 4.34.0-rc2 dependency set described in the
+[UC checkpoint](../docs/design/uc-rc2-checkpoint.md). The production compatibility preflight
+and `PROVENANCE.md` still describe the 4.33 baseline and must be updated before adoption.
+The build and kernel trust checks passed in the isolated candidate; the full adoption gates
+remain open.
+
 The current package provides:
 
 - direct compatibility canaries for `Complexitylib.Models.TuringMachine` and
-  `Complexitylib.Classes.P.Cobham.Defs` at VCVio's Lean/Mathlib 4.33 pin;
+  `Complexitylib.Classes.P.Cobham.Defs` on the candidate Lean/Mathlib dependency set;
 - a closed grammar of word, empty, unit, Boolean, unary-natural, fixed-width `BitVec`, product,
   dependent-pair, sum, and option representations, with proved codecs rather than
   caller-selected injective encodings;
@@ -38,7 +44,7 @@ The current package provides:
   compiling upstream capability probes, an executable regression for the pair-codec mismatch,
   and one fixed-answer second-order witness checked against two distinct response-size models;
 - PolyFun's category, exact-category, product, sum, option, and distributivity mixins as the single
-  interface for machine combinators that do not yet compile at this toolchain; the adapter does
+  interface for machine combinators whose adapter witnesses remain to be implemented; the adapter does
   not duplicate those requirements in VCVio-specific wrapper structures.
 
 The qualitative carrier deliberately admits every semantic function: all computational evidence
@@ -60,9 +66,9 @@ remain backend-relative; importing this package does not turn them into conventi
 machine-model PPT. The unqualified name is reserved until result, complete oracle transcript,
 randomness, and polynomial cost preservation are all proved.
 
-General categorical closure is intentionally uninhabited: the pinned complexitylib composition
-stack does not compile at VCVio's toolchain, and this package does not replace it with an
-extensional Lean composition or a synthetic cost counter. Any future implementation must provide
+General categorical closure remains uninhabited: the candidate complexitylib composition stack
+compiles, but the representation translation and PolyFun closure witnesses have not been
+implemented. Any future implementation must provide
 PolyFun's `QuantitativeStepClass.HasCategory` mixin directly; the specialized unit machines do not
 establish that universally quantified interface.
 

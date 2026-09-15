@@ -21,14 +21,14 @@ the older pins inherited from complexitylib.
 -/
 require complexitylib from git
   "https://github.com/SamuelSchlesinger/complexitylib.git" @
-  "b6738219a3a3c50967d6bd16cba9487887ca6b66"
+  "6c248df7859f2f245e731c1e07057bf69d165fe2"
 
 require VCVio from ".."
 
 /- Use the exact PolyFun source against which the root VCVio checkout is being developed. -/
 require PolyFun from "../.lake/packages/PolyFun"
 
-require "leanprover-community" / "mathlib" @ git "v4.33.1"
+require "leanprover-community" / "mathlib" @ git "e06eff5f95374108acfaf19f1ff7473aa7771df2"
 
 @[default_target] lean_lib VCVioComplexity
 
