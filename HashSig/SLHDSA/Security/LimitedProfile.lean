@@ -24,7 +24,7 @@ Three things, and they are all this module does.
 * **It discharges the instance obligations.**  `Certificate` asks for nine carrier instances, and
   at this bundle none of them is found by instance search: every one of the nine is stated with
   `inferInstanceAs` at the byte type the carrier is definitionally equal to.  Measured, the nine
-  written with plain `inferInstance` instead give nine failures to synthesize, one per
+  written with plain `inferInstance` instead give nine instance-synthesis failures, one per
   declaration, over the five distinct carriers `Y`, `PkSeed`, `SkSeed`, `SkPrf` and `AdrsKey`.
 * **It turns the one `Params`-level coefficient into a numeral.**  `Summands.bound` carries
   `(p.w - 2 : ℕ)` on the WOTS+-`F` undetectability summand; here `lgw = 2`, so `w = 4` and the
@@ -137,19 +137,19 @@ the same term slice 2's `limitedEncodedTargetLedgerConditions` concludes at.
 
 *Profile data.* -/
 -- Exposed, and what the attribute is for was read off the errors its removal alone produces:
--- fourteen.  Thirteen are `Not a definitional equality`, at `limitedVp_params` and at the twelve
--- `rfl` equations below that read a field of `limitedVp.params`, each reporting that the
--- theorem is exported and so may unfold only exposed definitions; the fourteenth is a
--- `Type mismatch` at `limitedPrimitives_eq`.  The two equations that survive are the ones whose
--- proofs are not `rfl`: `limitedParams_k_ne_len` and `limitedTargetCount_xmssH`.
+-- fourteen.  Thirteen are refusals of an equation proved by `rfl`, at `limitedVp_params` and at
+-- the twelve below that read a field of `limitedVp.params`, each reporting that the theorem is
+-- exported and so may unfold only exposed definitions; the fourteenth is a type error at
+-- `limitedPrimitives_eq`.  The two equations that survive are the ones whose proofs are not
+-- `rfl`: `limitedParams_k_ne_len` and `limitedTargetCount_xmssH`.
 @[expose] def limitedVp : ValidatedParams :=
   LimitedParameterSet.validatedParams .SLHDSA_SHA2_128_24
 
 -- Exposed, and what the attribute is for was read off the errors its removal alone produces:
 -- nineteen.  Eighteen are code-generation failures, two at each of the nine instances below,
 -- each reporting that the locally inferred compilation type differs from the one other modules
--- would infer and naming `limitedPrimitives` as the definition to expose; the nineteenth is a
--- `Not a definitional equality` at `limitedPrimitives_eq`.  No corollary moves.
+-- would infer and naming `limitedPrimitives` as the definition to expose; the nineteenth is the
+-- refusal of `limitedPrimitives_eq`'s own `rfl`.  No corollary moves.
 /-- The FIPS SHA-2 primitive bundle at that profile: `n = 16`, so every seed and node carrier is
 `Bytes 16`, and the compressed address key is `Bytes 22`.
 
