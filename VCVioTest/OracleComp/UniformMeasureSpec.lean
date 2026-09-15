@@ -20,8 +20,8 @@ import Mathlib.Tactic.GRewrite
 /-!
 # Measure-valued uniform oracle canaries
 
-The uniform response certificate is selected explicitly. Coin, finite-range, and
-bit-vector samplers exercise the event notation under direct measure semantics.
+The canonical concrete uniform response certificates are resolved by typeclass synthesis.
+Coin, finite-range, and bit-vector samplers exercise direct measure semantics.
 -/
 
 public section
@@ -29,16 +29,6 @@ public section
 open MeasureTheory ProbabilityTheory
 
 namespace VCVioTest.UniformMeasureSpec
-
-@[instance_reducible]
-noncomputable def coinMeasureSpec : OracleSpec.IsUniformMeasureSpec coinSpec :=
-  OracleSpec.IsUniformMeasureSpec.coinSpec
-
-@[instance_reducible]
-noncomputable def unifMeasureSpec : OracleSpec.IsUniformMeasureSpec unifSpec :=
-  OracleSpec.IsUniformMeasureSpec.unifSpec
-
-attribute [local instance] coinMeasureSpec unifMeasureSpec
 
 example : OracleSpec.IsMeasureSpec.toMeasure (spec := coinSpec) () =
     (uniformOn Set.univ : Measure Bool) :=
@@ -90,8 +80,7 @@ example (n : ℕ) :
 
 example (n m : ℕ) :
     𝒟[$ᵗ (BitVec n × BitVec m)] = uniformOn Set.univ :=
-  SampleableType.evalDist_prod (SampleableType.evalDist_bitVec n)
-    (SampleableType.evalDist_bitVec m)
+  SampleableType.evalDist_prod
 
 example (n : ℕ) (p : Fin (n + 1) → Prop) [DecidablePred p] :
     Pr{let x ← ProbComp.uniformFin n}[p x] =

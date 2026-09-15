@@ -96,9 +96,12 @@ its satisfying outcomes. These laws avoid a point-mass detour; the
 `SampleableType.NativeMeasure`, using finite-range sampling and equivalence
 transport. Its product sampler law uses `evalDist_pair` and the existing
 `uniformOn_univ_prod` construction. These supply the `BitVec` key law and the measure-level
-one-time-pad independence theorem. An arbitrary `SampleableType` still carries a
-finite-probability uniformity law; a native measure proof takes a separate
-`𝒟[$ᵗ α] = uniformOn Set.univ` certificate until that class surface is migrated.
+one-time-pad independence theorem. `SampleableType` itself certifies
+`𝒟[$ᵗ α] = uniformOn Set.univ` for every finite discrete measurable structure.
+Its executable sampler and full-support certificate provide the operational
+side; the old `Pr[...]` lemmas are compatibility consequences. Uniform table
+resampling and injective restriction use the measure laws in
+`VCVio.EvalDist.Monad.UniformTable`.
 `ProbComp.evalDist_decide_eq_uniformBool_half` proves that an independent Boolean guess
 matches a fair hidden bit with mass `1/2`; it uses the native uniform measure and
 Mathlib's `lintegral_fintype`, so all-random game hops need no point-probability sum.

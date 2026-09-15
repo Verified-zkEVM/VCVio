@@ -27,14 +27,13 @@ namespace ProbComp
 
 /-- A finite-range draw denotes the uniform measure chosen for its oracle response. -/
 @[simp]
-theorem evalDist_uniformFin [OracleSpec.IsUniformMeasureSpec unifSpec] (n : ℕ) :
+theorem evalDist_uniformFin (n : ℕ) :
     𝒟[uniformFin n] = uniformOn Set.univ := by
   change 𝒟[(unifSpec.query n : OracleComp unifSpec (Fin (n + 1)))] = _
   exact OracleComp.evalDist_query_uniform n
 
 /-- A decidable event on a finite-range draw has its normalized cardinality. -/
-theorem prEvent_uniformFin [OracleSpec.IsUniformMeasureSpec unifSpec]
-    (n : ℕ) (p : Fin (n + 1) → Prop) [DecidablePred p] :
+theorem prEvent_uniformFin (n : ℕ) (p : Fin (n + 1) → Prop) [DecidablePred p] :
     Pr{let x ← uniformFin n}[p x] =
       ((Finset.univ.filter p).card : ENNReal) / (n + 1) := by
   rw [prEvent_eq_evalDist_of_discrete, evalDist_uniformFin,
