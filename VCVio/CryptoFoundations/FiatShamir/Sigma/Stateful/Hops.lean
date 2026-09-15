@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import Mathlib.Data.Real.ENatENNReal
+public import Mathlib.Basic.Real.ENatENNReal
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.StateSeparating.IdenticalUntilBad

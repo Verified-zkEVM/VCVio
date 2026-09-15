@@ -81,7 +81,8 @@ theorem outputMeasure_query_succ [∀ a, DiscreteMeasurableSpace (P.B a)]
     outputMeasure (k + 1) (query position next) =
       Measure.bind (IsMeasureSpec.toMeasure position) fun direction =>
         outputMeasure k (next direction) := by
-  rw [outputMeasure, truncateMeasure, truncate_query_succ, FreeM.denote_liftBind]
+  rw [outputMeasure, truncateMeasure, truncate_query_succ,
+    FreeM.denote_liftBind _ _ Measurable.of_discrete.aemeasurable]
   unfold Measure.dropNone
   rw [Measure.bind_bind Measurable.of_discrete.aemeasurable
     Measure.measurable_dropNoneKernel.aemeasurable]

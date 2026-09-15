@@ -203,16 +203,41 @@ an activation bound alone.
 
 ## Complexity foundation: source audit and adoption decision
 
-This audit distinguishes the current VCVio pins from upstream source inspected on September 13.
-It does not claim that the newer dependency set has been built with VCVio. In particular, the
-optional backend's successful compatibility preflight recognizes known unavailable modules;
-that success alone does not inhabit composition or oracle-closure instances.
+This audit distinguishes production VCVio on Lean 4.33.1 from the isolated Lean 4.34.0-rc2
+candidate tested on September 14. The candidate now builds VCVio and the existing optional
+backend canaries. Production's compatibility preflight recognizes known unavailable modules;
+that success alone does not inhabit composition or oracle-closure instances. See the
+[dependency checkpoint and campaign handoff](uc-rc2-checkpoint.md) for published source pins,
+validation boundaries, restore instructions, and unfinished work.
 
 The isolated checkout at complexitylib `6c248df7859f2f245e731c1e07057bf69d165fe2`
 successfully built `TuringMachine.Composition`, `Combinators`, `Hoare`, `OutputBounds`,
 `Asymptotics`, and `Classes.P.Defs` on its matched Lean 4.34.0-rc2 / Mathlib / CSLib
-dependencies (2,062 build jobs). This validates those upstream modules; the VCVio adapter
-and its downstream canaries still require a coordinated candidate build before adoption.
+dependencies (2,062 build jobs). The coordinated VCVio adapter build subsequently passed
+with its existing downstream canaries (2,682 jobs), and its trust check passed.
+
+The September 14 candidate reuses PolyFun #184 on top of the merged activation-budget work.
+Its matched Mathlib revision is `e06eff5f95374108acfaf19f1ff7473aa7771df2`; CSLib
+`d9be64196bf145edd019f1ccfeaee0c11166ba6b` also needs the two existing FreeM constructor-normal-form
+fixes retained from the 4.33 fork. The isolated patched CSLib passes its build, umbrella check,
+tests, environment lint, and style lint. PolyFun passes full validation: 12,046 declarations
+across 313 production modules, zero sorry and nonstandard-axiom taint. Logs:
+`/private/tmp/uc-cslib-rc2-validation.log` and `/private/tmp/uc-polyfun-rc2-validation.log`.
+
+The VCVio candidate exposed three moved Mathlib imports, a redundant proof step, and a substantive
+change to the default for nonmeasurable `Measure.map`. The last finding motivates the explicit
+continuation guard and finite separation test described in the
+[probability semantics contract](../reading/denotational-probability-semantics.md#the-measurability-rule).
+That fold and counterexample compile on both dependency sets. The candidate's production build
+passes (4,236 jobs), as do `lake test` and the axiom sweep (18,893 declarations across 634
+modules, the same 40 existing sorry-tainted declarations, zero nonstandard-axiom taint).
+Deprecation warnings and full adoption validation remain outstanding. The spike is published
+as a draft checkpoint with immutable Git pins; production remains on Lean 4.33.1.
+
+The guarded fold passes VCVio's full `./scripts/validate.sh --lint --test --axioms` on the
+production dependency set: 18,923 declarations across 634 modules, the same 40 existing
+sorry-tainted declarations, and zero nonstandard-axiom taint. The complete continuous/discrete
+canaries and finite resumption consumers pass. Log: `/private/tmp/uc-measure-boundary-validation.log`.
 
 | Surface | Inspected evidence | Consequence |
 | --- | --- | --- |
@@ -225,7 +250,7 @@ and its downstream canaries still require a coordinated candidate build before a
 **Working foundation:** retain PolyFun's existing representations, quantitative realizers, and
 resource contracts as the UC-facing interface. Complete the first concrete implementation using
 the isolated complexitylib adapter. Evaluate the newer matched dependency set in a separate
-candidate and retain the validated baseline until its builds and canaries pass. Do not introduce
+candidate and retain the validated baseline until full validation and adoption review pass. Do not introduce
 an unqualified PPT alias from a backend-relative certificate.
 
 The cross-library bridge ledger is directed:
