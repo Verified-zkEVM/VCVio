@@ -109,8 +109,10 @@ own build; `scripts/test-initsweep.sh` carries the fixtures that falsify each on
   initialiser assigns compiler-generated parameterless declarations beside the constants:
   specialisations (`Fintype.card._at_.<caller>.spec_0`) and boxed numeric constants. They are
   not in the environment, so there is no value to read and the name is all there is;
-  `irDeclEvidence` tests the functions the specialiser recorded in it. Measured over the
-  seven default roots: 1473 such declarations, 0 of which name an entry point. 278 of the
+  `irDeclEvidence` tests the functions the specialiser recorded in it — by name against the
+  entry points, and by what they consume, which is what survives the instance being
+  specialised away. Measured over the seven default roots: 1473 such declarations, 0 of
+  which carry evidence of either kind. 278 of the
   1473 are assigned in the emitted C and the rest are laid out as literals, and — the
   direction that matters — **all 278** of the `_init_` assignments that are not environment
   constants are inside the 1473, checked by C symbol. So the two halves of the sweep between
