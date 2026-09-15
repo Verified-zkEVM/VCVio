@@ -46,6 +46,12 @@ claim that a pull request has been opened or merged.
   `ResponseResourceModel`, `ResponseResourceContract`, `PolynomialRunBound`,
   `PolynomialProgramWitness`, `PureResourceCertificate`, `RankedResource.PotentialCertificate`,
   `RankedResourceCertificate`, and the polynomial sequencing certificates.
+- `FreeM.HandlerMachine.runPrefix` executes dependent handler substitution with separate
+  caller and handler phases. Entry and return cost one administrative transition each;
+  inner queries remain visible. Component bounds derive `calls * (inner + 2)` completion,
+  and result erasure preserves the full inner interaction. `Examples/ElGamal/HandlerExecution.lean`
+  consumes this theorem for the three-query reduction. These transition counters do not provide
+  encoded backend operations or their quantitative realization.
 - VCVio has `SecurityFamily.packProgram` and thin crypto-facing aliases
   `ResourcePolynomial`, `OracleResourceModel`, `OracleContract`, `StrictPPTWitness`,
   `PureCertificate`, `ResourcePotentialCertificate`, and `RankedPPTCertificate`. VCVio retains the
@@ -75,7 +81,10 @@ claim that a pull request has been opened or merged.
   `oneCoin_isPPTBy`. Exact-run output-length lemmas justify
   `PolynomialCode.toPolyRealizerFromTime`. The package records that its pair codec is incompatible
   with complexitylib's canonical pairing and tests second-order quantification over two
-  fixed-answer envelopes. It does not yet export an inhabitant of the general machine-level
+  fixed-answer envelopes. `Backend/Copy.lean` proves exact linear copying and tag insertion on
+  every binary word. `HandlerCanary` realizes completed echo-handler execution on arbitrary-length
+  input, with derived `2n + 7` work and linear state/readout sizes. This is a specialized exact
+  realization, not the general handler compiler. It does not yet export an inhabitant of the general machine-level
   closure gates or compile arbitrary PolyFun machines to complexitylib machines.
 
 The following are design targets, not claims about the current API: a richer
