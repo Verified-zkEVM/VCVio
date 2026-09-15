@@ -295,8 +295,8 @@ theorem prfAbsAdvantage_toReal {K D R : Type} [DecidableEq D] [SampleableType R]
 /-! ## The twelve summands -/
 
 /-- At a validated parameter set the Winternitz width is at least two, so the `ℕ`-subtraction in
-the `(p.w - 2)` coefficient of `Summands.bound` never truncates and the coefficient is never
-silently zero.  `Params.w_pos` gives only `0 < p.w`, which is not enough.
+the `(p.w - 2)` coefficient of `Summands.bound` never truncates a negative difference.
+The coefficient is zero when `p.w = 2`.  `Params.w_pos` gives only `0 < p.w`, which is not enough.
 
 *Composition arithmetic.* -/
 theorem two_le_w {p : Params} (h : p.Valid) : 2 ≤ p.w := by
