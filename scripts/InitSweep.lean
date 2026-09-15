@@ -110,8 +110,12 @@ own build; `scripts/test-initsweep.sh` carries the fixtures that falsify each on
   specialisations (`Fintype.card._at_.<caller>.spec_0`) and boxed numeric constants. They are
   not in the environment, so there is no value to read and the name is all there is;
   `irDeclEvidence` tests the functions the specialiser recorded in it. Measured over the
-  seven default roots: 1473 such declarations, 0 of which name an entry point — and the
-  population is the reason the count is printed rather than merely checked.
+  seven default roots: 1473 such declarations, 0 of which name an entry point. 278 of the
+  1473 are assigned in the emitted C and the rest are laid out as literals, and — the
+  direction that matters — **all 278** of the `_init_` assignments that are not environment
+  constants are inside the 1473, checked by C symbol. So the two halves of the sweep between
+  them name every constant and every compiled declaration the 634 modules' initialisers
+  assign.
 
 Compiler-internal names are deliberately **not** skipped. The hazard this gate exists for
 is carried by an auxiliary — in the fixtures, `….instFintypeYBundle._aux_1`, and the
@@ -496,9 +500,13 @@ structure Census where
   loadTime : Array Entry
   /-- Compiler-generated parameterless declarations that are not environment constants:
   specialisations, boxed numeric constants and their like, which the backend assigns in the
-  module initialiser exactly as it assigns a constant's own value. The environment sweep
-  cannot name them — that is what makes them a blind spot rather than a population — so
-  they are counted here and tested by name. -/
+  module initialiser exactly as it assigns a constant's own value — unless the same
+  closed-term and ground-expression exemptions apply, so this over-approximates in the same
+  harmless direction as `isCompiledValue` does. Measured over the seven default roots: 1473
+  such declarations, of which the emitted C assigns **278**, and every one of those 278 is in
+  this population (checked by C symbol, both directions). The environment sweep cannot name
+  any of them — that is what made them a blind spot before they were counted here and tested
+  by name. -/
   irLoadTime : Nat
   /-- Those of `irLoadTime` whose mangled name carries an enumeration entry point. -/
   irOffenders : Array Entry
@@ -720,7 +728,8 @@ unsafe def run (args : List String) : IO UInt32 := do
     under {roots}"
   IO.println s!"  evaluated when their module is loaded: {cur.loadTime.size}"
   IO.println s!"  of those, with no readable value (blind spot): {cur.opaqueValues}"
-  IO.println s!"  compiler-generated declarations initialised alongside them: {cur.irLoadTime}"
+  IO.println s!"  compiler-generated declarations beside them, initialised or laid out as \
+    literals: {cur.irLoadTime}"
   IO.println s!"  building an enumeration of a type: {cur.offenders.size}"
   if let some out := cfg.out? then
     let report := Json.mkObj [
