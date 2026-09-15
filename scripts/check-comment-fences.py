@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep a top-level block comment from hiding the declaration that follows it.
+"""Keep a block comment at the left margin from hiding the declaration that follows it.
 
 A declaration written after the `-/` of the comment that documents it parses, builds and
 runs, and is invisible to a reader scanning the left margin for declarations. That is not
@@ -7,30 +7,75 @@ hypothetical: a docstring reflow in `lakefile.lean` once produced
 
     at least one. -/ lean_exe slhdsa_limited_profile_tests where root :=
 
-and every gate in the repository passed it. Lean's own `linter.style.whitespace`, which
-Mathlib's standard set enables here and which rejects a command that does not start at the
-beginning of a line, does not see it either: a doc comment is part of the command it
-documents, so the command *does* start at the beginning of the line — the line where the
-comment opened, several lines earlier.
+and every gate in the repository passed it.
 
-The rule, in one sentence: *a block comment that begins its line, or that spans more than
-one line, must be the last thing on the line where it ends.* Both halves say the same
-thing — such a comment is a top-level comment, and code after it is a declaration that no
-longer starts its own line. An inline annotation that opens and closes inside a line of
-code (`f (x /- the seed -/) y`) is untouched: it hides nothing, because the code around it
-is on the line the reader is already reading.
+Lean's own `linter.style.whitespace` rejects a command that does not start at the beginning
+of a line, and this package turns it on through `weak.linter.mathlibStandardSet`. It is
+silent on the *doc-comment* form of the shape above, and that is positional rather than a
+property of the lakefile: a doc comment is part of the command it documents, so the command
+*does* start at the beginning of a line — the line where the `/--` opened, several lines
+earlier. The other forms it does catch. Measured by elaborating a probe with that option
+on: a `def` after the `-/` of a two-line `/--` docstring draws no warning, while the same
+`def` after a `/-` or a `/-!` at the margin, an indented `def`, and a second `def` after a
+mid-line `/- … -/` each draw one. So the shape divides into three parts:
+
+* the `/--` form draws nothing anywhere, the 740 files the elaboration linters do run over
+  included, because the linter's position for such a command is the `/--` at column 0 and
+  there is nothing left to report. Witnessed for four spellings: a wrapped `/--` and a
+  one-line `/--`, each before a `def` and before `@[simp] theorem` / `instance`. *That is
+  the historical defect, and it is what this gate is for.*
+* every form of it — `/--`, `/-` and `/-!` — is uncovered in the 33 sources no Lean linter
+  elaborates: `lakefile.lean`, the 8 under `scripts/`, the 14 under `VCVioComplexity/`, and
+  the 10 under `Interop/`, which is in the style pass but never built.
+* the `/-` and `/-!` forms already fail CI in the other 740 files, through
+  `linter.style.whitespace` in the build log and `scripts/check-warning-log.py`. This gate
+  is redundant there and deliberately says the same thing. `scripts/lint.py`'s text-based
+  style pass, by contrast, catches none of this in any of its 750 files: its four linters
+  have no model of a comment at all.
+
+The rule, in one sentence: *a block comment that begins its line must be the last thing on
+the line where it ends.* A comment at column 0 is a top-level comment, and code written
+after its `-/` is a declaration that no longer starts its own line. A comment that opens
+part-way into a line is untouched however many lines it spans: it is an annotation inside
+an expression, a field, a constructor or a tactic block, the code around it is on the line
+the reader is already reading, and it hides nothing. Reaching those would cost innocent
+code: the repository holds 90 block comments that both span lines and start off the margin,
+every one of them a `/--` docstring, 86 on a `structure` or `class` field and 4 on an
+inductive constructor, across 35 files. A rule that also keyed on "spans more than one line"
+would put each of them one docstring reflow away from failing CI, with a message telling the
+author to move a declaration off a left margin it was never on.
 
 Scope: every Lean source the repository tracks, plus untracked ones that are not ignored,
 and `third_party/` excluded as vendored. `lakefile.lean` is in scope and is the file the
 rule was written for; it is also outside `scripts/lint.py`'s style pass, which covers the
 library and test roots only.
 
-What this cannot catch: a single-line comment that starts mid-line and is followed by a
-declaration (`def a := 1 /- note -/ def b := 2`), which is legal and hides `b` just as
-well; and anything a comment does not mediate, such as two declarations written on one
-line. Neither occurs in the tracked sources today. Widening to "nothing may ever follow
-`-/`" would cover the first and would also reject inline annotations, which have no defect
-behind them.
+What this cannot catch. One shape is uncovered everywhere, as the same-line form was:
+
+* a comment at the left margin whose declaration is *indented on the next line*.  The
+  comment is the last thing on its line, so the rule does not apply; and
+  `linter.style.whitespace` measures the command from the `/--` at column 0, so it draws no
+  warning either.  Measured in a library file with the standard set on: an indented `def`
+  is flagged, the same `def` under a margin docstring is not.
+
+The rest are uncovered only in those 33 sources — `lakefile.lean`, the 8 under `scripts/`,
+the 14 under `VCVioComplexity/`, the 10 under `Interop/`:
+
+* an *indented* comment followed by a declaration on its closing line,
+  `  /-- Doc. -/ lean_exe hidden where`;
+* a single-line comment that starts mid-line and is followed by a declaration,
+  `def a := 1 /- note -/ def b := 2`;
+* a bare indented command, or two declarations on one line, with no comment involved.
+
+`linter.style.whitespace` reports all three in a library file and the warning fails CI
+through `scripts/check-warning-log.py`; in `lakefile.lean` nothing reports them.  So for the
+file this rule was written for it closes the doc-comment sub-case and leaves the rest of the
+class open.  Widening to "nothing may ever follow `-/`" would cover the mid-line form and
+would also reject the annotations above, which have no defect behind them.
+
+None of these occurs in the tracked sources today.  Measured over all 773: no comment off
+the margin has anything after its `-/`, and no comment at the margin is followed by an
+indented command.
 
 Usage:
     scripts/check-comment-fences.py            # every tracked/untracked Lean source
@@ -39,11 +84,13 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 EXCLUDED_TOP_LEVEL = {"third_party"}
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 
 def block_comments(source: str) -> list[tuple[int, int, int, str]]:
@@ -92,14 +139,15 @@ def block_comments(source: str) -> list[tuple[int, int, int, str]]:
             index = cursor
             continue
         if character == "r" and source.startswith('"', index + 1):
-            index = skip_raw_string(source, index + 1, 0)
+            index, line, line_start = skip_raw_string(source, index + 1, 0, line, line_start)
             continue
         if character == "r" and source.startswith("#", index + 1):
             hashes = 0
             while source.startswith("#", index + 1 + hashes):
                 hashes += 1
             if source.startswith('"', index + 1 + hashes):
-                index = skip_raw_string(source, index + 1 + hashes, hashes)
+                index, line, line_start = skip_raw_string(source, index + 1 + hashes, hashes,
+                                                          line, line_start)
                 continue
         if character == '"':
             index, line, line_start = skip_string(source, index, line, line_start)
@@ -162,39 +210,49 @@ def skip_string(source: str, index: int, line: int, line_start: int) -> tuple[in
     return cursor, line, line_start
 
 
-def skip_raw_string(source: str, index: int, hashes: int) -> int:
-    """The index just past the raw string literal whose opening quote is at `index`.
+def skip_raw_string(source: str, index: int, hashes: int, line: int,
+                    line_start: int) -> tuple[int, int, int]:
+    """The index just past the raw string literal whose opening quote is at `index`, with
+    the line counter advanced.
 
-    Raw strings honour no escapes, so only the closing quote and its hashes end them.
-    Raw strings containing a newline are rare enough that the line counter is not advanced
-    here; a comment opened after one would be reported on the wrong line rather than
-    missed, and the check reports positions only for errors it has already found.
+    Raw strings honour no escapes, so only the closing quote and its hashes end them. Every
+    newline inside one still has to be counted: a comment opened after an uncounted one
+    would be reported on the wrong line, naming innocent code, for the rest of the file.
     """
     terminator = '"' + "#" * hashes
     closing = source.find(terminator, index + 1)
-    return len(source) if closing < 0 else closing + len(terminator)
+    end = len(source) if closing < 0 else closing + len(terminator)
+    for offset in range(index, end):
+        if source[offset] == "\n":
+            line += 1
+            line_start = offset + 1
+    return end, line, line_start
 
 
 def violations(path: Path, source: str) -> list[str]:
-    """Every place in `source` where a top-level block comment hides what follows it."""
+    """Every place in `source` where a block comment at the left margin hides what follows
+    it. A comment that opens part-way into a line is an annotation inside some larger piece
+    of syntax and is skipped however many lines it spans; see the module docstring."""
     found = []
-    for open_line, open_column, close_line, trailing in block_comments(source):
+    for _open_line, open_column, close_line, trailing in block_comments(source):
         if not trailing.strip():
             continue
-        spans_lines = close_line > open_line
-        starts_line = open_column == 0
-        if not (spans_lines or starts_line):
+        if open_column != 0:
             continue
-        shape = "spans lines" if spans_lines else "starts its line"
         found.append(
-            f"{path}:{close_line}: a block comment that {shape} is followed by "
+            f"{path}:{close_line}: a block comment that starts its line is followed by "
             f"{trailing.strip()!r} on the line where it ends"
         )
     return found
 
 
 def tracked_lean_sources() -> list[Path]:
-    """Tracked and untracked-but-not-ignored Lean sources, vendored trees excluded."""
+    """Tracked and untracked-but-not-ignored Lean sources, vendored trees excluded.
+
+    `git ls-files` lists the current directory downwards, so `main` moves to the repository
+    root before calling this: run from a subdirectory it would otherwise scan a subtree and
+    report a clean tree, and the vendored filter below would have nothing to match.
+    """
     paths: list[str] = []
     for arguments in (["ls-files", "-z", "--", "*.lean"],
                       ["ls-files", "--others", "--exclude-standard", "-z", "--", "*.lean"]):
@@ -207,7 +265,9 @@ def tracked_lean_sources() -> list[Path]:
 
 
 def expand(arguments: list[str]) -> list[Path]:
-    """The Lean sources named by `arguments`: files as given, directories recursively."""
+    """The Lean sources named by `arguments`: files as given, directories recursively.
+    Resolved against the caller's directory, which is why `main` does not move first when
+    it has arguments."""
     selected: list[Path] = []
     for argument in arguments:
         path = Path(argument)
@@ -220,7 +280,11 @@ def expand(arguments: list[str]) -> list[Path]:
 
 def main(arguments: list[str]) -> int:
     try:
-        paths = expand(arguments) if arguments else tracked_lean_sources()
+        if arguments:
+            paths = expand(arguments)
+        else:
+            os.chdir(REPOSITORY_ROOT)
+            paths = tracked_lean_sources()
     except (OSError, subprocess.CalledProcessError) as error:
         # Exit 2, never 1: a broken file listing is an infrastructure failure, and must not
         # be reported as if the sources had been read and found wanting.
@@ -233,8 +297,10 @@ def main(arguments: list[str]) -> int:
     for path in paths:
         try:
             source = path.read_text(encoding="utf-8")
-        except OSError as error:
-            print(f"comment fences: {error}", file=sys.stderr)
+        except (OSError, UnicodeDecodeError) as error:
+            # Same reasoning: a file that cannot be decoded has not been read and found
+            # wanting either. `UnicodeDecodeError` is a `ValueError`, not an `OSError`.
+            print(f"comment fences: {path}: {error}", file=sys.stderr)
             return 2
         found.extend(violations(path, source))
     if found:

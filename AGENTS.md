@@ -271,15 +271,28 @@ baseline, since accepting it would widen the trusted computing base. The
 tests and is deliberately excluded from every aggregate.
 
 `python3 ./scripts/check-comment-fences.py` enforces one rule over every tracked Lean
-source, the lakefiles included: a block comment that begins its line, or that spans more
-than one line, must be the last thing on the line where it ends. A declaration written
-after the `-/` of the docstring that documents it parses, builds and runs, and a reader
-scanning the left margin does not see it. `lake lint -- --style-only` does not catch this,
-in the lakefile or anywhere else: the text-based linters it runs do not look past a
-comment, and `linter.style.whitespace` measures a command from the start of its doc
-comment, so a command hidden this way does start at the beginning of a line. Inline
-annotations inside a line of code are untouched. The baseline is zero with no exception
-list; `scripts/test-comment-fences.sh` carries the fixtures.
+source, both lakefiles included: a block comment that begins its line must be the last thing
+on the line where it ends. A declaration written after the `-/` of the docstring that
+documents it parses, builds and runs, and a reader scanning the left margin does not see it.
+Two passes miss that, for two different reasons, and they are easy to confuse. `lake lint --
+--style-only` runs Mathlib's four text-based linters, none of which has any notion of a
+comment. `linter.style.whitespace` is not part of that pass at all: it is a syntax linter
+that runs during elaboration under the package's `weak.linter.mathlibStandardSet`, and its
+warnings fail CI through the build log and `scripts/check-warning-log.py`. It does reject a
+command that does not start at the beginning of a line, and it does report the `/-` and
+`/-!` forms of this shape — but it is silent on the `/--` form, because a doc comment is
+part of the command it documents, so the command starts at the `/--`, at column 0. So this
+gate is the only thing that sees the doc-comment form anywhere, and the only check of any
+kind that reads the 33 sources no Lean linter elaborates (`lakefile.lean`, `scripts/`,
+`VCVioComplexity/`, `Interop/`); over the other 740 it deliberately repeats what the
+whitespace linter already says. A block comment that opens part-way into a line is untouched
+however many lines it spans — that is an annotation inside an expression, a field or a
+tactic block, and the repository has 90 such comments that also span lines. Not covered: a
+declaration indented on its own line, which the whitespace linter reports in the ten built
+libraries *unless* a margin docstring precedes it, in which case nothing reports it
+anywhere; and a comment that starts mid-line, reported in those libraries and by nothing in
+the lakefiles. The baseline is zero with no exception list; `scripts/test-comment-fences.sh`
+carries the fixtures, including the shapes the rule knowingly does not reach.
 
 After adding new `.lean` files: `./scripts/update-lib.sh` (CI's `scripts/check-imports.sh`
 fails when a regenerated umbrella would differ from the committed one).

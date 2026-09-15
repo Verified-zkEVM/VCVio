@@ -2,9 +2,12 @@
 # scripts/test-comment-fences.sh
 #
 # Exercise check-comment-fences.py against fixtures: the declaration hidden after a
-# reflowed docstring that motivated the gate, the same shape for a comment that merely
-# starts its line, the inline annotations that must stay legal, the literal forms that
-# could confuse a lexical scanner, and the file selection.
+# reflowed docstring that motivated the gate, the same shape for a single-line comment at
+# the margin, the indented multi-line annotations that must stay legal (a wrapped
+# structure-field docstring is this repository's dominant documentation idiom and the rule
+# must not reach it), the literal forms that could confuse a lexical scanner, the line
+# numbering that a raw string or a gap escape would drift, the shapes the rule knowingly
+# does not cover, and the file selection.
 #
 # The checker takes its default file list from git, so the fixtures live in a throwaway
 # repository with the script copied into it.
@@ -70,6 +73,55 @@ git commit -qm 'fixture: accepted shapes'
 expect_status 0 accepted "$CHECKER"
 grep -q "Comment fences: OK" "$FIXTURE_REPO/accepted.log"
 
+# A block comment that opens part-way into a line is an annotation inside some larger piece
+# of syntax, and must stay accepted however many lines it spans. Every shape below is Lean
+# that elaborates with the package's own options and Mathlib's standard linter set on, with
+# no error and no warning; the rule fired on all seven while it also keyed on "spans more
+# than one line", and shape 2 is the repository's dominant documentation idiom.
+cat > Lib/Innocent.lean <<'LEAN'
+/-- 1. A multi-line inline annotation inside an expression. -/
+def one (x y : Nat) : Nat :=
+  x +
+  /- this argument is
+     the seed -/ y
+
+/-- 2. A wrapped structure-field docstring. -/
+structure Two where
+  /-- The first field, with a docstring long enough
+  that it wraps. -/ a : Nat
+
+/-- 3. A wrapped inductive-constructor docstring. -/
+inductive Three where
+  /-- A constructor docstring long enough
+  that it wraps. -/ | mk : Nat → Three
+
+/-- 4. A wrapped annotation in a `where` block. -/
+def four : Nat := k
+where
+  /- helper, described over
+     two lines -/ k : Nat := 1
+
+/-- 5. A wrapped annotation between list elements. -/
+def five : List Nat :=
+  [1, /- the first
+     element -/ 2,
+   3]
+
+/-- 6. A wrapped annotation before a closing bracket. -/
+def six : List Nat :=
+  [1, 2, 3 /- the last
+     element -/ ]
+
+/-- 7. A wrapped annotation in a tactic block. -/
+theorem seven : True := by
+  /- explain the step
+     over two lines -/ trivial
+LEAN
+git add -A
+git commit -qm 'fixture: indented multi-line annotations'
+expect_status 0 innocent "$CHECKER"
+grep -q "Comment fences: OK" "$FIXTURE_REPO/innocent.log"
+
 # --- the defect this gate exists for -----------------------------------------------------
 
 # A docstring reflowed until its terminator shares a line with the declaration it
@@ -80,7 +132,7 @@ cat > Lib/Swallowed.lean <<'LEAN'
 declaration that follows. -/ def swallowed : Nat := 1
 LEAN
 expect_status 1 swallowed "$CHECKER"
-grep -q "Lib/Swallowed.lean:2: a block comment that spans lines" "$FIXTURE_REPO/swallowed.log"
+grep -q "Lib/Swallowed.lean:2: a block comment that starts its line" "$FIXTURE_REPO/swallowed.log"
 grep -q "def swallowed" "$FIXTURE_REPO/swallowed.log"
 rm Lib/Swallowed.lean
 
@@ -108,6 +160,41 @@ LEAN
 expect_status 1 gap "$CHECKER"
 grep -q "Lib/Gap.lean:5:" "$FIXTURE_REPO/gap.log"
 rm Lib/Gap.lean
+
+# A raw string honours no escapes, so only its closing quote ends it — but the newlines
+# inside it still have to be counted. Not counting them drifts every line number reported
+# after the string, permanently, by the number of newlines it holds.
+cat > Lib/RawDrift.lean <<'LEAN'
+def banner : String := r"line one
+line two
+line three"
+
+/-- A docstring whose terminator swallowed the
+declaration. -/ def swallowed : Nat := 1
+LEAN
+expect_status 1 raw-drift "$CHECKER"
+grep -q "Lib/RawDrift.lean:6:" "$FIXTURE_REPO/raw-drift.log"
+rm Lib/RawDrift.lean
+
+# --- the shapes the rule knowingly does not reach -----------------------------------------
+
+# Asserted so the documented gap cannot change without this test saying so. Each of these
+# puts a declaration somewhere other than the left margin of its own line, and none has a
+# block comment at column 0, so the rule does not reach them. The first is uncovered
+# everywhere, including the libraries that elaborate: `linter.style.whitespace` measures the
+# command from its doc comment, which is at column 0, so it draws no warning either
+# (measured). The other two the linter does report, so they fail CI in a library file — but
+# not in `lakefile.lean`, `scripts/` or `VCVioComplexity/`, which no Lean linter elaborates.
+cat > Lib/Uncovered.lean <<'LEAN'
+/-- A docstring at the margin, its declaration indented on the next line. -/
+  def hiddenOne : Nat := 1
+
+  /-- Indented, and on the target's line. -/ def hiddenTwo : Nat := 1
+
+def a : Nat := 1 /- note -/ def hiddenThree : Nat := 2
+LEAN
+expect_status 0 uncovered "$CHECKER"
+rm Lib/Uncovered.lean
 
 # --- file selection -----------------------------------------------------------------------
 
