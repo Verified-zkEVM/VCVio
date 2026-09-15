@@ -57,14 +57,15 @@ least one.
 
 ## What is here
 
-Fifty-five runtime checks in five groups — the profile's seven parameters and the sizes they
+Fifty-three runtime checks in five groups — the profile's seven parameters and the sizes they
 derive (19), the eight caps and the two structural counts at `d = 1` (10), four arithmetic
 relations between the caps (5), the two dark cells (7), and the summand table checked against
 `targetCount`, against the order and the names its own rows carry, and against the arities of the
-games those names denote (14).  Fifty-four `example`s in `Pins`: one for each of the thirty-four
+games those names denote (12).  Sixty `example`s in `Pins`: one for each of the thirty-four
 declarations the library module exports, the five carriers its instances are stated at, the ten
-games' caps at this bundle, the two `T_ℓ` games' arities, the general coincidence of the two
-WOTS+-`F` caps, and the two certificate fields whose types are all that separates them.  Then the
+games' caps at this bundle, the eight attacked-member equations that carry the nine arities, the
+general coincidence of the two WOTS+-`F` caps, and the two certificate fields whose types are all
+that separates them.  Then the
 vacuity canary — fifteen declarations copied from `HashSigTest.SLHDSA.SufBound` and four
 restatements at this bundle.
 
@@ -241,16 +242,37 @@ def checkDarkCells : IO Unit := do
 /-- **The summand table**, checked rather than only written down: the twelve names in the source's
 order, three of them roleless, every row that has a role carrying that role's cap at this profile
 and carrying the role its own name denotes, and the arity of each of the five single-node games.
-Four of the nine arity cells `checkDarkCells` reads as well, three — `forsFDspr`, `forsFTcr`,
-`wotsFTcr` — are read here and nowhere else, and the two arity-two ones are read only there,
-because a second check on them would be the same predicate twice.
+Of those five arity cells `checkDarkCells` reads two as well, `wotsFUd` and `wotsFPre`; the other
+three — `forsFDspr`, `forsFTcr`, `wotsFTcr` — are read here and nowhere else; and the remaining
+four, the two `T_ℓ` and the two arity-two ones, are read only there, a second check on the
+arity-two pair being the same predicate twice.  Six and five with an overlap of two is the nine of
+the section docstring above.
 
-These are not independent.  The order check fixes the name column, so with the role check it also
-fixes the role column, which makes "twelve summands", "names distinct", "all eight roles are
-used", "the FORS-F role is the only one used twice" and "the two FORS-F rows are the DSPR and TCR
-summands" consequences of the two.  They are kept because each fires *first* on the edit it is
-named for and says which cell moved: a duplicated name stops at "names distinct", not at the order
-check — measured, by deleting each and re-running the edit. -/
+**These twelve are not independent, and the point of the ones that are implied is the order they
+stand in.**  A check implied by the *conjunction* of others still fires first on the edit it is
+named for and names the cell that moved, which a check implied by conjuncts that all precede it
+cannot do at all.  Both classes were measured rather than reasoned about, over the `2 ^ 12`
+role columns the role check admits with the names fixed:
+
+* the order check, "the roleless three are the two PRF hops and the ITSR term" and the role check
+  together imply "twelve summands", "names distinct", "three summands have no cap role", "all eight
+  roles are used" and "the two FORS-F rows are the DSPR and TCR summands" — 8 of the 4096 columns
+  satisfy the three, and none of them falsifies any of the five; drop the roleless-three conjunct
+  and 4088 of the 4096 falsify one, which is why the *three* conjuncts are named and not two;
+* each of those five nevertheless fires first on its own edit: a deleted row stops at "twelve
+  summands", a duplicated name at "names distinct", a row that loses its role at "three summands
+  have no cap role", the roleless set moved at "the roleless three are…", a role used twice at
+  "all eight roles are used", and the FORS-F role moved onto another row at "the two FORS-F rows
+  are…";
+* the cap and arity checks are implied by nothing here — each has a witness satisfying all three
+  conjuncts and falsifying it alone;
+* two checks that could *not* fire were deleted.  "The FORS-F role is the only one used twice" is
+  "twelve summands" and "three summands have no cap role" restated, both of which precede it: of
+  the 4096 columns none satisfies those two and falsifies it, and both edits that falsify it stop
+  at "three summands have no cap role".  "Every cap is positive" is implied by "every role row
+  carries its own cap" together with the measured fact that all eight of this profile's caps are
+  positive, so the cap-zero edit stops one check earlier; it would be worth having again at a
+  parameter set with a zero cap. -/
 def checkSummandTable : IO Unit := do
   ensure "twelve summands" (summands.length == 12)
   ensure "names distinct" ((summands.map (·.summand)).eraseDups.length == 12)
@@ -270,13 +292,9 @@ def checkSummandTable : IO Unit := do
   ensure "every role row carries an arity"
     (summands.all fun r => r.role.isSome == r.arity.isSome)
   ensure "all eight roles are used" ((summands.filterMap (·.role)).eraseDups.length == 8)
-  ensure "the FORS-F role is the only one used twice"
-    ((summands.filterMap (·.role)).length == 9)
   ensure "the two FORS-F rows are the DSPR and TCR summands"
     ((summands.filter (fun r => r.role == some .forsF)).map (·.summand) ==
       ["forsFDspr", "forsFTcr"])
-  ensure "every cap is positive"
-    (summands.all fun r => match r.cap with | some c => 0 < c | none => true)
   ensure "every role row carries the role its own name denotes"
     (summands.all fun r => match r.summand, r.role with
       | _, none => true
@@ -298,9 +316,11 @@ def checkSummandTable : IO Unit := do
 /-! ## The pins
 
 One `example` per exported declaration of `HashSig.SLHDSA.Security.LimitedProfile`, then the ten
-games' caps read at the concrete bundle and the two `T_ℓ` games' arities read off their own
-attacked-member equations.  A library-side edit cannot reach this file, so these are what refuses
-a change to the corollaries' shape. -/
+games' caps read at the concrete bundle and all nine of the table's arities read off the games'
+own attacked-member equations — eight equations for nine cells, the two standalone FORS-`F` games
+sharing the input type of the open-preimage game they are `.toDSPR` and `.toTCR` of.  A
+library-side edit cannot reach this file, so these are what refuses a change to the corollaries'
+shape. -/
 
 section Pins
 
@@ -394,11 +414,28 @@ example : (wotsTlTcrCProblem limitedPrimitives).numTargets = 2 ^ 22 := by
 example : (xmssHTcrCProblem limitedPrimitives).numTargets = 2 ^ 22 - 1 := by
   rw [xmssHTcrCProblem_numTargets]; exact limitedTargetCount_xmssH
 
-/-! ### The two `T_ℓ` games' arities
+/-! ### Every game's arity, read off its own attacked-member equation
 
-The cap cannot separate these two at `d = 1`; the message type can.  The FORS root compression
+The table's arity column says "the arity of the hash the game attacks", and these eight equations
+are what tie it to the games rather than to a literal.  `HashSig.SLHDSA.Security.CanonicalGames`
+exports one per collection game and one for the standalone FORS-`F` family, and each is stated at
+the game's own input type, so an equation restated about another game at the wrong type is
+refused.
+
+The two `T_ℓ` games are the pair the cap cannot separate at `d = 1`: the FORS root compression
 takes a `Vector limitedPrimitives.Y 6` and the WOTS+ public-key compression a
-`Vector limitedPrimitives.Y 68`, so each equation below is stated at a type the other refuses. -/
+`Vector limitedPrimitives.Y 68`.  The five single-node games take one `limitedPrimitives.Y` and
+the two arity-two ones a pair of them.  `forsFDsprProblem` and `forsFTcrProblem` have no equation
+of their own because they are `.toDSPR` and `.toTCR` of `forsFOpenPreProblem`, whose input type is
+therefore theirs.
+
+**What these eight separate, measured, and what they do not.**  Restating the WOTS+-`F`
+undetectability equation about the arity-two FORS-`H` game gives three errors, and stating the
+FORS-`H` equation at the single-node type gives four.  What they do *not* separate is two games of
+the same arity over the same `Thash`: proving the FORS-`H` pin by `xmssHTcrCProblem_eval_adrsToKey`
+gives **nothing at all**, exactly as restating a `T_ℓ` cap pin about the other `T_ℓ` game does.  So
+the arity column is now read off the games rather than off literals, and the two `H` games are a
+third pair that only their caps tell apart — which `checkDarkCells` asserts. -/
 
 example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs)
     (input : Vector limitedPrimitives.Y 6) :
@@ -413,6 +450,44 @@ example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs)
         (limitedPrimitives.adrsToKey address) input =
       limitedPrimitives.Tl pkSeed address input.toList :=
   wotsTlTcrCProblem_eval_adrsToKey limitedPrimitives pkSeed address input
+
+example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs) (input : limitedPrimitives.Y) :
+    (forsFOpenPreProblem limitedPrimitives).th.eval pkSeed
+        (limitedPrimitives.adrsToKey address) input =
+      limitedPrimitives.F pkSeed address input :=
+  forsFOpenPreProblem_eval_adrsToKey limitedPrimitives pkSeed address input
+
+example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs) (input : limitedPrimitives.Y) :
+    (wotsFUdCProblem limitedPrimitives).th.eval pkSeed
+        (limitedPrimitives.adrsToKey address) input =
+      limitedPrimitives.F pkSeed address input :=
+  wotsFUdCProblem_eval_adrsToKey limitedPrimitives pkSeed address input
+
+example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs) (input : limitedPrimitives.Y) :
+    (wotsFTcrCProblem limitedPrimitives).th.eval pkSeed
+        (limitedPrimitives.adrsToKey address) input =
+      limitedPrimitives.F pkSeed address input :=
+  wotsFTcrCProblem_eval_adrsToKey limitedPrimitives pkSeed address input
+
+example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs) (input : limitedPrimitives.Y) :
+    (wotsFPreCProblem limitedPrimitives).th.eval pkSeed
+        (limitedPrimitives.adrsToKey address) input =
+      limitedPrimitives.F pkSeed address input :=
+  wotsFPreCProblem_eval_adrsToKey limitedPrimitives pkSeed address input
+
+example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs)
+    (input : limitedPrimitives.Y × limitedPrimitives.Y) :
+    (forsHTcrCProblem limitedPrimitives).th.eval pkSeed
+        (limitedPrimitives.adrsToKey address) input =
+      limitedPrimitives.H pkSeed address input.1 input.2 :=
+  forsHTcrCProblem_eval_adrsToKey limitedPrimitives pkSeed address input
+
+example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs)
+    (input : limitedPrimitives.Y × limitedPrimitives.Y) :
+    (xmssHTcrCProblem limitedPrimitives).th.eval pkSeed
+        (limitedPrimitives.adrsToKey address) input =
+      limitedPrimitives.H pkSeed address input.1 input.2 :=
+  xmssHTcrCProblem_eval_adrsToKey limitedPrimitives pkSeed address input
 
 /-! ### The two profile facts -/
 

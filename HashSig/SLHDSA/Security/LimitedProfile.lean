@@ -22,8 +22,9 @@ instantiates both at one parameter set — the SP 800-230 reduced profile
 Three things, and the Labels section below counts what they come to: nine instances, one
 coefficient equation and eight cap equations — eighteen of the thirty-four declarations.  The other
 sixteen are the five corollaries those three things are for, the nine that write the profile down
-(the parameter set, the bundle, their two equations and five plain parameter values), and the two
-facts of *The two profile facts the witness families need* below, which nothing here consumes.
+(the parameter set, the bundle, their two equations, four plain parameter values and the
+disequality that separates the first dark cell), and the two facts of *The two profile facts the
+witness families need* below, which nothing here consumes.
 
 * **It discharges the instance obligations.**  `Certificate` asks for nine carrier instances, and
   at this bundle none of them is found by instance search.  Eight of the nine are stated with
