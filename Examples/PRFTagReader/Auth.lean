@@ -290,20 +290,6 @@ theorem authExp_le_prfAdvantage_add_authRF
   have : a - b ≤ |a - b| := le_abs_self _
   linarith
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
-/-- Existential form of the authentication reduction: there is a PRF adversary whose
-distinguishing advantage, added to the random-function world's success probability
-`authRFExp`, bounds the authentication adversary's success probability. The witness is
-`authToPRFReduction adversary`. -/
-theorem exists_prfAdv_authExp_le_prfAdvantage_add_authRF
-    (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : AuthAdversary TagId Nonce Digest) :
-    ∃ prfAdv : PRFScheme.PRFAdversary (TagId × Nonce) Digest,
-      (Pr[= true | authExp prfs adversary]).toReal ≤
-        PRFScheme.prfAdvantage prfs.multiplePRFScheme prfAdv +
-        (Pr[= true | authRFExp adversary]).toReal :=
-  ⟨authToPRFReduction adversary, authExp_le_prfAdvantage_add_authRF prfs adversary⟩
-
 omit [Nonempty TagId] in
 /-- In the ideal authentication world, a forged reader acceptance never occurs. -/
 theorem authIdealExp_eq_zero
