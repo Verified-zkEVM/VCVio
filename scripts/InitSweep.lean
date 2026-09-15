@@ -539,14 +539,18 @@ instance. There is no value to read — these declarations are not in the enviro
 so the name is all there is, which is why this clause is an addition to the value test and
 not a replacement for it.
 
-The third test is the one with reach. Testing only the entry-point list would make this
-clause a list membership check on one class's accessors: `Fintype.card._at_.f.spec_0` is
-caught because `Fintype.card` happens to be on that list, while
-`FinEnum.toList._at_.f.spec_0` — the same hazard in the other class of the pair — is not,
-and neither is a user helper's `count._at_.f.spec_0`. Both are flagged by what their
-segments consume. Measured over this tree: 0 of the 1473 compiled declarations of the seven
-default roots and 0 of the 1 in the test libraries, so the test ships at no baseline cost;
-`VCVioInitSweepTestFixtures.Hazard.Specialised` carries one witness of each kind. -/
+The three are complementary, and the third is the one with reach. A membership test on the
+entry-point list catches exactly the names on it — `Fintype.card._at_.f.spec_0`, and
+`FinEnum.toList._at_.f.spec_0` since that name joined the list — and nothing else; the result
+test catches a segment that *builds* an instance (`FinEnum.ofList`, `Pi.instFintype`,
+`Fintype.ofBijective`); and the argument test catches a segment that *consumes* one, which is
+the only one of the three that reaches a function on no list and of no class — a user's
+`count (α) [Fintype α]`, specialised at a fixed carrier and initialised at load. Testing only
+the list is what this clause did when it was written, and the witness that showed it was
+`FinEnum.toList` before it was added: the list grows one name at a time and the hazard does
+not. Measured over this tree: 0 of the 1473 compiled declarations of the seven default roots
+and 0 of the 1 in the test libraries, so the third test ships at no baseline cost, and
+`VCVioInitSweepTestFixtures.Hazard.Specialised` carries one witness per test. -/
 def irDeclEvidence (env : Environment) (n : Name) : Array String := Id.run do
   let segments := specialisationSegments n
   let mut hits : Array String := #[]
