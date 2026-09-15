@@ -5,12 +5,14 @@ Authors: Alexander Hicks
 -/
 module
 
+public import Mathlib.Data.FinEnum
 import VCVioInitSweepTestFixtures.Hazard.Decide
 import VCVioInitSweepTestFixtures.Hazard.Initialize
 import VCVioInitSweepTestFixtures.Hazard.Named
 import VCVioInitSweepTestFixtures.Hazard.Noncomputable
 import VCVioInitSweepTestFixtures.Hazard.Opaque
 import VCVioInitSweepTestFixtures.Hazard.Plain
+import VCVioInitSweepTestFixtures.Hazard.Specialised
 
 /-! # Hazard fixture root for initsweep
 
@@ -20,6 +22,9 @@ own, and the route that mentions no enumeration at all. `Plain` and `Noncomputab
 flagged on the same constant — the compiled auxiliary, not the instance; `Named` reaches the
 same enumeration through `Pi.instFintype`, which no entry-point name matches; `Initialize` is
 flagged on the declaration whose registered initialiser body carries the enumeration;
-`Decide` writes no instance at all and enumerates through the `Decidable` instance; and
-`Opaque` hides its value from the kernel's view and not from the backend.
+`Decide` writes no instance at all and enumerates through the `Decidable` instance;
+`Opaque` hides its value from the kernel's view and not from the backend; and `Specialised`
+has no parameterless constant of its own — the work is in a specialisation the compiler
+lifted out of a function, which the environment sweep cannot name and the compiled-declaration
+sweep can.
 -/

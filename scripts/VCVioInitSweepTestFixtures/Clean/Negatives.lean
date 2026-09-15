@@ -9,9 +9,9 @@ public import Mathlib.Data.Fintype.Pi
 
 /-! # One negative control per clause of the predicate
 
-A gate whose baseline is zero is only worth something if the zero is hard to reach by
-accident. These are the three ways a declaration can name an enumeration entry point, or
-be eagerly initialised, and still be harmless.
+A baseline is only worth something if the gate is hard to green by accident. One control
+per clause of the predicate: each names an enumeration entry point, or is eagerly
+initialised, and is still harmless.
 -/
 
 public section
@@ -19,13 +19,18 @@ public section
 namespace VCVioInitSweepTestFixtures.Clean.Negatives
 
 /-- Parameter clause: this names `Finset.univ` and compiles, but it takes a parameter, so
-the backend emits a procedure and nothing runs until someone calls it. -/
+the backend emits a procedure and the declaration is not itself initialised. It is also
+*polymorphic*, so there is no fixed carrier for the compiler to specialise it at — which is
+the part that matters, because a monomorphic function whose result is a ground value can
+have a parameterless specialisation lifted out of it, and that specialisation *is*
+initialised at load (`Hazard.Specialised`). -/
 def enumerate (α : Type) [Fintype α] : Finset α := Finset.univ
 
 /-- Parameter clause again, this time against the class disjunct: the value names
 `Pi.instFintype`, whose type is an application of `Fintype`, and `Fintype.elems` besides —
-both kinds of evidence the gate looks for — but the declaration takes a parameter, so the
-backend emits a procedure and nothing is enumerated until someone calls it. -/
+both kinds of evidence the gate looks for — but the declaration takes a parameter and the
+carrier is its argument, so there is nothing to specialise and nothing is enumerated until
+someone calls it. -/
 def enumerationSizeOf (n : ℕ) : ℕ :=
   (Pi.instFintype (α := Fin n) (β := fun _ => Bool)).elems.card
 

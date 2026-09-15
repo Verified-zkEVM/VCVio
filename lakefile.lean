@@ -493,10 +493,11 @@ lean_exe axiomsweep where
   root := `AxiomSweep
   supportInterpreter := true
 
-/-- Whole-library accounting of eagerly-initialised compiled constants: constants the Lean
-backend evaluates when their module is loaded, before any `main` runs, whose value builds an
-enumeration of a type. Gated against a list of accepted constant names
-(`scripts/init_sweep_baseline.json`, in the shape of `scripts/axiom_baseline.json`).
+/-- Whole-library accounting of eagerly-initialised compiled code: the constants the Lean
+backend evaluates when their module is loaded, before any `main` runs, and the
+compiler-generated declarations it initialises beside them, when what runs builds an
+enumeration of a type. Gated against a list of accepted constant names scoped by library
+(`scripts/init_sweep_baseline.json`), the allowlist idea `scripts/axiom_baseline.json` uses.
 Complements the axiom sweep: that one accounts for what the kernel accepted, this one for
 what the *binary* does at start-up. Runtime-imports built oleans, so run it after
 `lake build`. See `scripts/InitSweep.lean`. -/
@@ -509,10 +510,10 @@ lean_exe initsweep where
 Not a default target, and deliberately carrying the spellings of the instance that motivated
 the gate: the plain one, the `noncomputable` one that looks like a fix and is not, the named
 instance that a pure entry-point test accepts, the `decide` over a bounded quantifier that
-writes no instance at all, the `opaque` value the kernel hides, and the `Fintype.ofFinite`
-one that really is a fix. Every carrier
-type is tiny because the gate is a shape check and a large carrier would only cost build
-time. -/
+writes no instance at all, the `opaque` value the kernel hides, the specialisation that has
+no environment constant to read, and the `Fintype.ofFinite` one that really is a fix. Every
+carrier type is tiny because the gate is a shape check and a large carrier would only cost
+build time. -/
 lean_lib VCVioInitSweepTestFixtures where
   srcDir := "scripts"
   globs := #[.submodules `VCVioInitSweepTestFixtures]

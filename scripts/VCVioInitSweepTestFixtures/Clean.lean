@@ -5,6 +5,7 @@ Authors: Alexander Hicks
 -/
 module
 
+public import Mathlib.Data.FinEnum
 import VCVioInitSweepTestFixtures.Clean.Good
 import VCVioInitSweepTestFixtures.Clean.Negatives
 

@@ -3,11 +3,12 @@
 # Execute falsifiable fixtures for the eager-initialisation ratchet.
 #
 # The gate accepts a flagged constant only when the committed baseline names it, so the
-# fixtures have to falsify both halves: `VCVioInitSweepTestFixtures.Hazard` carries the five
+# fixtures have to falsify both halves: `VCVioInitSweepTestFixtures.Hazard` carries the six
 # routes by which loading a module can build an enumeration of a type — including the
-# respelling that a pure name test accepts, the route that writes no instance at all, and
-# the value the kernel hides — and `VCVioInitSweepTestFixtures.Clean` carries one negative
-# control per clause of the predicate. Each is asserted here by name, not by count. The
+# respelling that a pure name test accepts, the route that writes no instance at all, the
+# value the kernel hides, and the specialisation that has no environment constant to read —
+# and `VCVioInitSweepTestFixtures.Clean` carries one negative control per clause of the
+# predicate. Each is asserted here by name, not by count. The
 # baseline's own behaviour (accept by name, reject a widened entry-point set, reject a row
 # scoped to another library, preserve rows outside the swept roots) is exercised below it.
 
@@ -84,6 +85,12 @@ flagged = {name: entry for name, entry in hazard_entries.items() if entry["entry
 assert clean["opaqueValueCount"] == 0, clean["opaqueValueCount"]
 assert hazard["opaqueValueCount"] == 0, hazard["opaqueValueCount"]
 
+# The other half of what a module initialiser runs: compiler-generated parameterless
+# declarations, which are not environment constants and so have no value to read. The clean
+# root has none; the hazard root has exactly the one the specialisation fixture forces.
+assert clean["irLoadTimeCount"] == 0, clean["irLoadTimeCount"]
+assert clean["irOffenders"] == [], clean["irOffenders"]
+
 # --- the hazard, by each route ------------------------------------------------------
 
 # The plain spelling and the `noncomputable` one differ in source and not in effect: the
@@ -144,6 +151,21 @@ assert "Finset.univ" in flagged[opaque_value]["entryPoints"], flagged[opaque_val
 
 assert len(flagged) == 7, sorted(flagged)
 
+# The route with no environment constant at all: `carrierCount` is a *function*, so the
+# value clause is right to leave it alone, and the compiler lifts a parameterless
+# specialisation out of it that the module initialiser assigns. Nothing in
+# `Hazard.Specialised` is in the load-time population, so this is the only thing that can
+# catch it.
+assert not any(entry["module"].endswith("Hazard.Specialised")
+               for entry in hazard_entries.values()), sorted(hazard_entries)
+ir_offenders = hazard["irOffenders"]
+assert len(ir_offenders) == 1, ir_offenders
+specialised = ir_offenders[0]
+assert specialised["name"].startswith("Fintype.card._at_."), specialised
+assert "Hazard.Specialised.carrierCount" in specialised["name"], specialised
+assert specialised["via"] == "ir-only", specialised
+assert specialised["entryPoints"] == ["Fintype.card"], specialised
+
 # --- one negative control per clause, each witnessed by name -------------------------
 
 clean_prefix = "VCVioInitSweepTestFixtures.Clean."
@@ -188,6 +210,9 @@ expect_status 1 hazard-unaccepted \
     --check --baseline "$EMPTY_BASELINE"
 grep -q "instFintypeYBundle._aux_1" "$FIXTURE_TMP/hazard-unaccepted.log"
 grep -q "Hazard.Named.instFintypeYBundle" "$FIXTURE_TMP/hazard-unaccepted.log"
+grep -q "Hazard.Specialised.carrierCount" "$FIXTURE_TMP/hazard-unaccepted.log"
+# `Fintype.ofFinite` appears in the remediation advice the failure prints, not in any
+# verdict: this asserts that the advice is printed, nothing about the entry points.
 grep -q "Fintype.ofFinite" "$FIXTURE_TMP/hazard-unaccepted.log"
 grep -q "update-baseline" "$FIXTURE_TMP/hazard-unaccepted.log"
 
@@ -217,10 +242,11 @@ with open(source, encoding="utf-8") as stream:
     base = json.load(stream)
 
 rows = base["accepted"]
-assert len(rows) == 7, rows
+assert len(rows) == 8, rows
 assert all(row["library"] == "VCVioInitSweepTestFixtures.Hazard" for row in rows), rows
 
-# Drop one constant: the other five stay accepted and that one is a regression.
+# Drop one constant: every other row still accepts its constant and that one is a
+# regression.
 one_missing = [row for row in rows if not row["name"].endswith("Named.instFintypeYBundle")]
 with open(f"{tmp}/one-missing.json", "w", encoding="utf-8") as stream:
     json.dump({"accepted": one_missing}, stream)
@@ -238,7 +264,13 @@ mis_scoped = [dict(row, library="SomeOtherLibrary") for row in rows]
 with open(f"{tmp}/mis-scoped.json", "w", encoding="utf-8") as stream:
     json.dump({"accepted": mis_scoped}, stream)
 
-# A row for a library this run does not sweep, alongside the accepted six.
+# A row listing an entry point the constant does not name.
+widened = [dict(row, entryPoints=sorted(set(row["entryPoints"]) | {"Set.toFinset"}))
+           for row in rows]
+with open(f"{tmp}/widened.json", "w", encoding="utf-8") as stream:
+    json.dump({"accepted": widened}, stream)
+
+# A row for a library this run does not sweep, alongside the accepted rows.
 foreign = {"name": "SomeOtherLibrary.instFintypeThing",
            "library": "SomeOtherLibrary", "entryPoints": ["Fintype.mk"]}
 with open(f"{tmp}/with-foreign.json", "w", encoding="utf-8") as stream:
@@ -257,6 +289,15 @@ expect_status 1 hazard-narrowed-row \
 expect_status 1 hazard-mis-scoped \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
     --check --baseline "$FIXTURE_TMP/mis-scoped.json"
+
+# A row that lists more than the constant names is accepted — the ratchet only refuses new
+# evidence — but it is reported as shrinkable, so an over-broad row cannot pre-authorise
+# future hazard without saying so on every run.
+expect_status 0 hazard-widened-row \
+  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
+    --check --baseline "$FIXTURE_TMP/widened.json"
+grep -q "no longer build what they were accepted for" "$FIXTURE_TMP/hazard-widened-row.log"
+grep -q "update-baseline" "$FIXTURE_TMP/hazard-widened-row.log"
 
 # A row outside the swept roots is neither enforced nor lost: `--update-baseline` over a
 # partial root set preserves it instead of silently dropping the other libraries' rows.
@@ -278,7 +319,7 @@ with open(sys.argv[1], encoding="utf-8") as stream:
     base = json.load(stream)
 # The Clean sweep accepts nothing, and the Hazard rows belong to a library it did not
 # sweep, so they survive untouched.
-assert len(base["accepted"]) == 7, base
+assert len(base["accepted"]) == 8, base
 assert all(row["library"] == "VCVioInitSweepTestFixtures.Hazard"
            for row in base["accepted"]), base
 PY

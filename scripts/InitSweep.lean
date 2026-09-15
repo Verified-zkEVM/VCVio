@@ -16,7 +16,10 @@ The predicate, in one sentence: *a constant is flagged when loading its module e
 value on its behalf — its own, because its compiled declaration takes no parameters, or an
 `initialize` body registered for it — and that value either names one of
 `enumerationEntryPoints` or names a constant whose type is an application of one of
-`enumerationClasses`.*
+`enumerationClasses`.* A module's initialiser also evaluates declarations that are **not**
+environment constants — specialisations the compiler lifts out of functions, and boxed
+numeric constants — which have no value to read; those are counted separately and tested by
+the only thing they carry, their mangled name.
 
 Every clause is load-bearing, and every number below was measured over this repository's
 own build; `scripts/test-initsweep.sh` carries the fixtures that falsify each one.
@@ -28,9 +31,25 @@ own build; `scripts/test-initsweep.sh` carries the fixtures that falsify each on
   call-and-assign for the initialiser registered for an `initialize x : T ← e` (992-1002),
   and `x = _init_x();` for a parameterless declaration that is neither a lifted closed term
   nor a simple ground expression (1003-1005). `loadTimeSource` mirrors those three branches
-  and nothing else. A declaration with parameters compiles to a procedure and costs nothing
-  until it is called; one without is a value whose cost is paid at load time whether or not
-  anything reads it.
+  and nothing else. A declaration without parameters is a value whose cost is paid at load
+  time whether or not anything reads it.
+
+  A declaration *with* parameters is not itself initialised — but that is not the same as
+  costing nothing at load, and the difference is a real hazard rather than a technicality.
+  The compiler may lift a parameterless **specialisation** out of a monomorphic function's
+  body, and when the specialisation's result is a ground value the backend assigns it in the
+  module initialiser like any other value. Measured, with the emitted C as ground truth:
+  `def carrierCount (_u : Unit) : Nat := Fintype.card (Fin 3 → Bool)` declares no
+  parameterless constant, and its module's initialiser nevertheless runs
+  `_init_…Fintype_card___at___00….carrierCount_spec__0()`, which forces a closed term built
+  by `Fintype.piFinset` — the function this gate exists for. Two neighbouring shapes are
+  genuinely free, and the difference is worth knowing: `def mkY (_u : Unit) : Fintype T :=
+  inferInstance` returns an already-initialised pointer, and
+  `def elemsY (_u : Unit) : Finset T := Finset.univ` keeps its closed term behind a
+  `lean_obj_once` cell that is forced on the first call. `VCVioInitSweepTestFixtures.Hazard.Specialised`
+  is the first shape; the two controls in `Clean/Negatives.lean` are polymorphic, so nothing
+  can be specialised at a fixed carrier and they are safe for that reason rather than for the
+  reason a reader might assume.
 
   The LLVM backend's `Lean.IR.EmitLLVM.emitDeclInit` (`Lean/Compiler/IR/EmitLLVM.lean:1282`)
   makes the same parameterless decision (`d.params.size == 0`, line 1294) and is **strictly
@@ -84,6 +103,13 @@ own build; `scripts/test-initsweep.sh` carries the fixtures that falsify each on
   `enumerationClasses` catches any constant whose *type* is an enumeration of a type —
   which is what `Pi.instFintype`, `Fin.fintype` and every other instance is, however the
   author spelled it.
+* **and the same test on the compiled declarations that have no constant.** The module
+  initialiser assigns compiler-generated parameterless declarations beside the constants:
+  specialisations (`Fintype.card._at_.<caller>.spec_0`) and boxed numeric constants. They are
+  not in the environment, so there is no value to read and the name is all there is;
+  `irDeclEvidence` tests the functions the specialiser recorded in it. Measured over the
+  seven default roots: 1473 such declarations, 0 of which name an entry point — and the
+  population is the reason the count is printed rather than merely checked.
 
 Compiler-internal names are deliberately **not** skipped. The hazard this gate exists for
 is carried by an auxiliary — in the fixtures, `….instFintypeYBundle._aux_1`, and the
@@ -101,16 +127,37 @@ lake exe initsweep --update-baseline   # rewrite the baseline from the current b
 ```
 
 The committed baseline (`scripts/init_sweep_baseline.json`) is a **list of constant names**
-with the entry points each one is accepted for, in the shape of
-`scripts/axiom_baseline.json`: accepting one benign instance costs exactly that one name and
-leaves every other constant of its library at zero. It carries seven entries, every one a
-`Fintype` instance on a carrier of at most eight elements: two in the proof libraries
-(`SLHDSA.Security.instFintypeTargetRole`, eight elements written out;
-`OneTimePad.Separated.instFintypeNode`, six) and five in the test libraries (`Bool`, `Fin 3`
-and a one-element type). Like the axiom baseline's rows, the argument for each lives in the
-review of the diff that adds it. A row covers one constant under one library, so
-`--update-baseline` over a partial `--root` set rewrites only those libraries' rows and
-preserves the rest, and a row written for one sweep cannot green the same name in another.
+with the entry points each one is accepted for, rather than the per-library count this file
+shipped first: accepting one benign instance costs exactly that one name and leaves every
+other constant of its library at zero. It is the `scripts/axiom_baseline.json` idea — an
+allowlist keyed by declaration, argued row by row in review — with a scope attached, which
+`axiom_baseline.json`'s flat name lists do not have: a row covers one constant *under one
+library* and exactly the entry points it lists, so `--update-baseline` over a partial
+`--root` set rewrites only those libraries' rows and preserves the rest, and a row written
+for one sweep cannot green the same name in another.
+
+Its nine rows, read off the emitted C rather than off their names:
+
+* `SLHDSA.Security.instFintypeTargetRole` and `OneTimePad.Separated.instFintypeNode` —
+  `Fintype` instances on 8- and 6-constructor enumerations with `elems` written out in
+  source. Both are assigned in their module's initialiser: they really do build their
+  `Finset` at load, and it is eight and six elements.
+* `instFinEnumBool_toMathlib` — `FinEnum Bool` built by `FinEnum.ofList [true, false]`, so
+  the two-element list really is materialised at load.
+* `FinRatPMF.Demo.instFinEnumBool_vCVio`, `instFinEnumUSize_vCVio`,
+  `instFinEnumISize_vCVio` — hand-written `FinEnum.mk` instances, initialised at load but
+  materialising nothing: a numeral and two closures. The `USize` and `ISize` rows are the
+  ones worth re-reading if `FinEnum`'s constructors ever change, since their `card` is
+  `2 ^ System.Platform.numBits`.
+* `VCVioTest.Computability.toyForkProb` — a load-time value that applies a parameterised
+  `FinEnum` instance for a two-element coin spec.
+* `SMDTOpenPREFinalValidityTest.instFintypeInput` (a one-element `Fintype`) and
+  `VCVioTest.PFunctorFacade.instFintypeTriPFunctor` (a `PFunctor.Fintype`, a different class,
+  whose `Fin 3` instance sits inside a lambda) — these two are **not** initialised at load at
+  all: the emitter lays each of them out as a static literal
+  (`LEAN_EXPORT const lean_object* … = (const lean_object*)&…___closed__0_value;`). They are
+  the price of the over-approximation `isCompiledValue` documents, and they are why that
+  docstring says what it costs.
 
 Known limits, measured or constructed rather than assumed. The first two are about *size*,
 which this gate cannot see at all; the next three about what it can and cannot name; the
@@ -147,11 +194,22 @@ rest about reach.
   a `List (Fin 3 → Bool)` built by nested `List.flatMap` over `[true, false]` is accepted.
   The gate keys on named entry points and on types, so an enumeration written from scratch
   is invisible to it.
-* Conversely, the value it reads is the kernel's, so an entry point that survives only in
-  an erased position — inside a proof argument — would be a false positive. None occurs:
-  all seven constants flagged across the nine swept libraries are `Fintype` instances that
-  really are constructed at load. The summary line reports the whole load-time population,
-  so the margin between what is tested and what is flagged stays visible.
+* A **specialisation** lifted out of a function is caught only by its name. The compiled
+  half of the sweep tests `Fintype.card._at_.<caller>.spec_0` and its like, so the witness
+  above is flagged; a specialisation of a *user* helper that enumerates internally carries
+  the helper's name and nothing else, and is not. That is the monomorphic-helper limit
+  again, one level down.
+* Conversely, the values it reads are the kernel's, and it reads the whole value: an entry
+  point that occurs only in a position the initialiser never evaluates is a false positive
+  rather than a false negative. Two kinds exist. An entry point under a proof argument (none
+  in this tree), and an entry point under a lambda the initialiser only allocates a closure
+  for — constructed:
+  `def t : Thunk (Finset (Fin 3 → Bool)) := Thunk.mk (fun _ => Finset.univ)` is flagged, and
+  its initialiser allocates a thunk and enumerates nothing. No row of the committed baseline
+  is of that kind, and separating them would mean deciding which binders the initialiser
+  forces, which is the emitter's job rather than a name test's. The summary reports the whole
+  load-time population, so the margin between what is tested and what is flagged stays
+  visible.
 * `@[implemented_by f]` moves the hazard rather than hiding it: the attributed declaration
   is not compiled at all (so it never enters the load-time population), and `f` — which must
   have the same type, hence is itself a parameterless value — is flagged in its place.
@@ -162,16 +220,17 @@ rest about reach.
 * Of the three test libraries, `VCVioTest` and `LatticeCryptoTest` have umbrella modules and
   **are** swept, by the `--root VCVioTest --root LatticeCryptoTest` invocation
   `scripts/validate.sh` and `.github/workflows/build.yml` run after `lake test` builds their
-  oleans (1570 constants, 79 modules, 282 load-time, 0 flagged today). `HashSigTest` is not,
+  oleans: 1570 constants, 79 modules, 282 load-time, three flagged and baselined today.
+  `HashSigTest` is not,
   and precisely: (a) `HashSigTest.lean` does not exist, so the library name is not an
-  importable module; (b) its fourteen `lean_exe` roots *are* importable one at a time
+  importable module; (b) its thirteen `lean_exe` roots *are* importable one at a time
   (`--root HashSigTest.SLHDSA.Sha2KAT` sweeps 5 constants across 1 module and exits 0), but
   two of them cannot be imported together — `environment already contains 'main'`, exit 2;
   (c) `census` counts only modules whose name has a root as a prefix, so one exe root covers
   its own module and not the closure it imports. Closing it needs either a generated
   `HashSigTest.lean` umbrella (and its `main`-free equivalent) or a `census` that separates
-  the import root from the attribution prefix, plus the fourteen invocations to cover the
-  fourteen roots.
+  the import root from the attribution prefix, plus the thirteen invocations to cover the
+  thirteen roots.
 * It is a static check on the environment: it loads oleans and never executes a swept
   module's initialisation function. `.lake/build/bin/initsweep.rsp` links one project object
   (`InitSweep.c.o.export`) plus the FFI stubs and the Lean runtime — no swept-library native
@@ -187,8 +246,12 @@ load-time constants whose value could not be read, and therefore were accepted w
 being looked at.
 
 `scripts/test-initsweep.sh` exercises all of this against the `VCVioInitSweepTestFixtures`
-library, whose fixtures carry the five routes into the hazard, one negative control per
-clause, and the baseline's accept / widen / shrink behaviour.
+library, whose `Hazard` root carries six modules — the plain instance and the
+`noncomputable` spelling that flags the same auxiliary, the named instance no entry-point
+test can see, the `initialize` body, the `decide` over a bounded quantifier that writes no
+instance at all, the `opaque` value the kernel hides, and the specialisation with no
+environment constant to read — against one negative control per clause and the baseline's
+accept / drop / narrow / widen / re-scope / preserve behaviour.
 -/
 open Lean
 
@@ -227,27 +290,37 @@ def enumerationEntryPoints : List Name :=
   [`Finset.univ, `Fintype.elems, `Fintype.card, `Fintype.piFinset, `Fintype.ofFinite,
     `Fintype.ofEquiv, `Set.toFinset]
 
-/-- Classes whose *values* are enumerations of a type: naming a constant whose type is an
-application of one of these means the load-time value builds one, whatever the author wrote.
+/-- Classes an instance of which can materialise a collection of the type's elements, so
+that naming one of their *builders* in a load-time value means the collection is built then.
 
-`Fintype` qualifies on its fields: `Fintype.elems : Finset α` is a materialised collection
-of the elements of `α`, so constructing any `Fintype` costs the whole type. This one clause
-closes every respelling of the instance that motivated the gate —
+* `Fintype` qualifies unconditionally: `Fintype.elems : Finset α` is the collection, so
+  every instance carries one.
+* `FinEnum` qualifies through its constructors rather than its signature. Its fields are
+  `card : ℕ` and `equiv : α ≃ Fin card`, which a hand-written instance can fill with a
+  numeral and two closures (`instance : FinEnum USize where card := 2 ^ …; equiv := ⟨…⟩`
+  materialises nothing) — but every Mathlib instance for a composite type is built by
+  `FinEnum.ofList xs h = ofNodupList xs.dedup …`, which takes a **materialised list of every
+  element**, deduplicates it, sets `card := xs.length` and captures the list in both
+  directions of the equivalence. `FinEnum.prod`, `sum`, `fin`, `Finset.finEnum`,
+  `Subtype.finEnum`, `instSigma` and `Quotient.enum` all go through it, and Mathlib's emitted
+  C for `FinEnum.prod` calls `toList`, `productTR` and `ofList` in sequence. A `FinEnum` on a
+  composite carrier is therefore the same hazard as a `Fintype` on one, and
+  `def p : FinEnum (Fin 2 × Fin 2 × Fin 2) := inferInstance` is flagged.
+* `Encodable` and `Denumerable` do **not** qualify, and this is the field criterion doing
+  real work rather than being asserted: `Encodable` is `encode : α → ℕ` and
+  `decode : ℕ → Option α`, `Denumerable` extends it with a proof, and no instance of either
+  can hold a collection.
+
+The clause closes every respelling of the instance that motivated the gate —
 `instance : Fintype bundle.Y := Pi.instFintype`, the `abbrev` route, field-by-field
 construction, `Fintype.ofBijective`, a helper that returns the instance, and
 `def ok : Bool := decide (∀ x : T, p x)`, which enumerates `T` at load through
-`Fintype.decidableForallFintype` — none of which names any of `enumerationEntryPoints`.
-All six were constructed and measured; each is flagged by this clause and by nothing else.
+`Fintype.decidableForallFintype` — none of which names any of `enumerationEntryPoints`. All
+six were constructed and measured; each is flagged by this clause and by nothing else.
 
-`FinEnum` deliberately does **not** qualify, on the same criterion: its fields are
-`card : ℕ` and `equiv : α ≃ Fin card`, two closures and a numeral, so constructing one does
-not materialise anything. The swept tree's one `FinEnum` instance
-(`VCVio.OracleComp.FinRatPMF`) is correctly not flagged. `Encodable` and `Denumerable` are
-out for the same reason.
-
-The cost of the clause on this tree is two constants, both hand-written `Fintype` instances
-whose `elems` is written out in source; both are named in `scripts/init_sweep_baseline.json`. -/
-def enumerationClasses : List Name := [`Fintype]
+Its cost on this tree is nine baseline rows, seven of which the emitted C confirms are
+assigned in a module initialiser. -/
+def enumerationClasses : List Name := [`Fintype, `FinEnum]
 
 /-- The entry points and classes are written as unchecked name literals because this tool
 imports only `Lean` — linking Mathlib into a gate that has to run after every build is not
@@ -283,8 +356,11 @@ tool does and neither can be consulted from here. Measured over the seven swept 
 the other **293 are every one of them emitted as a static literal** —
 `LEAN_EXPORT const lean_object* X = (const lean_object*)&X___closed__N_value;`, checked by
 C symbol for all 293, and mostly notation constants. A literal cannot enumerate a type, so
-the surplus can only cost a false positive, and costs none. The LLVM backend has no such
-exemption at all, so there the mirror is exact. -/
+the surplus can only cost a false positive — and it costs exactly two, both in the test
+libraries: `SMDTOpenPREFinalValidityTest.instFintypeInput` and
+`VCVioTest.PFunctorFacade.instFintypeTriPFunctor` are baseline rows for constants the
+emitter proves are never evaluated at load. The LLVM backend has no such exemption at all,
+so there the mirror is exact and neither row is a false positive. -/
 def isCompiledValue (env : Environment) (n : Name) : Bool :=
   match Lean.IR.findEnvDecl env n with
   | some (.fdecl (xs := xs) ..) => xs.isEmpty
@@ -324,7 +400,18 @@ def namesEnumerationClass (env : Environment) (n : Name) : Bool :=
 
 /-- The evidence that the value of `n` builds an enumeration: the `enumerationEntryPoints`
 it names, in list order, followed by the constants it names whose type is an application of
-an `enumerationClasses` member, sorted so the report and the baseline are deterministic.
+an `enumerationClasses` member *and* which are not themselves parameterless compiled values,
+sorted so the report and the baseline are deterministic.
+
+The second half of that condition is what separates building an enumeration from mentioning
+one. `Pi.instFintype`, `Fin.fintype`, `Fintype.mk` and `Fintype.ofBijective` all take
+arguments, so naming one means this value applies it and pays for the result. `Bool.fintype`
+takes none: its enumeration was built by the module initialiser of the module that defines
+it, whoever mentions it afterwards, so a value that names it copies a pointer. Measured, that
+distinction removes three baseline rows that only ever read `lp_mathlib_Bool_fintype` and
+allocate a closure. It costs nothing in reach: a parameterless enumeration inside a swept
+library is itself in the load-time population and is flagged on its own account; one inside
+Mathlib is paid for when Mathlib's module is loaded and is outside what this gate governs.
 `#[]` if it names none or has no readable value. An `opaque` declaration is read like a
 `def`: `opaque x : T := v` hides `v` from unification and not from the backend, which
 compiles `v` and assigns it in the module initialiser like any other parameterless value
@@ -336,17 +423,52 @@ def entryPointsOf (env : Environment) (n : Name) : Array String := Id.run do
   let mut hits : Array String := #[]
   for e in enumerationEntryPoints do
     if used.contains e then hits := hits.push e.toString
-  let classHits := (used.filter (namesEnumerationClass env ·)).map (·.toString) |>.qsort (· < ·)
+  let classHits := (used.filter (fun u => namesEnumerationClass env u && !isCompiledValue env u))
+    |>.map (·.toString) |>.qsort (· < ·)
   for c in classHits do
     if !hits.contains c then hits := hits.push c
   return hits
 
+/-- Whether `n` is a closed term the compiler lifted out of a declaration's body.
+`Lean.Compiler.LCNF.ExtractClosed` names every one of them `<parent>._closed_<n>` and
+registers it in `closedTermCacheExt`, and `emitDeclInit` skips exactly the names in that
+cache — so the name is the emitter's own exemption, recovered without the cache, which does
+not survive an olean import. Checked on this tree: of the 496 `_init_` assignments emitted
+for the 634 swept modules, **0** is a lifted closed term (218 are environment constants and
+278 are boxed numeric constants). -/
+def isLiftedClosedTerm (n : Name) : Bool :=
+  match n.eraseMacroScopes with
+  | .str _ s => s.startsWith "_closed_"
+  | _ => false
+
+/-- The functions a compiler-generated name was specialised from. The specialiser writes
+`<specialised>._at_.<caller>.spec_<n>`, nesting as it goes, so splitting on `._at_.` gives
+one segment per function in the chain and the head of each segment is the function itself. -/
+def specialisationSegments (n : Name) : Array Name :=
+  (n.toString.splitOn "._at_.").toArray.map (·.toName)
+
+/-- The evidence that a compiler-generated 0-arity declaration builds an enumeration: the
+`enumerationEntryPoints` its mangled name was specialised from, and any segment that is
+itself a constant of an `enumerationClasses` type. There is no value to read — these
+declarations are not in the environment at all — so the name is all there is, which is why
+this clause is an addition to the value test and not a replacement for it. -/
+def irDeclEvidence (env : Environment) (n : Name) : Array String := Id.run do
+  let segments := specialisationSegments n
+  let mut hits : Array String := #[]
+  for e in enumerationEntryPoints do
+    if segments.any (e.isPrefixOf ·) then hits := hits.push e.toString
+  for seg in segments do
+    if namesEnumerationClass env seg && !hits.contains seg.toString then
+      hits := hits.push seg.toString
+  return hits
+
 /-- One constant the module initialiser evaluates. `library` is the swept root the
 constant's module sits under, which is the scope a baseline row carries. `via` is `value`
-when the declaration is itself the parameterless value the initialiser assigns, and
-`initialize` when the code that runs is an initialiser body registered for it; `source` is
-the constant whose value was read; `entryPoints` is empty for everything the gate accepts
-without a baseline row. -/
+when the declaration is itself the parameterless value the initialiser assigns,
+`initialize` when the code that runs is an initialiser body registered for it, and
+`ir-only` when the declaration is compiler-generated and has no environment constant at
+all; `source` is the constant whose value was read; `entryPoints` is empty for everything
+the gate accepts without a baseline row. -/
 structure Entry where
   name : String
   module : String
@@ -370,10 +492,19 @@ structure Census where
   declaration. None does today. -/
   opaqueValues : Nat
   loadTime : Array Entry
+  /-- Compiler-generated parameterless declarations that are not environment constants:
+  specialisations, boxed numeric constants and their like, which the backend assigns in the
+  module initialiser exactly as it assigns a constant's own value. The environment sweep
+  cannot name them — that is what makes them a blind spot rather than a population — so
+  they are counted here and tested by name. -/
+  irLoadTime : Nat
+  /-- Those of `irLoadTime` whose mangled name carries an enumeration entry point. -/
+  irOffenders : Array Entry
 
-/-- The load-time constants whose value builds an enumeration of a type. -/
+/-- The load-time constants whose value builds an enumeration of a type, and the
+compiler-generated declarations whose name says they do. -/
 def Census.offenders (c : Census) : Array Entry :=
-  c.loadTime.filter (!·.entryPoints.isEmpty)
+  c.loadTime.filter (!·.entryPoints.isEmpty) ++ c.irOffenders
 
 /-- Enumerate every constant of every module under one of `roots` and apply the predicate.
 A constant realised on demand can appear in several modules' `constNames`; it is counted
@@ -385,11 +516,31 @@ def census (roots : Array Name) : CoreM Census := do
   let mut modules := 0
   let mut opaqueValues := 0
   let mut loadTime : Array Entry := #[]
-  for (mname, mdata) in env.header.moduleNames.zip env.header.moduleData do
+  let mut irLoadTime := 0
+  let mut irOffenders : Array Entry := #[]
+  for i in [0:env.header.moduleNames.size] do
+    let mname := env.header.moduleNames[i]!
+    let mdata := env.header.moduleData[i]!
     -- A module is attributed to the root it was swept under, not to its own first
     -- component, so `--root Foo.Bar` and the baseline agree on one key.
     if let some root := roots.find? (·.isPrefixOf mname) then
       modules := modules + 1
+      -- The compiler-generated half of the module's initialisation work, which has no
+      -- environment constant to read: parameterless IR declarations the backend assigns
+      -- from `_init_` exactly as it assigns a constant's own value.
+      for d in Lean.IR.declMapExt.getModuleIREntries env i do
+        if let .fdecl (f := f) (xs := xs) .. := d then
+          if xs.isEmpty && (env.find? f).isNone && !isLiftedClosedTerm f then
+            irLoadTime := irLoadTime + 1
+            let hits := irDeclEvidence env f
+            if !hits.isEmpty then
+              irOffenders := irOffenders.push {
+                name := f.toString
+                module := mname.toString
+                library := root.toString
+                via := "ir-only"
+                source := f.toString
+                entryPoints := hits }
       for c in mdata.constNames do
         if seen.contains c then continue
         seen := seen.insert c
@@ -404,8 +555,9 @@ def census (roots : Array Name) : CoreM Census := do
           via := via
           source := source.toString
           entryPoints := entryPointsOf env source }
-  return { constants, modules, opaqueValues,
-           loadTime := loadTime.qsort (fun a b => a.name < b.name) }
+  return { constants, modules, opaqueValues, irLoadTime,
+           loadTime := loadTime.qsort (fun a b => a.name < b.name),
+           irOffenders := irOffenders.qsort (fun a b => a.name < b.name) }
 
 /-- One accepted constant: a name, the library it was swept under, and the entry points it
 is accepted for. Accepting a constant is not accepting its library — every other constant of
@@ -467,10 +619,14 @@ def runCheck (cur : Census) (roots : Array Name) (basePath : String) : IO UInt32
         names {o.entryPoints}"
     IO.eprintln "initsweep: a top-level constant of non-function type is evaluated when its \
       module is loaded, before any `main` runs. Route the finiteness argument through \
-      `Fintype.ofFinite` (a `Prop`-valued `Finite` instance leaves no compiled code), or \
-      give the declaration a parameter so it is called rather than initialised."
+      `Fintype.ofFinite`: its `Prop`-valued `Finite` argument leaves no compiled code at \
+      all, which is the only fix here that removes the work rather than moving it."
     IO.eprintln s!"initsweep: `noncomputable` is not a fix — it removes the instance's own \
-      code and leaves the compiled auxiliary that carries the work."
+      code and leaves the compiled auxiliary that carries the work. Adding a parameter is \
+      not reliably a fix either: the compiler can lift a parameterless specialisation out \
+      of a function whose result is a ground value, and that specialisation is initialised \
+      at load like any other value — `def cardY (_u : Unit) : Nat := Fintype.card T` emits \
+      one. Check the emitted C under `.lake/build/ir/` if you take that route."
     IO.eprintln s!"initsweep: if the enumeration is genuinely small, record it with \
       `lake exe initsweep --update-baseline` and argue the row — one constant, not one \
       library — in review."
@@ -562,13 +718,16 @@ unsafe def run (args : List String) : IO UInt32 := do
     under {roots}"
   IO.println s!"  evaluated when their module is loaded: {cur.loadTime.size}"
   IO.println s!"  of those, with no readable value (blind spot): {cur.opaqueValues}"
-  IO.println s!"  of those, building an enumeration of a type: {cur.offenders.size}"
+  IO.println s!"  compiler-generated declarations initialised alongside them: {cur.irLoadTime}"
+  IO.println s!"  building an enumeration of a type: {cur.offenders.size}"
   if let some out := cfg.out? then
     let report := Json.mkObj [
       ("roots", toJson (roots.map (·.toString))),
       ("constantCount", toJson cur.constants),
       ("loadTimeCount", toJson cur.loadTime.size),
       ("opaqueValueCount", toJson cur.opaqueValues),
+      ("irLoadTimeCount", toJson cur.irLoadTime),
+      ("irOffenders", toJson cur.irOffenders),
       ("loadTime", toJson cur.loadTime)]
     IO.FS.writeFile out (report.pretty ++ "\n")
     IO.println s!"initsweep: wrote report to {out}"

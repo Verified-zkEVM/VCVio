@@ -19,10 +19,11 @@ public section
 
 namespace VCVioInitSweepTestFixtures.Hazard.Decide
 
-/-- An eight-element carrier: the fixture reproduces the *shape*, not the size. -/
-@[expose] def Carrier : Type := Fin 3 → Bool
+/-- An eight-element carrier behind an alias, which is the shape the hazard had: nothing at
+the use site below says how large it is. -/
+abbrev Carrier : Type := Fin 3 → Bool
 
 /-- Evaluated when the module is loaded, and it enumerates `Carrier` to get there. -/
-def everyPointFixesZero : Bool := decide (∀ x : Fin 3 → Bool, x 0 = x 0)
+def everyPointFixesZero : Bool := decide (∀ x : Carrier, x 0 = x 0)
 
 end VCVioInitSweepTestFixtures.Hazard.Decide
