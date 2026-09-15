@@ -212,8 +212,9 @@ example : (𝒟[lossyCoin]).withFailure {none} = 2⁻¹ := by
   simp [lossyCoin, OptionT.probFailure_eq, probOutput_bind_eq_tsum]
 example : (𝒟[lossyCoin]).withFailure {some true} = 2⁻¹ := by
   simp [lossyCoin, OptionT.probOutput_eq, probOutput_bind_eq_tsum]
-example : 𝒟[lossyCoin] = (𝒟[lossyCoin.run]).dropNone :=
-  OptionT.evalDist_eq_dropNone lossyCoin
+example : (MeasureSemanticsVia.optionT ProbComp).evalDist lossyCoin =
+    (𝒟[lossyCoin.run]).dropNone := by
+  simp
 
 end failureCompatibility
 

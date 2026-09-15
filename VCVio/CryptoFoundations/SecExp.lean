@@ -5,10 +5,12 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
+public import ToMathlib.MeasureTheory.Measure.Bool
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.FailureMeasure
+public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.Monad.Measure
-public import VCVio.EvalDist.TVDist
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.ProbComp
@@ -19,8 +21,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound
 
 This file defines simple security experiments that succeed unless they terminate with failure.
 Each experiment carries bundled subprobabilistic semantics, so the experiment can be interpreted
-through an internal semantic monad instead of requiring a global `MonadLiftT _ SPMF` instance
-on the ambient monad.
+through an internal semantic monad and observed directly as a successful-output measure.
 
 We also define `BoundedAdversary α β` as an oracle computation bundled with a query bound.
 -/
@@ -29,7 +30,7 @@ We also define `BoundedAdversary α β` as an oracle computation bundled with a 
 
 universe u v w
 
-open OracleComp OracleSpec ENNReal Polynomial Prod
+open MeasureTheory OracleComp OracleSpec ENNReal Polynomial Prod
 
 /-- Bias advantage of a Boolean-valued game: the gap between the probabilities of the two outputs.
 
@@ -47,102 +48,72 @@ noncomputable def ProbComp.boolDistAdvantage (p q : ProbComp Bool) : ℝ :=
 /-- Bias advantage of a Boolean-valued subdistribution: the gap between the probabilities of
 returning `true` and `false`.
 
-This is the `SPMF` analogue of `ProbComp.boolBiasAdvantage`, used for games that have already
-been observed under bundled subprobabilistic semantics. Any remaining mass corresponds to failure
-and therefore contributes to neither Boolean branch. -/
+This compatibility definition immediately forgets the discrete representation in favor of its
+successful-output measure. Any remaining mass corresponds to failure and therefore contributes to
+neither Boolean branch. -/
 noncomputable def SPMF.boolBiasAdvantage (p : SPMF Bool) : ℝ :=
-  |(Pr[= true | p]).toReal - (Pr[= false | p]).toReal|
+  p.toMeasure.boolBias
 
-/-- Distinguishing advantage between two Boolean-valued subdistributions, measured on the
-`true` branch. SPMF analogue of `ProbComp.boolDistAdvantage`. -/
+/-- Distinguishing advantage between two Boolean-valued subdistributions, measured after mapping
+both values to successful-output measures. -/
 noncomputable def SPMF.boolDistAdvantage (p q : SPMF Bool) : ℝ :=
-  |(Pr[= true | p]).toReal - (Pr[= true | q]).toReal|
+  p.toMeasure.boolDist q.toMeasure
 
-/-- Re-express SPMF Boolean bias as twice the absolute deviation of `Pr[true]` from `1/2`,
-assuming the SPMF is a full distribution (no failure mass). -/
+/-- Re-express Boolean bias as twice the absolute deviation of the `true` mass from one half when
+the subdistribution has full mass. -/
 lemma SPMF.boolBiasAdvantage_eq_two_mul_abs_sub_half (p : SPMF Bool)
-    (htotal : Pr[= true | p] + Pr[= false | p] = 1) :
-    p.boolBiasAdvantage = 2 * |(Pr[= true | p]).toReal - 1 / 2| := by
-  have hfalse : Pr[= false | p] = 1 - Pr[= true | p] := by
-    rw [← htotal, ENNReal.add_sub_cancel_left probOutput_ne_top]
-  unfold SPMF.boolBiasAdvantage
-  rw [hfalse, ENNReal.toReal_sub_of_le probOutput_le_one ENNReal.one_ne_top, ENNReal.toReal_one,
-    show (Pr[= true | p]).toReal - (1 - (Pr[= true | p]).toReal) =
-      2 * ((Pr[= true | p]).toReal - 1 / 2) by ring,
-    abs_mul, abs_two]
+    (htotal : p.toMeasure {true} + p.toMeasure {false} = 1) :
+    p.boolBiasAdvantage = 2 * |(p.toMeasure {true}).toReal - 1 / 2| :=
+  Measure.boolBias_eq_two_mul_abs_sub_half p.toMeasure htotal
 
 /-- Hidden-bit decomposition at the SPMF level: the bias of a coin-flip guessing game equals the
 distinguishing advantage between the two branches, assuming the coin is fair and both branches
 have full mass (no failure).
 
-This is the SPMF analogue of `ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch`.
-The ProbComp version holds unconditionally because `ProbComp` distributions always have total mass
-1. For `SPMF` distributions, the totality hypotheses are required because failure mass breaks the
-`Pr[false] = 1 - Pr[true]` identity that the decomposition depends on. -/
+The totality hypotheses are required because failure mass breaks the identity between the `false`
+mass and the complement of the `true` mass. The proof is inherited from the measure API. -/
 lemma SPMF.boolBiasAdvantage_eq_boolDistAdvantage_coin_branch
     (coin p q : SPMF Bool)
-    (hcoin_true : Pr[= true | coin] = 1 / 2)
-    (hcoin_false : Pr[= false | coin] = 1 / 2)
-    (hp : Pr[= true | p] + Pr[= false | p] = 1)
-    (hq : Pr[= true | q] + Pr[= false | q] = 1) :
+    (hcoin_true : coin.toMeasure {true} = 1 / 2)
+    (hcoin_false : coin.toMeasure {false} = 1 / 2)
+    (hp : p.toMeasure {true} + p.toMeasure {false} = 1)
+    (hq : q.toMeasure {true} + q.toMeasure {false} = 1) :
     (coin >>= fun b =>
       (if b then p else q) >>= fun z => pure (b == z)).boolBiasAdvantage =
     p.boolDistAdvantage q := by
-  have hbt : ∀ x : Bool,
-      Pr[= x | (if (true : Bool) then p else q) >>= fun z =>
-        (pure (true == z) : SPMF Bool)] = Pr[= x | p] := by
-    intro x; cases x <;> simp
-  have hbf : ∀ x : Bool,
-      Pr[= x | (if (false : Bool) then p else q) >>= fun z =>
-        (pure (false == z) : SPMF Bool)] = Pr[= (!x) | q] := by
-    intro x; cases x <;> simp
-  have hgame : ∀ x : Bool, Pr[= x | coin >>= fun b =>
-      (if b then p else q) >>= fun z => pure (b == z)] =
-    (Pr[= x | p] + Pr[= (!x) | q]) / 2 := fun x => by
-    rw [probOutput_bind_eq_tsum, tsum_fintype (L := .unconditional _), Fintype.sum_bool,
-      hcoin_true, hcoin_false, hbt x, hbf x, ← left_distrib, one_div, mul_comm, div_eq_mul_inv]
-  have htotal : Pr[= true | coin >>= fun b =>
-      (if b then p else q) >>= fun z => pure (b == z)] +
-    Pr[= false | coin >>= fun b =>
-      (if b then p else q) >>= fun z => pure (b == z)] = 1 := by
-    rw [hgame true, hgame false]
-    simp only [Bool.not_true, Bool.not_false, ENNReal.div_add_div_same]
-    rw [show Pr[= true | p] + Pr[= false | q] + (Pr[= false | p] + Pr[= true | q]) =
-        (Pr[= true | p] + Pr[= false | p]) + (Pr[= true | q] + Pr[= false | q]) from by ring,
-      hp, hq, show (1 : ℝ≥0∞) + 1 = 2 from by norm_num]
-    exact ENNReal.div_self (by positivity) ENNReal.ofNat_ne_top
-  rw [SPMF.boolBiasAdvantage_eq_two_mul_abs_sub_half _ htotal, hgame true, Bool.not_true]
-  rw [show Pr[= false | q] = 1 - Pr[= true | q] from by
-      rw [← hq, ENNReal.add_sub_cancel_left probOutput_ne_top],
-    ENNReal.toReal_div, ENNReal.toReal_add probOutput_ne_top
-      (ENNReal.sub_ne_top ENNReal.one_ne_top),
-    ENNReal.toReal_sub_of_le (by rw [← hq]; exact le_add_right (le_refl _)) ENNReal.one_ne_top,
-    ENNReal.toReal_one, ENNReal.toReal_ofNat]
-  unfold SPMF.boolDistAdvantage
-  rw [show ((Pr[= true | p]).toReal + (1 - (Pr[= true | q]).toReal)) / 2 - 1 / 2 =
-      ((Pr[= true | p]).toReal - (Pr[= true | q]).toReal) / 2 from by ring, abs_div, abs_two,
-    mul_div_cancel₀ _ two_ne_zero]
+  let (r : SPMF Bool) : IsFiniteMeasure r.toMeasure :=
+    ⟨(SPMF.toMeasure_apply_univ_le_one r).trans_lt ENNReal.one_lt_top⟩
+  have hbranch (b : Bool) :
+      (((if b then p else q) >>= fun z => pure (b == z)) : SPMF Bool).toMeasure =
+        (if b then p.toMeasure else q.toMeasure).bind fun z => Measure.dirac (b == z) := by
+    rw [SPMF.toMeasure_bind' _ (f := fun z => pure (b == z)) Measurable.of_discrete]
+    cases b <;> simp [SPMF.toMeasure_pure]
+  unfold SPMF.boolBiasAdvantage SPMF.boolDistAdvantage
+  rw [SPMF.toMeasure_bind' coin (f := fun b =>
+    (if b then p else q) >>= fun z => pure (b == z)) Measurable.of_discrete]
+  simp_rw [hbranch]
+  exact Measure.boolBias_bind_coin coin.toMeasure p.toMeasure q.toMeasure
+    hcoin_true hcoin_false hp hq
 
 /-- Triangle inequality for SPMF Boolean distinguishing advantage. -/
 lemma SPMF.boolDistAdvantage_triangle (p q r : SPMF Bool) :
     p.boolDistAdvantage r ≤ p.boolDistAdvantage q + q.boolDistAdvantage r :=
-  abs_sub_le _ _ _
+  Measure.boolDist_triangle _ _ _
 
 /-- Triangle inequality for Boolean distinguishing advantage. -/
 lemma ProbComp.boolDistAdvantage_triangle (p q r : ProbComp Bool) :
     p.boolDistAdvantage r ≤ p.boolDistAdvantage q + q.boolDistAdvantage r :=
-  abs_sub_le _ _ _
+  Measure.boolDist_triangle _ _ _
 
 /-- A Boolean game has zero distinguishing advantage against itself. -/
 @[simp, grind =]
-lemma ProbComp.boolDistAdvantage_self (p : ProbComp Bool) : p.boolDistAdvantage p = 0 := by
-  unfold boolDistAdvantage
-  simp only [sub_self, abs_zero]
+lemma ProbComp.boolDistAdvantage_self (p : ProbComp Bool) : p.boolDistAdvantage p = 0 :=
+  Measure.boolDist_self 𝒟[p]
 
 /-- Boolean distinguishing advantage is symmetric. -/
 lemma ProbComp.boolDistAdvantage_comm (p q : ProbComp Bool) :
     p.boolDistAdvantage q = q.boolDistAdvantage p :=
-  abs_sub_comm _ _
+  Measure.boolDist_comm _ _
 
 /-- The `true`-branch probability of one Boolean-valued game is bounded above by the
 `true`-branch probability of another game plus their distinguishing advantage.
@@ -151,27 +122,22 @@ This is the `ENNReal`-level interpretation of the real-valued identity `a ≤ b 
 packaged for SSP game-hopping: converting an `advantage p q ≤ ε` assumption into a direct
 probability inequality `Pr[true|p] ≤ Pr[true|q] + ENNReal.ofReal ε` that plugs into chained
 `calc`-style bounds. -/
+lemma ProbComp.evalDist_apply_true_le_add_ofReal_boolDistAdvantage (p q : ProbComp Bool) :
+    𝒟[p] {true} ≤ 𝒟[q] {true} + ENNReal.ofReal (p.boolDistAdvantage q) :=
+  Measure.apply_true_le_add_ofReal_boolDist 𝒟[p] 𝒟[q]
+
+/-- Compatibility form of `evalDist_apply_true_le_add_ofReal_boolDistAdvantage`. -/
+@[deprecated evalDist_apply_true_le_add_ofReal_boolDistAdvantage (since := "2026-09-15")]
 lemma ProbComp.probOutput_true_le_add_ofReal_boolDistAdvantage (p q : ProbComp Bool) :
     Pr[= true | p] ≤ Pr[= true | q] + ENNReal.ofReal (p.boolDistAdvantage q) := by
-  unfold ProbComp.boolDistAdvantage
-  simp only [evalDist_apply_singleton]
-  set a : ℝ := (Pr[= true | p]).toReal
-  set b : ℝ := (Pr[= true | q]).toReal
-  rw [show Pr[= true | p] = ENNReal.ofReal a from (ENNReal.ofReal_toReal probOutput_ne_top).symm,
-    show Pr[= true | q] = ENNReal.ofReal b from (ENNReal.ofReal_toReal probOutput_ne_top).symm,
-    ← ENNReal.ofReal_add ENNReal.toReal_nonneg (abs_nonneg _)]
-  exact ENNReal.ofReal_le_ofReal (by linarith [le_abs_self (a - b)])
+  simpa only [← evalDist_apply_singleton] using
+    ProbComp.evalDist_apply_true_le_add_ofReal_boolDistAdvantage p q
 
 /-- Re-express Boolean bias as twice the absolute deviation of `Pr[true]` from `1/2`. -/
 lemma ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half (p : ProbComp Bool) :
-    p.boolBiasAdvantage = 2 * |(Pr[= true | p]).toReal - 1 / 2| := by
-  have hfalse : Pr[= false | p] = 1 - Pr[= true | p] := by simp [probOutput_false_eq_sub]
-  unfold ProbComp.boolBiasAdvantage
-  simp only [evalDist_apply_singleton]
-  rw [hfalse, ENNReal.toReal_sub_of_le probOutput_le_one ENNReal.one_ne_top, ENNReal.toReal_one,
-    show (Pr[= true | p]).toReal - (1 - (Pr[= true | p]).toReal) =
-      2 * ((Pr[= true | p]).toReal - 1 / 2) by ring,
-    abs_mul, abs_two]
+    p.boolBiasAdvantage = 2 * |(𝒟[p] {true}).toReal - 1 / 2| := by
+  let : IsProbabilityMeasure 𝒟[p] := ⟨OracleComp.evalDist_apply_univ_eq_one p⟩
+  exact Measure.boolBias_eq_two_mul_abs_sub_half_of_isProbabilityMeasure 𝒟[p]
 
 /-- A hidden-bit guessing game over two Boolean branches has bias exactly equal to the
 distinguishing advantage between those two branches. -/
@@ -183,7 +149,8 @@ lemma ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch
       pure (b == z)).boolBiasAdvantage =
     real.boolDistAdvantage rand := by
   rw [ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half,
-    probOutput_uniformBool_branch_toReal_sub_half, ProbComp.boolDistAdvantage]
+    evalDist_apply_singleton, probOutput_uniformBool_branch_toReal_sub_half,
+    ProbComp.boolDistAdvantage]
   simp only [evalDist_apply_singleton]
   rw [abs_div, abs_two, mul_div_cancel₀ _ two_ne_zero]
 
@@ -246,24 +213,40 @@ lemma ProbComp.boolBiasAdvantage_bind_uniformBool_eq_boolDistAdvantage
 noncomputable def ProbComp.guessAdvantage (p : ProbComp Unit) : ℝ :=
   |1 / 2 - (𝒟[p] {()}).toReal|
 
-/-- The guess advantage of `p` equals the absolute difference between `1/2` and `p`'s
-  probability of failure. -/
+/-- The guess advantage of `p` is its distance from one half measured using the missing mass. -/
+lemma ProbComp.guessAdvantage_eq_abs_half_sub_defect (p : ProbComp Unit) :
+    p.guessAdvantage = |1 / 2 - (𝒟[p]).defect.toReal| := by
+  have hunit : ({()} : Set Unit) = Set.univ := by
+    ext x
+    simp
+  rw [ProbComp.guessAdvantage, Measure.defect_toReal, hunit]
+  rw [show (1 : ℝ) / 2 - (1 - (𝒟[p] Set.univ).toReal) =
+    -(1 / 2 - (𝒟[p] Set.univ).toReal) by ring, abs_neg]
+
+/-- Compatibility form of `guessAdvantage_eq_abs_half_sub_defect`. -/
+@[deprecated guessAdvantage_eq_abs_half_sub_defect (since := "2026-09-15")]
 lemma ProbComp.guessAdvantage_eq_half_sub_probFailure (p : ProbComp Unit) :
     p.guessAdvantage = |1 / 2 - (Pr[⊥ | p]).toReal| := by
-  have h : Pr[= () | p] = 1 - Pr[⊥ | p] := probOutput_eq_sub_probFailure_of_unit
-  simp only [guessAdvantage, evalDist_apply_singleton, h,
-    ENNReal.toReal_sub_of_le probFailure_le_one one_ne_top, ENNReal.toReal_one]
-  rw [show (1 : ℝ) / 2 - (1 - (Pr[⊥ | p]).toReal) = -(1 / 2 - (Pr[⊥ | p]).toReal) from by ring,
-    abs_neg]
+  rw [ProbComp.guessAdvantage_eq_abs_half_sub_defect,
+    probFailure_eq_one_sub_evalDist_univ]
+  rfl
 
-/-- The guess advantage of `p` equals half the absolute difference between `p`'s
-  probabilities of failure and success. -/
+/-- The guess advantage is half the gap between the missing and successful masses. -/
+lemma ProbComp.guessAdvantage_eq_half_mul_abs_defect_sub_apply (p : ProbComp Unit) :
+    p.guessAdvantage = 2⁻¹ * |(𝒟[p]).defect.toReal - (𝒟[p] {()}).toReal| := by
+  have hunit : ({()} : Set Unit) = Set.univ := by
+    ext x
+    simp
+  rw [ProbComp.guessAdvantage, Measure.defect_toReal, hunit]
+  grind
+
+/-- Compatibility form of `guessAdvantage_eq_half_mul_abs_defect_sub_apply`. -/
+@[deprecated guessAdvantage_eq_half_mul_abs_defect_sub_apply (since := "2026-09-15")]
 lemma ProbComp.guessAdvantage_eq_half_of_sub (p : ProbComp Unit) :
     p.guessAdvantage = 2⁻¹ * |(Pr[⊥ | p]).toReal - (Pr[= () | p]).toReal| := by
-  have h : Pr[= () | p] = 1 - Pr[⊥ | p] := probOutput_eq_sub_probFailure_of_unit
-  simp only [guessAdvantage, evalDist_apply_singleton, h,
-    ENNReal.toReal_sub_of_le probFailure_le_one one_ne_top, ENNReal.toReal_one]
-  grind
+  simpa only [Measure.defect, probFailure_eq_one_sub_evalDist_univ,
+    ← evalDist_apply_singleton] using
+    ProbComp.guessAdvantage_eq_half_mul_abs_defect_sub_apply p
 
 /-- The **advantage** between two games `p` and `q`, modeled as probabilistic computations returning
   `Unit`, is the absolute difference between their probabilities of success. -/
@@ -280,15 +263,22 @@ lemma ProbComp.distAdvantage_comm (p q : ProbComp Unit) :
     p.distAdvantage q = q.distAdvantage p :=
   abs_sub_comm _ _
 
-/-- Distinguishing advantage equals the gap between the two games' failure probabilities. -/
+/-- Distinguishing advantage equals the gap between the two games' missing masses. -/
+lemma ProbComp.distAdvantage_eq_abs_sub_defect (p q : ProbComp Unit) :
+    p.distAdvantage q = |(𝒟[p]).defect.toReal - (𝒟[q]).defect.toReal| := by
+  have hunit : ({()} : Set Unit) = Set.univ := by
+    ext x
+    simp
+  rw [ProbComp.distAdvantage, Measure.defect_toReal, Measure.defect_toReal, hunit]
+  rw [show (1 - (𝒟[p] Set.univ).toReal) - (1 - (𝒟[q] Set.univ).toReal) =
+    -((𝒟[p] Set.univ).toReal - (𝒟[q] Set.univ).toReal) by ring, abs_neg]
+
+/-- Compatibility form of `distAdvantage_eq_abs_sub_defect`. -/
+@[deprecated distAdvantage_eq_abs_sub_defect (since := "2026-09-15")]
 lemma ProbComp.distAdvantage_eq_abs_sub_probFailure (p q : ProbComp Unit) :
     p.distAdvantage q = |(Pr[⊥ | p]).toReal - (Pr[⊥ | q]).toReal| := by
-  have hp : Pr[= () | p] = 1 - Pr[⊥ | p] := probOutput_eq_sub_probFailure_of_unit
-  have hq : Pr[= () | q] = 1 - Pr[⊥ | q] := probOutput_eq_sub_probFailure_of_unit
-  simp only [distAdvantage, evalDist_apply_singleton, hp, hq,
-    ENNReal.toReal_sub_of_le probFailure_le_one one_ne_top, ENNReal.toReal_one]
-  rw [show (1 - (Pr[⊥ | p]).toReal) - (1 - (Pr[⊥ | q]).toReal) =
-    -((Pr[⊥ | p]).toReal - (Pr[⊥ | q]).toReal) by ring, abs_neg]
+  simpa only [Measure.defect, probFailure_eq_one_sub_evalDist_univ] using
+    ProbComp.distAdvantage_eq_abs_sub_defect p q
 
 /-- Distinguishing advantage is nonnegative. -/
 lemma ProbComp.distAdvantage_nonneg (p q : ProbComp Unit) : 0 ≤ p.distAdvantage q :=
@@ -310,10 +300,17 @@ lemma ProbComp.distAdvantage_le_sum_range {n : ℕ} (games : ℕ → ProbComp Un
     rw [Finset.sum_range_succ]
     exact (distAdvantage_triangle _ _ _).trans (by gcongr)
 
-/-- Distinguishing advantage coincides with the total-variation distance of the two games. -/
+/-- Distinguishing advantage is the measure total-variation distance of the two games. -/
+lemma ProbComp.distAdvantage_eq_measureTVDist (p q : ProbComp Unit) :
+    p.distAdvantage q = measureTVDist p q := by
+  unfold ProbComp.distAdvantage measureTVDist
+  exact (Measure.tvDist_punit _ _).symm
+
+/-- Compatibility form of `distAdvantage_eq_measureTVDist`. -/
+@[deprecated distAdvantage_eq_measureTVDist (since := "2026-09-15")]
 lemma ProbComp.distAdvantage_eq_tvDist (p q : ProbComp Unit) :
     p.distAdvantage q = tvDist p q := by
-  simp only [distAdvantage, evalDist_apply_singleton]
+  simp only [ProbComp.distAdvantage, evalDist_apply_singleton]
   simp only [tvDist, SPMF.tvDist, PMF.tvDist_option_punit]
   simp only [probOutput_def, SPMF.apply_eq_toPMF_some]
 
@@ -335,15 +332,12 @@ variable {ι : Type u} {spec : OracleSpec ι} {α β : Type u}
 
 end BoundedAdversary
 
-/-- Structure to represent a security experiment.
-The experiment is considered successful unless it terminates with failure.
+/-- A failure-based security experiment with bundled successful-output measure semantics.
 
-A `SecExp` carries bundled `SPMFSemantics` directly. This keeps the semantic assumptions attached
-to the experiment itself: the surface monad can be interpreted through some internal semantic
-monad, and only then observed as a subdistribution for measuring success and failure
-probabilities. -/
+The surface monad can be interpreted through an internal semantic monad before its successful
+outputs are observed. Failure or nontermination contributes missing mass. -/
 structure SecExp (m : Type → Type w) [Monad m]
-    extends SPMFSemantics m where
+    extends MeasureSemanticsVia.{0, w, w} m where
   /-- Main experiment body. Success is interpreted as terminating without failure. -/
   main : m Unit
 
@@ -353,34 +347,30 @@ variable {m : Type → Type w} [Monad m]
 
 section advantage
 
-/-- Advantage of a failure-based security experiment: one minus its failure probability. -/
+/-- Advantage of a failure-based security experiment: the total mass of successful executions. -/
 noncomputable def advantage (exp : SecExp m) : ℝ≥0∞ :=
-  1 - Pr[⊥ | exp.toSPMFSemantics.evalSPMF exp.main]
+  exp.toMeasureSemanticsVia.evalDist exp.main Set.univ
 
-/-- A failure-based experiment has zero advantage exactly when it fails with probability `1`. -/
+/-- A failure-based experiment has zero advantage exactly when its successful-output measure has
+zero mass. -/
 @[simp]
 lemma advantage_eq_zero_iff (exp : SecExp m) :
-    exp.advantage = 0 ↔ Pr[⊥ | exp.toSPMFSemantics.evalSPMF exp.main] = 1 := by
-  rw [advantage, tsub_eq_zero_iff_le]
-  simpa only [SPMFSemantics.probFailure, probFailure_def, evalSPMF_def, monadLift_self] using
-    (exp.toSPMFSemantics.probFailure_le_one exp.main).ge_iff_eq
+    exp.advantage = 0 ↔ exp.toMeasureSemanticsVia.evalDist exp.main Set.univ = 0 :=
+  Iff.rfl
 
-/-- A failure-based experiment has advantage `1` exactly when it never fails. -/
+/-- A failure-based experiment has advantage `1` exactly when its successful-output measure has
+full mass. -/
 @[simp]
 lemma advantage_eq_one_iff (exp : SecExp m) :
-    exp.advantage = 1 ↔ Pr[⊥ | exp.toSPMFSemantics.evalSPMF exp.main] = 0 := by
-  rw [advantage]
-  let p := Pr[⊥ | exp.toSPMFSemantics.evalSPMF exp.main]
-  change 1 - p = 1 ↔ p = 0
-  constructor
-  · intro h
-    by_contra hp
-    have hp' : 0 < p := bot_lt_iff_ne_bot.mpr hp
-    have hlt : 1 - p < (1 : ℝ≥0∞) :=
-      (ENNReal.sub_lt_self_iff one_ne_top).2 ⟨zero_lt_one, hp'⟩
-    exact hlt.ne h
-  · intro h
-    simp only [h, tsub_zero]
+    exp.advantage = 1 ↔ exp.toMeasureSemanticsVia.evalDist exp.main Set.univ = 1 :=
+  Iff.rfl
+
+/-- Success advantage and failure mass sum to one. -/
+@[simp]
+lemma advantage_add_probFailure (exp : SecExp m) :
+    exp.advantage + exp.toMeasureSemanticsVia.probFailure exp.main = 1 := by
+  rw [advantage, MeasureSemanticsVia.probFailure, add_comm,
+    tsub_add_cancel_of_le (exp.toMeasureSemanticsVia.evalDist_apply_univ_le_one exp.main)]
 
 end advantage
 

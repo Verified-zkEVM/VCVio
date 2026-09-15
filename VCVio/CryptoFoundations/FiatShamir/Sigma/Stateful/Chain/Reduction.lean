@@ -510,14 +510,14 @@ theorem cma_advantage_le_fork_bound_of_h5
         (Commit := Commit) (Chal := Chal) (Resp := Resp)
         adv simT (ENNReal.ofReal ζ_zk) β hζ_zk_lt hHVZK' hPredSim qS qH hQ
   have hH3_prob :
-      Pr[= true | (cmaReal M Commit Chal σ hr).runProb
-        (cmaInit M Commit Chal Stmt Wit) A] ≤
-      Pr[= true | (cmaSim M Commit Chal hr simT).runProb
-        (cmaInit M Commit Chal Stmt Wit) A] +
+      𝒟[(cmaReal M Commit Chal σ hr).runProb
+        (cmaInit M Commit Chal Stmt Wit) A] {true} ≤
+      𝒟[(cmaSim M Commit Chal hr simT).runProb
+        (cmaInit M Commit Chal Stmt Wit) A] {true} +
         ((qS : ℝ≥0∞) * ENNReal.ofReal ζ_zk
           + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + (qH : ℝ≥0∞)) * β) :=
     le_trans
-      (ProbComp.probOutput_true_le_add_ofReal_boolDistAdvantage
+      (ProbComp.evalDist_apply_true_le_add_ofReal_boolDistAdvantage
         ((cmaReal M Commit Chal σ hr).runProb
           (cmaInit M Commit Chal Stmt Wit) A)
         ((cmaSim M Commit Chal hr simT).runProb
@@ -525,18 +525,18 @@ theorem cma_advantage_le_fork_bound_of_h5
       (add_le_add le_rfl hH3_abs)
   calc
     adv.advantage (FiatShamir.runtime M)
-        ≤ Pr[= true | (cmaReal M Commit Chal σ hr).runProb
-          (cmaInit M Commit Chal Stmt Wit) A] := by
-            simpa [A] using hH1H2
-    _ ≤ Pr[= true | (cmaSim M Commit Chal hr simT).runProb
-          (cmaInit M Commit Chal Stmt Wit) A] +
+        ≤ 𝒟[(cmaReal M Commit Chal σ hr).runProb
+          (cmaInit M Commit Chal Stmt Wit) A] {true} := by
+            simpa only [A, evalDist_apply_singleton] using hH1H2
+    _ ≤ 𝒟[(cmaSim M Commit Chal hr simT).runProb
+          (cmaInit M Commit Chal Stmt Wit) A] {true} +
         ((qS : ℝ≥0∞) * ENNReal.ofReal ζ_zk
           + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + (qH : ℝ≥0∞)) * β) := hH3_prob
     _ ≤ Fork.advantage σ hr M
           (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH +
         ((qS : ℝ≥0∞) * ENNReal.ofReal ζ_zk
           + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + (qH : ℝ≥0∞)) * β) :=
-        add_le_add hH5 le_rfl
+        add_le_add (by simpa only [evalDist_apply_singleton] using hH5) le_rfl
     _ = Fork.advantage σ hr M
             (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH +
           ENNReal.ofReal ((qS : ℝ) * ζ_zk) +

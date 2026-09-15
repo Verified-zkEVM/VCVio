@@ -55,6 +55,12 @@ instance (priority := 100) IsSubprobabilityMeasure.toIsFiniteMeasure : IsFiniteM
 /-- The mass a subprobability measure does not assign to any value. -/
 noncomputable def Measure.defect : ℝ≥0∞ := 1 - μ Set.univ
 
+/-- The real-valued defect is one minus the real-valued total mass. -/
+@[simp]
+theorem Measure.defect_toReal : μ.defect.toReal = 1 - (μ Set.univ).toReal := by
+  rw [Measure.defect, ENNReal.toReal_sub_of_le (measure_univ_le μ) ENNReal.one_ne_top,
+    ENNReal.toReal_one]
+
 @[simp]
 theorem Measure.defect_add_measure_univ : μ.defect + μ Set.univ = 1 :=
   tsub_add_cancel_of_le (measure_univ_le μ)

@@ -102,15 +102,11 @@ theorem probFailure_bind_eq_add_expectedValue [Monad m] [MonadLiftT m SPMF]
 
 namespace OptionT
 
-variable [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MeasurableSpace α]
-  [DiscreteMeasurableSpace α]
+variable [EvalDistSemantics m] [MeasurableSpace α]
 
 /-- An `OptionT` computation denotes the `dropNone` of its run: the `none` branch is discarded
 mass, not an output. -/
 theorem evalDist_eq_dropNone (mx : OptionT m α) : 𝒟[mx] = (𝒟[mx.run]).dropNone := by
-  change (𝒮[mx]).toMeasure = Measure.dropNone (𝒮[mx.run]).toMeasure
-  rw [OptionT.evalSPMF_eq, OptionT.mapM', Measure.dropNone, SPMF.toMeasure_bind]
-  refine Measure.bind_congr_right (Filter.Eventually.of_forall fun o => ?_)
-  cases o <;> simp
+  rfl
 
 end OptionT

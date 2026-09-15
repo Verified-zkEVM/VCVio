@@ -8,6 +8,7 @@ module
 
 public import ToMathlib.Data.ENNReal.AbsDiff
 public import Mathlib.MeasureTheory.Measure.Map
+public import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
 
 /-!
 # Total variation distance for subprobability measures
@@ -133,5 +134,30 @@ theorem tvDist_map_le (μ ν : Measure α) (f : α → β) (hf : Measurable f)
     (μ.map f).tvDist (ν.map f) ≤ μ.tvDist ν := by
   rw [Measure.tvDist, Measure.tvDist]
   exact ENNReal.toReal_mono (etvDist_ne_top μ ν hμ hν) (etvDist_map_le μ ν f hf)
+
+/-- On a one-point space, total variation is the absolute difference of the point masses. -/
+theorem tvDist_punit (μ ν : Measure PUnit) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    μ.tvDist ν = |(μ {PUnit.unit}).toReal - (ν {PUnit.unit}).toReal| := by
+  have hetv : μ.etvDist ν = ENNReal.absDiff (μ {PUnit.unit}) (ν {PUnit.unit}) := by
+    apply le_antisymm
+    · refine iSup_le fun s => ?_
+      by_cases hunit : PUnit.unit ∈ s.1
+      · have hs : s.1 = Set.univ := by
+          apply Set.eq_univ_of_forall
+          intro x
+          simpa [Subsingleton.elim x PUnit.unit] using hunit
+        rw [hs]
+        have hsingleton : ({PUnit.unit} : Set PUnit) = Set.univ := by
+          ext x
+          simp
+        rw [hsingleton]
+      · have hs : s.1 = ∅ := by
+          apply Set.eq_empty_iff_forall_notMem.mpr
+          intro x
+          simpa [Subsingleton.elim x PUnit.unit] using hunit
+        simp [hs]
+    · exact le_iSup_of_le ⟨{PUnit.unit}, MeasurableSet.singleton _⟩ le_rfl
+  rw [Measure.tvDist, hetv]
+  exact ENNReal.absDiff_toReal (measure_ne_top μ _) (measure_ne_top ν _)
 
 end MeasureTheory.Measure

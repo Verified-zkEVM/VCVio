@@ -80,6 +80,31 @@ theorem prEvent_eq_evalDist_decide
   let : MeasurableSpace α := ⊤
   exact prEvent_eq_evalDist_decide_of_discrete mx p
 
+/-- Pointwise equivalent predicates have the same probability after a common computation. -/
+theorem prEvent_congr
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (p q : α → Prop) (h : ∀ x, p x ↔ q x) :
+    Pr{let x ← mx}[p x] = Pr{let x ← mx}[q x] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete]
+  congr 1
+  ext x
+  simp only [Set.mem_ofPred_eq, h x]
+
+/-- An event that never occurs has probability zero. -/
+theorem prEvent_eq_zero_of_forall_not
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (p : α → Prop) (h : ∀ x, ¬p x) :
+    Pr{let x ← mx}[p x] = 0 := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  have hp : {x : α | p x} = ∅ := by
+    ext x
+    simp [h x]
+  rw [hp, measure_empty]
+
 /-- Implication between events bounds their probabilities on a discrete output space. -/
 theorem prEvent_mono_of_discrete
     {m : Type → Type v} [Monad m] [LawfulMonad m]
