@@ -23,6 +23,7 @@ Default fast checks (shared with per-PR CI):
   - ./scripts/check-imports.sh (generated umbrella modules are current)
   - the boundary ratchets: PolyFun, PMF/SPMF, broad expose, complexity backend,
     Extern and Interop isolation
+  - the eager-initialisation ratchet (needs the oleans the build above produced)
   - lake lint -- --style-only on every library and test module
   - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
 
@@ -90,6 +91,11 @@ bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh
 bash scripts/check-interop-isolation.sh
+
+echo ""
+echo "# Checking eagerly-initialised constants"
+./scripts/test-initsweep.sh
+lake exe initsweep --check
 
 echo ""
 echo "# Running the text-based style linters"

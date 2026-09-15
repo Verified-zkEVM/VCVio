@@ -273,6 +273,19 @@ jobs:
         run: ./scripts/test-axiomsweep.sh
       - name: Axiom sweep
         run: lake exe axiomsweep --check
+      # The eager-initialisation ratchet. A top-level constant of non-function type is
+      # evaluated when its module is loaded, before any `main` runs, so a finiteness
+      # instance written the obvious way builds an enumeration of its carrier at start-up
+      # in every executable that imports the module. That elaborates cleanly, builds
+      # cleanly, and passes every other gate here; it fails only when the binary runs.
+      # Needs the oleans the build above produced, as the axiom sweep does. The fixtures
+      # go first for the same reason: they carry the three routes by which loading a
+      # module can build such an enumeration, plus one negative control per clause of the
+      # predicate, so the gate's baseline of zero is falsifiable rather than merely true.
+      - name: Test the init sweep tool
+        run: ./scripts/test-initsweep.sh
+      - name: Init sweep
+        run: lake exe initsweep --check
       # `lake test` runs the `test` script from `lakefile.lean`: it builds the three test
       # libraries (every module reachable from `VCVioTest.lean`, the Lean-only lattice helpers
       # and vectors, the SLH-DSA canaries) and runs the smoke test and the SLH-DSA test
