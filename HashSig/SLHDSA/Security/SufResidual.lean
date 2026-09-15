@@ -149,8 +149,10 @@ signature".  `HashSig.SLHDSA.GeneralScheme.signInternalM` takes `addrnd` as an a
 signer `HashSig.SLHDSA.slhSignInternalM`, which derives `R` by the same
 `core.PRFmsg sk.skPrf addrnd msg`.  So the Lean transcript is the hedged one and
 `loggedRandomizers` at one message can hold as many distinct values as there were queries.  The
-residual's second branch is what that costs, and it is empty for the deterministic variant, which is
-the variant the source's shape matches.
+residual's second branch is what that costs.  The deterministic variant narrows the branch without
+emptying it: the log at a twice-signed message then lists one randomizer once per query rather than
+one per query, so a second signature there reuses it and lands in the branch just the same.  What
+the variant removes is the width, not the case.
 
 So the correspondence is: no source counterpart, because the source's game never reaches the case,
 and its signer could not have populated it as widely if it had.

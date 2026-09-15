@@ -140,6 +140,19 @@ structure BoundedAdversary {ι : Type u} [DecidableEq ι]
 
 All return `ℝ` via `.toReal` conversion from `ℝ≥0∞`. This is essential since subtraction on `ℝ≥0∞` is truncated.
 
+### KEM–DEM hybrid composition
+
+`VCVio.CryptoFoundations.KEMDEM.Measure` defines the preparation, encapsulation, and final
+observation games independently of probability. `KEMDEM.bias_compose_le` proves the
+composition bound with native measures. Both KEM message branches use `evalDist_kemGame`;
+`evalDist_demGame` performs independent-key interchange. Supply a fair coin, a lossless key
+sampler, and total Boolean hybrid outputs explicitly. Preparation and encapsulation effects
+retain their order. The `ProbCompRuntime` theorem in `KEMDEM.lean` is a compatibility adapter.
+
+`ToMathlib.MeasureTheory.Measure.Bool` provides Boolean event distance and bias algebra.
+`Measure.boolBias_bind_coin` requires total branches: missing mass is distinct from returning
+`false`, so the assumption cannot be dropped.
+
 ### Forking bounds and measure semantics
 
 `VCVio/CryptoFoundations/SeededFork.lean` and `ReplayFork.lean` prove the
@@ -149,6 +162,13 @@ of the `Option.isSome` event, using the canonical measure semantics induced by
 the oracle specification's existing per-query probability interpretation.
 These are transport corollaries; the forking arguments remain in the two
 original modules.
+
+The stateful Fiat–Shamir chain in `FiatShamir/Sigma/Stateful/Chain.lean` classifies each
+logged handler step with the private `ForkStateStep` relation before proving invariants.
+Its cache/log preservation lemmas use no sampling assumptions; both whole-run invariant
+proofs reuse the same support-case normalization. Preserve the distinction between a fresh
+oracle reply and a signing insertion: signing records the message and changes the adversary
+cache, while a fresh oracle reply updates both caches and the live query log.
 
 ## Hardness Assumptions
 
@@ -199,6 +219,73 @@ def myReduction (adversary : ...) : DDHAdversary F G := fun g A B T => do
 2. **Prove the probability identity**: show that the reduction's advantage equals (or bounds) the scheme adversary's advantage.
 
 3. **Key technique**: hybrid arguments for multi-query reductions.
+
+### Name the reduction in the theorem statement
+
+State a reduction theorem for a specific reduction, written as a definition of the source
+adversary:
+
+```lean
+theorem signature_euf_cma ... :
+    eps * (eps / (qH + 1) - challengeSpaceInv F) ≤
+      Pr[= true | dlogExp g (dlogReduction F G g M adv qH)]
+```
+
+Do not quantify over the target adversary:
+
+```lean
+-- Do not write this.
+theorem signature_euf_cma ... :
+    ∃ reduction : DLogAdversary F G,
+      eps * (eps / (qH + 1) - challengeSpaceInv F) ≤ Pr[= true | dlogExp g reduction]
+```
+
+The existential form holds for every source adversary, so it says nothing about the scheme.
+The reasons are specific to how adversaries are represented here.
+
+- **Adversary types carry no resource bound.** `DLogAdversary F G`, `X → ProbComp W`,
+  `PRFScheme.PRFAdversary D R`, and `OracleComp spec α` contain every computation of that type,
+  including exhaustive search. Against a computational assumption at concrete parameters, some
+  such adversary has advantage `1` or close to it: search recovers a discrete log, an MLWE
+  secret, or a PRF key.
+- **Lean is classical.** A term may choose a witness with `Classical.choice`, so the unbounded
+  adversary does not even need to search. For a `GenerableRelation`, `gen_sound` gives a
+  witness for every statement in the support of `gen`, and the reduction
+  `fun x => pure (if h : ∃ w, r x w then h.choose else default)` wins `hardRelationExp` with
+  probability exactly `1`. Any bound of the form `∃ B, f ≤ Pr[= true | hardRelationExp hr B]`
+  with `f ≤ 1` is then provable without looking at the scheme.
+- **No existing check catches it.** The vacuous theorem is true, `sorry`-free, and depends only
+  on the standard axioms, so `#print axioms` does not flag it. Checking that the hypotheses are
+  satisfiable ([gotcha 14](gotchas.md#14-hypothesis-satisfiability-is-a-proof-obligation)) does
+  not help either, because the defect is in the conclusion.
+
+The same applies to every object that the security argument requires to be efficient or
+independent of a secret:
+
+- simulators: `∃ sim ζ_zk, 0 ≤ ζ_zk ∧ HVZK sim ζ_zk` holds with `ζ_zk := 1`, since
+  `tvDist ≤ 1`;
+- extractors, distinguishers, collision finders, and preimage finders.
+
+Name each one with a definition (`cmaReduction`, `hvzkSimulatorReal`,
+`unlinkToMultiplePRFReduction`) and state the bound for that definition.
+
+A named reduction also makes the next steps possible. Its query count or cost can be proved as
+a separate lemma about the same definition. The asymptotic lemmas in
+[`VCVio/CryptoFoundations/Asymptotics/Security.lean`](../../VCVio/CryptoFoundations/Asymptotics/Security.lean),
+such as `SecurityGame.secureAgainst_of_reduction`, take the reduction as a function
+`reduce : Adv → Adv'` with an efficiency hypothesis `isPPT A → isPPT' (reduce A)`. That hypothesis
+cannot be stated for an adversary that exists only inside an existential.
+
+When the reduction is not implemented yet, do not fall back to `∃`. Either:
+
+- define it as a `sorry` placeholder and state the bound for that definition, as
+  `GPVHashAndSign.reduction` does; or
+- leave the theorem as a placeholder whose docstring warns that the statement has no security
+  content until a reduction is named, as `FiatShamirWithAbort.euf_cma_bound` does.
+
+`∃` remains appropriate for mathematical objects that the argument does not need to be efficient,
+such as a witness in a relation, an index in a support, or a key pair in the image of key
+generation.
 
 ### Hybrid Argument Pattern
 
