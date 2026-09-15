@@ -246,7 +246,8 @@ only shrinks against the merge base.
 and the SLH-DSA test executables), `--ffi` adds the native ML-KEM / ML-DSA / Falcon
 executables to `--test`, and `--axioms` adds the axiom sweep. The eager-initialisation
 ratchet runs in the default pass, after the boundary ratchets, since it reads the oleans
-the build just produced.
+the build just produced; `--test` runs it a second time over `VCVioTest` and
+`LatticeCryptoTest`, whose oleans `lake test` has just built.
 
 CI runs the timed build on the non-test Lean libraries:
 `ToMathlib`, `VCVio`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
@@ -286,20 +287,35 @@ imports the module — while elaborating cleanly and passing the build, the
 linters, every boundary ratchet and the axiom sweep. `lake exe initsweep --check`
 flags a constant when the module initialiser evaluates something for it (its own
 value, because the compiled declaration takes no parameters, or an `initialize`
-body registered for it) and that value names one of the type-enumeration entry
-points listed in `scripts/InitSweep.lean`. Marking the instance `noncomputable`
-is *not* a fix: it removes the instance's own compiled code and leaves the
+body registered for it) and that value either names one of the enumeration entry
+points listed in `scripts/InitSweep.lean` or names a constant whose *type* is a
+`Fintype` application — which is what every instance is, however it was spelled.
+The second disjunct is what makes the check a class test: writing the instance
+the elaborator would have found (`:= Pi.instFintype`) names none of the entry
+points and builds the same enumeration. Marking the instance `noncomputable`
+is *not* a fix either: it removes the instance's own compiled code and leaves the
 compiled auxiliary that carries the enumeration, which is the constant the gate
 names. Route the finiteness argument through `Fintype.ofFinite` instead, whose
 `Prop`-valued `Finite` argument leaves nothing compiled.
 
-The baseline `scripts/init_sweep_baseline.tsv` is a per-library ceiling in the
-shape of `scripts/expose_boundary_baseline.tsv`, at `0` for every swept library,
-so the gate carries no exception list. Raising a row is the escape hatch and
-needs an argument in review. `VCVioInitSweepTestFixtures` carries the three
-routes by which loading a module can build an enumeration, and one negative
-control per clause of the predicate; like the axiom-sweep fixtures it is kept out
-of every aggregate.
+The baseline `scripts/init_sweep_baseline.json` is a list of accepted constant
+names, in the shape of `scripts/axiom_baseline.json` rather than of a per-library
+ceiling: accepting one benign instance costs exactly that name and leaves every
+other constant of its library at zero. It holds seven rows today, each a
+`Fintype` on a carrier of at most eight elements, and a row is scoped to one
+constant under one library — so the same name flagged under another root, or
+gaining a new entry point, is still a regression. Adding a row is the escape
+hatch and needs an argument in review; `lake exe initsweep --update-baseline`
+writes it and preserves the rows of libraries the run did not sweep.
+`VCVioInitSweepTestFixtures` carries the five routes by which loading a module
+can build an enumeration, one negative control per clause of the predicate, and
+the baseline's accept / widen / shrink behaviour; like the axiom-sweep fixtures it
+is kept out of every aggregate.
+
+The gate cannot see how *large* an enumeration is, and it does not look at values
+whose size is an argument rather than a type (`List.range n`,
+`Array.replicate n x`); `scripts/InitSweep.lean` lists what that leaves open,
+with the occurrences of each in the current tree.
 
 After adding new `.lean` files: `./scripts/update-lib.sh` (CI's `scripts/check-imports.sh`
 fails when a regenerated umbrella would differ from the committed one).

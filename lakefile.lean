@@ -494,10 +494,11 @@ lean_exe axiomsweep where
   supportInterpreter := true
 
 /-- Whole-library accounting of eagerly-initialised compiled constants: constants the Lean
-backend evaluates when their module is loaded, before any `main` runs, whose value enumerates
-a type. Gated against a per-library ceiling (`scripts/init_sweep_baseline.tsv`, every library
-at zero). Complements the axiom sweep: that one accounts for what the kernel accepted, this
-one for what the *binary* does at start-up. Runtime-imports built oleans, so run it after
+backend evaluates when their module is loaded, before any `main` runs, whose value builds an
+enumeration of a type. Gated against a list of accepted constant names
+(`scripts/init_sweep_baseline.json`, in the shape of `scripts/axiom_baseline.json`).
+Complements the axiom sweep: that one accounts for what the kernel accepted, this one for
+what the *binary* does at start-up. Runtime-imports built oleans, so run it after
 `lake build`. See `scripts/InitSweep.lean`. -/
 lean_exe initsweep where
   srcDir := "scripts"
@@ -505,11 +506,13 @@ lean_exe initsweep where
   supportInterpreter := true
 
 /-- Isolated fixtures for the init-sweep ratchet, exercised by `scripts/test-initsweep.sh`.
-Not a default target, and deliberately carrying the three spellings of the instance that
-motivated the gate: the plain one, the `noncomputable` one that looks like a fix and is not,
-and the `Fintype.ofFinite` one that is. Every carrier type is tiny on purpose — the sweep
-imports these modules, so a genuinely unbounded fixture would blow up the gate's own test
-rather than fail it. -/
+Not a default target, and deliberately carrying the spellings of the instance that motivated
+the gate: the plain one, the `noncomputable` one that looks like a fix and is not, the named
+instance that a pure entry-point test accepts, the `decide` over a bounded quantifier that
+writes no instance at all, the `opaque` value the kernel hides, and the `Fintype.ofFinite`
+one that really is a fix. Every carrier
+type is tiny because the gate is a shape check and a large carrier would only cost build
+time. -/
 lean_lib VCVioInitSweepTestFixtures where
   srcDir := "scripts"
   globs := #[.submodules `VCVioInitSweepTestFixtures]

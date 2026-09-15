@@ -96,7 +96,21 @@ fi
     def test_init_sweep_runs_in_the_default_pass(self):
         result = self.validate()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("exe initsweep --check", (self.root / "calls").read_text().splitlines())
+        calls = (self.root / "calls").read_text().splitlines()
+        self.assertIn("exe initsweep --check", calls)
+        # The test libraries cannot be swept before `lake test` has built their oleans.
+        self.assertNotIn("exe initsweep --check --root VCVioTest --root LatticeCryptoTest",
+                         calls)
+
+    def test_init_sweep_covers_the_umbrella_test_libraries_after_lake_test(self):
+        result = self.validate("--test")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = (self.root / "calls").read_text().splitlines()
+        self.assertIn("exe initsweep --check --root VCVioTest --root LatticeCryptoTest",
+                      calls)
+        self.assertLess(calls.index("test"),
+                        calls.index("exe initsweep --check --root VCVioTest "
+                                    "--root LatticeCryptoTest"))
 
 
 if __name__ == "__main__":

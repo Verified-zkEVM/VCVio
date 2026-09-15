@@ -279,9 +279,11 @@ jobs:
       # in every executable that imports the module. That elaborates cleanly, builds
       # cleanly, and passes every other gate here; it fails only when the binary runs.
       # Needs the oleans the build above produced, as the axiom sweep does. The fixtures
-      # go first for the same reason: they carry the three routes by which loading a
-      # module can build such an enumeration, plus one negative control per clause of the
-      # predicate, so the gate's baseline of zero is falsifiable rather than merely true.
+      # go first for the same reason: they carry the five routes by which loading a
+      # module can build such an enumeration — including the respelling that a name test
+      # accepts — one negative control per clause of the predicate, and the baseline's own
+      # accept / widen / shrink behaviour, so the committed baseline is falsifiable rather
+      # than merely true.
       - name: Test the init sweep tool
         run: ./scripts/test-initsweep.sh
       - name: Init sweep
@@ -309,6 +311,14 @@ jobs:
             --path-prefix LatticeCryptoTest.lean \
             --path-prefix HashSigTest/ \
             --label 'test-library warnings'
+      # The same ratchet over the test libraries, which only exist as oleans once `lake
+      # test` has built them — the incident this gate exists for would have been just as
+      # expensive written in a test library. `VCVioTest` and `LatticeCryptoTest` have
+      # umbrella modules and are swept; `HashSigTest` is a `submodules` glob with no
+      # umbrella and fourteen roots that each define `main`, so it is not, and
+      # `scripts/InitSweep.lean` records precisely what that leaves uncovered.
+      - name: Init sweep (test libraries)
+        run: lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
       - name: Save Lake cache
         if: success() && steps.lake-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

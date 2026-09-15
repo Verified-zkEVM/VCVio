@@ -22,13 +22,21 @@ namespace VCVioInitSweepTestFixtures.Clean.Negatives
 the backend emits a procedure and nothing runs until someone calls it. -/
 def enumerate (α : Type) [Fintype α] : Finset α := Finset.univ
 
+/-- Parameter clause again, this time against the class disjunct: the value names
+`Pi.instFintype`, whose type is an application of `Fintype`, and `Fintype.elems` besides —
+both kinds of evidence the gate looks for — but the declaration takes a parameter, so the
+backend emits a procedure and nothing is enumerated until someone calls it. -/
+def enumerationSizeOf (n : ℕ) : ℕ :=
+  (Pi.instFintype (α := Fin n) (β := fun _ => Bool)).elems.card
+
 /-- Compiled-code clause: a theorem names `Fintype.card` and carries no compiled code at
 all, so no initialiser exists to be slow. -/
 theorem card_pos : 0 < Fintype.card (Fin 3 → Bool) := Fintype.card_pos
 
-/-- Entry-point clause: eagerly initialised, and bounded by an explicit numeral. This is
-the shape of the one legitimate `List.range` in the swept tree, and the reason numeric
-ranges are not in `InitSweep.enumerationEntryPoints`. -/
+/-- Enumeration clause: eagerly initialised, and sized by a numeral the author wrote at the
+site rather than by a type. That is the boundary `InitSweep.enumerationEntryPoints` draws,
+and this is the shape of the one `List.range` in the swept tree's load-time population
+(`SLHDSA.Concrete.Keccak.piLUT`). -/
 def table : List Nat := List.range 8
 
 /-- Entry-point clause again: an eagerly-initialised `Finset` whose elements are written

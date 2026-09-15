@@ -2,11 +2,14 @@
 
 # Execute falsifiable fixtures for the eager-initialisation ratchet.
 #
-# The gate's baseline is zero everywhere, so its zero is worth nothing unless the fixtures
-# can make it non-zero. `VCVioInitSweepTestFixtures.Hazard` carries the three routes by
-# which loading a module can build an enumeration of a type, and
-# `VCVioInitSweepTestFixtures.Clean` carries one negative control per clause of the
-# predicate — each asserted here by name, not by count.
+# The gate accepts a flagged constant only when the committed baseline names it, so the
+# fixtures have to falsify both halves: `VCVioInitSweepTestFixtures.Hazard` carries the five
+# routes by which loading a module can build an enumeration of a type — including the
+# respelling that a pure name test accepts, the route that writes no instance at all, and
+# the value the kernel hides — and `VCVioInitSweepTestFixtures.Clean` carries one negative
+# control per clause of the predicate. Each is asserted here by name, not by count. The
+# baseline's own behaviour (accept by name, reject a widened entry-point set, reject a row
+# scoped to another library, preserve rows outside the swept roots) is exercised below it.
 
 set -euo pipefail
 
@@ -30,25 +33,27 @@ expect_status() {
   fi
 }
 
-ZERO_BASELINE="$FIXTURE_TMP/zero.tsv"
-EXACT_BASELINE="$FIXTURE_TMP/exact.tsv"
-TIGHT_BASELINE="$FIXTURE_TMP/tight.tsv"
-HIGH_BASELINE="$FIXTURE_TMP/high-clean.tsv"
-INVALID_BASELINE="$FIXTURE_TMP/invalid.tsv"
-EMPTY_BASELINE="$FIXTURE_TMP/empty.tsv"
-MISSING_BASELINE="$FIXTURE_TMP/missing.tsv"
+EMPTY_BASELINE="$FIXTURE_TMP/empty.json"
+STALE_BASELINE="$FIXTURE_TMP/stale.json"
+INVALID_BASELINE="$FIXTURE_TMP/invalid.json"
+ZERO_BYTE_BASELINE="$FIXTURE_TMP/zero-byte.json"
+MISSING_BASELINE="$FIXTURE_TMP/missing.json"
+ACCEPT_ALL="$FIXTURE_TMP/accept-all.json"
 CLEAN_REPORT="$FIXTURE_TMP/clean.json"
 HAZARD_REPORT="$FIXTURE_TMP/hazard.json"
 HAZARD_REPORT_2="$FIXTURE_TMP/hazard-2.json"
 
-ROOTS=(VCVioInitSweepTestFixtures.Clean VCVioInitSweepTestFixtures.Hazard
-  VCVioInitSweepTestFixtures.Standalone)
-printf '%s\t0\n' "${ROOTS[@]}" >"$ZERO_BASELINE"
-printf 'VCVioInitSweepTestFixtures.Hazard\t3\n' >"$EXACT_BASELINE"
-printf 'VCVioInitSweepTestFixtures.Hazard\t2\n' >"$TIGHT_BASELINE"
-printf 'VCVioInitSweepTestFixtures.Clean\t3\n' >"$HIGH_BASELINE"
-printf 'VCVioInitSweepTestFixtures.Hazard 0\n' >"$INVALID_BASELINE"
-: >"$EMPTY_BASELINE"
+printf '{"accepted": []}\n' >"$EMPTY_BASELINE"
+printf 'not json\n' >"$INVALID_BASELINE"
+: >"$ZERO_BYTE_BASELINE"
+# A row for a constant that is *not* flagged, scoped to a library this run sweeps: the gate
+# reports it as shrinkable rather than failing on it.
+cat >"$STALE_BASELINE" <<'JSON'
+{"accepted":
+ [{"name": "VCVioInitSweepTestFixtures.Clean.Negatives.table",
+   "library": "VCVioInitSweepTestFixtures.Clean",
+   "entryPoints": ["Finset.univ"]}]}
+JSON
 
 lake build VCVioInitSweepTestFixtures
 lake exe initsweep --root VCVioInitSweepTestFixtures.Clean --out "$CLEAN_REPORT"
@@ -98,15 +103,46 @@ noncomputable_instance = (
     "VCVioInitSweepTestFixtures.Hazard.Noncomputable.instFintypeYBundle")
 assert noncomputable_instance not in hazard_entries, hazard_entries[noncomputable_instance]
 
+# The respelling: the same instance at the same type, written as the instance the
+# elaborator would have found. It names none of `enumerationEntryPoints` — what gives it
+# away is that `Pi.instFintype` is *typed* `Fintype _`. This is the case a name test alone
+# accepts, and the reason `enumerationClasses` exists.
+named = "VCVioInitSweepTestFixtures.Hazard.Named.instFintypeYBundle"
+assert named in flagged, sorted(flagged)
+assert "Pi.instFintype" in flagged[named]["entryPoints"], flagged[named]
+assert not any(point in flagged[named]["entryPoints"]
+               for point in ("Finset.univ", "Fintype.elems", "Fintype.card",
+                             "Fintype.piFinset", "Fintype.ofFinite", "Fintype.ofEquiv",
+                             "Set.toFinset")), flagged[named]
+
+# The route with no `Fintype` in the source at all: a top-level `decide` over a bounded
+# quantifier enumerates the carrier through the `Decidable` instance.
+decided = "VCVioInitSweepTestFixtures.Hazard.Decide.everyPointFixesZero"
+assert decided in flagged, sorted(flagged)
+assert "Pi.instFintype" in flagged[decided]["entryPoints"], flagged[decided]
+
 # `initialize x : T ← e` leaves `x` valueless; the gate has to follow the registered
 # initialiser to see anything at all.
 initialized = "VCVioInitSweepTestFixtures.Hazard.Initialize.enumeration"
 assert initialized in flagged, sorted(flagged)
 assert flagged[initialized]["via"] == "initialize", flagged[initialized]
 assert flagged[initialized]["source"] != initialized, flagged[initialized]
-assert flagged[initialized]["entryPoints"] == ["Finset.univ"], flagged[initialized]
+assert "Finset.univ" in flagged[initialized]["entryPoints"], flagged[initialized]
 
-assert len(flagged) == 3, sorted(flagged)
+# The instance of the plain spelling is flagged in its own right as well as through its
+# auxiliary: its value constructs a `Fintype`.
+plain_instance = "VCVioInitSweepTestFixtures.Hazard.Plain.instFintypeYBundle"
+assert plain_instance in flagged, sorted(flagged)
+
+# `opaque` hides the value from unification, not from the backend: the emitted C assigns it
+# from an `_init_` function like any other parameterless value, so the gate reads it and
+# the blind-spot count stays at zero rather than absorbing the route.
+opaque_value = "VCVioInitSweepTestFixtures.Hazard.Opaque.enumeration"
+assert opaque_value in flagged, sorted(flagged)
+assert flagged[opaque_value]["via"] == "value", flagged[opaque_value]
+assert "Finset.univ" in flagged[opaque_value]["entryPoints"], flagged[opaque_value]
+
+assert len(flagged) == 7, sorted(flagged)
 
 # --- one negative control per clause, each witnessed by name -------------------------
 
@@ -115,6 +151,10 @@ clean_prefix = "VCVioInitSweepTestFixtures.Clean."
 # Parameter clause: names `Finset.univ`, compiles, takes a parameter, so it is called
 # rather than initialised and never enters the load-time population.
 assert clean_prefix + "Negatives.enumerate" not in clean_entries
+
+# Parameter clause against the class disjunct: names `Pi.instFintype` and `Fintype.elems`,
+# and is still out of the population because it takes a parameter.
+assert clean_prefix + "Negatives.enumerationSizeOf" not in clean_entries
 
 # Compiled-code clause: a theorem names `Fintype.card` and carries no code.
 assert clean_prefix + "Negatives.card_pos" not in clean_entries
@@ -142,33 +182,106 @@ PY
 
 expect_status 0 clean-check \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Clean \
-    --check --baseline "$ZERO_BASELINE"
-expect_status 1 hazard-over-ceiling \
+    --check --baseline "$EMPTY_BASELINE"
+expect_status 1 hazard-unaccepted \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
-    --check --baseline "$ZERO_BASELINE"
-grep -q "instFintypeYBundle._aux_1" "$FIXTURE_TMP/hazard-over-ceiling.log"
-grep -q "Fintype.ofFinite" "$FIXTURE_TMP/hazard-over-ceiling.log"
+    --check --baseline "$EMPTY_BASELINE"
+grep -q "instFintypeYBundle._aux_1" "$FIXTURE_TMP/hazard-unaccepted.log"
+grep -q "Hazard.Named.instFintypeYBundle" "$FIXTURE_TMP/hazard-unaccepted.log"
+grep -q "Fintype.ofFinite" "$FIXTURE_TMP/hazard-unaccepted.log"
+grep -q "update-baseline" "$FIXTURE_TMP/hazard-unaccepted.log"
 
-# A library the baseline does not mention has a ceiling of zero, so a hazard cannot be
-# greened by deleting its row.
-printf 'VCVio\t0\n' >"$FIXTURE_TMP/other.tsv"
-expect_status 1 hazard-other-library-only \
-  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
-    --check --baseline "$FIXTURE_TMP/other.tsv"
-
-# The ceiling is exact: it accepts the measured count and nothing above it.
-expect_status 0 hazard-at-ceiling \
-  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
-    --check --baseline "$EXACT_BASELINE"
-expect_status 1 hazard-just-under-ceiling \
-  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
-    --check --baseline "$TIGHT_BASELINE"
-
-# Shrinking is reported rather than failed, and points at the update command.
-expect_status 0 clean-below-ceiling \
+# A baseline entry no longer flagged is reported, not failed, and points at the update
+# command. (The row is scoped to a library this run sweeps; out-of-scope rows are silent.)
+expect_status 0 clean-stale-row \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Clean \
-    --check --baseline "$HIGH_BASELINE"
-grep -q "update-baseline" "$FIXTURE_TMP/clean-below-ceiling.log"
+    --check --baseline "$STALE_BASELINE"
+grep -q "update-baseline" "$FIXTURE_TMP/clean-stale-row.log"
+
+# --- the baseline accepts by name, and only what it names --------------------------------
+
+# What `--update-baseline` writes is what `--check` then accepts.
+expect_status 0 write-hazard-baseline \
+  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
+    --update-baseline --baseline "$ACCEPT_ALL"
+expect_status 0 check-against-written \
+  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
+    --check --baseline "$ACCEPT_ALL"
+
+python3 - "$ACCEPT_ALL" "$FIXTURE_TMP" <<'PY'
+import json
+import sys
+
+source, tmp = sys.argv[1:]
+with open(source, encoding="utf-8") as stream:
+    base = json.load(stream)
+
+rows = base["accepted"]
+assert len(rows) == 7, rows
+assert all(row["library"] == "VCVioInitSweepTestFixtures.Hazard" for row in rows), rows
+
+# Drop one constant: the other five stay accepted and that one is a regression.
+one_missing = [row for row in rows if not row["name"].endswith("Named.instFintypeYBundle")]
+with open(f"{tmp}/one-missing.json", "w", encoding="utf-8") as stream:
+    json.dump({"accepted": one_missing}, stream)
+
+# Keep every constant but narrow one row's entry points: a constant that starts naming a
+# new entry point is a regression on a row that already exists.
+narrowed = [dict(row, entryPoints=[point for point in row["entryPoints"]
+                                   if point != "Pi.instFintype"])
+            for row in rows]
+with open(f"{tmp}/narrowed.json", "w", encoding="utf-8") as stream:
+    json.dump({"accepted": narrowed}, stream)
+
+# Same names, wrong library: scoping must not turn a row into a licence for another sweep.
+mis_scoped = [dict(row, library="SomeOtherLibrary") for row in rows]
+with open(f"{tmp}/mis-scoped.json", "w", encoding="utf-8") as stream:
+    json.dump({"accepted": mis_scoped}, stream)
+
+# A row for a library this run does not sweep, alongside the accepted six.
+foreign = {"name": "SomeOtherLibrary.instFintypeThing",
+           "library": "SomeOtherLibrary", "entryPoints": ["Fintype.mk"]}
+with open(f"{tmp}/with-foreign.json", "w", encoding="utf-8") as stream:
+    json.dump({"accepted": rows + [foreign]}, stream)
+PY
+
+expect_status 1 hazard-one-missing \
+  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
+    --check --baseline "$FIXTURE_TMP/one-missing.json"
+grep -q "Hazard.Named.instFintypeYBundle" "$FIXTURE_TMP/hazard-one-missing.log"
+
+expect_status 1 hazard-narrowed-row \
+  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
+    --check --baseline "$FIXTURE_TMP/narrowed.json"
+
+expect_status 1 hazard-mis-scoped \
+  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
+    --check --baseline "$FIXTURE_TMP/mis-scoped.json"
+
+# A row outside the swept roots is neither enforced nor lost: `--update-baseline` over a
+# partial root set preserves it instead of silently dropping the other libraries' rows.
+expect_status 0 update-preserves-foreign \
+  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
+    --update-baseline --baseline "$FIXTURE_TMP/with-foreign.json"
+grep -q "SomeOtherLibrary.instFintypeThing" "$FIXTURE_TMP/with-foreign.json"
+grep -q "1 preserved" "$FIXTURE_TMP/update-preserves-foreign.log"
+
+# Shrinking back to nothing is what a fix looks like.
+expect_status 0 shrink-baseline \
+  lake exe initsweep --root VCVioInitSweepTestFixtures.Clean \
+    --update-baseline --baseline "$ACCEPT_ALL"
+python3 - "$ACCEPT_ALL" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    base = json.load(stream)
+# The Clean sweep accepts nothing, and the Hazard rows belong to a library it did not
+# sweep, so they survive untouched.
+assert len(base["accepted"]) == 7, base
+assert all(row["library"] == "VCVioInitSweepTestFixtures.Hazard"
+           for row in base["accepted"]), base
+PY
 
 # --- infrastructure failures must never read as a ratchet verdict ----------------------
 
@@ -176,7 +289,7 @@ grep -q "update-baseline" "$FIXTURE_TMP/clean-below-ceiling.log"
 # clean tree would be the worst failure this gate can have, so it is an exit-2 instead.
 expect_status 2 entry-points-absent \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Standalone \
-    --check --baseline "$ZERO_BASELINE"
+    --check --baseline "$EMPTY_BASELINE"
 grep -q "not present in the swept environment" "$FIXTURE_TMP/entry-points-absent.log"
 
 expect_status 2 missing-baseline \
@@ -185,37 +298,24 @@ expect_status 2 missing-baseline \
 expect_status 2 invalid-baseline \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Clean \
     --check --baseline "$INVALID_BASELINE"
-expect_status 2 empty-baseline \
+expect_status 2 empty-file-baseline \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Clean \
-    --check --baseline "$EMPTY_BASELINE"
+    --check --baseline "$ZERO_BYTE_BASELINE"
+# An unparsable baseline must not be overwritten either: the rows it holds for libraries
+# outside this run's roots cannot be preserved if they cannot be read.
+expect_status 2 invalid-baseline-update \
+  lake exe initsweep --root VCVioInitSweepTestFixtures.Clean \
+    --update-baseline --baseline "$INVALID_BASELINE"
+grep -qx "not json" "$INVALID_BASELINE"
 expect_status 2 conflicting-flags \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Clean \
-    --check --update-baseline --baseline "$ZERO_BASELINE"
+    --check --update-baseline --baseline "$EMPTY_BASELINE"
 expect_status 2 unknown-flag \
   lake exe initsweep --bogus
 expect_status 2 bad-root \
-  lake exe initsweep --root NoSuchModule --check --baseline "$ZERO_BASELINE"
+  lake exe initsweep --root NoSuchModule --check --baseline "$EMPTY_BASELINE"
 expect_status 2 unwritable-out \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Clean \
     --out "$FIXTURE_TMP/no-such-dir/report.json"
-
-# --- baseline writing -------------------------------------------------------------------
-
-# The escape hatch is one reviewable line per library, and what it writes is what `--check`
-# then accepts.
-cp "$ZERO_BASELINE" "$FIXTURE_TMP/written.tsv"
-expect_status 0 write-hazard-baseline \
-  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
-    --update-baseline --baseline "$FIXTURE_TMP/written.tsv"
-grep -qx "VCVioInitSweepTestFixtures.Hazard	3" "$FIXTURE_TMP/written.tsv"
-expect_status 0 check-against-written \
-  lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
-    --check --baseline "$FIXTURE_TMP/written.tsv"
-
-# Shrinking back to zero is what a fix looks like.
-expect_status 0 shrink-baseline \
-  lake exe initsweep --root VCVioInitSweepTestFixtures.Clean \
-    --update-baseline --baseline "$FIXTURE_TMP/written.tsv"
-grep -qx "VCVioInitSweepTestFixtures.Clean	0" "$FIXTURE_TMP/written.tsv"
 
 echo "✓ Init sweep executable fixture matrix passed."
