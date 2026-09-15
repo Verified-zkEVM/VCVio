@@ -316,7 +316,7 @@ jobs:
       # test` has built them — the incident this gate exists for would have been just as
       # expensive written in a test library. `VCVioTest` and `LatticeCryptoTest` have
       # umbrella modules and are swept; `HashSigTest` is a `submodules` glob with no
-      # umbrella and fourteen roots that each define `main`, so it is not, and
+      # umbrella and thirteen roots that each define `main`, so it is not, and
       # `scripts/InitSweep.lean` records precisely what that leaves uncovered.
       - name: Init sweep (test libraries)
         run: lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
