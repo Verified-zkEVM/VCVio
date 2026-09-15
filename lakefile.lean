@@ -366,6 +366,10 @@ lean_lib HashSigTest where
 lean_exe smoke_test where
   root := `VCVioTest.Smoke
 
+/-- Finite-field folding and replay work-accounting regression checks. -/
+lean_exe inner_product_replay_checks where
+  root := `scripts.InnerProductReplayChecks
+
 /-- `lake test`: build the three test libraries, then run the smoke test and the SLH-DSA test
 executables. `lake test -- --ffi` additionally builds and runs the native-backed ML-KEM / ML-DSA /
 Falcon executables, which compile the vendored C backends under `third_party/`; that path is what
@@ -379,6 +383,7 @@ script test (args) do
   let mut steps : Array (Array String) := #[
     #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"],
     #["exe", "smoke_test"],
+    #["exe", "inner_product_replay_checks"],
     #["exe", "slhdsa_kat"],
     #["exe", "slhdsa_c13_kat"],
     #["exe", "slhdsa_data_codec_tests"],

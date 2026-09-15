@@ -39,6 +39,12 @@ Fiat-Shamir transform → managed-RO NMA → replay forking → DLog), see
 The Schnorr-specific σ-protocol facts that feed in live in
 [`Examples/Schnorr/SigmaProtocol.lean`](../../Examples/Schnorr/SigmaProtocol.lean).
 
+For the binary recursive inner-product protocol, typed source replay, and its
+independent dependent-effect comparison, see
+[inner-product replay](../reading/inner-product-replay.md). That development
+specifies the protocol and proves execution-observation results; it does not
+yet establish generalized knowledge extraction.
+
 ### Commitment schemes (`CommitmentScheme`)
 
 ```lean
