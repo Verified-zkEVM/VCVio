@@ -51,8 +51,7 @@ namespace oneTimePad
 
 /-- The one-time-pad experiment has independent message and ciphertext measures under
 the native uniform-oracle interpretation. -/
-theorem evalDist_perfectSecrecyExp [OracleSpec.IsUniformMeasureSpec unifSpec]
-    (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
+theorem evalDist_perfectSecrecyExp (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
     𝒟[(oneTimePad sp).PerfectSecrecyExp mgen] =
       𝒟[mgen].prod (ProbabilityTheory.uniformOn Set.univ :
         MeasureTheory.Measure (BitVec sp)) := by
@@ -60,8 +59,7 @@ theorem evalDist_perfectSecrecyExp [OracleSpec.IsUniformMeasureSpec unifSpec]
     evalDist_pair_xor_uniformSample sp mgen
 
 /-- A one-time-pad round trip denotes the Dirac measure at the original message. -/
-theorem evalDist_completeExp [OracleSpec.IsUniformMeasureSpec unifSpec]
-    (sp : ℕ) (msg : BitVec sp) :
+theorem evalDist_completeExp (sp : ℕ) (msg : BitVec sp) :
     𝒟[(oneTimePad sp).CompleteExp msg] = MeasureTheory.Measure.dirac (some msg) := by
   have hsimp : (oneTimePad sp).CompleteExp msg =
       (fun _ : BitVec sp => (some msg : Option (BitVec sp))) <$>
@@ -78,8 +76,7 @@ lemma complete (sp : ℕ) : (oneTimePad sp).Complete := by
   simp
 
 /-- The one-time-pad ciphertext has a uniform measure for every message sampler. -/
-theorem evalDist_perfectSecrecyCipherExp [OracleSpec.IsUniformMeasureSpec unifSpec]
-    (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
+theorem evalDist_perfectSecrecyCipherExp (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
     𝒟[(oneTimePad sp).PerfectSecrecyCipherExp mgen] =
       (ProbabilityTheory.uniformOn Set.univ : MeasureTheory.Measure (BitVec sp)) := by
   simpa [SymmEncAlg.PerfectSecrecyCipherExp, SymmEncAlg.PerfectSecrecyExp, oneTimePad,

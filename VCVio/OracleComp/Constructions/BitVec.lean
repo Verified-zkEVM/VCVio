@@ -25,14 +25,12 @@ the message. Singleton-probability corollaries provide the same facts to discret
 open OracleSpec OracleComp ENNReal MeasureTheory ProbabilityTheory
 
 /-- XOR with a sampled uniform bit vector has a native uniform output measure. -/
-theorem evalDist_xor_uniformSample [OracleSpec.IsUniformMeasureSpec unifSpec]
-    (sp : ℕ) (msg : BitVec sp) :
+theorem evalDist_xor_uniformSample (sp : ℕ) (msg : BitVec sp) :
     𝒟[(fun k : BitVec sp => k ^^^ msg) <$> ($ᵗ BitVec sp)] = uniformOn Set.univ :=
   evalDist_xor_uniform_right _ msg (SampleableType.evalDist_bitVec sp)
 
 /-- A sampled key makes the one-time-pad ciphertext independent of the message. -/
-theorem evalDist_pair_xor_uniformSample [OracleSpec.IsUniformMeasureSpec unifSpec]
-    (sp : ℕ) (mx : ProbComp (BitVec sp)) :
+theorem evalDist_pair_xor_uniformSample (sp : ℕ) (mx : ProbComp (BitVec sp)) :
     𝒟[do
       let msg ← mx
       let key ← $ᵗ BitVec sp
@@ -43,7 +41,6 @@ theorem evalDist_pair_xor_uniformSample [OracleSpec.IsUniformMeasureSpec unifSpe
 
 /-- A sampled key gives every ciphertext the native uniform output measure. -/
 theorem evalDist_cipher_from_pair_uniformSample
-    [OracleSpec.IsUniformMeasureSpec unifSpec]
     (sp : ℕ) (mx : ProbComp (BitVec sp)) :
     𝒟[do
       let msg ← mx
