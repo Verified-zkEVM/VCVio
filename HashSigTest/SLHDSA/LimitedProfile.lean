@@ -123,8 +123,8 @@ profile* as a numeral, and the arity of the hash the game attacks.  Three rows h
 two `PRF` hops, which are not tweakable-hash games at all, and the `H_msg` ITSR term, whose game
 has no target cap of any kind.  No column is only written here: the caps are checked against
 `targetCount` below, each role against the name its own row carries, and every one of the nine
-arities against a literal — six of them in `checkDarkCells` and the other three in
-`checkSummandTable`. -/
+arities against a literal — `checkDarkCells` reads six of them and `checkSummandTable` seven,
+which between them leave none unread. -/
 
 /-- A summand row: the field name, its game's cap role, that cap at this profile, and the arity of
 the attacked hash. -/
@@ -240,9 +240,9 @@ def checkDarkCells : IO Unit := do
 
 /-- **The summand table**, checked rather than only written down: twelve rows in the source's
 order, three of them roleless, every row that has a role carrying that role's cap at this profile
-and carrying the role its own name denotes, and the three arity cells `checkDarkCells` does not
-read — `forsFDspr`, `forsFTcr` and `wotsFTcr`, which are single-node games like the two it does
-read. -/
+and carrying the role its own name denotes, and the arity of each of the five single-node games
+and each of the two arity-two ones.  Four of those seven arity cells `checkDarkCells` also reads;
+the other three — `forsFDspr`, `forsFTcr`, `wotsFTcr` — are read here and nowhere else. -/
 def checkSummandTable : IO Unit := do
   ensure "twelve summands" (summands.length == 12)
   ensure "names distinct" ((summands.map (·.summand)).eraseDups.length == 12)
