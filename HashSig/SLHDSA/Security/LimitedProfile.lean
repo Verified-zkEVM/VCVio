@@ -146,10 +146,12 @@ the same term slice 2's `limitedEncodedTargetLedgerConditions` concludes at.
   LimitedParameterSet.validatedParams .SLHDSA_SHA2_128_24
 
 -- Exposed, and what the attribute is for was read off the errors its removal alone produces:
--- nineteen.  Eighteen are code-generation failures, two at each of the nine instances below,
--- each reporting that the locally inferred compilation type differs from the one other modules
--- would infer and naming `limitedPrimitives` as the definition to expose; the nineteenth is the
--- refusal of `limitedPrimitives_eq`'s own `rfl`.  No corollary moves.
+-- seventeen.  Sixteen are code-generation failures, two at each of the eight instances below
+-- that generate code, each reporting that the locally inferred compilation type differs from the
+-- one other modules would infer and naming `limitedPrimitives` as the definition to expose; the
+-- seventeenth is the refusal of `limitedPrimitives_eq`'s own `rfl`.  The ninth instance, the
+-- noncomputable finiteness one, is not among them: it generates no code to fail.  No corollary
+-- moves.
 /-- The FIPS SHA-2 primitive bundle at that profile: `n = 16`, so every seed and node carrier is
 `Bytes 16`, and the compressed address key is `Bytes 22`.
 
