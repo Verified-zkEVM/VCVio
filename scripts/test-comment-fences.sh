@@ -193,6 +193,17 @@ expect_status 1 raw-drift "$CHECKER"
 grep -q "Lib/RawDrift.lean:6:" "$FIXTURE_REPO/raw-drift.log"
 rm Lib/RawDrift.lean
 
+# Lean permits newlines inside quoted identifiers; their contents are not comments,
+# and counting their lines keeps diagnostics after the identifier accurate.
+cat > Lib/IdentifierDrift.lean <<'LEAN'
+def «multi
+/- identifier text -/ line» : Nat := 1
+/-- Reported on the right line. -/ def hidden : Nat := 2
+LEAN
+expect_status 1 identifier-drift "$CHECKER"
+grep -q "Lib/IdentifierDrift.lean:3:" "$FIXTURE_REPO/identifier-drift.log"
+rm Lib/IdentifierDrift.lean
+
 # --- the shapes the positional rule rejects, although they hide nothing -------------------
 
 # The test is where the comment opens, not what follows it, and Lean lets a term, a

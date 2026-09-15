@@ -197,7 +197,12 @@ def block_comments(source: str) -> list[tuple[int, int, int, str]]:
                 continue
         if character == "«":
             closing = source.find("»", index)
-            index = size if closing < 0 else closing + 1
+            end = size if closing < 0 else closing + 1
+            for offset in range(index, end):
+                if source[offset] == "\n":
+                    line += 1
+                    line_start = offset + 1
+            index = end
             continue
         index += 1
     return result
