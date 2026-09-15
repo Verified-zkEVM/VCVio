@@ -102,9 +102,9 @@ own build; `scripts/test-initsweep.sh` carries the fixtures that falsify each on
   on *that* number would be noise. Two disjuncts do the narrowing, and the second is the
   one that makes the clause a class test rather than a spelling test:
   `enumerationEntryPoints` names the library functions that enumerate, and
-  `enumerationClasses` catches any constant whose *type* is an enumeration of a type —
-  which is what `Pi.instFintype`, `Fin.fintype` and every other instance is, however the
-  author spelled it.
+  `enumerationClasses` catches any *builder* of an enumeration class — which is what
+  `Pi.instFintype`, `Fin.fintype`, `Fintype.mk` and `FinEnum.ofList` are, however the author
+  spelled the instance that uses them.
 * **and the same test on the compiled declarations that have no constant.** The module
   initialiser assigns compiler-generated parameterless declarations beside the constants:
   specialisations (`Fintype.card._at_.<caller>.spec_0`) and boxed numeric constants. They are
@@ -133,9 +133,9 @@ lake exe initsweep --update-baseline   # rewrite the baseline from the current b
 ```
 
 The committed baseline (`scripts/init_sweep_baseline.json`) is a **list of constant names**
-with the entry points each one is accepted for, rather than the per-library count this file
-shipped first: accepting one benign instance costs exactly that one name and leaves every
-other constant of its library at zero. It is the `scripts/axiom_baseline.json` idea — an
+with the entry points each one is accepted for, rather than a per-library count: accepting
+one benign instance costs exactly that one name and leaves every other constant of its
+library at zero. It is the `scripts/axiom_baseline.json` idea — an
 allowlist keyed by declaration, argued row by row in review — with a scope attached, which
 `axiom_baseline.json`'s flat name lists do not have: a row covers one constant *under one
 library* and exactly the entry points it lists, so `--update-baseline` over a partial
