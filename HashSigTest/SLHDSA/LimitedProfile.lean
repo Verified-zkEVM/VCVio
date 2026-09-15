@@ -60,13 +60,13 @@ least one.
 Fifty-five runtime checks in five groups — the profile's seven parameters and the sizes they
 derive (19), the eight caps and the two structural counts at `d = 1` (10), four arithmetic
 relations between the caps (5), the two dark cells (7), and the summand table checked against
-`targetCount`, against the names its own rows carry, and against the arities of the games those
-names denote (14).  Fifty-four `example`s in `Pins`: one for each of the thirty-four declarations
-the library module exports, the five carriers its instances are stated at, the ten games' caps at
-this bundle, the two `T_ℓ` games' arities, the general coincidence of the two WOTS+-`F` caps, and
-the two certificate fields whose types are all that separates them.  Then the vacuity canary —
-fifteen declarations copied from `HashSigTest.SLHDSA.SufBound` and four restatements at this
-bundle.
+`targetCount`, against the order and the names its own rows carry, and against the arities of the
+games those names denote (14).  Fifty-four `example`s in `Pins`: one for each of the thirty-four
+declarations the library module exports, the five carriers its instances are stated at, the ten
+games' caps at this bundle, the two `T_ℓ` games' arities, the general coincidence of the two
+WOTS+-`F` caps, and the two certificate fields whose types are all that separates them.  Then the
+vacuity canary — fifteen declarations copied from `HashSigTest.SLHDSA.SufBound` and four
+restatements at this bundle.
 
 ## What the checks cannot catch
 
@@ -121,10 +121,10 @@ One row per summand of `SLHDSA.Security.Summands`, in the source's order: the fi
 `TargetRole` whose `targetCount` caps the game the summand is the advantage of, that cap *at this
 profile* as a numeral, and the arity of the hash the game attacks.  Three rows have no role — the
 two `PRF` hops, which are not tweakable-hash games at all, and the `H_msg` ITSR term, whose game
-has no target cap of any kind.  No column is only written here: the caps are checked against
-`targetCount` below, each role against the name its own row carries, and every one of the nine
-arities against a literal — `checkDarkCells` reads six of them and `checkSummandTable` seven,
-which between them leave none unread. -/
+has no target cap of any kind.  Nothing about the table is only written here: the twelve names are
+checked in this order, the caps against `targetCount` below, each role against the name its own row
+carries, and every one of the nine arities against a literal — `checkDarkCells` reads six of them
+and `checkSummandTable` five, overlapping on two, which between them leave none unread. -/
 
 /-- A summand row: the field name, its game's cap role, that cap at this profile, and the arity of
 the attacked hash. -/
@@ -238,14 +238,25 @@ def checkDarkCells : IO Unit := do
     ((summands.filter (fun r => r.summand == "forsHTcr" || r.summand == "xmssHTcr")).map
       (·.arity) == [some 2, some 2])
 
-/-- **The summand table**, checked rather than only written down: twelve rows in the source's
+/-- **The summand table**, checked rather than only written down: the twelve names in the source's
 order, three of them roleless, every row that has a role carrying that role's cap at this profile
-and carrying the role its own name denotes, and the arity of each of the five single-node games
-and each of the two arity-two ones.  Four of those seven arity cells `checkDarkCells` also reads;
-the other three — `forsFDspr`, `forsFTcr`, `wotsFTcr` — are read here and nowhere else. -/
+and carrying the role its own name denotes, and the arity of each of the five single-node games.
+Four of the nine arity cells `checkDarkCells` reads as well, three — `forsFDspr`, `forsFTcr`,
+`wotsFTcr` — are read here and nowhere else, and the two arity-two ones are read only there,
+because a second check on them would be the same predicate twice.
+
+These are not independent.  The order check fixes the name column, so with the role check it also
+fixes the role column, which makes "twelve summands", "names distinct", "all eight roles are
+used", "the FORS-F role is the only one used twice" and "the two FORS-F rows are the DSPR and TCR
+summands" consequences of the two.  They are kept because each fires *first* on the edit it is
+named for and says which cell moved: a duplicated name stops at "names distinct", not at the order
+check — measured, by deleting each and re-running the edit. -/
 def checkSummandTable : IO Unit := do
   ensure "twelve summands" (summands.length == 12)
   ensure "names distinct" ((summands.map (·.summand)).eraseDups.length == 12)
+  ensure "the twelve rows are in the source's order"
+    (summands.map (·.summand) == ["skgPrf", "mkgPrf", "hmsgItsr", "forsFDspr", "forsFTcr",
+      "forsHTcr", "forsTlTcr", "wotsFUd", "wotsFTcr", "wotsFPre", "wotsTlTcr", "xmssHTcr"])
   ensure "three summands have no cap role" ((summands.filter (·.role.isNone)).length == 3)
   ensure "the roleless three are the two PRF hops and the ITSR term"
     ((summands.filter (·.role.isNone)).map (·.summand) == ["skgPrf", "mkgPrf", "hmsgItsr"])
@@ -283,9 +294,6 @@ def checkSummandTable : IO Unit := do
     ((summands.filter fun r =>
         ["forsFDspr", "forsFTcr", "wotsFUd", "wotsFTcr", "wotsFPre"].contains r.summand).map
       (·.arity) == [some 1, some 1, some 1, some 1, some 1])
-  ensure "the two H games have arity two"
-    ((summands.filter fun r => ["forsHTcr", "xmssHTcr"].contains r.summand).map (·.arity) ==
-      [some 2, some 2])
 
 /-! ## The pins
 
