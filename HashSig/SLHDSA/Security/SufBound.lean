@@ -87,9 +87,8 @@ in it, and reusing the randomizer costs an adversary nothing, because the random
 the signature it was handed.  `HashSigTest.SLHDSA.SufBound` runs that at the deterministic
 variant's own log, where the case is inhabited.  What the hedged default changes is the *size* of
 the logged-randomizer list at a message, and so how hard the **fresh** branch is to reach.
-`HashSig.SLHDSA.Security.SufResidual`'s module docstring says the second branch "is empty for the
-deterministic variant"; that is the sentence those checks falsify, and its own fixture's docstring
-states the narrower fact correctly.
+`HashSig.SLHDSA.Security.SufResidual` states the same boundary: deterministic signing narrows
+the logged-randomizer list without emptying the second branch.
 
 **The Lean signer is not.**  FIPS 205 Algorithm 19 sets `opt_rand ← addrnd` and then
 `R ← PRF_msg(SK.prf, opt_rand, M)`; §9.2 makes that hedged variant the default and offers
