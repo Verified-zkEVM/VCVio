@@ -51,8 +51,8 @@ and the Lean branch assignment is not the source's.
 
 So what is quoted below as "the bound at SLH-DSA-SHA2-128-24" is the *shape* of
 `EUFCMA_SPHINCS_PLUS`'s right-hand side, with this profile's coefficient and this profile's caps
-filled in.  It is not a security claim, and a reader who wants one should read the two
-certificates the fixture builds first.
+filled in.  It is not a security claim, and a reader who wants one should read the certificate
+the fixture builds first.
 
 ## Which bundle, and the other one
 
@@ -68,10 +68,10 @@ It is **not** `Concrete.shaPrimitives`, the hand-written SLH-DSA-SHA2-128-24 bun
 and `shaPrimitives = sha2Primitives slhdsaSha2_128_24` is not closed by `rfl`.  So no statement
 here transfers to the bundle the known-answer test runs, and none should be read as doing so.
 
-## The profile, and the one cell that goes dark at it
+## The profile, and the two cells that go dark at it
 
 `slhdsaSha2_128_24` is `n = 16`, `h = 22`, `d = 1`, `hp = 22`, `a = 24`, `k = 6`, `lgw = 2`.
-Because `d = 1` the hypertree is a single XMSS tree, and two consequences matter for reading the
+Because `d = 1` the hypertree is a single XMSS tree, and three consequences matter for reading the
 bound.
 
 * The FORS-`T_k` and WOTS+-`T_len` compression games have **the same cap**, `2 ^ 22`.  That is not
@@ -81,6 +81,12 @@ bound.
   against `p.len = 68`, pinned here by `limitedParams_k`, `limitedParams_len` and
   `limitedParams_k_ne_len`, and read off the two games' own attacked-member equations in the
   fixture.
+* The WOTS+-`F` undetectability and preimage caps are **equal too**, and not only here:
+  `targetCount` gives both `wotsInstanceCount p * p.len` at every parameter set, which
+  `limitedTargetCount_wotsFUd` and `limitedTargetCount_wotsFPre` show at this one.  Their arities
+  coincide as well, both being the single-node chain hash, so neither a cap nor an arity separates
+  those two summands; what does is the two games' types, `SM_DT_UD_SourceFinalValidity` against
+  `SM_DT_PRE_SourceFinalValidity`, which is what the two `Certificate` fields carry.
 * The XMSS-`H` cap is `2 ^ 22 - 1`, one node short of the FORS-`T_k` cap, because a single tree of
   height `hp` has `2 ^ hp - 1` internal nodes.
 
