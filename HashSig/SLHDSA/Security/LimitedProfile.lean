@@ -19,9 +19,11 @@ instantiates both at one parameter set — the SP 800-230 reduced profile
 
 ## What instantiating does
 
-Three things.  Two declarations fall outside them — the profile facts of
-*The two profile facts the witness families need* below, which nothing here consumes — and apart
-from those two the three below are all this module does.
+Three things, and the Labels section below counts what they come to: nine instances, one
+coefficient equation and eight cap equations — eighteen of the thirty-four declarations.  The other
+sixteen are the five corollaries those three things are for, the nine that write the profile down
+(the parameter set, the bundle, their two equations and five plain parameter values), and the two
+facts of *The two profile facts the witness families need* below, which nothing here consumes.
 
 * **It discharges the instance obligations.**  `Certificate` asks for nine carrier instances, and
   at this bundle none of them is found by instance search.  Eight of the nine are stated with
@@ -217,13 +219,15 @@ instance : DecidableEq limitedPrimitives.AdrsKey := inferInstanceAs (DecidableEq
 -- creates for it are computable and both have IR; written `noncomputable`, the instance loses its
 -- IR but `_aux_1` keeps it and stays computable — and `_aux_1` is itself a top-level constant of
 -- non-function type, so the module initialiser builds it whatever the instance is marked.  The
--- emitted C says the same: `lean -c` gives 41 940 bytes with 59 lines naming the instance and a
--- `Fintype.piFinset` call for the plain form, and 41 297 bytes with 54 such lines and the same
--- call for the `noncomputable` one.  Going through `Fintype.ofFinite`, whose argument is the
--- `Prop`-valued `Finite` and which is noncomputable by construction, creates no `_aux_1` at all —
--- only a `_proof_1`, which has no IR — and its C is 30 612 bytes naming the instance nowhere and
--- carrying no `Fintype` call at all, and with it the executable starts at once.  The
--- `noncomputable` form was compiled and probed but deliberately never run.
+-- emitted C says the same.  Its size is deliberately not quoted — it moves with the module name
+-- and the package prefix the invocation carries, so a figure from a scratch module does not match
+-- `.lake/build/ir/`; what does not move is that `lean -c` on the plain form names this instance on
+-- 59 lines and carries a `Fintype.piFinset` call, and on the `noncomputable` form 54 lines and the
+-- same call.  Going through `Fintype.ofFinite`, whose argument is the `Prop`-valued `Finite` and
+-- which is noncomputable by construction, creates no `_aux_1` at all — only a `_proof_1`, which
+-- has no IR — and its C names the instance nowhere and carries no `Fintype` call at all; with it
+-- the executable starts at once.  The `noncomputable` form was compiled and probed but
+-- deliberately never run.
 -- The three other carrier instances that are constants are harmless — `SampleableType` is a
 -- sampling program and `Inhabited` is one sixteen-byte vector — and `DecidableEq` is a function.
 /-- Finiteness of the node type, which the `DSPR` advantage asks for.  It is a proof-level
