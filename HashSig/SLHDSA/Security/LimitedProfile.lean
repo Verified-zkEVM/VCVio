@@ -64,9 +64,12 @@ It is **not** `Concrete.shaPrimitives`, the hand-written SLH-DSA-SHA2-128-24 bun
 `HashSig.SLHDSA.Concrete.Instance` that `HashSigTest.SLHDSA.Sha2KAT` executes and
 `Concrete.shaWireCodec` encodes against.  The two are different terms — `adrsToKey` is
 `shaAdrsKey` in one and `sha2AdrsKey` in the other, and `Thash` is `shaThash` against
-`sha2Thash` — and nothing in this repository relates them: measured, no declaration mentions both,
-and `shaPrimitives = sha2Primitives slhdsaSha2_128_24` is not closed by `rfl`.  So no statement
-here transfers to the bundle the known-answer test runs, and none should be read as doing so.
+`sha2Thash` — and nothing in this repository relates them.  Measured over every `.lean` file with
+comments stripped: no declaration names both.  The one file whose code names each of them is
+`HashSig.SLHDSA.Concrete.Codec`, which gives the two bundles a wire codec apiece and states no
+equation between them, and `shaPrimitives = sha2Primitives slhdsaSha2_128_24` is not closed by
+`rfl`.  So no statement here transfers to the bundle the known-answer test runs, and none should
+be read as doing so.
 
 ## The profile, and the two cells that go dark at it
 
