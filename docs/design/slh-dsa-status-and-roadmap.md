@@ -55,10 +55,18 @@ request — was re-checked against `origin/main` at `bf181a39` by locating its s
 with `git log origin/main --grep='(#N)'` and testing that commit with
 `git merge-base --is-ancestor`: thirty-two are ancestors of `bf181a39`, and they are exactly the
 numbers this document describes as merged or landed; the remaining twenty-one — those it
-describes as open, as closed, or as reverted or replaced before merging — are not.  That is the
-whole of what was re-checked; the branch heads and stacking relations quoted for the unmerged
-pull requests are as those pull requests last reported them and are not observable from a clone.
-The rows outside the lane were carried forward unchanged.
+describes as open, as closed, or as reverted or replaced before merging — are not.  Every commit
+this document quotes was resolved the same day, bar one.  Twelve are quoted: `bf181a39` is
+`origin/main`;
+`82252d83` is an earlier snapshot of it and an ancestor; six are the squash-merge commits the
+census above located, `a19548d2`, `b7d06dff`, `81a75e90`, `67b3a6d9`, `0a1ff722` and `630301f3`;
+three are branch tips — G9's `0529cefa`, G10's `f14a9a5e` and the archived donor's `88314278` —
+and each equals the `origin/` ref of its own branch exactly; and the twelfth, ACVP-Server's
+`975de31e`, is not a ref of this repository and was not checked.  No head of an open pull request
+is quoted anywhere, because a head is whatever was last pushed, and this document has twice
+carried one that had since moved.  What is *not* checkable from a clone is the stacking order,
+which is each pull request's base branch on GitHub.  The rows outside the lane were carried
+forward unchanged.
 
 | Milestone | Status | Landed in | Realized by | Gap against the plan's wording |
 |---|---|---|---|---|
@@ -104,9 +112,10 @@ The rows outside the lane were carried forward unchanged.
   the strong-unforgeability headline at the SP 800-230 reduced set, discharging nine carrier
   instances and turning the `w − 2` coefficient into the numeral 2 — and it does not move this
   gate. Read what it establishes exactly: the **shape** of `EUFCMA_SPHINCS_PLUS`'s right-hand
-  side, twelve named advantages in the source's order at the source's coefficients, conditional
-  on a `Certificate` whose eleven adversaries are quantified with nothing tying any of them to
-  the adversary being bounded. At that profile as at every other, a closed certificate is
+  side, twelve named advantages in the source's order, with the source's `w − 2` and the `3` that
+  VCV-io's `TCRDSPRBound` derives rather than transcribes, conditional on a `Certificate` whose
+  eleven adversaries are quantified with nothing tying any of them to the adversary being
+  bounded. At that profile as at every other, a closed certificate is
   constructible from an address key and a public seed, and the fixture builds one and proves the
   bound it names is at least one. So no summand is bounded, no reduction adversary exists, and
   nothing about SLH-DSA-SHA2-128-24's security follows from the corollary. What this gate needs
@@ -136,7 +145,7 @@ reviewers check each docstring sentence against the lemma it describes.
 | 3 | WOTS message-encoding injectivity | `Function.Injective` of the full-width `wotsMsgDigitsCore` under `p.Valid` (which supplies `lgw ∣ 8n`) and `core.ByteLaws`, from `WotsChecksum.fromBaseW_digitsOfBaseW_of_lt`; lifts `wots_fullDigits_incomparable` to `core.Y` | merged 2026-09-07 (#665, `81a75e90`); independent of the stack | axiom `two_encodings` (`WOTS_TW_ES.ec`), the only encoding fact the source assumes |
 | 4 | Trace provenance (WOTS+) | `constructionAddresses` union ledger with `Nodup`, `QueriesWithinConstructionTargets` pathwise `IsQueryBound` over `publicHashSpec`, theorems for `chainM`, `wotsPkGenM`, `wotsSignM`, `wotsPkFromSigM`, the logged-execution bridge for any `QueryImpl (publicHashSpec core) Id` | merged 2026-09-08 (#666, `67b3a6d9`); was stacked on #631; port of the archived donor with the enumeration-completeness section replaced by slice 1's `mem_*` lemmas; the public membership and encoding equations its consumers need, and the restatement of the wrapper as VCVio's `AllQueriesSatisfy`, are in #680, merged 2026-09-12 | the `hoare` address-discipline lemmas on the WOTS-TW oracles |
 | 5 | Trace provenance (FORS, XMSS, hypertree, scheme) | predicate-tracking Merkle lemmas added to VCVio (`PerfectMerkleTree.merkleRootM_pred_of_subtree`, `intrinsicAuthPathM_pred_of_siblings`, `intrinsicAuthPathM_pred_of_tree`, `climbM_pred_of_ancestors`, `AddressedMerkleTree.getPutativeRootAddressedM_pred_of_ancestors`), instantiated as `QueriesWithinConstructionTargets.merkleRootM/intrinsicAuthPathM/climbM`; twenty-two `*_queriesWithinConstructionTargets` theorems, covering `forsRootM`, `forsPkGenM`, `forsSignM`, and `forsPkFromSigM` (the last three also at the address Algorithm 19 derives from a digest), `xmssLeafM`, `xmssNodeM`, `xmssRootM`, `xmssSignM`, `xmssPkFromSigM`, the typed hypertree loops `signFromPositionM` and `recoverFromPositionM`, their entry points `GeneralHypertree.signM/pkFromSigM/verifyM/rootM` (named `hypertreeSignM_…` and so on), and `GeneralScheme.keygenInternalM/signInternalM/verifyInternalM`; twelve `*_traceContract` theorems pairing FORS public-key generation, signing and recovery, the four XMSS programs, hypertree signing and recovery, and the three internal scheme programs with an `IsTotalQueryBound`, closed-form at the FORS and XMSS levels and the `HypertreeGeneral.QueryBound`/`GeneralSchemeQueryBound` bounds — upper bounds, not exact counts — at the hypertree and scheme levels | merged 2026-09-12 (#682, `630301f3`); was stacked on #680 (`Security/ComponentTraces.lean`, `HashSigTest/SLHDSA/ComponentTraces.lean`, `slhdsa_component_trace_tests`); derived, no donor | the corresponding FORS/XMSS/hypertree oracle lemmas |
-| 6 | Canonical game instances | source-final-validity `Problem`s over the tweak space `Primitives.AdrsKey`, split standalone versus collection as the source is: three standalone FORS-`F` games with no collection oracle (`Problem.standalone` at collection index `Empty`) — OpenPRE, DSPR, and TCR — the latter two shown equal to `.toDSPR`/`.toTCR` of the OpenPRE problem (`forsFDsprProblem_eq_toDSPR`, `forsFTcrProblem_eq_toTCR`), and seven collection games sharing `Primitives.thashCollection`: TCR for FORS `H`, FORS `T_k`, WOTS+ `F`, WOTS+ `T_len`, and XMSS `H`, and UD and PRE for WOTS+ `F` with the whole node type as the subspace and the identity embedding. The seven collection records are `@[expose]`d so a downstream collection query type-checks; the standalone ones and the `H_msg` family stay opaque behind exported equations. ITSR for `H_msg`, keyed by the message randomizer and indexed by `hmsgIndices` (`splitDigest` locates the FORS instance, `forsIdx` reads each tree's leaf, `k` indices per digest); `numTargets := targetCount p role` bridges; no reductions and no inequalities | PR #683 (open), head `731bd820` on `feat/slhdsa-d1a-canonical-games-20260907`, opened stacked on #682 in the PR chain, which has since merged, and importing nothing from slice 5 (`Security/CanonicalGames.lean`, `HashSigTest/SLHDSA/CanonicalGames.lean`, `slhdsa_canonical_game_tests`); port of the archived donor `CanonicalGames.lean` retargeted to the game modules of #623–#625 | `FP_DSPR`, `FP_TCR`, `TRHC_TCR`, `TRCOC_TCR`, `FC_UD`, `FC_PRE`, `FC_TCR`, `PKCOC_TCR`, `MCO_ITSR` clones; two recorded deviations from `MCO_ITSR`: the source's `MCO` hashes the message alone while this input carries `PK.seed` and `PK.root` as FIPS 205 Algorithm 19 does, so at any fixed `PK.seed` and `PK.root` the instantiated assumption implies the source's, and the source's flat instance index is split into the `(idxTree, idxLeaf)` pair `splitDigest` produces |
+| 6 | Canonical game instances | source-final-validity `Problem`s over the tweak space `Primitives.AdrsKey`, split standalone versus collection as the source is: three standalone FORS-`F` games with no collection oracle (`Problem.standalone` at collection index `Empty`) — OpenPRE, DSPR, and TCR — the latter two shown equal to `.toDSPR`/`.toTCR` of the OpenPRE problem (`forsFDsprProblem_eq_toDSPR`, `forsFTcrProblem_eq_toTCR`), and seven collection games sharing `Primitives.thashCollection`: TCR for FORS `H`, FORS `T_k`, WOTS+ `F`, WOTS+ `T_len`, and XMSS `H`, and UD and PRE for WOTS+ `F` with the whole node type as the subspace and the identity embedding. The seven collection records are `@[expose]`d so a downstream collection query type-checks; the standalone ones and the `H_msg` family stay opaque behind exported equations. ITSR for `H_msg`, keyed by the message randomizer and indexed by `hmsgIndices` (`splitDigest` locates the FORS instance, `forsIdx` reads each tree's leaf, `k` indices per digest); `numTargets := targetCount p role` bridges; no reductions and no inequalities | PR #683 (open) on `feat/slhdsa-d1a-canonical-games-20260907`, opened stacked on #682 in the PR chain, which has since merged, and importing nothing from slice 5 (`Security/CanonicalGames.lean`, `HashSigTest/SLHDSA/CanonicalGames.lean`, `slhdsa_canonical_game_tests`); port of the archived donor `CanonicalGames.lean` retargeted to the game modules of #623–#625 | `FP_DSPR`, `FP_TCR`, `TRHC_TCR`, `TRCOC_TCR`, `FC_UD`, `FC_PRE`, `FC_TCR`, `PKCOC_TCR`, `MCO_ITSR` clones; two recorded deviations from `MCO_ITSR`: the source's `MCO` hashes the message alone while this input carries `PK.seed` and `PK.root` as FIPS 205 Algorithm 19 does, so at any fixed `PK.seed` and `PK.root` the instantiated assumption implies the source's, and the source's flat instance index is split into the `(idxTree, idxLeaf)` pair `splitDigest` produces |
 | 7 | D1B witness translations | deterministic forgery-to-witness translations over `GeneralScheme` and the intrinsic vectors, every statement labeled deterministic inclusion or transcript transport: `Security/WotsWitnesses.lean` (chain forgeries), `Security/ForsWitnesses.lean`, `Security/XmssWitnesses.lean`, `Security/HypertreeWitnesses.lean` (the layer walk), `Security/SchemeWitnesses.lean` (the pure `keygenInternal`/`verifyInternal` equations, the two-way split on the recovered FORS public key, and the `Witness` dispatch with its computable extractor), `Security/HmsgWitnesses.lean` (the `H_msg` index-to-FORS-coordinate maps, the widening of the hashed input stated in both directions, the first-uncovered-index extractor and the win-or-uncovered dichotomy), and `Security/SufResidual.lean` (the deterministic strong-unforgeability residual: a signing log read at one message, and the partition of a strong forgery by whether its randomizer occurs there). No probability, adversary, advantage or game hop anywhere | seven pull requests, none merged: #685 → #689 → #692 → #697 → #699 → #700 → #701 are open, the last being the SUF residual's. The #585 lemmas were the idea source only | the `valid_TCRTRH` and chain-consistency case analyses; the FORS case split is a reordering of `FORS_ES.ec`'s, not a restriction; and the residual has no counterpart at all, the source having no strong-unforgeability game |
 | 8 | Composition and conditional theorem | the two instrumented experiment splits and the named halves they define — the EUF dispatch split at the recovered FORS public key and the same-message split at whether a forgery's randomizer was logged (`Security/SchemeGames.lean`); the composition certificate, the exact conditional EUF-CMA expression (twelve summands with the `3·` and `(w−2)·` coefficients), the OpenPRE-to-`DSPR + 3·TCR` coupling that is the one step of its proof which is not arithmetic, and the two transports onto slice 6's standalone FORS-`F` games (`Security/Composition.lean`); the strong-unforgeability residual bound, with the two equivalences saying that the residual written on the right is the residual already inside the left (`Security/SufBound.lean`); and the SP 800-230 profile corollary, with the nine carrier instances, the eight caps as numerals and the undetectability coefficient as `2` (`Security/LimitedProfile.lean`). The certificate is free — a closed one is constructible from an address key and a public seed at every validated parameter set and every bundle carrying the nine carrier instances it asks for, which the composition, strong-unforgeability and profile fixtures each build and ship as a canary — so what is proved is the shape of the source's expression and not yet a statement about SLH-DSA's security. The program-equivalence hops and the OpenPRE counting interface are named hypotheses; the same-randomizer half of the residual has no bound and no source counterpart | four pull requests, none merged: #708 → #715 → #718 are open and stacked in that order, and the profile corollary with this document's refresh is the fourth and is not yet opened. Replaces #585 | `EUFCMA_SPHINCS_PLUS` (`SPHINCS_PLUS.ec`); no counterpart for the SUF residual, whose absence slice 7 records |
 
@@ -215,20 +224,21 @@ are idea sources for slices 7 and 8, which will be new pull requests. The plan's
 with a cross-reference when slice 8 opens.
 
 Slice 8 has opened — #708, #715 and #718, with the profile corollary pending — so that condition
-is met and the cross-reference exists. Two things about it are worth writing down before anyone
-acts on it, and only the first bears on the timing. The replacement is four pull requests and
-**none of them is on `main`**, so closing #585 now removes the only description of the donor's
-`Concrete/Security.lean` while its replacement is still under review. The second is a requirement
-on the closing comment rather than a reason to wait: the replacement claims less than #585's own
-description does — that description lists a "concrete SHA2-128-24 conditional EUF-CMA theorem
-with the WOTS coefficient reduced to exactly `2`", which is what `Security/LimitedProfile.lean`
-now states, but the lane has since measured that the certificate such a theorem is conditional on
-costs an address key and a public seed, so the statement is about the shape of the source's
-expression rather than about the profile's security. The recommendation from slice 8 is therefore
-to close #585 when slice 8's last pull request merges, or when the stack is abandoned, whichever
-comes first — not when it opens — and for the closing comment to name the four replacements, say
-that none is merged yet, and record that the replacement theorem is conditional in that specific
-way.
+is met, and this section is the cross-reference; the comment that would carry it to #585 itself is
+drafted on the profile corollary's branch and has not been posted. Two things about it are worth
+writing down before anyone acts on it, and only the first bears on the timing. The replacement is
+four pull requests and **none of them is on `main`**, so closing #585 now removes the only
+description of the donor's `Concrete/Security.lean` while its replacement is still under review.
+The second is a requirement on the closing comment rather than a reason to wait: the replacement
+claims less than #585's own description does — that description lists a "concrete SHA2-128-24
+conditional EUF-CMA theorem with the WOTS coefficient reduced to exactly `2`", which is what
+`Security/LimitedProfile.lean` now states, but the lane has since measured that the certificate
+such a theorem is conditional on costs an address key and a public seed, so the statement is about
+the shape of the source's expression rather than about the profile's security. The recommendation
+from slice 8 is therefore to close #585 when slice 8's last pull request merges, or when the stack
+is abandoned, whichever comes first — not when it opens — and for the closing comment to name the
+four replacements, say where each of them stands at the time of posting, and record that the
+replacement theorem is conditional in that specific way.
 
 ## Corrections to the plan document
 
