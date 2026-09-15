@@ -24,9 +24,9 @@ SLH-DSA unforgeability theorem of any kind exists on `main` at the recorded snap
 | C13 variant (WOTS+C/FORS+C, keccak256, `d = 2`) | `C13/{Params,Primitives,WotsC,ForsC,Xmss,Hypertree,Scheme,Concrete}.lean` | `slhdsa_c13_kat` |
 | External interfaces (Alg. 21–25) | `External.lean` | `slhdsa_external_tests` |
 | Security packaging | `Security.lean` (primitive families as `TweakableHash`/`PRFScheme`), `MerkleExtractor.lean` | — |
-| Security lane, slices 1–4 (on `main`) | `Security/TargetCounts.lean`, `Security/ReachableTargets.lean` (#630); `Security/EncodedTargets.lean` (#631); `WotsInjectivity.lean` (#665); `Security/TraceTargets.lean` (#666) | `slhdsa_target_ledger_tests`, `slhdsa_encoded_ledger_tests`, `slhdsa_trace_target_tests` |
-| Security lane, second-round review fixes for slices 1–4 (PR #680, open, not on `main`) | `VCVio/OracleComp/QueryTracking/{QueryBound,LoggingOracle}.lean` (`AllQueriesSatisfy` and its `isQueryBoundP_zero_iff` bridge, the logged-execution consequences); public equations for `Security/TraceTargets.lean`; ledger-canonicality and citation fixes in `Address.lean`, `Security/{TargetCounts,ReachableTargets,EncodedTargets}.lean`, `WotsChecksum.lean`, `WotsEncoding.lean`, `WotsInjectivity.lean` | `slhdsa_target_ledger_tests`, `slhdsa_encoded_ledger_tests`, `slhdsa_trace_target_tests`, `HashSigTest/SLHDSA/WotsEncoding.lean` |
-| Security lane, slices 5–6 (open PRs, not on `main`) | `Security/ComponentTraces.lean` (PR #682, open, on `feat/slhdsa-d1a-component-traces-20260907`); `Security/CanonicalGames.lean` (PR #683, open, on `feat/slhdsa-d1a-canonical-games-20260907`) | `slhdsa_component_trace_tests`, `slhdsa_canonical_game_tests` (on those branches) |
+| Security lane, slices 1–5 (on `main`) | `Security/TargetCounts.lean`, `Security/ReachableTargets.lean` (#630); `Security/EncodedTargets.lean` (#631); `WotsInjectivity.lean` (#665); `Security/TraceTargets.lean` (#666); the consolidated second-round review fixes for those four, including `VCVio/OracleComp/QueryTracking/{QueryBound,LoggingOracle}.lean`'s `AllQueriesSatisfy` (#680, `0a1ff722`); `Security/ComponentTraces.lean` (#682, `630301f3`) | `slhdsa_target_ledger_tests`, `slhdsa_encoded_ledger_tests`, `slhdsa_trace_target_tests`, `slhdsa_component_trace_tests` |
+| Security lane, slice 6 (open PR, not on `main`) | `Security/CanonicalGames.lean` (PR #683, open) | `slhdsa_canonical_game_tests` (on that branch) |
+| Security lane, slices 7–8 (open PRs, not on `main`) | `Security/{WotsWitnesses,ForsWitnesses,XmssWitnesses,HypertreeWitnesses,SchemeWitnesses,HmsgWitnesses,SufResidual}.lean` (#685 → #689 → #692 → #697 → #699 → #700 → #701); `Security/{SchemeGames,Composition,SufBound}.lean` (#708 → #715 → #718); `Security/LimitedProfile.lean` (not yet opened) | `slhdsa_{wots,fors,xmss,hypertree,scheme,hmsg}_witness_tests`, `slhdsa_suf_residual_tests`, `slhdsa_scheme_game_tests`, `slhdsa_composition_tests`, `slhdsa_suf_bound_tests`, `slhdsa_limited_profile_tests` (on those branches) |
 | Generic hash games consumed | `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/*.lean`, `KeyedHash/ITSR.lean`, `VCVio/CryptoFoundations/SignatureAlg.lean` | `VCVioTest/SMDT*.lean` |
 
 Every SLH-DSA test executable is registered in the `@[test_driver] script test` of `lakefile.lean`
@@ -49,7 +49,9 @@ with `--lint`, `--test`, `--ffi`, and `--axioms` selecting the slower passes.
 
 ## Milestone status ledger
 
-Verified against `origin/main` at `82252d83` (2026-09-11).
+Verified against `origin/main` at `82252d83` (2026-09-11); the security-lane rows and every
+pull-request state named below were re-checked against `origin/main` at `bf181a39` on
+2026-09-15, and the rows outside the lane were carried forward unchanged.
 
 | Milestone | Status | Landed in | Realized by | Gap against the plan's wording |
 |---|---|---|---|---|
@@ -67,9 +69,9 @@ Verified against `origin/main` at `82252d83` (2026-09-11).
 | CF1 final-validity games | DONE | #594, #622, #624 | `TweakableHash/FinalValidity.lean`, `SMDTTCRFinalValidity`, `SMDTPREFinalValidity`, `ToFinalValidity.lean` | none |
 | CF2 DSPR, OpenPRE, UD, ITSR | DONE | #596, #623, #625 | `SMDTDSPRFinalValidity`, `SMDTOpenPREFinalValidity`, `SMDTUDFinalValidity` (message-subspace parameter), `KeyedHash/ITSR.lean`, `OpenPREFromTCRDSPR.lean` (`toTCR`, `toDSPR`, `CountingInterface`) | the OpenPRE probability coupling remains an explicit interface, as the plan allows |
 | CF3 generic SUF surface | DONE | #601 | `SignatureAlg.strongUnforgeableAdv`, `sameMessageAdvantage`, `advantage_eq_euf_add_sameMessage` | SLH-DSA must use the per-adversary partition, not `SameMessageBinding` (#629 item 2b) |
-| D1A target and address ledger | PARTIAL: slices 1–4 DONE | #630 (`a19548d2`), #631 (`b7d06dff`), #665 (`81a75e90`), #666 (`67b3a6d9`), merged 2026-09-07/08 | slices 1–4 of the security lane below; slices 5 and 6 are open as PRs #682 and #683, and the consolidated second-round review fixes for slices 1–4 as PR #680 | `Params.IsD1` unclaimed; the FORS/XMSS/hypertree/scheme trace provenance and the canonical game instances are not on `main` |
-| D1B witness translations | IN REVIEW | — | slice 7 below, in seven pull requests: #685, #689, #692, #697, #699, #700 and #701, open and stacked in that order, none merged. On `main` only `SLHDSA.xmssPkFromSig_binding` exists, as a deterministic hook | the #585 lemmas are stated against the pre-G3 depth-one scheme |
-| Rewritten #585 (conditional quantitative theorem) | NOT STARTED | — | — | #585 is an archived donor, see below |
+| D1A target and address ledger | PARTIAL: slices 1–5 DONE | #630 (`a19548d2`), #631 (`b7d06dff`), #665 (`81a75e90`), #666 (`67b3a6d9`), merged 2026-09-07/08; #680 (`0a1ff722`) and #682 (`630301f3`), merged 2026-09-12 | slices 1–5 of the security lane below; slice 6 is open as PR #683 | `Params.IsD1` unclaimed, and deliberately so — see the corrections below; the canonical game instances are not on `main` |
+| D1B witness translations | IN REVIEW | — | slice 7 below, in seven pull requests: #685, #689, #692, #697, #699, #700 and #701, open and stacked in that order, none merged. Slice 8 consumes two of them — #699's dispatch dichotomy and #701's randomizer partition — and is itself unmerged. On `main` only `SLHDSA.xmssPkFromSig_binding` exists, as a deterministic hook | the #585 lemmas are stated against the pre-G3 depth-one scheme; and no family extracts from the second branch of #701's partition, so the same-randomizer case has no witness at all |
+| Rewritten #585 (conditional quantitative theorem) | IN REVIEW | — | slice 8 below, in four pull requests: #708, #715 and #718 are open and stacked in that order, and the SHA2-128-24 profile corollary with this document's refresh is the fourth and is not yet opened. Nothing is on `main` | the theorem is conditional on a `Certificate` that no proof in the repository supplies and that costs an address key and a public seed to build, so it bounds the advantage by a named expression and not by anything small; #585 is an archived donor, see below |
 | Merkle integration, general-`d` security | NOT STARTED | Merkle PRs #574, #575, #577–#579, #586–#591 merged | `MerkleExtractor.lean` is a log projection only; nothing under `HashSig/` imports `MultiExtractability` | all five integration bullets of the plan are absent |
 
 ### Gate status
@@ -85,12 +87,24 @@ Verified against `origin/main` at `82252d83` (2026-09-11).
   specification path. Missing: the pinned ACVP corpus is not executed anywhere, no
   refinement-linked optimized path is on `main`, and no benchmark record exists for the six
   numerical shapes.
-- **`d = 1` security gate: not met, in progress.** #630, #631, #665, and #666 are on `main`; they
-  use the general scheme without a duplicate implementation and disclaim security content, and
-  the WOTS encoding injectivity theorem is on `main`. Missing on `main`: trace provenance for the
-  FORS, XMSS, hypertree, and scheme programs and the canonical game instances (slices 5 and 6,
-  open as PRs #682 and #683), the second-round review fixes for the merged slices (PR #680), a profile-specific statement for SHA2-128-24 beyond the encoded-ledger conditions,
-  and everything from D1B onward.
+- **`d = 1` security gate: not met, in progress.** #630, #631, #665, #666, #680 and #682 are on
+  `main`: the ledgers and their encoded form, the WOTS encoding injectivity theorem, and the
+  component trace contracts. They use the general scheme without a duplicate implementation and
+  disclaim security content. Missing on `main`: the canonical game instances (slice 6, open as
+  PR #683), every witness translation (slice 7, seven open pull requests), and all of slice 8.
+  A profile-specific statement for SHA2-128-24 beyond the encoded-ledger conditions now exists in
+  review — `Security/LimitedProfile.lean` instantiates the twelve-summand EUF-CMA expression and
+  the strong-unforgeability headline at the SP 800-230 reduced set, discharging nine carrier
+  instances and turning the `w − 2` coefficient into the numeral 2 — and it does not move this
+  gate. Read what it establishes exactly: the **shape** of `EUFCMA_SPHINCS_PLUS`'s right-hand
+  side, twelve named advantages in the source's order at the source's coefficients, conditional
+  on a `Certificate` whose eleven adversaries are quantified with nothing tying any of them to
+  the adversary being bounded. At that profile as at every other, a closed certificate is
+  constructible from an address key and a public seed, and the fixture builds one and proves the
+  bound it names is at least one. So no summand is bounded, no reduction adversary exists, and
+  nothing about SLH-DSA-SHA2-128-24's security follows from the corollary. What this gate needs
+  is the twelve reduction adversaries, which are the bulk of the EasyCrypt development and are
+  not begun.
 - **General-`d` security gate: not started**, and correctly claimed nowhere.
 
 ## Security lane: slices, status, and source correspondence
@@ -116,7 +130,7 @@ reviewers check each docstring sentence against the lemma it describes.
 | 5 | Trace provenance (FORS, XMSS, hypertree, scheme) | predicate-tracking Merkle lemmas added to VCVio (`PerfectMerkleTree.merkleRootM_pred_of_subtree`, `intrinsicAuthPathM_pred_of_siblings`, `intrinsicAuthPathM_pred_of_tree`, `climbM_pred_of_ancestors`, `AddressedMerkleTree.getPutativeRootAddressedM_pred_of_ancestors`), instantiated as `QueriesWithinConstructionTargets.merkleRootM/intrinsicAuthPathM/climbM`; twenty-two `*_queriesWithinConstructionTargets` theorems, covering `forsRootM`, `forsPkGenM`, `forsSignM`, and `forsPkFromSigM` (the last three also at the address Algorithm 19 derives from a digest), `xmssLeafM`, `xmssNodeM`, `xmssRootM`, `xmssSignM`, `xmssPkFromSigM`, the typed hypertree loops `signFromPositionM` and `recoverFromPositionM`, their entry points `GeneralHypertree.signM/pkFromSigM/verifyM/rootM` (named `hypertreeSignM_…` and so on), and `GeneralScheme.keygenInternalM/signInternalM/verifyInternalM`; twelve `*_traceContract` theorems pairing FORS public-key generation, signing and recovery, the four XMSS programs, hypertree signing and recovery, and the three internal scheme programs with an `IsTotalQueryBound`, closed-form at the FORS and XMSS levels and the `HypertreeGeneral.QueryBound`/`GeneralSchemeQueryBound` bounds — upper bounds, not exact counts — at the hypertree and scheme levels | PR #682 (open), head `9c45520f` on `feat/slhdsa-d1a-component-traces-20260907`, stacked on #680 (`Security/ComponentTraces.lean`, `HashSigTest/SLHDSA/ComponentTraces.lean`, `slhdsa_component_trace_tests`); derived, no donor | the corresponding FORS/XMSS/hypertree oracle lemmas |
 | 6 | Canonical game instances | source-final-validity `Problem`s over the tweak space `Primitives.AdrsKey`, split standalone versus collection as the source is: three standalone FORS-`F` games with no collection oracle (`Problem.standalone` at collection index `Empty`) — OpenPRE, DSPR, and TCR — the latter two shown equal to `.toDSPR`/`.toTCR` of the OpenPRE problem (`forsFDsprProblem_eq_toDSPR`, `forsFTcrProblem_eq_toTCR`), and seven collection games sharing `Primitives.thashCollection`: TCR for FORS `H`, FORS `T_k`, WOTS+ `F`, WOTS+ `T_len`, and XMSS `H`, and UD and PRE for WOTS+ `F` with the whole node type as the subspace and the identity embedding. The seven collection records are `@[expose]`d so a downstream collection query type-checks; the standalone ones and the `H_msg` family stay opaque behind exported equations. ITSR for `H_msg`, keyed by the message randomizer and indexed by `hmsgIndices` (`splitDigest` locates the FORS instance, `forsIdx` reads each tree's leaf, `k` indices per digest); `numTargets := targetCount p role` bridges; no reductions and no inequalities | PR #683 (open), head `731bd820` on `feat/slhdsa-d1a-canonical-games-20260907`, stacked on #682 in the PR chain but importing nothing from slice 5 (`Security/CanonicalGames.lean`, `HashSigTest/SLHDSA/CanonicalGames.lean`, `slhdsa_canonical_game_tests`); port of the archived donor `CanonicalGames.lean` retargeted to the game modules of #623–#625 | `FP_DSPR`, `FP_TCR`, `TRHC_TCR`, `TRCOC_TCR`, `FC_UD`, `FC_PRE`, `FC_TCR`, `PKCOC_TCR`, `MCO_ITSR` clones; two recorded deviations from `MCO_ITSR`: the source's `MCO` hashes the message alone while this input carries `PK.seed` and `PK.root` as FIPS 205 Algorithm 19 does, so at any fixed `PK.seed` and `PK.root` the instantiated assumption implies the source's, and the source's flat instance index is split into the `(idxTree, idxLeaf)` pair `splitDigest` produces |
 | 7 | D1B witness translations | deterministic forgery-to-witness translations over `GeneralScheme` and the intrinsic vectors, every statement labeled deterministic inclusion or transcript transport: `Security/WotsWitnesses.lean` (chain forgeries), `Security/ForsWitnesses.lean`, `Security/XmssWitnesses.lean`, `Security/HypertreeWitnesses.lean` (the layer walk), `Security/SchemeWitnesses.lean` (the pure `keygenInternal`/`verifyInternal` equations, the two-way split on the recovered FORS public key, and the `Witness` dispatch with its computable extractor), `Security/HmsgWitnesses.lean` (the `H_msg` index-to-FORS-coordinate maps, the widening of the hashed input stated in both directions, the first-uncovered-index extractor and the win-or-uncovered dichotomy), and `Security/SufResidual.lean` (the deterministic strong-unforgeability residual: a signing log read at one message, and the partition of a strong forgery by whether its randomizer occurs there). No probability, adversary, advantage or game hop anywhere | seven pull requests, none merged: #685 → #689 → #692 → #697 → #699 → #700 → #701 are open, the last being the SUF residual's. The #585 lemmas were the idea source only | the `valid_TCRTRH` and chain-consistency case analyses; the FORS case split is a reordering of `FORS_ES.ec`'s, not a restriction; and the residual has no counterpart at all, the source having no strong-unforgeability game |
-| 8 | Composition and conditional theorem | composition certificate, exact conditional EUF-CMA expression (twelve summands with the `3·` and `(w−2)·` coefficients), SUF residual via the per-adversary partition, SHA2-128-24 corollary; program-equivalence hops and the OpenPRE coupling as named hypotheses | planned; replaces #585 | `EUFCMA_SPHINCS_PLUS` (`SPHINCS_PLUS.ec`) |
+| 8 | Composition and conditional theorem | the two instrumented experiment splits and the named halves they define — the EUF dispatch split at the recovered FORS public key and the same-message split at whether a forgery's randomizer was logged (`Security/SchemeGames.lean`); the composition certificate, the exact conditional EUF-CMA expression (twelve summands with the `3·` and `(w−2)·` coefficients), the OpenPRE-to-`DSPR + 3·TCR` coupling that is the one step of its proof which is not arithmetic, and the two transports onto slice 6's standalone FORS-`F` games (`Security/Composition.lean`); the strong-unforgeability residual bound, with the two equivalences saying that the residual written on the right is the residual already inside the left (`Security/SufBound.lean`); and the SP 800-230 profile corollary, with the nine carrier instances, the eight caps as numerals and the undetectability coefficient as `2` (`Security/LimitedProfile.lean`). The certificate is free — a closed one is constructible from an address key and a public seed at every validated parameter set and every bundle, which each of the four fixtures builds and ships as a canary — so what is proved is the shape of the source's expression and not yet a statement about SLH-DSA's security. The program-equivalence hops and the OpenPRE counting interface are named hypotheses; the same-randomizer half of the residual has no bound and no source counterpart | four pull requests, none merged: #708 → #715 → #718 are open and stacked in that order, and the profile corollary with this document's refresh is the fourth and is not yet opened. Replaces #585 | `EUFCMA_SPHINCS_PLUS` (`SPHINCS_PLUS.ec`); no counterpart for the SUF residual, whose absence slice 7 records |
 
 Hypotheses the conditional theorem is expected to carry explicitly, each corresponding to an
 undischarged or program-level step in the source proof:
@@ -126,10 +140,25 @@ undischarged or program-level step in the source proof:
 - the FORS public-key recomputation-versus-recovery program equivalence over `signInternalM`
   (`SLHDSA.forsPkFromSig_forsSign` supplies the deterministic identity over `Primitives`; the
   monadic lift over `signInternalM` is the hypothesis);
-- the `(w − 2)` UD hybrid and the OpenPRE-from-TCR/DSPR probability coupling
-  (`SM_DT_OpenPRE_SourceFinalValidity.CountingInterface`);
-- uniform full-digest distribution for the FORS inputs (`Problem.HasUniformInputs`);
-- structural adversary query bounds.
+- the `(w − 2)` UD hybrid, for which VCV-io has no hybrid-argument machinery, so slice 8 carries
+  the coefficient as a literal rather than deriving it;
+- the OpenPRE-from-TCR/DSPR probability coupling
+  (`SM_DT_OpenPRE_SourceFinalValidity.CountingInterface`) — specifically its two mass equations
+  and its strata inequality, which VCV-io's own docstring calls the substantive probabilistic
+  coupling still to be constructed;
+- **correction**: uniform full-digest distribution for the FORS inputs
+  (`Problem.HasUniformInputs`) was listed here as a hypothesis the theorem carries, and it is
+  not. As a `Problem` field it is discharged by slice 6 — `forsFOpenPreProblem_hasUniformInputs`
+  proves it by `rfl` — and slice 8 uses it to fill the counting interface's `uniformInputs`
+  field, the one field of that interface which is not an obligation. What does remain a
+  hypothesis is the modelling fact that honest FORS leaf preimages are uniform, and that lives
+  inside the two PRF hops rather than beside them;
+- structural adversary query bounds. Slice 8 adds one that the plan did not foresee: the
+  `MCO_ITSR` summand carries no target cap at all, because `KeyedHash.ITSRProblem` has two fields
+  and neither bounds the transcript, so the Lean advantage is a supremum over adversaries with
+  unbounded target transcripts where the source's term is bounded through its reduction;
+- the same-randomizer half of the strong-unforgeability residual, which has no counterpart in the
+  source at all and no bound anywhere in this repository.
 
 Reduction traps recorded in issue #629 apply to every slice from 6 onward: the zero fallbacks of
 `sha2AdrsKey` and `checkedNodeOrZero` alias reachable values, so every statement carries the
@@ -177,6 +206,20 @@ are idea sources for slices 7 and 8, which will be new pull requests. The plan's
 #585 "retains its number" should be read as: the rewritten theorem replaces it, and #585 is closed
 with a cross-reference when slice 8 opens.
 
+Slice 8 has opened — #708, #715 and #718, with the profile corollary pending — so that condition
+is met and the cross-reference exists. Two things about it are worth writing down before anyone
+acts on it. The replacement is four pull requests and **none of them is on `main`**, so closing
+#585 now removes the only description of the donor's `Concrete/Security.lean` while its
+replacement is still under review. And the replacement claims less than #585's own description
+does: that description lists a "concrete SHA2-128-24 conditional EUF-CMA theorem with the WOTS
+coefficient reduced to exactly `2`", which is what `Security/LimitedProfile.lean` now states, but
+the lane has since measured that the certificate such a theorem is conditional on costs an address
+key and a public seed, so the statement is about the shape of the source's expression rather than
+about the profile's security. The recommendation from slice 8 is therefore to close #585 when
+slice 8's last pull request merges, not when it opens, and for the closing comment to name the
+four replacements, say that none is merged yet, and record that the replacement theorem is
+conditional in that specific way.
+
 ## Corrections to the plan document
 
 Statements in `slh-dsa-fips205-generalization.md` that are snapshots of 2026-08-30 and are no
@@ -197,8 +240,12 @@ longer true on `main`:
   are corollaries.
 - `Params.IsD1` is named as a D1A deliverable but does not exist; `main` threads `p.d = 1`
   hypotheses directly (`DepthOneCompatibility` and `Security.xmssTreeCount_of_d_eq_one`, both on
-  `main`). Either the predicate is added in slice 8 where a named profile is needed, or the plan
-  is amended.
+  `main`). The choice this document left open — add the predicate in slice 8, or amend the
+  plan — is settled by amending the plan: slice 8 states its headline for arbitrary `d` over
+  `GeneralScheme`, and the only depth-one object in it is the SP 800-230 profile, where `d = 1`
+  is a checked fact of the parameter set (`Security.limitedParams_d`) rather than a threaded
+  hypothesis. A one-field predicate that nothing threads would be worse than the `p.d = 1`
+  hypotheses `main` already carries, so `Params.IsD1` is not added.
 - The plan does not mention the archived donor at commit `88314278` (closed #597; still hosted
   as the remote branch `archive/slhdsa-pr597-final-88314278`), whose
   `Security/{CanonicalGames,TraceTargets,Architecture}.lean` were the inputs of slices 4 and 6,
