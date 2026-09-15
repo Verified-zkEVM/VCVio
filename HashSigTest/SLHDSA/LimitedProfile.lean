@@ -261,19 +261,31 @@ three roleless rows have nothing to drop:
   satisfy the three, they are **one** column, and it falsifies none of the five; drop the
   roleless-three conjunct and 4088 of the 4096 falsify one, which is why the *three* conjuncts are
   named and not two;
-* each of those five nevertheless fires first on its own edit: a deleted row stops at "twelve
-  summands", a duplicated name at "names distinct", a row that loses its role at "three summands
-  have no cap role", the roleless set moved at "the roleless three are the two PRF hops and the
-  ITSR term", a role used twice at "all eight roles are used", and the FORS-F role moved onto
-  another row at "the two FORS-F rows are the DSPR and TCR summands";
-* the cap and arity checks are implied by nothing here — each has a witness satisfying all three
-  conjuncts and falsifying it alone;
+* each of those five nevertheless fires first on an edit named for it — and the edit has to name
+  its row, because `checkDarkCells` runs before this function and reads six of the twelve row
+  names, so a generic description of the edit is false for those six.  Deleting the `wotsFTcr` row
+  stops at "twelve summands", while deleting `forsHTcr`, `xmssHTcr`, `forsTlTcr`, `wotsTlTcr`,
+  `wotsFUd` or `wotsFPre` stops earlier, in `checkDarkCells`.  Renaming `forsFTcr` to `forsFDspr`
+  stops at "names distinct", while renaming `forsTlTcr` to `wotsTlTcr` stops earlier for the same
+  reason.  `forsHTcr` losing its role, its arity kept, stops at "three summands have no cap role".
+  `xmssHTcr` given the FORS-`H` role and cap stops at "all eight roles are used".  And the FORS-`F`
+  and FORS-`H` roles *moved off* their own rows stop at "the two FORS-F rows are the DSPR and TCR
+  summands" — moved, because merely duplicating the FORS-`F` role onto `forsHTcr` stops at "all
+  eight roles are used" instead.  The three conjuncts fire on their own edits too: two rows swapped
+  at the order check, `skgPrf` given a role and `wotsFTcr` made roleless at "the roleless three are
+  the two PRF hops and the ITSR term", and the `forsHTcr`/`xmssHTcr` role and cap transposed at the
+  role check;
+* the four cap and arity checks are implied by nothing here, and each fires on a named edit:
+  `skgPrf` given a cap at "the roleless three carry no cap", `wotsTlTcr`'s cap at `2 ^ 23` at
+  "every role row carries its own cap", `wotsFTcr` losing its arity at "every role row carries an
+  arity", and `wotsFTcr`'s arity at `3` at "the five single-node games have arity one";
 * two checks that could *not* fire were deleted.  "The FORS-F role is the only one used twice" is
   "twelve summands" and "three summands have no cap role" restated, both of which precede it: of
-  the 4096 columns none satisfies those two and falsifies it, and both edits that falsify it stop
-  at "three summands have no cap role".  "Every cap is positive" is implied by "every role row
-  carries its own cap" together with the measured fact that all eight of this profile's caps are
-  positive, so the cap-zero edit stops one check earlier; it would be worth having again at a
+  the 4096 masks none satisfies those two and falsifies it, and the two edits that falsify it —
+  `forsFTcr` losing its role, cap and arity, and `hmsgItsr` gaining all three — both stop at "three
+  summands have no cap role".  "Every cap is positive" is implied by "every role row carries its
+  own cap" together with the measured fact that all eight of this profile's caps are positive, so
+  `wotsTlTcr`'s cap at `0` stopped one check earlier; it would be worth having again at a
   parameter set with a zero cap. -/
 def checkSummandTable : IO Unit := do
   ensure "twelve summands" (summands.length == 12)
