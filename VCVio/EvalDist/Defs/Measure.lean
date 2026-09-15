@@ -7,6 +7,7 @@ module
 
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.Defs.Measure.OptionT
 public import ToMathlib.MeasureTheory.Measure.Option
 public import ToMathlib.Probability.ProbabilityMassFunction.Measure
 

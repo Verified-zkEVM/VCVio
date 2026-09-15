@@ -221,7 +221,7 @@ lemma probOutput_proj_simulateQ_preInsert [Monad m]
   rw [proj_simulateQ_preInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma support_proj_simulateQ_preInsert [Monad m]
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SetM]
+    [LawfulMonad m] [LawfulMonad n] [MonadAttach m]
     (so : QueryImpl spec m) (nx : spec.Domain → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
     (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
@@ -233,7 +233,7 @@ lemma support_proj_simulateQ_preInsert [Monad m]
   rw [proj_simulateQ_preInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma finSupport_proj_simulateQ_preInsert [Monad m]
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SetM] [HasEvalFinset m] [DecidableEq β]
+    [LawfulMonad m] [LawfulMonad n] [MonadAttach m] [HasEvalFinset m] [DecidableEq β]
     (so : QueryImpl spec m) (nx : spec.Domain → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
     (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
@@ -390,7 +390,7 @@ lemma probOutput_proj_simulateQ_postInsert
   rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma support_proj_simulateQ_postInsert
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SetM]
+    [LawfulMonad m] [LawfulMonad n] [MonadAttach m]
     (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
     (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
@@ -402,7 +402,7 @@ lemma support_proj_simulateQ_postInsert
   rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma finSupport_proj_simulateQ_postInsert
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SetM] [HasEvalFinset m] [DecidableEq β]
+    [LawfulMonad m] [LawfulMonad n] [MonadAttach m] [HasEvalFinset m] [DecidableEq β]
     (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
     (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)

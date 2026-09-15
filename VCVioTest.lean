@@ -14,6 +14,7 @@ public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.EvalDist.IndependentDraws
 public import VCVioTest.EvalDist.MeasureBridge
+public import VCVioTest.EvalDist.ProbabilityNotation
 public import VCVioTest.EvalDist.UniformTable
 public import VCVioTest.ForkMeasure
 public import VCVioTest.Forking.WithoutReplacement
@@ -30,6 +31,7 @@ public import VCVioTest.MonadProbability
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.SecurityFamily
+public import VCVioTest.OracleComp.UniformMeasureSpec
 public import VCVioTest.OracleNetwork
 public import VCVioTest.PFunctorFacade
 public import VCVioTest.PRFNetworkKernel

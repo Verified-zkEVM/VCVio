@@ -131,7 +131,8 @@ example {ι α : Type} {spec : OracleSpec ι} (oa : OracleComp spec α)
 
 section Costs
 
-variable {α : Type} {m : Type → Type*} [Monad m] [MonadLiftT m SetM]
+variable {α : Type} {m : Type → Type*} [Monad m] [LawfulMonad m]
+  [MonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
 variable (oa : AddWriterT ℕ m α) {a b c : ℕ}
 
 example (h : a ≤ b) :
@@ -201,6 +202,34 @@ example (oa : AddWriterT ℝ≥0∞ m α) (a : ℝ≥0∞) :
   rel [show a ≤ ⊤ from le_top]
 
 end Costs
+
+/-! ## Measure-valued expected costs -/
+
+section ExpectedCosts
+
+variable {α ω : Type} {m : Type → Type*} [Monad m] [EvalDistSemantics m]
+variable (oa : AddWriterT ω m α) (f g : ω → ℝ≥0∞)
+
+example (h : ∀ w, f w ≤ g w) :
+    AddWriterT.expectedCost oa f ≤ AddWriterT.expectedCost oa g := by
+  gcongr with w
+  exact h w
+
+example (h : ∀ w, f w ≤ g w) :
+    AddWriterT.expectedCost oa f ≤ AddWriterT.expectedCost oa g := by
+  grw [h]
+
+example : AddWriterT.expectedCost oa (fun _ => 0) = 0 := by simp
+
+example (c : ℝ≥0∞) :
+    AddWriterT.expectedCost oa (fun _ => c) = c * AddWriterT.costMass oa := by
+  simp
+
+example [AddMonoid ω] [LawfulMonad m] [LawfulEvalDistSemantics m]
+    (x : α) : AddWriterT.expectedCost (pure x : AddWriterT ω m α) f = f 0 := by
+  simp
+
+end ExpectedCosts
 
 /-! ## Measures and measurable kernels -/
 

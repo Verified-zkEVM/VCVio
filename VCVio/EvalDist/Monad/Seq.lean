@@ -28,16 +28,15 @@ section seq
 
 section support
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 
-@[simp]
 lemma support_seq (mf : m (α → β)) (mx : m α) :
     support (mf <*> mx) = ⋃ f ∈ support mf, f '' support mx := by
   simp [seq_eq_bind_map]
 
 lemma mem_support_seq_iff (mf : m (α → β)) (mx : m α) (y : β) :
     y ∈ support (mf <*> mx) ↔ ∃ f ∈ support mf, ∃ x ∈ support mx, f x = y := by
-  simp [support_seq]
+  simp
 
 @[simp]
 lemma finSupport_seq [HasEvalFinset m]
@@ -80,8 +79,9 @@ lemma probEvent_seq_eq_tsum_ite (mf : m (α → β)) (mx : m α)
   simp_rw [probEvent_seq_eq_tsum, probEvent_eq_tsum_ite, ← ENNReal.tsum_mul_left,
     Function.comp_apply, mul_ite, mul_zero]
 
-variable [MonadLiftT m SetM] [EvalDistCompatible m]
+variable [MonadLiftT m SetM] [MonadAttach m] [EvalDistCompatible m]
 
+omit [MonadLiftT m SetM] in
 @[simp, grind =_]
 lemma probFailure_seq (mf : m (α → β)) (mx : m α) :
     Pr[⊥ | mf <*> mx] = Pr[⊥ | mf] + Pr[⊥ | mx] - Pr[⊥ | mf] * Pr[⊥ | mx] := by
@@ -96,7 +96,7 @@ section seqLeft
 
 section support
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 
 @[simp]
 lemma support_seqLeft (mx : m α) (my : m β) [Decidable (support my).Nonempty] :
@@ -108,14 +108,15 @@ end support
 section spmf
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [MonadAttach m] [EvalDistCompatible m]
 
-omit [MonadLiftT m SetM] [EvalDistCompatible m] in
+omit [MonadLiftT m SetM] [MonadAttach m] [EvalDistCompatible m] in
 @[grind norm]
 lemma evalSPMF_seqLeft (mx : m α) (my : m β) :
     𝒮[mx <* my] = 𝒮[mx] <* 𝒮[my] := by
   simp [seqLeft_eq]
 
+omit [MonadLiftT m SetM] in
 @[simp, grind =_]
 lemma probOutput_seqLeft (mx : m α) (my : m β) (x : α) :
     Pr[= x | mx <* my] = (1 - Pr[⊥ | my]) * Pr[= x | mx] := by
@@ -126,11 +127,13 @@ lemma probOutput_seqLeft (mx : m α) (my : m β) (x : α) :
     mul_left_comm _ (1 - Pr[⊥ | my])]
   rw [ENNReal.tsum_mul_left, ← probOutput_bind_eq_tsum, bind_pure]
 
+omit [MonadLiftT m SetM] in
 @[simp, grind =_]
 lemma probFailure_seqLeft (mx : m α) (my : m β) :
     Pr[⊥ | mx <* my] = Pr[⊥ | mx] + Pr[⊥ | my] - Pr[⊥ | mx] * Pr[⊥ | my] := by
   rw [seqLeft_eq, probFailure_seq, probFailure_map]
 
+omit [MonadLiftT m SetM] in
 @[simp, grind =_]
 lemma probEvent_seqLeft (mx : m α) (my : m β) (p : α → Prop) :
     Pr[ p | mx <* my] = (1 - Pr[⊥ | my]) * Pr[ p | mx] := by
@@ -149,7 +152,7 @@ section seqRight
 
 section support
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 
 @[simp]
 lemma support_seqRight (mx : m α) (my : m β) [Decidable (support mx).Nonempty] :
@@ -161,24 +164,27 @@ end support
 section spmf
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [MonadAttach m] [EvalDistCompatible m]
 
-omit [MonadLiftT m SetM] [EvalDistCompatible m] in
+omit [MonadLiftT m SetM] [MonadAttach m] [EvalDistCompatible m] in
 @[grind norm]
 lemma evalSPMF_seqRight (mx : m α) (my : m β) :
     𝒮[mx *> my] = 𝒮[mx] *> 𝒮[my] := by
   simp [seqRight_eq]
 
+omit [MonadLiftT m SetM] in
 @[simp, grind =_]
 lemma probOutput_seqRight (mx : m α) (my : m β) (y : β) :
     Pr[= y | mx *> my] = (1 - Pr[⊥ | mx]) * Pr[= y | my] := by
   simp [seqRight_eq, seq_eq_bind_map, probOutput_bind_const]
 
+omit [MonadLiftT m SetM] in
 @[simp, grind =_]
 lemma probFailure_seqRight (mx : m α) (my : m β) :
     Pr[⊥ | mx *> my] = Pr[⊥ | mx] + Pr[⊥ | my] - Pr[⊥ | mx] * Pr[⊥ | my] := by
   rw [seqRight_eq, probFailure_seq, probFailure_map]
 
+omit [MonadLiftT m SetM] in
 @[simp, grind =_]
 lemma probEvent_seqRight (mx : m α) (my : m β) (p : β → Prop) :
     Pr[ p | mx *> my] = (1 - Pr[⊥ | mx]) * Pr[ p | my] := by
@@ -194,7 +200,7 @@ variable (mx : m α) (my : m β) (f : α → β → γ)
 
 section support
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 
 lemma support_seq_map_eq_image2 :
     support (f <$> mx <*> my) = Set.image2 f (support mx) (support my) := by
@@ -275,32 +281,37 @@ end spmf
 section mixed
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+  [ExactMonadAttach m] [EvalDistCompatible m]
 
-omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [EvalDistCompatible m] in
+omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM]
+  [LawfulMonadLiftT m SetM] [EvalDistCompatible m] in
 lemma mem_support_seq_map_iff_of_injective2 (hf : f.Injective2) (x : α) (y : β) :
     f x y ∈ support (f <$> mx <*> my) ↔ x ∈ support mx ∧ y ∈ support my := by
   rw [support_seq_map_eq_image2, Set.mem_image2_iff hf]
 
-omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [EvalDistCompatible m] in
+omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM]
+  [LawfulMonadLiftT m SetM] [EvalDistCompatible m] in
 lemma mem_finSupport_seq_map_iff_of_injective2 [HasEvalFinset m]
     [DecidableEq α] [DecidableEq β] [DecidableEq γ]
     (hf : f.Injective2) (x : α) (y : β) :
     f x y ∈ finSupport (f <$> mx <*> my) ↔ x ∈ finSupport mx ∧ y ∈ finSupport my := by
   rw [finSupport_seq_map_eq_image2, Finset.mem_image₂_iff hf]
 
-omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [EvalDistCompatible m] in
+omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM]
+  [LawfulMonadLiftT m SetM] [EvalDistCompatible m] in
 lemma support_seq_map_swap :
     support (Function.swap f <$> my <*> mx) = support (f <$> mx <*> my) := by
   simp only [support_seq_map_eq_image2, Set.image2_swap f]
 
-omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [EvalDistCompatible m] in
+omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM]
+  [LawfulMonadLiftT m SetM] [EvalDistCompatible m] in
 lemma finSupport_seq_map_swap [HasEvalFinset m] [DecidableEq γ] :
     finSupport (Function.swap f <$> my <*> mx) = finSupport (f <$> mx <*> my) := by
   classical
   simp only [finSupport_seq_map_eq_image2, Finset.image₂_swap f]
 
-omit [LawfulMonadLiftT m SetM] in
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [ExactMonadAttach m] in
 lemma probEvent_seq_map_eq_mul (p : γ → Prop) (q1 : α → Prop) (q2 : β → Prop)
     (h : ∀ x ∈ support mx, ∀ y ∈ support my, p (f x y) ↔ q1 x ∧ q2 y) :
     Pr[ p | f <$> mx <*> my] = Pr[ q1 | mx] * Pr[ q2 | my] := by
@@ -323,7 +334,7 @@ lemma probEvent_seq_map_eq_mul (p : γ → Prop) (q1 : α → Prop) (q2 : β →
         simp only [Function.comp_apply, h x hx y hy]; simp [hq], mul_zero]
   · simp [probOutput_eq_zero_of_not_mem_support hx]
 
-omit [LawfulMonadLiftT m SetM] in
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [ExactMonadAttach m] in
 lemma probOutput_seq_map_eq_mul (x : α) (y : β) (z : γ)
     (h : ∀ x' ∈ support mx, ∀ y' ∈ support my, z = f x' y' ↔ x' = x ∧ y' = y) :
     Pr[= z | f <$> mx <*> my] = Pr[= x | mx] * Pr[= y | my] := by

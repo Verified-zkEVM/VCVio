@@ -157,6 +157,23 @@ theorem ofEvalDistSemantics_evalDist (mx : m α) [EvalDistSemantics m]
     (MeasureSemanticsVia.ofEvalDistSemantics m).evalDist mx = 𝒟[mx] := by
   rfl
 
+/-- Bundle the effect-native successful-output semantics of `OptionT`. Explicit bundling avoids
+changing a downstream global instance graph that still contains the finite-distribution adapter. -/
+protected noncomputable def optionT (m : Type u → Type v) [Monad m]
+    [EvalDistSemantics m] : MeasureSemanticsVia (OptionT m) where
+  Sem := OptionT m
+  instMonadSem := inferInstance
+  interpret := MonadHom.id (OptionT m)
+  observe := fun mx => (𝒟[mx.run]).dropNone
+  observe_apply_univ_le_one := fun mx =>
+    (Measure.dropNone_apply_univ_le _).trans (_root_.evalDist_apply_univ_le_one mx.run)
+
+@[simp]
+theorem optionT_evalDist (mx : OptionT m α) [EvalDistSemantics m]
+    [MeasurableSpace α] :
+    (MeasureSemanticsVia.optionT m).evalDist mx = (𝒟[mx.run]).dropNone := by
+  rfl
+
 end MeasureSemanticsVia
 
 /-- Bundled subprobabilistic semantics for a monad `m`.

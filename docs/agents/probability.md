@@ -7,23 +7,45 @@ The accepted design for new work is
 [`Denotational Probability Semantics`](../reading/denotational-probability-semantics.md): use
 Mathlib measures for closed denotations, kernels for environment/state-indexed computations,
 effect-preserving outcome types for transformers, and keep `Pr[...]` as the discrete compatibility
-surface. [`docs/reading/`](../reading/README.md) indexes the full design record.
+surface. The [notation and computability account](../design/probability-notation-computability.md)
+records which finite events can be evaluated exactly and which semantics require measurable
+proofs. [`docs/reading/`](../reading/README.md) indexes the full design record.
 
 The primary notation is measure-valued: `𝒟[mx] : Measure α`. The generic classes and Giry laws
 live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
 `VCVio.EvalDist.PFunctorMeasure.Core`. These core modules do not import a PMF/SPMF backend.
+`Pr{let x ← mx; ...}[event]` is the computation-style event notation. It elaborates
+an ordinary Lean `do` sequence, returns its final Boolean or proposition, and takes
+the `{True}` mass of that result's `𝒟`. It works with a direct measure-only oracle
+interpretation as well as a finite compatibility interpretation. The
+`prEvent_eq_evalDist` theorem requires a measurable predicate; its
+discrete specialization discharges that condition. `prEvent_eq_evalDist_decide`
+equates an event with a Boolean experiment's final `decide`, without requiring
+a measurable space on the intermediate result. Factor the common sampling run
+once when both forms of a security game are public. For an optional computation,
+successful outputs are measured through `dropNone`, so failure contributes no mass.
+The `OptionT` measure instance also works when the base monad has no finite lift.
 `VCVio.EvalDist.Monad.Measure` provides `evalDist_bind_bind_swap` for jointly measurable
 continuations and `evalDist_bind_bind_bind_rotate` for discrete intermediate results. Their
 measure-level proofs use Tonelli's theorem and preserve subprobability mass.
+The generic `evalDist_pair` law denotes independent sequential draws by Mathlib's product
+measure. `evalDist_bind_apply_univ` expresses bind success mass as a `lintegral`, while
+`evalDist_map_apply_univ` states map preserves that mass; both live in the measure core.
 
 `VCVio.EvalDist.Monad.UniformTable` supplies cell resampling/extraction, permutation,
 and injective restriction laws with explicit uniform-measure hypotheses. Its native counting
 proofs live in `ToMathlib.MeasureTheory.Measure.UniformTable`. The continuation may lose mass.
+`evalDist_map_equiv_of_uniform` packages Mathlib's `uniformOn_univ_map_equiv` for a computation;
+use it for a uniform permutation before introducing a bind continuation.
+`evalDist_bind_bijective_of_uniform` reindexes any continuation after a uniform draw,
+using the finite-uniform pushforward law. `evalDist_bind_congr` compares continuation
+measures pointwise without a measurable-space instance on the intermediate result.
 `VCVio.OracleComp.EvalDist.Measure` gives `evalDist_bind_congr_of_support` by structural
 induction, without a probability/support bridge. These laws power the PRF tag/reader cache,
 composed-handler, and shared-observation proofs. `SampleableType.MeasureCompatibility`
-calibrates the existing sampler at the compatibility boundary; native proofs take that
-calibration as an explicit hypothesis.
+keeps the finite adapter calibration for legacy runtimes. BR93's measure-level masking
+step takes the chosen measure's uniformity certificate explicitly; its finite corollary
+uses the adapter calibration.
 
 The finite distribution API is
 explicit as `evalSPMF mx` / `𝒮[mx]`, and `Pr[...]` remains the discrete compatibility façade. One
@@ -36,9 +58,84 @@ is derived from it, in the simp direction, so measure-side goals reduce *into* t
 The compatibility adapter satisfies the class definitionally; the free-monad fold satisfies it
 whenever its measure specification agrees with its probability specification
 (`PFunctor.IsMeasureSpec.Compatible`, which `IsProbabilitySpec.toMeasureSpec` satisfies by `rfl`).
+For a finite uniform oracle, `OracleSpec.IsUniformMeasureSpec.instCompatible` proves the same
+agreement for the native `uniformOn Set.univ` interpretation. It lets a theorem about a direct
+uniform measure fold use an existing finite probability equation at the compatibility boundary.
+For `ProbComp Bool` security games, use `boolDistAdvantage` for a two-game gap and
+`𝒟[game] {true}` for a success probability; prefer `Pr{...}[winningCondition]`
+when the game ends by testing a predicate. The native uniform measure instances for
+`unifSpec` and `coinSpec` are global, so no local uniform certificate is needed.
+`boolDistAdvantage_self`,
+`boolDistAdvantage_comm`, and `boolDistAdvantage_triangle` keep elementary
+metric proofs independent of the finite façade.
 The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq.rec` law for `Pr[...]`
 only needs equality of result types, whereas a measure denotation also depends on the selected
 `MeasurableSpace`, so there is no blanket finite-type measurable-space instance.
+
+`SPMF`, `evalSPMF`, `probOutput`, `probEvent`, and `probFailure` are deprecated.
+Mathlib owns `PMF`, so VCVio's `usesRetiredProbability` environment linter
+records direct uses of it and the local finite API in `scripts/nolints.json`.
+New theorem statements should prefer `𝒟` or `Pr{...}[...]` and use a named
+compatibility equation only when discrete execution is needed.
+
+The notation alone does not make a theorem measure-native: `evalDist` retains its
+`EvalDistSemantics` instance as an implicit argument. If that instance is the
+`MonadLiftT … SPMF` adapter, the theorem's elaborated type still refers to `SPMF`,
+and `usesRetiredProbability` correctly reports it. State generic measure laws under
+an explicit `EvalDistSemantics`, or select a direct `PFunctor.IsMeasureSpec` before
+elaborating a concrete theorem. Keep sampler calibration through the old class in
+compatibility proofs until the sampler's certificate itself is measure-valued.
+For the finite-range and fair-coin oracles, `OracleSpec.IsUniformMeasureSpec.unifSpec`
+and `OracleSpec.IsUniformMeasureSpec.coinSpec` are the canonical native interpretations.
+Their instances apply only to these concrete oracle specifications; other oracle
+specifications still require an explicit measure interpretation. With the native instance,
+`ProbComp.evalDist_uniformFin` simplifies a query to `uniformOn Set.univ`, and
+`ProbComp.prEvent_uniformFin` evaluates a decidable event by counting
+its satisfying outcomes. These laws avoid a point-mass detour; the
+`FinEnum.SampleableType` construction also has a native uniformity proof in
+`SampleableType.NativeMeasure`, using finite-range sampling and equivalence
+transport. Its product sampler law uses `evalDist_pair` and the existing
+`uniformOn_univ_prod` construction. These supply the `BitVec` key law and the measure-level
+one-time-pad independence theorem. `SampleableType` itself certifies
+`𝒟[$ᵗ α] = uniformOn Set.univ` for every finite discrete measurable structure.
+Its executable sampler and full-support certificate provide the operational
+side; the old `Pr[...]` lemmas are compatibility consequences. Uniform table
+resampling and injective restriction use the measure laws in
+`VCVio.EvalDist.Monad.UniformTable`.
+`ProbComp.evalDist_decide_eq_uniformBool_half` proves that an independent Boolean guess
+matches a fair hidden bit with mass `1/2`; it uses the native uniform measure and
+Mathlib's `lintegral_fintype`, so all-random game hops need no point-probability sum.
+`ProbComp.evalDist_bind_not_uniformBool` applies the uniform-reindexing law to any
+continuation after complementing a fair bit.
+
+The type classes separate a choice of response measures (`IsMeasureSpec`) from the
+additional uniformity and finite-range laws (`IsUniformMeasureSpec`). A blanket instance
+from `[spec.Fintype] [spec.Inhabited]` would silently choose a distribution for an arbitrary
+oracle, so only the concrete `unifSpec` and `coinSpec` instances are global. Structural
+`OracleComp.support` needs neither measure class; a
+positive-mass bridge needs assumptions on the chosen measures.
+For oracle-relative possibility, use `OracleComp.reachableWhen possibleOutputs oa`:
+it follows only the query responses in `possibleOutputs`, with pure/query/bind laws
+and a `gcongr` monotonicity rule. PolyFun defines the underlying
+`FreeM.reachableUnder` from an angelic operation-indexed weakest-precondition
+fold. `reachableWhen_univ_eq_support` identifies its all-responses case with
+`MonadAttach.support`; `supportWhen_eq_reachableWhen` keeps the old `SetM` fold
+available as a deprecated compatibility bridge. This distinction matters for
+stateful handlers: `MonadAttach` records possible returned values, while a
+state-dependent notion must retain the starting state or operation policy.
+`OracleComp.mem_support_iff_evalDist_singleton_pos_of_fullSupport` takes the precise
+full-support condition on each answer measure, without adding a class for that one law.
+`OracleComp.mem_support_iff_evalDist_singleton_pos` discharges it from
+`IsUniformMeasureSpec`; use this native bridge when relating structural reachability to
+singleton mass. Neither theorem requires the PMF-based `IsUniformSpec` class.
+Structural support itself needs no probability interpretation. In particular,
+`OracleComp.support_nonempty` needs only `[spec.Inhabited]`; counting-oracle support
+and worst-case query bounds use that weaker assumption rather than `IsUniformSpec`.
+Keep the class hierarchy for chosen answer measures, and state one-off properties such as
+positive singleton mass as explicit hypotheses instead of adding a mixin for each bridge.
+Compatibility proofs that still use the finite frontend can open
+`ProbComp.DiscreteCompatibility` locally, leaving
+the native interpretation as the default elsewhere.
 
 The adapter is also `LawfulEvalDistSemantics` (`instLawfulEvalDistSemanticsOfMonadLiftTSPMF`), so
 the Giry laws `evalDist_pure`, `evalDist_bind`, `evalDist_map` and the const laws hold with no
@@ -47,9 +144,20 @@ measure specification in scope; `evalDist_eq_evalSPMF_toMeasure` is its definiti
 only on request (`gotchas.md` §10), and the measure side has no separate family of sum lemmas.
 Independent products denote product measures: `evalDist_mOfFn` and `evalDist_mPi`
 (`VCVio/EvalDist/IndepProductMeasure.lean`) identify `𝒟[Fintype.mPi f]` with
-`Measure.pi fun i => 𝒟[f i]`, through `Measure.pi_eq` and the coordinatewise event product;
-`evalDist_map_eval_mPi` reads one coordinate back off the product through Mathlib's
-`Measure.pi_map_eval` when the other factors never fail.
+`Measure.pi fun i => 𝒟[f i]` directly from `LawfulEvalDistSemantics` and Mathlib's
+`measurePreserving_piFinSuccAbove`/`pi_map_piCongrLeft`. The index traversal itself lives in
+`ToMathlib.Control.Monad.Fold`, so these measure laws do not import the scalar product proofs.
+`evalDist_map_eval_mPi` reads one coordinate back through `Measure.pi_map_eval` when the factors
+have full mass; `lintegral_evalDist_mPi_coord` then integrates a coordinate functional directly.
+For finite uniform-output computations, `evalDist_mOfFn_uniformOn_pi` and
+`evalDist_mPi_uniformOn_pi` combine those laws with Mathlib's `uniformOn_pi`, allowing each
+factor its own uniform set. Their constant-full-space corollaries take the single-draw
+uniformity certificate explicitly; the Fischlin small-sum count supplies its compatibility
+certificate at the boundary instead of inducting over singleton probabilities.
+`OracleComp.evalDist_replicate_succ` uses Mathlib's `Measure.bind` and `Measure.map` for repeated
+list-valued sampling, and `evalDist_replicate_apply_univ` gives its success mass as a power.
+Because Mathlib does not install a generic measurable space on `List α`, these laws require the
+chosen list measurable space and measurability of each `List.cons x` map explicitly.
 
 Failure on the measure side is missing mass, recorded in `VCVio/EvalDist/FailureMeasure.lean`:
 `Pr[⊥ | mx] = 1 - 𝒟[mx] univ`, `IsProbabilityMeasure 𝒟[mx] ↔ Pr[⊥ | mx] = 0` (an instance under

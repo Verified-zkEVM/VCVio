@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
 public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.SimSemantics.Append
 public import ToMathlib.Data.ENNReal.AbsDiff
 
@@ -196,12 +197,12 @@ noncomputable def Experiment [DecidableEq Tweak]
 /-- Success probability when challenges are sampled hash images. -/
 noncomputable def RealSuccess [DecidableEq Tweak]
     {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | Experiment .real adv]
+  𝒟[Experiment .real adv] {true}
 
 /-- Success probability when challenges are sampled directly from `outputGen`. -/
 noncomputable def IdealSuccess [DecidableEq Tweak]
     {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | Experiment .ideal adv]
+  𝒟[Experiment .ideal adv] {true}
 
 /-- Source SM-DT-UD advantage: the directed signed gap from the real world to the ideal world. -/
 noncomputable def DirectedAdvantage [DecidableEq Tweak]
@@ -218,7 +219,8 @@ noncomputable def AbsoluteAdvantage [DecidableEq Tweak]
 theorem absoluteAdvantage_toReal_eq_abs_directedAdvantage [DecidableEq Tweak]
     {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) :
     (AbsoluteAdvantage adv).toReal = |DirectedAdvantage adv| := by
-  exact ENNReal.absDiff_toReal probOutput_ne_top probOutput_ne_top
+  exact ENNReal.absDiff_toReal (MeasureTheory.measure_ne_top _ _)
+    (MeasureTheory.measure_ne_top _ _)
 
 /-- Forgetting orientation gives a sound upper bound on the directed source advantage. -/
 theorem directedAdvantage_le_absoluteAdvantage_toReal [DecidableEq Tweak]

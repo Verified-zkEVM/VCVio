@@ -27,6 +27,15 @@ open scoped ENNReal
 
 namespace ProbabilityTheory
 
+/-- A measurable space on a finite type with measurable singletons is discrete. -/
+theorem MeasurableSpace.eq_top_of_finite {α : Type*} [Finite α]
+    [MeasurableSpace α] [MeasurableSingletonClass α] :
+    (inferInstance : MeasurableSpace α) = ⊤ := by
+  apply le_antisymm le_top
+  rw [MeasurableSpace.le_def]
+  intro s _
+  exact MeasurableSet.of_discrete
+
 /-- Every point in a finite nonempty space has mass `1 / |α|` under its uniform measure. -/
 @[simp] theorem uniformOn_univ_apply_singleton
     {α : Type*} [MeasurableSpace α] [MeasurableSingletonClass α] [Fintype α] [Nonempty α]

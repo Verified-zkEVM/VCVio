@@ -9,6 +9,7 @@ module
 public import PolyFun.Interaction.UC.ReactiveNetwork.Budget
 public import VCVio.Interaction.UC.ReactiveRuntime
 public import VCVio.OracleComp.CanReturn
+import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # Activation certificates for probabilistic reactive execution
@@ -59,9 +60,10 @@ theorem tokenLaw_unfinished_zero [MeasurableSpace (Option (Outcome result))]
     (hinv : ∀ service ∈ support setup, invariant (initial network service))
     (hbound : ∀ service ∈ support setup, certificate.rank (initial network service) ≤ fuel) :
     tokenLaw network impl setup fuel {none} = 0 := by
-  rw [tokenLaw_eq_evalDist, evalDist_apply_singleton]
-  exact probOutput_eq_zero_of_not_mem_support
-    (tokenExperiment_not_unfinished certificate setup fuel hinv hbound)
+  rw [tokenLaw_eq_evalDist]
+  by_contra hne
+  exact tokenExperiment_not_unfinished certificate setup fuel hinv hbound <|
+    (mem_support_iff_evalDist_singleton_pos _ _).mpr (pos_iff_ne_zero.mpr hne)
 
 /-- Every supported run keeps its full consumed activation count. -/
 theorem token_elapsed_of_mem_support (fuel : ℕ) (state next : State network S)

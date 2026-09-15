@@ -72,15 +72,28 @@ noncomputable local instance instIsUniformSpec : IsUniformSpec spec :=
     Pr[ p | simulateQ (finRatImpl (spec := spec)) oa] = Pr[ p | oa] := by
   simp only [probEvent_eq_tsum_indicator, probOutput_simulateQ]
 
-@[simp] lemma support_simulateQ {α : Type v} (oa : OracleComp spec α) :
-    support (simulateQ (finRatImpl (spec := spec)) oa) = support oa :=
-  Set.ext fun x => mem_support_iff_of_evalSPMF_eq (evalSPMF_simulateQ (spec := spec) oa) x
+@[simp] lemma support_simulateQ {α : Type v} [DecidableEq α] (oa : OracleComp spec α) :
+    (simulateQ (finRatImpl (spec := spec)) oa).support = support oa := by
+  classical
+  ext x
+  simp only [Finset.mem_coe]
+  rw [Raw.mem_support_iff, mem_support_iff_evalSPMF_apply_ne_zero,
+    ← evalSPMF_simulateQ (spec := spec) oa]
+  change (simulateQ (finRatImpl (spec := spec)) oa).prob x ≠ 0 ↔
+    (liftM (liftM (simulateQ (finRatImpl (spec := spec)) oa) : PMF α) : SPMF α) x ≠ 0
+  rw [SPMF.liftM_apply]
+  change (simulateQ (finRatImpl (spec := spec)) oa).prob x ≠ 0 ↔
+    (@Raw.toPMF _ (Classical.decEq _) (simulateQ (finRatImpl (spec := spec)) oa)) x ≠ 0
+  simp only [Raw.toPMF_apply,
+    Raw.prob_eq_prob (Classical.decEq _) inferInstance
+      (simulateQ (finRatImpl (spec := spec)) oa) x]
+  simp
 
 lemma finSupport_simulateQ {α : Type v} [DecidableEq α]
     (oa : OracleComp spec α) :
-    finSupport (simulateQ (finRatImpl (spec := spec)) oa) = finSupport oa := by
+    (simulateQ (finRatImpl (spec := spec)) oa).support = finSupport oa := by
   apply Finset.coe_injective
-  rw [coe_finSupport, coe_finSupport, support_simulateQ]
+  rw [coe_finSupport, support_simulateQ]
 
 end finRatImpl
 

@@ -1,0 +1,117 @@
+/-
+Copyright (c) 2026 VCVio Contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Devon Tuma
+-/
+
+module
+public import VCVio.EvalDist.Defs.Measure.Core
+
+/-!
+# Measure events for computation notation
+
+`Pr{...}[...]` interprets an ordinary Lean `do` computation as the successful-output
+measure of its Boolean or propositional result. These equations identify that measure
+with an event in the underlying computation when the event is measurable.
+-/
+
+public section
+
+open MeasureTheory
+
+universe v
+
+/-- Probability of a successful event after an ordinary Lean `do` sequence.
+The event is interpreted by the primary measure semantics. -/
+syntax (name := prEvent) "Pr{" doSeq "}[" term "]" : term
+
+macro_rules (kind := prEvent)
+  -- `doSeqBracketed`
+  | `(Pr{{$items*}}[$t]) => `(𝒟[do $items:doSeqItem* return $t:term] {True})
+  -- `doSeqIndent`
+  | `(Pr{$items*}[$t]) => `(𝒟[do $items:doSeqItem* return $t:term] {True})
+
+/-- A measurable predicate returned by a computation has the probability of its event. -/
+theorem prEvent_eq_evalDist {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} [MeasurableSpace α] (mx : m α) (p : α → Prop)
+    (hp : Measurable p) :
+    Pr{let x ← mx}[p x] = 𝒟[mx] {x | p x} := by
+  change 𝒟[mx >>= (pure ∘ p)] {True} = _
+  rw [← map_eq_bind_pure_comp, evalDist_map mx hp,
+    Measure.map_apply hp (measurableSet_singleton True)]
+  simp
+
+/-- On a discrete output space every predicate is a measurable event. -/
+theorem prEvent_eq_evalDist_of_discrete
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : m α) (p : α → Prop) :
+    Pr{let x ← mx}[p x] = 𝒟[mx] {x | p x} :=
+  prEvent_eq_evalDist mx p Measurable.of_discrete
+
+/-- Checking a decidable event at the end of a computation gives the same success mass as
+returning its decision as a Boolean. -/
+theorem prEvent_eq_evalDist_decide_of_discrete
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : m α) (p : α → Prop) [DecidablePred p] :
+    Pr{let x ← mx}[p x] = 𝒟[do let x ← mx; return decide (p x)] {true} := by
+  rw [prEvent_eq_evalDist_of_discrete]
+  change 𝒟[mx] {x | p x} =
+    𝒟[mx >>= (pure ∘ fun x => decide (p x))] {true}
+  rw [← map_eq_bind_pure_comp,
+    evalDist_map mx (Measurable.of_discrete : Measurable fun x => decide (p x)),
+    Measure.map_apply (Measurable.of_discrete : Measurable fun x => decide (p x))
+      (measurableSet_singleton true)]
+  congr 1
+  ext x
+  simp
+
+/-- A final decidable event has the same success mass whether it is returned as a proposition
+or decided to a Boolean; no measurable structure on intermediate values is needed. -/
+theorem prEvent_eq_evalDist_decide
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (p : α → Prop) [DecidablePred p] :
+    Pr{let x ← mx}[p x] = 𝒟[do let x ← mx; return decide (p x)] {true} := by
+  let : MeasurableSpace α := ⊤
+  exact prEvent_eq_evalDist_decide_of_discrete mx p
+
+/-- Pointwise equivalent predicates have the same probability after a common computation. -/
+theorem prEvent_congr
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (p q : α → Prop) (h : ∀ x, p x ↔ q x) :
+    Pr{let x ← mx}[p x] = Pr{let x ← mx}[q x] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete]
+  congr 1
+  ext x
+  simp only [Set.mem_ofPred_eq, h x]
+
+/-- An event that never occurs has probability zero. -/
+theorem prEvent_eq_zero_of_forall_not
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (p : α → Prop) (h : ∀ x, ¬p x) :
+    Pr{let x ← mx}[p x] = 0 := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  have hp : {x : α | p x} = ∅ := by
+    ext x
+    simp [h x]
+  rw [hp, measure_empty]
+
+/-- Implication between events bounds their probabilities on a discrete output space. -/
+theorem prEvent_mono_of_discrete
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :
+    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
+  rw [prEvent_eq_evalDist_of_discrete,
+    prEvent_eq_evalDist_of_discrete]
+  exact measure_mono (Set.ofPred_subset_ofPred.mpr hpq)

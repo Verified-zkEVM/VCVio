@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.Expectation
+public import ToMathlib.Control.Monad.Fold
 
 /-!
 # Independent products of computations
@@ -34,9 +35,8 @@ variable {α : Type u} {m : Type u → Type v} [Monad m] [LawfulMonad m]
 
 section support
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 
-omit [LawfulMonad m] in
 /-- Every coordinate of an output of an independent product lies in the support of its factor. -/
 lemma mem_support_mOfFn (n : ℕ) (g : Fin n → m α) (v : Fin n → α)
     (hv : v ∈ support (Fin.mOfFn n g)) (i : Fin n) : v i ∈ support (g i) := by
@@ -215,7 +215,7 @@ lemma probEvent_coord_mOfFn (n : ℕ) (g : Fin n → m α) (hg : ∀ j, Pr[⊥ |
 omit [LawfulMonad m] in
 /-- Without a full-mass hypothesis on the other factors the marginal is only a bound: a factor
 that fails removes mass from every coordinate at once. -/
-lemma probEvent_coord_mOfFn_le [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+lemma probEvent_coord_mOfFn_le [MonadAttach m] [ExactMonadAttach m]
     [EvalDistCompatible m] (n : ℕ) (g : Fin n → m α) (i : Fin n) (p : α → Prop) :
     Pr[fun v => p (v i) | Fin.mOfFn n g] ≤ Pr[p | g i] := by
   classical
@@ -261,15 +261,9 @@ universe v'
 
 variable {α : Type} {m : Type → Type v'} [Monad m] [LawfulMonad m] {ι : Type} [Fintype ι]
 
-/-- The independent product of a family of computations indexed by a finite type, obtained by
-transporting `Fin.mOfFn` along `Fintype.equivFin`. -/
-noncomputable def Fintype.mPi (f : ι → m α) : m (ι → α) :=
-  (Equiv.arrowCongr (Fintype.equivFin ι).symm (Equiv.refl α)) <$>
-    Fin.mOfFn (Fintype.card ι) fun k => f ((Fintype.equivFin ι).symm k)
-
 section support
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 
 lemma mem_support_mPi (f : ι → m α) (v : ι → α) (hv : v ∈ support (Fintype.mPi f)) (i : ι) :
     v i ∈ support (f i) := by
@@ -282,7 +276,7 @@ end support
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
 /-- The output distribution of a finite independent product is the product of the factors. -/
-lemma probOutput_mPi [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+lemma probOutput_mPi [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
     (f : ι → m α) (v : ι → α) :
     Pr[= v | Fintype.mPi f] = ∏ i, Pr[= v i | f i] := by
   rw [Fintype.mPi, probOutput_map_equiv, probOutput_mOfFn]

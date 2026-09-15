@@ -194,6 +194,8 @@ theorem isPerIndexQueryBound_seededForkWithSeedValue
 section generateSeedCoverage
 
 variable [∀ i, SampleableType (spec.Range i)]
+variable [∀ i, MeasurableSpace (spec.Range i)]
+  [∀ i, DiscreteMeasurableSpace (spec.Range i)]
 
 private lemma expectedQueryCount_seededForkWithSeedValue_le_aux [spec.DecidableEq] [Finite ι]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
@@ -267,9 +269,9 @@ theorem seededForkExpectedQueryWork_le
       ((js.map fun j => qb j * sampleCost j).sum + sampleCost i + qb i : ENNReal) :=
   add_le_add
     (add_le_add
-      (AddWriterT.expectedCostNat_le_of_queryBoundedAboveBy
-        (generateSeed_queryCostExactly (spec := spec) qb js sampleCost hSample).toAbove)
-      (AddWriterT.expectedCostNat_le_of_queryBoundedAboveBy (hSample i).toAbove))
+      (AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _
+        (generateSeed_queryCostExactly (spec := spec) qb js sampleCost hSample)).le
+      (AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _ (hSample i)).le)
     (expectedQueryCount_seededForkWithSeedValue_le
       (main := main) (qb := qb) (js := js) (i := i) (cf := cf) hmain hjs)
 
@@ -287,7 +289,8 @@ omit [IsUniformSpec spec] [unifSpec ˡ⊂ₒ spec] in
 theorem cf_eq_of_mem_support_seededFork (x₁ x₂ : α)
     (h : some (x₁, x₂) ∈ support (seededFork main qb js i cf)) :
     ∃ s, cf x₁ = some s ∧ cf x₂ = some s := by
-  grind (gen := 16) [seededFork]
+  simp only [seededFork, mem_support_bind_iff] at h
+  grind
 
 omit [unifSpec ˡ⊂ₒ spec] in
 /-- On `seededFork` support, first-projection success equals pair-style success event. -/
@@ -522,7 +525,7 @@ private lemma probOutput_noGuardComp_step_le_add_aux (s : Fin (qb i + 1)) (seed 
   | none =>
       refine le_trans (le_of_eq ?_) zero_le
       rw [probOutput_eq_zero_iff]
-      simp [support_bind, support_map, z]
+      simp [z]
   | some t =>
       by_cases hts : t = s
       · subst hts
@@ -534,7 +537,7 @@ private lemma probOutput_noGuardComp_step_le_add_aux (s : Fin (qb i + 1)) (seed 
           (main := main) (qb := qb) (i := i) (cf := cf) t seed x₁ hca u
       · refine le_trans (le_of_eq ?_) zero_le
         rw [probOutput_eq_zero_iff]
-        simp [support_bind, support_map, z, hts]
+        simp [z, hts]
 
 omit [unifSpec ˡ⊂ₒ spec] in
 private lemma probEvent_seededFork_pair_eq_probOutput_map_aux (s : Fin (qb i + 1)) :

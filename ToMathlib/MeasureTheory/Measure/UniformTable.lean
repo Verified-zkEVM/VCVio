@@ -96,6 +96,20 @@ theorem uniformOn_univ_map_equiv {α β : Type*} [Finite α] [Finite β]
   rw [hpreimage]
   simp [uniformOn_univ, Fintype.card_congr e]
 
+/-- A parameter-dependent permutation of an independent uniform draw is still independent. -/
+theorem bind_uniformOn_map_equiv_eq_prod {A B : Type*} [MeasurableSpace A]
+    [Finite B] [MeasurableSpace B] [MeasurableSingletonClass B]
+    (μ : Measure A) (e : A → B ≃ B) :
+    μ.bind (fun a => (uniformOn Set.univ : Measure B).map (fun b => (a, e a b))) =
+      μ.prod (uniformOn Set.univ : Measure B) := by
+  rw [Measure.prod]
+  apply Measure.bind_congr_right
+  exact Filter.Eventually.of_forall fun a => by
+    change (uniformOn Set.univ : Measure B).map (Prod.mk a ∘ e a) =
+      (uniformOn Set.univ : Measure B).map (Prod.mk a)
+    rw [← Measure.map_map measurable_prodMk_left Measurable.of_discrete,
+      uniformOn_univ_map_equiv (e a)]
+
 /-- Restrict a uniform table to an injectively indexed family of cells. -/
 theorem uniformOn_univ_map_comp_injective {A B R : Type*} [Finite A] [Finite B] [Finite R]
     [Nonempty R] [MeasurableSpace R] [MeasurableSingletonClass R]

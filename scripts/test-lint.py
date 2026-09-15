@@ -61,6 +61,16 @@ print("-- Linting passed for " + root + ".")
         with self.assertRaisesRegex(ValueError, "Incomplete"):
             lint.collect(tool, ["A"], "[]")
 
+    def test_collection_accepts_reported_new_findings(self):
+        tool = self.tool('''import pathlib, sys
+pathlib.Path("scripts/nolints.json").write_text('[["usesRetiredProbability", "A.legacy"]]')
+print("-- Found 1 errors in 1 declarations")
+print("The `usesRetiredProbability` linter reports:")
+sys.exit(1)
+''')
+        self.assertEqual(lint.collect(tool, ["A"], "[]"),
+                         {("usesRetiredProbability", "A.legacy")})
+
     def test_stale_entries_fail_check_but_allow_prune(self):
         baseline = {("docBlame", "A.f")}
         with self.assertRaisesRegex(ValueError, "Obsolete"):
@@ -148,6 +158,21 @@ sys.exit(23)
                 lint.environment(["A"], no_build=True, prune=True, base_ref="HEAD")
             collect.assert_not_called()
         self.assertEqual(lint.BASELINE.read_bytes(), before)
+
+    def test_retired_probability_findings_are_reviewed_in_baseline_diff(self):
+        subprocess.run(["git", "init", "-q"], check=True)
+        lint.BASELINE.parent.mkdir()
+        lint.BASELINE.write_text('[["docBlame", "A.f"]]\n')
+        subprocess.run(["git", "add", str(lint.BASELINE)], check=True)
+        subprocess.run(["git", "-c", "user.name=Lint test", "-c",
+                        "user.email=lint-test@example.invalid", "-c", "commit.gpgSign=false",
+                        "commit", "-qm", "Baseline"], check=True)
+        lint.BASELINE.write_text('[["docBlame", "A.f"], '
+                                 '["usesRetiredProbability", "A.legacy"]]\n')
+        findings = {("docBlame", "A.f"), ("usesRetiredProbability", "A.legacy")}
+        with patch.object(lint, "collect", return_value=findings), \
+                patch.object(lint, "executable", return_value="fake-linter"):
+            lint.environment(["A"], no_build=True, prune=False, base_ref="HEAD")
 
 
 if __name__ == "__main__":

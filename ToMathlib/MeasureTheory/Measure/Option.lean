@@ -93,6 +93,15 @@ theorem lintegral_dropNone (μ : Measure (Option α)) {g : α → ENNReal} (hg :
   | none => simp
   | some x => simp [lintegral_dirac' x hg]
 
+/-- The total mass left after discarding `none` is the mass of the present outcomes. -/
+theorem dropNone_apply_univ (μ : Measure (Option α)) :
+    dropNone μ Set.univ = μ {value | value.isSome} := by
+  rw [← lintegral_one, lintegral_dropNone μ measurable_const,
+    ← lintegral_indicator_one Option.measurableSet_isSome]
+  apply lintegral_congr
+  intro value
+  cases value <;> simp [Set.indicator]
+
 /-! ## Completing a subprobability measure with an explicit failure outcome -/
 
 /-- Turn a subprobability measure into a measure on `Option α` by mapping successful outcomes

@@ -8,6 +8,7 @@ module
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Instances.OptionT
 public import VCVio.EvalDist.PFunctor
+public import PolyFun.PFunctor.Free.WP
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import ToMathlib.Data.Set.Functor
 
@@ -124,12 +125,16 @@ lemma evalSPMF_query_toPMF [IsProbabilitySpec spec] (t : spec.Domain) :
 
 @[simp, grind =] lemma support_liftM (q : OracleQuery spec α) :
     support (liftM q : OracleComp spec α) = Set.range q.cont := by
-  rw [OracleComp.liftM_def]
-  exact PFunctor.FreeM.support_liftObj q
+  exact PFunctor.FreeM.support_liftObj (P := spec.toPFunctor) q
 
 @[grind =] lemma support_query (t : spec.Domain) :
     support (query t : OracleComp spec _) = Set.univ := by
   rw [support_liftM]; exact Set.range_id
+
+/-- Mapping a free oracle tree maps its reachable outputs. -/
+lemma support_freeM_map (f : α → β) (mx : OracleComp spec α) :
+    support (PFunctor.FreeM.map f mx) = f '' support mx := by
+  exact PFunctor.FreeM.support_map f mx
 
 lemma mem_support_liftM_iff (q : OracleQuery spec α) (u : α) :
     u ∈ support (liftM q : OracleComp spec α) ↔ ∃ t, q.cont t = u := by
@@ -139,26 +144,42 @@ lemma mem_support_query (t : spec.Domain) (u : spec.Range t) :
     u ∈ support (query t : OracleComp spec _) := by
   rw [support_query]; trivial
 
+/-- An oracle computation has a reachable output when every query has an answer. -/
+theorem support_nonempty [spec.Inhabited] (mx : OracleComp spec α) :
+    (support mx).Nonempty := by
+  induction mx with
+  | pure x => exact ⟨x, by simp⟩
+  | queryBind t k ih =>
+      obtain ⟨x, hx⟩ := ih default
+      exact ⟨x, by
+        change x ∈ ⋃ b, support (k b)
+        exact Set.mem_iUnion.mpr ⟨default, hx⟩⟩
+
 alias support_liftM_query := support_query
 
 /-- Support-aware bind congruence: if two continuations agree on all elements in the support
     of `mx`, the resulting bind computations are equal. -/
 theorem bind_congr_of_forall_mem_support (mx : OracleComp spec α) {f g : α → OracleComp spec β}
     (h : ∀ x ∈ support mx, f x = g x) : mx >>= f = mx >>= g := by
-  induction mx using OracleComp.inductionOn with
+  induction mx with
   | pure a =>
-    simpa only [monad_norm] using h a (by simp)
-  | query_bind q k ih =>
-    change (query q : OracleComp spec _) >>= (fun u => k u >>= f) =
-      (query q : OracleComp spec _) >>= (fun u => k u >>= g)
-    exact bind_congr fun u => ih u fun x hx =>
-      h x ((mem_support_bind_iff _ _ _).mpr ⟨u, by simp, hx⟩)
+    simpa using h a (by simp)
+  | queryBind q k ih =>
+    change PFunctor.FreeM.liftBind q (fun u => k u >>= f) =
+      PFunctor.FreeM.liftBind q (fun u => k u >>= g)
+    congr 1
+    funext u
+    exact ih u fun x hx => h x (by
+      change x ∈ ⋃ b, support (k b)
+      exact Set.mem_iUnion.mpr ⟨u, hx⟩)
 
 @[simp, grind .]
 lemma support_finite [spec.Fintype] (mx : OracleComp spec α) : (support mx).Finite := by
-  induction mx using OracleComp.inductionOn with
+  induction mx with
   | pure x => simp
-  | query_bind t f h => simpa using Set.finite_iUnion h
+  | queryBind t f h =>
+      change (⋃ b, support (f b)).Finite
+      exact Set.finite_iUnion h
 
 end evalSPMF_main
 
@@ -377,9 +398,14 @@ lemma probFailure_guard {p : Prop} [Decidable p] :
   · -- See note above.
     simp [OptionT.probFailure_eq, OptionT.run_failure]
 
+omit [spec.IsProbabilitySpec] in
 lemma support_guard {p : Prop} [Decidable p] :
     support (guard p : OptionT (OracleComp spec) Unit) = if p then {()} else ∅ := by
-  rw [OracleComp.guard_eq]; split_ifs <;> simp
+  by_cases hp : p
+  · simp [OracleComp.guard_eq, hp]
+  · simp only [OracleComp.guard_eq, hp, ↓reduceIte, OptionT.support_def]
+    ext x
+    simp
 
 /-- For any `PUnit`-valued computation in an arbitrary monad with an `SPMF` denotation, the
 probability of returning `()` is the complementary mass of its failure probability. -/
@@ -483,17 +509,66 @@ end simulateQ_evalSPMF
 
 section supportWhen
 
-/-- The possible outputs of `mx` when queries can output values in the specified sets.
-NOTE: currently proofs using this should reduce to `simulateQ`. A full API would be better -/
+/-- Outputs reachable when a query may return any response selected by `o`. -/
+def reachableWhen (o : QueryImpl spec Set) (mx : OracleComp spec α) : Set α :=
+  PFunctor.FreeM.reachableUnder (P := spec.toPFunctor)
+    (fun (t : spec.Domain) (u : spec.Range t) ↦ u ∈ o t) mx
+
+@[simp]
+lemma reachableWhen_pure (o : QueryImpl spec Set) (x : α) :
+    reachableWhen o (pure x : OracleComp spec α) = {x} := by
+  simp [reachableWhen]
+
+@[simp]
+lemma reachableWhen_liftM (o : QueryImpl spec Set) (q : OracleQuery spec α) :
+    reachableWhen o (liftM q : OracleComp spec α) = q.cont '' o q.input := by
+  change (PFunctor.FreeM.liftObj q).reachableUnder
+    (fun (t : spec.Domain) (u : spec.Range t) ↦ u ∈ o t) = q.cont '' o q.input
+  simpa using (PFunctor.FreeM.reachableUnder_liftObj (P := spec.toPFunctor)
+    (fun (t : spec.Domain) (u : spec.Range t) ↦ u ∈ o t) q)
+
+lemma reachableWhen_query (o : QueryImpl spec Set) (t : spec.Domain) :
+    reachableWhen o (query t : OracleComp spec _) = o t := by
+  simp [OracleSpec.query]
+
+@[simp]
+lemma reachableWhen_bind (o : QueryImpl spec Set) (oa : OracleComp spec α)
+    (ob : α → OracleComp spec β) :
+    reachableWhen o (oa >>= ob) =
+      ⋃ x ∈ reachableWhen o oa, reachableWhen o (ob x) := by
+  exact PFunctor.FreeM.reachableUnder_bind _ oa ob
+
+lemma reachableWhen_query_bind (o : QueryImpl spec Set) (t : spec.Domain)
+    (next : spec.Range t → OracleComp spec α) :
+    reachableWhen o ((query t : OracleComp spec _) >>= next) =
+      ⋃ direction ∈ o t, reachableWhen o (next direction) := by
+  simp
+
+@[gcongr]
+lemma reachableWhen_mono {o₁ o₂ : QueryImpl spec Set}
+    (h : ∀ q, o₁ q ⊆ o₂ q) (oa : OracleComp spec α) :
+    reachableWhen o₁ oa ⊆ reachableWhen o₂ oa := by
+  exact PFunctor.FreeM.reachableUnder_mono (fun q u hu ↦ h q hu) oa
+
+/-- Admitting every typed response recovers the free tree's attachment support. -/
+theorem reachableWhen_univ_eq_support (oa : OracleComp spec α) :
+    reachableWhen (fun _ ↦ Set.univ) oa = support oa := by
+  simpa [reachableWhen, PFunctor.FreeM.reachable] using
+    (PFunctor.FreeM.reachable_eq_support oa)
+
+/-- The `SetM` interpretation of possible outputs under a query-response assignment. -/
+@[deprecated "VCVio retiring support API: use reachableWhen" (since := "2026-09-14")]
 def supportWhen (o : QueryImpl spec Set) (mx : OracleComp spec α) : Set α :=
   SetM.run (simulateQ (r := SetM) (fun t => SetM.ofSet (o t)) mx)
 
-@[simp]
+@[deprecated "VCVio retiring support API: use reachableWhen_pure" (since := "2026-09-14"), simp]
 lemma supportWhen_pure (o : QueryImpl spec Set) (x : α) :
     supportWhen o (pure x : OracleComp spec α) = {x} := by
   unfold supportWhen
   rw [simulateQ_pure, SetM.run_pure]
 
+@[deprecated "VCVio retiring support API: use reachableWhen_query_bind"
+  (since := "2026-09-14")]
 lemma supportWhen_query_bind (o : QueryImpl spec Set) (q : spec.Domain)
     (oa : spec.Range q → OracleComp spec α) :
     supportWhen o ((query q : OracleComp spec _) >>= oa) =
@@ -503,7 +578,7 @@ lemma supportWhen_query_bind (o : QueryImpl spec Set) (q : spec.Domain)
 
 /-- Reachable outputs of a bind are the reachable outputs of the continuation over reachable
 outputs of the first computation. -/
-@[simp]
+@[deprecated "VCVio retiring support API: use reachableWhen_bind" (since := "2026-09-14"), simp]
 lemma supportWhen_bind (o : QueryImpl spec Set) (oa : OracleComp spec α)
     (ob : α → OracleComp spec β) :
     supportWhen o (oa >>= ob) = ⋃ x ∈ supportWhen o oa, supportWhen o (ob x) := by
@@ -511,6 +586,7 @@ lemma supportWhen_bind (o : QueryImpl spec Set) (oa : OracleComp spec α)
   rw [simulateQ_bind, SetM.run_bind]
 
 /-- Membership form of [`OracleComp.supportWhen_bind`]. -/
+@[deprecated "VCVio retiring support API: use reachableWhen_bind" (since := "2026-09-14")]
 lemma mem_supportWhen_bind_iff (o : QueryImpl spec Set) (oa : OracleComp spec α)
     (ob : α → OracleComp spec β) (y : β) :
     y ∈ supportWhen o (oa >>= ob) ↔
@@ -518,7 +594,8 @@ lemma mem_supportWhen_bind_iff (o : QueryImpl spec Set) (oa : OracleComp spec α
   simp [supportWhen_bind]
 
 /-- Enlarging the set of possible oracle outputs only enlarges the reachable output set. -/
-@[gcongr]
+@[deprecated "VCVio retiring support API: use reachableWhen_mono" (since := "2026-09-14"),
+  gcongr]
 lemma supportWhen_mono {o₁ o₂ : QueryImpl spec Set}
     (h : ∀ q, o₁ q ⊆ o₂ q) (oa : OracleComp spec α) :
     supportWhen o₁ oa ⊆ supportWhen o₂ oa := by
@@ -530,6 +607,15 @@ lemma supportWhen_mono {o₁ o₂ : QueryImpl spec Set}
       simp only [supportWhen_query_bind, Set.mem_iUnion, exists_prop] at hy ⊢
       rcases hy with ⟨u, hu, hy⟩
       exact ⟨u, h q hu, ih u hy⟩
+
+/-- The historical `SetM` interpretation agrees with operation-indexed reachability. -/
+@[deprecated "VCVio retiring support API: use reachableWhen" (since := "2026-09-15")]
+theorem supportWhen_eq_reachableWhen (o : QueryImpl spec Set) (oa : OracleComp spec α) :
+    supportWhen o oa = reachableWhen o oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind q next ih =>
+      simp only [supportWhen_query_bind, reachableWhen_bind, reachableWhen_query, ih]
 
 end supportWhen
 

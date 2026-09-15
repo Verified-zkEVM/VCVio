@@ -576,19 +576,24 @@ theorem security
     PRGScheme.prgAdvantage (streamPRG prf n) adv ≤
       PRFScheme.prfAdvantage prf (prfReduction (S := S) (O := O) n adv) +
       collisionProb (S := S) (O := O) n := by
-  unfold PRGScheme.prgAdvantage PRFScheme.prfAdvantage
-  have hreal : (Pr[= true | PRGScheme.prgRealExp (streamPRG prf n) adv]).toReal =
-      (Pr[= true | PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)]).toReal :=
-    congrArg ENNReal.toReal (probOutput_congr rfl (prgRealExp_eq_prfRealExp hkey adv))
-  rw [hreal]
-  set a := (Pr[= true | PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)]).toReal
-  set b := (Pr[= true | PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)]).toReal
-  set c := (Pr[= true | PRGScheme.prgIdealExp adv]).toReal
-  have hgap : |b - c| ≤ collisionProb (S := S) (O := O) n :=
-    prfIdealGap_le_collisionProb adv
-  calc |a - c| = |(a - b) + (b - c)| := by ring_nf
-    _ ≤ |a - b| + |b - c| := abs_add_le _ _
-    _ ≤ |a - b| + collisionProb (S := S) (O := O) n := by linarith
+  let prgReal := PRGScheme.prgRealExp (streamPRG prf n) adv
+  let prfReal := PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)
+  let prfIdeal := PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)
+  let prgIdeal := PRGScheme.prgIdealExp adv
+  have hreal : 𝒟[prgReal] {true} = 𝒟[prfReal] {true} := by
+    simpa only [prgReal, prfReal, evalDist_apply_singleton] using
+      probOutput_congr rfl (prgRealExp_eq_prfRealExp hkey adv)
+  have hgap : prfIdeal.boolDistAdvantage prgIdeal ≤ collisionProb (S := S) (O := O) n := by
+    simpa only [prfIdeal, prgIdeal, ProbComp.boolDistAdvantage, evalDist_apply_singleton] using
+      prfIdealGap_le_collisionProb adv
+  change prgReal.boolDistAdvantage prgIdeal ≤
+    prfReal.boolDistAdvantage prfIdeal + collisionProb (S := S) (O := O) n
+  have heq : prgReal.boolDistAdvantage prgIdeal = prfReal.boolDistAdvantage prgIdeal := by
+    unfold ProbComp.boolDistAdvantage
+    rw [hreal]
+  rw [heq]
+  exact (ProbComp.boolDistAdvantage_triangle prfReal prfIdeal prgIdeal).trans
+    (add_le_add_right hgap _)
 
 omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [SampleableType S]
   [Inhabited O] [Fintype O] [DecidableEq O] [SampleableType O] in

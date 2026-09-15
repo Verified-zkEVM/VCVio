@@ -52,7 +52,8 @@ section generic
 
 variable {α : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
   [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
+  [EvalDistCompatible m]
   (p : α → Prop) (mx : m α) (x : α)
 
 example : Pr[ p | mx] = 0 ↔ ∀ y ∈ support mx, ¬ p y := by
@@ -142,7 +143,8 @@ section mapMap
 
 variable {α : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
   [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
+  [EvalDistCompatible m]
 
 example (mx : m α) (f g : α → α) : g <$> (f <$> mx) = (fun x => g (f x)) <$> mx := by grind
 example (mx : m α) (f g : α → α) : Pr[⊥ | g <$> (f <$> mx)] = Pr[⊥ | mx] := by grind

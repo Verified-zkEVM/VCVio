@@ -80,7 +80,7 @@ private lemma fischlinSearchAux_eq_withUnitCost
       rfl
 
 private lemma fischlinSearchAuxWithUnitCost_queryBoundedAboveBy
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (fischlinROSpec Stmt Commit Chal Resp ρ b M) m)
     (pk : Stmt) (sk : Wit) (sc : PrvState) (msg : M) (comList : List Commit) (i : Fin ρ)
     (challenges : List Chal) (best : Option (Chal × Resp × Fin (2 ^ b))) :
@@ -185,7 +185,7 @@ private lemma fischlinSearchAux_eq_withAddCost
 private lemma fischlinSearchAuxWithAddCost_pathwiseCostAtMost
     {κ : Type} [AddCommMonoid κ] [PartialOrder κ] [IsOrderedAddMonoid κ]
     [CanonicallyOrderedAdd κ]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (fischlinROSpec Stmt Commit Chal Resp ρ b M) m)
     (pk : Stmt) (sk : Wit) (sc : PrvState) (msg : M) (comList : List Commit) (i : Fin ρ)
     (challenges : List Chal) (best : Option (Chal × Resp × Fin (2 ^ b)))
@@ -268,8 +268,9 @@ section verifyCostAccounting
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 variable [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   (hr : GenerableRelation Stmt Wit rel) (S : ℕ)
-  [DecidableEq M] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+  [DecidableEq M] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Fischlin verification makes at most `ρ` random-oracle queries under unit-cost
 instrumentation. -/
 theorem verify_usesAtMostRhoQueries
@@ -320,6 +321,7 @@ theorem verify_usesAtMostRhoQueries
             (AddWriterT.queryBoundedAboveBy_fin_mOfFn (n := ρ) (k := 1) hstep))
         (fun _ => AddWriterT.queryBoundedAboveBy_pure _))
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Fischlin verification makes at least `ρ` random-oracle queries under unit-cost
 instrumentation. -/
 theorem verify_usesAtLeastRhoQueries
@@ -377,8 +379,9 @@ section signCostAccounting
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 variable [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   (hr : GenerableRelation Stmt Wit rel) (S : ℕ)
-  [DecidableEq M] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+  [DecidableEq M] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Fischlin signing makes at most `ρ * |Ω|` random-oracle queries under unit-cost
 instrumentation. -/
 theorem sign_usesAtMostRhoCardOmegaQueries
@@ -489,6 +492,7 @@ theorem sign_usesAtMostRhoCardOmegaQueries
         AddWriterT.queryBoundedAboveBy_fin_mOfFn (n := ρ) (k := FinEnum.card Chal)
           (fun i => hrep commits i)))
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Fischlin signing has weighted query cost at most `ρ • (|Ω| • w)` whenever every random-oracle
 query carries cost at most `w`. -/
 theorem sign_usesWeightedQueryCostAtMost
@@ -612,8 +616,10 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 variable [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   (hr : GenerableRelation Stmt Wit rel) (S : ℕ)
   [DecidableEq M] [MonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+  [ExactMonadAttach m] [EvalDistCompatible m]
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Fischlin signing has expected weighted query cost at most `ρ • (|Ω| • w)` whenever every
 random-oracle query is weighted by at most `w`. -/
 theorem sign_expectedQueryCost_le
@@ -633,6 +639,7 @@ theorem sign_expectedQueryCost_le
       (costFn := costFn) (w := w) hcost)
     hval
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Fischlin signing has expected query count at most `ρ * |Ω|` in the unit-cost runtime model.
 
 This is the expectation-level counterpart of
@@ -655,8 +662,10 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 variable [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   (hr : GenerableRelation Stmt Wit rel) (S : ℕ)
   [DecidableEq M] [MonadLiftT m PMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+  [ExactMonadAttach m] [EvalDistCompatible m]
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Fischlin verification has expected query count exactly `ρ` in the unit-cost runtime model. -/
 theorem verify_expectedQueries_eq_rho
     (runtime : QueryImpl (fischlinROSpec Stmt Commit Chal Resp ρ b M) m)

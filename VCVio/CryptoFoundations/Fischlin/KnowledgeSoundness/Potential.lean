@@ -9,6 +9,9 @@ module
 public import VCVio.CryptoFoundations.Fischlin.Completeness
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 import all VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
+import VCVio.EvalDist.IndepProductMeasure
+import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+import Mathlib.Probability.UniformOn
 
 /-!
 # Fischlin small-sum counting and potential invariants
@@ -97,42 +100,20 @@ private lemma smallSumCount_le :
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
-/-- Each output tuple of `n` IID uniform draws is equally likely, with probability
-`(Fintype.card α)⁻¹ ^ n`. -/
-private lemma probOutput_mOfFn_uniformSample {α : Type} [SampleableType α] [Fintype α]
-    (n : ℕ) (w : Fin n → α) :
-    Pr[= w | Fin.mOfFn n (fun _ => ($ᵗ α : ProbComp α))]
-      = (Fintype.card α : ℝ≥0∞)⁻¹ ^ n := by
-  let : DecidableEq α := Classical.decEq α
-  induction n with
-  | zero =>
-    have hw : w = Fin.elim0 := funext fun i => i.elim0
-    simp [Fin.mOfFn, hw]
-  | succ n ih =>
-    have hcond : ∀ (a : α) (r : Fin n → α),
-        w = Fin.cons a r ↔ r = Fin.tail w ∧ a = w 0 := by
-      intro a r
-      constructor
-      · rintro rfl
-        simp
-      · rintro ⟨rfl, rfl⟩
-        exact (Fin.cons_self_tail w).symm
-    rw [Fin.mOfFn]
-    simp only [probOutput_bind_eq_tsum, probOutput_pure, ih, probOutput_uniformSample,
-      hcond, ite_and, mul_ite, mul_one, mul_zero, tsum_ite_eq]
-    rw [pow_succ']
-
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- The probability that `n` IID uniform draws land in a (decidable) target set is exactly the
 size of the target set over `(Fintype.card α) ^ n`. -/
 private lemma probEvent_mOfFn_uniformSample {α : Type} [SampleableType α] [Fintype α]
     (n : ℕ) (p : (Fin n → α) → Prop) [DecidablePred p] :
     Pr[p | Fin.mOfFn n (fun _ => ($ᵗ α : ProbComp α))]
       = ((Finset.univ.filter p).card : ℝ≥0∞) / (Fintype.card α : ℝ≥0∞) ^ n := by
-  rw [probEvent_eq_sum_filter_univ]
-  simp only [probOutput_mOfFn_uniformSample, Finset.sum_const, nsmul_eq_mul]
-  rw [div_eq_mul_inv, ENNReal.inv_pow]
+  let : MeasurableSpace α := ⊤
+  rw [← evalDist_apply_setOf,
+    evalDist_mOfFn_const_uniform n ($ᵗ α : ProbComp α) evalDist_uniformSample,
+    ProbabilityTheory.uniformOn_univ]
+  rw [show {x : Fin n → α | p x} = ((Finset.univ.filter p : Finset (Fin n → α)) : Set _) by
+    ext x; simp]
+  rw [MeasureTheory.Measure.count_apply_finset]
+  simp [Nat.cast_pow]
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in

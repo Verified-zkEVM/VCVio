@@ -25,6 +25,7 @@ namespace OracleComp
 open OracleSpec MeasureTheory
 
 variable {ι S α : Type} {spec : OracleSpec ι}
+  [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
   [MeasurableSpace S] [MeasurableSpace α]
   [∀ operation : spec.Domain, MeasurableSpace (spec.Range operation)]
   [∀ operation : spec.Domain, DiscreteMeasurableSpace (spec.Range operation × S)]
