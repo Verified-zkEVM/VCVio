@@ -288,14 +288,17 @@ linters, every boundary ratchet and the axiom sweep. `lake exe initsweep --check
 flags a constant when the module initialiser evaluates something for it (its own
 value, because the compiled declaration takes no parameters, or an `initialize`
 body registered for it) and that value either names one of the enumeration entry
-points listed in `scripts/InitSweep.lean` or names a builder of an enumeration
-class (`Fintype`, `FinEnum`) — which is what every instance is, however it was
-spelled. The second disjunct is what makes the check a class test: writing the
-instance the elaborator would have found (`:= Pi.instFintype`) names none of the
-entry points and builds the same enumeration. The same sweep also walks the
-compiler-generated declarations the module initialiser assigns beside its
-constants, because a parameterless *specialisation* lifted out of a function is
-initialised at load and has no environment constant to read.
+points listed in `scripts/InitSweep.lean` or names a *builder* of an enumeration
+class (`Fintype`, `FinEnum`) — an instance constructor or an instance that takes
+arguments, as opposed to an already-materialised nullary instance such as
+`Bool.fintype`, which costs a pointer copy and is deliberately not counted. The
+second disjunct is what makes the check a class test: writing the instance the
+elaborator would have found (`:= Pi.instFintype`) names none of the entry points
+and builds the same enumeration. The same sweep also walks the compiler-generated
+declarations the module initialiser assigns beside its constants, because a
+parameterless *specialisation* lifted out of a function is initialised at load and
+has no environment constant to read; those are tested by what the functions in
+their mangled name consume.
 
 Marking the instance `noncomputable` is *not* a fix: it removes the instance's
 own compiled code and leaves the compiled auxiliary that carries the enumeration,
@@ -315,11 +318,11 @@ all. A row is scoped to one constant under one library, so the same name flagged
 under another root, or gaining a new entry point, is still a regression. Adding a
 row is the escape hatch and needs an argument in review;
 `lake exe initsweep --update-baseline` writes it and preserves the rows of
-libraries the run did not sweep. `VCVioInitSweepTestFixtures` carries the six
-routes by which loading a module can build an enumeration, one negative control
-per clause of the predicate, and the baseline's accept / drop / narrow / widen /
-re-scope / preserve behaviour; like the axiom-sweep fixtures it is kept out of
-every aggregate.
+libraries the run did not sweep. `VCVioInitSweepTestFixtures` carries seven
+hazard modules, one per route by which loading a module can build an enumeration,
+one negative control per clause of the predicate, and the baseline's accept /
+drop / narrow / widen / re-scope / preserve behaviour; like the axiom-sweep
+fixtures it is kept out of every aggregate.
 
 The gate cannot see how *large* an enumeration is, and it does not look at values
 whose size is an argument rather than a type (`List.range n`,

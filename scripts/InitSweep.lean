@@ -186,6 +186,16 @@ rest about reach.
   Gating that class would mean enumerating every size-taking constructor in the library,
   which has no principled boundary; the four occurrences above would be its first four
   baseline rows.
+
+  One family sits on the line and is settled here rather than left implicit: `Array.ofFn`,
+  `Vector.ofFn` and `List.ofFn` take their size from a `Fin n` **type index**, so by the
+  letter of "fixed by a type" they would be in scope. They are out, on the rationale rather
+  than the letter — the `n` is written at the application and is as visible as
+  `Array.replicate`'s — and the measurement says what that costs: over the load-time
+  population `Array.ofFn` occurs once (`Extern.Falcon.Instance`'s `sampleSamplerSeed`),
+  `Vector.ofFn` twice (`MLDSA.Concrete.rqEquivCoeffFun`, `MLKEM.Concrete.rqEquivCoeffFun`)
+  and `List.ofFn` not at all, so gating them would cost three baseline rows for three
+  constants whose size is a literal at the site.
 * It reads the value that runs, and only that value. A helper **function** that enumerates
   and is *called* from an initialiser is the same hazard and is not flagged — constructed:
   `def h (u : Unit) : Nat := (Finset.univ : Finset (Fin 3 → Bool)).card` with
@@ -200,11 +210,19 @@ rest about reach.
   a `List (Fin 3 → Bool)` built by nested `List.flatMap` over `[true, false]` is accepted.
   The gate keys on named entry points and on types, so an enumeration written from scratch
   is invisible to it.
-* A **specialisation** lifted out of a function is caught only by its name. The compiled
-  half of the sweep tests `Fintype.card._at_.<caller>.spec_0` and its like, so the witness
-  above is flagged; a specialisation of a *user* helper that enumerates internally carries
-  the helper's name and nothing else, and is not. That is the monomorphic-helper limit
-  again, one level down.
+* A **specialisation** is caught only by what its name records, which is the chain of
+  functions and not the instance. Three kinds are caught, each constructed and each in the
+  fixture: a specialisation of an entry point (`Fintype.card._at_.f.spec_0`), of the other
+  class's accessor (`FinEnum.toList._at_.f.spec_0`, whose result type is a `List` and which a
+  test on what a segment returns cannot see), and of a *user* helper that takes an
+  enumeration-class instance (`count._at_.f.spec_0`, where `count (α) [Fintype α]`). What is
+  not caught is a specialisation of a function that consumes an enumeration **class the list
+  does not name**: constructed, `class MyEnum (α) where all : List α` with
+  `instance : MyEnum C8 := ⟨FinEnum.toList C8⟩` and `useMine (α) [MyEnum α]` — the
+  specialisation `useMine._at_.topMine.spec_0` is accepted. The instance itself is flagged
+  where it is defined, so the module is not reported clean; a `MyEnum` instance defined in a
+  library the sweep does not cover would be missed entirely, which is the import-scope limit
+  below reached one step further out.
 * Conversely, the values it reads are the kernel's, and it reads the whole value: an entry
   point that occurs only in a position the initialiser never evaluates is a false positive
   rather than a false negative. Two kinds exist. An entry point under a proof argument (none
@@ -252,10 +270,10 @@ load-time constants whose value could not be read, and therefore were accepted w
 being looked at.
 
 `scripts/test-initsweep.sh` exercises all of this against the `VCVioInitSweepTestFixtures`
-library, whose `Hazard` root carries six modules — the plain instance and the
+library, whose `Hazard` root carries seven modules — the plain instance and the
 `noncomputable` spelling that flags the same auxiliary, the named instance no entry-point
 test can see, the `initialize` body, the `decide` over a bounded quantifier that writes no
-instance at all, the `opaque` value the kernel hides, and the specialisation with no
+instance at all, the `opaque` value the kernel hides, and the specialisations with no
 environment constant to read — against one negative control per clause and the baseline's
 accept / drop / narrow / widen / re-scope / preserve behaviour.
 -/
@@ -286,6 +304,14 @@ is auditable where the gate is rather than in a data file.
 * `Fintype.ofEquiv` — transports an enumeration along an equivalence, so it inherits the
   size of the source type.
 * `Set.toFinset` — enumerates the ambient type in order to filter it.
+* `FinEnum.toList` — materialises the list of every element of a `FinEnum`. It is here for
+  the case the class test alone cannot see: `def xs : List Bool := FinEnum.toList Bool` uses
+  an instance that was already materialised by the module that defines it, so the builder
+  filter in `entryPointsOf` drops the instance, and what remains is this call — which builds
+  a fresh list of every element at load. `FinEnum.card` is deliberately **not** here: it is a
+  field of the class, so reading it costs a pointer and the enumeration is paid for by
+  whatever constructed the instance, which the class test does see. (`Fintype`'s counterpart
+  needs no such entry: `Finset.univ` is already the first name on this list.)
 
 This list is an occurrence test on the elaborated term, and on its own it is a test of how
 the hazard was *spelled*: `instance : Fintype bundle.Y := inferInstanceAs (Fintype (Bytes 16))`
@@ -294,7 +320,7 @@ auxiliary that unfolds the instance. `enumerationClasses` is what makes the clau
 test. -/
 def enumerationEntryPoints : List Name :=
   [`Finset.univ, `Fintype.elems, `Fintype.card, `Fintype.piFinset, `Fintype.ofFinite,
-    `Fintype.ofEquiv, `Set.toFinset]
+    `Fintype.ofEquiv, `Set.toFinset, `FinEnum.toList]
 
 /-- Classes an instance of which can materialise a collection of the type's elements, so
 that naming one of their *builders* in a load-time value means the collection is built then.
@@ -312,10 +338,20 @@ that naming one of their *builders* in a load-time value means the collection is
   C for `FinEnum.prod` calls `toList`, `productTR` and `ofList` in sequence. A `FinEnum` on a
   composite carrier is therefore the same hazard as a `Fintype` on one, and
   `def p : FinEnum (Fin 2 × Fin 2 × Fin 2) := inferInstance` is flagged.
-* `Encodable` and `Denumerable` do **not** qualify, and this is the field criterion doing
-  real work rather than being asserted: `Encodable` is `encode : α → ℕ` and
-  `decode : ℕ → Option α`, `Denumerable` extends it with a proof, and no instance of either
-  can hold a collection.
+* `Encodable` and `Denumerable` are **out on their instance population, not on their
+  fields.** The fields look innocent — `encode : α → ℕ`, `decode : ℕ → Option α`, and
+  `Denumerable` adds a proof — but that is the same argument that fails for `FinEnum`, and it
+  fails here too: `Encodable.encodableOfList l H = ⟨fun a => idxOf a l, (l[·]?), …⟩`
+  (`Mathlib/Logic/Equiv/List.lean:110`) holds the materialised list in both closures, and
+  `Fintype.truncEncodable` (`:115`) feeds `Finset.univ.1` into it. What keeps them out is
+  what is built from those: `encodableOfList` is a `def` and not an instance,
+  `Fintype.toEncodable` (`:123`) is `noncomputable` and deliberately not global, and every
+  constructive route to an `Encodable` on a finite carrier names a `Fintype` or `Finset.univ`
+  that the value clause already flags. Measured over the load-time population:
+  `Encodable.encodableOfList`, `Fintype.truncEncodable` and `Fintype.toEncodable` occur 0
+  times each. This is a cost decision about which classes are worth their baseline rows, like
+  the one below about size, and not a claim that no `Encodable` instance can hold a
+  collection.
 
 The clause closes every respelling of the instance that motivated the gate —
 `instance : Fintype bundle.Y := Pi.instFintype`, the `abbrev` route, field-by-field
@@ -450,9 +486,18 @@ def isLiftedClosedTerm (n : Name) : Bool :=
 /-- The functions a compiler-generated name was specialised from. The specialiser writes
 `<specialised>._at_.<caller>.spec_<n>`, nesting as it goes, so cutting the name at its `_at_`
 components gives one segment per function in the chain, each with that function at its head.
-The cut is structural rather than textual: a name whose components include numerals or macro
-scopes (`_private.Foo.0.Bar`) does not survive a round trip through `toString`, and these
-names routinely do. -/
+
+Two details, both measured rather than assumed. The cut is structural rather than textual —
+`n.toString.splitOn "._at_."` and `String.toName` agree with it on all 1473 declarations this
+is applied to today, so that is not a correctness argument; it is kept because it does not
+depend on `toString` printing what `toName` can parse back, which fails on macro-scoped names
+(15 of the 538 load-time *constants* are macro-scoped and do not survive the round trip;
+none of this population is, because all 507 macro-scoped compiled declarations here are
+lifted closed terms and therefore excluded). And the concatenation is `Name.appendCore`
+rather than `++`: `Name.append` is macro-scope-aware, so on a name carrying `_hyg` it drops
+the hygiene marker and panics through `extractMacroScopes` while the tool still exits `0`
+(constructed and reproduced). These are compiler-generated names being taken apart, not
+hygienic names being re-scoped. -/
 def specialisationSegments (n : Name) : Array Name := Id.run do
   let mut segments : Array Name := #[]
   let mut current : Name := .anonymous
@@ -461,21 +506,53 @@ def specialisationSegments (n : Name) : Array Name := Id.run do
       segments := segments.push current
       current := .anonymous
     else
-      current := current ++ c
+      current := current.appendCore c
   return segments.push current
 
+/-- Whether the telescope of `e` binds an argument whose type is an application of an
+`enumerationClasses` member. -/
+partial def bindsEnumerationClass : Expr → Bool
+  | .forallE _ t b _ =>
+    (match t.getAppFn with
+      | .const c _ => enumerationClasses.contains c
+      | _ => false) || bindsEnumerationClass b
+  | _ => false
+
+/-- Whether `n` *takes* an enumeration-class instance, so that applying it materialises that
+instance's collection. This is the test that survives specialisation: the specialiser records
+the function chain in the mangled name and specialises the instance away, so what a
+compiled declaration returns says nothing, while what the function it came from consumes says
+everything. `Fintype.card`, `Fintype.piFinset`, `FinEnum.toList` and a user's
+`count (α) [Fintype α]` all take one; `useFinset (s : Finset α)` does not, because its caller
+built the enumeration and the caller is tested on its own account. -/
+def takesEnumerationClassArg (env : Environment) (n : Name) : Bool :=
+  match env.find? n with
+  | some ci => bindsEnumerationClass ci.type
+  | none => false
+
 /-- The evidence that a compiler-generated 0-arity declaration builds an enumeration: the
-`enumerationEntryPoints` its mangled name was specialised from, and any segment that is
-itself a constant of an `enumerationClasses` type. There is no value to read — these
-declarations are not in the environment at all — so the name is all there is, which is why
-this clause is an addition to the value test and not a replacement for it. -/
+`enumerationEntryPoints` its mangled name was specialised from, any segment that is itself a
+constant of an `enumerationClasses` type, and any segment that *takes* an enumeration-class
+instance. There is no value to read — these declarations are not in the environment at all —
+so the name is all there is, which is why this clause is an addition to the value test and
+not a replacement for it.
+
+The third test is the one with reach. Testing only the seven entry points would make this
+clause a list membership check on one class's accessors: `Fintype.card._at_.f.spec_0` is
+caught because `Fintype.card` happens to be on that list, while
+`FinEnum.toList._at_.f.spec_0` — the same hazard in the other class of the pair — is not,
+and neither is a user helper's `count._at_.f.spec_0`. Both are flagged by what their
+segments consume. Measured over this tree: 0 of the 1473 compiled declarations of the seven
+default roots and 0 of the 1 in the test libraries, so the test ships at no baseline cost;
+`VCVioInitSweepTestFixtures.Hazard.Specialised` carries one witness of each kind. -/
 def irDeclEvidence (env : Environment) (n : Name) : Array String := Id.run do
   let segments := specialisationSegments n
   let mut hits : Array String := #[]
   for e in enumerationEntryPoints do
     if segments.any (e.isPrefixOf ·) then hits := hits.push e.toString
   for seg in segments do
-    if namesEnumerationClass env seg && !hits.contains seg.toString then
+    if (namesEnumerationClass env seg || takesEnumerationClassArg env seg)
+        && !hits.contains seg.toString then
       hits := hits.push seg.toString
   return hits
 
@@ -519,7 +596,9 @@ structure Census where
   any of them — that is what made them a blind spot before they were counted here and tested
   by name. -/
   irLoadTime : Nat
-  /-- Those of `irLoadTime` whose mangled name carries an enumeration entry point. -/
+  /-- Those of `irLoadTime` whose mangled name carries an enumeration entry point, a
+  constant of an enumeration-class type, or a function that takes an enumeration-class
+  instance. -/
   irOffenders : Array Entry
 
 /-- The load-time constants whose value builds an enumeration of a type, and the

@@ -130,7 +130,7 @@ if (( run_test )); then
 
   # The eager-initialisation ratchet over the test libraries that can be swept: it needs
   # the oleans `lake test` has just built, which is why it is here and not in the default
-  # pass. `HashSigTest` has no umbrella module and fourteen `main`s, so it is not covered;
+  # pass. `HashSigTest` has no umbrella module and thirteen `main`s, so it is not covered;
   # `scripts/InitSweep.lean` records exactly what that leaves open.
   echo ""
   echo "# Checking eagerly-initialised constants in the test libraries"

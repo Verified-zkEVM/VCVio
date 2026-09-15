@@ -279,12 +279,12 @@ jobs:
       # in every executable that imports the module. That elaborates cleanly, builds
       # cleanly, and passes every other gate here; it fails only when the binary runs.
       # Needs the oleans the build above produced, as the axiom sweep does. The fixtures
-      # go first for the same reason: they carry the six routes by which loading a module
-      # can build such an enumeration — including the respelling that a name test accepts
-      # and the specialisation that has no environment constant to read — one negative
-      # control per clause of the predicate, and the baseline's own accept / drop / narrow /
-      # widen / re-scope / preserve behaviour, so the committed baseline is falsifiable
-      # rather than merely true.
+      # go first for the same reason: seven fixture modules, one per route by which loading
+      # a module can build such an enumeration — including the respelling that a name test
+      # accepts and the specialisations that have no environment constant to read — one
+      # negative control per clause of the predicate, and the baseline's own accept / drop /
+      # narrow / widen / re-scope / preserve behaviour, so the committed baseline is
+      # falsifiable rather than merely true.
       - name: Test the init sweep tool
         run: ./scripts/test-initsweep.sh
       - name: Init sweep

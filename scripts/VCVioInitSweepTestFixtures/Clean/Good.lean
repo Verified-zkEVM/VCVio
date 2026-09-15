@@ -24,9 +24,11 @@ instance is demanded for a *field*, not for a syntactically visible type. -/
 structure Primitives where
   Y : Type
 
-/-- An eight-element carrier. The fixtures are deliberately tiny: `initsweep` imports
-these modules, so a genuinely unbounded fixture would exhaust the gate's own test rather
-than fail it. -/
+/-- An eight-element carrier. The fixtures are deliberately tiny because the gate is a shape
+check and a larger one would only cost build time: the sweep reads oleans and never executes
+a swept module's initialisation function, so it could not be exhausted by the hazard it
+detects (`scripts/InitSweep.lean` records the link line and the absence of
+`precompileModules` that make that true). -/
 @[expose] def bundle : Primitives := { Y := Fin 3 → Bool }
 
 /-- The shipped spelling. Named so the test can assert that it is *not* flagged even

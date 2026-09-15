@@ -3,12 +3,12 @@
 # Execute falsifiable fixtures for the eager-initialisation ratchet.
 #
 # The gate accepts a flagged constant only when the committed baseline names it, so the
-# fixtures have to falsify both halves: `VCVioInitSweepTestFixtures.Hazard` carries the six
-# routes by which loading a module can build an enumeration of a type — including the
-# respelling that a pure name test accepts, the route that writes no instance at all, the
-# value the kernel hides, and the specialisation that has no environment constant to read —
-# and `VCVioInitSweepTestFixtures.Clean` carries one negative control per clause of the
-# predicate. Each is asserted here by name, not by count. The
+# fixtures have to falsify both halves: `VCVioInitSweepTestFixtures.Hazard` carries seven
+# modules, one per route by which loading a module can build an enumeration of a type —
+# including the respelling that a pure name test accepts, the route that writes no instance
+# at all, the value the kernel hides, and the specialisations that have no environment
+# constant to read — and `VCVioInitSweepTestFixtures.Clean` carries one negative control per
+# clause of the predicate. Each is asserted here by name, not by count. The
 # baseline's own behaviour (accept by name, reject a widened entry-point set, reject a row
 # scoped to another library, preserve rows outside the swept roots) is exercised below it.
 
@@ -158,13 +158,32 @@ assert len(flagged) == 7, sorted(flagged)
 # catch it.
 assert not any(entry["module"].endswith("Hazard.Specialised")
                for entry in hazard_entries.values()), sorted(hazard_entries)
-ir_offenders = hazard["irOffenders"]
-assert len(ir_offenders) == 1, ir_offenders
-specialised = ir_offenders[0]
-assert specialised["name"].startswith("Fintype.card._at_."), specialised
-assert "Hazard.Specialised.carrierCount" in specialised["name"], specialised
-assert specialised["via"] == "ir-only", specialised
-assert specialised["entryPoints"] == ["Fintype.card"], specialised
+assert hazard["irLoadTimeCount"] == len(hazard["irOffenders"]), hazard["irLoadTimeCount"]
+ir_offenders = {entry["name"]: entry for entry in hazard["irOffenders"]}
+assert all(entry["via"] == "ir-only" for entry in ir_offenders.values()), ir_offenders
+
+# One per kind of evidence a mangled name can carry, because a clause that tested only one
+# of the three would accept the other two.
+#  * an entry point for `Fintype`, which is on the list;
+by_entry_point = [name for name, entry in ir_offenders.items()
+                  if entry["entryPoints"] == ["Fintype.card"]]
+assert len(by_entry_point) == 1, sorted(ir_offenders)
+assert "Specialised.carrierCount" in by_entry_point[0], by_entry_point
+#  * an entry point for `FinEnum`, whose result type is a `List` and which a test on what a
+#    segment returns cannot see;
+by_other_class = [name for name, entry in ir_offenders.items()
+                  if entry["entryPoints"] == ["FinEnum.toList"]]
+assert by_other_class, sorted(ir_offenders)
+assert all("Specialised.carrierList" in name for name in by_other_class), by_other_class
+#  * and a *user* helper on no list at all, identified by the `Fintype` instance it takes.
+by_argument = [name for name, entry in ir_offenders.items()
+               if entry["entryPoints"] == [
+                   "VCVioInitSweepTestFixtures.Hazard.Specialised.countOf"]]
+assert len(by_argument) == 1, sorted(ir_offenders)
+assert "carrierCountViaHelper" in by_argument[0], by_argument
+
+assert len(ir_offenders) == len(by_entry_point) + len(by_other_class) + len(by_argument), \
+    sorted(ir_offenders)
 
 # --- one negative control per clause, each witnessed by name -------------------------
 
@@ -242,7 +261,7 @@ with open(source, encoding="utf-8") as stream:
     base = json.load(stream)
 
 rows = base["accepted"]
-assert len(rows) == 8, rows
+assert len(rows) == 12, rows
 assert all(row["library"] == "VCVioInitSweepTestFixtures.Hazard" for row in rows), rows
 
 # Drop one constant: every other row still accepts its constant and that one is a
@@ -319,7 +338,7 @@ with open(sys.argv[1], encoding="utf-8") as stream:
     base = json.load(stream)
 # The Clean sweep accepts nothing, and the Hazard rows belong to a library it did not
 # sweep, so they survive untouched.
-assert len(base["accepted"]) == 8, base
+assert len(base["accepted"]) == 12, base
 assert all(row["library"] == "VCVioInitSweepTestFixtures.Hazard"
            for row in base["accepted"]), base
 PY
