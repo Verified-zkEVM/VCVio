@@ -270,6 +270,17 @@ baseline, since accepting it would widen the trusted computing base. The
 `VCVioAxiomSweepTestFixtures` library carries synthetic taint for the tool's own
 tests and is deliberately excluded from every aggregate.
 
+`python3 ./scripts/check-comment-fences.py` enforces one rule over every tracked Lean
+source, the lakefiles included: a block comment that begins its line, or that spans more
+than one line, must be the last thing on the line where it ends. A declaration written
+after the `-/` of the docstring that documents it parses, builds and runs, and a reader
+scanning the left margin does not see it. `lake lint -- --style-only` does not catch this,
+in the lakefile or anywhere else: the text-based linters it runs do not look past a
+comment, and `linter.style.whitespace` measures a command from the start of its doc
+comment, so a command hidden this way does start at the beginning of a line. Inline
+annotations inside a line of code are untouched. The baseline is zero with no exception
+list; `scripts/test-comment-fences.sh` carries the fixtures.
+
 After adding new `.lean` files: `./scripts/update-lib.sh` (CI's `scripts/check-imports.sh`
 fails when a regenerated umbrella would differ from the committed one).
 

@@ -60,6 +60,17 @@ jobs:
           bash scripts/test-complexity-backend-isolation.sh
           bash scripts/check-complexity-backend-isolation.sh
 
+      # A declaration written after the `-/` of the comment that documents it parses,
+      # builds and runs, and is invisible to a reader scanning the left margin. This is
+      # not covered by `lake lint -- --style-only`: the four text-based linters it runs do
+      # not look past a comment, and `linter.style.whitespace` measures a command from the
+      # start of its doc comment, so the command does start at the beginning of a line.
+      # Text only, so it belongs in this job rather than behind a build.
+      - name: Check comment fences
+        run: |
+          bash scripts/test-comment-fences.sh
+          python3 scripts/check-comment-fences.py
+
       # Regenerates every umbrella with scripts/update-lib.sh and fails if any of them changes.
       - name: Check generated umbrella modules
         run: |
