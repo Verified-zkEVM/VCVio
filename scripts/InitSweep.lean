@@ -15,8 +15,8 @@ a type.
 The predicate, in one sentence: *a constant is flagged when loading its module evaluates a
 value on its behalf — its own, because its compiled declaration takes no parameters, or an
 `initialize` body registered for it — and that value either names one of
-`enumerationEntryPoints` or names a constant whose type is an application of one of
-`enumerationClasses`.* A module's initialiser also evaluates declarations that are **not**
+`enumerationEntryPoints` or names a *builder* of an `enumerationClasses` member.* A module's
+initialiser also evaluates declarations that are **not**
 environment constants — specialisations the compiler lifts out of functions, and boxed
 numeric constants — which have no value to read; those are counted separately and tested by
 the only thing they carry, their mangled name.
@@ -75,9 +75,11 @@ own build; `scripts/test-initsweep.sh` carries the fixtures that falsify each on
   * **218** are in both: value-route constants the C really does assign from `_init_`;
   * **293** are predicted only, and every one of the 293 is emitted as a static literal
     instead — see `isCompiledValue`;
-  * **278** are emitted only, and every one of the 278 is an IR auxiliary
-    (`___closed__`, `___boxed__const__`, `___redArg`, `___lam`) rather than an environment
-    constant, so no sweep of the environment can name it.
+  * **278** are emitted only, and every one of the 278 is a `___boxed__const__N` symbol — a
+    boxed numeric constant, not an environment constant, and so unnameable by a sweep of the
+    environment. That population is not left at that: it is what the compiled-declaration
+    walk below covers, and 0 of the 496 assignments is a lifted closed term (`___closed__N`),
+    which is the measurement `isLiftedClosedTerm` rests on.
 
   218 + 293 = 511 and 218 + 278 = 496. For one module the correspondence was also checked
   name by name: for `VCVio.Prelude` the predicate names 9 constants and
