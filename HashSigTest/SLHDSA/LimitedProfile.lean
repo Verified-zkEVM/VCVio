@@ -69,10 +69,16 @@ declarations copied from `HashSigTest.SLHDSA.SufBound` and four restatements at 
 ## What the checks cannot catch
 
 * **Anything about a probability.**  See above.
-* **A paired edit of the `w − 2` coefficient.**  Inherited unchanged from
-  `HashSigTest.SLHDSA.Composition`, which measures it: the coefficient is derived nowhere, and an
-  edit that moves the library module and the fixtures together is silent everywhere.  What this
-  file adds is one more place the numeral appears, not a new refusal.
+* **A paired edit of the `w − 2` coefficient — though not the one the general fixture
+  records.**  At this profile the numeral is not a free choice:
+  `limitedParams_wotsFUd_coefficient` is `rfl` against the parameter set, so changing `2` in that
+  equation, in the two written-out corollaries,
+  or in all three at once is refused by the library module itself, with three, one and two errors
+  respectively.  What is silent is the *general* edit `HashSigTest.SLHDSA.Composition` measures:
+  change `Summands.bound`'s expression there, its fixture with it, and this module's equation to
+  match, and everything here is provable again with a different numeral.  So what this file adds
+  is a numeral that has to agree with the parameter set, and not a check on the shape of `w − 2`,
+  which the source citation in the general module is still the only thing that checks.
 * **Whether the twelve summands are the source's.**  A reading of the EasyCrypt development,
   recorded in `HashSig.SLHDSA.Security.Composition`'s docstring, and no fixture can check it.
 * **Whether this bundle is the one anyone executes.**  It is not:
