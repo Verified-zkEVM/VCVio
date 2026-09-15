@@ -500,9 +500,11 @@ Restating it here is what catches an edit that breaks the concrete case alone, e
 `HashSigTest.SLHDSA.Composition`'s, carried unchanged through `HashSigTest.SLHDSA.SufBound`, and
 importing either from a `lean_exe` root is not possible: each declares a top-level `main`, and a
 second declaration of that name reports `` `main` has already been declared`` — measured, not
-assumed.  The lane has no shared fixture module and adding one would edit merged, reviewed files
-from inside this pull request.  What is copied is the free-certificate stack and the two
-strong-unforgeability headlines above it: fifteen declarations, the two idle adversaries, the
+assumed.  The lane has no shared fixture module either, and adding one would mean editing the two
+fixtures below this one in the stack, both of which are open pull requests still under review —
+neither is on `main`, which carries five `HashSig/SLHDSA/Security/` modules and none of slice 8.
+What is copied is the free-certificate stack and the two strong-unforgeability headlines above it:
+fifteen declarations, the two idle adversaries, the
 open-preimage adversary that records nothing with its three advantage lemmas and its counting
 interface, the winning preimage adversary with its inverse, the certificate with the bound it
 names, and the two headlines.  What is **not** copied is `HashSigTest.SLHDSA.Composition`'s
