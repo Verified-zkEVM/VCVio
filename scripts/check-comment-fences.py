@@ -59,21 +59,23 @@ starts its own line. A comment that opens part-way into a line is untouched howe
 lines it spans: it is an annotation inside an expression, a field, a constructor or a tactic
 block, the code around it is on the line the reader is already reading, and it hides
 nothing. Reaching those would cost innocent code — a wrapped field docstring, a `/--`
-opening indented inside a `structure` or `class` body and closing on the line of the field
-it documents, is a common shape in this repository, and a rule that also keyed
-on "spans more than one line" would put every one of them one reflow away from failing CI,
-with a message telling the author to move a declaration off a left margin it was never on.
+opening indented inside a `structure` or `class` body, is a common shape in this repository,
+and a rule that also keyed on "spans more than one line" would put every one of them one
+reflow away from failing CI, with a message telling the author to move a declaration off a
+left margin it was never on.
 
 Two things written after the `-/` hide nothing and are skipped: further complete `/- … -/`
 comments, and a `--` comment running to the end of the line.
 
 Rejected by design, and not a declaration: Lean also lets a term, a structure field, a
 tactic or a list element begin at column 0, where the enclosing command's indentation has
-run out, and a comment written in front of one of those is rejected like a top-level one.
-Four such shapes are asserted in the fixture matrix (`Lib/ColumnZero.lean`), each of them
-Lean that elaborates with no error and no warning, so the boundary is written down rather
-than rediscovered. Nothing in the repository is written that way: the check's baseline is
-zero and it re-establishes that on every run.
+run out, and a comment written in front of one of those is rejected like a top-level one. A
+fifth shape is rejected for a different reason — a comment at column 0 whose line ends
+inside a second, still-open comment, which the rule reports rather than guessing about what
+the next line holds. All five are asserted in the fixture matrix (`Lib/ColumnZero.lean`),
+each of them Lean that elaborates with no error and no warning, so the boundary is written
+down rather than rediscovered. Nothing in the repository is written any of those ways: the
+check's baseline is zero and it re-establishes that on every run.
 
 Scope: every Lean source the repository tracks or would track — tracked files plus untracked
 ones that are not ignored — with the vendored `third_party/` tree excluded. `lakefile.lean`
@@ -294,6 +296,31 @@ def hidden_code(trailing: str) -> str:
     return "" if rest.startswith("--") else rest
 
 
+def quoted_code(text: str) -> str:
+    """`text` with a trailing `--` comment dropped, for the message only.
+
+    Whether to report is `hidden_code`'s decision and this does not touch it; this only
+    keeps a line comment the author wrote after the hidden code out of the quotation.
+    String and character literals are skipped so a `--` inside one is not read as a
+    comment, and a result that came out empty falls back to the whole text rather than
+    quoting nothing.
+    """
+    index = 0
+    while index < len(text):
+        if text.startswith("--", index):
+            return text[:index].strip() or text
+        if text[index] == '"':
+            index, _line, _line_start = skip_string(text, index, 1, 0)
+            continue
+        if text[index] == "'" and not is_identifier_tail(text, index - 1):
+            skipped = skip_character_literal(text, index)
+            if skipped is not None:
+                index = skipped
+                continue
+        index += 1
+    return text
+
+
 def violations(path: Path, source: str) -> list[str]:
     """Every place in `source` where a block comment at the left margin hides what follows
     it. A comment that opens part-way into a line is an annotation inside some larger piece
@@ -307,7 +334,7 @@ def violations(path: Path, source: str) -> list[str]:
             continue
         found.append(
             f"{path}:{close_line}: a block comment that starts its line is followed by "
-            f"{hidden!r} on the line where it ends"
+            f"{quoted_code(hidden)!r} on the line where it ends"
         )
     return found
 
@@ -372,8 +399,11 @@ def main(arguments: list[str]) -> int:
     if found:
         for message in found:
             print(f"ERROR: {message}", file=sys.stderr)
+        # "what follows", not "the declaration": the rule is positional, so what follows
+        # can also be a term, a field, a tactic, a list element or a second comment. The
+        # module docstring enumerates the five; `Lib/ColumnZero.lean` asserts them.
         print(f"Comment fences: {len(found)} block comment(s) hide what follows them. "
-              "Move the declaration to its own line; a reader scanning the left margin "
+              "Move what follows to its own line; a reader scanning the left margin "
               "cannot see it where it is.", file=sys.stderr)
         return 1
     print(f"Comment fences: OK ({len(paths)} Lean sources).")

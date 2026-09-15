@@ -152,6 +152,16 @@ expect_status 1 pushed "$CHECKER"
 grep -q "Lib/Pushed.lean:1: a block comment that starts its line" "$FIXTURE_REPO/pushed.log"
 rm Lib/Pushed.lean
 
+# The message quotes what follows the `-/`, and a line comment the author wrote after that
+# is left out of the quotation: it is not part of what was hidden. Only the quotation is
+# trimmed — the decision to report is unchanged.
+cat > Lib/Trailing.lean <<'LEAN'
+/-- Short. -/ def quoted : Nat := 1 -- a note the author wrote after it
+LEAN
+expect_status 1 trailing "$CHECKER"
+grep -q "followed by 'def quoted : Nat := 1' on the line" "$FIXTURE_REPO/trailing.log"
+rm Lib/Trailing.lean
+
 # --- line numbers survive the shapes that shift a naive scanner --------------------------
 
 # A gap escape is a backslash followed by a newline inside a string literal. Skipping the
@@ -188,10 +198,12 @@ rm Lib/RawDrift.lean
 # The test is where the comment opens, not what follows it, and Lean lets a term, a
 # structure field, a tactic and a list element begin at column 0 where the enclosing
 # command's indentation has run out. A comment in front of one of those is rejected like a
-# top-level one. All four elaborate with no error and no warning (measured), so these are
-# rejections of clean Lean, asserted here so the boundary is written down rather than
-# rediscovered — the absence of exactly this fixture is what let an earlier, wider version
-# of the rule reach seven such shapes unnoticed.
+# top-level one. The fifth shape is rejected for a different reason: the line ends inside a
+# second, still-open comment, and the rule reports rather than guessing about the next line.
+# All five elaborate with no error and no warning (measured), so these are rejections of
+# clean Lean, asserted here so the boundary is written down rather than rediscovered — the
+# absence of exactly this fixture is what let an earlier, wider version of the rule reach
+# seven such shapes unnoticed.
 cat > Lib/ColumnZero.lean <<'LEAN'
 def term : Nat :=
 /- the seed -/ 1
@@ -206,12 +218,17 @@ def element : List Nat :=
   [1,
 /- two -/ 2,
    3]
+
+/- a -/ /- b
+   more -/
+def after : Nat := 1
 LEAN
 expect_status 1 column-zero "$CHECKER"
 grep -q "Lib/ColumnZero.lean:2: .* followed by '1'" "$FIXTURE_REPO/column-zero.log"
 grep -q "Lib/ColumnZero.lean:5: .* followed by 'a : Nat'" "$FIXTURE_REPO/column-zero.log"
 grep -q "Lib/ColumnZero.lean:8: .* followed by 'trivial'" "$FIXTURE_REPO/column-zero.log"
 grep -q "Lib/ColumnZero.lean:12: .* followed by '2,'" "$FIXTURE_REPO/column-zero.log"
+grep -q "Lib/ColumnZero.lean:15: .* followed by '/- b'" "$FIXTURE_REPO/column-zero.log"
 rm Lib/ColumnZero.lean
 
 # --- the shapes the rule knowingly does not reach -----------------------------------------
