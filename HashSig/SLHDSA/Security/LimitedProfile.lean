@@ -177,8 +177,9 @@ theorem limitedPrimitives_eq :
 /-! ## The carrier instances
 
 Instance search does not unfold `limitedPrimitives`, so none of the nine below is found by
-`inferInstance`; each names the byte type its carrier is definitionally equal to.  Four carriers
-are `Bytes 16` and the address key is `Bytes 22`. -/
+`inferInstance`; each names the byte type its carrier is definitionally equal to — eight of them
+directly, and the `Fintype` one through the `Finite` instance on that type, for the reason its own
+comment gives.  Four carriers are `Bytes 16` and the address key is `Bytes 22`. -/
 
 /-- Signing samples the per-signature `addrnd` from the node type. -/
 instance : SampleableType limitedPrimitives.Y := inferInstanceAs (SampleableType (Bytes 16))
