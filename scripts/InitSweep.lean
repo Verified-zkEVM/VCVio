@@ -448,10 +448,21 @@ def isLiftedClosedTerm (n : Name) : Bool :=
   | _ => false
 
 /-- The functions a compiler-generated name was specialised from. The specialiser writes
-`<specialised>._at_.<caller>.spec_<n>`, nesting as it goes, so splitting on `._at_.` gives
-one segment per function in the chain and the head of each segment is the function itself. -/
-def specialisationSegments (n : Name) : Array Name :=
-  (n.toString.splitOn "._at_.").toArray.map (·.toName)
+`<specialised>._at_.<caller>.spec_<n>`, nesting as it goes, so cutting the name at its `_at_`
+components gives one segment per function in the chain, each with that function at its head.
+The cut is structural rather than textual: a name whose components include numerals or macro
+scopes (`_private.Foo.0.Bar`) does not survive a round trip through `toString`, and these
+names routinely do. -/
+def specialisationSegments (n : Name) : Array Name := Id.run do
+  let mut segments : Array Name := #[]
+  let mut current : Name := .anonymous
+  for c in n.components do
+    if c == `_at_ then
+      segments := segments.push current
+      current := .anonymous
+    else
+      current := current ++ c
+  return segments.push current
 
 /-- The evidence that a compiler-generated 0-arity declaration builds an enumeration: the
 `enumerationEntryPoints` its mangled name was specialised from, and any segment that is
