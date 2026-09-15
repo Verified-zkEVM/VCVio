@@ -671,13 +671,14 @@ undetectability and preimage roles have the same cap at *every* parameter set an
 too, so only their games' types separate them — which the pins read off the two certificate
 fields.  Everything about the corollaries' own shape — the nine carrier instances none of which
 instance search finds at this bundle, the five carriers they are stated at, both coefficients as
-numerals, the ten games' caps read at the concrete bundle, the eight attacked-member equations
+numerals, the ten games' caps read at the concrete bundle, the ten attacked-member statements
 that carry the table's nine arities, and each of the five exported corollaries — is pinned by
 elaboration, at least one `example` per exported declaration, in a file no library-side edit can
 reach.  So is their strength: the vacuity canary rebuilds the composition fixture's free
 certificate at this bundle and proves that at it both headlines bound the advantage by something
-at least one. -/ lean_exe slhdsa_limited_profile_tests where root :=
-`HashSigTest.SLHDSA.LimitedProfile
+at least one. -/
+lean_exe slhdsa_limited_profile_tests where
+  root := `HashSigTest.SLHDSA.LimitedProfile
 
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop

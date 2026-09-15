@@ -212,7 +212,9 @@ instance : DecidableEq limitedPrimitives.AdrsKey := inferInstanceAs (DecidableEq
 -- `Finset.univ` of `2 ^ 128` sixteen-byte vectors built at the start of every executable that
 -- imports this module, however little of it that executable uses: so written,
 -- `slhdsa_limited_profile_tests` reached 29.5 GB resident in 25 seconds without printing its
--- first check, and none of its checks reads a `Fintype`.
+-- first check, and none of its checks reads a `Fintype`.  That is one run, by this module's
+-- author, before the fix, and it has not been repeated since: running it is the one measurement
+-- this module's record deliberately does not refresh.
 --
 -- Marking that term `noncomputable` does not fix it, and this is the part to state exactly rather
 -- than assert.  Probed with `Lean.IR.findEnvDecl` over the constants this module adds, at this

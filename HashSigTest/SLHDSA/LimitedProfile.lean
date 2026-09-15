@@ -61,9 +61,9 @@ Fifty-three runtime checks in five groups — the profile's seven parameters and
 derive (19), the eight caps and the two structural counts at `d = 1` (10), four arithmetic
 relations between the caps (5), the two dark cells (7), and the summand table checked against
 `targetCount`, against the order and the names its own rows carry, and against the arities of the
-games those names denote (12).  Sixty `example`s in `Pins`: one for each of the thirty-four
+games those names denote (12).  Sixty-two `example`s in `Pins`: one for each of the thirty-four
 declarations the library module exports, the five carriers its instances are stated at, the ten
-games' caps at this bundle, the eight attacked-member equations that carry the nine arities, the
+games' caps at this bundle, the ten attacked-member statements that carry the nine arities, the
 general coincidence of the two WOTS+-`F` caps, and the two certificate fields whose types are all
 that separates them.  Then the
 vacuity canary — fifteen declarations copied from `HashSigTest.SLHDSA.SufBound` and four
@@ -251,14 +251,16 @@ the section docstring above.
 **These twelve are not independent, and the point of the ones that are implied is the order they
 stand in.**  A check implied by the *conjunction* of others still fires first on the edit it is
 named for and names the cell that moved, which a check implied by conjuncts that all precede it
-cannot do at all.  Both classes were measured rather than reasoned about, over the `2 ^ 12`
-role columns the role check admits with the names fixed:
+cannot do at all.  Both classes were measured rather than reasoned about, over the `2 ^ 12` ways
+of dropping roles from the table — 512 distinct role columns, each counted eight times because the
+three roleless rows have nothing to drop:
 
 * the order check, "the roleless three are the two PRF hops and the ITSR term" and the role check
   together imply "twelve summands", "names distinct", "three summands have no cap role", "all eight
-  roles are used" and "the two FORS-F rows are the DSPR and TCR summands" — 8 of the 4096 columns
-  satisfy the three, and none of them falsifies any of the five; drop the roleless-three conjunct
-  and 4088 of the 4096 falsify one, which is why the *three* conjuncts are named and not two;
+  roles are used" and "the two FORS-F rows are the DSPR and TCR summands" — 8 of the 4096 masks
+  satisfy the three, they are **one** column, and it falsifies none of the five; drop the
+  roleless-three conjunct and 4088 of the 4096 falsify one, which is why the *three* conjuncts are
+  named and not two;
 * each of those five nevertheless fires first on its own edit: a deleted row stops at "twelve
   summands", a duplicated name at "names distinct", a row that loses its role at "three summands
   have no cap role", the roleless set moved at "the roleless three are the two PRF hops and the
@@ -317,10 +319,10 @@ def checkSummandTable : IO Unit := do
 
 One `example` per exported declaration of `HashSig.SLHDSA.Security.LimitedProfile`, then the ten
 games' caps read at the concrete bundle and all nine of the table's arities read off the games'
-own attacked-member equations — eight equations for nine cells, the two standalone FORS-`F` games
-sharing the input type of the open-preimage game they are `.toDSPR` and `.toTCR` of.  A
-library-side edit cannot reach this file, so these are what refuses a change to the corollaries'
-shape. -/
+own input types — ten `example`s covering the nine rows and the open-preimage game the two
+standalone FORS-`F` ones are derived from, through eight `*_eval_adrsToKey` equations and the two
+`forsF*Problem_eq_to*` equations.  A library-side edit cannot reach this file, so these are what
+refuses a change to the corollaries' shape. -/
 
 section Pins
 
@@ -416,26 +418,33 @@ example : (xmssHTcrCProblem limitedPrimitives).numTargets = 2 ^ 22 - 1 := by
 
 /-! ### Every game's arity, read off its own attacked-member equation
 
-The table's arity column says "the arity of the hash the game attacks", and these eight equations
-are what tie it to the games rather than to a literal.  `HashSig.SLHDSA.Security.CanonicalGames`
-exports one per collection game and one for the standalone FORS-`F` family, and each is stated at
-the game's own input type, so an equation restated about another game at the wrong type is
-refused.
+The table's arity column says "the arity of the hash the game attacks", and the ten `example`s
+below are what tie it to the games rather than to a literal.  Each is stated at the game's own
+input type, so a statement made at another arity is refused.  Seven of the nine table rows use the
+`*_eval_adrsToKey` equation of their own game, of which
+`HashSig.SLHDSA.Security.CanonicalGames` exports one per collection game and one for the standalone
+FORS-`F` family; the other two rows, `forsFDspr` and `forsFTcr`, go through
+`forsFDsprProblem_eq_toDSPR` and `forsFTcrProblem_eq_toTCR` first, those two games being `.toDSPR`
+and `.toTCR` of `forsFOpenPreProblem`, whose input type is therefore theirs.  The tenth `example`
+is `forsFOpenPreProblem` itself, which is not a table row.
 
 The two `T_ℓ` games are the pair the cap cannot separate at `d = 1`: the FORS root compression
 takes a `Vector limitedPrimitives.Y 6` and the WOTS+ public-key compression a
 `Vector limitedPrimitives.Y 68`.  The five single-node games take one `limitedPrimitives.Y` and
-the two arity-two ones a pair of them.  `forsFDsprProblem` and `forsFTcrProblem` have no equation
-of their own because they are `.toDSPR` and `.toTCR` of `forsFOpenPreProblem`, whose input type is
-therefore theirs.
+the two arity-two ones a pair of them.
 
-**What these eight separate, measured, and what they do not.**  Restating the WOTS+-`F`
-undetectability equation about the arity-two FORS-`H` game gives three errors, and stating the
-FORS-`H` equation at the single-node type gives four.  What they do *not* separate is two games of
-the same arity over the same `Thash`: proving the FORS-`H` pin by `xmssHTcrCProblem_eval_adrsToKey`
-gives **nothing at all**, exactly as restating a `T_ℓ` cap pin about the other `T_ℓ` game does.  So
-the arity column is now read off the games rather than off literals, and the two `H` games are a
-third pair that only their caps tell apart — which `checkDarkCells` asserts. -/
+**What separates a pin is its statement and not the lemma that proves it, and the whole
+substitution matrix was measured.**  Each of the eight directly-proved statements was re-proved by
+each of the eight equations: sixty-four elaborations, of which forty-eight are refused and sixteen
+accepted.  The refusals are every cross-arity cell — the WOTS+-`F` undetectability statement
+re-made about the arity-two FORS-`H` game gives three errors, the FORS-`H` statement made at the
+single-node type gives four — and they include the standalone/collection boundary, one error each
+way between `forsFOpenPre` and any WOTS+-`F` collection game.  Of the sixteen accepted, eight are
+the diagonal; the other eight are the ordered pairs inside `{wotsFUd, wotsFTcr, wotsFPre}` and
+`{forsHTcr, xmssHTcr}`, which are four unordered pairs of games sharing an arity and a `Thash`.
+Three of those four are told apart by their caps, which `checkDarkCells` asserts for the `H` pair;
+the fourth, `wotsFUd`/`wotsFPre`, is this module's **second dark cell**, where the caps are equal
+at every parameter set and only the two `Certificate` field types separate them. -/
 
 example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs)
     (input : Vector limitedPrimitives.Y 6) :
@@ -456,6 +465,20 @@ example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs) (input : limitedPri
         (limitedPrimitives.adrsToKey address) input =
       limitedPrimitives.F pkSeed address input :=
   forsFOpenPreProblem_eval_adrsToKey limitedPrimitives pkSeed address input
+
+example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs) (input : limitedPrimitives.Y) :
+    (forsFDsprProblem limitedPrimitives).th.eval pkSeed
+        (limitedPrimitives.adrsToKey address) input =
+      limitedPrimitives.F pkSeed address input := by
+  rw [forsFDsprProblem_eq_toDSPR]
+  exact forsFOpenPreProblem_eval_adrsToKey limitedPrimitives pkSeed address input
+
+example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs) (input : limitedPrimitives.Y) :
+    (forsFTcrProblem limitedPrimitives).th.eval pkSeed
+        (limitedPrimitives.adrsToKey address) input =
+      limitedPrimitives.F pkSeed address input := by
+  rw [forsFTcrProblem_eq_toTCR]
+  exact forsFOpenPreProblem_eval_adrsToKey limitedPrimitives pkSeed address input
 
 example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs) (input : limitedPrimitives.Y) :
     (wotsFUdCProblem limitedPrimitives).th.eval pkSeed
