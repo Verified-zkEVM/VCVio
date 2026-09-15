@@ -221,6 +221,11 @@ hypothesis type is separately inhabited. A toy witness establishes logical consi
 label it accordingly and do not present it as evidence that the assumptions are
 cryptographically strong or achievable at real parameters.
 
+The conclusion can be vacuous too. `∃ reduction, bound ≤ advantage reduction` holds for every
+scheme, because adversary types carry no resource bound and `Classical.choice` can pick a
+witness. State such bounds for a named reduction; see
+[Name the reduction in the theorem statement](crypto.md#name-the-reduction-in-the-theorem-statement).
+
 ## Module Structure
 
 ### 15. `EvalDist/` must never import from `OracleComp/`
