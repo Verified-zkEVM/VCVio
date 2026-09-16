@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
+public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import Mathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.MeasureTheory.Measure.Comap
 import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
@@ -133,6 +134,11 @@ theorem dropNone_apply_univ_le (μ : Measure (Option α)) :
   intro value
   cases value <;> simp
 
+/-- Discarding the absent outcomes of a subprobability measure preserves its mass bound. -/
+instance dropNone.instIsSubprobabilityMeasure (μ : Measure (Option α))
+    [IsSubprobabilityMeasure μ] : IsSubprobabilityMeasure μ.dropNone :=
+  ⟨(dropNone_apply_univ_le μ).trans (measure_univ_le μ)⟩
+
 /-- Integrating against `dropNone μ` integrates against `μ` with the `none` outcome discarded. -/
 theorem lintegral_dropNone (μ : Measure (Option α)) {g : α → ENNReal} (hg : Measurable g) :
     ∫⁻ x, g x ∂dropNone μ = ∫⁻ o, o.elim 0 g ∂μ := by
@@ -156,9 +162,9 @@ theorem dropNone_apply_univ (μ : Measure (Option α)) :
 /-- Turn a subprobability measure into a measure on `Option α` by mapping successful outcomes
 through `some` and assigning all missing mass to `none`.
 
-The definition is meaningful for every measure. The expected probability-measure law requires
-the explicit subprobability hypothesis `μ univ ≤ 1`; keeping that hypothesis visible avoids a
-blanket bundled subprobability type at the primary semantics boundary. -/
+The definition is meaningful for every measure. Its probability-measure law requires the
+subprobability bound `μ univ ≤ 1`, supplied explicitly or inferred from
+`IsSubprobabilityMeasure μ`. -/
 noncomputable def withFailure (μ : Measure α) : Measure (Option α) :=
   Measure.map some μ + (1 - μ Set.univ) • Measure.dirac none
 
@@ -178,18 +184,23 @@ theorem withFailure_isProbabilityMeasure (μ : Measure α) (hμ : μ Set.univ �
   rw [isProbabilityMeasure_iff]
   exact withFailure_apply_univ μ hμ
 
+/-- Completing a subprobability measure with its missing mass is a probability measure. -/
+instance withFailure.instIsProbabilityMeasure (μ : Measure α) [IsSubprobabilityMeasure μ] :
+    IsProbabilityMeasure μ.withFailure :=
+  withFailure_isProbabilityMeasure μ (measure_univ_le μ)
+
 /-- The mass of the explicit failure outcome is exactly the missing mass. -/
-theorem withFailure_apply_none [DiscreteMeasurableSpace α] (μ : Measure α) :
+theorem withFailure_apply_none (μ : Measure α) :
     withFailure μ {none} = 1 - μ Set.univ := by
   rw [withFailure, Measure.add_apply,
-    Measure.map_apply Option.measurable_some (measurableSet_singleton none),
-    Measure.smul_apply, Measure.dirac_apply' none (measurableSet_singleton none)]
+    Measure.map_apply Option.measurable_some Option.measurableSet_none,
+    Measure.smul_apply, Measure.dirac_apply' none Option.measurableSet_none]
   rw [show some ⁻¹' ({none} : Set (Option α)) = ∅ by ext y; simp]
   rw [Set.indicator_of_mem (Set.mem_singleton none)]
   simp only [measure_empty, Pi.one_apply, smul_eq_mul, zero_add, mul_one]
 
 /-- Failure completion preserves the mass of every successful singleton. -/
-theorem withFailure_apply_some [DiscreteMeasurableSpace α] (μ : Measure α) (x : α) :
+theorem withFailure_apply_some [MeasurableSingletonClass α] (μ : Measure α) (x : α) :
     withFailure μ {some x} = μ {x} := by
   rw [withFailure, Measure.add_apply,
     Measure.map_apply Option.measurable_some (measurableSet_singleton (some x)),

@@ -81,8 +81,6 @@ lemma SPMF.boolBiasAdvantage_eq_boolDistAdvantage_coin_branch
     (coin >>= fun b =>
       (if b then p else q) >>= fun z => pure (b == z)).boolBiasAdvantage =
     p.boolDistAdvantage q := by
-  let (r : SPMF Bool) : IsFiniteMeasure r.toMeasure :=
-    ⟨(SPMF.toMeasure_apply_univ_le_one r).trans_lt ENNReal.one_lt_top⟩
   have hbranch (b : Bool) :
       (((if b then p else q) >>= fun z => pure (b == z)) : SPMF Bool).toMeasure =
         (if b then p.toMeasure else q.toMeasure).bind fun z => Measure.dirac (b == z) := by
@@ -135,9 +133,8 @@ lemma ProbComp.probOutput_true_le_add_ofReal_boolDistAdvantage (p q : ProbComp B
 
 /-- Re-express Boolean bias as twice the absolute deviation of `Pr[true]` from `1/2`. -/
 lemma ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half (p : ProbComp Bool) :
-    p.boolBiasAdvantage = 2 * |(𝒟[p] {true}).toReal - 1 / 2| := by
-  let : IsProbabilityMeasure 𝒟[p] := ⟨OracleComp.evalDist_apply_univ_eq_one p⟩
-  exact Measure.boolBias_eq_two_mul_abs_sub_half_of_isProbabilityMeasure 𝒟[p]
+    p.boolBiasAdvantage = 2 * |(𝒟[p] {true}).toReal - 1 / 2| :=
+  Measure.boolBias_eq_two_mul_abs_sub_half_of_isProbabilityMeasure 𝒟[p]
 
 /-- A hidden-bit guessing game over two Boolean branches has bias exactly equal to the
 distinguishing advantage between those two branches. -/

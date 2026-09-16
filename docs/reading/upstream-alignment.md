@@ -331,6 +331,12 @@ pushforward and bind instances use upstream `Measure.map_apply_of_aemeasurable`,
 `Measure.map_of_not_aemeasurable`, and `Measure.bind_apply_le`; their upper mass bounds need no
 measurability hypothesis. Exact losslessness of an arbitrary continuous composition remains a
 separate measurable-continuation obligation.
+The optional coproduct makes `{none}` measurable without constraining the result space. Native
+`Measure.dropNone` and `Measure.withFailure` publish their mass-property instances, while lossless
+`evalDistKernel` families inherit `IsMarkovKernel`, including reader/state wrappers. Boolean branch
+totality already implies finite mass, so the hidden-bit identity needs no additional finite-measure
+assumptions. The state observation simp rule runs before upstream `StateT.run'_eq` unfolds the
+computation, preserving the measure-level projection API.
 
 Finite-uniform expectations use upstream `lintegral_fintype`, `uniformOn_univ`, and
 `Measure.count_singleton`; `lintegral_uniformOn_univ` packages their finite average without a

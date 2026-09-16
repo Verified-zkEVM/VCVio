@@ -5,7 +5,8 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.EvalDist.Defs.Measure
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.Option
 
 /-! # Evaluation with an explicit failure result
 
@@ -32,22 +33,23 @@ noncomputable def evalDistWithFailure (program : m α) : Measure (Option α) :=
   (evalDist program).withFailure
 
 /-- The semantics' subprobability bound makes the result a probability measure. -/
+@[instance]
 theorem evalDistWithFailure_isProbabilityMeasure (program : m α) :
     IsProbabilityMeasure (evalDistWithFailure program) :=
-  Measure.withFailure_isProbabilityMeasure _ (evalDist_apply_univ_le_one program)
+  inferInstanceAs (IsProbabilityMeasure (𝒟[program]).withFailure)
 
 /-- Execution failure/nontermination is precisely the missing successful-output mass. -/
-theorem evalDistWithFailure_none [DiscreteMeasurableSpace α] (program : m α) :
+theorem evalDistWithFailure_none (program : m α) :
     evalDistWithFailure program {none} = 1 - evalDist program Set.univ :=
   Measure.withFailure_apply_none _
 
 /-- Explicit returned outcomes keep their original mass, including returned faults. -/
-theorem evalDistWithFailure_some [DiscreteMeasurableSpace α] (program : m α) (x : α) :
+theorem evalDistWithFailure_some [MeasurableSingletonClass α] (program : m α) (x : α) :
     evalDistWithFailure program {some x} = evalDist program {x} :=
   Measure.withFailure_apply_some _ x
 
 /-- When the computation has total mass one, `none` has probability zero. -/
-theorem evalDistWithFailure_none_of_total [DiscreteMeasurableSpace α] (program : m α)
+theorem evalDistWithFailure_none_of_total (program : m α)
     (total : evalDist program Set.univ = 1) :
     evalDistWithFailure program {none} = 0 := by
   rw [evalDistWithFailure_none, total, tsub_self]

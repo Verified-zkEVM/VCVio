@@ -165,8 +165,8 @@ The missing mass is first made explicit as `none`; the resulting probability mea
 Mathlib's `Measure.toPMF` bridge. -/
 noncomputable def toSPMF [Countable α] [DiscreteMeasurableSpace α]
     (μ : Measure α) (hμ : μ Set.univ ≤ 1) : SPMF α := by
-  let _ : IsProbabilityMeasure μ.withFailure := μ.withFailure_isProbabilityMeasure hμ
-  exact SPMF.mk μ.withFailure.toPMF
+  let : IsSubprobabilityMeasure μ := ⟨hμ⟩
+  exact .mk μ.withFailure.toPMF
 
 @[simp]
 theorem toSPMF_apply [Countable α] [DiscreteMeasurableSpace α]
@@ -178,7 +178,7 @@ theorem toSPMF_apply [Countable α] [DiscreteMeasurableSpace α]
 theorem toSPMF_apply_none [Countable α] [DiscreteMeasurableSpace α]
     (μ : Measure α) (hμ : μ Set.univ ≤ 1) :
     (μ.toSPMF hμ).run none = 1 - μ Set.univ := by
-  let _ : IsProbabilityMeasure μ.withFailure := μ.withFailure_isProbabilityMeasure hμ
+  let : IsSubprobabilityMeasure μ := ⟨hμ⟩
   change μ.withFailure.toPMF none = 1 - μ Set.univ
   rw [Measure.toPMF_apply, Measure.withFailure_apply_none]
 

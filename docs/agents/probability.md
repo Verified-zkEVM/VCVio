@@ -58,6 +58,11 @@ such as `ℝ`. A general continuous program still requires a continuation measur
 `FreeM.denote` over discrete answers, `FreeM.pathMeasure`, and `FreeM.queryCountMeasure` export
 probability instances; proofs should not install them locally. `OptionT.evalDist_failure`
 simplifies native optional failure to zero using only the base pure law.
+`Measure.dropNone` preserves the subprobability instance of an optional measure, and
+`Measure.withFailure` automatically completes any subprobability measure to a probability measure.
+The backend-free `evalDistWithFailure` wrapper exports the same probability-measure instance.
+The mass at `none` needs no discreteness hypothesis: the optional coproduct makes this singleton
+measurable for every result space. Successful singleton masses need only measurable singletons.
 `FreeM.evalDist_lift_bind_pure` handles a measurable pure function after a single operation
 without requiring discrete answer spaces; continuous final-event proofs can use this directly.
 `le_evalDist_bind_apply` transports an almost-everywhere lower bound through a lossless draw;
@@ -265,6 +270,11 @@ needed for composition and data-processing theorems.
 `prod`, and powers. It implies `IsFiniteKernel`, so Mathlib's s-finite composition API is
 available without restating a finiteness bound. A lossless family should additionally expose an
 `IsMarkovKernel` instance or theorem.
+`evalDistKernel`, its discrete-input specialization, and the reader/state wrappers infer
+`IsMarkovKernel` from probability-measure instances for their output family. The reader/state
+discrete wrappers also expose subprobability instances directly. `StateT.evalDist_run'` simplifies
+the successful-output denotation to its first marginal before the upstream `run'` computation rule
+unfolds; consumers do not need to supply the measurable-map equation.
 
 `ProbabilitySemantics` is the total/lossless semantics bundle used by transformer adapters.
 The lower-level `MeasureSemanticsVia` continues to describe potentially lossy surface semantics.

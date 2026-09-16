@@ -44,6 +44,14 @@ section compatible
 variable [MonadLiftT m SPMF] [EvalDistSemantics m] [DiscreteEvalDistCompatible m]
   [MeasurableSpace α]
 
+omit [EvalDistSemantics m] [DiscreteEvalDistCompatible m] [MeasurableSpace α] in
+/-- `probFailure_bind_eq_add_tsum` with the sum packaged as an `expectedValue`: the failure of
+a bind is the prefix failure plus the expected failure of the continuation. -/
+theorem probFailure_bind_eq_add_expectedValue [Monad m] [LawfulMonadLiftT m SPMF]
+    (mx : m α) (my : α → m β) :
+    Pr[⊥ | mx >>= my] = Pr[⊥ | mx] + expectedValue mx fun x => Pr[⊥ | my x] :=
+  probFailure_bind_eq_add_tsum mx my
+
 /-- Failure is the mass missing from the denoted measure. -/
 theorem probFailure_eq_one_sub_evalDist_univ (mx : m α) :
     Pr[⊥ | mx] = 1 - 𝒟[mx] Set.univ := by
@@ -72,8 +80,6 @@ theorem evalDist_failure [AlternativeMonad m] [MonadAttach m] [EvalDistCompatibl
     [HasEvalSet.LawfulFailure m] : 𝒟[(failure : m α)] = 0 := by
   rw [← Measure.measure_univ_eq_zero, evalDist_apply_univ, probFailure_failure, tsub_self]
 
-variable [DiscreteMeasurableSpace α]
-
 /-- The failure-completed denotation puts the failure probability at `none`. -/
 @[simp]
 theorem evalDist_withFailure_apply_none (mx : m α) :
@@ -81,24 +87,15 @@ theorem evalDist_withFailure_apply_none (mx : m α) :
   rw [Measure.withFailure_apply_none, evalDist_apply_univ,
     ENNReal.sub_sub_cancel ENNReal.one_ne_top probFailure_le_one]
 
+variable [DiscreteMeasurableSpace α]
+
 /-- The failure-completed denotation keeps every point probability at `some x`. -/
 @[simp]
 theorem evalDist_withFailure_apply_some (mx : m α) (x : α) :
     (𝒟[mx]).withFailure {some x} = Pr[= x | mx] := by
   rw [Measure.withFailure_apply_some, evalDist_apply_singleton]
 
-/-- The failure-completed denotation is a probability measure. -/
-instance (mx : m α) : IsProbabilityMeasure (𝒟[mx]).withFailure :=
-  Measure.withFailure_isProbabilityMeasure _ (evalDist_apply_univ_le_one mx)
-
 end compatible
-
-/-- `probFailure_bind_eq_add_tsum` with the sum packaged as an `expectedValue`: the failure of
-a bind is the prefix failure plus the expected failure of the continuation. -/
-theorem probFailure_bind_eq_add_expectedValue [Monad m] [MonadLiftT m SPMF]
-    [LawfulMonadLiftT m SPMF] (mx : m α) (my : α → m β) :
-    Pr[⊥ | mx >>= my] = Pr[⊥ | mx] + expectedValue mx fun x => Pr[⊥ | my x] :=
-  probFailure_bind_eq_add_tsum mx my
 
 namespace OptionT
 

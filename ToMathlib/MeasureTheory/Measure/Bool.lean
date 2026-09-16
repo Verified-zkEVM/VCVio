@@ -98,11 +98,12 @@ lemma apply_true_le_add_ofReal_boolDist (μ ν : Measure Bool)
   exact ENNReal.ofReal_le_ofReal (by linarith [le_abs_self (a - b)])
 /-- A fair hidden-bit guessing experiment has the event distance of its two total branches. -/
 lemma boolBias_bind_coin (coin μ ν : Measure Bool)
-    [IsFiniteMeasure μ] [IsFiniteMeasure ν]
     (hcT : coin {true} = 1 / 2) (hcF : coin {false} = 1 / 2)
     (hμ : μ {true} + μ {false} = 1) (hν : ν {true} + ν {false} = 1) :
     (coin.bind fun b => (if b then μ else ν).bind
       fun z => Measure.dirac (b == z)).boolBias = μ.boolDist ν := by
+  let : IsProbabilityMeasure μ := ⟨by rwa [← apply_true_add_apply_false]⟩
+  let : IsProbabilityMeasure ν := ⟨by rwa [← apply_true_add_apply_false]⟩
   have hgame : ∀ x : Bool, (coin.bind fun b => (if b then μ else ν).bind
         fun z => Measure.dirac (b == z)) {x} = (μ {x} + ν {!x}) / 2 := by
     intro x

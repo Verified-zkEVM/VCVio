@@ -57,6 +57,14 @@ theorem measurableEmbedding_some [MeasurableSpace α] : MeasurableEmbedding (@so
   measurable := measurable_some
   measurableSet_image' _ hs := measurableSet_some_image.mpr hs
 
+/-- The absent optional value is a measurable singleton in every optional measurable space. -/
+@[simp]
+theorem measurableSet_none [MeasurableSpace α] :
+    MeasurableSet ({none} : Set (Option α)) := by
+  rw [measurableSet_option_iff]
+  simp only [Set.preimage, Set.mem_singleton_iff, reduceCtorEq, Set.ofPred_false,
+    MeasurableSet.empty]
+
 /-- Optional values have measurable singletons whenever the underlying values do. -/
 instance instMeasurableSingletonClass [MeasurableSpace α] [MeasurableSingletonClass α] :
     MeasurableSingletonClass (Option α) where

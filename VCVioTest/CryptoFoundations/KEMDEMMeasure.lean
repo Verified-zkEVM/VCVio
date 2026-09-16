@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 public import VCVio.CryptoFoundations.KEMDEM.Measure
 public import VCVio.EvalDist.PFunctorMeasure.Core
+public import VCVio.EvalDist.WithFailure
 import Mathlib.Tactic.NormNum
 
 /-!
@@ -41,14 +42,14 @@ instance : coinSpec.Inhabited where
 noncomputable instance : coinSpec.IsMeasureSpec :=
   IsMeasureSpec.uniformOfFintypeInhabited _
 
+example (mx : FreeM coinSpec Bool) : IsProbabilityMeasure (evalDistWithFailure mx) := inferInstance
+
 example (prepare : FreeM coinSpec Unit) (encaps : Unit → FreeM coinSpec (Bool × Bool))
     (finish : Unit → Bool → Bool → Bool → FreeM coinSpec Bool) :
     (𝒟[KEMDEM.composedGame prepare encaps finish (FreeM.lift ())]).boolBias ≤
       (𝒟[KEMDEM.kemGame prepare encaps finish (FreeM.lift ()) (FreeM.lift ()) true]).boolBias +
       (𝒟[KEMDEM.kemGame prepare encaps finish (FreeM.lift ()) (FreeM.lift ()) false]).boolBias +
       (𝒟[KEMDEM.demGame prepare encaps finish (FreeM.lift ()) (FreeM.lift ())]).boolBias := by
-  let (mx : FreeM coinSpec Bool) : IsProbabilityMeasure 𝒟[mx] :=
-    FreeM.isProbabilityMeasure_denote mx
   have hcoin (b : Bool) : (uniformOn Set.univ : Measure Bool) {b} = 1 / 2 := by
     rw [uniformOn_univ]
     simp [Fintype.card_bool]
