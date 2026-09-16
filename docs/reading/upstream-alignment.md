@@ -319,6 +319,14 @@ module; PMF bridges remain in a separate interoperability module behind the orig
 façade. `OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn` exposes the uniform response equation
 under the public oracle API head for rewriting; the inherited equation already handles `simp`.
 
+Boolean selector partitions use upstream `Measure.fst_apply`, `measure_union`, and
+`Set.disjoint_prod`. The local `Measure.fst_apply_eq_add` packages those facts for a Boolean
+second coordinate; no new measure construction is needed. The SLH-DSA instrumented experiments
+are native measures, and their projection equations use the runtime's bundled measurable-map
+law. Exact event splits require neither an infinite sum nor a separate evaluator hypothesis.
+Lossless discrete-answer free programs expose an `IsProbabilityMeasure` instance under native
+`evalDist`, so upstream constant-integral and total-mass simp rules apply directly.
+
 **Gaps confirmed** (search that came back empty in `M:`): subprobability measures and kernels;
 `tvDist`/`totalVariation` for measures and PMFs (only `SignedMeasure.totalVariation`);
 `absDiff`; Rényi/Hellinger divergences (only Erdős–Rényi, Hellinger–Toeplitz); couplings (only

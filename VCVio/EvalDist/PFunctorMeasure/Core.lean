@@ -233,7 +233,20 @@ theorem evalDist_liftBind [MeasurableSpace α] (a : P.A) (cont : P.B a → FreeM
     𝒟[FreeM.liftBind a cont] = Measure.bind (IsMeasureSpec.toMeasure a) fun b => 𝒟[cont b] :=
   rfl
 
+/-- A measurable pure function after one operation pushes forward its answer measure.
+No discreteness assumption on the answer space is needed. -/
+theorem evalDist_lift_bind_pure [MeasurableSpace α] (a : P.A) (f : P.B a → α)
+    (hf : Measurable f) :
+    𝒟[(FreeM.lift a >>= fun b ↦ pure (f b) : FreeM P α)] =
+      (𝒟[(FreeM.lift a : FreeM P (P.B a))]).map f := by
+  rw [FreeM.lift_bind, evalDist_liftBind (P := P), evalDist_lift (P := P)]
+  simp only [evalDist_pure]
+  exact Measure.bind_dirac_eq_map _ hf
+
 variable [∀ a, DiscreteMeasurableSpace (P.B a)]
+
+instance [MeasurableSpace α] (program : FreeM P α) : IsProbabilityMeasure 𝒟[program] :=
+  isProbabilityMeasure_denote program
 
 /-- Over a discrete-answer interface, the direct measure semantics satisfies the Giry monad
 laws. -/

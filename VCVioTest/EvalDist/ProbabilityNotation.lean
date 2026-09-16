@@ -24,6 +24,15 @@ open scoped ENNReal
 
 namespace VCVioTest.ProbabilityNotation
 
+example (mx : ProbComp ℝ) : IsProbabilityMeasure 𝒟[mx] := inferInstance
+
+example (mx : OracleComp coinSpec ℝ) : IsProbabilityMeasure 𝒟[mx] := inferInstance
+
+example (mx : ProbComp ℝ) : ∫⁻ _, (1 : ENNReal) ∂𝒟[mx] = 1 := by simp
+
+example {α : Type} (mx : ProbComp α) (b : Bool) :
+    𝒟[(fun _ ↦ b) <$> mx] {b} = 1 := by simp
+
 example (mx : ProbComp Bool) :
     Pr{let b ← mx}[b] = 𝒟[mx] {true} := by
   rw [prEvent_eq_evalDist_of_discrete]
@@ -51,9 +60,8 @@ open VCVioTest.MeasureSemantics in
 example :
     Pr{let x ← (FreeM.lift PUnit.unit : FreeM gaussSpec ℝ)}[x > 0] =
       gaussianReal 0 1 {x | x > 0} := by
-  change (Measure.bind (gaussianReal 0 1)
-    (fun x : ℝ => Measure.dirac (x > 0))) {True} = _
-  rw [Measure.bind_dirac_eq_map _ (by fun_prop),
+  rw [FreeM.evalDist_lift_bind_pure (P := gaussSpec) _ _ (by fun_prop),
+    FreeM.evalDist_eq_denote (P := gaussSpec), denote_gauss_lift,
     Measure.map_apply (by fun_prop) (measurableSet_singleton True)]
   simp
 

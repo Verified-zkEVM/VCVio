@@ -18,7 +18,8 @@ per-message reading of it.  All evaluated at values.
 
 ## Nothing probabilistic is checkable here, and that is a property of the subject
 
-Every probability in the library module is `noncomputable`: `Pr[…]`, both instrumented experiments,
+Every probability in the library module is `noncomputable`: measure event masses, both
+instrumented experiments,
 all four halves, both splits.  So the fifteen statements it makes about a probability — the two
 generic union bounds, the two splits, the library's exact partition at the canonical runtime, the
 four-term bound, the four bounding each half by the advantage it splits, the four bounding each half
@@ -881,47 +882,46 @@ example : SignatureAlg ProbComp (List Byte) (PublicKeyCore toyPrimitives.core)
     (SecretKeyCore toyPrimitives.core) (GeneralScheme.SignatureCore toy toyPrimitives.core) :=
   generalAlg (vp := toy) toyPrimitives
 
-noncomputable example : SPMF (Bool × Bool) :=
+noncomputable example : MeasureTheory.Measure (Bool × Bool) :=
   instrumentedEufExp ProbCompRuntime.probComp adv sel
 
-noncomputable example : SPMF (Bool × Bool) :=
+noncomputable example : MeasureTheory.Measure (Bool × Bool) :=
   instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel
 
 example : unforgeableExp ProbCompRuntime.probComp adv =
-    Prod.fst <$> instrumentedEufExp ProbCompRuntime.probComp adv sel :=
+    (instrumentedEufExp ProbCompRuntime.probComp adv sel).fst :=
   instrumentedEufExp_fst ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv sel
+    adv sel
 
 example (b : Bool) : instrumentedEufExp ProbCompRuntime.probComp adv (fun _ _ _ _ => b) =
-    (fun x => (x, b)) <$> unforgeableExp ProbCompRuntime.probComp adv :=
+    (unforgeableExp ProbCompRuntime.probComp adv).map (fun x => (x, b)) :=
   instrumentedEufExp_const ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv b
+    adv b
 
 example : adv.advantage ProbCompRuntime.probComp ≤
-    Pr[fun x => x.1 = true ∧ x.2 = true | instrumentedEufExp ProbCompRuntime.probComp adv sel] +
-    Pr[fun x => x.1 = true ∧ x.2 = false | instrumentedEufExp ProbCompRuntime.probComp adv sel] :=
+    (instrumentedEufExp ProbCompRuntime.probComp adv sel) {x | x.1 = true ∧ x.2 = true} +
+    (instrumentedEufExp ProbCompRuntime.probComp adv sel) {x | x.1 = true ∧ x.2 = false} :=
   advantage_le_arms ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv sel
+    adv sel
 
-example : ProbCompRuntime.probComp.evalSPMF (sameMessageStrongUnforgeableGame sadv) =
-    Prod.fst <$> instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel :=
+example : ProbCompRuntime.probComp.evalDist (sameMessageStrongUnforgeableGame sadv) =
+    (instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel).fst :=
   instrumentedSameMessageExp_fst ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) sadv lsel
+    sadv lsel
 
 example (b : Bool) :
     instrumentedSameMessageExp ProbCompRuntime.probComp sadv (fun _ _ _ => b) =
-      (fun x => (x, b)) <$>
-        ProbCompRuntime.probComp.evalSPMF (sameMessageStrongUnforgeableGame sadv) :=
+      (ProbCompRuntime.probComp.evalDist (sameMessageStrongUnforgeableGame sadv)).map
+        (fun x => (x, b)) :=
   instrumentedSameMessageExp_const ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) sadv b
+    sadv b
 
 example : sadv.sameMessageAdvantage ProbCompRuntime.probComp ≤
-    Pr[fun x => x.1 = true ∧ x.2 = true |
-      instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel] +
-    Pr[fun x => x.1 = true ∧ x.2 = false |
-      instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel] :=
+    (instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel) {x | x.1 = true ∧ x.2 = true} +
+    (instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel)
+      {x | x.1 = true ∧ x.2 = false} :=
   sameMessageAdvantage_le_arms ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) sadv lsel
+    sadv lsel
 
 example : (generalAlg (vp := toy) toyPrimitives).PerfectlyComplete ProbCompRuntime.probComp :=
   generalAlg_perfectlyComplete
@@ -1127,22 +1127,22 @@ example : sameRandomizerHalf sadv ≤ sadv.sameMessageAdvantage ProbCompRuntime.
 example : freshRandomizerHalf sadv ≤ sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
   freshRandomizerHalf_le_sameMessageAdvantage sadv
 
-example : forsHalf adv ≤ Pr[fun x => x.2 = true |
-    instrumentedEufExp ProbCompRuntime.probComp adv (forsArm (vp := toy) toyPrimitives)] :=
+example : forsHalf adv ≤
+  (instrumentedEufExp ProbCompRuntime.probComp adv (forsArm (vp := toy) toyPrimitives))
+    {x | x.2 = true} :=
   forsHalf_le_branch adv
 
-example : hypertreeHalf adv ≤ Pr[fun x => x.2 = false |
-    instrumentedEufExp ProbCompRuntime.probComp adv (forsArm (vp := toy) toyPrimitives)] :=
+example : hypertreeHalf adv ≤
+  (instrumentedEufExp ProbCompRuntime.probComp adv (forsArm (vp := toy) toyPrimitives))
+    {x | x.2 = false} :=
   hypertreeHalf_le_branch adv
 
-example : sameRandomizerHalf sadv ≤ Pr[fun x => x.2 = true |
-    instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-      (randomizerLogged (vp := toy) (prims := toyPrimitives))] :=
+example : sameRandomizerHalf sadv ≤ (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
+      (randomizerLogged (vp := toy) (prims := toyPrimitives))) {x | x.2 = true} :=
   sameRandomizerHalf_le_branch sadv
 
-example : freshRandomizerHalf sadv ≤ Pr[fun x => x.2 = false |
-    instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-      (randomizerLogged (vp := toy) (prims := toyPrimitives))] :=
+example : freshRandomizerHalf sadv ≤ (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
+      (randomizerLogged (vp := toy) (prims := toyPrimitives))) {x | x.2 = false} :=
   freshRandomizerHalf_le_branch sadv
 
 end Pins

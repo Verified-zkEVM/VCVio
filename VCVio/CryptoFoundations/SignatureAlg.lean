@@ -10,6 +10,7 @@ public import PolyFun.Control.Monad.Hom
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.ProbCompLift
+public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.QueryTracking.LoggingOracle
 public import VCVio.OracleComp.SimSemantics.Append
@@ -153,14 +154,12 @@ completeness statement to per-key bounds. -/
 lemma le_probOutput_bind_of_forall_support {α β : Type} {a : β} {δ : ℝ≥0∞} (gen : ProbComp α)
     (f : α → ProbComp β) (h : ∀ x, x ∈ support gen → 1 - δ ≤ Pr[= a | f x]) :
     1 - δ ≤ Pr[= a | gen >>= f] := by
-  rw [probOutput_bind_eq_tsum]
-  calc 1 - δ = ∑' x, Pr[= x | gen] * (1 - δ) := by
-        rw [ENNReal.tsum_mul_right, tsum_probOutput_of_liftM_PMF, one_mul]
-    _ ≤ ∑' x, Pr[= x | gen] * Pr[= a | f x] := by
-        refine ENNReal.tsum_le_tsum fun x => ?_
-        by_cases hx : x ∈ support gen
-        · gcongr; exact h x hx
-        · simp [probOutput_eq_zero_of_not_mem_support hx]
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  rw [← evalDist_apply_singleton]
+  apply le_evalDist_bind_apply gen f .of_discrete (measurableSet_singleton a)
+  exact ae_of_forall_mem_support gen _ fun x hx ↦ by
+    simpa only [evalDist_apply_singleton] using h x hx
 
 end correctness
 
@@ -199,6 +198,12 @@ noncomputable def unforgeableExp {sigAlg : SignatureAlg (OracleComp spec) M PK S
     let verified ← sigAlg.verify pk msg σ
     return !log.wasQueried msg && verified
 
+instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) :
+    MeasureTheory.IsSubprobabilityMeasure (unforgeableExp runtime adv) := by
+  unfold unforgeableExp
+  infer_instance
+
 /-- The success probability of a CMA adversary in the unforgeability experiment. -/
 noncomputable def unforgeableAdv.advantage {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
@@ -227,6 +232,12 @@ noncomputable def unforgeableExpNoFresh {sigAlg : SignatureAlg (OracleComp spec)
       simulateQ impl (adv.main pk)
     let ((msg, σ), _) ← sim_adv.run
     sigAlg.verify pk msg σ
+
+instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) :
+    MeasureTheory.IsSubprobabilityMeasure (unforgeableExpNoFresh runtime adv) := by
+  unfold unforgeableExpNoFresh
+  infer_instance
 
 omit [DecidableEq M] [DecidableEq S] in
 /-- **Phase B (freshness-drop) bound.** The CMA advantage is bounded above by the success
@@ -362,6 +373,12 @@ noncomputable def strongUnforgeableExp
     (adv : strongUnforgeableAdv sigAlg) : MeasureTheory.Measure Bool :=
   runtime.evalDist (strongUnforgeableGame adv)
 
+instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) :
+    MeasureTheory.IsSubprobabilityMeasure (strongUnforgeableExp runtime adv) := by
+  unfold strongUnforgeableExp
+  infer_instance
+
 omit [DecidableEq M] [DecidableEq S] in
 /-- The SUF experiment exposes the runtime's measure semantics directly. -/
 lemma strongUnforgeableExp_apply_singleton
@@ -413,6 +430,12 @@ noncomputable def sameMessageStrongUnforgeableExp
     (runtime : ProbCompRuntime (OracleComp spec))
     (adv : strongUnforgeableAdv sigAlg) : MeasureTheory.Measure Bool :=
   runtime.evalDist (sameMessageStrongUnforgeableGame adv)
+
+instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) :
+    MeasureTheory.IsSubprobabilityMeasure (sameMessageStrongUnforgeableExp runtime adv) := by
+  unfold sameMessageStrongUnforgeableExp
+  infer_instance
 
 omit [DecidableEq M] [DecidableEq S] in
 /-- The same-message experiment exposes the runtime's measure semantics directly. -/

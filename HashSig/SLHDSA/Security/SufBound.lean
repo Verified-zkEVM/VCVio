@@ -23,11 +23,11 @@ VCVio's SUF-to-EUF partition and names what the crossing costs.
 `  sadv.sameMessageAdvantage ProbCompRuntime.probComp`
 
 and `strongAdvantage_le_sufBound` refines the residual into the two named halves of
-`HashSig.SLHDSA.Security.SchemeGames`, the fresh-randomizer one and the same-randomizer one.  That
-refinement is a `≤` because the halves' bodies are not exposed, and
-`sufBound_eq_bound_add_sameMessage_of_unfoldings` says what that costs: take the two defining
-equations that module proves and does not name as hypotheses, and the two right-hand sides are
-equal, so the refinement is the headline and not a weakening of it.
+`HashSig.SLHDSA.Security.SchemeGames`, the fresh-randomizer one and the same-randomizer one.
+The Boolean partition is exact:
+`sameMessageAdvantage_eq_freshRandomizerHalf_add_sameRandomizerHalf` identifies the two halves
+with the same-message advantage, and `sufBound_eq_bound_add_sameMessage` identifies the bound
+expression with the headline's right-hand side.
 
 ## This adds nothing to the previous module's inequality, and that is a theorem here
 
@@ -44,16 +44,15 @@ module contributes is the naming and the argument, not the inequality.
 
 Nor does splitting the residual recover anything.  `sameMessageAdvantage_eq_arms` proves that at
 *any* selector the same-message advantage is the **sum** of the instrumented experiment's two arms —
-an equality, where the module that owns the split proves only `≤`, since that direction is all a
-bound consumes — so `strongAdvantage_le_add_arms_iff` is the same equivalence again, for every
-selector.  No instrumentation of the residual makes the bound say more.
+an exact Boolean partition — so `strongAdvantage_le_add_arms_iff` is the same equivalence again,
+for every selector. No instrumentation of the residual makes the bound say more.
 
 So the vacuity of this statement is the vacuity of the previous one, neither more nor less.  That
 one is measured there and shipped as a canary: a closed `Certificate` is constructible at an
 arbitrary validated parameter set, an arbitrary bundle and an arbitrary adversary from an address
 key and a public seed, and the bound it names is at least one.  At that certificate this module's
-headline reads `sadv.advantage ≤ (something ≥ 1) + residual`, which `probOutput_le_one` gives with
-extra steps, and `HashSigTest.SLHDSA.SufBound` ships that reading too.
+headline reads `sadv.advantage ≤ (something ≥ 1) + residual`, which `MeasureTheory.measure_le_one`
+gives with extra steps, and `HashSigTest.SLHDSA.SufBound` ships that reading too.
 
 **What is not free is the residual itself.**  Every summand of `Summands.bound` is the advantage of
 an adversary a certificate supplies, chosen with nothing tying it to `sadv`; the residual is a
@@ -169,23 +168,6 @@ this module.  Two of the four have no refusal anywhere and are named rather than
   bounded above by the advantage they split and by their own branches, and by nothing else.
   `strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le` is the shape a bound on the fresh half
   would plug into; its hypothesis is not discharged anywhere.
-* **The named halves are not identified with the arms, and what is missing is written down.**
-  `sameMessageAdvantage_eq_arms` is an equality at an arbitrary selector, and at
-  `SchemeGames.randomizerLogged` its two arms are the two named halves *in the module that defines
-  them*.  That identification is not available here: the halves' bodies are not exposed, so a
-  consumer's `rfl` is refused and `unfold` fails outright.  The named refinement
-  `strongAdvantage_le_sufBound` therefore goes through the exported `≤` and is, as far as anything
-  proved here can tell, possibly strict.  What closes it is the halves' two defining equations —
-  not one, and not an `@[expose]`: the module that owns them already proves both by `rfl`, as two
-  unnamed `example`s, so naming them there is a pure addition to it.  Naming their *consequence*
-  there is not: that module's own same-message split is a `≤`, and the equality the consequence
-  needs is `sameMessageAdvantage_eq_arms` above, which would have to move down beside it.
-  `sameMessageAdvantage_eq_halves_of_unfoldings` and
-  `sufBound_eq_bound_add_sameMessage_of_unfoldings` take the two equations as hypotheses and draw
-  the consequence, so the gap is one named theorem wide — the two equations, or, with the arms
-  equality moved down beside them, the single joint equality they give — and that theorem belongs
-  one module down.  It is not added there in this pull request because that module is under review
-  as it stands.
 * **Nothing about `SameMessageBinding`.**  VCVio's own docstring says no `ε < 1` can hold for a
   hash-based scheme, and issue #629 item 2b records that the per-adversary partition is what a
   quantitative result must consume.  This module consumes the partition.
@@ -196,22 +178,22 @@ this module.  Two of the four have no refusal anywhere and are named rather than
 
 ## Labels
 
-Fifteen declarations, one definition and fourteen theorems.
+One definition packages the bound expression; theorems relate it to the experiment partition.
 
-*Experiment split* — a statement about the same-message experiment or about the partition.  Seven:
+*Experiment split* — a statement about the same-message experiment or about the partition:
 
-* `sameMessageAdvantage_eq_arms`, `sameMessageAdvantage_le_one`;
+* `sameMessageAdvantage_le_one`;
 * `strongAdvantage_le_add_sameMessage_iff`, `strongAdvantage_le_add_arms_iff`;
 * `freshRandomizerHalf_le_strongAdvantage`, `sameRandomizerHalf_le_strongAdvantage`;
 * `sameMessageAdvantage_eq_halves_of_unfoldings`.
 
-*Residual arithmetic* — a statement about the bound expression this module writes.  Eight:
+*Residual arithmetic* — a statement about the bound expression this module writes:
 
 * `Summands.sufBound`, `Summands.sufBound_eq`, `sufBound_eq_bound_of_residuals_zero`;
 * `strongAdvantage_le_bound_add_sameMessage`, `strongAdvantage_le_bound_add_arms`,
   `strongAdvantage_le_sufBound`,
   `strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le`;
-* `sufBound_eq_bound_add_sameMessage_of_unfoldings`.
+* `sufBound_eq_bound_add_sameMessage`, `sufBound_eq_bound_add_sameMessage_of_unfoldings`.
 
 None is `private` and none carries `@[expose]`; `Summands.sufBound_eq` is what a consumer that
 needs the expression's shape rewrites with, exactly as `Composition.Summands.bound_eq` is for the
@@ -228,7 +210,7 @@ public section
 
 namespace SLHDSA.Security
 
-open OracleComp OracleSpec ENNReal SignatureAlg TweakableHash Security.CanonicalGames
+open MeasureTheory OracleComp OracleSpec ENNReal SignatureAlg TweakableHash Security.CanonicalGames
 
 universe u
 
@@ -238,45 +220,6 @@ section Generic
 
 variable {ι : Type u} {spec : OracleSpec ι} {M PK SK S : Type}
 
-/-- **The same-message split is an equality.**  `SchemeGames.sameMessageAdvantage_le_arms` bounds
-the same-message advantage by the sum of the instrumented experiment's two arms; the two arms are
-disjoint and exhaust the success event, so the two are equal.
-
-Where the module that owns the split records that equality holds is its *dispatch* split,
-`SchemeGames.advantage_le_arms`, on the ground that `VCVio.EvalDist` offers `probEvent_or_le`,
-`probEvent_le_add_of_imp_or` and `probEvent_compl` and no disjoint-union equality; there it proves
-only the `≤` direction, and `SchemeGames.sameMessageAdvantage_le_arms` claims no equality either.
-The same `tsum` congruence over `Bool × Bool` at `probEvent_eq_tsum_ite` gives both, and this module
-takes it for the same-message one because this module's subject is what the residual costs: with
-only the `≤` direction a reader cannot tell whether instrumenting the residual weakens the bound,
-and with the equality `strongAdvantage_le_add_arms_iff` says it does not.  The dispatch one is left
-alone here, and the same argument would sharpen it.
-
-The hypothesis is the runtime's pure-return factoring law, the same one the projection equation
-takes; `ProbCompRuntime.probComp` satisfies it by `ProbCompRuntime.probComp_evalSPMF_bind_pure`.
-The fresh arm is written first, matching
-`SchemeGames.sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer` rather than
-`sameMessageAdvantage_le_arms`, whose two summands are in the other order; so this is that lemma's
-missing direction up to `add_comm` and not literally.
-
-*Experiment split.* -/
-theorem sameMessageAdvantage_eq_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec))
-    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
-      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
-    (adv : strongUnforgeableAdv sigAlg) (sel : QueryLog (M →ₒ S) → M → S → Bool) :
-    adv.sameMessageAdvantage runtime =
-      Pr[fun x => x.1 = true ∧ x.2 = false | instrumentedSameMessageExp runtime adv sel] +
-      Pr[fun x => x.1 = true ∧ x.2 = true | instrumentedSameMessageExp runtime adv sel] := by
-  rw [strongUnforgeableAdv.sameMessageAdvantage, sameMessageStrongUnforgeableExp_apply_singleton,
-    instrumentedSameMessageExp_fst runtime h_pull adv sel, ← probEvent_eq_eq_probOutput,
-    probEvent_map]
-  classical
-  simp only [probEvent_eq_tsum_ite, ← ENNReal.tsum_add]
-  refine tsum_congr fun x => ?_
-  obtain ⟨b, s⟩ := x
-  cases b <;> cases s <;> simp
-
 /-- The same-message advantage is a probability, so it is finite.  This is what makes the residual
 cancel in `strongAdvantage_le_add_sameMessage_iff`: in `ℝ≥0∞` a summand may be added to both sides
 of a `≤` and removed again only when it is not `⊤`.
@@ -284,9 +227,8 @@ of a `≤` and removed again only when it is not `⊤`.
 *Experiment split.* -/
 theorem sameMessageAdvantage_le_one {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) :
-    adv.sameMessageAdvantage runtime ≤ 1 := by
-  rw [strongUnforgeableAdv.sameMessageAdvantage, sameMessageStrongUnforgeableExp_apply_singleton]
-  exact probOutput_le_one
+    adv.sameMessageAdvantage runtime ≤ 1 :=
+  MeasureTheory.measure_le_one _ _
 
 end Generic
 
@@ -334,13 +276,13 @@ theorem strongAdvantage_le_add_arms_iff (sadv : strongUnforgeableAdv (generalAlg
     (ε : ℝ≥0∞) (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core) →
       List Byte → GeneralScheme.SignatureCore vp prims.core → Bool) :
     sadv.advantage ProbCompRuntime.probComp ≤ ε +
-        (Pr[fun x => x.1 = true ∧ x.2 = false |
-            instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel] +
-          Pr[fun x => x.1 = true ∧ x.2 = true |
-            instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel]) ↔
+        ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+          {x | x.1 = true ∧ x.2 = false} +
+          (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+            {x | x.1 = true ∧ x.2 = true}) ↔
       sadv.toUnforgeableAdv.advantage ProbCompRuntime.probComp ≤ ε := by
   rw [← sameMessageAdvantage_eq_arms ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) sadv sel]
+    sadv sel]
   exact strongAdvantage_le_add_sameMessage_iff sadv ε
 
 /-- The fresh-randomizer half is at most the strong advantage it is a piece of.  Together with
@@ -424,7 +366,7 @@ By `strongAdvantage_le_add_sameMessage_iff` this is `Composition.advantage_le_bo
 more: the residual on the right is the residual inside the left, and the two cancel.  So everything
 that theorem does not say, this one does not say either — in particular its antecedent is free, and
 `HashSigTest.SLHDSA.SufBound` exhibits the certificate at which this statement is
-`probOutput_le_one` with extra steps.
+`MeasureTheory.measure_le_one` with extra steps.
 
 What the statement *does* do is put the residual where a reader has to see it.  The previous
 module's headline is about an existential adversary and is silent about strong unforgeability; this
@@ -443,9 +385,7 @@ theorem strongAdvantage_le_bound_add_sameMessage
 is equal to the headline's, by `sameMessageAdvantage_eq_arms`, so this is the same statement;
 `strongAdvantage_le_add_arms_iff` is that reading as an equivalence.
 
-It is stated because the named refinement below cannot be obtained from it: the two named halves
-are this pair of arms at `SchemeGames.randomizerLogged`, but their defining equations are not
-exported, so this module can bound the halves and cannot identify them.
+The named refinement specializes this partition to `SchemeGames.randomizerLogged`.
 
 *Residual arithmetic.* -/
 theorem strongAdvantage_le_bound_add_arms {sadv : strongUnforgeableAdv (generalAlg prims)}
@@ -453,24 +393,18 @@ theorem strongAdvantage_le_bound_add_arms {sadv : strongUnforgeableAdv (generalA
     (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core) →
       List Byte → GeneralScheme.SignatureCore vp prims.core → Bool) :
     sadv.advantage ProbCompRuntime.probComp ≤ c.summands.bound vp.params +
-      (Pr[fun x => x.1 = true ∧ x.2 = false |
-          instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel] +
-        Pr[fun x => x.1 = true ∧ x.2 = true |
-          instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel]) :=
+      ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+        {x | x.1 = true ∧ x.2 = false} +
+        (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+          {x | x.1 = true ∧ x.2 = true}) :=
   (strongAdvantage_le_add_arms_iff sadv _ sel).mpr (advantage_le_bound c)
 
 /-- **The headline refined through the two named halves.**  The residual is replaced by the
 fresh-randomizer half plus the same-randomizer half of
 `HashSig.SLHDSA.Security.SchemeGames`, which is where the same-randomizer term acquires a name.
 
-This one is a `≤` and not an equivalence, and the direction that is missing is measured rather than
-assumed: the step it takes is
-`SchemeGames.sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer`, whose reverse is
-`sameMessageAdvantage_eq_arms` at `SchemeGames.randomizerLogged` — true, proved above at every
-selector, and not transportable to the named halves from here, because their bodies are not
-exposed.  So this statement is possibly strict and this module cannot tell; what would settle it,
-and nothing more, is the pair of hypotheses
-`sufBound_eq_bound_add_sameMessage_of_unfoldings` takes.
+The exact Boolean partition identifies the sum of these halves with the same-message advantage.
+Thus the bound expression equals the headline's right-hand side.
 
 Like the headline, it says nothing about the size of what it bounds by:
 `HashSigTest.SLHDSA.SufBound.freeCertificate_sufBound_headline` exhibits a certificate at which
@@ -481,10 +415,9 @@ theorem strongAdvantage_le_sufBound {sadv : strongUnforgeableAdv (generalAlg pri
     (c : Certificate prims sadv.toUnforgeableAdv) :
     sadv.advantage ProbCompRuntime.probComp ≤
       c.summands.sufBound vp.params (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) := by
-  rw [Summands.sufBound_eq]
-  refine le_trans (strongAdvantage_le_bound_add_sameMessage c) ?_
-  gcongr
-  exact sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer sadv
+  rw [Summands.sufBound_eq,
+    ← sameMessageAdvantage_eq_freshRandomizerHalf_add_sameRandomizerHalf sadv]
+  exact strongAdvantage_le_bound_add_sameMessage c
 
 /-- **What a bound on the fresh half would buy**, as one statement: with the fresh-randomizer half
 bounded by `εfresh`, the strong advantage is at most the twelve summands plus `εfresh` plus the
@@ -510,13 +443,10 @@ theorem strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le
 
 end Headline
 
-/-! ## How far the refinement is from exact
+/-! ## Exact randomizer partition
 
-`strongAdvantage_le_sufBound` reaches the two named halves through
-`SchemeGames.sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer`, a `≤`, so nothing above
-says whether it is strict.  The two statements here say exactly what is missing: the halves'
-defining equations, which the module that defines them proves by `rfl` and does not name.  Supply
-them and the refinement's right-hand side *is* the headline's, so the two statements are one. -/
+The named halves partition the same-message success event. The defining equations of the halves
+also support proofs phrased explicitly through their event masses. -/
 
 section Exactness
 
@@ -524,58 +454,40 @@ variable {vp : ValidatedParams} {prims : Primitives vp.params}
   [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableType prims.PkSeed]
   [SampleableType prims.Y] [DecidableEq prims.Y]
 
-/-- **The same-message advantage is the sum of the two named halves**, given their defining
-equations.  This is `sameMessageAdvantage_eq_arms` at `SchemeGames.randomizerLogged`, transported
-along the two hypotheses.
-
-Neither hypothesis is discharged here and neither can be: `freshRandomizerHalf` and
-`sameRandomizerHalf` are `noncomputable def`s in `HashSig.SLHDSA.Security.SchemeGames` whose bodies
-that module does not expose, so a consumer's `rfl` reports that the two sides are not definitionally
-equal and names the half as a definition it could not unfold.  Inside that module both are `rfl`,
-and it already proves both, as two unnamed `example`s beside its four half-bounds.  Naming them
-there is a pure addition to that module and would discharge these two hypotheses at every call
-site.  Naming this conclusion there instead, where it would need no hypotheses, is not a pure
-addition: that module's own same-message split is a `≤`, so the conclusion would carry
-`sameMessageAdvantage_eq_arms` down with it.  That is where this statement belongs; it is stated
-here because that module is under review as it stands.
-
-*Experiment split.* -/
+/-- Explicit defining equations of the two halves transport the Boolean partition to their sum. -/
 theorem sameMessageAdvantage_eq_halves_of_unfoldings
     (sadv : strongUnforgeableAdv (generalAlg prims))
     (hfresh : freshRandomizerHalf sadv =
-      Pr[ fun x => x.1 = true ∧ x.2 = false |
-        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (prims := prims))])
+      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
+          (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = false})
     (hsame : sameRandomizerHalf sadv =
-      Pr[ fun x => x.1 = true ∧ x.2 = true |
-        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (prims := prims))]) :
+      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
+          (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = true}) :
     sadv.sameMessageAdvantage ProbCompRuntime.probComp =
       freshRandomizerHalf sadv + sameRandomizerHalf sadv := by
   rw [hfresh, hsame]
   exact sameMessageAdvantage_eq_arms ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) sadv
+    sadv
     (randomizerLogged (prims := prims))
 
-/-- **The refinement is exact**, given the same two equations: at the two named halves the bound
-expression is the headline's right-hand side, so `strongAdvantage_le_sufBound` and
-`strongAdvantage_le_bound_add_sameMessage` are the same inequality and the first is not strict.
+/-- At the two randomizer halves, the bound expression equals the same-message bound. -/
+theorem sufBound_eq_bound_add_sameMessage (s : Summands) (p : Params)
+    (sadv : strongUnforgeableAdv (generalAlg prims)) :
+    s.sufBound p (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) =
+      s.bound p + sadv.sameMessageAdvantage ProbCompRuntime.probComp := by
+  rw [Summands.sufBound_eq,
+    sameMessageAdvantage_eq_freshRandomizerHalf_add_sameRandomizerHalf sadv]
 
-Without the two equations this module can only say `≤`, which is what
-`strongAdvantage_le_sufBound`'s docstring records.  With them the gap closes for any `s` and `p`,
-the certificate's included.
-
-*Residual arithmetic.* -/
+/-- Explicit defining equations of the two halves identify the residual bound expression with
+its same-message form. -/
 theorem sufBound_eq_bound_add_sameMessage_of_unfoldings (s : Summands) (p : Params)
     (sadv : strongUnforgeableAdv (generalAlg prims))
     (hfresh : freshRandomizerHalf sadv =
-      Pr[ fun x => x.1 = true ∧ x.2 = false |
-        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (prims := prims))])
+      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
+          (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = false})
     (hsame : sameRandomizerHalf sadv =
-      Pr[ fun x => x.1 = true ∧ x.2 = true |
-        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (prims := prims))]) :
+      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
+          (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = true}) :
     s.sufBound p (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) =
       s.bound p + sadv.sameMessageAdvantage ProbCompRuntime.probComp := by
   rw [Summands.sufBound_eq, sameMessageAdvantage_eq_halves_of_unfoldings sadv hfresh hsame]

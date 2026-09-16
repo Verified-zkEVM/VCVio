@@ -220,9 +220,9 @@ theorem slhdsaConcreteAlg_perfectlyComplete (prims : Primitives p)
     subst hpk; subst hsk
     exact slhVerifyInternal_slhSignInternal hd prims (emptyContextMessage msg)
       skSeed skPrf pkSeed addrnd
-  rw [ProbCompRuntime.probComp_evalDist, evalDist_apply_singleton]
-  exact probOutput_eq_one_of_support_subset_singleton
-    (NeverFail.probFailure_eq_zero (mx := mx)) huniq
+  rw [ProbCompRuntime.probComp_evalDist]
+  exact (MeasureTheory.ae_iff_prob_eq_one (p := fun y ↦ y = true)
+    Measurable.of_discrete).mp (ae_of_forall_mem_support mx _ huniq)
 
 /-! ### One shared lazy-random-oracle runtime -/
 

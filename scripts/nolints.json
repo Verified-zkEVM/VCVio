@@ -2003,7 +2003,6 @@
  ["usesRetiredProbability", "RoundByRound.KnowledgeExtractionFamily.experiment_advantage"],
  ["usesRetiredProbability", "RoundByRound.KnowledgeTransitionFamily.experiment_advantage"],
  ["usesRetiredProbability", "RoundByRound.KnowledgeTransitionFamily.isBounded_iff"],
- ["usesRetiredProbability", "SLHDSA.slhdsaConcreteAlg_perfectlyComplete"],
  ["usesRetiredProbability", "SPMF"],
  ["usesRetiredProbability", "SPMF.Coupling"],
  ["usesRetiredProbability", "SPMF.Coupling.prod"],

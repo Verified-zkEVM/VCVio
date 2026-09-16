@@ -37,6 +37,32 @@ measure-level proofs use Tonelli's theorem and preserve subprobability mass.
 The generic `evalDist_pair` law denotes independent sequential draws by Mathlib's product
 measure. `evalDist_bind_apply_univ` expresses bind success mass as a `lintegral`, while
 `evalDist_map_apply_univ` states map preserves that mass; both live in the measure core.
+For discrete-answer oracle specifications, native `𝒟[mx]` has an automatic
+`IsProbabilityMeasure` instance, including when the result space is continuous. Mathlib's
+constant-integral and total-mass simp rules therefore need no local instance. This does not
+assert losslessness for arbitrary continuous-answer programs with unmeasurable continuations.
+A named opaque experiment publishes its own measure-property instances once at its definition.
+Callers should infer those properties rather than recreate local witnesses. For an abstract
+intermediate type, a local `MeasurableSpace α := ⊤` chooses the discrete structure; Mathlib uses
+this idiom in `MeasureTheory.Function.Piecewise` and `MeasureTheory.Function.SimpleFunc`.
+Keep that choice inside structural APIs when callers do not need to observe intermediate values.
+Genuinely measure-indexed results retain their selected measurable spaces as explicit parameters.
+`FreeM.evalDist_lift_bind_pure` handles a measurable pure function after a single operation
+without requiring discrete answer spaces; continuous final-event proofs can use this directly.
+`le_evalDist_bind_apply` transports an almost-everywhere lower bound through a lossless draw;
+its monad is generic and its event need only be measurable.
+
+Runtime-valued signature experiments expose `IsSubprobabilityMeasure` instances, so
+`measure_le_one` and `measure_ne_top` apply directly. An instrumented experiment recording
+success and a Boolean selector uses `Measure.fst` for its success marginal.
+`Measure.fst_apply_eq_add` splits a marginal event into the two disjoint selector events.
+The SLH-DSA `advantage_eq_arms` and `sameMessageAdvantage_eq_arms` equations use that partition
+without caller-supplied evaluator laws; the runtime already bundles its measurable-map law.
+Their named FORS/hypertree and randomizer halves have exported defining equations and exact
+partition theorems, so consumers do not need unfolding hypotheses.
+`OracleComp.evalDist_map_const` handles a constant output map without a measurable space on
+the discarded result type. This lets default `simp` stay on native measure laws after monad
+normalization turns a constant return into a map.
 
 `VCVio.EvalDist.Monad.UniformTable` supplies cell resampling/extraction, permutation,
 and injective restriction laws with explicit uniform-measure hypotheses. Its native counting

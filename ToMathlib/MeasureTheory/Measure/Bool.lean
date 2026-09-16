@@ -7,6 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
+public import Mathlib.MeasureTheory.Measure.Prod
 import Mathlib.Tactic.Linarith
 
 /-!
@@ -38,6 +39,17 @@ lemma apply_true_add_apply_false (μ : Measure Bool) :
   congr 1
   ext value
   cases value <;> simp
+
+/-- A Boolean selector partitions each event of the first marginal into its two branches. -/
+lemma fst_apply_eq_add {α : Type*} [MeasurableSpace α] (μ : Measure (α × Bool))
+    {s : Set α} (hs : MeasurableSet s) :
+    μ.fst s = μ (s ×ˢ {true}) + μ (s ×ˢ {false}) := by
+  rw [Measure.fst_apply hs, ← measure_union
+    (Set.disjoint_prod.mpr (Or.inr (by simp))) (hs.prod (measurableSet_singleton false))]
+  congr 1
+  ext ⟨a, b⟩
+  cases b <;> simp
+
 /-- Boolean bias is twice the distance of the `true` mass from one half when the measure is
 total. -/
 lemma boolBias_eq_two_mul_abs_sub_half (μ : Measure Bool)

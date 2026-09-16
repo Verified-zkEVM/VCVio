@@ -804,7 +804,8 @@ twenty fields supplied, all four inequalities proved — at an **arbitrary** `Va
 arbitrary primitive bundle carrying the instances the structure asks for, and an arbitrary
 adversary, from an address key and a public seed and no security assumption whatever; and it
 proves that the bound that certificate names is at least one.  `advantage_le_bound` at it is
-`adv.advantage ≤ (something ≥ 1)`, which `probOutput_le_one` already gives.  It then builds a
+`adv.advantage ≤ (something ≥ 1)`, which `MeasureTheory.measure_le_one` already gives. It then
+builds a
 second certificate, whose three `ℝ≥0∞` fields are the experiment's own quantities and whose one
 further input is a `CountingInterface` at an adversary of advantage one — which is what tying
 those fields to the experiment would leave.
@@ -1062,7 +1063,7 @@ noncomputable def freeCertificate {adv : unforgeableAdv (generalAlg prims)}
   split := by simp
   forsBranch_le := by simp
   hypertreeBranch_le := by
-    calc adv.advantage ProbCompRuntime.probComp ≤ 1 := probOutput_le_one
+    calc adv.advantage ProbCompRuntime.probComp ≤ 1 := MeasureTheory.measure_le_one _ _
       _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
           (freePreAdv_advantage prims t).symm
       _ ≤ _ := le_add_right (le_add_right le_add_self)
@@ -1154,7 +1155,7 @@ theorem forsHalf_le_winningOpenPre {adv : unforgeableAdv (generalAlg prims)} (t 
       + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
       + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv := by
   calc forsHalf adv ≤ adv.advantage ProbCompRuntime.probComp := forsHalf_le_advantage adv
-    _ ≤ 1 := probOutput_le_one
+    _ ≤ 1 := MeasureTheory.measure_le_one _ _
     _ = SM_DT_OpenPRE_SourceFinalValidity.Advantage
           (winningOpenPre (forsFOpenPreProblem prims) t) :=
         (winningOpenPre_advantage _ t (by
@@ -1178,7 +1179,7 @@ theorem hypertreeHalf_le_freePre {adv : unforgeableAdv (generalAlg prims)} (t : 
         + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
         + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv := by
   calc hypertreeHalf adv ≤ adv.advantage ProbCompRuntime.probComp := hypertreeHalf_le_advantage adv
-    _ ≤ 1 := probOutput_le_one
+    _ ≤ 1 := MeasureTheory.measure_le_one _ _
     _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
         (freePreAdv_advantage prims t).symm
     _ ≤ _ := le_add_right (le_add_right le_add_self)
@@ -1300,7 +1301,7 @@ theorem dspr_advantage_le_one {ix PkS Tw Msg Nd : Type} [Fintype Msg] [Decidable
     {prob : SM_DT_DSPR_SourceFinalValidity.Problem ix PkS Tw Msg Nd}
     (a : SM_DT_DSPR_SourceFinalValidity.Adversary prob) :
     SM_DT_DSPR_SourceFinalValidity.Advantage a ≤ 1 :=
-  le_trans tsub_le_self probOutput_le_one
+  le_trans tsub_le_self (MeasureTheory.measure_le_one _ _)
 
 /-- **The counting interface exists at a winning adversary exactly when `DSPR + 3 · TCR` reaches
 one at its two reductions.**  Both directions: the forward one is VCVio's own inequality at an

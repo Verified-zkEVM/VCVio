@@ -120,7 +120,6 @@ theorem evalDist_query_uniform [∀ t, MeasurableSpace (spec.Range t)]
   exact OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform t
 
 /-- A program over discrete, lossless oracle responses has total output mass one. -/
-@[simp]
 theorem evalDist_apply_univ_eq_one [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [OracleSpec.IsMeasureSpec spec] {α : Type v} [MeasurableSpace α]
@@ -138,5 +137,16 @@ theorem evalDist_bind_const [∀ t, MeasurableSpace (spec.Range t)]
     𝒟[mx >>= fun _ => my] = 𝒟[my] := by
   let : MeasurableSpace α := ⊤
   rw [_root_.evalDist_bind_const, evalDist_apply_univ_eq_one, one_smul]
+
+/-- A constant output map on a lossless oracle program is a Dirac measure.
+No measurable-space instance on the discarded result type is needed. -/
+@[simp]
+theorem evalDist_map_const [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec] {α β : Type v} [MeasurableSpace β]
+    (mx : OracleComp spec α) (b : β) :
+    𝒟[(fun _ : α ↦ b) <$> mx] = Measure.dirac b := by
+  rw [map_eq_bind_pure_comp]
+  simp only [Function.comp_def, evalDist_bind_const, evalDist_pure]
 
 end OracleComp

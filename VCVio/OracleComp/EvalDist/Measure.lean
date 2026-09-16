@@ -56,8 +56,6 @@ theorem ae_of_forall_mem_support
     [MeasurableSpace α] [DiscreteMeasurableSpace α]
     (mx : OracleComp spec α) (p : α → Prop) (h : ∀ x ∈ support mx, p x) :
     ∀ᵐ x ∂𝒟[mx], p x := by
-  let : IsProbabilityMeasure 𝒟[mx] :=
-    ⟨OracleComp.evalDist_apply_univ_eq_one mx⟩
   rw [MeasureTheory.ae_iff_prob_eq_one Measurable.of_discrete]
   rw [← prEvent_eq_evalDist_of_discrete]
   change 𝒟[mx >>= (pure ∘ p)] {True} = 1
@@ -149,8 +147,6 @@ theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
     [MeasurableSpace α] [DiscreteMeasurableSpace α]
     (mx : OracleComp spec α) (p : α → Prop) :
     𝒟[mx] {x | p x} = 1 ↔ ∀ x ∈ support mx, p x := by
-  let : IsProbabilityMeasure 𝒟[mx] :=
-    ⟨OracleComp.evalDist_apply_univ_eq_one mx⟩
   rw [← MeasureTheory.ae_iff_prob_eq_one Measurable.of_discrete]
   constructor
   · intro hp x hx
