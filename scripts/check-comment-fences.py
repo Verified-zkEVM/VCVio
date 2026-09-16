@@ -116,10 +116,10 @@ fail CI in the ten built libraries and survive in the four places above:
   not this rule, which is about comments, and not the linter, which does not run there.
 
 All five are asserted accepted in the fixture matrix (`Lib/Uncovered.lean`), so a documented
-gap cannot move without the test saying so.  In `lakefile.lean` the rule closes the
-doc-comment sub-case and leaves the rest of the class open.  Widening to "nothing may ever
-follow `-/`" would cover the mid-line form and would also reject the wrapped field
-docstrings above, which hide nothing — and would still not reach the string form.
+gap cannot move without the test saying so.  In `lakefile.lean` the rule closes the doc-comment
+sub-case and leaves the rest of the class open.  Widening to "nothing may ever follow `-/`" would
+cover the mid-line form and would also reject the wrapped field docstrings above, which hide
+nothing — and would still not reach the string form.
 
 Usage:
     scripts/check-comment-fences.py            # every tracked/untracked Lean source
@@ -143,11 +143,10 @@ def block_comments(source: str) -> list[tuple[int, int, int, str]]:
 
     Line and column numbers are 1- and 0-based. Lean's block comments nest and ignore
     string syntax inside themselves, so only `/-` and `-/` are tracked once one is open;
-    outside them, literal string chunks, raw strings and character literals are skipped
-    so their contents cannot be read as delimiters. Recognized interpolated strings resume
-    code scanning inside each unescaped brace pair, including nested strings. A comment left
-    unterminated at end of file is reported as closing there, which is what Lean would
-    report too.
+    outside them, literal string chunks, raw strings and character literals are skipped so their
+    contents cannot be read as delimiters. Recognized interpolated strings resume code scanning
+    inside each unescaped brace pair, including nested strings. A comment left unterminated at end
+    of file is reported as closing there, which is what Lean would report too.
     """
     result: list[tuple[int, int, int, str]] = []
     index, size, line = 0, len(source), 1

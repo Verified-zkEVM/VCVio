@@ -204,7 +204,7 @@ theorem keygenInternal_fst (vp : ValidatedParams) (prims : Primitives vp.params)
 given, and the same top-layer root the published key carries.
 
 This is the second component of the returned pair, stated as its own equation rather than as the
-second projection of one pair equation, so either component can be rewritten on its own. Both name
+second projection of one pair equation, so either component can be rewritten on its own.  Both name
 the `bind` law and no more, key generation making no `H_msg` query.
 
 The `pkRoot` field is the *published* root, not a second computation of it: this equation and

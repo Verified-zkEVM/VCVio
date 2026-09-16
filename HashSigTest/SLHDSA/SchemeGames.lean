@@ -19,14 +19,14 @@ per-message reading of it.  All evaluated at values.
 ## Nothing probabilistic is checkable here, and that is a property of the subject
 
 Every probability in the library module is `noncomputable`: `Pr[…]`, both instrumented experiments,
-all four halves, both splits. So the fifteen statements it makes about a probability — the two
+all four halves, both splits.  So the fifteen statements it makes about a probability — the two
 generic union bounds, the two splits, the library's exact partition at the canonical runtime, the
 four-term bound, the four bounding each half by the advantage it splits, the four bounding each half
 by its own branch, and perfect completeness — have no runtime coverage at all and cannot be given
-any. They are pinned by elaboration, in `Pins`; their content is pinned by the two pairs of
+any.  They are pinned by elaboration, in `Pins`; their content is pinned by the two pairs of
 `example`s the library module carries beside the halves, by those eight half-bounding theorems,
 which the `example`s cannot replace, and by the two selector equations, which neither the `example`s
-nor the eight can reach. A reader of the lane's other fixtures will expect runtime coverage of the
+nor the eight can reach.  A reader of the lane's other fixtures will expect runtime coverage of the
 headline; there cannot be any, and every executable check below is therefore about the
 *deterministic* data the two splits are instrumented with.
 
@@ -142,7 +142,7 @@ signature; there is no log in its argument list.
 - **R2 and R5 × L3, for a reader that drops its first entry.**  L3's first pair, `(msgP, detSigP)`,
   recurs at its third entry, so dropping the head changes nothing there for either reader.  This is
   a property of L3's shape, and L1 is where both readers catch a head-drop instead.
-- **R2 × L2, for message-blindness.** L2's two messages carry different randomizers, so a
+- **R2 × L2, for message-blindness.**  L2's two messages carry different randomizers, so a
   message-blind reader is caught there as well — but the cell depends on that choice: at a log whose
   two messages carried one randomizer, a message-blind reader would be invisible here.
 - **R1 × `otherPk` with the honest secret key.**  Both the real selector and the `sk.pkSeed` mutant
@@ -154,25 +154,25 @@ signature; there is no log in its argument list.
 ## What is not checked, and cannot be
 
 The dispatch bit is not compared against any bound, and no half is evaluated: they are
-`noncomputable`. Whether the four names `forsHalf`, `hypertreeHalf`, `sameRandomizerHalf` and
+`noncomputable`.  Whether the four names `forsHalf`, `hypertreeHalf`, `sameRandomizerHalf` and
 `freshRandomizerHalf` are attached to the right branches is settled inside the library module, by
 four `example`s — two per split — that see the unexposed bodies, and not here: an importing module
-cannot state that equation at all. That each half is an event of the success bit *and* of the bit
+cannot state that equation at all.  That each half is an event of the success bit *and* of the bit
 its experiment recorded is settled there too, and by eight theorems rather than by those `example`s,
 for a reason this file cannot repair: an `example … := rfl` moves with the body it is `rfl` against,
 so a paired weakening of all four halves survives it, survives every check below, and survives this
-executable. That the recorded bit is the selector's own value rather than its negation or a constant
-is one level down again, and is `instrumentedEufExp_const` and its twin, which refuse both of those
-shapes and every other recorded bit that is not that constant at a constant selector. Two directions
-below those are refused by nothing in either module — which of a run's values the selector is
-applied to, and any combination of applications of the selector that agrees with it wherever the
-selector is constant — and the paragraphs that close the library module's own section beside the
-four halves record both rather than claiming them. What this file adds to those eight is the
-selector argument: the four `Pins` entries restating the branch bounds name `forsArm` and
+executable.  That the recorded bit is the selector's own value rather than its negation or a
+constant is one level down again, and is `instrumentedEufExp_const` and its twin, which refuse both
+of those shapes and every other recorded bit that is not that constant at a constant selector.  Two
+directions below those are refused by nothing in either module — which of a run's values the
+selector is applied to, and any combination of applications of the selector that agrees with it
+wherever the selector is constant — and the paragraphs that close the library module's own section
+beside the four halves record both rather than claiming them.  What this file adds to those eight is
+the selector argument: the four `Pins` entries restating the branch bounds name `forsArm` and
 `randomizerLogged`, so a library-side edit taking one split's two halves at another selector is
-refused by that split's two entries here, although it leaves the library module well-formed. Nothing
-here says that any honest value was recorded as a game target, that any execution produced any log
-below, or that either half is bounded by anything.
+refused by that split's two entries here, although it leaves the library module well-formed.
+Nothing here says that any honest value was recorded as a game target, that any execution produced
+any log below, or that either half is bounded by anything.
 
 ## The pins
 
@@ -272,14 +272,14 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteMix msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed and `@[reducible]`, for two different reasons. Exposed for code generation: the compiled
+-- Exposed and `@[reducible]`, for two different reasons.  Exposed for code generation: the compiled
 -- declarations below, starting with `instance : DecidableEq toyPrimitives.Y`, have to infer the
 -- same compilation type for this bundle as an importing module would, which needs its body.
 -- Reducible because its carrier types have to unfold to `Bytes 1` for instance resolution to reach
 -- them: `byteOf`'s `y[0]` needs `GetElem toyPrimitives.Y ℕ` and an index bound, and `checkBranches`
 -- and the value pins need `BEq` on the embedded transcripts and on `toyPrimitives.Y × HmsgITSRInput
 -- …`, `Decidable (… ∈ embeddedTargets)`, and `DecidableEq` on `HmsgITSRInput toyPrimitives.PkSeed
--- toyPrimitives.Y` and on `toyPrimitives.PkSeed`. Nothing outside this executable consumes it.
+-- toyPrimitives.Y` and on `toyPrimitives.PkSeed`.  Nothing outside this executable consumes it.
 /-- The toy bundle: one byte per node, a collapsing order- and address-sensitive `Thash`, and an
 `H_msg` that depends on all four of its arguments and reads its message through `byteMix`. -/
 @[expose, reducible] def toyPrimitives : Primitives toyParams where
@@ -614,7 +614,7 @@ def checkFixture : IO Unit := do
 
 `sigD` and `sigE` differ only in the FORS half — the whole hypertree signature is held fixed and
 their randomizers agree, so they split to one digest at one instance address — and they take
-opposite arms. That is what pins that the arm is decided by the FORS public-key comparison and by
+opposite arms.  That is what pins that the arm is decided by the FORS public-key comparison and by
 nothing else, and a pair claimed to differ only in the FORS half is shown to.
 
 `sigH` is the other direction.  It differs from the honest signature only in the hypertree half and

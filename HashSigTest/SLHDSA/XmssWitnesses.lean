@@ -585,15 +585,15 @@ returns `some` only where the two openings first differ under an equal parent, s
 implies the root match.
 
 `authForgery` keeps the honest WOTS+ signature on the forged message and perturbs the height-zero
-authentication-path entry instead. Its recovered leaf is the honest one, so the *WOTS+* branch is
+authentication-path entry instead.  Its recovered leaf is the honest one, so the *WOTS+* branch is
 taken although the climb misses the root — and the witness it returns is valid, its guard being the
-leaf test, which is `findWotsWitness_sound`'s own hypothesis. So a missed root does not decide the
+leaf test, which is `findWotsWitness_sound`'s own hypothesis.  So a missed root does not decide the
 outcome: the branch is chosen by the recovered leaf, and neither branch returns an invalid witness.
 Where `none` comes from is the mechanism above — `findCollisionAddressed` returns `some` only where
 the two openings first differ under an equal parent — so on the Merkle branch a missed root gives
-`none`, and on the WOTS+ branch `none` is what a pair of equal messages gives. Distinctness is doing
-work in the WOTS+ half — re-extract `authForgery` against `forgedMsg` itself and it returns `none`,
-with the same missed root and the same honest leaf.
+`none`, and on the WOTS+ branch `none` is what a pair of equal messages gives.  Distinctness is
+doing work in the WOTS+ half — re-extract `authForgery` against `forgedMsg` itself and it returns
+`none`, with the same missed root and the same honest leaf.
 
 This is the shape `findXmssWitness_sound`'s root hypothesis is *stated against*, though as the
 paragraph above shows the Merkle branch does not need it.  Both halves are a *weaker* gap than the

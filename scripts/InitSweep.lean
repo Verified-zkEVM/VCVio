@@ -351,8 +351,7 @@ field, and neither fact predicts what the initialiser does.
 The list is an occurrence test on the elaborated term, and on its own it is a test of how the hazard
 is *spelled*: `instance : Fintype bundle.Y := inferInstanceAs (Fintype (Bytes 16))` names
 `Finset.univ` and `Fintype.piFinset` only because `inferInstanceAs` forces an auxiliary that unfolds
-the instance. `enumerationClasses` is what makes the clause a class
-test. -/
+the instance. `enumerationClasses` is what makes the clause a class test. -/
 def enumerationEntryPoints : List Name :=
   [`Finset.univ, `Fintype.elems, `Fintype.card, `Fintype.piFinset, `Fintype.ofFinite,
     `Fintype.ofEquiv, `Set.toFinset, `FinEnum.toList, `FinEnum.card, `FinEnum.equiv]
@@ -530,8 +529,7 @@ macro-scoped compiled declarations here are lifted closed terms and therefore ex
 concatenation is `Name.appendCore` rather than `++`: `Name.append` is macro-scope-aware, so on a
 name carrying `_hyg` it drops the hygiene marker and panics through `extractMacroScopes` while the
 tool still exits `0` (constructed and reproduced). These are compiler-generated names being taken
-apart, not
-hygienic names being re-scoped. -/
+apart, not hygienic names being re-scoped. -/
 def specialisationSegments (n : Name) : Array Name := Id.run do
   let mut segments : Array Name := #[]
   let mut current : Name := .anonymous
