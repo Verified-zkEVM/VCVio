@@ -23,6 +23,12 @@ Default fast checks (shared with per-PR CI):
   - ./scripts/check-imports.sh (generated umbrella modules are current)
   - the boundary checks: PolyFun, broad expose, complexity backend,
     Extern and Interop isolation
+  - the comment-fence rule over every Lean source the repository tracks or would
+    track, `third_party/` excluded and both lakefiles included
+
+  - the eager-initialisation ratchet (needs the oleans the build above produced)
+  - with --test, the same ratchet over the two test libraries that have umbrella
+    modules, once lake test has built them
   - lake lint -- --style-only on every library and test module
   - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
 
@@ -90,6 +96,13 @@ bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh
 bash scripts/check-interop-isolation.sh
+bash scripts/test-comment-fences.sh
+python3 ./scripts/check-comment-fences.py
+
+echo ""
+echo "# Checking eagerly-initialised constants"
+./scripts/test-initsweep.sh
+lake exe initsweep --check
 
 echo ""
 echo "# Running the text-based style linters"
@@ -122,6 +135,15 @@ if (( run_test )); then
     --exclude-substring 'VCVio retiring probability API' \
     --exclude-substring 'VCVio retiring support API' \
     --label 'test-library warnings'
+
+
+  # The eager-initialisation ratchet over the test libraries that can be swept: it needs
+  # the oleans `lake test` has just built, which is why it is here and not in the default
+  # pass. `HashSigTest` has no umbrella module and thirteen `main`s, so it is not covered;
+  # `scripts/InitSweep.lean` records exactly what that leaves open.
+  echo ""
+  echo "# Checking eagerly-initialised constants in the test libraries"
+  lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
 fi
 
 if (( run_axioms )); then
