@@ -172,8 +172,8 @@ undischarged or program-level step in the source proof:
   inside the two PRF hops rather than beside them;
 - structural adversary query bounds. Slice 8 adds one that the plan did not foresee: the
   `MCO_ITSR` summand carries no target cap at all, because `KeyedHash.ITSRProblem` has two fields
-  and neither bounds the transcript, so the Lean advantage is a supremum over adversaries with
-  unbounded target transcripts where the source's term is bounded through its reduction;
+  and neither bounds the transcript, so the Lean advantage is the supplied adversary's success
+  probability with no transcript bound, where the source's term is bounded through its reduction;
 - the same-randomizer half of the strong-unforgeability residual, which has no counterpart in the
   source at all and no bound anywhere in this repository.
 
