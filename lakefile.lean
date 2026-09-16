@@ -415,7 +415,8 @@ script test (args) do
     #["exe", "slhdsa_suf_residual_tests"],
     #["exe", "slhdsa_scheme_game_tests"],
     #["exe", "slhdsa_composition_tests"],
-    #["exe", "slhdsa_suf_bound_tests"]]
+    #["exe", "slhdsa_suf_bound_tests"],
+    #["exe", "slhdsa_limited_profile_tests"]]
   if args.contains "--ffi" then
     steps := steps ++ #[#["exe", "mlkem_test"], #["exe", "mldsa_test"], #["exe", "falcon_test"]]
   for cmdArgs in steps do
@@ -651,6 +652,33 @@ vacuity canary rebuilds the composition fixture's free certificate and proves th
 strong-unforgeability headline bounds the advantage by something at least one. -/
 lean_exe slhdsa_suf_bound_tests where
   root := `HashSigTest.SLHDSA.SufBound
+
+/-- The bound at the SP 800-230 reduced profile: nothing about the corollaries is runnable,
+because each instantiates a statement about a probability and every probability in them is
+`noncomputable`, so what runs is the `Params`-level arithmetic they are stated at — the profile's
+seven parameters and the width, chain count, digest and signature sizes they derive; the
+undetectability coefficient the profile turns from `w - 2` into the numeral two, asserted beside
+the fourteen every FIPS 205 set gives instead; the eight target caps as numerals, together with
+the two structural counts at `d = 1` and four arithmetic relations between the caps that a
+mis-transcribed formula breaks; and a twelve-row summand table carrying, per summand of the source
+expression, its game's cap role, that cap at this profile, and the arity of the hash the game
+attacks — no column of which is only written down, the twelve names being checked in the source's
+order, the caps against `targetCount`, each role against the name its own row carries, and all
+nine arities against literals.  Two cells of that table go dark at this profile and both are
+asserted rather than hidden: the two `T_l` compressions have the same cap at every one-layer
+parameter set and are separated only by their arity, six against sixty-eight, and the WOTS+-`F`
+undetectability and preimage roles have the same cap at *every* parameter set and the same arity
+too, so only their games' types separate them — which the pins read off the two certificate
+fields.  Everything about the corollaries' own shape — the nine carrier instances none of which
+instance search finds at this bundle, the five carriers they are stated at, both coefficients as
+numerals, the ten games' caps read at the concrete bundle, the ten attacked-member statements
+that carry the table's nine arities, and each of the five exported corollaries — is pinned by
+elaboration, at least one `example` per exported declaration, in a file no library-side edit can
+reach.  So is their strength: the vacuity canary rebuilds the composition fixture's free
+certificate at this bundle and proves that at it both headlines bound the advantage by something
+at least one. -/
+lean_exe slhdsa_limited_profile_tests where
+  root := `HashSigTest.SLHDSA.LimitedProfile
 
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
