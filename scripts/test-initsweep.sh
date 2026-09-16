@@ -57,6 +57,37 @@ cat >"$STALE_BASELINE" <<'JSON'
 JSON
 
 lake build VCVioInitSweepTestFixtures
+# A normal import must execute the initializer, establishing that the marker is a
+# valid positive control. The sweep must then leave it absent while reading the body.
+python3 - "$FIXTURE_TMP" <<'PY_STATIC_IMPORT'
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+tmp = Path(sys.argv[1])
+marker = tmp / "initializer-marker"
+control = tmp / "Control.lean"
+control.write_text("import VCVioInitSweepTestFixtures.StaticImport\n"
+                   "#eval VCVioInitSweepTestFixtures.StaticImport.executed\n",
+                   encoding="utf-8")
+env = os.environ.copy()
+env["VCVIO_INIT_SWEEP_SIDE_EFFECT_PATH"] = str(marker)
+subprocess.run(["lake", "env", "lean", str(control)], env=env, check=True)
+assert marker.read_text(encoding="utf-8") == "initializer executed"
+marker.unlink()
+report = tmp / "static-import.json"
+subprocess.run(["lake", "exe", "initsweep", "--root",
+                "VCVioInitSweepTestFixtures.StaticImport", "--out", str(report)],
+               env=env, check=True)
+assert not marker.exists(), "sweep executed an imported initializer"
+data = json.loads(report.read_text(encoding="utf-8"))
+entry = next(row for row in data["loadTime"] if row["name"] ==
+             "VCVioInitSweepTestFixtures.StaticImport.executed")
+assert entry["via"] == "initialize", entry
+assert entry["source"] != entry["name"], entry
+PY_STATIC_IMPORT
 lake exe initsweep --root VCVioInitSweepTestFixtures.Clean --out "$CLEAN_REPORT"
 lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard --out "$HAZARD_REPORT"
 lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard --out "$HAZARD_REPORT_2"

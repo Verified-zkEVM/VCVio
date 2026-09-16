@@ -278,13 +278,14 @@ rest about reach.
   `HashSigTest.lean` umbrella (and its `main`-free equivalent) or a `census` that separates
   the import root from the attribution prefix, plus the thirteen invocations to cover the
   thirteen roots.
-* It is a static check on the environment: it loads oleans and never executes a swept
-  module's initialisation function. `.lake/build/bin/initsweep.rsp` links one project object
-  (`InitSweep.c.o.export`) plus the FFI stubs and the Lean runtime — no swept-library native
-  code — and no library in `lakefile.lean` sets `precompileModules`, so `importModules`
-  reads the environment without running any of it. The gate therefore cannot be made to
-  exhaust itself by the hazard it detects. The fixtures are tiny because the gate is a shape
-  check and a large carrier would only cost build time — not because the sweep would run it.
+* It is a static check on the environment: it imports with `loadExts := false` and
+  does not enable initializer execution. Lean can execute an imported initializer through
+  its interpreter even when no swept-library native code is linked, so linking only the
+  tool is insufficient. The gate reads serialized constant and compiler-extension data
+  without loading environment extensions. The side-effect fixture first proves its
+  initializer executes in a normal Lean import, then verifies that the sweep leaves its
+  marker absent. Enumeration fixtures independently check that this import mode still
+  exposes registered initializer bodies and compiler-generated declarations.
 
 Exit codes are a contract with CI — `1` is a ratchet verdict, anything else an
 infrastructure failure — which is why `main` traps uncaught exceptions into `2`. The
@@ -853,10 +854,9 @@ unsafe def run (args : List String) : IO UInt32 := do
     return 2
   let roots := if cfg.roots.isEmpty then defaultRoots else cfg.roots
   initSearchPath (← findSysroot)
-  enableInitializersExecution
   let env ← try
       importModules (roots.map ({ module := · })) {} (trustLevel := 1024)
-        (loadExts := true)
+        (loadExts := false)
     catch e =>
       IO.eprintln s!"initsweep: cannot import root modules {roots}: {e.toString}"
       IO.eprintln "initsweep: roots are module names built by `lake build`, not library \
