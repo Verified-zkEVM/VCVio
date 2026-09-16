@@ -29,9 +29,9 @@ witness families need* below, which nothing here consumes.
 * **It discharges the instance obligations.**  `Certificate` asks for nine carrier instances, and
   at this bundle none of them is found by instance search.  Eight of the nine are stated with
   `inferInstanceAs` at the byte type the carrier is definitionally equal to; the ninth goes
-  through `Fintype.ofFinite`, for the reason the comment above it gives.  Measured, the nine
-  written with plain `inferInstance` instead give nine instance-synthesis failures, one per
-  declaration, over the five distinct carriers `Y`, `PkSeed`, `SkSeed`, `SkPrf` and `AdrsKey`.
+  through `Fintype.ofFinite`, for the reason the comment above it gives.  Instance search does not
+  unfold `limitedPrimitives`, so plain `inferInstance` finds none of the nine, over the five
+  distinct carriers `Y`, `PkSeed`, `SkSeed`, `SkPrf` and `AdrsKey`.
 * **It turns the one `Params`-level coefficient into a numeral.**  `Summands.bound` carries
   `(p.w - 2 : ℕ)` on the WOTS+-`F` undetectability summand; here `lgw = 2`, so `w = 4` and the
   coefficient is `2`.  `limitedAdvantage_le_summands` is the bound with that numeral and with the
@@ -63,15 +63,15 @@ the fixture builds first.
 ## Which bundle, and the other one
 
 `limitedPrimitives` is `Concrete.sha2Primitives` at this profile: the parameterised FIPS SHA-2
-family, which is the bundle slice 2's `limitedEncodedTargetLedgerConditions` and slice 1's ledgers
-are stated at.
+family, which is the bundle `limitedEncodedTargetLedgerConditions` and the reachable-target
+ledgers of `HashSig.SLHDSA.Security.ReachableTargets` are stated at.
 
 It is **not** `Concrete.shaPrimitives`, the hand-written SLH-DSA-SHA2-128-24 bundle of
 `HashSig.SLHDSA.Concrete.Instance` that `HashSigTest.SLHDSA.Sha2KAT` executes and
 `Concrete.shaWireCodec` encodes against.  The two are different terms — `adrsToKey` is
 `shaAdrsKey` in one and `sha2AdrsKey` in the other, and `Thash` is `shaThash` against
-`sha2Thash` — and nothing in this repository relates them.  Measured over every `.lean` file with
-comments stripped: no declaration names both.  The one file whose code names each of them is
+`sha2Thash` — and nothing in this repository relates them.  No declaration names both, over
+every `.lean` file with comments stripped.  The one file whose code names each of them is
 `HashSig.SLHDSA.Concrete.Codec`, which gives the two bundles a wire codec apiece and states no
 equation between them, and `shaPrimitives = sha2Primitives slhdsaSha2_128_24` is not closed by
 `rfl`.  So no statement here transfers to the bundle the known-answer test runs, and none should
@@ -119,7 +119,7 @@ Thirty-four declarations, of which nine are instances.
 * `limitedStrongAdvantage_le_bound_add_sameMessage`, `limitedStrongAdvantage_le_sufBound`.
 
 None is `private`.  Two carry `@[expose]`, `limitedVp` and `limitedPrimitives`, and the comment
-above each records the errors its removal alone produces.
+above each says what the attribute is required for.
 
 ## References
 
@@ -139,25 +139,21 @@ open OracleComp OracleSpec ENNReal SignatureAlg TweakableHash Security.Canonical
 
 /-- The SP 800-230 reduced parameter set, validated.  This is
 `SLHDSA.LimitedParameterSet.validatedParams` at the one constructor that inductive has, so it is
-the same term slice 2's `limitedEncodedTargetLedgerConditions` concludes at.
+the same term `limitedEncodedTargetLedgerConditions` concludes at.
 
 *Profile data.* -/
--- Exposed, and what the attribute is for was read off the errors its removal alone produces:
--- fourteen.  Thirteen are refusals of an equation proved by `rfl`, at `limitedVp_params` and at
--- the twelve below that read a field of `limitedVp.params`, each reporting that the theorem is
--- exported and so may unfold only exposed definitions; the fourteenth is a type error at
--- `limitedPrimitives_eq`.  The two equations that survive are the ones whose proofs are not
--- `rfl`: `limitedParams_k_ne_len` and `limitedTargetCount_xmssH`.
+-- Exposed because `limitedVp_params` and the twelve equations below that read a field of
+-- `limitedVp.params` are exported theorems proved by `rfl`, and an exported theorem may unfold
+-- only exposed definitions; and because `limitedPrimitives_eq` is stated at its parameters.  The
+-- two equations whose proofs are not `rfl` — `limitedParams_k_ne_len` and
+-- `limitedTargetCount_xmssH` — do not need it.
 @[expose] def limitedVp : ValidatedParams :=
   LimitedParameterSet.validatedParams .SLHDSA_SHA2_128_24
 
--- Exposed, and what the attribute is for was read off the errors its removal alone produces:
--- seventeen.  Sixteen are code-generation failures, two at each of the eight instances below
--- that generate code, each reporting that the locally inferred compilation type differs from the
--- one other modules would infer and naming `limitedPrimitives` as the definition to expose; the
--- seventeenth is the refusal of `limitedPrimitives_eq`'s own `rfl`.  The ninth instance, the
--- noncomputable finiteness one, is not among them: it generates no code to fail.  No corollary
--- moves.
+-- Exposed for code generation: the eight carrier instances below that generate code infer their
+-- compilation type from it, and `limitedPrimitives_eq` is proved by `rfl`.  The ninth instance,
+-- the noncomputable finiteness one, generates no code and does not need it, and no corollary
+-- needs it either.
 /-- The FIPS SHA-2 primitive bundle at that profile: `n = 16`, so every seed and node carrier is
 `Bytes 16`, and the compressed address key is `Bytes 22`.
 
@@ -206,31 +202,28 @@ instance : DecidableEq limitedPrimitives.PkSeed := inferInstanceAs (DecidableEq 
 compressed twenty-two-byte form. -/
 instance : DecidableEq limitedPrimitives.AdrsKey := inferInstanceAs (DecidableEq (Bytes 22))
 
--- **This one is not written like the other eight, and the reason was measured.**  Lean evaluates
--- a top-level constant of non-function type when its module is initialised, before any `main`
--- runs.  Written `inferInstanceAs (Fintype (Bytes 16))` like its neighbours, this instance is a
+-- This one is not written like the other eight, and the spelling matters.  Lean evaluates a
+-- top-level constant of non-function type when its module is initialised, before any `main` runs.
+-- Written `inferInstanceAs (Fintype (Bytes 16))` like its neighbours, this instance is a
 -- `Finset.univ` of `2 ^ 128` sixteen-byte vectors built at the start of every executable that
 -- imports this module, however little of it that executable uses: so written,
--- `slhdsa_limited_profile_tests` reached 29.5 GB resident in 25 seconds without printing its
--- first check, and none of its checks reads a `Fintype`.  That is one run, by this module's
--- author, before the fix, and it has not been repeated since: running it is the one measurement
--- this module's record deliberately does not refresh.
+-- `slhdsa_limited_profile_tests` reaches 29.5 GB resident in 25 seconds without printing its
+-- first check, and none of its checks reads a `Fintype`.
 --
--- Marking that term `noncomputable` does not fix it, and this is the part to state exactly rather
--- than assert.  Probed with `Lean.IR.findEnvDecl` over the constants this module adds, at this
--- commit: written plainly, both `instFintypeYLimitedPrimitives` and the `_aux_1` the elaborator
--- creates for it are computable and both have IR; written `noncomputable`, the instance loses its
--- IR but `_aux_1` keeps it and stays computable — and `_aux_1` is itself a top-level constant of
--- non-function type, so the module initialiser builds it whatever the instance is marked.  The
--- emitted C says the same.  Its size is deliberately not quoted — it moves with the module name
--- and the package prefix the invocation carries, so a figure from a scratch module does not match
--- `.lake/build/ir/`; what does not move is that `lean -c` on the plain form names this instance on
--- 59 lines and carries a `Fintype.piFinset` call, and on the `noncomputable` form 54 lines and the
--- same call.  Going through `Fintype.ofFinite`, whose argument is the `Prop`-valued `Finite` and
--- which is noncomputable by construction, creates no `_aux_1` at all — only a `_proof_1`, which
--- has no IR — and its C names the instance nowhere and carries no `Fintype` call at all; with it
--- the executable starts at once.  The `noncomputable` form was compiled and probed but
--- deliberately never run.
+-- Marking that term `noncomputable` does not fix it.  Over the constants this module adds, as
+-- `Lean.IR.findEnvDecl` reports them: written plainly, both `instFintypeYLimitedPrimitives` and
+-- the `_aux_1` the elaborator creates for it are computable and both have IR; written
+-- `noncomputable`, the instance loses its IR but `_aux_1` keeps it and stays computable — and
+-- `_aux_1` is itself a top-level constant of non-function type, so the module initialiser builds
+-- it whatever the instance is marked.  The emitted C says the same.  Its size is not a property of
+-- the module — it moves with the module name and the package prefix the invocation carries, so a
+-- figure from a scratch module does not match `.lake/build/ir/`; what does not move is that
+-- `lean -c` on the plain form names this instance on 59 lines and carries a `Fintype.piFinset`
+-- call, and on the `noncomputable` form 54 lines and the same call.  Going through
+-- `Fintype.ofFinite`, whose argument is the `Prop`-valued `Finite` and which is noncomputable by
+-- construction, creates no `_aux_1` at all — only a `_proof_1`, which has no IR — and its C names
+-- the instance nowhere and carries no `Fintype` call at all; with it the executable starts at
+-- once.
 -- The three other carrier instances that are constants are harmless — `SampleableType` is a
 -- sampling program and `Inhabited` is one sixteen-byte vector — and `DecidableEq` is a function.
 /-- Finiteness of the node type, which the `DSPR` advantage asks for.  It is a proof-level
@@ -333,15 +326,15 @@ theorem limitedTargetCount_xmssH :
 `SchemeWitnesses.findWitness_isSome` asks of a bundle.
 
 Like `limitedEncodedConditions` below it is stated here and consumed nowhere: it is not a
-hypothesis of the corollaries, deleting it with its docstring leaves the library at 0 errors, and
-its only occurrence in this repository is its own pin in `HashSigTest.SLHDSA.LimitedProfile`.
-What would ask it is the witness extraction of slice 7.
+hypothesis of the corollaries, and its only occurrence in this repository is its own pin in
+`HashSigTest.SLHDSA.LimitedProfile`.  What would ask it is witness extraction, in the
+`HashSig.SLHDSA.Security.*Witnesses` modules.
 
 *Profile data.* -/
 theorem limitedPrimitives_byteLaws : limitedPrimitives.core.ByteLaws :=
   Concrete.sha2Primitives_byteLaws _
 
-/-- **The encoded target ledgers stay duplicate-free at this profile**, which is slice 2's
+/-- **The encoded target ledgers stay duplicate-free at this profile**, which is
 `limitedEncodedTargetLedgerConditions` at its one constructor.
 
 It is stated here as a fact about the profile and is deliberately *not* a hypothesis of the

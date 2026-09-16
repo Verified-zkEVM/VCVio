@@ -109,7 +109,7 @@ shape — `k` leaf secrets followed by only `k − 1` authentication paths, a 4-
 counter inside each hypertree layer, and list-valued paths — so it is not expressible by the
 strict `CoreWireCodec` of `HashSig.SLHDSA.Codec`, which owns the FIPS `R ‖ SIG_FORS ‖ SIG_HT`
 format. This fixed-offset reader exists solely to check the embedded C13 reference vector
-against the on-chain verifier; every FIPS-facing byte surface is superseded by the strict
+against the on-chain verifier; every FIPS-facing byte surface is handled by the strict
 codec (`HashSig.SLHDSA.Concrete.Codec`). -/
 def decodeSignature (ba : ByteArray) : Signature keccakPrimitives :=
   let R : Bytes 16 := baSliceToB16 ba 0

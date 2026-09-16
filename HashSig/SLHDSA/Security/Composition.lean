@@ -38,7 +38,7 @@ attack it first.  Three things are true of it and worth stating separately.
   `advantage ≤ prf + prf + ideal`, `ideal ≤ forsBranch + hypertreeBranch`, and one bound per
   branch, and the step from there to the conclusion is arithmetic this module does — including one
   step that is not arithmetic at all (below).
-* **How much it needs is measured, not asserted.**  `Certificate.ofBranchBounds` builds one from
+* **How much it needs is exhibited, not asserted.**  `Certificate.ofBranchBounds` builds one from
   the eleven adversaries, the counting interface and *two* inequalities — one per branch of
   `SchemeGames`' dispatch split, stated at `forsHalf adv` and `hypertreeHalf adv` — discharging
   `split` from `advantage_le_forsHalf_add_hypertreeHalf` and `prfHops` from `le_add_self`.  So
@@ -50,7 +50,7 @@ attack it first.  Three things are true of it and worth stating separately.
   work.  A certificate that takes a real PRF hop has to choose a smaller `idealAdvantage`, and
   nothing in this repository can.  `advantage_le_bound_of_halves` is that reading as one statement.
 
-And two things about it that nothing here refuses, stated as open rather than claimed closed.
+And two things about it that nothing here refuses.
 
 * **The three named quantities mean only what the four inequalities say.**  `idealAdvantage`,
   `forsBranch` and `hypertreeBranch` are `ℝ≥0∞` fields with no tie to any experiment.  Their names
@@ -62,8 +62,8 @@ And two things about it that nothing here refuses, stated as open rather than cl
   module sees the difference, and `HashSigTest.SLHDSA.Composition` builds exactly that certificate
   and discharges the one goal it leaves.  Refusing *that* certificate needs the fields tied to the
   experiment, by the inequalities of "What would make it one" below or by fixing them to
-  `forsHalf adv` and `hypertreeHalf adv` outright — which would also fix the split this slice takes
-  and is a choice for the slice that bounds a branch.  Neither refuses every certificate: the same
+  `forsHalf adv` and `hypertreeHalf adv` outright — which would also fix the split this module
+  takes, and belongs with whatever bounds a branch.  Neither refuses every certificate: the same
   fixture builds the one that takes those values.
 * **`pkSeed` is not tied to the key generation the adversary plays against.**  It is the seed
   `skPrfScheme` is indexed at, chosen by whoever supplies the certificate; a reader who assumes it
@@ -231,7 +231,7 @@ Twenty-one declarations.
 * `Certificate.ofBranchBounds`, `Certificate.ofBranchBounds_summands`,
   `advantage_le_bound_of_halves`.
 
-*Game transport* — a statement that moves a bound between two of slice 6's named games:
+*Game transport* — a statement that moves a bound between two of `CanonicalGames`' named games:
 
 * `dspr_bound_transfer`, `tcr_bound_transfer`, `summands_forsF_le`, `openPre_le_summands_forsF`.
 
@@ -270,8 +270,8 @@ precedent for carrying both is `SM_DT_UD_SourceFinalValidity`, which has a signe
 `DirectedAdvantage : ℝ` and an `AbsoluteAdvantage : ℝ≥0∞` with a `toReal` bridge between them.
 
 TODO: promote `prfAbsAdvantage` and its bridge to `VCVio/CryptoFoundations/PRF.lean`, beside
-`PRFScheme.prfAdvantage`.  They are kept here because this slice should not add to a shared
-module's public surface, and the bridge makes the relationship checkable from either side. -/
+`PRFScheme.prfAdvantage`.  They are kept here so as not to widen a shared module's public surface,
+and the bridge makes the relationship checkable from either side. -/
 
 /-- The PRF distinguishing advantage as an `ℝ≥0∞`, the absolute gap between the real and ideal
 experiments' success probabilities.
@@ -811,7 +811,8 @@ end BranchBounds
 
 /-! ## Transporting a bound onto the two induced FORS-`F` games
 
-Slice 6's `forsFDsprProblem` and `forsFTcrProblem` are the games the OpenPRE reductions attack, and
+`CanonicalGames`' `forsFDsprProblem` and `forsFTcrProblem` are the games the OpenPRE reductions
+attack, and
 `CanonicalGames.forsFDsprProblem_eq_toDSPR` and `forsFTcrProblem_eq_toTCR` say so.  The obvious way
 to use those equations — cast an adversary along one of them and apply the hypothesis — does not
 work: the three standalone problems are deliberately not `@[expose]`d, so each equation is
@@ -825,7 +826,8 @@ section Transfer
 variable [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.AdrsKey]
   [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
 
-/-- A DSPR bound quantified over adversaries against slice 6's `forsFDsprProblem` applies to the
+/-- A DSPR bound quantified over adversaries against `CanonicalGames`' `forsFDsprProblem` applies
+to the
 adversary VCVio's OpenPRE-to-DSPR reduction produces.
 
 *Game transport.* -/
@@ -843,7 +845,8 @@ theorem dspr_bound_transfer (εD : ℝ≥0∞)
 -- `Fintype prims.Y` is in scope for the DSPR twin above, which needs it, and is unused here:
 -- `SM_DT_TCR_SourceFinalValidity.Advantage` asks only for the three `DecidableEq` instances.
 omit [Fintype prims.Y] in
-/-- A TCR bound quantified over adversaries against slice 6's `forsFTcrProblem` applies to the
+/-- A TCR bound quantified over adversaries against `CanonicalGames`' `forsFTcrProblem` applies to
+the
 adversary VCVio's OpenPRE-to-TCR reduction produces.
 
 *Game transport.* -/
@@ -862,7 +865,8 @@ variable [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [DecidableEq
 
 variable {prims}
 
-/-- The FORS-`F` block of the bound — `DSPR + 3·TCR` — under hypotheses stated at slice 6's two
+/-- The FORS-`F` block of the bound — `DSPR + 3·TCR` — under hypotheses stated at `CanonicalGames`'
+two
 standalone games rather than at the induced ones.  This is where the two transports do work: the
 hypotheses a reader would write are about `forsFDsprProblem` and `forsFTcrProblem`, and the
 certificate's summands are about `Problem.toDSPR` and `Problem.toTCR`.

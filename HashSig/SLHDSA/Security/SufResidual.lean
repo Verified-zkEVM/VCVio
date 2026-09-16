@@ -95,11 +95,10 @@ partner — and, as its own docstring records, says nothing about whether that p
 as a game target.  Here the supplied partner is a second adversarial signature, so the witness is a
 collision between two adversarial objects rather than an attack on honest committed material, which
 is exactly the two-adversarial-signatures argument this lane holds out of scope.  A same-digest
-extractor is therefore a further witness module with its own witness type, and it is not in this
-pull request.
+extractor is therefore a further witness module with its own witness type, and there is none.
 
-`HashSig.SLHDSA.Security.HypertreeWitnesses`'s review recorded that a two-adversarial-signatures
-argument is out of scope for the existential-unforgeability line; `schemeParts_eq_of_randomizer_eq`
+`HashSig.SLHDSA.Security.HypertreeWitnesses` holds a two-adversarial-signatures argument out of
+scope for the existential-unforgeability line; `schemeParts_eq_of_randomizer_eq`
 and `components_ne_of_ne_of_randomizer_eq` do not reopen it — they say what such an argument would
 be handed, and prove no extraction from it.
 
@@ -203,8 +202,8 @@ Nine of them carry `[DecidableEq (GeneralScheme.SignatureCore vp prims.core)]`. 
 not derivable on this branch: neither `SLHDSA.SignatureCore` nor `ForsTreeSigCore` nor `XmssSigCore`
 declares or derives one, and `HashSig` contains no instance for any of the three.  It is required by
 the library predicates being bridged, `SignatureAlg.signingLogContains` and `QueryLog.wasQueried`,
-and it is carried as a hypothesis rather than supplied, because supplying it would mean adding an
-instance to a merged module from inside this pull request.
+and it is carried as a hypothesis rather than supplied, since supplying it would mean declaring the
+instance in whichever module defines the signature type.
 
 ## References
 

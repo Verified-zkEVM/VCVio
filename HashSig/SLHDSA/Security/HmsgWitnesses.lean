@@ -50,8 +50,9 @@ assumption, the FIPS-shaped one is strictly the stronger.
 
 Those last two paragraphs speak of adversaries and hardness, and nothing here proves them at that
 level: they are the informal reading of the deterministic `Iff` below together with the obvious
-query embedding, and the statements that carry a probability, an adversary and an advantage are
-slice 8's.  What this module proves is the deterministic core they rest on.
+query embedding, and the statements that carry a probability, an adversary and an advantage live
+in `Security.SchemeGames` and `Security.Composition`.  What this module proves is the
+deterministic core they rest on.
 
 **What would be lost if a reduction needed the converse.**  A reduction that wanted to discharge a
 Lean SLH-DSA bound from the source's assumption alone — that is, to conclude wide-hardness from
@@ -101,10 +102,9 @@ whichever distribution is chosen.
 
 Choosing one is this development's own step, and the choice is forced rather than argued.
 `KeyedHashFamily.keygen` is a `ProbComp` field, not a theory parameter carrying a losslessness
-proof obligation: omit it and Lean reports `Fields missing: keygen`, so the Lean object has to name
-a computation exactly where the clone can defer.  The only key distribution in scope is the ambient
-instance's — drop `[SampleableType prims.Y]` from `hmsgNarrowItsrProblem` and the single error is
-`failed to synthesize instance of type class SampleableType prims.Y`, at `$ᵗ prims.Y`; the
+proof obligation: it cannot be omitted, so the Lean object has to name a computation exactly where
+the clone can defer.  The only key distribution in scope is the ambient instance's — without
+`[SampleableType prims.Y]`, `hmsgNarrowItsrProblem`'s `$ᵗ prims.Y` has no instance to sample at; the
 `Primitives` bundle carries no distribution of any kind, its `PRFmsg` being a function rather than
 a sampler, so there is nothing weaker to inherit.  And `SampleableType`'s defining law is
 `Pr[= x | selectElem] = Pr[= y | selectElem]`, which *is* uniformity.  `hmsgItsrProblem` made the
@@ -164,14 +164,14 @@ to.  `globalLeaf` is grounded the same way, against `forsSigLeafIndex`, which
 line 5.
 
 A shift of `globalLeaf` does not stay at two sites.  Shifting the definition together with
-`globalLeaf_of_mem` and nothing else leaves seven errors; carrying the shift through until the
-library elaborates clean moves nine declarations — the definition, `globalLeaf_eq`,
+`globalLeaf_of_mem` and nothing else does not typecheck; carrying the shift through until the
+library does moves nine declarations — the definition, `globalLeaf_eq`,
 `globalLeaf_lt`, `globalLeaf_div_pow_a`, `globalLeaf_of_mem`, `HmsgIndex.ext_of_coords`,
 `uncoveredTarget_globalLeaf`, `forsSign_reveals_of_mem_hmsgIndices` and
 `coord_unrevealed_of_notMem` — and seven of the fixture's statement pins with them.  Those pins
 close the shift at build time.  At run time it is closed by six checks in
 `HashSigTest.SLHDSA.HmsgWitnesses`, each of which reads the shifted leaf against something that
-does not move with it, and each of which was measured on its own with the other five removed:
+does not move with it, and each of which closes the shift on its own, without the other five:
 `forsSigLeafIndex`, the separately reviewed definition with its own citation; a hand-written
 `tree * 2 ^ a + leaf`; the divide-back to the FORS tree; the `k * 2 ^ a` bound; the secret value
 honest signing reveals at the coordinate; and a hand-written list of the two global leaves the

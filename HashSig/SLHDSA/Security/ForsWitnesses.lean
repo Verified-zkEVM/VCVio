@@ -672,7 +672,7 @@ theorem findForsWitness_sound (prims : Primitives p) [DecidableEq prims.Y]
 /-! ## Ledger membership and encoded distinctness
 
 *Transcript transport.*  Every address a witness names at a reachable bottom-layer position is a
-member of the slice-1 role ledger it is submitted against, and — under
+member of the `Security.ReachableTargets` role ledger it is submitted against, and — under
 `EncodedTargetLedgerConditions` — distinct addresses of one ledger carry distinct encoded tweaks.
 The three roles are reached separately, because they have three different ledgers:
 
@@ -803,7 +803,7 @@ conditions no game states, and the two distinctness conjuncts, which name `forsH
 is stated.
 
 The `fPreimage` bridge lands in `forsFOpenPreProblem` and not in `forsFTcrProblem`, for the reason
-the case-analysis section gives.  Slice 6's `forsFTcrProblem_eq_toTCR` and
+the case-analysis section gives.  `CanonicalGames`' `forsFTcrProblem_eq_toTCR` and
 `forsFDsprProblem_eq_toDSPR` are the route to the other two FORS-`F` games, and they are generic;
 nothing here needs a TCR- or DSPR-shaped FORS-`F` bridge. -/
 
@@ -846,7 +846,7 @@ the honest secret value have the same evaluation at the encoded leaf tweak.  Tha
 target input `x`, here the honest secret value whose image is the honest leaf image.  It is the
 hash half of that game's winning condition; the other half, that the index was never opened, is not
 established here.  `forsFOpenPreProblem_eval_adrsToKey` is not `@[simp]` where its two siblings
-are (`CanonicalGames.lean:353`), a slice-6 asymmetry nothing here depends on: all three proofs name
+are, an asymmetry in `CanonicalGames` that nothing here depends on: all three proofs name
 their rewrite explicitly. -/
 theorem forsWitness_valid_fPreimage_eval [SampleableType prims.PkSeed] [SampleableType prims.Y]
     (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (md : List Byte) (i : Fin p.k)

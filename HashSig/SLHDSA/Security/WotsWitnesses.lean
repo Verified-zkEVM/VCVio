@@ -635,9 +635,9 @@ theorem findWotsWitness_isSome (valid : p.Valid) (prims : Primitives p) [Decidab
 /-! ## Ledger membership and encoded distinctness
 
 *Transcript transport.*  Every address a witness names at a reachable WOTS+ instance is a member
-of the slice-1 role ledger it is submitted against, and — under `EncodedTargetLedgerConditions` —
-distinct addresses of one ledger carry distinct encoded tweaks.  The three roles are reached
-separately, because they have three different ledgers:
+of the `Security.ReachableTargets` role ledger it is submitted against, and — under
+`EncodedTargetLedgerConditions` — distinct addresses of one ledger carry distinct encoded tweaks.
+The three roles are reached separately, because they have three different ledgers:
 
 * the `fCollision` witness attacks `wotsFTcr`, whose ledger is `wotsStepAddresses`
   (`mem_wotsStepAddresses_of_lt`, `wotsStepAdrsKey_injective`);

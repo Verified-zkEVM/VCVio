@@ -49,7 +49,7 @@ bound consumes — so `strongAdvantage_le_add_arms_iff` is the same equivalence 
 selector.  No instrumentation of the residual makes the bound say more.
 
 So the vacuity of this statement is the vacuity of the previous one, neither more nor less.  That
-one is measured there and shipped as a canary: a closed `Certificate` is constructible at an
+one is exhibited there as a canary: a closed `Certificate` is constructible at an
 arbitrary validated parameter set, an arbitrary bundle and an arbitrary adversary from an address
 key and a public seed, and the bound it names is at least one.  At that certificate this module's
 headline reads `sadv.advantage ≤ (something ≥ 1) + residual`, which `probOutput_le_one` gives with
@@ -135,33 +135,30 @@ two branch bounds carry.
 
 ## What nothing here refuses
 
-Four levels, each measured on copies held outside the worktree, against the fixture that ships with
-this module.  Two of the four have no refusal anywhere and are named rather than argued away.
+Four things about this module are held in place by the fixture alone or by nothing at all.
 
-* **The two equivalences, weakened to implications.**  With `strongAdvantage_le_add_sameMessage_iff`
-  and `strongAdvantage_le_add_arms_iff` restated as `euf ≤ ε → advantage ≤ ε + residual` and both
-  consumers repaired, this module elaborates clean and the fixture reports two errors, at the two
-  pins that restate them.  So the module's own honest core is refused by the fixture alone; an edit
-  that moves the fixture too is silent.
+* **The two equivalences, weakened to implications.**  `strongAdvantage_le_add_sameMessage_iff` and
+  `strongAdvantage_le_add_arms_iff` restated as `euf ≤ ε → advantage ≤ ε + residual`, with both
+  consumers repaired, leave this module well-formed; only the two fixture pins that restate them
+  refuse it.  An edit that moves the fixture too is silent.
 * **Which half the consumption form bounds.**
   `strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le` takes a bound on the fresh half.  The
-  mirror statement, taking one on the same-randomizer half, is equally true and equally provable:
-  the paired edit leaves this module clean and fails one fixture pin, and moving that pin too leaves
-  **nothing** failing anywhere.  What decides which is right is the argument above — the fresh
-  branch has the `H_msg` bridge and the other has nothing — and not a check.
+  mirror statement, taking one on the same-randomizer half, is equally true and equally provable,
+  and is refused by one fixture pin only; move that pin and **nothing** refuses it.  What decides
+  which is right is the argument above — the fresh branch has the `H_msg` bridge and the other has
+  nothing — and not a check.
 * **The order of the two residuals in `Summands.sufBound`, and their association.**  Swapping them
-  or reassociating the sum leaves this module clean once its four proofs are repaired, and fails
-  three fixture entries either way; an edit that moves those entries too is silent, and at that
-  point the claim has been changed rather than a bug found.  Two neighbouring edits are *not* in
-  this class.  A coefficient other than one on a residual makes
-  `sufBound_eq_bound_add_sameMessage_of_unfoldings` false — one library error, at that statement and
-  nowhere else here.  A stray additive constant makes both it and
-  `sufBound_eq_bound_of_residuals_zero` false, two, of which only the first is new: the zero law
-  refused a stray constant before the statement beside it was written.
+  or reassociating the sum leaves this module provable once its four proofs are repaired, and is
+  refused by three fixture entries either way; an edit that moves those entries too changes the
+  claim rather than being caught.  Two neighbouring edits are *not* in this class.  A coefficient
+  other than one on a residual makes `sufBound_eq_bound_add_sameMessage_of_unfoldings` false, and
+  is refused there and nowhere else here.  A stray additive constant makes both it and
+  `sufBound_eq_bound_of_residuals_zero` false, and the zero law refuses such a constant
+  independently of the statement beside it.
 * **The strength of the certificate.**  Inherited unchanged from
-  `HashSig.SLHDSA.Security.Composition`, where it is measured: nothing refuses a certificate, and
-  the fixture there builds one from an address key and a public seed.  Adding the residual does not
-  touch that question, which is why this module's vacuity is exactly that module's.
+  `HashSig.SLHDSA.Security.Composition`: nothing refuses a certificate, and the fixture there
+  builds one from an address key and a public seed.  Adding the residual does not touch that
+  question, which is why this module's vacuity is exactly that module's.
 
 ## What is not established
 
@@ -184,8 +181,7 @@ this module.  Two of the four have no refusal anywhere and are named rather than
   `sufBound_eq_bound_add_sameMessage_of_unfoldings` take the two equations as hypotheses and draw
   the consequence, so the gap is one named theorem wide — the two equations, or, with the arms
   equality moved down beside them, the single joint equality they give — and that theorem belongs
-  one module down.  It is not added there in this pull request because that module is under review
-  as it stands.
+  one module down, where it is not stated.
 * **Nothing about `SameMessageBinding`.**  VCVio's own docstring says no `ε < 1` can hold for a
   hash-based scheme, and issue #629 item 2b records that the per-adversary partition is what a
   quantitative result must consume.  This module consumes the partition.
@@ -463,8 +459,8 @@ theorem strongAdvantage_le_bound_add_arms {sadv : strongUnforgeableAdv (generalA
 fresh-randomizer half plus the same-randomizer half of
 `HashSig.SLHDSA.Security.SchemeGames`, which is where the same-randomizer term acquires a name.
 
-This one is a `≤` and not an equivalence, and the direction that is missing is measured rather than
-assumed: the step it takes is
+This one is a `≤` and not an equivalence, and the direction that is missing is named rather than
+assumed away: the step it takes is
 `SchemeGames.sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer`, whose reverse is
 `sameMessageAdvantage_eq_arms` at `SchemeGames.randomizerLogged` — true, proved above at every
 selector, and not transportable to the named halves from here, because their bodies are not

@@ -17,17 +17,15 @@ The bundle below is the one `HashSigTest.SLHDSA.SchemeWitnesses` builds — the 
 parameters, the same six byte maps, the same three honest seeds and second public seed, the same
 published root — so the two executables run on one profile, and a reviewer can check that by
 diffing the two blocks.  It is copied rather than imported because a `lean_exe` root must own its
-`main`, and a module that imports the other one cannot declare `main` at all: the attempt reports
-`` `main` has already been declared``, and had it not, the executable would silently link the
-imported `main` and run the other fixture.  The lane has no shared fixture module yet, and adding
-one would edit a merged, reviewed file from inside this pull request.
+`main`, and a module that imports the other one cannot declare `main` at all; had that not been so,
+the executable would silently link the imported `main` and run the other fixture.  The lane has no
+shared fixture module.
 
-That diff has exactly seven entries, all deliberate.  The failure message names this executable.
-`toy` carries no `@[expose]` here, because removing that attribute in this file produces no errors
-at all.  Two attribute comments carry this file's own measured error counts and error text rather
-than the other fixture's — every attribute comment here was written by removing the attribute and
-reading what Lean said.  And three docstrings in the copied block name the group that asserts what
-they describe, which is `checkFixture` here and `checkToyBundle` there.  Strip the comments, the
+The two blocks differ in exactly seven places, all deliberate.  The failure message names this
+executable.  `toy` carries no `@[expose]` here, because nothing in this file needs its body.  Two
+attribute comments describe what those attributes are required for in this file rather than in the
+other one.  And three docstrings in the copied block name the group that asserts what they
+describe, which is `checkFixture` here and `checkToyBundle` there.  Strip the comments, the
 docstrings and that one dropped attribute, and the two blocks differ in a single string: the
 failure message.
 
@@ -98,8 +96,8 @@ coverage.
 
 ## The naive identifications this fixture is built to reject
 
-* *That `globalLeaf` is the local leaf.*  Rejected six times over, each measured on its own with
-  the other five removed: against `forsSigLeafIndex`, which is separately reviewed and carries the
+* *That `globalLeaf` is the local leaf.*  Rejected six times over, each of the six sufficient
+  without the other five: against `forsSigLeafIndex`, which carries the
   FIPS citation; against a hand-written `tree · 2 ^ a + leaf`; against the divide-back to the FORS
   tree; against the `k · 2 ^ a` bound; against the secret value honest signing reveals at the
   coordinate; and against a hand-written list of the two global leaves the forged digest is
@@ -141,22 +139,19 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 
 Two hypertree layers of height two, two FORS trees of height one, `w = 16`, `len = 4`. -/
 
--- Exposed, and what that attribute is for was read off the errors its removal produces in this
--- file.  Without `@[expose]` on `toyParams`, 41 errors, the first inside the bundle at
--- `yToBytes := id`, where `id` will not take the type `Bytes 1 → Bytes toyParams.n`.  `toy` below
--- needs no exposure of its own here, and neither do the secret map, the tweak map, the randomizer
--- or the digest map.  Nothing outside this executable consumes any of them.
+-- Exposed because the bundle below needs `toyParams.n` to reduce: `yToBytes := id` is checked
+-- against `Bytes 1 → Bytes toyParams.n`.  `toy` below needs no exposure of its own here, and
+-- neither do the secret map, the tweak map, the randomizer or the digest map.  Nothing outside
+-- this executable consumes any of them.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
 
 theorem toyValid : toyParams.Valid := by decide
 
-/-- The validated form of `toyParams`.  Unexposed here, where the scheme-dispatch fixture exposes
-it.  Two declarations mention it: `pkRoot` below, which passes it to `GeneralHypertree.root`, and
-the `BottomPosition.ofDigestParts` pin, which is an `example`.  Neither needs its body — the file
-elaborates as it stands with no errors and no warnings, and putting `@[expose]` back gives no
-errors and no warnings either. -/
+/-- The validated form of `toyParams`, which needs no exposure here.  Two declarations mention it:
+`pkRoot` below, which passes it to `GeneralHypertree.root`, and the
+`BottomPosition.ofDigestParts` pin, which is an `example`.  Neither needs its body. -/
 def toy : ValidatedParams := ⟨toyParams, toyValid⟩
 
 example : toyParams.w = 16 := by decide
@@ -203,16 +198,13 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteFold msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed and `@[reducible]`, for two different reasons, each read off the errors that removing
--- that attribute alone produces in this file.  Exposed, for code generation: without it, 51 errors,
--- the first at `instance : DecidableEq toyPrimitives.Y` just below, reading `Compilation failed,
--- locally inferred compilation type differs from type that would be inferred in other modules` and
--- naming `toyPrimitives ↦ 2`, with the rest following it down the compiled declarations.
--- Reducible, because its carrier types have to unfold to `Bytes 1` for instance resolution to
--- reach them: without it, three errors and only these — `byteOf`'s `y[0]` finds no
--- `GetElem toyPrimitives.Y ℕ` instance and cannot prove its index valid, and `wideWins` finds no
--- `DecidableEq (HmsgITSRInput toyPrimitives.PkSeed toyPrimitives.Y)`.  Nothing outside this
--- executable consumes it.
+-- Exposed and `@[reducible]`, for two different reasons.  Exposed for code generation: the
+-- compiled declarations below, starting with `instance : DecidableEq toyPrimitives.Y`, have to
+-- infer the same compilation type for this bundle as an importing module would, which needs its
+-- body.  Reducible because its carrier types have to unfold to `Bytes 1` for instance resolution
+-- to reach them: `byteOf`'s `y[0]` needs `GetElem toyPrimitives.Y ℕ` and an index bound, and
+-- `wideWins` needs `DecidableEq (HmsgITSRInput toyPrimitives.PkSeed toyPrimitives.Y)`.  Nothing
+-- outside this executable consumes it.
 /-- The toy bundle: one byte per node, a collapsing order- and address-sensitive `Thash`, and an
 `H_msg` that depends on all four of its arguments. -/
 @[expose, reducible] def toyPrimitives : Primitives toyParams where
@@ -418,13 +410,10 @@ Every other field, and every carrier type, is the fixture's own, and its source-
 *any* key pair is the fixture's source-shaped problem at the honest one — `checkStrictness` asserts
 that on the fixture's cases rather than assuming it — while its widened game admits the one-query
 break `wins_of_hmsg_agree` describes. -/
--- Exposed and `@[reducible]`, both measured the way the bundle above was.  Exposed: without it,
--- nine errors — the three instances just below report `Compilation failed, locally inferred
--- compilation type differs from type that would be inferred in other modules` naming
--- `blindPrimitives`, `checkStrictness` follows, and `main` and the root `main` then fail as
--- `consider marking it as 'noncomputable'`.  Reducible: without it, exactly one error, `failed to
--- synthesize instance of type class Decidable ((hmsgNarrowItsrProblem blindPrimitives pkSeed
--- pkRoot).Wins queries qC)` inside `checkStrictness`.
+-- Exposed and `@[reducible]`, for the two reasons the bundle above carries.  Exposed for code
+-- generation: the three instances just below, `checkStrictness` and both `main`s are compiled
+-- against this bundle and need its body.  Reducible so that `checkStrictness` can synthesize
+-- `Decidable ((hmsgNarrowItsrProblem blindPrimitives pkSeed pkRoot).Wins queries qC)`.
 @[expose, reducible] def blindPrimitives : Primitives toyParams :=
   { toyPrimitives with Hmsg := fun r _ _ msg => toyPrimitives.Hmsg r pkSeed pkRoot msg }
 
@@ -501,10 +490,9 @@ beside it reads that table at hand-written leaves instead, and so, unlike the pe
 moves under a shift of `globalLeaf`.
 
 On this profile the pair check also *implies* the per-index read: the two lists it compares are the
-same two indices the loop walks, so pointwise it gives exactly the per-index equation.  Measured
-both ways — with the per-index read deleted the executable still passes, and with it and the
-`range 4` sweep both deleted a leaf-address table shifted by one is still caught, at the pair
-check.  The per-index read is kept anyway, because it is the law about `forsNodeAdrs` quantified
+same two indices the loop walks, so pointwise it gives exactly the per-index equation: with the
+per-index read deleted the executable still passes, and with it and the `range 4` sweep both
+deleted a leaf-address table shifted by one is still caught, at the pair check.  The per-index read is kept anyway, because it is the law about `forsNodeAdrs` quantified
 over the index that a reader checks the imported function against, rather than a statement about
 these two values. -/
 def checkCoordinates : IO Unit := do

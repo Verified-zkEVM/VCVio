@@ -106,8 +106,8 @@ leaf addresses are additionally matched against a table of `Adrs` records writte
 change in how the global index reaches the address is caught there rather than only through
 `forsSigLeafIndex`.
 
-`checkSchemeEquations` evaluates the three equations this pull request adds to
-`SLHDSA.GeneralScheme` — the key-generation one once, the two verification ones at every signature
+`checkSchemeEquations` evaluates the three `SLHDSA.GeneralScheme` equations this fixture owns —
+the key-generation one once, the two verification ones at every signature
 the fixture builds — and pins the secret key the first of them does not state.
 `checkHonestPartner` pins that the honest layer-zero partner depends on the digest's *position* and
 not on its FORS message, which is what makes the hypertree arm's honest starting message well
@@ -140,15 +140,13 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 
 Two hypertree layers of height two, two FORS trees of height one, `w = 16`, `len = 4`. -/
 
--- Exposed, both of them, and what each attribute is for was read off the errors its removal
--- produces.  Not the `decide` pins below: those stay clean under either removal.  Without
--- `@[expose]` on `toyParams`, 44 errors, the first inside the bundle at `yToBytes := id`, where
--- `id` will not take the type `Bytes 1 → Bytes toyParams.n` and the note reads `not unfolded
--- because their definition is not exposed: toyParams`.  Without it on `toy`, 42 errors, none of
--- them before the bundle, the first where `toyPrimitives : Primitives toyParams` is offered where
--- `Primitives toy.params` is expected.  Neither the secret map, the tweak map, the randomizer, the
--- digest map nor any of the four positions needs exposure of its own.  Nothing outside this
--- executable consumes them.
+-- Both exposed, for two different reasons, and neither for the `decide` pins below, which reduce
+-- either way.  `toyParams` is exposed because the bundle needs `toyParams.n` to reduce:
+-- `yToBytes := id` is checked against `Bytes 1 → Bytes toyParams.n`.  `toy` is exposed because
+-- everything after the bundle is written at `toy`, so `toy.params` has to reduce to `toyParams`
+-- for `toyPrimitives : Primitives toyParams` to be accepted where `Primitives toy.params` is
+-- expected.  Neither the secret map, the tweak map, the randomizer, the digest map nor any of the
+-- four positions needs exposure of its own.  Nothing outside this executable consumes them.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
@@ -202,17 +200,14 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteFold msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed and `@[reducible]`, for two different reasons, each read off the errors that removing
--- that attribute produces.  Exposed, for code generation: without it, 40 compiled declarations
--- (the three instances just below, `node`, `byteOf`, the seeds, and on down to `armMsg`) report
--- `Compilation failed, locally inferred compilation type differs from type that would be inferred
--- in other modules`, naming `toyPrimitives`, and 31 more fall over behind them as `consider
--- marking it as 'noncomputable'`.  None of those 74 errors is at the hand-written positions below,
--- whose `Fin` bounds mention no primitive bundle.  Reducible, because its carrier types have to
--- unfold to `Bytes 1` for instance resolution to reach them: without it `byteOf`'s `y[0]` finds no
--- `GetElem` instance and no index bound, and the secret-key comparison in `checkSchemeEquations`
--- finds no `BEq` on `toyPrimitives.core.PkSeed` — six errors, only those.  Nothing outside this
--- executable consumes it.
+-- Exposed and `@[reducible]`, for two different reasons.  Exposed for code generation: every
+-- compiled declaration written at this bundle — the three instances just below, `node`, `byteOf`,
+-- the seeds, and on down to `armMsg` — has to infer the same compilation type for it as an
+-- importing module would, which needs its body.  The hand-written positions below do not, their
+-- `Fin` bounds naming no primitive bundle.  Reducible because its carrier types have to unfold to
+-- `Bytes 1` for instance resolution to reach them: `byteOf`'s `y[0]` needs a `GetElem` instance
+-- and an index bound, and the secret-key comparison in `checkSchemeEquations` needs `BEq` on
+-- `toyPrimitives.core.PkSeed`.  Nothing outside this executable consumes it.
 /-- The toy bundle: one byte per node, a collapsing order- and address-sensitive `Thash`, and an
 `H_msg` that depends on all four of its arguments. -/
 @[expose, reducible] def toyPrimitives : Primitives toyParams where
@@ -735,8 +730,8 @@ def checkToyBundle : IO Unit := do
 
 /-- Key generation publishes the seed it was given and the general hypertree's root; verification is
 the general hypertree verifier at the digest; and verification is the decision of whether the
-recovered root is the published one.  Those are the three equations this pull request adds to
-`SLHDSA.GeneralScheme`, evaluated rather than restated — the first once, the other two at every one
+recovered root is the published one.  Those are the three `SLHDSA.GeneralScheme` equations this
+fixture owns, evaluated rather than restated — the first once, the other two at every one
 of the seven signatures the fixture builds, with `sigA` taken at both of the messages that share its
 digest.
 
@@ -1204,7 +1199,8 @@ example (parts : DigestParts toy.params) (md : List Byte) (i : Fin toy.params.k)
 example (parts : DigestParts toy.params) : forsPkAdrs parts.forsAdrs ∈ forsRootAddresses toy :=
   mem_forsRootAddresses_of_parts (vp := toy) parts
 
-/-- The hypertree arm needs no bridge: its addresses are named at a `LayerPosition`, so slice 1's
+/-- The hypertree arm needs no bridge: its addresses are named at a `LayerPosition`, so the
+`Security.ReachableTargets`
 membership lemma applies to the advanced position unchanged. -/
 example (parts : DigestParts toy.params) (j : ℕ)
     (hj : (LayerPosition.initial toy parts).layer.val + j < toy.params.d) {z : ℕ} (hz : 0 < z)
@@ -1273,8 +1269,8 @@ two unfolding equations with the lane's seven `_eval` bridges — one per leaf b
 holding a composite witness reaches each canonical game's `eval` at the encoded tweak in one step.
 No bridge is restated in the library; these pin that none needs to be. -/
 
--- Not exposed, and that was measured: dropping the attribute from both leaves the module clean.
--- The two abbreviations exist only to keep the four hypertree-arm pins below readable, whose
+-- Neither is exposed, and neither needs to be.  The two abbreviations exist only to keep the four
+-- hypertree-arm pins below readable, whose
 -- hypothesis comes back from `HypertreeWitness.valid_iff` spelled with `advance` and
 -- `honestLayerMsg` rather than with these names; all 41 uses of them sit inside those four pins,
 -- and a pin is an `example`, which is not exported and so unfolds an unexposed definition freely

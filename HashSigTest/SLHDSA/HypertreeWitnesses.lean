@@ -91,8 +91,7 @@ six rejected.  The six are the in-range layer shifts, and they falsify the one c
 `HypertreeWitness.Valid` has — the XMSS condition at the position and honest message the label
 names.  There is no out-of-range fabrication, and there cannot be one: `HypertreeWitness.layer` is
 a `Fin toyParams.d`, so a label at or beyond `d` is not a witness at this walk length and does not
-elaborate.  What used to be two run-time rejections is a build error now, exercised by the mutation
-that widens the label's index rather than by an `ensure`.
+elaborate.  That case is therefore refused at build time rather than by an `ensure`.
 
 The `example`s pin the theorem statements at that bundle, including the nine declarations with no
 consumer inside the library, and the ledger and encoded-tweak lemmas at the same profile — which
@@ -389,12 +388,12 @@ The hand-written `posOf` agrees with `LayerPosition.advance` and the hand-writte
 with `honestLayerMsg`, at all three layers, so the layer canaries below check the extractor against
 a table that is written independently of the library's and known to match it.
 
-Those two agreement checks are load-bearing, not documentation, and it is worth saying what they
-carry now that the library also carries part of it.  When `HypertreeWitness.layer` was a bare `ℕ`,
-shifting the extractor's label and `HypertreeWitness.Valid`'s reading of it *together* — labelling
-the base case `⟨1, ·⟩` and reading `w.layer - 1` — re-proved `findHypertreeWitness_sound` by the
-same induction, and the executable was the only thing that noticed.  The label is a `Fin layers`
-now, so that particular shift no longer elaborates — but the class is not closed by the type.  The
+Those two agreement checks are load-bearing, not documentation, and what they carry is a class of
+relabelling that nothing else refuses.  Shifting the extractor's label and
+`HypertreeWitness.Valid`'s reading of it *together* re-proves `findHypertreeWitness_sound` by the
+same induction, so the library alone does not see it.  `HypertreeWitness.layer` is a `Fin layers`,
+which refuses the shift that moves the base label out of range — labelling the base case `⟨1, ·⟩`
+and reading `w.layer - 1` — but the class is not closed by the type.  The
 reflection `t ↦ layers - 1 - t`, counting the layer from the top of the walk instead of from the
 walk's start, agrees with the identity at walk length one, which is the only place `Fin layers` pins
 anything, and it re-proves the library.  What stops it is in this module: the statement pins below
@@ -794,7 +793,8 @@ theorem toyApprovedAddressBounds : ApprovedAddressBounds toyParams :=
     by decide, by decide⟩
 
 /-- Every XMSS internal node an `hCollision` witness can name at a layer the walk reaches is a
-listed `xmssH` target.  Slice 1's membership lemma applies to the advanced position unchanged. -/
+listed `xmssH` target.  The `Security.ReachableTargets` membership lemma applies to the advanced
+position unchanged. -/
 example (j : ℕ) (hj : pos0.layer.val + j < toyParams.d) {z : ℕ} (hz : 0 < z)
     (hzh : z ≤ toyParams.hp) :
     xmssNodeAdrs (pos0.advance j hj).toAdrs z ((pos0.advance j hj).leaf.val / 2 ^ z) ∈

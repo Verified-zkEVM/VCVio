@@ -33,8 +33,8 @@ needed — a witness at any such layer is a witness.  Nothing here constructs an
 an advantage, performs a game hop, or claims that any honest execution queried a value a witness
 attacks; those are program-level obligations of the later slice.
 
-The plan for this slice also lists an unoriented divergence lemma, over two arbitrary signature
-vectors, with both messages existentially quantified.  It is deliberately absent.  Its second
+An unoriented divergence lemma, over two arbitrary signature vectors with both messages
+existentially quantified, is deliberately absent.  Its second
 message is bound by the existential, so it cannot be identified with the honest one afterwards,
 and the binding form below is therefore not a corollary of it but a separate induction; and a
 statement that names no honest partner cannot feed a witness predicate.  The binding form is the
@@ -73,10 +73,11 @@ The declarations are:
   `findHypertreeWitness_eq_next_of_ne`, and its two lemmas `findHypertreeWitness_sound` and
   `findHypertreeWitness_isSome`.
 
-*Transcript transport* — a statement about the slice-1 coordinates and ledgers of
+*Transcript transport* — a statement about the coordinates and ledgers of
 `HashSig.SLHDSA.Security`:
 
-* `layerTreeCoord_advance_ne` is about `LayerTreeCoord`, a slice-1 coordinate, which is what the
+* `layerTreeCoord_advance_ne` is about `LayerTreeCoord`, a `Security.ReachableTargets` coordinate,
+  which is what the
   label covers: it separates the tree coordinates two different layers of one walk carry.  It
   names no ledger and asserts no membership.  It is the stronger of the pair it forms with
   `advance_ne`: `advance_ne` follows from it by `congrArg LayerTreeCoord.ofPosition`, while the
@@ -152,8 +153,9 @@ Either way the layer is one of the coordinates separating one recorded target fr
 
 Two things turn on it, and a third does not.
 
-* It is what *forms* the position: `LayerPosition.layer` is a `Fin d`.  Slice 1's ledgers are
-  enumerations of exactly those typed positions, so without the bound there is no position, no
+* It is what *forms* the position: `LayerPosition.layer` is a `Fin d`.  The
+  `Security.ReachableTargets` ledgers are enumerations of exactly those typed positions, so without
+  the bound there is no position, no
   address, and nothing listed.  The tree word needs no bound of its own — `LayerPosition.tree` is
   a `Fin (2 ^ layerTreeHeight vp layer.val)` and `next` carries that forward — and neither does
   the leaf, which is a `Fin (2 ^ h')`.
@@ -269,7 +271,7 @@ theorem advance_succ (pos : LayerPosition vp) (j : ℕ)
 because the layer word of `pos.advance j` is `pos.layer.val + j`.
 
 This is what a consumer holding two hypertree witnesses at two layers of one walk needs in three of
-the four branches: each of slice 1's four witness ledgers is enumerated over every layer, and the
+the four branches: each of the four witness ledgers is enumerated over every layer, and the
 three WOTS+ ones' injectivity lemmas each conclude equality of a coordinate whose position
 component this refutes.  It is what those three need and all they need.  The fourth is the `xmssH`
 ledger, indexed by a `LayerTreeCoord`, which `LayerTreeCoord.ofPosition` builds as
@@ -283,8 +285,8 @@ stronger of the two: this one follows from it by `congrArg LayerTreeCoord.ofPosi
 function applied to equal arguments gives equal results and no injectivity is needed in that
 direction.  Neither is derived from the other here, because this one is *Deterministic inclusion*
 position arithmetic and taking that derivation would rest it on a *Transcript transport* statement
-about a slice-1 coordinate.  Each ends at `advance_layer_val` — this one by projecting the layer
-word out of the position, the coordinate one by way of `toAdrs`. -/
+about a `Security.ReachableTargets` coordinate.  Each ends at `advance_layer_val` — this one by
+projecting the layer word out of the position, the coordinate one by way of `toAdrs`. -/
 theorem advance_ne (pos : LayerPosition vp) {j j' : ℕ}
     (hj : pos.layer.val + j < vp.params.d) (hj' : pos.layer.val + j' < vp.params.d)
     (hne : j ≠ j') :
@@ -386,8 +388,8 @@ Everything else here calls `honestLayerMsg` the honest partner of a witness.  Th
 that earns the name: without it the identification is a gloss, and a consumer that wants to say a
 witness attacks material an honest signing query would have revealed has nothing to rewrite with.
 `recoverFromPosition_signFromPosition` is the companion statement about where the honest walk
-*ends*; this one is about what it signs at each step, and slice 8's identification of the honest
-WOTS+ partner at a leaf runs through it.
+*ends*; this one is about what it signs at each step, and the identification of the honest WOTS+
+partner at a leaf runs through it.
 
 The subject is the pure structural loop, not `GeneralHypertree.sign`, which is that loop under
 `simulateQ (PublicHash.impl prims)`.  The step between them is one rewrite with
@@ -592,7 +594,8 @@ The whole content is `XmssWitness.Valid` at the tree address of `pos.advance w.l
 position's leaf, and the honest running message there — all three computed from the layer, none
 supplied.  There is no layer-bound conjunct: the label is a `Fin layers`, so the bound is in the
 witness's type, and `HypertreeWitness.layer_lt` is what forms the position from it.  That bound is
-still what places every address the witness names in a slice-1 ledger, and still what separates
+still what places every address the witness names in a `Security.ReachableTargets` ledger, and
+still what separates
 this layer's targets from another layer's inside the one `xmssNodeAddresses` ledger; it is now
 carried by the data rather than asserted about it.
 
@@ -824,7 +827,7 @@ LayerTreeCoord.ofPosition h)`.  There is no step back: `advance_ne`'s conclusion
 of positions, and carrying that forward through `ofPosition` is exactly injectivity of `ofPosition`,
 which builds `⟨pos.layer, pos.tree⟩` and so identifies the at-least-two leaves `Params.Valid.hp_pos`
 gives every tree.  Neither is derived from the other here in any case: `advance_ne` is
-*Deterministic inclusion* position arithmetic and would otherwise rest on this slice-1 coordinate
+*Deterministic inclusion* position arithmetic and would otherwise rest on this coordinate
 statement.
 
 Each is what one family of ledgers needs — this one for the `hCollision` branch, whose ledger is

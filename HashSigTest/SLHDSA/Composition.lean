@@ -22,9 +22,8 @@ headline `advantage_le_bound`, the certificate, the two transports and every sta
 probability have **no runtime coverage at all** and cannot be given any.  The runtime checks below
 are about `Params`-level data only: `p.w - 2`, `SLHDSA.Security.targetCount`, and a routing table
 this file writes down.  What pins the bound's own shape is the `Pins` section, which restates each
-of the twenty-one exported declarations, and mutation testing against those pins; what pins the
-*strength* of the hypotheses is the vacuity canary at the end, which is elaboration-only for the
-same reason.
+of the twenty-one exported declarations; what pins the *strength* of the hypotheses is the vacuity
+canary at the end, which is elaboration-only for the same reason.
 
 A reader of the lane's other fixtures will look for the headline among the runtime checks; it is
 not there, and no fixture could put it there.
@@ -36,7 +35,7 @@ copied rather than imported for the reason those files give: a `lean_exe` root m
 and a module that imports another fixture cannot declare one.  The primitive bundle is theirs less
 three things: the exclusive-or fold, which only that file's `H_msg` blindness assertion used; every
 message, signature and log, because no reader here reads one; and the bundle's `@[reducible]`
-attribute, which is measured unnecessary here.
+attribute, which nothing here needs.
 
 `SLHDSA.LimitedParameterSet.SLHDSA_SHA2_128_24` is here as a bare `Params`, with no primitive
 bundle, because it is the profile at which the summand-to-game routing has a cell that goes dark.
@@ -120,14 +119,10 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 
 /-! ## The two profiles -/
 
--- Exposed, and what the attribute is for was read off the errors its removal alone produces in
--- this file: forty-three, no error ceiling reached.  One `Type mismatch: id` inside the bundle
--- below, at `yToBytes := id`; eighteen `(kernel) declaration type mismatch` spread over the nine
--- instances written at `toyPrimitives`, between one and three each; nine code-generation failures
--- at those same nine instances, six `failed to compile definition` and three `Failed to find LCNF
--- signature`; and fifteen in the vacuity canary's toy instantiations, thirteen
--- `Application type mismatch` and two `(kernel) application type mismatch`, where `toy.params` has
--- to be `toyParams` for the generic declarations to apply.
+-- Exposed because `toyParams` has to reduce throughout this file: the bundle below checks
+-- `yToBytes := id` against `Bytes 1 → Bytes toyParams.n`, the nine instances written at
+-- `toyPrimitives` need it both to typecheck and to compile, and the vacuity canary's toy
+-- instantiations need `toy.params` to reduce to `toyParams` for the generic declarations to apply.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
@@ -135,13 +130,10 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 /-- The toy parameters are valid. -/
 theorem toyValid : toyParams.Valid := by decide
 
--- Exposed for a different reason from `toyParams`, also read off its removal: seven errors, none
--- of them in the bundle and all of them in the pins, where the certificate's own `vp` has to
--- reduce to `toyParams` for the bundle's instances to be found.  Six are `typeclass instance
--- problem is stuck` and the seventh is a `(deterministic) timeout` at the 200000-heartbeat limit;
--- none is a `failed to synthesize`.  Which operation that timeout names is an artefact of where
--- the budget happens to run out — two runs of this same measurement have disagreed about it — so
--- it is not recorded here.
+-- Exposed for a different reason from `toyParams`, and for nothing in the bundle: in the pins the
+-- certificate's own `vp` has to reduce to `toyParams` before the bundle's instances can be found.
+-- Without the body those searches do not report a missing instance but get stuck, one of them
+-- running to the heartbeat limit.
 /-- The validated form of `toyParams`. -/
 @[expose] def toy : ValidatedParams := ⟨toyParams, toyValid⟩
 
@@ -205,14 +197,12 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteMix msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed for code generation, and that is the whole of it: without the attribute, thirty errors,
--- every one of them `Compilation failed, locally inferred compilation type differs from type that
--- would be inferred in other modules` — two at each of the nine instances below, eleven at the
--- pins that name the certificate's fields at this bundle's types, and one at the `ITSRProblem`
--- shape pin.  `@[reducible]`, which the scheme-game fixture's copy of this bundle also carries,
--- is *not* needed here and is not written: the build is clean without it, because no check below
--- resolves an instance through the carrier by unfolding it — the nine instances name `Bytes 1`
--- and `Adrs` directly.
+-- Exposed for code generation, and that is the whole of it: the nine instances below, the pins
+-- that name the certificate's fields at this bundle's types, and the `ITSRProblem` shape pin all
+-- have to infer the same compilation type for this bundle as an importing module would, which
+-- needs its body.  `@[reducible]`, which the scheme-game fixture's copy of this bundle carries, is
+-- *not* needed here and is not written: no check below resolves an instance through the carrier by
+-- unfolding it, the nine instances naming `Bytes 1` and `Adrs` directly.
 /-- The toy bundle: one byte per node, a collapsing order- and address-sensitive `Thash`, and an
 `H_msg` that depends on all four of its arguments. -/
 @[expose] def toyPrimitives : Primitives toyParams where
@@ -363,8 +353,8 @@ def checkCaps : IO Unit := do
 
 /-- **The cell that goes dark, and what is left when it does.**  The two `T_ℓ` compressions are
 both target-collision games on the shared `Thash` collection; at `d = 1` their caps coincide, so at
-the profile the corollary of the next pull request will use, a cap check alone cannot tell
-`forsTlTcrCProblem` from `wotsTlTcrCProblem`.  What is left there is the arity, `p.k` against
+the SP 800-230 reduced profile a cap check alone cannot tell `forsTlTcrCProblem` from
+`wotsTlTcrCProblem`.  What is left there is the arity, `p.k` against
 `p.len`, and `Params.Valid` does not relate the two: `collideParams` is valid with `k = len`, and
 at it the two games are the same term.  So the last group here asserts the separation where it is
 actually true, over the whole shipped parameter table. -/
@@ -809,24 +799,22 @@ second certificate, whose three `ℝ≥0∞` fields are the experiment's own qua
 further input is a `CountingInterface` at an adversary of advantage one — which is what tying
 those fields to the experiment would leave.
 
-What it is for.  Three docstrings in the library module, this file, and the pull-request body once
-said that no route to a certificate was known which avoided proving something hard.  Shipping the
-route as a checked fact is what keeps that reading from coming back.  Measured, against the two
+What it is for.  A certificate costs nothing, and shipping that as a checked fact is what keeps a
+reader from taking the bound to rest on something hard.  This section is what refuses the two
 changes that would make the bound mean something:
 
 * **Anchoring.**  Add the three inequalities `idealAdvantage ≤ adv.advantage`,
   `forsHalf adv ≤ forsBranch` and `hypertreeHalf adv ≤ hypertreeBranch` to `Certificate` and repair
-  `Certificate.ofBranchBounds` with three `le_refl`s: the library elaborates clean and this file
-  has **two** errors, both `Fields missing`, one at each of the two certificates below.  With this
-  section deleted it has **none**, so the canary is the sole refusal and no pin sees the change.
-  Only the first of the two is refused.  `freeCertificate`'s `forsBranch` is `0`, so the second of
-  the three inequalities asks for `forsHalf adv ≤ 0` there, and an attempt to discharge it leaves
-  `forsHalf adv = 0` at an arbitrary adversary.  `anchoredCertificate` is repaired by three
-  `le_refl`s and nothing else, its three quantities being the anchored ones already — measured,
-  **one** error then, at `freeCertificate` alone.
+  `Certificate.ofBranchBounds` with three `le_refl`s: the library is still well-formed, and the two
+  certificates below are the only things refused — no pin here sees the change, so without this
+  section nothing would.  Only the first of the two is really refused.  `freeCertificate`'s
+  `forsBranch` is `0`, so the second of the three inequalities asks for `forsHalf adv ≤ 0` there,
+  and an attempt to discharge it leaves `forsHalf adv = 0` at an arbitrary adversary.
+  `anchoredCertificate` is repaired by three `le_refl`s and nothing else, its three quantities being
+  the anchored ones already.
 * **A reduction field.**  Make `wotsFPreAdv` a function `unforgeableAdv (generalAlg prims) → _`
-  at its four declaration sites: the library again elaborates clean and this file has
-  **twenty-five** errors, nine in `Pins` and sixteen here.  The sixteen go away under a one-line
+  at its four declaration sites: the library is again well-formed, and what is refused is nine
+  entries in `Pins` and sixteen sites here.  The sixteen go away under a one-line
   repair at each certificate, `wotsFPreAdv := fun _ => freePreAdv prims t`, because a field of
   function type is still freely chosen.  So this canary *notifies* on that change; only fixing the
   function at the structure, which deletes the field, refuses it.
@@ -847,8 +835,8 @@ with no further input is the `counting` field: the interface below is inhabited 
 whose advantage is zero, and at `winningOpenPre`, whose advantage is one, it exists — over a node
 type with at least two elements — exactly when `1 ≤ TCRDSPRBound` does,
 `nonempty_counting_winningOpenPre_iff`, which is as far as this file takes the question.
-`winningOpenPre_advantage` needs nothing of the input distribution, not even `HasUniformInputs` —
-measured by removing it. -/
+`winningOpenPre_advantage` needs nothing of the input distribution, not even
+`HasUniformInputs`. -/
 
 section Vacuity
 
@@ -874,13 +862,10 @@ def idleUd {ix PkS Tw Msg Msg' Nd : Type}
   pick := pure ()
   distinguish := fun _ _ => pure false
 
--- Exposed, and it is the only one of the ten definitions in this section that is: the file
--- elaborates clean with this attribute and no other one here.  Inside a `public section` a
--- definition's body is not available to later declarations, so without it
+-- Exposed, and the only one of the ten definitions in this section that needs to be.  Inside a
+-- `public section` a definition's body is not available to later declarations, so without it
 -- `(Problem.toDSPR (idleOpenPre prob)).State` does not reduce to `Unit × _ × _` and
--- `idleOpenPre_toDSPR_choose` cannot even be stated: three errors, a `Type mismatch` at that
--- statement, the `unknownIdentifier` it causes in `idleOpenPre_dspr`, and that theorem's
--- `unsolved goals`.
+-- `idleOpenPre_toDSPR_choose` cannot even be stated.
 /-- An open-preimage adversary that commits to no target and opens nothing. -/
 @[expose] def idleOpenPre {ix PkS Tw Msg Nd : Type} [Inhabited Msg]
     (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
@@ -1183,8 +1168,8 @@ theorem hypertreeHalf_le_freePre {adv : unforgeableAdv (generalAlg prims)} (t : 
         (freePreAdv_advantage prims t).symm
     _ ≤ _ := le_add_right (le_add_right le_add_self)
 
--- This one needs no `@[expose]`, measured: the three anchoring inequalities below elaborate as
--- `le_refl` without it.  Unlike `idleOpenPre`, what the later declarations need of it is a value
+-- This one needs no `@[expose]`: the three anchoring inequalities below elaborate as `le_refl`
+-- without it.  Unlike `idleOpenPre`, what the later declarations need of it is a value
 -- and not a reduced type.
 /-- **A `Certificate` whose three named quantities are the experiment's own.**  The two arguments
 that are data are an address key and a public seed, as in `freeCertificate`; the third is a
@@ -1391,8 +1376,8 @@ end Counting
 The subsection above is at an arbitrary bundle, and the one hypothesis it leaves undischarged is
 about the node type.  At this file's bundle that hypothesis is `2 ≤ Fintype.card (Bytes 1)`, which
 `decide` settles, so the equivalence is not a statement about an empty class of bundles.  Both
-`decide`s need a deeper recursion limit than the default, measured: 2048 is enough for neither and
-4096 is enough for both. -/
+`decide`s need a deeper recursion limit than the default: 2048 is enough for neither and 4096 is
+enough for both. -/
 
 set_option maxRecDepth 4096 in
 example : 2 ≤ Fintype.card toyPrimitives.Y := by decide
