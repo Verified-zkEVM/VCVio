@@ -23,6 +23,9 @@ Default fast checks (shared with per-PR CI):
   - ./scripts/check-imports.sh (generated umbrella modules are current)
   - the boundary ratchets: PolyFun, PMF/SPMF, broad expose, complexity backend,
     Extern and Interop isolation
+  - the comment-fence rule over every Lean source the repository tracks or would
+    track, `third_party/` excluded and both lakefiles included
+
   - the eager-initialisation ratchet (needs the oleans the build above produced)
   - with --test, the same ratchet over the two test libraries that have umbrella
     modules, once lake test has built them
@@ -93,6 +96,8 @@ bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh
 bash scripts/check-interop-isolation.sh
+bash scripts/test-comment-fences.sh
+python3 ./scripts/check-comment-fences.py
 
 echo ""
 echo "# Checking eagerly-initialised constants"
