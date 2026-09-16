@@ -37,6 +37,14 @@ measure-level proofs use Tonelli's theorem and preserve subprobability mass.
 The generic `evalDist_pair` law denotes independent sequential draws by Mathlib's product
 measure. `evalDist_bind_apply_univ` expresses bind success mass as a `lintegral`, while
 `evalDist_map_apply_univ` states map preserves that mass; both live in the measure core.
+`prEvent_map` composes an output map with its final event. `prEvent_bind_bind_and` factors
+independent conjunctions automatically with `simp` and `grind`; it runs before monad normalization
+changes the computation's shape. `prEvent_bind_eq_lintegral` is the observed tower law and keeps
+the common draw's measurable space explicit. `prEvent_bind_congr` instead compares continuation
+event probabilities pointwise, hiding the intermediate measurable space and allowing different
+continuation result types. `prEvent_mono` transports implication between final events without
+an intermediate measurable-space argument. Use `grw [prEvent_mono ...]` to rewrite an event bound;
+`gcongr` handles surrounding arithmetic, with this lemma closing the event comparison.
 For discrete-answer oracle specifications, native `𝒟[mx]` has an automatic
 `IsProbabilityMeasure` instance, including when the result space is continuous. Mathlib's
 constant-integral and total-mass simp rules therefore need no local instance. This does not
@@ -103,6 +111,20 @@ almost-everywhere acceptance/extraction bounds; the extraction functional need n
 `OracleComp.EvalDist.marginalized_jensen_forking_bound` applies it to any `EvalDistSemantics`,
 without monad laws or discrete-backend assumptions. Its `_map` corollary observes acceptance and
 extraction before integrating and keeps the intermediate measurable-space choice internal.
+
+`VCVio.EvalDist.ProbabilityBounds` supplies `prEvent_bind_sq_le_bind_pair` for conditional
+independent draws, including lossy common draws and continuations. Its selector-partition bound
+`sum_prEvent_option_map_eq_some_le_isSome` uses finite disjoint unions of measurable events,
+without expanding singleton probabilities. The raw measure lemma needs only measurable selector
+fibers and no measurable space on the selector's target. These native arguments also prove the
+discrete compatibility equations. Finite and weighted sum-of-squares inequalities derive from
+the same integral Cauchy–Schwarz theorem by integrating atomic measures.
+`VCVio.OracleComp.Constructions.Fork.Basic` owns the typed occurrence constructions and
+`prEvent_sq_le_observedForkPair`: arbitrary discrete answer measures suffice, with no uniformity
+assumption or measurable-space arguments on the observed outputs. The original fork import
+facade retains the deprecated discrete equation and focused-answer collision bounds.
+`ToMathlib.Probability.Kernel.Quadratic` states the conditional-square bound for measurable
+kernel events on arbitrary spaces, so continuous kernel families have the same analytic API.
 
 `VCVio.EvalDist.Monad.UniformTable` supplies cell resampling/extraction, permutation,
 and injective restriction laws with explicit uniform-measure hypotheses. Its native counting

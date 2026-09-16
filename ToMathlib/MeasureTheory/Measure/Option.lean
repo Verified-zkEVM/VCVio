@@ -209,4 +209,23 @@ theorem withFailure_apply_some [MeasurableSingletonClass α] (μ : Measure α) (
   rw [Set.indicator_of_notMem (by simp)]
   simp only [smul_zero, add_zero]
 
+/-- Finite selector fibers of optional outputs have total mass at most the mass of present
+outputs. Only the fibers need be measurable; the selector's target needs no measurable space. -/
+lemma sum_apply_option_map_eq_some_le_isSome {γ : Type*} [Fintype γ]
+    (μ : Measure (Option α)) (select : α → Option γ)
+    (hselect : ∀ k, MeasurableSet {r : Option α | r.map select = some (some k)}) :
+    ∑ k : γ, μ {r | r.map select = some (some k)} ≤ μ {r | r.isSome} := by
+  classical
+  have hdisjoint : Pairwise fun i j : γ ↦ Disjoint
+      {r : Option α | r.map select = some (some i)}
+      {r : Option α | r.map select = some (some j)} := by
+    intro i j hij
+    refine Set.disjoint_left.mpr fun r hi hj ↦ hij ?_
+    simpa only [Option.some.injEq] using hi.symm.trans hj
+  rw [← tsum_fintype (L := .unconditional _), ← measure_iUnion hdisjoint hselect]
+  apply measure_mono
+  intro r hr
+  obtain ⟨k, hk⟩ := Set.mem_iUnion.mp hr
+  cases r <;> simp_all
+
 end MeasureTheory.Measure

@@ -2333,8 +2333,6 @@
  ["usesRetiredProbability", "_private.VCVio.EvalDist.TVDist.0.pmf_etvDist_bind_left_le"],
  ["usesRetiredProbability", "_private.VCVio.EvalDist.TVDist.0.pmf_tvDist_bind_left_le"],
  ["usesRetiredProbability", "_private.VCVio.EvalDist.TVDist.0.spmf_tvDist_bind_left_le_liftM"],
- ["usesRetiredProbability", "_private.VCVio.OracleComp.Constructions.Fork.0.OracleComp.probOutput_pair_eq_observedForkPair_found"],
- ["usesRetiredProbability", "_private.VCVio.OracleComp.Constructions.Fork.0.OracleComp.probOutput_pair_eq_observedForkPair_missing"],
  ["usesRetiredProbability", "_private.VCVio.OracleComp.Constructions.GenerateSeed.0.OracleComp.probOutput_generateSeed_cons_eq_mul"],
  ["usesRetiredProbability", "_private.VCVio.OracleComp.Constructions.SampleableType.0.evalDist_eq_uniformOn_of_equal_probOutput"],
  ["usesRetiredProbability", "_private.VCVio.OracleComp.QueryTracking.Birthday.0.OracleComp.probEvent_cacheCollision_run_le_sum_aux"],

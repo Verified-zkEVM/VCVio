@@ -15,6 +15,7 @@ public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.EvalDist.FinRatPMF
 public import VCVioTest.EvalDist.IndependentDraws
 public import VCVioTest.EvalDist.MeasureBridge
+public import VCVioTest.EvalDist.ProbabilityBounds
 public import VCVioTest.EvalDist.ProbabilityNotation
 public import VCVioTest.EvalDist.UniformTable
 public import VCVioTest.ForkMeasure

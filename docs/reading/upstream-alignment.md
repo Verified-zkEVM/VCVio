@@ -345,6 +345,16 @@ nonempty assumption. Natural observation increments use Giry pushforward and ups
 Quadratic expectation bounds specialize upstream `ENNReal.lintegral_mul_le_Lp_mul_Lq` at
 `Real.HolderConjugate.two_two` and use `lintegral_sub_le'` for truncated subtraction. The native
 forking inequality uses those measure facts with almost-everywhere hypotheses and no discrete lift.
+Finite and weighted sum-of-squares lemmas integrate finite sums or arbitrary sums of weighted
+Dirac measures using upstream `lintegral_finsetSum_measure` and `lintegral_sum_measure`.
+Conditional independent events use `Measure.bind_apply` and `Kernel.prod_apply_prod`; no new
+measure construction is needed. The native typed occurrence-fork bound uses this conditional
+square argument for arbitrary discrete answer measures, without uniformity or weighted sums.
+Finite optional selector partitions use upstream `measure_iUnion` for disjoint measurable fibers.
+Event-map and independent-conjunction equations normalize computation observations before their
+monad structure unfolds. `prEvent_mono` works with `grw`; upstream's `@[gcongr]` registration
+requires varying arguments to be free variables, so the expanded event macro cannot itself carry
+that attribute. Surrounding arithmetic uses `gcongr` followed by the explicit event comparison.
 
 **Gaps confirmed** (search that came back empty in `M:`): subprobability measures and kernels;
 `tvDist`/`totalVariation` for measures and PMFs (only `SignedMeasure.totalVariation`);

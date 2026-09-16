@@ -179,6 +179,7 @@ public import VCVio.EvalDist.PFunctorKernelTransport
 public import VCVio.EvalDist.PFunctorMeasure
 public import VCVio.EvalDist.PFunctorMeasure.Core
 public import VCVio.EvalDist.PFunctorPath
+public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.RenyiDivergence
@@ -213,6 +214,7 @@ public import VCVio.OracleComp.Coinductive.SecurityFamily
 public import VCVio.OracleComp.Coinductive.WiredRun
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.OracleComp.Constructions.Fork
+public import VCVio.OracleComp.Constructions.Fork.Basic
 public import VCVio.OracleComp.Constructions.GenerateSeed
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
