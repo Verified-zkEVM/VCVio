@@ -118,11 +118,11 @@ example (a b c d : ℝ≥0∞) (hab : a ≤ b) (hcd : c ≤ d) : a + c ≤ b + d
 
 end Probability
 
-/-! ## Support does not require probability semantics -/
+/-! ## Reachability does not require probability semantics -/
 
 example {ι α : Type} {spec : OracleSpec ι} (oa : OracleComp spec α)
     (o₁ o₂ : QueryImpl spec Set) (h : ∀ q, o₁ q ⊆ o₂ q) :
-    supportWhen o₁ oa ⊆ supportWhen o₂ oa := by
+    reachableWhen o₁ oa ⊆ reachableWhen o₂ oa := by
   gcongr with q
   guard_target = o₁ q ⊆ o₂ q
   exact h q
