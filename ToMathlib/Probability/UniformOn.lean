@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import Mathlib.Probability.UniformOn
+public import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
 
 /-!
 # Uniform measures on finite spaces
@@ -43,6 +44,15 @@ theorem MeasurableSpace.eq_top_of_finite {α : Type*} [Finite α]
     uniformOn (Set.univ : Set α) {a} = (Fintype.card α : ℝ≥0∞)⁻¹ := by
   rw [uniformOn_univ, Measure.count_singleton]
   simp [div_eq_mul_inv]
+
+/-- Integrating over a finite uniform space averages the values of the integrand.
+The formula also holds for the empty space. -/
+theorem lintegral_uniformOn_univ {α : Type*} [MeasurableSpace α]
+    [MeasurableSingletonClass α] [Fintype α] (f : α → ℝ≥0∞) :
+    ∫⁻ a, f a ∂uniformOn Set.univ = (∑ a, f a) / Fintype.card α := by
+  rw [lintegral_fintype]
+  simp_rw [uniformOn_univ, Measure.count_singleton, one_div]
+  rw [div_eq_mul_inv, Finset.sum_mul]
 
 /-- The uniform measure on a product of finite nonempty spaces is the product of their uniform
 measures. Thus the two coordinates are independent uniform draws. -/

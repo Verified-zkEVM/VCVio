@@ -114,11 +114,9 @@ theorem isProbabilityMeasure_denote_liftBind [MeasurableSpace α] (a : P.A)
 
 variable [∀ a, DiscreteMeasurableSpace (P.B a)]
 
-/-- Every program over discrete answer types denotes a probability measure.
-
-This theorem is deliberately not a global instance: a program with a continuous answer type
-needs a measurability argument for each continuation, and typeclass search must not hide that
-boundary. -/
+/-- Every program over discrete answer types denotes a probability measure, independently of
+the measurable space on its output. -/
+@[instance]
 theorem isProbabilityMeasure_denote [MeasurableSpace α] (program : FreeM P α) :
     IsProbabilityMeasure (denote program) := by
   induction program with
@@ -226,6 +224,12 @@ theorem evalDist_eq_denote [MeasurableSpace α] (program : FreeM P α) :
 theorem evalDist_lift (a : P.A) :
     𝒟[(FreeM.lift a : FreeM P (P.B a))] = IsMeasureSpec.toMeasure a :=
   denote_lift a
+
+/-- A single operation denotes a probability measure, including for continuous answer spaces. -/
+theorem isProbabilityMeasure_evalDist_lift (a : P.A) :
+    IsProbabilityMeasure 𝒟[(FreeM.lift a : FreeM P (P.B a))] := by
+  rw [evalDist_lift]
+  infer_instance
 
 /-- An operation followed by a continuation denotes the Giry bind of its answer measure with
 the denotation of the continuation. -/

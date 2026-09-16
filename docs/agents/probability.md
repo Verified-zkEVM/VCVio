@@ -47,6 +47,17 @@ intermediate type, a local `MeasurableSpace α := ⊤` chooses the discrete stru
 this idiom in `MeasureTheory.Function.Piecewise` and `MeasureTheory.Function.SimpleFunc`.
 Keep that choice inside structural APIs when callers do not need to observe intermediate values.
 Genuinely measure-indexed results retain their selected measurable spaces as explicit parameters.
+Every `𝒟[mx]` automatically satisfies `IsSubprobabilityMeasure`. The upper mass bound also
+propagates automatically through raw `Measure.map` and `Measure.bind`, without measurability
+hypotheses; this uses upstream's zero pushforward for a nonmeasurable map and its one-sided bind
+bound. Exact mass preservation requires measurability. `pure` infers a probability-measure
+instance even for continuous-answer specifications. `FreeM.isProbabilityMeasure_evalDist_lift`
+supplies a single native query's probability proof. It is a theorem: the dependent output type
+`P.B a` gives a projection key that instance search cannot match against a concrete reduced type
+such as `ℝ`. A general continuous program still requires a continuation measurability proof.
+`FreeM.denote` over discrete answers, `FreeM.pathMeasure`, and `FreeM.queryCountMeasure` export
+probability instances; proofs should not install them locally. `OptionT.evalDist_failure`
+simplifies native optional failure to zero using only the base pure law.
 `FreeM.evalDist_lift_bind_pure` handles a measurable pure function after a single operation
 without requiring discrete answer spaces; continuous final-event proofs can use this directly.
 `le_evalDist_bind_apply` transports an almost-everywhere lower bound through a lossless draw;
@@ -63,6 +74,30 @@ partition theorems, so consumers do not need unfolding hypotheses.
 `OracleComp.evalDist_map_const` handles a constant output map without a measurable space on
 the discarded result type. This lets default `simp` stay on native measure laws after monad
 normalization turns a constant return into a map.
+
+`lintegral_evalDist_bind` states the tower law with a measurable continuation;
+`lintegral_evalDist_bind_of_discrete` supplies that proof for a discrete common draw.
+`lintegral_evalDist_map_add_nat` integrates an incremented natural-valued observation and
+retains its successful-mass factor. The intermediate type needs no measurable space.
+Lossless oracle programs infer that factor as one, so default `simp` proves the increment law.
+`lintegral_evalDist_map_const_add_nat` supplies the curried `Nat.add` form for `grind`;
+lambda-bound parameters are unavailable as automatic `grind` patterns.
+`lintegral_uniformOn_univ` averages over a finite uniform measure, including the empty space
+and infinite integrands. `ProbComp.lintegral_evalDist_uniformFin` exposes that law for a draw.
+
+The native drawing loop and its measure-valued length integrals live in
+`VCVio.OracleComp.Constructions.WithoutReplacement.Basic`. Observe `List.length` before
+integrating: the pool's value type needs no measurable space. The stopping and exhaustion laws
+use the same negative-hypergeometric recursion. The original import facade also exposes
+deprecated discrete expectation equations.
+
+`ToMathlib.MeasureTheory.Integral.Quadratic` specializes upstream Hölder to Cauchy–Schwarz,
+retaining the total-mass factor for arbitrary measures and bounding it for subprobability
+measures. Its quadratic bound requires only almost-everywhere measurable acceptance and
+almost-everywhere acceptance/extraction bounds; the extraction functional need not be measurable.
+`OracleComp.EvalDist.marginalized_jensen_forking_bound` applies it to any `EvalDistSemantics`,
+without monad laws or discrete-backend assumptions. Its `_map` corollary observes acceptance and
+extraction before integrating and keeps the intermediate measurable-space choice internal.
 
 `VCVio.EvalDist.Monad.UniformTable` supplies cell resampling/extraction, permutation,
 and injective restriction laws with explicit uniform-measure hypotheses. Its native counting

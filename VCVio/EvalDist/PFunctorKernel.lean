@@ -87,8 +87,6 @@ instance runKernel.instIsSubprobabilityKernel (impl : KernelHandler P S)
       let := ih
       refine ⟨fun state => ?_⟩
       change ((impl a state).bind fun out => runKernel impl (next out.1) out.2) Set.univ ≤ 1
-      have hm := measurable_runKernel_continuation impl next
-      let := isSubprobabilityMeasure_bind (μ := impl a state) hm.aemeasurable
       exact measure_univ_le _
 
 /-- Stateful interpretation respects sequential substitution. -/

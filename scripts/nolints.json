@@ -1366,7 +1366,6 @@
  ["usesRetiredProbability", "OracleComp.EvalDist.expectedValue_ne_top_of_le"],
  ["usesRetiredProbability", "OracleComp.EvalDist.expectedValue_pure"],
  ["usesRetiredProbability", "OracleComp.EvalDist.lintegral_evalDist"],
- ["usesRetiredProbability", "OracleComp.EvalDist.marginalized_jensen_forking_bound"],
  ["usesRetiredProbability", "OracleComp.HasUnpredictableSample.mk"],
  ["usesRetiredProbability", "OracleComp.HasUnpredictableSample.mono"],
  ["usesRetiredProbability", "OracleComp.HasUnpredictableSample.prob_le"],

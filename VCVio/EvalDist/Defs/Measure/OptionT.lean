@@ -72,6 +72,15 @@ theorem OptionT.evalDist_pure
   rw [OptionT.evalDist_eq_comap_some, OptionT.run_pure, _root_.evalDist_pure,
     ← Measure.dropNone_eq_comap_some, Measure.dropNone_dirac_some]
 
+/-- Optional failure has no successful-output mass. -/
+@[simp]
+theorem OptionT.evalDist_failure
+    {m : Type u → Type v} [Monad m] [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] : 𝒟[(failure : OptionT m α)] = 0 := by
+  rw [OptionT.evalDist_eq_comap_some,
+    show (failure : OptionT m α).run = pure none from rfl, _root_.evalDist_pure,
+    ← Measure.dropNone_eq_comap_some, Measure.dropNone_dirac_none]
+
 /-- Lifting a computation into `OptionT` preserves its successful-output measure. -/
 @[simp]
 theorem OptionT.evalDist_lift

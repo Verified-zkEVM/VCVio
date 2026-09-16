@@ -381,7 +381,9 @@ theorem nma_to_hard_relation_bound
           (σ := σ) (hr := hr) (M := M) nmaAdv qH pk)).trans
       (perPk_extraction_bound σ hr M nmaAdv qH hss hss_nf pk)
   rw [hAdv_eq_tsum, hRHS_eq_tsum]
-  exact OracleComp.EvalDist.marginalized_jensen_forking_bound (mx := hr.gen)
+  simpa only [DiscreteEvalDistCompatible.lintegral_evalDist _ (g := fun a ↦ a) measurable_id,
+    ← OracleComp.EvalDist.expectedValue_def, OracleComp.EvalDist.expectedValue_map] using
+    OracleComp.EvalDist.marginalized_jensen_forking_bound_map (mx := hr.gen)
     (acc := fun pkw => acc pkw.1)
     (B := fun pkw => Pr[ fun w : Wit => rel pkw.1 w = true |
       nmaReduction σ hr M nmaAdv qH pkw.1])

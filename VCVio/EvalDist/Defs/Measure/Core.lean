@@ -74,6 +74,12 @@ theorem evalDist_pure {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
     𝒟[(pure x : m α)] = Measure.dirac x :=
   LawfulPureEvalDistSemantics.denote_pure x
 
+instance evalDist.instIsProbabilityMeasurePure {m : Type u → Type v} [Monad m]
+    [EvalDistSemantics m] [LawfulPureEvalDistSemantics m] {α : Type u}
+    [MeasurableSpace α] (x : α) : IsProbabilityMeasure 𝒟[(pure x : m α)] := by
+  rw [evalDist_pure]
+  infer_instance
+
 theorem evalDist_bind {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
     (mx : m α) (f : α → m β) (hf : Measurable fun x => 𝒟[f x]) :
@@ -147,20 +153,62 @@ theorem evalDist_map_const {m : Type u → Type v} [Monad m] [LawfulMonad m] [Ev
     (mx : m α) (c : β) : 𝒟[(fun _ => c) <$> mx] = 𝒟[mx] Set.univ • Measure.dirac c := by
   rw [evalDist_map mx measurable_const, Measure.map_const]
 
-/-- Tower property on the measure side: the `∫⁻` twin of `expectedValue_bind`. -/
+/-- Integrating a bind first integrates each measurable continuation, then its common draw. -/
 theorem lintegral_evalDist_bind {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
-    [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α] [DiscreteMeasurableSpace α]
-    [MeasurableSpace β] (mx : m α) (f : α → m β) {g : β → ENNReal} (hg : Measurable g) :
+    [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α]
+    [MeasurableSpace β] (mx : m α) (f : α → m β)
+    (hf : Measurable fun x ↦ 𝒟[f x]) {g : β → ENNReal} (hg : Measurable g) :
     ∫⁻ y, g y ∂𝒟[mx >>= f] = ∫⁻ x, ∫⁻ y, g y ∂𝒟[f x] ∂𝒟[mx] := by
-  rw [evalDist_bind_of_discrete mx f,
-    Measure.lintegral_bind Measurable.of_discrete.aemeasurable hg.aemeasurable]
+  rw [evalDist_bind mx f hf, Measure.lintegral_bind hf.aemeasurable hg.aemeasurable]
 
-/-- Change of variables on the measure side: the `∫⁻` twin of `expectedValue_map`. -/
+/-- For a discrete common draw, the tower law needs no continuation measurability proof. -/
+theorem lintegral_evalDist_bind_of_discrete {m : Type u → Type v} [Monad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α]
+    [DiscreteMeasurableSpace α] [MeasurableSpace β] (mx : m α) (f : α → m β)
+    {g : β → ENNReal} (hg : Measurable g) :
+    ∫⁻ y, g y ∂𝒟[mx >>= f] = ∫⁻ x, ∫⁻ y, g y ∂𝒟[f x] ∂𝒟[mx] :=
+  lintegral_evalDist_bind mx f .of_discrete hg
+
+/-- Integrating a measurable output map integrates the composed functional. -/
 theorem lintegral_evalDist_map {m : Type u → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α]
     [MeasurableSpace β] (mx : m α) {f : α → β} (hf : Measurable f) {g : β → ENNReal}
     (hg : Measurable g) : ∫⁻ y, g y ∂𝒟[f <$> mx] = ∫⁻ x, g (f x) ∂𝒟[mx] := by
   rw [evalDist_map mx hf, lintegral_map hg hf]
+
+/-- On discrete source and target spaces, output-map integration needs no measurability
+proofs. -/
+@[simp high]
+theorem lintegral_evalDist_map_of_discrete {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α]
+    [DiscreteMeasurableSpace α] [MeasurableSpace β] [DiscreteMeasurableSpace β]
+    (mx : m α) (f : α → β) (g : β → ENNReal) :
+    ∫⁻ y, g y ∂𝒟[f <$> mx] = ∫⁻ x, g (f x) ∂𝒟[mx] :=
+  lintegral_evalDist_map mx .of_discrete .of_discrete
+
+/-- Adding to a natural-valued observation adds the constant scaled by the successful output
+mass. The observed computation's intermediate result needs no measurable-space instance. -/
+@[simp high + 1]
+theorem lintegral_evalDist_map_add_nat {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type}
+    (mx : m α) (f : α → ℕ) (c : ℕ) :
+    (∫⁻ n, (n : ENNReal) ∂𝒟[(fun x ↦ f x + c) <$> mx]) =
+      (∫⁻ n, (n : ENNReal) ∂𝒟[f <$> mx]) + c * 𝒟[f <$> mx] Set.univ := by
+  rw [show (fun x ↦ f x + c) <$> mx =
+    (fun n : ℕ ↦ n + c) <$> (f <$> mx) by simp [Functor.map_map],
+    lintegral_evalDist_map_of_discrete]
+  simp [lintegral_add_right]
+
+/-- Adding a fixed natural to an observed count scales that increment by successful mass.
+The curried addition form supplies a binder-free pattern for `grind`. -/
+@[grind =]
+theorem lintegral_evalDist_map_const_add_nat {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type}
+    (mx : m α) (f : α → ℕ) (c : ℕ) :
+    (∫⁻ n, (n : ENNReal) ∂𝒟[Nat.add c <$> (f <$> mx)]) =
+      (∫⁻ n, (n : ENNReal) ∂𝒟[f <$> mx]) + c * 𝒟[f <$> mx] Set.univ := by
+  simpa only [Functor.map_map, Function.comp_def, Nat.add_eq, Nat.add_comm] using
+    lintegral_evalDist_map_add_nat mx f c
 
 /-- The success mass of a bind is the integral of its continuation's success mass. -/
 theorem evalDist_bind_apply_univ {m : Type u → Type v} [Monad m]

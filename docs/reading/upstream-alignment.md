@@ -326,6 +326,19 @@ are native measures, and their projection equations use the runtime's bundled me
 law. Exact event splits require neither an infinite sum nor a separate evaluator hypothesis.
 Lossless discrete-answer free programs expose an `IsProbabilityMeasure` instance under native
 `evalDist`, so upstream constant-integral and total-mass simp rules apply directly.
+The native fold and named path/count measures also export this property. Subprobability
+pushforward and bind instances use upstream `Measure.map_apply_of_aemeasurable`,
+`Measure.map_of_not_aemeasurable`, and `Measure.bind_apply_le`; their upper mass bounds need no
+measurability hypothesis. Exact losslessness of an arbitrary continuous composition remains a
+separate measurable-continuation obligation.
+
+Finite-uniform expectations use upstream `lintegral_fintype`, `uniformOn_univ`, and
+`Measure.count_singleton`; `lintegral_uniformOn_univ` packages their finite average without a
+nonempty assumption. Natural observation increments use Giry pushforward and upstream
+`lintegral_add_right`, keeping successful mass visible and intermediate measurable spaces internal.
+Quadratic expectation bounds specialize upstream `ENNReal.lintegral_mul_le_Lp_mul_Lq` at
+`Real.HolderConjugate.two_two` and use `lintegral_sub_le'` for truncated subtraction. The native
+forking inequality uses those measure facts with almost-everywhere hypotheses and no discrete lift.
 
 **Gaps confirmed** (search that came back empty in `M:`): subprobability measures and kernels;
 `tvDist`/`totalVariation` for measures and PMFs (only `SignedMeasure.totalVariation`);

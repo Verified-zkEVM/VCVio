@@ -10,6 +10,7 @@ public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.EvalDist.ProbabilityNotation
 public import ToMathlib.MeasureTheory.Measure.Bounds
+public import ToMathlib.Probability.UniformOn
 
 /-!
 # Measure semantics for finite-range sampling
@@ -31,6 +32,12 @@ theorem evalDist_uniformFin (n : ℕ) :
     𝒟[uniformFin n] = uniformOn Set.univ := by
   change 𝒟[(unifSpec.query n : OracleComp unifSpec (Fin (n + 1)))] = _
   exact OracleComp.evalDist_query_uniform n
+
+/-- Integrating a finite-range draw is a finite average, including for infinite integrands. -/
+theorem lintegral_evalDist_uniformFin (n : ℕ) (f : Fin (n + 1) → ENNReal) :
+    ∫⁻ i, f i ∂𝒟[uniformFin n] = (∑ i, f i) / (n + 1) := by
+  rw [evalDist_uniformFin, lintegral_uniformOn_univ]
+  simp
 
 /-- A decidable event on a finite-range draw has its normalized cardinality. -/
 theorem prEvent_uniformFin (n : ℕ) (p : Fin (n + 1) → Prop) [DecidablePred p] :
