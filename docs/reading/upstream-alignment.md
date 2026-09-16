@@ -350,6 +350,11 @@ Dirac measures using upstream `lintegral_finsetSum_measure` and `lintegral_sum_m
 Conditional independent events use `Measure.bind_apply` and `Kernel.prod_apply_prod`; no new
 measure construction is needed. The native typed occurrence-fork bound uses this conditional
 square argument for arbitrary discrete answer measures, without uniformity or weighted sums.
+Occurrence-answer and located-fork marginals discard lossless suffixes with `Measure.bind_const`
+through the native oracle laws. The exact collision event is the configured answer measure's
+singleton mass; the uniform bound uses the existing `uniformOn_univ_apply_singleton` lemma.
+Operational completion and fork-map equations remain owned by PolyFun. These observations need
+no measurable spaces on completion records or main outputs, and no oracle-name decidable equality.
 Finite optional selector partitions use upstream `measure_iUnion` for disjoint measurable fibers.
 Event-map and independent-conjunction equations normalize computation observations before their
 monad structure unfolds. `prEvent_mono` works with `grw`; upstream's `@[gcongr]` registration

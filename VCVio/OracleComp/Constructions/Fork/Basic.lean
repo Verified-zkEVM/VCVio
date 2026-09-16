@@ -6,6 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import PolyFun.PFunctor.Free.Cursor.Fork
+public import ToMathlib.Probability.UniformOn
 public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 
@@ -14,7 +15,9 @@ public import VCVio.OracleComp.EvalDist.MeasureSpec
 
 Two independent completions of a selected occurrence bound the squared event probability of
 one execution. The argument applies to arbitrary discrete response measures, and observations
-need no measurable-space arguments on intermediate values.
+need no measurable-space arguments on intermediate values. Completing an occurrence and
+observing its answer recovers the query's configured measure. A located fork's second answer
+has the same marginal, so its collision probability is the mass of the fixed first answer.
 -/
 
 public section
@@ -64,6 +67,88 @@ def completeOccurrence {main : OracleComp spec α} {i : ι} {n : Nat}
   ofFreeM occurrence.complete
 
 end Cursor
+
+section answer
+
+variable [∀ t, MeasurableSpace (spec.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
+
+/-- The answer marginal of an occurrence completion is its configured query measure. -/
+@[simp↓ high, grind norm↓]
+theorem evalDist_map_answer_completeOccurrence {main : OracleComp spec α} {i : ι} {n : Nat}
+    (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) :
+    𝒟[(fun completion ↦ completion.answer) <$> Cursor.completeOccurrence occurrence] =
+      IsMeasureSpec.toMeasure (spec := spec) i := by
+  simp only [Cursor.completeOccurrence, PFunctor.FreeM.Cursor.Occurrence.complete,
+    PFunctor.FreeM.liftBind_eq, ofFreeM_bind, ofFreeM_map, map_bind, Functor.map_map]
+  calc
+    _ = 𝒟[(ofFreeM (PFunctor.FreeM.lift (P := spec.toPFunctor) i) :
+        OracleComp spec (spec.Range i)) >>= fun answer ↦ pure answer] := by
+      apply evalDist_bind_congr
+      intro answer
+      simp only [OracleComp.evalDist_map_const, evalDist_pure]
+    _ = _ := by
+      simpa only [bind_pure] using PFunctor.FreeM.evalDist_lift (P := spec.toPFunctor) i
+
+/-- Events on the answer of an occurrence completion are events of a fresh query. -/
+@[simp↓ high, grind norm↓]
+theorem prEvent_answer_completeOccurrence {main : OracleComp spec α} {i : ι} {n : Nat}
+    (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) (p : spec.Range i → Prop) :
+    Pr{let completion ← Cursor.completeOccurrence occurrence}[p completion.answer] =
+      Pr{let answer ← (query i : OracleComp spec (spec.Range i))}[p answer] := by
+  rw [← prEvent_map (Cursor.completeOccurrence occurrence) (fun c ↦ c.answer) p,
+    prEvent_eq_evalDist_of_discrete, evalDist_map_answer_completeOccurrence,
+    prEvent_eq_evalDist_of_discrete, evalDist_query]
+
+/-- The second answer of a located fork has its configured query measure. -/
+@[simp↓ high, grind norm↓]
+theorem evalDist_map_secondAnswer_fork {main : OracleComp spec α} {i : ι} {n : Nat}
+    {path : PFunctor.FreeM.Path main}
+    (located : PFunctor.FreeM.Cursor.Located i main path n) :
+    𝒟[(fun view ↦ view.secondAnswer) <$> ofFreeM located.fork] =
+      IsMeasureSpec.toMeasure (spec := spec) i := by
+  rw [PFunctor.FreeM.Cursor.Located.fork_eq_map_complete, ofFreeM_map, Functor.map_map]
+  simpa only [Function.comp_def, PFunctor.FreeM.Cursor.ForkView.secondAnswer_mk,
+    Cursor.completeOccurrence] using evalDist_map_answer_completeOccurrence located.occurrence
+
+/-- A located fork collides exactly with the measure of its fixed first answer. -/
+@[simp↓ high, grind norm↓]
+theorem prEvent_focusCollision_fork {main : OracleComp spec α} {i : ι} {n : Nat}
+    {path : PFunctor.FreeM.Path main}
+    (located : PFunctor.FreeM.Cursor.Located i main path n) :
+    Pr{let view ← ofFreeM located.fork}[view.firstAnswer = view.secondAnswer] =
+      IsMeasureSpec.toMeasure (spec := spec) i {located.completion.answer} := by
+  rw [PFunctor.FreeM.Cursor.Located.fork_eq_map_complete, ofFreeM_map, prEvent_map]
+  simp only [PFunctor.FreeM.Cursor.ForkView.firstAnswer_mk,
+    PFunctor.FreeM.Cursor.ForkView.secondAnswer_mk]
+  rw [prEvent_answer_completeOccurrence, prEvent_eq_evalDist_of_discrete, evalDist_query]
+  congr 1
+  ext answer
+  simp [eq_comm]
+
+/-- Adding a guard to a located fork's collision event only decreases its probability. -/
+theorem prEvent_focusCollision_fork_le {main : OracleComp spec α} {i : ι} {n : Nat}
+    {path : PFunctor.FreeM.Path main}
+    (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
+    Pr{let view ← ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧
+      accept (PFunctor.FreeM.output main view.firstPath)] ≤
+      IsMeasureSpec.toMeasure (spec := spec) i {located.completion.answer} :=
+  (prEvent_mono _ _ _ fun _ h ↦ h.1).trans_eq (prEvent_focusCollision_fork located)
+
+end answer
+
+/-- Under uniform answer measures, a guarded collision is bounded by inverse cardinality. -/
+theorem prEvent_focusCollision_fork_le_of_uniform
+    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [IsUniformMeasureSpec spec] {main : OracleComp spec α} {i : ι} {n : Nat}
+    {path : PFunctor.FreeM.Path main}
+    (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
+    Pr{let view ← ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧
+      accept (PFunctor.FreeM.output main view.firstPath)] ≤
+      (Fintype.card (spec.Range i) : ℝ≥0∞)⁻¹ := by
+  simpa only [IsMeasureSpec.toMeasure_eq_uniformOn,
+    ProbabilityTheory.uniformOn_univ_apply_singleton] using
+    prEvent_focusCollision_fork_le located accept
 
 /-- Observe the outputs of both completions of a fixed typed occurrence. -/
 @[expose] def observedForkPair [spec.DecidableEq]

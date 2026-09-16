@@ -51,6 +51,15 @@ theorem prEvent_eq_evalDist_of_discrete
     Pr{let x ← mx}[p x] = 𝒟[mx] {x | p x} :=
   prEvent_eq_evalDist mx p Measurable.of_discrete
 
+/-- Equality to one output has its singleton mass whenever singletons are measurable. -/
+theorem prEvent_eq_evalDist_singleton
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} [MeasurableSpace α] [MeasurableSingletonClass α] (mx : m α) (a : α) :
+    Pr{let x ← mx}[x = a] = 𝒟[mx] {a} := by
+  simpa only [Set.ofPred_eq_eq_singleton] using
+    prEvent_eq_evalDist mx (fun x ↦ x = a) (measurableSet_singleton a).mem
+
 /-- Checking a decidable event at the end of a computation gives the same success mass as
 returning its decision as a Boolean. -/
 theorem prEvent_eq_evalDist_decide_of_discrete

@@ -14,6 +14,8 @@ public import ToMathlib.Probability.Kernel.Quadratic
 These checks exercise conditional-square and selector-partition bounds without a discrete
 probability backend, measurable structures on intermediate values, or uniform answer measures.
 They also check that event maps and independent conjunctions normalize with `simp` and `grind`.
+Occurrence answer marginals and collision bounds infer their mass properties and need no
+measurable structures on completion records or main outputs.
 -/
 
 public section
@@ -66,6 +68,20 @@ example [Fintype γ] (mx : m (Option α)) (select : α → Option γ) :
 
 end monad
 
+example {m : Type → Type} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} [MeasurableSpace α] [MeasurableSingletonClass α] (mx : m α) (a : α) :
+    Pr{let x ← mx}[x = a] = 𝒟[mx] {a} :=
+  prEvent_eq_evalDist_singleton mx a
+
+example {m : Type → Type} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
+    [MeasurableSingletonClass α] [MeasurableSingletonClass β]
+    (mx : m (α × β)) (a : α) (b : β) :
+    Pr{let pair ← mx}[pair = (a, b)] = 𝒟[mx] {(a, b)} :=
+  prEvent_eq_evalDist_singleton mx (a, b)
+
 example {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
     (κ : Kernel α β) [IsSFiniteKernel κ] (μ : Measure α) [IsSubprobabilityMeasure μ]
     {s : Set β} (hs : MeasurableSet s) :
@@ -78,6 +94,68 @@ example {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
 noncomputable instance : IsMeasureSpec biasedSpec where
   toMeasure _ := Measure.dirac true
   isProbabilityMeasure _ := inferInstance
+
+section fork
+
+variable {ι : Type} {spec : OracleSpec ι} {α : Type}
+  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [IsMeasureSpec spec] {main : OracleComp spec α} {i : ι} {n : Nat}
+
+example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) :
+    𝒟[(fun completion ↦ completion.answer) <$>
+      OracleComp.Cursor.completeOccurrence occurrence] =
+      IsMeasureSpec.toMeasure (spec := spec) i := by simp
+
+example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) (p : spec.Range i → Prop) :
+    Pr{let completion ← OracleComp.Cursor.completeOccurrence occurrence}[p completion.answer] =
+      Pr{let answer ← (query i : OracleComp spec (spec.Range i))}[p answer] := by simp
+
+example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) (p : spec.Range i → Prop)
+    {bound : ENNReal}
+    (h : Pr{ let answer ← (query i : OracleComp spec (spec.Range i))}[p answer] ≤ bound) :
+    Pr{let completion ← OracleComp.Cursor.completeOccurrence occurrence}[p completion.answer] ≤
+      bound := by grind
+
+example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) :
+    IsProbabilityMeasure 𝒟[(fun completion ↦ completion.answer) <$>
+      OracleComp.Cursor.completeOccurrence occurrence] := inferInstance
+
+example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) :
+    IsSubprobabilityMeasure 𝒟[(fun completion ↦ completion.answer) <$>
+      OracleComp.Cursor.completeOccurrence occurrence] := inferInstance
+
+example {path : PFunctor.FreeM.Path main}
+    (located : PFunctor.FreeM.Cursor.Located i main path n) :
+    𝒟[(fun view ↦ view.secondAnswer) <$> OracleComp.ofFreeM located.fork] =
+      IsMeasureSpec.toMeasure (spec := spec) i := by simp
+
+example {path : PFunctor.FreeM.Path main}
+    (located : PFunctor.FreeM.Cursor.Located i main path n) {bound : ENNReal}
+    (h : IsMeasureSpec.toMeasure (spec := spec) i {located.completion.answer} ≤ bound) :
+    Pr{let view ← OracleComp.ofFreeM located.fork}[view.firstAnswer = view.secondAnswer] ≤
+      bound := by grind
+
+example {path : PFunctor.FreeM.Path main}
+    (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
+    Pr{let view ← OracleComp.ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧
+      accept (PFunctor.FreeM.output main view.firstPath)] ≤
+      IsMeasureSpec.toMeasure (spec := spec) i {located.completion.answer} :=
+  OracleComp.prEvent_focusCollision_fork_le located accept
+
+end fork
+
+example {ι : Type} {spec : OracleSpec ι} {α : Type}
+    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [IsUniformMeasureSpec spec] {main : OracleComp spec α} {i : ι} {n : Nat}
+    {path : PFunctor.FreeM.Path main}
+    (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
+    Pr{let view ← OracleComp.ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧
+      accept (PFunctor.FreeM.output main view.firstPath)] ≤
+      (Fintype.card (spec.Range i) : ENNReal)⁻¹ :=
+  OracleComp.prEvent_focusCollision_fork_le_of_uniform located accept
+
+example {α : Type} [MeasurableSpace α] (main : OracleComp biasedSpec α) :
+    IsProbabilityMeasure 𝒟[main] := inferInstance
 
 example {α β : Type} (main : OracleComp biasedSpec α) (n : Nat) (observe : α → Option β)
     (value : β) (hselect : OracleComp.OutputSelectsOccurrence main () n observe value) :

@@ -981,7 +981,6 @@
  ["unusedArguments", "OracleComp.map_run_simulateQ_eq_of_query_map_eq_inv'"],
  ["unusedArguments", "OracleComp.mem_finSupport_replicate"],
  ["unusedArguments", "OracleComp.probEvent_adaptivePrefixRunFrom_le"],
- ["unusedArguments", "OracleComp.probEvent_answer_ofFreeM_complete"],
  ["unusedArguments", "OracleComp.probEvent_cache_hits_targets_le_of_noCollision_homogeneous"],
  ["unusedArguments", "OracleComp.probOutput_guard_eq_sub_probOutput_guard_not"],
  ["unusedArguments", "OracleComp.probOutput_pop_none_eq_zero_of_count_pos"],

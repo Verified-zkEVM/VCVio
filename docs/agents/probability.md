@@ -49,11 +49,15 @@ For discrete-answer oracle specifications, native `𝒟[mx]` has an automatic
 `IsProbabilityMeasure` instance, including when the result space is continuous. Mathlib's
 constant-integral and total-mass simp rules therefore need no local instance. This does not
 assert losslessness for arbitrary continuous-answer programs with unmeasurable continuations.
-A named opaque experiment publishes its own measure-property instances once at its definition.
-Callers should infer those properties rather than recreate local witnesses. For an abstract
+A named opaque measure publishes its own measure-property instances once at its definition.
+An opaque computation inside `𝒟[...]` still uses the generic denotation instances; computation
+opacity alone does not require a separate witness. Callers should infer these properties rather
+than recreate local witnesses. For an abstract
 intermediate type, a local `MeasurableSpace α := ⊤` chooses the discrete structure; Mathlib uses
 this idiom in `MeasureTheory.Function.Piecewise` and `MeasureTheory.Function.SimpleFunc`.
 Keep that choice inside structural APIs when callers do not need to observe intermediate values.
+Choose the space on the underlying data type once; `Option`, products, and subtypes normally use
+their inherited measurable-space instances rather than separate local top spaces.
 Genuinely measure-indexed results retain their selected measurable spaces as explicit parameters.
 Every `𝒟[mx]` automatically satisfies `IsSubprobabilityMeasure`. The upper mass bound also
 propagates automatically through raw `Measure.map` and `Measure.bind`, without measurability
@@ -71,6 +75,8 @@ simplifies native optional failure to zero using only the base pure law.
 The backend-free `evalDistWithFailure` wrapper exports the same probability-measure instance.
 The mass at `none` needs no discreteness hypothesis: the optional coproduct makes this singleton
 measurable for every result space. Successful singleton masses need only measurable singletons.
+`prEvent_eq_evalDist_singleton` identifies an equality event with its singleton mass under that
+weaker assumption. It therefore works with inherited product spaces even when they are not discrete.
 `FreeM.evalDist_lift_bind_pure` handles a measurable pure function after a single operation
 without requiring discrete answer spaces; continuous final-event proofs can use this directly.
 `le_evalDist_bind_apply` transports an almost-everywhere lower bound through a lossless draw;
@@ -122,7 +128,14 @@ the same integral Cauchy–Schwarz theorem by integrating atomic measures.
 `VCVio.OracleComp.Constructions.Fork.Basic` owns the typed occurrence constructions and
 `prEvent_sq_le_observedForkPair`: arbitrary discrete answer measures suffice, with no uniformity
 assumption or measurable-space arguments on the observed outputs. The original fork import
-facade retains the deprecated discrete equation and focused-answer collision bounds.
+facade retains the deprecated discrete equations. `evalDist_map_answer_completeOccurrence` and
+`evalDist_map_secondAnswer_fork` recover the configured response measure without assigning a
+measurable space to the completion or fork record. `prEvent_answer_completeOccurrence` transports
+answer events to a fresh query. `prEvent_focusCollision_fork` identifies the exact collision
+probability with the measure of the fixed first answer; adding an output guard only decreases it.
+The `_le_of_uniform` corollary obtains inverse cardinality from the uniform measure's singleton law.
+Answer marginalization and collision equations normalize with `simp` and `grind`, without a
+decidable equality assumption on oracle names.
 `ToMathlib.Probability.Kernel.Quadratic` states the conditional-square bound for measurable
 kernel events on arbitrary spaces, so continuous kernel families have the same analytic API.
 
