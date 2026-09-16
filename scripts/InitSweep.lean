@@ -22,10 +22,10 @@ numeric constants — which have no value to read; those are counted separately 
 the only thing they carry, their mangled name.
 
 Every clause is load-bearing; `scripts/test-initsweep.sh` carries the fixtures that
-falsify each one. Numeric censuses and C-emission comparisons below record the original
-pre-stack build. They are measurements, not invariants of later heads: use the report from
-the exact head being validated for current counts. The declaration fixtures and baseline
-matching rules, rather than a fixed whole-library count, establish the gate's contract.
+falsify each one. The numeric censuses and C-emission comparisons below are measurements of
+one build rather than invariants of every head: read current counts from the report of the
+head being validated. What fixes the gate's contract is the declaration fixtures and the
+baseline matching rules, not any fixed whole-library count.
 
 * **the module initialiser evaluates something for it.**
   `Lean.Compiler.LCNF.emitDeclInit`
@@ -41,7 +41,7 @@ matching rules, rather than a fixed whole-library count, establish the gate's co
   costing nothing at load, and the difference is a real hazard rather than a technicality.
   The compiler may lift a parameterless **specialisation** out of a monomorphic function's
   body, and when the specialisation's result is a ground value the backend assigns it in the
-  module initialiser like any other value. Measured, with the emitted C as ground truth:
+  module initialiser like any other value. In the emitted C:
   `def carrierCount (_u : Unit) : Nat := Fintype.card (Fin 3 → Bool)` declares no
   parameterless constant, and its module's initialiser nevertheless runs
   `_init_…Fintype_card___at___00….carrierCount_spec__0()`, which forces a closed term built
@@ -122,11 +122,9 @@ matching rules, rather than a fixed whole-library count, establish the gate's co
   them name every constant and every compiled declaration the 634 modules' initialisers
   assign.
 
-Compiler-internal names are deliberately **not** skipped. The hazard this gate exists for
-is carried by an auxiliary — in the fixtures, `….instFintypeYBundle._aux_1`, and the
-instance that motivated the gate produced one of the same shape — and not by the
-user-written instance; skipping internal names would make the gate blind to every spelling
-of it.
+Compiler-internal names are deliberately **not** skipped. The hazard is carried by an
+auxiliary — in the fixtures, `….instFintypeYBundle._aux_1` — and not by the user-written
+instance; skipping internal names would make the gate blind to every spelling of it.
 
 Modes (run after `lake build`):
 
@@ -184,7 +182,7 @@ rest about reach.
   nothing about `2 ^ 128` — whereas `Finset.range (2 ^ 40)` carries its size in the diff
   that introduces it. This is a boundary, not a claim of safety: `Finset.range (2 ^ 40)` is
   the same hazard, and `def n := 2 ^ 40` in another file hides its numeral just as well.
-  Measured over the load-time population today: `List.range` occurs once
+  Over the load-time population of this tree: `List.range` occurs once
   (`SLHDSA.Concrete.Keccak.piLUT`, `List.range 5`), `Array.replicate` three times
   (`SLHDSA.Concrete.zeros48`, `SLHDSA.C13.Concrete.zeros16`, `SLHDSA.C13.Concrete.ffWord`),
   and `Finset.range`, `Multiset.range`, `List.finRange`, `List.replicate` not at all.
@@ -270,7 +268,7 @@ rest about reach.
 * Of the three test libraries, `VCVioTest` and `LatticeCryptoTest` have umbrella modules and
   **are** swept, by the `--root VCVioTest --root LatticeCryptoTest` invocation
   `scripts/validate.sh` and `.github/workflows/build.yml` run after `lake test` builds their
-  oleans: 1570 constants, 79 modules, 282 load-time, three flagged and baselined today.
+  oleans: 1570 constants, 79 modules, 282 load-time, three flagged and baselined.
   `HashSigTest` is not,
   and precisely: (a) `HashSigTest.lean` does not exist, so the library name is not an
   importable module; (b) its `lean_exe` roots *are* importable one at a time
@@ -321,9 +319,8 @@ is auditable where the gate is rather than in a data file.
 
 Each reason below is what the **emitted C** does for a load-time constant that names it, not
 what its declaration looks like: `lean … -c` over one constant per name, with the initialiser
-chain read. That matters because two of these were first excluded on a reading of the
-declaration — `FinEnum.toList` because it "returns a `List`", `FinEnum.card` because it "is a
-field, so reading it costs a pointer" — and the emitted C contradicted both.
+chain read. The declaration alone is not enough: `FinEnum.toList` returns a `List` and
+`FinEnum.card` is a field, and neither fact predicts what the initialiser does.
 
 * `Finset.univ` — the enumeration itself; the elements of a type as a `Finset`. Its constant's
   `_init_` forces a closed term that builds the `Finset`.
@@ -332,8 +329,8 @@ field, so reading it costs a pointer" — and the emitted C contradicted both.
   symbol).
 * `Fintype.card` — forces the enumeration in order to count it; its `_init_` chain ends in a
   `Fintype.card._at_.…` specialisation of the carrier.
-* `Fintype.piFinset` — the product enumeration; this is what the `2 ^ 128` initialiser
-  that motivated this gate actually built.
+* `Fintype.piFinset` — the product enumeration; this is what a `Fintype (Bytes 16)`
+  initialiser builds.
 * `Fintype.ofFinite` — the noncomputable route from a `Finite` proof to a `Fintype`. A
   constant naming it *and* carrying compiled code means the route that was supposed to
   erase the enumeration did not. It is the one name here that no other test would catch on
@@ -355,8 +352,7 @@ field, so reading it costs a pointer" — and the emitted C contradicted both.
   the equivalence. `Fintype`'s counterpart of this shape is `Fintype.elems`, above.
 
 The list is an occurrence test on the elaborated term, and on its own it is a test of how
-
-the hazard was *spelled*: `instance : Fintype bundle.Y := inferInstanceAs (Fintype (Bytes 16))`
+the hazard is *spelled*: `instance : Fintype bundle.Y := inferInstanceAs (Fintype (Bytes 16))`
 names `Finset.univ` and `Fintype.piFinset` only because `inferInstanceAs` forces an
 auxiliary that unfolds the instance. `enumerationClasses` is what makes the clause a class
 test. -/
@@ -395,7 +391,7 @@ that naming one of their *builders* in a load-time value means the collection is
   the one below about size, and not a claim that no `Encodable` instance can hold a
   collection.
 
-The clause closes every respelling of the instance that motivated the gate —
+The clause closes every respelling of the hazardous instance —
 `instance : Fintype bundle.Y := Pi.instFintype`, the `abbrev` route, field-by-field
 construction, `Fintype.ofBijective`, a helper that returns the instance, and
 `def ok : Bool := decide (∀ x : T, p x)`, which enumerates `T` at load through
@@ -529,10 +525,10 @@ def isLiftedClosedTerm (n : Name) : Bool :=
 `<specialised>._at_.<caller>.spec_<n>`, nesting as it goes, so cutting the name at its `_at_`
 components gives one segment per function in the chain, each with that function at its head.
 
-Two details, both measured rather than assumed. The cut is structural rather than textual —
-`n.toString.splitOn "._at_."` and `String.toName` agree with it on all 1473 declarations this
-is applied to today, so that is not a correctness argument; it is kept because it does not
-depend on `toString` printing what `toName` can parse back, which fails on macro-scoped names
+Two details. The cut is structural rather than textual — `n.toString.splitOn "._at_."` and
+`String.toName` agree with it on all 1473 declarations this is applied to in this tree, so
+that is not a correctness argument; it is kept because it does not depend on `toString`
+printing what `toName` can parse back, which fails on macro-scoped names
 (15 of the 538 load-time *constants* are macro-scoped and do not survive the round trip;
 none of this population is, because all 507 macro-scoped compiled declarations here are
 lifted closed terms and therefore excluded). And the concatenation is `Name.appendCore`
@@ -583,20 +579,17 @@ instance. There is no value to read — these declarations are not in the enviro
 so the name is all there is, which is why this clause is an addition to the value test and
 not a replacement for it.
 
-The argument test is the one with reach, and on this route it is the only one whose reach can
-be demonstrated. Of the ten entry points, nine also take an enumeration-class instance, so on
-a segment the list finds nothing the argument test would not; the tenth, `Fintype.ofFinite`,
-is `noncomputable` and has no compiled code, so it can never *be* a segment. The result test
-covers a segment that builds an instance without consuming one (`FinEnum.ofList`,
-`Fin.fintype`), which is a shape this compiler did not produce in any specialisation I could
-construct — a `FinEnum.ofList` call, a wrapper around it, and a `@[specialize]` wrapper all
-fold into lifted closed terms instead. Both are kept because they are sound and free, not
-because a fixture pins them: `scripts/test-initsweep.sh`'s three compiled-declaration
-witnesses pin the argument test only, which was measured by deleting each test in turn and
-re-running the matrix (deleting either of the other two leaves the five offenders and their
-evidence arrays byte-identical). The entry-point list and the builder test *are* pinned on the
-value route, by the `Plain` / `Opaque` / `Initialize` fixtures and by `Named` respectively —
-also measured by mutation.
+The argument test is the one with reach on this route. Of the ten entry points, nine also
+take an enumeration-class instance, so on a segment the list finds nothing the argument test
+would not; the tenth, `Fintype.ofFinite`, is `noncomputable` and has no compiled code, so it
+can never *be* a segment. The result test covers a segment that builds an instance without
+consuming one (`FinEnum.ofList`, `Fin.fintype`); no specialisation in this tree has that
+shape, a `FinEnum.ofList` call, a wrapper around it and a `@[specialize]` wrapper all folding
+into lifted closed terms instead. Both are kept because they are sound and free rather than
+because a fixture pins them: on the compiled-declaration route only the argument test is
+pinned, by `scripts/test-initsweep.sh`'s three compiled-declaration witnesses; the
+entry-point list and the builder test are pinned on the value route instead, by the `Plain` /
+`Opaque` / `Initialize` fixtures and by `Named` respectively.
 
 Measured over this tree: 0 of the 1473 compiled declarations of the seven default roots and 0
 of the 1 in the test libraries carry evidence of any kind, so all three tests ship at no
@@ -639,7 +632,7 @@ structure Census where
   reported on every run so it cannot grow unnoticed. `definition`s, `theorem`s and `opaque`
   declarations all have a readable value, so what is left here is the kernel's valueless
   kinds — an axiom, or a constructor or recursor — reaching a parameterless compiled
-  declaration. None does today. -/
+  declaration. None does in this tree. -/
   opaqueValues : Nat
   loadTime : Array Entry
   /-- Compiler-generated parameterless declarations that are not environment constants:

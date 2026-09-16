@@ -19,7 +19,7 @@ public section
 
 namespace VCVioInitSweepTestFixtures.Clean.Good
 
-/-- A bundle of carriers, mirroring the shape the hazard was written in: the `Fintype`
+/-- A bundle of carriers, mirroring the shape the hazard takes: the `Fintype`
 instance is demanded for a *field*, not for a syntactically visible type. -/
 structure Primitives where
   Y : Type

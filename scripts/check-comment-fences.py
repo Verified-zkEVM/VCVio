@@ -2,30 +2,29 @@
 """Keep a block comment at the left margin from hiding the declaration that follows it.
 
 A declaration written after the `-/` of the comment that documents it parses, builds and
-runs, and is invisible to a reader scanning the left margin for declarations. That is not
-hypothetical: a docstring reflow in `lakefile.lean` once produced
+runs, and is invisible to a reader scanning the left margin for declarations. In the shape
+a docstring reflow produces:
 
     at least one. -/ lean_exe slhdsa_limited_profile_tests where root :=
 
-and every gate in the repository passed it.
+nothing else in the repository rejects that line.
 
 Lean's own `linter.style.whitespace` rejects a command that does not start at the beginning
 of a line, and this package turns it on through `weak.linter.mathlibStandardSet`. It is
 silent on the *doc-comment* form of the shape above, and that is positional rather than a
 property of the lakefile: a doc comment is part of the command it documents, so the command
 *does* start at the beginning of a line — the line where the `/--` opened, several lines
-earlier. The other forms it does catch. (Everything below was measured by elaborating
-probes with that option on and `Mathlib.Init` imported: unless something in the import
-closure registers it the `weak.` option is silently dropped, which is the mechanism of the
-`scripts/` case.)
+earlier. The other forms it does catch. A `weak.` option is registered only when something
+in a file's import closure brings it in, and is silently dropped otherwise — the mechanism
+of the `scripts/` case below.
 
 So the shape divides by what a warning *does*, not by whether a linter exists:
 
 * the `/--` form draws nothing anywhere, the libraries the elaboration linters do run over
   included, because the linter's position for such a command is the `/--` at column 0 and
-  there is nothing left to report. Witnessed for four spellings: a wrapped `/--` and a
-  one-line `/--`, each before a `def` and before `@[simp] theorem` / `instance`. *That is
-  the historical defect, and it is what this gate is for.*
+  there is nothing left to report. That holds for a wrapped `/--` and for a one-line `/--`,
+  each before a `def` and before `@[simp] theorem` / `instance`. *This form is the one the
+  gate alone covers.*
 * the `/-` and `/-!` forms, wrapped or on one line, each draw a warning, as an indented
   `def` and a second `def` after a mid-line `/- … -/` do. In the seven proof libraries and
   the three test libraries that warning is already a CI failure, because
@@ -87,16 +86,16 @@ so comments in their interpolations are outside this lexical gate's coverage.
 
 Scope: every Lean source the repository tracks or would track — tracked files plus untracked
 ones that are not ignored — with the vendored `third_party/` tree excluded. `lakefile.lean`
-is in scope and is the file the rule was written for; it is also outside `scripts/lint.py`'s
-style pass, which covers the library and test roots only.
+is in scope, and is outside `scripts/lint.py`'s style pass, which covers the library and
+test roots only.
 
 What this cannot catch. The same-line `/--` form has an uncovered layout:
 
 * a comment at the left margin whose declaration is *indented on the next line*.  The
   comment is the last thing on its line, so the rule does not apply; and
   `linter.style.whitespace` measures the command from the `/--` at column 0, so it draws no
-  warning either.  Measured in a library file with the standard set on: an indented `def`
-  is flagged, the same `def` under a margin docstring is not.
+  warning either.  In a library file with the standard set on an indented `def` is flagged;
+  the same `def` under a margin docstring is not.
 
 The other four are reported by `linter.style.whitespace` wherever it is registered, so they
 fail CI in the ten built libraries and survive in the four places above:
@@ -117,11 +116,10 @@ fail CI in the ten built libraries and survive in the four places above:
   not this rule, which is about comments, and not the linter, which does not run there.
 
 All five are asserted accepted in the fixture matrix (`Lib/Uncovered.lean`), so a documented
-gap cannot move without the test saying so.  For the file this rule was written for it
-closes the doc-comment sub-case and leaves the rest of the class open.  Widening to "nothing
-may ever follow `-/`" would cover the mid-line form and would also reject the wrapped field
-docstrings above, which have no defect behind them — and would still not reach the string
-form.
+gap cannot move without the test saying so.  In `lakefile.lean` the rule closes the
+doc-comment sub-case and leaves the rest of the class open.  Widening to "nothing may ever
+follow `-/`" would cover the mid-line form and would also reject the wrapped field
+docstrings above, which hide nothing — and would still not reach the string form.
 
 Usage:
     scripts/check-comment-fences.py            # every tracked/untracked Lean source
@@ -146,9 +144,10 @@ def block_comments(source: str) -> list[tuple[int, int, int, str]]:
     Line and column numbers are 1- and 0-based. Lean's block comments nest and ignore
     string syntax inside themselves, so only `/-` and `-/` are tracked once one is open;
     outside them, literal string chunks, raw strings and character literals are skipped
-    so their contents cannot be read as delimiters. Recognized interpolated strings
-    resume code scanning inside each unescaped brace pair, including nested strings. A comment left unterminated at end of file is
-    reported as closing there, which is what Lean would report too.
+    so their contents cannot be read as delimiters. Recognized interpolated strings resume
+    code scanning inside each unescaped brace pair, including nested strings. A comment left
+    unterminated at end of file is reported as closing there, which is what Lean would
+    report too.
     """
     result: list[tuple[int, int, int, str]] = []
     index, size, line = 0, len(source), 1

@@ -19,7 +19,7 @@ public section
 
 namespace VCVioInitSweepTestFixtures.Hazard.Decide
 
-/-- An eight-element carrier behind an alias, which is the shape the hazard had: nothing at
+/-- An eight-element carrier behind an alias, which is the shape the hazard takes: nothing at
 the use site below says how large it is. -/
 abbrev Carrier : Type := Fin 3 → Bool
 
