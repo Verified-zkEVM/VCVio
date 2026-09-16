@@ -22,10 +22,12 @@ numeric constants — which have no value to read; those are counted separately 
 the only thing they carry, their mangled name.
 
 Every clause is load-bearing; `scripts/test-initsweep.sh` carries the fixtures that
-falsify each one. The numeric censuses and C-emission comparisons below are measurements of
-one build rather than invariants of every head: read current counts from the report of the
-head being validated. What fixes the gate's contract is the declaration fixtures and the
-baseline matching rules, not any fixed whole-library count.
+falsify each one. Every figure in this file — in the declaration docstrings below as well as
+here — is a measurement of an earlier build than the one you are reading, not an invariant of
+every head: read current counts from the report of the head being validated, and the compiler
+and Mathlib source lines cited below against the toolchain it pins. What fixes the gate's
+contract is the declaration fixtures and the baseline matching rules, not any fixed
+whole-library count.
 
 * **the module initialiser evaluates something for it.**
   `Lean.Compiler.LCNF.emitDeclInit`
@@ -579,17 +581,19 @@ instance. There is no value to read — these declarations are not in the enviro
 so the name is all there is, which is why this clause is an addition to the value test and
 not a replacement for it.
 
-The argument test is the one with reach on this route. Of the ten entry points, nine also
-take an enumeration-class instance, so on a segment the list finds nothing the argument test
-would not; the tenth, `Fintype.ofFinite`, is `noncomputable` and has no compiled code, so it
-can never *be* a segment. The result test covers a segment that builds an instance without
-consuming one (`FinEnum.ofList`, `Fin.fintype`); no specialisation in this tree has that
-shape, a `FinEnum.ofList` call, a wrapper around it and a `@[specialize]` wrapper all folding
-into lifted closed terms instead. Both are kept because they are sound and free rather than
-because a fixture pins them: on the compiled-declaration route only the argument test is
-pinned, by `scripts/test-initsweep.sh`'s three compiled-declaration witnesses; the
-entry-point list and the builder test are pinned on the value route instead, by the `Plain` /
-`Opaque` / `Initialize` fixtures and by `Named` respectively.
+The argument test is the one with reach on this route, and the only one whose reach the
+fixture matrix demonstrates. Of the ten entry points, nine also take an enumeration-class
+instance, so on a segment the list finds nothing the argument test would not; the tenth,
+`Fintype.ofFinite`, is `noncomputable` and has no compiled code, so it can never *be* a
+segment. The result test covers a segment that builds an instance without consuming one
+(`FinEnum.ofList`, `Fin.fintype`); no specialisation constructible from a `FinEnum.ofList`
+call, from a wrapper around it, or from a `@[specialize]` wrapper has that shape, all three
+folding into lifted closed terms instead. Both are kept because they are sound and free
+rather than because a fixture pins them: on the compiled-declaration route only the argument
+test is pinned, by `scripts/test-initsweep.sh`'s three compiled-declaration witnesses, and
+the other two contribute nothing to that matrix's five offenders or to their evidence arrays;
+the entry-point list and the builder test are pinned on the value route instead, by the
+`Plain` / `Opaque` / `Initialize` fixtures and by `Named` respectively.
 
 Measured over this tree: 0 of the 1473 compiled declarations of the seven default roots and 0
 of the 1 in the test libraries carry evidence of any kind, so all three tests ship at no

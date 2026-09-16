@@ -43,6 +43,10 @@ the same at the deterministic variant's single randomizer; the misreading `rando
 and four instances the vacuity canary's `SLHDSA.Security.Certificate` asks for — `DecidableEq` on
 the public seed and on the address key, `Fintype` and `Inhabited` on the node type.
 
+Seven of that block's declarations are absent here, nothing below reading them: `byteFold` and
+`toyByteLaws`, `otherPkSeed`, and the four dispatch-arm forgeries `sigD`, `sigE`, `sigH` and
+`sigLate`.
+
 ## The reader-by-log matrix
 
 Three readers and three logs.  L1 is the hedged log, three entries on two messages with the
@@ -50,7 +54,9 @@ twice-signed message's entries separated; L2 is the log FIPS 205 §9.2's determi
 produce for the same three queries; L3 is four entries, one message three times, with `sigP1`'s
 randomizer at its tail rather than its head.
 
-**R1**, `SchemeGames.randomizerLogged`, the residual's own selector.
+**R1**, `SchemeGames.randomizerLogged`, the residual's own selector.  A cell's catch is
+attributable to the misreading and not to the substitution: the real reader, substituted under a
+misreading's name, fires none of the thirty-two.
 
 At **L1** it catches a reader that ignores the message — the cross forgery's randomizer is in the
 log at the *other* message and must read `false` — and one that drops the log's head, since L1's
@@ -646,7 +652,8 @@ interface, the winning preimage adversary with its inverse, and the certificate 
 names — together with `freeCertificate_suf_headline` and `freeCertificate_sufBound_headline` at the
 end.  It is a copy rather than an import because that module is a `lean_exe` root and declares a
 top-level `main`, which a module importing it cannot also declare; the lane has no shared fixture
-module.
+module.  Every declaration in it is that module's verbatim, but for the docstrings of the two
+statements named above.
 
 That module's anchoring analysis — `winningOpenPre`, `anchoredCertificate` and
 `nonempty_countingInterface_iff` — is not here: the question it answers is about `Certificate`'s own

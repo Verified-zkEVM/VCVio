@@ -133,7 +133,7 @@ and `freshRandomizer_wins_or_uncovered` carry it into the `H_msg` bridge.  Neith
 here — bounding it is an adversary construction, which is the same deferral the previous module's
 two branch bounds carry.
 
-## What this module fixes, and what it leaves to the fixture
+## What fixes this module's claims, and where nothing does
 
 Four things about this module are held in place by the fixture alone or by nothing at all.
 
@@ -391,7 +391,7 @@ theorem Summands.sufBound_eq (s : Summands) (p : Params) (fresh same : ℝ≥0�
 
 /-- At zero residuals the expression is the existential bound.  It fixes the value at zero
 residuals only: it constrains neither the residuals' coefficients, nor their order, nor the
-association of the sum.  What refuses an edit that moves the value is this statement — a stray
+association of the sum, nor whether either residual appears in the body at all.  What refuses an edit that moves the value is this statement — a stray
 additive constant, or a second copy of `s.bound p`.  What fixes the order and the association is
 `HashSigTest.SLHDSA.SufBound`'s `sufBound` examples; what fixes the coefficients is those and
 `sufBound_eq_bound_add_sameMessage_of_unfoldings`.
@@ -531,8 +531,8 @@ and it already proves both, as two unnamed `example`s beside its four half-bound
 there is a pure addition to that module and would discharge these two hypotheses at every call
 site.  Naming this conclusion there instead, where it would need no hypotheses, is not a pure
 addition: that module's own same-message split is a `≤`, so the conclusion would carry
-`sameMessageAdvantage_eq_arms` down with it.  That is where this statement belongs; it is stated
-here because the two equations it needs are not exported.
+`sameMessageAdvantage_eq_arms` down with it.  That is where this statement belongs, and it is not
+stated there; here it can only take the two equations as hypotheses, which is what it does.
 
 *Experiment split.* -/
 theorem sameMessageAdvantage_eq_halves_of_unfoldings

@@ -362,8 +362,8 @@ instance : DecidableEq (XmssSigCore toy.params toyPrimitives.core) := fun a b =>
     ⟨fun h => by cases a; cases b; simp only at h; obtain ⟨h1, h2⟩ := h; subst h1; subst h2; rfl,
      fun h => h ▸ ⟨rfl, rfl⟩⟩
 
-/-- Signature equality, field by field.  The library module carries this as a hypothesis because no
-such instance exists on this branch. -/
+/-- Signature equality, field by field.  The library module carries this as a hypothesis because
+`HashSig` declares no such instance. -/
 instance : DecidableEq (GeneralScheme.SignatureCore toy toyPrimitives.core) := fun a b =>
   decidable_of_iff (a.randomness = b.randomness ∧ a.fors = b.fors ∧ a.hypertree = b.hypertree)
     ⟨fun h => by

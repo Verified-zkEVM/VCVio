@@ -207,8 +207,9 @@ instance : DecidableEq limitedPrimitives.AdrsKey := inferInstanceAs (DecidableEq
 -- Written `inferInstanceAs (Fintype (Bytes 16))` like its neighbours, this instance is a
 -- `Finset.univ` of `2 ^ 128` sixteen-byte vectors built at the start of every executable that
 -- imports this module, however little of it that executable uses: so written,
--- `slhdsa_limited_profile_tests` reaches 29.5 GB resident in 25 seconds without printing its
--- first check, and none of its checks reads a `Fintype`.
+-- `slhdsa_limited_profile_tests` reached 29.5 GB resident in 25 seconds without printing its
+-- first check, and none of its checks reads a `Fintype`.  That figure is one run and is not
+-- re-measured on every head; what does not depend on a run is the IR below.
 --
 -- Marking that term `noncomputable` does not fix it.  Over the constants this module adds, as
 -- `Lean.IR.findEnvDecl` reports them: written plainly, both `instFintypeYLimitedPrimitives` and
@@ -223,7 +224,8 @@ instance : DecidableEq limitedPrimitives.AdrsKey := inferInstanceAs (DecidableEq
 -- `Fintype.ofFinite`, whose argument is the `Prop`-valued `Finite` and which is noncomputable by
 -- construction, creates no `_aux_1` at all — only a `_proof_1`, which has no IR — and its C names
 -- the instance nowhere and carries no `Fintype` call at all; with it the executable starts at
--- once.
+-- once.  The `noncomputable` form's behaviour here is read off its IR and emitted C, not from a
+-- run of it.
 -- The three other carrier instances that are constants are harmless — `SampleableType` is a
 -- sampling program and `Inhabited` is one sixteen-byte vector — and `DecidableEq` is a function.
 /-- Finiteness of the node type, which the `DSPR` advantage asks for.  It is a proof-level

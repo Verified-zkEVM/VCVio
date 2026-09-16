@@ -251,8 +251,8 @@ instance : SampleableType toyPrimitives.Y := inferInstanceAs (SampleableType (By
 /-! ## The routing table
 
 One row per summand of `Summands`, in the source's order: the field's name, the `TargetRole` whose
-`targetCount` caps the game the summand is the advantage of, and whether a witness family of slices
-7.1--7.5 lands in that game.  Two summands have neither a role nor a witness, the two `PRF` hops.
+`targetCount` caps the game the summand is the advantage of, and whether a witness family of this
+lane lands in that game.  Two summands have neither a role nor a witness, the two `PRF` hops.
 A third has a role but no witness, the undetectability term, which in the source comes from the
 `Game2 → Game3` step of `MEUFGCMA_WOTSTWESNPRF` rather than from a forgery.  And a third has a
 witness but no `TargetRole`, the `H_msg` ITSR term, which has no cap of any other kind either:

@@ -60,8 +60,8 @@ narrow-hardness — cannot, and no amount of care in stating the bridge would le
 reduction must do instead is stay inside one fibre, and that is a property of how it forms its
 inputs, not of any lemma here.  `embedTargets` and the candidate side of `wins_embedTargets_iff`
 share one `(pkSeed, pkRoot)` argument pair for exactly that reason: a reduction that let the two
-drift apart cannot instantiate that lemma at all, rather than instantiating it at a different,
-silently weaker statement.  The drifted terms themselves type-check perfectly well —
+drift apart cannot instantiate that lemma at all, rather than instantiating it silently at a
+statement about different terms.  The drifted terms themselves type-check perfectly well —
 `notMem_embedTargets_of_ne` and `wins_of_hmsg_agree` are *about* such terms — so what the shared
 pair buys is a unification constraint on one lemma, not a type-level guarantee about reductions.
 
@@ -165,7 +165,7 @@ line 5.
 
 A shift of `globalLeaf` does not stay at two sites.  Shifting the definition together with
 `globalLeaf_of_mem` and nothing else does not typecheck; carrying the shift through until the
-library does moves nine declarations — the definition, `globalLeaf_eq`,
+library does takes nine declarations with it — the definition, `globalLeaf_eq`,
 `globalLeaf_lt`, `globalLeaf_div_pow_a`, `globalLeaf_of_mem`, `HmsgIndex.ext_of_coords`,
 `uncoveredTarget_globalLeaf`, `forsSign_reveals_of_mem_hmsgIndices` and
 `coord_unrevealed_of_notMem` — and seven of the fixture's statement pins with them.  Those pins

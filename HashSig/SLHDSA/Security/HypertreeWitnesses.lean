@@ -534,7 +534,9 @@ position and the layer already fix it; `HypertreeWitness.Valid` recomputes it.
 
 The layer is a `Fin layers`, indexed by the walk length the witness was extracted from, so the
 bound is carried by the data rather than by a side condition on every statement that reads the
-label.  That fixes the label's *range*, not its meaning.
+label.  That fixes the label's *range*, not its meaning: any relabelling that agrees with the
+identity at walk length one is still admitted — the reflection `t ↦ layers - 1 - t`, counting the
+layer from the top of the walk, is one — and no statement here distinguishes those.
 
 The label counts layers advanced from `pos`: `HypertreeWitness.Valid` forms the position
 `pos.advance w.layer` from it, so a consumer must not pair the raw label with a `Fin d` hypertree

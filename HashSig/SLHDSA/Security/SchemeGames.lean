@@ -152,9 +152,8 @@ that carries `@[expose]`.
 
 The eight generic declarations of the first section are stated over an arbitrary `SignatureAlg`
 and are not SLH-DSA-specific.  They are here rather than in
-`VCVio.CryptoFoundations.SignatureAlg` only because moving them would leave the two selectors
-behind as the sole
-SLH-DSA content of this module.  None of the eight mentions an SLH-DSA type; the
+`VCVio.CryptoFoundations.SignatureAlg` because moving them would leave the two selectors behind as
+this module's sole SLH-DSA content.  None of the eight mentions an SLH-DSA type; the
 target file, if they move, is `VCVio/CryptoFoundations/SignatureAlg.lean`, beside the two
 experiments whose bodies they duplicate.
 
@@ -199,8 +198,9 @@ only that the two events partition the success event, which any `Bool`-valued fu
 gives.
 
 The result type is the runtime's subdistribution reading of a pair of bits and is left to
-inference, as `SignatureAlg.unforgeableExp` leaves its own: writing it out would name the
-finite-distribution coupling directly and add nothing to what the definition says.
+inference, as `SignatureAlg.unforgeableExp` leaves its own: writing it out names the
+finite-distribution coupling directly, which `scripts/check-pmf-boundary.sh` counts and this module
+has no allowance for, and it adds nothing to what the definition says.
 
 *Experiment split.* -/
 noncomputable def instrumentedEufExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -352,8 +352,8 @@ omit [DecidableEq M] [DecidableEq S] in
 /-- The selector equation for the same-message experiment.
 
 The same three edits at this experiment's last line are silent in the same way, and this is the
-statement that refuses them: with it present and `instrumentedEufExp_const` absent, each gives one
-error here.  With both present each gives two, one per experiment.
+statement that refuses them: with it present and `instrumentedEufExp_const` absent, each is refused
+here; with both present, at both experiments.
 
 *Experiment split.* -/
 theorem instrumentedSameMessageExp_const
