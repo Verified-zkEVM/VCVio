@@ -21,8 +21,11 @@ environment constants — specialisations the compiler lifts out of functions, a
 numeric constants — which have no value to read; those are counted separately and tested by
 the only thing they carry, their mangled name.
 
-Every clause is load-bearing, and every number below was measured over this repository's
-own build; `scripts/test-initsweep.sh` carries the fixtures that falsify each one.
+Every clause is load-bearing; `scripts/test-initsweep.sh` carries the fixtures that
+falsify each one. Numeric censuses and C-emission comparisons below record the original
+pre-stack build. They are measurements, not invariants of later heads: use the report from
+the exact head being validated for current counts. The declaration fixtures and baseline
+matching rules, rather than a fixed whole-library count, establish the gate's contract.
 
 * **the module initialiser evaluates something for it.**
   `Lean.Compiler.LCNF.emitDeclInit`
