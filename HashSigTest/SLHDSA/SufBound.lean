@@ -121,18 +121,15 @@ separated: `forgeryDet`'s randomizer occurs at `msgP` and nowhere else.  It is n
   strong-unforgeability statement at all.  That is a reading of the eleven `.ec`/`.eca` files,
   recorded in the library module's docstring, and no fixture can check it.
 
-## A sentence this fixture falsifies
+## The deterministic-variant boundary this fixture exercises
 
-`HashSig.SLHDSA.Security.SufResidual`'s module docstring says of the residual's same-randomizer
-branch that "it is empty for the deterministic variant".  `checkVariants` runs that claim:
+`HashSig.SLHDSA.Security.SufResidual` states that deterministic signing narrows the
+same-randomizer branch without emptying it.  `checkVariants` exercises that boundary:
 `forgeryDet` reuses the single randomizer L2 carries at `msgP`, is not itself in L2, and reads
 `true`.  Reusing the randomizer costs an adversary nothing — it is a field of the signature it was
-handed — so the branch is inhabited under either variant.  What the hedged default actually changes
-is the *size* of the logged-randomizer list at a message, and therefore how hard the **fresh**
-branch is to reach: the same three checks show `forgeryLate` on the logged branch at L1 and on the
-fresh branch at L2.  That file's own fixture docstring states the correct version; only the library
-module's overstates it.  Nothing here edits that module, which belongs to a pull request below this
-one in the stack.
+handed — so the branch is inhabited under either variant.  What the hedged default changes is the
+*size* of the logged-randomizer list at a message, and therefore how hard the **fresh** branch is to
+reach: the same checks put `forgeryLate` on the logged branch at L1 and on the fresh branch at L2.
 
 ## What is here
 
@@ -443,9 +440,9 @@ the fresh branch is to reach: `forgeryLate` is on the logged branch at the hedge
 fresh branch at the deterministic one.  What it does **not** change is whether the logged branch is
 inhabited: `forgeryDet` reuses the deterministic log's single randomizer and is not itself in that
 log, so it is on the logged branch there.  Reusing the randomizer costs an adversary nothing, since
-it is a field of the signature it was handed.  `HashSig.SLHDSA.Security.SufResidual`'s module
-docstring says the second branch "is empty for the deterministic variant"; these three checks are
-what that sentence claims, run.  Ten properties. -/
+it is a field of the signature it was handed.  These checks exercise
+`HashSig.SLHDSA.Security.SufResidual`'s statement that the deterministic variant narrows the
+second branch without emptying it.  Ten properties. -/
 def checkVariants : IO Unit := do
   ensure "the deterministic log's own second signature is on its logged branch"
     (randomizerLogged deterministicLog msgP forgeryDet == true)
