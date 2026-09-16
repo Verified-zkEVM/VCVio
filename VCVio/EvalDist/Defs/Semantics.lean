@@ -164,14 +164,40 @@ protected noncomputable def optionT (m : Type u → Type v) [Monad m]
   Sem := OptionT m
   instMonadSem := inferInstance
   interpret := MonadHom.id (OptionT m)
-  observe := fun mx => (𝒟[mx.run]).dropNone
+  observe := fun mx => (𝒟[mx.run]).comap some
   observe_apply_univ_le_one := fun mx =>
-    (Measure.dropNone_apply_univ_le _).trans (_root_.evalDist_apply_univ_le_one mx.run)
+    calc
+      (𝒟[mx.run]).comap some Set.univ = 𝒟[mx.run] (some '' Set.univ) :=
+        Option.measurableEmbedding_some.comap_apply _ _
+      _ ≤ 𝒟[mx.run] Set.univ := measure_mono (Set.subset_univ _)
+      _ ≤ 1 := _root_.evalDist_apply_univ_le_one mx.run
 
 @[simp]
 theorem optionT_evalDist (mx : OptionT m α) [EvalDistSemantics m]
     [MeasurableSpace α] :
     (MeasureSemanticsVia.optionT m).evalDist mx = (𝒟[mx.run]).dropNone := by
+  exact (Measure.dropNone_eq_comap_some _).symm
+
+/-- Bundle the effect-native successful-output semantics of `ExceptT`. Errors remain observable
+in the run measure and are discarded only by the `Except.ok` observation at this boundary. -/
+protected noncomputable def exceptT (ε : Type u) [MeasurableSpace ε]
+    (m : Type u → Type v) [Monad m] [EvalDistSemantics m] :
+    MeasureSemanticsVia (ExceptT ε m) where
+  Sem := ExceptT ε m
+  instMonadSem := inferInstance
+  interpret := MonadHom.id (ExceptT ε m)
+  observe := fun mx => (𝒟[mx.run]).comap Except.ok
+  observe_apply_univ_le_one := fun mx =>
+    calc
+      (𝒟[mx.run]).comap Except.ok Set.univ = 𝒟[mx.run] (Except.ok '' Set.univ) :=
+        Except.measurableEmbedding_ok.comap_apply _ _
+      _ ≤ 𝒟[mx.run] Set.univ := measure_mono (Set.subset_univ _)
+      _ ≤ 1 := _root_.evalDist_apply_univ_le_one mx.run
+
+@[simp]
+theorem exceptT_evalDist (ε : Type u) [MeasurableSpace ε]
+    (mx : ExceptT ε m α) [EvalDistSemantics m] [MeasurableSpace α] :
+    (MeasureSemanticsVia.exceptT ε m).evalDist mx = (𝒟[mx.run]).comap Except.ok := by
   rfl
 
 end MeasureSemanticsVia

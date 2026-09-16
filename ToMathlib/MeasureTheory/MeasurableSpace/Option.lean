@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import Mathlib.MeasureTheory.MeasurableSpace.Constructions
+public import Mathlib.MeasureTheory.MeasurableSpace.Embedding
 
 /-!
 # The measurable coproduct structure on `Option`
@@ -34,6 +35,27 @@ theorem measurable_some [MeasurableSpace α] : Measurable (@some α) :=
 
 theorem measurable_none [MeasurableSpace α] : Measurable (fun _ : Unit => (none : Option α)) :=
   Measurable.of_le_map inf_le_right
+
+/-- A set of optional values is measurable exactly when its preimage under `some` is measurable.
+The `none` branch imposes no condition because it is indexed by the discrete one-point space. -/
+theorem measurableSet_option_iff [MeasurableSpace α] {s : Set (Option α)} :
+    MeasurableSet s ↔ MeasurableSet (some ⁻¹' s) := by
+  change MeasurableSet (some ⁻¹' s) ∧
+    MeasurableSet ((fun _ : Unit => (none : Option α)) ⁻¹' s) ↔ _
+  simp
+
+/-- The image of a measurable set under `some` is measurable. -/
+@[simp]
+theorem measurableSet_some_image [MeasurableSpace α] {s : Set α} :
+    MeasurableSet (some '' s : Set (Option α)) ↔ MeasurableSet s := by
+  rw [measurableSet_option_iff,
+    Set.preimage_image_eq s (fun _ _ h => Option.some.inj h)]
+
+/-- `some` embeds a measurable space as the successful branch of its optional extension. -/
+theorem measurableEmbedding_some [MeasurableSpace α] : MeasurableEmbedding (@some α) where
+  injective := fun _ _ h => Option.some.inj h
+  measurable := measurable_some
+  measurableSet_image' _ hs := measurableSet_some_image.mpr hs
 
 /-- Optional values have measurable singletons whenever the underlying values do. -/
 instance instMeasurableSingletonClass [MeasurableSpace α] [MeasurableSingletonClass α] :

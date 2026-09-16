@@ -167,16 +167,16 @@ Mathlib tree, and each carries the condition under which it should be deleted.
 | `BitVec` discrete instances | `MeasurableSpace/Instances.lean` covers `Bool`, `ℕ`, `ℤ`, `ℚ`, `Fin n`, `ZMod n`; not `BitVec` | `BitVec` joins that file |
 | `Option` coproduct measurable space | Mathlib has `Sum.instMeasurableSpace`; no `Option` counterpart found | an `Option` instance lands upstream |
 | `Except` coproduct measurable space | `Except` is its own inductive (`Init/Prelude.lean`), not `Sum`, so `Sum.instMeasurableSpace` does not apply | an `Except` instance lands upstream, or `Except` is redefined via `Sum` |
-| `Measure.dropNone` | **Overlaps `Measure.comap some`** — see below | the overlap is resolved in favour of upstream |
+| `Measure.dropNone` | Agrees with `Measure.comap some` by `Measure.dropNone_eq_comap_some`; native `OptionT` semantics uses `comap` | downstream compatibility and the Giry-bind normal form no longer need the local name |
 | `Measure.bind_mono_right`, `Measure.iSup_apply_of_monotone` | no counterpart found: Mathlib has no `Measure.bind` monotonicity lemma, and no measure-specific `iSup`-applied-to-a-set lemma for monotone families | either lands upstream |
 
-**The `dropNone` overlap, recorded rather than left implicit.** `Measure.comap f μ s = μ (f '' s)`
-for injective `f` with measurable images (`Measure.comap_apply`), and `some` satisfies both under
-the coproduct structure, so `dropNone` and `comap some` agree on measurable sets. The `bind`
-formulation is kept because `comap` is guarded by a `dif` on those side conditions, which every
-downstream rewrite would then have to discharge, whereas `bind` composes directly with the Giry
-structure used everywhere else here. An agreement lemma would make Mathlib's `comap` API reachable
-and is worth adding; its absence is a gap in this file, not a reason for the definition.
+**The `dropNone` overlap is explicit.** The local measurable embedding for `some` makes
+`Measure.comap_apply` compute without exposing its guarded definition, and
+`Measure.dropNone_eq_comap_some` identifies the two measures. Native `OptionT` semantics therefore
+uses Mathlib's `Measure.comap some`. The `dropNone` bind presentation remains a useful compatibility
+and proof normal form because it composes directly with the Giry bind; it is no longer a competing
+semantic construction. The corresponding `ExceptT` semantics uses `Measure.comap Except.ok`
+directly and shares the same successful-output interpretation without introducing a `dropError`.
 
 These declarations should track upstream naming and hypotheses closely. No VCVio-specific oracle
 policy belongs in this layer.

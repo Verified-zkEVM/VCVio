@@ -7,6 +7,7 @@ module
 
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.Defs.Measure.ExceptT
 public import VCVio.EvalDist.Defs.Measure.OptionT
 public import ToMathlib.MeasureTheory.Measure.Option
 public import ToMathlib.Probability.ProbabilityMassFunction.Measure
@@ -24,9 +25,9 @@ Measurable spaces are explicit arguments to the semantics. There is deliberately
 measurable-space instance for finite types: discrete adapters state their countability and
 measurability assumptions at the boundary where they are used.
 
-`LawfulEvalDistSemantics` records the Giry `pure` and `bind` laws. The bind law keeps the
-measurability of the continuation visible; `evalDist_bind_of_discrete` is the usual cryptographic
-specialization.
+`LawfulPureEvalDistSemantics` records the Giry `pure` law without imposing conditions on effects.
+`LawfulEvalDistSemantics` adds the bind law, keeping measurability of the continuation visible;
+`evalDist_bind_of_discrete` is the usual cryptographic specialization.
 -/
 
 @[expose] public section

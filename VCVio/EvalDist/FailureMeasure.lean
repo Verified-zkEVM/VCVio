@@ -107,6 +107,6 @@ variable [EvalDistSemantics m] [MeasurableSpace α]
 /-- An `OptionT` computation denotes the `dropNone` of its run: the `none` branch is discarded
 mass, not an output. -/
 theorem evalDist_eq_dropNone (mx : OptionT m α) : 𝒟[mx] = (𝒟[mx.run]).dropNone := by
-  rfl
+  exact (Measure.dropNone_eq_comap_some _).symm
 
 end OptionT

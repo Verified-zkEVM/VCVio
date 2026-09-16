@@ -7,6 +7,7 @@ module
 
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
 public import Mathlib.MeasureTheory.Measure.GiryMonad
+public import Mathlib.MeasureTheory.Measure.Comap
 import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
 
 /-!
@@ -47,6 +48,12 @@ theorem measurable_dropNoneKernel : Measurable fun value : Option α =>
 theorem measurable_dropNoneKernel_elim : Measurable fun value : Option α =>
     value.elim (0 : Measure α) Measure.dirac := by fun_prop
 
+/-- Discarding the `none` branch varies measurably with the input measure. -/
+@[fun_prop]
+theorem measurable_dropNone :
+    Measurable (dropNone : Measure (Option α) → Measure α) :=
+  Measure.measurable_bind' measurable_dropNoneKernel
+
 @[simp]
 theorem dropNone_zero : dropNone (0 : Measure (Option α)) = 0 := by
   simp [dropNone, Measure.bind_zero_left]
@@ -60,6 +67,48 @@ theorem dropNone_dirac_none :
 theorem dropNone_dirac_some (x : α) :
     dropNone (Measure.dirac (some x)) = Measure.dirac x := by
   rw [dropNone, Measure.dirac_bind measurable_dropNoneKernel]
+
+/-- The mass retained by `dropNone` on a measurable set is the mass of its image under `some`. -/
+theorem dropNone_apply (μ : Measure (Option α)) {s : Set α} (hs : MeasurableSet s) :
+    dropNone μ s = μ (some '' s) := by
+  rw [dropNone, Measure.bind_apply hs measurable_dropNoneKernel.aemeasurable]
+  refine (lintegral_congr fun value => ?_).trans
+    (lintegral_indicator_one (Option.measurableSet_some_image.mpr hs))
+  cases value with
+  | none => simp [Set.indicator]
+  | some x =>
+      rw [Measure.dirac_apply' x hs]
+      by_cases hx : x ∈ s <;> simp [Set.indicator, hx]
+
+/-- Discarding `none` is Mathlib's measure pullback along the measurable embedding `some`. -/
+theorem dropNone_eq_comap_some (μ : Measure (Option α)) :
+    dropNone μ = μ.comap some := by
+  ext s hs
+  rw [dropNone_apply μ hs, Option.measurableEmbedding_some.comap_apply]
+
+/-- Discarding failure after an optional bind is the bind of the successful input mass with the
+discarded successful mass of each continuation. -/
+theorem dropNone_bind {β : Type*} [MeasurableSpace β]
+    (μ : Measure (Option α)) (f : α → Measure (Option β)) (hf : Measurable f) :
+    dropNone (μ.bind fun value => value.elim (Measure.dirac none) f) =
+      (dropNone μ).bind fun x => dropNone (f x) := by
+  have hOption : Measurable fun value : Option α =>
+      value.elim (Measure.dirac none) f :=
+    Option.measurable_elim' _ hf
+  have hDropF : Measurable fun x => dropNone (f x) :=
+    measurable_dropNone.comp hf
+  simp only [dropNone] at hDropF ⊢
+  rw [Measure.bind_bind hOption.aemeasurable measurable_dropNoneKernel.aemeasurable,
+    Measure.bind_bind measurable_dropNoneKernel.aemeasurable hDropF.aemeasurable]
+  apply Measure.bind_congr_right
+  filter_upwards with value
+  cases value with
+  | none =>
+      simp only [Option.elim_none]
+      rw [Measure.dirac_bind measurable_dropNoneKernel, Measure.bind_zero_left]
+  | some x =>
+      simp only [Option.elim_some]
+      rw [Measure.dirac_bind hDropF]
 
 /-- The success mass at `x` is the original mass at `some x`.
 

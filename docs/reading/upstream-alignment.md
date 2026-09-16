@@ -281,11 +281,11 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
    `V:VCVio/EvalDist/Monad/Basic.lean:302`, `probOutput_bind_mono_div_const` `:658`,
    `probEvent_bind_congr_div_const` `:692`) and the Σ-protocol comment
    (`V:VCVio/CryptoFoundations/SigmaProtocol.lean:220–227`, "avoids conditional probability").
-6. `MeasurableEmbedding (@some α)` for the coproduct σ-algebra
-   (`V:ToMathlib/MeasureTheory/MeasurableSpace/Option.lean:28`; 0 uses of `MeasurableEmbedding` in
-   VCVio): makes `Measure.dropNone μ = μ.comap some` on the nose (the ambiguity the design doc
-   records) and unlocks `MeasurableEmbedding.lintegral_map`, `Measure.map_injective`,
-   `Kernel.comapRight`, `isProbabilityMeasure_comap`.
+6. Upstream the local `Option` and `Except` coproduct measurable embeddings
+   (`V:ToMathlib/MeasureTheory/MeasurableSpace/{Option,Except}.lean`). They now prove
+   `Measure.dropNone μ = μ.comap some`, support native `OptionT` and `ExceptT` successful-output
+   semantics, and unlock the standard `MeasurableEmbedding` API. The remaining work here is to move
+   these generally useful constructions upstream and then delete the local copies.
 7. Hypothesis hygiene: bind laws (`V:VCVio/EvalDist/Defs/Measure.lean:85`,
    `V:VCVio/EvalDist/PFunctorMeasure/Core.lean:133`) ask `Measurable`, Mathlib's
    `bind_apply`/`bind_bind`/`lintegral_bind` ask `AEMeasurable`; `Measure.toSPMF`

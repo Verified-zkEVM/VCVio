@@ -61,14 +61,11 @@ example :
 open VCVioTest.MeasureSemantics in
 example :
     𝒟[(pure (1 : ℝ) : OptionT (FreeM gaussSpec) ℝ)] {1} = 1 := by
-  change (Measure.dropNone (Measure.dirac (some (1 : ℝ)))) {1} = 1
   simp
 
 open VCVioTest.MeasureSemantics in
 example :
     Pr{let x ← (pure (1 : ℝ) : OptionT (FreeM gaussSpec) ℝ)}[x = 1] = 1 := by
-  simp only [pure_bind]
-  change (Measure.dropNone (Measure.dirac (some (True : Prop)))) {True} = 1
   simp
 
 end VCVioTest.ProbabilityNotation

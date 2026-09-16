@@ -209,6 +209,12 @@ noncomputable instance (priority := 20) instEvalDistSemanticsFreeM :
   denote := denote
   apply_univ_le_one := denote_apply_univ_le_one
 
+/-- The direct free-monad measure fold preserves pure without any discreteness assumption on
+oracle answers. -/
+noncomputable instance (priority := 20) instLawfulPureEvalDistSemanticsFreeM :
+    LawfulPureEvalDistSemantics (FreeM P) where
+  denote_pure := denote_pure
+
 /-- With a measure specification in scope, primary notation is definitionally the direct
 free-monad measure fold. `𝒟[…]` is the public head: this is a transport lemma, not a simp rule,
 so the `𝒟`-keyed laws below and in `Defs.Measure` are the ones `simp` uses. -/
@@ -233,7 +239,6 @@ variable [∀ a, DiscreteMeasurableSpace (P.B a)]
 laws. -/
 noncomputable instance (priority := 20) instLawfulEvalDistSemanticsFreeM :
     LawfulEvalDistSemantics (FreeM P) where
-  denote_pure := denote_pure
   denote_bind := denote_bind
 
 end FreeM

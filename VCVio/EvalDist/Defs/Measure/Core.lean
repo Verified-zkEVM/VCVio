@@ -12,7 +12,8 @@ public import Mathlib.MeasureTheory.Measure.Prod
 # Measure-valued evaluation and its composition laws
 
 `EvalDistSemantics` denotes successful outputs by subprobability measures.
-`LawfulEvalDistSemantics` supplies the Dirac and measurable-bind equations.
+`LawfulPureEvalDistSemantics` supplies the Dirac equation independently of bind, while
+`LawfulEvalDistSemantics` adds the measurable-bind equation.
 Measurable spaces and continuations are explicit; discrete source spaces discharge
 continuation measurability without constraining the result space.
 -/
@@ -50,12 +51,18 @@ instance evalDist.instIsSubprobabilityMeasure {m : Type u → Type v} [EvalDistS
     {α : Type u} [MeasurableSpace α] (mx : m α) : IsSubprobabilityMeasure 𝒟[mx] :=
   ⟨evalDist_apply_univ_le_one mx⟩
 
-/-- A measure-valued semantics respects `pure` and measurable `bind` in the Giry monad. -/
-class LawfulEvalDistSemantics (m : Type u → Type v) [Monad m]
+/-- A measure-valued semantics sends `pure` to a Dirac measure. This law is separate from the
+bind law because a semantics can preserve pure even when continuous effects prevent a global
+measurability proof for arbitrary bind continuations. -/
+class LawfulPureEvalDistSemantics (m : Type u → Type v) [Monad m]
     [EvalDistSemantics m] : Prop where
   /-- `pure` denotes a Dirac measure. -/
   denote_pure {α : Type u} [MeasurableSpace α] (x : α) :
     𝒟[(pure x : m α)] = Measure.dirac x
+
+/-- A measure-valued semantics also respects measurable `bind` in the Giry monad. -/
+class LawfulEvalDistSemantics (m : Type u → Type v) [Monad m]
+    [EvalDistSemantics m] : Prop extends LawfulPureEvalDistSemantics m where
   /-- Monadic bind denotes Giry bind whenever its measure-valued continuation is measurable. -/
   denote_bind {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
       (mx : m α) (f : α → m β) (hf : Measurable fun x => 𝒟[f x]) :
@@ -63,9 +70,9 @@ class LawfulEvalDistSemantics (m : Type u → Type v) [Monad m]
 
 @[simp]
 theorem evalDist_pure {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
-    [LawfulEvalDistSemantics m] {α : Type u} [MeasurableSpace α] (x : α) :
+    [LawfulPureEvalDistSemantics m] {α : Type u} [MeasurableSpace α] (x : α) :
     𝒟[(pure x : m α)] = Measure.dirac x :=
-  LawfulEvalDistSemantics.denote_pure x
+  LawfulPureEvalDistSemantics.denote_pure x
 
 theorem evalDist_bind {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
