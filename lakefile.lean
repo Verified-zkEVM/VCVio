@@ -413,7 +413,8 @@ script test (args) do
     #["exe", "slhdsa_scheme_witness_tests"],
     #["exe", "slhdsa_hmsg_witness_tests"],
     #["exe", "slhdsa_suf_residual_tests"],
-    #["exe", "slhdsa_scheme_game_tests"]]
+    #["exe", "slhdsa_scheme_game_tests"],
+    #["exe", "slhdsa_composition_tests"]]
   if args.contains "--ffi" then
     steps := steps ++ #[#["exe", "mlkem_test"], #["exe", "mldsa_test"], #["exe", "falcon_test"]]
   for cmdArgs in steps do
@@ -594,6 +595,36 @@ and the two equations saying what each experiment records at a constant selector
 elaboration only. -/
 lean_exe slhdsa_scheme_game_tests where
   root := `HashSigTest.SLHDSA.SchemeGames
+
+/-- The composition certificate and the conditional bound: nothing about the bound itself is
+runnable, because `Summands.bound` is `ℝ≥0∞`-valued and every advantage it sums is
+`noncomputable`, so what runs is the `Params`-level data the bound is parameterised by — the
+Winternitz coefficient `w - 2` at the scheme-dispatch fixture's two-layer profile and at the
+SP 800-230 reduced set, together with two parameter sets where the coefficient is zero and the
+whole undetectability summand leaves the bound — one with `lgw = 1`, which is *valid*, and one
+with `lgw = 0`, which is not valid and at which the `ℕ` subtraction truncates; the eight
+formula-derived target caps at both profiles; and a twelve-row routing table naming, per summand
+of the source expression, the cap role of the game it is the advantage of and whether one of this
+lane's witness families lands in that game, asserted to have three roleless rows, nine
+witness-backed ones and eight distinct backing branches, the FORS open-preimage branch backing two
+summands.  The two `T_l` compressions' caps are asserted to differ at the two-layer profile and to
+*coincide* at the reduced set; the fixture proves both generally, the coincidence at every
+one-layer set and the separation at every deeper one, and exhibits a *valid* profile with
+`k = len` at which the two games are the same term and nothing can separate them, so the arity
+separation the routing relies on is asserted where it is true — over the whole shipped parameter
+table.  Everything about the bound's own shape — both coefficients, the summand-to-game routing,
+each certificate field's game, the ten games' declared caps and the two open-preimage transports —
+is pinned by elaboration, at least one `example` per exported declaration, in a file no
+library-side edit can reach.  So is the strength of the bound's hypotheses: a vacuity canary
+builds a closed `Certificate` at an arbitrary validated parameter set from an address key and a
+public seed, and proves that the bound it names is at least one.  It builds a second one from
+those two and a counting interface at an open-preimage adversary of advantage one, whose three
+`ℝ≥0∞` fields are the experiment's own quantities — so tying those fields to the experiment
+refuses the first certificate and not the second — and proves that over a node type with at least
+two elements such an interface exists exactly when that adversary's two induced reductions satisfy
+`DSPR + 3 · TCR ≥ 1`. -/
+lean_exe slhdsa_composition_tests where
+  root := `HashSigTest.SLHDSA.Composition
 
 /-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
 committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
