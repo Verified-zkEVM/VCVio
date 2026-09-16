@@ -202,9 +202,9 @@ follows.  In particular:
   proved nor refuted here;
 * the `MCO_ITSR` summand carries no query bound.  `KeyedHash.ITSRProblem` has two fields and
   neither is a target cap: `ITSRTargetOracle` answers and records every query, so the Lean
-  advantage is a supremum over adversaries with unbounded target transcripts.  The source's term
-  is bounded through its reduction, by the forger's signing queries, and that reduction is not
-  here;
+  advantage is the supplied adversary's success probability, with no bound on its target
+  transcript.  The source's term is bounded through its reduction, by the forger's signing
+  queries, and that reduction is not here;
 * the `(w − 2)` undetectability hybrid is not performed;
 * nothing here is a statement about SUF-CMA.  `SchemeGames.strongAdvantage_le_halves` names the
   same-message residual, and the same-randomizer term inside it has no bound at all.
