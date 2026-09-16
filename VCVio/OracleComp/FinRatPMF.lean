@@ -7,12 +7,15 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.EvalDist
 public import VCVio.EvalDist.Instances.FinRatPMF
+public import VCVio.OracleComp.EvalDist.MeasureSpec
+public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Executable `FinRatPMF` Semantics for `OracleComp`
 
-This file provides a computable oracle evaluator using `FinRatPMF.Raw` and proves that its
-denotational semantics agree with the existing `evalSPMF` semantics of `OracleComp`.
+The computable oracle evaluator uses `FinRatPMF.Raw`. Its native output measure agrees with
+uniform oracle semantics, and its positive-weight outputs are exactly the oracle program's
+structurally reachable outputs. Discrete interoperability is available for probability games.
 -/
 
 @[expose] public section
@@ -33,6 +36,33 @@ def finRatImpl [spec.Inhabited] [∀ t : spec.Domain, FinEnum (spec.Range t)] :
 namespace finRatImpl
 
 variable [spec.Inhabited] [∀ t : spec.Domain, FinEnum (spec.Range t)]
+
+section Measure
+
+variable [∀ t, MeasurableSpace (spec.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsUniformMeasureSpec spec]
+
+omit [IsUniformMeasureSpec spec] in
+/-- Executable query sampling has the native uniform response measure. -/
+@[simp]
+lemma evalDist_apply (t : spec.Domain) :
+    𝒟[finRatImpl (spec := spec) t] = ProbabilityTheory.uniformOn Set.univ :=
+  Raw.evalDist_uniform
+
+/-- The executable evaluator preserves the native uniform oracle measure. -/
+@[simp]
+lemma evalDist_simulateQ {α : Type v} [MeasurableSpace α] (oa : OracleComp spec α) :
+    𝒟[simulateQ (finRatImpl (spec := spec)) oa] = 𝒟[oa] := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t mx ih =>
+      simp only [simulateQ_bind, simulateQ_spec_query]
+      rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
+      simp_rw [ih]
+      rw [evalDist_apply, OracleComp.evalDist_liftM_query,
+        IsMeasureSpec.toMeasure_eq_uniformOn]
+
+end Measure
 
 local instance instSpecFintypeOfFinEnum : spec.Fintype where
   fintypeB _ := inferInstance
@@ -74,26 +104,32 @@ noncomputable local instance instIsUniformSpec : IsUniformSpec spec :=
 
 @[simp] lemma support_simulateQ {α : Type v} [DecidableEq α] (oa : OracleComp spec α) :
     (simulateQ (finRatImpl (spec := spec)) oa).support = support oa := by
-  classical
-  ext x
-  simp only [Finset.mem_coe]
-  rw [Raw.mem_support_iff, mem_support_iff_evalSPMF_apply_ne_zero,
-    ← evalSPMF_simulateQ (spec := spec) oa]
-  change (simulateQ (finRatImpl (spec := spec)) oa).prob x ≠ 0 ↔
-    (liftM (liftM (simulateQ (finRatImpl (spec := spec)) oa) : PMF α) : SPMF α) x ≠ 0
-  rw [SPMF.liftM_apply]
-  change (simulateQ (finRatImpl (spec := spec)) oa).prob x ≠ 0 ↔
-    (@Raw.toPMF _ (Classical.decEq _) (simulateQ (finRatImpl (spec := spec)) oa)) x ≠ 0
-  simp only [Raw.toPMF_apply,
-    Raw.prob_eq_prob (Classical.decEq _) inferInstance
-      (simulateQ (finRatImpl (spec := spec)) oa) x]
-  simp
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t mx ih =>
+      have hsupport : (finRatImpl (spec := spec) t).support = Finset.univ :=
+        Raw.support_uniform
+      simp [Raw.support_bind, hsupport, ih]
 
 lemma finSupport_simulateQ {α : Type v} [DecidableEq α]
     (oa : OracleComp spec α) :
     (simulateQ (finRatImpl (spec := spec)) oa).support = finSupport oa := by
   apply Finset.coe_injective
   rw [coe_finSupport, support_simulateQ]
+
+end finRatImpl
+
+namespace finRatImpl
+
+/-- Final event checks have the same probability under executable and oracle evaluation. -/
+lemma prEvent_simulateQ {ι : Type u} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [IsUniformMeasureSpec spec] [∀ t : spec.Domain, FinEnum (spec.Range t)]
+    {α : Type} (oa : OracleComp spec α) (p : α → Prop) :
+    Pr{let x ← simulateQ (finRatImpl (spec := spec)) oa}[p x] = Pr{let x ← oa}[p x] := by
+  simpa only [simulateQ_bind, simulateQ_pure] using
+    congrArg (fun μ : MeasureTheory.Measure Prop => μ {True})
+      (evalDist_simulateQ (spec := spec) (oa >>= fun x => pure (p x)))
 
 end finRatImpl
 

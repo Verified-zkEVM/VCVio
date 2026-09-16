@@ -23,8 +23,14 @@ discrete specialization discharges that condition. `prEvent_eq_evalDist_decide`
 equates an event with a Boolean experiment's final `decide`, without requiring
 a measurable space on the intermediate result. Factor the common sampling run
 once when both forms of a security game are public. For an optional computation,
-successful outputs are measured through `dropNone`, so failure contributes no mass.
+successful outputs are measured through `Measure.comap some`, so failure contributes no mass.
 The `OptionT` measure instance also works when the base monad has no finite lift.
+`VCVio.EvalDist.Defs.Measure.FinRatPMF` gives the executable rational sampler native measure
+semantics without importing a PMF/SPMF backend. `Raw.toMeasure` is a finite sum of weighted Dirac
+measures; pure and measurable bind have the generic laws on arbitrary measurable spaces.
+`Raw.evalDist_apply` computes decidable event masses as rational sums, and the singleton simp
+lemma reduces to `Raw.prob`. `FinRatPMF.finRatImpl.evalDist_simulateQ` and `prEvent_simulateQ`
+identify executable evaluation with the native uniform oracle interpretation.
 `VCVio.EvalDist.Monad.Measure` provides `evalDist_bind_bind_swap` for jointly measurable
 continuations and `evalDist_bind_bind_bind_rotate` for discrete intermediate results. Their
 measure-level proofs use Tonelli's theorem and preserve subprobability mass.
@@ -163,7 +169,8 @@ Failure on the measure side is missing mass, recorded in `VCVio/EvalDist/Failure
 `Pr[⊥ | mx] = 1 - 𝒟[mx] univ`, `IsProbabilityMeasure 𝒟[mx] ↔ Pr[⊥ | mx] = 0` (an instance under
 `NeverFail mx`), `𝒟[failure] = 0`, the failure-completed `(𝒟[mx]).withFailure : Measure (Option α)`
 with `{none}` mass `Pr[⊥ | mx]`, the success mass of `bind`/`map` in `expectedValue` form, and
-`OptionT.evalDist_eq_dropNone` (an `OptionT` computation denotes the `dropNone` of its run).
+`OptionT.evalDist_eq_comap_some` (an `OptionT` computation denotes `Measure.comap some` of its run).
+`OptionT.evalDist_eq_dropNone` supplies the equivalent compatibility normal form.
 
 ## Core Definitions
 

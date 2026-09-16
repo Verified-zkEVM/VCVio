@@ -56,6 +56,12 @@ class IsUniformMeasureSpec (spec : OracleSpec.{u, v} ι)
 attribute [reducible, instance 100] IsUniformMeasureSpec.fintype IsUniformMeasureSpec.inhabited
 attribute [simp] IsUniformMeasureSpec.toMeasure_eq_uniform
 
+/-- The response measure exposed by the oracle API is uniform for a uniform specification. -/
+theorem IsMeasureSpec.toMeasure_eq_uniformOn [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsUniformMeasureSpec spec]
+    (t : spec.Domain) : toMeasure t = uniformOn Set.univ :=
+  IsUniformMeasureSpec.toMeasure_eq_uniform t
+
 /-- Select uniform measure semantics for a finite, inhabited oracle specification. -/
 @[reducible]
 noncomputable def IsUniformMeasureSpec.ofFintypeInhabited

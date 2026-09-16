@@ -12,6 +12,7 @@ public import VCVioTest.CryptoFoundations.OracleClosure
 public import VCVioTest.CryptoFoundations.PRFTableMeasure
 public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
+public import VCVioTest.EvalDist.FinRatPMF
 public import VCVioTest.EvalDist.IndependentDraws
 public import VCVioTest.EvalDist.MeasureBridge
 public import VCVioTest.EvalDist.ProbabilityNotation

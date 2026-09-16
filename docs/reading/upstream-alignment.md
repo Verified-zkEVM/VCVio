@@ -310,6 +310,15 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
     (`M:MeasureTheory/Integral/MeanInequalities.lean:24`) at `p = q = 2` against `𝒟[mx]` is the
     upstream form and drops the `∑' w ≤ 1` hypothesis.
 
+Executable rational sampling uses upstream `Measure.dirac`, measure addition/scaling, and Giry
+bind in `ToMathlib.ProbabilityTheory.FinRatPMF.Measure`. Finite uniform sampling is identified
+with upstream `ProbabilityTheory.uniformOn`. `Raw.lintegral_toMeasure` is a finite weighted sum
+on arbitrary measurable spaces, and `Raw.toMeasure_bind` needs only measurable continuation
+measures. Executable data and quotient monad laws live in a probability-backend-free `Basic`
+module; PMF bridges remain in a separate interoperability module behind the original import
+façade. `OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn` exposes the uniform response equation
+under the public oracle API head for rewriting; the inherited equation already handles `simp`.
+
 **Gaps confirmed** (search that came back empty in `M:`): subprobability measures and kernels;
 `tvDist`/`totalVariation` for measures and PMFs (only `SignedMeasure.totalVariation`);
 `absDiff`; Rényi/Hellinger divergences (only Erdős–Rényi, Hellinger–Toeplitz); couplings (only

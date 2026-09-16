@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.OracleComp.ProbComp
-public import VCVio.EvalDist.Instances.FinRatPMF
+public import VCVio.EvalDist.Defs.Measure.FinRatPMF
 public import VCVioTest.MeasureSemantics
 
 /-!
@@ -37,8 +37,7 @@ example (mx : OptionT ProbComp Bool) :
 example (mx : FinRatPMF.Raw Bool) :
     Pr{let b ← mx}[b] = ((mx.prob true : NNReal) : ENNReal) := by
   rw [prEvent_eq_evalDist_of_discrete]
-  change 𝒟[mx] {true} = _
-  exact FinRatPMF.Raw.evalDist_apply_singleton_eq_prob mx true
+  simp
 
 example : FinRatPMF.Raw.coin.prob true = 1 / 2 := by
   simpa only [one_div] using FinRatPMF.Raw.prob_coin true

@@ -128,7 +128,8 @@ New code follows these rules:
 3. Keep `PMF`/`SPMF` in compatibility adapters and existing discrete proofs while they migrate;
    do not build new foundational APIs around it, and prefer to leave a file's coupling lower than
    you found it. This is a floor and a direction: the surface is retiring, not merely frozen.
-4. Keep `FinRatPMF.Raw` for computation and prove that its denotation agrees with a measure.
+4. Keep `FinRatPMF.Raw` for computation. Its native denotation is a finite sum of weighted Dirac
+   measures, with pure, measurable bind, rational event evaluation, and total mass laws.
 5. Put missing general measurable-space instances and Mathlib-facing lemmas in `ToMathlib`.
 6. Do not open Mathlib, Lean, or cslib contributions during this design migration. A
    probability-free improvement that belongs intrinsically to PolyFun may be proposed there, but
@@ -210,7 +211,9 @@ The following are implementation questions, not reasons to reopen the architectu
 3. port expectation, independent-product, coupling, total-variation, and Rényi statements to
    measure-first foundations while retaining discrete corollaries;
 4. connect indicator integrals and kernel composition to the evolving `Std.WP`/`vcgen` surface;
-5. add denotation theorems from `FinRatPMF.Raw` to finite measures;
+5. extend the native finite rational measure API to distributional quotient semantics and further
+   executable samplers; the raw sampler and uniform oracle evaluator already have direct measure
+   denotations and final-event agreement laws;
 6. reassess local utilities at every Mathlib/PolyFun/cslib/toolchain update and delete them as soon
    as stable upstream surfaces subsume them.
 
