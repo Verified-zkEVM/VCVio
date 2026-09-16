@@ -295,6 +295,22 @@ jobs:
         run: ./scripts/test-axiomsweep.sh
       - name: Axiom sweep
         run: lake exe axiomsweep --check
+      # The eager-initialisation ratchet. A top-level constant of non-function type is
+      # evaluated when its module is loaded, before any `main` runs, so a finiteness
+      # instance written the obvious way builds an enumeration of its carrier at start-up
+      # in every executable that imports the module. That elaborates cleanly, builds
+      # cleanly, and passes every other gate here; it fails only when the binary runs.
+      # Needs the oleans the build above produced, as the axiom sweep does. The fixtures
+      # go first for the same reason: seven fixture modules, one per route by which loading
+      # a module can build such an enumeration — including the respelling that a name test
+      # accepts and the specialisations that have no environment constant to read — one
+      # negative control per clause of the predicate, and the baseline's own accept / drop /
+      # narrow / widen / re-scope / preserve behaviour, so the committed baseline is
+      # falsifiable rather than merely true.
+      - name: Test the init sweep tool
+        run: ./scripts/test-initsweep.sh
+      - name: Init sweep
+        run: lake exe initsweep --check
       # `lake test` runs the `test` script from `lakefile.lean`: it builds the three test
       # libraries (every module reachable from `VCVioTest.lean`, the Lean-only lattice helpers
       # and vectors, the SLH-DSA canaries) and runs the smoke test and the SLH-DSA test
@@ -318,6 +334,14 @@ jobs:
             --path-prefix LatticeCryptoTest.lean \
             --path-prefix HashSigTest/ \
             --label 'test-library warnings'
+      # The same ratchet over the test libraries, which only exist as oleans once `lake
+      # test` has built them — the incident this gate exists for would have been just as
+      # expensive written in a test library. `VCVioTest` and `LatticeCryptoTest` have
+      # umbrella modules and are swept; `HashSigTest` is a `submodules` glob with no
+      # umbrella and thirteen roots that each define `main`, so it is not, and
+      # `scripts/InitSweep.lean` records precisely what that leaves uncovered.
+      - name: Init sweep (test libraries)
+        run: lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
       - name: Save Lake cache
         if: success() && steps.lake-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
