@@ -270,14 +270,13 @@ rest about reach.
   oleans: 1570 constants, 79 modules, 282 load-time, three flagged and baselined today.
   `HashSigTest` is not,
   and precisely: (a) `HashSigTest.lean` does not exist, so the library name is not an
-  importable module; (b) its thirteen `lean_exe` roots *are* importable one at a time
+  importable module; (b) its `lean_exe` roots *are* importable one at a time
   (`--root HashSigTest.SLHDSA.Sha2KAT` sweeps 5 constants across 1 module and exits 0), but
   two of them cannot be imported together — `environment already contains 'main'`, exit 2;
   (c) `census` counts only modules whose name has a root as a prefix, so one exe root covers
   its own module and not the closure it imports. Closing it needs either a generated
   `HashSigTest.lean` umbrella (and its `main`-free equivalent) or a `census` that separates
-  the import root from the attribution prefix, plus the thirteen invocations to cover the
-  thirteen roots.
+  the import root from the attribution prefix, plus one invocation per executable root.
 * It is a static check on the environment: it imports with `loadExts := false` and
   does not enable initializer execution. Lean can execute an imported initializer through
   its interpreter even when no swept-library native code is linked, so linking only the
