@@ -40,12 +40,12 @@ canonical `PublicHash.impl` of a primitive bundle.  It is the SLH-DSA instance o
 probabilistic handler such as `PublicHash.randomOracle` needs its own bridge, which this module
 does not provide.
 
-The definitions are opaque to importers.  What an importer uses are the public equations:
+The definitions are opaque to importers. What an importer uses are the public equations:
 `mem_constructionAddresses_iff` and `constructionAddresses_length` for the union ledger,
 `mem_encodedConstructionAddresses_iff` and `encodeTargets_constructionAddresses` for its encoded
 image, `constructionQueryReachable_thash_iff` and `constructionQueryReachable_hmsg` for the query
-predicate, the structural laws `QueriesWithinConstructionTargets.pure`, `.bind`, `.query_iff`,
-and `.ofFnM` for assembling the predicate along a program, and
+predicate, the structural laws `QueriesWithinConstructionTargets.pure`, `.bind`, `.query_iff`, and
+`.ofFnM` for assembling the predicate along a program, and
 `queriesWithinConstructionTargets_iff_isQueryBound` to reach the generic `IsQueryBound` laws (for
 example `isQueryBound_map_iff`) from the wrapper.
 

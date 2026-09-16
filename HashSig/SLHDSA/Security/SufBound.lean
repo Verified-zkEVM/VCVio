@@ -48,12 +48,12 @@ an equality, where the module that owns the split proves only `≤`, since that 
 bound consumes — so `strongAdvantage_le_add_arms_iff` is the same equivalence again, for every
 selector.  No instrumentation of the residual makes the bound say more.
 
-So the vacuity of this statement is the vacuity of the previous one, neither more nor less.  That
-one is exhibited there as a canary: a closed `Certificate` is constructible at an
-arbitrary validated parameter set, an arbitrary bundle and an arbitrary adversary from an address
-key and a public seed, and the bound it names is at least one.  At that certificate this module's
-headline reads `sadv.advantage ≤ (something ≥ 1) + residual`, which `probOutput_le_one` gives with
-extra steps, and `HashSigTest.SLHDSA.SufBound` ships that reading too.
+So the vacuity of this statement is the vacuity of the previous one, neither more nor less. That one
+is exhibited there as a canary: a closed `Certificate` is constructible at an arbitrary validated
+parameter set, an arbitrary bundle and an arbitrary adversary from an address key and a public seed,
+and the bound it names is at least one. At that certificate this module's headline reads
+`sadv.advantage ≤ (something ≥ 1) + residual`, which `probOutput_le_one` gives with extra steps, and
+`HashSigTest.SLHDSA.SufBound` ships that reading too.
 
 **What is not free is the residual itself.**  Every summand of `Summands.bound` is the advantage of
 an adversary a certificate supplies, chosen with nothing tying it to `sadv`; the residual is a
@@ -137,28 +137,28 @@ two branch bounds carry.
 
 Four things about this module are held in place by the fixture alone or by nothing at all.
 
-* **The two equivalences, weakened to implications.**  `strongAdvantage_le_add_sameMessage_iff` and
+* **The two equivalences, weakened to implications.** `strongAdvantage_le_add_sameMessage_iff` and
   `strongAdvantage_le_add_arms_iff` restated as `euf ≤ ε → advantage ≤ ε + residual`, with both
   consumers repaired, leave this module well-formed; only the two fixture pins that restate them
-  refuse it.  An edit that moves the fixture too is silent.
+  refuse it. An edit that moves the fixture too is silent.
 * **Which half the consumption form bounds.**
-  `strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le` takes a bound on the fresh half.  The
+  `strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le` takes a bound on the fresh half. The
   mirror statement, taking one on the same-randomizer half, is equally true and equally provable,
-  and is refused by one fixture pin only; move that pin and **nothing** refuses it.  What decides
+  and is refused by one fixture pin only; move that pin and **nothing** refuses it. What decides
   which is right is the argument above — the fresh branch has the `H_msg` bridge and the other has
   nothing — and not a check.
-* **The order of the two residuals in `Summands.sufBound`, and their association.**  Swapping them
-  or reassociating the sum leaves this module provable once its four proofs are repaired, and is
+* **The order of the two residuals in `Summands.sufBound`, and their association.** Swapping them or
+  reassociating the sum leaves this module provable once its four proofs are repaired, and is
   refused by three fixture entries either way; an edit that moves those entries too changes the
-  claim rather than being caught.  Two neighbouring edits are *not* in this class.  A coefficient
-  other than one on a residual makes `sufBound_eq_bound_add_sameMessage_of_unfoldings` false, and
-  is refused there and nowhere else here.  A stray additive constant makes both it and
+  claim rather than being caught. Two neighbouring edits are *not* in this class. A coefficient
+  other than one on a residual makes `sufBound_eq_bound_add_sameMessage_of_unfoldings` false, and is
+  refused there and nowhere else here. A stray additive constant makes both it and
   `sufBound_eq_bound_of_residuals_zero` false, and the zero law refuses such a constant
   independently of the statement beside it.
-* **The strength of the certificate.**  Inherited unchanged from
-  `HashSig.SLHDSA.Security.Composition`: nothing refuses a certificate, and the fixture there
-  builds one from an address key and a public seed.  Adding the residual does not touch that
-  question, which is why this module's vacuity is exactly that module's.
+* **The strength of the certificate.** Inherited unchanged from
+  `HashSig.SLHDSA.Security.Composition`: nothing refuses a certificate, and the fixture there builds
+  one from an address key and a public seed. Adding the residual does not touch that question, which
+  is why this module's vacuity is exactly that module's.
 
 ## What is not established
 
@@ -169,12 +169,12 @@ Four things about this module are held in place by the fixture alone or by nothi
 * **The named halves are not identified with the arms, and what is missing is written down.**
   `sameMessageAdvantage_eq_arms` is an equality at an arbitrary selector, and at
   `SchemeGames.randomizerLogged` its two arms are the two named halves *in the module that defines
-  them*.  That identification is not available here: the halves' bodies are not exposed, so a
-  consumer's `rfl` is refused and `unfold` fails outright.  The named refinement
+  them*. That identification is not available here: the halves' bodies are not exposed, so a
+  consumer's `rfl` is refused and `unfold` fails outright. The named refinement
   `strongAdvantage_le_sufBound` therefore goes through the exported `≤` and is, as far as anything
-  proved here can tell, possibly strict.  What closes it is the halves' two defining equations —
-  not one, and not an `@[expose]`: the module that owns them already proves both by `rfl`, as two
-  unnamed `example`s, so naming them there is a pure addition to it.  Naming their *consequence*
+  proved here can tell, possibly strict. What closes it is the halves' two defining equations — not
+  one, and not an `@[expose]`: the module that owns them already proves both by `rfl`, as two
+  unnamed `example`s, so naming them there is a pure addition to it. Naming their *consequence*
   there is not: that module's own same-message split is a `≤`, and the equality the consequence
   needs is `sameMessageAdvantage_eq_arms` above, which would have to move down beside it.
   `sameMessageAdvantage_eq_halves_of_unfoldings` and
@@ -182,9 +182,9 @@ Four things about this module are held in place by the fixture alone or by nothi
   the consequence, so the gap is one named theorem wide — the two equations, or, with the arms
   equality moved down beside them, the single joint equality they give — and that theorem belongs
   one module down, where it is not stated.
-* **Nothing about `SameMessageBinding`.**  No `ε < 1` holds of it for a hash-based scheme, as
-  VCVio's own docstring records, so a quantitative result must consume the per-adversary
-  partition instead.  This module consumes the partition.
+* **Nothing about `SameMessageBinding`.** No `ε < 1` holds of it for a hash-based scheme, as VCVio's
+  own docstring records, so a quantitative result must consume the per-adversary partition instead.
+  This module consumes the partition.
 * **Everything the previous module does not establish.**  No reduction adversary, no challenge
   recording, no final validity, no PRF hop, no undetectability hybrid, no query cap on the
   `MCO_ITSR` summand, and the Lean branch assignment is not the source's.  The `Certificate` this
@@ -391,10 +391,10 @@ theorem Summands.sufBound_eq (s : Summands) (p : Params) (fresh same : ℝ≥0�
 
 /-- At zero residuals the expression is the existential bound.  It fixes the value at zero
 residuals only: it constrains neither the residuals' coefficients, nor their order, nor the
-association of the sum, nor whether either residual appears in the body at all.  What refuses an edit that moves the value is this statement — a stray
-additive constant, or a second copy of `s.bound p`.  What fixes the order and the association is
-`HashSigTest.SLHDSA.SufBound`'s `sufBound` examples; what fixes the coefficients is those and
-`sufBound_eq_bound_add_sameMessage_of_unfoldings`.
+association of the sum, nor whether either residual appears in the body at all. What refuses an edit
+that moves the value is this statement — a stray additive constant, or a second copy of `s.bound p`.
+What fixes the order and the association is `HashSigTest.SLHDSA.SufBound`'s `sufBound` examples;
+what fixes the coefficients is those and `sufBound_eq_bound_add_sameMessage_of_unfoldings`.
 
 *Residual arithmetic.* -/
 theorem sufBound_eq_bound_of_residuals_zero (s : Summands) (p : Params) :
@@ -462,10 +462,9 @@ This one is a `≤` and not an equivalence, and the direction that is missing is
 assumed away: the step it takes is
 `SchemeGames.sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer`, whose reverse is
 `sameMessageAdvantage_eq_arms` at `SchemeGames.randomizerLogged` — true, proved above at every
-selector, and not transportable to the named halves from here, because their bodies are not
-exposed.  So this statement is possibly strict and this module cannot tell; what would settle it,
-and nothing more, is the pair of hypotheses
-`sufBound_eq_bound_add_sameMessage_of_unfoldings` takes.
+selector, and not transportable to the named halves from here, because their bodies are not exposed.
+So this statement is possibly strict and this module cannot tell; what would settle it, and nothing
+more, is the pair of hypotheses `sufBound_eq_bound_add_sameMessage_of_unfoldings` takes.
 
 Like the headline, it says nothing about the size of what it bounds by:
 `HashSigTest.SLHDSA.SufBound.freeCertificate_sufBound_headline` exhibits a certificate at which
@@ -488,9 +487,9 @@ of this statement.  It is not the only unbounded one: `c.summands.bound vp.param
 the vacuity canary shows.
 
 This is the shape an `H_msg` reduction plugs into, and it is the form in which the residual's
-remaining cost is smallest to state.  Its hypothesis is not discharged here or anywhere
-in this repository: bounding the fresh half is an adversary construction, the same deferral the
-previous module's two branch bounds carry.
+remaining cost is smallest to state. Its hypothesis is not discharged here or anywhere in this
+repository: bounding the fresh half is an adversary construction, the same deferral the previous
+module's two branch bounds carry.
 
 *Residual arithmetic.* -/
 theorem strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le
@@ -526,12 +525,12 @@ along the two hypotheses.
 Neither hypothesis is discharged here and neither can be: `freshRandomizerHalf` and
 `sameRandomizerHalf` are `noncomputable def`s in `HashSig.SLHDSA.Security.SchemeGames` whose bodies
 that module does not expose, so a consumer's `rfl` reports that the two sides are not definitionally
-equal and names the half as a definition it could not unfold.  Inside that module both are `rfl`,
-and it already proves both, as two unnamed `example`s beside its four half-bounds.  Naming them
-there is a pure addition to that module and would discharge these two hypotheses at every call
-site.  Naming this conclusion there instead, where it would need no hypotheses, is not a pure
-addition: that module's own same-message split is a `≤`, so the conclusion would carry
-`sameMessageAdvantage_eq_arms` down with it.  That is where this statement belongs, and it is not
+equal and names the half as a definition it could not unfold. Inside that module both are `rfl`, and
+it already proves both, as two unnamed `example`s beside its four half-bounds. Naming them there is
+a pure addition to that module and would discharge these two hypotheses at every call site. Naming
+this conclusion there instead, where it would need no hypotheses, is not a pure addition: that
+module's own same-message split is a `≤`, so the conclusion would carry
+`sameMessageAdvantage_eq_arms` down with it. That is where this statement belongs, and it is not
 stated there; here it can only take the two equations as hypotheses, which is what it does.
 
 *Experiment split.* -/

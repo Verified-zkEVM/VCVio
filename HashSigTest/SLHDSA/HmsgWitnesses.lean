@@ -1,7 +1,6 @@
 /-
-Copyright (c) 2026 Alexander Hicks. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Alexander Hicks
+Copyright (c) 2026 Alexander Hicks. All rights reserved. Released under Apache 2.0 license as
+described in the file LICENSE. Authors: Alexander Hicks
 -/
 
 module
@@ -19,21 +18,20 @@ values, not restated from the theorems.
 
 ## The profile is the scheme-dispatch fixture's, and why it is copied rather than imported
 
-The bundle below is the one `HashSigTest.SLHDSA.SchemeWitnesses` builds — the same seven
-parameters, the same six byte maps, the same three honest seeds and second public seed, the same
-published root — so the two executables run on one profile, and a reviewer can check that by
-diffing the two blocks.  It is copied rather than imported because a `lean_exe` root must own its
-`main`, and a module that imports the other one cannot declare `main` at all; had that not been so,
-the executable would silently link the imported `main` and run the other fixture.  The lane has no
-shared fixture module.
+The bundle below is the one `HashSigTest.SLHDSA.SchemeWitnesses` builds — the same seven parameters,
+the same six byte maps, the same three honest seeds and second public seed, the same published root
+— so the two executables run on one profile, and a reviewer can check that by diffing the two
+blocks. It is copied rather than imported because a `lean_exe` root must own its `main`, and a
+module that imports the other one cannot declare `main` at all; had that not been so, the executable
+would silently link the imported `main` and run the other fixture. The lane has no shared fixture
+module.
 
-The two blocks differ in exactly seven places, all deliberate.  The failure message names this
-executable.  `toy` carries no `@[expose]` here, because nothing in this file needs its body.  Two
+The two blocks differ in exactly seven places, all deliberate. The failure message names this
+executable. `toy` carries no `@[expose]` here, because nothing in this file needs its body. Two
 attribute comments describe what those attributes are required for in this file rather than in the
-other one.  And three docstrings in the copied block name the group that asserts what they
-describe, which is `checkFixture` here and `checkToyBundle` there.  Strip the comments, the
-docstrings and that one dropped attribute, and the two blocks differ in a single string: the
-failure message.
+other one. And three docstrings in the copied block name the group that asserts what they describe,
+which is `checkFixture` here and `checkToyBundle` there. Strip the comments, the docstrings and that
+one dropped attribute, and the two blocks differ in a single string: the failure message.
 
 ## What the profile already supplies, and the one thing it does not
 
@@ -63,11 +61,11 @@ four coverage patterns against that pair of indices:
 
 The fifth, `qHonestOnly`, covers both indices at the honest key pair *without* reproducing the
 digest — coverage is a relation between selected indices, not between digests, and a fixture whose
-only win came from a digest collision would not have shown that.  It is also what makes the fibre
+only win came from a digest collision would not have shown that. It is also what makes the fibre
 equivalence's key pair falsifiable: at either of the two moved key pairs it covers neither index, so
-reading the source-shaped side anywhere but at the honest key pair changes the answer.  `qBoth`'s
-digest collision is additive and survives moving the seed and the root, so without `qHonestOnly`
-the equivalence would hold with the source-shaped side read at any public seed.
+reading the source-shaped side anywhere but at the honest key pair changes the answer. `qBoth`'s
+digest collision is additive and survives moving the seed and the root, so without `qHonestOnly` the
+equivalence would hold with the source-shaped side read at any public seed.
 
 `qSecond` and `qOther` share a randomizer and differ only in their message, which is asserted: ITSR
 freshness is *pair* freshness, and a fixture in which no two queries shared a key could not show
@@ -102,18 +100,18 @@ coverage.
 
 ## The naive identifications this fixture is built to reject
 
-* *That `globalLeaf` is the local leaf.*  Rejected six times over, each of the six sufficient
-  without the other five: against `forsSigLeafIndex`, which carries the FIPS citation; against a
-  hand-written `tree · 2 ^ a + leaf`; against the divide-back to the FORS tree; against the
-  `k · 2 ^ a` bound; against the secret value honest signing reveals at the coordinate; and against
-  a hand-written list of the two global leaves the forged digest is expected to select, read
-  through the hand-written `Adrs` table.  A shift of `globalLeaf` carried through the library until
-  it typechecks moves nine declarations, and is then refused by each of those six.  The
-  *per-index* read of that `Adrs` table is not one of them: the shifted global leaf
-  stands on both sides of its comparison, so with it alone the shift passes.  It pins how
-  `forsNodeAdrs` builds an address from a given global leaf, not which global leaf.  The `Nodup`
-  sweep over the sixty-four indices lets the shift through for its own reason: a shift merely
-  permutes those sixty-four leaves, so they stay distinct.
+* *That `globalLeaf` is the local leaf.* Rejected six times over, each of the six sufficient without
+  the other five: against `forsSigLeafIndex`, which carries the FIPS citation; against a
+  hand-written `tree · 2 ^ a + leaf`; against the divide-back to the FORS tree; against the `k · 2 ^
+  a` bound; against the secret value honest signing reveals at the coordinate; and against a
+  hand-written list of the two global leaves the forged digest is expected to select, read through
+  the hand-written `Adrs` table. A shift of `globalLeaf` carried through the library until it
+  typechecks moves nine declarations, and is then refused by each of those six. The *per-index* read
+  of that `Adrs` table is not one of them: the shifted global leaf stands on both sides of its
+  comparison, so with it alone the shift passes. It pins how `forsNodeAdrs` builds an address from a
+  given global leaf, not which global leaf. The `Nodup` sweep over the sixty-four indices lets the
+  shift through for its own reason: a shift merely permutes those sixty-four leaves, so they stay
+  distinct.
 * *That `findUncoveredIndex` returns "an" uncovered index.*  Rejected by the empty-transcript case,
   where both are uncovered and the returned one is required to be the earlier.
 * *That the ITSR candidate may carry any `(PK.seed, PK.root)`.*  Rejected by the two off-fibre
@@ -146,9 +144,9 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 Two hypertree layers of height two, two FORS trees of height one, `w = 16`, `len = 4`. -/
 
 -- Exposed because the bundle below needs `toyParams.n` to reduce: `yToBytes := id` is checked
--- against `Bytes 1 → Bytes toyParams.n`.  `toy` below needs no exposure of its own here, and
--- neither do the secret map, the tweak map, the randomizer or the digest map.  Nothing outside
--- this executable consumes any of them.
+-- against `Bytes 1 → Bytes toyParams.n`. `toy` below needs no exposure of its own here, and neither
+-- do the secret map, the tweak map, the randomizer or the digest map. Nothing outside this
+-- executable consumes any of them.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
@@ -204,13 +202,13 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteFold msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed and `@[reducible]`, for two different reasons.  Exposed for code generation: the
--- compiled declarations below, starting with `instance : DecidableEq toyPrimitives.Y`, have to
--- infer the same compilation type for this bundle as an importing module would, which needs its
--- body.  Reducible because its carrier types have to unfold to `Bytes 1` for instance resolution
--- to reach them: `byteOf`'s `y[0]` needs `GetElem toyPrimitives.Y ℕ` and an index bound, and
--- `wideWins` needs `DecidableEq (HmsgITSRInput toyPrimitives.PkSeed toyPrimitives.Y)`.  Nothing
--- outside this executable consumes it.
+-- Exposed and `@[reducible]`, for two different reasons. Exposed for code generation: the compiled
+-- declarations below, starting with `instance : DecidableEq toyPrimitives.Y`, have to infer the
+-- same compilation type for this bundle as an importing module would, which needs its body.
+-- Reducible because its carrier types have to unfold to `Bytes 1` for instance resolution to reach
+-- them: `byteOf`'s `y[0]` needs `GetElem toyPrimitives.Y ℕ` and an index bound, and `wideWins`
+-- needs `DecidableEq (HmsgITSRInput toyPrimitives.PkSeed toyPrimitives.Y)`. Nothing outside this
+-- executable consumes it.
 /-- The toy bundle: one byte per node, a collapsing order- and address-sensitive `Thash`, and an
 `H_msg` that depends on all four of its arguments. -/
 @[expose, reducible] def toyPrimitives : Primitives toyParams where
@@ -416,9 +414,9 @@ Every other field, and every carrier type, is the fixture's own, and its source-
 *any* key pair is the fixture's source-shaped problem at the honest one — `checkStrictness` asserts
 that on the fixture's cases rather than assuming it — while its widened game admits the one-query
 break `wins_of_hmsg_agree` describes. -/
--- Exposed and `@[reducible]`, for the two reasons the bundle above carries.  Exposed for code
+-- Exposed and `@[reducible]`, for the two reasons the bundle above carries. Exposed for code
 -- generation: the three instances just below, `checkStrictness` and both `main`s are compiled
--- against this bundle and need its body.  Reducible so that `checkStrictness` can synthesize
+-- against this bundle and need its body. Reducible so that `checkStrictness` can synthesize
 -- `Decidable ((hmsgNarrowItsrProblem blindPrimitives pkSeed pkRoot).Wins queries qC)`.
 @[expose, reducible] def blindPrimitives : Primitives toyParams :=
   { toyPrimitives with Hmsg := fun r _ _ msg => toyPrimitives.Hmsg r pkSeed pkRoot msg }
@@ -497,9 +495,9 @@ moves under a shift of `globalLeaf`.
 
 On this profile the pair check also *implies* the per-index read: the two lists it compares are the
 same two indices the loop walks, so pointwise it gives exactly the per-index equation: with the
-per-index read deleted the executable still passes, and with it and the `range 4` sweep both
-deleted a leaf-address table shifted by one is still caught, at the pair check.  The per-index
-read is kept anyway, because it is the law about `forsNodeAdrs` quantified over the index that a
+per-index read deleted the executable still passes, and with it and the `range 4` sweep both deleted
+a leaf-address table shifted by one is still caught, at the pair check. The per-index read is kept
+anyway, because it is the law about `forsNodeAdrs` quantified over the index that a
 reader checks the imported function against, rather than a statement about these two values. -/
 def checkCoordinates : IO Unit := do
   ensure "the forged instance address is the hand-written one"

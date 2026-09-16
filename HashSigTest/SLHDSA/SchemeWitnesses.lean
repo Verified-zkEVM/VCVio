@@ -106,17 +106,17 @@ leaf addresses are additionally matched against a table of `Adrs` records writte
 change in how the global index reaches the address is caught there rather than only through
 `forsSigLeafIndex`.
 
-`checkSchemeEquations` evaluates the three `SLHDSA.GeneralScheme` equations this fixture owns —
-the key-generation one once, the two verification ones at every signature
-the fixture builds — and pins the secret key the first of them does not state.
-`checkHonestPartner` pins that the honest layer-zero partner depends on the digest's *position* and
-not on its FORS message, which is what makes the hypertree arm's honest starting message well
-defined for a message the signer never signed.  `checkFabricated` is the tally: four hand-built
-witnesses accepted and eleven rejected, the rejected ones covering both sites, both layer
-relabellings, both FORS height bounds, a wrong preimage value, a `T_k` "second preimage" of the
-honest root vector itself, and a root vector that does differ from the honest one but does not
-compress to it.  There is no out-of-range layer fabrication, and there cannot be one:
-`HypertreeWitness.layer` is a `Fin toyParams.d`, so a label at or beyond `d` does not elaborate.
+`checkSchemeEquations` evaluates the three `SLHDSA.GeneralScheme` equations this fixture owns — the
+key-generation one once, the two verification ones at every signature the fixture builds — and pins
+the secret key the first of them does not state. `checkHonestPartner` pins that the honest
+layer-zero partner depends on the digest's *position* and not on its FORS message, which is what
+makes the hypertree arm's honest starting message well defined for a message the signer never
+signed. `checkFabricated` is the tally: four hand-built witnesses accepted and eleven rejected, the
+rejected ones covering both sites, both layer relabellings, both FORS height bounds, a wrong
+preimage value, a `T_k` "second preimage" of the honest root vector itself, and a root vector that
+does differ from the honest one but does not compress to it. There is no out-of-range layer
+fabrication, and there cannot be one: `HypertreeWitness.layer` is a `Fin toyParams.d`, so a label at
+or beyond `d` does not elaborate.
 
 The `example`s pin the library statements at this bundle — the three new `GeneralScheme` equations,
 the digest split, the dispatch, both shape equations, both unfolding equations, soundness,
@@ -141,12 +141,12 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 Two hypertree layers of height two, two FORS trees of height one, `w = 16`, `len = 4`. -/
 
 -- Both exposed, for two different reasons, and neither for the `decide` pins below, which reduce
--- either way.  `toyParams` is exposed because the bundle needs `toyParams.n` to reduce:
--- `yToBytes := id` is checked against `Bytes 1 → Bytes toyParams.n`.  `toy` is exposed because
--- everything after the bundle is written at `toy`, so `toy.params` has to reduce to `toyParams`
--- for `toyPrimitives : Primitives toyParams` to be accepted where `Primitives toy.params` is
--- expected.  Neither the secret map, the tweak map, the randomizer, the digest map nor any of the
--- four positions needs exposure of its own.  Nothing outside this executable consumes them.
+-- either way. `toyParams` is exposed because the bundle needs `toyParams.n` to reduce: `yToBytes :=
+-- id` is checked against `Bytes 1 → Bytes toyParams.n`. `toy` is exposed because everything after
+-- the bundle is written at `toy`, so `toy.params` has to reduce to `toyParams` for `toyPrimitives :
+-- Primitives toyParams` to be accepted where `Primitives toy.params` is expected. Neither the
+-- secret map, the tweak map, the randomizer, the digest map nor any of the four positions needs
+-- exposure of its own. Nothing outside this executable consumes them.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
@@ -200,14 +200,14 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteFold msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed and `@[reducible]`, for two different reasons.  Exposed for code generation: every
+-- Exposed and `@[reducible]`, for two different reasons. Exposed for code generation: every
 -- compiled declaration written at this bundle — the three instances just below, `node`, `byteOf`,
 -- the seeds, and on down to `armMsg` — has to infer the same compilation type for it as an
--- importing module would, which needs its body.  The hand-written positions below do not, their
--- `Fin` bounds naming no primitive bundle.  Reducible because its carrier types have to unfold to
--- `Bytes 1` for instance resolution to reach them: `byteOf`'s `y[0]` needs a `GetElem` instance
--- and an index bound, and the secret-key comparison in `checkSchemeEquations` needs `BEq` on
--- `toyPrimitives.core.PkSeed`.  Nothing outside this executable consumes it.
+-- importing module would, which needs its body. The hand-written positions below do not, their
+-- `Fin` bounds naming no primitive bundle. Reducible because its carrier types have to unfold to
+-- `Bytes 1` for instance resolution to reach them: `byteOf`'s `y[0]` needs a `GetElem` instance and
+-- an index bound, and the secret-key comparison in `checkSchemeEquations` needs `BEq` on
+-- `toyPrimitives.core.PkSeed`. Nothing outside this executable consumes it.
 /-- The toy bundle: one byte per node, a collapsing order- and address-sensitive `Thash`, and an
 `H_msg` that depends on all four of its arguments. -/
 @[expose, reducible] def toyPrimitives : Primitives toyParams where
@@ -540,12 +540,12 @@ def collapsedFors : ForsSigCore toyParams toyPrimitives.core :=
   honestForsB.set 0 { honestForsB[0] with sk := node (byteOf honestForsB[0].sk + 2) }
 
 /-- A FORS signature whose recovered *root vector* differs from the honest one while its `T_k`
-compression agrees, so the recovered public key does not move.  The toy `T_k` folds its children as
+compression agrees, so the recovered public key does not move. The toy `T_k` folds its children as
 `acc ↦ (acc <<< 2) ^^^ (y >>> 1)`, so at `k = 2` the first root reaches the compression through bits
 one to six only: its low bit is dropped by the shift right and its high bit is shifted out again by
-the shift left.  Moving tree zero's authentication node by `0x40` moves tree zero's recovered root
-by `0x80`, which is one of those two.  A signature carrying this still routes to the FORS arm, where
-the moved vector is the `T_k` second preimage the extractor returns.  Exactly ten one-byte moves
+the shift left. Moving tree zero's authentication node by `0x40` moves tree zero's recovered root by
+`0x80`, which is one of those two. A signature carrying this still routes to the FORS arm, where the
+moved vector is the `T_k` second preimage the extractor returns. Exactly ten one-byte moves
 of `honestForsB` have this property; this is one of them. -/
 def collidedFors : ForsSigCore toyParams toyPrimitives.core :=
   honestForsB.set 0 { honestForsB[0] with
@@ -645,12 +645,12 @@ def forsLeafAdrsTable (j : ℕ) : Adrs := ⟨0, 2, AddrType.forsTree.toCode, 0, 
 
 /-- Sixteen fixture properties.
 
-The first six are the liveness of the two message-derived maps: a bundle whose `H_msg` and
-`PRF_msg` are constant and whose public seed is a unit cannot exercise them.  Each of `H_msg`'s
-four FIPS inputs is moved on its own and the digest is required to move with it, and `PRF_msg` is
-moved in each of its two.  The seventh is that the two sites' randomizers
-differ, and the eighth is the exclusive-or fold's collision, which is what makes a routed forgery on
-an unsigned message exhibitable here.
+The first six are the liveness of the two message-derived maps: a bundle whose `H_msg` and `PRF_msg`
+are constant and whose public seed is a unit cannot exercise them. Each of `H_msg`'s four FIPS
+inputs is moved on its own and the digest is required to move with it, and `PRF_msg` is moved in
+each of its two. The seventh is that the two sites' randomizers differ, and the eighth is the
+exclusive-or fold's collision, which is what makes a routed forgery on an unsigned message
+exhibitable here.
 
 The next four separate the two forgery sites — different FORS instance address, different FORS
 message, different layer-zero position and different top-layer position — and pin that both FORS
@@ -730,9 +730,9 @@ def checkToyBundle : IO Unit := do
 
 /-- Key generation publishes the seed it was given and the general hypertree's root; verification is
 the general hypertree verifier at the digest; and verification is the decision of whether the
-recovered root is the published one.  Those are the three `SLHDSA.GeneralScheme` equations this
-fixture owns, evaluated rather than restated — the first once, the other two at every one
-of the seven signatures the fixture builds, with `sigA` taken at both of the messages that share its
+recovered root is the published one. Those are the three `SLHDSA.GeneralScheme` equations this
+fixture owns, evaluated rather than restated — the first once, the other two at every one of the
+seven signatures the fixture builds, with `sigA` taken at both of the messages that share its
 digest.
 
 The key-generation equation states the published component only, so the secret one is pinned here
@@ -1269,12 +1269,12 @@ two unfolding equations with the lane's seven `_eval` bridges — one per leaf b
 holding a composite witness reaches each canonical game's `eval` at the encoded tweak in one step.
 No bridge is restated in the library; these pin that none needs to be. -/
 
--- Neither is exposed, and neither needs to be.  The two abbreviations exist only to keep the four
--- hypertree-arm pins below readable, whose
--- hypothesis comes back from `HypertreeWitness.valid_iff` spelled with `advance` and
--- `honestLayerMsg` rather than with these names; all 41 uses of them sit inside those four pins,
--- and a pin is an `example`, which is not exported and so unfolds an unexposed definition freely
--- where a `theorem` would be refused.  Nothing outside this executable consumes them.
+-- Neither is exposed, and neither needs to be. The two abbreviations exist only to keep the four
+-- hypertree-arm pins below readable, whose hypothesis comes back from `HypertreeWitness.valid_iff`
+-- spelled with `advance` and `honestLayerMsg` rather than with these names; all 41 uses of them sit
+-- inside those four pins, and a pin is an `example`, which is not exported and so unfolds an
+-- unexposed definition freely where a `theorem` would be refused. Nothing outside this executable
+-- consumes them.
 /-- The position a hypertree-arm label names on the walk from a digest's layer-zero position. -/
 def armPos (parts : DigestParts toy.params) (layer : Fin toy.params.d) :
     LayerPosition toy :=

@@ -92,15 +92,15 @@ that theorem says nothing either way.
 What places the family out of scope is therefore not the guard but what a returned witness says.
 `findWotsWitness_sound` concludes `WotsWitness.Valid … sig' msg'` — validity against the *supplied*
 partner — and, as its own docstring records, says nothing about whether that partner was committed
-as a game target.  Here the supplied partner is a second adversarial signature, so the witness is a
+as a game target. Here the supplied partner is a second adversarial signature, so the witness is a
 collision between two adversarial objects rather than an attack on honest committed material, which
-is exactly the two-adversarial-signatures argument this lane holds out of scope.  A same-digest
+is exactly the two-adversarial-signatures argument this lane holds out of scope. A same-digest
 extractor is therefore a further witness module with its own witness type, and there is none.
 
 `HashSig.SLHDSA.Security.HypertreeWitnesses` holds a two-adversarial-signatures argument out of
-scope for the existential-unforgeability line; `schemeParts_eq_of_randomizer_eq`
-and `components_ne_of_ne_of_randomizer_eq` do not reopen it — they say what such an argument would
-be handed, and prove no extraction from it.
+scope for the existential-unforgeability line; `schemeParts_eq_of_randomizer_eq` and
+`components_ne_of_ne_of_randomizer_eq` do not reopen it — they say what such an argument would be
+handed, and prove no extraction from it.
 
 ## There is no strong unforgeability in the EasyCrypt development
 
@@ -161,16 +161,16 @@ and its signer could not have populated it as widely if it had.
 No probability, and in particular no use of `strongUnforgeableAdv.advantage_eq_euf_add_sameMessage`,
 whose statement carries a runtime-factoring hypothesis and whose two summands are advantages.
 Bounding the same-message summand for a specific reduction adversary is not done here, and it must
-go through that identity rather than the unbounded `SameMessageBinding` wrapper: no `ε < 1` holds
-of `SameMessageBinding` for a hash-based scheme, so a quantitative result has to take the
-per-adversary form.  The generic Boolean partition inside that identity's proof is not restated
-here either: it is not SLH-DSA-specific and the library already discharges it.
+go through that identity rather than the unbounded `SameMessageBinding` wrapper: no `ε < 1` holds of
+`SameMessageBinding` for a hash-based scheme, so a quantitative result has to take the per-adversary
+form. The generic Boolean partition inside that identity's proof is not restated here either: it is
+not SLH-DSA-specific and the library already discharges it.
 
-No extraction from the second branch, for the reason given above.  No `SignatureAlg` packaging: the
+No extraction from the second branch, for the reason given above. No `SignatureAlg` packaging: the
 statements below are over `QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core)`, which
-needs none, and every `SignatureAlg` in `HashSig` is at `p.d = 1`.  No equation relating a logged
-signature to `signInternal`: nothing here needs one — the divergence above is exercised at values
-in `HashSigTest.SLHDSA.SufResidual` instead.
+needs none, and every `SignatureAlg` in `HashSig` is at `p.d = 1`. No equation relating a logged
+signature to `signInternal`: nothing here needs one — the divergence above is exercised at values in
+`HashSigTest.SLHDSA.SufResidual` instead.
 
 ## Labels
 
@@ -199,12 +199,12 @@ about a pair of signatures rather than about a transcript:
 
 Those twenty-five are the module's whole interface; none is `private` and none carries `@[expose]`.
 
-Nine of them carry `[DecidableEq (GeneralScheme.SignatureCore vp prims.core)]`.  That instance is
-not derivable here: neither `SLHDSA.SignatureCore` nor `ForsTreeSigCore` nor `XmssSigCore`
-declares or derives one, and `HashSig` contains no instance for any of the three.  It is required by
-the library predicates being bridged, `SignatureAlg.signingLogContains` and `QueryLog.wasQueried`,
-and it is carried as a hypothesis rather than supplied, because the instance belongs to the modules
-that declare those signature types.
+Nine of them carry `[DecidableEq (GeneralScheme.SignatureCore vp prims.core)]`. That instance is not
+derivable here: neither `SLHDSA.SignatureCore` nor `ForsTreeSigCore` nor `XmssSigCore` declares or
+derives one, and `HashSig` contains no instance for any of the three. It is required by the library
+predicates being bridged, `SignatureAlg.signingLogContains` and `QueryLog.wasQueried`, and it is
+carried as a hypothesis rather than supplied, because the instance belongs to the modules that
+declare those signature types.
 
 ## References
 

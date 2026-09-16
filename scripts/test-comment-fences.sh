@@ -3,11 +3,11 @@
 #
 # Exercise check-comment-fences.py against fixtures: a declaration hidden after a reflowed
 # docstring, the same shape for a single-line comment at the margin, the indented multi-line
-# annotations that must stay legal (a wrapped structure-field docstring is a common
-# documentation shape in this repository and the rule must not reach it), the literal forms
-# that could confuse a lexical scanner, the line numbering that a raw string or a gap escape
-# would drift, the column-0 shapes the positional rule rejects although they are clean Lean,
-# the shapes the rule knowingly does not cover, and the file selection.
+# annotations that must stay legal (a wrapped structure-field docstring is a common documentation
+# shape in this repository and the rule must not reach it), the literal forms that could confuse a
+# lexical scanner, the line numbering that a raw string or a gap escape would drift, the column-0
+# shapes the positional rule rejects although they are clean Lean, the shapes the rule knowingly
+# does not cover, and the file selection.
 #
 # The checker takes its default file list from git, so the fixtures live in a throwaway
 # repository with the script copied into it.
@@ -92,12 +92,12 @@ git commit -qm 'fixture: accepted shapes'
 expect_status 0 accepted "$CHECKER"
 grep -q "Comment fences: OK" "$FIXTURE_REPO/accepted.log"
 
-# A block comment that opens part-way into a line is an annotation inside some larger piece
-# of syntax, and must stay accepted however many lines it spans; and a comment at the margin
-# followed only by more comments hides nothing either. All nine shapes below are Lean that
-# elaborates with the package's own options and Mathlib's standard linter set on, with no
-# error and no warning. Shape 2 is the common one — most of this repository's multi-line
-# off-margin comments are that shape.
+# A block comment that opens part-way into a line is an annotation inside some larger piece of
+# syntax, and must stay accepted however many lines it spans; and a comment at the margin followed
+# only by more comments hides nothing either. All nine shapes below are Lean that elaborates with
+# the package's own options and Mathlib's standard linter set on, with no error and no warning.
+# Shape 2 is the common one — most of this repository's multi-line off-margin comments are that
+# shape.
 cat > Lib/Innocent.lean <<'LEAN'
 /-- 1. A multi-line inline annotation inside an expression. -/
 def one (x y : Nat) : Nat :=
@@ -251,14 +251,14 @@ rm Lib/Interpolation.lean
 
 # --- the shapes the positional rule rejects, although they hide nothing -------------------
 
-# The test is where the comment opens, not what follows it, and Lean lets a term, a
-# structure field, a tactic and a list element begin at column 0 where the enclosing
-# command's indentation has run out. A comment in front of one of those is rejected like a
-# top-level one. The fifth shape is rejected for a different reason: the line ends inside a
-# second, still-open comment, and the rule reports rather than guessing about the next line.
-# All five elaborate with no error and no warning, so these are rejections of clean Lean,
-# asserted here so the boundary is written down rather than rediscovered: a widening of the
-# rule that reached further shapes than these would have to change this fixture to pass.
+# The test is where the comment opens, not what follows it, and Lean lets a term, a structure field,
+# a tactic and a list element begin at column 0 where the enclosing command's indentation has run
+# out. A comment in front of one of those is rejected like a top-level one. The fifth shape is
+# rejected for a different reason: the line ends inside a second, still-open comment, and the rule
+# reports rather than guessing about the next line. All five elaborate with no error and no warning,
+# so these are rejections of clean Lean, asserted here so the boundary is written down rather than
+# rediscovered: a widening of the rule that reached further shapes than these would have to change
+# this fixture to pass.
 cat > Lib/ColumnZero.lean <<'LEAN'
 def term : Nat :=
 /- the seed -/ 1
@@ -291,16 +291,15 @@ rm Lib/ColumnZero.lean
 # Asserted so the documented gap cannot change without this test saying so. Each of these
 # puts a declaration somewhere other than the left margin of its own line, and none of them
 # has code after the `-/` of a comment at column 0 — the first because its comment ends its
-# own line, the next three because their comments are not at column 0 or there is no comment
-# at all, and the last because its delimiter is a string quote and not a comment. The first
-# is uncovered everywhere, including the libraries that elaborate: `linter.style.whitespace`
-# measures the command from its doc comment, which is at column 0, so it draws no warning
-# either. The other four the linter does report, so they fail CI in the seven
-# proof and three test libraries — but not in `lakefile.lean`, `VCVioComplexity/lakefile.lean`
-# or `Interop/`, which nothing elaborates; not in `scripts/`, which per-PR CI builds but
-# whose sources import no Mathlib, so the `weak.` option is dropped and the linter is never
-# registered; and not effectively in `VCVioComplexity/`, where the linter does run and warn
-# but no step turns that warning into a failure.
+# own line, the next three because their comments are not at column 0 or there is no comment at all,
+# and the last because its delimiter is a string quote and not a comment. The first is uncovered
+# everywhere, including the libraries that elaborate: `linter.style.whitespace` measures the command
+# from its doc comment, which is at column 0, so it draws no warning either. The other four the
+# linter does report, so they fail CI in the seven proof and three test libraries — but not in
+# `lakefile.lean`, `VCVioComplexity/lakefile.lean` or `Interop/`, which nothing elaborates; not in
+# `scripts/`, which per-PR CI builds but whose sources import no Mathlib, so the `weak.` option is
+# dropped and the linter is never registered; and not effectively in `VCVioComplexity/`, where the
+# linter does run and warn but no step turns that warning into a failure.
 cat > Lib/Uncovered.lean <<'LEAN'
 /-- A docstring at the margin, its declaration indented on the next line. -/
   def hiddenOne : Nat := 1

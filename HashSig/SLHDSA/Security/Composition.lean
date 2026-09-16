@@ -38,13 +38,13 @@ attack it first.  Three things are true of it and worth stating separately.
   `advantage ≤ prf + prf + ideal`, `ideal ≤ forsBranch + hypertreeBranch`, and one bound per
   branch, and the step from there to the conclusion is arithmetic this module does — including one
   step that is not arithmetic at all (below).
-* **How much it needs is exhibited, not asserted.**  `Certificate.ofBranchBounds` builds one from
-  the eleven adversaries, the counting interface and *two* inequalities — one per branch of
+* **How much it needs is exhibited, not asserted.** `Certificate.ofBranchBounds` builds one from the
+  eleven adversaries, the counting interface and *two* inequalities — one per branch of
   `SchemeGames`' dispatch split, stated at `forsHalf adv` and `hypertreeHalf adv` — discharging
-  `split` from `advantage_le_forsHalf_add_hypertreeHalf` and `prfHops` from `le_add_self`.  So
+  `split` from `advantage_le_forsHalf_add_hypertreeHalf` and `prfHops` from `le_add_self`. So
   `split` is provably instantiable and is not a disguised assumption, and what remains unproven
-  *along that route* is the two branch bounds, which is the bulk of the EasyCrypt development.  It
-  is not the only route, and the other one costs nothing: see "A certificate costs nothing" below.
+  *along that route* is the two branch bounds, which is the bulk of the EasyCrypt development. It is
+  not the only route, and the other one costs nothing: see "A certificate costs nothing" below.
 * **`ofBranchBounds` takes no PRF hop.**  It sets `idealAdvantage := adv.advantage`, so in the
   certificate it returns the two PRF summands are pure slack: they appear in the bound and do no
   work.  A certificate that takes a real PRF hop has to choose a smaller `idealAdvantage`, and
@@ -52,19 +52,19 @@ attack it first.  Three things are true of it and worth stating separately.
 
 And two things about it that nothing here refuses.
 
-* **The three named quantities mean only what the four inequalities say.**  `idealAdvantage`,
-  `forsBranch` and `hypertreeBranch` are `ℝ≥0∞` fields with no tie to any experiment.  Their names
+* **The three named quantities mean only what the four inequalities say.** `idealAdvantage`,
+  `forsBranch` and `hypertreeBranch` are `ℝ≥0∞` fields with no tie to any experiment. Their names
   describe the intended reading — an advantage surviving two PRF hops, split into the two branches
   of `SchemeGames`' dispatch — and `ofBranchBounds` exhibits a certificate that honours it, but no
-  certificate is obliged to.  One with `forsBranch := 0` and
-  `hypertreeBranch := idealAdvantage := adv.advantage` satisfies `prfHops`, `split` and
-  `forsBranch_le` for free and puts the whole obligation on `hypertreeBranch_le`; nothing in this
-  module sees the difference, and `HashSigTest.SLHDSA.Composition` builds exactly that certificate
-  and discharges the one goal it leaves.  Refusing *that* certificate needs the fields tied to the
-  experiment, by the inequalities of "What would make it one" below or by fixing them to
-  `forsHalf adv` and `hypertreeHalf adv` outright — which would also fix the split this module
-  takes, and belongs with whatever bounds a branch.  Neither refuses every certificate: the same
-  fixture builds the one that takes those values.
+  certificate is obliged to. One with `forsBranch := 0` and `hypertreeBranch := idealAdvantage :=
+  adv.advantage` satisfies `prfHops`, `split` and `forsBranch_le` for free and puts the whole
+  obligation on `hypertreeBranch_le`; nothing in this module sees the difference, and
+  `HashSigTest.SLHDSA.Composition` builds exactly that certificate and discharges the one goal it
+  leaves. Refusing *that* certificate needs the fields tied to the experiment, by the inequalities
+  of "What would make it one" below or by fixing them to `forsHalf adv` and `hypertreeHalf adv`
+  outright — which would also fix the split this module takes, and belongs with whatever bounds a
+  branch. Neither refuses every certificate: the same fixture builds the one that takes those
+  values.
 * **`pkSeed` is not tied to the key generation the adversary plays against.**  It is the seed
   `skPrfScheme` is indexed at, chosen by whoever supplies the certificate; a reader who assumes it
   is the seed the experiment sampled is reading something the structure does not say.  The
@@ -109,15 +109,14 @@ statement about SLH-DSA's security, and a `Certificate` is not evidence of anyth
 
 ### What would make it one, and what that costs
 
-* **Reduction functions.**  Replace the eleven adversary fields by functions
-  `unforgeableAdv (generalAlg prims) → Adversary (game prims)`, fixed at the structure or at the
-  theorem, so each summand is stated at `R adv` and cannot be re-chosen.  Those are the source's
-  twelve `R_…(A)` modules, roughly twenty-four thousand lines of EasyCrypt, and none of them
-  exists here, so none of the twelve can be written yet.  This is the
-  only change that makes the statement a security statement.  Turning a *field* into one of
-  function type is not enough — it is still freely chosen, a certificate being able to supply a
-  constant function; the function has to be fixed at the structure or at the theorem, which
-  deletes the field.
+* **Reduction functions.** Replace the eleven adversary fields by functions `unforgeableAdv
+  (generalAlg prims) → Adversary (game prims)`, fixed at the structure or at the theorem, so each
+  summand is stated at `R adv` and cannot be re-chosen. Those are the source's twelve `R_…(A)`
+  modules, roughly twenty-four thousand lines of EasyCrypt, and none of them exists here, so none of
+  the twelve can be written yet. This is the only change that makes the statement a security
+  statement. Turning a *field* into one of function type is not enough — it is still freely chosen,
+  a certificate being able to supply a constant function; the function has to be fixed at the
+  structure or at the theorem, which deletes the field.
 * **Anchoring the three `ℝ≥0∞` fields** to the experiment — `idealAdvantage ≤ adv.advantage`,
   `forsHalf adv ≤ forsBranch`, `hypertreeHalf adv ≤ hypertreeBranch` — is much smaller, and it
   removes one route rather than the hole.  It does refuse the certificate above, which sets
@@ -157,24 +156,24 @@ statement about SLH-DSA's security, and a `Certificate` is not evidence of anyth
 
 ## Where the arithmetic is not arithmetic
 
-`Certificate.forsBranch_le` carries the **OpenPRE** advantage of `forsFOpenPreProblem`, not the
-pair `DSPR + 3·TCR` that the source's expression has.  `advantage_le_bound` replaces one by the
-other by applying `TweakableHash.SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound` to
-the certificate's `counting` field.  That is the only step of the proof that is not `gcongr` and
-`ring`, and it is why the `3` in `Summands.bound` is not a transcription: the library derives it
-from `openPRE_multipleMass_add_reciprocal_le_three_collision`, so a `Summands.bound` that said
-`2 *` does not typecheck against the library's own `TCRDSPRBound`.  The coefficient is therefore
-bounded below by the library and not bounded above inside this module; raised to `4 *` it is
-refused only by `HashSigTest.SLHDSA.Composition`.
+`Certificate.forsBranch_le` carries the **OpenPRE** advantage of `forsFOpenPreProblem`, not the pair
+`DSPR + 3·TCR` that the source's expression has. `advantage_le_bound` replaces one by the other by
+applying `TweakableHash.SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound` to the
+certificate's `counting` field. That is the only step of the proof that is not `gcongr` and `ring`,
+and it is why the `3` in `Summands.bound` is not a transcription: the library derives it from
+`openPRE_multipleMass_add_reciprocal_le_three_collision`, so a `Summands.bound` that said `2 *` does
+not typecheck against the library's own `TCRDSPRBound`. The coefficient is therefore bounded below
+by the library and not bounded above inside this module; raised to `4 *` it is refused only by
+`HashSigTest.SLHDSA.Composition`.
 
-The other coefficient, `(p.w - 2 : ℕ)`, is **not** derived anywhere in Lean.  VCVio has no
-hybrid-argument machinery for SM-DT-UD; the coefficient is carried from
-`MEUFGCMA_WOTSTWESNPRF` and `EUFNAGCMA_FLSLXMSSMTTWESNPRF`.  Nothing inside *this module* refuses
-a paired edit of it — changed throughout, with `bound_wotsFUd_coefficient_add_two`'s own constant
-moved with it, this module is still well-formed.  What refuses such a value is
-`HashSigTest.SLHDSA.Composition`, which restates the coefficient in its pins and in the hypertree
-branch bound of the certificate that survives anchoring; a coefficient changed in both places is
-refused by nothing beyond the source citation above.
+The other coefficient, `(p.w - 2 : ℕ)`, is **not** derived anywhere in Lean. VCVio has no
+hybrid-argument machinery for SM-DT-UD; the coefficient is carried from `MEUFGCMA_WOTSTWESNPRF` and
+`EUFNAGCMA_FLSLXMSSMTTWESNPRF`. Nothing inside *this module* refuses a paired edit of it — changed
+throughout, with `bound_wotsFUd_coefficient_add_two`'s own constant moved with it, this module is
+still well-formed. What refuses such a value is `HashSigTest.SLHDSA.Composition`, which restates the
+coefficient in its pins and in the hypertree branch bound of the certificate that survives
+anchoring; a coefficient changed in both places is refused by nothing beyond the source citation
+above.
 
 ## What is not established, and cannot be read into the inequality
 
@@ -267,7 +266,7 @@ precedent for carrying both is `SM_DT_UD_SourceFinalValidity`, which has a signe
 `DirectedAdvantage : ℝ` and an `AbsoluteAdvantage : ℝ≥0∞` with a `toReal` bridge between them.
 
 TODO: promote `prfAbsAdvantage` and its bridge to `VCVio/CryptoFoundations/PRF.lean`, beside
-`PRFScheme.prfAdvantage`.  They are kept here so as not to widen a shared module's public surface,
+`PRFScheme.prfAdvantage`. They are kept here so as not to widen a shared module's public surface,
 and the bridge makes the relationship checkable from either side. -/
 
 /-- The PRF distinguishing advantage as an `ℝ≥0∞`, the absolute gap between the real and ideal
@@ -364,11 +363,11 @@ theorem bound_eq_zero_of_summands_zero (p : Params) :
 /-- The coefficient on the undetectability summand, isolated: it is `w − 2` and it multiplies
 `wotsFUd` alone.
 
-This is the one coefficient nothing in this repository derives.  Inside this module it is pinned
-only relative to the constant in `bound_wotsFUd_coefficient_add_two`, so an edit that moves both
-leaves this module well-formed; what refuses it is `HashSigTest.SLHDSA.Composition`, which
-restates this equation, that one, the two branch expressions and the coefficient as a numeral at
-two profiles, in a file no edit of this module reaches.
+This is the one coefficient nothing in this repository derives. Inside this module it is pinned only
+relative to the constant in `bound_wotsFUd_coefficient_add_two`, so an edit that moves both leaves
+this module well-formed; what refuses it is `HashSigTest.SLHDSA.Composition`, which restates this
+equation, that one, the two branch expressions and the coefficient as a numeral at two profiles, in
+a file no edit of this module reaches.
 
 *Composition arithmetic.* -/
 theorem bound_wotsFUd_coefficient (p : Params) (x : ℝ≥0∞) :
@@ -403,8 +402,8 @@ theorem bound_wotsFUd_coefficient_add_two {p : Params} (h : p.Valid) (x : ℝ≥
 
 Unlike `bound_wotsFUd_coefficient` this one is pinned from below by the library:
 `advantage_le_bound` applies `SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound`, whose
-`TCRDSPRBound` has the literal `3`, so a coefficient smaller than three does not typecheck there.
-A larger one is not bounded above inside this module and is refused by the fixture alone.
+`TCRDSPRBound` has the literal `3`, so a coefficient smaller than three does not typecheck there. A
+larger one is not bounded above inside this module and is refused by the fixture alone.
 
 *Composition arithmetic.* -/
 theorem bound_forsFTcr_coefficient (p : Params) (x : ℝ≥0∞) :
@@ -643,15 +642,14 @@ interface, and one inequality per branch of `SchemeGames`' dispatch split — st
 and `hypertreeHalf adv`, the two probabilities of the instrumented experiment — this builds a
 certificate.
 
-What it measures is how much the intended route needs — not how much a certificate needs, which
-is nothing.  `split` is discharged from `advantage_le_forsHalf_add_hypertreeHalf`, a theorem of
-the previous module, so that field is provably instantiable and cannot be the place where the
-conclusion is smuggled in.  `prfHops` is
-discharged from `le_add_self` by taking `idealAdvantage := adv.advantage`, which is free in `ℝ≥0∞`
-— and that is the honest reading of it: **this constructor takes no PRF hop**, and in the
-certificate it returns the two PRF summands are slack that does no work.  What is left unproven is
-exactly the two arguments `hfors` and `hhyper`, the two branch bounds, which are the bulk of the
-EasyCrypt development.
+What it measures is how much the intended route needs — not how much a certificate needs, which is
+nothing. `split` is discharged from `advantage_le_forsHalf_add_hypertreeHalf`, a theorem of the
+previous module, so that field is provably instantiable and cannot be the place where the conclusion
+is smuggled in. `prfHops` is discharged from `le_add_self` by taking `idealAdvantage :=
+adv.advantage`, which is free in `ℝ≥0∞` — and that is the honest reading of it: **this constructor
+takes no PRF hop**, and in the certificate it returns the two PRF summands are slack that does no
+work. What is left unproven is exactly the two arguments `hfors` and `hhyper`, the two branch
+bounds, which are the bulk of the EasyCrypt development.
 
 *Composition arithmetic.* -/
 noncomputable def Certificate.ofBranchBounds {adv : unforgeableAdv (generalAlg prims)}
@@ -808,13 +806,12 @@ end BranchBounds
 /-! ## Transporting a bound onto the two induced FORS-`F` games
 
 `CanonicalGames`' `forsFDsprProblem` and `forsFTcrProblem` are the games the OpenPRE reductions
-attack, and
-`CanonicalGames.forsFDsprProblem_eq_toDSPR` and `forsFTcrProblem_eq_toTCR` say so.  The obvious way
-to use those equations — cast an adversary along one of them and apply the hypothesis — does not
-work: the three standalone problems are deliberately not `@[expose]`d, so each equation is
+attack, and `CanonicalGames.forsFDsprProblem_eq_toDSPR` and `forsFTcrProblem_eq_toTCR` say so. The
+obvious way to use those equations — cast an adversary along one of them and apply the hypothesis —
+does not work: the three standalone problems are deliberately not `@[expose]`d, so each equation is
 propositional but not definitional across the module boundary, and the cast survives as a `▸` that
-blocks unification.  Lean says so explicitly, naming `forsFOpenPreProblem` and `forsFDsprProblem` as
-"not unfolded because their definition is not exposed".  What does work is to rewrite the
+blocks unification. Lean says so explicitly, naming `forsFOpenPreProblem` and `forsFDsprProblem` as
+"not unfolded because their definition is not exposed". What does work is to rewrite the
 *hypothesis's own statement* before applying it, which is what these two do. -/
 
 section Transfer
@@ -823,8 +820,7 @@ variable [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq pri
   [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
 
 /-- A DSPR bound quantified over adversaries against `CanonicalGames`' `forsFDsprProblem` applies
-to the
-adversary VCVio's OpenPRE-to-DSPR reduction produces.
+to the adversary VCVio's OpenPRE-to-DSPR reduction produces.
 
 *Game transport.* -/
 theorem dspr_bound_transfer (εD : ℝ≥0∞)
@@ -842,8 +838,7 @@ theorem dspr_bound_transfer (εD : ℝ≥0∞)
 -- `SM_DT_TCR_SourceFinalValidity.Advantage` asks only for the three `DecidableEq` instances.
 omit [Fintype prims.Y] in
 /-- A TCR bound quantified over adversaries against `CanonicalGames`' `forsFTcrProblem` applies to
-the
-adversary VCVio's OpenPRE-to-TCR reduction produces.
+the adversary VCVio's OpenPRE-to-TCR reduction produces.
 
 *Game transport.* -/
 theorem tcr_bound_transfer (εT : ℝ≥0∞)
@@ -862,8 +857,7 @@ variable [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [DecidableEq
 variable {prims}
 
 /-- The FORS-`F` block of the bound — `DSPR + 3·TCR` — under hypotheses stated at `CanonicalGames`'
-two
-standalone games rather than at the induced ones.  This is where the two transports do work: the
+two standalone games rather than at the induced ones. This is where the two transports do work: the
 hypotheses a reader would write are about `forsFDsprProblem` and `forsFTcrProblem`, and the
 certificate's summands are about `Problem.toDSPR` and `Problem.toTCR`.
 

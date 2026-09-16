@@ -33,17 +33,17 @@ Unlike the WOTS+ witnesses, the honest secret seed is not confined to one lemma:
 partner a witness attacks — the honest root vector, the honest child pair at an internal node, the
 honest leaf image — is a function of the honest tree, and the honest tree is what `sk` generates.
 
-The *transcript-transport* statements are about a role ledger over a `ValidatedParams`.  The two
+The *transcript-transport* statements are about a role ledger over a `ValidatedParams`. The two
 membership lemmas take a bottom-layer position, a digest and a tree index, and
 `mem_forsTreeAddresses_of_digest` a node height as well; the three encoded-distinctness lemmas take
-a primitive bundle and an `EncodedTargetLedgerConditions`, and reach the ledger's coordinates
-either as the argument of a `Function.Injective` (`forsLeafAdrsKey_injective`,
-`forsRootAdrsKey_injective`) or as two coordinate tuples with their own range hypotheses
-(`forsTreeAdrsKey_injective`).  None of the five mentions a signature or a secret seed.  Nothing
-here constructs an adversary, states an advantage, performs a game hop, or claims that any honest
-execution queried the honest value a witness attacks.  In particular a witness lemma is **not** a
-reduction: that the game's target was committed before the forgery was seen is a
-simulation-fidelity obligation of a reduction, not a fact established here.
+a primitive bundle and an `EncodedTargetLedgerConditions`, and reach the ledger's coordinates either
+as the argument of a `Function.Injective` (`forsLeafAdrsKey_injective`, `forsRootAdrsKey_injective`)
+or as two coordinate tuples with their own range hypotheses (`forsTreeAdrsKey_injective`). None of
+the five mentions a signature or a secret seed. Nothing here constructs an adversary, states an
+advantage, performs a game hop, or claims that any honest execution queried the honest value a
+witness attacks. In particular a witness lemma is **not** a reduction: that the game's target was
+committed before the forgery was seen is a simulation-fidelity obligation of a reduction, not a fact
+established here.
 
 The FORS translation of `FORS_ES.ec` splits **four** ways, not three.  The fourth branch is
 `valid_ITSR` (`FORS_ES.ec:3213`): every FORS leaf index the forged message opens was already
@@ -803,7 +803,7 @@ conditions no game states, and the two distinctness conjuncts, which name `forsH
 is stated.
 
 The `fPreimage` bridge lands in `forsFOpenPreProblem` and not in `forsFTcrProblem`, for the reason
-the case-analysis section gives.  `CanonicalGames`' `forsFTcrProblem_eq_toTCR` and
+the case-analysis section gives. `CanonicalGames`' `forsFTcrProblem_eq_toTCR` and
 `forsFDsprProblem_eq_toDSPR` are the route to the other two FORS-`F` games, and they are generic;
 nothing here needs a TCR- or DSPR-shaped FORS-`F` bridge. -/
 
@@ -841,12 +841,12 @@ theorem forsWitness_valid_hCollision_eval [SampleableType prims.PkSeed] (sk : pr
     exact h.2.2.2⟩
 
 /-- The `F`-preimage branch, read in `forsFOpenPreProblem`'s vocabulary: the submitted value and
-the honest secret value have the same evaluation at the encoded leaf tweak.  That is the shape
+the honest secret value have the same evaluation at the encoded leaf tweak. That is the shape
 `SM_DT_OpenPRE_SourceFinalValidity.Experiment` tests — `eval pk t m = eval pk t x` at the committed
-target input `x`, here the honest secret value whose image is the honest leaf image.  It is the
-hash half of that game's winning condition; the other half, that the index was never opened, is not
-established here.  `forsFOpenPreProblem_eval_adrsToKey` is not `@[simp]` where its two siblings
-are, an asymmetry in `CanonicalGames` that nothing here depends on: all three proofs name
+target input `x`, here the honest secret value whose image is the honest leaf image. It is the hash
+half of that game's winning condition; the other half, that the index was never opened, is not
+established here. `forsFOpenPreProblem_eval_adrsToKey` is not `@[simp]` where its two siblings are,
+an asymmetry in `CanonicalGames` that nothing here depends on: all three proofs name
 their rewrite explicitly. -/
 theorem forsWitness_valid_fPreimage_eval [SampleableType prims.PkSeed] [SampleableType prims.Y]
     (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (md : List Byte) (i : Fin p.k)
