@@ -545,8 +545,8 @@ compression agrees, so the recovered public key does not move.  The toy `T_k` fo
 one to six only: its low bit is dropped by the shift right and its high bit is shifted out again by
 the shift left.  Moving tree zero's authentication node by `0x40` moves tree zero's recovered root
 by `0x80`, which is one of those two.  A signature carrying this still routes to the FORS arm, where
-the moved vector is the `T_k` second preimage the extractor returns.  A brute-force sweep over the
-one-byte moves of `honestForsB` finds ten such halves; this is one of them. -/
+the moved vector is the `T_k` second preimage the extractor returns.  Exactly ten one-byte moves
+of `honestForsB` have this property; this is one of them. -/
 def collidedFors : ForsSigCore toyParams toyPrimitives.core :=
   honestForsB.set 0 { honestForsB[0] with
     auth := honestForsB[0].auth.set 0 (node (byteOf honestForsB[0].auth[0] + 0x40)) }
@@ -645,10 +645,10 @@ def forsLeafAdrsTable (j : ℕ) : Adrs := ⟨0, 2, AddrType.forsTree.toCode, 0, 
 
 /-- Sixteen fixture properties.
 
-The first six are the liveness of the two message-derived maps, which the previous fixture in this
-lane could not exercise: its `H_msg` and `PRF_msg` were both constant and its public seed was a
-unit.  Each of `H_msg`'s four FIPS inputs is moved on its own and the digest is required to move
-with it, and `PRF_msg` is moved in each of its two.  The seventh is that the two sites' randomizers
+The first six are the liveness of the two message-derived maps: a bundle whose `H_msg` and
+`PRF_msg` are constant and whose public seed is a unit cannot exercise them.  Each of `H_msg`'s
+four FIPS inputs is moved on its own and the digest is required to move with it, and `PRF_msg` is
+moved in each of its two.  The seventh is that the two sites' randomizers
 differ, and the eighth is the exclusive-or fold's collision, which is what makes a routed forgery on
 an unsigned message exhibitable here.
 

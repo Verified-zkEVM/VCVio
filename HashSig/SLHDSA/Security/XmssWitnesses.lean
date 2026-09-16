@@ -60,7 +60,7 @@ in the statement.  None of the three mentions a signature or a secret seed.  Not
 constructs an adversary, states an advantage, performs a game hop, or claims that any honest
 execution queried the honest value a witness attacks.  In particular a witness lemma is **not** a
 reduction: that the game's target was committed before the forgery was seen is a
-simulation-fidelity obligation of the later program-level slice, not a fact established here.
+simulation-fidelity obligation of a reduction, not a fact established here.
 
 The one-layer split proved here is not the whole hypertree translation.  Each of the source's three
 flags is an existential over the `d` layers, and each reduction then picks one layer with a `find`
@@ -426,14 +426,8 @@ together with the validated parameters and the byte laws — never the root, as 
 shows, though no statement here isolates the existence half.  At `msg = msg'` every chain's two step
 counts agree, so the search can run out and give `none` however the climb went.
 
-Over a 768-case sweep at the toy bundle of `HashSigTest.SLHDSA.XmssWitnesses` — sixteen chain-`3`
-perturbations by three authentication-path choices, level `0`, level `1` or none, by sixteen path
-perturbations, all of them on two distinct messages — 608 cases miss the honest root; the 552 of
-those that take the Merkle branch all return `none`, the 56 that take the WOTS+ branch all return
-a witness, and no case in the sweep returns an invalid one.  The 768 are cases, not distinct
-signatures: the path mask is inert at the `none` level and mask `0` reproduces the honest path at
-every level, so they realise 496 signatures.  The malformed-forgery canary there pins both halves.
-`findXmssWitness_sound` carries the root hypothesis for a different reason, recorded on that
+`HashSigTest.SLHDSA.XmssWitnesses` exercises both branches on signatures that miss the honest
+root.  `findXmssWitness_sound` carries the root hypothesis for a different reason, recorded on that
 theorem.
 
 The honest WOTS+ signature the second branch compares against is recomputed here from `sk` rather

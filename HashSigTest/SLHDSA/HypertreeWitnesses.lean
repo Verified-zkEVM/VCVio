@@ -398,12 +398,11 @@ reflection `t ↦ layers - 1 - t`, counting the layer from the top of the walk i
 walk's start, agrees with the identity at walk length one, which is the only place `Fin layers` pins
 anything, and it re-proves the library.  What stops it is in this module: the statement pins below
 restate the two shape equations and `HypertreeWitness.Valid`'s body with the label read raw, so the
-reflection is a build error *here* at five sites; and renumbering those pins with it leaves
-`checkLayer`'s pin failing at run time with `layer 0: layer index is 0`, the reflected extractor
-reporting layer two for the layer-zero divergence.  These checks stay because they are what caught
-this class, because they cost nothing, and because they check the numbering a second way, not
-through `HypertreeWitness.Valid`: `checkLayer`'s `w.layer == layer` pin compares against the label
-the fixture *built* the divergence at, and `hypertreeWitnessHolds` reads `posOf` and `honestMsgAt`.
+reflection does not typecheck *here*; and renumbering those pins with it leaves `checkLayer`'s pin
+failing at run time, the reflected extractor reporting layer two for the layer-zero divergence.
+These checks also carry the numbering a second way, not through `HypertreeWitness.Valid`:
+`checkLayer`'s `w.layer == layer` pin compares against the label the fixture *built* the
+divergence at, and `hypertreeWitnessHolds` reads `posOf` and `honestMsgAt`.
 Renumbering those two tables to match some other labelling makes them stop agreeing with `advance`
 and `honestLayerMsg` at the fixed layers `0`, `1` and `2`, and the agreement check fails.  Without
 them the executable would be a restatement of the library at whatever numbering the library
@@ -630,9 +629,8 @@ the position and honest message the label names.  The per-argument separation �
 honest message — is `checkLayer`'s.
 
 An out-of-range fabrication is not among them because it is not writable.  `HypertreeWitness.layer`
-is a `Fin toyParams.d`, so `⟨3, w⟩` and `⟨9, w⟩` — which this tally used to carry, as the two
-rejections that isolated the old bound conjunct — are type errors rather than rejected runs.  The
-bound is exercised at build time instead, by the mutation that widens the label's index. -/
+is a `Fin toyParams.d`, so `⟨3, w⟩` and `⟨9, w⟩` are type errors rather than rejected runs: the
+layer bound lives in the witness's type and never reaches `hypertreeWitnessHolds`. -/
 /-- The tally: nine runs of `hypertreeWitnessHolds`, three accepted and six rejected. -/
 def checkFabricatedWitnesses : IO Unit := do
   let mut accepted := 0
@@ -656,9 +654,7 @@ def checkFabricatedWitnesses : IO Unit := do
 /-! ## Statement pins
 
 The theorems this module ships, elaborated at the toy profile.  Nine declarations have no consumer
-inside the library and nothing else in the tree elaborates them — every name declared in
-`HashSig.SLHDSA.Security.HypertreeWitnesses` that occurs exactly once in the code of `HashSig/`,
-which is its own declaration line, nothing there importing that module: the two extractor shape
+inside the library and nothing else in the tree elaborates them: the two extractor shape
 equations, the two extractor lemmas `findHypertreeWitness_sound` and `findHypertreeWitness_isSome`,
 the `atLayer` bridge, the top-level walk, the cross-layer encoded-distinctness lemma, the
 honest-signer bridge `signFromPosition_getElem`, and `LayerPosition.advance_ne`.  Each is pinned

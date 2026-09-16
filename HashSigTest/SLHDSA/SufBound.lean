@@ -37,17 +37,11 @@ the same three signature `DecidableEq` instances and the same three logs — so 
 run on one profile and a reviewer can diff the blocks.  It is copied because a `lean_exe` root must
 own its `main`, and a module that imports another fixture cannot declare one.
 
-Diffed against that file's block by declared name, from `toyParams` to the readers, there are eleven
-differences.  Seven declarations are dropped: `byteFold` and `toyByteLaws`, which only that file's
-`H_msg` blindness assertion and its extractor pins used; `otherPkSeed`, because no reader here reads
-a public key; and `sigD`, `sigE`, `sigH` and `sigLate`, its four dispatch-arm forgeries.  Four are
-added: `forgeryEarly` and `forgeryLate`, which are `sigD`'s and `sigLate`'s bodies under names that
-say what they are for here — a second signature under each of the hedged log's two randomizers at
-one message; `forgeryDet`, the same at the deterministic variant's single randomizer, which that
-file has no use for; and `randomizerLoggedRaw`, the mutant reader.  Four instances that file does
-not carry are added beside them — `DecidableEq` on the public seed and on the address key, `Fintype`
-and `Inhabited` on the node type — because the vacuity canary builds a
-`SLHDSA.Security.Certificate`, whose section asks for them.
+What this fixture holds, beyond that block: three forgeries — `forgeryEarly` and `forgeryLate`, a
+second signature under each of the hedged log's two randomizers at one message, and `forgeryDet`,
+the same at the deterministic variant's single randomizer; the misreading `randomizerLoggedRaw`;
+and four instances the vacuity canary's `SLHDSA.Security.Certificate` asks for — `DecidableEq` on
+the public seed and on the address key, `Fintype` and `Inhabited` on the node type.
 
 ## The reader-by-log matrix
 
@@ -56,19 +50,15 @@ twice-signed message's entries separated; L2 is the log FIPS 205 §9.2's determi
 produce for the same three queries; L3 is four entries, one message three times, with `sigP1`'s
 randomizer at its tail rather than its head.
 
-**R1**, `SchemeGames.randomizerLogged`, the residual's own selector.  Every "catches" below counts
-the checks of the thirty-two that fire when the named misreading is substituted for the real reader
-in all three groups; the real reader under a mutant's name fires none.
+**R1**, `SchemeGames.randomizerLogged`, the residual's own selector.
 
 At **L1** it catches a reader that ignores the message — the cross forgery's randomizer is in the
 log at the *other* message and must read `false` — and one that drops the log's head, since L1's
-head is the only place any log here carries `sigP1`'s randomizer at `msgP` (**1** check fires, in
-this group).  At **L2** it catches a reader that reports membership only when a message carries two
-*distinct* randomizers: L2's list at each message is constant and `forgeryDet` must still read
-`true`.  Across the three logs it catches a reader that keeps only the first signature at a message
-(**3** fire, one here and two in the third group), one that keeps only the last (**1** fires, in
-this group), and truncation of the log to three entries (**1** fires, in the third group, which is
-the only group that reads the four-entry log).
+head is the only place any log here carries `sigP1`'s randomizer at `msgP`.  At **L2** it catches a
+reader that reports membership only when a message carries two *distinct* randomizers: L2's list at
+each message is constant and `forgeryDet` must still read `true`.  Across the three logs it catches
+a reader that keeps only the first signature at a message, one that keeps only the last, and
+truncation of the log to three entries, that last only in the group that reads the four-entry log.
 
 **R2**, `SignatureAlg.signingLogContains`, the same-message experiment's own freshness conjunct.  At
 **L1** it separates a forgery from the signature it shares a randomizer with: `forgeryEarly` reads
@@ -89,9 +79,9 @@ separated: `forgeryDet`'s randomizer occurs at `msgP` and nowhere else.  It is n
   further log would separate them; none is added, because L1 already does and the matrix says so
   rather than leaving the other two cells looking covered.
 * **R1 under reordering and de-duplication, at every log.**  R1 is `∈` on a list.  Membership is
-  invariant under permutation and under `eraseDups`, so no log can make either visible: a reader
-  that reverses the log and one that collapses the per-message list to its distinct values each
-  fire **0 of 32**.  This is the same structural blind spot
+  invariant under permutation and under `eraseDups`, so no log can make either visible: neither a
+  reader that reverses the log nor one that collapses the per-message list to its distinct values
+  is caught anywhere here.  This is the same structural blind spot
   `HashSigTest.SLHDSA.SufResidual` records for its own predicates, for the same reason; it is a
   property of the predicate and not a gap in the fixture.
 * **R1 at L3 under a dropped head.**  L3's head pair recurs at its third entry, so dropping it
@@ -637,7 +627,7 @@ end Pins
 
 /-! ## The vacuity canary
 
-The previous module's canary, restated at this module's headline.  A closed
+The composition fixture's vacuity canary, at this module's headline.  A closed
 `SLHDSA.Security.Certificate` is constructible at an arbitrary validated parameter set, an arbitrary
 bundle carrying the instances the structure asks for and an arbitrary adversary, from an address key
 and a public seed and no security assumption at all, and the bound it names is at least one.  At
@@ -649,23 +639,18 @@ headline is equivalent to the previous module's `advantage_le_bound` at the same
 vacuity is that one's exactly.  The canary below is that equivalence instantiated: both conjuncts of
 `freeCertificate_suf_headline` are proved, and the second is what makes the first empty.
 
-**Why these declarations are copied rather than imported.**  The construction is
-`HashSigTest.SLHDSA.Composition`'s, and importing that module is not possible from a `lean_exe`
-root: it declares a top-level `main`, and a module that imports it cannot declare `main` itself.
-The lane has no shared fixture module.  What is
-copied is the free-certificate stack alone: thirteen declarations, the two idle adversaries, the
+**What this section holds.**  The free-certificate stack of
+`HashSigTest.SLHDSA.Composition` — thirteen declarations: the two idle adversaries, the
 open-preimage adversary that records nothing with its three advantage lemmas and its counting
 interface, the winning preimage adversary with its inverse, and the certificate with the bound it
-names.  What is **not** copied is that file's anchoring analysis — `winningOpenPre`,
-`anchoredCertificate` and `nonempty_countingInterface_iff` — because the question those answer is
-about `Certificate`'s own fields and is settled there; nothing about it changes when the residual is
-added, and restating it here would be two hundred lines that nothing here changes.
+names — together with `freeCertificate_suf_headline` and `freeCertificate_sufBound_headline` at the
+end.  It is a copy rather than an import because that module is a `lean_exe` root and declares a
+top-level `main`, which a module importing it cannot also declare; the lane has no shared fixture
+module.
 
-The two new declarations are `freeCertificate_suf_headline` and `freeCertificate_sufBound_headline`
-at the end.
-
-*Copied verbatim from `HashSigTest.SLHDSA.Composition` except for the docstrings of the two new
-declarations; a reviewer can diff the blocks.* -/
+That module's anchoring analysis — `winningOpenPre`, `anchoredCertificate` and
+`nonempty_countingInterface_iff` — is not here: the question it answers is about `Certificate`'s own
+fields and nothing about it changes when the residual is added. -/
 
 section Vacuity
 

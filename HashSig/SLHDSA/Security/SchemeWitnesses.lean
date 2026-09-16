@@ -93,13 +93,13 @@ agree, the `H` comparison turns around against the source's *cases* — "some tr
 is strictly wider than "the selected tree's image differs" — while the `F` branch stays strictly
 narrower.
 
-What the dispatch adds, and what a later slice must not assume: the composite's own two branches are
+What the dispatch adds, and what a consumer must not assume: the composite's own two branches are
 decided by one equality, so they are disjoint and exhaustive; the FORS arm's three are disjoint and
 exhaustive too, being the three outcomes of one function.  What is *not* preserved is the source's
 assignment of forgeries to cases, so a transcription of its `mu_split` coefficients would be
 unsound here.  What is preserved is that each branch still yields a witness against a different
-component hash, so the three FORS games a later slice has to reach are the same three; which
-forgeries reach which is what changes.  Whether the source's summand coefficients survive that
+component hash, so the three FORS games a downstream reduction has to reach are the same three;
+which forgeries reach which is what changes.  Whether the source's summand coefficients survive that
 change is not established here and must not be assumed from it.
 
 ## Labels

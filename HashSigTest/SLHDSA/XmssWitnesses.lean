@@ -587,15 +587,11 @@ implies the root match.
 `authForgery` keeps the honest WOTS+ signature on the forged message and perturbs the height-zero
 authentication-path entry instead.  Its recovered leaf is the honest one, so the *WOTS+* branch is
 taken although the climb misses the root — and the witness it returns is valid, its guard being the
-leaf test, which is `findWotsWitness_sound`'s own hypothesis.  So a missed root does not mean
-`none`: over a 768-case sweep — sixteen chain-`3` perturbations by three authentication-path
-choices, level `0`, level `1` or none, by sixteen path perturbations, all of them extracted here
-against a second message distinct from the first — 608 cases miss the honest root, the 552 of those
-that take the Merkle branch return `none`, the 56 that take the WOTS+ branch return a witness, and
-none of the 768 returns an invalid one.  Cases, not distinct signatures: the path mask is inert at
-the `none` level and mask `0` reproduces the honest path at every level, so the 768 realise 496
-signatures.  Distinctness is doing work in the WOTS+ half — re-extract `authForgery` against
-`forgedMsg` itself and it returns `none`, with the same missed root and the same honest leaf.
+leaf test, which is `findWotsWitness_sound`'s own hypothesis.  So a missed root does not decide
+the outcome: the branch is chosen by the recovered leaf, only the Merkle branch can return `none`,
+and neither branch returns an invalid witness.  Distinctness is doing work in the WOTS+ half —
+re-extract `authForgery` against `forgedMsg` itself and it returns `none`, with the same missed
+root and the same honest leaf.
 
 This is the shape `findXmssWitness_sound`'s root hypothesis is *stated against*, though as the
 paragraph above shows the Merkle branch does not need it.  Both halves are a *weaker* gap than the

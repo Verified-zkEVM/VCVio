@@ -144,8 +144,8 @@ signature; there is no log in its argument list.
   recurs at its third entry, so dropping the head changes nothing there for either reader.  This is
   a property of L3's shape, and L1 is where both readers catch a head-drop instead.
 - **R2 × L2, for message-blindness.**  L2's two messages carry different randomizers, so a
-  message-blind reader is caught there as well — but only because of that choice.  A later edit that
-  made them coincide would take this cell dark without failing anything.
+  message-blind reader is caught there as well — but the cell depends on that choice: at a log
+  whose two messages carried one randomizer, a message-blind reader would be invisible here.
 - **R1 × `otherPk` with the honest secret key.**  Both the real selector and the `sk.pkSeed` mutant
   read `false` there, so that pair separates nothing; it is asserted anyway, so that the one pair
   that *does* separate them is not mistaken for the only arrangement that could.
@@ -619,8 +619,7 @@ def checkFixture : IO Unit := do
 `sigD` and `sigE` differ only in the FORS half — the whole hypertree signature is held fixed and
 their randomizers agree, so they split to one digest at one instance address — and they take
 opposite arms.  That is what pins that the arm is decided by the FORS public-key comparison and by
-nothing else, and it is the defect #699's review record fixed in its own fixture: a pair claimed to
-differ only in the FORS half must be shown to.
+nothing else, and a pair claimed to differ only in the FORS half is shown to.
 
 `sigH` is the other direction.  It differs from the honest signature only in the hypertree half and
 takes the same arm, which is not a weakness to hide: the selector is a function of the key pair, the

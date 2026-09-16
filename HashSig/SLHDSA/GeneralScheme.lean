@@ -204,11 +204,8 @@ theorem keygenInternal_fst (vp : ValidatedParams) (prims : Primitives vp.params)
 given, and the same top-layer root the published key carries.
 
 This is the second component of the returned pair, stated as its own equation rather than as the
-second projection of one pair equation.  The two are consumed together: the only proof in the
-repository that rewrites with either is `SLHDSA.Security.generalAlg_keygen_eq`, which rewrites with
-both at one goal.  (`keygenInternal_fst` is additionally restated as a pin in
-`HashSigTest.SLHDSA.SchemeWitnesses`.)  Both name the `bind` law and no more, key generation making
-no `H_msg` query.
+second projection of one pair equation, so a consumer can rewrite either component independently.
+Both name the `bind` law and no more, key generation making no `H_msg` query.
 
 The `pkRoot` field is the *published* root, not a second computation of it: this equation and
 `keygenInternal_fst` name one `GeneralHypertree.root` application, which is what lets a consumer

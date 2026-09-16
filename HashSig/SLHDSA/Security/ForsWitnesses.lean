@@ -43,7 +43,7 @@ either as the argument of a `Function.Injective` (`forsLeafAdrsKey_injective`,
 here constructs an adversary, states an advantage, performs a game hop, or claims that any honest
 execution queried the honest value a witness attacks.  In particular a witness lemma is **not** a
 reduction: that the game's target was committed before the forgery was seen is a
-simulation-fidelity obligation of the later program-level slice, not a fact established here.
+simulation-fidelity obligation of a reduction, not a fact established here.
 
 The FORS translation of `FORS_ES.ec` splits **four** ways, not three.  The fourth branch is
 `valid_ITSR` (`FORS_ES.ec:3213`): every FORS leaf index the forged message opens was already

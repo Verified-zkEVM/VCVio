@@ -112,12 +112,12 @@ statement about SLH-DSA's security, and a `Certificate` is not evidence of anyth
 * **Reduction functions.**  Replace the eleven adversary fields by functions
   `unforgeableAdv (generalAlg prims) → Adversary (game prims)`, fixed at the structure or at the
   theorem, so each summand is stated at `R adv` and cannot be re-chosen.  Those are the source's
-  twelve `R_…(A)` modules; the slice plan sizes them at roughly twenty-four thousand lines of
-  EasyCrypt, and none of them exists here, so none of the twelve can be written yet.  This is the
+  twelve `R_…(A)` modules, roughly twenty-four thousand lines of EasyCrypt, and none of them
+  exists here, so none of the twelve can be written yet.  This is the
   only change that makes the statement a security statement.  Turning a *field* into one of
-  function type is not enough — it is still freely chosen, and the fixture's canary is repaired
-  under that change by one line per certificate; the function has to be fixed at the structure or
-  at the theorem, which deletes the field.
+  function type is not enough — it is still freely chosen, a certificate being able to supply a
+  constant function; the function has to be fixed at the structure or at the theorem, which
+  deletes the field.
 * **Anchoring the three `ℝ≥0∞` fields** to the experiment — `idealAdvantage ≤ adv.advantage`,
   `forsHalf adv ≤ forsBranch`, `hypertreeHalf adv ≤ hypertreeBranch` — is much smaller, and it
   removes one route rather than the hole.  It does refuse the certificate above, which sets
@@ -162,22 +162,19 @@ pair `DSPR + 3·TCR` that the source's expression has.  `advantage_le_bound` rep
 other by applying `TweakableHash.SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound` to
 the certificate's `counting` field.  That is the only step of the proof that is not `gcongr` and
 `ring`, and it is why the `3` in `Summands.bound` is not a transcription: the library derives it
-from `openPRE_multipleMass_add_reciprocal_le_three_collision`, and a `Summands.bound` that said
-`2 *` fails to elaborate against the library's own `TCRDSPRBound` — two errors, at this proof's
-`gcongr` step and at `openPre_le_summands_forsF`, however many other statements move with it.  It
-is pinned *from below* by the library and only from above by `HashSigTest.SLHDSA.Composition`:
-raised to `4 *`, with those two proofs repaired, this module elaborates clean and six fixture pins
-fail.
+from `openPRE_multipleMass_add_reciprocal_le_three_collision`, so a `Summands.bound` that said
+`2 *` does not typecheck against the library's own `TCRDSPRBound`.  The coefficient is therefore
+bounded below by the library and not bounded above inside this module; raised to `4 *` it is
+refused only by `HashSigTest.SLHDSA.Composition`.
 
 The other coefficient, `(p.w - 2 : ℕ)`, is **not** derived anywhere in Lean.  VCVio has no
 hybrid-argument machinery for SM-DT-UD; the coefficient is carried from
 `MEUFGCMA_WOTSTWESNPRF` and `EUFNAGCMA_FLSLXMSSMTTWESNPRF`.  Nothing inside *this module* refuses
 a paired edit of it — changed throughout, with `bound_wotsFUd_coefficient_add_two`'s own constant
-moved with it, the module elaborates clean — and seventeen entries of
-`HashSigTest.SLHDSA.Composition` fail: eleven pins, and six in its vacuity canary, which restates
-the coefficient in the hypertree branch bound of the certificate that survives anchoring.  An edit
-that moves those entries too is silent everywhere, and at that point the claim has been changed
-rather than a bug found; the only remaining check is the source citation above.
+moved with it, this module is still well-formed.  What refuses such a value is
+`HashSigTest.SLHDSA.Composition`, which restates the coefficient in its pins and in the hypertree
+branch bound of the certificate that survives anchoring; a coefficient changed in both places is
+refused by nothing beyond the source citation above.
 
 ## What is not established, and cannot be read into the inequality
 
@@ -369,7 +366,7 @@ theorem bound_eq_zero_of_summands_zero (p : Params) :
 
 This is the one coefficient nothing in this repository derives.  Inside this module it is pinned
 only relative to the constant in `bound_wotsFUd_coefficient_add_two`, so an edit that moves both
-leaves the module elaborating clean; what refuses it is `HashSigTest.SLHDSA.Composition`, which
+leaves this module well-formed; what refuses it is `HashSigTest.SLHDSA.Composition`, which
 restates this equation, that one, the two branch expressions and the coefficient as a numeral at
 two profiles, in a file no edit of this module reaches.
 
@@ -406,9 +403,8 @@ theorem bound_wotsFUd_coefficient_add_two {p : Params} (h : p.Valid) (x : ℝ≥
 
 Unlike `bound_wotsFUd_coefficient` this one is pinned from below by the library:
 `advantage_le_bound` applies `SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound`, whose
-`TCRDSPRBound` has the literal `3`, so a coefficient smaller than three does not elaborate there.
-Larger than three does elaborate, once two proofs are repaired, and is refused by the fixture
-alone.
+`TCRDSPRBound` has the literal `3`, so a coefficient smaller than three does not typecheck there.
+A larger one is not bounded above inside this module and is refused by the fixture alone.
 
 *Composition arithmetic.* -/
 theorem bound_forsFTcr_coefficient (p : Params) (x : ℝ≥0∞) :
@@ -654,8 +650,8 @@ conclusion is smuggled in.  `prfHops` is
 discharged from `le_add_self` by taking `idealAdvantage := adv.advantage`, which is free in `ℝ≥0∞`
 — and that is the honest reading of it: **this constructor takes no PRF hop**, and in the
 certificate it returns the two PRF summands are slack that does no work.  What is left unproven is
-exactly the two arguments `hfors` and `hhyper`, which are the two branch bounds of the slice plan's
-H2 and the bulk of the EasyCrypt development.
+exactly the two arguments `hfors` and `hhyper`, the two branch bounds, which are the bulk of the
+EasyCrypt development.
 
 *Composition arithmetic.* -/
 noncomputable def Certificate.ofBranchBounds {adv : unforgeableAdv (generalAlg prims)}

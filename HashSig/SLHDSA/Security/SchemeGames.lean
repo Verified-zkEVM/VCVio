@@ -20,7 +20,7 @@ experiment that returns the success bit paired with a decidable bit read off the
 
 A split is a union bound, not an identity, and neither of its two terms is bounded here.  What the
 instrumentation buys is that each term is a probability of a *named event of one experiment*, so a
-later slice can bound each separately without re-deriving the experiment, and so the term that
+consumer can bound each separately without re-deriving the experiment, and so the term that
 cannot be bounded at all is one named summand rather than an unquantified caveat.
 
 * **The dispatch split.**  `advantage_le_forsHalf_add_hypertreeHalf` bounds the EUF-CMA advantage of
@@ -60,9 +60,9 @@ type error.
 * `forsArm` must split the digest of the *internal* message.  A selector applied to the raw `msg`
   is a different, silently wrong predicate: it still has type `Bool`, and every statement below
   still elaborates.  What separates the two is a fixture at a bundle whose `H_msg` can see two
-  prefixed zero bytes — which is a real condition and not an automatic one: the fixture this lane
-  inherited folds a message by exclusive-or, which cannot, and `HashSigTest.SLHDSA.SchemeGames`
-  asserts that blindness before replacing the fold.
+  prefixed zero bytes — which is a real condition and not an automatic one: a bundle whose `H_msg`
+  folds a message by exclusive-or cannot see those bytes, and `HashSigTest.SLHDSA.SchemeGames`
+  asserts that blindness of the fold it replaces.
 * The `H_msg` transcript a reduction records is the transcript of the *internal* messages, so the
   log has to be internalised before `HashSig.SLHDSA.Security.SufResidual`'s transport lemmas apply
   to it.  `internalLog` is that map and `loggedSignatures_internalLog` is what makes it harmless:
@@ -78,7 +78,7 @@ either half of either split by a hardness advantage.  In particular:
 
 * `forsHalf` is not the FORS half's advantage in any game.  It is the probability that the forgery
   succeeds *and* recovers the honest FORS public key; turning that into a bound on a FORS game is
-  the adversary construction the eight review records of this stack all name as outstanding.
+  an adversary construction, and none is supplied here.
 * `sameRandomizerHalf` has no source counterpart and no bound.  What it *has* is
   `sameRandomizer_of_randomizerLogged`: on that branch the adversary's signature comes with a
   logged signature at the same message carrying the same randomizer, splitting to the same digest
@@ -152,9 +152,9 @@ that carries `@[expose]`.
 
 The eight generic declarations of the first section are stated over an arbitrary `SignatureAlg`
 and are not SLH-DSA-specific.  They are here rather than in
-`VCVio.CryptoFoundations.SignatureAlg` because promoting them is an eight-declaration move that
-would leave the two selectors behind as the only
-SLH-DSA content, and it is left to the maintainer.  None of the eight mentions an SLH-DSA type; the
+`VCVio.CryptoFoundations.SignatureAlg` only because moving them would leave the two selectors
+behind as the sole
+SLH-DSA content of this module.  None of the eight mentions an SLH-DSA type; the
 target file, if they move, is `VCVio/CryptoFoundations/SignatureAlg.lean`, beside the two
 experiments whose bodies they duplicate.
 
@@ -188,17 +188,10 @@ paired with a selector bit read off the same run.
 
 The body is `SignatureAlg.unforgeableExp`'s with one component added to the final `return`.  It
 opens with the same two `letI : DecidableEq _ := Classical.decEq _` lines that experiment opens
-with, and it has to — though not by the mechanism the shape suggests.  Dropping them puts
-`[DecidableEq M]` and `[DecidableEq S]` back into this definition's signature, which makes every
-`omit` of this EUF block illegal — `cannot omit referenced section variable`, at each of them — and
-then leaves the two dispatch halves, their two branch bounds and their two `example`s unable to
-synthesize `DecidableEq (GeneralScheme.SignatureCore vp prims.core)`, and the two `_le_advantage`
-theorems with unsolved goals.  So the tally is one error per `omit` of this block plus those eight,
-which is the shape to quote rather than a number a later declaration moves: at this head, three and
-eight, eleven errors, with three warnings beside them — one at each of the two `_le_advantage`
-theorems, whose proofs fail and are admitted, and one at the split above them, whose own proof
-succeeds and which is warned about only because it names the two halves that failed — and no
-`congr` step is ever reached.
+with, and needs them: without them `[DecidableEq M]` and `[DecidableEq S]` enter this definition's
+signature, the `omit`s of this EUF block are no longer legal, and the consumers below — the two
+dispatch halves, their two branch bounds and their two `example`s — cannot synthesize
+`DecidableEq (GeneralScheme.SignatureCore vp prims.core)`.
 
 The selector is a function of the sampled key pair and the returned pair.  It may read the *secret*
 key, so a selector is not in general something a reduction can evaluate; what a union bound needs is
@@ -206,9 +199,8 @@ only that the two events partition the success event, which any `Bool`-valued fu
 gives.
 
 The result type is the runtime's subdistribution reading of a pair of bits and is left to
-inference, as `SignatureAlg.unforgeableExp` leaves its own: writing it out is the direct
-finite-distribution coupling that `scripts/check-pmf-boundary.sh` ratchets, and the annotation
-would put this module over a ceiling of zero for no gain in what the definition says.
+inference, as `SignatureAlg.unforgeableExp` leaves its own: writing it out would name the
+finite-distribution coupling directly and add nothing to what the definition says.
 
 *Experiment split.* -/
 noncomputable def instrumentedEufExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -272,7 +264,7 @@ each of the three is refused here.
 What it does not pin is anything about a selector that is *not* constant: neither which of a run's
 values the selector is applied to, nor any combination of such applications that agrees with the
 selector wherever the selector is constant.  The paragraphs that close the section beside the four
-halves state both, with their measurements.
+halves state both.
 
 *Experiment split.* -/
 theorem instrumentedEufExp_const {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -885,9 +877,8 @@ theorem hypertreeHalf_le_advantage (adv : unforgeableAdv (generalAlg prims)) :
 /-- The FORS half is at most the probability of the branch it is named for.
 
 The other conjunct's bound, beside `forsHalf_le_advantage`: that one pins `forsHalf` to the success
-bit, this one to the selector bit.  Without it a `forsHalf` that had dropped `x.2 = true` would be
-`adv.advantage ProbCompRuntime.probComp` itself, which is provable on that mutant and satisfies
-`forsHalf_le_advantage` by equality.
+bit, this one to the selector bit.  Without it nothing ties `forsHalf` to the selector bit: an event
+consisting of the success conjunct alone is the advantage itself.
 
 *Experiment split.* -/
 theorem forsHalf_le_branch (adv : unforgeableAdv (generalAlg prims)) :
@@ -1214,9 +1205,8 @@ name attached to the wrong branch, and four theorems — two bounding each half 
 advantage it splits, two bounding it by its own branch — against the deletion of either conjunct and
 against the deletion of both.  These four are the same-message members of the two families the
 dispatch section's paragraph describes.  Here the
-`true` branch is the *same-randomizer* one, because `randomizerLogged` reports membership; getting
-that round the wrong way is the likeliest single-character error in the module and the reason the
-two `example`s are stated at all. -/
+`true` branch is the *same-randomizer* one, because `randomizerLogged` reports membership, and the
+two `example`s are what fix that orientation. -/
 
 /-- The same-randomizer half is at most the same-message advantage it splits.
 

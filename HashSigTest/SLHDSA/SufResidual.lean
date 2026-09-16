@@ -501,15 +501,11 @@ same-message condition are then falsified one at a time.
 
 The last two read the same two predicates on the four-entry log, the only log here either of them
 sees above three entries.  `wasQueried` is read at the one message that log queries and its first
-entry does not, and `signingLogContains` at the one pair it holds only in its last entry.  Three
-readings of the truncation family are refused there and nowhere else: a `wasQueried` that keeps only
-the head once the log reaches four, and a `signingLogContains` that keeps only the head or drops the
-last entry once it does.  Three more the file cannot reach at all, and the reason is the shape of
-the logs rather than the shape of the checks: a `wasQueried` that drops its last entry, and one that
-drops its first, are invisible at every threshold, because no log here carries a message at its
-first entry only or at its last entry only; and a `signingLogContains` that drops its first entry is
-invisible from four up, because this log's first pair is repeated at its third entry.  All three
-would need a further log.  Reordering and collapsing are invisible to both predicates everywhere,
+entry does not, and `signingLogContains` at the one pair it holds only in its last entry.  No log
+here carries a message at its first entry only or at its last entry only, and this log's first pair
+recurs at its third entry; those shapes are what a further log would have to supply, and without
+one a reading that drops a log's first or last entry is invisible.  Reordering and collapsing are
+invisible to both predicates everywhere,
 and no log could change that: `wasQueried` is non-emptiness of the entries at a message and
 `signingLogContains` is membership of one pair, and neither can depend on the order of a log or on
 repeats in it.  Ten properties. -/

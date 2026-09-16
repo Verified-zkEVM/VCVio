@@ -133,7 +133,7 @@ and `freshRandomizer_wins_or_uncovered` carry it into the `H_msg` bridge.  Neith
 here — bounding it is an adversary construction, which is the same deferral the previous module's
 two branch bounds carry.
 
-## What nothing here refuses
+## What this module fixes, and what it leaves to the fixture
 
 Four things about this module are held in place by the fixture alone or by nothing at all.
 
@@ -182,9 +182,9 @@ Four things about this module are held in place by the fixture alone or by nothi
   the consequence, so the gap is one named theorem wide — the two equations, or, with the arms
   equality moved down beside them, the single joint equality they give — and that theorem belongs
   one module down, where it is not stated.
-* **Nothing about `SameMessageBinding`.**  VCVio's own docstring says no `ε < 1` can hold for a
-  hash-based scheme, and issue #629 item 2b records that the per-adversary partition is what a
-  quantitative result must consume.  This module consumes the partition.
+* **Nothing about `SameMessageBinding`.**  No `ε < 1` holds of it for a hash-based scheme, as
+  VCVio's own docstring records, so a quantitative result must consume the per-adversary
+  partition instead.  This module consumes the partition.
 * **Everything the previous module does not establish.**  No reduction adversary, no challenge
   recording, no final validity, no PRF hop, no undetectability hybrid, no query cap on the
   `MCO_ITSR` summand, and the Lean branch assignment is not the source's.  The `Certificate` this
@@ -389,13 +389,12 @@ theorem Summands.sufBound_eq (s : Summands) (p : Params) (fresh same : ℝ≥0�
     s.sufBound p fresh same = s.bound p + (fresh + same) := by
   rfl
 
-/-- At zero residuals the expression is the existential bound.  What this refuses is an edit that
-moves that value — a stray additive constant, or a second copy of `s.bound p` — and nothing about
-how the residuals enter it.  With this statement and the unfolding equation alone present, putting
-a coefficient other than one on either residual, swapping the two, reassociating the sum, and
-dropping either from the body altogether all leave it provable by the same proof.  What pins the
-order and the association is `HashSigTest.SLHDSA.SufBound`'s `sufBound` examples; what pins the
-coefficients is those and `sufBound_eq_bound_add_sameMessage_of_unfoldings`.
+/-- At zero residuals the expression is the existential bound.  It fixes the value at zero
+residuals only: it constrains neither the residuals' coefficients, nor their order, nor the
+association of the sum.  What refuses an edit that moves the value is this statement — a stray
+additive constant, or a second copy of `s.bound p`.  What fixes the order and the association is
+`HashSigTest.SLHDSA.SufBound`'s `sufBound` examples; what fixes the coefficients is those and
+`sufBound_eq_bound_add_sameMessage_of_unfoldings`.
 
 *Residual arithmetic.* -/
 theorem sufBound_eq_bound_of_residuals_zero (s : Summands) (p : Params) :
@@ -488,8 +487,8 @@ same-randomizer half, and the same-randomizer half is then the only term not fix
 of this statement.  It is not the only unbounded one: `c.summands.bound vp.params` is free too, as
 the vacuity canary shows.
 
-This is the shape the next slice's `H_msg` reduction plugs into, and it is the form in which the
-residual's remaining cost is smallest to state.  Its hypothesis is not discharged here or anywhere
+This is the shape an `H_msg` reduction plugs into, and it is the form in which the residual's
+remaining cost is smallest to state.  Its hypothesis is not discharged here or anywhere
 in this repository: bounding the fresh half is an adversary construction, the same deferral the
 previous module's two branch bounds carry.
 
@@ -533,7 +532,7 @@ there is a pure addition to that module and would discharge these two hypotheses
 site.  Naming this conclusion there instead, where it would need no hypotheses, is not a pure
 addition: that module's own same-message split is a `≤`, so the conclusion would carry
 `sameMessageAdvantage_eq_arms` down with it.  That is where this statement belongs; it is stated
-here because that module is under review as it stands.
+here because the two equations it needs are not exported.
 
 *Experiment split.* -/
 theorem sameMessageAdvantage_eq_halves_of_unfoldings

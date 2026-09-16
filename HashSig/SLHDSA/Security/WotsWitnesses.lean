@@ -29,7 +29,7 @@ a role ledger over a `ValidatedParams`; they mention no signature at all.  Nothi
 constructs an adversary, states an advantage, performs a game hop, or claims that any honest
 execution queried the honest value a witness attacks.  In particular a witness lemma is **not** a
 reduction: that the game's target was committed before the forgery was seen is a
-simulation-fidelity obligation of the later program-level slice, not a fact established here.  The
+simulation-fidelity obligation of a reduction, not a fact established here.  The
 undetectability role has no witness content at all and is deliberately absent — undetectability
 pays for a distributional hybrid, not for an extraction.
 

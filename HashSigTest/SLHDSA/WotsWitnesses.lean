@@ -71,7 +71,7 @@ Only chains `0` and `5` are secret-sensitive: chains `1`-`4` take the "no witnes
 decided by the two messages alone, and under `F x = x >>> 1` the only observables of chain `i`'s
 secret `s` are `s >>> b` and `s >>> (w - 1)`, so `4`-`7` are interchangeable here at chain `0` and
 `40`-`47` at chain `5`.  Chain `0`'s `4` is chosen so that the collision the extractor finds lies
-strictly above the honest digit; at `2` it lay exactly at it, where the chain advance is the
+strictly above the honest digit; at `2` it would lie exactly at it, where the chain advance is the
 identity and the canaries could not see it. -/
 def toySecret : ℕ → UInt8
   | 0 => 4

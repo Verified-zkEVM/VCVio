@@ -1,3 +1,9 @@
+/-
+Copyright (c) 2026 Alexander Hicks. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Alexander Hicks
+-/
+
 module
 public import HashSig.SLHDSA.Security.HmsgWitnesses
 public import HashSig.SLHDSA.GeneralScheme
@@ -59,9 +65,9 @@ The fifth, `qHonestOnly`, covers both indices at the honest key pair *without* r
 digest — coverage is a relation between selected indices, not between digests, and a fixture whose
 only win came from a digest collision would not have shown that.  It is also what makes the fibre
 equivalence's key pair falsifiable: at either of the two moved key pairs it covers neither index, so
-reading the source-shaped side anywhere but at the honest key pair changes the answer.  Without it
-the equivalence canary passed under a mutant that read that side at a different public seed, because
-`qBoth`'s digest collision is an additive one that survives moving the seed and the root.
+reading the source-shaped side anywhere but at the honest key pair changes the answer.  `qBoth`'s
+digest collision is additive and survives moving the seed and the root, so without `qHonestOnly`
+the equivalence would hold with the source-shaped side read at any public seed.
 
 `qSecond` and `qOther` share a randomizer and differ only in their message, which is asserted: ITSR
 freshness is *pair* freshness, and a fixture in which no two queries shared a key could not show

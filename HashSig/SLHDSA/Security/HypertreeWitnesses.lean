@@ -31,7 +31,7 @@ extractor stops at the first layer whose recovered root is the honest one, and t
 its two shape equations, but no theorem here says the selected layer is minimal, and none is
 needed — a witness at any such layer is a witness.  Nothing here constructs an adversary, states
 an advantage, performs a game hop, or claims that any honest execution queried a value a witness
-attacks; those are program-level obligations of the later slice.
+attacks; those are program-level obligations of a reduction, and none is established here.
 
 An unoriented divergence lemma, over two arbitrary signature vectors with both messages
 existentially quantified, is deliberately absent.  Its second
@@ -93,9 +93,7 @@ tail of the vector the honest signer builds.  The second pair restates
 
 `LayerPosition.advance` and its equations are declared in the `SLHDSA.LayerPosition` namespace
 rather than this module's own, because they are position arithmetic and dot notation on a
-`LayerPosition` resolves there.  `HashSig.SLHDSA.Position` has no `advance` today and this is its
-only consumer, so it lives here; promoting it to that module later would move the declarations
-without renaming them.
+`LayerPosition` resolves there.
 
 ## The walk
 
@@ -185,7 +183,7 @@ Two things turn on it, and a third does not.
 ## Address roles
 
 Every address a hypertree witness names is the address the underlying XMSS witness names at the
-position `pos.advance w.layer`, so the membership lemmas of the slices below apply unchanged:
+position `pos.advance w.layer`, so the component modules' membership lemmas apply unchanged:
 `HashSig.SLHDSA.Security.XmssWitnesses`' `mem_xmssNodeAddresses_of_leaf` for the `H` branch and,
 through that module's `wotsLeafAdrs_eq_wotsInstanceAdrs`,
 `HashSig.SLHDSA.Security.ReachableTargets`' `mem_wotsPkAddresses` together with
@@ -534,38 +532,16 @@ field. -/
 at the position that layer names.  The position itself is not carried, because the walk's starting
 position and the layer already fix it; `HypertreeWitness.Valid` recomputes it.
 
-The layer is a `Fin layers`, indexed by the walk length the witness was extracted from, rather than
-a bare `ℕ` with the bound carried as a side condition.  The bound is the same one every statement
-here needs, and putting it in the type fixes the label's *range*.  It does not fix the label's
-meaning, and the difference is worth stating exactly.
+The layer is a `Fin layers`, indexed by the walk length the witness was extracted from, so the
+bound is carried by the data rather than by a side condition on every statement that reads the
+label.  That fixes the label's *range*, not its meaning.
 
-What the type refuses is the `+ 1` shift: `findHypertreeWitness`'s base case runs at walk length
-one, where the label's type is `Fin 1`, so a base label of `1` carries the obligation `1 < 1`,
-which is refutable rather than merely unproved.  What it still admits is any relabelling that
-agrees with the identity at walk length one.  The reflection `t ↦ layers - 1 - t` — counting the
-layer from the top of the walk instead of from `pos` — is the natural one, and it elaborates:
-leave the length-one base label `⟨0, ·⟩`, label the length-`n + 2` base case `⟨layers + 1, ·⟩`,
-drop the `+ 1` from the recursive step, read `layers - 1 - w.layer.val` in
-`HypertreeWitness.layer_lt`, `Valid` and `valid_iff`, and add two `omega`-derived rewrites to
-`findHypertreeWitness_sound`'s `more` branch.  Under it `w.layer` no longer counts layers advanced
-from `pos` — a divergence at the walk's first layer is labelled `layers - 1` — while `Valid` still
-names the right position, because it decodes the label.  A consumer pairing the raw label with a
-`Fin d` layer would address the wrong tree.
-
-Nothing here refuses that.  Every statement here that mentions the label either writes it — the two
-shape equations — or reads it through `layer_lt` and `Valid`, so the reflection renumbers them along
-with the extractor and they re-prove by the same inductions.  What
-would *not* renumber is a statement tying the label to the walk's own indexing of the signature
-vector — that the reported layer is the one whose component recovers the honest root there — and
-that is the first-match property this module does not prove.
-
-`HashSigTest.SLHDSA.HypertreeWitnesses` refuses it twice over, and the first of the two is a build
-error rather than a run-time one.  Its statement pins restate the two shape equations and `Valid`'s
-body with the label read raw, so the reflection applied to this module alone fails to elaborate
-*there*, at five sites in two `example`s, before anything runs.  Renumber those pins with it and the
-executable is what fails: `checkLayer` compares the reported label with the literal layer the
-fixture built the divergence at, and the `posOf`/`advance` and `honestMsgAt`/`honestLayerMsg`
-agreement checks are what stop those tables being renumbered to match. -/
+The label counts layers advanced from `pos`: `HypertreeWitness.Valid` forms the position
+`pos.advance w.layer` from it, so a consumer must not pair the raw label with a `Fin d` hypertree
+layer unless the walk starts at layer zero.  No statement here ties the label to the walk's own
+indexing of the signature vector: that the reported layer is the one whose component recovers the
+honest root there is the first-match property this module does not prove.
+`HashSigTest.SLHDSA.HypertreeWitnesses` pins the label's meaning. -/
 structure HypertreeWitness (vp : ValidatedParams) (prims : Primitives vp.params) (layers : ℕ) where
   /-- The layer, counted from the walk's starting position, below the walk's length. -/
   layer : Fin layers
@@ -575,11 +551,9 @@ structure HypertreeWitness (vp : ValidatedParams) (prims : Primitives vp.params)
 /-- The side condition every position and honest message a witness names is formed with: the layer
 the witness reports, added to the walk's starting layer, is below `d`.
 
-It is read off the `Fin layers` label and the walk-length hypothesis, with nothing from `Valid`.
-This is the *derived* form of the bound a consumer used to destructure out of `Valid`'s
-existential.  The existential's own conjunct was `w.layer < layers`, which is now `w.layer.isLt`
-and needs no lemma at all; `Valid` carries neither, so this is where the bound every `advance` site
-here needs comes from. -/
+It is read off the `Fin layers` label and the walk-length hypothesis, with nothing from `Valid`:
+`Valid` carries no layer-bound conjunct, so this is where every `advance` site here gets its
+bound. -/
 theorem HypertreeWitness.layer_lt {vp : ValidatedParams} {prims : Primitives vp.params}
     {layers : ℕ} (w : HypertreeWitness vp prims layers) (pos : LayerPosition vp)
     (hlayers : pos.layer.val + layers = vp.params.d) :
@@ -596,8 +570,8 @@ supplied.  There is no layer-bound conjunct: the label is a `Fin layers`, so the
 witness's type, and `HypertreeWitness.layer_lt` is what forms the position from it.  That bound is
 still what places every address the witness names in a `Security.ReachableTargets` ledger, and
 still what separates
-this layer's targets from another layer's inside the one `xmssNodeAddresses` ledger; it is now
-carried by the data rather than asserted about it.
+this layer's targets from another layer's inside the one `xmssNodeAddresses` ledger, and it is
+carried by the witness's type rather than asserted as a conjunct.
 
 This is a statement about hash values and ledger placement only.  It does not say that any honest
 object it names was committed as a game target, nor that any execution queried one. -/
@@ -705,31 +679,15 @@ theorem findHypertreeWitness_eq_next_of_ne (vp : ValidatedParams) (prims : Primi
 `HypertreeWitness.Valid` against the honest hypertree, at the layer it reports and against the
 honest running message there.
 
-What this pins about the reported layer is worth stating exactly, because two different things
-pin it and only one of them is this lemma.
-
-The *relative* placement is this lemma's.  The recursive step rewrites through
-`LayerPosition.advance_next` and `honestLayerMsg_next`, so dropping the `+ 1` from the extractor's
-recursive label breaks this proof at that rewrite.  A `+ 2` there does not even reach it: the
-recursive label's own bound would be `w.layer.val + 2 < layers + 2`, and the recursive answer
-supplies only `w.layer.val < layers + 1`.
-
-The *absolute* placement is the witness type's.  `HypertreeWitness.layer` is a `Fin layers`, so its
-range is fixed by the walk length the witness was extracted from rather than by the statements that
-read it.  A bare `ℕ` label would instead admit a uniform renumbering — base label `⟨0, ·⟩` to
-`⟨1, ·⟩`, `w.layer` read as `w.layer - 1` in `Valid`, the bound relaxed to
-`0 < w.layer ∧ w.layer ≤ layers` — which is a reparametrisation rather than an unsoundness: it
-leaves `Valid`'s content unchanged, so the statements this module ships are all renumbered with it
-and re-prove by the same induction.  What refuses it here is that the extractor's base case runs at
-walk length one, where the label's type is `Fin 1` and the shifted base label's obligation is
-`1 < 1`.  That obligation is refutable rather than merely unproved, so the renumbering is not
-writable at all and the failure is a build error rather than a run-time one.
+The reported layer is the one the extractor's recursive step advances to: the proof rewrites
+through `LayerPosition.advance_next` and `honestLayerMsg_next`, so the conclusion places the
+witness at `pos.advance w.layer` and against the honest running message there.  Its range is the
+witness type's, `HypertreeWitness.layer` being a `Fin layers`.
 
 `HashSigTest.SLHDSA.HypertreeWitnesses` checks the reported layer a second way, not through
 `HypertreeWitness.Valid`: it compares the label with the one its fixture built the divergence at,
 and evaluates the witness through a hand-written table of positions and honest messages, with an
-agreement check pinning that table against `advance` and `honestLayerMsg` at fixed layers.  Those
-checks are what caught the renumbering when the label was a bare `ℕ`, and they are kept.
+agreement check pinning that table against `advance` and `honestLayerMsg` at fixed layers.
 
 There is no top-root hypothesis.  Each layer's guard is the root match at that layer, which is
 `findXmssWitness_sound`'s own hypothesis, so the conclusion holds whether or not the walk reaches

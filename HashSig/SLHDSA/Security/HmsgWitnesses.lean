@@ -60,8 +60,8 @@ narrow-hardness — cannot, and no amount of care in stating the bridge would le
 reduction must do instead is stay inside one fibre, and that is a property of how it forms its
 inputs, not of any lemma here.  `embedTargets` and the candidate side of `wins_embedTargets_iff`
 share one `(pkSeed, pkRoot)` argument pair for exactly that reason: a reduction that let the two
-drift apart cannot instantiate that lemma at all, rather than instantiating it at a statement a
-reviewer has to notice is the wrong one.  The drifted terms themselves type-check perfectly well —
+drift apart cannot instantiate that lemma at all, rather than instantiating it at a different,
+silently weaker statement.  The drifted terms themselves type-check perfectly well —
 `notMem_embedTargets_of_ne` and `wins_of_hmsg_agree` are *about* such terms — so what the shared
 pair buys is a unification constraint on one lemma, not a type-level guarantee about reductions.
 
@@ -202,8 +202,9 @@ instance address together with a global leaf number — and not at the level of 
 `forsSkGenCore` calls at two different coordinates may collide, and nothing in the development
 excludes it.  Neither is the game-level reading derivable here: turning a coordinate into a
 position in an OpenPRE target list needs an index function from coordinates to list positions,
-which no module on this branch supplies.  What is available, and what the OpenPRE winning condition
-asks for, is that the coordinate itself was opened by no query, and that is what is proved.
+which no module in this repository supplies.  What is available, and what the OpenPRE winning
+condition asks for, is that the coordinate itself was opened by no query, and that is what is
+proved.
 
 The source proves no such lemma in isolation: the corresponding step is folded into the `conseq`
 that discharges the OpenPRE postcondition and closed by SMT over the concrete opened-index list.

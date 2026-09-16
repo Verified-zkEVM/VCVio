@@ -65,13 +65,12 @@ exercised there.
 ## What the checks cannot catch
 
 * **A paired edit of the `w − 2` coefficient that also moves this file.**  Nothing in the
-  repository derives the coefficient.  Changed throughout the library module it leaves that module
-  elaborating clean and fails seventeen entries here: eleven `Pins` entries, which restate the
-  bound expression, the two branch expressions and the coefficient as a numeral at two profiles,
-  and six in the vacuity canary, whose anchored certificate restates it in the hypertree branch
-  bound.  Changed here as well, nothing anywhere fails and the executable passes — at which point
-  the claim has been changed rather than a bug found, and the only remaining check is the source
-  citation the library module carries.
+  repository derives the coefficient.  Seventeen entries here restate it — eleven `Pins` entries,
+  which restate the bound expression, the two branch expressions and the coefficient as a numeral
+  at two profiles, and six in the vacuity canary, whose anchored certificate restates it in the
+  hypertree branch bound — so a library value that differs from this file's is refused.  A
+  coefficient changed in both places is refused by nothing beyond the source citation the library
+  module carries.
 * **Anything about a probability.**  See above.
 * **What a certificate's three named quantities mean.**  `idealAdvantage`, `forsBranch` and
   `hypertreeBranch` are `ℝ≥0∞` fields with no tie to any experiment, so the pins can only restate
@@ -788,8 +787,8 @@ end Pins
 /-! ## The vacuity canary
 
 Every other check in this file refuses a claim about a *definition*: a coefficient, a summand's
-routing, a cap, a certificate field's type.  This one refuses a claim about the *hypotheses*, and
-it is the first in this lane to do so.  It builds a closed `SLHDSA.Security.Certificate` — all
+routing, a cap, a certificate field's type.  This one refuses a claim about the *hypotheses*.  It
+builds a closed `SLHDSA.Security.Certificate` — all
 twenty fields supplied, all four inequalities proved — at an **arbitrary** `ValidatedParams`, an
 arbitrary primitive bundle carrying the instances the structure asks for, and an arbitrary
 adversary, from an address key and a public seed and no security assumption whatever; and it
@@ -1217,7 +1216,7 @@ theorem one_le_anchoredCertificate_bound {adv : unforgeableAdv (generalAlg prims
         (freePreAdv_advantage prims t).symm
     _ ≤ _ := le_add_right (le_add_right le_add_self)
 
-/-! The three inequalities a full anchoring would add to `Certificate`, at this certificate. -/
+/-! ### The three inequalities a full anchoring would add, at this certificate -/
 
 example (adv : unforgeableAdv (generalAlg prims)) (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
     (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
