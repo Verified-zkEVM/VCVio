@@ -23,7 +23,8 @@ class ValidationTests(unittest.TestCase):
                      "test-pmf-boundary", "check-pmf-boundary", "test-expose-boundary",
                      "check-expose-boundary", "test-complexity-backend-isolation",
                      "check-complexity-backend-isolation", "check-extern-isolation",
-                     "check-interop-isolation", "test-axiomsweep"):
+                     "check-interop-isolation", "test-axiomsweep",
+                     "test-initsweep"):
             self.script(scripts / f"{name}.sh", 'exit 0\n')
         for name in ("test-check-imports.py", "test-validation.py", "test-lint.py", "check-agent-docs.py",
                      "extract-doc-fragments.py"):
@@ -91,6 +92,25 @@ fi
         calls = (self.root / "calls").read_text().splitlines()
         self.assertIn("test -- --ffi", calls)
         self.assertIn("exe axiomsweep --check", calls)
+
+    def test_init_sweep_runs_in_the_default_pass(self):
+        result = self.validate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = (self.root / "calls").read_text().splitlines()
+        self.assertIn("exe initsweep --check", calls)
+        # The test libraries cannot be swept before `lake test` has built their oleans.
+        self.assertNotIn("exe initsweep --check --root VCVioTest --root LatticeCryptoTest",
+                         calls)
+
+    def test_init_sweep_covers_the_umbrella_test_libraries_after_lake_test(self):
+        result = self.validate("--test")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = (self.root / "calls").read_text().splitlines()
+        self.assertIn("exe initsweep --check --root VCVioTest --root LatticeCryptoTest",
+                      calls)
+        self.assertLess(calls.index("test"),
+                        calls.index("exe initsweep --check --root VCVioTest "
+                                    "--root LatticeCryptoTest"))
 
 
 if __name__ == "__main__":
