@@ -97,13 +97,13 @@ coverage.
 ## The naive identifications this fixture is built to reject
 
 * *That `globalLeaf` is the local leaf.*  Rejected six times over, each of the six sufficient
-  without the other five: against `forsSigLeafIndex`, which carries the
-  FIPS citation; against a hand-written `tree · 2 ^ a + leaf`; against the divide-back to the FORS
-  tree; against the `k · 2 ^ a` bound; against the secret value honest signing reveals at the
-  coordinate; and against a hand-written list of the two global leaves the forged digest is
-  expected to select, read through the hand-written `Adrs` table.  A shift of `globalLeaf` carried
-  through the library until it elaborates clean moves nine declarations, and then fails at each of
-  those six.  The *per-index* read of that `Adrs` table is not one of them: the shifted global leaf
+  without the other five: against `forsSigLeafIndex`, which carries the FIPS citation; against a
+  hand-written `tree · 2 ^ a + leaf`; against the divide-back to the FORS tree; against the
+  `k · 2 ^ a` bound; against the secret value honest signing reveals at the coordinate; and against
+  a hand-written list of the two global leaves the forged digest is expected to select, read
+  through the hand-written `Adrs` table.  A shift of `globalLeaf` carried through the library until
+  it typechecks moves nine declarations, and is then refused by each of those six.  The
+  *per-index* read of that `Adrs` table is not one of them: the shifted global leaf
   stands on both sides of its comparison, so with it alone the shift passes.  It pins how
   `forsNodeAdrs` builds an address from a given global leaf, not which global leaf.  The `Nodup`
   sweep over the sixty-four indices lets the shift through for its own reason: a shift merely
@@ -492,9 +492,9 @@ moves under a shift of `globalLeaf`.
 On this profile the pair check also *implies* the per-index read: the two lists it compares are the
 same two indices the loop walks, so pointwise it gives exactly the per-index equation: with the
 per-index read deleted the executable still passes, and with it and the `range 4` sweep both
-deleted a leaf-address table shifted by one is still caught, at the pair check.  The per-index read is kept anyway, because it is the law about `forsNodeAdrs` quantified
-over the index that a reader checks the imported function against, rather than a statement about
-these two values. -/
+deleted a leaf-address table shifted by one is still caught, at the pair check.  The per-index
+read is kept anyway, because it is the law about `forsNodeAdrs` quantified over the index that a
+reader checks the imported function against, rather than a statement about these two values. -/
 def checkCoordinates : IO Unit := do
   ensure "the forged instance address is the hand-written one"
     (partsC.forsAdrs == forgedForsAdrsTable)
