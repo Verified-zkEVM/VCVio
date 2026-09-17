@@ -143,6 +143,7 @@ public import VCVio.EvalDist.Defs.Basic
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Measure
 public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.Defs.Measure.Deterministic
 public import VCVio.EvalDist.Defs.Measure.ExceptT
 public import VCVio.EvalDist.Defs.Measure.FinRatPMF
 public import VCVio.EvalDist.Defs.Measure.OptionT

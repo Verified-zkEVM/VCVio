@@ -34,6 +34,14 @@ open scoped ENNReal
 
 namespace VCVioTest.MeasureBridge
 
+/-! ## Operational optional failure -/
+
+example {r : Type → Type} [Monad r] [LawfulMonad r] [MonadAttach r]
+    [ExactMonadAttach r] : HasEvalSet.LawfulFailure (OptionT r) := inferInstance
+
+example {r : Type → Type} [Monad r] [LawfulMonad r] [MonadAttach r]
+    [ExactMonadAttach r] {α : Type} : support (failure : OptionT r α) = ∅ := by simp
+
 /-! ## Adapter side: `ProbComp` with no measure specification -/
 
 section adapter

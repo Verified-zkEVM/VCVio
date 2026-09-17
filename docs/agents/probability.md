@@ -35,6 +35,15 @@ no measurable space on that intermediate type. A constant output map after the g
 normalization rule, so monad normalization preserves this automation. The guarded unit-output
 measure is its event probability times `Measure.dirac ()`. `OptionT.prEvent_eq_run` observes present
 values in the underlying run, and `OptionT.prEvent_lift` preserves an event through a lift.
+`VCVio.EvalDist.Defs.Measure.Deterministic` gives `Id`, `Option`, and `Except` native Dirac/zero
+semantics without a finite backend. Every `Id` value and successful `Option`/`Except` constructor
+infers its probability-measure instance; arbitrary optional/exceptional values infer only the
+subprobability bound. Bare `Except` observes no errors and needs no measurable space on its error
+type. `ExceptT` instead interprets its base run and uses the inherited coproduct space on errors
+and outputs. Deterministic final events simplify to their propositional indicators with `simp`
+and `grind`, using `Measure.dirac_apply_singleton_true`.
+Operational optional failure has empty support under exact attachment, independently of any
+probability semantics or lift.
 Native transformer semantics takes priority over the generic finite lifting adapter. Opening
 `ProbComp.DiscreteCompatibility` explicitly selects that adapter for retiring discrete calibration
 proofs. Native certificates describe the native interpretation and do not assert laws about an

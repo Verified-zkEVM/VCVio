@@ -38,6 +38,12 @@ lemma mem_support_iff (mx : OptionT m α) (x : α) :
 
 variable [LawfulMonad m] [ExactMonadAttach m]
 
+/-- Optional failure has empty attachment support when the base attachment is exact. -/
+instance instLawfulFailure (m : Type u → Type v) [Monad m]
+    [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m] :
+    HasEvalSet.LawfulFailure (OptionT m) where
+  support_failure' := by aesop
+
 @[simp]
 lemma support_liftM (mx : m α) :
     support (liftM mx : OptionT m α) = support mx := by grind
@@ -111,12 +117,6 @@ noncomputable instance instLawfulMonadLiftTSPMF (m : Type u → Type v) [Monad m
       OptionT.mapM' (MonadHom.ofLift m SPMF) mx >>=
         fun a => OptionT.mapM' (MonadHom.ofLift m SPMF) (my a)
     simp
-
-instance instLawfulFailure (m : Type u → Type v) [Monad m]
-    [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
-    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] :
-    HasEvalSet.LawfulFailure (OptionT m) where
-  support_failure' := by aesop
 
 /-- The native support of `OptionT m` (preimage of `support mx.run` under `some`) agrees with the
 SPMF-lift (the `OptionT.mapM'` bind into `SPMF`) on outputs, given `EvalDistCompatible m`. -/

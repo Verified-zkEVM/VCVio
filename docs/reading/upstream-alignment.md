@@ -340,6 +340,16 @@ transformer laws reuse them without importing that higher layer. Native transfor
 primary even when a finite-distribution lift exists; the explicit `ProbComp.DiscreteCompatibility`
 scope selects the adapter at a retiring calibration boundary. Lossless lifts publish
 probability-measure instances, so consumers infer their mass properties from the base computation.
+Native `Id`, `Option`, and `Except` interpretations use upstream `Measure.dirac`, zero,
+`Measure.dirac_bind`, and `Measure.bind_zero_left`. Their pure and bind certificates need no
+finite backend; bare exceptional semantics observes successful outputs without a measurable
+space on errors. A propositional Dirac observation normalizes with upstream `Pi.single_apply`,
+packaged as `Measure.dirac_apply_singleton_true` for `simp` and `grind`. Optional failure's empty
+operational support depends only on exact attachment, with no numeric lift assumptions.
+The pinned tree supplies `IsZeroApply` and its generic `zero_apply` rule, but no measure instance;
+`Measure.instIsZeroApply` connects zero measures to that upstream automation. Bare exceptional
+constructor equations live in `ToMathlib.Control.Except` and register their operational facts for
+`simp` and `grind`, so deterministic event proofs need no additional tactic arguments.
 The upstream measurable embeddings' `comap_apply` equations hold on all sets and need no event
 measurability hypothesis. Sampled optional guards collapse to conjunctions of observed events using
 upstream `lintegral_indicator_one`, including after constant-map normalization. Their unit-output
