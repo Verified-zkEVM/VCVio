@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import Mathlib.MeasureTheory.Measure.Dirac
+public import Mathlib.MeasureTheory.Measure.Dirac.Basic
 public import Mathlib.MeasureTheory.MeasurableSpace.Instances
 
 /-!

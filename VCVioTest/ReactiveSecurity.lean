@@ -48,7 +48,7 @@ open scoped ENNReal
 attribute [local implicit_reducible] signature Response HandledAssembly.plug HandledAssembly.atom
   HandledAssembly.ofDiagram HandledDiagram.plug HandledDiagram.atom
   HandledDiagram.network Diagram.plug Diagram.map Diagram.wire Diagram.atom
-  bitEffect noEffect boundary request response DynComputation.ofFreeM PFunctor.Obj
+  bitEffect noEffect boundary request response DynComputation.ofFreeM
   PFunctor.Idx HandledDiagram.closedPair Diagram.withEnvironment
 
 /-- The actual communicating experiment exposes the server's sampled bit. -/

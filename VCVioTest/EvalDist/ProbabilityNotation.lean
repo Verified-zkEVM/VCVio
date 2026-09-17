@@ -71,7 +71,8 @@ example (μ : Measure ℝ) [IsSubprobabilityMeasure μ] (f : ℝ → ℝ) :
     IsSubprobabilityMeasure (μ.map f) := inferInstance
 
 example (μ : Measure ℝ) [IsSubprobabilityMeasure μ] (f : ℝ → Measure ℝ)
-    [∀ x, IsSubprobabilityMeasure (f x)] : IsSubprobabilityMeasure (μ.bind f) := inferInstance
+    [∀ x, IsSubprobabilityMeasure (f x)] (hf : AEMeasurable f μ) :
+    IsSubprobabilityMeasure (μ.bind f) := MeasureTheory.isSubprobabilityMeasure_bind hf
 
 example (mx : ProbComp ℝ) : IsProbabilityMeasure (FreeM.denote mx) := inferInstance
 

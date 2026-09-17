@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 public import Mathlib.Data.Finset.Basic
 public import ToMathlib.Data.Set.Functor
-public import PolyFun.Control.Monad.Support
+public import PolyFun.Control.Monad.Support.Instances
 
 /-!
 # Support of a Monadic Computation

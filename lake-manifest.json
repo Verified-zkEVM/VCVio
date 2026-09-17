@@ -16,7 +16,7 @@
    "name": "PolyFun",
    "manifestFile": "lake-manifest.json",
    "inherited": false,
-   "dir": "/tmp/polyfun-tocslib-review",
+   "dir": "/tmp/polyfun-replay-review",
    "configFile": "lakefile.toml"},
   {"url": "https://github.com/quangvdao/loom2",
    "type": "git",

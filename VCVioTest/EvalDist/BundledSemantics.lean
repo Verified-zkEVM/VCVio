@@ -47,8 +47,9 @@ example (s : Set α) : sem.evalDist mx s ≠ ⊤ := measure_ne_top _ _
 
 example (f : α → β) : IsSubprobabilityMeasure ((sem.evalDist mx).map f) := inferInstance
 
-example (f : α → m β) :
-    IsSubprobabilityMeasure ((sem.evalDist mx).bind fun x ↦ sem.evalDist (f x)) := inferInstance
+example (f : α → m β) (hf : AEMeasurable (fun x ↦ sem.evalDist (f x)) (sem.evalDist mx)) :
+    IsSubprobabilityMeasure ((sem.evalDist mx).bind fun x ↦ sem.evalDist (f x)) :=
+  MeasureTheory.isSubprobabilityMeasure_bind hf
 
 example : sem.evalDist mx Set.univ ≤ 1 := by simp
 

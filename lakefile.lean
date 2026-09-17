@@ -81,7 +81,7 @@ declaration order, so this keeps the direct Mathlib requirement authoritative
 over PolyFun's inherited pin and makes `lake update --keep-toolchain`
 idempotent.
 -/
-require PolyFun from "/tmp/polyfun-tocslib-review"
+require PolyFun from "/tmp/polyfun-replay-review"
 
 require "leanprover-community" / "mathlib" @ git "v4.34.0"
 
