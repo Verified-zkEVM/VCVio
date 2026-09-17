@@ -65,6 +65,11 @@ literature here; it is not established in this file.
 - Falcon specification v1.2, Section 2.5.2 (sampler quality)
 -/
 
+-- Temporary file-length exception: the arithmetic proofs share private implementation
+-- lemmas. Split them once their internal module interfaces are settled, then restore
+-- the default 1500-line limit.
+set_option linter.style.longFile 7500
+
 public section
 
 

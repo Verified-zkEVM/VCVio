@@ -30,6 +30,11 @@ half — certifying the coefficient table against `Real.exp` — is a numerical-
 of a different character, described in `docs/agents/expm-certification.md`.
 -/
 
+-- Temporary file-length exception: the arithmetic proofs share private implementation
+-- lemmas. Split them once their internal module interfaces are settled, then restore
+-- the default 1500-line limit.
+set_option linter.style.longFile 2000
+
 public section
 
 namespace Falcon.Concrete.FPRBridge
