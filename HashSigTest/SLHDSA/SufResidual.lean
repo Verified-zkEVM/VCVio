@@ -21,26 +21,20 @@ The block below is the one `HashSigTest.SLHDSA.SchemeWitnesses` builds and
 `HashSigTest.SLHDSA.HmsgWitnesses` copies — the same seven parameters, the same six byte maps, the
 same three honest seeds, the same published root — so the three executables run on one profile, and
 a reviewer can check that by diffing the blocks.  It is copied rather than imported because a
-`lean_exe` root must own its `main`, and a module that imports another fixture cannot declare one:
-the attempt reports `` `main` has already been declared``, and had it not, this executable would
-have linked the imported `main` and run the other fixture.  The lane has no shared fixture module,
-and adding one would edit merged, reviewed files from inside this pull request.
+`lean_exe` root must own its `main`, and a module that imports another fixture cannot declare one;
+had that not been so, this executable would have linked the imported `main` and run the other
+fixture.  The lane has no shared fixture module.
 
 Diffed against the `H_msg` bridge fixture's copy of the block, from its section heading to `pkRoot`,
-there are four hunks.  Three attribute comments carry this file's own measured error counts and
-error text — every attribute comment here was written by removing the attribute and reading what
-Lean said.  There are four measured figures across those three comments, because the third carries
-one for each of its two attributes: 45, 61, a hundred errors plus the line saying the ceiling was
-reached, and 15.  Three of the four have a counterpart standing in the same place in that file — 45
-against its 41, the hundred-plus-ceiling against its 51, 15 against its 3 — and none of the three
-coincides; `toy`'s 61 has no counterpart at all, because that file leaves `toy` unexposed.  The
-error text differs as well, because these comments quote the error rather than paraphrasing it.  Two
-docstrings in the copied block name the group in *this* file that asserts what they describe.  `toy`
-carries `@[expose]` here, where that file leaves it unexposed, because the three `DecidableEq`
-instances below are stated at `toy.params`.  And `otherPkSeed`, which exists there to move a
-candidate off the honest key pair, is dropped: every statement in the library module reads its
-public seed and published root off one `pk`, so there is no second key pair to move to, and testing
-that there is would be re-testing the `H_msg` bridge.
+there are four hunks.  Three attribute comments describe what those attributes are required for in
+*this* file, which is not what the same attributes are required for there: `toy` is exposed here and
+not there, and the declarations that need each attribute differ.  Two docstrings in the copied block
+name the group in *this* file that asserts what they describe.  `toy` carries `@[expose]` here,
+where that file leaves it unexposed, because the three `DecidableEq` instances below are stated at
+`toy.params`.  And `otherPkSeed`, which exists there to move a candidate off the honest key pair, is
+dropped: every statement in the library module reads its public seed and published root off one
+`pk`, so there is no second key pair to move to, and testing that there is would be re-testing the
+`H_msg` bridge.
 
 ## What this fixture adds
 
@@ -67,19 +61,15 @@ for a fourth signature at one message, or for a fifth entry in a transcript, wou
 again.
 
 Four forgeries, and three `DecidableEq` instances.  The instances are the fixture's own: the library
-module carries `DecidableEq` on the signature type as a hypothesis because no such instance exists
-on this branch, and these build it field by field at this bundle and nowhere else.
+module carries `DecidableEq` on the signature type as a hypothesis because `HashSig` declares no
+such instance, and these build it field by field at this bundle and nowhere else.
 
-Two pins name their validated parameters explicitly, as `(vp := toy)`, and what that argument is for
-was read off the errors its removal produces.  Dropping it from both gives two errors, both
-`Type mismatch`, no synthesis failure at all, and a metavariable standing where `pk` should be.
-Naming the bundle in its place gives a different report — four errors, two
-`failed to synthesize instance of type class` for
-`SampleableType (Primitives.toCorePrimitives ?m).Y`, with a metavariable where the bundle should be,
-and two application type mismatches on the membership hypothesis — because a bundle at `toyParams`
-does not say which `vp` has `vp.params = toyParams`.  Naming the bundle as well changes nothing:
-with `(prims := toyPrimitives)` alongside, and without it, the file elaborates with no output.  The
-reason is not the `[SampleableType prims.Y]` binder these two theorems carry, because
+Two pins name their validated parameters explicitly, as `(vp := toy)`, because `vp` is not
+determined by the rest of the pin: a bundle at `toyParams` does not say which `vp` has `vp.params =
+toyParams`, so without the argument `vp` is left as a metavariable and the statement does not
+typecheck.  Naming the bundle instead does not determine it either, and naming the bundle *as well*
+changes nothing — with `(prims := toyPrimitives)` alongside, and without it, the pins elaborate the
+same way.  The reason is not the `[SampleableType prims.Y]` binder these two theorems carry, because
 `findUncoveredIndex_eq_none_of_mem_loggedRandomizers` carries it too and is pinned below with no
 named argument; and on copies of that statement, giving it either or both of the two `DecidableEq`
 binders the other two carry leaves it needing nothing still.  What the two that do need it have in
@@ -153,22 +143,19 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 
 Two hypertree layers of height two, two FORS trees of height one, `w = 16`, `len = 4`. -/
 
--- Exposed, and what that attribute is for was read off the errors its removal produces in this
--- file.  Without `@[expose]` on `toyParams`, 43 errors, the first inside the bundle at
--- `yToBytes := id`: `Type mismatch: id has type ?m → ?m but is expected to have type
--- `Bytes 1 → Bytes toyParams.n`.  The secret map, the tweak map, the randomizer and the digest map
--- need no exposure of their own here.  Nothing outside this executable consumes any of them.
+-- Exposed because the bundle below needs `toyParams.n` to reduce: `yToBytes := id` is checked
+-- against `Bytes 1 → Bytes toyParams.n`.  The secret map, the tweak map, the randomizer and the
+-- digest map need no exposure of their own here.  Nothing outside this executable consumes any of
+-- them.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
 
 theorem toyValid : toyParams.Valid := by decide
 
--- Exposed here, where the `H_msg` bridge fixture leaves it unexposed, because this file states
--- three `DecidableEq` instances whose types are written at `toy.params`: without the attribute,
--- 58 errors, the first at the `ForsTreeSigCore` instance below, `Application type mismatch: the
--- argument toyPrimitives.core has type CorePrimitives toyParams but is expected to have type
--- CorePrimitives toy.params`.
+-- Exposed because this file states three `DecidableEq` instances whose types are written at
+-- `toy.params`, the first of them at `ForsTreeSigCore`: `toy.params` has to reduce to `toyParams`
+-- for `toyPrimitives.core` to be accepted as their `CorePrimitives` argument.
 /-- The validated form of `toyParams`. -/
 @[expose] def toy : ValidatedParams := ⟨toyParams, toyValid⟩
 
@@ -220,21 +207,14 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteFold msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed and `@[reducible]`, for two different reasons, each read off the errors that removing
--- that attribute alone produces in this file.  Exposed, for code generation: without it the build
--- runs into Lean's hundred-error ceiling — 100 errors and the line saying the ceiling was reached,
--- so the count is a floor and not a total.  The first is at `instance : DecidableEq
--- toyPrimitives.Y` just below: `Compilation failed, locally inferred compilation type differs from
--- type that would be inferred in other modules`, naming `toyPrimitives ↦ 2`, with the rest after it
--- down the compiled declarations.  Reducible, because its carrier types have to unfold to `Bytes 1`
--- for instance resolution to reach them: without it, 13 errors and only these — two at `byteOf`,
--- whose `y[0]` finds no `GetElem toyPrimitives.Y ℕ` instance and then cannot prove its index valid;
--- two `BEq (ITSRTranscript toyPrimitives.Y (HmsgITSRInput toyPrimitives.PkSeed toyPrimitives.Y))`,
--- one for each embedded-transcript value pin in `checkBranches`; four `Decidable (… ∈
--- embeddedTargets)` membership goals in the same group; three `DecidableEq (HmsgITSRInput
--- toyPrimitives.PkSeed toyPrimitives.Y)`, one in `checkBranches` and two in the pins; and two
--- `DecidableEq toyPrimitives.PkSeed`, both in the pins.  Nothing outside this executable
--- consumes it.
+-- Exposed and `@[reducible]`, for two different reasons.  Exposed for code generation: the compiled
+-- declarations below, starting with `instance : DecidableEq toyPrimitives.Y`, have to infer the
+-- same compilation type for this bundle as an importing module would, which needs its body.
+-- Reducible because its carrier types have to unfold to `Bytes 1` for instance resolution to reach
+-- them: `byteOf`'s `y[0]` needs `GetElem toyPrimitives.Y ℕ` and an index bound, and `checkBranches`
+-- and the value pins need `BEq` on the embedded transcripts, `Decidable (… ∈ embeddedTargets)`, and
+-- `DecidableEq` on `HmsgITSRInput toyPrimitives.PkSeed toyPrimitives.Y` and on
+-- `toyPrimitives.PkSeed`.  Nothing outside this executable consumes it.
 /-- The toy bundle: one byte per node, a collapsing order- and address-sensitive `Thash`, and an
 `H_msg` that depends on all four of its arguments. -/
 @[expose, reducible] def toyPrimitives : Primitives toyParams where
@@ -380,7 +360,7 @@ def thriceSignedLog :
 /-! ## The forgeries
 
 Four, all offered against the honest public key.  None of the library module's statements has a
-verification hypothesis, so a forgery here does not have to verify — but which ones do is measured,
+verification hypothesis, so a forgery here does not have to verify — but which ones do is asserted,
 so that the branch the residual sends each to is not an artefact of offering nonsense.  Three
 verify: the one the honest signer produced under fresh randomness, and the two built by perturbing a
 logged signature in one of its two halves.  The fourth, which carries the randomizer the log
@@ -713,15 +693,15 @@ def checkSameRandomizer : IO Unit := do
               { sigP1.fors[1] with sk := node (byteOf sigP1.fors[1].sk + 1) } } msgP !=
       recoveredForsPk sigP1 msgP)
 
-/-- The formulation difference the module is about, measured.  Under FIPS 205's hedged default the
-log at a twice-signed message carries two randomizers, so pair freshness there is two disequalities
-and the residual's second branch is reachable; under its deterministic variant, which is the shape
-the EasyCrypt development's message-keyed signer has, the same three queries leave one.  The
-deterministic log's transcript is pinned too, because `signingLog`'s three pairs are distinct and a
-`logQueries` that de-duplicated would be invisible on it; this log and `thriceSignedLog` are the two
-that carry a repeated entry.  The same holds of `loggedRandomizers`,
-whose two deterministic entries at that message are equal, so that list is pinned by value rather
-than only through `eraseDups`.  Seven properties. -/
+/-- The formulation difference the module is about, exhibited at values.  Under FIPS 205's hedged
+default the log at a twice-signed message carries two randomizers, so pair freshness there is two
+disequalities and the residual's second branch is reachable; under its deterministic variant, which
+is the shape the EasyCrypt development's message-keyed signer has, the same three queries leave one.
+The deterministic log's transcript is pinned too, because `signingLog`'s three pairs are distinct
+and a `logQueries` that de-duplicated would be invisible on it; this log and `thriceSignedLog` are
+the two that carry a repeated entry.  The same holds of `loggedRandomizers`, whose two deterministic
+entries at that message are equal, so that list is pinned by value rather than only through
+`eraseDups`.  Seven properties. -/
 def checkVariants : IO Unit := do
   ensure "the deterministic variant's two queries on one message are one signature"
     (loggedSignatures deterministicLog msgP == [detSigP, detSigP])

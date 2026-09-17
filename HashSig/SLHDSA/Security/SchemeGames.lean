@@ -20,8 +20,8 @@ experiment that returns the success bit paired with a decidable bit read off the
 
 A split is a union bound, not an identity, and neither of its two terms is bounded here.  What the
 instrumentation buys is that each term is a probability of a *named event of one experiment*, so a
-later slice can bound each separately without re-deriving the experiment, and so the term that
-cannot be bounded at all is one named summand rather than an unquantified caveat.
+consumer can bound each separately without re-deriving the experiment, and so the term that cannot
+be bounded at all is one named summand rather than an unquantified caveat.
 
 * **The dispatch split.**  `advantage_le_forsHalf_add_hypertreeHalf` bounds the EUF-CMA advantage of
   an adversary against `generalAlg` by `forsHalf + hypertreeHalf`, the two probabilities of the
@@ -57,12 +57,12 @@ the predicate rather than a gap in its own data.
 log's keys are the raw `msg`.  Two consequences, both of which a statement can get wrong without a
 type error.
 
-* `forsArm` must split the digest of the *internal* message.  A selector applied to the raw `msg`
-  is a different, silently wrong predicate: it still has type `Bool`, and every statement below
-  still elaborates.  What separates the two is a fixture at a bundle whose `H_msg` can see two
-  prefixed zero bytes — which is a real condition and not an automatic one: the fixture this lane
-  inherited folds a message by exclusive-or, which cannot, and `HashSigTest.SLHDSA.SchemeGames`
-  asserts that blindness before replacing the fold.
+* `forsArm` must split the digest of the *internal* message.  A selector applied to the raw `msg` is
+  a different, silently wrong predicate: it still has type `Bool`, and every statement below still
+  elaborates.  What separates the two is a fixture at a bundle whose `H_msg` can see two prefixed
+  zero bytes — which is a real condition and not an automatic one: a bundle whose `H_msg` folds a
+  message by exclusive-or cannot see those bytes, and `HashSigTest.SLHDSA.SchemeGames` asserts that
+  blindness of the fold it replaces.
 * The `H_msg` transcript a reduction records is the transcript of the *internal* messages, so the
   log has to be internalised before `HashSig.SLHDSA.Security.SufResidual`'s transport lemmas apply
   to it.  `internalLog` is that map and `loggedSignatures_internalLog` is what makes it harmless:
@@ -77,8 +77,8 @@ records a challenge, exhibits a target transcript that an actual execution produ
 either half of either split by a hardness advantage.  In particular:
 
 * `forsHalf` is not the FORS half's advantage in any game.  It is the probability that the forgery
-  succeeds *and* recovers the honest FORS public key; turning that into a bound on a FORS game is
-  the adversary construction the eight review records of this stack all name as outstanding.
+  succeeds *and* recovers the honest FORS public key; turning that into a bound on a FORS game is an
+  adversary construction, and none is supplied here.
 * `sameRandomizerHalf` has no source counterpart and no bound.  What it *has* is
   `sameRandomizer_of_randomizerLogged`: on that branch the adversary's signature comes with a
   logged signature at the same message carrying the same randomizer, splitting to the same digest
@@ -150,13 +150,11 @@ key, a message, a signature and witness data:
 Those fifty-four are the module's whole interface; none is `private`, and `generalAlg` is the one
 that carries `@[expose]`.
 
-The eight generic declarations of the first section are stated over an arbitrary `SignatureAlg`
-and are not SLH-DSA-specific.  They are here rather than in
-`VCVio.CryptoFoundations.SignatureAlg` because this slice already edits one merged module;
-promoting them is an eight-declaration move that would leave the two selectors behind as the only
-SLH-DSA content, and it is left to the maintainer.  None of the eight mentions an SLH-DSA type; the
-target file, if they move, is `VCVio/CryptoFoundations/SignatureAlg.lean`, beside the two
-experiments whose bodies they duplicate.
+The eight generic declarations of the first section are stated over an arbitrary `SignatureAlg` and
+are not SLH-DSA-specific.  They are here rather than in `VCVio.CryptoFoundations.SignatureAlg`
+because moving them would leave the two selectors behind as this module's sole SLH-DSA content.
+None of the eight mentions an SLH-DSA type; the target file, if they move, is
+`VCVio/CryptoFoundations/SignatureAlg.lean`, beside the two experiments whose bodies they duplicate.
 
 ## References
 
@@ -188,27 +186,20 @@ paired with a selector bit read off the same run.
 
 The body is `SignatureAlg.unforgeableExp`'s with one component added to the final `return`.  It
 opens with the same two `letI : DecidableEq _ := Classical.decEq _` lines that experiment opens
-with, and it has to — though not by the mechanism the shape suggests.  Dropping them puts
-`[DecidableEq M]` and `[DecidableEq S]` back into this definition's signature, which makes every
-`omit` of this EUF block illegal — `cannot omit referenced section variable`, at each of them — and
-then leaves the two dispatch halves, their two branch bounds and their two `example`s unable to
-synthesize `DecidableEq (GeneralScheme.SignatureCore vp prims.core)`, and the two `_le_advantage`
-theorems with unsolved goals.  So the tally is one error per `omit` of this block plus those eight,
-which is the shape to quote rather than a number a later declaration moves: at this head, three and
-eight, eleven errors, with three warnings beside them — one at each of the two `_le_advantage`
-theorems, whose proofs fail and are admitted, and one at the split above them, whose own proof
-succeeds and which is warned about only because it names the two halves that failed — and no
-`congr` step is ever reached.
+with, and needs them: without them `[DecidableEq M]` and `[DecidableEq S]` enter this definition's
+signature, the `omit`s of this EUF block are no longer legal, and the consumers below — the two
+dispatch halves, their two branch bounds and their two `example`s — cannot synthesize `DecidableEq
+(GeneralScheme.SignatureCore vp prims.core)`.
 
 The selector is a function of the sampled key pair and the returned pair.  It may read the *secret*
 key, so a selector is not in general something a reduction can evaluate; what a union bound needs is
 only that the two events partition the success event, which any `Bool`-valued function of the run
 gives.
 
-The result type is the runtime's subdistribution reading of a pair of bits and is left to
-inference, as `SignatureAlg.unforgeableExp` leaves its own: writing it out is the direct
-finite-distribution coupling that `scripts/check-pmf-boundary.sh` ratchets, and the annotation
-would put this module over a ceiling of zero for no gain in what the definition says.
+The result type is the runtime's subdistribution reading of a pair of bits and is left to inference,
+as `SignatureAlg.unforgeableExp` leaves its own: writing it out names the finite-distribution
+coupling directly, which `scripts/check-pmf-boundary.sh` counts and this module has no allowance
+for, and it adds nothing to what the definition says.
 
 *Experiment split.* -/
 noncomputable def instrumentedEufExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -256,25 +247,23 @@ theorem instrumentedEufExp_fst {sigAlg : SignatureAlg (OracleComp spec) M PK SK 
 omit [DecidableEq M] [DecidableEq S] in
 /-- **The selector equation.**  At a constant selector the recorded bit is that constant.
 
-The projection equation above says what the first component of a run is.  This says what the
-second one is, at the selectors whose value is fixed in advance.  With it and its same-message
-twin absent nothing in the repository says what the second component *is* — the four `_le_branch`
-theorems below bound it above and identify it with nothing — and the final `return` may discard the
-selector it is handed or negate it.  Three edits of the two experiments' last lines were measured
-in that configuration; at this one they read
-`sel pk sk msg σ || true`, a literal `true` with the binder renamed `_sel`, and `!sel pk sk msg σ`,
-and each elaborates this module and its fixture with zero errors and zero warnings.  On the first,
-`hypertreeHalf` is provably `0` and `forsHalf` provably the advantage it splits, both proved in Lean
-on that mutant, so the dispatch split reads `a ≤ a + 0` while all eight half-bounds below hold; on
-the third the recorded bit is provably the selector's negation at both experiments, which exchanges
-the two names of each split — the class the four `example`s exist to refuse, reached where they
-cannot see it.  With this theorem present
-and the twin absent, each of the three gives one error here.
+The projection equation above says what the first component of a run is.  This says what the second
+one is, at the selectors whose value is fixed in advance.  With it and its same-message twin absent
+nothing in the repository says what the second component *is* — the four `_le_branch` theorems below
+bound it above and identify it with nothing — and the final `return` may discard the selector it is
+handed or negate it.  Three edits of the two experiments' last lines are silent in that
+configuration and refused by this theorem: `sel pk sk msg σ || true`, a literal `true` with the
+binder renamed `_sel`, and `!sel pk sk msg σ`.  Under the first, `hypertreeHalf` is provably `0` and
+`forsHalf` provably the advantage it splits, so the dispatch split reads `a ≤ a + 0` while all eight
+half-bounds below still hold; under the third the recorded bit is provably the selector's negation
+at both experiments, which exchanges the two names of each split — the class the four `example`s
+exist to refuse, reached where they cannot see it.  With this theorem present and the twin absent,
+each of the three is refused here.
 
 What it does not pin is anything about a selector that is *not* constant: neither which of a run's
 values the selector is applied to, nor any combination of such applications that agrees with the
 selector wherever the selector is constant.  The paragraphs that close the section beside the four
-halves state both, with their measurements.
+halves state both.
 
 *Experiment split.* -/
 theorem instrumentedEufExp_const {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -362,8 +351,8 @@ omit [DecidableEq M] [DecidableEq S] in
 /-- The selector equation for the same-message experiment.
 
 The same three edits at this experiment's last line are silent in the same way, and this is the
-statement that refuses them: with it present and `instrumentedEufExp_const` absent, each gives one
-error here.  With both present each gives two, one per experiment.
+statement that refuses them: with it present and `instrumentedEufExp_const` absent, each is refused
+here; with both present, at both experiments.
 
 *Experiment split.* -/
 theorem instrumentedSameMessageExp_const
@@ -423,11 +412,9 @@ routing a scheme game through the compatibility programs would put the depth-one
 point is that the two signers agree on outputs and differ in oracle traces — inside a probability
 argument.  This packaging avoids that and needs no `d = 1` hypothesis.
 
-Exposed, and what that attribute is for was read off the errors its removal produces: without it
-the three component equations below report `Not a definitional equality`, each with the note "This
-theorem is exported from the current module.  This requires that all definitions that need to be
-unfolded to prove this theorem must be exposed."  Three errors, one per equation, and no other
-error in the module; the per-declaration form is what the expose-boundary ratchet does not count.
+Exposed because the three component equations below are exported and prove themselves by unfolding
+it: an exported theorem may unfold only exposed definitions.  The per-declaration form of the
+attribute is what the expose-boundary ratchet does not count.
 
 *Deterministic inclusion.* -/
 @[expose] def generalAlg (prims : Primitives vp.params) [SampleableType prims.SkSeed]
@@ -776,60 +763,46 @@ the half names, and two edits one level down, of the experiment the half reads �
 paragraphs that close this section are about.
 
 **Which branch each name is attached to.**  `advantage_le_forsHalf_add_hypertreeHalf` is symmetric
-in its two summands, so it holds just as well of a module in which the two names are attached to
-the wrong branches, and no fixture can catch that: both are `noncomputable`.  The two `example`s
-below are that canary.  They are `example`s rather than theorems, and they are here rather than in
-the test module, because both reasons are the same one: the bodies are not exposed, so a
-`theorem … := rfl` exported from this module is refused ("Not a definitional equality", with the
-note that every definition that has to be unfolded must be exposed) and the same statement in an
-importing module is refused for the same reason.  An `example` is not exported and sees the body.
-Exchanging the two definitions' bodies fails these two at build time, and the two `_le_branch`
-theorems below with them: five errors with the split's proof left alone, four with it commuted by
-`add_comm`.
+in its two summands, so it holds just as well of a module in which the two names are attached to the
+wrong branches, and no fixture can catch that: both are `noncomputable`.  The two `example`s below
+are that canary.  They are `example`s rather than theorems, and they are here rather than in the
+test module, for one reason: the bodies are not exposed, so an exported `theorem … := rfl` is
+refused here, and the same statement in an importing module is refused for the same reason, while an
+`example` is not exported and sees the body.  Exchanging the two definitions' bodies fails these two
+at build time, and the two `_le_branch` theorems below with them.
 
 **Whether a half is an event of both of its bits.**  This the `example`s cannot reach, and the
 reason is structural: they are `rfl` against the body, so a paired edit of the body moves them with
 it.  The predicate is a conjunction of two conjuncts, so exactly three deletions weaken it, and the
 two families of four — the four theorems below and the four the same-message section states — refuse
-all three between them.  Each deletion is applied to all four halves, with both splits re-proved by
-monotonicity and all four `example`s moved:
+all three between them: dropping `x.1 = true` is refused by the four `…_le_advantage` theorems,
+dropping `x.2 = true` / `x.2 = false` by the four `…_le_branch` theorems, and dropping both by all
+eight.  Each theorem refuses its own weakening without the other seven present; nothing else in
+either library refuses any of the three, so without these eight and their `Pins` entries all three
+are silent.  That is why they are needed and not decoration: without the second conjunct each EUF
+half is *equal* to the advantage it splits, so the split reads `a ≤ a + a` and
+`forsHalf_le_advantage` reads `a ≤ a`; without the first, `Pr[sel = true] + Pr[sel = false]` is the
+experiment's total mass and dominates every event.
 
-* drop `x.1 = true`, keeping the selector conjunct: the four `…_le_advantage` theorems fail, four
-  errors, each an `Invalid projection` at the `hx.1` the weakened half no longer supplies;
-* drop `x.2 = true` / `x.2 = false`, keeping the success conjunct: the four `…_le_branch` theorems
-  fail the same way at `hx.2`, four errors, and nothing else in either module moves;
-* drop both: all eight fail, eight errors.
+The two families together bound each half above by the advantage, above by its own branch, and below
+— as a pair — by the split, which makes it an event of the success bit and of the bit the experiment
+recorded.  Whether the recorded bit is the selector's own value is one level down and not these
+eight theorems' question: a `return` that discarded or negated the selector leaves all eight
+provable.  `instrumentedEufExp_const` and its twin refuse that edit, and more.  Each is an equation
+about the *whole* experiment at a constant selector, so what it forces is that the recorded bit be
+that constant whenever the selector is, and that everything else the run does still be the library
+game's: recording the selector conjoined with the verification bit is refused at
+`instrumentedEufExp_const`; reading the selector at an independently sampled key pair, at that
+equation and at the projection equation above it; moving the same-message experiment's own success
+argument, at that experiment's pair.  What they do not reach is a recorded bit that already agrees
+with the selector wherever the selector is constant, and the paragraphs that close this section say
+what that leaves.
 
-Each theorem fires on its own: run against the weakening it refuses with the other seven absent,
-each of the eight still produces its one error.  And every one of the three weakenings is silent
-without them — with all eight theorems and their eight `Pins` entries removed, so that the
-class is run exactly as it stood before either family existed, all three give a library module and
-a fixture that build with zero errors and a freshly linked executable that passes all seventy-seven
-runtime checks.  That is why they are needed and not decoration: on the second weakening each EUF
-half is provably *equal* to the advantage it splits, which was checked by proving it on that
-mutant, so the split reads `a ≤ a + a` and `forsHalf_le_advantage` reads `a ≤ a`; on the first,
-`Pr[sel = true] + Pr[sel = false]` is the experiment's total mass and dominates every event.
-
-The two families together bound each half above by the advantage, above by its own branch, and
-below — as a pair — by the split, which makes it an event of the success bit and of the bit the
-experiment recorded.  Whether the recorded bit is the selector's own value is one level down and
-not these eight theorems' question: a `return` that discarded or negated the selector leaves all
-eight provable.  `instrumentedEufExp_const` and its twin refuse that edit, and more.  Each is an
-equation about the *whole* experiment at a constant selector, so what it forces is that the
-recorded bit be that constant whenever the selector is, and that everything else the run does still
-be the library game's: recording the selector conjoined with the verification bit gives one error,
-at `instrumentedEufExp_const`; reading the selector at an independently sampled key pair gives two,
-at that equation and at the projection equation above it; moving the same-message experiment's own
-success argument gives two, at that experiment's pair.  What they do not reach is a recorded bit
-that already agrees with the selector wherever the selector is constant, and the paragraphs that
-close this section say what that leaves.
-
-What none of the statements above pins is the *selector argument*, which is named in this module
-and which a paired edit of this module could therefore move throughout; the four `Pins` entries at
-which the test module restates the branch bounds do pin it, being in a file no library-side edit
-touches.  A module whose two halves of one split are taken at a constant selector rather than at
-`forsArm` or `randomizerLogged` elaborates here with zero errors and fails exactly that split's two
-`Pins` entries, with a `Type mismatch` each.
+What none of the statements above pins is the *selector argument*, which is named in this module and
+which a paired edit of this module could therefore move throughout; the four `Pins` entries at which
+the test module restates the branch bounds do pin it, being in a file no library-side edit touches.
+A module whose two halves of one split are taken at a constant selector rather than at `forsArm` or
+`randomizerLogged` is well-formed here and is refused by exactly that split's two `Pins` entries.
 
 Two directions one layer below all of these are refused by nothing, here or in the test module, and
 both are edits of what the experiments' last lines record.
@@ -837,45 +810,39 @@ both are edits of what the experiments' last lines record.
 *Which of a run's values each selector is applied to.*  Passing the signing log's first message,
 where the log has one, in place of the message the adversary returned — in both experiments' last
 lines — leaves the two projection equations, the two selector equations, all eight bounds, both
-splits, the four `example`s and every fixture pin silent: measured, zero errors and zero warnings in
-both modules.
+splits, the four `example`s and every fixture pin silent.
 
 *What the recorded bit is, beyond its value at a constant selector.*  The two selector equations are
 stated at constant selectors, so any combination of applications of the selector that agrees with it
 wherever the selector is constant satisfies both of them at every `b` while recording a different
 predicate.  The simplest such combinations are the `f : Bool → Bool → Bool` with `f b b = b` applied
 to two applications of the selector; a third application conjoined in, and a choice between two
-applications made by a run value, are as silent as those.
-Recording `sel pk sk msg σ && sel pk sk ((log.map Sigma.fst).headD msg) σ`, and the same at the
-same-message experiment, makes `forsHalf` the probability that the adversary forges and the FORS
-arm is true both at its own forgery and at the signing log's first message — a strictly
-smaller event, with `hypertreeHalf` strictly larger, both splits still provable and every equation
-this module states still true.  Measured: zero errors and zero warnings in both modules, a full
-`lake build` of both libraries at exit 0, and a freshly linked executable that passes all
-seventy-seven runtime checks.  Zero errors and zero warnings in both modules hold in the same place
-for `||`, for `cond (sel … == sel …) (sel …) (!sel …)`, for a third application conjoined in and
-for `cond (log.wasQueried msg) (sel …) (sel …)`.
+applications made by a run value, are as silent as those.  Recording `sel pk sk msg σ && sel pk sk
+((log.map Sigma.fst).headD msg) σ`, and the same at the same-message experiment, makes `forsHalf`
+the probability that the adversary forges and the FORS arm is true both at its own forgery and at
+the signing log's first message — a strictly smaller event, with `hypertreeHalf` strictly larger,
+both splits still provable and every equation this module states still true.  The same is silent in
+the same place for `||`, for `cond (sel … == sel …) (sel …) (!sel …)`, for a third application
+conjoined in and for `cond (log.wasQueried msg) (sel …) (sel …)`.
 
 One further law narrows the second direction without closing it, and is recorded here rather than
-stated.  Post-composition naturality in the selector — the experiment at
-`fun pk sk m s => g (sel pk sk m s)` is `fun x => (x.1, g x.2)` mapped over the experiment at `sel`,
-for any `g : Bool → Bool` — is provable here by the same `h_pull` argument the two selector
-equations take.  It is not a canary beside them but a generalisation:
-`instrumentedEufExp_const` follows from it and the projection equation in three lines — the law at
-the constantly-`false` selector and a constant `g`, the projection equation at that same selector,
-and `Functor.map_map` — which elaborates here at zero errors, and gives two errors when the law is
-removed.  Of the five shapes above it refuses three: the `&&`, the `||` and the third conjoined
-application each give one error, at the law itself, because `!a && !b` and `!(a && b)` differ.  The
-other two satisfy it — the `cond` shape at every `g : Bool → Bool`, and the run-value choice because
-post-composition passes through a `cond` — and each is back to zero errors and zero warnings in both
-modules once the law's `simp` is given the Boolean lemma it needs: `Bool.apply_cond` for the
-run-value choice, and for the `cond` shape one that has itself to be stated and proved, by
-decomposing `g` at `true` and `false` and deciding the four Booleans that remain.  So what the law
-offers is a change of exported shape rather than of what is proved — `instrumentedEufExp_const`
-becomes its corollary, and the same move would be wanted at the same-message experiment — and it
-would leave the direction open either way.  Refusing the family outright needs a law about the
-joint distribution of a run's key pair, message and signature, which this slice does not state.
-Both directions are recorded here rather than closed. -/
+stated.  Post-composition naturality in the selector — the experiment at `fun pk sk m s => g (sel pk
+sk m s)` is `fun x => (x.1, g x.2)` mapped over the experiment at `sel`, for any `g : Bool → Bool` —
+is provable here by the same `h_pull` argument the two selector equations take.  It is not a canary
+beside them but a generalisation: `instrumentedEufExp_const` follows from it and the projection
+equation in three lines — the law at the constantly-`false` selector and a constant `g`, the
+projection equation at that same selector, and `Functor.map_map`.  Of the five shapes above it
+refuses three: the `&&`, the `||` and the third conjoined application, because `!a && !b` and `!(a
+&& b)` differ.  The other two satisfy it — the `cond` shape at every `g : Bool → Bool`, and the
+run-value choice because post-composition passes through a `cond` — and each is silent again once
+the law's `simp` is given the Boolean lemma it needs: `Bool.apply_cond` for the run-value choice,
+and for the `cond` shape one that has itself to be stated and proved, by decomposing `g` at `true`
+and `false` and deciding the four Booleans that remain.  So what the law offers is a change of
+exported shape rather than of what is proved — `instrumentedEufExp_const` becomes its corollary, and
+the same move would be wanted at the same-message experiment — and it would leave the direction open
+either way.  Refusing the family outright needs a law about the joint distribution of a run's key
+pair, message and signature, which this module does not state.  Both directions are recorded here
+rather than closed. -/
 
 /-- The FORS half is at most the advantage it splits.
 
@@ -907,9 +874,8 @@ theorem hypertreeHalf_le_advantage (adv : unforgeableAdv (generalAlg prims)) :
 /-- The FORS half is at most the probability of the branch it is named for.
 
 The other conjunct's bound, beside `forsHalf_le_advantage`: that one pins `forsHalf` to the success
-bit, this one to the selector bit.  Without it a `forsHalf` that had dropped `x.2 = true` would be
-`adv.advantage ProbCompRuntime.probComp` itself, which is provable on that mutant and satisfies
-`forsHalf_le_advantage` by equality.
+bit, this one to the selector bit.  Without it nothing ties `forsHalf` to the selector bit: an event
+consisting of the success conjunct alone is the advantage itself.
 
 *Experiment split.* -/
 theorem forsHalf_le_branch (adv : unforgeableAdv (generalAlg prims)) :
@@ -1235,10 +1201,9 @@ Both kinds of canary again, for the same edits and for the same reasons: two `ex
 name attached to the wrong branch, and four theorems — two bounding each half by the same-message
 advantage it splits, two bounding it by its own branch — against the deletion of either conjunct and
 against the deletion of both.  These four are the same-message members of the two families the
-dispatch section's paragraph describes, and the counts there are for all eight together.  Here the
-`true` branch is the *same-randomizer* one, because `randomizerLogged` reports membership; getting
-that round the wrong way is the likeliest single-character error in the module and the reason the
-two `example`s are stated at all. -/
+dispatch section's paragraph describes.  Here the `true` branch is the *same-randomizer* one,
+because `randomizerLogged` reports membership, and the two `example`s are what fix that
+orientation. -/
 
 /-- The same-randomizer half is at most the same-message advantage it splits.
 

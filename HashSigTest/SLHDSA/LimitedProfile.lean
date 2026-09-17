@@ -72,16 +72,15 @@ restatements at this bundle.
 ## What the checks cannot catch
 
 * **Anything about a probability.**  See above.
-* **A paired edit of the `w − 2` coefficient — though not the one the general fixture
-  records.**  At this profile the numeral is not a free choice:
-  `limitedParams_wotsFUd_coefficient` is `rfl` against the parameter set, so changing `2` in that
-  equation, in the two written-out corollaries,
-  or in all three at once is refused by the library module itself, with three, one and two errors
-  respectively.  What is silent is the *general* edit `HashSigTest.SLHDSA.Composition` measures:
-  change `Summands.bound`'s expression there, its fixture with it, and this module's equation to
-  match, and everything here is provable again with a different numeral.  So what this file adds
-  is a numeral that has to agree with the parameter set, and not a check on the shape of `w − 2`,
-  which the source citation in the general module is still the only thing that checks.
+* **A paired edit of the `w − 2` coefficient — though not the one the general fixture records.**  At
+  this profile the numeral is not a free choice: `limitedParams_wotsFUd_coefficient` is `rfl`
+  against the parameter set, so changing `2` in that equation, in the two written-out corollaries,
+  or in all three at once is refused by the library module itself, in every combination.  What is
+  silent is the *general* edit `HashSigTest.SLHDSA.Composition` records: change `Summands.bound`'s
+  expression there, its fixture with it, and this module's equation to match, and everything here is
+  provable again with a different numeral.  So what this file adds is a numeral that has to agree
+  with the parameter set, and not a check on the shape of `w − 2`, which the source citation in the
+  general module is still the only thing that checks.
 * **Whether the twelve summands are the source's.**  A reading of the EasyCrypt development,
   recorded in `HashSig.SLHDSA.Security.Composition`'s docstring, and no fixture can check it.
 * **Whether this bundle is the one anyone executes.**  It is not:
@@ -251,9 +250,9 @@ the section docstring above.
 **These twelve are not independent, and the point of the ones that are implied is the order they
 stand in.**  A check implied by the *conjunction* of others still fires first on the edit it is
 named for and names the cell that moved, which a check implied by conjuncts that all precede it
-cannot do at all.  Both classes were measured rather than reasoned about, over the `2 ^ 12` ways
-of dropping roles from the table — 512 distinct role columns, each counted eight times because the
-three roleless rows have nothing to drop:
+cannot do at all.  Both classes hold over the `2 ^ 12` ways of dropping roles from the table — 512
+distinct role columns, each counted eight times because the three roleless rows have nothing to
+drop:
 
 * the order check, "the roleless three are the two PRF hops and the ITSR term" and the role check
   together imply "twelve summands", "names distinct", "three summands have no cap role", "all eight
@@ -279,13 +278,13 @@ three roleless rows have nothing to drop:
   `skgPrf` given a cap at "the roleless three carry no cap", `wotsTlTcr`'s cap at `2 ^ 23` at
   "every role row carries its own cap", `wotsFTcr` losing its arity at "every role row carries an
   arity", and `wotsFTcr`'s arity at `3` at "the five single-node games have arity one";
-* two checks that could *not* fire were deleted.  "The FORS-F role is the only one used twice" is
-  "twelve summands" and "three summands have no cap role" restated, both of which precede it: of
-  the 4096 masks none satisfies those two and falsifies it, and the two edits that falsify it —
-  `forsFTcr` losing its role, cap and arity, and `hmsgItsr` gaining all three — both stop at "three
-  summands have no cap role".  "Every cap is positive" is implied by "every role row carries its
-  own cap" together with the measured fact that all eight of this profile's caps are positive, so
-  `wotsTlTcr`'s cap at `0` stopped one check earlier; it would be worth having again at a
+* two predicates are absent because no edit could reach them.  "The FORS-F role is the only one used
+  twice" is "twelve summands" and "three summands have no cap role" restated, both of which precede
+  it: of the 4096 masks none satisfies those two and falsifies it, and the two edits that falsify it
+  — `forsFTcr` losing its role, cap and arity, and `hmsgItsr` gaining all three — both stop at
+  "three summands have no cap role".  "Every cap is positive" is implied by "every role row carries
+  its own cap" together with the fact that all eight of this profile's caps are positive, so
+  `wotsTlTcr`'s cap at `0` stops one check earlier; it would be worth having at a
   parameter set with a zero cap. -/
 def checkSummandTable : IO Unit := do
   ensure "twelve summands" (summands.length == 12)
@@ -360,10 +359,9 @@ example : SampleableType limitedPrimitives.SkPrf := inferInstance
 example : DecidableEq limitedPrimitives.Y := inferInstance
 example : DecidableEq limitedPrimitives.PkSeed := inferInstance
 example : DecidableEq limitedPrimitives.AdrsKey := inferInstance
--- `noncomputable`, measured: without it this pin is itself a compiled constant and the build
--- reports that it depends on the library module's `noncomputable` `Fintype` instance.  That
--- instance is `noncomputable` for the reason its own comment gives, and this is the pin
--- inheriting it.
+-- `noncomputable`, because without it this pin is itself a compiled constant and the build reports
+-- that it depends on the library module's `noncomputable` `Fintype` instance.  That instance is
+-- `noncomputable` for the reason its own comment gives, and this is the pin inheriting it.
 noncomputable example : Fintype limitedPrimitives.Y := inferInstance
 example : Inhabited limitedPrimitives.Y := inferInstance
 
@@ -445,17 +443,17 @@ takes a `Vector limitedPrimitives.Y 6` and the WOTS+ public-key compression a
 `Vector limitedPrimitives.Y 68`.  The five single-node games take one `limitedPrimitives.Y` and
 the two arity-two ones a pair of them.
 
-**What separates a pin is its statement and not the lemma that proves it, and the whole
-substitution matrix was measured.**  Each of the eight directly-proved statements was re-proved by
-each of the eight equations: sixty-four elaborations, of which forty-eight are refused and sixteen
-accepted.  The refusals are every cross-arity cell — the WOTS+-`F` undetectability statement
-re-made about the arity-two FORS-`H` game gives three errors, the FORS-`H` statement made at the
-single-node type gives four — and they include the standalone/collection boundary, one error each
-way between `forsFOpenPre` and any WOTS+-`F` collection game.  Of the sixteen accepted, eight are
-the diagonal; the other eight are the ordered pairs inside `{wotsFUd, wotsFTcr, wotsFPre}` and
-`{forsHTcr, xmssHTcr}`, which are four unordered pairs of games sharing an arity and a `Thash`.
-Three of those four are told apart by their caps, which `checkDarkCells` asserts for the `H` pair;
-the fourth, `wotsFUd`/`wotsFPre`, is this module's **second dark cell**, where the caps are equal
+**What separates a pin is its statement and not the lemma that proves it, across the whole
+substitution matrix.**  Each of the eight directly-proved statements re-proved by each of the eight
+equations is sixty-four elaborations, of which forty-eight are refused and sixteen accepted.  The
+refusals are every cross-arity cell — the WOTS+-`F` undetectability statement re-made about the
+arity-two FORS-`H` game, the FORS-`H` statement made at the single-node type — and they include the
+standalone/collection boundary, in both directions between `forsFOpenPre` and any WOTS+-`F`
+collection game.  Of the sixteen accepted, eight are the diagonal; the other eight are the ordered
+pairs inside `{wotsFUd, wotsFTcr, wotsFPre}` and `{forsHTcr, xmssHTcr}`, which are four unordered
+pairs of games sharing an arity and a `Thash`.  Three of those four are told apart by their caps,
+which `checkDarkCells` asserts for the `H` pair; the fourth, `wotsFUd`/`wotsFPre`, is this module's
+**second dark cell**, where the caps are equal
 at every parameter set and only the two `Certificate` field types separate them. -/
 
 example (pkSeed : limitedPrimitives.PkSeed) (address : Adrs)
@@ -598,42 +596,38 @@ end Pins
 
 /-! ## The vacuity canary, at this bundle
 
-The two previous pull requests' measurement, re-run at the concrete profile.  A closed
-`SLHDSA.Security.Certificate` is constructible at an arbitrary validated parameter set, an
-arbitrary bundle carrying the instances the structure asks for and an arbitrary adversary, from an
-address key and a public seed and no security assumption at all, and the bound it names is at
-least one.  Applied here, that says the corollaries of
-`HashSig.SLHDSA.Security.LimitedProfile` are no stronger than what they instantiate:
-`limitedAdvantage_le_bound` at the certificate below reads
+`HashSigTest.SLHDSA.Composition`'s canary, restated at the concrete profile.  A closed
+`SLHDSA.Security.Certificate` is constructible at an arbitrary validated parameter set, an arbitrary
+bundle carrying the instances the structure asks for and an arbitrary adversary, from an address key
+and a public seed and no security assumption at all, and the bound it names is at least one.
+Applied here, that says the corollaries of `HashSig.SLHDSA.Security.LimitedProfile` are no stronger
+than what they instantiate: `limitedAdvantage_le_bound` at the certificate below reads
 `adv.advantage ≤ (something ≥ 1)`, which `probOutput_le_one` gives with extra steps, and the two
 strong-unforgeability corollaries read the same with a residual added on the right.
 
 **Why it is restated at the bundle rather than cited.**  The construction is generic in the
-parameter set and the bundle, so the concrete case follows from it — but it follows only through
-the nine instances this pull request declares, and those are the part a concrete profile adds.
-Restating it here is what catches an edit that breaks the concrete case alone, exactly as
-`HashSigTest.SLHDSA.Composition` restates its own canary at the toy bundle for the same reason.
+parameter set and the bundle, so the concrete case follows from it — but it follows only through the
+nine carrier instances `HashSig.SLHDSA.Security.LimitedProfile` declares, and those are the part a
+concrete profile adds.  Restating it here catches an edit that breaks the concrete case alone,
+exactly as `HashSigTest.SLHDSA.Composition` restates its own canary at the toy bundle for the same
+reason.
 
 **Why these declarations are copied rather than imported.**  The construction is
 `HashSigTest.SLHDSA.Composition`'s, carried unchanged through `HashSigTest.SLHDSA.SufBound`, and
 importing either from a `lean_exe` root is not possible: each declares a top-level `main`, and a
-second declaration of that name reports `` `main` has already been declared`` — measured, not
-assumed.  The lane has no shared fixture module either, and adding one would mean editing the two
-fixtures below this one in the stack, both of which are open pull requests still under review —
-neither is on `main`, which carries five `HashSig/SLHDSA/Security/` modules and none of slice 8.
-What is copied is the free-certificate stack and the two strong-unforgeability headlines above it:
-fifteen declarations, the two idle adversaries, the
+second declaration of that name reports `` `main` has already been declared``.  The lane has no
+shared fixture module either.  What is copied is the free-certificate stack and the two
+strong-unforgeability headlines above it: fifteen declarations, the two idle adversaries, the
 open-preimage adversary that records nothing with its three advantage lemmas and its counting
-interface, the winning preimage adversary with its inverse, the certificate with the bound it
-names, and the two headlines.  What is **not** copied is `HashSigTest.SLHDSA.Composition`'s
-anchoring analysis — `winningOpenPre`, `anchoredCertificate` and `nonempty_countingInterface_iff`
-— for the reason `HashSigTest.SLHDSA.SufBound` gives, and for one more that is specific to this
-bundle: the equivalence those end in carries `2 ≤ Fintype.card` of the node type, and at
-`Bytes 16` that is a statement about `2 ^ 128` elements which no `decide` in this repository
-reaches.
+interface, the winning preimage adversary with its inverse, the certificate with the bound it names,
+and the two headlines.  What is **not** copied is `HashSigTest.SLHDSA.Composition`'s anchoring
+analysis — `winningOpenPre`, `anchoredCertificate` and `nonempty_countingInterface_iff` — for the
+reason `HashSigTest.SLHDSA.SufBound` gives, and for one more that is specific to this bundle: the
+equivalence those end in carries `2 ≤ Fintype.card` of the node type, and at `Bytes 16` that is a
+statement about `2 ^ 128` elements which no `decide` in this repository reaches.
 
-*Copied verbatim from `HashSigTest.SLHDSA.SufBound` except for the docstrings of this section; a
-reviewer can diff the blocks.* -/
+*The declarations below are `HashSigTest.SLHDSA.SufBound`'s, verbatim except for the docstrings
+of this section.* -/
 
 section Vacuity
 
@@ -659,13 +653,10 @@ def idleUd {ix PkS Tw Msg Msg' Nd : Type}
   pick := pure ()
   distinguish := fun _ _ => pure false
 
--- Exposed, and it is the only one of the seven definitions in this section that is: the file
--- elaborates clean with this attribute and no other one here.  Inside a `public section` a
--- definition's body is not available to later declarations, so without it
+-- Exposed, and the only one of the seven definitions in this section that needs to be.  Inside a
+-- `public section` a definition's body is not available to later declarations, so without it
 -- `(Problem.toDSPR (idleOpenPre prob)).State` does not reduce to `Unit × _ × _` and
--- `idleOpenPre_toDSPR_choose` cannot even be stated: three errors, a `Type mismatch` at that
--- statement, the `unknownIdentifier` it causes in `idleOpenPre_dspr`, and that theorem's
--- `unsolved goals`.
+-- `idleOpenPre_toDSPR_choose` cannot even be stated.
 /-- An open-preimage adversary that commits to no target and opens nothing. -/
 @[expose] def idleOpenPre {ix PkS Tw Msg Nd : Type} [Inhabited Msg]
     (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :

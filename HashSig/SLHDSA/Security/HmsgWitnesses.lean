@@ -50,8 +50,9 @@ assumption, the FIPS-shaped one is strictly the stronger.
 
 Those last two paragraphs speak of adversaries and hardness, and nothing here proves them at that
 level: they are the informal reading of the deterministic `Iff` below together with the obvious
-query embedding, and the statements that carry a probability, an adversary and an advantage are
-slice 8's.  What this module proves is the deterministic core they rest on.
+query embedding, and the statements that carry a probability, an adversary and an advantage live in
+`Security.SchemeGames` and `Security.Composition`.  What this module proves is the deterministic
+core they rest on.
 
 **What would be lost if a reduction needed the converse.**  A reduction that wanted to discharge a
 Lean SLH-DSA bound from the source's assumption alone — that is, to conclude wide-hardness from
@@ -59,8 +60,8 @@ narrow-hardness — cannot, and no amount of care in stating the bridge would le
 reduction must do instead is stay inside one fibre, and that is a property of how it forms its
 inputs, not of any lemma here.  `embedTargets` and the candidate side of `wins_embedTargets_iff`
 share one `(pkSeed, pkRoot)` argument pair for exactly that reason: a reduction that let the two
-drift apart cannot instantiate that lemma at all, rather than instantiating it at a statement a
-reviewer has to notice is the wrong one.  The drifted terms themselves type-check perfectly well —
+drift apart cannot instantiate that lemma at all, rather than instantiating it silently at a
+statement about different terms.  The drifted terms themselves type-check perfectly well —
 `notMem_embedTargets_of_ne` and `wins_of_hmsg_agree` are *about* such terms — so what the shared
 pair buys is a unification constraint on one lemma, not a type-level guarantee about reductions.
 
@@ -100,17 +101,16 @@ reading the `KeyedHash.ITSR` module's own docstring gives the sampled key, and i
 whichever distribution is chosen.
 
 Choosing one is this development's own step, and the choice is forced rather than argued.
-`KeyedHashFamily.keygen` is a `ProbComp` field, not a theory parameter carrying a losslessness
-proof obligation: omit it and Lean reports `Fields missing: keygen`, so the Lean object has to name
-a computation exactly where the clone can defer.  The only key distribution in scope is the ambient
-instance's — drop `[SampleableType prims.Y]` from `hmsgNarrowItsrProblem` and the single error is
-`failed to synthesize instance of type class SampleableType prims.Y`, at `$ᵗ prims.Y`; the
-`Primitives` bundle carries no distribution of any kind, its `PRFmsg` being a function rather than
-a sampler, so there is nothing weaker to inherit.  And `SampleableType`'s defining law is
-`Pr[= x | selectElem] = Pr[= y | selectElem]`, which *is* uniformity.  `hmsgItsrProblem` made the
-same forced choice already, and the two have to agree.  So `hmsgNarrowItsrProblem` fixes the key
-distribution to `$ᵗ prims.Y`, and the narrow problem is the source's shape *up to the key
-distribution*, which it strengthens from an arbitrary lossless one to the uniform one.
+`KeyedHashFamily.keygen` is a `ProbComp` field, not a theory parameter carrying a losslessness proof
+obligation: it cannot be omitted, so the Lean object has to name a computation exactly where the
+clone can defer.  The only key distribution in scope is the ambient instance's — without
+`[SampleableType prims.Y]`, `hmsgNarrowItsrProblem`'s `$ᵗ prims.Y` has no instance to sample at; the
+`Primitives` bundle carries no distribution of any kind, its `PRFmsg` being a function rather than a
+sampler, so there is nothing weaker to inherit.  And `SampleableType`'s defining law is `Pr[= x |
+selectElem] = Pr[= y | selectElem]`, which *is* uniformity.  `hmsgItsrProblem` made the same forced
+choice already, and the two have to agree.  So `hmsgNarrowItsrProblem` fixes the key distribution to
+`$ᵗ prims.Y`, and the narrow problem is the source's shape *up to the key distribution*, which it
+strengthens from an arbitrary lossless one to the uniform one.
 
 The strengthening costs nothing for what is proved here, and that is derivable rather than
 asserted: `ITSRProblem.Wins` is built from `indexSet` and `targetIndexSet`, both of which read
@@ -164,18 +164,18 @@ to.  `globalLeaf` is grounded the same way, against `forsSigLeafIndex`, which
 line 5.
 
 A shift of `globalLeaf` does not stay at two sites.  Shifting the definition together with
-`globalLeaf_of_mem` and nothing else leaves seven errors; carrying the shift through until the
-library elaborates clean moves nine declarations — the definition, `globalLeaf_eq`,
-`globalLeaf_lt`, `globalLeaf_div_pow_a`, `globalLeaf_of_mem`, `HmsgIndex.ext_of_coords`,
-`uncoveredTarget_globalLeaf`, `forsSign_reveals_of_mem_hmsgIndices` and
-`coord_unrevealed_of_notMem` — and seven of the fixture's statement pins with them.  Those pins
-close the shift at build time.  At run time it is closed by six checks in
-`HashSigTest.SLHDSA.HmsgWitnesses`, each of which reads the shifted leaf against something that
-does not move with it, and each of which was measured on its own with the other five removed:
-`forsSigLeafIndex`, the separately reviewed definition with its own citation; a hand-written
-`tree * 2 ^ a + leaf`; the divide-back to the FORS tree; the `k * 2 ^ a` bound; the secret value
-honest signing reveals at the coordinate; and a hand-written list of the two global leaves the
-forged digest is expected to select, read against the hand-written table of `Adrs` records.
+`globalLeaf_of_mem` and nothing else does not typecheck; carrying the shift through until the
+library does takes nine declarations with it — the definition, `globalLeaf_eq`, `globalLeaf_lt`,
+`globalLeaf_div_pow_a`, `globalLeaf_of_mem`, `HmsgIndex.ext_of_coords`,
+`uncoveredTarget_globalLeaf`, `forsSign_reveals_of_mem_hmsgIndices` and `coord_unrevealed_of_notMem`
+— and seven of the fixture's statement pins with them.  Those pins close the shift at build time.
+At run time it is closed by six checks in `HashSigTest.SLHDSA.HmsgWitnesses`, each of which reads
+the shifted leaf against something that does not move with it, and each of which closes the shift on
+its own, without the other five: `forsSigLeafIndex`, the separately reviewed definition with its own
+citation; a hand-written `tree * 2 ^ a + leaf`; the divide-back to the FORS tree; the `k * 2 ^ a`
+bound; the secret value honest signing reveals at the coordinate; and a hand-written list of the two
+global leaves the forged digest is expected to select, read against the hand-written table of `Adrs`
+records.
 
 The per-index read of that `Adrs` table is *not* one of the six.  The shifted global leaf stands on
 both sides of its comparison, so with only that check present the fully carried-through shift
@@ -200,10 +200,10 @@ fails.
 instance address together with a global leaf number — and not at the level of a secret *value*.
 "The signer never revealed this value" is not derivable and is not true in general: two
 `forsSkGenCore` calls at two different coordinates may collide, and nothing in the development
-excludes it.  Neither is the game-level reading derivable here: turning a coordinate into a
-position in an OpenPRE target list needs an index function from coordinates to list positions,
-which no module on this branch supplies.  What is available, and what the OpenPRE winning condition
-asks for, is that the coordinate itself was opened by no query, and that is what is proved.
+excludes it.  Neither is the game-level reading derivable here: turning a coordinate into a position
+in an OpenPRE target list needs an index function from coordinates to list positions, which no
+module in this repository supplies.  What is available, and what the OpenPRE winning condition asks
+for, is that the coordinate itself was opened by no query, and that is what is proved.
 
 The source proves no such lemma in isolation: the corresponding step is folded into the `conseq`
 that discharges the OpenPRE postcondition and closed by SMT over the concrete opened-index list.

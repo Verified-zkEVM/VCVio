@@ -50,16 +50,16 @@ tree, and the honest tree is what `sk` generates.
 
 The three *transcript-transport* statements are about the role ledgers of a `ValidatedParams`.
 `wotsLeafAdrs_eq_wotsInstanceAdrs` takes a layer position alone and states no membership: it
-identifies the address an XMSS witness names with the one a slice-1 ledger is indexed by, which is
-what lets the WOTS+ ledger lemmas apply unchanged.  `mem_xmssNodeAddresses_of_leaf` takes a layer
-position, a node height and that height's two bounds.  `xmssNodeAdrsKey_injective` takes a
-primitive bundle, an `EncodedTargetLedgerConditions`, and two coordinate tuples with their own
-range hypotheses; the tuples are implicit arguments rather than bound by a lambda, so they are free
-in the statement.  None of the three mentions a signature or a secret seed.  Nothing here
-constructs an adversary, states an advantage, performs a game hop, or claims that any honest
-execution queried the honest value a witness attacks.  In particular a witness lemma is **not** a
-reduction: that the game's target was committed before the forgery was seen is a
-simulation-fidelity obligation of the later program-level slice, not a fact established here.
+identifies the address an XMSS witness names with the one a `Security.ReachableTargets` ledger is
+indexed by, which is what lets the WOTS+ ledger lemmas apply unchanged.
+`mem_xmssNodeAddresses_of_leaf` takes a layer position, a node height and that height's two bounds.
+`xmssNodeAdrsKey_injective` takes a primitive bundle, an `EncodedTargetLedgerConditions`, and two
+coordinate tuples with their own range hypotheses; the tuples are implicit arguments rather than
+bound by a lambda, so they are free in the statement.  None of the three mentions a signature or a
+secret seed.  Nothing here constructs an adversary, states an advantage, performs a game hop, or
+claims that any honest execution queried the honest value a witness attacks.  In particular a
+witness lemma is **not** a reduction: that the game's target was committed before the forgery was
+seen is a simulation-fidelity obligation of a reduction, not a fact established here.
 
 The one-layer split proved here is not the whole hypertree translation.  Each of the source's three
 flags is an existential over the `d` layers, and each reduction then picks one layer with a `find`
@@ -91,14 +91,13 @@ declaration.
 
 * `wotsLeafAdrs_eq_wotsInstanceAdrs`, `mem_xmssNodeAddresses_of_leaf`, `xmssNodeAdrsKey_injective`.
 
-The `wots` branch's own three ledgers are slice-1 objects, defined in
-`HashSig.SLHDSA.Security.ReachableTargets`: `wotsStepAddresses`, `optionalWotsAddresses` and
-`wotsPkAddresses`.  They are reached by `WotsWitnesses`' `mem_wotsStepAddresses_of_lt` and
-`wotsPreimageAdrs_mem_optionalWotsAddresses`, and by `ReachableTargets`' own `mem_wotsPkAddresses`
-— which `WotsWitnesses` likewise uses directly rather than restating.  All three membership lemmas
-are stated at `wotsInstanceAdrs pos`, and an XMSS witness names
-`wotsLeafAdrs pos.toAdrs pos.leaf.val`; the two are the same address, which is what
-`wotsLeafAdrs_eq_wotsInstanceAdrs` records.  Nothing is restated.
+The `wots` branch's own three ledgers are defined in `HashSig.SLHDSA.Security.ReachableTargets`:
+`wotsStepAddresses`, `optionalWotsAddresses` and `wotsPkAddresses`.  They are reached by
+`WotsWitnesses`' `mem_wotsStepAddresses_of_lt` and `wotsPreimageAdrs_mem_optionalWotsAddresses`, and
+by `ReachableTargets`' own `mem_wotsPkAddresses` — which `WotsWitnesses` likewise uses directly
+rather than restating.  All three membership lemmas are stated at `wotsInstanceAdrs pos`, and an
+XMSS witness names `wotsLeafAdrs pos.toAdrs pos.leaf.val`; the two are the same address, which is
+what `wotsLeafAdrs_eq_wotsInstanceAdrs` records.  Nothing is restated.
 
 `xmssNodeAdrsKey_injective` consumes `EncodedTargetLedgerConditions` rather than assuming a fresh
 injectivity hypothesis, so a concrete profile discharges it through
@@ -425,13 +424,7 @@ together with the validated parameters and the byte laws — never the root, as 
 shows, though no statement here isolates the existence half.  At `msg = msg'` every chain's two step
 counts agree, so the search can run out and give `none` however the climb went.
 
-Over a 768-case sweep at the toy bundle of `HashSigTest.SLHDSA.XmssWitnesses` — sixteen chain-`3`
-perturbations by three authentication-path choices, level `0`, level `1` or none, by sixteen path
-perturbations, all of them on two distinct messages — 608 cases miss the honest root; the 552 of
-those that take the Merkle branch all return `none`, the 56 that take the WOTS+ branch all return
-a witness, and no case in the sweep returns an invalid one.  The 768 are cases, not distinct
-signatures: the path mask is inert at the `none` level and mask `0` reproduces the honest path at
-every level, so they realise 496 signatures.  The malformed-forgery canary there pins both halves.
+`HashSigTest.SLHDSA.XmssWitnesses` exercises both branches on signatures that miss the honest root.
 `findXmssWitness_sound` carries the root hypothesis for a different reason, recorded on that
 theorem.
 
@@ -593,15 +586,15 @@ theorem findXmssWitness_isSome (valid : p.Valid) (prims : Primitives p) [Decidab
 /-! ## Ledger membership and encoded distinctness
 
 *Transcript transport.*  Every address an XMSS witness names at a reachable layer position is a
-member of the slice-1 role ledger it is submitted against, and — under
+member of the `Security.ReachableTargets` role ledger it is submitted against, and — under
 `EncodedTargetLedgerConditions` — distinct addresses of that ledger carry distinct encoded tweaks.
 
 Only the `hCollision` branch has a ledger of its own here: it attacks `xmssH`, whose ledger is
 `xmssNodeAddresses` (`mem_xmssNodeAddresses_of_leaf`, `xmssNodeAdrsKey_injective`).  The `wots`
-branch's three ledgers are slice-1 objects of `HashSig.SLHDSA.Security.ReachableTargets`, reached
-by `WotsWitnesses`' membership lemmas and by `mem_wotsPkAddresses` directly, at the address
-`wotsInstanceAdrs pos`, which `wotsLeafAdrs_eq_wotsInstanceAdrs` identifies with the address an
-XMSS witness names.
+branch's three ledgers are objects of `HashSig.SLHDSA.Security.ReachableTargets`, reached by
+`WotsWitnesses`' membership lemmas and by `mem_wotsPkAddresses` directly, at the address
+`wotsInstanceAdrs pos`, which `wotsLeafAdrs_eq_wotsInstanceAdrs` identifies with the address an XMSS
+witness names.
 
 These are statements about the ledgers, not about any execution: nothing here says a logged query
 carried the witness values. -/
@@ -659,15 +652,15 @@ theorem xmssNodeAdrsKey_injective {prims : Primitives vp.params}
 /-! ## Game shapes
 
 `XmssWitness.Valid` is stated in the construction's own vocabulary (`prims.H` at a structural
-`Adrs`, and `WotsWitness.Valid` for the other branch).  The bridge below rewrites the
-`hCollision` branch into `xmssHTcrCProblem`'s `eval` vocabulary at the encoded tweak, using
-`CanonicalGames.xmssHTcrCProblem_eval_adrsToKey`.  That equation is already on the slice-6 base, so
+`Adrs`, and `WotsWitness.Valid` for the other branch).  The bridge below rewrites the `hCollision`
+branch into `xmssHTcrCProblem`'s `eval` vocabulary at the encoded tweak, using
+`CanonicalGames.xmssHTcrCProblem_eval_adrsToKey`.  That equation is already in `CanonicalGames`, so
 this module adds no new `Problem`-`eval` equation of its own; the bridge below is a consumer of
-slice 6's.  The proof names the rewrite explicitly rather than relying on its `@[simp]` attribute,
-because the sibling bridges of `CanonicalGames` do not all carry one.  It rewrites *both* sides of
-the hash equation, so the equation it concludes is stated in the game's vocabulary; the remaining
-conjuncts are carried through unchanged and stay in the construction's — the two height bounds,
-which are ledger-placement conditions no game states, and the distinctness, which names
+`CanonicalGames`'.  The proof names the rewrite explicitly rather than relying on its `@[simp]`
+attribute, because the sibling bridges of `CanonicalGames` do not all carry one.  It rewrites *both*
+sides of the hash equation, so the equation it concludes is stated in the game's vocabulary; the
+remaining conjuncts are carried through unchanged and stay in the construction's — the two height
+bounds, which are ledger-placement conditions no game states, and the distinctness, which names
 `xmssHonestChildren` directly.  It changes presentation only: no game is played and no advantage is
 stated.
 

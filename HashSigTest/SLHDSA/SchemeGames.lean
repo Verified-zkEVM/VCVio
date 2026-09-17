@@ -23,13 +23,12 @@ all four halves, both splits.  So the fifteen statements it makes about a probab
 generic union bounds, the two splits, the library's exact partition at the canonical runtime, the
 four-term bound, the four bounding each half by the advantage it splits, the four bounding each half
 by its own branch, and perfect completeness — have no runtime coverage at all and cannot be given
-any.  They are pinned by elaboration, in `Pins`, and their content is checked by mutation testing,
-by the two pairs of `example`s the library module carries beside the halves, by those eight
-half-bounding theorems, which the `example`s cannot replace, and by the two selector equations,
-which neither the `example`s nor the eight can reach.
-A reader of the lane's other fixtures will expect runtime coverage of the headline; there cannot
-be any, and every executable check below is therefore about the *deterministic* data
-the two splits are instrumented with.
+any.  They are pinned by elaboration, in `Pins`; their content is pinned by the two pairs of
+`example`s the library module carries beside the halves, by those eight half-bounding theorems,
+which the `example`s cannot replace, and by the two selector equations, which neither the `example`s
+nor the eight can reach.  A reader of the lane's other fixtures will expect runtime coverage of the
+headline; there cannot be any, and every executable check below is therefore about the
+*deterministic* data the two splits are instrumented with.
 
 ## The profile is the SUF residual fixture's, with one deliberate change to its `H_msg`
 
@@ -144,8 +143,8 @@ signature; there is no log in its argument list.
   recurs at its third entry, so dropping the head changes nothing there for either reader.  This is
   a property of L3's shape, and L1 is where both readers catch a head-drop instead.
 - **R2 × L2, for message-blindness.**  L2's two messages carry different randomizers, so a
-  message-blind reader is caught there as well — but only because of that choice.  A later edit that
-  made them coincide would take this cell dark without failing anything.
+  message-blind reader is caught there as well — but the cell depends on that choice: at a log whose
+  two messages carried one randomizer, a message-blind reader would be invisible here.
 - **R1 × `otherPk` with the honest secret key.**  Both the real selector and the `sk.pkSeed` mutant
   read `false` there, so that pair separates nothing; it is asserted anyway, so that the one pair
   that *does* separate them is not mistaken for the only arrangement that could.
@@ -159,23 +158,21 @@ The dispatch bit is not compared against any bound, and no half is evaluated: th
 `freshRandomizerHalf` are attached to the right branches is settled inside the library module, by
 four `example`s — two per split — that see the unexposed bodies, and not here: an importing module
 cannot state that equation at all.  That each half is an event of the success bit *and* of the bit
-its experiment recorded is settled there too, and by eight theorems rather than by those
-`example`s, for a reason this file cannot repair: an `example … := rfl` moves with the body it is
-`rfl` against, so a paired weakening of all four halves survives it, survives every check below,
-and survives this executable.  That the recorded bit is the selector's own value rather than its
-negation or a constant is one level down again, and is `instrumentedEufExp_const` and its twin,
-which refuse both of those shapes and every other recorded bit that is not that constant at a
-constant selector.
-Two directions below those are refused by nothing in either module — which of a run's values the
+its experiment recorded is settled there too, and by eight theorems rather than by those `example`s,
+for a reason this file cannot repair: an `example … := rfl` moves with the body it is `rfl` against,
+so a paired weakening of all four halves survives it, survives every check below, and survives this
+executable.  That the recorded bit is the selector's own value rather than its negation or a
+constant is one level down again, and is `instrumentedEufExp_const` and its twin, which refuse both
+of those shapes and every other recorded bit that is not that constant at a constant selector.  Two
+directions below those are refused by nothing in either module — which of a run's values the
 selector is applied to, and any combination of applications of the selector that agrees with it
 wherever the selector is constant — and the paragraphs that close the library module's own section
-beside the four halves record both rather than claiming them.  What this file adds to those
-eight is the selector argument: the four `Pins` entries restating the branch bounds name `forsArm`
-and `randomizerLogged`, so a library-side edit taking one split's two halves at another selector
-fails that split's two of them here, `Type mismatch` each, although it leaves the library module
-elaborating with zero errors.  Nothing here says that any
-honest value was recorded as a game target, that any execution produced any log below, or that
-either half is bounded by anything.
+beside the four halves record both rather than claiming them.  What this file adds to those eight is
+the selector argument: the four `Pins` entries restating the branch bounds name `forsArm` and
+`randomizerLogged`, so a library-side edit taking one split's two halves at another selector is
+refused by that split's two entries here, although it leaves the library module well-formed.
+Nothing here says that any honest value was recorded as a game target, that any execution produced
+any log below, or that either half is bounded by anything.
 
 ## The pins
 
@@ -199,9 +196,8 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 
 Two hypertree layers of height two, two FORS trees of height one, `w = 16`, `len = 4`. -/
 
--- Exposed, and what that attribute is for was read off the errors its removal produces in this
--- file: 58 errors, no error ceiling reached, the first inside the bundle at `yToBytes := id`,
--- `Type mismatch: id has type ?m → ?m but is expected to have type Bytes 1 → Bytes toyParams.n`.
+-- Exposed because the bundle below needs `toyParams.n` to reduce: `yToBytes := id` is checked
+-- against `Bytes 1 → Bytes toyParams.n`.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
@@ -209,15 +205,11 @@ Two hypertree layers of height two, two FORS trees of height one, `w = 16`, `len
 /-- The toy parameters are valid. -/
 theorem toyValid : toyParams.Valid := by decide
 
--- Exposed, because this file states three `DecidableEq` instances at this profile — two written at
+-- Exposed because this file states three `DecidableEq` instances at this profile — two written at
 -- `toy.params` (`ForsTreeSigCore` and `XmssSigCore`) and one at `toy` itself
 -- (`GeneralScheme.SignatureCore toy toyPrimitives.core`) — and every signature and digest it builds
--- is at `toy`: without the attribute the
--- build runs into Lean's hundred-error ceiling
--- — a hundred errors and the line saying `maximum number of errors (100; from option 'maxErrors')
--- reached`, so the count is a floor and not a total — the first at the `ForsTreeSigCore` instance,
--- `Application type mismatch: the argument toyPrimitives.core has type CorePrimitives toyParams
--- but is expected to have type CorePrimitives toy.params`.
+-- is at `toy`: `toy.params` has to reduce to `toyParams` for `toyPrimitives.core` to be accepted as
+-- their `CorePrimitives` argument.
 /-- The validated form of `toyParams`. -/
 @[expose] def toy : ValidatedParams := ⟨toyParams, toyValid⟩
 
@@ -280,19 +272,14 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteMix msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed and `@[reducible]`, for two different reasons, each read off the errors that removing
--- that attribute alone produces in this file.  Exposed, for code generation: without it the build
--- runs into Lean's hundred-error ceiling — a hundred errors and the line saying the ceiling was
--- reached, so the count is a floor — the first at `instance : DecidableEq toyPrimitives.Y` just
--- below, `Compilation failed, locally inferred compilation type differs from type that would be
--- inferred in other modules`.  Reducible, because its carrier types have to unfold to `Bytes 1` for
--- instance resolution to reach them: without it, 12 errors and only these — one `GetElem
--- toyPrimitives.Y ℕ` at `byteOf`, and the failure to prove its index valid; two `BEq
--- (ITSRTranscript toyPrimitives.Y (HmsgITSRInput toyPrimitives.PkSeed toyPrimitives.Y))` and one
--- `BEq (toyPrimitives.Y × HmsgITSRInput …)`, the three transcript value pins in `checkBranches`;
--- four `Decidable (… ∈ embeddedTargets)` in the same group; two `DecidableEq (HmsgITSRInput
--- toyPrimitives.PkSeed toyPrimitives.Y)`, one there and one in the pins; and one `DecidableEq
--- toyPrimitives.PkSeed`, in the pins.  Nothing outside this executable consumes it.
+-- Exposed and `@[reducible]`, for two different reasons.  Exposed for code generation: the compiled
+-- declarations below, starting with `instance : DecidableEq toyPrimitives.Y`, have to infer the
+-- same compilation type for this bundle as an importing module would, which needs its body.
+-- Reducible because its carrier types have to unfold to `Bytes 1` for instance resolution to reach
+-- them: `byteOf`'s `y[0]` needs `GetElem toyPrimitives.Y ℕ` and an index bound, and `checkBranches`
+-- and the value pins need `BEq` on the embedded transcripts and on `toyPrimitives.Y × HmsgITSRInput
+-- …`, `Decidable (… ∈ embeddedTargets)`, and `DecidableEq` on `HmsgITSRInput toyPrimitives.PkSeed
+-- toyPrimitives.Y` and on `toyPrimitives.PkSeed`.  Nothing outside this executable consumes it.
 /-- The toy bundle: one byte per node, a collapsing order- and address-sensitive `Thash`, and an
 `H_msg` that depends on all four of its arguments and reads its message through `byteMix`. -/
 @[expose, reducible] def toyPrimitives : Primitives toyParams where
@@ -371,8 +358,8 @@ instance : DecidableEq (XmssSigCore toy.params toyPrimitives.core) := fun a b =>
     ⟨fun h => by cases a; cases b; simp only at h; obtain ⟨h1, h2⟩ := h; subst h1; subst h2; rfl,
      fun h => h ▸ ⟨rfl, rfl⟩⟩
 
-/-- Signature equality, field by field.  The library module carries this as a hypothesis because no
-such instance exists on this branch. -/
+/-- Signature equality, field by field.  The library module carries this as a hypothesis because
+`HashSig` declares no such instance. -/
 instance : DecidableEq (GeneralScheme.SignatureCore toy toyPrimitives.core) := fun a b =>
   decidable_of_iff (a.randomness = b.randomness ∧ a.fors = b.fors ∧ a.hypertree = b.hypertree)
     ⟨fun h => by
@@ -628,8 +615,7 @@ def checkFixture : IO Unit := do
 `sigD` and `sigE` differ only in the FORS half — the whole hypertree signature is held fixed and
 their randomizers agree, so they split to one digest at one instance address — and they take
 opposite arms.  That is what pins that the arm is decided by the FORS public-key comparison and by
-nothing else, and it is the defect #699's review record fixed in its own fixture: a pair claimed to
-differ only in the FORS half must be shown to.
+nothing else, and a pair claimed to differ only in the FORS half is shown to.
 
 `sigH` is the other direction.  It differs from the honest signature only in the hypertree half and
 takes the same arm, which is not a weakness to hide: the selector is a function of the key pair, the

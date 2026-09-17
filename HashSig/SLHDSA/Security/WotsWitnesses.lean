@@ -23,15 +23,14 @@ development (`WOTS_TW_ES.ec`), with the axiom `two_encodings` replaced by the me
 
 Every *deterministic-inclusion* statement below is about signature data: a primitive bundle, a
 public seed, a structural address, two messages, and two signatures.  One of them,
-`wotsPkFromSig_cases`, additionally names the honest secret seed, because the honest public key
-it starts from is the one `wotsPkGen` produces.  The *transcript-transport* statements are about
-a role ledger over a `ValidatedParams`; they mention no signature at all.  Nothing here
-constructs an adversary, states an advantage, performs a game hop, or claims that any honest
-execution queried the honest value a witness attacks.  In particular a witness lemma is **not** a
-reduction: that the game's target was committed before the forgery was seen is a
-simulation-fidelity obligation of the later program-level slice, not a fact established here.  The
-undetectability role has no witness content at all and is deliberately absent — undetectability
-pays for a distributional hybrid, not for an extraction.
+`wotsPkFromSig_cases`, additionally names the honest secret seed, because the honest public key it
+starts from is the one `wotsPkGen` produces.  The *transcript-transport* statements are about a role
+ledger over a `ValidatedParams`; they mention no signature at all.  Nothing here constructs an
+adversary, states an advantage, performs a game hop, or claims that any honest execution queried the
+honest value a witness attacks.  In particular a witness lemma is **not** a reduction: that the
+game's target was committed before the forgery was seen is a simulation-fidelity obligation of a
+reduction, not a fact established here.  The undetectability role has no witness content at all and
+is deliberately absent — undetectability pays for a distributional hybrid, not for an extraction.
 
 ## Labels
 
@@ -634,10 +633,10 @@ theorem findWotsWitness_isSome (valid : p.Valid) (prims : Primitives p) [Decidab
 
 /-! ## Ledger membership and encoded distinctness
 
-*Transcript transport.*  Every address a witness names at a reachable WOTS+ instance is a member
-of the slice-1 role ledger it is submitted against, and — under `EncodedTargetLedgerConditions` —
-distinct addresses of one ledger carry distinct encoded tweaks.  The three roles are reached
-separately, because they have three different ledgers:
+*Transcript transport.*  Every address a witness names at a reachable WOTS+ instance is a member of
+the `Security.ReachableTargets` role ledger it is submitted against, and — under
+`EncodedTargetLedgerConditions` — distinct addresses of one ledger carry distinct encoded tweaks.
+The three roles are reached separately, because they have three different ledgers:
 
 * the `fCollision` witness attacks `wotsFTcr`, whose ledger is `wotsStepAddresses`
   (`mem_wotsStepAddresses_of_lt`, `wotsStepAdrsKey_injective`);

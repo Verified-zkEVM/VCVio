@@ -23,7 +23,8 @@ probability in it is `noncomputable`: the two advantages, both halves, the instr
 and `Summands.sufBound` alike.  So the headline, the two equivalences and the four bounds have **no
 runtime coverage at all** and cannot be given any.  What the checks below read is the selector that
 decides which of the two named halves a forgery contributes to, which is decidable because it is a
-list membership; what pins the statements is the `Pins` section and mutation testing against it.
+list membership; what pins the statements is the `Pins` section, and the matrix below records how
+far that pinning reaches.
 
 A reader of the lane's other fixtures will look for the headline among the runtime checks.  It is
 not there, and no fixture could put it there.
@@ -34,20 +35,17 @@ The block below is the one `HashSigTest.SLHDSA.SchemeGames` builds — the same 
 same six byte maps, the same three honest seeds, the same published root, the same three messages,
 the same three signature `DecidableEq` instances and the same three logs — so the lane's executables
 run on one profile and a reviewer can diff the blocks.  It is copied because a `lean_exe` root must
-own its `main`: importing another fixture reports `` `main` has already been declared``, measured
-rather than assumed.
+own its `main`, and a module that imports another fixture cannot declare one.
 
-Diffed against that file's block by declared name, from `toyParams` to the readers, there are eleven
-differences.  Seven declarations are dropped: `byteFold` and `toyByteLaws`, which only that file's
-`H_msg` blindness assertion and its extractor pins used; `otherPkSeed`, because no reader here reads
-a public key; and `sigD`, `sigE`, `sigH` and `sigLate`, its four dispatch-arm forgeries.  Four are
-added: `forgeryEarly` and `forgeryLate`, which are `sigD`'s and `sigLate`'s bodies under names that
-say what they are for here — a second signature under each of the hedged log's two randomizers at
-one message; `forgeryDet`, the same at the deterministic variant's single randomizer, which that
-file has no use for; and `randomizerLoggedRaw`, the mutant reader.  Four instances that file does
-not carry are added beside them — `DecidableEq` on the public seed and on the address key, `Fintype`
-and `Inhabited` on the node type — because the vacuity canary builds a
-`SLHDSA.Security.Certificate`, whose section asks for them.
+What this fixture holds, beyond that block: three forgeries — `forgeryEarly` and `forgeryLate`, a
+second signature under each of the hedged log's two randomizers at one message, and `forgeryDet`,
+the same at the deterministic variant's single randomizer; the misreading `randomizerLoggedRaw`; and
+four instances the vacuity canary's `SLHDSA.Security.Certificate` asks for — `DecidableEq` on the
+public seed and on the address key, `Fintype` and `Inhabited` on the node type.
+
+Seven of that block's declarations are absent here, nothing below reading them: `byteFold` and
+`toyByteLaws`, `otherPkSeed`, and the four dispatch-arm forgeries `sigD`, `sigE`, `sigH` and
+`sigLate`.
 
 ## The reader-by-log matrix
 
@@ -56,19 +54,17 @@ twice-signed message's entries separated; L2 is the log FIPS 205 §9.2's determi
 produce for the same three queries; L3 is four entries, one message three times, with `sigP1`'s
 randomizer at its tail rather than its head.
 
-**R1**, `SchemeGames.randomizerLogged`, the residual's own selector.  Every "catches" below was
-measured by substituting the mutant reader into all three check groups and counting which of the
-thirty-two fire; the control, the real reader under the mutant's name, fires none.
+**R1**, `SchemeGames.randomizerLogged`, the residual's own selector.  A cell's catch is attributable
+to the misreading and not to the substitution: the real reader, substituted under a misreading's
+name, fires none of the thirty-two.
 
 At **L1** it catches a reader that ignores the message — the cross forgery's randomizer is in the
 log at the *other* message and must read `false` — and one that drops the log's head, since L1's
-head is the only place any log here carries `sigP1`'s randomizer at `msgP` (**1** check fires, in
-this group).  At **L2** it catches a reader that reports membership only when a message carries two
-*distinct* randomizers: L2's list at each message is constant and `forgeryDet` must still read
-`true`.  Across the three logs it catches a reader that keeps only the first signature at a message
-(**3** fire, one here and two in the third group), one that keeps only the last (**1** fires, in
-this group), and truncation of the log to three entries (**1** fires, in the third group, which is
-the only group that reads the four-entry log).
+head is the only place any log here carries `sigP1`'s randomizer at `msgP`.  At **L2** it catches a
+reader that reports membership only when a message carries two *distinct* randomizers: L2's list at
+each message is constant and `forgeryDet` must still read `true`.  Across the three logs it catches
+a reader that keeps only the first signature at a message, one that keeps only the last, and
+truncation of the log to three entries, that last only in the group that reads the four-entry log.
 
 **R2**, `SignatureAlg.signingLogContains`, the same-message experiment's own freshness conjunct.  At
 **L1** it separates a forgery from the signature it shares a randomizer with: `forgeryEarly` reads
@@ -76,10 +72,10 @@ the only group that reads the four-entry log).
 signature.  It is not read at **L3**.
 
 **R3**, `randomizerLoggedRaw`, the mutant that sweeps the whole log rather than the entries at this
-message.  At **L1** it is separated from R1 at the cross forgery, and a mutation sweep finds one
-further reading in this file that separates them: any forgery read at `msgU`, which no log carries,
-where the per-message reader is `false` and the whole-log one is not.  At **L2** it is not
-separated: `forgeryDet`'s randomizer occurs at `msgP` and nowhere else.  It is not read at **L3**.
+message.  At **L1** it is separated from R1 at the cross forgery, and one further reading in this
+file separates them as well: any forgery read at `msgU`, which no log carries, where the per-message
+reader is `false` and the whole-log one is not.  At **L2** it is not separated: `forgeryDet`'s
+randomizer occurs at `msgP` and nowhere else.  It is not read at **L3**.
 
 **Cells that cannot discriminate, and why.**
 
@@ -89,11 +85,11 @@ separated: `forgeryDet`'s randomizer occurs at `msgP` and nowhere else.  It is n
   further log would separate them; none is added, because L1 already does and the matrix says so
   rather than leaving the other two cells looking covered.
 * **R1 under reordering and de-duplication, at every log.**  R1 is `∈` on a list.  Membership is
-  invariant under permutation and under `eraseDups`, so no log can make either visible.  Measured
-  rather than argued: a reader that reverses the log and one that collapses the per-message list to
-  its distinct values each fire **0 of 32**.  This is the same structural blind spot
-  `HashSigTest.SLHDSA.SufResidual` records for its own predicates, for the same reason; it is a
-  property of the predicate and not a gap in the fixture.
+  invariant under permutation and under `eraseDups`, so no log can make either visible: neither a
+  reader that reverses the log nor one that collapses the per-message list to its distinct values is
+  caught anywhere here.  This is the same structural blind spot `HashSigTest.SLHDSA.SufResidual`
+  records for its own predicates, for the same reason; it is a property of the predicate and not a
+  gap in the fixture.
 * **R1 at L3 under a dropped head.**  L3's head pair recurs at its third entry, so dropping it
   changes nothing there.  L1 catches it; L3 does not.
 * **Every reader against anything probabilistic.**  See above.
@@ -101,14 +97,14 @@ separated: `forgeryDet`'s randomizer occurs at `msgP` and nowhere else.  It is n
 ## What the checks cannot catch
 
 * **A reordering or reassociation of `Summands.sufBound`'s two residuals that moves this file too.**
-  The expression is this pull request's own; nothing outside these two files constrains its order or
-  its association.  Either edit made in the library module alone fails three entries here, but not
-  the same three: the reordering fails three `Pins` entries, the reassociation two of those and the
-  vacuity canary's own restatement of the refinement.  Made in both, nothing fails, and at that
-  point the claim has been changed rather than a bug found.
-  A coefficient other than one on a residual and a stray additive constant are *not* in this class —
-  the library refuses each on its own, at `sufBound_eq_bound_add_sameMessage_of_unfoldings` and, for
-  the constant, at `sufBound_eq_bound_of_residuals_zero` as well.
+  Nothing outside these two files constrains the expression's order or its association.  Either edit
+  made in the library module alone fails three entries here, but not the same three: the reordering
+  fails three `Pins` entries, the reassociation two of those and the vacuity canary's own
+  restatement of the refinement.  Made in both, nothing fails, and at that point the claim has been
+  changed rather than a bug found.  A coefficient other than one on a residual and a stray additive
+  constant are *not* in this class — the library refuses each on its own, at
+  `sufBound_eq_bound_add_sameMessage_of_unfoldings` and, for the constant, at
+  `sufBound_eq_bound_of_residuals_zero` as well.
 * **Anything about a probability.**  See above.
 * **Which of the two halves the consumption form bounds.**  The theorem
   `strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le` takes a bound on the *fresh* half and
@@ -159,14 +155,10 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 
 /-! ## The profile -/
 
--- Exposed, and what the attribute is for was read off the errors its removal alone produces in
--- this file, against the untouched library: fifty-one, no error ceiling reached.  Eighteen
--- `(kernel) declaration type mismatch` and three `Failed to find LCNF signature`, all of them at
--- the nine instances written at this bundle, and fifteen `failed to compile definition`, six of
--- those there and nine further down; eight `Application type mismatch`, six of them at the two
--- restatements of the vacuity canary at this profile, where `toy.params` has to be `toyParams`;
--- and five `Type mismatch`, one `failed to synthesize` and one index-validity failure at the
--- definitions that read the carrier.
+-- Exposed because `toyParams` has to reduce throughout this file: the nine instances written at the
+-- bundle below need it both to typecheck and to compile, the two restatements of the vacuity canary
+-- at this profile need `toy.params` to reduce to `toyParams`, and the definitions that read the
+-- carrier need its width.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
@@ -174,12 +166,10 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 /-- The toy parameters are valid. -/
 theorem toyValid : toyParams.Valid := by decide
 
--- Exposed, because the three signature `DecidableEq` instances below are stated at `toy.params`
--- and every signature, log and forgery this file builds is at `toy`.  Removed alone: sixty-seven
--- errors, thirty-four `failed to synthesize`, twenty-five `Application type mismatch`, and eight
--- `(deterministic) timeout` at the 200000-heartbeat limit.  Which operation each timeout reports is
--- not recorded here: it is a property of where the budget runs out rather than of this file, and
--- one mutation in this lane has produced four timeouts of two different kinds in a single run.
+-- Exposed because the three signature `DecidableEq` instances below are stated at `toy.params` and
+-- every signature, log and forgery this file builds is at `toy`, so `toy.params` has to reduce to
+-- `toyParams` for those instances to apply.  Without the body, instance search does not merely fail
+-- on those goals but runs to the heartbeat limit on some of them.
 /-- The validated form of `toyParams`. -/
 @[expose] def toy : ValidatedParams := ⟨toyParams, toyValid⟩
 
@@ -211,15 +201,11 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteMix msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed and `@[reducible]`, for two different reasons, each read off the errors that removing
--- that attribute alone produces.  Exposed, for code generation: sixty-three errors, thirty
--- `Compilation failed, locally inferred compilation type differs from type that would be inferred
--- in other modules`, nineteen `failed to compile definition`, ten `failed to synthesize` and four
--- `Application type mismatch`, eighteen of them at the nine instances just below and three more at
--- the three signature-equality instances after those.  Reducible,
--- because the carrier has to unfold to `Bytes 1` for instance resolution to reach it: without it,
--- exactly two errors and only these — `failed to synthesize` `GetElem toyPrimitives.Y ℕ` at
--- `byteOf`, and the index-validity failure it causes there.
+-- Exposed and `@[reducible]`, for two different reasons.  Exposed for code generation: the nine
+-- instances just below and the three signature-equality instances after them have to infer the same
+-- compilation type for this bundle as an importing module would, which needs its body.  Reducible
+-- because the carrier has to unfold to `Bytes 1` for instance resolution to reach it: `byteOf`'s
+-- `y[0]` needs `GetElem toyPrimitives.Y ℕ` and the index bound that follows from it.
 /-- The toy bundle. -/
 @[expose, reducible] def toyPrimitives : Primitives toyParams where
   PkSeed := Bytes 1
@@ -647,36 +633,30 @@ end Pins
 
 /-! ## The vacuity canary
 
-The previous pull request's measurement, re-run at this module's headline.  A closed
+The composition fixture's vacuity canary, at this module's headline.  A closed
 `SLHDSA.Security.Certificate` is constructible at an arbitrary validated parameter set, an arbitrary
 bundle carrying the instances the structure asks for and an arbitrary adversary, from an address key
 and a public seed and no security assumption at all, and the bound it names is at least one.  At
-that certificate `strongAdvantage_le_bound_add_sameMessage` reads
-`sadv.advantage ≤ (something ≥ 1) + residual`, which `probOutput_le_one` gives with extra steps.
+that certificate `strongAdvantage_le_bound_add_sameMessage` reads `sadv.advantage ≤ (something ≥ 1)
++ residual`, which `probOutput_le_one` gives with extra steps.
 
 **The residual does not repair it and cannot.**  By `strongAdvantage_le_add_sameMessage_iff` the
 headline is equivalent to the previous module's `advantage_le_bound` at the same certificate, so its
 vacuity is that one's exactly.  The canary below is that equivalence instantiated: both conjuncts of
 `freeCertificate_suf_headline` are proved, and the second is what makes the first empty.
 
-**Why these declarations are copied rather than imported.**  The construction is
-`HashSigTest.SLHDSA.Composition`'s, and importing that module is not possible from a `lean_exe`
-root: it declares a top-level `main`, and a second declaration of that name reports
-`` `main` has already been declared`` — measured, not assumed.  The lane has no shared fixture
-module and adding one would edit merged, reviewed files from inside this pull request.  What is
-copied is the free-certificate stack alone: thirteen declarations, the two idle adversaries, the
-open-preimage adversary that records nothing with its three advantage lemmas and its counting
-interface, the winning preimage adversary with its inverse, and the certificate with the bound it
-names.  What is **not** copied is that file's anchoring analysis — `winningOpenPre`,
-`anchoredCertificate` and `nonempty_countingInterface_iff` — because the question those answer is
-about `Certificate`'s own fields and is settled there; nothing about it changes when the residual is
-added, and restating it here would be two hundred lines that this pull request does not move.
+**What this section holds.**  The free-certificate stack of `HashSigTest.SLHDSA.Composition` —
+thirteen declarations: the two idle adversaries, the open-preimage adversary that records nothing
+with its three advantage lemmas and its counting interface, the winning preimage adversary with its
+inverse, and the certificate with the bound it names — together with `freeCertificate_suf_headline`
+and `freeCertificate_sufBound_headline` at the end.  It is a copy rather than an import because that
+module is a `lean_exe` root and declares a top-level `main`, which a module importing it cannot also
+declare; the lane has no shared fixture module.  Every declaration in it is that module's verbatim,
+but for the docstrings of the two statements named above.
 
-The two new declarations are `freeCertificate_suf_headline` and `freeCertificate_sufBound_headline`
-at the end.
-
-*Copied verbatim from `HashSigTest.SLHDSA.Composition` except for the docstrings of the two new
-declarations; a reviewer can diff the blocks.* -/
+That module's anchoring analysis — `winningOpenPre`, `anchoredCertificate` and
+`nonempty_countingInterface_iff` — is not here: the question it answers is about `Certificate`'s own
+fields and nothing about it changes when the residual is added. -/
 
 section Vacuity
 
@@ -702,13 +682,10 @@ def idleUd {ix PkS Tw Msg Msg' Nd : Type}
   pick := pure ()
   distinguish := fun _ _ => pure false
 
--- Exposed, and it is the only one of the seven definitions in this section that is: the file
--- elaborates clean with this attribute and no other one here.  Inside a `public section` a
--- definition's body is not available to later declarations, so without it
+-- Exposed, and the only one of the seven definitions in this section that needs to be.  Inside a
+-- `public section` a definition's body is not available to later declarations, so without it
 -- `(Problem.toDSPR (idleOpenPre prob)).State` does not reduce to `Unit × _ × _` and
--- `idleOpenPre_toDSPR_choose` cannot even be stated: three errors, a `Type mismatch` at that
--- statement, the `unknownIdentifier` it causes in `idleOpenPre_dspr`, and that theorem's
--- `unsolved goals`.
+-- `idleOpenPre_toDSPR_choose` cannot even be stated.
 /-- An open-preimage adversary that commits to no target and opens nothing. -/
 @[expose] def idleOpenPre {ix PkS Tw Msg Nd : Type} [Inhabited Msg]
     (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :

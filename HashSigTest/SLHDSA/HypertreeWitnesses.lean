@@ -89,10 +89,9 @@ hypothesis.
 `checkFabricatedWitnesses` is the tally: nine runs of `hypertreeWitnessHolds`, three accepted and
 six rejected.  The six are the in-range layer shifts, and they falsify the one conjunct
 `HypertreeWitness.Valid` has — the XMSS condition at the position and honest message the label
-names.  There is no out-of-range fabrication, and there cannot be one: `HypertreeWitness.layer` is
-a `Fin toyParams.d`, so a label at or beyond `d` is not a witness at this walk length and does not
-elaborate.  What used to be two run-time rejections is a build error now, exercised by the mutation
-that widens the label's index rather than by an `ensure`.
+names.  There is no out-of-range fabrication, and there cannot be one: `HypertreeWitness.layer` is a
+`Fin toyParams.d`, so a label at or beyond `d` is not a witness at this walk length and does not
+elaborate.  That case is therefore refused at build time rather than by an `ensure`.
 
 The `example`s pin the theorem statements at that bundle, including the nine declarations with no
 consumer inside the library, and the ledger and encoded-tweak lemmas at the same profile — which
@@ -389,28 +388,26 @@ The hand-written `posOf` agrees with `LayerPosition.advance` and the hand-writte
 with `honestLayerMsg`, at all three layers, so the layer canaries below check the extractor against
 a table that is written independently of the library's and known to match it.
 
-Those two agreement checks are load-bearing, not documentation, and it is worth saying what they
-carry now that the library also carries part of it.  When `HypertreeWitness.layer` was a bare `ℕ`,
-shifting the extractor's label and `HypertreeWitness.Valid`'s reading of it *together* — labelling
-the base case `⟨1, ·⟩` and reading `w.layer - 1` — re-proved `findHypertreeWitness_sound` by the
-same induction, and the executable was the only thing that noticed.  The label is a `Fin layers`
-now, so that particular shift no longer elaborates — but the class is not closed by the type.  The
-reflection `t ↦ layers - 1 - t`, counting the layer from the top of the walk instead of from the
-walk's start, agrees with the identity at walk length one, which is the only place `Fin layers` pins
-anything, and it re-proves the library.  What stops it is in this module: the statement pins below
-restate the two shape equations and `HypertreeWitness.Valid`'s body with the label read raw, so the
-reflection is a build error *here* at five sites; and renumbering those pins with it leaves
-`checkLayer`'s pin failing at run time with `layer 0: layer index is 0`, the reflected extractor
-reporting layer two for the layer-zero divergence.  These checks stay because they are what caught
-this class, because they cost nothing, and because they check the numbering a second way, not
-through `HypertreeWitness.Valid`: `checkLayer`'s `w.layer == layer` pin compares against the label
-the fixture *built* the divergence at, and `hypertreeWitnessHolds` reads `posOf` and `honestMsgAt`.
-Renumbering those two tables to match some other labelling makes them stop agreeing with `advance`
-and `honestLayerMsg` at the fixed layers `0`, `1` and `2`, and the agreement check fails.  Without
-them the executable would be a restatement of the library at whatever numbering the library
-happened to use; with them it is an independent one.  The hand-written honest chain ends agree with
-`wotsPkGenTops`, which is what `XmssWitness.Valid` names.  And the hand-assembled honest hypertree
-signature is the one `GeneralHypertree.sign` produces. -/
+Those two agreement checks are load-bearing, not documentation, and what they carry is a class of
+relabelling that nothing else refuses.  Shifting the extractor's label and
+`HypertreeWitness.Valid`'s reading of it *together* re-proves `findHypertreeWitness_sound` by the
+same induction, so the library alone does not see it.  `HypertreeWitness.layer` is a `Fin layers`,
+which refuses the shift that moves the base label out of range — labelling the base case `⟨1, ·⟩`
+and reading `w.layer - 1` — but the class is not closed by the type.  The reflection `t ↦ layers - 1
+- t`, counting the layer from the top of the walk instead of from the walk's start, agrees with the
+identity at walk length one, which is the only place `Fin layers` pins anything, and it re-proves
+the library.  What stops it is in this module: the statement pins below restate the two shape
+equations and `HypertreeWitness.Valid`'s body with the label read raw, so the reflection does not
+typecheck *here*; and renumbering those pins with it leaves `checkLayer`'s pin failing at run time,
+the reflected extractor reporting layer two for the layer-zero divergence.  These checks also carry
+the numbering a second way, not through `HypertreeWitness.Valid`: `checkLayer`'s `w.layer == layer`
+pin compares against the label the fixture *built* the divergence at, and `hypertreeWitnessHolds`
+reads `posOf` and `honestMsgAt`.  Renumbering those two tables to match some other labelling makes
+them stop agreeing with `advance` and `honestLayerMsg` at the fixed layers `0`, `1` and `2`, and the
+agreement check fails.  Without them the executable would be a restatement of the library at
+whatever numbering the library happened to use; with them it is an independent one.  The
+hand-written honest chain ends agree with `wotsPkGenTops`, which is what `XmssWitness.Valid` names.
+And the hand-assembled honest hypertree signature is the one `GeneralHypertree.sign` produces. -/
 def checkToyBundle : IO Unit := do
   ensure "honest roots distinct"
     (honestRoot 0 != honestRoot 1 && honestRoot 1 != honestRoot 2 &&
@@ -577,8 +574,7 @@ the branch taken was layer zero's rather than a failure to match.
 
 The second half runs a walk none of whose layers matches: three copies of the perturbed layer-zero
 signature, which miss the honest root at all three layers, so the search reaches the last layer
-without a match and stops.
-Those are the only two ways nothing comes back. -/
+without a match and stops.  Those are the only two ways nothing comes back. -/
 def checkNoWitness : IO Unit := do
   ensure "honest walk reaches the published root"
     (pkFromSig toy toyPrimitives honestMsg honestHtSig () parts ==
@@ -631,9 +627,8 @@ the position and honest message the label names.  The per-argument separation �
 honest message — is `checkLayer`'s.
 
 An out-of-range fabrication is not among them because it is not writable.  `HypertreeWitness.layer`
-is a `Fin toyParams.d`, so `⟨3, w⟩` and `⟨9, w⟩` — which this tally used to carry, as the two
-rejections that isolated the old bound conjunct — are type errors rather than rejected runs.  The
-bound is exercised at build time instead, by the mutation that widens the label's index. -/
+is a `Fin toyParams.d`, so `⟨3, w⟩` and `⟨9, w⟩` are type errors rather than rejected runs: the
+layer bound lives in the witness's type and never reaches `hypertreeWitnessHolds`. -/
 /-- The tally: nine runs of `hypertreeWitnessHolds`, three accepted and six rejected. -/
 def checkFabricatedWitnesses : IO Unit := do
   let mut accepted := 0
@@ -657,20 +652,18 @@ def checkFabricatedWitnesses : IO Unit := do
 /-! ## Statement pins
 
 The theorems this module ships, elaborated at the toy profile.  Nine declarations have no consumer
-inside the library and nothing else in the tree elaborates them — every name declared in
-`HashSig.SLHDSA.Security.HypertreeWitnesses` that occurs exactly once in the code of `HashSig/`,
-which is its own declaration line, nothing there importing that module: the two extractor shape
-equations, the two extractor lemmas `findHypertreeWitness_sound` and `findHypertreeWitness_isSome`,
-the `atLayer` bridge, the top-level walk, the cross-layer encoded-distinctness lemma, the
-honest-signer bridge `signFromPosition_getElem`, and `LayerPosition.advance_ne`.  Each is pinned
-here.  `HypertreeWitness.valid_iff` is not among them — `findHypertreeWitness_sound` rewrites with
-it — and neither is `HypertreeWitness.layer_lt`, which is what `HypertreeWitness.Valid` forms its
-position with; both are pinned all the same, in the form a consumer meets them.  The honest-signer
-bridge is pinned as the layer-`j` component read against `honestLayerMsg`, and all three WOTS+
-cross-layer separations are composed here the way the module docstring says they compose:
-`wotsPkAdrsKey_injective` against `advance_ne` directly, `wotsOptionalStepAdrsKey_injective`
-through the `congrArg Prod.fst` its `WotsChainCoord` conclusion needs, and
-`wotsStepAdrsKey_injective` through the `congrArg (·.1.1)` its pair-valued conclusion needs.
+inside the library and nothing else in the tree elaborates them: the two extractor shape equations,
+the two extractor lemmas `findHypertreeWitness_sound` and `findHypertreeWitness_isSome`, the
+`atLayer` bridge, the top-level walk, the cross-layer encoded-distinctness lemma, the honest-signer
+bridge `signFromPosition_getElem`, and `LayerPosition.advance_ne`.  Each is pinned here.
+`HypertreeWitness.valid_iff` is not among them — `findHypertreeWitness_sound` rewrites with it — and
+neither is `HypertreeWitness.layer_lt`, which is what `HypertreeWitness.Valid` forms its position
+with; both are pinned all the same, in the form a consumer meets them.  The honest-signer bridge is
+pinned as the layer-`j` component read against `honestLayerMsg`, and all three WOTS+ cross-layer
+separations are composed here the way the module docstring says they compose:
+`wotsPkAdrsKey_injective` against `advance_ne` directly, `wotsOptionalStepAdrsKey_injective` through
+the `congrArg Prod.fst` its `WotsChainCoord` conclusion needs, and `wotsStepAdrsKey_injective`
+through the `congrArg (·.1.1)` its pair-valued conclusion needs.
 
 Two of these pins carry more than their statements.  The extractor's dichotomy pin writes both
 shape equations' labels out literally and the soundness pin writes `Valid`'s body with
@@ -794,7 +787,8 @@ theorem toyApprovedAddressBounds : ApprovedAddressBounds toyParams :=
     by decide, by decide⟩
 
 /-- Every XMSS internal node an `hCollision` witness can name at a layer the walk reaches is a
-listed `xmssH` target.  Slice 1's membership lemma applies to the advanced position unchanged. -/
+listed `xmssH` target.  The `Security.ReachableTargets` membership lemma applies to the advanced
+position unchanged. -/
 example (j : ℕ) (hj : pos0.layer.val + j < toyParams.d) {z : ℕ} (hz : 0 < z)
     (hzh : z ≤ toyParams.hp) :
     xmssNodeAdrs (pos0.advance j hj).toAdrs z ((pos0.advance j hj).leaf.val / 2 ^ z) ∈
