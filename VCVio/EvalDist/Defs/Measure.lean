@@ -5,8 +5,10 @@ Authors: Devon Tuma
 -/
 module
 
+public import VCVio.Prelude
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.Defs.Measure.Deterministic
 public import VCVio.EvalDist.Defs.Measure.ExceptT
 public import VCVio.EvalDist.Defs.Measure.OptionT
 public import ToMathlib.MeasureTheory.Measure.Option
@@ -45,9 +47,8 @@ bridge from the finite executable backend to the primary measure API. -/
 noncomputable def toMeasure : Measure α :=
   p.toPMF.toMeasure.dropNone
 
-theorem toMeasure_apply_univ_le_one : p.toMeasure Set.univ ≤ 1 := by
-  have hTotal : p.toPMF.toMeasure Set.univ = 1 := measure_univ
-  exact (Measure.dropNone_apply_univ_le p.toPMF.toMeasure).trans_eq hTotal
+theorem toMeasure_apply_univ_le_one : p.toMeasure Set.univ ≤ 1 :=
+  measure_univ_le p.toPMF.toMeasure.dropNone
 
 @[simp]
 theorem toMeasure_pure (x : α) : (pure x : SPMF α).toMeasure = Measure.dirac x := by
@@ -56,7 +57,7 @@ theorem toMeasure_pure (x : α) : (pure x : SPMF α).toMeasure = Measure.dirac x
 /-- Failure carries no successful-output mass. -/
 @[simp]
 theorem toMeasure_failure : (failure : SPMF α).toMeasure = 0 := by
-  rw [toMeasure, SPMF.toPMF_failure, PMF.toMeasure_pure, Measure.dropNone_dirac_none]
+  rw [toMeasure, toPMF_failure, PMF.toMeasure_pure, Measure.dropNone_dirac_none]
 
 @[simp]
 theorem toMeasure_apply_singleton [MeasurableSingletonClass α] (x : α) :
@@ -76,7 +77,7 @@ theorem lintegral_toMeasure {g : α → ENNReal} (hg : Measurable g) :
   refine (PMF.lintegral_toMeasure p.toPMF (g := fun o => o.elim 0 g)
     (by fun_prop)).trans ?_
   rw [tsum_option _ ENNReal.summable]
-  simp [SPMF.apply_eq_toPMF_some]
+  simp [apply_eq_toPMF_some]
 
 /-- The successful-output measure of a measurable set is the sum of the point masses it
 contains. -/

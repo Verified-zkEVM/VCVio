@@ -7,7 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import ToMathlib.MeasureTheory.Measure.Bool
 public import VCVio.EvalDist.Defs.Instances
-public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.EvalDist.FailureMeasure
 public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.Monad.Measure

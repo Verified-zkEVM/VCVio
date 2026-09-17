@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.Defs.Semantics.Core
 public import ToMathlib.Probability.Kernel.Subprobability
 
 /-!
@@ -91,14 +91,14 @@ instance evalDistKernelOfDiscrete.instIsMarkovKernel [EvalDistSemantics m]
 theorem evalDist_bind_eq_comp [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     [MeasurableSpace α] [MeasurableSpace β] (mx : m α) (f : α → m β)
     (hf : Measurable fun x => 𝒟[f x]) :
-    𝒟[mx >>= f] = evalDistKernel f hf ∘ₘ 𝒟[mx] :=
+    𝒟[mx >>= f] = Measure.bind 𝒟[mx] (evalDistKernel f hf) :=
   evalDist_bind mx f hf
 
 /-- Discrete-domain specialization of `evalDist_bind_eq_comp`. -/
 theorem evalDist_bind_eq_comp_of_discrete [Monad m] [EvalDistSemantics m]
     [LawfulEvalDistSemantics m] [MeasurableSpace α] [DiscreteMeasurableSpace α]
     [MeasurableSpace β] (mx : m α) (f : α → m β) :
-    𝒟[mx >>= f] = evalDistKernelOfDiscrete f ∘ₘ 𝒟[mx] :=
+    𝒟[mx >>= f] = Measure.bind 𝒟[mx] (evalDistKernelOfDiscrete f) :=
   evalDist_bind_of_discrete mx f
 
 namespace MeasureSemanticsVia
@@ -122,6 +122,14 @@ instance evalDistKernel.instIsSubprobabilityKernel (sem : MeasureSemanticsVia m)
     (hf : Measurable fun r => sem.evalDist (f r)) :
     IsSubprobabilityKernel (sem.evalDistKernel f hf) :=
   ⟨fun r => sem.evalDist_apply_univ_le_one (f r)⟩
+
+/-- A bundled family with lossless output measures denotes a Markov kernel. -/
+instance evalDistKernel.instIsMarkovKernel (sem : MeasureSemanticsVia m)
+    [MeasurableSpace ρ] [MeasurableSpace α] (f : ρ → m α)
+    (hf : Measurable fun r ↦ sem.evalDist (f r))
+    [∀ r, IsProbabilityMeasure (sem.evalDist (f r))] :
+    IsMarkovKernel (sem.evalDistKernel f hf) where
+  isProbabilityMeasure r := inferInstanceAs (IsProbabilityMeasure (sem.evalDist (f r)))
 
 end MeasureSemanticsVia
 

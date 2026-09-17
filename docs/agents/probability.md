@@ -35,6 +35,23 @@ no measurable space on that intermediate type. A constant output map after the g
 normalization rule, so monad normalization preserves this automation. The guarded unit-output
 measure is its event probability times `Measure.dirac ()`. `OptionT.prEvent_eq_run` observes present
 values in the underlying run, and `OptionT.prEvent_lift` preserves an event through a lift.
+`VCVio.EvalDist.Defs.Measure.Deterministic` gives `Id`, `Option`, and `Except` native Dirac/zero
+semantics without a finite backend. Every `Id` value and successful `Option`/`Except` constructor
+infers its probability-measure instance; arbitrary optional/exceptional values infer only the
+subprobability bound. Bare `Except` observes no errors and needs no measurable space on its error
+type. `ExceptT` instead interprets its base run and uses the inherited coproduct space on errors
+and outputs. Deterministic final events simplify to their propositional indicators with `simp`
+and `grind`, using `Measure.dirac_apply_singleton_true`.
+`VCVio.EvalDist.Defs.Support` and its `Support.Failure` module expose operational support without
+importing a probability backend. Optional failure has empty support under Lean's
+`LawfulMonadAttach`, independently of any probability interpretation or lift. Its pure-output
+elimination law suffices: no `ExactMonadAttach` is needed, including over state and reader bases.
+`HasEvalSet.LawfulFailure` only requires an `Alternative` and attachment.
+The independent `LawfulFailureEvalDistSemantics` mixin certifies zero measure for failure.
+Native `Option` and `OptionT` export that certificate; `OptionT` needs only the base pure law.
+`VCVio.EvalDist.Monad.Failure` makes failure before a continuation, a constantly failing
+continuation, and a final event after failure normalize to zero with `simp` and `grind`.
+These composition laws need no attachment or measurable-space instance on intermediate results.
 Native transformer semantics takes priority over the generic finite lifting adapter. Opening
 `ProbComp.DiscreteCompatibility` explicitly selects that adapter for retiring discrete calibration
 proofs. Native certificates describe the native interpretation and do not assert laws about an
@@ -95,8 +112,8 @@ supplies a single native query's probability proof. It is a theorem: the depende
 `P.B a` gives a projection key that instance search cannot match against a concrete reduced type
 such as `ℝ`. A general continuous program still requires a continuation measurability proof.
 `FreeM.denote` over discrete answers, `FreeM.pathMeasure`, and `FreeM.queryCountMeasure` export
-probability instances; proofs should not install them locally. `OptionT.evalDist_failure`
-simplifies native optional failure to zero using only the base pure law.
+probability instances; proofs should not install them locally. `evalDist_failure_eq_zero`
+simplifies failure to zero under its native certificate.
 `Measure.dropNone` preserves the subprobability instance of an optional measure, and
 `Measure.withFailure` automatically completes any subprobability measure to a probability measure.
 The backend-free `evalDistWithFailure` wrapper exports the same probability-measure instance.
@@ -340,6 +357,21 @@ unfolds; consumers do not need to supply the measurable-map equation.
 
 `ProbabilitySemantics` is the total/lossless semantics bundle used by transformer adapters.
 The lower-level `MeasureSemanticsVia` continues to describe potentially lossy surface semantics.
+Import `VCVio.EvalDist.Defs.Semantics.Core` for native bundles and
+`VCVio.EvalDist.MeasureSemantics` for effect-preserving transformer observations. These paths
+contain no PMF/SPMF backend; `Defs.Semantics` additionally exports the discrete compatibility
+bundles. Bundled `evalDist` observations infer `IsSubprobabilityMeasure` and `IsFiniteMeasure`.
+Known probability certificates propagate through bundling, and bundled kernels infer
+`IsMarkovKernel` from certificates for their output family. The total semantics bundle's bare
+denotation and effect-preserving `optionT`, `exceptT`, and `writerT` observations infer
+`IsProbabilityMeasure`; their total mass simplifies to one with `simp`.
+
+Mass properties and measurable spaces have different roles. `evalDist` always supplies the
+subprobability bound, but successful-output semantics cannot supply a probability certificate
+for a computation that may fail. Exact mass preservation through arbitrary maps and binds also
+needs the appropriate measurability proof. A named measure or kernel should export its guaranteed
+instances once; consumers should not repeatedly unfold it or redeclare the same instance.
+Lean's instance search does not prove arbitrary mass equations or unfold every named wrapper.
 
 For `ProbResponder`, the kernel is authoritative. `ProbResponder.IsExecutable` optionally carries
 a coherent realization `ProbResponder.IsExecutable.answerSPMF` for machine execution.
@@ -368,6 +400,11 @@ When introducing a new kernel, require the real measurable-space assumptions or 
 the semantic object. Do not install global `MeasurableSpace := ⊤` instances merely to discharge a
 proof. For an intentionally discrete local model, `evalDistKernelOfDiscrete` or a locally bundled
 measurable space is the explicit escape hatch.
+For generic output types, prefer `[MeasurableSpace α]` and structural instances for products,
+options, and subtypes. A local `MeasurableSpace := ⊤` deliberately selects discrete semantics;
+it is not an extra proof of a property of an already chosen measure. Intermediate choices made
+only to normalize a computation belong inside the semantic API, as in `prEvent` and the native
+constant-continuation laws.
 
 ### Measure-native interfaces
 

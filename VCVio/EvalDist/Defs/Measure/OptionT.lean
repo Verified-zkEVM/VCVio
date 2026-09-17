@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.Defs.Measure.Failure
 public import ToMathlib.MeasureTheory.Measure.Option
 
 /-!
@@ -80,13 +80,18 @@ instance (priority := 20) instLawfulPureEvalDistSemanticsOptionT
   denote_pure := OptionT.evalDist_pure
 
 /-- Optional failure has no successful-output mass. -/
-@[simp]
 theorem OptionT.evalDist_failure
     {m : Type u → Type v} [Monad m] [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
     {α : Type u} [MeasurableSpace α] : 𝒟[(failure : OptionT m α)] = 0 := by
   rw [OptionT.evalDist_eq_comap_some,
     show (failure : OptionT m α).run = pure none from rfl, _root_.evalDist_pure,
     ← Measure.dropNone_eq_comap_some, Measure.dropNone_dirac_none]
+
+/-- Native optional failure has zero measure whenever the base semantics preserves pure. -/
+instance (priority := 20) instLawfulFailureEvalDistSemanticsOptionT
+    {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
+    [LawfulPureEvalDistSemantics m] : LawfulFailureEvalDistSemantics (OptionT m) where
+  denote_failure := OptionT.evalDist_failure
 
 /-- Lifting a computation into `OptionT` preserves its successful-output measure. -/
 @[simp]

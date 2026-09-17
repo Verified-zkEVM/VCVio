@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import ToMathlib.MeasureTheory.Measure.Subprobability
+public import ToMathlib.MeasureTheory.Measure.Prop
 public import Mathlib.MeasureTheory.Measure.Prod
 
 /-!

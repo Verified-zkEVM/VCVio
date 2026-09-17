@@ -7,6 +7,7 @@ module
 
 public import Mathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
+public import Mathlib.Data.FunLike.IsApply
 
 /-!
 # Subprobability measures
@@ -32,6 +33,10 @@ open scoped ENNReal
 namespace MeasureTheory
 
 variable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
+
+/-- The zero measure evaluates pointwise to zero. -/
+instance Measure.instIsZeroApply : IsZeroApply (Measure α) (Set α) ℝ≥0∞ where
+  zero_apply _ := rfl
 
 /-- A measure with total mass at most one. -/
 class IsSubprobabilityMeasure (μ : Measure α) : Prop where

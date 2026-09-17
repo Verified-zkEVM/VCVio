@@ -5,8 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.Prelude
-public import ToMathlib.ProbabilityTheory.SPMF
+public import Mathlib.Data.Finset.Basic
 public import ToMathlib.Data.Set.Functor
 public import PolyFun.Control.Monad.Support
 
@@ -21,8 +20,6 @@ Finite support and decidable membership are optional refinements of that view.
 -/
 
 @[expose] public section
-
-open ENNReal
 
 universe u v w
 
@@ -77,8 +74,8 @@ section forall_support
 variable {m : Type u → Type v} [MonadAttach m] {α : Type u}
 
 /-- A predicate holds on every output reachable from a monadic computation `mx`,
-i.e. `∀ x ∈ support mx, p x`. This is the "almost-sure" assertion at the qualitative
-denotational level provided by `MonadAttach m`.
+i.e. `∀ x ∈ support mx, p x`. This is a qualitative assertion about the possible outputs
+provided by `MonadAttach m`.
 
 For `OracleComp`, see also the structural-recursion variant
 `OracleComp.allOutputsSatisfyWhen` in `VCVio/OracleComp/Traversal.lean`, which is

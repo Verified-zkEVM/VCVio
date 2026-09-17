@@ -340,6 +340,37 @@ transformer laws reuse them without importing that higher layer. Native transfor
 primary even when a finite-distribution lift exists; the explicit `ProbComp.DiscreteCompatibility`
 scope selects the adapter at a retiring calibration boundary. Lossless lifts publish
 probability-measure instances, so consumers infer their mass properties from the base computation.
+Generic observation bundles and their native measure observers live in
+`VCVio.EvalDist.Defs.Semantics.Core`; the original import facade also exports the discrete adapters.
+Their bundled measures expose subprobability and finiteness automatically, and known probability
+certificates propagate through optional, exceptional, and global semantics bundling. The lossless
+`ProbabilitySemantics` bundle registers the guaranteed probability properties of bare denotations
+and effect-preserving transformer observations. These are certificates for existing measures;
+no new measure construction or global measurable-space choice is needed. Bundled computation
+families likewise infer Markov kernels from their probability-measure certificates.
+Mathlib's scoped kernel/measure notation `κ ∘ₘ μ` denotes `Measure.bind μ κ`.
+PolyFun currently registers the same glyph globally for `MonadHom.comp`; native kernel composition
+equations use the explicit upstream `Measure.bind` to avoid depending on import order. Scoping
+PolyFun's morphism notation remains an upstream notation issue.
+Native `Id`, `Option`, and `Except` interpretations use upstream `Measure.dirac`, zero,
+`Measure.dirac_bind`, and `Measure.bind_zero_left`. Their pure and bind certificates need no
+finite backend; bare exceptional semantics observes successful outputs without a measurable
+space on errors. A propositional Dirac observation normalizes with upstream `Pi.single_apply`,
+packaged as `Measure.dirac_apply_singleton_true` for `simp` and `grind`. Optional failure's empty
+operational support uses Lean's `LawfulMonadAttach.eq_of_canReturn_pure`; its elimination law
+needs no `ExactMonadAttach` or numeric lift. Registering this upstream rule for forward `grind`
+lets the short proof work over state and reader bases. The operational support/failure modules
+contain no PMF/SPMF backend, and raw SPMF support uses native attachment without a SetM lift.
+`LawfulFailureEvalDistSemantics` separately certifies zero successful-output measure for an
+`Alternative`. The pinned Lean, Batteries, Mathlib, cslib, and PolyFun trees provide no corresponding
+measure-valued failure certificate. Native optional semantics supplies it from the base pure law;
+composition proofs use upstream `Measure.bind_zero_left` and `Measure.bind_const`, with discrete
+intermediate spaces internal to the API. Failure, its compositions, and final events normalize to
+zero with `simp` and `grind`, without an operational/probability compatibility class.
+The pinned tree supplies `IsZeroApply` and its generic `zero_apply` rule, but no measure instance;
+`Measure.instIsZeroApply` connects zero measures to that upstream automation. Bare exceptional
+constructor equations live in `ToMathlib.Control.Except` and register their operational facts for
+`simp` and `grind`, so deterministic event proofs need no additional tactic arguments.
 The upstream measurable embeddings' `comap_apply` equations hold on all sets and need no event
 measurability hypothesis. Sampled optional guards collapse to conjunctions of observed events using
 upstream `lintegral_indicator_one`, including after constant-map normalization. Their unit-output

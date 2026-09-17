@@ -5,6 +5,7 @@ public import ToMathlib.Algebra.BigOperators.List
 public import ToMathlib.Analysis.MeanInequalities
 public import ToMathlib.Analysis.SumIntegralComparisons
 public import ToMathlib.Control.AlternativeMonad
+public import ToMathlib.Control.Except
 public import ToMathlib.Control.Functor.Prod
 public import ToMathlib.Control.Lawful.MonadControl
 public import ToMathlib.Control.Lawful.MonadFunctor
@@ -58,6 +59,7 @@ public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Monotone
 public import ToMathlib.MeasureTheory.Measure.Option
+public import ToMathlib.MeasureTheory.Measure.Prop
 public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import ToMathlib.MeasureTheory.Measure.UniformTable
