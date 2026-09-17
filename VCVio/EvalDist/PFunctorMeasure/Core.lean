@@ -263,7 +263,8 @@ theorem evalDist_lift_bind_pure [MeasurableSpace α] (a : P.A) (f : P.B a → α
       (𝒟[(FreeM.lift a : FreeM P (P.B a))]).map f := by
   have hcont : AEMeasurable (fun b => denote (pure (f b) : FreeM P α))
       (IsMeasureSpec.toMeasure a) := by
-    simpa only [denote_pure] using (Measure.measurable_dirac.comp hf).aemeasurable
+    change AEMeasurable (Measure.dirac ∘ f) (IsMeasureSpec.toMeasure a)
+    exact (Measure.measurable_dirac.comp hf).aemeasurable
   rw [FreeM.lift_bind, evalDist_liftBind (P := P) a _ hcont, evalDist_lift (P := P)]
   simp only [evalDist_pure]
   exact Measure.bind_dirac_eq_map _ hf
