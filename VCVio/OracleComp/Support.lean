@@ -61,7 +61,7 @@ theorem bind_congr_of_forall_mem_support (mx : OracleComp spec α) {f g : α →
     (h : ∀ x ∈ support mx, f x = g x) : mx >>= f = mx >>= g :=
   MonadAttach.bind_congr_of_forall_mem_support mx h
 
-@[simp, grind .]
+@[grind .]
 lemma support_finite [spec.Fintype] (mx : OracleComp spec α) : (support mx).Finite :=
   PFunctor.FreeM.support_finite mx
 
