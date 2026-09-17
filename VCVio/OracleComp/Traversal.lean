@@ -5,7 +5,7 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ReachableWhen
 public import PolyFun.PFunctor.Free.Cursor
 
 /-!

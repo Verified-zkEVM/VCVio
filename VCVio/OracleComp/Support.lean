@@ -50,40 +50,20 @@ lemma mem_support_query (t : spec.Domain) (u : spec.Range t) :
 
 /-- An oracle computation has a reachable output when every query has an answer. -/
 theorem support_nonempty [spec.Inhabited] (mx : OracleComp spec α) :
-    (support mx).Nonempty := by
-  induction mx with
-  | pure x => exact ⟨x, by simp⟩
-  | queryBind t k ih =>
-      obtain ⟨x, hx⟩ := ih default
-      exact ⟨x, by
-        change x ∈ ⋃ b, support (k b)
-        exact Set.mem_iUnion.mpr ⟨default, hx⟩⟩
+    (support mx).Nonempty :=
+  PFunctor.FreeM.support_nonempty mx
 
 alias support_liftM_query := support_query
 
 /-- Support-aware bind congruence: if two continuations agree on all elements in the support
     of `mx`, the resulting bind computations are equal. -/
 theorem bind_congr_of_forall_mem_support (mx : OracleComp spec α) {f g : α → OracleComp spec β}
-    (h : ∀ x ∈ support mx, f x = g x) : mx >>= f = mx >>= g := by
-  induction mx with
-  | pure a =>
-    simpa using h a (by simp)
-  | queryBind q k ih =>
-    change PFunctor.FreeM.liftBind q (fun u => k u >>= f) =
-      PFunctor.FreeM.liftBind q (fun u => k u >>= g)
-    congr 1
-    funext u
-    exact ih u fun x hx => h x (by
-      change x ∈ ⋃ b, support (k b)
-      exact Set.mem_iUnion.mpr ⟨u, hx⟩)
+    (h : ∀ x ∈ support mx, f x = g x) : mx >>= f = mx >>= g :=
+  MonadAttach.bind_congr_of_forall_mem_support mx h
 
-@[simp, grind .]
-lemma support_finite [spec.Fintype] (mx : OracleComp spec α) : (support mx).Finite := by
-  induction mx with
-  | pure x => simp
-  | queryBind t f h =>
-      change (⋃ b, support (f b)).Finite
-      exact Set.finite_iUnion h
+@[grind .]
+lemma support_finite [spec.Fintype] (mx : OracleComp spec α) : (support mx).Finite :=
+  PFunctor.FreeM.support_finite mx
 
 
 end OracleComp

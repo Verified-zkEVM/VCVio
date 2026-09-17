@@ -46,6 +46,8 @@ premise — a combination Lean's instance search refuses to chase. The direct
 
 This typeclass records agreement of attachment support with discrete probability outputs,
 i.e. `support mx = SPMF.support (evalSPMF mx)`. -/
+@[deprecated "VCVio retiring probability API: use operational support and measure AE laws"
+  (since := "2026-09-17")]
 class EvalDistCompatible (m : Type u → Type v) [MonadAttach m]
     [MonadLiftT m SPMF] : Prop where
   /-- The reachable outputs of `mx` (via `support`) are exactly the outputs with
@@ -1072,6 +1074,8 @@ variable [MonadLiftT m SPMF]
 
 /-- The primary measure semantics agrees with the discrete façade: integrating a measurable
 functional against `𝒟[mx]` is the façade expectation `∑' x, Pr[= x | mx] * g x`. -/
+@[deprecated "VCVio retiring probability API: use native measure equations"
+  (since := "2026-09-17")]
 class DiscreteEvalDistCompatible (m : Type u → Type v) [MonadLiftT m SPMF]
     [EvalDistSemantics m] : Prop where
   /-- Integrals against the denoted measure are mass-weighted sums over the façade. -/

@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import PolyFun.Control.Monad.Algebra.WP
+public import PolyFun.Control.Monad.Support.WP
 public import Std.Internal.Do.ExceptPost
 public import VCVio.ProgramLogic.Unary.HoarePropTriple
 
@@ -37,18 +38,24 @@ variable {α β : Type}
 Enable with `open scoped OracleComp.Qualitative`. -/
 noncomputable scoped instance instWP :
     Std.Internal.Do.WPMonad (OracleComp spec) Prop Std.Internal.Do.EPost.Nil :=
-  MAlgOrdered.toWPMonad
+  MonadAttach.toWPMonadDemonic
 
-/-! ## Definitional alignment with `MAlgOrdered.wp` (Prop)
+/-! ## Agreement with the structural assertion algebra
 
-The keystone lemma confirms `Std.Internal.Do.wp` agrees with the `Prop`-valued
-`MAlgOrdered.wp` on the nose, so every existing qualitative `wp_*`
-theorem in `HoarePropTriple.lean` (and the support-style lemma
-`wp_iff_forall_support`) transports for free when the user rewrites
-`Std.Internal.Do.wp _ _ _ ↦ MAlgOrdered.wp (l := Prop) _ _`. -/
+The direct core WP interpretation and the `Prop`-valued ordered algebra both quantify
+over operationally possible outputs. Their public equations relate the two interfaces.
+-/
 
 theorem wp_eq_mAlgOrdered_wp_prop (oa : OracleComp spec α) (post : α → Prop) :
     Std.Internal.Do.wp oa post Lean.Order.bot =
-      MAlgOrdered.wp (m := OracleComp spec) (l := Prop) oa post := rfl
+      MAlgOrdered.wp (m := OracleComp spec) (l := Prop) oa post := by
+  rw [MonadAttach.toWPMonadDemonic_wp]
+  exact propext (MonadAttach.wp_iff_allOutputs oa post).symm
+
+/-- Structural weakest preconditions hold precisely on every possible output. -/
+theorem wp_iff_forall_support (oa : OracleComp spec α) (post : α → Prop) :
+    Std.Internal.Do.wp oa post Lean.Order.bot ↔ ∀ a ∈ support oa, post a := by
+  rw [wp_eq_mAlgOrdered_wp_prop]
+  exact OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support oa post
 
 end OracleComp.Qualitative

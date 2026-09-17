@@ -7,7 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import PolyFun.Control.Monad.Hom.Loops
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-public import VCVio.Prelude
+public import VCVio.Prelude.Core
 public import ToMathlib.Control.OptionT
 
 /-!

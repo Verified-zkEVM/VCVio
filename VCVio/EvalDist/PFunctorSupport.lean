@@ -11,33 +11,7 @@ public import PolyFun.PFunctor.Free.Support
 /-!
 # Operational support of polynomial free programs
 
-Universe-polymorphic mapping and operation-object equations for PolyFun's native
-`MonadAttach.support`. This module uses no probability interpretation.
+PolyFun's operational `MonadAttach.support` and polynomial free-program equations.
 -/
 
 public section
-
-universe uA uB v w
-
-namespace PFunctor.FreeM
-
-variable {P : PFunctor.{uA, uB}} {α : Type v}
-
-/-- Mapping a free tree maps its reachable leaves. -/
-@[simp]
-theorem support_map {γ : Type v} {δ : Type w} (f : γ → δ) (program : FreeM P γ) :
-    support (FreeM.map f program) = f '' support program := by
-  induction program with
-  | pure value => simp
-  | lift_bind position next ih =>
-      change (⋃ direction, support (FreeM.map f (next direction))) =
-        f '' (⋃ direction, support (next direction))
-      simp [ih, Set.image_iUnion]
-
-/-- An operation object can return exactly the outputs of its continuation. -/
-theorem support_liftObj (object : P.Obj α) :
-    MonadAttach.support (FreeM.liftObj object) = Set.range (PFunctor.Obj.snd object) := by
-  cases object using PFunctor.Obj.rec
-  simp [FreeM.liftObj, support_map, PFunctor.Obj.snd]
-
-end PFunctor.FreeM

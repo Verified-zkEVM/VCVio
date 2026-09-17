@@ -46,6 +46,8 @@ Remarks:
   monadic structure. We intentionally avoid a `bind` instance, as the natural condition depends
   on the support of the left-hand side.
 -/
+@[deprecated "VCVio retiring probability API: use IsProbabilityMeasure on 𝒟[mx]"
+  (since := "2026-09-17")]
 class NeverFail {α : Type u} {m : Type u → Type v} [Monad m]
     [MonadLiftT m SPMF] (mx : m α) : Prop where
   mk :: probFailure_eq_zero : Pr[⊥ | mx] = 0

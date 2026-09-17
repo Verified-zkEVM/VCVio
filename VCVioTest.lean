@@ -38,6 +38,7 @@ public import VCVioTest.MerkleTreeHashing
 public import VCVioTest.MerkleTreeMonadic
 public import VCVioTest.MerkleTreeMultiExtractability
 public import VCVioTest.MonadProbability
+public import VCVioTest.Native
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
@@ -49,6 +50,7 @@ public import VCVioTest.PFunctorFacade
 public import VCVioTest.PRFNetworkKernel
 public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics
+public import VCVioTest.ProgramLogic.BoundedMeasureWP
 public import VCVioTest.ProgramLogic.CoreWP
 public import VCVioTest.ProgramLogic.GCongr
 public import VCVioTest.ProgramLogic.MeasureRelWP

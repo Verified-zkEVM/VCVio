@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import ToMathlib.MeasureTheory.DiscreteInstances
 import VCVio.EvalDist.Monad.Measure
 import Mathlib.Logic.Equiv.Bool

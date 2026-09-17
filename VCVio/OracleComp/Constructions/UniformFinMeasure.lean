@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.EvalDist.ProbabilityNotation
 public import ToMathlib.MeasureTheory.Measure.Bounds

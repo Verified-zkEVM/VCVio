@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import PolyFun.PFunctor.Free.Support
-public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.Support
 
 /-!
 # Exact return predicates for oracle computations

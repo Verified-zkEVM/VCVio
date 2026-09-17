@@ -10,6 +10,7 @@ public import ToMathlib.Control.Functor.Prod
 public import ToMathlib.Control.Lawful.MonadControl
 public import ToMathlib.Control.Lawful.MonadFunctor
 public import ToMathlib.Control.Lawful.MonadState
+public import ToMathlib.Control.Monad.Algebra
 public import ToMathlib.Control.Monad.Dijkstra
 public import ToMathlib.Control.Monad.Fold
 public import ToMathlib.Control.Monad.Graded
