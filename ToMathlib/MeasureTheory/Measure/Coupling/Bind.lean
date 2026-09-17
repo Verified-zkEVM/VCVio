@@ -107,17 +107,17 @@ theorem ae_bind_of_ae_of_aemeasurable {μ : Measure α} {k : α → Measure β} 
 noncomputable def Coupling.bind {μ : Measure α} {ν : Measure β}
     (c : Coupling μ ν) {k : α → Measure γ} {l : β → Measure δ}
     {j : α × β → Measure (γ × δ)} (hk : Measurable k) (hl : Measurable l)
-    (hj : Measurable j) (h : ∀ᵐ z ∂c.1, IsCoupling (j z) (k z.1) (l z.2)) :
+    (hj : Measurable j) (h : ∀ᵐ z ∂c.joint, IsCoupling (j z) (k z.1) (l z.2)) :
     Coupling (μ.bind k) (ν.bind l) :=
-  ⟨c.1.bind j, c.2.bind hk hl hj h⟩
+  ⟨c.joint.bind j, c.isCoupling.bind hk hl hj h⟩
 
 /-- The joint measure of sequentially composed couplings is their Giry bind. -/
 @[simp]
 theorem Coupling.bind_joint {μ : Measure α} {ν : Measure β}
     (c : Coupling μ ν) {k : α → Measure γ} {l : β → Measure δ}
     {j : α × β → Measure (γ × δ)} (hk : Measurable k) (hl : Measurable l)
-    (hj : Measurable j) (h : ∀ᵐ z ∂c.1, IsCoupling (j z) (k z.1) (l z.2)) :
+    (hj : Measurable j) (h : ∀ᵐ z ∂c.joint, IsCoupling (j z) (k z.1) (l z.2)) :
     (c.bind hk hl hj h).joint = c.joint.bind j := by
-  simp only [Coupling.bind, Coupling.joint]
+  rfl
 
 end MeasureTheory.Measure

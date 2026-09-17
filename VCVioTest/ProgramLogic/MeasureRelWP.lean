@@ -65,6 +65,9 @@ example (R : Nat → Nat → Prop) : ¬RelWP (some 0) (none : Option Nat) R :=
 example (g : Nat → Nat → ENNReal) (h : ∀ a b, g a b ≤ 1) :
     eRelWP (some 0) (some 1) g ≤ 1 := eRelWP_le _ _ g 1 h
 
+example (mx my : Option Nat) (c : Measure.Coupling 𝒟[mx] 𝒟[my]) :
+    c.joint Set.univ ≤ 1 := measure_univ_le c.joint
+
 example [MeasurableSpace ℝ] [MeasurableSingletonClass ℝ]
     (j : ℝ × ℝ → Measure (Nat × Nat)) : AEMeasurable j (Measure.dirac (0, 0)) :=
   aemeasurable_of_ae_mem_countable (Set.countable_singleton ((0, 0) : ℝ × ℝ))

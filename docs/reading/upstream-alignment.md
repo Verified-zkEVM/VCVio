@@ -1020,6 +1020,16 @@ weighted oracles without selecting an enumeration, assuming uniformity, or ident
 sure postconditions with structural demonic WP. The native relational API also permits different
 universe levels for its two monads.
 
+Countable-concentration reflexivity restricts the diagonal predicate to its countable measurable
+part, avoiding a global `MeasurableEq` requirement for uncountable discrete outputs. Finite-tree
+reflexivity therefore simplifies directly. Bundled couplings use a structure with named joint
+and marginal-certificate fields; their constructor equations replace hidden subtype-coercion
+reductions in public proofs. Anonymous construction, numeric projections, joint coercion, and
+`val`/`property` access remain available. Probability, subprobability, and finite-measure instances
+are inherited from the first marginal. The pinned Mathlib has `IsProbabilityMeasure` and
+`IsFiniteMeasure`; the subprobability bound uses the existing local shim, as Mathlib does not
+yet provide that class.
+
 `PolyFun.Control.Monad.Algebra.Relational` already owns the generic relational class and rules.
 The local duplicate prevented importing the upstream algebra alongside VCVio's umbrella.
 `ToMathlib.Control.Monad.RelationalAlgebra` is now a reexport plus delegates installing the

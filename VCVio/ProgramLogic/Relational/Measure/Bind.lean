@@ -68,13 +68,13 @@ theorem relWP_bind_of_aemeasurable {m₁ : Type u → Type w₁} {m₂ : Type v 
     (mx : m₁ α) (my : m₂ β) (c : Measure.Coupling 𝒟[mx] 𝒟[my])
     (f : α → m₁ γ) (g : β → m₂ δ)
     (hf : Measurable fun a ↦ 𝒟[f a]) (hg : Measurable fun b ↦ 𝒟[g b])
-    {j : α × β → Measure (γ × δ)} (hj : AEMeasurable j c.1)
+    {j : α × β → Measure (γ × δ)} (hj : AEMeasurable j c.joint)
     {S : γ → δ → Prop} (hS : MeasurableSet {z : γ × δ | S z.1 z.2})
-    (hstep : ∀ᵐ z ∂c.1,
+    (hstep : ∀ᵐ z ∂c.joint,
       Measure.IsCoupling (j z) 𝒟[f z.1] 𝒟[g z.2] ∧ ∀ᵐ out ∂j z, S out.1 out.2) :
     RelWP (mx >>= f) (my >>= g) S := by
   rw [RelWP, evalDist_bind mx f hf, evalDist_bind my g hg]
-  exact ⟨⟨c.1.bind j, c.2.bind_of_aemeasurable hf hg hj
+  exact ⟨⟨c.joint.bind j, c.isCoupling.bind_of_aemeasurable hf hg hj
     (hstep.mono fun _ h ↦ h.1)⟩,
     Measure.ae_bind_of_ae_of_aemeasurable hj hS (hstep.mono fun _ h ↦ h.2)⟩
 
@@ -95,19 +95,19 @@ theorem CouplingPost.bind_of_countable {γ : Type x} {δ : Type y}
   obtain ⟨c, hc⟩ := hinit
   let domain : Set (α × β) := (s ×ˢ t) ∩ {z | R z.1 z.2}
   have hcount : domain.Countable := (hs.prod ht).mono Set.inter_subset_left
-  have hdomain : ∀ᵐ z ∂c.1, z ∈ domain :=
-    (c.2.ae_mem_prod hs.measurableSet ht.measurableSet hμ hν).and hc
+  have hdomain : ∀ᵐ z ∂c.joint, z ∈ domain :=
+    (c.isCoupling.ae_mem_prod hs.measurableSet ht.measurableSet hμ hν).and hc
   have hconditional (z : α × β) (hz : z ∈ domain) : CouplingPost (k z.1) (l z.2) S :=
     hstep z.1 hz.1.1 z.2 hz.1.2 hz.2
   let j : α × β → Measure (γ × δ) := fun z ↦
-    if hz : z ∈ domain then (hconditional z hz).choose.1 else 0
-  have hj : AEMeasurable j c.1 := aemeasurable_of_ae_mem_countable hcount hdomain j
-  have hcontract : ∀ᵐ z ∂c.1,
+    if hz : z ∈ domain then (hconditional z hz).choose.joint else 0
+  have hj : AEMeasurable j c.joint := aemeasurable_of_ae_mem_countable hcount hdomain j
+  have hcontract : ∀ᵐ z ∂c.joint,
       Measure.IsCoupling (j z) (k z.1) (l z.2) ∧ ∀ᵐ out ∂j z, S out.1 out.2 := by
     filter_upwards [hdomain] with z hz
     simpa only [j, dite_eq_left hz] using
-      And.intro (hconditional z hz).choose.2 (hconditional z hz).choose_spec
-  exact ⟨⟨c.1.bind j, c.2.bind_of_aemeasurable hk hl hj
+      And.intro (hconditional z hz).choose.isCoupling (hconditional z hz).choose_spec
+  exact ⟨⟨c.joint.bind j, c.isCoupling.bind_of_aemeasurable hk hl hj
     (hcontract.mono fun _ h ↦ h.1)⟩,
     Measure.ae_bind_of_ae_of_aemeasurable hj hS (hcontract.mono fun _ h ↦ h.2)⟩
 
@@ -133,7 +133,7 @@ theorem CouplingPost.bind_of_countable_of_ae_mem {γ : Type x} {δ : Type y}
       CouplingPost (k a) (l b) (fun x y ↦ (x ∈ p ∧ y ∈ q) ∧ S x y) := by
     intro a ha b hb hR
     obtain ⟨c, hc⟩ := hstep a ha b hb hR
-    exact ⟨c, (c.2.ae_mem_prod hp.measurableSet hq.measurableSet
+    exact ⟨c, (c.isCoupling.ae_mem_prod hp.measurableSet hq.measurableSet
       (hkp a ha) (hlq b hb)).and hc⟩
   exact (hinit.bind_of_countable hs ht hμ hν hk hl hpost hstep').mono
     fun _ _ h ↦ h.2
@@ -147,16 +147,16 @@ theorem lintegral_le_eRelWP_bind {m₁ : Type u → Type w₁} {m₂ : Type v �
     (mx : m₁ α) (my : m₂ β) (c : Measure.Coupling 𝒟[mx] 𝒟[my])
     (f : α → m₁ γ) (g : β → m₂ δ)
     (hf : Measurable fun a ↦ 𝒟[f a]) (hg : Measurable fun b ↦ 𝒟[g b])
-    {j : α × β → Measure (γ × δ)} (hj : AEMeasurable j c.1)
-    (hstep : ∀ᵐ z ∂c.1, Measure.IsCoupling (j z) 𝒟[f z.1] 𝒟[g z.2])
+    {j : α × β → Measure (γ × δ)} (hj : AEMeasurable j c.joint)
+    (hstep : ∀ᵐ z ∂c.joint, Measure.IsCoupling (j z) 𝒟[f z.1] 𝒟[g z.2])
     (post : γ → δ → ENNReal) (hpost : Measurable fun z : γ × δ ↦ post z.1 z.2) :
-    (∫⁻ z, ∫⁻ out, post out.1 out.2 ∂j z ∂c.1) ≤
+    (∫⁻ z, ∫⁻ out, post out.1 out.2 ∂j z ∂c.joint) ≤
       eRelWP (mx >>= f) (my >>= g) post := by
   rw [eRelWP, evalDist_bind mx f hf, evalDist_bind my g hg]
   have h := le_iSup
     (fun joint : Measure.Coupling (𝒟[mx].bind fun a ↦ 𝒟[f a])
         (𝒟[my].bind fun b ↦ 𝒟[g b]) ↦ ∫⁻ out, post out.1 out.2 ∂joint.1)
-    ⟨c.1.bind j, c.2.bind_of_aemeasurable hf hg hj hstep⟩
+    ⟨c.joint.bind j, c.isCoupling.bind_of_aemeasurable hf hg hj hstep⟩
   simpa only [Measure.lintegral_bind hj hpost.aemeasurable] using h
 
 end MeasureProgramLogic

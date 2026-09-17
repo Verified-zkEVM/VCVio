@@ -6,8 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 
-public import Mathlib.MeasureTheory.Measure.GiryMonad
-public import Mathlib.MeasureTheory.Measure.Prod
+public import ToMathlib.MeasureTheory.Measure.Subprobability
 
 /-!
 # Couplings of measures
@@ -39,9 +38,13 @@ class IsCoupling (c : Measure (α × β)) (μ : Measure α) (ν : Measure β) : 
   /-- The second marginal of the joint measure. -/
   snd_eq : c.snd = ν
 
-/-- Joint measures coupling `μ` and `ν`. -/
-def Coupling (μ : Measure α) (ν : Measure β) :=
-  {c : Measure (α × β) // IsCoupling c μ ν}
+/-- A joint measure together with its two marginal equations. -/
+@[ext]
+structure Coupling (μ : Measure α) (ν : Measure β) where
+  /-- The joint response law. -/
+  joint : Measure (α × β)
+  /-- Its marginal equations. -/
+  isCoupling : IsCoupling joint μ ν
 
 namespace IsCoupling
 
@@ -146,12 +149,34 @@ namespace Coupling
 
 variable {μ : Measure α} {ν : Measure β}
 
-/-- The joint measure underlying a coupling. -/
-abbrev joint (c : Coupling μ ν) : Measure (α × β) := c.1
+instance : CoeTC (Coupling μ ν) (Measure (α × β)) := ⟨Coupling.joint⟩
+
+/-- The underlying joint measure. -/
+abbrev val (c : Coupling μ ν) : Measure (α × β) := c.joint
+
+/-- The joint law's marginal certificate. -/
+abbrev property (c : Coupling μ ν) : IsCoupling c.joint μ ν := c.isCoupling
+
+instance (c : Coupling μ ν) [IsProbabilityMeasure μ] : IsProbabilityMeasure c.joint where
+  measure_univ := by rw [c.isCoupling.joint_apply_univ_eq_left, measure_univ]
+
+instance (c : Coupling μ ν) [IsSubprobabilityMeasure μ] : IsSubprobabilityMeasure c.joint where
+  measure_univ_le' := by
+    rw [c.isCoupling.joint_apply_univ_eq_left]
+    exact measure_univ_le μ
+
+instance (c : Coupling μ ν) [IsFiniteMeasure μ] : IsFiniteMeasure c.joint where
+  measure_univ_lt_top := by
+    rw [c.isCoupling.joint_apply_univ_eq_left]
+    exact measure_lt_top μ Set.univ
 
 /-- Canonical diagonal self-coupling. -/
 noncomputable def refl (μ : Measure α) : Coupling μ μ :=
   ⟨μ.map fun a => (a, a), IsCoupling.refl μ⟩
+
+/-- The diagonal coupling's joint law is the diagonal pushforward. -/
+@[simp]
+theorem refl_joint (μ : Measure α) : (refl μ).joint = μ.map (fun a ↦ (a, a)) := rfl
 
 /-- Independent-product coupling of probability measures. -/
 noncomputable def prod (μ : Measure α) (ν : Measure β)
@@ -163,14 +188,18 @@ noncomputable def dirac (a : α) (b : β) :
     Coupling (Measure.dirac a) (Measure.dirac b) :=
   ⟨Measure.dirac (a, b), IsCoupling.dirac a b⟩
 
+/-- The joint law of two pure outcomes is their paired Dirac measure. -/
+@[simp]
+theorem dirac_joint (a : α) (b : β) : (dirac a b).joint = Measure.dirac (a, b) := rfl
+
 /-- Swap the coordinates of a coupling. -/
 noncomputable def swap (c : Coupling μ ν) : Coupling ν μ :=
-  ⟨c.1.map Prod.swap, c.2.swap⟩
+  ⟨c.joint.map Prod.swap, c.isCoupling.swap⟩
 
 /-- Push a coupling forward through a pair of measurable functions. -/
 noncomputable def map (c : Coupling μ ν) (f : α → γ) (g : β → δ)
     (hf : Measurable f) (hg : Measurable g) : Coupling (μ.map f) (ν.map g) :=
-  ⟨c.1.map fun z => (f z.1, g z.2), c.2.map f g hf hg⟩
+  ⟨c.joint.map fun z => (f z.1, g z.2), c.isCoupling.map f g hf hg⟩
 
 end Coupling
 

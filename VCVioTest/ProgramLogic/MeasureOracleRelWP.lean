@@ -33,6 +33,10 @@ example (a b : ℝ) (R : ℝ → ℝ → Prop) :
     MAlgRelOrdered.RelWP (pure a : ProbComp ℝ) (pure b : ProbComp ℝ) R ↔ R a b := by
   simp
 
+example (mx : ProbComp ℝ) : MAlgRelOrdered.RelWP mx mx (· = ·) := by simp
+
+example (mx : ProbComp ℝ) : OracleComp.MeasureRelational.wp mx mx (· = ·) := by simp
+
 example (mx my : ProbComp ℝ) (f g : ℝ → ProbComp ℝ) (R : ℝ → ℝ → Prop)
     (h : MAlgRelOrdered.RelWP mx my fun a b ↦ MAlgRelOrdered.RelWP (f a) (g b) R) :
     MAlgRelOrdered.RelWP (mx >>= f) (my >>= g) R :=

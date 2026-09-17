@@ -41,7 +41,7 @@ variable [MeasurableSpace α] [MeasurableSpace β]
 
 /-- A relation holds under some coupling of `μ` and `ν`, almost everywhere. -/
 def CouplingPost (μ : Measure α) (ν : Measure β) (R : α → β → Prop) : Prop :=
-  ∃ c : Measure.Coupling μ ν, ∀ᵐ z ∂c.1, R z.1 z.2
+  ∃ c : Measure.Coupling μ ν, ∀ᵐ z ∂c.joint, R z.1 z.2
 
 /-- Measure-native relational weakest precondition for two denoted computations. -/
 def RelWP {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
@@ -53,7 +53,7 @@ def RelWP {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
 noncomputable def eRelWP {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [EvalDistSemantics m₁] [EvalDistSemantics m₂]
     (mx : m₁ α) (my : m₂ β) (g : α → β → ℝ≥0∞) : ℝ≥0∞ :=
-  ⨆ c : Measure.Coupling 𝒟[mx] 𝒟[my], ∫⁻ z, g z.1 z.2 ∂c.1
+  ⨆ c : Measure.Coupling 𝒟[mx] 𝒟[my], ∫⁻ z, g z.1 z.2 ∂c.joint
 
 /-- Postcondition monotonicity for measure couplings. -/
 theorem CouplingPost.mono {μ : Measure α} {ν : Measure β} {R S : α → β → Prop}
@@ -84,7 +84,7 @@ theorem le_eRelWP_of_isCoupling {m₁ : Type u → Type w₁} {m₂ : Type v →
     [EvalDistSemantics m₁] [EvalDistSemantics m₂]
     (mx : m₁ α) (my : m₂ β) (g : α → β → ℝ≥0∞)
     (c : Measure.Coupling 𝒟[mx] 𝒟[my]) :
-    (∫⁻ z, g z.1 z.2 ∂c.1) ≤ eRelWP mx my g :=
+    (∫⁻ z, g z.1 z.2 ∂c.joint) ≤ eRelWP mx my g :=
   le_iSup (fun c' : Measure.Coupling 𝒟[mx] 𝒟[my] ↦
     ∫⁻ z, g z.1 z.2 ∂c'.1) c
 
@@ -92,16 +92,16 @@ theorem le_eRelWP_of_isCoupling {m₁ : Type u → Type w₁} {m₂ : Type v →
 theorem le_eRelWP_pure_pure
     {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [Monad m₁] [Monad m₂] [EvalDistSemantics m₁] [EvalDistSemantics m₂]
-    [LawfulEvalDistSemantics m₁] [LawfulEvalDistSemantics m₂]
+    [LawfulPureEvalDistSemantics m₁] [LawfulPureEvalDistSemantics m₂]
     (a : α) (b : β) (g : α → β → ℝ≥0∞)
     (hg : Measurable fun z : α × β => g z.1 z.2) :
     g a b ≤ eRelWP (pure a : m₁ α) (pure b : m₂ β) g := by
   rw [eRelWP, evalDist_pure, evalDist_pure]
   have h := le_iSup
     (fun c : Measure.Coupling (Measure.dirac a) (Measure.dirac b) ↦
-      ∫⁻ z, g z.1 z.2 ∂c.1)
+      ∫⁻ z, g z.1 z.2 ∂c.joint)
     (Measure.Coupling.dirac a b)
-  change (∫⁻ z, g z.1 z.2 ∂Measure.dirac (a, b)) ≤ _ at h
+  rw [Measure.Coupling.dirac_joint] at h
   rw [lintegral_dirac' (a, b) hg] at h
   exact h
 
@@ -109,7 +109,7 @@ theorem le_eRelWP_pure_pure
 theorem relWP_pure_pure
     {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [Monad m₁] [Monad m₂] [EvalDistSemantics m₁] [EvalDistSemantics m₂]
-    [LawfulEvalDistSemantics m₁] [LawfulEvalDistSemantics m₂]
+    [LawfulPureEvalDistSemantics m₁] [LawfulPureEvalDistSemantics m₂]
     (a : α) (b : β) {R : α → β → Prop}
     (hMeasurable : MeasurableSet {z : α × β | R z.1 z.2}) (hR : R a b) :
     RelWP (pure a : m₁ α) (pure b : m₂ β) R := by
@@ -124,10 +124,28 @@ theorem couplingPost_refl [MeasurableEq α] (μ : Measure α) : CouplingPost μ 
     (measurableSet_eq_fun measurable_fst measurable_snd)).2
     (Filter.Eventually.of_forall fun _ => rfl)
 
+/-- Countable concentration suffices for reflexivity even when equality is not globally
+measurable in the product space. -/
+theorem couplingPost_refl_of_ae_mem_countable [MeasurableSingletonClass α]
+    (μ : Measure α) {s : Set α} (hs : s.Countable) (hμ : ∀ᵐ a ∂μ, a ∈ s) :
+    CouplingPost μ μ (· = ·) := by
+  have hevent : MeasurableSet {z : α × α | (z.1 ∈ s ∧ z.2 ∈ s) ∧ z.1 = z.2} :=
+    ((hs.prod hs).mono fun _ hz ↦ hz.1).measurableSet
+  refine ⟨Measure.Coupling.refl μ, ?_⟩
+  rw [Measure.Coupling.refl_joint]
+  exact ((ae_map_iff (μ := μ) (measurable_id.prodMk measurable_id).aemeasurable
+    hevent).2 (hμ.mono fun _ ha ↦ ⟨⟨ha, ha⟩, rfl⟩)).mono fun _ h ↦ h.2
+
 /-- Every computation is related to itself by equality. -/
 theorem relWP_refl {m : Type u → Type w₁} [EvalDistSemantics m] [MeasurableEq α] (mx : m α) :
     RelWP mx mx (· = ·) :=
   couplingPost_refl 𝒟[mx]
+
+/-- A countably concentrated output law admits a reflexive relational witness. -/
+theorem relWP_refl_of_ae_mem_countable {m : Type u → Type w₁}
+    [EvalDistSemantics m] [MeasurableSingletonClass α]
+    (mx : m α) {s : Set α} (hs : s.Countable) (h : ∀ᵐ a ∂𝒟[mx], a ∈ s) :
+    RelWP mx mx (· = ·) := couplingPost_refl_of_ae_mem_countable 𝒟[mx] hs h
 
 /-- A zero post-expectation has zero coupled expectation, including when no coupling exists. -/
 @[simp]
@@ -141,14 +159,14 @@ theorem not_relWP_of_mass_ne {m₁ : Type u → Type w₁} {m₂ : Type v → Ty
     [EvalDistSemantics m₁] [EvalDistSemantics m₂] (mx : m₁ α) (my : m₂ β)
     (h : 𝒟[mx] Set.univ ≠ 𝒟[my] Set.univ) (R : α → β → Prop) : ¬RelWP mx my R := by
   rintro ⟨c, _⟩
-  exact h c.2.apply_univ_eq
+  exact h c.isCoupling.apply_univ_eq
 
 /-- The quantitative supremum is zero when unequal masses leave no coupling witnesses. -/
 theorem eRelWP_eq_zero_of_mass_ne {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [EvalDistSemantics m₁] [EvalDistSemantics m₂] (mx : m₁ α) (my : m₂ β)
     (h : 𝒟[mx] Set.univ ≠ 𝒟[my] Set.univ) (g : α → β → ℝ≥0∞) :
     eRelWP mx my g = 0 := by
-  let : IsEmpty (Measure.Coupling 𝒟[mx] 𝒟[my]) := ⟨fun c ↦ h c.2.apply_univ_eq⟩
+  let : IsEmpty (Measure.Coupling 𝒟[mx] 𝒟[my]) := ⟨fun c ↦ h c.isCoupling.apply_univ_eq⟩
   simp [eRelWP]
 
 /-- Coupled expectations respect any pointwise constant upper bound. -/
@@ -158,10 +176,10 @@ theorem eRelWP_le {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     (h : ∀ a b, g a b ≤ bound) : eRelWP mx my g ≤ bound := by
   refine iSup_le fun c ↦ ?_
   calc
-    (∫⁻ z, g z.1 z.2 ∂c.1) ≤ ∫⁻ _ : α × β, bound ∂c.1 :=
+    (∫⁻ z, g z.1 z.2 ∂c.joint) ≤ ∫⁻ _ : α × β, bound ∂c.joint :=
       lintegral_mono fun z ↦ h z.1 z.2
     _ = bound * 𝒟[mx] Set.univ := by
-      rw [lintegral_const, c.2.joint_apply_univ_eq_left]
+      rw [lintegral_const, c.isCoupling.joint_apply_univ_eq_left]
     _ ≤ bound := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
 
 /-- Pure computations have their exact coupled post-expectation. -/
@@ -177,13 +195,13 @@ theorem eRelWP_pure_pure [MeasurableSingletonClass α] [MeasurableSingletonClass
   · refine iSup_le fun c ↦ ?_
     apply le_of_eq
     calc
-      (∫⁻ z, g z.1 z.2 ∂c.1) = ∫⁻ _ : α × β, g a b ∂c.1 :=
-        lintegral_congr_ae ((c.2.ae_eq_pair_of_dirac a b).mono fun z hz ↦ by rw [hz])
+      (∫⁻ z, g z.1 z.2 ∂c.joint) = ∫⁻ _ : α × β, g a b ∂c.joint :=
+        lintegral_congr_ae ((c.isCoupling.ae_eq_pair_of_dirac a b).mono fun z hz ↦ by rw [hz])
       _ = g a b := by
-        rw [lintegral_const, c.2.joint_apply_univ_eq_left, measure_univ, mul_one]
-  · simpa [Measure.Coupling.dirac] using le_iSup
+        rw [lintegral_const, c.isCoupling.joint_apply_univ_eq_left, measure_univ, mul_one]
+  · simpa only [Measure.Coupling.dirac_joint, lintegral_dirac] using le_iSup
       (fun c : Measure.Coupling (Measure.dirac a) (Measure.dirac b) ↦
-        ∫⁻ z, g z.1 z.2 ∂c.1) (Measure.Coupling.dirac a b)
+        ∫⁻ z, g z.1 z.2 ∂c.joint) (Measure.Coupling.dirac a b)
 
 /-- Pure computations satisfy exactly the relation on their returned values. -/
 @[simp]
@@ -196,12 +214,10 @@ theorem relWP_pure_pure_iff [MeasurableSingletonClass α] [MeasurableSingletonCl
   rw [RelWP, evalDist_pure, evalDist_pure, CouplingPost]
   constructor
   · rintro ⟨c, hc⟩
-    have hpair := c.2.ae_eq_pair_of_dirac a b
-    let : IsProbabilityMeasure c.1 :=
-      ⟨by rw [c.2.joint_apply_univ_eq_left, measure_univ]⟩
+    have hpair := c.isCoupling.ae_eq_pair_of_dirac a b
     obtain ⟨z, hz, hR⟩ := (hpair.and hc).exists
     simpa [hz] using hR
   · intro hR
-    exact ⟨Measure.Coupling.dirac a b, by simp [Measure.Coupling.dirac, hR]⟩
+    exact ⟨Measure.Coupling.dirac a b, by simp [hR]⟩
 
 end MeasureProgramLogic

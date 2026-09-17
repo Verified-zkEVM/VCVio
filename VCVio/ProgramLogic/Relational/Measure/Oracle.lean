@@ -89,6 +89,14 @@ theorem wp_bind {α β γ δ : Type}
       MonadAttach.mem_support_bind.mpr ⟨b, hb, hy⟩)
     (fun _ _ _ _ h ↦ by simpa only [wp, RelWP] using h)
 
+/-- Every finite-response oracle tree is related to itself by equality of outputs. -/
+@[simp]
+theorem wp_refl {α : Type} [∀ t, Finite (spec₁.Range t)] (mx : OracleComp spec₁ α) :
+    wp mx mx (· = ·) := by
+  let : MeasurableSpace α := ⊤
+  exact relWP_refl_of_ae_mem_countable mx (PFunctor.FreeM.support_finite mx).countable
+    (ae_of_forall_mem_support mx _ fun _ h ↦ h)
+
 end OracleComp.MeasureRelational
 
 namespace MeasureProgramLogic.Relational
@@ -116,5 +124,10 @@ theorem relWP_eq_wp {α β : Type}
     [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
     (mx : OracleComp spec₁ α) (my : OracleComp spec₂ β) (post : α → β → Prop) :
     MAlgRelOrdered.RelWP mx my post = wp mx my post := rfl
+
+/-- Native finite-tree reflexivity needs no measurable-equality instance on the output type. -/
+@[simp]
+theorem relWP_refl {α : Type} [∀ t, Finite (spec₁.Range t)] (mx : OracleComp spec₁ α) :
+    MAlgRelOrdered.RelWP mx mx (· = ·) := wp_refl mx
 
 end MeasureProgramLogic.Relational

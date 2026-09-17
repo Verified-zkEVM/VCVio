@@ -21,6 +21,11 @@ compatibility facades for their discrete corollaries.
 successful optional values simplify to their exact postcondition with plain `simp`.
 `eRelWP_mono` supports `gcongr` and `grw`. Unequal success masses admit no coupling, so the
 qualitative judgment is false and the quantitative supremum is zero.
+Couplings expose named `joint` and `isCoupling` fields, with public equations for their
+constructors. Their joint laws infer probability, subprobability, and finite-measure certificates
+from the corresponding marginal certificate. Countable-concentration reflexivity needs no
+globally measurable equality relation; native finite-tree reflexivity closes with plain `simp`,
+including on uncountable output types.
 `CouplingPost.bind_of_countable` composes pointwise coupling witnesses on countable marginal
 concentration sets: measurability is needed only under the chosen initial joint law. Its proof
 uses Mathlib's measurable modification API, not a globally measurable choice principle.
