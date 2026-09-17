@@ -150,6 +150,7 @@ public import VCVio.EvalDist.Defs.Measure.FinRatPMF
 public import VCVio.EvalDist.Defs.Measure.OptionT
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Support.Failure
 public import VCVio.EvalDist.Divergence.KLDivergence

@@ -357,6 +357,21 @@ unfolds; consumers do not need to supply the measurable-map equation.
 
 `ProbabilitySemantics` is the total/lossless semantics bundle used by transformer adapters.
 The lower-level `MeasureSemanticsVia` continues to describe potentially lossy surface semantics.
+Import `VCVio.EvalDist.Defs.Semantics.Core` for native bundles and
+`VCVio.EvalDist.MeasureSemantics` for effect-preserving transformer observations. These paths
+contain no PMF/SPMF backend; `Defs.Semantics` additionally exports the discrete compatibility
+bundles. Bundled `evalDist` observations infer `IsSubprobabilityMeasure` and `IsFiniteMeasure`.
+Known probability certificates propagate through bundling, and bundled kernels infer
+`IsMarkovKernel` from certificates for their output family. The total semantics bundle's bare
+denotation and effect-preserving `optionT`, `exceptT`, and `writerT` observations infer
+`IsProbabilityMeasure`; their total mass simplifies to one with `simp`.
+
+Mass properties and measurable spaces have different roles. `evalDist` always supplies the
+subprobability bound, but successful-output semantics cannot supply a probability certificate
+for a computation that may fail. Exact mass preservation through arbitrary maps and binds also
+needs the appropriate measurability proof. A named measure or kernel should export its guaranteed
+instances once; consumers should not repeatedly unfold it or redeclare the same instance.
+Lean's instance search does not prove arbitrary mass equations or unfold every named wrapper.
 
 For `ProbResponder`, the kernel is authoritative. `ProbResponder.IsExecutable` optionally carries
 a coherent realization `ProbResponder.IsExecutable.answerSPMF` for machine execution.
@@ -385,6 +400,11 @@ When introducing a new kernel, require the real measurable-space assumptions or 
 the semantic object. Do not install global `MeasurableSpace := ⊤` instances merely to discharge a
 proof. For an intentionally discrete local model, `evalDistKernelOfDiscrete` or a locally bundled
 measurable space is the explicit escape hatch.
+For generic output types, prefer `[MeasurableSpace α]` and structural instances for products,
+options, and subtypes. A local `MeasurableSpace := ⊤` deliberately selects discrete semantics;
+it is not an extra proof of a property of an already chosen measure. Intermediate choices made
+only to normalize a computation belong inside the semantic API, as in `prEvent` and the native
+constant-continuation laws.
 
 ### Measure-native interfaces
 

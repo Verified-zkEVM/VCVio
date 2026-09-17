@@ -340,6 +340,18 @@ transformer laws reuse them without importing that higher layer. Native transfor
 primary even when a finite-distribution lift exists; the explicit `ProbComp.DiscreteCompatibility`
 scope selects the adapter at a retiring calibration boundary. Lossless lifts publish
 probability-measure instances, so consumers infer their mass properties from the base computation.
+Generic observation bundles and their native measure observers live in
+`VCVio.EvalDist.Defs.Semantics.Core`; the original import facade also exports the discrete adapters.
+Their bundled measures expose subprobability and finiteness automatically, and known probability
+certificates propagate through optional, exceptional, and global semantics bundling. The lossless
+`ProbabilitySemantics` bundle registers the guaranteed probability properties of bare denotations
+and effect-preserving transformer observations. These are certificates for existing measures;
+no new measure construction or global measurable-space choice is needed. Bundled computation
+families likewise infer Markov kernels from their probability-measure certificates.
+Mathlib's scoped kernel/measure notation `κ ∘ₘ μ` denotes `Measure.bind μ κ`.
+PolyFun currently registers the same glyph globally for `MonadHom.comp`; native kernel composition
+equations use the explicit upstream `Measure.bind` to avoid depending on import order. Scoping
+PolyFun's morphism notation remains an upstream notation issue.
 Native `Id`, `Option`, and `Except` interpretations use upstream `Measure.dirac`, zero,
 `Measure.dirac_bind`, and `Measure.bind_zero_left`. Their pure and bind certificates need no
 finite backend; bare exceptional semantics observes successful outputs without a measurable
