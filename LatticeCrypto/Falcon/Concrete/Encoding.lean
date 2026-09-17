@@ -728,8 +728,8 @@ private theorem decVal_pkEncode (n : ℕ) (h : Rq n) (hn4 : n % 4 = 0)
     rw [v3, hcoeff (4 * b + 3) (by omega)]
 
 /-- Round-trip: decoding an encoded Falcon public key recovers the original polynomial.
-Requires `4 ∣ n` (true for every Falcon degree); for `n % 4 ≠ 0` the encoder pads to a
-non-canonical length and the decoder rejects. -/
+Requires `4 ∣ n` (true for every supported Falcon degree); for `n % 4 ≠ 0` the encoder
+panics and the decoder rejects. -/
 theorem pkDecode_pkEncode (n : ℕ) (h : Rq n) (hn4 : 4 ∣ n) :
     pkDecode n (pkEncode n h) = some h := by
   have hmod : n % 4 = 0 := by omega
