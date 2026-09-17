@@ -157,8 +157,8 @@ example {f : α → OracleComp spec β} {g : OracleComp spec β}
 
 /-! ### Loop invariants -/
 
-example {oa : OracleComp spec α} {I : ℝ≥0∞} {n : ℕ}
-    (hstep : ⦃ I ⦄ oa ⦃ fun _ => I ⦄) :
+-- Constant postconditions are preserved without an invariant premise.
+example {oa : OracleComp spec α} {I : ℝ≥0∞} {n : ℕ} :
     ⦃ I ⦄ oa.replicate n ⦃ fun _ => I ⦄ := by
   vcgen
 
@@ -168,8 +168,7 @@ example {σ : Type} {f : σ → α → OracleComp spec σ} {l : List α} {s₀ :
     ⦃ I s₀ ⦄ l.foldlM f s₀ ⦃ I ⦄ := by
   vcgen
 
-example {f : α → OracleComp spec β} {l : List α} {I : ℝ≥0∞}
-    (hstep : ∀ x, x ∈ l → ⦃ I ⦄ f x ⦃ fun _ => I ⦄) :
+example {f : α → OracleComp spec β} {l : List α} {I : ℝ≥0∞} :
     ⦃ I ⦄ l.mapM f ⦃ fun _ => I ⦄ := by
   vcgen
 
@@ -187,9 +186,9 @@ example {oa : OracleComp spec α} {f : α → OracleComp spec β}
   · intro x
     vcgen using cut2
 
-example {oa : OracleComp spec α} {I : ℝ≥0∞} {n : ℕ}
-    {pre : ℝ≥0∞} {post : List α → ℝ≥0∞}
-    (hpre : pre ≤ I) (hpost : ∀ xs, I ≤ post xs)
-    (hstep : ⦃ I ⦄ oa ⦃ fun _ => I ⦄) :
-    ⦃ pre ⦄ oa.replicate n ⦃ post ⦄ := by
+example {σ : Type} {f : σ → α → OracleComp spec σ} {l : List α} {s₀ : σ}
+    {I : σ → ℝ≥0∞} {pre : ℝ≥0∞} {post : σ → ℝ≥0∞}
+    (hpre : pre ≤ I s₀) (hpost : ∀ s, I s ≤ post s)
+    (hstep : ∀ s x, x ∈ l → ⦃ I s ⦄ f s x ⦃ I ⦄) :
+    ⦃ pre ⦄ l.foldlM f s₀ ⦃ post ⦄ := by
   vcgen inv I
