@@ -111,30 +111,30 @@ theorem outputMeasure_le_succ [∀ a, DiscreteMeasurableSpace (P.B a)]
     outputMeasure k computation ≤ outputMeasure (k + 1) computation := by
   induction k generalizing computation with
   | zero =>
-      rcases hdest : dest computation with result | ⟨position, next⟩
+      rcases hdest : dest computation with result | node
       · have hcomputation : computation = pure (p := P) result :=
           eq_of_dest_eq (by simpa using hdest)
         subst computation
         simp
-      · have hcomputation : computation = query position next :=
+      · have hcomputation : computation = query node.fst node.snd :=
           eq_of_dest_eq (by simpa using hdest)
         subst computation
         rw [outputMeasure_query_zero]
         exact bot_le
   | succ k ih =>
-      rcases hdest : dest computation with result | ⟨position, next⟩
+      rcases hdest : dest computation with result | node
       · have hcomputation : computation = pure (p := P) result :=
           eq_of_dest_eq (by simpa using hdest)
         subst computation
         simp
-      · have hcomputation : computation = query position next :=
+      · have hcomputation : computation = query node.fst node.snd :=
           eq_of_dest_eq (by simpa using hdest)
         subst computation
         rw [outputMeasure_query_succ, outputMeasure_query_succ]
         gcongr with direction
         · exact Measurable.of_discrete.aemeasurable
         · exact Measurable.of_discrete.aemeasurable
-        · exact ih (next direction)
+        · exact ih (node.snd direction)
 
 /-- The finite returned-output observations form an increasing sequence of measures. -/
 theorem monotone_outputMeasure [∀ a, DiscreteMeasurableSpace (P.B a)]

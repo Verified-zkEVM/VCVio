@@ -1031,6 +1031,13 @@ are inherited from the first marginal. The pinned Mathlib has `IsProbabilityMeas
 yet provide that class.
 
 `PolyFun.Control.Monad.Algebra.Relational` already owns the generic relational class and rules.
+The dependency pin also includes the merged object-equality and independent comonad/pairing
+interfaces, together with simulation and trace transport through cslib. Resumption measure
+proofs use the public `Obj.fst`/`Obj.snd` projections and
+`Obj.eta`, avoiding Sigma elimination without lengthening the proofs. Structural consumers
+import PolyFun's support module directly; the existing VCVio support-module path remains a
+thin public import facade.
+
 The local duplicate prevented importing the upstream algebra alongside VCVio's umbrella.
 `ToMathlib.Control.Monad.RelationalAlgebra` is now a reexport plus delegates installing the
 upstream named transformer constructions under the existing instance names. PolyFun's
