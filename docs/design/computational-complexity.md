@@ -539,7 +539,7 @@ young complexity library and avoids a dependency cycle.
 
 The audited source is complexitylib commit
 [`b6738219a3a3c50967d6bd16cba9487887ca6b66`](https://github.com/SamuelSchlesinger/complexitylib/tree/b6738219a3a3c50967d6bd16cba9487887ca6b66).
-At Lean/Mathlib 4.33, direct imports of
+At Lean/Mathlib 4.34, direct imports of
 `Complexitylib.Models.TuringMachine` and
 `Complexitylib.Classes.P.Cobham.Defs` compile unchanged. The package builds an
 exact certificate layer on that machine model and inhabited PolyFun
@@ -555,12 +555,14 @@ This import direction is conceptually sound: VCVio-specific interaction is an
 instantiation over a general concrete machine library. Compatibility of the
 higher machine-combinator stack is a blocker for general closure, not a layering
 problem. The cited complexitylib revision pins Lean and Mathlib 4.30, while
-VCVio pins 4.33. The completed preflight used VCVio's toolchain and made the
-direct Mathlib 4.33 pin authoritative. No file in the checked-out complexitylib
+VCVio pins 4.34. The completed preflight used VCVio's toolchain and made the
+direct Mathlib 4.34 pin authoritative. No file in the checked-out complexitylib
 dependency was edited.
 
 The preflight found two separate incompatibilities. The upstream asymptotics
-module fails, so the package contains one attributed adaptation,
+module fails at its polynomial import boundary (`Polynomial.natDegree` and
+`Polynomial.eval_eq_sum_range` are unavailable from its imports). Its earlier
+`Norm.ext` failures no longer occur on v4.34. The package contains one attributed adaptation,
 `VCVioComplexity.Asymptotics.PolyBound`, omitting only the `BigO` bridge. The
 higher Turing-machine combinator stack also fails, so the package exposes
 PolyFun's category, exact-category, product, sum, option, and distributivity mixins as explicit
