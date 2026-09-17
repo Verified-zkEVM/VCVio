@@ -373,7 +373,7 @@ with the occurrences of each in the current tree.
 After adding new `.lean` files: `./scripts/update-lib.sh` (CI's `scripts/check-imports.sh`
 fails when a regenerated umbrella would differ from the committed one).
 
-Lean toolchain and Mathlib must stay in sync (both currently `v4.33.1`); the bump procedure
+Lean toolchain and Mathlib must stay in sync (both currently `v4.34.0`); the bump procedure
 is in `CONTRIBUTING.md`. Mathlib's file-length linter is enabled at 1500 lines. Split
 files by responsibility before crossing that limit; retain an import façade when an existing
 module path forms part of the public API.

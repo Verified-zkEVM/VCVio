@@ -3,18 +3,19 @@
 - Upstream: <https://github.com/SamuelSchlesinger/complexitylib>
 - Revision: `b6738219a3a3c50967d6bd16cba9487887ca6b66`
 - Upstream toolchain at that revision: Lean `v4.30.0`
-- VCVio validation toolchain: Lean and Mathlib `v4.33.1`
+- VCVio validation toolchain: Lean and Mathlib `v4.34.0`
 
 The direct Git dependency is tested with VCVio as a path dependency and with the nested package's
-direct Mathlib `v4.33.1` requirement taking precedence over inherited pins. The direct compatibility
+direct Mathlib `v4.34.0` requirement taking precedence over inherited pins. The direct compatibility
 canary imports:
 
 - `Complexitylib.Models.TuringMachine`;
 - `Complexitylib.Classes.P.Cobham.Defs`.
 
-Both modules compile unchanged at Lean/Mathlib 4.33. The transitive import
-`Complexitylib.Asymptotics` does not: its Lean 4.30 proofs use extensionality for `Norm ℝ` and
-natural-to-real coercion conversions that no longer close under Mathlib 4.33.
+Both modules compile unchanged at Lean/Mathlib 4.34. The transitive import
+`Complexitylib.Asymptotics` does not: its imports do not expose `Polynomial.natDegree` or
+`Polynomial.eval_eq_sum_range` under Mathlib 4.34. The earlier `Norm.ext` and coercion
+proof failures no longer occur. The preflight checks exactly six polynomial diagnostics.
 Consequently, `Complexitylib.Classes.P.Defs` and the full Cobham equivalence theorem remain outside
 the compiling canary because they transitively depend on that asymptotics module; the syntax-only
 `Complexitylib.Classes.P.Cobham.Defs` module does compile.
@@ -37,12 +38,12 @@ coexist with the direct implementation.
 
 ## Concrete TM adapter compatibility
 
-`Complexitylib.Models.TuringMachine` compiles unchanged on Lean and Mathlib 4.33. It supplies the
+`Complexitylib.Models.TuringMachine` compiles unchanged on Lean and Mathlib 4.34. It supplies the
 concrete deterministic TM, exact `TM.reachesIn`, delimited `Tape.HasOutput`, and
 `TM.ComputesInTime` used by `VCVioComplexity.Backend.TuringMachine`.
 
 The higher compositional stack does not currently compile. `TuringMachine.Internal` fails at
-upstream lines 54 and 71 because Lean 4.33's `split` no longer selects the exposed conditional;
+upstream lines 54 and 71 because Lean 4.34's `split` no longer selects the exposed conditional;
 `TuringMachine.Combinators` fails similarly at upstream lines 328 and 341. `Hoare.Defs` imports
 the failing internal module, while `Composition.Defs` and `Subroutines.CopyOutput` transitively
 import the failing combinator stack. Consequently this package exposes exact per-machine
@@ -80,7 +81,7 @@ The direct identity/composition acceptance test is PolyFun's
 `polynomialQuantitativeStepClass.HasCategory` mixin itself. It has no exported inhabitant. Filling
 it requires total exact machines on all words, represented semantic correctness, polynomial run
 certificates, and a proved inequality for connection overhead. The currently failing upstream
-modules prevent reusing `copyInputToOutputTM` and `compositionTM` at Lean 4.33; no closure witness
+modules prevent reusing `copyInputToOutputTM` and `compositionTM` at Lean 4.34; no closure witness
 is inferred from their source definitions alone.
 
 The closed adapter codec and complexitylib's canonical pairing are not definitionally compatible:

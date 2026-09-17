@@ -8,7 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
 public import PolyFun.Realizability.Quantitative.Closure
-public import Mathlib.MeasureTheory.Measure.Dirac
+public import Mathlib.MeasureTheory.Measure.Dirac.Basic
 
 /-!
 # Computational-complexity soundness checks
