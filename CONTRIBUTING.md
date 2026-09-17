@@ -143,7 +143,8 @@ The toolchain and Mathlib move together, and the other pins follow them. The ord
 `lake update` idempotent (see the comment above the PolyFun `require` in `lakefile.lean`):
 
 1. `lean-toolchain`, then the Mathlib tag in `lakefile.lean`.
-2. The `cslib`, `PolyFun`, and `loom2` revisions, each to a commit built against that Mathlib.
+2. The `cslib` and `PolyFun` revisions, each to a commit built against that Mathlib. Program
+   logic uses the pinned Lean core WP interface through PolyFun.
 3. `lake update --keep-toolchain`, then `lake exe cache get`.
 4. `./scripts/validate.sh --lint --test --axioms`; fix what the new toolchain flags rather than
    silencing it (`docs/agents/gotchas.md` §23), and update `scripts/axiom_baseline.json` only for
