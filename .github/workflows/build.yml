@@ -19,7 +19,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The PMF/SPMF boundary ratchet diffs against the pull-request base.
           fetch-depth: 0
 
       - name: Set up Lean environment
@@ -36,15 +35,6 @@ jobs:
         run: |
           bash scripts/test-polyfun-boundary.sh
           bash scripts/check-polyfun-boundary.sh
-
-      - name: Check PMF/SPMF dependency boundary
-        run: |
-          bash scripts/test-pmf-boundary.sh
-          bash scripts/check-pmf-boundary.sh
-
-      - name: Report PMF/SPMF boundary trend
-        if: github.event_name == 'pull_request'
-        run: bash scripts/check-pmf-boundary.sh --report "origin/${{ github.base_ref }}"
 
       - name: Check broad-expose boundary
         run: |
@@ -271,6 +261,7 @@ jobs:
             --path-prefix Examples.lean \
             --path-prefix VCVioWidgets.lean \
             --exclude-substring 'declaration uses `sorry`' \
+            --exclude-substring 'VCVio retiring probability API' \
             --label 'repository non-sorry warnings'
       - name: Time warm rebuild
         run: |
@@ -333,6 +324,7 @@ jobs:
             --path-prefix LatticeCryptoTest/ \
             --path-prefix LatticeCryptoTest.lean \
             --path-prefix HashSigTest/ \
+            --exclude-substring 'VCVio retiring probability API' \
             --label 'test-library warnings'
       # The same ratchet over the test libraries, which only exist as oleans once `lake
       # test` has built them — the incident this gate exists for would have been just as

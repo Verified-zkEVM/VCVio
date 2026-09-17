@@ -7,8 +7,9 @@ Machine-checked cryptographic proofs in Lean, built on Mathlib.
 1. Run `lake exe cache get && lake build`.
 2. Read `Examples/OneTimePad/Basic.lean` for a compact modern proof (correctness and privacy).
 3. Choose the work area by task: use `VCVio/` for oracle/probability/program-logic work, `LatticeCrypto/` for lattice schemes and reductions, and `LatticeCryptoTest/` for vectors or differential tests.
-4. If probability lemmas fail unexpectedly, first check for `[IsProbabilitySpec spec]`
-   or `[IsUniformSpec spec]` as appropriate.
+4. If `𝒟` lemmas fail unexpectedly, check for `[OracleSpec.IsMeasureSpec spec]`
+   and the required measurable spaces. The concrete `unifSpec` and `coinSpec`
+   have native uniform-measure instances; other specs need a chosen interpretation.
 
 `AGENTS.md` is the canonical guide. `CLAUDE.md` is a symlink to this file.
 
@@ -116,7 +117,7 @@ or `VCVioTest/`. This contract is enforced by
 
 ## Critical Gotchas
 
-1. **Probability assumptions are explicit.** `support` on `OracleComp spec` works for arbitrary specs. `evalSPMF` / `Pr[...]` need `[IsProbabilitySpec spec]`; `evalDist` / `𝒟[…]` additionally need an ambient `MeasurableSpace` on the result. Uniform/cardinality lemmas and `support ↔ Pr[= _] ≠ 0` need `[IsUniformSpec spec]`. Use `IsUniformSpec.ofFintypeInhabited` when you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics.
+1. **Probability assumptions are explicit for arbitrary specs.** `support` on `OracleComp spec` works without a probability interpretation. `evalSPMF` / `Pr[...]` need `[IsProbabilitySpec spec]`; direct `evalDist` / `𝒟[…]` need `[OracleSpec.IsMeasureSpec spec]` and an ambient `MeasurableSpace` on the result. Native uniform-measure instances are global for `unifSpec` and `coinSpec`. Uniform/cardinality lemmas and `support ↔ Pr[= _] ≠ 0` need `[IsUniformSpec spec]`. Use `IsUniformSpec.ofFintypeInhabited` when you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics.
 2. **`autoImplicit = false` is set globally in `lakefile.lean`**. Do not add `set_option autoImplicit false` in individual files. Every variable must be explicitly declared.
 3. **`evalSPMF` IS `simulateQ`** with `IsProbabilitySpec.toPMF`; under `[IsUniformSpec spec]` this is uniform. This is definitional (`rfl`). `evalDist` is its successful-output measure façade on the discrete compatibility path and agrees with the direct `FreeM.denote` measure fold when both specifications are present. These identities are internal to `VCVio/EvalDist/**` and `VCVio/OracleComp/**`: code outside those directories crosses them through the public equation lemmas (`evalSPMF_eq_simulateQ`, `probOutput_def`, `support_def`). Existing downstream `rfl` uses are grandfathered; new proofs use the public equations.
 4. **`++ₒ` is dead** — use `+` for combining oracle specs.
@@ -126,7 +127,7 @@ or `VCVioTest/`. This contract is enforced by
 8. **Interop TCB isolation is mandatory**. Core VCVio (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `Examples/`, `LatticeCryptoTest/`, `Extern/`, `VCVioWidgets/`, `VCVioTest/`) must never `import Interop.…`, `import Hax.…`, or `import Aeneas.…`. CI fails the PR if it does. See `docs/agents/interop.md`.
 9. **Extern link-safety isolation is mandatory**. Proof libraries (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) must never `import Extern.…`: the native backends behind it are built as empty stubs whenever the `third_party/` submodules are absent — always the case for Lake dependency checkouts — so importing `Extern` would break downstream executable links. Test libraries may import it. Enforced by `scripts/check-extern-isolation.sh` in CI.
 
-10. **`PMF`/`SPMF` is a retiring surface, not a coequal representation.** Upstream is dismantling `PMF` construction by construction — the pinned Mathlib already deprecates `PMF.bernoulli` and `PMF.binomial` for measure-valued replacements. New semantic code uses `Measure`/`Kernel`; a change that touches a file still carrying explicit `PMF`/`SPMF` identifiers should leave that source count lower than it found it. `scripts/check-pmf-boundary.sh` enforces a per-file ceiling on every build (a file absent from the baseline has an allowance of zero) and reports the actual source-count trend against the base ref on every pull request; comments and string literals do not count. This is a syntactic migration proxy, not semantic dependency analysis. `SPMF` counts because `SPMF := OptionT PMF`. `--ratchet` is the opt-in mode for a deliberate reduction pass, with holds recorded in `scripts/pmf_boundary_holds.tsv`. See `docs/reading/denotational-probability-semantics.md`.
+10. **`PMF`/`SPMF` is a retiring surface, not a coequal representation.** New semantic code uses `Measure`/`Kernel` and the measure-backed `Pr{...}[...]` notation. Local `SPMF`, `evalSPMF`, and the legacy scalar evaluation functions are deprecated. Mathlib owns `PMF`, so VCVio cannot attach Lean's `deprecated` attribute to that imported declaration; `ToMathlib.Lint.usesRetiredProbability` detects direct use of it, alongside the local deprecated declarations. The exact `scripts/nolints.json` entries track existing dependent declarations and must shrink as they migrate. Compiler deprecation warnings remain visible in Lean; the build warning budget delegates only these tagged warnings to the environment linter. The old source-count script has been removed. See `docs/reading/denotational-probability-semantics.md`.
 
 11. **Name the reduction in security theorems.** Write `bound ≤ Pr[= true | exp (myReduction adv)]`, never `∃ B, bound ≤ Pr[= true | exp B]`. Adversary types such as `X → ProbComp W` carry no resource bound, and `Classical.choice` can pick a witness directly, so the existential form holds for every scheme and passes the axiom sweep. The same applies to simulators (`∃ sim ζ, HVZK sim ζ` holds with `ζ := 1`), extractors, and distinguishers. If the reduction does not exist yet, use a named `sorry` definition or a warned placeholder instead. See [`docs/agents/crypto.md`](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
 
@@ -234,7 +235,7 @@ lake exe cache get && lake build
 
 `lake build` builds the seven proof libraries (the default targets); `lake build VCVio` is
 the fast path for framework-only work. `./scripts/validate.sh` runs the fast per-PR CI checks
-locally in CI's order (build and warning budget, umbrella check, boundary ratchets, style
+locally in CI's order (build and warning budget, umbrella check, remaining boundary checks, style
 linters, agent-docs checks); `--lint` adds Batteries' environment linters, one process per
 proof library as in CI. `lake lint` runs both source-style and environment checks;
 `-- --style-only` and `-- --env-only` select either pass, and `-- --no-build` requires existing
@@ -372,7 +373,7 @@ with the occurrences of each in the current tree.
 After adding new `.lean` files: `./scripts/update-lib.sh` (CI's `scripts/check-imports.sh`
 fails when a regenerated umbrella would differ from the committed one).
 
-Lean toolchain and Mathlib must stay in sync (both currently `v4.33.1`); the bump procedure
+Lean toolchain and Mathlib must stay in sync (both currently `v4.34.0`); the bump procedure
 is in `CONTRIBUTING.md`. Mathlib's file-length linter is enabled at 1500 lines. Split
 files by responsibility before crossing that limit; retain an import façade when an existing
 module path forms part of the public API.

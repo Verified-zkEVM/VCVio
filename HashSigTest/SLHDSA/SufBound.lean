@@ -504,12 +504,12 @@ variable (sadv : strongUnforgeableAdv (generalAlg (vp := toy) toyPrimitives))
 example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
       List Byte → GeneralScheme.SignatureCore toy toyPrimitives.core → Bool) :
     sadv.sameMessageAdvantage ProbCompRuntime.probComp =
-      Pr[fun z => z.1 = true ∧ z.2 = false |
-        instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel] +
-      Pr[fun z => z.1 = true ∧ z.2 = true |
-        instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel] :=
+      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+        {z | z.1 = true ∧ z.2 = false} +
+      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+        {z | z.1 = true ∧ z.2 = true} :=
   sameMessageAdvantage_eq_arms ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) sadv sel
+    sadv sel
 
 example : sadv.sameMessageAdvantage ProbCompRuntime.probComp ≤ 1 :=
   sameMessageAdvantage_le_one ProbCompRuntime.probComp sadv
@@ -525,10 +525,10 @@ example :
 example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
       List Byte → GeneralScheme.SignatureCore toy toyPrimitives.core → Bool) :
     sadv.advantage ProbCompRuntime.probComp ≤ x +
-        (Pr[fun z => z.1 = true ∧ z.2 = false |
-            instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel] +
-          Pr[fun z => z.1 = true ∧ z.2 = true |
-            instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel]) ↔
+        ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+          {z | z.1 = true ∧ z.2 = false} +
+          (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+            {z | z.1 = true ∧ z.2 = true}) ↔
       sadv.toUnforgeableAdv.advantage ProbCompRuntime.probComp ≤ x :=
   strongAdvantage_le_add_arms_iff sadv x sel
 
@@ -582,10 +582,10 @@ example : sadv.advantage ProbCompRuntime.probComp ≤
 example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
       List Byte → GeneralScheme.SignatureCore toy toyPrimitives.core → Bool) :
     sadv.advantage ProbCompRuntime.probComp ≤ c.summands.bound toy.params +
-      (Pr[fun z => z.1 = true ∧ z.2 = false |
-          instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel] +
-        Pr[fun z => z.1 = true ∧ z.2 = true |
-          instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel]) :=
+      ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+        {z | z.1 = true ∧ z.2 = false} +
+        (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+          {z | z.1 = true ∧ z.2 = true}) :=
   strongAdvantage_le_bound_add_arms c sel
 
 example : sadv.advantage ProbCompRuntime.probComp ≤
@@ -597,37 +597,15 @@ example (hfresh : freshRandomizerHalf sadv ≤ x) :
       c.summands.bound toy.params + x + sameRandomizerHalf sadv :=
   strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le c x hfresh
 
-/-! ### The two halves at their defining equations
+/-! ### Exact randomizer partition -/
 
-Both hypotheses below are `rfl` in the module that defines the halves and are not available here or
-in the module under test, so these two pins are the only place in this file where a statement is
-pinned at hypotheses nothing discharges. -/
+example : sadv.sameMessageAdvantage ProbCompRuntime.probComp =
+    freshRandomizerHalf sadv + sameRandomizerHalf sadv :=
+  sameMessageAdvantage_eq_freshRandomizerHalf_add_sameRandomizerHalf sadv
 
-example
-    (hfresh : freshRandomizerHalf sadv =
-      Pr[ fun z => z.1 = true ∧ z.2 = false |
-        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (vp := toy) (prims := toyPrimitives))])
-    (hsame : sameRandomizerHalf sadv =
-      Pr[ fun z => z.1 = true ∧ z.2 = true |
-        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (vp := toy) (prims := toyPrimitives))]) :
-    sadv.sameMessageAdvantage ProbCompRuntime.probComp =
-      freshRandomizerHalf sadv + sameRandomizerHalf sadv :=
-  sameMessageAdvantage_eq_halves_of_unfoldings sadv hfresh hsame
-
-example
-    (hfresh : freshRandomizerHalf sadv =
-      Pr[ fun z => z.1 = true ∧ z.2 = false |
-        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (vp := toy) (prims := toyPrimitives))])
-    (hsame : sameRandomizerHalf sadv =
-      Pr[ fun z => z.1 = true ∧ z.2 = true |
-        instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (vp := toy) (prims := toyPrimitives))]) :
-    s.sufBound toyParams (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) =
-      s.bound toyParams + sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
-  sufBound_eq_bound_add_sameMessage_of_unfoldings s toyParams sadv hfresh hsame
+example : s.sufBound toyParams (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) =
+    s.bound toyParams + sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+  sufBound_eq_bound_add_sameMessage s toyParams sadv
 
 end Pins
 
@@ -637,8 +615,9 @@ The composition fixture's vacuity canary, at this module's headline.  A closed
 `SLHDSA.Security.Certificate` is constructible at an arbitrary validated parameter set, an arbitrary
 bundle carrying the instances the structure asks for and an arbitrary adversary, from an address key
 and a public seed and no security assumption at all, and the bound it names is at least one.  At
-that certificate `strongAdvantage_le_bound_add_sameMessage` reads `sadv.advantage ≤ (something ≥ 1)
-+ residual`, which `probOutput_le_one` gives with extra steps.
+that certificate `strongAdvantage_le_bound_add_sameMessage` reads
+`sadv.advantage ≤ (something ≥ 1) + residual`, which `MeasureTheory.measure_le_one` gives with extra
+steps.
 
 **The residual does not repair it and cannot.**  By `strongAdvantage_le_add_sameMessage_iff` the
 headline is equivalent to the previous module's `advantage_le_bound` at the same certificate, so its
@@ -829,7 +808,7 @@ noncomputable def freeCertificate {adv : unforgeableAdv (generalAlg prims)}
   split := by simp
   forsBranch_le := by simp
   hypertreeBranch_le := by
-    calc adv.advantage ProbCompRuntime.probComp ≤ 1 := probOutput_le_one
+    calc adv.advantage ProbCompRuntime.probComp ≤ 1 := MeasureTheory.measure_le_one _ _
       _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
           (freePreAdv_advantage prims t).symm
       _ ≤ _ := le_add_right (le_add_right le_add_self)
@@ -847,7 +826,8 @@ end Closed
 
 /-- **The headline at that certificate.**  Both conjuncts together are the canary: the bound holds,
 and what it bounds the strong advantage by is at least one — so the strong-unforgeability statement
-of this module is, at this certificate, `probOutput_le_one` with extra steps, exactly as the
+of this module is, at this certificate, `MeasureTheory.measure_le_one` with extra steps, exactly as
+the
 existential one is at the same certificate.
 
 The residual is on the right-hand side of both conjuncts and changes neither. -/

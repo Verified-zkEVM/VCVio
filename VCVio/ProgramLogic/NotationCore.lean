@@ -26,7 +26,9 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 ### Prop indicator
 - `𝟙⟦P⟧` — inject `Prop` into `ℝ≥0∞` (1 if true, 0 if false)
 
-### Unary (Std.Do-inspired)
+### Unary (core WP)
+
+Unary triples additionally require `open scoped Std.Internal.Do OracleComp.Quantitative`.
 - `wp⟦c⟧` — quantitative WP (partial application, use as `wp⟦c⟧ post`)
 - `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)
 
@@ -84,12 +86,11 @@ theorem GameEquiv.probOutput_eq {g₁ g₂ : OracleComp spec₁ α}
 
 open scoped Classical in
 /-- Indicator embedding: lifts `P : Prop` into `ℝ≥0∞` as `1` (true) or `0` (false).
-This is the quantitative analogue of Loom's pure proposition assertion, but
-targets the expectation carrier rather than the current assertion lattice. -/
+It takes values in the expectation carrier `ℝ≥0∞`. -/
 noncomputable def propInd (P : Prop) : ℝ≥0∞ := if P then 1 else 0
 
-@[simp] lemma propInd_true : propInd True = 1 := if_pos trivial
-@[simp] lemma propInd_false : propInd False = 0 := if_neg id
+@[simp] lemma propInd_true : propInd True = 1 := ite_eq_left trivial
+@[simp] lemma propInd_false : propInd False = 0 := ite_eq_right id
 
 lemma propInd_eq_ite {P : Prop} [Decidable P] : propInd P = if P then 1 else 0 := by simp [propInd]
 
@@ -121,8 +122,7 @@ lemma propInd_not {P : Prop} : propInd (¬P) = 1 - propInd P := by
 /-! ## Notation -/
 
 /-- Numeric proposition indicator: `𝟙⟦P⟧ = 1` if `P` holds, `0` otherwise.
-This is deliberately distinct from Loom's `⌜P⌝`, which embeds propositions as
-top/bottom in the active assertion lattice. -/
+The true branch is the numeric value `1`, including for the unbounded expectation carrier. -/
 scoped notation "𝟙⟦" P "⟧" => propInd P
 
 /-- Quantitative WP notation. `wp⟦c⟧ post` directly elaborates to
@@ -137,7 +137,7 @@ scoped macro_rules
   | `(wp⟦ $c ⟧)            => `(fun post => wp $c post)
 
 /-- Raw relational WP notation.
-`rwp⟦c₁ ~ c₂ | post; epost₁, epost₂⟧` elaborates to `Std.Do'.rwp`.
+`rwp⟦c₁ ~ c₂ | post; epost₁, epost₂⟧` elaborates to `VCVio.ProgramLogic.rwp`.
 The normal assertion carrier and both exception-post carriers are inferred from
 `post`, `epost₁`, and `epost₂`, so this notation also works for stateful and
 exception-aware `RelWP` instances. -/
@@ -146,7 +146,7 @@ scoped syntax:max (name := relWpBracket)
 
 scoped macro_rules (kind := relWpBracket)
   | `(rwp⟦ $c₁ ~ $c₂ | $post; $epost₁, $epost₂ ⟧) =>
-      `(Std.Do'.rwp $c₁ $c₂ $post $epost₁ $epost₂)
+      `(VCVio.ProgramLogic.rwp $c₁ $c₂ $post $epost₁ $epost₂)
 
 /-- Game equivalence: `g₁ ≡ₚ g₂` means `evalSPMF g₁ = evalSPMF g₂`.
 Uses `syntax` + `macro_rules` because `≡` conflicts with Mathlib's
@@ -162,11 +162,11 @@ scoped notation "⟪" c₁ " ≈[" ε "] " c₂ " | " R "⟫" =>
   Relational.ApproxRelTriple ε c₁ c₂ R
 
 /-- eRHL quantitative relational triple:
-`⦃f⦄ c₁ ≈ₑ c₂ ⦃g⦄` means the quantitative `Std.Do'.RelTriple` form. -/
+`⦃f⦄ c₁ ≈ₑ c₂ ⦃g⦄` means the quantitative `VCVio.ProgramLogic.RelTriple` form. -/
 scoped syntax:lead "⦃" term "⦄ " term:lead " ≈ₑ " term:lead " ⦃" term "⦄" : term
 macro_rules
   | `(⦃$f⦄ $c₁ ≈ₑ $c₂ ⦃$g⦄) =>
-      `(Std.Do'.RelTriple $f $c₁ $c₂ $g Lean.Order.bot Lean.Order.bot)
+      `(VCVio.ProgramLogic.RelTriple $f $c₁ $c₂ $g Lean.Order.bot Lean.Order.bot)
 
 /-! ## Bridge lemmas: numeric indicators and existing API -/
 

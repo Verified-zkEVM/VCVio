@@ -352,7 +352,7 @@ private theorem pkEncode_eq_E (n : ℕ) (h : Rq n) (hn : n % 4 = 0) :
   unfold pkEncode E
   have hb : (n % 4 != 0) = false := by simp [hn]
   simp only [Id.run, Std.Legacy.Range.forIn_eq_forIn_range', Std.Legacy.Range.size, Nat.sub_zero,
-    Nat.div_one, Nat.add_sub_cancel, hb, Bool.false_eq_true, if_false]
+    Nat.div_one, Nat.add_sub_cancel, hb, Bool.false_eq_true, ite_false]
   simp only [List.forIn_pure_yield_eq_foldl, bind_pure]
   rfl
 
@@ -478,7 +478,7 @@ theorem sigDecode_sigEncode (salt : Bytes 40) (compSig : List UInt8) (logn : ℕ
       (by rw [ByteArray.size_append, hb1, hss]) (by rw [ByteArray.size_append, hb1, hss, hcs])]
     rw [byteArray_toList_eq]
   unfold sigDecode
-  simp only [Id.run, hguard, hhead, hhdr, if_false, bne_self_eq_false, Bool.false_eq_true,
+  simp only [Id.run, hguard, hhead, hhdr, ite_false, bne_self_eq_false, Bool.false_eq_true,
     hsalt, hcomp]
   rfl
 
@@ -659,7 +659,7 @@ private theorem decode_loop_invariant (n : ℕ) (g : ByteArray) :
             : Id _)
         else pure (ForInStep.yield ((none, R1) : Option (Option (Rq n)) × Array Coeff)))
           = ForInStep.yield ((none, R1) : Option (Option (Rq n)) × Array Coeff)
-      rw [if_neg (by rw [hcondfalse]; exact Bool.false_ne_true)]
+      rw [ite_eq_right (by rw [hcondfalse]; exact Bool.false_ne_true)]
       rfl
     rw [hstep]
     have hR1sz : R1.size = n := by rw [hR1]; simp [hsz0]
@@ -744,7 +744,7 @@ theorem pkDecode_pkEncode (n : ℕ) (h : Rq n) (hn4 : 4 ∣ n) :
   -- unfold pkDecode and reduce to the post-loop assembly
   unfold pkDecode
   have hb : (n % 4 != 0) = false := by simp [hmod]
-  simp only [Id.run, hb, Bool.false_eq_true, if_false, hguard,
+  simp only [Id.run, hb, Bool.false_eq_true, ite_false, hguard,
     Std.Legacy.Range.forIn_eq_forIn_range', Std.Legacy.Range.size, Nat.sub_zero, Nat.div_one,
     Nat.add_sub_cancel]
   -- the forIn body is definitionally `decBody`, so rewrite using the invariant result

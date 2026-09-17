@@ -142,11 +142,11 @@ The game generates a keypair, samples a uniform challenge message, encrypts it h
 then runs the adversary on the public key and challenge ciphertext. The adversary may query the
 ambient oracle interface `spec`, the plaintext-checking oracle, and the validity oracle, and the
 game returns `true` exactly when the final guess equals the hidden challenge message. -/
-def OW_PCVA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
+noncomputable def OW_PCVA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : OW_PCVA_Adversary encAlg) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : OW_PCVA_Adversary encAlg) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let (pk, sk) ← encAlg.keygen
     let msg ← runtime.liftProbComp ($ᵗ M)
     let cStar ← encAlg.encrypt pk msg
@@ -158,6 +158,6 @@ noncomputable def OW_PCVA_Advantage {encAlg : AsymmEncAlg (OracleComp spec) M PK
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : OW_PCVA_Adversary encAlg) : ℝ≥0∞ :=
-  Pr[= true | OW_PCVA_Game runtime adversary]
+  OW_PCVA_Game runtime adversary {true}
 
 end OW_PCVA

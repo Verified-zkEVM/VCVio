@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.Expectation
+public import ToMathlib.Control.Monad.Fold
 
 /-!
 # Independent products of computations
@@ -34,9 +35,8 @@ variable {α : Type u} {m : Type u → Type v} [Monad m] [LawfulMonad m]
 
 section support
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 
-omit [LawfulMonad m] in
 /-- Every coordinate of an output of an independent product lies in the support of its factor. -/
 lemma mem_support_mOfFn (n : ℕ) (g : Fin n → m α) (v : Fin n → α)
     (hv : v ∈ support (Fin.mOfFn n g)) (i : Fin n) : v i ∈ support (g i) := by
@@ -92,21 +92,21 @@ lemma probOutput_mOfFn (n : ℕ) (g : Fin n → m α) (v : Fin n → α) :
         intro a
         rw [probOutput_bind_eq_tsum]
         by_cases ha : a = v 0
-        · rw [if_pos ha]
+        · rw [ite_eq_left ha]
           refine (tsum_eq_single (Fin.tail v) fun rest hrest => ?_).trans ?_
-          · rw [probOutput_pure, if_neg (fun h => hrest ((hcons a rest).mp h).2), mul_zero]
-          · rw [probOutput_pure, if_pos ((hcons a (Fin.tail v)).mpr ⟨ha, rfl⟩), mul_one]
-        · rw [if_neg ha]
+          · rw [probOutput_pure, ite_eq_right (fun h => hrest ((hcons a rest).mp h).2), mul_zero]
+          · rw [probOutput_pure, ite_eq_left ((hcons a (Fin.tail v)).mpr ⟨ha, rfl⟩), mul_one]
+        · rw [ite_eq_right ha]
           have hzero : ∀ rest : Fin n → α,
               Pr[= rest | Fin.mOfFn n fun i => g i.succ] *
                   Pr[= v | (pure (Fin.cons a rest) : m (Fin (n + 1) → α))] = 0 := by
             intro rest
-            rw [probOutput_pure, if_neg (fun h => ha ((hcons a rest).mp h).1), mul_zero]
+            rw [probOutput_pure, ite_eq_right (fun h => ha ((hcons a rest).mp h).1), mul_zero]
           simp only [hzero, tsum_zero]
       simp only [Fin.mOfFn]
       rw [probOutput_bind_eq_tsum]
       simp only [hinner, mul_ite, mul_zero]
-      rw [tsum_eq_single (v 0) (fun a ha => if_neg ha), if_pos rfl,
+      rw [tsum_eq_single (v 0) (fun a ha => ite_eq_right ha), ite_eq_left rfl,
         ih (fun i => g i.succ) (Fin.tail v), Fin.prod_univ_succ]
       rfl
 
@@ -131,19 +131,19 @@ lemma probEvent_forall_coord_mOfFn (n : ℕ) (g : Fin n → m α) (p : (i : Fin 
         intro a
         rw [probEvent_bind_eq_tsum]
         by_cases ha : p 0 a
-        · rw [if_pos ha, probEvent_eq_tsum_ite]
+        · rw [ite_eq_left ha, probEvent_eq_tsum_ite]
           refine tsum_congr fun rest => ?_
           simp only [probEvent_pure, Fin.forall_fin_succ, Fin.cons_zero, Fin.cons_succ, ha,
             true_and]
           split <;> simp
-        · rw [if_neg ha]
+        · rw [ite_eq_right ha]
           have hzero : ∀ rest : Fin n → α,
               Pr[= rest | Fin.mOfFn n fun i => g i.succ] *
                   Pr[fun v => ∀ i, p i (v i) | (pure (Fin.cons a rest) : m (Fin (n + 1) → α))]
                 = 0 := by
             intro rest
             simp only [probEvent_pure, Fin.forall_fin_succ, Fin.cons_zero, ha, false_and,
-              if_false, mul_zero]
+              ite_false, mul_zero]
           simp only [hzero, tsum_zero]
       simp only [Fin.mOfFn]
       rw [probEvent_bind_eq_tsum]
@@ -215,7 +215,7 @@ lemma probEvent_coord_mOfFn (n : ℕ) (g : Fin n → m α) (hg : ∀ j, Pr[⊥ |
 omit [LawfulMonad m] in
 /-- Without a full-mass hypothesis on the other factors the marginal is only a bound: a factor
 that fails removes mass from every coordinate at once. -/
-lemma probEvent_coord_mOfFn_le [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+lemma probEvent_coord_mOfFn_le [MonadAttach m] [ExactMonadAttach m]
     [EvalDistCompatible m] (n : ℕ) (g : Fin n → m α) (i : Fin n) (p : α → Prop) :
     Pr[fun v => p (v i) | Fin.mOfFn n g] ≤ Pr[p | g i] := by
   classical
@@ -261,15 +261,9 @@ universe v'
 
 variable {α : Type} {m : Type → Type v'} [Monad m] [LawfulMonad m] {ι : Type} [Fintype ι]
 
-/-- The independent product of a family of computations indexed by a finite type, obtained by
-transporting `Fin.mOfFn` along `Fintype.equivFin`. -/
-noncomputable def Fintype.mPi (f : ι → m α) : m (ι → α) :=
-  (Equiv.arrowCongr (Fintype.equivFin ι).symm (Equiv.refl α)) <$>
-    Fin.mOfFn (Fintype.card ι) fun k => f ((Fintype.equivFin ι).symm k)
-
 section support
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadAttach m] [ExactMonadAttach m]
 
 lemma mem_support_mPi (f : ι → m α) (v : ι → α) (hv : v ∈ support (Fintype.mPi f)) (i : ι) :
     v i ∈ support (f i) := by
@@ -282,7 +276,7 @@ end support
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
 /-- The output distribution of a finite independent product is the product of the factors. -/
-lemma probOutput_mPi [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+lemma probOutput_mPi [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
     (f : ι → m α) (v : ι → α) :
     Pr[= v | Fintype.mPi f] = ∏ i, Pr[= v i | f i] := by
   rw [Fintype.mPi, probOutput_map_equiv, probOutput_mOfFn]

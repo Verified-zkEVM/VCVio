@@ -30,7 +30,7 @@ private def binderIdentsToNames (ids : Syntax.TSepArray `Lean.binderIdent ",") :
 private def runVCGenFinish : TacticM Unit := do
   unless (← getGoals).isEmpty do
     -- Only `wp_*`, `propInd_*`, and `game_rule` are kept here; generic ring/if normalization
-    -- (`one_mul`, `zero_add`, `ite_true`, `if_false`, `dite_true`, …) is already in Mathlib's
+    -- (`one_mul`, `zero_add`, `ite_true`, `ite_false`, `dite_true`, …) is already in Mathlib's
     -- default simp-set and was rarely firing on the Triple/wp-shaped goals that reach this
     -- finish pass — building those extra simp entries on every `vcgen` invocation was a
     -- constant tax without an observed win.
@@ -47,7 +47,7 @@ private def runVCGenFinish : TacticM Unit := do
   unless (← getGoals).isEmpty do
     discard <| tryEvalTacticSyntax
       (← `(tactic| all_goals try
-        (refine Std.Do'.Triple.iff.mpr ?_
+        (refine Std.Internal.Do.Triple.intro ?_
          repeat intro _
          simp [Lean.Order.PartialOrder.rel,
            MonadStateOf.get, MonadStateOf.set, MonadReaderOf.read, MonadWriter.tell,
@@ -56,16 +56,16 @@ private def runVCGenFinish : TacticM Unit := do
            StateT.run_lift, StateT.run_map,
            ReaderT.run_bind, ReaderT.run_pure, ReaderT.run_monadLift, ReaderT.run_read,
            ReaderT.run_map,
-           Std.Do'.WriterT.apply_wp,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_bind,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_pure,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_tell,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_monadLift,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_map,
+           WriterT.wp_apply_eq,
+           OracleComp.Quantitative.WriterT.wp_bind,
+           OracleComp.Quantitative.WriterT.wp_pure,
+           OracleComp.Quantitative.WriterT.wp_tell,
+           OracleComp.Quantitative.WriterT.wp_monadLift,
+           OracleComp.Quantitative.WriterT.wp_map,
            WriterT.run_bind, WriterT.run_pure, WriterT.run_tell, WriterT.run_map,
            MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp_epost,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))
@@ -81,12 +81,12 @@ private def runVCGenFinish : TacticM Unit := do
            ReaderT.run, ReaderT.run_read, ReaderT.run_pure, ReaderT.run_monadLift,
            TacticInternals.Unary.wp_ReaderT_run_read_layer,
            TacticInternals.Unary.wp_ReaderT_run_read_layer',
-           Std.Do'.WriterT.apply_wp,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_tell,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_monadLift,
+           WriterT.wp_apply_eq,
+           OracleComp.Quantitative.WriterT.wp_tell,
+           OracleComp.Quantitative.WriterT.wp_monadLift,
            WriterT.run_tell, WriterT.run_pure, WriterT.run_monadLift, WriterT.run_map,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp_epost,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
            MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
@@ -105,12 +105,12 @@ private def runVCGenFinish : TacticM Unit := do
            ReaderT.run, ReaderT.run_read, ReaderT.run_pure, ReaderT.run_monadLift,
            TacticInternals.Unary.wp_ReaderT_run_read_layer,
            TacticInternals.Unary.wp_ReaderT_run_read_layer',
-           Std.Do'.WriterT.apply_wp,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_tell,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_monadLift,
+           WriterT.wp_apply_eq,
+           OracleComp.Quantitative.WriterT.wp_tell,
+           OracleComp.Quantitative.WriterT.wp_monadLift,
            WriterT.run_tell, WriterT.run_pure, WriterT.run_monadLift, WriterT.run_map,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp_epost,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
            MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
@@ -334,12 +334,15 @@ Variants:
   then continues with exhaustive decomposition on all resulting goals.
 - `vcgen inv I` applies an explicit loop invariant `I` to the first `replicate`/`foldlM`/`mapM`
   goal, then continues with exhaustive decomposition. -/
+tactic_extension Lean.Parser.Tactic.vcgenMacro
+
+@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
 syntax (name := vcgenBasic) "vcgen" : tactic
-@[inherit_doc vcgenBasic, tactic_alt vcgenBasic]
+@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
 syntax (name := vcgenUsing) "vcgen" "using" term : tactic
-@[inherit_doc vcgenBasic, tactic_alt vcgenBasic]
+@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
 syntax (name := vcgenInv) "vcgen" &"inv" term : tactic
-@[inherit_doc vcgenBasic, tactic_alt vcgenBasic]
+@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
 syntax (name := vcgenSuggestion) "vcgen?" : tactic
 
 elab_rules (kind := vcgenBasic) : tactic
@@ -365,7 +368,7 @@ elab_rules (kind := vcgenSuggestion) : tactic
             "OracleComp.ProgramLogic.wp_map, OracleComp.ProgramLogic.wp_uniformSample, ",
             "OracleComp.ProgramLogic.wp_const, OracleComp.ProgramLogic.propInd_true, ",
             "OracleComp.ProgramLogic.propInd_false, OracleComp.ProgramLogic.propInd_eq_ite, ",
-            "ite_true, ite_false, if_true, if_false, dite_true, dite_false, ",
+            "ite_true, ite_false, ite_true, ite_false, dite_true, dite_false, ",
             "one_mul, mul_one, zero_mul, mul_zero, zero_add, add_zero, game_rule]",
           ],
           String.intercalate "" [
@@ -418,7 +421,7 @@ macro (name := expNorm) "exp_norm" : tactic =>
     OracleComp.ProgramLogic.wp_pure, OracleComp.ProgramLogic.wp_bind,
     OracleComp.ProgramLogic.wp_map, OracleComp.ProgramLogic.wp_ite,
     OracleComp.ProgramLogic.wp_dite,
-    ite_true, ite_false, if_true, if_false, dite_true, dite_false,
+    ite_true, ite_false, ite_true, ite_false, dite_true, dite_false,
     one_mul, mul_one, zero_mul, mul_zero, zero_add, add_zero,
     game_rule])
 

@@ -7,7 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 
 public import ToMathlib.MeasureTheory.Measure.Coupling
-public import VCVio.EvalDist.Defs.Measure
+public import VCVio.EvalDist.Defs.Measure.Core
 
 /-!
 # Measure-native relational program logic
@@ -62,7 +62,15 @@ theorem CouplingPost.mono {μ : Measure α} {ν : Measure β} {R S : α → β �
   obtain ⟨c, hc⟩ := h
   exact ⟨c, hc.mono fun z hz => hRS z.1 z.2 hz⟩
 
+/-- Implication of relations preserves a measure-native relational judgment. -/
+theorem relWP_mono {m₁ : Type u → Type w} {m₂ : Type v → Type w}
+    [EvalDistSemantics m₁] [EvalDistSemantics m₂]
+    {mx : m₁ α} {my : m₂ β} {R S : α → β → Prop}
+    (h : RelWP mx my R) (hRS : ∀ a b, R a b → S a b) : RelWP mx my S :=
+  h.mono hRS
+
 /-- Quantitative post-expectation monotonicity. -/
+@[gcongr low]
 theorem eRelWP_mono {m₁ : Type u → Type w} {m₂ : Type v → Type w}
     [EvalDistSemantics m₁] [EvalDistSemantics m₂]
     (mx : m₁ α) (my : m₂ β) {g h : α → β → ℝ≥0∞}

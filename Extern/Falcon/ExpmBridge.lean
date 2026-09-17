@@ -309,7 +309,7 @@ private theorem toReal_eq_significand_of_nonneg (x : FPR) (hn : FPR.IsNormal x)
   obtain ⟨hne0, hne2047⟩ := hn
   have hsig : (FPR.decode x).significand = (FPR.decode x).mantissa + 2 ^ 52 := by
     unfold FPR.Bits.significand
-    rw [if_neg hne0]
+    rw [ite_eq_right hne0]
   have hkey := toReal_eq_significand_mul_two_zpow hne0 hne2047
   rw [hsig] at hkey
   change toReal x = _ at hkey
@@ -318,9 +318,9 @@ private theorem toReal_eq_significand_of_nonneg (x : FPR) (hn : FPR.IsNormal x)
     exact_mod_cast h
   have hzpos : (0 : ℝ) < (2 : ℝ) ^ (((FPR.decode x).exponent : ℤ) - 1075) := by positivity
   by_cases hs : (FPR.decode x).sign = true
-  · rw [hkey, if_pos hs] at h0
+  · rw [hkey, ite_eq_left hs] at h0
     nlinarith
-  · rw [hkey, if_neg hs]
+  · rw [hkey, ite_eq_right hs]
     ring
 
 /-- An operand below `1` has biased exponent at most `1022`: with the implicit leading bit, an
@@ -401,10 +401,10 @@ private theorem toReal_lt_of_exponent_eq_zero (x : FPR)
   have hz : (0 : ℝ) < 2 ^ (-1074 : ℤ) := by positivity
   change (FPR.decode x).toReal < _
   unfold FPR.Bits.toReal
-  rw [if_pos hex]
+  rw [ite_eq_left hex]
   by_cases hs : (FPR.decode x).sign = true
-  · rw [if_pos hs]; nlinarith
-  · rw [if_neg hs]; nlinarith
+  · rw [ite_eq_left hs]; nlinarith
+  · rw [ite_eq_right hs]; nlinarith
 
 /-- On a subnormal operand `mtwop63` returns `0`: the shift saturates at `63` there too. -/
 private theorem toNat_mtwop63_of_exponent_eq_zero (x : FPR)
@@ -438,7 +438,7 @@ private theorem toNat_mtwop63 (x : FPR)
       have hz : toReal x = 0 := by
         change (FPR.decode x).toReal = 0
         unfold FPR.Bits.toReal
-        rw [if_neg (by omega : (FPR.decode x).exponent ≠ 0), if_pos hex]
+        rw [ite_eq_right (by omega : (FPR.decode x).exponent ≠ 0), ite_eq_left hex]
       rw [hz]
       norm_num
   case pos =>

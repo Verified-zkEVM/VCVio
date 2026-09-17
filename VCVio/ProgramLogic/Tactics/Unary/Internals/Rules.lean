@@ -9,7 +9,7 @@ module
 public meta import VCVio.ProgramLogic.Tactics.Common
 public import VCVio.ProgramLogic.Relational.Basic
 public meta import VCVio.ProgramLogic.Tactics.Relational.Internals
-public import Loom.Triple.SpecLemmas
+public import PolyFun.Control.Do.Spec
 
 /-!
 # Unary VCGen structural rules
@@ -18,6 +18,7 @@ public import Loom.Triple.SpecLemmas
 public meta section
 
 open Lean Elab Tactic Meta
+open scoped OracleComp.Quantitative WriterT.MonoidWP
 
 namespace OracleComp.ProgramLogic
 namespace TacticInternals
@@ -104,160 +105,176 @@ theorem wp_uniformSample_le_vcspec {α : Type} [SampleableType α] (post : α �
       wp ($ᵗ α : ProbComp α) post := by
   rw [OracleComp.ProgramLogic.wp_uniformSample]
 
-/-- Generic Loom triple bind step with the intermediate postcondition fixed to
-the weakest precondition of the continuation. This is the `Std.Do'.Triple`
+/-- Generic core triple bind step with the intermediate postcondition fixed to
+the weakest precondition of the continuation. This is the `Std.Internal.Do.Triple`
 counterpart of `OracleComp.ProgramLogic.triple_bind_wp`, and lets unary
 automation walk transformer-stack `do` blocks without guessing a user cut. -/
 theorem stdDoTriple_bind_wp {m : Type u → Type v}
     {Pred EPred : Type u} {α β : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {pre : Pred} (x : m α) (f : α → m β) (post : β → Pred) (epost : EPred) :
-    Std.Do'.Triple pre x (fun a => Std.Do'.wp (f a) post epost) epost →
-      Std.Do'.Triple pre (x >>= f) post epost := by
+    Std.Internal.Do.Triple x pre (fun a => Std.Internal.Do.wp (f a) post epost) epost →
+      Std.Internal.Do.Triple (x >>= f) pre post epost := by
   intro h
-  exact Std.Do'.Triple.bind x f (fun a => Std.Do'.wp (f a) post epost) h
-    (fun _ => Std.Do'.Triple.iff.mpr Lean.Order.PartialOrder.rel_refl)
+  exact Std.Internal.Do.Triple.bind x f (fun a => Std.Internal.Do.wp (f a) post epost) h
+    (fun _ => ⟨Lean.Order.PartialOrder.rel_refl⟩)
 
-/-- Close a Loom triple from the corresponding WP entailment.
+/-- Close a core triple from the corresponding WP entailment.
 
-This is just `Std.Do'.Triple.iff.mpr` packaged as a theorem so tactic code can expose
+This is just `Std.Internal.Do.Triple.iff.mpr` packaged as a theorem so tactic code can expose
 the weakest-precondition side condition and then run transformer-specific WP normalizers. -/
 theorem stdDoTriple_of_wp_le {m : Type u → Type v}
     {Pred EPred : Type u} {α : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {pre : Pred} (x : m α) (post : α → Pred) (epost : EPred)
-    (hpre : Lean.Order.PartialOrder.rel pre (Std.Do'.wp x post epost)) :
-    Std.Do'.Triple pre x post epost :=
-  Std.Do'.Triple.iff.mpr hpre
+    (hpre : Lean.Order.PartialOrder.rel pre (Std.Internal.Do.wp x post epost)) :
+    Std.Internal.Do.Triple x pre post epost :=
+  ⟨hpre⟩
 
 theorem wp_StateT_get_layer {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {σ : Type u} (post : σ → σ → Pred) (epost : EPred) :
-    Std.Do'.wp (MonadStateOf.get : StateT σ m σ) post epost =
-      fun s => Std.Do'.wp (pure (s, s) : m (σ × σ))
+    Std.Internal.Do.wp (MonadStateOf.get : StateT σ m σ) post epost =
+      fun s => Std.Internal.Do.wp (pure (s, s) : m (σ × σ))
         (fun p : σ × σ => post p.1 p.2) epost :=
   rfl
 
 theorem wp_StateT_get_layer' {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {σ : Type u} (post : σ → σ → Pred) (epost : EPred) :
-    Std.Do'.wp (StateT.get : StateT σ m σ) post epost =
-      fun s => Std.Do'.wp (pure (s, s) : m (σ × σ))
+    Std.Internal.Do.wp (StateT.get : StateT σ m σ) post epost =
+      fun s => Std.Internal.Do.wp (pure (s, s) : m (σ × σ))
         (fun p : σ × σ => post p.1 p.2) epost :=
   rfl
 
 theorem stdDoTriple_StateT_get_of_rel {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {σ : Type u} (pre : σ → Pred) (post : σ → σ → Pred) (epost : EPred)
     (h : ∀ s, Lean.Order.PartialOrder.rel (pre s) (post s s)) :
-    Std.Do'.Triple pre (StateT.get : StateT σ m σ) post epost := by
-  refine Std.Do'.Triple.iff.mpr ?_
+    Std.Internal.Do.Triple (StateT.get : StateT σ m σ) pre post epost := by
+  refine ⟨?_⟩
   intro s
   change Lean.Order.PartialOrder.rel (pre s)
-    (Std.Do'.wp (pure (s, s) : m (σ × σ))
+    (Std.Internal.Do.wp (pure (s, s) : m (σ × σ))
       (fun p : σ × σ => post p.1 p.2) epost)
   exact Lean.Order.PartialOrder.rel_trans (h s)
-    (Std.Do'.WP.wp_pure (m := m) (x := (s, s))
+    (Std.Internal.Do.WPMonad.pure_le_wp_pure (m := m) (x := (s, s))
       (post := fun p : σ × σ => post p.1 p.2) (epost := epost))
 
 theorem wp_StateT_set_layer {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {σ : Type u} (s' : σ) (post : PUnit → σ → Pred) (epost : EPred) :
-    Std.Do'.wp (MonadStateOf.set s' : StateT σ m PUnit) post epost =
-      fun _ => Std.Do'.wp (pure (PUnit.unit, s') : m (PUnit × σ))
+    Std.Internal.Do.wp (MonadStateOf.set s' : StateT σ m PUnit) post epost =
+      fun _ => Std.Internal.Do.wp (pure (PUnit.unit, s') : m (PUnit × σ))
         (fun p : PUnit × σ => post p.1 p.2) epost :=
   rfl
 
 theorem wp_StateT_run_get_layer {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {σ : Type u} (s : σ) (post : σ → σ → Pred) (epost : EPred) :
-    Std.Do'.wp ((MonadStateOf.get : StateT σ m σ).run s)
+    Std.Internal.Do.wp ((MonadStateOf.get : StateT σ m σ).run s)
         (fun p : σ × σ => post p.1 p.2) epost =
-      Std.Do'.wp (pure (s, s) : m (σ × σ)) (fun p : σ × σ => post p.1 p.2) epost :=
+      Std.Internal.Do.wp (pure (s, s) : m (σ × σ)) (fun p : σ × σ => post p.1 p.2) epost :=
   rfl
 
 theorem wp_StateT_run_get_layer' {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {σ : Type u} (s : σ) (post : σ → σ → Pred) (epost : EPred) :
-    Std.Do'.wp ((StateT.get : StateT σ m σ).run s)
+    Std.Internal.Do.wp ((StateT.get : StateT σ m σ).run s)
         (fun p : σ × σ => post p.1 p.2) epost =
-      Std.Do'.wp (pure (s, s) : m (σ × σ)) (fun p : σ × σ => post p.1 p.2) epost :=
+      Std.Internal.Do.wp (pure (s, s) : m (σ × σ)) (fun p : σ × σ => post p.1 p.2) epost :=
   rfl
 
 theorem wp_StateT_run_set_layer {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {σ : Type u} (s s' : σ) (post : PUnit → σ → Pred) (epost : EPred) :
-    Std.Do'.wp ((MonadStateOf.set s' : StateT σ m PUnit).run s)
+    Std.Internal.Do.wp ((MonadStateOf.set s' : StateT σ m PUnit).run s)
         (fun p : PUnit × σ => post p.1 p.2) epost =
-      Std.Do'.wp (pure (PUnit.unit, s') : m (PUnit × σ))
+      Std.Internal.Do.wp (pure (PUnit.unit, s') : m (PUnit × σ))
         (fun p : PUnit × σ => post p.1 p.2) epost :=
   rfl
 
 theorem wp_StateT_run_set_layer' {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {σ : Type u} (s s' : σ) (post : PUnit → σ → Pred) (epost : EPred) :
-    Std.Do'.wp ((StateT.set s' : StateT σ m PUnit).run s)
+    Std.Internal.Do.wp ((StateT.set s' : StateT σ m PUnit).run s)
         (fun p : PUnit × σ => post p.1 p.2) epost =
-      Std.Do'.wp (pure (PUnit.unit, s') : m (PUnit × σ))
+      Std.Internal.Do.wp (pure (PUnit.unit, s') : m (PUnit × σ))
         (fun p : PUnit × σ => post p.1 p.2) epost :=
   rfl
 
 theorem wp_StateT_map_layer {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {σ α β : Type u} (f : α → β) (x : StateT σ m α) (post : β → σ → Pred)
     (epost : EPred) :
-    Std.Do'.wp (f <$> x) post epost =
-      fun s => Std.Do'.wp ((f <$> x).run s)
+    Std.Internal.Do.wp (f <$> x) post epost =
+      fun s => Std.Internal.Do.wp ((f <$> x).run s)
         (fun p : β × σ => post p.1 p.2) epost :=
   rfl
 
 theorem wp_ReaderT_read_layer {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {ρ : Type u} (post : ρ → ρ → Pred) (epost : EPred) :
-    Std.Do'.wp (MonadReaderOf.read : ReaderT ρ m ρ) post epost =
-      fun r => Std.Do'.wp (pure r : m ρ) (fun a => post a r) epost :=
+    Std.Internal.Do.wp (MonadReaderOf.read : ReaderT ρ m ρ) post epost =
+      fun r => Std.Internal.Do.wp (pure r : m ρ) (fun a => post a r) epost :=
   rfl
 
 theorem wp_ReaderT_read_layer' {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {ρ : Type u} (post : ρ → ρ → Pred) (epost : EPred) :
-    Std.Do'.wp (ReaderT.read : ReaderT ρ m ρ) post epost =
-      fun r => Std.Do'.wp (pure r : m ρ) (fun a => post a r) epost :=
+    Std.Internal.Do.wp (ReaderT.read : ReaderT ρ m ρ) post epost =
+      fun r => Std.Internal.Do.wp (pure r : m ρ) (fun a => post a r) epost :=
   rfl
 
 theorem stdDoTriple_ReaderT_read_of_rel {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {ρ : Type u} (pre : ρ → Pred) (post : ρ → ρ → Pred) (epost : EPred)
     (h : ∀ r, Lean.Order.PartialOrder.rel (pre r) (post r r)) :
-    Std.Do'.Triple pre (MonadReaderOf.read : ReaderT ρ m ρ) post epost := by
-  refine Std.Do'.Triple.iff.mpr ?_
+    Std.Internal.Do.Triple (MonadReaderOf.read : ReaderT ρ m ρ) pre post epost := by
+  refine ⟨?_⟩
   intro r
   change Lean.Order.PartialOrder.rel (pre r)
-    (Std.Do'.wp (pure r : m ρ) (fun a : ρ => post a r) epost)
+    (Std.Internal.Do.wp (pure r : m ρ) (fun a : ρ => post a r) epost)
   exact Lean.Order.PartialOrder.rel_trans (h r)
-    (Std.Do'.WP.wp_pure (m := m) (x := r)
+    (Std.Internal.Do.WPMonad.pure_le_wp_pure (m := m) (x := r)
       (post := fun a : ρ => post a r) (epost := epost))
 
 theorem wp_ReaderT_run_read_layer {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {ρ : Type u} (r : ρ) (post : ρ → ρ → Pred) (epost : EPred) :
-    Std.Do'.wp ((MonadReaderOf.read : ReaderT ρ m ρ).run r) (fun a : ρ => post a r)
+    Std.Internal.Do.wp ((MonadReaderOf.read : ReaderT ρ m ρ).run r) (fun a : ρ => post a r)
         epost =
-      Std.Do'.wp (pure r : m ρ) (fun a : ρ => post a r) epost :=
+      Std.Internal.Do.wp (pure r : m ρ) (fun a : ρ => post a r) epost :=
   rfl
 
 theorem wp_ReaderT_run_read_layer' {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {ρ : Type u} (r : ρ) (post : ρ → ρ → Pred) (epost : EPred) :
-    Std.Do'.wp ((ReaderT.read : ReaderT ρ m ρ).run r) (fun a : ρ => post a r)
+    Std.Internal.Do.wp ((ReaderT.read : ReaderT ρ m ρ).run r) (fun a : ρ => post a r)
         epost =
-      Std.Do'.wp (pure r : m ρ) (fun a : ρ => post a r) epost :=
+      Std.Internal.Do.wp (pure r : m ρ) (fun a : ρ => post a r) epost :=
   rfl
 
 theorem mAlgOrdered_wp_OptionT_run_StateT_get {ι : Type u} {spec : OracleSpec ι}
     [IsUniformSpec spec] {σ : Type} (s : σ)
     (post : σ → σ → ENNReal)
-    (epost : Std.Do'.EPost.cons ENNReal Std.Do'.EPost.nil) :
+    (epost : Std.Internal.Do.EPost.Cons ENNReal Std.Internal.Do.EPost.Nil) :
     MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
       (((StateT.get : StateT σ (OptionT (OracleComp spec)) σ).run s).run)
       (epost.pushOption (fun p : σ × σ => post p.1 p.2)) = post s s := by
@@ -268,7 +285,8 @@ theorem mAlgOrdered_wp_OptionT_run_StateT_get {ι : Type u} {spec : OracleSpec �
 
 theorem mAlgOrdered_wp_OptionT_run_StateT_set {ι : Type u} {spec : OracleSpec ι}
     [IsUniformSpec spec] {σ : Type} (s s' : σ)
-    (post : PUnit → σ → ENNReal) (epost : Std.Do'.EPost.cons ENNReal Std.Do'.EPost.nil) :
+    (post : PUnit → σ → ENNReal)
+    (epost : Std.Internal.Do.EPost.Cons ENNReal Std.Internal.Do.EPost.Nil) :
     MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
       (((StateT.set s' : StateT σ (OptionT (OracleComp spec)) PUnit).run s).run)
       (epost.pushOption (fun p : PUnit × σ => post p.1 p.2)) = post PUnit.unit s' := by
@@ -280,7 +298,7 @@ theorem mAlgOrdered_wp_OptionT_run_StateT_set {ι : Type u} {spec : OracleSpec �
 theorem mAlgOrdered_wp_OptionT_run_lift {ι : Type u} {spec : OracleSpec ι}
     [IsUniformSpec spec] {α : Type}
     (oa : OracleComp spec α) (post : α → ENNReal)
-    (epost : Std.Do'.EPost.cons ENNReal Std.Do'.EPost.nil) :
+    (epost : Std.Internal.Do.EPost.Cons ENNReal Std.Internal.Do.EPost.Nil) :
     MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) (OptionT.lift oa).run
       (epost.pushOption post) =
         MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) oa post := by
@@ -296,20 +314,20 @@ theorem mAlgOrdered_wp_OptionT_run_lift {ι : Type u} {spec : OracleSpec ι}
 theorem mAlgOrdered_wp_OptionT_run_StateT_monadLift_lift {ι : Type u}
     {spec : OracleSpec ι} [IsUniformSpec spec]
     {σ α : Type} (oa : OracleComp spec α) (s : σ) (post : α → σ → ENNReal)
-    (epost : Std.Do'.EPost.cons ENNReal Std.Do'.EPost.nil) :
+    (epost : Std.Internal.Do.EPost.Cons ENNReal Std.Internal.Do.EPost.Nil) :
     MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
       (((MonadLift.monadLift (OptionT.lift oa) :
         StateT σ (OptionT (OracleComp spec)) α).run s).run)
       (epost.pushOption (fun p : α × σ => post p.1 p.2)) =
         MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) oa (fun a => post a s) := by
   simp [MonadLift.monadLift, OptionT.run_lift, MAlgOrdered.wp_map,
-    Std.Do'.EPost.cons.pushOption]
+    Std.Internal.Do.EPost.Cons.pushOption]
 
 theorem wp_StateT_OptionT_monadLift_lift {ι : Type u} {spec : OracleSpec ι}
     [IsUniformSpec spec] {σ α : Type}
     (oa : OracleComp spec α) (post : α → σ → ENNReal)
-    (epost : Std.Do'.EPost.cons ENNReal Std.Do'.EPost.nil) :
-    Std.Do'.wp
+    (epost : Std.Internal.Do.EPost.Cons ENNReal Std.Internal.Do.EPost.Nil) :
+    Std.Internal.Do.wp
       (MonadLift.monadLift (OptionT.lift oa) : StateT σ (OptionT (OracleComp spec)) α)
       post epost =
         fun s => MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) oa
@@ -335,11 +353,12 @@ theorem mAlgOrdered_wp_OptionT_run_StateT_monadLift_lift_map {ι : Type u}
   simp [MonadLift.monadLift, OptionT.run_lift, MAlgOrdered.wp_map]
 
 theorem wp_ReaderT_map_layer {m : Type u → Type v} {Pred EPred : Type u}
-    [Monad m] [Std.Do'.Assertion Pred] [Std.Do'.Assertion EPred] [Std.Do'.WP m Pred EPred]
+    [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
+    [Std.Internal.Do.WPMonad m Pred EPred]
     {ρ α β : Type u} (f : α → β) (x : ReaderT ρ m α) (post : β → ρ → Pred)
     (epost : EPred) :
-    Std.Do'.wp (f <$> x) post epost =
-      fun r => Std.Do'.wp ((f <$> x).run r) (fun b : β => post b r) epost :=
+    Std.Internal.Do.wp (f <$> x) post epost =
+      fun r => Std.Internal.Do.wp ((f <$> x).run r) (fun b : β => post b r) epost :=
   rfl
 
 attribute [vcspec]
@@ -355,66 +374,63 @@ attribute [vcspec]
   wp_HasQuery_query_le_vcspec
   wp_uniformSample_le_vcspec
   -- StateT
-  Std.Do'.Spec.get_StateT
-  Std.Do'.Spec.set_StateT
-  Std.Do'.Spec.modifyGet_StateT
-  Std.Do'.Spec.monadLift_StateT
+  Std.Internal.Do.Spec.get_StateT
+  Std.Internal.Do.Spec.set_StateT
+  Std.Internal.Do.Spec.modifyGet_StateT
+  Std.Internal.Do.Spec.monadLift_StateT
   -- ReaderT
-  Std.Do'.Spec.read_ReaderT
-  Std.Do'.Spec.monadLift_ReaderT
-  Std.Do'.Spec.adapt_ReaderT
-  Std.Do'.Spec.withReader_ReaderT
+  Std.Internal.Do.Spec.read_ReaderT
+  Std.Internal.Do.Spec.monadLift_ReaderT
+  Std.Internal.Do.Spec.adapt_ReaderT
+  Std.Internal.Do.Spec.withReader_ReaderT
   -- WriterT
-  Std.Do'.Spec.tell_WriterT
-  Std.Do'.Spec.monadLift_WriterT
-  Std.Do'.Spec.mk_WriterT
-  Std.Do'.WriterT.wp_pure
-  Std.Do'.WriterT.wp_bind
-  Std.Do'.WriterT.wp_tell
-  Std.Do'.WriterT.wp_monadLift
-  Std.Do'.WriterT.wp_map
+  Std.Internal.Do.Spec.tell_WriterT
+  Std.Internal.Do.Spec.monadLift_WriterT
+  Std.Internal.Do.Spec.mk_WriterT
+  WriterT.le_wp_tell
+  WriterT.le_wp_monadLift
   -- OptionT
-  Std.Do'.Spec.run_OptionT
-  Std.Do'.Spec.throw_OptionT
-  Std.Do'.Spec.tryCatch_OptionT
-  Std.Do'.Spec.orElse_OptionT
-  Std.Do'.Spec.monadLift_OptionT
+  Std.Internal.Do.Spec.run_OptionT
+  Std.Internal.Do.Spec.throw_OptionT
+  Std.Internal.Do.Spec.tryCatch_OptionT
+  Std.Internal.Do.Spec.orElse_OptionT
+  Std.Internal.Do.Spec.monadLift_OptionT
   -- ExceptT
-  Std.Do'.Spec.run_ExceptT
-  Std.Do'.Spec.throw_ExceptT
-  Std.Do'.Spec.tryCatch_ExceptT
-  Std.Do'.Spec.orElse_ExceptT
-  Std.Do'.Spec.adapt_ExceptT
-  Std.Do'.Spec.monadLift_ExceptT
+  Std.Internal.Do.Spec.run_ExceptT
+  Std.Internal.Do.Spec.throw_ExceptT
+  Std.Internal.Do.Spec.tryCatch_ExceptT
+  Std.Internal.Do.Spec.orElse_ExceptT
+  Std.Internal.Do.Spec.adapt_ExceptT
+  Std.Internal.Do.Spec.monadLift_ExceptT
   -- Lifted MonadExceptOf
-  Std.Do'.Spec.throw_MonadExcept
-  Std.Do'.Spec.tryCatch_MonadExcept
-  Std.Do'.Spec.throw_ReaderT
-  Std.Do'.Spec.throw_StateT
-  Std.Do'.Spec.throw_ExceptT_lift
-  Std.Do'.Spec.throw_Option_lift
-  Std.Do'.Spec.tryCatch_ReaderT
-  Std.Do'.Spec.tryCatch_StateT
-  Std.Do'.Spec.tryCatch_ExceptT_lift
-  Std.Do'.Spec.tryCatch_OptionT_lift
+  Std.Internal.Do.Spec.throw_MonadExcept
+  Std.Internal.Do.Spec.tryCatch_MonadExcept
+  Std.Internal.Do.Spec.throw_ReaderT
+  Std.Internal.Do.Spec.throw_StateT
+  Std.Internal.Do.Spec.throw_ExceptT_lift
+  Std.Internal.Do.Spec.throw_Option_lift
+  Std.Internal.Do.Spec.tryCatch_ReaderT
+  Std.Internal.Do.Spec.tryCatch_StateT
+  Std.Internal.Do.Spec.tryCatch_ExceptT_lift
+  Std.Internal.Do.Spec.tryCatch_OptionT_lift
   -- Generic monad-transformer hooks
-  Std.Do'.Spec.monadMap_StateT
-  Std.Do'.Spec.monadMap_ReaderT
-  Std.Do'.Spec.monadMap_ExceptT
-  Std.Do'.Spec.monadMap_OptionT
-  Std.Do'.Spec.monadMap_refl
-  Std.Do'.Spec.monadMap_trans
-  Std.Do'.Spec.liftWith_StateT
-  Std.Do'.Spec.liftWith_ReaderT
-  Std.Do'.Spec.liftWith_ExceptT
-  Std.Do'.Spec.liftWith_OptionT
-  Std.Do'.Spec.liftWith_refl
-  Std.Do'.Spec.liftWith_trans
-  Std.Do'.Spec.restoreM_StateT
-  Std.Do'.Spec.restoreM_ReaderT
-  Std.Do'.Spec.restoreM_ExceptT
-  Std.Do'.Spec.restoreM_OptionT
-  Std.Do'.Spec.restoreM_refl
+  Std.Internal.Do.Spec.monadMap_StateT
+  Std.Internal.Do.Spec.monadMap_ReaderT
+  Std.Internal.Do.Spec.monadMap_ExceptT
+  Std.Internal.Do.Spec.monadMap_OptionT
+  Std.Internal.Do.Spec.monadMap_refl
+  Std.Internal.Do.Spec.monadMap_trans
+  Std.Internal.Do.Spec.liftWith_StateT
+  Std.Internal.Do.Spec.liftWith_ReaderT
+  Std.Internal.Do.Spec.liftWith_ExceptT
+  Std.Internal.Do.Spec.liftWith_OptionT
+  Std.Internal.Do.Spec.liftWith_refl
+  Std.Internal.Do.Spec.liftWith_trans
+  Std.Internal.Do.Spec.restoreM_StateT
+  Std.Internal.Do.Spec.restoreM_ReaderT
+  Std.Internal.Do.Spec.restoreM_ExceptT
+  Std.Internal.Do.Spec.restoreM_OptionT
+  Std.Internal.Do.Spec.restoreM_refl
 
 end Unary
 end TacticInternals

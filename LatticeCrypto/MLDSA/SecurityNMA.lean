@@ -6,6 +6,7 @@ Authors: Oleksandr Vovkotrub
 
 module
 public import LatticeCrypto.MLDSA.Security
+import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # ML-DSA EUF-NMA Security: reduction scaffolding
@@ -73,7 +74,7 @@ in this file claims it.
 
 @[expose] public section
 
-open OracleComp OracleSpec ENNReal
+open MeasureTheory OracleComp OracleSpec ENNReal
 open LatticeCrypto TransformOps
 
 namespace MLDSA
@@ -268,11 +269,11 @@ noncomputable def nmaGame
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
-    SPMF Bool :=
+    Measure Bool :=
   (FiatShamirWithAbort.runtime (Commit := Commitment p prims)
-    (Chal := CommitHashBytes p) M).evalSPMF do
-      let (pk, _) ← (FiatShamirWithAbort.runtime (Commit := Commitment p prims)
-        (Chal := CommitHashBytes p) M).liftProbComp keygen
+    (Chal := CommitHashBytes p) M).evalDist do
+      let (pk, _) ← (liftM keygen : OracleComp
+        (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) _)
       let (msg, σ) ← main pk
       (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify pk msg σ
 
@@ -284,7 +285,7 @@ noncomputable def nmaAdvantage
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) : ℝ≥0∞ :=
-  Pr[= true | nmaGame p prims hr maxAttempts keygen main]
+  nmaGame p prims hr maxAttempts keygen main {true}
 
 /-! ### Short-model EUF-NMA game -/
 
@@ -299,11 +300,11 @@ noncomputable def nmaGameShort
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
-    SPMF Bool :=
+    Measure Bool :=
   (FiatShamirWithAbort.runtime (Commit := Commitment p prims)
-    (Chal := CommitHashBytes p) M).evalSPMF do
-      let (pk, _) ← (FiatShamirWithAbort.runtime (Commit := Commitment p prims)
-        (Chal := CommitHashBytes p) M).liftProbComp keygen
+    (Chal := CommitHashBytes p) M).evalDist do
+      let (pk, _) ← (liftM keygen : OracleComp
+        (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) _)
       let (msg, σ) ← main pk
       (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
 
@@ -318,7 +319,7 @@ noncomputable def nmaAdvantageShort
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) : ℝ≥0∞ :=
-  Pr[= true | nmaGameShort p prims hr maxAttempts keygen main]
+  nmaGameShort p prims hr maxAttempts keygen main {true}
 
 end Game
 
@@ -341,7 +342,7 @@ def roImpl :
 
 /-- Observe an oracle computation as a plain `ProbComp` by simulating its random oracle from an
 empty cache and discarding the final cache state. This is exactly the `ProbComp` underlying
-`FiatShamirWithAbort.runtime.evalSPMF` (see `BundledSemantics.withStateOracle`), exposed so the
+`FiatShamirWithAbort.runtime.evalDist`, exposed so the
 MLWE distinguisher — which must inhabit `… → ProbComp Bool` — can run the NMA game internally. -/
 def simulateToProbComp {α : Type}
     (mx : OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) α) :
@@ -452,13 +453,13 @@ should be read computationally, against bounded distinguishers, where it is the
 assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
 def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ) : Prop :=
   ∀ [IsUniformSpec unifSpec] (D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool),
-    |(Pr[= true | do
+    |(𝒟[do
         let rho ← $ᵗ (Bytes 32)
-        D rho (prims.expandA rho)]).toReal -
-      (Pr[= true | do
+        D rho (prims.expandA rho)] {true}).toReal -
+      (𝒟[do
         let rho ← $ᵗ (Bytes 32)
         let A ← $ᵗ (TqMatrix p.k p.l)
-        D rho A]).toReal| ≤ εA
+        D rho A] {true}).toReal| ≤ εA
 
 /-- The short-model MLWE distinguisher: form `pk = (ρ, Power2Round(t).1)` from the challenge
 `(ρ, t)`, run the NMA forging strategy
@@ -502,8 +503,8 @@ distinguisher `D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s�
 
 Proof recipe: rewrite both advantages via `advantage_eq_game_boolDistAdvantage` and
 `ProbComp.boolDistAdvantage`; the `game1` branches are identified by stripping the
-unused matrix draw (`probOutput_bind_const`, with `Pr[⊥ | $ᵗ _] = 0`) and commuting
-the independent uniform draws (`evalSPMF_bind_bind_swap`); the `game0` branches
+unused matrix draw with `evalDist_bind_const` and commuting the independent uniform draws with
+`evalDist_bind_bind_swap`; the `game0` branches
 are `≤ εA` by `hA` applied at `D` above, after `bind_assoc` normalization. Conclude
 by the triangle inequality. -/
 lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
@@ -537,40 +538,38 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
     exact ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch _ _
   rw [hadv (mldsaMLWEShort p prims) B, hadv (mldsaMatrixMLWE p) Bm,
     ProbComp.boolDistAdvantage, ProbComp.boolDistAdvantage]
-  have h1 : Pr[= true | LearningWithErrors.game1 (mldsaMLWEShort p prims) B] =
-      Pr[= true | LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm] := by
+  have h1 : 𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B] {true} =
+      𝒟[LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm] {true} := by
     simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, mldsaMLWEShort,
       mldsaMatrixMLWE, hBm, matrixLift, bind_assoc, pure_bind]
     -- Strip the unused leading matrix draw on the right, then commute the two uniform draws.
-    rw [probOutput_bind_const, probFailure_uniformSample]
-    simp only [tsub_zero, one_mul]
-    rw [probOutput_def, probOutput_def,
-      evalSPMF_bind_bind_swap
+    rw [OracleComp.evalDist_bind_const,
+      evalDist_bind_bind_swap_of_countable
         ($ᵗ (Bytes 32)) ($ᵗ (RqVec p.k)) (fun rho t => B (rho, t))]
-  have h0 : |(Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B]).toReal -
-      (Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm]).toReal| ≤ εA := by
-    have hreal : Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B] =
-        Pr[= true | do let rho ← $ᵗ (Bytes 32); D rho (prims.expandA rho)] := by
+  have h0 : |(𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B] {true}).toReal -
+      (𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] {true}).toReal| ≤ εA := by
+    have hreal : 𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B] {true} =
+        𝒟[do let rho ← $ᵗ (Bytes 32); D rho (prims.expandA rho)] {true} := by
       simp only [LearningWithErrors.game0, LearningWithErrors.distr, mldsaMLWEShort, hD,
         bind_assoc, pure_bind]
-    have hunif : Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] =
-        Pr[= true | do
+    have hunif : 𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] {true} =
+        𝒟[do
           let rho ← $ᵗ (Bytes 32)
           let A ← $ᵗ (TqMatrix p.k p.l)
-          D rho A] := by
+          D rho A] {true} := by
       simp only [LearningWithErrors.game0, LearningWithErrors.distr, mldsaMatrixMLWE, hBm,
         matrixLift, hD,
         bind_assoc, pure_bind]
       -- Commute the trailing `ρ` draw to the front (three independent-draw transpositions).
-      rw [probOutput_def, probOutput_def]
       congr 1
-      refine Eq.trans (evalSPMF_bind_congr' _ (fun A => evalSPMF_bind_congr' _ (fun s1 =>
-        evalSPMF_bind_bind_swap (sampleShortVec p.k p.eta) ($ᵗ (Bytes 32))
-          (fun s2 rho => B (rho, A * s1 + s2))))) ?_
-      refine Eq.trans (evalSPMF_bind_congr' _ (fun A =>
-        evalSPMF_bind_bind_swap (sampleShortVec p.l p.eta) ($ᵗ (Bytes 32))
+      refine Eq.trans (evalDist_bind_congr _ _ _ (fun A =>
+        evalDist_bind_congr _ _ _ (fun s1 =>
+          evalDist_bind_bind_swap_of_countable (sampleShortVec p.k p.eta) ($ᵗ (Bytes 32))
+            (fun s2 rho => B (rho, A * s1 + s2))))) ?_
+      refine Eq.trans (evalDist_bind_congr _ _ _ (fun A =>
+        evalDist_bind_bind_swap_of_countable (sampleShortVec p.l p.eta) ($ᵗ (Bytes 32))
           (fun s1 rho => sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2)))) ?_
-      exact evalSPMF_bind_bind_swap
+      exact evalDist_bind_bind_swap_of_countable
         ($ᵗ (TqMatrix p.k p.l)) ($ᵗ (Bytes 32))
         (fun A rho => sampleShortVec p.l p.eta >>= fun s1 =>
           sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2))
@@ -578,7 +577,7 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
     exact hA D
   rw [h1]
   refine le_trans (abs_sub_le _
-    (Pr[= true | LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm].toReal) _) ?_
+    ((𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] {true}).toReal) _) ?_
   rw [add_comm]
   exact add_le_add le_rfl h0
 
@@ -622,8 +621,8 @@ Fiat-Shamir-with-aborts runtime: the `Pr[= true]` of `nmaGame … keygen` equals
 first sampling `(pk, _) ← keygen` (in plain `ProbComp`) and then running the forge-and-verify tail
 through `simulateToProbComp` — which is exactly the body of `distinguisherB` evaluated at `pk`.
 
-This is the bundled-semantics fact `runtime.evalSPMF (liftM oa >>= rest) = 𝒮[oa] >>= …`
-(`SPMFSemantics.withStateOracle` interpret/observe with `roSim.run'_liftM_bind`), specialised to
+This is the bundled-semantics fact that `runtime.evalDist (liftM oa >>= rest)` is the measure bind
+of `𝒟[oa]` with the runtime measures of the continuations, specialised to
 the ML-DSA NMA game. It discharges the runtime plumbing but deliberately makes no claim that two
 different key distributions coincide. -/
 theorem nmaGame_eq_keygen_bind
@@ -634,32 +633,26 @@ theorem nmaGame_eq_keygen_bind
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     nmaGame p prims hr maxAttempts keygen main =
-      𝒮[(do
+      𝒟[(do
         let (pk, _) ← keygen
         simulateToProbComp p prims (M := M) (do
           let (msg, σ) ← main pk
           (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify
             pk msg σ))] := by
-  classical
-  let ro : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p)
-      (StateT ((M × Commitment p prims →ₒ CommitHashBytes p).QueryCache) ProbComp) := randomOracle
-  let impl : QueryImpl (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
-      (StateT ((M × Commitment p prims →ₒ CommitHashBytes p).QueryCache) ProbComp) :=
-    unifFwdImpl (M × Commitment p prims →ₒ CommitHashBytes p) + ro
+  let : MeasurableSpace (PublicKey p prims × SecretKey p) := ⊤
   let rest : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) Bool := fun pk => do
     let (msg, σ) ← main pk
     (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify pk msg σ
-  unfold nmaGame FiatShamirWithAbort.runtime ProbCompRuntime.evalSPMF
-    ProbCompRuntime.liftProbComp SPMFSemantics.evalSPMF SemanticsVia.denote
-  change 𝒮[(simulateQ impl (liftM keygen >>= fun pk => rest pk.1)).run' ∅] =
-    𝒮[keygen >>= fun pk => simulateToProbComp p prims (rest pk.1)]
-  rw [simulateQ_bind,
-    roSim.run'_liftM_bind (ro := ro) (oa := keygen)
-      (rest := fun pk => simulateQ impl (rest pk.1)) (s := ∅)]
-  rw [evalSPMF_bind, evalSPMF_bind]
-  simp only [simulateToProbComp, roImpl]
-  rfl
+  unfold nmaGame
+  rw [FiatShamirWithAbort.runtime_evalDist_bind_liftComp
+    (Commit := Commitment p prims) (Chal := CommitHashBytes p) (M := M),
+    evalDist_bind_of_discrete]
+  apply Measure.bind_congr_right
+  filter_upwards [] with pk
+  simpa only [simulateToProbComp, roImpl] using
+    (FiatShamirWithAbort.runtime_evalDist_eq_simulateQ_run'
+      (Commit := Commitment p prims) (Chal := CommitHashBytes p) M (rest pk.1))
 
 /-! ### The exact short-model key-swap hop -/
 
@@ -676,32 +669,26 @@ theorem nmaGameShort_eq_keygen_bind
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     nmaGameShort p prims hr maxAttempts keygen main =
-      𝒮[(do
+      𝒟[(do
         let (pk, _) ← keygen
         simulateToProbComp p prims (M := M) (do
           let (msg, σ) ← main pk
           (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify
             pk msg σ))] := by
-  classical
-  let ro : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p)
-      (StateT ((M × Commitment p prims →ₒ CommitHashBytes p).QueryCache) ProbComp) := randomOracle
-  let impl : QueryImpl (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
-      (StateT ((M × Commitment p prims →ₒ CommitHashBytes p).QueryCache) ProbComp) :=
-    unifFwdImpl (M × Commitment p prims →ₒ CommitHashBytes p) + ro
+  let : MeasurableSpace (PublicKey p prims × SecretKey p) := ⊤
   let rest : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) Bool := fun pk => do
     let (msg, σ) ← main pk
     (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
-  unfold nmaGameShort FiatShamirWithAbort.runtime ProbCompRuntime.evalSPMF
-    ProbCompRuntime.liftProbComp SPMFSemantics.evalSPMF SemanticsVia.denote
-  change 𝒮[(simulateQ impl (liftM keygen >>= fun pk => rest pk.1)).run' ∅] =
-    𝒮[keygen >>= fun pk => simulateToProbComp p prims (rest pk.1)]
-  rw [simulateQ_bind,
-    roSim.run'_liftM_bind (ro := ro) (oa := keygen)
-      (rest := fun pk => simulateQ impl (rest pk.1)) (s := ∅)]
-  rw [evalSPMF_bind, evalSPMF_bind]
-  simp only [simulateToProbComp, roImpl]
-  rfl
+  unfold nmaGameShort
+  rw [FiatShamirWithAbort.runtime_evalDist_bind_liftComp
+    (Commit := Commitment p prims) (Chal := CommitHashBytes p) (M := M),
+    evalDist_bind_of_discrete]
+  apply Measure.bind_congr_right
+  filter_upwards [] with pk
+  simpa only [simulateToProbComp, roImpl] using
+    (FiatShamirWithAbort.runtime_evalDist_eq_simulateQ_run'
+      (Commit := Commitment p prims) (Chal := CommitHashBytes p) M (rest pk.1))
 
 /-- **The exact short-model key-swap hop.** Against the idealized key generators
 `keygenShort` / `keygenShort1`, the short-model NMA-game gap **is** the `mldsaMLWEShort`
@@ -713,8 +700,8 @@ do (the unused `K` draw strips off, being the leading draw).
 Proof recipe: both branches follow the same shape: `rw [nmaGameShort_eq_keygen_bind]`,
 `simp only [LearningWithErrors.game0/1, LearningWithErrors.distr/uniformDistr,
 distinguisherBShort, mldsaMLWEShort, keygenShort/1, keyFromMaterial, bind_assoc, pure_bind]`,
-strip the leading `K` draw with `probOutput_bind_const` (`Pr[⊥ | $ᵗ (Bytes 32)] = 0`), and
-close with `probOutput_def`/`SPMF.evalSPMF_def`. -/
+strip unused lossless draws with `OracleComp.evalDist_bind_const`, and
+close by simplifying the resulting plain `ProbComp` bind. -/
 theorem nma_keyswap_hop_short
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
@@ -726,33 +713,25 @@ theorem nma_keyswap_hop_short
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
         (distinguisherBShort p prims hr maxAttempts main) := by
   set B := distinguisherBShort p prims hr maxAttempts main (M := M) with hB
-  -- `Pr[= true | 𝒮[Y]] = Pr[= true | Y]` holds definitionally (the SPMF self-lift is `id`).
-  have peel : ∀ (Y : ProbComp Bool), Pr[= true | 𝒮[Y]] = Pr[= true | Y] := fun _ => rfl
-  have hkey : Pr[⊥ | ($ᵗ (Bytes 32) : ProbComp (Bytes 32))] = 0 := probFailure_uniformSample _
-  have hss : ∀ (k b : ℕ), Pr[⊥ | sampleShortVec k b] = 0 := by
-    intro k b
-    simp only [sampleShortVec, probFailure_map, probFailure_uniformSample]
   rw [advantage_eq_game_boolDistAdvantage (mldsaMLWEShort p prims) B,
     ProbComp.boolDistAdvantage, nmaAdvantageShort, nmaAdvantageShort]
-  have hH1 : Pr[= true | nmaGameShort p prims hr maxAttempts (keygenShort1 p prims) main] =
-      Pr[= true | LearningWithErrors.game1 (mldsaMLWEShort p prims) B] := by
+  have hH1 : nmaGameShort p prims hr maxAttempts (keygenShort1 p prims) main {true} =
+      𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B] {true} := by
     rw [nmaGameShort_eq_keygen_bind]
     simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, hB,
       distinguisherBShort, mldsaMLWEShort, keygenShort1, keyFromMaterial, bind_assoc, pure_bind]
     -- Strip the unused leading `key` draw, then the unused `s₁`, `s₂` draws under `ρ`.
-    rw [peel, probOutput_bind_const, hkey]
-    simp only [tsub_zero, one_mul]
-    refine probOutput_bind_congr' _ true (fun rho => ?_)
-    rw [probOutput_bind_const, hss, probOutput_bind_const, hss]
-    simp only [tsub_zero, one_mul]
-  have hH0 : Pr[= true | nmaGameShort p prims hr maxAttempts (keygenShort p prims) main] =
-      Pr[= true | LearningWithErrors.game0 (mldsaMLWEShort p prims) B] := by
+    rw [OracleComp.evalDist_bind_const]
+    apply congrArg (fun μ : Measure Bool => μ {true})
+    refine evalDist_bind_congr _ _ _ fun rho => ?_
+    rw [OracleComp.evalDist_bind_const, OracleComp.evalDist_bind_const]
+  have hH0 : nmaGameShort p prims hr maxAttempts (keygenShort p prims) main {true} =
+      𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B] {true} := by
     rw [nmaGameShort_eq_keygen_bind]
     simp only [LearningWithErrors.game0, LearningWithErrors.distr, hB, distinguisherBShort,
       mldsaMLWEShort, keygenShort, keyFromMaterial, bind_assoc, pure_bind]
     -- Only the leading `key` draw is unused here (`s₁`, `s₂` build `t`).
-    rw [peel, probOutput_bind_const, hkey]
-    simp only [tsub_zero, one_mul]
+    rw [OracleComp.evalDist_bind_const]
   rw [hH0, hH1]
 
 end Hop
@@ -841,7 +820,8 @@ tail (run through `simulateToProbComp`) accepts no more often than the SelfTarge
 tail of `extractorC` at the matching parameters `(ExpandA(ρ), pk)`.
 
 Both tails first simulate `main pk` against the same random oracle from the empty cache; the proof
-compares them after that shared prefix (`probOutput_bind_mono`). On an aborting forgery the NMA tail
+compares them after that shared prefix (`OracleComp.evalDist_bind_apply_mono_of_support`). On an
+aborting forgery the NMA tail
 is deterministically `false`. On a forgery `some (w', (z, h))` both branches issue the *same*
 `H(msg, w')` query on the *same* cache, so the random answer `c̃` and the resulting cache coincide;
 the STMSIS experiment then reads `c̃` back and `mldsaSTMSIS.isValid` recovers `w'` as exactly the
@@ -855,10 +835,11 @@ private theorem stmsis_tail_le
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims)))
     (pk : PublicKey p prims) :
-    Pr[= true | simulateToProbComp p prims (M := M) (do
+    𝒟[simulateToProbComp p prims (M := M) (do
         let (msg, σ) ← main pk
-        (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify pk msg σ)] ≤
-      Pr[= true | do
+        (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify pk msg σ)]
+        {true} ≤
+      𝒟[do
         let ((hashInput, response), cache) ←
           (simulateQ (roImpl p prims (M := M))
             ((extractorC p prims main).run (prims.expandA pk.rho, pk))).run ∅
@@ -866,21 +847,22 @@ private theorem stmsis_tail_le
         | some hashOutput =>
             pure ((mldsaSTMSIS p prims M).isValid (prims.expandA pk.rho) pk hashInput hashOutput
               response)
-        | none => pure false] := by
+        | none => pure false] {true} := by
   classical
   -- Decompose both tails over the shared simulation of `main pk` from the empty cache.
   unfold simulateToProbComp extractorC
   simp only [bind_pure_comp, simulateQ_bind, StateT.run_bind, StateT.run'_eq, map_bind,
     bind_assoc]
   -- Compare after the shared `main pk` simulation prefix.
-  refine probOutput_bind_mono fun a _ => ?_
+  refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
+    (measurableSet_singleton true) fun a _ => ?_
   -- `a = ((msg, σ), cache₀)`; split on whether the forgery aborts.
   obtain ⟨⟨msg, σ⟩, cache0⟩ := a
   cases σ with
   | none =>
     -- Aborting forgery: NMA `verify` is deterministically `false`, so the NMA tail has weight `0`.
     simp only [FiatShamirWithAbort, simulateQ_pure, StateT.run_pure, map_pure,
-      probOutput_pure]
+      evalDist_pure, Measure.dirac_apply]
     simp
   | some wzh =>
     obtain ⟨w', z, h⟩ := wzh
@@ -890,7 +872,8 @@ private theorem stmsis_tail_le
     -- Both sides are now `f <$> (simulateQ roImpl (query (msg, w'))).run cache0`; turn the maps
     -- into binds over the shared random-oracle run and compare per random answer `(c, cache₁)`.
     simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc]
-    refine probOutput_bind_mono fun cc hcc => ?_
+    refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
+      (measurableSet_singleton true) fun cc hcc => ?_
     simp only [pure_bind]
     -- The query simulation caches its answer: `cc.2 (msg, w') = some cc.1`.
     have hquery : simulateQ (roImpl p prims (M := M)) (query (msg, w') :
@@ -914,7 +897,7 @@ private theorem stmsis_tail_le
     -- `hashInput.2 = w'` holds because the queried preimage is exactly `(msg, w')`, so the binding
     -- reduces to `decide (w' = w') = true`; commitment recoverability is the middle conjunct of
     -- `verify`, which `isValid` discharges by `decide (X = X)`.
-    rw [probOutput_pure, probOutput_pure]
+    simp only [evalDist_pure, Measure.dirac_apply]
     by_cases hverify :
         (identificationScheme p prims).verify pk w' cc.1 (z, h) = true
     · -- Accepted: `isValid` recovers `w'` as the very `useHintVec …` value `verify` checks against,
@@ -925,7 +908,7 @@ private theorem stmsis_tail_le
         simp only [mldsaSTMSIS, identificationScheme] at hverify ⊢
         revert hverify
         grind
-      rw [if_pos hverify.symm, if_pos hvalid.symm]
+      simp [hverify, hvalid]
     · simp only [Bool.not_eq_true] at hverify
       rw [hverify]
       simp
@@ -955,24 +938,23 @@ theorem nmaAdvantage_keygen1_le_stmsis
   -- the STMSIS experiment performs exactly this (its RO-consistency lookup yields `c̃`, and
   -- `mldsaSTMSIS.isValid` recovers `w'` from `(pk, c̃, (z,h))` and runs `ids.verify`).  After the
   -- bundled-semantics rewrite (`nmaGame_eq_keygen_bind`) both sides bind over the same `keygen1`
-  -- prefix, so monotonicity (`probOutput_bind_mono`) reduces to the per-key comparison
+  -- prefix, so measure-bind monotonicity reduces to the per-key comparison
   -- `stmsis_tail_le`, which packages the cache read-back and commitment recoverability.
   classical
   rw [nmaAdvantage, nmaGame_eq_keygen_bind, SelfTargetMSIS.advantage,
     SelfTargetMSIS.experiment]
-  rw [probOutput_def, SPMF.evalSPMF_def]
   -- The STMSIS `sampleParams` is exactly `keygen1` followed by publishing `(ExpandA(ρ), pk)`, so
-  -- both `Pr[= true]`s bind over the same `keygen1` prefix; compare them per-key.
-  change Pr[= true | (keygen1 p prims) >>= _] ≤
-    Pr[= true | ((mldsaSTMSIS p prims M).sampleParams) >>= _]
+  -- both event measures bind over the same `keygen1` prefix; compare them per-key.
   rw [show (mldsaSTMSIS p prims M).sampleParams =
       (keygen1 p prims) >>= fun pkSk => pure (prims.expandA pkSk.1.rho, pkSk.1) from rfl]
   rw [bind_assoc]
-  refine probOutput_bind_mono ?_
+  refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
+    (measurableSet_singleton true) ?_
   rintro ⟨pk, sk⟩ _
   rw [pure_bind]
   convert stmsis_tail_le p prims hr maxAttempts main pk using 2
   rw [roImpl, unifFwdImpl]
+  apply congrArg (fun mx : ProbComp Bool => 𝒟[mx])
   refine bind_congr fun x => ?_
   obtain ⟨⟨hashInput, response⟩, cache⟩ := x
   dsimp only
@@ -1183,11 +1165,11 @@ private theorem stmsis_tail_le_short
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims)))
     (pk : PublicKey p prims) :
-    Pr[= true | simulateToProbComp p prims (M := M) (do
+    𝒟[simulateToProbComp p prims (M := M) (do
         let (msg, σ) ← main pk
         (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify
-          pk msg σ)] ≤
-      Pr[= true | do
+          pk msg σ)] {true} ≤
+      𝒟[do
         let ((hashInput, response), cache) ←
           (simulateQ (roImpl p prims (M := M))
             ((extractorCShort p prims main).run (prims.expandA pk.rho, pk))).run ∅
@@ -1195,21 +1177,22 @@ private theorem stmsis_tail_le_short
         | some hashOutput =>
             pure ((mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk
               hashInput hashOutput response)
-        | none => pure false] := by
+        | none => pure false] {true} := by
   classical
   -- Decompose both tails over the shared simulation of `main pk` from the empty cache.
   unfold simulateToProbComp extractorCShort extractorC
   simp only [bind_pure_comp, simulateQ_bind, StateT.run_bind, StateT.run'_eq, map_bind,
     bind_assoc]
   -- Compare after the shared `main pk` simulation prefix.
-  refine probOutput_bind_mono fun a _ => ?_
+  refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
+    (measurableSet_singleton true) fun a _ => ?_
   -- `a = ((msg, σ), cache₀)`; split on whether the forgery aborts.
   obtain ⟨⟨msg, σ⟩, cache0⟩ := a
   cases σ with
   | none =>
     -- Aborting forgery: NMA `verify` is deterministically `false`, so the NMA tail has weight `0`.
     simp only [FiatShamirWithAbort, simulateQ_pure, StateT.run_pure, map_pure,
-      probOutput_pure]
+      evalDist_pure, Measure.dirac_apply]
     simp
   | some wzh =>
     obtain ⟨w', z, h⟩ := wzh
@@ -1219,7 +1202,8 @@ private theorem stmsis_tail_le_short
     -- Both sides are now `f <$> (simulateQ roImpl (query (msg, w'))).run cache0`; turn the maps
     -- into binds over the shared random-oracle run and compare per random answer `(c, cache₁)`.
     simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc]
-    refine probOutput_bind_mono fun cc hcc => ?_
+    refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
+      (measurableSet_singleton true) fun cc hcc => ?_
     simp only [pure_bind]
     -- The query simulation caches its answer: `cc.2 (msg, w') = some cc.1`.
     have hquery : simulateQ (roImpl p prims (M := M)) (query (msg, w') :
@@ -1243,7 +1227,7 @@ private theorem stmsis_tail_le_short
     -- says the recomputed commitment equals the forgery's `w'`, which is the commitment
     -- component of the extractor's preimage `(msg, w')` — exactly the self-target binding
     -- `isValid` demands.
-    rw [probOutput_pure, probOutput_pure]
+    simp only [evalDist_pure, Measure.dirac_apply]
     by_cases hverify :
         (identificationSchemeShort p prims).verify pk w' cc.1 (z, h) = true
     · -- Accepted: `verify`'s middle conjunct identifies the recomputed commitment with `w'`,
@@ -1256,7 +1240,7 @@ private theorem stmsis_tail_le_short
           at hverify ⊢
         revert hverify
         grind
-      rw [if_pos hverify.symm, if_pos hvalid.symm]
+      simp [hverify, hvalid]
     · simp only [Bool.not_eq_true] at hverify
       rw [hverify]
       simp
@@ -1283,19 +1267,18 @@ theorem nmaAdvantage_keygenShort1_le_stmsis
   classical
   rw [nmaAdvantageShort, nmaGameShort_eq_keygen_bind, SelfTargetMSIS.advantage,
     SelfTargetMSIS.experiment]
-  rw [probOutput_def, SPMF.evalSPMF_def]
   -- The short STMSIS `sampleParams` is exactly `keygenShort1` followed by publishing
-  -- `(ExpandA(ρ), pk)`, so both `Pr[= true]`s bind over the same prefix; compare them per-key.
-  change Pr[= true | (keygenShort1 p prims) >>= _] ≤
-    Pr[= true | ((mldsaSTMSISShort p prims M).sampleParams) >>= _]
+  -- `(ExpandA(ρ), pk)`, so both event measures bind over the same prefix; compare them per-key.
   rw [show (mldsaSTMSISShort p prims M).sampleParams =
       (keygenShort1 p prims) >>= fun pkSk => pure (prims.expandA pkSk.1.rho, pkSk.1) from rfl]
   rw [bind_assoc]
-  refine probOutput_bind_mono ?_
+  refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
+    (measurableSet_singleton true) ?_
   rintro ⟨pk, sk⟩ _
   rw [pure_bind]
   convert stmsis_tail_le_short p prims hr maxAttempts main pk using 2
   rw [roImpl, unifFwdImpl]
+  apply congrArg (fun mx : ProbComp Bool => 𝒟[mx])
   refine bind_congr fun x => ?_
   obtain ⟨⟨hashInput, response⟩, cache⟩ := x
   dsimp only

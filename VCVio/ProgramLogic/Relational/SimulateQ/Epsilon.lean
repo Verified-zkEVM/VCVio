@@ -617,13 +617,13 @@ private theorem tvDist_simulateQ_run_le_queryBound_mul_slack_plus_probEvent_bad_
           obtain ⟨h_can, h_cont⟩ := h_qb
           by_cases hSt : S t
           · -- Costly query: use the existing helper with budget `qS`, decrementing to `qS - 1`.
-            simp only [if_pos hSt] at h_cont
+            simp only [ite_eq_left hSt] at h_cont
             have hqS_pos : 0 < qS := h_can.resolve_left (· hSt)
             exact tvDist_simulateQ_run_query_bind_le impl₁ impl₂ hε h_step_tv_global
               t cont hqS_pos
               (fun u p' => ih u (h_cont u) p') s
           · -- Free query: impls equal here; preserve the `qS` budget through the recursion.
-            simp only [if_neg hSt] at h_cont
+            simp only [ite_eq_right hSt] at h_cont
             exact tvDist_simulateQ_run_free_query_bind_le impl₁ impl₂ hε t
               (h_step_eq_nS t hSt) cont
               (fun u p' => ih u (h_cont u) p') s
@@ -767,7 +767,7 @@ theorem tvDist_simulateQ_run_le_queryBoundP_mul
       rw [hsim₁_eq, hsim₂_eq]
       by_cases hSt : S t
       · -- Charged query: swap the step (cost `ε`), then recurse with budget `qS - 1`.
-        simp only [if_pos hSt] at h_cont
+        simp only [ite_eq_left hSt] at h_cont
         have hqS_pos : 0 < qS := h_can.resolve_left (not_not_intro hSt)
         have h_first : tvDist ((impl₁ t).run s₀ >>= f₁) ((impl₁ t).run s₀ >>= f₂)
             ≤ ↑(qS - 1) * ε :=
@@ -786,7 +786,7 @@ theorem tvDist_simulateQ_run_le_queryBoundP_mul
           _ = (↑(qS - 1) + 1) * ε := by ring
           _ = ↑qS * ε := by rw [hq_arith]
       · -- Free query: the step is shared; recurse with the budget intact.
-        simp only [if_neg hSt] at h_cont
+        simp only [ite_eq_right hSt] at h_cont
         rw [← h_step_eq_nS t hSt s₀]
         exact le_trans (tvDist_bind_left_le _ _ _)
           (tsum_probOutput_mul_tvDist_le_const _ f₁ f₂

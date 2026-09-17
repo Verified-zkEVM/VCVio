@@ -77,8 +77,8 @@ fields supplied, all four inequalities proved — at an *arbitrary* `vp : Valida
 arbitrary bundle carrying the instance hypotheses this section asks for, and an arbitrary
 adversary, from an address key and a public seed and no security assumption at all; and it proves
 that the bound that certificate names is at least one.  `advantage_le_bound` at that certificate
-says `adv.advantage ≤ (something ≥ 1)`, which `probOutput_le_one` already gives.  Three facts
-compose, each a theorem of that fixture.
+says `adv.advantage ≤ (something ≥ 1)`, which `MeasureTheory.measure_le_one` already gives.
+Three facts compose, each a theorem of that fixture.
 
 * **The preimage game is winnable outright.**  `SM_DT_PRE_SourceFinalValidity` accepts on
   `th.eval pk t (emb m) = th.eval pk t (emb x)` with no `m ≠ x` clause — correctly, because it is
@@ -275,7 +275,7 @@ experiments' success probabilities.
 *Composition arithmetic.* -/
 noncomputable def prfAbsAdvantage {K D R : Type} [DecidableEq D] [SampleableType R]
     (prf : PRFScheme K D R) (adv : PRFScheme.PRFAdversary D R) : ℝ≥0∞ :=
-  ENNReal.absDiff (Pr[= true | prf.prfRealExp adv]) (Pr[= true | PRFScheme.prfIdealExp adv])
+  ENNReal.absDiff (𝒟[prf.prfRealExp adv] {true}) (𝒟[PRFScheme.prfIdealExp adv] {true})
 
 /-- The `ℝ≥0∞` advantage is the library's `ℝ`-valued one.  Without this a reader cannot check that
 the two PRF summands of the bound are the source's two absolute differences of `main(false)` and
@@ -285,8 +285,8 @@ the two PRF summands of the bound are the source's two absolute differences of `
 theorem prfAbsAdvantage_toReal {K D R : Type} [DecidableEq D] [SampleableType R]
     (prf : PRFScheme K D R) (adv : PRFScheme.PRFAdversary D R) :
     (prfAbsAdvantage prf adv).toReal = PRFScheme.prfAdvantage prf adv := by
-  rw [prfAbsAdvantage, PRFScheme.prfAdvantage,
-    ENNReal.absDiff_toReal probOutput_ne_top probOutput_ne_top]
+  exact ENNReal.absDiff_toReal (MeasureTheory.measure_ne_top _ _)
+    (MeasureTheory.measure_ne_top _ _)
 
 /-! ## The twelve summands -/
 
@@ -570,8 +570,9 @@ inequalities plus VCVio's OpenPRE-to-`DSPR + 3·TCR` coupling give the source's 
 coupling is where the `3` comes from.  What it does not do is say anything about SLH-DSA.  Its
 antecedent is free — `HashSigTest.SLHDSA.Composition` builds a `Certificate` for every adversary
 from an address key and a public seed, and proves that the bound that one names is at least one,
-so at that certificate this theorem is `probOutput_le_one` with extra steps.  Nothing here bounds
-any of the twelve summands, ties any of the eleven adversaries to `adv`, records any challenge, or
+so at that certificate this theorem is `MeasureTheory.measure_le_one` with extra steps. Nothing
+here bounds any of the twelve summands, ties any of the eleven adversaries to `adv`, records any
+challenge, or
 establishes any game's final validity.  The module docstring's "A certificate costs nothing" says
 what would have to change.
 

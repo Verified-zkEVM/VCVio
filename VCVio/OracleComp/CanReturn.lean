@@ -27,8 +27,6 @@ variable {ι : Type u} {α : Type v} {spec : OracleSpec.{u, v} ι}
 
 /-- Generic exact return reachability agrees with the oracle support interpretation. -/
 theorem canReturn_iff_mem_support (program : OracleComp spec α) (value : α) :
-    MonadAttach.CanReturn program value ↔ value ∈ support program := by
-  change value ∈ MonadAttach.support program ↔ value ∈ support program
-  rw [PFunctor.FreeM.support_eq_liftM_univ, PFunctor.FreeM.support_eq_liftM]
+    MonadAttach.CanReturn program value ↔ value ∈ support program := by rfl
 
 end OracleComp

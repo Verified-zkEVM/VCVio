@@ -5,6 +5,7 @@ public import ToMathlib.Algebra.BigOperators.List
 public import ToMathlib.Analysis.MeanInequalities
 public import ToMathlib.Analysis.SumIntegralComparisons
 public import ToMathlib.Control.AlternativeMonad
+public import ToMathlib.Control.Except
 public import ToMathlib.Control.Functor.Prod
 public import ToMathlib.Control.Lawful.MonadControl
 public import ToMathlib.Control.Lawful.MonadFunctor
@@ -19,6 +20,7 @@ public import ToMathlib.Control.Monad.RelationalAlgebra
 public import ToMathlib.Control.Monad.RelationalAlgebraAnchored
 public import ToMathlib.Control.Monad.Relative
 public import ToMathlib.Control.Monad.Transformer
+public import ToMathlib.Control.Option
 public import ToMathlib.Control.OptionT
 public import ToMathlib.Control.StateT
 public import ToMathlib.Control.WriterT
@@ -41,8 +43,10 @@ public import ToMathlib.Data.Vector
 public import ToMathlib.Data.Vector.Count
 public import ToMathlib.Data.Vector.Induction
 public import ToMathlib.Data.Vector.ListVector
+public import ToMathlib.Lint.LegacyProbability
 public import ToMathlib.Logic.Basic
 public import ToMathlib.MeasureTheory.DiscreteInstances
+public import ToMathlib.MeasureTheory.Integral.Quadratic
 public import ToMathlib.MeasureTheory.MeasurableSpace.Except
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
 public import ToMathlib.MeasureTheory.Measure.Bool
@@ -51,9 +55,12 @@ public import ToMathlib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.Coupling.Bind
 public import ToMathlib.MeasureTheory.Measure.Coupling.Discard
 public import ToMathlib.MeasureTheory.Measure.Coupling.Residual
+public import ToMathlib.MeasureTheory.Measure.Except
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Monotone
 public import ToMathlib.MeasureTheory.Measure.Option
+public import ToMathlib.MeasureTheory.Measure.Prop
 public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import ToMathlib.MeasureTheory.Measure.UniformTable
@@ -61,6 +68,7 @@ public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.Divergence.Renyi
 public import ToMathlib.Probability.Divergence.RenyiDiscrete
 public import ToMathlib.Probability.Divergence.TotalVariation
+public import ToMathlib.Probability.Kernel.Quadratic
 public import ToMathlib.Probability.Kernel.Subprobability
 public import ToMathlib.Probability.NegativeHypergeometric
 public import ToMathlib.Probability.ProbabilityMassFunction.Lemmas
@@ -72,6 +80,9 @@ public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
 public import ToMathlib.Probability.UniformOn
 public import ToMathlib.ProbabilityTheory.Coupling
 public import ToMathlib.ProbabilityTheory.FinRatPMF
+public import ToMathlib.ProbabilityTheory.FinRatPMF.Basic
+public import ToMathlib.ProbabilityTheory.FinRatPMF.Measure
+public import ToMathlib.ProbabilityTheory.FinRatPMF.PMF
 public import ToMathlib.ProbabilityTheory.OptimalCoupling
 public import ToMathlib.ProbabilityTheory.SPMF
 public import ToMathlib.Topology.Algebra.InfiniteSum.Option

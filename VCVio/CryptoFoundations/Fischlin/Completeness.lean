@@ -90,9 +90,9 @@ sample and the old minimum. This avoids unfolding the comparison into unrelated 
 private lemma minChoice_gt_iff (k : ℕ) {b : ℕ} (i best : Fin (2 ^ b)) :
     k < (if i.val < best.val then i else best).val ↔ k < i.val ∧ k < best.val := by
   by_cases h : i.val < best.val
-  · simp only [h, if_true]
+  · simp only [h, ite_true]
     exact ⟨fun hi => ⟨hi, hi.trans h⟩, And.left⟩
-  · simp only [h, if_false]
+  · simp only [h, ite_false]
     exact ⟨fun hbest => ⟨hbest.trans_le (Nat.le_of_not_gt h), hbest⟩, And.right⟩
 
 /-- Tail bound for the min-tracking search from an arbitrary starting `best`: the running
@@ -124,11 +124,11 @@ private lemma minUnifAux_probEvent_gt (b k t : ℕ) (best : Option (Fin (2 ^ b))
             * q ^ n := by
         intro x
         by_cases hx : (x : ℕ) = 0
-        · simp only [hx, if_true]
+        · simp only [hx, ite_true]
           rw [probEvent_pure_eq_indicator]
           simp only [minGt, Set.indicator, Set.mem_ofPred_eq, hx]
           simp
-        · simp only [hx, if_false]
+        · simp only [hx, ite_false]
           rw [ih]
           congr 1
           simp only [Option.some.injEq, forall_eq']
@@ -138,20 +138,20 @@ private lemma minUnifAux_probEvent_gt (b k t : ℕ) (best : Option (Fin (2 ^ b))
       rw [mul_comm (q ^ n) q, ← mul_assoc]
       congr 1
       rcases best with _ | b0
-      · rw [if_pos (by simp), one_mul, hq, ← probEvent_val_gt_uniformSample b k,
+      · rw [ite_eq_left (by simp), one_mul, hq, ← probEvent_val_gt_uniformSample b k,
           probEvent_eq_tsum_ite]
         refine tsum_congr fun i => ?_
         by_cases hi : (i : ℕ) = 0 <;> by_cases hk : k < (i : ℕ) <;> simp [hi, hk]
       · simp only [Option.some.injEq, forall_eq']
         by_cases hb : k < (b0 : ℕ)
-        · rw [if_pos hb, one_mul, hq, ← probEvent_val_gt_uniformSample b k,
+        · rw [ite_eq_left hb, one_mul, hq, ← probEvent_val_gt_uniformSample b k,
             probEvent_eq_tsum_ite]
           refine tsum_congr fun i => ?_
           by_cases hi : (i : ℕ) = 0
           · simp [hi]
-          · simp only [hi, if_false, minChoice_gt_iff, hb, and_true]
+          · simp only [hi, ite_false, minChoice_gt_iff, hb, and_true]
             simp
-        · rw [if_neg hb, zero_mul]
+        · rw [ite_eq_right hb, zero_mul]
           rw [show (∑' (i : Fin (2 ^ b)), Pr[= i | $ᵗ Fin (2 ^ b)] *
               if (i : ℕ) = 0 then (0 : ℝ≥0∞)
               else if k < ((if (i : ℕ) < (b0 : ℕ) then i else b0) : Fin (2 ^ b)).val then 1 else 0)
@@ -160,7 +160,7 @@ private lemma minUnifAux_probEvent_gt (b k t : ℕ) (best : Option (Fin (2 ^ b))
           · refine tsum_congr fun i => ?_
             by_cases hi : (i : ℕ) = 0
             · simp [hi]
-            · simp only [hi, if_false, minChoice_gt_iff, hb, and_false]
+            · simp only [hi, ite_false, minChoice_gt_iff, hb, and_false]
               simp
 
 /-- Tail bound for the min-tracking search started fresh (`best = none`): the running minimum
@@ -169,7 +169,7 @@ completeness union bound. -/
 private lemma minUnifAux_probEvent_gt_none (b k t : ℕ) :
     Pr[fun o => minGt k o | minUnifAux b t none]
       = ((↑(2 ^ b - (k + 1)) : ℝ≥0∞) / ↑(2 ^ b)) ^ t := by
-  rw [minUnifAux_probEvent_gt, if_pos (by simp), one_mul]
+  rw [minUnifAux_probEvent_gt, ite_eq_left (by simp), one_mul]
 
 section security
 
@@ -253,11 +253,11 @@ private lemma fischlinUnifSearch_probEvent_minGt_le
       refine ENNReal.tsum_le_tsum (fun h => ?_)
       refine mul_le_mul' le_rfl ?_
       by_cases hh : h.val = 0
-      · simp only [hh, if_true]
+      · simp only [hh, ite_true]
         rw [probEvent_pure_eq_indicator, probEvent_pure_eq_indicator]
         refine le_of_eq ?_
         simp [Set.indicator, Set.mem_ofPred_eq, minGt]
-      · simp only [hh, if_false]
+      · simp only [hh, ite_false]
         refine le_trans (ih _) (le_of_eq ?_)
         congr 1
         cases best with
@@ -278,11 +278,12 @@ used by the bundled `withStateOracle` runtime. -/
 omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
 /-- The Fischlin runtime denotes a surface computation by simulating it with `fischlinImpl`
 starting from the empty cache and discarding the final cache. -/
-private lemma runtime_evalSPMF_eq
-    {α : Type} (mx : OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M) α) :
-    (runtime ρ b M).evalSPMF mx = 𝒮[(simulateQ (fischlinImpl ρ b M) mx).run' ∅] := by
-  unfold runtime ProbCompRuntime.evalSPMF SPMFSemantics.evalSPMF SemanticsVia.denote
-  simp only [SPMFSemantics.withStateOracle]
+private lemma runtime_evalDist_eq
+    {α : Type} [MeasurableSpace α]
+    (mx : OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M) α) :
+    (runtime ρ b M).evalDist mx = 𝒟[(simulateQ (fischlinImpl ρ b M) mx).run' ∅] := by
+  unfold runtime ProbCompRuntime.evalDist
+  simp only [MeasureSemanticsVia.withStateOracle_evalDist]
   rfl
 
 /-- The pure-probability model game `G` for Fischlin completeness.
@@ -391,9 +392,9 @@ private lemma fischlinSearch_run'_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
       erw [hmiss, map_bind, evalSPMF_bind, evalSPMF_bind]
       refine congrArg (𝒮[$ᵗ Fin (2 ^ b)] >>= ·) (funext fun x => ?_)
       by_cases hx : x.val = 0
-      · simp only [hx, if_true, simulateQ_pure, StateT.run', map_pure, Option.map_some]
+      · simp only [hx, ite_true, simulateQ_pure, StateT.run', map_pure, Option.map_some]
         rfl
-      · simp only [hx, if_false]
+      · simp only [hx, ite_false]
         -- Recurse: freshness is preserved for `rest` after caching the `ω` record.
         have hfresh' : searchFresh ρ b M pk msg comList i rest
             (cache.cacheQuery ⟨pk, msg, comList, i, ω, resp⟩ x) := by
@@ -493,9 +494,9 @@ private lemma fischlinSearch_run_cache_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
       rw [evalSPMF_bind, evalSPMF_bind]
       refine congrArg (𝒮[$ᵗ Fin (2 ^ b)] >>= ·) (funext fun x => ?_)
       by_cases hx : x.val = 0
-      · simp only [hx, if_true, simulateQ_pure, StateT.run_pure, map_pure, map_pure,
+      · simp only [hx, ite_true, simulateQ_pure, StateT.run_pure, map_pure, map_pure,
           Option.map_some, searchRecord, QueryCache.cacheQuery_self]
-      · simp only [hx, if_false]
+      · simp only [hx, ite_false]
         -- Recurse: freshness preserved and the new best's record is now cached at `x`.
         have hfresh' : searchFresh ρ b M pk msg comList i rest
             (cache.cacheQuery ⟨pk, msg, comList, i, ω, resp⟩ x) := by
@@ -522,8 +523,8 @@ private lemma fischlinSearch_run_cache_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
           | some t =>
               obtain ⟨ω', resp', h'⟩ := t
               by_cases hlt : x.val < h'.val
-              · simp only [hlt, if_true] at hnone; exact absurd hnone (by simp)
-              · simp only [hlt, if_false] at hnone; exact absurd hnone (by simp)
+              · simp only [hlt, ite_true] at hnone; exact absurd hnone (by simp)
+              · simp only [hlt, ite_false] at hnone; exact absurd hnone (by simp)
         -- Per-element cache fact for the updated best `newBest`.
         have hbest' : ∀ a r hh,
             (match best with
@@ -546,10 +547,10 @@ private lemma fischlinSearch_run_cache_eq (pk : Stmt) (sk : Wit) (sc : PrvState)
                   FischlinROInput Stmt Commit Chal Resp ρ M) = some h' :=
                 hbest ω' resp' h' rfl
               by_cases hlt : x.val < h'.val
-              · simp only [hlt, if_true, Option.some.injEq, Prod.mk.injEq] at hmatch
+              · simp only [hlt, ite_true, Option.some.injEq, Prod.mk.injEq] at hmatch
                 obtain ⟨rfl, rfl, rfl⟩ := hmatch
                 exact QueryCache.cacheQuery_self _ _ _
-              · simp only [hlt, if_false, Option.some.injEq, Prod.mk.injEq] at hmatch
+              · simp only [hlt, ite_false, Option.some.injEq, Prod.mk.injEq] at hmatch
                 obtain ⟨rfl, rfl, rfl⟩ := hmatch
                 by_cases heq : (⟨pk, msg, comList, i, ω', resp'⟩ :
                     FischlinROInput Stmt Commit Chal Resp ρ M)
@@ -656,18 +657,18 @@ private lemma fischlinSearch_run_preserves_offrep (pk : Stmt) (sk : Wit) (sc : P
           support_uniformSample, Set.mem_univ, Set.iUnion_true, Set.mem_iUnion] at hmem
         obtain ⟨x, hxmem⟩ := hmem
         by_cases hx : x.val = 0
-        · simp only [hx, if_true, simulateQ_pure, StateT.run_pure, support_pure,
+        · simp only [hx, ite_true, simulateQ_pure, StateT.run_pure, support_pure,
             Set.mem_singleton_iff, Prod.mk.injEq] at hxmem
           rw [hxmem.2, QueryCache.cacheQuery_of_ne cache x hne]
-        · simp only [hx, if_false] at hxmem
+        · simp only [hx, ite_false] at hxmem
           rw [ih _ _ hxmem, QueryCache.cacheQuery_of_ne cache x hne]
       · obtain ⟨u, hu⟩ := Option.ne_none_iff_exists'.mp hc
         rw [QueryImpl.withCaching_run_some (so := uniformSampleImpl) hu, pure_bind] at hmem
         by_cases hx : u.val = 0
-        · simp only [hx, if_true, simulateQ_pure, StateT.run_pure, support_pure,
+        · simp only [hx, ite_true, simulateQ_pure, StateT.run_pure, support_pure,
             Set.mem_singleton_iff, Prod.mk.injEq] at hmem
           rw [hmem.2]
-        · simp only [hx, if_false] at hmem
+        · simp only [hx, ite_false] at hmem
           exact ih _ _ hmem
 
 
@@ -693,9 +694,9 @@ private lemma fischlinUnifSearch_isSome (pk : Stmt) (sk : Wit) (sc : PrvState) :
       simp only [fischlinUnifSearch, mem_support_bind_iff] at ho
       obtain ⟨resp, _, h, _, ho⟩ := ho
       by_cases hh : h.val = 0
-      · simp only [hh, if_true, support_pure, Set.mem_singleton_iff] at ho
+      · simp only [hh, ite_true, support_pure, Set.mem_singleton_iff] at ho
         rw [ho]; rfl
-      · simp only [hh, if_false] at ho
+      · simp only [hh, ite_false] at ho
         refine ih _ (Or.inl ?_) o ho
         cases best with
         | none => rfl
@@ -1141,7 +1142,7 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
 
 omit [SampleableType Chal] in
 /-- **Residual: full-game distribution surgery.** After collapsing the random-oracle runtime to a
-`StateT`-simulation on the empty cache (`runtime_evalSPMF_eq`), the entire Fischlin game
+`StateT`-simulation on the empty cache (`runtime_evalDist_eq`), the entire Fischlin game
 `keygen >>= sign >>= verify`, observed as a `ProbComp Bool` via `StateT.run'`, has the same
 distribution as `modelGame`.
 
@@ -1187,7 +1188,7 @@ field separates repetitions), so each is a cache miss whose answer is a fresh un
 matching `fischlinUnifSearch`. The chosen transcript's hash was cached during `sign`, so the
 verifier's re-query is a cache hit returning that same value, matching the model's direct read. -/
 private lemma fischlin_game_eq_model (msg : M) :
-    Pr[= true | (runtime ρ b M).evalSPMF do
+    (runtime ρ b M).evalDist (do
       let (pk, sk) ←
         (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).keygen
@@ -1195,10 +1196,10 @@ private lemma fischlin_game_eq_model (msg : M) :
         (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).sign pk sk msg
       (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
-        σ hr ρ b S M).verify pk msg sig]
-      = Pr[= true | modelGame σ hr ρ b S] := by
-  rw [runtime_evalSPMF_eq]
-  rw [probOutput_evalSPMF, probOutput_def, probOutput_def,
+        σ hr ρ b S M).verify pk msg sig) {true}
+      = 𝒟[modelGame σ hr ρ b S] {true} := by
+  rw [runtime_evalDist_eq, evalDist_apply_singleton, evalDist_apply_singleton,
+    probOutput_def, probOutput_def,
     fischlin_game_run'_eq_modelGame σ hr ρ b S M msg]
 
 /-- Support membership for the pure-probability search: any kept triple `(ω, resp, h)` has its
@@ -1225,10 +1226,10 @@ private lemma fischlinUnifSearch_mem_support {Stmt Wit Commit PrvState Chal Resp
       simp only [fischlinUnifSearch, mem_support_bind_iff] at hmem
       obtain ⟨resp₀, hresp₀, h₀, _, hmem⟩ := hmem
       by_cases hh : h₀.val = 0
-      · simp only [hh, if_true, support_pure, Set.mem_singleton_iff] at hmem
+      · simp only [hh, ite_true, support_pure, Set.mem_singleton_iff] at hmem
         obtain ⟨rfl, rfl, rfl⟩ := hmem
         exact hresp₀
-      · simp only [hh, if_false] at hmem
+      · simp only [hh, ite_false] at hmem
         refine ih _ ω resp h (fun ω' resp' h' heq => ?_) hmem
         cases hb : best with
         | none =>
@@ -1240,10 +1241,10 @@ private lemma fischlinUnifSearch_mem_support {Stmt Wit Commit PrvState Chal Resp
             obtain ⟨ωt, respt, ht⟩ := t
             rw [hb] at heq
             by_cases hlt : h₀.val < ht.val
-            · simp only [hlt, if_true, Option.some.injEq, Prod.mk.injEq] at heq
+            · simp only [hlt, ite_true, Option.some.injEq, Prod.mk.injEq] at heq
               obtain ⟨rfl, rfl, rfl⟩ := heq
               exact hresp₀
-            · simp only [hlt, if_false, Option.some.injEq, Prod.mk.injEq] at heq
+            · simp only [hlt, ite_false, Option.some.injEq, Prod.mk.injEq] at heq
               obtain ⟨rfl, rfl, rfl⟩ := heq
               exact hbest _ _ _ hb.symm
 
@@ -1310,9 +1311,9 @@ private lemma fischlinUnifSearch_match_verify
         simp only [fischlinUnifSearch, mem_support_bind_iff] at ho
         obtain ⟨resp₀, _, h₀, _, ho⟩ := ho
         by_cases hh : h₀.val = 0
-        · simp only [hh, if_true, support_pure, Set.mem_singleton_iff] at ho
+        · simp only [hh, ite_true, support_pure, Set.mem_singleton_iff] at ho
           subst ho; rfl
-        · simp only [hh, if_false] at ho
+        · simp only [hh, ite_false] at ho
           rcases rest with _ | ⟨ω₁, rest'⟩
           · simp only [fischlinUnifSearch, support_pure, Set.mem_singleton_iff] at ho
             subst ho
@@ -1430,7 +1431,7 @@ Unlike the Fiat-Shamir transform (which is perfectly complete), the Fischlin tra
 has a non-zero completeness error because the prover's proof-of-work search may fail
 to find hash values whose sum is at most `S`. -/
 theorem almostComplete (hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (msg : M) :
-    Pr[= true | (runtime ρ b M).evalSPMF do
+    (runtime ρ b M).evalDist (do
       let (pk, sk) ←
         (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).keygen
@@ -1438,13 +1439,14 @@ theorem almostComplete (hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (msg : M) :
         (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).sign pk sk msg
       (Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
-        σ hr ρ b S M).verify pk msg sig]
+        σ hr ρ b S M).verify pk msg sig) {true}
     ≥ 1 - completenessError ρ b S (FinEnum.card Chal) := by
   rw [ge_iff_le, fischlin_game_eq_model σ hr ρ b S M msg]
   have hbound := model_reject_le σ hr ρ b S M hρ hc msg
-  set P : ℝ≥0∞ := Pr[= true | modelGame σ hr ρ b S] with hP
+  rw [← evalDist_apply_singleton] at hbound
+  set P : ℝ≥0∞ := 𝒟[modelGame σ hr ρ b S] {true} with hP
   -- From `1 - P ≤ e` and `P ≤ 1` conclude `1 - e ≤ P`.
-  have hP1 : P ≤ 1 := probOutput_le_one
+  have hP1 : P ≤ 1 := MeasureTheory.measure_le_one _ _
   rw [tsub_le_iff_right] at hbound ⊢
   rwa [add_comm] at hbound
 

@@ -178,7 +178,7 @@ theorem signM_isTotalQueryBound (vp : ValidatedParams) (core : CorePrimitives vp
   by_cases hd : vp.params.d = 1
   · have htrue : (vp.params.d == 1) = true := by simp [hd]
     simpa only [signM, signQueryBound, hd, htrue, beq_self_eq_true, signLoopQueryBound,
-      if_true] using h
+      ite_true] using h
   · have hfalse : (vp.params.d == 1) = false := by simp [hd]
     rw [hfalse, signLoopQueryBound_false vp.params vp.params.d vp.valid.d_pos] at h
     simpa [signM, signQueryBound, hd, hfalse] using h

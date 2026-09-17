@@ -327,7 +327,7 @@ support: any output reachable after simulation was already reachable in the orig
 (where oracle queries may return any value). This is the support-level analogue of
 `evalSPMF_simulateQ_run'_eq_evalSPMF`. -/
 theorem support_simulateQ_run'_subset
-    {n : Type w → Type _} [Monad n] [LawfulMonad n] [MonadLiftT n SetM] [LawfulMonadLiftT n SetM]
+    {n : Type w → Type _} [Monad n] [LawfulMonad n] [MonadAttach n] [ExactMonadAttach n]
     {σ : Type w}
     (impl : QueryImpl spec (StateT σ n))
     (oa : OracleComp spec α) (s : σ) :

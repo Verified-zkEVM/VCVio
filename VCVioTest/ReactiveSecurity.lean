@@ -48,7 +48,7 @@ open scoped ENNReal
 attribute [local implicit_reducible] signature Response HandledAssembly.plug HandledAssembly.atom
   HandledAssembly.ofDiagram HandledDiagram.plug HandledDiagram.atom
   HandledDiagram.network Diagram.plug Diagram.map Diagram.wire Diagram.atom
-  bitEffect noEffect boundary request response DynComputation.ofFreeM PFunctor.Obj
+  bitEffect noEffect boundary request response DynComputation.ofFreeM
   PFunctor.Idx HandledDiagram.closedPair Diagram.withEnvironment
 
 /-- The actual communicating experiment exposes the server's sampled bit. -/
@@ -101,7 +101,9 @@ theorem law_server_uniform : law (server ($ᵗ Bool)) (context 5) =
     rw [evalDist_uniformSample, ProbabilityTheory.uniformOn_univ]
     cases bit <;> simp
   rw [law_eq_evalDist, experiment_server, evalDist_map_of_discrete, hcoin]
-  rw [Measure.map_add _ _ Measurable.of_discrete, Measure.map_smul, Measure.map_smul]
+  rw [Measure.map_add _ _ Measurable.of_discrete,
+    Measure.map_smul _ Measurable.of_discrete.aemeasurable,
+    Measure.map_smul _ Measurable.of_discrete.aemeasurable]
   simp [Measure.map_dirac' Measurable.of_discrete]
 
 private theorem tvDist_dirac_half {α : Type} [MeasurableSpace α]

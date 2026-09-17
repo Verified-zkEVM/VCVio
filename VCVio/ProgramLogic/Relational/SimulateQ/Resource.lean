@@ -171,16 +171,16 @@ private theorem probEvent_fst_simulateQ_run_le_add_bad_add_slack
         have hcabs : c + (if charged t then ε else 0) ≤ (q : ℝ≥0∞) * ε := by
           rcases hvalid with hnc | hpos
           · -- `t` uncharged: `c = q·ε`, slack term is `0`.
-            rw [hc, if_neg hnc, if_neg hnc, add_zero]
+            rw [hc, ite_eq_right hnc, ite_eq_right hnc, add_zero]
           · -- `t` charged: `c = (q-1)·ε`, slack term is `ε`, and `0 < q`.
             by_cases hch : charged t
-            · rw [hc, if_pos hch, if_pos hch]
+            · rw [hc, ite_eq_left hch, ite_eq_left hch]
               have hq : ((q - 1 : ℕ) : ℝ≥0∞) + 1 = (q : ℝ≥0∞) := by
                 have : ((q - 1 : ℕ) + 1 : ℕ) = q := Nat.succ_pred_eq_of_pos hpos
                 exact_mod_cast congrArg (Nat.cast : ℕ → ℝ≥0∞) this
               rw [show ((q - 1 : ℕ) : ℝ≥0∞) * ε + ε = (((q - 1 : ℕ) : ℝ≥0∞) + 1) * ε by
                 rw [add_mul, one_mul], hq]
-            · rw [hc, if_neg hch, if_neg hch, add_zero]
+            · rw [hc, ite_eq_right hch, ite_eq_right hch, add_zero]
         gcongr
 
 /-- **Heterogeneous-state bad + slack `simulateQ` rule.**
@@ -296,11 +296,11 @@ private lemma expectedQuerySlack_query_bind_good_eq
           expectedQuerySlack impl S ε (cont z.1) (if S t then qS - 1 else qS) (z.2, false) := by
   rw [expectedQuerySlack_query_bind]
   by_cases h : S t
-  · rw [expectedQuerySlackStep_costly_pos _ _ _ _ _ _ _ h (hqS h), if_pos h, if_pos h,
+  · rw [expectedQuerySlackStep_costly_pos _ _ _ _ _ _ _ h (hqS h), ite_eq_left h, ite_eq_left h,
       tsum_prod_right_bool_eq_of_zero (f := fun z : spec.Range t × σ × Bool =>
         Pr[= z | (impl t).run (s, false)] * expectedQuerySlack impl S ε (cont z.1) (qS - 1) z.2)
         (by rintro ⟨u, s'⟩; simp)]
-  · rw [expectedQuerySlackStep_free _ _ _ _ _ _ _ h, if_neg h, if_neg h, zero_add,
+  · rw [expectedQuerySlackStep_free _ _ _ _ _ _ _ h, ite_eq_right h, ite_eq_right h, zero_add,
       tsum_prod_right_bool_eq_of_zero (f := fun z : spec.Range t × σ × Bool =>
         Pr[= z | (impl t).run (s, false)] * expectedQuerySlack impl S ε (cont z.1) qS z.2)
         (by rintro ⟨u, s'⟩; simp)]
@@ -344,10 +344,10 @@ private lemma probEvent_bad_simulateQ_run_query_bind_le_expectedQuerySlack
             (simulateQ impl (cont z.1)).run (z.2, false)] := by
     by_cases h : charged t
     · -- Charged step: pay the flip charge `w s`.
-      rw [if_pos h]
+      rw [ite_eq_left h]
       exact h_charged_step t s h _
     · -- Free step: no charge.
-      rw [if_neg h, zero_add]
+      rw [ite_eq_right h, zero_add]
       exact h_free_step t s h _
   -- Discard the bad-flagged output states, then forward each good one to the IH.
   rw [hsim, expectedQuerySlack_query_bind_good_eq impl charged w t cont
@@ -479,7 +479,8 @@ lemma avgBadM_pure_state
     (p₀ : σ × Bool) (oa : OracleComp spec γ) :
     avgBadM impl (fun p => if p = p₀ then 1 else 0) oa =
       Pr[fun z : γ × σ × Bool => z.2.2 = true | (simulateQ impl oa).run p₀] := by
-  rw [avgBadM, tsum_eq_single p₀ (by intro p hp; rw [if_neg hp, zero_mul]), if_pos rfl, one_mul]
+  rw [avgBadM, tsum_eq_single p₀ (by intro p hp; rw [ite_eq_right hp, zero_mul]),
+    ite_eq_left rfl, one_mul]
 
 open scoped Classical in
 /-- **Linearity of `avgBadM` in the state measure.** The averaged bad mass over `ν` is the

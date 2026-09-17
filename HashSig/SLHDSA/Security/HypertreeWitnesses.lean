@@ -653,8 +653,8 @@ theorem findHypertreeWitness_eq_of_root (vp : ValidatedParams) (prims : Primitiv
       (findXmssWitness prims pos.leaf.val sigs.head msg msg' sk pk pos.toAdrs).map
         (⟨⟨0, Nat.succ_pos layers⟩, ·⟩) := by
   match layers, hlayers, sigs, hmatch with
-  | 0, _, _, hmatch => rw [findHypertreeWitness, if_pos hmatch]
-  | _ + 1, _, _, hmatch => rw [findHypertreeWitness, if_pos hmatch]
+  | 0, _, _, hmatch => rw [findHypertreeWitness, ite_eq_left hmatch]
+  | _ + 1, _, _, hmatch => rw [findHypertreeWitness, ite_eq_left hmatch]
 
 /-- Where the starting layer's recovered root is not the honest one and a layer remains above it,
 the search moves to the next position and its answer is that layer's, shifted up by one. -/
@@ -670,7 +670,7 @@ theorem findHypertreeWitness_eq_next_of_ne (vp : ValidatedParams) (prims : Primi
           (xmssPkFromSig prims pos.leaf.val sigs.head msg pk pos.toAdrs)
           (xmssRoot prims sk pk pos.toAdrs) sigs.tail).map
         fun w => ⟨⟨w.layer.val + 1, Nat.succ_lt_succ w.layer.isLt⟩, w.witness⟩ := by
-  rw [findHypertreeWitness, if_neg hmatch]
+  rw [findHypertreeWitness, ite_eq_right hmatch]
 
 /-- **Extractor soundness.**  Whatever `findHypertreeWitness` returns satisfies
 `HypertreeWitness.Valid` against the honest hypertree, at the layer it reports and against the
@@ -750,7 +750,7 @@ theorem findHypertreeWitness_isSome (vp : ValidatedParams) (prims : Primitives v
   | one =>
       simp only [recoverFromPosition] at hroot
       rw [← LayerPosition.toAdrs_eq_layerAdrs_of_isFinal pos (by omega)] at hroot
-      rw [findHypertreeWitness, if_pos hroot, Option.isSome_map]
+      rw [findHypertreeWitness, ite_eq_left hroot, Option.isSome_map]
       exact findXmssWitness_isSome vp.valid prims laws pos.leaf.val pos.leaf.isLt sigs.head msg
         msg' sk pk pos.toAdrs hne hroot
   | more layers _ ih =>

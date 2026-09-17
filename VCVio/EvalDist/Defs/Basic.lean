@@ -6,6 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.EvalDist.Defs.Measure
+public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Typeclasses for Denotational Monad Semantics
@@ -25,27 +26,11 @@ universe u v w
 
 variable {m : Type u → Type v} {α β γ : Type u}
 
-/-! ## `MonadLiftT m SetM` and `MonadLiftT m SPMF`
+/-! ## Discrete probability lifts
 
-The `SetM` / `SPMF` lifts exposed by this layer are declared as `MonadLiftT`,
-not `MonadLift`. Total semantic sources may still expose a plain `MonadLift`
-into `PMF`; the important point here is that support is never obtained by a
-transitive `m → SPMF → SetM` path, and parameterized/typeclass-gated
-probability lifts avoid `MonadLift` instance search. There are two independent
-reasons.
-
-**No transitive `SPMF → SetM` lift.** The `MonadLiftT SPMF SetM` instance below
-exists so `support` and friends work on raw `SPMF α`. Crucially it is declared
-as `MonadLiftT` rather than `MonadLift`, which means Lean's `monadLiftTrans`
-(which requires `MonadLift n o` for the outer hop) cannot chain it: a monad
-`m` with `MonadLiftT m SPMF` does **not** automatically gain `MonadLiftT m SetM`
-via transitivity. Each monad declares its `MonadLiftT m SetM` directly — e.g.
-`OracleComp` uses the syntactic `simulateQ` into `SetM` (which doesn't require
-`[spec.Fintype]`), and `EvalDistCompatible` records the propositional coherence
-between that syntactic support and `SPMF.support ∘ evalSPMF`.
-
-**Resolution fragility for parameterized + typeclass-gated lifts.** Lifts whose
-source is parameterized (`OracleComp spec`, `OptionT m`, `StateT σ m`, …) and
+Support comes from `MonadAttach`. Discrete probability uses direct `MonadLiftT` declarations
+to keep instance resolution stable for parameterized carriers. Lifts whose source is
+parameterized (`OracleComp spec`, `OptionT m`, `StateT σ m`, …) and
 which are gated by a typeclass on the parameter (`[IsProbabilitySpec spec]`,
 `[MonadLiftT m SPMF]`, …) must also be `MonadLiftT`, not `MonadLift`. Demoting
 to `MonadLift` forces Lean to find the instance through its transitive
@@ -56,35 +41,23 @@ the typeclass premise on `?spec`, and pin down `?spec` from the inner reflexive
 premise — a combination Lean's instance search refuses to chase. The direct
 `MonadLiftT` declaration sidesteps this with a single-step head match. -/
 
-/-- Direct `MonadLiftT SPMF SetM` (only on `SPMF` itself — not the transitive
-`MonadLift` that would create a diamond). -/
-instance instMonadLiftTSPMFSetM : MonadLiftT SPMF SetM where
-  monadLift := SPMF.support
-
-instance instLawfulMonadLiftTSPMFSetM : LawfulMonadLiftT SPMF SetM where
-  monadLift_pure := SPMF.support_pure
-  monadLift_bind := SPMF.support_bind
-
-/-- Coherence between `support` (via `MonadLiftT m SetM`) and `evalSPMF`
+/-- Coherence between `support` (via `MonadAttach`) and `evalSPMF`
 (via `MonadLiftT m SPMF`): `x ∈ support mx` iff `Pr[= x | mx] ≠ 0`.
 
-This typeclass is exported by every monad that admits both lifts and they
-agree on outputs — i.e. `support mx = SPMF.support (evalSPMF mx)`. -/
-class EvalDistCompatible (m : Type u → Type v) [MonadLiftT m SetM]
+This typeclass records agreement of attachment support with discrete probability outputs,
+i.e. `support mx = SPMF.support (evalSPMF mx)`. -/
+class EvalDistCompatible (m : Type u → Type v) [MonadAttach m]
     [MonadLiftT m SPMF] : Prop where
   /-- The reachable outputs of `mx` (via `support`) are exactly the outputs with
   nonzero probability in `evalSPMF mx`. -/
   support_eq_SPMF_support {α : Type u} (mx : m α) :
-    SetM.run (liftM mx : SetM α) = SPMF.support (liftM mx : SPMF α)
+    support mx = SPMF.support (liftM mx : SPMF α)
 
 export EvalDistCompatible (support_eq_SPMF_support)
 
-/-- `SPMF` is trivially compatible: both lifts coincide on the nose. -/
-instance : EvalDistCompatible SPMF where
-  support_eq_SPMF_support _ := rfl
-
 /-- The resulting distribution of running the monadic computation `mx`. -/
-@[reducible, inline]
+@[deprecated "VCVio retiring probability API: use the measure `𝒟[mx]`"
+  (since := "2026-09-13"), reducible, inline]
 def evalSPMF [MonadLiftT m SPMF] {α : Type u} (mx : m α) : SPMF α := liftM mx
 
 /-- Evaluation distribution notation for any monad lifting into `SPMF`. -/
@@ -112,6 +85,7 @@ section probability_notation
 
 This remains definitionally the point mass of the executable `SPMF` semantics;
 `evalDist_apply_singleton` is the equivalent measure-level reading. -/
+@[deprecated "VCVio retiring probability API: use `𝒟[mx] {x}`" (since := "2026-09-13")]
 def probOutput [MonadLiftT m SPMF] (mx : m α) (x : α) : ℝ≥0∞ :=
   evalSPMF mx x
 
@@ -120,10 +94,14 @@ def probOutput [MonadLiftT m SPMF] (mx : m α) (x : α) : ℝ≥0∞ :=
 The traditional notation remains the executable `SPMF` event API and is therefore usable for
 arbitrary predicates. General measure developments should apply `𝒟[mx]` to a measurable event;
 `evalDist_apply_setOf` bridges the two on discrete spaces. -/
+@[deprecated "VCVio retiring probability API: use `𝒟[mx] {x | p x}`"
+  (since := "2026-09-13")]
 noncomputable def probEvent [MonadLiftT m SPMF] (mx : m α) (p : α → Prop) : ℝ≥0∞ :=
   (evalSPMF mx).run.toOuterMeasure (some '' {x | p x})
 
 /-- Probability that a computation `mx` will fail to return a value. -/
+@[deprecated "VCVio retiring probability API: use `1 - 𝒟[mx] Set.univ`"
+  (since := "2026-09-13")]
 def probFailure [MonadLiftT m SPMF] (mx : m α) : ℝ≥0∞ :=
   (evalSPMF mx).run none
 
@@ -145,12 +123,12 @@ variable [MonadLiftT m SPMF]
 @[aesop norm (rule_sets := [UnfoldEvalDist]), grind =]
 lemma probOutput_def (mx : m α) (x : α) : Pr[= x | mx] = evalSPMF mx x := rfl
 
-variable [MonadLiftT m SetM] [EvalDistCompatible m]
+variable [MonadAttach m] [EvalDistCompatible m]
 
 @[grind =]
 lemma mem_support_iff (mx : m α) (x : α) :
     x ∈ support mx ↔ Pr[= x | mx] ≠ 0 := by
-  rw [support_def, support_eq_SPMF_support, SPMF.mem_support_iff,
+  rw [support_eq_SPMF_support, SPMF.mem_support_iff,
     probOutput_def, evalSPMF_def]
 
 lemma mem_support_iff_evalSPMF_apply_ne_zero (mx : m α) (x : α) :
@@ -169,7 +147,8 @@ lemma probOutput_eq_zero_of_not_mem_support {mx : m α} {x : α}
     (h : x ∉ support mx) : Pr[= x | mx] = 0 := by rwa [mem_support_iff, not_not] at h
 
 @[simp low, grind =] lemma probOutput_eq_zero_iff (mx : m α) (x : α) :
-    Pr[= x | mx] = 0 ↔ x ∉ support mx := by aesop
+    Pr[= x | mx] = 0 ↔ x ∉ support mx := by
+  simpa only [not_ne_iff] using (mem_support_iff mx x).not.symm
 
 alias ⟨not_mem_support_of_probOutput_eq_zero, probOutput_eq_zero⟩ := probOutput_eq_zero_iff
 
@@ -257,7 +236,7 @@ variable [MonadLiftT m SPMF]
 
 section zero
 
-variable [MonadLiftT m SetM] [EvalDistCompatible m] {mx : m α} {p : α → Prop}
+variable [MonadAttach m] [EvalDistCompatible m] {mx : m α} {p : α → Prop}
 
 -- `simp`-only: `grind` saturates on this support-quantifier characterization.
 @[simp]
@@ -324,7 +303,7 @@ end zero
 
 section supportMixed
 
-variable [MonadLiftT m SetM] [EvalDistCompatible m]
+variable [MonadAttach m] [EvalDistCompatible m]
 
 lemma probEvent_eq_tsum_subtype_mem_support (mx : m α) (p : α → Prop) :
     Pr[ p | mx] = ∑' x : {x ∈ support mx | p x}, Pr[= x | mx] := by
@@ -342,7 +321,7 @@ lemma probEvent_eq_sum_filter_finSupport [HasEvalFinset m] [DecidableEq α]
     Pr[ p | mx] = ∑ x ∈ (finSupport mx).filter p, Pr[= x | mx] :=
   (probEvent_eq_tsum_ite mx p).trans <|
     (tsum_eq_sum' <| by simp; tauto).trans
-      (Finset.sum_congr rfl <| fun x hx ↦ if_pos (Finset.mem_filter.1 hx).2)
+      (Finset.sum_congr rfl <| fun x hx ↦ ite_eq_left (Finset.mem_filter.1 hx).2)
 
 lemma probEvent_eq_sum_finSupport_ite [HasEvalFinset m] [DecidableEq α]
     (mx : m α) (p : α → Prop) [DecidablePred p] :
@@ -404,25 +383,6 @@ syntax (name := probEventBinding1)
 macro_rules (kind := probEventBinding1)
   | `(Pr[ $cond:term | $var:ident ← $src:term]) => `(Pr[ fun $var => $cond | $src])
 
-/-- Probability that a computation returns a value satisfying a predicate.
-See `probOutput_true_eq_probEvent` for relation to the above definitions. -/
-syntax (name := probEventBinding2) "Pr{" doSeq "}[" term "]" : term
-
-macro_rules (kind := probEventBinding2)
-  -- `doSeqBracketed`
-  | `(Pr{{$items*}}[$t]) => `(probOutput (do $items:doSeqItem* return $t:term) True)
-  -- `doSeqIndent`
-  | `(Pr{$items*}[$t]) => `(probOutput (do $items:doSeqItem* return $t:term) True)
-
-/-- Tests for all the different probability notations. -/
-noncomputable example {m : Type → Type u} [Monad m] [MonadLiftT m SPMF] (mx : m ℕ) : Unit :=
-  let _ := Pr[= 10 | mx]
-  let _ := Pr[ fun x => x^2 + x < 10 | mx]
-  let _ := Pr[ x^2 + x < 10 | x ← mx]
-  let _ := Pr{let x ← mx}[x = 10]
-  let _ := Pr[⊥ | mx]
-  ()
-
 end probability_notation
 
 @[simp] -- TODO: versions for other constructions?
@@ -466,16 +426,17 @@ lemma evalSPMF_eq_mk_iff [MonadLiftT m SPMF] (mx : m α) (p : PMF (Option α)) :
 lemma evalSPMF_eq_liftM [MonadLiftT m SPMF] {mx : m α} {p : PMF α}
     (h : ∀ x, Pr[= x | mx] = p x) : 𝒮[mx] = liftM p := by aesop
 
-lemma evalSPMF_apply_eq_zero_iff [MonadLiftT m SPMF] [MonadLiftT m SetM]
-    [EvalDistCompatible m] (mx : m α) (x : Option α) :
+lemma evalSPMF_apply_eq_zero_iff [MonadLiftT m SPMF]
+    [MonadAttach m] [EvalDistCompatible m] (mx : m α) (x : Option α) :
     (𝒮[mx]).run x = 0 ↔ x.rec (Pr[⊥ | mx] = 0) (· ∉ support mx) := by
   induction x with
   | none => simp [probFailure_def]
-  | some y => simp [OptionT.run, mem_support_iff_evalSPMF_apply_ne_zero,
-      SPMF.apply_eq_toPMF_some, SPMF.toPMF]
+  | some y =>
+      simpa [probOutput_def, SPMF.apply_eq_toPMF_some] using
+        (probOutput_eq_zero_iff mx y)
 
-lemma evalSPMF_apply_eq_zero_iff' [MonadLiftT m SPMF] [MonadLiftT m SetM]
-    [EvalDistCompatible m] [HasEvalFinset m] [DecidableEq α] (mx : m α)
+lemma evalSPMF_apply_eq_zero_iff' [MonadLiftT m SPMF]
+    [MonadAttach m] [EvalDistCompatible m] [HasEvalFinset m] [DecidableEq α] (mx : m α)
     (x : Option α) : (𝒮[mx]).run x = 0 ↔ x.rec (Pr[⊥ | mx] = 0) (· ∉ finSupport mx) := by
   rw [evalSPMF_apply_eq_zero_iff]
   grind
@@ -541,6 +502,7 @@ section sums
 lemma probOutput_true_eq_probEvent {α} {m : Type → Type u} [Monad m]
     [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (mx : m α) (p : α → Prop) : Pr{let x ← mx}[p x] = Pr[ p | mx] := by
+  rw [evalDist_eq_evalSPMF_toMeasure, SPMF.toMeasure_apply_singleton]
   simp [probEvent_eq_tsum_indicator, probOutput_def, evalSPMF, map_eq_bind_pure_comp]
   congr 1; aesop
 
@@ -619,16 +581,17 @@ lemma one_le_probFailure_iff [MonadLiftT m SPMF] : 1 ≤ Pr[⊥ | mx] ↔ Pr[⊥
 
 -- `simp`-only: `grind` saturates on this support-quantifier characterization.
 @[simp]
-lemma probOutput_eq_one_iff [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m] :
+lemma probOutput_eq_one_iff [MonadLiftT m SPMF] [MonadAttach m] [EvalDistCompatible m] :
     Pr[= x | mx] = 1 ↔ Pr[⊥ | mx] = 0 ∧ support mx = {x} := by
+  rw [support_eq_SPMF_support]
   rw [← probEvent_eq_eq_probOutput]
   simp [probOutput_def, probFailure_def, SPMF.apply_eq_toPMF_some, PMF.apply_eq_one_iff,
-    Set.ext_iff, Option.forall, mem_support_iff_evalSPMF_apply_ne_zero]
+    Set.ext_iff, Option.forall]
 alias ⟨_, probOutput_eq_one⟩ := probOutput_eq_one_iff
 
 -- `simp`-only: `grind` saturates on this support-quantifier characterization.
 @[simp]
-lemma one_eq_probOutput_iff [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m] :
+lemma one_eq_probOutput_iff [MonadLiftT m SPMF] [MonadAttach m] [EvalDistCompatible m] :
     1 = Pr[= x | mx] ↔ Pr[⊥ | mx] = 0 ∧ support mx = {x} := by
   rw [eq_comm, probOutput_eq_one_iff]
 alias ⟨_, one_eq_probOutput⟩ := one_eq_probOutput_iff
@@ -636,22 +599,22 @@ alias ⟨_, one_eq_probOutput⟩ := one_eq_probOutput_iff
 -- `grind`-safe in isolation, and the natural mirror of `one_eq_probOutput_iff'` (which kept its
 -- `grind` tag): both are the `finSupport`-singleton characterization. See `probability.md`.
 @[grind =]
-lemma probOutput_eq_one_iff' [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma probOutput_eq_one_iff' [MonadLiftT m SPMF] [MonadAttach m] [EvalDistCompatible m]
     [HasEvalFinset m] [DecidableEq α] :
     Pr[= x | mx] = 1 ↔ Pr[⊥ | mx] = 0 ∧ finSupport mx = {x} := by
   rw [probOutput_eq_one_iff, finSupport_eq_iff_support_eq_coe, Finset.coe_singleton]
 alias ⟨_, probOutput_eq_one'⟩ := probOutput_eq_one_iff'
 
 @[grind =]
-lemma one_eq_probOutput_iff' [MonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma one_eq_probOutput_iff' [MonadLiftT m SPMF] [MonadAttach m] [EvalDistCompatible m]
     [HasEvalFinset m] [DecidableEq α] :
     1 = Pr[= x | mx] ↔ Pr[⊥ | mx] = 0 ∧ finSupport mx = {x} := by
   rw [eq_comm, probOutput_eq_one_iff']
 alias ⟨_, one_eq_probOutput'⟩ := one_eq_probOutput_iff'
 
 /-- If a non-failing computation can only return `x`, then it returns `x` with probability one. -/
-lemma probOutput_eq_one_of_support_subset_singleton [MonadLiftT m SPMF] [MonadLiftT m SetM]
-    [EvalDistCompatible m]
+lemma probOutput_eq_one_of_support_subset_singleton [MonadLiftT m SPMF]
+    [MonadAttach m] [EvalDistCompatible m]
     (hnf : Pr[⊥ | mx] = 0) (huniq : ∀ y ∈ support mx, y = x) :
     Pr[= x | mx] = 1 := by
   simpa [hnf, tsum_eq_single (f := (Pr[= · | mx])) x
@@ -699,11 +662,11 @@ lemma tsum_probOutput_eq_one' {mx : m α} (h : Pr[⊥ | mx] = 0) :
     ∑' x : α, Pr[= x | mx] = 1 := by simp [h]
 
 @[simp]
-lemma tsum_support_probOutput_eq_sub [MonadLiftT m SetM] [EvalDistCompatible m] (mx : m α) :
+lemma tsum_support_probOutput_eq_sub [MonadAttach m] [EvalDistCompatible m] (mx : m α) :
     ∑' x : support mx, Pr[= x | mx] = 1 - Pr[⊥ | mx] := by
   rw [tsum_subtype_eq_of_support_subset] <;> simp
 
-lemma tsum_support_probOutput_eq_one' [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma tsum_support_probOutput_eq_one' [MonadAttach m] [EvalDistCompatible m]
     {mx : m α} (h : Pr[⊥ | mx] = 0) :
     ∑' x : support mx, Pr[= x | mx] = 1 := by simp [h]
 
@@ -716,13 +679,13 @@ lemma sum_probOutput_eq_one [Fintype α] {mx : m α} (h : Pr[⊥ | mx] = 0) :
     ∑ x : α, Pr[= x | mx] = 1 := by simp [h]
 
 @[simp]
-lemma sum_finSupport_probOutput_eq_sub [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma sum_finSupport_probOutput_eq_sub [MonadAttach m] [EvalDistCompatible m]
     [HasEvalFinset m] [DecidableEq α] (mx : m α) :
     ∑ x ∈ finSupport mx, Pr[= x | mx] = 1 - Pr[⊥ | mx] := by
   rw [← tsum_probOutput_eq_sub, tsum_eq_sum]
   simp
 
-lemma sum_finSupport_probOutput_eq_one [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma sum_finSupport_probOutput_eq_one [MonadAttach m] [EvalDistCompatible m]
     [HasEvalFinset m] [DecidableEq α]
     {mx : m α} (h : Pr[⊥ | mx] = 0) : ∑ x ∈ finSupport mx, Pr[= x | mx] = 1 := by simp [h]
 
@@ -774,19 +737,19 @@ lemma probFailure_eq_one_iff_probEvent_true (mx : m α) :
 
 -- `simp`-only: `grind` saturates on this support-quantifier characterization.
 @[simp]
-lemma probFailure_eq_one_iff [MonadLiftT m SetM] [EvalDistCompatible m] (mx : m α) :
+lemma probFailure_eq_one_iff [MonadAttach m] [EvalDistCompatible m] (mx : m α) :
     Pr[⊥ | mx] = 1 ↔ support mx = ∅ := by
   simp [probFailure_eq_one_iff_probEvent_true, probEvent_eq_tsum_subtype_mem_support, Set.ext_iff]
 
 @[aesop unsafe forward]
-lemma probFailure_eq_one [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma probFailure_eq_one [MonadAttach m] [EvalDistCompatible m]
     {mx : m α} (h : support mx = ∅) : Pr[⊥ | mx] = 1 := (probFailure_eq_one_iff mx).mpr h
 
 /-- `grind`-friendly companion to `probFailure_eq_one_iff`: phrasing "fails with probability one"
 via `Set.Nonempty` — which `grind` keeps atomic — avoids the support quantifier that makes the
 `support = ∅` form saturate, so this stays in the default `grind` set. -/
 @[grind =]
-lemma probFailure_eq_one_iff_not_nonempty [MonadLiftT m SetM] [EvalDistCompatible m] (mx : m α) :
+lemma probFailure_eq_one_iff_not_nonempty [MonadAttach m] [EvalDistCompatible m] (mx : m α) :
     Pr[⊥ | mx] = 1 ↔ ¬ (support mx).Nonempty := by
   simp only [probFailure_eq_one_iff, Set.not_nonempty_iff_eq_empty]
 
@@ -817,17 +780,17 @@ lemma probFailure_of_liftM_PMF (mx : m α) : Pr[⊥ | mx] = 0 := by
 lemma tsum_probOutput_of_liftM_PMF (mx : m α) :
     ∑' x, Pr[= x | mx] = 1 := by simp
 
-lemma tsum_support_probOutput_of_liftM_PMF [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma tsum_support_probOutput_of_liftM_PMF [MonadAttach m] [EvalDistCompatible m]
     (mx : m α) : ∑' x : support mx, Pr[= x | mx] = 1 := by simp
 
 lemma sum_probOutput_of_liftM_PMF [Fintype α] (mx : m α) :
     ∑ x : α, Pr[= x | mx] = 1 := by simp
 
-lemma sum_finSupport_probOutput_of_liftM_PMF [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma sum_finSupport_probOutput_of_liftM_PMF [MonadAttach m] [EvalDistCompatible m]
     [HasEvalFinset m] [DecidableEq α] (mx : m α) :
     ∑ x ∈ finSupport mx, Pr[= x | mx] = 1 := by simp
 
-lemma finSupport_nonempty_of_liftM_PMF [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma finSupport_nonempty_of_liftM_PMF [MonadAttach m] [EvalDistCompatible m]
     [HasEvalFinset m] [DecidableEq α] (mx : m α) :
     (finSupport mx).Nonempty := by
   by_contra h
@@ -835,7 +798,7 @@ lemma finSupport_nonempty_of_liftM_PMF [MonadLiftT m SetM] [EvalDistCompatible m
   rw [Finset.not_nonempty_iff_eq_empty.mp h, Finset.sum_empty] at hsum
   exact zero_ne_one hsum
 
-lemma probOutput_eq_inv_finSupport_card_of_liftM_PMF [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma probOutput_eq_inv_finSupport_card_of_liftM_PMF [MonadAttach m] [EvalDistCompatible m]
     [HasEvalFinset m] [DecidableEq α] {mx : m α} {c : ENNReal}
     (hconst : ∀ x ∈ support mx, Pr[= x | mx] = c) :
     c = 1 / (finSupport mx).card := by
@@ -882,7 +845,7 @@ lemma probEvent_le_tsum_probOutput_mul_cost (mx : m α) (p : α → Prop) (c : �
       _ ≤ Pr[= x | mx] * c x := by gcongr; exact hc x hp
   · exact zero_le
 
-variable [MonadLiftT m SetM] [EvalDistCompatible m]
+variable [MonadAttach m] [EvalDistCompatible m]
 
 /-- **First-moment / Markov bound** (`support`-restricted cost). Variant of
 `probEvent_le_tsum_probOutput_mul_cost` whose `c ≥ 1` hypothesis need only hold on the
@@ -921,7 +884,7 @@ lemma probEvent_mono' [HasEvalFinset m] [DecidableEq α]
     (h : ∀ x ∈ finSupport mx, p x → q x) : Pr[ p | mx] ≤ Pr[ q | mx] :=
   probEvent_mono (fun x hx hpx => h x (mem_finSupport_of_mem_support hx) hpx)
 
-omit [MonadLiftT m SetM] [EvalDistCompatible m] in
+omit [MonadAttach m] [EvalDistCompatible m] in
 /-- If `p` implies `q` everywhere then `p` is less likely than `q`. Convenience
 specialisation of `probEvent_mono` that drops the support hypothesis. -/
 @[gcongr low]
@@ -984,22 +947,22 @@ lemma function_support_probOutput :
   simp only [Function.support, ne_eq, probOutput_eq_zero_iff, not_not, Set.ofPred_mem_eq]
 
 lemma mem_support_iff_of_evalSPMF_eq {m n} [Monad m] [MonadLiftT m SPMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
-    [Monad n] [MonadLiftT n SPMF] [MonadLiftT n SetM] [EvalDistCompatible n]
+    [MonadAttach m] [EvalDistCompatible m]
+    [Monad n] [MonadLiftT n SPMF] [MonadAttach n] [EvalDistCompatible n]
     {mx : m α} {mx' : n α} (h : 𝒮[mx] = 𝒮[mx']) (x : α) :
     x ∈ support mx ↔ x ∈ support mx' := by
   simp only [mem_support_iff, probOutput_def, h]
 
 lemma mem_finSupport_iff_of_evalSPMF_eq {m n} [Monad m] [MonadLiftT m SPMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
-    [Monad n] [MonadLiftT n SPMF] [MonadLiftT n SetM] [EvalDistCompatible n]
+    [MonadAttach m] [EvalDistCompatible m]
+    [Monad n] [MonadLiftT n SPMF] [MonadAttach n] [EvalDistCompatible n]
     [HasEvalFinset m] [HasEvalFinset n] [DecidableEq α]
     {mx : m α} {mx' : n α} (h : 𝒮[mx] = 𝒮[mx']) (x : α) :
     x ∈ finSupport mx ↔ x ∈ finSupport mx' := by
   simp only [mem_finSupport_iff_mem_support, mem_support_iff_of_evalSPMF_eq h]
 
 open Classical in
-omit [MonadLiftT m SetM] [EvalDistCompatible m] in
+omit [MonadAttach m] [EvalDistCompatible m] in
 lemma indicator_objective_eq_probEvent (mx : m (α × β)) (R : α → β → Prop) :
     (∑' z, Pr[= z | mx] * (if R z.1 z.2 then 1 else 0)) = Pr[ fun z => R z.1 z.2 | mx] := by
   rw [probEvent_eq_tsum_ite]
@@ -1056,7 +1019,7 @@ theorem expectedValue_mul_const (mx : m α) (g : α → ℝ≥0∞) (c : ℝ≥0
     expectedValue mx (fun x => g x * c) = expectedValue mx g * c := by
   simp only [expectedValue_def, ← mul_assoc, ENNReal.tsum_mul_right]
 
-variable [MonadLiftT m SetM] [EvalDistCompatible m]
+variable [MonadAttach m] [EvalDistCompatible m]
 
 /-- `expectedValue_mono` with the hypothesis restricted to `support mx`. After `gcongr with x hx`
 the goal is `g x ≤ h x` with `hx : x ∈ support mx` in context. -/
@@ -1153,7 +1116,7 @@ theorem evalDist_apply_univ (mx : m α) : 𝒟[mx] Set.univ = 1 - Pr[⊥ | mx] :
 /-- Reachable outputs are exactly the positive-mass singletons. General measures can have
 support points of mass zero, so the statement is deliberately restricted to singleton-measurable
 spaces. -/
-theorem mem_support_iff_evalDist_singleton_ne_zero [MonadLiftT m SetM] [EvalDistCompatible m]
+theorem mem_support_iff_evalDist_singleton_ne_zero [MonadAttach m] [EvalDistCompatible m]
     [MeasurableSingletonClass α] (mx : m α) (x : α) :
     x ∈ support mx ↔ 𝒟[mx] {x} ≠ 0 := by
   rw [evalDist_apply_singleton]

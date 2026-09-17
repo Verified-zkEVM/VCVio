@@ -18,6 +18,8 @@ public import ToMathlib.Data.BitVec
 public import ToMathlib.Data.Vector.Induction
 public import ToMathlib.Topology.Algebra.InfiniteSum.Option
 public import ToMathlib.Control.Monad.Fold
+public import ToMathlib.ProbabilityTheory.SPMF
+public meta import ToMathlib.Lint.LegacyProbability
 
 /-!
 # VCVio Prelude

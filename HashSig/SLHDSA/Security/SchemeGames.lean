@@ -6,6 +6,7 @@ Authors: Alexander Hicks
 
 module
 public import HashSig.SLHDSA.Security.SufResidual
+public import ToMathlib.MeasureTheory.Measure.Bool
 
 /-!
 # The SLH-DSA scheme games, and the two experiment splits
@@ -167,7 +168,7 @@ public section
 
 namespace SLHDSA.Security
 
-open OracleComp OracleSpec ENNReal SignatureAlg Security.CanonicalGames KeyedHash
+open MeasureTheory OracleComp OracleSpec ENNReal SignatureAlg Security.CanonicalGames KeyedHash
 
 universe u
 
@@ -181,33 +182,18 @@ section Generic
 variable {ι : Type u} {spec : OracleSpec ι} {M PK SK S : Type}
   [DecidableEq M] [DecidableEq S]
 
-/-- The EUF-CMA experiment of `VCVio.CryptoFoundations.SignatureAlg`, returning the success bit
-paired with a selector bit read off the same run.
+/-- The unforgeability experiment records success paired with a Boolean selector.
 
-The body is `SignatureAlg.unforgeableExp`'s with one component added to the final `return`.  It
-opens with the same two `letI : DecidableEq _ := Classical.decEq _` lines that experiment opens
-with, and needs them: without them `[DecidableEq M]` and `[DecidableEq S]` enter this definition's
-signature, the `omit`s of this EUF block are no longer legal, and the consumers below — the two
-dispatch halves, their two branch bounds and their two `example`s — cannot synthesize `DecidableEq
-(GeneralScheme.SignatureCore vp prims.core)`.
-
-The selector is a function of the sampled key pair and the returned pair.  It may read the *secret*
-key, so a selector is not in general something a reduction can evaluate; what a union bound needs is
-only that the two events partition the success event, which any `Bool`-valued function of the run
-gives.
-
-The result type is the runtime's subdistribution reading of a pair of bits and is left to inference,
-as `SignatureAlg.unforgeableExp` leaves its own: writing it out names the finite-distribution
-coupling directly, which `scripts/check-pmf-boundary.sh` counts and this module has no allowance
-for, and it adds nothing to what the definition says.
+The selector may inspect the sampled secret key as well as the returned message and signature.
+Its first marginal is `SignatureAlg.unforgeableExp`; the two selector events partition success.
 
 *Experiment split.* -/
 noncomputable def instrumentedEufExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg)
-    (sel : PK → SK → M → S → Bool) :=
+    (sel : PK → SK → M → S → Bool) : Measure (Bool × Bool) :=
   letI : DecidableEq M := Classical.decEq M
   letI : DecidableEq S := Classical.decEq S
-  runtime.evalSPMF do
+  runtime.evalDist do
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
@@ -220,14 +206,19 @@ noncomputable def instrumentedEufExp {sigAlg : SignatureAlg (OracleComp spec) M 
     let verified ← sigAlg.verify pk msg σ
     return (!log.wasQueried msg && verified, sel pk sk msg σ)
 
+instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg)
+    (sel : PK → SK → M → S → Bool) :
+    IsSubprobabilityMeasure (instrumentedEufExp runtime adv sel) := by
+  unfold instrumentedEufExp
+  infer_instance
+
 omit [DecidableEq M] [DecidableEq S] in
 /-- **The projection equation.**  Forgetting the selector bit recovers the experiment.
 
-The hypothesis is the runtime's pure-return factoring law, the same one
-`strongUnforgeableAdv.advantage_eq_euf_add_sameMessage` takes; `ProbCompRuntime.probComp` satisfies
-it by `ProbCompRuntime.probComp_evalSPMF_bind_pure`.  It is what lets the two `return`s be compared
-without evaluating either computation: both are one joint execution followed by a pure function of
-its result, and the law pulls that function out of the evaluator.
+The runtime's `ProbCompRuntime.evalDist_bind_pure` law factors the final projection out of the
+evaluator. Both computations execute the same joint program before applying a pure function to
+its result.
 
 Neither `[DecidableEq M]` nor `[DecidableEq S]` is used, because both computations supply their own
 classical instances; the `omit` records that rather than leaving the binders to be inferred as
@@ -236,73 +227,53 @@ load-bearing.
 *Experiment split.* -/
 theorem instrumentedEufExp_fst {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
-      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
     (adv : unforgeableAdv sigAlg) (sel : PK → SK → M → S → Bool) :
-    unforgeableExp runtime adv = Prod.fst <$> instrumentedEufExp runtime adv sel := by
-  rw [unforgeableExp, instrumentedEufExp, ← h_pull Prod.fst]
+    unforgeableExp runtime adv = (instrumentedEufExp runtime adv sel).fst := by
+  rw [Measure.fst, unforgeableExp, instrumentedEufExp,
+    ← runtime.evalDist_bind_pure _ Prod.fst measurable_fst]
   congr 1
   simp
 
 omit [DecidableEq M] [DecidableEq S] in
-/-- **The selector equation.**  At a constant selector the recorded bit is that constant.
-
-The projection equation above says what the first component of a run is.  This says what the second
-one is, at the selectors whose value is fixed in advance.  With it and its same-message twin absent
-nothing in the repository says what the second component *is* — the four `_le_branch` theorems below
-bound it above and identify it with nothing — and the final `return` may discard the selector it is
-handed or negate it.  Three edits of the two experiments' last lines are silent in that
-configuration and refused by this theorem: `sel pk sk msg σ || true`, a literal `true` with the
-binder renamed `_sel`, and `!sel pk sk msg σ`.  Under the first, `hypertreeHalf` is provably `0` and
-`forsHalf` provably the advantage it splits, so the dispatch split reads `a ≤ a + 0` while all eight
-half-bounds below still hold; under the third the recorded bit is provably the selector's negation
-at both experiments, which exchanges the two names of each split — the class the four `example`s
-exist to refuse, reached where they cannot see it.  With this theorem present and the twin absent,
-each of the three is refused here.
-
-What it does not pin is anything about a selector that is *not* constant: neither which of a run's
-values the selector is applied to, nor any combination of such applications that agrees with the
-selector wherever the selector is constant.  The paragraphs that close the section beside the four
-halves state both.
+/-- A constant selector records that constant alongside the unforgeability result.
 
 *Experiment split.* -/
 theorem instrumentedEufExp_const {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
-      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
     (adv : unforgeableAdv sigAlg) (b : Bool) :
     instrumentedEufExp runtime adv (fun _ _ _ _ => b) =
-      (fun x => (x, b)) <$> unforgeableExp runtime adv := by
-  rw [unforgeableExp, instrumentedEufExp, ← h_pull fun x => (x, b)]
+      (unforgeableExp runtime adv).map (fun x => (x, b)) := by
+  rw [unforgeableExp, instrumentedEufExp,
+    ← runtime.evalDist_bind_pure _ (fun x => (x, b)) (by fun_prop)]
   congr 1
   simp
+
+omit [DecidableEq M] [DecidableEq S] in
+/-- The unforgeability advantage is the sum of the two selector branches of success. -/
+theorem advantage_eq_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (adv : unforgeableAdv sigAlg) (sel : PK → SK → M → S → Bool) :
+    adv.advantage runtime =
+      (instrumentedEufExp runtime adv sel) {x | x.1 = true ∧ x.2 = true} +
+      (instrumentedEufExp runtime adv sel) {x | x.1 = true ∧ x.2 = false} := by
+  rw [unforgeableAdv.advantage, instrumentedEufExp_fst runtime adv sel]
+  exact Measure.fst_apply_eq_add _ (measurableSet_singleton true)
 
 omit [DecidableEq M] [DecidableEq S] in
 /-- **The dispatch split, generically.**  The advantage is at most the sum of the two selector
 branches of the success event.
 
-This is an inequality and not an equality, and the inequality is the only direction a union bound
-gives.  The two events are in fact disjoint and their union is the success event, so equality holds.
-What `VCVio.EvalDist` offers on that surface is `probEvent_or_le`, `probEvent_le_add_of_imp_or` and
-`probEvent_compl`, all inequalities or complements, and no disjoint-union equality; the `≤`
-direction is what a bound consumes, so no equality is claimed and none is proved.
+The selector events are disjoint and exhaust success. `Measure.fst_apply_eq_add` partitions the
+first marginal exactly; the bound follows from that equality.
 
 *Experiment split.* -/
 theorem advantage_le_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
-      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
     (adv : unforgeableAdv sigAlg) (sel : PK → SK → M → S → Bool) :
     adv.advantage runtime ≤
-      Pr[fun x => x.1 = true ∧ x.2 = true | instrumentedEufExp runtime adv sel] +
-      Pr[fun x => x.1 = true ∧ x.2 = false | instrumentedEufExp runtime adv sel] := by
-  rw [unforgeableAdv.advantage, instrumentedEufExp_fst runtime h_pull adv sel,
-    ← probEvent_eq_eq_probOutput, probEvent_map]
-  refine le_trans (probEvent_mono ?_) (probEvent_or_le _ _ _)
-  rintro ⟨b, s⟩ _ hx
-  cases s
-  · exact Or.inr ⟨hx, rfl⟩
-  · exact Or.inl ⟨hx, rfl⟩
+      (instrumentedEufExp runtime adv sel) {x | x.1 = true ∧ x.2 = true} +
+      (instrumentedEufExp runtime adv sel) {x | x.1 = true ∧ x.2 = false} :=
+  (advantage_eq_arms runtime adv sel).le
 
 /-- The same-message, new-signature event of `SignatureAlg.sameMessageStrongUnforgeableGame`,
 returning its own bit paired with a selector bit.
@@ -315,10 +286,10 @@ it takes what the SLH-DSA selector reads, and a wider argument list would be thr
 noncomputable def instrumentedSameMessageExp
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg)
-    (sel : QueryLog (M →ₒ S) → M → S → Bool) :=
+    (sel : QueryLog (M →ₒ S) → M → S → Bool) : Measure (Bool × Bool) :=
   letI : DecidableEq M := Classical.decEq M
   letI : DecidableEq S := Classical.decEq S
-  runtime.evalSPMF do
+  runtime.evalDist do
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
@@ -331,68 +302,71 @@ noncomputable def instrumentedSameMessageExp
     let verified ← sigAlg.verify pk msg σ
     return (log.wasQueried msg && !signingLogContains log msg σ && verified, sel log msg σ)
 
+instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg)
+    (sel : QueryLog (M →ₒ S) → M → S → Bool) :
+    IsSubprobabilityMeasure (instrumentedSameMessageExp runtime adv sel) := by
+  unfold instrumentedSameMessageExp
+  infer_instance
+
 omit [DecidableEq M] [DecidableEq S] in
 /-- The projection equation for the same-message experiment.
 
 *Experiment split.* -/
 theorem instrumentedSameMessageExp_fst {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
-      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
     (adv : strongUnforgeableAdv sigAlg) (sel : QueryLog (M →ₒ S) → M → S → Bool) :
-    runtime.evalSPMF (sameMessageStrongUnforgeableGame adv) =
-      Prod.fst <$> instrumentedSameMessageExp runtime adv sel := by
-  rw [instrumentedSameMessageExp, ← h_pull Prod.fst]
+    runtime.evalDist (sameMessageStrongUnforgeableGame adv) =
+      (instrumentedSameMessageExp runtime adv sel).fst := by
+  rw [Measure.fst, instrumentedSameMessageExp,
+    ← runtime.evalDist_bind_pure _ Prod.fst measurable_fst]
   congr 1
   rw [sameMessageStrongUnforgeableGame]
   simp
 
 omit [DecidableEq M] [DecidableEq S] in
-/-- The selector equation for the same-message experiment.
-
-The same three edits at this experiment's last line are silent in the same way, and this is the
-statement that refuses them: with it present and `instrumentedEufExp_const` absent, each is refused
-here; with both present, at both experiments.
+/-- A constant selector records that constant alongside the same-message result.
 
 *Experiment split.* -/
 theorem instrumentedSameMessageExp_const
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
-      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
     (adv : strongUnforgeableAdv sigAlg) (b : Bool) :
     instrumentedSameMessageExp runtime adv (fun _ _ _ => b) =
-      (fun x => (x, b)) <$> runtime.evalSPMF (sameMessageStrongUnforgeableGame adv) := by
-  rw [instrumentedSameMessageExp, ← h_pull fun x => (x, b)]
+      (runtime.evalDist (sameMessageStrongUnforgeableGame adv)).map (fun x => (x, b)) := by
+  rw [instrumentedSameMessageExp,
+    ← runtime.evalDist_bind_pure _ (fun x => (x, b)) (by fun_prop)]
   congr 1
   rw [sameMessageStrongUnforgeableGame]
   simp
 
 omit [DecidableEq M] [DecidableEq S] in
+/-- The same-message advantage is the sum of the false and true selector branches of success. -/
+theorem sameMessageAdvantage_eq_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec))
+    (adv : strongUnforgeableAdv sigAlg) (sel : QueryLog (M →ₒ S) → M → S → Bool) :
+    adv.sameMessageAdvantage runtime =
+      (instrumentedSameMessageExp runtime adv sel) {x | x.1 = true ∧ x.2 = false} +
+      (instrumentedSameMessageExp runtime adv sel) {x | x.1 = true ∧ x.2 = true} := by
+  rw [strongUnforgeableAdv.sameMessageAdvantage, sameMessageStrongUnforgeableExp_apply_singleton,
+    instrumentedSameMessageExp_fst runtime adv sel]
+  exact (Measure.fst_apply_eq_add _ (measurableSet_singleton true)).trans (add_comm _ _)
+
+omit [DecidableEq M] [DecidableEq S] in
 /-- **The same-message split, generically.**  The same-message advantage is at most the sum of the
 two selector branches of its own success event.
 
-The passage from the measure-valued `sameMessageStrongUnforgeableExp` to the point-probability
-reading is `sameMessageStrongUnforgeableExp_apply_singleton`, the library's own compatibility
-equation; no measure-theoretic step is taken here beyond it.
+The first marginal is the same-message experiment. The Boolean selector partitions each success
+event into two disjoint measurable branches, whose masses sum to the same-message advantage.
 
 *Experiment split.* -/
 theorem sameMessageAdvantage_le_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (h_pull : ∀ {α β : Type} (f : α → β) (mx : OracleComp spec α),
-      runtime.evalSPMF (mx >>= fun x => pure (f x)) = f <$> runtime.evalSPMF mx)
     (adv : strongUnforgeableAdv sigAlg) (sel : QueryLog (M →ₒ S) → M → S → Bool) :
     adv.sameMessageAdvantage runtime ≤
-      Pr[fun x => x.1 = true ∧ x.2 = true | instrumentedSameMessageExp runtime adv sel] +
-      Pr[fun x => x.1 = true ∧ x.2 = false | instrumentedSameMessageExp runtime adv sel] := by
-  rw [strongUnforgeableAdv.sameMessageAdvantage, sameMessageStrongUnforgeableExp_apply_singleton,
-    instrumentedSameMessageExp_fst runtime h_pull adv sel, ← probEvent_eq_eq_probOutput,
-    probEvent_map]
-  refine le_trans (probEvent_mono ?_) (probEvent_or_le _ _ _)
-  rintro ⟨b, s⟩ _ hx
-  cases s
-  · exact Or.inr ⟨hx, rfl⟩
-  · exact Or.inl ⟨hx, rfl⟩
+      (instrumentedSameMessageExp runtime adv sel) {x | x.1 = true ∧ x.2 = true} +
+      (instrumentedSameMessageExp runtime adv sel) {x | x.1 = true ∧ x.2 = false} :=
+  ((sameMessageAdvantage_eq_arms runtime adv sel).trans (add_comm _ _)).le
 
 end Generic
 
@@ -520,7 +494,7 @@ theorem generalAlg_perfectlyComplete :
     refine bind_congr fun addrnd => ?_
     rw [GeneralScheme.verifyInternal_signInternal]
   rw [hbody]
-  simp [ProbCompRuntime.evalSPMF, ProbCompRuntime.probComp]
+  simp
 
 /-- **The honest key pair, read off the support.**  On every run of key generation the published key
 is the honest one for the secret key that run produced: its seed is the secret key's public seed and
@@ -729,120 +703,42 @@ the event reads the secret key.
 
 *Experiment split.* -/
 noncomputable def forsHalf (adv : unforgeableAdv (generalAlg prims)) : ℝ≥0∞ :=
-  Pr[fun x => x.1 = true ∧ x.2 = true |
-    instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims)]
+  (instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims)) {x | x.1 = true ∧ x.2 = true}
 
 /-- The probability that the adversary forges and its forgery does *not* recover that key, so its
 hypertree half carries the value it did recover to the published root.
 
 *Experiment split.* -/
 noncomputable def hypertreeHalf (adv : unforgeableAdv (generalAlg prims)) : ℝ≥0∞ :=
-  Pr[fun x => x.1 = true ∧ x.2 = false |
-    instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims)]
+  (instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims)) {x | x.1 = true ∧ x.2 = false}
+
+/-- The EUF-CMA advantage is the sum of its FORS and hypertree halves. -/
+theorem advantage_eq_forsHalf_add_hypertreeHalf (adv : unforgeableAdv (generalAlg prims)) :
+    adv.advantage ProbCompRuntime.probComp = forsHalf adv + hypertreeHalf adv :=
+  advantage_eq_arms ProbCompRuntime.probComp adv (forsArm prims)
 
 /-- **The dispatch split.**  The EUF-CMA advantage against the external SLH-DSA algebra is at most
 the sum of its two dispatch branches.
 
 The runtime is fixed to `ProbCompRuntime.probComp`, whose factoring law is
-`ProbCompRuntime.probComp_evalSPMF_bind_pure`, so the statement carries no hypothesis a reader has
+`ProbCompRuntime.probComp_evalDist_bind_pure`, so the statement carries no hypothesis a reader has
 to discharge.  `advantage_le_arms` is the general-runtime form for anyone who needs another one.
 
 *Experiment split.* -/
 theorem advantage_le_forsHalf_add_hypertreeHalf (adv : unforgeableAdv (generalAlg prims)) :
     adv.advantage ProbCompRuntime.probComp ≤ forsHalf adv + hypertreeHalf adv :=
   advantage_le_arms ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv (forsArm prims)
+    adv (forsArm prims)
 
-/-! ### What pins the four halves, in two kinds
+/-! ### Half event API
 
-A half is `Pr[fun x => x.1 = true ∧ x.2 = b | …]`: an event of two conjuncts, one reading the
-experiment's success bit and one reading the bit it recorded.  Two kinds of silent edit *of the
-half itself* leave both splits provable, and they need canaries of different kinds; the first is a
-*naming* error and the second a *vacuity* one.  What these eight leave open — the selector argument
-the half names, and two edits one level down, of the experiment the half reads — is what the
-paragraphs that close this section are about.
+Each half is a conjunction of the success event and its selector branch. The defining equations
+`forsHalf_eq` and `hypertreeHalf_eq` identify those events. Their `_le_advantage` bounds forget the
+selector conjunct; their `_le_branch` bounds forget the success conjunct.
 
-**Which branch each name is attached to.**  `advantage_le_forsHalf_add_hypertreeHalf` is symmetric
-in its two summands, so it holds just as well of a module in which the two names are attached to the
-wrong branches, and no fixture can catch that: both are `noncomputable`.  The two `example`s below
-are that canary.  They are `example`s rather than theorems, and they are here rather than in the
-test module, for one reason: the bodies are not exposed, so an exported `theorem … := rfl` is
-refused here, and the same statement in an importing module is refused for the same reason, while an
-`example` is not exported and sees the body.  Exchanging the two definitions' bodies fails these two
-at build time, and the two `_le_branch` theorems below with them.
-
-**Whether a half is an event of both of its bits.**  This the `example`s cannot reach, and the
-reason is structural: they are `rfl` against the body, so a paired edit of the body moves them with
-it.  The predicate is a conjunction of two conjuncts, so exactly three deletions weaken it, and the
-two families of four — the four theorems below and the four the same-message section states — refuse
-all three between them: dropping `x.1 = true` is refused by the four `…_le_advantage` theorems,
-dropping `x.2 = true` / `x.2 = false` by the four `…_le_branch` theorems, and dropping both by all
-eight.  Each theorem refuses its own weakening without the other seven present; nothing else in
-either library refuses any of the three, so without these eight and their `Pins` entries all three
-are silent.  That is why they are needed and not decoration: without the second conjunct each EUF
-half is *equal* to the advantage it splits, so the split reads `a ≤ a + a` and
-`forsHalf_le_advantage` reads `a ≤ a`; without the first, `Pr[sel = true] + Pr[sel = false]` is the
-experiment's total mass and dominates every event.
-
-The two families together bound each half above by the advantage, above by its own branch, and below
-— as a pair — by the split, which makes it an event of the success bit and of the bit the experiment
-recorded.  Whether the recorded bit is the selector's own value is one level down and not these
-eight theorems' question: a `return` that discarded or negated the selector leaves all eight
-provable.  `instrumentedEufExp_const` and its twin refuse that edit, and more.  Each is an equation
-about the *whole* experiment at a constant selector, so what it forces is that the recorded bit be
-that constant whenever the selector is, and that everything else the run does still be the library
-game's: recording the selector conjoined with the verification bit is refused at
-`instrumentedEufExp_const`; reading the selector at an independently sampled key pair, at that
-equation and at the projection equation above it; moving the same-message experiment's own success
-argument, at that experiment's pair.  What they do not reach is a recorded bit that already agrees
-with the selector wherever the selector is constant, and the paragraphs that close this section say
-what that leaves.
-
-What none of the statements above pins is the *selector argument*, which is named in this module and
-which a paired edit of this module could therefore move throughout; the four `Pins` entries at which
-the test module restates the branch bounds do pin it, being in a file no library-side edit touches.
-A module whose two halves of one split are taken at a constant selector rather than at `forsArm` or
-`randomizerLogged` is well-formed here and is refused by exactly that split's two `Pins` entries.
-
-Two directions one layer below all of these are refused by nothing, here or in the test module, and
-both are edits of what the experiments' last lines record.
-
-*Which of a run's values each selector is applied to.*  Passing the signing log's first message,
-where the log has one, in place of the message the adversary returned — in both experiments' last
-lines — leaves the two projection equations, the two selector equations, all eight bounds, both
-splits, the four `example`s and every fixture pin silent.
-
-*What the recorded bit is, beyond its value at a constant selector.*  The two selector equations are
-stated at constant selectors, so any combination of applications of the selector that agrees with it
-wherever the selector is constant satisfies both of them at every `b` while recording a different
-predicate.  The simplest such combinations are the `f : Bool → Bool → Bool` with `f b b = b` applied
-to two applications of the selector; a third application conjoined in, and a choice between two
-applications made by a run value, are as silent as those.  Recording `sel pk sk msg σ && sel pk sk
-((log.map Sigma.fst).headD msg) σ`, and the same at the same-message experiment, makes `forsHalf`
-the probability that the adversary forges and the FORS arm is true both at its own forgery and at
-the signing log's first message — a strictly smaller event, with `hypertreeHalf` strictly larger,
-both splits still provable and every equation this module states still true.  The same is silent in
-the same place for `||`, for `cond (sel … == sel …) (sel …) (!sel …)`, for a third application
-conjoined in and for `cond (log.wasQueried msg) (sel …) (sel …)`.
-
-One further law narrows the second direction without closing it, and is recorded here rather than
-stated.  Post-composition naturality in the selector — the experiment at `fun pk sk m s => g (sel pk
-sk m s)` is `fun x => (x.1, g x.2)` mapped over the experiment at `sel`, for any `g : Bool → Bool` —
-is provable here by the same `h_pull` argument the two selector equations take.  It is not a canary
-beside them but a generalisation: `instrumentedEufExp_const` follows from it and the projection
-equation in three lines — the law at the constantly-`false` selector and a constant `g`, the
-projection equation at that same selector, and `Functor.map_map`.  Of the five shapes above it
-refuses three: the `&&`, the `||` and the third conjoined application, because `!a && !b` and `!(a
-&& b)` differ.  The other two satisfy it — the `cond` shape at every `g : Bool → Bool`, and the
-run-value choice because post-composition passes through a `cond` — and each is silent again once
-the law's `simp` is given the Boolean lemma it needs: `Bool.apply_cond` for the run-value choice,
-and for the `cond` shape one that has itself to be stated and proved, by decomposing `g` at `true`
-and `false` and deciding the four Booleans that remain.  So what the law offers is a change of
-exported shape rather than of what is proved — `instrumentedEufExp_const` becomes its corollary, and
-the same move would be wanted at the same-message experiment — and it would leave the direction open
-either way.  Refusing the family outright needs a law about the joint distribution of a run's key
-pair, message and signature, which this module does not state.  Both directions are recorded here
-rather than closed. -/
+The selector evaluates the forgery at its own address. It can inspect secret key data and is not
+itself a reduction that an adversary can execute. The generic projection and constant-selector
+laws describe the recorded bits independently of that choice of selector. -/
 
 /-- The FORS half is at most the advantage it splits.
 
@@ -856,9 +752,9 @@ theorem forsHalf_le_advantage (adv : unforgeableAdv (generalAlg prims)) :
     forsHalf adv ≤ adv.advantage ProbCompRuntime.probComp := by
   rw [forsHalf, unforgeableAdv.advantage,
     instrumentedEufExp_fst ProbCompRuntime.probComp
-      (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv (forsArm prims),
-    ← probEvent_eq_eq_probOutput, probEvent_map]
-  exact probEvent_mono fun x _ hx => hx.1
+      adv (forsArm prims),
+    Measure.fst_apply (measurableSet_singleton true)]
+  exact measure_mono fun x hx => hx.1
 
 /-- The hypertree half is at most the advantage it splits.
 
@@ -867,9 +763,9 @@ theorem hypertreeHalf_le_advantage (adv : unforgeableAdv (generalAlg prims)) :
     hypertreeHalf adv ≤ adv.advantage ProbCompRuntime.probComp := by
   rw [hypertreeHalf, unforgeableAdv.advantage,
     instrumentedEufExp_fst ProbCompRuntime.probComp
-      (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv (forsArm prims),
-    ← probEvent_eq_eq_probOutput, probEvent_map]
-  exact probEvent_mono fun x _ hx => hx.1
+      adv (forsArm prims),
+    Measure.fst_apply (measurableSet_singleton true)]
+  exact measure_mono fun x hx => hx.1
 
 /-- The FORS half is at most the probability of the branch it is named for.
 
@@ -879,25 +775,27 @@ consisting of the success conjunct alone is the advantage itself.
 
 *Experiment split.* -/
 theorem forsHalf_le_branch (adv : unforgeableAdv (generalAlg prims)) :
-    forsHalf adv ≤ Pr[fun x => x.2 = true |
-      instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims)] :=
-  probEvent_mono fun _ _ hx => hx.2
+    forsHalf adv ≤ (instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims))
+      {x | x.2 = true} :=
+  measure_mono fun _ hx => hx.2
 
 /-- The hypertree half is at most the probability of the branch it is named for.
 
 *Experiment split.* -/
 theorem hypertreeHalf_le_branch (adv : unforgeableAdv (generalAlg prims)) :
-    hypertreeHalf adv ≤ Pr[fun x => x.2 = false |
-      instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims)] :=
-  probEvent_mono fun _ _ hx => hx.2
+    hypertreeHalf adv ≤ (instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims))
+      {x | x.2 = false} :=
+  measure_mono fun _ hx => hx.2
 
-example (adv : unforgeableAdv (generalAlg prims)) :
-    forsHalf adv = Pr[fun x => x.1 = true ∧ x.2 = true |
-      instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims)] := rfl
+/-- The FORS half is the successful true-selector event. -/
+theorem forsHalf_eq (adv : unforgeableAdv (generalAlg prims)) :
+    forsHalf adv = (instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims))
+      {x | x.1 = true ∧ x.2 = true} := by rfl
 
-example (adv : unforgeableAdv (generalAlg prims)) :
-    hypertreeHalf adv = Pr[fun x => x.1 = true ∧ x.2 = false |
-      instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims)] := rfl
+/-- The hypertree half is the successful false-selector event. -/
+theorem hypertreeHalf_eq (adv : unforgeableAdv (generalAlg prims)) :
+    hypertreeHalf adv = (instrumentedEufExp ProbCompRuntime.probComp adv (forsArm prims))
+      {x | x.1 = true ∧ x.2 = false} := by rfl
 
 end Halves
 
@@ -945,8 +843,8 @@ theorem loggedSignatures_internalLog
   refine List.filterMap_congr fun e _ => ?_
   simp only [Function.comp_apply]
   rcases eq_or_ne e.1 msg with h | h
-  · rw [if_pos h, if_pos (congrArg emptyContextMessage h)]
-  · rw [if_neg h, if_neg fun hc => h (emptyContextMessage_injective hc)]
+  · rw [ite_eq_left h, ite_eq_left (congrArg emptyContextMessage h)]
+  · rw [ite_eq_right h, ite_eq_right fun hc => h (emptyContextMessage_injective hc)]
 
 /-- And therefore neither does the randomizer reading.
 
@@ -1140,16 +1038,23 @@ it is `sameRandomizer_of_randomizerLogged`; no bound on it is claimed anywhere.
 
 *Experiment split.* -/
 noncomputable def sameRandomizerHalf (adv : strongUnforgeableAdv (generalAlg prims)) : ℝ≥0∞ :=
-  Pr[fun x => x.1 = true ∧ x.2 = true |
-    instrumentedSameMessageExp ProbCompRuntime.probComp adv (randomizerLogged (prims := prims))]
+  (instrumentedSameMessageExp ProbCompRuntime.probComp adv (randomizerLogged (prims := prims)))
+    {x | x.1 = true ∧ x.2 = true}
 
 /-- The probability that it does so with a randomizer fresh at that message, where the `H_msg`
 bridge applies.
 
 *Experiment split.* -/
 noncomputable def freshRandomizerHalf (adv : strongUnforgeableAdv (generalAlg prims)) : ℝ≥0∞ :=
-  Pr[fun x => x.1 = true ∧ x.2 = false |
-    instrumentedSameMessageExp ProbCompRuntime.probComp adv (randomizerLogged (prims := prims))]
+  (instrumentedSameMessageExp ProbCompRuntime.probComp adv (randomizerLogged (prims := prims)))
+    {x | x.1 = true ∧ x.2 = false}
+
+/-- The same-message advantage is the sum of its fresh- and same-randomizer halves. -/
+theorem sameMessageAdvantage_eq_freshRandomizerHalf_add_sameRandomizerHalf
+    (adv : strongUnforgeableAdv (generalAlg prims)) :
+    adv.sameMessageAdvantage ProbCompRuntime.probComp =
+      freshRandomizerHalf adv + sameRandomizerHalf adv :=
+  sameMessageAdvantage_eq_arms ProbCompRuntime.probComp adv (randomizerLogged (prims := prims))
 
 /-- **The same-message split.**  The same-message advantage is at most the fresh-randomizer term
 plus the same-randomizer term.
@@ -1164,7 +1069,7 @@ theorem sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer
       freshRandomizerHalf adv + sameRandomizerHalf adv := by
   rw [freshRandomizerHalf, sameRandomizerHalf, add_comm]
   exact sameMessageAdvantage_le_arms ProbCompRuntime.probComp
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv
+    adv
     (randomizerLogged (prims := prims))
 
 /-- The library's exact SUF-to-EUF partition, at the canonical runtime.
@@ -1176,7 +1081,7 @@ theorem strongAdvantage_eq_advantage_add_sameMessage
       adv.toUnforgeableAdv.advantage ProbCompRuntime.probComp +
         adv.sameMessageAdvantage ProbCompRuntime.probComp :=
   strongUnforgeableAdv.advantage_eq_euf_add_sameMessage _
-    (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv
+    adv
 
 /-- **Both splits together.**  The SUF-CMA advantage against the external SLH-DSA algebra is at most
 the sum of four named terms: the two dispatch branches of the EUF-CMA experiment and the two
@@ -1195,15 +1100,11 @@ theorem strongAdvantage_le_halves (adv : strongUnforgeableAdv (generalAlg prims)
   exact add_le_add (advantage_le_forsHalf_add_hypertreeHalf adv.toUnforgeableAdv)
     (sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer adv)
 
-/-! ### What pins the two same-message halves
+/-! ### Randomizer half event API
 
-Both kinds of canary again, for the same edits and for the same reasons: two `example`s against a
-name attached to the wrong branch, and four theorems — two bounding each half by the same-message
-advantage it splits, two bounding it by its own branch — against the deletion of either conjunct and
-against the deletion of both.  These four are the same-message members of the two families the
-dispatch section's paragraph describes.  Here the `true` branch is the *same-randomizer* one,
-because `randomizerLogged` reports membership, and the two `example`s are what fix that
-orientation. -/
+`randomizerLogged` selects the same-randomizer branch with `true` and the fresh-randomizer branch
+with `false`. The defining equations identify each half with its branch of success. The bounds
+below forget either success or selector membership. -/
 
 /-- The same-randomizer half is at most the same-message advantage it splits.
 
@@ -1214,10 +1115,10 @@ theorem sameRandomizerHalf_le_sameMessageAdvantage
   rw [sameRandomizerHalf, strongUnforgeableAdv.sameMessageAdvantage,
     sameMessageStrongUnforgeableExp_apply_singleton,
     instrumentedSameMessageExp_fst ProbCompRuntime.probComp
-      (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv
+      adv
       (randomizerLogged (prims := prims)),
-    ← probEvent_eq_eq_probOutput, probEvent_map]
-  exact probEvent_mono fun x _ hx => hx.1
+    Measure.fst_apply (measurableSet_singleton true)]
+  exact measure_mono fun x hx => hx.1
 
 /-- The fresh-randomizer half is at most the same-message advantage it splits.
 
@@ -1228,38 +1129,36 @@ theorem freshRandomizerHalf_le_sameMessageAdvantage
   rw [freshRandomizerHalf, strongUnforgeableAdv.sameMessageAdvantage,
     sameMessageStrongUnforgeableExp_apply_singleton,
     instrumentedSameMessageExp_fst ProbCompRuntime.probComp
-      (fun f mx => ProbCompRuntime.probComp_evalSPMF_bind_pure f mx) adv
+      adv
       (randomizerLogged (prims := prims)),
-    ← probEvent_eq_eq_probOutput, probEvent_map]
-  exact probEvent_mono fun x _ hx => hx.1
+    Measure.fst_apply (measurableSet_singleton true)]
+  exact measure_mono fun x hx => hx.1
 
 /-- The same-randomizer half is at most the probability of the branch it is named for.
 
 *Experiment split.* -/
 theorem sameRandomizerHalf_le_branch (adv : strongUnforgeableAdv (generalAlg prims)) :
-    sameRandomizerHalf adv ≤ Pr[fun x => x.2 = true |
-      instrumentedSameMessageExp ProbCompRuntime.probComp adv
-        (randomizerLogged (prims := prims))] :=
-  probEvent_mono fun _ _ hx => hx.2
+    sameRandomizerHalf adv ≤ (instrumentedSameMessageExp ProbCompRuntime.probComp adv
+        (randomizerLogged (prims := prims))) {x | x.2 = true} :=
+  measure_mono fun _ hx => hx.2
 
 /-- The fresh-randomizer half is at most the probability of the branch it is named for.
 
 *Experiment split.* -/
 theorem freshRandomizerHalf_le_branch (adv : strongUnforgeableAdv (generalAlg prims)) :
-    freshRandomizerHalf adv ≤ Pr[fun x => x.2 = false |
-      instrumentedSameMessageExp ProbCompRuntime.probComp adv
-        (randomizerLogged (prims := prims))] :=
-  probEvent_mono fun _ _ hx => hx.2
+    freshRandomizerHalf adv ≤ (instrumentedSameMessageExp ProbCompRuntime.probComp adv
+        (randomizerLogged (prims := prims))) {x | x.2 = false} :=
+  measure_mono fun _ hx => hx.2
 
-example (adv : strongUnforgeableAdv (generalAlg prims)) :
-    sameRandomizerHalf adv = Pr[fun x => x.1 = true ∧ x.2 = true |
-      instrumentedSameMessageExp ProbCompRuntime.probComp adv
-        (randomizerLogged (prims := prims))] := rfl
+/-- The same-randomizer half is the successful true-selector event. -/
+theorem sameRandomizerHalf_eq (adv : strongUnforgeableAdv (generalAlg prims)) :
+    sameRandomizerHalf adv = (instrumentedSameMessageExp ProbCompRuntime.probComp adv
+        (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = true} := by rfl
 
-example (adv : strongUnforgeableAdv (generalAlg prims)) :
-    freshRandomizerHalf adv = Pr[fun x => x.1 = true ∧ x.2 = false |
-      instrumentedSameMessageExp ProbCompRuntime.probComp adv
-        (randomizerLogged (prims := prims))] := rfl
+/-- The fresh-randomizer half is the successful false-selector event. -/
+theorem freshRandomizerHalf_eq (adv : strongUnforgeableAdv (generalAlg prims)) :
+    freshRandomizerHalf adv = (instrumentedSameMessageExp ProbCompRuntime.probComp adv
+        (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = false} := by rfl
 
 end SufHalves
 

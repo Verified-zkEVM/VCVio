@@ -123,7 +123,7 @@ attribute [local implicit_reducible] effects ports serviceAnswer envAnswer
   ingress packet := packet.1.elim
   environment := false
 
-attribute [local implicit_reducible] network DynComputation.ofFreeM PFunctor.Obj
+attribute [local implicit_reducible] network DynComputation.ofFreeM
 
 /-- Environment effects preserve the hidden service state; service effects use their API. -/
 @[expose] def implementation (env : Environment Message Cipher Memory)
@@ -170,7 +170,11 @@ theorem tokenExperiment_eq (env : Environment Message Cipher Memory)
   rintro ⟨ciphertext, state⟩
   apply bind_congr
   rintro ⟨permitted, state⟩
-  cases permitted <;> simp [Function.update, map_bind] <;> rfl
+  cases permitted <;>
+    simp only [DynComputation.view_ofFreeM_liftBind, DynComputation.ofFreeM_State,
+      pure_bind, bind_map_left, Function.update, ↓reduceDIte, Function.update_idem,
+      List.nil_append, Nat.reduceAdd, Bool.false_eq_true, Function.update_eq_self,
+      Functor.map_map, DynComputation.view_ofFreeM_pure, ↓reduceIte, map_bind] <;> rfl
 
 /-- Two explicitly charged deliveries accompany the nine local activations. -/
 @[expose] def fifoSchedule : List (Activation Bool) :=
@@ -200,7 +204,11 @@ theorem fifoExperiment_eq (env : Environment Message Cipher Memory)
   rintro ⟨ciphertext, state⟩
   apply bind_congr
   rintro ⟨permitted, state⟩
-  cases permitted <;> simp [Function.update, map_bind] <;> rfl
+  cases permitted <;>
+    simp only [DynComputation.view_ofFreeM_liftBind, DynComputation.ofFreeM_State,
+      pure_bind, bind_map_left, Function.update, ↓reduceDIte, Function.update_idem,
+      List.nil_append, Nat.reduceAdd, Bool.false_eq_true, Function.update_eq_self,
+      Functor.map_map, DynComputation.view_ofFreeM_pure, ↓reduceIte, map_bind] <;> rfl
 
 /-- Observation equality uses different activation budgets for the two policies. -/
 theorem fifoExperiment_eq_tokenExperiment (env : Environment Message Cipher Memory)

@@ -59,6 +59,12 @@ that `thash` returns a node while `H_msg` returns a digest. -/
   | .thash _ _ _ => core.Y
   | .hmsg _ _ _ _ => Bytes p.m
 
+/-- The result of every public-hash query is canonically sampleable when the node and digest
+types are sampleable. -/
+instance (core : CorePrimitives p) [SampleableType core.Y] [SampleableType (Bytes p.m)] :
+    (q : (publicHashSpec core).Domain) → SampleableType ((publicHashSpec core).Range q) :=
+  fun q => by cases q <;> infer_instance
+
 namespace PublicHash
 
 /-- Issue an explicit `F` query. -/
@@ -216,9 +222,6 @@ abbrev Cache (core : CorePrimitives p) := (publicHashSpec core).QueryCache
     [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y]
     [SampleableType core.Y] [SampleableType (Bytes p.m)] :
     QueryImpl (publicHashSpec core) (StateT (PublicHash.Cache core) ProbComp) := by
-  letI : ∀ t : PublicHashQuery core.PkSeed core.AdrsKey core.Y,
-      SampleableType ((publicHashSpec core).Range t) := fun t => by
-    cases t <;> exact inferInstance
   exact (publicHashSpec core).randomOracle
 
 end PublicHash

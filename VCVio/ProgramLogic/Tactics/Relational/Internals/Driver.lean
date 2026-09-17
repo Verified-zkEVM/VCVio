@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Relational.Quantitative
-public import VCVio.ProgramLogic.Relational.Loom.Quantitative
+public import VCVio.ProgramLogic.Relational.WP.Quantitative
 public import VCVio.ProgramLogic.Relational.SimulateQ
 public meta import VCVio.ProgramLogic.Tactics.Common
 public meta import VCVio.ProgramLogic.Tactics.Relational.Internals.Steps
@@ -18,6 +18,8 @@ import all VCVio.ProgramLogic.Tactics.Relational.Internals.Steps
 -/
 
 public meta section
+
+open scoped OracleComp.Rel.Quantitative
 
 open Lean Elab Tactic Meta
 
@@ -387,7 +389,7 @@ private def runRVCGenStepWithTheoremConseq
             (m₁ := OracleComp _) (m₂ := OracleComp _) (l := Prop) _ _ ?_)))
     else if (stdDoRelTripleGoalParts? target).isSome then
       pure <| some (← `(tactic|
-        refine OracleComp.ProgramLogic.Relational.Loom.relTriple_conseq le_rfl ?_ ?_))
+        refine OracleComp.Rel.Quantitative.relTriple_conseq le_rfl ?_ ?_))
     else
       pure none
   let some wrapper := wrapper? | return false
@@ -413,7 +415,7 @@ private def runRVCGenStepWithTheoremConseq
   return false
 
 /-- Apply a `@[vcspec]` relational rule to the current goal.
-Default `rvcstep` fires cached rules directly. Raw `Std.Do'.rwp` goals also get
+Default `rvcstep` fires cached rules directly. Raw `VCVio.ProgramLogic.rwp` goals also get
 a narrow theorem-consequence fallback because their carrier inference can fail
 before the cached path sees the concrete target carrier. -/
 private def runRelationalVCSpecRule
@@ -779,7 +781,7 @@ def throwRVCGenStepError : TacticM Unit := withMainContext do
   | none =>
       throwError m!
         "rvcstep: expected a `GameEquiv`, `evalSPMF` equality, `RelTriple`, `RelWP`,\n\
-        or quantitative `Std.Do'.RelTriple` goal; got:{indentExpr target}"
+        or quantitative `VCVio.ProgramLogic.RelTriple` goal; got:{indentExpr target}"
   | some (oa, ob, post) =>
       let oa ← whnfReducible (← instantiateMVars oa)
       let ob ← whnfReducible (← instantiateMVars ob)
@@ -789,7 +791,7 @@ def throwRVCGenStepError : TacticM Unit := withMainContext do
         acc ++ tier.map (·.theoremName!)
       let goalLabel :=
         if isStdDoRelTripleGoal target then
-          "quantitative `Std.Do'.RelTriple`"
+          "quantitative `VCVio.ProgramLogic.RelTriple`"
         else if (relWPGoalParts? target).isSome then
           "`RelWP`"
         else
@@ -934,14 +936,14 @@ def runRVCGenSearchFinish : TacticM Unit := do
         | exact OracleComp.ProgramLogic.Relational.relTriple_eqRel_of_eq rfl
         | exact OracleComp.ProgramLogic.Relational.relTriple_pure_pure rfl
         | (apply OracleComp.ProgramLogic.Relational.relTriple_pure_pure; assumption)
-        | exact OracleComp.ProgramLogic.Relational.Loom.relTriple_pure _ _ _
+        | exact OracleComp.Rel.Quantitative.relTriple_pure _ _ _
         | (try subst_vars
            first
              | exact OracleComp.ProgramLogic.Relational.relTriple_true _ _
              | exact OracleComp.ProgramLogic.Relational.relTriple_refl _
              | exact OracleComp.ProgramLogic.Relational.relTriple_eqRel_of_eq rfl
              | exact OracleComp.ProgramLogic.Relational.relTriple_pure_pure rfl
-             | exact OracleComp.ProgramLogic.Relational.Loom.relTriple_pure _ _ _
+             | exact OracleComp.Rel.Quantitative.relTriple_pure _ _ _
              | (apply OracleComp.ProgramLogic.Relational.relTriple_pure_pure; assumption)
              | exact OracleComp.ProgramLogic.Relational.relTriple_post_const
                 (fun _ _ => by trivial))))

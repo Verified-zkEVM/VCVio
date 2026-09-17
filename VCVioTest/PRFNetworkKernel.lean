@@ -76,7 +76,7 @@ theorem noisy_joint_law {S : Type} [MeasurableSpace S]
     (operation : (UnlinkOracleSpec Bool Bool Bool).Domain) (state : S) :
     𝒟[(noisy impl operation).run state] = 𝒟[(impl operation).run state] := by
   change 𝒟[(($ᵗ Bool) >>= fun _ => (impl operation).run state)] = _
-  rw [evalDist_bind_const, measure_univ, one_smul]
+  rw [_root_.evalDist_bind_const, measure_univ, one_smul]
 
 /-- The full three-term packet reduction admits a concretely changed implementation. -/
 example (adversary : UnlinkAdversary Bool Bool Bool) (qReader qTag : ℕ)

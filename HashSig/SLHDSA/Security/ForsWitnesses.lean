@@ -617,7 +617,7 @@ theorem findForsTreeCollision_isSome_of_ne (prims : Primitives p) [DecidableEq p
     (forsLeaf prims sk pk adrs) (forsNodeHash prims pk adrs) p.a
     (forsSigLeafIndex p md i.val) _ _ hlen hclimb hleaf
   rw [findForsTreeCollision]
-  simp only [hleaf, if_false, hor, Option.map_some, Option.isSome_some]
+  simp only [hleaf, ite_false, hor, Option.map_some, Option.isSome_some]
 
 /-- A tree at which the search finds nothing, and which climbs to the honest root, has a forged
 leaf image equal to the honest one — the `F`-preimage branch.  Contrapositive of

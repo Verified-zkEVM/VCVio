@@ -82,7 +82,7 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
       rcases t with n | s
       · -- unifSpec query: forwarded, cache unchanged, budget unchanged
         have hbud : (if (Sum.inl n : ℕ ⊕ T) matches Sum.inr _ then q - 1 else q) = q :=
-          if_neg (by simp)
+          ite_eq_right (by simp)
         rw [hbud] at hrest
         change expectedValue ((unifFwdImpl (T →ₒ Fin (2 ^ b)) n).run cache >>=
             fun p : unifSpec.Range n × (T →ₒ Fin (2 ^ b)).QueryCache =>
@@ -92,7 +92,8 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
               (simulateQ (roImpl b T) (mx p.1)).run p.2)
             = (HasQuery.query (spec := unifSpec) (m := ProbComp) n) >>=
               fun a => (simulateQ (roImpl b T) (mx a)).run cache := by
-          simp only [unifFwdImpl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply]
+          rw [unifFwdImpl.eq_toQueryImpl]
+          simp only [QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply]
           rw [OracleComp.liftM_run_StateT, bind_assoc]
           simp only [pure_bind]
         rw [hrun]
@@ -101,7 +102,7 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
         have hp : ((Sum.inr s : ℕ ⊕ T) matches Sum.inr _) := rfl
         have hq0 : 0 < q := hcan.resolve_left (by simp)
         have hbud : (if (Sum.inr s : ℕ ⊕ T) matches Sum.inr _ then q - 1 else q) = q - 1 :=
-          if_pos hp
+          ite_eq_left hp
         rw [hbud] at hrest
         have hμ : ((q - 1 : ℕ) : ℝ≥0∞) * slotPsi ρ b S (fun _ => none)
             + slotPsi ρ b S (fun _ => none)
@@ -501,7 +502,7 @@ private lemma ksRelevant_record (x : Stmt) (msg : M) (π : FischlinProof Commit 
     ksRelevant σ ρ M x msg
       ⟨x, msg, List.ofFn fun j => (π j).1, i, (π i).2.1, (π i).2.2⟩ := by
   refine ⟨rfl, rfl, (π i).1, ?_, hver⟩
-  rw [List.getElem?_ofFn, dif_pos i.isLt]
+  rw [List.getElem?_ofFn, dite_eq_left i.isLt]
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
@@ -513,7 +514,7 @@ private lemma ksRelevant_verify_at (x : Stmt) (msg : M)
     (hcom : t.comList = List.ofFn fun j => (π j).1) :
     σ.verify x (π t.rep).1 t.chal t.resp = true := by
   obtain ⟨_, _, c, hc, hv⟩ := h
-  rw [hcom, List.getElem?_ofFn, dif_pos t.rep.isLt] at hc
+  rw [hcom, List.getElem?_ofFn, dite_eq_left t.rep.isLt] at hc
   cases Option.some.inj hc
   exact hv
 
@@ -550,9 +551,9 @@ private lemma fischlin_leaf_le (hur : σ.UniqueResponses) (x : Stmt) (msg : M)
   unfold ksLeaf
   by_cases hpin : CachePinned σ ρ b M x π cache
   case neg =>
-    rw [if_neg hpin, zero_mul]
+    rw [ite_eq_right hpin, zero_mul]
     exact zero_le
-  rw [if_pos hpin, one_mul]
+  rw [ite_eq_left hpin, one_mul]
   by_cases hver : ∀ i, σ.verify x (π i).1 (π i).2.1 (π i).2.2 = true
   case neg =>
     -- Some repetition fails σ-verification: acceptance probability is zero.
@@ -561,7 +562,7 @@ private lemma fischlin_leaf_le (hur : σ.UniqueResponses) (x : Stmt) (msg : M)
       fun hAll => hver fun i => List.all_eq_true.mp hAll i (List.mem_finRange i)
     rw [verify_probOutput_true_mixed σ hr ρ b S M x msg π cache
       (fun j => cache ⟨x, msg, List.ofFn fun k => (π k).1, j, (π j).2.1, (π j).2.2⟩)
-      (fun j => rfl), if_neg hall, zero_mul, ENNReal.zero_div]
+      (fun j => rfl), ite_eq_right hall, zero_mul, ENNReal.zero_div]
     exact zero_le
   set k₀ : List Commit := List.ofFn fun j => (π j).1 with hk₀
   -- The proof's key is live: deadness would give two distinct pinned challenges in a cell.
@@ -602,7 +603,7 @@ private lemma fischlin_leaf_le (hur : σ.UniqueResponses) (x : Stmt) (msg : M)
   have hall :
       ((List.finRange ρ).all fun i => σ.verify x (π i).1 (π i).2.1 (π i).2.2) = true :=
     List.all_eq_true.mpr fun i _ => hver i
-  rw [verify_probOutput_true_mixed σ hr ρ b S M x msg π cache (st k₀) hcache, if_pos hall,
+  rw [verify_probOutput_true_mixed σ hr ρ b S M x msg π cache (st k₀) hcache, ite_eq_left hall,
     one_mul]
   change slotPsi ρ b S (st k₀) ≤ _
   by_cases hk : k₀ ∈ keys
@@ -611,7 +612,7 @@ private lemma fischlin_leaf_le (hur : σ.UniqueResponses) (x : Stmt) (msg : M)
     rw [Phi]
     calc slotPsi ρ b S (st k₀)
         = if ksDead σ ρ b M x msg cache k₀ then 0 else slotPsi ρ b S (st k₀) :=
-          (if_neg hlive).symm
+          (ite_eq_right hlive).symm
       _ ≤ ∑ k ∈ keys, if ksDead σ ρ b M x msg cache k then 0 else slotPsi ρ b S (st k) :=
           Finset.single_le_sum
             (f := fun k => if ksDead σ ρ b M x msg cache k then 0 else slotPsi ρ b S (st k))
@@ -656,18 +657,18 @@ private lemma ksSample_probEvent_eq_expectedValue
   congr 1
   rw [probEvent_bind_eq_tsum]
   by_cases hfw : fischlinFindWitness σ ρ b M x z.1.1 z.1.2 = none
-  · rw [if_pos hfw, one_mul, StateT.run', ← probEvent_eq_eq_probOutput, probEvent_map,
+  · rw [ite_eq_left hfw, one_mul, StateT.run', ← probEvent_eq_eq_probOutput, probEvent_map,
       probEvent_eq_tsum_ite]
     refine tsum_congr fun vc => ?_
     rw [probEvent_pure]
     by_cases hv : vc.1 = true
-    · rw [if_pos ⟨hv, hfw⟩, mul_one]
-      exact (if_pos hv).symm
-    · rw [if_neg (fun h => hv h.1), mul_zero]
-      exact (if_neg hv).symm
-  · rw [if_neg hfw, zero_mul]
+    · rw [ite_eq_left ⟨hv, hfw⟩, mul_one]
+      exact (ite_eq_left hv).symm
+    · rw [ite_eq_right (fun h => hv h.1), mul_zero]
+      exact (ite_eq_right hv).symm
+  · rw [ite_eq_right hfw, zero_mul]
     refine ENNReal.tsum_eq_zero.mpr fun vc => ?_
-    rw [probEvent_pure, if_neg (fun h => hfw h.2), mul_zero]
+    rw [probEvent_pure, ite_eq_right (fun h => hfw h.2), mul_zero]
 
 omit [SampleableType Chal] in
 /-- **Support transfer.** On the support of the logged run, the extractor's scan-miss
@@ -697,8 +698,8 @@ private lemma EP_scanMiss_eq_EP_ksLeaf
   have hiff := fischlinFindWitness_eq_none_iff_cachePinned σ ρ b M x z.1.1
     (log_subset_cache (prover x msg) hz) (cache_subset_log (prover x msg) hz)
   by_cases hfw : fischlinFindWitness σ ρ b M x z.1.1 z.1.2 = none
-  · rw [if_pos hfw, if_pos (hiff.mp hfw)]
-  · rw [if_neg hfw, if_neg fun hp => hfw (hiff.mpr hp)]
+  · rw [ite_eq_left hfw, ite_eq_left (hiff.mp hfw)]
+  · rw [ite_eq_right hfw, ite_eq_right fun hp => hfw (hiff.mpr hp)]
 
 omit [SampleableType Chal] in
 /-- **Online-extraction reduction (Fischlin 2005, Theorem 2 core).** The Fischlin

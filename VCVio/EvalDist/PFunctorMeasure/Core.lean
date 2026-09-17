@@ -130,11 +130,9 @@ theorem isProbabilityMeasure_denote_liftBind [MeasurableSpace α] (a : P.A)
 
 variable [∀ a, DiscreteMeasurableSpace (P.B a)]
 
-/-- Every program over discrete answer types denotes a probability measure.
-
-This theorem is deliberately not a global instance: a program with a continuous answer type
-needs a measurability argument for each continuation, and typeclass search must not hide that
-boundary. -/
+/-- Every program over discrete answer types denotes a probability measure, independently of
+the measurable space on its output. -/
+@[instance]
 theorem isProbabilityMeasure_denote [MeasurableSpace α] (program : FreeM P α) :
     IsProbabilityMeasure (denote program) := by
   induction program with
@@ -153,8 +151,9 @@ theorem denote_bind [MeasurableSpace α] [MeasurableSpace β]
   induction program with
   | pure x => simpa using (Measure.dirac_bind hf x).symm
   | lift_bind a cont ih =>
-      rw [FreeM.liftBind_bind,
-        denote_liftBind _ _ Measurable.of_discrete.aemeasurable,
+      change denote (FreeM.liftBind a (fun b => (cont b).bind f)) =
+        Measure.bind (denote (FreeM.liftBind a cont)) (fun x => denote (f x))
+      rw [denote_liftBind _ _ Measurable.of_discrete.aemeasurable,
         denote_liftBind _ _ Measurable.of_discrete.aemeasurable]
       rw [Measure.bind_bind (Measurable.of_discrete).aemeasurable hf.aemeasurable]
       exact Measure.bind_congr_right (Filter.Eventually.of_forall fun b => ih b)
@@ -212,6 +211,7 @@ theorem denote_apply_univ_le_one [MeasurableSpace α] (program : FreeM P α) :
   induction program with
   | pure _ => simp
   | lift_bind a cont ih =>
+      change denote (FreeM.liftBind a cont) Set.univ ≤ 1
       by_cases h : AEMeasurable (fun b => denote (cont b)) (IsMeasureSpec.toMeasure a)
       · rw [denote_liftBind a cont h, Measure.bind_apply MeasurableSet.univ h]
         calc
@@ -227,6 +227,12 @@ noncomputable instance (priority := 20) instEvalDistSemanticsFreeM :
   denote := denote
   apply_univ_le_one := denote_apply_univ_le_one
 
+/-- The direct free-monad measure fold preserves pure without any discreteness assumption on
+oracle answers. -/
+noncomputable instance (priority := 20) instLawfulPureEvalDistSemanticsFreeM :
+    LawfulPureEvalDistSemantics (FreeM P) where
+  denote_pure := denote_pure
+
 /-- With a measure specification in scope, primary notation is definitionally the direct
 free-monad measure fold. `𝒟[…]` is the public head: this is a transport lemma, not a simp rule,
 so the `𝒟`-keyed laws below and in `Defs.Measure` are the ones `simp` uses. -/
@@ -239,19 +245,42 @@ theorem evalDist_lift (a : P.A) :
     𝒟[(FreeM.lift a : FreeM P (P.B a))] = IsMeasureSpec.toMeasure a :=
   denote_lift a
 
+/-- A single operation denotes a probability measure, including for continuous answer spaces. -/
+theorem isProbabilityMeasure_evalDist_lift (a : P.A) :
+    IsProbabilityMeasure 𝒟[(FreeM.lift a : FreeM P (P.B a))] := by
+  rw [evalDist_lift]
+  infer_instance
+
 /-- An operation with an almost everywhere measurable continuation denotes Giry bind. -/
 theorem evalDist_liftBind [MeasurableSpace α] (a : P.A) (cont : P.B a → FreeM P α)
     (h : AEMeasurable (fun b => denote (cont b)) (IsMeasureSpec.toMeasure a)) :
     𝒟[FreeM.liftBind a cont] = Measure.bind (IsMeasureSpec.toMeasure a) fun b => 𝒟[cont b] :=
   denote_liftBind a cont h
 
+/-- A measurable pure function after one operation pushes forward its answer measure.
+No discreteness assumption on the answer space is needed. -/
+theorem evalDist_lift_bind_pure [MeasurableSpace α] (a : P.A) (f : P.B a → α)
+    (hf : Measurable f) :
+    𝒟[(FreeM.lift a >>= fun b ↦ pure (f b) : FreeM P α)] =
+      (𝒟[(FreeM.lift a : FreeM P (P.B a))]).map f := by
+  have hcont : AEMeasurable (fun b => denote (pure (f b) : FreeM P α))
+      (IsMeasureSpec.toMeasure a) := by
+    change AEMeasurable (Measure.dirac ∘ f) (IsMeasureSpec.toMeasure a)
+    exact (Measure.measurable_dirac.comp hf).aemeasurable
+  change 𝒟[FreeM.liftBind a (fun b => pure (f b))] = _
+  rw [evalDist_liftBind (P := P) a _ hcont, evalDist_lift (P := P)]
+  simp only [evalDist_pure]
+  exact Measure.bind_dirac_eq_map _ hf
+
 variable [∀ a, DiscreteMeasurableSpace (P.B a)]
+
+instance [MeasurableSpace α] (program : FreeM P α) : IsProbabilityMeasure 𝒟[program] :=
+  isProbabilityMeasure_denote program
 
 /-- Over a discrete-answer interface, the direct measure semantics satisfies the Giry monad
 laws. -/
 noncomputable instance (priority := 20) instLawfulEvalDistSemanticsFreeM :
     LawfulEvalDistSemantics (FreeM P) where
-  denote_pure := denote_pure
   denote_bind := denote_bind
 
 end FreeM

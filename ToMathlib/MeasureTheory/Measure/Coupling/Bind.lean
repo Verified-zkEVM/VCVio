@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import ToMathlib.MeasureTheory.Measure.Coupling
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import ToMathlib.MeasureTheory.Measure.Monotone
 
 /-!
@@ -27,28 +28,6 @@ namespace MeasureTheory.Measure
 
 variable {α : Type u} {β : Type v} {γ : Type w} {δ : Type x}
 variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ] [MeasurableSpace δ]
-
-/-- Pushing a fixed s-finite measure through a jointly measurable parameterized map gives a
-measurable family of measures. -/
-theorem measurable_map_parameter (μ : Measure β) [SFinite μ]
-    {f : α × β → γ} (hf : Measurable f) :
-    Measurable fun a => μ.map (fun b => f (a, b)) := by
-  have h := (measurable_map f hf).comp (Measurable.map_prodMk_left (ν := μ))
-  simpa only [Measure.map_map hf measurable_prodMk_left, Function.comp_def] using h
-
-/-- Pushforward commutes with binding a measurable family of measures. -/
-theorem map_bind (μ : Measure α) {k : α → Measure β} {f : β → γ}
-    (hk : Measurable k) (hf : Measurable f) :
-    (μ.bind k).map f = μ.bind (fun a => (k a).map f) := by
-  rw [bind, ← join_map_map hf, Measure.map_map (measurable_map f hf) hk]
-  rfl
-
-/-- Binding after a pushforward is substitution in the measure-valued continuation. -/
-theorem bind_map (μ : Measure α) {f : α → β} {k : β → Measure γ}
-    (hf : Measurable f) (hk : Measurable k) :
-    (μ.map f).bind k = μ.bind (fun a => k (f a)) := by
-  rw [bind, Measure.map_map hk hf]
-  rfl
 
 /-- Bind is additive in its initial measure. -/
 theorem bind_add_left (μ ν : Measure α) {k : α → Measure β} (hk : Measurable k) :

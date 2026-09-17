@@ -38,6 +38,7 @@ direct-coupling headline in `DirectCoupling.Compose`.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
+open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 
@@ -353,7 +354,7 @@ reading off its value at a fixed cell `x` produces a uniform digest, so any spec
 appears with probability `1 / |Digest|`.
 
 This is a consequence of the marginalization lemma
-`OracleComp.evalSPMF_uniformSample_bind_update_map`: rewriting a uniform function as the
+`OracleComp.evalDist_uniformSample_bind_update_map`: rewriting a uniform function as the
 post-composition of a fresh uniform value at `x` with a uniform function at the remaining cells. -/
 lemma probOutput_uniformSample_fun_eval [Finite TagId] [Finite Nonce] [Fintype Digest]
     [Nonempty Digest]
@@ -363,10 +364,13 @@ lemma probOutput_uniformSample_fun_eval [Finite TagId] [Finite Nonce] [Fintype D
                 pure (gFine x)] =
       (Fintype.card Digest : ℝ≥0∞)⁻¹ := by
   classical
-  -- Bridge via `evalSPMF_uniformSample_bind_update_map` at the cell `x`, with `ψ = fun g => g x`.
-  have hbridge :=
-    OracleComp.evalSPMF_uniformSample_bind_update_map
-      (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest) x (fun g => g x)
+  let : MeasurableSpace Digest := ⊤
+  let : MeasurableSpace (((TagId × Fin sessionsPerTag) × Nonce) → Digest) :=
+    MeasurableSpace.pi
+  have hbridge := evalSPMF_eq_of_evalDist_eq _ _ <|
+    OracleComp.evalDist_uniformSample_bind_update_map
+      (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
+      evalDist_uniformSample evalDist_uniformSample x (fun g => g x)
   have hLHS :
       (do let u ← ($ᵗ Digest); let g ← ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest));
           pure ((Function.update g x u) x))
@@ -444,12 +448,12 @@ lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
       simp
     rw [hinner]
     by_cases hcb : cacheBadReader (sessionsPerTag := sessionsPerTag) gFine transcript = true
-    · rw [if_pos hcb, mul_one, if_pos]
+    · rw [ite_eq_left hcb, mul_one, ite_eq_left]
       unfold cacheBadReader at hcb
       rw [decide_eq_true_eq] at hcb
       obtain ⟨tag, sid, _, hg⟩ := hcb
       exact ⟨(tag, sid), Finset.mem_univ _, hg⟩
-    · rw [if_neg hcb, mul_zero]; exact zero_le
+    · rw [ite_eq_right hcb, mul_zero]; exact zero_le
   refine hmono.trans ?_
   -- Step 2: union bound over the slot set.
   have hsum :
@@ -482,7 +486,7 @@ lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
       by_cases h : gFine (slot, transcript.nonce) = transcript.auth
       · simp [h, probOutput_pure]
       · simp only [h, ite_false, probOutput_pure]
-        rw [if_neg (fun heq => h heq.symm), mul_zero]
+        rw [ite_eq_right (fun heq => h heq.symm), mul_zero]
     rw [hkey]
     exact probOutput_uniformSample_fun_eval (slot, transcript.nonce) transcript.auth
   rw [Finset.sum_congr rfl (fun slot _ => hcell slot)]
@@ -529,7 +533,7 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
   induction oa using OracleComp.inductionOn generalizing s c sB with
   | pure b =>
     simp only [simulateQ_pure, StateT.run_pure, map_pure]
-    rw [evalDist_bind_const, hTable]
+    rw [_root_.evalDist_bind_const, hTable]
     simp
   | query_bind t f ih =>
     rw [multipleBad_run_query_bind', map_bind]
@@ -1076,7 +1080,7 @@ lemma evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad
       𝒟[sampleFine] Set.univ •
         𝒟[(simulateQ (multipleBadTableHandler (sessionsPerTag := sessionsPerTag) g) oa).run p] := by
   simp_rw [map_bind, simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq]
-  exact evalDist_bind_const _ _
+  exact _root_.evalDist_bind_const _ _
 
 omit [Nonempty TagId] [SampleableType Digest] in
 /-- **Fine→original eager-table bridge.** Marginalizing the Fine-run output distribution over a

@@ -29,8 +29,8 @@ def OracleQuery {ι : Type u} (spec : OracleSpec.{u, v} ι) :
     Type w → Type (max u v w) :=
   PFunctor.Obj spec.toPFunctor
 
-@[reducible] protected def OracleQuery.mk {ι α} {spec : OracleSpec ι}
-    (t : spec.Domain) (f : spec.Range t → α) : OracleQuery spec α := ⟨t, f⟩
+@[reducible, match_pattern] protected def OracleQuery.mk {ι α} {spec : OracleSpec ι}
+    (t : spec.Domain) (f : spec.Range t → α) : OracleQuery spec α := PFunctor.Obj.mk t f
 
 namespace OracleSpec
 
@@ -47,7 +47,7 @@ protected def query (t : spec.Domain) : OracleQuery spec (spec.Range t) :=
   OracleQuery.mk t id
 
 protected lemma query_def (t : spec.Domain) :
-    OracleSpec.query t = ⟨t, id⟩ := rfl
+    OracleSpec.query t = OracleQuery.mk t id := rfl
 
 end OracleSpec
 
@@ -80,10 +80,12 @@ variable {ι : Type u} {spec : OracleSpec.{u, v} ι}
 
 /-- The oracle input used in an oracle query. -/
 @[inline, reducible]
-def input {α} (q : OracleQuery spec α) : spec.Domain := q.1
+def input {α} (q : OracleQuery spec α) : spec.Domain := PFunctor.Obj.fst q
 
-@[simp] lemma input_apply {α} (t : spec.Domain) (f : spec.Range t → α) :
-    input ⟨t, f⟩ = t := rfl
+@[simp] lemma input_mk {α} (t : spec.Domain) (f : spec.Range t → α) :
+    input (OracleQuery.mk t f) = t := rfl
+
+alias input_apply := input_mk
 
 @[simp] lemma input_map {α β} (q : OracleQuery spec α) (f : α → β) :
     (f <$> q).input = q.input := rfl
@@ -93,10 +95,12 @@ def input {α} (q : OracleQuery spec α) : spec.Domain := q.1
 
 /-- The continuation used for the result of an oracle query. -/
 @[inline, reducible]
-def cont {α} (q : OracleQuery spec α) (f : spec.Range q.input) : α := q.2 f
+def cont {α} (q : OracleQuery spec α) : spec.Range q.input → α := PFunctor.Obj.snd q
 
-@[simp] lemma cont_apply {α} (t : spec.Domain) (f : spec.Range t → α) :
-    cont ⟨t, f⟩ = f := rfl
+@[simp] lemma cont_mk {α} (t : spec.Domain) (f : spec.Range t → α) :
+    cont (OracleQuery.mk t f) = f := rfl
+
+alias cont_apply := cont_mk
 
 @[simp] lemma cont_map {α β} (q : OracleQuery spec α) (f : α → β) :
     (f <$> q).cont = f ∘ q.cont := rfl
@@ -107,32 +111,43 @@ def cont {α} (q : OracleQuery spec α) (f : spec.Range q.input) : α := q.2 f
 /-- Two oracles queries are equal if they query for the same input and run
 extensionally equal continuation on the results of the query. -/
 @[ext] lemma ext {α} {q q' : OracleQuery spec α}
-    (h : q.input = q'.input) (h' : q.cont ≍ q'.cont) : q = q' := Sigma.ext h h'
+    (h : q.input = q'.input) (h' : q.cont ≍ q'.cont) : q = q' := by
+  cases q using PFunctor.Obj.rec with
+  | mk t f =>
+    cases q' using PFunctor.Obj.rec with
+    | mk t' f' =>
+      change t = t' at h
+      subst t'
+      exact congrArg (OracleQuery.mk t) (eq_of_heq h')
 
 /-- Version of `OracleQuery.ext` that avoids using `HEq` when the inputs are the same. -/
 lemma ext' {α} (t : spec.Domain) {cont cont' : spec.Range t → α}
-    (h : cont = cont') : (⟨t, cont⟩ : OracleQuery spec α) = ⟨t, cont'⟩ := by
-  simpa [funext_iff] using h
+    (h : cont = cont') : (OracleQuery.mk t cont : OracleQuery spec α) = OracleQuery.mk t cont' := by
+  exact congrArg (OracleQuery.mk t) h
 
 /-- If an oracle exists and the output type is non-empty then the type of queries is non-empty. -/
 instance {α} [Inhabited ι] [Inhabited α] : Inhabited (OracleQuery spec α) :=
-  inferInstanceAs (Inhabited ((t : spec.Domain) × (spec.Range t → α)))
+  ⟨OracleQuery.mk default (fun _ ↦ default)⟩
 
 /-- If there are no oracles available then the type of queries is empty. -/
 instance {α} [h : IsEmpty ι] : IsEmpty (OracleQuery spec α) :=
-  inferInstanceAs (IsEmpty ((t : spec.Domain) × (spec.Range t → α)))
+  ⟨fun q ↦ PFunctor.Obj.rec (fun t _ ↦ h.false t) q⟩
 
 /-- If there is at most one oracle and output, then there is at most one query. -/
 instance {α} [h : Subsingleton ι] [h' : Subsingleton α] : Subsingleton (OracleQuery spec α) where
-  allEq := fun ⟨t, cont⟩ ⟨t', cont'⟩ => by
-    obtain rfl := h.allEq t t'
-    exact OracleQuery.ext' t (Subsingleton.allEq cont cont')
+  allEq q q' := by
+    cases q using PFunctor.Obj.rec with
+    | mk t cont =>
+      cases q' using PFunctor.Obj.rec with
+      | mk t' cont' =>
+        obtain rfl := h.allEq t t'
+        exact OracleQuery.ext' t (Subsingleton.allEq cont cont')
 
 @[simp] lemma input_query (t : spec.Domain) : (OracleSpec.query t).input = t := rfl
 @[simp] lemma cont_query (t : spec.Domain) : (OracleSpec.query t).cont = id := rfl
 
-@[simp] lemma fst_query (t : spec.Domain) : (OracleSpec.query t).1 = t := rfl
-@[simp] lemma snd_query (t : spec.Domain) : (OracleSpec.query t).2 = id := rfl
+@[simp] lemma fst_query (t : spec.Domain) : PFunctor.Obj.fst (OracleSpec.query t) = t := rfl
+@[simp] lemma snd_query (t : spec.Domain) : PFunctor.Obj.snd (OracleSpec.query t) = id := rfl
 
 @[simp] lemma cont_map_query_input {α} (q : OracleQuery spec α) :
     q.cont <$> (OracleSpec.query q.input) = q := rfl

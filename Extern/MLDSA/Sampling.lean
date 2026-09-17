@@ -291,10 +291,10 @@ private theorem sampleInBallLoop_mem (stream : ByteArray) (signs hi : ℕ) :
   | fuel + 1, i, out, pos, signIdx, hInv, j => by
     unfold sampleInBallLoop
     by_cases hlt : i < hi
-    · simp only [hlt, if_true]
+    · simp only [hlt, ite_true]
       exact sampleInBallLoop_mem stream signs hi fuel (i + 1) _ _ _
         (fun j => sampleInBallStep_mem stream signs i out pos signIdx hInv j) j
-    · simp only [hlt, if_false]
+    · simp only [hlt, ite_false]
       exact hInv j
 
 /-- Every coefficient of `sampleInBall` lies in `{0, 1, -1}`. -/
@@ -332,14 +332,14 @@ private def countNZ (out : Array Coeff) : ℕ :=
 /-- A defaulted lookup at the just-written slot returns the written value. -/
 private theorem getD_set!_self (out : Array Coeff) (a : ℕ) (ha : a < out.size) (u : Coeff) :
     (out.set! a u).getD a 0 = u := by
-  simp only [Array.set!, Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds, ha, if_true,
+  simp only [Array.set!, Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds, ha, ite_true,
     Option.getD_some]
 
 /-- A defaulted lookup away from the just-written slot is unchanged. -/
 private theorem getD_set!_ne (out : Array Coeff) (a : ℕ) (u : Coeff) (j : ℕ) (hj : j ≠ a) :
     (out.set! a u).getD j 0 = out.getD j 0 := by
   simp only [Array.set!, Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds]
-  rw [if_neg (fun h => hj h.symm)]
+  rw [ite_eq_right (fun h => hj h.symm)]
 
 /-- Exact additive single-slot update law for `countNZ`, stated to avoid `ℕ` subtraction. -/
 private theorem countNZ_set!_eq (out : Array Coeff) (a : ℕ) (ha : a < ringDegree)
@@ -368,8 +368,8 @@ private theorem findChosen_le (stream : ByteArray) (i : ℕ) :
   | succ f ih =>
     intro pos; unfold sampleInBallFindChosen
     by_cases hb : (getByteD stream pos).toNat ≤ i
-    · simp only [hb, if_true]
-    · simp only [hb, if_false]; exact ih (pos + 1)
+    · simp only [hb, ite_true]
+    · simp only [hb, ite_false]; exact ih (pos + 1)
 
 /-- One challenge step preserves the accumulator size. -/
 private theorem step_size (stream : ByteArray) (signs i : ℕ) (out : Array Coeff) (pos signIdx : ℕ)
@@ -429,7 +429,7 @@ private theorem loop_countNZ_le (stream : ByteArray) (signs hi : ℕ) (hhi : hi 
   | fuel + 1, i, out, pos, signIdx, hsize, hfresh => by
     unfold sampleInBallLoop
     by_cases hlt : i < hi
-    · simp only [hlt, if_true]
+    · simp only [hlt, ite_true]
       set stepOut := (sampleInBallStep stream signs i out pos signIdx) with hstep
       have hi' : i < ringDegree := lt_of_lt_of_le hlt hhi
       have hfreshi : (LatticeCrypto.centeredRepr (out.getD i 0)).natAbs = 0 := by
@@ -446,7 +446,7 @@ private theorem loop_countNZ_le (stream : ByteArray) (signs hi : ℕ) (hhi : hi 
           ≤ countNZ stepOut.1 + (hi - (i + 1)) := ih
         _ ≤ (countNZ out + 1) + (hi - (i + 1)) := by omega
         _ = countNZ out + (hi - i) := by omega
-    · simp only [hlt, if_false]
+    · simp only [hlt, ite_false]
       exact Nat.le_add_right _ _
 
 /-- The all-zero accumulator has nonzero count zero. -/
@@ -456,7 +456,7 @@ private theorem countNZ_replicate_zero : countNZ (Array.replicate ringDegree (0 
   intro j _
   rw [Array.getD_eq_getD_getElem?]
   simp only [Array.getElem?_replicate]
-  by_cases h : j < ringDegree <;> simp only [h, if_true, if_false, Option.getD] <;> decide
+  by_cases h : j < ringDegree <;> simp only [h, ite_true, ite_false, Option.getD] <;> decide
 
 /-- The `ℓ₁` norm of a polynomial materialized by `Vector.ofFn` from a defaulted-array lookup is the
 nonzero count of that array. -/
@@ -482,7 +482,7 @@ private theorem countNZ_sampleInBallLoop_le (stream : ByteArray) (signs : ℕ) (
       (Array.replicate ringDegree (0 : Coeff)).getD j 0 = 0 := by
     intro j _
     rw [Array.getD_eq_getD_getElem?]; simp only [Array.getElem?_replicate]
-    by_cases h : j < ringDegree <;> simp only [h, if_true, if_false, Option.getD]
+    by_cases h : j < ringDegree <;> simp only [h, ite_true, ite_false, Option.getD]
   have hloop := loop_countNZ_le stream signs ringDegree (le_refl _) p.tau (ringDegree - p.tau)
     (Array.replicate ringDegree 0) 8 0 hsize hfresh
   rw [countNZ_replicate_zero, zero_add] at hloop

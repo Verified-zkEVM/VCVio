@@ -86,7 +86,7 @@ theorem law_eq_evalDist (system : System Δ) (context : Context Δ) :
 theorem law_univ (system : System Δ) (context : Context Δ) :
     law system context Set.univ = 1 := by
   rw [law_eq_evalDist]
-  exact measure_univ
+  exact OracleComp.evalDist_apply_univ_eq_one _
 
 /-- The actual execution law has total mass at most one. -/
 theorem law_univ_le_one (system : System Δ) (context : Context Δ) :

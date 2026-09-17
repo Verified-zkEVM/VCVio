@@ -56,16 +56,21 @@ theorem evalDist_bind_cell_extract (value : m R) (table : m (D → R))
   simpa only [Function.update_self] using
     (evalDist_bind_bind_update value table hvalue htable t (fun g => f g (g t))).symm
 
+/-- Reindexing a finite uniform draw by a permutation preserves its denotation. -/
+theorem evalDist_map_equiv_of_uniform [Finite α] [MeasurableSingletonClass α]
+    (draw : m α) (hdraw : 𝒟[draw] = uniformOn Set.univ) (e : α ≃ α) :
+    𝒟[e <$> draw] = 𝒟[draw] := by
+  rw [evalDist_map_of_discrete, hdraw, uniformOn_univ_map_equiv]
+
 /-- Reindexing a finite uniform draw by a permutation preserves every continuation measure. -/
 theorem evalDist_bind_uniform_equiv [Finite α] [MeasurableSingletonClass α]
     {β : Type} [MeasurableSpace β] (draw : m α)
     (hdraw : 𝒟[draw] = uniformOn Set.univ) (e : α ≃ α) (f : α → m β) :
     𝒟[draw >>= f] = 𝒟[draw >>= fun x => f (e x)] := by
-  have hmap : 𝒟[e <$> draw] = 𝒟[draw] := by
-    rw [evalDist_map_of_discrete, hdraw, uniformOn_univ_map_equiv]
   calc
     _ = 𝒟[(e <$> draw) >>= f] := by
-      rw [evalDist_bind_of_discrete _ f, evalDist_bind_of_discrete _ f, hmap]
+      rw [evalDist_bind_of_discrete _ f, evalDist_bind_of_discrete _ f,
+        evalDist_map_equiv_of_uniform draw hdraw e]
     _ = _ := by rw [bind_map_left]
 
 /-- Independently resample two distinct table cells before observing the table. -/

@@ -276,11 +276,11 @@ private lemma probOutput_withProgramming_eq_withCachingTrackingPolicy_of_not_bad
             OracleComp spec' (spec.Range t × spec.QueryCache × Bool)) := by
         simp [QueryImpl.withCachingTrackingPolicy_apply, hcache, hpol, Functor.map_map]
       rw [hL_run, hR_run]
-      rw [probOutput_pure, if_neg (hne v _)]
+      rw [probOutput_pure, ite_eq_right (hne v _)]
       rw [probOutput_bind_eq_tsum]
       symm
       refine ENNReal.tsum_eq_zero.mpr (fun u' => ?_)
-      rw [probOutput_pure, if_neg (hne u' _), mul_zero]
+      rw [probOutput_pure, ite_eq_right (hne u' _), mul_zero]
 
 omit [IsUniformSpec spec] in
 /-- Joint (state-included) identical-until-bad TV-distance bound between `withProgramming policy`

@@ -169,14 +169,14 @@ private theorem addCellU32 (cur prod : UInt32) (hc : cur.toNat < modulus)
     rw [UInt32.toNat_add, hpow, Nat.mod_eq_of_lt]; omega
   simp only [ge_iff_le, UInt32.le_iff_toNat_le, hq, hadd]
   by_cases h : 12289 ≤ cur.toNat + prod.toNat
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     have hsub : (cur + prod - modulus.toUInt32).toNat = cur.toNat + prod.toNat - 12289 := by
       rw [UInt32.toNat_sub, hq, hadd, hpow]; omega
     rw [hsub]
     refine ⟨by rw [hmm]; omega, ?_⟩
     rw [cast_natSub h]; push_cast
     rw [show (12289 : ZMod modulus) = ((modulus:ℕ):ZMod modulus) from rfl, ZMod.natCast_self]; ring
-  · rw [if_neg h, hadd]
+  · rw [ite_eq_right h, hadd]
     exact ⟨by rw [hmm]; omega, by push_cast; ring⟩
 
 private theorem subCellU32 (cur prod : UInt32) (hc : cur.toNat < modulus)
@@ -190,10 +190,10 @@ private theorem subCellU32 (cur prod : UInt32) (hc : cur.toNat < modulus)
   rw [hmm] at hc hp
   simp only [ge_iff_le, UInt32.le_iff_toNat_le]
   by_cases h : prod.toNat ≤ cur.toNat
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     have hsub : (cur - prod).toNat = cur.toNat - prod.toNat := by rw [UInt32.toNat_sub, hpow]; omega
     rw [hsub]; exact ⟨by rw [hmm]; omega, by rw [cast_natSub h]⟩
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     have hcadd : (cur + modulus.toUInt32).toNat = cur.toNat + 12289 := by
       rw [UInt32.toNat_add, hq, hpow]; omega
     have hsub : (cur + modulus.toUInt32 - prod).toNat = cur.toNat + 12289 - prod.toNat := by
@@ -282,9 +282,9 @@ private theorem inner_invariant {n : ℕ} (fa ga : Array UInt32) (i : ℕ) (hi :
         rw [hr']
         unfold innerStep
         by_cases hlt : i + J < n
-        · rw [if_pos hlt, getD_set!_self _ _ _ (by rw [ihsz]; exact hkk)]
+        · rw [ite_eq_left hlt, getD_set!_self _ _ _ (by rw [ihsz]; exact hkk)]
           exact (addCellU32 (r.getD ((i+J)%n) 0) _ (ihb _ hkk) hprod.1).1
-        · rw [if_neg hlt, getD_set!_self _ _ _ (by rw [ihsz]; exact hkk)]
+        · rw [ite_eq_right hlt, getD_set!_self _ _ _ (by rw [ihsz]; exact hkk)]
           exact (subCellU32 (r.getD ((i+J)%n) 0) _ (ihb _ hkk) hprod.1).1
       · rw [hr']
         unfold innerStep
@@ -304,19 +304,19 @@ private theorem inner_invariant {n : ℕ} (fa ga : Array UInt32) (i : ℕ) (hi :
         unfold innerStep
         have hJnotmem : J ∉ (Finset.range J).filter (fun j => (i + j) % n = (i + J) % n) := by
           simp
-        rw [hfilt, if_pos rfl, Finset.sum_insert hJnotmem]
+        rw [hfilt, ite_eq_left rfl, Finset.sum_insert hJnotmem]
         by_cases hlt : i + J < n
-        · rw [if_pos hlt, getD_set!_self _ _ _ (by rw [ihsz]; exact hkk)]
+        · rw [ite_eq_left hlt, getD_set!_self _ _ _ (by rw [ihsz]; exact hkk)]
           rw [(addCellU32 (r.getD ((i+J)%n) 0) _ (ihb _ hkk) hprod.1).2]
           rw [ihv _ hkk, hprod.2]
           unfold colVal
-          rw [if_pos hlt]; ring
-        · rw [if_neg hlt, getD_set!_self _ _ _ (by rw [ihsz]; exact hkk)]
+          rw [ite_eq_left hlt]; ring
+        · rw [ite_eq_right hlt, getD_set!_self _ _ _ (by rw [ihsz]; exact hkk)]
           rw [(subCellU32 (r.getD ((i+J)%n) 0) _ (ihb _ hkk) hprod.1).2]
           rw [ihv _ hkk, hprod.2]
           unfold colVal
-          rw [if_neg hlt]; ring
-      · rw [hfilt, if_neg hkeq]
+          rw [ite_eq_right hlt]; ring
+      · rw [hfilt, ite_eq_right hkeq]
         rw [hr']
         unfold innerStep
         rw [show (if i + J < n then r.set! ((i+J)%n) _ else r.set! ((i+J)%n) _)
@@ -364,7 +364,7 @@ private theorem outer_invariant {n : ℕ} (fa ga : Array UInt32)
     intro _
     have hrep0 : ∀ k, k < n → (Array.replicate n (0:UInt32)).getD k 0 = 0 := by
       intro k hk
-      rw [Array.getD, dif_pos (by rw [Array.size_replicate]; exact hk)]; simp
+      rw [Array.getD, dite_eq_left (by rw [Array.size_replicate]; exact hk)]; simp
     simp only [List.range_zero, List.foldl_nil]
     refine ⟨by simp, ?_, ?_⟩
     · intro k hk; rw [hrep0 k hk]; simp [modulus]
@@ -475,7 +475,8 @@ theorem negacyclicMulU32_eq_negacyclicMul {n : ℕ} (f g : Rq n) :
     (fun j => by
       by_cases hj : j < n
       · rw [hga]; exact fa_bound g j hj
-      · rw [hga]; rw [Array.getD]; rw [dif_neg (by rw [Array.size_map, g.size_toArray]; omega)]
+      · rw [hga, Array.getD,
+          dite_eq_right (by rw [Array.size_map, g.size_toArray]; omega)]
         simp [modulus])
     n (le_refl n)
   rw [hval k.val k.isLt]
@@ -494,10 +495,10 @@ theorem negacyclicMulU32_eq_negacyclicMul {n : ℕ} (f g : Rq n) :
   intro j _
   -- termwise: colVal matches the spec summand via fa_cast
   by_cases hc : (i.val + j.val) % n = (k:ℕ)
-  · rw [if_pos hc, if_pos hc]
+  · rw [ite_eq_left hc, ite_eq_left hc]
     unfold colVal
     rw [hfa, hga, fa_cast f i.val i.isLt, fa_cast g j.val j.isLt]
-  · rw [if_neg hc, if_neg hc]
+  · rw [ite_eq_right hc, ite_eq_right hc]
 
 /-- The `UInt64` accumulator of `pairL2NormSqU32` never overflows: folding a list of
 nonnegative summands whose every prefix stays below `2 ^ 64` commutes with `UInt64.toNat`. -/
@@ -569,8 +570,8 @@ private theorem kernelC_toInt (x : ZMod modulus) :
       rw [UInt32.toNat_ofNat']; rfl
     rw [h2]
   by_cases h : ZMod.val x ≤ 6144
-  · rw [if_pos (hcmp.mpr h), hpos, LatticeCrypto.centeredRepr_of_le (by omega)]
-  · rw [if_neg (fun hc => h (hcmp.mp hc)), Int64.toInt_sub, hpos, toInt_modulus]
+  · rw [ite_eq_left (hcmp.mpr h), hpos, LatticeCrypto.centeredRepr_of_le (by omega)]
+  · rw [ite_eq_right (fun hc => h (hcmp.mp hc)), Int64.toInt_sub, hpos, toInt_modulus]
     have hgt : 6144 < ZMod.val x := by omega
     rw [LatticeCrypto.centeredRepr_of_gt (by omega),
       bmod_two_pow_64_eq_self _ (by omega) (by omega)]
@@ -588,7 +589,7 @@ private theorem getD_eq_get {n : ℕ} (s : Rq n) (i : ℕ) (hi : i < n) :
     Vector.getD s i 0 = s.get ⟨i, hi⟩ := by
   simp only [Vector.getD, Vector.get, Array.getD]
   have h2 : i < s.toArray.size := by rw [s.size_toArray]; exact hi
-  rw [dif_pos h2]; rfl
+  rw [dite_eq_left h2]; rfl
 
 /-- The per-coefficient summand equals the squared absolute centered representative. -/
 private theorem loopG_toNat {n : ℕ} (s : Rq n) (a : ℕ) (ha : a < n) :

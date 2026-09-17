@@ -36,6 +36,7 @@ distribution over a uniform table draw.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
+open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 
