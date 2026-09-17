@@ -25,6 +25,7 @@ public import VCVioTest.MeasurabilityBoundary
 public import VCVioTest.MeasureSemantics
 public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MerkleTreeExtractability
+public import VCVioTest.MerkleTreeHashForest
 public import VCVioTest.MerkleTreeHashing
 public import VCVioTest.MerkleTreeMonadic
 public import VCVioTest.MerkleTreeMultiExtractability
