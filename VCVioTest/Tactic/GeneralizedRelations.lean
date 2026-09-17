@@ -24,7 +24,7 @@ The companion `GeneralizedRelationsExperiments` module isolates proposed registr
 public section
 
 open OracleComp OracleComp.EvalDist OracleComp.ProgramLogic OracleSpec MeasureTheory
-open scoped ENNReal
+open scoped ENNReal Std.Internal.Do OracleComp.Quantitative
 
 namespace VCVioTest.GeneralizedRelations
 

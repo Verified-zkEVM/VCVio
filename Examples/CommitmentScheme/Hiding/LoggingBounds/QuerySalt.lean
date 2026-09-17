@@ -527,7 +527,8 @@ lemma wp_querySaltIndicator_prepend_eq_one
       rw [QueryLog.countQ_cons, ite_eq_left hsalt]
       omega
     exact OracleComp.ProgramLogic.propInd_eq_one_iff.mpr hpos
-  rw [hpost, OracleComp.ProgramLogic.wp_const]
+  rw [hpost]
+  exact OracleComp.ProgramLogic.wp_const _ _
 
 lemma wp_querySaltIndicator_prepend_eq_of_ne
     {α : Type}
@@ -626,7 +627,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
             (oa := mx ((query t).cont qu.1)) (cache := qu.2)
             (t := t) (u := (query t).cont qu.1) (s := s) hsalt
         rw [hpost]
-        simp only [OracleComp.ProgramLogic.wp_const]
+        simp
       · have hpost :
             (fun qu : C × QueryCache (CMOracle M S C) =>
               OracleComp.ProgramLogic.wp
