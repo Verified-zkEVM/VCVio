@@ -214,6 +214,26 @@ successfully built `TuringMachine.Composition`, `Combinators`, `Hoare`, `OutputB
 dependencies (2,062 build jobs). This validates those upstream modules; the VCVio adapter
 and its downstream canaries still require a coordinated candidate build before adoption.
 
+The September 14 candidate reuses PolyFun #184 on top of the merged activation-budget work.
+Its matched Mathlib revision is `e06eff5f95374108acfaf19f1ff7473aa7771df2`; CSLib
+`d9be64196bf145edd019f1ccfeaee0c11166ba6b` also needs the two existing FreeM constructor-normal-form
+fixes retained from the 4.33 fork. The isolated patched CSLib passes its build, umbrella check,
+tests, environment lint, and style lint. PolyFun passes full validation: 12,046 declarations
+across 313 production modules, zero sorry and nonstandard-axiom taint. Logs:
+`/private/tmp/uc-cslib-rc2-validation.log` and `/private/tmp/uc-polyfun-rc2-validation.log`.
+
+The VCVio candidate exposed three moved Mathlib imports, a redundant proof step, and a substantive
+change to the default for nonmeasurable `Measure.map`. The last finding motivates the explicit
+continuation guard and finite separation test described in the
+[probability semantics contract](../reading/denotational-probability-semantics.md#the-measurability-rule).
+That fold and counterexample compile on both dependency sets. The complete VCVio candidate and
+concrete backend canaries have not passed; the production toolchain remains 4.33.1.
+
+The guarded fold passes VCVio's full `./scripts/validate.sh --lint --test --axioms` on the
+production dependency set: 18,923 declarations across 634 modules, the same 40 existing
+sorry-tainted declarations, and zero nonstandard-axiom taint. The complete continuous/discrete
+canaries and finite resumption consumers pass. Log: `/private/tmp/uc-measure-boundary-validation.log`.
+
 | Surface | Inspected evidence | Consequence |
 | --- | --- | --- |
 | [CSLib single-tape deterministic machines](https://github.com/leanprover/cslib/blob/main/Cslib/Computability/Machines/Turing/SingleTape/Deterministic.lean) | `TimeComputable` contains one machine working on every word. `PolyTimeComputable.comp` constructs composition, given monotonicity of the second bound, and accounts for intermediate output length. | This core is uniform. The optional P/poly facade's different quantifiers do not characterize CSLib's underlying definition. |

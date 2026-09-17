@@ -21,6 +21,7 @@ public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.LongChainPrograms
+public import VCVioTest.MeasurabilityBoundary
 public import VCVioTest.MeasureSemantics
 public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MerkleTreeExtractability
