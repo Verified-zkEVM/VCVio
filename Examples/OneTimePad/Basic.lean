@@ -8,6 +8,7 @@ module
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.ProgramLogic.Tactics.Relational
+public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 public import VCVioWidgets.GameHop.Panel
 import VCVio.OracleComp.EvalDist.UniformCompatibility
 
@@ -21,9 +22,8 @@ The native measure laws give the Dirac correctness distribution and a product di
 for message and ciphertext. Their singleton consequences supply the discrete `SymmEncAlg`
 predicates during migration.
 
-The relational proof (`cipherGivenMsg_equiv`, `ciphertextRowsEqual`) also shows that any two
-messages yield the same ciphertext distribution via a bijection coupling, using the
-`by_equiv` / `rvcstep` tactic workflow.
+Fixed-message uniformity gives equal ciphertext rows directly, and a compatibility bridge
+exports the corresponding `GameEquiv` statement.
 -/
 
 @[expose] public section
@@ -92,44 +92,34 @@ lemma probOutput_cipher_uniform (sp : ℕ)
 /-- The one-time pad is perfectly secret in the canonical independence form. -/
 lemma perfectSecrecyAt (sp : ℕ) : (oneTimePad sp).perfectSecrecyAt := by
   intro mgen msg σ
-  have hpair :
-      Pr[= (msg, σ) | (oneTimePad sp).PerfectSecrecyExp mgen] =
-        Pr[= msg | mgen] *
-          (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
-    simpa [SymmEncAlg.PerfectSecrecyExp, oneTimePad,
-      monad_norm] using
-      probOutput_pair_xor_uniform sp (mx := mgen) msg σ
-  rw [hpair, ← probOutput_cipher_uniform]
+  simp only [← evalDist_apply_singleton, evalDist_perfectSecrecyExp,
+    evalDist_perfectSecrecyCipherExp]
+  simpa only [Set.singleton_prod_singleton] using
+    (MeasureTheory.Measure.prod_prod (μ := 𝒟[mgen])
+      (ν := ProbabilityTheory.uniformOn Set.univ) {msg} {σ})
 
 /-- The one-time pad is perfectly secret for all security parameters. -/
 lemma perfectSecrecy : ∀ sp, (oneTimePad sp).perfectSecrecyAt := perfectSecrecyAt
 
 /-! ### Relational proof of ciphertext uniformity
 
-Alternative proof that encrypting any two messages with a random OTP key yields
-the same ciphertext distribution. Uses the bijection coupling `k ↦ k ⊕ m₀ ⊕ m₁`. -/
+Fixed-message uniformity identifies each ciphertext row with the same measure. -/
+
+/-- Every fixed message has the uniform ciphertext measure. -/
+theorem evalDist_perfectSecrecyCipherGivenMsgExp (sp : ℕ) (msg : BitVec sp) :
+    𝒟[(oneTimePad sp).PerfectSecrecyCipherGivenMsgExp msg] =
+      (ProbabilityTheory.uniformOn Set.univ : MeasureTheory.Measure (BitVec sp)) := by
+  simpa [SymmEncAlg.PerfectSecrecyCipherGivenMsgExp, oneTimePad, monad_norm] using
+    evalDist_xor_uniformSample sp msg
 
 open OracleComp.ProgramLogic in
-/-- Encrypting any two messages with a random OTP key yields the same distribution,
-proved via a bijection coupling. -/
+/-- Encrypting any two fixed messages has the same ciphertext distribution. -/
 lemma cipherGivenMsg_equiv (sp : ℕ) (msg₀ msg₁ : BitVec sp) :
     GameEquiv
       ((oneTimePad sp).PerfectSecrecyCipherGivenMsgExp msg₀)
       ((oneTimePad sp).PerfectSecrecyCipherGivenMsgExp msg₁) := by
-  simp only [SymmEncAlg.PerfectSecrecyCipherGivenMsgExp, oneTimePad]
-  let c := msg₀ ^^^ msg₁
-  have hxor : Function.Bijective (fun x : BitVec sp => x ^^^ c) :=
-    Function.Involutive.bijective fun x => by
-      rw [BitVec.xor_assoc, BitVec.xor_self, BitVec.xor_zero]
-  change GameEquiv (($ᵗ BitVec sp) >>= fun k => pure (k ^^^ msg₀))
-    (($ᵗ BitVec sp) >>= fun k => pure (k ^^^ msg₁))
-  by_equiv
-  rvcstep using (fun k : BitVec sp => k ^^^ c)
-  · apply Relational.relTriple_pure_pure
-    simp only [show c = msg₀ ^^^ msg₁ from rfl,
-      BitVec.xor_assoc, BitVec.xor_self, BitVec.xor_zero]
-    rfl
-  · exact hxor
+  apply evalSPMF_eq_of_evalDist_eq
+  rw [evalDist_perfectSecrecyCipherGivenMsgExp, evalDist_perfectSecrecyCipherGivenMsgExp]
 
 /-- The one-time pad has equal ciphertext rows: all messages yield the same
 ciphertext distribution. Derived from the relational `GameEquiv` proof above. -/

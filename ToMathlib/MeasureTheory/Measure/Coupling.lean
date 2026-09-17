@@ -59,6 +59,38 @@ theorem joint_apply_univ_eq_right (h : IsCoupling c μ ν) : c Set.univ = ν Set
 theorem apply_univ_eq (h : IsCoupling c μ ν) : μ Set.univ = ν Set.univ := by
   rw [← h.joint_apply_univ_eq_left, h.joint_apply_univ_eq_right]
 
+/-- Concentration of the marginals gives concentration of the joint pair. -/
+theorem ae_mem_prod (h : IsCoupling c μ ν) {s : Set α} {t : Set β}
+    (hs : MeasurableSet s) (ht : MeasurableSet t)
+    (hμ : ∀ᵐ a ∂μ, a ∈ s) (hν : ∀ᵐ b ∂ν, b ∈ t) :
+    ∀ᵐ z ∂c, z ∈ s ×ˢ t := by
+  have ha : ∀ᵐ z ∂c, z.1 ∈ s := by
+    apply (ae_map_iff measurable_fst.aemeasurable hs).1
+    rw [show c.map Prod.fst = μ from h.fst_eq]
+    exact hμ
+  have hb : ∀ᵐ z ∂c, z.2 ∈ t := by
+    apply (ae_map_iff measurable_snd.aemeasurable ht).1
+    rw [show c.map Prod.snd = ν from h.snd_eq]
+    exact hν
+  exact ha.and hb
+
+/-- Dirac marginals force the joint output pair almost everywhere. -/
+theorem ae_eq_pair_of_dirac [MeasurableSingletonClass α] [MeasurableSingletonClass β]
+    (a : α) (b : β) (h : IsCoupling c (Measure.dirac a) (Measure.dirac b)) :
+    ∀ᵐ z ∂c, z = (a, b) := by
+  have ha : ∀ᵐ z ∂c, z.1 = a := by
+    have hmeas : MeasurableSet {x : α | x = a} := measurableSet_singleton a
+    apply (ae_map_iff measurable_fst.aemeasurable hmeas).1
+    rw [show c.map Prod.fst = Measure.dirac a from h.fst_eq]
+    exact (ae_dirac_iff hmeas).2 rfl
+  have hb : ∀ᵐ z ∂c, z.2 = b := by
+    have hmeas : MeasurableSet {x : β | x = b} := measurableSet_singleton b
+    apply (ae_map_iff measurable_snd.aemeasurable hmeas).1
+    rw [show c.map Prod.snd = Measure.dirac b from h.snd_eq]
+    exact (ae_dirac_iff hmeas).2 rfl
+  filter_upwards [ha, hb] with z hz₀ hz₁
+  exact Prod.ext hz₀ hz₁
+
 /-- The diagonal pushforward is a self-coupling of any measure. -/
 theorem refl (μ : Measure α) :
     IsCoupling (μ.map fun a => (a, a)) μ μ := by

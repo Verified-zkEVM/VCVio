@@ -132,6 +132,7 @@ public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.RoundByRound
 public import VCVio.CryptoFoundations.SecExp
+public import VCVio.CryptoFoundations.SecExp.Measure
 public import VCVio.CryptoFoundations.SeededFork
 public import VCVio.CryptoFoundations.SigmaProtocol
 public import VCVio.CryptoFoundations.SignatureAlg
@@ -177,6 +178,7 @@ public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.Monad.Basic
+public import VCVio.EvalDist.Monad.Bool
 public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Discard
 public import VCVio.EvalDist.Monad.Failure
@@ -222,7 +224,9 @@ public import VCVio.Interaction.UC.StdDoBridge
 public import VCVio.Native
 public import VCVio.OracleComp.CanReturn
 public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
 public import VCVio.OracleComp.Coinductive.Bridge
 public import VCVio.OracleComp.Coinductive.DynSystem
 public import VCVio.OracleComp.Coinductive.Machine
@@ -295,10 +299,12 @@ public import VCVio.OracleComp.Runtime
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.OptionT.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
 public import VCVio.OracleComp.SimSemantics.ReaderT.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 public import VCVio.OracleComp.SimSemantics.StateT.Measure
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
@@ -322,6 +328,8 @@ public import VCVio.ProgramLogic.Relational.KernelHandler
 public import VCVio.ProgramLogic.Relational.Leakage
 public import VCVio.ProgramLogic.Relational.Measure
 public import VCVio.ProgramLogic.Relational.Measure.Bind
+public import VCVio.ProgramLogic.Relational.Measure.Deterministic
+public import VCVio.ProgramLogic.Relational.Measure.Oracle
 public import VCVio.ProgramLogic.Relational.ProgrammingOracle
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
@@ -372,8 +380,10 @@ public import VCVio.ProgramLogic.Unary.WP.Qualitative
 public import VCVio.ProgramLogic.Unary.WP.Quantitative
 public import VCVio.ProgramLogic.Unary.WriterTBridge
 public import VCVio.StateSeparating.Advantage
+public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.StateSeparating.CellRef
 public import VCVio.StateSeparating.DistEquiv
 public import VCVio.StateSeparating.Hybrid
 public import VCVio.StateSeparating.IdenticalUntilBad
 public import VCVio.StateSeparating.IndistAt
+public import VCVio.StateSeparating.MeasureDistEquiv

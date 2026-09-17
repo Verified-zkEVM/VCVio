@@ -988,3 +988,50 @@ PolyFun's `MAlgOrdered.restrictIic`; its scopes take precedence over generic tra
 `VCVio.Native` has an ordinary import canary excluding PMF/SPMF and the retiring compatibility
 classes. Existing imports remain facades for discrete corollaries. The environment-linter
 baseline shrinks; no syntactic probability ratchet is introduced.
+
+## Native relational and security follow-up (2026-09-17)
+
+Native coercion and state-handler modules separate operational constructions from discrete
+corollaries. The measure interpretation transports equal joint response/state laws through
+adaptive clients using its generic lawful bind/map laws. It requires neither oracle uniformity
+nor positive singleton masses. Stateful measure equivalence exports observation equations,
+event congruence, linking congruence, and advantage replacement across different state types.
+
+The coupling search covered pinned Mathlib's `ae_map_iff`, `ae_dirac_iff`,
+`AEMeasurable.mk`, `measurable_mk`, `ae_eq_mk`, `Measurable.measurable_of_countable_ne`,
+and `Measure.lintegral_bind`. Those APIs supply almost everywhere bind composition and
+measurable modifications. The local `aemeasurable_of_ae_mem_countable` lemma packages a
+countable concentration argument; the domain needs measurable singletons, while its arbitrary
+codomain only needs a measurable space and a default point.
+
+Pointwise qualitative coupling witnesses compose on countable marginal concentration sets,
+without a globally measurable choice assumption. Quantitative composition accepts an explicit
+almost everywhere measurable conditional witness family and supplies a lower bound. A universal
+quantitative relational-algebra instance would additionally need a justified supremum/integration
+argument and measurability obligations. In particular, product spaces of uncountable discrete
+factors cannot be treated as automatically discrete. The witness rules state the actual
+obligations rather than installing such an instance.
+
+The scoped qualitative oracle adapter does use PolyFun's existing `MAlgRelOrdered` interface.
+It requires finite response types, giving finite source and final concentration sets from
+PolyFun's operational support theorem. Arbitrary final relations are restricted to their
+countable measurable part before bind composition. It works on uncountable output types and
+weighted oracles without selecting an enumeration, assuming uniformity, or identifying almost
+sure postconditions with structural demonic WP. The native relational API also permits different
+universe levels for its two monads.
+
+`PolyFun.Control.Monad.Algebra.Relational` already owns the generic relational class and rules.
+The local duplicate prevented importing the upstream algebra alongside VCVio's umbrella.
+`ToMathlib.Control.Monad.RelationalAlgebra` is now a reexport plus delegates installing the
+upstream named transformer constructions under the existing instance names. PolyFun's
+`rwpExc` takes a single outcome postcondition; the four-corner convenience frontend is called
+`rwpExcCases`, keeping its distinct signature explicit. Existing one-sided and optional helpers
+continue to use the shared class. Oracle implementation composition also uses PolyFun's
+`FreeM.liftM_natural`, removing a local fold induction and its probability-heavy import path.
+
+Dirac marginal concentration gives exact pure relational laws without measurability of the
+postcondition. Constructor-specific optional/exceptional lemmas preserve their `simp` heads.
+Native security observations reuse measure-valued Boolean bias/distance, including the generic
+fair-coin identity. One-time-pad privacy uses `Measure.prod_prod` and singleton products instead
+of a point-mass calculation. ElGamal's computational handler identities induce native measure
+equivalence, while existing discrete theorem names remain compatibility corollaries.

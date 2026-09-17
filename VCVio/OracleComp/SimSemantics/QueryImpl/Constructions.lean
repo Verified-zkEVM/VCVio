@@ -7,7 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
 
 /-!
 # Basic Constructions of Simulation Oracles
@@ -50,35 +50,6 @@ universe u v w
 
 namespace QueryImpl
 
-section compose
-
-variable {m : Type u → Type v} [Monad m]
-    {ι ι' : Type*} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
-    {α β γ : Type u}
-
-/-- Given an implementation of `spec` in terms of a new set of oracles `spec'`,
-and an implementation of `spec'` in terms of arbitrary `m`, implement `spec` in terms of `m`. -/
-def compose (so' : QueryImpl spec' m) (so : QueryImpl spec (OracleComp spec')) :
-    QueryImpl spec m :=
-  fun t => simulateQ so' (so t)
-
-infixl : 65 " ∘ₛ " => QueryImpl.compose
-
-@[simp]
-lemma apply_compose (so' : QueryImpl spec' m) (so : QueryImpl spec (OracleComp spec'))
-    (t : spec.Domain) : (so' ∘ₛ so) t = simulateQ so' (so t) := rfl
-
-@[simp]
-lemma simulateQ_compose [LawfulMonad m] (so' : QueryImpl spec' m)
-    (so : QueryImpl spec (OracleComp spec'))
-    (oa : OracleComp spec α) : simulateQ (so' ∘ₛ so) oa = simulateQ so' (simulateQ so oa) := by
-  induction oa using OracleComp.inductionOn <;> simp_all
-
-@[simp]
-lemma compose_id' [LawfulMonad m] (so : QueryImpl spec m) :
-    so ∘ₛ QueryImpl.id' spec = so := by ext x; simp
-
-end compose
 
 section insertPre
 

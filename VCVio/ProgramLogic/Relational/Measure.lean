@@ -32,7 +32,7 @@ noncomputable section
 open MeasureTheory
 open scoped ENNReal
 
-universe u v w
+universe u v w₁ w₂
 
 namespace MeasureProgramLogic
 
@@ -44,13 +44,13 @@ def CouplingPost (μ : Measure α) (ν : Measure β) (R : α → β → Prop) : 
   ∃ c : Measure.Coupling μ ν, ∀ᵐ z ∂c.1, R z.1 z.2
 
 /-- Measure-native relational weakest precondition for two denoted computations. -/
-def RelWP {m₁ : Type u → Type w} {m₂ : Type v → Type w}
+def RelWP {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [EvalDistSemantics m₁] [EvalDistSemantics m₂]
     (mx : m₁ α) (my : m₂ β) (R : α → β → Prop) : Prop :=
   CouplingPost 𝒟[mx] 𝒟[my] R
 
 /-- Quantitative relational WP: best coupled expectation of `g`. -/
-noncomputable def eRelWP {m₁ : Type u → Type w} {m₂ : Type v → Type w}
+noncomputable def eRelWP {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [EvalDistSemantics m₁] [EvalDistSemantics m₂]
     (mx : m₁ α) (my : m₂ β) (g : α → β → ℝ≥0∞) : ℝ≥0∞ :=
   ⨆ c : Measure.Coupling 𝒟[mx] 𝒟[my], ∫⁻ z, g z.1 z.2 ∂c.1
@@ -63,7 +63,7 @@ theorem CouplingPost.mono {μ : Measure α} {ν : Measure β} {R S : α → β �
   exact ⟨c, hc.mono fun z hz => hRS z.1 z.2 hz⟩
 
 /-- Implication of relations preserves a measure-native relational judgment. -/
-theorem relWP_mono {m₁ : Type u → Type w} {m₂ : Type v → Type w}
+theorem relWP_mono {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [EvalDistSemantics m₁] [EvalDistSemantics m₂]
     {mx : m₁ α} {my : m₂ β} {R S : α → β → Prop}
     (h : RelWP mx my R) (hRS : ∀ a b, R a b → S a b) : RelWP mx my S :=
@@ -71,7 +71,7 @@ theorem relWP_mono {m₁ : Type u → Type w} {m₂ : Type v → Type w}
 
 /-- Quantitative post-expectation monotonicity. -/
 @[gcongr low]
-theorem eRelWP_mono {m₁ : Type u → Type w} {m₂ : Type v → Type w}
+theorem eRelWP_mono {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [EvalDistSemantics m₁] [EvalDistSemantics m₂]
     (mx : m₁ α) (my : m₂ β) {g h : α → β → ℝ≥0∞}
     (hgh : ∀ a b, g a b ≤ h a b) :
@@ -80,7 +80,7 @@ theorem eRelWP_mono {m₁ : Type u → Type w} {m₂ : Type v → Type w}
   exact lintegral_mono fun z => hgh z.1 z.2
 
 /-- A concrete measure coupling provides a falsifiable lower bound on the quantitative WP. -/
-theorem le_eRelWP_of_isCoupling {m₁ : Type u → Type w} {m₂ : Type v → Type w}
+theorem le_eRelWP_of_isCoupling {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [EvalDistSemantics m₁] [EvalDistSemantics m₂]
     (mx : m₁ α) (my : m₂ β) (g : α → β → ℝ≥0∞)
     (c : Measure.Coupling 𝒟[mx] 𝒟[my]) :
@@ -90,7 +90,7 @@ theorem le_eRelWP_of_isCoupling {m₁ : Type u → Type w} {m₂ : Type v → Ty
 
 /-- The Dirac coupling gives the expected lower bound for two pure computations. -/
 theorem le_eRelWP_pure_pure
-    {m₁ : Type u → Type w} {m₂ : Type v → Type w}
+    {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [Monad m₁] [Monad m₂] [EvalDistSemantics m₁] [EvalDistSemantics m₂]
     [LawfulEvalDistSemantics m₁] [LawfulEvalDistSemantics m₂]
     (a : α) (b : β) (g : α → β → ℝ≥0∞)
@@ -107,7 +107,7 @@ theorem le_eRelWP_pure_pure
 
 /-- Pure computations satisfy every relation true of their returned pair. -/
 theorem relWP_pure_pure
-    {m₁ : Type u → Type w} {m₂ : Type v → Type w}
+    {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
     [Monad m₁] [Monad m₂] [EvalDistSemantics m₁] [EvalDistSemantics m₂]
     [LawfulEvalDistSemantics m₁] [LawfulEvalDistSemantics m₂]
     (a : α) (b : β) {R : α → β → Prop}
@@ -125,8 +125,83 @@ theorem couplingPost_refl [MeasurableEq α] (μ : Measure α) : CouplingPost μ 
     (Filter.Eventually.of_forall fun _ => rfl)
 
 /-- Every computation is related to itself by equality. -/
-theorem relWP_refl {m : Type u → Type w} [EvalDistSemantics m] [MeasurableEq α] (mx : m α) :
+theorem relWP_refl {m : Type u → Type w₁} [EvalDistSemantics m] [MeasurableEq α] (mx : m α) :
     RelWP mx mx (· = ·) :=
   couplingPost_refl 𝒟[mx]
+
+/-- A zero post-expectation has zero coupled expectation, including when no coupling exists. -/
+@[simp]
+theorem eRelWP_zero {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
+    [EvalDistSemantics m₁] [EvalDistSemantics m₂] (mx : m₁ α) (my : m₂ β) :
+    eRelWP mx my (fun _ _ ↦ 0) = 0 := by
+  simp [eRelWP]
+
+/-- Coupling semantics cannot relate unequal successful-output masses. -/
+theorem not_relWP_of_mass_ne {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
+    [EvalDistSemantics m₁] [EvalDistSemantics m₂] (mx : m₁ α) (my : m₂ β)
+    (h : 𝒟[mx] Set.univ ≠ 𝒟[my] Set.univ) (R : α → β → Prop) : ¬RelWP mx my R := by
+  rintro ⟨c, _⟩
+  exact h c.2.apply_univ_eq
+
+/-- The quantitative supremum is zero when unequal masses leave no coupling witnesses. -/
+theorem eRelWP_eq_zero_of_mass_ne {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
+    [EvalDistSemantics m₁] [EvalDistSemantics m₂] (mx : m₁ α) (my : m₂ β)
+    (h : 𝒟[mx] Set.univ ≠ 𝒟[my] Set.univ) (g : α → β → ℝ≥0∞) :
+    eRelWP mx my g = 0 := by
+  let : IsEmpty (Measure.Coupling 𝒟[mx] 𝒟[my]) := ⟨fun c ↦ h c.2.apply_univ_eq⟩
+  simp [eRelWP]
+
+/-- Coupled expectations respect any pointwise constant upper bound. -/
+theorem eRelWP_le {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
+    [EvalDistSemantics m₁] [EvalDistSemantics m₂]
+    (mx : m₁ α) (my : m₂ β) (g : α → β → ℝ≥0∞) (bound : ℝ≥0∞)
+    (h : ∀ a b, g a b ≤ bound) : eRelWP mx my g ≤ bound := by
+  refine iSup_le fun c ↦ ?_
+  calc
+    (∫⁻ z, g z.1 z.2 ∂c.1) ≤ ∫⁻ _ : α × β, bound ∂c.1 :=
+      lintegral_mono fun z ↦ h z.1 z.2
+    _ = bound * 𝒟[mx] Set.univ := by
+      rw [lintegral_const, c.2.joint_apply_univ_eq_left]
+    _ ≤ bound := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
+
+/-- Pure computations have their exact coupled post-expectation. -/
+@[simp]
+theorem eRelWP_pure_pure [MeasurableSingletonClass α] [MeasurableSingletonClass β]
+    {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
+    [Monad m₁] [Monad m₂] [EvalDistSemantics m₁] [EvalDistSemantics m₂]
+    [LawfulPureEvalDistSemantics m₁] [LawfulPureEvalDistSemantics m₂]
+    (a : α) (b : β) (g : α → β → ℝ≥0∞) :
+    eRelWP (pure a : m₁ α) (pure b : m₂ β) g = g a b := by
+  rw [eRelWP, evalDist_pure, evalDist_pure]
+  apply le_antisymm
+  · refine iSup_le fun c ↦ ?_
+    apply le_of_eq
+    calc
+      (∫⁻ z, g z.1 z.2 ∂c.1) = ∫⁻ _ : α × β, g a b ∂c.1 :=
+        lintegral_congr_ae ((c.2.ae_eq_pair_of_dirac a b).mono fun z hz ↦ by rw [hz])
+      _ = g a b := by
+        rw [lintegral_const, c.2.joint_apply_univ_eq_left, measure_univ, mul_one]
+  · simpa [Measure.Coupling.dirac] using le_iSup
+      (fun c : Measure.Coupling (Measure.dirac a) (Measure.dirac b) ↦
+        ∫⁻ z, g z.1 z.2 ∂c.1) (Measure.Coupling.dirac a b)
+
+/-- Pure computations satisfy exactly the relation on their returned values. -/
+@[simp]
+theorem relWP_pure_pure_iff [MeasurableSingletonClass α] [MeasurableSingletonClass β]
+    {m₁ : Type u → Type w₁} {m₂ : Type v → Type w₂}
+    [Monad m₁] [Monad m₂] [EvalDistSemantics m₁] [EvalDistSemantics m₂]
+    [LawfulPureEvalDistSemantics m₁] [LawfulPureEvalDistSemantics m₂]
+    (a : α) (b : β) (R : α → β → Prop) :
+    RelWP (pure a : m₁ α) (pure b : m₂ β) R ↔ R a b := by
+  rw [RelWP, evalDist_pure, evalDist_pure, CouplingPost]
+  constructor
+  · rintro ⟨c, hc⟩
+    have hpair := c.2.ae_eq_pair_of_dirac a b
+    let : IsProbabilityMeasure c.1 :=
+      ⟨by rw [c.2.joint_apply_univ_eq_left, measure_univ]⟩
+    obtain ⟨z, hz, hR⟩ := (hpair.and hc).exists
+    simpa [hz] using hR
+  · intro hR
+    exact ⟨Measure.Coupling.dirac a b, by simp [Measure.Coupling.dirac, hR]⟩
 
 end MeasureProgramLogic

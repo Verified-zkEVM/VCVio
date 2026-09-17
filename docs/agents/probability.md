@@ -12,9 +12,50 @@ records which finite events can be evaluated exactly and which semantics require
 proofs. [`docs/reading/`](../reading/README.md) indexes the full design record.
 
 `import VCVio.Native` is the public entry point for native oracle, sampling, measure, kernel,
-operational-support, and unary-WP foundations. Its ordinary import closure contains neither
+operational-support, unary/relational WP, and stateful security foundations. Its ordinary import
+closure contains neither
 `PMF` nor `SPMF`; `VCVioTest.Native` checks this boundary. Existing module paths remain
 compatibility facades for their discrete corollaries.
+
+`VCVio.ProgramLogic.Relational.Measure` uses successful-output measure couplings. Pure and
+successful optional values simplify to their exact postcondition with plain `simp`.
+`eRelWP_mono` supports `gcongr` and `grw`. Unequal success masses admit no coupling, so the
+qualitative judgment is false and the quantitative supremum is zero.
+`CouplingPost.bind_of_countable` composes pointwise coupling witnesses on countable marginal
+concentration sets: measurability is needed only under the chosen initial joint law. Its proof
+uses Mathlib's measurable modification API, not a globally measurable choice principle.
+`relWP_bind_of_aemeasurable` and `lintegral_le_eRelWP_bind` accept an explicit almost everywhere
+measurable family. The quantitative rule supplies a witness lower bound; it does not assert
+existence of an optimal coupling or interchange a supremum with integration. A product of
+arbitrary discrete measurable spaces need not itself be discrete. Do not hide that distinction
+in an automatic relational assertion-algebra instance.
+`open scoped MeasureProgramLogic.Relational` selects PolyFun's qualitative `MAlgRelOrdered`
+interface for finite-response oracle trees. The source and final operational output sets are
+finite concentration sets, so arbitrary final relations are handled by restricting to their
+countable measurable part. This works for uncountable output types and weighted interpretations;
+it needs only finite responses, without enumerations or uniformity. The quantitative algebra is
+not installed by this scope, and the qualitative algebra is not automatically anchored to
+structural demonic WP under weighted interpretations.
+The generic relational class and laws come from `PolyFun.Control.Monad.Algebra.Relational`.
+`ToMathlib.Control.Monad.RelationalAlgebra` additionally installs the named upstream transformer
+constructions for compatibility typeclass search. New code can select those constructions
+explicitly. `MAlgRelOrdered.rwpExc` accepts one postcondition on both exception outcomes;
+`rwpExcCases` packages four separate corner postconditions, while the one-sided and optional
+case helpers remain available in `RelationalAlgebraAnchored`.
+
+`VCVio.StateSeparating.MeasureDistEquiv` compares all adaptive client output measures under the
+selected lawful interpretation. Its `of_step` rule retains each joint response/state law;
+`prEvent_eq` transports final events, and the advantage rules permit replacing experiments
+with different private-state types. `run_evalDist_eq` is the public observation equation.
+Weighted interpretations can give a structurally possible answer zero mass; measure equivalence
+therefore does not assert equality of operational support. Native coercions, state handlers,
+`SecExp.Measure`, and `Advantage.Measure` have ordinary import closures without PMF/SPMF.
+
+`evalDist_boolBias_bind_coin` is a generic fair-coin reduction for lawful measure semantics and
+lossless Boolean branches. The probability-only security facade supplies its fair-coin law.
+`SampleableType.evalDist_uniformSample_singleton` normalizes uniform singleton masses directly;
+`Measure.apply_true_add_apply_false_eq_one` gives `simp` and `grind` the two-outcome mass law
+without first unfolding the universal Boolean event into a finite set.
 
 `VCVio.OracleComp.ProbComp.Basic` owns executable container sampling, and
 `VCVio.OracleComp.Constructions.SampleableType.Basic` owns uniform sampler certificates.

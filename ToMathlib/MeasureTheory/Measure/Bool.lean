@@ -40,6 +40,12 @@ lemma apply_true_add_apply_false (μ : Measure Bool) :
   ext value
   cases value <;> simp
 
+/-- The two Boolean outcome masses sum to one under a probability measure. -/
+@[simp↓, grind norm↓]
+lemma apply_true_add_apply_false_eq_one (μ : Measure Bool) [IsProbabilityMeasure μ] :
+    μ {true} + μ {false} = 1 := by
+  rw [apply_true_add_apply_false, measure_univ]
+
 /-- A Boolean selector partitions each event of the first marginal into its two branches. -/
 lemma fst_apply_eq_add {α : Type*} [MeasurableSpace α] (μ : Measure (α × Bool))
     {s : Set α} (hs : MeasurableSet s) :
